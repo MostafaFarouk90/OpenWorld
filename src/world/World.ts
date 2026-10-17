@@ -42,6 +42,7 @@ export class World {
   readonly spawn: Vec3;
   private _avatar: KnightAvatar | null = null;
   private unsubscribe: (() => void) | null = null;
+  private disposed = false;
   private readonly feet = { x: 0, y: 0, z: 0 };
 
   constructor(
@@ -101,7 +102,10 @@ export class World {
     this.player.render(alpha, frameTime);
   }
 
+  /** Frees the avatar, colliders and player body. Idempotent. */
   dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
     this.unsubscribe?.();
     this._avatar?.dispose();
     this.colliders.dispose();
