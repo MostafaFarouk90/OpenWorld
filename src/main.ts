@@ -6,12 +6,13 @@ import { TerrainScene } from './terrain/TerrainScene';
 import { PhysicsWorld } from './physics/PhysicsWorld';
 import { InputManager } from './input/InputManager';
 import { Player } from './characters/Player';
+import { startWorld } from './world/startWorld';
 
 const container = document.getElementById('app');
 if (!container) throw new Error('Missing #app container');
 
-// `?scene=terrain` shows the streaming terrain demo, `?scene=audio` the audio and asset demo;
-// the default is the physics test level.
+// The default is the open world (the Knight on the streamed terrain). `?scene=physics` is the
+// physics test level, `?scene=terrain` the terrain flyover, `?scene=audio` the audio and asset demo.
 const sceneName = new URLSearchParams(window.location.search).get('scene');
 
 if (sceneName === 'audio') {
@@ -30,8 +31,10 @@ if (sceneName === 'audio') {
       renderer.render();
     },
   }).start();
-} else {
+} else if (sceneName === 'physics') {
   await startPhysicsTestLevel(container);
+} else {
+  await startWorld(container);
 }
 
 async function startPhysicsTestLevel(container: HTMLElement): Promise<void> {
