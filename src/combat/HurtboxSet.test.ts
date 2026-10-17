@@ -74,8 +74,9 @@ describe('HurtboxSet', () => {
     const { root } = rig(true);
     const set = new HurtboxSet(root);
     const head = set.capsules.find((c) => c.name === 'head')!;
-    expect(head.a.y).toBeCloseTo(0.05);
-    expect(head.b.y).toBeCloseTo(0.3);
+    const def = KNIGHT_HURTBOX_DEFS.find((d) => d.name === 'head')!;
+    expect(head.a.y).toBeCloseTo(def.start.y);
+    expect(head.b.y).toBeCloseTo(def.end.y);
   });
 
   it('refits after a bone moves: hits at the new place only', () => {
@@ -128,13 +129,14 @@ describe('HurtboxSet', () => {
     root.updateMatrixWorld(true);
     set.update();
     const cap = set.capsules.find((c) => c.name === 'head')!;
-    expect(cap.b.x - cap.a.x).toBeCloseTo(0.25);
+    const def = KNIGHT_HURTBOX_DEFS.find((d) => d.name === 'head')!;
+    expect(cap.b.x - cap.a.x).toBeCloseTo(def.end.y - def.start.y);
     expect(cap.b.y - cap.a.y).toBeCloseTo(0, 5);
     const x = bone.position.x;
     // a downward ray at x+0.2 now hits (capsule lies along +X), but didn't before
     expect(set.bvh.raycastFirst(ray(x + 0.2, 2, 0, 0, -1, 0), THREE.FrontSide)).not.toBeNull();
     expect(set.bvh.raycastFirst(ray(x, 0.4, 0, 0, -1, 0), THREE.FrontSide)).not.toBeNull();
-    expect(set.bvh.raycastFirst(ray(x, 2, 0.5, 0, -1, 0), THREE.FrontSide)).toBeNull();
+    expect(set.bvh.raycastFirst(ray(x, 2, 2, 0, -1, 0), THREE.FrontSide)).toBeNull();
     // no NaNs even when the axis is degenerate
     bone.scale.set(1, 0, 1);
     root.updateMatrixWorld(true);

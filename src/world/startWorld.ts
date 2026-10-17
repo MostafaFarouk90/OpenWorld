@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { KNIGHT, TERRAIN, WORLD } from '../config/constants';
+import { COMBAT, KNIGHT, TERRAIN, WORLD } from '../config/constants';
 import { GameLoop } from '../core/GameLoop';
 import { Renderer } from '../rendering/Renderer';
 import { ThirdPersonCamera } from '../rendering/ThirdPersonCamera';
@@ -9,10 +9,12 @@ import { TerrainManager } from '../terrain/TerrainManager';
 import { AssetLoader } from '../assets';
 import { AudioManager, proceduralSounds } from '../audio';
 import { KnightAvatar } from '../characters/KnightAvatar';
+import { heightAt } from '../terrain/heightfield';
+import { DamageNumberSprites } from './DamageNumbers';
 import { World, type WorldSounds } from './World';
 
 const SKY = 0x9db8d3;
-const CONTROLS = 'Click to look around · WASD move · Shift run · Space jump · Left click or 1-4 attack';
+const CONTROLS = 'Click to look around · WASD move · Shift run · Space jump · Left click or 1-4 attack · H hurtboxes';
 
 /**
  * The default page: the Knight on the streamed terrain. Physics must load (it shows a full-page
@@ -44,6 +46,13 @@ export async function startWorld(container: HTMLElement): Promise<void> {
   const input = new InputManager(renderer.renderer.domElement);
   const followCamera = new ThirdPersonCamera(camera, input, physics, world.player.controller.collider);
   const overlay = createOverlay(container);
+  const damageNumbers = new DamageNumberSprites(scene);
+  let hurtboxes = false;
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'KeyH') return;
+    hurtboxes = !hurtboxes;
+    world.combat.setDebugVisible(hurtboxes);
+  });
 
   overlay.status('Loading the Knight…');
   const assets = new AssetLoader(renderer.renderer);
@@ -51,6 +60,7 @@ export async function startWorld(container: HTMLElement): Promise<void> {
     (avatar) => {
       world.setAvatar(avatar);
       overlay.status(null);
+      placeDummies(world, assets, damageNumbers, overlay);
     },
     (err: unknown) => {
       console.error('The Knight failed to load; playing as the capsule instead.', err);
@@ -65,6 +75,7 @@ export async function startWorld(container: HTMLElement): Promise<void> {
     },
     render(alpha, frameTime) {
       world.render(alpha, frameTime);
+      damageNumbers.update(frameTime);
       followCamera.update(world.player.feet);
       terrain.update(camera.position);
       followSun(sun, world.player.feet);
@@ -103,6 +114,7 @@ function createAudio(): AudioManager | null {
     const audio = new AudioManager();
     audio.register('footstep-0', { src: [proceduralSounds.footstepUrl(0)], format: ['wav'], volume: KNIGHT.footstepVolume });
     audio.register('footstep-1', { src: [proceduralSounds.footstepUrl(1)], format: ['wav'], volume: KNIGHT.footstepVolume });
+    audio.register('hit', { src: [proceduralSounds.clangUrl()], format: ['wav'], volume: COMBAT.hitSoundVolume });
     audio.register('land', { src: [proceduralSounds.landUrl()], format: ['wav'], volume: KNIGHT.landVolume });
     return audio;
   } catch (err) {
@@ -117,6 +129,9 @@ function footstepSounds(audio: AudioManager): WorldSounds {
     footstep(foot, position) {
       audio.playAt(foot === 'left' ? 'footstep-0' : 'footstep-1', at.set(position.x, position.y, position.z));
     },
+    hit(position) {
+      audio.playAt('hit', at.set(position.x, position.y, position.z));
+    },
     land(fallSpeed, position) {
       at.set(position.x, position.y, position.z);
       audio.playAt(fallSpeed >= KNIGHT.hardLandingSpeed ? 'land' : 'footstep-0', at);
@@ -124,8 +139,36 @@ function footstepSounds(audio: AudioManager): WorldSounds {
   };
 }
 
+/** Training dummies on the meadow near the spawn, facing it, with hit numbers and the counter. */
+function placeDummies(world: World, assets: AssetLoader, numbers: DamageNumberSprites, overlay: Overlay): void {
+  const clips = assets.animations('knight');
+  for (const at of COMBAT.dummies) {
+    const x = world.spawn.x + at.x;
+    const z = world.spawn.z + at.z;
+    const model = assets.instantiate('knight');
+    model.position.set(x, heightAt(x, z), z);
+    model.rotation.y = Math.atan2(world.spawn.x - x, world.spawn.z - z);
+    model.scale.setScalar(KNIGHT.modelScale);
+    // Unarmed: only the Knight's body stays visible.
+    model.traverse((o) => {
+      if (/Sword|Shield/.test(o.name)) o.visible = false;
+      if ((o as THREE.Mesh).isMesh) o.castShadow = true;
+    });
+    world.combat.addDummy(model, clips);
+  }
+  const refresh = (): void => {
+    const s = world.combat.stats;
+    overlay.hits(s.hits === 0 ? '' : `Hits ${s.hits} · damage ${s.totalDamage} · last ${s.lastBone} (${s.lastDamage})`);
+  };
+  world.combat.onHitEvent((e) => {
+    numbers.spawn(e.damage, e.point);
+    refresh();
+  });
+}
+
 interface Overlay {
   status(text: string | null): void;
+  hits(text: string): void;
   error(text: string): void;
 }
 
@@ -136,15 +179,19 @@ function createOverlay(container: HTMLElement): Overlay {
     'position:absolute;left:12px;top:12px;max-width:min(560px,calc(100% - 24px));pointer-events:none;' +
     'font:14px/1.4 system-ui,sans-serif;color:#fff;text-shadow:0 1px 2px #000';
   const message = document.createElement('div');
+  const hitLine = document.createElement('div');
   const help = document.createElement('div');
   help.textContent = CONTROLS;
   help.style.opacity = '0.85';
-  panel.append(message, help);
+  panel.append(message, hitLine, help);
   container.appendChild(panel);
   return {
     status(text) {
       message.textContent = text ?? '';
       message.style.cssText = '';
+    },
+    hits(text) {
+      hitLine.textContent = text;
     },
     error(text) {
       message.textContent = text;
