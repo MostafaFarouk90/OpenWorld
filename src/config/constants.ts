@@ -79,3 +79,29 @@ export const CAMERA = {
   /** Gap kept between the camera and any collider it would otherwise clip into. */
   collisionMargin: 0.2,
 } as const;
+
+/** Combat hit detection (game-feel defaults; not in the spec). */
+export const COMBAT = {
+  baseDamage: 10,
+  /** Damage multiplier per hurtbox name (see HURTBOX_NAMES); unknown names use 1. */
+  boneMultipliers: {
+    head: 2.0,
+    torso: 1.0,
+    upperArmL: 0.75,
+    upperArmR: 0.75,
+    lowerArmL: 0.75,
+    lowerArmR: 0.75,
+    upperLegL: 0.6,
+    upperLegR: 0.6,
+    lowerLegL: 0.6,
+    lowerLegR: 0.6,
+  } as Readonly<Record<string, number>>,
+  /** Capsule radial segments and rings per hemisphere of the low-poly hurtbox meshes. */
+  hurtboxRadialSegments: 8,
+  hurtboxHemisphereRings: 2,
+  /** Seconds a struck hurtbox stays highlighted in the demo. */
+  hitFlashSeconds: 0.2,
+  /** Demo attack clip and its active window as normalised clip time (start, end), matching animation-events.md. */
+  demoClip: '1H_Melee_Attack_Slice_Horizontal',
+  demoWindow: { start: 0.15, end: 0.36 },
+} as const;
