@@ -12,6 +12,7 @@ import { KnightAvatar } from '../characters/KnightAvatar';
 import { heightAt } from '../terrain/heightfield';
 import { DamageNumberSprites } from './DamageNumbers';
 import { World, type WorldSounds } from './World';
+import { formatHitStats } from './WorldCombat';
 
 const SKY = 0x9db8d3;
 const CONTROLS = 'Click to look around · WASD move · Shift run · Space jump · Left click or 1-4 attack · H hurtboxes';
@@ -158,7 +159,7 @@ function placeDummies(world: World, assets: AssetLoader, numbers: DamageNumberSp
   }
   const refresh = (): void => {
     const s = world.combat.stats;
-    overlay.hits(s.hits === 0 ? '' : `Hits ${s.hits} · damage ${s.totalDamage} · last ${s.lastBone} (${s.lastDamage})`);
+    overlay.hits(formatHitStats(s));
   };
   world.combat.onHitEvent((e) => {
     numbers.spawn(e.damage, e.point);

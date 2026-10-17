@@ -130,6 +130,8 @@ export const COMBAT = {
   boneMultipliers: {
     head: 2.0,
     torso: 1.0,
+    abdomen: 1.0,
+    hips: 0.8,
     upperArmL: 0.75,
     upperArmR: 0.75,
     lowerArmL: 0.75,
