@@ -5,8 +5,9 @@ import { KNIGHT_HURTBOX_DEFS } from './hurtboxLayout';
 import { HurtboxSet } from './HurtboxSet';
 import { HURTBOX_NAMES } from './types';
 
+const N = KNIGHT_HURTBOX_DEFS.length;
 const BONES = [
-  'head', 'chest', 'upperarm.l', 'upperarm.r', 'lowerarm.l', 'lowerarm.r',
+  'head', 'chest', 'spine', 'hips', 'upperarm.l', 'upperarm.r', 'lowerarm.l', 'lowerarm.r',
   'upperleg.l', 'upperleg.r', 'lowerleg.l', 'lowerleg.r',
 ];
 
@@ -35,24 +36,24 @@ describe('KNIGHT_HURTBOX_DEFS', () => {
 });
 
 describe('HurtboxSet', () => {
-  it('builds all 10 capsules for dotted and dot-stripped names', () => {
+  it('builds every capsule for dotted and dot-stripped names', () => {
     for (const strip of [false, true]) {
       const { root } = rig(strip);
       const owner = {};
       const set = new HurtboxSet(root, undefined, owner);
-      expect(set.count).toBe(10);
+      expect(set.count).toBe(N);
       expect(set.missing).toEqual([]);
       expect(set.owner).toBe(owner);
-      expect(set.capsules).toHaveLength(10);
+      expect(set.capsules).toHaveLength(N);
       const perCap = 2 * COMBAT.hurtboxRadialSegments + (2 * COMBAT.hurtboxHemisphereRings - 1) * COMBAT.hurtboxRadialSegments * 2;
-      expect(set.geometry.getIndex()!.count / 3).toBe(perCap * 10);
+      expect(set.geometry.getIndex()!.count / 3).toBe(perCap * N);
     }
   });
 
   it('skips missing bones, lists them, and does not throw', () => {
     const { root } = rig(false, ['head', 'lowerleg.r']);
     const set = new HurtboxSet(root);
-    expect(set.count).toBe(8);
+    expect(set.count).toBe(N - 2);
     expect(set.missing.sort()).toEqual(['head', 'lowerLegR']);
     expect(set.capsules.find((c) => c.name === 'head')).toBeUndefined();
   });
@@ -66,7 +67,7 @@ describe('HurtboxSet', () => {
     expect(set.nameOfTriangle(0)).toBe('');
     const none = new HurtboxSet(new THREE.Group());
     expect(none.count).toBe(0);
-    expect(none.missing).toHaveLength(10);
+    expect(none.missing).toHaveLength(N);
     expect(() => none.dispose()).not.toThrow();
   });
 
@@ -74,8 +75,9 @@ describe('HurtboxSet', () => {
     const { root } = rig(true);
     const set = new HurtboxSet(root);
     const head = set.capsules.find((c) => c.name === 'head')!;
-    expect(head.a.y).toBeCloseTo(0.05);
-    expect(head.b.y).toBeCloseTo(0.3);
+    const def = KNIGHT_HURTBOX_DEFS.find((d) => d.name === 'head')!;
+    expect(head.a.y).toBeCloseTo(def.start.y);
+    expect(head.b.y).toBeCloseTo(def.end.y);
   });
 
   it('refits after a bone moves: hits at the new place only', () => {
@@ -128,13 +130,14 @@ describe('HurtboxSet', () => {
     root.updateMatrixWorld(true);
     set.update();
     const cap = set.capsules.find((c) => c.name === 'head')!;
-    expect(cap.b.x - cap.a.x).toBeCloseTo(0.25);
+    const def = KNIGHT_HURTBOX_DEFS.find((d) => d.name === 'head')!;
+    expect(cap.b.x - cap.a.x).toBeCloseTo(def.end.y - def.start.y);
     expect(cap.b.y - cap.a.y).toBeCloseTo(0, 5);
     const x = bone.position.x;
     // a downward ray at x+0.2 now hits (capsule lies along +X), but didn't before
     expect(set.bvh.raycastFirst(ray(x + 0.2, 2, 0, 0, -1, 0), THREE.FrontSide)).not.toBeNull();
     expect(set.bvh.raycastFirst(ray(x, 0.4, 0, 0, -1, 0), THREE.FrontSide)).not.toBeNull();
-    expect(set.bvh.raycastFirst(ray(x, 2, 0.5, 0, -1, 0), THREE.FrontSide)).toBeNull();
+    expect(set.bvh.raycastFirst(ray(x, 2, 2, 0, -1, 0), THREE.FrontSide)).toBeNull();
     // no NaNs even when the axis is degenerate
     bone.scale.set(1, 0, 1);
     root.updateMatrixWorld(true);

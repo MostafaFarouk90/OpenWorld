@@ -4,6 +4,8 @@ import type * as THREE from 'three';
 export const HURTBOX_NAMES = [
   'head',
   'torso',
+  'abdomen',
+  'hips',
   'upperArmL',
   'upperArmR',
   'lowerArmL',

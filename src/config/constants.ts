@@ -130,6 +130,8 @@ export const COMBAT = {
   boneMultipliers: {
     head: 2.0,
     torso: 1.0,
+    abdomen: 1.0,
+    hips: 0.8,
     upperArmL: 0.75,
     upperArmR: 0.75,
     lowerArmL: 0.75,
@@ -147,4 +149,18 @@ export const COMBAT = {
   /** Demo attack clip and its active window as normalised clip time (start, end), matching animation-events.md. */
   demoClip: '1H_Melee_Attack_Slice_Horizontal',
   demoWindow: { start: 0.15, end: 0.36 },
+  /** Clip a struck training dummy plays before returning to Idle, and the crossfade into and out of it. */
+  dummyReactionClip: 'Hit_A',
+  dummyReactionFadeSeconds: 0.08,
+  /** Training dummies in the world scene: offset from the spawn in metres, and yaw (they face the spawn). */
+  dummies: [
+    { x: 0, z: -2.2 },
+    { x: 3.5, z: -3.5 },
+  ] as ReadonlyArray<{ x: number; z: number }>,
+  /** Floating damage numbers: lifetime, rise in metres, and the most shown at once. */
+  damageNumberSeconds: 0.9,
+  damageNumberRise: 1.2,
+  maxDamageNumbers: 16,
+  /** Volume of the positional hit clang. */
+  hitSoundVolume: 0.8,
 } as const;
