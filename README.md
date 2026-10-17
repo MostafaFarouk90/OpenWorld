@@ -7,6 +7,7 @@ npm install
 npm run dev      # dev server
 npm run build    # typecheck + production build
 npm run preview  # serve the production build
+npm test         # unit tests (Vitest), src/**/*.test.ts
 ```
 
 ## Layout
