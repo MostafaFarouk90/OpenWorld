@@ -115,6 +115,7 @@ export function startCombatDemo(renderer: Renderer): void {
         attacker.updateMatrixWorld(true);
         dummy.updateMatrixWorld(true);
         attackerBoxes.update();
+        if (debug) dummyBoxes.update(); // otherwise refit lazily, only while the window is active
         combat.update(dt);
         attackerBoxes.tickFlash(dt);
         refreshHud();

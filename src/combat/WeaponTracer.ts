@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { HitEvent } from './types';
 import type { HurtboxSet } from './HurtboxSet';
 import { damageFor, type DamageBus } from './DamageBus';
-import { sweepBlade, segmentVsCapsules } from './sweep';
+import { isUsableBlade, sweepBlade, segmentVsCapsules } from './sweep';
 
 export interface BladeSegment {
   hilt: THREE.Vector3;
@@ -131,6 +131,11 @@ export class WeaponTracer {
     this.weapon.updateWorldMatrix(true, false);
     this.curHilt.copy(this.localHilt).applyMatrix4(this.weapon.matrixWorld);
     this.curTip.copy(this.localTip).applyMatrix4(this.weapon.matrixWorld);
+    if (!isUsableBlade(this.curHilt, this.curTip)) {
+      // Degenerate or NaN blade: trace nothing and drop the previous pose so no stale sweep follows.
+      this.hasPrev = false;
+      return [];
+    }
     if (!this.hasPrev) {
       this.prevHilt.copy(this.curHilt);
       this.prevTip.copy(this.curTip);

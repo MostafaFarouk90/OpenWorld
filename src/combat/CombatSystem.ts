@@ -62,14 +62,23 @@ export class CombatSystem {
     // Snapshot: bus listeners may add or remove targets and attackers while we iterate.
     for (const [tracer, window] of [...this.attackers]) {
       if (!this.attackers.has(tracer)) continue;
-      const hits = tracer.tick(isWindowActive(window), [...this.targets], prepare, window.swingId);
+      const hits = tracer.tick(isWindowActive(window), this.liveTargets(), prepare, window.swingId);
       for (const hit of hits) all.push(hit);
     }
     for (const set of this.targets) set.tickFlash(dt);
     return all;
   }
 
-  /** Disposes all registered targets (BVHs, debug meshes) and detaches everything. Idempotent. */
+  /** Targets still registered when reached: removal or dispose by a hit listener takes effect immediately. */
+  private *liveTargets(): Generator<HurtboxSet> {
+    for (const set of [...this.targets]) {
+      if (!this.disposed && this.targets.has(set)) yield set;
+    }
+  }
+
+  /**
+   * Disposes all registered targets (BVHs, debug meshes) and detaches everything. Idempotent.
+   * Note: unlike `removeTarget`, this takes ownership of every set still registered. */
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;

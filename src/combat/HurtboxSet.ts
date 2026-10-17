@@ -43,6 +43,8 @@ export class HurtboxSet {
   readonly debugMesh: THREE.Mesh;
 
   private readonly bindings: Binding[] = [];
+  /** Scale that makes the faceted mesh enclose the true capsule (worst face-centre angle). */
+  private readonly circumscribe: number;
   private readonly radial: number;
   private readonly rings: number;
   private readonly vertsPer: number;
@@ -89,6 +91,7 @@ export class HurtboxSet {
       });
     }
     this.count = this.capsules.length;
+    this.circumscribe = 1 / Math.cos(Math.max(Math.PI / this.radial, Math.PI / (4 * this.rings)));
 
     const n = this.radial;
     const r = this.rings;
@@ -199,21 +202,23 @@ export class HurtboxSet {
       // Radius follows the bone's world scale (the Knight rig is scaled by its avatar root).
       const rad = bd.radius * m.getMaxScaleOnAxis();
       cap.radius = rad;
+      // The mesh circumscribes the true capsule so its flat faces never sit inside the analytic radius.
+      const mr = rad * this.circumscribe;
       let o = c * this.vertsPer * 3;
       // bottom pole
-      arr[o++] = cap.a.x - axis.x * rad;
-      arr[o++] = cap.a.y - axis.y * rad;
-      arr[o++] = cap.a.z - axis.z * rad;
+      arr[o++] = cap.a.x - axis.x * mr;
+      arr[o++] = cap.a.y - axis.y * mr;
+      arr[o++] = cap.a.z - axis.z * mr;
       // top pole
-      arr[o++] = cap.b.x + axis.x * rad;
-      arr[o++] = cap.b.y + axis.y * rad;
-      arr[o++] = cap.b.z + axis.z * rad;
+      arr[o++] = cap.b.x + axis.x * mr;
+      arr[o++] = cap.b.y + axis.y * mr;
+      arr[o++] = cap.b.z + axis.z * mr;
       for (let i = 0; i < 2 * r; i++) {
         const lower = i < r;
         const j = lower ? i + 1 : 2 * r - i; // 1..r, polar angle step from the pole
         const theta = (Math.PI / 2) * (j / r);
-        const ct = Math.cos(theta) * rad;
-        const rr = Math.sin(theta) * rad;
+        const ct = Math.cos(theta) * mr;
+        const rr = Math.sin(theta) * mr;
         const end = lower ? cap.a : cap.b;
         const sgn = lower ? -1 : 1;
         const cx = end.x + axis.x * ct * sgn;
