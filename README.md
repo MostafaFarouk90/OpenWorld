@@ -18,7 +18,7 @@ npm test         # unit tests (Vitest), src/**/*.test.ts
 | `src/config/constants.ts` | Reference constants from the technical spec |
 | `src/rendering/` | Three.js renderer, scene, camera |
 | `src/physics/` | Rapier world and kinematic character controller (stubs) |
-| `src/terrain/` | Quadtree LOD terrain, heightfield math, worker pool (stubs) |
+| `src/terrain/` | Quadtree LOD terrain with worker pool and skirts, swappable height function, Rapier heightfield patches. Demo: `npm run dev`, open `/?scene=terrain` |
 | `src/audio/` | Spatial audio and stem crossfades (stub) |
 | `src/input/` | Keyboard and mouse input (stub) |
 | `src/combat/` | BVH weapon hitbox tracing (stub) |
