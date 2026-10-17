@@ -21,9 +21,30 @@ export const AUDIO = {
   distanceModel: 'exponential',
 } as const;
 
-/** Quadtree LOD terrain chunk size range in metres. */
+/** Quadtree LOD terrain. Distances and sizes in metres. */
 export const TERRAIN = {
+  /** Smallest (most detailed) chunk edge length: the quadtree's leaf level. */
   minChunkSize: 100,
+  /** Root chunk edge length. 3200 / 100 gives six LOD levels. */
   maxChunkSize: 3200,
+  /** Grid cells along each chunk edge, at every LOD level (100 m chunk = 1.56 m spacing). */
+  chunkSegments: 64,
+  /** A node splits when the camera is closer than `size * lodSplitFactor` to its footprint. */
+  lodSplitFactor: 1.6,
+  /** Root tiles whose footprint lies within this horizontal radius of the camera are streamed. */
+  viewDistance: 4800,
+  /** Skirt depth as a fraction of chunk size, so coarse chunks get deeper skirts. */
+  skirtDepthRatio: 0.04,
+  /** Lower bound on skirt depth for the finest chunks. */
+  minSkirtDepth: 2,
+  /** Web Workers building chunk geometry (clamped to 1-4 and to hardwareConcurrency - 1). */
   workerCount: 2,
+  /** Edge length of each square physics heightfield patch around the player. */
+  colliderPatchSize: 200,
+  /** Cells per patch edge: 1.5625 m spacing, matching the finest render LOD. */
+  colliderPatchCells: 128,
+  /** Patches kept around the player's patch in each direction (1 = a 3 x 3 block). */
+  colliderPatchRadius: 1,
+  /** Seed for the procedural placeholder heightmap. */
+  seed: 1337,
 } as const;
