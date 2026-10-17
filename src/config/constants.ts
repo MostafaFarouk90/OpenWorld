@@ -37,7 +37,7 @@ export const TERRAIN = {
   skirtDepthRatio: 0.04,
   /** Lower bound on skirt depth for the finest chunks. */
   minSkirtDepth: 2,
-  /** Web Workers building chunk geometry (clamped to 2-4 and to hardwareConcurrency). */
+  /** Web Workers building chunk geometry (clamped to 1-4 and to hardwareConcurrency - 1). */
   workerCount: 2,
   /** Edge length of each square physics heightfield patch around the player. */
   colliderPatchSize: 200,

@@ -82,7 +82,8 @@ export class TerrainManager {
   /** Streams and selects chunks for the given viewpoint. Call once per rendered frame. */
   update(cameraPosition: THREE.Vector3): void {
     if (this.disposed) return;
-    this.tree.update(cameraPosition);
+    // Dispatch after the whole frame's requests are queued, so the nearest chunks go first.
+    this.pool.batch(() => this.tree.update(cameraPosition));
   }
 
   /** Frees every chunk, terminates the workers and detaches from the scene. Idempotent. */

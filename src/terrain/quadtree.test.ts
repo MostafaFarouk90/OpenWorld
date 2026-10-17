@@ -188,17 +188,28 @@ describe('split and draw', () => {
   });
 
   it('counts visible nodes without double counting', () => {
-    const { tree, flush } = setup();
+    const { tree, flush, shown } = setup();
     tree.update(SPLIT_ROOT_ONLY);
     expect(tree.visibleCount).toBe(0);
     flush();
     tree.update(SPLIT_ROOT_ONLY);
-    // Root 0,0 shows its 4 children; the 8 other roots are also split-eligible or leaf-visible.
-    const visibleByNode = [...tree.roots.values()].length;
-    expect(tree.visibleCount).toBeGreaterThanOrEqual(visibleByNode);
+    // Exact count: nodes holding data whose latest setVisible call was true.
+    const exact = () => {
+      let n = 0;
+      const walk = (node: Node) => {
+        if (node.data !== null && shown.has(label(node))) n++;
+        node.children?.forEach(walk);
+      };
+      tree.roots.forEach(walk);
+      return n;
+    };
+    expect(exact()).toBeGreaterThan(0);
+    expect(shown.size).toBe(exact());
+    expect(tree.visibleCount).toBe(exact());
     const after = tree.visibleCount;
     tree.update(SPLIT_ROOT_ONLY);
     expect(tree.visibleCount).toBe(after);
+    expect(exact()).toBe(after);
   });
 
   it('shows built children of a node that has no data (no-hole fallback)', () => {

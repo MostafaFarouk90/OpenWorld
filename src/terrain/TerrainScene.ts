@@ -11,11 +11,15 @@ export class TerrainScene {
   readonly terrain: TerrainManager;
   private readonly flyover: TerrainFlyover;
   private readonly lights: THREE.Light[];
+  private readonly previousBackground: THREE.Scene['background'];
+  private readonly previousFar: number;
 
   constructor(
     private readonly scene: THREE.Scene,
     private readonly camera: THREE.PerspectiveCamera,
   ) {
+    this.previousBackground = scene.background;
+    this.previousFar = camera.far;
     scene.background = new THREE.Color(0x9db8d3);
     scene.fog = new THREE.Fog(0x9db8d3, TERRAIN.viewDistance * 0.15, TERRAIN.viewDistance * 0.95);
 
@@ -45,5 +49,8 @@ export class TerrainScene {
     this.terrain.dispose();
     for (const light of this.lights) light.removeFromParent();
     this.scene.fog = null;
+    this.scene.background = this.previousBackground;
+    this.camera.far = this.previousFar;
+    this.camera.updateProjectionMatrix();
   }
 }
