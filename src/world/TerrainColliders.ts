@@ -46,6 +46,9 @@ export class TerrainColliders {
   private queue: string[] = [];
   private playerKey: string | null = null;
   private disposed = false;
+  private updates = 0;
+  /** Keys whose collider failed to add: retried after an exponential backoff, warned about once. */
+  private readonly failures = new Map<string, { count: number; retryAt: number }>();
 
   constructor(
     private readonly physics: PhysicsWorld,
@@ -92,14 +95,18 @@ export class TerrainColliders {
   /**
    * Call once per fixed tick before `physics.step()`. Removes colliders that left the wanted block,
    * builds the player's patch immediately, and builds queued patches within the time budget.
-   * Non-finite positions change nothing; build failures are logged and retried on later updates.
+   * Non-finite positions change nothing; a patch that fails to add is logged once and retried after
+   * a growing number of updates.
    */
   update(x: number, z: number): void {
     if (this.disposed || !Number.isFinite(x) || !Number.isFinite(z)) return;
+    this.updates++;
 
     const px = Math.floor(x / this.patchSize);
     const pz = Math.floor(z / this.patchSize);
     const playerKey = `${px},${pz}`;
+    // Steady state: same patch, nothing to build or retry.
+    if (playerKey === this.playerKey && this.queue.length === 0 && this.failures.size === 0) return;
     const wanted = new Set<string>();
     for (let iz = pz - this.radius; iz <= pz + this.radius; iz++) {
       for (let ix = px - this.radius; ix <= px + this.radius; ix++) wanted.add(`${ix},${iz}`);
@@ -113,18 +120,21 @@ export class TerrainColliders {
     for (const key of this.jobs.keys()) {
       if (!wanted.has(key)) this.jobs.delete(key);
     }
+    for (const key of this.failures.keys()) {
+      if (!wanted.has(key)) this.failures.delete(key);
+    }
     this.queue = this.queue.filter((key) => wanted.has(key));
 
     const queued = new Set(this.queue);
     for (const key of wanted) {
-      if (!this.colliders.has(key) && !queued.has(key)) this.queue.push(key);
+      if (!this.colliders.has(key) && !queued.has(key) && !this.backingOff(key)) this.queue.push(key);
     }
     if (playerKey !== this.playerKey || this.queue.length > queued.size) {
       this.playerKey = playerKey;
       this.sortQueue(x, z);
     }
 
-    if (!this.colliders.has(playerKey)) {
+    if (!this.colliders.has(playerKey) && !this.backingOff(playerKey)) {
       const i = this.queue.indexOf(playerKey);
       if (i >= 0) this.queue.splice(i, 1);
       const job = this.jobFor(playerKey);
@@ -137,6 +147,7 @@ export class TerrainColliders {
   /** Removes every collider and clears the queue. Idempotent; later updates do nothing. */
   dispose(): void {
     this.disposed = true;
+    this.failures.clear();
     for (const collider of this.colliders.values()) this.physics.removeCollider(collider);
     this.colliders.clear();
     this.jobs.clear();
@@ -212,12 +223,22 @@ export class TerrainColliders {
         center: { x: job.cx, y: 0, z: job.cz },
       });
       this.colliders.set(job.key, collider);
+      this.failures.delete(job.key);
       return true;
     } catch (err) {
-      console.warn(`TerrainColliders: failed to add heightfield ${job.key}`, err);
-      if (!this.queue.includes(job.key)) this.queue.push(job.key);
+      const failure = this.failures.get(job.key) ?? { count: 0, retryAt: 0 };
+      if (failure.count === 0) console.warn(`TerrainColliders: failed to add heightfield ${job.key}; will retry`, err);
+      failure.count++;
+      // 2, 4, 8 ... updates, capped at about ten seconds of ticks.
+      failure.retryAt = this.updates + Math.min(2 ** failure.count, 600);
+      this.failures.set(job.key, failure);
       return false;
     }
+  }
+
+  private backingOff(key: string): boolean {
+    const failure = this.failures.get(key);
+    return failure !== undefined && this.updates < failure.retryAt;
   }
 }
 

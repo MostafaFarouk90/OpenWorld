@@ -37,8 +37,18 @@ interface AttackRun {
   previousNormalizedTime: number;
   windowOpen: boolean;
   windowClosed: boolean;
+  /** Whether the weapon counted as dangerous on the latest tick (also true for a sub-tick window). */
+  active: boolean;
   ended: boolean;
+  /** Tick on which the clip played to its end; the attack stays visible to combat for that tick. */
+  endTick: number;
 }
+
+/**
+ * Clip time within this many seconds of the end counts as finished. Knight clips last whole ticks
+ * and glTF stores durations as float32, so accumulated tick time can stop a hair short of the end.
+ */
+const END_EPSILON = 1e-4;
 
 type ClipState = Exclude<LocomotionState, 'attack'>;
 
@@ -75,6 +85,7 @@ export class AnimationController {
   private pendingAttack: AttackClipDef | null = null;
   private attack: AttackRun | null = null;
   private swingCounter = 0;
+  private tickCount = 0;
 
   /**
    * @throws Error when `clips` lacks the idle clip, which every fallback ends at.
@@ -141,7 +152,7 @@ export class AnimationController {
   /** Current blend weight of a clip (0 when not playing). */
   weightOf(clip: string): number {
     const action = this.actions.get(clip);
-    return action && action.isRunning() ? action.getEffectiveWeight() : 0;
+    return action ? (this.weights.get(clip) ?? 0) : 0;
   }
 
   /**
@@ -158,12 +169,12 @@ export class AnimationController {
   /** The attack playing this tick, or null. */
   activeAttack(): ActiveAttack | null {
     const a = this.attack;
-    if (!a || a.ended) return null;
+    if (!a || (a.ended && a.endTick !== this.tickCount)) return null;
     return {
       ...a.def,
       normalizedTime: a.normalizedTime,
       previousNormalizedTime: a.previousNormalizedTime,
-      active: isInWindow(a),
+      active: a.active,
       swingId: a.swingId,
     };
   }
@@ -173,6 +184,7 @@ export class AnimationController {
    * advances the mixer, updates the root's world matrices, then emits this tick's events.
    */
   fixedUpdate(input: LocomotionInput, dt: number = FIXED_TIMESTEP): void {
+    this.tickCount++;
     this.airTime = input.grounded ? 0 : this.airTime + dt;
     if (!input.grounded) this.minAirVerticalSpeed = Math.min(this.minAirVerticalSpeed, input.verticalSpeed);
 
@@ -189,14 +201,16 @@ export class AnimationController {
         previousNormalizedTime: 0,
         windowOpen: false,
         windowClosed: false,
+        active: false,
         ended: false,
+        endTick: -1,
       };
     } else {
       const clipDuration = this.actions.get(this.currentClip)!.getClip().duration;
       const next = nextState(this._state, input, {
         timeInState: this.timeInState,
         airTime: this.airTime,
-        clipDone: this.clipElapsed >= clipDuration - 1e-6,
+        clipDone: this.clipElapsed >= clipDuration - END_EPSILON,
       });
       if (next !== this._state) {
         const wasAirborne = this._state === 'airborne' || this._state === 'jumpStart';
@@ -330,7 +344,9 @@ export class AnimationController {
     if (!a || a.ended || this._state !== 'attack') return;
     const action = this.actions.get(a.def.clip)!;
     a.previousNormalizedTime = a.normalizedTime;
-    a.normalizedTime = Math.min(1, Math.max(a.previousNormalizedTime, action.time / action.getClip().duration));
+    const duration = action.getClip().duration;
+    const time = action.time >= duration - END_EPSILON ? duration : action.time;
+    a.normalizedTime = Math.min(1, Math.max(a.previousNormalizedTime, time / duration));
     const { clip } = a.def;
     const t = a.normalizedTime;
 
@@ -339,6 +355,7 @@ export class AnimationController {
       this.events.emit({ type: 'attackWindow', clip, swingId: a.swingId, phase: 'open', normalizedTime: t });
       // A window shorter than one tick is skipped over: it still counts as active for this tick.
       if (t > a.def.activeEnd) {
+        a.active = true;
         this.emitProgress(a, true);
         a.windowClosed = true;
         this.events.emit({ type: 'attackWindow', clip, swingId: a.swingId, phase: 'close', normalizedTime: t });
@@ -346,7 +363,8 @@ export class AnimationController {
         return;
       }
     }
-    this.emitProgress(a, isInWindow(a));
+    a.active = isInWindow(a);
+    this.emitProgress(a, a.active);
     if (a.windowOpen && !a.windowClosed && t > a.def.activeEnd) {
       a.windowClosed = true;
       this.events.emit({ type: 'attackWindow', clip, swingId: a.swingId, phase: 'close', normalizedTime: t });
@@ -372,6 +390,7 @@ export class AnimationController {
       this.events.emit({ type: 'attackWindow', clip: a.def.clip, swingId: a.swingId, phase: 'close', normalizedTime: 1 });
     }
     a.ended = true;
+    a.endTick = this.tickCount;
     this.clipEndSent = true;
     this.events.emit({ type: 'clipEnd', clip: a.def.clip, interrupted: false });
   }
@@ -380,7 +399,7 @@ export class AnimationController {
   private emitOneShotEnd(): void {
     if (this._state === 'attack' || LOOPING_STATES.has(this._state) || this.clipEndSent) return;
     const duration = this.actions.get(this.currentClip)!.getClip().duration;
-    if (this.clipElapsed < duration - 1e-6) return;
+    if (this.clipElapsed < duration - END_EPSILON) return;
     this.clipEndSent = true;
     this.events.emit({ type: 'clipEnd', clip: this.currentClip, interrupted: false });
   }
