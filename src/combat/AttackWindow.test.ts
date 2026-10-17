@@ -24,8 +24,8 @@ describe('isWindowActive', () => {
     expect(isWindowActive(src(0.3, 0.6, 0.2999))).toBe(false);
     expect(isWindowActive(src(0.3, 0.6, 0.6001))).toBe(false);
   });
-  it('zero-length window is never active', () => {
-    expect(isWindowActive(src(0.5, 0.5, 0.5))).toBe(false);
+  it('zero-length window is only active at exactly that instant (contract: end >= start)', () => {
+    expect(isWindowActive(src(0.5, 0.5, 0.5))).toBe(true);
     expect(isWindowActive(src(0.5, 0.5, 0.4))).toBe(false);
   });
   it('inverted window is never active', () => {
@@ -140,5 +140,12 @@ describe('MixerAttackWindowSource', () => {
     const action = mixer.clipAction(new THREE.AnimationClip('z', 0, []));
     action.play();
     expect(new MixerAttackWindowSource(action, 'z', 0, 1).currentTime()).toBeNull();
+  });
+
+  it('returns null when the action plays a different clip than the window describes', () => {
+    const { action } = setup();
+    action.play();
+    expect(new MixerAttackWindowSource(action, 'stab', 0.3, 0.6).currentTime()).toBeNull();
+    expect(new MixerAttackWindowSource(action, 'slash', 0.3, 0.6).currentTime()).not.toBeNull();
   });
 });

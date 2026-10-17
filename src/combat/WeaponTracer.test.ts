@@ -388,3 +388,90 @@ describe('WeaponTracer extras', () => {
     expect(tracer.swing).toBe(2);
   });
 });
+
+describe('review fixes', () => {
+  const nan = v(NaN, 0.5, 0);
+
+  it('ignores NaN and zero-length blades at the sweep level', () => {
+    const { set } = character([{ name: 'torso', x: 0 }]);
+    expect(sweepBlade(nan, v(0.5, 0.5, 0), v(0, 0.5, 0), v(0.5, 0.5, 0), set)).toBeNull();
+    expect(sweepBlade(v(-0.5, 0.5, 0), nan, v(-0.5, 0.5, 0), v(0.5, 0.5, 0), set)).toBeNull();
+    expect(sweepBlade(v(-0.5, 0.5, 0), v(0.5, 0.5, 0), v(NaN, NaN, NaN), v(NaN, NaN, NaN), set)).toBeNull();
+  });
+
+  it('ignores NaN and zero-length blades on the tracer\'s first active tick', () => {
+    const t = character([{ name: 'torso', x: 0 }]);
+    const w = new THREE.Group();
+    const zero = new WeaponTracer({ attacker: {}, weapon: w, hilt: v(0, 0, 0), tip: v(0, 0, 0) });
+    w.position.set(0, 0.5, 0);
+    w.updateMatrixWorld(true);
+    expect(zero.tick(true, [t.set])).toEqual([]);
+    const bad = new WeaponTracer({ attacker: {}, weapon: w, hilt: v(0, 0, 0), tip: nan });
+    expect(bad.tick(true, [t.set])).toEqual([]);
+  });
+
+  it('catches grazes through the outer part of the radius in a face-centre direction', () => {
+    const { set } = character([{ name: 'torso', x: 0, r: 0.2 }]);
+    for (const deg of [0, 22.5, 45, 67.5, 90, 112.5, 157.5, 202.5, 292.5]) {
+      for (const frac of [0.9, 0.95, 0.98]) {
+        const a = (deg * Math.PI) / 180;
+        const px = Math.cos(a) * 0.2 * frac;
+        const pz = Math.sin(a) * 0.2 * frac;
+        // The blade passes through (px, y, pz) in one frame, moving perpendicular to the radial direction.
+        const dx = -Math.sin(a);
+        const dz = Math.cos(a);
+        const hit = sweepBlade(
+          v(px - dx * 2, 0.4, pz - dz * 2),
+          v(px - dx * 2, 0.6, pz - dz * 2),
+          v(px + dx * 2, 0.4, pz + dz * 2),
+          v(px + dx * 2, 0.6, pz + dz * 2),
+          set,
+        );
+        expect(hit, `angle ${deg} frac ${frac}`).not.toBeNull();
+      }
+    }
+  });
+
+  it('re-opening the window with the blade elsewhere does not sweep across the gap', () => {
+    const t = character([{ name: 'torso', x: 0 }]);
+    const w = weapon();
+    const tracer = new WeaponTracer({ attacker: {}, weapon: w });
+    swing(tracer, w, [t.set], [-1]);
+    tracer.tick(false, [t.set]);
+    expect(swing(tracer, w, [t.set], [1, 1.2])).toEqual([]);
+  });
+
+  it('hit events from the tracer carry a normal facing against the motion', () => {
+    const t = character([{ name: 'torso', x: 0 }]);
+    const w = weapon();
+    const tracer = new WeaponTracer({ attacker: {}, weapon: w });
+    const hits = swing(tracer, w, [t.set], [-1, 1]);
+    expect(hits[0].normal.z).toBeLessThan(0);
+  });
+
+  it('removal or dispose by a hit listener takes effect for the remaining targets', () => {
+    for (const mode of ['remove', 'dispose'] as const) {
+      const system = new CombatSystem();
+      const a = character([{ name: 'torso', x: 0 }]);
+      const b = character([{ name: 'torso', x: 0 }]);
+      const w = weapon();
+      const tracer = new WeaponTracer({ attacker: {}, weapon: w, bus: system.bus });
+      system.addTarget(a.set);
+      system.addTarget(b.set);
+      system.addAttacker(tracer, { clipName: 'x', start: 0, end: 1, currentTime: () => 0.5 });
+      const seen: unknown[] = [];
+      system.bus.subscribe((e) => {
+        seen.push(e.target);
+        if (mode === 'remove') system.removeTarget(b.set);
+        else system.dispose();
+      });
+      w.position.set(-0.5, 0.5, -1);
+      w.updateMatrixWorld(true);
+      system.update(1 / 60);
+      w.position.z = 1;
+      w.updateMatrixWorld(true);
+      system.update(1 / 60);
+      expect(seen).toEqual([a.owner]);
+    }
+  });
+});

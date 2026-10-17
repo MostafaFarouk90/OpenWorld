@@ -18,7 +18,6 @@ const quadBox = new THREE.Box3();
 const line = new THREE.Line3();
 const tmpTri = new ExtendedTriangle();
 const mid = new THREE.Vector3();
-const bladeDir = new THREE.Vector3();
 const motion = new THREE.Vector3();
 const oldPt = new THREE.Vector3();
 const newPt = new THREE.Vector3();
@@ -27,6 +26,11 @@ const d2 = new THREE.Vector3();
 const r = new THREE.Vector3();
 const c1 = new THREE.Vector3();
 const c2 = new THREE.Vector3();
+
+/** True for a finite blade segment of at least MIN_BLADE_LENGTH (NaN-safe: NaN compares false). */
+export function isUsableBlade(h: THREE.Vector3, t: THREE.Vector3): boolean {
+  return h.distanceToSquared(t) >= MIN_BLADE_LENGTH ** 2 && Number.isFinite(h.x + h.y + h.z + t.x + t.y + t.z);
+}
 
 /** Closest points between segments p1-q1 and p2-q2 (Ericson, Real-Time Collision Detection). */
 export function closestSegmentSegment(
@@ -85,7 +89,7 @@ export function segmentVsCapsules(h: THREE.Vector3, t: THREE.Vector3, set: Hurtb
   let bestDist = Infinity;
   for (const cap of set.capsules) {
     const dist = closestSegmentSegment(h, t, cap.a, cap.b, c1, c2);
-    if (dist > cap.radius || dist >= bestDist) continue;
+    if (!(dist <= cap.radius) || dist >= bestDist) continue;
     bestDist = dist;
     const normal = new THREE.Vector3().subVectors(c1, c2);
     if (normal.lengthSq() < 1e-12) normal.set(0, 1, 0);
@@ -107,7 +111,7 @@ export function sweepBlade(
   set: HurtboxSet,
 ): SweepHit | null {
   if (set.count === 0) return null;
-  if (h0.distanceToSquared(t0) < MIN_BLADE_LENGTH ** 2 || h1.distanceToSquared(t1) < MIN_BLADE_LENGTH ** 2) return null;
+  if (!isUsableBlade(h0, t0) || !isUsableBlade(h1, t1)) return null;
 
   // Blade already inside a capsule at the start of the frame: earliest possible hit.
   const startHit = segmentVsCapsules(h0, t0, set, 0);
@@ -130,7 +134,6 @@ export function sweepBlade(
     quadA.needsUpdate = true;
     quadB.needsUpdate = true;
     quadBox.makeEmpty().expandByPoint(h0).expandByPoint(t0).expandByPoint(h1).expandByPoint(t1);
-    bladeDir.copy(t1).sub(h1);
 
     set.bvh.shapecast({
       intersectsBounds: (box) => box.intersectsBox(quadBox),

@@ -17,7 +17,7 @@ export type HurtboxName = (typeof HURTBOX_NAMES)[number];
 
 /**
  * A capsule fixed to a skeleton bone. `start` and `end` are the capsule's axis endpoints in the
- * bone's local space (bone space of `bone`); `radius` is in metres (assumes unscaled bones).
+ * bone's local space (bone space of `bone`); `radius` is in metres (scaled by the bone's world scale).
  */
 export interface HurtboxDef {
   name: string;
