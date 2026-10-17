@@ -338,3 +338,74 @@ describe('dispose', () => {
     expect(() => world.dispose()).not.toThrow();
   });
 });
+
+describe('review follow-ups', () => {
+  it('during the tick the avatar is at the simulated feet and heading, not the interpolated render pose', () => {
+    const { world, avatar } = makeWorld();
+    const walk: InputSnapshot = { ...IDLE, moveForward: 1 };
+    const checks: number[] = [];
+    avatar.events.subscribe((e) => {
+      if (e.type !== 'footstep') return;
+      const feet = feetOf(world);
+      const at = avatar.root.getWorldPosition(new THREE.Vector3());
+      checks.push(at.distanceTo(new THREE.Vector3(feet.x, feet.y, feet.z)));
+      const q = avatar.root.getWorldQuaternion(new THREE.Quaternion());
+      const facing = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), world.player.facingYaw);
+      checks.push(q.angleTo(facing));
+    });
+    for (let i = 0; i < 180; i++) {
+      // A render between ticks leaves the mesh one tick behind and only partly turned.
+      world.render(0, 0.0001);
+      world.fixedUpdate(walk, EAST);
+    }
+    expect(checks.length).toBeGreaterThan(4);
+    for (const c of checks) expect(c).toBeLessThan(1e-5);
+    // The render pose really did differ, so the check above is meaningful.
+    world.render(0, 0.0001);
+    const rendered = avatar.root.getWorldPosition(new THREE.Vector3());
+    const f = feetOf(world);
+    expect(rendered.distanceTo(new THREE.Vector3(f.x, f.y, f.z))).toBeGreaterThan(0.05);
+    world.dispose();
+  });
+
+  it('makes no footsteps while airborne during a running jump', () => {
+    const { world, avatar } = makeWorld();
+    const walk: InputSnapshot = { ...IDLE, moveForward: 1 };
+    run(world, 60, walk, EAST);
+    world.fixedUpdate({ ...walk, jump: true }, EAST);
+    let airborneSteps = 0;
+    let airTicks = 0;
+    for (let i = 0; i < 90; i++) {
+      const before = sounds.footstep.mock.calls.length;
+      world.fixedUpdate(walk, EAST);
+      const s = avatar.controller.state;
+      if (s === 'jumpStart' || s === 'airborne') {
+        airTicks++;
+        airborneSteps += sounds.footstep.mock.calls.length - before;
+      }
+    }
+    expect(airTicks).toBeGreaterThan(20);
+    expect(airborneSteps).toBe(0);
+    world.dispose();
+  });
+
+  it('an attack is interrupted when the player leaves the ground, and movement unlocks', () => {
+    const { world, avatar } = makeWorld();
+    run(world, 30);
+    const events: string[] = [];
+    avatar.events.subscribe((e) => {
+      if (e.type === 'clipEnd' && e.clip === '1H_Melee_Attack_Slice_Horizontal') events.push(`end:${e.interrupted}`);
+    });
+    world.fixedUpdate({ ...IDLE, attack: 1 }, NO_MOVE);
+    run(world, 10);
+    expect(avatar.controller.state).toBe('attack');
+    const f = feetOf(world);
+    world.player.controller.teleport({ x: f.x, y: f.y + 6, z: f.z });
+    run(world, 20);
+    expect(avatar.controller.state).toBe('airborne');
+    expect(events).toEqual(['end:true']);
+    expect(avatar.controller.movementLocked).toBe(false);
+    expect(avatar.controller.activeAttack()).toBeNull();
+    world.dispose();
+  });
+});

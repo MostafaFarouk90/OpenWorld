@@ -107,6 +107,9 @@ export const KNIGHT = {
   footstepMinWeight: 0.5,
   /** Fall speed above which landing plays a heavier thud, in m/s. */
   hardLandingSpeed: 6,
+  /** Volumes of the footstep and landing sounds. */
+  footstepVolume: 0.6,
+  landVolume: 0.8,
 } as const;
 
 /** Open-world scene. */

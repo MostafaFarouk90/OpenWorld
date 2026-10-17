@@ -385,8 +385,11 @@ describe('TerrainColliders failures', () => {
     expect(String(warn.mock.calls[0][0])).toContain('0,0');
     expect(warn.mock.calls[0][1]).toBeInstanceOf(Error);
     expect(tc.keys).not.toContain('0,0');
-    expect(tc.pendingKeys).toContain('0,0');
+    // Backing off: the failed key is not rebuilt on the very next update.
+    expect(tc.pendingKeys).not.toContain('0,0');
     vi.spyOn(physics, 'addHeightfield').mockImplementation(real);
+    tc.update(5, 5);
+    expect(tc.keys).not.toContain('0,0');
     tc.update(5, 5);
     expect(tc.keys).toContain('0,0');
     expect(tc.count).toBe(9);
@@ -419,7 +422,40 @@ describe('TerrainColliders failures', () => {
     for (let i = 0; i < 10; i++) expect(() => tc.update(5, 5)).not.toThrow();
     expect(tc.count).toBe(6);
     expect(physics.world.colliders.len()).toBe(6);
-    expect(tc.pendingKeys.sort()).toEqual(['1,-1', '1,0', '1,1']);
+    // The failing keys are waiting out their backoff rather than rebuilt every update.
+    expect(tc.pendingKeys).toEqual([]);
+  });
+
+  it('backs off exponentially and warns once per failing key', async () => {
+    const { physics, tc } = await setup({
+      cells: 4,
+      budgetMs: BIG,
+      heightAt: (x) => (x > 20 && x < 40 ? NaN : 0),
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const add = vi.spyOn(physics, 'addHeightfield');
+    for (let i = 0; i < 300; i++) tc.update(5, 5);
+    expect(warn).toHaveBeenCalledTimes(3);
+    // Three failing keys, each tried at updates 1, 3, 7, 15, 31, 63, 127, 255: 8 attempts, not 300.
+    const failedAttempts = add.mock.calls.filter(([hf]) => hf.center.x > 20 && hf.center.x < 40).length;
+    expect(failedAttempts).toBeLessThanOrEqual(3 * 9);
+    expect(failedAttempts).toBeGreaterThanOrEqual(3 * 6);
+  });
+
+  it('a backed-off key that leaves the wanted block is forgotten, and retried at once on return', async () => {
+    let failing = true;
+    const { tc } = await setup({
+      cells: 4,
+      budgetMs: BIG,
+      heightAt: (x) => (failing && x > 20 && x < 40 ? NaN : 0),
+    });
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    tc.update(5, 5);
+    expect(tc.keys).not.toContain('1,0');
+    failing = false;
+    tc.update(-500, 5); // far away: '1,0' leaves the block
+    tc.update(5, 5);
+    expect(tc.keys).toContain('1,0');
   });
 });
 

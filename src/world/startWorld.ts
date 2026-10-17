@@ -101,9 +101,9 @@ function followSun(sun: THREE.DirectionalLight, feet: THREE.Vector3): void {
 function createAudio(): AudioManager | null {
   try {
     const audio = new AudioManager();
-    audio.register('footstep-0', { src: [proceduralSounds.footstepUrl(0)], format: ['wav'], volume: 0.6 });
-    audio.register('footstep-1', { src: [proceduralSounds.footstepUrl(1)], format: ['wav'], volume: 0.6 });
-    audio.register('land', { src: [proceduralSounds.landUrl()], format: ['wav'], volume: 0.8 });
+    audio.register('footstep-0', { src: [proceduralSounds.footstepUrl(0)], format: ['wav'], volume: KNIGHT.footstepVolume });
+    audio.register('footstep-1', { src: [proceduralSounds.footstepUrl(1)], format: ['wav'], volume: KNIGHT.footstepVolume });
+    audio.register('land', { src: [proceduralSounds.landUrl()], format: ['wav'], volume: KNIGHT.landVolume });
     return audio;
   } catch (err) {
     console.warn('Audio is unavailable; the world runs silently.', err);

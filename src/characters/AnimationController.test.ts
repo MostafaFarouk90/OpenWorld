@@ -482,3 +482,131 @@ describe('AnimationController events and lifecycle', () => {
     expect(KNIGHT_CLIPS.idle).toBe('Idle');
   });
 });
+
+describe('AnimationController with real clip timing (review follow-ups)', () => {
+  // GLTFLoader gives float32 durations; Knight clips last a whole number of ticks.
+  function f32Clip(name: string, seconds: number): THREE.AnimationClip {
+    return new THREE.AnimationClip(name, undefined, [
+      new THREE.VectorKeyframeTrack('hips.position', new Float32Array([0, seconds]), [0, 0, 0, 0, 1, 0]),
+    ]);
+  }
+  const REAL: Record<string, number> = {
+    Idle: 1.0666667,
+    Walking_A: 1.0666667,
+    Running_A: 0.8,
+    Jump_Start: 0.6,
+    Jump_Idle: 1.0666667,
+    Jump_Land: 0.6666667,
+    '1H_Melee_Attack_Slice_Horizontal': 1.0666667,
+    '1H_Melee_Attack_Slice_Diagonal': 1,
+    '1H_Melee_Attack_Chop': 1.0666667,
+    '1H_Melee_Attack_Stab': 1.6,
+  };
+  const realSetup = () => {
+    const controller = new AnimationController(
+      rig(),
+      Object.entries(REAL).map(([n, d]) => f32Clip(n, d)),
+      { warn: vi.fn() },
+    );
+    const events: AnimationEvent[] = [];
+    controller.events.subscribe((e) => events.push(e));
+    return { controller, events };
+  };
+
+  for (const attack of KNIGHT_ATTACKS) {
+    it(`${attack.clip} completes (not interrupted) and its last progress is exactly 1`, () => {
+      const { controller, events } = realSetup();
+      expect(controller.playAttack(attack.clip)).toBe(true);
+      let lastSeen: number | null = null;
+      for (let i = 0; i < 200 && (i === 0 || controller.state !== 'idle'); i++) {
+        controller.fixedUpdate(IDLE);
+        const a = controller.activeAttack();
+        if (a) lastSeen = a.normalizedTime;
+      }
+      expect(controller.state).toBe('idle');
+      const ends = events.filter((e) => e.type === 'clipEnd' && e.clip === attack.clip);
+      expect(ends).toEqual([{ type: 'clipEnd', clip: attack.clip, interrupted: false }]);
+      const progress = events.filter((e) => e.type === 'attackProgress') as Array<{ normalizedTime: number }>;
+      expect(progress.at(-1)!.normalizedTime).toBe(1);
+      // Combat runs after the avatar each tick, so it must still see the final pose.
+      expect(lastSeen).toBe(1);
+    });
+  }
+
+  it('jump start and landing one-shots report a normal end with float32 durations', () => {
+    const { controller, events } = realSetup();
+    for (let i = 0; i < 40; i++) controller.fixedUpdate({ ...RISING, verticalSpeed: 3 });
+    for (let i = 0; i < 10; i++) controller.fixedUpdate(FALLING);
+    for (let i = 0; i < 60; i++) controller.fixedUpdate(IDLE);
+    const ends = events.filter((e) => e.type === 'clipEnd' && e.clip !== 'Idle' && e.clip !== 'Jump_Idle');
+    expect(ends).toEqual([
+      { type: 'clipEnd', clip: 'Jump_Start', interrupted: false },
+      { type: 'clipEnd', clip: 'Jump_Land', interrupted: false },
+    ]);
+  });
+
+  it('a sub-tick window is active through activeAttack() while its progress event is delivered', () => {
+    const tiny = { clip: '1H_Melee_Attack_Slice_Horizontal', activeStart: 0.5, activeEnd: 0.501 };
+    const controller = new AnimationController(rig(), knightClips(), { attacks: [tiny], warn: vi.fn() });
+    const seen: boolean[] = [];
+    controller.events.subscribe((e) => {
+      if (e.type === 'attackProgress' && e.active) seen.push(controller.activeAttack()!.active);
+    });
+    controller.playAttack(tiny.clip);
+    for (let i = 0; i < 80; i++) controller.fixedUpdate(IDLE);
+    expect(seen).toEqual([true]);
+  });
+});
+
+describe('AnimationController blending edge cases (review follow-ups)', () => {
+  it('a loop under half weight emits no footsteps', () => {
+    const controller = new AnimationController(rig(), knightClips(), {
+      warn: vi.fn(),
+      footsteps: { Running_A: [{ phase: 0.05, foot: 'left' }] },
+    });
+    const steps: AnimationEvent[] = [];
+    controller.events.subscribe((e) => e.type === 'footstep' && steps.push(e));
+    for (let i = 0; i < 30; i++) controller.fixedUpdate(WALK);
+    // Running_A restarts at 0 and crosses 0.05 after ~3 ticks, when its weight is still ~0.25.
+    for (let i = 0; i < 5; i++) controller.fixedUpdate(RUN);
+    expect(controller.weightOf('Running_A')).toBeLessThan(KNIGHT.footstepMinWeight);
+    expect(steps).toHaveLength(0);
+    for (let i = 0; i < 60; i++) controller.fixedUpdate(RUN);
+    expect(steps.length).toBeGreaterThan(0);
+  });
+
+  it('weights include a finished one-shot that is still blending out', () => {
+    const { controller, tick } = setup();
+    controller.playAttack(KNIGHT_ATTACKS[0].clip);
+    tick(IDLE, Math.ceil(DURATIONS[KNIGHT_ATTACKS[0].clip] / DT) + 3);
+    expect(controller.state).toBe('idle');
+    expect(controller.weightOf(KNIGHT_ATTACKS[0].clip)).toBeGreaterThan(0);
+    expect(totalWeight(controller)).toBeCloseTo(1, 6);
+  });
+
+  it('repeating an attack that is still blending out restarts it from the beginning', () => {
+    const { controller, tick } = setup();
+    const clip = KNIGHT_ATTACKS[0].clip;
+    controller.playAttack(clip);
+    tick(IDLE, Math.ceil(DURATIONS[clip] / DT) + 3);
+    expect(controller.weightOf(clip)).toBeGreaterThan(0);
+    expect(controller.playAttack(clip)).toBe(true);
+    tick(IDLE);
+    expect(controller.action(clip)!.time).toBeCloseTo(DT, 5);
+    expect(controller.activeAttack()!.swingId).toBe(2);
+  });
+
+  it('each landing reports its own fall speed', () => {
+    const { tick, events } = setup();
+    tick(RISING);
+    tick({ ...FALLING, verticalSpeed: -12 }, 15);
+    tick(IDLE, 60);
+    tick(RISING);
+    tick({ ...FALLING, verticalSpeed: -4 }, 15);
+    tick(IDLE, 2);
+    expect(events.filter((e) => e.type === 'land')).toEqual([
+      { type: 'land', fallSpeed: 12 },
+      { type: 'land', fallSpeed: 4 },
+    ]);
+  });
+});
