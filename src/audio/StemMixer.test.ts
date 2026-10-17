@@ -222,4 +222,73 @@ describe('StemMixer.add', () => {
     expect(ctx.sources).toHaveLength(1);
     expect(ctx.sources[0].buffer).toEqual(buf('a'));
   });
+
+  it('rejects a concurrent add of the same id while the first is still fetching', async () => {
+    let finish!: () => void;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            finish = () => resolve({ ok: true, status: 200, arrayBuffer: async () => new ArrayBuffer(8) } as Response);
+          }),
+      ),
+    );
+    const first = mixer.add('a', '/a.ogg');
+    await expect(mixer.add('a', buf('other'))).rejects.toThrow(/already added/);
+    finish();
+    await first;
+    mixer.start();
+    expect(ctx.sources).toHaveLength(1);
+    expect(ctx.sources[0].buffer).toEqual({ decoded: true });
+  });
+
+  it('allows adding the same id again after a failed add', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500 }) as Response));
+    await expect(mixer.add('a', '/a.ogg')).rejects.toThrow(/500/);
+    await mixer.add('a', buf('a'));
+    mixer.start();
+    expect(ctx.sources).toHaveLength(1);
+    expect(ctx.sources[0].buffer).toEqual(buf('a'));
+  });
+
+  it('allows a retry after a failed decode', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, arrayBuffer: async () => new ArrayBuffer(1) }) as Response));
+    ctx.decodeAudioData.mockRejectedValueOnce(new Error('bad'));
+    await expect(mixer.add('a', '/a.ogg')).rejects.toThrow(/decode/);
+    await expect(mixer.add('a', '/a.ogg')).resolves.toBeUndefined();
+  });
+});
+
+describe('StemMixer.dispose', () => {
+  it('stops sources, disconnects every stem gain and leaves no stems', async () => {
+    await mixer.add('a', buf('a'));
+    await mixer.add('b', buf('b'));
+    mixer.start();
+    const sources = [...ctx.sources];
+    mixer.dispose();
+    expect(mixer.isPlaying).toBe(false);
+    for (const s of sources) {
+      expect(s.stop).toHaveBeenCalledTimes(1);
+      expect(s.disconnect).toHaveBeenCalledTimes(1);
+    }
+    for (const g of ctx.gains) expect(g.disconnect).toHaveBeenCalledTimes(1);
+    mixer.start();
+    expect(ctx.sources).toHaveLength(2);
+    mixer.setMix({ a: 1 });
+    expect(param(0).calls.some((c) => c[0] === 'ramp')).toBe(false);
+  });
+
+  it('is safe on an empty mixer and when called twice', () => {
+    expect(() => {
+      mixer.dispose();
+      mixer.dispose();
+    }).not.toThrow();
+  });
+
+  it('allows re-adding an id after dispose', async () => {
+    await mixer.add('a', buf('a'));
+    mixer.dispose();
+    await expect(mixer.add('a', buf('a'))).resolves.toBeUndefined();
+  });
 });

@@ -15,6 +15,8 @@ interface Stem {
  */
 export class StemMixer {
   private readonly stems = new Map<string, Stem>();
+  /** Ids reserved by add() calls still fetching, so concurrent duplicates are rejected too. */
+  private readonly pending = new Set<string>();
   private playing = false;
 
   constructor(
@@ -25,10 +27,17 @@ export class StemMixer {
   /**
    * Adds a stem from a decoded buffer or a URL (fetched and decoded). Stems should share one
    * length. Rejects, without adding the stem, if the fetch fails or the data cannot be decoded.
+   * A stem added while the mixer is playing joins at the next start().
    */
   async add(id: string, source: StemSource): Promise<void> {
-    if (this.stems.has(id)) throw new Error(`Stem "${id}" is already added`);
-    const buffer = typeof source === 'string' ? await this.fetchAndDecode(id, source) : source;
+    if (this.stems.has(id) || this.pending.has(id)) throw new Error(`Stem "${id}" is already added`);
+    this.pending.add(id);
+    let buffer: AudioBuffer;
+    try {
+      buffer = typeof source === 'string' ? await this.fetchAndDecode(id, source) : source;
+    } finally {
+      this.pending.delete(id);
+    }
     const gain = this.ctx.createGain();
     gain.gain.value = 0;
     gain.connect(this.destination);
@@ -67,6 +76,13 @@ export class StemMixer {
       stem.source = null;
     }
     this.playing = false;
+  }
+
+  /** Stops playback and disconnects and forgets every stem. */
+  dispose(): void {
+    this.stop();
+    for (const stem of this.stems.values()) stem.gain.disconnect();
+    this.stems.clear();
   }
 
   /**

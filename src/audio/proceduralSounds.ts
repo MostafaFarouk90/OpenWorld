@@ -91,9 +91,14 @@ export function crackleLoopUrl(): string {
 /** Music stems share one tempo and length so they loop in lockstep: 90 BPM, 4 bars. */
 const STEM_SECONDS = (60 / 90) * 16;
 
-/** Ambient stem: a slow D-minor pad. Its length is a whole number of cycles of each partial. */
+/** Rounds a frequency to a whole number of cycles per stem, so the loop seam does not click. */
+function loopable(hz: number): number {
+  return Math.round(hz * STEM_SECONDS) / STEM_SECONDS;
+}
+
+/** Ambient stem: a slow D-minor pad, every partial snapped to whole cycles per loop. */
 export function ambientStem(ctx: BaseAudioContext): AudioBuffer {
-  const chord = [146.83, 174.61, 220.0, 293.66];
+  const chord = [146.83, 174.61, 220.0, 293.66].map(loopable);
   return toAudioBuffer(
     ctx,
     render(STEM_SECONDS, (t) => {
@@ -109,6 +114,7 @@ export function ambientStem(ctx: BaseAudioContext): AudioBuffer {
 export function combatStem(ctx: BaseAudioContext): AudioBuffer {
   const beat = 60 / 90 / 2; // eighth notes
   const rand = noise(11);
+  const droneHz = loopable(73.42);
   return toAudioBuffer(
     ctx,
     render(STEM_SECONDS, (t) => {
@@ -116,7 +122,7 @@ export function combatStem(ctx: BaseAudioContext): AudioBuffer {
       const local = t - step * beat;
       const kick = step % 4 === 0 ? Math.sin(TAU * (55 + 90 * Math.exp(-local * 30)) * local) * Math.exp(-local * 8) : 0;
       const hat = rand() * Math.exp(-local * 40) * 0.25;
-      const drone = 0.15 * Math.sin(TAU * 73.42 * t);
+      const drone = 0.15 * Math.sin(TAU * droneHz * t);
       return 0.5 * kick + hat + drone;
     }),
   );

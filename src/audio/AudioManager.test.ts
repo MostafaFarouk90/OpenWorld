@@ -17,8 +17,9 @@ interface PannerAttrs {
 const mock = vi.hoisted(() => {
   class FakeHowl {
     static instances: FakeHowl[] = [];
+    static initialState = 'loaded';
     nextId = 1;
-    loadState = 'loaded';
+    loadState = FakeHowl.initialState;
     groupAttrs: PannerAttrs | undefined;
     perIdAttrs: Array<[PannerAttrs, number]> = [];
     onceCallbacks: Array<[string, () => void]> = [];
@@ -56,6 +57,8 @@ const mock = vi.hoisted(() => {
     orientation: vi.fn(),
     masterGain: {} as unknown,
     usingWebAudio: true,
+    autoUnlock: true,
+    autoSuspend: true,
     ctx: null as null | { state: string; resume: ReturnType<typeof vi.fn> },
   };
   return { FakeHowl, Howler };
@@ -109,7 +112,10 @@ beforeEach(() => {
   win = new FakeWindow();
   vi.stubGlobal('window', win);
   FakeHowl.instances.length = 0;
+  FakeHowl.initialState = 'loaded';
   Howler.usingWebAudio = true;
+  Howler.autoUnlock = true;
+  Howler.autoSuspend = true;
   Howler.ctx = null;
   for (const fn of [Howler.volume, Howler.mute, Howler.pos, Howler.orientation]) fn.mockClear();
 });
@@ -128,6 +134,17 @@ describe('AudioManager construction', () => {
   it('throws when Howler has no AudioContext', () => {
     Howler.ctx = null;
     expect(() => new AudioManager()).toThrow(/Web Audio/);
+  });
+
+  it('disables Howler autoUnlock and autoSuspend before touching the volume', () => {
+    let atVolume: [boolean, boolean] | null = null;
+    Howler.volume.mockImplementationOnce(() => {
+      atVolume = [Howler.autoUnlock, Howler.autoSuspend];
+    });
+    make('running');
+    expect(Howler.autoUnlock).toBe(false);
+    expect(Howler.autoSuspend).toBe(false);
+    expect(atVolume).toEqual([false, false]);
   });
 
   it('is already unlocked when the context is running and attach plays immediately', () => {
@@ -185,6 +202,89 @@ describe('AudioManager.register', () => {
     m.register('boom', { src: ['b.ogg'] });
     expect(howl(0).unload).toHaveBeenCalledTimes(1);
     expect(howl(1).unload).not.toHaveBeenCalled();
+  });
+});
+
+describe('AudioManager.register restarts emitters', () => {
+  it('restarts a playing emitter on the new Howl and unloads the old one', () => {
+    make('running').register('hum', { src: ['a.ogg'], loop: true });
+    const obj = new THREE.Group();
+    obj.position.set(1, 2, 3);
+    manager.attach('hum', obj);
+    expect(howl(0).play).toHaveBeenCalledTimes(1);
+
+    manager.register('hum', { src: ['b.ogg'], loop: true });
+    expect(howl(0).unload).toHaveBeenCalledTimes(1);
+    expect(howl(1).play).toHaveBeenCalledTimes(1);
+    expect(howl(1).loop).toHaveBeenCalledWith(true, 1);
+    expect(howl(1).pos).toHaveBeenCalledWith(1, 2, 3, 1);
+    // The old Howl is not asked to play again.
+    expect(howl(0).play).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not restart emitters of other keys', () => {
+    make('running');
+    manager.register('a', { src: ['a.ogg'], loop: true });
+    manager.register('b', { src: ['b.ogg'], loop: true });
+    manager.attach('a', new THREE.Group());
+    manager.register('b', { src: ['b2.ogg'], loop: true });
+    expect(howl(0).play).toHaveBeenCalledTimes(1);
+    expect(howl(2).play).not.toHaveBeenCalled();
+  });
+
+  it('a queued (locked) emitter starts on the new Howl after unlock, not the old one', async () => {
+    make('suspended').register('hum', { src: ['a.ogg'], loop: true });
+    manager.attach('hum', new THREE.Group());
+    manager.register('hum', { src: ['b.ogg'], loop: true });
+    expect(howl(1).play).not.toHaveBeenCalled();
+    gesture();
+    await flush();
+    expect(howl(0).play).not.toHaveBeenCalled();
+    expect(howl(1).play).toHaveBeenCalledTimes(1);
+    expect(howl(1).pos).toHaveBeenCalledTimes(1);
+  });
+
+  it('an emitter waiting for the old Howl load starts from the new Howl', () => {
+    make('running').register('hum', { src: ['a.ogg'], loop: true });
+    howl(0).loadState = 'loading';
+    manager.attach('hum', new THREE.Group());
+    expect(howl(0).onceCallbacks).toHaveLength(1);
+
+    manager.register('hum', { src: ['b.ogg'], loop: true });
+    // New Howl is loaded in the mock, so it starts immediately.
+    expect(howl(1).play).toHaveBeenCalledTimes(1);
+    // The old Howl's load event must not start it a second time.
+    howl(0).loadState = 'loaded';
+    howl(0).fire('load');
+    expect(howl(0).play).not.toHaveBeenCalled();
+    expect(howl(1).play).toHaveBeenCalledTimes(1);
+  });
+
+  it('a re-registered emitter whose new Howl is still loading waits for its load', () => {
+    make('running').register('hum', { src: ['a.ogg'], loop: true });
+    manager.attach('hum', new THREE.Group());
+    FakeHowl.initialState = 'loading';
+    manager.register('hum', { src: ['b.ogg'], loop: true });
+    expect(howl(1).play).not.toHaveBeenCalled();
+    expect(howl(1).onceCallbacks).toHaveLength(1);
+    howl(1).loadState = 'loaded';
+    howl(1).fire('load');
+    expect(howl(1).play).toHaveBeenCalledTimes(1);
+    expect(howl(1).loop).toHaveBeenCalledWith(true, 1);
+  });
+
+  it('warns with the key when loading fails', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      make('running').register('boom', { src: ['a.ogg'] });
+      const onloaderror = howl().options.onloaderror as (id: number, err: unknown) => void;
+      onloaderror(1, 'Decoding failed');
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0][0])).toContain('boom');
+      expect(warn.mock.calls[0][1]).toBe('Decoding failed');
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 
@@ -290,6 +390,55 @@ describe('AudioManager unlock', () => {
     expect(late).toHaveBeenCalledTimes(1);
   });
 
+  it('calls resume again on the next gesture while the first resume is still pending, then unlocks', async () => {
+    manager.dispose(); // drop the beforeEach manager's listeners
+    const resolvers: Array<() => void> = [];
+    setCtx('suspended', () => new Promise<void>((r) => resolvers.push(r)));
+    manager = new AudioManager();
+    manager.register('boom', { src: ['a.ogg'] });
+    const cb = vi.fn();
+    manager.onUnlock(cb);
+
+    gesture();
+    await flush();
+    expect(resumeMock()).toHaveBeenCalledTimes(1);
+    expect(manager.isUnlocked).toBe(false);
+
+    gesture('keydown');
+    await flush();
+    expect(resumeMock()).toHaveBeenCalledTimes(2);
+    expect(manager.isUnlocked).toBe(false);
+
+    resolvers[1]();
+    await flush();
+    expect(manager.isUnlocked).toBe(true);
+    expect(cb).toHaveBeenCalledTimes(1);
+
+    // The first resume resolving late must not run callbacks twice.
+    resolvers[0]();
+    await flush();
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes the listeners after unlock so later gestures do not call resume', async () => {
+    gesture();
+    await flush();
+    expect(manager.isUnlocked).toBe(true);
+    for (const type of ['pointerdown', 'keydown', 'touchend']) gesture(type);
+    await flush();
+    expect(resumeMock()).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps listening after unlock fails and does not remove them on a rejected resume', async () => {
+    resumeMock().mockImplementation(() => Promise.reject(new Error('no')));
+    for (let i = 0; i < 3; i++) {
+      gesture();
+      await flush();
+    }
+    expect(resumeMock()).toHaveBeenCalledTimes(3);
+    expect(manager.isUnlocked).toBe(false);
+  });
+
   it('listens for keydown and touchend as well', async () => {
     gesture('keydown');
     await flush();
@@ -377,11 +526,13 @@ describe('AudioManager.update', () => {
   });
 
   it('moves emitters to their object world position, including a translated parent', () => {
+    const scene = new THREE.Scene();
     const parent = new THREE.Group();
     parent.position.set(10, 0, 0);
     const child = new THREE.Object3D();
     child.position.set(1, 2, 3);
     parent.add(child);
+    scene.add(parent);
     manager.attach('boom', child);
     howl().pos.mockClear();
 
@@ -403,6 +554,65 @@ describe('AudioManager.update', () => {
     manager.update(new THREE.PerspectiveCamera());
     expect(howl().stop).toHaveBeenCalledTimes(1);
     expect(howl().pos).not.toHaveBeenCalled();
+  });
+
+  it('detaches an emitter whose parent group was removed from the scene', () => {
+    const scene = new THREE.Scene();
+    const group = new THREE.Group();
+    const child = new THREE.Object3D();
+    group.add(child);
+    scene.add(group);
+    manager.attach('boom', child);
+    manager.update(new THREE.PerspectiveCamera());
+    expect(howl().stop).not.toHaveBeenCalled();
+
+    scene.remove(group);
+    howl().pos.mockClear();
+    manager.update(new THREE.PerspectiveCamera());
+    expect(howl().stop).toHaveBeenCalledWith(1);
+    expect(howl().pos).not.toHaveBeenCalled();
+    manager.update(new THREE.PerspectiveCamera());
+    expect(howl().stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps an emitter whose object is directly under the scene', () => {
+    const scene = new THREE.Scene();
+    const obj = new THREE.Object3D();
+    obj.position.set(7, 8, 9);
+    scene.add(obj);
+    manager.attach('boom', obj);
+    howl().pos.mockClear();
+    manager.update(new THREE.PerspectiveCamera());
+    manager.update(new THREE.PerspectiveCamera());
+    expect(howl().stop).not.toHaveBeenCalled();
+    expect(howl().pos).toHaveBeenCalledTimes(2);
+    expect(howl().pos).toHaveBeenLastCalledWith(7, 8, 9, 1);
+  });
+
+  it('listener follows a pitched and rolled camera inside a rotated, translated parent', () => {
+    const scene = new THREE.Scene();
+    const rig = new THREE.Group();
+    rig.position.set(5, -2, 9);
+    rig.rotation.y = 0.8;
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(1, 2, 3);
+    camera.rotation.x = -0.4;
+    camera.rotation.z = 0.3;
+    rig.add(camera);
+    scene.add(rig);
+    scene.updateMatrixWorld(true);
+
+    manager.update(camera);
+    const pos = camera.getWorldPosition(new THREE.Vector3());
+    const dir = camera.getWorldDirection(new THREE.Vector3());
+    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.getWorldQuaternion(new THREE.Quaternion()));
+    const [px, py, pz] = Howler.pos.mock.calls[0] as number[];
+    [px, py, pz].forEach((v, i) => expect(v).toBeCloseTo([pos.x, pos.y, pos.z][i], 6));
+    const o = Howler.orientation.mock.calls[0] as number[];
+    [dir.x, dir.y, dir.z, up.x, up.y, up.z].forEach((v, i) => expect(o[i]).toBeCloseTo(v, 6));
+    const upDiffers = Math.abs(o[3]) > 1e-3 || Math.abs(o[4] - 1) > 1e-3 || Math.abs(o[5]) > 1e-3;
+    expect(upDiffers).toBe(true);
+    expect(Math.hypot(o[3], o[4], o[5])).toBeCloseTo(1, 6);
   });
 
   it('does not touch a locked emitter that has no sound id yet', () => {
@@ -458,6 +668,13 @@ describe('AudioManager.dispose', () => {
     expect(howl(1).unload).toHaveBeenCalledTimes(1);
     expect(musicStop).toHaveBeenCalledTimes(1);
     expect(() => manager.play('a')).toThrow(/Unknown sound/);
+  });
+
+  it('disposes the music mixer', () => {
+    make('running');
+    const spy = vi.spyOn(manager.music, 'dispose');
+    manager.dispose();
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it('clears queued callbacks so they never run, even if a pending resume resolves afterwards', async () => {

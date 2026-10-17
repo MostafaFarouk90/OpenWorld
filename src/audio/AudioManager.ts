@@ -12,7 +12,10 @@ export interface SoundDefinition {
   loop?: boolean;
   /** Distance at which attenuation starts, in metres. */
   refDistance?: number;
-  /** Distance beyond which the sound stops getting quieter, in metres. */
+  /**
+   * PannerNode maxDistance, in metres. Only the linear distance model uses it; with our exponential
+   * model it has no effect on loudness (see exponentialGain).
+   */
   maxDistance?: number;
 }
 
@@ -38,6 +41,10 @@ const UNLOCK_EVENTS = ['pointerdown', 'keydown', 'touchend'] as const;
  * Before the browser allows audio (first pointer, key or touch), one-shots (`play`, `playAt`) are
  * dropped and return null, since a sound heard late is worse than none. Emitters from `attach`
  * are persistent, so they are queued and start on unlock.
+ *
+ * Howler's own autoUnlock and autoSuspend are turned off: autoUnlock replaces the AudioContext on
+ * devices that do not run at 44.1 kHz (which would orphan the StemMixer), and autoSuspend only
+ * counts Howl sounds, so it would suspend the context under playing music.
  */
 export class AudioManager {
   readonly music: StemMixer;
@@ -54,6 +61,8 @@ export class AudioManager {
   private readonly tmpQuat = new THREE.Quaternion();
 
   constructor() {
+    Howler.autoUnlock = false;
+    Howler.autoSuspend = false;
     // Touching Howler's volume creates its shared AudioContext and master gain.
     Howler.volume(1);
     if (!Howler.usingWebAudio || !Howler.ctx) {
@@ -87,6 +96,7 @@ export class AudioManager {
       volume: def.volume ?? 1,
       loop: def.loop ?? false,
       html5: false, // PannerNode spatialization needs Web Audio buffers.
+      onloaderror: (_id, error) => console.warn(`Sound "${key}" failed to load:`, error),
     });
     // Cone values are explicit: re-applying the group attributes per sound id (spatialize) would
     // otherwise pass undefined cone angles, which PannerNode rejects as non-finite.
@@ -101,6 +111,14 @@ export class AudioManager {
       maxDistance: def.maxDistance ?? 100,
     });
     this.sounds.set(key, howl);
+
+    // Emitters on a re-registered key were bound to the unloaded Howl; restart them on the new one.
+    for (const emitter of this.emitters.values()) {
+      if (emitter.key !== key) continue;
+      emitter.soundId = null;
+      emitter.awaitingLoad = false;
+      if (this.unlocked) this.startEmitter(emitter);
+    }
   }
 
   /** Plays a non-positional sound. Returns the Howler sound id, or null if audio is still locked. */
@@ -110,7 +128,10 @@ export class AudioManager {
     return howl.play();
   }
 
-  /** Plays a sound at a fixed world position. Returns null (and plays nothing) while locked. */
+  /**
+   * Plays a sound at a fixed world position. Returns null (and plays nothing) while locked. Note
+   * that Howler merges two plays issued before the file has loaded into one sound.
+   */
   playAt(key: string, position: THREE.Vector3Like): number | null {
     const howl = this.get(key);
     if (!this.unlocked) return null;
@@ -123,7 +144,7 @@ export class AudioManager {
   /**
    * Starts a looping sound that follows `object` every frame and returns an emitter id for
    * `detach`. While audio is locked the emitter is queued and starts on unlock. It is removed
-   * automatically once the object leaves the scene graph.
+   * automatically once the object is no longer under a THREE.Scene.
    */
   attach(key: string, object: THREE.Object3D): number {
     this.get(key);
@@ -158,7 +179,7 @@ export class AudioManager {
     );
 
     for (const [id, emitter] of this.emitters) {
-      if (!emitter.object.parent) {
+      if (!isInScene(emitter.object)) {
         this.detach(id);
         continue;
       }
@@ -182,27 +203,28 @@ export class AudioManager {
     for (const type of UNLOCK_EVENTS) window.removeEventListener(type, this.unlock, true);
     this.unlockCallbacks.length = 0;
     for (const id of [...this.emitters.keys()]) this.detach(id);
-    this.music.stop();
+    this.music.dispose();
     for (const howl of this.sounds.values()) howl.unload();
     this.sounds.clear();
   }
 
+  /**
+   * Tries to resume the context on every gesture until one succeeds. A gesture that does not count
+   * as user activation leaves resume() pending or rejected, so listeners stay until it resolves.
+   */
   private readonly unlock = (): void => {
-    for (const type of UNLOCK_EVENTS) window.removeEventListener(type, this.unlock, true);
+    if (this.unlocked || this.disposed) return;
     Howler.ctx.resume().then(
       () => {
         if (this.unlocked || this.disposed) return;
         this.unlocked = true;
+        for (const type of UNLOCK_EVENTS) window.removeEventListener(type, this.unlock, true);
         for (const emitter of this.emitters.values()) {
           if (emitter.soundId === null) this.startEmitter(emitter);
         }
         for (const cb of this.unlockCallbacks.splice(0)) cb();
       },
-      // Resume was refused (no real gesture); stay locked and wait for the next gesture.
-      () => {
-        if (this.disposed) return;
-        for (const type of UNLOCK_EVENTS) window.addEventListener(type, this.unlock, true);
-      },
+      () => {}, // Refused: stay locked; the next gesture tries again.
     );
   };
 
@@ -237,4 +259,11 @@ export class AudioManager {
   private spatialize(howl: Howl, id: number): void {
     howl.pannerAttr(howl.pannerAttr(), id);
   }
+}
+
+function isInScene(object: THREE.Object3D): boolean {
+  for (let o: THREE.Object3D | null = object; o; o = o.parent) {
+    if ((o as THREE.Scene).isScene) return true;
+  }
+  return false;
 }

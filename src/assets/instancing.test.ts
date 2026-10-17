@@ -96,6 +96,50 @@ describe('extractMeshParts', () => {
   });
 });
 
+describe('extractMeshParts transforms', () => {
+  it('rotates positions and normals of a rotated child', () => {
+    const root = new THREE.Group();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
+    mesh.rotation.y = Math.PI / 2;
+    root.add(mesh);
+    const geo = extractMeshParts(root)[0].geometry;
+    const src = new THREE.BoxGeometry(1, 1, 1);
+    const pos = geo.getAttribute('position');
+    const normal = geo.getAttribute('normal');
+    const srcNormal = src.getAttribute('normal');
+    const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+    let sawPlusX = false;
+    for (let i = 0; i < normal.count; i++) {
+      const expected = new THREE.Vector3().fromBufferAttribute(srcNormal, i).applyQuaternion(q);
+      const got = new THREE.Vector3().fromBufferAttribute(normal, i);
+      expect(got.distanceTo(expected)).toBeLessThan(1e-5);
+      if (srcNormal.getX(i) === 1) {
+        sawPlusX = true;
+        // +x rotated 90 degrees about y points to -z.
+        expect(got.z).toBeCloseTo(-1, 5);
+        expect(got.x).toBeCloseTo(0, 5);
+      }
+    }
+    expect(sawPlusX).toBe(true);
+    expect(pos.count).toBe(src.getAttribute('position').count);
+  });
+
+  it('scales positions of a scaled child (x extent doubles) and keeps normals unit length', () => {
+    const root = new THREE.Group();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
+    mesh.scale.set(2, 1, 1);
+    root.add(mesh);
+    const geo = extractMeshParts(root)[0].geometry;
+    geo.computeBoundingBox();
+    expect(geo.boundingBox!.max.x - geo.boundingBox!.min.x).toBeCloseTo(2);
+    expect(geo.boundingBox!.max.y - geo.boundingBox!.min.y).toBeCloseTo(1);
+    const normal = geo.getAttribute('normal');
+    for (let i = 0; i < normal.count; i++) {
+      expect(new THREE.Vector3().fromBufferAttribute(normal, i).length()).toBeCloseTo(1, 5);
+    }
+  });
+});
+
 describe('InstancedModel', () => {
   it('creates one InstancedMesh per part with count starting at 0', () => {
     const model = new InstancedModel([part(), part()], 4);
@@ -144,6 +188,32 @@ describe('InstancedModel', () => {
     expect(new THREE.Vector3().setFromMatrixPosition(out).x).toBe(9);
   });
 
+  it('addInstance does not eagerly compute the bounding sphere, and a later compute covers all instances', () => {
+    const model = new InstancedModel([part(), part()], 4);
+    model.addInstance(translation(0));
+    model.addInstance(translation(100));
+    for (const mesh of model.meshes) {
+      expect(mesh.boundingSphere).toBeNull();
+      expect(mesh.boundingBox).toBeNull();
+      mesh.computeBoundingSphere();
+      expect(mesh.boundingSphere!.containsPoint(new THREE.Vector3(100, 0, 0))).toBe(true);
+      expect(mesh.boundingSphere!.containsPoint(new THREE.Vector3(0, 0, 0))).toBe(true);
+    }
+  });
+
+  it('setMatrixAt invalidates previously computed bounds', () => {
+    const model = new InstancedModel([part()], 2);
+    model.addInstance(translation(0));
+    const mesh = model.meshes[0];
+    mesh.computeBoundingSphere();
+    mesh.computeBoundingBox();
+    model.setMatrixAt(0, translation(50));
+    expect(mesh.boundingSphere).toBeNull();
+    expect(mesh.boundingBox).toBeNull();
+    mesh.computeBoundingSphere();
+    expect(mesh.boundingSphere!.center.x).toBeCloseTo(50);
+  });
+
   it.each([-1, 1, 2, 100])('setMatrixAt throws RangeError for out-of-range index %i', (index) => {
     const model = new InstancedModel([part()], 4);
     model.addInstance(translation(0));
@@ -186,13 +256,23 @@ describe('buildBatchedMesh', () => {
     expect(mesh.receiveShadow).toBe(true);
   });
 
-  it('adds an index to non-indexed geometry', () => {
+  it('batches non-indexed geometry without modifying the caller geometry', () => {
     const material = new THREE.MeshStandardMaterial();
     const geometry = new THREE.BoxGeometry(1, 1, 1).toNonIndexed();
     expect(geometry.index).toBeNull();
-    buildBatchedMesh([[{ geometry, material }]], 2);
-    expect(geometry.index).not.toBeNull();
-    expect(geometry.index!.count).toBe(geometry.getAttribute('position').count);
+    const { mesh, geometryIds } = buildBatchedMesh([[{ geometry, material }]], 2);
+    expect(geometry.index).toBeNull();
+    const ids = addBatchedInstance(mesh, geometryIds[0], translation(3));
+    expect(ids).toHaveLength(1);
+    mesh.computeBoundingBox();
+    expect(mesh.boundingBox!.max.x).toBeCloseTo(3.5);
+  });
+
+  it('leaves already indexed geometry as it was', () => {
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const index = geometry.index;
+    buildBatchedMesh([[{ geometry, material: new THREE.MeshStandardMaterial() }]], 2);
+    expect(geometry.index).toBe(index);
   });
 
   it('returns geometryIds shaped like the input models and parts', () => {
@@ -236,6 +316,31 @@ describe('buildBatchedMesh', () => {
 });
 
 describe('addBatchedInstance', () => {
+  it('resets cached bounds so a far-away new instance is covered after recompute', () => {
+    const { mesh, geometryIds } = buildBatchedMesh([[part()]], 4);
+    addBatchedInstance(mesh, geometryIds[0], translation(0));
+    mesh.computeBoundingSphere();
+    expect(mesh.boundingSphere).not.toBeNull();
+    const far = new THREE.Vector3(500, 0, 0);
+    expect(mesh.boundingSphere!.containsPoint(far)).toBe(false);
+
+    addBatchedInstance(mesh, geometryIds[0], translation(500));
+    expect(mesh.boundingSphere).toBeNull();
+    expect(mesh.boundingBox).toBeNull();
+    mesh.computeBoundingSphere();
+    expect(mesh.boundingSphere!.containsPoint(far)).toBe(true);
+  });
+
+  it('resets cached bounds even when the add throws for lack of slots', () => {
+    const { mesh, geometryIds } = buildBatchedMesh([[part()]], 1);
+    addBatchedInstance(mesh, geometryIds[0], translation(0));
+    mesh.computeBoundingSphere();
+    mesh.computeBoundingBox();
+    expect(() => addBatchedInstance(mesh, geometryIds[0], translation(1))).toThrow();
+    expect(mesh.boundingSphere).toBeNull();
+    expect(mesh.boundingBox).toBeNull();
+  });
+
   it('returns one instance id per part and sets each matrix', () => {
     const material = new THREE.MeshStandardMaterial();
     const { mesh, geometryIds } = buildBatchedMesh([[part(material), part(material)]], 4);

@@ -12,7 +12,8 @@ export interface AssetLoaderOptions {
   manifest?: Record<string, AssetEntry>;
   /**
    * A load that has not settled after this long rejects. Guards against a decoder that never
-   * answers (e.g. a missing Draco or Basis file behind a server that does not return 404).
+   * answers (e.g. a missing Draco or Basis file behind a server that does not return 404). It
+   * includes download time, so keep it generous. 0 or Infinity disables it. Default 60 000.
    */
   timeoutMs?: number;
 }
@@ -40,7 +41,7 @@ export class AssetLoader {
     this.renderer = renderer;
     this.manager = options.manager;
     this.manifest = options.manifest ?? ASSETS;
-    this.timeoutMs = options.timeoutMs ?? 30_000;
+    this.timeoutMs = options.timeoutMs ?? 60_000;
   }
 
   /**
@@ -64,6 +65,7 @@ export class AssetLoader {
     const promise = withTimeout(this.getLoader().loadAsync(entry.url), this.timeoutMs).then(
       (gltf) => {
         if (generation === this.generation) this.loaded.set(id, gltf);
+        else disposeObject(gltf.scene); // Finished after dispose(): nobody owns it.
         return gltf;
       },
       (err: unknown) => {
@@ -154,6 +156,7 @@ function disposeObject(root: THREE.Object3D): void {
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  if (!(ms > 0) || !Number.isFinite(ms)) return promise;
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms);
     promise.then(
