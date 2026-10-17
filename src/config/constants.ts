@@ -39,6 +39,12 @@ export const TERRAIN = {
   minSkirtDepth: 2,
   /** Web Workers building chunk geometry (clamped to 2-4 and to hardwareConcurrency). */
   workerCount: 2,
+  /** Edge length of each square physics heightfield patch around the player. */
+  colliderPatchSize: 200,
+  /** Cells per patch edge: 1.5625 m spacing, matching the finest render LOD. */
+  colliderPatchCells: 128,
+  /** Patches kept around the player's patch in each direction (1 = a 3 x 3 block). */
+  colliderPatchRadius: 1,
   /** Seed for the procedural placeholder heightmap. */
   seed: 1337,
 } as const;

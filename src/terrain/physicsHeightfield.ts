@@ -11,7 +11,12 @@
 //   heights[row + col * (nrows + 1)] is the sample at
 //   x = -scale.x / 2 + col * scale.x / ncols, z = -scale.z / 2 + row * scale.z / nrows.
 // - The shape is centred on the collider's origin, so the collider goes at the patch centre.
+// The full contract lives in /mnt/project-files/contracts/heightfield.md.
+//
+// Collider registration is independent of visual LOD: ColliderPatches decides which patches
+// around the player need colliders; physics only adds and removes what it is handed.
 
+import { TERRAIN } from '../config/constants';
 import { heightAt } from './heightfield';
 
 export interface PhysicsHeightfield {
@@ -32,6 +37,8 @@ export interface PhysicsHeightfield {
  * @param size Edge length of the patch in metres.
  * @param cells Cells along each edge (spacing = size / cells). Match or exceed the finest render
  *   LOD (TERRAIN.minChunkSize / TERRAIN.chunkSegments) so the collider hugs the visible ground.
+ * @throws RangeError when the centre is not finite, size is not a positive finite number, or
+ *   cells is not a positive integer.
  */
 export function buildPhysicsHeightfield(
   centerX: number,
@@ -39,6 +46,15 @@ export function buildPhysicsHeightfield(
   size: number,
   cells: number,
 ): PhysicsHeightfield {
+  if (!Number.isFinite(centerX) || !Number.isFinite(centerZ)) {
+    throw new RangeError(`Heightfield centre must be finite, got (${centerX}, ${centerZ})`);
+  }
+  if (!Number.isFinite(size) || size <= 0) {
+    throw new RangeError(`Heightfield size must be a positive finite number, got ${size}`);
+  }
+  if (!Number.isInteger(cells) || cells < 1) {
+    throw new RangeError(`Heightfield cells must be a positive integer, got ${cells}`);
+  }
   const nrows = cells;
   const ncols = cells;
   const step = size / cells;
@@ -57,4 +73,86 @@ export function buildPhysicsHeightfield(
     scale: { x: size, y: 1, z: size },
     center: { x: centerX, y: 0, z: centerZ },
   };
+}
+
+export interface ColliderPatch {
+  /** Stable id: the patch's grid coordinates, `"ix,iz"`. */
+  key: string;
+  heightfield: PhysicsHeightfield;
+}
+
+export interface ColliderPatchChanges {
+  added: ColliderPatch[];
+  /** Keys of patches whose colliders should be removed. */
+  removed: string[];
+}
+
+/**
+ * Decides which heightfield patches around the player get colliders: a (2r + 1)^2 block of
+ * square patches on a fixed world grid, centred on the player's patch. Patches only change when
+ * the player crosses into another patch, so physics sees a small add/remove diff.
+ */
+export class ColliderPatches {
+  private readonly active = new Set<string>();
+
+  constructor(
+    readonly patchSize: number = TERRAIN.colliderPatchSize,
+    readonly cells: number = TERRAIN.colliderPatchCells,
+    readonly radius: number = TERRAIN.colliderPatchRadius,
+  ) {
+    if (!Number.isFinite(patchSize) || patchSize <= 0) {
+      throw new RangeError(`Patch size must be a positive finite number, got ${patchSize}`);
+    }
+    if (!Number.isInteger(cells) || cells < 1) {
+      throw new RangeError(`Patch cells must be a positive integer, got ${cells}`);
+    }
+    if (!Number.isInteger(radius) || radius < 0) {
+      throw new RangeError(`Patch radius must be a non-negative integer, got ${radius}`);
+    }
+  }
+
+  /** Keys of patches that currently have colliders. */
+  get keys(): string[] {
+    return [...this.active];
+  }
+
+  /** Recomputes the patch set for the player at (x, z). Non-finite positions change nothing. */
+  update(x: number, z: number): ColliderPatchChanges {
+    const changes: ColliderPatchChanges = { added: [], removed: [] };
+    if (!Number.isFinite(x) || !Number.isFinite(z)) return changes;
+
+    const px = Math.floor(x / this.patchSize);
+    const pz = Math.floor(z / this.patchSize);
+    const wanted = new Set<string>();
+    for (let iz = pz - this.radius; iz <= pz + this.radius; iz++) {
+      for (let ix = px - this.radius; ix <= px + this.radius; ix++) {
+        const key = `${ix},${iz}`;
+        wanted.add(key);
+        if (this.active.has(key)) continue;
+        this.active.add(key);
+        changes.added.push({
+          key,
+          heightfield: buildPhysicsHeightfield(
+            (ix + 0.5) * this.patchSize,
+            (iz + 0.5) * this.patchSize,
+            this.patchSize,
+            this.cells,
+          ),
+        });
+      }
+    }
+    for (const key of this.active) {
+      if (wanted.has(key)) continue;
+      this.active.delete(key);
+      changes.removed.push(key);
+    }
+    return changes;
+  }
+
+  /** Forgets all patches; returns their keys so physics can remove the colliders. */
+  clear(): string[] {
+    const removed = [...this.active];
+    this.active.clear();
+    return removed;
+  }
 }

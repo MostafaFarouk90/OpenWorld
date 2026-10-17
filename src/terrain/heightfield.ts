@@ -19,10 +19,13 @@ const detailNoise = createNoise2D(TERRAIN.seed + 5);
 /** Approximate bounds of `heightAt`, for culling and colouring. */
 export const HEIGHT_RANGE = { min: -40, max: 420 } as const;
 
-/** Radius around the world origin kept gently rolling as a spawn meadow (future village site). */
-const SPAWN_FLAT_RADIUS = 180;
-const SPAWN_BLEND_RADIUS = 520;
-const SPAWN_HEIGHT = 6;
+/**
+ * The spawn meadow around the world origin (future village site) is exactly flat at height 0
+ * within this radius, so the physics test level and player spawn line up with the terrain.
+ */
+export const SPAWN_FLAT_RADIUS = 180;
+/** Distance from the origin at which the meadow has fully blended into natural terrain. */
+export const SPAWN_BLEND_RADIUS = 520;
 
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0), 1);
@@ -31,6 +34,9 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
 
 /** Terrain height in metres at world position (x, z). Deterministic and thread-safe. */
 export function heightAt(x: number, z: number): number {
+  const spawnDistance = Math.hypot(x, z);
+  if (spawnDistance <= SPAWN_FLAT_RADIUS) return 0;
+
   // Domain warp keeps hills and ridges from lining up on the noise lattice.
   const wx = x + warpNoise(x / 2400, z / 2400) * 320;
   const wz = z + warpNoise(x / 2400 + 31.7, z / 2400 - 17.3) * 320;
@@ -70,9 +76,6 @@ export function heightAt(x: number, z: number): number {
   const detail = detailNoise(x / 45, z / 45) * 0.8;
   const natural = 12 + continent + hills + ridges + detail;
 
-  // Flatten toward a gentle meadow around the origin.
-  const d = Math.hypot(x, z);
-  const t = smoothstep(SPAWN_FLAT_RADIUS, SPAWN_BLEND_RADIUS, d);
-  const meadow = SPAWN_HEIGHT + hills * 0.08 + detail;
-  return meadow + (natural - meadow) * t;
+  // Blend from the flat meadow (height 0) into natural terrain.
+  return natural * smoothstep(SPAWN_FLAT_RADIUS, SPAWN_BLEND_RADIUS, spawnDistance);
 }

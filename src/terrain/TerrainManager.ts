@@ -2,35 +2,16 @@
 // camera, with vertical skirts along chunk borders to hide cracks without stitching.
 // Reference: Vheissu/emerald-bayou.
 //
-// Each frame `update` refines a forest of root tiles (TERRAIN.maxChunkSize) around the camera.
-// A node splits when the camera is within `size * lodSplitFactor` of its footprint. Chunk meshes
-// are built off-thread by the WorkerPool; while a node's children are still building, the node's
-// own mesh stays visible, so streaming never opens holes. The fallback is local to that node.
+// This class is the Three.js adapter: quadtree.ts decides which chunks exist and are drawn,
+// WorkerPool builds their geometry off-thread, and this class turns results into meshes.
 
 import * as THREE from 'three';
 import { TERRAIN } from '../config/constants';
 import { buildChunkIndices, type ChunkData, type ChunkRequest } from './chunkGeometry';
 import { heightAt } from './heightfield';
 import { buildPhysicsHeightfield, type PhysicsHeightfield } from './physicsHeightfield';
-import { WorkerPool } from './WorkerPool';
-
-class QuadNode {
-  children: QuadNode[] | null = null;
-  mesh: THREE.Mesh | null = null;
-  /** Worker job id while a build is queued or running, else 0. */
-  jobId = 0;
-  wantSplit = false;
-
-  constructor(
-    readonly centerX: number,
-    readonly centerZ: number,
-    readonly size: number,
-  ) {}
-
-  get ready(): boolean {
-    return this.mesh !== null;
-  }
-}
+import { LodQuadtree, type QuadNode, type QuadtreeHost } from './quadtree';
+import { WorkerPool, type WorkerFactory } from './WorkerPool';
 
 export interface TerrainStats {
   /** Chunk meshes currently resident. */
@@ -41,18 +22,23 @@ export interface TerrainStats {
   pending: number;
 }
 
+type ChunkNode = QuadNode<THREE.Mesh>;
+
+export function skirtDepthFor(size: number): number {
+  return Math.max(size * TERRAIN.skirtDepthRatio, TERRAIN.minSkirtDepth);
+}
+
 export class TerrainManager {
   readonly group = new THREE.Group();
   private readonly material: THREE.MeshStandardMaterial;
   private readonly indices: Uint16Array | Uint32Array;
   private readonly pool: WorkerPool;
-  private readonly roots = new Map<string, QuadNode>();
-  private readonly camera = new THREE.Vector3();
-  private cameraHeight = 0;
+  private readonly tree: LodQuadtree<THREE.Mesh>;
+  private readonly jobs = new Map<ChunkNode, number>();
   private chunkCount = 0;
-  private visibleCount = 0;
+  private disposed = false;
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, workerFactory?: WorkerFactory) {
     this.group.name = 'terrain';
     scene.add(this.group);
     this.material = new THREE.MeshStandardMaterial({
@@ -61,8 +47,22 @@ export class TerrainManager {
       metalness: 0,
     });
     this.indices = buildChunkIndices(TERRAIN.chunkSegments);
-    this.pool = new WorkerPool(TERRAIN.workerCount);
-    this.pool.setPriority((req) => this.distanceTo(req.centerX, req.centerZ, req.size));
+    this.pool = new WorkerPool(TERRAIN.workerCount, workerFactory);
+
+    const host: QuadtreeHost<THREE.Mesh> = {
+      build: (node) => this.requestBuild(node),
+      cancel: (node) => {
+        const id = this.jobs.get(node);
+        if (id !== undefined) this.pool.cancel(id);
+        this.jobs.delete(node);
+      },
+      release: (_node, mesh) => this.releaseMesh(mesh),
+      setVisible: (_node, mesh, visible) => {
+        mesh.visible = visible;
+      },
+    };
+    this.tree = new LodQuadtree(host, TERRAIN, heightAt);
+    this.pool.setPriority((req) => this.tree.distanceTo(req.centerX, req.centerZ, req.size));
   }
 
   /** Terrain height in metres at world (x, z), sampled synchronously on the calling thread. */
@@ -76,151 +76,54 @@ export class TerrainManager {
   }
 
   get stats(): TerrainStats {
-    return { chunks: this.chunkCount, visible: this.visibleCount, pending: this.pool.pending };
+    return { chunks: this.chunkCount, visible: this.tree.visibleCount, pending: this.pool.pending };
   }
 
   /** Streams and selects chunks for the given viewpoint. Call once per rendered frame. */
   update(cameraPosition: THREE.Vector3): void {
-    this.camera.copy(cameraPosition);
-    this.cameraHeight = Math.max(0, cameraPosition.y - heightAt(cameraPosition.x, cameraPosition.z));
-    this.updateRoots();
-    this.visibleCount = 0;
-    for (const root of this.roots.values()) {
-      this.refine(root, true);
-      this.draw(root);
-    }
+    if (this.disposed) return;
+    this.tree.update(cameraPosition);
   }
 
+  /** Frees every chunk, terminates the workers and detaches from the scene. Idempotent. */
   dispose(): void {
-    for (const root of this.roots.values()) this.disposeNode(root);
-    this.roots.clear();
+    if (this.disposed) return;
+    this.disposed = true;
+    this.tree.dispose();
+    this.jobs.clear();
     this.pool.dispose();
     this.material.dispose();
     this.group.removeFromParent();
   }
 
-  /** Distance from the camera to a chunk footprint, with the camera's height above ground. */
-  private distanceTo(centerX: number, centerZ: number, size: number): number {
-    const half = size / 2;
-    const dx = Math.max(Math.abs(this.camera.x - centerX) - half, 0);
-    const dz = Math.max(Math.abs(this.camera.z - centerZ) - half, 0);
-    return Math.sqrt(dx * dx + dz * dz + this.cameraHeight * this.cameraHeight);
-  }
-
-  private updateRoots(): void {
-    const size = TERRAIN.maxChunkSize;
-    const range = TERRAIN.viewDistance;
-    const minX = Math.floor((this.camera.x - range) / size);
-    const maxX = Math.floor((this.camera.x + range) / size);
-    const minZ = Math.floor((this.camera.z - range) / size);
-    const maxZ = Math.floor((this.camera.z + range) / size);
-    const wanted = new Set<string>();
-
-    for (let iz = minZ; iz <= maxZ; iz++) {
-      for (let ix = minX; ix <= maxX; ix++) {
-        const cx = (ix + 0.5) * size;
-        const cz = (iz + 0.5) * size;
-        const half = size / 2;
-        const dx = Math.max(Math.abs(this.camera.x - cx) - half, 0);
-        const dz = Math.max(Math.abs(this.camera.z - cz) - half, 0);
-        if (dx * dx + dz * dz > range * range) continue;
-        const key = `${ix},${iz}`;
-        wanted.add(key);
-        if (!this.roots.has(key)) this.roots.set(key, new QuadNode(cx, cz, size));
-      }
-    }
-
-    for (const [key, root] of this.roots) {
-      if (wanted.has(key)) continue;
-      this.disposeNode(root);
-      this.roots.delete(key);
-    }
-  }
-
-  /** Updates split decisions and requests the chunks the current view needs. */
-  private refine(node: QuadNode, isRoot: boolean): void {
-    node.wantSplit =
-      node.size > TERRAIN.minChunkSize &&
-      this.distanceTo(node.centerX, node.centerZ, node.size) < node.size * TERRAIN.lodSplitFactor;
-
-    // Roots are always built, as the coarse fallback while finer chunks stream in.
-    if (!node.wantSplit || isRoot) this.ensureBuilt(node);
-
-    if (node.wantSplit) {
-      if (!node.children) node.children = this.createChildren(node);
-      for (const child of node.children) this.refine(child, false);
-    } else if (node.children) {
-      if (node.ready) {
-        for (const child of node.children) this.disposeNode(child);
-        node.children = null;
-      } else {
-        // Keep finished children on screen until this coarser chunk is built; stop their builds.
-        for (const child of node.children) this.cancelBuilds(child);
-      }
-    }
-  }
-
-  /** True when this node's footprint can be drawn without holes. */
-  private covered(node: QuadNode): boolean {
-    if (node.ready) return true;
-    return node.children !== null && node.children.every((child) => this.covered(child));
-  }
-
-  private draw(node: QuadNode): void {
-    const children = node.children;
-    // Draw children when they fully cover this node, or when this node has nothing to show yet
-    // (partial children beat a hole).
-    const useChildren =
-      children !== null &&
-      (!node.ready || (node.wantSplit && children.every((child) => this.covered(child))));
-
-    if (useChildren) {
-      if (node.mesh) node.mesh.visible = false;
-      for (const child of children) this.draw(child);
-      return;
-    }
-    if (node.mesh) {
-      node.mesh.visible = true;
-      this.visibleCount++;
-    }
-    if (children) for (const child of children) this.hide(child);
-  }
-
-  private hide(node: QuadNode): void {
-    if (node.mesh) node.mesh.visible = false;
-    if (node.children) for (const child of node.children) this.hide(child);
-  }
-
-  private createChildren(node: QuadNode): QuadNode[] {
-    const size = node.size / 2;
-    const q = size / 2;
-    return [
-      new QuadNode(node.centerX - q, node.centerZ - q, size),
-      new QuadNode(node.centerX + q, node.centerZ - q, size),
-      new QuadNode(node.centerX - q, node.centerZ + q, size),
-      new QuadNode(node.centerX + q, node.centerZ + q, size),
-    ];
-  }
-
-  private ensureBuilt(node: QuadNode): void {
-    if (node.mesh || node.jobId) return;
+  private requestBuild(node: ChunkNode): void {
     const request: ChunkRequest = {
       centerX: node.centerX,
       centerZ: node.centerZ,
       size: node.size,
       segments: TERRAIN.chunkSegments,
-      skirtDepth: Math.max(node.size * TERRAIN.skirtDepthRatio, TERRAIN.minSkirtDepth),
+      skirtDepth: skirtDepthFor(node.size),
     };
-    node.jobId = this.pool.request(request, (data) => {
-      node.jobId = 0;
-      node.mesh = this.createMesh(node, data, request.skirtDepth);
-      node.mesh.visible = false;
-      this.group.add(node.mesh);
-      this.chunkCount++;
+    const id = this.pool.request(request, {
+      onDone: (data) => {
+        this.jobs.delete(node);
+        if (this.disposed) return;
+        const mesh = this.createMesh(node, data, request.skirtDepth);
+        if (this.tree.complete(node, mesh)) {
+          this.group.add(mesh);
+          this.chunkCount++;
+        }
+      },
+      onError: (error) => {
+        this.jobs.delete(node);
+        console.warn(`Terrain chunk build failed at (${node.centerX}, ${node.centerZ}): ${error}`);
+        this.tree.fail(node);
+      },
     });
+    this.jobs.set(node, id);
   }
 
-  private createMesh(node: QuadNode, data: ChunkData, skirtDepth: number): THREE.Mesh {
+  private createMesh(node: ChunkNode, data: ChunkData, skirtDepth: number): THREE.Mesh {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(data.positions, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(data.normals, 3));
@@ -237,30 +140,20 @@ export class TerrainManager {
     geometry.boundingSphere = geometry.boundingBox.getBoundingSphere(new THREE.Sphere());
 
     const mesh = new THREE.Mesh(geometry, this.material);
+    mesh.name = `terrain-chunk-${node.size}@${node.centerX},${node.centerZ}`;
     mesh.position.set(node.centerX, 0, node.centerZ);
     mesh.receiveShadow = true;
     mesh.matrixAutoUpdate = false;
     mesh.updateMatrix();
+    mesh.visible = false;
     return mesh;
   }
 
-  private cancelBuilds(node: QuadNode): void {
-    if (node.jobId) {
-      this.pool.cancel(node.jobId);
-      node.jobId = 0;
-    }
-    if (node.children) for (const child of node.children) this.cancelBuilds(child);
-  }
-
-  private disposeNode(node: QuadNode): void {
-    this.cancelBuilds(node);
-    if (node.mesh) {
-      node.mesh.geometry.dispose();
-      this.group.remove(node.mesh);
-      node.mesh = null;
+  private releaseMesh(mesh: THREE.Mesh): void {
+    mesh.geometry.dispose();
+    if (mesh.parent) {
+      mesh.removeFromParent();
       this.chunkCount--;
     }
-    if (node.children) for (const child of node.children) this.disposeNode(child);
-    node.children = null;
   }
 }
