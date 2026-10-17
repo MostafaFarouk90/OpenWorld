@@ -409,3 +409,49 @@ describe('review follow-ups', () => {
     world.dispose();
   });
 });
+
+describe('combat wiring', () => {
+  it('routes hit events to the hit sound and tears combat down with the world', () => {
+    const hit = vi.fn();
+    const world = new World(scene, physics, { colliders: smallColliders(), sounds: { ...sounds, hit } });
+    world.setAvatar(makeRig());
+    world.combat.combat.bus.emit({
+      bone: 'head',
+      point: new THREE.Vector3(1, 2, 3),
+      normal: new THREE.Vector3(0, 1, 0),
+      attacker: null,
+      target: null,
+      damage: 20,
+    });
+    expect(hit).toHaveBeenCalledWith(expect.objectContaining({ x: 1, y: 2, z: 3 }), 20);
+    expect(world.combat.stats.hits).toBe(1);
+    world.dispose();
+    expect(world.combat.fixedUpdate(FIXED_TIMESTEP)).toEqual([]);
+  });
+
+  it('runs without a hit sound and without an avatar', () => {
+    const world = new World(scene, physics, { colliders: smallColliders() });
+    expect(() => run(world, 5, { ...IDLE, attack: 1 })).not.toThrow();
+    world.combat.combat.bus.emit({
+      bone: 'torso',
+      point: new THREE.Vector3(),
+      normal: new THREE.Vector3(),
+      attacker: null,
+      target: null,
+      damage: 10,
+    });
+    expect(world.combat.stats.hits).toBe(1);
+    world.dispose();
+  });
+
+  it('keeps ticking combat after the avatar swings with a dummy in reach', () => {
+    const { world, avatar } = makeWorld();
+    const dummy = new THREE.Group();
+    dummy.position.set(0, 0, -1);
+    world.combat.addDummy(dummy, []);
+    run(world, 5, { ...IDLE, attack: 1 });
+    expect(avatar.controller.activeAttack()).not.toBeNull();
+    expect(() => run(world, 90)).not.toThrow();
+    world.dispose();
+  });
+});

@@ -1,5 +1,5 @@
 import type * as THREE from 'three';
-import { WORLD } from '../config/constants';
+import { FIXED_TIMESTEP, WORLD } from '../config/constants';
 import type { InputSnapshot } from '../input/InputManager';
 import type { PhysicsWorld, Vec3 } from '../physics/PhysicsWorld';
 import { Player } from '../characters/Player';
@@ -7,11 +7,14 @@ import type { KnightAvatar } from '../characters/KnightAvatar';
 import type { Foot } from '../characters/knightClips';
 import { heightAt as terrainHeightAt } from '../terrain/heightfield';
 import { TerrainColliders } from './TerrainColliders';
+import { WorldCombat } from './WorldCombat';
 
 /** Where gameplay sounds go; the browser scene plays them through AudioManager. */
 export interface WorldSounds {
   footstep(foot: Foot, position: Vec3): void;
   land(fallSpeed: number, position: Vec3): void;
+  /** A sword hit landed at `position`. */
+  hit?(position: Vec3, damage: number): void;
 }
 
 export interface WorldOptions {
@@ -40,6 +43,8 @@ export class World {
   readonly player: Player;
   readonly colliders: TerrainColliders;
   readonly spawn: Vec3;
+  /** Player sword against training dummies; runs after the avatar each tick. */
+  readonly combat: WorldCombat;
   private _avatar: KnightAvatar | null = null;
   private unsubscribe: (() => void) | null = null;
   private disposed = false;
@@ -57,6 +62,9 @@ export class World {
     this.colliders.update(this.spawn.x, this.spawn.z);
     physics.step();
 
+    this.combat = new WorldCombat(scene, {
+      hit: (position, damage) => options.sounds?.hit?.(position, damage),
+    });
     this.player = new Player(scene, physics, this.spawn, {
       movementLocked: () => this._avatar?.controller.movementLocked ?? false,
       onRespawn: (at) => this.colliders.update(at.x, at.z),
@@ -73,6 +81,7 @@ export class World {
     this._avatar = avatar;
     this.player.setAvatar(avatar.root);
     this.player.syncSimulatedPose();
+    this.combat.attachPlayer(avatar);
     const sounds = this.options.sounds;
     if (!sounds) return;
     this.unsubscribe = avatar.events.subscribe((e) => {
@@ -95,6 +104,7 @@ export class World {
     if (this._avatar) {
       this.player.syncSimulatedPose();
       this._avatar.fixedUpdate(this.player.locomotion());
+      this.combat.fixedUpdate(FIXED_TIMESTEP);
     }
   }
 
@@ -107,6 +117,7 @@ export class World {
     if (this.disposed) return;
     this.disposed = true;
     this.unsubscribe?.();
+    this.combat.dispose();
     this._avatar?.dispose();
     this.colliders.dispose();
     this.player.controller.dispose();
