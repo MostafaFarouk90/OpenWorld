@@ -10,7 +10,8 @@ import { Player } from './characters/Player';
 const container = document.getElementById('app');
 if (!container) throw new Error('Missing #app container');
 
-// `?scene=terrain` shows the streaming terrain demo, `?scene=audio` the audio and asset demo;
+// `?scene=terrain` shows the streaming terrain demo, `?scene=audio` the audio and asset demo,
+// `?scene=combat` the hit detection demo;
 // the default is the physics test level.
 const sceneName = new URLSearchParams(window.location.search).get('scene');
 
@@ -18,6 +19,9 @@ if (sceneName === 'audio') {
   const renderer = new Renderer(container);
   // Loaded on demand so the other scenes do not ship the audio and asset demo.
   void import('./demo/AudioAssetsDemo').then(({ startAudioAssetsDemo }) => startAudioAssetsDemo(renderer));
+} else if (sceneName === 'combat') {
+  const renderer = new Renderer(container);
+  void import('./demo/CombatDemo').then(({ startCombatDemo }) => startCombatDemo(renderer));
 } else if (sceneName === 'terrain') {
   const renderer = new Renderer(container);
   const terrainScene = new TerrainScene(renderer.scene, renderer.camera);
