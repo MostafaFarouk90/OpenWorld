@@ -154,6 +154,41 @@ describe('AssetLoader failures', () => {
     await expect(result).resolves.toBe(gltf);
   });
 
+  it.each([0, Infinity])('never times out when timeoutMs is %s', async (timeoutMs) => {
+    vi.useFakeTimers();
+    const d = deferred<GLTF>();
+    mocks.loadAsync.mockReturnValueOnce(d.promise);
+    const loader = new AssetLoader(renderer, { timeoutMs });
+    const result = loader.load('knight');
+    await vi.advanceTimersByTimeAsync(10 * 60 * 60 * 1000);
+    expect(vi.getTimerCount()).toBe(0);
+    const gltf = makeGltf();
+    d.resolve(gltf);
+    await expect(result).resolves.toBe(gltf);
+    expect(loader.get('knight')).toBe(gltf);
+  });
+
+  it('still rejects a failure when the timeout is disabled', async () => {
+    mocks.loadAsync.mockRejectedValueOnce(new Error('boom'));
+    await expect(new AssetLoader(renderer, { timeoutMs: 0 }).load('knight')).rejects.toThrow(/boom/);
+  });
+
+  it('uses a 60 s default timeout', async () => {
+    vi.useFakeTimers();
+    mocks.loadAsync.mockReturnValueOnce(new Promise(() => {}));
+    const result = new AssetLoader(renderer).load('knight').then(
+      () => 'resolved',
+      (e: Error) => e.message,
+    );
+    await vi.advanceTimersByTimeAsync(59_999);
+    let settled = false;
+    void result.then(() => (settled = true));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await result).toMatch(/timed out after 60000 ms/);
+  });
+
   it('rejects an unsupported format without fetching', async () => {
     const manifest: Record<string, AssetEntry> = {
       bad: { id: 'bad', url: '/assets/bad.fbx', pack: 'kaykit-adventurers', kind: 'prop' },
@@ -208,6 +243,33 @@ describe('AssetLoader.dispose', () => {
     mocks.loadAsync.mockResolvedValueOnce(gltf);
     await expect(loader.load('knight')).resolves.toBe(gltf);
     expect(mocks.loadAsync).toHaveBeenCalledTimes(2);
+  });
+
+  it('disposes the scene of a load that resolves after dispose and does not cache it', async () => {
+    const d = deferred<GLTF>();
+    mocks.loadAsync.mockReturnValueOnce(d.promise);
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const material = new THREE.MeshStandardMaterial();
+    const scene = new THREE.Group();
+    scene.add(new THREE.Mesh(geometry, material));
+    const spies = [vi.spyOn(geometry, 'dispose'), vi.spyOn(material, 'dispose')];
+    const loader = new AssetLoader(renderer);
+    const first = loader.load('knight');
+    loader.dispose();
+    d.resolve(makeGltf(scene));
+    await first;
+    for (const spy of spies) expect(spy).toHaveBeenCalledTimes(1);
+    expect(() => loader.get('knight')).toThrow('not loaded');
+  });
+
+  it('does not dispose the scene of a load that resolves without a dispose', async () => {
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const scene = new THREE.Group();
+    scene.add(new THREE.Mesh(geometry, new THREE.MeshStandardMaterial()));
+    const spy = vi.spyOn(geometry, 'dispose');
+    mocks.loadAsync.mockResolvedValueOnce(makeGltf(scene));
+    await new AssetLoader(renderer).load('knight');
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it('does not delete a newer cache entry when an old load rejects after dispose', async () => {

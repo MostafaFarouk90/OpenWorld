@@ -94,7 +94,9 @@ export class InstancedModel extends THREE.Group {
     for (const mesh of this.meshes) {
       mesh.setMatrixAt(index, matrix);
       mesh.instanceMatrix.needsUpdate = true;
-      mesh.computeBoundingSphere();
+      // Recomputing here would make filling n instances O(n^2); three recomputes lazily when null.
+      mesh.boundingSphere = null;
+      mesh.boundingBox = null;
     }
   }
 }
@@ -104,7 +106,8 @@ export class InstancedModel extends THREE.Group {
  * All parts must share one material: KayKit packs use a single atlas, but each GLTF load has
  * its own material instance, so atlas users should pass `material` explicitly. Without it, all
  * parts must already reference the same material instance. Geometries must share the same
- * attribute set (e.g. position/normal/uv); non-indexed ones get a sequential index added.
+ * attribute set (e.g. position/normal/uv); non-indexed ones are copied with a sequential index
+ * (the caller's geometry is not modified).
  * Returns the mesh and, per model, the geometry ids of its parts.
  */
 export function buildBatchedMesh(
@@ -162,12 +165,17 @@ export function addBatchedInstance(
   } catch (err) {
     for (const instanceId of added) mesh.setVisibleAt(instanceId, false);
     throw err;
+  } finally {
+    // three r168 caches BatchedMesh bounds on first use and never invalidates them itself.
+    mesh.boundingSphere = null;
+    mesh.boundingBox = null;
   }
   return added;
 }
 
-function ensureIndexed(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
-  if (geometry.index) return geometry;
+function ensureIndexed(source: THREE.BufferGeometry): THREE.BufferGeometry {
+  if (source.index) return source;
+  const geometry = source.clone();
   const count = geometry.getAttribute('position').count;
   const indices = new Uint32Array(count);
   for (let i = 0; i < count; i++) indices[i] = i;
