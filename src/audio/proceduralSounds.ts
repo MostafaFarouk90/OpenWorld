@@ -127,3 +127,36 @@ export function combatStem(ctx: BaseAudioContext): AudioBuffer {
     }),
   );
 }
+
+/** A soft step on grass or earth: low-passed noise burst plus a faint low thump. Pure samples. */
+function stepSamples(seconds: number, seed: number, pitch: number, thumpGain: number, decay: number, level: number): Float32Array<ArrayBuffer> {
+  const rand = noise(seed);
+  const alpha = 0.18 * pitch; // one-pole low-pass coefficient
+  let low = 0;
+  return render(seconds, (t) => {
+    low += alpha * (rand() - low);
+    const attack = Math.min(1, t / 0.003);
+    const env = attack * Math.exp(-t * decay);
+    const thump = Math.sin(TAU * 80 * pitch * t) * Math.exp(-t * decay * 0.9) * thumpGain;
+    const s = level * (env * low * 2.2 + thump);
+    return Math.max(-1, Math.min(1, s));
+  });
+}
+
+/** ~0.12 s footstep samples. Variants differ in noise seed and slightly in pitch. */
+export function footstepSamples(variant = 0): Float32Array<ArrayBuffer> {
+  return stepSamples(0.12, 101 + variant * 37, 1 + 0.07 * (variant % 5), 0.25, 38, 0.8);
+}
+
+/** ~0.25 s landing thud: same recipe, longer and heavier. */
+export function landSamples(): Float32Array<ArrayBuffer> {
+  return stepSamples(0.25, 211, 0.85, 0.8, 18, 0.9);
+}
+
+export function footstepUrl(variant = 0): string {
+  return toWavUrl(footstepSamples(variant));
+}
+
+export function landUrl(): string {
+  return toWavUrl(landSamples());
+}

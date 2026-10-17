@@ -5,7 +5,7 @@ import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { Player } from './Player';
 import { flatGround } from '../physics/flatGround';
 
-const NO_INPUT: InputSnapshot = { moveRight: 0, moveForward: 0, sprint: false, jump: false };
+const NO_INPUT: InputSnapshot = { moveRight: 0, moveForward: 0, sprint: false, jump: false, attack: 0 };
 const DT = 1 / 60;
 
 let physics: PhysicsWorld;
