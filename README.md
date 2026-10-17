@@ -19,8 +19,11 @@ npm test         # unit tests (Vitest), src/**/*.test.ts
 | `src/rendering/` | Three.js renderer, scene, camera |
 | `src/physics/` | Rapier world and kinematic character controller (stubs) |
 | `src/terrain/` | Quadtree LOD terrain with worker pool and skirts, swappable height function, Rapier heightfield patches. Demo: `npm run dev`, open `/?scene=terrain` |
-| `src/audio/` | Spatial audio and stem crossfades (stub) |
+| `src/audio/` | Howler spatial audio (HRTF, exponential rolloff), camera listener, multi-stem music crossfades |
+| `src/assets/` | Asset manifest, cached glTF loader (Draco/KTX2/Meshopt), InstancedMesh/BatchedMesh helpers |
+| `src/demo/` | Audio and asset demo. Open `/?scene=audio` |
 | `src/input/` | Keyboard and mouse input (stub) |
 | `src/combat/` | BVH weapon hitbox tracing (stub) |
 | `src/characters/` | Character rigs and animation (reserved) |
-| `public/assets/` | CC0 asset packs (not yet added) |
+| `public/assets/` | CC0 asset packs; see `public/assets/README.md` for sources and install steps |
+| `public/decoders/` | Draco and Basis (KTX2) decoders from three@0.168, fetched only when a model needs them |
