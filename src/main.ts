@@ -9,17 +9,17 @@ if (!container) throw new Error('Missing #app container');
 const renderer = new Renderer(container);
 // `?scene=terrain` shows the streaming terrain demo; the default is the debug scene.
 const sceneName = new URLSearchParams(window.location.search).get('scene');
-const debugScene =
+const activeScene =
   sceneName === 'terrain'
     ? new TerrainScene(renderer.scene, renderer.camera)
     : new DebugScene(renderer.scene, renderer.camera);
 
 const loop = new GameLoop({
   fixedUpdate(dt) {
-    debugScene.fixedUpdate(dt);
+    activeScene.fixedUpdate(dt);
   },
   render(alpha) {
-    debugScene.render(alpha);
+    activeScene.render(alpha);
     renderer.render();
   },
 });

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { chunkVertexCount, type ChunkData, type ChunkRequest } from './chunkGeometry';
 import type { ChunkJobMessage } from './workerProtocol';
-import { MAX_ATTEMPTS, WorkerPool, resolveWorkerCount, type WorkerLike } from './WorkerPool';
+import { MAX_ATTEMPTS, MAX_CONSECUTIVE_CRASHES, WorkerPool, resolveWorkerCount, type WorkerLike } from './WorkerPool';
 
 class FakeWorker implements WorkerLike {
   onmessage: ((event: MessageEvent) => void) | null = null;
@@ -123,7 +123,7 @@ describe('cancel', () => {
     expect(pool.pending).toBe(0);
   });
 
-  it('ignores the late reply of a running cancelled job and frees the slot for the next job', () => {
+  it('drains after cancelling a running job: the slot takes new work only after the late reply', () => {
     const { pool, workers } = makePool(1);
     const aDone = vi.fn();
     const bDone = vi.fn();
@@ -131,17 +131,92 @@ describe('cancel', () => {
     pool.request(req(2), { onDone: bDone });
     pool.cancel(a);
     const w = workers[0];
-    expect(w.posted).toHaveLength(2);
-    expect(w.last.request.centerX).toBe(2);
+    // The worker is still building A, so B has not been posted.
+    expect(w.posted).toHaveLength(1);
+    expect(pool.pending).toBe(1);
 
-    // Late reply for the cancelled job: ignored, B untouched and still running.
+    // The late reply for the cancelled job is ignored and frees the slot for B.
     w.reply(ok(a));
     expect(aDone).not.toHaveBeenCalled();
     expect(bDone).not.toHaveBeenCalled();
+    expect(w.posted).toHaveLength(2);
+    expect(w.last.request.centerX).toBe(2);
     expect(pool.pending).toBe(1);
 
     w.reply(ok(w.last.id));
     expect(bDone).toHaveBeenCalledOnce();
+    expect(pool.pending).toBe(0);
+  });
+
+  it('a valid reply with an unrelated id does not end a drain', () => {
+    const { pool, workers } = makePool(1);
+    const a = pool.request(req(1), { onDone: () => {} });
+    const bDone = vi.fn();
+    pool.request(req(2), { onDone: bDone });
+    pool.cancel(a);
+    const w = workers[0];
+    w.reply(ok(9999));
+    w.reply({ id: 4242, ok: false, error: 'stale' });
+    expect(w.posted).toHaveLength(1);
+    w.reply(ok(a));
+    expect(w.posted).toHaveLength(2);
+    w.reply(ok(w.last.id));
+    expect(bDone).toHaveBeenCalledOnce();
+  });
+
+  it('a malformed message ends a drain without failing the next job', () => {
+    const { pool, workers } = makePool(1);
+    const a = pool.request(req(1), { onDone: () => {} });
+    const bDone = vi.fn();
+    const bError = vi.fn();
+    pool.request(req(2), { onDone: bDone, onError: bError });
+    pool.cancel(a);
+    const w = workers[0];
+    expect(() => w.reply({ nonsense: true })).not.toThrow();
+    expect(w.posted).toHaveLength(2);
+    expect(w.last.request.centerX).toBe(2);
+    expect(bError).not.toHaveBeenCalled();
+    expect(pool.pending).toBe(1);
+    // B was not consumed by the malformed message; it still completes normally.
+    w.reply(ok(w.last.id));
+    expect(bDone).toHaveBeenCalledOnce();
+    expect(bError).not.toHaveBeenCalled();
+  });
+
+  it('a cancelled job whose slot is idle again has no drain (cancel after finish)', () => {
+    const { pool, workers } = makePool(1);
+    const a = pool.request(req(1), { onDone: () => {} });
+    workers[0].reply(ok(a));
+    pool.cancel(a);
+    const onDone = vi.fn();
+    pool.request(req(2), { onDone });
+    expect(workers[0].posted).toHaveLength(2);
+  });
+
+  it('a crash during a drain gives the next queued job to the replacement without using an attempt', () => {
+    const { pool, workers } = makePool(1);
+    const aDone = vi.fn();
+    const bDone = vi.fn();
+    const bError = vi.fn();
+    const a = pool.request(req(1), { onDone: aDone });
+    pool.request(req(2), { onDone: bDone, onError: bError });
+    pool.cancel(a);
+    const old = workers[0];
+    old.onerror?.({ message: 'crash', preventDefault() {} } as unknown as ErrorEvent);
+    expect(old.terminated).toBe(true);
+    expect(workers).toHaveLength(2);
+    const fresh = workers[1];
+    expect(fresh.posted).toHaveLength(1);
+    expect(fresh.last.request.centerX).toBe(2);
+    expect(aDone).not.toHaveBeenCalled();
+
+    // B still has its retry: one error reply re-posts it rather than failing it.
+    fresh.reply({ id: fresh.last.id, ok: false, error: 'first' });
+    expect(fresh.posted).toHaveLength(2);
+    expect(bError).not.toHaveBeenCalled();
+    fresh.reply(ok(fresh.last.id));
+    expect(bDone).toHaveBeenCalledOnce();
+    expect(pool.pending).toBe(0);
   });
 
   it('is a no-op for unknown ids and for jobs that already finished', () => {
@@ -408,5 +483,201 @@ describe('dispose', () => {
       pool.dispose();
       pool.cancel(id);
     }).not.toThrow();
+  });
+});
+
+describe('crash storm', () => {
+  const crash = (w: FakeWorker, message = 'crash') => {
+    w.onerror?.({ message, preventDefault() {} } as unknown as ErrorEvent);
+  };
+
+  it('retires a slot after MAX_CONSECUTIVE_CRASHES and fails queued and new jobs without retry', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { pool, workers, factory } = makePool(1);
+    const errors: string[] = [];
+    for (let i = 0; i < 4; i++) pool.request(req(i), { onDone: () => {}, onError: (e) => errors.push(e) });
+
+    // Crash every worker as soon as it exists.
+    for (let i = 0; i < MAX_CONSECUTIVE_CRASHES; i++) crash(workers[workers.length - 1]);
+
+    expect(workers).toHaveLength(1 + (MAX_CONSECUTIVE_CRASHES - 1));
+    expect(factory).toHaveBeenCalledTimes(MAX_CONSECUTIVE_CRASHES);
+    expect(workers.every((w) => w.terminated)).toBe(true);
+    expect(pool.size).toBe(0);
+    expect(pool.pending).toBe(0);
+    expect(error).toHaveBeenCalledOnce();
+    // Every queued job failed, each exactly once, with no retry.
+    expect(errors).toEqual(Array(4).fill('no terrain workers available'));
+
+    // A later request fails synchronously and never spawns a worker.
+    const onDone = vi.fn();
+    const late = vi.fn();
+    expect(() => pool.request(req(9), { onDone, onError: late })).not.toThrow();
+    expect(late).toHaveBeenCalledOnce();
+    expect(late).toHaveBeenCalledWith('no terrain workers available');
+    expect(onDone).not.toHaveBeenCalled();
+    expect(factory).toHaveBeenCalledTimes(MAX_CONSECUTIVE_CRASHES);
+    expect(pool.pending).toBe(0);
+    // A job without onError just disappears.
+    expect(() => pool.request(req(10), { onDone })).not.toThrow();
+    // batch also fails requests when it ends.
+    const inBatch = vi.fn();
+    pool.batch(() => {
+      pool.request(req(11), { onDone, onError: inBatch });
+      expect(inBatch).not.toHaveBeenCalled();
+    });
+    expect(inBatch).toHaveBeenCalledWith('no terrain workers available');
+    expect(factory).toHaveBeenCalledTimes(MAX_CONSECUTIVE_CRASHES);
+  });
+
+  it('retires each slot independently and keeps working with the survivors', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { pool, workers, factory } = makePool(2);
+    expect(pool.size).toBe(2);
+    // Crash slot 0's workers only (those created with factory index 0).
+    const indexOf = (w: FakeWorker) => factory.mock.calls[workers.indexOf(w)][0];
+    for (let i = 0; i < MAX_CONSECUTIVE_CRASHES; i++) {
+      const w = [...workers].reverse().find((x) => indexOf(x) === 0 && !x.terminated) as FakeWorker;
+      crash(w);
+    }
+    expect(pool.size).toBe(1);
+    expect(error).toHaveBeenCalledOnce();
+    expect(workers.filter((w) => indexOf(w) === 0)).toHaveLength(MAX_CONSECUTIVE_CRASHES);
+
+    const onDone = vi.fn();
+    const onError = vi.fn();
+    pool.request(req(1), { onDone, onError });
+    const survivor = workers.find((w) => indexOf(w) === 1) as FakeWorker;
+    expect(survivor.posted).toHaveLength(1);
+    survivor.reply(ok(survivor.last.id));
+    expect(onDone).toHaveBeenCalledOnce();
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('a valid reply resets the crash count', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { pool, workers, factory } = makePool(1);
+    pool.request(req(1), { onDone: () => {}, onError: () => {} });
+    crash(workers[0]);
+    crash(workers[1]); // two crashes in a row; job 1 has now failed
+    expect(workers).toHaveLength(3);
+
+    const onDone = vi.fn();
+    pool.request(req(2), { onDone });
+    workers[2].reply(ok(workers[2].last.id)); // valid reply: count back to 0
+    expect(onDone).toHaveBeenCalledOnce();
+
+    crash(workers[2]);
+    crash(workers[3]);
+    expect(pool.size).toBe(1);
+    expect(error).not.toHaveBeenCalled();
+    expect(factory).toHaveBeenCalledTimes(5);
+
+    // The third crash in this run retires it.
+    crash(workers[4]);
+    expect(pool.size).toBe(0);
+    expect(error).toHaveBeenCalledOnce();
+  });
+
+  it('a stale valid reply from a draining worker also resets the crash count', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { pool, workers } = makePool(1);
+    pool.request(req(1), { onDone: () => {}, onError: () => {} });
+    crash(workers[0]);
+    crash(workers[1]);
+    const id = pool.request(req(2), { onDone: () => {} });
+    pool.cancel(id);
+    workers[2].reply(ok(id));
+    crash(workers[2]);
+    crash(workers[3]);
+    expect(pool.size).toBe(1);
+    expect(error).not.toHaveBeenCalled();
+  });
+});
+
+describe('batch', () => {
+  it('defers dispatch until it ends, then sends the lowest priority score first', () => {
+    const { pool, workers } = makePool(1);
+    pool.setPriority((r) => r.centerX);
+    pool.batch(() => {
+      for (const x of [9, 5, 1, 3]) pool.request(req(x), { onDone: () => {} });
+      expect(workers[0].posted).toHaveLength(0);
+      expect(pool.pending).toBe(4);
+    });
+    expect(workers[0].posted).toHaveLength(1);
+    expect(workers[0].last.request.centerX).toBe(1);
+  });
+
+  it('dispatches to every free worker by priority order when it ends', () => {
+    const { pool, workers } = makePool(2);
+    pool.setPriority((r) => r.centerX);
+    pool.batch(() => {
+      for (const x of [9, 5, 1, 3]) pool.request(req(x), { onDone: () => {} });
+    });
+    expect(workers.map((w) => w.last.request.centerX)).toEqual([1, 3]);
+  });
+
+  it('nested batches dispatch only when the outermost one ends', () => {
+    const { pool, workers } = makePool(1);
+    pool.setPriority((r) => r.centerX);
+    pool.batch(() => {
+      pool.request(req(7), { onDone: () => {} });
+      pool.batch(() => {
+        pool.request(req(2), { onDone: () => {} });
+      });
+      expect(workers[0].posted).toHaveLength(0);
+      pool.request(req(5), { onDone: () => {} });
+    });
+    expect(workers[0].posted).toHaveLength(1);
+    expect(workers[0].last.request.centerX).toBe(2);
+  });
+
+  it('an empty batch posts nothing, and requests outside a batch dispatch immediately again', () => {
+    const { pool, workers } = makePool(1);
+    pool.batch(() => {});
+    expect(workers[0].posted).toHaveLength(0);
+    pool.batch(() => pool.request(req(1), { onDone: () => {} }));
+    expect(workers[0].posted).toHaveLength(1);
+    pool.request(req(2), { onDone: () => {} });
+    pool.cancel(workers[0].last.id);
+    workers[0].reply(ok(workers[0].last.id));
+    expect(workers[0].posted).toHaveLength(2);
+  });
+
+  it('if fn throws the error propagates and the queue is still dispatched', () => {
+    const { pool, workers } = makePool(1);
+    expect(() =>
+      pool.batch(() => {
+        pool.request(req(1), { onDone: () => {} });
+        throw new Error('batch failure');
+      }),
+    ).toThrow('batch failure');
+    expect(workers[0].posted).toHaveLength(1);
+    // Depth was restored: later requests dispatch right away.
+    const w = workers[0];
+    w.reply(ok(w.last.id));
+    pool.request(req(2), { onDone: () => {} });
+    expect(w.posted).toHaveLength(2);
+  });
+
+  it('an inner batch that throws does not dispatch early, and the outer end still does', () => {
+    const { pool, workers } = makePool(1);
+    pool.batch(() => {
+      expect(() =>
+        pool.batch(() => {
+          pool.request(req(1), { onDone: () => {} });
+          throw new Error('inner');
+        }),
+      ).toThrow('inner');
+      expect(workers[0].posted).toHaveLength(0);
+    });
+    expect(workers[0].posted).toHaveLength(1);
+  });
+
+  it('a batch after dispose does not post anything', () => {
+    const { pool, workers } = makePool(1);
+    pool.dispose();
+    expect(() => pool.batch(() => {})).not.toThrow();
+    expect(workers[0].posted).toHaveLength(0);
   });
 });

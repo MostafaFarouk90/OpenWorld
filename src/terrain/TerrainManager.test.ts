@@ -74,16 +74,34 @@ describe('TerrainManager', () => {
   });
 
   it('prioritises the chunks nearest the camera', () => {
-    const { manager, workers, camera } = setup();
-    manager.update(camera);
-    const firstRoot = workers[0].posted[0].request;
-    // Answer the first job: the next one dispatched to that worker is not a far-away root.
-    workers[0].onmessage?.({ data: handleChunkMessage(workers[0].last).message } as MessageEvent);
-    const next = workers[0].last?.request;
-    expect(next).toBeDefined();
-    const dist = (r: { centerX: number; centerZ: number }) => Math.hypot(r.centerX, r.centerZ);
-    expect(dist(next as { centerX: number; centerZ: number })).toBeLessThan(TERRAIN.viewDistance * 2);
-    expect(firstRoot.size).toBeGreaterThan(0);
+    const { manager, workers } = setup();
+    const cam = new THREE.Vector3(1234, 50, -2345);
+    manager.update(cam);
+    // Same footprint formula as quadtree.distanceTo, without the height term.
+    const gap = (r: { centerX: number; centerZ: number; size: number }) => {
+      const half = r.size / 2;
+      return Math.hypot(Math.max(Math.abs(cam.x - r.centerX) - half, 0), Math.max(Math.abs(cam.z - r.centerZ) - half, 0));
+    };
+    const first = workers.map((w) => w.posted[0].request);
+    expect(first.length).toBeGreaterThan(0);
+    // The camera is inside a root, so every first job must cover the camera's x/z.
+    for (const r of first) expect(gap(r)).toBe(0);
+    manager.dispose();
+  });
+
+  it('keeps dispatching nearest-first as builds complete', () => {
+    const { manager, workers } = setup();
+    const cam = new THREE.Vector3(1234, 50, -2345);
+    manager.update(cam);
+    const gap = (r: { centerX: number; centerZ: number; size: number }) => {
+      const half = r.size / 2;
+      return Math.hypot(Math.max(Math.abs(cam.x - r.centerX) - half, 0), Math.max(Math.abs(cam.z - r.centerZ) - half, 0));
+    };
+    const w = workers[0];
+    w.onmessage?.({ data: handleChunkMessage(w.last).message } as MessageEvent);
+    const next = (w.last as ChunkJobMessage).request;
+    // Roots farther than viewDistance are never requested; the next job is still near the camera.
+    expect(gap(next)).toBeLessThanOrEqual(TERRAIN.viewDistance);
     manager.dispose();
   });
 
@@ -104,6 +122,54 @@ describe('TerrainManager', () => {
     manager.update(camera);
     expect(manager.stats.visible).toBeGreaterThan(0);
     expect(manager.stats.visible).toBeLessThanOrEqual(manager.stats.chunks);
+    manager.dispose();
+  });
+
+  it('gives every built mesh a bounding box containing all vertices, skirts included', () => {
+    const { manager, camera, answerAll } = setup();
+    manager.update(camera);
+    for (let i = 0; i < 3; i++) answerAll();
+    expect(manager.group.children.length).toBeGreaterThan(0);
+    for (const child of manager.group.children) {
+      const geometry = (child as THREE.Mesh).geometry;
+      const box = geometry.boundingBox as THREE.Box3;
+      const pos = geometry.getAttribute('position');
+      const point = new THREE.Vector3();
+      const tolerant = box.clone().expandByScalar(1e-3);
+      let lowest = Infinity;
+      for (let i = 0; i < pos.count; i++) {
+        point.fromBufferAttribute(pos, i);
+        expect(tolerant.containsPoint(point)).toBe(true);
+        lowest = Math.min(lowest, point.y);
+      }
+      // The skirt reaches below the terrain, and the box covers it.
+      expect(box.min.y).toBeLessThanOrEqual(lowest + 1e-3);
+    }
+    manager.dispose();
+  });
+
+  it('drops resident chunks when the camera teleports away and keeps stats consistent', () => {
+    const { manager, camera, answerAll } = setup();
+    manager.update(camera);
+    for (let i = 0; i < 4; i++) answerAll();
+    const before = manager.stats.chunks;
+    expect(before).toBeGreaterThan(0);
+    expect(manager.stats.chunks).toBe(manager.group.children.length);
+
+    manager.update(new THREE.Vector3(200_000, 50, 200_000));
+    expect(manager.stats.chunks).toBeLessThan(before);
+    expect(manager.stats.chunks).toBe(manager.group.children.length);
+    expect(manager.stats.visible).toBeLessThanOrEqual(manager.stats.chunks);
+
+    for (let i = 0; i < 4; i++) {
+      answerAll();
+      expect(manager.stats.chunks).toBe(manager.group.children.length);
+    }
+    manager.update(new THREE.Vector3(200_000, 50, 200_000));
+    expect(manager.stats.chunks).toBeGreaterThan(0);
+    expect(manager.stats.chunks).toBe(manager.group.children.length);
+    // Every surviving mesh belongs to the new area.
+    for (const child of manager.group.children) expect(child.position.x).toBeGreaterThan(100_000);
     manager.dispose();
   });
 
@@ -213,6 +279,16 @@ describe('TerrainManager', () => {
       expect(() => manager.dispose()).not.toThrow();
       expect(workers.every((w) => w.terminated === 1)).toBe(true);
       expect(manager.group.children).toHaveLength(0);
+    });
+
+    it('disposes the shared material', () => {
+      const { manager, camera, answerAll } = setup();
+      manager.update(camera);
+      answerAll();
+      const spy = vi.spyOn(THREE.Material.prototype, 'dispose');
+      manager.dispose();
+      const materials = spy.mock.contexts.filter((c) => c instanceof THREE.MeshStandardMaterial);
+      expect(materials).toHaveLength(1);
     });
 
     it('disposes the geometry of every resident chunk', () => {
