@@ -89,9 +89,10 @@ export class TerrainManager {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    // Pool first, so cancelling the tree's builds cannot dispatch queued jobs to doomed workers.
+    this.pool.dispose();
     this.tree.dispose();
     this.jobs.clear();
-    this.pool.dispose();
     this.material.dispose();
     this.group.removeFromParent();
   }

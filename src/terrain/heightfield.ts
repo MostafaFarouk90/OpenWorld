@@ -16,8 +16,12 @@ const ridgeNoise = createNoise2D(TERRAIN.seed + 3);
 const maskNoise = createNoise2D(TERRAIN.seed + 4);
 const detailNoise = createNoise2D(TERRAIN.seed + 5);
 
-/** Approximate bounds of `heightAt`, for culling and colouring. */
-export const HEIGHT_RANGE = { min: -40, max: 420 } as const;
+/**
+ * Hard bounds of `heightAt`, derived from the term amplitudes below (noise is within [-1, 1]):
+ * 12 + continent 45 + hills 28 * 1.875 + ridges 280 * 1.875 + detail 0.8 at most, and
+ * 12 - 45 - 52.5 - 0.8 at least. Update together with the terms.
+ */
+export const HEIGHT_RANGE = { min: -90, max: 640 } as const;
 
 /**
  * The spawn meadow around the world origin (future village site) is exactly flat at height 0
