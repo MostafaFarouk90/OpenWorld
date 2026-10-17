@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 /**
  * Placeholder camera that glides over the terrain so the dev server shows LOD streaming
- * before input and the player character exist. Replaced by the player camera later.
+ * before input and the player character exist (the ?scene=terrain demo). Replaced by the player camera later.
  */
 export class TerrainFlyover {
   private prevTime = 0;
