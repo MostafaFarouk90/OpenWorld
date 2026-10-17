@@ -7,6 +7,11 @@ export interface InputSnapshot {
   sprint: boolean;
   /** True on exactly one tick per press, even if the key went down and up between ticks. */
   jump: boolean;
+  /**
+   * Attack request on this tick, edge-triggered like `jump`: 0 none, 1 primary (left mouse button
+   * while pointer-locked, or key 1), 2-4 the alternate attacks on keys 2-4.
+   */
+  attack: number;
 }
 
 const FORWARD = ['KeyW', 'ArrowUp'];
@@ -15,6 +20,7 @@ const LEFT = ['KeyA', 'ArrowLeft'];
 const RIGHT = ['KeyD', 'ArrowRight'];
 const SPRINT = ['ShiftLeft', 'ShiftRight'];
 const JUMP = ['Space'];
+const ATTACK_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4'];
 
 /**
  * Keyboard and mouse state. Keys are sampled once per fixed tick (`sample`) so simulation input
@@ -27,6 +33,7 @@ export type PointerLockDocument = EventTarget & { readonly pointerLockElement: E
 export class InputManager {
   private readonly down = new Set<string>();
   private jumpQueued = false;
+  private attackQueued = 0;
   private mouseDX = 0;
   private mouseDY = 0;
   private wheel = 0;
@@ -41,6 +48,7 @@ export class InputManager {
     win.addEventListener('keyup', this.onKeyUp as EventListener);
     win.addEventListener('blur', this.onBlur);
     element.addEventListener('click', this.onClick);
+    element.addEventListener('mousedown', this.onMouseDown);
     doc.addEventListener('mousemove', this.onMouseMove as EventListener);
     element.addEventListener('wheel', this.onWheel, { passive: true });
   }
@@ -53,11 +61,14 @@ export class InputManager {
     const axis = (neg: string[], pos: string[]) => (this.any(pos) ? 1 : 0) - (this.any(neg) ? 1 : 0);
     const jump = this.jumpQueued;
     this.jumpQueued = false;
+    const attack = this.attackQueued;
+    this.attackQueued = 0;
     return {
       moveRight: axis(LEFT, RIGHT),
       moveForward: axis(BACK, FORWARD),
       sprint: this.any(SPRINT),
       jump,
+      attack,
     };
   }
 
@@ -81,6 +92,7 @@ export class InputManager {
     this.win.removeEventListener('keyup', this.onKeyUp as EventListener);
     this.win.removeEventListener('blur', this.onBlur);
     this.element.removeEventListener('click', this.onClick);
+    this.element.removeEventListener('mousedown', this.onMouseDown);
     this.doc.removeEventListener('mousemove', this.onMouseMove as EventListener);
     this.element.removeEventListener('wheel', this.onWheel);
   }
@@ -91,6 +103,8 @@ export class InputManager {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (JUMP.includes(e.code) && !e.repeat) this.jumpQueued = true;
+    const slot = ATTACK_KEYS.indexOf(e.code);
+    if (slot >= 0 && !e.repeat) this.attackQueued = slot + 1;
     if (JUMP.includes(e.code) || e.code.startsWith('Arrow')) e.preventDefault();
     this.down.add(e.code);
   };
@@ -108,6 +122,11 @@ export class InputManager {
     // Chrome returns a promise that rejects if the lock is refused (e.g. clicked right after Esc).
     const request = this.element.requestPointerLock() as Promise<void> | undefined;
     request?.catch(() => {});
+  };
+
+  private onMouseDown = (e: MouseEvent): void => {
+    // The click that requests pointer lock is not an attack.
+    if (e.button === 0 && this.pointerLocked) this.attackQueued = 1;
   };
 
   private onMouseMove = (e: MouseEvent): void => {
