@@ -55,7 +55,7 @@ export class AnimationController {
   readonly events = new AnimationEvents();
 
   private readonly actions = new Map<string, THREE.AnimationAction>();
-  /** Un-normalised blend weights by clip name; only actions with weight > 0 are playing. */
+  /** Blend weights by clip name, summing to 1; only actions listed here are playing. */
   private readonly weights = new Map<string, number>();
   private readonly stateClips: Record<ClipState, string>;
   private readonly attackDefs = new Map<string, AttackClipDef>();
@@ -121,7 +121,7 @@ export class AnimationController {
     this.currentClip = this.stateClips.idle;
     this.startAction(this.currentClip);
     this.weights.set(this.currentClip, 1);
-    this.applyWeights();
+    this.actions.get(this.currentClip)!.setEffectiveWeight(1);
   }
 
   get state(): LocomotionState {
@@ -131,6 +131,11 @@ export class AnimationController {
   /** True while an attack plays or is queued for the next tick: the player must not move or jump. */
   get movementLocked(): boolean {
     return this._state === 'attack' || this.pendingAttack !== null;
+  }
+
+  /** The mixer action for a clip, or undefined if the controller does not use that clip. */
+  action(clip: string): THREE.AnimationAction | undefined {
+    return this.actions.get(clip);
   }
 
   /** Current blend weight of a clip (0 when not playing). */
@@ -289,26 +294,28 @@ export class AnimationController {
     this.actions.set(clip.name, action);
   }
 
+  /**
+   * Moves the current clip's weight up by one step and scales every other clip down so the weights
+   * keep summing to 1. No weight changes by more than a step per tick, however many clips are still
+   * blending, so a fade interrupted by another fade continues from where it was.
+   */
   private rampWeights(dt: number): void {
-    const step = this.fadeRate * dt;
+    const current = this.weights.get(this.currentClip) ?? 0;
+    const next = Math.min(1, current + this.fadeRate * dt);
+    const others = 1 - current;
+    const scale = others > 1e-9 ? (1 - next) / others : 0;
     for (const [clip, w] of this.weights) {
-      const target = clip === this.currentClip ? 1 : 0;
-      const next = target > w ? Math.min(target, w + step) : Math.max(target, w - step);
-      if (next <= 0 && clip !== this.currentClip) {
+      if (clip === this.currentClip) {
+        this.weights.set(clip, next);
+      } else if (w * scale < 1e-4) {
         this.weights.delete(clip);
         this.actions.get(clip)!.stop();
         this.lastPhase.delete(clip);
       } else {
-        this.weights.set(clip, next);
+        this.weights.set(clip, w * scale);
       }
     }
-    this.applyWeights();
-  }
-
-  private applyWeights(): void {
-    let sum = 0;
-    for (const w of this.weights.values()) sum += w;
-    for (const [clip, w] of this.weights) this.actions.get(clip)!.setEffectiveWeight(sum > 0 ? w / sum : 0);
+    for (const [clip, w] of this.weights) this.actions.get(clip)!.setEffectiveWeight(w);
   }
 
   private loopRate(speed: number): number {
