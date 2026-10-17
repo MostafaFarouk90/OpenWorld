@@ -5,8 +5,9 @@ import { KNIGHT_HURTBOX_DEFS } from './hurtboxLayout';
 import { HurtboxSet } from './HurtboxSet';
 import { HURTBOX_NAMES } from './types';
 
+const N = KNIGHT_HURTBOX_DEFS.length;
 const BONES = [
-  'head', 'chest', 'upperarm.l', 'upperarm.r', 'lowerarm.l', 'lowerarm.r',
+  'head', 'chest', 'spine', 'hips', 'upperarm.l', 'upperarm.r', 'lowerarm.l', 'lowerarm.r',
   'upperleg.l', 'upperleg.r', 'lowerleg.l', 'lowerleg.r',
 ];
 
@@ -35,24 +36,24 @@ describe('KNIGHT_HURTBOX_DEFS', () => {
 });
 
 describe('HurtboxSet', () => {
-  it('builds all 10 capsules for dotted and dot-stripped names', () => {
+  it('builds every capsule for dotted and dot-stripped names', () => {
     for (const strip of [false, true]) {
       const { root } = rig(strip);
       const owner = {};
       const set = new HurtboxSet(root, undefined, owner);
-      expect(set.count).toBe(10);
+      expect(set.count).toBe(N);
       expect(set.missing).toEqual([]);
       expect(set.owner).toBe(owner);
-      expect(set.capsules).toHaveLength(10);
+      expect(set.capsules).toHaveLength(N);
       const perCap = 2 * COMBAT.hurtboxRadialSegments + (2 * COMBAT.hurtboxHemisphereRings - 1) * COMBAT.hurtboxRadialSegments * 2;
-      expect(set.geometry.getIndex()!.count / 3).toBe(perCap * 10);
+      expect(set.geometry.getIndex()!.count / 3).toBe(perCap * N);
     }
   });
 
   it('skips missing bones, lists them, and does not throw', () => {
     const { root } = rig(false, ['head', 'lowerleg.r']);
     const set = new HurtboxSet(root);
-    expect(set.count).toBe(8);
+    expect(set.count).toBe(N - 2);
     expect(set.missing.sort()).toEqual(['head', 'lowerLegR']);
     expect(set.capsules.find((c) => c.name === 'head')).toBeUndefined();
   });
@@ -66,7 +67,7 @@ describe('HurtboxSet', () => {
     expect(set.nameOfTriangle(0)).toBe('');
     const none = new HurtboxSet(new THREE.Group());
     expect(none.count).toBe(0);
-    expect(none.missing).toHaveLength(10);
+    expect(none.missing).toHaveLength(N);
     expect(() => none.dispose()).not.toThrow();
   });
 

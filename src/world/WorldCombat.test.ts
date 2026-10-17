@@ -3,8 +3,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { KnightAvatar } from '../characters/KnightAvatar';
-import { COMBAT, FIXED_TIMESTEP, KNIGHT } from '../config/constants';
-import { WorldCombat, type Dummy } from './WorldCombat';
+import { FIXED_TIMESTEP, KNIGHT } from '../config/constants';
+import { WeaponTracer } from '../combat/WeaponTracer';
+import { WorldCombat, formatHitStats, type Dummy } from './WorldCombat';
 
 const SLICE = '1H_Melee_Attack_Slice_Horizontal';
 const GROUNDED = { grounded: true, horizontalSpeed: 0, verticalSpeed: 0 };
@@ -51,6 +52,17 @@ function arena(spots: Array<[number, number]>, sounds?: ConstructorParameters<ty
   return { scene, avatar, wc, dummies, hits, tick };
 }
 
+/** Records the `active` argument of every WeaponTracer.tick call. */
+function spyTicks(): boolean[] {
+  const calls: boolean[] = [];
+  const orig = WeaponTracer.prototype.tick;
+  vi.spyOn(WeaponTracer.prototype, 'tick').mockImplementation(function (this: WeaponTracer, active, ...rest) {
+    calls.push(active);
+    return orig.call(this, active, ...rest);
+  });
+  return calls;
+}
+
 const swing = (a: ReturnType<typeof arena>, clip = SLICE) => {
   expect(a.avatar.controller.playAttack(clip)).toBe(true);
   a.tick(90);
@@ -76,6 +88,16 @@ describe('WorldCombat with the real Knight and controller', () => {
     expect(a.hits).toHaveLength(2);
   });
 
+  it('misses a dummy at striking range on the far side from the sword (angle, not distance)', () => {
+    // Facing -Z the sword hand is on +X, and the horizontal slice sweeps across it.
+    const near = arena([[1.2, 0]]);
+    swing(near);
+    expect(near.hits).toHaveLength(1);
+    const far = arena([[-1.2, 0]]);
+    swing(far);
+    expect(far.hits).toHaveLength(0);
+  });
+
   it('a swing that misses (too far, behind, to the side) produces no hit', () => {
     for (const spot of [[0, -3.5], [0, 1.2], [3, 0], [-3, 0]] as Array<[number, number]>) {
       const a = arena([spot]);
@@ -92,6 +114,18 @@ describe('WorldCombat with the real Knight and controller', () => {
     expect(a.hits).toHaveLength(2);
   });
 
+  it('an interrupt inside the open window stops tracing at once', () => {
+    const a = arena([[0, -3.5]]);
+    const ticks = spyTicks();
+    a.avatar.controller.playAttack(SLICE);
+    for (let i = 0; i < 90 && !a.avatar.controller.activeAttack()?.active; i++) a.tick();
+    expect(a.avatar.controller.activeAttack()?.active).toBe(true);
+    a.tick(1, AIRBORNE as typeof GROUNDED);
+    const seen = ticks.filter(Boolean).length;
+    a.tick(100);
+    expect(ticks.filter(Boolean).length).toBe(seen);
+  });
+
   it('an interrupted attack traces nothing afterwards', () => {
     const a = arena([[0, -1.0]]);
     a.avatar.controller.playAttack(SLICE);
@@ -103,9 +137,13 @@ describe('WorldCombat with the real Knight and controller', () => {
 
   it('does not trace between swings (a dummy moved into the blade path while idle)', () => {
     const a = arena([[0, -3.5]]);
+    const ticks = spyTicks();
     swing(a); // a clean miss
+    const activeAfterSwing = ticks.filter(Boolean).length;
+    expect(activeAfterSwing).toBeGreaterThan(0);
     a.dummies[0].model.position.set(0, 0, -1.0);
     a.tick(120); // idle: the blade rests, nothing is swept
+    expect(ticks.filter(Boolean).length).toBe(activeAfterSwing);
     expect(a.hits).toHaveLength(0);
   });
 
@@ -134,6 +172,8 @@ describe('WorldCombat with the real Knight and controller', () => {
 
   it('never hits the player themself, even with no dummies', () => {
     const a = arena([]);
+    // Even when the player's own hurtboxes are registered as a target, the sword never hits them.
+    a.wc.combat.addTarget((a.wc as unknown as { playerBoxes: Parameters<typeof a.wc.combat.addTarget>[0] }).playerBoxes);
     swing(a);
     expect(a.hits).toHaveLength(0);
   });
@@ -224,8 +264,12 @@ describe('tuned hurtboxes against the real Slice_Horizontal timing', () => {
     expect(connected.slice(firstMiss).some(Boolean)).toBe(false);
   });
 
-  it('the tuning constants are sane', () => {
-    expect(COMBAT.dummies.length).toBeGreaterThan(0);
-    expect(COMBAT.damageNumberSeconds).toBeGreaterThan(0);
+  it('the HUD line is empty before a hit and reports the counters after', () => {
+    const s = { hits: 0, totalDamage: 0, lastBone: '', lastDamage: 0 };
+    expect(formatHitStats(s)).toBe('');
+    expect(formatHitStats({ hits: 1, totalDamage: 7.5, lastBone: 'torso', lastDamage: 7.5 })).toBe(
+      'Hits 1 · damage 7.5 · last torso (7.5)',
+    );
+    expect(formatHitStats({ hits: 3, totalDamage: 22.5, lastBone: 'head', lastDamage: 20 })).toContain('Hits 3');
   });
 });

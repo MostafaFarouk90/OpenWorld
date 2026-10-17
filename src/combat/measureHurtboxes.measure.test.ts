@@ -7,11 +7,10 @@ import { describe, it } from 'vitest';
  *   MEASURE_HURTBOXES=1 npx vitest run src/combat/measureHurtboxes.measure.test.ts
  * Measures the bind pose (skeleton.pose()), no animation.
  */
-const BONES = ['head', 'chest', 'upperarm.l', 'upperarm.r', 'lowerarm.l', 'lowerarm.r', 'upperleg.l', 'upperleg.r', 'lowerleg.l', 'lowerleg.r'];
+const BONES = ['head', 'chest', 'spine', 'hips', 'upperarm.l', 'upperarm.r', 'lowerarm.l', 'lowerarm.r', 'upperleg.l', 'upperleg.r', 'lowerleg.l', 'lowerleg.r'];
 const WEAPON = /sword|shield/i;
 
 const pct = (sorted: number[], p: number) => sorted[Math.min(sorted.length - 1, Math.floor(p * (sorted.length - 1) + 0.5))];
-const median = (a: number[]) => pct([...a].sort((x, y) => x - y), 0.5);
 const r4 = (n: number) => Math.round(n * 1e4) / 1e4;
 
 describe.skipIf(!(globalThis as any).process?.env?.MEASURE_HURTBOXES)('measure Knight hurtboxes', () => {
@@ -53,7 +52,8 @@ describe.skipIf(!(globalThis as any).process?.env?.MEASURE_HURTBOXES)('measure K
       const list = pts.get(b.replace(/\./g, ''))!;
       if (list.length < 20) { out[b] = { count: list.length, note: 'TOO FEW' }; continue; }
       const xs = list.map((p) => p.x), zs = list.map((p) => p.z), ys = list.map((p) => p.y);
-      const mx = median(xs), mz = median(zs);
+      // Axis offset = midpoint of the x,z bounding box (a median follows vertex density, not the shape).
+      const mx = (Math.min(...xs) + Math.max(...xs)) / 2, mz = (Math.min(...zs) + Math.max(...zs)) / 2;
       const ox = Math.abs(mx) > 0.02 ? mx : 0, oz = Math.abs(mz) > 0.02 ? mz : 0;
       const rad = list.map((p) => Math.hypot(p.x - ox, p.z - oz)).sort((a, c) => a - c);
       const radius = pct(rad, 0.9);

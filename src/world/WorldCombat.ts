@@ -29,6 +29,12 @@ export interface Dummy {
 
 type DummyEntry = Dummy;
 
+/** HUD line for the hit counter; empty before the first hit. */
+export function formatHitStats(s: HitStats): string {
+  if (s.hits === 0) return '';
+  return `Hits ${s.hits} · damage ${Math.round(s.totalDamage * 10) / 10} · last ${s.lastBone} (${s.lastDamage})`;
+}
+
 /**
  * Player-versus-dummy combat inside the world: the avatar's sword traces dummy hurtboxes while the
  * animation controller says an attack is active. `fixedUpdate` must run after the avatar's fixed
@@ -41,6 +47,7 @@ export class WorldCombat {
   private tracer: WeaponTracer | null = null;
   private playerBoxes: HurtboxSet | null = null;
   private disposed = false;
+  private debugVisible = false;
   private readonly hitListeners = new Set<(e: HitEvent) => void>();
   private readonly unsubscribe: () => void;
 
@@ -92,15 +99,17 @@ export class WorldCombat {
     if (hitClip) {
       reaction = mixer.clipAction(hitClip);
       reaction.setLoop(THREE.LoopOnce, 1);
-      reaction.clampWhenFinished = false;
+      reaction.clampWhenFinished = true; // hold the last pose while Idle fades back in
       mixer.addEventListener('finished', (ev) => {
         if ((ev as unknown as { action: THREE.AnimationAction }).action !== reaction || !idle) return;
         idle.reset().play().crossFadeFrom(reaction!, COMBAT.dummyReactionFadeSeconds, false);
+        // The faded-out reaction is stopped by the mixer once its weight reaches 0.
       });
     }
     const entry: DummyEntry = { model, hurtboxes, mixer, idle, reaction };
     this.dummies.set(entry, entry);
     this.combat.addTarget(hurtboxes);
+    if (this.debugVisible) this.setDebugVisible(true);
     return entry;
   }
 
@@ -116,6 +125,7 @@ export class WorldCombat {
   }
 
   setDebugVisible(visible: boolean): void {
+    this.debugVisible = visible;
     for (const d of this.dummies.values()) {
       if (visible && !d.hurtboxes.debugMesh.parent) this.scene.add(d.hurtboxes.debugMesh);
       d.hurtboxes.setDebugVisible(visible);
