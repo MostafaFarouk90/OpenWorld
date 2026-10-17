@@ -48,3 +48,34 @@ export const TERRAIN = {
   /** Seed for the procedural placeholder heightmap. */
   seed: 1337,
 } as const;
+
+/** Player capsule and movement tuning (not in the spec; game-feel defaults). */
+export const PLAYER = {
+  /** Capsule radius and half-height of the cylindrical part; total height = 2 * (halfHeight + radius) = 1.8 m. */
+  radius: 0.35,
+  halfHeight: 0.55,
+  walkSpeed: 4.5,
+  sprintSpeed: 7.5,
+  jumpSpeed: 6.5,
+  /** Downward acceleration applied to the kinematic player, in m/s². */
+  gravity: 20,
+  /** Terminal fall speed, in m/s. */
+  maxFallSpeed: 40,
+} as const;
+
+/** World gravity for dynamic rigid bodies, in m/s². */
+export const WORLD_GRAVITY = { x: 0, y: -9.81, z: 0 } as const;
+
+/** Third-person follow camera. */
+export const CAMERA = {
+  distance: 5,
+  minDistance: 2,
+  maxDistance: 12,
+  /** Height above the player's feet the camera orbits around, in metres. */
+  targetHeight: 1.5,
+  minPitch: -1.2,
+  maxPitch: 0.6,
+  mouseSensitivity: 0.0025,
+  /** Gap kept between the camera and any collider it would otherwise clip into. */
+  collisionMargin: 0.2,
+} as const;
