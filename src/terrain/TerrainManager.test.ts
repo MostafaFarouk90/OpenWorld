@@ -117,8 +117,9 @@ describe('TerrainManager', () => {
     const attempts = () => workers.flatMap((x) => x.posted).filter((m) => m.id === failing.id);
     expect(attempts().length).toBeGreaterThanOrEqual(1);
     // Fail every dispatch of that job and answer the rest, until it gives up (the retry queues
-    // behind the other pending jobs).
-    for (let i = 0; i < 200 && warn.mock.calls.length === 0; i++) {
+    // behind the other pending jobs). The cap scales with the queue, not the worker count, which
+    // depends on navigator.hardwareConcurrency (absent on Node 20, so one worker there).
+    for (let i = 0; i < 10_000 && warn.mock.calls.length === 0 && manager.stats.pending > 0; i++) {
       for (const x of workers) {
         if (!x.last || !x.onmessage) continue;
         const msg = x.last.id === failing.id ? { id: failing.id, ok: false, error: 'boom' } : handleChunkMessage(x.last).message;
