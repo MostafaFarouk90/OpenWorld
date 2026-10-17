@@ -37,7 +37,7 @@ afterEach(() => {
 describe('InputManager keys', () => {
   it('samples all zero/false with no keys', () => {
     const { input } = setup();
-    expect(input.sample()).toEqual({ moveRight: 0, moveForward: 0, sprint: false, jump: false });
+    expect(input.sample()).toEqual({ moveRight: 0, moveForward: 0, sprint: false, jump: false, attack: 0 });
   });
 
   it.each([
@@ -290,5 +290,55 @@ describe('InputManager dispose', () => {
     const { input } = setup();
     input.dispose();
     expect(() => input.dispose()).not.toThrow();
+  });
+});
+
+describe('InputManager attacks', () => {
+  const mouseDown = (el: EventTarget, button = 0): void => {
+    el.dispatchEvent(Object.assign(new Event('mousedown'), { button }));
+  };
+
+  it('left mouse button while pointer-locked queues the primary attack for exactly one tick', () => {
+    const { element, input, lock } = setup();
+    lock();
+    mouseDown(element);
+    expect(input.sample().attack).toBe(1);
+    expect(input.sample().attack).toBe(0);
+  });
+
+  it('ignores the click that requests pointer lock and other mouse buttons', () => {
+    const { element, input, lock } = setup();
+    mouseDown(element);
+    expect(input.sample().attack).toBe(0);
+    lock();
+    mouseDown(element, 2);
+    expect(input.sample().attack).toBe(0);
+  });
+
+  it('keys 1-4 select the attack slot; key repeat does not re-trigger', () => {
+    const { win, input } = setup();
+    ['Digit1', 'Digit2', 'Digit3', 'Digit4'].forEach((code, i) => {
+      key(win, 'keydown', code);
+      expect(input.sample().attack).toBe(i + 1);
+      key(win, 'keydown', code, true);
+      expect(input.sample().attack).toBe(0);
+      key(win, 'keyup', code);
+    });
+  });
+
+  it('a press between ticks is not lost and the latest press wins', () => {
+    const { win, input } = setup();
+    key(win, 'keydown', 'Digit2');
+    key(win, 'keyup', 'Digit2');
+    key(win, 'keydown', 'Digit3');
+    expect(input.sample().attack).toBe(3);
+  });
+
+  it('dispose removes the mousedown listener', () => {
+    const { element, input, lock } = setup();
+    lock();
+    input.dispose();
+    mouseDown(element);
+    expect(input.sample().attack).toBe(0);
   });
 });

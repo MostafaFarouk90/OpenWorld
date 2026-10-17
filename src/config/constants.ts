@@ -80,6 +80,49 @@ export const CAMERA = {
   collisionMargin: 0.2,
 } as const;
 
+/** KayKit Knight avatar and animation blending (game-feel defaults, measured from Knight.glb where noted). */
+export const KNIGHT = {
+  /** Knight.glb is about 2.3 m tall; this brings it to the 1.8 m capsule. */
+  modelScale: 0.78,
+  /** Default crossfade between states, in seconds. */
+  fadeSeconds: 0.2,
+  /** Faster crossfades into reactive states. */
+  fadeIntoJumpSeconds: 0.08,
+  fadeIntoLandSeconds: 0.08,
+  fadeIntoAttackSeconds: 0.1,
+  fadeOutOfAttackSeconds: 0.25,
+  /** Horizontal speed thresholds with hysteresis, in m/s (walk 4.5, sprint 7.5). */
+  walkEnterSpeed: 0.5,
+  walkExitSpeed: 0.3,
+  runEnterSpeed: 6,
+  runExitSpeed: 5.5,
+  /** Upward speed that counts as a jump rather than leaving the ground on a slope, in m/s. */
+  jumpDetectSpeed: 2,
+  /** Ungrounded time before falling counts as airborne (ignores single-tick ground losses on slopes). */
+  airborneDelay: 0.12,
+  /** Playback rate range for walk and run loops, which follow the actual speed. */
+  minLoopRate: 0.5,
+  maxLoopRate: 1.5,
+  /** A loop must weigh at least this much in the blend to emit footsteps. */
+  footstepMinWeight: 0.5,
+  /** Fall speed above which landing plays a heavier thud, in m/s. */
+  hardLandingSpeed: 6,
+  /** Volumes of the footstep and landing sounds. */
+  footstepVolume: 0.6,
+  landVolume: 0.8,
+} as const;
+
+/** Open-world scene. */
+export const WORLD = {
+  /** Spawn position on the flattened meadow (height comes from the terrain). */
+  spawnX: 0,
+  spawnZ: 0,
+  /** Half-size of the sun's shadow camera box around the player, in metres. */
+  shadowHalfSize: 40,
+  /** Per-tick time budget for building terrain collider patches, in milliseconds. */
+  colliderBuildBudgetMs: 2,
+} as const;
+
 /** Combat hit detection (game-feel defaults; not in the spec). */
 export const COMBAT = {
   baseDamage: 10,
