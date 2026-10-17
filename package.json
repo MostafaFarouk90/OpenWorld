@@ -1,0 +1,23 @@
+{
+  "name": "medieval-open-world-rpg",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.168.0",
+    "@dimforge/rapier3d": "^0.21.0",
+    "three-mesh-bvh": "^0.8.2",
+    "howler": "^2.2.4"
+  },
+  "devDependencies": {
+    "@types/three": "^0.168.0",
+    "@types/howler": "^2.2.11",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0"
+  }
+}
