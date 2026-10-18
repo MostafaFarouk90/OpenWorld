@@ -183,6 +183,13 @@ export interface StatePort {
   setFlag(key: string, value: boolean | number | string): void;
 }
 
+/** Thread 3a's `nav` service (contracts/interiors-and-nav.md section 2). */
+export interface NavPort {
+  hasGrid(at: Vec3): boolean;
+  /** Waypoints including `to`; null means no grid covers this (steer locally). */
+  path(from: Vec3, to: Vec3): Vec3[] | null;
+}
+
 /** `ctx.gates` (state/FlagGates.ts): flag-derived state that is re-derived on `save.loaded`. */
 export interface GatesPort {
   /** `listener(open, cause)` at once, then when `test`'s result changes. `get(key)` reads a flag as a boolean. */
@@ -227,6 +234,7 @@ export interface ServicesPort {
   get(name: 'quests'): { active(): string[] } | undefined;
   /** Thread 3a's interiors service: the interior id the player is in, or null outdoors. */
   get(name: 'interiors'): { readonly current: string | null } | undefined;
+  get(name: 'nav'): NavPort | undefined;
 }
 
 /** The parts of the AssetLoader the enemy models need (requests-round-1 item 6). */

@@ -109,7 +109,7 @@ export class SpawnerRegistry {
         yaw: own ? own.yaw : anchor.yaw,
         level,
         patrol,
-        options: { ...opts, leash: opts.leash ?? def.leash ?? true },
+        options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard },
         spentKey,
       });
       if (actorId === null) continue;

@@ -4,7 +4,7 @@ const ONE: { min: number; max: number } = { min: 1, max: 1 };
 
 /** One-shot manual group: one member per anchor in `members` (the layout defines per-member anchors). */
 function beat(id: string, enemy: SpawnerDef['enemy'], members: readonly string[]): SpawnerDef {
-  return { id, enemy, count: members.length, anchor: members[0], memberAnchors: members, band: ONE, activation: 'manual', respawn: 'never', leash: false };
+  return { id, enemy, count: members.length, anchor: members[0], memberAnchors: members, band: ONE, activation: 'manual', respawn: 'never', leash: false, guard: false };
 }
 
 const replay = beat;

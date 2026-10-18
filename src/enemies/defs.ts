@@ -34,13 +34,14 @@ export const ASH_WRAITH: EnemyDef = {
 };
 
 /**
- * Blighted Soldier (T09): the Charred Footman of section 10 row 2 in soot grey, since the design has no
- * soldier row. Overhead chop with a 0.6 s raise, a short shield bash, poise 40, Spare mercy for Halvard.
- * The Footman's 50% guard, pair advance and back-attack weakness are out of the slice.
+ * The Charred Footman (design 10 row 2), kept under the slice 1 kind id `blighted-soldier` so saves, XP and
+ * quest filters keep working. Overhead chop with a 0.6 s raise, a short shield bash, poise 40, Spare mercy
+ * for Halvard; since slice 2 it also raises its shield about half the time (a heavy chop breaks the guard,
+ * back attacks ignore it) and advances beside its partner.
  */
 export const BLIGHTED_SOLDIER: EnemyDef = {
   kind: 'blighted-soldier',
-  nameKey: 'enemies.name.blighted-soldier',
+  nameKey: 'enemies.name.charred-footman',
   model: { prefer: [], tint: 0x6a625a, weapons: 'sword-shield' },
   maxHealth: 60,
   maxPoise: 40,
@@ -59,6 +60,8 @@ export const BLIGHTED_SOLDIER: EnemyDef = {
   mercy: { verb: 'spare', tier: 'normal', track: 'halvard', when: 'yielding' },
   material: 'metal',
   rises: false,
+  guard: true,
+  pairAdvance: true,
 };
 
 export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {

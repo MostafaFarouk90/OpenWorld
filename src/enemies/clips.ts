@@ -13,6 +13,7 @@ export const ENEMY_CLIPS = {
   death: 'Death_A',
   kneel: 'Sit_Floor_Down',
   kneelIdle: 'Sit_Floor_Idle',
+  guard: 'Blocking',
   backOff: 'Walking_Backwards',
 } as const;
 

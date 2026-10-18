@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { HumanoidBody } from './body';
 import { mulberry32 } from './ai/moveSelect';
 import { ENEMY_DEFS } from './defs';
@@ -8,7 +9,7 @@ import { scaleStats } from './level';
 import { makeMercyInteractable, mercyEvents, mercyTargets, type MercySubject } from './mercy';
 import type { ActorId, EnemyEvents, EnemyHost } from './ports';
 import { SpawnerRegistry, patrolForSlot, type SpawnRequest } from './spawners';
-import { ASH_GRAB, MERCY, WORLD_AI, AI } from './tuning';
+import { ASH_GRAB, GUARD, MERCY, PAIR, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions } from './types';
 
 /** Supplies a fresh model clone (and the shared clips) for a def; the plugin wraps the AssetLoader. */
@@ -41,6 +42,9 @@ export class EnemyManager {
   private readonly subjects = new Map<Enemy, MercySubject>();
   private readonly unsubs: Array<() => void> = [];
   private readonly rng: () => number;
+  private readonly scratch = new THREE.Vector3();
+  private readonly tokenAt = new Map<Enemy, number>();
+  private clock = 0;
   private counter = 0;
   private disposed = false;
 
@@ -97,6 +101,7 @@ export class EnemyManager {
   // ---- fixed and render phases -------------------------------------------------------------------
 
   think(dt: number): void {
+    this.clock += dt;
     this.updateDormancy();
     for (const e of this.enemies.values()) e.think(dt);
   }
@@ -213,7 +218,14 @@ export class EnemyManager {
       this.env.releaseToken(self);
       const set = this.tokens.get(targetId) ?? new Set<Enemy>();
       if (set.size >= AI.attackersPerTarget) return false;
+      // A pair does not swing in the same instant: the second waits out a short stagger.
+      if (self.def.pairAdvance && self.spawnerId) {
+        for (const e of set) {
+          if (e.spawnerId === self.spawnerId && this.clock - (this.tokenAt.get(e) ?? -Infinity) < PAIR.attackStaggerSeconds) return false;
+        }
+      }
       set.add(self);
+      this.tokenAt.set(self, this.clock);
       this.tokens.set(targetId, set);
       this.tokenOf.set(self, targetId);
       return true;
@@ -222,7 +234,22 @@ export class EnemyManager {
       const t = this.tokenOf.get(self);
       if (t === undefined) return;
       this.tokenOf.delete(self);
+      this.tokenAt.delete(self);
       this.tokens.get(t)?.delete(self);
+    },
+    partnerOf: (self: Enemy) => {
+      if (!self.spawnerId) return null;
+      let best: Enemy | null = null;
+      let bestD: number = PAIR.maxPartnerDistance;
+      for (const e of this.enemies.values()) {
+        if (e === self || e.spawnerId !== self.spawnerId || !e.active || e.sleeping) continue;
+        const d = e.feet.distanceTo(self.feet);
+        if (d <= bestD) {
+          best = e;
+          bestD = d;
+        }
+      }
+      return best;
     },
     alertPack: (self: Enemy, targetId: ActorId) => {
       if (!self.spawnerId) return;
@@ -232,6 +259,7 @@ export class EnemyManager {
       }
     },
     mercyUnlocked: (verb: 'release' | 'spare') => this.mercyUnlocked(verb),
+    nav: () => this.host.services.get('nav'),
     gone: (self: Enemy, how: 'died' | 'released' | 'spared' | 'despawned') => {
       this.enemies.delete(self.id);
       this.env.releaseToken(self);
@@ -295,7 +323,26 @@ export class EnemyManager {
       if (interior) this.spawners.onInteriorEntered(interior);
     });
 
+    // Defender band (-100..-1): a raised footman shield scales a front hit down; a heavy chop breaks it; the back is open.
     this.unsubs.push(
+      this.host.damage.addModifier(
+        'enemies.guard',
+        (req, target, attacker) => {
+          if (req.kind !== 'melee' || req.outcome !== 'hit' || !attacker) return;
+          const enemy = this.enemies.get(target.id);
+          if (!enemy) return;
+          const from = attacker.worldPosition(this.scratch);
+          const hit = enemy.guardHit(req.poise, from);
+          if (hit === 'broken') enemy.breakGuard();
+          else if (hit === 'back') req.amount *= GUARD.backDamageScale;
+          else if (hit === 'blocked' && !req.unblockable) {
+            req.outcome = 'blocked';
+            req.amount *= GUARD.damageScale;
+            req.poise *= GUARD.poiseScale;
+          }
+        },
+        GUARD.modifierOrder,
+      ),
       this.host.damage.addModifier(
         'enemies.moves',
         (req, _target, attacker) => {

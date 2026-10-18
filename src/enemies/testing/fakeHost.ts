@@ -19,6 +19,7 @@ import type {
   EnemyEvents,
   EnemyHost,
   InteractableLike,
+  NavPort,
   Team,
 } from '../ports';
 
@@ -181,6 +182,8 @@ export class FakeHost {
   lockOnTarget: ActorId | null = null;
   /** Thread 3a's interiors service, when a test provides it. */
   interiors: { current: string | null } | undefined;
+  /** Thread 3a's nav service, when a test provides it. */
+  nav: NavPort | undefined;
   private readonly gateWatchers: Array<{ test: (get: (k: string) => boolean) => boolean; listener: (open: boolean, cause: 'init' | 'flag' | 'load' | 'recheck') => void; open: boolean }> = [];
   private counter = 0;
 
@@ -430,6 +433,7 @@ export class FakeHost {
         if (name === 'lockOn') return { targetId: this.lockOnTarget };
         if (name === 'quests') return this.quests;
         if (name === 'interiors') return this.interiors;
+        if (name === 'nav') return this.nav;
         return undefined;
       }) as EnemyHost['services']['get'],
     },

@@ -78,6 +78,10 @@ export interface EnemyDef {
   fleeAtHealth?: number;
   mercy: MercyDef;
   material: 'ash' | 'metal';
+  /** Raises a shield about half the time; see ai/guard.ts. */
+  guard?: boolean;
+  /** Advances beside a living packmate and staggers swing starts (ai/pair.ts). */
+  pairAdvance?: boolean;
   /** Wraiths rise from an ash pile when spawned (Lie_StandUp). */
   rises: boolean;
 }
@@ -118,6 +122,8 @@ export interface SpawnerDef {
   ephemeral?: boolean;
   respawn: 'never' | 'onRest';
   leash?: boolean;
+  /** `false` turns off the Footman's guard for this group (the slice 1 tutorial soldiers fight without it). */
+  guard?: boolean;
 }
 
 export interface SpawnOptions {
@@ -130,6 +136,8 @@ export interface SpawnOptions {
   tierOffset?: number;
   /** Default: the spawner's `leash`, else true. */
   leash?: boolean;
+  /** Default: the spawner's `guard`, else the def's. */
+  guard?: boolean;
 }
 
 export interface EnemyView {
