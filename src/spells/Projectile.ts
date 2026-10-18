@@ -16,6 +16,12 @@ export type ProjectileHit =
 
 export interface LaunchOptions {
   casterId: ActorId;
+  /** Actors the projectile may pass through before it stops (default 0: it stops at the first actor). Each is reported through `onPass`. */
+  pierce?: number;
+  /** Called for every actor the projectile passes through (pierce), in order; the stop is still reported by `onHit`. */
+  onPass?(hit: { actorId: ActorId; point: Vec3 }): void;
+  /** Hits only hostile actors: neutral creatures are skipped (default: the caster's `canDamage` rule). */
+  hostileOnly?: boolean;
   origin: Vec3;
   direction: Vec3;
   speed: number;
@@ -39,6 +45,10 @@ interface Slot {
   casterId: ActorId;
   casterTeam: ActorLike['team'];
   onHit: ((r: ProjectileHit) => void) | null;
+  pierce: number;
+  passed: Set<ActorId>;
+  onPass: ((hit: { actorId: ActorId; point: Vec3 }) => void) | null;
+  hostileOnly: boolean;
 }
 
 const pos = new THREE.Vector3();
@@ -62,6 +72,7 @@ export class ProjectileSystem {
     this.slots = Array.from({ length: n }, () => ({
       live: false, seq: 0, x: 0, y: 0, z: 0, dx: 0, dy: 0, dz: 0, speed: 0, remaining: 0, radius: 0,
       casterId: '', casterTeam: 'player' as ActorLike['team'], onHit: null,
+      pierce: 0, passed: new Set<ActorId>(), onPass: null, hostileOnly: false,
     }));
   }
 
@@ -91,6 +102,10 @@ export class ProjectileSystem {
     slot.casterId = o.casterId;
     slot.casterTeam = this.host.actors.get(o.casterId)?.team ?? 'player';
     slot.onHit = o.onHit;
+    slot.pierce = Number.isInteger(o.pierce) && (o.pierce as number) > 0 ? (o.pierce as number) : 0;
+    slot.passed.clear();
+    slot.onPass = typeof o.onPass === 'function' ? o.onPass : null;
+    slot.hostileOnly = o.hostileOnly === true;
     this.live++;
     return true;
   }
@@ -102,15 +117,22 @@ export class ProjectileSystem {
     for (const s of order) if (s.live) this.step(s, dt);
   }
 
-  /** Expires every live projectile (each onHit called once with 'expired'). */
-  clear(): void {
-    for (const s of this.slots) if (s.live) this.finish(s, { kind: 'expired', point: { x: s.x, y: s.y, z: s.z } });
+  /** Expires every live projectile (each onHit called once with 'expired'), or drops them without a callback when `silent`. */
+  clear(silent = false): void {
+    for (const s of this.slots) {
+      if (!s.live) continue;
+      // Silent: the projectiles are dropped without a callback (a class change or a load must not detonate them).
+      if (silent) s.onHit = null;
+      this.finish(s, { kind: 'expired', point: { x: s.x, y: s.y, z: s.z } });
+    }
   }
 
   private finish(s: Slot, result: ProjectileHit): void {
     const cb = s.onHit;
     s.live = false;
     s.onHit = null;
+    s.onPass = null;
+    s.passed.clear();
     this.live--;
     cb?.(result);
   }
@@ -139,9 +161,15 @@ export class ProjectileSystem {
       const x = ox + s.dx * t, y = oy + s.dy * t, z = oz + s.dz * t;
       const actor = this.actorAt(s, x, y, z);
       if (actor) {
-        s.x = x; s.y = y; s.z = z;
-        this.finish(s, { kind: 'actor', actorId: actor.id, point: { x, y, z } });
-        return;
+        if (s.pierce > 0) {
+          s.pierce--;
+          s.passed.add(actor.id);
+          s.onPass?.({ actorId: actor.id, point: { x, y, z } });
+        } else {
+          s.x = x; s.y = y; s.z = z;
+          this.finish(s, { kind: 'actor', actorId: actor.id, point: { x, y, z } });
+          return;
+        }
       }
       const ground = this.host.heightAt?.(x, z);
       if (ground !== undefined && Number.isFinite(ground) && y < ground) {
@@ -165,7 +193,8 @@ export class ProjectileSystem {
     let best: ActorLike | null = null;
     let bestD = Infinity;
     for (const a of this.host.actors.all()) {
-      if (a.id === s.casterId || a.dead || !a.hittable || friendly(s.casterTeam, a.team)) continue;
+      if (a.id === s.casterId || a.dead || !a.hittable || s.passed.has(a.id) || friendly(s.casterTeam, a.team)) continue;
+      if (s.hostileOnly && a.team !== 'hostile') continue;
       a.worldPosition(pos);
       const d = Math.hypot(pos.x - x, pos.z - z);
       if (d > ACTOR_HIT.radius + s.radius) continue;
