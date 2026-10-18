@@ -21,6 +21,7 @@ interface SoftServices {
   };
   chase: { timer(): { remaining: number; total: number; gap: number; phase: 'running' | 'again' } | null };
   mount: { stamina(): { value: number; max: number } | null };
+  pathfinder: { ammo(): { count: number; max: number } | null };
   classes: { chosen(): boolean; current(): string; kit(id: string): { nameKey: string } | undefined | null };
   vfx: { spawnEffect(id: string, transform: { position: { x: number; y: number; z: number } }): unknown };
 }

@@ -571,8 +571,9 @@ describe('slice 2 widgets and soft services', () => {
   });
 
   it('the map and the Act 1 continues card use exactly region/fogWall\'s open flags', async () => {
-    expect(mapSourcesSource).toContain("import { FOG_OPEN_FLAGS } from '../region/fogWall'");
-    expect(hudSource).toContain("import { FOG_OPEN_FLAGS } from '../region/fogWall'");
+    expect(mapSourcesSource).toContain("from '../region/fogWall'");
+    expect(mapSourcesSource).toContain('fogOpen(');
+    expect(hudSource).toContain("import { fogOpen } from '../region/fogWall'");
     // Neither file keeps a list or a literal flag of its own.
     expect(mapSourcesSource).not.toMatch(/story\.(m05|slice)\./);
     expect(hudSource).not.toMatch(/getBool\('story\.(m05|slice)\./);

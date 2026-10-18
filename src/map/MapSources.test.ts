@@ -108,7 +108,8 @@ describe('MapSources', () => {
 
   it('the map reads the same open list as the wall itself (one import, no local copy)', () => {
     const source = mapSourcesSource;
-    expect(source).toContain("import { FOG_OPEN_FLAGS } from '../region/fogWall'");
+    expect(source).toContain("from '../region/fogWall'");
+    expect(source).toContain('fogOpen(');
     expect(source).not.toMatch(/FOG_OPEN_FLAGS\s*=/);
   });
 
