@@ -29,7 +29,7 @@ interface VfxPort {
 
 /**
  * The Emberwright class (tiers 1 and 2): kit, attack set, three Surge forms, six skills and their spells. Everything it
- * registers is disposed with the plugin, except the skills (the registry has no unregister and a restart counts as success).
+ * registers is disposed with the plugin, including the skills.
  * Registrations whose service is not there yet retry once a second, so the plugin loads before #53 and the codex PR.
  */
 const plugin: GamePlugin = {
@@ -104,7 +104,11 @@ const plugin: GamePlugin = {
       }
     };
     const bind = (): void => {
-      once('skills', () => registerEmberwrightSkills().ok);
+      once('skills', () => {
+        const r = registerEmberwrightSkills();
+        if (r.ok) offs.push(r.dispose);
+        return r.ok;
+      });
       once('attacks', () => {
         const cv = svc<{ registerAttackSet(id: string, set: typeof EMBERWRIGHT_ATTACK_SET): { ok: boolean; dispose?(): void; reason?: string } }>('combatVerbs');
         if (!cv) return false;

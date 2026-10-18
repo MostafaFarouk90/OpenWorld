@@ -246,8 +246,9 @@ describe('Surge forms', () => {
 describe('skills', () => {
   it('registers once, tier 1 and 2 live, 3 to 5 listed unavailable, tier 5 exclusive capstones, tier 1 passives', () => {
     resetClassSkills();
-    expect(registerEmberwrightSkills()).toMatchObject({ ok: true, count: 15 });
-    expect(registerEmberwrightSkills()).toEqual({ ok: true, count: 0 }); // a restart counts as success
+    const first = registerEmberwrightSkills();
+    expect(first).toMatchObject({ ok: true, count: 15 });
+    expect(registerEmberwrightSkills()).toMatchObject({ ok: true, count: 0 }); // a restart that skipped dispose counts as success
     const mine = SKILLS.filter((s) => s.classId === 'emberwright');
     expect(mine).toHaveLength(15);
     expect(mine.filter((s) => s.available).map((s) => s.id).sort()).toEqual(
