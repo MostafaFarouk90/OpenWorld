@@ -7,7 +7,7 @@ import { buildCorridorScenery } from './corridorScenery';
 import { FOG_WALL_X } from './corridor.layout';
 import { buildFogWall } from './fogWall';
 import { buildPoiProps } from './poiProps';
-import { TOLL_POST_BROKEN_FLAG, spawnTollPost, type TollPostHandle } from './tollPost';
+import { watchTollPost } from './tollPost';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
 import type { CoreContext, GamePlugin } from './coreTypes';
 import type { LayoutData } from './layoutTypes';
@@ -93,23 +93,13 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
         });
         swapBarley();
 
-        // The corridor beyond Kettlewick: road, water, reeds; the Leap POIs; the toll-post; the slice fog wall.
+        // The corridor beyond Kettlewick: road, water, reeds; the Leap POIs; the toll-post flag (the actor is the enemies module's); the slice fog wall.
         const scenery = buildCorridorScenery(height);
         ctx.scene.add(scenery.object);
         cleanups.push(() => scenery.dispose());
         const poi = buildPoiProps(ctx, ctx.anchors);
         cleanups.push(() => poi.dispose());
-        const tollAnchor = ctx.anchors.find('ford.toll-post');
-        if (tollAnchor) {
-          let toll: TollPostHandle | null = spawnTollPost(ctx, tollAnchor, { broken: ctx.state.getBool(TOLL_POST_BROKEN_FLAG) });
-          cleanups.push(() => toll?.dispose());
-          cleanups.push(
-            ctx.events.on('save.loaded', () => {
-              toll?.dispose();
-              toll = spawnTollPost(ctx, tollAnchor, { broken: ctx.state.getBool(TOLL_POST_BROKEN_FLAG) });
-            }),
-          );
-        }
+        cleanups.push(watchTollPost(ctx));
         const fogAnchor = ctx.anchors.find('fog.harrowmark');
         if (fogAnchor && ctx.physics.rapier) {
           const fog = buildFogWall({ ...ctx, rapier: ctx.physics.rapier }, { x: FOG_WALL_X, y: fogAnchor.position.y, z: fogAnchor.position.z });
