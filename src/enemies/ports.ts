@@ -210,6 +210,8 @@ export interface NavPort {
   hasGrid(at: Vec3): boolean;
   /** Waypoints including `to`; null means no grid covers this (steer locally). */
   path(from: Vec3, to: Vec3): Vec3[] | null;
+  /** Which grid covers a point (null/undefined for none). Absent on services older than the open-edged street grids. */
+  gridId?(at: Vec3): string | number | null | undefined;
 }
 
 /** `ctx.gates` (state/FlagGates.ts): flag-derived state that is re-derived on `save.loaded`. */

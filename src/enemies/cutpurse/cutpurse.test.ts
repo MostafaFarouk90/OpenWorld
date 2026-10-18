@@ -10,6 +10,7 @@ import { buildEnemyModel } from '../EnemyModel';
 import { EnemyManager } from '../EnemyManager';
 import { bandForRegion, REGION_BANDS } from '../level';
 import { mercyInteractableId } from '../mercy';
+import type { NavPort } from '../ports';
 import { FakeHost, loadKnight } from '../testing/fakeHost';
 import { AI } from '../tuning';
 import type { SpawnerDef } from '../types';
@@ -484,5 +485,33 @@ describe('Brain: cornered', () => {
     expect(b.state).toBe('yield');
     for (let i = 0; i < Math.round(AI.yieldSeconds / DT) + 2; i++) b.step(DT, senses());
     expect(b.state).toBe('flee');
+  });
+});
+
+describe('cornered by a path that ends short', () => {
+  const walled = (reachable: boolean): NavPort => ({
+    hasGrid: () => true,
+    gridId: (p) => (reachable || p.z < 3 ? 'a' : 'b'),
+    path: (from, to) => (reachable ? [to] : [{ x: from.x, y: 0, z: 2.5 }]),
+  });
+
+  it('a thief whose path stops at a wall short of its flee goal yields, and Spare returns the exact pouch', () => {
+    const t = rig(1000);
+    t.fake.nav = walled(false);
+    const id = t.robbed();
+    expect(t.until(() => t.m.get(id)?.state === 'yield', 10)).toBe(true);
+    expect(t.fake.bus.of('enemies.cutpurse.caught')).toEqual([{ actorId: expect.any(String), amount: 40 }]);
+    interact(t, id);
+    expect(t.inv!.gold).toBe(1000);
+    expect(t.inv!.added).toEqual([40]);
+  });
+
+  it('a thief in open ground with a reachable goal is not caught', () => {
+    const t = rig(1000);
+    t.fake.nav = walled(true);
+    const id = t.robbed();
+    t.tick(4);
+    expect(t.m.get(id)?.state).toBe('flee');
+    expect(t.fake.bus.of('enemies.cutpurse.caught')).toEqual([]);
   });
 });

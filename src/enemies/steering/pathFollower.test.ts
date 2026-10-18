@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { NavPort } from '../ports';
-import { PathFollower } from './pathFollower';
+import { PathBudget, PathFollower } from './pathFollower';
 
 const at = (x: number, z: number) => ({ x, y: 0, z });
 
@@ -99,5 +99,90 @@ describe('PathFollower', () => {
       if (self.x >= 10) left = true;
     }
     expect(left).toBe(true);
+  });
+});
+
+describe('PathFollower: gridId goalOutside', () => {
+  const grids = (self: string | null, goalGrid: string | null) => ({
+    hasGrid: (p: { x: number }) => (p.x < 100 ? self !== null : goalGrid !== null),
+    gridId: (p: { x: number }) => (p.x < 100 ? self : goalGrid),
+    path: () => [at(0, -2)],
+  });
+  it('a goal in another grid or none is outside: past the last waypoint it steers to the raw goal', () => {
+    const { follower } = rig(grids('street', null));
+    expect(follower.goalFor(0.016, at(0, 0), at(200, 0))).toEqual({ x: 0, z: -2 });
+    expect(follower.goalFor(0.016, at(0, -2), at(200, 0))).toEqual({ x: 200, z: 0 });
+  });
+  it('a goal in the same grid is not outside even when hasGrid(goal) would say so', () => {
+    const { follower } = rig({ hasGrid: (p) => p.x < 100, gridId: () => 'street', path: () => [at(0, -2)] });
+    follower.goalFor(0.016, at(0, 0), at(200, 0));
+    expect(follower.goalFor(0.016, at(0, -2), at(200, 0))).toEqual({ x: 0, z: -2 });
+  });
+  it('without gridId it falls back to hasGrid(goal)', () => {
+    const { follower } = rig({ hasGrid: (p) => p.x < 100, path: () => [at(0, -2)] });
+    follower.goalFor(0.016, at(0, 0), at(200, 0));
+    expect(follower.goalFor(0.016, at(0, -2), at(200, 0))).toEqual({ x: 200, z: 0 });
+  });
+  it('a goal in a different grid reports endedShort at the path end instead of latching the raw goal', () => {
+    const { follower } = rig({ hasGrid: () => true, gridId: (p) => (p.x < 100 ? 'a' : 'b'), path: () => [at(0, -2)] });
+    for (let i = 0; i < 10; i++) follower.goalFor(0.016, at(0, -2), at(200, 0));
+    expect(follower.endedShort).toBe(false);
+    for (let i = 0; i < 40; i++) expect(follower.goalFor(0.016, at(0, -2), at(200, 0))).toEqual({ x: 0, z: -2 });
+    expect(follower.endedShort).toBe(true);
+  });
+  it('a reachable goal never reports endedShort', () => {
+    const { follower } = rig({ hasGrid: () => true, gridId: () => 'a', path: () => [at(0, -2), at(5, -2)] });
+    for (let i = 0; i < 100; i++) follower.goalFor(0.016, at(5, -2), at(5, -2));
+    expect(follower.endedShort).toBe(false);
+  });
+});
+
+describe('PathBudget', () => {
+  it('caps queries per tick across followers and everyone gets a path eventually', () => {
+    const path = vi.fn(() => [at(1, 1)]);
+    const nav = { hasGrid: () => true, path } as unknown as NavPort;
+    const budget = new PathBudget();
+    expect(budget.limit).toBe(4);
+    const followers = Array.from({ length: 10 }, () => new PathFollower(() => nav, vi.fn(), budget));
+    const got = new Set<number>();
+    for (let tick = 1; tick <= 3; tick++) {
+      budget.reset();
+      followers.forEach((f, i) => {
+        if (f.goalFor(0.016, at(0, 0), at(5, 5))) got.add(i);
+      });
+      expect(path).toHaveBeenCalledTimes(Math.min(10, 4 * tick));
+    }
+    expect(got.size).toBe(10);
+  });
+  it('a denied follower keeps its previous path', () => {
+    const path = vi.fn(() => [at(1, 1)]);
+    const budget = new PathBudget(1);
+    const nav = { hasGrid: () => true, path } as unknown as NavPort;
+    const f = new PathFollower(() => nav, vi.fn(), budget);
+    budget.reset();
+    f.goalFor(0.016, at(0, 0), at(5, 5));
+    budget.take(); // another follower used the tick's query
+    budget.reset();
+    budget.take();
+    expect(f.goalFor(1, at(0, 0), at(5, 5))).toEqual({ x: 1, z: 1 });
+    expect(path).toHaveBeenCalledTimes(1);
+  });
+  it('a throwing nav still warns once', () => {
+    const warn = vi.fn();
+    const budget = new PathBudget();
+    const nav = { hasGrid: () => true, path: () => { throw new Error('boom'); } } as unknown as NavPort;
+    const fs = Array.from({ length: 3 }, () => new PathFollower(() => nav, warn, budget));
+    for (let i = 0; i < 5; i++) {
+      budget.reset();
+      fs.forEach((f) => f.goalFor(0.016, at(0, 0), at(5, 5)));
+    }
+    expect(warn).toHaveBeenCalledTimes(3); // once per follower
+  });
+  it('a null (outdoor) answer is not re-asked every tick', () => {
+    const path = vi.fn(() => null);
+    const nav = { hasGrid: () => true, path } as unknown as NavPort;
+    const f = new PathFollower(() => nav, vi.fn());
+    for (let i = 0; i < 10; i++) f.goalFor(0.016, at(0, 0), at(5, 5));
+    expect(path).toHaveBeenCalledTimes(1);
   });
 });
