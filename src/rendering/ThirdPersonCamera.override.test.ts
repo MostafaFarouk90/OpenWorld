@@ -64,6 +64,35 @@ describe('ThirdPersonCamera.override', () => {
     expect(camera.position.distanceTo(followPose())).toBeLessThan(1e-9);
   });
 
+  it('an override started and released before any frame draws it causes no jump', () => {
+    const { camera, cam } = setup();
+    cam.update(feet, DT);
+    const follow = camera.position.clone();
+    cam.override(shotAt(150, 5, 150)).release();
+    cam.update(feet, DT);
+    expect(camera.position.distanceTo(follow)).toBeLessThan(1e-6);
+  });
+
+  it('two overrides started in one frame blend from the shown pose to the newer shot', () => {
+    const { camera, cam } = setup();
+    cam.update(feet, DT);
+    const follow = camera.position.clone();
+    cam.override(shotAt(150, 5, 150));
+    cam.override(shotAt(10, 5, 10));
+    cam.update(feet, DT);
+    // One frame into a 0.5 s blend: still close to the follow pose, never near the undrawn first shot.
+    expect(camera.position.distanceTo(follow)).toBeLessThan(1);
+    run(cam, 0.6);
+    expect(camera.position.distanceTo(new THREE.Vector3(10, 5, 10))).toBeLessThan(1e-6);
+  });
+
+  it('an override before the first frame ever blends from the follow pose', () => {
+    const { camera, cam } = setup();
+    cam.override(shotAt(150, 5, 150)).release();
+    cam.update(feet, DT);
+    expect(camera.position.distanceTo(followPose())).toBeLessThan(1e-6);
+  });
+
   it('blends in and reaches the shot pose after blendIn', () => {
     const { camera, cam } = setup();
     cam.update(feet, DT);
@@ -203,6 +232,7 @@ describe('ThirdPersonCamera.override', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const { cam } = setup();
       cam.override({ position: { x: Infinity, y: 0, z: 0 }, lookAt: { x: 0, y: 0, z: 0 }, blendIn: 0 });
+      run(cam, 0.05);
       cam.override({ position: { x: 0, y: 0, z: 0 }, lookAt: { x: 0, y: NaN, z: 0 }, blendIn: 0 });
       run(cam, 0.1);
       expect(warn).toHaveBeenCalledTimes(2);

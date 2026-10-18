@@ -428,6 +428,7 @@ export class Game {
     this.bridge.dispose();
     this.gates.dispose();
     this.bosses.dispose();
+    this.opts.world.player.onLeap = null;
     this.ctx.combat.dispose();
     this.offKeyboardLock();
   }

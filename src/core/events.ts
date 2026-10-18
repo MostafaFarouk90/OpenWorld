@@ -98,6 +98,8 @@ export interface GameEventMap {
   'boss.releaseWindow': { bossId: string; open: boolean };
   'boss.defeated': { bossId: string; actorId: ActorId };
   'boss.released': { bossId: string; actorId: ActorId };
+  /** The registration ended without an outcome change (a vault-reload reset, a plugin teardown); clear boss UI and music. */
+  'boss.ended': { bossId: string; actorId: ActorId; reason: 'despawned' | 'unregistered' };
   /** Thread 2: an ability granted outside the skill tree (first id `surge-leap`). */
   'ability.learned': { id: string; source: string };
   /** Thread 2: a Scar was added (shard use at Burn 75 or more); `total` is the new count. */
