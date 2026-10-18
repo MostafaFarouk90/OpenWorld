@@ -64,4 +64,38 @@ export const HUD_CSS = `
 .owg-skill-meta{font-size:11px;opacity:.7}
 .owg-skill-desc{font-size:12px;opacity:.85}
 .owg-skill-state{font-size:12px;color:#d8a830}
+.owg-scar{display:flex;align-items:center;gap:4px;color:#f0a070;font-weight:700;text-shadow:0 1px 2px #000}
+.owg-scar-pulse{animation:owg-pulse .6s ease-out}
+@keyframes owg-pulse{0%{transform:scale(1)}40%{transform:scale(1.5)}100%{transform:scale(1)}}
+.owg-leap{position:relative;width:34px;height:34px;margin-left:6px;border-radius:6px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.3);color:#fff;font:12px system-ui,sans-serif}
+.owg-leap-warn{border-color:#f5a84a;box-shadow:0 0 6px #f5a84a}
+.owg-leap-ring{position:absolute;inset:0;border-radius:6px}
+.owg-leap-glyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700}
+.owg-boss{display:flex;flex-direction:column;align-items:center;gap:3px;width:480px;max-width:80vw;pointer-events:none;font:14px system-ui,sans-serif;color:#f3ead8;text-shadow:0 1px 2px #000;transition:opacity 1.5s linear}
+.owg-boss-name{font-weight:700;letter-spacing:.05em}
+.owg-boss-bar{position:relative;width:100%;height:14px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.25);border-radius:3px;overflow:hidden}
+.owg-boss-fill{height:100%;width:0;background:#a8302a;transition:width .12s linear}
+.owg-boss-shielded .owg-boss-fill{background:#5a8fc0}
+.owg-boss-release .owg-boss-bar{box-shadow:0 0 10px #f0d060;border-color:#f0d060}
+.owg-boss-tick{position:absolute;top:0;width:2px;height:100%;background:rgba(255,255,255,.7)}
+.owg-boss-pips{display:flex;gap:4px;height:8px}
+.owg-boss-pip{width:8px;height:8px;border-radius:50%;border:1px solid #c8b890;background:transparent}
+.owg-boss-pip-on{background:#f0d060}
+.owg-boss-flag{font-size:11px;color:#f0d060}
+.owg-companion{display:flex;flex-direction:column;gap:3px;width:180px;margin-top:4px;pointer-events:none;font:12px system-ui,sans-serif;color:#f3ead8;text-shadow:0 1px 2px #000}
+.owg-companion-head{display:flex;align-items:center;gap:6px}
+.owg-companion-name{font-weight:600}
+.owg-aura-pip{width:8px;height:8px;border-radius:50%;background:#444;border:1px solid #888}
+.owg-aura-on{background:#f0d060;border-color:#f0d060;box-shadow:0 0 6px #f0d060}
+.owg-companion-bar{height:6px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
+.owg-companion-fill{height:100%;width:0;background:#5aa65a}
+.owg-card{max-width:420px;padding:20px 28px;text-align:center;border-radius:8px;background:rgba(20,16,12,.92);border:1px solid #6a5a3a;color:#e8dfc8;font:14px system-ui,sans-serif;pointer-events:none}
+.owg-card-title{margin:0 0 8px;font-size:22px;color:#f0d890}
+.owg-card-hint{margin-top:10px;font-size:11px;opacity:.6}
+.owg-respec{min-width:320px;padding:16px;border-radius:8px;background:rgba(20,16,12,.94);border:1px solid #6a5a3a;color:#e8dfc8;font:14px system-ui,sans-serif;pointer-events:auto}
+.owg-respec-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.owg-btn[disabled]{opacity:.4;cursor:default}
+.owg-respec-warn{color:#f5a84a}
+.interaction-prompt__mercy{color:#f2ead8}
+body.owg-burn-scar .interaction-prompt__mercy{color:#f5a84a}
 `;

@@ -3,7 +3,11 @@ import type { GameContext } from '../core/Game';
 import type { GamePlugin } from '../core/plugins';
 import type { ElementLike } from './dom';
 import './events';
-import { AbilityBar, type AbilitySlotInfo } from './AbilityBar';
+import { AbilityBar, LeapState, type AbilitySlotInfo } from './AbilityBar';
+import { ActContinuesCard, hudOptions, type KeySource } from './ActContinuesCard';
+import { BossBar } from './BossBar';
+import { CompanionPortrait } from './CompanionPortrait';
+import { createRespecModal, type RespecModalDeps } from './RespecModal';
 import { BuffBar, type BuffInfo } from './BuffBar';
 import { LockOnMarker } from './LockOnMarker';
 import { NextUnlock } from './NextUnlock';
@@ -37,26 +41,36 @@ const hudPlugin: GamePlugin = {
     const player = () => ctx.actors.player;
 
     const mount = (slot: HudSlot, view: HudWidgetView & { element: ElementLike }, order: number): void => {
-      ctx.hud.mount(slot, { id: view.id, element: asHtml(view.element), order, update: () => view.update(), dispose: () => view.dispose() });
+      ctx.hud.mount(slot, { id: view.id, element: asHtml(view.element), order, update: (dt) => view.update(dt), dispose: () => view.dispose() });
     };
 
-    mount(
-      'top-left',
-      new StatusBars(doc, {
+    const status = new StatusBars(doc, {
         health: () => player().health,
         maxHealth: () => player().maxHealth,
         stamina: () => player().stamina,
         maxStamina: () => player().maxStamina,
         baseMaxHealth: () => progression()?.baseMaxHealth() ?? player().maxHealth,
         spells: () => soft(ctx, 'spells'),
+        scars: () => soft(ctx, 'spells')?.scars,
         progress: () => {
           const p = progression();
           return p ? xpBarProgress(p) : null;
         },
         t,
-      }),
-      20,
-    );
+    });
+    ctx.events.on('scar.added', () => status.pulse());
+    // Burn 75+ tints the mercy prompt's cost amber (CSS only; the text is thread 1's string in core's PromptWidget).
+    ctx.hud.mount('top-left', {
+      id: status.id,
+      element: asHtml(status.element),
+      order: 20,
+      update() {
+        status.update();
+        const body = typeof document !== 'undefined' ? document.body : undefined;
+        body?.classList?.toggle('owg-burn-scar', (soft(ctx, 'spells')?.burn ?? 0) >= 75);
+      },
+      dispose: () => status.dispose(),
+    });
 
     const buffs = new Map<string, BuffInfo>();
     ctx.events.on('buff.applied', (e) => {
@@ -110,7 +124,20 @@ const hudPlugin: GamePlugin = {
     );
 
     const abilities = () => ctx.services.get('abilities');
+    // Leap ring: learned state from the flag (survives a load), cooldown from spells.leap with a local 4 s fallback.
+    let leapLearned = false;
+    ctx.gates.flag('ability.surge-leap.learned', (open) => {
+      leapLearned = open;
+    });
+    const leapSpells = () => soft(ctx, 'spells') as ({ burn?: number; leap?: { cooldown?: () => { remaining: number; total: number } } } | undefined);
+    const leap = new LeapState({
+      learned: () => leapLearned,
+      cooldown: () => leapSpells()?.leap?.cooldown?.(),
+      burn: () => leapSpells()?.burn,
+    });
+    ctx.events.on('player.leap', (e) => leap.onLeap(e.phase));
     const bar = new AbilityBar(doc, {
+      leap: () => leap.info(),
       glyph: (a) => ctx.input.bindings.glyph(a as 'ability1'),
       t,
       slots: () => {
@@ -132,7 +159,63 @@ const hudPlugin: GamePlugin = {
       },
     });
     ctx.events.on('ability.failed', (e) => bar.shake(e.slot));
-    ctx.hud.mount('bottom-center', { id: bar.id, element: asHtml(bar.element), order: 12, update: () => bar.update(), dispose: () => bar.dispose() });
+    ctx.hud.mount('bottom-center', {
+      id: bar.id,
+      element: asHtml(bar.element),
+      order: 12,
+      update(dt) {
+        leap.tick(dt ?? 0);
+        bar.update();
+      },
+      dispose: () => bar.dispose(),
+    });
+
+    // Boss bar: initialised from ctx.bosses.active(), then driven by the boss.* events.
+    const bosses = ctx.bosses;
+    const bossBar = new BossBar(doc, {
+      active: () => bosses?.active?.() ?? [],
+      state: (id) => bosses?.state?.(id) ?? null,
+      t,
+    });
+    ctx.events.on('boss.started', (e) => bossBar.started(e.bossId));
+    for (const type of ['boss.phase', 'boss.break', 'boss.shield', 'boss.releaseWindow'] as const) {
+      ctx.events.on(type, (e) => bossBar.touched(e.bossId));
+    }
+    for (const type of ['boss.defeated', 'boss.released', 'boss.ended'] as const) {
+      ctx.events.on(type, (e) => bossBar.finished(e.bossId));
+    }
+    mount('top-center', bossBar, 0);
+
+    // Companion portrait: read at setup and on save.loaded (a load emits no join events).
+    const companionSvc = () => soft(ctx, 'companions');
+    const portrait = new CompanionPortrait(doc, {
+      active: () => companionSvc()?.active() ?? [],
+      actorId: (id) => companionSvc()?.actorId(id) ?? null,
+      actor: (id) => ctx.actors.get(id),
+      t,
+    });
+    ctx.events.on('save.loaded', () => portrait.reload());
+    ctx.events.on('companion.joined', (e) => portrait.joined(e.companionId, e.actorId));
+    ctx.events.on('companion.left', (e) => portrait.left(e.companionId));
+    ctx.events.on('companion.aura', (e) => portrait.aura(e.companionId, e.active));
+    mount('top-left', portrait, 40);
+
+    // "Act 1 continues" card, behind hudOptions.showActContinues.
+    const keyTarget = typeof globalThis.addEventListener === 'function' ? (globalThis as unknown as KeySource) : null;
+    const card = new ActContinuesCard(doc, { t, keys: keyTarget, enabled: () => hudOptions.showActContinues });
+    ctx.events.on('trigger.enter', (e) => card.onTrigger(e.triggerId));
+    mount('center', card, 0);
+
+    // respecModal service (thread 7 calls it; this plugin never calls progression).
+    ctx.services.provide(
+      'respecModal',
+      createRespecModal({
+        doc,
+        t,
+        keys: keyTarget as RespecModalDeps['keys'],
+        openModal: (w) => ctx.hud.openModal({ id: w.id, element: asHtml(w.element), dispose: w.dispose }, { context: 'menu' }),
+      }),
+    );
 
     mount(
       'bottom-left',

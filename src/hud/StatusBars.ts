@@ -13,6 +13,8 @@ export interface StatusBarsSource {
   baseMaxHealth?(): number;
   /** Absent or null: no Ember rules, so the Burn and Ember bars are hidden. */
   spells?(): { burn: number; ember: number; maxEmber: number } | null | undefined;
+  /** Scars taken (polled: a load emits no `scar.added`). Absent or 0: the scar count is hidden. */
+  scars?(): number | null | undefined;
   progress?(): { level: number; xp: number; xpToNext: number; maxed: boolean } | null | undefined;
   t?: Translate;
 }
@@ -50,6 +52,10 @@ export class StatusBars implements HudWidgetView {
   private readonly burnFill;
   private readonly emberRow;
   private readonly emberFill;
+  private readonly scarRow;
+  private readonly scarText;
+  private pulseTimer: ReturnType<typeof setTimeout> | null = null;
+  private pulsing = false;
   private readonly xpRow;
   private readonly xpFill;
   private readonly xpLabel;
@@ -74,6 +80,10 @@ export class StatusBars implements HudWidgetView {
     const b = bar('owg-bar-burn owg-burn-warm', 'hud.bar.burn');
     this.burnRow = b.row;
     this.burnFill = b.fill;
+    this.scarRow = makeEl(doc, 'div', 'owg-scar', root);
+    this.scarRow.setAttribute('title', this.t('hud.scar.tip'));
+    makeEl(doc, 'span', 'owg-scar-glyph', this.scarRow).textContent = '\u2726';
+    this.scarText = makeEl(doc, 'span', 'owg-scar-count', this.scarRow);
     const e = bar('owg-bar-ember', 'hud.bar.ember');
     this.emberRow = e.row;
     this.emberFill = e.fill;
@@ -103,6 +113,11 @@ export class StatusBars implements HudWidgetView {
       this.emberFill.style.width = pct(barFraction(sp.ember, sp.maxEmber));
     }
 
+    const scars = shownNumber(s.scars?.() ?? 0);
+    setShown(this.scarRow, scars > 0, 'flex');
+    this.scarText.textContent = String(scars);
+    this.scarRow.className = this.pulsing ? 'owg-scar owg-scar-pulse' : 'owg-scar';
+
     const pr = s.progress?.() ?? null;
     setShown(this.xpRow, !!pr);
     if (pr) {
@@ -111,7 +126,21 @@ export class StatusBars implements HudWidgetView {
     }
   }
 
+  /** One pulse of the scar count (on `scar.added`). */
+  pulse(): void {
+    if (this.pulseTimer) clearTimeout(this.pulseTimer);
+    this.pulsing = true;
+    this.scarRow.className = 'owg-scar owg-scar-pulse';
+    this.pulseTimer = setTimeout(() => {
+      this.pulseTimer = null;
+      this.pulsing = false;
+      this.scarRow.className = 'owg-scar';
+    }, 600);
+  }
+
   dispose(): void {
+    if (this.pulseTimer) clearTimeout(this.pulseTimer);
+    this.pulseTimer = null;
     this.element.remove();
   }
 }

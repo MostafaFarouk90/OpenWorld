@@ -12,6 +12,7 @@ interface SoftServices {
     active(): readonly unknown[];
     objectives(id: string): readonly unknown[];
   };
+  companions: { active(): readonly string[]; actorId(id: string): string | null };
   vfx: { spawnEffect(id: string, transform: { position: { x: number; y: number; z: number } }): unknown };
 }
 

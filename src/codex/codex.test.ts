@@ -1,0 +1,381 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { EventBus } from '../core/EventBus';
+import type { GameEventMap } from '../core/events';
+import { Services } from '../core/Services';
+import { StubDocument, textOf, type ElementLike } from '../hud/dom';
+import { StringTable } from '../strings/StringTable';
+import { CodexModel, normaliseTally } from './CodexModel';
+import { CODEX_MODAL_ID, createCodexModal } from './CodexView';
+import { CODEX_ENTRIES, entriesOf } from './entries';
+import codexPlugin from './codex.plugin';
+import { CODEX_STRINGS_EN } from './strings.en';
+import type { CodexService } from './service';
+
+beforeEach(() => void vi.spyOn(console, 'warn').mockImplementation(() => {}));
+afterEach(() => vi.restoreAllMocks());
+
+describe('CodexModel', () => {
+  it('unlock and has', () => {
+    const m = new CodexModel();
+    expect(m.has('howto.release')).toBe(false);
+    expect(m.unlock('howto.release')).toBe(true);
+    expect(m.unlock('howto.release')).toBe(false);
+    expect(m.has('howto.release')).toBe(true);
+    expect(m.unlock('')).toBe(false);
+  });
+
+  it('round trips only unlocked and read', () => {
+    const m = new CodexModel();
+    m.unlock('a');
+    m.unlock('b');
+    m.markRead('a');
+    m.markRead('zzz'); // not unlocked: ignored
+    const saved = JSON.parse(JSON.stringify(m.serialize()));
+    expect(Object.keys(saved).sort()).toEqual(['read', 'unlocked']);
+    const n = new CodexModel();
+    n.load(saved);
+    expect(n.serialize()).toEqual({ unlocked: ['a', 'b'], read: ['a'] });
+  });
+
+  it('survives corrupt payloads and warns', () => {
+    const warn = vi.fn();
+    const m = new CodexModel();
+    for (const bad of [null, 5, 'x', [1], { unlocked: 'nope', read: 3 }]) {
+      m.load(bad, warn);
+      expect(m.serialize()).toEqual({ unlocked: [], read: [] });
+    }
+    expect(warn).toHaveBeenCalled();
+    m.load({ unlocked: ['ok', 3, null, ''], read: [{}] }, warn);
+    expect(m.serialize().unlocked).toEqual(['ok']);
+  });
+
+  it('keeps unknown string ids', () => {
+    const m = new CodexModel();
+    m.load({ unlocked: ['lore.from-a-future-build'] });
+    expect(m.has('lore.from-a-future-build')).toBe(true);
+  });
+
+  it('normalises tallies from records and maps', () => {
+    const r = normaliseTally({ 'ash-wraith': { release: 2, spare: 1.9, calm: -1, killed: 'x' }, bad: 3 });
+    expect(r.get('ash-wraith')).toEqual({ release: 2, spare: 1, calm: 0, killed: 0 });
+    expect(r.has('bad')).toBe(false);
+    expect(normaliseTally(new Map([['k', { release: 1 }]])).get('k')?.release).toBe(1);
+    expect(normaliseTally(undefined).size).toBe(0);
+  });
+});
+
+describe('strings', () => {
+  it('has a name and body for every entry and registers cleanly', () => {
+    for (const e of CODEX_ENTRIES) {
+      expect(CODEX_STRINGS_EN[e.nameKey]).toBeTruthy();
+      expect(CODEX_STRINGS_EN[e.bodyKey]).toBeTruthy();
+    }
+    expect(() => new StringTable().register('en', CODEX_STRINGS_EN)).not.toThrow();
+  });
+
+  it('has no scarecrow or Blightbloom entry', () => {
+    expect(CODEX_ENTRIES.map((e) => e.id).join(' ')).not.toMatch(/scarecrow|blightbloom/);
+  });
+});
+
+function findAll(el: ElementLike, cls: string, out: ElementLike[] = []): ElementLike[] {
+  if (el.className.split(' ').includes(cls)) out.push(el);
+  for (const c of el.children) findAll(c, cls, out);
+  return out;
+}
+
+function makeView(unlocked: string[] = [], tally: ((k: string) => any) | null = null) {
+  const set = new Set(unlocked);
+  const strings = new StringTable();
+  strings.register('en', CODEX_STRINGS_EN);
+  const view = createCodexModal({
+    has: (id) => set.has(id),
+    markRead: () => {},
+    isRead: () => false,
+    tally: tally ?? (() => null),
+    t: (k, p) => strings.t(k, p),
+    doc: new StubDocument(),
+  });
+  return { view, set, root: view.element as unknown as ElementLike };
+}
+
+describe('CodexView', () => {
+  it('masks locked entries with ???', () => {
+    const { root } = makeView();
+    const items = findAll(root, 'codex-modal__item').concat(findAll(root, 'codex-modal__item--selected'));
+    expect(items.length).toBeGreaterThan(0);
+    for (const i of items) expect(i.textContent).toBe('???');
+    expect(textOf(root)).not.toContain('Footman');
+  });
+
+  it('shows names and detail when unlocked', () => {
+    const { root } = makeView(['blighted-soldier']);
+    expect(textOf(root)).toContain('Blighted Footman');
+  });
+
+  it('keyboard: tabs wrap, selection clamps', () => {
+    const { view } = makeView();
+    expect(view.tab).toBe('bestiary');
+    view.key('ArrowRight');
+    expect(view.tab).toBe('lore');
+    view.key('ArrowRight');
+    view.key('ArrowRight');
+    expect(view.tab).toBe('bestiary');
+    view.key('ArrowLeft');
+    expect(view.tab).toBe('howto');
+    expect(view.selectedId).toBe(entriesOf('howto')[0].id);
+    view.key('ArrowDown');
+    expect(view.selectedId).toBe(entriesOf('howto')[1].id);
+    for (let i = 0; i < 20; i++) view.key('ArrowDown');
+    expect(view.selectedId).toBe(entriesOf('howto').at(-1)!.id);
+    for (let i = 0; i < 20; i++) view.key('ArrowUp');
+    expect(view.selectedId).toBe(entriesOf('howto')[0].id);
+    expect(view.key('KeyQ')).toBe(false);
+  });
+
+  it('tally row shows zeros without the service and counts with it', () => {
+    const none = makeView(['ash-wraith']);
+    none.view.key('ArrowDown');
+    expect(textOf(none.root)).toContain('Released 0 · Spared 0 · Calmed 0');
+    const some = makeView(['ash-wraith'], () => ({ release: 2, spare: 1, calm: 0, killed: 4 }));
+    some.view.key('ArrowDown');
+    expect(textOf(some.root)).toContain('Released 2 · Spared 1 · Calmed 0');
+  });
+
+  it('refreshes on update when an entry unlocks', () => {
+    const { view, set, root } = makeView();
+    expect(textOf(root)).not.toContain('Blighted Footman');
+    set.add('blighted-soldier');
+    view.update?.(0.1);
+    expect(textOf(root)).toContain('Blighted Footman');
+  });
+
+  it('select jumps to the entry tab', () => {
+    const { view } = makeView();
+    view.select('howto.rally-cry');
+    expect(view.tab).toBe('howto');
+    expect(view.selectedId).toBe('howto.rally-cry');
+    view.select('nonsense');
+    expect(view.selectedId).toBe('howto.rally-cry');
+  });
+});
+
+// ---- plugin against a fake context ----
+
+interface Rig {
+  events: EventBus<GameEventMap>;
+  services: Services;
+  flags: Map<string, boolean | number>;
+  saved: Map<string, { version: number; serialize(): unknown; load(d: unknown, v: number): void }>;
+  pressed: Set<string>;
+  systems: Array<{ fixedUpdate(dt: number): void }>;
+  modal: { id: string | null; closers: number };
+  blockModal: boolean;
+  top: string;
+  codex: CodexService;
+  tick(...actions: string[]): void;
+  widget(): any;
+}
+
+async function rig(opts: { enemies?: () => unknown; noHud?: boolean } = {}): Promise<Rig> {
+  const events = new EventBus<GameEventMap>();
+  const services = new Services();
+  const flags = new Map<string, boolean | number>();
+  const saved: Rig['saved'] = new Map();
+  const systems: Rig['systems'] = [];
+  const pressed = new Set<string>();
+  let widget: any = null;
+  const r = { modal: { id: null as string | null, closers: 0 }, blockModal: false, top: 'gameplay' } as Rig;
+  const strings = new StringTable();
+  const ctx: any = {
+    events,
+    services,
+    strings,
+    state: {
+      getBool: (k: string) => (typeof flags.get(k) === 'boolean' ? flags.get(k) : false),
+      getNumber: (k: string) => (typeof flags.get(k) === 'number' ? flags.get(k) : 0),
+    },
+    persist: { register: (p: any) => void saved.set(p.key, p) },
+    systems: { add: (s: any) => void systems.push(s) },
+    input: { actions: { pressed: (a: string) => pressed.has(a) }, contexts: { top: () => r.top } },
+    actors: { get: (id: string) => (id === 'w1' ? { kind: 'ash-wraith' } : undefined) },
+    hud: {
+      get modalOpen() {
+        return r.modal.id;
+      },
+      openModal: (w: any) => {
+        if (r.blockModal || r.modal.id) return null;
+        r.modal.id = w.id;
+        widget = w;
+        events.emit('ui.modal', { id: w.id, open: true });
+        return () => {
+          r.modal.closers++;
+          r.modal.id = null;
+          events.emit('ui.modal', { id: w.id, open: false });
+        };
+      },
+    },
+  };
+  if (opts.enemies) services.provide('enemies' as any, { mercyTally: opts.enemies } as any);
+  await codexPlugin.setup(ctx);
+  Object.assign(r, {
+    events, services, flags, saved, pressed, systems,
+    codex: services.get('codex')!,
+    tick: (...a: string[]) => {
+      pressed.clear();
+      a.forEach((x) => pressed.add(x));
+      for (const s of systems) s.fixedUpdate(1 / 60);
+      pressed.clear();
+    },
+    widget: () => widget,
+  });
+  return r;
+}
+
+const mercy = (verb: string, creature: string) =>
+  ({ verb, tier: 'normal', track: null, creature }) as GameEventMap['mercy'];
+
+describe('codex plugin', () => {
+  it('provides the service and persists under key codex v1', async () => {
+    const r = await rig();
+    expect(r.codex.has('x')).toBe(false);
+    r.codex.unlock('x');
+    expect(r.codex.has('x')).toBe(true);
+    const p = r.saved.get('codex')!;
+    expect(p.version).toBe(1);
+    const data = JSON.parse(JSON.stringify(p.serialize()));
+    expect(Object.keys(data).sort()).toEqual(['read', 'unlocked']);
+    const r2 = await rig();
+    r2.saved.get('codex')!.load(data, 1);
+    expect(r2.codex.has('x')).toBe(true);
+    r2.saved.get('codex')!.load({ unlocked: 'bad' }, 1);
+    expect(r2.codex.has('x')).toBe(false);
+  });
+
+  it('splits Release and Spare by mercy verb and unlocks the creature', async () => {
+    const r = await rig();
+    r.events.emit('mercy', mercy('release', 'ash-wraith'));
+    expect(r.codex.has('howto.release')).toBe(true);
+    expect(r.codex.has('howto.spare')).toBe(false);
+    expect(r.codex.has('ash-wraith')).toBe(true);
+    r.events.emit('mercy', mercy('spare', 'blighted-soldier'));
+    expect(r.codex.has('howto.spare')).toBe(true);
+    expect(r.codex.has('blighted-soldier')).toBe(true);
+    r.events.emit('mercy', mercy('calm', 'scarecrow'));
+    expect(r.codex.has('scarecrow')).toBe(false);
+  });
+
+  it('unlocks on ability.learned, companion.joined, boss.started, aggro, scar, warmth', async () => {
+    const r = await rig();
+    r.events.emit('ability.learned', { id: 'surge-leap', source: 'm03' });
+    r.events.emit('ability.learned', { id: 'something-else', source: 'x' });
+    expect(r.codex.has('howto.surge-leap')).toBe(true);
+    expect(r.codex.has('howto.rally-cry')).toBe(false);
+    r.events.emit('companion.joined', { companionId: 'tobb', actorId: 'a' });
+    expect(r.codex.has('howto.rally-cry')).toBe(true);
+    r.events.emit('boss.started', { bossId: 'ashen-prior', actorId: 'b' });
+    expect(r.codex.has('ashen-prior')).toBe(true);
+    r.events.emit('ai.aggro', { actorId: 'w1', targetId: 'player' });
+    expect(r.codex.has('ash-wraith')).toBe(true);
+    r.events.emit('scar.added', { total: 1, source: 'x' });
+    expect(r.codex.has('howto.burn-scars')).toBe(true);
+    r.events.emit('warmth.changed', { tier: 0, previous: 1 });
+    expect(r.codex.has('howto.warmth-tier')).toBe(false);
+    r.events.emit('warmth.changed', { tier: 1, previous: 0 });
+    expect(r.codex.has('howto.warmth-tier')).toBe(true);
+  });
+
+  it('backfills from flags and the tally after load, with no codex entry in the save', async () => {
+    const tally = { 'ash-wraith': { release: 3, spare: 0, calm: 0, killed: 0 }, 'blighted-soldier': { release: 0, spare: 2, calm: 0, killed: 5 } };
+    const r = await rig({ enemies: () => tally });
+    r.flags.set('prompt.mercy.count', 5);
+    r.flags.set('prompt.surgeLeap.count', 1);
+    r.flags.set('ability.rally-cry.learned', true);
+    // A save without a codex entry: the persistable's load is never called.
+    expect(r.codex.has('howto.release')).toBe(false);
+    r.events.emit('save.loaded', { slot: 'a' });
+    for (const id of ['howto.release', 'howto.spare', 'howto.surge-leap', 'howto.rally-cry', 'ash-wraith', 'blighted-soldier']) {
+      expect(r.codex.has(id)).toBe(true);
+    }
+    expect(r.codex.has('howto.warmth-tier')).toBe(false);
+  });
+
+  it('backfill without a tally service falls back to Release only', async () => {
+    const r = await rig();
+    r.flags.set('prompt.mercy.count', 1);
+    r.events.emit('save.loaded', { slot: 'a' });
+    expect(r.codex.has('howto.release')).toBe(true);
+    expect(r.codex.has('howto.spare')).toBe(false);
+  });
+
+  it('backfill after a codex load keeps loaded ids', async () => {
+    const r = await rig();
+    r.saved.get('codex')!.load({ unlocked: ['lore.leap-a'] }, 1);
+    r.flags.set('warmth.tier', 2);
+    r.events.emit('save.loaded', { slot: 'a' });
+    expect(r.codex.has('lore.leap-a')).toBe(true);
+    expect(r.codex.has('howto.warmth-tier')).toBe(true);
+  });
+
+  it('a throwing tally does not break backfill', async () => {
+    const r = await rig({ enemies: () => { throw new Error('boom'); } });
+    r.flags.set('prompt.mercy.count', 1);
+    expect(() => r.events.emit('save.loaded', { slot: 'a' })).not.toThrow();
+    expect(r.codex.has('howto.release')).toBe(true);
+  });
+
+  it('toggles open and closed on L, closes on Esc', async () => {
+    const r = await rig();
+    r.tick('codex');
+    expect(r.modal.id).toBe(CODEX_MODAL_ID);
+    r.tick('codex');
+    expect(r.modal.id).toBeNull();
+    r.tick('codex');
+    expect(r.modal.id).toBe(CODEX_MODAL_ID);
+    r.tick('menu');
+    expect(r.modal.id).toBeNull();
+    expect(r.modal.closers).toBe(2);
+    r.tick('menu'); // nothing open: no effect
+    expect(r.modal.id).toBeNull();
+  });
+
+  it('does not open outside gameplay', async () => {
+    const r = await rig();
+    r.top = 'dialogue';
+    r.tick('codex');
+    expect(r.modal.id).toBeNull();
+  });
+
+  it('open() is a safe no-op while another modal is open', async () => {
+    const r = await rig();
+    r.modal.id = 'map.modal';
+    expect(() => r.codex.open()).not.toThrow();
+    r.tick('codex');
+    expect(r.modal.id).toBe('map.modal');
+    r.modal.id = null;
+    r.blockModal = true;
+    expect(() => r.codex.open('howto.release')).not.toThrow();
+    r.blockModal = false;
+    r.codex.open('howto.release');
+    expect(r.widget().selectedId).toBe('howto.release');
+    r.codex.open('lore.leap-b'); // already open: just selects
+    expect(r.widget().selectedId).toBe('lore.leap-b');
+  });
+
+  it('shows the tally from the service in the open modal, zeros without', async () => {
+    const r = await rig({ enemies: () => ({ 'ash-wraith': { release: 2, spare: 1, calm: 3, killed: 0 } }) });
+    r.codex.unlock('ash-wraith');
+    r.codex.open('ash-wraith');
+    expect(textOf(r.widget().element)).toContain('Released 2 · Spared 1 · Calmed 3');
+    const bare = await rig();
+    bare.codex.unlock('ash-wraith');
+    bare.codex.open('ash-wraith');
+    expect(textOf(bare.widget().element)).toContain('Released 0 · Spared 0 · Calmed 0');
+  });
+
+  it('works with no hud services other than core, and a locked entry stays masked', async () => {
+    const r = await rig();
+    r.codex.open('ash-wraith');
+    expect(textOf(r.widget().element)).toContain('???');
+  });
+});

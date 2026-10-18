@@ -430,3 +430,63 @@ describe('review fixes', () => {
     t.dispose();
   });
 });
+
+describe('slice 2 widgets and soft services', () => {
+  const bossDef = { bossId: 'ashen-prior', nameKey: 'boss.ashen-prior', phases: [0.66, 0.33], breaksPerPhase: 3 };
+
+  it('mounts the new widgets with only core present and provides respecModal', async () => {
+    const t = await setup([corePlugin, hudPlugin]);
+    expect(t.statuses.find((s) => s.id === 'hud')?.state).toBe('ok');
+    expect(t.ctx.hud.mounted('top-center')).toContain('boss-bar');
+    expect(t.ctx.hud.mounted('top-left')).toEqual(expect.arrayContaining(['status-bars', 'companion-portrait']));
+    expect(t.ctx.hud.mounted('center')).toContain('act-continues');
+    expect(t.ctx.services.get('respecModal' as any)).toBeTruthy();
+    t.run(2);
+    t.ctx.hud.update(0.016);
+    t.dispose();
+  });
+
+  it('a missing optional service (spells, companions, leap) never removes the health bars', async () => {
+    const t = await setup([corePlugin, hudPlugin]);
+    expect(t.ctx.services.get('spells' as any)).toBeUndefined();
+    expect(t.ctx.services.get('companions' as any)).toBeUndefined();
+    t.game.events.emit('scar.added', { total: 1, source: 'x' });
+    t.game.events.emit('player.leap', { phase: 'start', from: { x: 0, y: 0, z: 0 } });
+    t.game.events.emit('companion.joined', { companionId: 'tobb', actorId: 'nobody' });
+    t.game.events.emit('companion.aura', { companionId: 'tobb', auraId: 'battle-song', active: true });
+    t.game.events.emit('boss.ended', { bossId: 'ghost', actorId: 'nobody', reason: 'despawned' });
+    t.game.events.emit('boss.phase', { bossId: 'ghost', phase: 2, previous: 1 });
+    t.game.events.emit('trigger.enter', { triggerId: 'trg.fog.harrowmark', actorId: 'player' });
+    t.game.events.emit('save.loaded', { slot: 'x' });
+    t.run(2);
+    expect(() => t.ctx.hud.update(0.016)).not.toThrow();
+    expect(t.ctx.hud.mounted('top-left')).toContain('status-bars');
+    t.dispose();
+  });
+
+  it('boss lifecycle through the real registry updates without errors and fades out', async () => {
+    const t = await setup([corePlugin, hudPlugin]);
+    const boss = t.ctx.actors.spawn({ kind: 'ash-prior', team: 'hostile', level: 5, maxHealth: 100 });
+    t.ctx.bosses.register(boss.id, bossDef);
+    t.ctx.hud.update(0.016);
+    t.ctx.bosses.setShield(bossDef.bossId, true);
+    t.ctx.hud.update(0.016);
+    boss.health = 40;
+    t.ctx.hud.update(0.016);
+    t.ctx.hud.update(2);
+    expect(t.ctx.hud.mounted('top-center')).toContain('boss-bar');
+    t.dispose();
+  });
+
+  it('respecModal opens a menu modal and refuses a second one', async () => {
+    const t = await setup([corePlugin, hudPlugin]);
+    const svc = t.ctx.services.get('respecModal' as any) as any;
+    const confirm = vi.fn();
+    const cancel = vi.fn();
+    expect(svc.open({ quote: { free: true, gold: 0, canAfford: true }, confirm, cancel })).toBe(true);
+    expect(t.ctx.hud.modalOpen).toBe('respec');
+    expect(svc.open({ quote: { free: true, gold: 0, canAfford: true }, confirm, cancel })).toBe(false);
+    expect(confirm).not.toHaveBeenCalled();
+    t.dispose();
+  });
+});
