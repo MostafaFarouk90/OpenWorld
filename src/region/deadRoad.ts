@@ -1,5 +1,7 @@
-// The Dead Road's drawn course in phase A. DRAWN ONLY: this array is never fed to the terrain shaping (thread 11's
-// `RoadDef` in src/terrain/shape/deadRoad.ts starts at (1100, -150) in the phase B PR; the shaped box x -1500..1090 is protected).
+// The Dead Road's drawn course. Phase A's part (west of the fog wall) is DRAWN ONLY: it is never fed to the terrain
+// shaping, because the shaped box x -1500..1090 is protected. From (1100, -150) the shaped `RoadDef`
+// (src/terrain/shape/deadRoad.ts, thread 4's data in core's file) takes over and the ribbon follows its polyline.
+import { DEAD_ROAD } from '../terrain/shape/deadRoad';
 import type { Pt } from './ribbon';
 
 export const ROAD_WIDTH = 6;
@@ -16,6 +18,9 @@ export const DEAD_ROAD_DRAWN: readonly Pt[] = [
   [500, ROAD_Z],
   [ROAD_EAST_X, ROAD_Z],
 ];
+
+/** The whole road as drawn: Phase A's course, then the shaped road's points after its first (which is the fog wall's (1100, -150)). */
+export const DEAD_ROAD_FULL: readonly Pt[] = [...DEAD_ROAD_DRAWN, ...DEAD_ROAD.points.slice(1).map((p): Pt => [p.x, p.z])];
 
 /** The lane from the loft meets the road at (0, -150): drawn as a 4 m dirt track from the loft's gate area. */
 export const LANE_TRACK_DRAWN: readonly Pt[] = [

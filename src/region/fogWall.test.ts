@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { heightAt } from '../terrain/heightfield';
-import { FOG_OPEN_FLAGS, fogColliderExtent, FOG_TRIGGER_ID, FOG_WALL_HALF_LENGTH, PUSH_BACK_PAST, PUSH_BACK_TO, buildFogWall, needsPushBack } from './fogWall';
+import { FOG_OPEN_FLAGS, fogOpen, fogColliderExtent, FOG_TRIGGER_ID, FOG_WALL_HALF_LENGTH, PUSH_BACK_PAST, PUSH_BACK_TO, buildFogWall, needsPushBack } from './fogWall';
 import { createFakeCore } from './testing/fakeCore';
 
 let physics: PhysicsWorld;
@@ -21,7 +21,7 @@ function setup(flags: Record<string, boolean> = {}, openFlags?: readonly string[
 const wallObjects = (fc: ReturnType<typeof createFakeCore>) => fc.scene.children.filter((c) => c.name === 'fog-wall');
 
 describe('the slice fog wall', () => {
-  it('stands while story.slice.harrowmarkOpen is unset: mesh, ash, collider, trigger and push-back system', () => {
+  it('stands while story.m05.complete is unset: mesh, ash, collider, trigger and push-back system', () => {
     const { fc, fog } = setup();
     expect(fog.standing).toBe(true);
     expect(wallObjects(fc)).toHaveLength(1);
@@ -43,7 +43,7 @@ describe('the slice fog wall', () => {
 
   it('opens when the flag turns true, removing every part, and the trigger with it', () => {
     const { fc, fog } = setup();
-    fc.ctx.state.setFlag('story.slice.harrowmarkOpen', true);
+    fc.ctx.state.setFlag('story.m05.complete', true);
     expect(fog.standing).toBe(false);
     expect(wallObjects(fc)).toHaveLength(0);
     expect(fc.colliders.size).toBe(0);
@@ -52,33 +52,57 @@ describe('the slice fog wall', () => {
   });
 
   it('is never built on a load with the flag already true, and stands again when a later load clears it', () => {
-    const { fc, fog } = setup({ 'story.slice.harrowmarkOpen': true });
+    const { fc, fog } = setup({ 'story.m05.complete': true });
     expect(fog.standing).toBe(false);
     expect(fc.colliders.size).toBe(0);
-    fc.flags.delete('story.slice.harrowmarkOpen');
+    fc.flags.delete('story.m05.complete');
     fc.fire('save.loaded');
     expect(fog.standing).toBe(true);
     expect(fc.colliders.size).toBe(1);
   });
 
-  it('keeps standing for a phase A save that finished M05 (story.m05.complete opens it only in the phase B PR)', () => {
-    const { fog } = setup({ 'story.m05.complete': true });
-    expect(fog.standing).toBe(true);
+  it('is down for a save that finished M05, and the retired Phase A flag no longer opens it', () => {
+    expect(setup({ 'story.m05.complete': true }).fog.standing).toBe(false);
+    expect(setup({ 'story.slice.harrowmarkOpen': true }).fog.standing).toBe(true);
   });
 
-  it('opens on any listed flag, so phase B can add story.m05.complete', () => {
-    const { fc, fog } = setup({}, [...FOG_OPEN_FLAGS, 'story.m05.complete']);
+  it('opens when story.m05.complete is set during play', () => {
+    const { fc, fog } = setup();
     expect(fog.standing).toBe(true);
     fc.ctx.state.setFlag('story.m05.complete', true);
     expect(fog.standing).toBe(false);
+  });
+
+  it('rises again when an earlier save is loaded, and the push-back is idle while the wall is down', () => {
+    const { fc, fog } = setup({ 'story.m05.complete': true });
+    expect(fog.standing).toBe(false);
+    expect(fc.systems.has('fog-wall')).toBe(false);
+    fc.flags.delete('story.m05.complete');
+    fc.fire('save.loaded');
+    expect(fog.standing).toBe(true);
+    expect(fc.systems.has('fog-wall')).toBe(true);
+    fc.flags.set('story.m05.complete', true);
+    fc.fire('save.loaded');
+    expect(fog.standing).toBe(false);
+  });
+
+  it('fogOpen reads the same flags as the wall', () => {
+    const flags = new Map<string, unknown>();
+    const state = { getFlag: (k: string) => flags.get(k) };
+    expect(fogOpen(state)).toBe(false);
+    flags.set('story.slice.harrowmarkOpen', true);
+    expect(fogOpen(state)).toBe(false);
+    flags.set('story.m05.complete', true);
+    expect(fogOpen(state)).toBe(true);
+    for (const k of FOG_OPEN_FLAGS) expect(FOG_OPEN_FLAGS).toContain(k);
   });
 
   it('does not rebuild when an unrelated flag changes or the same flag is set twice', () => {
     const { fc, fog } = setup();
     fc.ctx.state.setFlag('story.m04.complete', true);
     expect(fc.colliders.size).toBe(1);
-    fc.ctx.state.setFlag('story.slice.harrowmarkOpen', true);
-    fc.ctx.state.setFlag('story.slice.harrowmarkOpen', true);
+    fc.ctx.state.setFlag('story.m05.complete', true);
+    fc.ctx.state.setFlag('story.m05.complete', true);
     expect(fog.standing).toBe(false);
     expect(fc.colliders.size).toBe(0);
   });
@@ -97,7 +121,7 @@ describe('the slice fog wall', () => {
   });
 
   it('does not push back once it is open', () => {
-    const { fc } = setup({ 'story.slice.harrowmarkOpen': true });
+    const { fc } = setup({ 'story.m05.complete': true });
     fc.playerFeet.x = 1300;
     fc.tick('intent');
     expect(fc.teleports).toHaveLength(0);
@@ -121,7 +145,7 @@ describe('the slice fog wall', () => {
     expect(fc.scene.children).toHaveLength(0);
     expect(fc.colliders.size).toBe(0);
     expect(fc.triggers.size).toBe(0);
-    fc.flags.delete('story.slice.harrowmarkOpen');
+    fc.flags.delete('story.m05.complete');
     fc.fire('save.loaded');
     expect(fc.colliders.size).toBe(0);
   });

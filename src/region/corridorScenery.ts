@@ -1,7 +1,7 @@
 // The look of the corridor beyond Kettlewick: the Dead Road and the lane as dirt ribbons, verge posts and stones,
 // the river and the Hollin Brook as draped water, and reeds on the river banks. Visual only: nothing here collides.
 import * as THREE from 'three';
-import { DEAD_ROAD_DRAWN, LANE_TRACK_DRAWN, LANE_WIDTH, ROAD_WIDTH } from './deadRoad';
+import { DEAD_ROAD_FULL, LANE_TRACK_DRAWN, LANE_WIDTH, ROAD_WIDTH } from './deadRoad';
 import { ribbonGeometry, sampleStations, type HeightFn, type Station } from './ribbon';
 import { BROOK_COURSE, BROOK_WIDTH, RIVER_COURSE, RIVER_WIDTH } from './water';
 
@@ -59,7 +59,7 @@ export function buildCorridorScenery(heightAt: HeightFn): SceneryHandle {
     new THREE.MeshBasicMaterial({ color: 0x4a7d9c, transparent: true, opacity: 0.78, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }),
   );
 
-  const roadStations = sampleStations(DEAD_ROAD_DRAWN, 2);
+  const roadStations = sampleStations(DEAD_ROAD_FULL, 2);
   const road = new THREE.Mesh(track(ribbonGeometry(roadStations, ROAD_WIDTH, heightAt, { lift: ROAD_LIFT })), dirt);
   road.name = 'dead-road';
   road.frustumCulled = false;
