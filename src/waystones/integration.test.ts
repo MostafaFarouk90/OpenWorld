@@ -143,7 +143,7 @@ describe('waystones + saves on the real game', () => {
     const save = b.game.ctx.services.require('save');
     expect(save.hasSave()).toBe(true);
     await b.run(3);
-    const loaded = b.game.ctx.events.once ? new Promise<void>((r) => b.game.ctx.events.on('save.loaded', () => r())) : Promise.resolve();
+    const loaded = new Promise<void>((r) => b.game.ctx.events.on('save.loaded', () => r()));
     const cont = save.continueNow();
     for (let i = 0; i < 900; i++) {
       await b.run(1);
