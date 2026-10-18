@@ -189,3 +189,110 @@ describe('enemy lifecycle edges', () => {
     expect(t.fake.warnings.some((w) => w.includes('owner already bound'))).toBe(true);
   });
 });
+
+describe('reset', () => {
+  const kill = (t: ReturnType<typeof rig>, ids: string[]) => {
+    t.tick(0.1);
+    for (const id of ids) t.fake.apply({ attackerId: 'player', targetId: id, amount: 1000, poise: 0, kind: 'melee' });
+    t.tick(5);
+  };
+
+  it('a cleared beat group refills after reset, and the persisted state no longer lists it', () => {
+    const t = rig([manual('beat', 'ash-wraith', 'a', 2)], { x: 0, y: 0, z: -50 });
+    kill(t, t.m.service.spawnGroup('beat'));
+    expect(t.m.service.alive('beat')).toEqual([]);
+    expect(t.m.spawners.serialize().cleared).toContain('beat');
+    t.m.service.reset('beat');
+    expect(t.m.spawners.serialize().cleared).not.toContain('beat');
+    expect(t.m.service.spawnGroup('beat')).toHaveLength(2);
+  });
+
+  it('reset of a live group despawns it, then spawnGroup refills every slot', () => {
+    const t = rig([manual('beat', 'ash-wraith', 'a', 3)], { x: 0, y: 0, z: -50 });
+    const first = t.m.service.spawnGroup('beat');
+    t.m.service.reset('beat');
+    expect(t.m.service.alive('beat')).toEqual([]);
+    for (const id of first) expect(t.m.get(id)).toBeUndefined();
+    expect(t.m.service.spawnGroup('beat')).toHaveLength(3);
+  });
+
+  it('spent (released) slots refill after reset', () => {
+    const t = rig([manual('beat', 'ash-wraith', 'a', 2)], { x: 0, y: 0, z: -50 });
+    t.m.service.spawnGroup('beat');
+    t.m.spawners.load({ spent: ['beat#0', 'beat#1'], cleared: [], warmthTier: 0, lockedBlockLevels: {} });
+    t.m.service.reset('beat');
+    expect(t.m.spawners.serialize().spent).toEqual([]);
+    expect(t.m.service.spawnGroup('beat')).toHaveLength(2);
+  });
+
+  it('an unknown id warns once and does not throw', () => {
+    const t = rig([]);
+    t.m.service.reset('nope');
+    t.m.service.reset('nope');
+    expect(t.fake.warnings.filter((w) => w.includes("'nope'"))).toHaveLength(1);
+  });
+});
+
+describe('flag-gated quest activation', () => {
+  const gated: SpawnerDef = { ...manual('lanes', 'ash-wraith', 'a', 2), activation: { quest: 'm01', flag: 'tutorial.complete' } };
+  const flip = (t: ReturnType<typeof rig>, value = true) => {
+    t.fake.flags.set('tutorial.complete', value);
+    t.fake.bus.emit('flag.changed', { key: 'tutorial.complete', value, previous: !value });
+  };
+
+  it('does not spawn when the quest starts with the flag unset, nor after a save.loaded', () => {
+    const t = rig([gated], { x: 0, y: 0, z: -50 });
+    t.fake.quests = { active: () => ['m01'] };
+    t.fake.bus.emit('quest.started', { questId: 'm01' });
+    t.fake.bus.emit('save.loaded', { slot: 's' });
+    expect(t.m.service.alive('lanes')).toEqual([]);
+  });
+
+  it('spawns when the flag turns true while the quest is active', () => {
+    const t = rig([gated], { x: 0, y: 0, z: -50 });
+    t.fake.quests = { active: () => ['m01'] };
+    t.fake.bus.emit('quest.started', { questId: 'm01' });
+    flip(t);
+    expect(t.m.service.alive('lanes')).toHaveLength(2);
+  });
+
+  it('spawns on quest.started and on save.loaded when the flag is already set', () => {
+    const t = rig([gated], { x: 0, y: 0, z: -50 });
+    t.fake.flags.set('tutorial.complete', true);
+    t.fake.bus.emit('quest.started', { questId: 'm01' });
+    expect(t.m.service.alive('lanes')).toHaveLength(2);
+    t.m.service.despawnGroup('lanes');
+    t.fake.quests = { active: () => ['m01'] };
+    t.fake.bus.emit('save.loaded', { slot: 's' });
+    expect(t.m.service.alive('lanes')).toHaveLength(2);
+  });
+
+  it('does not spawn when the flag turns true while the quest is inactive, or turns false', () => {
+    const t = rig([gated], { x: 0, y: 0, z: -50 });
+    t.fake.quests = { active: () => [] };
+    flip(t);
+    expect(t.m.service.alive('lanes')).toEqual([]);
+    t.fake.quests = { active: () => ['m01'] };
+    flip(t, false);
+    expect(t.m.service.alive('lanes')).toEqual([]);
+  });
+
+  it('a cleared group stays cleared when the flag changes again', () => {
+    const t = rig([gated], { x: 0, y: 0, z: -50 });
+    t.fake.quests = { active: () => ['m01'] };
+    flip(t);
+    t.tick(0.1);
+    for (const id of t.m.service.alive('lanes')) t.fake.apply({ attackerId: 'player', targetId: id, amount: 1000, poise: 0, kind: 'melee' });
+    t.tick(5);
+    expect(t.m.spawners.isCleared('lanes')).toBe(true);
+    flip(t);
+    t.fake.bus.emit('quest.started', { questId: 'm01' });
+    expect(t.m.service.alive('lanes')).toEqual([]);
+  });
+
+  it('a plain { quest } activation spawns on quest.started as before', () => {
+    const t = rig([{ ...gated, activation: { quest: 'm01' } }], { x: 0, y: 0, z: -50 });
+    t.fake.bus.emit('quest.started', { questId: 'm01' });
+    expect(t.m.service.alive('lanes')).toHaveLength(2);
+  });
+});

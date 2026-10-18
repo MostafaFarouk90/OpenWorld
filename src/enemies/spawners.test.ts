@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import { BRIGHTWATER_LAYOUT } from '../region/brightwater.layout';
+import { resolveLayout } from '../region/resolveLayout';
 import type { AnchorLike } from './ports';
 import { SLICE_SPAWNERS } from './spawnerDefs';
 import { SpawnRequest, SpawnerRegistry, patrolForSlot } from './spawners';
@@ -245,10 +247,28 @@ describe('SpawnerRegistry', () => {
     expect(reg.getLockedBlockLevel('b2')).toBeUndefined();
   });
   it('slice table is well-formed', () => {
-    expect(SLICE_SPAWNERS).toHaveLength(8);
+    expect(SLICE_SPAWNERS).toHaveLength(11);
     const bw = SLICE_SPAWNERS.find((s) => s.id === 'brightwater.north-patrol')!;
     expect(bw).toMatchObject({ count: 3, band: { min: 2, max: 3 }, activation: 'auto', respawn: 'onRest', leash: true });
-    expect(new Set(SLICE_SPAWNERS.map((s) => s.id)).size).toBe(8);
+    expect(new Set(SLICE_SPAWNERS.map((s) => s.id)).size).toBe(11);
     expect(SLICE_SPAWNERS.find((s) => s.id === 't09.soldier')!.enemy).toBe('blighted-soldier');
+  });
+  it('every slice anchor, member anchor and waypoint exists in the real Brightwater layout, and counts match', () => {
+    const ids = new Set(resolveLayout(BRIGHTWATER_LAYOUT, () => 0).anchors.map((a) => a.id));
+    for (const d of SLICE_SPAWNERS) {
+      expect(ids.has(d.anchor), `${d.id} anchor ${d.anchor}`).toBe(true);
+      for (const m of d.memberAnchors ?? []) expect(ids.has(m), `${d.id} member ${m}`).toBe(true);
+      if (d.memberAnchors) expect(d.memberAnchors.length, d.id).toBe(d.count);
+      if (Array.isArray(d.patrol)) for (const w of d.patrol) expect(ids.has(w), `${d.id} waypoint ${w}`).toBe(true);
+    }
+  });
+  it('defines the replay spawners and gates m01 on the tutorial flag', () => {
+    const by = (id: string) => SLICE_SPAWNERS.find((s) => s.id === id)!;
+    for (const id of ['replay.blocker', 'replay.dodge', 'replay.lockon']) {
+      expect(by(id)).toMatchObject({ activation: 'manual', respawn: 'never', leash: false, band: { min: 1, max: 1 } });
+    }
+    expect(by('replay.lockon')).toMatchObject({ count: 2, memberAnchors: ['yard.pole-1', 'yard.pole-2'] });
+    expect(by('m01.lanes').activation).toEqual({ quest: 'm01', flag: 'tutorial.complete' });
+    expect(by('m01.lanes').patrol).toBeUndefined();
   });
 });
