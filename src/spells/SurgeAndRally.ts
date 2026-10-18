@@ -39,6 +39,12 @@ export interface SurgeFormContext {
   poise: number;
   host: SpellEffectHost;
   damage: DamageLike;
+  /** vfx, audio and the other services, for a form's own effects. */
+  services: SpellEffectDeps['services'];
+  /** Simulation clock (hit-stop, `seconds`). */
+  clock: SpellEffectDeps['clock'];
+  /** The form draws its own effect: skip the shared Surge ring (the pulse, shake, hit-stop and sound still play). */
+  suppressRing(): void;
 }
 export type SurgeFormImpl = (ctx: SurgeFormContext) => void;
 export type RegisterFormResult = { ok: true; dispose(): void } | { ok: false; reason: 'duplicate' | 'bad-class' | 'bad-zone' | 'bad-impl' };
@@ -136,14 +142,18 @@ export function registerSurge(host: SpellEffectHost, caster: SpellCaster, deps: 
     const poise = zone === 'cinder' ? SURGE.cinderPoise : SURGE.poise;
 
     const form = forms.resolve(deps.classId?.() ?? DEFAULT_CLASS_ID, zone);
-    form?.({ casterId: ctx.casterId, zone, feet, facingYaw: host.player.facingYaw, radius, poise, host, damage });
+    let ringSuppressed = false;
+    form?.({
+      casterId: ctx.casterId, zone, feet, facingYaw: host.player.facingYaw, radius, poise, host, damage, services, clock,
+      suppressRing: () => { ringSuppressed = true; },
+    });
 
     const me = host.actors.get(ctx.casterId);
     if (me) damage.heal(ctx.casterId, me.maxHealth * SURGE.healFraction);
     useShard(BURN.surgeGain, 'surge');
 
     const vfx = services.get('vfx');
-    vfx?.spawnEffect('surge', { position: feet, scale }, { zone });
+    if (!ringSuppressed) vfx?.spawnEffect('surge', { position: feet, scale }, { zone });
     vfx?.pulseScreen(SURGE_FX.pulse[zone], SURGE_FX.pulseSeconds, SURGE_FX.pulseColor[zone]);
     clock.hitStop(SURGE.hitStop);
     vfx?.shake(SURGE_FX.shake[zone], SURGE_FX.shakeSeconds[zone]);

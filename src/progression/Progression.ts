@@ -7,6 +7,7 @@ import {
   type NextUnlock,
   type ProgressionService,
 } from '../hud/ports';
+import { classStats, type ClassBaseStats } from './classStats';
 import { DEFAULT_CLASS_ID, getSkill, SKILLS, type SkillDef } from './skills';
 import {
   BAR_SLOTS,
@@ -42,6 +43,8 @@ export interface ProgressionDeps {
   flags?: FlagStore;
   /** Gold for paid respecs; without it only free ones work. */
   gold?: () => GoldPort | undefined;
+  /** Told the active class row whenever it is (re)applied; the plugin forwards the Ember maximum to the spells. */
+  onClassStats?: (row: Readonly<ClassBaseStats>) => void;
 }
 
 export type RespecQuote = { free: boolean; gold: number; canAfford: boolean };
@@ -122,6 +125,25 @@ export class Progression implements ProgressionService {
   setClass(classId: string | null): void {
     this.chosenClass = classId;
     this.applyMaxHealth();
+    this.applyClassResources();
+  }
+
+  /**
+   * Applies the class row's stamina maximum to the player and hands the Ember maximum to `onClassStats`. Current stamina
+   * is kept, clamped to the new maximum; a fresh game (`fill`) starts full.
+   */
+  applyClassResources(fill = false): void {
+    const row = classStats(this.chosenClass);
+    const actor = this.actor();
+    if (actor) {
+      actor.maxStamina = row.stamina;
+      actor.stamina = fill ? row.stamina : Math.min(actor.stamina, row.stamina);
+    }
+    try {
+      this.deps.onClassStats?.(row);
+    } catch (err) {
+      this.logger.warn(`progression: class stats listener failed: ${String(err)}`);
+    }
   }
 
   /** The flag `ability.<id>.learned` is the single source of truth. */
