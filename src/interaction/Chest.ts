@@ -16,6 +16,12 @@ export interface ChestOptions {
   loot: ItemStack[];
   radius?: number;
   name?: string;
+  /**
+   * v0.5 veto (locked chests): checked on each interact; false keeps the chest shut, prompt and all, and calls
+   * `onRefused` (a toast, a lockpick prompt). A throwing veto counts as false.
+   */
+  canOpen?: () => boolean;
+  onRefused?: () => void;
 }
 
 /** Opens once, grants its loot and persists in `chest.<name>.opened`. */
@@ -58,8 +64,25 @@ export class Chest {
     for (const off of this.offs.splice(0).reverse()) off();
   }
 
+  private vetoPasses(): boolean {
+    try {
+      return this.opts.canOpen?.() === true;
+    } catch (err) {
+      console.warn(`Chest "${this.opts.id}": canOpen failed; staying shut`, err);
+      return false;
+    }
+  }
+
   private open(): void {
     if (this.opened) return;
+    if (this.opts.canOpen && !this.vetoPasses()) {
+      try {
+        this.opts.onRefused?.();
+      } catch (err) {
+        console.warn(`Chest "${this.opts.id}": onRefused failed`, err);
+      }
+      return;
+    }
     this.opened = true;
     this.ctx.state.setFlag(this.flag, true);
     this.ctx.events.emit('loot.granted', { sourceId: this.opts.id, items: this.loot.map((l) => ({ ...l })) });

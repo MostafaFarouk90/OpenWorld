@@ -46,4 +46,7 @@ export const SLICE_SPAWNERS: readonly SpawnerDef[] = [
   replay('replay.blocker', 'blighted-soldier', ['yard.blocker']),
   replay('replay.dodge', 'ash-wraith', ['yard.dodge-lane']),
   replay('replay.lockon', 'ash-wraith', ['yard.pole-1', 'yard.pole-2']),
+  // The M07 class drill's sparring partners in the Halvard Bastion yard (manual; thread 12 spawns them per step).
+  replay('classes.drill.blocker', 'blighted-soldier', ['harrowmark.bastion.drill.blocker']),
+  replay('classes.drill.dodge', 'ash-wraith', ['harrowmark.bastion.drill.dodge-lane']),
 ];
