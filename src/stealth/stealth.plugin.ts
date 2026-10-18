@@ -8,7 +8,7 @@ import type { Action } from '../input/actions';
 import { IDLE_PLAYER, type PlayerStealthState, playerNoise, stealthModifiers } from './detection';
 import { StealthEffects } from './hooks';
 import { objectivesDone, questLive } from './liveness';
-import type { PerceptionModifiers } from './perceptionPort';
+import type { P3, PerceptionModifiers } from './perceptionPort';
 import { SECTIONS } from './sections';
 import { SneakPose } from './SneakPose';
 import { type Eye, StealthDirector } from './StealthDirector';
@@ -96,6 +96,11 @@ export default {
             e?.reset(g);
             e?.spawnGroup(g);
           }
+        },
+        // Thread 5's face-toward hook, feature-detected until it lands (plan section 12; the coordinator's ruling 18:41).
+        face: (id, at) => {
+          const p = perceptionService(ctx) as { face?: (id: ActorId, at: P3 | null) => unknown } | null;
+          p?.face?.(id, at);
         },
         teleport: teleporter(ctx),
         paused: () => ctx.services.get('save')?.loading ?? false,

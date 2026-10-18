@@ -34,6 +34,7 @@ function world() {
   const guards = new Map<string, GuardPerceptionState>([['guard-1', { awareness: 0, sees: false, hears: false, distance: 10 }]]);
   let released = 0;
   const loading = { v: false };
+  const faces: string[] = [];
   const tp = { hold: false, pending: [] as (() => void)[] };
   const suspensions = new SaveSuspensions(() => void released++);
   const events: string[] = [];
@@ -56,6 +57,7 @@ function world() {
       return Promise.resolve(true);
     },
     paused: () => loading.v,
+    face: (id, at) => faces.push(at ? `${id} ${at.x},${at.z}` : `${id} release`),
     suspend: (r) => suspensions.suspend(r),
     checkpointSave: (r) => {
       saves.push(`${r} held=${suspensions.active}`);
@@ -71,7 +73,7 @@ function world() {
   };
   const d = new StealthDirector([SECTION], ports);
   const at = (x: number, z: number) => Object.assign(feet, { x, y: 0, z });
-  return { d, ports, feet, at, quest, guards, suspensions, events, saves, teleports, resets: () => resets, loading, tp, get released() { return released; } };
+  return { d, ports, feet, at, quest, guards, suspensions, events, saves, teleports, resets: () => resets, loading, tp, faces, get released() { return released; } };
 }
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -319,6 +321,23 @@ describe('StealthDirector', () => {
     w.d.fixedUpdate(DT);
     w.d.onPlayerHitGuard('guard-1');
     expect(w.events.filter((e) => e.startsWith('caught'))).toHaveLength(2);
+  });
+
+  it('a suspicious guard faces where it sensed the player, and is released on calm and on leaving', () => {
+    const w = world();
+    w.at(5, 0);
+    w.d.fixedUpdate(DT);
+    w.guards.set('guard-1', { awareness: STEALTH.suspiciousAt + 0.05, sees: true, hears: false, distance: 9 });
+    w.d.fixedUpdate(DT);
+    expect(w.faces.at(-1)).toBe('guard-1 5,0');
+    w.guards.set('guard-1', { awareness: 0.05, sees: false, hears: false, distance: 9 });
+    w.d.fixedUpdate(DT);
+    expect(w.faces.at(-1)).toBe('guard-1 release');
+    w.guards.set('guard-1', { awareness: STEALTH.suspiciousAt + 0.05, sees: false, hears: true, distance: 9 });
+    w.d.fixedUpdate(DT);
+    w.at(-40, 0);
+    w.d.fixedUpdate(DT);
+    expect(w.faces.at(-1)).toBe('guard-1 release');
   });
 
   it('re-entering never teleports forward', () => {

@@ -18,6 +18,11 @@ export interface StealthPorts {
   guardState(id: ActorId): GuardPerceptionState | null;
   /** `enemies.reset(group)` then `spawnGroup(group)` for each of the section's groups. */
   resetGuards(def: StealthSectionDef): void;
+  /**
+   * Turns an observer-only guard toward a point and holds it there (pausing its patrol) until called with null.
+   * Optional: thread 5's `enemies.perception.face` when present.
+   */
+  face?(actorId: ActorId, at: P3 | null): void;
   /** `waystones.safeTeleport` (fade, freeze, ground wait); resolves false when the player was not moved. */
   teleport(feet: P3, yaw: number): Promise<boolean>;
   /** True while a save is loading (the director skips ticks between the load teleport and `save.loaded`). */
@@ -60,6 +65,8 @@ export class StealthDirector {
   private capturing = false;
   /** Bumped per capture or load teleport, so a stale promise never clears a newer one's flag. */
   private teleportGen = 0;
+  /** Guards currently held facing a sighting (released on calm, leave, capture and dispose). */
+  private readonly facing = new Set<ActorId>();
   /** Sections cleared this window: not re-entered until their quest window closes (no entered/cleared loop). */
   private readonly cleared = new Set<string>();
   private hiddenAt: string | null = null;
@@ -141,6 +148,7 @@ export class StealthDirector {
     const cur = this.active;
     if (!cur) return;
     this.active = null;
+    this.releaseFacing();
     this.hiddenAt = null;
     this.alerts.clear();
     cur.release?.();
@@ -178,6 +186,11 @@ export class StealthDirector {
       const { next, caught } = stepAlert(prev, { awareness: st.awareness, sees: st.sees, distance: st.distance }, dt);
       this.alerts.set(id, next);
       if (next.state !== prev.state) this.ports.emit.alert(id, def.id, next.state);
+      // A suspicious (or alerted) guard turns toward where it last sensed the player; calm again, it resumes its patrol.
+      if (next.state !== 'calm' && (st.sees || st.hears)) {
+        this.facing.add(id);
+        this.ports.face?.(id, this.ports.playerFeet());
+      } else if (next.state === 'calm' && this.facing.delete(id)) this.ports.face?.(id, null);
       if (RANK[next.state] > RANK[this.eyeOut.state] || (next.state === this.eyeOut.state && st.awareness > this.eyeOut.level)) {
         this.eyeOut.state = next.state;
         this.eyeOut.level = st.awareness;
@@ -185,6 +198,11 @@ export class StealthDirector {
       }
       if (caught) return this.capture(id);
     }
+  }
+
+  private releaseFacing(): void {
+    for (const id of this.facing) this.ports.face?.(id, null);
+    this.facing.clear();
   }
 
   private resetEye(): void {
@@ -219,6 +237,7 @@ export class StealthDirector {
     for (const [id, a] of this.alerts) if (a.state !== 'calm') this.ports.emit.alert(id, def.id, 'calm');
     this.hiddenAt = null;
     this.alerts.clear();
+    this.releaseFacing();
     this.resetEye();
     if (!anchor) {
       this.ports.warn(`stealth: capture in ${def.id} has no checkpoint anchor`);
@@ -318,6 +337,7 @@ export class StealthDirector {
     this.disposed = true;
     const cur = this.active;
     this.active = null;
+    this.releaseFacing();
     cur?.release?.();
   }
 }
