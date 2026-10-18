@@ -25,10 +25,10 @@ const modules: Record<string, PluginModule> = {
   '/src/test/waystones.plugin.ts': { default: waystonesPlugin },
 };
 
-/** Thread 17's outside door anchors (plans/slice-2-harrowmark-city.md 5.1): x, z and compass heading (yaw = heading + 180). */
+/** Thread 17's outside door anchors (`DOORS` in its harrowmark.layout.ts): x, z and compass heading (yaw = heading + 180). */
 const OUTSIDE: Record<string, { x: number; z: number; heading: number }> = {
   'harrowmark.tilted-anvil.door': { ...HARROWMARK_SITES['tilted-anvil'], heading: 180 },
-  'harrowmark.tilted-anvil-back.door': { x: 8230, z: 1636, heading: 0 },
+  'harrowmark.tilted-anvil-back.door': { x: 8200, z: 1683.5, heading: 0 },
   'harrowmark.keep-hall.door': { ...HARROWMARK_SITES['keep-hall'], heading: 180 },
   'harrowmark.counting-house.door': { ...HARROWMARK_SITES['counting-house'], heading: 270 },
   'harrowmark.archive.door': { ...HARROWMARK_SITES.archive, heading: 270 },
