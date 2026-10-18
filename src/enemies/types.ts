@@ -18,7 +18,7 @@ export type AiState =
   | 'spared'
   | 'dead';
 
-export type EnemyKind = 'ash-wraith' | 'blighted-soldier';
+export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse' | 'ember-hound' | 'watch-guard' | 'guildhall-thug';
 
 /** The impact-sound materials of `actor.data.audio.material` ('straw' and 'wood' are the foes'). */
 export type EnemyMaterial = 'ash' | 'metal' | 'straw' | 'wood';
@@ -49,7 +49,9 @@ export interface MoveDef {
   recover: number;
   /** Selection weight; 0 means only when a spawn's move filter names it (the T10 red sweep). */
   weight: number;
-  onHit?: 'slow';
+  onHit?: 'slow' | 'steal' | 'ignite';
+  /** A forward leap while the window is open (the hound's pounce): up to `maxMetres` in a straight line, stopping short of the target. */
+  leap?: { maxMetres: number };
 }
 
 export interface ModelRecipe {
@@ -68,8 +70,12 @@ export interface MercyDef {
   verb: UnlockVerb;
   tier: 'normal' | 'elite';
   track: FavourTrack | null;
-  /** Release opens on a stagger (undead); Spare on a yield (humans). */
+  /** Release opens on a stagger (undead); Spare on a yield (humans); Calm before the first attack (beasts). */
   when: 'staggered' | 'yielding' | 'calming';
+  /** Calm: item ids that open it (thread 1 reads them; data only here). */
+  offerings?: readonly { itemId: string; count: number }[];
+  /** A staggered (knocked down) beast accepts the Warm Hand (thread 1's Calm). */
+  warmHand?: boolean;
 }
 
 export interface EnemyDef {
@@ -83,7 +89,8 @@ export interface EnemyDef {
   moves: readonly MoveDef[];
   /** Flee below this health fraction (design: pack animals at 0.15); undefined never flees. */
   fleeAtHealth?: number;
-  mercy: MercyDef;
+  /** None for kinds that cannot be spared, released or calmed (the watch guard). */
+  mercy?: MercyDef;
   material: EnemyMaterial;
   /** Raises a shield about half the time; see ai/guard.ts. */
   guard?: boolean;
@@ -91,6 +98,20 @@ export interface EnemyDef {
   pairAdvance?: boolean;
   /** Wraiths rise from an ash pile when spawned (Lie_StandUp). */
   rises: boolean;
+  /** Alley Cutpurse behaviour (cutpurse/): steals on a grab, flees with the gold, can be caught and spared. */
+  thief?: boolean;
+  /** Which body the enemy gets: the Knight rig (default) or the procedural quadruped. */
+  body?: 'humanoid' | 'quadruped';
+  /** `circle-rush`: circle the target while a packmate is near, then rush (ai/Brain, hound/circleRush.ts). */
+  behaviour?: 'circle-rush';
+  /** Overrides `AI.attackersPerTarget` (the largest limit among the holders and the requester applies). */
+  attackersPerTarget?: number;
+  /** Seconds between two members of one spawner taking an attack token (default: the pair stagger for `pairAdvance`, else none). */
+  attackStagger?: number;
+  /** A player hit shortly after dodging this enemy's attack knocks it down (the hound). */
+  dodgeCounterKnockdown?: boolean;
+  /** Watches only: raises `ai.spotted`, never `ai.aggro`, never chases or attacks (still hurtable). See Enemy.damaged. */
+  observerOnly?: boolean;
 }
 
 export interface LevelBand {
@@ -127,6 +148,8 @@ export interface SpawnerDef {
     | { quest: string; flag?: string }
     | { flag?: string; until?: string }
     | { interior: string };
+  /** The pack leader's slot (one per group): a calmed leader calms its pack (thread 1). */
+  leaderSlot?: number;
   /** Never saved: no spent slots and no cleared mark (the Prior's summons, which thread 3b resets per wave). */
   ephemeral?: boolean;
   respawn: 'never' | 'onRest';
@@ -147,6 +170,8 @@ export interface SpawnOptions {
   leash?: boolean;
   /** Default: the spawner's `guard`, else the def's. */
   guard?: boolean;
+  /** Watch only (default: the def's `observerOnly`); see EnemyDef.observerOnly. */
+  observerOnly?: boolean;
 }
 
 export interface EnemyView {
@@ -155,4 +180,9 @@ export interface EnemyView {
   readonly state: AiState;
   readonly spawnerId: string | null;
   readonly level: number;
+  /**
+   * True while this enemy occupies its spawner's `leaderSlot` and is alive (thread 1's pack Calm reads it).
+   * A dead leader is not replaced: nobody reads true afterwards. Foes and groups without a leader slot read false.
+   */
+  readonly packLeader: boolean;
 }

@@ -1,3 +1,5 @@
+import { PLAYER } from '../config/constants';
+
 /**
  * Enemy AI tuning (thread 2's tuning file; src/config/constants.ts is shared and not edited).
  * Design sources: section 10 "Creature behaviours and AI states", 9.6 (poise), 11.0 (reactions), 5.9 (levels).
@@ -33,6 +35,8 @@ export const AI = {
   heavyStaggerSeconds: 0.8,
   knockbackMetres: 1.2,
   knockbackSeconds: 0.2,
+  /** The most `enemies.push` moves an enemy in one call. */
+  pushMaxMetres: 6,
   /** Poise break (design 9.6). */
   breakStaggerSeconds: 1.2,
   poiseRegenDelay: 4,
@@ -141,3 +145,21 @@ export const WORLD_AI = {
   /** Spawn ring radius when several enemies share one anchor, and patrol slot ring. */
   ringRadius: 1.5,
 } as const;
+
+/** Awareness (ai/awareness.ts): how fast an observer's notice meter fills and drains. */
+export const AWARENESS = {
+  /** Seconds to fill from empty at point-blank range while seen (or heard); farther is slower. */
+  fillSeconds: 1.0,
+  /** Fill rate fraction at the edge of the sight range (1 at the observer's feet). */
+  edgeFillScale: 0.4,
+  /** Drain per second while neither seen nor heard. */
+  drainPerSecond: 0.25,
+  /** `ai.suspicious` fires on each rise above this. */
+  suspiciousAbove: 0.3,
+} as const;
+
+/**
+ * The player is loud when the measured horizontal speed is strictly above this (walk speed + 0.5 m/s) or an attack is
+ * active. Holding Shift while sneaking or standing still is quiet; the key itself is never read.
+ */
+export const LOUD_SPEED = PLAYER.walkSpeed + 0.5;

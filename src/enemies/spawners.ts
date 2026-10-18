@@ -1,4 +1,5 @@
 import type { Vec3 } from '../physics/PhysicsWorld';
+import { CUTPURSE } from './cutpurse/tuning';
 import { ENEMY_DEFS } from './defs';
 import { FOE_DEFS, isFoeKind } from './foes/defs';
 import type { FoeDef } from './foes/types';
@@ -36,7 +37,19 @@ export interface SpawnerRegistryDeps {
   rng?: () => number;
 }
 
-export type MemberEnd = 'died' | 'released' | 'spared' | 'despawned';
+/**
+ * How a member left. 'escaped' is a thief that fled and despawned with the loot: its slot is freed (not spent, not
+ * gone, no `groupCleared`) and refilled later while the group is live. Only thief kinds escape; the registry treats
+ * 'escaped' from any other kind as a plain 'despawned'.
+ */
+export type MemberEnd = 'died' | 'released' | 'spared' | 'despawned' | 'escaped';
+
+/** A freed thief slot waiting to be refilled. */
+interface PendingRefill {
+  spawnerId: string;
+  slot: number;
+  left: number;
+}
 
 export interface SpawnersPersisted {
   spent: string[];
@@ -56,6 +69,15 @@ export class SpawnerRegistry {
   private readonly firedCleared = new Set<string>();
   private readonly everSpawned = new Set<string>();
   private readonly lastOpts = new Map<string, SpawnOptions>();
+  /** Groups that have members placed and have not been despawned or reset since (a refill needs its group live). */
+  private readonly live = new Set<string>();
+  private pendingRefills: PendingRefill[] = [];
+  /** The actor in `leaderSlot` of a group, or null. */
+  leaderOf(id: string): ActorId | null {
+    const slot = this.defs.get(id)?.leaderSlot;
+    return slot === undefined ? null : (this.slots.get(id)?.[slot] ?? null);
+  }
+
   private readonly byActor = new Map<ActorId, { spawnerId: string; slot: number }>();
   private readonly warned = new Set<string>();
   private spent = new Set<string>();
@@ -80,7 +102,7 @@ export class SpawnerRegistry {
     this.goneSlots.set(def.id, new Set());
   }
 
-  spawnGroup(id: string, opts: SpawnOptions = {}): ActorId[] {
+  spawnGroup(id: string, opts: SpawnOptions = {}, onlySlot?: number): ActorId[] {
     const def = this.defs.get(id);
     if (!def) {
       this.deps.warn(`spawners: unknown spawner '${id}'`);
@@ -96,14 +118,14 @@ export class SpawnerRegistry {
       this.warnOnce(`enemy:${id}`, `spawners: spawner '${id}' has unknown enemy '${def.enemy}'`);
       return [];
     }
-    this.lastOpts.set(id, opts);
+    if (onlySlot === undefined) this.lastOpts.set(id, opts);
     const band = this.resolveBand(def, opts.tierOffset);
     const patrol = this.resolvePatrol(def);
     const slots = this.slots.get(id)!;
     const gone = this.goneSlots.get(id)!;
     const out: ActorId[] = [];
     for (let slot = 0; slot < slots.length; slot++) {
-      if (slots[slot] !== null) continue;
+      if (slots[slot] !== null || (onlySlot !== undefined && slot !== onlySlot)) continue;
       const spentKey = `${id}#${slot}`;
       if (this.spent.has(spentKey) || this.dead.has(spentKey)) continue;
       const level = this.levelFor(band);
@@ -133,6 +155,7 @@ export class SpawnerRegistry {
       out.push(actorId);
     }
     if (out.length > 0) {
+      this.live.add(id);
       this.everSpawned.add(id);
       this.firedCleared.delete(id);
     }
@@ -161,8 +184,14 @@ export class SpawnerRegistry {
     this.byActor.delete(actorId);
     const slots = this.slots.get(rec.spawnerId)!;
     slots[rec.slot] = null;
-    if (how === 'despawned') return false;
     const def = this.defs.get(rec.spawnerId)!;
+    if (how === 'escaped' && this.isThiefGroup(def)) {
+      // The thief got away with the loot: the slot is free again (not spent, not gone), so the group is not cleared and,
+      // while it stays live, the slot refills after CUTPURSE.refillSeconds out of the player's sight.
+      if (this.live.has(def.id)) this.pendingRefills.push({ spawnerId: def.id, slot: rec.slot, left: CUTPURSE.refillSeconds });
+      return false;
+    }
+    if (how === 'despawned' || how === 'escaped') return false;
     const key = `${rec.spawnerId}#${rec.slot}`;
     if ((how === 'released' || how === 'spared') && !def.ephemeral) this.spent.add(key);
     // A member of a never-respawning world group (not a manual lesson group, which replays) that died stays dead across a save, so a group that was
@@ -189,6 +218,8 @@ export class SpawnerRegistry {
       this.deps.warn(`spawners: unknown spawner '${id}'`);
       return;
     }
+    this.live.delete(id);
+    this.pendingRefills = this.pendingRefills.filter((p) => p.spawnerId !== id);
     for (let i = 0; i < slots.length; i++) {
       const actorId = slots[i];
       if (actorId === null || actorId === undefined) continue;
@@ -209,10 +240,55 @@ export class SpawnerRegistry {
     this.goneSlots.get(id)!.clear();
     this.firedCleared.delete(id);
     this.cleared.delete(id);
+    this.live.delete(id);
     for (let i = 0; i < slots.length; i++) {
       this.spent.delete(`${id}#${i}`);
       this.dead.delete(`${id}#${i}`);
     }
+  }
+
+  /**
+   * Counts down the refills of escaped thieves. A slot refills when its wait is over, its group is still live (not
+   * despawned, reset or cleared) and the slot's anchor is not in the player's sight (`canSee(position)` false).
+   * Returns the spawned actors.
+   */
+  tickRefills(dt: number, canSee: (position: Vec3) => boolean = () => false): ActorId[] {
+    const out: ActorId[] = [];
+    if (!(dt > 0) || this.pendingRefills.length === 0) return out;
+    const keep: PendingRefill[] = [];
+    for (const p of this.pendingRefills) {
+      const def = this.defs.get(p.spawnerId);
+      const key = `${p.spawnerId}#${p.slot}`;
+      if (!def || !this.live.has(p.spawnerId) || this.cleared.has(p.spawnerId) || this.spent.has(key) || this.dead.has(key)) continue;
+      if (this.slots.get(p.spawnerId)?.[p.slot] != null) continue;
+      p.left -= dt;
+      if (p.left > 0) {
+        keep.push(p);
+        continue;
+      }
+      const at = this.slotAnchor(def, p.slot);
+      if (at && canSee(at)) {
+        keep.push(p);
+        continue;
+      }
+      out.push(...this.spawnGroup(p.spawnerId, this.lastOpts.get(p.spawnerId) ?? {}, p.slot));
+    }
+    this.pendingRefills = keep;
+    return out;
+  }
+
+  /** Slots waiting to be refilled after a thief escaped (for tests). */
+  pendingRefillSlots(id: string): number[] {
+    return this.pendingRefills.filter((p) => p.spawnerId === id).map((p) => p.slot);
+  }
+
+  private slotAnchor(def: SpawnerDef, slot: number): Vec3 | null {
+    const own = def.memberAnchors?.[slot] ? this.deps.anchors.find(def.memberAnchors[slot]) : undefined;
+    return (own ?? this.deps.anchors.find(def.anchor))?.position ?? null;
+  }
+
+  private isThiefGroup(def: SpawnerDef): boolean {
+    return !isFoeKind(def.enemy) && ENEMY_DEFS[def.enemy]?.thief === true;
   }
 
   alive(id: string): ActorId[] {
@@ -366,6 +442,7 @@ export class SpawnerRegistry {
     this.cleared = new Set();
     this.spentPiles = new Set();
     this.dead = new Set();
+    this.pendingRefills = [];
     this.warmthTier = 0;
     this.lockedBlockLevels = {};
     if (!isRecord(data)) {

@@ -73,4 +73,31 @@ describe('PathFollower', () => {
     grid = true;
     expect(follower.goalFor(0.016, at(0, 0), at(4, 4))).toEqual({ x: 4, z: 4 });
   });
+
+  it('steers to the raw goal past the last waypoint when the goal lies outside every grid', () => {
+    const inGrid = (p: { x: number }) => p.x < 10;
+    const path = vi.fn(() => [at(5, 0), at(9, 0)]);
+    const { follower } = rig({ hasGrid: inGrid, path });
+    expect(follower.goalFor(0.016, at(0, 0), at(30, 0))).toEqual({ x: 5, z: 0 });
+    expect(follower.goalFor(0.016, at(4.9, 0), at(30, 0))).toEqual({ x: 9, z: 0 });
+    expect(follower.goalFor(0.016, at(9, 0), at(30, 0))).toEqual({ x: 30, z: 0 });
+  });
+
+  it('latches the raw goal and leaves a real nav grid at the edge (no jitter)', async () => {
+    const { NavRegistry } = await import('../../nav/NavRegistry');
+    const { NavGrid } = await import('../../nav/NavGrid');
+    const reg = new NavRegistry();
+    reg.add(new NavGrid({ id: 'g', minX: 0, minZ: 0, maxX: 10, maxZ: 10, floorY: 0, walkable: [{ x0: 0, z0: 0, x1: 10, z1: 10 }] }));
+    const f = new PathFollower(() => reg as never, () => {});
+    const goal = { x: 15, y: 0, z: 5 };
+    let self = { x: 5, y: 0, z: 5 };
+    let left = false;
+    for (let i = 0; i < 600 && !left; i++) {
+      const g = f.goalFor(1 / 60, self, goal) ?? goal;
+      const d = Math.hypot(g.x - self.x, g.z - self.z);
+      if (d > 1e-6) self = { x: self.x + (g.x - self.x) / d * Math.min(d, 0.09), y: 0, z: self.z + (g.z - self.z) / d * Math.min(d, 0.09) };
+      if (self.x >= 10) left = true;
+    }
+    expect(left).toBe(true);
+  });
 });

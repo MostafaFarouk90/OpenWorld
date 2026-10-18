@@ -30,6 +30,16 @@ export const HUD_STRINGS_EN: Readonly<Record<string, string>> = {
   'hud.respec.cannotAfford': 'You cannot afford this.',
   'hud.respec.confirm': 'Confirm',
   'hud.respec.cancel': 'Cancel',
+  'hud.respec.options': 'Choose',
+  'hud.stealth.eye': 'Detection',
+  'hud.stealth.noise': 'Noise you are making',
+  'hud.chase.seconds': '{seconds} s',
+  'hud.chase.again': 'Again!',
+  'hud.chase.gap': '{metres} m',
+  'hud.bar.mount': 'Mount stamina',
+  'hud.gold.label': 'Gold',
+  'hud.ending.title': 'Smoke Over Harrowmark',
+  'hud.ending.hint': 'Press any key to continue',
 };
 
 export function formatHud(template: string, params?: Record<string, string | number>): string {

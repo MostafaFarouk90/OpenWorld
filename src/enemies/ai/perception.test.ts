@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { PhysicsWorld } from '../../physics/PhysicsWorld';
 import { AI } from '../tuning';
-import { type PerceptionInput, makeLineOfSight, perceive } from './perception';
+import { flatGround } from '../../physics/flatGround';
+import { type PerceptionInput, canSeeChest, makeLineOfSight, perceive } from './perception';
 
 const clear = () => true;
 function input(patch: Partial<PerceptionInput>): PerceptionInput {
@@ -139,5 +140,19 @@ describe('makeLineOfSight with real Rapier', () => {
     physics.step();
     expect(perceive(input({ lineOfSight: makeLineOfSight(physics, target) })).sees).toBe(false);
     expect(perceive(input({ lineOfSight: makeLineOfSight(physics, target, self) })).sees).toBe(true);
+  });
+
+  it('canSeeChest aims eye to chest: a wall blocks, a clear ray over open ground reads visible, the target collider counts as seen', () => {
+    physics.addHeightfield(flatGround(200));
+    const target = targetAt(-10);
+    physics.step();
+    const los = makeLineOfSight(physics, target);
+    expect(canSeeChest(los, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: -10 })).toBe(true);
+    const wall = physics.addStaticCollider(physics.rapier.ColliderDesc.cuboid(3, 3, 0.2).setTranslation(0, 1.5, -5));
+    physics.step();
+    expect(canSeeChest(los, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: -10 })).toBe(false);
+    physics.removeCollider(wall);
+    physics.step();
+    expect(canSeeChest(los, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: -10 })).toBe(true);
   });
 });
