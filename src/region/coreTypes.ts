@@ -111,6 +111,7 @@ export interface StringsApi {
 }
 
 export interface PhysicsApi {
+  readonly rapier: typeof RAPIER;
   addStaticCollider(desc: RAPIER.ColliderDesc): RAPIER.Collider;
   removeCollider(collider: RAPIER.Collider): void;
 }
@@ -151,6 +152,7 @@ export interface CoreContext {
   strings: StringsApi;
   systems: SystemsApi;
   combat: CombatApi;
+  player: { readonly feet: Vec3 };
 }
 
 export interface GamePlugin {
