@@ -24,6 +24,13 @@ export const STRUCTURE_MODELS: Record<StructureKind, AssetId | null> = {
   rock: null,
   bridge: null,
   stair: null,
+  wall: null,
+  tower: null,
+  'stair-step': null,
+  block: null,
+  stall: null,
+  crate: null,
+  fountain: null,
 };
 
 export interface ModelLoader {

@@ -66,6 +66,58 @@ export class NpcManager implements NpcsService {
     if (this.disposed) throw new Error('NpcManager: spawnAll after dispose');
     if (this.spawned) throw new Error('NpcManager: spawnAll called twice (npcs already spawned)');
     const { layoutNpcs, defs } = this.opts;
+    this.validateSet(layoutNpcs, defs);
+    this.spawned = true;
+    this.spawnSet(layoutNpcs, defs, this.gateOffs);
+
+    this.unsubs.push(
+      this.core.events.on('dialogue.started', (p) => {
+        if (p?.npcId && this.entries.has(p.npcId)) this.talking.add(p.npcId);
+      }),
+      this.core.events.on('dialogue.ended', (p) => {
+        if (p?.npcId) this.talking.delete(p.npcId);
+      }),
+    );
+  }
+
+  /**
+   * Adds more NPCs after `spawnAll` (a later region's cast). Validated as one set: every def needs a spec and the
+   * other way round, and no id may already exist. Returns a remover that despawns exactly these NPCs. A failure
+   * leaves nothing behind and does not touch the NPCs already spawned.
+   */
+  register(layoutNpcs: NpcSpec[], defs: NpcDef[]): () => void {
+    if (this.disposed) throw new Error('NpcManager: register after dispose');
+    if (!this.spawned) throw new Error('NpcManager: register before spawnAll');
+    this.validateSet(layoutNpcs, defs);
+    for (const spec of layoutNpcs) {
+      if (this.specs.has(spec.id)) throw new Error(`NpcManager: npc "${spec.id}" is already registered`);
+    }
+    // This set's gate watchers live in their own array, so removing it never touches another register() call's.
+    const offs: Array<() => void> = [];
+    try {
+      this.spawnSet(layoutNpcs, defs, offs);
+    } catch (err) {
+      this.removeSet(layoutNpcs, offs);
+      throw err;
+    }
+    let removed = false;
+    return () => {
+      if (removed || this.disposed) return;
+      removed = true;
+      this.removeSet(layoutNpcs, offs);
+    };
+  }
+
+  private removeSet(layoutNpcs: NpcSpec[], offs: Array<() => void>): void {
+    for (const off of offs.splice(0)) off();
+    for (const spec of layoutNpcs) {
+      this.despawnOne(spec.id);
+      this.specs.delete(spec.id);
+      this.lastPos.delete(spec.id);
+    }
+  }
+
+  private validateSet(layoutNpcs: NpcSpec[], defs: NpcDef[]): void {
     const defById = new Map<string, NpcDef>();
     for (const d of defs) {
       if (defById.has(d.id)) throw new Error(`NpcManager: duplicate def for npc "${d.id}"`);
@@ -83,34 +135,33 @@ export class NpcManager implements NpcsService {
     for (const d of defs) {
       if (!seen.has(d.id)) throw new Error(`NpcManager: NpcDef "${d.id}" has no entry in the layout`);
     }
+  }
 
-    this.spawned = true;
+  private spawnSet(layoutNpcs: NpcSpec[], defs: NpcDef[], offs: Array<() => void>): void {
+    const defById = new Map(defs.map((d) => [d.id, d]));
     for (const spec of layoutNpcs) this.specs.set(spec.id, spec);
     for (const spec of layoutNpcs) {
       const def = defById.get(spec.id)!;
-      if (spec.absentWhen) {
-        // Present until the flag turns true (read through ctx.gates, so a loaded save is honoured); never spawned on a load with it set.
-        this.gateOffs.push(
-          this.core.gates.flag(spec.absentWhen, (absent) => {
-            if (this.disposed) return;
-            if (absent) this.despawnOne(spec.id);
-            else if (!this.entries.has(spec.id)) this.spawnOne(spec, def);
-          }),
-        );
+      if (spec.absentWhen || spec.presentWhen) {
+        // Absent while `absentWhen` is true and until `presentWhen` is true (both read through ctx.gates, so a loaded save is honoured).
+        let absent = false;
+        let notYet = !!spec.presentWhen;
+        const apply = (): void => {
+          if (this.disposed) return;
+          if (absent || notYet) this.despawnOne(spec.id);
+          else if (!this.entries.has(spec.id)) this.spawnOne(spec, def);
+        };
+        if (spec.absentWhen) {
+          offs.push(this.core.gates.flag(spec.absentWhen, (on) => { absent = on; apply(); }));
+        }
+        if (spec.presentWhen) {
+          offs.push(this.core.gates.flag(spec.presentWhen, (on) => { notYet = !on; apply(); }));
+        }
       } else {
         this.spawnOne(spec, def);
       }
-      if (spec.walkOff) this.gateWalkOff(spec, spec.walkOff);
+      if (spec.walkOff) this.gateWalkOff(spec, spec.walkOff, offs);
     }
-
-    this.unsubs.push(
-      this.core.events.on('dialogue.started', (p) => {
-        if (p?.npcId && this.entries.has(p.npcId)) this.talking.add(p.npcId);
-      }),
-      this.core.events.on('dialogue.ended', (p) => {
-        if (p?.npcId) this.talking.delete(p.npcId);
-      }),
-    );
   }
 
   private spawnOne(spec: NpcSpec, def: NpcDef): void {
@@ -200,8 +251,8 @@ export class NpcManager implements NpcsService {
     else disposeModel(e.figure);
   }
 
-  private gateWalkOff(spec: NpcSpec, walkOff: NonNullable<NpcSpec['walkOff']>): void {
-    this.gateOffs.push(
+  private gateWalkOff(spec: NpcSpec, walkOff: NonNullable<NpcSpec['walkOff']>, offs: Array<() => void>): void {
+    offs.push(
       this.core.gates.flag(walkOff.whenFlag, (open, cause) => {
         if (this.disposed) return;
         const e = this.entries.get(spec.id);
@@ -397,7 +448,7 @@ export class NpcManager implements NpcsService {
     if (last) return { ...last };
     // Absent through its gate since the load (never spawned): it still answers with where its post is.
     const spec = this.specs.get(id);
-    const post = spec?.absentWhen ? this.core.anchors.find(spec.post) : undefined;
+    const post = spec?.absentWhen || spec?.presentWhen ? this.core.anchors.find(spec.post) : undefined;
     return post ? { x: post.position.x, y: post.position.y, z: post.position.z } : undefined;
   }
 
