@@ -114,7 +114,7 @@ export class DamageResolver {
     let saved = false;
     let savedBy = '';
     if (target.immortal) {
-      if (target.health <= 0) target.health = target.maxHealth;
+      target.health = target.maxHealth; // training dummies take every hit and stay full
     } else if (target.health <= 0 && dealtWanted > 0) {
       target.health = 0;
       const partial: DamageResult = this.result(req, dealt, 0, target, false, false, false);

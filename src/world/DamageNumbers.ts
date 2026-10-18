@@ -24,7 +24,12 @@ export class DamageNumbers {
   ) {}
 
   spawn(damage: number, at: { x: number; y: number; z: number }): FloatingNumber {
-    const n = { text: formatDamage(damage), x: at.x, y: at.y, z: at.z, age: 0 };
+    return this.spawnText(formatDamage(damage), at);
+  }
+
+  /** A floating word instead of a number ("Blocked", "Parried"). */
+  spawnText(text: string, at: { x: number; y: number; z: number }): FloatingNumber {
+    const n = { text, x: at.x, y: at.y, z: at.z, age: 0 };
     this.live.push(n);
     return n;
   }
@@ -79,7 +84,11 @@ export class DamageNumberSprites {
   }
 
   spawn(damage: number, at: { x: number; y: number; z: number }): void {
-    const n = this.state.spawn(damage, at);
+    this.spawnText(formatDamage(damage), at);
+  }
+
+  spawnText(text: string, at: { x: number; y: number; z: number }): void {
+    const n = this.state.spawnText(text, at);
     const sprite = new THREE.Sprite(
       new THREE.SpriteMaterial({ map: makeTexture(n.text), transparent: true, depthTest: false }),
     );

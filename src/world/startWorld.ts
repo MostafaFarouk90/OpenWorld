@@ -13,9 +13,14 @@ import { heightAt } from '../terrain/heightfield';
 import { DamageNumberSprites } from './DamageNumbers';
 import { World, type WorldSounds } from './World';
 import { formatHitStats } from './WorldCombat';
+import { Game } from '../core/Game';
+import { MoveModifiers } from '../core/MoveModifiers';
+import { PLUGIN_MODULES } from '../core/pluginManifest';
+import { disabledFromQuery } from '../core/plugins';
+import type { StringTable } from '../strings/StringTable';
+import type { InputBindings } from '../input/InputBindings';
 
 const SKY = 0x9db8d3;
-const CONTROLS = 'Click to look around · WASD move · Shift run · Space jump · Left click or 1-4 attack · H hurtboxes';
 
 /**
  * The default page: the Knight on the streamed terrain. Physics must load (it shows a full-page
@@ -43,41 +48,74 @@ export async function startWorld(container: HTMLElement): Promise<void> {
 
   const terrain = new TerrainManager(scene);
   const audio = createAudio();
-  const world = new World(scene, physics, { sounds: audio ? footstepSounds(audio) : undefined });
+  const moveModifiers = new MoveModifiers();
+  const world = new World(scene, physics, {
+    sounds: audio ? footstepSounds(audio) : undefined,
+    moveModifier: () => moveModifiers.state(),
+  });
   const input = new InputManager(renderer.renderer.domElement);
   const followCamera = new ThirdPersonCamera(camera, input, physics, world.player.controller.collider);
-  const overlay = createOverlay(container);
+  const cameraForward = new THREE.Vector3();
+  container.style.position ||= 'relative'; // HUD slots are positioned against it
+  const game = new Game({
+    scene,
+    camera,
+    physics,
+    world,
+    input,
+    moveModifiers,
+    hudContainer: container,
+    toWorld: (r, f) => followCamera.toWorld(r, f),
+    cameraForward: () => camera.getWorldDirection(cameraForward),
+  });
+  const { strings, hud, events } = game.ctx;
+  const overlay = createOverlay(hud, strings, input.bindings);
   const damageNumbers = new DamageNumberSprites(scene);
-  let hurtboxes = false;
-  window.addEventListener('keydown', (e) => {
-    if (e.code !== 'KeyH') return;
-    hurtboxes = !hurtboxes;
-    world.combat.setDebugVisible(hurtboxes);
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('debug')) installDebugKeys(world);
+  installLeaveGuard(strings);
+  // The first click that starts play also asks for fullscreen and keyboard lock (Ctrl dodge, contracts/input-and-hud.md).
+  renderer.renderer.domElement.addEventListener('click', () => void input.requestFullscreenAndLock(container), { once: true });
+
+  events.on('damage.dealt', (r) => {
+    if (!r.point) return;
+    if (r.outcome === 'blocked') damageNumbers.spawnText(strings.t('combat.blocked'), r.point);
+    else if (r.outcome === 'parried') damageNumbers.spawnText(strings.t('combat.parried'), r.point);
+    else if (r.outcome === 'hit') damageNumbers.spawn(r.dealt, r.point);
   });
 
-  overlay.status('Loading the Knight…');
+  // Plugins set up before the first tick; the loop starts once every setup has settled.
+  const statuses = await game.loadPlugins(PLUGIN_MODULES, { disabled: disabledFromQuery(window.location.search) });
+  const failed = statuses.filter((s) => s.state === 'failed');
+  if (failed.length > 0) {
+    overlay.error(
+      strings.t('core.pluginFailed', { plugin: failed.map((f) => f.id).join(', '), error: failed[0].reason ?? '' }),
+    );
+  }
+  overlay.refreshControls();
+
+  overlay.status(strings.t('core.loadingKnight'));
   const assets = new AssetLoader(renderer.renderer);
   KnightAvatar.load(assets).then(
     (avatar) => {
       world.setAvatar(avatar);
+      game.attachAvatar(avatar);
       overlay.status(null);
-      placeDummies(world, assets, damageNumbers, overlay);
+      placeDummies(world, game, assets, overlay);
     },
     (err: unknown) => {
       console.error('The Knight failed to load; playing as the capsule instead.', err);
-      overlay.error(`Could not load the Knight. ${err instanceof Error ? err.message : String(err)}`);
+      overlay.error(strings.t('core.knightFailed', { error: err instanceof Error ? err.message : String(err) }));
     },
   );
 
   new GameLoop({
     fixedUpdate() {
-      const snapshot = input.sample();
-      world.fixedUpdate(snapshot, followCamera.toWorld(snapshot.moveRight, snapshot.moveForward));
+      game.fixedUpdate();
     },
     render(alpha, frameTime) {
-      world.render(alpha, frameTime);
+      game.render(alpha, frameTime, () => followCamera.update(world.player.feet));
       damageNumbers.update(frameTime);
-      followCamera.update(world.player.feet);
       terrain.update(camera.position);
       followSun(sun, world.player.feet);
       audio?.update(camera);
@@ -87,8 +125,28 @@ export async function startWorld(container: HTMLElement): Promise<void> {
 
   if (import.meta.env.DEV) {
     // Handle for debugging and browser smoke tests; stripped from production builds.
-    Object.assign(window, { __game: { physics, world, terrain, camera: followCamera, input, audio } });
+    Object.assign(window, { __game: { physics, world, terrain, camera: followCamera, input, audio, game } });
   }
+}
+
+/** Debug toggles, only with ?debug in the URL: F4 shows the hurtboxes. */
+function installDebugKeys(world: World): void {
+  let hurtboxes = false;
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'F4') return;
+    e.preventDefault();
+    hurtboxes = !hurtboxes;
+    world.combat.setDebugVisible(hurtboxes);
+  });
+}
+
+/** Ctrl+W (dodge plus forward) asks before closing the tab instead of ending the session. */
+function installLeaveGuard(strings: StringTable): void {
+  window.addEventListener('beforeunload', (e) => {
+    e.preventDefault();
+    // Older browsers show a dialog only when returnValue is set.
+    e.returnValue = strings.t('core.leaveGuard');
+  });
 }
 
 function createSun(scene: THREE.Scene): THREE.DirectionalLight {
@@ -140,8 +198,8 @@ function footstepSounds(audio: AudioManager): WorldSounds {
   };
 }
 
-/** Training dummies on the meadow near the spawn, facing it, with hit numbers and the counter. */
-function placeDummies(world: World, assets: AssetLoader, numbers: DamageNumberSprites, overlay: Overlay): void {
+/** Training dummies on the meadow near the spawn, facing it, registered as actors; hits update the counter. */
+function placeDummies(world: World, game: Game, assets: AssetLoader, overlay: Overlay): void {
   const clips = assets.animations('knight');
   for (const at of COMBAT.dummies) {
     const x = world.spawn.x + at.x;
@@ -156,36 +214,48 @@ function placeDummies(world: World, assets: AssetLoader, numbers: DamageNumberSp
       if ((o as THREE.Mesh).isMesh) o.castShadow = true;
     });
     world.combat.addDummy(model, clips);
+    game.addDummy(model);
   }
   const refresh = (): void => {
     const s = world.combat.stats;
     overlay.hits(formatHitStats(s));
   };
-  world.combat.onHitEvent((e) => {
-    numbers.spawn(e.damage, e.point);
-    refresh();
-  });
+  world.combat.onHitEvent(() => refresh());
 }
 
 interface Overlay {
   status(text: string | null): void;
   hits(text: string): void;
   error(text: string): void;
+  /** Re-renders the controls hint from the current bindings and strings. */
+  refreshControls(): void;
 }
 
-function createOverlay(container: HTMLElement): Overlay {
-  container.style.position ||= 'relative';
+/** Status, error, hit counter and controls hint as a HUD widget in the top-left slot. */
+function createOverlay(hud: Game['ctx']['hud'], strings: StringTable, bindings: InputBindings): Overlay {
   const panel = document.createElement('div');
   panel.style.cssText =
-    'position:absolute;left:12px;top:12px;max-width:min(560px,calc(100% - 24px));pointer-events:none;' +
+    'max-width:min(560px,calc(100vw - 24px));pointer-events:none;' +
     'font:14px/1.4 system-ui,sans-serif;color:#fff;text-shadow:0 1px 2px #000';
   const message = document.createElement('div');
   const hitLine = document.createElement('div');
   const help = document.createElement('div');
-  help.textContent = CONTROLS;
   help.style.opacity = '0.85';
   panel.append(message, hitLine, help);
-  container.appendChild(panel);
+  hud.mount('top-left', { id: 'core.overlay', element: panel, order: 0 });
+  const refreshControls = (): void => {
+    const g = (a: Parameters<InputBindings['glyph']>[0]) => bindings.glyph(a);
+    help.textContent = strings.t('core.controls', {
+      forward: g('moveForward'),
+      left: g('moveLeft'),
+      back: g('moveBack'),
+      right: g('moveRight'),
+      sprint: g('sprint'),
+      jump: g('jump'),
+      interact: g('interact'),
+    });
+  };
+  bindings.onChange(refreshControls);
   return {
     status(text) {
       message.textContent = text ?? '';
@@ -199,5 +269,6 @@ function createOverlay(container: HTMLElement): Overlay {
       message.setAttribute('role', 'alert');
       message.style.cssText = 'background:rgba(140,20,20,0.85);padding:8px 10px;border-radius:6px;margin-bottom:6px';
     },
+    refreshControls,
   };
 }
