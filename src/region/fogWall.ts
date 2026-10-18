@@ -7,8 +7,16 @@ import type RAPIER from '@dimforge/rapier3d';
 import { heightAt as terrainHeight } from '../terrain/heightfield';
 import type { CoreContext } from './coreTypes';
 
-/** Any one of these opens the wall. Phase B adds `story.m05.complete` (thread 6 writes it); nothing writes the first in slice 2. */
-export const FOG_OPEN_FLAGS: readonly string[] = ['story.slice.harrowmarkOpen'];
+/**
+ * The wall stands until M05 is complete (thread 6 writes `story.m05.complete`, and Phase A saves already carry it).
+ * `story.slice.harrowmarkOpen` was Phase A's stand-in: nothing writes it, and thread 21 retires its readers.
+ */
+export const FOG_OPEN_FLAGS: readonly string[] = ['story.m05.complete'];
+
+/** Whether the wall is down for this state, built on the same flags the wall watches: the check for the map marker and the card. */
+export function fogOpen(state: { getFlag(key: string): unknown }): boolean {
+  return FOG_OPEN_FLAGS.some((k) => Boolean(state.getFlag(k)));
+}
 export const FOG_TRIGGER_ID = 'trg.fog.harrowmark';
 export const FOG_WALL_HALF_LENGTH = 500;
 const COLLIDER_HALF_THICKNESS = 1.5;

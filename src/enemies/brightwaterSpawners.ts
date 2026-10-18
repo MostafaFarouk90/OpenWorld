@@ -35,6 +35,25 @@ function patrol(n: number): SpawnerDef {
 }
 
 /**
+ * A Dead Road Footman camp (thread 4's DEADROAD_LAYOUT places the anchors): three Footmen who are there once the fog
+ * wall is down. The id is also the spawn tag, which the purse whitelist (thread 19) matches.
+ */
+function camp(n: number): SpawnerDef {
+  const members = [1, 2, 3].map((i) => `spawn.deadroad.camp-${n}.${i}`);
+  return {
+    id: `deadroad.camp-${n}`,
+    enemy: 'blighted-soldier',
+    count: 3,
+    anchor: members[0],
+    memberAnchors: members,
+    band: { min: 4, max: 6 },
+    activation: { flag: 'story.m05.complete' },
+    respawn: 'never',
+    leash: true,
+  };
+}
+
+/**
  * Brightwater, slice 2 (anchor ids: world-layout-and-npcs.md section 6; thread 4 and thread 3a place them).
  * Levels stay inside 1 to 9, and no group respawns on rest.
  */
@@ -54,6 +73,7 @@ export const BRIGHTWATER_SPAWNERS: readonly SpawnerDef[] = [
   },
   ...[1, 2].map((n) => ford(n)),
   ...[1, 2].map((n) => patrol(n)),
+  ...[1, 2].map((n) => camp(n)),
   {
     id: 'brightwater.vault',
     enemy: 'ash-wraith',

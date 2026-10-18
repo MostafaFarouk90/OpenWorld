@@ -122,6 +122,7 @@ export class Brain {
   private readonly rush: CircleRush | null;
   /** A swing has begun since the last time the target was dropped: Calm is refused (the pounce window is closed). */
   private attackStarted = false;
+  private struckByPlayer = false;
 
   constructor(
     readonly def: EnemyDef,
@@ -162,17 +163,32 @@ export class Brain {
 
   /** States in which nothing more happens to this enemy. */
   get finished(): boolean {
-    return this._state === 'dead' || this._state === 'released' || this._state === 'spared';
+    return this._state === 'dead' || this._state === 'released' || this._state === 'spared' || this._state === 'calmed';
   }
 
   /** The current stagger is a status stun: no mercy window (design: a stun is not a stagger). */
   private stunMode = false;
 
-  /** Open to its mercy verb: a staggered undead (Release), a yielding human (Spare) or a calmable beast (Calm). */
+  /** The player or an ally has landed a hit on this enemy (a status tick of theirs counts); nothing clears it. */
+  get struck(): boolean {
+    return this.struckByPlayer;
+  }
+
+  /**
+   * Open to its mercy verb: a staggered undead (Release), a yielding human (Spare), or a beast (Calm) that has
+   * not been struck and has not begun a swing, or is at a poise break (the Warm Hand and offerings share windows).
+   */
   get mercyOpen(): boolean {
-    if (this.def.mercy?.when === 'staggered') return this._state === 'stagger' && !this.stunMode;
-    // `calming` defs open through the Calm hold, which arrives with the calmed state.
-    return this.def.mercy?.when === 'yielding' && this._state === 'yield';
+    switch (this.def.mercy?.when) {
+      case 'staggered':
+        return this._state === 'stagger' && !this.stunMode;
+      case 'yielding':
+        return this._state === 'yield';
+      case 'calming':
+        return (this.warmHandOpen && !this.stunMode) || (!this.struckByPlayer && this.calmOpen);
+      default:
+        return false;
+    }
   }
 
   /**
@@ -264,6 +280,7 @@ export class Brain {
         return this.intent(this.home, this.def.walkSpeed * 1.5, null, AI.waypointRadius * 0.5);
       case 'released':
       case 'spared':
+      case 'calmed':
       case 'dead':
         return this.intent(null, 0);
     }
@@ -432,9 +449,21 @@ export class Brain {
     this.enter('spared');
   }
 
-  /** mercy.revoked on a spared enemy that has not left yet: hostile again, chasing the striker. */
+  /** Calm accepted (an offering or the Warm Hand): from any live state, the swing and the aggro end at once. */
+  calmed(): void {
+    if (this.finished) return;
+    this.enter('calmed');
+  }
+
+  /** A hit from the player or an ally landed (`Enemy.struckByPlayer`, from damage.dealt): no more Calm unless it staggers. */
+  markStruck(): void {
+    this.struckByPlayer = true;
+  }
+
+  /** mercy.revoked on a spared or calmed enemy that has not left yet: hostile again, chasing the striker. */
   revoked(strikerId: ActorId | null): void {
-    if (this._state !== 'spared') return;
+    if (this._state !== 'spared' && this._state !== 'calmed') return;
+    this.struckByPlayer = true;
     this.forcedTarget = strikerId;
     this.enter('chase');
   }

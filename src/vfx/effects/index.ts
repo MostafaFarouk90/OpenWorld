@@ -172,6 +172,29 @@ export const EFFECTS: Record<EffectId, EffectFactory> = {
     const r = ring(ctx, { position: hand }, 4, GOLD, 0.8);
     return r;
   },
+  // Design 11 effect 16 (Ashblade Ash Cloud): grey smoke puffs that keep rising from a `scale` metre radius for `seconds`.
+  'ash-cloud': (ctx, t, p) => {
+    const o = origin(t);
+    const radius = Math.max(0.5, t.scale ?? 3.5);
+    const seconds = Math.max(0.5, num(p, 'seconds', 6));
+    const start = ctx.now();
+    let last = -Infinity;
+    let stopped = false;
+    const puff = (count: number, now: number) =>
+      ctx.points.emit('smoke', { x: o.x, y: o.y + 0.4, z: o.z }, count, { spread: radius * 0.6, rise: 0.8, life: 3 }, now);
+    puff(40, start);
+    return {
+      update(now) {
+        if (stopped || now - start >= seconds) return false;
+        if (now - last >= 0.25) {
+          last = now;
+          puff(8, now);
+        }
+        return true;
+      },
+      stop: () => void (stopped = true),
+    };
+  },
   // Section 3 Spare: a gold glyph above a yielding human for the 2 s window.
   'yield-glyph': (ctx, t, p) => {
     const o = origin(t);
@@ -216,5 +239,21 @@ export const EFFECTS: Record<EffectId, EffectFactory> = {
     ctx.lights.flash(o, 0xff4020, 7, 0.05, 0.3, ctx.now());
     ctx.points.emit('ember', o, 24, { color: 0xff6030, spread: 0.4, rise: 1.2, life: 0.6 }, ctx.now());
     return ONE_SHOT;
+  },
+  // Section 2 Calm: the offering's glow at hand height, a few warm embers and a small orange-to-gold ring.
+  'calm-offering': (ctx, t, p) => {
+    const o = origin(t);
+    const hand = { x: o.x, y: o.y + 1, z: o.z };
+    ctx.points.emit('ember', hand, num(p, 'count', 24), { spread: 0.5, rise: 1, life: 1.2, color: 0xffa040 }, ctx.now());
+    ctx.lights.flash(hand, 0xffb050, 3, 0.1, 0.9, ctx.now());
+    return ring(ctx, { position: hand }, 1.6, GOLD, 0.8);
+  },
+  // Section 3 Warm Hand: the same without an item, brighter, since the player's own fire is spent.
+  'warm-hand': (ctx, t, p) => {
+    const o = origin(t);
+    const hand = { x: o.x, y: o.y + 1, z: o.z };
+    ctx.points.emit('ember', hand, num(p, 'count', 36), { spread: 0.6, rise: 1.4, life: 1.3, color: WHITE_HOT }, ctx.now());
+    ctx.lights.flash(hand, WHITE_HOT, 4, 0.1, 1.1, ctx.now());
+    return ring(ctx, { position: hand }, 1.8, GOLD, 0.8);
   },
 };

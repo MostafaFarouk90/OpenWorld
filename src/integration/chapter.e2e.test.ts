@@ -85,7 +85,7 @@ async function chain(field: FieldBranch, prior: PriorBranch): Promise<Trails> {
   await playM05(h, t.m05);
   expect(qstate('m05')).toBe('completed');
   expect(flag('story.m05.complete')).toBe(true);
-  expect(fogStanding()).toBe(true); // Phase A: story.m05.complete does not open the wall
+  expect(fogStanding()).toBe(false); // the wall drops when M05 completes
 
   await playR01(h, t.r01, field);
   expect(flag('world.brightwater.barley')).toBe(field);
@@ -107,7 +107,7 @@ async function chain(field: FieldBranch, prior: PriorBranch): Promise<Trails> {
   expect(companions.active()).toEqual(['tobb']);
   const tobb = h.ctx.actors.get(companions.actorId('tobb')!)!;
   expect(tobb.root!.position.distanceTo(h.ctx.player.feet)).toBeLessThan(12);
-  expect(fogStanding()).toBe(true);
+  expect(fogStanding()).toBe(false);
   expect(flag('story.slice.harrowmarkOpen')).toBeUndefined();
   expect(h.ctx.player.actor.dead).toBe(false);
   return t;

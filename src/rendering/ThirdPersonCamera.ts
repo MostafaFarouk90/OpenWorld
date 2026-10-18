@@ -56,6 +56,9 @@ export class ThirdPersonCamera {
   pitch = -0.3;
   /** Returns the lock-on target point (world space) while locked, else null. Set by the player controller. */
   lockTarget: (() => { x: number; y: number; z: number } | null) | null = null;
+  /** Metres added to the orbit target height and to the distance (the mount raises and widens the view); 0 by default. */
+  mountLift = 0;
+  mountDistance = 0;
   /** Receives the frame's horizontal mouse delta in pixels while locked (feeds the lock-on swap gesture). */
   onLockLook: ((dx: number) => void) | null = null;
   private distance: number = CAMERA.distance;
@@ -245,7 +248,7 @@ export class ThirdPersonCamera {
       );
     }
 
-    this.target.set(feet.x, feet.y + CAMERA.targetHeight, feet.z);
+    this.target.set(feet.x, feet.y + CAMERA.targetHeight + this.mountLift, feet.z);
     // While locked, aim a third of the way to the target so both stay in frame.
     if (lock) this.target.lerp(this.tmp.set(lock.x, lock.y, lock.z), 1 / 3);
     // Direction from the target back to the camera.
@@ -255,7 +258,7 @@ export class ThirdPersonCamera {
       Math.cos(this.yaw) * Math.cos(this.pitch),
     );
 
-    let dist = this.distance;
+    let dist = this.distance + this.mountDistance;
     const hit = this.physics.raycast(this.target, this.offset, dist + CAMERA.collisionMargin, this.ignore);
     if (hit) dist = Math.max(hit.distance - CAMERA.collisionMargin, 0.3);
 

@@ -111,6 +111,8 @@ export interface MercyEventLike {
   actorId?: ActorId;
   amount?: number;
   pulseId?: string;
+  /** Boss mercies: the ledger row ('D01', 'D02'). */
+  ledgerId?: string;
 }
 
 /** The shared events this thread emits or listens to (payloads from game-events-and-flags.md section 4). */
@@ -185,6 +187,8 @@ export interface InteractableLike {
   /** Half-angle of the facing cone (core default 75). */
   coneDegrees?: number;
   promptKey?: string;
+  /** v0.5: extra `{param}` values of the prompt line (the mercy `{cost}`, the Calm `{offering}`). */
+  promptParams?(): Record<string, string | number>;
   name?: string;
   holdSeconds?: number;
   priority?: number;
@@ -275,6 +279,9 @@ export interface QuestsPortLike {
 
 /** The `inventory` service (contracts/game-events-and-flags.md section 6) as far as the Alley Cutpurse uses it. */
 export interface InventoryPort {
+  /** Calm: the offering held, and taken through `remove` only (never a loot grant). */
+  count(itemId: string): number;
+  remove(itemId: string, n: number): boolean;
   readonly gold: number;
   addGold(n: number): void;
   /** Takes up to `n`, returns what was taken; emits `gold.spent` for the reason. */
@@ -313,6 +320,22 @@ export interface StatusPort {
       slow?: number;
     },
   ): boolean;
+  /** Calm: the statuses on a beast, and `clear` to drop the ones the player put there. */
+  list(actorId: ActorId): readonly { id: string; sourceId: ActorId | null }[];
+  clear(actorId: ActorId, id?: string): void;
+}
+
+/** What the Calm offering cycle reads from the interaction, hud and input systems. */
+export interface CalmUiPort {
+  /** Id of the interactable the 'mercy' action is focused on, or null. */
+  focusedId(): string | null;
+  /** The mercy hold has started (progress above zero). */
+  holding(): boolean;
+  modalOpen(): boolean;
+  claimWheel(owner: string): () => void;
+  consumeWheel(owner: string): number;
+  /** String table lookup for offering names. */
+  text(key: string): string;
 }
 
 export interface ShardSpells {
@@ -351,6 +374,8 @@ export interface EnemyHost {
   services: ServicesPort;
   /** The core boss registry; absent in tests that do not need bosses. */
   bosses?: BossesPort;
+  /** Calm offering cycle; absent in tests that do not need it. */
+  calmUi?: CalmUiPort;
   player: PlayerPort;
   /** The carried torch (read through the quests service); absent in hosts that have none. */
   torch?: TorchPort;
