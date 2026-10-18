@@ -3,7 +3,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { FIXED_TIMESTEP, KNIGHT, PLAYER } from '../config/constants';
 import { AnimationController, crossed } from './AnimationController';
 import type { AnimationEvent } from './AnimationEvents';
-import { KNIGHT_ATTACKS, KNIGHT_CLIPS } from './knightClips';
+import {
+  ACTION_KINDS,
+  GROUNDED_STATES,
+  KNIGHT_ACTION_CLIPS,
+  KNIGHT_ATTACKS,
+  KNIGHT_CLIPS,
+  type ActionKind,
+} from './knightClips';
 import type { LocomotionInput } from './locomotionState';
 
 const DT = FIXED_TIMESTEP;
@@ -608,5 +615,439 @@ describe('AnimationController blending edge cases (review follow-ups)', () => {
       { type: 'land', fallSpeed: 12 },
       { type: 'land', fallSpeed: 4 },
     ]);
+  });
+});
+
+describe('AnimationController actions', () => {
+  // Float32 durations as GLTFLoader gives them (see END_EPSILON).
+  function f32(name: string, seconds: number): THREE.AnimationClip {
+    return new THREE.AnimationClip(name, undefined, [
+      new THREE.VectorKeyframeTrack('hips.position', new Float32Array([0, seconds]), [0, 0, 0, 0, 1, 0]),
+    ]);
+  }
+  const ACTION_DURATIONS: Record<string, number> = {
+    Blocking: 1.0666667,
+    Block_Hit: 1.0666667,
+    Dodge_Forward: 0.4,
+    Dodge_Backward: 0.4,
+    Dodge_Left: 0.4,
+    Dodge_Right: 0.4,
+    Hit_A: 0.6666667,
+    Hit_B: 0.8666667,
+    Death_A: 0.8,
+    Cheer: 0.5,
+  };
+  const ticksOf = (clipName: string) => Math.round(ACTION_DURATIONS[clipName] / DT);
+  const H = KNIGHT_ATTACKS[0];
+
+  function actionSetup(omit: string[] = []) {
+    const warn = vi.fn();
+    const clips = [
+      ...knightClips(),
+      ...Object.entries(ACTION_DURATIONS)
+        .filter(([n]) => !omit.includes(n))
+        .map(([n, d]) => f32(n, d)),
+    ];
+    const controller = new AnimationController(rig(), clips, { warn });
+    const events: AnimationEvent[] = [];
+    controller.events.subscribe((e) => events.push(e));
+    const tick = (input: LocomotionInput, n = 1) => {
+      for (let i = 0; i < n; i++) controller.fixedUpdate(input);
+    };
+    tick(IDLE, 5);
+    events.length = 0;
+    return { controller, events, tick, warn };
+  }
+  const noSteps = (events: AnimationEvent[]) => events.filter((e) => e.type !== 'footstep');
+
+  const ONE_SHOTS: Array<[ActionKind, string, string | undefined]> = [
+    ['blockHit', 'Block_Hit', undefined],
+    ['dodge', 'Dodge_Forward', undefined],
+    ['dodge', 'Dodge_Backward', 'Dodge_Backward'],
+    ['dodge', 'Dodge_Left', 'Dodge_Left'],
+    ['dodge', 'Dodge_Right', 'Dodge_Right'],
+    ['flinch', 'Hit_A', undefined],
+    ['stagger', 'Hit_B', undefined],
+  ];
+
+  it('the action kinds have their Knight clips and GROUNDED_STATES holds no action state', () => {
+    expect(KNIGHT_ACTION_CLIPS).toEqual({
+      block: 'Blocking',
+      blockHit: 'Block_Hit',
+      dodge: 'Dodge_Forward',
+      flinch: 'Hit_A',
+      stagger: 'Hit_B',
+      dying: 'Death_A',
+      dead: 'Death_A',
+    });
+    for (const kind of ACTION_KINDS) expect(GROUNDED_STATES.has(kind)).toBe(false);
+  });
+
+  for (const [kind, clipName, requested] of ONE_SHOTS) {
+    it(`${kind} plays ${clipName} and returns to idle at its end`, () => {
+      const { controller, events, tick } = actionSetup();
+      expect(controller.enterAction(kind, requested ? { clip: requested } : undefined)).toBe(true);
+      expect(controller.state).toBe(kind);
+      expect(controller.currentAction).toBe(kind);
+      const n = ticksOf(clipName);
+      tick(IDLE, n);
+      expect(controller.state).toBe(kind);
+      expect(controller.weightOf(clipName)).toBeCloseTo(1);
+      tick(IDLE);
+      expect(controller.state).toBe('idle');
+      expect(controller.currentAction).toBeNull();
+      expect(noSteps(events)).toEqual([
+        { type: 'clipEnd', clip: 'Idle', interrupted: false },
+        { type: 'stateChange', from: 'idle', to: kind },
+        { type: 'clipStart', clip: clipName },
+        { type: 'clipEnd', clip: clipName, interrupted: false },
+        { type: 'stateChange', from: kind, to: 'idle' },
+        { type: 'clipStart', clip: 'Idle' },
+      ]);
+    });
+  }
+
+  it('returns to walk when the player is moving at the end', () => {
+    const { controller, tick } = actionSetup();
+    controller.enterAction('flinch');
+    tick(WALK, ticksOf('Hit_A') + 1);
+    expect(controller.state).toBe('walk');
+  });
+
+  it('a durationTicks shorter than the clip cuts it at normal speed', () => {
+    const { controller, events, tick } = actionSetup();
+    controller.enterAction('flinch', { durationTicks: 10 });
+    tick(IDLE, 10);
+    expect(controller.state).toBe('flinch');
+    expect(controller.action('Hit_A')!.time).toBeCloseTo(10 * DT, 6);
+    tick(IDLE);
+    expect(controller.state).toBe('idle');
+    expect(events.filter((e) => e.type === 'clipEnd' && e.clip === 'Hit_A')).toEqual([
+      { type: 'clipEnd', clip: 'Hit_A', interrupted: true },
+    ]);
+  });
+
+  it('a durationTicks longer than the clip holds its last pose', () => {
+    const { controller, events, tick } = actionSetup();
+    const n = ticksOf('Hit_B');
+    controller.enterAction('stagger', { durationTicks: n + 30 });
+    tick(IDLE, n);
+    expect(events).toContainEqual({ type: 'clipEnd', clip: 'Hit_B', interrupted: false });
+    tick(IDLE, 30);
+    expect(controller.state).toBe('stagger');
+    expect(controller.action('Hit_B')!.time).toBeCloseTo(ACTION_DURATIONS.Hit_B, 5);
+    expect(controller.weightOf('Hit_B')).toBeCloseTo(1);
+    tick(IDLE);
+    expect(controller.state).toBe('idle');
+    expect(events.filter((e) => e.type === 'clipEnd' && e.clip === 'Hit_B')).toHaveLength(1);
+  });
+
+  it('block loops past its clip length and ends only on exitAction', () => {
+    const { controller, events, tick } = actionSetup();
+    expect(controller.enterAction('block')).toBe(true);
+    tick(IDLE, ticksOf('Blocking') * 3 + 7);
+    expect(controller.state).toBe('block');
+    expect(controller.weightOf('Blocking')).toBeCloseTo(1);
+    expect(controller.action('Blocking')!.isRunning()).toBe(true);
+    expect(events.filter((e) => e.type === 'clipEnd' && e.clip === 'Blocking')).toHaveLength(0);
+    expect(controller.enterAction('block')).toBe(true); // already blocking: kept
+    expect(controller.exitAction()).toBeUndefined();
+    expect(controller.state).toBe('idle');
+    expect(controller.currentAction).toBeNull();
+    tick(IDLE);
+    expect(noSteps(events).slice(-3)).toEqual([
+      { type: 'clipEnd', clip: 'Blocking', interrupted: false },
+      { type: 'stateChange', from: 'block', to: 'idle' },
+      { type: 'clipStart', clip: 'Idle' },
+    ]);
+    expect(events.filter((e) => e.type === 'stateChange' && e.to === 'block')).toHaveLength(1);
+  });
+
+  it('dying becomes dead at the clip end, holds the last pose and emits nothing more', () => {
+    const { controller, events, tick } = actionSetup();
+    expect(controller.enterAction('dying')).toBe(true);
+    tick(FALLING, 3); // falling does not interrupt dying
+    tick(IDLE, ticksOf('Death_A') - 3);
+    expect(controller.state).toBe('dead');
+    expect(controller.currentAction).toBe('dead');
+    expect(noSteps(events).slice(-2)).toEqual([
+      { type: 'clipEnd', clip: 'Death_A', interrupted: false },
+      { type: 'stateChange', from: 'dying', to: 'dead' },
+    ]);
+    events.length = 0;
+    tick(WALK, 300);
+    expect(events).toEqual([]);
+    expect(controller.state).toBe('dead');
+    expect(controller.action('Death_A')!.time).toBeCloseTo(ACTION_DURATIONS.Death_A, 5);
+    expect(controller.weightOf('Death_A')).toBeCloseTo(1);
+    expect(controller.enterAction('flinch')).toBe(false);
+    expect(controller.enterAction('dying')).toBe(true); // already dead: kept
+    tick(IDLE);
+    expect(events).toEqual([]);
+    controller.exitAction(); // respawn
+    tick(IDLE);
+    expect(controller.state).toBe('idle');
+    expect(noSteps(events)).toEqual([
+      { type: 'stateChange', from: 'dead', to: 'idle' },
+      { type: 'clipStart', clip: 'Idle' },
+    ]);
+  });
+
+  it('dead entered directly holds the last frame of the death clip', () => {
+    const { controller, events, tick } = actionSetup();
+    expect(controller.enterAction('dead')).toBe(true);
+    tick(IDLE, 60);
+    expect(controller.state).toBe('dead');
+    expect(controller.action('Death_A')!.time).toBeCloseTo(ACTION_DURATIONS.Death_A, 5);
+    expect(events.filter((e) => e.type === 'clipEnd' && e.clip === 'Death_A')).toHaveLength(0);
+  });
+
+  it('entering an action during an attack: window close, clipEnd interrupted, stateChange, clipStart', () => {
+    const { controller, events, tick } = actionSetup();
+    controller.playAttack(H.clip);
+    tick(IDLE, Math.ceil((H.activeStart * DURATIONS[H.clip]) / DT) + 2);
+    expect(controller.activeAttack()!.active).toBe(true);
+    events.length = 0;
+    expect(controller.enterAction('stagger')).toBe(true);
+    expect(controller.activeAttack()).toBeNull();
+    tick(IDLE, 80);
+    const relevant = noSteps(events).filter((e) => e.type !== 'attackProgress');
+    expect(relevant.slice(0, 4)).toEqual([
+      { type: 'attackWindow', clip: H.clip, swingId: 1, phase: 'close', normalizedTime: expect.any(Number) },
+      { type: 'clipEnd', clip: H.clip, interrupted: true },
+      { type: 'stateChange', from: 'attack', to: 'stagger' },
+      { type: 'clipStart', clip: 'Hit_B' },
+    ]);
+    expect(events.filter((e) => e.type === 'attackWindow' && e.phase === 'close')).toHaveLength(1);
+    expect(events.filter((e) => e.type === 'attackProgress')).toHaveLength(0);
+  });
+
+  it('entering an action cancels a queued attack', () => {
+    const { controller, events, tick } = actionSetup();
+    expect(controller.playAttack(H.clip)).toBe(true);
+    expect(controller.enterAction('flinch')).toBe(true);
+    tick(IDLE, 5);
+    expect(controller.state).toBe('flinch');
+    expect(events.some((e) => e.type === 'clipStart' && e.clip === H.clip)).toBe(false);
+  });
+
+  it('an action replaces another: the old clip ends interrupted when it had not finished', () => {
+    const { controller, events, tick } = actionSetup();
+    controller.enterAction('flinch');
+    tick(IDLE, 5);
+    expect(controller.enterAction('stagger')).toBe(true);
+    tick(IDLE);
+    controller.enterAction('block');
+    tick(IDLE, 3);
+    controller.enterAction('dying');
+    tick(IDLE);
+    expect(controller.state).toBe('dying');
+    const seq = noSteps(events).filter((e) => e.type !== 'clipStart');
+    expect(seq).toEqual([
+      { type: 'clipEnd', clip: 'Idle', interrupted: false },
+      { type: 'stateChange', from: 'idle', to: 'flinch' },
+      { type: 'clipEnd', clip: 'Hit_A', interrupted: true },
+      { type: 'stateChange', from: 'flinch', to: 'stagger' },
+      { type: 'clipEnd', clip: 'Hit_B', interrupted: true },
+      { type: 'stateChange', from: 'stagger', to: 'block' },
+      { type: 'clipEnd', clip: 'Blocking', interrupted: false },
+      { type: 'stateChange', from: 'block', to: 'dying' },
+    ]);
+    // Replacing with the same one-shot restarts it.
+    const b = actionSetup();
+    b.controller.enterAction('blockHit');
+    b.tick(IDLE, 10);
+    b.controller.enterAction('blockHit');
+    b.tick(IDLE);
+    expect(b.controller.action('Block_Hit')!.time).toBeCloseTo(DT, 6);
+    expect(b.events).toContainEqual({ type: 'clipEnd', clip: 'Block_Hit', interrupted: true });
+  });
+
+  for (const kind of ACTION_KINDS) {
+    it(`playAttack is refused during ${kind} and accepted again after`, () => {
+      const { controller, tick } = actionSetup();
+      controller.enterAction(kind, { clip: kind === 'dodge' ? 'Dodge_Left' : undefined });
+      expect(controller.playAttack(H.clip)).toBe(false);
+      tick(IDLE, 3);
+      expect(controller.playAttack(H.clip)).toBe(false);
+      controller.exitAction();
+      tick(IDLE);
+      expect(controller.playAttack(H.clip)).toBe(true);
+      tick(IDLE);
+      expect(controller.state).toBe('attack');
+    });
+  }
+
+  it('playAttack is accepted again after a one-shot action ends by itself', () => {
+    const { controller, tick } = actionSetup();
+    controller.enterAction('dodge');
+    tick(IDLE, ticksOf('Dodge_Forward'));
+    expect(controller.playAttack(H.clip)).toBe(false);
+    tick(IDLE);
+    expect(controller.playAttack(H.clip)).toBe(true);
+  });
+
+  it('movementLocked per kind: all but flinch lock', () => {
+    const expected: Record<ActionKind, boolean> = {
+      block: true,
+      blockHit: true,
+      dodge: true,
+      flinch: false,
+      stagger: true,
+      dying: true,
+      dead: true,
+    };
+    for (const kind of ACTION_KINDS) {
+      const { controller, tick } = actionSetup();
+      controller.enterAction(kind);
+      expect(controller.movementLocked).toBe(expected[kind]);
+      tick(IDLE, 2);
+      expect(controller.movementLocked).toBe(expected[kind]);
+      controller.exitAction();
+      expect(controller.movementLocked).toBe(false);
+    }
+  });
+
+  it('a missing action clip falls back to idle with one warning', () => {
+    const { controller, tick, warn } = actionSetup(['Hit_A']);
+    expect(warn).not.toHaveBeenCalled();
+    expect(controller.enterAction('flinch')).toBe(true);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toMatch(/Hit_A.*flinch.*Idle/);
+    tick(IDLE, 10);
+    expect(controller.state).toBe('flinch');
+    expect(controller.weightOf('Idle')).toBeCloseTo(1);
+    tick(IDLE, Math.round(DURATIONS.Idle / DT));
+    expect(controller.state).toBe('idle');
+    controller.enterAction('flinch');
+    controller.enterAction('dodge', { clip: 'Dodge_Sideways' });
+    controller.enterAction('dodge', { clip: 'Dodge_Sideways' });
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+
+  it('emits nothing after dispose and refuses new actions', () => {
+    const { controller, events, tick } = actionSetup();
+    controller.enterAction('stagger');
+    controller.dispose();
+    expect(controller.enterAction('flinch')).toBe(false);
+    controller.exitAction();
+    tick(IDLE, 10);
+    expect(events).toEqual([]);
+  });
+
+  it('block, blockHit and dodge need the ground; flinch, stagger, dying and dead do not', () => {
+    for (const kind of ACTION_KINDS) {
+      const { controller, tick } = actionSetup();
+      tick(RISING);
+      tick(FALLING, 20);
+      expect(controller.state).toBe('airborne');
+      const ok = controller.enterAction(kind);
+      expect(ok).toBe(!['block', 'blockHit', 'dodge'].includes(kind));
+      if (!ok) expect(controller.state).toBe('airborne');
+    }
+    // Grounded actions chain on the ground (block -> blockHit -> block).
+    const { controller } = actionSetup();
+    expect(controller.enterAction('block')).toBe(true);
+    expect(controller.enterAction('blockHit')).toBe(true);
+    expect(controller.enterAction('block')).toBe(true);
+  });
+
+  it('a grounded action ends when the player leaves the ground; stagger plays on in the air', () => {
+    const a = actionSetup();
+    a.controller.enterAction('block');
+    a.tick(IDLE, 3);
+    a.tick(FALLING, 10);
+    expect(a.controller.state).toBe('airborne');
+    const b = actionSetup();
+    b.controller.enterAction('stagger');
+    b.tick(FALLING, 10);
+    expect(b.controller.state).toBe('stagger');
+  });
+
+  it('is deterministic: the same ticks give the same events', () => {
+    const run = () => {
+      const { controller, events, tick } = actionSetup();
+      controller.playAttack(H.clip);
+      tick(WALK, 30);
+      controller.enterAction('blockHit', { durationTicks: 20 });
+      tick(WALK, 25);
+      controller.enterAction('dodge', { clip: 'Dodge_Right' });
+      tick(RUN, 40);
+      controller.enterAction('dying');
+      tick(IDLE, 60);
+      controller.exitAction();
+      tick(WALK, 30);
+      return events;
+    };
+    expect(run()).toEqual(run());
+  });
+
+  describe('playOneShot', () => {
+    it('plays a clip once and returns to locomotion at its end', () => {
+      const { controller, events, tick } = actionSetup();
+      expect(controller.playOneShot('Cheer')).toBe(true);
+      expect(controller.state).toBe('oneShot');
+      expect(controller.currentAction).toBeNull();
+      expect(controller.movementLocked).toBe(false);
+      tick(IDLE, ticksOf('Cheer'));
+      expect(controller.state).toBe('oneShot');
+      tick(WALK);
+      expect(controller.state).toBe('walk');
+      expect(noSteps(events)).toEqual([
+        { type: 'clipEnd', clip: 'Idle', interrupted: false },
+        { type: 'stateChange', from: 'idle', to: 'oneShot' },
+        { type: 'clipStart', clip: 'Cheer' },
+        { type: 'clipEnd', clip: 'Cheer', interrupted: false },
+        { type: 'stateChange', from: 'oneShot', to: 'walk' },
+        { type: 'clipStart', clip: 'Walking_A' },
+      ]);
+    });
+
+    it('lockMove locks movement while it plays', () => {
+      const { controller, tick } = actionSetup();
+      expect(controller.playOneShot('Cheer', { lockMove: true })).toBe(true);
+      expect(controller.movementLocked).toBe(true);
+      tick(IDLE, ticksOf('Cheer'));
+      expect(controller.movementLocked).toBe(true);
+      tick(IDLE);
+      expect(controller.movementLocked).toBe(false);
+    });
+
+    it('is refused for a missing clip, while busy, and while airborne', () => {
+      const { controller, tick } = actionSetup();
+      expect(controller.playOneShot('Dance')).toBe(false);
+      expect(controller.state).toBe('idle');
+      controller.playAttack(H.clip);
+      expect(controller.playOneShot('Cheer')).toBe(false); // attack queued
+      tick(IDLE);
+      expect(controller.playOneShot('Cheer')).toBe(false); // attack playing
+      tick(IDLE, 80);
+      controller.enterAction('block');
+      expect(controller.playOneShot('Cheer')).toBe(false); // action
+      controller.exitAction();
+      expect(controller.playOneShot('Cheer')).toBe(true);
+      expect(controller.playOneShot('Cheer')).toBe(false); // another one-shot
+      expect(controller.playAttack(H.clip)).toBe(false);
+      const b = actionSetup();
+      b.tick(RISING);
+      b.tick(FALLING, 20);
+      expect(b.controller.playOneShot('Cheer')).toBe(false);
+    });
+
+    for (const kind of ['flinch', 'stagger', 'dying', 'dead'] as const) {
+      it(`is interrupted by ${kind}`, () => {
+        const { controller, events, tick } = actionSetup();
+        controller.playOneShot('Cheer');
+        tick(IDLE, 5);
+        expect(controller.enterAction(kind)).toBe(true);
+        tick(IDLE);
+        expect(controller.state).toBe(kind);
+        expect(noSteps(events).slice(-3)).toEqual([
+          { type: 'clipEnd', clip: 'Cheer', interrupted: true },
+          { type: 'stateChange', from: 'oneShot', to: kind },
+          { type: 'clipStart', clip: kind === 'flinch' ? 'Hit_A' : kind === 'stagger' ? 'Hit_B' : 'Death_A' },
+        ]);
+      });
+    }
   });
 });
