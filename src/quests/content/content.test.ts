@@ -92,6 +92,20 @@ function play(w: ReturnType<typeof world>, id: string, npc: string, pick: (node:
   return texts;
 }
 
+describe('t12 journal objective', () => {
+  it('opening the journal credits only once the director sets tutorial.t12.kit', () => {
+    const w = world('banked');
+    expect(w.qm.start('t12')).toBe(true);
+    w.bus.emit('interact', { interactableId: 'use:t12-journal-open' });
+    expect(w.qm.state('t12')).toBe('active');
+    w.flags.set('tutorial.t12.kit', true);
+    w.bus.emit('flag.changed', { key: 'tutorial.t12.kit', value: true, previous: undefined });
+    w.bus.emit('interact', { interactableId: 'use:t12-journal-open' });
+    expect(w.qm.state('t12')).toBe('completed');
+    expect(w.qm.state('m01')).toBe('active');
+  });
+});
+
 describe('M01 and M02 walk-through with the real QuestManager', () => {
   it('t03 -> t12 -> m01 -> m02', () => {
     const w = world('banked');

@@ -101,8 +101,11 @@ export interface SpawnerDef {
   patrol?: readonly string[] | { tag: string };
   /** A band, or a region id from REGION_BANDS. */
   band: LevelBand | string;
-  /** auto: at setup and after `rest`; manual: the enemies service; quest: on `quest.started` with this id. */
-  activation: 'auto' | 'manual' | { quest: string };
+  /**
+   * auto: at setup and after `rest`; manual: the enemies service; quest: on `quest.started` with this id,
+   * and with `flag` only while that quest is active and the flag is true (checked on start, flag change and save load).
+   */
+  activation: 'auto' | 'manual' | { quest: string; flag?: string };
   respawn: 'never' | 'onRest';
   leash?: boolean;
 }

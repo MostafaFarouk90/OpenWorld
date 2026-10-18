@@ -116,7 +116,7 @@ describe('enemies plugin on the real core', () => {
   it('headless (no asset loader): spawning warns and returns nothing instead of throwing', async () => {
     const t = setup(null);
     await t.game.loadPlugins(modules(corePlugin, enemiesPlugin));
-    t.anchorAhead('spawn.t10.wraith', 4);
+    t.anchorAhead('spawn.t10.wraith-1', 4);
     const enemies = t.game.ctx.services.require('enemies');
     expect(enemies.spawnGroup('t10.sweeper')).toEqual([]);
     expect(warn.mock.calls.some((c) => String(c[0]).includes('headless'))).toBe(true);
@@ -130,7 +130,7 @@ describe('enemies plugin on the real core', () => {
     // Thread 1's job in the game (actors-and-damage.md section 5): make the player hittable.
     t.world.combat.combat.addTarget(t.world.combat.playerHurtboxes!);
     await t.game.loadPlugins(modules(corePlugin, enemiesPlugin));
-    t.anchorAhead('spawn.t10.wraith', 3);
+    t.anchorAhead('spawn.t10.wraith-1', 3);
     const enemies = t.game.ctx.services.require('enemies');
     const [id] = enemies.spawnGroup('t10.sweeper');
     expect(id).toBeDefined();
@@ -159,14 +159,14 @@ describe('enemies plugin on the real core', () => {
     await loaded;
     await Promise.resolve();
     await Promise.resolve();
-    expect(warn.mock.calls.some((c) => String(c[0]).includes('spawn.brightwater.north-patrol'))).toBe(true);
+    expect(warn.mock.calls.some((c) => String(c[0]).includes('spawn.patrol.wraith-1'))).toBe(true);
     t.teardown();
   });
 
   it('a failed Knight load warns once and spawns nothing', async () => {
     const { assets, loaded } = fakeAssets({ fail: true });
     const t = setup(assets);
-    t.anchorAhead('spawn.brightwater.north-patrol', 6);
+    t.anchorAhead('spawn.patrol.wraith-1', 6);
     await t.game.loadPlugins(modules(corePlugin, enemiesPlugin));
     await loaded;
     await new Promise((r) => setTimeout(r, 0));
@@ -180,6 +180,7 @@ describe('enemies plugin on the real core', () => {
     const t = setup(assets);
     await t.game.loadPlugins(modules(corePlugin, enemiesPlugin));
     for (let i = 1; i <= 5; i++) t.anchorAhead(`spawn.m01.wraith-${i}`, 8 + i * 3);
+    t.game.ctx.state.setFlag('tutorial.complete', true);
     t.game.events.emit('quest.started', { questId: 'm01' });
     const ids = t.game.ctx.services.require('enemies').alive('m01.lanes');
     expect(ids).toHaveLength(5);
@@ -210,7 +211,7 @@ describe('enemies plugin on the real core', () => {
     const { assets } = fakeAssets();
     const t = setup(assets);
     await t.game.loadPlugins(modules(corePlugin, enemiesPlugin));
-    t.anchorAhead('spawn.t10.wraith', 2);
+    t.anchorAhead('spawn.t10.wraith-1', 2);
     const enemies = t.game.ctx.services.require('enemies');
     const [id] = enemies.spawnGroup('t10.sweeper');
     const player = t.game.ctx.actors.player;
@@ -248,7 +249,7 @@ describe('enemies plugin on the real core', () => {
     const t = setup(assets);
     t.world.combat.combat.addTarget(t.world.combat.playerHurtboxes!);
     await t.game.loadPlugins(modules(corePlugin, enemiesPlugin));
-    t.anchorAhead('spawn.t09.soldier', 2);
+    t.anchorAhead('spawn.t09.soldier-1', 2);
     const [id] = t.game.ctx.services.require('enemies').spawnGroup('t09.soldier', { moves: ['soldier.bash'] });
     expect(id).toBeDefined();
     expect(warn.mock.calls.some((c) => String(c[0]).includes('could not spawn'))).toBe(false);
