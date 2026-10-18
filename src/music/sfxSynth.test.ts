@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SFX_IDS } from './sfxLayers';
+import { BARE_SFX_IDS, SFX_IDS } from './sfxLayers';
 import { sfxKey, sfxSeconds, SFX_VARIANTS, synthSfx } from './sfxSynth';
 
 const SR = 22050;
@@ -74,5 +74,33 @@ describe('spell sounds', () => {
   });
   it('rejects a bad variant for a spell sound', () => {
     expect(() => synthSfx('sfx.rally', 3, SR)).toThrow();
+  });
+});
+
+describe('slice 2 bare-key sounds', () => {
+  const bare = BARE_SFX_IDS.map((id) => [id] as const);
+  it.each(bare)('%s is a finite, audible, click-free one-shot of its declared length', (id) => {
+    const s = synthSfx(id, 1, SR);
+    expect(s.length).toBe(Math.round(sfxSeconds(id) * SR));
+    expect(s.every(Number.isFinite)).toBe(true);
+    expect(Math.max(...Array.from(s, Math.abs))).toBeGreaterThan(0.05);
+    expect(Math.max(...Array.from(s, Math.abs))).toBeLessThanOrEqual(1);
+    expect(Math.abs(s[s.length - 1])).toBeLessThan(0.01);
+  });
+
+  it('the five wardstones are five different pitches', () => {
+    const zeroCrossings = (id: (typeof BARE_SFX_IDS)[number]): number => {
+      const s = synthSfx(id, 1, SR).slice(0, Math.round(0.2 * SR));
+      let n = 0;
+      for (let i = 1; i < s.length; i++) if (s[i - 1] < 0 !== s[i] < 0) n++;
+      return n;
+    };
+    const counts = [1, 2, 3, 4, 5].map((n) => zeroCrossings(`sfx.wardstone.${n}` as (typeof BARE_SFX_IDS)[number]));
+    expect(new Set(counts).size).toBe(5);
+    expect([...counts].sort((a, b) => a - b)).toEqual(counts); // ascending
+  });
+
+  it('rejects an id without a recipe', () => {
+    expect(() => synthSfx('sfx.nope' as never, 1, SR)).toThrow();
   });
 });
