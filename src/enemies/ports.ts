@@ -89,6 +89,8 @@ export type DamageModifierLike = (
 export interface DamagePort {
   addModifier(id: string, modifier: DamageModifierLike, order?: number): () => void;
   heal(id: ActorId, amount: number): number;
+  /** Scripted death (the real DamageResolver has it); foes that fire or a torch destroys use it, so `actor.died` still fires. */
+  kill?(id: ActorId, killerId?: ActorId | null): void;
 }
 
 export interface CombatPort {
@@ -138,6 +140,8 @@ export interface EnemyEvents {
   'enemies.groupCleared': { spawnerId: string };
   'enemies.state': { actorId: ActorId; from: string; to: string };
   'enemies.yield': { actorId: ActorId; seconds: number };
+  /** R01: once per ash scarecrow (`scarecrowId` is its spawner slot's anchor id, e.g. 'r01.scarecrow.3'). */
+  'scarecrow.cleared': { actorId: ActorId; scarecrowId: string; method: 'torch' | 'surge' | 'strike' };
 }
 export type EnemyEventName = keyof EnemyEvents;
 
@@ -227,11 +231,35 @@ export interface VfxLike {
   ): { setEmitting(on: boolean): void; dispose(): void };
 }
 
+/**
+ * The torch the player carries in R01 (plans/slice-2-quests.md: "the quests service exposes the carried torch,
+ * no event"). Not on this branch's quests service yet, so this is the shape agreed from the plan text: the
+ * quests service gains an optional `carriedTorch()`.
+ */
+export interface TorchState {
+  /** Only a lit torch ignites anything. */
+  readonly lit: boolean;
+  /** World position of the flame. */
+  position(out: { x: number; y: number; z: number }): { x: number; y: number; z: number };
+  /** Contact radius around the flame, metres. */
+  readonly radius: number;
+}
+export interface TorchPort {
+  /** The carried torch, or null when the player carries none. */
+  carried(): TorchState | null;
+}
+
+/** Thread 3's quests service as far as enemies use it. */
+export interface QuestsPortLike {
+  active(): string[];
+  carriedTorch?(): TorchState | null;
+}
+
 export interface ServicesPort {
   get(name: 'vfx'): VfxLike | undefined;
   get(name: 'lockOn'): { readonly targetId: ActorId | null } | undefined;
   /** Thread 3's quests service: the started, unfinished quest ids. */
-  get(name: 'quests'): { active(): string[] } | undefined;
+  get(name: 'quests'): QuestsPortLike | undefined;
   /** Thread 3a's interiors service: the interior id the player is in, or null outdoors. */
   get(name: 'interiors'): { readonly current: string | null } | undefined;
   get(name: 'nav'): NavPort | undefined;
@@ -259,6 +287,8 @@ export interface EnemyHost {
   gates: GatesPort;
   services: ServicesPort;
   player: PlayerPort;
+  /** The carried torch (read through the quests service); absent in hosts that have none. */
+  torch?: TorchPort;
   heightAt(x: number, z: number): number;
   warn(message: string): void;
 }

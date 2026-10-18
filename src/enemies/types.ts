@@ -1,3 +1,4 @@
+import type { FoeKind } from './foes/types';
 import type { ActorId, FavourTrack } from './ports';
 
 export type AiState =
@@ -18,6 +19,9 @@ export type AiState =
   | 'dead';
 
 export type EnemyKind = 'ash-wraith' | 'blighted-soldier';
+
+/** The impact-sound materials of `actor.data.audio.material` ('straw' and 'wood' are the foes'). */
+export type EnemyMaterial = 'ash' | 'metal' | 'straw' | 'wood';
 
 /** Which hand's tracer a move swings: the right weapon (sword or claw) or the left (shield). */
 export type WeaponChannel = 'right' | 'left';
@@ -77,7 +81,7 @@ export interface EnemyDef {
   /** Flee below this health fraction (design: pack animals at 0.15); undefined never flees. */
   fleeAtHealth?: number;
   mercy: MercyDef;
-  material: 'ash' | 'metal';
+  material: EnemyMaterial;
   /** Raises a shield about half the time; see ai/guard.ts. */
   guard?: boolean;
   /** Advances beside a living packmate and staggers swing starts (ai/pair.ts). */
@@ -95,7 +99,7 @@ export interface SpawnerDef {
   id: string;
   /** Written to `actor.spawnTag` (default: the spawner id); thread 3's M01 kill objective matches 'm01'. */
   tag?: string;
-  enemy: EnemyKind;
+  enemy: EnemyKind | FoeKind;
   count: number;
   /** Spawn anchor id (world-layout-and-npcs.md section 2). */
   anchor: string;
@@ -103,6 +107,8 @@ export interface SpawnerDef {
   memberAnchors?: readonly string[];
   /** Waypoint anchor ids, or every anchor carrying a tag. */
   patrol?: readonly string[] | { tag: string };
+  /** Ash-pile anchor ids a Blightbloom raises wraiths from. */
+  piles?: readonly string[];
   /** A band, or a region id from REGION_BANDS. */
   band: LevelBand | string;
   /**
@@ -142,7 +148,7 @@ export interface SpawnOptions {
 
 export interface EnemyView {
   readonly actorId: ActorId;
-  readonly kind: EnemyKind;
+  readonly kind: EnemyKind | FoeKind;
   readonly state: AiState;
   readonly spawnerId: string | null;
   readonly level: number;

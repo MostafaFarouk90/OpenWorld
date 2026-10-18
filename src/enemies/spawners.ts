@@ -1,5 +1,7 @@
 import type { Vec3 } from '../physics/PhysicsWorld';
 import { ENEMY_DEFS } from './defs';
+import { FOE_DEFS, isFoeKind } from './foes/defs';
+import type { FoeDef } from './foes/types';
 import { DEFAULT_BAND, bandForRegion, enemyLevel } from './level';
 import type { ActorId, AnchorLike, AnchorsPort, GatesPort } from './ports';
 import { LEVEL, WORLD_AI } from './tuning';
@@ -10,7 +12,11 @@ export interface SpawnRequest {
   /** `def.tag ?? def.id`. */
   spawnTag: string;
   slot: number;
-  def: EnemyDef;
+  def: EnemyDef | FoeDef;
+  /** The spawner slot's anchor id (`memberAnchors[slot]`, else the group anchor); the scarecrow's `scarecrowId`. */
+  anchorId?: string;
+  /** Ash-pile anchor ids of the spawner (the bloom). */
+  piles?: readonly string[];
   feet: Vec3;
   yaw: number;
   level: number;
@@ -35,6 +41,8 @@ export type MemberEnd = 'died' | 'released' | 'spared' | 'despawned';
 export interface SpawnersPersisted {
   spent: string[];
   cleared: string[];
+  /** Ash piles whose raised wraith was Released (Blightbloom piles); optional so old saves load. */
+  spentPiles?: string[];
   warmthTier: number;
   lockedBlockLevels: Record<string, number>;
 }
@@ -53,6 +61,7 @@ export class SpawnerRegistry {
   private readonly gateOpen = new Map<string, boolean>();
   private readonly gateOff: Array<() => void> = [];
   private started = false;
+  private spentPiles = new Set<string>();
   private warmthTier = 0;
   private lockedBlockLevels: Record<string, number> = {};
   private readonly rng: () => number;
@@ -79,7 +88,7 @@ export class SpawnerRegistry {
       this.warnOnce(`anchor:${id}`, `spawners: spawner '${id}' has no spawn anchor '${def.anchor}'; nothing spawned`);
       return [];
     }
-    const enemyDef = ENEMY_DEFS[def.enemy];
+    const enemyDef: EnemyDef | FoeDef | undefined = isFoeKind(def.enemy) ? FOE_DEFS[def.enemy] : ENEMY_DEFS[def.enemy];
     if (!enemyDef) {
       this.warnOnce(`enemy:${id}`, `spawners: spawner '${id}' has unknown enemy '${def.enemy}'`);
       return [];
@@ -107,6 +116,8 @@ export class SpawnerRegistry {
         def: enemyDef,
         feet,
         yaw: own ? own.yaw : anchor.yaw,
+        anchorId: own ? own.id : anchor.id,
+        piles: def.piles,
         level,
         patrol,
         options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard },
@@ -273,6 +284,21 @@ export class SpawnerRegistry {
     return out;
   }
 
+  /** The quest a group is activated by, if any. */
+  questOf(spawnerId: string): string | undefined {
+    const act = this.defs.get(spawnerId)?.activation;
+    return typeof act === 'object' && 'quest' in act ? act.quest : undefined;
+  }
+
+  isPileSpent(pileId: string): boolean {
+    return this.spentPiles.has(pileId);
+  }
+
+  /** A pile is spent when a wraith raised from it is Released. */
+  markPileSpent(pileId: string): void {
+    this.spentPiles.add(pileId);
+  }
+
   // Persistence
 
   serialize(): SpawnersPersisted {
@@ -280,6 +306,8 @@ export class SpawnerRegistry {
     return {
       spent: [...this.spent].filter(saved),
       cleared: [...this.cleared].filter(saved),
+      // Omitted while empty, so saves without a bloom keep their old shape.
+      ...(this.spentPiles.size > 0 ? { spentPiles: [...this.spentPiles] } : {}),
       warmthTier: this.warmthTier,
       lockedBlockLevels: { ...this.lockedBlockLevels },
     };
@@ -288,6 +316,7 @@ export class SpawnerRegistry {
   load(data: unknown): void {
     this.spent = new Set();
     this.cleared = new Set();
+    this.spentPiles = new Set();
     this.warmthTier = 0;
     this.lockedBlockLevels = {};
     if (!isRecord(data)) {
@@ -306,6 +335,12 @@ export class SpawnerRegistry {
         else this.deps.warn(`spawners: dropped bad cleared entry ${JSON.stringify(s)}`);
       }
     } else if (data.cleared !== undefined) this.deps.warn('spawners: saved cleared is not a list; keeping default');
+    if (Array.isArray(data.spentPiles)) {
+      for (const s of data.spentPiles) {
+        if (typeof s === 'string') this.spentPiles.add(s);
+        else this.deps.warn(`spawners: dropped bad spentPiles entry ${JSON.stringify(s)}`);
+      }
+    } else if (data.spentPiles !== undefined) this.deps.warn('spawners: saved spentPiles is not a list; keeping default');
     if (typeof data.warmthTier === 'number' && Number.isFinite(data.warmthTier)) {
       this.warmthTier = clampTier(data.warmthTier);
     } else if (data.warmthTier !== undefined) this.deps.warn('spawners: saved warmthTier is invalid; keeping default');
