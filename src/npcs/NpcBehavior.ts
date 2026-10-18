@@ -46,7 +46,7 @@ export function stepNpc(state: NpcState, dt: number, ctx: NpcStepContext): { yaw
     const dz = p.z - state.z;
     const dist = Math.hypot(dx, dz);
     if (dist > 1e-6 && (ctx.talkingTo || dist <= NPC_TUNING.glanceRadius)) {
-      target = Math.atan2(dx, dz);
+      target = Math.atan2(-dx, -dz); // yaw 0 faces -Z
       if (ctx.talkingTo) rate = NPC_TUNING.talkTurnRate;
     } else if (ctx.talkingTo) {
       rate = NPC_TUNING.talkTurnRate;

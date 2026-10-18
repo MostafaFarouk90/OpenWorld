@@ -1,4 +1,4 @@
-import { doorCentre, footprintBox, footprintCorners, footprintsOverlap, footprintWithin, pointInFootprint, wallBoxes } from './geometry';
+import { doorCentre, footprintCorners, footprintsOverlap, footprintWithin, pointInFootprint, wallBoxes } from './geometry';
 import type { LayoutData, StructureSpec } from './layoutTypes';
 import { resolveAnchor, type HeightFn, type ResolvedAnchor } from './resolveLayout';
 
@@ -17,7 +17,8 @@ export interface ValidateOptions {
 
 const ID = /^[a-z0-9][a-z0-9-]*(\.[a-z0-9-]+)+$/;
 const NAME = /^[a-zA-Z0-9_-]+$/;
-const PLAYER_MARGIN = 0.3;
+/** Clearance kept around blocking geometry: the player capsule radius (0.35) plus the controller offset. */
+const PLAYER_MARGIN = 0.4;
 
 function dupes(ids: string[]): string[] {
   const seen = new Set<string>();
@@ -136,21 +137,28 @@ export function validateLayout(layout: LayoutData, heightAt: HeightFn, opts: Val
   const w = Math.ceil((Math.max(...xs) + pad - x0) / cell);
   const h = Math.ceil((Math.max(...zs) + pad - z0) / cell);
   const blockedGrid = new Uint8Array(w * h);
-  const mark = (s: StructureSpec, onlyWalls: boolean) => {
-    const boxes = onlyWalls ? wallBoxes(s) : [footprintBox(s)];
-    for (const b of boxes) {
-      const ix0 = Math.max(0, Math.floor((b.cx - b.hx - PLAYER_MARGIN - x0) / cell));
-      const ix1 = Math.min(w - 1, Math.ceil((b.cx + b.hx + PLAYER_MARGIN - x0) / cell));
-      const iz0 = Math.max(0, Math.floor((b.cz - b.hz - PLAYER_MARGIN - z0) / cell));
-      const iz1 = Math.min(h - 1, Math.ceil((b.cz + b.hz + PLAYER_MARGIN - z0) / cell));
-      for (let iz = iz0; iz <= iz1; iz++) {
-        for (let ix = ix0; ix <= ix1; ix++) {
-          const px = x0 + (ix + 0.5) * cell;
-          const pz = z0 + (iz + 0.5) * cell;
-          if (Math.abs(px - b.cx) <= b.hx + PLAYER_MARGIN && Math.abs(pz - b.cz) <= b.hz + PLAYER_MARGIN) blockedGrid[iz * w + ix] = 1;
-        }
+  const markBox = (b: { cx: number; cz: number; hx: number; hz: number }, inside: (px: number, pz: number) => boolean) => {
+    const ix0 = Math.max(0, Math.floor((b.cx - b.hx - PLAYER_MARGIN - x0) / cell));
+    const ix1 = Math.min(w - 1, Math.ceil((b.cx + b.hx + PLAYER_MARGIN - x0) / cell));
+    const iz0 = Math.max(0, Math.floor((b.cz - b.hz - PLAYER_MARGIN - z0) / cell));
+    const iz1 = Math.min(h - 1, Math.ceil((b.cz + b.hz + PLAYER_MARGIN - z0) / cell));
+    for (let iz = iz0; iz <= iz1; iz++) {
+      for (let ix = ix0; ix <= ix1; ix++) {
+        if (inside(x0 + (ix + 0.5) * cell, z0 + (iz + 0.5) * cell)) blockedGrid[iz * w + ix] = 1;
       }
     }
+  };
+  const mark = (s: StructureSpec, onlyWalls: boolean) => {
+    if (onlyWalls) {
+      // Enterable structures are axis aligned (yaw 0), so the wall boxes are too.
+      for (const b of wallBoxes(s)) {
+        markBox(b, (px, pz) => Math.abs(px - b.cx) <= b.hx + PLAYER_MARGIN && Math.abs(pz - b.cz) <= b.hz + PLAYER_MARGIN);
+      }
+      return;
+    }
+    // Solid structures may be rotated: grow the bounding box by the footprint's reach, test the true shape.
+    const reach = Math.hypot(...s.footprint) / 2;
+    markBox({ cx: s.x, cz: s.z, hx: reach, hz: reach }, (px, pz) => pointInFootprint(s, px, pz, PLAYER_MARGIN));
   };
   for (const s of blocking) if (s.mode === 'enterable') mark(s, true);
   for (const s of blocking) if (s.mode === 'solid') mark(s, false);

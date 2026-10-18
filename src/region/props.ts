@@ -1,10 +1,10 @@
-// Inert M01/M02 props: the bakery barrel chest, the hearth-stone pickup and the notice-board use point.
+// Props: the bakery barrel chest, the hearth-stone pickup (M02), the notice-board use point and the T02 banners.
 import * as THREE from 'three';
 import type { AnchorsApi, CoreContext } from './coreTypes';
 import { greyMat } from './greybox';
-import type { ChestOptions, Disposable } from './localDoor';
+import type { ChestOptions, Disposable } from './StructureBuilder';
 
-export type PropsDeps = Pick<CoreContext, 'scene' | 'interaction' | 'state' | 'events'> & {
+export type PropsDeps = Pick<CoreContext, 'scene' | 'interaction' | 'state' | 'events' | 'services'> & {
   createChest: (opts: ChestOptions) => Disposable;
 };
 
@@ -15,6 +15,21 @@ export interface PropsHandle {
 export const BARREL_ANCHOR = 'kettlewick.barrel';
 export const HEARTH_STONE_ANCHOR = 'kettlewick.bakery-hearth';
 export const NOTICE_BOARD_ANCHOR = 'kettlewick.notice-board';
+
+/**
+ * Quests (thread 3) say which objective is current; until that service is on main, or if its plugin failed,
+ * the stone stays untouchable rather than risk being taken early.
+ */
+function m02StoneObjectiveIsCurrent(services: PropsDeps['services']): boolean {
+  const quests = (services as unknown as { get(name: string): unknown }).get('quests') as
+    | { isObjectiveCurrent?(questId: string, objectiveId: string): boolean }
+    | undefined;
+  try {
+    return quests?.isObjectiveCurrent?.('m02', 'o2') === true;
+  } catch {
+    return false;
+  }
+}
 
 export function buildProps(deps: PropsDeps, anchors: AnchorsApi): PropsHandle {
   const cleanups: Array<() => void> = [];
@@ -63,7 +78,7 @@ export function buildProps(deps: PropsDeps, anchors: AnchorsApi): PropsHandle {
     });
     cleanups.push(() => chest.dispose());
 
-    // Hearth stone pickup.
+    // Hearth stone on the bakery hearth.
     const stone = new THREE.Mesh(
       new THREE.DodecahedronGeometry(0.18),
       new THREE.MeshStandardMaterial({ color: 0xd9a441, emissive: 0xd9a441, emissiveIntensity: 0.3, flatShading: true }),
@@ -72,6 +87,8 @@ export function buildProps(deps: PropsDeps, anchors: AnchorsApi): PropsHandle {
     stone.position.set(stoneAnchor.position.x, stoneAnchor.position.y + 0.2, stoneAnchor.position.z);
     group.add(stone);
     cleanups.push(() => (stone.material as THREE.Material).dispose());
+    // The hearth stone: M02's "bring the stone" objective. It can only be taken while that objective is the
+    // current one (thread 3's quests service), so pressing F on it during T03/T12 changes nothing.
     const stoneFlag = 'pickup.hearth-stone.taken';
     let taken = deps.state.getBool(stoneFlag);
     stone.visible = !taken;
@@ -82,7 +99,7 @@ export function buildProps(deps: PropsDeps, anchors: AnchorsApi): PropsHandle {
         position: (out) => out.set(stoneAnchor.position.x, stoneAnchor.position.y, stoneAnchor.position.z),
         radius: 2,
         promptKey: 'interact.pickup',
-        enabled: () => !taken,
+        enabled: () => !taken && m02StoneObjectiveIsCurrent(deps.services),
         onInteract() {
           if (taken || disposed) return;
           taken = true;
@@ -113,6 +130,16 @@ export function buildProps(deps: PropsDeps, anchors: AnchorsApi): PropsHandle {
         onInteract() {},
       }),
     );
+
+    // T02 look targets: cloth banners on the chapel's west face, one per `banner` anchor.
+    for (const a of anchors.withTag('banner')) {
+      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(1, 2.4), new THREE.MeshStandardMaterial({ color: 0xb02a2a, side: THREE.DoubleSide, flatShading: true }));
+      cloth.name = `banner:${a.id}`;
+      cloth.position.set(a.position.x, a.position.y, a.position.z);
+      cloth.rotation.y = a.yaw;
+      group.add(cloth);
+      cleanups.push(() => (cloth.material as THREE.Material).dispose());
+    }
   } catch (err) {
     dispose();
     throw err;

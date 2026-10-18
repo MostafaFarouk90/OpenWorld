@@ -7,20 +7,13 @@ import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
 import type { CoreContext, GamePlugin } from './coreTypes';
 import type { LayoutData } from './layoutTypes';
 import { buildProps } from './props';
-import { regionAt, type RegionInfo } from './regionMask';
+import { regionAt } from './regionMask';
 import { resolveLayout } from './resolveLayout';
-import { spawnScarecrow } from './scarecrow';
-import { buildStructures, localFactories } from './StructureBuilder';
+import { SCARECROW_TOPPLED_FLAG, spawnScarecrow } from './scarecrow';
+import type { RegionService } from './serviceTypes';
+import { buildStructures, coreFactories } from './StructureBuilder';
 import { REGION_STRINGS_EN } from './strings.en';
 import { validateLayout } from './validateLayout';
-import type * as THREE from 'three';
-
-/** Service `region`: published to other plugins through `services.get('region')`. */
-export interface RegionService {
-  at(x: number, z: number): RegionInfo | null;
-  /** Mesh of the waystone at an anchor tagged `waystone`, or undefined. For thread 6 to light up. */
-  waystoneObject(anchorId: string): THREE.Object3D | undefined;
-}
 
 export interface RegionPluginOptions {
   layout?: LayoutData;
@@ -50,17 +43,20 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
     dependsOn: ['core'],
     setup(ctx: CoreContext) {
       try {
-        const errors = validateLayout(layout, height);
-        if (errors.length) throw new Error(`region: invalid layout:\n${errors.join('\n')}`);
+        // The layout is static data; checking it costs a 250k-cell flood fill, so only dev builds and tests pay.
+        if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
+          const errors = validateLayout(layout, height);
+          if (errors.length) throw new Error(`region: invalid layout:\n${errors.join('\n')}`);
+        }
 
-        ctx.strings.register('en', REGION_STRINGS_EN);
+        cleanups.push(ctx.strings.register('en', REGION_STRINGS_EN));
 
         const resolved = resolveLayout(layout, height);
-        for (const a of resolved.anchors) ctx.anchors.define({ id: a.id, position: a.position, yaw: a.yaw, tags: a.tags });
+        for (const a of resolved.anchors) cleanups.push(ctx.anchors.define({ id: a.id, position: a.position, yaw: a.yaw, tags: a.tags }));
         for (const t of resolved.triggers) cleanups.push(ctx.triggers.add({ id: t.id, who: t.who, once: t.once, shape: t.shape }));
 
         const lookup = new BuildingLookup();
-        const structures = buildStructures({ ...ctx, rapier: ctx.physics.rapier, ...localFactories(ctx) }, layout, height, lookup);
+        const structures = buildStructures({ ...ctx, rapier: ctx.physics.rapier, ...coreFactories(ctx) }, layout, height, lookup);
         cleanups.push(() => structures.dispose());
         void structures.upgrade();
 
@@ -71,20 +67,31 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
           barley.dispose();
         });
 
-        const props = buildProps({ ...ctx, ...localFactories(ctx) }, ctx.anchors);
+        const props = buildProps({ ...ctx, ...coreFactories(ctx) }, ctx.anchors);
         cleanups.push(() => props.dispose());
 
-        const scarecrow = spawnScarecrow(ctx, ctx.anchors.get('brightwater.scarecrow'), height);
-        cleanups.push(() => scarecrow.dispose());
+        // A scarecrow already knocked down in this save stays down (checked again when a save loads).
+        let scarecrow = ctx.state.getBool(SCARECROW_TOPPLED_FLAG) ? null : spawnScarecrow(ctx, ctx.anchors.get('brightwater.scarecrow'), height);
+        cleanups.push(() => scarecrow?.dispose());
+        cleanups.push(
+          ctx.events.on('save.loaded', () => {
+            if (scarecrow && ctx.state.getBool(SCARECROW_TOPPLED_FLAG)) {
+              scarecrow.dispose();
+              scarecrow = null;
+            }
+          }),
+        );
 
         // The training dummies belong to the core; move them into the Practice Yard when it can.
-        const dummies = ctx.services.get('dummies') as
-          | { place(spots: Array<{ feet: { x: number; y: number; z: number }; yaw: number }>): void }
-          | undefined;
-        dummies?.place(['yard.dummy-1', 'yard.dummy-2'].map((id) => {
-          const a = ctx.anchors.get(id);
-          return { feet: a.position, yaw: a.yaw };
-        }));
+        const dummies = ctx.services.get('dummies');
+        try {
+          dummies?.place(['yard.dummy-1', 'yard.dummy-2'].map((id) => {
+            const a = ctx.anchors.get(id);
+            return { feet: a.position, yaw: a.yaw };
+          }));
+        } catch (err) {
+          console.warn('region: could not place the training dummies', err);
+        }
 
         const service: RegionService = {
           at: regionAt,
@@ -100,8 +107,8 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
         cleanups.push(
           ctx.systems.add({
             id: 'region-tracker',
-            fixedPhase: 'rules',
-            order: 50,
+            fixedPhase: 'intent',
+            order: -90,
             fixedUpdate() {
               const { x, z } = ctx.player.feet;
               const now = regionAt(x, z)?.id ?? null;

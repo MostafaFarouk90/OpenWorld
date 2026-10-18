@@ -32,14 +32,10 @@ interface Entry {
   mixer: THREE.AnimationMixer | null;
 }
 
-interface DialoguePayload {
-  dialogueId?: string;
-  npcId?: string;
-}
-
 export class NpcManager implements NpcsService {
   private readonly entries = new Map<string, Entry>();
   private readonly talking = new Set<string>();
+  private readonly loading = new Map<NpcModelId, Promise<void>>();
   private unsubs: Array<() => void> = [];
   private readonly warn: (m: string) => void;
   private warnedNoDialogue = false;
@@ -79,13 +75,14 @@ export class NpcManager implements NpcsService {
     this.spawned = true;
     for (const spec of layoutNpcs) this.spawnOne(spec, defById.get(spec.id)!);
 
-    const on = (type: string, fn: (p: DialoguePayload) => void) => this.unsubs.push(this.core.events.on(type, fn));
-    on('dialogue.started', (p) => {
-      if (p?.npcId && this.entries.has(p.npcId)) this.talking.add(p.npcId);
-    });
-    on('dialogue.ended', (p) => {
-      if (p?.npcId) this.talking.delete(p.npcId);
-    });
+    this.unsubs.push(
+      this.core.events.on('dialogue.started', (p) => {
+        if (p?.npcId && this.entries.has(p.npcId)) this.talking.add(p.npcId);
+      }),
+      this.core.events.on('dialogue.ended', (p) => {
+        if (p?.npcId) this.talking.delete(p.npcId);
+      }),
+    );
   }
 
   private spawnOne(spec: NpcSpec, def: NpcDef): void {
@@ -98,39 +95,52 @@ export class NpcManager implements NpcsService {
     root.add(figure);
     this.core.scene.add(root);
 
-    const actor = this.core.actors.spawn({
-      kind: `npc:${def.id}`,
-      team: 'neutral',
-      maxHealth: 1,
-      immortal: true,
-      hittable: false,
-      root,
-    });
-    const pos: Vec3 = { x: anchor.position.x, y: anchor.position.y, z: anchor.position.z };
-    const unregister = this.core.interaction.register({
-      id: `npc:${def.id}`,
-      kind: 'talk',
-      name: this.core.strings.t(def.nameKey),
-      radius: NPC_TUNING.talkRadius,
-      position: (out) => out.set(pos.x, pos.y, pos.z),
-      onInteract: () => this.talkTo(def),
-    });
-    this.entries.set(def.id, {
-      spec,
-      def,
-      root,
-      figure,
-      isPlaceholder: true,
-      pos,
-      state: createNpcState({ x: pos.x, z: pos.z, yaw: anchor.yaw }),
-      actor,
-      unregister,
-      mixer: null,
-    });
+    // Anything below can throw (a duplicate interactable id); undo what was done so nothing leaks.
+    let actor: ActorLike | null = null;
+    try {
+      actor = this.core.actors.spawn({
+        kind: `npc:${def.id}`,
+        team: 'neutral',
+        maxHealth: 1,
+        immortal: true,
+        hittable: false,
+        root,
+      });
+      const pos: Vec3 = { x: anchor.position.x, y: anchor.position.y, z: anchor.position.z };
+      const unregister = this.core.interaction.register({
+        id: `npc:${def.id}`,
+        kind: 'talk',
+        name: this.core.strings.t(def.nameKey),
+        radius: NPC_TUNING.talkRadius,
+        position: (out) => out.set(pos.x, pos.y, pos.z),
+        onInteract: () => this.talkTo(def),
+      });
+      this.entries.set(def.id, {
+        spec,
+        def,
+        root,
+        figure,
+        isPlaceholder: true,
+        pos,
+        state: createNpcState({ x: pos.x, z: pos.z, yaw: anchor.yaw }),
+        actor,
+        unregister,
+        mixer: null,
+      });
+    } catch (err) {
+      if (actor) this.core.actors.despawn(actor.id);
+      root.remove(figure);
+      this.core.scene.remove(root);
+      disposePlaceholder(figure);
+      throw err;
+    }
   }
 
   private talkTo(def: NpcDef): void {
-    const d = this.core.services.get('dialogue') as { start(dialogueId: string, npcId: string): void } | undefined;
+    // Thread 3 provides 'dialogue'; until its type is merged the lookup goes through the untyped door.
+    const d = (this.core.services as unknown as { get(name: string): unknown }).get('dialogue') as
+      | { start(dialogueId: string, npcId: string): void }
+      | undefined;
     if (!d) {
       if (!this.warnedNoDialogue) {
         this.warnedNoDialogue = true;
@@ -146,39 +156,50 @@ export class NpcManager implements NpcsService {
     }
   }
 
-  /** Never rejects. Each distinct GLB is loaded once; a failure keeps the placeholders. */
+  /** Never rejects. Loads every NPC's GLB now (tests and screenshots); in play, proximity loads them. */
   async loadModels(): Promise<void> {
+    await Promise.all([...new Set([...this.entries.values()].map((e) => e.def.model))].map((m) => this.loadGlb(m)));
+  }
+
+  /** One load per distinct GLB; a failure keeps the placeholders and is not retried. Never rejects. */
+  private loadGlb(model: NpcModelId): Promise<void> {
     const loader = this.opts.loader;
-    if (!loader) return;
-    const byModel = new Map<NpcModelId, Entry[]>();
-    for (const e of this.entries.values()) {
-      const list = byModel.get(e.def.model) ?? [];
-      list.push(e);
-      byModel.set(e.def.model, list);
-    }
-    await Promise.all(
-      [...byModel].map(async ([model, list]) => {
+    if (!loader) return Promise.resolve();
+    let p = this.loading.get(model);
+    if (p) return p;
+    p = (async () => {
+      try {
+        await loader.load(model);
+      } catch (err) {
+        this.warn(`NpcManager: model "${model}" failed to load, keeping placeholders: ${errMsg(err)}`);
+        return;
+      }
+      for (const e of this.entries.values()) {
+        if (e.def.model !== model || !e.isPlaceholder) continue;
+        if (this.disposed) return;
         try {
-          await loader.load(model);
-        } catch (err) {
-          this.warn(`NpcManager: model "${model}" failed to load, keeping placeholders: ${errMsg(err)}`);
-          return;
-        }
-        for (const e of list) {
-          if (this.disposed) return;
-          try {
-            const { model: obj, clips } = prepareNpcModel(loader, e.def);
-            if (this.disposed) {
-              disposeModel(obj);
-              return;
-            }
-            this.swap(e, obj, clips);
-          } catch (err) {
-            this.warn(`NpcManager: could not build model for npc "${e.def.id}": ${errMsg(err)}`);
+          const { model: obj, clips } = prepareNpcModel(loader, e.def);
+          if (this.disposed) {
+            disposeModel(obj);
+            return;
           }
+          this.swap(e, obj, clips);
+        } catch (err) {
+          this.warn(`NpcManager: could not build model for npc "${e.def.id}": ${errMsg(err)}`);
         }
-      }),
-    );
+      }
+    })();
+    this.loading.set(model, p);
+    return p;
+  }
+
+  /** Starts the GLB of every NPC whose post is within the load radius of the player (download budget). */
+  private loadNear(player: { x: number; z: number } | null): void {
+    if (!this.opts.loader || !player) return;
+    for (const e of this.entries.values()) {
+      if (!e.isPlaceholder || this.loading.has(e.def.model)) continue;
+      if (Math.hypot(player.x - e.pos.x, player.z - e.pos.z) <= NPC_TUNING.modelLoadRadius) void this.loadGlb(e.def.model);
+    }
   }
 
   private swap(e: Entry, model: THREE.Object3D, clips: THREE.AnimationClip[]): void {
@@ -204,6 +225,7 @@ export class NpcManager implements NpcsService {
 
   fixedUpdateBehaviour(dt: number): void {
     const player = this.opts.playerPosition();
+    this.loadNear(player);
     for (const [id, e] of this.entries) {
       const { yaw } = stepNpc(e.state, dt, { player, talkingTo: this.talking.has(id) });
       e.root.rotation.y = yaw;

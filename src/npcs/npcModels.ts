@@ -13,7 +13,7 @@ const PLACEHOLDER_COLOURS: Record<NpcModelId, number> = {
 /** Held items modelled into the GLBs (swords, shields, staffs, books, mugs); NPCs stand empty-handed. */
 const HELD_ITEM = /^(1H_|2H_|Knife|Throwable|Badge_|Rectangle_|Round_Shield|Spike_|Spellbook|Mug|Barbarian_Round_Shield)/;
 
-/** Synchronous stand-in: capsule body, sphere head, a nose box on +Z. Feet at the origin, ~1.8 m tall. */
+/** Synchronous stand-in: capsule body, sphere head, a nose box on -Z (the facing of yaw 0). Feet at the origin, ~1.8 m tall. */
 export function buildPlaceholder(def: NpcDef): THREE.Group {
   const t = NPC_TUNING.placeholder;
   const g = new THREE.Group();
@@ -24,7 +24,7 @@ export function buildPlaceholder(def: NpcDef): THREE.Group {
   const head = new THREE.Mesh(new THREE.SphereGeometry(t.headRadius, 12, 8), mat);
   head.position.y = t.height - t.headRadius;
   const nose = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.12), mat);
-  nose.position.set(0, t.height - t.headRadius, t.headRadius);
+  nose.position.set(0, t.height - t.headRadius, -t.headRadius);
   g.add(body, head, nose);
   g.scale.setScalar(def.scale);
   return g;
@@ -47,8 +47,8 @@ export interface LoadedNpcModel {
 }
 
 /**
- * Loads the def's GLB and returns a private clone: scaled, tinted, empty-handed, facing +Z (the
- * KayKit rig's native facing, which matches the layout's yaw 0). Materials are cloned before the
+ * Loads the def's GLB and returns a private clone: scaled, tinted, empty-handed, turned to face -Z (the
+ * KayKit rig faces +Z natively; yaw 0 in the engine faces -Z, like the Knight avatar). Materials are cloned before the
  * tint so the loader's shared source materials are never touched. Rejects if the load fails.
  */
 export async function loadNpcModel(loader: NpcModelLoader, def: NpcDef): Promise<LoadedNpcModel> {
@@ -77,6 +77,7 @@ export function prepareNpcModel(loader: NpcModelLoader, def: NpcDef): LoadedNpcM
     mesh.material = Array.isArray(mesh.material) ? mesh.material.map(clone) : clone(mesh.material);
   });
   hide.forEach((o) => (o.visible = false));
+  model.rotation.y = Math.PI;
   return { model, clips };
 }
 

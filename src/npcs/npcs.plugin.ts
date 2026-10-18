@@ -22,8 +22,15 @@ function playerPositionFrom(ctx: CoreContext): () => { x: number; z: number } | 
 }
 
 function teardown(): void {
-  offs.forEach((o) => o());
+  const pending = offs;
   offs = [];
+  for (const o of pending) {
+    try {
+      o();
+    } catch (err) {
+      console.warn('npcs: teardown step failed', err);
+    }
+  }
   manager?.dispose();
   manager = null;
 }
@@ -34,11 +41,11 @@ export default {
   setup(ctx) {
     try {
       ctx.strings.register('en', NPC_STRINGS_EN);
-      const assets = ctx.services.get('assets');
+      const assets = ctx.assets;
       manager = new NpcManager(ctx, {
         layoutNpcs: BRIGHTWATER_LAYOUT.npcs,
         defs: NPC_DEFS,
-        loader: isLoader(assets) ? assets : undefined,
+        loader: assets && isLoader(assets) ? assets : undefined,
         playerPosition: playerPositionFrom(ctx),
       });
       const m = manager;
@@ -48,7 +55,7 @@ export default {
         ctx.systems.add({ id: 'npcs-behaviour', fixedPhase: 'intent', order: -50, fixedUpdate: (dt) => m.fixedUpdateBehaviour(dt) }),
         ctx.systems.add({ id: 'npcs-anim', fixedPhase: 'animation', order: 150, fixedUpdate: (dt) => m.fixedUpdateAnimation(dt) }),
       );
-      void m.loadModels();
+      // GLBs download by proximity (NpcManager.loadNear), never in setup: the 10 s plugin timeout and the first-load budget.
     } catch (err) {
       teardown();
       throw err;
