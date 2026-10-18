@@ -549,7 +549,7 @@ describe('slice 2 widgets and soft services', () => {
     expect(a.ctx.state.getBool('codex.actEndingSeen')).toBe(true);
     a.dispose();
     const b = await setup([corePlugin, hudPlugin]);
-    b.ctx.state.setFlag('story.act1.campSeen', true);
+    b.ctx.state.setFlag('story.d02.campSeen', true);
     b.ctx.state.setFlag('story.gate.a2', true);
     expect(b.ctx.state.getBool('codex.actEndingSeen')).toBe(false);
     b.dispose();
