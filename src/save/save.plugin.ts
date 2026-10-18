@@ -1,0 +1,209 @@
+import type { GamePlugin } from '../core/plugins';
+import { heightAt } from '../terrain/heightfield';
+import '../waystones/service';
+import { showToast } from '../waystones/toast';
+import { createContinueModal } from './ContinueModal';
+import { SaveManager, type ApplyReport } from './SaveManager';
+import type { SaveService } from './service';
+import './service';
+import { IndexedDbSaveStore, MemorySaveStore } from './SaveStore';
+import { SAVE_STRINGS_EN } from './strings.en';
+import type { SavePorts } from './ports';
+
+export const AUTOSAVE_INTERVAL_SECONDS = 120;
+const SNAPSHOT_INTERVAL_SECONDS = 10;
+const GROUND_RAY = 0.35;
+const MAX_COORD = 100_000;
+
+interface Grounded {
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+}
+
+/** Position from a save entry, lifted onto the terrain; null when implausible. */
+export function sanitizePosition(data: unknown): Grounded | null {
+  if (typeof data !== 'object' || data === null) return null;
+  const d = data as Record<string, unknown>;
+  const { x, y, z, yaw } = d;
+  if (![x, y, z, yaw].every((n) => typeof n === 'number' && Number.isFinite(n))) return null;
+  const nx = x as number;
+  const nz = z as number;
+  if (Math.abs(nx) > MAX_COORD || Math.abs(nz) > MAX_COORD) return null;
+  const ground = heightAt(nx, nz);
+  return { x: nx, y: Math.max(y as number, ground) + 0.05, z: nz, yaw: yaw as number };
+}
+
+let cleanup: (() => void) | null = null;
+
+const save: GamePlugin = {
+  id: 'save',
+  dependsOn: ['core', 'waystones'],
+  setup(ctx) {
+    ctx.strings.register('en', SAVE_STRINGS_EN);
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+    const waystones = () => ctx.services.get('waystones');
+
+    let grounded: Grounded | null = null;
+    const ports: SavePorts = {
+      persistables: () => ctx.persist.all(),
+      emitLoaded: (slot) => ctx.events.emit('save.loaded', { slot }),
+      now: () => Date.now(),
+      log: (level, msg, c) => (level === 'error' ? console.error : level === 'warn' ? console.warn : console.info)(msg, c ?? ''),
+      gameplaySafe: () => {
+        const top = ctx.input.contexts.top();
+        if (ctx.player.actor.dead) return { safe: false, reason: 'dead' };
+        if (top === 'cutscene' || top === 'dialogue') return { safe: false, reason: top };
+        if (waystones()?.travelling) return { safe: false, reason: 'travelling' };
+        return { safe: true };
+      },
+      groundedPlayerState: () => (grounded ? { ...grounded } : undefined),
+      toast: (key) => showToast(ctx.hud, ctx.strings.t(key)),
+    };
+
+    const manager = new SaveManager({ ports, store: new IndexedDbSaveStore(), createFallbackStore: () => new MemorySaveStore() });
+    // The IndexedDB read runs while the other plugins are still setting up.
+    const bootRead = manager.continue();
+    let boot: Awaited<typeof bootRead> | null = null;
+    void bootRead.then((r) => (boot = r));
+    if (typeof navigator !== 'undefined') void navigator.storage?.persist?.().catch(() => undefined);
+
+    let loading = false;
+    let endLoadPending = false;
+
+    const loadSequence = async (): Promise<boolean> => {
+      if (!boot || !boot.ok || loading) return false;
+      loading = true;
+      const release = ctx.player.addMoveModifier('save.load', { freeze: true });
+      try {
+        manager.beginLoad();
+        const report: ApplyReport = manager.applyLoad(boot.file);
+        const pos = sanitizePosition(report.playerPosition?.data);
+        const target = pos ?? (() => {
+          const r = waystones()?.respawnPoint();
+          return r ? { x: r.feet.x, y: r.feet.y, z: r.feet.z, yaw: r.yaw } : null;
+        })();
+        if (target) await waystones()?.safeTeleport({ x: target.x, y: target.y, z: target.z }, target.yaw);
+        ports.emitLoaded(boot.slot);
+        endLoadPending = true; // saves unlock on the next tick, after the settle
+        return true;
+      } finally {
+        release();
+      }
+    };
+
+    const service: SaveService = {
+      saveNow: (reason) => manager.save(reason),
+      hasSave: () => boot?.ok === true,
+      get usingFallback() {
+        return manager.isUsingFallback;
+      },
+      get loading() {
+        return loading;
+      },
+      continueNow: loadSequence,
+      newGame: async () => (await manager.newGame()).ok,
+    };
+    ctx.services.provide('save', service);
+
+    // Boot decision, taken once the read has settled and a tick has run.
+    let bootHandled = false;
+    const handleBoot = () => {
+      if (bootHandled || !boot) return;
+      bootHandled = true;
+      if (params.has('new')) {
+        void manager.newGame();
+        return;
+      }
+      if (params.has('continue') && boot.ok) {
+        void loadSequence();
+        return;
+      }
+      const problem = boot.ok ? null : boot.reason === 'corrupt' || boot.reason === 'newer' ? boot.reason : null;
+      const unavailable = !boot.ok && boot.reason === 'unavailable';
+      if (typeof document === 'undefined' || (!boot.ok && !problem && !unavailable)) return;
+      const hold = ctx.player.addMoveModifier('save.boot', { freeze: true });
+      let closeModal: (() => void) | null = null;
+      const finish = () => {
+        hold();
+        closeModal?.();
+      };
+      const widget = createContinueModal({
+        hasSave: boot.ok,
+        storageUnavailable: unavailable || manager.isUsingFallback,
+        saveProblem: problem,
+        t: (k, p) => ctx.strings.t(k, p),
+        onContinue: () => {
+          finish();
+          void loadSequence();
+        },
+        onNewGame: () => {
+          finish();
+          void manager.newGame();
+        },
+      });
+      closeModal = ctx.hud.openModal(widget);
+      if (!closeModal) hold();
+    };
+
+    let sinceSave = 0;
+    let sinceSnapshot = 0;
+    ctx.systems.add({
+      id: 'save.tick',
+      fixedPhase: 'late',
+      order: 0,
+      fixedUpdate(dt) {
+        if (endLoadPending) {
+          endLoadPending = false;
+          loading = false;
+          manager.endLoad();
+        }
+        handleBoot();
+        manager.addPlaytime(dt);
+        if (!waystones()?.travelling && !loading) {
+          const f = ctx.player.feet;
+          const hit = ctx.physics.raycast({ x: f.x, y: f.y + 0.2, z: f.z }, { x: 0, y: -1, z: 0 }, GROUND_RAY + 0.2);
+          if (hit) grounded = { x: f.x, y: f.y, z: f.z, yaw: ctx.player.facingYaw };
+        }
+        sinceSave += dt;
+        if (sinceSave >= AUTOSAVE_INTERVAL_SECONDS) {
+          sinceSave = 0;
+          void manager.autosave('timer', waystones()?.hostileAggro ?? false);
+        }
+        sinceSnapshot += dt;
+        if (sinceSnapshot >= SNAPSHOT_INTERVAL_SECONDS) {
+          sinceSnapshot = 0;
+          manager.captureSnapshot();
+        }
+      },
+    });
+
+    ctx.events.on('discover', (e) => {
+      if (e.kind === 'region') void manager.save('zone');
+    });
+    const safeAgain = () => void manager.notifySafe();
+    ctx.events.on('cutscene.ended', safeAgain);
+    ctx.events.on('dialogue.ended', safeAgain);
+    ctx.events.on('actor.revived', safeAgain);
+
+    if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+      const onHide = () => {
+        if (document.visibilityState === 'hidden') void manager.snapshotForExit();
+      };
+      const onPageHide = () => void manager.snapshotForExit();
+      document.addEventListener('visibilitychange', onHide);
+      window.addEventListener('pagehide', onPageHide);
+      cleanup = () => {
+        document.removeEventListener('visibilitychange', onHide);
+        window.removeEventListener('pagehide', onPageHide);
+      };
+    }
+  },
+  dispose() {
+    cleanup?.();
+    cleanup = null;
+  },
+};
+
+export default save;
