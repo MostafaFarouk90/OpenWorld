@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { StubDocument, textOf, type ElementLike } from './dom';
 import { barFraction, burnZone, StatusBars, type StatusBarsSource } from './StatusBars';
 
@@ -159,5 +159,52 @@ describe('StatusBars', () => {
     root.append(bars.element);
     bars.dispose();
     expect(root.children).toHaveLength(0);
+  });
+});
+
+describe('scar count', () => {
+  afterEach(() => vi.useRealTimers());
+  const scarEl = (b: StatusBars) => find(b.element, 'owg-scar')!;
+
+  it('is hidden at 0, null and when the source is absent', () => {
+    expect(scarEl(make().bars).style.display).toBe('none');
+    expect(scarEl(make({ scars: () => 0 }).bars).style.display).toBe('none');
+    expect(scarEl(make({ scars: () => null }).bars).style.display).toBe('none');
+    expect(scarEl(make({ scars: () => NaN }).bars).style.display).toBe('none');
+  });
+
+  it('shows the polled count (a load changes it without any event) with the tooltip', () => {
+    let n = 0;
+    const { bars } = make({ scars: () => n });
+    n = 3;
+    bars.update();
+    expect(scarEl(bars).style.display).toBe('flex');
+    expect(textOf(scarEl(bars))).toContain('3');
+    expect(scarEl(bars).getAttribute('title')).toBe('Scars: each takes max health');
+    n = 12345;
+    bars.update();
+    expect(textOf(scarEl(bars))).toContain('12345');
+    n = 0;
+    bars.update();
+    expect(scarEl(bars).style.display).toBe('none');
+  });
+
+  it('pulses once on pulse() and survives updates meanwhile', () => {
+    vi.useFakeTimers();
+    const { bars } = make({ scars: () => 1 });
+    bars.pulse();
+    expect(scarEl(bars).className).toContain('pulse');
+    bars.update();
+    expect(scarEl(bars).className).toContain('pulse');
+    vi.advanceTimersByTime(700);
+    expect(scarEl(bars).className).not.toContain('pulse');
+  });
+
+  it('dispose clears a pending pulse timer', () => {
+    vi.useFakeTimers();
+    const { bars } = make({ scars: () => 1 });
+    bars.pulse();
+    bars.dispose();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
