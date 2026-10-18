@@ -44,17 +44,20 @@ class Track {
   /** Adds a note starting at `startSample` lasting `seconds`; indices wrap around the loop end. */
   add(startSample: number, seconds: number, voice: Voice): void {
     const n = Math.max(1, Math.round(seconds * this.sampleRate));
+    // Every note ends in a short fade to zero so none is cut off mid-sound (that would click).
+    const fade = Math.max(1, Math.min(Math.floor(n * 0.2), Math.round(0.01 * this.sampleRate)));
     for (let i = 0; i < n; i++) {
       const idx = (startSample + i) % this.length;
-      this.data[idx] += voice(i / this.sampleRate, i);
+      const tail = n - i <= fade ? (n - i - 1) / fade : 1;
+      this.data[idx] += voice(i / this.sampleRate, i) * tail;
     }
   }
 
-  /** Scales to a safe peak and returns the data. */
-  finish(peak = 0.8): Float32Array {
+  /** Scales the stem to exactly `peak` (up or down) and returns the data. */
+  finish(peak = 0.15): Float32Array {
     let max = 0;
     for (let i = 0; i < this.length; i++) max = Math.max(max, Math.abs(this.data[i]));
-    if (max > peak) {
+    if (max > 0) {
       const k = peak / max;
       for (let i = 0; i < this.length; i++) this.data[i] *= k;
     }
@@ -169,9 +172,8 @@ function vocal(t: Track, g: Grid): void {
     t.add(g.start(bar, 0), g.barSeconds * 0.96, (s) => {
       const swell = Math.sin((Math.PI * s) / (g.barSeconds * 0.96)) ** 1.5;
       const vib = 1 + 0.006 * Math.sin(TAU * 5 * s);
-      let sum = 0;
-      for (let h = 1; h <= 4; h++) sum += Math.sin(TAU * hz * vib * h * s) / h ** 1.4;
-      return swell * sum * 0.35;
+      const w = TAU * hz * vib * s;
+      return swell * (Math.sin(w) + Math.sin(2 * w) * 0.38 + Math.sin(3 * w) * 0.22) * 0.35;
     });
     // Open "hoh" calls on the off-beat of every other bar (A half) or every bar (B half).
     if (!aHalf || bar % 2 === 1) {
@@ -233,6 +235,9 @@ function boss(t: Track, g: Grid): void {
   }
 }
 
+/** Per-stem peak so the summed combat and boss mixes stay under full scale at the mixer's output. */
+const STEM_PEAK: Record<string, number> = { kick: 0.4, snare: 0.36, hat: 0.28, bass: 0.4, vocal: 0.32, melody: 0.24, boss: 0.1 };
+
 const VOICES: Record<string, (t: Track, g: Grid) => void> = { kick, snare, hat, bass, vocal, melody, boss };
 
 /** Renders one placeholder stem as exactly `loopSamples(track, sampleRate)` mono samples. */
@@ -242,5 +247,5 @@ export function synthStem(track: TrackDef, stemId: string, sampleRate: number): 
   const length = loopSamples(track, sampleRate);
   const t = new Track(length, sampleRate);
   voice(t, grid(track, length, sampleRate));
-  return t.finish();
+  return t.finish(STEM_PEAK[stemId] ?? 0.15);
 }

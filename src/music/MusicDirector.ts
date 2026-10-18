@@ -40,6 +40,7 @@ export class MusicDirector {
   private clock: BarClock | null = null;
   private disposed = false;
   private lastNow = -Infinity;
+  private lastAudio: number | null = null;
 
   private boss = false;
   private combat = false;
@@ -117,12 +118,13 @@ export class MusicDirector {
 
   /** A hostile hit the player, or the player hit a hostile (already filtered by `isCombatHit`). */
   onCombatHit(now: number): void {
+    if (!this.clock) return; // a hit before the music can play says nothing about the fight now
     this.lastHit = Math.max(this.lastHit, now);
   }
 
   /** `discover` and `waystone.rekindled`. Dropped during combat, boss and ending, or if one is already planned. */
   requestDiscover(): void {
-    if (this.disposed || !this.clock) return;
+    if (this.disposed) return;
     if (this.combat || this.boss || this.endingUntil !== null) return;
     if (this.discoverPending || this.discover) return;
     this.discoverPending = true;
@@ -177,9 +179,20 @@ export class MusicDirector {
    * @param now audio-clock seconds
    * @param distanceTo distance from the player to an actor in metres, undefined if unknown
    */
-  update(now: number, distanceTo: (actorId: string) => number | undefined = () => undefined): void {
+  update(
+    now: number,
+    distanceTo: (actorId: string) => number | undefined = () => undefined,
+    extra: { audioNow?: number; hostileNear?: boolean } = {},
+  ): void {
     if (this.disposed || !this.clock) return;
     if (!Number.isFinite(now) || now < this.lastNow) return;
+    const audioNow = extra.audioNow ?? now;
+    // Audio time keeps running through a pause or a backgrounded tab while `now` (game time) does
+    // not; a phrase planned on the bar clock cannot survive that gap, so drop it instead of skipping it.
+    if (this.lastAudio !== null && audioNow - this.lastAudio - (now - this.lastNow) > 0.5) {
+      this.discover = null;
+    }
+    this.lastAudio = audioNow;
     this.lastNow = now;
     const cfg = this.cfg;
 
@@ -193,10 +206,10 @@ export class MusicDirector {
         if (near || now - this.lastHit < cfg.exitHysteresis) this.enterCombat();
       }
       if (this.combat) {
-        const holding = this.hostiles.list().some((id) => {
-          const d = distanceTo(id);
-          return d === undefined || d <= cfg.leashRadius;
-        });
+        // A set member with no known position (actor gone) cannot hold combat; the 6 s timer ends it.
+        const holding =
+          extra.hostileNear === true ||
+          this.hostiles.list().some((id) => distanceTo(id) !== undefined);
         if (holding) this.lastHold = now;
         if (!holding && now - Math.max(this.lastHold, this.lastHit) >= cfg.exitHysteresis) {
           this.combat = false;
@@ -210,7 +223,7 @@ export class MusicDirector {
       this.exploreSince = now;
     }
 
-    this.updateDiscover(now);
+    this.updateDiscover(audioNow);
     this.updateSilence(now);
     this.apply(now);
   }
@@ -240,7 +253,7 @@ export class MusicDirector {
       const startPos = half - pos <= this.cfg.halfBoundaryReachBars ? half : clock.nextBar(now);
       this.discover = {
         startAt: clock.timeAtBarPosition(now, startPos),
-        endAt: clock.timeAtBarPosition(now, clock.halfAfter(startPos)),
+        endAt: clock.timeAtBarPosition(now, startPos + this.cfg.halfLoopBars),
         active: false,
       };
       this.discoverPending = false;
@@ -250,7 +263,7 @@ export class MusicDirector {
     if (!d.active && now >= d.startAt && this.ducks.size === 0) d.active = true;
     if (now >= d.endAt) {
       this.discover = null;
-      this.exploreSince = now;
+      this.exploreSince = this.lastNow;
     }
   }
 
@@ -289,9 +302,9 @@ export class MusicDirector {
   private apply(now: number): void {
     const key = this.mixKey;
     if (key === this.appliedKey) return;
-    this.appliedKey = key;
     try {
       this.driver.setMix(this.track.mixes[key], this.cfg.rampSeconds);
+      this.appliedKey = key;
     } catch (err) {
       console.warn(`Music: setMix(${key}) failed at ${now.toFixed(2)} s:`, err);
     }

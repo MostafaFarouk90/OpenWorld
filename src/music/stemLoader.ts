@@ -20,6 +20,10 @@ export interface StemLoaderOptions {
   fetchImpl?: (url: string) => Promise<Response>;
   /** Frames a recording may differ from the canonical length and still be trimmed or padded. */
   toleranceFrames?: number;
+  /** Stems never to synthesise (for example the boss stem, unheard in the slice); recordings still load. */
+  skipProcedural?: readonly string[];
+  /** A fetch that has not answered after this long counts as missing (default 5 s). */
+  fetchTimeoutMs?: number;
   /** Awaited between procedural stems so synthesis does not block a frame for long. */
   yieldToMain?: () => Promise<void>;
 }
@@ -52,8 +56,19 @@ export async function loadTrackStems(
   options: StemLoaderOptions = {},
 ): Promise<LoadedStems> {
   const length = loopSamples(track, ctx.sampleRate);
-  const baseUrl = options.baseUrl ?? `/assets/music/${track.id}`;
-  const fetchImpl = options.fetchImpl ?? ((url: string) => fetch(url));
+  const baseUrl = options.baseUrl ?? `${import.meta.env.BASE_URL}assets/music/${track.id}`;
+  const timeoutMs = options.fetchTimeoutMs ?? 5000;
+  const fetchImpl =
+    options.fetchImpl ??
+    (async (url: string) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    });
   const tolerance = options.toleranceFrames ?? 2;
   const yieldToMain = options.yieldToMain ?? defaultYield;
 
@@ -84,6 +99,7 @@ export async function loadTrackStems(
       result.sources[stem] = 'recorded';
       continue;
     }
+    if (options.skipProcedural?.includes(stem)) continue;
     try {
       await yieldToMain();
       const out = ctx.createBuffer(1, length, ctx.sampleRate);

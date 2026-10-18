@@ -51,7 +51,7 @@ function makeEnv(opts: { withAudio?: boolean; unlocked?: boolean; stemFailsFor?:
   };
   if (opts.withAudio !== false) services.provide('audio', audio as never);
 
-  const actors = new Map<string, { id: string; team: string; data: Record<string, unknown>; root: object | null; worldPosition(o: THREE.Vector3): THREE.Vector3 }>();
+  const actors = new Map<string, { id: string; team: string; dead?: boolean; data: Record<string, unknown>; root: object | null; worldPosition(o: THREE.Vector3): THREE.Vector3 }>();
   const addActor = (id: string, team: string, pos: [number, number, number], data: Record<string, unknown> = {}) =>
     actors.set(id, { id, team, data, root: {}, worldPosition: (o) => o.set(...pos) });
   addActor('player', 'player', [0, 0, 0]);
@@ -62,7 +62,8 @@ function makeEnv(opts: { withAudio?: boolean; unlocked?: boolean; stemFailsFor?:
   const ctx = {
     events,
     services,
-    actors: { player: actors.get('player'), get: (id: string) => actors.get(id) },
+    actors: { player: actors.get('player'), get: (id: string) => actors.get(id), all: () => actors.values() },
+    state: { isMercied: () => false },
     player: { feet: new THREE.Vector3() },
     systems: { add: (s: (typeof systems)[number]) => (systems.push(s), () => {}) },
   } as unknown as GameContext;
@@ -70,7 +71,12 @@ function makeEnv(opts: { withAudio?: boolean; unlocked?: boolean; stemFailsFor?:
     audio.isUnlocked = true;
     unlockCbs.splice(0).forEach((cb) => cb());
   };
-  return { ctx, events, services, audio, music, systems, unlock, addActor, actors };
+  const tickTo = (t: number): void => {
+    const dt = Math.max(1 / 60, t - audio.context.currentTime);
+    audio.context.currentTime += dt;
+    systems[0].fixedUpdate!(dt, ctx);
+  };
+  return { ctx, events, services, audio, music, systems, unlock, addActor, actors, tickTo };
 }
 
 const flush = async (): Promise<void> => {
@@ -106,7 +112,7 @@ describe('music plugin', () => {
     const e = makeEnv();
     setupMusic(e.ctx);
     await flush();
-    expect(e.music.add).toHaveBeenCalledTimes(TRACK.stems.length);
+    expect(e.music.add).toHaveBeenCalledTimes(TRACK.stems.length - 1); // the boss stem is not synthesised
     expect(e.music.start).not.toHaveBeenCalled();
     e.unlock();
     expect(e.music.start).toHaveBeenCalledWith(TRACK.mixes.explore);
@@ -117,7 +123,7 @@ describe('music plugin', () => {
     setupMusic(e.ctx);
     e.events.emit('ai.aggro', { actorId: 'w1', targetId: 'player' });
     e.events.emit('dialogue.started', { dialogueId: 'd', npcId: 'n' });
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(e.audio.context.currentTime + 1 / 60);
     expect(e.music.setMix).not.toHaveBeenCalled();
     await flush();
     e.unlock();
@@ -147,7 +153,7 @@ describe('music plugin', () => {
     await flush();
     e.unlock();
     expect(e.music.start).not.toHaveBeenCalled();
-    expect(() => e.systems[0].fixedUpdate!(1 / 60, e.ctx)).not.toThrow();
+    expect(() => e.tickTo(e.audio.context.currentTime + 1 / 60)).not.toThrow();
   });
 
   it('a stem load finishing after teardown is discarded', async () => {
@@ -175,13 +181,14 @@ describe('music plugin', () => {
     setupMusic(e.ctx);
     await flush();
     e.events.emit('ai.aggro', { actorId: 'w1', targetId: 'player' });
-    e.audio.context.currentTime = 1;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1);
     expect(e.services.get('music')!.state).toBe('combat');
     expect(e.music.setMix).toHaveBeenLastCalledWith(TRACK.mixes.combat, 0.4);
     e.events.emit('ai.calm', { actorId: 'w1' });
-    e.audio.context.currentTime = 8;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(8);
+    expect(e.services.get('music')!.state).toBe('combat'); // calmed but still 5 m away: holds
+    e.actors.get('w1')!.worldPosition = (o) => o.set(50, 0, 0);
+    e.tickTo(15);
     expect(e.services.get('music')!.state).toBe('explore');
   });
 
@@ -190,8 +197,7 @@ describe('music plugin', () => {
     setupMusic(e.ctx);
     await flush();
     e.events.emit('ai.aggro', { actorId: 'w1', targetId: 'villager' });
-    e.audio.context.currentTime = 1;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1);
     expect(e.services.get('music')!.state).toBe('explore');
   });
 
@@ -200,21 +206,17 @@ describe('music plugin', () => {
     setupMusic(e.ctx);
     await flush();
     e.events.emit('ai.aggro', { actorId: 'w1', targetId: 'player' });
-    e.audio.context.currentTime = 1;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1);
     e.events.emit('mercy', { verb: 'calm', tier: 'normal', track: null, creature: 'wraith', actorId: 'w1' } as never);
-    e.audio.context.currentTime = 1.1;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1.1);
     expect(e.services.get('music')!.state).toBe('ending');
     e.events.emit('dialogue.started', { dialogueId: 'a', npcId: 'n' });
     e.events.emit('cutscene.started', { cutsceneId: 'a' });
     e.events.emit('dialogue.ended', { dialogueId: 'a', npcId: 'n' });
-    e.audio.context.currentTime = 1.2;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1.2);
     expect(e.music.setMix).toHaveBeenLastCalledWith(TRACK.mixes.talk, 0.4); // cutscene:a still holds
     e.events.emit('cutscene.ended', { cutsceneId: 'a' });
-    e.audio.context.currentTime = 1.3;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1.3);
     expect(e.music.setMix).toHaveBeenLastCalledWith(TRACK.mixes.ending, 0.4);
   });
 
@@ -223,23 +225,18 @@ describe('music plugin', () => {
     setupMusic(e.ctx);
     await flush();
     e.events.emit('ai.aggro', { actorId: 'w1', targetId: 'player' });
-    e.audio.context.currentTime = 1;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1);
     expect(e.services.get('music')!.state).toBe('combat');
     e.events.emit('actor.revived', { actorId: 'w1', reason: 'respawn', health: 1 }); // not the player: ignored
-    e.audio.context.currentTime = 1.1;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1.1);
     expect(e.services.get('music')!.state).toBe('combat');
     e.events.emit('actor.revived', { actorId: 'player', reason: 'respawn', health: 50 });
-    e.audio.context.currentTime = 1.2;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1.2);
     expect(e.services.get('music')!.state).toBe('explore');
     e.events.emit('ai.aggro', { actorId: 'w1', targetId: 'player' });
-    e.audio.context.currentTime = 1.3;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1.3);
     e.events.emit('save.loaded', { slot: 's' });
-    e.audio.context.currentTime = 1.4;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1.4);
     expect(e.services.get('music')!.state).toBe('explore');
   });
 
@@ -250,8 +247,7 @@ describe('music plugin', () => {
     await flush();
     const svc = e.services.get('music')!;
     svc.setBoss(true);
-    e.audio.context.currentTime = 1;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1);
     expect(svc.state).toBe('boss');
     svc.setRegionTrack('harrowmark');
     expect(warn).toHaveBeenCalled();
@@ -321,11 +317,10 @@ describe('music plugin SFX and combat hits', () => {
     e.audio.context.currentTime = 1;
     e.events.emit('damage.dealt', hit({ targetId: 'dummy' }));
     e.events.emit('damage.dealt', hit({ attackerId: null, targetId: 'player', kind: 'fall' }));
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(e.audio.context.currentTime + 1 / 60);
     expect(e.services.get('music')!.state).toBe('explore');
     e.events.emit('damage.dealt', hit({ attackerId: 'w1', targetId: 'player' }));
-    e.audio.context.currentTime = 1.1;
-    e.systems[0].fixedUpdate!(1 / 60, e.ctx);
+    e.tickTo(1.1);
     expect(e.services.get('music')!.state).toBe('combat');
   });
 
@@ -350,5 +345,151 @@ describe('music plugin SFX and combat hits', () => {
     await flush();
     e.events.emit('damage.dealt', hit({}));
     expect(e.audio.playAt).not.toHaveBeenCalled();
+  });
+});
+
+describe('music plugin review fixes', () => {
+  const hit = (over: Record<string, unknown>) =>
+    ({ attackerId: 'player', targetId: 'w1', amount: 10, poise: 10, kind: 'melee', outcome: 'hit', dealt: 10, poiseDealt: 10, healthAfter: 50, killed: false, saved: false, staggered: false, ...over }) as never;
+  const far = (e: ReturnType<typeof makeEnv>, id: string): void => {
+    e.actors.get(id)!.worldPosition = (o) => o.set(50, 0, 0);
+  };
+
+  it('a hostile that hits the player joins the fight, so sparing it plays the ending', async () => {
+    const e = makeEnv({ unlocked: true });
+    setupMusic(e.ctx);
+    await flush();
+    far(e, 'w1');
+    e.events.emit('damage.dealt', hit({ attackerId: 'w1', targetId: 'player' }));
+    e.tickTo(1);
+    expect(e.services.get('music')!.state).toBe('combat');
+    e.events.emit('mercy', { verb: 'spare', tier: 'normal', track: null, creature: 'x', actorId: 'w1' } as never);
+    e.tickTo(1.1);
+    expect(e.services.get('music')!.state).toBe('ending');
+  });
+
+  it('a hostile standing within 12 m with no aggro event keeps combat open; a mercied one does not', async () => {
+    const e = makeEnv({ unlocked: true });
+    setupMusic(e.ctx);
+    await flush();
+    e.events.emit('damage.dealt', hit({ attackerId: 'w1', targetId: 'player' }));
+    e.events.emit('ai.calm', { actorId: 'w1' });
+    e.tickTo(0.5);
+    e.tickTo(20);
+    expect(e.services.get('music')!.state).toBe('combat');
+    (e.ctx.state as { isMercied: (id: string) => boolean }).isMercied = () => true;
+    e.tickTo(30);
+    expect(e.services.get('music')!.state).toBe('explore');
+  });
+
+  it('falls, script damage and spell hits play no impact sound', async () => {
+    const e = makeEnv({ unlocked: true });
+    setupMusic(e.ctx);
+    await flush();
+    e.audio.playAt.mockClear();
+    for (const kind of ['fall', 'script', 'spell']) e.events.emit('damage.dealt', hit({ kind }));
+    expect(e.audio.playAt).not.toHaveBeenCalled();
+  });
+
+  it('discover and waystone.rekindled schedule a phrase; actor.died and despawn drop hostiles', async () => {
+    const e = makeEnv({ unlocked: true });
+    setupMusic(e.ctx);
+    await flush();
+    e.events.emit('discover', { placeId: 'brightwater', kind: 'region' });
+    for (let t = 1; t <= 60; t++) e.tickTo(t);
+    expect(e.music.setMix).toHaveBeenCalledWith(TRACK.mixes.discover, 0.4);
+    e.music.setMix.mockClear();
+    e.events.emit('waystone.rekindled', { waystoneId: 'w', cause: 'player' });
+    for (let t = 61; t <= 120; t++) e.tickTo(t);
+    expect(e.music.setMix).toHaveBeenCalledWith(TRACK.mixes.discover, 0.4);
+
+    far(e, 'w1');
+    e.events.emit('ai.aggro', { actorId: 'w1', targetId: 'player' });
+    e.events.emit('actor.died', { actorId: 'w1', killerId: 'player', kind: 'x', team: 'hostile', level: 1, spawnTag: undefined });
+    e.tickTo(130);
+    expect(e.services.get('music')!.state).toBe('explore');
+    e.events.emit('ai.aggro', { actorId: 'w1', targetId: 'player' });
+    e.events.emit('actor.despawned', { actorId: 'w1' });
+    e.tickTo(140);
+    expect(e.services.get('music')!.state).toBe('explore');
+  });
+
+  it('an aggro retargeted to someone else removes the actor from the fight', async () => {
+    const e = makeEnv({ unlocked: true });
+    setupMusic(e.ctx);
+    await flush();
+    e.events.emit('ai.aggro', { actorId: 'w1', targetId: 'player' });
+    e.events.emit('ai.aggro', { actorId: 'w1', targetId: 'villager' });
+    far(e, 'w1');
+    e.tickTo(1);
+    expect(e.services.get('music')!.state).toBe('explore');
+  });
+
+  it('a mercy with no actorId and a .ended for an unknown duck are harmless', async () => {
+    const e = makeEnv({ unlocked: true });
+    setupMusic(e.ctx);
+    await flush();
+    e.events.emit('mercy', { verb: 'spare', tier: 'normal', track: null, creature: 'x' } as never);
+    e.events.emit('dialogue.ended', { dialogueId: 'never', npcId: 'n' });
+    e.events.emit('cutscene.ended', { cutsceneId: 'never' });
+    e.tickTo(1);
+    expect(e.services.get('music')!.state).toBe('explore');
+  });
+
+  it('the opening discover (before the first gesture) plays after unlock', async () => {
+    const e = makeEnv();
+    setupMusic(e.ctx);
+    e.events.emit('discover', { placeId: 'brightwater', kind: 'region' });
+    await flush();
+    e.unlock();
+    for (let t = 1; t <= 40; t++) e.tickTo(t);
+    expect(e.music.setMix).toHaveBeenCalledWith(TRACK.mixes.discover, 0.4);
+  });
+
+  it('teardown between the stem load and the unlock keeps the mixer from starting', async () => {
+    const e = makeEnv();
+    const down = setupMusic(e.ctx);
+    await flush();
+    down();
+    e.unlock();
+    expect(e.music.start).not.toHaveBeenCalled();
+  });
+
+  it('a throwing mixer start is contained inside the unlock callback', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const e = makeEnv();
+    e.music.start.mockImplementation(() => {
+      throw new Error('context closed');
+    });
+    setupMusic(e.ctx);
+    await flush();
+    expect(() => e.unlock()).not.toThrow();
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it('a second setup on the same audio does not throw (duplicate stems are skipped)', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const e = makeEnv();
+    e.music.add.mockRejectedValue(new Error('Stem is already added'));
+    setupMusic(e.ctx);
+    await flush();
+    expect(() => e.unlock()).not.toThrow();
+  });
+
+  it('the default export tears down every setup on dispose', () => {
+    const e = makeEnv();
+    plugin.setup(e.ctx);
+    plugin.dispose!();
+    plugin.dispose!();
+    expect(e.services.has('music')).toBe(true); // unprovide is the loader's scoped job
+  });
+
+  it('pausing the game (no fixed ticks) while the audio clock runs does not start silence or end a phrase', async () => {
+    const e = makeEnv({ unlocked: true });
+    setupMusic(e.ctx);
+    await flush();
+    e.audio.context.currentTime += 200; // audio clock runs on; no simulated ticks
+    e.tickTo(e.audio.context.currentTime + 1 / 60);
+    expect(e.music.setMix).not.toHaveBeenCalled();
   });
 });
