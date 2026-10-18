@@ -7,6 +7,9 @@ import { pairGoal } from './ai/pair';
 import { makeLineOfSight, perceive } from './ai/perception';
 import { ENEMY_CLIPS } from './clips';
 import { Cutpurse } from './cutpurse/Cutpurse';
+import { BURNING_BITE, HOUND } from './hound/tuning';
+import { slopePitch } from './hound/slope';
+import { readStatusData } from './statusData';
 import type { EnemyBody } from './body';
 import type { ActorId, ActorLike, EnemyHost, NavPort } from './ports';
 import { PathFollower } from './steering/pathFollower';
@@ -32,6 +35,10 @@ export interface EnemyEnv {
   nav(): NavPort | undefined;
   /** The nearest living packmate of the same spawner within pair range, if any. */
   partnerOf(self: Enemy): Enemy | null;
+  /** Living packmates of the same spawner within `HOUND.packRadius` (the `circle-rush` behaviour). */
+  packNearby(self: Enemy): number;
+  /** The lowest actor id among the spawner's living pack-leader-capable members (hound/pack.ts), or null. */
+  packLeaderId(spawnerId: string): ActorId | null;
   /** Called once the enemy is gone from the world (after despawn). */
   gone(self: Enemy, how: 'died' | 'released' | 'spared' | 'despawned'): void;
 }
@@ -53,6 +60,12 @@ export interface EnemySpawn {
 type Phase = 'alive' | 'dying' | 'fading' | 'leaving' | 'gone';
 
 const LOCO_RUN_SPEED = 2.0;
+/** Duck-typed controls of a quadruped body (QuadrupedBody): gait speed and slope pitch, fed every tick. */
+interface QuadrupedControls {
+  setSpeed(mps: number): void;
+  setSlopePitch(rad: number): void;
+  readonly params?: { bodyLength: number; scale?: number };
+}
 /** Brain states in which a footman may hold its shield up. */
 const GUARD_STATES: ReadonlySet<AiState> = new Set<AiState>(['notice', 'chase', 'recover']);
 
@@ -87,7 +100,13 @@ export class Enemy {
   private loco: string | null = null;
   private oneShotLeft = 0;
   private speed = 0;
+  /** Horizontal speed the mover actually achieved last tick (fed to a quadruped body's gait). */
+  private movedSpeed = 0;
   private stuckGiveUp = false;
+  /** Seconds left in which a hit counts as a dodge counter (`player.dodged` named this enemy). */
+  private counterLeft = 0;
+  /** The swing whose bite already ignited (once per swing). */
+  private ignitedSwing = -1;
   private asleep = false;
   private leaveFrom: THREE.Vector3 | null = null;
   private slowRemover: (() => void) | null = null;
@@ -113,6 +132,7 @@ export class Enemy {
     this.mover = host.physics
       ? new SwitchingMover(host.physics, host.heightAt, spawn.feet)
       : new HeightfieldMover(host.heightAt, spawn.feet);
+    this.mover.maxSpeed = Math.max(this.mover.maxSpeed, this.topSpeed(spawn.def, body));
     this.lineOfSight = host.physics
       ? makeLineOfSight(host.physics, host.player.collider, this.mover.collider)
       : () => true;
@@ -141,6 +161,7 @@ export class Enemy {
         patrol: spawn.patrol,
         leash: spawn.options.leash,
         aggroOnSpawn: spawn.options.aggro ? host.actors.player.id : null,
+        rng: () => env.rng(),
       });
       if (spawn.options.moves) this.moveFilter = [...spawn.options.moves];
       this.thief = this.def.thief ? this.makeThief() : null;
@@ -169,7 +190,10 @@ export class Enemy {
 
     body.onWindow = (ch, phase, swingId) => {
       this.trails[ch]?.setEmitting(phase === 'open');
-      if (phase === 'open') this.brain.windowOpened(swingId);
+      if (phase === 'open') {
+        this.brain.windowOpened(swingId);
+        this.startLeap();
+      }
     };
     body.onClipEnd = (clip, interrupted) => {
       const move = this.brain.currentMove;
@@ -180,6 +204,17 @@ export class Enemy {
   }
 
   private moveFilter: string[] | undefined;
+
+  /** The fastest the def moves: the chase, or a leap's average speed. */
+  private topSpeed(def: EnemyDef, body: EnemyBody): number {
+    let top = def.chaseSpeed;
+    for (const m of def.moves) {
+      if (!m.leap) continue;
+      const seconds = (m.activeEnd - m.activeStart) * (body.clipDuration(m.clip) ?? 0.5);
+      if (seconds > 0) top = Math.max(top, m.leap.maxMetres / seconds);
+    }
+    return top;
+  }
 
   get id(): ActorId {
     return this.actor.id;
@@ -250,6 +285,24 @@ export class Enemy {
     return this.phase === 'alive' && this.brain.mercyOpen;
   }
 
+  /**
+   * Calm is possible right now (a beast that has not begun an attack; the entry point thread 1's Calm checks).
+   * Refused once a swing has started, while staggered (that is the Warm Hand's) and when not alive.
+   */
+  get calmOpen(): boolean {
+    return this.phase === 'alive' && !this.asleep && this.brain.calmOpen;
+  }
+
+  /** The Warm Hand is possible: a staggered (knocked down) calm-type beast. */
+  get warmHandOpen(): boolean {
+    return this.phase === 'alive' && this.brain.warmHandOpen;
+  }
+
+  /** This enemy is its spawner's pack leader (the lowest actor id of the living members); a calmed leader calms its pack. */
+  get isPackLeader(): boolean {
+    return !!this.spawnerId && this.def.mercy.packLeader === true && this.env.packLeaderId(this.spawnerId) === this.id;
+  }
+
   // ---- fixed phases ------------------------------------------------------------------------------
 
   /** `intent` phase: perception, brain, steering and the queued move. */
@@ -289,13 +342,17 @@ export class Enemy {
       healthFraction: this.actor.maxHealth > 0 ? this.actor.health / this.actor.maxHealth : 0,
       stuckGiveUp: this.stuckGiveUp,
       yieldAllowed: this.env.mercyUnlocked('spare'),
+      packNearby: this.def.behaviour === 'circle-rush' ? this.env.packNearby(this) : 0,
     };
+    const status = readStatusData(this.actor.data['status']);
+    if (status.stunSeconds > 0) this.brain.stunned(status.stunSeconds);
     const intent = this.brain.step(dt, senses);
     if (this.thief) {
       const visible = p.distance <= AI.sightRange && this.lineOfSight(pFeet, self);
       this.thief.tick(dt, this.brain.state, visible);
       if (this.phase !== 'alive') return; // it despawned itself (flee window over, or blinked out)
     }
+    if (status.speedScale < 1) intent.speed *= status.speedScale;
     this.guard?.step(dt, GUARD_STATES.has(this.brain.state), this.env.rng);
     if (this.def.pairAdvance && this.brain.state === 'chase' && intent.goal && senses.targetPos && intent.goal.x === senses.targetPos.x && intent.goal.z === senses.targetPos.z) {
       // A plain chase heads straight for the target (the circling goal is somewhere else); a pair spreads onto opposite flanks instead.
@@ -329,12 +386,15 @@ export class Enemy {
     }
     if (this.thief?.holdStill) velocity = { x: 0, z: 0 };
     this.speed = pushed ? 0 : Math.hypot(velocity.x, velocity.z);
+    const bx = self.x;
+    const bz = self.z;
     if (pushed) {
       // facing stays while knocked back
     } else if (intent.face) this.targetYaw = yawTo(self, intent.face);
     else if (this.speed > 0.05) this.targetYaw = Math.atan2(-velocity.x, -velocity.z);
     this.yaw = turnToward(this.yaw, this.targetYaw, AI.turnRate * dt);
     this.mover.move(velocity, dt);
+    this.movedSpeed = dt > 0 ? Math.hypot(this.mover.feet.x - bx, this.mover.feet.z - bz) / dt : 0;
   }
 
   /** `animation` phase: root at the simulated pose, mixer by one tick, matrices current for combat. */
@@ -343,6 +403,7 @@ export class Enemy {
     this.placeRoot(this.mover.feet);
     if (this.oneShotLeft > 0) this.oneShotLeft -= dt;
     if (this.phase === 'alive' && this.oneShotLeft <= 0) this.chooseLoco();
+    this.feedQuadruped();
     this.body.fixedUpdate(dt);
     this.body.root.updateMatrixWorld(true);
   }
@@ -351,6 +412,7 @@ export class Enemy {
   react(dt: number): void {
     if (this.phase === 'gone') return;
     this.moves.tick(dt);
+    if (this.counterLeft > 0) this.counterLeft = Math.max(0, this.counterLeft - dt);
     if (this.slowLeft > 0) {
       this.slowLeft -= dt;
       if (this.slowLeft <= 0) this.clearSlow();
@@ -391,7 +453,28 @@ export class Enemy {
     }
     if (staggered || killed) return; // actor.staggered and actor.died follow in the same batch
     this.brain.setCondition(this.actor.maxHealth > 0 ? this.actor.health / this.actor.maxHealth : 0, this.env.mercyUnlocked('spare'));
+    if (outcome === 'hit' && this.counterLeft > 0 && attackerId === this.host.actors.player.id) {
+      // A hit right after the player dodged this enemy's attack: knocked down, poise break or not.
+      this.counterLeft = 0;
+      this.brain.knockedDown(attackerId);
+      return;
+    }
     this.brain.hit(attackerId, poiseDealt, outcome);
+  }
+
+  /** `player.dodged` named this enemy as the attacker: its next player hit within the window is a dodge counter. */
+  playerDodged(): void {
+    if (this.phase === 'alive' && this.def.dodgeCounterKnockdown) this.counterLeft = HOUND.dodgeCounterSeconds;
+  }
+
+  /** The current bite's burning status, once per swing; null when this move does not ignite or already did. */
+  burningBite(): { id: string; dps: number; seconds: number } | null {
+    const move = this.brain.currentMove;
+    if (move?.onHit !== 'ignite' || !this.active) return null;
+    const swing = this.brain.currentSwing;
+    if (this.ignitedSwing === swing) return null;
+    this.ignitedSwing = swing;
+    return { id: BURNING_BITE.id, dps: BURNING_BITE.dps * this.damageScale, seconds: BURNING_BITE.seconds };
   }
 
   staggered(byId: ActorId | null): void {
@@ -608,6 +691,18 @@ export class Enemy {
     else this.setLoco(ENEMY_CLIPS.idle);
   }
 
+  /** A quadruped body gets the mover's real speed (its gait) and the terrain pitch under its front and back. */
+  private feedQuadruped(): void {
+    const q = this.body as Partial<QuadrupedControls>;
+    if (typeof q.setSpeed !== 'function') return;
+    q.setSpeed(this.phase === 'alive' ? this.movedSpeed : 0);
+    if (typeof q.setSlopePitch === 'function') {
+      const f = this.mover.feet;
+      const length = (q.params?.bodyLength ?? 0) * (q.params?.scale ?? 1);
+      q.setSlopePitch(slopePitch(this.host.heightAt, f.x, f.z, this.yaw, length));
+    }
+  }
+
   private setLoco(clip: string): void {
     if (this.loco === clip && this.body.currentClip === clip) return;
     this.loco = clip;
@@ -643,6 +738,8 @@ export class Enemy {
     return {
       stateChanged: (from, to) => {
         this.host.events.emit('enemies.state', { actorId: this.actor.id, from, to });
+        // A knocked-down hound stops mid-leap.
+        if (to === 'stagger' && from === 'attack' && this.brain.currentMove?.leap) this.pushTicks = 0;
         if (to === 'stagger') this.oneShot(ENEMY_CLIPS.stagger, AI.breakStaggerSeconds);
         else if (to === 'yield') this.oneShot(ENEMY_CLIPS.kneel, AI.yieldSeconds);
         else if (from === 'yield' || from === 'stagger') this.oneShotLeft = 0;
@@ -703,6 +800,25 @@ export class Enemy {
         warn: (m) => host.warn(m),
       },
     );
+  }
+
+  /**
+   * A move with `leap` (the pounce) carries the enemy forward in a straight line while its window is open: up to
+   * `maxMetres`, stopping `HOUND.leapStopShort` short of the target when that is nearer.
+   */
+  private startLeap(): void {
+    const move = this.brain.currentMove;
+    if (!move?.leap || this.phase !== 'alive') return;
+    const self = this.mover.feet;
+    const p = this.host.player.feet;
+    const toTarget = Math.hypot(p.x - self.x, p.z - self.z);
+    const metres = Math.max(0, Math.min(move.leap.maxMetres, toTarget - HOUND.leapStopShort));
+    const windowSeconds = (move.activeEnd - move.activeStart) * (this.body.clipDuration(move.clip) ?? 0.5);
+    const ticks = Math.max(1, Math.round(windowSeconds / FIXED_TIMESTEP));
+    const f = forwardOf(this.yaw);
+    const speed = metres / (ticks * FIXED_TIMESTEP);
+    this.pushTicks = ticks;
+    this.pushVelocity = { x: f.x * speed, z: f.z * speed };
   }
 
   /** 1.2 m away from the player over KNOCKBACK seconds, applied as one teleport-free push per tick. */

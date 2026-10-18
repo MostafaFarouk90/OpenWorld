@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { isHeavyBlow } from '../combat/heavyBlow';
-import { HumanoidBody } from './body';
+import { HumanoidBody, type EnemyBody } from './body';
 import { mulberry32 } from './ai/moveSelect';
 import { ENEMY_DEFS } from './defs';
 import { boneMultiplier, Enemy, type EnemyEnv, type EnemySpawn } from './Enemy';
@@ -11,8 +11,11 @@ import type { Foe } from './foes/Foe';
 import { FoeManager } from './foes/FoeManager';
 import type { FoeDef, RaiseWraithRequest } from './foes/types';
 import { scaleStats } from './level';
-import { makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyTargets, nextPulseId, type BossMercySubject, type MercySubject } from './mercy';
+import { isHoldVerb, makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyTargets, nextPulseId, type BossMercySubject, type MercySubject } from './mercy';
 import { MercyTally, type TallyRow } from './mercyTally';
+import { makeQuadrupedBody } from './hound/body';
+import { pickPackLeader } from './hound/pack';
+import { HOUND } from './hound/tuning';
 import type { ActorId, EnemyEvents, EnemyHost, MercyEventLike } from './ports';
 import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } from './spawners';
 import { ASH_GRAB, BOSS_MERCY, GUARD, MERCY, PAIR, WORLD_AI, AI } from './tuning';
@@ -39,6 +42,8 @@ export interface EnemiesService {
   lockBlockLevel(blockId: string, level: number): void;
   /** Mercies and kills per creature kind, for the codex (thread 8). */
   mercyTally(): Record<string, TallyRow>;
+  /** The pack leader of a spawner: the lowest actor id among its living pack-leader-capable members, or null. */
+  packLeader(spawnerId: string): ActorId | null;
 }
 
 /**
@@ -131,7 +136,17 @@ export class EnemyManager {
     setWarmthTier: (w) => this.spawners.setWarmthTier(w),
     lockBlockLevel: (b, l) => this.spawners.lockBlockLevel(b, l),
     mercyTally: () => this.tally.snapshot(),
+    packLeader: (id) => this.packLeaderId(id),
   };
+
+  /** Lowest actor id among a spawner's living members whose def has `mercy.packLeader`. */
+  packLeaderId(spawnerId: string): ActorId | null {
+    const ids: ActorId[] = [];
+    for (const e of this.enemies.values()) {
+      if (e.spawnerId === spawnerId && e.def.mercy.packLeader && e.active) ids.push(e.id);
+    }
+    return pickPackLeader(ids);
+  }
 
   mercyUnlocked(verb: 'release' | 'spare'): boolean {
     return this.host.state.getBool(MERCY.flags[verb], false);
@@ -171,9 +186,6 @@ export class EnemyManager {
     if (isFoeDef(def)) return this.foes.spawn({ ...req, def });
     let enemy: Enemy;
     try {
-      const source = this.makeModel(def);
-      const model = buildEnemyModel(source, def, { bus: this.host.combat.bus });
-      const animator = new EnemyAnimator(model.owner, source.clips, { warn: (m) => this.host.warn(m) });
       const stats = scaleStats(def, req.level);
       const spawn: EnemySpawn = {
         def: def,
@@ -188,7 +200,7 @@ export class EnemyManager {
         patrol: patrolForSlot(req.patrol.map((a) => a.position), req.slot),
         options: req.options,
       };
-      enemy = new Enemy(this.env, spawn, new HumanoidBody(model, animator));
+      enemy = new Enemy(this.env, spawn, this.makeBody(def));
     } catch (err) {
       this.host.warn(`enemies: could not spawn ${def.kind} for ${req.spawnerId}: ${String(err)}`);
       return null;
@@ -202,17 +214,29 @@ export class EnemyManager {
       mercyOpen: () => enemy.mercyOpen,
     };
     this.subjects.set(enemy, subject);
-    this.mercyRemovers.set(
-      enemy,
-      this.host.interaction.register(
-        makeMercyInteractable(subject, {
-          unlocked: (verb) => this.mercyUnlocked(verb),
-          lockOnTarget: () => this.host.services.get('lockOn')?.targetId ?? null,
-          complete: (s) => this.completeMercy(s),
-        }),
-      ),
-    );
+    // Calm's interactable is thread 1's (the Calm type, offerings and state); only Release and Spare are built here.
+    if (isHoldVerb(enemy.def.mercy.verb)) {
+      this.mercyRemovers.set(
+        enemy,
+        this.host.interaction.register(
+          makeMercyInteractable(subject, {
+            unlocked: (verb) => this.mercyUnlocked(verb),
+            lockOnTarget: () => this.host.services.get('lockOn')?.targetId ?? null,
+            complete: (s) => this.completeMercy(s),
+          }),
+        ),
+      );
+    }
     return enemy.id;
+  }
+
+  /** The body for a def: the procedural quadruped, or the Knight rig from the model factory. */
+  private makeBody(def: EnemyDef): EnemyBody {
+    if (def.body === 'quadruped') return makeQuadrupedBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
+    const source = this.makeModel(def);
+    const model = buildEnemyModel(source, def, { bus: this.host.combat.bus });
+    const animator = new EnemyAnimator(model.owner, source.clips, { warn: (m) => this.host.warn(m) });
+    return new HumanoidBody(model, animator);
   }
 
   /** Spawns one enemy without a spawner (tests, debug). */
@@ -417,11 +441,16 @@ export class EnemyManager {
       if (this.tokenOf.get(self) === targetId) return true;
       this.env.releaseToken(self);
       const set = this.tokens.get(targetId) ?? new Set<Enemy>();
-      if (set.size >= AI.attackersPerTarget) return false;
-      // A pair does not swing in the same instant: the second waits out a short stagger.
-      if (self.def.pairAdvance && self.spawnerId) {
+      // The limit is defined by the kinds in play: the largest `attackersPerTarget` among the holders and the
+      // requester (default AI.attackersPerTarget), so a hound pack takes 3 and a scene without hounds keeps 2.
+      let limit = self.def.attackersPerTarget ?? AI.attackersPerTarget;
+      for (const e of set) limit = Math.max(limit, e.def.attackersPerTarget ?? AI.attackersPerTarget);
+      if (set.size >= limit) return false;
+      // Members of one group do not swing in the same instant: the next waits out a short stagger.
+      const gap = self.def.attackStagger ?? (self.def.pairAdvance ? PAIR.attackStaggerSeconds : 0);
+      if (gap > 0 && self.spawnerId) {
         for (const e of set) {
-          if (e.spawnerId === self.spawnerId && this.clock - (this.tokenAt.get(e) ?? -Infinity) < PAIR.attackStaggerSeconds) return false;
+          if (e.spawnerId === self.spawnerId && this.clock - (this.tokenAt.get(e) ?? -Infinity) < gap) return false;
         }
       }
       set.add(self);
@@ -451,6 +480,16 @@ export class EnemyManager {
       }
       return best;
     },
+    packNearby: (self: Enemy) => {
+      if (!self.spawnerId) return 0;
+      let n = 0;
+      for (const e of this.enemies.values()) {
+        if (e === self || e.spawnerId !== self.spawnerId || !e.active) continue;
+        if (e.feet.distanceTo(self.feet) <= HOUND.packRadius) n++;
+      }
+      return n;
+    },
+    packLeaderId: (spawnerId: string) => this.packLeaderId(spawnerId),
     alertPack: (self: Enemy, targetId: ActorId) => {
       if (!self.spawnerId) return;
       for (const e of this.enemies.values()) {
@@ -484,14 +523,20 @@ export class EnemyManager {
       this.unsubs.push(this.host.events.on(type, fn));
 
     on('damage.dealt', (r) => {
+      // A status tick (bleed, ignite) never flinches, alerts or provokes (actors-and-damage.md section 10).
+      if (r.kind === 'status') return;
       const target = this.enemies.get(r.targetId);
       if (target) target.damaged(r.attackerId, r.outcome, r.poiseDealt, r.staggered, r.killed, r.kind);
       const attacker = r.attackerId ? this.enemies.get(r.attackerId) : undefined;
+      if (attacker && r.outcome === 'hit' && r.kind === 'melee') this.igniteOnBite(attacker, r.targetId);
       if (attacker && r.outcome === 'hit' && r.targetId === this.host.actors.player.id) {
         const move = attacker.brain.currentMove;
         if (move?.onHit === 'slow' && attacker.active) attacker.applySlow(ASH_GRAB.speedScale, ASH_GRAB.seconds);
         if (move?.onHit === 'steal' && attacker.active) attacker.thief?.grabHit();
       }
+    });
+    on('player.dodged', (p) => {
+      if (p.attackerId) this.enemies.get(p.attackerId)?.playerDodged();
     });
     on('actor.staggered', (p) => this.enemies.get(p.actorId)?.staggered(p.byId));
     on('actor.died', (p) => {
@@ -604,6 +649,15 @@ export class EnemyManager {
         -150,
       ),
     );
+  }
+
+  /** The burning bite: `status.apply(target, ignite)` through the status service; a no-op while it is absent. */
+  private igniteOnBite(attacker: Enemy, targetId: ActorId): void {
+    const status = this.host.services.get('status');
+    if (!status) return;
+    const burn = attacker.burningBite();
+    if (!burn) return;
+    status.apply(targetId, { id: burn.id, kind: 'ignite', dps: burn.dps, seconds: burn.seconds, sourceId: attacker.id });
   }
 
   // ---- dormancy ----------------------------------------------------------------------------------

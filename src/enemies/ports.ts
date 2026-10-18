@@ -150,6 +150,8 @@ export interface EnemyEvents {
   'boss.releaseWindow': { bossId: string; open: boolean };
   'boss.released': { bossId: string; actorId: ActorId };
   'boss.ended': { bossId: string; actorId: ActorId; reason: 'despawned' | 'unregistered' };
+  /** The player's dodge i-frames avoided `attackerId`'s hit (actors-and-damage.md section 10; the hound's dodge counter). */
+  'player.dodged': { attackerId: ActorId | null };
 }
 export type EnemyEventName = keyof EnemyEvents;
 
@@ -288,6 +290,23 @@ export interface ServicesPort {
   get(name: 'spells'): ShardSpells | undefined;
   /** Thread 5's inventory service (gold). */
   get(name: 'inventory'): InventoryPort | undefined;
+  /** Thread 2's status service (`apply` only): the hound's burning bite. Absent until it lands; callers no-op. */
+  get(name: 'status'): StatusPort | undefined;
+}
+
+/** The part of core's `StatusService` (src/actors/status.ts) the enemies call. */
+export interface StatusPort {
+  apply(
+    actorId: ActorId,
+    spec: {
+      id: string;
+      kind: 'bleed' | 'ignite' | 'stun' | 'slow';
+      dps?: number;
+      seconds: number;
+      sourceId: ActorId | null;
+      slow?: number;
+    },
+  ): boolean;
 }
 
 export interface ShardSpells {

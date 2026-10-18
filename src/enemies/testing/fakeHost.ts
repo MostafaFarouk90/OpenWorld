@@ -22,6 +22,7 @@ import type {
   InventoryPort,
   NavPort,
   QuestsPortLike,
+  StatusPort,
   TorchState,
   Team,
 } from '../ports';
@@ -55,6 +56,16 @@ export async function loadKnight(): Promise<{ scene: THREE.Object3D; animations:
     console.error = error;
   }
   return knight!;
+}
+
+/** The status service stand-in: records every `apply`; `result` is what it returns. */
+export class FakeStatus implements StatusPort {
+  readonly calls: Array<{ actorId: ActorId; spec: Parameters<StatusPort['apply']>[1] }> = [];
+  result = true;
+  apply(actorId: ActorId, spec: Parameters<StatusPort['apply']>[1]): boolean {
+    this.calls.push({ actorId, spec });
+    return this.result;
+  }
 }
 
 export class FakeBus {
@@ -225,6 +236,8 @@ export class FakeHost {
   nav: NavPort | undefined;
   /** Thread 5's inventory service (gold), when a test provides it (`provideInventory`). */
   inventory: FakeInventory | undefined;
+  /** Thread 2's status service, when a test provides it (`new FakeStatus()`); absent means the burning bite is a no-op. */
+  status: StatusPort | undefined;
   private readonly gateWatchers: Array<{ test: (get: (k: string) => boolean) => boolean; listener: (open: boolean, cause: 'init' | 'flag' | 'load' | 'recheck') => void; open: boolean }> = [];
   private counter = 0;
 
@@ -510,6 +523,7 @@ export class FakeHost {
         if (name === 'nav') return this.nav;
         if (name === 'spells') return this.spells;
         if (name === 'inventory') return this.inventory;
+        if (name === 'status') return this.status;
         return undefined;
       }) as EnemyHost['services']['get'],
     },

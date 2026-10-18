@@ -21,7 +21,15 @@ export function mercyInteractableId(slug: string): string {
 
 /** String key of the prompt: "Hold {key}: Release (10 Burn)" or "Hold {key}: Spare". */
 export function mercyPromptKey(def: EnemyDef): string {
+  if (def.mercy.verb === 'calm') return 'enemies.mercy.calm';
   return def.mercy.verb === 'release' ? 'enemies.mercy.release' : 'enemies.mercy.spare';
+}
+
+/** The verbs of the hold-T interactable built here; Calm's interactable is thread 1's. */
+export type HoldVerb = 'release' | 'spare';
+
+export function isHoldVerb(verb: EnemyDef['mercy']['verb']): verb is HoldVerb {
+  return verb === 'release' || verb === 'spare';
 }
 
 /**
@@ -52,10 +60,10 @@ export function makeMercyInteractable(
     get priority() {
       return deps.lockOnTarget() === subject.actorId ? MERCY.lockOnPriority : 0;
     },
-    enabled: () => deps.unlocked(subject.def.mercy.verb) && subject.mercyOpen(),
+    enabled: () => deps.unlocked(subject.def.mercy.verb as HoldVerb) && subject.mercyOpen(),
     onInteract: () => {
       // The hold may complete on the tick the window closes; check again.
-      if (!deps.unlocked(subject.def.mercy.verb) || !subject.mercyOpen()) return;
+      if (!deps.unlocked(subject.def.mercy.verb as HoldVerb) || !subject.mercyOpen()) return;
       deps.complete(subject);
     },
   };

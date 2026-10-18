@@ -1,3 +1,5 @@
+import { CircleRush } from '../hound/circleRush';
+import { HOUND } from '../hound/tuning';
 import { AI } from '../tuning';
 import type { ActorId } from '../ports';
 import type { AiState, EnemyDef, MoveDef } from '../types';
@@ -28,6 +30,8 @@ export interface Senses {
   stuckGiveUp: boolean;
   /** Spare (for `when: 'yielding'`) is unlocked. */
   yieldAllowed: boolean;
+  /** Living packmates of the same spawner within `HOUND.packRadius` (the `circle-rush` behaviour; absent counts as 0). */
+  packNearby?: number;
 }
 
 /** Side effects the brain asks for; Enemy implements them (tests use spies). */
@@ -75,6 +79,8 @@ export interface BrainOptions {
   rise?: boolean;
   /** Notice this target as soon as the spawn ends. */
   aggroOnSpawn?: ActorId | null;
+  /** Random source of the `circle-rush` behaviour (circle length and direction). */
+  rng?: () => number;
 }
 
 const STOP_AT_TARGET = 1.1;
@@ -112,6 +118,10 @@ export class Brain {
   private forcedTarget: ActorId | null = null;
   /** A thief that has started to flee keeps fleeing (after a stagger or yield) until its owner despawns it. */
   private fleeLocked = false;
+  /** `circle-rush` defs only (the hound). */
+  private readonly rush: CircleRush | null;
+  /** A swing has begun since the last time the target was dropped: Calm is refused (the pounce window is closed). */
+  private attackStarted = false;
 
   constructor(
     readonly def: EnemyDef,
@@ -125,6 +135,10 @@ export class Brain {
     const reach = Math.min(...def.moves.map((m) => m.range[1]));
     this.stopAtTarget = Number.isFinite(reach) ? Math.min(STOP_AT_TARGET, Math.max(0.6, reach * 0.85)) : STOP_AT_TARGET;
     this.pendingAggro = opts.aggroOnSpawn ?? null;
+    this.rush =
+      def.behaviour === 'circle-rush'
+        ? new CircleRush(opts.rng ?? Math.random, { circle: HOUND.circleSpeed, approach: def.chaseSpeed })
+        : null;
     const rise = opts.rise ?? def.rises;
     if (rise) this.enter('spawn');
     else this.afterSpawn();
@@ -151,10 +165,30 @@ export class Brain {
     return this._state === 'dead' || this._state === 'released' || this._state === 'spared';
   }
 
-  /** Open to its mercy verb: a staggered undead (Release) or a yielding human (Spare). */
+  /** Open to its mercy verb: a staggered undead (Release), a yielding human (Spare) or a calmable beast (Calm). */
   get mercyOpen(): boolean {
     if (this.def.mercy.when === 'staggered') return this._state === 'stagger';
+    if (this.def.mercy.when === 'calming') return this.calmOpen || this.warmHandOpen;
     return this._state === 'yield';
+  }
+
+  /**
+   * Calm with an offering is still possible: a beast that is wary or stalking and has not begun an attack. Once
+   * a swing has started (the crouch of a pounce, the lunge of a bite) the window is closed until it disengages.
+   */
+  get calmOpen(): boolean {
+    if (this.def.mercy.when !== 'calming' || this.attackStarted) return false;
+    return this._state === 'idle' || this._state === 'patrol' || this._state === 'notice' || this._state === 'chase';
+  }
+
+  /** The Warm Hand on a staggered beast (design 3): open for the length of the knockdown, whatever it did before. */
+  get warmHandOpen(): boolean {
+    return this.def.mercy.when === 'calming' && this._state === 'stagger';
+  }
+
+  /** The `circle-rush` phase, for tests and debug; null for other behaviours. */
+  get circlePhase(): 'circle' | 'rush' | null {
+    return this.rush ? (this.rush.isRushing ? 'rush' : 'circle') : null;
   }
 
   // ---- per tick ---------------------------------------------------------------------------------
@@ -301,6 +335,22 @@ export class Brain {
     this.stagger(AI.breakStaggerSeconds);
   }
 
+  /**
+   * Knocked down without a poise break (the hound's dodge counter): down for `HOUND.knockdownSeconds`, the
+   * attacker becomes the target. Ignored once finished or while spawning.
+   */
+  knockedDown(byId: ActorId | null): void {
+    if (this.finished || this._state === 'spawn') return;
+    this.provoke(byId);
+    this.stagger(HOUND.knockdownSeconds);
+  }
+
+  /** Stunned (an `actor.data['status']` entry): staggered for the remaining stun. */
+  stunned(seconds: number): void {
+    if (this.finished || this._state === 'spawn' || this._state === 'yield' || !(seconds > 0)) return;
+    this.stagger(seconds);
+  }
+
   /** Pack alert, or a scripted aggro. */
   alert(targetId: ActorId): void {
     if (this.finished) return;
@@ -442,12 +492,19 @@ export class Brain {
     }
     if (this.flinchLeft > 0) return this.intent(null, 0, s.targetPos);
     const target = s.targetPos!;
+    if (this.rush) {
+      const ring = this.rush.step(dt, { self: s.self, targetPos: target, distance: s.distance, packNearby: s.packNearby ?? 0 });
+      if (ring) return this.intent(ring.goal, ring.speed, target, 0.3);
+    }
     if (s.facingErrorDeg <= AI.attackFacingDegrees && this.aggroTarget) {
       const move = this.hooks.pickMove(s.distance);
       if (move) {
         if (this.hasToken || this.hooks.acquireToken(this.aggroTarget)) {
           this.hasToken = true;
           if (this.beginSwing(move)) return this.intent(null, 0, target);
+        } else if (this.rush) {
+          // The pack's pounces start one after another: wait facing the target for the next slot.
+          return this.intent(null, 0, target);
         } else {
           // Two already attack this target: circle at a distance.
           const away = { x: s.self.x - target.x, z: s.self.z - target.z };
@@ -470,6 +527,7 @@ export class Brain {
     if (swing < 0) return false;
     this.move = move;
     this.swingId = swing;
+    this.attackStarted = true;
     this.windowPending = true;
     this.clipPlaying = true;
     this.hooks.markMoveUsed(move);
@@ -544,6 +602,7 @@ export class Brain {
   private dropAggro(): void {
     if (!this.aggroTarget) return;
     this.aggroTarget = null;
+    this.attackStarted = false;
     this.hooks.calm();
   }
 
@@ -607,6 +666,7 @@ export class Brain {
       const t = this.pendingAcquire ?? this.forcedTarget;
       if (t) this.acquire(t);
     }
+    if (next === 'chase' && prev !== 'chase') this.rush?.reset();
     if (next === 'return' || next === 'idle' || next === 'patrol') this.unseen = 0;
     if (next === 'flee') this.fleeLocked = this.def.thief === true;
     else if (next !== 'yield' && next !== 'stagger' && next !== 'dead' && next !== 'released' && next !== 'spared') this.fleeLocked = false;

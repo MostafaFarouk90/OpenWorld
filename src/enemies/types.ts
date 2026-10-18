@@ -18,7 +18,7 @@ export type AiState =
   | 'spared'
   | 'dead';
 
-export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse';
+export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse' | 'ember-hound';
 
 /** The impact-sound materials of `actor.data.audio.material` ('straw' and 'wood' are the foes'). */
 export type EnemyMaterial = 'ash' | 'metal' | 'straw' | 'wood';
@@ -49,7 +49,9 @@ export interface MoveDef {
   recover: number;
   /** Selection weight; 0 means only when a spawn's move filter names it (the T10 red sweep). */
   weight: number;
-  onHit?: 'slow' | 'steal';
+  onHit?: 'slow' | 'steal' | 'ignite';
+  /** A forward leap while the window is open (the hound's pounce): up to `maxMetres` in a straight line, stopping short of the target. */
+  leap?: { maxMetres: number };
 }
 
 export interface ModelRecipe {
@@ -62,11 +64,15 @@ export interface ModelRecipe {
 }
 
 export interface MercyDef {
-  verb: 'release' | 'spare';
+  verb: 'release' | 'spare' | 'calm';
   tier: 'normal' | 'elite';
   track: FavourTrack | null;
-  /** Release opens on a stagger (undead); Spare on a yield (humans). */
-  when: 'staggered' | 'yielding';
+  /** Release opens on a stagger (undead); Spare on a yield (humans); Calm before the first attack (beasts). */
+  when: 'staggered' | 'yielding' | 'calming';
+  /** Calm: item ids that open it (thread 1 reads them; data only here). */
+  offerings?: readonly string[];
+  /** Calm: a calmed leader (the lowest actor id of the spawner's living members) calms its pack. */
+  packLeader?: boolean;
 }
 
 export interface EnemyDef {
@@ -90,6 +96,16 @@ export interface EnemyDef {
   rises: boolean;
   /** Alley Cutpurse behaviour (cutpurse/): steals on a grab, flees with the gold, can be caught and spared. */
   thief?: boolean;
+  /** Which body the enemy gets: the Knight rig (default) or the procedural quadruped. */
+  body?: 'humanoid' | 'quadruped';
+  /** `circle-rush`: circle the target while a packmate is near, then rush (ai/Brain, hound/circleRush.ts). */
+  behaviour?: 'circle-rush';
+  /** Overrides `AI.attackersPerTarget` (the largest limit among the holders and the requester applies). */
+  attackersPerTarget?: number;
+  /** Seconds between two members of one spawner taking an attack token (default: the pair stagger for `pairAdvance`, else none). */
+  attackStagger?: number;
+  /** A player hit shortly after dodging this enemy's attack knocks it down (the hound). */
+  dodgeCounterKnockdown?: boolean;
 }
 
 export interface LevelBand {
