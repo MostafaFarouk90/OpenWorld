@@ -2,7 +2,23 @@
 // Timings were measured from the asset: foot plants from the lowest foot height per cycle, attack
 // windows from the sword tip's speed. The combat contract (contracts/animation-events.md) mirrors this.
 
-export type LocomotionState = 'idle' | 'walk' | 'run' | 'jumpStart' | 'airborne' | 'land' | 'attack';
+/** Reactive and defensive states entered by `AnimationController.enterAction`, never by `nextState`. */
+export type ActionKind = 'block' | 'blockHit' | 'dodge' | 'flinch' | 'stagger' | 'dying' | 'dead';
+
+/** Movement states picked by `nextState` from what the character controller did, plus `attack`. */
+export type MovementState = 'idle' | 'walk' | 'run' | 'jumpStart' | 'airborne' | 'land' | 'attack';
+
+/** State of a clip played once by `AnimationController.playOneShot` (emotes, interactions). */
+export type OneShotState = 'oneShot';
+
+/** Every state the animation controller can be in (the `stateChange` event carries these). */
+export type LocomotionState = MovementState | ActionKind | OneShotState;
+
+export const ACTION_KINDS: readonly ActionKind[] = ['block', 'blockHit', 'dodge', 'flinch', 'stagger', 'dying', 'dead'];
+
+export function isActionKind(state: string): state is ActionKind {
+  return (ACTION_KINDS as readonly string[]).includes(state);
+}
 
 /** States that play a looping clip; the rest play once. */
 export const LOOPING_STATES: ReadonlySet<LocomotionState> = new Set(['idle', 'walk', 'run', 'airborne']);
@@ -10,7 +26,7 @@ export const LOOPING_STATES: ReadonlySet<LocomotionState> = new Set(['idle', 'wa
 /** States the player is standing in; attacks can only start from these. */
 export const GROUNDED_STATES: ReadonlySet<LocomotionState> = new Set(['idle', 'walk', 'run', 'land']);
 
-export type ClipMap = Record<Exclude<LocomotionState, 'attack'>, string>;
+export type ClipMap = Record<Exclude<MovementState, 'attack'>, string>;
 
 export const KNIGHT_CLIPS: ClipMap = {
   idle: 'Idle',
@@ -22,13 +38,50 @@ export const KNIGHT_CLIPS: ClipMap = {
 };
 
 /** Where a state borrows its clip from when the Knight file lacks it. `idle` is required. */
-export const CLIP_FALLBACKS: Record<Exclude<LocomotionState, 'attack' | 'idle'>, Exclude<LocomotionState, 'attack'>> = {
+export const CLIP_FALLBACKS: Record<Exclude<MovementState, 'attack' | 'idle'>, Exclude<MovementState, 'attack'>> = {
   walk: 'idle',
   run: 'walk',
   jumpStart: 'airborne',
   airborne: 'idle',
   land: 'idle',
 };
+
+/** Default clip of each action (`dodge` takes its clip from the caller; this is used when none is given). */
+export type ActionClipMap = Record<ActionKind, string>;
+
+export const KNIGHT_ACTION_CLIPS: ActionClipMap = {
+  block: 'Blocking', // loops, 1.067 s
+  blockHit: 'Block_Hit', // 1.067 s
+  dodge: 'Dodge_Forward', // 0.4 s
+  flinch: 'Hit_A', // 0.667 s
+  stagger: 'Hit_B', // 0.867 s
+  dying: 'Death_A', // 0.8 s, then holds its last pose
+  dead: 'Death_A', // held on its last frame
+};
+
+/** The four directional dodge clips (0.4 s each). */
+export const KNIGHT_DODGE_CLIPS = {
+  forward: 'Dodge_Forward',
+  backward: 'Dodge_Backward',
+  left: 'Dodge_Left',
+  right: 'Dodge_Right',
+} as const;
+
+/** Actions whose clip loops until `exitAction`. */
+export const LOOPING_ACTIONS: ReadonlySet<ActionKind> = new Set(['block']);
+
+/** Actions that can only start while standing on the ground (the rest can start in any state). */
+export const GROUNDED_ACTIONS: ReadonlySet<ActionKind> = new Set(['block', 'blockHit', 'dodge']);
+
+/** Actions during which the player must not move or jump by input (flinch leaves movement free). */
+export const MOVEMENT_LOCKING_ACTIONS: ReadonlySet<ActionKind> = new Set([
+  'block',
+  'blockHit',
+  'dodge',
+  'stagger',
+  'dying',
+  'dead',
+]);
 
 export interface AttackClipDef {
   clip: string;

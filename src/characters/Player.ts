@@ -26,6 +26,13 @@ export interface MoveModifierState {
   freeze?: boolean;
 }
 
+/** A scripted horizontal move (dodge, knockback): unit direction (x, z) in world space and speed in m/s. */
+export interface ForcedMove {
+  x: number;
+  z: number;
+  speed: number;
+}
+
 /**
  * The player character: a kinematic capsule plus its visual. Simulation runs in `fixedUpdate`;
  * `render` places the mesh at the position interpolated between ticks. The visual is a placeholder
@@ -42,6 +49,8 @@ export class Player {
   private readonly placeholder: THREE.Object3D;
   private readonly tickPrev = { x: 0, y: 0, z: 0 };
   private readonly tickCurr = { x: 0, y: 0, z: 0 };
+  private facingOverride: number | null = null;
+  private forcedMove: ForcedMove | null = null;
 
   constructor(
     scene: THREE.Scene,
@@ -82,6 +91,25 @@ export class Player {
     return 2 * Math.atan2(this.facing.y, this.facing.w);
   }
 
+  /**
+   * While set, the simulated facing is this yaw (radians about +Y, 0 = facing -Z, same convention as
+   * `facingYaw`) instead of the movement heading. `null` restores normal turning (the heading is kept
+   * until the player next moves).
+   */
+  setFacingOverride(yaw: number | null): void {
+    this.facingOverride = yaw !== null && Number.isFinite(yaw) ? yaw : null;
+    if (this.facingOverride !== null) this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, this.facingOverride);
+  }
+
+  /**
+   * While set, every tick moves along `m` at `m.speed` instead of the input movement, even while
+   * `movementLocked` is true; jump is suppressed and sprint is off. Uses the same collision path as
+   * normal movement. `null` gives control back to the input.
+   */
+  setForcedMove(m: ForcedMove | null): void {
+    this.forcedMove = m ? { x: m.x, z: m.z, speed: m.speed } : null;
+  }
+
   /** What the controller actually did over the last tick, for animation. */
   locomotion(): LocomotionInput {
     this.controller.interpolatedFeet(0, this.tickPrev);
@@ -112,17 +140,26 @@ export class Player {
       this.controller.hold();
       return;
     }
-    const locked = (this.options.movementLocked?.() ?? false) || (mod?.lockMove ?? false);
-    let jump: boolean;
-    ({ moveX, moveZ, jump } = gateMovement(locked, { moveX, moveZ, jump: input.jump }));
-    if (mod && mod.speedScale < 1) {
-      const len = Math.hypot(moveX, moveZ);
-      const scale = Math.max(0, mod.speedScale) / Math.max(1, len);
-      moveX *= scale;
-      moveZ *= scale;
+    const forced = this.forcedMove;
+    if (forced) {
+      moveX = forced.x;
+      moveZ = forced.z;
+      this.controller.fixedUpdate({ moveX, moveZ, sprint: false, jump: false, speedOverride: forced.speed });
+    } else {
+      const locked = (this.options.movementLocked?.() ?? false) || (mod?.lockMove ?? false);
+      let jump: boolean;
+      ({ moveX, moveZ, jump } = gateMovement(locked, { moveX, moveZ, jump: input.jump }));
+      if (mod && mod.speedScale < 1) {
+        const len = Math.hypot(moveX, moveZ);
+        const scale = Math.max(0, mod.speedScale) / Math.max(1, len);
+        moveX *= scale;
+        moveZ *= scale;
+      }
+      this.controller.fixedUpdate({ moveX, moveZ, sprint: input.sprint, jump });
     }
-    this.controller.fixedUpdate({ moveX, moveZ, sprint: input.sprint, jump });
-    if ((moveX !== 0 || moveZ !== 0) && !mod?.lockFacing) {
+    if (this.facingOverride !== null) {
+      this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, this.facingOverride);
+    } else if ((moveX !== 0 || moveZ !== 0) && !mod?.lockFacing) {
       // Mesh faces -Z at rest; turn it towards the movement direction.
       this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, Math.atan2(-moveX, -moveZ));
     }

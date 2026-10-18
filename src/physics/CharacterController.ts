@@ -8,6 +8,8 @@ export interface MoveIntent {
   moveZ: number;
   sprint: boolean;
   jump: boolean;
+  /** When finite and > 0, replaces the walk/sprint speed for this tick (m/s); direction is still clamped. */
+  speedOverride?: number;
 }
 
 /**
@@ -82,7 +84,13 @@ export class CharacterController {
       mx /= len;
       mz /= len;
     }
-    const speed = intent.sprint ? PLAYER.sprintSpeed : PLAYER.walkSpeed;
+    const override = intent.speedOverride;
+    const speed =
+      override !== undefined && Number.isFinite(override) && override > 0
+        ? override
+        : intent.sprint
+          ? PLAYER.sprintSpeed
+          : PLAYER.walkSpeed;
 
     if (this._grounded && intent.jump) {
       this.verticalVelocity = PLAYER.jumpSpeed;
