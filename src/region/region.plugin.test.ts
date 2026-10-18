@@ -196,10 +196,9 @@ describe('region plugin', () => {
 });
 
 describe('region plugin, beyond Kettlewick', () => {
-  it('spawns the toll-post actor, the corridor scenery and the POI props, and removes them on dispose', () => {
+  it('builds the corridor scenery and the POI props, and removes them on dispose', () => {
     const { fc, plugin } = setup();
     plugin.setup(fc.ctx);
-    expect([...fc.actors.values()].filter((a) => a.kind === 'toll-post')).toHaveLength(1);
     expect(fc.scene.children.map((c) => c.name)).toEqual(expect.arrayContaining(['corridor-scenery', 'poi-props', 'fog-wall']));
     plugin.dispose?.();
     expect(fc.scene.children).toHaveLength(0);
@@ -208,18 +207,15 @@ describe('region plugin, beyond Kettlewick', () => {
     expect([...fc.actors.values()].filter((a) => a.kind === 'toll-post')).toHaveLength(0);
   });
 
-  it('builds a broken toll-post when the save says so, and re-syncs on save.loaded both ways', () => {
+  it('does not spawn the toll-post actor (the enemies module does), and flags it broken when it dies', () => {
     const { fc, plugin } = setup();
-    fc.flags.set(TOLL_POST_BROKEN_FLAG, true);
     plugin.setup(fc.ctx);
-    const tolls = () => [...fc.actors.values()].filter((a) => a.kind === 'toll-post').length;
-    expect(tolls()).toBe(0);
-    fc.flags.delete(TOLL_POST_BROKEN_FLAG);
-    fc.fire('save.loaded');
-    expect(tolls()).toBe(1);
-    fc.flags.set(TOLL_POST_BROKEN_FLAG, true);
-    fc.fire('save.loaded');
-    expect(tolls()).toBe(0);
+    expect([...fc.actors.values()].filter((a) => a.kind === 'toll-post')).toHaveLength(0);
+    fc.fire('actor.died', { actorId: 'x', kind: 'toll-post', spawnTag: 'other' });
+    fc.fire('actor.died', { actorId: 'y', kind: 'scarecrow', spawnTag: 'ford.toll-post' });
+    expect(fc.flags.get(TOLL_POST_BROKEN_FLAG)).toBeUndefined();
+    fc.fire('actor.died', { actorId: 'z', kind: 'toll-post', spawnTag: 'ford.toll-post' });
+    expect(fc.flags.get(TOLL_POST_BROKEN_FLAG)).toBe(true);
     plugin.dispose?.();
   });
 
