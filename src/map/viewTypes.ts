@@ -1,5 +1,6 @@
 import type { FogGrid } from './MapModel';
 import type { MapMarker } from './MapModel';
+import type { ForgeState } from './ForgeMarks';
 import type { TerrainBitmap } from './TerrainBitmap';
 import type { WorldBounds } from './tuning';
 
@@ -14,6 +15,10 @@ export interface MapViewModel {
   markers(): MapMarker[];
   player(): { x: number; z: number; yaw: number };
   /** Why travel is currently impossible ('in-combat', ...) or null when allowed. */
+  /** Forge-mark row state; omitted when the view has no forge data. */
+  forge?(): ForgeState;
+  /** Expected level band for the player's position; null hides the legend. */
+  legend?(): { min: number; max: number } | null;
   travelBlockedReason(): string | null;
   /** Fast travel to a waystone id (without `waystone.` prefix). */
   travel(id: string): void;
