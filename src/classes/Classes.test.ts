@@ -295,10 +295,14 @@ describe('Classes.registerKit', () => {
     expect(t.c.kit('warden')).toBe(DEFAULT_KITS.warden);
   });
 
-  it('a stale dispose does not undo a newer kit', () => {
+  it('refuses a second kit for the same class until the first is disposed, and a stale dispose does nothing', () => {
     const t = make();
     const a = t.c.registerKit(warden({ nameKey: 'a' }));
-    t.c.registerKit(warden({ nameKey: 'b' }));
+    expect(t.c.registerKit(warden({ nameKey: 'b' }))).toEqual({ ok: false, reason: 'duplicate' });
+    expect(t.c.kit('warden')?.nameKey).toBe('a');
+    if (a.ok) a.dispose();
+    const b = t.c.registerKit(warden({ nameKey: 'b' }));
+    expect(b.ok).toBe(true);
     if (a.ok) a.dispose();
     expect(t.c.kit('warden')?.nameKey).toBe('b');
   });

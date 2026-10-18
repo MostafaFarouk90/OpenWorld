@@ -8,12 +8,15 @@ import type { ClassKit, DrillStepDef } from './types';
  */
 export const CLASSES_OFFERED: readonly ClassId[] = CLASS_IDS;
 
-/** Design 9 base rows of the four new classes; the Knight's is built into progression. Threads 13 to 16 do not register stats. */
+/**
+ * Design 9 base rows of the four new classes; the Knight's is built into progression. Threads 13 to 16 do not register stats.
+ * Base Ember is 100 for every class (the coordinator's Knight ruling applied uniformly, over design 9's per-class column).
+ */
 export const CLASS_STATS: Readonly<Record<Exclude<ClassId, 'knight'>, ClassBaseStats>> = {
-  warden: { health: 150, healthPerLevel: 14, stamina: 90, ember: 20 },
+  warden: { health: 150, healthPerLevel: 14, stamina: 90, ember: 100 },
   emberwright: { health: 85, healthPerLevel: 6, stamina: 80, ember: 100 },
-  ashblade: { health: 95, healthPerLevel: 7, stamina: 120, ember: 40 },
-  pathfinder: { health: 100, healthPerLevel: 8, stamina: 110, ember: 35 },
+  ashblade: { health: 95, healthPerLevel: 7, stamina: 120, ember: 100 },
+  pathfinder: { health: 100, healthPerLevel: 8, stamina: 110, ember: 100 },
 };
 
 /** The spars of the block and dodge steps (spawnerDefs.ts, the tutorial Replay board's moves). */
@@ -22,7 +25,12 @@ export const DRILL_SPARS = {
   dodge: { spawnerId: 'classes.drill.dodge', moves: ['wraith.sweep'] },
 } as const;
 
-/** About four minutes (design item 87): keys 1 to 4, block, dodge, a skill and the ability bar. */
+/**
+ * About four minutes (design item 87): keys 1 to 4, block, dodge, a skill and the ability bar. The `skills` step runs only
+ * when the class has registered tier skills and the player can buy one; the `ability` step runs only when something sits on
+ * the ability bar when it is reached (learning an active skill in the step before slots it). A class with no skills yet, or
+ * a player who buys a passive, passes over them; a class thread that wants them always may pass its own `drill` on its kit.
+ */
 export const DEFAULT_DRILL: readonly DrillStepDef[] = [
   { id: 'attack1', mechanic: 'attack1', action: 'attack1', count: 3 },
   { id: 'attack2', mechanic: 'attack2', action: 'attack2', count: 3 },
