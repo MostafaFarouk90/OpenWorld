@@ -150,7 +150,8 @@ export class Brain {
   /** Open to its mercy verb: a staggered undead (Release) or a yielding human (Spare). */
   get mercyOpen(): boolean {
     if (this.def.mercy.when === 'staggered') return this._state === 'stagger';
-    return this._state === 'yield';
+    // `calming` defs open through the Calm hold, which arrives with the calmed state.
+    return this.def.mercy.when === 'yielding' && this._state === 'yield';
   }
 
   // ---- per tick ---------------------------------------------------------------------------------

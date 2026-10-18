@@ -12,7 +12,7 @@ import { PathFollower } from './steering/pathFollower';
 import { forwardOf, Steering, turnToward, yawTo } from './steering/steering';
 import { HeightfieldMover, SwitchingMover, type EnemyMover } from './steering/movers';
 import { AI } from './tuning';
-import type { AiState, EnemyDef, EnemyView, MoveDef, SpawnOptions, WeaponChannel } from './types';
+import type { AiState, EnemyDef, EnemyView, MoveDef, SpawnOptions, UnlockVerb, WeaponChannel } from './types';
 
 /** A vfx dissolve that has not settled this long after its length still despawns the enemy. */
 const DISSOLVE_GRACE_SECONDS = 0.5;
@@ -27,7 +27,7 @@ export interface EnemyEnv {
   acquireToken(self: Enemy, targetId: ActorId): boolean;
   releaseToken(self: Enemy): void;
   alertPack(self: Enemy, targetId: ActorId): void;
-  mercyUnlocked(verb: 'release' | 'spare'): boolean;
+  mercyUnlocked(verb: UnlockVerb): boolean;
   nav(): NavPort | undefined;
   /** The nearest living packmate of the same spawner within pair range, if any. */
   partnerOf(self: Enemy): Enemy | null;
