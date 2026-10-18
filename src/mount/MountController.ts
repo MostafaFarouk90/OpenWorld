@@ -94,6 +94,8 @@ export class MountController implements MountService {
   private readonly offs: (() => void)[] = [];
   private readonly lastFeet = new THREE.Vector3();
   private lastFeetValid = false;
+  /** Set by `load` and cleared on `save.loaded`: a load cycle that never reached `load` gets the defaults. */
+  private loadedEntry = false;
   private leaping = false;
   private lockout = 0;
   private wasTransitioning = false;
@@ -208,10 +210,10 @@ export class MountController implements MountService {
         this.leaping = e.phase === 'start';
       }),
       ctx.events.on('save.loaded', () => {
-        // A save without a `mount` entry (or one refused as newer) never reaches `load`: end the ride here too.
-        if (this._mounted) this.dismount('load');
+        // A save without a `mount` entry (or one refused as newer) never reaches `load`: load the defaults here.
+        if (!this.loadedEntry) this.load(null);
+        this.loadedEntry = false;
         if (!this.available) this.removeHorse();
-        this.lastFeetValid = false;
       }),
     );
     this.offs.push(
@@ -603,6 +605,7 @@ export class MountController implements MountService {
 
   /** A mounted player loads dismounted (contract section 7): the ride ends here, before the player is placed. */
   load(data: unknown): void {
+    this.loadedEntry = true;
     if (this._mounted) this.dismount('load');
     const d = (data ?? {}) as Partial<MountSave>;
     this.model.setStamina(typeof d.stamina === 'number' ? d.stamina : this.model.max);
