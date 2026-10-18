@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import type { DamageBus } from '../combat/DamageBus';
 import type { HurtboxSet } from '../combat/HurtboxSet';
 import type { AttackWindowSource } from '../combat/types';
 import type { WeaponTracer } from '../combat/WeaponTracer';
@@ -89,6 +90,8 @@ export interface DamagePort {
 }
 
 export interface CombatPort {
+  /** The hit bus the core's DamageBridge listens to (world.combat.combat.bus); enemy tracers emit on it. */
+  readonly bus: DamageBus;
   /** Returns a remove function (requests-round-1 item 5); removing an open window emits attack.window close. */
   addAttacker(actorId: ActorId, tracer: WeaponTracer, window: AttackWindowSource): () => void;
   addTarget(hurtboxes: HurtboxSet, actorId?: ActorId): () => void;

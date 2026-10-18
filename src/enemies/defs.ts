@@ -17,15 +17,15 @@ export const ASH_WRAITH: EnemyDef = {
   moves: [
     move('wraith.claw', ENEMY_ATTACKS.wraithClaw, {
       windup: 0.5, telegraph: 'block', weapon: 'right', damage: 12, poise: 10,
-      range: [0, 1.7], cooldown: 1.2, recover: 0.9, weight: 3,
+      range: [0, 1.0], cooldown: 1.2, recover: 0.9, weight: 3,
     }),
     move('wraith.grab', ENEMY_ATTACKS.wraithGrab, {
       windup: 0.5, telegraph: 'block', weapon: 'right', damage: 8, poise: 5,
-      range: [0, 1.4], cooldown: 4, recover: 0.9, weight: 1, onHit: 'slow',
+      range: [0, 0.9], cooldown: 4, recover: 0.9, weight: 1, onHit: 'slow',
     }),
     move('wraith.sweep', ENEMY_ATTACKS.wraithSweep, {
       windup: 0.7, telegraph: 'dodge', weapon: 'right', damage: 18, poise: 20,
-      range: [0, 2.0], cooldown: 2, recover: 1.0, weight: 0,
+      range: [0, 1.1], cooldown: 2, recover: 1.0, weight: 0,
     }),
   ],
   mercy: { verb: 'release', tier: 'normal', track: 'ashwalkers', when: 'staggered' },
@@ -49,11 +49,11 @@ export const BLIGHTED_SOLDIER: EnemyDef = {
   moves: [
     move('soldier.chop', ENEMY_ATTACKS.soldierChop, {
       windup: 0.6, telegraph: 'block', weapon: 'right', damage: 20, poise: 25,
-      range: [0, 2.0], cooldown: 1.6, recover: 0.7, weight: 3,
+      range: [0, 1.6], cooldown: 1.6, recover: 0.7, weight: 3,
     }),
     move('soldier.bash', ENEMY_ATTACKS.soldierBash, {
       windup: 0.6, telegraph: 'block', weapon: 'left', damage: 10, poise: 25,
-      range: [0, 1.3], cooldown: 3, recover: 0.7, weight: 1,
+      range: [0, 1.0], cooldown: 3, recover: 0.7, weight: 1,
     }),
   ],
   mercy: { verb: 'spare', tier: 'normal', track: 'halvard', when: 'yielding' },

@@ -1,3 +1,4 @@
+import type { DamageBus } from '../combat/DamageBus';
 import * as THREE from 'three';
 import { KNIGHT } from '../config/constants';
 import { HurtboxSet } from '../combat/HurtboxSet';
@@ -13,9 +14,10 @@ import type { EnemyDef } from './types';
 export const CLAW_BONE = 'handr';
 /**
  * Claw reach from the hand bone's origin (the wrist end of the hand) to the claw tip, in metres.
- * KayKit hands are about 0.08 m long at the 0.78 scale, so the tip sits about 0.27 m past the fingers.
+ * Ash wraiths have long talons: the tip sits about 0.5 m past the fingers, so a swipe reaches a target
+ * about 0.85 m away (the distance the wraith closes to).
  */
-export const CLAW_LENGTH = 0.35;
+export const CLAW_LENGTH = 0.6;
 
 export interface WeaponChannelParts {
   /** The object the tracer follows (sword, shield, or the empty claw). */
@@ -61,7 +63,11 @@ type Tintable = THREE.Material & { color?: THREE.Color; emissive?: THREE.Color }
  *
  * @throws Error when the model has no skinned mesh, or a bone or embedded weapon the recipe needs is missing.
  */
-export function buildEnemyModel(source: EnemyModelSource, def: EnemyDef): EnemyModel {
+export function buildEnemyModel(
+  source: EnemyModelSource,
+  def: EnemyDef,
+  opts: { bus?: DamageBus } = {},
+): EnemyModel {
   const root = new THREE.Group();
   root.name = `enemy-${def.kind}`;
   const model = source.model;
@@ -162,7 +168,7 @@ export function buildEnemyModel(source: EnemyModelSource, def: EnemyDef): EnemyM
   const owner = model;
   const hurtboxes = new HurtboxSet(model, undefined, owner);
   const tracer = (w: WeaponChannelParts): WeaponTracer =>
-    new WeaponTracer({ attacker: owner, weapon: w.object, hilt: w.hilt, tip: w.tip, ownHurtboxes: hurtboxes });
+    new WeaponTracer({ attacker: owner, weapon: w.object, hilt: w.hilt, tip: w.tip, ownHurtboxes: hurtboxes, bus: opts.bus });
   const tracers: EnemyModel['tracers'] = { right: tracer(weapons.right) };
   if (weapons.left) tracers.left = tracer(weapons.left);
 

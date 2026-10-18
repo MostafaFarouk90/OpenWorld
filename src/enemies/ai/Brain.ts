@@ -103,6 +103,7 @@ export class Brain {
   private readonly home: XZ;
   private readonly patrol: readonly XZ[];
   private pendingAggro: ActorId | null;
+  private readonly stopAtTarget: number;
   /** The target given by a pack alert or a hit, used when senses carry no target (e.g. a revoked spare). */
   private forcedTarget: ActorId | null = null;
 
@@ -114,6 +115,9 @@ export class Brain {
     this.home = { ...opts.home };
     this.patrol = (opts.patrol ?? []).map((p) => ({ ...p }));
     this.leash = opts.leash ?? true;
+    // Close in until the shortest-reaching move can start.
+    const reach = Math.min(...def.moves.map((m) => m.range[1]));
+    this.stopAtTarget = Number.isFinite(reach) ? Math.min(STOP_AT_TARGET, Math.max(0.6, reach * 0.85)) : STOP_AT_TARGET;
     this.pendingAggro = opts.aggroOnSpawn ?? null;
     const rise = opts.rise ?? def.rises;
     if (rise) this.enter('spawn');
@@ -345,7 +349,7 @@ export class Brain {
       this.pendingAggro = null;
       this.forcedTarget = s.targetId;
       this.enter('chase');
-      return this.intent(s.targetPos, this.def.chaseSpeed, s.targetPos, STOP_AT_TARGET);
+      return this.intent(s.targetPos, this.def.chaseSpeed, s.targetPos, this.stopAtTarget);
     }
     if (s.notices && s.targetId && s.targetAlive) {
       this.pendingAcquire = s.targetId;
@@ -403,7 +407,7 @@ export class Brain {
         }
       }
     }
-    return this.intent(target, this.def.chaseSpeed, target, STOP_AT_TARGET);
+    return this.intent(target, this.def.chaseSpeed, target, this.stopAtTarget);
   }
 
   private beginSwing(move: MoveDef): boolean {
