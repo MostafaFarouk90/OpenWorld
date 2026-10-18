@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
+import { getFx } from './ActorMaterials';
 import { VfxServiceImpl } from './VfxServiceImpl';
 import { EFFECT_IDS } from './types';
 
@@ -143,6 +144,17 @@ describe('VfxServiceImpl', () => {
     const { vfx } = make();
     for (let i = 0; i < 24; i++) vfx.decals.place({ x: i, y: 0, z: 0 }, undefined, 0.5, 0x222222, 0);
     expect(vfx.decals.liveCount).toBe(16);
+  });
+
+  it('dissolve passes reverse through, so the root fades in from fully dissolved', () => {
+    const { vfx, scene } = make();
+    const forward = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial());
+    const back = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial());
+    scene.add(forward, back);
+    void vfx.dissolve(forward, 0.5);
+    void vfx.dissolve(back, 0.5, { reverse: true, tint: 0xffffff });
+    expect(getFx(forward.material as THREE.MeshStandardMaterial)!.uDissolve.value).toBe(0);
+    expect(getFx(back.material as THREE.MeshStandardMaterial)!.uDissolve.value).toBe(1);
   });
 
   it('restores materials cloned only by a dissolve once the actor leaves the scene', () => {

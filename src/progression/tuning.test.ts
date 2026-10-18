@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { killXp, levelForXp, levelPoints, levelScale, xpForLevel, LEVEL_CAP } from './tuning';
 
 describe('tuning', () => {
+  it('the Ashen Prior pays 200 base kill xp, scaled by level like any kill', () => {
+    expect(killXp('ashen-prior', 5, 5)).toBe(200);
+    expect(killXp('ashen-prior', 5, 7)).toBe(140);
+    expect(killXp('ashen-prior', 5, 30)).toBe(50);
+  });
   it('xp curve', () => {
     expect(xpForLevel(1)).toBe(0);
     expect(xpForLevel(2)).toBe(50);
