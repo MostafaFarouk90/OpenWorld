@@ -216,6 +216,30 @@ describe('shrine plugin on the real game', () => {
     for (let n = 1; n <= 5; n++) expect(names).toContain(`wardstone-${n}`);
   });
 
+  it('opens thread 8\'s respecModal at a lit shrine and releases the permit on cancel', async () => {
+    let held = 0;
+    let released = 0;
+    let opts: any = null;
+    const t = await boot({
+      stub: (g) => {
+        g.ctx.services.provide('respecModal' as never, { open: (o: unknown) => ((opts = o), true) } as never);
+      },
+    });
+    const prog = t.ctx.services.require('progression') as any;
+    prog.allowRespec = () => (held++, () => void released++);
+    prog.respecQuote = () => ({ free: true, gold: 0, canAfford: true });
+    prog.respec = () => ({ ok: true });
+    t.ctx.state.setFlag('shrine.quenchstone.lit', true);
+    t.run(2);
+    const lectern = (t.ctx.interaction as any).items.get('use:quenchstone-respec');
+    expect(lectern).toBeDefined();
+    expect(lectern.enabled()).toBe(true);
+    lectern.onInteract(t.ctx.actors.player);
+    expect(opts.quote.free).toBe(true);
+    opts.cancel();
+    expect({ held, released }).toEqual({ held: 1, released: 1 });
+  });
+
   it('animates the steam on render once lit', async () => {
     const t = await boot();
     t.ctx.state.setFlag('shrine.quenchstone.lit', true);
@@ -264,9 +288,17 @@ describe('shrine plugin on the real game', () => {
   });
 
   describe('wardstone input', () => {
-    async function rhythm() {
+    async function rhythm(opts: { prompts?: string[] } = {}) {
       const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(1000);
-      const t = await boot();
+      const t = await boot({
+        stub: (g) => {
+          if (opts.prompts)
+            g.ctx.services.provide('prompts' as never, {
+              show: (m: string, a: string, k: string) => opts.prompts!.push(`show:${m}:${a}:${k}`),
+              hide: (m: string) => opts.prompts!.push(`hide:${m}`),
+            } as never);
+        },
+      });
       let pressed = false;
       Object.defineProperty(t.ctx.input, 'actions', {
         get: () => ({ down: () => false, pressed: (a: string) => pressed && a === 'attack1', released: () => false, heldTicks: () => 0, axis: () => 0 }),
@@ -323,6 +355,19 @@ describe('shrine plugin on the real game', () => {
       release();
       r.press(1000 + r.beat * 9);
       expect(of(r.t, 'wardstone.missed')).toEqual([]);
+    });
+
+    it('shows the strike prompt near the next stone once Tobb has joined, and hides it when leaving', async () => {
+      const calls: string[] = [];
+      const r = await rhythm({ prompts: calls });
+      r.t.run(1);
+      expect(calls).toEqual([]); // not before Tobb joins
+      r.t.ctx.state.setFlag('story.m05.tobbJoined', true);
+      r.t.run(2);
+      expect(calls).toEqual(['show:wardstone-strike:attack1:prompt.wardstone-strike']);
+      r.t.ctx.state.setFlag('story.m05.tobbJoined', false);
+      r.t.run(1);
+      expect(calls.at(-1)).toBe('hide:wardstone-strike');
     });
 
     it('does nothing in a menu context', async () => {
