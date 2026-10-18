@@ -363,6 +363,17 @@ describe('Second Wind, death and respawn', () => {
     expect(t.of('player.respawned')[0].source).toBe('waystone');
   });
 
+  it('an inn rest (placeId only) keeps the last rested waystone (v0.5)', () => {
+    const t = setup();
+    t.ctx.anchors.define({ id: 'waystone.mill', position: { x: t.world.spawn.x + 20, y: t.world.spawn.y, z: t.world.spawn.z }, yaw: 0 });
+    t.game.events.emit('rest', { waystoneId: 'mill' });
+    t.game.events.emit('rest', { placeId: 'harrowmark.inn' });
+    expect(t.verbs.lastRestedWaystoneId).toBe('mill');
+    t.hit(t.enemy(), { amount: 500 });
+    t.run(170);
+    expect(t.of('player.respawned')[0].source).toBe('waystone');
+  });
+
   it('uses the waystones service when it exists', () => {
     const t = setup();
     const respawnPlayer = vi.fn();
