@@ -53,9 +53,17 @@ export function grantGold(h: ChapterHarness, amount: number): void {
   h.ctx.services.require('inventory').addGold(amount);
 }
 
-/** Presses F at an anchor (an interactable standing there). */
-async function useAt(h: ChapterHarness, anchorId: string, dist = 1.1): Promise<void> {
-  await h.approach(h.anchor(anchorId), dist);
+const focusOf = (h: ChapterHarness): string | undefined =>
+  (h.ctx.interaction as unknown as { focusFor(a: string): { id: string } | null }).focusFor('interact')?.id;
+
+/** Presses F at an anchor, from whichever side puts `interactableId` in focus (a wall or a neighbour can take it). */
+async function useAt(h: ChapterHarness, anchorId: string, interactableId: string, dist = 1.1): Promise<void> {
+  for (const from of [{ x: 1, z: 0 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 0, z: -1 }]) {
+    await h.approach(h.anchor(anchorId), dist, from);
+    h.run(2);
+    if (focusOf(h) === interactableId) break;
+  }
+  ensure(focusOf(h) === interactableId, `${interactableId} in focus at ${anchorId} (focus ${focusOf(h) ?? 'none'})`);
   h.press('KeyF');
   h.run(2);
 }
@@ -189,7 +197,7 @@ export async function playM07(h: ChapterHarness, t: QuestTrail, classId: PhaseBO
   ensure(q.state('m07') === 'active' && objectiveDone(h, 'm07', 'o1'), `M07 offered: ${describeQuest(h, 'm07')}`);
   await killGroup(h, 'm07.thieves', 'alley-cutpurse', 3, 'm07.thieves.1');
   ensure(objectiveDone(h, 'm07', 'o2'), `o2 three cutpurses (${describeQuest(h, 'm07')})`);
-  await useAt(h, 'm07.satchel');
+  await useAt(h, 'm07.satchel', 'pickup:satchel');
   ensure(objectiveDone(h, 'm07', 'o3'), `o3 the satchel (${describeQuest(h, 'm07')})`);
   await talkTo(h, t, 'aldith');
   ensure(objectiveDone(h, 'm07', 'o4') && h.ctx.state.getBool('story.m07.classOpen'), 'o4 and the trainers open');
@@ -218,7 +226,7 @@ export async function playR03(h: ChapterHarness, t: QuestTrail, debt: PhaseBOpti
   ensure(q.state('r03') === 'active', `R03 offered: ${describeQuest(h, 'r03')}`);
   await killGroup(h, 'r03.guildhall', 'guildhall-thug', 3, 'r03.guildhall.1');
   ensure(objectiveDone(h, 'r03', 'o2'), `o2 the thugs (${describeQuest(h, 'r03')})`);
-  await useAt(h, 'r03.brewing-copper');
+  await useAt(h, 'r03.brewing-copper', 'pickup:brewing-copper');
   ensure(objectiveDone(h, 'r03', 'o3'), 'o3 the copper');
   const before = gold(h);
   await talkTo(h, t, 'aldith', [debt === 'forgiven' ? 1 : 2]);
@@ -234,7 +242,7 @@ export async function playR04(h: ChapterHarness, t: QuestTrail, steward: PhaseBO
   const q = quests(h);
   await talkTo(h, t, 'whitlock', [1]);
   ensure(q.state('r04') === 'active', `R04 offered: ${describeQuest(h, 'r04')}`);
-  for (const n of [1, 2, 3]) await useAt(h, `r04.page-${n}`);
+  for (const n of [1, 2, 3]) await useAt(h, `r04.page-${n}`, `use:r04-page-${n}`);
   ensure(objectiveDone(h, 'r04', 'o2'), `o2 three pages (${describeQuest(h, 'r04')})`);
   await talkTo(h, t, 'whitlock', [steward === 'expose' ? 1 : 2]);
   ensure(q.state('r04') === 'completed', `R04 completed: ${describeQuest(h, 'r04')}`);
