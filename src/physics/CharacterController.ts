@@ -151,6 +151,17 @@ export class CharacterController {
     Object.assign(this.prev, this.curr);
   }
 
+  /**
+   * Holds the character where it is for this tick: no move, no gravity (cutscenes, kneeling). The
+   * interpolation pair collapses so rendering does not drift.
+   */
+  hold(): void {
+    Object.assign(this.prev, this.curr);
+    this.verticalVelocity = 0;
+    const t = this.body.translation();
+    this.body.setNextKinematicTranslation({ x: t.x, y: t.y, z: t.z });
+  }
+
   dispose(): void {
     this.physics.world.removeCharacterController(this.controller);
     this.physics.world.removeRigidBody(this.body);

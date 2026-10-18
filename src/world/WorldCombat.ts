@@ -46,6 +46,7 @@ export class WorldCombat {
   private readonly dummies = new Map<Dummy, DummyEntry>();
   private tracer: WeaponTracer | null = null;
   private playerBoxes: HurtboxSet | null = null;
+  private playerWindowSource: ControllerAttackWindow | null = null;
   private disposed = false;
   private debugVisible = false;
   private readonly hitListeners = new Set<(e: HitEvent) => void>();
@@ -56,6 +57,21 @@ export class WorldCombat {
     private readonly sounds?: CombatSounds,
   ) {
     this.unsubscribe = this.combat.bus.subscribe((e) => this.onHit(e));
+  }
+
+  /** The player's own hurtboxes (never hit by its own sword); thread 1 adds them as a combat target. */
+  get playerHurtboxes(): HurtboxSet | null {
+    return this.playerBoxes;
+  }
+
+  /** The player's sword tracer and its attack window, once the avatar is attached. */
+  get playerAttacker(): { tracer: WeaponTracer; window: ControllerAttackWindow } | null {
+    return this.tracer && this.playerWindowSource ? { tracer: this.tracer, window: this.playerWindowSource } : null;
+  }
+
+  /** The training dummies' models, in insertion order. */
+  get dummyModels(): THREE.Object3D[] {
+    return [...this.dummies.values()].map((d) => d.model);
   }
 
   get dummyCount(): number {
@@ -82,7 +98,8 @@ export class WorldCombat {
       ownHurtboxes: own,
       bus: this.combat.bus,
     });
-    this.combat.addAttacker(this.tracer, new ControllerAttackWindow(avatar.controller));
+    this.playerWindowSource = new ControllerAttackWindow(avatar.controller);
+    this.combat.addAttacker(this.tracer, this.playerWindowSource);
   }
 
   /** Adds an Idle Knight as a training dummy. `model` is placed in the scene by the caller or here. */
