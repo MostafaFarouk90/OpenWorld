@@ -8,11 +8,18 @@ export const FLOAT_HEIGHT = 150;
 export const CELL = 0.5;
 /** Thickness of floor and ceiling slabs. */
 export const SLAB = 0.5;
+/** A walkable prop is at most this tall (the character controller's auto-step, config/constants.ts). */
+export const MAX_WALKABLE_PROP = 0.4;
+/**
+ * The save loader rejects a position more than 200 m above the terrain under it, and the floor sits 150 m above the highest
+ * ground under the footprint, so the ground under a footprint may vary by at most 50 m; this keeps a 10 m margin.
+ */
+export const MAX_GROUND_RANGE = 40;
 /** Margin around the rooms that still counts as inside the interior's bounds. */
 const BOUNDS_MARGIN = 1;
 const DEG = Math.PI / 180;
 
-export type BoxKind = 'floor' | 'wall' | 'ceiling' | 'pillar' | 'blocker';
+export type BoxKind = 'floor' | 'wall' | 'ceiling' | 'pillar' | 'prop' | 'blocker';
 
 /** A world-space box. */
 export interface SolidBox {
@@ -40,6 +47,27 @@ export interface InteriorLayout {
   nav: NavGridDef;
 }
 
+/**
+ * True when `at` could be someone standing in the interior: over a room, not inside a pillar or a solid prop, and between the floor
+ * and 1.5 m above whatever is under it (the floor, a bed, a shelf top). A load checks a saved spot with it.
+ */
+export function standsIn(layout: InteriorLayout, at: Vec3): boolean {
+  const x = at.x - layout.origin.x;
+  const z = at.z - layout.origin.z;
+  const y = at.y - layout.floorY;
+  const def = layout.def;
+  if (y < -0.5 || !def.rooms.some((r) => inRect(r, x, z))) return false;
+  if (def.pillars.some((p) => inRect(p, x, z))) return false;
+  let top = 0;
+  for (const p of def.props ?? []) {
+    if (!inRect(p.rect, x, z)) continue;
+    // Inside a solid prop (more than its top 0.25 m) is not standing; on top of one is.
+    if (!p.walkable && y < p.height - 0.25) return false;
+    top = Math.max(top, p.height);
+  }
+  return y <= top + 1.5;
+}
+
 export function boundsContain(b: Bounds, p: Vec3): boolean {
   return p.x >= b.min.x && p.x <= b.max.x && p.y >= b.min.y && p.y <= b.max.y && p.z >= b.min.z && p.z <= b.max.z;
 }
@@ -64,17 +92,26 @@ function roomsBox(def: InteriorDef): LocalRect {
 
 const inRect = (r: LocalRect, x: number, z: number) => x >= r.x0 && x < r.x1 && z >= r.z0 && z < r.z1;
 
-/** The highest terrain over the footprint, sampled every 2 m and at the corners. */
-function maxGround(def: InteriorDef, heightAt: (x: number, z: number) => number): number {
+/** The lowest and highest terrain over the footprint, sampled every 2 m and at the corners. */
+export function groundRange(def: InteriorDef, heightAt: (x: number, z: number) => number): { min: number; max: number } {
   const box = roomsBox(def);
+  let min = Infinity;
   let max = -Infinity;
   const step = 2;
-  for (let x = box.x0 - 1; x <= box.x1 + 1 + 1e-9; x += step) {
-    for (let z = box.z0 - 1; z <= box.z1 + 1 + 1e-9; z += step) {
-      max = Math.max(max, heightAt(def.site.x + x, def.site.z + z));
+  const xs: number[] = [];
+  const zs: number[] = [];
+  for (let x = box.x0 - 1; x < box.x1 + 1; x += step) xs.push(x);
+  for (let z = box.z0 - 1; z < box.z1 + 1; z += step) zs.push(z);
+  xs.push(box.x1 + 1);
+  zs.push(box.z1 + 1);
+  for (const x of xs) {
+    for (const z of zs) {
+      const h = heightAt(def.site.x + x, def.site.z + z);
+      min = Math.min(min, h);
+      max = Math.max(max, h);
     }
   }
-  return max;
+  return { min, max };
 }
 
 /**
@@ -84,7 +121,21 @@ function maxGround(def: InteriorDef, heightAt: (x: number, z: number) => number)
  */
 export function layoutInterior(def: InteriorDef, heightAt: (x: number, z: number) => number): InteriorLayout {
   if (def.rooms.length === 0) throw new Error(`Interior "${def.id}" has no rooms`);
-  const floorY = maxGround(def, heightAt) + FLOAT_HEIGHT;
+  const props = def.props ?? [];
+  for (const p of props) {
+    if (!(p.height > 0)) throw new Error(`Interior "${def.id}": prop ${p.id ?? ''} needs a positive height`);
+    if (p.walkable && p.height > MAX_WALKABLE_PROP) {
+      throw new Error(`Interior "${def.id}": walkable prop ${p.id ?? ''} is ${p.height} m tall (at most ${MAX_WALKABLE_PROP})`);
+    }
+  }
+  const ground = groundRange(def, heightAt);
+  if (ground.max - ground.min > MAX_GROUND_RANGE) {
+    throw new Error(
+      `Interior "${def.id}": the ground under it varies by ${(ground.max - ground.min).toFixed(1)} m (at most ${MAX_GROUND_RANGE}); ` +
+        'a save there would be rejected as too high above the terrain',
+    );
+  }
+  const floorY = ground.max + FLOAT_HEIGHT;
   const origin = { x: def.site.x, y: floorY, z: def.site.z };
   const w = (x: number, y: number, z: number): Vec3 => ({ x: origin.x + x, y: floorY + y, z: origin.z + z });
 
@@ -169,6 +220,9 @@ export function layoutInterior(def: InteriorDef, heightAt: (x: number, z: number
     const h = roomHeightAt((p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2);
     boxes.push({ kind: 'pillar', min: w(p.x0, 0, p.z0), max: w(p.x1, h, p.z1) });
   }
+  for (const p of props) {
+    boxes.push({ kind: 'prop', min: w(p.rect.x0, 0, p.rect.z0), max: w(p.rect.x1, p.height, p.rect.z1) });
+  }
   for (const b of def.blockers) {
     boxes.push({ kind: 'blocker', blockerId: b.id, min: w(b.rect.x0, 0, b.rect.z0), max: w(b.rect.x1, b.height, b.rect.z1) });
   }
@@ -179,9 +233,15 @@ export function layoutInterior(def: InteriorDef, heightAt: (x: number, z: number
     max: w(box.x1 + BOUNDS_MARGIN, tallest + BOUNDS_MARGIN, box.z1 + BOUNDS_MARGIN),
   };
 
+  // An anchor over a walkable prop (the dais) stands on its top.
+  const standOn = (x: number, z: number): number => {
+    let y = 0;
+    for (const p of props) if (p.walkable && inRect(p.rect, x, z)) y = Math.max(y, p.height);
+    return y;
+  };
   const anchors = def.anchors.map((a) => ({
     id: a.id,
-    position: w(a.x, 0, a.z),
+    position: w(a.x, standOn(a.x, a.z), a.z),
     yaw: a.facing ? yawToward(a, a.facing) : (a.yaw ?? 0) * DEG,
   }));
   const triggers = def.triggers.map((t) => ({ id: t.id, center: w(t.center.x, t.center.y, t.center.z), half: { ...t.half } }));
@@ -205,7 +265,7 @@ export function layoutInterior(def: InteriorDef, heightAt: (x: number, z: number
       floorY,
       cellSize: CELL,
       walkable: def.rooms.map(toWorldRect),
-      blocked: def.pillars.map(toWorldRect),
+      blocked: [...def.pillars, ...props.filter((p) => !p.walkable).map((p) => p.rect)].map(toWorldRect),
       blockers: Object.fromEntries(def.blockers.map((b) => [b.id, [toWorldRect(b.rect)]])),
     },
   };
