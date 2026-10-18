@@ -5,7 +5,7 @@ import { buildTollPostVisual } from './visuals';
 
 /**
  * M04's ford barrier: a post with a bar. Mortal (health 120), no poise, heavy-only: a hit under
- * `TOLL.heavyPoise` is blocked by the foe manager's defender modifier. It never acts; it dies through the
+ * `the heavy blow` is blocked by the foe manager's defender modifier. It never acts; it dies through the
  * normal `actor.died` path and gives no XP (no progression row).
  */
 export class TollPost extends Foe {

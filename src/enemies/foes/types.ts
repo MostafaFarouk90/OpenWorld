@@ -28,6 +28,10 @@ export interface RaiseWraithRequest {
   level: number;
   /** Called once when the wraith is gone for any reason (died, released, despawned). */
   onGone(how: FoeEnd): void;
+  /** A Release was accepted on it: the pile is spent now, not when it finishes dissolving. */
+  onReleased?(): void;
+  /** That Release was revoked (it was struck): the pile is live again. */
+  onReleaseRevoked?(): void;
 }
 
 /** What a foe needs from the foe manager (and, through it, the enemies manager). */
@@ -39,6 +43,7 @@ export interface FoeEnv {
   raiseWraith(req: RaiseWraithRequest): ActorId | null;
   isPileSpent(pileId: string): boolean;
   markPileSpent(pileId: string): void;
+  unmarkPileSpent(pileId: string): void;
 }
 
 export interface FoeSpawnInfo {

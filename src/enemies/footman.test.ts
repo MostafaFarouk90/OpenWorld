@@ -36,20 +36,19 @@ describe('Guard', () => {
     const g = new Guard(1);
     g.step(DT, true, () => 0);
     expect(g.up).toBe(true);
-    expect(g.classify(10, 0)).toBe('blocked');
-    expect(g.classify(GUARD.heavyPoise - 0.01, 0)).toBe('blocked');
-    expect(g.classify(GUARD.heavyPoise, 0)).toBe('broken'); // checked before the poise scaling
-    expect(g.classify(10, GUARD.arcDegrees)).toBe('blocked');
-    expect(g.classify(10, GUARD.arcDegrees + 1)).toBe('open');
-    expect(g.classify(10, 180 - GUARD.backDegrees)).toBe('back'); // exactly on the boundary counts as the back
-    expect(g.classify(99, 180)).toBe('back'); // a heavy hit from behind is just a back hit
+    expect(g.classify(false, 0)).toBe('blocked');
+    expect(g.classify(true, 0)).toBe('broken'); // judged before the poise scaling
+    expect(g.classify(false, GUARD.arcDegrees)).toBe('blocked');
+    expect(g.classify(false, GUARD.arcDegrees + 1)).toBe('open');
+    expect(g.classify(false, 180 - GUARD.backDegrees)).toBe('back'); // exactly on the boundary counts as the back
+    expect(g.classify(true, 180)).toBe('back'); // a heavy hit from behind is just a back hit
   });
 
   it('a guard that is down blocks nothing, but the back is still weak', () => {
     const g = new Guard(0);
     g.step(DT, true, () => 0.99);
-    expect(g.classify(10, 0)).toBe('open');
-    expect(g.classify(10, 170)).toBe('back');
+    expect(g.classify(false, 0)).toBe('open');
+    expect(g.classify(false, 170)).toBe('back');
   });
 
   it('a broken guard stays down for brokenSeconds even when it rolls up', () => {

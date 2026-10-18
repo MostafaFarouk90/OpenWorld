@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import { HEAVY_CHOP_CLIP } from '../../combat/heavyBlow';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { KILL_XP_BASE } from '../../progression/tuning';
 import { canDamage } from '../../actors/teams';
@@ -6,7 +7,7 @@ import { BRIGHTWATER_SPAWNERS } from '../brightwaterSpawners';
 import { loadKnight } from '../testing/fakeHost';
 import { foeKit, type Kit } from './foeTestKit';
 import type { TollPost } from './TollPost';
-import { TOLL } from './tuning';
+
 
 let gltf: { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
 beforeAll(async () => {
@@ -37,13 +38,13 @@ describe('toll post', () => {
     expect(kit.factory).not.toHaveBeenCalled();
     expect(kit.manager.service.view(p.id)).toMatchObject({ kind: 'toll-post', spawnerId: 'brightwater.ford.toll-post' });
     const def = BRIGHTWATER_SPAWNERS.find((s) => s.id === 'brightwater.ford.toll-post')!;
-    expect(def).toMatchObject({ count: 1, anchor: 'spawn.ford.toll-post', activation: { quest: 'm04' }, respawn: 'never', band: { min: 1, max: 1 } });
+    expect(def).toMatchObject({ count: 1, anchor: 'ford.toll-post', activation: { quest: 'm04' }, respawn: 'never', band: { min: 1, max: 1 } });
   });
 
   it('a light hit does nothing, however much damage it carries', () => {
     const kit = foeKit(gltf, { player: { x: 0, z: -5 } });
     const p = post(kit);
-    for (const poise of [0, 10, 25, TOLL.heavyPoise - 0.01]) {
+    for (const poise of [0, 10, 25, 29.99]) {
       const r = hit(kit, p.id, 500, poise);
       expect(r.outcome).toBe('blocked');
       expect(r.dealt).toBe(0);
@@ -52,10 +53,18 @@ describe('toll post', () => {
     expect(kit.fake.bus.of('actor.died')).toHaveLength(0);
   });
 
+  it('the heavy chop damages it by attack id although a real swing carries little poise', () => {
+    const kit = foeKit(gltf, { player: { x: 0, z: -5 } });
+    const p = post(kit);
+    const r = hit(kit, p.id, 40, 20, HEAVY_CHOP_CLIP);
+    expect(r.outcome).toBe('hit');
+    expect(r.dealt).toBe(40);
+  });
+
   it('a heavy hit (poise 30 or more) damages it', () => {
     const kit = foeKit(gltf, { player: { x: 0, z: -5 } });
     const p = post(kit);
-    const r = hit(kit, p.id, 50, TOLL.heavyPoise);
+    const r = hit(kit, p.id, 50, 30);
     expect(r.outcome).toBe('hit');
     expect(r.dealt).toBe(50);
     expect(p.actor.health).toBe(70);

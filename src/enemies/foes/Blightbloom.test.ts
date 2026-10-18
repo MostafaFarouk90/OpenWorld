@@ -1,6 +1,7 @@
 import type * as THREE from 'three';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { Enemy } from '../Enemy';
+import { mercyInteractableId } from '../mercy';
 import { FakeHost, loadKnight } from '../testing/fakeHost';
 import type { SpawnerDef } from '../types';
 import { foeKit, swordHit, type Kit } from './foeTestKit';
@@ -144,6 +145,19 @@ describe('bloom activation and cadence', () => {
 });
 
 describe('bloom piles', () => {
+  it('a Release accepted through the mercy hold spends the pile at once, before the dissolve ends', () => {
+    const kit = foeKit(gltf, { player: PLAYER });
+    enterVault(kit);
+    runUntilRaised(kit, 1);
+    const w = newest(kit);
+    kit.tick(3); // finish rising
+    kit.fake.flags.set('enemies.mercy.release', true);
+    kit.fake.stagger(w.id, 'player');
+    kit.fake.interactables.get(mercyInteractableId(w.slug))!.onInteract(kit.fake.player);
+    // not yet dissolved, but the save would already carry the spent pile
+    expect(kit.manager.spawners.serialize().spentPiles).toHaveLength(1);
+  });
+
   it('uses unspent piles only: a released wraith spends its pile for good', () => {
     const kit = foeKit(gltf, { player: PLAYER });
     enterVault(kit);

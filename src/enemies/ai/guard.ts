@@ -58,12 +58,12 @@ export class Guard {
   }
 
   /**
-   * What a hit does. `poise` is the request's poise before any scaling; `fromDeg` is the angle between
+   * What a hit does. `heavy` is `isHeavyBlow` of the request, judged before any scaling; `fromDeg` is the angle between
    * the footman's facing and the direction to the attacker (0 in front, 180 behind).
    */
-  classify(poise: number, fromDeg: number): GuardHit {
+  classify(heavy: boolean, fromDeg: number): GuardHit {
     if (fromDeg >= 180 - GUARD.backDegrees) return 'back';
     if (!this.upFlag || fromDeg > GUARD.arcDegrees) return 'open';
-    return poise >= GUARD.heavyPoise ? 'broken' : 'blocked';
+    return heavy ? 'broken' : 'blocked';
   }
 }

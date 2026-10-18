@@ -110,7 +110,7 @@ export const BRIGHTWATER_SPAWNERS: readonly SpawnerDef[] = [
     tag: 'ford.toll-post',
     enemy: 'toll-post',
     count: 1,
-    anchor: 'spawn.ford.toll-post',
+    anchor: 'ford.toll-post',
     band: { min: 1, max: 1 },
     activation: { quest: 'm04' },
     respawn: 'never',

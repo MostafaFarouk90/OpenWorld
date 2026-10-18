@@ -59,8 +59,8 @@ function rig(opts: { playerFeet?: { x: number; y: number; z: number } } = {}) {
       mgr.update(DT);
     }
   };
-  const hit = (targetId: string, poise = 10, attackerId: string | null = player.id) =>
-    damage.apply({ attackerId, targetId, amount: 10, poise, kind: 'melee', direction: new THREE.Vector3(0, 0, -1) });
+  const hit = (targetId: string, poise = 10, attackerId: string | null = player.id, attackId?: string) =>
+    damage.apply({ attackerId, targetId, amount: 10, poise, kind: 'melee', attackId, direction: new THREE.Vector3(0, 0, -1) });
   return { events, actors, damage, player, scene, targets, combat, feet, warn, mgr, seen, of, guard, step, hit, tick: () => tick };
 }
 
@@ -123,6 +123,15 @@ describe('player hits', () => {
     expect(r.of('dummy.hitOpen')).toEqual([{ dummyId: d.id, byId: 'player' }]);
     expect(d.counts.hitOpen).toBe(1);
     expect(r.of('dummy.blocked')).toHaveLength(0);
+  });
+
+  it('breaks the guard on the heavy chop by attack id, whatever its poise', () => {
+    const r = rig({ playerFeet: { x: 50, y: 0, z: 50 } });
+    const [d] = r.mgr.place([SPOT]);
+    r.step(0.5);
+    r.hit(d.id, 20, undefined, '1H_Melee_Attack_Chop');
+    expect(r.of('dummy.guardBroken')).toEqual([{ dummyId: d.id, byId: 'player' }]);
+    expect(d.state).toBe('broken');
   });
 
   it('breaks the guard on a heavy hit (poise >= 30), staggers 1.2 s, then raises it again', () => {

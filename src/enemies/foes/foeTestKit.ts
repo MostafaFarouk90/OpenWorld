@@ -24,7 +24,7 @@ export function foeKit(gltf: { scene: THREE.Object3D; animations: THREE.Animatio
   fake.defineAnchor('vault.pile.1', 3, 0);
   fake.defineAnchor('vault.pile.2', 0, 4);
   fake.defineAnchor('vault.pile.3', -5, 0);
-  fake.defineAnchor('spawn.ford.toll-post', 0, 0);
+  fake.defineAnchor('ford.toll-post', 0, 0);
   const factory = vi.fn(FakeHost.factory(gltf));
   const manager = new EnemyManager(fake.host, factory, { spawners: opts.spawners ?? BRIGHTWATER_SPAWNERS, seed: opts.seed ?? 11 });
   const tick = (seconds = DT) => {

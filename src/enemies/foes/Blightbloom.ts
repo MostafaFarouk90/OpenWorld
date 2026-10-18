@@ -167,6 +167,8 @@ export class Blightbloom extends Foe {
       spawnTag: this.info.spawnTag,
       level: this.info.level,
       // Independent of this bloom: a Release after the bloom is destroyed still spends the pile.
+      onReleased: () => this.env.markPileSpent(pile),
+      onReleaseRevoked: () => this.env.unmarkPileSpent(pile),
       onGone: (how) => {
         if (early.id === null) {
           early.ended = how;

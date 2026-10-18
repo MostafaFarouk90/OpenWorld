@@ -1,3 +1,4 @@
+import { isHeavyBlow } from '../../combat/heavyBlow';
 import { LEVEL } from '../tuning';
 import type { ActorId, DamageRequestLike, EnemyEvents, EnemyHost } from '../ports';
 import type { SpawnRequest } from '../spawners';
@@ -5,7 +6,7 @@ import { Blightbloom } from './Blightbloom';
 import type { Foe } from './Foe';
 import { Scarecrow } from './Scarecrow';
 import { TollPost } from './TollPost';
-import { BLOOM, SCARECROW, TOLL, isFireAttack } from './tuning';
+import { BLOOM, SCARECROW, isFireAttack } from './tuning';
 import type { FoeDef, FoeEnd, FoeEnv, FoeSpawnInfo, RaiseWraithRequest } from './types';
 
 export interface FoeManagerDeps {
@@ -16,6 +17,7 @@ export interface FoeManagerDeps {
   raiseWraith(req: RaiseWraithRequest): ActorId | null;
   isPileSpent(pileId: string): boolean;
   markPileSpent(pileId: string): void;
+  unmarkPileSpent(pileId: string): void;
 }
 
 /** Health scaling for a foe's level, as `scaleStats` does for enemies. */
@@ -48,6 +50,7 @@ export class FoeManager {
       raiseWraith: (req) => deps.raiseWraith(req),
       isPileSpent: (id) => deps.isPileSpent(id),
       markPileSpent: (id) => deps.markPileSpent(id),
+      unmarkPileSpent: (id) => deps.unmarkPileSpent(id),
     };
     this.listen();
   }
@@ -168,7 +171,7 @@ export class FoeManager {
           if (target.kind !== 'toll-post' || req.outcome !== 'hit') return;
           const poise = this.rawPoise.get(req) ?? req.poise ?? req.amount;
           this.rawPoise.delete(req);
-          if (poise >= TOLL.heavyPoise) return;
+          if (isHeavyBlow({ attackId: req.attackId, poise })) return;
           req.outcome = 'blocked';
           req.amount = 0;
           req.poise = 0;

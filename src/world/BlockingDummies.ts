@@ -5,6 +5,7 @@ import type { CombatRegistry } from '../actors/CombatRegistry';
 import type { DamageResolver, ModifiableRequest } from '../actors/DamageResolver';
 import { DUMMY_INIT, PLAYER_ID } from '../actors/teams';
 import { HurtboxSet } from '../combat/HurtboxSet';
+import { isHeavyBlow } from '../combat/heavyBlow';
 import type { GameEvents } from '../core/events';
 import type { Vec3 } from '../physics/PhysicsWorld';
 import './dummies.events';
@@ -20,8 +21,6 @@ export const BLOCKING = {
   guardUpSeconds: 1.2,
   guardDownSeconds: 1.0,
   staggerSeconds: 1.2,
-  /** A hit with at least this much poise (before any scaling) breaks a raised guard. */
-  heavyPoise: 30,
   /** Mean seconds between scripted swings; each interval varies by +-10% from the rng. */
   swingEverySeconds: 4,
   swingTelegraphSeconds: 0.5,
@@ -358,7 +357,7 @@ export class BlockingDummies {
     if (!d || req.attackerId !== PLAYER_ID || req.outcome === 'immune') return;
     d.decision = null;
     if (d.state !== 'up') return;
-    if (req.poise >= BLOCKING.heavyPoise) {
+    if (isHeavyBlow(req)) {
       d.decision = 'guardBroken';
       d.setState('broken', BLOCKING.staggerSeconds);
       return;

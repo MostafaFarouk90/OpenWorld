@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isHeavyBlow } from '../combat/heavyBlow';
 import { HumanoidBody } from './body';
 import { mulberry32 } from './ai/moveSelect';
 import { ENEMY_DEFS } from './defs';
@@ -50,6 +51,7 @@ export class EnemyManager {
   /** Brainless mortal foes (scarecrows, blooms, toll posts), spawned through the same spawners. */
   private readonly foes: FoeManager;
   /** Per-enemy end callbacks (the bloom's raised wraiths). */
+  private readonly releaseWatchers = new Map<ActorId, { accepted(): void; revoked?(): void }>();
   private readonly goneWatchers = new Map<ActorId, (how: MemberEnd) => void>();
   private readonly tokens = new Map<ActorId, Set<Enemy>>();
   private readonly tokenOf = new Map<Enemy, ActorId>();
@@ -88,6 +90,7 @@ export class EnemyManager {
       raiseWraith: (req) => this.raiseWraith(req),
       isPileSpent: (id) => this.spawners.isPileSpent(id),
       markPileSpent: (id) => this.spawners.markPileSpent(id),
+      unmarkPileSpent: (id) => this.spawners.unmarkPileSpent(id),
     });
     for (const def of opts.spawners ?? []) this.spawners.define(def);
     this.spawners.bindGates();
@@ -246,7 +249,10 @@ export class EnemyManager {
       options: { aggro: true, leash: false },
       spentKey: `${req.spawnerId}#raised`,
     });
-    if (id !== null) this.goneWatchers.set(id, req.onGone);
+    if (id !== null) {
+      this.goneWatchers.set(id, req.onGone);
+      if (req.onReleased) this.releaseWatchers.set(id, { accepted: req.onReleased, revoked: req.onReleaseRevoked });
+    }
     return id;
   }
 
@@ -291,6 +297,7 @@ export class EnemyManager {
       if (!enemy) continue;
       // Spent now, not when it finally leaves: a save mid-dissolve or mid-walk-off must not bring it back.
       this.spawners.spendMercy(enemy.id);
+      if (ev.verb === 'release') this.releaseWatchers.get(enemy.id)?.accepted();
       if (ev.verb === 'release') enemy.release();
       else enemy.spare();
       this.tally.mercy(ev);
@@ -462,6 +469,7 @@ export class EnemyManager {
       this.mercyRemovers.delete(self);
       const watcher = this.goneWatchers.get(self.id);
       this.goneWatchers.delete(self.id);
+      this.releaseWatchers.delete(self.id);
       if (this.disposed) return;
       watcher?.(how);
       this.afterGone(self.id, self.spawnerId, how);
@@ -500,7 +508,10 @@ export class EnemyManager {
       this.tally.revoked(p.actorId);
       const e = this.enemies.get(p.actorId);
       // Hostile again: its slot is live, not spent, so a reload does not drop it.
-      if (e?.revoked(this.host.actors.player.id)) this.spawners.unspendMercy(p.actorId);
+      if (e?.revoked(this.host.actors.player.id)) {
+        this.spawners.unspendMercy(p.actorId);
+        this.releaseWatchers.get(p.actorId)?.revoked?.();
+      }
     });
     on('enemies.yield', (p) => {
       const e = this.enemies.get(p.actorId);
@@ -535,7 +546,8 @@ export class EnemyManager {
       // (no spend, no clear) and refill its group, so the loaded world keeps the enemy.
       const refill = new Set<string>();
       for (const e of [...this.enemies.values()]) {
-        if ((e.spawnerId && this.spawners.isCleared(e.spawnerId)) || spent.has(e.id)) e.despawn();
+        // Summons are never saved: a load drops them, and nothing refills them.
+        if ((e.spawnerId && (this.spawners.isCleared(e.spawnerId) || this.spawners.isEphemeral(e.spawnerId))) || spent.has(e.id)) e.despawn();
         else if (e.inMercyExit && e.spawnerId) {
           refill.add(e.spawnerId);
           e.despawnUnseen();
@@ -553,6 +565,7 @@ export class EnemyManager {
       for (const questId of active) this.spawners.onQuestStarted(questId, (f) => this.host.state.getBool(f, false));
       const interior = this.host.services.get('interiors')?.current;
       if (interior) this.spawners.onInteriorEntered(interior);
+      this.spawners.resyncGates();
     });
 
     // Defender band (-100..-1): a raised footman shield scales a front hit down; a heavy chop breaks it; the back is open.
@@ -564,7 +577,7 @@ export class EnemyManager {
           const enemy = this.enemies.get(target.id);
           if (!enemy) return;
           const from = attacker.worldPosition(this.scratch);
-          const hit = enemy.guardHit(req.poise, from);
+          const hit = enemy.guardHit(isHeavyBlow(req), from);
           if (hit === 'broken') enemy.breakGuard();
           else if (hit === 'back') req.amount *= GUARD.backDamageScale;
           else if (hit === 'blocked' && !req.unblockable) {

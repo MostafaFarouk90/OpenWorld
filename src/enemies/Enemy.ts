@@ -223,9 +223,9 @@ export class Enemy {
 
   /**
    * What a hit from `from` (feet position) does against this footman's shield; 'open' without a guard.
-   * `poise` is the request's poise before any scaling.
+   * `heavy` is `isHeavyBlow` of the request, judged before any scaling.
    */
-  guardHit(poise: number, from: { x: number; z: number }): GuardHit {
+  guardHit(heavy: boolean, from: { x: number; z: number }): GuardHit {
     if (!this.guard || this.phase !== 'alive') return 'open';
     const self = this.mover.feet;
     const dx = from.x - self.x;
@@ -234,7 +234,7 @@ export class Enemy {
     if (!(len > 1e-6)) return 'open';
     const f = forwardOf(this.yaw);
     const cos = Math.max(-1, Math.min(1, (f.x * dx + f.z * dz) / len));
-    return this.guard.classify(poise, Math.acos(cos) * (180 / Math.PI));
+    return this.guard.classify(heavy, Math.acos(cos) * (180 / Math.PI));
   }
 
   /** A heavy hit landed on the shield: it stays down for `GUARD.brokenSeconds`. */
@@ -288,8 +288,8 @@ export class Enemy {
     };
     const intent = this.brain.step(dt, senses);
     this.guard?.step(dt, GUARD_STATES.has(this.brain.state), this.env.rng);
-    if (this.def.pairAdvance && this.brain.state === 'chase' && intent.goal === senses.targetPos) {
-      // A plain chase heads straight for the target; a pair spreads onto opposite flanks instead.
+    if (this.def.pairAdvance && this.brain.state === 'chase' && intent.goal && senses.targetPos && intent.goal.x === senses.targetPos.x && intent.goal.z === senses.targetPos.z) {
+      // A plain chase heads straight for the target (the circling goal is somewhere else); a pair spreads onto opposite flanks instead.
       const partner = this.env.partnerOf(this);
       if (partner) intent.goal = pairGoal(self, partner.feet, intent.goal!, this.actor.id, partner.actor.id);
     }

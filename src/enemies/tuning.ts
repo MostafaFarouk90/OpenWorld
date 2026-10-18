@@ -94,8 +94,6 @@ export const GUARD = {
   /** A blocked hit keeps this fraction of its damage and poise. */
   damageScale: 0.15,
   poiseScale: 0.5,
-  /** A hit with at least this much poise (before scaling) breaks the guard instead of being blocked. */
-  heavyPoise: 30,
   brokenSeconds: 1.0,
   /** Half-angle of the shield arc in front, and of the open back. */
   arcDegrees: 100,

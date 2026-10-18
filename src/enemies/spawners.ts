@@ -43,6 +43,8 @@ export interface SpawnersPersisted {
   cleared: string[];
   /** Ash piles whose raised wraith was Released (Blightbloom piles); optional so old saves load. */
   spentPiles?: string[];
+  /** Slots of never-respawning groups whose member was killed (a spared or released one is in `spent`). */
+  dead?: string[];
   warmthTier: number;
   lockedBlockLevels: Record<string, number>;
 }
@@ -62,6 +64,7 @@ export class SpawnerRegistry {
   private readonly gateOff: Array<() => void> = [];
   private started = false;
   private spentPiles = new Set<string>();
+  private dead = new Set<string>();
   private warmthTier = 0;
   private lockedBlockLevels: Record<string, number> = {};
   private readonly rng: () => number;
@@ -102,7 +105,7 @@ export class SpawnerRegistry {
     for (let slot = 0; slot < slots.length; slot++) {
       if (slots[slot] !== null) continue;
       const spentKey = `${id}#${slot}`;
-      if (this.spent.has(spentKey)) continue;
+      if (this.spent.has(spentKey) || this.dead.has(spentKey)) continue;
       const level = this.levelFor(band);
       const own = def.memberAnchors?.[slot] ? this.deps.anchors.find(def.memberAnchors[slot]) : undefined;
       if (def.memberAnchors?.[slot] && !own) {
@@ -142,7 +145,7 @@ export class SpawnerRegistry {
    */
   spendMercy(actorId: ActorId): void {
     const rec = this.byActor.get(actorId);
-    if (rec) this.spent.add(`${rec.spawnerId}#${rec.slot}`);
+    if (rec && !this.defs.get(rec.spawnerId)?.ephemeral) this.spent.add(`${rec.spawnerId}#${rec.slot}`);
   }
 
   /** A spared enemy was struck before it left: it is hostile and live again, so its slot is not spent. */
@@ -160,10 +163,19 @@ export class SpawnerRegistry {
     slots[rec.slot] = null;
     if (how === 'despawned') return false;
     const def = this.defs.get(rec.spawnerId)!;
-    if ((how === 'released' || how === 'spared') && !def.ephemeral) this.spent.add(`${rec.spawnerId}#${rec.slot}`);
+    const key = `${rec.spawnerId}#${rec.slot}`;
+    if ((how === 'released' || how === 'spared') && !def.ephemeral) this.spent.add(key);
+    // A member of a never-respawning world group (not a manual lesson group, which replays) that died stays dead across a save, so a group that was
+    // partly cleared before a save can still be cleared afterwards.
+    if (how === 'died' && def.respawn === 'never' && def.activation !== 'manual' && !def.ephemeral) this.dead.add(key);
     const gone = this.goneSlots.get(rec.spawnerId)!;
     gone.add(rec.slot);
-    if (gone.size < slots.length || slots.some((s) => s !== null)) return false;
+    if (slots.some((s) => s !== null)) return false;
+    const allGone =
+      def.respawn === 'never' && def.activation !== 'manual'
+        ? slots.every((_, i) => gone.has(i) || this.spent.has(`${rec.spawnerId}#${i}`) || this.dead.has(`${rec.spawnerId}#${i}`))
+        : gone.size >= slots.length;
+    if (!allGone) return false;
     if (this.firedCleared.has(rec.spawnerId)) return false;
     this.firedCleared.add(rec.spawnerId);
     // A group that never respawns stays cleared across reloads, auto groups included.
@@ -197,7 +209,10 @@ export class SpawnerRegistry {
     this.goneSlots.get(id)!.clear();
     this.firedCleared.delete(id);
     this.cleared.delete(id);
-    for (let i = 0; i < slots.length; i++) this.spent.delete(`${id}#${i}`);
+    for (let i = 0; i < slots.length; i++) {
+      this.spent.delete(`${id}#${i}`);
+      this.dead.delete(`${id}#${i}`);
+    }
   }
 
   alive(id: string): ActorId[] {
@@ -243,6 +258,19 @@ export class SpawnerRegistry {
           keys,
         ),
       );
+    }
+  }
+
+  /**
+   * After a load: gate groups follow their (re-derived) gate. An open one is refilled, a closed one leaves;
+   * a cleared one stays gone either way.
+   */
+  resyncGates(): void {
+    if (!this.started) return;
+    for (const def of this.defs.values()) {
+      if (!isGate(def.activation) || !this.gateOpen.has(def.id)) continue;
+      if (this.gateOpen.get(def.id) && !this.cleared.has(def.id)) this.spawnGroup(def.id);
+      else if (!this.gateOpen.get(def.id)) this.despawnGroup(def.id);
     }
   }
 
@@ -314,6 +342,10 @@ export class SpawnerRegistry {
     this.spentPiles.add(pileId);
   }
 
+  unmarkPileSpent(pileId: string): void {
+    this.spentPiles.delete(pileId);
+  }
+
   // Persistence
 
   serialize(): SpawnersPersisted {
@@ -323,6 +355,7 @@ export class SpawnerRegistry {
       cleared: [...this.cleared].filter(saved),
       // Omitted while empty, so saves without a bloom keep their old shape.
       ...(this.spentPiles.size > 0 ? { spentPiles: [...this.spentPiles] } : {}),
+      ...(this.dead.size > 0 ? { dead: [...this.dead].filter(saved) } : {}),
       warmthTier: this.warmthTier,
       lockedBlockLevels: { ...this.lockedBlockLevels },
     };
@@ -332,6 +365,7 @@ export class SpawnerRegistry {
     this.spent = new Set();
     this.cleared = new Set();
     this.spentPiles = new Set();
+    this.dead = new Set();
     this.warmthTier = 0;
     this.lockedBlockLevels = {};
     if (!isRecord(data)) {
@@ -350,6 +384,12 @@ export class SpawnerRegistry {
         else this.deps.warn(`spawners: dropped bad cleared entry ${JSON.stringify(s)}`);
       }
     } else if (data.cleared !== undefined) this.deps.warn('spawners: saved cleared is not a list; keeping default');
+    if (Array.isArray(data.dead)) {
+      for (const d of data.dead) {
+        if (typeof d === 'string' && /^.+#\d+$/.test(d)) this.dead.add(d);
+        else this.deps.warn(`spawners: dropped bad dead entry ${JSON.stringify(d)}`);
+      }
+    } else if (data.dead !== undefined) this.deps.warn('spawners: saved dead is not a list; keeping default');
     if (Array.isArray(data.spentPiles)) {
       for (const s of data.spentPiles) {
         if (typeof s === 'string') this.spentPiles.add(s);
@@ -401,6 +441,10 @@ export class SpawnerRegistry {
 
   isSpent(key: string): boolean {
     return this.spent.has(key);
+  }
+
+  isEphemeral(spawnerId: string): boolean {
+    return this.defs.get(spawnerId)?.ephemeral === true;
   }
 
   isCleared(spawnerId: string): boolean {

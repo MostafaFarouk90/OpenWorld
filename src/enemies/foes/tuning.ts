@@ -46,8 +46,6 @@ export const BLOOM = {
 
 /** Toll post (M04 ford barrier). */
 export const TOLL = {
-  /** Poise of the hit (before any scaling) needed to damage it: the heavy attack. */
-  heavyPoise: 30,
   fadeSeconds: 1,
 } as const;
 
