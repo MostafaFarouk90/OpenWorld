@@ -3,7 +3,7 @@ import type { DocumentLike, ElementLike } from './dom';
 export interface HudWidgetView {
   id: string;
   element: ElementLike;
-  update(): void;
+  update(frameTime?: number): void;
   dispose(): void;
 }
 

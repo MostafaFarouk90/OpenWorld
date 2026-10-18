@@ -4,6 +4,8 @@ import { musicConfig } from './musicConfig';
 import { HostileSet } from './hostileSet';
 import type { MixState, TrackDef } from './tracks';
 
+const ANON_BOSS = '\u0000anonymous';
+
 export type MusicState = Exclude<MixState, 'talk'>;
 
 export interface MusicDirectorOptions {
@@ -42,7 +44,9 @@ export class MusicDirector {
   private lastNow = -Infinity;
   private lastAudio: number | null = null;
 
-  private boss = false;
+  /** Active registry bosses by id (insertion order: the last started sets the mix), plus the anonymous legacy flag. */
+  private readonly bosses = new Map<string, { phase: number; hush: boolean }>();
+  private warnedBossIds = new Set<string>();
   private combat = false;
   private lastHold = -Infinity;
   private lastHit = -Infinity;
@@ -51,7 +55,7 @@ export class MusicDirector {
   private discover: DiscoverWindow | null = null;
   private exploreSince: number | null = null;
   private silenceUntil: number | null = null;
-  private appliedKey: MixState | null = null;
+  private appliedKey: string | null = null;
 
   constructor(options: MusicDirectorOptions) {
     this.track = options.track;
@@ -74,9 +78,40 @@ export class MusicDirector {
     return this.ducks.size > 0 ? 'talk' : this.state;
   }
 
+  private get boss(): boolean {
+    return this.bosses.size > 0;
+  }
+
+  private get leadBoss(): [string, { phase: number; hush: boolean }] | undefined {
+    let last: [string, { phase: number; hush: boolean }] | undefined;
+    for (const entry of this.bosses) last = entry;
+    return last;
+  }
+
+  /** Changes whenever the wanted mix changes, including a boss phase or hush inside `boss`. */
+  get mixRevision(): string {
+    const key = this.mixKey;
+    const lead = key === 'boss' ? this.leadBoss : undefined;
+    return lead ? `boss:${lead[0]}:${lead[1].phase}:${lead[1].hush ? 'hush' : ''}` : key;
+  }
+
   /** The gains for the mix that should be playing now, for starting the mixer. */
   currentMix(): Readonly<Record<string, number>> {
-    return this.track.mixes[this.mixKey];
+    const key = this.mixKey;
+    const lead = key === 'boss' ? this.leadBoss : undefined;
+    if (!lead) return this.track.mixes[key];
+    const [id, st] = lead;
+    const def = this.track.bossMixes?.[id];
+    if (!def) {
+      if (id !== ANON_BOSS && !this.warnedBossIds.has(id)) {
+        this.warnedBossIds.add(id);
+        console.warn(`Music: no boss mix for "${id}"; using the generic boss mix`);
+      }
+      return this.track.mixes.boss;
+    }
+    if (st.hush && def.hush) return def.hush;
+    const phase = Math.min(def.phases.length, Math.max(1, Math.floor(st.phase) || 1));
+    return def.phases[phase - 1];
   }
 
   get hostileCount(): number {
@@ -89,7 +124,7 @@ export class MusicDirector {
     this.clock = clock;
     this.lastNow = now;
     this.exploreSince = now;
-    this.appliedKey = this.mixKey; // the mixer was started with currentMix()
+    this.appliedKey = this.mixRevision; // the mixer was started with currentMix()
   }
 
   // ---- events -------------------------------------------------------------------------------
@@ -130,22 +165,70 @@ export class MusicDirector {
     this.discoverPending = true;
   }
 
-  setBoss(on: boolean, now: number): void {
-    if (this.disposed || on === this.boss) return;
-    this.boss = on;
+  /**
+   * The public `music.setBoss`. The plugin follows the core boss registry (`bossStarted`,
+   * `bossResolved`, `bossEnded`); this stays for callers outside it. `setBoss(false)` never ends
+   * a registry boss's music, so a stray call cannot start an ending while a boss is still active.
+   */
+  setBoss(on: boolean, now: number, bossId?: string): void {
+    if (this.disposed) return;
+    if (on) {
+      this.bossStarted(bossId ?? ANON_BOSS, 1, now);
+      return;
+    }
+    if (bossId !== undefined) {
+      this.bossResolved(bossId, now);
+      return;
+    }
+    if (this.bosses.has(ANON_BOSS)) this.bossResolved(ANON_BOSS, now);
+  }
+
+  /** A registry boss started (`phase` is 1-based; a boss registered below a threshold starts in that phase). */
+  bossStarted(bossId: string, phase: number, _now: number): void {
+    if (this.disposed) return;
+    const existing = this.bosses.get(bossId);
+    if (existing) {
+      existing.phase = phase;
+      return;
+    }
+    this.bosses.set(bossId, { phase, hush: false });
     this.discover = null;
     this.discoverPending = false;
     this.silenceUntil = null;
     this.exploreSince = null;
-    if (on) {
-      this.combat = false;
-      this.endingUntil = null;
-    } else {
-      this.combat = false;
-      this.hostiles.clear();
-      this.lastHit = -Infinity;
-      this.endingUntil = now + this.cfg.endingSeconds;
-    }
+    this.combat = false;
+    this.endingUntil = null;
+  }
+
+  bossPhase(bossId: string, phase: number): void {
+    const b = this.bosses.get(bossId);
+    if (b) b.phase = phase;
+  }
+
+  /** The Release window opened or closed. A close after the boss resolved finds no boss and does nothing. */
+  bossHush(bossId: string, open: boolean): void {
+    const b = this.bosses.get(bossId);
+    if (b) b.hush = open;
+  }
+
+  /** A boss was defeated or released: the 6 s ending plays once the last active boss has resolved. */
+  bossResolved(bossId: string, now: number): void {
+    if (!this.bosses.delete(bossId) || this.bosses.size > 0) return;
+    this.afterLastBoss(now, true);
+  }
+
+  /** A boss was despawned or unregistered without an outcome: no ending, the mix just returns to exploring. */
+  bossEnded(bossId: string, now: number): void {
+    if (!this.bosses.delete(bossId) || this.bosses.size > 0) return;
+    this.afterLastBoss(now, false);
+  }
+
+  private afterLastBoss(now: number, ending: boolean): void {
+    this.combat = false;
+    this.hostiles.clear();
+    this.lastHit = -Infinity;
+    if (ending) this.endingUntil = now + this.cfg.endingSeconds;
+    else this.exploreSince = now;
   }
 
   /** Reasons are namespaced by the caller (`dialogue:<id>`, `cutscene:<id>`). Unknown `off` is a no-op. */
@@ -158,7 +241,7 @@ export class MusicDirector {
   reset(now: number): void {
     this.hostiles.clear();
     this.ducks.clear();
-    this.boss = false;
+    this.bosses.clear();
     this.combat = false;
     this.lastHold = -Infinity;
     this.lastHit = -Infinity;
@@ -300,10 +383,10 @@ export class MusicDirector {
   }
 
   private apply(now: number): void {
-    const key = this.mixKey;
+    const key = this.mixRevision;
     if (key === this.appliedKey) return;
     try {
-      this.driver.setMix(this.track.mixes[key], this.cfg.rampSeconds);
+      this.driver.setMix(this.currentMix(), this.cfg.rampSeconds);
       this.appliedKey = key;
     } catch (err) {
       console.warn(`Music: setMix(${key}) failed at ${now.toFixed(2)} s:`, err);
