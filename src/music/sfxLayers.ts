@@ -12,6 +12,16 @@ export const SFX = {
   parry: 'sfx.parry',
 } as const;
 
+/** Spell sounds played by the spells plugin (thread 7) under these exact keys, with no variant suffix. */
+export const SPELL_SFX = {
+  surgeCharge: 'sfx.surge.charge',
+  surgeRelease: 'sfx.surge.release',
+  rally: 'sfx.rally',
+} as const;
+
+export type SpellSfxId = (typeof SPELL_SFX)[keyof typeof SPELL_SFX];
+export const SPELL_SFX_IDS: readonly SpellSfxId[] = Object.values(SPELL_SFX);
+
 export type SfxId = (typeof SFX)[keyof typeof SFX];
 export const SFX_IDS: readonly SfxId[] = Object.values(SFX);
 
