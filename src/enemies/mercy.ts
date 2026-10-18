@@ -79,16 +79,65 @@ export function mercyTargets(initiator: MercySubject, all: Iterable<MercySubject
 
 let pulseCounter = 0;
 
-/** One `mercy` event per covered enemy; a Release pulse shares one `pulseId` so Burn is charged once. */
-export function mercyEvents(targets: readonly MercySubject[]): MercyEventLike[] {
+export function nextPulseId(): string {
+  return `pulse-${++pulseCounter}`;
+}
+
+/**
+ * One `mercy` event per covered enemy; a Release pulse shares one `pulseId` (other consumers dedupe by
+ * it; the Burn is charged once per hold by `EnemyManager`, not per event). `pulseId` lets a boss hold
+ * put its own event into the same pulse.
+ */
+export function mercyEvents(targets: readonly MercySubject[], pulseId?: string): MercyEventLike[] {
   if (!targets.length) return [];
-  const pulseId = targets[0].def.mercy.verb === 'release' ? `pulse-${++pulseCounter}` : undefined;
+  const id = pulseId ?? (targets[0].def.mercy.verb === 'release' ? nextPulseId() : undefined);
   return targets.map((t) => ({
     verb: t.def.mercy.verb,
     tier: t.def.mercy.tier,
     track: t.def.mercy.track,
     creature: t.def.kind,
     actorId: t.actorId,
-    ...(pulseId ? { pulseId } : {}),
+    ...(id ? { pulseId: id } : {}),
   }));
+}
+
+/** What the boss hold needs to know about the boss. */
+export interface BossMercySubject {
+  readonly bossId: string;
+  readonly actorId: ActorId;
+  feet(out: THREE.Vector3): THREE.Vector3;
+}
+
+/**
+ * The hold-T interactable of a boss whose release window is open. Registered on `boss.releaseWindow`
+ * and removed when the window closes, so `enabled` only has to check the verb is unlocked and the
+ * registry still says the window is open.
+ */
+export function makeBossMercyInteractable(
+  subject: BossMercySubject,
+  deps: {
+    unlocked(): boolean;
+    windowOpen(): boolean;
+    lockOnTarget(): ActorId | null;
+    complete(subject: BossMercySubject): void;
+  },
+): InteractableLike {
+  return {
+    id: `release:boss-${subject.bossId}`,
+    kind: 'release',
+    action: 'mercy',
+    position: (out) => subject.feet(out),
+    radius: MERCY.radius,
+    coneDegrees: MERCY.coneDegrees,
+    holdSeconds: MERCY.holdSeconds,
+    promptKey: 'enemies.mercy.release',
+    get priority() {
+      return deps.lockOnTarget() === subject.actorId ? MERCY.lockOnPriority : 0;
+    },
+    enabled: () => deps.unlocked() && deps.windowOpen(),
+    onInteract: () => {
+      if (!deps.unlocked() || !deps.windowOpen()) return;
+      deps.complete(subject);
+    },
+  };
 }
