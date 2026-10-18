@@ -78,12 +78,14 @@ describe('imported asset provenance', () => {
 
   it('every file in the imported folders has a provenance entry', () => {
     const unlisted: string[] = [];
-    for (const dir of IMPORTED_DIRS) {
+    const walk = (dir: string) => {
       for (const name of fs.readdirSync(ROOT + dir)) {
         const rel = `${dir}/${name}`;
-        if (fs.statSync(ROOT + rel).isFile() && !prov.files[rel]) unlisted.push(rel);
+        if (fs.statSync(ROOT + rel).isDirectory()) walk(rel);
+        else if (!prov.files[rel]) unlisted.push(rel);
       }
-    }
+    };
+    IMPORTED_DIRS.forEach(walk);
     expect(unlisted).toEqual([]);
   });
 
@@ -171,7 +173,7 @@ describe('imported models load', () => {
       for (const b of buffers) {
         const bin = read(dir + b.uri);
         if (!bin) issues.push(`${rel}: missing ${b.uri}`);
-        else if (bin.length < b.byteLength) issues.push(`${rel}: ${b.uri} shorter than declared`);
+        else if (bin.length !== b.byteLength) issues.push(`${rel}: ${b.uri} is ${bin.length} bytes, glTF declares ${b.byteLength}`);
       }
       for (const img of images) if (!read(dir + img)) issues.push(`${rel}: missing texture ${img}`);
     }
@@ -181,7 +183,13 @@ describe('imported models load', () => {
   it('every model parses with GLTFLoader and has geometry', async () => {
     const empty: string[] = [];
     for (const rel of models()) {
-      const gltf = await loadFromDisk(rel);
+      let gltf: any;
+      try {
+        gltf = await loadFromDisk(rel);
+      } catch (e) {
+        empty.push(`${rel}: ${e instanceof Error ? e.message : String(e)}`);
+        continue;
+      }
       let meshes = 0;
       gltf.scene.traverse((o: THREE.Object3D) => {
         if ((o as THREE.Mesh).isMesh) meshes++;
@@ -203,9 +211,8 @@ describe('imported models load', () => {
     for (const clip of gltf.animations) expect(clip.duration).toBeGreaterThan(0);
   });
 
-  it('rejects a truncated GLB', async () => {
-    const bytes = read(HORSE)!.slice(0, 64);
-    await expect(new Promise((res, rej) => new GLTFLoader().parse(arrayBuffer(bytes), '', res, rej))).rejects.toBeTruthy();
+  it('gltfJson rejects a truncated copy of a committed GLB', () => {
+    expect(() => gltfJson(read(HORSE)!.slice(0, 64), HORSE)).toThrow(/truncated/);
   });
 });
 

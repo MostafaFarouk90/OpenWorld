@@ -1,5 +1,5 @@
 {
-  "$comment": "Game-scale factor, yaw and y offset per imported model; pivots are base centre.",
+  "$comment": "Game-scale factor, yaw and y offset per imported model. yOffset is 0 throughout; pivots vary (see public/assets/README.md).",
   "models": {
     "kaykit-adventurers/weapons/arrow_bundle.gltf": {
       "kind": "weapon",
@@ -435,211 +435,211 @@
     },
     "kaykit-furniture/bed_double_A.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-furniture/bed_single_A.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-furniture/book_set.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-furniture/cabinet_medium.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-furniture/chair_A_wood.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-furniture/chair_stool_wood.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-furniture/rug_rectangle_A.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-furniture/shelf_B_large_decorated.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-furniture/table_medium_long.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-furniture/table_medium.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-furniture/table_small.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/arch_gate.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/arch.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/bench.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/candle_triple.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/candle.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/coffin.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/crypt.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/fence_broken.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/fence_gate.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/fence_pillar.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/fence.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/grave_A.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/grave_B.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/gravemarker_A.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/gravestone.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/lantern_hanging.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/lantern_standing.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/pillar.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/post_lantern.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/shrine_candles.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/shrine.gltf": {
       "kind": "prop",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/tree_dead_large.gltf": {
       "kind": "nature",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/tree_dead_medium.gltf": {
       "kind": "nature",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },
     "kaykit-halloween/tree_dead_small.gltf": {
       "kind": "nature",
-      "scale": 1,
+      "scale": 0.78,
       "yawDeg": 0,
       "yOffset": 0
     },

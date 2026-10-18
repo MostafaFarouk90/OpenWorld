@@ -3456,7 +3456,7 @@
       "source": {
         "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
         "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
-        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/hexagons_medieval.png"
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/hexagons_medieval.png"
       },
       "licence": {
         "path": "kaykit-medieval-hexagon/LICENSE.txt",

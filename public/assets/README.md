@@ -26,6 +26,8 @@ All packs are CC0 1.0 (public domain). Attribution is not required but appreciat
   - `Rogue.glb`: `e825437cd4d2ee9c1960b517a74a69101e33eb409ae7fa8cedc7134a998fbb7d`
   - `Rogue_Hooded.glb`: `93e6e25213009952276d9cf34f5d96a243767334c66f280db0433ddfabb91545`
 
+- Download budget: the four NPC GLBs total about 14.4 MB. They are loaded lazily, one per distinct model, once the player is within 100 m of an NPC's post; placeholders show until then.
+
 ### Provenance: imported packs (2026-10-18)
 
 `public/assets/provenance.json` records every imported file: source repo, commit, upstream path,
@@ -39,13 +41,18 @@ re-checks all of it, loads every model, and caps the imported bytes at 25 MB.
   `85064399bbdacc0e8cc50807179490314bc4ff1c`. The re-host is a third party: **check that FBX hash against an
   official quaternius.com download of the Farm Animals Pack when someone can reach it.** The GLB is not
   byte-stable across Blender versions, so its committed SHA-256 is the pin; CI never runs Blender.
-- `public/assets/fit.json` gives each model a game-scale factor (pivot at base centre, y min 0, except the
-  bridges which reach y -1): Hexagon buildings and walls 5.5 (door matches the Knight), castle and towers 9,
-  Hexagon props and trees 4.3, Dungeon, Halloween, Furniture and weapons at character scale (0.78 or 1),
-  horse 0.3. Factors are starting points for the asset-swap thread.
+  The horse's two provenance entries and its fit entry were written by hand from the script's output;
+  `import-packs.mjs` keeps entries that carry a `generated` field (and their licence files) across re-imports.
+- `public/assets/fit.json` gives each model a game-scale factor: Hexagon buildings and walls 5.5 (door
+  matches the Knight), castle and towers 9, Hexagon props and trees 4.3; Dungeon, Halloween, Furniture and
+  weapons 0.78 (the Knight's modelScale; all three packs are authored at the same size); horse 0.3.
+  `yOffset` is 0 everywhere and pivots are as authored: buildings, walls, props and trees sit at base centre
+  with y min about 0 (bridges reach y -1, floors -0.1); weapons pivot at the grip; wall-mounted and hanging
+  pieces (banners, shelves, torches, lanterns, keyring) pivot at their mount point. Factors and offsets are
+  starting points for the asset-swap thread.
+- The Adventurers weapon import moved here from slice-2 thread 12 by the coordinator's ruling of 2026-10-18
+  (plans/asset-routes-review.md follow-up, thread "Asset routes").
 - Nothing is registered in `AssetManifest.ts` yet; the asset-swap thread wires models in.
-
-- Download budget: the four NPC GLBs total about 14.4 MB. They are loaded lazily, one per distinct model, once the player is within 100 m of an NPC's post; placeholders show until then.
 
 ## Installing a pack
 
