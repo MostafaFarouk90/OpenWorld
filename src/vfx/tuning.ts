@@ -95,4 +95,6 @@ export const RALLY = {
   cooldown: 8,
   radius: 8,
   staminaFraction: 0.1,
+  /** Length of the buff-bar entry; Rally Cry has no lasting effect, so this is only the HUD echo. */
+  buffSeconds: 3,
 } as const;

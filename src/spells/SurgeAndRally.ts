@@ -104,6 +104,7 @@ export function registerRally(host: SpellEffectHost, caster: SpellCaster, deps: 
       a.restoreStamina(a.maxStamina * RALLY.staminaFraction);
     }
     // The 'skill-q' effect multiplies scale by params.radius, so the scale stays 1.
+    host.events.emit('buff.applied', { id: RALLY.skillId, nameKey: 'skill.knight.rallyCry.name', seconds: RALLY.buffSeconds });
     services.get('vfx')?.spawnEffect('skill-q', { position: feet, scale: 1 }, { radius: RALLY.radius, color: RALLY_FX.color });
     if (RALLY_DEF.soundRelease) sfx(services, RALLY_DEF.soundRelease, feet);
   });
@@ -117,10 +118,17 @@ export function registerRally(host: SpellEffectHost, caster: SpellCaster, deps: 
     if (!abilities) return false;
     try {
       // Thread 5 spends the cost and starts the cooldown after this returns ok, so the cast itself is free.
-      offHandler = abilities.registerHandler(RALLY_SKILL_ID, ({ caster: actor }) => {
+      const reg = abilities.registerHandler(RALLY_SKILL_ID, ({ caster: actor }) => {
         const r = caster.cast(actor?.id ?? playerId(), RALLY_DEF.id);
         return r.ok ? { ok: true } : { ok: false, reason: r.reason };
       });
+      if (!reg.ok) {
+        // Someone else owns the skill id. Retrying cannot succeed, so log once and stop.
+        bindFailed = true;
+        console.warn(`[spells] could not register the ${RALLY_SKILL_ID} handler`, reg.reason);
+        return false;
+      }
+      offHandler = reg.dispose;
     } catch (err) {
       // A second registration for the skill throws. Retrying every second cannot succeed, so log once and stop.
       bindFailed = true;

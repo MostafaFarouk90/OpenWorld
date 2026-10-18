@@ -170,7 +170,9 @@ describe('Rally', () => {
     const play = vi.fn();
     const spawnEffect = vi.fn();
     const reportTrigger = vi.fn();
-    services = { audio: { play, playAt: play }, vfx: { spawnEffect } as never, abilities: { registerHandler: () => () => undefined, reportTrigger } as never };
+    services = { audio: { play, playAt: play }, vfx: { spawnEffect } as never, abilities: { registerHandler: () => ({ ok: true, dispose: () => undefined }), reportTrigger } as never };
+    const buffs: unknown[] = [];
+    (w.host.events as { on(t: string, f: (p: unknown) => void): unknown }).on('buff.applied', (p) => buffs.push(p));
     registerRally(w, caster, { services: svc() });
     caster.cast('player', 'rally-cry');
     finish();
@@ -178,11 +180,12 @@ describe('Rally', () => {
     expect(spawnEffect).toHaveBeenCalledTimes(1);
     expect(spawnEffect).toHaveBeenCalledWith('skill-q', { position: { x: 0, y: 0, z: 0 }, scale: 1 }, { radius: 8, color: RALLY_FX.color });
     expect(reportTrigger).not.toHaveBeenCalled();
+    expect(buffs).toEqual([{ id: 'knight.rallyCry', nameKey: 'skill.knight.rallyCry.name', seconds: 3 }]);
   });
   it('the abilities handler casts for the Actor, is free, refuses with the caster reason, and unregisters on dispose', () => {
     const off = vi.fn();
     let handler: ((a: { skillId: string; slot: number; caster: { id: string } | undefined; ctx?: unknown }) => unknown) | undefined;
-    services = { abilities: { registerHandler: (id: string, h: typeof handler) => { expect(id).toBe('knight.rallyCry'); expect(id).toBe(RALLY_SKILL_ID); handler = h; return off; } } as never };
+    services = { abilities: { registerHandler: (id: string, h: typeof handler) => { expect(id).toBe('knight.rallyCry'); expect(id).toBe(RALLY_SKILL_ID); handler = h; return { ok: true, dispose: off }; } } as never };
     const reg = registerRally(w, caster, { services: svc() });
     expect(RALLY_DEF.emberCost).toBe(0);
     expect(RALLY_DEF.cooldown).toBe(0);
@@ -206,7 +209,7 @@ describe('Rally', () => {
     expect(caster.def('rally-cry')).toBeUndefined();
   });
   it('a second registration throwing is logged once and not retried; a direct cast stays free', () => {
-    const registerHandler = vi.fn(() => { throw new Error('duplicate handler'); });
+    const registerHandler = vi.fn(() => ({ ok: false as const, reason: 'duplicate' }));
     services = { abilities: { registerHandler } as never };
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const reg = registerRally(w, caster, { services: svc() });
@@ -224,7 +227,7 @@ describe('Rally', () => {
     expect(reg.bindAbilities()).toBe(false);
     expect(caster.cast('player', 'rally-cry').ok).toBe(true);
     finish();
-    const registerHandler = vi.fn(() => () => undefined);
+    const registerHandler = vi.fn(() => ({ ok: true as const, dispose: () => undefined }));
     services = { abilities: { registerHandler } as never };
     expect(reg.bindAbilities()).toBe(true);
     reg.bindAbilities();
