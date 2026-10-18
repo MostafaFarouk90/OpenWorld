@@ -16,6 +16,12 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'blighted-soldier': 30,
   // The Ashen Prior (D01, slice 2). Thread 5's new kinds are added here when it sends them.
   'ashen-prior': 200,
+  // Thread 5's kinds: R01 and the toll post pay through their quests; hounds and cutpurses are phase B.
+  'ash-scarecrow': 0,
+  'toll-post': 0,
+  blightbloom: 15,
+  'ember-hound': 25,
+  'alley-cutpurse': 18,
   dummy: 0,
   scarecrow: 0,
 };
