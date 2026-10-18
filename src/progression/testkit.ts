@@ -9,7 +9,7 @@ export interface Evt {
 export function fakeActor(over: Partial<{ health: number; maxHealth: number; dead: boolean }> = {}): ActorPort & { dead: boolean } {
   return {
     id: 'player',
-    kind: 'knight',
+    kind: 'player',
     team: 'player',
     level: 1,
     health: over.health ?? 120,

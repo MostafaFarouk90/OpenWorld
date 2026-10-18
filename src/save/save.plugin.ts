@@ -9,6 +9,7 @@ import type { SaveService } from './service';
 import './service';
 import { IndexedDbSaveStore, MemorySaveStore } from './SaveStore';
 import { SAVE_STRINGS_EN } from './strings.en';
+import { SaveSuspensions } from './suspend';
 import type { SavePorts } from './ports';
 
 export const AUTOSAVE_INTERVAL_SECONDS = 120;
@@ -39,6 +40,7 @@ export function sanitizePosition(data: unknown): Grounded | null {
 }
 
 let cleanup: (() => void) | null = null;
+let clearSuspensions: (() => void) | null = null;
 
 const save: GamePlugin = {
   id: 'save',
@@ -49,6 +51,8 @@ const save: GamePlugin = {
     const waystones = () => ctx.services.get('waystones');
 
     let grounded: Grounded | null = null;
+    // `manager` is created below; the last release runs a deferred save.
+    const suspensions = new SaveSuspensions(() => void manager.notifySafe());
     const ports: SavePorts = {
       persistables: () => ctx.persist.all(),
       emitLoaded: (slot) => ctx.events.emit('save.loaded', { slot }),
@@ -59,6 +63,7 @@ const save: GamePlugin = {
         if (ctx.player.actor.dead) return { safe: false, reason: 'dead' };
         if (top === 'cutscene' || top === 'dialogue') return { safe: false, reason: top };
         if (waystones()?.travelling) return { safe: false, reason: 'travelling' };
+        if (suspensions.active) return { safe: false, reason: `suspended:${suspensions.reason}` };
         return { safe: true };
       },
       groundedPlayerState: () => (grounded ? { ...grounded } : undefined),
@@ -123,8 +128,14 @@ const save: GamePlugin = {
         unlock();
         return r.ok;
       },
+      suspend: (reason) => suspensions.suspend(reason),
+      checkpoint: (reason) => {
+        console.debug(`save: checkpoint (${reason})`);
+        return manager.save('zone');
+      },
     };
     ctx.services.provide('save', service);
+    clearSuspensions = () => suspensions.clear();
 
     // Boot decision, taken once the read has settled and a tick has run.
     let bootHandled = false;
@@ -228,6 +239,8 @@ const save: GamePlugin = {
   dispose() {
     cleanup?.();
     cleanup = null;
+    clearSuspensions?.();
+    clearSuspensions = null;
   },
 };
 

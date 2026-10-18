@@ -15,6 +15,16 @@ export interface SaveService {
   continueNow(): Promise<boolean>;
   /** Clears both slots (after backing up a problem save). */
   newGame(): Promise<boolean>;
+  /**
+   * v0.5: defers every save while held (stealth sections, the chase; not the mount). The last release runs a save
+   * that was deferred meanwhile. Releasing twice is a no-op; the plugin drops holds on teardown.
+   */
+  suspend(reason: string): () => void;
+  /**
+   * v0.5: a stealth checkpoint save (reason `zone`). Saves at once when no hold is active (release your own hold
+   * first); while another hold is active it defers like any save.
+   */
+  checkpoint(reason: string): Promise<SaveOutcome>;
 }
 
 declare module '../core/Services' {

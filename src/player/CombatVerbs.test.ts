@@ -380,7 +380,7 @@ describe('Second Wind, death and respawn', () => {
     t.hit(t.enemy(), { amount: 500 });
     t.run(2);
     expect(t.verbs.pouch.pouch?.gold).toBe(10);
-    expect(inv.takeGold).toHaveBeenCalledWith(10);
+    expect(inv.takeGold).toHaveBeenCalledWith(10, 'death');
     t.verbs.pouch.recover(inv);
     expect(inv.addGold).toHaveBeenCalledWith(10);
 

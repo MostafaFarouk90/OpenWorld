@@ -102,4 +102,29 @@ describe('PromptWidget mercy line', () => {
     w.update(0);
     expect((w.element as any).children[2].textContent).toBe('interact.mercy|');
   });
+
+  it('passes promptParams (v0.5); the core key and name win; a cost is wrapped in .prompt-cost', () => {
+    const interaction = { focus: null, holdProgress: 0, focusFor: (a: string) => (a === 'mercy' ? mercyItem : null) } as any;
+    const mercyItem = { kind: 'release', name: 'Wraith', promptParams: () => ({ cost: '10 Burn', key: 'X', name: 'Y' }) };
+    const text = vi.fn((k: string, p: Record<string, string | number>) => `${k} ${p.key} ${p.name} (${p.cost})`);
+    const w = createPromptWidget({ interaction, text, glyph: () => 'F', mercyGlyph: () => 'T', doc: { createElement: () => fakeEl() } as any });
+    w.update(0);
+    const line = (w.element as any).children[2];
+    expect(text).toHaveBeenCalledWith('interact.mercy', expect.objectContaining({ key: 'T', name: 'Wraith' }));
+    const parts = line.children.map((c: any) => [c.className, c.textContent]);
+    expect(parts).toEqual([['', 'interact.mercy T Wraith ('], ['prompt-cost', '10 Burn'], ['', ')']]);
+    const calls = text.mock.calls.length;
+    w.update(0);
+    expect(line.children).toHaveLength(3); // unchanged text is not rebuilt
+    expect(text.mock.calls.length).toBe(calls + 1);
+  });
+
+  it('an empty cost or a throwing promptParams renders plain text', () => {
+    const { w } = make({ kind: 'use', name: 'Bell', promptParams: () => ({ cost: '' }) });
+    w.update(0);
+    expect((w.element as any).children[0].textContent).toBe('interact.use|F|Bell');
+    const bad = make({ kind: 'use', name: 'Bell', promptParams: () => { throw new Error('x'); } });
+    bad.w.update(0);
+    expect((bad.w.element as any).children[0].textContent).toBe('interact.use|F|Bell');
+  });
 });
