@@ -125,3 +125,9 @@ export const trainerAnchor = (k: Pick<ClassKit, 'trainer'>): string => `harrowma
 export const npcBastionPost = (k: Pick<ClassKit, 'trainer'>): string => `npc-post.${k.trainer.npcId}.bastion`;
 export const YARD_ANCHOR = 'harrowmark.bastion.yard';
 export const availableFlag = (id: ClassId): string => `classes.available.${id}`;
+/** Written by thread 6 at M07 o4: the trainers take pupils. */
+export const CLASS_OPEN_FLAG = 'story.m07.classOpen';
+/** Mirror of `classes.chosen()` for quest conditions. */
+export const CHOSEN_FLAG = 'classes.chosen';
+/** Mirror of `classes.drillOutcome(id)`: 'done' | 'skipped'. */
+export const drillFlag = (id: ClassId): string => `classes.drill.${id}`;
