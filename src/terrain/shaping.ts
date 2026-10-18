@@ -42,7 +42,8 @@ export interface RoadDef {
   startTaper: number;
   /**
    * Largest average side slope of the cut or fill (default 0.6): the blend widens to
-   * max(blend, |cut or fill| / maxSideSlope) where the road leaves the ground.
+   * max(blend, 1.5 * |cut or fill| / maxSideSlope) where the road leaves the ground (measured at the centre, the road
+   * edges and the blend edges), capped at MAX_ROAD_BLEND.
    */
   maxSideSlope?: number;
 }
@@ -54,6 +55,10 @@ export interface TerrainShape {
 }
 
 export const DEFAULT_MAX_SIDE_SLOPE = 0.6;
+/** The widest a road's blend can grow (metres either side of its half-width). */
+export const MAX_ROAD_BLEND = 300;
+/** Profile samples either side over which a blend width is widened to its neighbours' (10 x 5 m). */
+const BLEND_WINDOW = 10;
 /** Largest plateau blend slope `validateShape` accepts (|height - ground at the blend edge| / blend). */
 export const MAX_PLATEAU_BLEND_SLOPE = 0.5;
 /** Arc spacing of a road's precomputed profile, in metres. */
@@ -139,6 +144,26 @@ interface BuiltRoad {
   blends: Float64Array;
   step: number;
   aabb: ShapeBox;
+}
+
+function pointSegmentGap(px: number, pz: number, sg: Segment): number {
+  const t = Math.min(Math.max((px - sg.ax) * sg.dx + (pz - sg.az) * sg.dz, 0), sg.len);
+  return Math.hypot(px - (sg.ax + sg.dx * t), pz - (sg.az + sg.dz * t));
+}
+
+/** Shortest distance between two segments (0 when they cross). */
+function segmentGap(a: Segment, b: Segment): number {
+  const ex = a.ax + a.dx * a.len;
+  const ez = a.az + a.dz * a.len;
+  const fx = b.ax + b.dx * b.len;
+  const fz = b.az + b.dz * b.len;
+  const cross = (ox: number, oz: number, px: number, pz: number, qx: number, qz: number) => (px - ox) * (qz - oz) - (pz - oz) * (qx - ox);
+  const d1 = cross(b.ax, b.az, fx, fz, a.ax, a.az);
+  const d2 = cross(b.ax, b.az, fx, fz, ex, ez);
+  const d3 = cross(a.ax, a.az, ex, ez, b.ax, b.az);
+  const d4 = cross(a.ax, a.az, ex, ez, fx, fz);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return 0;
+  return Math.min(pointSegmentGap(a.ax, a.az, b), pointSegmentGap(ex, ez, b), pointSegmentGap(b.ax, b.az, a), pointSegmentGap(fx, fz, a));
 }
 
 function sample(arr: Float64Array, step: number, length: number, s: number): number {
@@ -299,11 +324,48 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
     }
     heights[0] = start;
     heights[n - 1] = end;
+    // Blend width per sample: the worst cut or fill at the centre, both road edges and both outer blend edges,
+    // over the side slope, times 1.5 (the smoothstep's peak slope). Measured twice, the second time at the widened
+    // edge, so a hillside rising beside the road counts. Capped at MAX_ROAD_BLEND.
     const blends = new Float64Array(n);
     let maxBlend = r.blend;
+    seg = 0;
     for (let i = 0; i < n; i++) {
-      blends[i] = Math.max(r.blend, Math.abs(heights[i] - g[i]) / sideSlope);
-      maxBlend = Math.max(maxBlend, blends[i]);
+      const s = i * step;
+      while (seg < segments.length - 1 && s > segments[seg].s0 + segments[seg].len) seg++;
+      const sg = segments[seg];
+      const t = Math.min(Math.max(s - sg.s0, 0), sg.len);
+      const cx = sg.ax + sg.dx * t;
+      const cz = sg.az + sg.dz * t;
+      let cut = Math.abs(heights[i] - g[i]);
+      for (const off of [r.halfWidth, -r.halfWidth]) cut = Math.max(cut, Math.abs(heights[i] - ground(cx + sg.dz * off, cz - sg.dx * off)));
+      let b = Math.min(MAX_ROAD_BLEND, Math.max(r.blend, (1.5 * cut) / sideSlope));
+      for (let pass = 0; pass < 2; pass++) {
+        const reachOut = r.halfWidth + b;
+        let edgeCut = cut;
+        for (const off of [reachOut, -reachOut]) edgeCut = Math.max(edgeCut, Math.abs(heights[i] - ground(cx + sg.dz * off, cz - sg.dx * off)));
+        b = Math.min(MAX_ROAD_BLEND, Math.max(b, (1.5 * edgeCut) / sideSlope));
+      }
+      blends[i] = b;
+    }
+    // Widths change slowly along the road (a running max over BLEND_WINDOW samples each way), so a narrow sample
+    // between wide ones cannot leave a steep notch at the blend edge.
+    const raw = blends.slice();
+    for (let i = 0; i < n; i++) {
+      let b = raw[i];
+      for (let k = Math.max(0, i - BLEND_WINDOW); k <= Math.min(n - 1, i + BLEND_WINDOW); k++) b = Math.max(b, raw[k]);
+      blends[i] = b;
+      maxBlend = Math.max(maxBlend, b);
+    }
+    // Hairpins: two non-neighbouring segments whose blends overlap would give one point two arc positions (a cliff).
+    const reachAll = r.halfWidth + maxBlend;
+    for (let i = 0; i < segments.length; i++) {
+      for (let j = i + 2; j < segments.length; j++) {
+        const gap = segmentGap(segments[i], segments[j]);
+        if (gap < 2 * reachAll) {
+          throw new Error(`${where}: segments ${i} and ${j} are ${gap.toFixed(1)} m apart, closer than twice the road's reach (${reachAll.toFixed(0)} m)`);
+        }
+      }
     }
     const reach = r.halfWidth + maxBlend;
     for (const sg of segments) sg.aabb = expand(sg.aabb, reach);

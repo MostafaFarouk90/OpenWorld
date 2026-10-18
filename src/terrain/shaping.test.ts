@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildShaper, DEFAULT_MAX_SIDE_SLOPE, validateShape, type BaseHeight, type RoadDef, type TerrainShape } from './shaping';
+import { buildShaper, DEFAULT_MAX_SIDE_SLOPE, MAX_ROAD_BLEND, validateShape, type BaseHeight, type RoadDef, type TerrainShape } from './shaping';
 
 const flat: BaseHeight = () => 0;
 /** A ridge term of 50 m everywhere plus a gentle east-west slope, so suppression and grades are visible. */
@@ -92,9 +92,10 @@ describe('terrain shaping: roads', () => {
     const centre = s.heightAt(x, 0);
     expect(s.heightAt(x, 5.9)).toBeCloseTo(centre, 9);
     expect(s.heightAt(x, -5.9)).toBeCloseTo(centre, 9);
-    const cut = Math.abs(centre - rolling(x, 0, 1));
-    const reach = 6 + Math.max(30, cut / DEFAULT_MAX_SIDE_SLOPE);
-    expect(s.heightAt(x, reach + 20)).toBe(rolling(x, reach + 20, 1));
+    // Past the widest blend a road can have, the ground is untouched.
+    const reach = 6 + MAX_ROAD_BLEND;
+    expect(s.heightAt(x, reach + 1)).toBe(rolling(x, reach + 1, 1));
+    expect(s.heightAt(x, -reach - 1)).toBe(rolling(x, -reach - 1, 1));
   });
 
   it('the taper is 0 at points[0], so ground behind and at the start is untouched', () => {
@@ -126,6 +127,28 @@ describe('terrain shaping: roads', () => {
       prev = h;
     }
     expect(worst).toBeLessThan(0.05);
+  });
+
+  it('widens the blend for a hillside beside the road, keeping the cut bank near maxSideSlope', () => {
+    // Level along the road, rising 0.3 per metre to the north: the centreline cut is 0, the uphill bank is not.
+    const hill: BaseHeight = (_x, z) => 0.3 * Math.max(z, 0);
+    const s = buildShaper({ ...empty, roads: [road()] }, hill, opts);
+    let worst = 0;
+    for (let z = 6; z < 6 + MAX_ROAD_BLEND; z += 0.5) worst = Math.max(worst, (s.heightAt(500, z + 0.5) - s.heightAt(500, z)) / 0.5);
+    expect(worst).toBeLessThanOrEqual(DEFAULT_MAX_SIDE_SLOPE + 0.3 * 1.25 + 1e-6);
+    expect(worst).toBeGreaterThan(0.3); // it still climbs to meet the hill
+  });
+
+  it('rejects a hairpin whose legs share ground, and accepts legs far enough apart', () => {
+    const hairpin = (gap: number) =>
+      road({ points: [{ x: 0, z: 0 }, { x: 600, z: 0 }, { x: 600, z: gap }, { x: 0, z: gap }] });
+    expect(() => validateShape({ ...empty, roads: [hairpin(40)] }, flat, opts)).toThrow(/segments 0 and 2/);
+    expect(() => validateShape({ ...empty, roads: [hairpin(80)] }, flat, opts)).not.toThrow();
+  });
+
+  it('rejects crossing segments', () => {
+    const cross = road({ points: [{ x: 0, z: 0 }, { x: 600, z: 0 }, { x: 600, z: 300 }, { x: 300, z: -300 }] });
+    expect(() => validateShape({ ...empty, roads: [cross] }, flat, opts)).toThrow(/0\.0 m apart/);
   });
 
   it('rejects bad road data', () => {
