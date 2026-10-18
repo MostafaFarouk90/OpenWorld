@@ -255,3 +255,113 @@ describe('ThirdPersonCamera collision', () => {
     expect(exclude).toBe(ignore);
   });
 });
+
+describe('ThirdPersonCamera lock-on framing', () => {
+  const at = (x: number, z: number, y = 2) => () => ({ x, y, z });
+  const run = (cam: ThirdPersonCamera, n: number) => {
+    for (let i = 0; i < n; i++) cam.update(feet);
+  };
+  const deg = (r: number) => (r * 180) / Math.PI;
+
+  it('converges to the target bearing without overshooting more than 1 degree', () => {
+    const { cam } = setup();
+    // Target to the +X side of the player: forward (-sin yaw, -cos yaw) = (1, 0) => yaw = -pi/2.
+    cam.lockTarget = at(feet.x + 10, feet.z);
+    const goal = -Math.PI / 2;
+    let prev = Math.abs(cam.yaw - goal);
+    for (let i = 0; i < 300; i++) {
+      cam.update(feet);
+      const err = Math.abs(cam.yaw - goal);
+      expect(err).toBeLessThanOrEqual(prev + 1e-12);
+      expect(deg(cam.yaw - goal)).toBeGreaterThan(-1e-9);
+      prev = err;
+    }
+    expect(prev).toBeLessThan(1e-4);
+    expect(cam.pitch).toBeCloseTo(-0.25, 4);
+  });
+
+  it('turns along the shortest arc across +-pi', () => {
+    const { cam } = setup();
+    cam.yaw = Math.PI - 0.1;
+    cam.lockTarget = at(feet.x + 0.05, feet.z + 10); // goal yaw ~ pi + small
+    cam.update(feet);
+    expect(cam.yaw).toBeGreaterThan(Math.PI - 0.1);
+    cam.yaw = -Math.PI + 0.1;
+    cam.lockTarget = at(feet.x - 0.05, feet.z + 10);
+    cam.update(feet);
+    expect(cam.yaw).toBeLessThan(-Math.PI + 0.1);
+  });
+
+  it('keeps the previous yaw for a zero-distance or overhead target', () => {
+    const { cam, camera } = setup();
+    cam.yaw = 0.7;
+    cam.lockTarget = at(feet.x, feet.z, feet.y);
+    run(cam, 5);
+    expect(cam.yaw).toBe(0.7);
+    cam.lockTarget = at(feet.x, feet.z, feet.y + 50);
+    run(cam, 5);
+    expect(cam.yaw).toBe(0.7);
+    expect(Number.isFinite(camera.position.x + camera.position.y + camera.position.z)).toBe(true);
+  });
+
+  it('a null provider or null result matches the unlocked output exactly', () => {
+    const a = setup();
+    const b = setup();
+    const c = setup();
+    b.cam.lockTarget = () => null;
+    for (const s of [a, b, c]) {
+      s.mouse.dx = 30;
+      s.mouse.dy = 10;
+    }
+    c.cam.lockTarget = null;
+    a.cam.update(feet);
+    b.cam.update(feet);
+    c.cam.update(feet);
+    expect(b.cam.yaw).toBe(a.cam.yaw);
+    expect(b.cam.pitch).toBe(a.cam.pitch);
+    expect(b.camera.position.toArray()).toEqual(a.camera.position.toArray());
+    expect(c.camera.position.toArray()).toEqual(a.camera.position.toArray());
+  });
+
+  it('reports dx to onLockLook and ignores the mouse for yaw/pitch while locked', () => {
+    const { cam, mouse } = setup();
+    const seen: number[] = [];
+    cam.onLockLook = (dx) => seen.push(dx);
+    cam.lockTarget = at(feet.x, feet.z - 10); // straight ahead: yaw goal 0, pitch goal -0.25
+    mouse.dx = 500;
+    mouse.dy = 300;
+    cam.update(feet);
+    expect(seen).toEqual([500]);
+    expect(cam.yaw).toBe(0);
+    expect(cam.pitch).toBeGreaterThan(-0.3);
+    expect(cam.pitch).toBeLessThan(-0.25 + 1e-9);
+  });
+
+  it('does not call onLockLook when unlocked and resumes mouse look after unlock', () => {
+    const { cam, mouse } = setup();
+    const onLockLook = vi.fn();
+    cam.onLockLook = onLockLook;
+    let locked = true;
+    cam.lockTarget = () => (locked ? { x: feet.x, y: 2, z: feet.z - 10 } : null);
+    cam.update(feet);
+    expect(onLockLook).toHaveBeenCalledTimes(1);
+    locked = false;
+    mouse.dx = 100;
+    cam.update(feet);
+    expect(onLockLook).toHaveBeenCalledTimes(1);
+    expect(cam.yaw).toBeCloseTo(-100 * CAMERA.mouseSensitivity, 10);
+  });
+
+  it('frames the player and target by aiming a third of the way along', () => {
+    const { cam, camera } = setup();
+    cam.lockTarget = at(feet.x, feet.z - 9, feet.y + 3);
+    run(cam, 200);
+    camera.updateMatrixWorld();
+    const dir = camera.getWorldDirection(new THREE.Vector3());
+    const aim = new THREE.Vector3(feet.x, feet.y + CAMERA.targetHeight, feet.z).lerp(
+      new THREE.Vector3(feet.x, feet.y + 3, feet.z - 9),
+      1 / 3,
+    );
+    expect(dir.distanceTo(aim.sub(camera.position).normalize())).toBeLessThan(1e-6);
+  });
+});

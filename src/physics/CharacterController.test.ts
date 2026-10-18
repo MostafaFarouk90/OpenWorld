@@ -206,6 +206,23 @@ describe('CharacterController horizontal movement', () => {
     expect(travelled(intent({ moveX: 0.5 }))).toBeCloseTo(full / 2, 2);
   });
 
+  it('speedOverride replaces the walk/sprint speed for that tick', () => {
+    const c = spawnOnGround();
+    const s = feet(c);
+    tick(c, intent({ moveX: 1, sprint: true, speedOverride: 11 }));
+    const e = feet(c);
+    expect(Math.hypot(e.x - s.x, e.z - s.z)).toBeCloseTo(11 / 60, 3);
+  });
+
+  it('speedOverride keeps the unit-length clamp', () => {
+    expect(travelled(intent({ moveX: 3, moveZ: 4, speedOverride: 2 }))).toBeCloseTo(2, 1);
+  });
+
+  // One controller per test: several at the same spawn would push each other.
+  it.each([0, -3, Number.NaN, Infinity])('ignores a speedOverride of %d', (speedOverride) => {
+    expect(travelled(intent({ moveX: 1, speedOverride }))).toBeCloseTo(PLAYER.walkSpeed, 2);
+  });
+
   it('does not move on idle input', () => {
     const c = spawnOnGround();
     const s = feet(c);

@@ -202,4 +202,94 @@ describe('Player', () => {
       expect(Math.abs(runner.feet.z)).toBeGreaterThan(Math.abs(walker.feet.z) + 0.5);
     });
   });
+
+  describe('forced moves and facing override', () => {
+    function settled(options: ConstructorParameters<typeof Player>[3] = {}, at = { x: 0, y: 0, z: 0 }): Player {
+      const player = new Player(scene, physics, at, options);
+      for (let i = 0; i < 30; i++) tick(player);
+      return player;
+    }
+    const feetNow = (p: Player) => p.controller.interpolatedFeet(1, new THREE.Vector3());
+
+    it('a forced move replaces the input movement at its own speed', () => {
+      addGround();
+      const player = settled();
+      const start = feetNow(player);
+      player.setForcedMove({ x: 0, z: 1, speed: 11 });
+      for (let i = 0; i < 30; i++) tick(player, 1, 0, { ...NO_INPUT, sprint: true });
+      const end = feetNow(player);
+      expect(end.z - start.z).toBeCloseTo(11 * 0.5, 1);
+      expect(Math.abs(end.x - start.x)).toBeLessThan(1e-3);
+    });
+
+    it('a forced move ignores movementLocked, and null restores input (still gated by the lock)', () => {
+      addGround();
+      let locked = true;
+      const player = settled({ movementLocked: () => locked });
+      const s0 = feetNow(player);
+      player.setForcedMove({ x: 1, z: 0, speed: 6 });
+      for (let i = 0; i < 20; i++) tick(player, 0, -1);
+      const s1 = feetNow(player);
+      expect(s1.x - s0.x).toBeCloseTo(2, 1);
+      player.setForcedMove(null);
+      for (let i = 0; i < 20; i++) tick(player, 0, -1);
+      const s2 = feetNow(player);
+      expect(s2.distanceTo(s1)).toBeLessThan(0.05); // locked again: no input movement
+      locked = false;
+      for (let i = 0; i < 60; i++) tick(player, 0, -1);
+      expect(s2.z - feetNow(player).z).toBeGreaterThan(4); // input moves again
+    });
+
+    it('jump is ignored while a move is forced', () => {
+      addGround();
+      const player = settled();
+      player.setForcedMove({ x: 1, z: 0, speed: 3 });
+      const y0 = feetNow(player).y;
+      for (let i = 0; i < 20; i++) tick(player, 0, 0, { ...NO_INPUT, jump: true });
+      expect(feetNow(player).y).toBeLessThan(y0 + 0.02);
+      expect(player.controller.grounded).toBe(true);
+    });
+
+    it('a forced move uses the normal collision path (blocked by a wall)', () => {
+      addGround();
+      physics.addStaticCollider(physics.rapier.ColliderDesc.cuboid(0.5, 2, 20).setTranslation(3, 2, 0));
+      const player = settled();
+      player.setForcedMove({ x: 1, z: 0, speed: 11 });
+      for (let i = 0; i < 60; i++) tick(player);
+      expect(feetNow(player).x).toBeLessThan(2.5);
+    });
+
+    it('the facing override survives movement input and null restores normal turning', () => {
+      addGround();
+      const player = settled();
+      player.setFacingOverride(Math.PI / 2); // facing -X
+      expect(player.facingYaw).toBeCloseTo(Math.PI / 2, 6);
+      for (let i = 0; i < 20; i++) tick(player, 1, 0);
+      expect(player.facingYaw).toBeCloseTo(Math.PI / 2, 6);
+      player.setForcedMove({ x: 0, z: 1, speed: 5 });
+      for (let i = 0; i < 5; i++) tick(player);
+      expect(player.facingYaw).toBeCloseTo(Math.PI / 2, 6);
+      player.setForcedMove(null);
+      player.setFacingOverride(null);
+      expect(player.facingYaw).toBeCloseTo(Math.PI / 2, 6); // kept until the player moves
+      tick(player, 1, 0);
+      expect(player.facingYaw).toBeCloseTo(-Math.PI / 2, 6); // facing +X
+    });
+
+    it('a forced move does not turn the player unless asked (knockback keeps facing the enemy)', () => {
+      addGround();
+      const player = settled();
+      player.setForcedMove({ x: 0, z: 1, speed: 5 });
+      tick(player);
+      expect(player.facingYaw).toBeCloseTo(0, 6);
+    });
+
+    it('a forced move with turn set faces its direction', () => {
+      addGround();
+      const player = settled();
+      player.setForcedMove({ x: 0, z: 1, speed: 5, turn: true });
+      tick(player);
+      expect(Math.abs(player.facingYaw)).toBeCloseTo(Math.PI, 6);
+    });
+  });
 });
