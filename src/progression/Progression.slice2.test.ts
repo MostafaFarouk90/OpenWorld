@@ -202,11 +202,36 @@ describe('classes', () => {
     expect(registerClassStats('x', { health: 0, healthPerLevel: 1, stamina: 1, ember: 1 })).toEqual({ ok: false, reason: 'bad-stats' });
     expect(hasClassStats('x')).toBe(false);
   });
-  it('only max health is wired: stamina and Ember rows stay data', () => {
-    const { p, actor } = make();
-    registerClassStats('mage', { health: 85, healthPerLevel: 6, stamina: 80, ember: 100 });
+  it('a class row sets the stamina maximum and tells the listener its Ember maximum', () => {
+    const rows: number[] = [];
+    const actor = fakeActor();
+    const p = new Progression({ emit: () => {}, actor: () => actor, onClassStats: (r) => rows.push(r.ember) });
+    registerClassStats('mage', { health: 85, healthPerLevel: 6, stamina: 80, ember: 160 });
+    actor.stamina = 100;
     p.setClass('mage');
+    expect(actor.maxStamina).toBe(80);
+    expect(actor.stamina).toBe(80);
+    expect(rows).toEqual([160]);
+    p.setClass(null);
     expect(actor.maxStamina).toBe(100);
+    expect(actor.stamina).toBe(80);
+    expect(rows).toEqual([160, 100]);
+  });
+  it('applyClassResources(true) fills stamina; a throwing listener is reported, not fatal', () => {
+    const warnings: string[] = [];
+    const actor = fakeActor();
+    actor.stamina = 10;
+    const p = new Progression({ emit: () => {}, actor: () => actor, logger: { warn: (m) => warnings.push(m) }, onClassStats: () => { throw new Error('boom'); } });
+    p.applyClassResources(true);
+    expect(actor.stamina).toBe(100);
+    expect(warnings.some((w) => w.includes('class stats listener failed'))).toBe(true);
+  });
+  it('works without an actor or a listener', () => {
+    const p = new Progression({ emit: () => {}, actor: () => null });
+    expect(() => p.setClass('knight')).not.toThrow();
+  });
+  it("the Knight's row keeps the shipped Ember maximum of 100", () => {
+    expect(classStats('knight').ember).toBe(100);
   });
 });
 
