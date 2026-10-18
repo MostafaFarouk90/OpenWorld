@@ -167,6 +167,22 @@ describe('ActionMap contexts', () => {
     expect(map.sample().pressed('journal')).toBe(true);
   });
 
+  it('codex (L, v0.4) reports in gameplay and menu, not in dialogue', () => {
+    const { map, contexts } = setup();
+    map.keyDown('KeyL');
+    expect(map.sample().pressed('codex')).toBe(true);
+    map.keyUp('KeyL');
+    map.sample();
+    contexts.push('menu', 'm');
+    map.keyDown('KeyL');
+    expect(map.sample().pressed('codex')).toBe(true);
+    map.keyUp('KeyL');
+    map.sample();
+    contexts.push('dialogue', 'd');
+    map.keyDown('KeyL');
+    expect(map.sample().pressed('codex')).toBe(false);
+  });
+
   it('held actions of the old context report released once on push', () => {
     const { map, contexts } = setup();
     map.keyDown('KeyQ');

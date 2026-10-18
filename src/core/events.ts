@@ -4,6 +4,13 @@ import type { FavourBand, FavourSource, FavourTrack, MercyEvent } from '../state
 import type { FlagValue } from '../state/WorldState';
 import { EventBus } from './EventBus';
 
+/** A plain position in event payloads (copied, never a live vector). */
+export interface Vec3Like {
+  x: number;
+  y: number;
+  z: number;
+}
+
 export interface ItemStack {
   itemId: string;
   count: number;
@@ -79,6 +86,36 @@ export interface GameEventMap {
   'spell.cast': { casterId: ActorId; spellId: string };
   'spell.released': { casterId: ActorId; spellId: string };
   'ui.modal': { id: string; open: boolean };
+
+  // v0.4 (slice 2). Appended at the end; owners emit these and never redeclare them.
+  /** Core: the scripted Surge Leap primitive (`player.leap`). `to` is the landing feet on `land`. */
+  'player.leap': { phase: 'start' | 'land' | 'cancel'; from: Vec3Like; to?: Vec3Like };
+  /** Core boss registry (actors-and-damage.md section 7); only the registry emits `boss.*`. */
+  'boss.started': { bossId: string; actorId: ActorId };
+  'boss.phase': { bossId: string; phase: number; previous: number };
+  'boss.break': { bossId: string; phase: number; breaks: number; last: boolean };
+  'boss.shield': { bossId: string; up: boolean };
+  'boss.releaseWindow': { bossId: string; open: boolean };
+  'boss.defeated': { bossId: string; actorId: ActorId };
+  'boss.released': { bossId: string; actorId: ActorId };
+  /** Thread 2: an ability granted outside the skill tree (first id `surge-leap`). */
+  'ability.learned': { id: string; source: string };
+  /** Thread 2: a Scar was added (shard use at Burn 75 or more); `total` is the new count. */
+  'scar.added': { total: number; source: string };
+  /** Thread 3a. */
+  'interior.entered': { interiorId: string; doorId: string };
+  'interior.exited': { interiorId: string; doorId: string };
+  /** Thread 4b. */
+  'companion.joined': { companionId: string; actorId: ActorId };
+  'companion.left': { companionId: string; actorId: ActorId };
+  'companion.banter': { companionId: string; lineKey: string; trigger: 'area' | 'combatStart' | 'combatEnd' | 'elapsed' };
+  'companion.aura': { companionId: string; auraId: string; active: boolean };
+  /** Thread 7. */
+  'warmth.changed': { tier: number; previous: number };
+  'shrine.rekindled': { shrineId: string };
+  'wardstone.struck': { index: number; errorMs: number };
+  'wardstone.missed': { index: number; reason: 'early' | 'late' | 'order' };
+  'wardstones.complete': Record<string, never>;
 }
 
 export type GameEventType = keyof GameEventMap;

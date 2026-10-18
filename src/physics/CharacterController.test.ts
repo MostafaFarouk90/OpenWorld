@@ -255,6 +255,22 @@ describe('CharacterController jumping', () => {
     expect(feet(c).y).toBeLessThan(GROUND_SKIN + 0.03);
   });
 
+  it('intent.jumpSpeed replaces PLAYER.jumpSpeed for the launch', () => {
+    const c = spawnOnGround();
+    const base = feet(c).y;
+    const v = 10;
+    tick(c, intent({ jump: true, jumpSpeed: v }));
+    let peak = 0;
+    for (let i = 0; i < 120; i++) {
+      tick(c);
+      peak = Math.max(peak, feet(c).y - base);
+      if (i > 5 && c.grounded) break;
+    }
+    const expected = (v * v) / (2 * PLAYER.gravity);
+    expect(peak).toBeGreaterThan(expected * 0.9);
+    expect(peak).toBeLessThan(expected * 1.1);
+  });
+
   it('leaves the ground after the jump tick', () => {
     const c = spawnOnGround();
     const base = feet(c).y;
