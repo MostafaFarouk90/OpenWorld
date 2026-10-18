@@ -574,7 +574,8 @@ export class TutorialDirector {
       this.leaveBeat();
       this.ports.setLocks([]);
       this.ports.holdKillXp(false);
-      if (this.s.complete) this.placeNpcsFor(null);
+      // After M01 the quest posts own Gaut and Aelfreda (src/quests/posts.ts).
+      if (this.s.complete && this.ports.state.questState('m01') !== 'completed') this.placeNpcsFor(null);
       return;
     }
     const def = this.def();

@@ -1232,7 +1232,9 @@ describe('review fixes', () => {
       tick();
       expect(d.complete).toBe(true);
       expect(w2.locks).toEqual([]);
-      expect(w2.calls).toContain('place:gaut@tutorial.gaut.gate');
+      // After M01 the quest posts own Gaut and Aelfreda (src/quests/posts.ts): the tutorial no longer places them.
+      if (quest === 'm01' && state === 'completed') expect(w2.calls).not.toContain('place:gaut@tutorial.gaut.gate');
+      else expect(w2.calls).toContain('place:gaut@tutorial.gaut.gate');
     }
     const w3 = new FakeWorld();
     w3.quests.set('t01', 'completed');
