@@ -16,7 +16,7 @@ import { MercyTally, type TallyRow } from './mercyTally';
 import type { ActorId, EnemyEvents, EnemyHost, MercyEventLike } from './ports';
 import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } from './spawners';
 import { ASH_GRAB, BOSS_MERCY, GUARD, MERCY, PAIR, WORLD_AI, AI } from './tuning';
-import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions } from './types';
+import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions, UnlockVerb } from './types';
 
 function isFoeDef(def: EnemyDef | FoeDef): def is FoeDef {
   return isFoeKind(def.kind);
@@ -33,8 +33,8 @@ export interface EnemiesService {
   reset(spawnerId: string): void;
   alive(spawnerId: string): ActorId[];
   view(actorId: ActorId): EnemyView | undefined;
-  setMercyUnlocked(verb: 'release' | 'spare', on: boolean): void;
-  mercyUnlocked(verb: 'release' | 'spare'): boolean;
+  setMercyUnlocked(verb: UnlockVerb, on: boolean): void;
+  mercyUnlocked(verb: UnlockVerb): boolean;
   setWarmthTier(w: number): void;
   lockBlockLevel(blockId: string, level: number): void;
   /** Mercies and kills per creature kind, for the codex (thread 8). */
@@ -133,7 +133,7 @@ export class EnemyManager {
     mercyTally: () => this.tally.snapshot(),
   };
 
-  mercyUnlocked(verb: 'release' | 'spare'): boolean {
+  mercyUnlocked(verb: UnlockVerb): boolean {
     return this.host.state.getBool(MERCY.flags[verb], false);
   }
 
@@ -458,7 +458,7 @@ export class EnemyManager {
         if (e.feet.distanceTo(self.feet) <= AI.packShareRadius) e.alert(targetId);
       }
     },
-    mercyUnlocked: (verb: 'release' | 'spare') => this.mercyUnlocked(verb),
+    mercyUnlocked: (verb: UnlockVerb) => this.mercyUnlocked(verb),
     nav: () => this.host.services.get('nav'),
     gone: (self: Enemy, how: 'died' | 'released' | 'spared' | 'despawned') => {
       this.enemies.delete(self.id);

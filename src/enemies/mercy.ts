@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { ActorId, InteractableLike, MercyEventLike } from './ports';
 import { MERCY } from './tuning';
-import type { EnemyDef } from './types';
+import type { EnemyDef, UnlockVerb } from './types';
 
 /** What the mercy interactable needs to know about its enemy. */
 export interface MercySubject {
@@ -21,7 +21,8 @@ export function mercyInteractableId(slug: string): string {
 
 /** String key of the prompt: "Hold {key}: Release (10 Burn)" or "Hold {key}: Spare". */
 export function mercyPromptKey(def: EnemyDef): string {
-  return def.mercy.verb === 'release' ? 'enemies.mercy.release' : 'enemies.mercy.spare';
+  if (def.mercy.verb === 'release') return 'enemies.mercy.release';
+  return def.mercy.verb === 'calm' ? 'enemies.mercy.calm' : 'enemies.mercy.spare';
 }
 
 /**
@@ -32,7 +33,7 @@ export function mercyPromptKey(def: EnemyDef): string {
 export function makeMercyInteractable(
   subject: MercySubject,
   deps: {
-    unlocked(verb: 'release' | 'spare'): boolean;
+    unlocked(verb: UnlockVerb): boolean;
     lockOnTarget(): ActorId | null;
     complete(subject: MercySubject): void;
   },

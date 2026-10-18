@@ -82,12 +82,12 @@ describe('placeNpc, unlockMercy, grantAbility', () => {
     const r2 = runner().run;
     expect(r2.run([{ placeNpc: { npcId: '', anchorId: 'b' } }])[0].ok).toBe(false);
   });
-  it('unlocks release and spare only', () => {
+  it('unlocks release, spare and calm, and nothing else', () => {
     const { w, run } = runner();
-    expect(run.run([{ unlockMercy: 'release' }, { unlockMercy: 'spare' }]).map((r) => r.ok)).toEqual([true, true]);
-    expect(w.enemies.unlocked).toEqual(['release', 'spare']);
-    expect(run.run([{ unlockMercy: 'calm' } as any])[0].ok).toBe(false);
-    expect(w.enemies.unlocked).toHaveLength(2);
+    expect(run.run([{ unlockMercy: 'release' }, { unlockMercy: 'spare' }, { unlockMercy: 'calm' }]).map((r) => r.ok)).toEqual([true, true, true]);
+    expect(w.enemies.unlocked).toEqual(['release', 'spare', 'calm']);
+    expect(run.run([{ unlockMercy: 'warmHand' } as any])[0].ok).toBe(false);
+    expect(w.enemies.unlocked).toHaveLength(3);
   });
   it('unlockMercy fails when the enemies service is absent', () => {
     expect(runner({ enemies: () => undefined }).run.run([{ unlockMercy: 'spare' }])[0].ok).toBe(false);
@@ -106,13 +106,13 @@ describe('placeNpc, unlockMercy, grantAbility', () => {
 describe('validateEffects for the new shapes', () => {
   it('accepts well-formed ones', () => {
     expect(validateEffects([
-      { giveGold: 5 }, { placeNpc: { npcId: 'a', anchorId: 'b' } }, { unlockMercy: 'spare' }, { grantAbility: 'x' },
+      { giveGold: 5 }, { placeNpc: { npcId: 'a', anchorId: 'b' } }, { unlockMercy: 'spare' }, { unlockMercy: 'calm' }, { grantAbility: 'x' },
       { if: { flag: 'a.b' }, then: [{ giveGold: 1 }], else: [] },
     ])).toEqual([]);
   });
   it('flags malformed ones', () => {
     const errs = validateEffects([
-      { giveGold: -1 }, { placeNpc: { npcId: 'a' } as any }, { unlockMercy: 'calm' } as any, { grantAbility: '' },
+      { giveGold: -1 }, { placeNpc: { npcId: 'a' } as any }, { unlockMercy: 'warmHand' } as any, { grantAbility: '' },
       { if: { flag: 'a.b' } } as any,
     ]);
     expect(errs).toHaveLength(5);
