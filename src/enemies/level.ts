@@ -21,7 +21,7 @@ export const REGION_BANDS: Record<string, LevelBand> = {
 };
 
 /** The Watch Guard's level band for spawner groups (inside every REGION_BANDS entry, so the lead can use it as is). */
-export const WATCH_GUARD_BAND: LevelBand = { min: 2, max: 4 };
+export const WATCH_GUARD_BAND: LevelBand = { min: 4, max: 6 };
 
 export function bandForRegion(id: string): LevelBand | undefined {
   return Object.prototype.hasOwnProperty.call(REGION_BANDS, id) ? REGION_BANDS[id] : undefined;
