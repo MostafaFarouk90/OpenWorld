@@ -57,6 +57,13 @@ export interface EnemiesService {
     register(provider: PerceptionProvider): Unregister;
     /** Per-guard read: awareness 0..1, sees and hears as of the enemy's last think; null for an unknown, gone or dormant enemy. */
     state(actorId: ActorId): { awareness: number; sees: boolean; hears: boolean; distance: number } | null;
+    /**
+     * Stealth's per-tick hold on a watch guard: pauses its patrol and turns it toward `at` (feet) at `AI.turnRate`,
+     * holding until the next call; cheap, idempotent, no allocation. `null` releases it and the patrol resumes from
+     * where it stands. False (nothing happens) for an unknown, gone, dormant or non-observer-only actor and for
+     * non-finite coordinates. A group reset or despawn, `save.loaded` and `sleep` clear any hold.
+     */
+    face(actorId: ActorId, at: { x: number; y: number; z: number } | null): boolean;
   };
 }
 
@@ -155,6 +162,7 @@ export class EnemyManager {
     perception: {
       register: (p) => this.perceptionHub.register(p),
       state: (id) => this.enemies.get(id)?.perceptionState() ?? null,
+      face: (id, at) => this.enemies.get(id)?.faceToward(at) ?? false,
     },
   };
 

@@ -125,6 +125,9 @@ export class Enemy {
   /** Watches only: never targets, never aggros, never attacks (see `damaged`). */
   readonly observerOnly: boolean;
   private asleep = false;
+  /** Stealth's hold: while `faceHeld`, an observer-only guard stands still facing `facePoint` (preallocated; see `faceToward`). */
+  private faceHeld = false;
+  private readonly facePoint = { x: 0, z: 0 };
   private leaveFrom: THREE.Vector3 | null = null;
   private slowRemover: (() => void) | null = null;
   private slowLeft = 0;
@@ -274,6 +277,24 @@ export class Enemy {
   perceptionState(): { awareness: number; sees: boolean; hears: boolean; distance: number } | null {
     if (this.phase === 'gone' || this.asleep) return null;
     return { awareness: this.awareness, sees: this.lastSees, hears: this.lastHears, distance: this.lastDistance };
+  }
+
+  /**
+   * Pauses an observer-only guard's patrol and turns it toward `at` (at `AI.turnRate`) until the next call; `null`
+   * releases it, and the patrol resumes from where it stands. Idempotent and allocation-free. False (nothing
+   * happens) for a gone, dormant, dying or non-observer-only enemy and for a non-finite point.
+   */
+  faceToward(at: { x: number; y: number; z: number } | null): boolean {
+    if (!this.observerOnly || this.phase !== 'alive' || this.asleep) return false;
+    if (at === null) {
+      this.faceHeld = false;
+      return true;
+    }
+    if (!at || !Number.isFinite(at.x) || !Number.isFinite(at.y) || !Number.isFinite(at.z)) return false;
+    this.facePoint.x = at.x;
+    this.facePoint.z = at.z;
+    this.faceHeld = true;
+    return true;
   }
 
   private readonly poseCache: Mutable<ObserverPose> = {
@@ -428,6 +449,12 @@ export class Enemy {
       const visible = p.distance <= AI.sightRange && canSeeChest(this.lineOfSight, self, pFeet, mods?.targetHeight);
       this.thief.tick(dt, this.brain.state, visible);
       if (this.phase !== 'alive') return; // it despawned itself (flee window over, or blinked out)
+    }
+    if (this.faceHeld) {
+      // Stealth holds the guard: stand and turn toward the point; the brain keeps its state, so patrol resumes where it stood.
+      intent.goal = null;
+      intent.speed = 0;
+      intent.face = this.facePoint;
     }
     if (status.speedScale < 1) intent.speed *= status.speedScale;
     this.guard?.step(dt, GUARD_STATES.has(this.brain.state), this.env.rng);
@@ -673,6 +700,7 @@ export class Enemy {
     // A fleeing thief that goes dormant is out of play: its flee window is over.
     if (this.thief && this.thief.stolenGold > 0) return void this.escape();
     this.asleep = true;
+    this.faceHeld = false;
     // A dormant observer forgets: stale awareness would fire `ai.spotted` the moment it wakes.
     this.awareness = 0;
     this.spottedArmed = true;

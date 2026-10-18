@@ -118,13 +118,20 @@ export class SpawnerRegistry {
       this.warnOnce(`enemy:${id}`, `spawners: spawner '${id}' has unknown enemy '${def.enemy}'`);
       return [];
     }
+    // `count` limits this call only: it is not a spawn option for the members, nor remembered for refills.
+    const { count, ...memberOpts } = opts;
+    if (count !== undefined && (!Number.isInteger(count) || count <= 0)) {
+      this.warnOnce(`count:${id}`, `spawners: spawnGroup('${id}') ignored a bad count ${String(count)}; nothing spawned`);
+      return [];
+    }
+    opts = memberOpts;
     if (onlySlot === undefined) this.lastOpts.set(id, opts);
     const band = this.resolveBand(def, opts.tierOffset);
     const patrol = this.resolvePatrol(def);
     const slots = this.slots.get(id)!;
     const gone = this.goneSlots.get(id)!;
     const out: ActorId[] = [];
-    for (let slot = 0; slot < slots.length; slot++) {
+    for (let slot = 0; slot < slots.length && out.length < (count ?? Infinity); slot++) {
       if (slots[slot] !== null || (onlySlot !== undefined && slot !== onlySlot)) continue;
       const spentKey = `${id}#${slot}`;
       if (this.spent.has(spentKey) || this.dead.has(spentKey)) continue;
