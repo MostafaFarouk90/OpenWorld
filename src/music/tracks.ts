@@ -1,4 +1,4 @@
-export type MixState = 'explore' | 'discover' | 'silence' | 'combat' | 'boss' | 'ending' | 'talk';
+export type MixState = 'explore' | 'discover' | 'silence' | 'combat' | 'boss' | 'ending' | 'talk' | 'stealth' | 'chase';
 
 export type StemMix = Readonly<Record<string, number>>;
 
@@ -14,6 +14,8 @@ export interface TrackDef {
    * while the Release window is open. An id without an entry plays `mixes.boss` for every phase.
    */
   bossMixes?: Readonly<Record<string, BossMixDef>>;
+  /** Stealth mix while the loudest guard is suspicious or alerted; `calm` plays `mixes.stealth`. */
+  stealthAlert?: Readonly<Record<'suspicious' | 'alerted', StemMix>>;
 }
 
 export interface BossMixDef {
@@ -39,6 +41,13 @@ export const BARLEY_AND_BRAZIER: TrackDef = {
     boss: mix(1, 1, 1, 1, 1, 0.7, 1),
     ending: mix(0, 0, 0, 0.4, 0, 1, 0),
     talk: mix(0, 0, 0, 0.5, 0, 0.5, 0),
+    // Slice 2 phase B (this thread's reading; not in design 6.1). Alert overlays are in `stealthAlert`.
+    stealth: mix(0, 0, 0.1, 0.5, 0.2, 0, 0),
+    chase: mix(1, 0.6, 1, 0.9, 0.5, 0.2, 0),
+  },
+  stealthAlert: {
+    suspicious: mix(0.15, 0, 0.1, 0.5, 0.2, 0, 0),
+    alerted: mix(0.3, 0.1, 0.1, 0.5, 0.2, 0, 0),
   },
   bossMixes: {
     // Design 6.1 trigger 3: phase 2 and 3 re-ramp the same seven stems (hat, boss and melody lift).
@@ -80,6 +89,7 @@ export function validateTrack(track: TrackDef): void {
     def.phases.forEach((m, i) => allMixes.push([`boss ${id} phase ${i + 1}`, m]));
     if (def.hush) allMixes.push([`boss ${id} hush`, def.hush]);
   }
+  for (const [level, m] of Object.entries(track.stealthAlert ?? {})) allMixes.push([`stealth ${level}`, m]);
   for (const [state, stemMix] of allMixes) {
     for (const [stem, gain] of Object.entries(stemMix)) {
       if (!track.stems.includes(stem)) fail(`mix "${state}" references unknown stem "${stem}"`);

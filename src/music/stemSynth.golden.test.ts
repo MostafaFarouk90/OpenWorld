@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { synthStem } from './stemSynth';
 import { BARLEY_AND_BRAZIER } from './tracks';
@@ -17,11 +16,15 @@ const GOLDEN: Record<string, string> = {
   boss: 'b8e1371769897462ba4f285d17af277ca7ff7b064c51a981af392a0b596d81f1',
 };
 
-const sha256 = (data: Float32Array): string =>
-  createHash('sha256').update(Buffer.from(data.buffer, data.byteOffset, data.byteLength)).digest('hex');
+async function sha256(data: Float32Array): Promise<string> {
+  const bytes = new Uint8Array(new ArrayBuffer(data.byteLength));
+  bytes.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 describe('Barley and Brazier stems are byte-stable', () => {
-  it.each(Object.keys(GOLDEN))('%s', (stem) => {
-    expect(sha256(synthStem(BARLEY_AND_BRAZIER, stem, SR))).toBe(GOLDEN[stem]);
+  it.each(Object.keys(GOLDEN))('%s', async (stem) => {
+    expect(await sha256(synthStem(BARLEY_AND_BRAZIER, stem, SR))).toBe(GOLDEN[stem]);
   });
 });
