@@ -8,7 +8,7 @@ import { WAYSTONE_STRINGS_EN } from './strings.en';
 import '../save/service';
 import './service';
 import { showToast } from './toast';
-import { WAYSTONE_TUNING } from './tuning';
+import { WAYSTONE_LOCKS, WAYSTONE_TUNING } from './tuning';
 import type { WaystoneService } from './service';
 import { WaystoneNetwork } from './WaystoneNetwork';
 
@@ -80,6 +80,12 @@ const waystones: GamePlugin = {
       if (e.cause === 'player') showToast(ctx.hud, ctx.strings.t('waystone.rekindled'));
     });
 
+    // Locked stones: the gate is derived from a flag (and re-derived on a load), so the refusal is right after both.
+    const locked = new Set(Object.keys(WAYSTONE_LOCKS));
+    for (const [id, flag] of Object.entries(WAYSTONE_LOCKS)) {
+      ctx.gates.flag(flag, (open) => (open ? locked.delete(id) : locked.add(id)));
+    }
+
     // Interactables follow the anchors: thread 4 may define them after this plugin sets up.
     const registered = new Map<string, () => void>();
     const syncStones = () => {
@@ -101,6 +107,10 @@ const waystones: GamePlugin = {
           },
           enabled: () => !teleport.active,
           onInteract: () => {
+            if (locked.has(id)) {
+              showToast(ctx.hud, ctx.strings.t('waystone.locked'));
+              return;
+            }
             if (net.isLit(id)) net.rest(id);
             else net.rekindle(id, 'player');
           },
