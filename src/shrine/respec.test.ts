@@ -211,3 +211,124 @@ describe('RespecFlow refusals', () => {
     expect(t.permits.released).toBe(1);
   });
 });
+
+describe('RespecFlow class change (Phase B)', () => {
+  function build(over: { chosen?: boolean; changeResult?: { ok: true } | { ok: false; reason: string }; modalOpens?: boolean; noClasses?: boolean } = {}) {
+    const permits = { held: 0, released: 0 };
+    const sources: string[] = [];
+    const calls = { change: [] as string[], respec: 0 };
+    const toasts: [string, unknown][] = [];
+    let opts: Parameters<RespecDialog['open']>[0] | null = null;
+    const dialog: RespecDialog = { open: (o) => ((opts = o), over.modalOpens ?? true) };
+    const classes = {
+      chosen: () => over.chosen ?? true,
+      current: () => 'knight',
+      changeQuote: (id: string) =>
+        id === 'unknown' ? ({ ok: false, reason: 'unknown' } as const) : ({ ok: true, free: id === 'mage', gold: 125, canAfford: true } as const),
+      change: (id: string) => {
+        calls.change.push(id);
+        return over.changeResult ?? { ok: true as const };
+      },
+    };
+    const flow = new RespecFlow({
+      progression: () => ({
+        allowRespec: (s: string) => {
+          sources.push(s);
+          permits.held++;
+          return () => void permits.released++;
+        },
+        respecQuote: () => ({ free: false, gold: 50, canAfford: true }),
+        respec: () => (calls.respec++, { ok: true }),
+      }),
+      dialog: () => dialog,
+      classes: over.noClasses ? undefined : () => classes,
+      classIds: () => ['knight', 'warden', 'mage'],
+      className: (id) => id.toUpperCase(),
+      lit: () => true,
+      inCombat: () => false,
+      now: () => 0,
+      distanceToLectern: () => 0,
+      toast: (k, p) => void toasts.push([k, p]),
+    });
+    return { flow, permits, sources, calls, toasts, get opts() { return opts!; } };
+  }
+
+  it('offers no class options before a class is chosen', () => {
+    const t = build({ chosen: false });
+    t.flow.interact();
+    expect(t.opts.options).toBeUndefined();
+  });
+  it('offers no class options when thread 12 has not merged', () => {
+    const t = build({ noClasses: true });
+    t.flow.interact();
+    expect(t.opts.options).toBeUndefined();
+  });
+  it('lists the classes and quotes the highlighted one from classes.changeQuote', () => {
+    const t = build();
+    t.flow.interact();
+    expect(t.opts.options).toEqual([
+      { id: 'knight', label: 'KNIGHT' },
+      { id: 'warden', label: 'WARDEN' },
+      { id: 'mage', label: 'MAGE' },
+    ]);
+    expect(t.opts.quoteFor!('mage')).toEqual({ free: true, gold: 125, canAfford: true });
+    expect(t.opts.quoteFor!('warden')).toEqual({ free: false, gold: 125, canAfford: true });
+    expect(t.opts.quoteFor!('knight')).toEqual({ free: false, gold: 50, canAfford: true }); // the current class: a plain respec
+    expect(t.opts.quoteFor!('unknown')).toEqual({ free: false, gold: 0, canAfford: false });
+  });
+  it('holds the lectern permit while open', () => {
+    const t = build();
+    t.flow.interact();
+    expect(t.sources).toEqual(['lectern']);
+    expect(t.permits.released).toBe(0);
+  });
+  it('confirming another class calls classes.change once, starts no respec of its own, and releases the permit', () => {
+    const t = build();
+    t.flow.interact();
+    expect(t.opts.confirm('warden')).toEqual({ ok: true });
+    expect(t.calls.change).toEqual(['warden']);
+    expect(t.calls.respec).toBe(0);
+    expect(t.permits.released).toBe(1);
+    expect(t.toasts.at(-1)).toEqual(['shrine.class.done', { name: 'WARDEN' }]);
+  });
+  it('confirming the current class is a plain respec, and no id is too', () => {
+    const t = build();
+    t.flow.interact();
+    t.opts.confirm('knight');
+    expect(t.calls.respec).toBe(1);
+    expect(t.calls.change).toEqual([]);
+    const u = build();
+    u.flow.interact();
+    u.opts.confirm();
+    expect(u.calls.respec).toBe(1);
+  });
+  it('a refused change reports the reason and still releases the permit', () => {
+    const t = build({ changeResult: { ok: false, reason: 'no-gold' } });
+    t.flow.interact();
+    expect(t.opts.confirm('mage')).toEqual({ ok: false, reason: 'no-gold' });
+    expect(t.toasts.at(-1)).toEqual(['shrine.respec.refused', { reason: 'no-gold' }]);
+    expect(t.permits.released).toBe(1);
+  });
+  it('cancel changes nothing', () => {
+    const t = build();
+    t.flow.interact();
+    t.opts.cancel();
+    expect(t.calls.change).toEqual([]);
+    expect(t.permits.released).toBe(1);
+  });
+  it('a confirm after cancel is closed and calls nothing', () => {
+    const t = build();
+    t.flow.interact();
+    const { confirm, cancel } = t.opts;
+    cancel();
+    expect(confirm('warden')).toEqual({ ok: false, reason: 'closed' });
+    expect(t.calls.change).toEqual([]);
+  });
+  it('when the modal will not open, the fallback is the plain respec toast, never a class change', () => {
+    const t = build({ modalOpens: false });
+    expect(t.flow.interact()).toBe('armed');
+    expect(t.flow.interact()).toBe('done');
+    expect(t.calls.change).toEqual([]);
+    expect(t.calls.respec).toBe(1);
+  });
+});

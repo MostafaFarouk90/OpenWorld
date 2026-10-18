@@ -7,6 +7,7 @@ export const SHRINE_STRINGS_EN: Record<string, string> = {
   'shrine.respec.confirmCost': 'Press F again to unlearn your skills for {gold} gold.',
   'shrine.respec.done': 'Your skill points are returned.',
   'shrine.respec.refused': 'The shrine refuses ({reason}).',
+  'shrine.class.done': 'You take up the {name}\'s path.',
   'shrine.rekindled': 'The Quenchstone Shrine is lit',
   'warmth.tier': 'Warmth {tier}',
   'wardstone.prompt': 'Strike {key} on the beat',
