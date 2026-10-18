@@ -23,6 +23,8 @@ export interface ActorInit {
   id?: ActorId;
   /** Set by the spawner (e.g. 'spawn.m01'), read-only afterwards; quests filter kills on it. */
   spawnTag?: string;
+  /** AI target selection and lock-on never pick it (companions; v0.4 forward hook for Hrolf). Default false. */
+  untargetable?: boolean;
 }
 
 function nonNegative(v: number | undefined, name: string): number {
@@ -49,6 +51,8 @@ export class Actor {
   maxStamina: number;
   readonly immortal: boolean;
   hittable: boolean;
+  /** Skipped by `ActorRegistry.nearest(..., { targetable: true })`, AI targeting and lock-on. */
+  untargetable: boolean;
   root: THREE.Object3D | null;
   /** I-frames: damage requests resolve as 'immune'. */
   invulnerable = false;
@@ -76,6 +80,7 @@ export class Actor {
     this.stamina = this.maxStamina;
     this.immortal = init.immortal ?? false;
     this.hittable = init.hittable ?? true;
+    this.untargetable = init.untargetable ?? false;
     this.root = init.root ?? null;
   }
 

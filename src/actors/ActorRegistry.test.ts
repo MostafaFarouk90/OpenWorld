@@ -259,6 +259,18 @@ describe('ActorRegistry queries', () => {
       expect(registry.nearest(origin, { alive: false })).toBe(h);
     });
 
+    it('targetable skips untargetable actors (companions); untargetable defaults to false', () => {
+      const { registry } = make();
+      const tobb = registry.spawn({ kind: 'npc:tobb', team: 'ally', maxHealth: 50, hittable: false, untargetable: true, root: rooted(1) });
+      const h = registry.spawn({ ...wraith, root: rooted(2) });
+      const origin = { x: 0, y: 0, z: 0 };
+      expect(h.untargetable).toBe(false);
+      expect(tobb.untargetable).toBe(true);
+      expect(registry.nearest(origin)).toBe(tobb);
+      expect(registry.nearest(origin, { targetable: true })).toBe(h);
+      expect(registry.nearest(origin, { targetable: true, team: 'ally' })).toBeUndefined();
+    });
+
     it('breaks distance ties by lowest id, independent of spawn order', () => {
       const { registry } = make();
       const b = registry.spawn({ ...wraith, id: 'b', root: rooted(2) });

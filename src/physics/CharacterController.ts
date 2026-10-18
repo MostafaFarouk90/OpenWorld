@@ -10,6 +10,8 @@ export interface MoveIntent {
   jump: boolean;
   /** When finite and > 0, replaces the walk/sprint speed for this tick (m/s); direction is still clamped. */
   speedOverride?: number;
+  /** Launch vertical speed (m/s) for a grounded jump this tick; defaults to PLAYER.jumpSpeed. */
+  jumpSpeed?: number;
 }
 
 /**
@@ -93,7 +95,7 @@ export class CharacterController {
           : PLAYER.walkSpeed;
 
     if (this._grounded && intent.jump) {
-      this.verticalVelocity = PLAYER.jumpSpeed;
+      this.verticalVelocity = intent.jumpSpeed ?? PLAYER.jumpSpeed;
     } else if (this._grounded && this.verticalVelocity < 0) {
       // Keep a small downward push while grounded so ground detection and snapping stay engaged.
       this.verticalVelocity = -1;

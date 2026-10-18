@@ -15,6 +15,43 @@ export interface PlayerOptions {
   onRespawn?: (spawn: Vec3) => void;
   /** Asked every tick: the combined movement modifiers of the game core (PlayerHandle.addMoveModifier). */
   moveModifier?: () => MoveModifierState;
+  /** Called when a scripted leap starts, lands or is cancelled (`to` is the landing feet, on 'land' only). */
+  onLeap?: (e: { phase: 'start' | 'land' | 'cancel'; from: Vec3; to?: Vec3 }) => void;
+}
+
+/** A scripted ballistic jump: `distance` metres along `yaw`, peaking `apex` metres above the launch point. */
+export interface LeapOptions {
+  /** Radians about +Y, 0 = facing -Z. Default: the current facing. */
+  yaw?: number;
+  distance: number;
+  apex: number;
+  /** Simulated-time limit before the leap is cancelled. Default 1.5. */
+  maxSeconds?: number;
+}
+
+export interface LeapHandle {
+  readonly active: boolean;
+  /** True once the leap ended by touching ground again (not by cancel). */
+  readonly landed: boolean;
+  cancel(): void;
+}
+
+const LEAP_DEFAULT_SECONDS = 1.5;
+/** A leap whose controller is still grounded after this many ticks was blocked and is cancelled. */
+const LEAP_LIFTOFF_TICKS = 3;
+
+interface ActiveLeap {
+  dirX: number;
+  dirZ: number;
+  yaw: number;
+  speed: number;
+  jumpSpeed: number;
+  ticks: number;
+  maxTicks: number;
+  leftGround: boolean;
+  landed: boolean;
+  active: boolean;
+  from: Vec3;
 }
 
 /** Combined movement restriction for one tick; `speedScale` in [0, 1]. */
@@ -53,6 +90,9 @@ export class Player {
   private readonly tickCurr = { x: 0, y: 0, z: 0 };
   private facingOverride: number | null = null;
   private forcedMove: ForcedMove | null = null;
+  /** Leap start, land and cancel; the game core maps it to the `player.leap` event. Defaults to `options.onLeap`. */
+  onLeap: PlayerOptions['onLeap'] | null = null;
+  private leapState: ActiveLeap | null = null;
 
   constructor(
     scene: THREE.Scene,
@@ -61,6 +101,7 @@ export class Player {
     private readonly options: PlayerOptions = {},
   ) {
     this.controller = new CharacterController(physics, spawn);
+    this.onLeap = options.onLeap ?? null;
 
     const body = new THREE.Mesh(
       new THREE.CapsuleGeometry(PLAYER.radius, PLAYER.halfHeight * 2, 4, 12),
@@ -112,6 +153,73 @@ export class Player {
     this.forcedMove = m ? { x: m.x, z: m.z, speed: m.speed, turn: m.turn === true } : null;
   }
 
+  /**
+   * Starts a scripted leap: a ballistic jump covering `distance` along `yaw` with its peak `apex`
+   * above the launch point, through the normal collision path. It takes precedence over forced moves
+   * and ignores `lockMove`, `speedScale` and `movementLocked`. Returns null (and does nothing) when
+   * the inputs are invalid, the player is airborne or frozen, or a leap is already running.
+   */
+  leap(opts: LeapOptions): LeapHandle | null {
+    const maxSeconds = opts.maxSeconds ?? LEAP_DEFAULT_SECONDS;
+    const yaw = opts.yaw ?? this.facingYaw;
+    const ok = (n: number) => Number.isFinite(n) && n > 0;
+    if (!ok(opts.distance) || !ok(opts.apex) || !ok(maxSeconds) || !Number.isFinite(yaw)) return null;
+    if (this.leapState || !this.controller.grounded || this.options.moveModifier?.()?.freeze) return null;
+
+    const g = PLAYER.gravity;
+    const jumpSpeed = Math.sqrt(2 * g * opts.apex);
+    const airtime = (2 * jumpSpeed) / g;
+    const from = this.controller.interpolatedFeet(1, { x: 0, y: 0, z: 0 });
+    const state: ActiveLeap = {
+      dirX: -Math.sin(yaw),
+      dirZ: -Math.cos(yaw),
+      yaw,
+      speed: opts.distance / airtime,
+      jumpSpeed,
+      ticks: 0,
+      maxTicks: Math.max(1, Math.ceil(maxSeconds / FIXED_TIMESTEP)),
+      leftGround: false,
+      landed: false,
+      active: true,
+      from,
+    };
+    this.leapState = state;
+    this.onLeap?.({ phase: 'start', from: { ...from } });
+    return {
+      get active() {
+        return state.active;
+      },
+      get landed() {
+        return state.landed;
+      },
+      cancel: () => {
+        if (this.leapState === state) this.endLeap('cancel');
+      },
+    };
+  }
+
+  /** Ends a running leap (teleports, respawns); gravity continues, forced horizontal motion stops. No-op otherwise. */
+  cancelLeap(): void {
+    if (this.leapState) this.endLeap('cancel');
+  }
+
+  private endLeap(phase: 'land' | 'cancel'): void {
+    const state = this.leapState;
+    if (!state) return;
+    this.leapState = null;
+    state.active = false;
+    if (phase === 'land') {
+      state.landed = true;
+      this.onLeap?.({
+        phase,
+        from: { ...state.from },
+        to: this.controller.interpolatedFeet(1, { x: 0, y: 0, z: 0 }),
+      });
+    } else {
+      this.onLeap?.({ phase, from: { ...state.from } });
+    }
+  }
+
   /** What the controller actually did over the last tick, for animation. */
   locomotion(): LocomotionInput {
     this.controller.interpolatedFeet(0, this.tickPrev);
@@ -139,11 +247,29 @@ export class Player {
   fixedUpdate(input: InputSnapshot, moveX: number, moveZ: number): void {
     const mod = this.options.moveModifier?.();
     if (mod?.freeze) {
+      this.cancelLeap();
       this.controller.hold();
       return;
     }
-    const forced = this.forcedMove;
-    if (forced) {
+    const leap = this.leapState;
+    const forced = leap ? null : this.forcedMove;
+    if (leap) {
+      moveX = leap.dirX;
+      moveZ = leap.dirZ;
+      this.controller.fixedUpdate({
+        moveX,
+        moveZ,
+        sprint: false,
+        jump: leap.ticks === 0,
+        speedOverride: leap.speed,
+        jumpSpeed: leap.jumpSpeed,
+      });
+      leap.ticks++;
+      if (!this.controller.grounded) leap.leftGround = true;
+      if (leap.leftGround && this.controller.grounded) this.endLeap('land');
+      else if (!leap.leftGround && leap.ticks >= LEAP_LIFTOFF_TICKS) this.endLeap('cancel');
+      else if (leap.ticks >= leap.maxTicks) this.endLeap('cancel');
+    } else if (forced) {
       moveX = forced.x;
       moveZ = forced.z;
       this.controller.fixedUpdate({ moveX, moveZ, sprint: false, jump: false, speedOverride: forced.speed });
@@ -161,7 +287,7 @@ export class Player {
     }
     if (this.facingOverride !== null) {
       this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, this.facingOverride);
-    } else if ((moveX !== 0 || moveZ !== 0) && !mod?.lockFacing && (!forced || forced.turn)) {
+    } else if ((moveX !== 0 || moveZ !== 0) && !mod?.lockFacing && (leap || !forced || forced.turn)) {
       // Mesh faces -Z at rest; turn it towards the movement direction.
       this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, Math.atan2(-moveX, -moveZ));
     }
@@ -177,6 +303,7 @@ export class Player {
   postStep(): void {
     const t = this.controller.body.translation();
     if (t.y < KILL_PLANE_Y) {
+      this.cancelLeap();
       this.controller.teleport(this.spawn);
       this.options.onRespawn?.(this.spawn);
     }

@@ -136,6 +136,15 @@ describe('DamageResolver.apply basics', () => {
       expect(npc.health).toBe(10);
     });
 
+    it('a companion (ally, hittable false, untargetable) takes no hostile hit and emits nothing', () => {
+      const { dr, actors, enemy, log } = make();
+      const tobb = actors.spawn({ kind: 'npc:tobb', team: 'ally', maxHealth: 40, hittable: false, untargetable: true });
+      log.length = 0;
+      expect(dr.apply({ attackerId: enemy.id, targetId: tobb.id, amount: 8, kind: 'spell' })).toBeNull();
+      expect(tobb.health).toBe(40);
+      expect(log).toEqual([]);
+    });
+
     it('a hostile can hurt the player', () => {
       const { dr, enemy, player } = make();
       const r = dr.apply({ attackerId: enemy.id, targetId: player.id, amount: 10, kind: 'melee' });
