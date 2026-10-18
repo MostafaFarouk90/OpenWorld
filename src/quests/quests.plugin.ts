@@ -14,9 +14,11 @@ import { JournalTabs, PLACEHOLDER_KEY, defaultSlots } from './journalTabs';
 import { installBridges } from './bridges';
 import { installPoiRewards } from './poi';
 import { POI_REWARDS } from './content/poi';
-import { PostDirector, BRIGHTWATER_POST_RULES } from './posts';
+import { PostDirector, POST_RULES } from './posts';
 import { TorchSystem } from './torch';
 import { R02Yard, type R02YardDummies } from './r02Yard';
+import { QuestProps } from './props';
+import { QUEST_PROPS, INTERACT_FLAGS } from './content/props';
 import { createEffectRunner } from './effects';
 import type { BusPort } from './ports';
 import type { QuestDef } from './types';
@@ -109,7 +111,7 @@ const plugin: GamePlugin = {
     offs.push(ctx.events.on('flag.changed', () => journalState.widget?.refresh()));
 
     // Event-to-flag bridges, one-time POI rewards and quest-driven NPC posts.
-    offs.push(installBridges(bus, ctx.state, manager, warn));
+    offs.push(installBridges(bus, ctx.state, manager, warn, INTERACT_FLAGS));
     const svc = (n: string) => (ctx.services as unknown as { get(n: string): any }).get(n);
     const poiEffects = createEffectRunner({
       state: ctx.state, quests: manager, bus, sourceId: 'poi', warn,
@@ -120,8 +122,8 @@ const plugin: GamePlugin = {
       codexUnlock: (id) => svc('codex')?.unlock?.(id),
     }));
     const posts = new PostDirector(
-      BRIGHTWATER_POST_RULES,
-      () => ({ state: ctx.state, quests: manager, warn }),
+      POST_RULES,
+      () => ({ state: ctx.state, quests: manager, gold: () => svc('inventory')?.gold, warn }),
       () => svc('npcs'),
       () => svc('dialogue')?.active === true,
     );
@@ -272,6 +274,23 @@ const plugin: GamePlugin = {
 
     // Built once, after M01 has started (or was loaded as started), when every plugin and thread 4's
     // anchors exist. A build failure is logged once and never retried (no leaked meshes).
+    const props = new QuestProps(QUEST_PROPS, {
+      bus,
+      state: ctx.state,
+      quests: manager,
+      anchor: (id) => {
+        const a = ctx.anchors.find(id);
+        return a && { x: a.position.x, y: a.position.y, z: a.position.z };
+      },
+      register: (i) =>
+        ctx.interaction.register({
+          id: i.id, kind: i.kind as 'use' | 'pickup', name: i.name, radius: i.radius, promptKey: i.promptKey, enabled: i.enabled,
+          position: (out) => { i.position(out); return out; },
+          onInteract: () => i.onInteract(),
+        }),
+      warn,
+    });
+    let propTick = 0;
     let carryTried = false;
     ctx.systems.add({
       id: 'quests-carry',
@@ -298,6 +317,7 @@ const plugin: GamePlugin = {
           }
         }
         torch?.update();
+        if (++propTick % 30 === 0) props.update();
         posts.update();
         yard.update();
       },
@@ -305,6 +325,7 @@ const plugin: GamePlugin = {
         carry?.dispose();
         carry = null;
         for (const o of offs.splice(0)) o();
+        props.dispose();
         torch?.dispose();
         torch = null;
         torchMesh?.removeFromParent();

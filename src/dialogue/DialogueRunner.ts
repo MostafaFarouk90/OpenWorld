@@ -24,7 +24,9 @@ export interface DialogueRunnerOptions {
   quests: QuestReader;
   effects: { run(effects: Effect[] | undefined): unknown };
   strings: StringsPort;
-  evalCondition?: (c: Condition | undefined, env: { state: StatePort; quests: QuestReader; warn?(m: string): void }) => boolean;
+  evalCondition?: (c: Condition | undefined, env: { state: StatePort; quests: QuestReader; gold?: () => number | undefined; warn?(m: string): void }) => boolean;
+  /** inventory gold for `gold` conditions */
+  gold?: () => number | undefined;
   playerName?: () => string;
   warn?: (msg: string) => void;
 }
@@ -119,8 +121,15 @@ export class DialogueRunner {
     this.steps = 0;
     this.o.bus.emit('dialogue.choice', { dialogueId: c.def.id, nodeId: c.node.id, choiceId: choice.id });
     if (this.cur !== c) return; // a listener closed us
-    this.runEffects(choice.effects);
+    const halted = this.runEffects(choice.effects);
     if (this.cur !== c) return;
+    if (halted) {
+      // a failed spend: stay on this node; the choice is hidden or disabled by its own gold condition now
+      c.visible = this.visibleChoices(c.node);
+      if (c.visible.length === 0) { this.steps = 0; this.go(c.node.next); return; }
+      this.refreshView();
+      return;
+    }
     this.go(choice.next);
   }
 
@@ -224,16 +233,20 @@ export class DialogueRunner {
     if (c === undefined) return true;
     try {
       const fn = this.o.evalCondition ?? defaultEval;
-      return !!fn(c, { state: this.o.state, quests: this.o.quests, warn: (m) => this.warn(m) });
+      return !!fn(c, { state: this.o.state, quests: this.o.quests, gold: this.o.gold, warn: (m) => this.warn(m) });
     } catch (e) {
       this.warnOnce('cond', `dialogue condition threw: ${String(e)}`);
       return false;
     }
   }
 
-  private runEffects(effects: Effect[] | undefined): void {
-    if (!effects || effects.length === 0) return;
-    try { this.o.effects.run(effects); } catch (e) { this.warnOnce('effects', `dialogue effects threw: ${String(e)}`); }
+  /** Runs effects; true when a failed spend halted them. */
+  private runEffects(effects: Effect[] | undefined): boolean {
+    if (!effects || effects.length === 0) return false;
+    try {
+      const res = this.o.effects.run(effects);
+      return Array.isArray(res) && res.some((r) => (r as { halted?: boolean })?.halted === true);
+    } catch (e) { this.warnOnce('effects', `dialogue effects threw: ${String(e)}`); return false; }
   }
 
   private warn(msg: string): void {

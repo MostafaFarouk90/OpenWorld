@@ -5,7 +5,18 @@ describe('items', () => {
   it('has exactly the v2 item ids', () => {
     expect(Object.keys(ITEMS).sort()).toEqual(
       [
+        'aldiths-stout',
         'barley-cake',
+        'brewing-copper',
+        'couriers-cloak',
+        'crossbow-bolts',
+        'ember-coal',
+        'halvard-signet',
+        'lore-tome-1',
+        'oswin-lockpicks',
+        'sewer-master-key',
+        'stolen-satchel',
+        'watch-pass',
         'ford-guard-shield',
         'hearth-stone',
         'hearth-token',

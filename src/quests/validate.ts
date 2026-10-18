@@ -64,6 +64,10 @@ export function validateEffects(effects: Effect[] | undefined, where = 'effects'
       if (typeof c.skillPoints !== 'number' || !Number.isFinite(c.skillPoints) || c.skillPoints <= 0) errs.push(`${w}: skillPoints must be a positive number`);
     } else if ('giveGold' in c) {
       if (typeof c.giveGold !== 'number' || !Number.isFinite(c.giveGold) || c.giveGold <= 0) errs.push(`${w}: giveGold must be a positive number`);
+    } else if ('spendGold' in c) {
+      const s = c.spendGold;
+      if (!isObj(s) || !Number.isInteger(s.amount) || s.amount <= 0) errs.push(`${w}: spendGold amount must be a positive integer`);
+      else if (!isStr(s.reason)) errs.push(`${w}: spendGold needs a reason`);
     } else if ('if' in c) {
       if (depth >= MAX_IF_DEPTH) errs.push(`${w}: if effects nest at most ${MAX_IF_DEPTH} deep`);
       else {
@@ -128,7 +132,13 @@ export function validateQuest(def: QuestDef, hasKey: (k: string) => boolean): st
     if (o?.type === 'event') {
       const names = Array.isArray(o.target) ? o.target : [o.target];
       if (names.length === 0 || !names.every(isStr)) errs.push(`${w}: event target must be an event name or a non-empty list of names`);
-      if (o.match !== undefined && !isObj(o.match)) errs.push(`${w}: match must be an object`);
+      if (o.match !== undefined) {
+        if (!isObj(o.match)) errs.push(`${w}: match must be an object`);
+        else for (const [k, v] of Object.entries(o.match)) {
+          const prim = (x: unknown) => typeof x === 'boolean' || typeof x === 'string' || (typeof x === 'number' && Number.isFinite(x));
+          if (Array.isArray(v) ? v.length === 0 || !v.every(prim) : !prim(v)) errs.push(`${w}: match.${k} must be a value or a non-empty list of values`);
+        }
+      }
       if (o.dedupeBy !== undefined && !isStr(o.dedupeBy)) errs.push(`${w}: dedupeBy must be a payload key`);
     } else {
       if (Array.isArray(o?.target)) errs.push(`${w}: only event objectives take a target list`);

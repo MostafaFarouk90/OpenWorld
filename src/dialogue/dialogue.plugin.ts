@@ -36,6 +36,7 @@ const plugin: GamePlugin = {
       quests,
       effects,
       strings: ctx.strings,
+      gold: () => svc('inventory')?.gold,
       playerName: () => {
         const n = ctx.state.getFlag('player.name');
         return typeof n === 'string' && n ? n : 'Cael';

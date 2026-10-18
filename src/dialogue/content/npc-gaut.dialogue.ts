@@ -8,6 +8,9 @@ const bankedPlus: Condition = { favour: 'halvard', band: ['banked', 'stoked', 'h
 const m04Active: Condition = { quest: 'm04', state: 'active' };
 const done = (o: string): Condition => ({ objective: ['m04', o], done: true });
 
+const classOpen: Condition = { flag: 'story.m07.classOpen', equals: true };
+const m07Seen: Condition = { any: [{ quest: 'm07', state: 'active' }, { quest: 'm07', state: 'completed' }] };
+
 export const npcGaut: DialogueDef = {
   id: 'npc-gaut',
   start: [
@@ -29,6 +32,11 @@ export const npcGaut: DialogueDef = {
     { when: { all: [m04Active, done('o2')] }, node: 'm04-spare-remind' },
     { when: { all: [m04Active, done('o1')] }, node: 'm04-spare' },
     { when: m04Active, node: 'm04-ford' },
+
+    // M06 Rook's gate
+    { when: { quest: 'm06', state: 'active' }, node: 'm06-gate-wait' },
+    { when: classOpen, node: 'trainer-open' },
+    { when: { all: [m07Seen, { not: classOpen }] }, node: 'trainer-closed' },
 
     { when: cold, node: 'idle-cold' },
     { when: bankedPlus, node: 'idle-banked' },
@@ -85,6 +93,18 @@ export const npcGaut: DialogueDef = {
     { id: 'm04-report-cold', speaker: 'gaut', textKey: P + 'm04-report-cold', next: 'm04-report-2' },
     { id: 'm04-report-banked', speaker: 'gaut', textKey: P + 'm04-report-banked', next: 'm04-report-2' },
     { id: 'm04-report-2', speaker: 'gaut', textKey: P + 'm04-report-2', next: null },
+
+    { id: 'm06-gate-wait', speaker: 'gaut', textKey: P + 'm06-gate-wait', next: null },
+    // class trainer (Halvard Bastion yard)
+    { id: 'trainer-closed', speaker: 'gaut', textKey: P + 'trainer-closed', next: null },
+    { id: 'trainer-open', speaker: 'gaut', textKey: P + 'trainer-open', next: 'trainer-open-2' },
+    {
+      id: 'trainer-open-2', speaker: 'gaut', textKey: P + 'trainer-open-2',
+      choices: [
+        { id: 'train', textKey: P + 'trainer-open-2.train', effects: [{ event: 'classes.trainer.open', payload: { classId: 'knight' } }], next: null },
+        { id: 'leave', textKey: P + 'trainer-open-2.leave', next: null },
+      ],
+    },
 
     { id: 'idle-cold', speaker: 'gaut', textKey: P + 'idle-cold', next: null },
     { id: 'idle-banked', speaker: 'gaut', textKey: P + 'idle-banked', next: null },

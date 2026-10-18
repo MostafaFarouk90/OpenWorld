@@ -268,13 +268,17 @@ export class QuestManager implements QuestReader, QuestActions {
 
   private startAllowed(def: QuestDef): boolean {
     if (!def.startWhen) return true;
-    return evalCondition(def.startWhen, { state: this.opts.state, quests: this, warn: this.opts.warn });
+    return evalCondition(def.startWhen, this.condEnv());
+  }
+
+  private condEnv(): ConditionEnv {
+    return { state: this.opts.state, quests: this, gold: () => this.opts.inventory?.()?.gold, warn: this.opts.warn };
   }
 
   private whenHolds(o: ObjectiveDef): boolean {
-    if (!o.when) return true;
-    const env: ConditionEnv = { state: this.opts.state, quests: this, warn: this.opts.warn };
-    try { return evalCondition(o.when, env); } catch (e) {
+    if (!o.when && !o.startWhen) return true;
+    const env = this.condEnv();
+    try { return evalCondition(o.when, env) && evalCondition(o.startWhen, env); } catch (e) {
       this.warn(`quests: objective condition threw: ${String(e)}`);
       return false;
     }
@@ -340,7 +344,7 @@ export class QuestManager implements QuestReader, QuestActions {
       if (!this.isObjectiveCurrent(questId, o.id)) continue;
       if (o.type === 'event' && o.doneWhen) {
         if (!doneWhen) continue;
-        const env: ConditionEnv = { state: this.opts.state, quests: this, warn: this.opts.warn };
+        const env = this.condEnv();
         let done = false;
         try { done = evalCondition(o.doneWhen, env); } catch (e) { this.warn(`quests: doneWhen threw: ${String(e)}`); }
         if (done) {

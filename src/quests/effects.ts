@@ -9,6 +9,8 @@ const TRACKS: readonly string[] = ['halvard', 'oswin', 'grisel', 'dragons', 'ash
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
 class Silent extends Error {}
+/** A failed spendGold: stops the whole run, including the lists around a nested `if`. */
+class Halt extends Error {}
 
 export function createEffectRunner(env: EffectEnv): EffectRunner {
   const warned = new Set<string>();
@@ -74,10 +76,18 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
       inv.addGold(c.giveGold);
     } else if ('if' in c) {
       if (depth >= MAX_IF_DEPTH) throw new Error(`if effects nest at most ${MAX_IF_DEPTH} deep`);
-      const holds = evalCondition(c.if, { state: env.state, quests: env.quests, warn: env.warn });
+      const holds = evalCondition(c.if, { state: env.state, quests: env.quests, gold: () => env.inventory?.()?.gold, warn: env.warn });
       const branch = (holds ? c.then : c.else) as Effect[] | undefined;
       if (branch !== undefined && !Array.isArray(branch)) throw new Error('if branch is not an array');
       runList(branch, depth + 1);
+    } else if ('spendGold' in c) {
+      const { amount, reason } = (c.spendGold ?? {}) as { amount?: unknown; reason?: unknown };
+      if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0) throw new Halt('spendGold amount must be a positive integer');
+      if (typeof reason !== 'string' || !reason) throw new Halt('spendGold needs a reason');
+      const inv = env.inventory?.();
+      if (!inv?.takeGold || typeof inv.gold !== 'number') { warnOnce('spendGold: inventory service absent'); throw new Halt('inventory service absent'); }
+      if (inv.gold < amount) throw new Halt(`spendGold: need ${amount} gold, have ${inv.gold}`);
+      if (inv.takeGold(amount, reason) !== amount) throw new Halt('spendGold: take was short');
     } else if ('placeNpc' in c) {
       const { npcId, anchorId } = (c.placeNpc ?? {}) as { npcId?: unknown; anchorId?: unknown };
       if (typeof npcId !== 'string' || typeof anchorId !== 'string' || !npcId || !anchorId) throw new Error('placeNpc needs npcId and anchorId');
@@ -106,16 +116,24 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
 
   function runList(effects: Effect[] | undefined, depth: number): EffectResult[] {
     if (!effects) return [];
-    return effects.map((effect): EffectResult => {
+    const out: EffectResult[] = [];
+    for (const effect of effects) {
       try {
         exec(effect, depth);
-        return { effect, ok: true };
+        out.push({ effect, ok: true });
       } catch (err) {
         const error = err instanceof Error ? err.message : String(err);
+        if (err instanceof Halt) {
+          if (depth > 0) throw err; // the outermost list records it and stops
+          warn(`effect halted: ${error}`);
+          out.push({ effect, ok: false, error, halted: true });
+          return out;
+        }
         if (!(err instanceof Silent)) warn(`effect failed: ${error}`);
-        return { effect, ok: false, error };
+        out.push({ effect, ok: false, error });
       }
-    });
+    }
+    return out;
   }
 
   return { run: (effects) => runList(effects, 0) };

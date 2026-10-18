@@ -1,5 +1,8 @@
 // English quest strings. Keys: quest.<id>.title / .summary / .<objectiveId>.
+import { questStringsHarrowmark } from './strings.harrowmark.en';
+
 export const questStrings: Record<string, string> = {
+  ...questStringsHarrowmark,
   'quest.journal.title': 'Journal',
   'quest.lead.m03': 'Sister Aelfreda is asking for you at the chapel.',
   'quest.journal.empty': 'Your journal is empty. Kettlewick has stories waiting.',

@@ -12,27 +12,52 @@ export interface PostRule {
   posts: { when: Condition; anchorId: string }[];
 }
 
-/** Brightwater posts (slice 2 phase A). Phase B appends the Harrowmark rules. */
 // The tutorial leaves Gaut and Aelfreda at the Kettlewick gate (T15) for M01; once M01 is done they go home, so
 // Aelfreda gives M03 at the chapel (the tutorial stops re-placing them after M01, TutorialDirector.resumeAfterLoad).
 const m01Done: Condition = { quest: 'm01', state: 'completed' };
-export const BRIGHTWATER_POST_RULES: PostRule[] = [
+const live = (q: string): Condition => ({ quest: q, state: ['active', 'completed'] });
+
+/**
+ * Quest posts for Brightwater (phase A) and Harrowmark (phase B; anchor ids are thread 17's, Gaut's gate post is
+ * thread 4's). First matching entry wins. NPCs a rule names that are not in the world yet are retried until placed.
+ */
+export const POST_RULES: PostRule[] = [
   {
-    npcId: 'gaut',
-    home: 'npc-post.gaut',
+    npcId: 'gaut', home: 'npc-post.gaut',
     posts: [
+      { when: live('m07'), anchorId: 'npc-post.gaut.bastion' },
+      { when: { quest: 'm06', state: 'active' }, anchorId: 'npc-post.gaut.south-gate' },
       { when: { quest: 'm04', state: 'active' }, anchorId: 'npc-post.gaut.ford' },
       { when: m01Done, anchorId: 'npc-post.gaut' },
     ],
   },
   {
-    npcId: 'aelfreda',
-    home: 'npc-post.aelfreda',
+    npcId: 'aelfreda', home: 'npc-post.aelfreda',
     posts: [
       { when: { quest: 'd01', state: 'active' }, anchorId: 'npc-post.aelfreda.vault' },
+      { when: { quest: 'm06', state: 'completed' }, anchorId: 'npc-post.aelfreda.chapel' },
       { when: m01Done, anchorId: 'npc-post.aelfreda' },
     ],
   },
+  // Stane trains at the Bastion once the Practice Yard work (R02) is done and the class choice has begun (M07)
+  { npcId: 'stane', home: 'npc-post.stane', posts: [{ when: { all: [{ quest: 'r02', state: 'completed' }, live('m07')] }, anchorId: 'npc-post.stane.bastion' }] },
+  { npcId: 'rook', home: 'npc-post.rook', posts: [{ when: { quest: 'm06', state: 'active' }, anchorId: 'npc-post.rook.gate' }] },
+  {
+    npcId: 'gerta', home: 'npc-post.gerta.guild',
+    posts: [
+      { when: { quest: 'm10', state: 'active' }, anchorId: 'npc-post.gerta.guild' },
+      { when: live('m07'), anchorId: 'npc-post.gerta.bastion' },
+    ],
+  },
+  // the audience: the Regent's court stands in the Keep hall while M08 runs (inside posts are thread 3a's anchors)
+  { npcId: 'edric', home: 'npc-post.edric', posts: [{ when: { quest: 'm08', state: 'active' }, anchorId: 'npc-post.edric.hall' }] },
+  { npcId: 'vey', home: 'npc-post.vey.keep', posts: [{ when: { quest: 'm08', state: 'active' }, anchorId: 'npc-post.vey.hall' }] },
+  // Merrin waits inside the Counting-House once she has sent the player in
+  {
+    npcId: 'merrin', home: 'npc-post.merrin',
+    posts: [{ when: { all: [{ quest: 'm09', state: 'active' }, { objective: ['m09', 'o1'], done: true }] }, anchorId: 'npc-post.merrin.inside' }],
+  },
+  { npcId: 'pennard', home: 'npc-post.pennard.archive', posts: [{ when: live('m07'), anchorId: 'npc-post.pennard.bastion' }] },
 ];
 
 /** The anchor each NPC should stand at now. */
