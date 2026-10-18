@@ -167,3 +167,34 @@ describe('DodgeModel cancel and recovery', () => {
     expect(m.canCancelIntoAttack).toBe(false);
   });
 });
+
+describe('DodgeModel distance scale', () => {
+  const speeds = (scale?: number) => {
+    const m = new DodgeModel();
+    m.start({ ...free(), ...(scale === undefined ? {} : { distanceScale: scale }) });
+    const out: number[] = [];
+    for (let i = 0; i < DODGE.totalTicks; i++) {
+      const t = m.tick();
+      if (t.move) out.push(t.move.speed);
+    }
+    return out;
+  };
+  it('multiplies the travel speed and keeps the tick count', () => {
+    const base = speeds();
+    const quick = speeds(1.2);
+    expect(quick).toHaveLength(base.length);
+    quick.forEach((s, i) => expect(s).toBeCloseTo(base[i] * 1.2));
+  });
+  it('treats a missing, zero, negative or non-finite scale as 1', () => {
+    const base = speeds();
+    for (const bad of [0, -1, NaN, Infinity]) expect(speeds(bad === Infinity ? NaN : bad)).toEqual(base);
+  });
+  it('resets on the next dodge', () => {
+    const m = new DodgeModel();
+    m.start({ ...free(), distanceScale: 2 });
+    m.cancel();
+    m.tick();
+    m.start(free());
+    expect(m.tick().move!.speed).toBeCloseTo(DODGE_SPEED);
+  });
+});
