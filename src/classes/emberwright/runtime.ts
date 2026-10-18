@@ -81,8 +81,6 @@ export class EmberwrightRuntime {
   private readonly released = new Set<string>();
   private readonly offs: Array<() => void> = [];
   private disposed = false;
-  /** True while `projectiles.clear()` expires the live ones: a ball in flight must not burst then. */
-  private clearing = false;
 
   constructor(private readonly host: EmberwrightHost) {
     const h = host;
@@ -261,7 +259,7 @@ export class EmberwrightRuntime {
     hit: ProjectileHit, dir: Vec3,
     o: { damage: number; poise: number; ignite: boolean; attackId: string; volley?: Volley; chain?: boolean; blast?: boolean },
   ): void {
-    if (this.disposed || this.clearing) return;
+    if (this.disposed) return;
     this.host.fx(FX.boltImpact, hit.point);
     if (o.blast) {
       this.flameBlast(hit, dir);
@@ -507,8 +505,8 @@ export class EmberwrightRuntime {
   }
 
   private clearProjectiles(): void {
-    this.clearing = true;
-    try { this.projectiles.clear(); } finally { this.clearing = false; }
+    // Silent: a ball in flight is dropped, never detonated, by a load, a class change or a rest.
+    this.projectiles.clear(true);
   }
 
   private reset(reason: string): void {
