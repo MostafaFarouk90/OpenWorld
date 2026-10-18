@@ -11,6 +11,7 @@ import { World } from '../world/World';
 import type { GameEventMap } from './events';
 import { Game } from './Game';
 import { MoveModifiers } from './MoveModifiers';
+import { Scope } from './scope';
 import { PLUGIN_MODULES } from './pluginManifest';
 import type { GamePlugin, PluginModule } from './plugins';
 import corePlugin from './core.plugin';
@@ -537,6 +538,68 @@ describe('core plugin mercy wiring', () => {
     c.actors.despawn(wolf.id);
     expect(c.state.isMercied(wolf.id)).toBe(false);
     expect(c.state.favour('halvard')).toBe(31);
+    t.world.dispose();
+  });
+});
+
+describe('plugin scope retention', () => {
+  it('despawning many enemies does not grow the scope', () => {
+    const t = setup();
+    const scope = new Scope();
+    const ctx = t.game.scopedContext(scope);
+    const spawnOne = () => {
+      const enemy = ctx.actors.spawn({ kind: 'wolf', team: 'hostile', maxHealth: 10 });
+      ctx.actors.bindOwner(enemy, {});
+      ctx.combat.addAttacker(enemy.id, { attacker: {}, tick: () => [] } as never, { clipName: 'Bite', start: 0, end: 1, currentTime: () => null });
+      ctx.combat.addTarget({ update: () => {}, tickFlash: () => {} } as never, enemy.id);
+      return enemy;
+    };
+    spawnOne();
+    t.game.ctx.actors.despawn(t.game.ctx.actors.ofTeam('hostile')[0].id);
+    const baseline = scope.size; // the one despawn listener
+    for (let i = 0; i < 200; i++) {
+      const enemy = spawnOne();
+      // Some despawn through the plugin's own context, some through another system.
+      (i % 2 ? ctx : t.game.ctx).actors.despawn(enemy.id);
+    }
+    expect(scope.size).toBe(baseline);
+    expect(t.world.combat.combat.targetCount).toBe(0);
+    // A live enemy is still torn down on close.
+    const live = spawnOne();
+    expect(scope.size).toBe(baseline + 4);
+    scope.close();
+    expect(t.game.ctx.actors.get(live.id)).toBeUndefined();
+    expect(t.world.combat.combat.targetCount).toBe(0);
+    t.world.dispose();
+  });
+
+  it('pausing and resuming the same reason repeatedly retains one entry at most', () => {
+    const t = setup();
+    const scope = new Scope();
+    const ctx = t.game.scopedContext(scope);
+    for (let i = 0; i < 100; i++) {
+      ctx.clock.setPaused('menu', true);
+      ctx.clock.setPaused('menu', true);
+      ctx.clock.setPaused('menu', false);
+    }
+    expect(scope.size).toBe(0);
+    ctx.clock.setPaused('menu', true);
+    expect(scope.size).toBe(1);
+    scope.close();
+    expect(t.game.clock.paused).toBe(false);
+    t.world.dispose();
+  });
+
+  it('removers the plugin calls itself leave the scope', () => {
+    const t = setup();
+    const scope = new Scope();
+    const ctx = t.game.scopedContext(scope);
+    for (let i = 0; i < 100; i++) {
+      ctx.events.on('rest', () => {})();
+      ctx.player.addMoveModifier('drink', { speedScale: 0.5 })();
+    }
+    expect(scope.size).toBe(0);
+    expect(t.moveModifiers.size).toBe(0);
     t.world.dispose();
   });
 });
