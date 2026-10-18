@@ -6,6 +6,7 @@ import { MoveSelector } from './ai/moveSelect';
 import { pairGoal } from './ai/pair';
 import { makeLineOfSight, perceive } from './ai/perception';
 import { ENEMY_CLIPS } from './clips';
+import { Cutpurse } from './cutpurse/Cutpurse';
 import type { EnemyBody } from './body';
 import type { ActorId, ActorLike, EnemyHost, NavPort } from './ports';
 import { PathFollower } from './steering/pathFollower';
@@ -70,6 +71,8 @@ export class Enemy {
   private readonly mover: EnemyMover;
   private readonly steering = new Steering();
   private readonly guard: Guard | null;
+  /** Alley Cutpurse rules (def.thief); null for every other kind. */
+  readonly thief: Cutpurse | null;
   private readonly path: PathFollower;
   private readonly moves = new MoveSelector();
   private readonly removers: Array<() => void> = [];
@@ -140,6 +143,7 @@ export class Enemy {
         aggroOnSpawn: spawn.options.aggro ? host.actors.player.id : null,
       });
       if (spawn.options.moves) this.moveFilter = [...spawn.options.moves];
+      this.thief = this.def.thief ? this.makeThief() : null;
 
       this.removers.push(host.combat.addTarget(body.hurtboxes, this.actor.id));
       for (const ch of ['right', 'left'] as const) {
@@ -287,6 +291,11 @@ export class Enemy {
       yieldAllowed: this.env.mercyUnlocked('spare'),
     };
     const intent = this.brain.step(dt, senses);
+    if (this.thief) {
+      const visible = p.distance <= AI.sightRange && this.lineOfSight(pFeet, self);
+      this.thief.tick(dt, this.brain.state, visible);
+      if (this.phase !== 'alive') return; // it despawned itself (flee window over, or blinked out)
+    }
     this.guard?.step(dt, GUARD_STATES.has(this.brain.state), this.env.rng);
     if (this.def.pairAdvance && this.brain.state === 'chase' && intent.goal && senses.targetPos && intent.goal.x === senses.targetPos.x && intent.goal.z === senses.targetPos.z) {
       // A plain chase heads straight for the target (the circling goal is somewhere else); a pair spreads onto opposite flanks instead.
@@ -318,6 +327,7 @@ export class Enemy {
       this.pushTicks--;
       velocity = this.pushVelocity;
     }
+    if (this.thief?.holdStill) velocity = { x: 0, z: 0 };
     this.speed = pushed ? 0 : Math.hypot(velocity.x, velocity.z);
     if (pushed) {
       // facing stays while knocked back
@@ -371,13 +381,16 @@ export class Enemy {
   // ---- events (from the manager) -----------------------------------------------------------------
 
   /** damage.dealt on this enemy. */
-  damaged(attackerId: ActorId | null, outcome: string, poiseDealt: number, staggered: boolean, killed: boolean): void {
+  damaged(attackerId: ActorId | null, outcome: string, poiseDealt: number, staggered: boolean, killed: boolean, kind?: string): void {
     if (this.phase !== 'alive') return;
+    // Status ticks (burn, poison) hurt but never flinch, stagger or provoke.
+    if (kind === 'status') return;
     if (outcome === 'hit') {
       this.damagedThisTick = true;
       this.poiseIdle = 0;
     }
     if (staggered || killed) return; // actor.staggered and actor.died follow in the same batch
+    this.brain.setCondition(this.actor.maxHealth > 0 ? this.actor.health / this.actor.maxHealth : 0, this.env.mercyUnlocked('spare'));
     this.brain.hit(attackerId, poiseDealt, outcome);
   }
 
@@ -396,6 +409,7 @@ export class Enemy {
     // A spared soldier walking off can still be struck down (the core revokes its mercy credit).
     if (this.phase !== 'alive' && this.phase !== 'leaving') return;
     this.leaveFrom = null;
+    this.thief?.died();
     this.brain.died();
     this.disarm();
     this.phase = 'dying';
@@ -417,6 +431,7 @@ export class Enemy {
   /** Spared: disarmed, walks off and despawns; a strike before it leaves revokes (see `revoked`). */
   spare(): void {
     if (this.phase !== 'alive') return;
+    this.thief?.spared();
     this.brain.spared();
     this.goneHow = 'spared';
     this.phase = 'leaving';
@@ -469,6 +484,8 @@ export class Enemy {
     if (this.asleep || this.phase !== 'alive') return;
     // Leave combat first so the token, telegraph (cancelled), open window and aggro (calm) are settled.
     this.brain.standDown();
+    // A fleeing thief that goes dormant is out of play: its flee window is over.
+    if (this.thief && this.thief.stolenGold > 0) return void this.despawn();
     this.asleep = true;
     if (this.mover instanceof SwitchingMover) this.mover.sleep();
   }
@@ -648,7 +665,9 @@ export class Enemy {
           leadSeconds: lead,
         }),
       telegraphCancelled: (swingId) => this.host.events.emit('telegraph.cancelled', { actorId: this.actor.id, swingId }),
-      pickMove: (distance) => this.moves.pick(this.def.moves, distance, this.env.rng, this.moveFilter),
+      pickMove: (distance) =>
+        this.moves.pick(this.thief ? this.thief.availableMoves(this.def.moves) : this.def.moves, distance, this.env.rng, this.moveFilter),
+      caught: (how) => this.thief?.caught(how),
       markMoveUsed: (move: MoveDef) => this.moves.markUsed(move.id, this.def.moves),
       acquireToken: (targetId) => this.env.acquireToken(this, targetId),
       releaseToken: () => this.env.releaseToken(this),
@@ -661,6 +680,29 @@ export class Enemy {
       },
       alertPack: (targetId) => this.env.alertPack(this, targetId),
     };
+  }
+
+  private makeThief(): Cutpurse {
+    const host = this.host;
+    return new Cutpurse(
+      {
+        actorId: this.actor.id,
+        feet: () => this.mover.feet,
+        startFlee: () => this.brain.startFlee(),
+        playClip: (clip, seconds) => this.oneShot(clip, seconds),
+        setHidden: (hidden) => {
+          this.body.root.visible = !hidden;
+        },
+        despawn: () => this.despawn(),
+      },
+      {
+        inventory: () => host.services.get('inventory'),
+        vfx: () => host.services.get('vfx'),
+        events: host.events,
+        state: host.state,
+        warn: (m) => host.warn(m),
+      },
+    );
   }
 
   /** 1.2 m away from the player over KNOCKBACK seconds, applied as one teleport-free push per tick. */

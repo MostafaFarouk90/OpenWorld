@@ -17,6 +17,7 @@ export const DEFAULT_BAND: LevelBand = { min: 1, max: 1 };
 
 export const REGION_BANDS: Record<string, LevelBand> = {
   brightwater: { min: 1, max: 9 },
+  harrowmark: { min: 4, max: 9 },
 };
 
 export function bandForRegion(id: string): LevelBand | undefined {

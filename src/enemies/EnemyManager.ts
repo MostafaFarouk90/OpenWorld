@@ -485,11 +485,12 @@ export class EnemyManager {
 
     on('damage.dealt', (r) => {
       const target = this.enemies.get(r.targetId);
-      if (target) target.damaged(r.attackerId, r.outcome, r.poiseDealt, r.staggered, r.killed);
+      if (target) target.damaged(r.attackerId, r.outcome, r.poiseDealt, r.staggered, r.killed, r.kind);
       const attacker = r.attackerId ? this.enemies.get(r.attackerId) : undefined;
       if (attacker && r.outcome === 'hit' && r.targetId === this.host.actors.player.id) {
         const move = attacker.brain.currentMove;
         if (move?.onHit === 'slow' && attacker.active) attacker.applySlow(ASH_GRAB.speedScale, ASH_GRAB.seconds);
+        if (move?.onHit === 'steal' && attacker.active) attacker.thief?.grabHit();
       }
     });
     on('actor.staggered', (p) => this.enemies.get(p.actorId)?.staggered(p.byId));

@@ -19,6 +19,7 @@ import type {
   EnemyEvents,
   EnemyHost,
   InteractableLike,
+  InventoryPort,
   NavPort,
   QuestsPortLike,
   TorchState,
@@ -117,6 +118,26 @@ export class FakeBus {
   }
 }
 
+/** The inventory service's gold half, as thread 5 provides it; records every spend. */
+export class FakeInventory implements InventoryPort {
+  readonly spent: Array<{ amount: number; reason: string }> = [];
+  readonly added: number[] = [];
+  constructor(public gold: number) {}
+  addGold(n: number): void {
+    if (Number.isFinite(n) && n > 0) {
+      this.gold += Math.floor(n);
+      this.added.push(Math.floor(n));
+    }
+  }
+  takeGold(n: number, reason: 'theft' | 'script' = 'script'): number {
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    const taken = Math.min(this.gold, Math.floor(n));
+    this.gold -= taken;
+    if (taken > 0) this.spent.push({ amount: taken, reason });
+    return taken;
+  }
+}
+
 export class FakeActor implements ActorLike {
   team: Team;
   level: number;
@@ -202,6 +223,8 @@ export class FakeHost {
   interiors: { current: string | null } | undefined;
   /** Thread 3a's nav service, when a test provides it. */
   nav: NavPort | undefined;
+  /** Thread 5's inventory service (gold), when a test provides it (`provideInventory`). */
+  inventory: FakeInventory | undefined;
   private readonly gateWatchers: Array<{ test: (get: (k: string) => boolean) => boolean; listener: (open: boolean, cause: 'init' | 'flag' | 'load' | 'recheck') => void; open: boolean }> = [];
   private counter = 0;
 
@@ -267,6 +290,12 @@ export class FakeHost {
         swingId: atk?.window.swingId,
       });
     });
+  }
+
+  /** Gives the world an inventory service holding `gold`. */
+  provideInventory(gold: number): FakeInventory {
+    this.inventory = new FakeInventory(gold);
+    return this.inventory;
   }
 
   /** Makes the quests service expose a carried torch (`torchState`); the shape is the plan's, not yet on the real service. */
@@ -480,6 +509,7 @@ export class FakeHost {
         if (name === 'interiors') return this.interiors;
         if (name === 'nav') return this.nav;
         if (name === 'spells') return this.spells;
+        if (name === 'inventory') return this.inventory;
         return undefined;
       }) as EnemyHost['services']['get'],
     },

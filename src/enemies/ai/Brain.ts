@@ -53,6 +53,8 @@ export interface BrainHooks {
   refill(): void;
   /** Tell pack mates about a new target. */
   alertPack(targetId: ActorId): void;
+  /** A thief (`def.thief`) was staggered or cornered while fleeing. */
+  caught?(how: 'staggered' | 'cornered'): void;
 }
 
 /** Where the brain wants to go this tick; Steering turns it into a velocity. */
@@ -108,6 +110,8 @@ export class Brain {
   private readonly stopAtTarget: number;
   /** The target given by a pack alert or a hit, used when senses carry no target (e.g. a revoked spare). */
   private forcedTarget: ActorId | null = null;
+  /** A thief that has started to flee keeps fleeing (after a stagger or yield) until its owner despawns it. */
+  private fleeLocked = false;
 
   constructor(
     readonly def: EnemyDef,
@@ -161,7 +165,9 @@ export class Brain {
     if (this.flinchLeft > 0) this.flinchLeft = Math.max(0, this.flinchLeft - dt);
 
     if (!this.finished && this._state !== 'spawn' && this.def.fleeAtHealth !== undefined) {
-      if (this.aggroTarget && s.healthFraction < this.def.fleeAtHealth && this._state !== 'flee') this.enter('flee');
+      // A caught thief (stagger, yield) is not sent running again by the health check.
+      const caughtNow = this.def.thief && (this._state === 'yield' || this._state === 'stagger');
+      if (this.aggroTarget && s.healthFraction < this.def.fleeAtHealth && this._state !== 'flee' && !caughtNow) this.enter('flee');
     }
 
     switch (this._state) {
@@ -198,7 +204,13 @@ export class Brain {
         if (this.stateTime >= AI.yieldSeconds) this.resume(s);
         return this.intent(null, 0);
       case 'flee': {
-        if (!s.targetPos || !this.validTarget(s) || s.distance > AI.sightRange + 5) {
+        if (this.def.thief && s.stuckGiveUp && s.targetPos) {
+          // Cornered: nowhere left to run.
+          this.catchThief('cornered', s.yieldAllowed);
+          return this.intent(null, 0);
+        }
+        // A thief runs until its owner despawns it (flee window, smoke); everyone else gives up when far.
+        if (!s.targetPos || !this.validTarget(s) || (!this.fleeLocked && s.distance > AI.sightRange + 5)) {
           this.enter('idle');
           return this.intent(null, 0);
         }
@@ -259,7 +271,8 @@ export class Brain {
     }
     if (poiseDealt >= AI.heavyPoise) {
       this.hooks.knockback();
-      this.stagger(AI.heavyStaggerSeconds);
+      if (this.def.thief && this._state === 'flee') this.catchThief('staggered', this.yieldAllowedNow);
+      else this.stagger(AI.heavyStaggerSeconds);
       return;
     }
     // A light hit flinches; it never interrupts a swing whose window is already open.
@@ -276,6 +289,10 @@ export class Brain {
   staggered(byId: ActorId | null): void {
     if (this.finished || this._state === 'spawn') return;
     this.provoke(byId);
+    if (this.def.thief && this._state === 'flee') {
+      this.catchThief('staggered', this.yieldAllowedNow);
+      return;
+    }
     if (this.def.mercy.when === 'yielding' && this.yieldAllowedNow && this.healthFractionNow < AI.yieldBelowHealth) {
       this.enter('yield');
       this.hooks.yieldStarted(AI.yieldSeconds);
@@ -344,6 +361,12 @@ export class Brain {
     this.enter('yield');
     this.hooks.yieldStarted(AI.yieldSeconds);
     return true;
+  }
+
+  /** The thief's grab landed: run away now, whatever its health. */
+  startFlee(): void {
+    if (this.finished || !this.aggroTarget || this._state === 'flee') return;
+    this.enter('flee');
   }
 
   released(): void {
@@ -533,15 +556,27 @@ export class Brain {
     this.enter('stagger');
   }
 
+  /** A fleeing thief is caught: it yields (Spare opens) when Spare is unlocked, else it just staggers. */
+  private catchThief(how: 'staggered' | 'cornered', yieldAllowed: boolean): void {
+    this.hooks.caught?.(how);
+    if (yieldAllowed && this.def.mercy.when === 'yielding') {
+      this.enter('yield');
+      this.hooks.yieldStarted(AI.yieldSeconds);
+    } else {
+      this.stagger(AI.breakStaggerSeconds);
+    }
+  }
+
   private resume(s: Senses): void {
-    if (this.aggroTarget && this.validTarget(s)) this.enter('chase');
+    if (this.fleeLocked && this.aggroTarget && this.validTarget(s)) this.enter('flee');
+    else if (this.aggroTarget && this.validTarget(s)) this.enter('chase');
     else if (this.aggroTarget) this.loseTarget();
     else this.enter(this.patrol.length ? 'patrol' : 'idle');
   }
 
   private resumeWithTarget(attackerId: ActorId | null): void {
     this.provoke(attackerId);
-    this.enter(this.aggroTarget ? 'chase' : 'idle');
+    this.enter(this.aggroTarget ? (this.fleeLocked ? 'flee' : 'chase') : 'idle');
   }
 
   private afterSpawn(): void {
@@ -573,6 +608,8 @@ export class Brain {
       if (t) this.acquire(t);
     }
     if (next === 'return' || next === 'idle' || next === 'patrol') this.unseen = 0;
+    if (next === 'flee') this.fleeLocked = this.def.thief === true;
+    else if (next !== 'yield' && next !== 'stagger' && next !== 'dead' && next !== 'released' && next !== 'spared') this.fleeLocked = false;
     if (next !== 'chase') this.flinchLeft = 0;
     this._state = next;
     this.stateTime = 0;

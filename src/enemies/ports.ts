@@ -140,6 +140,10 @@ export interface EnemyEvents {
   'enemies.groupCleared': { spawnerId: string };
   'enemies.state': { actorId: ActorId; from: string; to: string };
   'enemies.yield': { actorId: ActorId; seconds: number };
+  /** The Alley Cutpurse took `amount` gold (inventory.takeGold reason 'theft'). */
+  'enemies.cutpurse.robbed': { amount: number };
+  /** A fleeing cutpurse was caught (staggered or cornered); `amount` is the gold it still holds (0 if none). */
+  'enemies.cutpurse.caught': { amount: number };
   /** R01: once per ash scarecrow (`scarecrowId` is its spawner slot's anchor id, e.g. 'r01.scarecrow.3'). */
   'scarecrow.cleared': { actorId: ActorId; scarecrowId: string; method: 'torch' | 'surge' | 'strike' };
   /** Core boss registry (actors-and-damage.md section 7); thread 1 listens to open the boss's mercy hold. */
@@ -261,6 +265,14 @@ export interface QuestsPortLike {
   carriedTorch?(): TorchState | null;
 }
 
+/** The `inventory` service (contracts/game-events-and-flags.md section 6) as far as the Alley Cutpurse uses it. */
+export interface InventoryPort {
+  readonly gold: number;
+  addGold(n: number): void;
+  /** Takes up to `n`, returns what was taken; emits `gold.spent` for the reason. */
+  takeGold(n: number, reason?: 'theft' | 'script'): number;
+}
+
 export interface ServicesPort {
   get(name: 'vfx'): VfxLike | undefined;
   get(name: 'lockOn'): { readonly targetId: ActorId | null } | undefined;
@@ -274,6 +286,8 @@ export interface ServicesPort {
    * merges, `addBurn` charges the Burn alone.
    */
   get(name: 'spells'): ShardSpells | undefined;
+  /** Thread 5's inventory service (gold). */
+  get(name: 'inventory'): InventoryPort | undefined;
 }
 
 export interface ShardSpells {

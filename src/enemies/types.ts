@@ -18,7 +18,7 @@ export type AiState =
   | 'spared'
   | 'dead';
 
-export type EnemyKind = 'ash-wraith' | 'blighted-soldier';
+export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse';
 
 /** The impact-sound materials of `actor.data.audio.material` ('straw' and 'wood' are the foes'). */
 export type EnemyMaterial = 'ash' | 'metal' | 'straw' | 'wood';
@@ -49,7 +49,7 @@ export interface MoveDef {
   recover: number;
   /** Selection weight; 0 means only when a spawn's move filter names it (the T10 red sweep). */
   weight: number;
-  onHit?: 'slow';
+  onHit?: 'slow' | 'steal';
 }
 
 export interface ModelRecipe {
@@ -88,6 +88,8 @@ export interface EnemyDef {
   pairAdvance?: boolean;
   /** Wraiths rise from an ash pile when spawned (Lie_StandUp). */
   rises: boolean;
+  /** Alley Cutpurse behaviour (cutpurse/): steals on a grab, flees with the gold, can be caught and spared. */
+  thief?: boolean;
 }
 
 export interface LevelBand {

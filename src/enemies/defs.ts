@@ -1,4 +1,5 @@
 import { ENEMY_ATTACKS } from './clips';
+import { ALLEY_CUTPURSE } from './cutpurse/def';
 import type { EnemyDef, EnemyKind, MoveDef } from './types';
 
 /**
@@ -67,6 +68,7 @@ export const BLIGHTED_SOLDIER: EnemyDef = {
 export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'ash-wraith': ASH_WRAITH,
   'blighted-soldier': BLIGHTED_SOLDIER,
+  'alley-cutpurse': ALLEY_CUTPURSE,
 };
 
 /**
@@ -76,6 +78,7 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
 export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapon'; color: number }>> = {
   'ash-wraith': { part: 'hand', color: 0x9fbf8f },
   'blighted-soldier': { part: 'weapon', color: 0xd04030 },
+  'alley-cutpurse': { part: 'hand', color: 0xc8b070 },
 };
 
 function move(

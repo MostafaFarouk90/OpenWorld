@@ -1,4 +1,6 @@
+import type { AssetId } from '../assets/AssetManifest';
 import type { GamePlugin } from '../core/plugins';
+import { ENEMY_DEFS } from './defs';
 import { EnemyManager, type ModelFactory } from './EnemyManager';
 import { hostFromContext } from './host';
 import { BRIGHTWATER_SPAWNERS } from './brightwaterSpawners';
@@ -22,8 +24,16 @@ const plugin: GamePlugin = {
   setup(ctx) {
     const warn = (m: string) => console.warn(`[enemies] ${m}`);
     const assets = ctx.assets;
-    const makeModel: ModelFactory = () => {
+    const makeModel: ModelFactory = (def) => {
       if (!assets) throw new Error('no asset loader (headless)');
+      // The recipe's preferred models (the cutpurse's Rogue) when loaded, the Knight otherwise.
+      for (const id of def.model.prefer) {
+        try {
+          return { model: assets.instantiate(id as AssetId), clips: assets.animations(id as AssetId) };
+        } catch {
+          // not loaded (yet): try the next, then the Knight
+        }
+      }
       return { model: assets.instantiate(KNIGHT), clips: assets.animations(KNIGHT) };
     };
     const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS] });
@@ -49,6 +59,7 @@ const plugin: GamePlugin = {
     ctx.systems.add({ id: 'enemies.render', renderPhase: 'world', order: 50, render: (alpha) => m.render(alpha) });
 
     if (assets) {
+      for (const def of Object.values(ENEMY_DEFS)) for (const id of def.model.prefer) assets.load(id as AssetId).catch(() => undefined);
       assets.load(KNIGHT).then(
         () => {
           if (manager === m) m.spawners.startAuto();
