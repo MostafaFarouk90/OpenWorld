@@ -89,12 +89,14 @@ export interface LevelBand {
 
 export interface SpawnerDef {
   id: string;
-  /** Written to `actor.spawnTag` (default: the spawner id); thread 3's M01 kill filter reads 'spawn.m01'. */
+  /** Written to `actor.spawnTag` (default: the spawner id); thread 3's M01 kill objective matches 'm01'. */
   tag?: string;
   enemy: EnemyKind;
   count: number;
   /** Spawn anchor id (world-layout-and-npcs.md section 2). */
   anchor: string;
+  /** Per-member spawn anchors (slot i at entry i); a missing one falls back to the ring around `anchor`. */
+  memberAnchors?: readonly string[];
   /** Waypoint anchor ids, or every anchor carrying a tag. */
   patrol?: readonly string[] | { tag: string };
   /** A band, or a region id from REGION_BANDS. */

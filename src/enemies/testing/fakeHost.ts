@@ -318,6 +318,13 @@ export class FakeHost {
         this.bus.emit('actor.despawned', { actorId: id });
       },
       get: (id) => this.actorMap.get(id),
+      bindOwner: (actor, owner) => {
+        if (!this.actorMap.has(actor.id)) throw new Error(`FakeHost: "${actor.id}" is not registered`);
+        this.owners.set(owner, actor.id);
+        return () => {
+          if (this.owners.get(owner) === actor.id) this.owners.delete(owner);
+        };
+      },
       get player() {
         return self.player;
       },
@@ -342,6 +349,10 @@ export class FakeHost {
     combat: {
       bus: this.combatSystem.bus,
       addAttacker: (actorId, tracer, window) => {
+        // As the real CombatRegistry.watch: one window per tracer attacker.
+        if (this.attackers.some((a) => a.tracer.attacker === tracer.attacker)) {
+          throw new Error(`CombatRegistry: attacker of "${actorId}" is already watched`);
+        }
         const entry = { actorId, tracer, window, open: false };
         this.attackers.push(entry);
         this.combatSystem.addAttacker(tracer, window);

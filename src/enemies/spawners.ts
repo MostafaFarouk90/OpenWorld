@@ -91,14 +91,18 @@ export class SpawnerRegistry {
       const spentKey = `${id}#${slot}`;
       if (this.spent.has(spentKey)) continue;
       const level = this.levelFor(band);
-      const feet = this.slotPosition(anchor, slot, slots.length);
+      const own = def.memberAnchors?.[slot] ? this.deps.anchors.find(def.memberAnchors[slot]) : undefined;
+      if (def.memberAnchors?.[slot] && !own) {
+        this.warnOnce(`member:${id}#${slot}`, `spawners: spawner '${id}' member ${slot} has no anchor '${def.memberAnchors[slot]}'; using a ring slot`);
+      }
+      const feet = own ? { ...own.position } : this.slotPosition(anchor, slot, slots.length);
       const actorId = this.deps.spawn({
         spawnerId: id,
         spawnTag: def.tag ?? def.id,
         slot,
         def: enemyDef,
         feet,
-        yaw: anchor.yaw,
+        yaw: own ? own.yaw : anchor.yaw,
         level,
         patrol,
         options: { ...opts, leash: opts.leash ?? def.leash ?? true },

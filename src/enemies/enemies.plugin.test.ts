@@ -175,15 +175,15 @@ describe('enemies plugin on the real core', () => {
     t.teardown();
   });
 
-  it('quest m01 spawns the lane wraiths tagged spawn.m01, and disposing the game despawns them', async () => {
+  it('quest m01 spawns five lane wraiths tagged m01, and disposing the game despawns them', async () => {
     const { assets } = fakeAssets();
     const t = setup(assets);
     await t.game.loadPlugins(modules(corePlugin, enemiesPlugin));
-    t.anchorAhead('spawn.m01.wraith-1', 10);
+    for (let i = 1; i <= 5; i++) t.anchorAhead(`spawn.m01.wraith-${i}`, 8 + i * 3);
     t.game.events.emit('quest.started', { questId: 'm01' });
     const ids = t.game.ctx.services.require('enemies').alive('m01.lanes');
-    expect(ids).toHaveLength(4);
-    for (const id of ids) expect(t.game.ctx.actors.get(id)!.spawnTag).toBe('spawn.m01');
+    expect(ids).toHaveLength(5);
+    for (const id of ids) expect(t.game.ctx.actors.get(id)!.spawnTag).toBe('m01');
     const before = t.scene.children.length;
     t.teardown();
     for (const id of ids) expect(t.game.ctx.actors.get(id)).toBeUndefined();
@@ -242,4 +242,20 @@ describe('enemies plugin on the real core', () => {
     expect(t.of('enemies.groupCleared')).toEqual([{ spawnerId: 't10.sweeper' }]);
     t.teardown();
   });
+
+  it('the blighted soldier registers both hands, and its shield bash is credited to it', async () => {
+    const { assets } = fakeAssets();
+    const t = setup(assets);
+    t.world.combat.combat.addTarget(t.world.combat.playerHurtboxes!);
+    await t.game.loadPlugins(modules(corePlugin, enemiesPlugin));
+    t.anchorAhead('spawn.t09.soldier', 2);
+    const [id] = t.game.ctx.services.require('enemies').spawnGroup('t09.soldier', { moves: ['soldier.bash'] });
+    expect(id).toBeDefined();
+    expect(warn.mock.calls.some((c) => String(c[0]).includes('could not spawn'))).toBe(false);
+    const player = t.game.ctx.actors.player;
+    for (let i = 0; i < 900 && !t.of('damage.dealt').some((d) => d.targetId === player.id); i++) t.run(1);
+    expect(t.of('damage.dealt').find((d) => d.targetId === player.id)).toMatchObject({ attackerId: id, attackId: 'Block_Attack' });
+    t.teardown();
+  });
 });
+
