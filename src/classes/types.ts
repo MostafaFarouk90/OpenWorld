@@ -55,7 +55,7 @@ export interface ClassKit {
   drill?: readonly DrillStepDef[];
 }
 
-export type RegisterKitResult = { ok: true; dispose(): void } | { ok: false; reason: 'bad-class' | 'bad-kit' };
+export type RegisterKitResult = { ok: true; dispose(): void } | { ok: false; reason: 'bad-class' | 'bad-kit' | 'duplicate' };
 
 export type DrillOutcome = 'done' | 'skipped';
 
