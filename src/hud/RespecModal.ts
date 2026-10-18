@@ -19,8 +19,18 @@ export interface RespecOption {
 }
 
 export interface RespecModalRequest {
-  /** One quote covers all options: the cost depends on state (first respec free, gold held), not on the target. */
+  /**
+   * The quote shown. When `quoteFor` is absent (or there are no options) this single quote covers all options:
+   * the cost depends on state (first respec free, gold held), not on the target. It is also the fallback when
+   * `quoteFor` throws or returns a malformed quote.
+   */
   quote: RespecQuote;
+  /**
+   * Optional, used only with options: the quote for one option id. Asked for the first option on open and again
+   * on every selection change (arrows, click), so the price text and Confirm's enabled state follow the highlight.
+   * A throw or a malformed result falls back to `quote` for that option.
+   */
+  quoteFor?(id: string): RespecQuote;
   /**
    * With options (non-empty after dropping entries with an empty id or label; duplicate ids make `open` return
    * false) the dialog shows a radio group, the first option selected. Absent or empty: no group.
@@ -96,26 +106,55 @@ export function createRespecModal(deps: RespecModalDeps): RespecModalService {
       if (!quote || typeof request.confirm !== 'function' || typeof request.cancel !== 'function') return false;
       const options = cleanOptions(request.options);
       if (options === false) return false;
-      const raw = [quote.gold, quote.cost].find((n): n is number => typeof n === 'number' && Number.isFinite(n));
-      const gold = raw === undefined ? 0 : Math.max(0, Math.round(raw));
-      let have: number | undefined;
-      try {
-        have = deps.gold?.();
-      } catch {
-        have = undefined;
-      }
       // Unknown affordability is assumed true; the caller (thread 7) refuses the spend if it is not.
-      const canAfford =
-        quote.free === true ||
-        (typeof quote.canAfford === 'boolean' ? quote.canAfford : typeof have === 'number' && Number.isFinite(have) ? gold <= have : true);
+      const evaluate = (q: RespecQuote): { free: boolean; gold: number; canAfford: boolean } => {
+        const raw = [q.gold, q.cost].find((n): n is number => typeof n === 'number' && Number.isFinite(n));
+        const gold = raw === undefined ? 0 : Math.max(0, Math.round(raw));
+        let have: number | undefined;
+        try {
+          have = deps.gold?.();
+        } catch {
+          have = undefined;
+        }
+        const canAfford =
+          q.free === true ||
+          (typeof q.canAfford === 'boolean' ? q.canAfford : typeof have === 'number' && Number.isFinite(have) ? gold <= have : true);
+        return { free: !!q.free, gold, canAfford };
+      };
+      const quoteFor = options && typeof request.quoteFor === 'function' ? request.quoteFor.bind(request) : null;
+      const quoteOf = (index: number): { free: boolean; gold: number; canAfford: boolean } => {
+        if (quoteFor && options) {
+          try {
+            const q = quoteFor(options[index]!.id) as RespecQuote | null | undefined;
+            if (q && typeof q === 'object' && typeof q.free === 'boolean') return evaluate(q);
+          } catch {
+            // fall through to the request quote
+          }
+        }
+        return evaluate(quote);
+      };
+      let current = quoteOf(0);
 
       const { doc } = deps;
       const element = makeEl(doc, 'div', 'owg-respec');
       makeEl(doc, 'h2', 'owg-menu-title', element).textContent = t('hud.respec.title');
-      makeEl(doc, 'div', 'owg-respec-quote', element).textContent = quote.free ? t('hud.respec.free') : t('hud.respec.cost', { gold });
-      if (!canAfford) makeEl(doc, 'div', 'owg-respec-warn', element).textContent = t('hud.respec.cannotAfford');
+      const quoteEl = makeEl(doc, 'div', 'owg-respec-quote', element);
+      const warnEl = makeEl(doc, 'div', 'owg-respec-warn', element);
       let selected = 0;
       const radios: ElementLike[] = [];
+      let confirmBtn: ElementLike | null = null;
+      const render = (): void => {
+        quoteEl.textContent = current.free ? t('hud.respec.free') : t('hud.respec.cost', { gold: current.gold });
+        warnEl.textContent = current.canAfford ? '' : t('hud.respec.cannotAfford');
+        warnEl.style.display = current.canAfford ? 'none' : '';
+        if (confirmBtn) (confirmBtn as unknown as { disabled: boolean }).disabled = !current.canAfford;
+      };
+      const select = (i: number): void => {
+        selected = i;
+        current = quoteOf(i);
+        paint();
+        render();
+      };
       const paint = (): void => {
         radios.forEach((r, i) => {
           r.setAttribute('aria-checked', i === selected ? 'true' : 'false');
@@ -132,17 +171,17 @@ export function createRespecModal(deps: RespecModalDeps): RespecModalService {
           r.setAttribute('role', 'radio');
           r.textContent = o.label;
           r.onclick = () => {
-            selected = i;
-            paint();
+            select(i);
           };
           radios.push(r);
         });
         paint();
       }
       const actions = makeEl(doc, 'div', 'owg-respec-actions', element);
-      const confirmBtn = makeEl(doc, 'button', 'owg-btn owg-respec-confirm', actions);
-      confirmBtn.textContent = t('hud.respec.confirm');
-      (confirmBtn as unknown as { disabled: boolean }).disabled = !canAfford;
+      const confirmEl = makeEl(doc, 'button', 'owg-btn owg-respec-confirm', actions);
+      confirmBtn = confirmEl;
+      confirmEl.textContent = t('hud.respec.confirm');
+      render();
       const cancelBtn = makeEl(doc, 'button', 'owg-btn owg-respec-cancel', actions);
       cancelBtn.textContent = t('hud.respec.cancel');
 
@@ -159,8 +198,7 @@ export function createRespecModal(deps: RespecModalDeps): RespecModalService {
         const step = k === 'ArrowDown' || k === 'ArrowRight' ? 1 : k === 'ArrowUp' || k === 'ArrowLeft' ? -1 : 0;
         if (step === 0) return;
         e.preventDefault?.();
-        selected = (selected + step + options.length) % options.length;
-        paint();
+        select((selected + step + options.length) % options.length);
       };
       const teardown = (): void => {
         active = false;
@@ -168,7 +206,7 @@ export function createRespecModal(deps: RespecModalDeps): RespecModalService {
       };
       const finish = (kind: 'confirm' | 'cancel'): void => {
         if (decided) return;
-        if (kind === 'confirm' && !canAfford) return;
+        if (kind === 'confirm' && !current.canAfford) return;
         decided = true;
         const c = closer;
         closer = null;
@@ -185,7 +223,7 @@ export function createRespecModal(deps: RespecModalDeps): RespecModalService {
           console.warn('respecModal: callback failed', e);
         }
       };
-      confirmBtn.onclick = () => finish('confirm');
+      confirmEl.onclick = () => finish('confirm');
       cancelBtn.onclick = () => finish('cancel');
 
       active = true;

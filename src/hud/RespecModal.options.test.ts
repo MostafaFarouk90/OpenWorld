@@ -45,7 +45,7 @@ function setup() {
     const ok = svc.open({ quote, options, confirm, cancel });
     return { ok, confirm, cancel };
   };
-  return { open, radios, checked, key, confirmBtn, cancelBtn, all, listeners };
+  return { svc, open, radios, checked, key, confirmBtn, cancelBtn, all, listeners };
 }
 
 describe('respecModal options', () => {
@@ -184,5 +184,129 @@ describe('respecModal options', () => {
     s.confirmBtn().click();
     s.confirmBtn().click();
     expect(r.confirm).toHaveBeenCalledTimes(1);
+  });
+
+  describe('quoteFor', () => {
+    const q = (o: Partial<RespecQuote>): RespecQuote => ({ free: false, ...o });
+    const open = (s: ReturnType<typeof setup>, quoteFor: ((id: string) => RespecQuote) | undefined, options: RespecOption[] | null = OPTS) => {
+      const confirm = vi.fn();
+      const cancel = vi.fn();
+      s.svc.open({ quote: q({ gold: 100, canAfford: true }), options: options ?? undefined, quoteFor, confirm, cancel });
+      return { confirm, cancel };
+    };
+    const text = (s: ReturnType<typeof setup>) => s.all((e) => e.className.includes('owg-respec-quote'))[0]!.textContent;
+
+    it('is called per highlight with wrapping arrows; price follows; unaffordable disables Confirm', () => {
+      const s = setup();
+      const prices: Record<string, RespecQuote> = {
+        knight: q({ gold: 100, canAfford: true }),
+        ranger: q({ gold: 900, canAfford: false }),
+        mage: q({ gold: 50, canAfford: true }),
+      };
+      const quoteFor = vi.fn((id: string) => prices[id]!);
+      const r = open(s, quoteFor);
+      expect(quoteFor).toHaveBeenLastCalledWith('knight');
+      expect(text(s)).toBe('hud.respec.cost');
+      expect(s.confirmBtn().disabled).toBe(false);
+      s.key('ArrowDown'); // ranger, unaffordable
+      expect(quoteFor).toHaveBeenLastCalledWith('ranger');
+      expect(s.confirmBtn().disabled).toBe(true);
+      s.confirmBtn().click();
+      expect(r.confirm).not.toHaveBeenCalled();
+      s.key('ArrowDown'); // mage
+      expect(quoteFor).toHaveBeenLastCalledWith('mage');
+      expect(s.confirmBtn().disabled).toBe(false);
+      s.key('ArrowDown'); // wraps to knight
+      expect(quoteFor).toHaveBeenLastCalledWith('knight');
+      s.key('ArrowUp'); // wraps to mage
+      expect(quoteFor).toHaveBeenLastCalledWith('mage');
+      s.radios()[1]!.click(); // click re-evaluates
+      expect(quoteFor).toHaveBeenLastCalledWith('ranger');
+      expect(s.confirmBtn().disabled).toBe(true);
+      s.radios()[2]!.click();
+      s.confirmBtn().click();
+      expect(r.confirm).toHaveBeenCalledWith('mage');
+    });
+
+    it('price text switches between free and gold', () => {
+      const t2 = vi.fn((k: string, p?: Record<string, unknown>) => (p ? `${k}:${p.gold}` : k));
+      const listeners = new Set<(e: RespecKeyEvent) => void>();
+      let el: ElementLike | null = null;
+      const svc = createRespecModal({
+        doc: new StubDocument(),
+        t: t2 as never,
+        keys: { addEventListener: (_t, l) => void listeners.add(l), removeEventListener: (_t, l) => void listeners.delete(l) },
+        openModal: (w) => ((el = w.element), () => {}),
+      });
+      svc.open({
+        quote: FREE,
+        options: OPTS,
+        quoteFor: (id) => (id === 'knight' ? { free: true } : { free: false, gold: 250, canAfford: true }),
+        confirm: () => {},
+        cancel: () => {},
+      });
+      const quoteText = () => (el!.children.find((c) => c.className.includes('owg-respec-quote')) as StubElement).textContent;
+      expect(quoteText()).toBe('hud.respec.free');
+      [...listeners].forEach((l) => l({ key: 'ArrowDown', code: 'ArrowDown' }));
+      expect(quoteText()).toBe('hud.respec.cost:250');
+    });
+
+    it('derives canAfford from gold per option', () => {
+      const listeners = new Set<(e: RespecKeyEvent) => void>();
+      let el: ElementLike | null = null;
+      const svc = createRespecModal({
+        doc: new StubDocument(),
+        t: (k) => k,
+        gold: () => 200,
+        keys: { addEventListener: (_t, l) => void listeners.add(l), removeEventListener: (_t, l) => void listeners.delete(l) },
+        openModal: (w) => ((el = w.element), () => {}),
+      });
+      const confirm = vi.fn();
+      svc.open({
+        quote: FREE,
+        options: OPTS,
+        quoteFor: (id) => ({ free: false, gold: id === 'knight' ? 100 : 300 }),
+        confirm,
+        cancel: () => {},
+      });
+      const btn = () => {
+        const f = (e: ElementLike): StubElement | null => (e.className.includes('owg-respec-confirm') ? (e as StubElement) : e.children.map(f).find(Boolean) ?? null);
+        return f(el!) as StubElement & { disabled: boolean };
+      };
+      expect(btn().disabled).toBe(false);
+      [...listeners].forEach((l) => l({ key: 'ArrowDown', code: 'ArrowDown' }));
+      expect(btn().disabled).toBe(true);
+    });
+
+    it('a throwing or malformed quoteFor falls back to request.quote without throwing', () => {
+      for (const bad of [
+        () => {
+          throw new Error('boom');
+        },
+        () => null as never,
+        () => ({}) as never,
+        () => 'x' as never,
+      ]) {
+        const s = setup();
+        const r = open(s, bad);
+        expect(s.confirmBtn().disabled).toBe(false);
+        expect(() => s.key('ArrowDown')).not.toThrow();
+        s.confirmBtn().click();
+        expect(r.confirm).toHaveBeenCalledWith('ranger');
+      }
+      const s = setup();
+      s.svc.open({ quote: q({ gold: 5, canAfford: false }), options: OPTS, quoteFor: () => { throw new Error('x'); }, confirm: vi.fn(), cancel: vi.fn() });
+      expect(s.confirmBtn().disabled).toBe(true);
+    });
+
+    it('is ignored without options', () => {
+      const s = setup();
+      const quoteFor = vi.fn(() => q({ gold: 1, canAfford: false }));
+      const r = open(s, quoteFor, null);
+      expect(quoteFor).not.toHaveBeenCalled();
+      expect(s.confirmBtn().disabled).toBe(false);
+      s.confirmBtn().click();
+      expect(r.confirm).toHaveBeenCalledWith();
+    });
   });
 });
