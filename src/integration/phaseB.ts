@@ -382,7 +382,8 @@ export async function playEnding(h: ChapterHarness, t: QuestTrail): Promise<numb
   const dialogue = h.ctx.services.require('dialogue');
   h.run(10);
   ensure(!dialogue.active, 'no camp before the card closes');
-  h.ctx.events.emit('hud.actEnding.closed', { endingId: 'smoke-over-harrowmark' });
+  ensure(h.ctx.services.require('actEndingCard').active(), 'the card is up');
+  h.ctx.services.require('actEndingCard').dismiss();
   for (let i = 0; i < 30 && !dialogue.active; i++) h.run(1);
   ensure(dialogue.active, 'the camp scene started after the card');
   let nodes = 0;

@@ -219,8 +219,9 @@ const hudPlugin: GamePlugin = {
     ctx.events.on('companion.aura', (e) => portrait.aura(e.companionId, e.active));
     mount('top-left', portrait, 40);
 
-    // The fog wall before M05 (its trigger exists only while the wall stands): one toast per session on walking into it.
     const keyTarget = typeof globalThis.addEventListener === 'function' ? (globalThis as unknown as KeySource) : null;
+
+    // The fog wall before M05 (its trigger exists only while the wall stands): one toast per session on walking into it.
     let fogToasted = false;
     ctx.events.on('trigger.enter', (e) => {
       if (e.triggerId !== FOG_TRIGGER_ID || fogToasted || fogOpen(ctx.state)) return;
@@ -242,6 +243,7 @@ const hudPlugin: GamePlugin = {
     ctx.events.on('save.loaded', () => ending.onLoaded());
     ctx.gates.flag(ACT_ENDING_GATE_FLAG, (open) => ending.onGate(open));
     mount('center', ending, 1);
+    ctx.services.provide('actEndingCard', { active: () => ending.active, dismiss: () => ending.dismiss() });
 
     // Phase B readers: every service optional, looked up on each read (plugins may set up after this one).
     mount(

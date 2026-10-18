@@ -22,10 +22,11 @@ const plugin: GamePlugin = {
       getFlag: (k) => ctx.state.getFlag(k),
       setFlag: (k, v) => ctx.state.setFlag(k, v),
       emitActEnded: (e) => ctx.events.emit('act.ended', e),
-      busy: () => ctx.hud.modalOpen !== null || dialogue()?.active === true,
+      // The card counts as busy: a load with the gate set and the card unseen re-shows it (the gate watcher runs before
+      // this plugin's save.loaded and marks it seen), and the camp must wait for its close.
+      busy: () => ctx.hud.modalOpen !== null || dialogue()?.active === true || ctx.services.get('actEndingCard')?.active() === true,
       inCombat: () => ctx.player.actor.dead || ctx.services.get('waystones')?.hostileAggro === true,
       startCamp: () => dialogue()?.start(ACT1_CAMP_DIALOGUE, ACT1_CAMP_NPC) === true,
-      warn: (m) => console.warn(`[act1-ending] ${m}`),
     });
 
     let shot: CameraOverride | null = null;

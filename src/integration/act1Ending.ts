@@ -28,13 +28,12 @@ export interface Act1EndingPorts {
   getFlag(key: string): unknown;
   setFlag(key: string, value: true): void;
   emitActEnded(e: { act: 1; endingId: string }): void;
-  /** True while any dialogue or HUD modal is open. */
+  /** True while any dialogue or HUD modal is open, or the ending card is waiting or showing. */
   busy(): boolean;
   /** True while hostiles are aggroed on the player, or the player is dead. */
   inCombat(): boolean;
   /** Starts the camp dialogue; false when refused (try again later). */
   startCamp(): boolean;
-  warn?(msg: string): void;
 }
 
 export class Act1Ending {
@@ -86,7 +85,8 @@ export class Act1Ending {
       return;
     }
     if (this.seen(ACT1_CAMP_SEEN_FLAG)) return;
-    // Card not seen yet: the HUD re-shows it and its `closed` arms the camp.
+    // Card seen: the camp is owed. A card the HUD re-shows on this load is marked seen before this handler runs (its
+    // gate watcher goes first), so the tick also waits while the card is up (`busy`); its `closed` arms it again.
     if (this.seen(ACT1_CARD_SEEN_FLAG)) this.campPending = true;
   }
 
@@ -98,8 +98,7 @@ export class Act1Ending {
   }
 
   /**
-   * Rules tick: starts the owed camp once nothing is open and no fight is on. The card never needs a check of its own:
-   * the camp is armed only after its `closed`, or on a load whose card was already shown (the HUD does not re-show it).
+   * Rules tick: starts the owed camp once nothing is open (the ending card included, through `busy`) and no fight is on.
    */
   tick(): void {
     if (!this.campPending) return;
