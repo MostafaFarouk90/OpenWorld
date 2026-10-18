@@ -115,7 +115,7 @@ describe('Ash-drift (Warm)', () => {
   it('falls back to the player side of the target when the back is walled off', () => {
     const t = harness([foe('a', { x: 0, y: 0, z: -4 }, facingPlayer)], {
       // a wall between the target and the point behind it
-      walls: (o, d) => (d.z < 0 && o.z === -4 + 0 ? { distance: 0.5 } : null),
+      walls: (o, d) => (d.z < 0 && Math.abs(o.z + 4.5) < 1e-6 ? { distance: 0.5 } : null),
     });
     t.forms.warm(t.ctx());
     expect(t.teleports).toHaveLength(1);
@@ -183,9 +183,29 @@ describe('Ash-drift (Blaze)', () => {
     expect(t.invulnerable).toHaveBeenCalledOnce();
   });
 
+  it('the second target is the one nearest the first even when another stands in front of the cast', () => {
+    // The player faces +Z. Both b and far-front are judged from the landing, not from the cast: b is level with the
+    // player (not in front) but nearer the first target than far-front is.
+    const t = harness([foe('a', { x: 0, y: 0, z: 1 }), foe('b', { x: 3, y: 0, z: -0.5 }), foe('far-front', { x: 0, y: 0, z: 7.5 })]);
+    t.forms.blaze(t.ctx(8, { x: 0, y: 0, z: 0 }, Math.PI));
+    expect(t.apply.mock.calls.map((c) => c[0].targetId)).toEqual(['a', 'b']);
+  });
+
   it('strikes the single target once when there is only one', () => {
     const t = harness([foe('a', { x: 0, y: 0, z: -4 })]);
     t.forms.blaze(t.ctx(8));
+    expect(t.apply).toHaveBeenCalledOnce();
+  });
+});
+
+describe('Ash-drift against a solid target', () => {
+  it('starts the wall ray outside the target capsule, so a body at the target feet does not block the hop', () => {
+    // A ray that starts within 0.35 m of the target feet hits its capsule at distance 0.
+    const t = harness([foe('a', { x: 0, y: 0, z: -4 }, facingPlayer)], {
+      walls: (o) => (Math.hypot(o.x, o.z + 4) < 0.35 ? { distance: 0 } : null),
+    });
+    t.forms.warm(t.ctx());
+    expect(t.teleports).toHaveLength(1);
     expect(t.apply).toHaveBeenCalledOnce();
   });
 });

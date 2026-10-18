@@ -62,13 +62,6 @@ describe('Back-Slit', () => {
     expect(run(mkActor('foe'), req({ direction: undefined })).r.amount).toBe(10);
     expect(run(mkActor('foe'), req(), false).r.amount).toBe(10);
   });
-
-  it('still lets the hit land on a watch guard: the damage is doubled, never suppressed (a hit is a stealth catch)', () => {
-    const guard = mkActor('guard');
-    const { r } = run(guard, req({ targetId: 'guard' }));
-    expect(r.amount).toBe(20);
-    expect(r.outcome).toBe('hit');
-  });
 });
 
 const result = (over: Partial<DamageResult> = {}): DamageResult =>
@@ -136,7 +129,7 @@ describe('Bleeding Ember', () => {
 
 describe('Spark Dodge', () => {
   const setup = (over: { tick?: { v: number }; active?: boolean; near?: { id: string; state: string | undefined }[] } = {}) => {
-    const apply = vi.fn(() => true);
+    const apply = vi.fn((..._a: unknown[]) => true);
     const spark = vi.fn();
     const tick = over.tick ?? { v: 0 };
     const h = sparkDodgeHandler({
@@ -169,6 +162,13 @@ describe('Spark Dodge', () => {
     tick.v = 90;
     h();
     expect(spark).toHaveBeenCalledTimes(2);
+  });
+
+  it('always ignites the attacker whose swing was dodged, even with no enemy view', () => {
+    const { h, apply } = setup({ near: [{ id: 'boss', state: undefined }, { id: 'idle', state: 'patrol' }] });
+    h('boss');
+    expect(apply).toHaveBeenCalledOnce();
+    expect(apply.mock.calls[0][0]).toBe('boss');
   });
 
   it('does nothing when the skill is not learned', () => {

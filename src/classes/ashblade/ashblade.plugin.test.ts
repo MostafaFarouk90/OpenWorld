@@ -214,7 +214,7 @@ describe('ashblade plugin: Quick Slip', () => {
 });
 
 describe('ashblade plugin: Spark Dodge', () => {
-  it('ignites aggroed hostiles near the feet on a dodge that avoids a hit, once per 1.5 s', async () => {
+  it('ignites aggroed hostiles near the feet on a dodge that avoids a hit', async () => {
     const t = await boot();
     const applied: string[] = [];
     t.ctx.services.provide('status' as never, { apply: (id: string) => (applied.push(id), true) } as never);
@@ -348,7 +348,7 @@ describe('ashblade plugin: late services and teardown', () => {
     const entries: unknown[][] = [];
     const off = vi.fn();
     t.ctx.services.provide('codex' as never, { register: (e: unknown[]) => (entries.push(e), off) } as never);
-    t.run(3);
+    t.run(31);
     expect(entries).toHaveLength(1);
     expect(entries[0]).toEqual([{ tab: 'howto', id: 'ashblade-craft', nameKey: 'codex.howto.ashblade-craft.name', bodyKey: 'codex.howto.ashblade-craft.body' }]);
     expect(t.ctx.strings.t('codex.howto.ashblade-craft.name')).toBe("The Ashblade's craft");

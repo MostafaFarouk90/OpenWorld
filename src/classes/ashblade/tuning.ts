@@ -43,7 +43,7 @@ export const SPARK_DODGE = {
 } as const;
 
 export const ASH_CLOUD = {
-  /** Skill data (thread 5's abilities service spends and cools). Ember 10 keeps the 40 Surge affordable (the pool is 40). */
+  /** Skill data (thread 5's abilities service spends and cools). Ember 10 (Rally Cry's cost) keeps the 40 Surge affordable. */
   emberCost: 10,
   cooldown: 18,
   /** Design effect 16: a 6 s cloud. */
@@ -73,6 +73,8 @@ export const ASH_DRIFT = {
   groundProbeDown: 3,
   /** Landing ground must be within this of the target's feet. */
   groundTolerance: 2,
+  /** Wall rays start this far from the target's feet, outside its capsule (radius 0.35). */
+  clearOfTarget: 0.5,
   damage: SURGE.damage,
 } as const;
 

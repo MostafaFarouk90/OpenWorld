@@ -32,13 +32,16 @@ function facingOf(root: THREE.Object3D | null): { x: number; z: number } | null 
 }
 
 /** A safe standing point near `want`, or null: no wall between `from` and it, ground within tolerance of `refY`. */
-function landing(p: DriftPorts, from: V3, want: { x: number; z: number }, refY: number): V3 | null {
+function landing(p: DriftPorts, from: V3, want: { x: number; z: number }, refY: number, clear = 0): V3 | null {
   const chest = ASH_DRIFT.chestHeight;
   const dx = want.x - from.x;
   const dz = want.z - from.z;
   const len = Math.hypot(dx, dz);
-  if (len > 1e-6) {
-    const wall = p.raycast({ x: from.x, y: refY + chest, z: from.z }, { x: dx / len, y: 0, z: dz / len }, len);
+  if (len > clear + 1e-6) {
+    // `clear` starts the ray outside a target's own capsule (radius 0.35), which a solid ray would hit at distance 0.
+    const ux = dx / len;
+    const uz = dz / len;
+    const wall = p.raycast({ x: from.x + ux * clear, y: refY + chest, z: from.z + uz * clear }, { x: ux, y: 0, z: uz }, len - clear);
     if (wall) return null;
   }
   const down = p.raycast({ x: want.x, y: refY + ASH_DRIFT.groundProbeUp, z: want.z }, { x: 0, y: -1, z: 0 }, ASH_DRIFT.groundProbeUp + ASH_DRIFT.groundProbeDown);
@@ -73,7 +76,7 @@ export function createAshbladeForms(p: DriftPorts): Record<'warm' | 'blaze' | 'c
   };
 
   /** Living hostiles the drift may jump to, nearest first, front half before back half. */
-  const candidates = (c: SurgeFormContext, centre: V3, exclude: ReadonlySet<string>) => {
+  const candidates = (c: SurgeFormContext, centre: V3, exclude: ReadonlySet<string>, rankFront = true) => {
     const inSpace = p.currentInterior();
     const f = fwd(c.facingYaw);
     const hits = actorsInRadius(c.host.actors, centre, c.radius, { team: 'hostile', alive: true }).filter(
@@ -81,7 +84,7 @@ export function createAshbladeForms(p: DriftPorts): Record<'warm' | 'blaze' | 'c
     );
     const front = (h: { position: V3; distance: number }) =>
       h.distance < 1e-6 || ((h.position.x - c.feet.x) * f.x + (h.position.z - c.feet.z) * f.z) / Math.max(h.distance, 1e-6) > 0;
-    return hits.sort((a, b) => Number(!front(a)) - Number(!front(b)) || a.distance - b.distance);
+    return hits.sort((a, b) => (rankFront ? Number(!front(a)) - Number(!front(b)) : 0) || a.distance - b.distance);
   };
 
   /** Picks a landing next to a target: behind it, else on the player's side of it. */
@@ -93,7 +96,7 @@ export function createAshbladeForms(p: DriftPorts): Record<'warm' | 'blaze' | 'c
     const behind = face ? { x: h.position.x - face.x * ASH_DRIFT.behind, z: h.position.z - face.z * ASH_DRIFT.behind } : { x: h.position.x + away.x * ASH_DRIFT.behind, z: h.position.z + away.z * ASH_DRIFT.behind };
     const near = { x: h.position.x - away.x * ASH_DRIFT.behind, z: h.position.z - away.z * ASH_DRIFT.behind };
     const targetFeet = { x: h.position.x, y: h.position.y, z: h.position.z };
-    return landing(p, targetFeet, behind, h.position.y) ?? landing(p, targetFeet, near, h.position.y);
+    return landing(p, targetFeet, behind, h.position.y, ASH_DRIFT.clearOfTarget) ?? landing(p, targetFeet, near, h.position.y, ASH_DRIFT.clearOfTarget);
   };
 
   const hop = (to: V3, lookAt: V3): void => {
@@ -110,7 +113,7 @@ export function createAshbladeForms(p: DriftPorts): Record<'warm' | 'blaze' | 'c
       let origin: V3 = c.feet;
       for (let i = 0; i < targets; i++) {
         let done = false;
-        for (const cand of candidates(c, origin, hit)) {
+        for (const cand of candidates(c, origin, hit, i === 0)) {
           hit.add(cand.actor.id);
           // No safe landing next to this one: the drift gives the invulnerability without the hop or the strike; try the next.
           const to = landNear(origin, cand);
