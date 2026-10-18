@@ -87,8 +87,8 @@ export const MERCY = {
 } as const;
 
 /** Boss mercies by bossId (actors-and-damage.md section 7). Amount is the uncapped ledger value. */
-export const BOSS_MERCY: Readonly<Record<string, { verb: 'release'; track: 'ashwalkers'; amount: number }>> = {
-  'ashen-prior': { verb: 'release', track: 'ashwalkers', amount: 4 },
+export const BOSS_MERCY: Readonly<Record<string, { verb: 'release'; track: 'ashwalkers'; amount: number; burn: number }>> = {
+  'ashen-prior': { verb: 'release', track: 'ashwalkers', amount: 4, burn: 20 },
 };
 
 export const ASH_GRAB = { speedScale: 0.6, seconds: 2 } as const;

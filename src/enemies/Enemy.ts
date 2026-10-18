@@ -380,6 +380,17 @@ export class Enemy {
     this.setLoco(ENEMY_CLIPS.walk);
   }
 
+  /** Despawns without reporting the mercy exit, for a load that never saw the mercy. */
+  despawnUnseen(): void {
+    this.goneHow = 'despawned';
+    this.despawn();
+  }
+
+  /** Leaving or dissolving after an accepted mercy. */
+  get inMercyExit(): boolean {
+    return this.goneHow === 'released' || this.goneHow === 'spared';
+  }
+
   /** A packmate was spared: see `Brain.offerYield`. */
   offerYield(): boolean {
     return this.phase === 'alive' && this.brain.offerYield();

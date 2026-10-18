@@ -43,6 +43,7 @@ export class EnemyManager {
   private readonly mercyRemovers = new Map<Enemy, () => void>();
   private readonly subjects = new Map<Enemy, MercySubject>();
   private readonly bossHolds = new Map<string, () => void>();
+  private readonly glyphs = new Map<ActorId, { stop(): void }>();
   readonly tally = new MercyTally();
   private readonly unsubs: Array<() => void> = [];
   private readonly rng: () => number;
@@ -233,7 +234,9 @@ export class EnemyManager {
   }
 
   private releaseFx(at: THREE.Vector3): void {
-    this.host.services.get('vfx')?.spawnEffect?.('release-pulse', { position: { x: at.x, y: at.y, z: at.z } });
+    const vfx = this.host.services.get('vfx');
+    vfx?.spawnEffect?.('release-pulse', { position: { x: at.x, y: at.y, z: at.z } });
+    vfx?.pulseScreen?.(0.5, 0.8, 0xffc040);
   }
 
   // ---- boss mercy ---------------------------------------------------------------------------------
@@ -268,6 +271,11 @@ export class EnemyManager {
     );
   }
 
+  private stopGlyph(actorId: ActorId): void {
+    this.glyphs.get(actorId)?.stop();
+    this.glyphs.delete(actorId);
+  }
+
   private closeBossHold(bossId: string): void {
     this.bossHolds.get(bossId)?.();
     this.bossHolds.delete(bossId);
@@ -277,9 +285,9 @@ export class EnemyManager {
     const bosses = this.host.bosses;
     const table = BOSS_MERCY[boss.bossId];
     if (!bosses || !table) return;
-    // The registry decides: only a true release charges Burn and pays the ledger row.
-    if (!bosses.release(boss.bossId)) return;
-    this.closeBossHold(boss.bossId);
+    // Read the boss position and the summons before the registry fires `boss.released`: its listeners
+    // (the encounter script) may despawn the boss or its summons synchronously.
+    if (!this.host.actors.get(boss.actorId)) return;
     const at = boss.feet(new THREE.Vector3());
     const pulseId = nextPulseId();
     // The pulse also frees every staggered undead within 4 m, under the same pulseId and one charge.
@@ -288,7 +296,10 @@ export class EnemyManager {
     for (const s of this.subjects.values()) {
       if (s.def.mercy.verb === 'release' && s.mercyOpen() && s.feet(p).distanceTo(at) <= MERCY.pulseRadius) around.push(s);
     }
-    this.chargeShard(MERCY.bossReleaseBurn, 'release');
+    // The registry decides: only a true release charges Burn and pays the ledger row.
+    if (!bosses.release(boss.bossId)) return;
+    this.closeBossHold(boss.bossId);
+    this.chargeShard(table.burn, 'release');
     const bossEvent: MercyEventLike = {
       verb: table.verb,
       tier: 'boss',
@@ -300,7 +311,7 @@ export class EnemyManager {
     };
     this.tally.mercy(bossEvent);
     this.host.events.emit('mercy', bossEvent);
-    this.applyMercy(mercyEvents(around, pulseId));
+    this.applyMercy(mercyEvents(around.filter((a) => this.enemies.has(a.actorId)), pulseId));
     this.releaseFx(at);
   }
 
@@ -347,6 +358,7 @@ export class EnemyManager {
       this.enemies.delete(self.id);
       this.env.releaseToken(self);
       this.subjects.delete(self);
+      this.stopGlyph(self.id);
       this.mercyRemovers.get(self)?.();
       this.mercyRemovers.delete(self);
       if (this.disposed) return;
@@ -392,7 +404,15 @@ export class EnemyManager {
     });
     on('enemies.yield', (p) => {
       const e = this.enemies.get(p.actorId);
-      if (e) this.host.services.get('vfx')?.spawnEffect?.('yield-glyph', { position: { x: e.feet.x, y: e.feet.y, z: e.feet.z } }, { seconds: p.seconds });
+      if (!e) return;
+      // A refreshed window replaces the old glyph.
+      this.stopGlyph(p.actorId);
+      const h = this.host.services.get('vfx')?.spawnEffect?.('yield-glyph', { position: { x: e.feet.x, y: e.feet.y, z: e.feet.z } }, { seconds: p.seconds });
+      if (h && typeof (h as { stop?: unknown }).stop === 'function') this.glyphs.set(p.actorId, h as { stop(): void });
+    });
+    // The glyph goes when the yield ends: resume, mercy, death or despawn.
+    on('enemies.state', (p) => {
+      if (p.from === 'yield') this.stopGlyph(p.actorId);
     });
     on('boss.releaseWindow', (p) => this.onBossWindow(p.bossId, p.open));
     on('boss.released', (p) => this.closeBossHold(p.bossId));
@@ -410,9 +430,17 @@ export class EnemyManager {
     on('save.loaded', () => {
       // The live world follows the save: cleared groups and spent piles go, active quests' groups return.
       const spent = new Set(this.spawners.liveInSpentSlots());
+      // An enemy leaving after a mercy the loaded save never saw is gone from this world: despawn it
+      // (no spend, no clear) and refill its group, so the loaded world keeps the enemy.
+      const refill = new Set<string>();
       for (const e of [...this.enemies.values()]) {
         if ((e.spawnerId && this.spawners.isCleared(e.spawnerId)) || spent.has(e.id)) e.despawn();
+        else if (e.inMercyExit && e.spawnerId) {
+          refill.add(e.spawnerId);
+          e.despawnUnseen();
+        }
       }
+      for (const id of refill) if (!this.spawners.isCleared(id)) this.spawners.spawnGroup(id);
       const active = this.host.services.get('quests')?.active() ?? [];
       for (const questId of active) this.spawners.onQuestStarted(questId, (f) => this.host.state.getBool(f, false));
     });
@@ -455,6 +483,7 @@ export class EnemyManager {
     this.disposed = true;
     for (const u of this.unsubs.splice(0)) u();
     for (const id of [...this.bossHolds.keys()]) this.closeBossHold(id);
+    for (const id of [...this.glyphs.keys()]) this.stopGlyph(id);
     for (const e of [...this.enemies.values()]) e.despawn();
     this.enemies.clear();
   }

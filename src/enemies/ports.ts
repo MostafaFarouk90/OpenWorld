@@ -203,7 +203,8 @@ export interface PlayerPort {
 }
 
 export interface VfxLike {
-  spawnEffect?(id: string, transform: { position: { x: number; y: number; z: number } }, params?: Record<string, number | string | boolean>): unknown;
+  spawnEffect?(id: string, transform: { position: { x: number; y: number; z: number } }, params?: Record<string, number | string | boolean>): { stop(): void } | unknown;
+  pulseScreen?(strength: number, seconds: number, color?: number): void;
   dissolve(root: THREE.Object3D, seconds: number): Promise<void>;
   attachTrail?(
     id: string,

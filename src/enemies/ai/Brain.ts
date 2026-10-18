@@ -337,6 +337,7 @@ export class Brain {
     if (this.finished || this.def.mercy.when !== 'yielding') return false;
     if (this._state === 'yield') {
       this.stateTime = 0;
+      this.hooks.yieldStarted(AI.yieldSeconds);
       return true;
     }
     if (this._state !== 'stagger') return false;

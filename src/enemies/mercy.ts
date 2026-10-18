@@ -130,7 +130,8 @@ export function makeBossMercyInteractable(
     radius: MERCY.radius,
     coneDegrees: MERCY.coneDegrees,
     holdSeconds: MERCY.holdSeconds,
-    promptKey: 'enemies.mercy.release',
+    // Stop-gap until Interactable.promptParams (v0.5) lets one key carry the cost.
+    promptKey: 'enemies.mercy.release.boss',
     get priority() {
       return deps.lockOnTarget() === subject.actorId ? MERCY.lockOnPriority : 0;
     },
