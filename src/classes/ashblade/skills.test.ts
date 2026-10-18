@@ -38,11 +38,15 @@ describe('Ashblade skill data', () => {
 
   it('registers into the shared tree once, and a repeat is refused without changing it', () => {
     const before = SKILLS.length;
-    expect(registerClassSkills('ashblade', ASHBLADE_SKILLS)).toEqual({ ok: true, count: 15 });
+    const reg = registerClassSkills('ashblade', ASHBLADE_SKILLS);
+    expect(reg).toMatchObject({ ok: true, count: 15 });
     expect(SKILLS.length).toBe(before + 15);
     expect(getSkill(SKILL.backSlit)?.classId).toBe('ashblade');
     expect(registerClassSkills('ashblade', ASHBLADE_SKILLS)).toEqual({ ok: false, reason: 'duplicate-class' });
     expect(SKILLS.length).toBe(before + 15);
+    if (reg.ok) reg.dispose();
+    expect(SKILLS.length).toBe(before);
+    expect(getSkill(SKILL.backSlit)).toBeUndefined();
   });
 });
 
