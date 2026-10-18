@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { heightAt } from '../terrain/heightfield';
 import { PHASE_A_PROTECTED } from '../terrain/shaping';
 import { DEAD_ROAD } from '../terrain/shape/deadRoad';
+import { HARROWMARK_LAYOUT } from '../harrowmark/harrowmark.layout';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
 import { CAMP_1, CAMP_2, CITY_CENTRE, DEADROAD_DOC, DEADROAD_LAYOUT, SOUTH_GATE, WALL_CLEARANCE } from './deadroad.layout';
 import { footprintCorners } from './geometry';
@@ -63,6 +64,13 @@ describe('DEADROAD_LAYOUT', () => {
     }
   });
 
+  it('shares no anchor, trigger or structure id with the Harrowmark city layout', () => {
+    for (const key of ['anchors', 'triggers', 'structures'] as const) {
+      const mine = new Set(DEADROAD_LAYOUT[key].map((x) => x.id));
+      expect(HARROWMARK_LAYOUT[key].map((x) => x.id).filter((id) => mine.has(id)), key).toEqual([]);
+    }
+  });
+
   it('is not spread into the Brightwater layout (core regresses every one of those anchors on natural ground)', () => {
     const phaseA = new Set(BRIGHTWATER_LAYOUT.anchors.map((a) => a.id));
     for (const a of DEADROAD_LAYOUT.anchors) expect(phaseA.has(a.id), a.id).toBe(false);
@@ -81,7 +89,7 @@ describe('DEADROAD_LAYOUT', () => {
       expect(id, a.id).toBe('brightwater');
       expect(distanceToRoad(a.x, a.z), a.id).toBeGreaterThan(25);
     }
-    for (const id of ['farmring.centre', 'waystone.farm-ring', 'waystone.harrowmark-gate', 'npc-post.tobb.south-gate', 'npc-post.gaut.south-gate']) {
+    for (const id of ['farmring.centre', 'waystone.farm-ring', 'waystone.harrowmark-gate', 'npc-post.gaut.south-gate']) {
       expect(regionAt(anchor(id).x, anchor(id).z)?.id, id).toBe('harrowmark');
     }
     for (const s of DEADROAD_LAYOUT.structures.filter((x) => x.id.startsWith('farmring') || x.id.startsWith('waystone'))) {
@@ -105,9 +113,7 @@ describe('DEADROAD_LAYOUT', () => {
     }
     const stone = DEADROAD_LAYOUT.structures.find((s) => s.id === 'waystone-harrowmark-gate')!;
     expect(stone.z - SOUTH_GATE.z).toBeCloseTo(1.8, 5);
-    for (const id of ['npc-post.tobb.south-gate', 'npc-post.gaut.south-gate']) {
-      expect(Math.hypot(anchor(id).x - stone.x, anchor(id).z - stone.z), id).toBeGreaterThanOrEqual(3);
-    }
+    expect(Math.hypot(anchor('npc-post.gaut.south-gate').x - stone.x, anchor('npc-post.gaut.south-gate').z - stone.z)).toBeGreaterThanOrEqual(3);
     // thread 17's gate anchor (8500, 1244) and its queue stay clear of the stand point.
     expect(Math.hypot(SOUTH_GATE.x - 8500, SOUTH_GATE.z - 1244)).toBeGreaterThanOrEqual(3);
   });

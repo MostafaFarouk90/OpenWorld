@@ -20,7 +20,6 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | farmring.centre | 6825 | 810 | 0 | 180 | poi |
 | waystone.farm-ring | 6830 | 792 | 0 | 180 | waystone |
 | waystone.harrowmark-gate | 8516 | 1212 | 0 | 180 | waystone |
-| npc-post.tobb.south-gate | 8520 | 1208 | 0 | 90 | npc-post |
 | npc-post.gaut.south-gate | 8524 | 1214 | 0 | 90 | npc-post |
 
 ## Triggers
