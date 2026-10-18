@@ -24,6 +24,7 @@ export const TUTORIAL_STRINGS_EN: Record<string, string> = {
   'tutorial.replay.lockon': 'Locking on',
   'tutorial.replay.close': 'Leave the board',
   'tutorial.replay.done': 'Well drilled',
+  'tutorial.replay.cancelled': 'Drill ended',
 
   // prompts
   'tutorial.prompt.move': 'Press {key} to walk',

@@ -220,8 +220,9 @@ function makePorts(ctx: GameContext, ui: {
         return;
       }
       const ws = svc.get('waystones');
-      if (ws) await ws.safeTeleport(a.position, a.yaw);
-      else ctx.player.teleport(a.position, a.yaw);
+      const outcome = ws ? await ws.safeTeleport(a.position, a.yaw) : null;
+      // Busy or terrain not ready: never leave a restarted player where they fell.
+      if (!outcome || !outcome.ok) ctx.player.teleport(a.position, a.yaw);
     },
     holdKillXp: (on) => {
       // Pauses are not saved (Progression.ts), so a hold is always re-taken fresh.
@@ -249,7 +250,7 @@ function makePorts(ctx: GameContext, ui: {
     cutscene: (kind) => {
       const c = ui.cutscene;
       if (kind === null) return c.end();
-      if (c.active === kind) return;
+      if (c.active === `tutorial.${kind}`) return;
       if (c.active) c.end();
       const feet = ctx.player.feet;
       const target = kind === 'knighting' ? anchorPos('chapel.altar') : null;
@@ -385,8 +386,12 @@ const tutorial: GamePlugin = {
         const a = ctx.anchors.find('yard.board');
         return a ? out.set(a.position.x, a.position.y, a.position.z) : out.set(0, -1000, 0);
       },
-      enabled: () => director.complete && director.drillActive === null,
+      enabled: () => director.complete,
       onInteract: () => {
+        if (director.drillActive !== null) {
+          director.cancelDrill();
+          return;
+        }
         if (!d || replayClose) return;
         const widget = createReplayMenu({
           doc: d,
@@ -507,6 +512,7 @@ const tutorial: GamePlugin = {
     });
 
     tutorialDispose = () => {
+      director.dispose();
       cutscene.dispose();
       wired.dispose();
       d?.removeEventListener('pointerlockchange', onLockChange);

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BEATS, FULL_ORDER, KETTLEWICK_ORDER, LOCKABLE_VERBS, VETERAN_ORDER } from './beats';
 import { createGoal } from './goals';
-import { CRACK_SECONDS, SPAWN_RETRY_SECONDS, TutorialDirector, VOW_RETRY_SECONDS, type DrillDef } from './TutorialDirector';
+import { CRACK_SECONDS, DRILL_SECONDS, SPAWN_RETRY_SECONDS, TutorialDirector, VOW_RETRY_SECONDS, type DrillDef } from './TutorialDirector';
 import type { BeatId, DirectorEvent, DirectorPorts, SpawnSpec, TickSample } from './types';
 
 const DT = 1 / 60;
@@ -41,6 +41,14 @@ class FakeWorld implements DirectorPorts {
   teleports: string[] = [];
   fadePromise: { resolve: () => void } | null = null;
   autoFade = true;
+  /**
+   * Like the real quests and dialogue services outside a bus dispatch, completing a quest and
+   * closing the vow emit straight back into the director (review B1, M1).
+   */
+  syncEmit = true;
+  private emit(e: DirectorEvent) {
+    if (this.syncEmit) d.onEvent(e);
+  }
 
   readonly state = {
     equipped: (slot: string) => this.equippedSlots.get(slot) ?? null,
@@ -64,7 +72,9 @@ class FakeWorld implements DirectorPorts {
   }
   completeQuest(id: string) {
     this.calls.push(`complete:${id}`);
+    const was = this.quests.get(id);
     this.quests.set(id, 'completed');
+    if (was !== 'completed') this.emit({ type: 'questCompleted', questId: id });
   }
   completeObjective(q: string, o: string) {
     this.calls.push(`objective:${q}.${o}`);
@@ -75,8 +85,10 @@ class FakeWorld implements DirectorPorts {
     return true;
   }
   closeVow() {
+    const was = this.vowOpened;
     this.vowOpened = false;
     this.calls.push('closeVow');
+    if (was) this.emit({ type: 'dialogueEnded', dialogueId: 't04-vow', reason: 'skip' });
   }
   vowOpen() {
     return this.vowOpened;
@@ -622,7 +634,18 @@ describe('hold-Esc skip', () => {
     d.skipCurrent();
     expect(w.calls).toContain('closeVow');
     expect(d.beat).toBe('t05');
-    expect(w.beats).toContain('t04:skipped');
+    expect(w.beats.slice(-2)).toEqual(['t04:skipped', 't05:started']);
+    expect(w.beats).not.toContain('t04:completed');
+    expect(w.cut).toBe('crack');
+  });
+
+  it('skipping T03 enters T04 exactly once', () => {
+    d.begin('full');
+    passUntil('t03');
+    d.skipCurrent();
+    tick();
+    expect(w.beats.filter((b) => b === 't04:started')).toHaveLength(1);
+    expect(w.beats).not.toContain('t03:completed');
   });
 
   it('skip after partial progress grants nothing twice', () => {
@@ -963,5 +986,152 @@ describe('Replay board drills', () => {
     ev({ type: 'groupCleared', spawnerId: 'replay.blocker' });
     expect(d.drillActive).toBeNull();
     expect(w.toasts).toContain('tutorial.replay.done');
+  });
+});
+
+describe('review fixes', () => {
+  it('each beat starts and finishes exactly once with synchronous quest events', () => {
+    d.begin('full');
+    // T01 the natural way: gate first, then the scarecrow finishes it on the tick's flag check.
+    ev({ type: 'trigger', id: 'trg.t01.gate' });
+    w.flags.set('place.scarecrow.toppled', true);
+    tick(3);
+    expect(w.beats).toEqual(['t01:started', 't01:completed', 't02:started']);
+    passUntil(null);
+    for (const b of FULL_ORDER) {
+      expect(w.beats.filter((x) => x === `${b}:started`)).toHaveLength(1);
+      expect(w.beats.filter((x) => x === `${b}:completed`)).toHaveLength(1);
+    }
+  });
+
+  it('an event raised mid-transition for the old beat gives the new beat no credit', () => {
+    d.begin('full');
+    passUntil('t08');
+    // A stale "cleared" from finishing T08 must not reach T09.
+    w.syncEmit = false;
+    PASS.t08();
+    expect(d.beat).toBe('t09');
+    expect(d.currentStep).toBe(0);
+  });
+
+  it('a T05 reload after the last kill respawns the wave so the clear step can end', () => {
+    d.begin('full');
+    passUntil('t05');
+    seconds(CRACK_SECONDS);
+    for (const id of ['w1', 'w2', 'w3']) ev({ type: 'kill', actorId: id, kind: 'ash-wraith', spawnTag: 't05.churchyard', byPlayer: true });
+    expect(d.currentStep).toBe(1);
+    const save = d.serialize();
+    const w2 = new FakeWorld();
+    w = w2;
+    d = new TutorialDirector(w2, data);
+    d.load(save);
+    d.onSaveLoaded();
+    tick();
+    seconds(CRACK_SECONDS);
+    expect(w2.spawned.map((s) => s.spawnerId)).toEqual(['t05.churchyard']);
+    ev({ type: 'groupCleared', spawnerId: 't05.churchyard' });
+    expect(d.beat).toBe('t06');
+  });
+
+  it('a later-step goal met while an earlier step was current is read when its step begins (T14)', () => {
+    d.begin('full');
+    passUntil('t14');
+    ev({ type: 'rekindled', waystoneId: 'chapel' });
+    w.lit.add('chapel');
+    ev({ type: 'trigger', id: 'trg.t14.chapel' });
+    expect(d.currentStep).toBe(2);
+  });
+
+  it('an abandoned drill ends by itself and releases the XP pause; the board cancels a running drill', () => {
+    const drill: DrillDef = {
+      id: 'block',
+      waves: [{ spawnerId: 'replay.blocker', aggro: true }],
+      steps: [[{ kind: 'count', event: 'blocked', count: 3 }]],
+    };
+    d.begin('full');
+    passUntil(null);
+    expect(d.startDrill(drill)).toBe(true);
+    seconds(DRILL_SECONDS);
+    expect(d.drillActive).toBeNull();
+    expect(w.xpHeld).toBe(false);
+    expect(w.calls).toContain('despawn:replay.blocker');
+    expect(d.onLethal()).toBe(false);
+    expect(d.startDrill(drill)).toBe(true);
+    d.cancelDrill();
+    expect(d.drillActive).toBeNull();
+    expect(w.xpHeld).toBe(false);
+    expect(w.toasts.filter((t) => t === 'tutorial.replay.cancelled')).toHaveLength(2);
+  });
+
+  it('a restart fade that resolves after a load or teardown does nothing', async () => {
+    d.begin('full');
+    passUntil('t09');
+    w.autoFade = false;
+    expect(d.onLethal()).toBe(true);
+    tick();
+    const fade = w.fadePromise!;
+    const save = d.serialize();
+    d.load(save);
+    d.onSaveLoaded();
+    tick();
+    ev({ type: 'blocked' });
+    fade.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(d.restartInFlight).toBe(false);
+    expect(d.currentStep).toBe(0);
+    expect(w.spawned.filter((s) => s.spawnerId === 't09.soldier' && s.healthScale === 0.5)).toHaveLength(0);
+
+    expect(d.onLethal()).toBe(true);
+    tick();
+    const fade2 = w.fadePromise!;
+    d.dispose();
+    const xpBefore = w.xpHeld;
+    const spawns = w.spawned.length;
+    fade2.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(w.spawned.length).toBe(spawns);
+    expect(w.xpHeld).toBe(xpBefore);
+  });
+
+  it('a save from before the director, past T12 or into M01, migrates to complete', () => {
+    for (const [quest, state] of [['t12', 'completed'], ['m01', 'active'], ['m01', 'completed']] as const) {
+      const w2 = new FakeWorld();
+      w2.quests.set(quest, state);
+      w = w2;
+      d = new TutorialDirector(w2, data);
+      d.onSaveLoaded();
+      tick();
+      expect(d.complete).toBe(true);
+      expect(w2.locks).toEqual([]);
+      expect(w2.calls).toContain('place:gaut@tutorial.gaut.gate');
+    }
+    const w3 = new FakeWorld();
+    w3.quests.set('t01', 'completed');
+    w = w3;
+    d = new TutorialDirector(w3, data);
+    d.onSaveLoaded();
+    expect(d.beat).toBe('t02');
+    expect(d.complete).toBe(false);
+  });
+
+  it('a reload in a beat with no NPC entry re-applies the latest placement (Gaut at the lane in T07)', () => {
+    d.begin('full');
+    passUntil('t07');
+    const save = d.serialize();
+    const w2 = new FakeWorld();
+    w = w2;
+    d = new TutorialDirector(w2, data);
+    d.load(save);
+    d.onSaveLoaded();
+    tick();
+    const gaut = w2.calls.filter((c) => c.startsWith('place:gaut@'));
+    expect(gaut).toHaveLength(1);
+    const expected = FULL_ORDER.slice(0, FULL_ORDER.indexOf('t07') + 1)
+      .map((b) => BEATS[b].npcs?.gaut)
+      .filter(Boolean)
+      .pop();
+    expect(gaut[0]).toBe(`place:gaut@${expected}`);
   });
 });
