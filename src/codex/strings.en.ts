@@ -21,6 +21,7 @@ const BODIES: Record<string, [string, string]> = {
   'lore.leap-b': ['The Leap Stone, South', '[Greybox] A second stone, older. The runes say the gap was never a wall, only a question.'],
   'howto.release': ['Release', 'Hold {key} near a staggered wraith to Release it. This is a mercy: it costs Burn, and the wraith is freed rather than slain.'],
   'howto.spare': ['Spare', 'Hold {key} near a yielding foe to Spare it. It stands down and does not fight you again.'],
+  'howto.calm': ['Calm', 'Hold {key} near a wary beast with an offering, or use the Warm Hand, to Calm it. It settles and leaves you alone; the Warm Hand costs Burn.'],
   'howto.burn-scars': ['Burn and Scars', 'Burn builds as you draw on the forge-fire. Every Scar you take lowers your maximum health for good.'],
   'howto.surge-leap': ['Surge Leap', 'Press {key} to leap. Burn never blocks it. At 75 or more Burn, a Scar risk is shown.'],
   'howto.rally-cry': ['Rally Cry', 'A battle-shout from the Standard branch of the skill tree. It steadies you and restores a little stamina.'],

@@ -13,7 +13,10 @@ import promptsPlugin from '../prompts/prompts.plugin';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 import './events';
+import { FOG_OPEN_FLAGS } from '../region/fogWall';
 import hudPlugin from './hud.plugin';
+import hudSource from './hud.plugin.ts?raw';
+import mapSourcesSource from '../map/MapSources.ts?raw';
 import type { AbilitiesService, InventoryService, ProgressionService } from './ports';
 
 let physics: PhysicsWorld;
@@ -497,6 +500,90 @@ describe('slice 2 widgets and soft services', () => {
     t.run(2);
     expect(() => t.ctx.hud.update(0.016)).not.toThrow();
     expect(t.ctx.hud.mounted('top-left')).toContain('status-bars');
+    t.dispose();
+  });
+
+  it('Phase B widgets mount; with every Phase B service absent the health bars and Phase A widgets stay mounted', async () => {
+    const t = await setup([corePlugin, hudPlugin]);
+    for (const svc of ['stealth', 'chase', 'mount', 'classes']) expect(t.ctx.services.get(svc as any)).toBeUndefined();
+    expect(t.ctx.hud.mounted('top-center')).toEqual(expect.arrayContaining(['stealth-eye', 'chase-timer', 'boss-bar']));
+    expect(t.ctx.hud.mounted('top-left')).toEqual(expect.arrayContaining(['status-bars', 'mount-stamina', 'class-label', 'companion-portrait']));
+    expect(t.ctx.hud.mounted('center')).toEqual(expect.arrayContaining(['act-ending-card', 'act-continues']));
+    t.run(2);
+    expect(() => t.ctx.hud.update(0.016)).not.toThrow();
+    expect(t.ctx.hud.mounted('top-left')).toContain('status-bars');
+    expect(t.ctx.hud.mounted('bottom-center')).toContain('ability-bar');
+    t.dispose();
+  });
+
+  it('throwing Phase B services never remove the health bars', async () => {
+    const t = await setup([corePlugin, hudPlugin]);
+    const bad = () => {
+      throw new Error('boom');
+    };
+    t.ctx.services.provide('stealth' as any, { eye: bad, noise: bad } as any);
+    t.ctx.services.provide('chase' as any, { timer: bad } as any);
+    t.ctx.services.provide('mount' as any, { stamina: bad } as any);
+    t.ctx.services.provide('classes' as any, { chosen: bad, current: bad, kit: bad } as any);
+    expect(() => t.ctx.hud.update(0.016)).not.toThrow();
+    expect(t.ctx.hud.mounted('top-left')).toContain('status-bars');
+    t.dispose();
+  });
+
+  it('act.ended sets codex.actEndingSeen when the card shows; a wrong ending does not', async () => {
+    const t = await setup([corePlugin, hudPlugin]);
+    expect(t.ctx.state.getBool('codex.actEndingSeen')).toBe(false);
+    t.game.events.emit('act.ended', { act: 1, endingId: 'smoke-over-harrowmark' });
+    expect(t.ctx.state.getBool('codex.actEndingSeen')).toBe(true);
+    t.ctx.hud.update(0.016);
+    t.dispose();
+    const u = await setup([corePlugin, hudPlugin]);
+    u.game.events.emit('act.ended', { act: 2, endingId: 'smoke-over-harrowmark' });
+    expect(u.ctx.state.getBool('codex.actEndingSeen')).toBe(false);
+    u.dispose();
+  });
+
+  it('the ending card re-derives from story.gate.a2 on a flag change and stays off with campSeen set', async () => {
+    const a = await setup([corePlugin, hudPlugin]);
+    a.ctx.state.setFlag('story.gate.a2', true);
+    expect(a.ctx.state.getBool('codex.actEndingSeen')).toBe(true);
+    a.dispose();
+    const b = await setup([corePlugin, hudPlugin]);
+    b.ctx.state.setFlag('story.d02.campSeen', true);
+    b.ctx.state.setFlag('story.gate.a2', true);
+    expect(b.ctx.state.getBool('codex.actEndingSeen')).toBe(false);
+    b.dispose();
+  });
+
+  it('a real save.loaded with story.gate.a2 set shows the ending card once', async () => {
+    const t = await setup([corePlugin, hudPlugin]);
+    const changes = () => t.of('flag.changed' as never).filter((e: any) => e.key === 'codex.actEndingSeen').length;
+    expect(t.ctx.state.getBool('codex.actEndingSeen')).toBe(false);
+    t.ctx.state.load({ flags: { 'story.gate.a2': true } });
+    t.game.events.emit('save.loaded', { slot: 'x' });
+    expect(t.ctx.state.getBool('codex.actEndingSeen')).toBe(true);
+    expect(changes()).toBe(1);
+    // A second load of a save that already recorded the ending does not show it again.
+    t.ctx.state.load({ flags: { 'story.gate.a2': true, 'codex.actEndingSeen': true } });
+    t.game.events.emit('save.loaded', { slot: 'x' });
+    expect(changes()).toBe(1);
+    t.dispose();
+  });
+
+  it('the map and the Act 1 continues card use exactly region/fogWall\'s open flags', async () => {
+    expect(mapSourcesSource).toContain("import { FOG_OPEN_FLAGS } from '../region/fogWall'");
+    expect(hudSource).toContain("import { FOG_OPEN_FLAGS } from '../region/fogWall'");
+    // Neither file keeps a list or a literal flag of its own.
+    expect(mapSourcesSource).not.toMatch(/story\.(m05|slice)\./);
+    expect(hudSource).not.toMatch(/getBool\('story\.(m05|slice)\./);
+    expect(FOG_OPEN_FLAGS.length).toBeGreaterThan(0);
+  });
+
+  it('the noise ring mounts in the full-viewport overlay slot, not the transformed top-center slot', async () => {
+    const t = await setup([corePlugin, hudPlugin]);
+    expect(t.ctx.hud.mounted('overlay')).toContain('noise-ring');
+    expect(t.ctx.hud.mounted('top-center')).not.toContain('noise-ring');
+    expect(t.ctx.hud.mounted('top-center')).toContain('stealth-eye');
     t.dispose();
   });
 

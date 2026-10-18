@@ -24,3 +24,18 @@ export function setShown(el: ElementLike, shown: boolean, display = 'block'): vo
 export function pct(fraction: number): string {
   return `${Math.round(fraction * 10000) / 100}%`;
 }
+
+/** Calls a soft reader; a missing reader, a throw or a nullish result all give undefined (the widget hides). */
+export function safeRead<T>(read: (() => T | null | undefined) | undefined): T | undefined {
+  if (!read) return undefined;
+  try {
+    return read() ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Clamps to 0..1; NaN and non-numbers give 0. */
+export function clamp01(n: unknown): number {
+  return typeof n === 'number' && n > 0 ? (n < 1 ? n : 1) : 0;
+}
