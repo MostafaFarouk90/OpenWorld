@@ -3,12 +3,20 @@ import { ENEMY_DEFS } from './defs';
 import { boneMultiplier, Enemy, type EnemyEnv, type EnemySpawn } from './Enemy';
 import { EnemyAnimator } from './EnemyAnimator';
 import { buildEnemyModel, type EnemyModelSource } from './EnemyModel';
+import { isFoeKind } from './foes/defs';
+import type { Foe } from './foes/Foe';
+import { FoeManager } from './foes/FoeManager';
+import type { FoeDef, RaiseWraithRequest } from './foes/types';
 import { scaleStats } from './level';
 import { makeMercyInteractable, mercyEvents, mercyTargets, type MercySubject } from './mercy';
 import type { ActorId, EnemyEvents, EnemyHost } from './ports';
-import { SpawnerRegistry, patrolForSlot, type SpawnRequest } from './spawners';
+import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } from './spawners';
 import { ASH_GRAB, MERCY, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions } from './types';
+
+function isFoeDef(def: EnemyDef | FoeDef): def is FoeDef {
+  return isFoeKind(def.kind);
+}
 
 /** Supplies a fresh model clone (and the shared clips) for a def; the plugin wraps the AssetLoader. */
 export type ModelFactory = (def: EnemyDef) => EnemyModelSource;
@@ -34,6 +42,10 @@ export interface EnemiesService {
 export class EnemyManager {
   readonly spawners: SpawnerRegistry;
   private readonly enemies = new Map<ActorId, Enemy>();
+  /** Brainless mortal foes (scarecrows, blooms, toll posts), spawned through the same spawners. */
+  private readonly foes: FoeManager;
+  /** Per-enemy end callbacks (the bloom's raised wraiths). */
+  private readonly goneWatchers = new Map<ActorId, (how: MemberEnd) => void>();
   private readonly tokens = new Map<ActorId, Set<Enemy>>();
   private readonly tokenOf = new Map<Enemy, ActorId>();
   private readonly mercyRemovers = new Map<Enemy, () => void>();
@@ -54,8 +66,16 @@ export class EnemyManager {
       anchors: host.anchors,
       warn: (m) => host.warn(m),
       spawn: (req) => this.spawn(req),
-      despawn: (id) => this.enemies.get(id)?.despawn(),
+      despawn: (id) => (this.enemies.get(id) ?? this.foes.get(id))?.despawn(),
       rng: this.rng,
+    });
+    this.foes = new FoeManager({
+      host,
+      rng: this.rng,
+      gone: (foe, how) => this.memberGone(foe, how),
+      raiseWraith: (req) => this.raiseWraith(req),
+      isPileSpent: (id) => this.spawners.isPileSpent(id),
+      markPileSpent: (id) => this.spawners.markPileSpent(id),
     });
     for (const def of opts.spawners ?? []) this.spawners.define(def);
     this.listen();
@@ -65,8 +85,17 @@ export class EnemyManager {
     return this.enemies.size;
   }
 
+  /** Live foes (not counted in `count`). */
+  get foeCount(): number {
+    return this.foes.count;
+  }
+
   get(actorId: ActorId): Enemy | undefined {
     return this.enemies.get(actorId);
+  }
+
+  getFoe(actorId: ActorId): Foe | undefined {
+    return this.foes.get(actorId);
   }
 
   all(): Enemy[] {
@@ -80,7 +109,7 @@ export class EnemyManager {
     despawnGroup: (id) => this.spawners.despawnGroup(id),
     reset: (id) => this.spawners.reset(id),
     alive: (id) => this.spawners.alive(id),
-    view: (id) => this.enemies.get(id)?.view,
+    view: (id) => (this.enemies.get(id) ?? this.foes.get(id))?.view,
     setMercyUnlocked: (verb, on) => this.host.state.setFlag(MERCY.flags[verb], on),
     mercyUnlocked: (verb) => this.mercyUnlocked(verb),
     setWarmthTier: (w) => this.spawners.setWarmthTier(w),
@@ -96,18 +125,22 @@ export class EnemyManager {
   think(dt: number): void {
     this.updateDormancy();
     for (const e of this.enemies.values()) e.think(dt);
+    this.foes.think(dt);
   }
 
   animate(dt: number): void {
     for (const e of this.enemies.values()) e.animate(dt);
+    this.foes.animate(dt);
   }
 
   react(dt: number): void {
     for (const e of [...this.enemies.values()]) e.react(dt);
+    this.foes.react(dt);
   }
 
   render(alpha: number): void {
     for (const e of this.enemies.values()) e.render(alpha);
+    this.foes.render(alpha);
   }
 
   // ---- spawning --------------------------------------------------------------------------------
@@ -115,15 +148,18 @@ export class EnemyManager {
   /** Builds one enemy for a spawner request; null (with a warning) when its model cannot be built. */
   spawn(req: SpawnRequest): ActorId | null {
     if (this.disposed) return null;
+    // Foes (scarecrow, bloom, toll post) have no Knight model: the model factory is never called for them.
+    const def = req.def;
+    if (isFoeDef(def)) return this.foes.spawn({ ...req, def });
     let enemy: Enemy;
     try {
-      const source = this.makeModel(req.def);
-      const model = buildEnemyModel(source, req.def, { bus: this.host.combat.bus });
+      const source = this.makeModel(def);
+      const model = buildEnemyModel(source, def, { bus: this.host.combat.bus });
       const animator = new EnemyAnimator(model.owner, source.clips, { warn: (m) => this.host.warn(m) });
-      const stats = scaleStats(req.def, req.level);
+      const stats = scaleStats(def, req.level);
       const spawn: EnemySpawn = {
-        def: req.def,
-        slug: `${req.def.kind}-${++this.counter}`,
+        def: def,
+        slug: `${def.kind}-${++this.counter}`,
         spawnerId: req.spawnerId,
         spawnTag: req.spawnTag,
         feet: req.feet,
@@ -136,7 +172,7 @@ export class EnemyManager {
       };
       enemy = new Enemy(this.env, spawn, model, animator);
     } catch (err) {
-      this.host.warn(`enemies: could not spawn ${req.def.kind} for ${req.spawnerId}: ${String(err)}`);
+      this.host.warn(`enemies: could not spawn ${def.kind} for ${req.spawnerId}: ${String(err)}`);
       return null;
     }
     this.enemies.set(enemy.id, enemy);
@@ -175,6 +211,39 @@ export class EnemyManager {
       options: { ...opts, leash: opts.leash ?? true },
       spentKey: 'loose#0',
     });
+  }
+
+  /**
+   * Raises a wraith (it plays its rise, aggro on) at a pile for a Blightbloom, outside any spawner slot.
+   * The wraith belongs to `req.spawnerId` for pack alerts and save-load cleanup; `req.onGone` is called
+   * once when it is gone however it ended ('released' is what spends the pile).
+   */
+  raiseWraith(req: RaiseWraithRequest): ActorId | null {
+    const id = this.spawn({
+      spawnerId: req.spawnerId,
+      spawnTag: req.spawnTag,
+      slot: -1,
+      def: ENEMY_DEFS['ash-wraith'],
+      feet: req.feet,
+      yaw: req.yaw,
+      level: req.level,
+      patrol: [],
+      options: { aggro: true, leash: false },
+      spentKey: `${req.spawnerId}#raised`,
+    });
+    if (id !== null) this.goneWatchers.set(id, req.onGone);
+    return id;
+  }
+
+  /** A foe left the world: the same slot bookkeeping as an enemy. */
+  private memberGone(foe: Foe, how: MemberEnd): void {
+    this.afterGone(foe.id, foe.spawnerId, how);
+  }
+
+  private afterGone(id: ActorId, spawnerId: string | null, how: MemberEnd): void {
+    if (this.spawners.onMemberGone(id, how) && spawnerId) {
+      this.host.events.emit('enemies.groupCleared', { spawnerId });
+    }
   }
 
   // ---- mercy -------------------------------------------------------------------------------------
@@ -235,10 +304,11 @@ export class EnemyManager {
       this.subjects.delete(self);
       this.mercyRemovers.get(self)?.();
       this.mercyRemovers.delete(self);
+      const watcher = this.goneWatchers.get(self.id);
+      this.goneWatchers.delete(self.id);
       if (this.disposed) return;
-      if (this.spawners.onMemberGone(self.id, how) && self.spawnerId) {
-        this.host.events.emit('enemies.groupCleared', { spawnerId: self.spawnerId });
-      }
+      watcher?.(how);
+      this.afterGone(self.id, self.spawnerId, how);
     },
     };
   }
@@ -270,6 +340,7 @@ export class EnemyManager {
     });
     on('mercy.revoked', (p) => this.enemies.get(p.actorId)?.revoked(this.host.actors.player.id));
     on('rest', () => this.spawners.onRest());
+    on('interior.entered', (p) => this.spawners.onInteriorEntered(p.interiorId));
     on('quest.started', (p) => this.spawners.onQuestStarted(p.questId, (f) => this.host.state.getBool(f, false)));
     on('flag.changed', (p) => {
       if (p.value !== true) return;
@@ -286,6 +357,13 @@ export class EnemyManager {
         if ((e.spawnerId && this.spawners.isCleared(e.spawnerId)) || spent.has(e.id)) e.despawn();
       }
       const active = this.host.services.get('quests')?.active() ?? [];
+      for (const f of this.foes.all()) {
+        // A foe whose group is cleared or whose slot is spent does not survive a load; neither does an R01
+        // scarecrow once its quest is no longer active.
+        const quest = f.spawnerId ? this.spawners.questOf(f.spawnerId) : undefined;
+        const questOver = f.kind === 'ash-scarecrow' && quest !== undefined && !active.includes(quest);
+        if ((f.spawnerId && this.spawners.isCleared(f.spawnerId)) || spent.has(f.id) || questOver) f.despawn();
+      }
       for (const questId of active) this.spawners.onQuestStarted(questId, (f) => this.host.state.getBool(f, false));
     });
 
@@ -326,6 +404,7 @@ export class EnemyManager {
     if (this.disposed) return;
     this.disposed = true;
     for (const u of this.unsubs.splice(0)) u();
+    this.foes.dispose();
     for (const e of [...this.enemies.values()]) e.despawn();
     this.enemies.clear();
   }

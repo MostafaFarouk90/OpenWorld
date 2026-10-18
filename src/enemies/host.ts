@@ -36,6 +36,10 @@ export function hostFromContext(ctx: GameContext, warn: (m: string) => void): En
       loud: () => ctx.input.actions.down('sprint') || ctx.player.avatar?.controller.activeAttack() != null,
       addMoveModifier: (source, mod) => ctx.player.addMoveModifier(source, mod),
     },
+    torch: {
+      // The quests service exposes the carried torch (plans/slice-2-quests.md); absent until it lands.
+      carried: () => (ctx.services as unknown as ServicesPort).get('quests')?.carriedTorch?.() ?? null,
+    },
     heightAt: terrainHeightAt,
     warn,
   };

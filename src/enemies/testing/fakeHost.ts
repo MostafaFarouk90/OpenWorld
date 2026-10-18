@@ -19,6 +19,8 @@ import type {
   EnemyEvents,
   EnemyHost,
   InteractableLike,
+  QuestsPortLike,
+  TorchState,
   Team,
 } from '../ports';
 
@@ -59,6 +61,14 @@ export class FakeBus {
   private queue: Array<[string, unknown]> = [];
   private dispatching = false;
   private batching = 0;
+
+  /** Listeners currently registered for `type`, or for every type (leak checks). */
+  listenerCount(type?: string): number {
+    if (type !== undefined) return this.listeners.get(type)?.length ?? 0;
+    let n = 0;
+    for (const l of this.listeners.values()) n += l.length;
+    return n;
+  }
 
   on<K extends keyof EnemyEvents>(type: K, l: (p: EnemyEvents[K]) => void): () => void {
     const list = this.listeners.get(type) ?? [];
@@ -177,7 +187,9 @@ export class FakeHost {
   loud = false;
   vfx: { dissolve(root: THREE.Object3D, s: number): Promise<void> } | undefined;
   /** Thread 3's quests service, when a test provides it. */
-  quests: { active(): string[] } | undefined;
+  quests: QuestsPortLike | undefined;
+  /** The torch `provideTorch()` hands out; null means none carried. */
+  torchState: TorchState | null = null;
   lockOnTarget: ActorId | null = null;
   private counter = 0;
 
@@ -216,6 +228,27 @@ export class FakeHost {
         attackId: atk?.window.clipName,
         swingId: atk?.window.swingId,
       });
+    });
+  }
+
+  /** Makes the quests service expose a carried torch (`torchState`); the shape is the plan's, not yet on the real service. */
+  provideTorch(state: TorchState | null = null): void {
+    this.torchState = state;
+    this.quests ??= { active: () => [] };
+    this.quests.carriedTorch = () => this.torchState;
+  }
+
+  /** A lit torch at (x, y, z) with the given contact radius. */
+  setTorch(x: number, y: number, z: number, radius = 0.5, lit = true): void {
+    this.provideTorch({
+      lit,
+      radius,
+      position: (out) => {
+        out.x = x;
+        out.y = y;
+        out.z = z;
+        return out;
+      },
     });
   }
 
@@ -340,6 +373,12 @@ export class FakeHost {
           if (i >= 0) this.modifiers.splice(i, 1);
         };
       },
+      kill: (id, killerId = null) => {
+        const a = this.actorMap.get(id);
+        if (!a || a.dead) return;
+        a.health = 0;
+        this.bus.emit('actor.died', { actorId: id, killerId, kind: a.kind, team: a.team, level: a.level });
+      },
       heal: (id, amount) => {
         const a = this.actorMap.get(id);
         if (!a || a.dead || !(amount > 0)) return 0;
@@ -406,6 +445,7 @@ export class FakeHost {
         return () => this.moveModifiers.delete(source);
       },
     },
+    torch: { carried: () => this.quests?.carriedTorch?.() ?? null },
     heightAt: (x, z) => this.heightAt(x, z),
     warn: (m) => void this.warnings.push(m),
     };

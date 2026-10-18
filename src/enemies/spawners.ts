@@ -1,5 +1,7 @@
 import type { Vec3 } from '../physics/PhysicsWorld';
 import { ENEMY_DEFS } from './defs';
+import { FOE_DEFS, isFoeKind } from './foes/defs';
+import type { FoeDef } from './foes/types';
 import { DEFAULT_BAND, bandForRegion, enemyLevel } from './level';
 import type { ActorId, AnchorLike, AnchorsPort } from './ports';
 import { LEVEL, WORLD_AI } from './tuning';
@@ -10,7 +12,11 @@ export interface SpawnRequest {
   /** `def.tag ?? def.id`. */
   spawnTag: string;
   slot: number;
-  def: EnemyDef;
+  def: EnemyDef | FoeDef;
+  /** The spawner slot's anchor id (`memberAnchors[slot]`, else the group anchor); the scarecrow's `scarecrowId`. */
+  anchorId?: string;
+  /** Ash-pile anchor ids of the spawner (the bloom). */
+  piles?: readonly string[];
   feet: Vec3;
   yaw: number;
   level: number;
@@ -33,6 +39,8 @@ export type MemberEnd = 'died' | 'released' | 'spared' | 'despawned';
 export interface SpawnersPersisted {
   spent: string[];
   cleared: string[];
+  /** Ash piles whose raised wraith was Released (Blightbloom piles); optional so old saves load. */
+  spentPiles?: string[];
   warmthTier: number;
   lockedBlockLevels: Record<string, number>;
 }
@@ -48,6 +56,7 @@ export class SpawnerRegistry {
   private readonly warned = new Set<string>();
   private spent = new Set<string>();
   private cleared = new Set<string>();
+  private spentPiles = new Set<string>();
   private warmthTier = 0;
   private lockedBlockLevels: Record<string, number> = {};
   private readonly rng: () => number;
@@ -74,7 +83,7 @@ export class SpawnerRegistry {
       this.warnOnce(`anchor:${id}`, `spawners: spawner '${id}' has no spawn anchor '${def.anchor}'; nothing spawned`);
       return [];
     }
-    const enemyDef = ENEMY_DEFS[def.enemy];
+    const enemyDef: EnemyDef | FoeDef | undefined = isFoeKind(def.enemy) ? FOE_DEFS[def.enemy] : ENEMY_DEFS[def.enemy];
     if (!enemyDef) {
       this.warnOnce(`enemy:${id}`, `spawners: spawner '${id}' has unknown enemy '${def.enemy}'`);
       return [];
@@ -102,6 +111,8 @@ export class SpawnerRegistry {
         def: enemyDef,
         feet,
         yaw: own ? own.yaw : anchor.yaw,
+        anchorId: own ? own.id : anchor.id,
+        piles: def.piles,
         level,
         patrol,
         options: { ...opts, leash: opts.leash ?? def.leash ?? true },
@@ -201,7 +212,7 @@ export class SpawnerRegistry {
     const out: ActorId[] = [];
     for (const def of this.defs.values()) {
       const act = def.activation;
-      if (typeof act !== 'object' || act.quest !== questId || this.cleared.has(def.id)) continue;
+      if (typeof act !== 'object' || !('quest' in act) || act.quest !== questId || this.cleared.has(def.id)) continue;
       if (act.flag !== undefined && !flagOn(act.flag)) continue;
       out.push(...this.spawnGroup(def.id));
     }
@@ -212,9 +223,35 @@ export class SpawnerRegistry {
   questsGatedBy(flag: string): string[] {
     const out: string[] = [];
     for (const def of this.defs.values()) {
-      if (typeof def.activation === 'object' && def.activation.flag === flag) out.push(def.activation.quest);
+      if (typeof def.activation === 'object' && 'quest' in def.activation && def.activation.flag === flag) out.push(def.activation.quest);
     }
     return out;
+  }
+
+  /** Spawns the groups that activate on entering `interiorId` (and are not cleared). */
+  onInteriorEntered(interiorId: string): ActorId[] {
+    const out: ActorId[] = [];
+    for (const def of this.defs.values()) {
+      const act = def.activation;
+      if (typeof act !== 'object' || !('interior' in act) || act.interior !== interiorId || this.cleared.has(def.id)) continue;
+      out.push(...this.spawnGroup(def.id));
+    }
+    return out;
+  }
+
+  /** The quest a group is activated by, if any. */
+  questOf(spawnerId: string): string | undefined {
+    const act = this.defs.get(spawnerId)?.activation;
+    return typeof act === 'object' && 'quest' in act ? act.quest : undefined;
+  }
+
+  isPileSpent(pileId: string): boolean {
+    return this.spentPiles.has(pileId);
+  }
+
+  /** A pile is spent when a wraith raised from it is Released. */
+  markPileSpent(pileId: string): void {
+    this.spentPiles.add(pileId);
   }
 
   // Persistence
@@ -223,6 +260,8 @@ export class SpawnerRegistry {
     return {
       spent: [...this.spent],
       cleared: [...this.cleared],
+      // Omitted while empty, so saves without a bloom keep their old shape.
+      ...(this.spentPiles.size > 0 ? { spentPiles: [...this.spentPiles] } : {}),
       warmthTier: this.warmthTier,
       lockedBlockLevels: { ...this.lockedBlockLevels },
     };
@@ -231,6 +270,7 @@ export class SpawnerRegistry {
   load(data: unknown): void {
     this.spent = new Set();
     this.cleared = new Set();
+    this.spentPiles = new Set();
     this.warmthTier = 0;
     this.lockedBlockLevels = {};
     if (!isRecord(data)) {
@@ -249,6 +289,12 @@ export class SpawnerRegistry {
         else this.deps.warn(`spawners: dropped bad cleared entry ${JSON.stringify(s)}`);
       }
     } else if (data.cleared !== undefined) this.deps.warn('spawners: saved cleared is not a list; keeping default');
+    if (Array.isArray(data.spentPiles)) {
+      for (const s of data.spentPiles) {
+        if (typeof s === 'string') this.spentPiles.add(s);
+        else this.deps.warn(`spawners: dropped bad spentPiles entry ${JSON.stringify(s)}`);
+      }
+    } else if (data.spentPiles !== undefined) this.deps.warn('spawners: saved spentPiles is not a list; keeping default');
     if (typeof data.warmthTier === 'number' && Number.isFinite(data.warmthTier)) {
       this.warmthTier = clampTier(data.warmthTier);
     } else if (data.warmthTier !== undefined) this.deps.warn('spawners: saved warmthTier is invalid; keeping default');

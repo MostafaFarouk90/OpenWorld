@@ -12,6 +12,8 @@ declare module '../core/events' {
     'enemies.state': { actorId: string; from: string; to: string };
     /** A blighted soldier kneels: Spare is open for `seconds`. */
     'enemies.yield': { actorId: string; seconds: number };
+    /** An ash scarecrow was cleared, once each: by the carried torch, by the Surge (or, as a fallback, killed). */
+    'scarecrow.cleared': { actorId: string; scarecrowId: string; method: 'torch' | 'surge' | 'strike' };
   }
 }
 
