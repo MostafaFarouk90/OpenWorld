@@ -12,6 +12,8 @@ export interface NpcDef {
   tint: number | null;
   dialogueId: string;
   idleClip: string;
+  /** Props that belong to the NPC (a cloak, a lute); built once per spawn, facing -Z like yaw 0, and kept across the GLB swap. */
+  extras?: () => THREE.Object3D;
 }
 
 /** The slice of AssetLoader the NPCs use; tests pass stand-ins. */

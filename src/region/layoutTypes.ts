@@ -41,7 +41,10 @@ export type StructureKind =
   | 'waystone'
   | 'board'
   | 'yard-fence'
-  | 'pole';
+  | 'pole'
+  | 'rock'
+  | 'bridge'
+  | 'stair';
 
 /**
  * solid: one static box over the footprint (nobody enters).
@@ -73,7 +76,20 @@ export interface StructureSpec {
   door?: DoorSpec;
   /** Id of an enterable structure that contains this one (exempt from the overlap check). */
   inside?: string;
+  /**
+   * `ledge`: a Leap-gated platform. Its height is measured from the highest ground within 1 m of the footprint and
+   * the validator holds it between LEDGE_MIN_HEIGHT and LEDGE_MAX_HEIGHT with a top at least LEDGE_MIN_DEPTH deep.
+   */
+  role?: 'ledge';
 }
+
+/** Foundation kinds stand on a column down to the lowest ground under them, so the terrain-spread rule does not apply. */
+export const FOUNDATION_KINDS: readonly StructureKind[] = ['rock'];
+
+/** A plain jump peaks at 1.056 m and auto-step adds 0.4 m; the Leap (apex 2.2 m) clears 1.8 m (review of slice-2-brightwater-layout). */
+export const LEDGE_MIN_HEIGHT = 1.7;
+export const LEDGE_MAX_HEIGHT = 1.9;
+export const LEDGE_MIN_DEPTH = 3;
 
 export interface PatrolSpec {
   id: string;
@@ -85,6 +101,10 @@ export interface NpcSpec {
   id: string;
   post: string;
   idleClip?: string;
+  /** The NPC is not spawned (or is despawned) while this flag is true; its handover to a companion or a quest. */
+  absentWhen?: string;
+  /** Once `whenFlag` is true the NPC walks in a straight line to the anchor `to` (the only walking NPCs); on a load it just stands there. */
+  walkOff?: { whenFlag: string; to: string };
 }
 
 export interface FieldSpec {

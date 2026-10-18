@@ -2,7 +2,12 @@
 // structures, props, the scarecrow, barley), exposes the `region` service and reports region changes.
 import { heightAt } from '../terrain/heightfield';
 import { BuildingLookup } from './buildingLookup';
-import { buildBarley } from './barley';
+import { barleyVariantOf, buildBarley } from './barley';
+import { buildCorridorScenery } from './corridorScenery';
+import { FOG_WALL_X } from './corridor.layout';
+import { buildFogWall } from './fogWall';
+import { buildPoiProps } from './poiProps';
+import { TOLL_POST_BROKEN_FLAG, spawnTollPost, type TollPostHandle } from './tollPost';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
 import type { CoreContext, GamePlugin } from './coreTypes';
 import type { LayoutData } from './layoutTypes';
@@ -20,8 +25,11 @@ export interface RegionPluginOptions {
   heightAt?: (x: number, z: number) => number;
 }
 
-/** `placeId` of the discover event and the flag that makes it fire once per save. */
-export const BRIGHTWATER_DISCOVERED_FLAG = 'place.brightwater.discovered';
+/** The flag that makes a region's `discover` fire once per save: `place.<regionId>.discovered`. */
+export const discoveredFlag = (regionId: string): string => `place.${regionId}.discovered`;
+export const BRIGHTWATER_DISCOVERED_FLAG = discoveredFlag('brightwater');
+/** R01's field state (thread 6 writes `'scorched'` or `'saved'`). */
+export const BARLEY_FLAG = 'world.brightwater.barley';
 
 export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
   const layout = opts.layout ?? BRIGHTWATER_LAYOUT;
@@ -60,12 +68,47 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
         cleanups.push(() => structures.dispose());
         void structures.upgrade();
 
-        const barley = buildBarley(layout.fields, height, 1, layout.structures.filter((s) => s.mode !== 'open'));
+        // Wynn's field takes R01's outcome; a loaded save re-derives it through the gates.
+        const solid = layout.structures.filter((st) => st.mode !== 'open');
+        let barley = buildBarley(layout.fields, height, 1, solid);
         ctx.scene.add(barley.object);
+        const swapBarley = (): void => {
+          barley.dispose();
+          barley = buildBarley(layout.fields, height, 1, solid, {
+            variant: barleyVariantOf(ctx.state.getFlag(BARLEY_FLAG)),
+            variantFields: ['barley-west'],
+          });
+          ctx.scene.add(barley.object);
+        };
+        cleanups.push(ctx.gates.flag(BARLEY_FLAG, (_open, cause) => cause !== 'init' && swapBarley()));
         cleanups.push(() => {
           ctx.scene.remove(barley.object);
           barley.dispose();
         });
+        if (ctx.state.getFlag(BARLEY_FLAG) !== undefined) swapBarley();
+
+        // The corridor beyond Kettlewick: road, water, reeds; the Leap POIs; the toll-post; the slice fog wall.
+        const scenery = buildCorridorScenery(height);
+        ctx.scene.add(scenery.object);
+        cleanups.push(() => scenery.dispose());
+        const poi = buildPoiProps(ctx, ctx.anchors);
+        cleanups.push(() => poi.dispose());
+        const tollAnchor = ctx.anchors.find('ford.toll-post');
+        if (tollAnchor) {
+          let toll: TollPostHandle | null = spawnTollPost(ctx, tollAnchor, { broken: ctx.state.getBool(TOLL_POST_BROKEN_FLAG) });
+          cleanups.push(() => toll?.dispose());
+          cleanups.push(
+            ctx.events.on('save.loaded', () => {
+              toll?.dispose();
+              toll = spawnTollPost(ctx, tollAnchor, { broken: ctx.state.getBool(TOLL_POST_BROKEN_FLAG) });
+            }),
+          );
+        }
+        const fogAnchor = ctx.anchors.find('fog.harrowmark');
+        if (fogAnchor && ctx.physics.rapier) {
+          const fog = buildFogWall({ ...ctx, rapier: ctx.physics.rapier }, { x: FOG_WALL_X, y: fogAnchor.position.y, z: fogAnchor.position.z });
+          cleanups.push(() => fog.dispose());
+        }
 
         const props = buildProps({ ...ctx, ...coreFactories(ctx) }, ctx.anchors);
         cleanups.push(() => props.dispose());
@@ -117,8 +160,9 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
               current = now;
               if (!now) return;
               ctx.events.emit('region.entered', { regionId: now, previous });
-              if (!ctx.state.getBool(BRIGHTWATER_DISCOVERED_FLAG)) {
-                ctx.state.setFlag(BRIGHTWATER_DISCOVERED_FLAG, true);
+              const flag = discoveredFlag(now);
+              if (!ctx.state.getBool(flag)) {
+                ctx.state.setFlag(flag, true);
                 ctx.events.emit('discover', { placeId: now, kind: 'region' });
               }
             },

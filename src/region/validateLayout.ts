@@ -1,5 +1,5 @@
 import { doorCentre, footprintCorners, footprintsOverlap, footprintWithin, pointInFootprint, wallBoxes } from './geometry';
-import type { LayoutData, StructureSpec } from './layoutTypes';
+import { FOUNDATION_KINDS, LEDGE_MAX_HEIGHT, LEDGE_MIN_DEPTH, LEDGE_MIN_HEIGHT, type LayoutData, type StructureSpec } from './layoutTypes';
 import { resolveAnchor, type HeightFn, type ResolvedAnchor } from './resolveLayout';
 
 export interface ValidateOptions {
@@ -26,6 +26,11 @@ function dupes(ids: string[]): string[] {
   for (const id of ids) (seen.has(id) ? out : seen).add(id);
   return [...out];
 }
+
+/** Structures that stand on a column (rock), are decoration over walkable ground (bridge) or are a prop on a slope (the stranded cart) need no flat site. */
+const SPREAD_EXEMPT: readonly string[] = [...FOUNDATION_KINDS, 'bridge', 'cart'];
+/** Greater than this and two anchors belong to different walkability clusters (a window each, not one grid for the world). */
+const CLUSTER_LINK = 100;
 
 const finite = (...n: number[]) => n.every((v) => Number.isFinite(v));
 
@@ -101,11 +106,20 @@ export function validateLayout(layout: LayoutData, heightAt: HeightFn, opts: Val
     }
   }
 
+  for (const s of layout.structures) {
+    if (s.role !== 'ledge') continue;
+    const h = s.height ?? 0;
+    if (h < LEDGE_MIN_HEIGHT || h > LEDGE_MAX_HEIGHT) errors.push(`structure "${s.id}": a ledge must be ${LEDGE_MIN_HEIGHT} to ${LEDGE_MAX_HEIGHT} m high (a jump reaches 1.46 m, the Leap clears 1.8 m), got ${h}`);
+    if (Math.min(...s.footprint) < LEDGE_MIN_DEPTH) errors.push(`structure "${s.id}": a ledge top must be at least ${LEDGE_MIN_DEPTH} m deep`);
+    if (s.mode !== 'solid') errors.push(`structure "${s.id}": a ledge must be solid`);
+  }
+
   // Footprint terrain spread and overlaps.
   for (const s of layout.structures) {
     if (!finite(s.x, s.z) ) continue;
     const pts = [...footprintCorners(s), [s.x, s.z] as [number, number]];
     const hs = pts.map(([x, z]) => heightAt(x, z));
+    if (SPREAD_EXEMPT.includes(s.kind)) continue;
     if (Math.max(...hs) - Math.min(...hs) > maxSpread) errors.push(`structure "${s.id}": terrain under the footprint is not flat enough`);
   }
   const blocking = layout.structures.filter((s) => s.mode !== 'open' && finite(s.x, s.z, s.yawDeg) && s.footprint.every((v) => v > 0));
@@ -123,89 +137,118 @@ export function validateLayout(layout: LayoutData, heightAt: HeightFn, opts: Val
     }
   }
 
-  // Walkability: build a grid, flood from the player spawn, check every standing anchor.
+  // Walkability: one grid per cluster of nearby anchors (a world-sized grid would be millions of cells), flooded from
+  // the cluster's seed. The tutorial cluster floods from the player spawn.
   const spawn = layout.anchors.find((a) => a.id === 'brightwater.player-spawn');
   if (!spawn) {
     errors.push('missing anchor "brightwater.player-spawn"');
     return errors;
   }
+  const anchors = layout.anchors.filter((a) => finite(a.x, a.z));
+  const parent = anchors.map((_, i) => i);
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  for (let i = 0; i < anchors.length; i++) {
+    for (let j = i + 1; j < anchors.length; j++) {
+      if (Math.hypot(anchors[i].x - anchors[j].x, anchors[i].z - anchors[j].z) <= CLUSTER_LINK) parent[find(i)] = find(j);
+    }
+  }
+  const clusters = new Map<number, typeof anchors>();
+  anchors.forEach((a, i) => {
+    const r = find(i);
+    const list = clusters.get(r);
+    if (list) list.push(a);
+    else clusters.set(r, [a]);
+  });
+  const gated = (a: (typeof anchors)[number]) => a.tags?.includes('elevated') || a.tags?.includes('leap-gated');
   const pad = 12;
-  const xs = [...layout.anchors.map((a) => a.x), ...blocking.flatMap((s) => footprintCorners(s).map((c) => c[0]))].filter(Number.isFinite);
-  const zs = [...layout.anchors.map((a) => a.z), ...blocking.flatMap((s) => footprintCorners(s).map((c) => c[1]))].filter(Number.isFinite);
-  const x0 = Math.min(...xs) - pad;
-  const z0 = Math.min(...zs) - pad;
-  const w = Math.ceil((Math.max(...xs) + pad - x0) / cell);
-  const h = Math.ceil((Math.max(...zs) + pad - z0) / cell);
-  const blockedGrid = new Uint8Array(w * h);
-  const markBox = (b: { cx: number; cz: number; hx: number; hz: number }, inside: (px: number, pz: number) => boolean) => {
-    const ix0 = Math.max(0, Math.floor((b.cx - b.hx - PLAYER_MARGIN - x0) / cell));
-    const ix1 = Math.min(w - 1, Math.ceil((b.cx + b.hx + PLAYER_MARGIN - x0) / cell));
-    const iz0 = Math.max(0, Math.floor((b.cz - b.hz - PLAYER_MARGIN - z0) / cell));
-    const iz1 = Math.min(h - 1, Math.ceil((b.cz + b.hz + PLAYER_MARGIN - z0) / cell));
-    for (let iz = iz0; iz <= iz1; iz++) {
-      for (let ix = ix0; ix <= ix1; ix++) {
-        if (inside(x0 + (ix + 0.5) * cell, z0 + (iz + 0.5) * cell)) blockedGrid[iz * w + ix] = 1;
+  for (const members of clusters.values()) {
+    const bx0 = Math.min(...members.map((a) => a.x)) - pad;
+    const bx1 = Math.max(...members.map((a) => a.x)) + pad;
+    const bz0 = Math.min(...members.map((a) => a.z)) - pad;
+    const bz1 = Math.max(...members.map((a) => a.z)) + pad;
+    const local = blocking.filter((s) => footprintCorners(s).some(([x, z]) => x >= bx0 - 20 && x <= bx1 + 20 && z >= bz0 - 20 && z <= bz1 + 20));
+    const xs = [bx0, bx1, ...local.flatMap((s) => footprintCorners(s).map((c) => c[0]))];
+    const zs = [bz0, bz1, ...local.flatMap((s) => footprintCorners(s).map((c) => c[1]))];
+    const x0 = Math.min(...xs);
+    const z0 = Math.min(...zs);
+    const w = Math.ceil((Math.max(...xs) - x0) / cell);
+    const h = Math.ceil((Math.max(...zs) - z0) / cell);
+    const blockedGrid = new Uint8Array(w * h);
+    const markBox = (b: { cx: number; cz: number; hx: number; hz: number }, inside: (px: number, pz: number) => boolean) => {
+      const ix0 = Math.max(0, Math.floor((b.cx - b.hx - PLAYER_MARGIN - x0) / cell));
+      const ix1 = Math.min(w - 1, Math.ceil((b.cx + b.hx + PLAYER_MARGIN - x0) / cell));
+      const iz0 = Math.max(0, Math.floor((b.cz - b.hz - PLAYER_MARGIN - z0) / cell));
+      const iz1 = Math.min(h - 1, Math.ceil((b.cz + b.hz + PLAYER_MARGIN - z0) / cell));
+      for (let iz = iz0; iz <= iz1; iz++) {
+        for (let ix = ix0; ix <= ix1; ix++) {
+          if (inside(x0 + (ix + 0.5) * cell, z0 + (iz + 0.5) * cell)) blockedGrid[iz * w + ix] = 1;
+        }
       }
-    }
-  };
-  const mark = (s: StructureSpec, onlyWalls: boolean) => {
-    if (onlyWalls) {
-      // Enterable structures are axis aligned (yaw 0), so the wall boxes are too.
-      for (const b of wallBoxes(s)) {
-        markBox(b, (px, pz) => Math.abs(px - b.cx) <= b.hx + PLAYER_MARGIN && Math.abs(pz - b.cz) <= b.hz + PLAYER_MARGIN);
+    };
+    const mark = (s: StructureSpec, onlyWalls: boolean) => {
+      if (onlyWalls) {
+        // Enterable structures are axis aligned (yaw 0), so the wall boxes are too.
+        for (const b of wallBoxes(s)) {
+          markBox(b, (px, pz) => Math.abs(px - b.cx) <= b.hx + PLAYER_MARGIN && Math.abs(pz - b.cz) <= b.hz + PLAYER_MARGIN);
+        }
+        return;
       }
-      return;
-    }
-    // Solid structures may be rotated: grow the bounding box by the footprint's reach, test the true shape.
-    const reach = Math.hypot(...s.footprint) / 2;
-    markBox({ cx: s.x, cz: s.z, hx: reach, hz: reach }, (px, pz) => pointInFootprint(s, px, pz, PLAYER_MARGIN));
-  };
-  for (const s of blocking) if (s.mode === 'enterable') mark(s, true);
-  for (const s of blocking) if (s.mode === 'solid') mark(s, false);
-  const cellOf = (x: number, z: number) => {
-    const ix = Math.floor((x - x0) / cell);
-    const iz = Math.floor((z - z0) / cell);
-    return ix < 0 || iz < 0 || ix >= w || iz >= h ? -1 : iz * w + ix;
-  };
-  const start = cellOf(spawn.x, spawn.z);
-  if (start < 0 || blockedGrid[start]) {
-    errors.push('anchor "brightwater.player-spawn": blocked by a structure');
-    return errors;
-  }
-  const seen = new Uint8Array(w * h);
-  const stack = [start];
-  seen[start] = 1;
-  while (stack.length) {
-    const c = stack.pop()!;
-    const ix = c % w;
-    const iz = (c - ix) / w;
-    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-      const nx = ix + dx;
-      const nz = iz + dz;
-      if (nx < 0 || nz < 0 || nx >= w || nz >= h) continue;
-      const n = nz * w + nx;
-      if (seen[n] || blockedGrid[n]) continue;
-      seen[n] = 1;
-      stack.push(n);
-    }
-  }
-  for (const a of layout.anchors) {
-    if (!finite(a.x, a.z) || a.tags?.includes('elevated')) continue;
-    const c = cellOf(a.x, a.z);
-    const solidHost = a.onStructure ? structures.get(a.onStructure) : undefined;
-    if (c >= 0 && blockedGrid[c]) {
-      const inSolidHost = solidHost?.mode === 'solid' && pointInFootprint(solidHost, a.x, a.z);
-      if (!inSolidHost) errors.push(`anchor "${a.id}": inside a solid structure`);
+      // Solid structures may be rotated: grow the bounding box by the footprint's reach, test the true shape.
+      const reach = Math.hypot(...s.footprint) / 2;
+      markBox({ cx: s.x, cz: s.z, hx: reach, hz: reach }, (px, pz) => pointInFootprint(s, px, pz, PLAYER_MARGIN));
+    };
+    for (const s of local) if (s.mode === 'enterable') mark(s, true);
+    for (const s of local) if (s.mode === 'solid') mark(s, false);
+    const cellOf = (x: number, z: number) => {
+      const ix = Math.floor((x - x0) / cell);
+      const iz = Math.floor((z - z0) / cell);
+      return ix < 0 || iz < 0 || ix >= w || iz >= h ? -1 : iz * w + ix;
+    };
+    const isSpawnCluster = members.includes(spawn as (typeof anchors)[number]);
+    const seedAnchor = isSpawnCluster
+      ? spawn
+      : members.find((a) => a.tags?.includes('flood-seed')) ?? members.find((a) => !gated(a) && !a.onStructure && blockedGrid[cellOf(a.x, a.z)] === 0);
+    if (!seedAnchor) continue;
+    const start = cellOf(seedAnchor.x, seedAnchor.z);
+    if (start < 0 || blockedGrid[start]) {
+      errors.push(`anchor "${seedAnchor.id}": blocked by a structure`);
       continue;
     }
-    if (c < 0 || !seen[c]) errors.push(`anchor "${a.id}": unreachable from the player spawn`);
-  }
-  // Doors must lead somewhere: the doorway cell has to be reachable from outside.
-  for (const s of blocking) {
-    const d = doorCentre(s);
-    if (!d) continue;
-    const c = cellOf(d.x, d.z);
-    if (c < 0 || !seen[c]) errors.push(`structure "${s.id}": doorway is not reachable`);
+    const seen = new Uint8Array(w * h);
+    const stack = [start];
+    seen[start] = 1;
+    while (stack.length) {
+      const c = stack.pop()!;
+      const ix = c % w;
+      const iz = (c - ix) / w;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const nx = ix + dx;
+        const nz = iz + dz;
+        if (nx < 0 || nz < 0 || nx >= w || nz >= h) continue;
+        const n = nz * w + nx;
+        if (seen[n] || blockedGrid[n]) continue;
+        seen[n] = 1;
+        stack.push(n);
+      }
+    }
+    for (const a of members) {
+      if (gated(a)) continue;
+      const c = cellOf(a.x, a.z);
+      const solidHost = a.onStructure ? structures.get(a.onStructure) : undefined;
+      if (c >= 0 && blockedGrid[c]) {
+        const inSolidHost = solidHost?.mode === 'solid' && pointInFootprint(solidHost, a.x, a.z);
+        if (!inSolidHost) errors.push(`anchor "${a.id}": inside a solid structure`);
+        continue;
+      }
+      if (c < 0 || !seen[c]) errors.push(`anchor "${a.id}": unreachable from ${isSpawnCluster ? 'the player spawn' : `"${seedAnchor.id}"`}`);
+    }
+    // Doors must lead somewhere: the doorway cell has to be reachable from outside.
+    for (const s of local) {
+      const d = doorCentre(s);
+      if (!d || !members.some((a) => Math.hypot(a.x - s.x, a.z - s.z) <= CLUSTER_LINK)) continue;
+      const c = cellOf(d.x, d.z);
+      if (c < 0 || !seen[c]) errors.push(`structure "${s.id}": doorway is not reachable`);
+    }
   }
   return errors;
 }

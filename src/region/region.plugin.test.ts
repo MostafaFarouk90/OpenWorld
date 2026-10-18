@@ -28,13 +28,16 @@ describe('region plugin', () => {
     const { fc, plugin } = setup();
     plugin.setup(fc.ctx);
     expect(fc.anchors.size).toBe(BRIGHTWATER_LAYOUT.anchors.length);
-    expect(fc.triggers.size).toBe(BRIGHTWATER_LAYOUT.triggers.length);
+    // The slice fog wall stands, so its trigger exists too.
+    expect(fc.triggers.size).toBe(BRIGHTWATER_LAYOUT.triggers.length + 1);
+    expect(fc.triggers.has('trg.fog.harrowmark')).toBe(true);
     expect(fc.anchors.get('waystone.north')!.position.y).toBe(heightAt(10, 310));
     expect(fc.interactables.has('door:chapel')).toBe(true);
     expect(fc.interactables.has('door:bakery')).toBe(true);
     expect(fc.interactables.has('chest:bakery-barrel')).toBe(true);
     expect(fc.interactables.has('pickup:hearth-stone')).toBe(true);
     expect(fc.interactables.has('use:notice-board')).toBe(true);
+    for (const id of ['use:poi-chapel-ledge', 'use:poi-reed-island', 'use:shard-study']) expect(fc.interactables.has(id), id).toBe(true);
     expect([...fc.interactables.keys()].filter((id) => id.startsWith('waystone'))).toEqual([]);
     expect([...fc.actors.values()].filter((a) => a.kind === 'scarecrow')).toHaveLength(1);
     expect(fc.colliders.size).toBeGreaterThan(20);

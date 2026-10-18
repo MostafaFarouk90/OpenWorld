@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { COMBAT, WORLD } from '../config/constants';
 import { SPAWN_FLAT_RADIUS, heightAt } from '../terrain/heightfield';
+import { CORRIDOR_LAYOUT } from './corridor.layout';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
 import { pointInFootprint } from './geometry';
 import type { LayoutData } from './layoutTypes';
@@ -57,9 +58,9 @@ describe('Brightwater layout data', () => {
     for (const id of ['m01.chapel-door', 'm02.bakery']) expect(triggers.has(id), id).toBe(true);
   });
 
-  it('tags exactly three waystone anchors, with the Kettlewick one starting lit', () => {
+  it('tags exactly five waystone anchors, with the Kettlewick one starting lit', () => {
     const stones = BRIGHTWATER_LAYOUT.anchors.filter((a) => a.tags?.includes('waystone'));
-    expect(stones.map((a) => a.id).sort()).toEqual(['waystone.chapel', 'waystone.kettlewick', 'waystone.north']);
+    expect(stones.map((a) => a.id).sort()).toEqual(['waystone.chapel', 'waystone.hollin-ford', 'waystone.kettlewick', 'waystone.north', 'waystone.quenchstone']);
     expect(stones.filter((a) => a.tags?.includes('waystone-lit')).map((a) => a.id)).toEqual(['waystone.kettlewick']);
   });
 
@@ -71,8 +72,9 @@ describe('Brightwater layout data', () => {
   });
 
   it('puts every structure but the far waystone inside the flat meadow', () => {
+    const corridor = new Set(CORRIDOR_LAYOUT.structures.map((c) => c.id));
     for (const s of BRIGHTWATER_LAYOUT.structures) {
-      if (s.id === 'waystone-north') continue;
+      if (s.id === 'waystone-north' || corridor.has(s.id)) continue;
       expect(Math.hypot(s.x, s.z) + Math.hypot(...s.footprint) / 2).toBeLessThanOrEqual(SPAWN_FLAT_RADIUS);
     }
   });
@@ -289,7 +291,7 @@ describe('validateLayout failure paths', () => {
     const e = errorsOf(BRIGHTWATER_LAYOUT);
     const blocking = BRIGHTWATER_LAYOUT.structures.filter((s) => s.mode !== 'open');
     const stones = BRIGHTWATER_LAYOUT.anchors.filter((a) => a.tags?.includes('waystone'));
-    expect(stones).toHaveLength(3);
+    expect(stones).toHaveLength(5);
     for (const a of stones) {
       expect(e.filter((m) => m.includes(`"${a.id}"`)), a.id).toEqual([]);
       for (const s of blocking) expect(pointInFootprint(s, a.x, a.z, 0.4), `${a.id} vs ${s.id}`).toBe(false);

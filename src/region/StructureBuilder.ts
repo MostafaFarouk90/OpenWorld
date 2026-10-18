@@ -4,9 +4,9 @@ import * as THREE from 'three';
 import type RAPIER from '@dimforge/rapier3d';
 import type { BuildingLookup } from './buildingLookup';
 import type { CoreContext } from './coreTypes';
-import { doorFillBox, wallBoxes } from './geometry';
+import { doorFillBox, groundRange, wallBoxes } from './geometry';
 import { DOOR_HEIGHT, buildGreybox, disposeGreybox, greyMat, structureHeight } from './greybox';
-import type { LayoutData, StructureSpec } from './layoutTypes';
+import { FOUNDATION_KINDS, type LayoutData, type StructureSpec } from './layoutTypes';
 import { Chest, type ChestOptions } from '../interaction/Chest';
 import { Door, type DoorOptions } from '../interaction/Door';
 
@@ -97,14 +97,23 @@ export function buildStructures(
   try {
     deps.scene.add(group);
     for (const spec of layout.structures) {
-      const y = heightAt(spec.x, spec.z);
+      let y = heightAt(spec.x, spec.z);
       const yaw = (spec.yawDeg * Math.PI) / 180;
-      const h = structureHeight(spec);
+      let h = structureHeight(spec);
+      let visualSpec = spec;
+      if (FOUNDATION_KINDS.includes(spec.kind)) {
+        // A column from the lowest ground up to `height` above the highest ground within 1 m, so the top is level.
+        const range = groundRange(spec, heightAt, 1);
+        const bottom = range.min - 0.3;
+        y = bottom;
+        h = range.max + h - bottom;
+        visualSpec = { ...spec, height: h };
+      }
       const holder = new THREE.Group();
       holder.name = `structure:${spec.id}`;
       holder.position.set(spec.x, y, spec.z);
       holder.rotation.y = yaw;
-      const visual = buildGreybox(spec);
+      const visual = buildGreybox(visualSpec);
       visual.name = VISUAL;
       holder.add(visual);
       group.add(holder);

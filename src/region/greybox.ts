@@ -21,6 +21,9 @@ export const DEFAULT_HEIGHT: Record<StructureKind, number> = {
   gate: 3,
   loft: 3,
   'yard-fence': 1.1,
+  rock: 2,
+  bridge: 0.3,
+  stair: 0.2,
 };
 
 /** Height of a door slab; the wall above the doorway is closed by a lintel. */
@@ -182,6 +185,30 @@ export function buildGreybox(spec: StructureSpec): THREE.Object3D {
         for (let z = -d / 2 + step; z < d / 2 - 1e-6; z += step) post(g, sx * (w / 2), z, h);
         g.add(box(0.1, 0.1, d, sx * (w / 2), h * 0.7, 0, WOOD));
       }
+      break;
+    }
+    case 'rock': {
+      // A boulder pile: the main block plus two offset blocks so the silhouette is not a box.
+      g.add(box(w, h, d, 0, 0, 0, 0x7d7a74, 'rock'));
+      g.add(box(w * 0.55, h * 0.35, d * 0.5, w * 0.12, h, -d * 0.1, 0x8a8780));
+      g.add(box(w * 0.3, h * 0.2, d * 0.3, -w * 0.25, h, d * 0.2, 0x6f6c66));
+      break;
+    }
+    case 'bridge': {
+      g.add(box(w, h, d, 0, 0, 0, WOOD, 'deck'));
+      for (const sz of [-1, 1]) {
+        g.add(box(w, 0.08, 0.1, 0, h + 0.8, sz * (d / 2 - 0.05), WOOD, 'rail'));
+        for (const sx of [-1, 0, 1]) post(g, sx * (w / 2 - 0.1), sz * (d / 2 - 0.05), h + 0.9);
+      }
+      break;
+    }
+    case 'stair': {
+      // A stone frame round a dark opening: the crypt stair beside the altar.
+      g.add(box(w, h, d, 0, 0, 0, 0x2a2622, 'opening'));
+      g.add(box(w + 0.4, 0.15, 0.2, 0, h, -d / 2 - 0.1, STONE));
+      g.add(box(w + 0.4, 0.15, 0.2, 0, h, d / 2 + 0.1, STONE));
+      g.add(box(0.2, 0.15, d, -w / 2 - 0.1, h, 0, STONE));
+      g.add(box(0.2, 0.15, d, w / 2 + 0.1, h, 0, STONE));
       break;
     }
     default:
