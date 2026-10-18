@@ -1087,6 +1087,8 @@ describe('status ticks (contracts section 10)', () => {
     tick(t, e);
     t.run(3);
     expect(t.controller.currentAction).toBeNull();
+  });
+});
 
 describe('class hooks: dodge distance and timed invulnerability', () => {
   const dodgeDistance = (t: ReturnType<typeof setup>) => {
@@ -1136,6 +1138,18 @@ describe('class hooks: dodge distance and timed invulnerability', () => {
     t.run(3);
     expect(t.actor.invulnerable).toBe(false);
     expect(t.hit(e, { swingId: 4 })!.outcome).toBe('hit');
+  });
+
+  it('a status tick passes through a timed grant but a hit does not', () => {
+    const t = setup();
+    const e = t.enemy();
+    svc(t).addInvulnerability('ash-drift', 1);
+    t.run(1);
+    expect(t.hit(e)!.outcome).toBe('immune');
+    const r = t.ctx.damage.apply({ attackerId: e.id, targetId: 'player', amount: 2, kind: 'status', statusId: 'burn', statusKind: 'ignite' });
+    expect(r!.outcome).toBe('hit');
+    t.verbs.invuln.add('respawn');
+    expect(t.ctx.damage.apply({ attackerId: e.id, targetId: 'player', amount: 2, kind: 'status', statusId: 'burn2', statusKind: 'ignite' })!.outcome).toBe('immune');
   });
 
   it('the same source extends instead of stacking, and the release ends it early', () => {

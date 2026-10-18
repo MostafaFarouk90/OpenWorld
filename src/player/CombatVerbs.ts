@@ -721,6 +721,8 @@ export class CombatVerbs {
   private addTimedInvulnerability(source: string, seconds: number): () => void {
     if (typeof source !== 'string' || source === '' || !Number.isFinite(seconds) || seconds <= 0) return () => undefined;
     const key = `timed:${source}`;
+    // A timed grant is an i-frame like the dodge: status ticks pass through it (actors-and-damage.md section 10), a grace does not.
+    this.iFrameSources.add(key);
     const ticks = Math.ceil(seconds * 60);
     this.timedInvuln.set(key, Math.max(this.timedInvuln.get(key) ?? 0, ticks));
     this.invuln.add(key);
