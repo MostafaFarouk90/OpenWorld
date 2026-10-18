@@ -1,7 +1,6 @@
 // Slice 1 saves (written by the real save plugin at the slice 1 tip 5a09676, see __fixtures__/README.md) load
 // into slice 2 through the real save plugin and every real plugin.
 import * as THREE from 'three';
-import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Game } from '../core/Game';
 import { MoveModifiers } from '../core/MoveModifiers';
@@ -14,7 +13,8 @@ import { World } from '../world/World';
 import { createLeadSource } from '../quests/leads';
 import { FakeIndexedDb } from './__fixtures__/fakeIndexedDb';
 
-const fixture = (name: string): unknown => JSON.parse(readFileSync(`src/save/__fixtures__/${name}.json`, 'utf8'));
+const FIXTURES = import.meta.glob<unknown>('./__fixtures__/slice1-*.json', { eager: true, import: 'default' });
+const fixture = (name: string): unknown => structuredClone(FIXTURES[`./__fixtures__/${name}.json`]);
 
 let physics: PhysicsWorld;
 let fake: FakeIndexedDb;
