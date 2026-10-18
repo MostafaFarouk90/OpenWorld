@@ -106,6 +106,13 @@ describe('BloomPostPass', () => {
     warn.mockRestore();
     h.throwOnRatio = false;
   });
+  it('setPixelRatio after dispose does not touch the composer', () => {
+    const p = new BloomPostPass(renderer, scene, camera);
+    const c = h.composer;
+    p.dispose();
+    p.setPixelRatio(2);
+    expect(c.setPixelRatio).not.toHaveBeenCalled();
+  });
   it('setPixelRatio without a composer is a no-op', () => {
     h.throwOnConstruct = true;
     const p = new BloomPostPass(renderer, scene, camera);

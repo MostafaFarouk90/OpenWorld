@@ -84,7 +84,7 @@ export class BloomPostPass implements PostPass {
 
   /** Forwarded by the graphics service on install and on every render-scale change. */
   setPixelRatio(ratio: number): void {
-    if (!Number.isFinite(ratio) || ratio <= 0) return;
+    if (this.disposed || !Number.isFinite(ratio) || ratio <= 0) return;
     try {
       this.composer?.setPixelRatio(ratio);
     } catch (e) {

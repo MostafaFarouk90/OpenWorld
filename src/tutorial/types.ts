@@ -2,6 +2,7 @@
  * Shared types of the Knighting Day director (plans/knighting-day-integration.md sections 3 and 9).
  * Pure: no three.js, no DOM. The plugin adapts the merged services to `DirectorPorts`.
  */
+import type { DialogueEndReason } from '../core/events';
 
 export const BEAT_IDS = [
   't01', 't02', 't03', 't04', 't05', 't06', 't07', 't08', 't09', 't10', 't11', 't12', 't13', 't14', 't15', 'skirmish',
@@ -46,7 +47,7 @@ export type DirectorEvent =
   | { type: 'rest'; waystoneId: string }
   | { type: 'interact'; id: string }
   | { type: 'vowComplete' }
-  | { type: 'dialogueEnded'; dialogueId: string; reason: string | undefined }
+  | { type: 'dialogueEnded'; dialogueId: string; reason: DialogueEndReason | undefined }
   | { type: 'modal'; id: string; open: boolean };
 
 /** Per-tick sample for goals that measure motion or gaze. */

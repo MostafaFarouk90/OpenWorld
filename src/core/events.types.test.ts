@@ -1,6 +1,7 @@
 import { describe, expectTypeOf, it } from 'vitest';
 import type { CloseReason } from '../dialogue/DialogueRunner';
 import type { DialogueEndReason, GameEventMap } from './events';
+import type { DialogueService } from '../quests/service';
 
 // Checked by `tsc --noEmit` (tests are part of the project); the runtime body is a no-op.
 describe('dialogue.ended typing', () => {
@@ -8,5 +9,11 @@ describe('dialogue.ended typing', () => {
     expectTypeOf<GameEventMap['dialogue.ended']['reason']>().toEqualTypeOf<DialogueEndReason | undefined>();
     expectTypeOf<CloseReason>().toEqualTypeOf<Exclude<DialogueEndReason, 'completed'>>();
     expectTypeOf<'completed'>().toMatchTypeOf<DialogueEndReason>();
+  });
+});
+
+describe('dialogue service close typing', () => {
+  it('accepts exactly the close reasons of the event type', () => {
+    expectTypeOf<Parameters<DialogueService['close']>[0]>().toEqualTypeOf<CloseReason | undefined>();
   });
 });
