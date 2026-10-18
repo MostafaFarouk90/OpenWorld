@@ -40,4 +40,7 @@ describe('kill xp table (slice 2)', () => {
     expect(killXp('ashen-prior', 3, 3)).toBe(200);
     expect(killXp('mystery-beast', 3, 3)).toBe(0);
   });
+  it("thread 5's kinds", () => {
+    expect([killXp('ash-scarecrow', 1, 1), killXp('toll-post', 1, 1), killXp('blightbloom', 1, 1), killXp('blighted-soldier', 1, 1), killXp('ember-hound', 1, 1), killXp('alley-cutpurse', 1, 1)]).toEqual([0, 0, 15, 30, 25, 18]);
+  });
 });
