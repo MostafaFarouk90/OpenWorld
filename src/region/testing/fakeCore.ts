@@ -136,6 +136,7 @@ export function createFakeCore(): FakeCore {
           strings.set(k, v);
         }
       },
+      t: (key) => strings.get(key) ?? key,
     },
     systems: { add: (s) => unique(systems, s.id, 'system', s) },
     combat: { addTarget: (t) => void targets.push(t) },
