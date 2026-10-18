@@ -184,8 +184,9 @@ export interface PluginContext {
   damage: DamageLike;
   services: ServicesLike;
   systems: { add(system: GameSystem): () => void };
+  input?: { actions: { pressed(a: string): boolean } };
   persist: { register(p: { key: string; version: number; serialize(): unknown; load(data: unknown, version: number): void }): () => void };
-  hud: { mount(slot: string, id: string, el: HTMLElement, order?: number): () => void };
+  hud: { mount(slot: string, widget: { id: string; element: HTMLElement; order?: number; dispose?(): void }): () => void };
   /** Height of the terrain at x, z (the world heightfield). */
   heightAt?(x: number, z: number): number;
 }
