@@ -13,6 +13,7 @@ import { heightAt } from '../terrain/heightfield';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 import stealthPlugin from './stealth.plugin';
+import { catchCourierForTest } from './testing/headless';
 
 let physics: PhysicsWorld;
 beforeAll(() => {
@@ -229,5 +230,22 @@ describe('stealth and chase plugins on the real core', () => {
     t.run(1);
     expect(t.of('chase.started')).toEqual([{ chaseId: 'm10.rooftops' }]);
     t.done();
+  });
+
+  it('test-only catchCourierForTest catches a running chase through chase.caught and releases the hold', async () => {
+    const t = await boot();
+    expect(catchCourierForTest()).toBe(false); // no route built yet, nothing running
+    const start = t.ctx.anchors.get('chase.m10.0').position;
+    t.teleport(start.x, start.z);
+    t.f.quests.set('m10', { state: 'active', done: new Set(), current: 'o2' });
+    t.run(1);
+    expect(t.ctx.services.get('chase')?.active()).toBe(true);
+    expect(catchCourierForTest()).toBe(true);
+    expect(t.of('chase.caught')).toHaveLength(1);
+    expect(t.ctx.services.get('chase')?.active()).toBe(false);
+    expect([...t.f.holds].some((h) => h.startsWith('chase'))).toBe(false);
+    expect(catchCourierForTest()).toBe(false);
+    t.done();
+    expect(catchCourierForTest()).toBe(false);
   });
 });
