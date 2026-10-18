@@ -1068,6 +1068,19 @@ describe('status ticks (contracts section 10)', () => {
     expect(t.of('player.dodged')).toHaveLength(0);
   });
 
+  it('any registered i-frame source lets a tick through; mixed with grace it does not', () => {
+    const t = setup();
+    const e = t.enemy();
+    t.verbs.iFrameSources.add('ashDrift');
+    t.verbs.invuln.add('ashDrift');
+    expect(tick(t, e).outcome).toBe('hit');
+    t.verbs.invuln.add('respawn');
+    expect(tick(t, e).outcome).toBe('immune');
+    t.verbs.invuln.remove('respawn');
+    t.verbs.invuln.remove('ashDrift');
+    expect(tick(t, e).outcome).toBe('hit');
+  });
+
   it('a tick does not make the player flinch', () => {
     const t = setup();
     const e = t.enemy();
