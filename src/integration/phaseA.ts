@@ -277,7 +277,7 @@ export async function playM05(h: ChapterHarness, t: QuestTrail): Promise<void> {
 export type FieldBranch = 'saved' | 'scorched';
 
 /** Rests at the nearest lit waystone (hold F): Burn clears. */
-async function restNearest(h: ChapterHarness): Promise<void> {
+async function restNearest(h: ChapterHarness): Promise<boolean> {
   const ways = h.ctx.services.require('waystones');
   const f = h.ctx.player.feet;
   let best: THREE.Vector3 | null = null;
@@ -289,8 +289,12 @@ async function restNearest(h: ChapterHarness): Promise<void> {
   }
   ensure(best, 'a lit waystone to rest at');
   await h.approach(best, 1.5);
+  // A Surge still casting locks interact; wait it out.
+  for (let i = 0; i < 40 && h.moveModifiers.isActionLocked('interact'); i++) runHealed(h, 0.25);
+  const before = h.of('rest').length;
   h.hold('KeyF', WAYSTONE_TUNING.restHoldSeconds + 0.2);
   await h.runAsync(30);
+  return h.of('rest').length > before;
 }
 
 export async function playR01(h: ChapterHarness, t: QuestTrail, field: FieldBranch): Promise<void> {
@@ -316,11 +320,11 @@ export async function playR01(h: ChapterHarness, t: QuestTrail, field: FieldBran
     }
     ensure(h.ctx.state.getBool('story.r01.torchUsed'), 'story.r01.torchUsed set by the torch bridge');
   } else {
-    // A purifying Surge (G) next to each scarecrow; rest when the Burn runs high.
+    // A purifying Surge (G) next to each scarecrow. No rest in between: an aggroed scarecrow never calms, so the
+    // waystones refuse a rest until the field is clear, and Burn climbs to 100 (with Scars) over six Surges.
     const spells = h.ctx.services.require('spells');
     for (const c of crows) {
-      for (let i = 0; i < 12 && !cleared(c.id) && c.root; i++) {
-        if (spells.burn >= 50) await restNearest(h);
+      for (let i = 0; i < 40 && !cleared(c.id) && c.root; i++) {
         heal(h);
         await h.approach(v3(c.root), 1.5);
         h.press('KeyG');
@@ -328,8 +332,11 @@ export async function playR01(h: ChapterHarness, t: QuestTrail, field: FieldBran
       }
       ensure(cleared(c.id), `scarecrow ${c.id} cleared by the Surge`);
     }
-    // Cool off before handing in, as a player would after six Surges.
-    if (spells.burn > 0) await restNearest(h);
+    // Field clear: rest at the nearest lit waystone (hold F) to clear the Burn, as a player would.
+    const ways = h.ctx.services.require('waystones');
+    for (let i = 0; i < 20 && ways.hostileAggro; i++) runHealed(h, 0.5);
+    ensure(await restNearest(h), `rested after the field (aggro ${ways.hostileAggro})`);
+    ensure(spells.burn === 0, `Burn cleared by the rest (${spells.burn})`);
     ensure(!h.ctx.state.getBool('story.r01.torchUsed'), 'no torch used');
   }
   ensure(objectiveDone(h, 'r01', 'o2'), 'o2 six scarecrows');
