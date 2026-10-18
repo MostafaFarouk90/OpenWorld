@@ -52,10 +52,8 @@ export interface WardenCombatPorts {
 
 interface Swing {
   id: number;
-  /** Targets the blade hit (they take no cleave extra), and the strongest blade hit's numbers. */
+  /** Targets the blade struck, whatever came of it (they take no cleave extra). */
   hit: Set<ActorId>;
-  amount: number;
-  poise: number;
   sawActive: boolean;
 }
 
@@ -65,7 +63,7 @@ interface Swing {
  */
 export class WardenCombat {
   private swing: Swing | null = null;
-  private howlArmed = true;
+  private howlArmed = true; // reset() seeds it from the player's health
   private lastHowl = -Infinity;
   private lastRage = -Infinity;
   private igniteUntil = 0;
@@ -94,7 +92,9 @@ export class WardenCombat {
   /** Forgets the swing, the howl state and the burning axe (a load, a death, a class change away). */
   reset(): void {
     this.swing = null;
-    this.howlArmed = true;
+    const me = this.p.actors.player;
+    // Armed only from above 50% health: a load at 30% must not howl on the first hit (no downward crossing).
+    this.howlArmed = me.maxHealth <= 0 || me.health / me.maxHealth >= WAR_HOWL.healthFraction;
     this.lastHowl = -Infinity;
     this.lastRage = -Infinity;
     this.endIgnite();
@@ -130,7 +130,7 @@ export class WardenCombat {
   }
 
   private swingFor(id: number): Swing {
-    if (this.swing?.id !== id) this.swing = { id, hit: new Set(), amount: 0, poise: 0, sawActive: false };
+    if (this.swing?.id !== id) this.swing = { id, hit: new Set(), sawActive: false };
     return this.swing;
   }
 
@@ -139,8 +139,9 @@ export class WardenCombat {
     if (!this.p.learned(SKILL_IDS.cleavingSwing)) return;
     const feet = this.p.feet();
     const yaw = this.p.facingYaw();
-    const amount = s.amount > 0 ? s.amount : COMBAT.baseDamage;
-    const poise = s.poise > 0 ? s.poise : amount;
+    // The weapon's base: the blade's own result is already scaled by bone, back-hit and scarecrow modifiers that run again per target.
+    const amount = COMBAT.baseDamage;
+    const poise = amount;
     // actorsInCone looks along (sin, cos) of its yaw; the player looks along (-sin, -cos).
     for (const h of actorsInCone(this.p.actors, feet, yaw + Math.PI, CLEAVE.halfAngle, CLEAVE.rangeMetres, { team: 'hostile', alive: true })) {
       if (s.hit.has(h.actor.id)) continue;
@@ -174,13 +175,9 @@ export class WardenCombat {
     healthAfter: number;
   }): void {
     const me = this.playerId();
+    // A slice the target blocked, parried or was immune to still counts as that target's hit of the swing (no second try by the cleave).
+    if (e.attackerId === me && e.kind === 'melee' && e.attackId === WARDEN_CLIPS.slice && e.swingId !== undefined) this.swingFor(e.swingId).hit.add(e.targetId);
     if (e.attackerId === me && e.kind === 'melee' && e.outcome === 'hit' && e.attackId !== undefined && AXE_ATTACK_IDS.has(e.attackId)) {
-      if (e.attackId === WARDEN_CLIPS.slice && e.swingId !== undefined) {
-        const s = this.swingFor(e.swingId);
-        s.hit.add(e.targetId);
-        s.amount = Math.max(s.amount, e.amount);
-        s.poise = Math.max(s.poise, e.poise);
-      }
       this.applyStatuses(e.targetId);
     }
     if (e.targetId === me && e.kind !== 'status' && e.outcome === 'hit') {
