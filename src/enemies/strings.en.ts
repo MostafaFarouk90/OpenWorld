@@ -9,6 +9,7 @@ export const ENEMY_STRINGS_EN: Record<string, string> = {
   'enemies.name.blighted-soldier': 'Blighted Soldier',
   'enemies.name.charred-footman': 'Charred Footman',
   'enemies.name.ember-hound': 'Ember Hound',
+  'enemies.name.guildhall-thug': 'Guildhall Thug',
   'enemies.name.watch-guard': 'Watch Guard',
   'enemies.name.ash-scarecrow': 'Ash-Possessed Scarecrow',
   'enemies.name.blightbloom': 'Blightbloom',

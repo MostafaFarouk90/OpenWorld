@@ -1,5 +1,6 @@
 import { ENEMY_ATTACKS } from './clips';
 import { ALLEY_CUTPURSE } from './cutpurse/def';
+import { GUILDHALL_THUG } from './guildhall/def';
 import { EMBER_HOUND } from './hound/def';
 import type { EnemyDef, EnemyKind, MoveDef } from './types';
 
@@ -91,6 +92,7 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'alley-cutpurse': ALLEY_CUTPURSE,
   'ember-hound': EMBER_HOUND,
   'watch-guard': WATCH_GUARD,
+  'guildhall-thug': GUILDHALL_THUG,
 };
 
 /**
@@ -104,6 +106,7 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   // Tail flare (design 11.6): the pounce is red, the bite's flash is the same tail.
   'ember-hound': { part: 'tail', color: 0xff5a1f },
   'watch-guard': { part: 'weapon', color: 0xd04030 },
+  'guildhall-thug': { part: 'hand', color: 0xd04030 },
 };
 
 function move(
