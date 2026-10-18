@@ -1,3 +1,4 @@
+import { HumanoidBody } from './body';
 import { mulberry32 } from './ai/moveSelect';
 import { ENEMY_DEFS } from './defs';
 import { boneMultiplier, Enemy, type EnemyEnv, type EnemySpawn } from './Enemy';
@@ -134,7 +135,7 @@ export class EnemyManager {
         patrol: patrolForSlot(req.patrol.map((a) => a.position), req.slot),
         options: req.options,
       };
-      enemy = new Enemy(this.env, spawn, model, animator);
+      enemy = new Enemy(this.env, spawn, new HumanoidBody(model, animator));
     } catch (err) {
       this.host.warn(`enemies: could not spawn ${req.def.kind} for ${req.spawnerId}: ${String(err)}`);
       return null;

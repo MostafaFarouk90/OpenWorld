@@ -4,8 +4,7 @@ import { Brain, type BrainHooks, type Senses } from './ai/Brain';
 import { MoveSelector } from './ai/moveSelect';
 import { makeLineOfSight, perceive } from './ai/perception';
 import { ENEMY_CLIPS } from './clips';
-import type { EnemyAnimator } from './EnemyAnimator';
-import type { EnemyModel } from './EnemyModel';
+import type { EnemyBody } from './body';
 import type { ActorId, ActorLike, EnemyHost } from './ports';
 import { forwardOf, Steering, turnToward, yawTo } from './steering/steering';
 import { HeightfieldMover, SwitchingMover, type EnemyMover } from './steering/movers';
@@ -87,8 +86,7 @@ export class Enemy {
   constructor(
     private readonly env: EnemyEnv,
     spawn: EnemySpawn,
-    readonly model: EnemyModel,
-    readonly animator: EnemyAnimator,
+    readonly body: EnemyBody,
   ) {
     const host = env.host;
     this.host = host;
@@ -105,9 +103,9 @@ export class Enemy {
       : () => true;
 
     try {
-      host.scene.add(model.root);
+      host.scene.add(body.root);
       this.placeRoot(this.mover.feet);
-      model.root.updateMatrixWorld(true);
+      body.root.updateMatrixWorld(true);
 
       const maxHealth = Math.max(1, Math.round(spawn.maxHealth * (spawn.options.healthScale ?? 1)));
       this.actor = host.actors.spawn({
@@ -116,8 +114,8 @@ export class Enemy {
         level: spawn.level,
         maxHealth,
         maxPoise: this.def.maxPoise,
-        root: model.root,
-        owner: model.owner,
+        root: body.root,
+        owner: body.owner,
         spawnTag: spawn.spawnTag,
       });
       this.actor.data['audio'] = { material: this.def.material };
@@ -131,14 +129,14 @@ export class Enemy {
       });
       if (spawn.options.moves) this.moveFilter = [...spawn.options.moves];
 
-      this.removers.push(host.combat.addTarget(model.hurtboxes, this.actor.id));
+      this.removers.push(host.combat.addTarget(body.hurtboxes, this.actor.id));
       for (const ch of ['right', 'left'] as const) {
-        const tracer = model.tracers[ch];
+        const tracer = body.tracers[ch];
         if (!tracer) continue;
-        if (tracer.attacker !== model.owner) this.removers.push(host.actors.bindOwner(this.actor, tracer.attacker));
-        this.removers.push(host.combat.addAttacker(this.actor.id, tracer, animator.windowSource(ch)));
+        if (tracer.attacker !== body.owner) this.removers.push(host.actors.bindOwner(this.actor, tracer.attacker));
+        this.removers.push(host.combat.addAttacker(this.actor.id, tracer, body.windowSource(ch)));
         // vfx-and-feedback.md: the trail id is the actor id; the shield gets none.
-        const parts = model.weapons[ch];
+        const parts = body.weapons[ch];
         const trail = parts && ch === 'right' ? host.services.get('vfx')?.attachTrail?.(this.actor.id, parts.hilt, parts.tip) : undefined;
         if (trail) this.trails[ch] = trail;
       }
@@ -148,16 +146,16 @@ export class Enemy {
       for (const ch of ['right', 'left'] as const) this.trails[ch]?.dispose();
       const spawned = (this as { actor?: ActorLike }).actor;
       if (spawned) host.actors.despawn(spawned.id);
-      model.root.removeFromParent();
+      body.root.removeFromParent();
       this.mover.dispose();
       throw err;
     }
 
-    animator.onWindow = (ch, phase, swingId) => {
+    body.onWindow = (ch, phase, swingId) => {
       this.trails[ch]?.setEmitting(phase === 'open');
       if (phase === 'open') this.brain.windowOpened(swingId);
     };
-    animator.onClipEnd = (clip, interrupted) => {
+    body.onClipEnd = (clip, interrupted) => {
       const move = this.brain.currentMove;
       if (move && clip === move.clip) this.brain.attackClipEnded(this.brain.currentSwing, interrupted);
     };
@@ -289,8 +287,8 @@ export class Enemy {
     this.placeRoot(this.mover.feet);
     if (this.oneShotLeft > 0) this.oneShotLeft -= dt;
     if (this.phase === 'alive' && this.oneShotLeft <= 0) this.chooseLoco();
-    this.animator.fixedUpdate(dt);
-    this.model.root.updateMatrixWorld(true);
+    this.body.fixedUpdate(dt);
+    this.body.root.updateMatrixWorld(true);
   }
 
   /** `afterCombat` phase: poise regen, slow timer, the death and release fades. */
@@ -313,7 +311,7 @@ export class Enemy {
       return;
     }
     if (this.phase === 'fading' && !this.fadeHandledByVfx) {
-      this.model.setOpacity(Math.max(0, 1 - this.phaseTime / this.fadeSeconds));
+      this.body.setOpacity(Math.max(0, 1 - this.phaseTime / this.fadeSeconds));
       if (this.phaseTime >= this.fadeSeconds) this.despawn();
     }
   }
@@ -435,10 +433,9 @@ export class Enemy {
     if (this.brain.state !== 'dead' && !this.brain.finished) this.brain.died();
     this.disarm();
     this.phase = 'gone';
-    this.animator.onWindow = null;
-    this.animator.onClipEnd = null;
-    this.animator.dispose();
-    this.model.dispose();
+    this.body.onWindow = null;
+    this.body.onClipEnd = null;
+    this.body.dispose();
     this.mover.dispose();
     this.env.gone(this, this.goneHow);
   }
@@ -483,7 +480,7 @@ export class Enemy {
       this.dissolved = true;
     };
     try {
-      vfx.dissolve(this.model.root, seconds).then(done, done);
+      vfx.dissolve(this.body.root, seconds).then(done, done);
     } catch (err) {
       this.host.warn(`enemies: vfx dissolve failed for ${this.actor.id}: ${String(err)}`);
       this.fadeHandledByVfx = false;
@@ -491,7 +488,7 @@ export class Enemy {
   }
 
   private deathClipSeconds(): number {
-    return this.animator.clipDuration(ENEMY_CLIPS.death) ?? 1;
+    return this.body.clipDuration(ENEMY_CLIPS.death) ?? 1;
   }
 
   private leave(dt: number): void {
@@ -516,9 +513,9 @@ export class Enemy {
   }
 
   private placeRoot(feet: THREE.Vector3): void {
-    this.prevRoot.copy(this.model.root.position);
-    this.model.root.position.copy(feet);
-    this.model.root.rotation.set(0, this.yaw, 0);
+    this.prevRoot.copy(this.body.root.position);
+    this.body.root.position.copy(feet);
+    this.body.root.rotation.set(0, this.yaw, 0);
   }
 
   private chooseLoco(): void {
@@ -531,15 +528,15 @@ export class Enemy {
   }
 
   private setLoco(clip: string): void {
-    if (this.loco === clip && this.animator.currentClip === clip) return;
+    if (this.loco === clip && this.body.currentClip === clip) return;
     this.loco = clip;
-    this.animator.play(clip, { loop: true });
+    this.body.play(clip, { loop: true });
   }
 
   private oneShot(clip: string, seconds: number): void {
     this.loco = null;
-    this.animator.play(clip, { loop: false });
-    const len = this.animator.clipDuration(clip) ?? FIXED_TIMESTEP;
+    this.body.play(clip, { loop: false });
+    const len = this.body.clipDuration(clip) ?? FIXED_TIMESTEP;
     this.oneShotLeft = Math.min(seconds, len);
   }
 
@@ -574,9 +571,9 @@ export class Enemy {
       startAttack: (move, lead) => {
         this.loco = null;
         this.oneShotLeft = 0;
-        return this.animator.playAttack(move, lead);
+        return this.body.playAttack(move, lead);
       },
-      cancelAttack: () => this.animator.cancelAttack(),
+      cancelAttack: () => this.body.cancelAttack(),
       telegraph: (move, swingId, lead) =>
         this.host.events.emit('telegraph', {
           actorId: this.actor.id,
