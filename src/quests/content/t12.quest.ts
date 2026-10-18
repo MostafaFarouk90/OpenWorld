@@ -9,7 +9,15 @@ export const t12: QuestDef = {
   titleKey: 'quest.t12.title',
   summaryKey: 'quest.t12.summary',
   objectives: [
-    { id: 'o1', type: 'interact', target: 'use:t12-journal-open', textKey: 'quest.t12.o1', optional: false },
+    {
+      id: 'o1',
+      type: 'interact',
+      target: 'use:t12-journal-open',
+      textKey: 'quest.t12.o1',
+      optional: false,
+      // The director sets the flag once the kit lesson is up, so an earlier J press earns nothing.
+      when: { flag: 'tutorial.t12.kit' },
+    },
   ],
   onComplete: [{ startQuest: 'm01' }],
 };

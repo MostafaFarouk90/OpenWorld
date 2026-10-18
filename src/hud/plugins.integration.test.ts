@@ -391,6 +391,12 @@ describe('review fixes', () => {
     expect(rows[0].objectives.length).toBeGreaterThan(0);
     for (const o of rows[0].objectives) expect(o.textKey).toMatch(/^quest\.m01\./);
     expect(rows[0].objectives.every((o) => o.required >= 1)).toBe(true);
+    expect(rows[0].titleKey).toBe(q.get('m01').titleKey);
+    // A quest registered at runtime with its own titleKey shows that key, not quest.<id>.title.
+    t.ctx.strings.register('en', { 'tutorial.x.title': 'X', 'tutorial.x.o1': 'Do x', 'tutorial.x.summary': 's' });
+    q.register({ id: 'tx', titleKey: 'tutorial.x.title', summaryKey: 'tutorial.x.summary', objectives: [{ id: 'o1', type: 'interact', target: 'use:x', textKey: 'tutorial.x.o1' }] });
+    q.start('tx');
+    expect(adaptQuests(q).find((r) => r.id === 'tx')?.titleKey).toBe('tutorial.x.title');
     t.dispose();
   });
 

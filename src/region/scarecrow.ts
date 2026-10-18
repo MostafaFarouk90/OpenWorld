@@ -72,6 +72,7 @@ export function spawnScarecrow(
   root.updateMatrixWorld(true);
 
   const actor = deps.actors.spawn({ kind: 'scarecrow', team: 'neutral', maxHealth: 20, hittable: true, root, owner: root });
+  actor.data.audio = { material: 'straw' };
   let hurtboxes: HurtboxSet | null = null;
   let removeTarget: (() => void) | null = null;
   let died = false;
