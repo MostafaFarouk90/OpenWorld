@@ -3,7 +3,8 @@ import { GameEvents } from '../core/events';
 import { FlagGates } from '../state/FlagGates';
 import { WorldState } from '../state/WorldState';
 import { buildForgeState, SHRINE_IDS } from './ForgeMarks';
-import { FOG_WALL, createMapSources } from './MapSources';
+import { FOG_OPEN_FLAGS, FOG_WALL, createMapSources, type PostAnchor } from './MapSources';
+import { DEFAULT_WORLD_BOUNDS } from './tuning';
 import { FogGrid, buildMarkers } from './MapModel';
 import { createMapModal } from './MapView';
 import { MAP_STRINGS_EN } from './strings.en';
@@ -84,16 +85,73 @@ describe('MapSources', () => {
     expect(make().src.legend(1, 1)).toBeNull();
   });
 
-  it('fog wall marker shows until story.slice.harrowmarkOpen is true, including via a load', () => {
+  it('fog wall marker stands iff story.m05.complete is not true, including via a load', () => {
     const { state, src, load } = make();
     expect(src.fogWall()).toMatchObject({ id: 'trg.fog.harrowmark', x: FOG_WALL.x, z: FOG_WALL.z });
     state.setFlag('story.slice.harrowmarkOpen', true);
+    expect(src.fogWall()).not.toBeNull(); // no fallback to the old flag
+    state.setFlag('story.m05.complete', true);
     expect(src.fogWall()).toBeNull();
     load({});
     expect(src.fogWall()).not.toBeNull();
-    load({ 'story.slice.harrowmarkOpen': true });
+    load({ 'story.m05.complete': true });
     expect(src.fogWall()).toBeNull();
-    expect(buildMarkers({ waystones: [], fog: src.fogWall() })).toHaveLength(0);
+    load({ 'story.m05.complete': false, 'story.slice.harrowmarkOpen': true });
+    expect(src.fogWall()).not.toBeNull();
+    expect(buildMarkers({ waystones: [], fog: src.fogWall() })).toHaveLength(1);
+    expect([...FOG_OPEN_FLAGS]).toEqual(['story.m05.complete']);
+  });
+
+  describe('trainer and vendor posts', () => {
+    const grid = () => FogGrid.forBounds(DEFAULT_WORLD_BOUNDS);
+    const mk = (anchors: PostAnchor[]) => {
+      const events = new GameEvents(() => {});
+      const state = new WorldState(events, () => {});
+      const gates = new FlagGates(state, events, () => {});
+      const src = createMapSources({ gates, events, service: () => undefined }, (k) => k, anchors);
+      const load = (flags: Record<string, unknown>) => {
+        state.load({ flags });
+        events.emit('save.loaded', { slot: 't' });
+      };
+      return { src, state, load };
+    };
+
+    it('default table lists the five Bastion trainers, hidden until revealed', () => {
+      const { src } = make();
+      const g = grid();
+      expect(src.posts((x, z) => g.isRevealed(x, z))).toHaveLength(0);
+      g.reveal(8200, 1730, 100);
+      const out = src.posts((x, z) => g.isRevealed(x, z));
+      expect(out.map((p) => p.id)).toEqual(['gaut', 'stane', 'pennard', 'gerta', 'ashdown'].map((n) => `harrowmark.bastion.trainer.${n}`));
+      expect(out[0]).toMatchObject({ x: 8200, z: 1730, label: 'Gaut, trainer' });
+      expect(buildMarkers({ waystones: [], poi: out })).toHaveLength(5);
+    });
+
+    it('vendors need story.m08.favourTab, set directly or by a load', () => {
+      const { src, state, load } = mk([{ id: 'shop.wystan', kind: 'vendor', x: 10, z: 20 }]);
+      const seen = () => true;
+      expect(src.posts(seen)).toHaveLength(0);
+      state.setFlag('story.m08.favourTab', true);
+      expect(src.posts(seen)).toHaveLength(1);
+      expect(src.posts(() => false)).toHaveLength(0);
+      load({});
+      expect(src.posts(seen)).toHaveLength(0);
+      load({ 'story.m08.favourTab': true });
+      expect(src.posts(seen)).toHaveLength(1);
+    });
+
+    it('survives a throwing reveal check, non-finite anchors and anchors outside the bounds', () => {
+      const { src } = mk([
+        { id: 'a', kind: 'trainer', x: 99999, z: -99999 },
+        { id: 'b', kind: 'trainer', x: NaN, z: 0 },
+        { id: 'c', kind: 'trainer', x: 1, z: 1 },
+      ]);
+      const g = grid();
+      expect(() => src.posts((x, z) => g.isRevealed(x, z))).not.toThrow();
+      expect(src.posts((x, z) => g.isRevealed(x, z))).toHaveLength(0);
+      expect(src.posts((x) => x === 99999 || x === 1).map((p) => p.id)).toEqual(['a', 'c']);
+      expect(src.posts(() => { throw new Error('x'); })).toEqual([]);
+    });
   });
 
   it('legend reads region.at(x, z).levelBand and hides without data', () => {

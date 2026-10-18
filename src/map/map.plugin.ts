@@ -107,6 +107,7 @@ const map: GamePlugin = {
             const lit = waystones()?.isLit(id) ?? false;
             return [{ id, x: p.x, z: p.z, state: lit ? ('rekindled' as const) : ('dormant' as const), discovered: lit || fog.isRevealed(p.x, p.z), label: id }];
           }),
+          poi: sources.posts((x, z) => fog.isRevealed(x, z)),
           shrines: sources.litShrines(),
           fog: sources.fogWall(),
           quest: currentLeads(),

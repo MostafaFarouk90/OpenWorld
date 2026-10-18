@@ -54,7 +54,7 @@ export class ActContinuesCard implements HudWidgetView {
   onTrigger(triggerId: string): void {
     if (triggerId !== ACT_CONTINUES_TRIGGER || this.done) return;
     if (this.opts.enabled && !this.opts.enabled()) return;
-    // The wall is already down (story.slice.harrowmarkOpen): there is nothing to announce.
+    // The wall is already down (story.m05.complete): there is nothing to announce.
     if (this.opts.alreadyOpen?.()) return;
     this.done = true;
     this.left = ACT_CONTINUES_SECONDS;
