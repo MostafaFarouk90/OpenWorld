@@ -64,6 +64,17 @@ describe('Scope', () => {
     expect(undo).toHaveBeenCalledTimes(1);
   });
 
+  it('an undo run early leaves the scope, so repeated register and remove retains nothing', () => {
+    const scope = new Scope();
+    for (let i = 0; i < 1000; i++) scope.track(() => {})();
+    expect(scope.size).toBe(0);
+    const live = vi.fn();
+    scope.track(live);
+    expect(scope.size).toBe(1);
+    scope.close();
+    expect(live).toHaveBeenCalledTimes(1);
+  });
+
   it('track after close runs immediately', () => {
     const s = new Scope();
     s.close();
