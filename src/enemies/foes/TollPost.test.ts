@@ -83,7 +83,7 @@ describe('toll post', () => {
     expect(p.actor.health).toBe(80);
   });
 
-  it('dies through the normal actor.died path, gives no XP row, and is removed', () => {
+  it('dies through the normal actor.died path, gives no XP, and is removed', () => {
     const kit = foeKit(gltf, { player: { x: 0, z: -5 } });
     const p = post(kit);
     hit(kit, p.id, 130, 40);
@@ -92,7 +92,7 @@ describe('toll post', () => {
     kit.tick(2.5);
     expect(kit.manager.getFoe(p.id)).toBeUndefined();
     expect(kit.fake.actorMap.has(p.id)).toBe(false);
-    expect(Object.keys(KILL_XP_BASE)).not.toContain('toll-post');
+    expect(KILL_XP_BASE['toll-post'] ?? 0).toBe(0);
     expect(kit.fake.bus.of('enemies.groupCleared')).toEqual([{ spawnerId: 'brightwater.ford.toll-post' }]);
   });
 
