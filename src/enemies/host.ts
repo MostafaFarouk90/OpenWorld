@@ -23,6 +23,10 @@ export function hostFromContext(ctx: GameContext, warn: (m: string) => void): En
     anchors: ctx.anchors,
     interaction: ctx.interaction as unknown as InteractionPort,
     state: ctx.state,
+    gates: {
+      watch: (test, listener, keys) =>
+        ctx.gates.watch((state) => test((k) => Boolean(state.getFlag(k))), listener, { keys }),
+    },
     // vfx (thread 7) and lockOn (thread 1) are optional: get() returns undefined until they merge.
     services: ctx.services as unknown as ServicesPort,
     bosses: ctx.bosses,
@@ -36,6 +40,10 @@ export function hostFromContext(ctx: GameContext, warn: (m: string) => void): En
       collider: playerCollider,
       loud: () => ctx.input.actions.down('sprint') || ctx.player.avatar?.controller.activeAttack() != null,
       addMoveModifier: (source, mod) => ctx.player.addMoveModifier(source, mod),
+    },
+    torch: {
+      // The quests service exposes the carried torch (plans/slice-2-quests.md); absent until it lands.
+      carried: () => (ctx.services as unknown as ServicesPort).get('quests')?.carriedTorch?.() ?? null,
     },
     heightAt: terrainHeightAt,
     warn,

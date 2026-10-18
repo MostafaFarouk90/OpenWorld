@@ -15,6 +15,7 @@ Enemy AI and the slice's first enemies (thread 2, plan in plans/enemy-ai.md). Pl
 | `Enemy.ts`, `EnemyManager.ts` | One enemy (think, animate, react, death and mercy flows) and the manager (spawning, damage modifier `enemies.moves` at -150, pack attack tokens, dormancy past 120 m or 24 awake). |
 | `spawners.ts`, `spawnerDefs.ts`, `level.ts` | Spawners on named anchors (manual, auto, or on `quest.started`), respawn on `rest`, `spawnTag` from the spawner's tag; `enemyLevel(band, ctx)` with the Warmth Tier hook. |
 | `mercy.ts` | Hold T (0.5 s) Release and Spare interactables, the 4 m Release pulse with a shared `pulseId`, locked by `enemies.mercy.release` / `enemies.mercy.spare`. |
+| `foes/`, `brightwaterSpawners.ts` | Foes: brainless mortal actors that are not `EnemyKind`s (ash scarecrow, Blightbloom, toll post), built from primitives, spawned through the same spawners (`FoeKind`, `FoeManager`; `EnemyManager.raiseWraith` for the bloom). |
 | `defs.ts`, `clips.ts`, `tuning.ts` | Enemy definitions, measured attack windows and tuning numbers. |
 
 Service (`ctx.services.get('enemies')`): `spawnGroup(spawnerId, opts?)`, `despawnGroup`, `alive`, `view`,

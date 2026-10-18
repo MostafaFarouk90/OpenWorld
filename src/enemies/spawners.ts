@@ -1,7 +1,9 @@
 import type { Vec3 } from '../physics/PhysicsWorld';
 import { ENEMY_DEFS } from './defs';
+import { FOE_DEFS, isFoeKind } from './foes/defs';
+import type { FoeDef } from './foes/types';
 import { DEFAULT_BAND, bandForRegion, enemyLevel } from './level';
-import type { ActorId, AnchorLike, AnchorsPort } from './ports';
+import type { ActorId, AnchorLike, AnchorsPort, GatesPort } from './ports';
 import { LEVEL, WORLD_AI } from './tuning';
 import type { EnemyDef, LevelBand, SpawnOptions, SpawnerDef } from './types';
 
@@ -10,7 +12,11 @@ export interface SpawnRequest {
   /** `def.tag ?? def.id`. */
   spawnTag: string;
   slot: number;
-  def: EnemyDef;
+  def: EnemyDef | FoeDef;
+  /** The spawner slot's anchor id (`memberAnchors[slot]`, else the group anchor); the scarecrow's `scarecrowId`. */
+  anchorId?: string;
+  /** Ash-pile anchor ids of the spawner (the bloom). */
+  piles?: readonly string[];
   feet: Vec3;
   yaw: number;
   level: number;
@@ -25,6 +31,8 @@ export interface SpawnerRegistryDeps {
   warn(msg: string): void;
   spawn(req: SpawnRequest): ActorId | null;
   despawn(actorId: ActorId): void;
+  /** Flag gates for `{ flag, until }` groups; absent (headless) means every gate counts as open. */
+  gates?: GatesPort;
   rng?: () => number;
 }
 
@@ -33,6 +41,10 @@ export type MemberEnd = 'died' | 'released' | 'spared' | 'despawned';
 export interface SpawnersPersisted {
   spent: string[];
   cleared: string[];
+  /** Ash piles whose raised wraith was Released (Blightbloom piles); optional so old saves load. */
+  spentPiles?: string[];
+  /** Slots of never-respawning groups whose member was killed (a spared or released one is in `spent`). */
+  dead?: string[];
   warmthTier: number;
   lockedBlockLevels: Record<string, number>;
 }
@@ -48,6 +60,11 @@ export class SpawnerRegistry {
   private readonly warned = new Set<string>();
   private spent = new Set<string>();
   private cleared = new Set<string>();
+  private readonly gateOpen = new Map<string, boolean>();
+  private readonly gateOff: Array<() => void> = [];
+  private started = false;
+  private spentPiles = new Set<string>();
+  private dead = new Set<string>();
   private warmthTier = 0;
   private lockedBlockLevels: Record<string, number> = {};
   private readonly rng: () => number;
@@ -74,7 +91,7 @@ export class SpawnerRegistry {
       this.warnOnce(`anchor:${id}`, `spawners: spawner '${id}' has no spawn anchor '${def.anchor}'; nothing spawned`);
       return [];
     }
-    const enemyDef = ENEMY_DEFS[def.enemy];
+    const enemyDef: EnemyDef | FoeDef | undefined = isFoeKind(def.enemy) ? FOE_DEFS[def.enemy] : ENEMY_DEFS[def.enemy];
     if (!enemyDef) {
       this.warnOnce(`enemy:${id}`, `spawners: spawner '${id}' has unknown enemy '${def.enemy}'`);
       return [];
@@ -88,7 +105,7 @@ export class SpawnerRegistry {
     for (let slot = 0; slot < slots.length; slot++) {
       if (slots[slot] !== null) continue;
       const spentKey = `${id}#${slot}`;
-      if (this.spent.has(spentKey)) continue;
+      if (this.spent.has(spentKey) || this.dead.has(spentKey)) continue;
       const level = this.levelFor(band);
       const own = def.memberAnchors?.[slot] ? this.deps.anchors.find(def.memberAnchors[slot]) : undefined;
       if (def.memberAnchors?.[slot] && !own) {
@@ -102,9 +119,11 @@ export class SpawnerRegistry {
         def: enemyDef,
         feet,
         yaw: own ? own.yaw : anchor.yaw,
+        anchorId: own ? own.id : anchor.id,
+        piles: def.piles,
         level,
         patrol,
-        options: { ...opts, leash: opts.leash ?? def.leash ?? true },
+        options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard },
         spentKey,
       });
       if (actorId === null) continue;
@@ -126,7 +145,7 @@ export class SpawnerRegistry {
    */
   spendMercy(actorId: ActorId): void {
     const rec = this.byActor.get(actorId);
-    if (rec) this.spent.add(`${rec.spawnerId}#${rec.slot}`);
+    if (rec && !this.defs.get(rec.spawnerId)?.ephemeral) this.spent.add(`${rec.spawnerId}#${rec.slot}`);
   }
 
   /** A spared enemy was struck before it left: it is hostile and live again, so its slot is not spent. */
@@ -143,14 +162,24 @@ export class SpawnerRegistry {
     const slots = this.slots.get(rec.spawnerId)!;
     slots[rec.slot] = null;
     if (how === 'despawned') return false;
-    if (how === 'released' || how === 'spared') this.spent.add(`${rec.spawnerId}#${rec.slot}`);
+    const def = this.defs.get(rec.spawnerId)!;
+    const key = `${rec.spawnerId}#${rec.slot}`;
+    if ((how === 'released' || how === 'spared') && !def.ephemeral) this.spent.add(key);
+    // A member of a never-respawning world group (not a manual lesson group, which replays) that died stays dead across a save, so a group that was
+    // partly cleared before a save can still be cleared afterwards.
+    if (how === 'died' && def.respawn === 'never' && def.activation !== 'manual' && !def.ephemeral) this.dead.add(key);
     const gone = this.goneSlots.get(rec.spawnerId)!;
     gone.add(rec.slot);
-    if (gone.size < slots.length || slots.some((s) => s !== null)) return false;
+    if (slots.some((s) => s !== null)) return false;
+    const allGone =
+      def.respawn === 'never' && def.activation !== 'manual'
+        ? slots.every((_, i) => gone.has(i) || this.spent.has(`${rec.spawnerId}#${i}`) || this.dead.has(`${rec.spawnerId}#${i}`))
+        : gone.size >= slots.length;
+    if (!allGone) return false;
     if (this.firedCleared.has(rec.spawnerId)) return false;
     this.firedCleared.add(rec.spawnerId);
-    const def = this.defs.get(rec.spawnerId)!;
-    if (def.activation !== 'auto') this.cleared.add(rec.spawnerId);
+    // A group that never respawns stays cleared across reloads, auto groups included.
+    if (!def.ephemeral && (def.activation !== 'auto' || def.respawn === 'never')) this.cleared.add(rec.spawnerId);
     return true;
   }
 
@@ -180,19 +209,84 @@ export class SpawnerRegistry {
     this.goneSlots.get(id)!.clear();
     this.firedCleared.delete(id);
     this.cleared.delete(id);
-    for (let i = 0; i < slots.length; i++) this.spent.delete(`${id}#${i}`);
+    for (let i = 0; i < slots.length; i++) {
+      this.spent.delete(`${id}#${i}`);
+      this.dead.delete(`${id}#${i}`);
+    }
   }
 
   alive(id: string): ActorId[] {
     return (this.slots.get(id) ?? []).filter((a): a is ActorId => a !== null);
   }
 
+  /** Starts the auto groups and the gate groups whose gate is open; later gate changes add or remove groups. */
   startAuto(): ActorId[] {
+    this.started = true;
     const out: ActorId[] = [];
     for (const def of this.defs.values()) {
-      if (def.activation === 'auto' && !this.cleared.has(def.id)) out.push(...this.spawnGroup(def.id));
+      if (this.cleared.has(def.id)) continue;
+      if (def.activation === 'auto' || (isGate(def.activation) && this.gateOpen.get(def.id) !== false)) {
+        out.push(...this.spawnGroup(def.id));
+      }
     }
     return out;
+  }
+
+  /** Watches every gate group's flags through `ctx.gates`; call once after the groups are defined. */
+  bindGates(): void {
+    const gates = this.deps.gates;
+    for (const def of this.defs.values()) {
+      const act = def.activation;
+      if (!isGate(act)) continue;
+      const { flag, until } = act;
+      const keys = [flag, until].filter((k): k is string => typeof k === 'string');
+      if (keys.length === 0) {
+        this.deps.warn(`spawners: gate group '${def.id}' names neither flag nor until; treated as auto`);
+        continue;
+      }
+      if (!gates) continue;
+      this.gateOff.push(
+        gates.watch(
+          (get) => (flag === undefined || get(flag)) && (until === undefined || !get(until)),
+          (open) => {
+            const was = this.gateOpen.get(def.id);
+            this.gateOpen.set(def.id, open);
+            if (was === undefined || was === open || !this.started) return;
+            if (open && !this.cleared.has(def.id)) this.spawnGroup(def.id);
+            else if (!open) this.despawnGroup(def.id);
+          },
+          keys,
+        ),
+      );
+    }
+  }
+
+  /**
+   * After a load: gate groups follow their (re-derived) gate. An open one is refilled, a closed one leaves;
+   * a cleared one stays gone either way.
+   */
+  resyncGates(): void {
+    if (!this.started) return;
+    for (const def of this.defs.values()) {
+      if (!isGate(def.activation) || !this.gateOpen.has(def.id)) continue;
+      if (this.gateOpen.get(def.id) && !this.cleared.has(def.id)) this.spawnGroup(def.id);
+      else if (!this.gateOpen.get(def.id)) this.despawnGroup(def.id);
+    }
+  }
+
+  /** Spawns the groups that wait for `interiorId` (not cleared, not already there). */
+  onInteriorEntered(interiorId: string): ActorId[] {
+    const out: ActorId[] = [];
+    for (const def of this.defs.values()) {
+      const act = def.activation;
+      if (typeof act !== 'object' || !('interior' in act) || act.interior !== interiorId || this.cleared.has(def.id)) continue;
+      out.push(...this.spawnGroup(def.id));
+    }
+    return out;
+  }
+
+  dispose(): void {
+    for (const off of this.gateOff.splice(0)) off();
   }
 
   onRest(): ActorId[] {
@@ -216,7 +310,7 @@ export class SpawnerRegistry {
     const out: ActorId[] = [];
     for (const def of this.defs.values()) {
       const act = def.activation;
-      if (typeof act !== 'object' || act.quest !== questId || this.cleared.has(def.id)) continue;
+      if (typeof act !== 'object' || !('quest' in act) || act.quest !== questId || this.cleared.has(def.id)) continue;
       if (act.flag !== undefined && !flagOn(act.flag)) continue;
       out.push(...this.spawnGroup(def.id));
     }
@@ -227,17 +321,41 @@ export class SpawnerRegistry {
   questsGatedBy(flag: string): string[] {
     const out: string[] = [];
     for (const def of this.defs.values()) {
-      if (typeof def.activation === 'object' && def.activation.flag === flag) out.push(def.activation.quest);
+      const act = def.activation;
+      if (typeof act === 'object' && 'quest' in act && act.flag === flag) out.push(act.quest);
     }
     return out;
+  }
+
+  /** The quest a group is activated by, if any. */
+  questOf(spawnerId: string): string | undefined {
+    const act = this.defs.get(spawnerId)?.activation;
+    return typeof act === 'object' && 'quest' in act ? act.quest : undefined;
+  }
+
+  isPileSpent(pileId: string): boolean {
+    return this.spentPiles.has(pileId);
+  }
+
+  /** A pile is spent when a wraith raised from it is Released. */
+  markPileSpent(pileId: string): void {
+    this.spentPiles.add(pileId);
+  }
+
+  unmarkPileSpent(pileId: string): void {
+    this.spentPiles.delete(pileId);
   }
 
   // Persistence
 
   serialize(): SpawnersPersisted {
+    const saved = (key: string) => !this.defs.get(key.replace(/#\d+$/, ''))?.ephemeral;
     return {
-      spent: [...this.spent],
-      cleared: [...this.cleared],
+      spent: [...this.spent].filter(saved),
+      cleared: [...this.cleared].filter(saved),
+      // Omitted while empty, so saves without a bloom keep their old shape.
+      ...(this.spentPiles.size > 0 ? { spentPiles: [...this.spentPiles] } : {}),
+      ...(this.dead.size > 0 ? { dead: [...this.dead].filter(saved) } : {}),
       warmthTier: this.warmthTier,
       lockedBlockLevels: { ...this.lockedBlockLevels },
     };
@@ -246,6 +364,8 @@ export class SpawnerRegistry {
   load(data: unknown): void {
     this.spent = new Set();
     this.cleared = new Set();
+    this.spentPiles = new Set();
+    this.dead = new Set();
     this.warmthTier = 0;
     this.lockedBlockLevels = {};
     if (!isRecord(data)) {
@@ -264,6 +384,18 @@ export class SpawnerRegistry {
         else this.deps.warn(`spawners: dropped bad cleared entry ${JSON.stringify(s)}`);
       }
     } else if (data.cleared !== undefined) this.deps.warn('spawners: saved cleared is not a list; keeping default');
+    if (Array.isArray(data.dead)) {
+      for (const d of data.dead) {
+        if (typeof d === 'string' && /^.+#\d+$/.test(d)) this.dead.add(d);
+        else this.deps.warn(`spawners: dropped bad dead entry ${JSON.stringify(d)}`);
+      }
+    } else if (data.dead !== undefined) this.deps.warn('spawners: saved dead is not a list; keeping default');
+    if (Array.isArray(data.spentPiles)) {
+      for (const s of data.spentPiles) {
+        if (typeof s === 'string') this.spentPiles.add(s);
+        else this.deps.warn(`spawners: dropped bad spentPiles entry ${JSON.stringify(s)}`);
+      }
+    } else if (data.spentPiles !== undefined) this.deps.warn('spawners: saved spentPiles is not a list; keeping default');
     if (typeof data.warmthTier === 'number' && Number.isFinite(data.warmthTier)) {
       this.warmthTier = clampTier(data.warmthTier);
     } else if (data.warmthTier !== undefined) this.deps.warn('spawners: saved warmthTier is invalid; keeping default');
@@ -309,6 +441,10 @@ export class SpawnerRegistry {
 
   isSpent(key: string): boolean {
     return this.spent.has(key);
+  }
+
+  isEphemeral(spawnerId: string): boolean {
+    return this.defs.get(spawnerId)?.ephemeral === true;
   }
 
   isCleared(spawnerId: string): boolean {
@@ -373,6 +509,10 @@ export class SpawnerRegistry {
       z: p.z + Math.sin(angle) * WORLD_AI.ringRadius,
     };
   }
+}
+
+function isGate(act: SpawnerDef['activation']): act is { flag?: string; until?: string } {
+  return typeof act === 'object' && !('quest' in act) && !('interior' in act);
 }
 
 function clampTier(w: number): number {

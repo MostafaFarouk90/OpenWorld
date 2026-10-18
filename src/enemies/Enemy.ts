@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import { COMBAT, FIXED_TIMESTEP } from '../config/constants';
 import { Brain, type BrainHooks, type Senses } from './ai/Brain';
+import { Guard, type GuardHit } from './ai/guard';
 import { MoveSelector } from './ai/moveSelect';
+import { pairGoal } from './ai/pair';
 import { makeLineOfSight, perceive } from './ai/perception';
 import { ENEMY_CLIPS } from './clips';
-import type { EnemyAnimator } from './EnemyAnimator';
-import type { EnemyModel } from './EnemyModel';
-import type { ActorId, ActorLike, EnemyHost } from './ports';
+import type { EnemyBody } from './body';
+import type { ActorId, ActorLike, EnemyHost, NavPort } from './ports';
+import { PathFollower } from './steering/pathFollower';
 import { forwardOf, Steering, turnToward, yawTo } from './steering/steering';
 import { HeightfieldMover, SwitchingMover, type EnemyMover } from './steering/movers';
 import { AI } from './tuning';
@@ -26,6 +28,9 @@ export interface EnemyEnv {
   releaseToken(self: Enemy): void;
   alertPack(self: Enemy, targetId: ActorId): void;
   mercyUnlocked(verb: 'release' | 'spare'): boolean;
+  nav(): NavPort | undefined;
+  /** The nearest living packmate of the same spawner within pair range, if any. */
+  partnerOf(self: Enemy): Enemy | null;
   /** Called once the enemy is gone from the world (after despawn). */
   gone(self: Enemy, how: 'died' | 'released' | 'spared' | 'despawned'): void;
 }
@@ -47,6 +52,8 @@ export interface EnemySpawn {
 type Phase = 'alive' | 'dying' | 'fading' | 'leaving' | 'gone';
 
 const LOCO_RUN_SPEED = 2.0;
+/** Brain states in which a footman may hold its shield up. */
+const GUARD_STATES: ReadonlySet<AiState> = new Set<AiState>(['notice', 'chase', 'recover']);
 
 /**
  * One enemy in the world: its actor, brain, animator, model, mover and combat registrations.
@@ -62,6 +69,8 @@ export class Enemy {
   private readonly host: EnemyHost;
   private readonly mover: EnemyMover;
   private readonly steering = new Steering();
+  private readonly guard: Guard | null;
+  private readonly path: PathFollower;
   private readonly moves = new MoveSelector();
   private readonly removers: Array<() => void> = [];
   private readonly trails: Partial<Record<WeaponChannel, { setEmitting(on: boolean): void; dispose(): void }>> = {};
@@ -87,8 +96,7 @@ export class Enemy {
   constructor(
     private readonly env: EnemyEnv,
     spawn: EnemySpawn,
-    readonly model: EnemyModel,
-    readonly animator: EnemyAnimator,
+    readonly body: EnemyBody,
   ) {
     const host = env.host;
     this.host = host;
@@ -96,6 +104,8 @@ export class Enemy {
     this.slug = spawn.slug;
     this.spawnerId = spawn.spawnerId;
     this.damageScale = spawn.damageScale * (spawn.options.damageScale ?? 1);
+    this.path = new PathFollower(() => env.nav(), (m) => host.warn(m));
+    this.guard = (spawn.options.guard ?? this.def.guard) ? new Guard() : null;
     this.yaw = this.targetYaw = spawn.yaw;
     this.mover = host.physics
       ? new SwitchingMover(host.physics, host.heightAt, spawn.feet)
@@ -105,9 +115,9 @@ export class Enemy {
       : () => true;
 
     try {
-      host.scene.add(model.root);
+      host.scene.add(body.root);
       this.placeRoot(this.mover.feet);
-      model.root.updateMatrixWorld(true);
+      body.root.updateMatrixWorld(true);
 
       const maxHealth = Math.max(1, Math.round(spawn.maxHealth * (spawn.options.healthScale ?? 1)));
       this.actor = host.actors.spawn({
@@ -116,8 +126,8 @@ export class Enemy {
         level: spawn.level,
         maxHealth,
         maxPoise: this.def.maxPoise,
-        root: model.root,
-        owner: model.owner,
+        root: body.root,
+        owner: body.owner,
         spawnTag: spawn.spawnTag,
       });
       this.actor.data['audio'] = { material: this.def.material };
@@ -131,14 +141,14 @@ export class Enemy {
       });
       if (spawn.options.moves) this.moveFilter = [...spawn.options.moves];
 
-      this.removers.push(host.combat.addTarget(model.hurtboxes, this.actor.id));
+      this.removers.push(host.combat.addTarget(body.hurtboxes, this.actor.id));
       for (const ch of ['right', 'left'] as const) {
-        const tracer = model.tracers[ch];
+        const tracer = body.tracers[ch];
         if (!tracer) continue;
-        if (tracer.attacker !== model.owner) this.removers.push(host.actors.bindOwner(this.actor, tracer.attacker));
-        this.removers.push(host.combat.addAttacker(this.actor.id, tracer, animator.windowSource(ch)));
+        if (tracer.attacker !== body.owner) this.removers.push(host.actors.bindOwner(this.actor, tracer.attacker));
+        this.removers.push(host.combat.addAttacker(this.actor.id, tracer, body.windowSource(ch)));
         // vfx-and-feedback.md: the trail id is the actor id; the shield gets none.
-        const parts = model.weapons[ch];
+        const parts = body.weapons[ch];
         const trail = parts && ch === 'right' ? host.services.get('vfx')?.attachTrail?.(this.actor.id, parts.hilt, parts.tip) : undefined;
         if (trail) this.trails[ch] = trail;
       }
@@ -148,16 +158,16 @@ export class Enemy {
       for (const ch of ['right', 'left'] as const) this.trails[ch]?.dispose();
       const spawned = (this as { actor?: ActorLike }).actor;
       if (spawned) host.actors.despawn(spawned.id);
-      model.root.removeFromParent();
+      body.root.removeFromParent();
       this.mover.dispose();
       throw err;
     }
 
-    animator.onWindow = (ch, phase, swingId) => {
+    body.onWindow = (ch, phase, swingId) => {
       this.trails[ch]?.setEmitting(phase === 'open');
       if (phase === 'open') this.brain.windowOpened(swingId);
     };
-    animator.onClipEnd = (clip, interrupted) => {
+    body.onClipEnd = (clip, interrupted) => {
       const move = this.brain.currentMove;
       if (move && clip === move.clip) this.brain.attackClipEnded(this.brain.currentSwing, interrupted);
     };
@@ -206,6 +216,32 @@ export class Enemy {
     return this.phase === 'alive';
   }
 
+  /** The shield is up right now. */
+  get guarding(): boolean {
+    return this.guard?.up ?? false;
+  }
+
+  /**
+   * What a hit from `from` (feet position) does against this footman's shield; 'open' without a guard.
+   * `heavy` is `isHeavyBlow` of the request, judged before any scaling.
+   */
+  guardHit(heavy: boolean, from: { x: number; z: number }): GuardHit {
+    if (!this.guard || this.phase !== 'alive') return 'open';
+    const self = this.mover.feet;
+    const dx = from.x - self.x;
+    const dz = from.z - self.z;
+    const len = Math.hypot(dx, dz);
+    if (!(len > 1e-6)) return 'open';
+    const f = forwardOf(this.yaw);
+    const cos = Math.max(-1, Math.min(1, (f.x * dx + f.z * dz) / len));
+    return this.guard.classify(heavy, Math.acos(cos) * (180 / Math.PI));
+  }
+
+  /** A heavy hit landed on the shield: it stays down for `GUARD.brokenSeconds`. */
+  breakGuard(): void {
+    this.guard?.break();
+  }
+
   get mercyOpen(): boolean {
     return this.phase === 'alive' && this.brain.mercyOpen;
   }
@@ -251,13 +287,21 @@ export class Enemy {
       yieldAllowed: this.env.mercyUnlocked('spare'),
     };
     const intent = this.brain.step(dt, senses);
+    this.guard?.step(dt, GUARD_STATES.has(this.brain.state), this.env.rng);
+    if (this.def.pairAdvance && this.brain.state === 'chase' && intent.goal && senses.targetPos && intent.goal.x === senses.targetPos.x && intent.goal.z === senses.targetPos.z) {
+      // A plain chase heads straight for the target (the circling goal is somewhere else); a pair spreads onto opposite flanks instead.
+      const partner = this.env.partnerOf(this);
+      if (partner) intent.goal = pairGoal(self, partner.feet, intent.goal!, this.actor.id, partner.actor.id);
+    }
 
     let velocity = { x: 0, z: 0 };
     this.stuckGiveUp = false;
     if (intent.goal && intent.speed > 0 && Math.hypot(intent.goal.x - self.x, intent.goal.z - self.z) > intent.stopDistance) {
+      // Inside a nav grid (an interior), steer to the next path waypoint; outdoors this is null.
+      const waypoint = this.path.goalFor(dt, self, { x: intent.goal.x, y: pFeet.y, z: intent.goal.z });
       const out = this.steering.step({
         position: self,
-        desired: intent.goal,
+        desired: waypoint ?? intent.goal,
         speed: intent.speed,
         neighbours: this.env.neighbours(this),
         heightAt: this.host.heightAt,
@@ -289,8 +333,8 @@ export class Enemy {
     this.placeRoot(this.mover.feet);
     if (this.oneShotLeft > 0) this.oneShotLeft -= dt;
     if (this.phase === 'alive' && this.oneShotLeft <= 0) this.chooseLoco();
-    this.animator.fixedUpdate(dt);
-    this.model.root.updateMatrixWorld(true);
+    this.body.fixedUpdate(dt);
+    this.body.root.updateMatrixWorld(true);
   }
 
   /** `afterCombat` phase: poise regen, slow timer, the death and release fades. */
@@ -313,7 +357,7 @@ export class Enemy {
       return;
     }
     if (this.phase === 'fading' && !this.fadeHandledByVfx) {
-      this.model.setOpacity(Math.max(0, 1 - this.phaseTime / this.fadeSeconds));
+      this.body.setOpacity(Math.max(0, 1 - this.phaseTime / this.fadeSeconds));
       if (this.phaseTime >= this.fadeSeconds) this.despawn();
     }
   }
@@ -452,10 +496,9 @@ export class Enemy {
     if (this.brain.state !== 'dead' && !this.brain.finished) this.brain.died();
     this.disarm();
     this.phase = 'gone';
-    this.animator.onWindow = null;
-    this.animator.onClipEnd = null;
-    this.animator.dispose();
-    this.model.dispose();
+    this.body.onWindow = null;
+    this.body.onClipEnd = null;
+    this.body.dispose();
     this.mover.dispose();
     this.env.gone(this, this.goneHow);
   }
@@ -500,7 +543,7 @@ export class Enemy {
       this.dissolved = true;
     };
     try {
-      vfx.dissolve(this.model.root, seconds).then(done, done);
+      vfx.dissolve(this.body.root, seconds).then(done, done);
     } catch (err) {
       this.host.warn(`enemies: vfx dissolve failed for ${this.actor.id}: ${String(err)}`);
       this.fadeHandledByVfx = false;
@@ -508,7 +551,7 @@ export class Enemy {
   }
 
   private deathClipSeconds(): number {
-    return this.animator.clipDuration(ENEMY_CLIPS.death) ?? 1;
+    return this.body.clipDuration(ENEMY_CLIPS.death) ?? 1;
   }
 
   private leave(dt: number): void {
@@ -533,30 +576,31 @@ export class Enemy {
   }
 
   private placeRoot(feet: THREE.Vector3): void {
-    this.prevRoot.copy(this.model.root.position);
-    this.model.root.position.copy(feet);
-    this.model.root.rotation.set(0, this.yaw, 0);
+    this.prevRoot.copy(this.body.root.position);
+    this.body.root.position.copy(feet);
+    this.body.root.rotation.set(0, this.yaw, 0);
   }
 
   private chooseLoco(): void {
     const s = this.brain.state;
     if (s === 'telegraph' || s === 'attack') return; // the attack clip plays
     if (s === 'yield') return this.setLoco(ENEMY_CLIPS.kneelIdle);
+    if (this.guard?.up) return this.setLoco(ENEMY_CLIPS.guard);
     if (this.speed > LOCO_RUN_SPEED) this.setLoco(ENEMY_CLIPS.run);
     else if (this.speed > 0.1) this.setLoco(ENEMY_CLIPS.walk);
     else this.setLoco(ENEMY_CLIPS.idle);
   }
 
   private setLoco(clip: string): void {
-    if (this.loco === clip && this.animator.currentClip === clip) return;
+    if (this.loco === clip && this.body.currentClip === clip) return;
     this.loco = clip;
-    this.animator.play(clip, { loop: true });
+    this.body.play(clip, { loop: true });
   }
 
   private oneShot(clip: string, seconds: number): void {
     this.loco = null;
-    this.animator.play(clip, { loop: false });
-    const len = this.animator.clipDuration(clip) ?? FIXED_TIMESTEP;
+    this.body.play(clip, { loop: false });
+    const len = this.body.clipDuration(clip) ?? FIXED_TIMESTEP;
     this.oneShotLeft = Math.min(seconds, len);
   }
 
@@ -591,9 +635,9 @@ export class Enemy {
       startAttack: (move, lead) => {
         this.loco = null;
         this.oneShotLeft = 0;
-        return this.animator.playAttack(move, lead);
+        return this.body.playAttack(move, lead);
       },
-      cancelAttack: () => this.animator.cancelAttack(),
+      cancelAttack: () => this.body.cancelAttack(),
       telegraph: (move, swingId, lead) =>
         this.host.events.emit('telegraph', {
           actorId: this.actor.id,

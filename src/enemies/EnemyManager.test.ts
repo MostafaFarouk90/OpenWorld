@@ -98,10 +98,10 @@ describe('spawning', () => {
     const [a, b] = manager.service.spawnGroup('pack');
     const ea = manager.get(a)!;
     const eb = manager.get(b)!;
-    ea.model.setTelegraph(1, 0xffffff);
-    ea.model.setOpacity(0.3);
-    expect(ea.model.materials[0]).not.toBe(eb.model.materials[0]);
-    expect(eb.model.materials[0].opacity).toBe(1);
+    ea.body.setTelegraph(1, 0xffffff);
+    ea.body.setOpacity(0.3);
+    expect(ea.body.materials[0]).not.toBe(eb.body.materials[0]);
+    expect(eb.body.materials[0].opacity).toBe(1);
   });
 });
 
