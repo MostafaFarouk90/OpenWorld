@@ -279,11 +279,11 @@ export class CompanionController {
       }),
       ev.on('fastTravel', () => this.requestTeleport()),
       ev.on('interior.entered', ({ interiorId }) => {
-        this.requestTeleport();
+        this.onDoor();
         const place = this.def.places.interiors[interiorId];
         if (place && this.sinceReset > TOBB_TUNING.reEmitWindowSeconds) this.emitBark(this.director.area(place));
       }),
-      ev.on('interior.exited', () => this.requestTeleport()),
+      ev.on('interior.exited', () => this.onDoor()),
       ev.on('mount.mounted', () => {
         this.mounted = true;
       }),
@@ -291,6 +291,9 @@ export class CompanionController {
         this.mounted = false;
         if (!this.mountHidden) return;
         this.mountHidden = false;
+        // The trail from before the hide is far behind by now.
+        this.model?.trail.clear();
+        this.lastTrailPoint = null;
         this.requestTeleport();
       }),
       ev.on('save.loaded', () => this.onLoaded()),
@@ -335,7 +338,7 @@ export class CompanionController {
     this.playerDead = this.ctx.player.actor.dead;
     this.talking = false;
     this.sinceReset = 0;
-    // Thread 20 re-emits `mount.mounted` after `save.loaded` for a mounted load.
+    // A mounted player always loads dismounted (contract v0.5), so the load clears it.
     this.mounted = false;
     this.mountHidden = false;
     const saved = this.saved;
@@ -364,6 +367,16 @@ export class CompanionController {
         return;
       }
     }
+    this.requestTeleport();
+  }
+
+  /**
+   * Door events arrive after the fade-in. A wait that ended at black may already have him walking back in Cael's
+   * space; a teleport then would pop in view, so it is skipped.
+   */
+  private onDoor(): void {
+    const m = this.model;
+    if (m && !this.wait && !this.hidden && this.canWalkBack(this.ctx.player.feet)) return;
     this.requestTeleport();
   }
 
