@@ -1,6 +1,7 @@
 import type { GamePlugin } from '../core/plugins';
 import { DialogueRunner } from './DialogueRunner';
 import { createDialoguePanel, handleDialogueInput } from './DialoguePanel';
+import { computeVowTone, T04_DIALOGUE_ID } from './content/t04-vow.dialogue';
 import { validateDialogue } from './validate';
 import { dialogueDefs } from './content';
 import { dialogueStrings } from './strings.en';
@@ -55,23 +56,35 @@ const plugin: GamePlugin = {
       load: (data) => runner.load(data),
     });
 
-    // The input context follows the runner: pushed while a dialogue is open, popped when it ends.
-    let popContext: (() => void) | null = null;
-    const syncContext = (): void => {
-      if (runner.isOpen && !popContext) {
-        popContext = ctx.input.contexts.push('dialogue', 'dialogue');
-        if (typeof document !== 'undefined') document.exitPointerLock?.();
-      } else if (!runner.isOpen && popContext) {
-        popContext();
-        popContext = null;
-      }
-    };
-    runner.onChange(syncContext);
-
+    // The dialogue is a HUD modal that pushes the `dialogue` input context (input-and-hud.md item 10).
+    // The panel element is detached on close and re-attached on the next open; the widget itself has no
+    // dispose, so the panel lives for the plugin's lifetime.
     const panel = createDialoguePanel(runner);
-    if (panel.element) {
-      ctx.hud.mount('bottom-center', { id: 'dialogue-panel', element: panel.element, order: 50, dispose: () => panel.dispose() });
-    }
+    let closeModal: (() => void) | null = null;
+    const openModal = (): boolean => {
+      // Headless (tests): the HUD has no DOM, so any element stands in.
+      const element = panel.element ?? ({} as HTMLElement);
+      closeModal = ctx.hud.openModal({ id: 'dialogue', element }, { context: 'dialogue' });
+      return closeModal !== null;
+    };
+    runner.onChange(() => {
+      if (!runner.isOpen && closeModal) {
+        const close = closeModal;
+        closeModal = null;
+        close();
+      }
+    });
+
+    // T04 tone follows the vows however the dialogue ended (a skip keeps unchosen vows at earnest).
+    ctx.events.on('dialogue.ended', (e) => {
+      if (e.dialogueId !== T04_DIALOGUE_ID) return;
+      const vow = (n: number): string => String(ctx.state.getFlag(`tutorial.t04.vow${n}`) ?? 'earnest');
+      try {
+        ctx.state.setFlag('tutorial.t04.tone', computeVowTone(vow(1), vow(2), vow(3)));
+      } catch (err) {
+        warn(`could not write tutorial.t04.tone: ${String(err)}`);
+      }
+    });
 
     ctx.events.on('actor.died', (e) => {
       if (e.actorId === ctx.player.actor.id) runner.close('death');
@@ -80,8 +93,14 @@ const plugin: GamePlugin = {
 
     ctx.services.provide('dialogue', {
       start: (dialogueId, npcId) => {
-        if (ctx.hud.modalOpen) return false;
-        return runner.start(dialogueId, npcId);
+        if (ctx.hud.modalOpen || runner.isOpen) return false;
+        // The modal (and its context) opens first so `dialogue.started` listeners already see it.
+        if (!openModal()) return false;
+        if (runner.start(dialogueId, npcId)) return true;
+        const close = closeModal;
+        closeModal = null;
+        close?.();
+        return false;
       },
       get active() {
         return runner.isOpen;
@@ -97,7 +116,7 @@ const plugin: GamePlugin = {
       fixedUpdate: () => handleDialogueInput(runner, ctx.input.actions),
       dispose: () => {
         runner.close('dispose');
-        syncContext();
+        panel.dispose();
       },
     });
   },

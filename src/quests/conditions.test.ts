@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { evalCondition } from './conditions';
 import type { ConditionEnv } from './ports';
+import { GameEvents } from '../core/events';
+import { WorldState } from '../state/WorldState';
 import type { FavourBand, FavourTrack, FlagValue, QuestState, Condition } from './types';
 
 function band(n: number): FavourBand {
-  return n >= 70 ? 'hearthsworn' : n >= 50 ? 'sworn' : n >= 25 ? 'warm' : 'cold';
+  return n >= 70 ? 'hearthbound' : n >= 50 ? 'stoked' : n >= 25 ? 'banked' : 'cold';
 }
 
 function makeEnv(opts: {
@@ -44,8 +46,8 @@ describe('evalCondition', () => {
   });
 
   it.each([
-    [24, 'cold', 'warm'], [25, 'warm', 'cold'], [49, 'warm', 'sworn'],
-    [50, 'sworn', 'warm'], [69, 'sworn', 'hearthsworn'], [70, 'hearthsworn', 'sworn'],
+    [24, 'cold', 'banked'], [25, 'banked', 'cold'], [49, 'banked', 'stoked'],
+    [50, 'stoked', 'banked'], [69, 'stoked', 'hearthbound'], [70, 'hearthbound', 'stoked'],
   ] as const)('band edge at %i is %s not %s', (n, yes, no) => {
     const { env } = makeEnv({ favour: n });
     const t: FavourTrack = 'halvard';
@@ -61,7 +63,7 @@ describe('evalCondition', () => {
     expect(evalCondition({ favour: 'oswin', atLeast: 31 }, env)).toBe(false);
     expect(evalCondition({ favour: 'oswin', below: 31 }, env)).toBe(true);
     expect(evalCondition({ favour: 'oswin', below: 30 }, env)).toBe(false);
-    expect(evalCondition({ favour: 'oswin', band: 'warm', atLeast: 25, below: 40 }, env)).toBe(true);
+    expect(evalCondition({ favour: 'oswin', band: 'banked', atLeast: 25, below: 40 }, env)).toBe(true);
     expect(evalCondition({ favour: 'oswin', band: 'cold', atLeast: 25 }, env)).toBe(false);
   });
 
@@ -120,5 +122,44 @@ describe('evalCondition', () => {
     const { env } = makeEnv();
     delete env.warn;
     expect(evalCondition({ bogus: 1 } as unknown as Condition, env)).toBe(false);
+  });
+});
+
+describe('evalCondition against the real WorldState', () => {
+  function realEnv(track: FavourTrack, value: number) {
+    const warns: string[] = [];
+    const ws = new WorldState(new GameEvents(), (m) => warns.push(m));
+    ws.addFavour(track, value - ws.favour(track), 'script');
+    const env: ConditionEnv = {
+      state: ws,
+      quests: { state: () => 'inactive', objectiveDone: () => false },
+      warn: (m) => warns.push(m),
+    };
+    return { env, warns };
+  }
+
+  it.each([
+    [24, 'cold'], [25, 'banked'], [49, 'banked'], [50, 'stoked'], [69, 'stoked'], [70, 'hearthbound'],
+  ] as const)('favour %i is band %s', (n, expected) => {
+    const { env } = realEnv('halvard', n);
+    const all: FavourBand[] = ['cold', 'banked', 'stoked', 'hearthbound'];
+    for (const b of all) expect(evalCondition({ favour: 'halvard', band: b }, env)).toBe(b === expected);
+    expect(evalCondition({ favour: 'halvard', band: all.filter((b) => b !== expected) }, env)).toBe(false);
+  });
+
+  it('banked/stoked/hearthbound edges 24/25, 49/50, 69/70', () => {
+    expect(evalCondition({ favour: 'oswin', band: 'banked' }, realEnv('oswin', 24).env)).toBe(false);
+    expect(evalCondition({ favour: 'oswin', band: 'banked' }, realEnv('oswin', 25).env)).toBe(true);
+    expect(evalCondition({ favour: 'oswin', band: 'stoked' }, realEnv('oswin', 49).env)).toBe(false);
+    expect(evalCondition({ favour: 'oswin', band: 'stoked' }, realEnv('oswin', 50).env)).toBe(true);
+    expect(evalCondition({ favour: 'oswin', band: 'hearthbound' }, realEnv('oswin', 69).env)).toBe(false);
+    expect(evalCondition({ favour: 'oswin', band: 'hearthbound' }, realEnv('oswin', 70).env)).toBe(true);
+  });
+
+  it('an unknown favour track is false with a warning (and stays false under not)', () => {
+    const { env, warns } = realEnv('halvard', 30);
+    expect(evalCondition({ favour: 'nobody' as FavourTrack, band: 'cold' }, env)).toBe(false);
+    expect(warns.some((w) => w.includes('nobody'))).toBe(true);
+    expect(evalCondition({ not: { favour: 'nobody' as FavourTrack, atLeast: 5 } }, env)).toBe(false);
   });
 });

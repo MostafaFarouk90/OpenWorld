@@ -4,6 +4,18 @@ const D = 'dialogue.t04-vow.';
 const TONES = ['earnest', 'wry', 'humble'] as const;
 type Tone = (typeof TONES)[number];
 
+export const T04_DIALOGUE_ID = 't04-vow';
+
+const asTone = (v: unknown): Tone => ((TONES as readonly unknown[]).includes(v) ? (v as Tone) : 'earnest');
+
+/** Majority tone of the three vows; when all differ, vow 3 wins. Unknown values count as 'earnest'. */
+export function computeVowTone(v1: unknown, v2: unknown, v3: unknown): Tone {
+  const a = asTone(v1), b = asTone(v2), c = asTone(v3);
+  if (a === b || a === c) return a;
+  if (b === c) return b;
+  return c;
+}
+
 const vowIs = (n: 1 | 2 | 3, t: Tone): Condition => ({ flag: `tutorial.t04.vow${n}`, equals: t });
 
 /**
@@ -33,7 +45,7 @@ function vowNode(n: 1 | 2 | 3, next: string): DialogueNode {
 }
 
 export const t04Vow: DialogueDef = {
-  id: 't04-vow',
+  id: T04_DIALOGUE_ID,
   start: 'entry',
   nodes: [
     {

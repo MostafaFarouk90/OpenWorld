@@ -22,10 +22,12 @@ export const OBJECTIVE_EVENTS = [
 const isObj = (v: unknown): v is Record<string, any> => typeof v === 'object' && v !== null;
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
 
-function spawnTagOk(def: ObjectiveDef, actorId: unknown, ctx: MatchCtx): boolean {
+function spawnTagOk(def: ObjectiveDef, p: Record<string, any>, ctx: MatchCtx): boolean {
   if (def.spawnTag === undefined) return true;
-  if (!isStr(actorId)) return false;
-  return ctx.actorMeta?.(actorId)?.spawnTag === def.spawnTag;
+  // the payload carries the tag (the actor may already be gone from the registry); fall back to the lookup
+  if (isStr(p.spawnTag)) return p.spawnTag === def.spawnTag;
+  if (!isStr(p.actorId)) return false;
+  return ctx.actorMeta?.(p.actorId)?.spawnTag === def.spawnTag;
 }
 
 /** Credit an objective earns from one event, or null when the event does not concern it. */
@@ -37,14 +39,14 @@ export function creditFor(def: ObjectiveDef, type: string, payload: unknown, ctx
       if (type !== 'trigger.enter') return null;
       return ctx.playerId !== undefined && p.actorId === ctx.playerId && p.triggerId === def.target ? { amount: 1 } : null;
     case 'interact':
-      return type === 'interact' && p.interactableId === def.target ? { amount: 1 } : null;
+      return type === 'interact' && p.interactableId === def.target && p.action !== 'mercy' ? { amount: 1 } : null;
     case 'kill': {
       if (type === 'actor.died') {
         if (ctx.playerId === undefined || p.killerId !== ctx.playerId || p.kind !== def.target) return null;
       } else if (type === 'mercy') {
         if (p.creature !== def.target) return null;
       } else return null;
-      if (!spawnTagOk(def, p.actorId, ctx)) return null;
+      if (!spawnTagOk(def, p, ctx)) return null;
       return isStr(p.actorId) ? { amount: 1, dedupeKey: p.actorId } : { amount: 1 };
     }
     case 'collect': {
@@ -56,7 +58,9 @@ export function creditFor(def: ObjectiveDef, type: string, payload: unknown, ctx
       return n > 0 ? { amount: n } : null;
     }
     case 'talk':
-      return type === 'dialogue.ended' && p.npcId === def.target ? { amount: 1 } : null;
+      // aborted dialogues end with reason death|load|skip|dispose|script and earn no credit
+      if (type !== 'dialogue.ended' || p.npcId !== def.target) return null;
+      return p.reason === undefined || p.reason === 'completed' ? { amount: 1 } : null;
     case 'carry':
       if (type !== 'carry.delivered' || p.destinationId !== def.target) return null;
       return isStr(p.carryId) ? { amount: 1, dedupeKey: p.carryId } : null;

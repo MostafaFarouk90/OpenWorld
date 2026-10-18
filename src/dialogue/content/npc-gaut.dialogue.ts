@@ -3,7 +3,7 @@ import type { Condition, DialogueDef } from '../../quests/types';
 const m01Active: Condition = { quest: 'm01', state: 'active' };
 const notBriefed: Condition = { not: { flag: 'quest.m01.briefed', equals: true } };
 const cold: Condition = { favour: 'halvard', band: 'cold' };
-const warmPlus: Condition = { favour: 'halvard', band: ['warm', 'sworn', 'hearthsworn'] };
+const bankedPlus: Condition = { favour: 'halvard', band: ['banked', 'stoked', 'hearthbound'] };
 
 export const npcGaut: DialogueDef = {
   id: 'npc-gaut',
@@ -13,16 +13,16 @@ export const npcGaut: DialogueDef = {
       node: 'report',
     },
     { when: { all: [m01Active, notBriefed, cold] }, node: 'brief-cold' },
-    { when: { all: [m01Active, notBriefed] }, node: 'brief-warm' },
+    { when: { all: [m01Active, notBriefed] }, node: 'brief-banked' },
     { when: m01Active, node: 'remind' },
     { when: cold, node: 'idle-cold' },
-    { when: warmPlus, node: 'idle-warm' },
+    { when: bankedPlus, node: 'idle-banked' },
     { when: { all: [] }, node: 'idle' },
   ],
   nodes: [
     // briefing (first visit while M01 is active)
     { id: 'brief-cold', speaker: 'gaut', textKey: 'dialogue.npc-gaut.brief-cold', next: 'brief-1' },
-    { id: 'brief-warm', speaker: 'gaut', textKey: 'dialogue.npc-gaut.brief-warm', next: 'brief-1' },
+    { id: 'brief-banked', speaker: 'gaut', textKey: 'dialogue.npc-gaut.brief-banked', next: 'brief-1' },
     { id: 'brief-1', speaker: 'gaut', textKey: 'dialogue.npc-gaut.brief-1', next: 'brief-2' },
     {
       id: 'brief-2', speaker: 'gaut', textKey: 'dialogue.npc-gaut.brief-2',
@@ -43,7 +43,7 @@ export const npcGaut: DialogueDef = {
     { id: 'report-3', speaker: 'gaut', textKey: 'dialogue.npc-gaut.report-3', next: null },
 
     { id: 'idle-cold', speaker: 'gaut', textKey: 'dialogue.npc-gaut.idle-cold', next: null },
-    { id: 'idle-warm', speaker: 'gaut', textKey: 'dialogue.npc-gaut.idle-warm', next: null },
+    { id: 'idle-banked', speaker: 'gaut', textKey: 'dialogue.npc-gaut.idle-banked', next: null },
     { id: 'idle', speaker: 'gaut', textKey: 'dialogue.npc-gaut.idle', next: null },
   ],
 };

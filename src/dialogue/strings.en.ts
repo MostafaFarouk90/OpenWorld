@@ -14,7 +14,7 @@ export const dialogueStrings: Record<string, string> = {
 
   // ---- Sir Gaut ----
   'dialogue.npc-gaut.brief-cold': '{name}. I vouched for you before the whole Halvard household, so give them no reason to doubt me.',
-  'dialogue.npc-gaut.brief-warm': '{name}, well met. I hoped you would come to me first, and I am glad of it.',
+  'dialogue.npc-gaut.brief-banked': '{name}, well met. I hoped you would come to me first, and I am glad of it.',
   'dialogue.npc-gaut.brief-1': 'Ash wraiths are drifting up the lanes of Kettlewick, born of the Sunforge crack. Cut down five of them.',
   'dialogue.npc-gaut.brief-2': 'Some villagers are frozen with fright. Lift them with F and carry three to the chapel door, where Sister Aelfreda keeps the hearth.',
   'dialogue.npc-gaut.brief-2.ready': 'Five wraiths, three villagers. I will not fail you.',
@@ -26,7 +26,7 @@ export const dialogueStrings: Record<string, string> = {
   'dialogue.npc-gaut.report-2': 'Taking you on again cost me something in this realm, {name}. After today, I would pay it twice.',
   'dialogue.npc-gaut.report-3': 'Take my spare blade. It has served me well, and I think it will serve you better.',
   'dialogue.npc-gaut.idle-cold': 'Hold your head up, {name}. Trust comes back one honest deed at a time.',
-  'dialogue.npc-gaut.idle-warm': 'Well met, {name}. The Halvard name sits easier on you every day.',
+  'dialogue.npc-gaut.idle-banked': 'Well met, {name}. The Halvard name sits easier on you every day.',
   'dialogue.npc-gaut.idle': 'The chapel door is open, {name}. Stay sharp and stay kind.',
 
   // ---- Edda ----
@@ -97,10 +97,6 @@ export const dialogueStrings: Record<string, string> = {
   'dialogue.t04-vow.tone-humble': 'A quiet vow, and the quiet ones tend to hold. May the Hearth lend you strength on the days you lack it.',
   'dialogue.t04-vow.lit': 'Rise, {name}. The Kindling Ember is lit, and the Hearth keeps you.',
 
-  // ---- villager barks (used when a villager is picked up) ----
-  'dialogue.bark.villager1': 'Oh, thank the Hearth! Please, the chapel is just up the hill.',
-  'dialogue.bark.villager2': 'I can feel my legs again, but do not set me down until we are safe!',
-  'dialogue.bark.villager3': 'You are a Halvard squire, aren\'t you? Bless you, then, whatever the gossips say.',
 };
 
 /** Fallback speaker names for tests; the real names live in thread 4's `npc.<id>.name`. */
@@ -109,5 +105,4 @@ export const npcNameFallbackStrings: Record<string, string> = {
   'npc.edda.name': 'Edda Brannoc',
   'npc.stane.name': 'Marshal Stane',
   'npc.aelfreda.name': 'Sister Aelfreda',
-  'npc.cael.name': '{name}',
 };

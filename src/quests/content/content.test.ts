@@ -49,7 +49,7 @@ class Bus implements BusPort {
   }
 }
 
-function world(band: FavourBand = 'warm') {
+function world(band: FavourBand = 'banked') {
   const bus = new Bus();
   const flags = new Map<string, FlagValue>();
   const state: StatePort = {
@@ -94,7 +94,7 @@ function play(w: ReturnType<typeof world>, id: string, npc: string, pick: (node:
 
 describe('M01 and M02 walk-through with the real QuestManager', () => {
   it('t03 -> t12 -> m01 -> m02', () => {
-    const w = world('warm');
+    const w = world('banked');
     expect(w.qm.start('t03')).toBe(true);
     // Stane, Edda (gift), board
     play(w, 'npc-stane', 'stane');
@@ -118,7 +118,7 @@ describe('M01 and M02 walk-through with the real QuestManager', () => {
     expect(w.qm.state('m01')).toBe('active');
 
     // Gaut briefs, then reminds
-    expect(play(w, 'npc-gaut', 'gaut')[0]).toBe('brief-warm');
+    expect(play(w, 'npc-gaut', 'gaut')[0]).toBe('brief-banked');
     expect(w.flags.get('quest.m01.briefed')).toBe(true);
     expect(play(w, 'npc-gaut', 'gaut')[0]).toBe('remind');
 
@@ -159,6 +159,19 @@ describe('M01 and M02 walk-through with the real QuestManager', () => {
     expect(play(w, 'npc-edda', 'edda')[0]).toBe('idle');
   });
 
+  it('m02 hands in the hearth-stone on completion', () => {
+    const m = questDefs.find((q) => q.id === 'm02')!;
+    expect(m.onComplete).toEqual([{ take: 'hearth-stone' }]);
+  });
+
+  it('edda offers m02 once m01 is completed even if o1 is not flagged done', () => {
+    const w = world();
+    w.qm.start('m01');
+    w.qm.complete('m01');
+    expect(w.qm.state('m01')).toBe('completed');
+    expect(play(w, 'npc-edda', 'edda')[0]).toBe('offer');
+  });
+
   it('cold favour gets the cold greeting', () => {
     const w = world('cold');
     w.qm.start('m01');
@@ -166,11 +179,11 @@ describe('M01 and M02 walk-through with the real QuestManager', () => {
   });
 
   it('every root dialogue falls through to idle with no quests', () => {
-    const w = world('warm');
+    const w = world('banked');
     expect(play(w, 'npc-stane', 'stane')[0]).toBe('idle');
     expect(play(w, 'npc-edda', 'edda')[0]).toBe('idle');
     expect(play(w, 'npc-aelfreda', 'aelfreda')[0]).toBe('idle');
-    expect(play(w, 'npc-gaut', 'gaut')[0]).toBe('idle-warm');
+    expect(play(w, 'npc-gaut', 'gaut')[0]).toBe('idle-banked');
   });
 
   it('aelfreda mentions the Heartshard while m01 is active', () => {

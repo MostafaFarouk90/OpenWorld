@@ -1,6 +1,7 @@
 import type { Condition, FavourBand, FavourTrack, QuestState } from './types';
 import type { ConditionEnv } from './ports';
 
+const TRACKS: readonly string[] = ['halvard', 'oswin', 'grisel', 'dragons', 'ashwalkers'];
 const ERR = Symbol('condition-error');
 type Result = boolean | typeof ERR;
 
@@ -40,6 +41,7 @@ function evalInner(c: unknown, env: ConditionEnv): Result {
       return 'equals' in c && c.equals !== undefined ? v === c.equals : !!v;
     }
     if ('favour' in c) {
+      if (typeof c.favour !== 'string' || !TRACKS.includes(c.favour)) return fail(`unknown favour track ${String(c.favour)}`);
       const track = c.favour as FavourTrack;
       let result = true;
       if (c.band !== undefined) {

@@ -6,6 +6,12 @@ const ctx = { playerId: 'p', actorMeta: (id: string) => (id === 'w1' ? { spawnTa
 const o = (x: Partial<ObjectiveDef> & { type: ObjectiveDef['type'] }): ObjectiveDef => ({ id: 'o', textKey: 't', target: 'T', ...x });
 
 describe('creditFor', () => {
+  it('interact is not credited by the mercy action on the same target', () => {
+    const d = o({ type: 'interact' });
+    expect(creditFor(d, 'interact', { interactableId: 'T', action: 'interact' }, ctx)).toEqual({ amount: 1 });
+    expect(creditFor(d, 'interact', { interactableId: 'T', action: 'mercy' }, ctx)).toBeNull();
+  });
+
   it('goTo needs the player and the target trigger', () => {
     const d = o({ type: 'goTo' });
     expect(creditFor(d, 'trigger.enter', { triggerId: 'T', actorId: 'p' }, ctx)).toEqual({ amount: 1 });
@@ -35,6 +41,22 @@ describe('creditFor', () => {
     expect(creditFor(d, 'mercy', { creature: 'T', actorId: 'w2' }, ctx)).toBeNull();
     expect(creditFor(d, 'mercy', { creature: 'T' }, ctx)).toBeNull();
     expect(creditFor(d, 'actor.died', { actorId: 'w1', killerId: 'p', kind: 'T' }, { playerId: 'p' })).toBeNull();
+  });
+  it('kill: payload spawnTag wins even when the actor is gone from the registry', () => {
+    const d = o({ type: 'kill', spawnTag: 'm01' });
+    const gone = { playerId: 'p', actorMeta: () => undefined };
+    expect(creditFor(d, 'actor.died', { actorId: 'zz', killerId: 'p', kind: 'T', spawnTag: 'm01' }, gone)).toEqual({ amount: 1, dedupeKey: 'zz' });
+    expect(creditFor(d, 'actor.died', { actorId: 'zz', killerId: 'p', kind: 'T', spawnTag: 'other' }, gone)).toBeNull();
+    // payload tag mismatch is not rescued by the registry
+    expect(creditFor(d, 'actor.died', { actorId: 'w1', killerId: 'p', kind: 'T', spawnTag: 'other' }, ctx)).toBeNull();
+    expect(creditFor(d, 'actor.died', { actorId: 'zz', killerId: 'p', kind: 'T' }, gone)).toBeNull();
+  });
+  it('talk credits only completed dialogues', () => {
+    const d = o({ type: 'talk' });
+    expect(creditFor(d, 'dialogue.ended', { npcId: 'T', reason: 'completed' }, ctx)).toEqual({ amount: 1 });
+    for (const reason of ['death', 'load', 'skip', 'dispose', 'script']) {
+      expect(creditFor(d, 'dialogue.ended', { npcId: 'T', reason }, ctx)).toBeNull();
+    }
   });
   it('collect sums counts for the item', () => {
     const d = o({ type: 'collect' });

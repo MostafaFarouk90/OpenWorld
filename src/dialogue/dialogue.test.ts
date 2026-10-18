@@ -10,11 +10,11 @@ function make(opts: { flags?: Record<string, any>; band?: string; fail?: 'throw'
   const events: [string, any][] = [];
   const ran: Effect[][] = [];
   const warn = vi.fn();
-  const state: any = { getFlag: (k: string) => flags[k], favourBand: () => opts.band ?? 'warm' };
+  const state: any = { getFlag: (k: string) => flags[k], favourBand: () => opts.band ?? 'banked' };
   const evalCondition = (c: Condition): boolean => {
     const k = c as any;
     if ('flag' in k) return k.equals === undefined ? !!flags[k.flag] : flags[k.flag] === k.equals;
-    if ('favour' in k) return k.band === (opts.band ?? 'warm');
+    if ('favour' in k) return k.band === (opts.band ?? 'banked');
     if ('not' in k) return !evalCondition(k.not);
     return true;
   };
@@ -75,7 +75,7 @@ describe('DialogueRunner', () => {
     expect(events).toEqual([
       ['dialogue.started', { dialogueId: 'd', npcId: 'gaut' }],
       ['dialogue.choice', { dialogueId: 'd', nodeId: 'a', choiceId: 'c1' }],
-      ['dialogue.ended', { dialogueId: 'd', npcId: 'gaut' }],
+      ['dialogue.ended', { dialogueId: 'd', npcId: 'gaut', reason: 'completed' }],
     ]);
   });
   it('choice effects run before the next node effects', () => {
@@ -208,9 +208,9 @@ describe('DialogueRunner', () => {
     expect(warn).not.toHaveBeenCalled();
   });
   it('favour-band variants', () => {
-    for (const band of ['cold', 'warm']) {
+    for (const band of ['cold', 'banked']) {
       const { runner } = make({ band });
-      runner.register(def([N('cold'), N('warm')], [{ when: { favour: 'halvard', band: 'cold' }, node: 'cold' }, { when: { favour: 'halvard', band: 'warm' }, node: 'warm' }]));
+      runner.register(def([N('cold'), N('banked')], [{ when: { favour: 'halvard', band: 'cold' }, node: 'cold' }, { when: { favour: 'halvard', band: 'banked' }, node: 'banked' }]));
       runner.start('d', 'gaut');
       expect(runner.view()!.nodeId).toBe(band);
     }
@@ -293,7 +293,7 @@ describe('panel', () => {
     expect(m.nextHint).not.toBeNull();
     expect(buildPanelModel(null).visible).toBe(false);
     expect(buildPanelModel(runner.view(), { t: () => 'Gaut', has: () => true }).speakerName).toBe('Gaut');
-    expect(portraitFor('gaut-warm', 'gaut').initials).toBe('G');
+    expect(portraitFor('gaut-banked', 'gaut').initials).toBe('G');
   });
   it('model choices numbered', () => {
     const { runner } = make();
@@ -324,5 +324,50 @@ describe('panel', () => {
     runner.close('script');
     handleDialogueInput(runner, press('dialogueNext')); // closed: nothing
     expect(runner.isOpen).toBe(false);
+  });
+});
+
+describe('review fixes', () => {
+  it('ended carries reason: completed on a normal end, else the close reason', () => {
+    const { runner, events } = make();
+    runner.register(def([N('a')]));
+    runner.start('d', 'gaut');
+    runner.advance();
+    expect(events.filter((e) => e[0] === 'dialogue.ended').map((e) => e[1].reason)).toEqual(['completed']);
+    for (const r of ['skip', 'death', 'load', 'dispose', 'script'] as const) {
+      events.length = 0;
+      runner.start('d', 'gaut');
+      runner.close(r);
+      expect(events.filter((e) => e[0] === 'dialogue.ended').map((e) => e[1].reason)).toEqual([r]);
+    }
+  });
+
+  it("speaker 'cael' view carries the player's name; others do not", () => {
+    const { runner } = make();
+    runner.register(def([N('a', { speaker: 'cael', next: 'b' }), N('b')]));
+    runner.start('d', 'gaut');
+    expect(runner.view()!.speakerName).toBeTruthy();
+    runner.advance();
+    expect(runner.view()!.speakerName).toBeUndefined();
+  });
+
+  it('buildPanelModel prefers view.speakerName over the npc.<speaker>.name lookup', () => {
+    const view: any = { dialogueId: 'd', npcId: 'edda', nodeId: 'a', speaker: 'cael', speakerName: 'Rowan', portrait: undefined, text: 't', hasNext: true, choices: [] };
+    const strings = { t: () => 'WRONG', has: () => true };
+    expect(buildPanelModel(view, strings).speakerName).toBe('Rowan');
+    expect(buildPanelModel({ ...view, speaker: 'edda', speakerName: undefined }, strings).speakerName).toBe('WRONG');
+  });
+
+  it('validateDialogue checks node and choice effects', () => {
+    const d = def([
+      N('a', { effects: [{ event: 'bogus.event' }, { setFlag: '', value: true }], choices: [{ id: 'c', textKey: 'x.c', effects: [{ give: [{ itemId: 'i', count: 0 }] }, { take: 'x' }], next: null }] }),
+    ]);
+    const errs = validateDialogue(d, () => true).errors.join('\n');
+    expect(errs).toMatch(/event name not allowed/);
+    expect(errs).toMatch(/setFlag key/);
+    expect(errs).toMatch(/count must be a positive integer/);
+    expect(errs).not.toMatch(/take/);
+    const ok = def([N('a', { effects: [{ event: 'tutorial.vow.complete' }, { take: [{ itemId: 'i', count: 2 }] }] })]);
+    expect(validateDialogue(ok, () => true).errors).toEqual([]);
   });
 });

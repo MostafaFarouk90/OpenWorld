@@ -97,6 +97,27 @@ describe('registration', () => {
   });
 });
 
+describe('kill credit and talk credit through the manager', () => {
+  it('kill credit uses payload.spawnTag when the actor is already gone from the registry', () => {
+    const m = make();
+    m.register(quest('a', [obj('o', 'kill', 'wraith', { spawnTag: 'm01', required: 2 })]));
+    m.start('a');
+    bus.emit('actor.died', { actorId: 'gone1', killerId: 'p', kind: 'wraith', spawnTag: 'm01' });
+    expect(m.objectives('a')[0].progress).toBe(1);
+    bus.emit('actor.died', { actorId: 'gone2', killerId: 'p', kind: 'wraith', spawnTag: 'other' });
+    expect(m.objectives('a')[0].progress).toBe(1);
+  });
+  it('aborted dialogues do not credit talk', () => {
+    const m = make();
+    m.register(quest('a', [obj('o', 'talk', 'x')]));
+    m.start('a');
+    bus.emit('dialogue.ended', { npcId: 'x', reason: 'death' });
+    expect(m.objectiveDone('a', 'o')).toBe(false);
+    bus.emit('dialogue.ended', { npcId: 'x', reason: 'completed' });
+    expect(m.objectiveDone('a', 'o')).toBe(true);
+  });
+});
+
 describe('lifecycle', () => {
   it('start moves inactive to active once, runs onStart, emits quest.started', () => {
     const m = make();
@@ -148,11 +169,42 @@ describe('lifecycle', () => {
     expect(calls).toHaveLength(2);
     expect(bus.of('quest.completed')).toHaveLength(1);
   });
-  it('complete on inactive quest does nothing', () => {
+  it('t12 completed from inactive runs onComplete (startQuest m01) once', () => {
+    const m = make();
+    m.register(quest('m01', [obj('o', 'talk', 'x')]));
+    m.register(quest('a', [obj('o', 'talk', 'x')], { onComplete: [{ startQuest: 'm01' }], rewards: [{ xp: 1 }] }));
+    (globalThis as any).__onEffect = (e: Effect) => { if ('startQuest' in e) m.start(e.startQuest); };
+    expect(m.complete('a')).toBe(true);
+    expect(m.state('a')).toBe('completed');
+    expect(m.state('m01')).toBe('active');
+    expect(calls.filter((c) => c.includes('startQuest'))).toHaveLength(1);
+    expect(calls).toHaveLength(2);
+    expect(bus.of('quest.completed')).toEqual([{ questId: 'a' }]);
+    expect(m.complete('a')).toBe(false);
+    expect(bus.of('quest.completed')).toHaveLength(1);
+  });
+  it('complete on a failed quest does nothing', () => {
     const m = make();
     m.register(quest('a', [obj('o', 'talk', 'x')], { rewards: [{ xp: 1 }] }));
+    m.start('a'); m.fail('a');
     expect(m.complete('a')).toBe(false);
     expect(calls).toHaveLength(0);
+  });
+  it('quest.started is emitted before onStart effects (order when onStart completes the quest)', () => {
+    const m = make();
+    m.register(quest('a', [obj('o', 'talk', 'x')], { onStart: [{ completeQuest: 'a' }] }));
+    (globalThis as any).__onEffect = (e: Effect) => { if ('completeQuest' in e) m.complete(e.completeQuest); };
+    m.start('a');
+    expect(bus.log.map((e) => e.type).filter((t) => t.startsWith('quest.'))).toEqual(['quest.started', 'quest.completed']);
+    expect(m.state('a')).toBe('completed');
+  });
+  it('effect runner is created per run with sourceId quest:<id>', () => {
+    const m = make();
+    const ids: string[] = [];
+    m.register(quest('a', [obj('o', 'talk', 'x')], { onStart: [{ xp: 1 }] }));
+    (globalThis as any).__onEffect = (_e: Effect, env: any) => { ids.push(env.sourceId); };
+    m.start('a');
+    expect(ids).toEqual(['quest:a']);
   });
   it('fail emits, stops crediting, and is a no-op after complete', () => {
     const m = make();
@@ -279,6 +331,24 @@ describe('objective crediting', () => {
     m.register(quest('a', [obj('o', 'goTo', 'T'), obj('o2', 'talk', 'x')]));
     m.start('a');
     expect(m.objectiveDone('a', 'o')).toBe(true);
+  });
+  it('load() credits goTo objectives of active quests whose trigger the player is already inside', () => {
+    const m = make();
+    m.register(quest('a', [obj('o', 'goTo', 'T'), obj('o2', 'talk', 'x')]));
+    m.start('a');
+    const saved = m.serialize();
+    m.load({ quests: {} });
+    inside.add('T');
+    m.load(saved);
+    expect(m.objectiveDone('a', 'o')).toBe(true);
+  });
+  it('without a TriggerPort a current goTo warns once', () => {
+    const m = make({ triggers: undefined });
+    m.register(quest('a', [obj('o', 'goTo', 'T')]));
+    m.register(quest('b', [obj('o', 'goTo', 'T')]));
+    m.start('a'); m.start('b');
+    m.load(m.serialize());
+    expect(warns.filter((w) => w.includes('TriggerPort'))).toHaveLength(1);
   });
   it('collect adds counts across grants and clamps', () => {
     const m = make();

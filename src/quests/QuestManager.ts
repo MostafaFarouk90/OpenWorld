@@ -6,7 +6,7 @@ import type {
   StatePort, TriggerPort, Unsubscribe,
 } from './ports';
 import { evalCondition } from './conditions';
-import { createEffectRunner, type EffectRunner } from './effects';
+import { createEffectRunner } from './effects';
 import { creditFor, OBJECTIVE_EVENTS } from './objectives';
 
 export interface QuestManagerOpts {
@@ -34,7 +34,6 @@ export class QuestManager implements QuestReader, QuestActions {
   private readonly listeners = new Set<() => void>();
   private readonly unsubs: Unsubscribe[] = [];
   private readonly warned = new Set<string>();
-  private runner: EffectRunner | undefined;
   private disposed = false;
 
   constructor(private readonly opts: QuestManagerOpts) {
@@ -124,9 +123,9 @@ export class QuestManager implements QuestReader, QuestActions {
     rt.objectives = {};
     for (const o of def.objectives) this.dedupe.delete(this.dkey(id, o.id));
     this.order.push(id);
-    this.runEffects(def.onStart);
     this.emit('quest.started', { questId: id });
     this.notify();
+    this.runEffects(def.onStart, id);
     this.creditInside(id);
     return true;
   }
@@ -134,11 +133,12 @@ export class QuestManager implements QuestReader, QuestActions {
   complete(id: string): boolean {
     const def = this.defs.get(id);
     const rt = this.rt.get(id);
-    if (!def || !rt || rt.state !== 'active') return false;
+    // active -> completed, or inactive -> completed (a skipped beat); completed/failed are no-ops
+    if (!def || !rt || (rt.state !== 'active' && rt.state !== 'inactive')) return false;
     rt.state = 'completed'; // before effects: a re-entrant complete is a no-op
     this.removeActive(id);
-    this.runEffects(def.onComplete);
-    this.runEffects(def.rewards);
+    this.runEffects(def.onComplete, id);
+    this.runEffects(def.rewards, id);
     this.emit('quest.completed', { questId: id });
     this.notify();
     return true;
@@ -214,6 +214,9 @@ export class QuestManager implements QuestReader, QuestActions {
       }
     }
     this.notify();
+    for (const id of [...this.order]) {
+      if (this.rt.get(id)?.state === 'active') this.creditInside(id);
+    }
   }
 
   dispose(): void {
@@ -306,9 +309,15 @@ export class QuestManager implements QuestReader, QuestActions {
   private creditInside(questId: string): void {
     const triggers = this.opts.triggers;
     const player = this.opts.playerId();
-    if (!triggers || player === undefined) return;
     const def = this.defs.get(questId);
     if (!def) return;
+    if (!triggers) {
+      if (def.objectives.some((o) => o.type === 'goTo' && this.isObjectiveCurrent(questId, o.id))) {
+        this.warnOnce('no-trigger-port', 'quests: no TriggerPort; goTo objectives cannot detect an already-inside player');
+      }
+      return;
+    }
+    if (player === undefined) return;
     for (const o of def.objectives) {
       if (o.type !== 'goTo' || !this.isObjectiveCurrent(questId, o.id)) continue;
       let inside = false;
@@ -320,19 +329,19 @@ export class QuestManager implements QuestReader, QuestActions {
     }
   }
 
-  private runEffects(effects: Effect[] | undefined): void {
+  private runEffects(effects: Effect[] | undefined, questId: string): void {
     if (!effects || effects.length === 0) return;
     try {
-      this.runner ??= createEffectRunner({
+      const runner = createEffectRunner({
         state: this.opts.state,
         quests: this,
         bus: this.opts.bus,
         progression: this.opts.progression,
         inventory: this.opts.inventory,
-        sourceId: 'quests',
+        sourceId: `quest:${questId}`,
         warn: this.opts.warn,
       });
-      this.runner.run(effects);
+      runner.run(effects);
     } catch (e) {
       this.warn(`quests: effects threw: ${String(e)}`);
     }
