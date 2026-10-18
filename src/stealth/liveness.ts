@@ -21,7 +21,7 @@ export function questLive(quests: Pick<QuestsService, 'state' | 'objectiveDone' 
   }
 }
 
-/** Every listed objective is done (M09's exit arms once the three invoices are copied). */
+/** Every listed objective is done (M09's exit arms once the invoices objective is done). */
 export function objectivesDone(quests: Pick<QuestsService, 'objectiveDone'> | undefined, questId: string, ids: readonly string[] | undefined): boolean {
   if (!ids || ids.length === 0) return true;
   if (!quests) return false;
