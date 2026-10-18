@@ -217,10 +217,23 @@ describe('class skills', () => {
   });
   it('registers all or nothing and then resolves by id', () => {
     const n = SKILLS.length;
-    expect(registerClassSkills('warden', [def('a', 1), def('b', 2, 'warden.a')])).toEqual({ ok: true, count: 2 });
+    expect(registerClassSkills('warden', [def('a', 1), def('b', 2, 'warden.a')])).toMatchObject({ ok: true, count: 2 });
     expect(SKILLS.length).toBe(n + 2);
     expect(getSkill('warden.b')?.requires).toBe('warden.a');
     expect(getSkill('knight.rimBash')?.classId).toBe('knight');
+  });
+
+  it('registerClassSkills dispose removes only that class and frees the class id again', () => {
+    const r = registerClassSkills('warden', [def('a', 1), def('b', 2, 'warden.a')]);
+    if (!r.ok) throw new Error('refused');
+    expect(getSkill('warden.a')).toBeDefined();
+    r.dispose();
+    expect(getSkill('warden.a')).toBeUndefined();
+    expect(SKILLS.some((s) => s.classId === 'warden')).toBe(false);
+    expect(getSkill('knight.rallyCry')).toBeDefined();
+    expect(registerClassSkills('warden', [def('a', 1)]).ok).toBe(true);
+    r.dispose(); // a stale dispose after re-registration must not remove the new defs
+    expect(getSkill('warden.a')).toBeDefined();
   });
   it.each([
     ['wrong id prefix', 'warden', [{ ...def('a', 1), id: 'knight.zzz' }], 'bad-id'],
