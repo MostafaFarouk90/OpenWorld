@@ -23,8 +23,8 @@ describe('npcs plugin', () => {
   it('spawns placeholders synchronously, provides the service and registers systems', () => {
     const fc = world();
     expect(plugin.setup(fc.ctx)).toBeUndefined();
-    expect(fc.actors.size).toBe(6);
-    expect(fc.interactables.size).toBe(6);
+    expect(fc.actors.size).toBe(BRIGHTWATER_LAYOUT.npcs.length);
+    expect(fc.interactables.size).toBe(BRIGHTWATER_LAYOUT.npcs.length);
     expect(fc.strings.get('npc.silent')).toBe('They have nothing to say yet.');
     const svc = fc.services.get('npcs') as NpcsService;
     expect(svc.get('gaut')).toBeDefined();

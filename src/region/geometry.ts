@@ -121,3 +121,19 @@ export function doorFillBox(s: StructureSpec): Box2 | null {
     ? { cx: c.x, cz: c.z + insetZ, hx: half, hz: t }
     : { cx: c.x + inset, cz: c.z, hx: t, hz: half };
 }
+
+/** Lowest and highest ground sampled under a footprint grown by `margin` (corners, edge midpoints and centre). */
+export function groundRange(s: StructureSpec, heightAt: (x: number, z: number) => number, margin = 0): { min: number; max: number } {
+  const big: StructureSpec = { ...s, footprint: [s.footprint[0] + margin * 2, s.footprint[1] + margin * 2] };
+  const c = footprintCorners(big);
+  const pts: Array<[number, number]> = [...c, [s.x, s.z]];
+  for (let i = 0; i < 4; i++) pts.push([(c[i][0] + c[(i + 1) % 4][0]) / 2, (c[i][1] + c[(i + 1) % 4][1]) / 2]);
+  let min = Infinity;
+  let max = -Infinity;
+  for (const [x, z] of pts) {
+    const h = heightAt(x, z);
+    if (h < min) min = h;
+    if (h > max) max = h;
+  }
+  return { min, max };
+}

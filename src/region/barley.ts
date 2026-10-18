@@ -7,6 +7,23 @@ import type { FieldSpec, StructureSpec } from './layoutTypes';
 export const MAX_BARLEY_INSTANCES = 8000;
 const KEEP_OUT_MARGIN = 0.4;
 
+/** R01's field state (`world.brightwater.barley`): unset leaves the barley as it was. */
+export type BarleyVariant = 'unset' | 'scorched' | 'saved';
+
+/** Reads the flag value; anything but the two known words counts as unset. */
+export function barleyVariantOf(value: unknown): BarleyVariant {
+  return value === 'scorched' || value === 'saved' ? value : 'unset';
+}
+
+/** Fraction of the cards that survive a scorching. */
+export const SCORCHED_KEEP = 0.5;
+
+export interface BarleyOptions {
+  variant?: BarleyVariant;
+  /** Only these fields take the variant (Wynn's field); default none. */
+  variantFields?: readonly string[];
+}
+
 export interface BarleyHandle {
   object: THREE.Group;
   instanceCount: number;
@@ -40,6 +57,7 @@ export function buildBarley(
   heightAt: (x: number, z: number) => number,
   seed = 1,
   keepOut: StructureSpec[] = [],
+  options: BarleyOptions = {},
 ): BarleyHandle {
   for (const f of fields) {
     if (![f.x0, f.z0, f.x1, f.z1].every(Number.isFinite) || f.x1 <= f.x0 || f.z1 <= f.z0) {
@@ -53,10 +71,11 @@ export function buildBarley(
   const total = wanted.reduce((s, n) => s + n, 0);
   const scale = total > MAX_BARLEY_INSTANCES ? MAX_BARLEY_INSTANCES / total : 1;
 
-  const placed: Array<{ x: number; y: number; z: number; rot: number; s: number; tone: number }> = [];
+  const placed: Array<{ x: number; y: number; z: number; rot: number; s: number; tone: number; variant: BarleyVariant }> = [];
   fields.forEach((f, i) => {
     const rand = mulberry32(seed * 7919 + i * 104729);
-    const n = Math.floor(wanted[i] * scale);
+    const variant = options.variantFields?.includes(f.id) ? (options.variant ?? 'unset') : 'unset';
+    const n = Math.floor(wanted[i] * scale * (variant === 'scorched' ? SCORCHED_KEEP : 1));
     for (let k = 0; k < n; k++) {
       const x = f.x0 + rand() * (f.x1 - f.x0);
       const z = f.z0 + rand() * (f.z1 - f.z0);
@@ -64,7 +83,7 @@ export function buildBarley(
       const s = 0.8 + rand() * 0.5;
       const tone = rand();
       if (keepOut.some((st) => pointInFootprint(st, x, z, KEEP_OUT_MARGIN))) continue;
-      placed.push({ x, y: heightAt(x, z), z, rot, s, tone });
+      placed.push({ x, y: heightAt(x, z), z, rot, s: variant === 'scorched' ? s * 0.7 : s, tone, variant });
     }
   });
 
@@ -83,7 +102,9 @@ export function buildBarley(
     q.setFromAxisAngle(up, p.rot);
     m.compose(new THREE.Vector3(p.x, p.y, p.z), q, new THREE.Vector3(p.s, p.s, p.s));
     mesh.setMatrixAt(i, m);
-    col.setHSL(0.12 + p.tone * 0.03, 0.55, 0.45 + p.tone * 0.12);
+    if (p.variant === 'scorched') col.setHSL(0.06 + p.tone * 0.02, 0.15, 0.14 + p.tone * 0.08);
+    else if (p.variant === 'saved') col.setHSL(0.13 + p.tone * 0.03, 0.7, 0.5 + p.tone * 0.12);
+    else col.setHSL(0.12 + p.tone * 0.03, 0.55, 0.45 + p.tone * 0.12);
     mesh.setColorAt(i, col);
   });
   mesh.instanceMatrix.needsUpdate = true;

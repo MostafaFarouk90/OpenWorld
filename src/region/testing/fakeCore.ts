@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FlagGates } from '../../state/FlagGates';
 import type { ActorInit, Anchor, GameSystem, Interactable, TriggerDef, CoreContext } from '../coreTypes';
 import type { Actor as ActorLike } from '../../actors/Actor';
 
@@ -18,6 +19,10 @@ export interface FakeCore {
   targets: unknown[];
   /** Mutable: tests move the player by assigning x, y, z. */
   playerFeet: { x: number; y: number; z: number };
+  /** Damage modifiers registered through `ctx.damage.addModifier`, by id. */
+  modifiers: Map<string, (req: any, target: any, attacker: any) => void>;
+  /** Calls to `ctx.player.teleport`. */
+  teleports: Array<{ feet: { x: number; y: number; z: number }; yaw?: number }>;
   /** Fires every listener of `type`. */
   /** Gives the fake physics a real Rapier module (after `await physicsWorld.init()`). */
   useRapier(rapier: CoreContext['physics']['rapier']): void;
@@ -42,6 +47,8 @@ export function createFakeCore(): FakeCore {
   const listeners = new Map<string, Set<(p: any) => void>>();
   const counters = new Map<string, number>();
   const playerFeet = { x: 0, y: 0, z: 0 };
+  const modifiers = new Map<string, (req: any, target: any, attacker: any) => void>();
+  const teleports: Array<{ feet: { x: number; y: number; z: number }; yaw?: number }> = [];
 
   const unique = <T>(map: Map<string, T>, id: string, what: string, value: T): (() => void) => {
     if (map.has(id)) throw new Error(`duplicate ${what} "${id}"`);
@@ -123,8 +130,11 @@ export function createFakeCore(): FakeCore {
         const v = flags.get(key);
         return typeof v === 'boolean' ? v : fallback;
       },
+      getFlag: (key: string) => flags.get(key),
       setFlag(key: string, value: boolean | number | string) {
         flags.set(key, value);
+        // Like the real WorldState: listeners hear it, and so do the gates.
+        for (const l of [...(listeners.get('flag.changed') ?? [])]) l({ key, value });
       },
     },
     services: {
@@ -160,8 +170,23 @@ export function createFakeCore(): FakeCore {
       },
     },
     assets: null,
-    player: { feet: playerFeet },
+    player: {
+      feet: playerFeet,
+      teleport(feet: { x: number; y: number; z: number }, yaw?: number) {
+        teleports.push({ feet, yaw });
+        return { ready: () => true };
+      },
+    },
+    damage: {
+      addModifier(id: string, fn: (req: any, target: any, attacker: any) => void) {
+        if (modifiers.has(id)) throw new Error(`duplicate modifier "${id}"`);
+        modifiers.set(id, fn);
+        return () => modifiers.delete(id);
+      },
+    },
+    gates: undefined as unknown as FlagGates,
   };
+  impl.gates = new FlagGates(impl.state as never, impl.events as never);
   const ctx = impl as unknown as CoreContext;
 
   return {
@@ -178,6 +203,8 @@ export function createFakeCore(): FakeCore {
     colliders,
     emitted,
     targets,
+    modifiers,
+    teleports,
     playerFeet,
     useRapier(rapier) {
       (impl.physics as { rapier: unknown }).rapier = rapier;

@@ -5,5 +5,8 @@ export const NPC_STRINGS_EN: Record<string, string> = {
   'npc.aelfreda.name': 'Sister Aelfreda',
   'npc.hob.name': 'Hob Waygrey',
   'npc.wynn.name': 'Wynn Tillman',
+  'npc.tobb.name': 'Tobb Fenwick',
+  'npc.carter-1.name': 'Carter',
+  'npc.carter-2.name': 'Carter',
   'npc.silent': 'They have nothing to say yet.',
 };

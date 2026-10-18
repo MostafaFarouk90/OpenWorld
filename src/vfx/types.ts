@@ -57,7 +57,8 @@ export interface VfxService {
   telegraph(actorId: ActorId, kind: 'block' | 'dodge', leadSeconds: number, opts?: { parts?: string[] }): void;
   shake(amplitude: number, seconds: number): void;
   fovPunch(degrees: number, seconds?: number): void;
-  dissolve(root: THREE.Object3D, seconds: number, opts?: { tint?: number }): Promise<void>;
+  /** `reverse` fades the root in (1 to 0) instead of out, for a teleport arrival or a rise. */
+  dissolve(root: THREE.Object3D, seconds: number, opts?: { tint?: number; reverse?: boolean }): Promise<void>;
   /** Pulses the screen vignette (parry flash, Surge): strength 0..1. */
   pulseScreen(strength: number, seconds: number, color?: number): void;
   /** Wraps weapon geometry with hilt and tip marker Objects for enemy trails (item 19). */

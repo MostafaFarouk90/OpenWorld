@@ -1,5 +1,6 @@
 import type { CoreContext, GamePlugin } from '../region/coreTypes';
 import { BRIGHTWATER_LAYOUT } from '../region/brightwater.layout';
+import { heightAt } from '../terrain/heightfield';
 import { NPC_DEFS } from './npcDefs';
 import { NpcManager } from './NpcManager';
 import { NPC_STRINGS_EN } from './strings.en';
@@ -47,6 +48,7 @@ export default {
         defs: NPC_DEFS,
         loader: assets && isLoader(assets) ? assets : undefined,
         playerPosition: playerPositionFrom(ctx),
+        heightAt,
       });
       const m = manager;
       m.spawnAll();

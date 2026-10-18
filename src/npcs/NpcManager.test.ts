@@ -39,12 +39,13 @@ describe('spawnAll', () => {
   it('creates one non-hittable immortal neutral actor and placeholder per npc, at the post', () => {
     const { fc, m } = setup();
     m.spawnAll();
-    expect(fc.actors.size).toBe(6);
+    expect(fc.actors.size).toBe(BRIGHTWATER_LAYOUT.npcs.length);
     for (const n of BRIGHTWATER_LAYOUT.npcs) {
       const a = [...fc.actors.values()].find((x) => x.kind === `npc:${n.id}`)!;
       expect(a).toMatchObject({ team: 'neutral', hittable: false, immortal: true });
       expect(a.root!.parent).toBe(fc.scene);
-      expect(a.root!.children.length).toBe(1);
+      // Tobb carries his cloak and lute as a second child.
+      expect(a.root!.children.length).toBe(n.id === 'tobb' ? 2 : 1);
       const [x, y, z, yaw] = POSTS[n.id];
       expect(a.root!.position.toArray()).toEqual([x, y, z]);
       expect(a.root!.rotation.y).toBeCloseTo(yaw);
@@ -55,7 +56,7 @@ describe('spawnAll', () => {
   it('registers a talk interactable per npc with the translated name and radius', () => {
     const { fc, m } = setup();
     m.spawnAll();
-    expect(fc.interactables.size).toBe(6);
+    expect(fc.interactables.size).toBe(BRIGHTWATER_LAYOUT.npcs.length);
     const i = fc.interactables.get('npc:stane')!;
     expect(i.kind).toBe('talk');
     expect(i.name).toBe('Marshal Osric Stane');
@@ -65,7 +66,7 @@ describe('spawnAll', () => {
   it('is synchronous: placeholders exist before any loader promise settles', () => {
     const { fc, m } = setup({ loader: never() });
     m.spawnAll();
-    expect(fc.scene.children.length).toBe(6);
+    expect(fc.scene.children.length).toBe(BRIGHTWATER_LAYOUT.npcs.length);
   });
   it('throws when called twice', () => {
     const { m } = setup();
@@ -156,7 +157,7 @@ describe('models', () => {
     m.spawnAll();
     const before = fc.actors.get('npc:gaut#1')!.root!.children[0];
     await m.loadModels();
-    expect(spy.mock.calls.map((c) => c[0]).sort()).toEqual(['barbarian', 'knight', 'mage', 'rogueHooded']);
+    expect(spy.mock.calls.map((c) => c[0]).sort()).toEqual(['barbarian', 'knight', 'mage', 'rogue', 'rogueHooded']);
     expect(m.get('gaut')!.hasModel).toBe(true);
     const after = m.get('gaut')!.root.children;
     expect(after.length).toBe(1);
@@ -185,7 +186,7 @@ describe('models', () => {
     await expect(m.loadModels()).resolves.toBeUndefined();
     expect(m.get('gaut')!.hasModel).toBe(false);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('404'));
-    expect(warn).toHaveBeenCalledTimes(4);
+    expect(warn).toHaveBeenCalledTimes(5);
   });
   it('an instantiate failure keeps the placeholder and does not reject', async () => {
     const l = fakeLoader();
@@ -203,7 +204,7 @@ describe('models', () => {
     await flush();
     expect(m.get('gaut')!.hasModel).toBe(false);
     expect(() => { m.fixedUpdateBehaviour(1 / 60); m.fixedUpdateAnimation(1 / 60); }).not.toThrow();
-    expect(fc.scene.children.length).toBe(6);
+    expect(fc.scene.children.length).toBe(BRIGHTWATER_LAYOUT.npcs.length);
   });
   it('does not mutate the shared source material when tinting', async () => {
     const l = fakeLoader();

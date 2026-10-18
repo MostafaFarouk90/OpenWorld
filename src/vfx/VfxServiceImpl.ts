@@ -198,7 +198,7 @@ export class VfxServiceImpl implements VfxService {
     this.screen.pulse(strength, seconds, color);
   }
 
-  dissolve(root: THREE.Object3D, seconds: number, opts?: { tint?: number }): Promise<void> {
+  dissolve(root: THREE.Object3D, seconds: number, opts?: { tint?: number; reverse?: boolean }): Promise<void> {
     this.touched.add(root);
     return this.dissolver.start(root, seconds, this.clock.now, opts).done;
   }

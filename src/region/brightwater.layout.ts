@@ -2,6 +2,7 @@
 // Anchor facings are written as compass headings (0 faces north/+Z, 90 faces east/+X) and stored as the
 // engine's yaw, where yaw 0 faces -Z, so yawDeg = heading + 180 (contracts/world-layout-and-npcs.md section 4).
 // Everything sits inside the flat meadow (SPAWN_FLAT_RADIUS) except the beyond-the-village anchors.
+import { CORRIDOR_LAYOUT } from './corridor.layout';
 import type { AnchorSpec, LayoutData, StructureSpec, TriggerSpec } from './layoutTypes';
 
 const a = (id: string, x: number, z: number, heading: number, tags: string[] = [], rest: Partial<AnchorSpec> = {}): AnchorSpec => ({
@@ -214,9 +215,9 @@ const structures: StructureSpec[] = [
 ];
 
 export const BRIGHTWATER_LAYOUT: LayoutData = {
-  anchors,
-  triggers,
-  structures,
+  anchors: [...anchors, ...CORRIDOR_LAYOUT.anchors],
+  triggers: [...triggers, ...CORRIDOR_LAYOUT.triggers],
+  structures: [...structures, ...CORRIDOR_LAYOUT.structures],
   patrols: [{ id: 'patrol.north', points: ['patrol.north.1', 'patrol.north.2', 'patrol.north.3', 'patrol.north.4'], loop: true }],
   npcs: [
     { id: 'gaut', post: 'npc-post.gaut', idleClip: 'Idle' },
@@ -225,6 +226,7 @@ export const BRIGHTWATER_LAYOUT: LayoutData = {
     { id: 'aelfreda', post: 'npc-post.aelfreda', idleClip: 'Idle' },
     { id: 'hob', post: 'npc-post.hob', idleClip: 'Idle' },
     { id: 'wynn', post: 'npc-post.wynn', idleClip: 'Idle' },
+    ...CORRIDOR_LAYOUT.npcs,
   ],
   fields: [
     { id: 'barley-west', x0: -40, z0: 8, x1: -8, z1: 50, count: 3500 },

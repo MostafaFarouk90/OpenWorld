@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { killXp, levelForXp, levelPoints, levelScale, xpForLevel, LEVEL_CAP } from './tuning';
 
 describe('tuning', () => {
+  it('the Ashen Prior pays 200 base kill xp, scaled by level like any kill', () => {
+    expect(killXp('ashen-prior', 5, 5)).toBe(200);
+    expect(killXp('ashen-prior', 5, 7)).toBe(140);
+    expect(killXp('ashen-prior', 5, 30)).toBe(50);
+  });
   it('xp curve', () => {
     expect(xpForLevel(1)).toBe(0);
     expect(xpForLevel(2)).toBe(50);
@@ -32,5 +37,15 @@ describe('tuning', () => {
     expect(killXp('dummy', 50, 1)).toBe(0);
     expect(killXp('scarecrow', 5, 1)).toBe(0);
     expect(killXp('mystery', 5, 1)).toBe(0);
+  });
+});
+
+describe('kill xp table (slice 2)', () => {
+  it('the Ashen Prior pays 200 at equal level; an unknown kind still pays 0', () => {
+    expect(killXp('ashen-prior', 3, 3)).toBe(200);
+    expect(killXp('mystery-beast', 3, 3)).toBe(0);
+  });
+  it("thread 5's kinds", () => {
+    expect([killXp('ash-scarecrow', 1, 1), killXp('toll-post', 1, 1), killXp('blightbloom', 1, 1), killXp('blighted-soldier', 1, 1), killXp('ember-hound', 1, 1), killXp('alley-cutpurse', 1, 1)]).toEqual([0, 0, 15, 30, 25, 18]);
   });
 });

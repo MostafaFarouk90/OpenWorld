@@ -226,6 +226,42 @@ describe('plugin wiring (real Game)', () => {
     t.dispose();
   });
 
+  it('slice 2: ability.grant grants the Leap once through the flag, and a paid respec spends real gold', async () => {
+    const t = await setup();
+    t.game.events.emit('ability.grant', { id: 'surge-leap', source: 'm03' });
+    t.game.events.emit('ability.grant', { id: 'surge-leap', source: 'm03' });
+    expect(t.of('ability.learned')).toEqual([{ id: 'surge-leap', source: 'm03' }]);
+    expect(t.ctx.state.getFlag('ability.surge-leap.learned')).toBe(true);
+    expect(t.prog().hasAbility('surge-leap')).toBe(true);
+
+    t.prog().grantXp(100, 's');
+    t.prog().learn('knight.rimBash');
+    const release = t.prog().allowRespec('test');
+    expect(t.prog().respec()).toMatchObject({ ok: true, cost: 0 }); // the free one
+    t.prog().learn('knight.rimBash');
+    t.inv().addGold(10);
+    expect(t.prog().respecQuote().canAfford).toBe(false);
+    expect(t.prog().respec()).toEqual({ ok: false, reason: 'no-gold' });
+    expect(t.inv().gold).toBe(10);
+    t.inv().addGold(500);
+    const quote = t.prog().respecQuote();
+    expect(t.prog().respec()).toMatchObject({ ok: true, cost: quote.gold });
+    expect(t.inv().gold).toBe(510 - quote.gold);
+    release();
+    t.dispose();
+  });
+
+  it('slice 2: a v1 progression save loads as the Knight with no class', async () => {
+    const t = await setup();
+    const reg = t.ctx.persist.get('progression')!;
+    expect(reg.version).toBe(2);
+    reg.load({ xp: 100, storyPoints: 0, learned: ['knight.rimBash'], bar: [null, null, null, null, null, null] }, 1);
+    expect(t.prog().classId).toBeNull();
+    expect(t.prog().learned('knight.rimBash')).toBe(true);
+    expect(t.prog().respecQuote().free).toBe(true);
+    t.dispose();
+  });
+
   it('8. persist round trip', async () => {
     const t = await setup();
     const reg = t.ctx.persist;

@@ -20,5 +20,6 @@ export const PROMPT_STRINGS_EN: Record<string, string> = {
   'prompt.fastTravel': 'Press {key} to travel to a waystone',
   'prompt.surge': 'Press {key} to surge',
   'prompt.rest': 'Press {key} to rest',
+  'prompt.wardstone-strike': 'Strike on the beat',
   'prompt.hintsToggle': 'Always show hints',
 };

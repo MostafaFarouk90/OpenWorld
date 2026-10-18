@@ -68,11 +68,11 @@ describe('Burn', () => {
     expect(b.value).toBe(20);
     expect(b.scars).toBe(0);
   });
-  it('multiplier is 1 while the flag is false', () => {
+  it('multiplier is live by default and 1 when the seam is switched off', () => {
     const b = new Burn();
     b.add(90, 't');
     b.addScar(15);
-    expect(b.healthMultiplier()).toBe(1);
+    expect(b.healthMultiplier()).toBeLessThan(0.5);
     expect(b.healthMultiplier(false)).toBe(1);
   });
   it('multiplier with the penalty enabled', () => {
@@ -132,5 +132,79 @@ describe('Burn boundary notifications', () => {
     b.decay(10, false);
     expect(b.value).toBe(0);
     expect(seen[seen.length - 1]).toBe(0);
+  });
+});
+
+describe('Burn.useShard', () => {
+  it('scars only when Burn was 75 or more before the gain', () => {
+    const b = new Burn();
+    b.add(74, 't');
+    expect(b.useShard(8, 'leap')).toMatchObject({ scarred: false });
+    expect(b.scars).toBe(0);
+    b.clear('x');
+    b.add(75, 't');
+    expect(b.useShard(8, 'leap')).toMatchObject({ scarred: true });
+    expect(b.scars).toBe(1);
+  });
+  it('a fractional 74.6 does not scar (zone() floors)', () => {
+    const b = new Burn();
+    b.add(74.6, 't');
+    expect(b.zone()).toBe('blaze');
+    expect(b.useShard(8, 'surge').scarred).toBe(false);
+  });
+  it('still scars when the gain is clamped at 100, and at 100 exactly', () => {
+    const b = new Burn();
+    b.add(100, 't');
+    const r = b.useShard(25, 'surge');
+    expect(r).toEqual({ gained: 0, scarred: true });
+    expect(b.value).toBe(100);
+    expect(b.scars).toBe(1);
+  });
+  it('a caller can decide the Scar at the press', () => {
+    const b = new Burn();
+    b.add(80, 't');
+    expect(b.useShard(8, 'leap', false).scarred).toBe(false);
+    expect(b.scars).toBe(0);
+    b.clear('x');
+    expect(b.useShard(8, 'leap', true).scarred).toBe(true);
+    expect(b.scars).toBe(1);
+  });
+  it('ignores a NaN gain but still scars at cinder (the use happened)', () => {
+    const b = new Burn();
+    b.add(90, 't');
+    expect(b.useShard(Number.NaN, 'x')).toEqual({ gained: 0, scarred: true });
+    expect(b.value).toBe(90);
+  });
+  it('rest-style clear never removes Scars', () => {
+    const b = new Burn();
+    b.add(90, 't');
+    b.useShard(10, 'surge');
+    b.clear('rest');
+    expect(b.value).toBe(0);
+    expect(b.scars).toBe(1);
+  });
+});
+
+describe('Burn.healthMultiplier (design 9.7)', () => {
+  it('matches the zone table at its edges', () => {
+    const b = new Burn();
+    const at = (n: number) => { b.clear('x'); b.add(n, 't'); return b.healthMultiplier(true); };
+    expect(at(0)).toBe(1);
+    expect(at(39)).toBeCloseTo(0.85, 4);
+    expect(at(40)).toBeCloseTo(0.84, 4);
+    expect(at(74)).toBeCloseTo(0.7, 2);
+    expect(at(75)).toBeCloseTo(0.69, 4);
+    expect(at(100)).toBeCloseTo(0.6, 4);
+  });
+  it('Scars multiply with the zone penalty and cap at 30%', () => {
+    const b = new Burn();
+    b.addScar(5);
+    expect(b.healthMultiplier(true)).toBeCloseTo(0.9, 4);
+    b.add(39, 't');
+    expect(b.healthMultiplier(true)).toBeCloseTo(0.9 * 0.85, 4);
+    b.clear('x');
+    b.addScar(20);
+    expect(b.scars).toBe(25);
+    expect(b.healthMultiplier(true)).toBeCloseTo(0.7, 4);
   });
 });
