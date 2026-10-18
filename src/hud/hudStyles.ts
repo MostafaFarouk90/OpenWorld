@@ -96,6 +96,38 @@ export const HUD_CSS = `
 .owg-respec-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 .owg-btn[disabled]{opacity:.4;cursor:default}
 .owg-respec-warn{color:#f5a84a}
+.owg-respec-options{display:flex;flex-direction:column;gap:4px;margin-top:10px}
+.owg-respec-option{padding:6px 10px;border:1px solid rgba(255,255,255,.2);border-radius:4px;cursor:pointer}
+.owg-respec-option.owg-selected{border-color:#f0d890;background:rgba(240,216,144,.15)}
+.owg-stealth{display:flex;flex-direction:column;align-items:center;pointer-events:none}
+.owg-eye{position:relative;width:44px;height:22px;border-radius:50% / 100%;border:2px solid #c9c2b0;background:rgba(0,0,0,.55);overflow:hidden}
+.owg-eye-lid{position:absolute;inset:0;background:#c9c2b0;transform-origin:top;transition:transform .1s linear}
+.owg-eye-pupil{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#111}
+.owg-eye-calm{border-color:#9aa8a0}
+.owg-eye-suspicious{border-color:#e8b84a;box-shadow:0 0 6px #e8b84a}
+.owg-eye-alerted{border-color:#d8362c;box-shadow:0 0 8px #d8362c}
+.owg-noise{pointer-events:none}
+.owg-noise-ring{pointer-events:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);border:2px solid rgba(240,216,144,.45);border-radius:50%;transition:width .1s linear,height .1s linear}
+.owg-chase{display:flex;align-items:center;gap:8px;min-width:220px;pointer-events:none;font:13px system-ui,sans-serif;color:#f3ead8;text-shadow:0 1px 2px #000}
+.owg-chase-bar{flex:1;height:8px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
+.owg-chase-fill{height:100%;width:0;background:#e0a050}
+.owg-chase-red .owg-chase-fill{background:#d8362c}
+.owg-chase-red .owg-chase-secs{color:#ff6a5a}
+.owg-chase-again .owg-chase-fill{width:100%!important;background:#f0d890}
+.owg-chase-again{animation:owg-chase-pulse 1s ease-in-out infinite}
+.owg-chase-gap:before{content:"\\00BB\\00A0"}
+@keyframes owg-chase-pulse{50%{opacity:.55}}
+.owg-mount{width:260px;pointer-events:none}
+.owg-bar-mount{height:6px}
+.owg-bar-mount .owg-bar-fill{background:#c9a063}
+.owg-classlabel{display:flex;flex-direction:column;gap:2px;margin-top:4px;pointer-events:none;font:12px system-ui,sans-serif;color:#f3ead8;text-shadow:0 1px 2px #000}
+.owg-class-name{font-weight:600}
+.owg-gold{display:flex;align-items:center;gap:5px}
+.owg-gold-icon{width:10px;height:10px;border-radius:50%;background:#e8c64a;border:1px solid #8a6a10}
+.owg-ending{pointer-events:auto;cursor:pointer}
+.owg-ending-body{max-height:200px;overflow-y:auto;text-align:left}
+.owg-ending-line{margin:4px 0}
+@media (prefers-reduced-motion:reduce){.owg-chase-again{animation:none}.owg-eye-lid,.owg-noise-ring{transition:none}}
 .interaction-prompt__mercy{color:#f2ead8}
 body.owg-burn-scar .interaction-prompt__mercy{color:#f5a84a}
 `;
