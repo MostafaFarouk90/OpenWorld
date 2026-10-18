@@ -13,6 +13,7 @@ function make() {
     strike: (m) => calls.push(`strike:${m.id}`),
     teleportOut: () => calls.push('out'),
     teleportIn: (d) => calls.push(`in:${d}`),
+    arrived: () => calls.push('arrived'),
     summonStart: (o) => calls.push(`summon:${o ? 'opening' : 'resummon'}`),
     summonRelease: (n) => calls.push(`release:${n}`),
     stagger: () => calls.push('stagger'),
@@ -167,7 +168,9 @@ describe('PriorBrain', () => {
     expect(s.brain.state).toBe('teleportOut');
     s.calls.length = 0;
     s.brain.onBreak();
-    expect(s.calls).toEqual([]);
+    // ignored, but his poise is refilled so it never stays empty
+    expect(s.calls).toEqual(['poise']);
+    expect(s.brain.state).toBe('teleportOut');
     s.brain.onReleaseWindow(true);
     expect(s.brain.state).toBe('kneel');
     s.calls.length = 0;
@@ -321,5 +324,35 @@ describe('PriorBrain', () => {
     const d = started();
     d.brain.onOutcome('defeated');
     expect(d.brain.state).toBe('dying');
+  });
+
+  it('the arrival hook fires when the fade-in ends, not when it starts', () => {
+    const s = started();
+    s.brain.onBreak();
+    s.run(PRIOR.breakSeconds + PRIOR.teleportOutSeconds + PRIOR.hiddenSeconds + 0.05);
+    expect(s.calls).toContain('in:pillar');
+    expect(s.calls).not.toContain('arrived');
+    expect(s.brain.state).toBe('teleportIn');
+    s.run(PRIOR.teleportInSeconds);
+    expect(s.calls.at(-1) === 'arrived' || s.calls.includes('arrived')).toBe(true);
+    expect(s.brain.present).toBe(true);
+  });
+
+  it('a break during the shielded phase-2 opening cast re-casts it unshielded after the stagger, without counting a wave', () => {
+    const s = started();
+    s.sense.dist = 20;
+    s.brain.onPhase(2);
+    s.run(PRIOR.teleportOutSeconds + PRIOR.hiddenSeconds + PRIOR.teleportInSeconds + 0.1);
+    expect(s.brain.state).toBe('summon');
+    expect(s.brain.wavesStarted).toBe(2);
+    s.calls.length = 0;
+    s.brain.onBreak(); // the Surge dropped the shield mid-cast, then a break
+    s.run(PRIOR.breakSeconds + PRIOR.teleportOutSeconds + PRIOR.hiddenSeconds + PRIOR.teleportInSeconds + 0.2);
+    expect(s.calls).toContain('in:centre');
+    expect(s.calls).toContain('summon:resummon');
+    expect(s.calls).not.toContain('summon:opening');
+    s.run(PRIOR.summonCastSeconds + 0.1);
+    expect(s.calls).toContain(`release:${SUMMONS.openingCount[1]}`);
+    expect(s.brain.wavesStarted).toBe(2);
   });
 });
