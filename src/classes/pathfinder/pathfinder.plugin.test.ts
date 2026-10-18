@@ -234,6 +234,21 @@ describe('pathfinder plugin on the real game', () => {
     expect(t.ctx.player.avatar?.classId).toBe('pathfinder');
   });
 
+  it('exposes the bolt count for the HUD: null as a Knight and while the item is undefined, { count, max } otherwise', async () => {
+    ITEMS['crossbow-bolts'] = BOLTS;
+    const t = await boot();
+    const svc = () => t.ctx.services.require('pathfinder');
+    expect(svc().ammo()).toBeNull();
+    t.ctx.state.setFlag(CLASS_OPEN_FLAG, true);
+    t.ctx.services.require('classes').choose('pathfinder');
+    await t.settle();
+    const inv = t.ctx.services.require('inventory') as any;
+    inv.add('crossbow-bolts', 7);
+    expect(svc().ammo()).toEqual({ count: inv.count('crossbow-bolts'), max: 40 });
+    delete ITEMS['crossbow-bolts'];
+    expect(svc().ammo()).toBeNull();
+  });
+
   it('is harmless as a Knight: a melee hit with a Knight clip lands in full', async () => {
     const t = await boot();
     const target = spawnHostile(t, -1);
