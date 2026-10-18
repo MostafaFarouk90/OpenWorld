@@ -42,7 +42,7 @@ export interface SpawnerRegistryDeps {
  * gone, no `groupCleared`) and refilled later while the group is live. Only thief kinds escape; the registry treats
  * 'escaped' from any other kind as a plain 'despawned'.
  */
-export type MemberEnd = 'died' | 'released' | 'spared' | 'despawned' | 'escaped';
+export type MemberEnd = 'died' | 'released' | 'spared' | 'calmed' | 'despawned' | 'escaped';
 
 /** A freed thief slot waiting to be refilled. */
 interface PendingRefill {
@@ -200,7 +200,7 @@ export class SpawnerRegistry {
     }
     if (how === 'despawned' || how === 'escaped') return false;
     const key = `${rec.spawnerId}#${rec.slot}`;
-    if ((how === 'released' || how === 'spared') && !def.ephemeral) this.spent.add(key);
+    if ((how === 'released' || how === 'spared' || how === 'calmed') && !def.ephemeral) this.spent.add(key);
     // A member of a never-respawning world group (not a manual lesson group, which replays) that died stays dead across a save, so a group that was
     // partly cleared before a save can still be cleared afterwards.
     if (how === 'died' && def.respawn === 'never' && def.activation !== 'manual' && !def.ephemeral) this.dead.add(key);

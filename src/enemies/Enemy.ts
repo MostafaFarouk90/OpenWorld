@@ -644,6 +644,28 @@ export class Enemy {
     this.setLoco(ENEMY_CLIPS.walk);
   }
 
+  /**
+   * Calmed (an offering or the Warm Hand): drops its head, stops attacking and walks off like a spared soldier;
+   * a strike before it leaves revokes (see `revoked`). Takes any live state, so a calmed pack leader's packmates
+   * scatter whatever they were doing.
+   */
+  calm(): void {
+    if (this.phase !== 'alive') return;
+    this.lowerHead(true); // before the phase leaves 'alive'
+    this.brain.calmed();
+    this.goneHow = 'calmed';
+    this.phase = 'leaving';
+    this.leaveFrom = this.mover.feet.clone();
+    this.leaveTime = 0;
+    this.scatter = (this.env.rng() - 0.5) * 1.4;
+    this.setLoco(ENEMY_CLIPS.walk);
+  }
+
+  /** The player or an ally struck this enemy (damage.dealt, outcome hit, not a script): Calm closes unless it staggers. */
+  markStruck(): void {
+    this.brain.markStruck();
+  }
+
   /** A thief gets away with the pouch (flee window over, blinked out, or gone dormant while fleeing): the spawner may refill its slot. */
   private escape(): void {
     if (this.phase === 'gone') return;
@@ -659,7 +681,7 @@ export class Enemy {
 
   /** Leaving or dissolving after an accepted mercy. */
   get inMercyExit(): boolean {
-    return this.goneHow === 'released' || this.goneHow === 'spared';
+    return this.goneHow === 'released' || this.goneHow === 'spared' || this.goneHow === 'calmed';
   }
 
   /** A packmate was spared: see `Brain.offerYield`. */
@@ -673,6 +695,7 @@ export class Enemy {
     this.leaveFrom = null;
     this.goneHow = 'despawned';
     this.thief?.spareRevoked();
+    this.lowerHead(false);
     this.brain.revoked(strikerId);
     return true;
   }
@@ -744,6 +767,8 @@ export class Enemy {
   private fadeHandledByVfx = false;
   private dissolved = false;
   private leaveTime = 0;
+  /** Radians off the straight-away heading, so a scattering pack fans out. */
+  private scatter = 0;
 
   /** Out of combat for good: no hurtboxes, no weapons, no slow, no trails, no token, not hittable. */
   private disarm(): void {
@@ -793,7 +818,11 @@ export class Enemy {
     const p = this.host.player.feet;
     const away = { x: self.x - p.x, z: self.z - p.z };
     const len = Math.hypot(away.x, away.z) || 1;
-    const v = { x: (away.x / len) * this.def.walkSpeed, z: (away.z / len) * this.def.walkSpeed };
+    const c = Math.cos(this.scatter);
+    const sn = Math.sin(this.scatter);
+    const ux = away.x / len;
+    const uz = away.z / len;
+    const v = { x: (ux * c - uz * sn) * this.def.walkSpeed, z: (ux * sn + uz * c) * this.def.walkSpeed };
     this.yaw = turnToward(this.yaw, Math.atan2(-v.x, -v.z), AI.turnRate * dt);
     this.mover.move(v, dt);
     this.leaveTime += dt;
@@ -1012,7 +1041,8 @@ export class Enemy {
     if (this.phase !== 'alive' || this.asleep || this.observerOnly) return false;
     if (this.actor.team !== 'hostile' || this.actor.dead) return false;
     // The Calm window counts only once Calm is unlocked (before that a circling hound is just an enemy).
-    if (this.mercyOpen || (this.calmOpen && this.env.mercyUnlocked('calm')) || this.warmHandOpen) return false;
+    // A calming def's mercy window is Calm's (open only once unlocked) or the Warm Hand's; the other verbs open on `mercyOpen`.
+    if (this.def.mercy?.when === 'calming' ? (this.calmOpen && this.env.mercyUnlocked('calm')) || this.warmHandOpen : this.mercyOpen) return false;
     if (this.thief && this.thief.stolenGold > 0) return false;
     if (!dir || !Number.isFinite(dir.x) || !Number.isFinite(dir.z) || !Number.isFinite(metres) || !(metres > 0)) return false;
     const len = Math.hypot(dir.x, dir.z);

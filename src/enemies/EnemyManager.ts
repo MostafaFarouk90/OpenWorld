@@ -11,13 +11,14 @@ import type { Foe } from './foes/Foe';
 import { FoeManager } from './foes/FoeManager';
 import type { FoeDef, FoeEnd, RaiseWraithRequest } from './foes/types';
 import { scaleStats } from './level';
-import { isHoldVerb, makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyTargets, nextPulseId, type BossMercySubject, type MercyEnemyDef, type MercySubject } from './mercy';
+import { CalmCycle, calmOptionLabel, calmOptions, calmPayable, type CalmOption } from './calm';
+import { bossMercyInteractableId, makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyInteractableId, mercyTargets, nextPulseId, type BossMercySubject, type MercyEnemyDef, type MercySubject } from './mercy';
 import { MercyTally, type TallyRow } from './mercyTally';
 import { makeQuadrupedBody } from './hound/body';
 import { HOUND } from './hound/tuning';
 import type { ActorId, EnemyEvents, EnemyHost, MercyEventLike } from './ports';
 import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } from './spawners';
-import { ASH_GRAB, BOSS_MERCY, GUARD, MERCY, PAIR, WORLD_AI, AI } from './tuning';
+import { ASH_GRAB, BOSS_MERCY, GUARD, MERCY, PAIR, WARM_HAND_BURN, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions, UnlockVerb } from './types';
 import { makeLineOfSight } from './ai/perception';
 import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
@@ -86,6 +87,8 @@ export class EnemyManager {
   private readonly bossHolds = new Map<string, () => void>();
   private readonly glyphs = new Map<ActorId, { stop(): void }>();
   readonly tally = new MercyTally();
+  /** The Calm prompt's offering selection and wheel claim. */
+  private readonly calm: CalmCycle;
   private readonly unsubs: Array<() => void> = [];
   private readonly rng: () => number;
   private readonly scratch = new THREE.Vector3();
@@ -100,6 +103,7 @@ export class EnemyManager {
     opts: { seed?: number; spawners?: readonly SpawnerDef[] } = {},
   ) {
     this.rng = mulberry32(opts.seed ?? 0x5eed);
+    this.calm = new CalmCycle(host.calmUi);
     this.env = this.makeEnv();
     this.spawners = new SpawnerRegistry({
       anchors: host.anchors,
@@ -221,6 +225,7 @@ export class EnemyManager {
   }
 
   render(alpha: number): void {
+    this.calm.update();
     for (const e of this.enemies.values()) e.render(alpha);
     this.foes.render(alpha);
   }
@@ -265,20 +270,32 @@ export class EnemyManager {
       mercyOpen: () => enemy.mercyOpen,
     };
     this.subjects.set(enemy, subject);
-    // Calm's interactable is thread 1's (the Calm type, offerings and state); only Release and Spare are built here.
-    if (isHoldVerb(mercyDef.mercy.verb)) {
-      this.mercyRemovers.set(
-        enemy,
-        this.host.interaction.register(
-          makeMercyInteractable(subject, {
-            unlocked: (verb) => this.mercyUnlocked(verb),
-            lockOnTarget: () => this.host.services.get('lockOn')?.targetId ?? null,
-            complete: (s) => this.completeMercy(s),
-          }),
-        ),
-      );
-    }
+    const holdId = mercyInteractableId(enemy.slug);
+    const removeCalm =
+      mercyDef.mercy.verb === 'calm'
+        ? this.calm.register(holdId, () =>
+            enemy.mercyOpen && this.mercyUnlocked('calm') ? calmOptions(mercyDef.mercy, this.host.services.get('inventory')) : [],
+          )
+        : null;
+    const removeHold = this.host.interaction.register(
+      makeMercyInteractable(subject, {
+        unlocked: (verb) => this.mercyUnlocked(verb),
+        lockOnTarget: () => this.host.services.get('lockOn')?.targetId ?? null,
+        complete: (s) => this.completeMercy(s),
+        calmLabel: () => this.calmLabel(holdId),
+      }),
+    );
+    this.mercyRemovers.set(enemy, () => {
+      removeHold();
+      removeCalm?.();
+    });
     return enemy.id;
+  }
+
+  /** The prompt's `{offering}` for the hold `id`, or null when nothing can be paid (the prompt stays hidden). */
+  private calmLabel(id: string): string | null {
+    const option = this.calm.selected(id);
+    return option ? calmOptionLabel(option, (k) => this.host.calmUi?.text(k) ?? k) : null;
   }
 
   /** The body for a def: the procedural quadruped, or the Knight rig from the model factory. */
@@ -344,7 +361,18 @@ export class EnemyManager {
 
   // ---- mercy -------------------------------------------------------------------------------------
 
+  /** The player or an ally (the core's mercy-revoke test). */
+  private playerSide(actorId: ActorId | null): boolean {
+    if (!actorId) return false;
+    const team = this.host.actors.get(actorId)?.team;
+    return team === 'player' || team === 'ally';
+  }
+
   private completeMercy(initiator: MercySubject): void {
+    if (initiator.def.mercy.verb === 'calm') {
+      this.completeCalm(initiator);
+      return;
+    }
     const covered = mercyTargets(initiator, this.subjects.values());
     const events = mercyEvents(covered);
     // One charge per completed hold, however many wraiths the pulse covers (design 9.7).
@@ -355,6 +383,55 @@ export class EnemyManager {
       const at = initiator.feet(new THREE.Vector3());
       this.releaseFx(at);
     }
+  }
+
+  /**
+   * Calm (design section 2): pays the chosen offering (an item through `inventory.remove`, never a loot grant; or
+   * the Warm Hand's Burn), calms the beast and, for a pack leader, every packmate near it.
+   */
+  private completeCalm(initiator: MercySubject): void {
+    const enemy = this.enemies.get(initiator.actorId);
+    if (!enemy) return;
+    const inventory = this.host.services.get('inventory');
+    const option = this.calm.selected(mercyInteractableId(initiator.slug));
+    this.calm.finish();
+    if (!option || !calmPayable(option, inventory)) return;
+    // The item goes first: when it cannot be taken nothing else happens.
+    if (option.kind === 'item' && !inventory?.remove(option.itemId, option.count)) return;
+    if (option.kind === 'warmHand') this.chargeShard(WARM_HAND_BURN, 'warmHand');
+    const covered: MercySubject[] = [initiator];
+    if (enemy.spawnerId && this.packLeaderId(enemy.spawnerId) === enemy.id) covered.push(...this.packOf(enemy));
+    const events = mercyEvents(covered);
+    if (option.kind === 'warmHand') events[0] = { ...events[0], verb: 'warmHand' };
+    this.applyMercy(events);
+    this.calmFx(enemy.feet, option);
+  }
+
+  /** Packmates of a calmed leader: every living one of its group within the pack radius, struck or mid-swing, they all scatter. */
+  private packOf(leader: Enemy): MercySubject[] {
+    const out: MercySubject[] = [];
+    if (!leader.spawnerId) return out;
+    for (const e of this.enemies.values()) {
+      if (e === leader || e.spawnerId !== leader.spawnerId || !e.active || e.def.mercy?.verb !== 'calm') continue;
+      if (e.feet.distanceTo(leader.feet) <= AI.packShareRadius) {
+        const s = this.subjects.get(e);
+        if (s) out.push(s);
+      }
+    }
+    return out;
+  }
+
+  /** Drops the statuses the player put on a beast that is then calmed (actors-and-damage.md section 7). */
+  private clearPlayerStatuses(actorId: ActorId): void {
+    const status = this.host.services.get('status');
+    if (!status) return;
+    for (const entry of status.list(actorId)) if (this.playerSide(entry.sourceId)) status.clear(actorId, entry.id);
+  }
+
+  private calmFx(at: THREE.Vector3, option: CalmOption): void {
+    this.host.services.get('vfx')?.spawnEffect?.(option.kind === 'warmHand' ? 'warm-hand' : 'calm-offering', {
+      position: { x: at.x, y: at.y, z: at.z },
+    });
   }
 
   /** Burn and, at 75 or more, a Scar: thread 2's `useShard` when it exists, the bare Burn charge otherwise. */
@@ -374,7 +451,11 @@ export class EnemyManager {
       this.spawners.spendMercy(enemy.id);
       if (ev.verb === 'release') this.releaseWatchers.get(enemy.id)?.accepted();
       if (ev.verb === 'release') enemy.release();
-      else enemy.spare();
+      else if (ev.verb === 'spare') enemy.spare();
+      else {
+        this.clearPlayerStatuses(enemy.id);
+        enemy.calm();
+      }
       this.tally.mercy(ev);
       this.host.events.emit('mercy', ev);
     }
@@ -411,22 +492,31 @@ export class EnemyManager {
     const subject: BossMercySubject = {
       bossId,
       actorId,
+      verb: table.verb,
+      burn: table.burn,
       feet: (out) => {
         const a = this.host.actors.get(actorId);
         return a ? a.worldPosition(out) : out.set(0, 0, 0);
       },
     };
-    this.bossHolds.set(
-      bossId,
-      this.host.interaction.register(
-        makeBossMercyInteractable(subject, {
-          unlocked: () => this.mercyUnlocked('release'),
-          windowOpen: () => bosses.state(bossId)?.releaseOpen === true,
-          lockOnTarget: () => this.host.services.get('lockOn')?.targetId ?? null,
-          complete: (b) => this.completeBossMercy(b),
-        }),
-      ),
+    const holdId = bossMercyInteractableId(bossId);
+    const removeCalm =
+      table.verb === 'calm'
+        ? this.calm.register(holdId, () => (bosses.state(bossId)?.releaseOpen && this.mercyUnlocked('calm') ? calmOptions(table, this.host.services.get('inventory')) : []))
+        : null;
+    const removeHold = this.host.interaction.register(
+      makeBossMercyInteractable(subject, {
+        unlocked: () => this.mercyUnlocked(table.verb),
+        windowOpen: () => bosses.state(bossId)?.releaseOpen === true,
+        lockOnTarget: () => this.host.services.get('lockOn')?.targetId ?? null,
+        complete: (b) => this.completeBossMercy(b),
+        calmLabel: () => this.calmLabel(holdId),
+      }),
     );
+    this.bossHolds.set(bossId, () => {
+      removeHold();
+      removeCalm?.();
+    });
   }
 
   private stopGlyph(actorId: ActorId): void {
@@ -446,31 +536,52 @@ export class EnemyManager {
     // Read the boss position and the summons before the registry fires `boss.released`: its listeners
     // (the encounter script) may despawn the boss or its summons synchronously.
     if (!this.host.actors.get(boss.actorId)) return;
+    const calm = table.verb === 'calm';
+    const inventory = this.host.services.get('inventory');
+    // Calm: settle what is paid before the registry decides; nothing is taken until it says yes.
+    let option: CalmOption | null = null;
+    if (calm) {
+      option = this.calm.selected(bossMercyInteractableId(boss.bossId));
+      this.calm.finish();
+      if (!option || !calmPayable(option, inventory)) return;
+    }
     const at = boss.feet(new THREE.Vector3());
-    const pulseId = nextPulseId();
-    // The pulse also frees every staggered undead within 4 m, under the same pulseId and one charge.
+    const pulseId = calm ? undefined : nextPulseId();
+    // Release: the pulse also frees every staggered undead within 4 m, under the same pulseId and one charge.
+    // Calm: every living member of the boss's summon groups scatters, at any distance (the boss's summons are `ephemeral`, so no slot is spent).
     const around: MercySubject[] = [];
     const p = new THREE.Vector3();
     for (const s of this.subjects.values()) {
-      if (s.def.mercy.verb === 'release' && s.mercyOpen() && s.feet(p).distanceTo(at) <= MERCY.pulseRadius) around.push(s);
+      const e = this.enemies.get(s.actorId);
+      if (!calm && s.def.mercy.verb === 'release' && s.mercyOpen() && s.feet(p).distanceTo(at) <= MERCY.pulseRadius) around.push(s);
+      if (calm && e?.active && !!e.spawnerId && table.summonGroups?.includes(e.spawnerId)) around.push(s);
     }
-    // The registry decides: only a true release charges Burn and pays the ledger row.
+    // The registry decides: only a true release charges, takes the offering and pays the ledger row.
     if (!bosses.release(boss.bossId)) return;
     this.closeBossHold(boss.bossId);
-    this.chargeShard(table.burn, 'release');
+    // A boss.released listener may have used the loaf in between: the calm is then free, which the warning records.
+    if (option?.kind === 'item' && !inventory?.remove(option.itemId, option.count)) {
+      this.host.warn(`enemies: ${boss.bossId} calmed but ${option.itemId} could not be taken`);
+    }
+    if (option?.kind === 'warmHand') this.chargeShard(WARM_HAND_BURN, 'warmHand');
+    else if (!calm) this.chargeShard(table.burn, 'release');
     const bossEvent: MercyEventLike = {
-      verb: table.verb,
+      verb: option?.kind === 'warmHand' ? 'warmHand' : table.verb,
       tier: 'boss',
       track: table.track,
       creature: boss.bossId,
       actorId: boss.actorId,
       amount: table.amount,
-      pulseId,
+      ledgerId: table.ledgerId,
+      ...(pulseId ? { pulseId } : {}),
     };
     this.tally.mercy(bossEvent);
     this.host.events.emit('mercy', bossEvent);
-    this.applyMercy(mercyEvents(around.filter((a) => this.enemies.has(a.actorId)), pulseId));
-    this.releaseFx(at);
+    // The scattered hounds count for the tally and codex only: the boss row pays the favour (track null = codex only).
+    const scattered = mercyEvents(around.filter((a) => this.enemies.get(a.actorId)?.active), pulseId);
+    this.applyMercy(calm ? scattered.map((ev) => ({ ...ev, track: null })) : scattered);
+    if (calm) this.calmFx(at, option!);
+    else this.releaseFx(at);
   }
 
   // ---- shared state used by enemies -----------------------------------------------------------------
@@ -562,7 +673,7 @@ export class EnemyManager {
       this.goneWatchers.delete(self.id);
       this.releaseWatchers.delete(self.id);
       if (this.disposed) return;
-      watcher?.(how === 'escaped' ? 'despawned' : how);
+      watcher?.(how === 'escaped' || how === 'calmed' ? 'despawned' : how);
       this.afterGone(self.id, self.spawnerId, how);
     },
     };
@@ -575,9 +686,11 @@ export class EnemyManager {
       this.unsubs.push(this.host.events.on(type, fn));
 
     on('damage.dealt', (r) => {
+      const target = this.enemies.get(r.targetId);
+      // The core revokes a mercy on this same test (core.plugin.ts); Calm closes on it too, status ticks included.
+      if (target && r.outcome === 'hit' && r.kind !== 'script' && this.playerSide(r.attackerId)) target.markStruck();
       // A status tick (bleed, ignite) never flinches, alerts or provokes (actors-and-damage.md section 10).
       if (r.kind === 'status') return;
-      const target = this.enemies.get(r.targetId);
       if (target) target.damaged(r.attackerId, r.outcome, r.poiseDealt, r.staggered, r.killed, r.kind);
       const attacker = r.attackerId ? this.enemies.get(r.attackerId) : undefined;
       if (attacker && r.outcome === 'hit' && r.kind === 'melee') this.igniteOnBite(attacker, r.targetId);
@@ -739,6 +852,7 @@ export class EnemyManager {
     this.spawners.dispose();
     this.foes.dispose();
     for (const id of [...this.bossHolds.keys()]) this.closeBossHold(id);
+    this.calm.dispose();
     for (const id of [...this.glyphs.keys()]) this.stopGlyph(id);
     for (const e of [...this.enemies.values()]) e.despawn();
     this.enemies.clear();

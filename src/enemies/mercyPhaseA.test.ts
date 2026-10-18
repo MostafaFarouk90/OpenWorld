@@ -158,7 +158,7 @@ describe('boss Release hold', () => {
     expect(b.fake.bossReleases).toEqual(['ashen-prior']);
     expect(b.calls).toEqual([[MERCY.bossReleaseBurn, 'release']]);
     const mercies = b.fake.bus.of('mercy');
-    expect(mercies[0]).toMatchObject({ verb: 'release', tier: 'boss', track: 'ashwalkers', creature: 'ashen-prior', amount: 4 });
+    expect(mercies[0]).toMatchObject({ verb: 'release', tier: 'boss', track: 'ashwalkers', creature: 'ashen-prior', amount: 4, ledgerId: 'D01' });
     expect(mercies.slice(1).map((m) => m.actorId).sort()).toEqual([b.ids[0], b.ids[1]].sort());
     expect(new Set(mercies.map((m) => m.pulseId)).size).toBe(1);
     expect(b.bossHold()).toBeUndefined();
@@ -200,7 +200,8 @@ describe('boss Release hold', () => {
     b.fake.stagger(b.ids[0], 'player');
     b.fake.bus.on('boss.released', () => b.manager.service.despawnGroup('pack'));
     const i = b.bossHold()!;
-    expect(i.promptKey).toBe('enemies.mercy.release.boss');
+    expect(i.promptKey).toBe('enemies.mercy.release');
+    expect(i.promptParams?.()).toEqual({ cost: 20 });
     i.onInteract(b.fake.player);
     const mercies = b.fake.bus.of('mercy');
     expect(mercies.map((m) => m.tier)).toContain('boss');

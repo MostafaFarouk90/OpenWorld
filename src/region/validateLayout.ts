@@ -13,6 +13,12 @@ export interface ValidateOptions {
   cell?: number;
   /** Positions of things that must stay clear of every blocking structure (the old training dummies). */
   keepClear?: Array<{ id: string; x: number; z: number; radius: number }>;
+  /**
+   * The anchor every spawn-cluster flood starts from (default `brightwater.player-spawn`). `null` is for a layout with
+   * no tutorial spawn (the Dead Road's): every cluster then needs a `flood-seed` anchor or an open one, and none is
+   * the spawn's.
+   */
+  spawnId?: string | null;
 }
 
 const ID = /^[a-z0-9][a-z0-9-]*(\.[a-z0-9-]+)+$/;
@@ -139,9 +145,10 @@ export function validateLayout(layout: LayoutData, heightAt: HeightFn, opts: Val
 
   // Walkability: one grid per cluster of nearby anchors (a world-sized grid would be millions of cells), flooded from
   // the cluster's seed. The tutorial cluster floods from the player spawn.
-  const spawn = layout.anchors.find((a) => a.id === 'brightwater.player-spawn');
-  if (!spawn) {
-    errors.push('missing anchor "brightwater.player-spawn"');
+  const spawnId = opts.spawnId === undefined ? 'brightwater.player-spawn' : opts.spawnId;
+  const spawn = spawnId === null ? undefined : layout.anchors.find((a) => a.id === spawnId);
+  if (spawnId !== null && !spawn) {
+    errors.push(`missing anchor "${spawnId}"`);
     return errors;
   }
   const anchors = layout.anchors.filter((a) => finite(a.x, a.z));
@@ -208,9 +215,9 @@ export function validateLayout(layout: LayoutData, heightAt: HeightFn, opts: Val
       const iz = Math.floor((z - z0) / cell);
       return ix < 0 || iz < 0 || ix >= w || iz >= h ? -1 : iz * w + ix;
     };
-    const isSpawnCluster = members.includes(spawn as (typeof anchors)[number]);
+    const isSpawnCluster = spawn !== undefined && members.includes(spawn as (typeof anchors)[number]);
     const seedAnchor = isSpawnCluster
-      ? spawn
+      ? spawn!
       : members.find((a) => a.tags?.includes('flood-seed')) ?? members.find((a) => !gated(a) && !a.onStructure && blockedGrid[cellOf(a.x, a.z)] === 0);
     if (!seedAnchor) continue;
     const start = cellOf(seedAnchor.x, seedAnchor.z);

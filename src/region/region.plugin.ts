@@ -9,6 +9,7 @@ import { buildFogWall } from './fogWall';
 import { buildPoiProps } from './poiProps';
 import { watchTollPost } from './tollPost';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
+import { DEADROAD_LAYOUT } from './deadroad.layout';
 import type { CoreContext, GamePlugin } from './coreTypes';
 import type { LayoutData } from './layoutTypes';
 import { buildProps } from './props';
@@ -21,7 +22,13 @@ import { REGION_STRINGS_EN } from './strings.en';
 import { validateLayout } from './validateLayout';
 
 export interface RegionPluginOptions {
+  /** One layout only (tests). Without `layout` or `layouts` the plugin lays out Brightwater and the Dead Road. */
   layout?: LayoutData;
+  /**
+   * Several layouts resolved together. Only anchors, triggers and structures are used from the later ones; the first
+   * holds the barley fields and the tutorial spawn (NPCs are read from BRIGHTWATER_LAYOUT by the npcs plugin).
+   */
+  layouts?: LayoutData[];
   heightAt?: (x: number, z: number) => number;
 }
 
@@ -32,7 +39,8 @@ export const BRIGHTWATER_DISCOVERED_FLAG = discoveredFlag('brightwater');
 export const BARLEY_FLAG = 'world.brightwater.barley';
 
 export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
-  const layout = opts.layout ?? BRIGHTWATER_LAYOUT;
+  const layouts = opts.layouts ?? (opts.layout ? [opts.layout] : [BRIGHTWATER_LAYOUT, DEADROAD_LAYOUT]);
+  const layout = layouts[0];
   const height = opts.heightAt ?? heightAt;
   const cleanups: Array<() => void> = [];
 
@@ -53,20 +61,25 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
       try {
         // The layout is static data; checking it costs a 250k-cell flood fill, so only dev builds and tests pay.
         if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
-          const errors = validateLayout(layout, height);
+          // Only the first layout holds the tutorial spawn the flood fill starts from.
+          const errors = layouts.flatMap((l, i) => validateLayout(l, height, i === 0 ? {} : { spawnId: null }));
           if (errors.length) throw new Error(`region: invalid layout:\n${errors.join('\n')}`);
         }
 
         cleanups.push(ctx.strings.register('en', REGION_STRINGS_EN));
 
-        const resolved = resolveLayout(layout, height);
-        for (const a of resolved.anchors) cleanups.push(ctx.anchors.define({ id: a.id, position: a.position, yaw: a.yaw, tags: a.tags }));
-        for (const t of resolved.triggers) cleanups.push(ctx.triggers.add({ id: t.id, who: t.who, once: t.once, shape: t.shape }));
+        for (const l of layouts) {
+          const resolved = resolveLayout(l, height);
+          for (const a of resolved.anchors) cleanups.push(ctx.anchors.define({ id: a.id, position: a.position, yaw: a.yaw, tags: a.tags }));
+          for (const t of resolved.triggers) cleanups.push(ctx.triggers.add({ id: t.id, who: t.who, once: t.once, shape: t.shape }));
+        }
 
         const lookup = new BuildingLookup();
-        const structures = buildStructures({ ...ctx, rapier: ctx.physics.rapier, ...coreFactories(ctx) }, layout, height, lookup);
-        cleanups.push(() => structures.dispose());
-        void structures.upgrade();
+        const built = layouts.map((l) => buildStructures({ ...ctx, rapier: ctx.physics.rapier, ...coreFactories(ctx) }, l, height, lookup));
+        for (const structures of built) {
+          cleanups.push(() => structures.dispose());
+          void structures.upgrade();
+        }
 
         // Wynn's field takes R01's outcome and re-derives it on a loaded save.
         const solid = layout.structures.filter((st) => st.mode !== 'open');
@@ -137,7 +150,12 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
           waystoneObject(anchorId) {
             const stone = ctx.anchors.find(anchorId);
             if (!stone?.tags?.includes('waystone')) return undefined;
-            return structures.objectById.get(anchorId.replace('.', '-'));
+            const key = anchorId.replace('.', '-');
+            for (const structures of built) {
+              const found = structures.objectById.get(key);
+              if (found) return found;
+            }
+            return undefined;
           },
         };
         cleanups.push(ctx.services.provide('region', service));

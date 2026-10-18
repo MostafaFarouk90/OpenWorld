@@ -16,6 +16,7 @@ export type AiState =
   | 'yield'
   | 'released'
   | 'spared'
+  | 'calmed'
   | 'dead';
 
 export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse' | 'ember-hound' | 'watch-guard' | 'guildhall-thug';
