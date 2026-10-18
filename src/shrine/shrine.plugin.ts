@@ -143,7 +143,7 @@ const shrinePlugin: GamePlugin = {
     };
     const respec = new RespecFlow({
       progression: () => progression as unknown as Partial<RespecProgression>,
-      dialog: () => ctx.services.get('respecDialog' as never) as RespecDialog | undefined,
+      dialog: () => ctx.services.get('respecModal' as never) as RespecDialog | undefined,
       lit: shrineLit,
       inCombat: () => waystones()?.hostileAggro ?? false,
       now: () => simTime,
@@ -208,6 +208,16 @@ const shrinePlugin: GamePlugin = {
         }
       },
     });
+    // The "Strike on the beat" prompt shows near the next stone and hides when it is struck or the player leaves.
+    type PromptsLike = { show?(m: string, a: string, key: string, o?: { force?: boolean }): void; hide?(m?: string): void };
+    const prompts = () => ctx.services.get('prompts' as never) as PromptsLike | undefined;
+    let promptShown = false;
+    const setPrompt = (want: boolean) => {
+      if (want === promptShown) return;
+      promptShown = want;
+      if (want) prompts()?.show?.('wardstone-strike', 'attack1', 'prompt.wardstone-strike');
+      else prompts()?.hide?.('wardstone-strike');
+    };
     // M05 starts the rhythm: before Tobb joins, the stones ignore the player.
     let rhythmOpen = false;
     ctx.gates.watch(
@@ -295,6 +305,12 @@ const shrinePlugin: GamePlugin = {
 
         const now = performance.now();
         const playing = ctx.input.contexts.top() === 'gameplay' && alive;
+        const nextIdx = rhythmOpen && playing ? wardstones.nextIndex() : null;
+        const nextStone = nextIdx === null ? undefined : stonePositions().find((s) => s.index === nextIdx);
+        setPrompt(
+          !!nextStone &&
+            Math.hypot(nextStone.x - ctx.player.feet.x, nextStone.z - ctx.player.feet.z) <= T.wardstones.promptRange,
+        );
         if (!playing) wardstones.reset(); // a menu, dialogue or death never counts as a skipped beat
         else if (rhythmOpen && wardstones.nextIndex() !== null) {
           // Strike first: a press sampled late in the tick must not be pre-empted by its own beat's miss.
@@ -313,6 +329,7 @@ const shrinePlugin: GamePlugin = {
         visuals.update(frameTime);
       },
       dispose() {
+        setPrompt(false);
         respec.close();
         respecOff?.();
         cooled.teardown();
