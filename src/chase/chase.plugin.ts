@@ -37,6 +37,13 @@ function courierFigure(ctx: GameContext): THREE.Object3D | null {
 }
 
 let cleanup: (() => void) | null = null;
+/** The live director, for the test-only helpers in `testing/headless.ts`. */
+let current: ChaseDirector | null = null;
+
+/** Test-only: catch the courier now (normal `chase.caught`, hold released). False unless a chase is running. */
+export function catchCourierForTest(): boolean {
+  return current?.catchNow() ?? false;
+}
 
 /** Slice 2 thread 18: the M10 courier chase (plans/slice-2-stealth-chase.md section 7). */
 export default {
@@ -58,7 +65,7 @@ export default {
       const quests = () => ctx.services.get('quests');
       let director: ChaseDirector | null = null;
       let routeKey = '';
-      offs.push(() => director?.dispose());
+      offs.push(() => (director?.dispose(), (current = null)));
 
       /** Builds the director once the route anchors exist (and again if they change); the timer comes from the par time. */
       let sinceCheck = Infinity;
@@ -76,7 +83,7 @@ export default {
         // A rebuilt route ends any running chase cleanly first (hold released, chase.lost emitted).
         director?.abort();
         director?.dispose();
-        director = null;
+        director = current = null;
         if (nodes.length === 0) return null;
         const problems = validateRoute(nodes);
         const timer = problems.length ? NaN : timerFor(nodes, MIN_CLASS_STAMINA);
@@ -84,7 +91,7 @@ export default {
           console.warn(`chase: ${M10_CHASE.id} route is not solvable; chase disabled`, problems);
           return null;
         }
-        director = new ChaseDirector({ ...M10_CHASE, timer }, nodes, {
+        director = current = new ChaseDirector({ ...M10_CHASE, timer }, nodes, {
           find: (id) => ctx.anchors.find(id),
           playerFeet: () => ctx.player.feet,
           live: (def) => questLive(quests(), def.quest),
