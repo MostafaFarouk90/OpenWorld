@@ -56,16 +56,18 @@ export class CompanionPortrait implements HudWidgetView {
       ids = [];
     }
     for (const id of [...this.rows.keys()]) if (!ids.includes(id)) this.left(id);
-    for (const id of ids) {
-      let actorId: string | null = null;
-      try {
-        actorId = this.source.actorId?.(id) ?? null;
-      } catch {
-        actorId = null;
-      }
-      this.joined(id, actorId);
-    }
+    for (const id of ids) this.joined(id, this.queryActor(id));
+    // A load starts from a clean slate: aura events arrive again if it is still on.
+    for (const row of this.rows.values()) row.aura = false;
     this.update();
+  }
+
+  private queryActor(id: string): string | null {
+    try {
+      return this.source.actorId?.(id) ?? null;
+    } catch {
+      return null;
+    }
   }
 
   joined(companionId: string, actorId: string | null): void {
@@ -106,12 +108,22 @@ export class CompanionPortrait implements HudWidgetView {
 
   update(): void {
     setShown(this.element, this.rows.size > 0);
-    for (const row of this.rows.values()) {
-      let a: CompanionActorView | null | undefined;
-      try {
-        a = row.actorId ? this.source.actor?.(row.actorId) : null;
-      } catch {
-        a = null;
+    for (const [id, row] of this.rows) {
+      const read = (): CompanionActorView | null | undefined => {
+        try {
+          return row.actorId ? this.source.actor?.(row.actorId) : null;
+        } catch {
+          return null;
+        }
+      };
+      let a = read();
+      // The actor may spawn after the HUD's save.loaded handler: keep asking while it is unknown.
+      if (!a) {
+        const found = this.queryActor(id);
+        if (found) {
+          row.actorId = found;
+          a = read();
+        }
       }
       row.fill.style.width = a ? pct(barFraction(a.health, a.maxHealth)) : '0%';
       row.pip.className = row.aura ? 'owg-aura-pip owg-aura-on' : 'owg-aura-pip';

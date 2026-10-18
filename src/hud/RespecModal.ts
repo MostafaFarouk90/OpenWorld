@@ -5,8 +5,11 @@ import { makeEl, type Translate } from './widget';
 /** Thread 7's `respecQuote()` reduced to what the dialog shows. */
 export interface RespecQuote {
   free: boolean;
-  gold: number;
-  canAfford: boolean;
+  gold?: number;
+  /** Alias of `gold`. */
+  cost?: number;
+  /** When absent it is derived: free, or the price fits in the gold the player holds. */
+  canAfford?: boolean;
 }
 
 export interface RespecModalRequest {
@@ -34,6 +37,8 @@ export interface RespecModalDeps {
   /** `ctx.hud.openModal` bound with context 'menu'; null when another modal is open. */
   openModal(widget: { id: string; element: ElementLike; dispose?(): void }): (() => void) | null;
   t?: Translate;
+  /** The player's gold (inventory.gold); undefined when unknown, in which case the price is assumed affordable. */
+  gold?(): number | undefined;
   /** Where Esc is heard (window in the browser). */
   keys?: {
     addEventListener(type: 'keydown', listener: (e: { code?: string; key?: string }) => void): void;
@@ -49,8 +54,18 @@ export function createRespecModal(deps: RespecModalDeps): RespecModalService {
       if (active) return false;
       const quote = request?.quote;
       if (!quote || typeof request.confirm !== 'function' || typeof request.cancel !== 'function') return false;
-      const gold = Number.isFinite(quote.gold) ? Math.max(0, Math.round(quote.gold)) : 0;
-      const canAfford = quote.free || quote.canAfford;
+      const raw = [quote.gold, quote.cost].find((n): n is number => typeof n === 'number' && Number.isFinite(n));
+      const gold = raw === undefined ? 0 : Math.max(0, Math.round(raw));
+      let have: number | undefined;
+      try {
+        have = deps.gold?.();
+      } catch {
+        have = undefined;
+      }
+      // Unknown affordability is assumed true; the caller (thread 7) refuses the spend if it is not.
+      const canAfford =
+        quote.free === true ||
+        (typeof quote.canAfford === 'boolean' ? quote.canAfford : typeof have === 'number' && Number.isFinite(have) ? gold <= have : true);
 
       const { doc } = deps;
       const element = makeEl(doc, 'div', 'owg-respec');
@@ -98,9 +113,15 @@ export function createRespecModal(deps: RespecModalDeps): RespecModalService {
         id: 'respec',
         element,
         dispose: () => {
-          // Closed from outside (plugin teardown): no decision was made, so call no callback.
+          // Closed from outside (plugin teardown): treat it as a cancel, once, so the caller never holds a pending respec.
+          if (decided) return;
           decided = true;
           teardown();
+          try {
+            request.cancel();
+          } catch (e) {
+            console.warn('respecModal: callback failed', e);
+          }
         },
       });
       if (!closer) {

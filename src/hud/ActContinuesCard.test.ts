@@ -3,12 +3,12 @@ import { ACT_CONTINUES_SECONDS, ACT_CONTINUES_TRIGGER, ActContinuesCard } from '
 import { StubDocument } from './dom';
 
 function keys() {
-  const set = new Set<() => void>();
+  const set = new Set<(e: { repeat?: boolean }) => void>();
   return {
     set,
-    addEventListener: (_t: 'keydown', l: () => void) => void set.add(l),
-    removeEventListener: (_t: 'keydown', l: () => void) => void set.delete(l),
-    press: () => [...set].forEach((l) => l()),
+    addEventListener: (_t: 'keydown', l: (e: { repeat?: boolean }) => void) => void set.add(l),
+    removeEventListener: (_t: 'keydown', l: (e: { repeat?: boolean }) => void) => void set.delete(l),
+    press: (repeat = false) => [...set].forEach((l) => l({ repeat })),
   };
 }
 
@@ -39,6 +39,7 @@ describe('ActContinuesCard', () => {
     const c = new ActContinuesCard(new StubDocument(), { keys: k });
     c.onTrigger(ACT_CONTINUES_TRIGGER);
     expect(k.set.size).toBe(1);
+    c.update(0.6);
     k.press();
     expect(c.visible).toBe(false);
     expect(k.set.size).toBe(0);
@@ -66,5 +67,25 @@ describe('ActContinuesCard', () => {
     c.onTrigger(ACT_CONTINUES_TRIGGER);
     c.dispose();
     expect(k.set.size).toBe(0);
+  });
+
+  it('a held key (auto-repeat) and a key pressed straight away do not dismiss', () => {
+    const k = keys();
+    const c = new ActContinuesCard(new StubDocument(), { keys: k });
+    c.onTrigger(ACT_CONTINUES_TRIGGER);
+    k.press(false); // too soon after opening
+    k.press(true);
+    expect(c.visible).toBe(true);
+    c.update(0.6);
+    for (let i = 0; i < 20; i++) k.press(true); // held W keeps repeating
+    expect(c.visible).toBe(true);
+    k.press(false); // a fresh press after the delay
+    expect(c.visible).toBe(false);
+  });
+
+  it('does not show when the wall is already open', () => {
+    const c = new ActContinuesCard(new StubDocument(), { alreadyOpen: () => true });
+    c.onTrigger(ACT_CONTINUES_TRIGGER);
+    expect(c.visible).toBe(false);
   });
 });

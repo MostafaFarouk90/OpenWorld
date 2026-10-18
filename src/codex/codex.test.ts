@@ -197,7 +197,11 @@ async function rig(opts: { enemies?: () => unknown; noHud?: boolean } = {}): Pro
     },
     persist: { register: (p: any) => void saved.set(p.key, p) },
     systems: { add: (s: any) => void systems.push(s) },
-    input: { actions: { pressed: (a: string) => pressed.has(a) }, contexts: { top: () => r.top } },
+    input: {
+      actions: { pressed: (a: string) => pressed.has(a) },
+      contexts: { top: () => r.top },
+      bindings: { glyph: (a: string) => ({ mercy: 'G', surgeLeap: 'Q', codex: 'K', menu: 'Tab' })[a] ?? '?' },
+    },
     actors: { get: (id: string) => (id === 'w1' ? { kind: 'ash-wraith' } : undefined) },
     hud: {
       get modalOpen() {
@@ -265,13 +269,17 @@ describe('codex plugin', () => {
     expect(r.codex.has('scarecrow')).toBe(false);
   });
 
-  it('unlocks on ability.learned, companion.joined, boss.started, aggro, scar, warmth', async () => {
+  it('unlocks on ability.learned, skill.learned, boss.started, aggro, scar, warmth', async () => {
     const r = await rig();
     r.events.emit('ability.learned', { id: 'surge-leap', source: 'm03' });
     r.events.emit('ability.learned', { id: 'something-else', source: 'x' });
     expect(r.codex.has('howto.surge-leap')).toBe(true);
     expect(r.codex.has('howto.rally-cry')).toBe(false);
-    r.events.emit('companion.joined', { companionId: 'tobb', actorId: 'a' });
+    r.events.emit('companion.joined' as any, { companionId: 'tobb', actorId: 'a' });
+    expect(r.codex.has('howto.rally-cry')).toBe(false); // joining a companion is not learning Rally Cry
+    r.events.emit('skill.learned' as any, { skillId: 'knight.oathward' });
+    expect(r.codex.has('howto.rally-cry')).toBe(false);
+    r.events.emit('skill.learned' as any, { skillId: 'knight.rallyCry' });
     expect(r.codex.has('howto.rally-cry')).toBe(true);
     r.events.emit('boss.started', { bossId: 'ashen-prior', actorId: 'b' });
     expect(r.codex.has('ashen-prior')).toBe(true);
@@ -290,7 +298,7 @@ describe('codex plugin', () => {
     const r = await rig({ enemies: () => tally });
     r.flags.set('prompt.mercy.count', 5);
     r.flags.set('prompt.surgeLeap.count', 1);
-    r.flags.set('ability.rally-cry.learned', true);
+    r.services.provide('progression' as any, { learned: (id: string) => id === 'knight.rallyCry' } as any);
     // A save without a codex entry: the persistable's load is never called.
     expect(r.codex.has('howto.release')).toBe(false);
     r.events.emit('save.loaded', { slot: 'a' });
@@ -311,7 +319,7 @@ describe('codex plugin', () => {
   it('backfill after a codex load keeps loaded ids', async () => {
     const r = await rig();
     r.saved.get('codex')!.load({ unlocked: ['lore.leap-a'] }, 1);
-    r.flags.set('warmth.tier', 2);
+    r.flags.set('shrine.quenchstone.lit', true);
     r.events.emit('save.loaded', { slot: 'a' });
     expect(r.codex.has('lore.leap-a')).toBe(true);
     expect(r.codex.has('howto.warmth-tier')).toBe(true);
@@ -377,5 +385,59 @@ describe('codex plugin', () => {
     const r = await rig();
     r.codex.open('ash-wraith');
     expect(textOf(r.widget().element)).toContain('???');
+  });
+
+  it('Warmth Tier backfills from the warmth service tier, not a stored flag', async () => {
+    const r = await rig();
+    r.flags.set('warmth.tier', 3); // a flag that never exists in the real game: must not count
+    r.events.emit('save.loaded', { slot: 'a' });
+    expect(r.codex.has('howto.warmth-tier')).toBe(false);
+    r.services.provide('warmth' as any, { tier: () => 2 } as any);
+    r.events.emit('save.loaded', { slot: 'a' });
+    expect(r.codex.has('howto.warmth-tier')).toBe(true);
+  });
+
+  it('a lit shrine flag unlocks Warmth Tier live and on load', async () => {
+    const r = await rig();
+    r.flags.set('shrine.hushed-anvil.lit', true);
+    r.events.emit('flag.changed' as any, { key: 'shrine.hushed-anvil.lit', value: true });
+    expect(r.codex.has('howto.warmth-tier')).toBe(true);
+  });
+
+  it('shows bound glyphs, not hard-coded keys, and follows a rebind', async () => {
+    const r = await rig();
+    r.codex.unlock('howto.release');
+    r.codex.unlock('howto.surge-leap');
+    r.codex.open('howto.release');
+    let text = textOf(r.widget().element);
+    expect(text).toContain('Hold G near');
+    expect(text).toContain('K or Tab: close');
+    expect(text).not.toContain('Hold T');
+    r.widget().select('howto.surge-leap');
+    expect(textOf(r.widget().element)).toContain('Press Q to leap');
+  });
+
+  it('polls the mercy tally at most 10 Hz while open', () => {
+    let t = 0;
+    const calls = vi.fn(() => ({ release: 1, spare: 0, calm: 0, killed: 0 }));
+    const view = createCodexModal({
+      has: () => true,
+      markRead: () => {},
+      isRead: () => true,
+      tally: calls,
+      t: (k) => k,
+      now: () => t,
+      glyph: () => 'x',
+    });
+    view.select('ash-wraith');
+    const base = calls.mock.calls.length;
+    for (let i = 0; i < 30; i++) {
+      t += 1;
+      view.update?.(1 / 60);
+    }
+    expect(calls.mock.calls.length - base).toBeLessThanOrEqual(1);
+    t += 200;
+    view.update?.(1 / 60);
+    expect(calls.mock.calls.length - base).toBeGreaterThanOrEqual(1);
   });
 });

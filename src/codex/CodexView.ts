@@ -14,8 +14,22 @@ export interface CodexViewDeps {
   /** Counts for a kind, or null when the tally service is absent (zeros are shown). */
   tally(kind: string): MercyCounts | null;
   t(key: string, params?: Record<string, string | number>): string;
+  /** `bindings.glyph(action)`; shown text never hard-codes a key. */
+  glyph?(action: string): string;
+  /** Milliseconds clock for the tally poll (tests). */
+  now?(): number;
   doc?: DocumentLike;
 }
+
+/** The action whose glyph fills `{key}` in an entry's body. */
+const ENTRY_ACTION: Readonly<Record<string, string>> = {
+  'howto.release': 'mercy',
+  'howto.spare': 'mercy',
+  'howto.surge-leap': 'surgeLeap',
+};
+
+/** The tally is read at most this often while the codex is open (10 Hz). */
+const TALLY_POLL_MS = 100;
 
 export interface CodexModalWidget extends HudWidget {
   /** Keyboard `code` (ArrowLeft, ArrowRight, ArrowUp, ArrowDown). Close keys are the plugin's (input actions). */
@@ -40,6 +54,20 @@ export function createCodexModal(deps: CodexViewDeps): CodexModalWidget {
   const index: Record<CodexTab, number> = { bestiary: 0, lore: 0, howto: 0 };
   let disposed = false;
   let signature = '';
+  const glyph = (a: string): string => {
+    try {
+      return deps.glyph?.(a) ?? '?';
+    } catch {
+      return '?';
+    }
+  };
+  const now = deps.now ?? (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
+  let cached: { kind: string; at: number; value: MercyCounts | null } | null = null;
+  const tally = (kind: string): MercyCounts | null => {
+    const t = now();
+    if (!cached || cached.kind !== kind || t - cached.at >= TALLY_POLL_MS || t < cached.at) cached = { kind, at: t, value: deps.tally(kind) };
+    return cached.value;
+  };
 
   const el = (tag: string, cls: string, text?: string): ElementLike => {
     const e = doc.createElement(tag);
@@ -90,9 +118,9 @@ export function createCodexModal(deps: CodexViewDeps): CodexModalWidget {
     if (sel) {
       const unlocked = deps.has(sel.id);
       detail.append(el('h3', 'codex-modal__name', unlocked ? deps.t(sel.nameKey) : deps.t('codex.locked')));
-      detail.append(el('p', 'codex-modal__body', unlocked ? deps.t(sel.bodyKey) : deps.t('codex.lockedBody')));
+      detail.append(el('p', 'codex-modal__body', unlocked ? deps.t(sel.bodyKey, { key: glyph(ENTRY_ACTION[sel.id] ?? '') }) : deps.t('codex.lockedBody')));
       if (sel.tab === 'bestiary' && unlocked) {
-        const c = deps.tally(sel.id) ?? ZERO_COUNTS;
+        const c = tally(sel.id) ?? ZERO_COUNTS;
         detail.append(el('p', 'codex-modal__tally', deps.t('codex.tally', { release: c.release, spare: c.spare, calm: c.calm })));
       }
     }
@@ -101,15 +129,15 @@ export function createCodexModal(deps: CodexViewDeps): CodexModalWidget {
     Object.assign(body.style, { display: 'flex', gap: '16px', overflow: 'hidden' });
     body.append(list, detail);
 
-    root.replaceChildren(title, tabs, body, el('p', 'codex-modal__hint', deps.t('codex.hint')));
+    root.replaceChildren(title, tabs, body, el('p', 'codex-modal__hint', deps.t('codex.hint', { codex: glyph('codex'), menu: glyph('menu') })));
     signature = stateSignature();
   }
 
   function stateSignature(): string {
     const sel = selected();
-    const c = sel && sel.tab === 'bestiary' ? deps.tally(sel.id) : null;
+    const c = sel && sel.tab === 'bestiary' ? tally(sel.id) : null;
     const unlocks = currentEntries().map((e) => (deps.has(e.id) ? 1 : 0)).join('');
-    return `${tab}|${index[tab]}|${unlocks}|${c ? `${c.release},${c.spare},${c.calm}` : '-'}`;
+    return `${tab}|${index[tab]}|${unlocks}|${glyph('mercy')}${glyph('surgeLeap')}${glyph('codex')}${glyph('menu')}|${c ? `${c.release},${c.spare},${c.calm}` : '-'}`;
   }
 
   function setTab(next: CodexTab): void {

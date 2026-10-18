@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { StubDocument, StubElement, textOf, type ElementLike } from './dom';
 import { createRespecModal, type RespecQuote } from './RespecModal';
 
-function setup(opts: { modalBusy?: boolean } = {}) {
+function setup(opts: { modalBusy?: boolean; gold?: number } = {}) {
   const listeners = new Set<(e: { code?: string }) => void>();
   const keys = {
     addEventListener: (_t: 'keydown', l: (e: { code?: string }) => void) => void listeners.add(l),
@@ -13,6 +13,7 @@ function setup(opts: { modalBusy?: boolean } = {}) {
     doc: new StubDocument(),
     t: (k, p) => (p ? `${k}:${JSON.stringify(p)}` : k),
     keys,
+    gold: () => opts.gold,
     openModal: (w) => {
       if (opts.modalBusy) return null;
       state.opened++;
@@ -121,5 +122,46 @@ describe('respecModal', () => {
     s.svc.open({ quote: { free: true, gold: 0, canAfford: true }, confirm, cancel: vi.fn() });
     expect(() => s.btn('confirm').click()).not.toThrow();
     expect(s.make({ free: true, gold: 0, canAfford: true }).ok).toBe(true);
+  });
+
+  it('a quote without canAfford is derived from the held gold, and cost aliases gold', () => {
+    const poor = setup({ gold: 50 });
+    poor.make({ free: false, cost: 120 });
+    expect(textOf(poor.state.el!)).toContain('"gold":120');
+    expect(poor.btn('confirm').disabled).toBe(true);
+
+    const rich = setup({ gold: 500 });
+    rich.make({ free: false, gold: 120 });
+    expect(rich.btn('confirm').disabled).toBe(false);
+
+    const unknown = setup();
+    unknown.make({ free: false, cost: 9999 });
+    expect(unknown.btn('confirm').disabled).toBe(false); // assumed affordable; the caller refuses
+  });
+
+  it('closing from outside (plugin teardown) calls cancel exactly once', () => {
+    let dispose: (() => void) | undefined;
+    const svc = createRespecModal({
+      doc: new StubDocument(),
+      openModal: (w) => {
+        dispose = w.dispose;
+        return () => w.dispose?.();
+      },
+    });
+    const cancel = vi.fn();
+    const confirm = vi.fn();
+    expect(svc.open({ quote: { free: true }, confirm, cancel })).toBe(true);
+    dispose!();
+    dispose!();
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(svc.open({ quote: { free: true }, confirm, cancel })).toBe(true);
+  });
+
+  it('a normal cancel through the closer does not double-call cancel', () => {
+    const s = setup();
+    const r = s.make({ free: true });
+    s.btn('cancel').click();
+    expect(r.cancel).toHaveBeenCalledTimes(1);
   });
 });

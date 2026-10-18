@@ -76,4 +76,20 @@ describe('CompanionPortrait', () => {
     }).not.toThrow();
     expect(p.count).toBe(0);
   });
+
+  it('picks up an actor that spawns after the load, and reload resets the aura', () => {
+    const { p, ids, actors } = make(['tobb']);
+    ids.map.tobb = null; // not spawned yet
+    p.reload();
+    p.aura('tobb', true);
+    p.update();
+    const fill = () => p.element.children[0]!.children[1]!.children[0]!.style.width;
+    expect(fill()).toBe('0%');
+    ids.map.tobb = 'a1';
+    actors.a1 = { health: 25, maxHealth: 100 };
+    p.update();
+    expect(fill()).toBe('25%');
+    p.reload();
+    expect(p.element.children[0]!.children[0]!.children[1]!.className).not.toContain('aura-on');
+  });
 });
