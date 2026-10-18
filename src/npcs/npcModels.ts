@@ -78,6 +78,7 @@ export function prepareNpcModel(loader: NpcModelLoader, def: NpcDef): LoadedNpcM
   });
   hide.forEach((o) => (o.visible = false));
   model.rotation.y = Math.PI;
+  def.decorate?.(model);
   return { model, clips };
 }
 

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
-import { MAX_BARLEY_INSTANCES, buildBarley } from './barley';
+import { MAX_BARLEY_INSTANCES, SCORCHED_KEEP, barleyVariantOf, buildBarley } from './barley';
 import { pointInFootprint } from './geometry';
 import type { FieldSpec, StructureSpec } from './layoutTypes';
 
@@ -87,5 +87,62 @@ describe('buildBarley', () => {
     h.dispose();
     h.dispose();
     expect(parent.children).toHaveLength(0);
+  });
+});
+
+
+describe('R01 variants (world.brightwater.barley)', () => {
+  const fields = [
+    { id: 'barley-west', x0: 0, z0: 0, x1: 20, z1: 20, count: 400 },
+    { id: 'barley-east', x0: 40, z0: 0, x1: 60, z1: 20, count: 400 },
+  ];
+  const flat = () => 0;
+  const count = (variant: 'unset' | 'scorched' | 'saved') =>
+    buildBarley(fields, flat, 1, [], { variant, variantFields: ['barley-west'] });
+
+  it('reads the flag: only the two known words count', () => {
+    expect(barleyVariantOf('scorched')).toBe('scorched');
+    expect(barleyVariantOf('saved')).toBe('saved');
+    for (const v of [undefined, null, '', 'burnt', 1, true, {}]) expect(barleyVariantOf(v)).toBe('unset');
+  });
+
+  it('thins only the listed field when scorched', () => {
+    const base = count('unset');
+    const burnt = count('scorched');
+    expect(base.instanceCount).toBe(800);
+    expect(burnt.instanceCount).toBe(400 + Math.floor(400 * SCORCHED_KEEP));
+    base.dispose();
+    burnt.dispose();
+  });
+
+  it('keeps the saved field as full as the untouched one but lusher', () => {
+    const base = count('unset');
+    const saved = count('saved');
+    expect(saved.instanceCount).toBe(base.instanceCount);
+    const colour = (h: ReturnType<typeof count>) => ((h.object.getObjectByName('barley-instances') as import('three').InstancedMesh).instanceColor!.array as Float32Array).slice(0, 3);
+    expect(colour(saved)[1]).not.toBeCloseTo(colour(base)[1], 2);
+    base.dispose();
+    saved.dispose();
+  });
+
+  it('darkens the scorched cards', () => {
+    const burnt = count('scorched');
+    const base = count('unset');
+    const lum = (h: ReturnType<typeof count>) => {
+      const a = (h.object.getObjectByName('barley-instances') as import('three').InstancedMesh).instanceColor!.array as Float32Array;
+      return (a[0] + a[1] + a[2]) / 3;
+    };
+    expect(lum(burnt)).toBeLessThan(lum(base));
+    base.dispose();
+    burnt.dispose();
+  });
+
+  it('ignores a variant when no field is listed, and an unknown field id', () => {
+    const a = buildBarley(fields, flat, 1, [], { variant: 'scorched' });
+    const b = buildBarley(fields, flat, 1, [], { variant: 'scorched', variantFields: ['nope'] });
+    expect(a.instanceCount).toBe(800);
+    expect(b.instanceCount).toBe(800);
+    a.dispose();
+    b.dispose();
   });
 });

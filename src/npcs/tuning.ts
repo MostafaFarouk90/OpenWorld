@@ -7,6 +7,8 @@ export const NPC_TUNING = {
   idleTurnRate: 3,
   /** Turn rate (rad/s) while in dialogue with the player. */
   talkTurnRate: 6,
+  /** Speed (m/s) of the one scripted walk (the carters leaving Hollin Ford). */
+  walkSpeed: 1.4,
   /** Interaction radius (m) of the 'talk' interactable. */
   talkRadius: 2.5,
   /** An NPC's GLB starts downloading once the player is this close to its post (first-load budget). */
