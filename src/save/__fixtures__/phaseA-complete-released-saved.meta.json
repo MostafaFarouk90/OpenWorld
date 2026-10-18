@@ -1,0 +1,9 @@
+{
+  "fixture": "phaseA-complete-released-saved.json",
+  "what": "Phase A complete: M03-M05, R01, R02, D01 completed; Prior released; R01 field saved (Surge); Tobb joined; outside at the vault door",
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/fixtures.gen.test.ts",
+  "generatingCommit": "43470a37b01ca4ca721e0e56fa9251a19fe826bd",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving",
+  "playtimeSeconds": "rounded to whole seconds",
+  "source": "the real save plugin (saveNow(\"manual\")), read back from the fake IndexedDB slot-0"
+}
