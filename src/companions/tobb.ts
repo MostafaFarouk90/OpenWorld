@@ -61,7 +61,7 @@ export const TOBB: CompanionDef = {
   // Quest-derived only (review B1; thread 18's liveness windows). Posts: south-gate and keep are thread 17's,
   // tilted-anvil is thread 3a's (the hearth, inside the inn).
   waits: [
-    { reason: 'stealth', anchorId: 'npc-post.tobb.tilted-anvil', quest: 'm09', until: 'o6' },
+    { reason: 'stealth', anchorId: 'npc-post.tobb.tilted-anvil', quest: 'm09', until: 'o4' },
     { reason: 'chase', anchorId: 'npc-post.tobb.tilted-anvil', quest: 'm10', until: 'o3' },
     { reason: 'keep', anchorId: 'npc-post.tobb.keep', interior: 'keep-hall' },
     { reason: 'gate', anchorId: 'npc-post.tobb.south-gate', quest: 'm06', until: 'o2' },
