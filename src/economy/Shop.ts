@@ -47,7 +47,8 @@ export type ShopFailure =
   | 'cannot-sell'
   | 'equipped'
   | 'not-owned'
-  | 'no-such-entry';
+  | 'no-such-entry'
+  | 'price-rose';
 
 export type ShopResult = { ok: true; total: number } | { ok: false; reason: ShopFailure };
 
@@ -135,7 +136,8 @@ export class Shop {
     return (this.buyBackList.get(vendorId) ?? []).map((e) => ({ ...e }));
   }
 
-  buy(vendorId: VendorId, itemId: string, count = 1): ShopResult {
+  /** `seenPrice` is the per-unit price the player was shown; a higher price now refuses instead of charging more. */
+  buy(vendorId: VendorId, itemId: string, count = 1, seenPrice?: number): ShopResult {
     if (!isVendorId(vendorId)) return { ok: false, reason: 'unknown-vendor' };
     if (!isCount(count)) return { ok: false, reason: 'bad-count' };
     if (!this.ports.isOpen(vendorId)) return { ok: false, reason: 'closed' };
@@ -143,6 +145,7 @@ export class Shop {
     if (!offer) return { ok: false, reason: 'not-stocked' };
     const def = this.ports.getItem(itemId);
     if (!def) return { ok: false, reason: 'unknown-item' };
+    if (seenPrice !== undefined && offer.price > seenPrice) return { ok: false, reason: 'price-rose' };
     if (offer.remaining !== null && offer.remaining < count) return { ok: false, reason: 'out-of-stock' };
     if (this.ports.count(itemId) + count > def.stackMax) return { ok: false, reason: 'no-room' };
     const total = offer.price * count;
@@ -179,9 +182,12 @@ export class Shop {
     const total = unit * count;
     this.ports.addGold(total);
     const list = this.buyBackList.get(vendorId) ?? [];
-    const same = list.find((e) => e.itemId === itemId && e.price === unit);
-    if (same) same.count += count;
-    else list.push({ itemId, count, price: unit });
+    const idx = list.findIndex((e) => e.itemId === itemId && e.price === unit && e.count + count <= (def.stackMax || 1));
+    if (idx >= 0) {
+      // A fresh sale goes to the end so eviction (oldest first) never takes it before older entries.
+      const [same] = list.splice(idx, 1);
+      list.push({ ...same, count: same.count + count });
+    } else list.push({ itemId, count, price: unit });
     while (list.length > BUY_BACK_MAX) list.shift();
     this.buyBackList.set(vendorId, list);
     this.ports.emit('vendor.sold', { vendorId, itemId, count, price: unit });
@@ -235,7 +241,8 @@ export class Shop {
       const m = this.stock.get(v)!;
       for (const [itemId, n] of Object.entries(rec)) {
         const limited = this.line(v, itemId)?.count !== undefined;
-        if (limited && typeof n === 'number' && Number.isInteger(n) && n >= 0) m.set(itemId, n);
+        const max = this.line(v, itemId)?.count ?? 0;
+        if (limited && typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= max) m.set(itemId, n);
         else this.ports.warn(`economy: dropped bad stock "${v}.${itemId}"`);
       }
     }

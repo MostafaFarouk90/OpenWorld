@@ -168,6 +168,27 @@ describe('economy plugin on the real game', () => {
     expect(a.maxHealth).toBeCloseTo(base * 1.1, 1);
   });
 
+  it('npc.vendor.open during a dialogue opens the shop only after the dialogue modal has closed', async () => {
+    const t = await boot();
+    t.ctx.state.setFlag('story.m08.favourTab', true);
+    const modals: string[] = [];
+    t.ctx.events.on('ui.modal', (e) => modals.push(`${e.id}:${e.open ? 'open' : 'closed'}`));
+    const closeDialogue = t.ctx.hud.openModal({ id: 'dialogue', element: {} as HTMLElement }, { context: 'dialogue' })!;
+    (t.ctx.events as any).emit('npc.vendor.open', { vendorId: 'wystan' });
+    t.ctx.events.emit('dialogue.ended', { dialogueId: 'd', npcId: 'wystan' });
+    expect(modals).toEqual(['dialogue:open']); // still up: nothing opens yet
+    closeDialogue();
+    expect(modals).toEqual(['dialogue:open', 'dialogue:closed', 'vendor:open']);
+  });
+
+  it('a closed vendor does not open from npc.vendor.open', async () => {
+    const t = await boot();
+    const modals: string[] = [];
+    t.ctx.events.on('ui.modal', (e) => modals.push(e.id));
+    (t.ctx.events as any).emit('npc.vendor.open', { vendorId: 'wystan' });
+    expect(modals).toEqual([]);
+  });
+
   it('vendor and persistence registrations exist', async () => {
     const t = await boot();
     expect(t.ctx.persist.get('vendors')).toBeTruthy();

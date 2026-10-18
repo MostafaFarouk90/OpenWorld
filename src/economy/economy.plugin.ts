@@ -99,7 +99,7 @@ const economyPlugin: GamePlugin = {
         inventory,
         offers: () => shop.offers(id),
         buyBackList: () => shop.buyBackFor(id),
-        buy: (itemId) => shop.buy(id, itemId),
+        buy: (itemId, seen) => shop.buy(id, itemId, 1, seen),
         sell: (itemId) => shop.sell(id, itemId),
         buyBack: (i) => shop.buyBack(id, i),
         t,
@@ -130,7 +130,9 @@ const economyPlugin: GamePlugin = {
       if (ctx.input.contexts.top() === 'dialogue') pendingVendor = p.vendorId;
       else openVendor(p.vendorId);
     });
-    ctx.events.on('dialogue.ended', () => {
+    // `dialogue.ended` fires before the dialogue modal closes, so wait for the modal itself to go.
+    ctx.events.on('ui.modal', (e) => {
+      if (e.id !== 'dialogue' || e.open) return;
       const id = pendingVendor;
       pendingVendor = null;
       if (id) openVendor(id);
@@ -151,9 +153,10 @@ const economyPlugin: GamePlugin = {
       cooledFactor: SHRINE_TUNING.cooled.multiplier,
       addMaxHealthModifier: (id, fn) => progression.addMaxHealthModifier(id, fn),
       refreshMaxHealth: () => progression.refreshMaxHealth(),
-      topUp: () => {
+      maxHealth: () => ctx.actors.player.maxHealth,
+      healBy: (n) => {
         const a = ctx.actors.player;
-        if (!a.dead && a.health < a.maxHealth) ctx.damage.heal(a.id, a.maxHealth - a.health);
+        if (n > 0 && !a.dead) ctx.damage.heal(a.id, Math.min(n, a.maxHealth - a.health));
       },
       emitApplied: (seconds) => emit('buff.applied', { id: INN.buffId, nameKey: INN.nameKey, seconds }),
       emitRemoved: () => emit('buff.removed', { id: INN.buffId }),
@@ -185,32 +188,45 @@ const economyPlugin: GamePlugin = {
       if (e.questId === 'm07' && e.objectiveId === 'o4' && e.done && !ctx.state.getBool(INN.roomFlag)) ctx.state.setFlag(INN.roomFlag, true);
     });
 
-    let closeInn: (() => void) | null = null;
+    let cancelInn: (() => void) | null = null;
+    let resting = false;
     function openInn(): void {
-      if (closeInn) return;
+      if (cancelInn || resting) return;
       const price = inn.quote();
-      const ok = openInnModal(
+      cancelInn = openInnModal(
         { doc: hudDocument() as never, openModal: (w) => ctx.hud.openModal({ ...w, element: asHtml(w.element) }), t },
         {
           gold: price,
           canAfford: inventory.gold >= price,
           blocked: ctx.state.getBool(INN.roomFlag) ? null : 'no-room',
           confirm: () => {
-            closeInn = null;
-            const why = inn.canRest();
-            if (why) return toast(t('economy.inn.blocked'));
-            void ctx.hud.fade(1, 0.6).then(() => {
-              const r = inn.rest();
-              toast(r.ok ? t('economy.inn.rested') : t('economy.inn.blocked'));
-              return ctx.hud.fade(0, 0.8);
-            });
+            cancelInn = null;
+            if (inn.canRest()) return toast(t('economy.inn.blocked'));
+            resting = true; // no second night while the screen fades
+            void ctx.hud
+              .fade(1, 0.6)
+              .then(() => {
+                const r = inn.rest();
+                toast(r.ok ? t('economy.inn.rested') : t('economy.inn.blocked'));
+                return ctx.hud.fade(0, 0.8);
+              })
+              .finally(() => {
+                resting = false;
+              });
           },
           cancel: () => {
-            closeInn = null;
+            cancelInn = null;
           },
         },
       );
-      if (ok) closeInn = () => undefined;
+    }
+    // Esc closes whichever shop dialog is open.
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', (e) => {
+        if (e.code !== 'Escape') return;
+        closeMenu?.();
+        cancelInn?.();
+      });
     }
     ctx.services.provide('inn', {
       rest: () => openInn(),
@@ -264,7 +280,7 @@ const economyPlugin: GamePlugin = {
           position: (out) => out.set(p.x, p.y, p.z),
           name: v,
           promptKey: 'economy.shop.prompt',
-          priority: -1,
+          priority: -0.01,
           enabled: () => isOpen(v),
           onInteract: () => openVendor(v),
         });
@@ -280,7 +296,7 @@ const economyPlugin: GamePlugin = {
             position: (out) => out.set(p.x, p.y, p.z),
             name: 'aldith',
             promptKey: 'economy.inn.prompt',
-            priority: -1,
+            priority: -0.01,
             enabled: () => ctx.state.getBool(INN.roomFlag),
             onInteract: () => openInn(),
           });

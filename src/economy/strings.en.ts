@@ -23,6 +23,7 @@ export const ECONOMY_STRINGS_EN: Record<string, string> = {
   'economy.shop.fail.closed': 'They are not trading right now.',
   'economy.shop.fail.cannot-sell': 'They will not buy that.',
   'economy.shop.fail.equipped': 'Unequip it first.',
+  'economy.shop.fail.price-rose': 'The price has changed. Look again.',
   'economy.shop.fail.generic': 'That did not work.',
   'economy.inn.prompt': 'Press {key} to rent a room',
   'economy.inn.title': 'The Tilted Anvil',

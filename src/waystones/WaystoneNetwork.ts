@@ -27,7 +27,8 @@ export interface NetworkPorts {
   setFlag(key: string, value: boolean): void;
   context(): WaystoneContext;
   /** Heal HP and stamina; no flask refill, no enemy respawn. */
-  restoreVitals(): void;
+  /** `quiet` (the inn) skips the waystone toast and prompt. */
+  restoreVitals(opts?: { quiet?: boolean }): void;
   requestSave(reason: 'waystone' | 'rest'): void;
   toast(key: string): void;
   playerFeet(): Vec3;
@@ -137,7 +138,7 @@ export class WaystoneNetwork {
       if (blocked === 'in-combat') this.ports.toast('waystone.foesNear');
       return { ok: false, reason: blocked };
     }
-    this.ports.restoreVitals();
+    this.ports.restoreVitals({ quiet: true });
     this.ports.emit('rest', { placeId });
     this.ports.requestSave('rest');
     return { ok: true };
