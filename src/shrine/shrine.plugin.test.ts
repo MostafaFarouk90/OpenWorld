@@ -115,12 +115,14 @@ describe('shrine plugin on the real game', () => {
     t.ctx.persist.get('burn')!.load({ burn: 60, scars: 3 }, 1);
     t.ctx.services.require('progression').refreshMaxHealth();
     const a = t.ctx.actors.player;
+    // Burn 60 costs max health (slice 2 thread 2 turned the penalty on); the rest clears it, the 3 Scars (-6%) stay.
     const before = a.maxHealth;
+    expect(before).toBeLessThan(120 * 0.94);
     a.health = 10;
     t.ctx.events.emit('rest', { waystoneId: 'quenchstone' });
     expect(t.ctx.services.require('spells').burn).toBe(0);
     expect(t.ctx.services.require('spells').scars).toBe(3);
-    expect(a.maxHealth).toBeCloseTo(before * 1.1, 3);
+    expect(a.maxHealth).toBeCloseTo(120 * 0.94 * 1.1, 0);
     expect(a.health).toBe(a.maxHealth);
     expect(t.ctx.services.require('shrine').cooledSeconds()).toBe(1200);
     expect(t.emitted.filter((e) => e.type === 'buff.applied').at(-1)?.payload).toMatchObject({ id: 'shrine.cooled', seconds: 1200 });
