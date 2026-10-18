@@ -20,5 +20,5 @@ Enemy AI and the slice's first enemies (thread 2, plan in plans/enemy-ai.md). Pl
 Service (`ctx.services.get('enemies')`): `spawnGroup(spawnerId, opts?)`, `despawnGroup`, `alive`, `view`,
 `setMercyUnlocked(verb, on)`, `mercyUnlocked`, `setWarmthTier`, `lockBlockLevel`.
 
-The player becomes hittable once thread 1 adds `world.combat.playerHurtboxes` as a combat target
-(contracts/actors-and-damage.md section 5); until then enemies swing and telegraph but cannot hurt the player.
+The player is a combat target once thread 1's combat verbs plugin binds the avatar (`src/player/CombatVerbs.ts`);
+the real-core tests here add that target themselves.
