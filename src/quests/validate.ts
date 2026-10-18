@@ -13,22 +13,31 @@ function condRefs(c: unknown, out: [string, string][]): void {
   if (Array.isArray(c.objective) && c.objective.length === 2) out.push([String(c.objective[0]), String(c.objective[1])]);
 }
 
-function effectErrors(list: Effect[] | undefined, where: string, self: string, ids: Set<string>, errs: string[]): void {
-  if (list === undefined) return;
-  if (!Array.isArray(list)) { errs.push(`${where}: effects must be an array`); return; }
-  list.forEach((e, i) => {
+const FLAG_KEY = /^[a-z][a-zA-Z0-9]*(\.[a-zA-Z0-9_-]+)+$/;
+const TRACKS = ['halvard', 'oswin', 'grisel', 'dragons', 'ashwalkers'];
+
+/** Static checks of an effect list. Returns error strings; empty means valid. */
+export function validateEffects(effects: Effect[] | undefined, where = 'effects'): string[] {
+  const errs: string[] = [];
+  if (effects === undefined) return errs;
+  if (!Array.isArray(effects)) return [`${where}: effects must be an array`];
+  effects.forEach((e, i) => {
     const w = `${where}[${i}]`;
     const c = e as unknown as Record<string, any>;
     if (!isObj(c)) { errs.push(`${w}: effect is not an object`); return; }
+    const flagKey = (k: unknown, what: string) => {
+      if (!isStr(k)) errs.push(`${w}: ${what} key must be a non-empty string`);
+      else if (!FLAG_KEY.test(k)) errs.push(`${w}: ${what} key "${k}" is not a valid flag key`);
+    };
     if ('setFlag' in c) {
-      if (!isStr(c.setFlag)) errs.push(`${w}: setFlag key must be a non-empty string`);
+      flagKey(c.setFlag, 'setFlag');
       if (!(typeof c.value === 'boolean' || typeof c.value === 'string' || (typeof c.value === 'number' && Number.isFinite(c.value)))) {
         errs.push(`${w}: setFlag value must be boolean, string or finite number`);
       }
     } else if ('clearFlag' in c) {
-      if (!isStr(c.clearFlag)) errs.push(`${w}: clearFlag key must be a non-empty string`);
+      flagKey(c.clearFlag, 'clearFlag');
     } else if ('favour' in c) {
-      if (!['halvard', 'oswin', 'grisel', 'dragons', 'ashwalkers'].includes(c.favour)) errs.push(`${w}: unknown favour track`);
+      if (!TRACKS.includes(c.favour)) errs.push(`${w}: unknown favour track`);
       if (typeof c.delta !== 'number' || !Number.isFinite(c.delta)) errs.push(`${w}: favour delta must be finite`);
     } else if ('mercy' in c) {
       if (!isObj(c.mercy)) errs.push(`${w}: mercy data missing`);
@@ -39,7 +48,8 @@ function effectErrors(list: Effect[] | undefined, where: string, self: string, i
     } else if ('completeObjective' in c) {
       const o = c.completeObjective;
       if (!Array.isArray(o) || o.length !== 2 || !isStr(o[0]) || !isStr(o[1])) errs.push(`${w}: completeObjective needs [questId, objectiveId]`);
-      else if (o[0] === self && !ids.has(o[1])) errs.push(`${w}: unknown objective ${o[1]} of quest ${self}`);
+    } else if ('take' in c && isStr(c.take)) {
+      // single item id, count 1
     } else if ('give' in c || 'take' in c) {
       const k = 'give' in c ? 'give' : 'take';
       const arr = c[k];
@@ -56,6 +66,17 @@ function effectErrors(list: Effect[] | undefined, where: string, self: string, i
       if (typeof c.event !== 'string' || !EFFECT_EVENT_PATTERN.test(c.event)) errs.push(`${w}: event name not allowed`);
     } else {
       errs.push(`${w}: unknown effect shape`);
+    }
+  });
+  return errs;
+}
+
+function selfObjectiveErrors(list: Effect[] | undefined, where: string, self: string, ids: Set<string>, errs: string[]): void {
+  if (!Array.isArray(list)) return;
+  list.forEach((e, i) => {
+    const o = (e as any)?.completeObjective;
+    if (Array.isArray(o) && o.length === 2 && o[0] === self && isStr(o[1]) && !ids.has(o[1])) {
+      errs.push(`${where}[${i}]: unknown objective ${o[1]} of quest ${self}`);
     }
   });
 }
@@ -93,8 +114,32 @@ export function validateQuest(def: QuestDef, hasKey: (k: string) => boolean): st
       for (const [rq, ro] of refs) if (rq === q && !ids.has(ro)) errs.push(`${w}: when references unknown objective ${ro}`);
     }
   });
-  effectErrors(def?.onStart, `${tag} onStart`, q, ids, errs);
-  effectErrors(def?.onComplete, `${tag} onComplete`, q, ids, errs);
-  effectErrors(def?.rewards, `${tag} rewards`, q, ids, errs);
+  // objective `when` cycles: A waits on done of B and B (transitively) on A
+  const deps = new Map<string, string[]>();
+  for (const o of objs) {
+    if (!isStr(o?.id) || o.when === undefined) continue;
+    const refs: [string, string][] = [];
+    condRefs(o.when as Condition, refs);
+    deps.set(o.id, refs.filter(([rq, ro]) => rq === q && ids.has(ro)).map(([, ro]) => ro));
+  }
+  const state = new Map<string, 1 | 2>();
+  const reported = new Set<string>();
+  const visit = (id: string, path: string[]): void => {
+    if (state.get(id) === 2) return;
+    if (state.get(id) === 1) {
+      const cyc = path.slice(path.indexOf(id));
+      const key = [...cyc].sort().join(',');
+      if (!reported.has(key)) { reported.add(key); errs.push(`${tag}: objective when cycle ${[...cyc, id].join(' -> ')}`); }
+      return;
+    }
+    state.set(id, 1);
+    for (const d of deps.get(id) ?? []) visit(d, [...path, id]);
+    state.set(id, 2);
+  };
+  for (const id of deps.keys()) visit(id, []);
+  for (const [list, name] of [[def?.onStart, 'onStart'], [def?.onComplete, 'onComplete'], [def?.rewards, 'rewards']] as const) {
+    errs.push(...validateEffects(list, `${tag} ${name}`));
+    selfObjectiveErrors(list, `${tag} ${name}`, q, ids, errs);
+  }
   return errs;
 }

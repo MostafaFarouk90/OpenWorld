@@ -11,5 +11,6 @@ export const m02: QuestDef = {
     { id: 'o2', type: 'interact', target: 'pickup:hearth-stone', textKey: 'quest.m02.o2' },
     { id: 'o3', type: 'talk', target: 'edda', textKey: 'quest.m02.o3', when: { objective: ['m02', 'o2'], done: true } },
   ],
+  onComplete: [{ take: 'hearth-stone' }],
   rewards: [{ xp: 250 }, { give: [{ itemId: 'hearth-stone-charm', count: 1 }] }],
 };

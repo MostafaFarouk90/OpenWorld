@@ -10,6 +10,8 @@ export interface DialogueView {
   npcId: string;
   nodeId: string;
   speaker: string;
+  /** set when the speaker's display name is dynamic (speaker 'cael' = the player's name) */
+  speakerName?: string;
   portrait: string | undefined;
   text: string;
   hasNext: boolean;
@@ -123,8 +125,7 @@ export class DialogueRunner {
   }
 
   close(reason: CloseReason): void {
-    void reason;
-    this.finish();
+    this.finish(reason);
   }
 
   // ---- internals ----
@@ -187,6 +188,7 @@ export class DialogueRunner {
       npcId: c.npcId,
       nodeId: c.node.id,
       speaker: c.node.speaker,
+      ...(c.node.speaker === 'cael' ? { speakerName: name } : {}),
       portrait: c.node.portrait,
       text: this.t(c.node.textKey, name),
       hasNext: vis.length === 0,
@@ -195,12 +197,12 @@ export class DialogueRunner {
     this.notify();
   }
 
-  private finish(): void {
+  private finish(reason: CloseReason | 'completed' = 'completed'): void {
     const c = this.cur;
     if (!c) return;
     this.cur = null;
     this.cachedView = null;
-    this.o.bus.emit('dialogue.ended', { dialogueId: c.def.id, npcId: c.npcId });
+    this.o.bus.emit('dialogue.ended', { dialogueId: c.def.id, npcId: c.npcId, reason });
     this.notify();
   }
 

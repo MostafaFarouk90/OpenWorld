@@ -25,7 +25,7 @@ export const npcEdda: DialogueDef = {
     { when: { all: [{ quest: 't03', state: 'active' }, { not: { flag: 'quest.t03.eddaGift', equals: true } }] }, node: 'gift' },
     { when: { all: [{ quest: 'm02', state: 'active' }, { objective: ['m02', 'o2'], done: true }] }, node: 'disgrace' },
     { when: { quest: 'm02', state: 'active' }, node: 'fetch-reminder' },
-    { when: { all: [{ objective: ['m01', 'o1'], done: true }, { quest: 'm02', state: 'inactive' }] }, node: 'offer' },
+    { when: { all: [{ any: [{ objective: ['m01', 'o1'], done: true }, { quest: 'm01', state: 'completed' }] }, { quest: 'm02', state: 'inactive' }] }, node: 'offer' },
     { when: { all: [] }, node: 'idle' },
   ],
   nodes: [

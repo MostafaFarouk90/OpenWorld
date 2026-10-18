@@ -23,7 +23,8 @@ export function buildPanelModel(view: DialogueView | null, strings?: PanelString
   if (!view) return EMPTY_MODEL;
   const nameKey = `npc.${view.speaker}.name`;
   let speakerName = view.speaker;
-  try { if (strings?.has(nameKey)) speakerName = strings.t(nameKey); } catch { /* keep id */ }
+  if (view.speakerName !== undefined) speakerName = view.speakerName;
+  else try { if (strings?.has(nameKey)) speakerName = strings.t(nameKey); } catch { /* keep id */ }
   let hint = 'Space: next';
   try { if (strings?.has('dialogue.next')) hint = strings.t('dialogue.next'); } catch { /* keep default */ }
   return {

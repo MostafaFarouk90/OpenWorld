@@ -118,7 +118,7 @@ describe('createEffectRunner', () => {
     const a = setup({ inventory: () => inv });
     a.runner.run([{ take: [{ itemId: 'a', count: 1 }, { itemId: 'gone', count: 2 }, { itemId: 'b', count: 0 }] }]);
     expect(remove.mock.calls).toEqual([['a', 1], ['gone', 2]]);
-    expect(a.warns).toHaveLength(1);
+    expect(a.warns).toHaveLength(2); // one dropped invalid entry, one failed removal
 
     for (const env of [setup(), setup({ inventory: () => undefined })]) {
       const e: Effect = { take: [{ itemId: 'a', count: 1 }] };
@@ -128,8 +128,16 @@ describe('createEffectRunner', () => {
     }
   });
 
+  it('take accepts a bare item id (count 1) and an array', () => {
+    const remove = vi.fn(() => true);
+    const { runner } = setup({ inventory: () => ({ remove }) });
+    const r = runner.run([{ take: 'ember-key' }, { take: [{ itemId: 'a', count: 2 }] }]);
+    expect(r.every((x) => x.ok)).toBe(true);
+    expect(remove.mock.calls).toEqual([['ember-key', 1], ['a', 2]]);
+  });
+
   it('xp and skillPoints use the progression service', () => {
-    const p: ProgressionPort = { grantXp: vi.fn(), grantSkillPoints: vi.fn() };
+    const p: ProgressionPort = { grantXp: vi.fn(), grantSkillPoint: vi.fn() };
     const { runner } = setup({ progression: () => p });
     const r = runner.run([
       { xp: 50 }, { xp: 0 }, { xp: NaN }, { xp: -3 },
@@ -137,8 +145,8 @@ describe('createEffectRunner', () => {
     ]);
     expect(p.grantXp).toHaveBeenCalledTimes(1);
     expect(p.grantXp).toHaveBeenCalledWith(50, 'quest:test');
-    expect(p.grantSkillPoints).toHaveBeenCalledTimes(1);
-    expect(p.grantSkillPoints).toHaveBeenCalledWith(2);
+    expect(p.grantSkillPoint).toHaveBeenCalledTimes(1);
+    expect(p.grantSkillPoint).toHaveBeenCalledWith(2, 'quest:test');
     expect(r[0].ok).toBe(true);
   });
 
@@ -150,7 +158,7 @@ describe('createEffectRunner', () => {
     expect(flags.get('after')).toBe(1);
   });
 
-  it('skillPoints with progression lacking grantSkillPoints warns', () => {
+  it('skillPoints with progression lacking grantSkillPoint warns', () => {
     const { runner, warns } = setup({ progression: () => ({ grantXp: vi.fn() }) });
     expect(runner.run([{ skillPoints: 1 }])[0].ok).toBe(false);
     expect(warns).toHaveLength(1);

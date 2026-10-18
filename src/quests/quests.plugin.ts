@@ -14,14 +14,15 @@ import type { QuestDef } from './types';
 import './service';
 
 const VILLAGERS = 3;
-const HEARTH_STONE_ID = 'pickup:hearth-stone';
+/** Synthetic interact id that completes T12's "open the quest log" objective. */
+const JOURNAL_OPENED = 'use:t12-journal-open';
 
 const plugin: GamePlugin = {
   id: 'quests',
   dependsOn: ['core'],
   setup(ctx) {
     const warn = (m: string): void => console.warn(`[quests] ${m}`);
-    ctx.strings.register('en', { ...questStrings, 'prompt.carry': '{key} Carry the villager' });
+    ctx.strings.register('en', { ...questStrings, 'quest.prompt.carry': '{key} Carry the villager' });
 
     const bus = ctx.events as unknown as BusPort;
     const manager = new QuestManager({
@@ -32,7 +33,7 @@ const plugin: GamePlugin = {
       actorMeta: (id) => ({ spawnTag: (ctx.actors.get(id) as { spawnTag?: string } | undefined)?.spawnTag }),
       triggers: {
         isInside: (triggerId, actorId) =>
-          (ctx.triggers as unknown as { isInside?(t: string, a: string): boolean }).isInside?.(triggerId, actorId) ?? false,
+          ctx.triggers.isInside(triggerId, actorId),
       },
       progression: () => (ctx.services as unknown as { get(n: string): any }).get('progression'),
       inventory: () => (ctx.services as unknown as { get(n: string): any }).get('inventory'),
@@ -88,25 +89,17 @@ const plugin: GamePlugin = {
         w.element ? ctx.hud.openModal({ id: 'journal', element: w.element, dispose: () => w.dispose() }) : null,
     };
 
-    // Quest props: the hearth-stone is only usable while M02's fetch objective is current.
-    const stoneAnchor = () => ctx.anchors.find('m02.hearth-stone');
-    ctx.interaction.register({
-      id: HEARTH_STONE_ID,
-      kind: 'pickup',
-      name: 'hearth-stone',
-      position: (out) => {
-        const a = stoneAnchor();
-        return a ? out.set(a.position.x, a.position.y, a.position.z) : out.set(0, -1000, 0);
-      },
-      enabled: () => !!stoneAnchor() && manager.isObjectiveCurrent('m02', 'o2'),
-      onInteract: () => {
-        ctx.events.emit('loot.granted', { sourceId: HEARTH_STONE_ID, items: [{ itemId: 'hearth-stone', count: 1 }] });
-      },
-    });
-
     // Carrying is built on the first rules tick, after every plugin (and thread 4's anchors) exists.
     let carry: CarrySystem | null = null;
     const visuals: THREE.Mesh[] = [];
+    const disposeVisuals = (): void => {
+      for (const m of visuals) {
+        m.removeFromParent();
+        m.geometry.dispose();
+        (m.material as THREE.Material).dispose();
+      }
+      visuals.length = 0;
+    };
     const buildCarry = (): CarrySystem => {
       const carryables: Carryable[] = [];
       for (let i = 1; i <= VILLAGERS; i++) {
@@ -128,6 +121,7 @@ const plugin: GamePlugin = {
           questId: 'm01',
           objectiveId: 'o2',
           destination: 'm01.chapel-door',
+          promptKey: 'quest.prompt.carry',
         });
       }
       return new CarrySystem({
@@ -169,31 +163,41 @@ const plugin: GamePlugin = {
       fixedPhase: 'input',
       order: 20,
       fixedUpdate: () => {
-        if (ctx.input.actions.pressed('journal')) toggleJournal(journalHud, makeJournal, journalState);
+        if (!ctx.input.actions.pressed('journal')) return;
+        const open = toggleJournal(journalHud, makeJournal, journalState);
+        if (open) {
+          // T12 "open the log" and the journal tutorial prompt count this as a successful use.
+          ctx.events.emit('interact', { interactableId: JOURNAL_OPENED, kind: 'use', actorId: ctx.player.actor.id, action: 'interact' });
+          ctx.services.get('prompts')?.success('journal');
+        }
       },
     });
+    // Built once, after M01 has started (or was loaded as started), when every plugin and thread 4's
+    // anchors exist. A build failure is logged once and never retried (no leaked meshes).
+    let carryTried = false;
     ctx.systems.add({
       id: 'quests-carry',
       fixedPhase: 'rules',
       order: 10,
       fixedUpdate: (dt) => {
-        carry ??= buildCarry();
-        carry.update(dt);
+        if (!carryTried && manager.state('m01') !== 'inactive') {
+          carryTried = true;
+          try {
+            carry = buildCarry();
+          } catch (err) {
+            warn(`carry system failed to build: ${String(err)}`);
+            disposeVisuals();
+          }
+        }
+        carry?.update(dt);
+      },
+      dispose: () => {
+        carry?.dispose();
+        carry = null;
+        disposeVisuals();
+        manager.dispose();
       },
     });
-
-    // Plugin-owned objects the scope cannot see.
-    (plugin as { dispose?: () => void }).dispose = () => {
-      carry?.dispose();
-      carry = null;
-      for (const m of visuals) {
-        m.removeFromParent();
-        m.geometry.dispose();
-        (m.material as THREE.Material).dispose();
-      }
-      visuals.length = 0;
-      manager.dispose();
-    };
   },
 };
 

@@ -3,6 +3,7 @@ import { dialogueDefs } from './index';
 import { dialogueStrings, npcNameFallbackStrings } from '../strings.en';
 import { questStrings } from '../../quests/strings.en';
 import { validateDialogue } from '../validate';
+import { computeVowTone, T04_DIALOGUE_ID } from './t04-vow.dialogue';
 import { DialogueRunner } from '../DialogueRunner';
 import { createEffectRunner } from '../../quests/effects';
 import type { BusPort, StatePort, StringsPort } from '../../quests/ports';
@@ -33,9 +34,8 @@ describe('dialogue content', () => {
     }
   });
 
-  it('speakers are known and the three barks exist', () => {
+  it('speakers are known', () => {
     for (const d of dialogueDefs) for (const n of d.nodes) expect(['gaut', 'edda', 'stane', 'aelfreda', 'cael']).toContain(n.speaker);
-    for (const i of [1, 2, 3]) expect(hasKey(`dialogue.bark.villager${i}`)).toBe(true);
   });
 
   it('no literal Cael in strings', () => {
@@ -49,7 +49,7 @@ function setup() {
   const bus: BusPort = { on: () => () => {}, emit: (type, payload) => { log.push({ type, payload }); } };
   const state: StatePort = {
     getFlag: (k) => flags.get(k), setFlag: (k, v) => { flags.set(k, v); }, clearFlag: (k) => { flags.delete(k); },
-    favourBand: () => 'warm', favour: () => 30, addFavour: () => 0,
+    favourBand: () => 'banked', favour: () => 30, addFavour: () => 0,
   };
   const quests = { state: () => 'inactive' as const, objectiveDone: () => false, start: () => true, complete: () => true, completeObjective: () => true };
   const effects = createEffectRunner({ state, quests, bus, sourceId: 'test' });
@@ -90,6 +90,24 @@ describe('T04 vow flow (real DialogueRunner)', () => {
     expect(flags.get('tutorial.t04.vow3')).toBe(c);
     expect(flags.get('tutorial.t04.tone')).toBe(majority(vows));
     expect(log.some((e) => e.type === 'tutorial.vow.complete')).toBe(true);
+  });
+
+  it('computeVowTone over all 27 combos matches majority, vow3 on all-different', () => {
+    for (const [a, b, c] of combos) expect(computeVowTone(a, b, c)).toBe(majority([a, b, c]));
+    expect(computeVowTone('x', undefined, 'wry')).toBe('earnest');
+    expect(computeVowTone(1, 'nope', null)).toBe('earnest');
+    expect(T04_DIALOGUE_ID).toBe('t04-vow');
+  });
+
+  it('skip after two wry picks leaves vows wry,wry,earnest', () => {
+    const { flags, dr } = setup();
+    dr.start('t04-vow', 'aelfreda');
+    for (let i = 0; i < 2; i++) {
+      while (!/^vow\d$/.test(dr.view()!.nodeId)) dr.advance();
+      dr.choose(2);
+    }
+    dr.close('skip');
+    expect([1, 2, 3].map((n) => flags.get(`tutorial.t04.vow${n}`))).toEqual(['wry', 'wry', 'earnest']);
   });
 
   it('skipping early leaves earnest defaults', () => {

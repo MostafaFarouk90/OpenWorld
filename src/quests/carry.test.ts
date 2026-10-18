@@ -46,7 +46,7 @@ function setup(opts: { missingHome?: string; current?: (q: string, o: string) =>
   const pick = (n: number) => interactables.get(`pickup:villager-${n}`)!.onInteract();
   const enabled = (n: number) => interactables.get(`pickup:villager-${n}`)!.enabled!();
   const ev = (t: string) => emitted.filter((e) => e[0] === t).map((e) => e[1]);
-  return { sys, bus, flags, interactables, vis, warns, feet, pick, enabled, ev, get mods() { return mods; }, get addCalls() { return addCalls; }, get lastMod() { return lastMod; }, setBlock: (b: boolean) => { block = b; } };
+  return { sys, bus, emitted, flags, interactables, vis, warns, feet, pick, enabled, ev, get mods() { return mods; }, get addCalls() { return addCalls; }, get lastMod() { return lastMod; }, setBlock: (b: boolean) => { block = b; } };
 }
 
 describe('CarrySystem', () => {
@@ -58,6 +58,26 @@ describe('CarrySystem', () => {
     expect(t.lastMod.lockActions).toContain('dodge');
     expect(t.lastMod.lockActions).not.toContain('block');
     expect(t.ev('carry.picked')).toEqual([{ carryId: 'villager-1' }]);
+  });
+  it('block-held pickup yields picked then dropped', () => {
+    const t = setup(); t.setBlock(true);
+    t.pick(1);
+    expect(t.emitted.map((e) => e[0]).filter((x) => x.startsWith('carry.'))).toEqual(['carry.picked', 'carry.dropped']);
+    expect(t.mods).toBe(0);
+  });
+  it('locks surgeLeap and mount', () => {
+    const t = setup(); t.pick(1);
+    expect(t.lastMod.lockActions).toEqual(expect.arrayContaining(['surgeLeap', 'mount']));
+  });
+  it('drops with reason objective when the objective stops being current', () => {
+    let cur = true;
+    const t = setup({ current: () => cur }); t.pick(1);
+    t.sys.update(0.016);
+    expect(t.mods).toBe(1);
+    cur = false;
+    t.sys.update(0.016);
+    expect(t.mods).toBe(0);
+    expect(t.ev('carry.dropped')).toEqual([{ carryId: 'villager-1', reason: 'objective' }]);
   });
   it('damage hit drops with reason damaged; other outcomes and targets do not', () => {
     const t = setup(); t.pick(1);

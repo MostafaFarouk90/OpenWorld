@@ -69,11 +69,11 @@ export interface CarryPorts {
   warn?(msg: string): void;
 }
 
-export type CarryDropReason = 'damaged' | 'death' | 'load' | 'voluntary' | 'dispose';
+export type CarryDropReason = 'damaged' | 'death' | 'load' | 'voluntary' | 'dispose' | 'objective';
 
 export const CARRY_LOCKED_ACTIONS: readonly string[] = [
   'attack1', 'attack2', 'attack3', 'attack4', 'jump', 'sprint', 'surge',
-  'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6', 'dodge',
+  'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6', 'dodge', 'surgeLeap', 'mount',
 ];
 export const CARRY_SPEED_SCALE = 0.6;
 const MODIFIER_SOURCE = 'carry';
@@ -137,6 +137,7 @@ export class CarrySystem {
     if (this.disposed) return;
     const s = this.carrying;
     if (!s) return;
+    if (!this.p.objectiveCurrent(s.c.questId, s.c.objectiveId)) { this.drop('objective'); return; }
     if (this.p.isActionHeld('block')) { this.drop('voluntary'); return; }
     const f = this.p.player.feet();
     s.pos = { x: f.x, y: f.y + CARRY_LIFT, z: f.z };
@@ -175,8 +176,8 @@ export class CarrySystem {
     });
     this.carrying = s;
     s.c.setVisible(true);
-    this.update(0);
     this.p.bus.emit('carry.picked', { carryId: s.c.id });
+    this.update(0);
   }
 
   private drop(reason: CarryDropReason): void {

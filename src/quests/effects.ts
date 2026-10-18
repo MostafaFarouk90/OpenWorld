@@ -15,7 +15,8 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
   const warnOnce = (msg: string): void => { if (!warned.has(msg)) { warned.add(msg); warn(msg); } };
 
   const stack = (v: unknown): { itemId: string; count: number }[] =>
-    Array.isArray(v)
+    typeof v === 'string' ? (v !== '' ? [{ itemId: v, count: 1 }] : [])
+      : Array.isArray(v)
       ? v.filter((e): e is { itemId: string; count: number } =>
         isObj(e) && typeof e.itemId === 'string' && e.itemId !== '' && Number.isInteger(e.count) && (e.count as number) > 0)
       : [];
@@ -49,7 +50,10 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
     } else if ('take' in c) {
       const inv = env.inventory?.();
       if (!inv) { warnOnce('take: inventory service absent'); throw new Silent('inventory service absent'); }
-      for (const it of stack(c.take)) {
+      const takes = stack(c.take);
+      const total = Array.isArray(c.take) ? c.take.length : 1;
+      if (total - takes.length > 0) warn(`take: dropped ${total - takes.length} invalid entr${total - takes.length === 1 ? 'y' : 'ies'}`);
+      for (const it of takes) {
         if (!inv.remove(it.itemId, it.count)) warn(`take: could not remove ${it.count} x ${it.itemId}`);
       }
     } else if ('xp' in c) {
@@ -60,8 +64,8 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
     } else if ('skillPoints' in c) {
       if (typeof c.skillPoints !== 'number' || !Number.isFinite(c.skillPoints) || c.skillPoints <= 0) return;
       const p = env.progression?.();
-      if (!p?.grantSkillPoints) { warnOnce('skillPoints: progression service absent'); throw new Silent('skill point service absent'); }
-      p.grantSkillPoints(c.skillPoints);
+      if (!p?.grantSkillPoint) { warnOnce('skillPoints: progression service absent'); throw new Silent('skill point service absent'); }
+      p.grantSkillPoint(c.skillPoints, env.sourceId);
     } else if ('event' in c) {
       if (typeof c.event !== 'string' || !EFFECT_EVENT_PATTERN.test(c.event)) {
         throw new Error(`event name rejected: ${String(c.event)}`);
