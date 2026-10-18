@@ -38,6 +38,7 @@ export class Toasts implements Omit<HudWidgetView, 'update'> {
 
   dispose(): void {
     this.live.length = 0;
+    this.element.replaceChildren();
     this.element.remove();
   }
 }
