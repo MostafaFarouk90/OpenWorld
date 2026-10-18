@@ -36,6 +36,12 @@ const plugin: GamePlugin = {
       serialize: () => m.spawners.serialize(),
       load: (data) => m.spawners.load(data),
     });
+    ctx.persist.register({
+      key: m.tally.key,
+      version: m.tally.version,
+      serialize: () => m.tally.serialize(),
+      load: (data) => m.tally.load(data),
+    });
     ctx.systems.add({ id: 'enemies.think', fixedPhase: 'intent', order: -150, fixedUpdate: (dt) => m.think(dt) });
     ctx.systems.add({ id: 'enemies.animate', fixedPhase: 'animation', order: 50, fixedUpdate: (dt) => m.animate(dt) });
     ctx.systems.add({ id: 'enemies.react', fixedPhase: 'afterCombat', order: 50, fixedUpdate: (dt) => m.react(dt) });
