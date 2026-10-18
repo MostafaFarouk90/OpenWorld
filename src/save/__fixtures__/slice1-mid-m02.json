@@ -1,0 +1,259 @@
+{
+  "_comment": "Slice 1 save (M01 done, M02 active), written by the real save plugin at the slice 1 tip 5a09676 with src/gen/slice1Fixtures.gen.test.ts (OUT_DIR=... npx vitest run src/gen) in a worktree; savedAt normalised.",
+  "format": 1,
+  "savedAt": 1760000000000,
+  "reason": "manual",
+  "playtimeSeconds": 0.08333333333333333,
+  "entries": {
+    "world-state": {
+      "version": 1,
+      "data": {
+        "flags": {
+          "place.brightwater.discovered": true,
+          "waystone.kettlewick.lit": true,
+          "quest.t03.eddaGift": true,
+          "tutorial.t04.begin": true,
+          "tutorial.t04.vow1": "earnest",
+          "tutorial.t04.vow2": "earnest",
+          "tutorial.t04.vow3": "earnest",
+          "tutorial.t04.tone": "earnest",
+          "tutorial.heartshard-awakened": true,
+          "tutorial.t12.kit": true,
+          "waystone.chapel.lit": true,
+          "tutorial.skipped": true,
+          "tutorial.complete": true
+        },
+        "favour": {
+          "halvard": 30,
+          "oswin": 20,
+          "grisel": 20,
+          "dragons": 10,
+          "ashwalkers": 15
+        },
+        "creatureMercy": {
+          "halvard": 0,
+          "oswin": 0,
+          "grisel": 0,
+          "dragons": 0,
+          "ashwalkers": 0
+        },
+        "mercyCount": 0
+      }
+    },
+    "player": {
+      "version": 1,
+      "data": {
+        "health": 140,
+        "stamina": 100,
+        "lastRestedWaystoneId": null,
+        "goldPouch": null
+      }
+    },
+    "quests": {
+      "version": 1,
+      "data": {
+        "quests": {
+          "m02": {
+            "state": "active",
+            "objectives": {}
+          },
+          "t03": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t12": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "m01": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t01": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t02": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t04": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t05": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t06": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t07": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t08": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t09": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t10": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t11": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t13": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t14": {
+            "state": "completed",
+            "objectives": {}
+          },
+          "t15": {
+            "state": "completed",
+            "objectives": {}
+          }
+        }
+      }
+    },
+    "dialogue": {
+      "version": 1,
+      "data": {
+        "seen": []
+      }
+    },
+    "enemies": {
+      "version": 1,
+      "data": {
+        "spent": [],
+        "cleared": [],
+        "warmthTier": 0,
+        "lockedBlockLevels": {}
+      }
+    },
+    "inventory": {
+      "version": 1,
+      "data": {
+        "items": {
+          "squires-arming-sword": 1,
+          "gauts-spare-tabard": 1,
+          "wooden-round-shield": 1,
+          "healing-flask": 3,
+          "hearth-bread": 1,
+          "hearth-token": 1,
+          "gauts-spare-blade": 1
+        },
+        "equipped": {
+          "weapon": "squires-arming-sword",
+          "offhand": "wooden-round-shield",
+          "armour": "gauts-spare-tabard"
+        },
+        "unknown": {},
+        "gold": 0
+      }
+    },
+    "waystones": {
+      "version": 1,
+      "data": {
+        "lit": [
+          "chapel",
+          "kettlewick"
+        ],
+        "lastRest": null,
+        "respawn": "chapel"
+      }
+    },
+    "map": {
+      "version": 1,
+      "data": {
+        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAFAAAABQAKAG"
+      }
+    },
+    "progression": {
+      "version": 1,
+      "data": {
+        "xp": 350,
+        "storyPoints": 0,
+        "learned": [
+          "knight.rallyCry"
+        ],
+        "bar": [
+          "knight.rallyCry",
+          null,
+          null,
+          null,
+          null,
+          null
+        ]
+      }
+    },
+    "prompts": {
+      "version": 1,
+      "data": {
+        "counts": {},
+        "rebindOfferShown": false
+      }
+    },
+    "burn": {
+      "version": 1,
+      "data": {
+        "burn": 0,
+        "scars": 0
+      }
+    },
+    "ember": {
+      "version": 1,
+      "data": {
+        "ember": 100
+      }
+    },
+    "tutorial": {
+      "version": 1,
+      "data": {
+        "mode": "kettlewick",
+        "beat": null,
+        "finished": [
+          "t01",
+          "t02",
+          "t03",
+          "t04",
+          "t05",
+          "t06",
+          "t07",
+          "t08",
+          "t09",
+          "t10",
+          "t11",
+          "t12",
+          "t13",
+          "t14",
+          "t15"
+        ],
+        "skipped": [
+          "t15"
+        ],
+        "progress": {},
+        "t13PendingPassive": null,
+        "kitGranted": true,
+        "complete": true
+      }
+    },
+    "player-position": {
+      "version": 1,
+      "data": {
+        "x": 0,
+        "y": 0.010099966618872691,
+        "z": 157.99999988244352,
+        "yaw": 3.141592653589793
+      }
+    }
+  }
+}

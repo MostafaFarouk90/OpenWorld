@@ -24,8 +24,28 @@ export const ITEMS: Record<string, ItemDef> = {
   'training-weights': def('training-weights', 'trinket', { slot: 'trinket' }),
   'tobbs-lucky-whistle': def('tobbs-lucky-whistle', 'trinket', { slot: 'trinket' }),
   'priors-censer': def('priors-censer', 'trinket', { slot: 'trinket' }),
+  // Class starter gear (design 9, tier 1), granted by the M07 trainers (thread 12, src/classes/kits.ts).
+  'woodcutters-axe': def('woodcutters-axe', 'weapon', { slot: 'weapon', stats: { attack: 14 } }),
+  'hide-jerkin': def('hide-jerkin', 'armour', { slot: 'armour', stats: { defense: 3 } }),
+  'apprentices-staff': def('apprentices-staff', 'weapon', { slot: 'weapon', stats: { attack: 8 } }),
+  'wool-robe': def('wool-robe', 'armour', { slot: 'armour', stats: { defense: 1 } }),
+  'alley-knives': def('alley-knives', 'weapon', { slot: 'weapon', stats: { attack: 11 } }),
+  'leather-vest': def('leather-vest', 'armour', { slot: 'armour', stats: { defense: 2 } }),
+  'hunting-crossbow': def('hunting-crossbow', 'weapon', { slot: 'weapon', stats: { attack: 10 } }),
+  'rangers-cloak': def('rangers-cloak', 'armour', { slot: 'armour', stats: { defense: 2 } }),
   'healing-flask': def('healing-flask', 'consumable', { stackMax: 5, use: { healFraction: 0.4, drinkSeconds: 1.2 } }),
 };
+
+/**
+ * Adds item definitions from another module (the economy). Call at module scope so ids exist before a save loads
+ * (`Inventory.load` stashes unknown ids). A duplicate id throws.
+ */
+export function registerItems(defs: readonly ItemDef[]): void {
+  for (const d of defs) {
+    if (Object.prototype.hasOwnProperty.call(ITEMS, d.id)) throw new Error(`registerItems: duplicate item id "${d.id}"`);
+    ITEMS[d.id] = d;
+  }
+}
 
 export function getItem(id: string): ItemDef | undefined {
   return Object.prototype.hasOwnProperty.call(ITEMS, id) ? ITEMS[id] : undefined;

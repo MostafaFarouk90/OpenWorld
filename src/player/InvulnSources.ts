@@ -22,6 +22,18 @@ export class InvulnSources implements InvulnerabilityGate {
     return this.sources.has(source);
   }
 
+  /** True when `source` is the only reason the actor is invulnerable. */
+  only(source: string): boolean {
+    return this.sources.size === 1 && this.sources.has(source);
+  }
+
+  /** True when something is active and every active source is one of `allowed`. */
+  onlyAmong(allowed: ReadonlySet<string>): boolean {
+    if (this.sources.size === 0) return false;
+    for (const s of this.sources) if (!allowed.has(s)) return false;
+    return true;
+  }
+
   get active(): boolean {
     return this.sources.size > 0;
   }

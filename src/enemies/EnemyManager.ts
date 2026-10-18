@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { isHeavyBlow } from '../combat/heavyBlow';
-import { HumanoidBody } from './body';
+import { HumanoidBody, type EnemyBody } from './body';
 import { mulberry32 } from './ai/moveSelect';
 import { ENEMY_DEFS } from './defs';
 import { boneMultiplier, Enemy, type EnemyEnv, type EnemySpawn } from './Enemy';
@@ -9,14 +9,19 @@ import { buildEnemyModel, type EnemyModelSource } from './EnemyModel';
 import { isFoeKind } from './foes/defs';
 import type { Foe } from './foes/Foe';
 import { FoeManager } from './foes/FoeManager';
-import type { FoeDef, RaiseWraithRequest } from './foes/types';
+import type { FoeDef, FoeEnd, RaiseWraithRequest } from './foes/types';
 import { scaleStats } from './level';
-import { makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyTargets, nextPulseId, type BossMercySubject, type MercySubject } from './mercy';
+import { isHoldVerb, makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyTargets, nextPulseId, type BossMercySubject, type MercyEnemyDef, type MercySubject } from './mercy';
 import { MercyTally, type TallyRow } from './mercyTally';
+import { makeQuadrupedBody } from './hound/body';
+import { HOUND } from './hound/tuning';
 import type { ActorId, EnemyEvents, EnemyHost, MercyEventLike } from './ports';
 import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } from './spawners';
 import { ASH_GRAB, BOSS_MERCY, GUARD, MERCY, PAIR, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions, UnlockVerb } from './types';
+import { makeLineOfSight } from './ai/perception';
+import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
+
 
 function isFoeDef(def: EnemyDef | FoeDef): def is FoeDef {
   return isFoeKind(def.kind);
@@ -39,6 +44,20 @@ export interface EnemiesService {
   lockBlockLevel(blockId: string, level: number): void;
   /** Mercies and kills per creature kind, for the codex (thread 8). */
   mercyTally(): Record<string, TallyRow>;
+  /** The living member in a spawner's `leaderSlot`, or null. */
+  packLeader(spawnerId: string): ActorId | null;
+  /**
+   * Shoves an enemy `metres` (clamped to 6) along the horizontal `dir` over a short knockback, without a stagger.
+   * False (nothing happens) for a non-finite `dir` or `metres <= 0`, an unknown, dead, gone, foe, observer-only or
+   * non-hostile actor, a boss, an enemy in any mercy window, and a thief carrying gold.
+   */
+  push(actorId: ActorId, push: { dir: { x: number; z: number }; metres: number }): boolean;
+  /** Perception hook for stealth and skills (thread 18, 15). */
+  perception: {
+    register(provider: PerceptionProvider): Unregister;
+    /** Per-guard read: awareness 0..1, sees and hears as of the enemy's last think; null for an unknown, gone or dormant enemy. */
+    state(actorId: ActorId): { awareness: number; sees: boolean; hears: boolean; distance: number } | null;
+  };
 }
 
 /**
@@ -52,7 +71,7 @@ export class EnemyManager {
   private readonly foes: FoeManager;
   /** Per-enemy end callbacks (the bloom's raised wraiths). */
   private readonly releaseWatchers = new Map<ActorId, { accepted(): void; revoked?(): void }>();
-  private readonly goneWatchers = new Map<ActorId, (how: MemberEnd) => void>();
+  private readonly goneWatchers = new Map<ActorId, (how: FoeEnd) => void>();
   private readonly tokens = new Map<ActorId, Set<Enemy>>();
   private readonly tokenOf = new Map<Enemy, ActorId>();
   private readonly mercyRemovers = new Map<Enemy, () => void>();
@@ -131,7 +150,30 @@ export class EnemyManager {
     setWarmthTier: (w) => this.spawners.setWarmthTier(w),
     lockBlockLevel: (b, l) => this.spawners.lockBlockLevel(b, l),
     mercyTally: () => this.tally.snapshot(),
+    packLeader: (id) => this.packLeaderId(id),
+    push: (id, p) => this.pushEnemy(id, p),
+    perception: {
+      register: (p) => this.perceptionHub.register(p),
+      state: (id) => this.enemies.get(id)?.perceptionState() ?? null,
+    },
   };
+
+  readonly perceptionHub = new PerceptionHub((m) => this.host.warn(m));
+
+  private pushEnemy(actorId: ActorId, p: { dir: { x: number; z: number }; metres: number }): boolean {
+    const enemy = this.enemies.get(actorId);
+    if (!enemy || !p) return false;
+    const bosses = this.host.bosses;
+    if (bosses?.active) for (const b of bosses.active()) if (bosses.state(b)?.actorId === actorId) return false;
+    return enemy.pushAlong(p.dir, p.metres);
+  }
+
+  /** The living member in a spawner's `leaderSlot`, or null (no leader slot, or its occupant is gone). */
+  packLeaderId(spawnerId: string): ActorId | null {
+    const id = this.spawners.leaderOf(spawnerId);
+    const e = id ? this.enemies.get(id) : undefined;
+    return e && e.active ? e.id : null;
+  }
 
   mercyUnlocked(verb: UnlockVerb): boolean {
     return this.host.state.getBool(MERCY.flags[verb], false);
@@ -144,6 +186,20 @@ export class EnemyManager {
     this.updateDormancy();
     for (const e of this.enemies.values()) e.think(dt);
     this.foes.think(dt);
+    // Escaped thieves' slots refill out of the player's sight while their group is live.
+    this.spawners.tickRefills(dt, (at) => this.playerCanSee(at));
+  }
+
+  /** Whether the player could see a point on the ground: within sight range and with a clear ray. */
+  private playerCanSee(at: { x: number; y: number; z: number }): boolean {
+    const p = this.host.player.feet;
+    if (Math.hypot(p.x - at.x, p.z - at.z) > AI.sightRange) return false;
+    const physics = this.host.physics;
+    if (!physics) return true;
+    return makeLineOfSight(physics, this.host.player.collider)(
+      { x: at.x, y: at.y + AI.eyeHeight, z: at.z },
+      { x: p.x, y: p.y + AI.chestHeight, z: p.z },
+    );
   }
 
   animate(dt: number): void {
@@ -171,9 +227,6 @@ export class EnemyManager {
     if (isFoeDef(def)) return this.foes.spawn({ ...req, def });
     let enemy: Enemy;
     try {
-      const source = this.makeModel(def);
-      const model = buildEnemyModel(source, def, { bus: this.host.combat.bus });
-      const animator = new EnemyAnimator(model.owner, source.clips, { warn: (m) => this.host.warn(m) });
       const stats = scaleStats(def, req.level);
       const spawn: EnemySpawn = {
         def: def,
@@ -188,31 +241,45 @@ export class EnemyManager {
         patrol: patrolForSlot(req.patrol.map((a) => a.position), req.slot),
         options: req.options,
       };
-      enemy = new Enemy(this.env, spawn, new HumanoidBody(model, animator));
+      enemy = new Enemy(this.env, spawn, this.makeBody(def));
     } catch (err) {
       this.host.warn(`enemies: could not spawn ${def.kind} for ${req.spawnerId}: ${String(err)}`);
       return null;
     }
     this.enemies.set(enemy.id, enemy);
+    const mercyDef = enemy.def.mercy ? (enemy.def as MercyEnemyDef) : null;
+    if (!mercyDef) return enemy.id; // no mercy row (the watch guard): nothing to register
     const subject: MercySubject = {
       actorId: enemy.id,
-      def: enemy.def,
+      def: mercyDef,
       slug: enemy.slug,
       feet: (out) => out.copy(enemy.feet),
       mercyOpen: () => enemy.mercyOpen,
     };
     this.subjects.set(enemy, subject);
-    this.mercyRemovers.set(
-      enemy,
-      this.host.interaction.register(
-        makeMercyInteractable(subject, {
-          unlocked: (verb) => this.mercyUnlocked(verb),
-          lockOnTarget: () => this.host.services.get('lockOn')?.targetId ?? null,
-          complete: (s) => this.completeMercy(s),
-        }),
-      ),
-    );
+    // Calm's interactable is thread 1's (the Calm type, offerings and state); only Release and Spare are built here.
+    if (isHoldVerb(mercyDef.mercy.verb)) {
+      this.mercyRemovers.set(
+        enemy,
+        this.host.interaction.register(
+          makeMercyInteractable(subject, {
+            unlocked: (verb) => this.mercyUnlocked(verb),
+            lockOnTarget: () => this.host.services.get('lockOn')?.targetId ?? null,
+            complete: (s) => this.completeMercy(s),
+          }),
+        ),
+      );
+    }
     return enemy.id;
+  }
+
+  /** The body for a def: the procedural quadruped, or the Knight rig from the model factory. */
+  private makeBody(def: EnemyDef): EnemyBody {
+    if (def.body === 'quadruped') return makeQuadrupedBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
+    const source = this.makeModel(def);
+    const model = buildEnemyModel(source, def, { bus: this.host.combat.bus });
+    const animator = new EnemyAnimator(model.owner, source.clips, { warn: (m) => this.host.warn(m) });
+    return new HumanoidBody(model, animator);
   }
 
   /** Spawns one enemy without a spawner (tests, debug). */
@@ -417,11 +484,16 @@ export class EnemyManager {
       if (this.tokenOf.get(self) === targetId) return true;
       this.env.releaseToken(self);
       const set = this.tokens.get(targetId) ?? new Set<Enemy>();
-      if (set.size >= AI.attackersPerTarget) return false;
-      // A pair does not swing in the same instant: the second waits out a short stagger.
-      if (self.def.pairAdvance && self.spawnerId) {
+      // The limit is defined by the kinds in play: the largest `attackersPerTarget` among the holders and the
+      // requester (default AI.attackersPerTarget), so a hound pack takes 3 and a scene without hounds keeps 2.
+      let limit = self.def.attackersPerTarget ?? AI.attackersPerTarget;
+      for (const e of set) limit = Math.max(limit, e.def.attackersPerTarget ?? AI.attackersPerTarget);
+      if (set.size >= limit) return false;
+      // Members of one group do not swing in the same instant: the next waits out a short stagger.
+      const gap = self.def.attackStagger ?? (self.def.pairAdvance ? PAIR.attackStaggerSeconds : 0);
+      if (gap > 0 && self.spawnerId) {
         for (const e of set) {
-          if (e.spawnerId === self.spawnerId && this.clock - (this.tokenAt.get(e) ?? -Infinity) < PAIR.attackStaggerSeconds) return false;
+          if (e.spawnerId === self.spawnerId && this.clock - (this.tokenAt.get(e) ?? -Infinity) < gap) return false;
         }
       }
       set.add(self);
@@ -437,6 +509,7 @@ export class EnemyManager {
       this.tokenAt.delete(self);
       this.tokens.get(t)?.delete(self);
     },
+    perceptionModifiers: (self: Enemy, targetId: ActorId) => this.perceptionHub.combined(targetId, () => self.pose()),
     partnerOf: (self: Enemy) => {
       if (!self.spawnerId) return null;
       let best: Enemy | null = null;
@@ -451,6 +524,16 @@ export class EnemyManager {
       }
       return best;
     },
+    packNearby: (self: Enemy) => {
+      if (!self.spawnerId) return 0;
+      let n = 0;
+      for (const e of this.enemies.values()) {
+        if (e === self || e.spawnerId !== self.spawnerId || !e.active) continue;
+        if (e.feet.distanceTo(self.feet) <= HOUND.packRadius) n++;
+      }
+      return n;
+    },
+    packLeaderId: (spawnerId: string) => this.packLeaderId(spawnerId),
     alertPack: (self: Enemy, targetId: ActorId) => {
       if (!self.spawnerId) return;
       for (const e of this.enemies.values()) {
@@ -460,7 +543,7 @@ export class EnemyManager {
     },
     mercyUnlocked: (verb: UnlockVerb) => this.mercyUnlocked(verb),
     nav: () => this.host.services.get('nav'),
-    gone: (self: Enemy, how: 'died' | 'released' | 'spared' | 'despawned') => {
+    gone: (self: Enemy, how: MemberEnd) => {
       this.enemies.delete(self.id);
       this.env.releaseToken(self);
       this.subjects.delete(self);
@@ -471,7 +554,7 @@ export class EnemyManager {
       this.goneWatchers.delete(self.id);
       this.releaseWatchers.delete(self.id);
       if (this.disposed) return;
-      watcher?.(how);
+      watcher?.(how === 'escaped' ? 'despawned' : how);
       this.afterGone(self.id, self.spawnerId, how);
     },
     };
@@ -484,13 +567,20 @@ export class EnemyManager {
       this.unsubs.push(this.host.events.on(type, fn));
 
     on('damage.dealt', (r) => {
+      // A status tick (bleed, ignite) never flinches, alerts or provokes (actors-and-damage.md section 10).
+      if (r.kind === 'status') return;
       const target = this.enemies.get(r.targetId);
-      if (target) target.damaged(r.attackerId, r.outcome, r.poiseDealt, r.staggered, r.killed);
+      if (target) target.damaged(r.attackerId, r.outcome, r.poiseDealt, r.staggered, r.killed, r.kind);
       const attacker = r.attackerId ? this.enemies.get(r.attackerId) : undefined;
+      if (attacker && r.outcome === 'hit' && r.kind === 'melee') this.igniteOnBite(attacker, r.targetId);
       if (attacker && r.outcome === 'hit' && r.targetId === this.host.actors.player.id) {
         const move = attacker.brain.currentMove;
         if (move?.onHit === 'slow' && attacker.active) attacker.applySlow(ASH_GRAB.speedScale, ASH_GRAB.seconds);
+        if (move?.onHit === 'steal' && attacker.active) attacker.thief?.grabHit();
       }
+    });
+    on('player.dodged', (p) => {
+      if (p.attackerId) this.enemies.get(p.attackerId)?.playerDodged();
     });
     on('actor.staggered', (p) => this.enemies.get(p.actorId)?.staggered(p.byId));
     on('actor.died', (p) => {
@@ -551,6 +641,11 @@ export class EnemyManager {
         else if (e.inMercyExit && e.spawnerId) {
           refill.add(e.spawnerId);
           e.despawnUnseen();
+        } else if (e.thief && e.thief.stolenGold > 0) {
+          // The loaded inventory is the truth about gold: a thief carrying a pouch the save never saw would pay it out
+          // again when killed. It vanishes without counting as an escape and its slot is refilled.
+          if (e.spawnerId) refill.add(e.spawnerId);
+          e.despawnUnseen();
         }
       }
       for (const id of refill) if (!this.spawners.isCleared(id)) this.spawners.spawnGroup(id);
@@ -603,6 +698,15 @@ export class EnemyManager {
         -150,
       ),
     );
+  }
+
+  /** The burning bite: `status.apply(target, ignite)` through the status service; a no-op while it is absent. */
+  private igniteOnBite(attacker: Enemy, targetId: ActorId): void {
+    const status = this.host.services.get('status');
+    if (!status) return;
+    const burn = attacker.burningBite();
+    if (!burn) return;
+    status.apply(targetId, { id: burn.id, kind: 'ignite', dps: burn.dps, seconds: burn.seconds, sourceId: attacker.id });
   }
 
   // ---- dormancy ----------------------------------------------------------------------------------

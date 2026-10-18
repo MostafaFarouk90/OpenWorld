@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { StubDocument, StubElement, textOf } from '../hud/dom';
+import { registerClassSkills, SKILLS, type SkillDef } from './skills';
 import { Progression } from './Progression';
 import { SkillMenu } from './SkillMenu';
 import { skillViewModel } from './skillViewModel';
@@ -70,5 +71,68 @@ describe('SkillMenu', () => {
   it('shows locked later tiers instead of a learn button', () => {
     const { menu } = setup(5);
     expect(textOf(menu.element)).toContain('Not available yet');
+  });
+});
+
+describe('class-aware skill menu', () => {
+  const def = (cls: string, name: string, branch: string, tier: SkillDef['tier'] = 1): SkillDef => ({
+    id: `${cls}.${name}`, classId: cls, branch, tier, cost: 1, kind: 'passive',
+    nameKey: `skill.${cls}.${name}`, descKey: `skill.${cls}.${name}.d`, available: true,
+  });
+  const mk = (classId?: () => string | null | undefined, tt = t) => {
+    const actor = fakeActor();
+    const prog = new Progression({ emit: () => {}, logger: { warn: () => {} }, actor: () => actor });
+    const menu = new SkillMenu(new StubDocument(), { progression: prog, t: tt, close: () => {}, classId });
+    return { prog, menu };
+  };
+  const before = SKILLS.length;
+  const cleanup = () => SKILLS.splice(before);
+
+  it('Knight keeps bulwark, vanguard, standard in order', () => {
+    const { prog } = mk();
+    expect(skillViewModel(prog, 'knight').branches.map((b) => b.branch)).toEqual(['bulwark', 'vanguard', 'standard']);
+    expect(skillViewModel(prog).branches).toHaveLength(3);
+  });
+
+  it('a registered class shows only its own branches, in registration order; switching re-reads', () => {
+    try {
+      expect(registerClassSkills('mage', [def('mage', 'a', 'frost'), def('mage', 'b', 'arcane'), def('mage', 'c', 'frost', 2)]).ok).toBe(true);
+      let cls = 'mage';
+      const { prog, menu } = mk(() => cls);
+      expect(skillViewModel(prog, 'mage').branches.map((b) => b.branch)).toEqual(['frost', 'arcane']);
+      expect(textOf(menu.element)).toContain('Frost');
+      expect(textOf(menu.element)).not.toContain('Bulwark');
+      cls = 'knight';
+      menu.render();
+      expect(textOf(menu.element)).toContain('Bulwark');
+      expect(textOf(menu.element)).not.toContain('Frost');
+    } finally { cleanup(); }
+  });
+
+  it('missing branch string falls back to a title-cased id; a present one wins', () => {
+    try {
+      registerClassSkills('rogue', [def('rogue', 'a', 'shadow-step')]);
+      const { menu } = mk(() => 'rogue');
+      expect(textOf(menu.element)).toContain('Shadow Step');
+      const { menu: m2 } = mk(() => 'rogue', (k, p) => (k === 'hud.skills.branch.shadow-step' ? 'Umbra' : t(k, p)));
+      expect(textOf(m2.element)).toContain('Umbra');
+    } finally { cleanup(); }
+  });
+
+  it('empty or unknown class shows the empty message', () => {
+    expect(textOf(mk(() => 'ghost').menu.element)).toContain('This class has no skills yet.');
+    const { prog } = mk();
+    expect(skillViewModel(prog, 'ghost').branches).toEqual([]);
+  });
+
+  it('absent classes service (undefined/null) falls back to the progression class, then the Knight', () => {
+    const { prog, menu } = mk(() => undefined);
+    expect(textOf(menu.element)).toContain('Bulwark');
+    try {
+      registerClassSkills('bard', [def('bard', 'a', 'song')]);
+      prog.setClass('bard');
+      expect(skillViewModel(prog).branches.map((b) => b.branch)).toEqual(['song']);
+      expect(skillViewModel(prog, null).branches.map((b) => b.branch)).toEqual(['song']);
+    } finally { cleanup(); }
   });
 });

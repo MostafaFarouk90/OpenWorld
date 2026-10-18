@@ -42,6 +42,8 @@ export interface ActorInitLike {
   level?: number;
   maxHealth: number;
   maxPoise?: number;
+  /** Takes every hit and stays at full health (the watch guard). */
+  immortal?: boolean;
   root?: THREE.Object3D;
   owner?: unknown;
   /** Set once at spawn from the spawner's tag (coordinator ruling for thread 3's kill filter). */
@@ -120,6 +122,8 @@ export interface EnemyEvents {
   'actor.revived': { actorId: ActorId; reason: string; health: number };
   'ai.aggro': { actorId: ActorId; targetId: ActorId };
   'ai.calm': { actorId: ActorId };
+  'ai.suspicious': { actorId: ActorId; targetId: ActorId; awareness: number };
+  'ai.spotted': { actorId: ActorId; targetId: ActorId };
   telegraph: {
     actorId: ActorId;
     kind: 'block' | 'dodge';
@@ -140,12 +144,18 @@ export interface EnemyEvents {
   'enemies.groupCleared': { spawnerId: string };
   'enemies.state': { actorId: ActorId; from: string; to: string };
   'enemies.yield': { actorId: ActorId; seconds: number };
+  /** The Alley Cutpurse took `amount` gold (inventory.takeGold reason 'theft'). */
+  'enemies.cutpurse.robbed': { actorId: ActorId; amount: number };
+  /** A fleeing cutpurse was caught (staggered or cornered); `amount` is the gold it still holds (0 if none). */
+  'enemies.cutpurse.caught': { actorId: ActorId; amount: number };
   /** R01: once per ash scarecrow (`scarecrowId` is its spawner slot's anchor id, e.g. 'r01.scarecrow.3'). */
   'scarecrow.cleared': { actorId: ActorId; scarecrowId: string; method: 'torch' | 'surge' | 'strike' };
   /** Core boss registry (actors-and-damage.md section 7); thread 1 listens to open the boss's mercy hold. */
   'boss.releaseWindow': { bossId: string; open: boolean };
   'boss.released': { bossId: string; actorId: ActorId };
   'boss.ended': { bossId: string; actorId: ActorId; reason: 'despawned' | 'unregistered' };
+  /** The player's dodge i-frames avoided `attackerId`'s hit (actors-and-damage.md section 10; the hound's dodge counter). */
+  'player.dodged': { attackerId: ActorId | null };
 }
 export type EnemyEventName = keyof EnemyEvents;
 
@@ -222,6 +232,8 @@ export interface PlayerPort {
   readonly collider: unknown;
   /** Sprinting or attacking this tick (heard at AI.hearingLoud). */
   loud(): boolean;
+  /** Measured horizontal speed in m/s (feet movement over simulated time), not input state. */
+  speed(): number;
   addMoveModifier(source: string, mod: { speedScale?: number }): () => void;
 }
 
@@ -261,6 +273,14 @@ export interface QuestsPortLike {
   carriedTorch?(): TorchState | null;
 }
 
+/** The `inventory` service (contracts/game-events-and-flags.md section 6) as far as the Alley Cutpurse uses it. */
+export interface InventoryPort {
+  readonly gold: number;
+  addGold(n: number): void;
+  /** Takes up to `n`, returns what was taken; emits `gold.spent` for the reason. */
+  takeGold(n: number, reason?: 'theft' | 'script'): number;
+}
+
 export interface ServicesPort {
   get(name: 'vfx'): VfxLike | undefined;
   get(name: 'lockOn'): { readonly targetId: ActorId | null } | undefined;
@@ -274,6 +294,25 @@ export interface ServicesPort {
    * merges, `addBurn` charges the Burn alone.
    */
   get(name: 'spells'): ShardSpells | undefined;
+  /** Thread 5's inventory service (gold). */
+  get(name: 'inventory'): InventoryPort | undefined;
+  /** Thread 2's status service (`apply` only): the hound's burning bite. Absent until it lands; callers no-op. */
+  get(name: 'status'): StatusPort | undefined;
+}
+
+/** The part of core's `StatusService` (src/actors/status.ts) the enemies call. */
+export interface StatusPort {
+  apply(
+    actorId: ActorId,
+    spec: {
+      id: string;
+      kind: 'bleed' | 'ignite' | 'stun' | 'slow';
+      dps?: number;
+      seconds: number;
+      sourceId: ActorId | null;
+      slow?: number;
+    },
+  ): boolean;
 }
 
 export interface ShardSpells {
@@ -285,6 +324,8 @@ export interface ShardSpells {
 export interface BossesPort {
   state(bossId: string): { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | null } | null;
   release(bossId: string): boolean;
+  /** Ids of the registered bosses (the core registry has it); lets the enemies tell a boss actor from a plain enemy. */
+  active?(): string[];
 }
 
 /** The parts of the AssetLoader the enemy models need (requests-round-1 item 6). */

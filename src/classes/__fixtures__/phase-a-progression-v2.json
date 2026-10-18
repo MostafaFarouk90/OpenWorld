@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "savedAt": 1792300000000,
+  "reason": "waystone",
+  "playtimeSeconds": 9600,
+  "entries": {
+    "progression": {
+      "version": 2,
+      "data": {
+        "xp": 600,
+        "storyPoints": 1,
+        "learned": ["knight.rimBash", "knight.ironStance"],
+        "bar": [null, null, null, null, null, null],
+        "classId": null,
+        "respecUsed": true
+      }
+    },
+    "world-state": {
+      "version": 1,
+      "data": { "flags": { "story.m05.complete": true, "ability.surge-leap.learned": true } }
+    }
+  }
+}

@@ -64,6 +64,16 @@ describe('TrailDriver', () => {
     expect(made[0].emitting).toBe(false);
   });
 
+  it('draws no ribbon for a ranged shot clip flagged noTrace', () => {
+    const { mgr, made } = fakeManager();
+    const { hilt, tip } = sceneWithMarkers();
+    const d = new TrailDriver(mgr);
+    d.attachPlayer('player', avatar(hilt, tip, () => ({ ...atk(0.5), noTrace: true })));
+    d.tick(0);
+    d.tick(0.1);
+    expect(made.filter((r) => r.emitting)).toHaveLength(0);
+  });
+
   it('enemy ribbons follow attack.window open and close', () => {
     const { mgr, made } = fakeManager();
     const { hilt, tip } = sceneWithMarkers();

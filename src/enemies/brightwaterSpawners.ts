@@ -46,7 +46,7 @@ export const BRIGHTWATER_SPAWNERS: readonly SpawnerDef[] = [
     enemy: 'ash-wraith',
     count: 4,
     anchor: 'pile.churchyard.1',
-    memberAnchors: numbered('pile.churchyard', 4),
+    memberAnchors: [1, 2, 3, 4].map((i) => `pile.churchyard.${i}`), // thread 4's layout ids (dot, not dash)
     band: { min: 2, max: 3 },
     activation: { flag: 'enemies.mercy.release' },
     respawn: 'never',

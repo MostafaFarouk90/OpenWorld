@@ -1,6 +1,9 @@
 import { EMBER } from '../vfx/tuning';
 
-export type EmberSaveData = { ember: number };
+/** A saved maximum above this is ignored. */
+const MAX_SAVED_MAX = 1000;
+
+export type EmberSaveData = { ember: number; max?: number };
 
 /** The Heartshard's fuel: 0..EMBER.max, regenerates after a delay since the last spend. */
 export class Ember {
@@ -10,12 +13,21 @@ export class Ember {
   private _value: number = EMBER.start;
   private lastNotified: number = EMBER.start;
   private sinceSpend = Infinity;
+  private _max: number = EMBER.max;
 
   get value(): number {
     return this._value;
   }
   get max(): number {
-    return EMBER.max;
+    return this._max;
+  }
+
+  /** A class row sets the maximum (design 9). The current value is kept, clamped to the new maximum; false for a bad number. */
+  setMax(n: number): boolean {
+    if (typeof n !== 'number' || !Number.isFinite(n) || n <= 0) return false;
+    this._max = n;
+    this.set(this._value);
+    return true;
   }
 
   /** n <= 0 is a successful no-op, NaN fails, insufficient Ember fails and spends nothing. */
@@ -37,7 +49,7 @@ export class Ember {
     if (!(dt > 0) || !Number.isFinite(dt)) return;
     const before = this.sinceSpend;
     this.sinceSpend += dt;
-    if (this._value >= EMBER.max) return;
+    if (this._value >= this._max) return;
     // Only the part of dt that lies after the delay regenerates.
     const delay = EMBER.regenDelayAfterSpendSeconds;
     const active = before >= delay ? dt : Math.max(0, this.sinceSpend - delay);
@@ -45,7 +57,7 @@ export class Ember {
   }
 
   serialize(): EmberSaveData {
-    return { ember: this._value };
+    return { ember: this._value, max: this._max };
   }
 
   load(data: unknown, version: number): void {
@@ -53,17 +65,20 @@ export class Ember {
     if (typeof data !== 'object' || data === null) return;
     const v = (data as Record<string, unknown>).ember;
     if (typeof v !== 'number' || !Number.isFinite(v)) return;
+    // The class row is applied after every persistable has loaded, so the save carries the maximum its value was kept under.
+    const max = (data as Record<string, unknown>).max;
+    if (typeof max === 'number' && Number.isFinite(max) && max > 0 && max <= MAX_SAVED_MAX) this._max = max;
     this.sinceSpend = Infinity;
     this.set(v);
   }
 
   /** `always` false (regen) notifies only when the rounded, displayed value changes. The internal value stays a float. */
   private set(next: number, always = true): void {
-    const clamped = Math.min(EMBER.max, Math.max(0, next));
+    const clamped = Math.min(this._max, Math.max(0, next));
     const previous = this._value;
     if (clamped === previous) return;
     this._value = clamped;
-    if (always || clamped === 0 || clamped === EMBER.max || Math.round(clamped) !== Math.round(this.lastNotified)) {
+    if (always || clamped === 0 || clamped === this._max || Math.round(clamped) !== Math.round(this.lastNotified)) {
       const was = this.lastNotified;
       this.lastNotified = clamped;
       this.onChange?.(clamped, was);
