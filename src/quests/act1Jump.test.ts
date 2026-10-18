@@ -9,6 +9,7 @@ import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { FakeIndexedDb } from '../save/__fixtures__/fakeIndexedDb';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
+import slice1Complete from '../save/__fixtures__/slice1-complete.json';
 import { tutorialFromQuery } from '../tutorial/tutorial.plugin';
 import { ACT1_JUMP_IDS, ACT1_NODE_EFFECTS, ACT1_PREREQS, Act1Jump, type Act1JumpId, nodeEffects, parseAct1 } from './act1Jump';
 
@@ -39,7 +40,8 @@ describe('node effects are read from the dialogue content', () => {
 });
 
 describe('Act1Jump (fakes)', () => {
-  function rig(id: Act1JumpId, opts: { startFails?: boolean } = {}) {
+  function rig(id: Act1JumpId, opts: { startFails?: boolean; teleportRefusals?: number } = {}) {
+    let refusals = opts.teleportRefusals ?? 0;
     const states = new Map<string, string>();
     const log: string[] = [];
     const tut = { begun: false, complete: false, beat: null as string | null, restartInFlight: false,
@@ -57,7 +59,7 @@ describe('Act1Jump (fakes)', () => {
       runEffects: (e) => log.push(`effects:${JSON.stringify(e)}`),
       setFlag: (f) => log.push(`flag:${f}`),
       rekindle: (w) => log.push(`rekindle:${w}`),
-      teleportTo: (a) => { log.push(`tp:${a}`); return true; },
+      teleportTo: (a) => { log.push(`tp:${a}`); return refusals-- <= 0; },
       ready: () => ready,
       warn,
     });
@@ -91,6 +93,14 @@ describe('Act1Jump (fakes)', () => {
     expect(r.states.get('m03')).toBe('active');
   });
 
+  it('keeps placing while the teleport is refused (busy, terrain loading) and finishes once it lands', () => {
+    const r = rig('d01', { teleportRefusals: 3 });
+    r.setReady();
+    r.run(20);
+    expect(r.jump.phase).toBe('done');
+    expect(r.log.filter((l) => l.startsWith('tp:'))).toHaveLength(4);
+  });
+
   it('fails cleanly when the quest refuses to start', () => {
     const r = rig('r02', { startFails: true });
     r.setReady();
@@ -118,6 +128,7 @@ afterEach(() => {
   for (const c of cleanups.splice(0)) c();
   delete (globalThis as { indexedDB?: unknown }).indexedDB;
   delete (globalThis as { location?: unknown }).location;
+  delete (globalThis as { window?: unknown }).window;
   vi.restoreAllMocks();
 });
 
@@ -173,6 +184,17 @@ describe('?act1= on the real game', () => {
     expect(t.quests.state('r02')).toBe('active');
     expect(t.ctx.state.getBool('enemies.mercy.release')).toBe(false);
     expect([...t.ctx.actors.all()].some((a) => a.kind === 'blocking-dummy') || !t.ctx.services.get('dummies')).toBe(true);
+  }, 60000);
+
+  it('leaves a real save on the same origin untouched (the &new boot skips the slot clear)', async () => {
+    fake.seed('slot-0', slice1Complete);
+    fake.seed('autosave', slice1Complete);
+    // The save plugin reads its boot parameters from window.location.
+    (globalThis as { window?: unknown }).window = { location: { search: '?act1=m03&new' } };
+    const t = await jumpTo('?act1=m03&new');
+    expect(t.jump?.phase).toBe('done');
+    expect(fake.peek('slot-0')).toEqual(slice1Complete);
+    expect(fake.peek('autosave')).toEqual(slice1Complete);
   }, 60000);
 
   it('without &new nothing happens', async () => {
