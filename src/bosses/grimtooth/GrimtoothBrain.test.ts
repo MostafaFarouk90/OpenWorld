@@ -275,17 +275,29 @@ describe('GrimtoothBrain', () => {
     expect(s.calls).toContain('backstep');
   });
 
-  it('starting a move resets the camp timer', () => {
+  it('a player hugging him at 1.5 m gets a backstep even though he keeps biting (bites do not reset the camp timer)', () => {
     const s = make();
-    s.sense.dist = 2.4;
+    s.sense.dist = 1.5;
     s.brain.start();
-    s.run(GRIMTOOTH.campSeconds - 1);
-    s.sense.dist = 1; // he bites (camp timer cleared on entering the bite)
-    s.run(0.1);
-    expect(s.brain.state).toBe('bite');
-    s.sense.dist = 2.4;
-    s.run(GRIMTOOTH.campSeconds - 1);
+    s.run(GRIMTOOTH.campSeconds - 0.5);
+    expect(s.calls.filter((c) => c.startsWith('strike:bite')).length).toBeGreaterThan(1);
     expect(s.calls).not.toContain('backstep');
+    s.run(1.5);
+    expect(s.count('backstep')).toBe(1);
+  });
+
+  it('a backstep that comes due mid-bite cancels the bite telegraph first', () => {
+    const s = make();
+    s.sense.dist = 1.5;
+    s.brain.start();
+    let guard = 0;
+    while (!s.calls.includes('backstep') && guard++ < 2000) s.run(DT);
+    const i = s.calls.indexOf('backstep');
+    // Every telegraph before the backstep was either struck or cancelled.
+    const before = s.calls.slice(0, i);
+    const telegraphs = before.filter((c) => c.startsWith('telegraph:')).length;
+    const ends = before.filter((c) => c.startsWith('strike') || c.startsWith('cancel') || c.startsWith('leapStart')).length;
+    expect(ends).toBe(telegraphs);
   });
 
   it('phase 2 howl releases 2 hounds; there is no howl in phase 1', () => {

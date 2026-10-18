@@ -54,7 +54,8 @@ export interface GrimtoothHooks {
 /** `index` is the HOWLS.counts slot; `retry` is a howl cut short by a break, re-cast once and not re-counted. */
 type Howl = { index: number; count: number; retry: boolean };
 
-const CAMPING: ReadonlySet<GrimtoothState> = new Set<GrimtoothState>(['circle', 'close', 'recover']);
+/** The camp timer runs through every fighting state (his swings included), so a player hugging him cannot keep it at 0. */
+const CAMPING: ReadonlySet<GrimtoothState> = new Set<GrimtoothState>(['circle', 'close', 'crouch', 'leap', 'bite', 'recover', 'howl']);
 const TERMINAL: ReadonlySet<GrimtoothState> = new Set<GrimtoothState>(['calmed', 'dying']);
 /** States a break can interrupt (idle, broken and window ignore it). */
 const BREAKABLE: ReadonlySet<GrimtoothState> = new Set<GrimtoothState>([
@@ -135,11 +136,12 @@ export class GrimtoothBrain {
     this.t += dt;
     this.cooldowns.pounce = Math.max(0, this.cooldowns.pounce - dt);
     this.cooldowns.bite = Math.max(0, this.cooldowns.bite - dt);
-    // The camp timer runs through his swings' recovery too: a player hugging his flank for 10 s gets a backstep.
+    // A player within camp distance for 10 s of fighting gets a backstep; a backstep may not cut a leap or a howl short.
     if (CAMPING.has(this._state)) {
       if (sense.dist < GRIMTOOTH.campDistance) this.campTime += dt;
       else this.campTime = 0;
-      if (this.campTime >= GRIMTOOTH.campSeconds) {
+      if (this.campTime >= GRIMTOOTH.campSeconds && this._state !== 'leap' && this._state !== 'howl') {
+        this.cancelAction(false);
         this.enter('backstep');
         this.hooks.backstep();
         return;

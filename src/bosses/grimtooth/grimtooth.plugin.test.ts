@@ -15,7 +15,7 @@ import { killXp } from '../../progression/tuning';
 import { d02 } from '../../quests/content/d02.quest';
 import { TerrainColliders } from '../../world/TerrainColliders';
 import { World } from '../../world/World';
-import { OUTCOME_FLAG } from './GrimtoothDirector';
+import { gateVeil, OUTCOME_FLAG } from './GrimtoothDirector';
 import grimtoothPlugin from './grimtooth.plugin';
 import { ARENA, BITE, D02, GRIMTOOTH, GRIMTOOTH_BOSS_ID, HOWLS, MOVES, PRESENTATION, SUMMON_GROUP } from './tuning';
 
@@ -99,7 +99,7 @@ function fakeQuests(houndsDone: boolean) {
     },
   };
   const plugin: GamePlugin = {
-    id: 'fake-quests',
+    id: 'quests',
     dependsOn: ['core'],
     setup(c) {
       (c.services.provide as (n: string, v: unknown) => void)('quests', q);
@@ -328,6 +328,35 @@ describe('Gaffer Grimtooth on the real core', () => {
     t.teardown();
   });
 
+  it('a player death or a load during the calm walk-off leaves the scattering pack alive', async () => {
+    for (const end of ['death', 'load'] as const) {
+      const t = await setup();
+      t.startFight();
+      toWindow(t);
+      const pack = t.enemies.service.alive();
+      const callsBefore = t.enemies.calls.length;
+      expect(t.ctx.bosses.release(GRIMTOOTH_BOSS_ID)).toBe(true);
+      t.run(secs(PRESENTATION.calmHeadSeconds + 0.5));
+      if (end === 'death') t.ctx.damage.kill(t.ctx.player.actor.id);
+      else t.game.events.emit('save.loaded', { slot: 'test' });
+      t.run(secs(PRESENTATION.calmDespawnAfter) + 5);
+      expect(t.enemies.calls.slice(callsBefore).filter((c) => c.startsWith('reset'))).toEqual([]);
+      for (const id of pack) expect(t.ctx.actors.get(id)).toBeTruthy();
+      expect(t.of('boss.ended')).toHaveLength(1);
+      expect(t.ctx.state.hasFlag(OUTCOME_FLAG)).toBe(true);
+      t.teardown();
+    }
+  });
+
+  it('a fresh session with the arena never entered leaves the gate open and spawns nothing', async () => {
+    const t = await setup();
+    t.run(secs(5));
+    expect(t.boss()).toBeNull();
+    expect(t.interiors.log.filter((l) => l.startsWith(`blocker:${ARENA.gate}:true`))).toEqual([]);
+    expect(t.enemies.calls).toEqual([]);
+    t.teardown();
+  });
+
   it('a strike in the window kills him: boss.defeated, the pack crumbles, one boss.ended', async () => {
     const t = await setup();
     t.startFight();
@@ -553,7 +582,7 @@ describe('Gaffer Grimtooth on the real core', () => {
     const t = await setup();
     t.startFight();
     const door = t.ctx.anchors.find(ARENA.arenaDoor)!;
-    t.game.events.emit('save.loaded', {} as never);
+    t.game.events.emit('save.loaded', { slot: 'test' });
     t.run(1);
     expect(t.boss()).toBeNull();
     expect(t.ctx.player.feet.distanceTo(new THREE.Vector3(door.position.x, t.ctx.player.feet.y, door.position.z))).toBeLessThan(0.5);
@@ -575,7 +604,7 @@ describe('Gaffer Grimtooth on the real core', () => {
     t.enter();
     t.run(secs(1));
     expect(t.moveModifiers.state().freeze).toBe(true);
-    t.game.events.emit('save.loaded', {} as never);
+    t.game.events.emit('save.loaded', { slot: 'test' });
     t.run(1);
     expect(t.boss()).toBeNull();
     expect(t.moveModifiers.state().freeze).toBeFalsy();
@@ -655,13 +684,16 @@ describe("3a's real Underways geometry", () => {
       }
     }
     expect(checked).toBeGreaterThan(0);
-    // The veil is drawn inside the gate's span.
-    const vx = door.x + ((centre.x - door.x) / doorToCentre) * ARENA.veilOffset;
-    const vz = door.z + ((centre.z - door.z) / doorToCentre) * ARENA.veilOffset;
-    expect(vx).toBeGreaterThanOrEqual(gate.x0 - 1e-6);
-    expect(vx).toBeLessThanOrEqual(gate.x1 + 1e-6);
-    expect(vz).toBeGreaterThanOrEqual(gate.z0 - 1e-6);
-    expect(vz).toBeLessThanOrEqual(gate.z1 + 1e-6);
+    // The veil sits at the gate's centre and spans its long side, in world space for any site offset (review should-fix 3).
+    const off = { x: 400, z: -250 };
+    const anchors = { find: (id: string) => (id === ARENA.arenaDoor ? { position: { x: door.x + off.x, y: 7, z: door.z + off.z }, yaw: 0 } : null) };
+    const veil = gateVeil({ anchors } as never)!;
+    expect(veil.at.x - off.x).toBeCloseTo((gate.x0 + gate.x1) / 2);
+    expect(veil.at.z - off.z).toBeCloseTo((gate.z0 + gate.z1) / 2);
+    expect(veil.at.y).toBe(7);
+    expect(gate.x1 - gate.x0).toBeGreaterThan(gate.z1 - gate.z0);
+    expect(veil.yaw).toBe(0);
+    expect(gateVeil({ anchors: { find: () => null } } as never)).toBeNull();
   });
 
   it('the summon anchors sit inside his arena half-extent of the centre', () => {

@@ -47,6 +47,20 @@ describe('PounceDecal', () => {
     d.dispose();
   });
 
+  it('retarget moves the strip to the locked aim without restarting the fill', () => {
+    const d = new PounceDecal();
+    d.start({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: -4 });
+    d.update(POUNCE.decalFillSeconds / 2);
+    d.retarget({ x: 0, y: 0, z: 0 }, { x: -6, y: 0, z: 0 });
+    expect(d.mesh.scale.z).toBeCloseTo(3);
+    expect(d.mesh.rotation.y).toBeCloseTo(Math.PI / 2);
+    d.stop();
+    d.retarget({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: -4 });
+    expect(d.active).toBe(true);
+    expect(d.mesh.scale.z).toBeLessThan(0.01);
+    d.dispose();
+  });
+
   it('survives a zero-length leap and disposes its geometry and material', () => {
     const d = new PounceDecal();
     d.start({ x: 1, y: 0, z: 1 }, { x: 1, y: 0, z: 1 });

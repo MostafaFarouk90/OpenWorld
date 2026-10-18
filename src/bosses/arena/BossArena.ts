@@ -61,8 +61,10 @@ export interface BossArenaConfig<M, P extends { centre: THREE.Vector3 }, E exten
   gate: string;
   /** The gate closes only once the player is this far past the door, so it never shuts on them. */
   gateClearance: number;
-  /** The veil sits this far from the door toward the centre. */
+  /** The veil sits this far from the door toward the centre, facing along door to centre (unless `veilPlacement` says). */
   veilOffset: number;
+  /** Where the veil goes when the arena knows its gate better than the door-to-centre line (D02's gate is off that line). */
+  veilPlacement?: () => { at: THREE.Vector3Like; yaw: number } | null;
   introSource: string;
   intro: ArenaIntro<M>;
   veil: ArenaVeil;
@@ -71,10 +73,8 @@ export interface BossArenaConfig<M, P extends { centre: THREE.Vector3 }, E exten
   makeEncounter(places: P, model: M | null, onEnd: () => void): E;
   makeModel?: () => M | null;
   modelState?: () => BossModelState;
-  /** Extra start condition (D02: the kennels are done). Default: always armed. */
+  /** Extra start condition (D02: the kennels are done), re-checked every tick while the player stands in the trigger. */
   armed?: () => boolean;
-  /** Subscribes to changes that can arm the arena while the player stands in the trigger; returns the unsubscribe. */
-  watchArming?: (changed: () => void) => () => void;
   /** Whether a load at `feet` puts the player back at the door. Default: anywhere in `interiorId`. */
   insideForReload?: (feet: THREE.Vector3Like) => boolean;
   warn?: (message: string) => void;
@@ -112,7 +112,6 @@ export class BossArena<M, P extends { centre: THREE.Vector3 }, E extends ArenaEn
   private outcomeChanged = false;
   /** The player is inside the arena trigger (so a later arming can start the fight). */
   private inTrigger = false;
-  private armChanged = false;
   private disposed = false;
 
   constructor(ctx: GameContext, cfg: BossArenaConfig<M, P, E>) {
@@ -132,7 +131,9 @@ export class BossArena<M, P extends { centre: THREE.Vector3 }, E extends ArenaEn
         if (e.triggerId === cfg.trigger && e.actorId === player()) this.inTrigger = false;
       }),
       ctx.events.on('actor.died', (e) => {
-        if (e.actorId === player()) this.teardownFight();
+        if (e.actorId !== player()) return;
+        this.inTrigger = false;
+        this.teardownFight();
       }),
       ctx.events.on('save.loaded', () => this.onLoaded()),
       ctx.gates.watch(
@@ -144,7 +145,6 @@ export class BossArena<M, P extends { centre: THREE.Vector3 }, E extends ArenaEn
         { keys: [cfg.outcomeFlag] },
       ),
     );
-    if (cfg.watchArming) this.offs.push(cfg.watchArming(() => (this.armChanged = true)));
   }
 
   /** The running encounter (tests, integration). */
@@ -173,10 +173,9 @@ export class BossArena<M, P extends { centre: THREE.Vector3 }, E extends ArenaEn
       const e = this.encounter;
       if (e && !e.done && !e.outcomePlaying) this.teardownFight();
     }
-    if (this.armChanged) {
-      this.armChanged = false;
-      if (this.inTrigger) this.start();
-    }
+    // Arming can change while the player waits in the trigger (D02's kennel hounds can follow them in): re-check it.
+    // Polled rather than subscribed, so it never depends on which plugin set up first (review blocking 1).
+    if (this.cfg.armed && this.inTrigger && !this.encounter && !this.intro && !this.waiting && this.cfg.armed()) this.start();
     if (this.waiting && this.modelState() !== 'loading') {
       this.waiting = false;
       this.start();
@@ -302,6 +301,11 @@ export class BossArena<M, P extends { centre: THREE.Vector3 }, E extends ArenaEn
       this.interiors()?.setBlocker?.(this.cfg.gate, true);
     } catch (err) {
       this.warn(`could not close the arena gate (${String(err)})`);
+    }
+    const placed = this.cfg.veilPlacement?.();
+    if (placed) {
+      this.cfg.veil.show(placed.at, placed.yaw);
+      return;
     }
     const dx = centre.position.x - door.position.x;
     const dz = centre.position.z - door.position.z;
