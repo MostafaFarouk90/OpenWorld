@@ -195,6 +195,22 @@ describe('parry', () => {
     expect(g.resolve(req({ attackerId: 'wolf', swingId: 1 }), ctx(102)).outcome).toBe('blocked');
   });
 
+  it('parryable: false turns a timed block into a plain block', () => {
+    const g = new GuardModel();
+    g.setBlockHeld(true, 100);
+    const res = g.resolve(req({ attackerId: 'prior', parryable: false }), ctx(102));
+    expect(res.outcome).toBe('blocked');
+    expect(res.scale).toBe(GUARD.blockedScale);
+    expect(res.staminaCost).toBeGreaterThan(0);
+  });
+
+  it('parryable: false still guard-breaks when stamina is short', () => {
+    const g = new GuardModel();
+    g.setBlockHeld(true, 100);
+    const res = g.resolve(req({ parryable: false }), { ...ctx(102), stamina: { canAfford: () => false, current: 7 } });
+    expect(res).toMatchObject({ outcome: 'hit', guardBreak: true, staminaCost: 7 });
+  });
+
   it('without a known window falls back to the lead rule', () => {
     const g = new GuardModel();
     g.setBlockHeld(true, 100);
