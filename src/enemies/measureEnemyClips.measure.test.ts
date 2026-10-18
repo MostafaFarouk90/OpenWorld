@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { FIXED_TIMESTEP } from '../config/constants';
 import { ENEMY_ATTACKS, ENEMY_CLIPS } from './clips';
 import { ASH_WRAITH, BLIGHTED_SOLDIER } from './defs';
+import { ALLEY_CUTPURSE } from './cutpurse/def';
 import { buildEnemyModel, type EnemyModel } from './EnemyModel';
 import type { EnemyDef } from './types';
 
@@ -107,12 +108,15 @@ describe.skipIf(!(globalThis as any).process?.env?.MEASURE_ENEMY_CLIPS)('measure
       buildEnemyModel({ model: SkeletonUtils.clone(gltf.scene), clips: gltf.animations }, def);
     const wraith = model(ASH_WRAITH);
     const soldier = model(BLIGHTED_SOLDIER);
+    const cutpurse = model(ALLEY_CUTPURSE);
     const uses: Record<keyof typeof ENEMY_ATTACKS, { m: EnemyModel; channels: Array<'right' | 'left'> }> = {
       wraithClaw: { m: wraith, channels: ['right'] },
       wraithSweep: { m: wraith, channels: ['right'] },
       wraithGrab: { m: wraith, channels: ['right'] },
       soldierChop: { m: soldier, channels: ['right'] },
       soldierBash: { m: soldier, channels: ['left', 'right'] },
+      cutpurseSlash: { m: cutpurse, channels: ['right'] },
+      cutpurseGrab: { m: cutpurse, channels: ['right'] },
     };
     const line = (label: string, clip: THREE.AnimationClip, r: Measured) =>
       console.log(
