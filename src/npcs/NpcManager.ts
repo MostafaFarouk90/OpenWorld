@@ -68,7 +68,7 @@ export class NpcManager implements NpcsService {
     const { layoutNpcs, defs } = this.opts;
     this.validateSet(layoutNpcs, defs);
     this.spawned = true;
-    this.spawnSet(layoutNpcs, defs);
+    this.spawnSet(layoutNpcs, defs, this.gateOffs);
 
     this.unsubs.push(
       this.core.events.on('dialogue.started', (p) => {
@@ -92,23 +92,24 @@ export class NpcManager implements NpcsService {
     for (const spec of layoutNpcs) {
       if (this.specs.has(spec.id)) throw new Error(`NpcManager: npc "${spec.id}" is already registered`);
     }
-    const gateStart = this.gateOffs.length;
+    // This set's gate watchers live in their own array, so removing it never touches another register() call's.
+    const offs: Array<() => void> = [];
     try {
-      this.spawnSet(layoutNpcs, defs);
+      this.spawnSet(layoutNpcs, defs, offs);
     } catch (err) {
-      this.removeSet(layoutNpcs, gateStart);
+      this.removeSet(layoutNpcs, offs);
       throw err;
     }
     let removed = false;
     return () => {
       if (removed || this.disposed) return;
       removed = true;
-      this.removeSet(layoutNpcs, gateStart);
+      this.removeSet(layoutNpcs, offs);
     };
   }
 
-  private removeSet(layoutNpcs: NpcSpec[], gateStart: number): void {
-    for (const off of this.gateOffs.splice(gateStart)) off();
+  private removeSet(layoutNpcs: NpcSpec[], offs: Array<() => void>): void {
+    for (const off of offs.splice(0)) off();
     for (const spec of layoutNpcs) {
       this.despawnOne(spec.id);
       this.specs.delete(spec.id);
@@ -136,7 +137,7 @@ export class NpcManager implements NpcsService {
     }
   }
 
-  private spawnSet(layoutNpcs: NpcSpec[], defs: NpcDef[]): void {
+  private spawnSet(layoutNpcs: NpcSpec[], defs: NpcDef[], offs: Array<() => void>): void {
     const defById = new Map(defs.map((d) => [d.id, d]));
     for (const spec of layoutNpcs) this.specs.set(spec.id, spec);
     for (const spec of layoutNpcs) {
@@ -151,15 +152,15 @@ export class NpcManager implements NpcsService {
           else if (!this.entries.has(spec.id)) this.spawnOne(spec, def);
         };
         if (spec.absentWhen) {
-          this.gateOffs.push(this.core.gates.flag(spec.absentWhen, (on) => { absent = on; apply(); }));
+          offs.push(this.core.gates.flag(spec.absentWhen, (on) => { absent = on; apply(); }));
         }
         if (spec.presentWhen) {
-          this.gateOffs.push(this.core.gates.flag(spec.presentWhen, (on) => { notYet = !on; apply(); }));
+          offs.push(this.core.gates.flag(spec.presentWhen, (on) => { notYet = !on; apply(); }));
         }
       } else {
         this.spawnOne(spec, def);
       }
-      if (spec.walkOff) this.gateWalkOff(spec, spec.walkOff);
+      if (spec.walkOff) this.gateWalkOff(spec, spec.walkOff, offs);
     }
   }
 
@@ -250,8 +251,8 @@ export class NpcManager implements NpcsService {
     else disposeModel(e.figure);
   }
 
-  private gateWalkOff(spec: NpcSpec, walkOff: NonNullable<NpcSpec['walkOff']>): void {
-    this.gateOffs.push(
+  private gateWalkOff(spec: NpcSpec, walkOff: NonNullable<NpcSpec['walkOff']>, offs: Array<() => void>): void {
+    offs.push(
       this.core.gates.flag(walkOff.whenFlag, (open, cause) => {
         if (this.disposed) return;
         const e = this.entries.get(spec.id);
@@ -447,7 +448,7 @@ export class NpcManager implements NpcsService {
     if (last) return { ...last };
     // Absent through its gate since the load (never spawned): it still answers with where its post is.
     const spec = this.specs.get(id);
-    const post = spec?.absentWhen ? this.core.anchors.find(spec.post) : undefined;
+    const post = spec?.absentWhen || spec?.presentWhen ? this.core.anchors.find(spec.post) : undefined;
     return post ? { x: post.position.x, y: post.position.y, z: post.position.z } : undefined;
   }
 

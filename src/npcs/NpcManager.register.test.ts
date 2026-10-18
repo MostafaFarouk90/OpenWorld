@@ -79,6 +79,26 @@ describe('NpcManager.register', () => {
     expect(m.get('late')).toBeUndefined();
   });
 
+  it('removing one set leaves another set\'s gate watchers alive (dispose order A then B)', () => {
+    const { fc, m } = setup();
+    fc.ctx.anchors.define({ id: 'npc-post.third', position: { x: 70, y: 2, z: 70 }, yaw: 0 });
+    fc.ctx.strings.register('en', { 'npc.third.name': 'Third' });
+    const offA = m.register([{ id: 'late', post: 'npc-post.late', presentWhen: 'a' }], [def('late')]);
+    m.register([{ id: 'third', post: 'npc-post.third', presentWhen: 'b' }], [def('third')]);
+    offA();
+    fc.ctx.state.setFlag('b', true);
+    expect(m.get('third')).toBeDefined();
+    fc.flags.set('b', false);
+    fc.fire('save.loaded');
+    expect(m.get('third')).toBeUndefined();
+  });
+
+  it('answers position() for a not-yet-present NPC with its post', () => {
+    const { m } = setup();
+    m.register([{ id: 'late', post: 'npc-post.late', presentWhen: 'story.late.started' }], [def('late')]);
+    expect(m.position('late')).toEqual({ x: 60, y: 2, z: 60 });
+  });
+
   it('refuses before spawnAll and after dispose', () => {
     const fc = createFakeCore();
     const m = new NpcManager(fc.ctx, { layoutNpcs: [], defs: [], playerPosition: () => null, warn: vi.fn() });

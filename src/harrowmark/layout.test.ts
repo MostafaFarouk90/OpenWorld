@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BRIGHTWATER_LAYOUT } from '../region/brightwater.layout';
 import { CORRIDOR_LAYOUT } from '../region/corridor.layout';
+import { pointInFootprint } from '../region/geometry';
 import { arrival, radiusOf } from './validateCity';
 import { BANNER_COUNT, BRAZIER_COUNT, CHASE_M10, CROWD_LANES, DOORS, HARROWMARK_LAYOUT, HARROWMARK_NPCS, WARD } from './harrowmark.layout';
 import { HARROWMARK_NPC_DEFS } from './npcDefs';
@@ -165,6 +166,34 @@ describe('Harrowmark routes', () => {
     for (const p of HARROWMARK_LAYOUT.patrols) expect(p.points.length).toBeGreaterThanOrEqual(2);
     expect(HARROWMARK_LAYOUT.patrols.find((p) => p.id === 'patrol.m06.gate-square')?.loop).toBe(true);
     expect(HARROWMARK_LAYOUT.patrols.find((p) => p.id === 'harrowmark.patrol.gate-wall-walk')?.loop).toBe(false);
+  });
+
+  it('keeps hide spots 2 m clear of every patrol segment, and patrol and chase segments clear of solid footprints', () => {
+    const segDist = (p: { x: number; z: number }, a: { x: number; z: number }, b: { x: number; z: number }) => {
+      const l2 = (b.x - a.x) ** 2 + (b.z - a.z) ** 2;
+      const t = l2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * (b.x - a.x) + (p.z - a.z) * (b.z - a.z)) / l2));
+      return dist(p, { x: a.x + t * (b.x - a.x), z: a.z + t * (b.z - a.z) });
+    };
+    const hides = HARROWMARK_LAYOUT.anchors.filter((q) => q.tags?.includes('hide') && !q.tags.includes('elevated'));
+    const solids = HARROWMARK_LAYOUT.structures.filter((s) => s.mode === 'solid');
+    const routes = [
+      ...HARROWMARK_LAYOUT.patrols.map((p) => ({ id: p.id, pts: p.points.map(at), loop: p.loop })),
+      { id: 'chase-start', pts: CHASE_M10.slice(0, 5).map((n) => ({ x: n.x, z: n.z })), loop: false },
+      { id: 'chase-end', pts: CHASE_M10.slice(13).map((n) => ({ x: n.x, z: n.z })), loop: false },
+    ];
+    for (const r of routes) {
+      const n = r.loop ? r.pts.length : r.pts.length - 1;
+      for (let i = 0; i < n; i++) {
+        const p = r.pts[i];
+        const q = r.pts[(i + 1) % r.pts.length];
+        for (const h of hides) expect(segDist(h, p, q), `${r.id} ${i} vs ${h.id}`).toBeGreaterThanOrEqual(2);
+        // sample the segment against solid footprints (roof legs are excluded above)
+        for (let k = 0; k <= 20; k++) {
+          const pt = { x: p.x + ((q.x - p.x) * k) / 20, z: p.z + ((q.z - p.z) * k) / 20 };
+          for (const s of solids) expect(pointInFootprint(s, pt.x, pt.z, 0.4), `${r.id} ${i} through ${s.id}`).toBe(false);
+        }
+      }
+    }
   });
 
   it('lays crowd lanes as ordered anchors, no gap over 90 m, away from stealth, patrol, hide and chase nodes', () => {

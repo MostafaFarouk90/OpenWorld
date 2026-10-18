@@ -6,7 +6,7 @@ import type { CoreContext, GamePlugin } from '../region/coreTypes';
 import { resolveLayout } from '../region/resolveLayout';
 import { buildCity } from './cityBuild';
 import { watchSouthGate } from './gate';
-import { DOORS, HARROWMARK_LAYOUT, INSIDE_HOMES } from './harrowmark.layout';
+import { DOORS, HARROWMARK_LAYOUT } from './harrowmark.layout';
 import { HARROWMARK_NPC_DEFS, HARROWMARK_NPC_STRINGS_EN } from './npcDefs';
 import './types';
 import { validateCity } from './validateCity';
@@ -34,8 +34,7 @@ export function createHarrowmarkPlugin(opts: HarrowmarkPluginOptions = {}): Game
 
   return {
     id: 'harrowmark',
-    // `interiors`: the inside home posts (npc-post.aldith.inside, ...) exist only once its plugin has set up.
-    dependsOn: ['core', 'region', 'npcs', 'interiors'],
+    dependsOn: ['core', 'region', 'npcs'],
     setup(ctx: CoreContext) {
       try {
         if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
@@ -62,11 +61,7 @@ export function createHarrowmarkPlugin(opts: HarrowmarkPluginOptions = {}): Game
         try {
           const npcs = ctx.services.get('npcs');
           if (!npcs) throw new Error('the npcs service is missing');
-          const specs = layout.npcs.map((n) => {
-            const inside = INSIDE_HOMES[n.id];
-            return inside && ctx.anchors.find(inside) ? { ...n, post: inside } : n;
-          });
-          cleanups.push(npcs.register(specs, HARROWMARK_NPC_DEFS));
+          cleanups.push(npcs.register(layout.npcs, HARROWMARK_NPC_DEFS));
         } catch (err) {
           console.warn('harrowmark: could not register the Harrowmark NPCs', err);
         }

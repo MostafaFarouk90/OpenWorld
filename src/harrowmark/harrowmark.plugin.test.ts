@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { createFakeCore } from '../region/testing/fakeCore';
 import { createHarrowmarkPlugin } from './harrowmark.plugin';
-import { HARROWMARK_LAYOUT, HARROWMARK_NPCS, INSIDE_HOMES } from './harrowmark.layout';
+import { HARROWMARK_LAYOUT, HARROWMARK_NPCS } from './harrowmark.layout';
 import { HARROWMARK_NPC_DEFS } from './npcDefs';
 import type { HarrowmarkService } from './types';
 
@@ -113,24 +113,12 @@ describe('harrowmark plugin', () => {
     warn.mockRestore();
   });
 
-  it('homes the interior NPCs at their inside posts when thread 3a has defined them, and at the porch otherwise', () => {
+  it('has no hard dependency on interiors: its failure must not cost the city, and the porch posts always exist', () => {
+    expect(createHarrowmarkPlugin().dependsOn).toEqual(['core', 'region', 'npcs']);
     const { fc, plugin, registered } = setup();
-    for (const post of Object.values(INSIDE_HOMES)) fc.ctx.anchors.define({ id: post, position: { x: 0, y: 150, z: 0 }, yaw: 0 });
     plugin.setup(fc.ctx);
-    const specs = registered[0].specs as Array<{ id: string; post: string }>;
-    for (const [id, post] of Object.entries(INSIDE_HOMES)) expect(specs.find((n) => n.id === id)!.post).toBe(post);
-    expect(specs.find((n) => n.id === 'rook')!.post).toBe('npc-post.rook');
+    for (const n of registered[0].specs as Array<{ post: string }>) expect(fc.anchors.has(n.post)).toBe(true);
     plugin.dispose?.();
-
-    const none = setup();
-    none.plugin.setup(none.fc.ctx);
-    const porch = none.registered[0].specs as Array<{ id: string; post: string }>;
-    for (const id of Object.keys(INSIDE_HOMES)) expect(porch.find((n) => n.id === id)!.post).toBe(HARROWMARK_LAYOUT.npcs.find((n) => n.id === id)!.post);
-    none.plugin.dispose?.();
-  });
-
-  it('depends on core, region, npcs and interiors', () => {
-    expect(createHarrowmarkPlugin().dependsOn).toEqual(['core', 'region', 'npcs', 'interiors']);
   });
 
   it('rejects a broken layout in test builds and sets nothing up', () => {

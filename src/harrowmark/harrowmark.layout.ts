@@ -31,7 +31,7 @@ const HIDES: Hide[] = [
   { name: 'gate-barrels', x: 8425, z: 1296, heading: 270 },
   { name: 'gate-wall-shadow', x: 8470, z: 1262, heading: 180 },
   { name: 'stable-hay', x: 8668, z: 1356, heading: 0 },
-  { name: 'barracks-woodpile', x: 8330, z: 1360, heading: 90 },
+  { name: 'barracks-woodpile', x: 8325, z: 1382, heading: 90 },
   { name: 'forge-coalbin', x: 8120, z: 1500, heading: 0 },
   { name: 'anvil-alley', x: 8180, z: 1604, heading: 180 },
   { name: 'guild-crates', x: 8720, z: 1540, heading: 90 },
@@ -147,7 +147,7 @@ const POSTS: Post[] = [
   { id: 'gerta.bastion', x: 8225, z: 1745, heading: 180 },
   { id: 'ashdown.bastion', x: 8250, z: 1745, heading: 180 },
   { id: 'wystan', x: 8185, z: 1787, heading: 180 },
-  { id: 'dunstan', x: 8178, z: 1496, heading: 180 },
+  { id: 'dunstan', x: 8178, z: 1496, heading: 0 },
   { id: 'wace', x: 8625, z: 1356, heading: 90 },
   { id: 'aldith', x: 8212, z: 1648, heading: 180 },
   { id: 'merrin', x: 8782, z: 1995, heading: 270 },
@@ -184,18 +184,6 @@ export const HARROWMARK_NPCS: NpcSpec[] = [
   { id: 'vey', post: 'npc-post.vey.keep', presentWhen: 'story.m08.started' },
 ];
 
-/**
- * Where the interior-homed NPCs live once thread 3a's interiors are set up (their `npc-post.<id>.inside` / `.hall` anchors exist
- * only then). The plugin uses these when present and the outdoor porch post otherwise.
- */
-export const INSIDE_HOMES: Readonly<Record<string, string>> = {
-  aldith: 'npc-post.aldith.inside',
-  merrin: 'npc-post.merrin.inside',
-  whitlock: 'npc-post.whitlock.inside',
-  edric: 'npc-post.edric.hall',
-  vey: 'npc-post.vey.hall',
-};
-
 // ---------------------------------------------------------------- patrols, chase, lanes
 type Pts = Array<[number, number]>;
 const ring = (cx: number, cz: number, r: number, n: number, phase = 0): Pts =>
@@ -217,7 +205,7 @@ const PATROLS: Array<{ id: string; pts: Pts; loop: boolean; tags?: string[] }> =
   { id: 'patrol.m06.gate-square', loop: true, pts: [[8470, 1275], [8470, 1320], [8530, 1320], [8530, 1275], [8500, 1298]] },
   { id: H('patrol.gate-wall-walk'), loop: false, pts: arc(130, 170, 5, 735) },
   { id: H('patrol.keep-road'), loop: true, pts: [[8478, 1780], [8478, 2000], [8478, 2300], [8478, 2540], [8522, 2540], [8522, 2300], [8522, 2000], [8522, 1780]] },
-  { id: H('patrol.guild-alley'), loop: false, pts: [[8935, 1519], [8975, 1519], [9010, 1519], [9045, 1522]] },
+  { id: H('patrol.guild-alley'), loop: false, pts: [[8935, 1523.5], [8975, 1523.5], [9010, 1523.5], [9045, 1524]] },
   { id: H('patrol.counting-yard'), loop: true, pts: [[8760, 1975], [8760, 2020], [8725, 2020], [8725, 1975]] },
   { id: H('patrol.barracks'), loop: true, pts: [[8330, 1295], [8395, 1295], [8395, 1365], [8330, 1365]] },
   { id: H('patrol.keep-court'), loop: true, pts: [[8470, 2560], [8470, 2590], [8530, 2590], [8530, 2560], [8500, 2545], [8500, 2570]] },
@@ -239,7 +227,7 @@ export const CHASE_M10: ChaseNode[] = [
   { x: 8900, z: 1760, tag: 'run' },
   { x: 8900, z: 1900, tag: 'run' },
   { x: 8900, z: 2040, tag: 'vault' },
-  { x: 8850, z: 2200, tag: 'run' },
+  { x: 8900, z: 2200, tag: 'run' },
   { x: 8850, z: 2262, tag: 'run', roof: b10 },
   { x: 8850, z: 2338, tag: 'gap', roof: b10 },
   { x: 8850, z: 2400, tag: 'run', roof: b11 },
@@ -248,9 +236,9 @@ export const CHASE_M10: ChaseNode[] = [
   { x: 8756, z: 2430, tag: 'gap', roof: b01 },
   { x: 8756, z: 2490, tag: 'run', roof: b02 },
   { x: 8716, z: 2490, tag: 'drop', roof: b02 },
-  { x: 8690, z: 2490, tag: 'run' },
-  { x: 8600, z: 2490, tag: 'run' },
-  { x: 8510, z: 2490, tag: 'run' },
+  { x: 8690, z: 2494, tag: 'run' },
+  { x: 8600, z: 2494, tag: 'run' },
+  { x: 8510, z: 2494, tag: 'run' },
 ];
 const CHASE_ALT: Pts = [[8900, 2100], [9010, 2200], [9010, 2400], [9000, 2540], [8850, 2548], [8690, 2540]];
 
@@ -265,7 +253,7 @@ const LANES: Array<{ name: string; pts: Pts; loop: boolean; halfWidth: number }>
   { name: 'main-street-north', loop: false, halfWidth: 8, pts: [[8490, 1770], [8490, 1850], [8490, 1930], [8490, 2010], [8490, 2090], [8490, 2170], [8490, 2250], [8490, 2330], [8490, 2375], [8490, 2420], [8490, 2470], [8490, 2520]] },
   { name: 'market-ring', loop: true, halfWidth: 3, pts: ring(8780, 1520, 30, 8) },
   { name: 'forge-row', loop: false, halfWidth: 6, pts: [[8100, 1520], [8140, 1520], [8180, 1520], [8230, 1520], [8290, 1520]] },
-  { name: 'guild-alley', loop: false, halfWidth: 3, pts: [[8940, 1527], [8975, 1527], [9010, 1527], [9040, 1532], [9060, 1542]] },
+  { name: 'guild-alley', loop: false, halfWidth: 1.5, pts: [[8940, 1527.5], [8975, 1527.5], [9010, 1527.5], [9040, 1532], [9060, 1542]] },
   { name: 'gate-queue', loop: false, halfWidth: 4, pts: [[8500, 1262], [8500, 1285], [8500, 1312], [8495, 1345]] },
   { name: 'fountain-circuit', loop: true, halfWidth: 4, pts: ring(8500, 1700, 32, 8, Math.PI / 8) },
   { name: 'chapel-approach', loop: false, halfWidth: 4, pts: [[8480, 2150], [8430, 2150], [8392, 2150], [8358, 2150]] },
@@ -314,7 +302,7 @@ const anchors: AnchorSpec[] = [
   a(H('stables.yard'), 8640, 1375, 0, ['poi']),
   a(H('stables.door'), 8640, 1311, 180, ['poi']),
   a(H('forge-row.centre'), 8180, 1520, 0, ['poi']),
-  a(H('dunstan.forge'), 8178, 1496, 180, ['poi']),
+  a(H('dunstan.forge'), 8178, 1496, 0, ['poi']),
   a(H('guildhall.door'), 8870, 1583, 180, ['poi']),
   a(H('chapel.court'), 8365, 2150, 90, ['poi']),
   a(H('chapel.door'), 8349, 2150, 90, ['poi']),
@@ -331,7 +319,7 @@ const anchors: AnchorSpec[] = [
   // Economy (thread 19): talking and shopping are separate spots, at least 3 m apart.
   a('shop.wystan', 8171, 1787, 180, ['shop']),
   a('shop.merrin', 8782, 1978, 270, ['shop']),
-  a('shop.dunstan', 8183, 1501, 180, ['shop']),
+  a('shop.dunstan', 8183, 1501, 0, ['shop']),
   a('shop.gerta', 8791, 1512, 300, ['shop', 'needs-attendant']),
   a('shop.ashdown', 8262, 1739, 90, ['shop']),
   a('chest.harrowmark.1', 8270, 1520, 270, ['chest']),

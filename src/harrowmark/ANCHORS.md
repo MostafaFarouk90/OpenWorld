@@ -35,7 +35,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | harrowmark.stables.yard | 8640 | 1375 | 0 | 180 | poi |
 | harrowmark.stables.door | 8640 | 1311 | 0 | 0 | poi |
 | harrowmark.forge-row.centre | 8180 | 1520 | 0 | 180 | poi |
-| harrowmark.dunstan.forge | 8178 | 1496 | 0 | 0 | poi |
+| harrowmark.dunstan.forge | 8178 | 1496 | 0 | 180 | poi |
 | harrowmark.guildhall.door | 8870 | 1583 | 0 | 0 | poi |
 | harrowmark.chapel.court | 8365 | 2150 | 0 | 270 | poi |
 | harrowmark.chapel.door | 8349 | 2150 | 0 | 270 | poi |
@@ -65,7 +65,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | npc-post.gerta.bastion | 8225 | 1745 | 0 | 0 | npc-post |
 | npc-post.ashdown.bastion | 8250 | 1745 | 0 | 0 | npc-post |
 | npc-post.wystan | 8185 | 1787 | 0 | 0 | npc-post |
-| npc-post.dunstan | 8178 | 1496 | 0 | 0 | npc-post |
+| npc-post.dunstan | 8178 | 1496 | 0 | 180 | npc-post |
 | npc-post.wace | 8625 | 1356 | 0 | 270 | npc-post |
 | npc-post.aldith | 8212 | 1648 | 0 | 0 | npc-post |
 | npc-post.merrin | 8782 | 1995 | 0 | 90 | npc-post |
@@ -79,7 +79,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | npc-post.gerta.guild | 8780 | 1520 | 0 | 0 | npc-post |
 | shop.wystan | 8171 | 1787 | 0 | 0 | shop |
 | shop.merrin | 8782 | 1978 | 0 | 90 | shop |
-| shop.dunstan | 8183 | 1501 | 0 | 0 | shop |
+| shop.dunstan | 8183 | 1501 | 0 | 180 | shop |
 | shop.gerta | 8791 | 1512 | 0 | 120 | shop, needs-attendant |
 | shop.ashdown | 8262 | 1739 | 0 | 270 | shop |
 | chest.harrowmark.1 | 8270 | 1520 | 0 | 90 | chest |
@@ -111,7 +111,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | harrowmark.hide.gate-barrels | 8425 | 1296 | 0 | 90 | hide |
 | harrowmark.hide.gate-wall-shadow | 8470 | 1262 | 0 | 0 | hide |
 | harrowmark.hide.stable-hay | 8668 | 1356 | 0 | 180 | hide |
-| harrowmark.hide.barracks-woodpile | 8330 | 1360 | 0 | 270 | hide |
+| harrowmark.hide.barracks-woodpile | 8325 | 1382 | 0 | 270 | hide |
 | harrowmark.hide.forge-coalbin | 8120 | 1500 | 0 | 180 | hide |
 | harrowmark.hide.anvil-alley | 8180 | 1604 | 0 | 0 | hide |
 | harrowmark.hide.guild-crates | 8720 | 1540 | 0 | 270 | hide |
@@ -154,10 +154,10 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | harrowmark.patrol.keep-road.6 | 8522 | 2300 | 0 | 180 | patrol |
 | harrowmark.patrol.keep-road.7 | 8522 | 2000 | 0 | 180 | patrol |
 | harrowmark.patrol.keep-road.8 | 8522 | 1780 | 0 | 180 | patrol |
-| harrowmark.patrol.guild-alley.1 | 8935 | 1519 | 0 | 180 | patrol |
-| harrowmark.patrol.guild-alley.2 | 8975 | 1519 | 0 | 180 | patrol |
-| harrowmark.patrol.guild-alley.3 | 9010 | 1519 | 0 | 180 | patrol |
-| harrowmark.patrol.guild-alley.4 | 9045 | 1522 | 0 | 180 | patrol |
+| harrowmark.patrol.guild-alley.1 | 8935 | 1523.5 | 0 | 180 | patrol |
+| harrowmark.patrol.guild-alley.2 | 8975 | 1523.5 | 0 | 180 | patrol |
+| harrowmark.patrol.guild-alley.3 | 9010 | 1523.5 | 0 | 180 | patrol |
+| harrowmark.patrol.guild-alley.4 | 9045 | 1524 | 0 | 180 | patrol |
 | harrowmark.patrol.counting-yard.1 | 8760 | 1975 | 0 | 180 | patrol |
 | harrowmark.patrol.counting-yard.2 | 8760 | 2020 | 0 | 180 | patrol |
 | harrowmark.patrol.counting-yard.3 | 8725 | 2020 | 0 | 180 | patrol |
@@ -176,7 +176,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | chase.m10.1 | 8900 | 1760 | 0 | 180 | chase, run |
 | chase.m10.2 | 8900 | 1900 | 0 | 180 | chase, run |
 | chase.m10.3 | 8900 | 2040 | 0 | 180 | chase, vault |
-| chase.m10.4 | 8850 | 2200 | 0 | 180 | chase, run |
+| chase.m10.4 | 8900 | 2200 | 0 | 180 | chase, run |
 | chase.m10.5 | 8850 | 2262 | 6.5 | 180 | chase, run, elevated |
 | chase.m10.6 | 8850 | 2338 | 6.5 | 180 | chase, gap, elevated |
 | chase.m10.7 | 8850 | 2400 | 7 | 180 | chase, run, elevated |
@@ -185,9 +185,9 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | chase.m10.10 | 8756 | 2430 | 6.5 | 180 | chase, gap, elevated |
 | chase.m10.11 | 8756 | 2490 | 7 | 180 | chase, run, elevated |
 | chase.m10.12 | 8716 | 2490 | 7 | 180 | chase, drop, elevated |
-| chase.m10.13 | 8690 | 2490 | 0 | 180 | chase, run |
-| chase.m10.14 | 8600 | 2490 | 0 | 180 | chase, run |
-| chase.m10.15 | 8510 | 2490 | 0 | 180 | chase, run |
+| chase.m10.13 | 8690 | 2494 | 0 | 180 | chase, run |
+| chase.m10.14 | 8600 | 2494 | 0 | 180 | chase, run |
+| chase.m10.15 | 8510 | 2494 | 0 | 180 | chase, run |
 | chase.m10.alt.1 | 8900 | 2100 | 0 | 180 | chase, run |
 | chase.m10.alt.2 | 9010 | 2200 | 0 | 180 | chase, run |
 | chase.m10.alt.3 | 9010 | 2400 | 0 | 180 | chase, run |
@@ -227,9 +227,9 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | harrowmark.lane.forge-row.3 | 8180 | 1520 | 0 | 180 | lane |
 | harrowmark.lane.forge-row.4 | 8230 | 1520 | 0 | 180 | lane |
 | harrowmark.lane.forge-row.5 | 8290 | 1520 | 0 | 180 | lane |
-| harrowmark.lane.guild-alley.1 | 8940 | 1527 | 0 | 180 | lane |
-| harrowmark.lane.guild-alley.2 | 8975 | 1527 | 0 | 180 | lane |
-| harrowmark.lane.guild-alley.3 | 9010 | 1527 | 0 | 180 | lane |
+| harrowmark.lane.guild-alley.1 | 8940 | 1527.5 | 0 | 180 | lane |
+| harrowmark.lane.guild-alley.2 | 8975 | 1527.5 | 0 | 180 | lane |
+| harrowmark.lane.guild-alley.3 | 9010 | 1527.5 | 0 | 180 | lane |
 | harrowmark.lane.guild-alley.4 | 9040 | 1532 | 0 | 180 | lane |
 | harrowmark.lane.guild-alley.5 | 9060 | 1542 | 0 | 180 | lane |
 | harrowmark.lane.gate-queue.1 | 8500 | 1262 | 0 | 180 | lane |
@@ -479,7 +479,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | hide-prop.gate-barrels | crate | 8427 | 1296 | 3.2 x 1.6 | solid |
 | hide-prop.gate-wall-shadow | crate | 8470 | 1264 | 3.2 x 1.6 | solid |
 | hide-prop.stable-hay | crate | 8668 | 1354 | 3.2 x 1.6 | solid |
-| hide-prop.barracks-woodpile | crate | 8328 | 1360 | 3.2 x 1.6 | solid |
+| hide-prop.barracks-woodpile | crate | 8323 | 1382 | 3.2 x 1.6 | solid |
 | hide-prop.forge-coalbin | crate | 8120 | 1498 | 3.2 x 1.6 | solid |
 | hide-prop.anvil-alley | crate | 8180 | 1606 | 3.2 x 1.6 | solid |
 | hide-prop.guild-crates | crate | 8718 | 1540 | 3.2 x 1.6 | solid |
