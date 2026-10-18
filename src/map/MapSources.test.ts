@@ -133,7 +133,8 @@ describe('MapSources', () => {
       g.reveal(8200, 1730, 100);
       const out = src.posts((x, z) => g.isRevealed(x, z));
       expect(out.map((p) => p.id)).toEqual(['gaut', 'stane', 'pennard', 'gerta', 'ashdown'].map((n) => `harrowmark.bastion.trainer.${n}`));
-      expect(out[0]).toMatchObject({ x: 8200, z: 1730, label: 'Gaut, trainer' });
+      expect(out[0]).toMatchObject({ x: 8150, z: 1742.5, label: 'Gaut, trainer' });
+      expect(new Set(out.map((p) => p.x)).size).toBe(5);
       expect(buildMarkers({ waystones: [], poi: out })).toHaveLength(5);
     });
 
