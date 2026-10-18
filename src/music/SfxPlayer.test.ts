@@ -1,13 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerPlaceholderSfx, SfxPlayer } from './SfxPlayer';
-import { SFX, SFX_IDS, SPELL_SFX_IDS, type SfxId } from './sfxLayers';
+import { BARE_SFX, SFX, SFX_IDS, SPELL_SFX_IDS, type SfxId } from './sfxLayers';
 import { sfxSeconds, SFX_VARIANTS } from './sfxSynth';
 
 const POS = { x: 1, y: 2, z: 3 };
 
 function setup(opts: { maxVoices?: number; minGapSeconds?: number } = {}) {
   let t = 10;
-  const audio = { isUnlocked: true, playAt: vi.fn<(k: string, p: typeof POS) => number | null>(() => 1) };
+  const audio = {
+    isUnlocked: true,
+    playAt: vi.fn<(k: string, p: typeof POS) => number | null>(() => 1),
+    play: vi.fn<(k: string) => number | null>(() => 1),
+  };
   const player = new SfxPlayer({ audio, now: () => t, ...opts });
   return { audio, player, setT: (v: number) => void (t = v) };
 }
@@ -107,13 +111,14 @@ describe('registerPlaceholderSfx', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('registers 11 ids x 3 variants as wav and returns the keys', () => {
+  it('registers every id x 3 variants, the bare-key sounds and the bare aliases as wav, and returns the keys', () => {
     const register = vi.fn();
     const keys = registerPlaceholderSfx({ register }, 0.5);
-    expect(keys).toHaveLength(SFX_IDS.length * SFX_VARIANTS + SPELL_SFX_IDS.length);
-    expect(keys).toHaveLength(36);
-    expect(new Set(keys).size).toBe(36);
-    expect(register).toHaveBeenCalledTimes(36);
+    // variants + spell sounds + the 11 bare slice 2 sounds + 4 bare aliases of variant ids
+    const total = SFX_IDS.length * SFX_VARIANTS + SPELL_SFX_IDS.length + 11 + 4;
+    expect(keys).toHaveLength(total);
+    expect(new Set(keys).size).toBe(total);
+    expect(register).toHaveBeenCalledTimes(total);
     for (const [key, def] of register.mock.calls) {
       expect(keys).toContain(key);
       expect(def.format).toEqual(['wav']);
@@ -142,5 +147,60 @@ describe('registerPlaceholderSfx', () => {
     for (const id of SPELL_SFX_IDS) expect(() => play(id)).not.toThrow();
     expect(() => play('sfx.surge.charge#0')).toThrow(/Unknown sound/);
     expect(() => play('sfx.nonexistent')).toThrow(/Unknown sound/);
+  });
+});
+
+describe('SfxPlayer slice 2 additions', () => {
+  it('a fixed variant is used as given (wrapped), and does not advance the cycling counter', () => {
+    const { audio, player } = setup();
+    player.play([SFX.leap], POS, { variant: 7 });
+    expect(audio.playAt.mock.calls[0][0]).toBe('sfx.leap#1');
+    player.play([SFX.thump], POS);
+    expect(audio.playAt.mock.calls[1][0]).toBe('sfx.thump#0');
+    player.play([SFX.leap], POS, { variant: -1, minGapSeconds: 0 });
+    expect(audio.playAt.mock.calls[2][0]).toBe('sfx.leap#2');
+  });
+
+  it('a per-call minimum gap rate-limits one id longer than the default', () => {
+    const { audio, player, setT } = setup();
+    player.play([SFX.companionBark], POS, { minGapSeconds: 0.8 });
+    setT(10.5);
+    player.play([SFX.companionBark], POS, { minGapSeconds: 0.8 });
+    expect(audio.playAt).toHaveBeenCalledTimes(1);
+    setT(10.9);
+    player.play([SFX.companionBark], POS, { minGapSeconds: 0.8 });
+    expect(audio.playAt).toHaveBeenCalledTimes(2);
+  });
+
+  it('playKey plays flat without a position and spatially with one', () => {
+    const { audio, player } = setup();
+    expect(player.playKey(BARE_SFX.shrineRekindle)).toBe(true);
+    expect(audio.play).toHaveBeenCalledWith('sfx.shrine.rekindle');
+    expect(player.playKey(BARE_SFX.whistle, POS)).toBe(true);
+    expect(audio.playAt).toHaveBeenCalledWith('sfx.whistle', POS);
+  });
+
+  it('playKey is dropped while locked, inside the gap, over the voice cap, or when the manager returns null', () => {
+    const { audio, player, setT } = setup({ maxVoices: 1 });
+    audio.isUnlocked = false;
+    expect(player.playKey(BARE_SFX.whistle)).toBe(false);
+    audio.isUnlocked = true;
+    expect(player.playKey(BARE_SFX.whistle)).toBe(true);
+    expect(player.playKey(BARE_SFX.whistle)).toBe(false); // same id, same instant
+    expect(player.playKey(BARE_SFX.priorGong)).toBe(false); // voice cap
+    setT(20);
+    audio.play.mockReturnValueOnce(null);
+    expect(player.playKey(BARE_SFX.priorGong)).toBe(false);
+  });
+
+  it('playKey never throws when the manager does (an unregistered key), and warns', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { audio, player } = setup();
+    audio.play.mockImplementation(() => {
+      throw new Error('Sound "x" is not registered');
+    });
+    expect(player.playKey(BARE_SFX.whistle)).toBe(false);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
