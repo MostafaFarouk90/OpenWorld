@@ -247,6 +247,7 @@ describe('shrine plugin on the real game', () => {
     const changed: string[] = [];
     const t = await boot({
       stub: (g) => {
+        g.ctx.strings.register('en', { 'classes.name.warden': 'Warden' });
         g.ctx.services.provide('respecModal' as never, { open: (o: unknown) => ((opts = o), true) } as never);
         g.ctx.services.provide(
           'classes' as never,
