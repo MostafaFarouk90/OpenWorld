@@ -60,6 +60,10 @@ export interface InteriorPorts {
   fade(opacity: number, seconds: number): void;
   teleport(feet: Vec3, yaw: number): { ready(): boolean };
   groundBelow(maxDistance: number): boolean;
+  /** True when `at` stands on that interior's floor: near a walkable nav cell, at floor height (a load checks a saved spot). */
+  onFloor(interiorId: string, at: Vec3): boolean;
+  /** Metres from the terrain up to `at` (a load left in the sky is not a waystone fallback on the ground). */
+  aboveTerrain(at: Vec3): number;
   /** Shows that interior (and its look) and hides every other, or restores the outdoors for null. */
   applyEnvironment(interiorId: string | null): void;
   emit(type: 'interior.entered' | 'interior.exited', payload: { interiorId: string; doorId: string }): void;
@@ -83,6 +87,16 @@ interface Transition {
 
 const FORWARD = (yaw: number) => ({ x: -Math.sin(yaw), z: -Math.cos(yaw) });
 
+/** A load left the player off the saved interior's floor (its layout changed since the save): moved to the entry at black. */
+interface Rescue {
+  handle: { ready(): boolean };
+  time: number;
+  ticks: number;
+}
+
+/** A saved spot this far over the terrain is in the interiors' sky, not a ground fallback. */
+const SKY_METRES = 100;
+
 /**
  * The interior lifecycle (contracts/interiors-and-nav.md section 1): enter and exit transitions, the bounds rule, the
  * `interior` persistable and the event rule (entered and exited strictly alternate per interior id). Driven by `tick`.
@@ -96,6 +110,7 @@ export class InteriorController {
   private door: string | null = null;
   private applied: string | null = null;
   private transition: Transition | null = null;
+  private rescue: Rescue | null = null;
   private outside = 0;
   private loading = false;
   private loadingTime = 0;
@@ -116,7 +131,7 @@ export class InteriorController {
   }
 
   get transitioning(): boolean {
-    return this.transition !== null;
+    return this.transition !== null || this.rescue !== null;
   }
 
   /** The door the player used to enter `current` (or its first door after a load or the bounds rule). */
@@ -165,7 +180,7 @@ export class InteriorController {
     const door = spec?.doors.find((d) => d.doorId === doorId);
     const inside = door && this.ports.anchor(door.inside);
     if (!spec || !door || !inside) return this.refuse('unknown');
-    if (this.transition) return this.refuse('busy');
+    if (this.transitioning) return this.refuse('busy');
     if (this._current !== null) return this.refuse('inside');
     const common = this.commonRefusal();
     if (common) return this.refuse(common);
@@ -175,7 +190,7 @@ export class InteriorController {
   }
 
   exit(doorId?: string): Promise<void> {
-    if (this.transition) return this.refuse('busy');
+    if (this.transitioning) return this.refuse('busy');
     const id = this._current;
     if (id === null) return this.refuse('not-inside');
     const spec = this.specs.get(id);
@@ -192,21 +207,28 @@ export class InteriorController {
   tick(dt: number): void {
     const t = this.transition;
     if (t) this.step(t, dt);
+    else if (this.rescue) this.stepRescue(this.rescue, dt);
     else this.reconcile(dt);
   }
 
   /** Call on `save.loaded`, after every persistable has loaded and the player has been placed. */
   onSaveLoaded(): void {
     this.loading = false;
-    // The loader may have put the feet elsewhere (an invalid saved position falls back to a waystone, or an autosave caught an
-    // enter mid-way): trust the feet, and announce nothing for an interior the player is not in.
-    if (this._current !== null && this.interiorAt(this.ports.feet()) !== this._current) {
+    const saved = this._current;
+    const feet = this.ports.feet();
+    if (saved !== null && !this.ports.onFloor(saved, feet) && (this.interiorAt(feet) === saved || this.ports.aboveTerrain(feet) > SKY_METRES)) {
+      // The saved spot is no longer floor (the layout changed, or nothing is under it): move to the entry at black.
+      this.startRescue(saved);
+    } else if (saved !== null && this.interiorAt(feet) !== saved) {
+      // The loader put the feet elsewhere (an invalid saved position falls back to a waystone, or an autosave caught an enter
+      // mid-way): trust the feet, and announce nothing for an interior the player is not in.
       this._current = null;
       this.door = null;
       this.outside = 0;
       this.setApplied(null);
     }
     this.flushStale();
+    // A load keeps the saved door (back-door entrants leave by it); only the bounds rule and a rescue use the first door.
     if (this._current) this.announceEntered(this._current, this.door ?? this.firstDoor(this._current));
   }
 
@@ -220,6 +242,10 @@ export class InteriorController {
   }
 
   dispose(): void {
+    if (this.rescue) {
+      this.rescue = null;
+      this.ports.fade(0, TRANSITION.fadeInSeconds);
+    }
     if (this.transition) {
       this.abort(this.transition, 'aborted');
       this.ports.fade(0, TRANSITION.fadeInSeconds);
@@ -374,6 +400,38 @@ export class InteriorController {
     for (const [id, door] of [...this.announced]) if (id !== this._current) this.announceExited(id, door);
   }
 
+  // ---------------------------------------------------------------- the stale-load rescue
+
+  private startRescue(id: string): void {
+    const door = this.specs.get(id)!.doors[0];
+    const inside = this.ports.anchor(door.inside);
+    if (!inside) {
+      this.ports.warn(`Interiors: no inside anchor "${door.inside}" to move a stale load to; loading outdoors`);
+      this._current = null;
+      this.door = null;
+      this.setApplied(null);
+      return;
+    }
+    this.ports.warn(`Interiors: the saved spot in "${id}" is not on its floor (layout changed?); moving to "${door.inside}"`);
+    // Black at once: the save loader's own fade has already lifted, and its teleport may still be holding the player.
+    this.ports.fade(1, 0);
+    this._current = id;
+    this.door = door.doorId;
+    this.outside = 0;
+    this.setApplied(id);
+    this.rescue = { handle: this.ports.teleport({ ...inside.position }, inside.yaw), time: 0, ticks: 0 };
+  }
+
+  private stepRescue(r: Rescue, dt: number): void {
+    r.time += dt;
+    r.ticks++;
+    const settled = r.ticks >= 1 && r.handle.ready() && this.ports.groundBelow(TRANSITION.groundRay);
+    if (!settled && r.time < TRANSITION.settleTimeoutSeconds) return;
+    if (!settled) this.ports.warn('Interiors: the stale-load rescue found no ground in time; lifting the fade anyway');
+    this.rescue = null;
+    this.ports.fade(0, TRANSITION.fadeInSeconds);
+  }
+
   // ---------------------------------------------------------------- bounds rule, saves, events
 
   private reconcile(dt: number): void {
@@ -416,6 +474,7 @@ export class InteriorController {
 
   private load(data: unknown): void {
     if (this.transition) this.abort(this.transition, 'aborted');
+    this.rescue = null;
     let id: string | null = null;
     let door: string | null = null;
     if (data && typeof data === 'object') {
