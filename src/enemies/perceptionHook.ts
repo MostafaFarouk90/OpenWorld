@@ -55,6 +55,17 @@ export function combineModifiers(list: readonly PerceptionModifiers[]): Combined
   return out;
 }
 
+function validModifiers(m: PerceptionModifiers): boolean {
+  return (
+    Number.isFinite(m.sightRangeScale) &&
+    Number.isFinite(m.coneScale) &&
+    Number.isFinite(m.hearingQuietScale) &&
+    Number.isFinite(m.hearingLoudScale) &&
+    (m.hiddenBelow === undefined || Number.isFinite(m.hiddenBelow)) &&
+    (m.targetHeight === undefined || Number.isFinite(m.targetHeight))
+  );
+}
+
 /** The registered providers (`enemies.perception`). A provider that throws is skipped, with one warning per provider. */
 export class PerceptionHub {
   private readonly providers: PerceptionProvider[] = [];
@@ -82,7 +93,15 @@ export class PerceptionHub {
     for (const p of [...this.providers]) {
       try {
         const m = p.modifiers(target, pose);
-        if (m) list.push(m);
+        if (!m) continue;
+        if (!validModifiers(m)) {
+          if (!this.warned.has(p)) {
+            this.warned.add(p);
+            this.warn('enemies: a perception provider returned a non-finite scale or height and is ignored');
+          }
+          continue;
+        }
+        list.push(m);
       } catch (err) {
         if (!this.warned.has(p)) {
           this.warned.add(p);

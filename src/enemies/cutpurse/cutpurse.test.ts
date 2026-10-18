@@ -383,6 +383,19 @@ describe('damage details', () => {
     expect(t.m.get(id!)!.state).toBe('idle');
   });
 
+  it('a stun during the smoke tell cancels the smoke: the thief does not vanish', () => {
+    const t = rig(1000);
+    const id = t.robbed();
+    expect(t.until(() => t.m.get(id)?.thief?.holdStill === true, 8)).toBe(true);
+    t.m.get(id)!.actor.data['status'] = { stunned: true, stunRemaining: 1, slow: 0 };
+    t.tick(0.1);
+    expect(t.m.get(id)!.thief!.holdStill).toBe(false);
+    t.tick(CUTPURSE.smokeTelegraphSeconds + CUTPURSE.smokeHiddenSeconds);
+    expect(t.m.get(id)?.thief?.hidden).toBe(false);
+    expect(t.m.get(id)).toBeDefined(); // still in the world, stunned
+    expect(t.fake.bus.of('telegraph.cancelled').length).toBeGreaterThan(0);
+  });
+
   it('a revoked spare clears the spared flag again', () => {
     const t = rig(1000);
     const id = t.robbed();

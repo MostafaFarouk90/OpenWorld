@@ -55,6 +55,11 @@ export function loudFromSpeed(speed: number, attacking: boolean): boolean {
   return attacking || (Number.isFinite(speed) && speed > LOUD_SPEED);
 }
 
+/** Speed spikes above this, jumps over this many metres in one reading, and readings further apart than this are not movement. */
+const METER_MAX_SPEED = 20;
+const METER_MAX_JUMP_METRES = 3;
+const METER_MAX_GAP_SECONDS = 0.25;
+
 /**
  * Measures horizontal speed (m/s) from successive feet readings against simulated time. Several
  * calls in one tick share the reading; the first call has no history and reads 0.
@@ -68,8 +73,13 @@ export function makeSpeedMeter(feet: () => { x: number; z: number }, seconds: ()
     const t = seconds();
     if (t === lastT) return speed;
     const f = feet();
-    if (Number.isFinite(lastT) && t > lastT) speed = Math.hypot(f.x - lastX, f.z - lastZ) / (t - lastT);
-    else speed = 0;
+    speed = 0;
+    if (Number.isFinite(lastT) && t > lastT && t - lastT <= METER_MAX_GAP_SECONDS) {
+      const jump = Math.hypot(f.x - lastX, f.z - lastZ);
+      const v = jump / (t - lastT);
+      // A teleport (door, respawn, fast travel) is not running: ignore position jumps and impossible speeds.
+      if (jump <= METER_MAX_JUMP_METRES && v <= METER_MAX_SPEED) speed = v;
+    }
     lastT = t;
     lastX = f.x;
     lastZ = f.z;

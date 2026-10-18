@@ -293,15 +293,38 @@ describe('loudness from speed', () => {
     let t = 0;
     const speed = makeSpeedMeter(() => feet, () => t);
     expect(speed()).toBe(0);
-    t = 0.5;
-    feet.x = 3;
-    feet.z = 4;
+    t = 0.05;
+    feet.x = 0.3;
+    feet.z = 0.4;
     expect(speed()).toBeCloseTo(10);
     feet.x = 100;
     expect(speed()).toBeCloseTo(10); // same tick: cached
-    t = 1;
-    expect(speed()).toBeCloseTo(97 / 0.5);
-    t = 1.5; // standing still
+    t = 0.1;
+    feet.x = 0.3; // a jump back of ~100 m is a teleport, not a speed
     expect(speed()).toBe(0);
+    t = 0.15; // standing still
+    expect(speed()).toBe(0);
+  });
+
+  it('a teleport or a stale gap does not read as loud', () => {
+    let t = 0;
+    const feet = { x: 0, z: 0 };
+    const speed = makeSpeedMeter(() => feet, () => t);
+    speed();
+    t += 1 / 60;
+    feet.x = 0.02;
+    expect(loudFromSpeed(speed(), false)).toBe(false);
+    t += 1 / 60;
+    feet.x = 30; // a door or fast travel
+    expect(loudFromSpeed(speed(), false)).toBe(false);
+    t += 1 / 60;
+    feet.x = 30.02;
+    expect(loudFromSpeed(speed(), false)).toBe(false);
+    t += 10; // not read for a while (no awake enemies), then the player is somewhere else
+    feet.x = 33;
+    expect(loudFromSpeed(speed(), false)).toBe(false);
+    t += 1 / 60;
+    feet.x = 33.12; // a real sprint is still loud
+    expect(loudFromSpeed(speed(), false)).toBe(true);
   });
 });

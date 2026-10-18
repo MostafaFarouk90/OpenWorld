@@ -135,3 +135,12 @@ export function makeLineOfSight(
     return hit === null || hit.collider === targetCollider;
   };
 }
+
+/**
+ * Whether `target` can be seen from `self` the way `perceive` aims: from the observer's eye to the target's chest
+ * (or lower `targetHeight`), never along the ground. A hit on the target's own collider counts as seen.
+ */
+export function canSeeChest(los: (from: P3, to: P3) => boolean, self: P3, target: P3, targetHeight?: number): boolean {
+  const height = targetHeight !== undefined ? Math.min(AI.chestHeight, Math.max(0, targetHeight)) : AI.chestHeight;
+  return los({ x: self.x, y: self.y + AI.eyeHeight, z: self.z }, { x: target.x, y: target.y + height, z: target.z });
+}

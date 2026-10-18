@@ -137,6 +137,11 @@ export class Cutpurse {
     if (!this.smokeUsed && this.fleeTime >= CUTPURSE.smokeAfterFleeSeconds) this.beginSmoke();
   }
 
+  /** A status stun cancels the smoke tell (a thief in the puff already stays hidden). */
+  stunned(): void {
+    if (this.phase === 'smoke') this.endSmoke();
+  }
+
   /** Killed: shows again and drops the pouch as gold (the player picks it up at once). */
   died(): void {
     this.endSmoke();

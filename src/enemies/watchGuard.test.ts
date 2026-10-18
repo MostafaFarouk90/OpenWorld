@@ -111,9 +111,14 @@ describe('watch guard kind', () => {
     tick(0.1);
     expect(m.service.perception.state(id)!.awareness).toBeGreaterThan(0.95); // 1 on the hit, one tick of drain since
     expect(fake.bus.of('ai.spotted')).toEqual([{ actorId: id, targetId: 'player' }]);
-    // A flurry in one tick fires one event for the whole flurry (the first hit fills it, the rest find it at 1).
+    // A flurry fires nothing more: `ai.spotted` is once per fill and re-arms only after awareness drops under 0.3.
     const before = fake.bus.of('ai.spotted').length;
     for (let i = 0; i < 3; i++) fake.apply({ attackerId: 'player', targetId: id, amount: 5, poise: 5, kind: 'melee' });
+    tick(0.1);
+    expect(fake.bus.of('ai.spotted')).toHaveLength(before);
+    tick(10); // the meter drains away (the player is out of sight)
+    expect(m.service.perception.state(id)!.awareness).toBeLessThan(0.3);
+    fake.apply({ attackerId: 'player', targetId: id, amount: 5, poise: 5, kind: 'melee' });
     tick(0.1);
     expect(fake.bus.of('ai.spotted')).toHaveLength(before + 1);
     expect(actor.health).toBe(actor.maxHealth);

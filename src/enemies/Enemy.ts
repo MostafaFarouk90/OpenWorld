@@ -5,7 +5,7 @@ import { Guard, type GuardHit } from './ai/guard';
 import { MoveSelector } from './ai/moveSelect';
 import { pairGoal } from './ai/pair';
 import { stepAwareness } from './ai/awareness';
-import { makeLineOfSight, perceive, type CombinedModifiers } from './ai/perception';
+import { canSeeChest, makeLineOfSight, perceive, type CombinedModifiers } from './ai/perception';
 import { ENEMY_CLIPS } from './clips';
 import { Cutpurse } from './cutpurse/Cutpurse';
 import { BURNING_BITE, HOUND } from './hound/tuning';
@@ -19,7 +19,7 @@ type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 import { PathFollower } from './steering/pathFollower';
 import { forwardOf, Steering, turnToward, yawTo } from './steering/steering';
 import { HeightfieldMover, SwitchingMover, type EnemyMover } from './steering/movers';
-import { AI } from './tuning';
+import { AI, AWARENESS } from './tuning';
 import type { MemberEnd } from './spawners';
 import type { AiState, EnemyDef, EnemyView, MoveDef, SpawnOptions, UnlockVerb, WeaponChannel } from './types';
 
@@ -117,6 +117,8 @@ export class Enemy {
   /** The swing whose bite already ignited (once per swing). */
   private ignitedSwing = -1;
   private awareness = 0;
+  private spottedArmed = true;
+  private emitsStealth = false;
   private lastSees = false;
   private lastHears = false;
   private lastDistance = Infinity;
@@ -163,8 +165,8 @@ export class Enemy {
       this.actor = host.actors.spawn({
         kind: this.def.kind,
         // A watch guard is neutral and immortal: lock-on and hostile checks skip it, and a caught reset has no dead slot.
-        team: this.def.observerOnly ? 'neutral' : 'hostile',
-        immortal: this.def.observerOnly ? true : undefined,
+        team: this.observerOnly ? 'neutral' : 'hostile',
+        immortal: this.observerOnly ? true : undefined,
         level: spawn.level,
         maxHealth,
         maxPoise: this.def.maxPoise,
@@ -401,7 +403,7 @@ export class Enemy {
       modifiers: mods,
     });
     this.damagedThisTick = false;
-    this.trackAwareness(dt, p, player.id, AI.sightRange * (mods?.sightRangeScale ?? 1));
+    this.trackAwareness(dt, p, player.id, AI.sightRange * (mods?.sightRangeScale ?? 1), mods != null);
     const toTarget = yawTo(self, pFeet);
     const senses: Senses = {
       self: { x: self.x, z: self.z },
@@ -422,7 +424,8 @@ export class Enemy {
     if (status.stunSeconds > 0) this.brain.stunned(status.stunSeconds);
     const intent = this.brain.step(dt, senses);
     if (this.thief) {
-      const visible = p.distance <= AI.sightRange && this.lineOfSight(pFeet, self);
+      if (status.stunSeconds > 0) this.thief.stunned();
+      const visible = p.distance <= AI.sightRange && canSeeChest(this.lineOfSight, self, pFeet, mods?.targetHeight);
       this.thief.tick(dt, this.brain.state, visible);
       if (this.phase !== 'alive') return; // it despawned itself (flee window over, or blinked out)
     }
@@ -670,6 +673,9 @@ export class Enemy {
     // A fleeing thief that goes dormant is out of play: its flee window is over.
     if (this.thief && this.thief.stolenGold > 0) return void this.escape();
     this.asleep = true;
+    // A dormant observer forgets: stale awareness would fire `ai.spotted` the moment it wakes.
+    this.awareness = 0;
+    this.spottedArmed = true;
     if (this.mover instanceof SwitchingMover) this.mover.sleep();
   }
 
@@ -769,21 +775,33 @@ export class Enemy {
   }
 
   /** Steps the awareness meter and emits `ai.suspicious` / `ai.spotted` on their edges. */
-  private trackAwareness(dt: number, p: { sees: boolean; hears: boolean; distance: number }, targetId: ActorId, sightRange: number): void {
+  private trackAwareness(dt: number, p: { sees: boolean; hears: boolean; distance: number }, targetId: ActorId, sightRange: number, providerApplied: boolean): void {
     const step = stepAwareness(this.awareness, { ...p, sightRange }, dt);
     this.awareness = step.awareness;
+    // Hostile enemies notice instantly and need no stealth events: only observers and enemies a perception provider
+    // applies to (the stealth system) emit. Awareness is tracked for everyone.
+    this.emitsStealth = this.observerOnly || providerApplied;
+    // `ai.spotted` fires once per fill: it re-arms only after awareness falls back under the suspicious line.
+    if (step.awareness <= AWARENESS.suspiciousAbove) this.spottedArmed = true;
+    if (!this.emitsStealth) return;
     this.lastSees = p.sees;
     this.lastHears = p.hears;
     this.lastDistance = p.distance;
     if (step.becameSuspicious) this.host.events.emit('ai.suspicious', { actorId: this.actor.id, targetId, awareness: step.awareness });
-    if (step.becameSpotted) this.host.events.emit('ai.spotted', { actorId: this.actor.id, targetId });
+    if (step.becameSpotted && this.spottedArmed) {
+      this.spottedArmed = false;
+      this.host.events.emit('ai.spotted', { actorId: this.actor.id, targetId });
+    }
   }
 
   /** A hit on an observer: awareness goes straight to 1, and `ai.spotted` fires if it was not already there. */
   private spotNow(targetId: ActorId): void {
     const was = this.awareness;
     this.awareness = 1;
-    if (was < 1) this.host.events.emit('ai.spotted', { actorId: this.actor.id, targetId });
+    if (was < 1 && this.spottedArmed) {
+      this.spottedArmed = false;
+      this.host.events.emit('ai.spotted', { actorId: this.actor.id, targetId });
+    }
   }
 
   private clearSlow(): void {
