@@ -25,6 +25,8 @@ const plugin: GamePlugin = {
       bus,
       progression: () => svc('progression'),
       inventory: () => svc('inventory'),
+      npcs: () => svc('npcs'),
+      enemies: () => svc('enemies'),
       sourceId: 'dialogue',
       warn,
     });

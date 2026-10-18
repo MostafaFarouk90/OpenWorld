@@ -9,6 +9,14 @@ import {
 import { validateQuest } from './validate';
 import { questDefs } from './content';
 import { questStrings } from './strings.en';
+import { journalStrings } from './journalStrings.en';
+import { JournalTabs, PLACEHOLDER_KEY, defaultSlots } from './journalTabs';
+import { installBridges } from './bridges';
+import { installPoiRewards } from './poi';
+import { POI_REWARDS } from './content/poi';
+import { PostDirector, BRIGHTWATER_POST_RULES } from './posts';
+import { TorchSystem } from './torch';
+import { createEffectRunner } from './effects';
 import type { BusPort } from './ports';
 import type { QuestDef } from './types';
 import './service';
@@ -22,7 +30,7 @@ const plugin: GamePlugin = {
   dependsOn: ['core'],
   setup(ctx) {
     const warn = (m: string): void => console.warn(`[quests] ${m}`);
-    ctx.strings.register('en', { ...questStrings, 'quest.prompt.carry': '{key} Carry the villager' });
+    ctx.strings.register('en', { ...questStrings, ...journalStrings, 'quest.prompt.carry': '{key} Carry the villager' });
 
     const bus = ctx.events as unknown as BusPort;
     const manager = new QuestManager({
@@ -37,6 +45,8 @@ const plugin: GamePlugin = {
       },
       progression: () => (ctx.services as unknown as { get(n: string): any }).get('progression'),
       inventory: () => (ctx.services as unknown as { get(n: string): any }).get('inventory'),
+      npcs: () => (ctx.services as unknown as { get(n: string): any }).get('npcs'),
+      enemies: () => (ctx.services as unknown as { get(n: string): any }).get('enemies'),
       warn,
     });
 
@@ -52,6 +62,18 @@ const plugin: GamePlugin = {
     };
     for (const def of questDefs) register(def);
 
+    const tabs = new JournalTabs(defaultSlots(
+      (k) => ctx.state.getFlag(k),
+      (root) => {
+        const p = root.ownerDocument.createElement('p');
+        p.className = 'journal-empty';
+        p.textContent = ctx.strings.t(PLACEHOLDER_KEY);
+        root.appendChild(p);
+      },
+    ));
+    ctx.services.provide('journal', tabs);
+
+    let torch: TorchSystem | null = null;
     ctx.services.provide('quests', {
       register,
       get: (id) => manager.get(id),
@@ -65,6 +87,7 @@ const plugin: GamePlugin = {
       objectives: (id) => manager.objectives(id),
       active: () => manager.active(),
       onChange: (l) => manager.onChange(l),
+      torch: () => torch?.position() ?? null,
     });
     ctx.persist.register({
       key: 'quests',
@@ -79,8 +102,28 @@ const plugin: GamePlugin = {
       all: () =>
         registered.map((def) => ({ def, state: manager.state(def.id), objectives: manager.objectives(def.id) })),
     };
-    const makeJournal = () => createJournalPanel(() => buildJournalModel(journalSource, ctx.strings));
+    const makeJournal = () => createJournalPanel(() => buildJournalModel(journalSource, ctx.strings), undefined, { tabs, t: (k) => ctx.strings.t(k) });
     manager.onChange(() => journalState.widget?.refresh());
+    ctx.events.on('flag.changed', () => journalState.widget?.refresh());
+
+    // Event-to-flag bridges, one-time POI rewards and quest-driven NPC posts.
+    installBridges(bus, ctx.state, manager, warn);
+    const svc = (n: string) => (ctx.services as unknown as { get(n: string): any }).get(n);
+    const poiEffects = createEffectRunner({
+      state: ctx.state, quests: manager, bus, sourceId: 'poi', warn,
+      inventory: () => svc('inventory'), progression: () => svc('progression'),
+    });
+    installPoiRewards(POI_REWARDS, {
+      bus, state: ctx.state, run: (e) => { poiEffects.run(e); }, warn,
+      codexUnlock: (id) => svc('codex')?.unlock?.(id),
+    });
+    const posts = new PostDirector(
+      BRIGHTWATER_POST_RULES,
+      () => ({ state: ctx.state, quests: manager, warn }),
+      () => svc('npcs'),
+    );
+    manager.onChange(() => posts.markDirty());
+    ctx.events.on('save.loaded', () => posts.reset());
     const journalHud = {
       get modalOpen() {
         return ctx.hud.modalOpen;
@@ -172,6 +215,42 @@ const plugin: GamePlugin = {
         }
       },
     });
+    let torchTried = false;
+    let torchMesh: THREE.Mesh | null = null;
+    const buildTorch = (): TorchSystem => {
+      torchMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
+      );
+      torchMesh.visible = false;
+      ctx.scene.add(torchMesh);
+      const mesh = torchMesh;
+      return new TorchSystem({
+        bus,
+        player: {
+          id: () => ctx.player.actor.id,
+          feet: () => ctx.player.feet,
+          addMoveModifier: (s, m) => ctx.player.addMoveModifier(s, m as MoveModifier),
+        },
+        braziers: [1, 2].map((n) => ({
+          interactableId: `use:r01-brazier-${n}`,
+          position: () => {
+            const a = ctx.anchors.find(`r01.brazier.${n}`);
+            return a && { x: a.position.x, y: a.position.y, z: a.position.z };
+          },
+        })),
+        registerInteractable: (i) =>
+          ctx.interaction.register({
+            id: i.id, kind: 'use', name: 'brazier', radius: i.radius, promptKey: i.promptKey, enabled: i.enabled,
+            position: (out) => { i.position(out); return out; },
+            onInteract: () => i.onInteract(),
+          }),
+        active: () => manager.isObjectiveCurrent('r01', 'o2'),
+        setVisual: (on, at) => { mesh.visible = on; if (at) mesh.position.set(at.x, at.y, at.z); },
+        warn,
+      });
+    };
+
     // Built once, after M01 has started (or was loaded as started), when every plugin and thread 4's
     // anchors exist. A build failure is logged once and never retried (no leaked meshes).
     let carryTried = false;
@@ -190,10 +269,25 @@ const plugin: GamePlugin = {
           }
         }
         carry?.update(dt);
+        if (!torchTried && manager.state('r01') !== 'inactive') {
+          torchTried = true;
+          try {
+            torch = buildTorch();
+          } catch (err) {
+            warn(`torch failed to build: ${String(err)}`);
+            torchMesh?.removeFromParent();
+          }
+        }
+        torch?.update();
+        posts.update();
       },
       dispose: () => {
         carry?.dispose();
         carry = null;
+        torch?.dispose();
+        torch = null;
+        torchMesh?.removeFromParent();
+        torchMesh?.geometry.dispose();
         disposeVisuals();
         manager.dispose();
       },

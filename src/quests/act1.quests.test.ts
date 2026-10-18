@@ -1,0 +1,118 @@
+import { describe, it, expect } from 'vitest';
+import { makeWorld } from './testKit';
+import { m04 } from './content/m04.quest';
+import { d01 } from './content/d01.quest';
+import { r02 } from './content/r02.quest';
+import { m03 } from './content/m03.quest';
+
+const talk = (w: ReturnType<typeof makeWorld>, npcId: string, reason?: string) => w.bus.emit('dialogue.ended', { npcId, reason });
+const died = (w: ReturnType<typeof makeWorld>, actorId: string, kind: string) => w.bus.emit('actor.died', { actorId, killerId: 'p', kind });
+
+describe('M04 The Toll at Hollin Ford', () => {
+  function toFord() {
+    const w = makeWorld([m04]);
+    w.manager.start('m04');
+    w.bus.emit('trigger.enter', { triggerId: 'trg.ford.toll-post', actorId: 'p' });
+    talk(w, 'gaut');
+    return w;
+  }
+  it('plays through with one kill and one Spare', () => {
+    const w = toFord();
+    died(w, 's1', 'blighted-soldier');
+    w.bus.emit('mercy', { verb: 'spare', creature: 'blighted-soldier', actorId: 's2' });
+    died(w, 'tp', 'toll-post');
+    talk(w, 'carter-1');
+    talk(w, 'gaut');
+    expect(w.manager.state('m04')).toBe('completed');
+    expect(w.calls).toContain('xp:350:quest:m04');
+    expect(w.bus.of('loot.granted')[0]).toMatchObject({ items: [{ itemId: 'ford-guard-shield', count: 1 }] });
+  });
+  it('a soldier both spared and killed counts once', () => {
+    const w = toFord();
+    w.bus.emit('mercy', { verb: 'spare', creature: 'blighted-soldier', actorId: 's1' });
+    died(w, 's1', 'blighted-soldier');
+    expect(w.manager.objectives('m04')[2].progress).toBe(1);
+  });
+  it('the toll-post cannot be broken before the soldiers are dealt with, and a stranger killing it does not count', () => {
+    const w = toFord();
+    died(w, 'tp', 'toll-post');
+    expect(w.manager.objectiveDone('m04', 'o4')).toBe(false);
+    w.bus.emit('actor.died', { actorId: 's1', killerId: 'someone-else', kind: 'blighted-soldier' });
+    expect(w.manager.objectives('m04')[2].progress).toBe(0);
+  });
+  it('an aborted dialogue with Gaut earns no credit', () => {
+    const w = makeWorld([m04]);
+    w.manager.start('m04');
+    w.bus.emit('trigger.enter', { triggerId: 'trg.ford.toll-post', actorId: 'p' });
+    talk(w, 'gaut', 'skip');
+    expect(w.manager.objectiveDone('m04', 'o2')).toBe(false);
+  });
+});
+
+describe('D01 Prayers in the Vault', () => {
+  const enterVault = (w: ReturnType<typeof makeWorld>) => {
+    w.manager.start('d01');
+    w.bus.emit('interior.entered', { interiorId: 'chapel-vault', doorId: 'vault.door' });
+    w.bus.emit('trigger.enter', { triggerId: 'trg.vault.arena', actorId: 'p' });
+  };
+  it.each(['boss.defeated', 'boss.released'])('completes on %s', (ev) => {
+    const w = makeWorld([d01]);
+    enterVault(w);
+    w.bus.emit(ev, { bossId: 'ashen-prior', actorId: 'x' });
+    talk(w, 'aelfreda');
+    expect(w.manager.state('d01')).toBe('completed');
+    expect(w.calls).toContain('xp:600:quest:d01');
+  });
+  it('the Prior beaten in an earlier visit still counts when the quest comes late (outcome flag)', () => {
+    const w = makeWorld([d01]);
+    w.flags.set('boss.ashen-prior.outcome', 'released');
+    enterVault(w);
+    expect(w.manager.objectiveDone('d01', 'o3')).toBe(true);
+  });
+  it('another interior does not count, and the boss objective waits for the arena', () => {
+    const w = makeWorld([d01]);
+    w.manager.start('d01');
+    w.bus.emit('interior.entered', { interiorId: 'cellar', doorId: 'x' });
+    expect(w.manager.objectiveDone('d01', 'o1')).toBe(false);
+    w.bus.emit('boss.defeated', { bossId: 'ashen-prior' }); // before o1/o2: ignored, the flag handles it later
+    expect(w.manager.objectiveDone('d01', 'o3')).toBe(false);
+  });
+  it('a load inside the vault keeps its place', () => {
+    const w = makeWorld([d01]);
+    enterVault(w);
+    w.manager.load(JSON.parse(JSON.stringify(w.manager.serialize())));
+    expect(w.manager.isObjectiveCurrent('d01', 'o3')).toBe(true);
+  });
+});
+
+describe('R02 The Marshal\'s Last Drill', () => {
+  it('needs 3 open hits, 3 parries and 2 guard breaks in order, then Stane', () => {
+    const w = makeWorld([r02]);
+    w.manager.start('r02');
+    w.bus.emit('dummy.parried', {}); // too early
+    talk(w, 'stane');
+    for (let i = 0; i < 3; i++) w.bus.emit('dummy.hitOpen', { dummyId: 'd1' });
+    w.bus.emit('dummy.blocked', { dummyId: 'd1' }); // the dummy's own block is not the player's feat
+    for (let i = 0; i < 3; i++) w.bus.emit('dummy.parried', { dummyId: 'd2' });
+    expect(w.manager.objectiveDone('r02', 'o4')).toBe(false);
+    for (let i = 0; i < 2; i++) w.bus.emit('dummy.guardBroken', { dummyId: 'd3' });
+    expect(w.manager.state('r02')).toBe('active');
+    talk(w, 'stane');
+    expect(w.manager.state('r02')).toBe('completed');
+  });
+});
+
+describe('M03 grants nothing by itself', () => {
+  it('the Leap, Release unlock and skill point come from dialogue and rewards, not from starting', () => {
+    const w = makeWorld([m03]);
+    w.manager.start('m03');
+    expect(w.calls).toEqual([]);
+    expect(w.enemies.unlocked).toEqual([]);
+  });
+  it('rewards: 300 xp and 1 skill point on completion', () => {
+    const w = makeWorld([m03]);
+    w.manager.start('m03');
+    for (const o of ['o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7']) w.manager.completeObjective('m03', o);
+    expect(w.calls).toEqual(['xp:300:quest:m03', 'sp:1']);
+  });
+});
