@@ -96,6 +96,8 @@ export const ORDER = {
   reactions: 10,
   death: 20,
   /** damage modifier and lethal handler orders */
+  /** Before the guard (-50): status ticks ignore the dodge's i-frames. */
+  statusTicks: -60,
   guardModifier: -50,
   secondWindHandler: -100,
 } as const;
