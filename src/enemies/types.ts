@@ -160,6 +160,12 @@ export interface SpawnerDef {
 }
 
 export interface SpawnOptions {
+  /**
+   * `spawnGroup` only: fill at most this many free slots, lowest slot index first (clamped to the free slots; live
+   * and spent slots are skipped, so a later call continues with the next free slots). A non-integer or <= 0 count
+   * spawns nothing (one warning). Slot indices, and so `leaderSlot`, are unchanged. Not remembered for refills.
+   */
+  count?: number;
   /** Only these move ids may be chosen (T09 chop only, T10 red sweep only). */
   moves?: readonly string[];
   healthScale?: number;

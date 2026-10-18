@@ -275,3 +275,38 @@ describe('SpawnerRegistry', () => {
     expect(by('m01.lanes').patrol).toBeUndefined();
   });
 });
+
+describe('spawnGroup count', () => {
+  const four = (over: Partial<SpawnerDef> = {}) => mk({ id: 'g', count: 4, ephemeral: true, leaderSlot: 0, ...over });
+  it('fills the lowest free slots first and continues with the next free ones', () => {
+    const { reg, reqs } = setup([anchor('sp', 0, 0)], [four()]);
+    expect(reg.spawnGroup('g', { count: 2 })).toHaveLength(2);
+    expect(reqs.map((r) => r.slot)).toEqual([0, 1]);
+    expect(reg.spawnGroup('g', { count: 3 })).toHaveLength(2); // clamped to the two free slots
+    expect(reqs.map((r) => r.slot)).toEqual([0, 1, 2, 3]);
+    expect(reg.spawnGroup('g', { count: 3 })).toEqual([]); // nothing free, nothing respawned
+    expect(reqs).toHaveLength(4);
+  });
+  it('count larger than the group clamps; the option is not passed on or remembered', () => {
+    const { reg, reqs } = setup([anchor('sp', 0, 0)], [four()]);
+    expect(reg.spawnGroup('g', { count: 99 })).toHaveLength(4);
+    expect(reqs.every((r) => !('count' in r.options))).toBe(true);
+  });
+  it('bad counts spawn nothing', () => {
+    const { reg, reqs } = setup([anchor('sp', 0, 0)], [four()]);
+    for (const c of [0, -1, 1.5, NaN, Infinity]) expect(reg.spawnGroup('g', { count: c })).toEqual([]);
+    expect(reqs).toHaveLength(0);
+    expect(reg.spawnGroup('g')).toHaveLength(4); // no count: the whole group, as before
+  });
+  it('the leader stays slot 0 and an ephemeral group is not saved', () => {
+    const { reg } = setup([anchor('sp', 0, 0)], [four()]);
+    const [a, b] = reg.spawnGroup('g', { count: 2 });
+    expect(reg.leaderOf('g')).toBe(a);
+    reg.spawnGroup('g', { count: 2 });
+    expect(reg.leaderOf('g')).toBe(a);
+    expect(b).toBeDefined();
+    reg.onMemberGone(a!, 'released');
+    expect(reg.serialize().spent).toEqual([]);
+    expect(reg.serialize().cleared).toEqual([]);
+  });
+});
