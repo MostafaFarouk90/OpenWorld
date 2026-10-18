@@ -85,7 +85,7 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
       if (!npcs) { warnOnce('placeNpc: npcs service absent'); throw new Silent('npcs service absent'); }
       if (!npcs.place(npcId, anchorId)) warn(`placeNpc: could not place ${npcId} at ${anchorId}`);
     } else if ('unlockMercy' in c) {
-      if (c.unlockMercy !== 'release' && c.unlockMercy !== 'spare') throw new Error(`unknown mercy verb ${String(c.unlockMercy)}`);
+      if (c.unlockMercy !== 'release' && c.unlockMercy !== 'spare' && c.unlockMercy !== 'calm') throw new Error(`unknown mercy verb ${String(c.unlockMercy)}`);
       const enemies = env.enemies?.();
       if (!enemies) { warnOnce('unlockMercy: enemies service absent'); throw new Silent('enemies service absent'); }
       enemies.setMercyUnlocked(c.unlockMercy, true);

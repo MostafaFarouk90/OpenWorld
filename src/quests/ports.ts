@@ -49,7 +49,7 @@ export interface ProgressionPort {
 }
 export interface InventoryPort { remove(itemId: string, count: number): boolean; addGold?(n: number): void }
 export interface NpcPort { place(npcId: string, anchorId: string): boolean }
-export interface EnemiesPort { setMercyUnlocked(verb: 'release' | 'spare', on: boolean): void }
+export interface EnemiesPort { setMercyUnlocked(verb: 'release' | 'spare' | 'calm', on: boolean): void }
 
 export interface ConditionEnv { state: StatePort; quests: QuestReader; warn?(msg: string): void }
 

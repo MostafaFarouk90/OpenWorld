@@ -102,6 +102,10 @@ export interface ProgressionService {
   respec():
     | { ok: true; refunded: number; cost: number }
     | { ok: false; reason: 'no-permit' | 'no-gold' | 'nothing-learned' };
+  /** Thread 12's M07 choice: refunds every learned skill silently, only while no class is chosen; returns the points. */
+  refundForClassChoice(): number;
+  /** Skills learned, in order. */
+  learnedSkills(): readonly string[];
   nextUnlock(): NextUnlock;
 }
 

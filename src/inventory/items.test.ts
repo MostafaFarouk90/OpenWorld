@@ -20,6 +20,15 @@ describe('items', () => {
         'practice-sword',
         'squires-arming-sword',
         'wooden-round-shield',
+        // Class starter gear (thread 12).
+        'woodcutters-axe',
+        'hide-jerkin',
+        'apprentices-staff',
+        'wool-robe',
+        'alley-knives',
+        'leather-vest',
+        'hunting-crossbow',
+        'rangers-cloak',
       ].sort(),
     );
   });
