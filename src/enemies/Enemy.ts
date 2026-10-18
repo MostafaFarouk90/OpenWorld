@@ -16,7 +16,7 @@ import type { ActorId, ActorLike, EnemyHost, NavPort } from './ports';
 import type { ObserverPose } from './perceptionHook';
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
-import { PathFollower } from './steering/pathFollower';
+import { PathFollower, type PathBudget } from './steering/pathFollower';
 import { forwardOf, Steering, turnToward, yawTo } from './steering/steering';
 import { HeightfieldMover, SwitchingMover, type EnemyMover } from './steering/movers';
 import { AI, AWARENESS } from './tuning';
@@ -38,6 +38,8 @@ export interface EnemyEnv {
   alertPack(self: Enemy, targetId: ActorId): void;
   mercyUnlocked(verb: UnlockVerb): boolean;
   nav(): NavPort | undefined;
+  /** Shared per-tick cap on `nav.path` queries; absent means uncapped. */
+  pathBudget?: PathBudget;
   /** The nearest living packmate of the same spawner within pair range, if any. */
   partnerOf(self: Enemy): Enemy | null;
   /** Living packmates of the same spawner within `HOUND.packRadius` (the `circle-rush` behaviour). */
@@ -147,7 +149,7 @@ export class Enemy {
     this.spawnerId = spawn.spawnerId;
     this.damageScale = spawn.damageScale * (spawn.options.damageScale ?? 1);
     this.observerOnly = spawn.options.observerOnly ?? this.def.observerOnly ?? false;
-    this.path = new PathFollower(() => env.nav(), (m) => host.warn(m));
+    this.path = new PathFollower(() => env.nav(), (m) => host.warn(m), env.pathBudget);
     this.guard = (spawn.options.guard ?? this.def.guard) ? new Guard() : null;
     this.yaw = this.targetYaw = spawn.yaw;
     this.mover = host.physics
@@ -482,7 +484,8 @@ export class Enemy {
         dt,
       });
       velocity = out.move;
-      this.stuckGiveUp = out.giveUp;
+      // A thief whose path ended short of an unreachable flee goal is cornered, same as one that cannot move on.
+      this.stuckGiveUp = out.giveUp || (!!this.thief && this.path.endedShort);
     } else {
       this.steering.reset();
     }
