@@ -11,15 +11,21 @@ import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 import slice1Complete from '../save/__fixtures__/slice1-complete.json';
 import { tutorialFromQuery } from '../tutorial/tutorial.plugin';
-import { ACT1_JUMP_IDS, ACT1_NODE_EFFECTS, ACT1_PREREQS, Act1Jump, type Act1JumpId, nodeEffects, parseAct1 } from './act1Jump';
+import {
+  ACT1_GIVERS, ACT1_JUMP_IDS, ACT1_NODE_EFFECTS, ACT1_PHASE_B_JUMP_IDS, ACT1_PREREQS, Act1Jump, type Act1JumpId, GIVER_STAND_OFF,
+  nodeEffects, parseAct1,
+} from './act1Jump';
+import { dialogueDefs } from '../dialogue/content';
+import { heightAt } from '../terrain/heightfield';
+import { regionAt } from '../region/regionMask';
 
 describe('parseAct1', () => {
-  it('accepts the six quests with &new', () => {
+  it('accepts every Act 1 quest with &new', () => {
     for (const id of ACT1_JUMP_IDS) expect(parseAct1(`?act1=${id}&new`)).toEqual({ id, fresh: true });
   });
   it('is null without the parameter and refuses unknown ids or a missing &new', () => {
     expect(parseAct1('?tutorial=t05')).toBeNull();
-    expect(parseAct1('?act1=m09&new')).toMatchObject({ error: expect.stringContaining('unknown') });
+    expect(parseAct1('?act1=m11&new')).toMatchObject({ error: expect.stringContaining('unknown') });
     expect(parseAct1('?act1=m03')).toMatchObject({ error: expect.stringContaining('&new') });
   });
   it('a valid jump starts the tutorial from Kettlewick (no start screen); a refused one does not', () => {
@@ -32,15 +38,29 @@ describe('parseAct1', () => {
 describe('node effects are read from the dialogue content', () => {
   it('every referenced node exists and carries effects', () => {
     for (const refs of Object.values(ACT1_NODE_EFFECTS)) {
-      for (const r of refs) expect(nodeEffects(r.dialogueId, r.nodeId)?.length, `${r.dialogueId}:${r.nodeId}`).toBeGreaterThan(0);
+      for (const r of refs) {
+        expect(nodeEffects(r.dialogueId, r.nodeId, dialogueDefs, r.choiceId)?.length, `${r.dialogueId}:${r.nodeId}/${r.choiceId}`).toBeGreaterThan(0);
+      }
     }
     expect(nodeEffects('npc-aelfreda', 'leap')).toEqual([{ grantAbility: 'surge-leap' }]);
     expect(nodeEffects('npc-nobody', 'x')).toBeNull();
   });
+  it('a choice adds its effects after the node\'s own; an unknown choice is null', () => {
+    const bribe = nodeEffects('npc-rook', 'm06-choose', dialogueDefs, 'bribe');
+    expect(bribe).toContainEqual({ setFlag: 'story.m06.route', value: 'bribe' });
+    expect(bribe?.[0]).toMatchObject({ spendGold: { amount: 50 } });
+    expect(nodeEffects('npc-whitlock', 'r04-pages', dialogueDefs, 'shield')).toContainEqual({ setFlag: 'story.r04.choice', value: 'shield' });
+    expect(nodeEffects('npc-rook', 'm06-choose', dialogueDefs, 'nope')).toBeNull();
+    expect(nodeEffects('npc-rook', 'm06-choose', dialogueDefs)).toEqual([]);
+  });
+  it('the jumps never write a story flag by hand: every story.* write comes from a dialogue node', () => {
+    const src = JSON.stringify(ACT1_NODE_EFFECTS);
+    expect(src).not.toMatch(/story\./);
+  });
 });
 
 describe('Act1Jump (fakes)', () => {
-  function rig(id: Act1JumpId, opts: { startFails?: boolean; teleportRefusals?: number } = {}) {
+  function rig(id: Act1JumpId, opts: { startFails?: boolean; teleportRefusals?: number; classRefused?: boolean } = {}) {
     let refusals = opts.teleportRefusals ?? 0;
     const states = new Map<string, string>();
     const log: string[] = [];
@@ -59,7 +79,10 @@ describe('Act1Jump (fakes)', () => {
       runEffects: (e) => log.push(`effects:${JSON.stringify(e)}`),
       setFlag: (f) => log.push(`flag:${f}`),
       rekindle: (w) => log.push(`rekindle:${w}`),
+      giveGold: (n) => log.push(`gold:${n}`),
+      chooseClass: (c) => { log.push(`class:${c}`); return !opts.classRefused; },
       teleportTo: (a) => { log.push(`tp:${a}`); return refusals-- <= 0; },
+      standBy: (n) => { log.push(`by:${n}`); return refusals-- <= 0; },
       ready: () => ready,
       warn,
     });
@@ -99,6 +122,55 @@ describe('Act1Jump (fakes)', () => {
     r.run(20);
     expect(r.jump.phase).toBe('done');
     expect(r.log.filter((l) => l.startsWith('tp:'))).toHaveLength(4);
+  });
+
+  it('a Phase B jump completes its prerequisites, leaves the quest offerable and stands by its giver', () => {
+    for (const id of ACT1_PHASE_B_JUMP_IDS) {
+      const r = rig(id);
+      r.setReady();
+      r.run(30);
+      expect(r.jump.phase, id).toBe('done');
+      expect(r.log.filter((l) => l.startsWith('complete:')), id).toEqual(ACT1_PREREQS[id].map((q) => `complete:${q}`));
+      expect(r.states.get(id), id).toBeUndefined(); // never started
+      expect(r.log.at(-1), id).toBe(`by:${ACT1_GIVERS[id]}`);
+    }
+  });
+
+  it('M06: the bribe gold is granted before Rook\'s bribe choice runs, both before M06 completes', () => {
+    const r = rig('m07');
+    r.setReady();
+    r.run(30);
+    const gold = r.log.indexOf('gold:50');
+    const bribe = r.log.findIndex((l) => l.includes('"route","value":"bribe"') || l.includes('"value":"bribe"'));
+    expect(gold).toBeGreaterThan(-1);
+    expect(bribe).toBeGreaterThan(gold);
+    expect(r.log.indexOf('complete:m06')).toBeGreaterThan(bribe);
+  });
+
+  it('M07: Aldith\'s return node runs before the class choice, and both before M07 completes', () => {
+    const r = rig('m08');
+    r.setReady();
+    r.run(30);
+    const open = r.log.findIndex((l) => l.includes('story.m07.classOpen'));
+    expect(open).toBeGreaterThan(-1);
+    expect(r.log.indexOf('class:knight')).toBeGreaterThan(open);
+    expect(r.log.indexOf('complete:m07')).toBeGreaterThan(r.log.indexOf('class:knight'));
+  });
+
+  it('warns when the class choice is refused and carries on', () => {
+    const r = rig('m08', { classRefused: true });
+    r.setReady();
+    r.run(30);
+    expect(r.warn).toHaveBeenCalledWith(expect.stringContaining('class choice was refused'));
+    expect(r.jump.phase).toBe('done');
+  });
+
+  it('a Phase B jump keeps standing by while the teleport is refused', () => {
+    const r = rig('d02', { teleportRefusals: 2 });
+    r.setReady();
+    r.run(30);
+    expect(r.jump.phase).toBe('done');
+    expect(r.log.filter((l) => l.startsWith('by:'))).toHaveLength(3);
   });
 
   it('fails cleanly when the quest refuses to start', () => {
@@ -194,6 +266,37 @@ describe('?act1= on the real game', () => {
     expect(t.jump?.phase).toBe('done');
     expect(fake.peek('slot-0')).toEqual(slice1Complete);
     expect(fake.peek('autosave')).toEqual(slice1Complete);
+  }, 60000);
+
+  it.each(ACT1_PHASE_B_JUMP_IDS)('%s: prerequisites done, the quest offerable, the player on the ground in Harrowmark beside the giver, nothing saved', async (id) => {
+    const t = await jumpTo(`?act1=${id}&new`);
+    expect(t.jump?.phase).toBe('done');
+    for (const q of ACT1_PREREQS[id]) expect(t.quests.state(q), q).toBe('completed');
+    expect(t.quests.state(id)).toBe('inactive');
+    const feet = t.ctx.player.feet;
+    expect(regionAt(feet.x, feet.z)?.id).toBe('harrowmark');
+    expect(Math.abs(feet.y - heightAt(feet.x, feet.z))).toBeLessThan(1.5);
+    expect(t.ctx.services.require('interiors').current).toBeNull();
+    const giver = t.ctx.services.require('npcs').position(ACT1_GIVERS[id]);
+    expect(giver, ACT1_GIVERS[id]).toBeDefined();
+    expect(Math.hypot(giver!.x - feet.x, giver!.z - feet.z)).toBeLessThan(GIVER_STAND_OFF + 2);
+    const s = t.ctx.state;
+    if (id === 'm06') expect(feet.z).toBeLessThan(1250 - 1); // south of the portcullis
+    else expect(s.getFlag('story.m06.route')).toBe('bribe');
+    if (!['m06', 'm07'].includes(id)) {
+      const classes = t.ctx.services.require('classes');
+      expect(classes.chosen()).toBe(true);
+      expect(classes.current()).toBe('knight');
+      expect(s.getFlag('classes.drill.knight')).toBe('skipped');
+    }
+    if (id === 'd02') {
+      expect(s.getFlag('story.r04.choice')).toBe('shield');
+      expect(s.getFlag('world.harrowmark.inn.price')).toBe('collected');
+      expect(s.getFlag('story.m08.stance')).toBe('steady');
+      expect(s.getBool('story.d02.underwaysOpen')).toBe(false); // Rook's offer opens it
+    }
+    const r = await t.ctx.services.require('save').saveNow('manual');
+    expect(r.ok).toBe(false);
   }, 60000);
 
   it('without &new nothing happens', async () => {
