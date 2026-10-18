@@ -20,6 +20,10 @@ export interface WaystoneService {
   readonly travelling: boolean;
   /** Any hostile has noticed the player and not calmed or died. */
   readonly hostileAggro: boolean;
+  /** Why a rest cannot happen now (dead, cutscene, dialogue, in-combat), or null. */
+  canRestNow(): 'dead' | 'cutscene' | 'dialogue' | 'in-combat' | null;
+  /** A rest away from a waystone (the inn): heals and saves, never moves the respawn point. */
+  restAt(placeId: string): { ok: boolean; reason?: string };
   /** Teleport that waits for the ground (also used by Continue). */
   safeTeleport(feet: Vec3, yaw: number): Promise<TeleportOutcome>;
 }

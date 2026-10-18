@@ -100,6 +100,7 @@ const progressionPlugin: GamePlugin = {
       injectCss(HUD_CSS);
       const menu = new SkillMenu(hudDocument(), {
         progression,
+        classId: () => soft(ctx, 'classes')?.current(),
         t: (k, p) => ctx.strings.t(k, p),
         close: () => close?.(),
         onLearn: () => ctx.services.get('prompts')?.success('skills'),

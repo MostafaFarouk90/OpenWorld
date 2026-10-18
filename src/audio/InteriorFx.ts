@@ -23,7 +23,7 @@ export const INTERIOR_PRESETS: Readonly<Record<string, InteriorPreset>> = {
   'keep-hall': { seconds: 1.0, damping: 0.45, wet: 0.3, duck: 0.8 },
   'counting-house': { seconds: 0.6, damping: 0.7, wet: 0.18, duck: 0.85 },
   archive: { seconds: 0.9, damping: 0.8, wet: 0.2, duck: 0.8 },
-  underways: { seconds: 2.2, damping: 0.8, wet: 0.45, duck: 0.7 },
+  underways: { seconds: 2.2, damping: 0.9, wet: 0.45, duck: 0.7 },
 };
 
 export function presetFor(interiorId: string): InteriorPreset {
