@@ -272,3 +272,56 @@ describe('unblockable (dodge telegraph) swings', () => {
     expect(g.resolve(req({ attackId: 'slam', swingId: 1 }), ctx(102)).outcome).toBe('blocked');
   });
 });
+
+describe('arcHalfAngle context override', () => {
+  const outcomeAt = (angle: number, arcHalfAngle?: number) => {
+    const g = new GuardModel();
+    g.setBlockHeld(true, 0);
+    return g.resolve(req({ swingId: undefined, direction: from(angle) }), ctx(100, arcHalfAngle === undefined ? {} : { arcHalfAngle })).outcome;
+  };
+
+  it('the default arc is 100 degrees and does not block a hit from 120 degrees', () => {
+    expect(outcomeAt(120)).toBe('hit');
+    expect(outcomeAt(120, undefined)).toBe('hit');
+  });
+
+  it('a 135 degree arc blocks 120 degrees on either side but not 140', () => {
+    expect(outcomeAt(120, deg(135))).toBe('blocked');
+    expect(outcomeAt(-120, deg(135))).toBe('blocked');
+    expect(outcomeAt(140, deg(135))).toBe('hit');
+    expect(outcomeAt(-140, deg(135))).toBe('hit');
+  });
+
+  it('the Iron Stance tuning value is that 135 degree arc', () => {
+    expect(GUARD.ironStanceArcHalfAngle).toBeCloseTo(deg(135));
+    expect(outcomeAt(134, GUARD.ironStanceArcHalfAngle)).toBe('blocked');
+    expect(outcomeAt(136, GUARD.ironStanceArcHalfAngle)).toBe('hit');
+  });
+
+  it('a narrower arc blocks less than the default', () => {
+    expect(outcomeAt(60, deg(45))).toBe('hit');
+    expect(outcomeAt(30, deg(45))).toBe('blocked');
+  });
+
+  it('a wider arc never blocks a hit from straight behind, and still needs a direction', () => {
+    expect(outcomeAt(180, deg(135))).toBe('hit');
+    const g = new GuardModel();
+    g.setBlockHeld(true, 0);
+    expect(g.resolve(req({ swingId: undefined, direction: undefined }), ctx(100, { arcHalfAngle: deg(179) })).outcome).toBe('hit');
+  });
+
+  it('follows facingYaw with the widened arc', () => {
+    const g = new GuardModel();
+    g.setBlockHeld(true, 0);
+    // yaw pi/2 faces -X; an attacker at -X plus 120 degrees round is blocked only with the wide arc.
+    const wide = g.resolve(req({ swingId: undefined, direction: from(120 - 90) }), ctx(100, { facingYaw: Math.PI / 2, arcHalfAngle: deg(135) }));
+    expect(wide.outcome).toBe('blocked');
+  });
+
+  it('does not bypass lockout, exhaustion or unblockable attacks', () => {
+    const g = new GuardModel();
+    g.setBlockHeld(true, 0);
+    expect(g.resolve(req({ swingId: undefined, direction: from(120) }), ctx(100, { arcHalfAngle: deg(135), exhausted: true })).outcome).toBe('hit');
+    expect(g.resolve(req({ swingId: undefined, direction: from(120), unblockable: true }), ctx(100, { arcHalfAngle: deg(135) })).outcome).toBe('hit');
+  });
+});

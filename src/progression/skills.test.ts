@@ -7,7 +7,7 @@ describe('skills data', () => {
     for (const s of SKILLS) {
       expect(s.cost).toBe([1, 1, 2, 3, 5][s.tier - 1]);
       expect(s.nameKey).toBe(`skill.${s.id}.name`);
-      expect(s.available).toBe(s.tier === 1);
+      expect(s.available).toBe(s.tier <= 2);
       if (s.tier > 1) {
         const prev = getSkill(s.requires!)!;
         expect(prev.branch).toBe(s.branch);
@@ -28,5 +28,23 @@ describe('skills data', () => {
     expect(caps).toHaveLength(3);
     expect(caps.every((c) => c.tier === 5 && c.exclusiveGroup === 'capstone')).toBe(true);
     expect(getSkill('nope')).toBeUndefined();
+  });
+});
+
+describe('tier 2 (slice 2)', () => {
+  it('Iron Stance, Flowing Cuts and Banner Plant are live and chained to tier 1', () => {
+    for (const [id, req] of [['knight.ironStance', 'knight.rimBash'], ['knight.flowingCuts', 'knight.riposteEdge'], ['knight.bannerPlant', 'knight.rallyCry']] as const) {
+      const s = getSkill(id)!;
+      expect([s.available, s.tier, s.cost, s.requires, s.classId]).toEqual([true, 2, 1, req, 'knight']);
+    }
+    expect(getSkill('knight.ironStance')!.kind).toBe('passive');
+    expect(getSkill('knight.flowingCuts')!.kind).toBe('passive');
+  });
+  it('tiers 3 to 5 stay locked', () => {
+    expect(SKILLS.filter((s) => s.tier >= 3).every((s) => !s.available)).toBe(true);
+  });
+  it('Banner Plant is an active that costs 20 Ember with a 45 s cooldown (on the SkillDef)', () => {
+    const b = getSkill('knight.bannerPlant')!;
+    expect([b.kind, b.emberCost, b.cooldown]).toEqual(['active', 20, 45]);
   });
 });

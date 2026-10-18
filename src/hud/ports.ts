@@ -88,6 +88,19 @@ export interface ProgressionService {
   baseMaxHealth(): number;
   /** Re-evaluates the max-health modifiers; call after a Burn or Scar change. */
   refreshMaxHealth(): void;
+  /** The chosen class; null until the M07 choice (plays as the Knight). */
+  readonly classId: string | null;
+  /** Silent; thread 12's `classes.choose` emits `class.chosen`. */
+  setClass(classId: string | null): void;
+  /** Abilities granted outside the tree (the Leap): the flag `ability.<id>.learned` is the single source. */
+  hasAbility(id: string): boolean;
+  grantAbility(id: string, source: string): boolean;
+  /** The only respec definition (thread 7 holds the permit, thread 8 shows the quote, thread 12 calls `respec` on a class change). */
+  allowRespec(source: string): () => void;
+  respecQuote(): { free: boolean; gold: number; canAfford: boolean };
+  respec():
+    | { ok: true; refunded: number; cost: number }
+    | { ok: false; reason: 'no-permit' | 'no-gold' | 'nothing-learned' };
   nextUnlock(): NextUnlock;
 }
 

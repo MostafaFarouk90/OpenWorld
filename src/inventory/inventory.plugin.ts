@@ -11,7 +11,7 @@ import { NEW_GAME_KIT, getItem } from './items';
 import { INVENTORY_STRINGS_EN } from './strings.en';
 
 const DRINK_LOCKS = [
-  'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'surge', 'interact',
+  'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'surge', 'surgeLeap', 'interact',
   'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6',
 ] as const;
 const REFUSAL_TOAST: Record<string, string> = {
