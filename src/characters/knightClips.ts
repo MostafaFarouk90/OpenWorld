@@ -89,6 +89,8 @@ export interface AttackClipDef {
   activeStart: number;
   /** Normalised clip time at which it stops, inclusive. */
   activeEnd: number;
+  /** A ranged shot: the window still opens and closes (swing sound, `attack.window`), but no blade ribbon is drawn. */
+  noTrace?: true;
 }
 
 export const KNIGHT_ATTACKS: readonly AttackClipDef[] = [

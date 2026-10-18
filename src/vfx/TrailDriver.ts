@@ -152,7 +152,7 @@ export class TrailDriver {
 
   private poll(b: Binding): void {
     const atk = this.avatars.get(b.actorId)?.controller.activeAttack() ?? null;
-    if (atk && atk.normalizedTime >= atk.activeStart - TRAIL_LEAD && atk.normalizedTime <= atk.activeEnd) {
+    if (atk && !atk.noTrace && atk.normalizedTime >= atk.activeStart - TRAIL_LEAD && atk.normalizedTime <= atk.activeEnd) {
       this.start(b, atk.clip);
     } else this.stop(b);
   }
