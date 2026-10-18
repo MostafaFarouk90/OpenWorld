@@ -1,0 +1,225 @@
+import type * as THREE from 'three';
+import type { HurtboxSet } from '../combat/HurtboxSet';
+import type { AttackWindowSource } from '../combat/types';
+import type { WeaponTracer } from '../combat/WeaponTracer';
+import type { Vec3 } from '../physics/PhysicsWorld';
+
+/**
+ * The slice of the game core (contracts/actors-and-damage.md, game-events-and-flags.md,
+ * world-layout-and-npcs.md, input-and-hud.md) this thread uses, as narrow structural interfaces.
+ * `enemies.plugin.ts` adapts the real GameContext to `EnemyHost`; tests pass fakes.
+ */
+
+export type ActorId = string;
+export type Team = 'player' | 'ally' | 'neutral' | 'hostile';
+export type FavourTrack = 'halvard' | 'oswin' | 'grisel' | 'dragons' | 'ashwalkers';
+export type MercyVerb = 'spare' | 'calm' | 'release' | 'warmHand';
+export type MercyTier = 'normal' | 'elite' | 'boss';
+
+export interface ActorLike {
+  readonly id: ActorId;
+  readonly kind: string;
+  team: Team;
+  level: number;
+  health: number;
+  maxHealth: number;
+  poise: number;
+  maxPoise: number;
+  readonly dead: boolean;
+  hittable: boolean;
+  invulnerable: boolean;
+  root: THREE.Object3D | null;
+  data: Record<string, unknown>;
+  worldPosition(out: THREE.Vector3): THREE.Vector3;
+  restorePoise(n?: number): void;
+}
+
+export interface ActorInitLike {
+  kind: string;
+  team: Team;
+  level?: number;
+  maxHealth: number;
+  maxPoise?: number;
+  root?: THREE.Object3D;
+  owner?: unknown;
+}
+
+export interface ActorsPort {
+  spawn(init: ActorInitLike): ActorLike;
+  despawn(id: ActorId): void;
+  get(id: ActorId): ActorLike | undefined;
+  readonly player: ActorLike;
+}
+
+export type DamageOutcome = 'hit' | 'blocked' | 'parried' | 'immune';
+export interface DamageRequestLike {
+  attackerId: ActorId | null;
+  targetId: ActorId;
+  amount: number;
+  poise: number;
+  kind: 'melee' | 'spell' | 'fall' | 'script';
+  bone?: string;
+  attackId?: string;
+  swingId?: number;
+  direction?: THREE.Vector3;
+  /** Requested from thread 0 (requests-round-1 item 4): red, dodge-only attacks. */
+  unblockable?: boolean;
+}
+export interface DamageResultLike extends DamageRequestLike {
+  outcome: DamageOutcome;
+  dealt: number;
+  poiseDealt: number;
+  healthAfter: number;
+  killed: boolean;
+  saved: boolean;
+  staggered: boolean;
+}
+export type DamageModifierLike = (
+  req: DamageRequestLike & { outcome: DamageOutcome },
+  target: ActorLike,
+  attacker: ActorLike | null,
+) => void;
+
+export interface DamagePort {
+  addModifier(id: string, modifier: DamageModifierLike, order?: number): () => void;
+  heal(id: ActorId, amount: number): number;
+}
+
+export interface CombatPort {
+  /** Returns a remove function (requests-round-1 item 5); removing an open window emits attack.window close. */
+  addAttacker(actorId: ActorId, tracer: WeaponTracer, window: AttackWindowSource): () => void;
+  addTarget(hurtboxes: HurtboxSet, actorId?: ActorId): () => void;
+}
+
+export interface MercyEventLike {
+  verb: MercyVerb;
+  tier: MercyTier;
+  track: FavourTrack | null;
+  creature: string;
+  actorId?: ActorId;
+  amount?: number;
+  pulseId?: string;
+}
+
+/** The shared events this thread emits or listens to (payloads from game-events-and-flags.md section 4). */
+export interface EnemyEvents {
+  'damage.dealt': DamageResultLike;
+  'actor.staggered': { actorId: ActorId; byId: ActorId | null };
+  'actor.died': { actorId: ActorId; killerId: ActorId | null; kind: string; team: Team; level: number };
+  'actor.despawned': { actorId: ActorId };
+  'actor.revived': { actorId: ActorId; reason: string; health: number };
+  'ai.aggro': { actorId: ActorId; targetId: ActorId };
+  'ai.calm': { actorId: ActorId };
+  telegraph: {
+    actorId: ActorId;
+    kind: 'block' | 'dodge';
+    attackId: string;
+    moveId: string;
+    swingId: number;
+    leadSeconds: number;
+  };
+  'telegraph.cancelled': { actorId: ActorId; swingId: number };
+  mercy: MercyEventLike;
+  'mercy.revoked': { actorId: ActorId; track: FavourTrack | null; removed: number };
+  rest: { waystoneId: string };
+  'save.loaded': { slot: string };
+  'quest.started': { questId: string };
+  'enemies.groupCleared': { spawnerId: string };
+  'enemies.state': { actorId: ActorId; from: string; to: string };
+  'enemies.yield': { actorId: ActorId; seconds: number };
+}
+export type EnemyEventName = keyof EnemyEvents;
+
+export interface EventsPort {
+  on<K extends EnemyEventName>(type: K, listener: (payload: EnemyEvents[K]) => void): () => void;
+  emit<K extends EnemyEventName>(type: K, payload: EnemyEvents[K]): void;
+}
+
+export interface AnchorLike {
+  id: string;
+  position: Vec3;
+  yaw: number;
+  tags?: string[];
+}
+export interface AnchorsPort {
+  find(id: string): AnchorLike | undefined;
+  withTag(tag: string): AnchorLike[];
+}
+
+/** world-layout-and-npcs.md section 1 plus requests-round-1 item 8 (action, coneDegrees, score). */
+export interface InteractableLike {
+  id: string;
+  kind: 'release';
+  action?: 'interact' | 'mercy';
+  position(out: THREE.Vector3): THREE.Vector3;
+  radius?: number;
+  coneDegrees?: number;
+  promptKey?: string;
+  name?: string;
+  holdSeconds?: number;
+  priority?: number;
+  score?(feet: THREE.Vector3): number;
+  enabled?(): boolean;
+  onInteract(actor: ActorLike): void;
+}
+export interface InteractionPort {
+  register(i: InteractableLike): () => void;
+}
+
+export interface StatePort {
+  getBool(key: string, fallback?: boolean): boolean;
+  setFlag(key: string, value: boolean | number | string): void;
+}
+
+export interface PersistableLike {
+  key: string;
+  version: number;
+  serialize(): unknown;
+  load(data: unknown, version: number): void;
+}
+
+export interface PlayerPort {
+  readonly actor: ActorLike;
+  readonly feet: THREE.Vector3;
+  /** The player's capsule collider, so line-of-sight rays can tell "hit the player" from "hit a wall". */
+  readonly collider: unknown;
+  addMoveModifier(source: string, mod: { speedScale?: number }): () => void;
+}
+
+export interface VfxLike {
+  dissolve(root: THREE.Object3D, seconds: number): Promise<void>;
+  attachTrail?(
+    id: string,
+    hilt: THREE.Object3D,
+    tip: THREE.Object3D,
+    opts?: { lifetime?: number; color?: number },
+  ): { setEmitting(on: boolean): void; dispose(): void };
+}
+
+export interface ServicesPort {
+  get(name: 'vfx'): VfxLike | undefined;
+  get(name: 'lockOn'): { readonly targetId: ActorId | null } | undefined;
+}
+
+/** The parts of the AssetLoader the enemy models need (requests-round-1 item 6). */
+export interface AssetsPort {
+  load(id: string): Promise<unknown>;
+  instantiate(id: string): THREE.Object3D;
+  animations(id: string): THREE.AnimationClip[];
+  has(id: string): boolean;
+}
+
+export interface EnemyHost {
+  scene: THREE.Object3D;
+  actors: ActorsPort;
+  damage: DamagePort;
+  combat: CombatPort;
+  events: EventsPort;
+  anchors: AnchorsPort;
+  interaction: InteractionPort;
+  state: StatePort;
+  services: ServicesPort;
+  player: PlayerPort;
+  heightAt(x: number, z: number): number;
+  warn(message: string): void;
+}
