@@ -41,6 +41,16 @@ describe('OccupantHider', () => {
     expect(ghost.root.visible).toBe(false);
   });
 
+  it('does not adopt a root that is already hidden inside another interior, so its owner keeps it', () => {
+    const h = new OccupantHider();
+    const waiting = actor(0, 150);
+    waiting.root.visible = false; // hidden by its own system
+    h.update([waiting], null, inside);
+    expect(h.size).toBe(0);
+    h.update([waiting], 'keep-hall', inside);
+    expect(waiting.root.visible).toBe(false);
+  });
+
   it('skips the player and actors with no root, forgets despawned actors, and shows its own on dispose', () => {
     const h = new OccupantHider();
     const player = actor(0, 150);
@@ -50,6 +60,7 @@ describe('OccupantHider', () => {
     expect(h.size).toBe(1);
     h.update([], null, inside);
     expect(h.size).toBe(0);
+    guard.root.visible = true; // spawned again
     h.update([guard], null, inside);
     h.dispose();
     expect(guard.root.visible).toBe(true);

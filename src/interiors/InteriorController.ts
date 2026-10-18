@@ -91,7 +91,7 @@ const FORWARD = (yaw: number) => ({ x: -Math.sin(yaw), z: -Math.cos(yaw) });
 interface Rescue {
   handle: { ready(): boolean };
   time: number;
-  ticks: number;
+  release: () => void;
 }
 
 /** A saved spot this far over the terrain is in the interiors' sky, not a ground fallback. */
@@ -243,6 +243,7 @@ export class InteriorController {
 
   dispose(): void {
     if (this.rescue) {
+      this.rescue.release();
       this.rescue = null;
       this.ports.fade(0, TRANSITION.fadeInSeconds);
     }
@@ -419,16 +420,18 @@ export class InteriorController {
     this.door = door.doorId;
     this.outside = 0;
     this.setApplied(id);
-    this.rescue = { handle: this.ports.teleport({ ...inside.position }, inside.yaw), time: 0, ticks: 0 };
+    const release = this.ports.freeze();
+    this.rescue = { handle: this.ports.teleport({ ...inside.position }, inside.yaw), time: 0, release };
   }
 
   private stepRescue(r: Rescue, dt: number): void {
     r.time += dt;
-    r.ticks++;
-    const settled = r.ticks >= 1 && r.handle.ready() && this.ports.groundBelow(TRANSITION.groundRay);
+    // A tick has run since the teleport (the rescue starts in save.loaded, between ticks).
+    const settled = r.handle.ready() && this.ports.groundBelow(TRANSITION.groundRay);
     if (!settled && r.time < TRANSITION.settleTimeoutSeconds) return;
     if (!settled) this.ports.warn('Interiors: the stale-load rescue found no ground in time; lifting the fade anyway');
     this.rescue = null;
+    r.release();
     this.ports.fade(0, TRANSITION.fadeInSeconds);
   }
 
@@ -474,6 +477,7 @@ export class InteriorController {
 
   private load(data: unknown): void {
     if (this.transition) this.abort(this.transition, 'aborted');
+    this.rescue?.release();
     this.rescue = null;
     let id: string | null = null;
     let door: string | null = null;

@@ -13,10 +13,11 @@ import waystonesPlugin from '../waystones/waystones.plugin';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 import { HARROWMARK_SITES } from './harrowmark/sites';
-import { TILTED_ANVIL_BACKROOM_GATE } from './harrowmark/tiltedAnvil';
+import { TILTED_ANVIL_BACKROOM_GATE, TILTED_ANVIL_DEF } from './harrowmark/tiltedAnvil';
+import { layoutInterior } from './layout';
 import { InteriorError } from './InteriorController';
 import interiorsPlugin from './interiors.plugin';
-import { UNDERWAYS_ARENA_GATE } from './underways/generate';
+import { UNDERWAYS_ARENA_GATE, UNDERWAYS_DEF } from './underways/generate';
 
 const modules: Record<string, PluginModule> = {
   '/src/test/core.plugin.ts': { default: corePlugin },
@@ -251,27 +252,83 @@ describe('the Harrowmark interiors on the real game', () => {
     expect(root.visible).toBe(true);
   });
 
-  it('moves a load whose saved spot is no longer floor to the entry', async () => {
+  /** Saves inside the Underways, boots a fresh game and loads it the way save.plugin does, with the player placed at `stale`. */
+  async function loadAt(stale: (b: Booted) => { x: number; y: number; z: number }) {
     const a = await boot();
     t_open(a);
     await a.run(2);
     await settle(a, a.svc().enter('underways', 'underways'));
     const entries = a.game.ctx.persist.saveAll();
-
     const b = await boot();
     for (const e of entries) b.game.ctx.persist.get(e.key)?.load(e.data, e.version);
-    // A stale spot inside the Underways' bounds but in solid rock (the layout changed since the save).
-    const entry = b.anchor('harrowmark.underways.entry').position;
-    const stale = { x: entry.x - 2.8, y: entry.y + 0.05, z: entry.z + 10 };
-    b.game.ctx.player.teleport(stale);
-    await b.run(3);
+    const at = stale(b);
+    // The loader's safe teleport: it places, waits for ground and lifts its fade, or goes stuck (frozen) when there is none.
+    let outcome: unknown = null;
+    void b.game.ctx.services.get('waystones')!.safeTeleport(at, 0).then((o) => (outcome = o));
+    for (let i = 0; i < 600 && !outcome; i++) await b.run(1);
     b.game.ctx.events.emit('save.loaded', { slot: 'test' });
-    await b.run(30);
+    await b.run(90);
+    return { b, outcome, entry: b.anchor('harrowmark.underways.entry').position };
+  }
+
+  it('moves a load whose saved spot is now inside a wall to the entry', async () => {
+    const { b, entry } = await loadAt((t) => {
+      // The centre of a wall box under the corridors (the layout changed since the save).
+      const layout = layoutInterior(UNDERWAYS_DEF, heightAt);
+      const wall = layout.boxes.find((x) => x.kind === 'wall' && x.max.x - x.min.x >= 0.5 && x.max.z - x.min.z >= 0.5 && x.max.y - x.min.y > 3)!;
+      const at = { x: (wall.min.x + wall.max.x) / 2, y: layout.floorY + 1, z: (wall.min.z + wall.max.z) / 2 };
+      expect(t.svc().interiorAt(at)).toBe('underways');
+      return at;
+    });
     expect(near(b.game.ctx.player.feet, entry)).toBeLessThan(0.5);
     expect(b.svc().current).toBe('underways');
-    // The fade order is pinned in InteriorController.test.ts; here the doors work again once it has lifted.
     expect(b.svc().transitioning).toBe(false);
     expect(b.events.map((e) => e.type)).toEqual(['interior.entered']);
+  });
+
+  it('moves a load left over open void (the loader teleport goes stuck) to the entry and unfreezes', async () => {
+    const { b, outcome, entry } = await loadAt((t) => {
+      const layout = layoutInterior(UNDERWAYS_DEF, heightAt);
+      for (let x = layout.bounds.min.x + 2; x < layout.bounds.max.x - 2; x += 1) {
+        for (let z = layout.bounds.min.z + 2; z < layout.bounds.max.z - 2; z += 1) {
+          const at = { x, y: layout.floorY + 0.05, z };
+          const solid = layout.boxes.some((q) => x >= q.min.x - 1 && x <= q.max.x + 1 && z >= q.min.z - 1 && z <= q.max.z + 1);
+          if (!solid && t.svc().interiorAt(at) === 'underways') return at;
+        }
+      }
+      throw new Error('no void spot');
+    });
+    expect(outcome).toEqual({ ok: false, reason: 'terrain-not-ready' });
+    expect(near(b.game.ctx.player.feet, entry)).toBeLessThan(0.5);
+    expect(b.svc().transitioning).toBe(false);
+    expect(b.game.ctx.services.get('waystones')!.travelling).toBe(false);
+    await b.run(60);
+    expect(b.game.ctx.player.feet.y).toBeGreaterThan(entry.y - 0.2);
+    expect(b.events.map((e) => e.type)).toEqual(['interior.entered']);
+  });
+
+  it('keeps a load made standing on the inn bed where it was', async () => {
+    const a = await boot();
+    t_open(a);
+    await a.run(2);
+    await settle(a, a.svc().enter('tilted-anvil', 'tilted-anvil-back'));
+    const room = a.anchor('inn.room').position;
+    const bed = TILTED_ANVIL_DEF.props!.find((p) => p.id?.startsWith('bed'))!;
+    const layout = layoutInterior(TILTED_ANVIL_DEF, heightAt);
+    const top = { x: layout.origin.x + (bed.rect.x0 + bed.rect.x1) / 2, y: layout.floorY + bed.height + 0.05, z: layout.origin.z + (bed.rect.z0 + bed.rect.z1) / 2 };
+    expect(near(top, room)).toBeLessThan(5);
+    a.game.ctx.player.teleport(top);
+    await a.run(30);
+    const entries = a.game.ctx.persist.saveAll();
+    const b = await boot();
+    for (const e of entries) b.game.ctx.persist.get(e.key)?.load(e.data, e.version);
+    b.game.ctx.player.teleport(top);
+    await b.run(5);
+    b.game.ctx.events.emit('save.loaded', { slot: 'test' });
+    await b.run(5);
+    expect(near(b.game.ctx.player.feet, top)).toBeLessThan(0.5);
+    expect(b.svc().current).toBe('tilted-anvil');
+    expect(b.events.map((e) => e.payload.doorId)).toEqual(['tilted-anvil-back']);
   });
 });
 
