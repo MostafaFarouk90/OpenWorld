@@ -96,7 +96,9 @@ async function boot() {
   const f = fakes();
   const events: { type: keyof GameEventMap; payload: any }[] = [];
   game.events.onAny((type, payload) => events.push({ type, payload }));
-  const statuses = await game.loadPlugins(modules(corePlugin, f.plugin, stealthPlugin, chasePlugin));
+  // Stealth loads after interiors (its load teleport wins over 3a's rescue); a stand-in with no interior here.
+  const interiors: GamePlugin = { id: 'interiors', dependsOn: ['core'], setup() {} };
+  const statuses = await game.loadPlugins(modules(corePlugin, interiors, f.plugin, stealthPlugin, chasePlugin));
   const ctx = game.ctx;
   const run = (n: number) => {
     for (let i = 0; i < n; i++) game.fixedUpdate();
