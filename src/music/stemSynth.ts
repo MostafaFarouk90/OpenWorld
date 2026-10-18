@@ -218,6 +218,7 @@ function melody(t: Track, g: Grid, c: Ctx): void {
       const seconds = (beats * beatSamples) / t.sampleRate;
       if (c.syn.voices.melody === 'trumpet') {
         const maxK = Math.max(1, Math.min(8, Math.floor((t.sampleRate * 0.45) / hz)));
+        const amp = Array.from({ length: maxK + 1 }, (_, k) => (k === 0 ? 0 : 1 / k ** 0.8));
         t.add(Math.round(cursor), seconds * 0.97, (s) => {
           const env = Math.min(1, s / 0.03) * Math.min(1, (seconds - s) / 0.05 + 0.2) * Math.exp(-s * 0.3);
           // Lip trill: vibrato plus a quick flutter that wobbles both pitch and loudness.
@@ -225,7 +226,17 @@ function melody(t: Track, g: Grid, c: Ctx): void {
           const vib = 1 + 0.012 * Math.min(1, s / 0.15) * Math.sin(TAU * 5.5 * s) + 0.006 * flutter;
           const w = TAU * hz * vib * s;
           let sum = 0;
-          for (let k = 1; k <= maxK; k++) sum += Math.sin(k * w) / k ** 0.8;
+          {
+            const c2 = 2 * Math.cos(w);
+            let prev = 0;
+            let cur = Math.sin(w);
+            for (let k = 1; k <= maxK; k++) {
+              sum += cur * amp[k];
+              const next = c2 * cur - prev;
+              prev = cur;
+              cur = next;
+            }
+          }
           // Buzzy lip noise rides on the odd harmonics' phase, deterministic and noise-free.
           const buzz = Math.sin(w * 0.5 + 0.8 * Math.sin(w * 3)) * 0.15;
           return env * (1 + 0.15 * flutter) * (sum * 0.38 + buzz) * 0.5;
@@ -276,18 +287,33 @@ function chant(t: Track, g: Grid, bar: number, hz: number): void {
   for (let q = 0; q < 4; q++) {
     const [f1, f2] = vowels[q % 2];
     const dur = g.stepSeconds * 3.6;
+    // Harmonic weights depend only on the voice, not on time: computed once per syllable.
+    const voices = [0.997, 1.004].map((detune) => {
+      const f0 = hz * detune;
+      const top = maxFor(f0);
+      const weights: number[] = [0];
+      for (let k = 1; k <= top; k++) {
+        const fk = k * f0;
+        const res = 1 / (1 + ((fk - f1) / 140) ** 2) + 0.7 / (1 + ((fk - f2) / 220) ** 2);
+        weights.push((0.25 + 1.6 * res) / k);
+      }
+      return { f0, top, weights };
+    });
     t.add(g.start(bar, q * 4), dur, (s) => {
       // Pulses on the beat: fast attack, quick decay to a sustained throat drone.
       const env = Math.min(1, s / 0.012) * (0.45 + 0.55 * Math.exp(-s * 9));
       let sum = 0;
-      for (const detune of [0.997, 1.004]) {
-        const f0 = hz * detune;
-        const w = TAU * f0 * s;
-        const top = maxFor(f0);
-        for (let k = 1; k <= top; k++) {
-          const fk = k * f0;
-          const res = 1 / (1 + ((fk - f1) / 140) ** 2) + 0.7 / (1 + ((fk - f2) / 220) ** 2);
-          sum += (Math.sin(k * w) / k) * (0.25 + 1.6 * res);
+      for (const v of voices) {
+        // sin(k w) by the Chebyshev recurrence: one sin and one cos per voice instead of one per harmonic.
+        const w = TAU * v.f0 * s;
+        const c2 = 2 * Math.cos(w);
+        let prev = 0;
+        let cur = Math.sin(w);
+        for (let k = 1; k <= v.top; k++) {
+          sum += cur * v.weights[k];
+          const next = c2 * cur - prev;
+          prev = cur;
+          cur = next;
         }
       }
       return env * sum * 0.22;
