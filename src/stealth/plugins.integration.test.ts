@@ -62,6 +62,7 @@ function fakes() {
         perception: {
           register: (p: (typeof providers)[number]) => (providers.push(p), () => providers.splice(providers.indexOf(p), 1)),
           state: (id: string) => guardStates.get(id) ?? null,
+          face: () => true,
         },
       });
       // Thread 17's M06 anchors, on the flat spawn meadow.
