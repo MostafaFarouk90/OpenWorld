@@ -261,12 +261,12 @@ describe('Tobb waits: the Keep Hall (M08)', () => {
 });
 
 describe('Tobb waits: the Tilted Anvil (M09 stealth, M10 chase)', () => {
-  it('M09 until objective 6 puts him at the hearth; chase events never release a chase wait; o3 ends it', async () => {
+  it('M09 until objective 4 puts him at the hearth; chase events never release a chase wait; o3 ends it', async () => {
     const t = await joined();
     t.quests.states.set('m09', 'active');
     t.run(1);
     expect(t.dist(t.posts[INN].position)).toBeLessThan(0.01);
-    t.quests.done.add('m09.o6');
+    t.quests.done.add('m09.o4');
     t.quests.states.set('m10', 'active');
     t.run(1);
     expect(t.dist(t.posts[INN].position)).toBeLessThan(0.01);
@@ -358,7 +358,7 @@ describe('Tobb waits: while waiting', () => {
     t.quests.states.set('m09', 'active');
     t.run(1);
     const saved = t.ctx.persist.get('companions')!.serialize();
-    t.quests.done.add('m09.o6');
+    t.quests.done.add('m09.o4');
     t.ctx.persist.loadAll([{ key: 'companions', version: 1, data: saved }], t.ctx.events, 'test');
     t.run(2);
     expect(t.distToPlayer()).toBeLessThan(5);

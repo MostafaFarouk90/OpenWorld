@@ -65,9 +65,9 @@ describe('deriveWait with TOBB.waits', () => {
   it('null once o2 done even though m06 active', () => {
     expect(deriveWait(RULES, fakeView({ quests: { m06: 'active' }, done: ['m06.o2'] }))).toBeNull();
   });
-  it('stealth while m09 active and o6 not done', () => {
+  it('stealth while m09 active and o4 not done', () => {
     expect(deriveWait(RULES, fakeView({ quests: { m09: 'active' } }))).toEqual({ reason: 'stealth', anchorId: ANVIL });
-    expect(deriveWait(RULES, fakeView({ quests: { m09: 'active' }, done: ['m09.o6'] }))).toBeNull();
+    expect(deriveWait(RULES, fakeView({ quests: { m09: 'active' }, done: ['m09.o4'] }))).toBeNull();
   });
   it('chase while m10 active and o3 not done; null when done', () => {
     expect(deriveWait(RULES, fakeView({ quests: { m10: 'active' } }))).toEqual({ reason: 'chase', anchorId: ANVIL });
