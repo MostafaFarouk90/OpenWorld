@@ -380,12 +380,29 @@ export class Enemy {
     this.setLoco(ENEMY_CLIPS.walk);
   }
 
-  revoked(strikerId: ActorId | null): void {
-    if (this.phase !== 'leaving' || this.actor.dead) return;
+  /** Despawns without reporting the mercy exit, for a load that never saw the mercy. */
+  despawnUnseen(): void {
+    this.goneHow = 'despawned';
+    this.despawn();
+  }
+
+  /** Leaving or dissolving after an accepted mercy. */
+  get inMercyExit(): boolean {
+    return this.goneHow === 'released' || this.goneHow === 'spared';
+  }
+
+  /** A packmate was spared: see `Brain.offerYield`. */
+  offerYield(): boolean {
+    return this.phase === 'alive' && this.brain.offerYield();
+  }
+
+  revoked(strikerId: ActorId | null): boolean {
+    if (this.phase !== 'leaving' || this.actor.dead) return false;
     this.phase = 'alive';
     this.leaveFrom = null;
     this.goneHow = 'despawned';
     this.brain.revoked(strikerId);
+    return true;
   }
 
   /** The player this enemy is chasing died or despawned. */

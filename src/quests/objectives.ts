@@ -31,7 +31,28 @@ function spawnTagOk(def: ObjectiveDef, p: Record<string, any>, ctx: MatchCtx): b
 }
 
 /** Credit an objective earns from one event, or null when the event does not concern it. */
+/** Event names an `event` objective listens to. */
+export function eventNames(def: ObjectiveDef): string[] {
+  if (def.type !== 'event') return [];
+  return (Array.isArray(def.target) ? def.target : [def.target]).filter(isStr);
+}
+
+function eventCredit(def: ObjectiveDef, type: string, payload: unknown): Credit | null {
+  if (!eventNames(def).includes(type)) return null;
+  const p = isObj(payload) ? payload : undefined;
+  if (def.match) {
+    if (!p) return null;
+    for (const [k, v] of Object.entries(def.match)) if (p[k] !== v) return null;
+  }
+  if (def.dedupeBy !== undefined) {
+    const key = p?.[def.dedupeBy];
+    return isStr(key) ? { amount: 1, dedupeKey: key } : null;
+  }
+  return { amount: 1 };
+}
+
 export function creditFor(def: ObjectiveDef, type: string, payload: unknown, ctx: MatchCtx): Credit | null {
+  if (def.type === 'event') return eventCredit(def, type, payload);
   if (!isObj(payload)) return null;
   const p = payload;
   switch (def.type as ObjectiveType) {

@@ -283,8 +283,9 @@ describe('PromptManager', () => {
   });
 
   it('MECHANICS covers the contract list', () => {
-    expect(MECHANICS).toHaveLength(20);
-    expect(new Set(MECHANICS).size).toBe(20);
+    expect(MECHANICS).toHaveLength(21);
+    expect(new Set(MECHANICS).size).toBe(21);
+    expect(MECHANICS).toContain('wardstone-strike');
   });
 });
 

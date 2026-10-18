@@ -1,5 +1,6 @@
 import type { QuestDef, QuestState } from './types';
 import type { ObjectiveView } from './QuestManager';
+import type { JournalService } from './journalTabs';
 
 /** `quests` service (contracts/quests-and-dialogue.md section 2, plus the additions thread 3 listed). */
 export interface QuestsService {
@@ -16,6 +17,8 @@ export interface QuestsService {
   objectives(id: string): ObjectiveView[];
   active(): string[];
   onChange(listener: () => void): () => void;
+  /** World position of R01's carried torch, or null when none burns (thread 5's scarecrows test contact). */
+  torch(): { x: number; y: number; z: number } | null;
 }
 
 /** `dialogue` service. */
@@ -31,6 +34,8 @@ declare module '../core/Services' {
   interface GameServices {
     quests: QuestsService;
     dialogue: DialogueService;
+    /** Journal tab slots; thread 8 fills Favour and Story so far. */
+    journal: JournalService;
   }
 }
 

@@ -15,6 +15,21 @@ export const HUD_STRINGS_EN: Readonly<Record<string, string>> = {
   'hud.nextUnlock.learn': 'Spend your skill point: {skill}',
   'hud.nextUnlock.points': '{points} skill points to spend',
   'hud.nextUnlock.point': '1 skill point to spend',
+  'hud.scar.tip': 'Scars: each takes max health',
+  'hud.leap.name': 'Surge Leap',
+  'hud.boss.shield': 'Shielded',
+  'hud.boss.release': 'Release open',
+  'hud.companion.tobb': 'Tobb',
+  'hud.companion.aura': 'Battle-song',
+  'hud.actContinues.title': 'Act 1 continues',
+  'hud.actContinues.body': 'The road beyond the fog is not open yet. The tale goes on in a later update.',
+  'hud.actContinues.hint': 'Press any key to continue',
+  'hud.respec.title': 'Respec',
+  'hud.respec.free': 'Your first respec is free.',
+  'hud.respec.cost': 'Respec costs {gold} gold.',
+  'hud.respec.cannotAfford': 'You cannot afford this.',
+  'hud.respec.confirm': 'Confirm',
+  'hud.respec.cancel': 'Cancel',
 };
 
 export function formatHud(template: string, params?: Record<string, string | number>): string {
