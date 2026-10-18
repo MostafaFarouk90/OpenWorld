@@ -225,10 +225,10 @@ function makePorts(ctx: GameContext, ui: {
       // Busy or terrain not ready: never leave a restarted player where they fell.
       if (!outcome || !outcome.ok) ctx.player.teleport(a.position, a.yaw);
     },
-    holdKillXp: (on) => {
+    holdKillXp: (on, reason = 'tutorial') => {
       // Pauses are not saved (Progression.ts), so a hold is always re-taken fresh.
       xpRelease?.();
-      xpRelease = on ? (svc.get('progression')?.pauseKillXp('tutorial') ?? null) : null;
+      xpRelease = on ? (svc.get('progression')?.pauseKillXp(reason) ?? null) : null;
     },
     level: () => svc.get('progression')?.level ?? 1,
     grantLevelTwo: () => {

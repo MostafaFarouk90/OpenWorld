@@ -22,6 +22,7 @@ class FakeWorld implements DirectorPorts {
   locks: readonly string[] = [];
   charges: number[] = [];
   xpHeld = false;
+  xpReasons: string[] = [];
   /** Trigger volumes the player is inside, as the last fixedUpdate saw them. */
   inside = new Set<string>();
   lvl = 1;
@@ -138,8 +139,9 @@ class FakeWorld implements DirectorPorts {
     if (this.autoFade) return Promise.resolve();
     return new Promise<void>((resolve) => (this.fadePromise = { resolve }));
   }
-  holdKillXp(on: boolean) {
+  holdKillXp(on: boolean, reason?: string) {
     this.xpHeld = on;
+    if (on) this.xpReasons.push(reason ?? '');
   }
   playerInTrigger(id: string) {
     return this.inside.has(id);
@@ -981,6 +983,7 @@ describe('Replay board drills', () => {
     passUntil(null);
     expect(d.startDrill(block)).toBe(true);
     expect(w.xpHeld).toBe(true);
+    expect(w.xpReasons.at(-1)).toBe('tutorial.replay');
     w.health = 0.01;
     expect(d.onLethal()).toBe(true);
     expect(d.drillActive).toBeNull();
@@ -1093,6 +1096,23 @@ describe('trigger goals with the player already inside', () => {
     tick();
     expect(d.drillActive).toBeNull();
     expect(w.toasts.filter((t) => t === 'tutorial.replay.done')).toHaveLength(1);
+  });
+});
+
+describe('kill XP pause reasons', () => {
+  it('the run pauses as tutorial, a drill as tutorial.replay, and both release on end', () => {
+    d.begin('full');
+    expect(w.xpHeld).toBe(true);
+    expect(w.xpReasons).toEqual(['tutorial']);
+    passUntil(null);
+    expect(w.xpHeld).toBe(false);
+    const drill: DrillDef = { id: 'block', steps: [[{ kind: 'count', event: 'blocked', count: 1 }]] };
+    expect(d.startDrill(drill)).toBe(true);
+    expect(w.xpHeld).toBe(true);
+    expect(w.xpReasons.at(-1)).toBe('tutorial.replay');
+    ev({ type: 'blocked' });
+    expect(d.drillActive).toBeNull();
+    expect(w.xpHeld).toBe(false);
   });
 });
 

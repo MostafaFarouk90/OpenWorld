@@ -212,7 +212,8 @@ export interface DirectorPorts {
   fadeTeleport(anchorId: string): Promise<void>;
 
   // progression and items
-  holdKillXp(on: boolean): void;
+  /** `reason` names the kill-XP pause: 'tutorial' for the run, 'tutorial.replay' for Replay drills. */
+  holdKillXp(on: boolean, reason?: string): void;
   level(): number;
   grantLevelTwo(): void;
   grantItems(sourceId: string, items: { itemId: string; count: number }[]): void;
