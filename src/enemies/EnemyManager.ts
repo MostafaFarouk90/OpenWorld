@@ -115,7 +115,7 @@ export class EnemyManager {
     let enemy: Enemy;
     try {
       const source = this.makeModel(req.def);
-      const model = buildEnemyModel(source, req.def);
+      const model = buildEnemyModel(source, req.def, { bus: this.host.combat.bus });
       const animator = new EnemyAnimator(model.owner, source.clips, { warn: (m) => this.host.warn(m) });
       const stats = scaleStats(req.def, req.level);
       const spawn: EnemySpawn = {

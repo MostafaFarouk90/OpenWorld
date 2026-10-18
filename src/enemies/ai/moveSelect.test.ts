@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { ASH_WRAITH } from '../defs';
 import { MoveSelector, mulberry32 } from './moveSelect';
 
-const moves = ASH_WRAITH.moves; // claw w3 [0,1.7], grab w1 [0,1.4], sweep w0 [0,2.0]
+// Fixed ranges so the tests do not move with tuning: claw w3 [0,1.7], grab w1 [0,1.4], sweep w0 [0,2.0].
+const RANGES: Record<string, readonly [number, number]> = {
+  'wraith.claw': [0, 1.7],
+  'wraith.grab': [0, 1.4],
+  'wraith.sweep': [0, 2.0],
+};
+const moves = ASH_WRAITH.moves.map((m) => ({ ...m, range: RANGES[m.id] }));
 
 describe('MoveSelector', () => {
   it('gates by range', () => {
