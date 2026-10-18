@@ -41,7 +41,7 @@ export interface QuestActions {
   completeObjective(questId: string, objectiveId: string): boolean;
 }
 
-export interface ProgressionPort { grantXp(amount: number, source: string): void; grantSkillPoints?(amount: number): void }
+export interface ProgressionPort { grantXp(amount: number, source: string): void; grantSkillPoint?(amount: number, reason: string): void }
 export interface InventoryPort { remove(itemId: string, count: number): boolean }
 
 export interface ConditionEnv { state: StatePort; quests: QuestReader; warn?(msg: string): void }
