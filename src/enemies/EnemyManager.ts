@@ -14,7 +14,6 @@ import { scaleStats } from './level';
 import { isHoldVerb, makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyTargets, nextPulseId, type BossMercySubject, type MercySubject } from './mercy';
 import { MercyTally, type TallyRow } from './mercyTally';
 import { makeQuadrupedBody } from './hound/body';
-import { pickPackLeader } from './hound/pack';
 import { HOUND } from './hound/tuning';
 import type { ActorId, EnemyEvents, EnemyHost, MercyEventLike } from './ports';
 import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } from './spawners';
@@ -139,13 +138,11 @@ export class EnemyManager {
     packLeader: (id) => this.packLeaderId(id),
   };
 
-  /** Lowest actor id among a spawner's living members whose def has `mercy.packLeader`. */
+  /** The living member in a spawner's `leaderSlot`, or null (no leader slot, or its occupant is gone). */
   packLeaderId(spawnerId: string): ActorId | null {
-    const ids: ActorId[] = [];
-    for (const e of this.enemies.values()) {
-      if (e.spawnerId === spawnerId && e.def.mercy.packLeader && e.active) ids.push(e.id);
-    }
-    return pickPackLeader(ids);
+    const id = this.spawners.leaderOf(spawnerId);
+    const e = id ? this.enemies.get(id) : undefined;
+    return e && e.active ? e.id : null;
   }
 
   mercyUnlocked(verb: 'release' | 'spare'): boolean {

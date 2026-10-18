@@ -298,9 +298,18 @@ export class Enemy {
     return this.phase === 'alive' && this.brain.warmHandOpen;
   }
 
-  /** This enemy is its spawner's pack leader (the lowest actor id of the living members); a calmed leader calms its pack. */
+  /**
+   * Thread 1's Calm: the head-lowered pose while an offering is accepted (quadruped bodies only; a no-op on a humanoid).
+   * `on` false returns to the idle clip.
+   */
+  lowerHead(on: boolean): void {
+    if (this.phase !== 'alive' || this.def.body !== 'quadruped') return;
+    this.body.play(on ? 'HeadLower' : 'Idle');
+  }
+
+  /** This enemy fills its spawner's `leaderSlot`; a calmed leader calms its pack. */
   get isPackLeader(): boolean {
-    return !!this.spawnerId && this.def.mercy.packLeader === true && this.env.packLeaderId(this.spawnerId) === this.id;
+    return !!this.spawnerId && this.env.packLeaderId(this.spawnerId) === this.id;
   }
 
   // ---- fixed phases ------------------------------------------------------------------------------

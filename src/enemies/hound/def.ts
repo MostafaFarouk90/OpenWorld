@@ -34,8 +34,11 @@ export const EMBER_HOUND: EnemyDef = {
     tier: 'normal',
     track: 'dragons',
     when: 'calming',
-    offerings: ['hearth-bread', 'ember-coal'],
-    packLeader: true,
+    offerings: [
+      { itemId: 'hearth-bread', count: 1 },
+      { itemId: 'ember-coal', count: 1 },
+    ],
+    warmHand: true,
   },
   material: 'ash',
   rises: false,

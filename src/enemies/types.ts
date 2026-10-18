@@ -70,9 +70,9 @@ export interface MercyDef {
   /** Release opens on a stagger (undead); Spare on a yield (humans); Calm before the first attack (beasts). */
   when: 'staggered' | 'yielding' | 'calming';
   /** Calm: item ids that open it (thread 1 reads them; data only here). */
-  offerings?: readonly string[];
-  /** Calm: a calmed leader (the lowest actor id of the spawner's living members) calms its pack. */
-  packLeader?: boolean;
+  offerings?: readonly { itemId: string; count: number }[];
+  /** A staggered (knocked down) beast accepts the Warm Hand (thread 1's Calm). */
+  warmHand?: boolean;
 }
 
 export interface EnemyDef {
@@ -142,6 +142,8 @@ export interface SpawnerDef {
     | { quest: string; flag?: string }
     | { flag?: string; until?: string }
     | { interior: string };
+  /** The pack leader's slot (one per group): a calmed leader calms its pack (thread 1). */
+  leaderSlot?: number;
   /** Never saved: no spent slots and no cleared mark (the Prior's summons, which thread 3b resets per wave). */
   ephemeral?: boolean;
   respawn: 'never' | 'onRest';

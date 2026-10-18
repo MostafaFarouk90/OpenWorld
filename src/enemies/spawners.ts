@@ -56,6 +56,12 @@ export class SpawnerRegistry {
   private readonly firedCleared = new Set<string>();
   private readonly everSpawned = new Set<string>();
   private readonly lastOpts = new Map<string, SpawnOptions>();
+  /** The actor in `leaderSlot` of a group, or null. */
+  leaderOf(id: string): ActorId | null {
+    const slot = this.defs.get(id)?.leaderSlot;
+    return slot === undefined ? null : (this.slots.get(id)?.[slot] ?? null);
+  }
+
   private readonly byActor = new Map<ActorId, { spawnerId: string; slot: number }>();
   private readonly warned = new Set<string>();
   private spent = new Set<string>();

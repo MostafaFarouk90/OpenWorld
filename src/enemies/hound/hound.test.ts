@@ -2,7 +2,6 @@ import type * as THREE from 'three';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { FIXED_TIMESTEP } from '../../config/constants';
 import { CircleRush } from './circleRush';
-import { compareActorIds, pickPackLeader } from './pack';
 import { slopePitch } from './slope';
 import { BURNING_BITE, HOUND } from './tuning';
 import { ENEMY_DEFS, TELEGRAPH_STYLE } from '../defs';
@@ -100,9 +99,9 @@ describe('Ember Hound def', () => {
     expect(TELEGRAPH_STYLE['ember-hound']).toBeDefined();
   });
 
-  it('carries mercy data rows only: calm, normal, dragons, two offerings, pack leader', () => {
+  it('carries mercy data rows only: calm, normal, dragons, two offerings, warm hand', () => {
     expect(def.mercy).toEqual({
-      verb: 'calm', tier: 'normal', track: 'dragons', when: 'calming', offerings: ['hearth-bread', 'ember-coal'], packLeader: true,
+      verb: 'calm', tier: 'normal', track: 'dragons', when: 'calming', offerings: [{ itemId: 'hearth-bread', count: 1 }, { itemId: 'ember-coal', count: 1 }], warmHand: true,
     });
     expect(ENEMY_STRINGS_EN['enemies.mercy.calm']).toBe('Hold {key}: Calm');
     expect(ENEMY_STRINGS_EN['enemies.name.ember-hound']).toBe('Ember Hound');
@@ -377,46 +376,35 @@ describe('calm is refused once an attack has started', () => {
 });
 
 describe('pack leader', () => {
-  it('is the lowest actor id of the living members and every member agrees on it', () => {
-    const t = rig([pack('ember-hound', 3)]);
+  const led = (count: number, leaderSlot: number | undefined, id = 'pack'): SpawnerDef => ({ ...pack('ember-hound', count, id), leaderSlot });
+
+  it('is the member in the spawner\'s leaderSlot and every member agrees on it', () => {
+    const t = rig([led(3, 1)]);
     const ids = t.m.service.spawnGroup('pack');
-    const lowest = [...ids].sort(compareActorIds)[0]!;
-    expect(t.m.service.packLeader('pack')).toBe(lowest);
-    const flags = hounds(t, ids).map((e) => e.isPackLeader);
-    expect(flags.filter(Boolean)).toHaveLength(1);
-    expect(t.m.get(lowest)!.isPackLeader).toBe(true);
+    expect(t.m.service.packLeader('pack')).toBe(ids[1]);
+    expect(hounds(t, ids).map((e) => e.isPackLeader)).toEqual([false, true, false]);
   });
 
-  it('edge: a dead leader passes the role to the next lowest id; no one alive means no leader', () => {
-    const t = rig([pack('ember-hound', 3)]);
-    const ids = t.m.service.spawnGroup('pack').sort(compareActorIds);
+  it('edge: a dead leader leaves no leader (no automatic successor); a group with no leaderSlot has none', () => {
+    const t = rig([led(3, 0), led(2, undefined, 'plain')]);
+    const ids = t.m.service.spawnGroup('pack');
     kill(t, ids[0]!);
     t.tick(DT);
-    expect(t.m.service.packLeader('pack')).toBe(ids[1]);
-    expect(t.m.get(ids[1]!)!.isPackLeader).toBe(true);
-    expect(t.m.get(ids[0]!)?.isPackLeader ?? false).toBe(false);
-    kill(t, ids[1]!);
-    kill(t, ids[2]!);
-    t.tick(DT);
     expect(t.m.service.packLeader('pack')).toBeNull();
-  });
-
-  it('is per spawner, and a def without the flag has no leader', () => {
-    const t = rig([pack('ember-hound', 2, 'one'), pack('ash-wraith', 2, 'wraiths')]);
-    const a = t.m.service.spawnGroup('one');
-    t.fake.defineAnchor('a', 0, 0);
-    const w = t.m.service.spawnGroup('wraiths');
-    expect(t.m.service.packLeader('one')).toBe([...a].sort(compareActorIds)[0]);
-    expect(t.m.service.packLeader('wraiths')).toBeNull();
+    expect(t.m.get(ids[1]!)!.isPackLeader).toBe(false);
+    t.m.service.spawnGroup('plain');
+    expect(t.m.service.packLeader('plain')).toBeNull();
     expect(t.m.service.packLeader('missing')).toBeNull();
-    expect(t.m.get(w[0]!)!.isPackLeader).toBe(false);
   });
 
-  it('orders ids by number, not text (#9 before #12), and ignores the empty set', () => {
-    expect(pickPackLeader(['ember-hound#12', 'ember-hound#9', 'ember-hound#10'])).toBe('ember-hound#9');
-    expect(compareActorIds('ember-hound#2', 'ember-hound#2')).toBe(0);
-    expect(compareActorIds('a', 'b')).toBeLessThan(0);
-    expect(pickPackLeader([])).toBeNull();
+  it('lowerHead plays the head-lowered pose on a hound and returns to idle', () => {
+    const t = rig([led(1, 0)]);
+    const [id] = t.m.service.spawnGroup('pack');
+    const e = t.m.get(id!)!;
+    e.lowerHead(true);
+    expect(e.body.currentClip).toBe('HeadLower');
+    e.lowerHead(false);
+    expect(e.body.currentClip).toBe('Idle');
   });
 });
 
