@@ -6,7 +6,7 @@ import { BossRegistry, type BossDef } from './BossRegistry';
 import { DamageResolver, type DamageRequest } from './DamageResolver';
 import { playerInit } from './teams';
 
-const DEF: BossDef = { bossId: 'ashen-prior', nameKey: 'boss.ashen-prior', phases: [0.5], breaksPerPhase: 3, shieldBreakers: ['surge'] };
+const DEF: BossDef = { bossId: 'ashen-prior', nameKey: 'boss.ashen-prior', phases: [0.5], breaksPerPhase: 3, shieldBreakers: ['heartshard-surge'] };
 
 function make() {
   const events = new GameEvents(() => {});
@@ -68,7 +68,7 @@ describe('register and state', () => {
     expect(of('boss.shield')).toHaveLength(0);
   });
 
-  it('undo unregisters, emits nothing and is idempotent', () => {
+  it('undo unregisters, emits boss.ended once and is idempotent', () => {
     const { bosses, boss, seen } = make();
     const undo = bosses.register(boss.id, DEF);
     seen.length = 0;
@@ -76,7 +76,7 @@ describe('register and state', () => {
     undo();
     expect(bosses.active()).toEqual([]);
     expect(bosses.state('ashen-prior')).toBeNull();
-    expect(seen).toHaveLength(0);
+    expect(seen.map((e) => [e.type, e.payload])).toEqual([['boss.ended', { bossId: 'ashen-prior', actorId: boss.id, reason: 'unregistered' }]]);
     // a later registration of the same id is not removed by the stale undo
     const undo2 = bosses.register(boss.id, DEF);
     undo();
@@ -257,7 +257,7 @@ describe('shield', () => {
 
   it('a shieldBreaker hit drops the shield, deals damage, emits boss.shield once', () => {
     const { bosses, boss, hit, of, seen } = started({ ...DEF, shield: true });
-    const r = hit(20, { attackId: 'surge' })!;
+    const r = hit(20, { attackId: 'heartshard-surge' })!;
     expect(r.outcome).toBe('hit');
     expect(r.dealt).toBe(20);
     expect(boss.health).toBe(80);
@@ -278,7 +278,7 @@ describe('shield', () => {
     const { bosses, hit, of } = started({ ...DEF, shield: true });
     bosses.setShield('ashen-prior', true);
     expect(of('boss.shield')).toHaveLength(0);
-    hit(1, { attackId: 'surge' });
+    hit(1, { attackId: 'heartshard-surge' });
     bosses.setShield('ashen-prior', true);
     expect(of('boss.shield')).toEqual([
       { bossId: 'ashen-prior', up: false },
@@ -398,11 +398,12 @@ describe('release window', () => {
     expect(m.bosses.release('ashen-prior')).toBe(true);
   });
 
-  it('despawn closes the window without an event', () => {
+  it('despawn closes the window and ends the encounter (vault-reload reset)', () => {
     const m = oneSingle();
     finalWindow(m);
     m.actors.despawn(m.boss.id);
-    expect(m.of('boss.releaseWindow')).toHaveLength(1);
+    expect(m.of('boss.releaseWindow').map((e) => e.open)).toEqual([true, false]);
+    expect(m.of('boss.ended')).toEqual([{ bossId: 'ashen-prior', actorId: m.boss.id, reason: 'despawned' }]);
     expect(m.bosses.release('ashen-prior')).toBe(false);
   });
 });
@@ -475,5 +476,52 @@ describe('robustness', () => {
     events.emit('actor.died', { actorId: 'ghost', killerId: null, kind: 'x', team: 'hostile', level: 1, spawnTag: undefined });
     expect(seen.filter((s) => s.type.startsWith('boss.'))).toHaveLength(0);
     expect(report).not.toHaveBeenCalled();
+  });
+});
+
+describe('v0.4 review fixes', () => {
+  it('boss.shield follows the breaking hit\'s own damage.dealt', () => {
+    const { hit, seen } = started({ ...DEF, shield: true });
+    hit(20, { attackId: 'heartshard-surge' });
+    const types = seen.map((e) => e.type);
+    expect(types.indexOf('damage.dealt')).toBeLessThan(types.indexOf('boss.shield'));
+  });
+
+  it('a breaker the boss blocks leaves the shield up', () => {
+    const { bosses, dr, hit, of } = started({ ...DEF, shield: true });
+    const off = dr.addModifier('test.boss-block', (req) => {
+      req.outcome = 'blocked';
+      req.amount = 0;
+    }, -50);
+    expect(hit(20, { attackId: 'heartshard-surge' })!.outcome).toBe('blocked');
+    expect(bosses.state('ashen-prior')!.shield).toBe(true);
+    expect(of('boss.shield')).toHaveLength(0);
+    off();
+  });
+
+  it('staggers while shielded (a parry) are no breaks and never open the release window', () => {
+    const { bosses, stagger, hit, of } = started({ ...DEF, phases: [], breaksPerPhase: 1, shield: true });
+    stagger();
+    stagger();
+    expect(of('boss.break')).toHaveLength(0);
+    expect(bosses.state('ashen-prior')!.releaseOpen).toBe(false);
+    hit(1, { attackId: 'heartshard-surge' });
+    stagger();
+    expect(of('boss.break')).toEqual([{ bossId: 'ashen-prior', phase: 1, breaks: 1, last: true }]);
+    expect(bosses.state('ashen-prior')!.releaseOpen).toBe(true);
+  });
+
+  it('a boss registered below a threshold starts in that phase without boss.phase', () => {
+    const { bosses, boss, dr, player, of } = make();
+    dr.apply({ attackerId: player.id, targetId: boss.id, amount: 60, poise: 0, kind: 'melee' });
+    bosses.register(boss.id, DEF);
+    expect(bosses.state('ashen-prior')!.phase).toBe(2);
+    expect(of('boss.phase')).toHaveLength(0);
+  });
+
+  it('dispose emits no boss.ended', () => {
+    const { bosses, of } = started();
+    bosses.dispose();
+    expect(of('boss.ended')).toHaveLength(0);
   });
 });

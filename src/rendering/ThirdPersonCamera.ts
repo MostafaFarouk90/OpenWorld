@@ -78,6 +78,7 @@ export class ThirdPersonCamera {
   private readonly outPos = new THREE.Vector3();
   private readonly outLook = new THREE.Vector3();
   private outFov = 0;
+  private hasShown = false;
 
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
@@ -126,18 +127,17 @@ export class ThirdPersonCamera {
     this.retarget(next ? { kind: 'entry', entry: next } : { kind: 'follow' }, blendOut ?? entry.shot.blendOut ?? DEFAULT_BLEND);
   }
 
-  /** Starts a blend towards `to`, continuing from the pose currently on screen. */
+  /**
+   * Starts a blend towards `to`, continuing from the pose last shown on screen. Several changes between two
+   * frames (an override started and released within one frame's fixed ticks) therefore never jump to a
+   * shot that was never drawn.
+   */
   private retarget(to: Source, duration: number): void {
-    if (this.blendDur > 0 && this.blendT > 0 && this.blendT < this.blendDur) {
-      this.from = {
-        kind: 'frozen',
-        position: this.outPos.clone(),
-        lookAt: this.outLook.clone(),
-        fov: this.outFov,
-      };
-    } else {
-      this.from = this.to;
-    }
+    const idleOnFollow = this.from.kind === 'follow' && this.to.kind === 'follow';
+    this.from =
+      idleOnFollow || !this.hasShown
+        ? { kind: 'follow' }
+        : { kind: 'frozen', position: this.outPos.clone(), lookAt: this.outLook.clone(), fov: this.outFov };
     this.to = to;
     this.blendT = 0;
     this.blendDur = Number.isFinite(duration) ? duration : 0;
@@ -192,6 +192,7 @@ export class ThirdPersonCamera {
     this.outPos.lerpVectors(this.fromPos, this.toPos, w);
     this.outLook.lerpVectors(this.fromLook, this.toLook, w);
     this.outFov = fromFov + (toFov - fromFov) * w;
+    this.hasShown = true;
     this.camera.position.copy(this.outPos);
     this.camera.lookAt(this.outLook);
     this.setFov(this.outFov);
@@ -204,6 +205,15 @@ export class ThirdPersonCamera {
       this.setFov(this.baseFov);
       this.baseFov = null;
     }
+    this.remember(this.followPos, this.target, this.camera.fov);
+  }
+
+  /** The pose drawn this frame, where the next retarget starts from. */
+  private remember(pos: THREE.Vector3, look: THREE.Vector3, fov: number): void {
+    this.outPos.copy(pos);
+    this.outLook.copy(look);
+    this.outFov = fov;
+    this.hasShown = true;
   }
 
   private setFov(fov: number): void {

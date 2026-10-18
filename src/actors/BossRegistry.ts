@@ -2,7 +2,7 @@ import type { GameEvents } from '../core/events';
 import type { WorldState } from '../state/WorldState';
 import type { ActorId } from './Actor';
 import type { ActorRegistry } from './ActorRegistry';
-import type { DamageResolver, ModifiableRequest } from './DamageResolver';
+import type { DamageResolver, DamageResult, ModifiableRequest } from './DamageResolver';
 
 export interface BossDef {
   /** Kebab-case id, e.g. 'ashen-prior'. */
@@ -15,7 +15,7 @@ export interface BossDef {
   breaksPerPhase: number;
   /** Initial shield state; default false. */
   shield?: boolean;
-  /** attackIds that drop the shield (e.g. 'surge'). */
+  /** attackIds that drop the shield, e.g. ['heartshard-surge'] (the Surge's attackId). */
   shieldBreakers?: readonly string[];
   /** Simulated seconds the release window stays open; default 4. */
   releaseWindowSeconds?: number;
@@ -96,7 +96,7 @@ export class BossRegistry {
 
     this.offs.push(
       this.damage.addModifier(BOSS_SHIELD_MODIFIER_ID, (req) => this.shieldModifier(req), -1),
-      this.events.on('damage.dealt', (r) => this.onDamage(r.targetId, r.healthAfter)),
+      this.events.on('damage.dealt', (r) => this.onDamage(r)),
       this.events.on('actor.staggered', (p) => this.onStagger(p.actorId)),
       this.events.on('actor.died', (p) => this.onDied(p.actorId)),
       this.events.on('actor.despawned', (p) => this.onDespawned(p.actorId)),
@@ -148,11 +148,14 @@ export class BossRegistry {
       windowOpen: false,
       outcome: null,
     };
+    // A boss registered already below a threshold (a reset after a reload keeps health) starts in that
+    // phase; no `boss.phase` is emitted for it.
+    boss.phase = this.phaseFor(boss, actor.health / actor.maxHealth);
     this.bosses.set(def.bossId, boss);
     this.byActor.set(actorId, def.bossId);
     this.events.emit('boss.started', { bossId: def.bossId, actorId });
     return () => {
-      if (this.bosses.get(def.bossId) === boss) this.drop(boss);
+      if (this.bosses.get(def.bossId) === boss) this.drop(boss, 'unregistered');
     };
   }
 
@@ -222,11 +225,18 @@ export class BossRegistry {
 
   // ---- internals ----
 
-  private drop(boss: Boss): void {
-    boss.windowLeft = 0;
-    boss.windowOpen = false;
+  /** Unregisters and tells the HUD, music and mercy prompt the encounter is over (a reload reset, a teardown). */
+  private drop(boss: Boss, reason: 'despawned' | 'unregistered'): void {
+    this.closeWindow(boss);
     this.bosses.delete(boss.def.bossId);
     if (this.byActor.get(boss.actorId) === boss.def.bossId) this.byActor.delete(boss.actorId);
+    if (!this.disposed) this.events.emit('boss.ended', { bossId: boss.def.bossId, actorId: boss.actorId, reason });
+  }
+
+  private phaseFor(boss: Boss, fraction: number): number {
+    let phase = 1;
+    for (const t of boss.thresholds) if (fraction <= t) phase++;
+    return phase;
   }
 
   private bossOf(actorId: ActorId): Boss | undefined {
@@ -244,14 +254,15 @@ export class BossRegistry {
     this.events.emit('boss.shield', { bossId: boss.def.bossId, up });
   }
 
+  /**
+   * While the shield is up every hit but a breaker becomes 'immune' (not undone by `unblockable`). A breaker
+   * passes untouched; the shield drops in `onDamage` only once that hit has landed with outcome 'hit', so a
+   * breaker the boss blocks, or a request dropped later, leaves the shield up.
+   */
   private shieldModifier(req: ModifiableRequest): void {
     const boss = this.bossOf(req.targetId);
     if (!boss || !boss.shield || req.outcome === 'immune') return;
-    if (req.attackId !== undefined && boss.breakers.has(req.attackId)) {
-      // The bus batches events emitted while a hit resolves, so this goes out with the hit's own events.
-      this.changeShield(boss, false);
-      return;
-    }
+    if (req.attackId !== undefined && boss.breakers.has(req.attackId)) return;
     req.outcome = 'immune';
   }
 
@@ -260,14 +271,16 @@ export class BossRegistry {
    * Ordering note: `damage.dealt` is delivered before `actor.staggered` of the same hit, so a hit that
    * both crosses a threshold and breaks poise counts its break in the NEW phase (breaks were just reset).
    */
-  private onDamage(targetId: ActorId, healthAfter: number): void {
-    const boss = this.bossOf(targetId);
+  private onDamage(r: DamageResult): void {
+    const boss = this.bossOf(r.targetId);
     if (!boss || !this.isLive(boss)) return;
-    const actor = this.actors.get(targetId)!;
+    // Emitted from this listener, so `boss.shield` follows the breaking hit's own events.
+    if (boss.shield && r.outcome === 'hit' && r.attackId !== undefined && boss.breakers.has(r.attackId)) {
+      this.changeShield(boss, false);
+    }
+    const actor = this.actors.get(r.targetId)!;
     if (!(actor.maxHealth > 0)) return;
-    const fraction = healthAfter / actor.maxHealth;
-    let target = 1;
-    for (const t of boss.thresholds) if (fraction <= t) target++;
+    const target = this.phaseFor(boss, r.healthAfter / actor.maxHealth);
     while (boss.phase < target) {
       const previous = boss.phase;
       boss.phase++;
@@ -282,6 +295,9 @@ export class BossRegistry {
     // together and the actor is already dead when the stagger is delivered; the break still counts
     // and the `actor.died` that follows turns it into a defeat.
     if (!boss || boss.outcome) return;
+    // A shielded boss's poise can still empty (a parry's `damage.stagger`), but that is no break: only the
+    // shield breaker opens the way (design 10 row 17, "Surge breaks his shield").
+    if (boss.shield) return;
     boss.breaks++;
     const last = boss.phase === boss.thresholds.length + 1 && boss.breaks >= boss.def.breaksPerPhase;
     this.events.emit('boss.break', { bossId: boss.def.bossId, phase: boss.phase, breaks: boss.breaks, last });
@@ -305,7 +321,7 @@ export class BossRegistry {
 
   private onDespawned(actorId: ActorId): void {
     const boss = this.bossOf(actorId);
-    if (boss) this.drop(boss);
+    if (boss) this.drop(boss, 'despawned');
   }
 
   private setOutcome(boss: Boss, outcome: BossOutcome): void {

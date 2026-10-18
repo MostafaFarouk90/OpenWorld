@@ -13,6 +13,7 @@ describe('v0.4 event payloads', () => {
     expectTypeOf<GameEventMap['boss.releaseWindow']>().toEqualTypeOf<{ bossId: string; open: boolean }>();
     expectTypeOf<GameEventMap['boss.defeated']>().toEqualTypeOf<{ bossId: string; actorId: string }>();
     expectTypeOf<GameEventMap['boss.released']>().toEqualTypeOf<{ bossId: string; actorId: string }>();
+    expectTypeOf<GameEventMap['boss.ended']>().toEqualTypeOf<{ bossId: string; actorId: string; reason: 'despawned' | 'unregistered' }>();
   });
 
   it('events emitted by slice 2 threads', () => {
