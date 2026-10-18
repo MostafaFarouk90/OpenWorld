@@ -176,6 +176,8 @@ export class FakeHost {
   readonly playerFeet: THREE.Vector3;
   loud = false;
   vfx: { dissolve(root: THREE.Object3D, s: number): Promise<void> } | undefined;
+  /** Thread 3's quests service, when a test provides it. */
+  quests: { active(): string[] } | undefined;
   lockOnTarget: ActorId | null = null;
   private counter = 0;
 
@@ -386,6 +388,7 @@ export class FakeHost {
       get: ((name: string) => {
         if (name === 'vfx') return this.vfx;
         if (name === 'lockOn') return { targetId: this.lockOnTarget };
+        if (name === 'quests') return this.quests;
         return undefined;
       }) as EnemyHost['services']['get'],
     },

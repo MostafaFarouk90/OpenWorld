@@ -6,7 +6,7 @@ import { buildEnemyModel, type EnemyModelSource } from './EnemyModel';
 import { scaleStats } from './level';
 import { makeMercyInteractable, mercyEvents, mercyTargets, type MercySubject } from './mercy';
 import type { ActorId, EnemyEvents, EnemyHost } from './ports';
-import { SpawnerRegistry, type SpawnRequest } from './spawners';
+import { SpawnerRegistry, patrolForSlot, type SpawnRequest } from './spawners';
 import { ASH_GRAB, MERCY, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions } from './types';
 
@@ -128,7 +128,7 @@ export class EnemyManager {
         level: req.level,
         maxHealth: stats.maxHealth,
         damageScale: stats.damageScale,
-        patrol: req.patrol.map((a) => ({ x: a.position.x, z: a.position.z })),
+        patrol: patrolForSlot(req.patrol.map((a) => a.position), req.slot),
         options: req.options,
       };
       enemy = new Enemy(this.env, spawn, model, animator);
@@ -232,7 +232,6 @@ export class EnemyManager {
       this.subjects.delete(self);
       this.mercyRemovers.get(self)?.();
       this.mercyRemovers.delete(self);
-      this.spawners.releaseClaims(self.id);
       if (this.disposed) return;
       if (this.spawners.onMemberGone(self.id, how) && self.spawnerId) {
         this.host.events.emit('enemies.groupCleared', { spawnerId: self.spawnerId });
@@ -270,9 +269,13 @@ export class EnemyManager {
     on('rest', () => this.spawners.onRest());
     on('quest.started', (p) => this.spawners.onQuestStarted(p.questId));
     on('save.loaded', () => {
+      // The live world follows the save: cleared groups and spent piles go, active quests' groups return.
+      const spent = new Set(this.spawners.liveInSpentSlots());
       for (const e of [...this.enemies.values()]) {
-        if (e.spawnerId && this.spawners.isCleared(e.spawnerId)) e.despawn();
+        if ((e.spawnerId && this.spawners.isCleared(e.spawnerId)) || spent.has(e.id)) e.despawn();
       }
+      const active = this.host.services.get('quests')?.active() ?? [];
+      for (const questId of active) this.spawners.onQuestStarted(questId);
     });
 
     this.unsubs.push(
@@ -302,8 +305,9 @@ export class EnemyManager {
       .map((e) => ({ e, d: e.feet.distanceTo(p) }))
       .sort((a, b) => a.d - b.d);
     ranked.forEach(({ e, d }, i) => {
+      // Hysteresis, so an enemy on the edge does not flip between sleep and wake every tick.
       if (d > WORLD_AI.dormantDistance || i >= WORLD_AI.maxAwake) e.sleep();
-      else e.wake();
+      else if (d < WORLD_AI.dormantDistance - WORLD_AI.wakeMargin && i < WORLD_AI.maxAwake - WORLD_AI.wakeRankMargin) e.wake();
     });
   }
 

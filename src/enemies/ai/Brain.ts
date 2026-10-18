@@ -76,6 +76,8 @@ export interface BrainOptions {
 }
 
 const STOP_AT_TARGET = 1.1;
+/** States that hold a target or a swing. */
+const COMBAT: ReadonlySet<AiState> = new Set<AiState>(['notice', 'chase', 'telegraph', 'attack', 'recover', 'stagger', 'yield', 'flee']);
 
 /**
  * The enemy state machine (design section 10, "Creature behaviours and AI states" and "Mercy states").
@@ -308,6 +310,17 @@ export class Brain {
       return;
     }
     this.loseTarget();
+  }
+
+  /** Out of combat now (going dormant): drops the target, cancelling any swing, token and aggro through `enter`. */
+  standDown(): void {
+    if (this.finished || this._state === 'dead') return;
+    this.forcedTarget = null;
+    this.pendingAcquire = null;
+    if (this.aggroTarget || COMBAT.has(this._state)) {
+      this.enter(this.leash ? 'return' : this.patrol.length ? 'patrol' : 'idle');
+    }
+    this.dropAggro();
   }
 
   died(): void {
