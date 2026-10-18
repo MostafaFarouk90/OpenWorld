@@ -138,7 +138,7 @@ function fakeEl(tag = 'div'): any {
 }
 
 function view(extra: Partial<MapViewModel>, markers = buildMarkers({ waystones: [] })) {
-  const B = { minX: -2000, maxX: 9500, minZ: -2000, maxZ: 4500 };
+  const B = { minX: -2000, maxX: 10500, minZ: -2000, maxZ: 4500 };
   const model: MapViewModel = {
     bounds: B,
     fullBitmap: () => null,
@@ -207,7 +207,7 @@ describe('MapView overlays', () => {
     const { w, canvas } = view({}, markers);
     expect(() => w.update(0.1)).not.toThrow();
     expect(canvas.width).toBe(640);
-    expect(canvas.height).toBe(362);
+    expect(canvas.height).toBe(333);
     expect(canvas.ctx.calls.filter((c: string) => c === 'beginPath').length).toBeGreaterThanOrEqual(3);
   });
 });
