@@ -1,7 +1,7 @@
 // Flag- and service-driven map data: forge marks, fog wall marker, shrine markers and the level legend.
 // Takes narrow ports so it runs against fakes in tests; every soft service is optional.
 
-import { FOG_OPEN_FLAGS } from '../region/fogWall';
+import { FOG_OPEN_FLAGS, fogOpen } from '../region/fogWall';
 import type { FlagGates } from '../state/FlagGates';
 import { buildForgeState, SHRINE_IDS, SHRINE_POSITIONS, type ForgeState, type ShrineId } from './ForgeMarks';
 import type { PoiInput } from './MapModel';
@@ -64,7 +64,7 @@ function call<T>(fn: () => T): T | undefined {
 
 export function createMapSources(ports: MapSourcePorts, label: (key: string) => string = (k) => k, anchors: readonly PostAnchor[] = POST_ANCHORS): MapSources {
   const lit = new Map<ShrineId, boolean>();
-  let fogOpen = false;
+  let fogIsOpen = false;
   let vendorsOpen = false;
   let eventTier: number | null = null;
   const offs: Array<() => void> = [];
@@ -73,15 +73,8 @@ export function createMapSources(ports: MapSourcePorts, label: (key: string) => 
   for (const id of SHRINE_IDS) {
     offs.push(ports.gates.watch((s) => s.getBool(`shrine.${id}.lit`), (open) => lit.set(id, open), { keys: ['shrine.*'] }));
   }
-  const fogFlags = new Map<string, boolean>();
-  for (const f of FOG_OPEN_FLAGS) {
-    offs.push(
-      ports.gates.flag(f, (open) => {
-        fogFlags.set(f, open);
-        fogOpen = FOG_OPEN_FLAGS.some((k) => fogFlags.get(k) === true);
-      }),
-    );
-  }
+  // The wall's own rule (region/fogWall fogOpen), re-evaluated on every listed flag change and every load.
+  offs.push(ports.gates.watch((st) => fogOpen(st), (open) => (fogIsOpen = open), { keys: [...FOG_OPEN_FLAGS] }));
   offs.push(ports.gates.flag(VENDOR_FLAG, (open) => (vendorsOpen = open)));
   offs.push(
     ports.events.on('warmth.changed', (e) => {
@@ -109,7 +102,7 @@ export function createMapSources(ports: MapSourcePorts, label: (key: string) => 
       if (!band || !Number.isFinite(band.min) || !Number.isFinite(band.max)) return null;
       return { min: band.min, max: band.max };
     },
-    fogWall: () => (fogOpen ? null : { id: FOG_WALL.id, x: FOG_WALL.x, z: FOG_WALL.z, label: label('map.markers.fog') }),
+    fogWall: () => (fogIsOpen ? null : { id: FOG_WALL.id, x: FOG_WALL.x, z: FOG_WALL.z, label: label('map.markers.fog') }),
     posts: (isRevealed) =>
       anchors.flatMap((a) => {
         if (!Number.isFinite(a.x) || !Number.isFinite(a.z)) return [];
