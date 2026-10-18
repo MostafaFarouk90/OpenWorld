@@ -77,6 +77,8 @@ describe('the Dead Road polyline', () => {
 describe('the Dead Road fit', () => {
   const along = samples();
 
+  // East of x 6100 the ground before roads is the suppressed ridge field, which core does not export, so the cut limit
+  // is checked on the natural ground west of it (about 70% of the road); the bank-slope test below covers all of it.
   it(`cuts or fills at most ${MAX_CUT} m at the centre and at both edges (on the natural ground)`, () => {
     let worst = 0;
     for (const p of along) {
@@ -91,10 +93,10 @@ describe('the Dead Road fit', () => {
     expect(worst).toBeGreaterThan(0);
   });
 
-  it('never grows its blend to MAX_ROAD_BLEND: the ground 8 m inside the cap is untouched', () => {
+  it('never grows its blend toward MAX_ROAD_BLEND: the ground 60% of the cap out is untouched', () => {
     for (const p of along) {
       if (p.x >= NATURAL_UNTIL_X || p.x < 1400) continue;
-      const off = 6 + MAX_ROAD_BLEND - 8;
+      const off = 6 + MAX_ROAD_BLEND * 0.6;
       for (const side of [1, -1]) {
         const x = p.x + p.nx * off * side;
         const z = p.z + p.nz * off * side;
@@ -156,7 +158,7 @@ describe('the farm-ring plateau', () => {
     expect(crossed).toBeGreaterThan(20);
   });
 
-  it('blends back to the ground no steeper than 0.9 on any side', () => {
+  it('blends back to the ground no steeper than 0.5 on any side', () => {
     let worst = 0;
     const sweep = (x0: number, z0: number, dx: number, dz: number) => {
       for (let t = 0; t < FARM_RING_PLATEAU.blend; t += 4) {
@@ -170,6 +172,7 @@ describe('the farm-ring plateau', () => {
     sweep(box.minX, midZ, -1, 0);
     sweep(box.maxX, midZ, 1, 0);
     sweep(midX, box.maxZ, 0, 1);
-    expect(worst).toBeLessThanOrEqual(0.9);
+    sweep(midX, box.minZ, 0, -1);
+    expect(worst).toBeLessThanOrEqual(0.5);
   });
 });
