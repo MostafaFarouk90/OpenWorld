@@ -87,6 +87,9 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | chest.harrowmark.3 | 8830 | 2115 | 0 | 0 | chest |
 | chest.harrowmark.4 | 8540 | 2520 | 0 | 90 | chest |
 | m06.gate-brazier | 8533.5 | 1284 | 0 | 270 | quest |
+| spawn.m06.watch-1 | 8478 | 1270 | 0 | 0 | spawn |
+| spawn.m06.watch-2 | 8522 | 1270 | 0 | 0 | spawn |
+| spawn.m06.watch-3 | 8512 | 1300 | 0 | 0 | spawn |
 | m07.bastion-yard | 8200 | 1715 | 0 | 0 | quest |
 | m07.satchel | 8975 | 1523 | 0 | 270 | quest, pickup |
 | m07.thieves.1 | 8990 | 1514 | 0 | 90 | spawn |

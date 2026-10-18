@@ -328,6 +328,10 @@ const anchors: AnchorSpec[] = [
   a('chest.harrowmark.4', 8540, 2520, 270, ['chest']),
   // Quest anchors (thread 6)
   a('m06.gate-brazier', 8533.5, 1284, 90, ['quest']),
+  // M06 watch-guard posts on the gate square, facing the gate (thread 5's spawner reads these; the yaw is the starting facing).
+  a('spawn.m06.watch-1', 8478, 1270, 180, ['spawn']),
+  a('spawn.m06.watch-2', 8522, 1270, 180, ['spawn']),
+  a('spawn.m06.watch-3', 8512, 1300, 180, ['spawn']),
   a('m07.bastion-yard', 8200, 1715, 180, ['quest']),
   a('m07.satchel', 8975, 1523, 90, ['quest', 'pickup']),
   ...numbered('m07.thieves', [[8990, 1514], [8995, 1530], [8984, 1536]], ['spawn'], 270),
