@@ -1,4 +1,5 @@
 import type { DialogueDef, Effect } from '../quests/types';
+import { validateEffects } from '../quests/validate';
 import { EFFECT_EVENT_PATTERN } from '../quests/types';
 
 const nonEmpty = (v: unknown): boolean => typeof v === 'string' && v !== '';
@@ -46,6 +47,8 @@ export function validateDialogueEffects(effects: Effect[] | undefined, where: st
       if (e.unlockMercy !== 'release' && e.unlockMercy !== 'spare') errs.push(`${w}: unlockMercy verb must be release or spare`);
     } else if ('grantAbility' in e) {
       if (!nonEmpty(e.grantAbility)) errs.push(`${w}: grantAbility needs an ability id`);
+    } else if ('giveGold' in e || 'if' in e || 'placeNpc' in e) {
+      errs.push(...validateEffects([e as any], w));
     } else if (!('mercy' in e)) errs.push(`${w}: unknown effect shape`);
   });
   return errs;

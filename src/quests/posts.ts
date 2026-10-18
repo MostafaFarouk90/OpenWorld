@@ -40,16 +40,19 @@ export class PostDirector {
     private readonly rules: PostRule[],
     private readonly env: () => ConditionEnv,
     private readonly npcs: () => NpcPort | undefined,
+    /** true while a dialogue is open: NPCs must not teleport mid-conversation */
+    private readonly busy?: () => boolean,
   ) {}
 
   /** Quest state or a save changed; evaluate on the next update. */
   markDirty(): void { this.dirty = true; }
 
-  reset(): void { this.applied.clear(); this.dirty = true; }
+  /** A save loaded. NPC positions are not saved and survive a load, so `applied` stays valid; just re-evaluate. */
+  reset(): void { this.dirty = true; }
 
-  /** True while some post could not be placed yet (the NPC or its anchor does not exist), so retry. */
+  /** Applies pending posts; stays dirty while one cannot be placed yet (NPC or anchor missing) or a dialogue is open. */
   update(): void {
-    if (!this.dirty) return;
+    if (!this.dirty || this.busy?.()) return;
     const npcs = this.npcs();
     if (!npcs) return;
     let pending = false;
