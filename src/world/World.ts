@@ -101,7 +101,7 @@ export class World {
 
   /** `move` is the camera-relative input already rotated into world space. */
   fixedUpdate(input: InputSnapshot, move: { x: number; z: number }, hooks?: WorldTickHooks): void {
-    const attack = ATTACK_SLOTS[input.attack - 1];
+    const attack = this._avatar?.controller.attackClip(input.attack) ?? ATTACK_SLOTS[input.attack - 1];
     if (attack && this._avatar) this._avatar.controller.playAttack(attack);
 
     this.player.fixedUpdate(input, move.x, move.z);

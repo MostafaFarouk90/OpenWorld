@@ -34,3 +34,10 @@ describe('tuning', () => {
     expect(killXp('mystery', 5, 1)).toBe(0);
   });
 });
+
+describe('kill xp table (slice 2)', () => {
+  it('the Ashen Prior pays 200 at equal level; an unknown kind still pays 0', () => {
+    expect(killXp('ashen-prior', 3, 3)).toBe(200);
+    expect(killXp('mystery-beast', 3, 3)).toBe(0);
+  });
+});

@@ -1,11 +1,8 @@
 import type { Action } from '../input/actions';
 // Spell-framework constants that are not shared with the vfx thread (those live in src/vfx/tuning.ts).
 
-/**
- * Warm-zone max-health loss and Scars are DEFERRED until the designs thread confirms the numbers (design 9.7).
- * While false, Burn.healthMultiplier() returns 1 and the multiplier registered with progression is a no-op.
- */
-export const BURN_MAX_HEALTH_PENALTY_ENABLED: boolean = false;
+/** Zone and Scar max-health penalties (design 9.7) are live. The constant stays as a seam for tests. */
+export const BURN_MAX_HEALTH_PENALTY_ENABLED: boolean = true;
 
 /** Each Scar permanently lowers max health by 2%, capped at 30% (15 Scars). */
 export const SCAR = { healthPerScar: 0.02, maxPenalty: 0.3 } as const;
@@ -51,3 +48,11 @@ export const PLAYER_STAGGER_LOCK_SECONDS = 0.8;
 
 /** How often the plugin retries binding progression / abilities when they are not provided yet. */
 export const LATE_BIND_RETRY_SECONDS = 1;
+
+/** The Surge Leap (design 9.7 and 11.5): 6 m forward, 8 Burn, 4 s cooldown. `apex` is tuned by the ledge-reach test. */
+export const LEAP = { distance: 6, burn: 8, cooldownSeconds: 4, apex: 2.2, fovPunch: 4, fovSeconds: 0.25, pulse: 0.3, pulseSeconds: 0.3 } as const;
+/** Ability id of the Leap (granted at M03, not a tree skill). The flag `ability.<id>.learned` is the single source. */
+export const LEAP_ABILITY_ID = 'surge-leap';
+
+/** Banner Plant (Knight Standard 2): -10% damage taken by the player and allies within 8 m. Cost and cooldown are on the SkillDef. */
+export const BANNER = { skillId: 'knight.bannerPlant', radius: 8, damageScale: 0.9, lifetimeSeconds: 20, placeDistance: 2 } as const;

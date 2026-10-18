@@ -26,6 +26,10 @@ export const STAMINA = {
 export const GUARD = {
   /** Half-angle of the front arc that a block covers, in radians (100 degrees). */
   arcHalfAngle: (100 * Math.PI) / 180,
+  /** Iron Stance (Knight Bulwark 2) slides the guard over the sides: 270 degrees in all (a reading of "cover the sides"). */
+  ironStanceArcHalfAngle: (135 * Math.PI) / 180,
+  /** Walking speed while guarding with Iron Stance, as a fraction of the walk speed. */
+  ironStanceSpeedScale: 0.5,
   /** Damage and poise that get through a block. */
   blockedScale: 0.2,
   /** Block pressed this many ticks before a swing's window opens (or at the open tick) is a parry. */

@@ -1,4 +1,5 @@
 /** Progression numbers in one place; tuned later. */
+import { classStats } from './classStats';
 
 export const LEVEL_CAP = 40;
 export const BAR_SLOTS = 6;
@@ -7,9 +8,14 @@ export const MERCY_XP_FRACTION = 0.6;
 export const KNIGHT_BASE_HEALTH = 120;
 export const KNIGHT_HEALTH_PER_LEVEL = 10;
 
+/** Design 9: the first respec is free; later ones cost 25 gold x level, capped at 500. */
+export const RESPEC = { goldPerLevel: 25, goldCap: 500 } as const;
+
 export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'ash-wraith': 20,
   'blighted-soldier': 30,
+  // The Ashen Prior (D01, slice 2). Thread 5's new kinds are added here when it sends them.
+  'ashen-prior': 200,
   dummy: 0,
   scarecrow: 0,
 };
@@ -55,6 +61,11 @@ export function killXp(kind: string, enemyLevel: number, playerLevel: number): n
   return Math.round(base * levelScale(enemyLevel, playerLevel));
 }
 
-export function baseMaxHealthForLevel(level: number): number {
-  return KNIGHT_BASE_HEALTH + KNIGHT_HEALTH_PER_LEVEL * (level - 1);
+export function baseMaxHealthForLevel(level: number, classId?: string | null): number {
+  const row = classStats(classId);
+  return row.health + row.healthPerLevel * (level - 1);
+}
+
+export function respecGold(level: number): number {
+  return Math.min(RESPEC.goldCap, RESPEC.goldPerLevel * Math.max(1, Math.floor(level)));
 }

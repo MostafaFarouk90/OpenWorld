@@ -1,6 +1,8 @@
 import { looseService } from '../vfx/ports';
 import type { CastResult } from './SpellCaster';
 import type { SpellDef } from './spellDefs';
+import type { BurnZone } from './Burn';
+import type { RegisterFormResult, SurgeFormImpl } from './SurgeAndRally';
 
 /** The 'spells' service (design 9.7 Burn, Ember, casting). */
 export interface SpellsService {
@@ -9,7 +11,16 @@ export interface SpellsService {
   readonly ember: number;
   readonly maxEmber: number;
   spendEmber(n: number): boolean;
+  /** Raw Burn change (boss attacks that add Burn directly): never scars. */
   addBurn(n: number, source: string): void;
+  /**
+   * The only shard-use path (Surge, Leap, rekindle, Release): adds `gain` Burn and, when Burn was 75 or more before the
+   * gain, a Scar (`scar.added`, flag `story.f10.scars`, max health refresh, feedback).
+   */
+  useShard(gain: number, source: string): { gained: number; scarred: boolean };
+  registerSurgeForm(classId: string, zone: BurnZone, impl: SurgeFormImpl): RegisterFormResult;
+  /** The Surge Leap on V: learned once M03 grants `surge-leap`; `cooldown()` is in sim seconds. */
+  readonly leap: { readonly learned: boolean; cooldown(): { remaining: number; total: number } };
   clearBurn(reason: string): void;
   cast(spellId: string): CastResult;
   canCast(spellId: string): CastResult;
