@@ -646,15 +646,22 @@ describe('Ashen Prior on the real core', () => {
     t.teardown();
   });
 
-  it('the chain stays unparryable: a parry (guard stand-in that staggers the attacker) counts no boss break', async () => {
+  it('the chain stays unparryable: a timed block (guard stand-in honouring parryable) blocks, counts no boss break', async () => {
     const t = await setup();
     openFight(t);
-    // Stand-in for CombatVerbs.guardModifier at -50: a timed block on a swing with no window parries and staggers the attacker.
+    // Stand-in for CombatVerbs.guardModifier at -50, mirroring GuardModel.resolve: a timed block on a swing with no window
+    // parries and staggers the attacker unless the request says `parryable: false`, when it is a plain block.
+    const seen: { attackerId: string | null; parryable: unknown }[] = [];
     t.ctx.damage.addModifier('test.parry', (req, target, attacker) => {
       if (target.id !== 'player' || req.attackId !== 'prior.chain') return;
-      req.outcome = 'parried';
+      seen.push({ attackerId: req.attackerId, parryable: req.parryable });
       req.amount = 0;
       req.poise = 0;
+      if (req.parryable === false) {
+        req.outcome = 'blocked';
+        return;
+      }
+      req.outcome = 'parried';
       if (attacker) t.ctx.damage.stagger(attacker.id, 'player', 999);
     }, -50);
     let guard = 0;
@@ -663,9 +670,11 @@ describe('Ashen Prior on the real core', () => {
       t.healPlayer();
       t.run(1);
     }
-    expect(chains()[0]).toMatchObject({ outcome: 'parried', attackerId: null, dealt: 0 });
+    expect(seen[0]).toEqual({ attackerId: t.prior()!.id, parryable: false });
+    expect(chains()[0]).toMatchObject({ outcome: 'blocked', dealt: 0 });
     t.run(2);
     expect(t.of('boss.break')).toEqual([]);
+    expect(t.of('actor.staggered').filter((e) => e.actorId === t.prior()!.id)).toEqual([]);
     t.teardown();
   });
 

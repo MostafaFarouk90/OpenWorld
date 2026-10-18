@@ -316,12 +316,10 @@ export class PriorEncounter implements PriorHooks {
     const direction = this.tmp.set(feet.x - pos.x, 0, feet.z - pos.z);
     if (direction.lengthSq() < 1e-6) direction.set(0, 0, 1);
     direction.normalize();
-    // The chain must be blockable but not parryable (ruling). The guard falls back to "block pressed within 0.2 s" for a
-    // swing with no `attack.window`, and a parry staggers the attacker, which the registry would count as a boss break.
-    // Until the damage request can say `parryable: false` (requested from core), the chain is sent without an attacker:
-    // a well-timed block still reads as 'parried' (no damage), but nobody is staggered and no break is counted.
+    // The chain is blockable but not parryable (ruling): a script hit has no `attack.window`, so without `parryable: false`
+    // the guard's "block pressed within 0.2 s" fallback would parry it and stagger the Prior into a free boss break.
     const result = this.ctx.damage.apply({
-      attackerId: move.id === 'chain' ? null : this.actor.id,
+      attackerId: this.actor.id,
       targetId: player.id,
       amount: move.damage,
       poise: move.poise,
@@ -329,8 +327,8 @@ export class PriorEncounter implements PriorHooks {
       attackId: move.attackId,
       swingId,
       direction: direction.clone(),
-      // The censer's red sweep is dodge-only; the chain stays blockable (and, a script hit with no window, not parryable).
-      ...(move.telegraph === 'dodge' ? { unblockable: true } : {}),
+      // The censer's red sweep is dodge-only; the chain stays blockable but never parried.
+      ...(move.telegraph === 'dodge' ? { unblockable: true } : { parryable: false as const }),
     });
     if (move.id === 'chain' && result && result.outcome === 'hit') this.applySlow();
   }
