@@ -14,3 +14,11 @@ export const WAYSTONE_TUNING = {
   retryLift: 0.05,
   fallbackSpawnAnchor: 'brightwater.player-spawn',
 } as const;
+
+/**
+ * Stones that refuse the player until a flag is set (waystone id without the `waystone.` prefix -> flag). The South
+ * Gate stone stays shut until M06's route is chosen. Read through `ctx.gates`, so a load re-derives it.
+ */
+export const WAYSTONE_LOCKS: Readonly<Record<string, string>> = {
+  'harrowmark-gate': 'story.m06.route',
+};

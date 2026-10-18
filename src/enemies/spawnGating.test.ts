@@ -198,6 +198,22 @@ describe('the shipped Brightwater table', () => {
     expect(by('brightwater.churchyard')).toMatchObject({ tag: 'm03.churchyard', count: 4, activation: { flag: 'enemies.mercy.release' } });
     expect(by('brightwater.vault').activation).toEqual({ interior: 'chapel-vault' });
   });
+
+  it('has the two Dead Road camps: three Footmen each, live once M05 is complete, never respawning', () => {
+    for (const n of [1, 2]) {
+      const d = BRIGHTWATER_SPAWNERS.find((x) => x.id === `deadroad.camp-${n}`)!;
+      expect(d).toMatchObject({
+        enemy: 'blighted-soldier',
+        count: 3,
+        band: { min: 4, max: 6 },
+        activation: { flag: 'story.m05.complete' },
+        respawn: 'never',
+        leash: true,
+        memberAnchors: [1, 2, 3].map((i) => `spawn.deadroad.camp-${n}.${i}`),
+      });
+      expect(d.tag).toBeUndefined();
+    }
+  });
 });
 
 describe('lesson gates of the shipped table', () => {
@@ -233,5 +249,41 @@ describe('lesson gates of the shipped table', () => {
     expect(b.manager.service.alive('brightwater.ford.pair-1')).toHaveLength(0);
     b.fake.bus.emit('quest.started', { questId: 'm04' });
     expect(b.manager.service.alive('brightwater.ford.pair-1')).toHaveLength(2);
+  });
+});
+
+describe('the Dead Road camps (gate on story.m05.complete)', () => {
+  const camp = (n: number) => BRIGHTWATER_SPAWNERS.find((d) => d.id === `deadroad.camp-${n}`)!;
+  function campSetup() {
+    const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: -2000 } });
+    for (const n of [1, 2]) for (const i of [1, 2, 3]) fake.defineAnchor(`spawn.deadroad.camp-${n}.${i}`, 10 * n + i, 0);
+    const manager = new EnemyManager(fake.host, FakeHost.factory(gltf), { spawners: [camp(1), camp(2)], seed: 5 });
+    return { fake, manager };
+  }
+
+  it('are absent before M05, appear when it completes, and appear on a load that has it', () => {
+    const { fake, manager } = campSetup();
+    manager.spawners.startAuto();
+    expect(manager.service.alive('deadroad.camp-1')).toHaveLength(0);
+    expect(manager.service.alive('deadroad.camp-2')).toHaveLength(0);
+    fake.setFlag('story.m05.complete', true);
+    expect(manager.service.alive('deadroad.camp-1')).toHaveLength(3);
+    expect(manager.service.alive('deadroad.camp-2')).toHaveLength(3);
+    fake.loadFlags({});
+    expect(manager.service.alive('deadroad.camp-1')).toHaveLength(0);
+    fake.loadFlags({ 'story.m05.complete': true });
+    expect(manager.service.alive('deadroad.camp-1')).toHaveLength(3);
+  });
+
+  it('stay dead once cleared, across a load and a rest', () => {
+    const { fake, manager } = campSetup();
+    manager.spawners.startAuto();
+    fake.setFlag('story.m05.complete', true);
+    for (const id of manager.service.alive('deadroad.camp-1')) kill(fake, id, manager);
+    expect(manager.service.alive('deadroad.camp-1')).toHaveLength(0);
+    fake.bus.emit('save.loaded', { slot: 's' });
+    fake.bus.emit('rest', { waystoneId: 'farm-ring' });
+    expect(manager.service.alive('deadroad.camp-1')).toHaveLength(0);
+    expect(manager.service.alive('deadroad.camp-2')).toHaveLength(3);
   });
 });
