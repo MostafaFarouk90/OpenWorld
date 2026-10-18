@@ -8,6 +8,15 @@ export interface NavRect {
   z1: number;
 }
 
+/** A rectangle rotated about +Y by `yaw` radians (Three and Rapier convention), half extents along its own x and z. */
+export interface NavOrientedRect {
+  cx: number;
+  cz: number;
+  hx: number;
+  hz: number;
+  yaw: number;
+}
+
 /** Definition of one flat-floored navigation grid (an interior, a yard). */
 export interface NavGridDef {
   id: string;
@@ -26,6 +35,13 @@ export interface NavGridDef {
   walkable: NavRect[];
   /** Subtracted from the walkable area (pillars). */
   blocked?: NavRect[];
+  /** Subtracted from the walkable area too (rotated buildings outdoors). */
+  blockedOriented?: NavOrientedRect[];
+  /**
+   * Outdoor grids (city blocks): the ground goes on past the edges, so `NavRegistry.path` ends a path toward a goal in no
+   * grid or another grid at the goal itself, after the edge cell. Interiors leave it off: beyond their edge is a wall.
+   */
+  openEdges?: boolean;
   /** Named dynamic obstacles (doors); initially open, so they do not block. */
   blockers?: Record<string, NavRect[]>;
 }
@@ -48,6 +64,10 @@ export class NavGrid {
   readonly maxX: number;
   readonly maxZ: number;
   readonly band: number;
+  /** True for an outdoor grid whose edges are open ground (a city block): paths to a goal beyond it end at the goal. */
+  readonly openEdges: boolean;
+  /** Bumped whenever walkability changes (a blocker opened or closed). */
+  revision = 0;
 
   private readonly base: Uint8Array;
   private readonly walk: Uint8Array;
@@ -71,6 +91,7 @@ export class NavGrid {
     this.maxZ = def.maxZ;
     this.floorY = def.floorY;
     this.band = def.band ?? 2.5;
+    this.openEdges = def.openEdges ?? false;
     this.cols = Math.max(1, Math.ceil((def.maxX - def.minX) / this.cellSize - 1e-9));
     this.rows = Math.max(1, Math.ceil((def.maxZ - def.minZ) / this.cellSize - 1e-9));
     const n = this.cols * this.rows;
@@ -88,6 +109,7 @@ export class NavGrid {
     this.edtZ = new Float64Array(longest + 1);
     for (const r of def.walkable) this.paint(r, this.base, 1);
     for (const r of def.blocked ?? []) this.paint(r, this.base, 0);
+    for (const r of def.blockedOriented ?? []) this.paintOriented(r, this.base, 0);
     for (const [id, rects] of Object.entries(def.blockers ?? {})) this.blockers.set(id, { rects, closed: false });
     this.rebuild();
   }
@@ -163,7 +185,31 @@ export class NavGrid {
     }
   }
 
+  /** Sets `value` on every cell whose centre is inside the rotated rect. */
+  private paintOriented(r: NavOrientedRect, into: Uint8Array, value: number): void {
+    const cs = this.cellSize;
+    const c = Math.cos(r.yaw);
+    const s = Math.sin(r.yaw);
+    // World AABB of the rotated rect (a local (x, z) lands at (x c + z s, -x s + z c)).
+    const ex = Math.abs(r.hx * c) + Math.abs(r.hz * s);
+    const ez = Math.abs(r.hx * s) + Math.abs(r.hz * c);
+    const ix0 = Math.max(0, Math.floor((r.cx - ex - this.minX) / cs));
+    const ix1 = Math.min(this.cols - 1, Math.ceil((r.cx + ex - this.minX) / cs));
+    const iz0 = Math.max(0, Math.floor((r.cz - ez - this.minZ) / cs));
+    const iz1 = Math.min(this.rows - 1, Math.ceil((r.cz + ez - this.minZ) / cs));
+    for (let iz = iz0; iz <= iz1; iz++) {
+      const dz = this.minZ + (iz + 0.5) * cs - r.cz;
+      for (let ix = ix0; ix <= ix1; ix++) {
+        const dx = this.minX + (ix + 0.5) * cs - r.cx;
+        const lx = dx * c - dz * s;
+        const lz = dx * s + dz * c;
+        if (lx >= -r.hx && lx < r.hx && lz >= -r.hz && lz < r.hz) into[iz * this.cols + ix] = value;
+      }
+    }
+  }
+
   private rebuild(): void {
+    this.revision++;
     this.walk.set(this.base);
     for (const b of this.blockers.values()) if (b.closed) for (const r of b.rects) this.paint(r, this.walk, 0);
     this.computeClearance();

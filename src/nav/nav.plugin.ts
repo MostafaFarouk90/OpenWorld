@@ -12,6 +12,7 @@ const nav: GamePlugin = {
       path: (from, to, opts) => registry.path(from, to, opts),
       hasGrid: (at) => registry.hasGrid(at),
       floorAt: (at) => registry.floorAt(at),
+      gridId: (at) => registry.gridId(at),
       addGrid: (grid) => registry.add(grid),
       setBlocker: (id, closed) => registry.setBlocker(id, closed),
     };
