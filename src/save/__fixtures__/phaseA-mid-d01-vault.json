@@ -61,41 +61,6 @@
         "mercyCount": 0
       }
     },
-    "codex": {
-      "version": 1,
-      "data": {
-        "unlocked": [
-          "howto.surge-leap",
-          "ash-wraith",
-          "blighted-soldier",
-          "howto.warmth-tier",
-          "howto.burn-scars"
-        ],
-        "read": []
-      }
-    },
-    "player": {
-      "version": 1,
-      "data": {
-        "health": 167,
-        "stamina": 100,
-        "lastRestedWaystoneId": "chapel",
-        "goldPouch": null
-      }
-    },
-    "companions": {
-      "version": 1,
-      "data": {
-        "positions": {
-          "tobb": {
-            "x": 51.13749999999997,
-            "y": 149.99999358355998,
-            "z": 68.00000011691246,
-            "yaw": -0.27994746945723636
-          }
-        }
-      }
-    },
     "quests": {
       "version": 1,
       "data": {
@@ -226,6 +191,53 @@
         }
       }
     },
+    "waystones": {
+      "version": 1,
+      "data": {
+        "lit": [
+          "chapel",
+          "kettlewick",
+          "quenchstone"
+        ],
+        "lastRest": "chapel",
+        "respawn": "chapel"
+      }
+    },
+    "codex": {
+      "version": 1,
+      "data": {
+        "unlocked": [
+          "howto.surge-leap",
+          "blighted-soldier",
+          "ash-wraith",
+          "howto.warmth-tier",
+          "howto.burn-scars"
+        ],
+        "read": []
+      }
+    },
+    "player": {
+      "version": 1,
+      "data": {
+        "health": 167,
+        "stamina": 100,
+        "lastRestedWaystoneId": "chapel",
+        "goldPouch": null
+      }
+    },
+    "companions": {
+      "version": 1,
+      "data": {
+        "positions": {
+          "tobb": {
+            "x": 51.13749999999997,
+            "y": 149.99999358355998,
+            "z": 68.00000011691246,
+            "yaw": -0.27994746945723636
+          }
+        }
+      }
+    },
     "dialogue": {
       "version": 1,
       "data": {
@@ -352,18 +364,6 @@
         },
         "unknown": {},
         "gold": 0
-      }
-    },
-    "waystones": {
-      "version": 1,
-      "data": {
-        "lit": [
-          "chapel",
-          "kettlewick",
-          "quenchstone"
-        ],
-        "lastRest": "chapel",
-        "respawn": "chapel"
       }
     },
     "map": {
