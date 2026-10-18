@@ -41,8 +41,15 @@ export interface QuestActions {
   completeObjective(questId: string, objectiveId: string): boolean;
 }
 
-export interface ProgressionPort { grantXp(amount: number, source: string): void; grantSkillPoint?(amount: number, reason: string): void }
-export interface InventoryPort { remove(itemId: string, count: number): boolean }
+export interface ProgressionPort {
+  grantXp(amount: number, source: string): void;
+  grantSkillPoint?(amount: number, reason: string): void;
+  /** thread 2: unlocks an ability and emits `ability.learned` */
+  grantAbility?(id: string, source: string): void;
+}
+export interface InventoryPort { remove(itemId: string, count: number): boolean; addGold?(n: number): void }
+export interface NpcPort { place(npcId: string, anchorId: string): boolean }
+export interface EnemiesPort { setMercyUnlocked(verb: 'release' | 'spare', on: boolean): void }
 
 export interface ConditionEnv { state: StatePort; quests: QuestReader; warn?(msg: string): void }
 
@@ -53,6 +60,8 @@ export interface EffectEnv {
   /** optional services; absent means the effect warns once and does nothing */
   progression?: () => ProgressionPort | undefined;
   inventory?: () => InventoryPort | undefined;
+  npcs?: () => NpcPort | undefined;
+  enemies?: () => EnemiesPort | undefined;
   /** id recorded as `sourceId` on loot.granted and as xp source */
   sourceId: string;
   warn?(msg: string): void;

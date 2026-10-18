@@ -2,12 +2,12 @@ import type {
   Effect, ObjectiveDef, QuestDef, QuestRuntime, QuestState, QuestsSaveData,
 } from './types';
 import type {
-  ActorMetaPort, BusPort, ConditionEnv, InventoryPort, ProgressionPort, QuestActions, QuestReader,
+  ActorMetaPort, BusPort, ConditionEnv, EnemiesPort, InventoryPort, NpcPort, ProgressionPort, QuestActions, QuestReader,
   StatePort, TriggerPort, Unsubscribe,
 } from './ports';
 import { evalCondition } from './conditions';
 import { createEffectRunner } from './effects';
-import { creditFor, OBJECTIVE_EVENTS } from './objectives';
+import { creditFor, eventNames, OBJECTIVE_EVENTS } from './objectives';
 
 export interface QuestManagerOpts {
   bus: BusPort;
@@ -17,6 +17,8 @@ export interface QuestManagerOpts {
   triggers?: TriggerPort;
   progression?: () => ProgressionPort | undefined;
   inventory?: () => InventoryPort | undefined;
+  npcs?: () => NpcPort | undefined;
+  enemies?: () => EnemiesPort | undefined;
   warn?(m: string): void;
 }
 
@@ -33,13 +35,19 @@ export class QuestManager implements QuestReader, QuestActions {
   private readonly dedupe = new Map<string, Set<string>>();
   private readonly listeners = new Set<() => void>();
   private readonly unsubs: Unsubscribe[] = [];
+  private readonly subscribed = new Set<string>();
   private readonly warned = new Set<string>();
   private disposed = false;
 
   constructor(private readonly opts: QuestManagerOpts) {
-    for (const type of OBJECTIVE_EVENTS) {
-      this.unsubs.push(opts.bus.on(type, (payload) => this.onEvent(type, payload)));
-    }
+    for (const type of OBJECTIVE_EVENTS) this.subscribe(type);
+  }
+
+  /** One bus listener per event name, however many objectives want it. */
+  private subscribe(type: string): void {
+    if (this.subscribed.has(type)) return;
+    this.subscribed.add(type);
+    this.unsubs.push(this.opts.bus.on(type, (payload) => this.onEvent(type, payload)));
   }
 
   // ---- registry ----------------------------------------------------------------------------
@@ -52,6 +60,7 @@ export class QuestManager implements QuestReader, QuestActions {
       seen.add(o.id);
     }
     const copy = JSON.parse(JSON.stringify(def)) as QuestDef;
+    for (const o of copy.objectives) for (const name of eventNames(o)) this.subscribe(name);
     this.defs.set(copy.id, copy);
     const rt: QuestRuntime = { state: 'inactive', objectives: {} };
     this.rt.set(copy.id, rt);
@@ -119,6 +128,7 @@ export class QuestManager implements QuestReader, QuestActions {
       return false;
     }
     if (rt.state !== 'inactive') return false;
+    if (!this.startAllowed(def)) { this.warnOnce(`start-gated:${id}`, `quests: start of "${id}" refused by its startWhen`); return false; }
     rt.state = 'active';
     rt.objectives = {};
     for (const o of def.objectives) this.dedupe.delete(this.dkey(id, o.id));
@@ -135,6 +145,7 @@ export class QuestManager implements QuestReader, QuestActions {
     const rt = this.rt.get(id);
     // active -> completed, or inactive -> completed (a skipped beat); completed/failed are no-ops
     if (!def || !rt || (rt.state !== 'active' && rt.state !== 'inactive')) return false;
+    if (rt.state === 'inactive' && !this.startAllowed(def)) return false;
     rt.state = 'completed'; // before effects: a re-entrant complete is a no-op
     this.removeActive(id);
     this.runEffects(def.onComplete, id);
@@ -215,8 +226,14 @@ export class QuestManager implements QuestReader, QuestActions {
     }
     this.notify();
     for (const id of [...this.order]) {
-      if (this.rt.get(id)?.state === 'active') this.creditInside(id);
+      // doneWhen reads flags, which may not have loaded yet: `recheck()` on save.loaded credits those
+      if (this.rt.get(id)?.state === 'active') this.creditInside(id, false);
     }
+  }
+
+  /** Credits objectives the world already satisfies (goTo inside a trigger, doneWhen); call after a save loaded. */
+  recheck(): void {
+    for (const id of [...this.order]) if (this.rt.get(id)?.state === 'active') this.creditInside(id);
   }
 
   dispose(): void {
@@ -247,6 +264,11 @@ export class QuestManager implements QuestReader, QuestActions {
   private removeActive(id: string): void {
     const i = this.order.indexOf(id);
     if (i >= 0) this.order.splice(i, 1);
+  }
+
+  private startAllowed(def: QuestDef): boolean {
+    if (!def.startWhen) return true;
+    return evalCondition(def.startWhen, { state: this.opts.state, quests: this, warn: this.opts.warn });
   }
 
   private whenHolds(o: ObjectiveDef): boolean {
@@ -305,26 +327,39 @@ export class QuestManager implements QuestReader, QuestActions {
     return true;
   }
 
-  /** goTo objectives that just became current are credited when the player already stands in the trigger. */
-  private creditInside(questId: string): void {
+  /**
+   * Objectives that just became current are credited when the world already satisfies them: goTo while the
+   * player stands in the trigger, event objectives whose `doneWhen` holds (the event may have fired earlier).
+   */
+  private creditInside(questId: string, doneWhen = true): void {
     const triggers = this.opts.triggers;
     const player = this.opts.playerId();
     const def = this.defs.get(questId);
     if (!def) return;
-    if (!triggers) {
-      if (def.objectives.some((o) => o.type === 'goTo' && this.isObjectiveCurrent(questId, o.id))) {
-        this.warnOnce('no-trigger-port', 'quests: no TriggerPort; goTo objectives cannot detect an already-inside player');
-      }
-      return;
-    }
-    if (player === undefined) return;
     for (const o of def.objectives) {
-      if (o.type !== 'goTo' || !this.isObjectiveCurrent(questId, o.id)) continue;
+      if (!this.isObjectiveCurrent(questId, o.id)) continue;
+      if (o.type === 'event' && o.doneWhen) {
+        if (!doneWhen) continue;
+        const env: ConditionEnv = { state: this.opts.state, quests: this, warn: this.opts.warn };
+        let done = false;
+        try { done = evalCondition(o.doneWhen, env); } catch (e) { this.warn(`quests: doneWhen threw: ${String(e)}`); }
+        if (done) {
+          this.setProgress(questId, o, required(o));
+          return; // setProgress re-enters creditInside for whatever became current
+        }
+        continue;
+      }
+      if (o.type !== 'goTo') continue;
+      if (!triggers) {
+        this.warnOnce('no-trigger-port', 'quests: no TriggerPort; goTo objectives cannot detect an already-inside player');
+        continue;
+      }
+      if (player === undefined) continue;
       let inside = false;
-      try { inside = triggers.isInside(o.target, player); } catch (e) { this.warn(`quests: isInside threw: ${String(e)}`); }
+      try { inside = triggers.isInside(o.target as string, player); } catch (e) { this.warn(`quests: isInside threw: ${String(e)}`); }
       if (inside) {
         this.setProgress(questId, o, this.progress(questId, o) + 1);
-        return; // setProgress re-enters creditInside for whatever became current
+        return;
       }
     }
   }
@@ -338,6 +373,8 @@ export class QuestManager implements QuestReader, QuestActions {
         bus: this.opts.bus,
         progression: this.opts.progression,
         inventory: this.opts.inventory,
+        npcs: this.opts.npcs,
+        enemies: this.opts.enemies,
         sourceId: `quest:${questId}`,
         warn: this.opts.warn,
       });

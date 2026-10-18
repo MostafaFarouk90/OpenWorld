@@ -1,7 +1,7 @@
 import type { Condition, Effect, QuestDef } from './types';
-import { EFFECT_EVENT_PATTERN } from './types';
+import { EFFECT_EVENT_PATTERN, MAX_IF_DEPTH } from './types';
 
-const TYPES = ['goTo', 'interact', 'kill', 'collect', 'carry', 'talk'];
+const TYPES = ['goTo', 'interact', 'kill', 'collect', 'carry', 'talk', 'event'];
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.trim() !== '';
 const isObj = (v: unknown): v is Record<string, any> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
@@ -17,7 +17,7 @@ const FLAG_KEY = /^[a-z][a-zA-Z0-9]*(\.[a-zA-Z0-9_-]+)+$/;
 const TRACKS = ['halvard', 'oswin', 'grisel', 'dragons', 'ashwalkers'];
 
 /** Static checks of an effect list. Returns error strings; empty means valid. */
-export function validateEffects(effects: Effect[] | undefined, where = 'effects'): string[] {
+export function validateEffects(effects: Effect[] | undefined, where = 'effects', depth = 0): string[] {
   const errs: string[] = [];
   if (effects === undefined) return errs;
   if (!Array.isArray(effects)) return [`${where}: effects must be an array`];
@@ -62,6 +62,25 @@ export function validateEffects(effects: Effect[] | undefined, where = 'effects'
       if (typeof c.xp !== 'number' || !Number.isFinite(c.xp) || c.xp <= 0) errs.push(`${w}: xp must be a positive number`);
     } else if ('skillPoints' in c) {
       if (typeof c.skillPoints !== 'number' || !Number.isFinite(c.skillPoints) || c.skillPoints <= 0) errs.push(`${w}: skillPoints must be a positive number`);
+    } else if ('giveGold' in c) {
+      if (typeof c.giveGold !== 'number' || !Number.isFinite(c.giveGold) || c.giveGold <= 0) errs.push(`${w}: giveGold must be a positive number`);
+    } else if ('if' in c) {
+      if (depth >= MAX_IF_DEPTH) errs.push(`${w}: if effects nest at most ${MAX_IF_DEPTH} deep`);
+      else {
+        if (!isObj(c.if)) errs.push(`${w}: if needs a condition`);
+        if (!Array.isArray(c.then)) errs.push(`${w}: if needs a then list`);
+        else errs.push(...validateEffects(c.then, `${w}.then`, depth + 1));
+        if (c.else !== undefined) {
+          if (!Array.isArray(c.else)) errs.push(`${w}: else must be an array`);
+          else errs.push(...validateEffects(c.else, `${w}.else`, depth + 1));
+        }
+      }
+    } else if ('placeNpc' in c) {
+      if (!isObj(c.placeNpc) || !isStr(c.placeNpc.npcId) || !isStr(c.placeNpc.anchorId)) errs.push(`${w}: placeNpc needs npcId and anchorId`);
+    } else if ('unlockMercy' in c) {
+      if (c.unlockMercy !== 'release' && c.unlockMercy !== 'spare') errs.push(`${w}: unlockMercy verb must be release or spare`);
+    } else if ('grantAbility' in c) {
+      if (!isStr(c.grantAbility)) errs.push(`${w}: grantAbility needs an ability id`);
     } else if ('event' in c) {
       if (typeof c.event !== 'string' || !EFFECT_EVENT_PATTERN.test(c.event)) errs.push(`${w}: event name not allowed`);
     } else {
@@ -106,8 +125,17 @@ export function validateQuest(def: QuestDef, hasKey: (k: string) => boolean): st
     if (o?.required !== undefined && (!Number.isInteger(o.required) || o.required <= 0)) errs.push(`${w}: required must be a positive integer`);
     if (!isStr(o?.textKey)) errs.push(`${w}: textKey must be a non-empty string`);
     else if (!hasKey(o.textKey)) errs.push(`${w}: textKey "${o.textKey}" is not in the string table`);
-    if (o?.type === 'kill' && !isStr(o.target)) errs.push(`${w}: kill objective needs a target`);
-    else if (!isStr(o?.target)) errs.push(`${w}: target must be a non-empty string`);
+    if (o?.type === 'event') {
+      const names = Array.isArray(o.target) ? o.target : [o.target];
+      if (names.length === 0 || !names.every(isStr)) errs.push(`${w}: event target must be an event name or a non-empty list of names`);
+      if (o.match !== undefined && !isObj(o.match)) errs.push(`${w}: match must be an object`);
+      if (o.dedupeBy !== undefined && !isStr(o.dedupeBy)) errs.push(`${w}: dedupeBy must be a payload key`);
+    } else {
+      if (Array.isArray(o?.target)) errs.push(`${w}: only event objectives take a target list`);
+      else if (o?.type === 'kill' && !isStr(o.target)) errs.push(`${w}: kill objective needs a target`);
+      else if (!isStr(o?.target)) errs.push(`${w}: target must be a non-empty string`);
+      if (o?.match !== undefined || o?.doneWhen !== undefined || o?.dedupeBy !== undefined) errs.push(`${w}: match, doneWhen and dedupeBy are event-only`);
+    }
     if (o?.when !== undefined) {
       const refs: [string, string][] = [];
       condRefs(o.when as Condition, refs);
