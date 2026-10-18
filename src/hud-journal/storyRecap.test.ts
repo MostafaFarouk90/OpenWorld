@@ -25,7 +25,7 @@ describe('buildRecap', () => {
 
   it.each([
     ['m06', 'story.m06.route', ['stealth', 'bribe', 'persuasion']],
-    ['m08', 'story.m08.stance', ['warm', 'wary']],
+    ['m08', 'story.m08.stance', ['meek', 'steady', 'bold']],
     ['d01', 'boss.ashen-prior.outcome', ['defeated', 'released']],
     ['d02', 'boss.gaffer-grimtooth.outcome', ['defeated', 'released']],
     ['r04', 'story.r04.choice', ['expose', 'shield']],
@@ -105,7 +105,7 @@ describe('endingRecap (ending card body)', () => {
     'world.brightwater.barley': 'saved',
     'story.m05.tobbJoined': true,
     'story.m06.route': 'stealth',
-    'story.m08.stance': 'warm',
+    'story.m08.stance': 'bold',
     'world.harrowmark.inn.price': 'forgiven',
     'boss.ashen-prior.outcome': 'defeated',
     'boss.gaffer-grimtooth.outcome': 'released',
@@ -120,7 +120,7 @@ describe('endingRecap (ending card body)', () => {
     expect(out).not.toContain('m01');
     expect(out).not.toContain('m02');
     // Story order is kept.
-    expect(out).toEqual(['m06.stealth', 'm08.warm', 'inn.forgiven', 'd01.defeated', 'd02.released', 'r04.expose']);
+    expect(out).toEqual(['m06.stealth', 'm08.bold', 'inn.forgiven', 'd01.defeated', 'd02.released', 'r04.expose']);
   });
 
   it('with few outcomes it tops up with the latest plain completions, still in story order', () => {

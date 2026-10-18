@@ -55,7 +55,7 @@ export const RECAP_LINES: readonly RecapLine[] = [
   flagIs('tobb.joined', 'story.m05.tobbJoined', true),
   ...beat('m06', 'story.m06.route', ['stealth', 'bribe', 'persuasion']),
   done('m07'),
-  ...beat('m08', 'story.m08.stance', ['warm', 'wary']),
+  ...beat('m08', 'story.m08.stance', ['meek', 'steady', 'bold']),
   done('m09'),
   ...outcomes('inn', 'world.harrowmark.inn.price', { forgiven: 'forgiven', collected: 'collected' }),
   done('m10'),

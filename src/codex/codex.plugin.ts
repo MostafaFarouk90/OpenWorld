@@ -3,7 +3,7 @@ import type { GamePlugin } from '../core/plugins';
 import { CodexModel, normaliseTally, ZERO_COUNTS } from './CodexModel';
 import { CODEX_MODAL_ID, createCodexModal, type CodexModalWidget } from './CodexView';
 import { SHRINE_IDS } from '../map/ForgeMarks';
-import { BESTIARY_IDS, HOWTO_IDS } from './entries';
+import { BESTIARY_IDS, CodexRegistry, HOWTO_IDS } from './entries';
 import { CODEX_STRINGS_EN } from './strings.en';
 import type { CodexService, MercyCounts } from './service';
 import './service';
@@ -40,6 +40,7 @@ const codex: GamePlugin = {
     ctx.strings.register('en', CODEX_STRINGS_EN);
     const model = new CodexModel();
     const warn = (m: string) => console.warn(m);
+    const registry = new CodexRegistry(undefined, warn);
 
     /** Optional: thread 1's `enemies.mercyTally()`; zeros are shown when it is absent. */
     const tally = (): Map<string, MercyCounts> | null => {
@@ -69,6 +70,7 @@ const codex: GamePlugin = {
           const t = tally();
           return t ? (t.get(kind) ?? ZERO_COUNTS) : null;
         },
+        entries: registry,
         glyph: (a) => (ctx.input as unknown as { bindings?: { glyph(a: string): string } }).bindings?.glyph(a) ?? '?',
         t: (k, p) => ctx.strings.t(k, p),
       });
@@ -87,6 +89,13 @@ const codex: GamePlugin = {
       unlock: (id) => void model.unlock(id),
       has: (id) => model.has(id),
       open,
+      register: (entries) => {
+        const remove = registry.register(entries);
+        return () => {
+          remove();
+          // An open view re-renders on its next update (its signature lists entry ids); nothing else to do.
+        };
+      },
     };
     ctx.services.provide('codex', service);
 
