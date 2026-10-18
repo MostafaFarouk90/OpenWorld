@@ -4,6 +4,7 @@ export interface ElementLike {
   textContent: string | null;
   readonly style: Record<string, string>;
   readonly children: ElementLike[];
+  onclick: ((ev?: unknown) => void) | null;
   setAttribute(name: string, value: string): void;
   getAttribute(name: string): string | null;
   append(...nodes: ElementLike[]): void;
@@ -21,6 +22,7 @@ export class StubElement implements ElementLike {
   textContent: string | null = null;
   readonly style: Record<string, string> = {};
   children: ElementLike[] = [];
+  onclick: ((ev?: unknown) => void) | null = null;
   parent: StubElement | null = null;
   private attrs = new Map<string, string>();
   constructor(readonly tag: string) {}
@@ -39,6 +41,9 @@ export class StubElement implements ElementLike {
   replaceChildren(...nodes: ElementLike[]): void {
     this.children = [];
     this.append(...nodes);
+  }
+  click(): void {
+    this.onclick?.();
   }
   remove(): void {
     if (this.parent) this.parent.children = this.parent.children.filter((c) => c !== this);

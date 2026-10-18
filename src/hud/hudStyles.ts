@@ -38,4 +38,30 @@ export const HUD_CSS = `
 @keyframes owg-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
 .owg-nextunlock{display:flex;align-items:center;gap:8px;pointer-events:none;font:12px system-ui,sans-serif;color:#d8d0c0;text-shadow:0 1px 2px #000}
 .owg-points{padding:1px 8px;border-radius:9px;background:#d8a830;color:#2a1c00;font-weight:700}
+.owg-prompts{display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
+.owg-prompt{padding:4px 12px;border-radius:4px;background:rgba(0,0,0,.6);color:#f2ead8;font:14px system-ui,sans-serif;white-space:pre-line;text-align:center;transition:opacity .4s linear}
+.owg-toasts{display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
+.owg-toast{padding:4px 12px;border-radius:4px;background:rgba(0,0,0,.65);color:#f2ead8;font:13px system-ui,sans-serif}
+.owg-menu{min-width:520px;max-width:90vw;max-height:80vh;overflow:auto;padding:16px;border-radius:8px;background:rgba(20,16,12,.94);border:1px solid #6a5a3a;color:#e8dfc8;font:14px system-ui,sans-serif;pointer-events:auto}
+.owg-menu-head{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+.owg-menu-title{margin:0;flex:1;font-size:18px}
+.owg-btn{padding:3px 10px;border:1px solid #8a7440;border-radius:4px;background:#3a2f1c;color:#f0e4c0;cursor:pointer;font:inherit}
+.owg-btn:hover{background:#4d3f24}
+.owg-equip-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.owg-equip-slot{display:flex;align-items:center;gap:8px;padding:4px 8px;background:rgba(255,255,255,.05);border-radius:4px}
+.owg-slot-name{opacity:.7;min-width:64px}
+.owg-slot-item{flex:1}
+.owg-item{display:flex;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.owg-item-name{min-width:200px;font-weight:600}
+.owg-item-desc{flex:1;opacity:.75}
+.owg-empty{opacity:.6}
+.owg-branches{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.owg-branch-title{margin:0 0 6px;font-size:15px;color:#f0d890}
+.owg-skill{display:flex;flex-direction:column;gap:2px;padding:6px;margin-bottom:6px;border-radius:4px;background:rgba(255,255,255,.05)}
+.owg-skill-learned{border:1px solid #d8a830}
+.owg-skill-unavailable{opacity:.45}
+.owg-skill-name{font-weight:600}
+.owg-skill-meta{font-size:11px;opacity:.7}
+.owg-skill-desc{font-size:12px;opacity:.85}
+.owg-skill-state{font-size:12px;color:#d8a830}
 `;

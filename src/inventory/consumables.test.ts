@@ -47,9 +47,9 @@ describe('begin refusals', () => {
   });
   it('not usable (gear, quest item)', () => {
     inv.add('practice-sword', 1);
-    inv.add('brannoc-hearth-stone', 1);
+    inv.add('hearth-stone', 1);
     expect(user.begin('practice-sword')).toEqual({ ok: false, reason: 'not-usable' });
-    expect(user.begin('brannoc-hearth-stone')).toEqual({ ok: false, reason: 'not-usable' });
+    expect(user.begin('hearth-stone')).toEqual({ ok: false, reason: 'not-usable' });
   });
   it('dead, and no actor at all', () => {
     actor.dead = true;

@@ -15,7 +15,8 @@ export const ITEMS: Record<string, ItemDef> = {
   'gauts-spare-tabard': def('gauts-spare-tabard', 'armour', { slot: 'armour', stats: { defense: 2 } }),
   'gauts-spare-blade': def('gauts-spare-blade', 'weapon', { slot: 'weapon', stats: { attack: 14 } }),
   'hearth-stone-charm': def('hearth-stone-charm', 'trinket', { slot: 'trinket', stats: { defense: 1 } }),
-  'brannoc-hearth-stone': def('brannoc-hearth-stone', 'quest'),
+  'hearth-stone': def('hearth-stone', 'quest'),
+  'hearth-token': def('hearth-token', 'quest'),
   'hearth-bread': def('hearth-bread', 'consumable', { stackMax: 5, use: { healFlat: 15, drinkSeconds: 0.8 } }),
   'healing-flask': def('healing-flask', 'consumable', { stackMax: 5, use: { healFraction: 0.4, drinkSeconds: 1.2 } }),
 };

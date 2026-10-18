@@ -110,17 +110,19 @@ describe('abilities', () => {
     expect(spells.spent).toEqual([]);
     expect(ab.cooldown(0).remaining).toBe(0);
   });
-  it('second handler throws; dispose frees the id; handler beats fallback', () => {
+  it('second handler is refused; dispose frees the id; handler beats fallback', () => {
     const { ab, fallback } = setup();
     const h = vi.fn<AbilityHandler>(() => ({ ok: true }));
-    const dispose = ab.registerHandler('knight.rallyCry', h);
-    expect(() => ab.registerHandler('knight.rallyCry', h)).toThrow();
+    const reg = ab.registerHandler('knight.rallyCry', h);
+    if (!reg.ok) throw new Error('first registration failed');
+    const dispose = reg.dispose;
+    expect(ab.registerHandler('knight.rallyCry', h)).toEqual({ ok: false, reason: 'duplicate' });
     ab.use(0);
     expect(h).toHaveBeenCalledTimes(1);
     expect(fallback).not.toHaveBeenCalled();
     dispose();
     dispose();
-    expect(() => ab.registerHandler('knight.rallyCry', h)()).not.toThrow();
+    expect(ab.registerHandler('knight.rallyCry', h).ok).toBe(true);
   });
   it('no handler and no fallback', () => {
     const { ab } = setup({ fallback: false });

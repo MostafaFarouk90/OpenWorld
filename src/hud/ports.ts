@@ -47,6 +47,9 @@ export interface InventoryService {
   use(id: string): UseResult;
   reset(kit: InventoryKit): void;
   items(): readonly { id: string; count: number }[];
+  readonly gold: number;
+  addGold(n: number): void;
+  takeGold(n: number): number;
 }
 
 export type LearnCheck =
@@ -109,7 +112,7 @@ export type UseAbilityResult =
 export interface AbilitiesService {
   use(slot: number): UseAbilityResult;
   cooldown(slot: number): { remaining: number; total: number };
-  registerHandler(skillId: string, handler: AbilityHandler): () => void;
+  registerHandler(skillId: string, handler: AbilityHandler): { ok: true; dispose(): void } | { ok: false; reason: 'duplicate' };
   reportTrigger(skillId: string): boolean;
 }
 

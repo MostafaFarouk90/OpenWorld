@@ -24,6 +24,8 @@ export interface AbilitiesDeps {
 
 const TICKS_PER_SECOND = 60;
 
+export type RegisterResult = { ok: true; dispose(): void } | { ok: false; reason: 'duplicate' };
+
 export class Abilities implements AbilitiesService {
   private handlers = new Map<string, AbilityHandler>();
   /** Remaining fixed ticks per skill id. */
@@ -34,11 +36,14 @@ export class Abilities implements AbilitiesService {
     this.logger = deps.logger ?? consoleLogger;
   }
 
-  registerHandler(skillId: string, handler: AbilityHandler): () => void {
-    if (this.handlers.has(skillId)) throw new Error(`ability handler already registered for ${skillId}`);
+  registerHandler(skillId: string, handler: AbilityHandler): RegisterResult {
+    if (this.handlers.has(skillId)) return { ok: false, reason: 'duplicate' };
     this.handlers.set(skillId, handler);
-    return () => {
-      if (this.handlers.get(skillId) === handler) this.handlers.delete(skillId);
+    return {
+      ok: true,
+      dispose: () => {
+        if (this.handlers.get(skillId) === handler) this.handlers.delete(skillId);
+      },
     };
   }
 
