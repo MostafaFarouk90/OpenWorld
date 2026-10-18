@@ -6,7 +6,7 @@ import type { EnemiesService } from './EnemyManager';
  */
 declare module '../core/events' {
   interface GameEventMap {
-    /** Every member of a spawner's group died, was released, was spared or despawned. */
+    /** Every member of a spawner's group died, was released or was spared. A despawn or a thief's escape never counts (an escape is refilled). */
     'enemies.groupCleared': { spawnerId: string };
     /** An observer's awareness of its target rose above 0.3 (once per rise). */
     'ai.suspicious': { actorId: string; targetId: string; awareness: number };
