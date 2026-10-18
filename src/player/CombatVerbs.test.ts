@@ -219,10 +219,12 @@ describe('dodge', () => {
     t.actor.stamina = 1;
     t.verbs.stamina.forceDrain(5);
     expect(t.verbs.stamina.exhausted).toBe(true);
+    const before = t.actor.stamina;
     t.press('KeyN');
     t.run(3);
     expect(t.controller.currentAction).toBeNull();
     expect(t.actor.invulnerable).toBe(false);
+    expect(t.actor.stamina).toBeGreaterThanOrEqual(before);
   });
 
   it('a stagger cancels the dodge and clears the invulnerability', () => {
@@ -231,13 +233,14 @@ describe('dodge', () => {
     t.press('KeyN');
     t.run(1);
     t.release('KeyN');
-    t.run(20);
+    t.run(5);
     expect(t.controller.currentAction).toBe('dodge');
-    t.actor.poise = 5;
-    t.hit(e, { poise: 20 });
+    expect(t.actor.invulnerable).toBe(true);
+    t.ctx.damage.stagger('player', e.id, 999);
     t.run(2);
     expect(t.controller.currentAction).toBe('stagger');
     expect(t.actor.invulnerable).toBe(false);
+    expect(t.hit(e, { swingId: 7 })!.outcome).toBe('hit');
   });
 
   it('costs no stamina before the tutorial ends', () => {
@@ -480,6 +483,120 @@ describe('skills and services', () => {
     t.run(2);
     expect(svc.busy).toBe(true);
     expect(svc.staggered).toBe(true);
+  });
+});
+
+describe('review fixes', () => {
+  it('a corpse does not slide: death after a knockback stops the forced move', () => {
+    const t = setup();
+    const e = t.enemy();
+    t.hit(e, { poise: 30 });
+    t.run(2);
+    expect(t.controller.currentAction).toBe('stagger');
+    t.hit(e, { amount: 500, swingId: 2 });
+    t.run(2);
+    const z = t.ctx.player.feet.z;
+    t.run(60);
+    expect(Math.abs(t.ctx.player.feet.z - z)).toBeLessThan(0.05);
+  });
+
+  it('a knockback keeps the Knight facing the enemy', () => {
+    const t = setup();
+    const e = t.enemy();
+    const yaw0 = t.ctx.player.facingYaw;
+    t.hit(e, { poise: 30 });
+    t.run(30);
+    expect(Math.cos(t.ctx.player.facingYaw - yaw0)).toBeGreaterThan(0.99);
+  });
+
+  it('a pending waystones.respawnPlayer() holds the player down until it resolves; a rejection falls back', async () => {
+    const t = setup();
+    let resolve!: () => void;
+    t.ctx.services.provide('waystones' as never, { respawnPlayer: () => new Promise<void>((r) => (resolve = r)) } as never);
+    t.hit(t.enemy(), { amount: 500 });
+    t.run(170);
+    expect(t.actor.dead).toBe(true);
+    resolve();
+    await Promise.resolve();
+    t.run(2);
+    expect(t.actor.dead).toBe(false);
+    expect(t.of('player.respawned')[0].source).toBe('waystone');
+
+    const r = setup();
+    r.ctx.services.provide('waystones' as never, { respawnPlayer: () => Promise.reject(new Error('no')) } as never);
+    r.hit(r.enemy(), { amount: 500 });
+    r.run(170);
+    await Promise.resolve();
+    await Promise.resolve();
+    r.run(30);
+    expect(r.actor.dead).toBe(false);
+    expect(r.of('player.respawned')[0].source).toBe('world');
+  });
+
+  it('an external revive during the death timeline leaves nothing locked', () => {
+    const t = setup();
+    t.hit(t.enemy(), { amount: 500 });
+    t.run(5);
+    t.ctx.damage.revive('player', 1, 'script');
+    t.run(200);
+    expect(t.controller.currentAction).toBeNull();
+    expect(t.game.moveModifiers.sources()).not.toContain('player-dead');
+  });
+
+  it('disposing while blocking releases the guard animation', () => {
+    const t = setup();
+    t.press('KeyB');
+    t.run(5);
+    expect(t.controller.currentAction).toBe('block');
+    t.verbs.dispose();
+    expect(t.controller.currentAction).toBeNull();
+  });
+
+  it('a held block still guards a second hit 13 ticks after the first', () => {
+    const t = setup();
+    const e = t.enemy();
+    t.press('KeyB');
+    t.run(20);
+    expect(t.hit(e)!.outcome).toBe('blocked');
+    t.run(14);
+    expect(t.hit(e, { swingId: 2 })!.outcome).toBe('blocked');
+  });
+
+  it('exhaustion locks sprint; too little stamina locks the heavy attack', () => {
+    const t = setup();
+    t.actor.stamina = 5;
+    t.run(2);
+    expect(t.game.moveModifiers.isActionLocked('attack3')).toBe(true);
+    expect(t.game.moveModifiers.isActionLocked('attack1')).toBe(false);
+    t.actor.stamina = 1;
+    t.verbs.stamina.forceDrain(5);
+    t.run(2);
+    expect(t.game.moveModifiers.isActionLocked('sprint')).toBe(true);
+    t.actor.stamina = 100;
+    t.run(2);
+    expect(t.game.moveModifiers.isActionLocked('attack3')).toBe(false);
+  });
+
+  it('Rim Bash needs the skill; learned, block plus attack 1 staggers the enemy in front and reports it', () => {
+    const t = setup();
+    const reportTrigger = vi.fn();
+    t.ctx.services.provide('abilities' as never, { reportTrigger } as never);
+    let learned = false;
+    t.ctx.services.provide('progression' as never, { learned: () => learned } as never);
+    const e = t.enemy(-1.5);
+    t.press('KeyB');
+    t.run(5);
+    t.press('Digit1');
+    t.run(2);
+    t.release('Digit1');
+    expect(e.poise).toBe(20);
+    expect(reportTrigger).not.toHaveBeenCalled();
+    t.run(40);
+    learned = true;
+    t.press('Digit1');
+    t.run(2);
+    expect(e.poise).toBe(0);
+    expect(reportTrigger).toHaveBeenCalledWith('skill.knight.rimBash');
   });
 });
 
