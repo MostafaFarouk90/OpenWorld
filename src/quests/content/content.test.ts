@@ -16,7 +16,7 @@ const hasKey = (k: string) => k in all;
 describe('quest content', () => {
   it('has the expected quest ids, unique', () => {
     const ids = questDefs.map((q) => q.id);
-    expect(ids).toEqual(['t03', 't12', 'm01', 'm02', 'm03', 'm04', 'm05', 'd01', 'r01', 'r02']);
+    expect(ids).toEqual(['t03', 't12', 'm01', 'm02', 'm03', 'm04', 'm05', 'd01', 'r01', 'r02', 'm06', 'm07', 'm08', 'm09', 'm10', 'r03', 'r04', 'd02']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 

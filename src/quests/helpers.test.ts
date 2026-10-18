@@ -171,7 +171,7 @@ describe('quest posts', () => {
   it('never puts Tobb in a rule', () => {
     expect(POST_RULES.map((r) => r.npcId)).not.toContain('tobb');
     const w = makeWorld();
-    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager }))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'gerta', 'pennard']);
+    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager }))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'gerta', 'edric', 'vey', 'merrin', 'pennard']);
   });
 });
 
