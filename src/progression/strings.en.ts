@@ -40,6 +40,7 @@ export const SKILL_STRINGS_EN: Record<string, string> = {
   'hud.skills.branch.bulwark': 'Bulwark',
   'hud.skills.branch.vanguard': 'Vanguard',
   'hud.skills.branch.standard': 'Standard',
+  'hud.skills.empty': 'This class has no skills yet.',
   'hud.skills.tier': 'Tier {tier}',
   'hud.skills.active': 'Active',
   'hud.skills.passive': 'Passive',
