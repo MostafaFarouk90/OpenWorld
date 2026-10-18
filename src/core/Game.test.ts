@@ -683,13 +683,13 @@ describe('v0.4 core additions', () => {
     const scope = new Scope();
     const ctx = t.game.scopedContext(scope);
     const seen: boolean[] = [];
-    ctx.gates.flag('story.slice.harrowmarkOpen', (open) => seen.push(open));
+    ctx.gates.flag('test.gate.flag', (open) => seen.push(open));
     const prior = ctx.actors.spawn({ kind: 'ashen-prior', team: 'hostile', maxHealth: 100, maxPoise: 30 });
     ctx.bosses.register(prior.id, { bossId: 'ashen-prior', nameKey: 'boss.ashen-prior', phases: [0.5], breaksPerPhase: 3 });
     expect(t.game.ctx.bosses.active()).toEqual(['ashen-prior']);
     scope.close();
     expect(t.game.ctx.bosses.active()).toEqual([]);
-    t.game.ctx.state.setFlag('story.slice.harrowmarkOpen', true);
+    t.game.ctx.state.setFlag('test.gate.flag', true);
     expect(seen).toEqual([false]);
     t.world.dispose();
   });

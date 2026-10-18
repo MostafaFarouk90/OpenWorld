@@ -4,8 +4,7 @@ import type { GamePlugin } from '../core/plugins';
 import type { ElementLike } from './dom';
 import './events';
 import { AbilityBar, LeapState, type AbilitySlotInfo } from './AbilityBar';
-import { ActContinuesCard, hudOptions, type KeySource } from './ActContinuesCard';
-import { ActEndingCard, ACT_ENDING_CAMP_FLAGS, ACT_ENDING_GATE_FLAG, ACT_ENDING_SEEN_FLAG } from './ActEndingCard';
+import { ActEndingCard, ACT_ENDING_CAMP_FLAGS, ACT_ENDING_GATE_FLAG, ACT_ENDING_SEEN_FLAG, type KeySource } from './ActEndingCard';
 import { BossBar } from './BossBar';
 import { ChaseTimer } from './ChaseTimer';
 import { ClassLabel } from './ClassLabel';
@@ -26,7 +25,7 @@ import { asHtml, hudDocument, injectCss, projectToScreen, soft } from './soft';
 import type { HudSlot } from '../ui/HudLayer';
 import type { HudWidgetView } from './widget';
 import type { ProgressionService } from './ports';
-import { fogOpen } from '../region/fogWall';
+import { FOG_TRIGGER_ID, fogOpen } from '../region/fogWall';
 import { getSkill } from '../progression/skills';
 import { LEVEL_CAP, xpForLevel } from '../progression/tuning';
 
@@ -220,14 +219,14 @@ const hudPlugin: GamePlugin = {
     ctx.events.on('companion.aura', (e) => portrait.aura(e.companionId, e.active));
     mount('top-left', portrait, 40);
 
-    // "Act 1 continues" card, behind hudOptions.showActContinues.
+    // The fog wall before M05 (its trigger exists only while the wall stands): one toast per session on walking into it.
     const keyTarget = typeof globalThis.addEventListener === 'function' ? (globalThis as unknown as KeySource) : null;
-    const card = new ActContinuesCard(doc, { t, keys: keyTarget, enabled: () => hudOptions.showActContinues,
-      // The wall stands iff none of region/fogWall's open flags is true (the same list the map uses).
-      alreadyOpen: () => fogOpen(ctx.state),
+    let fogToasted = false;
+    ctx.events.on('trigger.enter', (e) => {
+      if (e.triggerId !== FOG_TRIGGER_ID || fogToasted || fogOpen(ctx.state)) return;
+      fogToasted = true;
+      ctx.events.emit('hud.toast', { textKey: 'hud.fog.toast' });
     });
-    ctx.events.on('trigger.enter', (e) => card.onTrigger(e.triggerId));
-    mount('center', card, 0);
 
     // Act 1 mini-ending card: live on act.ended, re-derived on load only while neither once-flag is set.
     const ending = new ActEndingCard(doc, {
