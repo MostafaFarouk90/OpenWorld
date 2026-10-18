@@ -60,16 +60,25 @@ const hudPlugin: GamePlugin = {
     });
     ctx.events.on('scar.added', () => status.pulse());
     // Burn 75+ tints the mercy prompt's cost amber (CSS only; the text is thread 1's string in core's PromptWidget).
+    const bodyEl = () => (typeof document !== 'undefined' ? document.body : undefined);
+    let burnClass = false;
     ctx.hud.mount('top-left', {
       id: status.id,
       element: asHtml(status.element),
       order: 20,
       update() {
         status.update();
-        const body = typeof document !== 'undefined' ? document.body : undefined;
-        body?.classList?.toggle('owg-burn-scar', (soft(ctx, 'spells')?.burn ?? 0) >= 75);
+        const hot = (soft(ctx, 'spells')?.burn ?? 0) >= 75;
+        if (hot !== burnClass) {
+          burnClass = hot;
+          bodyEl()?.classList?.toggle('owg-burn-scar', hot);
+        }
       },
-      dispose: () => status.dispose(),
+      dispose: () => {
+        burnClass = false;
+        bodyEl()?.classList?.remove('owg-burn-scar');
+        status.dispose();
+      },
     });
 
     const buffs = new Map<string, BuffInfo>();
@@ -202,7 +211,9 @@ const hudPlugin: GamePlugin = {
 
     // "Act 1 continues" card, behind hudOptions.showActContinues.
     const keyTarget = typeof globalThis.addEventListener === 'function' ? (globalThis as unknown as KeySource) : null;
-    const card = new ActContinuesCard(doc, { t, keys: keyTarget, enabled: () => hudOptions.showActContinues });
+    const card = new ActContinuesCard(doc, { t, keys: keyTarget, enabled: () => hudOptions.showActContinues,
+      alreadyOpen: () => ctx.state.getBool('story.slice.harrowmarkOpen'),
+    });
     ctx.events.on('trigger.enter', (e) => card.onTrigger(e.triggerId));
     mount('center', card, 0);
 
@@ -213,6 +224,10 @@ const hudPlugin: GamePlugin = {
         doc,
         t,
         keys: keyTarget as RespecModalDeps['keys'],
+        gold: () => {
+          const g = (soft(ctx, 'inventory') as { gold?: unknown } | undefined)?.gold;
+          return typeof g === 'number' && Number.isFinite(g) ? g : undefined;
+        },
         openModal: (w) => ctx.hud.openModal({ id: w.id, element: asHtml(w.element), dispose: w.dispose }, { context: 'menu' }),
       }),
     );

@@ -9,7 +9,7 @@ const CHROME: Record<string, string> = {
   'codex.lockedBody': 'Not yet discovered.',
   'codex.empty': 'Nothing here yet.',
   'codex.tally': 'Released {release} · Spared {spare} · Calmed {calm}',
-  'codex.hint': 'Left/Right: tab · Up/Down: select · L or Esc: close',
+  'codex.hint': 'Left/Right: tab · Up/Down: select · {codex} or {menu}: close',
 };
 
 /** Placeholder greybox text; thread 6 / the writer replace the lore bodies. */
@@ -19,11 +19,11 @@ const BODIES: Record<string, [string, string]> = {
   'bestiary.ashen-prior': ['The Ashen Prior', 'Keeper of the vault below the chapel. His grief burns hotter than his flame. He can be broken, or he can be freed.'],
   'lore.leap-a': ['The Leap Stone, North', '[Greybox] A carved stone on the first ridge. It speaks of those who crossed the gap in a single breath.'],
   'lore.leap-b': ['The Leap Stone, South', '[Greybox] A second stone, older. The runes say the gap was never a wall, only a question.'],
-  'howto.release': ['Release', 'Hold T near a staggered wraith to Release it. This is a mercy: it costs Burn, and the wraith is freed rather than slain.'],
-  'howto.spare': ['Spare', 'Hold T near a yielding foe to Spare it. It stands down and does not fight you again.'],
+  'howto.release': ['Release', 'Hold {key} near a staggered wraith to Release it. This is a mercy: it costs Burn, and the wraith is freed rather than slain.'],
+  'howto.spare': ['Spare', 'Hold {key} near a yielding foe to Spare it. It stands down and does not fight you again.'],
   'howto.burn-scars': ['Burn and Scars', 'Burn builds as you draw on the forge-fire. Every Scar you take lowers your maximum health for good.'],
-  'howto.surge-leap': ['Surge Leap', 'Press V to leap. Burn never blocks it. At 75 or more Burn, a Scar risk is shown.'],
-  'howto.rally-cry': ['Rally Cry', 'A shout that steadies allies near you. It is strongest when your companion fights beside you.'],
+  'howto.surge-leap': ['Surge Leap', 'Press {key} to leap. Burn never blocks it. At 75 or more Burn, a Scar risk is shown.'],
+  'howto.rally-cry': ['Rally Cry', 'A battle-shout from the Standard branch of the skill tree. It steadies you and restores a little stamina.'],
   'howto.warmth-tier': ['Warmth Tier', 'Each lit forge-shrine raises Warmth. Higher tiers change how the world and its creatures answer you.'],
 };
 

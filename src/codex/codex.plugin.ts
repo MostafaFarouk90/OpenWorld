@@ -2,6 +2,7 @@ import type { GameContext } from '../core/Game';
 import type { GamePlugin } from '../core/plugins';
 import { CodexModel, normaliseTally, ZERO_COUNTS } from './CodexModel';
 import { CODEX_MODAL_ID, createCodexModal, type CodexModalWidget } from './CodexView';
+import { SHRINE_IDS } from '../map/ForgeMarks';
 import { BESTIARY_IDS, HOWTO_IDS } from './entries';
 import { CODEX_STRINGS_EN } from './strings.en';
 import type { CodexService, MercyCounts } from './service';
@@ -12,13 +13,15 @@ const FIRST_USE_FLAGS: readonly { flag: string; entry: string }[] = [
   { flag: 'prompt.surge.count', entry: HOWTO_IDS.burnScars },
   { flag: 'prompt.surgeLeap.count', entry: HOWTO_IDS.surgeLeap },
   { flag: 'ability.surge-leap.learned', entry: HOWTO_IDS.surgeLeap },
-  { flag: 'ability.rally-cry.learned', entry: HOWTO_IDS.rallyCry },
-  { flag: 'warmth.tier', entry: HOWTO_IDS.warmthTier },
 ];
 
 const ABILITY_ENTRIES: Readonly<Record<string, string>> = {
   'surge-leap': HOWTO_IDS.surgeLeap,
-  'rally-cry': HOWTO_IDS.rallyCry,
+};
+
+/** Skill-tree skills (progression `skill.learned` / `learned()`) that unlock a how-to entry. */
+const SKILL_ENTRIES: Readonly<Record<string, string>> = {
+  'knight.rallyCry': HOWTO_IDS.rallyCry,
 };
 
 const BESTIARY = new Set<string>(BESTIARY_IDS);
@@ -66,6 +69,7 @@ const codex: GamePlugin = {
           const t = tally();
           return t ? (t.get(kind) ?? ZERO_COUNTS) : null;
         },
+        glyph: (a) => (ctx.input as unknown as { bindings?: { glyph(a: string): string } }).bindings?.glyph(a) ?? '?',
         t: (k, p) => ctx.strings.t(k, p),
       });
       if (entryId) w.select(entryId);
@@ -104,7 +108,10 @@ const codex: GamePlugin = {
       const entry = typeof e?.id === 'string' ? ABILITY_ENTRIES[e.id] : undefined;
       if (entry) model.unlock(entry);
     });
-    onLoose(ctx, 'companion.joined', () => void model.unlock(HOWTO_IDS.rallyCry));
+    onLoose(ctx, 'skill.learned', (e: { skillId?: unknown }) => {
+      const entry = typeof e?.skillId === 'string' ? SKILL_ENTRIES[e.skillId] : undefined;
+      if (entry) model.unlock(entry);
+    });
     onLoose(ctx, 'scar.added', () => void model.unlock(HOWTO_IDS.burnScars));
     onLoose(ctx, 'warmth.changed', (e: { tier?: unknown }) => {
       if (typeof e?.tier === 'number' && e.tier > 0) model.unlock(HOWTO_IDS.warmthTier);
@@ -122,6 +129,24 @@ const codex: GamePlugin = {
     /** A save with no codex entry (or an older one) still reflects what the flags and the tally say was used. */
     const backfill = (): void => {
       for (const { flag, entry } of FIRST_USE_FLAGS) if (used(flag)) model.unlock(entry);
+      const prog = (ctx.services as unknown as Loose).get('progression') as { learned?: (id: string) => boolean } | undefined;
+      for (const [skill, entry] of Object.entries(SKILL_ENTRIES)) {
+        try {
+          if (prog?.learned?.(skill) === true) model.unlock(entry);
+        } catch (e) {
+          warn(`codex: progression.learned() failed: ${String(e)}`);
+        }
+      }
+      // Warmth is derived, never stored: read the service tier, or any lit shrine flag.
+      const warmth = (ctx.services as unknown as Loose).get('warmth') as { tier?: () => unknown } | undefined;
+      let tier = 0;
+      try {
+        const v = warmth?.tier?.();
+        if (typeof v === 'number' && Number.isFinite(v)) tier = v;
+      } catch (e) {
+        warn(`codex: warmth.tier() failed: ${String(e)}`);
+      }
+      if (tier > 0 || SHRINE_IDS.some((id) => ctx.state.getBool(`shrine.${id}.lit`))) model.unlock(HOWTO_IDS.warmthTier);
       const t = tally();
       if (t) {
         for (const [kind, c] of t) {
@@ -135,7 +160,8 @@ const codex: GamePlugin = {
     };
     ctx.events.on('save.loaded', backfill);
     onLoose(ctx, 'flag.changed', (e: { key?: unknown }) => {
-      if (typeof e?.key === 'string' && FIRST_USE_FLAGS.some((f) => f.flag === e.key)) backfill();
+      if (typeof e?.key !== 'string') return;
+      if (FIRST_USE_FLAGS.some((f) => f.flag === e.key) || (e.key.startsWith('shrine.') && e.key.endsWith('.lit'))) backfill();
     });
     ctx.events.on('ui.modal', (e) => {
       if (e.id === CODEX_MODAL_ID && !e.open) {
