@@ -24,7 +24,8 @@ describe('sections data', () => {
     expect(m06.checkpoints.map((c) => c.anchor)).toEqual(['stealth.m06.start', 'stealth.m06.cp.inside']);
     const m09 = SECTIONS.find((s) => s.id === 'm09.counting-house')!;
     expect(m09.bounds).toEqual({ interior: 'counting-house' });
-    expect(m09.quest.exitArmedAfter).toEqual(['o3', 'o4', 'o5']);
+    expect(m09.quest.exitArmedAfter).toEqual(['o3']);
+    expect(m09.quest.liveUntil).toBe('o4'); // thread 6 PR 2: invoices are one objective (o3), the exit is o4
     expect(m09.guardGroups).toEqual(['stealth.m09.hall', 'stealth.m09.stacks', 'stealth.m09.clerk']);
   });
 });

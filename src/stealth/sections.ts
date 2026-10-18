@@ -57,7 +57,7 @@ export const SECTIONS: readonly StealthSectionDef[] = [
   },
   {
     id: 'm09.counting-house',
-    quest: { id: 'm09', liveFrom: 'o2', liveUntil: 'o6', exitArmedAfter: ['o3', 'o4', 'o5'] },
+    quest: { id: 'm09', liveFrom: 'o2', liveUntil: 'o4', exitArmedAfter: ['o3'] },
     bounds: { interior: 'counting-house' },
     checkpoints: [
       { id: 'ch.entry', anchor: 'stealth.m09.entry', volume: v('stealth.m09.entry', 2, 3, 2) },
