@@ -17,7 +17,7 @@ export interface RespecProgression {
   respec(): RespecResult;
 }
 
-/** Thread 8's dialog service. It never calls progression; `confirm` does. */
+/** Thread 8's `respecModal` service. It never calls progression; `confirm` does. */
 export interface RespecDialog {
   open(opts: { quote: RespecQuote; confirm: () => RespecResult; cancel: () => void }): boolean;
 }
