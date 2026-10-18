@@ -64,6 +64,16 @@ export interface CombatVerbsService {
    * tick while no dodge or knockback is running (those win); several owners: the latest one wins. `x`, `z` is a unit direction.
    */
   holdForcedMove(owner: string, move: { x: number; z: number; speed: number } | null): void;
+  /**
+   * Multiplies the dodge's travel distance (Ashblade Quick Slip); the i-frames and the clip are unchanged. Multipliers
+   * combine by product, clamped to 0.5..2; the same id replaces its earlier entry. Returns the remover.
+   */
+  addDodgeDistanceMultiplier(id: string, mult: number | (() => number)): () => void;
+  /**
+   * Makes the player invulnerable for `seconds` of fixed ticks through the same i-frame gate as the dodge (Ashblade
+   * Ash-drift). The same source extends, never stacks. Cleared on death, on a load and on dispose. Returns the early release.
+   */
+  addInvulnerability(source: string, seconds: number): () => void;
 }
 
 declare module '../core/Services' {
@@ -124,6 +134,9 @@ export class CombatVerbs {
   readonly attackSets = new AttackSets();
   private readonly forcedHolds = new Map<string, { x: number; z: number; speed: number }>();
   readonly attackSpeed = new SpeedMultipliers((id) => console.warn(`combatVerbs: attack speed multiplier "${id}" is invalid, ignored`));
+  readonly dodgeDistance = new SpeedMultipliers((id) => console.warn(`combatVerbs: dodge distance multiplier "${id}" is invalid, ignored`));
+  /** Timed invulnerability sources (`addInvulnerability`): source name to remaining fixed ticks. */
+  private readonly timedInvuln = new Map<string, number>();
   private appliedAttackClass: string | null = null;
   private offIronStance: (() => void) | null = null;
   private controller: AnimationController | null = null;
@@ -187,6 +200,7 @@ export class CombatVerbs {
       ctx.events.on('actor.died', (e) => {
         if (e.actorId === this.actor.id) this.deathPending = true;
       }),
+      ctx.events.on('save.loaded', () => this.clearTimedInvulnerability()),
       ctx.events.on('rest', (e) => {
         // Inn rests (placeId only) do not move the respawn point.
         if (e.waystoneId) this.lastRestedWaystoneId = e.waystoneId;
@@ -258,6 +272,8 @@ export class CombatVerbs {
           self.forcedHolds.set(owner, { ...move });
         } else self.forcedHolds.delete(owner);
       },
+      addDodgeDistanceMultiplier: (id, mult) => self.dodgeDistance.add(id, mult),
+      addInvulnerability: (source, seconds) => self.addTimedInvulnerability(source, seconds),
     });
     const rig = ctx.cameraRig;
     if (rig) {
@@ -281,6 +297,7 @@ export class CombatVerbs {
     this.invuln.remove('dodge');
     this.invuln.remove('respawn');
     this.invuln.remove('secondWind');
+    this.clearTimedInvulnerability();
     this.controller?.exitAction();
     if (this.lockOn.target !== null) this.ctx.events.emit('lockon.changed', { targetId: null });
     const rig = this.ctx.cameraRig;
@@ -304,6 +321,7 @@ export class CombatVerbs {
     const { ctx, actor } = this;
     const avatar = ctx.world.avatar;
     this.expireGrace();
+    this.tickTimedInvulnerability();
     this.secondWind.tickGrace();
     this.poise.tick();
     if (!avatar) return;
@@ -400,6 +418,7 @@ export class CombatVerbs {
       inputZ: w.z,
       facingYaw: ctx.player.facingYaw,
       lockedOn: this.lockOn.target !== null,
+      distanceScale: this.dodgeDistance.value(),
     });
     this.freeDodgeYaw = this.lockOn.target === null ? start.yaw : null;
     this.knockback = null;
@@ -626,6 +645,7 @@ export class CombatVerbs {
     this.ctx.world.player.setForcedMove(null);
     this.ctx.world.player.setFacingOverride(null);
     this.pending.length = 0;
+    this.clearTimedInvulnerability();
     this.guard.setBlockHeld(false, ctx.clock.tick);
     c?.enterAction('dying');
     this.deadModifier ??= ctx.player.addMoveModifier('player-dead', { lockMove: true, lockActions: DEAD_LOCKED_ACTIONS });
@@ -695,6 +715,31 @@ export class CombatVerbs {
     this.invuln.add('respawn');
     this.respawnGrace = RESPAWN.graceTicks;
     ctx.events.emit('player.respawned', { source });
+  }
+
+  private addTimedInvulnerability(source: string, seconds: number): () => void {
+    if (typeof source !== 'string' || source === '' || !Number.isFinite(seconds) || seconds <= 0) return () => undefined;
+    const key = `timed:${source}`;
+    const ticks = Math.ceil(seconds * 60);
+    this.timedInvuln.set(key, Math.max(this.timedInvuln.get(key) ?? 0, ticks));
+    this.invuln.add(key);
+    return () => {
+      if (this.timedInvuln.delete(key)) this.invuln.remove(key);
+    };
+  }
+
+  private tickTimedInvulnerability(): void {
+    for (const [key, left] of this.timedInvuln) {
+      if (left <= 1) {
+        this.timedInvuln.delete(key);
+        this.invuln.remove(key);
+      } else this.timedInvuln.set(key, left - 1);
+    }
+  }
+
+  private clearTimedInvulnerability(): void {
+    for (const key of this.timedInvuln.keys()) this.invuln.remove(key);
+    this.timedInvuln.clear();
   }
 
   private expireGrace(): void {
