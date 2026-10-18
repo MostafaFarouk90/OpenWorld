@@ -1,15 +1,6 @@
-// In-memory stand-in for thread 0's GameContext, used by the region and npcs tests until the real
-// core merges. Records every registration so tests can assert on it and on teardown.
 import * as THREE from 'three';
-import type {
-  ActorInit,
-  ActorLike,
-  Anchor,
-  CoreContext,
-  GameSystem,
-  Interactable,
-  TriggerDef,
-} from '../coreTypes';
+import type { ActorInit, Anchor, GameSystem, Interactable, TriggerDef, CoreContext } from '../coreTypes';
+import type { Actor as ActorLike } from '../../actors/Actor';
 
 export interface FakeCore {
   ctx: CoreContext;
@@ -60,39 +51,38 @@ export function createFakeCore(): FakeCore {
     };
   };
 
-  const ctx: CoreContext = {
+  // A partial stand-in: it implements what the region and npcs code calls, typed loosely on purpose.
+  const impl = {
     scene,
     physics: {
       rapier: undefined as never,
-      addStaticCollider(desc) {
+      addStaticCollider(desc: object) {
         const c = { desc };
         colliders.add(c);
         return c as never;
       },
-      removeCollider(c) {
+      removeCollider(c: object) {
         colliders.delete(c as never);
       },
     },
     anchors: {
-      define(a) {
-        unique(anchors, a.id, 'anchor', a);
-      },
-      get(id) {
+      define: (a: Anchor) => unique(anchors, a.id, 'anchor', a),
+      get(id: string) {
         const a = anchors.get(id);
         if (!a) throw new Error(`unknown anchor "${id}"`);
         return a;
       },
-      find: (id) => anchors.get(id),
-      withTag: (tag) => [...anchors.values()].filter((a) => a.tags?.includes(tag)),
+      find: (id: string) => anchors.get(id),
+      withTag: (tag: string) => [...anchors.values()].filter((a) => a.tags?.includes(tag)),
     },
-    triggers: { add: (def) => unique(triggers, def.id, 'trigger', def) },
-    interaction: { register: (i) => unique(interactables, i.id, 'interactable', i) },
+    triggers: { add: (def: TriggerDef) => unique(triggers, def.id, 'trigger', def) },
+    interaction: { register: (i: Interactable) => unique(interactables, i.id, 'interactable', i) },
     actors: {
       spawn(init: ActorInit) {
         const n = (counters.get(init.kind) ?? 0) + 1;
         counters.set(init.kind, n);
         const id = init.id ?? `${init.kind}#${n}`;
-        const actor: ActorLike = {
+        const actor = {
           id,
           kind: init.kind,
           team: init.team,
@@ -101,21 +91,21 @@ export function createFakeCore(): FakeCore {
           dead: false,
           root: init.root ?? null,
           data: {},
-        };
+        } as unknown as ActorLike;
         actors.set(id, actor);
         return actor;
       },
-      despawn(id) {
+      despawn(id: string) {
         actors.delete(id);
       },
       bindOwner: () => () => {},
     },
     events: {
-      emit(type, payload) {
+      emit(type: string, payload: unknown) {
         emitted.push({ type, payload });
         for (const l of [...(listeners.get(type) ?? [])]) l(payload);
       },
-      on(type, l) {
+      on(type: string, l: (p: any) => void) {
         const set = listeners.get(type) ?? new Set();
         set.add(l);
         listeners.set(type, set);
@@ -123,31 +113,50 @@ export function createFakeCore(): FakeCore {
       },
     },
     state: {
-      getBool: (key, fallback = false) => {
+      getBool: (key: string, fallback = false) => {
         const v = flags.get(key);
         return typeof v === 'boolean' ? v : fallback;
       },
-      setFlag(key, value) {
+      setFlag(key: string, value: boolean | number | string) {
         flags.set(key, value);
       },
     },
     services: {
-      get: (name) => services.get(name),
-      provide: (name, impl) => unique(services, name, 'service', impl),
+      get: (name: string) => services.get(name),
+      provide: (name: string, service: unknown) => unique(services, name, 'service', service),
     },
     strings: {
-      register(_locale, table) {
-        for (const [k, v] of Object.entries(table)) {
-          if (strings.has(k)) throw new Error(`duplicate string key "${k}"`);
-          strings.set(k, v);
+      register(_locale: string, table: Record<string, string>) {
+        const added: string[] = [];
+        try {
+          for (const [k, v] of Object.entries(table)) {
+            if (strings.has(k)) throw new Error(`duplicate string key "${k}"`);
+            strings.set(k, v);
+            added.push(k);
+          }
+        } catch (err) {
+          for (const k of added) strings.delete(k);
+          throw err;
         }
+        return () => added.forEach((k) => strings.delete(k));
       },
-      t: (key) => strings.get(key) ?? key,
+      t: (key: string) => strings.get(key) ?? key,
     },
-    systems: { add: (s) => unique(systems, s.id, 'system', s) },
-    combat: { addTarget: (t) => void targets.push(t) },
+    systems: { add: (s: GameSystem) => unique(systems, s.id, 'system', s) },
+    combat: {
+      addTarget(t: unknown, actorId?: string) {
+        targets.push(t);
+        void actorId;
+        return () => {
+          const i = targets.indexOf(t);
+          if (i >= 0) targets.splice(i, 1);
+        };
+      },
+    },
+    assets: null,
     player: { feet: playerFeet },
   };
+  const ctx = impl as unknown as CoreContext;
 
   return {
     ctx,
@@ -165,7 +174,7 @@ export function createFakeCore(): FakeCore {
     targets,
     playerFeet,
     useRapier(rapier) {
-      (ctx.physics as { rapier: unknown }).rapier = rapier;
+      (impl.physics as { rapier: unknown }).rapier = rapier;
     },
     fire(type, payload) {
       for (const l of [...(listeners.get(type) ?? [])]) l(payload);
@@ -174,7 +183,7 @@ export function createFakeCore(): FakeCore {
       [...systems.values()]
         .filter((s) => s.fixedPhase === phase)
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .forEach((s) => s.fixedUpdate?.(dt));
+        .forEach((s) => s.fixedUpdate?.(dt, ctx));
     },
   };
 }

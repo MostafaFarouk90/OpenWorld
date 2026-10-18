@@ -5,7 +5,10 @@ import type { HurtboxDef } from '../combat/types';
 import type { ActorLike, Anchor, CoreContext } from './coreTypes';
 import { greyMat } from './greybox';
 
-export type ScarecrowDeps = Pick<CoreContext, 'scene' | 'actors' | 'combat' | 'events' | 'systems'>;
+export type ScarecrowDeps = Pick<CoreContext, 'scene' | 'actors' | 'combat' | 'events' | 'systems' | 'state'>;
+
+/** Set when the T01 scarecrow is knocked down, so a reload past T01 does not stand it up again. */
+export const SCARECROW_TOPPLED_FLAG = 'place.scarecrow.toppled';
 
 export const TOPPLE_SECONDS = 0.6;
 
@@ -70,7 +73,7 @@ export function spawnScarecrow(
 
   const actor = deps.actors.spawn({ kind: 'scarecrow', team: 'neutral', maxHealth: 20, hittable: true, root, owner: root });
   let hurtboxes: HurtboxSet | null = null;
-  let targetAdded = false;
+  let removeTarget: (() => void) | null = null;
   let died = false;
   let toppled = false;
   let disposed = false;
@@ -80,8 +83,8 @@ export function spawnScarecrow(
 
   const dropHurtboxes = (): void => {
     if (!hurtboxes) return;
-    if (targetAdded) deps.combat.removeTarget?.(hurtboxes);
-    targetAdded = false;
+    removeTarget?.();
+    removeTarget = null;
     hurtboxes.dispose();
     hurtboxes = null;
   };
@@ -108,11 +111,12 @@ export function spawnScarecrow(
 
   try {
     hurtboxes = new HurtboxSet(root, SCARECROW_DEFS, root);
-    deps.combat.addTarget(hurtboxes);
-    targetAdded = true;
+    // With the actor id the core also removes the target when the actor despawns.
+    removeTarget = deps.combat.addTarget(hurtboxes, actor.id);
     offDied = deps.events.on('actor.died', (p: { actorId?: string } | undefined) => {
       if (disposed || died || p?.actorId !== actor.id) return;
       died = true;
+      deps.state.setFlag(SCARECROW_TOPPLED_FLAG, true);
       dropHurtboxes();
       let t = 0;
       removeSystem = deps.systems.add({

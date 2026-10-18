@@ -55,7 +55,7 @@ export interface DoorSpec {
   name: string;
   side: 'N' | 'S' | 'E' | 'W';
   width: number;
-  /** Flags that all must be true for the door to open (the chapel stays shut until T04 starts). */
+  /** The door is locked until any one of these flags is true (empty or omitted: never locked). */
   openWhen?: string[];
 }
 

@@ -1,12 +1,14 @@
-// The Brightwater tutorial footprint, in engine metres from the origin (+Z north, yaw 0 faces +Z).
+// The Brightwater tutorial footprint, in engine metres from the origin, +Z north.
+// Anchor facings are written as compass headings (0 faces north/+Z, 90 faces east/+X) and stored as the
+// engine's yaw, where yaw 0 faces -Z, so yawDeg = heading + 180 (contracts/world-layout-and-npcs.md section 4).
 // Everything sits inside the flat meadow (SPAWN_FLAT_RADIUS) except the beyond-the-village anchors.
 import type { AnchorSpec, LayoutData, StructureSpec, TriggerSpec } from './layoutTypes';
 
-const a = (id: string, x: number, z: number, yawDeg: number, tags: string[] = [], rest: Partial<AnchorSpec> = {}): AnchorSpec => ({
+const a = (id: string, x: number, z: number, heading: number, tags: string[] = [], rest: Partial<AnchorSpec> = {}): AnchorSpec => ({
   id,
   x,
   z,
-  yawDeg,
+  yawDeg: (heading + 180) % 360,
   tags,
   ...rest,
 });
@@ -50,14 +52,16 @@ const anchors: AnchorSpec[] = [
   a('chapel.door', 46, 60, 90, ['poi', 'door']),
   a('chapel.kneel', 53, 60, 90, ['poi'], { onStructure: 'chapel' }),
   a('chapel.altar', 57, 60, 90, ['poi'], { onStructure: 'altar' }),
-  a('chapel.banner-1', 49, 60, 0, ['elevated', 'banner'], { dy: 9, onStructure: 'chapel' }),
-  a('chapel.banner-2', 52, 60, 0, ['elevated', 'banner'], { dy: 9, onStructure: 'chapel' }),
-  a('chapel.banner-3', 55, 60, 0, ['elevated', 'banner'], { dy: 9, onStructure: 'chapel' }),
+  // T02 look targets: banners hung on the chapel's west face, either side of the door.
+  a('chapel.banner-1', 45.6, 54, 270, ['elevated', 'banner'], { dy: 5 }),
+  a('chapel.banner-2', 45.6, 57, 270, ['elevated', 'banner'], { dy: 5 }),
+  a('chapel.banner-3', 45.6, 63, 270, ['elevated', 'banner'], { dy: 5 }),
 
-  // Waystones (anchors only; thread 6 owns the stones' behaviour and finds them by tag).
-  a('waystone.chapel', 40, 45, 0, ['waystone'], { onStructure: 'waystone-chapel' }),
-  a('waystone.kettlewick', 12, 156, 0, ['waystone', 'waystone-lit'], { onStructure: 'waystone-kettlewick' }),
-  a('waystone.north', 10, 310, 0, ['waystone'], { onStructure: 'waystone-north' }),
+  // Waystones: the anchor is where the player stands (fast travel, respawn), 1.8 m south of the stone, facing it.
+  // Thread 6 owns the stones' behaviour and finds them by tag.
+  a('waystone.chapel', 40, 45, 0, ['waystone']),
+  a('waystone.kettlewick', 12, 156, 0, ['waystone', 'waystone-lit']),
+  a('waystone.north', 10, 310, 0, ['waystone']),
 
   // NPC posts.
   a('npc-post.gaut', -3, 24, 0, ['npc-post']),
@@ -111,7 +115,7 @@ const anchors: AnchorSpec[] = [
   a('spawn.m01.wraith-4', 4, 150, 0, ['spawn']),
   a('spawn.m01.wraith-5', -6, 112, 0, ['spawn']),
 
-  // First open-world patrol, 235 m beyond the T15 wave.
+  // First open-world patrol, a ring of radius 20 around (0, 400): 215 m past the Kettlewick gate.
   a('patrol.north.1', 20, 400, 0, ['patrol']),
   a('patrol.north.2', 0, 420, 0, ['patrol']),
   a('patrol.north.3', -20, 400, 0, ['patrol']),
@@ -153,8 +157,12 @@ const structures: StructureSpec[] = [
   { id: 'loft', kind: 'loft', x: 0, z: 0, yawDeg: 0, footprint: [8, 8], mode: 'open' },
   { id: 'gate-lane', kind: 'gate', x: 0, z: 25, yawDeg: 0, footprint: [8, 1], mode: 'open' },
   { id: 'gate-kettlewick', kind: 'gate', x: 0, z: 165, yawDeg: 0, footprint: [10, 1], mode: 'open' },
-  { id: 'cart', kind: 'cart', x: 0, z: 70, yawDeg: 0, footprint: [4, 2.5], mode: 'solid', height: 1 },
-  { id: 'fence-lane', kind: 'fence', x: 0, z: 90, yawDeg: 0, footprint: [10, 0.6], mode: 'solid', height: 0.9 },
+  // T07: a cart and a fence that must be jumped (apex of a jump is about 1.05 m, so both stay low), with
+  // fences either side so the lane is walled from house to house.
+  { id: 'cart', kind: 'cart', x: 0, z: 70, yawDeg: 0, footprint: [4, 1], mode: 'solid', height: 0.6 },
+  { id: 'fence-cart-w', kind: 'fence', x: -9, z: 70, yawDeg: 0, footprint: [14, 0.6], mode: 'solid', height: 0.6 },
+  { id: 'fence-cart-e', kind: 'fence', x: 9, z: 70, yawDeg: 0, footprint: [14, 0.6], mode: 'solid', height: 0.6 },
+  { id: 'fence-lane', kind: 'fence', x: 0, z: 90, yawDeg: 0, footprint: [32, 0.6], mode: 'solid', height: 0.6 },
   // Kettlewick: fourteen houses (bakery and tavern included), mill and well.
   {
     id: 'bakery',
@@ -197,12 +205,12 @@ const structures: StructureSpec[] = [
     footprint: [12, 18],
     mode: 'enterable',
     height: 8,
-    door: { name: 'chapel', side: 'W', width: 2.4, openWhen: ['tutorial.t04.begin'] },
+    door: { name: 'chapel', side: 'W', width: 2.4, openWhen: ['tutorial.t04.begin', 'tutorial.skipped'] },
   },
   { id: 'altar', kind: 'altar', x: 57, z: 60, yawDeg: 0, footprint: [1.6, 3], mode: 'solid', height: 1.1, inside: 'chapel' },
-  { id: 'waystone-chapel', kind: 'waystone', x: 40, z: 45, yawDeg: 0, footprint: [1.6, 1.6], mode: 'solid', height: 2.4 },
-  { id: 'waystone-kettlewick', kind: 'waystone', x: 12, z: 156, yawDeg: 0, footprint: [1.6, 1.6], mode: 'solid', height: 2.4 },
-  { id: 'waystone-north', kind: 'waystone', x: 10, z: 310, yawDeg: 0, footprint: [1.6, 1.6], mode: 'solid', height: 2.4 },
+  { id: 'waystone-chapel', kind: 'waystone', x: 40, z: 46.8, yawDeg: 0, footprint: [1.6, 1.6], mode: 'solid', height: 2.4 },
+  { id: 'waystone-kettlewick', kind: 'waystone', x: 12, z: 157.8, yawDeg: 0, footprint: [1.6, 1.6], mode: 'solid', height: 2.4 },
+  { id: 'waystone-north', kind: 'waystone', x: 10, z: 311.8, yawDeg: 0, footprint: [1.6, 1.6], mode: 'solid', height: 2.4 },
 ];
 
 export const BRIGHTWATER_LAYOUT: LayoutData = {

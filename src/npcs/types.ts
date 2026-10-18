@@ -26,7 +26,7 @@ export interface NpcHandle {
   readonly def: NpcDef;
   readonly root: THREE.Object3D;
   readonly actor: ActorLike;
-  /** Current facing, radians (0 = +Z, pi/2 = +X). */
+  /** Current facing, radians (0 = -Z, pi/2 = -X: forward is (-sin yaw, -cos yaw)). */
   readonly yaw: number;
   /** True once the GLB has replaced the placeholder. */
   readonly hasModel: boolean;
@@ -38,4 +38,18 @@ export interface NpcsService {
   place(id: string, anchorId: string): boolean;
   get(id: string): NpcHandle | undefined;
   position(id: string): Vec3 | undefined;
+}
+
+declare module '../core/Services' {
+  interface GameServices {
+    /** Provided by the npcs plugin (thread 4). */
+    npcs: NpcsService;
+  }
+}
+
+declare module '../core/events' {
+  interface GameEventMap {
+    /** A talk interactable was used while no dialogue service exists (thread 3 not merged or failed). */
+    'npc.talk-unavailable': { npcId: string };
+  }
 }

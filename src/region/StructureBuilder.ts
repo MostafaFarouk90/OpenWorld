@@ -7,7 +7,12 @@ import type { CoreContext } from './coreTypes';
 import { doorFillBox, wallBoxes } from './geometry';
 import { DOOR_HEIGHT, buildGreybox, disposeGreybox, greyMat, structureHeight } from './greybox';
 import type { LayoutData, StructureSpec } from './layoutTypes';
-import { createLocalChest, createLocalDoor, type ChestOptions, type Disposable, type DoorOptions } from './localDoor';
+import { Chest, type ChestOptions } from '../interaction/Chest';
+import { Door, type DoorOptions } from '../interaction/Door';
+
+export interface Disposable {
+  dispose(): void;
+}
 
 export type Collider = RAPIER.Collider;
 
@@ -28,13 +33,15 @@ export interface StructureHandle {
   dispose(): void;
 }
 
-/** Default factories for StructureDeps built from a core context. */
-export function localFactories(ctx: Pick<CoreContext, 'physics' | 'interaction' | 'state' | 'events' | 'systems'>) {
+/** The core's Door and Chest, bound to a context; tests substitute their own. */
+export function coreFactories(ctx: Pick<CoreContext, 'interaction' | 'state' | 'events' | 'systems'>) {
   return {
-    createDoor: (o: DoorOptions) => createLocalDoor(ctx, o),
-    createChest: (o: ChestOptions) => createLocalChest(ctx, o),
+    createDoor: (o: DoorOptions): Disposable => new Door(ctx, o),
+    createChest: (o: ChestOptions): Disposable => new Chest(ctx, o),
   };
 }
+
+export type { ChestOptions, DoorOptions };
 
 const VISUAL = 'visual';
 const POST_HALF = 0.25;
@@ -132,7 +139,8 @@ export function buildStructures(
               openAngle: Math.PI / 2,
               seconds: 0.6,
               collider: fillCollider,
-              locked: () => !openWhen.every((f) => deps.state.getBool(f)),
+              // Any one flag opens it (the chapel opens at T04, or when the tutorial is skipped).
+              locked: () => openWhen.length > 0 && !openWhen.some((f) => deps.state.getBool(f)),
             }),
           );
         }
