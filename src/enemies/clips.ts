@@ -15,6 +15,8 @@ export const ENEMY_CLIPS = {
   kneelIdle: 'Sit_Floor_Idle',
   guard: 'Blocking',
   backOff: 'Walking_Backwards',
+  /** The cutpurse's hand-to-belt smoke telegraph. */
+  useItem: 'Use_Item',
 } as const;
 
 export interface EnemyAttackClip {
@@ -33,6 +35,8 @@ export interface EnemyAttackClip {
  *   wraithGrab  Unarmed_Melee_Attack_Punch_B    1.667 s  [0.21, 0.31]
  *   soldierChop 1H_Melee_Attack_Chop            1.067 s  [0.49, 0.57]  (the player's wider 0.45..0.62 was measured differently)
  *   soldierBash Block_Attack (left, shield)     1.067 s  [0.27, 0.60]  (a slow push; the sword also flicks at 0.37..0.45)
+ *   cutpurseSlash 1H_Melee_Attack_Slice_Horizontal 1.067 s [0.18, 0.29]  (right hand, same rule; peak 23.7 m/s)
+ *   cutpurseGrab  Unarmed_Melee_Attack_Punch_A  1.467 s  [0.24, 0.33]  (a snatch with the right hand; peak 7.4 m/s)
  */
 export const ENEMY_ATTACKS = {
   wraithClaw: { clip: '1H_Melee_Attack_Slice_Diagonal', activeStart: 0.36, activeEnd: 0.44 },
@@ -40,4 +44,6 @@ export const ENEMY_ATTACKS = {
   wraithGrab: { clip: 'Unarmed_Melee_Attack_Punch_B', activeStart: 0.21, activeEnd: 0.31 },
   soldierChop: { clip: '1H_Melee_Attack_Chop', activeStart: 0.49, activeEnd: 0.57 },
   soldierBash: { clip: 'Block_Attack', activeStart: 0.27, activeEnd: 0.6 },
+  cutpurseSlash: { clip: '1H_Melee_Attack_Slice_Horizontal', activeStart: 0.18, activeEnd: 0.29 },
+  cutpurseGrab: { clip: 'Unarmed_Melee_Attack_Punch_A', activeStart: 0.24, activeEnd: 0.33 },
 } as const satisfies Record<string, EnemyAttackClip>;

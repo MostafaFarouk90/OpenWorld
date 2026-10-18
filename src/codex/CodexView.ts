@@ -1,7 +1,7 @@
 import type { DocumentLike, ElementLike } from '../hud/dom';
 import type { HudWidget } from '../ui/HudLayer';
 import { asHtml, hudDocument } from '../hud/soft';
-import { CODEX_TABS, entriesOf, findEntry, type CodexTab } from './entries';
+import { CODEX_TABS, CodexRegistry, type CodexEntrySource, type CodexTab } from './entries';
 import { ZERO_COUNTS } from './CodexModel';
 import type { MercyCounts } from './service';
 
@@ -18,6 +18,8 @@ export interface CodexViewDeps {
   glyph?(action: string): string;
   /** Milliseconds clock for the tally poll (tests). */
   now?(): number;
+  /** Entry source (built-ins plus registered); defaults to the built-ins. */
+  entries?: CodexEntrySource;
   doc?: DocumentLike;
 }
 
@@ -25,6 +27,7 @@ export interface CodexViewDeps {
 const ENTRY_ACTION: Readonly<Record<string, string>> = {
   'howto.release': 'mercy',
   'howto.spare': 'mercy',
+  'howto.calm': 'mercy',
   'howto.surge-leap': 'surgeLeap',
 };
 
@@ -41,6 +44,7 @@ export interface CodexModalWidget extends HudWidget {
 }
 
 export function createCodexModal(deps: CodexViewDeps): CodexModalWidget {
+  const source = deps.entries ?? new CodexRegistry();
   const doc = deps.doc ?? hudDocument();
   const root = doc.createElement('div');
   root.className = 'codex-modal';
@@ -76,12 +80,13 @@ export function createCodexModal(deps: CodexViewDeps): CodexModalWidget {
     return e;
   };
 
-  const currentEntries = () => entriesOf(tab);
+  const currentEntries = () => source.of(tab);
   const selected = () => currentEntries()[index[tab]] ?? null;
 
   function render(): void {
     if (disposed) return;
     const entries = currentEntries();
+    index[tab] = Math.max(0, Math.min(index[tab], entries.length - 1));
     const sel = selected();
     if (sel && deps.has(sel.id)) deps.markRead(sel.id);
 
@@ -118,7 +123,7 @@ export function createCodexModal(deps: CodexViewDeps): CodexModalWidget {
     if (sel) {
       const unlocked = deps.has(sel.id);
       detail.append(el('h3', 'codex-modal__name', unlocked ? deps.t(sel.nameKey) : deps.t('codex.locked')));
-      detail.append(el('p', 'codex-modal__body', unlocked ? deps.t(sel.bodyKey, { key: glyph(ENTRY_ACTION[sel.id] ?? '') }) : deps.t('codex.lockedBody')));
+      detail.append(el('p', 'codex-modal__body', unlocked ? deps.t(sel.bodyKey, { key: glyph(sel.action ?? ENTRY_ACTION[sel.id] ?? '') }) : deps.t('codex.lockedBody')));
       if (sel.tab === 'bestiary' && unlocked) {
         const c = tally(sel.id) ?? ZERO_COUNTS;
         detail.append(el('p', 'codex-modal__tally', deps.t('codex.tally', { release: c.release, spare: c.spare, calm: c.calm })));
@@ -136,8 +141,8 @@ export function createCodexModal(deps: CodexViewDeps): CodexModalWidget {
   function stateSignature(): string {
     const sel = selected();
     const c = sel && sel.tab === 'bestiary' ? tally(sel.id) : null;
-    const unlocks = currentEntries().map((e) => (deps.has(e.id) ? 1 : 0)).join('');
-    return `${tab}|${index[tab]}|${unlocks}|${glyph('mercy')}${glyph('surgeLeap')}${glyph('codex')}${glyph('menu')}|${c ? `${c.release},${c.spare},${c.calm}` : '-'}`;
+    const unlocks = currentEntries().map((e) => `${e.id}:${deps.has(e.id) ? 1 : 0}`).join(',');
+    return `${tab}|${index[tab]}|${unlocks}|${glyph('mercy')}${glyph('surgeLeap')}${sel?.action ? glyph(sel.action) : ''}${glyph('codex')}${glyph('menu')}|${c ? `${c.release},${c.spare},${c.calm}` : '-'}`;
   }
 
   function setTab(next: CodexTab): void {
@@ -175,10 +180,10 @@ export function createCodexModal(deps: CodexViewDeps): CodexModalWidget {
       }
     },
     select(entryId) {
-      const e = findEntry(entryId);
+      const e = source.find(entryId);
       if (!e) return;
       tab = e.tab;
-      index[tab] = Math.max(0, entriesOf(tab).findIndex((x) => x.id === entryId));
+      index[tab] = Math.max(0, source.of(tab).findIndex((x) => x.id === entryId));
       render();
     },
     focusDefault() {

@@ -292,3 +292,51 @@ describe('StemMixer.dispose', () => {
     await expect(mixer.add('a', buf('a'))).resolves.toBeUndefined();
   });
 });
+
+describe('StemMixer.setMix with an end time', () => {
+  beforeEach(async () => {
+    await mixer.add('a', buf('a'));
+  });
+
+  it('holds the current value until end - ramp, then ramps so it ends exactly on the end time', () => {
+    ctx.currentTime = 10;
+    param(0).value = 0.8;
+    mixer.setMix({ a: 0 }, 0.4, 12.5);
+    expect(param(0).calls).toEqual([
+      ['cancel', 10],
+      ['set', 0.8, 10],
+      ['set', 0.8, 12.1],
+      ['ramp', 0, 12.5],
+    ]);
+  });
+
+  it('an end time too close to now starts the ramp now and ends one ramp later', () => {
+    ctx.currentTime = 10;
+    mixer.setMix({ a: 0 }, 0.4, 10.1);
+    expect(param(0).calls).toEqual([
+      ['cancel', 10],
+      ['set', 0, 10],
+      ['ramp', 0, 10.4],
+    ]);
+  });
+
+  it('ignores a non-finite end time', () => {
+    ctx.currentTime = 10;
+    mixer.setMix({ a: 1 }, 0.4, NaN);
+    expect(param(0).calls.at(-1)).toEqual(['ramp', 1, 10.4]);
+  });
+});
+
+describe('StemMixer.clear', () => {
+  it('stops, disconnects and forgets every stem so another track can be added', async () => {
+    await mixer.add('a', buf('a'));
+    mixer.start({ a: 1 });
+    mixer.clear();
+    expect(mixer.isPlaying).toBe(false);
+    expect(mixer.stemCount).toBe(0);
+    expect(ctx.gains[0].disconnect).toHaveBeenCalled();
+    await expect(mixer.add('a', buf('a2'))).resolves.toBeUndefined();
+    mixer.start({ a: 1 });
+    expect(mixer.isPlaying).toBe(true);
+  });
+});

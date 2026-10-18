@@ -1,12 +1,24 @@
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
+import type { LayoutData } from './layoutTypes';
+
+export interface AnchorsDocMeta {
+  title: string;
+  /** Layout source file name, for the header line. */
+  source: string;
+  /** Generator command, for the header line. */
+  command?: string;
+}
 
 /** The anchor, trigger and structure tables as Markdown; ANCHORS.md must equal this (see anchorsDoc.test.ts). */
-export function renderAnchorsDoc(layout = BRIGHTWATER_LAYOUT): string {
+export function renderAnchorsDoc(
+  layout: LayoutData = BRIGHTWATER_LAYOUT,
+  meta: AnchorsDocMeta = { title: 'Brightwater anchors, triggers and structures', source: 'brightwater.layout.ts' },
+): string {
   const f = (n: number) => String(Math.round(n * 100) / 100);
   const lines = [
-    '# Brightwater anchors, triggers and structures',
+    `# ${meta.title}`,
     '',
-    'Generated from `brightwater.layout.ts` by `npx vite-node tools/gen-region-docs.ts`; a test fails when this file drifts.',
+    `Generated from \`${meta.source}\` by \`${meta.command ?? 'npx vite-node tools/gen-region-docs.ts'}\`; a test fails when this file drifts.`,
     'Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is absolute and computed from the terrain at runtime.',
     '',
     '## Anchors',
