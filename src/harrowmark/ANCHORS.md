@@ -227,11 +227,12 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | harrowmark.lane.forge-row.3 | 8180 | 1520 | 0 | 180 | lane |
 | harrowmark.lane.forge-row.4 | 8230 | 1520 | 0 | 180 | lane |
 | harrowmark.lane.forge-row.5 | 8290 | 1520 | 0 | 180 | lane |
-| harrowmark.lane.guild-alley.1 | 8940 | 1527.5 | 0 | 180 | lane |
-| harrowmark.lane.guild-alley.2 | 8975 | 1527.5 | 0 | 180 | lane |
-| harrowmark.lane.guild-alley.3 | 9010 | 1527.5 | 0 | 180 | lane |
-| harrowmark.lane.guild-alley.4 | 9040 | 1532 | 0 | 180 | lane |
-| harrowmark.lane.guild-alley.5 | 9060 | 1542 | 0 | 180 | lane |
+| harrowmark.lane.guild-alley.1 | 8940 | 1525 | 0 | 180 | lane |
+| harrowmark.lane.guild-alley.2 | 8958 | 1525 | 0 | 180 | lane |
+| harrowmark.lane.guild-alley.3 | 8985 | 1525 | 0 | 180 | lane |
+| harrowmark.lane.guild-alley.4 | 9015 | 1525 | 0 | 180 | lane |
+| harrowmark.lane.guild-alley.5 | 9040 | 1532 | 0 | 180 | lane |
+| harrowmark.lane.guild-alley.6 | 9060 | 1542 | 0 | 180 | lane |
 | harrowmark.lane.gate-queue.1 | 8500 | 1262 | 0 | 180 | lane |
 | harrowmark.lane.gate-queue.2 | 8500 | 1285 | 0 | 180 | lane |
 | harrowmark.lane.gate-queue.3 | 8500 | 1312 | 0 | 180 | lane |
