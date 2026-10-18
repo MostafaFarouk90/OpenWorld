@@ -177,7 +177,10 @@ export function adaptQuests(q: NonNullable<ReturnType<typeof soft<'quests'>>>): 
         done: v.done === true,
         optional: v.def.optional === true,
       }));
-    out.push({ id, titleKey: `quest.${id}.title`, objectives });
+    // Quests registered by other threads (the tutorial's beat quests) carry their own titleKey.
+    const def = (q as { get?(id: string): { titleKey?: unknown } | undefined }).get?.(id);
+    const titleKey = typeof def?.titleKey === 'string' ? def.titleKey : `quest.${id}.title`;
+    out.push({ id, titleKey, objectives });
   }
   return out;
 }
