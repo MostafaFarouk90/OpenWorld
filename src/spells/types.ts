@@ -11,6 +11,8 @@ export interface SpellsService {
   readonly ember: number;
   readonly maxEmber: number;
   spendEmber(n: number): boolean;
+  /** The class row's Ember maximum (progression calls it on a class change and after a load); false for a bad number. */
+  setMaxEmber(n: number): boolean;
   /** Raw Burn change (boss attacks that add Burn directly): never scars. */
   addBurn(n: number, source: string): void;
   /**
