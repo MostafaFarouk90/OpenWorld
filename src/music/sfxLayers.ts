@@ -10,7 +10,31 @@ export const SFX = {
   armourRing: 'sfx.armour-ring',
   block: 'sfx.block',
   parry: 'sfx.parry',
+  // Slice 2 (contracts/music-states.md section 7). Variant ids, also registered under their bare key.
+  impactPlant: 'sfx.impact.plant',
+  releasePulse: 'sfx.release.pulse',
+  yieldKneel: 'sfx.yield.kneel',
+  leap: 'sfx.leap',
+  companionBark: 'sfx.companion.bark',
 } as const;
+
+/** Slice 2 one-shots played or registered under their bare key (no variant suffix). */
+export const BARE_SFX = {
+  whistle: 'sfx.whistle',
+  wardstone1: 'sfx.wardstone.1',
+  wardstone2: 'sfx.wardstone.2',
+  wardstone3: 'sfx.wardstone.3',
+  wardstone4: 'sfx.wardstone.4',
+  wardstone5: 'sfx.wardstone.5',
+  wardstoneMiss: 'sfx.wardstone.miss',
+  wardstonesComplete: 'sfx.wardstones.complete',
+  priorGong: 'sfx.prior.gong',
+  priorTeleport: 'sfx.prior.teleport',
+  shrineRekindle: 'sfx.shrine.rekindle',
+} as const;
+export type BareSfxId = (typeof BARE_SFX)[keyof typeof BARE_SFX];
+export const BARE_SFX_IDS: readonly BareSfxId[] = Object.values(BARE_SFX);
+export type AnySfxId = SfxId | SpellSfxId | BareSfxId;
 
 /** Spell sounds played by the spells plugin (thread 7) under these exact keys, with no variant suffix. */
 export const SPELL_SFX = {
@@ -25,7 +49,7 @@ export const SPELL_SFX_IDS: readonly SpellSfxId[] = Object.values(SPELL_SFX);
 export type SfxId = (typeof SFX)[keyof typeof SFX];
 export const SFX_IDS: readonly SfxId[] = Object.values(SFX);
 
-export type Material = 'flesh' | 'ash' | 'metal' | 'wood' | 'straw';
+export type Material = 'flesh' | 'ash' | 'metal' | 'wood' | 'straw' | 'plant';
 
 const IMPACT: Record<Material, SfxId> = {
   flesh: SFX.impactFlesh,
@@ -33,6 +57,7 @@ const IMPACT: Record<Material, SfxId> = {
   metal: SFX.impactMetal,
   wood: SFX.impactWood,
   straw: SFX.impactStraw,
+  plant: SFX.impactPlant,
 };
 
 /**

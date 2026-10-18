@@ -175,7 +175,13 @@ export class FakeHost {
   readonly playerHurtboxes: HurtboxSet;
   readonly playerFeet: THREE.Vector3;
   loud = false;
-  vfx: { dissolve(root: THREE.Object3D, s: number): Promise<void> } | undefined;
+  vfx: { dissolve(root: THREE.Object3D, s: number): Promise<void>; spawnEffect?(id: string, t: { position: { x: number; y: number; z: number } }, p?: Record<string, number | string | boolean>): unknown } | undefined;
+  /** Thread 2's spells service when a test provides it (`useShard`, or the older `addBurn`). */
+  spells: { useShard?(g: number, s: string): void; addBurn?(n: number, s: string): void } | undefined = undefined;
+  /** The core boss registry fake: tests set `bossOpen` and read `bossReleases`. */
+  bossStates = new Map<string, { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | null }>();
+  bossReleaseResult = true;
+  readonly bossReleases: string[] = [];
   /** Thread 3's quests service, when a test provides it. */
   quests: { active(): string[] } | undefined;
   lockOnTarget: ActorId | null = null;
@@ -389,8 +395,23 @@ export class FakeHost {
         if (name === 'vfx') return this.vfx;
         if (name === 'lockOn') return { targetId: this.lockOnTarget };
         if (name === 'quests') return this.quests;
+        if (name === 'spells') return this.spells;
         return undefined;
       }) as EnemyHost['services']['get'],
+    },
+    bosses: {
+      state: (id) => self.bossStates.get(id) ?? null,
+      release: (id) => {
+        self.bossReleases.push(id);
+        if (self.bossReleaseResult) {
+          const st = self.bossStates.get(id);
+          if (st) {
+            st.releaseOpen = false;
+            st.outcome = 'released';
+          }
+        }
+        return self.bossReleaseResult;
+      },
     },
     player: {
       get actor() {

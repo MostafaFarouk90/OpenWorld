@@ -162,4 +162,19 @@ export const EFFECTS: Record<EffectId, EffectFactory> = {
     ctx.points.emit('ember', o, 20, { color: GOLD, rise: 0.8, spread: 0.6, life: 1.2 }, ctx.now());
     return ring(ctx, t, (t.scale ?? 1) * num(p, 'radius', 8), num(p, 'color', GOLD), 0.6);
   },
+  // Design 11.3 row 30: a 4 m ring at hand height, 80 rising embers, a 1.5 s chest light and the ash decal.
+  'release-pulse': (ctx, t, p) => {
+    const o = origin(t);
+    const hand = { x: o.x, y: o.y + 1, z: o.z };
+    ctx.points.emit('ember', hand, num(p, 'count', 80), { spread: 1.6, rise: 2.2, life: 1.5, color: WHITE_HOT }, ctx.now());
+    ctx.lights.flash(hand, WHITE_HOT, 6, 0.1, 1.5, ctx.now());
+    ctx.decals.place(o, t.normal, 4 * (t.scale ?? 1), 0x1a1208, ctx.now());
+    const r = ring(ctx, { position: hand }, 4, GOLD, 0.8);
+    return r;
+  },
+  // Section 3 Spare: a gold glyph above a yielding human for the 2 s window.
+  'yield-glyph': (ctx, t, p) => {
+    const o = origin(t);
+    return ring(ctx, { position: { x: o.x, y: o.y + num(p, 'height', 2.4), z: o.z } }, 0.5, GOLD, num(p, 'seconds', 2));
+  },
 };
