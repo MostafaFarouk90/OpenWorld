@@ -13,7 +13,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootChapter, type ChapterHarness } from './chapterHarness';
 import { ensure, playPhaseA, reachPhaseAStart } from './phaseA';
-import { PHASE_A_FIXTURES, FIXTURE_SAVED_AT } from '../save/__fixtures__/phaseA';
+import { PHASE_A_FIXTURES, FIXTURE_SAVED_AT, readPhaseAFixture } from '../save/__fixtures__/phaseA';
+import { ACT1_FIXTURES } from '../save/__fixtures__/act1';
+import { bootFromSave } from './chapterHarness';
+import { playPhaseB } from './phaseB';
+import { fightGrimtooth } from './grimtoothStub';
 
 const GEN = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.GEN_FIXTURES === '1';
 
@@ -103,3 +107,57 @@ const PHASE_A_FIXTURES_WHAT = {
   defeatedScorched: 'Phase A complete: M03-M05, R01, R02, D01 completed; Prior defeated; R01 field scorched (torch); Tobb joined; outside at the vault door',
   midD01Vault: 'D01 active (o1 done), player inside the chapel vault just past its entry, Tobb joined; M03-M05, R01 (saved), R02 completed',
 } as const;
+
+const ACT1_FIXTURES_WHAT: Record<keyof typeof ACT1_FIXTURES, string> = {
+  m06ThroughGate: 'Act 1 run A from phaseA-complete-released-saved: M06 completed by bribe (harness-granted 50 gold), the South Gate open, M07 not started',
+  m07ClassChosen: 'Act 1 run B from phaseA-complete-defeated-scorched: M06 by stealth, M07 completed, the Warden chosen, its drill skipped, in the Bastion yard',
+  m09CountingHouse: 'Act 1 run A: M09 active with o4 done (the stealth section cleared), inside the Counting-House before the hand-in to Merrin',
+  m10Ashmare: 'Act 1 run A: M10 completed, story.m10.ashmare set, on foot',
+  d02Underways: 'Act 1 run A: D02 active (o1, o2 done), inside the Underways before the kennels; bread, Calm and the door from Rook',
+  endingCard: 'Act 1 run A: D02 completed, story.gate.a2 set, the ending card shown (codex.actEndingSeen) and not dismissed, no camp yet',
+  complete: 'Act 1 run A: every Act 1 quest completed, Grimtooth calmed (test stand-in until thread 3b), the ending card and the camp scene done',
+};
+
+describe.skipIf(!GEN)('Act 1 fixtures (GEN_FIXTURES=1 writes them)', () => {
+  it('run A: through the gate, the Counting-House, the Ashmare, the Underways, the ending card, the end', async () => {
+    const t = await bootFromSave(await readPhaseAFixture(PHASE_A_FIXTURES.releasedSaved), { models: true, virtualClock: true });
+    h = t;
+    const out: Partial<Record<keyof typeof ACT1_FIXTURES, Record<string, unknown>>> = {};
+    await playPhaseB(t, {
+      route: 'bribe', classId: 'knight', debt: 'forgiven', steward: 'expose', stance: 'steady', grimtooth: 'released',
+      after: async (q) => {
+        if (q === 'm06') out.m06ThroughGate = await saveFixture(t);
+        if (q === 'm10') out.m10Ashmare = await saveFixture(t);
+        if (q === 'd02') {
+          for (let i = 0; i < 5; i++) {
+            t.run(1);
+            t.ctx.hud.update(1 / 60);
+          }
+          ensure(t.ctx.state.getBool('codex.actEndingSeen'), 'the card is showing');
+          out.endingCard = await saveFixture(t);
+        }
+      },
+      inCountingHouse: async () => { out.m09CountingHouse = await saveFixture(t); },
+      inUnderways: async () => { out.d02Underways = await saveFixture(t); },
+    }, fightGrimtooth);
+    out.complete = await saveFixture(t);
+    for (const k of ['m06ThroughGate', 'm09CountingHouse', 'm10Ashmare', 'd02Underways', 'endingCard', 'complete'] as const) {
+      expect(out[k], k).toBeDefined();
+      await write(ACT1_FIXTURES[k], out[k]!, ACT1_FIXTURES_WHAT[k]);
+    }
+  }, 300_000);
+
+  it('run B: the class chosen', async () => {
+    const t = await bootFromSave(await readPhaseAFixture(PHASE_A_FIXTURES.defeatedScorched), { models: true, virtualClock: true });
+    h = t;
+    let chosen: Record<string, unknown> | null = null;
+    await playPhaseB(t, {
+      route: 'stealth', classId: 'warden', debt: 'collected', steward: 'shield', stance: 'bold', grimtooth: 'defeated',
+      after: async (q) => {
+        if (q === 'm07') chosen = await saveFixture(t);
+      },
+    }, fightGrimtooth);
+    expect(chosen).not.toBeNull();
+    await write(ACT1_FIXTURES.m07ClassChosen, chosen!, ACT1_FIXTURES_WHAT.m07ClassChosen);
+  }, 300_000);
+});
