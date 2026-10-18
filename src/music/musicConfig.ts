@@ -9,6 +9,8 @@ export const musicConfig = {
   /** Combat ends this long after the hostile set empties or the last hostile hit on the player. */
   exitHysteresis: 6,
   endingSeconds: 6,
+  /** A lost chase holds its mix this long, covering thread 18's 2 s "Again" card. */
+  chaseRestartHoldSeconds: 2.5,
   mercyEndingSeconds: 4,
   /** Uninterrupted explore loops before a silence window. */
   silenceAfterLoops: 2,

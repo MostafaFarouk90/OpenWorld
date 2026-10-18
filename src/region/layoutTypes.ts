@@ -44,7 +44,15 @@ export type StructureKind =
   | 'pole'
   | 'rock'
   | 'bridge'
-  | 'stair';
+  | 'stair'
+  // Harrowmark (thread 17): ring wall, gate towers, stepped rooftop access, rooftop blocks, market stalls, crates, the fountain.
+  | 'wall'
+  | 'tower'
+  | 'stair-step'
+  | 'block'
+  | 'stall'
+  | 'crate'
+  | 'fountain';
 
 /**
  * solid: one static box over the footprint (nobody enters).
@@ -103,6 +111,8 @@ export interface NpcSpec {
   idleClip?: string;
   /** The NPC is not spawned (or is despawned) while this flag is true; its handover to a companion or a quest. */
   absentWhen?: string;
+  /** The NPC is not spawned until this flag is true (Vey from M08, Ashdown from M07). Combines with `absentWhen`. */
+  presentWhen?: string;
   /** Once `whenFlag` is true the NPC walks in a straight line to the anchor `to` (the only walking NPCs); on a load it just stands there. */
   walkOff?: { whenFlag: string; to: string };
 }

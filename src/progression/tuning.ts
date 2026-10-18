@@ -22,6 +22,7 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   blightbloom: 15,
   'ember-hound': 25,
   'alley-cutpurse': 18,
+  'guildhall-thug': 28,
   dummy: 0,
   scarecrow: 0,
 };

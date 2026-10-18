@@ -14,6 +14,14 @@ interface SoftServices {
   };
   companions: { active(): readonly string[]; actorId(id: string): string | null };
   inventory: { readonly gold: number };
+  stealth: {
+    active?(): boolean;
+    eye(): { level: number; state: 'calm' | 'suspicious' | 'alerted'; observerId: string | null } | null;
+    noise(): number | null;
+  };
+  chase: { timer(): { remaining: number; total: number; gap: number; phase: 'running' | 'again' } | null };
+  mount: { stamina(): { value: number; max: number } | null };
+  classes: { chosen(): boolean; current(): string; kit(id: string): { nameKey: string } | undefined | null };
   vfx: { spawnEffect(id: string, transform: { position: { x: number; y: number; z: number } }): unknown };
 }
 

@@ -95,12 +95,14 @@ export class BeatScheduler {
     this.lastEmitted = -1;
   }
 
-  update(clock: BarClock | null, bpm: number, audioNow: number): void {
+  /** `until`: beats at or after this audio time are left to a later clock (a committed handover). */
+  update(clock: BarClock | null, bpm: number, audioNow: number, until = Infinity): void {
     if (!clock || this.listeners.size === 0 || !Number.isFinite(audioNow)) return;
     const beatSeconds = clock.barSeconds / BEATS_PER_BAR;
     const horizon = audioNow + this.lookahead - clock.startedAt;
     if (horizon < 0) return;
-    const newest = Math.floor(horizon / beatSeconds + 1e-9);
+    let newest = Math.floor(horizon / beatSeconds + 1e-9);
+    if (Number.isFinite(until)) newest = Math.min(newest, Math.ceil((until - clock.startedAt) / beatSeconds - 1e-9) - 1);
     // The oldest beat still worth reporting.
     const oldest = Math.max(this.lastEmitted + 1, Math.ceil((audioNow - this.stale * beatSeconds - clock.startedAt) / beatSeconds - 1e-9), 0);
     let emitted = 0;

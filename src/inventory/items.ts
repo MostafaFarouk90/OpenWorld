@@ -36,6 +36,17 @@ export const ITEMS: Record<string, ItemDef> = {
   'healing-flask': def('healing-flask', 'consumable', { stackMax: 5, use: { healFraction: 0.4, drinkSeconds: 1.2 } }),
 };
 
+/**
+ * Adds item definitions from another module (the economy). Call at module scope so ids exist before a save loads
+ * (`Inventory.load` stashes unknown ids). A duplicate id throws.
+ */
+export function registerItems(defs: readonly ItemDef[]): void {
+  for (const d of defs) {
+    if (Object.prototype.hasOwnProperty.call(ITEMS, d.id)) throw new Error(`registerItems: duplicate item id "${d.id}"`);
+    ITEMS[d.id] = d;
+  }
+}
+
 export function getItem(id: string): ItemDef | undefined {
   return Object.prototype.hasOwnProperty.call(ITEMS, id) ? ITEMS[id] : undefined;
 }

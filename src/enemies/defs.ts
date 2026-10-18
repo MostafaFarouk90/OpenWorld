@@ -1,4 +1,7 @@
 import { ENEMY_ATTACKS } from './clips';
+import { ALLEY_CUTPURSE } from './cutpurse/def';
+import { GUILDHALL_THUG } from './guildhall/def';
+import { EMBER_HOUND } from './hound/def';
 import type { EnemyDef, EnemyKind, MoveDef } from './types';
 
 /**
@@ -64,18 +67,47 @@ export const BLIGHTED_SOLDIER: EnemyDef = {
   pairAdvance: true,
 };
 
+/**
+ * Watch Guard: an observer-only humanoid (Knight fallback model, tinted) for stealth sections. It sees the
+ * player and raises `ai.spotted`; it has no moves, no mercy, never emits `ai.aggro`, never chases and is never
+ * routed through the PathFollower. It is `neutral` and immortal: a hit takes its awareness to 1 (one `ai.spotted`)
+ * and nothing else, so a caught reset never has a dead slot to save. It pays no XP.
+ */
+export const WATCH_GUARD: EnemyDef = {
+  kind: 'watch-guard',
+  nameKey: 'enemies.name.watch-guard',
+  model: { prefer: [], tint: 0x5a6470, weapons: 'none' },
+  maxHealth: 40,
+  maxPoise: 30,
+  walkSpeed: 1.4,
+  chaseSpeed: 2.6,
+  moves: [],
+  material: 'metal',
+  rises: false,
+  observerOnly: true,
+};
+
 export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'ash-wraith': ASH_WRAITH,
   'blighted-soldier': BLIGHTED_SOLDIER,
+  'alley-cutpurse': ALLEY_CUTPURSE,
+  'ember-hound': EMBER_HOUND,
+  'watch-guard': WATCH_GUARD,
+  'guildhall-thug': GUILDHALL_THUG,
 };
 
 /**
  * Telegraph look per kind, for thread 7 (design 11.6): which part flashes and in what colour.
  * The `telegraph` event names only the actor; thread 7 maps `actor.kind` through this table.
  */
-export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapon'; color: number }>> = {
+export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapon' | 'tail'; color: number }>> = {
   'ash-wraith': { part: 'hand', color: 0x9fbf8f },
   'blighted-soldier': { part: 'weapon', color: 0xd04030 },
+  'alley-cutpurse': { part: 'hand', color: 0xc8b070 },
+  // Tail flare (design 11.6): the pounce is red, the bite's flash is the same tail.
+  'ember-hound': { part: 'tail', color: 0xff5a1f },
+  'watch-guard': { part: 'weapon', color: 0xd04030 },
+  'guildhall-thug': { part: 'hand', color: 0xd04030 },
 };
 
 function move(

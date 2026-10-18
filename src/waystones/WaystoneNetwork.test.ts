@@ -324,3 +324,37 @@ describe('review fixes', () => {
     expect(net.respawnPoint().waystoneId).toBe('chapel');
   });
 });
+
+describe('restAt (the inn)', () => {
+  it('heals, saves and emits only a placeId; the respawn point does not move', () => {
+    const { net, events, ports } = make(STD());
+    net.rekindle('chapel');
+    const before = net.respawnPoint();
+    events.length = 0;
+    expect(net.restAt('inn.tilted-anvil')).toEqual({ ok: true });
+    expect(ports.restoreVitals).toHaveBeenCalledWith({ quiet: true });
+    expect(events).toEqual([['rest', { placeId: 'inn.tilted-anvil' }]]);
+    expect(ports.requestSave).toHaveBeenLastCalledWith('rest');
+    expect(net.respawnPoint()).toEqual(before);
+  });
+
+  it('needs no lit waystone', () => {
+    expect(make(STD()).net.restAt('inn.tilted-anvil')).toEqual({ ok: true });
+  });
+
+  it.each([['dead'], ['cutscene'], ['dialogue']] as const)('refuses while %s and heals nothing', (k) => {
+    const { net, ctx, ports } = make(STD());
+    ctx[k] = true;
+    expect(net.canRestNow()).toBe(k);
+    expect(net.restAt('inn.tilted-anvil')).toEqual({ ok: false, reason: k });
+    expect(ports.restoreVitals).not.toHaveBeenCalled();
+  });
+
+  it('is refused near hostiles unless waived', () => {
+    const a = make(STD(), { hostileAggro: true });
+    expect(a.net.restAt('inn.tilted-anvil')).toEqual({ ok: false, reason: 'in-combat' });
+    expect(a.net.canRestNow()).toBe('in-combat');
+    const b = make(STD(), { hostileAggro: true, allowRestInCombat: true });
+    expect(b.net.canRestNow()).toBeNull();
+  });
+});
