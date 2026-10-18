@@ -20,6 +20,9 @@ interface Scratch {
   valid: Uint8Array;
   /** Valid with half a cell to spare: line-of-sight smoothing may cross a cell anywhere, not only at its centre. */
   strict: Uint8Array;
+  /** The radius and grid revision `valid` and `strict` were filled for (refilled only when either changes). */
+  validRadius: number;
+  validRevision: number;
 }
 
 const scratch = new WeakMap<NavGrid, Scratch>();
@@ -40,6 +43,8 @@ function scratchFor(grid: NavGrid): Scratch {
       size: 0,
       valid: new Uint8Array(n),
       strict: new Uint8Array(n),
+      validRadius: Number.NaN,
+      validRevision: -1,
     };
     scratch.set(grid, s);
   }
@@ -102,6 +107,9 @@ function heapPop(s: Scratch): number {
 
 /** Marks cells that are walkable with clearance >= radius. */
 function fillValid(grid: NavGrid, s: Scratch, radius: number): void {
+  if (s.validRadius === radius && s.validRevision === grid.revision) return;
+  s.validRadius = radius;
+  s.validRevision = grid.revision;
   const n = grid.cols * grid.rows;
   const strict = radius + grid.cellSize / 2;
   for (let i = 0; i < n; i++) {
@@ -203,7 +211,7 @@ export function findPath(grid: NavGrid, from: Vec3, to: Vec3, radius: number): V
   const r = Math.max(0, radius);
   const s = scratchFor(grid);
   fillValid(grid, s, r);
-  const { cols, rows, minX, minZ, maxX, maxZ, floorY } = grid;
+  const { cols, rows, minX, minZ, maxX, maxZ, floorY, cellSize } = grid;
   const centre = (i: number): Vec3 => grid.cellCentre(i);
 
   let fx = Math.min(maxX - 1e-6, Math.max(minX, from.x));
@@ -238,8 +246,9 @@ export function findPath(grid: NavGrid, from: Vec3, to: Vec3, radius: number): V
       const i = stack[--sp]!;
       const ix = i % cols;
       const iz = (i - ix) / cols;
-      const c = centre(i);
-      const d = (c.x - tx0) * (c.x - tx0) + (c.z - tz0) * (c.z - tz0);
+      const cx = minX + (ix + 0.5) * cellSize - tx0;
+      const cz = minZ + (iz + 0.5) * cellSize - tz0;
+      const d = cx * cx + cz * cz;
       if (d < bestD || (d === bestD && i < best)) {
         bestD = d;
         best = i;
@@ -257,7 +266,12 @@ export function findPath(grid: NavGrid, from: Vec3, to: Vec3, radius: number): V
     }
     return best;
   };
-  if (!exact) goal = floodNearest();
+  if (!exact) {
+    // Cheap first: the valid cell nearest the target by ring search, when it shares the start's walkable component (a goal
+    // outside a city block, or inside a building). Otherwise flood (a goal behind a closed gate, or in a walled-off island).
+    const near = nearestValid(grid, s, tx0, tz0);
+    goal = near >= 0 && grid.component(near) === grid.component(start) ? near : floodNearest();
+  }
 
   // A*
   const astamp = ++s.stamp;
@@ -289,8 +303,9 @@ export function findPath(grid: NavGrid, from: Vec3, to: Vec3, radius: number): V
     }
     const ix = i % cols;
     const iz = (i - ix) / cols;
-    const c = centre(i);
-    const d = (c.x - tx0) * (c.x - tx0) + (c.z - tz0) * (c.z - tz0);
+    const cx = minX + (ix + 0.5) * cellSize - tx0;
+    const cz = minZ + (iz + 0.5) * cellSize - tz0;
+    const d = cx * cx + cz * cz;
     if (d < bestClosedD || (d === bestClosedD && i < bestClosed)) {
       bestClosedD = d;
       bestClosed = i;

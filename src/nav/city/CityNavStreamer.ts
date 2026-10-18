@@ -29,6 +29,7 @@ const distanceToRect = (b: CityNavBlock, x: number, z: number): number => {
  */
 export class CityNavStreamer {
   private readonly slots: Slot[];
+  private readonly refused = new Set<string>();
 
   constructor(blocks: readonly CityNavBlock[], private readonly ports: CityNavStreamerPorts) {
     this.slots = blocks.map((block) => ({ block, state: 'idle' }));
@@ -93,9 +94,13 @@ export class CityNavStreamer {
 
   private register(block: CityNavBlock, grid: NavGrid): (() => void) | null {
     try {
-      return this.ports.add(grid);
+      const undo = this.ports.add(grid);
+      this.refused.delete(block.id);
+      return undo;
     } catch (err) {
-      this.ports.warn(`city nav: block "${block.id}" could not be registered`, err);
+      // Retried each update while in range; warned about once per run of refusals.
+      if (!this.refused.has(block.id)) this.ports.warn(`city nav: block "${block.id}" could not be registered`, err);
+      this.refused.add(block.id);
       return null;
     }
   }

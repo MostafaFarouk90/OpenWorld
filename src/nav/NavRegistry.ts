@@ -40,12 +40,17 @@ export class NavRegistry {
     return this.gridAt(at)?.floorY ?? null;
   }
 
-  /** Waypoints from `from` (excluded) to `to` inside from's grid; null when from is in no grid or an input is not finite. */
+  /**
+   * Waypoints from `from` (excluded) to `to` inside from's grid; on an open-edged grid a goal in no grid or another grid is
+   * appended after the edge cell. Null when from is in no grid or an input is not finite. */
   path(from: Vec3, to: Vec3, opts?: { radius?: number }): Vec3[] | null {
     if (!finite(from) || !finite(to)) return null;
     const grid = this.gridAt(from);
     if (!grid) return null;
-    return findPath(grid, from, to, opts?.radius ?? DEFAULT_NAV_RADIUS);
+    const path = findPath(grid, from, to, opts?.radius ?? DEFAULT_NAV_RADIUS);
+    // Off an open-edged grid the path walks on to the goal (Tobb and chasers follow the player out of a city block).
+    if (grid.openEdges && path.length > 0 && this.gridAt(to) !== grid) path.push({ x: to.x, y: to.y, z: to.z });
+    return path;
   }
 
   /** Opens or closes the named blocker in whichever grid has it; false when none does. */

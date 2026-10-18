@@ -37,6 +37,11 @@ export interface NavGridDef {
   blocked?: NavRect[];
   /** Subtracted from the walkable area too (rotated buildings outdoors). */
   blockedOriented?: NavOrientedRect[];
+  /**
+   * Outdoor grids (city blocks): the ground goes on past the edges, so `NavRegistry.path` ends a path toward a goal in no
+   * grid or another grid at the goal itself, after the edge cell. Interiors leave it off: beyond their edge is a wall.
+   */
+  openEdges?: boolean;
   /** Named dynamic obstacles (doors); initially open, so they do not block. */
   blockers?: Record<string, NavRect[]>;
 }
@@ -59,6 +64,10 @@ export class NavGrid {
   readonly maxX: number;
   readonly maxZ: number;
   readonly band: number;
+  /** True for an outdoor grid whose edges are open ground (a city block): paths to a goal beyond it end at the goal. */
+  readonly openEdges: boolean;
+  /** Bumped whenever walkability changes (a blocker opened or closed). */
+  revision = 0;
 
   private readonly base: Uint8Array;
   private readonly walk: Uint8Array;
@@ -82,6 +91,7 @@ export class NavGrid {
     this.maxZ = def.maxZ;
     this.floorY = def.floorY;
     this.band = def.band ?? 2.5;
+    this.openEdges = def.openEdges ?? false;
     this.cols = Math.max(1, Math.ceil((def.maxX - def.minX) / this.cellSize - 1e-9));
     this.rows = Math.max(1, Math.ceil((def.maxZ - def.minZ) / this.cellSize - 1e-9));
     const n = this.cols * this.rows;
@@ -199,6 +209,7 @@ export class NavGrid {
   }
 
   private rebuild(): void {
+    this.revision++;
     this.walk.set(this.base);
     for (const b of this.blockers.values()) if (b.closed) for (const r of b.rects) this.paint(r, this.walk, 0);
     this.computeClearance();
