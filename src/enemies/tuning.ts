@@ -130,6 +130,8 @@ export interface BossMercyRow {
   /** Calm bosses: what the hold accepts, as `MercyDef` does for a beast. */
   offerings?: readonly { itemId: string; count: number }[];
   warmHand?: boolean;
+  /** Calm bosses: spawner groups whose every living member scatters with him (no radius, so no straggler stays hostile). */
+  summonGroups?: readonly string[];
 }
 
 export const BOSS_MERCY: Readonly<Record<string, BossMercyRow>> = {
@@ -143,6 +145,7 @@ export const BOSS_MERCY: Readonly<Record<string, BossMercyRow>> = {
     ledgerId: 'D02',
     offerings: [{ itemId: 'hearth-bread', count: 1 }],
     warmHand: true,
+    summonGroups: ['grimtooth-summons'],
   },
 };
 
