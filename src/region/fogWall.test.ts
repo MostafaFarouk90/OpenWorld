@@ -94,7 +94,7 @@ describe('the slice fog wall', () => {
     expect(fogOpen(state)).toBe(false);
     flags.set('story.m05.complete', true);
     expect(fogOpen(state)).toBe(true);
-    for (const k of FOG_OPEN_FLAGS) expect(FOG_OPEN_FLAGS).toContain(k);
+    expect(FOG_OPEN_FLAGS).toEqual(['story.m05.complete']);
   });
 
   it('does not rebuild when an unrelated flag changes or the same flag is set twice', () => {

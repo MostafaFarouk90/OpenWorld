@@ -13,7 +13,7 @@ import type { CoreContext } from './coreTypes';
  */
 export const FOG_OPEN_FLAGS: readonly string[] = ['story.m05.complete'];
 
-/** Whether the wall is down for this state: the one check the map marker, the card and the wall itself share. */
+/** Whether the wall is down for this state, built on the same flags the wall watches: the check for the map marker and the card. */
 export function fogOpen(state: { getFlag(key: string): unknown }): boolean {
   return FOG_OPEN_FLAGS.some((k) => Boolean(state.getFlag(k)));
 }

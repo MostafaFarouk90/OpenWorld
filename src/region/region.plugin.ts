@@ -24,7 +24,10 @@ import { validateLayout } from './validateLayout';
 export interface RegionPluginOptions {
   /** One layout only (tests). Without `layout` or `layouts` the plugin lays out Brightwater and the Dead Road. */
   layout?: LayoutData;
-  /** Several layouts resolved together; the first holds the fields and the tutorial spawn. */
+  /**
+   * Several layouts resolved together. Only anchors, triggers and structures are used from the later ones; the first
+   * holds the barley fields and the tutorial spawn (NPCs are read from BRIGHTWATER_LAYOUT by the npcs plugin).
+   */
   layouts?: LayoutData[];
   heightAt?: (x: number, z: number) => number;
 }
