@@ -36,6 +36,17 @@ const CODEX_RETRY_SECONDS = 1;
 /** Where the crossbow's muzzle is, relative to the crossbow node (the long axis is +Z, design 9.5). */
 export const CROSSBOW_TIP = { x: 0, y: 0.07, z: 1.16 } as const;
 
+/** The Pathfinder's readers (thread 8's bolt counter). */
+export interface PathfinderService {
+  /** Bolts in the pouch and the stack size; null when the class is not the Pathfinder or the bolt item is not defined yet. */
+  ammo(): { count: number; max: number } | null;
+}
+declare module '../../core/Services' {
+  interface GameServices {
+    pathfinder: PathfinderService;
+  }
+}
+
 type Loose = { get(name: string): unknown };
 type CodexPort = { register(entries: readonly unknown[]): () => void };
 type InventoryPort = { count(id: string): number; remove(id: string, n: number): boolean };
@@ -129,6 +140,15 @@ const pathfinderPlugin: GamePlugin = {
       count: () => inventory()?.count(PF.ammoItem) ?? 0,
       remove: (n) => inventory()?.remove(PF.ammoItem, n) ?? false,
     });
+    offs.push(
+      ctx.services.provide('pathfinder', {
+        ammo: () => {
+          const def = getItem(PF.ammoItem);
+          if (!isPathfinder() || !def || !inventory()) return null;
+          return { count: Math.max(0, inventory()!.count(PF.ammoItem)), max: def.stackMax };
+        },
+      }),
+    );
     const marks = new Marks({
       actors: ctx.actors,
       now: () => simTime,
