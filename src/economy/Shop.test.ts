@@ -162,10 +162,14 @@ describe('Shop favour bands', () => {
     expect(after.find((o) => o.itemId === 'healing-flask')?.price).toBeLessThan(before.find((o) => o.itemId === 'healing-flask')!.price);
   });
 
-  it('charges the price now, not the price the player saw before a band change', () => {
+  it('refuses when the price rose since the player saw it, and charges the lower price when it fell', () => {
     const { w, shop } = world({ bands: { wystan: 'stoked' } });
     w.bands.wystan = 'cold';
-    expect(shop.buy('wystan', 'healing-flask')).toEqual({ ok: true, total: 36 });
+    expect(shop.buy('wystan', 'healing-flask', 1, 27)).toEqual({ ok: false, reason: 'price-rose' });
+    expect(w.gold).toBe(1000);
+    expect(w.spent).toEqual([]);
+    w.bands.wystan = 'hearthbound';
+    expect(shop.buy('wystan', 'healing-flask', 1, 27)).toEqual({ ok: true, total: 24 });
   });
 
   it('plain shops ignore bands', () => {
@@ -221,6 +225,20 @@ describe('Shop selling and buy-back', () => {
     expect(list.some((e) => e.itemId === priced[0])).toBe(false);
   });
 
+  it('moves a merged sale to the end and never merges past the stack max', () => {
+    const { w, shop } = world();
+    w.items.set('barley-cake', 10);
+    w.items.set('hearth-bread', 2);
+    shop.sell('merrin', 'barley-cake', 6);
+    shop.sell('merrin', 'hearth-bread');
+    shop.sell('merrin', 'barley-cake', 4);
+    const list = shop.buyBackFor('merrin');
+    expect(list.map((e) => [e.itemId, e.count])).toEqual([['hearth-bread', 1], ['barley-cake', 10]]);
+    w.items.set('barley-cake', 1);
+    shop.sell('merrin', 'barley-cake', 1); // 11 would exceed the stack of 10: a separate entry
+    expect(shop.buyBackFor('merrin').filter((e) => e.itemId === 'barley-cake').map((e) => e.count)).toEqual([10, 1]);
+  });
+
   it('refuses buy-back without gold or room and for a bad index', () => {
     const { w, shop } = world({ gold: 0 });
     w.items.set('gauts-spare-blade', 1);
@@ -256,6 +274,8 @@ describe('Shop save and load', () => {
     expect(w.warnings.length).toBeGreaterThanOrEqual(4);
     expect(shop.serialize().buyBack.wystan).toEqual([]);
     expect(shop.serialize().stock.wystan['marshals-longsword']).toBe(1);
+    shop.load({ stock: { wystan: { 'marshals-longsword': 5 } } }, 1);
+    expect(shop.serialize().stock.wystan['marshals-longsword']).toBe(1); // a corrupt save cannot restock unique gear
     shop.load(null, 1);
     shop.load({}, 99);
     expect(shop.serialize().stock.wystan['marshals-longsword']).toBe(1);

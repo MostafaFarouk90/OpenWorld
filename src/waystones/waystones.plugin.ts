@@ -56,10 +56,11 @@ const waystones: GamePlugin = {
         heartshard: debug || ctx.state.getBool('tutorial.heartshard-awakened'),
         allowRestInCombat: ctx.state.getBool('waystone.allowRestInCombat'),
       }),
-      restoreVitals: () => {
+      restoreVitals: (opts) => {
         const a = ctx.player.actor;
         ctx.damage.heal(PLAYER_ID, a.maxHealth);
         a.restoreStamina(a.maxStamina);
+        if (opts?.quiet) return;
         showToast(ctx.hud, ctx.strings.t('waystone.rested'));
         prompts()?.success('rest');
       },

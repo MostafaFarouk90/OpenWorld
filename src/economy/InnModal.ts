@@ -18,7 +18,8 @@ export interface InnModalDeps {
 }
 
 /** One-shot confirm dialog for a night at the inn; the Inn service does the paying and resting. */
-export function openInnModal(deps: InnModalDeps, req: InnRequest): boolean {
+/** Returns a function that cancels the dialog (Esc), or null when another modal is open. */
+export function openInnModal(deps: InnModalDeps, req: InnRequest): (() => void) | null {
   const t = deps.t ?? defaultHudT;
   const { doc } = deps;
   const element = makeEl(doc, 'div', 'owg-respec');
@@ -55,5 +56,5 @@ export function openInnModal(deps: InnModalDeps, req: InnRequest): boolean {
       req.cancel();
     },
   });
-  return closer !== null;
+  return closer === null ? null : () => finish('cancel');
 }

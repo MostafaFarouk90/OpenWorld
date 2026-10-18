@@ -12,7 +12,7 @@ export interface VendorMenuDeps {
   inventory: Pick<InventoryService, 'items' | 'gold' | 'equipped'>;
   offers(): Offer[];
   buyBackList(): readonly BuyBackEntry[];
-  buy(itemId: string): ShopResult;
+  buy(itemId: string, seenPrice: number): ShopResult;
   sell(itemId: string): ShopResult;
   buyBack(index: number): ShopResult;
   t: T;
@@ -92,7 +92,7 @@ export class VendorMenu {
     if (this.tab === 'buy') {
       for (const o of this.deps.offers()) {
         row(nameOf(o.itemId), o.remaining === null ? '' : t('economy.shop.left', { n: o.remaining }), t('economy.shop.buy', { price: o.price }), () =>
-          this.act(this.deps.buy(o.itemId)),
+          this.act(this.deps.buy(o.itemId, o.price)),
         );
       }
     } else if (this.tab === 'sell') {

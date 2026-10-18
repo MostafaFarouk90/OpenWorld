@@ -26,7 +26,9 @@ export interface InnPorts {
   cooledFactor: number;
   addMaxHealthModifier(id: string, fn: () => number): () => void;
   refreshMaxHealth(): void;
-  topUp(): void;
+  maxHealth(): number;
+  /** Heals the player by n (never past the maximum). */
+  healBy(n: number): void;
   emitApplied(seconds: number): void;
   emitRemoved(): void;
 }
@@ -76,9 +78,10 @@ export class Inn {
     if (why) return { ok: false, reason: why };
     const price = this.quote();
     const taken = this.ports.takeGold(price, 'inn');
+    // Hearty first: restAt requests the checkpoint save, which must already hold the buff, and its heal fills the new max.
+    this.applyHearty(INN.heartySeconds);
     // canRestNow passed a moment ago in the same call, so restAt cannot refuse.
     this.ports.restAt(INN.placeId);
-    this.applyHearty(INN.heartySeconds);
     return { ok: true, paid: taken };
   }
 
@@ -86,9 +89,11 @@ export class Inn {
   applyHearty(seconds: number): void {
     if (!(seconds > 0)) return;
     this.remaining = Math.max(this.remaining, seconds);
+    const before = this.ports.maxHealth();
     this.install();
     this.ports.refreshMaxHealth();
-    this.ports.topUp();
+    // A stout mid-fight heals only the max-health it adds; the full refill belongs to the rest.
+    this.ports.healBy(this.ports.maxHealth() - before);
     this.ports.emitApplied(this.remaining);
   }
 

@@ -332,7 +332,7 @@ describe('restAt (the inn)', () => {
     const before = net.respawnPoint();
     events.length = 0;
     expect(net.restAt('inn.tilted-anvil')).toEqual({ ok: true });
-    expect(ports.restoreVitals).toHaveBeenCalledOnce();
+    expect(ports.restoreVitals).toHaveBeenCalledWith({ quiet: true });
     expect(events).toEqual([['rest', { placeId: 'inn.tilted-anvil' }]]);
     expect(ports.requestSave).toHaveBeenLastCalledWith('rest');
     expect(net.respawnPoint()).toEqual(before);

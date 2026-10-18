@@ -14,7 +14,8 @@ function make(over: Partial<{ room: boolean; price: 'forgiven' | 'collected' | u
     applied: [] as number[],
     removed: 0,
     refreshed: 0,
-    toppedUp: 0,
+    healed: [] as number[],
+    order: [] as string[],
   };
   const ports: InnPorts = {
     roomRented: () => s.room,
@@ -27,6 +28,7 @@ function make(over: Partial<{ room: boolean; price: 'forgiven' | 'collected' | u
     },
     canRestNow: () => s.blocked,
     restAt: (p) => {
+      s.order.push(`restAt:${s.modifier ? 'hearty' : 'bare'}`);
       s.rests.push(p);
       return { ok: true };
     },
@@ -39,7 +41,8 @@ function make(over: Partial<{ room: boolean; price: 'forgiven' | 'collected' | u
       };
     },
     refreshMaxHealth: () => void s.refreshed++,
-    topUp: () => void s.toppedUp++,
+    maxHealth: () => 100 * (s.modifier ? s.modifier() : 1),
+    healBy: (n) => void s.healed.push(n),
     emitApplied: (sec) => void s.applied.push(sec),
     emitRemoved: () => void s.removed++,
   };
@@ -61,7 +64,8 @@ describe('Inn rest', () => {
     expect(s.spent).toEqual([8]);
     expect(s.rests).toEqual([INN.placeId]);
     expect(s.applied).toEqual([INN.heartySeconds]);
-    expect(s.toppedUp).toBe(1);
+    expect(s.healed[0]).toBeCloseTo(10);
+    expect(s.order).toEqual(['restAt:hearty']); // the checkpoint save inside restAt already sees the buff
     expect(s.modifier?.()).toBeCloseTo(1.1);
   });
 
@@ -112,6 +116,15 @@ describe('Hearty and Cooled', () => {
     expect(inn.active).toBe(false);
     expect(s.removed).toBe(1);
     expect(s.modifier).toBeNull();
+  });
+
+  it('a stout heals only the max health it adds, never a full refill', () => {
+    const { s, inn } = make();
+    inn.applyHearty(60);
+    expect(s.healed).toHaveLength(1);
+    expect(s.healed[0]).toBeCloseTo(10);
+    inn.applyHearty(60); // refresh: nothing new to heal
+    expect(s.healed[1]).toBeCloseTo(0);
   });
 
   it('a shorter stout does not shorten a running Hearty', () => {
