@@ -5,7 +5,7 @@
 // quest's own gate holds (Tobb joined for M05 and D01, R02's blocking dummies in the yard), no console errors.
 // For each Harrowmark `?act1=<quest>&new`: the jump finishes, the quest is offerable (not started), the player stands
 // on the ground outside any interior within a few metres of its giver, no console errors.
-// Then the fog wall: standing after the D01 jump (M05 not complete), solid, and its toast shows on entry.
+// Then the fog wall: standing on the M05 jump (M05 not complete), solid, and its toast shows on entry.
 import { createRequire } from 'node:module';
 const { chromium } = createRequire(process.env.PLAYWRIGHT_RESOLVE ?? import.meta.url)('playwright');
 
@@ -77,7 +77,8 @@ for (const id of ['m03', 'm04', 'm05', 'd01', 'r01', 'r02']) {
       tobb: (id === 'm05' || id === 'd01') === s.tobb.includes('tobb'),
       dummies: (id === 'r02') === (s.blockingDummies === 3),
       mercy: id === 'd01' ? s.release && s.spare : id === 'm03' || id === 'r01' || id === 'r02' ? !s.release && !s.spare : true,
-      fogStands: !s.fogOpen,
+      // The wall opens on story.m05.complete: standing through M05, open from the D01 jump on.
+      fogStands: id === 'd01' ? s.fogOpen : !s.fogOpen,
     });
   } catch (err) {
     errors.push(`step failed: ${String(err).slice(0, 300)}`);
@@ -113,9 +114,9 @@ for (const id of ['m06', 'm07', 'm08', 'm09', 'm10', 'r03', 'r04', 'd02']) {
   await page.close();
 }
 
-// The fog wall after the whole of Phase A: walk into it from the road.
+// The fog wall while M05 is active: walk into it from the road.
 {
-  const { page, errors } = await jump('d01');
+  const { page, errors } = await jump('m05');
   try {
     const r = await page.evaluate(async () => {
       const ctx = window.__game.game.ctx;
@@ -133,7 +134,9 @@ for (const id of ['m06', 'm07', 'm08', 'm09', 'm10', 'r03', 'r04', 'd02']) {
         await new Promise((res) => setTimeout(res, 100));
         toastSeen ||= toast();
       }
-      await new Promise((res) => setTimeout(res, 1500));
+      // Then once well past it (the sweep's queued teleports race the push-back at a low frame rate): it puts the player back.
+      ctx.player.teleport({ x: fog.x + 10, y: fog.y + 1, z: fog.z });
+      await new Promise((res) => setTimeout(res, 4000));
       return {
         x: Math.round(ctx.player.feet.x), wallX: Math.round(fog.x), toastSeen, open: ctx.state.getBool('story.m05.complete'),
         fogTrigger: entered.includes('trg.fog.harrowmark'), modal: ctx.hud.modalOpen,
