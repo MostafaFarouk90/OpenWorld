@@ -11,6 +11,7 @@ import { createEffectRunner } from './effects';
 import { r01 } from './content/r01.quest';
 import { d01 } from './content/d01.quest';
 import { m03 } from './content/m03.quest';
+import { m01 } from './content/m01.quest';
 import { m04 } from './content/m04.quest';
 import { m05 } from './content/m05.quest';
 
@@ -111,9 +112,30 @@ describe('quest posts', () => {
     w.npcs.missing.clear();
     dir.update();
     expect(w.npcs.placed).toEqual([['gaut', 'npc-post.gaut.ford']]);
-    dir.reset(); // save.loaded: positions survive a load, nothing needs re-placing
+    dir.reset(); // save.loaded: another system may have moved him on load, so the post is placed again
     dir.update();
-    expect(w.npcs.placed).toHaveLength(1);
+    expect(w.npcs.placed).toEqual([['gaut', 'npc-post.gaut.ford'], ['gaut', 'npc-post.gaut.ford']]);
+    dir.update();
+    expect(w.npcs.placed).toHaveLength(2);
+  });
+  it('after M01, Gaut and Aelfreda leave the tutorial gate for their home posts (Aelfreda gives M03 at the chapel)', () => {
+    const w = makeWorld([m01, m04]);
+    const dir = new PostDirector(BRIGHTWATER_POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
+    w.manager.start('m01');
+    dir.update();
+    expect(w.npcs.placed).toEqual([]); // M01 under way: the tutorial's gate placement stands
+    w.manager.complete('m01');
+    dir.markDirty();
+    dir.update();
+    expect(w.npcs.placed).toEqual([['gaut', 'npc-post.gaut'], ['aelfreda', 'npc-post.aelfreda']]);
+    // A load re-places them even at home (the tutorial may have put them back at the gate meanwhile).
+    dir.reset();
+    dir.update();
+    expect(w.npcs.placed.slice(2)).toEqual([['gaut', 'npc-post.gaut'], ['aelfreda', 'npc-post.aelfreda']]);
+    w.manager.start('m04');
+    dir.markDirty();
+    dir.update();
+    expect(w.npcs.placed.at(-1)).toEqual(['gaut', 'npc-post.gaut.ford']);
   });
   it('a load that rewinds the quest sends Gaut home even though the load did not move him', () => {
     const w = makeWorld([m04]);
