@@ -47,6 +47,11 @@ const anchors: AnchorSpec[] = [
   a('yard.dodge-lane', -36, 125, 0, ['replay']),
   a('yard.pole-1', -53.5, 111, 90, ['replay']),
   a('yard.pole-2', -53.5, 121, 90, ['replay']),
+  // R02's blocking dummies (placed only while R02 is active, src/quests/r02Yard.ts): 4 m apart, south of the
+  // training dummies and clear of the Replay lanes, facing north into the yard like the training dummies.
+  a('yard.blocking-dummy-1', -49, 108, 0, ['dummy']),
+  a('yard.blocking-dummy-2', -45, 108, 0, ['dummy']),
+  a('yard.blocking-dummy-3', -41, 108, 0, ['dummy']),
 
   // Brightwater Chapel and the churchyard to its west.
   a('chapel.yard-centre', 32, 60, 90, ['poi']),
