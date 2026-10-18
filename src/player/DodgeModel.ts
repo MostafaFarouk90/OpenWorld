@@ -19,6 +19,8 @@ export interface DodgeStartArgs {
   inputZ: number;
   facingYaw: number;
   lockedOn: boolean;
+  /** Multiplies the travel speed (so the distance), the tick counts stay; default 1. */
+  distanceScale?: number;
 }
 
 export interface DodgeStart {
@@ -47,6 +49,7 @@ export class DodgeModel {
   private index = -1;
   private dirX = 0;
   private dirZ = 0;
+  private scale = 1;
 
   /** False when any blocking condition holds or a dodge is already running. */
   canStart(ctx: DodgeContext): boolean {
@@ -87,6 +90,7 @@ export class DodgeModel {
     this.index = -1;
     this.dirX = dirX;
     this.dirZ = dirZ;
+    this.scale = args.distanceScale !== undefined && Number.isFinite(args.distanceScale) && args.distanceScale > 0 ? args.distanceScale : 1;
     return { clip, dirX, dirZ, yaw };
   }
 
@@ -100,7 +104,7 @@ export class DodgeModel {
     if (!this.running) return { index: -1, iFrames: false, move: null, done: false };
     const index = ++this.index;
     const iFrames = index >= DODGE.iFrameStart && index <= DODGE.iFrameEnd;
-    const move = index <= DODGE.iFrameEnd ? { x: this.dirX, z: this.dirZ, speed: DODGE_SPEED } : null;
+    const move = index <= DODGE.iFrameEnd ? { x: this.dirX, z: this.dirZ, speed: DODGE_SPEED * this.scale } : null;
     const done = index >= DODGE.totalTicks - 1;
     if (done) {
       this.running = false;

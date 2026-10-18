@@ -1022,3 +1022,231 @@ describe('class kit swap (v0.5)', () => {
     expect(r.dealt).toBe(10);
   });
 });
+
+describe('status ticks (contracts section 10)', () => {
+  const tick = (t: ReturnType<typeof setup>, from: Actor) =>
+    t.hit(from, { kind: 'status', statusId: 'bleed:t', statusKind: 'bleed', amount: 3, poise: 0, unblockable: true, direction: undefined, attackId: undefined, swingId: undefined })!;
+
+  it('a held block neither blocks nor pays stamina for a tick', () => {
+    const t = setup();
+    const e = t.enemy();
+    t.press('KeyB');
+    t.run(20);
+    const stamina = t.actor.stamina;
+    const r = tick(t, e);
+    expect(r.outcome).toBe('hit');
+    expect(r.dealt).toBe(3);
+    expect(t.actor.stamina).toBe(stamina);
+    t.run(2);
+    expect(t.of('player.blocked')).toHaveLength(0);
+    expect(t.controller.currentAction).toBe('block');
+  });
+
+  it('dodge i-frames do not stop a tick, report no dodge and do not stop real hits being dodged', () => {
+    const t = setup();
+    const e = t.enemy();
+    t.press('KeyN');
+    t.run(1);
+    t.release('KeyN');
+    t.run(3);
+    expect(t.actor.invulnerable).toBe(true);
+    const health = t.actor.health;
+    const r = tick(t, e);
+    expect(r.outcome).toBe('hit');
+    expect(t.actor.health).toBe(health - 3);
+    expect(t.hit(e)!.outcome).toBe('immune');
+    t.run(2);
+    expect(t.of('player.dodged')).toHaveLength(1);
+  });
+
+  it('other invulnerability (a respawn grace) still stops a tick', () => {
+    const t = setup();
+    const e = t.enemy();
+    t.verbs.invuln.add('respawn');
+    t.verbs.invuln.add('dodge');
+    expect(tick(t, e).outcome).toBe('immune');
+    expect(t.of('player.dodged')).toHaveLength(0);
+  });
+
+  it('any registered i-frame source lets a tick through; mixed with grace it does not', () => {
+    const t = setup();
+    const e = t.enemy();
+    t.verbs.iFrameSources.add('ashDrift');
+    t.verbs.invuln.add('ashDrift');
+    expect(tick(t, e).outcome).toBe('hit');
+    t.verbs.invuln.add('respawn');
+    expect(tick(t, e).outcome).toBe('immune');
+    t.verbs.invuln.remove('respawn');
+    t.verbs.invuln.remove('ashDrift');
+    expect(tick(t, e).outcome).toBe('hit');
+  });
+
+  it('a tick does not make the player flinch', () => {
+    const t = setup();
+    const e = t.enemy();
+    tick(t, e);
+    t.run(3);
+    expect(t.controller.currentAction).toBeNull();
+  });
+});
+
+describe('class hooks: dodge distance and timed invulnerability', () => {
+  const dodgeDistance = (t: ReturnType<typeof setup>) => {
+    const z0 = t.ctx.player.feet.z;
+    t.press('KeyN');
+    t.run(1);
+    t.release('KeyN');
+    t.run(40);
+    return Math.abs(t.ctx.player.feet.z - z0);
+  };
+  const svc = (t: ReturnType<typeof setup>) => t.ctx.services.get('combatVerbs') as CombatVerbsService;
+
+  it('a dodge distance multiplier lengthens the dodge, combines by product and is removable', () => {
+    const t = setup();
+    const base = dodgeDistance(t);
+    t.run(60);
+    const off = svc(t).addDodgeDistanceMultiplier('a', 1.2);
+    const longer = dodgeDistance(t);
+    expect(longer / base).toBeGreaterThan(1.1);
+    expect(longer / base).toBeLessThan(1.3);
+    t.run(60);
+    svc(t).addDodgeDistanceMultiplier('b', () => 1.5);
+    const both = dodgeDistance(t);
+    expect(both / base).toBeGreaterThan(1.6);
+    t.run(60);
+    off();
+    expect(dodgeDistance(t) / base).toBeGreaterThan(1.35);
+  });
+
+  it('an invalid multiplier is ignored', () => {
+    const t = setup();
+    const base = dodgeDistance(t);
+    t.run(60);
+    svc(t).addDodgeDistanceMultiplier('bad', NaN);
+    expect(dodgeDistance(t) / base).toBeCloseTo(1, 1);
+  });
+
+  it('addInvulnerability makes hits immune for the time and then ends', () => {
+    const t = setup();
+    const e = t.enemy();
+    svc(t).addInvulnerability('ash-drift', 1);
+    t.run(1);
+    expect(t.actor.invulnerable).toBe(true);
+    expect(t.hit(e)!.outcome).toBe('immune');
+    t.run(58);
+    expect(t.actor.invulnerable).toBe(true);
+    t.run(3);
+    expect(t.actor.invulnerable).toBe(false);
+    expect(t.hit(e, { swingId: 4 })!.outcome).toBe('hit');
+  });
+
+  it('a status tick passes through a timed grant but a hit does not', () => {
+    const t = setup();
+    const e = t.enemy();
+    svc(t).addInvulnerability('ash-drift', 1);
+    t.run(1);
+    expect(t.hit(e)!.outcome).toBe('immune');
+    const r = t.ctx.damage.apply({ attackerId: e.id, targetId: 'player', amount: 2, kind: 'status', statusId: 'burn', statusKind: 'ignite' });
+    expect(r!.outcome).toBe('hit');
+    t.verbs.invuln.add('respawn');
+    expect(t.ctx.damage.apply({ attackerId: e.id, targetId: 'player', amount: 2, kind: 'status', statusId: 'burn2', statusKind: 'ignite' })!.outcome).toBe('immune');
+  });
+
+  it('the same source extends instead of stacking, and the release ends it early', () => {
+    const t = setup();
+    svc(t).addInvulnerability('x', 1);
+    t.run(30);
+    const off = svc(t).addInvulnerability('x', 1);
+    t.run(40);
+    expect(t.actor.invulnerable).toBe(true);
+    off();
+    expect(t.actor.invulnerable).toBe(false);
+    off();
+    expect(t.actor.invulnerable).toBe(false);
+  });
+
+  it('does not clear the dodge i-frames when a timed source ends', () => {
+    const t = setup();
+    svc(t).addInvulnerability('x', 0.05);
+    t.press('KeyN');
+    t.run(1);
+    t.release('KeyN');
+    t.run(8);
+    expect(t.controller.currentAction).toBe('dodge');
+    expect(t.actor.invulnerable).toBe(true);
+  });
+
+  it('refuses a bad source or time and returns a harmless remover', () => {
+    const t = setup();
+    for (const [src, secs] of [['', 1], ['x', 0], ['x', -1], ['x', NaN]] as const) svc(t).addInvulnerability(src, secs)();
+    t.run(2);
+    expect(t.actor.invulnerable).toBe(false);
+  });
+
+  it('death and a load clear it', () => {
+    const t = setup();
+    svc(t).addInvulnerability('x', 10);
+    t.run(2);
+    expect(t.actor.invulnerable).toBe(true);
+    t.game.events.emit('save.loaded', {} as never);
+    expect(t.actor.invulnerable).toBe(false);
+    svc(t).addInvulnerability('y', 10);
+    t.run(2);
+    t.ctx.damage.kill?.('player', null);
+    t.run(5);
+    expect(t.actor.invulnerable).toBe(false);
+  });
+});
+
+describe('holdForcedMove (the Warden shoulder charge)', () => {
+  const svc = (t: ReturnType<typeof setup>) => t.ctx.services.get('combatVerbs' as never) as unknown as CombatVerbsService;
+  const dist = (t: ReturnType<typeof setup>, a: THREE.Vector3) => Math.hypot(t.ctx.player.feet.x - a.x, t.ctx.player.feet.z - a.z);
+
+  it('moves the player about 5 m over 21 ticks along the held direction and survives the per-tick clear', () => {
+    const t = setup();
+    const start = t.ctx.player.feet.clone();
+    svc(t).holdForcedMove('charge', { x: 0, z: -1, speed: 5 / 0.35 });
+    t.run(21);
+    svc(t).holdForcedMove('charge', null);
+    t.run(3);
+    const moved = dist(t, start);
+    expect(moved).toBeGreaterThan(4);
+    expect(moved).toBeLessThan(5.6);
+    expect(t.ctx.player.feet.z).toBeLessThan(start.z - 4);
+  });
+
+  it('stops when released', () => {
+    const t = setup();
+    svc(t).holdForcedMove('charge', { x: 0, z: -1, speed: 10 });
+    t.run(5);
+    svc(t).holdForcedMove('charge', null);
+    t.run(2);
+    const z = t.ctx.player.feet.z;
+    t.run(30);
+    expect(Math.abs(t.ctx.player.feet.z - z)).toBeLessThan(0.05);
+  });
+
+  it('a knockback wins over a hold while it lasts', () => {
+    const t = setup();
+    const start = t.ctx.player.feet.clone();
+    svc(t).holdForcedMove('charge', { x: 0, z: -1, speed: 2 });
+    t.hit(t.enemy(), { poise: 30 });
+    t.run(4);
+    expect(t.controller.currentAction).toBe('stagger');
+    // The enemy is ahead (-z): the knockback pushes the player back (+z) although the hold points forward.
+    expect(t.ctx.player.feet.z).toBeGreaterThan(start.z);
+    svc(t).holdForcedMove('charge', null);
+  });
+
+  it('ignores non-finite moves and later owners win', () => {
+    const t = setup();
+    const start = t.ctx.player.feet.clone();
+    svc(t).holdForcedMove('a', { x: NaN, z: 0, speed: 1 });
+    t.run(10);
+    expect(dist(t, start)).toBeLessThan(0.05);
+    svc(t).holdForcedMove('a', { x: 0, z: -1, speed: 3 });
+    svc(t).holdForcedMove('b', { x: 0, z: 1, speed: 3 });
+    t.run(30);
+    expect(t.ctx.player.feet.z).toBeGreaterThan(start.z + 0.5);
+  });
+});

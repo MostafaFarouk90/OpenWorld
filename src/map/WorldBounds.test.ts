@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bitmapCacheKey } from './TerrainBitmap';
 import { FogGrid, buildMarkers, hitTestMarker, mapExtent, mapToWorld, worldToMap } from './MapModel';
+import { WORLD_BOUNDS } from '../config/constants';
 import { DEFAULT_WORLD_BOUNDS, LEGACY_V1_BOUNDS, MAP_TUNING } from './tuning';
 
 const WIDE = { minX: -2000, maxX: 10500, minZ: -2000, maxZ: 4500 };
@@ -9,6 +10,12 @@ describe('non-square, off-origin bounds', () => {
   it('the default is the widened world with the v1 origin', () => {
     expect(DEFAULT_WORLD_BOUNDS).toEqual(WIDE);
     expect(MAP_TUNING.fogCellSize).toBe(50);
+  });
+
+  it('guard: the default equals core WORLD_BOUNDS, as a frozen copy', () => {
+    expect(DEFAULT_WORLD_BOUNDS).toEqual(WORLD_BOUNDS);
+    expect(DEFAULT_WORLD_BOUNDS).not.toBe(WORLD_BOUNDS);
+    expect(Object.isFrozen(DEFAULT_WORLD_BOUNDS)).toBe(true);
   });
 
   it('keeps the aspect: the longer edge is `size`, one metre is the same on both axes', () => {

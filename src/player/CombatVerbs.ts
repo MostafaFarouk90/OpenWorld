@@ -59,6 +59,21 @@ export interface CombatVerbsService {
    * Multipliers combine by product, clamped to 0.5..2. Returns the remover.
    */
   addAttackSpeedMultiplier(id: string, mult: number | (() => number)): () => void;
+  /**
+   * Holds a scripted forced move (the Warden's shoulder charge) for `owner` until it is released with `null`. Applied every
+   * tick while no dodge or knockback is running (those win); several owners: the latest one wins. `x`, `z` is a unit direction.
+   */
+  holdForcedMove(owner: string, move: { x: number; z: number; speed: number } | null): void;
+  /**
+   * Multiplies the dodge's travel distance (Ashblade Quick Slip); the i-frames and the clip are unchanged. Multipliers
+   * combine by product, clamped to 0.5..2; the same id replaces its earlier entry. Returns the remover.
+   */
+  addDodgeDistanceMultiplier(id: string, mult: number | (() => number)): () => void;
+  /**
+   * Makes the player invulnerable for `seconds` of fixed ticks through the same i-frame gate as the dodge (Ashblade
+   * Ash-drift). The same source extends, never stacks. Cleared on death, on a load and on dispose. Returns the early release.
+   */
+  addInvulnerability(source: string, seconds: number): () => void;
 }
 
 declare module '../core/Services' {
@@ -117,7 +132,12 @@ export class CombatVerbs {
   lastRestedWaystoneId: string | null = null;
 
   readonly attackSets = new AttackSets();
+  private readonly forcedHolds = new Map<string, { x: number; z: number; speed: number }>();
   readonly attackSpeed = new SpeedMultipliers((id) => console.warn(`combatVerbs: attack speed multiplier "${id}" is invalid, ignored`));
+  readonly dodgeDistance = new SpeedMultipliers((id) => console.warn(`combatVerbs: dodge distance multiplier "${id}" is invalid, ignored`));
+  /** Timed invulnerability sources (`addInvulnerability`): source name to remaining fixed ticks. */
+  private readonly timedInvuln = new Map<string, number>();
+  private readonly timedGeneration = new Map<string, number>();
   private appliedAttackClass: string | null = null;
   private offIronStance: (() => void) | null = null;
   private controller: AnimationController | null = null;
@@ -135,6 +155,11 @@ export class CombatVerbs {
   private sprintTicks = 0;
   private reArmed = false;
   private readonly dodgedSwings = new Set<string>();
+  /**
+   * Invulnerability sources that are i-frames (the dodge, and later Ash-drift): status ticks ignore them. Respawn grace
+   * and Second Wind are not in it, so they still stop ticks. A new i-frame source adds its name here.
+   */
+  readonly iFrameSources = new Set<string>(['dodge']);
   private readonly offs: Array<() => void> = [];
   /** The current avatar's combat target and clip listener (replaced on a kit swap). */
   private readonly avatarOffs: Array<() => void> = [];
@@ -176,12 +201,14 @@ export class CombatVerbs {
       ctx.events.on('actor.died', (e) => {
         if (e.actorId === this.actor.id) this.deathPending = true;
       }),
+      ctx.events.on('save.loaded', () => this.clearTimedInvulnerability()),
       ctx.events.on('rest', (e) => {
         // Inn rests (placeId only) do not move the respawn point.
         if (e.waystoneId) this.lastRestedWaystoneId = e.waystoneId;
       }),
     );
     ctx.damage.addModifier('player-riposte', (req) => this.riposteModifier(req), -150);
+    ctx.damage.addModifier('player-status-ticks', (req, target) => this.statusThroughDodge(req, target), ORDER.statusTicks);
     ctx.damage.addModifier('player-guard', (req, target, attacker) => this.guardModifier(req, target, attacker), ORDER.guardModifier);
     ctx.damage.addLethalHandler(
       'second-wind',
@@ -240,6 +267,14 @@ export class CombatVerbs {
       },
       registerAttackSet: (classId, set) => self.attackSets.register(classId, set),
       addAttackSpeedMultiplier: (id, mult) => self.attackSpeed.add(id, mult),
+      holdForcedMove: (owner, move) => {
+        if (move && Number.isFinite(move.x + move.z + move.speed)) {
+          self.forcedHolds.delete(owner); // re-insert so the latest hold is the last
+          self.forcedHolds.set(owner, { ...move });
+        } else self.forcedHolds.delete(owner);
+      },
+      addDodgeDistanceMultiplier: (id, mult) => self.dodgeDistance.add(id, mult),
+      addInvulnerability: (source, seconds) => self.addTimedInvulnerability(source, seconds),
     });
     const rig = ctx.cameraRig;
     if (rig) {
@@ -255,6 +290,7 @@ export class CombatVerbs {
     for (const off of this.offs.splice(0)) off();
     for (const off of this.offLocks.values()) off();
     this.offLocks.clear();
+    this.forcedHolds.clear();
     this.deadModifier?.();
     this.deadModifier = null;
     this.offIronStance?.();
@@ -262,6 +298,7 @@ export class CombatVerbs {
     this.invuln.remove('dodge');
     this.invuln.remove('respawn');
     this.invuln.remove('secondWind');
+    this.clearTimedInvulnerability();
     this.controller?.exitAction();
     if (this.lockOn.target !== null) this.ctx.events.emit('lockon.changed', { targetId: null });
     const rig = this.ctx.cameraRig;
@@ -285,6 +322,7 @@ export class CombatVerbs {
     const { ctx, actor } = this;
     const avatar = ctx.world.avatar;
     this.expireGrace();
+    this.tickTimedInvulnerability();
     this.secondWind.tickGrace();
     this.poise.tick();
     if (!avatar) return;
@@ -381,6 +419,7 @@ export class CombatVerbs {
       inputZ: w.z,
       facingYaw: ctx.player.facingYaw,
       lockedOn: this.lockOn.target !== null,
+      distanceScale: this.dodgeDistance.value(),
     });
     this.freeDodgeYaw = this.lockOn.target === null ? start.yaw : null;
     this.knockback = null;
@@ -416,7 +455,9 @@ export class CombatVerbs {
       this.knockback.left--;
     } else if (!this.dodge.active) {
       this.knockback = null;
-      player.setForcedMove(null);
+      let hold: { x: number; z: number; speed: number } | null = null;
+      for (const h of this.forcedHolds.values()) hold = h;
+      player.setForcedMove(hold);
     }
     const target = this.lockOn.target;
     if (this.freeDodgeYaw !== null) player.setFacingOverride(this.freeDodgeYaw);
@@ -468,8 +509,14 @@ export class CombatVerbs {
     req.unblockable = true;
   }
 
+  /** Bleed and ignite ticks are not dodgeable (contracts/actors-and-damage.md section 10): the dodge's i-frames do not stop them. */
+  private statusThroughDodge(req: ModifiableRequest, target: Actor): void {
+    if (req.kind === 'status' && target.id === this.actor.id && req.outcome === 'immune' && this.invuln.onlyAmong(this.iFrameSources)) req.outcome = 'hit';
+  }
+
   private guardModifier(req: ModifiableRequest, target: Actor, attacker: Actor | null): void {
-    if (target.id !== this.actor.id || req.outcome === 'immune') return;
+    // Status ticks are neither blockable nor parryable and drain no guard stamina.
+    if (target.id !== this.actor.id || req.outcome === 'immune' || req.kind === 'status') return;
     const c = this.controller;
     const action = c?.currentAction;
     // The tick after a blockHit clip ends the guard is still up; block re-enters on the next intent.
@@ -516,7 +563,7 @@ export class CombatVerbs {
       if (this.learned(RIPOSTE_SKILL)) this.riposteUntil = ctx.clock.tick + RIPOSTE_WINDOW_TICKS;
     } else if (r.outcome === 'immune') {
       const attacker = r.attackerId ? ctx.actors.get(r.attackerId) : undefined;
-      if (attacker?.team === 'hostile' && this.invuln.has('dodge')) {
+      if (attacker?.team === 'hostile' && r.kind !== 'status' && this.invuln.has('dodge')) {
         const key = `${r.attackerId}#${r.swingId ?? r.attackId ?? ctx.clock.tick}`;
         if (!this.dodgedSwings.has(key)) {
           this.dodgedSwings.add(key);
@@ -525,7 +572,8 @@ export class CombatVerbs {
           this.prompts()?.success('dodge');
         }
       }
-    } else {
+    } else if (r.kind !== 'status') {
+      // A bleed tick does not make the player flinch.
       const reaction = this.poise.onDamage({
         outcome: r.outcome,
         reqPoise: r.poise,
@@ -598,6 +646,7 @@ export class CombatVerbs {
     this.ctx.world.player.setForcedMove(null);
     this.ctx.world.player.setFacingOverride(null);
     this.pending.length = 0;
+    this.clearTimedInvulnerability();
     this.guard.setBlockHeld(false, ctx.clock.tick);
     c?.enterAction('dying');
     this.deadModifier ??= ctx.player.addMoveModifier('player-dead', { lockMove: true, lockActions: DEAD_LOCKED_ACTIONS });
@@ -667,6 +716,37 @@ export class CombatVerbs {
     this.invuln.add('respawn');
     this.respawnGrace = RESPAWN.graceTicks;
     ctx.events.emit('player.respawned', { source });
+  }
+
+  private addTimedInvulnerability(source: string, seconds: number): () => void {
+    if (typeof source !== 'string' || source === '' || !Number.isFinite(seconds) || seconds <= 0) return () => undefined;
+    const key = `timed:${source}`;
+    // A timed grant is an i-frame like the dodge: status ticks pass through it (actors-and-damage.md section 10), a grace does not.
+    this.iFrameSources.add(key);
+    const ticks = Math.ceil(seconds * 60);
+    this.timedInvuln.set(key, Math.max(this.timedInvuln.get(key) ?? 0, ticks));
+    this.invuln.add(key);
+    const generation = (this.timedGeneration.get(key) ?? 0) + 1;
+    this.timedGeneration.set(key, generation);
+    return () => {
+      // A stale release must not cancel a newer grant of the same source.
+      if (this.timedGeneration.get(key) === generation && this.timedInvuln.delete(key)) this.invuln.remove(key);
+    };
+  }
+
+  private tickTimedInvulnerability(): void {
+    if (this.timedInvuln.size === 0) return;
+    for (const [key, left] of this.timedInvuln) {
+      if (left <= 1) {
+        this.timedInvuln.delete(key);
+        this.invuln.remove(key);
+      } else this.timedInvuln.set(key, left - 1);
+    }
+  }
+
+  private clearTimedInvulnerability(): void {
+    for (const key of this.timedInvuln.keys()) this.invuln.remove(key);
+    this.timedInvuln.clear();
   }
 
   private expireGrace(): void {

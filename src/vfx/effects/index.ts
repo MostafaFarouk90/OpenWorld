@@ -172,9 +172,72 @@ export const EFFECTS: Record<EffectId, EffectFactory> = {
     const r = ring(ctx, { position: hand }, 4, GOLD, 0.8);
     return r;
   },
+  // Design 11 effect 16 (Ashblade Ash Cloud): grey smoke puffs that keep rising from a `scale` metre radius for `seconds`.
+  'ash-cloud': (ctx, t, p) => {
+    const o = origin(t);
+    const radius = Math.max(0.5, t.scale ?? 3.5);
+    const seconds = Math.max(0.5, num(p, 'seconds', 6));
+    const start = ctx.now();
+    let last = -Infinity;
+    let stopped = false;
+    const puff = (count: number, now: number) =>
+      ctx.points.emit('smoke', { x: o.x, y: o.y + 0.4, z: o.z }, count, { spread: radius * 0.6, rise: 0.8, life: 3 }, now);
+    puff(40, start);
+    return {
+      update(now) {
+        if (stopped || now - start >= seconds) return false;
+        if (now - last >= 0.25) {
+          last = now;
+          puff(8, now);
+        }
+        return true;
+      },
+      stop: () => void (stopped = true),
+    };
+  },
   // Section 3 Spare: a gold glyph above a yielding human for the 2 s window.
   'yield-glyph': (ctx, t, p) => {
     const o = origin(t);
     return ring(ctx, { position: { x: o.x, y: o.y + num(p, 'height', 2.4), z: o.z } }, 0.5, GOLD, num(p, 'seconds', 2));
+  },
+  // Section 3 Surge Leap: a continuous gold trail that follows `attach` until stopped (landing, cancel) or `maxSeconds`.
+  'leap-trail': (ctx, t, p) => {
+    const start = ctx.now();
+    const maxSeconds = num(p, 'maxSeconds', 2);
+    let done = false;
+    return {
+      update(now) {
+        if (done || now - start >= maxSeconds) {
+          done = true;
+          return false;
+        }
+        ctx.points.emit('ember', origin(t), num(p, 'count', 3), { color: GOLD, spread: 0.25, rise: 0.4, life: 0.5 }, now);
+        return true;
+      },
+      stop: () => {
+        done = true;
+      },
+    };
+  },
+  // Takeoff and landing: a flat dust ring at the feet.
+  'leap-dust': (ctx, t) => {
+    const o = origin(t);
+    ctx.points.emit('ash', o, 16, { color: 0xc8b898, spread: 0.8, rise: 0.5, life: 0.6 }, ctx.now());
+    return ring(ctx, t, (t.scale ?? 1) * 1.5, 0xc8b898, 0.4);
+  },
+  // The 0.2 s F shell around the player at launch.
+  'leap-shell': (ctx, t, p) => {
+    const scale = t.scale ?? 1;
+    const o = origin(t);
+    const shell = createFresnelShell({ radius: 1.2 * scale, color: num(p, 'color', GOLD), intensity: 1.2 });
+    shell.position.set(o.x, o.y + 1, o.z);
+    return timedMesh(ctx, shell, 0.2, (q) => setShellProgress(shell, q));
+  },
+  // Scar: a brief chest flash.
+  'scar-flash': (ctx, t) => {
+    const o = origin(t);
+    ctx.lights.flash(o, 0xff4020, 7, 0.05, 0.3, ctx.now());
+    ctx.points.emit('ember', o, 24, { color: 0xff6030, spread: 0.4, rise: 1.2, life: 0.6 }, ctx.now());
+    return ONE_SHOT;
   },
 };

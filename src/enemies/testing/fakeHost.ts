@@ -7,6 +7,7 @@ import type { AttackWindowSource } from '../../combat/types';
 import { isWindowActive } from '../../combat/AttackWindow';
 import type { WeaponTracer } from '../../combat/WeaponTracer';
 import { KNIGHT } from '../../config/constants';
+import { loudFromSpeed } from '../ai/awareness';
 import type {
   ActorId,
   ActorInitLike,
@@ -19,8 +20,10 @@ import type {
   EnemyEvents,
   EnemyHost,
   InteractableLike,
+  InventoryPort,
   NavPort,
   QuestsPortLike,
+  StatusPort,
   TorchState,
   Team,
 } from '../ports';
@@ -54,6 +57,16 @@ export async function loadKnight(): Promise<{ scene: THREE.Object3D; animations:
     console.error = error;
   }
   return knight!;
+}
+
+/** The status service stand-in: records every `apply`; `result` is what it returns. */
+export class FakeStatus implements StatusPort {
+  readonly calls: Array<{ actorId: ActorId; spec: Parameters<StatusPort['apply']>[1] }> = [];
+  result = true;
+  apply(actorId: ActorId, spec: Parameters<StatusPort['apply']>[1]): boolean {
+    this.calls.push({ actorId, spec });
+    return this.result;
+  }
 }
 
 export class FakeBus {
@@ -117,6 +130,26 @@ export class FakeBus {
   }
 }
 
+/** The inventory service's gold half, as thread 5 provides it; records every spend. */
+export class FakeInventory implements InventoryPort {
+  readonly spent: Array<{ amount: number; reason: string }> = [];
+  readonly added: number[] = [];
+  constructor(public gold: number) {}
+  addGold(n: number): void {
+    if (Number.isFinite(n) && n > 0) {
+      this.gold += Math.floor(n);
+      this.added.push(Math.floor(n));
+    }
+  }
+  takeGold(n: number, reason: 'theft' | 'script' = 'script'): number {
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    const taken = Math.min(this.gold, Math.floor(n));
+    this.gold -= taken;
+    if (taken > 0) this.spent.push({ amount: taken, reason });
+    return taken;
+  }
+}
+
 export class FakeActor implements ActorLike {
   team: Team;
   level: number;
@@ -126,6 +159,8 @@ export class FakeActor implements ActorLike {
   maxPoise: number;
   hittable = true;
   invulnerable = false;
+  /** Takes every hit and stays at full health, like the core's immortal actors. */
+  readonly immortal: boolean;
   root: THREE.Object3D | null;
   data: Record<string, unknown> = {};
   readonly spawnTag?: string;
@@ -135,6 +170,7 @@ export class FakeActor implements ActorLike {
     init: ActorInitLike,
   ) {
     this.team = init.team;
+    this.immortal = init.immortal ?? false;
     this.level = init.level ?? 1;
     this.maxHealth = this.health = init.maxHealth;
     this.maxPoise = this.poise = init.maxPoise ?? 0;
@@ -163,6 +199,8 @@ export interface FakeHostOptions {
   heightAt?: (x: number, z: number) => number;
   /** Player feet at start. */
   playerFeet?: { x: number; y: number; z: number };
+  /** A real physics world: enemies then use the kinematic mover and real raycasts (player collider stays null). */
+  physics?: EnemyHost['physics'];
 }
 
 /** The whole fake core plus a player with real Knight hurtboxes. */
@@ -186,6 +224,8 @@ export class FakeHost {
   readonly playerHurtboxes: HurtboxSet;
   readonly playerFeet: THREE.Vector3;
   loud = false;
+  /** Measured player speed (m/s) the fake reports; loud above LOUD_SPEED, whatever keys are held. */
+  speed = 0;
   vfx: { dissolve(root: THREE.Object3D, s: number): Promise<void>; spawnEffect?(id: string, t: { position: { x: number; y: number; z: number } }, p?: Record<string, number | string | boolean>): unknown } | undefined;
   /** Thread 2's spells service when a test provides it (`useShard`, or the older `addBurn`). */
   spells: { useShard?(g: number, s: string): void; addBurn?(n: number, s: string): void } | undefined = undefined;
@@ -202,6 +242,10 @@ export class FakeHost {
   interiors: { current: string | null } | undefined;
   /** Thread 3a's nav service, when a test provides it. */
   nav: NavPort | undefined;
+  /** Thread 5's inventory service (gold), when a test provides it (`provideInventory`). */
+  inventory: FakeInventory | undefined;
+  /** Thread 2's status service, when a test provides it (`new FakeStatus()`); absent means the burning bite is a no-op. */
+  status: StatusPort | undefined;
   private readonly gateWatchers: Array<{ test: (get: (k: string) => boolean) => boolean; listener: (open: boolean, cause: 'init' | 'flag' | 'load' | 'recheck') => void; open: boolean }> = [];
   private counter = 0;
 
@@ -269,6 +313,12 @@ export class FakeHost {
     });
   }
 
+  /** Gives the world an inventory service holding `gold`. */
+  provideInventory(gold: number): FakeInventory {
+    this.inventory = new FakeInventory(gold);
+    return this.inventory;
+  }
+
   /** Makes the quests service expose a carried torch (`torchState`); the shape is the plan's, not yet on the real service. */
   provideTorch(state: TorchState | null = null): void {
     this.torchState = state;
@@ -331,7 +381,7 @@ export class FakeHost {
     for (const m of [...this.modifiers].sort((a, b) => a.order - b.order)) m.fn(r, target, attacker);
     const dealt = r.outcome === 'immune' || r.outcome === 'parried' ? 0 : Math.max(0, r.amount);
     const poiseDealt = r.outcome === 'immune' || r.outcome === 'parried' ? 0 : Math.max(0, r.poise);
-    target.health = Math.max(0, target.health - dealt);
+    target.health = target.immortal ? target.maxHealth : Math.max(0, target.health - dealt);
     const before = target.poise;
     target.poise = Math.max(0, target.poise - poiseDealt);
     const staggered = before > 0 && target.poise === 0;
@@ -374,7 +424,7 @@ export class FakeHost {
     const self = this;
     return {
     scene: this.scene,
-    physics: null,
+    physics: this.opts.physics ?? null,
     actors: {
       spawn: (init) => {
         const id = `${init.kind}#${++this.counter}`;
@@ -480,10 +530,13 @@ export class FakeHost {
         if (name === 'interiors') return this.interiors;
         if (name === 'nav') return this.nav;
         if (name === 'spells') return this.spells;
+        if (name === 'inventory') return this.inventory;
+        if (name === 'status') return this.status;
         return undefined;
       }) as EnemyHost['services']['get'],
     },
     bosses: {
+      active: () => [...self.bossStates.keys()],
       state: (id) => self.bossStates.get(id) ?? null,
       release: (id) => {
         self.bossReleases.push(id);
@@ -505,7 +558,8 @@ export class FakeHost {
         return self.playerFeet;
       },
       collider: null,
-      loud: () => this.loud,
+      loud: () => loudFromSpeed(this.speed, false) || this.loud,
+      speed: () => this.speed,
       addMoveModifier: (source, mod) => {
         this.moveModifiers.set(source, mod);
         return () => this.moveModifiers.delete(source);

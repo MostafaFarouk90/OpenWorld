@@ -99,3 +99,55 @@ describe('Ember boundary notifications', () => {
     expect(seen[seen.length - 1]).toBe(e.max);
   });
 });
+
+describe('Ember.setMax (class rows)', () => {
+  it('keeps the value, clamps it to a lower maximum and notifies', () => {
+    const e = new Ember();
+    const seen: number[] = [];
+    e.onChange = (v) => seen.push(v);
+    expect(e.setMax(60)).toBe(true);
+    expect(e.max).toBe(60);
+    expect(e.value).toBe(60);
+    expect(seen).toEqual([60]);
+  });
+  it('a larger maximum keeps the value and regenerates up to it', () => {
+    const e = new Ember();
+    e.setMax(160);
+    expect(e.value).toBe(100);
+    for (let i = 0; i < 60 * 40; i++) e.regen(1 / 60);
+    expect(e.value).toBe(160);
+  });
+  it.each([0, -5, Number.NaN, Number.POSITIVE_INFINITY, '30' as unknown as number])('refuses %s and changes nothing', (n) => {
+    const e = new Ember();
+    expect(e.setMax(n)).toBe(false);
+    expect(e.max).toBe(100);
+  });
+  it('a save carries its maximum, so a value above the default survives the load; a bad saved maximum is ignored', () => {
+    const e = new Ember();
+    e.setMax(150);
+    e.restore(50);
+    const saved = e.serialize();
+    expect(saved).toEqual({ ember: 150, max: 150 });
+    const fresh = new Ember();
+    fresh.load(saved, 1);
+    expect(fresh.value).toBe(150);
+    expect(fresh.max).toBe(150);
+    fresh.setMax(120);
+    expect(fresh.value).toBe(120);
+    const bad = new Ember();
+    bad.load({ ember: 500, max: -3 }, 1);
+    expect([bad.max, bad.value]).toEqual([100, 100]);
+    bad.load({ ember: 50, max: 99999 }, 1);
+    expect(bad.max).toBe(100);
+  });
+  it('spending and the full-value notification use the class maximum', () => {
+    const e = new Ember();
+    e.setMax(50);
+    e.spend(10);
+    const seen: number[] = [];
+    e.onChange = (v) => seen.push(v);
+    for (let i = 0; i < 60 * 10; i++) e.regen(1 / 60);
+    expect(e.value).toBe(50);
+    expect(seen[seen.length - 1]).toBe(50);
+  });
+});

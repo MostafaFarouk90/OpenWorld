@@ -11,7 +11,8 @@ const PLACEHOLDER_COLOURS: Record<NpcModelId, number> = {
 };
 
 /** Held items modelled into the GLBs (swords, shields, staffs, books, mugs); NPCs stand empty-handed. */
-const HELD_ITEM = /^(1H_|2H_|Knife|Throwable|Badge_|Rectangle_|Round_Shield|Spike_|Spellbook|Mug|Barbarian_Round_Shield)/;
+/** Every held item built into the KayKit character glbs (the class avatars hide the same list). */
+export const HELD_ITEM = /^(1H_|2H_|Knife|Throwable|Badge_|Rectangle_|Round_Shield|Spike_|Spellbook|Mug|Barbarian_Round_Shield)/;
 
 /** Synchronous stand-in: capsule body, sphere head, a nose box on -Z (the facing of yaw 0). Feet at the origin, ~1.8 m tall. */
 export function buildPlaceholder(def: NpcDef): THREE.Group {

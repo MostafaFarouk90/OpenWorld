@@ -98,7 +98,7 @@ export const SKILLS: SkillDef[] = [...KNIGHT_SKILLS];
 
 const BY_ID = new Map(SKILLS.map((s) => [s.id, s]));
 
-export type RegisterSkillsResult = { ok: true; count: number } | { ok: false; reason: string };
+export type RegisterSkillsResult = { ok: true; count: number; dispose(): void } | { ok: false; reason: string };
 
 /**
  * Adds a class's skills (threads 13 to 16). All or nothing: ids must start with `<classId>.` and be unique, tiers 1 to 5
@@ -121,7 +121,17 @@ export function registerClassSkills(classId: string, defs: readonly SkillDef[]):
     SKILLS.push(d);
     BY_ID.set(d.id, d);
   }
-  return { ok: true, count: defs.length };
+  return {
+    ok: true,
+    count: defs.length,
+    dispose: () => {
+      for (const d of defs) {
+        const at = SKILLS.indexOf(d);
+        if (at >= 0) SKILLS.splice(at, 1);
+        if (BY_ID.get(d.id) === d) BY_ID.delete(d.id);
+      }
+    },
+  };
 }
 
 /** Test seam: forgets every class but the Knight. */

@@ -21,6 +21,7 @@ const COLOURS: Record<BoxKind, number> = {
   wall: 0x6b655d,
   ceiling: 0x3a3632,
   pillar: 0x7a736a,
+  prop: 0x5e4a36,
   blocker: 0x2b2622,
 };
 

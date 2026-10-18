@@ -247,15 +247,16 @@ describe('SpawnerRegistry', () => {
     expect(reg.getLockedBlockLevel('b2')).toBeUndefined();
   });
   it('slice table is well-formed', () => {
-    expect(SLICE_SPAWNERS).toHaveLength(11);
+    expect(SLICE_SPAWNERS).toHaveLength(13);
     const bw = SLICE_SPAWNERS.find((s) => s.id === 'brightwater.north-patrol')!;
     expect(bw).toMatchObject({ count: 3, band: { min: 2, max: 3 }, activation: 'auto', respawn: 'never', leash: true });
-    expect(new Set(SLICE_SPAWNERS.map((s) => s.id)).size).toBe(11);
+    expect(new Set(SLICE_SPAWNERS.map((s) => s.id)).size).toBe(13);
     expect(SLICE_SPAWNERS.find((s) => s.id === 't09.soldier')!.enemy).toBe('blighted-soldier');
   });
   it('every slice anchor, member anchor and waypoint exists in the real Brightwater layout, and counts match', () => {
     const ids = new Set(resolveLayout(BRIGHTWATER_LAYOUT, () => 0).anchors.map((a) => a.id));
-    for (const d of SLICE_SPAWNERS) {
+    // The class drill's spars stand in Harrowmark (thread 17's layout), not Brightwater.
+    for (const d of SLICE_SPAWNERS.filter((s) => !s.anchor.startsWith('harrowmark.'))) {
       expect(ids.has(d.anchor), `${d.id} anchor ${d.anchor}`).toBe(true);
       for (const m of d.memberAnchors ?? []) expect(ids.has(m), `${d.id} member ${m}`).toBe(true);
       if (d.memberAnchors) expect(d.memberAnchors.length, d.id).toBe(d.count);
@@ -268,6 +269,8 @@ describe('SpawnerRegistry', () => {
       expect(by(id)).toMatchObject({ activation: 'manual', respawn: 'never', leash: false, band: { min: 1, max: 1 } });
     }
     expect(by('replay.lockon')).toMatchObject({ count: 2, memberAnchors: ['yard.pole-1', 'yard.pole-2'] });
+    expect(by('classes.drill.blocker')).toMatchObject({ enemy: 'blighted-soldier', activation: 'manual', anchor: 'harrowmark.bastion.drill.blocker' });
+    expect(by('classes.drill.dodge')).toMatchObject({ enemy: 'ash-wraith', activation: 'manual', anchor: 'harrowmark.bastion.drill.dodge-lane' });
     expect(by('m01.lanes').activation).toEqual({ quest: 'm01', flag: 'tutorial.complete' });
     expect(by('m01.lanes').patrol).toBeUndefined();
   });

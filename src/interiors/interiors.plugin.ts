@@ -11,12 +11,19 @@ import '../waystones/service';
 import { buildInterior, type BuiltInterior } from './build';
 import { SceneEnvironment } from './environment';
 import { InteriorController, InteriorError } from './InteriorController';
-import { boundsContain, layoutInterior, type InteriorLayout } from './layout';
+import { boundsContain, layoutInterior, standsIn, type InteriorLayout } from './layout';
 import type { InteriorsService } from './service';
 import './service';
+import { HARROWMARK_INTERIORS } from './harrowmark';
+import { HARROWMARK_DOOR_LOCKS, HARROWMARK_FLAG_BLOCKERS, M09_INVOICES } from './harrowmark/locks';
+import { OccupantHider } from './occupants';
 import { INTERIOR_STRINGS_EN } from './strings.en';
 import type { InteriorDef } from './types';
+import { UNDERWAYS_DEF } from './underways/generate';
 import { VAULT_DEF } from './vaultDef';
+
+/** Every interior the game ships (contracts/interiors-and-nav.md section 9). */
+export const ALL_INTERIORS: readonly InteriorDef[] = [VAULT_DEF, ...HARROWMARK_INTERIORS, UNDERWAYS_DEF];
 
 /** Thread 3a's band in `rules` (requested for game-events-and-flags.md section 2) and in render `world`. */
 export const INTERIORS_RULES_ORDER = 400;
@@ -30,6 +37,10 @@ const TOASTED: Record<string, string> = { aggro: 'interior.refused.aggro', locke
 export interface InteriorsPluginOptions {
   defs?: readonly InteriorDef[];
   heightAt?: (x: number, z: number) => number;
+  /** doorId -> the flag that unlocks it (default: the Harrowmark doors). */
+  doorLocks?: Readonly<Record<string, string>>;
+  /** blockerId -> the flag that opens it (default: the Anvil's back-room gate). */
+  flagBlockers?: Readonly<Record<string, string>>;
 }
 
 /** The plugin with its interiors injectable (tests use small defs; the game uses the chapel vault). */
@@ -78,6 +89,11 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
   const env = new SceneEnvironment(ctx.scene, () => ctx.services.get('graphics'));
   const built = new Map<string, BuiltInterior>();
   const layouts = new Map<string, InteriorLayout>();
+  const grids = new Map<string, NavGrid>();
+  const onFloor = (id: string, at: { x: number; y: number; z: number }): boolean => {
+    const layout = layouts.get(id);
+    return !!layout && standsIn(layout, at);
+  };
 
   const controller = new InteriorController({
     feet: () => ctx.player.feet,
@@ -91,6 +107,8 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     fade: (o, s) => void ctx.hud.fade(o, s),
     teleport: (feet, yaw) => ctx.player.teleport(feet, yaw),
     groundBelow: (d) => groundDistance(ctx, d) !== null,
+    onFloor,
+    aboveTerrain: (at) => at.y - ground(at.x, at.z),
     applyEnvironment: (id) => {
       for (const [bid, b] of built) b.root.visible = bid === id;
       const layout = id === null ? undefined : layouts.get(id);
@@ -106,7 +124,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
   ctx.events.on('interior.exited', () => (cooldown = REENTER_COOLDOWN_SECONDS));
   if (!ctx.physics.ready) throw new Error('interiors: physics is not initialised (the floating interiors need their colliders)');
 
-  for (const def of opts.defs ?? [VAULT_DEF]) {
+  for (const def of opts.defs ?? ALL_INTERIORS) {
     const layout = layoutInterior(def, ground);
     // Colliders are built now and kept, so a load or a takeover teleport always finds the floor.
     const b = buildInterior(layout, ctx.physics);
@@ -115,11 +133,34 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     built.set(def.id, b);
     layouts.set(def.id, layout);
     cleanups.push(controller.add({ id: def.id, doors: def.doors, contains: (p) => boundsContain(layout.bounds, p) }));
-    if (nav) cleanups.push(nav.addGrid(new NavGrid(layout.nav)));
+    // One grid object serves both: nav answers paths, onFloor checks a loaded spot (blockers flip it through nav.setBlocker).
+    const grid = new NavGrid(layout.nav);
+    grids.set(def.id, grid);
+    if (nav) cleanups.push(nav.addGrid(grid));
     for (const a of layout.anchors) ctx.anchors.define(a);
     for (const t of layout.triggers) ctx.triggers.add({ id: t.id, shape: { type: 'box', center: t.center, half: t.half } });
   }
   ctx.persist.register(controller.persistable());
+
+  // Door locks and flag-driven blockers. Gates call back at once ('init') and again after a load, so the state re-derives.
+  const known = new Set([...layouts.values()].flatMap((l) => l.def.doors.map((d) => d.doorId)));
+  for (const [doorId, flag] of Object.entries(opts.doorLocks ?? HARROWMARK_DOOR_LOCKS)) {
+    if (!known.has(doorId)) continue;
+    let open = false;
+    cleanups.push(ctx.gates.flag(flag, (o) => (open = o)));
+    cleanups.push(controller.setDoorLock(doorId, () => !open));
+  }
+  const setBlocker = (id: string, closed: boolean): boolean => {
+    let found = false;
+    for (const b of built.values()) if (b.setBlocker(id, closed)) found = true;
+    for (const g of grids.values()) if (g.setBlocker(id, closed)) found = true;
+    if (!found) console.warn(`interiors: unknown blocker "${id}"`);
+    return found;
+  };
+  for (const [blockerId, flag] of Object.entries(opts.flagBlockers ?? HARROWMARK_FLAG_BLOCKERS)) {
+    if (![...built.values()].some((b) => b.hasBlocker(blockerId))) continue;
+    cleanups.push(ctx.gates.flag(flag, (o) => setBlocker(blockerId, !o)));
+  }
 
   const onRefused = (err: unknown) => {
     if (!(err instanceof InteriorError)) return console.warn('interiors: door failed', err);
@@ -167,13 +208,53 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     doors.clear();
   });
 
+  // M09's invoices: one-use interactables at the office desk (thread 6 counts the interact and writes the taken flag).
+  const invoices = new Map<string, () => void>();
+  const syncInvoices = () => {
+    for (const inv of M09_INVOICES) {
+      if (invoices.has(inv.id)) continue;
+      const anchor = ctx.anchors.find(inv.anchor);
+      if (!anchor) continue;
+      invoices.set(
+        inv.id,
+        ctx.interaction.register({
+          id: inv.id,
+          kind: 'use',
+          position: (out: THREE.Vector3) => out.set(anchor.position.x, anchor.position.y + 1, anchor.position.z),
+          radius: 1.5,
+          promptKey: 'interior.m09.invoice',
+          enabled: () => !ctx.state.getFlag(inv.takenFlag),
+          onInteract: () => {},
+        }),
+      );
+    }
+  };
+  syncInvoices();
+  cleanups.push(() => {
+    for (const off of invoices.values()) off();
+    invoices.clear();
+  });
+
+  const hider = new OccupantHider();
+  cleanups.push(() => hider.dispose());
+
+  // A plugin whose own save.loaded teleport must win over a stale-load rescue (3b, 18, 20) depends on 'interiors', so it subscribes
+  // after this one; without that dependency the order is the loader's tie-break.
   ctx.events.on('save.loaded', () => controller.onSaveLoaded());
+  // Debug: `?debug&interior=<id>` drops the player at that interior's first entry (the bounds rule does the rest).
+  let debugInterior = debugInteriorParam();
   ctx.systems.add({
     id: 'interiors.tick',
     fixedPhase: 'rules',
     order: INTERIORS_RULES_ORDER,
     fixedUpdate(dt) {
       cooldown = Math.max(0, cooldown - dt);
+      if (debugInterior) {
+        const entry = ctx.anchors.find(layouts.get(debugInterior)?.def.doors[0].inside ?? '');
+        if (entry) ctx.player.teleport({ ...entry.position, y: entry.position.y + 0.05 }, entry.yaw);
+        else console.warn(`interiors: ?interior=${debugInterior} is not an interior`);
+        debugInterior = null;
+      }
       syncDoors();
       controller.tick(dt);
     },
@@ -182,7 +263,10 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     id: 'interiors.render',
     renderPhase: 'world',
     order: INTERIORS_RENDER_ORDER,
-    render: () => env.frame(ctx.player.feet),
+    render: () => {
+      env.frame(ctx.player.feet);
+      hider.update(ctx.actors.all(), controller.current, (at) => controller.interiorAt(at), (a) => a === ctx.player.actor);
+    },
   });
 
   const service: InteriorsService = {
@@ -196,15 +280,15 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     },
     interiorAt: (at) => controller.interiorAt(at),
     setDoorLock: (door, locked) => controller.setDoorLock(door, locked),
-    setBlocker: (id, closed) => {
-      let found = false;
-      for (const b of built.values()) if (b.setBlocker(id, closed)) found = true;
-      if (nav?.setBlocker(id, closed)) found = true;
-      if (!found) console.warn(`interiors: unknown blocker "${id}"`);
-      return found;
-    },
+    setBlocker,
   };
   ctx.services.provide('interiors', service);
+}
+
+function debugInteriorParam(): string | null {
+  if (typeof location === 'undefined') return null;
+  const q = new URLSearchParams(location.search);
+  return q.has('debug') ? q.get('interior') : null;
 }
 
 export default createInteriorsPlugin();

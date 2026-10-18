@@ -29,6 +29,14 @@ export interface InteriorEnvironment {
   lightDistance: number;
 }
 
+/** Low furniture (`InteriorDef.props`). */
+export interface PropDef {
+  id?: string;
+  rect: LocalRect;
+  height: number;
+  walkable?: boolean;
+}
+
 /** A door: the outside anchor is the layout thread's; the inside anchor and the exit interactable's anchor are the interior's. */
 export interface DoorDef {
   doorId: string;
@@ -47,6 +55,12 @@ export interface InteriorDef {
   rooms: RoomDef[];
   /** Solid from floor to ceiling. */
   pillars: LocalRect[];
+  /**
+   * Low solid furniture (tables, counters, shelves, a bed, a dais): floor to `height`, with a collider and a mesh. Its nav cells
+   * are blocked unless `walkable`; a walkable prop is at most `MAX_WALKABLE_PROP` tall (the controller's auto-step), and an
+   * anchor over it stands on its top. Optional so older defs need no change.
+   */
+  props?: PropDef[];
   /** Named obstacles, open by default (collider, mesh and nav cells together). */
   blockers: { id: string; rect: LocalRect; height: number }[];
   /** Wall-mounted torch heads: local x, height above the floor, local z. */

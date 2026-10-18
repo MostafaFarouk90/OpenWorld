@@ -85,7 +85,7 @@ export interface AvatarLike {
 }
 
 export interface ControllerLike {
-  activeAttack(): { clip: string; activeStart: number; activeEnd: number; normalizedTime: number; active: boolean; swingId: number } | null;
+  activeAttack(): { clip: string; activeStart: number; activeEnd: number; normalizedTime: number; active: boolean; swingId: number; noTrace?: true } | null;
   /** Requested from thread 1: plays a non-looping clip, false when busy or unknown. */
   playOneShot?(clip: string, opts?: { lockMove?: boolean }): boolean;
   /** Requested from thread 1. */

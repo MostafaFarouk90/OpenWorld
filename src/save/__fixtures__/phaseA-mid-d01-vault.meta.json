@@ -1,0 +1,9 @@
+{
+  "fixture": "phaseA-mid-d01-vault.json",
+  "what": "D01 active (o1 done), player inside the chapel vault just past its entry, Tobb joined; M03-M05, R01 (saved), R02 completed",
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/fixtures.gen.test.ts",
+  "generatingCommit": "86cf6edef69cc961a149b07fa37db3b2ec856385",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving",
+  "playtimeSeconds": "rounded to whole seconds",
+  "source": "the real save plugin (saveNow(\"manual\")), read back from the fake IndexedDB slot-0"
+}

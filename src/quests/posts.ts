@@ -13,9 +13,26 @@ export interface PostRule {
 }
 
 /** Brightwater posts (slice 2 phase A). Phase B appends the Harrowmark rules. */
+// The tutorial leaves Gaut and Aelfreda at the Kettlewick gate (T15) for M01; once M01 is done they go home, so
+// Aelfreda gives M03 at the chapel (the tutorial stops re-placing them after M01, TutorialDirector.resumeAfterLoad).
+const m01Done: Condition = { quest: 'm01', state: 'completed' };
 export const BRIGHTWATER_POST_RULES: PostRule[] = [
-  { npcId: 'gaut', home: 'npc-post.gaut', posts: [{ when: { quest: 'm04', state: 'active' }, anchorId: 'npc-post.gaut.ford' }] },
-  { npcId: 'aelfreda', home: 'npc-post.aelfreda', posts: [{ when: { quest: 'd01', state: 'active' }, anchorId: 'npc-post.aelfreda.vault' }] },
+  {
+    npcId: 'gaut',
+    home: 'npc-post.gaut',
+    posts: [
+      { when: { quest: 'm04', state: 'active' }, anchorId: 'npc-post.gaut.ford' },
+      { when: m01Done, anchorId: 'npc-post.gaut' },
+    ],
+  },
+  {
+    npcId: 'aelfreda',
+    home: 'npc-post.aelfreda',
+    posts: [
+      { when: { quest: 'd01', state: 'active' }, anchorId: 'npc-post.aelfreda.vault' },
+      { when: m01Done, anchorId: 'npc-post.aelfreda' },
+    ],
+  },
 ];
 
 /** The anchor each NPC should stand at now. */
@@ -32,6 +49,8 @@ export function resolvePosts(rules: PostRule[], env: ConditionEnv): Record<strin
  * Applies resolved posts. An NPC that should be at home and was never moved by a rule is left alone, because
  * the tutorial moves some of them. `reset()` on load forgets what was applied so quest posts are re-placed.
  */
+const UNKNOWN = '?';
+
 export class PostDirector {
   private readonly applied = new Map<string, string>();
   private dirty = true;
@@ -47,8 +66,14 @@ export class PostDirector {
   /** Quest state or a save changed; evaluate on the next update. */
   markDirty(): void { this.dirty = true; }
 
-  /** A save loaded. NPC positions are not saved and survive a load, so `applied` stays valid; just re-evaluate. */
-  reset(): void { this.dirty = true; }
+  /**
+   * A save loaded. NPC positions are not saved, and other systems (the tutorial) may re-place an NPC on load, so
+   * every NPC a rule ever moved is placed again (`applied` is kept as "unknown" so a home post is re-applied too).
+   */
+  reset(): void {
+    for (const k of this.applied.keys()) this.applied.set(k, UNKNOWN);
+    this.dirty = true;
+  }
 
   /** Applies pending posts; stays dirty while one cannot be placed yet (NPC or anchor missing) or a dialogue is open. */
   update(): void {

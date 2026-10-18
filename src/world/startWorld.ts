@@ -19,6 +19,7 @@ import { PLUGIN_MODULES } from '../core/pluginManifest';
 import { disabledFromQuery } from '../core/plugins';
 import { Graphics } from '../core/graphics';
 import { TrainingDummies } from './TrainingDummies';
+import { HEAVY_CHOP_CLIPS } from '../combat/heavyBlow';
 import { ATTACK_SLOTS } from './World';
 import type { StringTable } from '../strings/StringTable';
 import type { InputBindings } from '../input/InputBindings';
@@ -112,7 +113,7 @@ export async function startWorld(container: HTMLElement): Promise<void> {
     if (!r.point) return;
     if (r.outcome === 'blocked') damageNumbers.spawnText(strings.t('core.damage.blocked'), r.point);
     else if (r.outcome === 'parried') damageNumbers.spawnText(strings.t('core.damage.parried'), r.point);
-    else if (r.outcome === 'hit') damageNumbers.spawn(r.dealt, r.point, r.killed || r.attackId === ATTACK_SLOTS[2] ? 1.4 : 1);
+    else if (r.outcome === 'hit') damageNumbers.spawn(r.dealt, r.point, r.killed || r.attackId === ATTACK_SLOTS[2] || (r.attackId !== undefined && HEAVY_CHOP_CLIPS.has(r.attackId)) ? 1.4 : 1);
   });
 
   // Plugins set up before the first tick; the loop starts once every setup has settled.

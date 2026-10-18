@@ -7,6 +7,7 @@ import {
   type NextUnlock,
   type ProgressionService,
 } from '../hud/ports';
+import { classStats, type ClassBaseStats } from './classStats';
 import { DEFAULT_CLASS_ID, getSkill, SKILLS, type SkillDef } from './skills';
 import {
   BAR_SLOTS,
@@ -30,7 +31,8 @@ export interface FlagStore {
 export interface GoldPort {
   readonly gold: number;
   addGold(n: number): void;
-  takeGold(n: number): number;
+  /** v0.5: the inventory service emits `gold.spent { reason }` when anything was taken. */
+  takeGold(n: number, reason?: 'respec'): number;
 }
 
 export interface ProgressionDeps {
@@ -41,6 +43,8 @@ export interface ProgressionDeps {
   flags?: FlagStore;
   /** Gold for paid respecs; without it only free ones work. */
   gold?: () => GoldPort | undefined;
+  /** Told the active class row whenever it is (re)applied; the plugin forwards the Ember maximum to the spells. */
+  onClassStats?: (row: Readonly<ClassBaseStats>) => void;
 }
 
 export type RespecQuote = { free: boolean; gold: number; canAfford: boolean };
@@ -121,6 +125,25 @@ export class Progression implements ProgressionService {
   setClass(classId: string | null): void {
     this.chosenClass = classId;
     this.applyMaxHealth();
+    this.applyClassResources();
+  }
+
+  /**
+   * Applies the class row's stamina maximum to the player and hands the Ember maximum to `onClassStats`. Current stamina
+   * is kept, clamped to the new maximum; a fresh game (`fill`) starts full.
+   */
+  applyClassResources(fill = false): void {
+    const row = classStats(this.chosenClass);
+    const actor = this.actor();
+    if (actor) {
+      actor.maxStamina = row.stamina;
+      actor.stamina = fill ? row.stamina : Math.min(actor.stamina, row.stamina);
+    }
+    try {
+      this.deps.onClassStats?.(row);
+    } catch (err) {
+      this.logger.warn(`progression: class stats listener failed: ${String(err)}`);
+    }
   }
 
   /** The flag `ability.<id>.learned` is the single source of truth. */
@@ -163,9 +186,11 @@ export class Progression implements ProgressionService {
     const quote = this.respecQuote();
     if (quote.gold > 0) {
       const gold = this.deps.gold?.();
-      const taken = gold ? gold.takeGold(quote.gold) : 0;
-      if (!gold || taken < quote.gold) {
-        if (gold && taken > 0) gold.addGold(taken);
+      // Check first: a partial take would emit a `gold.spent` that the refund below then undoes.
+      if (!gold || !(gold.gold >= quote.gold)) return { ok: false, reason: 'no-gold' };
+      const taken = gold.takeGold(quote.gold, 'respec');
+      if (taken < quote.gold) {
+        if (taken > 0) gold.addGold(taken);
         return { ok: false, reason: 'no-gold' };
       }
     }
@@ -177,6 +202,22 @@ export class Progression implements ProgressionService {
     this.emit('skillpoints.changed', { points: this.skillPoints });
     this.applyMaxHealth();
     return { ok: true, refunded, cost: quote.gold };
+  }
+
+  /**
+   * The M07 class choice (thread 12): refunds every learned skill and clears the bar, silently and without a permit or
+   * gold, and leaves the free respec unused (the first choice is not a respec). Only before a class is chosen, so it can
+   * never act as a free respec later. Returns the points refunded (0 when refused or nothing was learned).
+   */
+  refundForClassChoice(): number {
+    if (this.chosenClass !== null || this.learnedIds.length === 0) return 0;
+    const refunded = this.spent(this.learnedIds);
+    this.learnedIds = [];
+    this.slots = new Array<string | null>(BAR_SLOTS).fill(null);
+    this.emit('ability.bar.changed', {});
+    this.emit('skillpoints.changed', { points: this.skillPoints });
+    this.applyMaxHealth();
+    return refunded;
   }
 
   get level(): number {

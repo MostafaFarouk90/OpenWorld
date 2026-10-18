@@ -5,6 +5,8 @@ import { skillViewModel } from './skillViewModel';
 export interface SkillMenuDeps {
   progression: ProgressionService;
   t(key: string, params?: Record<string, string | number>): string;
+  /** Current class id, read on every render; falls back to the progression's class, then the Knight. */
+  classId?(): string | null | undefined;
   close(): void;
   onLearn?(skillId: string): void;
   onRefused?(): void;
@@ -30,9 +32,16 @@ export class SkillMenu {
     return e;
   }
 
+  private branchTitle(branch: string): string {
+    const key = `hud.skills.branch.${branch}`;
+    const text = this.deps.t(key);
+    if (text && !text.includes(key)) return text;
+    return branch.replace(/[-_.]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
   render(): void {
     const { progression: p, t } = this.deps;
-    const vm = skillViewModel(p);
+    const vm = skillViewModel(p, this.deps.classId?.());
     const head = this.el('div', 'owg-menu-head');
     head.append(
       this.el('h2', 'owg-menu-title', t('hud.skills.title')),
@@ -44,9 +53,10 @@ export class SkillMenu {
     head.append(close);
 
     const cols = this.el('div', 'owg-branches');
+    if (vm.branches.length === 0) cols.append(this.el('p', 'owg-skills-empty', t('hud.skills.empty')));
     for (const b of vm.branches) {
       const col = this.el('div', 'owg-branch');
-      col.append(this.el('h3', 'owg-branch-title', t(`hud.skills.branch.${b.branch}`)));
+      col.append(this.el('h3', 'owg-branch-title', this.branchTitle(b.branch)));
       for (const n of b.nodes) {
         const node = this.el('div', `owg-skill owg-skill-${n.state}`);
         node.append(

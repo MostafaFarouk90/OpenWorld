@@ -17,6 +17,8 @@ function setup(over: Partial<InteriorPorts> = {}) {
     travelling: false,
     ready: true,
     ground: true,
+    /** False: the vault's floor has moved since the save (no saved spot is floor). */
+    floor: true,
     frozen: 0,
     applied: [] as (string | null)[],
   };
@@ -26,6 +28,7 @@ function setup(over: Partial<InteriorPorts> = {}) {
     'vault.exit': { position: { x: 0, y: 150, z: 2 }, yaw: 0 },
     'vault.back': { position: { x: 5, y: 0, z: 10 }, yaw: 0 },
   };
+  const inVault = (p: Vec3) => Math.abs(p.x) < 30 && Math.abs(p.z) < 60 && p.y > 140 && p.y < 160;
   const ports: InteriorPorts = {
     feet: () => feet,
     yaw: () => 0,
@@ -49,6 +52,8 @@ function setup(over: Partial<InteriorPorts> = {}) {
       return { ready: () => state.ready };
     },
     groundBelow: () => state.ground,
+    onFloor: (_id, at) => state.floor && inVault(at) && Math.abs(at.y - 150) < 1.5,
+    aboveTerrain: (at) => at.y,
     applyEnvironment: (id) => {
       state.applied.push(id);
       log.push(`env ${id}`);
@@ -61,7 +66,6 @@ function setup(over: Partial<InteriorPorts> = {}) {
     ...over,
   };
   const c = new InteriorController(ports);
-  const inVault = (p: Vec3) => Math.abs(p.x) < 30 && Math.abs(p.z) < 60 && p.y > 140 && p.y < 160;
   c.add({
     id: VAULT,
     doors: [
@@ -472,6 +476,82 @@ describe('InteriorController: saves', () => {
     const t = setup();
     t.c.persistable().load({ interiorId: VAULT, doorId: 'gone' }, 1);
     expect(t.c.currentDoor).toBe('vault');
+  });
+
+  it('a load keeps the saved door, so a back-door entrant leaves by the back door', async () => {
+    const t = setup();
+    t.c.persistable().load({ interiorId: VAULT, doorId: 'back' }, 1);
+    Object.assign(t.feet, { x: 0, y: 150, z: -5 });
+    t.c.tick(DT);
+    t.c.onSaveLoaded();
+    expect(t.events).toEqual([{ type: 'interior.entered', payload: { interiorId: VAULT, doorId: 'back' } }]);
+    await t.settle(t.c.exit());
+    expect(t.feet.x).toBeCloseTo(5); // in front of vault.back
+    expect(t.events.at(-1)).toEqual({ type: 'interior.exited', payload: { interiorId: VAULT, doorId: 'back' } });
+  });
+
+  it('a load onto a spot that is no longer floor (inside a wall) moves to the first entry at black, with one entered', () => {
+    const t = setup();
+    t.state.floor = false;
+    t.c.persistable().load({ interiorId: VAULT, doorId: 'back' }, 1);
+    Object.assign(t.feet, { x: 20, y: 150, z: -40 }); // the save loader placed the stale spot and lifted its fade
+    t.c.tick(DT);
+    t.log.length = 0;
+    t.c.onSaveLoaded();
+    expect(t.log.slice(0, 3)).toEqual(['fade 1', 'freeze', 'teleport 150']);
+    expect(t.state.frozen).toBe(1);
+    expect(t.feet).toMatchObject({ x: 0, y: 150, z: -1 });
+    expect(t.c.current).toBe(VAULT);
+    expect(t.c.currentDoor).toBe('vault');
+    expect(t.c.transitioning).toBe(true);
+    // Doors refuse while the screen is black.
+    return reason(t.c.exit()).then((r) => {
+      expect(r).toBe('busy');
+      t.run(0.1);
+      expect(t.log.at(-1)).toBe('fade 0');
+      expect(t.c.transitioning).toBe(false);
+      expect(t.state.frozen).toBe(0);
+      expect(t.events).toEqual([{ type: 'interior.entered', payload: { interiorId: VAULT, doorId: 'vault' } }]);
+    });
+  });
+
+  it('a load left over no floor in the sky (a stuck loader teleport) is moved to the entry too', () => {
+    const t = setup();
+    t.state.floor = false;
+    t.c.persistable().load({ interiorId: VAULT, doorId: 'vault' }, 1);
+    Object.assign(t.feet, { x: 80, y: 151, z: 0 }); // out of the vault's bounds, 151 m up, nothing below
+    t.c.onSaveLoaded();
+    expect(t.feet).toMatchObject({ x: 0, y: 150, z: -1 });
+    expect(t.c.current).toBe(VAULT);
+    t.run(0.1);
+    expect(t.events.map((e) => e.type)).toEqual(['interior.entered']);
+  });
+
+  it('lifts the fade after the settle timeout even when the rescue finds no ground, with a warning', () => {
+    const warn = vi.fn();
+    const t = setup({ warn });
+    t.state.floor = false;
+    t.state.ground = false;
+    t.c.persistable().load({ interiorId: VAULT, doorId: 'vault' }, 1);
+    Object.assign(t.feet, { x: 20, y: 150, z: -40 });
+    t.c.onSaveLoaded();
+    t.run(TRANSITION.settleTimeoutSeconds - 0.1);
+    expect(t.c.transitioning).toBe(true);
+    t.run(0.2);
+    expect(t.c.transitioning).toBe(false);
+    expect(t.log.at(-1)).toBe('fade 0');
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/no ground/));
+  });
+
+  it('a waystone fallback on the ground (not in the sky) is never rescued into the vault', () => {
+    const t = setup();
+    t.state.floor = false;
+    t.c.persistable().load({ interiorId: VAULT, doorId: 'vault' }, 1);
+    Object.assign(t.feet, { x: 300, y: 2, z: 300 });
+    t.c.onSaveLoaded();
+    expect(t.c.current).toBeNull();
+    expect(t.c.transitioning).toBe(false);
+    expect(t.events).toEqual([]);
   });
 
   it('stops waiting for save.loaded after the loading timeout', () => {

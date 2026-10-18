@@ -1,6 +1,7 @@
 import { heightAt } from '../terrain/heightfield';
 import { looseService, type ActorId, type GamePlugin, type PluginContext } from '../vfx/ports';
-import { BURN, EMBER } from '../vfx/tuning';
+import { BURN } from '../vfx/tuning';
+import { classStats } from '../progression/classStats';
 import { Burn, type BurnZone } from './Burn';
 import { createBanner } from './BannerPlant';
 import { LeapController } from './Leap';
@@ -109,7 +110,7 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       looseService(ctx.services, 'progression')?.refreshMaxHealth?.();
       const feet = ctx.player.feet;
       const vfx = ctx.services.get('vfx');
-      vfx?.spawnEffect('ember-burst', { position: { x: feet.x, y: feet.y + 1.2, z: feet.z } });
+      vfx?.spawnEffect('scar-flash', { position: { x: feet.x, y: feet.y + 1.2, z: feet.z } });
       vfx?.pulseScreen(0.5, 0.4, 0xff4020);
     };
     const useShard = (gain: number, source: string, scarred?: boolean): { gained: number; scarred: boolean } => {
@@ -134,6 +135,9 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
     // ---- the Surge Leap
     const learnedLeap = (): boolean => (ctx.state as { getFlag?(k: string): unknown } | undefined)?.getFlag?.(`ability.${LEAP_ABILITY_ID}.learned`) === true;
     const controller = (): OneShotController | undefined => ctx.player.avatar?.controller as unknown as OneShotController | undefined;
+    let trail: { stop(): void } | null = null;
+    const stopTrail = (): void => { trail?.stop(); trail = null; };
+    offs.push(stopTrail);
     const leap = new LeapController({
       learned: learnedLeap,
       alive: () => !ctx.player.actor.dead,
@@ -152,12 +156,24 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       onLaunch() {
         const f = ctx.player.feet;
         const vfx = ctx.services.get('vfx');
-        vfx?.spawnEffect('shockwave-ring', { position: { x: f.x, y: f.y, z: f.z }, scale: 0.5 });
+        vfx?.spawnEffect('leap-dust', { position: { x: f.x, y: f.y, z: f.z } });
+        const attach = ctx.player.avatar?.root;
+        vfx?.spawnEffect('leap-shell', attach ? { position: { x: 0, y: 0, z: 0 }, attach } : { position: { x: f.x, y: f.y, z: f.z } });
+        stopTrail();
+        trail = vfx?.spawnEffect('leap-trail', attach ? { position: { x: 0, y: 1, z: 0 }, attach } : { position: { x: f.x, y: f.y + 1, z: f.z } }) ?? null;
         vfx?.fovPunch(LEAP.fovPunch, LEAP.fovSeconds);
         vfx?.pulseScreen(LEAP.pulse, LEAP.pulseSeconds, 0xffb040);
       },
     });
-    offs.push(ctx.events.on('player.leap', (e) => leap.onPhase(e.phase, simTime)));
+    offs.push(ctx.events.on('player.leap', (e) => {
+      leap.onPhase(e.phase, simTime);
+      if (e.phase === 'start') return;
+      stopTrail(); // landed, or cancelled (a stagger or a wall mid-air)
+      if (e.phase === 'land') {
+        const f = ctx.player.feet;
+        ctx.services.get('vfx')?.spawnEffect('leap-dust', { position: { x: f.x, y: f.y, z: f.z } });
+      }
+    }));
 
     // ---- Banner Plant
     const banner = createBanner({ events: ctx.events, scene: ctx.scene, services: ctx.services, player: ctx.player });
@@ -172,7 +188,13 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       get burn() { return burn.value; },
       get scars() { return burn.scars; },
       get ember() { return ember.value; },
-      get maxEmber() { return EMBER.max; },
+      get maxEmber() { return ember.max; },
+      setMaxEmber: (n) => ember.setMax(n),
+      restoreEmber: (n) => {
+        const before = ember.value;
+        ember.restore(n);
+        return ember.value - before;
+      },
       spendEmber: (n) => ember.spend(n),
       addBurn: (n, source) => void burn.add(n, source),
       useShard: (gain, source) => useShard(gain, source),
@@ -256,7 +278,10 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
     const bindLate = (): void => {
       if (!offModifier) {
         // Returns base * 1 while BURN_MAX_HEALTH_PENALTY_ENABLED is false (deferred, see Burn.ts).
-        offModifier = looseService(ctx.services, 'progression')?.addMaxHealthModifier('burn', () => burn.healthMultiplier()) ?? null;
+        const prog = looseService(ctx.services, 'progression');
+        offModifier = prog?.addMaxHealthModifier('burn', () => burn.healthMultiplier()) ?? null;
+        // Progression set up after us: it could not hand us the class row's Ember maximum yet.
+        if (offModifier) ember.setMax(classStats(prog?.classId).ember);
       }
       rally.bindAbilities();
       bindBanner();
