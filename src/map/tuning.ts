@@ -7,14 +7,19 @@ export interface WorldBounds {
   maxZ: number;
 }
 
-export const WORLD_SIZE_M = 4000;
+/** Slice 1 world: a 4 km square centred on the origin. Saved `map` v1 fog is on this extent. */
+export const LEGACY_V1_BOUNDS: Readonly<WorldBounds> = Object.freeze({ minX: -2000, maxX: 2000, minZ: -2000, maxZ: 2000 });
 
-/** Default world extent: a 4 km square centred on the origin. */
+/**
+ * The one world extent (slice 2): x -2000..9500, z -2000..4500. Covers the farm-ring (6800, 900), the fog
+ * wall (1100, -150) and Harrowmark. Origin (-2000, -2000) equals the v1 origin and cells stay 50 m, so old
+ * fog cells map 1:1 into the new grid. Final numbers come from thread 11's terrain size.
+ */
 export const DEFAULT_WORLD_BOUNDS: Readonly<WorldBounds> = Object.freeze({
-  minX: -WORLD_SIZE_M / 2,
-  maxX: WORLD_SIZE_M / 2,
-  minZ: -WORLD_SIZE_M / 2,
-  maxZ: WORLD_SIZE_M / 2,
+  minX: -2000,
+  maxX: 9500,
+  minZ: -2000,
+  maxZ: 4500,
 });
 
 export const MAP_TUNING = {

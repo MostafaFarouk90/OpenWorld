@@ -17,7 +17,8 @@ export interface MapPoint {
 
 // ---------------------------------------------------------------- transforms
 // Map space: u grows with world x (east), v grows with world z (screen down).
-// `size` is the map edge in pixels (square).
+// `size` is the pixel length of the map's LONGER edge; the shorter edge scales by the same factor so
+// non-square bounds are never stretched (one metre is the same number of pixels on both axes).
 
 export function boundsWidth(b: WorldBounds): number {
   return b.maxX - b.minX;
@@ -26,18 +27,26 @@ export function boundsDepth(b: WorldBounds): number {
   return b.maxZ - b.minZ;
 }
 
+/** Pixels per metre when the longer bounds edge is `size` pixels. */
+export function mapScale(bounds: WorldBounds, size: number): number {
+  return size / Math.max(boundsWidth(bounds), boundsDepth(bounds));
+}
+
+/** Pixel extent of the whole map (width along x, height along z). */
+export function mapExtent(bounds: WorldBounds, size: number): { width: number; height: number } {
+  const s = mapScale(bounds, size);
+  return { width: Math.max(1, Math.round(boundsWidth(bounds) * s)), height: Math.max(1, Math.round(boundsDepth(bounds) * s)) };
+}
+
+/** Does not clamp: a point outside the bounds lands outside [0, extent]. */
 export function worldToMap(x: number, z: number, bounds: WorldBounds, size: number): MapPoint {
-  return {
-    u: ((x - bounds.minX) / boundsWidth(bounds)) * size,
-    v: ((z - bounds.minZ) / boundsDepth(bounds)) * size,
-  };
+  const s = mapScale(bounds, size);
+  return { u: (x - bounds.minX) * s, v: (z - bounds.minZ) * s };
 }
 
 export function mapToWorld(u: number, v: number, bounds: WorldBounds, size: number): Vec2 {
-  return {
-    x: bounds.minX + (u / size) * boundsWidth(bounds),
-    z: bounds.minZ + (v / size) * boundsDepth(bounds),
-  };
+  const s = mapScale(bounds, size);
+  return { x: bounds.minX + u / s, z: bounds.minZ + v / s };
 }
 
 export function inBounds(x: number, z: number, bounds: WorldBounds): boolean {
@@ -196,8 +205,8 @@ export class FogGrid {
 
   /**
    * Compact base64: a header (origin, cell size, dimensions) followed by the bitset with runs of
-   * zero bytes run-length encoded (0x00 followed by a varint run length). A 24 km x 18 km world at
-   * 50 m cells is 480 x 360 bits = 21.6 KB raw and a few hundred bytes when sparsely explored.
+   * zero bytes run-length encoded (0x00 followed by a varint run length). An 11.5 km x 6.5 km world at
+   * 50 m cells is 230 x 130 bits = 3.7 KB raw and a few hundred bytes when sparsely explored.
    */
   encode(): string {
     const out: number[] = [];
@@ -231,6 +240,53 @@ export class FogGrid {
       out.push(n);
     }
     return bytesToBase64(Uint8Array.from(out));
+  }
+
+  /**
+   * Decode a saved grid of any extent into `expected`, copying each revealed cell to the cell that covers
+   * the same world position. Works for equal headers too. A header that cannot be read (corrupt, short,
+   * other cell size or a non-cell-aligned origin) gives an empty grid of the expected shape; never throws.
+   * An old grid that is a different shape never wipes cells that still fit in the new one.
+   */
+  static migrate(encoded: unknown, expected: FogGridSpec): FogGrid {
+    const empty = new FogGrid(expected);
+    if (typeof encoded !== 'string' || encoded.length === 0) return empty;
+    const bytes = base64ToBytes(encoded);
+    if (!bytes || bytes.length < HEADER_BYTES) return empty;
+    const head = new DataView(bytes.buffer, bytes.byteOffset, HEADER_BYTES);
+    if (head.getUint8(0) !== FOG_MAGIC || head.getUint8(1) !== FOG_FORMAT) return empty;
+    const old: FogGridSpec = {
+      originX: head.getFloat64(2),
+      originZ: head.getFloat64(10),
+      cellSize: head.getFloat32(18),
+      cols: head.getUint32(22),
+      rows: head.getUint32(26),
+    };
+    if (!Number.isFinite(old.originX) || !Number.isFinite(old.originZ)) return empty;
+    if (old.cols < 1 || old.rows < 1 || old.cols * old.rows > 4_000_000) return empty;
+    if (old.cellSize !== Math.fround(expected.cellSize)) return empty;
+    const dc = (old.originX - expected.originX) / expected.cellSize;
+    const dr = (old.originZ - expected.originZ) / expected.cellSize;
+    if (!Number.isInteger(dc) || !Number.isInteger(dr)) return empty;
+    let src: FogGrid;
+    try {
+      src = FogGrid.decode(encoded, { ...old, cellSize: expected.cellSize });
+    } catch {
+      return empty;
+    }
+    if (src.revealedCount === 0) return empty;
+    for (let r = 0; r < src.rows; r++) {
+      const nr = r + dr;
+      if (nr < 0 || nr >= expected.rows) continue;
+      for (let c = 0; c < src.cols; c++) {
+        const nc = c + dc;
+        if (nc < 0 || nc >= expected.cols || !src.isCellRevealed(c, r)) continue;
+        const i = nr * expected.cols + nc;
+        empty.bits[i >> 3] = empty.bits[i >> 3]! | (1 << (i & 7));
+        empty.count++;
+      }
+    }
+    return empty;
   }
 
   /**
@@ -316,7 +372,7 @@ function base64ToBytes(s: string): Uint8Array | null {
 // ---------------------------------------------------------------- markers
 
 export type WaystoneState = 'dormant' | 'rekindled';
-export type MarkerKind = 'waystone' | 'poi' | 'quest';
+export type MarkerKind = 'waystone' | 'poi' | 'quest' | 'shrine' | 'fog';
 
 export interface WaystoneInput {
   id: string;
@@ -355,6 +411,10 @@ export interface BuildMarkersInput {
   waystones: readonly WaystoneInput[];
   poi?: readonly PoiInput[];
   quest?: QuestInput | null;
+  /** Rekindled shrines with a known position. */
+  shrines?: readonly PoiInput[];
+  /** The fog wall marker; pass null once the wall is gone. */
+  fog?: PoiInput | null;
 }
 
 /** Build the marker list: waystones first, then points of interest, then the quest marker. */
@@ -376,6 +436,14 @@ export function buildMarkers(input: BuildMarkersInput): MapMarker[] {
   for (const p of input.poi ?? []) {
     if (!isFinitePos(p.x, p.z)) continue;
     out.push({ id: p.id, kind: 'poi', x: p.x, z: p.z, label: p.label ?? p.id, travelable: false });
+  }
+  for (const p of input.shrines ?? []) {
+    if (!isFinitePos(p.x, p.z)) continue;
+    out.push({ id: p.id, kind: 'shrine', x: p.x, z: p.z, label: p.label ?? p.id, travelable: false });
+  }
+  const f = input.fog;
+  if (f && isFinitePos(f.x, f.z)) {
+    out.push({ id: f.id, kind: 'fog', x: f.x, z: f.z, label: f.label ?? f.id, travelable: false });
   }
   const q = input.quest;
   if (q && isFinitePos(q.x, q.z)) {
