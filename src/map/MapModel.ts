@@ -206,7 +206,7 @@ export class FogGrid {
   /**
    * Compact base64: a header (origin, cell size, dimensions) followed by the bitset with runs of
    * zero bytes run-length encoded (0x00 followed by a varint run length). An 11.5 km x 6.5 km world at
-   * 50 m cells is 230 x 130 bits = 3.7 KB raw and a few hundred bytes when sparsely explored.
+   * 50 m cells is 250 x 130 bits = 4 KB raw and a few hundred bytes when sparsely explored.
    */
   encode(): string {
     const out: number[] = [];

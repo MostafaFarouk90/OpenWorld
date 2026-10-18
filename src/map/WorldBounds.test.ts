@@ -3,7 +3,7 @@ import { bitmapCacheKey } from './TerrainBitmap';
 import { FogGrid, buildMarkers, hitTestMarker, mapExtent, mapToWorld, worldToMap } from './MapModel';
 import { DEFAULT_WORLD_BOUNDS, LEGACY_V1_BOUNDS, MAP_TUNING } from './tuning';
 
-const WIDE = { minX: -2000, maxX: 9500, minZ: -2000, maxZ: 4500 };
+const WIDE = { minX: -2000, maxX: 10500, minZ: -2000, maxZ: 4500 };
 
 describe('non-square, off-origin bounds', () => {
   it('the default is the widened world with the v1 origin', () => {
@@ -14,7 +14,7 @@ describe('non-square, off-origin bounds', () => {
   it('keeps the aspect: the longer edge is `size`, one metre is the same on both axes', () => {
     const e = mapExtent(WIDE, 640);
     expect(e.width).toBe(640);
-    expect(e.height).toBe(Math.round((640 * 6500) / 11500));
+    expect(e.height).toBe(Math.round((640 * 6500) / 12500));
     const a = worldToMap(0, 0, WIDE, 640);
     const b = worldToMap(1000, 1000, WIDE, 640);
     expect(b.u - a.u).toBeCloseTo(b.v - a.v, 9);
@@ -22,7 +22,7 @@ describe('non-square, off-origin bounds', () => {
   });
 
   it('round trips world -> map -> world', () => {
-    for (const [x, z] of [[-2000, -2000], [0, 0], [6800, 900], [1100, -150], [9500, 4500], [-1234.5, 4321]] as const) {
+    for (const [x, z] of [[-2000, -2000], [0, 0], [6800, 900], [1100, -150], [10500, 4500], [-1234.5, 4321]] as const) {
       const p = worldToMap(x, z, WIDE, 640);
       const w = mapToWorld(p.u, p.v, WIDE, 640);
       expect(w.x).toBeCloseTo(x, 6);
@@ -63,7 +63,7 @@ describe('fog migration v1 -> v2', () => {
     old.reveal(-1900, 1900, 100);
     old.reveal(1950, -1950, 60);
     const grown = FogGrid.migrate(old.encode(), v2);
-    expect(grown.cols).toBe(230);
+    expect(grown.cols).toBe(250);
     expect(grown.revealedCount).toBe(old.revealedCount);
     for (let r = 0; r < old.rows; r++) {
       for (let c = 0; c < old.cols; c++) expect(grown.isCellRevealed(c, r)).toBe(old.isCellRevealed(c, r));
@@ -81,7 +81,7 @@ describe('fog migration v1 -> v2', () => {
   it('an empty v1 grid migrates to an empty grid of the new shape', () => {
     const g = FogGrid.migrate(v1().encode(), v2);
     expect(g.revealedCount).toBe(0);
-    expect(g.cols).toBe(230);
+    expect(g.cols).toBe(250);
   });
 
   it('corrupt, short, wrong-type or misaligned payloads give an empty grid and never throw', () => {
@@ -91,7 +91,7 @@ describe('fog migration v1 -> v2', () => {
     for (const bad of [undefined, null, 5, {}, '', 'not base64!!', good.slice(0, 8), good.slice(0, good.length - 8), btoa('xx')]) {
       const g = FogGrid.migrate(bad, v2);
       expect(g.revealedCount).toBe(0);
-      expect(g.cols).toBe(230);
+      expect(g.cols).toBe(250);
       expect(g.rows).toBe(130);
     }
     const odd = FogGrid.forBounds({ minX: -2010, maxX: 1990, minZ: -2000, maxZ: 2000 });

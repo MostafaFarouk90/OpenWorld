@@ -11,13 +11,13 @@ export interface WorldBounds {
 export const LEGACY_V1_BOUNDS: Readonly<WorldBounds> = Object.freeze({ minX: -2000, maxX: 2000, minZ: -2000, maxZ: 2000 });
 
 /**
- * The one world extent (slice 2): x -2000..9500, z -2000..4500. Covers the farm-ring (6800, 900), the fog
+ * The one world extent (slice 2): x -2000..10500 (mirror core WORLD_BOUNDS from src/config/constants.ts once v0.5 lands), z -2000..4500. Covers the farm-ring (6800, 900), the fog
  * wall (1100, -150) and Harrowmark. Origin (-2000, -2000) equals the v1 origin and cells stay 50 m, so old
  * fog cells map 1:1 into the new grid. Final numbers come from thread 11's terrain size.
  */
 export const DEFAULT_WORLD_BOUNDS: Readonly<WorldBounds> = Object.freeze({
   minX: -2000,
-  maxX: 9500,
+  maxX: 10500,
   minZ: -2000,
   maxZ: 4500,
 });
