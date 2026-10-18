@@ -22,6 +22,11 @@ export class PurseTracker {
 
   constructor(private readonly pay: (gold: number, actorId: string) => void) {}
 
+  /** Forgets who was paid (a save with no economy entry, a new game). */
+  reset(): void {
+    this.paid.clear();
+  }
+
   onDied(e: DiedEvent): number {
     const gold = purseFor(e);
     if (gold <= 0 || this.paid.has(e.actorId)) return 0;
