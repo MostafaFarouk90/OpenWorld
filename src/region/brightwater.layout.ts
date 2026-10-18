@@ -64,9 +64,9 @@ const anchors: AnchorSpec[] = [
   a('waystone.north', 10, 310, 0, ['waystone']),
 
   // NPC posts.
-  a('npc-post.gaut', -3, 24, 0, ['npc-post']),
+  a('npc-post.gaut', -3, 24, 180, ['npc-post']),
   a('npc-post.edda', 25, 131, 270, ['npc-post']),
-  a('npc-post.stane', -40, 128, 0, ['npc-post']),
+  a('npc-post.stane', -40, 128, 90, ['npc-post']),
   a('npc-post.aelfreda', 52, 64, 90, ['npc-post'], { onStructure: 'chapel' }),
   a('npc-post.hob', 42, 47, 0, ['npc-post']),
   a('npc-post.wynn', -9, 44, 90, ['npc-post']),

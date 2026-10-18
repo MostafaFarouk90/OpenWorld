@@ -4,7 +4,7 @@ import { HurtboxSet } from '../combat/HurtboxSet';
 import { SCARECROW_DEFS, TOPPLE_SECONDS, spawnScarecrow, type ScarecrowDeps } from './scarecrow';
 import { createFakeCore } from './testing/fakeCore';
 
-const anchor = { position: { x: 3, y: 0, z: 27 }, yaw: 0 };
+const anchor = { position: { x: 3, y: 2, z: 27 }, yaw: 0 };
 
 function setup() {
   const fc = createFakeCore();

@@ -42,9 +42,9 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | waystone.chapel | 40 | 45 | 0 | 180 | waystone |
 | waystone.kettlewick | 12 | 156 | 0 | 180 | waystone, waystone-lit |
 | waystone.north | 10 | 310 | 0 | 180 | waystone |
-| npc-post.gaut | -3 | 24 | 0 | 180 | npc-post |
+| npc-post.gaut | -3 | 24 | 0 | 0 | npc-post |
 | npc-post.edda | 25 | 131 | 0 | 90 | npc-post |
-| npc-post.stane | -40 | 128 | 0 | 180 | npc-post |
+| npc-post.stane | -40 | 128 | 0 | 270 | npc-post |
 | npc-post.aelfreda | 52 | 64 | 0 | 270 | npc-post |
 | npc-post.hob | 42 | 47 | 0 | 180 | npc-post |
 | npc-post.wynn | -9 | 44 | 0 | 270 | npc-post |

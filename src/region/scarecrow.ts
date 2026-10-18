@@ -63,10 +63,10 @@ function buildMesh(): { root: THREE.Group; rig: THREE.Group } {
 export function spawnScarecrow(
   deps: ScarecrowDeps,
   anchor: Pick<Anchor, 'position' | 'yaw'>,
-  heightAt: (x: number, z: number) => number,
+  _heightAt?: (x: number, z: number) => number,
 ): ScarecrowHandle {
   const { root, rig } = buildMesh();
-  root.position.set(anchor.position.x, heightAt(anchor.position.x, anchor.position.z), anchor.position.z);
+  root.position.set(anchor.position.x, anchor.position.y, anchor.position.z);
   root.rotation.y = anchor.yaw ?? 0;
   deps.scene.add(root);
   root.updateMatrixWorld(true);
