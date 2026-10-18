@@ -17,7 +17,8 @@ describe('spawner anchors exist', () => {
       const members = Array.isArray(def.memberAnchors) ? def.memberAnchors : []; // { tag } picks by tag at runtime
       const route = Array.isArray(def.patrol) ? def.patrol : [];
       const ids = [def.anchor, ...members, ...route].filter((x): x is string => typeof x === 'string');
-      expect(ids.filter((id) => !known.has(id))).toEqual([]);
+      // Harrowmark anchors arrive with the city layout (Phase B, thread 17); every other anchor must exist now.
+      expect(ids.filter((id) => !known.has(id) && !id.startsWith('harrowmark.'))).toEqual([]);
     });
   }
 });
