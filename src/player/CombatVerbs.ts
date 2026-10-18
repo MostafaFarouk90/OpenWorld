@@ -135,6 +135,11 @@ export class CombatVerbs {
   private sprintTicks = 0;
   private reArmed = false;
   private readonly dodgedSwings = new Set<string>();
+  /**
+   * Invulnerability sources that are i-frames (the dodge, and later Ash-drift): status ticks ignore them. Respawn grace
+   * and Second Wind are not in it, so they still stop ticks. A new i-frame source adds its name here.
+   */
+  readonly iFrameSources = new Set<string>(['dodge']);
   private readonly offs: Array<() => void> = [];
   /** The current avatar's combat target and clip listener (replaced on a kit swap). */
   private readonly avatarOffs: Array<() => void> = [];
@@ -471,7 +476,7 @@ export class CombatVerbs {
 
   /** Bleed and ignite ticks are not dodgeable (contracts/actors-and-damage.md section 10): the dodge's i-frames do not stop them. */
   private statusThroughDodge(req: ModifiableRequest, target: Actor): void {
-    if (req.kind === 'status' && target.id === this.actor.id && req.outcome === 'immune' && this.invuln.only('dodge')) req.outcome = 'hit';
+    if (req.kind === 'status' && target.id === this.actor.id && req.outcome === 'immune' && this.invuln.onlyAmong(this.iFrameSources)) req.outcome = 'hit';
   }
 
   private guardModifier(req: ModifiableRequest, target: Actor, attacker: Actor | null): void {
