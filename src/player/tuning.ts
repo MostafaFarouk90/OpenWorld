@@ -67,7 +67,7 @@ export const RESPAWN = {
   delayTicks: ticks(2.5),
   graceTicks: ticks(1.5),
   healthFraction: 1,
-  /** Share of carried gold dropped as the ember pouch (design section 2). */
+  /** Share of carried gold dropped as the gold pouch (design section 2). */
   pouchGoldShare: 0.1,
   pouchHoldSeconds: 0.5,
 } as const;
