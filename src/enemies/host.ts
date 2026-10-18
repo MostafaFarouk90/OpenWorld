@@ -1,5 +1,6 @@
 import type { GameContext } from '../core/Game';
 import { heightAt as terrainHeightAt } from '../terrain/heightfield';
+import { loudFromSpeed, makeSpeedMeter } from './ai/awareness';
 import type { EnemyHost, EventsPort, InteractionPort, ServicesPort } from './ports';
 import './events';
 
@@ -9,6 +10,7 @@ import './events';
  */
 export function hostFromContext(ctx: GameContext, warn: (m: string) => void): EnemyHost {
   const playerCollider = ctx.world.player.controller.collider;
+  const speed = makeSpeedMeter(() => ctx.player.feet, () => ctx.clock.seconds);
   return {
     scene: ctx.scene,
     physics: ctx.physics,
@@ -38,7 +40,9 @@ export function hostFromContext(ctx: GameContext, warn: (m: string) => void): En
         return ctx.player.feet;
       },
       collider: playerCollider,
-      loud: () => ctx.input.actions.down('sprint') || ctx.player.avatar?.controller.activeAttack() != null,
+      // Measured pace, not the sprint key: Shift held while standing still is quiet.
+      loud: () => loudFromSpeed(speed(), ctx.player.avatar?.controller.activeAttack() != null),
+      speed,
       addMoveModifier: (source, mod) => ctx.player.addMoveModifier(source, mod),
     },
     torch: {

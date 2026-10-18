@@ -120,6 +120,8 @@ export interface EnemyEvents {
   'actor.revived': { actorId: ActorId; reason: string; health: number };
   'ai.aggro': { actorId: ActorId; targetId: ActorId };
   'ai.calm': { actorId: ActorId };
+  'ai.suspicious': { actorId: ActorId; targetId: ActorId; awareness: number };
+  'ai.spotted': { actorId: ActorId; targetId: ActorId };
   telegraph: {
     actorId: ActorId;
     kind: 'block' | 'dodge';
@@ -228,6 +230,8 @@ export interface PlayerPort {
   readonly collider: unknown;
   /** Sprinting or attacking this tick (heard at AI.hearingLoud). */
   loud(): boolean;
+  /** Measured horizontal speed in m/s (feet movement over simulated time), not input state. */
+  speed(): number;
   addMoveModifier(source: string, mod: { speedScale?: number }): () => void;
 }
 

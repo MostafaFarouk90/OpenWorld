@@ -18,7 +18,7 @@ export type AiState =
   | 'spared'
   | 'dead';
 
-export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse' | 'ember-hound';
+export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse' | 'ember-hound' | 'watch-guard';
 
 /** The impact-sound materials of `actor.data.audio.material` ('straw' and 'wood' are the foes'). */
 export type EnemyMaterial = 'ash' | 'metal' | 'straw' | 'wood';
@@ -106,6 +106,8 @@ export interface EnemyDef {
   attackStagger?: number;
   /** A player hit shortly after dodging this enemy's attack knocks it down (the hound). */
   dodgeCounterKnockdown?: boolean;
+  /** Watches only: raises `ai.spotted`, never `ai.aggro`, never chases or attacks (still hurtable). See Enemy.damaged. */
+  observerOnly?: boolean;
 }
 
 export interface LevelBand {
@@ -164,6 +166,8 @@ export interface SpawnOptions {
   leash?: boolean;
   /** Default: the spawner's `guard`, else the def's. */
   guard?: boolean;
+  /** Watch only (default: the def's `observerOnly`); see EnemyDef.observerOnly. */
+  observerOnly?: boolean;
 }
 
 export interface EnemyView {

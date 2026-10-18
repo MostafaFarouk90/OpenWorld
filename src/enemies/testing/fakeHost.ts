@@ -7,6 +7,7 @@ import type { AttackWindowSource } from '../../combat/types';
 import { isWindowActive } from '../../combat/AttackWindow';
 import type { WeaponTracer } from '../../combat/WeaponTracer';
 import { KNIGHT } from '../../config/constants';
+import { loudFromSpeed } from '../ai/awareness';
 import type {
   ActorId,
   ActorInitLike,
@@ -218,6 +219,8 @@ export class FakeHost {
   readonly playerHurtboxes: HurtboxSet;
   readonly playerFeet: THREE.Vector3;
   loud = false;
+  /** Measured player speed (m/s) the fake reports; loud at LOUD_SPEED or more, whatever keys are held. */
+  speed = 0;
   vfx: { dissolve(root: THREE.Object3D, s: number): Promise<void>; spawnEffect?(id: string, t: { position: { x: number; y: number; z: number } }, p?: Record<string, number | string | boolean>): unknown } | undefined;
   /** Thread 2's spells service when a test provides it (`useShard`, or the older `addBurn`). */
   spells: { useShard?(g: number, s: string): void; addBurn?(n: number, s: string): void } | undefined = undefined;
@@ -549,7 +552,8 @@ export class FakeHost {
         return self.playerFeet;
       },
       collider: null,
-      loud: () => this.loud,
+      loud: () => loudFromSpeed(this.speed, false) || this.loud,
+      speed: () => this.speed,
       addMoveModifier: (source, mod) => {
         this.moveModifiers.set(source, mod);
         return () => this.moveModifiers.delete(source);

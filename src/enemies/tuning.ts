@@ -141,3 +141,18 @@ export const WORLD_AI = {
   /** Spawn ring radius when several enemies share one anchor, and patrol slot ring. */
   ringRadius: 1.5,
 } as const;
+
+/** Awareness (ai/awareness.ts): how fast an observer's notice meter fills and drains. */
+export const AWARENESS = {
+  /** Seconds to fill from empty at point-blank range while seen (or heard); farther is slower. */
+  fillSeconds: 1.0,
+  /** Fill rate fraction at the edge of the sight range (1 at the observer's feet). */
+  edgeFillScale: 0.4,
+  /** Drain per second while neither seen nor heard. */
+  drainPerSecond: 0.25,
+  /** `ai.suspicious` fires on each rise above this. */
+  suspiciousAbove: 0.3,
+} as const;
+
+/** The player counts as loud at this horizontal speed (m/s) or faster: between walk 4.5 and sprint 7.5. Holding Shift while standing still is quiet. */
+export const LOUD_SPEED = 6;

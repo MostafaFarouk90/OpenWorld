@@ -19,6 +19,7 @@ import type { ActorId, EnemyEvents, EnemyHost, MercyEventLike } from './ports';
 import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } from './spawners';
 import { ASH_GRAB, BOSS_MERCY, GUARD, MERCY, PAIR, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions } from './types';
+import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
 
 function isFoeDef(def: EnemyDef | FoeDef): def is FoeDef {
   return isFoeKind(def.kind);
@@ -41,8 +42,14 @@ export interface EnemiesService {
   lockBlockLevel(blockId: string, level: number): void;
   /** Mercies and kills per creature kind, for the codex (thread 8). */
   mercyTally(): Record<string, TallyRow>;
-  /** The pack leader of a spawner: the lowest actor id among its living pack-leader-capable members, or null. */
+  /** The living member in a spawner's `leaderSlot`, or null. */
   packLeader(spawnerId: string): ActorId | null;
+  /** Perception hook for stealth and skills (thread 18, 15). */
+  perception: {
+    register(provider: PerceptionProvider): Unregister;
+  };
+  /** Awareness, line of sight and distance as of the enemy's last think; null for an unknown, gone or dormant enemy. */
+  perceptionState(actorId: ActorId): { awareness: number; sees: boolean; distance: number } | null;
 }
 
 /**
@@ -136,7 +143,11 @@ export class EnemyManager {
     lockBlockLevel: (b, l) => this.spawners.lockBlockLevel(b, l),
     mercyTally: () => this.tally.snapshot(),
     packLeader: (id) => this.packLeaderId(id),
+    perception: { register: (p) => this.perceptionHub.register(p) },
+    perceptionState: (id) => this.enemies.get(id)?.perceptionState() ?? null,
   };
+
+  readonly perceptionHub = new PerceptionHub((m) => this.host.warn(m));
 
   /** The living member in a spawner's `leaderSlot`, or null (no leader slot, or its occupant is gone). */
   packLeaderId(spawnerId: string): ActorId | null {
@@ -463,6 +474,7 @@ export class EnemyManager {
       this.tokenAt.delete(self);
       this.tokens.get(t)?.delete(self);
     },
+    perceptionModifiers: (self: Enemy, targetId: ActorId) => this.perceptionHub.combined(targetId, () => self.pose()),
     partnerOf: (self: Enemy) => {
       if (!self.spawnerId) return null;
       let best: Enemy | null = null;

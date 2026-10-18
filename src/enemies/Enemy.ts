@@ -4,7 +4,8 @@ import { Brain, type BrainHooks, type Senses } from './ai/Brain';
 import { Guard, type GuardHit } from './ai/guard';
 import { MoveSelector } from './ai/moveSelect';
 import { pairGoal } from './ai/pair';
-import { makeLineOfSight, perceive } from './ai/perception';
+import { stepAwareness } from './ai/awareness';
+import { makeLineOfSight, perceive, type CombinedModifiers } from './ai/perception';
 import { ENEMY_CLIPS } from './clips';
 import { Cutpurse } from './cutpurse/Cutpurse';
 import { BURNING_BITE, HOUND } from './hound/tuning';
@@ -12,6 +13,7 @@ import { slopePitch } from './hound/slope';
 import { readStatusData } from './statusData';
 import type { EnemyBody } from './body';
 import type { ActorId, ActorLike, EnemyHost, NavPort } from './ports';
+import type { ObserverPose } from './perceptionHook';
 import { PathFollower } from './steering/pathFollower';
 import { forwardOf, Steering, turnToward, yawTo } from './steering/steering';
 import { HeightfieldMover, SwitchingMover, type EnemyMover } from './steering/movers';
@@ -37,8 +39,10 @@ export interface EnemyEnv {
   partnerOf(self: Enemy): Enemy | null;
   /** Living packmates of the same spawner within `HOUND.packRadius` (the `circle-rush` behaviour). */
   packNearby(self: Enemy): number;
-  /** The lowest actor id among the spawner's living pack-leader-capable members (hound/pack.ts), or null. */
+  /** The living member in the spawner's `leaderSlot`, or null. */
   packLeaderId(spawnerId: string): ActorId | null;
+  /** Combined perception modifiers for this observer vs the target; null with no providers. */
+  perceptionModifiers(self: Enemy, targetId: ActorId): CombinedModifiers | null;
   /** Called once the enemy is gone from the world (after despawn). */
   gone(self: Enemy, how: 'died' | 'released' | 'spared' | 'despawned'): void;
 }
@@ -107,6 +111,11 @@ export class Enemy {
   private counterLeft = 0;
   /** The swing whose bite already ignited (once per swing). */
   private ignitedSwing = -1;
+  private awareness = 0;
+  private lastSees = false;
+  private lastDistance = Infinity;
+  /** Watches only: never targets, never aggros, never attacks (see `damaged`). */
+  readonly observerOnly: boolean;
   private asleep = false;
   private leaveFrom: THREE.Vector3 | null = null;
   private slowRemover: (() => void) | null = null;
@@ -126,6 +135,7 @@ export class Enemy {
     this.slug = spawn.slug;
     this.spawnerId = spawn.spawnerId;
     this.damageScale = spawn.damageScale * (spawn.options.damageScale ?? 1);
+    this.observerOnly = spawn.options.observerOnly ?? this.def.observerOnly ?? false;
     this.path = new PathFollower(() => env.nav(), (m) => host.warn(m));
     this.guard = (spawn.options.guard ?? this.def.guard) ? new Guard() : null;
     this.yaw = this.targetYaw = spawn.yaw;
@@ -160,7 +170,7 @@ export class Enemy {
         home: { x: spawn.feet.x, z: spawn.feet.z },
         patrol: spawn.patrol,
         leash: spawn.options.leash,
-        aggroOnSpawn: spawn.options.aggro ? host.actors.player.id : null,
+        aggroOnSpawn: spawn.options.aggro && !this.observerOnly ? host.actors.player.id : null,
         rng: () => env.rng(),
       });
       if (spawn.options.moves) this.moveFilter = [...spawn.options.moves];
@@ -244,6 +254,26 @@ export class Enemy {
   /** Simulated feet this tick. */
   get feet(): THREE.Vector3 {
     return this.mover.feet;
+  }
+
+  /** Awareness, line of sight and distance as of the last think; null once gone or while dormant. */
+  perceptionState(): { awareness: number; sees: boolean; distance: number } | null {
+    if (this.phase === 'gone' || this.asleep) return null;
+    return { awareness: this.awareness, sees: this.lastSees, distance: this.lastDistance };
+  }
+
+  /** The pose handed to perception providers. */
+  pose(): ObserverPose {
+    return {
+      actorId: this.actor.id,
+      kind: this.def.kind,
+      state: this.brain.state,
+      spawnerId: this.spawnerId,
+      level: this.actor.level,
+      feet: { x: this.mover.feet.x, y: this.mover.feet.y, z: this.mover.feet.z },
+      yaw: this.yaw,
+      observerOnly: this.observerOnly,
+    };
   }
 
   get isGone(): boolean {
@@ -336,15 +366,18 @@ export class Enemy {
       targetLoud: this.host.player.loud(),
       damagedBy: this.damagedThisTick,
       lineOfSight: this.lineOfSight,
+      modifiers: this.env.perceptionModifiers(this, player.id),
     });
     this.damagedThisTick = false;
+    this.trackAwareness(dt, p, player.id);
     const toTarget = yawTo(self, pFeet);
     const senses: Senses = {
       self: { x: self.x, z: self.z },
       targetId: player.id,
       targetAlive: !player.dead,
       targetPos: { x: pFeet.x, z: pFeet.z },
-      notices: p.notices,
+      // An observer-only guard never acquires a target: the brain stays calm.
+      notices: p.notices && !this.observerOnly,
       sees: p.sees,
       distance: p.distance,
       facingErrorDeg: Math.abs(wrap(toTarget - this.yaw)) * (180 / Math.PI),
@@ -460,6 +493,12 @@ export class Enemy {
       this.damagedThisTick = true;
       this.poiseIdle = 0;
     }
+    // An observer-only guard takes the damage (it can die) and flinches on a hit, but never provokes,
+    // staggers into mercy or chases: the brain is not told, so no `ai.aggro` follows.
+    if (this.observerOnly) {
+      if (outcome === 'hit' && !staggered && !killed) this.oneShot(ENEMY_CLIPS.flinch, AI.flinchSeconds);
+      return;
+    }
     if (staggered || killed) return; // actor.staggered and actor.died follow in the same batch
     this.brain.setCondition(this.actor.maxHealth > 0 ? this.actor.health / this.actor.maxHealth : 0, this.env.mercyUnlocked('spare'));
     if (outcome === 'hit' && this.counterLeft > 0 && attackerId === this.host.actors.player.id) {
@@ -489,6 +528,10 @@ export class Enemy {
   staggered(byId: ActorId | null): void {
     if (this.phase !== 'alive') return;
     this.poiseIdle = 0;
+    if (this.observerOnly) {
+      this.oneShot(ENEMY_CLIPS.stagger, AI.breakStaggerSeconds);
+      return;
+    }
     this.brain.setCondition(
       this.actor.maxHealth > 0 ? this.actor.health / this.actor.maxHealth : 0,
       this.env.mercyUnlocked('spare'),
@@ -562,7 +605,7 @@ export class Enemy {
   }
 
   alert(targetId: ActorId): void {
-    if (this.phase === 'alive') this.brain.alert(targetId);
+    if (this.phase === 'alive' && !this.observerOnly) this.brain.alert(targetId);
   }
 
   /** This enemy's swing slowed the player (ash-grab). */
@@ -675,6 +718,16 @@ export class Enemy {
     // A soldier pinned against a wall still leaves: after the walk's time plus a margin.
     const timeout = AI.sparedWalkMetres / Math.max(0.1, this.def.walkSpeed) + SPARED_LEAVE_MARGIN_SECONDS;
     if ((this.leaveFrom && self.distanceTo(this.leaveFrom) >= AI.sparedWalkMetres) || this.leaveTime >= timeout) this.despawn();
+  }
+
+  /** Steps the awareness meter and emits `ai.suspicious` / `ai.spotted` on their edges. */
+  private trackAwareness(dt: number, p: { sees: boolean; hears: boolean; distance: number }, targetId: ActorId): void {
+    const step = stepAwareness(this.awareness, p, dt);
+    this.awareness = step.awareness;
+    this.lastSees = p.sees;
+    this.lastDistance = p.distance;
+    if (step.becameSuspicious) this.host.events.emit('ai.suspicious', { actorId: this.actor.id, targetId, awareness: step.awareness });
+    if (step.becameSpotted) this.host.events.emit('ai.spotted', { actorId: this.actor.id, targetId });
   }
 
   private clearSlow(): void {

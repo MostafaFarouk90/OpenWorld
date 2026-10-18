@@ -8,6 +8,10 @@ declare module '../core/events' {
   interface GameEventMap {
     /** Every member of a spawner's group died, was released, was spared or despawned. */
     'enemies.groupCleared': { spawnerId: string };
+    /** An observer's awareness of its target rose above 0.3 (once per rise). */
+    'ai.suspicious': { actorId: string; targetId: string; awareness: number };
+    /** An observer's awareness reached 1 (once per fill). Thread 18 maps it to `stealth.noticed`. */
+    'ai.spotted': { actorId: string; targetId: string };
     /** An enemy's AI state changed (debug and tests; not persisted). */
     'enemies.state': { actorId: string; from: string; to: string };
     /** A blighted soldier kneels: Spare is open for `seconds`. */

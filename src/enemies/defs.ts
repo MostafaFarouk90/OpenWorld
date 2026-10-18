@@ -66,11 +66,31 @@ export const BLIGHTED_SOLDIER: EnemyDef = {
   pairAdvance: true,
 };
 
+/**
+ * Watch Guard: an observer-only humanoid (Knight fallback model, tinted) for stealth sections. It sees the
+ * player and raises `ai.spotted`; it has no moves, never emits `ai.aggro` and never chases. It can be hurt and killed.
+ */
+export const WATCH_GUARD: EnemyDef = {
+  kind: 'watch-guard',
+  nameKey: 'enemies.name.watch-guard',
+  model: { prefer: [], tint: 0x5a6470, weapons: 'none' },
+  maxHealth: 40,
+  maxPoise: 30,
+  walkSpeed: 1.4,
+  chaseSpeed: 2.6,
+  moves: [],
+  mercy: { verb: 'spare', tier: 'normal', track: null, when: 'yielding' },
+  material: 'metal',
+  rises: false,
+  observerOnly: true,
+};
+
 export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'ash-wraith': ASH_WRAITH,
   'blighted-soldier': BLIGHTED_SOLDIER,
   'alley-cutpurse': ALLEY_CUTPURSE,
   'ember-hound': EMBER_HOUND,
+  'watch-guard': WATCH_GUARD,
 };
 
 /**
@@ -83,6 +103,7 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   'alley-cutpurse': { part: 'hand', color: 0xc8b070 },
   // Tail flare (design 11.6): the pounce is red, the bite's flash is the same tail.
   'ember-hound': { part: 'tail', color: 0xff5a1f },
+  'watch-guard': { part: 'weapon', color: 0xd04030 },
 };
 
 function move(
