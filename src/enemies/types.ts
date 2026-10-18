@@ -61,12 +61,15 @@ export interface ModelRecipe {
   weapons: 'none' | 'sword-shield';
 }
 
+/** The verbs a quest can unlock (flags `enemies.mercy.<verb>`). The Warm Hand rides on Calm. */
+export type UnlockVerb = 'release' | 'spare' | 'calm';
+
 export interface MercyDef {
-  verb: 'release' | 'spare';
+  verb: UnlockVerb;
   tier: 'normal' | 'elite';
   track: FavourTrack | null;
   /** Release opens on a stagger (undead); Spare on a yield (humans). */
-  when: 'staggered' | 'yielding';
+  when: 'staggered' | 'yielding' | 'calming';
 }
 
 export interface EnemyDef {

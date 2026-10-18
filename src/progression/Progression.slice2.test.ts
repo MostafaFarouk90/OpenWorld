@@ -342,3 +342,64 @@ describe('save migration', () => {
     expect(goldBox.gold).toBe(7);
   });
 });
+
+describe('the M07 class choice refund and the respec gold (thread 12)', () => {
+  const learnTwo = (p: Progression) => {
+    p.grantXp(xpForLevel(3), 'test');
+    expect(p.learn('knight.rimBash').ok).toBe(true);
+    expect(p.learn('knight.ironStance').ok).toBe(true);
+  };
+
+  it('refundForClassChoice refunds every point silently, clears the bar and leaves the used respec as saved', () => {
+    const { p, events } = make();
+    p.load({ xp: xpForLevel(3), storyPoints: 0, learned: [], bar: [], classId: null, respecUsed: true }, 2);
+    learnTwo(p);
+    const before = p.skillPoints;
+    events.length = 0;
+    expect(p.refundForClassChoice()).toBe(2);
+    expect(p.skillPoints).toBe(before + 2);
+    expect(p.learnedSkills()).toEqual([]);
+    expect(p.bar().every((s) => s === null)).toBe(true);
+    expect(p.serialize().respecUsed).toBe(true);
+    expect(events.map((e) => e.type)).toEqual(expect.arrayContaining(['skillpoints.changed', 'ability.bar.changed']));
+    expect(events.some((e) => e.type === 'gold.spent')).toBe(false);
+  });
+
+  it('refundForClassChoice is refused once a class is chosen, so it can never be a free respec', () => {
+    const { p } = make();
+    learnTwo(p);
+    p.setClass('knight');
+    expect(p.refundForClassChoice()).toBe(0);
+    expect(p.learnedSkills()).toHaveLength(2);
+  });
+
+  it('refundForClassChoice re-applies max health', () => {
+    const { p, actor } = make();
+    learnTwo(p);
+    actor.maxHealth = 1;
+    p.refundForClassChoice();
+    expect(actor.maxHealth).toBe(p.baseMaxHealth());
+  });
+
+  it('a paid respec passes the reason respec, and too little gold takes nothing', () => {
+    const { p, goldBox } = make({ gold: 10 });
+    learnTwo(p);
+    const release = p.allowRespec('test');
+    expect(p.respec().ok).toBe(true); // the free one
+    learnTwo(p);
+    const reasons: unknown[] = [];
+    const takeSpy = (p as any).deps.gold();
+    const original = takeSpy.takeGold.bind(takeSpy);
+    takeSpy.takeGold = (n: number, reason?: string) => {
+      reasons.push(reason);
+      return original(n);
+    };
+    expect(p.respec()).toEqual({ ok: false, reason: 'no-gold' });
+    expect(reasons).toEqual([]);
+    expect(goldBox.gold).toBe(10);
+    goldBox.gold = 1000;
+    expect(p.respec().ok).toBe(true);
+    expect(reasons).toEqual(['respec']);
+    release();
+  });
+});

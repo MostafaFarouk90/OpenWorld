@@ -493,3 +493,19 @@ describe('mercy tally', () => {
     expect(s.manager.service.mercyTally()['blighted-soldier'].killed).toBe(1);
   });
 });
+
+describe('the calm unlock', () => {
+  it('is its own flag, off by default and independent of Release and Spare', () => {
+    const { manager, fake } = setup();
+    expect(manager.service.mercyUnlocked('calm')).toBe(false);
+    manager.service.setMercyUnlocked('release', true);
+    manager.service.setMercyUnlocked('spare', true);
+    expect(manager.service.mercyUnlocked('calm')).toBe(false);
+    manager.service.setMercyUnlocked('calm', true);
+    expect(manager.service.mercyUnlocked('calm')).toBe(true);
+    expect(fake.flags.get('enemies.mercy.calm')).toBe(true);
+    manager.service.setMercyUnlocked('calm', false);
+    expect(manager.service.mercyUnlocked('calm')).toBe(false);
+    expect(manager.service.mercyUnlocked('release')).toBe(true);
+  });
+});

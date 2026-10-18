@@ -131,7 +131,7 @@ export interface EnemyEvents {
   'telegraph.cancelled': { actorId: ActorId; swingId: number };
   mercy: MercyEventLike;
   'mercy.revoked': { actorId: ActorId; track: FavourTrack | null; removed: number };
-  rest: { waystoneId: string };
+  rest: { waystoneId?: string; placeId?: string };
   'save.loaded': { slot: string };
   'interior.entered': { interiorId: string; doorId: string };
   'interior.exited': { interiorId: string; doorId: string };

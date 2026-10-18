@@ -43,8 +43,8 @@ export type Effect =
   | { grantAbility: string }
   | { event: string; payload?: unknown };
 
-/** Mercy verbs a quest can unlock (`calm` arrives with the v0.5 enemies service). */
-export type MercyUnlockVerb = 'release' | 'spare';
+/** Mercy verbs a quest can unlock (the flags `enemies.mercy.<verb>`). */
+export type MercyUnlockVerb = 'release' | 'spare' | 'calm';
 
 /** `if` effects may nest this deep. */
 export const MAX_IF_DEPTH = 3;
