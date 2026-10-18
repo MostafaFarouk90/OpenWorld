@@ -29,6 +29,7 @@ export const TUTORIAL_STRINGS_EN: Record<string, string> = {
   'tutorial.prompt.move': 'Press {key} to walk',
   'tutorial.prompt.look': 'Move the mouse to look about',
   'tutorial.prompt.attack1': 'Press {key} to strike the scarecrow',
+  'tutorial.prompt.attack1.wraith': 'Press {key} to strike the wraiths',
   'tutorial.prompt.interact': 'Press {key} to speak or use',
   'tutorial.prompt.sprint': 'Hold {key} to run',
   'tutorial.prompt.jump': 'Press {key} to leap',

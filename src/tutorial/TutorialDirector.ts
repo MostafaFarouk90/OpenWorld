@@ -19,6 +19,9 @@ export const VOW_RETRY_SECONDS = 1;
 /** Ticks the T12 smoke hit is retried while health stays full (i-frames can eat it). */
 export const SMOKE_RETRY_TICKS = 30;
 export const SMOKE_FRACTION = 0.25;
+/** Seconds a spawn that found nothing is retried (the enemy model may still be loading) before its goals count as done. */
+export const SPAWN_RETRY_SECONDS = 10;
+const SPAWN_RETRY_INTERVAL = 0.5;
 /** Enemy health on a restarted beat (design section 2, "a second failure restarts the beat with enemies at half health"). */
 export const RESTART_HEALTH_SCALE = 0.5;
 
@@ -74,6 +77,7 @@ export class TutorialDirector {
   /** Spawners whose spawn found nothing: their goals count as done (missing anchors never soft-lock). */
   private readonly missing = new Set<string>();
   private healthScale = 1;
+  private retries: { sp: SpawnSpec; left: number; wait: number }[] = [];
   private pendingLoad = false;
   private loadedEntry = false;
   private restartPending = false;
@@ -297,6 +301,7 @@ export class TutorialDirector {
       }
     }
     if (id === 't12') this.tickSmoke();
+    this.tickRetries(sample.dt);
 
     this.tickSteps(this.steps, this.step, sample);
     this.advance();
@@ -433,6 +438,7 @@ export class TutorialDirector {
     this.step = 0;
     this.wavesSpawned = 0;
     this.missing.clear();
+    this.retries = [];
     this.crackLeft = 0;
     this.vowRetryLeft = -1;
     this.smokeTicks = 0;
@@ -575,10 +581,27 @@ export class TutorialDirector {
 
   private spawnOne(sp: SpawnSpec): void {
     const scaled: SpawnSpec = { ...sp, healthScale: (sp.healthScale ?? 1) * this.healthScale };
-    const ids = this.ports.spawn(scaled);
-    if (ids.length === 0) {
-      this.ports.warn(`Tutorial: spawner ${sp.spawnerId} spawned nothing; its goals count as done`);
-      this.missing.add(sp.spawnerId);
+    if (this.ports.spawn(scaled).length > 0) return;
+    if (!this.retries.some((r) => r.sp.spawnerId === sp.spawnerId)) {
+      this.retries.push({ sp, left: SPAWN_RETRY_SECONDS, wait: SPAWN_RETRY_INTERVAL });
+    }
+  }
+
+  private tickRetries(dt: number): void {
+    if (this.retries.length === 0) return;
+    for (const r of [...this.retries]) {
+      r.left -= dt;
+      r.wait -= dt;
+      if (r.wait > 0 && r.left > 0) continue;
+      r.wait = SPAWN_RETRY_INTERVAL;
+      const scaled: SpawnSpec = { ...r.sp, healthScale: (r.sp.healthScale ?? 1) * this.healthScale };
+      if (this.ports.spawn(scaled).length > 0) {
+        this.retries.splice(this.retries.indexOf(r), 1);
+      } else if (r.left <= 0) {
+        this.retries.splice(this.retries.indexOf(r), 1);
+        this.ports.warn(`Tutorial: spawner ${r.sp.spawnerId} spawned nothing; its goals count as done`);
+        this.missing.add(r.sp.spawnerId);
+      }
     }
   }
 

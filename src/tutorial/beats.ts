@@ -70,7 +70,7 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
     crisis: true,
     cutscene: 'crack',
     npcs: t04Npcs,
-    prompts: [prompt('attack1')],
+    prompts: [P('attack1', 'attack1', 'tutorial.prompt.attack1.wraith')],
     waves: [[{ spawnerId: 't05.churchyard', aggro: true }]],
     steps: [
       [{ kind: 'kill', creature: 'ash-wraith', spawnTag: 't05.churchyard', count: 3 }],
