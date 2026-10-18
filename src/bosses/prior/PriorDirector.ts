@@ -29,9 +29,17 @@ interface Intro {
   camera: CameraOverride | null;
 }
 
+/**
+ * Where the Mage model stands: 'none' (headless: the fight runs without a model, for tests), 'loading' (a start waits for
+ * it), 'ready', or 'failed'. Without a model the Prior has no hurtboxes and the sword cannot touch him, so a real game
+ * never starts the fight without one (review S2).
+ */
+export type PriorModelState = 'none' | 'loading' | 'ready' | 'failed';
+
 export interface PriorDirectorOptions {
-  /** A fresh Prior model, or null (headless or the Mage failed to load); a throw counts as null. */
+  /** A fresh Prior model (called only in state 'ready'); a throw refuses the start with a warning. */
   makeModel?: () => PriorModel | null;
+  modelState?: () => PriorModelState;
   warn?: (message: string) => void;
 }
 
@@ -43,6 +51,10 @@ export interface PriorDirectorOptions {
 export class PriorDirector {
   private readonly ctx: GameContext;
   private readonly makeModel: () => PriorModel | null;
+  private readonly modelState: () => PriorModelState;
+  /** The trigger fired while the model was loading; start once it is ready. */
+  private waiting = false;
+  private warnedModel = false;
   private readonly warn: (message: string) => void;
   private readonly offs: (() => void)[] = [];
   private readonly veil = new AshVeil();
@@ -58,6 +70,7 @@ export class PriorDirector {
   constructor(ctx: GameContext, opts: PriorDirectorOptions = {}) {
     this.ctx = ctx;
     this.makeModel = opts.makeModel ?? (() => null);
+    this.modelState = opts.modelState ?? (() => 'none');
     this.warn = opts.warn ?? ((m) => console.warn(`[ashen-prior] ${m}`));
     ctx.scene.add(this.veil.mesh);
     this.offs.push(
@@ -84,6 +97,11 @@ export class PriorDirector {
     return this.encounter;
   }
 
+  /** A start is waiting for the Mage to load. */
+  get waitingForModel(): boolean {
+    return this.waiting;
+  }
+
   get introRunning(): boolean {
     return this.intro !== null;
   }
@@ -100,9 +118,13 @@ export class PriorDirector {
       const e = this.encounter;
       if (e && !e.done && e.brain.state !== 'released' && e.brain.state !== 'dying') this.teardownFight();
     }
+    if (this.waiting && this.modelState() !== 'loading') {
+      this.waiting = false;
+      this.start();
+    }
     if (this.intro) this.tickIntro(dt);
     this.encounter?.tick(dt);
-    if (this.encounter?.fighting && !this.gateClosed) this.tryCloseGate();
+    if (this.encounter?.contested && !this.gateClosed) this.tryCloseGate();
     this.veil.update(dt);
   }
 
@@ -144,11 +166,24 @@ export class PriorDirector {
     if (this.beaten || this.ctx.state.hasFlag(OUTCOME_FLAG) || this.ctx.player.actor.dead) return;
     const places = this.places();
     if (!places) return;
+    const modelState = this.modelState();
+    if (modelState === 'loading') {
+      this.waiting = true;
+      return;
+    }
     let model: PriorModel | null = null;
-    try {
-      model = this.makeModel();
-    } catch (err) {
-      this.warn(`Prior model unavailable, greybox fight without it (${err instanceof Error ? err.message : String(err)})`);
+    if (modelState !== 'none') {
+      try {
+        model = modelState === 'ready' ? this.makeModel() : null;
+      } catch (err) {
+        model = null;
+        if (!this.warnedModel) this.warn(`Prior model failed to build (${err instanceof Error ? err.message : String(err)})`);
+      }
+      if (!model) {
+        if (!this.warnedModel) this.warn('no Prior model (the Mage failed to load); the fight does not start');
+        this.warnedModel = true;
+        return;
+      }
     }
     const encounter = new PriorEncounter(this.ctx, {
       model,
@@ -273,6 +308,7 @@ export class PriorDirector {
 
   /** Player death, load, or an outside outcome: no fight state survives (game-events-and-flags.md section 7). */
   private teardownFight(): void {
+    this.waiting = false;
     this.endIntro();
     const e = this.encounter;
     this.encounter = null;

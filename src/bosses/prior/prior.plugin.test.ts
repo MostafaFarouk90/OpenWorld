@@ -86,7 +86,9 @@ function fakeInteriors(current: string | null = VAULT.interiorId) {
   return { plugin, service, log };
 }
 
-async function setup(opts: { enemies?: boolean; interiors?: string | null | false; anchors?: boolean; assets?: AssetLoader } = {}) {
+async function setup(
+  opts: { enemies?: boolean; interiors?: string | null | false; anchors?: boolean; assets?: AssetLoader; cameraRig?: unknown } = {},
+) {
   const scene = new THREE.Scene();
   const moveModifiers = new MoveModifiers();
   const world = new World(scene, physics, {
@@ -97,7 +99,7 @@ async function setup(opts: { enemies?: boolean; interiors?: string | null | fals
   const doc = Object.assign(new EventTarget(), { pointerLockElement: null as Element | null });
   const element = Object.assign(new EventTarget(), { requestPointerLock: () => {} }) as unknown as HTMLElement;
   const input = new InputManager(element, win, doc, { storage: null });
-  const game = new Game({ scene, physics, world, input, moveModifiers, assets: opts.assets ?? null, report: () => {} });
+  const game = new Game({ scene, physics, world, input, moveModifiers, assets: opts.assets ?? null, cameraRig: (opts.cameraRig ?? null) as never, report: () => {} });
   const events: Array<{ type: keyof GameEventMap; payload: any }> = [];
   game.events.onAny((type, payload) => events.push({ type, payload }));
   const enemies = fakeEnemies();
@@ -422,7 +424,11 @@ describe('Ashen Prior on the real core', () => {
     t.run(secs(PRIOR.summonCastSeconds) + 2);
     shard(25);
     t.surge();
+    // kill the opening summons so the phase-1 re-summon happens: it must not raise the shield
+    for (const g of SUMMON_GROUPS) for (const id of t.enemies.service.alive(g)) t.ctx.damage.kill(id, 'player');
     t.runHealed(30);
+    expect(t.enemies.calls.filter((c) => c.startsWith('spawn:'))).toHaveLength(4);
+    expect(t.of('boss.shield').filter((e) => e.up)).toHaveLength(1);
     const s = t.state()!;
     t.hit(s.health - s.maxHealth * 0.5 + 1, 0);
     t.run(secs(1.2 + PRIOR.summonCastSeconds + 0.5));
@@ -637,6 +643,134 @@ describe('Ashen Prior on the real core', () => {
     t.hit(1e6);
     t.run(secs(PRESENTATION.deathClipSeconds + PRESENTATION.deathDissolveSeconds) + 2);
     expect(t.ctx.scene.getObjectByName('boss-ashen-prior')).toBeUndefined();
+    t.teardown();
+  });
+
+  it('the chain stays unparryable: a parry (guard stand-in that staggers the attacker) counts no boss break', async () => {
+    const t = await setup();
+    openFight(t);
+    // Stand-in for CombatVerbs.guardModifier at -50: a timed block on a swing with no window parries and staggers the attacker.
+    t.ctx.damage.addModifier('test.parry', (req, target, attacker) => {
+      if (target.id !== 'player' || req.attackId !== 'prior.chain') return;
+      req.outcome = 'parried';
+      req.amount = 0;
+      req.poise = 0;
+      if (attacker) t.ctx.damage.stagger(attacker.id, 'player', 999);
+    }, -50);
+    let guard = 0;
+    const chains = () => t.of('damage.dealt').filter((d) => d.attackId === 'prior.chain');
+    while (chains().length === 0 && guard++ < secs(30)) {
+      t.healPlayer();
+      t.run(1);
+    }
+    expect(chains()[0]).toMatchObject({ outcome: 'parried', attackerId: null, dealt: 0 });
+    t.run(2);
+    expect(t.of('boss.break')).toEqual([]);
+    t.teardown();
+  });
+
+  it('he cannot be hit while fading in after a teleport (no break lost to the arrival)', async () => {
+    const t = await setup();
+    openFight(t);
+    t.breakPoise();
+    let guard = 0;
+    while (t.game.ctx.actors && guard++ < secs(5)) {
+      t.run(1);
+      const enc = t.prior();
+      if (enc && !enc.hittable && t.of('boss.break').length === 1) break;
+    }
+    // during teleportOut, hidden and teleportIn every hit is dropped
+    const r = t.hit(1, PRIOR.maxPoise);
+    expect(r).toBeNull();
+    t.settle(1.5);
+    expect(t.prior()!.hittable).toBe(true);
+    expect(t.prior()!.poise).toBe(PRIOR.maxPoise);
+    t.teardown();
+  });
+
+  it('a trigger while the Mage loads waits for it, then starts; a failed load never starts the fight', async () => {
+    (globalThis as any).self ??= globalThis;
+    const fsModule = 'node:fs';
+    const { readFileSync } = (await import(/* @vite-ignore */ fsModule)) as any;
+    const file = readFileSync('public/assets/kaykit-adventurers/characters/Mage.glb');
+    const buf = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength) as ArrayBuffer;
+    const gltf: any = await new Promise((res, rej) => new GLTFLoader().parse(buf, '', res as any, rej));
+    let resolveLoad!: () => void;
+    const loaded = new Promise<void>((r) => (resolveLoad = r));
+    const assets = {
+      load: vi.fn(async () => {
+        await loaded;
+        return gltf;
+      }),
+      instantiate: vi.fn(() => cloneSkinned(gltf.scene)),
+      animations: vi.fn(() => gltf.animations),
+      has: () => true,
+    } as unknown as AssetLoader;
+    const t = await setup({ assets });
+    t.enter();
+    t.run(10);
+    expect(t.prior()).toBeNull();
+    resolveLoad();
+    await new Promise((r) => setTimeout(r, 0));
+    t.run(2);
+    expect(t.prior()).not.toBeNull();
+    expect(t.ctx.scene.getObjectByName('boss-ashen-prior')).toBeDefined();
+    t.teardown();
+
+    const failing = { ...(assets as any), load: vi.fn(async () => Promise.reject(new Error('404'))) } as unknown as AssetLoader;
+    const f = await setup({ assets: failing });
+    await new Promise((r) => setTimeout(r, 0));
+    f.enter();
+    f.run(10);
+    f.enter();
+    expect(f.prior()).toBeNull();
+    expect(warn.mock.calls.filter((c) => String(c[0]).includes('fight does not start'))).toHaveLength(1);
+    f.teardown();
+  });
+
+  it('with a camera rig the first intro overrides the camera toward the arena and releases it when the intro ends; retries skip it', async () => {
+    const release = vi.fn();
+    const rig = { override: vi.fn(() => ({ active: true, release })) };
+    const t = await setup({ cameraRig: rig });
+    t.enter();
+    expect(rig.override).toHaveBeenCalledTimes(1);
+    const shot = (rig.override.mock.calls[0] as unknown as [{ lookAt: { x: number; z: number } }])[0];
+    const centre = t.ctx.anchors.get(VAULT.centre).position;
+    expect(shot.lookAt).toMatchObject({ x: centre.x, z: centre.z });
+    t.run(secs(PRESENTATION.introSeconds) - 5);
+    expect(release).not.toHaveBeenCalled();
+    t.run(6);
+    // (the core's scoped wrapper may forward the release more than once; the real rig's release is idempotent)
+    expect(release).toHaveBeenCalled();
+    t.ctx.damage.kill('player');
+    t.ctx.damage.revive('player', 1, 'respawn');
+    t.enter();
+    t.run(secs(PRESENTATION.retrySeconds) + 1);
+    expect(rig.override).toHaveBeenCalledTimes(1);
+    t.teardown();
+  });
+
+  it('teardown during the first intro releases the camera override', async () => {
+    const release = vi.fn();
+    const rig = { override: vi.fn(() => ({ active: true, release })) };
+    const t = await setup({ cameraRig: rig });
+    t.enter();
+    t.teardown();
+    expect(release).toHaveBeenCalled();
+  });
+
+  it('the gate does not close during the outcome presentation', async () => {
+    const t = await setup();
+    const door = t.ctx.anchors.find(VAULT.arenaDoor)!;
+    const p = t.ctx.player.feet;
+    door.position.z = p.z + 1; // the player stays within the clearance: the gate stays open through the fight
+    openFight(t);
+    toPhaseTwo(t);
+    toWindow(t);
+    t.ctx.bosses.release(PRIOR_BOSS_ID);
+    door.position.z = p.z + 10; // now far enough, but the outcome is in
+    t.run(secs(PRESENTATION.releaseDissolveSeconds) + 2);
+    expect(t.interiors.service.setBlocker).not.toHaveBeenCalled();
     t.teardown();
   });
 });

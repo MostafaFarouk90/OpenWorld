@@ -125,7 +125,6 @@ export const PRESENTATION = {
   introSeconds: 4,
   introRiseSeconds: 1.5,
   introGongAt: 1.5,
-  introSkippableAfter: 1,
   retrySeconds: 1.2,
   releaseDissolveSeconds: 1.2,
   releaseTint: 0xffe6a8,

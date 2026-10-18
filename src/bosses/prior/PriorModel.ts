@@ -45,7 +45,7 @@ export interface PriorModel {
   play(clip: PriorClip, opts?: { loop?: boolean; fade?: number }): void;
   /** Advances the mixer (fixed tick). */
   update(dt: number): void;
-  /** Emissive boost 0..1 toward white on the censer and robe (the censer-lift flash fallback). */
+  /** Emissive boost 0..1 toward white on the censer bowl (the censer-lift flash). */
   setGlow(t: number): void;
   dispose(): void;
 }
@@ -114,10 +114,15 @@ export function buildPriorModel(source: PriorModelSource, warn: (m: string) => v
   const byName = new Map(source.clips.map((c) => [c.name, c]));
   const warned = new Set<string>();
   let current: THREE.AnimationAction | null = null;
-  const glowMats = [...clones.values(), ...(censer.userData.glowMats as Tintable[])];
-  const baseEmissive = new Map<Tintable, THREE.Color>();
-  for (const m of glowMats) if (m.emissive) baseEmissive.set(m, m.emissive.clone());
+  // The censer's own geometry and materials, kept for dispose: a vfx dissolve swaps mesh materials for its clones.
+  const censerParts: { geometry: THREE.BufferGeometry; material: THREE.Material }[] = [];
+  censer.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (mesh.isMesh) censerParts.push({ geometry: mesh.geometry, material: mesh.material as THREE.Material });
+  });
+  const bowl = censer.getObjectByName('censer-bowl') as THREE.Mesh;
   const white = new THREE.Color(0xffffff);
+  const black = new THREE.Color(0x000000);
   let disposed = false;
 
   return {
@@ -149,20 +154,19 @@ export function buildPriorModel(source: PriorModelSource, warn: (m: string) => v
     },
     setGlow(t) {
       const k = THREE.MathUtils.clamp(Number.isFinite(t) ? t : 0, 0, 1);
-      for (const [m, base] of baseEmissive) m.emissive!.copy(base).lerp(white, k);
+      // Read the bowl's material each time: after a dissolve it is the vfx clone, which is what renders.
+      const m = bowl.material as Tintable;
+      m.emissive?.copy(black).lerp(white, k);
     },
     dispose() {
       if (disposed) return;
       disposed = true;
       mixer.stopAllAction();
       for (const m of clones.values()) m.dispose();
-      censer.traverse((o) => {
-        const mesh = o as THREE.Mesh;
-        if (mesh.isMesh) {
-          mesh.geometry.dispose();
-          (mesh.material as THREE.Material).dispose();
-        }
-      });
+      for (const part of censerParts) {
+        part.geometry.dispose();
+        part.material.dispose();
+      }
       hurtboxes.dispose();
       root.removeFromParent();
     },
@@ -200,6 +204,5 @@ export function buildCenser(): THREE.Group {
   core.position.y = -0.9 - 0.1;
   core.name = 'censer-ember';
   group.add(core);
-  group.userData.glowMats = [bronze];
   return group;
 }

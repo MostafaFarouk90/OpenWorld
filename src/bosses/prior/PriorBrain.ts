@@ -33,6 +33,8 @@ export interface PriorHooks {
   strike(move: PriorMoveDef, swingId: number): void;
   teleportOut(): void;
   teleportIn(dest: TeleportDest): void;
+  /** The arrival fade has ended: hittable again (review S1: no break can land while he fades in). */
+  arrived(): void;
   /** `opening` waves raise the shield (review B1); re-summons do not. */
   summonStart(opening: boolean): void;
   summonRelease(count: number): void;
@@ -41,7 +43,8 @@ export interface PriorHooks {
   restorePoise(): void;
 }
 
-type Wave = { opening: boolean; count: number };
+/** `opening` raises the shield at the cast; `retry` is an opening cut short by a break, re-cast unshielded and not re-counted. */
+type Wave = { opening: boolean; count: number; dest: TeleportDest; retry?: boolean };
 
 const FIGHTING: ReadonlySet<PriorState> = new Set<PriorState>(['glide', 'windup', 'recover', 'summon']);
 const TERMINAL: ReadonlySet<PriorState> = new Set<PriorState>(['released', 'dying']);
@@ -98,7 +101,7 @@ export class PriorBrain {
   /** The fight begins (after the intro): he stands at the centre and casts the shielded phase-1 opening at once. */
   start(): void {
     if (this._state !== 'idle') return;
-    this.wave = { opening: true, count: SUMMONS.openingCount[0] };
+    this.wave = { opening: true, count: SUMMONS.openingCount[0], dest: 'centre' };
     this.enter('summon');
   }
 
@@ -144,7 +147,10 @@ export class PriorBrain {
         }
         break;
       case 'teleportIn':
-        if (this.t >= PRIOR.teleportInSeconds) this.enter(this.wave ? 'summon' : 'glide');
+        if (this.t >= PRIOR.teleportInSeconds) {
+          this.enter(this.wave ? 'summon' : 'glide');
+          this.hooks.arrived();
+        }
         break;
       case 'summon':
         if (this.t >= PRIOR.summonCastSeconds) {
@@ -167,10 +173,17 @@ export class PriorBrain {
 
   /** A counted poise break (`boss.break`, `last` or not): the stagger. A `last` break is followed by the window opening. */
   onBreak(): void {
-    if (!FIGHTING.has(this._state)) return;
+    if (!FIGHTING.has(this._state)) {
+      // A break the brain cannot act on (away or kneeling) must not leave his poise empty for good.
+      if (this._state === 'teleportOut' || this._state === 'hidden' || this._state === 'teleportIn') this.hooks.restorePoise();
+      return;
+    }
     this.cancelSwing();
-    // A re-summon cut short is spent, not refunded, so breaking the cast is no farm (review B2).
+    const cut = this._state === 'summon' ? this.wave : null;
     this.wave = null;
+    // A re-summon cut short is spent, not refunded, so breaking the cast is no farm (review B2). An opening cut short
+    // (its shield already Surged off) is re-cast after the stagger, unshielded, so the phase still gets its summons.
+    if (cut?.opening) this.pending.unshift({ opening: false, count: cut.count, dest: cut.dest, retry: true });
     this.enter('broken');
     this.hooks.stagger();
   }
@@ -186,8 +199,8 @@ export class PriorBrain {
     if (count === undefined) return; // the Prior has two phases; a deeper one adds no waves
     this.resummonsThisPhase = 0;
     // Drop a queued re-summon of the previous phase; the opening replaces it.
-    for (let i = this.pending.length - 1; i >= 0; i--) if (!this.pending[i].opening) this.pending.splice(i, 1);
-    this.pending.push({ opening: true, count });
+    for (let i = this.pending.length - 1; i >= 0; i--) if (!this.pending[i].opening && !this.pending[i].retry) this.pending.splice(i, 1);
+    this.pending.push({ opening: true, count, dest: 'centre' });
   }
 
   /** `boss.releaseWindow`: kneel while open; when it closes unused he stands, teleports and fights on. */
@@ -217,10 +230,9 @@ export class PriorBrain {
   // ---- internals ----
 
   private glide(sense: PriorSense): void {
-    const opening = this.pending.findIndex((w) => w.opening);
-    if (opening >= 0) {
-      this.wave = this.pending.splice(opening, 1)[0];
-      this.teleport(this._phase >= 2 ? 'centre' : 'pillar');
+    if (this.pending.length > 0) {
+      this.wave = this.pending.shift()!;
+      this.teleport(this.wave.dest);
       return;
     }
     if (
@@ -229,7 +241,7 @@ export class PriorBrain {
       this.sinceWave >= SUMMONS.resummonAfter
     ) {
       this.resummonsThisPhase++;
-      this.wave = { opening: false, count: SUMMONS.resummonCount };
+      this.wave = { opening: false, count: SUMMONS.resummonCount, dest: 'pillar' };
       this.teleport('pillar');
       return;
     }
@@ -252,10 +264,9 @@ export class PriorBrain {
 
   /** After a break or a closed window: a queued opening goes to its spot and casts; otherwise a pillar and glide. */
   private teleportNext(): void {
-    const opening = this.pending.findIndex((w) => w.opening);
-    if (opening >= 0) {
-      this.wave = this.pending.splice(opening, 1)[0];
-      this.teleport(this._phase >= 2 ? 'centre' : 'pillar');
+    if (this.pending.length > 0) {
+      this.wave = this.pending.shift()!;
+      this.teleport(this.wave.dest);
     } else {
       this.teleport('pillar');
     }
@@ -277,7 +288,7 @@ export class PriorBrain {
     this._state = next;
     this.t = 0;
     if (next === 'summon') {
-      this._wavesStarted++;
+      if (!this.wave!.retry) this._wavesStarted++;
       this.sinceWave = 0;
       this.hooks.summonStart(this.wave!.opening);
     }

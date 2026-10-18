@@ -121,4 +121,16 @@ describe('PriorModel (KayKit Mage)', () => {
     expect(c.getObjectByName('censer-bowl')).toBeDefined();
     expect(c.getObjectByName('censer-ember')).toBeDefined();
   });
+
+  it('setGlow still reaches the bowl after a dissolve swapped its material for a clone', () => {
+    const { model } = build();
+    const bowl = model.censer.getObjectByName('censer-bowl') as THREE.Mesh;
+    const original = bowl.material as THREE.MeshStandardMaterial;
+    const swapped = original.clone();
+    bowl.material = swapped;
+    model.setGlow(1);
+    expect(swapped.emissive.getHex()).toBe(0xffffff);
+    model.dispose();
+    bowl.material = original;
+  });
 });

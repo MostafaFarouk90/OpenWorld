@@ -165,9 +165,14 @@ export class PriorEncounter implements PriorHooks {
     this.model?.play('idle', { loop: true });
   }
 
-  /** True once `register` ran and until the encounter ends. */
+  /** True once `register` ran and until the encounter ends (the outcome presentation included). */
   get fighting(): boolean {
     return this.registered && !this.ended;
+  }
+
+  /** Fighting and no outcome yet (the gate may close only then). */
+  get contested(): boolean {
+    return this.fighting && this.brain.state !== 'released' && this.brain.state !== 'dying';
   }
 
   get done(): boolean {
@@ -311,8 +316,12 @@ export class PriorEncounter implements PriorHooks {
     const direction = this.tmp.set(feet.x - pos.x, 0, feet.z - pos.z);
     if (direction.lengthSq() < 1e-6) direction.set(0, 0, 1);
     direction.normalize();
+    // The chain must be blockable but not parryable (ruling). The guard falls back to "block pressed within 0.2 s" for a
+    // swing with no `attack.window`, and a parry staggers the attacker, which the registry would count as a boss break.
+    // Until the damage request can say `parryable: false` (requested from core), the chain is sent without an attacker:
+    // a well-timed block still reads as 'parried' (no damage), but nobody is staggered and no break is counted.
     const result = this.ctx.damage.apply({
-      attackerId: this.actor.id,
+      attackerId: move.id === 'chain' ? null : this.actor.id,
       targetId: player.id,
       amount: move.damage,
       poise: move.poise,
@@ -344,7 +353,9 @@ export class PriorEncounter implements PriorHooks {
     this.root.rotation.y = yawToward(this.root.position, player);
     this.sfx('sfx.prior.teleport', this.root.position);
     this.dissolve(PRIOR.teleportInSeconds, PRESENTATION.teleportTint, true);
-    // Hittable again from the arrival; the brain keeps him out of moves until the fade-in ends.
+  }
+
+  arrived(): void {
     this.setPresent(true);
   }
 
