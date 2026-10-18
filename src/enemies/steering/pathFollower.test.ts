@@ -73,4 +73,13 @@ describe('PathFollower', () => {
     grid = true;
     expect(follower.goalFor(0.016, at(0, 0), at(4, 4))).toEqual({ x: 4, z: 4 });
   });
+
+  it('steers to the raw goal past the last waypoint when the goal lies outside every grid', () => {
+    const inGrid = (p: { x: number }) => p.x < 10;
+    const path = vi.fn(() => [at(5, 0), at(9, 0)]);
+    const { follower } = rig({ hasGrid: inGrid, path });
+    expect(follower.goalFor(0.016, at(0, 0), at(30, 0))).toEqual({ x: 5, z: 0 });
+    expect(follower.goalFor(0.016, at(4.9, 0), at(30, 0))).toEqual({ x: 9, z: 0 });
+    expect(follower.goalFor(0.016, at(9, 0), at(30, 0))).toEqual({ x: 30, z: 0 });
+  });
 });
