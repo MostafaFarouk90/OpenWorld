@@ -4,7 +4,8 @@ import type { Burn } from './Burn';
 import { actorsInRadius } from './areas';
 import { RALLY_DEF, SURGE_DEF } from './spellDefs';
 import type { ReleaseContext, SpellCaster } from './SpellCaster';
-import { RALLY_FX, SURGE_FX } from './tuning';
+import { RALLY_FX, RALLY_SKILL_ID, SURGE_FX } from './tuning';
+import { abilitiesOf } from './types';
 
 /** What the spell effects need from the game (a subset of SpellHost plus the core services). */
 export interface SpellEffectHost {
@@ -84,9 +85,10 @@ export interface RallyRegistration {
   dispose(): void;
 }
 
-/** Registers Rally Cry on the caster, and (when present) as the abilities handler of RALLY.skillId. */
+/** Registers Rally Cry on the caster, and (when present) as the abilities handler of RALLY_SKILL_ID. */
 export function registerRally(host: SpellEffectHost, caster: SpellCaster, deps: Pick<SpellEffectDeps, 'services'>): RallyRegistration {
   const { services } = deps;
+  const playerId = (): string => host.player.actor.id;
   const offDef = caster.register(RALLY_DEF, (ctx: ReleaseContext) => {
     const feet = feetOf(host);
     const seen = new Set<string>();
@@ -100,17 +102,30 @@ export function registerRally(host: SpellEffectHost, caster: SpellCaster, deps: 
       seen.add(a.id);
       a.restoreStamina(a.maxStamina * RALLY.staminaFraction);
     }
-    services.get('vfx')?.spawnEffect('skill-q', { position: feet, scale: RALLY.radius }, { radius: RALLY.radius, color: RALLY_FX.color });
+    // The 'skill-q' effect multiplies scale by params.radius, so the scale stays 1.
+    services.get('vfx')?.spawnEffect('skill-q', { position: feet, scale: 1 }, { radius: RALLY.radius, color: RALLY_FX.color });
     if (RALLY_DEF.soundRelease) services.get('audio')?.play(RALLY_DEF.soundRelease, { position: feet });
-    services.get('abilities')?.reportTrigger(RALLY.skillId);
   });
 
   let offHandler: (() => void) | null = null;
+  let bindFailed = false;
   const bindAbilities = (): boolean => {
     if (offHandler) return true;
-    const abilities = services.get('abilities');
+    if (bindFailed) return false;
+    const abilities = abilitiesOf(services);
     if (!abilities) return false;
-    offHandler = abilities.registerHandler(RALLY.skillId, ({ casterId }) => caster.cast(casterId, RALLY_DEF.id).ok);
+    try {
+      // Thread 5 spends the cost and starts the cooldown after this returns ok, so the cast itself is free.
+      offHandler = abilities.registerHandler(RALLY_SKILL_ID, ({ caster: actor }) => {
+        const r = caster.cast(actor?.id ?? playerId(), RALLY_DEF.id);
+        return r.ok ? { ok: true } : { ok: false, reason: r.reason };
+      });
+    } catch (err) {
+      // A second registration for the skill throws. Retrying every second cannot succeed, so log once and stop.
+      bindFailed = true;
+      console.warn(`[spells] could not register the ${RALLY_SKILL_ID} handler`, err);
+      return false;
+    }
     return true;
   };
   bindAbilities();

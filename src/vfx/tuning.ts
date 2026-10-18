@@ -89,7 +89,7 @@ export const SURGE = {
 } as const;
 
 export const RALLY = {
-  skillId: 'knight.rally-cry',
+  skillId: 'knight.rallyCry',
   clip: 'Cheer',
   emberCost: 15,
   cooldown: 8,

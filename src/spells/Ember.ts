@@ -8,6 +8,7 @@ export class Ember {
   readonly version = 1;
   onChange: ((value: number, previous: number) => void) | null = null;
   private _value: number = EMBER.start;
+  private lastNotified: number = EMBER.start;
   private sinceSpend = Infinity;
 
   get value(): number {
@@ -40,7 +41,7 @@ export class Ember {
     // Only the part of dt that lies after the delay regenerates.
     const delay = EMBER.regenDelayAfterSpendSeconds;
     const active = before >= delay ? dt : Math.max(0, this.sinceSpend - delay);
-    if (active > 0) this.set(this._value + EMBER.regenPerSecond * active);
+    if (active > 0) this.set(this._value + EMBER.regenPerSecond * active, false);
   }
 
   serialize(): EmberSaveData {
@@ -56,11 +57,16 @@ export class Ember {
     this.set(v);
   }
 
-  private set(next: number): void {
+  /** `always` false (regen) notifies only when the rounded, displayed value changes. The internal value stays a float. */
+  private set(next: number, always = true): void {
     const clamped = Math.min(EMBER.max, Math.max(0, next));
     const previous = this._value;
     if (clamped === previous) return;
     this._value = clamped;
-    this.onChange?.(clamped, previous);
+    if (always || Math.round(clamped) !== Math.round(this.lastNotified)) {
+      const was = this.lastNotified;
+      this.lastNotified = clamped;
+      this.onChange?.(clamped, was);
+    }
   }
 }

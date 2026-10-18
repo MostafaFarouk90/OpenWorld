@@ -94,4 +94,31 @@ describe('Burn', () => {
     b.addScar(50);
     expect(b.healthMultiplier(true)).toBeCloseTo(0.7);
   });
+  it('decay notifies only when the displayed value changes; add and clear always notify', () => {
+    const b = new Burn();
+    b.add(50, 't');
+    const events: Array<[number, number]> = [];
+    b.onChange = (v, p) => events.push([v, p]);
+    const start = b.value;
+    for (let i = 0; i < 60 * 60; i++) b.decay(1 / 60, false); // 60 s -> 12 points
+    const change = start - b.value;
+    expect(change).toBeCloseTo(12, 5);
+    expect(events.length).toBeLessThanOrEqual(Math.ceil(change) + 1);
+    expect(events.length).toBeGreaterThan(0);
+    expect(Number.isInteger(b.value)).toBe(false); // the internal value stays a float
+    const n = events.length;
+    b.add(0.1, 't');
+    b.clear('x');
+    expect(events.length).toBe(n + 2);
+    expect(events.at(-1)).toEqual([0, events.at(-2)![0]]);
+  });
+});
+describe('Burn events', () => {
+  it('load notifies when the value changes', () => {
+    const b = new Burn();
+    const cb = vi.fn();
+    b.onChange = cb;
+    b.load({ burn: 30, scars: 0 }, 1);
+    expect(cb).toHaveBeenCalledWith(30, 0);
+  });
 });

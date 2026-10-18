@@ -104,17 +104,30 @@ export class SpellCaster {
     const a: Active = {
       casterId, def, elapsed: 0, duration: clip.duration, releaseTime: clip.duration * def.releaseAt, released: false, removeModifier: null,
     };
-    this.active = a;
-    this.host.events.emit('spell.cast', { casterId, spellId });
-    if (casterId === this.host.player.actor.id) {
-      a.removeModifier = this.host.player.addMoveModifier(SPELL_MOVE_SOURCE, { lockMove: def.lockMove, lockActions: [...SPELL_LOCK_ACTIONS] });
-    }
-    // A listener of spell.cast may have cancelled the cast already.
-    if (this.active !== a) return { ok: true };
-    if (!this.host.playClip(def.clip, { lockMove: def.lockMove })) {
-      this.end('clip', true);
+    // Everything that can throw or fail runs before spell.cast and the charge sound, so a refusal leaves no trace.
+    const abort = (): CastResult => {
+      this.active = null;
+      a.removeModifier?.();
+      a.removeModifier = null;
+      this.host.ember.restore(def.emberCost);
       return { ok: false, reason: 'busy' };
+    };
+    this.active = a;
+    if (casterId === this.host.player.actor.id) {
+      try {
+        a.removeModifier = this.host.player.addMoveModifier(SPELL_MOVE_SOURCE, { lockMove: def.lockMove, lockActions: [...SPELL_LOCK_ACTIONS] });
+      } catch {
+        return abort();
+      }
     }
+    let played = false;
+    try {
+      played = this.host.playClip(def.clip, { lockMove: def.lockMove });
+    } catch {
+      played = false;
+    }
+    if (!played) return abort();
+    this.host.events.emit('spell.cast', { casterId, spellId });
     return { ok: true };
   }
 

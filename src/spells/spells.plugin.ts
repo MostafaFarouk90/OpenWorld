@@ -6,6 +6,7 @@ import { ProjectileSystem } from './Projectile';
 import { SpellCaster, type SpellHost } from './SpellCaster';
 import { SURGE_DEF } from './spellDefs';
 import { registerRally, registerSurge, type RallyRegistration } from './SurgeAndRally';
+import { onLoose } from './looseEvents';
 import { LATE_BIND_RETRY_SECONDS, PLAYER_STAGGER_LOCK_SECONDS } from './tuning';
 import type { SpellsService } from './types';
 
@@ -21,6 +22,22 @@ const plugin = {
   setup(ctx: PluginContext): void {
     cleanup?.();
     const offs: Array<() => void> = [];
+    try {
+      build(ctx, offs);
+    } catch (err) {
+      // A failed setup (for example persist.register throwing) must leave no listeners, systems or services behind.
+      for (const off of offs.splice(0).reverse()) off();
+      cleanup = null;
+      throw err;
+    }
+  },
+
+  dispose(): void {
+    cleanup?.();
+  },
+} satisfies GamePlugin;
+
+function build(ctx: PluginContext, offs: Array<() => void>): void {
     const playerId = (): ActorId => ctx.player.actor.id;
 
     const burn = new Burn();
@@ -64,10 +81,13 @@ const plugin = {
     // Only a running cast can be cancelled; a stale request must not kill the next one.
     const requestCancel = (reason: string): void => { if (caster.state !== 'idle') pendingCancel = reason; };
     const projectiles = new ProjectileSystem({ actors: ctx.actors, heightAt: ctx.heightAt });
+    offs.push(() => caster.dispose());
 
     const effectHost = { events: ctx.events, player: ctx.player, actors: ctx.actors };
     const offSurge = registerSurge(effectHost, caster, { damage: ctx.damage, clock: ctx.clock, services: ctx.services, burn });
+    offs.push(offSurge);
     const rally: RallyRegistration = registerRally(effectHost, caster, { services: ctx.services });
+    offs.push(() => rally.dispose());
 
     const service: SpellsService = {
       get burn() { return burn.value; },
@@ -90,18 +110,26 @@ const plugin = {
 
     // ---- events
     const touchCombat = (): void => { lastCombat = simTime; };
+    const unaggro = (id: ActorId): void => {
+      if (aggro.delete(id) && aggro.size === 0) touchCombat();
+    };
     offs.push(
       ctx.events.on('rest', () => { burn.clear('rest'); requestCancel('rest'); }),
       ctx.events.on('waystone.rekindled', (e) => { if (e.cause === 'player') burn.add(BURN.rekindleGain, 'rekindle'); }),
-      ctx.events.on('damage.dealt', (e) => { if (e.attackerId === playerId() || e.targetId === playerId()) touchCombat(); }),
+      // Same definition as the music director: combat while a hostile targets the player, plus a hysteresis window
+      // after the last aggro or damage to the player, and after the aggro set empties.
+      ctx.events.on('damage.dealt', (e) => { if (e.targetId === playerId()) touchCombat(); }),
       ctx.events.on('ai.aggro', (e) => {
         if (e.targetId !== playerId()) return;
         aggro.add(e.actorId);
         touchCombat();
       }),
-      ctx.events.on('ai.calm', (e) => void aggro.delete(e.actorId)),
-      ctx.events.on('actor.died', (e) => void aggro.delete(e.actorId)),
-      ctx.events.on('actor.despawned', (e) => void aggro.delete(e.actorId)),
+      ctx.events.on('ai.calm', (e) => unaggro(e.actorId)),
+      ctx.events.on('actor.died', (e) => unaggro(e.actorId)),
+      ctx.events.on('actor.despawned', (e) => unaggro(e.actorId)),
+      onLoose<{ actorId: ActorId }>(ctx.events, 'mercy', (e) => unaggro(e.actorId)),
+      onLoose<{ id: string; open: boolean }>(ctx.events, 'ui.modal', (e) => { if (e.open) requestCancel('modal'); }),
+      ctx.events.on('save.loaded', () => { requestCancel('load'); aggro.clear(); lastCombat = -Infinity; }),
       ctx.events.on('actor.staggered', (e) => { if (e.actorId === playerId()) staggeredUntil = simTime + PLAYER_STAGGER_LOCK_SECONDS; }),
       ctx.events.on('dialogue.started', () => { blockers++; requestCancel('dialogue'); }),
       ctx.events.on('dialogue.ended', () => { blockers = Math.max(0, blockers - 1); }),
@@ -111,6 +139,7 @@ const plugin = {
 
     // ---- late binding of progression (max-health modifier) and abilities (Rally handler)
     let offModifier: (() => void) | null = null;
+    offs.push(() => { offModifier?.(); offModifier = null; });
     let retryTimer = 0;
     const bindLate = (): void => {
       if (!offModifier) {
@@ -157,17 +186,7 @@ const plugin = {
       caster.cancel('dispose');
       projectiles.clear();
       for (const off of offs.splice(0).reverse()) off();
-      offSurge();
-      rally.dispose();
-      offModifier?.();
-      offModifier = null;
-      caster.dispose();
     };
-  },
-
-  dispose(): void {
-    cleanup?.();
-  },
-} satisfies GamePlugin;
+}
 
 export default plugin;

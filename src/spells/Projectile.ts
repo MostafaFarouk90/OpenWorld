@@ -44,10 +44,11 @@ interface Slot {
 const pos = new THREE.Vector3();
 
 function friendly(casterTeam: ActorLike['team'], target: ActorLike['team']): boolean {
-  const casterSide = casterTeam === 'player' || casterTeam === 'ally';
-  if (casterSide) return target === 'player' || target === 'ally';
-  if (casterTeam === 'hostile') return target === 'hostile' || target === 'neutral';
-  return true; // neutral casters hit nothing
+  // canDamage (contracts/actors-and-damage.md section 3): player and ally hurt hostile and neutral; hostile hurts
+  // player, ally and neutral; neutral hurts nobody; nobody hurts its own side.
+  if (casterTeam === 'neutral') return true;
+  if (casterTeam === 'hostile') return target === 'hostile';
+  return target === 'player' || target === 'ally';
 }
 
 /** Pooled projectiles with sub-stepped sweeps, so nothing tunnels through an actor. */

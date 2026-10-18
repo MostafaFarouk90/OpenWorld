@@ -17,7 +17,14 @@ export const BURN_ZONE_PENALTY = {
 } as const;
 
 export const SPELL_MOVE_SOURCE = 'spell';
-export const SPELL_LOCK_ACTIONS = ['attack', 'block', 'dodge', 'jump', 'surge', 'ability', 'interact'];
+/** Action ids (contracts/input-and-hud.md section 1) the spell locks while casting. lockOn and sprint stay free. */
+export const SPELL_LOCK_ACTIONS: readonly string[] = [
+  'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'jump', 'surge', 'interact',
+  'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6',
+];
+
+/** Thread 5's skill id for Rally Cry (plans/hud-inventory-skills.md, v2 changes). Shadows src/vfx/tuning.ts RALLY.skillId. */
+export const RALLY_SKILL_ID = 'knight.rallyCry';
 
 /** Surge feedback strengths per Burn zone. */
 export const SURGE_FX = {
