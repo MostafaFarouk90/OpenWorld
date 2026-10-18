@@ -57,6 +57,7 @@ export class NavGrid {
   private readonly stack: Int32Array;
   private readonly edtF: Float64Array;
   private readonly edtD: Float64Array;
+  private readonly edtOut: Float64Array;
   private readonly edtV: Int32Array;
   private readonly edtZ: Float64Array;
 
@@ -82,6 +83,7 @@ export class NavGrid {
     const longest = Math.max(this.cols, this.rows) + 2;
     this.edtF = new Float64Array(padded);
     this.edtD = new Float64Array(longest);
+    this.edtOut = new Float64Array(longest);
     this.edtV = new Int32Array(longest);
     this.edtZ = new Float64Array(longest + 1);
     for (const r of def.walkable) this.paint(r, this.base, 1);
@@ -181,6 +183,8 @@ export class NavGrid {
       }
     }
     const d = this.edtD;
+    // The lower envelope reads d[p] for p < q, so results go to a separate buffer (writing over d breaks exactness).
+    const out = this.edtOut;
     const v = this.edtV;
     const z = this.edtZ;
     const pass = (len: number): void => {
@@ -203,18 +207,18 @@ export class NavGrid {
       for (let q = 0; q < len; q++) {
         while (z[k + 1]! < q) k++;
         const p = v[k]!;
-        d[q] = (q - p) * (q - p) + d[p]!;
+        out[q] = (q - p) * (q - p) + d[p]!;
       }
     };
     for (let x = 0; x < W; x++) {
       for (let y = 0; y < H; y++) d[y] = f[y * W + x]!;
       pass(H);
-      for (let y = 0; y < H; y++) f[y * W + x] = d[y]!;
+      for (let y = 0; y < H; y++) f[y * W + x] = out[y]!;
     }
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) d[x] = f[y * W + x]!;
       pass(W);
-      for (let x = 0; x < W; x++) f[y * W + x] = d[x]!;
+      for (let x = 0; x < W; x++) f[y * W + x] = out[x]!;
     }
     const half = this.cellSize / 2;
     for (let iz = 0; iz < this.rows; iz++) {

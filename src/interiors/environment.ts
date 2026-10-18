@@ -91,6 +91,12 @@ export class SceneEnvironment {
     }
   }
 
+  /** Restores the outdoors and frees the follow light. */
+  dispose(): void {
+    this.restore();
+    this.light.dispose();
+  }
+
   /** Every render frame while inside: the light follows `at`, and the interior fog wins over any graphics change. */
   frame(at: THREE.Vector3Like): void {
     if (!this.env) return;

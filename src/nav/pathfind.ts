@@ -18,6 +18,8 @@ interface Scratch {
   pos: Int32Array;
   size: number;
   valid: Uint8Array;
+  /** Valid with half a cell to spare: line-of-sight smoothing may cross a cell anywhere, not only at its centre. */
+  strict: Uint8Array;
 }
 
 const scratch = new WeakMap<NavGrid, Scratch>();
@@ -37,6 +39,7 @@ function scratchFor(grid: NavGrid): Scratch {
       pos: new Int32Array(n),
       size: 0,
       valid: new Uint8Array(n),
+      strict: new Uint8Array(n),
     };
     scratch.set(grid, s);
   }
@@ -100,7 +103,12 @@ function heapPop(s: Scratch): number {
 /** Marks cells that are walkable with clearance >= radius. */
 function fillValid(grid: NavGrid, s: Scratch, radius: number): void {
   const n = grid.cols * grid.rows;
-  for (let i = 0; i < n; i++) s.valid[i] = grid.isWalkable(i) && grid.clearance(i) >= radius - 1e-6 ? 1 : 0;
+  const strict = radius + grid.cellSize / 2;
+  for (let i = 0; i < n; i++) {
+    const c = grid.isWalkable(i) ? grid.clearance(i) : -1;
+    s.valid[i] = c >= radius - 1e-6 ? 1 : 0;
+    s.strict[i] = c >= strict - 1e-6 ? 1 : 0;
+  }
 }
 
 /** Nearest valid cell to a point by ring search; -1 when the grid has none. Bounded by the cell count. */
@@ -148,7 +156,15 @@ function lineOfSight(grid: NavGrid, s: Scratch, ax: number, az: number, bx: numb
   let iz = Math.floor(z0);
   const ex = Math.floor(x1);
   const ez = Math.floor(z1);
-  const ok = (cx: number, cz: number): boolean => cx >= 0 && cz >= 0 && cx < cols && cz < rows && s.valid[cz * cols + cx] === 1;
+  const sx0 = ix;
+  const sz0 = iz;
+  // The end cells only need to be valid (they hold the agent or the target); every crossed cell needs the stricter mask.
+  const ok = (cx: number, cz: number): boolean => {
+    if (cx < 0 || cz < 0 || cx >= cols || cz >= rows) return false;
+    const i = cz * cols + cx;
+    if ((cx === sx0 && cz === sz0) || (cx === ex && cz === ez)) return s.valid[i] === 1;
+    return s.strict[i] === 1;
+  };
   if (!ok(ix, iz)) return false;
   const dx = x1 - x0;
   const dz = z1 - z0;
@@ -193,12 +209,15 @@ export function findPath(grid: NavGrid, from: Vec3, to: Vec3, radius: number): V
   let fx = Math.min(maxX - 1e-6, Math.max(minX, from.x));
   let fz = Math.min(maxZ - 1e-6, Math.max(minZ, from.z));
   let start = grid.cellIndex(fx, fz);
+  // A start snapped out of a wall keeps the snapped centre as its first waypoint, so the agent steps out before cutting across.
+  let snapped: Vec3 | null = null;
   if (start < 0 || !s.valid[start]) {
     start = nearestValid(grid, s, fx, fz);
     if (start < 0) return [];
     const c = centre(start);
     fx = c.x;
     fz = c.z;
+    snapped = { x: c.x, y: floorY, z: c.z };
   }
 
   const tx0 = Math.min(maxX - 1e-6, Math.max(minX, to.x));
@@ -313,7 +332,11 @@ export function findPath(grid: NavGrid, from: Vec3, to: Vec3, radius: number): V
 
   const endX = exact ? tx0 : centre(reached).x;
   const endZ = exact ? tz0 : centre(reached).z;
-  if (chain.length === 1) return [{ x: endX, y: floorY, z: endZ }];
+  const withStart = (path: Vec3[]): Vec3[] => {
+    if (snapped && (path.length === 0 || path[0]!.x !== snapped.x || path[0]!.z !== snapped.z)) path.unshift(snapped);
+    return path;
+  };
+  if (chain.length === 1) return withStart([{ x: endX, y: floorY, z: endZ }]);
 
   // String-pull: start point, interior cell centres, end point.
   const pts: { x: number; z: number }[] = [{ x: fx, z: fz }];
@@ -329,5 +352,5 @@ export function findPath(grid: NavGrid, from: Vec3, to: Vec3, radius: number): V
     out.push({ x: pts[j]!.x, y: floorY, z: pts[j]!.z });
     a = j;
   }
-  return out;
+  return withStart(out);
 }

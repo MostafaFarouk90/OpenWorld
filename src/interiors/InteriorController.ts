@@ -198,7 +198,15 @@ export class InteriorController {
   /** Call on `save.loaded`, after every persistable has loaded and the player has been placed. */
   onSaveLoaded(): void {
     this.loading = false;
-    for (const [id, door] of [...this.announced]) if (id !== this._current) this.announceExited(id, door);
+    // The loader may have put the feet elsewhere (an invalid saved position falls back to a waystone, or an autosave caught an
+    // enter mid-way): trust the feet, and announce nothing for an interior the player is not in.
+    if (this._current !== null && this.interiorAt(this.ports.feet()) !== this._current) {
+      this._current = null;
+      this.door = null;
+      this.outside = 0;
+      this.setApplied(null);
+    }
+    this.flushStale();
     if (this._current) this.announceEntered(this._current, this.door ?? this.firstDoor(this._current));
   }
 
@@ -212,7 +220,10 @@ export class InteriorController {
   }
 
   dispose(): void {
-    if (this.transition) this.abort(this.transition, 'aborted');
+    if (this.transition) {
+      this.abort(this.transition, 'aborted');
+      this.ports.fade(0, TRANSITION.fadeInSeconds);
+    }
     if (this.applied !== null) this.ports.applyEnvironment(null);
     this.applied = null;
   }
@@ -254,7 +265,7 @@ export class InteriorController {
 
   private step(t: Transition, dt: number): void {
     if (this.ports.dead()) return this.abort(t, 'aborted');
-    if (t.phase !== 'fading-out' && t.ticksSincePlace >= 1 && this.drifted(t)) return this.abort(t, 'aborted');
+    if (t.phase !== 'fading-out' && t.ticksSincePlace >= 1 && this.drifted(t)) return this.abort(t, 'aborted', true);
     t.time += dt;
     switch (t.phase) {
       case 'fading-out':
@@ -299,7 +310,7 @@ export class InteriorController {
   private drifted(t: Transition): boolean {
     const f = this.ports.feet();
     if (t.kind === 'enter') return !this.specs.get(t.interiorId)?.contains(f);
-    return Math.hypot(f.x - t.target.feet.x, f.z - t.target.feet.z) > TRANSITION.exitDriftMetres;
+    return this.interiorAt(f) !== null || Math.hypot(f.x - t.target.feet.x, f.z - t.target.feet.z) > TRANSITION.exitDriftMetres;
   }
 
   private finish(t: Transition): void {
@@ -322,12 +333,45 @@ export class InteriorController {
     t.reject(new InteriorError('not-ready'));
   }
 
-  /** Drops the transition where it stands; the bounds rule then puts the state right. The fade belongs to whoever moved us. */
-  private abort(t: Transition, reason: InteriorRefusal): void {
+  /**
+   * Drops the transition where it stands; the bounds rule then puts the state right. A death or waystone travel brings its own
+   * fade in; any other teleport (a script, a debug key) does not, so the screen is lifted here.
+   */
+  private abort(t: Transition, reason: InteriorRefusal, lift = false): void {
     this.transition = null;
     this.outside = 0;
     t.release();
+    this.flushStale();
+    if (lift && !this.ports.dead() && !this.ports.travelling()) {
+      // Settle the state and the look for where the feet are now, while the screen is still black.
+      this.followFeet();
+      this.ports.fade(0, TRANSITION.fadeInSeconds);
+    }
     t.reject(new InteriorError(reason));
+  }
+
+  /** The bounds rule applied at once, without waiting for ticks outside. */
+  private followFeet(): void {
+    const at = this.interiorAt(this.ports.feet());
+    if (this._current !== null && at !== this._current) {
+      const id = this._current;
+      const door = this.door ?? this.firstDoor(id);
+      this._current = null;
+      this.door = null;
+      this.announceExited(id, door);
+    }
+    if (this._current === null && at !== null) {
+      this._current = at;
+      this.door = this.firstDoor(at);
+      this.setApplied(at);
+      this.announceEntered(at, this.door);
+    }
+    this.setApplied(this._current);
+  }
+
+  /** Closes the event pair for every announced interior the player is no longer in. */
+  private flushStale(): void {
+    for (const [id, door] of [...this.announced]) if (id !== this._current) this.announceExited(id, door);
   }
 
   // ---------------------------------------------------------------- bounds rule, saves, events
@@ -340,7 +384,7 @@ export class InteriorController {
       if (this.loadingTime >= TRANSITION.loadingTimeoutSeconds) this.loading = false;
       // While a load places the player, only follow the feet: the events wait for save.loaded.
       if (this._current !== null && at === this._current) this.setApplied(this._current);
-      else if (this._current === null && this.applied !== null && at !== this.applied) this.setApplied(null);
+      else if (this.applied !== null && at !== this.applied) this.setApplied(null);
       return;
     }
     if (this._current !== null) {
@@ -359,6 +403,7 @@ export class InteriorController {
       this.announceExited(id, door);
       return;
     }
+    this.flushStale();
     if (at !== null) {
       this._current = at;
       this.door = this.firstDoor(at);
