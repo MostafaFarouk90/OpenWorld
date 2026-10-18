@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import type { ActorLike, CoreContext, Vec3 } from '../region/coreTypes';
 import type { NpcSpec } from '../region/layoutTypes';
-import { createNpcState, stepNpc, type NpcState } from './NpcBehavior';
+import { createNpcState, stepNpc, wrapAngle, type NpcState } from './NpcBehavior';
 import { buildPlaceholder, disposePlaceholder, pickIdleClip, prepareNpcModel } from './npcModels';
 import { NPC_TUNING } from './tuning';
 import type { NpcDef, NpcHandle, NpcModelId, NpcModelLoader, NpcsService } from './types';
 
 export type NpcManagerCore = Pick<
   CoreContext,
-  'scene' | 'actors' | 'interaction' | 'anchors' | 'events' | 'services' | 'strings'
+  'scene' | 'actors' | 'interaction' | 'anchors' | 'events' | 'services' | 'strings' | 'gates'
 >;
 
 export interface NpcManagerOptions {
@@ -17,6 +17,8 @@ export interface NpcManagerOptions {
   loader?: NpcModelLoader;
   playerPosition(): { x: number; z: number } | null;
   warn?: (message: string) => void;
+  /** Terrain height; a walking NPC follows the ground instead of lerping between two anchor heights. */
+  heightAt?: (x: number, z: number) => number;
 }
 
 interface Entry {
@@ -30,10 +32,20 @@ interface Entry {
   actor: ActorLike;
   unregister: () => void;
   mixer: THREE.AnimationMixer | null;
+  /** Props that belong to the NPC rather than its figure (Tobb's cloak and lute); they survive the GLB swap. */
+  extras: THREE.Object3D | null;
+  /** A scripted straight-line walk (the carters leaving the ford); null when standing. */
+  walk: { from: Vec3; to: Vec3; toYaw: number; length: number; done: number } | null;
 }
 
 export class NpcManager implements NpcsService {
   private readonly entries = new Map<string, Entry>();
+  /** Where an NPC stood when it was despawned for a handover (`npcs.position` keeps answering for it). */
+  private readonly lastPos = new Map<string, Vec3>();
+  private readonly specs = new Map<string, NpcSpec>();
+  private gateOffs: Array<() => void> = [];
+  /** Models whose GLB has loaded: an NPC that spawns later (a handover undone by a load) takes its model at once. */
+  private readonly loadedModels = new Set<NpcModelId>();
   private readonly talking = new Set<string>();
   private readonly loading = new Map<NpcModelId, Promise<void>>();
   private unsubs: Array<() => void> = [];
@@ -73,7 +85,23 @@ export class NpcManager implements NpcsService {
     }
 
     this.spawned = true;
-    for (const spec of layoutNpcs) this.spawnOne(spec, defById.get(spec.id)!);
+    for (const spec of layoutNpcs) this.specs.set(spec.id, spec);
+    for (const spec of layoutNpcs) {
+      const def = defById.get(spec.id)!;
+      if (spec.absentWhen) {
+        // Present until the flag turns true (read through ctx.gates, so a loaded save is honoured); never spawned on a load with it set.
+        this.gateOffs.push(
+          this.core.gates.flag(spec.absentWhen, (absent) => {
+            if (this.disposed) return;
+            if (absent) this.despawnOne(spec.id);
+            else if (!this.entries.has(spec.id)) this.spawnOne(spec, def);
+          }),
+        );
+      } else {
+        this.spawnOne(spec, def);
+      }
+      if (spec.walkOff) this.gateWalkOff(spec, spec.walkOff);
+    }
 
     this.unsubs.push(
       this.core.events.on('dialogue.started', (p) => {
@@ -93,6 +121,8 @@ export class NpcManager implements NpcsService {
     root.rotation.y = anchor.yaw;
     const figure = buildPlaceholder(def);
     root.add(figure);
+    const extras = def.extras ? def.extras() : null;
+    if (extras) root.add(extras);
     this.core.scene.add(root);
 
     // Anything below can throw (a duplicate interactable id); undo what was done so nothing leaks.
@@ -126,14 +156,80 @@ export class NpcManager implements NpcsService {
         actor,
         unregister,
         mixer: null,
+        extras,
+        walk: null,
       });
+      this.lastPos.delete(def.id);
+      const entry = this.entries.get(def.id)!;
+      const loader = this.opts.loader;
+      if (loader && this.loadedModels.has(def.model)) {
+        try {
+          const { model, clips } = prepareNpcModel(loader, def);
+          this.swap(entry, model, clips);
+        } catch (err) {
+          this.warn(`NpcManager: could not build model for npc "${def.id}": ${errMsg(err)}`);
+        }
+      }
     } catch (err) {
       if (actor) this.core.actors.despawn(actor.id);
+      if (extras) disposePlaceholder(extras);
       root.remove(figure);
       this.core.scene.remove(root);
       disposePlaceholder(figure);
       throw err;
     }
+  }
+
+  /** Removes a live NPC for a handover; its last position stays readable through `position()`. */
+  private despawnOne(id: string): void {
+    const e = this.entries.get(id);
+    if (!e) return;
+    this.lastPos.set(id, { ...e.pos });
+    this.talking.delete(id);
+    this.entries.delete(id);
+    e.unregister();
+    this.core.actors.despawn(e.actor.id);
+    e.mixer?.stopAllAction();
+    e.root.remove(e.figure);
+    if (e.extras) {
+      e.root.remove(e.extras);
+      disposePlaceholder(e.extras);
+    }
+    this.core.scene.remove(e.root);
+    if (e.isPlaceholder) disposePlaceholder(e.figure);
+    else disposeModel(e.figure);
+  }
+
+  private gateWalkOff(spec: NpcSpec, walkOff: NonNullable<NpcSpec['walkOff']>): void {
+    this.gateOffs.push(
+      this.core.gates.flag(walkOff.whenFlag, (open, cause) => {
+        if (this.disposed) return;
+        const e = this.entries.get(spec.id);
+        if (!e) return;
+        if (!open) {
+          // Spawned at the post already; only a later load that clears the flag needs the move back.
+          if (cause !== 'init') this.place(spec.id, spec.post);
+        } else if (cause === 'flag') {
+          this.startWalk(e, walkOff.to);
+        } else {
+          // init, load or recheck: the scene is already past the event, so stand at the end of the walk.
+          this.place(spec.id, walkOff.to);
+        }
+      }),
+    );
+  }
+
+  private startWalk(e: Entry, anchorId: string): void {
+    const anchor = this.core.anchors.find(anchorId);
+    if (!anchor) {
+      this.warn(`NpcManager: walk-off anchor "${anchorId}" for npc "${e.def.id}" does not exist`);
+      return;
+    }
+    const from = { ...e.pos };
+    const to = { x: anchor.position.x, y: anchor.position.y, z: anchor.position.z };
+    const length = Math.hypot(to.x - from.x, to.z - from.z);
+    if (length < 1e-3) return;
+    e.walk = { from, to, toYaw: anchor.yaw, length, done: 0 };
   }
 
   private talkTo(def: NpcDef): void {
@@ -174,6 +270,7 @@ export class NpcManager implements NpcsService {
         this.warn(`NpcManager: model "${model}" failed to load, keeping placeholders: ${errMsg(err)}`);
         return;
       }
+      this.loadedModels.add(model);
       for (const e of this.entries.values()) {
         if (e.def.model !== model || !e.isPlaceholder) continue;
         if (this.disposed) return;
@@ -227,8 +324,28 @@ export class NpcManager implements NpcsService {
     const player = this.opts.playerPosition();
     this.loadNear(player);
     for (const [id, e] of this.entries) {
-      const { yaw } = stepNpc(e.state, dt, { player, talkingTo: this.talking.has(id) });
+      if (e.walk && !this.talking.has(id)) this.stepWalk(e, dt);
+      const { yaw } = e.walk ? { yaw: e.state.yaw } : stepNpc(e.state, dt, { player, talkingTo: this.talking.has(id) });
       e.root.rotation.y = yaw;
+    }
+  }
+
+  private stepWalk(e: Entry, dt: number): void {
+    const w = e.walk!;
+    if (!Number.isFinite(dt) || dt <= 0) return;
+    w.done = Math.min(w.length, w.done + NPC_TUNING.walkSpeed * Math.min(dt, NPC_TUNING.maxStepDt));
+    const k = w.done / w.length;
+    e.pos.x = w.from.x + (w.to.x - w.from.x) * k;
+    e.pos.y = w.from.y + (w.to.y - w.from.y) * k;
+    e.pos.z = w.from.z + (w.to.z - w.from.z) * k;
+    if (this.opts.heightAt) e.pos.y = this.opts.heightAt(e.pos.x, e.pos.z);
+    e.root.position.set(e.pos.x, e.pos.y, e.pos.z);
+    e.state.x = e.pos.x;
+    e.state.z = e.pos.z;
+    e.state.yaw = Math.atan2(-(w.to.x - w.from.x), -(w.to.z - w.from.z));
+    if (w.done >= w.length) {
+      e.state.postYaw = wrapAngle(w.toYaw);
+      e.walk = null;
     }
   }
 
@@ -246,6 +363,7 @@ export class NpcManager implements NpcsService {
     const e = this.entries.get(id);
     const anchor = this.core.anchors.find(anchorId);
     if (!e || !anchor) return false;
+    e.walk = null;
     e.pos.x = anchor.position.x;
     e.pos.y = anchor.position.y;
     e.pos.z = anchor.position.z;
@@ -274,7 +392,13 @@ export class NpcManager implements NpcsService {
 
   position(id: string): Vec3 | undefined {
     const e = this.entries.get(id);
-    return e ? { ...e.pos } : undefined;
+    if (e) return { ...e.pos };
+    const last = this.lastPos.get(id);
+    if (last) return { ...last };
+    // Absent through its gate since the load (never spawned): it still answers with where its post is.
+    const spec = this.specs.get(id);
+    const post = spec?.absentWhen ? this.core.anchors.find(spec.post) : undefined;
+    return post ? { x: post.position.x, y: post.position.y, z: post.position.z } : undefined;
   }
 
   dispose(): void {
@@ -282,6 +406,8 @@ export class NpcManager implements NpcsService {
     this.disposed = true;
     this.unsubs.forEach((u) => u());
     this.unsubs = [];
+    this.gateOffs.forEach((o) => o());
+    this.gateOffs = [];
     this.talking.clear();
     for (const e of this.entries.values()) {
       e.unregister();
@@ -289,6 +415,7 @@ export class NpcManager implements NpcsService {
       e.mixer?.stopAllAction();
       e.mixer = null;
       e.root.remove(e.figure);
+      if (e.extras) disposePlaceholder(e.extras);
       this.core.scene.remove(e.root);
       if (e.isPlaceholder) disposePlaceholder(e.figure);
       else disposeModel(e.figure);

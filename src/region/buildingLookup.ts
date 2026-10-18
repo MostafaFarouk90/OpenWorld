@@ -21,6 +21,9 @@ export const STRUCTURE_MODELS: Record<StructureKind, AssetId | null> = {
   board: null,
   'yard-fence': null,
   pole: null,
+  rock: null,
+  bridge: null,
+  stair: null,
 };
 
 export interface ModelLoader {

@@ -1,3 +1,4 @@
+import { applyTobbCloak, buildLute } from '../companions/tobbLook';
 import type { NpcDef, NpcModelId } from './types';
 
 const def = (
@@ -22,4 +23,8 @@ export const NPC_DEFS: NpcDef[] = [
   def('aelfreda', 'mage', { tint: 0xffffff }),
   def('hob', 'mage'),
   def('wynn', 'barbarian', { scale: 0.95 }),
+  // Tobb's green cape and lute come from the companion's look (src/companions/tobbLook.ts) so the two match.
+  { ...def('tobb', 'rogueHooded'), extras: buildLute, decorate: applyTobbCloak },
+  def('carter-1', 'barbarian', { tint: 0x8a7a5a }),
+  def('carter-2', 'rogue', { tint: 0x7a6a4a }),
 ];
