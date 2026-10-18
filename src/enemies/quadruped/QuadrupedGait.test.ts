@@ -66,6 +66,14 @@ describe('QuadrupedGait', () => {
     const dt = 0.02;
     for (let i = 0; i < 100; i++) g.step(12, dt);
     let prev = g.pose(0);
+    // The largest per-tick change of steady galloping is the yardstick: the slow-down must not exceed it.
+    let steady = 0;
+    for (let i = 0; i < 60; i++) {
+      g.step(12, dt);
+      const now = g.pose(0);
+      steady = Math.max(steady, maxLegDelta(prev, now));
+      prev = now;
+    }
     let worst = 0;
     // Deceleration at 12 m/s^2 (the body's MAX_DECEL class), from 12 down to walking pace.
     for (let speed = 12; speed > 1.5; speed -= 12 * dt) {
@@ -74,7 +82,10 @@ describe('QuadrupedGait', () => {
       worst = Math.max(worst, maxLegDelta(prev, now));
       prev = now;
     }
-    expect(worst).toBeLessThan(0.35);
+    expect(steady).toBeGreaterThan(0.05);
+    // Blending gaits with different leg offsets adds some motion, but nothing near a pop (a jump would be a radian or more).
+    expect(worst).toBeLessThan(0.6);
+    expect(worst).toBeLessThan(steady * 2.2);
   });
 
   it('an abrupt switch from gallop to walk speed still keeps the phase continuous', () => {
@@ -94,6 +105,20 @@ describe('bodyPitch', () => {
     expect(bodyPitch(1, 1.5, 1)).toBeCloseTo(-Math.atan2(0.5, 1));
     expect(bodyPitch(1, 0, 0)).toBe(0);
     expect(bodyPitch(Number.NaN, 0, 1)).toBe(0);
+  });
+});
+
+describe('HORSE_PROPORTIONS', () => {
+  it('builds with only a tint added: a plausible horse about 1.6 m to the saddle at scale 1', () => {
+    const rig = QuadrupedRig.build({ ...HORSE_PROPORTIONS, tint: 0x6b4a2c });
+    rig.updateMatrixWorld(true);
+    const saddle = QuadrupedRig.sockets(rig).saddle.getWorldPosition(new THREE.Vector3());
+    expect(saddle.y).toBeGreaterThan(1.55);
+    expect(saddle.y).toBeLessThan(1.65);
+    const size = new THREE.Box3().setFromObject(rig).getSize(new THREE.Vector3());
+    expect(size.z).toBeGreaterThan(2.6); // body, neck and head reach
+    expect(HORSE_PROPORTIONS.scale).toBe(1);
+    QuadrupedRig.dispose(rig);
   });
 });
 

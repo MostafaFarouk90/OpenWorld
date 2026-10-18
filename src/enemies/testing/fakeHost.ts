@@ -534,6 +534,7 @@ export class FakeHost {
       }) as EnemyHost['services']['get'],
     },
     bosses: {
+      active: () => [...self.bossStates.keys()],
       state: (id) => self.bossStates.get(id) ?? null,
       release: (id) => {
         self.bossReleases.push(id);

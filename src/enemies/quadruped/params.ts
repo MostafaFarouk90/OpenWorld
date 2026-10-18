@@ -49,20 +49,22 @@ export const HOUND: Readonly<QuadrupedParams> = Object.freeze({
 });
 
 /**
- * Starting proportions for the Ashmare (a horse). A STUB: thread 20 owns the real tuning and builds its
- * `HORSE` preset (tint, emissive) on top of this.
+ * The Ashmare's full proportions at scale 1: a riding horse about 1.6 m to the saddle (the `saddle` socket sits on the
+ * back at `legLength + 0.75 * bodyHeight`), 2.1 m of body, a raised neck and a long head. Gait changes are at the
+ * horse's own speeds: it trots from about 4 m/s, canters at 9 and gallops at 12. Thread 20 adds only `tint` (and
+ * `emissive`): `QuadrupedRig.build({ ...HORSE_PROPORTIONS, tint })`.
  */
-export const HORSE_PROPORTIONS: Readonly<
-  Pick<QuadrupedParams, 'bodyLength' | 'bodyHeight' | 'legLength' | 'neckLength' | 'neckAngle' | 'headSize' | 'gaitSpeeds'>
-> = Object.freeze({
-  bodyLength: 2.0,
-  bodyHeight: 0.8,
-  legLength: 1.15,
-  neckLength: 0.8,
-  neckAngle: 0.9,
+export const HORSE_PROPORTIONS: Readonly<Omit<QuadrupedParams, 'tint' | 'emissive'>> = Object.freeze({
+  bodyLength: 2.1,
+  bodyHeight: 0.7,
+  legLength: 1.07,
+  neckLength: 0.75,
+  neckAngle: 0.95,
   headSize: 0.55,
+  tailLength: 0.95,
+  scale: 1,
   // Walk below ~4, trot to ~7.5, then it canters at 9 m/s and gallops at 12 m/s.
-  gaitSpeeds: { walkToTrot: 4, trotToCanter: 7.5, canterToGallop: 10.5 },
+  gaitSpeeds: Object.freeze({ walkToTrot: 4, trotToCanter: 7.5, canterToGallop: 10.5 }),
 });
 
 /** Derived rig-local dimensions (before `scale`); the rig builds from these and gait.ts grounds the pose with them. */

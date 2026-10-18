@@ -324,6 +324,8 @@ export interface ShardSpells {
 export interface BossesPort {
   state(bossId: string): { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | null } | null;
   release(bossId: string): boolean;
+  /** Ids of the registered bosses (the core registry has it); lets the enemies tell a boss actor from a plain enemy. */
+  active?(): string[];
 }
 
 /** The parts of the AssetLoader the enemy models need (requests-round-1 item 6). */

@@ -46,6 +46,12 @@ export interface EnemiesService {
   mercyTally(): Record<string, TallyRow>;
   /** The living member in a spawner's `leaderSlot`, or null. */
   packLeader(spawnerId: string): ActorId | null;
+  /**
+   * Shoves an enemy `metres` (clamped to 6) along the horizontal `dir` over a short knockback, without a stagger.
+   * False (nothing happens) for a non-finite `dir` or `metres <= 0`, an unknown, dead, gone, foe, observer-only or
+   * non-hostile actor, a boss, an enemy in any mercy window, and a thief carrying gold.
+   */
+  push(actorId: ActorId, push: { dir: { x: number; z: number }; metres: number }): boolean;
   /** Perception hook for stealth and skills (thread 18, 15). */
   perception: {
     register(provider: PerceptionProvider): Unregister;
@@ -145,6 +151,7 @@ export class EnemyManager {
     lockBlockLevel: (b, l) => this.spawners.lockBlockLevel(b, l),
     mercyTally: () => this.tally.snapshot(),
     packLeader: (id) => this.packLeaderId(id),
+    push: (id, p) => this.pushEnemy(id, p),
     perception: {
       register: (p) => this.perceptionHub.register(p),
       state: (id) => this.enemies.get(id)?.perceptionState() ?? null,
@@ -152,6 +159,14 @@ export class EnemyManager {
   };
 
   readonly perceptionHub = new PerceptionHub((m) => this.host.warn(m));
+
+  private pushEnemy(actorId: ActorId, p: { dir: { x: number; z: number }; metres: number }): boolean {
+    const enemy = this.enemies.get(actorId);
+    if (!enemy || !p) return false;
+    const bosses = this.host.bosses;
+    if (bosses?.active) for (const b of bosses.active()) if (bosses.state(b)?.actorId === actorId) return false;
+    return enemy.pushAlong(p.dir, p.metres);
+  }
 
   /** The living member in a spawner's `leaderSlot`, or null (no leader slot, or its occupant is gone). */
   packLeaderId(spawnerId: string): ActorId | null {

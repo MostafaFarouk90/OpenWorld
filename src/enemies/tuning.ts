@@ -35,6 +35,8 @@ export const AI = {
   heavyStaggerSeconds: 0.8,
   knockbackMetres: 1.2,
   knockbackSeconds: 0.2,
+  /** The most `enemies.push` moves an enemy in one call. */
+  pushMaxMetres: 6,
   /** Poise break (design 9.6). */
   breakStaggerSeconds: 1.2,
   poiseRegenDelay: 4,

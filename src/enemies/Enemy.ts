@@ -946,6 +946,27 @@ export class Enemy {
     this.pushVelocity = { x: f.x * speed, z: f.z * speed };
   }
 
+  /**
+   * A scripted shove (`enemies.push`): `metres` along the horizontal direction `dir` over a short knockback, with no
+   * stagger and no poise. Refused (false) for a non-hostile, observer-only, dormant, dying or gone enemy, while any mercy
+   * window is open (Release, Spare, Calm, Warm Hand), and for a thief carrying gold. `dir` need not be normalised.
+   */
+  pushAlong(dir: { x: number; z: number }, metres: number): boolean {
+    if (this.phase !== 'alive' || this.asleep || this.observerOnly) return false;
+    if (this.actor.team !== 'hostile' || this.actor.dead) return false;
+    if (this.mercyOpen || this.calmOpen || this.warmHandOpen) return false;
+    if (this.thief && this.thief.stolenGold > 0) return false;
+    if (!dir || !Number.isFinite(dir.x) || !Number.isFinite(dir.z) || !Number.isFinite(metres) || !(metres > 0)) return false;
+    const len = Math.hypot(dir.x, dir.z);
+    if (!(len > 1e-9)) return false;
+    const m = Math.min(metres, AI.pushMaxMetres);
+    const seconds = Math.min(0.5, Math.max(AI.knockbackSeconds, m / 15));
+    this.pushTicks = Math.max(1, Math.round(seconds / FIXED_TIMESTEP));
+    const speed = m / (this.pushTicks * FIXED_TIMESTEP);
+    this.pushVelocity = { x: (dir.x / len) * speed, z: (dir.z / len) * speed };
+    return true;
+  }
+
   /** Knockback runs in place of steering while it lasts. */
   private pushTicks = 0;
   private pushVelocity = { x: 0, z: 0 };
