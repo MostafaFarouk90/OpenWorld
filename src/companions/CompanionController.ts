@@ -1,5 +1,7 @@
 // One companion wired into the game: joined state from its flag, the actor and figure, follow and teleport-behind,
-// Battle-song, banter, the talk interactable and saved position (plans/slice-2-tobb.md, section 13 overrides).
+// Battle-song, banter, the talk interactable and saved position (plans/slice-2-tobb.md, section 13 overrides);
+// Phase B adds quest-derived waits and horseback following (plans/slice-2-tobb-phase-b.md and its review).
+import * as THREE from 'three';
 import type { Actor } from '../actors/Actor';
 import type { GameContext } from '../core/Game';
 import type { GateCause } from '../state/FlagGates';
@@ -10,10 +12,11 @@ import { AuraWindow } from './AuraWindow';
 import { BanterDirector, type Bark } from './BanterDirector';
 import { CombatPresence } from './CombatPresence';
 import { CompanionFigure } from './CompanionFigure';
-import { FollowModel, behind, type Vec3 } from './FollowModel';
+import { FollowModel, behind, yawToward, type Vec3 } from './FollowModel';
 import { RayBudget, findSpot, groundAt, type GroundPorts } from './ground';
 import { COMPANION_TUNING, TOBB_TUNING } from './tuning';
 import type { AttackSpeedHook, CompanionDef, InteriorsLike, NavLike } from './types';
+import { deriveWait, inView, sameWait, type ViewPorts, type Wait, type WaitView } from './WaitDirector';
 
 export interface SavedSpot {
   x: number;
@@ -38,6 +41,11 @@ const MAX_SAVED_HEIGHT_GAP = 10;
 const REPATH_SECONDS = 0.5;
 const REPATH_MOVE = 1;
 const WAYPOINT_REACHED = 0.6;
+
+/** A door event this soon after a wait ended with a walk back is the same door's fade-in finishing. */
+const WALK_BACK_DOOR_WINDOW = 2;
+
+const dist3 = (a: Vec3, b: Vec3) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 export class CompanionController {
   private actor: Actor | null = null;
@@ -65,6 +73,16 @@ export class CompanionController {
   private readonly offs: (() => void)[] = [];
   private readonly warn: (m: string) => void;
   private disposed = false;
+  /** The post he stands at instead of following, or null. Derived each tick from quest and interior state. */
+  private wait: Wait | null = null;
+  private waitYaw = 0;
+  /** Seconds a different wait has been wanted but not applied (relocation waits until he is out of view). */
+  private handoffAge = 0;
+  private mounted = false;
+  /** Hidden on horseback after falling too far back; reappears behind the player on dismount. */
+  private mountHidden = false;
+  /** Seconds left in which a door event does not teleport him, after a wait ended with a walk back. */
+  private walkBackWindow = 0;
 
   constructor(
     private readonly ctx: GameContext,
@@ -98,6 +116,11 @@ export class CompanionController {
 
   get yaw(): number {
     return this.model?.yaw ?? 0;
+  }
+
+  /** The current wait, or null while following. */
+  get waiting(): Wait | null {
+    return this.wait ? { ...this.wait } : null;
   }
 
   get auraActive(): boolean {
@@ -214,6 +237,9 @@ export class CompanionController {
     this.talking = false;
     this.teleportPending = false;
     this.hidden = false;
+    this.wait = null;
+    this.handoffAge = 0;
+    this.mountHidden = false;
   }
 
   private loader(): NpcModelLoader | null {
@@ -258,11 +284,23 @@ export class CompanionController {
       }),
       ev.on('fastTravel', () => this.requestTeleport()),
       ev.on('interior.entered', ({ interiorId }) => {
-        this.requestTeleport();
+        this.onDoor();
         const place = this.def.places.interiors[interiorId];
         if (place && this.sinceReset > TOBB_TUNING.reEmitWindowSeconds) this.emitBark(this.director.area(place));
       }),
-      ev.on('interior.exited', () => this.requestTeleport()),
+      ev.on('interior.exited', () => this.onDoor()),
+      ev.on('mount.mounted', () => {
+        this.mounted = true;
+      }),
+      ev.on('mount.dismounted', () => {
+        this.mounted = false;
+        if (!this.mountHidden) return;
+        this.mountHidden = false;
+        // The trail from before the hide is far behind by now.
+        this.model?.trail.clear();
+        this.lastTrailPoint = null;
+        this.requestTeleport();
+      }),
       ev.on('save.loaded', () => this.onLoaded()),
       ev.on('dialogue.started', ({ npcId }) => {
         this.director.suppress('dialogue', true);
@@ -305,9 +343,24 @@ export class CompanionController {
     this.playerDead = this.ctx.player.actor.dead;
     this.talking = false;
     this.sinceReset = 0;
+    // A mounted player always loads dismounted (contract v0.5), so the load clears it.
+    this.mounted = false;
+    this.mountHidden = false;
+    this.walkBackWindow = 0;
     const saved = this.saved;
     this.saved = null;
     if (!this.model) return;
+    // A load is black: a wait that holds is applied at once and the saved spot is ignored.
+    this.handoffAge = 0;
+    const want = deriveWait(this.def.waits, this.waitView());
+    if (want) {
+      this.enterWait(want);
+      return;
+    }
+    if (this.wait) {
+      this.wait = null;
+      this.director.setActive(!this.hidden);
+    }
     const feet = this.ctx.player.feet;
     const near =
       saved &&
@@ -323,8 +376,18 @@ export class CompanionController {
     this.requestTeleport();
   }
 
+  /**
+   * Door events arrive after the fade-in. A wait that ended at black (within the last 2 s) may already have him
+   * walking back in Cael's space; a teleport then would pop in view, so it is skipped.
+   */
+  private onDoor(): void {
+    if (this.walkBackWindow > 0 && !this.wait && !this.hidden && this.canWalkBack(this.ctx.player.feet)) return;
+    this.requestTeleport();
+  }
+
+  /** No-op while waiting: doors, fast travel and respawns never pull a waiting companion to the player. */
   private requestTeleport(): void {
-    if (!this.model) return;
+    if (!this.model || this.wait) return;
     this.teleportPending = true;
     this.spotCursor.next = 0;
     this.lastTrailPoint = this.model.trail.newest() ?? this.lastTrailPoint;
@@ -333,7 +396,7 @@ export class CompanionController {
   // ---- aura --------------------------------------------------------------------------------------------------
 
   private onBlock(): void {
-    if (!this.actor || this.hidden || this.playerDead) return;
+    if (!this.actor || this.hidden || this.wait || this.playerDead) return;
     const verbs = this.ctx.services.get('combatVerbs') as unknown as Partial<AttackSpeedHook> | undefined;
     if (typeof verbs?.addAttackSpeedMultiplier !== 'function') {
       this.warnOnce('hook', 'companions: combatVerbs.addAttackSpeedMultiplier is missing; Battle-song does nothing');
@@ -372,7 +435,7 @@ export class CompanionController {
   // ---- banter ------------------------------------------------------------------------------------------------
 
   private emitBark(b: Bark | null): void {
-    if (!b || !this.actor || this.hidden) return;
+    if (!b || !this.actor || this.hidden || this.wait) return;
     this.ctx.events.emit('companion.banter', { companionId: this.def.id, lineKey: b.lineKey, trigger: b.trigger });
     const t = this.ctx.strings;
     this.ctx.events.emit('hud.toast', { textKey: 'companion.say', params: { name: t.t(this.def.nameKey), line: t.t(b.lineKey) } });
@@ -383,6 +446,7 @@ export class CompanionController {
   fixedUpdate(dt: number): void {
     if (this.disposed || !(dt > 0)) return;
     this.sinceReset += dt;
+    this.walkBackWindow = Math.max(0, this.walkBackWindow - dt);
     // Fights are tracked before he joins too, so a fight already running at the join is not announced as new.
     const edge = this.presence.tick(dt);
     const m = this.model;
@@ -395,13 +459,38 @@ export class CompanionController {
     const player = { x: p.feet.x, y: p.feet.y, z: p.feet.z };
     const ports = this.ports();
 
+    this.updateWait(dt, player, p.facingYaw);
+    if (this.wait) {
+      // At his post: no follow and no teleport; he faces Cael while they talk.
+      m.gait = 'idle';
+      m.speed = 0;
+      m.yaw = this.talking ? yawToward(player.x - m.pos.x, player.z - m.pos.z) : this.waitYaw;
+    } else if (!this.mountHidden && this.mounted && dist3(m.pos, player) > COMPANION_TUNING.mountHideDistance) {
+      // On horseback he jogs along; once too far back he is hidden quietly until the dismount (no teleport loop).
+      this.mountHidden = true;
+      this.teleportPending = false;
+      this.setHidden(true);
+    }
+    if (!this.wait && !this.mountHidden) this.follow(dt, player, p.facingYaw, ports);
+
+    if (this.aura.tick(dt)) this.endAura();
+    if (edge === 'end') this.emitBark(this.director.combat('end'));
+    this.emitBark(this.director.tick(dt));
+
+    this.figure?.setGait(this.hidden ? 'idle' : m.gait);
+    this.figure?.update(dt);
+    this.applyPose(1);
+  }
+
+  private follow(dt: number, player: Vec3, playerYaw: number, ports: GroundPorts): void {
+    const m = this.model!;
     if (!this.teleportPending) {
       const newest = m.trail.newest();
       if (newest) this.lastTrailPoint = newest;
       const step = m.step({
         dt,
         player,
-        playerYaw: p.facingYaw,
+        playerYaw,
         groundAt: (x, z, y) => groundAt(ports, x, z, y),
         hold: this.talking,
         steer: (from, to) => this.steer(from, to, dt),
@@ -413,15 +502,122 @@ export class CompanionController {
         if (step.teleport === 'jump') this.lastTrailPoint = null;
       }
     }
-    if (this.teleportPending) this.resolveTeleport(player, p.facingYaw, ports);
+    if (this.teleportPending) this.resolveTeleport(player, playerYaw, ports);
+  }
 
-    if (this.aura.tick(dt)) this.endAura();
-    if (edge === 'end') this.emitBark(this.director.combat('end'));
-    this.emitBark(this.director.tick(dt));
+  // ---- waits -------------------------------------------------------------------------------------------------
 
-    this.figure?.setGait(this.hidden ? 'idle' : m.gait);
-    this.figure?.update(dt);
-    this.applyPose(1);
+  private waitView(): WaitView {
+    const q = this.ctx.services.get('quests');
+    return {
+      // Unregistered quests (thread 6's Harrowmark quests before they merge) read as no wait, without a warning.
+      questState: (id) => (q && q.get(id) ? q.state(id) : undefined),
+      objectiveDone: (id, o) => !!q && !!q.get(id) && q.objectiveDone(id, o),
+      interior: this.interiors()?.current ?? null,
+      anchorExists: (id) => {
+        if (this.ctx.anchors.find(id)) return true;
+        this.warnOnce(`anchor:${id}`, `companions: wait post "${id}" is not defined; ${this.def.id} keeps following`);
+        return false;
+      },
+    };
+  }
+
+  private viewPorts(player: Vec3, playerYaw: number): ViewPorts {
+    const i = this.interiors();
+    const cam = this.ctx.camera;
+    return {
+      player,
+      playerYaw,
+      current: i?.current ?? null,
+      interiorAt: i && typeof i.interiorAt === 'function' ? (p) => i.interiorAt!(p) : undefined,
+      inFrustum: cam
+        ? (p) => {
+            cam.updateMatrixWorld();
+            this.frustum.setFromProjectionMatrix(
+              this.projView.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse),
+            );
+            return this.frustum.containsPoint(this.probe.set(p.x, p.y, p.z));
+          }
+        : undefined,
+    };
+  }
+
+  private readonly frustum = new THREE.Frustum();
+  private readonly projView = new THREE.Matrix4();
+  private readonly probe = new THREE.Vector3();
+
+  /**
+   * Polled every tick (quest objectives and `interiors.current`, which is set at black before `interior.entered`).
+   * A change is applied when nobody sees the pop: at a door's black, with him and his destination out of view, when
+   * he can walk back, or after `handoffMaxSeconds` regardless.
+   */
+  private updateWait(dt: number, player: Vec3, playerYaw: number): void {
+    const want = deriveWait(this.def.waits, this.waitView());
+    if (sameWait(want, this.wait)) {
+      this.handoffAge = 0;
+      return;
+    }
+    this.handoffAge += dt;
+    if (!this.canRelocate(want, player, playerYaw)) return;
+    this.handoffAge = 0;
+    if (want) this.enterWait(want);
+    else this.leaveWait(player);
+  }
+
+  private canRelocate(want: Wait | null, player: Vec3, playerYaw: number): boolean {
+    if (this.handoffAge >= COMPANION_TUNING.handoffMaxSeconds) return true;
+    if (this.interiors()?.transitioning) return true;
+    const m = this.model!;
+    const v = this.viewPorts(player, playerYaw);
+    const fromUnseen = this.hidden || !inView(v, m.pos);
+    if (!want) return this.canWalkBack(player) || fromUnseen;
+    const a = this.ctx.anchors.find(want.anchorId);
+    return fromUnseen && (!a || !inView(v, a.position));
+  }
+
+  /** Same space (both outdoors, or the same interior) and within the teleport distance. */
+  private canWalkBack(player: Vec3): boolean {
+    const m = this.model!;
+    const i = this.interiors();
+    if (i && typeof i.interiorAt === 'function' && i.interiorAt(m.pos) !== i.interiorAt(player)) return false;
+    return dist3(m.pos, player) <= COMPANION_TUNING.teleportDistance;
+  }
+
+  private enterWait(w: Wait): void {
+    const m = this.model;
+    const a = this.ctx.anchors.find(w.anchorId);
+    if (!m || !a) return;
+    this.wait = { ...w };
+    this.waitYaw = a.yaw;
+    this.teleportPending = false;
+    this.mountHidden = false;
+    this.path = null;
+    this.endAura();
+    m.place(a.position, a.yaw);
+    this.prev.x = m.pos.x;
+    this.prev.y = m.pos.y;
+    this.prev.z = m.pos.z;
+    // Visible at his post (3a's hider still hides him while the player is in another space); silent while waiting.
+    this.setHidden(false);
+    this.director.setActive(false);
+  }
+
+  private leaveWait(player: Vec3): void {
+    const m = this.model!;
+    this.wait = null;
+    this.director.setActive(!this.hidden);
+    if (this.canWalkBack(player)) {
+      // Clears the trail and the player history, so the first step after the wait is not taken for a jump.
+      m.place({ ...m.pos }, m.yaw);
+      this.walkBackWindow = WALK_BACK_DOOR_WINDOW;
+      return;
+    }
+    this.lastTrailPoint = null;
+    this.requestTeleport();
+  }
+
+  private interiors(): InteriorsLike | undefined {
+    return anyService<InteriorsLike>(this.ctx, 'interiors');
   }
 
   /** Render interpolation between the last two fixed poses. */
@@ -482,7 +678,7 @@ export class CompanionController {
     if (this.hidden === h) return;
     this.hidden = h;
     if (h) this.endAura();
-    this.director.setActive(!h && this.actor !== null);
+    this.director.setActive(!h && this.actor !== null && !this.wait);
     if (this.figure) this.figure.root.visible = !h;
   }
 
