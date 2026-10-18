@@ -81,6 +81,11 @@ export class TriggerVolumes implements GameSystem {
     };
   }
 
+  /** True while the actor (default the player) is inside the trigger as of the last update; false for unknown triggers. */
+  isInside(triggerId: string, actorId: ActorId = PLAYER): boolean {
+    return this.triggers.get(triggerId)?.inside.has(actorId) ?? false;
+  }
+
   fixedUpdate(): void {
     for (const [id, entry] of [...this.triggers]) {
       if (this.triggers.get(id) !== entry) continue;

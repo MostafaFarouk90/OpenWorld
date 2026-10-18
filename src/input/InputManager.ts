@@ -42,7 +42,8 @@ export class InputManager {
   readonly contexts = new InputContexts();
   readonly actionMap: ActionMap;
   /** True while `navigator.keyboard.lock` is active (Ctrl+W and friends reach the game). */
-  keyboardLocked = false;
+  private lockedState = false;
+  private readonly lockListeners = new Set<(state: { supported: boolean; locked: boolean }) => void>();
   private latest: ActionState = NO_ACTIONS;
   private mouseDX = 0;
   private mouseDY = 0;
@@ -74,6 +75,36 @@ export class InputManager {
     doc.addEventListener('mousemove', this.onMouseMove as EventListener);
     doc.addEventListener('fullscreenchange', this.onFullscreenChange);
     element.addEventListener('wheel', this.onWheel, { passive: true });
+  }
+
+  get keyboardLocked(): boolean {
+    return this.lockedState;
+  }
+
+  set keyboardLocked(v: boolean) {
+    if (v === this.lockedState) return;
+    this.lockedState = v;
+    const state = { supported: this.keyboardLockSupported, locked: v };
+    for (const l of [...this.lockListeners]) {
+      try {
+        l(state);
+      } catch (e) {
+        console.error('InputManager: keyboard lock listener failed', e);
+      }
+    }
+  }
+
+  /** True when `navigator.keyboard.lock` exists and fullscreen is available. */
+  get keyboardLockSupported(): boolean {
+    if (typeof this.keyboardApi()?.lock !== 'function') return false;
+    const fsEnabled = (this.doc as unknown as { fullscreenEnabled?: boolean }).fullscreenEnabled;
+    return fsEnabled !== false && typeof this.element.requestFullscreen === 'function';
+  }
+
+  /** Fires whenever `keyboardLocked` changes. Returns an unsubscribe function. */
+  onKeyboardLockChange(listener: (state: { supported: boolean; locked: boolean }) => void): () => void {
+    this.lockListeners.add(listener);
+    return () => this.lockListeners.delete(listener);
   }
 
   get pointerLocked(): boolean {
@@ -142,8 +173,20 @@ export class InputManager {
     }
   }
 
+  /** Releases the keyboard lock (no-op when not locked). */
+  unlockKeyboard(): void {
+    if (!this.lockedState) return;
+    this.keyboardLocked = false;
+    try {
+      this.keyboardApi()?.unlock?.();
+    } catch {
+      // ignore
+    }
+  }
+
   dispose(): void {
     this.unsubscribeBindings();
+    this.lockListeners.clear();
     this.win.removeEventListener('keydown', this.onKeyDown as EventListener);
     this.win.removeEventListener('keyup', this.onKeyUp as EventListener);
     this.win.removeEventListener('blur', this.onBlur);

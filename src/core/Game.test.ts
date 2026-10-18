@@ -345,3 +345,132 @@ describe('Game plugins', () => {
     t.world.dispose();
   });
 });
+
+describe('round-1 core additions', () => {
+  it('freeze holds the player in the air with no gravity; removal lets it fall', () => {
+    const t = setup();
+    t.run(30);
+    t.game.ctx.player.teleport({ x: 0, y: 5, z: 0 });
+    const unfreeze = t.game.ctx.player.addMoveModifier('test.cutscene', { freeze: true });
+    key(t.win, 'keydown', 'KeyW');
+    t.run(30);
+    const held = t.game.ctx.player.feet.clone();
+    expect(held.y).toBeGreaterThan(4.9);
+    expect(Math.hypot(held.x, held.z)).toBeLessThan(0.05);
+    unfreeze();
+    t.run(90);
+    expect(t.game.ctx.player.feet.y).toBeLessThan(1);
+    t.world.dispose();
+  });
+
+  it('a lockActions modifier added in the intent phase applies to that same tick', () => {
+    const t = setup();
+    t.run(30);
+    let added = false;
+    t.game.systems.add({
+      id: 'test.intent-lock',
+      fixedPhase: 'intent',
+      fixedUpdate: (_d, ctx) => {
+        if (!added && ctx.input.actions.pressed('jump')) {
+          added = true;
+          ctx.player.addMoveModifier('test.drink', { lockActions: ['jump'] });
+        }
+      },
+    });
+    const jump = vi.spyOn(t.world.player.controller, 'fixedUpdate');
+    key(t.win, 'keydown', 'Space');
+    t.run(1);
+    expect(added).toBe(true);
+    expect(jump.mock.calls.at(-1)![0].jump).toBe(false);
+    t.world.dispose();
+  });
+
+  it('teleport.ready() turns true only after a physics step at a resident destination', () => {
+    const t = setup();
+    t.run(5);
+    const far = { x: 400, y: 0, z: 0 };
+    expect(t.game.ctx.terrain.isResident(far.x, far.z, 2)).toBe(false);
+    const handle = t.game.ctx.player.teleport(far);
+    expect(handle.ready()).toBe(false);
+    let ticks = 0;
+    while (!handle.ready() && ticks < 120) {
+      const residentBefore = t.game.ctx.terrain.isResident(far.x, far.z, 2);
+      t.run(1);
+      ticks++;
+      // ready never turns true in the same tick the patches first became resident.
+      if (handle.ready()) expect(residentBefore).toBe(true);
+    }
+    expect(handle.ready()).toBe(true);
+    expect(t.game.ctx.terrain.isResident(far.x, far.z, 2)).toBe(true);
+    t.world.dispose();
+  });
+
+  it('isResident rejects bad input and needs every overlapping patch', () => {
+    const t = setup();
+    expect(t.game.ctx.terrain.isResident(NaN, 0)).toBe(false);
+    expect(t.game.ctx.terrain.isResident(0, 0, -1)).toBe(false);
+    expect(t.game.ctx.terrain.isResident(0, 0, 0)).toBe(true);
+    expect(t.game.ctx.terrain.isResident(0, 0, 10_000)).toBe(false);
+    t.world.dispose();
+  });
+
+  it('clock.frozen covers hit-stop and pause', () => {
+    const t = setup();
+    expect(t.game.clock.frozen).toBe(false);
+    t.game.clock.hitStop(0.02);
+    expect(t.game.clock.frozen).toBe(true);
+    t.run(2);
+    expect(t.game.clock.frozen).toBe(false);
+    t.game.clock.setPaused('menu', true);
+    expect(t.game.clock.frozen).toBe(true);
+    t.world.dispose();
+  });
+
+  it('combat registrations of an actor are removed when it despawns, closing an open window', () => {
+    const t = setup();
+    const actor = t.game.ctx.actors.spawn({ kind: 'ash-wraith', team: 'hostile', maxHealth: 10, spawnTag: 'spawn.m01' });
+    const system = t.world.combat.combat;
+    const tracer = { attacker: {}, tick: () => [] } as never;
+    let open = true;
+    const window = { clipName: 'Swing', start: 0, end: 1, currentTime: () => (open ? 0.5 : null) };
+    t.game.ctx.combat.addAttacker(actor.id, tracer, window);
+    const set = { update: () => {}, tickFlash: () => {} } as never;
+    t.game.ctx.combat.addTarget(set, actor.id);
+    expect(system.targetCount).toBe(1);
+    t.game.ctx.combat.pollWindows();
+    t.game.ctx.actors.despawn(actor.id);
+    expect(system.targetCount).toBe(0);
+    expect(ofType(t.events, 'attack.window').map((w) => w.phase)).toEqual(['open', 'close']);
+    open = false;
+    t.world.dispose();
+  });
+
+  it('actor.died carries the spawnTag', () => {
+    const t = setup();
+    const actor = t.game.ctx.actors.spawn({ kind: 'ash-wraith', team: 'hostile', maxHealth: 10, spawnTag: 'spawn.m01' });
+    t.game.ctx.damage.apply({ attackerId: 'player', targetId: actor.id, amount: 10, kind: 'melee' });
+    expect(ofType(t.events, 'actor.died')[0]).toMatchObject({ actorId: actor.id, spawnTag: 'spawn.m01' });
+    t.world.dispose();
+  });
+
+  it('exposes headless defaults for camera rig and assets', () => {
+    const t = setup();
+    expect(t.game.ctx.cameraRig).toBeNull();
+    expect(t.game.ctx.assets).toBeNull();
+    t.world.dispose();
+  });
+});
+
+describe('keyboard lock', () => {
+  it('forwards lock changes to game events and exposes supported and locked', () => {
+    const t = setup();
+    expect(t.game.ctx.input.keyboardLock).toEqual({ supported: false, locked: false });
+    t.input.keyboardLocked = true;
+    expect(ofType(t.events, 'input.keyboardLock').at(-1)).toEqual({ supported: false, locked: true });
+    expect(t.game.ctx.input.keyboardLock.locked).toBe(true);
+    t.game.dispose();
+    t.input.keyboardLocked = false;
+    expect(ofType(t.events, 'input.keyboardLock')).toHaveLength(1);
+    t.world.dispose();
+  });
+});

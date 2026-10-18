@@ -21,6 +21,8 @@ export interface ActorInit {
   owner?: unknown;
   /** Only 'player' is given explicitly; others get `${kind}#${n}`. */
   id?: ActorId;
+  /** Set by the spawner (e.g. 'spawn.m01'), read-only afterwards; quests filter kills on it. */
+  spawnTag?: string;
 }
 
 function nonNegative(v: number | undefined, name: string): number {
@@ -36,6 +38,7 @@ function nonNegative(v: number | undefined, name: string): number {
 export class Actor {
   readonly id: ActorId;
   readonly kind: string;
+  readonly spawnTag: string | undefined;
   team: Team;
   level: number;
   health: number;
@@ -62,6 +65,7 @@ export class Actor {
     if (!Number.isInteger(level) || level < 1) throw new Error('Actor: level must be an integer >= 1');
     this.id = id;
     this.kind = init.kind;
+    this.spawnTag = init.spawnTag;
     this.team = init.team;
     this.level = level;
     this.maxHealth = maxHealth;

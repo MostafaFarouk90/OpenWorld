@@ -17,6 +17,9 @@ import { Game } from '../core/Game';
 import { MoveModifiers } from '../core/MoveModifiers';
 import { PLUGIN_MODULES } from '../core/pluginManifest';
 import { disabledFromQuery } from '../core/plugins';
+import { Graphics } from '../core/graphics';
+import { TrainingDummies } from './TrainingDummies';
+import { ATTACK_SLOTS } from './World';
 import type { StringTable } from '../strings/StringTable';
 import type { InputBindings } from '../input/InputBindings';
 
@@ -48,16 +51,21 @@ export async function startWorld(container: HTMLElement): Promise<void> {
 
   const terrain = new TerrainManager(scene);
   const audio = createAudio();
+  const assets = new AssetLoader(renderer.renderer);
+  const graphics = new Graphics({ renderer: renderer.renderer, scene, camera, sun, viewDistance: TERRAIN.viewDistance });
+  const dummies = new TrainingDummies();
   const moveModifiers = new MoveModifiers();
+  // `game` is assigned below; sounds only fire from ticks, which start after it exists.
+  let game: Game | null = null;
   const world = new World(scene, physics, {
-    sounds: audio ? footstepSounds(audio) : undefined,
+    sounds: audio ? footstepSounds(audio, () => game?.ctx.services.has('music') ?? false) : undefined,
     moveModifier: () => moveModifiers.state(),
   });
   const input = new InputManager(renderer.renderer.domElement);
   const followCamera = new ThirdPersonCamera(camera, input, physics, world.player.controller.collider);
   const cameraForward = new THREE.Vector3();
   container.style.position ||= 'relative'; // HUD slots are positioned against it
-  const game = new Game({
+  game = new Game({
     scene,
     camera,
     physics,
@@ -67,7 +75,13 @@ export async function startWorld(container: HTMLElement): Promise<void> {
     hudContainer: container,
     toWorld: (r, f) => followCamera.toWorld(r, f),
     cameraForward: () => camera.getWorldDirection(cameraForward),
+    cameraRig: followCamera,
+    assets,
   });
+  // Core services exist before any plugin sets up; audio is provided while still locked.
+  if (audio) game.ctx.services.provide('audio', audio);
+  game.ctx.services.provide('graphics', graphics);
+  game.ctx.services.provide('dummies', dummies);
   const { strings, hud, events } = game.ctx;
   const overlay = createOverlay(hud, strings, input.bindings);
   const damageNumbers = new DamageNumberSprites(scene);
@@ -81,7 +95,7 @@ export async function startWorld(container: HTMLElement): Promise<void> {
     if (!r.point) return;
     if (r.outcome === 'blocked') damageNumbers.spawnText(strings.t('combat.blocked'), r.point);
     else if (r.outcome === 'parried') damageNumbers.spawnText(strings.t('combat.parried'), r.point);
-    else if (r.outcome === 'hit') damageNumbers.spawn(r.dealt, r.point);
+    else if (r.outcome === 'hit') damageNumbers.spawn(r.dealt, r.point, r.killed || r.attackId === ATTACK_SLOTS[2] ? 1.4 : 1);
   });
 
   // Plugins set up before the first tick; the loop starts once every setup has settled.
@@ -95,13 +109,13 @@ export async function startWorld(container: HTMLElement): Promise<void> {
   overlay.refreshControls();
 
   overlay.status(strings.t('core.loadingKnight'));
-  const assets = new AssetLoader(renderer.renderer);
+  const ready = game;
   KnightAvatar.load(assets).then(
     (avatar) => {
       world.setAvatar(avatar);
-      game.attachAvatar(avatar);
+      ready.attachAvatar(avatar);
       overlay.status(null);
-      placeDummies(world, game, assets, overlay);
+      placeDummies(world, ready, assets, overlay, dummies);
     },
     (err: unknown) => {
       console.error('The Knight failed to load; playing as the capsule instead.', err);
@@ -111,15 +125,15 @@ export async function startWorld(container: HTMLElement): Promise<void> {
 
   new GameLoop({
     fixedUpdate() {
-      game.fixedUpdate();
+      ready.fixedUpdate();
     },
     render(alpha, frameTime) {
-      game.render(alpha, frameTime, () => followCamera.update(world.player.feet));
+      ready.render(alpha, frameTime, () => followCamera.update(world.player.feet));
       damageNumbers.update(frameTime);
       terrain.update(camera.position);
       followSun(sun, world.player.feet);
       audio?.update(camera);
-      renderer.render();
+      graphics.render();
     },
   }).start();
 
@@ -182,13 +196,15 @@ function createAudio(): AudioManager | null {
   }
 }
 
-function footstepSounds(audio: AudioManager): WorldSounds {
+/** `musicOwnsHits`: once a music service exists it plays layered hit SFX, so the plain clang stops. */
+function footstepSounds(audio: AudioManager, musicOwnsHits: () => boolean): WorldSounds {
   const at = new THREE.Vector3();
   return {
     footstep(foot, position) {
       audio.playAt(foot === 'left' ? 'footstep-0' : 'footstep-1', at.set(position.x, position.y, position.z));
     },
     hit(position) {
+      if (musicOwnsHits()) return;
       audio.playAt('hit', at.set(position.x, position.y, position.z));
     },
     land(fallSpeed, position) {
@@ -199,7 +215,7 @@ function footstepSounds(audio: AudioManager): WorldSounds {
 }
 
 /** Training dummies on the meadow near the spawn, facing it, registered as actors; hits update the counter. */
-function placeDummies(world: World, game: Game, assets: AssetLoader, overlay: Overlay): void {
+function placeDummies(world: World, game: Game, assets: AssetLoader, overlay: Overlay, spots: TrainingDummies): void {
   const clips = assets.animations('knight');
   for (const at of COMBAT.dummies) {
     const x = world.spawn.x + at.x;
@@ -214,8 +230,10 @@ function placeDummies(world: World, game: Game, assets: AssetLoader, overlay: Ov
       if ((o as THREE.Mesh).isMesh) o.castShadow = true;
     });
     world.combat.addDummy(model, clips);
-    game.addDummy(model);
+    game.addDummy(model).data.audio = { material: 'wood' };
   }
+  // Thread 4's yard anchors move them once its plugin calls dummies.place.
+  spots.setModels(world.combat.dummyModels);
   const refresh = (): void => {
     const s = world.combat.stats;
     overlay.hits(formatHitStats(s));

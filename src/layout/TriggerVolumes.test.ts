@@ -214,4 +214,25 @@ describe('TriggerVolumes', () => {
     t.actors.despawn('wolf');
     expect(t.log).toEqual(['enter z wolf']);
   });
+  it('isInside tracks membership per actor and is false for unknown triggers', () => {
+    const t = setup();
+    const p = t.spawn('player', 5);
+    t.spawn('wolf', 0);
+    t.tv.add({ id: 'z', shape: sphere(), who: 'any-actor' });
+    expect(t.tv.isInside('z')).toBe(false);
+    t.tv.fixedUpdate();
+    expect(t.tv.isInside('z')).toBe(false);
+    expect(t.tv.isInside('z', 'wolf')).toBe(true);
+    p.root.position.x = 0;
+    t.tv.fixedUpdate();
+    expect(t.tv.isInside('z')).toBe(true);
+    expect(t.tv.isInside('z', 'player')).toBe(true);
+    expect(t.tv.isInside('nope')).toBe(false);
+    expect(t.tv.isInside('nope', 'wolf')).toBe(false);
+    p.root.position.x = 9;
+    t.tv.fixedUpdate();
+    expect(t.tv.isInside('z')).toBe(false);
+    t.actors.despawn('wolf');
+    expect(t.tv.isInside('z', 'wolf')).toBe(false);
+  });
 });

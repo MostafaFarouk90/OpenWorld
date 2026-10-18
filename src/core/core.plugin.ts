@@ -26,6 +26,7 @@ const core: GamePlugin = {
           interaction: ctx.interaction,
           text: (key, params) => ctx.strings.t(key, params),
           glyph: () => ctx.input.bindings.glyph('interact'),
+          mercyGlyph: () => ctx.input.bindings.glyph('mercy'),
         }),
       );
     }

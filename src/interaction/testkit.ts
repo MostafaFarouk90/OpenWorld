@@ -25,18 +25,18 @@ export function fakeActions() {
   return {
     actions,
     /** Key goes down this tick (pressed edge + down). */
-    press() {
-      s.down.add('interact');
-      s.pressed.add('interact');
+    press(a: Action = 'interact') {
+      s.down.add(a);
+      s.pressed.add(a);
     },
     /** Next tick: still held, no edge. */
-    hold() {
+    hold(a: Action = 'interact') {
       s.pressed.clear();
-      s.down.add('interact');
+      s.down.add(a);
     },
-    release() {
+    release(a: Action = 'interact') {
       s.pressed.clear();
-      s.down.delete('interact');
+      s.down.delete(a);
     },
   };
 }

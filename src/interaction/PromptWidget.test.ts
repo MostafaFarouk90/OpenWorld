@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { InteractionSystem } from './InteractionSystem';
 import { createPromptWidget } from './PromptWidget';
 
 function fakeEl(): any {
@@ -9,10 +8,10 @@ function fakeEl(): any {
   return el;
 }
 
-function make(focus: any, progress = 0) {
-  const interaction = { focus, holdProgress: progress } as unknown as InteractionSystem;
+function make(focus: any, progress = 0, mercy: any = null) {
+  const interaction = { focus, holdProgress: progress, focusFor: (a: string) => (a === 'mercy' ? interaction.mercy : null), mercy } as any;
   const text = vi.fn((k: string, p: Record<string, string | number>) => `${k}|${p.key}|${p.name}`);
-  const w = createPromptWidget({ interaction, text, glyph: () => 'F', doc: { createElement: () => fakeEl() } as any });
+  const w = createPromptWidget({ interaction, text, glyph: () => 'F', mercyGlyph: () => 'T', doc: { createElement: () => fakeEl() } as any });
   return { w, interaction: interaction as any, text };
 }
 
@@ -65,5 +64,42 @@ describe('PromptWidget', () => {
     const el: any = w.element;
     expect(el.children[0].textContent).toBe('interact.door|F|');
     expect(text).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('PromptWidget mercy line', () => {
+  const mercyLine = (w: any) => w.element.children[2];
+  it('is hidden without a mercy focus', () => {
+    const { w } = make({ kind: 'door' });
+    w.update(0);
+    expect(mercyLine(w).style.display).toBe('none');
+  });
+  it('shows a second line with the default key and the mercy glyph', () => {
+    const { w } = make({ kind: 'door' }, 0, { kind: 'use', name: 'Wolf' });
+    w.update(0);
+    expect(mercyLine(w).textContent).toBe('interact.mercy|T|Wolf');
+    expect(mercyLine(w).style.display).toBe('');
+    expect(w.element.children[0].textContent).toBe('interact.door|F|');
+  });
+  it('uses the mercy promptKey and shows alone when there is no interact focus', () => {
+    const { w, interaction } = make(null, 0, { kind: 'use', promptKey: 'mercy.spare' });
+    w.update(0);
+    expect(w.element.style.display).toBe('');
+    expect(mercyLine(w).textContent).toBe('mercy.spare|T|');
+    expect((w.element as any).children[0].style.display).toBe('none');
+    interaction.mercy = null;
+    w.update(0);
+    expect(w.element.style.display).toBe('none');
+    expect(mercyLine(w).style.display).toBe('none');
+    interaction.focus = { kind: 'door' };
+    w.update(0);
+    expect(w.element.style.display).toBe('');
+    expect((w.element as any).children[0].style.display).toBe('');
+  });
+  it('works without a mercyGlyph dep', () => {
+    const interaction = { focus: null, holdProgress: 0, focusFor: () => ({ kind: 'use' }) } as any;
+    const w = createPromptWidget({ interaction, text: (k, p) => `${k}|${p.key}`, glyph: () => 'F', doc: { createElement: () => fakeEl() } as any });
+    w.update(0);
+    expect((w.element as any).children[2].textContent).toBe('interact.mercy|');
   });
 });

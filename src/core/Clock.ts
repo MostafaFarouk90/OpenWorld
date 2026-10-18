@@ -26,6 +26,11 @@ export class Clock {
     return this.pauses.size > 0;
   }
 
+  /** True while hit-stop or any pause reason holds the simulation. */
+  get frozen(): boolean {
+    return this.paused || this.hitStopLeft > 0;
+  }
+
   get hitStopRemaining(): number {
     return this.hitStopLeft;
   }

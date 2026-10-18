@@ -7,7 +7,7 @@ import { DamageResolver } from '../actors/DamageResolver';
 import { DUMMY_INIT, playerInit } from '../actors/teams';
 import type { KnightAvatar } from '../characters/KnightAvatar';
 import { FIXED_TIMESTEP } from '../config/constants';
-import { NO_ACTIONS, type ActionState, type InputContextStack } from '../input/actions';
+import { NO_ACTIONS, type Action, type ActionState, type InputContextStack } from '../input/actions';
 import type { InputBindings } from '../input/InputBindings';
 import type { InputManager, InputSnapshot } from '../input/InputManager';
 import { InteractionSystem } from '../interaction/InteractionSystem';
@@ -18,6 +18,9 @@ import { WorldState } from '../state/WorldState';
 import { StringTable } from '../strings/StringTable';
 import { HudLayer } from '../ui/HudLayer';
 import type { World } from '../world/World';
+import type { ThirdPersonCamera } from '../rendering/ThirdPersonCamera';
+import type { AssetLoader } from '../assets/AssetLoader';
+import './coreServices';
 import { Clock } from './Clock';
 import { GameEvents } from './events';
 import { MoveModifiers, type MoveModifier } from './MoveModifiers';
@@ -36,7 +39,8 @@ export interface PlayerHandle {
   readonly avatar: KnightAvatar | null;
   /** True when the last tick had movement input. */
   readonly moving: boolean;
-  teleport(feet: Vec3, yaw?: number): void;
+  /** `ready()` turns true once the collider patch there exists and a physics step has made it visible. */
+  teleport(feet: Vec3, yaw?: number): { ready(): boolean };
   addMoveModifier(source: string, mod: MoveModifier): () => void;
 }
 
@@ -44,6 +48,8 @@ export interface GameInput {
   readonly actions: ActionState;
   /** True once fullscreen keyboard lock is active (Ctrl dodge is then safe). */
   readonly keyboardLocked: boolean;
+  /** Whether fullscreen keyboard lock can work here, and whether it is held now. */
+  readonly keyboardLock: { readonly supported: boolean; readonly locked: boolean };
   readonly bindings: InputBindings;
   readonly contexts: InputContextStack;
 }
@@ -69,6 +75,12 @@ export interface GameContext {
   readonly persist: PersistRegistry;
   readonly systems: SystemRegistry;
   readonly clock: Clock;
+  /** The follow camera (world scene only); thread 1 adds lock-on to it. Updated between the world and afterCamera render phases. */
+  readonly cameraRig: ThirdPersonCamera | null;
+  /** The scene's asset loader (memoised loads, SkeletonUtils clones); null headless. */
+  readonly assets: AssetLoader | null;
+  /** Physics terrain residency (fast travel waits on it). */
+  readonly terrain: { isResident(x: number, z: number, radius?: number): boolean };
 }
 
 export interface GameOptions {
@@ -85,8 +97,36 @@ export interface GameOptions {
   toWorld?: (right: number, forward: number) => { x: number; z: number };
   /** Camera forward for interaction focus while standing still. */
   cameraForward?: () => THREE.Vector3Like | null;
+  cameraRig?: ThirdPersonCamera | null;
+  assets?: AssetLoader | null;
   report?: (message: string, err?: unknown) => void;
 }
+
+/** `actions` with every locked action reporting nothing, evaluated at read time. */
+export function lockedActions(actions: ActionState, locked: (a: Action) => boolean): ActionState {
+  return {
+    down: (a) => !locked(a) && actions.down(a),
+    pressed: (a) => !locked(a) && actions.pressed(a),
+    released: (a) => !locked(a) && actions.released(a),
+    heldTicks: (a) => (locked(a) ? 0 : actions.heldTicks(a)),
+    axis: (neg, pos) => ((actions.down(pos) && !locked(pos) ? 1 : 0) - (actions.down(neg) && !locked(neg) ? 1 : 0)) as -1 | 0 | 1,
+  };
+}
+
+/** The tick's snapshot after action locks added up to the end of the intent phase. */
+export function applyLocks(s: InputSnapshot, a: ActionState): InputSnapshot {
+  const attackAction = s.attack > 0 ? (`attack${s.attack}` as Action) : null;
+  return {
+    moveRight: s.moveRight === 0 ? 0 : a.axis('moveLeft', 'moveRight'),
+    moveForward: s.moveForward === 0 ? 0 : a.axis('moveBack', 'moveForward'),
+    sprint: s.sprint && a.down('sprint'),
+    jump: s.jump && a.pressed('jump'),
+    attack: attackAction && a.pressed(attackAction) ? s.attack : 0,
+  };
+}
+
+/** Metres around a teleport destination whose collider patches must exist before it counts as ready. */
+export const TELEPORT_READY_RADIUS = 2;
 
 const SIMULATED_PHASES_BEFORE_WORLD: FixedPhase[] = ['input', 'intent'];
 const SIMULATED_PHASES_AFTER_WORLD: FixedPhase[] = ['afterCombat', 'rules', 'late'];
@@ -102,8 +142,11 @@ export class Game {
   readonly systems: SystemRegistry;
   readonly moveModifiers: MoveModifiers;
   private readonly bridge: DamageBridge;
+  private readonly offKeyboardLock: () => void;
   private loader: PluginLoader | null = null;
   private actions: ActionState = NO_ACTIONS;
+  /** World steps run so far (teleport readiness). */
+  private worldSteps = 0;
   private moving = false;
   private readonly feet = new THREE.Vector3();
   private readonly report: (message: string, err?: unknown) => void;
@@ -152,6 +195,9 @@ export class Game {
       get keyboardLocked() {
         return input.keyboardLocked;
       },
+      get keyboardLock() {
+        return { supported: input.keyboardLockSupported, locked: input.keyboardLocked };
+      },
       bindings: input.bindings,
       contexts: input.contexts,
     };
@@ -165,7 +211,7 @@ export class Game {
     const triggers = new TriggerVolumes({ actors, events: this.events });
     this.systems.add(interaction);
     this.systems.add(triggers);
-    input.actionMap.setActionFilter((a) => !this.moveModifiers.isActionLocked(a));
+    this.offKeyboardLock = input.onKeyboardLockChange((state) => this.events.emit('input.keyboardLock', state));
 
     this.ctx = {
       scene: opts.scene,
@@ -188,6 +234,9 @@ export class Game {
       persist,
       systems: this.systems,
       clock: this.clock,
+      cameraRig: opts.cameraRig ?? null,
+      assets: opts.assets ?? null,
+      terrain: { isResident: (x, z, radius = 0) => world.colliders.isResident(x, z, radius) },
     };
   }
 
@@ -257,10 +306,11 @@ export class Game {
     if (!this.clock.beginTick()) return;
     const dt = FIXED_TIMESTEP;
     const { snapshot, actions } = this.opts.input.sampleTick();
-    this.actions = actions;
+    // Locked actions are checked when read, so a modifier added in `intent` applies to this very tick.
+    this.actions = lockedActions(actions, (a) => this.moveModifiers.isActionLocked(a));
     this.moving = snapshot.moveRight !== 0 || snapshot.moveForward !== 0;
     for (const phase of SIMULATED_PHASES_BEFORE_WORLD) this.systems.runFixed(phase, dt, this.ctx);
-    this.stepWorld(snapshot, dt);
+    this.stepWorld(applyLocks(snapshot, this.actions), dt);
     for (const phase of SIMULATED_PHASES_AFTER_WORLD) this.systems.runFixed(phase, dt, this.ctx);
   }
 
@@ -285,7 +335,8 @@ export class Game {
     this.systems.dispose();
     this.ctx.hud.dispose();
     this.bridge.dispose();
-    this.opts.input.actionMap.setActionFilter(null);
+    this.ctx.combat.dispose();
+    this.offKeyboardLock();
   }
 
   private stepWorld(snapshot: InputSnapshot, dt: number): void {
@@ -299,13 +350,27 @@ export class Game {
         this.ctx.combat.pollWindows();
       },
     });
+    this.worldSteps++;
   }
 
-  private teleport(feet: Vec3, yaw?: number): void {
+  private teleport(feet: Vec3, yaw?: number): { ready(): boolean } {
     const world = this.opts.world;
     world.player.controller.teleport(feet);
-    // The patch under the destination must exist before the next physics step.
+    // The patch under the destination is built now; the controller sees it after the next physics step.
     world.colliders.update(feet.x, feet.z);
     if (yaw !== undefined && Number.isFinite(yaw)) world.player.setFacingYaw(yaw);
+    let residentSince: number | null = world.colliders.isResident(feet.x, feet.z, TELEPORT_READY_RADIUS)
+      ? this.worldSteps
+      : null;
+    return {
+      ready: () => {
+        if (!world.colliders.isResident(feet.x, feet.z, TELEPORT_READY_RADIUS)) {
+          residentSince = null;
+          return false;
+        }
+        residentSince ??= this.worldSteps;
+        return this.worldSteps > residentSince;
+      },
+    };
   }
 }

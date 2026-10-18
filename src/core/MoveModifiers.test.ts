@@ -4,7 +4,7 @@ import { MoveModifiers } from './MoveModifiers';
 describe('MoveModifiers', () => {
   it('starts neutral', () => {
     const m = new MoveModifiers();
-    expect(m.state()).toEqual({ speedScale: 1, lockMove: false, lockFacing: false });
+    expect(m.state()).toEqual({ speedScale: 1, lockMove: false, lockFacing: false, freeze: false });
     expect(m.size).toBe(0);
     expect(m.isActionLocked('jump')).toBe(false);
     expect(m.sources()).toEqual([]);
@@ -44,7 +44,7 @@ describe('MoveModifiers', () => {
     expect(m.isActionLocked('jump')).toBe(true);
     off();
     off();
-    expect(m.state()).toEqual({ speedScale: 1, lockMove: false, lockFacing: false });
+    expect(m.state()).toEqual({ speedScale: 1, lockMove: false, lockFacing: false, freeze: false });
     expect(m.isActionLocked('jump')).toBe(false);
     expect(m.size).toBe(0);
   });

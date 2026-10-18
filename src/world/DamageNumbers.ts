@@ -83,16 +83,17 @@ export class DamageNumberSprites {
     return this.sprites.size;
   }
 
-  spawn(damage: number, at: { x: number; y: number; z: number }): void {
-    this.spawnText(formatDamage(damage), at);
+  /** `scale` 1.4 for heavy or killing hits (contracts/vfx-and-feedback.md section 2). */
+  spawn(damage: number, at: { x: number; y: number; z: number }, scale = 1): void {
+    this.spawnText(formatDamage(damage), at, scale);
   }
 
-  spawnText(text: string, at: { x: number; y: number; z: number }): void {
+  spawnText(text: string, at: { x: number; y: number; z: number }, scale = 1): void {
     const n = this.state.spawnText(text, at);
     const sprite = new THREE.Sprite(
       new THREE.SpriteMaterial({ map: makeTexture(n.text), transparent: true, depthTest: false }),
     );
-    sprite.scale.set(0.9, 0.45, 1);
+    sprite.scale.set(0.9 * scale, 0.45 * scale, 1);
     sprite.renderOrder = 1000;
     this.sprites.set(n, sprite);
     this.parent.add(sprite);

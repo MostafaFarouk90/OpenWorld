@@ -14,6 +14,7 @@ export const CORE_STRINGS_EN: Record<string, string> = {
   'interact.lever': '{key} Pull',
   'interact.kneel': 'Hold {key} to kneel',
   'interact.release': 'Hold {key} to release',
+  'interact.mercy': 'Hold {key} to spare {name}',
   'interact.use': '{key} Use {name}',
   'interact.locked': 'Locked',
   'combat.blocked': 'Blocked',

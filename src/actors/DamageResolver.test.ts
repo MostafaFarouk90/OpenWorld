@@ -716,3 +716,32 @@ describe('lead additions', () => {
     expect(t.log).toEqual(['actor.staggered']);
   });
 });
+
+describe('unblockable', () => {
+  it('undoes a defender modifier that blocks or parries an unblockable hit, warning once per modifier', () => {
+    const t = make();
+    t.dr.addModifier('block', (req) => {
+      req.outcome = 'blocked';
+      req.amount *= 0.2;
+    }, -50);
+    const a = t.dr.apply({ attackerId: t.enemy.id, targetId: t.player.id, amount: 10, kind: 'melee', unblockable: true });
+    expect(a).toMatchObject({ outcome: 'hit', dealt: 10 });
+    t.dr.apply({ attackerId: t.enemy.id, targetId: t.player.id, amount: 10, kind: 'melee', unblockable: true });
+    expect(t.warn.mock.calls.filter((c) => String(c[0]).includes('unblockable'))).toHaveLength(1);
+    const blocked = t.dr.apply({ attackerId: t.enemy.id, targetId: t.player.id, amount: 10, kind: 'melee' });
+    expect(blocked).toMatchObject({ outcome: 'blocked', dealt: 2 });
+  });
+
+  it('an attacker-side modifier can mark the hit unblockable before the defender band runs', () => {
+    const t = make();
+    t.dr.addModifier('red-sweep', (req) => void (req.unblockable = true), -150);
+    t.dr.addModifier('parry', (req) => void (req.outcome = 'parried'), -50);
+    expect(t.dr.apply({ attackerId: t.enemy.id, targetId: t.player.id, amount: 5, kind: 'melee' })?.outcome).toBe('hit');
+  });
+
+  it('i-frames still make an unblockable hit immune', () => {
+    const t = make();
+    t.player.invulnerable = true;
+    expect(t.dr.apply({ attackerId: t.enemy.id, targetId: t.player.id, amount: 5, kind: 'melee', unblockable: true })).toMatchObject({ outcome: 'immune', dealt: 0 });
+  });
+});

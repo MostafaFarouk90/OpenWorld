@@ -175,7 +175,7 @@ describe('InteractionSystem press', () => {
     t.tick(5);
     expect(a.onInteract).toHaveBeenCalledTimes(1);
     expect(a.onInteract).toHaveBeenCalledWith(t.actor);
-    expect(t.of('interact')).toEqual([{ interactableId: 'use:a', kind: 'use', actorId: 'player' }]);
+    expect(t.of('interact')).toEqual([{ interactableId: 'use:a', kind: 'use', actorId: 'player', action: 'interact' }]);
   });
   it('does nothing without focus', () => {
     const t = setup();
@@ -256,7 +256,7 @@ describe('InteractionSystem hold', () => {
     t.tick(10);
     t.input.release();
     t.tick();
-    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'released' }]);
+    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'released', action: 'interact' }]);
     expect(t.sys.holdProgress).toBe(0);
     expect(a.onInteract).not.toHaveBeenCalled();
   });
@@ -278,7 +278,7 @@ describe('InteractionSystem hold', () => {
     start(t);
     t.me.feet.set(0, 0, 5);
     t.tick();
-    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'focus-lost' }]);
+    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'focus-lost', action: 'interact' }]);
   });
   it('cancels when another interactable takes focus', () => {
     const t = setup();
@@ -286,7 +286,7 @@ describe('InteractionSystem hold', () => {
     start(t);
     t.sys.register(t.item('use:closer', -0.2));
     t.tick();
-    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'focus-lost' }]);
+    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'focus-lost', action: 'interact' }]);
   });
   it('cancels when unregistered mid-hold', () => {
     const t = setup();
@@ -295,7 +295,7 @@ describe('InteractionSystem hold', () => {
     start(t);
     off();
     t.tick();
-    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'focus-lost' }]);
+    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'focus-lost', action: 'interact' }]);
   });
   it('cancels when disabled mid-hold', () => {
     const t = setup();
@@ -304,7 +304,7 @@ describe('InteractionSystem hold', () => {
     start(t);
     on = false;
     t.tick();
-    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'focus-lost' }]);
+    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'focus-lost', action: 'interact' }]);
   });
   const hit = (t: ReturnType<typeof setup>, outcome: DamageResult['outcome'], targetId = 'player') =>
     t.events.emit('damage.dealt', {
@@ -316,7 +316,7 @@ describe('InteractionSystem hold', () => {
     holdItem(t);
     start(t);
     hit(t, 'hit');
-    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'damaged' }]);
+    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'damaged', action: 'interact' }]);
     expect(t.sys.holdProgress).toBe(0);
   });
   it.each(['blocked', 'parried', 'immune'] as const)('does NOT cancel on %s damage', (o) => {
@@ -340,7 +340,7 @@ describe('InteractionSystem hold', () => {
     holdItem(t);
     start(t);
     t.ctx.set('menu');
-    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'context' }]);
+    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'context', action: 'interact' }]);
   });
   it('cancels on player death', () => {
     const t = setup();
@@ -348,7 +348,7 @@ describe('InteractionSystem hold', () => {
     start(t);
     t.actor._dead = true;
     t.tick();
-    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'dead' }]);
+    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:kneel', reason: 'dead', action: 'interact' }]);
   });
   it('after a cancel the key must be released before a new hold starts', () => {
     const t = setup();
@@ -398,5 +398,186 @@ describe('InteractionSystem hold', () => {
     expect(t.of('interact.cancelled')).toEqual([]);
     t.tick(50);
     expect(a.onInteract).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('InteractionSystem per-action focus (mercy)', () => {
+  const mercy = (t: ReturnType<typeof setup>, id: string, z: number, extra: Partial<Interactable> = {}) =>
+    t.item(id, z, { action: 'mercy', ...extra });
+
+  it('tracks a focus per action; focus stays the interact one', () => {
+    const t = setup();
+    const a = t.item('use:a', -1);
+    const m = mercy(t, 'use:m', -0.5);
+    t.sys.register(a);
+    t.sys.register(m);
+    t.tick();
+    expect(t.sys.focus).toBe(a);
+    expect(t.sys.focusFor('interact')).toBe(a);
+    expect(t.sys.focusFor('mercy')).toBe(m);
+  });
+  it('mercy items are driven only by the mercy key, interact items only by interact', () => {
+    const t = setup();
+    const a = t.item('use:a', -1);
+    const m = mercy(t, 'use:m', -1);
+    t.sys.register(a);
+    t.sys.register(m);
+    t.input.press('interact');
+    t.tick();
+    expect(a.onInteract).toHaveBeenCalledTimes(1);
+    expect(m.onInteract).not.toHaveBeenCalled();
+    t.input.release('interact');
+    t.input.press('mercy');
+    t.tick();
+    expect(m.onInteract).toHaveBeenCalledTimes(1);
+    expect(a.onInteract).toHaveBeenCalledTimes(1);
+    expect(t.of('interact')).toEqual([
+      { interactableId: 'use:a', kind: 'use', actorId: 'player', action: 'interact' },
+      { interactableId: 'use:m', kind: 'use', actorId: 'player', action: 'mercy' },
+    ]);
+  });
+  it('a mercy-only item does not respond to the interact key', () => {
+    const t = setup();
+    const m = mercy(t, 'use:m', -1);
+    t.sys.register(m);
+    t.input.press('interact');
+    t.tick();
+    expect(m.onInteract).not.toHaveBeenCalled();
+    expect(t.sys.focus).toBeNull();
+  });
+  it('holds are per action: a mercy hold completes while an interact hold is cancelled independently', () => {
+    const t = setup();
+    const k = t.item('use:k', -1, { holdSeconds: 1 });
+    const m = mercy(t, 'use:m', -1, { holdSeconds: 0.5 });
+    t.sys.register(k);
+    t.sys.register(m);
+    t.input.press('mercy');
+    t.tick();
+    expect(t.sys.holdProgressFor('mercy')).toBeGreaterThan(0);
+    expect(t.sys.holdProgress).toBe(0);
+    t.input.press('interact');
+    t.tick();
+    t.input.hold('interact');
+    t.input.hold('mercy');
+    t.tick();
+    expect(t.sys.holdProgress).toBeGreaterThan(0);
+    t.input.release('interact');
+    t.tick();
+    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:k', reason: 'released', action: 'interact' }]);
+    expect(t.sys.holdProgressFor('mercy')).toBeGreaterThan(0);
+    t.input.hold('mercy');
+    t.tick(40);
+    expect(m.onInteract).toHaveBeenCalledTimes(1);
+    expect(t.of('interact')).toEqual([{ interactableId: 'use:m', kind: 'use', actorId: 'player', action: 'mercy' }]);
+    expect(t.sys.holdProgressFor('mercy')).toBe(0);
+  });
+  it('releasing mercy mid-hold emits a cancel with action mercy', () => {
+    const t = setup();
+    t.sys.register(mercy(t, 'use:m', -1, { holdSeconds: 1 }));
+    t.input.press('mercy');
+    t.tick();
+    t.input.release('mercy');
+    t.tick();
+    expect(t.of('interact.cancelled')).toEqual([{ interactableId: 'use:m', reason: 'released', action: 'mercy' }]);
+  });
+  it('a context change or damage cancels holds of both actions', () => {
+    const t = setup();
+    t.sys.register(t.item('use:k', -1, { holdSeconds: 1 }));
+    t.sys.register(mercy(t, 'use:m', -1, { holdSeconds: 1 }));
+    t.input.press('interact');
+    t.input.press('mercy');
+    t.tick();
+    t.input.hold('interact');
+    t.input.hold('mercy');
+    t.ctx.set('menu');
+    expect(t.of('interact.cancelled')).toHaveLength(2);
+    expect(t.sys.focusFor('mercy')).toBeNull();
+    expect(t.sys.focus).toBeNull();
+  });
+  it('mercy key must be released after a cancel before it can start again', () => {
+    const t = setup();
+    const m = mercy(t, 'use:m', -1, { holdSeconds: 1 });
+    t.sys.register(m);
+    t.input.press('mercy');
+    t.tick();
+    t.me.feet.set(0, 0, 5);
+    t.input.hold('mercy');
+    t.tick();
+    t.me.feet.set(0, 0, 0);
+    t.input.press('mercy');
+    t.tick();
+    expect(t.sys.holdProgressFor('mercy')).toBe(0);
+    t.input.release('mercy');
+    t.tick();
+    t.input.press('mercy');
+    t.tick();
+    expect(t.sys.holdProgressFor('mercy')).toBeGreaterThan(0);
+  });
+});
+
+describe('InteractionSystem cone and score', () => {
+  it('coneDegrees narrows the cone; behind is rejected by default', () => {
+    const t = setup();
+    // 45 degrees off forward (-Z) at distance ~1.41.
+    const side = t.item('use:side', 0, { position: (o) => o.set(1, 0, -1), coneDegrees: 30 });
+    t.sys.register(side);
+    t.tick();
+    expect(t.sys.focus).toBeNull();
+    const wide = t.item('use:wide', 0, { position: (o) => o.set(1, 0, -1), coneDegrees: 60 });
+    t.sys.register(wide);
+    t.tick();
+    expect(t.sys.focus).toBe(wide);
+  });
+  it('360 or more disables the facing check (even directly behind)', () => {
+    const t = setup();
+    const back = t.item('use:back', 1, { coneDegrees: 360 });
+    const back2 = t.item('use:back2', 1.5, { coneDegrees: 720 });
+    const plain = t.item('use:plain', 0.5);
+    t.sys.register(back);
+    t.sys.register(back2);
+    t.sys.register(plain);
+    t.tick();
+    expect(t.sys.focus).toBe(back);
+    t.sys.register(t.item('use:near', 0.2, { coneDegrees: 359 }));
+    t.tick();
+    expect(t.sys.focus).toBe(back);
+  });
+  it('score overrides the default (lower wins) and ties still go to the lower id', () => {
+    const t = setup();
+    const near = t.item('use:near', -0.5);
+    const far = t.item('use:far', -1.5, { score: () => -10 });
+    t.sys.register(near);
+    t.sys.register(far);
+    t.tick();
+    expect(t.sys.focus).toBe(far);
+    const same = t.item('use:a', -1.9, { score: () => -10 });
+    t.sys.register(same);
+    t.tick();
+    expect(t.sys.focus).toBe(same);
+  });
+  it('score receives the player feet; a throwing or non-finite score falls back to the default', () => {
+    const t = setup();
+    const seen = vi.fn(() => 1);
+    t.sys.register(t.item('use:s', -1, { score: seen }));
+    t.tick();
+    expect(seen).toHaveBeenCalledWith(t.me.feet);
+    const t2 = setup();
+    const bad = t2.item('use:bad', -1, { score: () => { throw new Error('x'); } });
+    const nan = t2.item('use:nan', -0.5, { score: () => Number.NaN });
+    t2.sys.register(bad);
+    t2.sys.register(nan);
+    t2.tick();
+    expect(t2.sys.focus).toBe(nan);
+    expect(t2.warn).toHaveBeenCalled();
+  });
+  it('score is compared only within the same action', () => {
+    const t = setup();
+    const a = t.item('use:a', -1);
+    const m = t.item('use:m', -1, { action: 'mercy', score: () => -100 });
+    t.sys.register(a);
+    t.sys.register(m);
+    t.tick();
+    expect(t.sys.focus).toBe(a);
+    expect(t.sys.focusFor('mercy')).toBe(m);
   });
 });

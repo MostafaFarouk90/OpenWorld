@@ -19,7 +19,22 @@ export interface DamageRequest {
   swingId?: number;
   /** Unit, horizontal, attacker root to target root (directional block). */
   direction?: THREE.Vector3;
+  /**
+   * Cannot be blocked or parried (red telegraphs): a modifier that sets 'blocked' or 'parried' is undone.
+   * Set by the request author or an attacker-side modifier (order band -200..-101). I-frames still apply.
+   */
+  unblockable?: boolean;
 }
+
+/** Modifier order bands (contracts/actors-and-damage.md section 4). */
+export const MODIFIER_BANDS = {
+  /** Attacker stats: weapon damage, level scaling, Burn bonuses (threads 2, 5, 7). */
+  attacker: [-200, -101],
+  /** Defender verbs: block, parry (thread 1). */
+  defender: [-100, -1],
+  /** Buffs and armour. */
+  buffs: [0, 99],
+} as const;
 
 export type DamageOutcome = 'hit' | 'blocked' | 'parried' | 'immune';
 
@@ -64,6 +79,7 @@ export class DamageResolver {
   private depth = 0;
   /** Event emitters of hits nested inside the outermost hit; they go out after its own events. */
   private readonly nested: (() => void)[] = [];
+  private readonly warnedUnblockable = new Set<string>();
 
   constructor(
     private readonly actors: ActorRegistry,
@@ -113,10 +129,18 @@ export class DamageResolver {
     const req: ModifiableRequest = { ...input, poise: poiseIn, outcome: target.invulnerable && !raw ? 'immune' : 'hit' };
     // `raw` (scripted kills) skips i-frames and modifiers such as block.
     for (const m of raw ? [] : this.modifiers.slice()) {
+      const before = { amount: req.amount, poise: req.poise, outcome: req.outcome };
       try {
         m.fn(req, target, attacker);
       } catch (err) {
         this.warn(`DamageResolver: modifier "${m.id}" failed`, err);
+      }
+      if (req.unblockable && (req.outcome === 'blocked' || req.outcome === 'parried') && before.outcome !== req.outcome) {
+        Object.assign(req, before);
+        if (!this.warnedUnblockable.has(m.id)) {
+          this.warnedUnblockable.add(m.id);
+          this.warn(`DamageResolver: modifier "${m.id}" blocked or parried an unblockable hit; undone`);
+        }
       }
     }
     // A modifier (or something it called) may have killed or removed the target.
@@ -229,7 +253,14 @@ export class DamageResolver {
   }
 
   private diedEvent(target: Actor, killerId: ActorId | null): void {
-    this.events.emit('actor.died', { actorId: target.id, killerId, kind: target.kind, team: target.team, level: target.level });
+    this.events.emit('actor.died', {
+      actorId: target.id,
+      killerId,
+      kind: target.kind,
+      team: target.team,
+      level: target.level,
+      spawnTag: target.spawnTag,
+    });
   }
 
   private result(
