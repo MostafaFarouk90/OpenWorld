@@ -53,10 +53,12 @@ export interface PlayerHandle {
    */
   leap(opts: LeapOptions): LeapHandle | null;
   /**
-   * v0.5: swaps the class kit (thread 12; out of combat only). Cancels a leap, replaces the avatar in the World
-   * (the old one is disposed), re-binds the actor owners and the weapon watch, and emits `player.avatar`.
+   * v0.5: swaps the class kit (thread 12; out of combat, not mid-cast). Cancels a leap, replaces the avatar in the
+   * World (the old one is disposed), re-binds the actor owners and the weapon watch, and emits `player.avatar`.
+   * Returns false, changing nothing, before the first avatar is attached (wait for `player.avatar`) or for the
+   * avatar already worn.
    */
-  swapAvatar(avatar: PlayerAvatar): void;
+  swapAvatar(avatar: PlayerAvatar): boolean;
 }
 
 export interface GameInput {
@@ -405,6 +407,7 @@ export class Game {
    */
   attachAvatar(avatar: PlayerAvatar): void {
     if (this.disposed || this.attached === avatar) return;
+    if (this.opts.world.avatar !== avatar) throw new Error('Game: attachAvatar needs the avatar the World holds (world.setAvatar first)');
     const previous = this.attached?.classId ?? null;
     this.unbindAvatar();
     this.attached = avatar;
@@ -416,21 +419,21 @@ export class Game {
     this.events.emit('player.avatar', { classId: avatar.classId, previous });
   }
 
-
   private unbindAvatar(): void {
     // The weapon watch closes an open attack window (one `attack.window` close) as it is undone.
     for (const u of this.avatarUnbind.reverse()) u();
     this.avatarUnbind = [];
   }
 
-  private swapAvatar(avatar: PlayerAvatar): void {
+  private swapAvatar(avatar: PlayerAvatar): boolean {
     if (this.disposed) throw new Error('Game: disposed');
     const world = this.opts.world;
-    if (world.avatar === avatar) return;
+    if (!this.attached || world.avatar === avatar) return false;
     world.player.cancelLeap();
     this.unbindAvatar();
     world.replaceAvatar(avatar);
     this.attachAvatar(avatar);
+    return true;
   }
 
   /** Registers a training dummy (already added to WorldCombat) as an immortal neutral actor. */
