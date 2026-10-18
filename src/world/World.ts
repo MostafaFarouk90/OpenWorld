@@ -2,7 +2,7 @@ import type * as THREE from 'three';
 import { FIXED_TIMESTEP, WORLD } from '../config/constants';
 import type { InputSnapshot } from '../input/InputManager';
 import type { PhysicsWorld, Vec3 } from '../physics/PhysicsWorld';
-import { Player } from '../characters/Player';
+import { Player, type PlayerOptions } from '../characters/Player';
 import type { KnightAvatar } from '../characters/KnightAvatar';
 import type { Foot } from '../characters/knightClips';
 import { heightAt as terrainHeightAt } from '../terrain/heightfield';
@@ -21,6 +21,14 @@ export interface WorldOptions {
   heightAt?: (x: number, z: number) => number;
   colliders?: TerrainColliders;
   sounds?: WorldSounds;
+  /** Forwarded to the Player (the game core's move modifiers). */
+  moveModifier?: PlayerOptions['moveModifier'];
+}
+
+/** Points in the fixed tick where the game core runs its system phases (contracts/game-events-and-flags.md §2). */
+export interface WorldTickHooks {
+  /** After the player avatar's fixed update, before combat tracing: enemy and NPC mixers. */
+  beforeCombat?(): void;
 }
 
 /** Attack clip per input slot (InputSnapshot.attack 1-4): left mouse or key 1 is the horizontal slice. */
@@ -68,6 +76,7 @@ export class World {
     this.player = new Player(scene, physics, this.spawn, {
       movementLocked: () => this._avatar?.controller.movementLocked ?? false,
       onRespawn: (at) => this.colliders.update(at.x, at.z),
+      moveModifier: options.moveModifier,
     });
   }
 
@@ -91,7 +100,7 @@ export class World {
   }
 
   /** `move` is the camera-relative input already rotated into world space. */
-  fixedUpdate(input: InputSnapshot, move: { x: number; z: number }): void {
+  fixedUpdate(input: InputSnapshot, move: { x: number; z: number }, hooks?: WorldTickHooks): void {
     const attack = ATTACK_SLOTS[input.attack - 1];
     if (attack && this._avatar) this._avatar.controller.playAttack(attack);
 
@@ -104,8 +113,9 @@ export class World {
     if (this._avatar) {
       this.player.syncSimulatedPose();
       this._avatar.fixedUpdate(this.player.locomotion());
-      this.combat.fixedUpdate(FIXED_TIMESTEP);
     }
+    hooks?.beforeCombat?.();
+    if (this._avatar) this.combat.fixedUpdate(FIXED_TIMESTEP);
   }
 
   render(alpha: number, frameTime: number): void {
