@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { BRIGHTWATER_LAYOUT } from '../region/brightwater.layout';
 import { createFakeCore } from '../region/testing/fakeCore';
-import { fakeLoader } from './npcModels.test';
+import { fakeLoader } from './npcTestKit';
 import plugin from './npcs.plugin';
 import type { NpcsService } from './types';
 
@@ -36,16 +36,22 @@ describe('npcs plugin', () => {
 
   it('returns immediately with a loader that never resolves', () => {
     const fc = world();
-    fc.services.set('assets', { load: () => new Promise(() => {}), instantiate: () => { throw new Error('x'); }, animations: () => [] });
+    (fc.ctx as { assets: unknown }).assets = { load: () => new Promise(() => {}), instantiate: () => { throw new Error('x'); }, animations: () => [] };
+    fc.playerFeet.x = 25; fc.playerFeet.z = 131;
     expect(plugin.setup(fc.ctx)).toBeUndefined();
     expect((fc.services.get('npcs') as NpcsService).get('edda')!.hasModel).toBe(false);
     plugin.dispose!();
   });
 
-  it('swaps models in when the assets service resolves', async () => {
+  it('swaps models in by proximity when ctx.assets is a loader (setup itself loads nothing)', async () => {
     const fc = world();
-    fc.services.set('assets', fakeLoader());
+    const loader = fakeLoader();
+    (fc.ctx as { assets: unknown }).assets = loader;
+    fc.playerFeet.x = 25; fc.playerFeet.z = 131; // at edda
     plugin.setup(fc.ctx);
+    expect(loader.loads.length).toBe(0);
+    expect((fc.services.get('npcs') as NpcsService).get('edda')!.hasModel).toBe(false);
+    fc.tick('intent');
     await new Promise((r) => setTimeout(r, 0));
     expect((fc.services.get('npcs') as NpcsService).get('edda')!.hasModel).toBe(true);
     plugin.dispose!();
@@ -61,6 +67,35 @@ describe('npcs plugin', () => {
     expect(fc.scene.children.length).toBe(0);
     expect(fc.systems.size).toBe(0);
     expect(fc.services.has('npcs')).toBe(false);
+  });
+
+  it('ignores a services-registered assets loader (only ctx.assets counts)', async () => {
+    const fc = world();
+    fc.services.set('assets', fakeLoader());
+    plugin.setup(fc.ctx);
+    fc.tick('intent');
+    await new Promise((r) => setTimeout(r, 0));
+    expect((fc.services.get('npcs') as NpcsService).get('edda')!.hasModel).toBe(false);
+    plugin.dispose!();
+  });
+
+  it('teardown still runs every remover and disposes the manager when one throws', () => {
+    const fc = world();
+    const add = fc.ctx.systems.add;
+    fc.ctx.systems.add = (s) => {
+      const off = add(s);
+      return s.id === 'npcs-behaviour' ? () => { throw new Error('remover boom'); } : off;
+    };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    plugin.setup(fc.ctx);
+    expect(() => plugin.dispose!()).not.toThrow();
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+    expect(fc.services.has('npcs')).toBe(false);
+    expect(fc.systems.has('npcs-anim')).toBe(false);
+    expect(fc.actors.size).toBe(0);
+    expect(fc.interactables.size).toBe(0);
+    expect(fc.scene.children.length).toBe(0);
   });
 
   it('cleans up when setup fails (missing post anchor)', () => {

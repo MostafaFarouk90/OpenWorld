@@ -57,7 +57,13 @@ export function createFakeCore(): FakeCore {
     physics: {
       rapier: undefined as never,
       addStaticCollider(desc: object) {
-        const c = { desc };
+        const c = {
+          desc,
+          enabled: true,
+          setEnabled(on: boolean) {
+            c.enabled = on;
+          },
+        };
         colliders.add(c);
         return c as never;
       },

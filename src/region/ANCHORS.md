@@ -1,96 +1,96 @@
 # Brightwater anchors, triggers and structures
 
 Generated from `brightwater.layout.ts` by `npx vite-node tools/gen-region-docs.ts`; a test fails when this file drifts.
-Metres from the origin, +Z north, yaw 0 faces +Z, yaw 90 faces +X. Anchor `y` is absolute and computed from the terrain at runtime.
+Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is absolute and computed from the terrain at runtime.
 
 ## Anchors
 
 | id | x | z | dy | yaw | tags |
 | --- | --- | --- | --- | --- | --- |
-| brightwater.player-spawn | 0 | 0 | 0 | 0 | spawn |
-| brightwater.loft-bed | 0 | 2 | 0 | 0 | poi |
-| brightwater.gate | 0 | 25 | 0 | 0 | poi |
-| brightwater.scarecrow | 3 | 27 | 0 | 0 | spawn, scarecrow |
-| lane.start | 0 | 32 | 0 | 0 | poi |
-| lane.cart | 0 | 66 | 0 | 0 | poi |
-| lane.fence | 0 | 87 | 0 | 0 | poi |
-| lane.end | 0 | 108 | 0 | 0 | poi |
-| kettlewick.square | 3 | 127 | 0 | 0 | poi |
-| kettlewick.gate | 0 | 165 | 0 | 0 | poi |
-| kettlewick.bakery-door | 17 | 132 | 0 | 90 | poi |
-| kettlewick.bakery-counter | 25 | 132 | 0 | 270 | poi |
-| kettlewick.barrel | 27 | 135 | 0 | 0 | interact |
-| kettlewick.bakery-hearth | 21.5 | 129 | 0 | 0 | interact |
-| kettlewick.bakery-fire | 26 | 128 | 0 | 0 | fx |
-| kettlewick.notice-board | -9 | 124 | 0 | 0 | interact |
-| kettlewick.tavern-door | -16 | 132 | 0 | 270 | poi |
-| yard.centre | -45 | 120 | 0 | 0 | poi |
-| yard.board | -45 | 127 | 0 | 180 | poi |
-| yard.dummy-1 | -40 | 117 | 0 | 0 | dummy |
-| yard.dummy-2 | -50 | 117 | 0 | 0 | dummy |
-| yard.blocker | -52 | 125 | 0 | 90 | replay |
-| yard.dodge-lane | -36 | 125 | 0 | 0 | replay |
-| yard.pole-1 | -53.5 | 111 | 0 | 90 | replay |
-| yard.pole-2 | -53.5 | 121 | 0 | 90 | replay |
-| chapel.yard-centre | 32 | 60 | 0 | 90 | poi |
-| chapel.door | 46 | 60 | 0 | 90 | poi, door |
-| chapel.kneel | 53 | 60 | 0 | 90 | poi |
-| chapel.altar | 57 | 60 | 0 | 90 | poi |
-| chapel.banner-1 | 49 | 60 | 9 | 0 | elevated, banner |
-| chapel.banner-2 | 52 | 60 | 9 | 0 | elevated, banner |
-| chapel.banner-3 | 55 | 60 | 9 | 0 | elevated, banner |
-| waystone.chapel | 40 | 45 | 0 | 0 | waystone |
-| waystone.kettlewick | 12 | 156 | 0 | 0 | waystone, waystone-lit |
-| waystone.north | 10 | 310 | 0 | 0 | waystone |
-| npc-post.gaut | -3 | 24 | 0 | 0 | npc-post |
-| npc-post.edda | 25 | 131 | 0 | 270 | npc-post |
-| npc-post.stane | -40 | 128 | 0 | 0 | npc-post |
-| npc-post.aelfreda | 52 | 64 | 0 | 90 | npc-post |
-| npc-post.hob | 42 | 47 | 0 | 0 | npc-post |
-| npc-post.wynn | -9 | 44 | 0 | 90 | npc-post |
-| beat.t01.start | 0 | 2 | 0 | 0 | beat |
-| beat.t02.start | 3 | 26 | 0 | 0 | beat |
-| beat.t03.start | 0 | 32 | 0 | 0 | beat |
-| beat.t04.start | 40 | 60 | 0 | 90 | beat |
-| beat.t05.start | 38 | 60 | 0 | 90 | beat |
-| beat.t06.start | 40 | 60 | 0 | 270 | beat |
-| beat.t07.start | 0 | 62 | 0 | 0 | beat |
-| beat.t08.start | 0 | 95 | 0 | 0 | beat |
-| beat.t09.start | 0 | 112 | 0 | 0 | beat |
-| beat.t10.start | 0 | 114 | 0 | 0 | beat |
-| beat.t11.start | 0 | 120 | 0 | 0 | beat |
-| beat.t12.start | 14 | 132 | 0 | 90 | beat |
-| beat.t13.start | 24 | 133 | 0 | 0 | beat |
-| beat.t14.start | 38 | 48 | 0 | 0 | beat |
-| beat.t15.start | 0 | 158 | 0 | 0 | beat |
-| spawn.t05.wraith-1 | 30 | 52 | 0 | 90 | spawn |
-| spawn.t05.wraith-2 | 30 | 68 | 0 | 90 | spawn |
-| spawn.t05.wraith-3 | 36 | 60 | 0 | 90 | spawn |
-| spawn.t08.wraith-1 | -3 | 104 | 0 | 180 | spawn |
-| spawn.t08.wraith-2 | 3 | 106 | 0 | 180 | spawn |
-| spawn.t08.wraith-3 | 0 | 110 | 0 | 180 | spawn |
-| spawn.t09.soldier-1 | 0 | 120 | 0 | 180 | spawn |
-| spawn.t10.wraith-1 | 0 | 124 | 0 | 180 | spawn |
-| spawn.t11.wraith-1 | -8 | 138 | 0 | 180 | spawn |
-| spawn.t11.wraith-2 | 8 | 138 | 0 | 180 | spawn |
-| spawn.t11.wraith-3 | 0 | 142 | 0 | 180 | spawn |
-| spawn.t15.wave-1 | -8 | 190 | 0 | 180 | spawn |
-| spawn.t15.wave-2 | 8 | 190 | 0 | 180 | spawn |
-| spawn.t15.wave-3 | -4 | 198 | 0 | 180 | spawn |
-| spawn.t15.wave-4 | 4 | 198 | 0 | 180 | spawn |
-| m01.villager-1 | -18 | 150 | 0 | 90 | villager |
-| m01.villager-2 | 22 | 110 | 0 | 270 | villager |
-| m01.villager-3 | -10 | 56 | 0 | 90 | villager |
-| spawn.m01.wraith-1 | 0 | 45 | 0 | 0 | spawn |
-| spawn.m01.wraith-2 | 0 | 80 | 0 | 0 | spawn |
-| spawn.m01.wraith-3 | -4 | 128 | 0 | 0 | spawn |
-| spawn.m01.wraith-4 | 4 | 150 | 0 | 0 | spawn |
-| spawn.m01.wraith-5 | -6 | 112 | 0 | 0 | spawn |
-| patrol.north.1 | 20 | 400 | 0 | 0 | patrol |
-| patrol.north.2 | 0 | 420 | 0 | 0 | patrol |
-| patrol.north.3 | -20 | 400 | 0 | 0 | patrol |
-| patrol.north.4 | 0 | 380 | 0 | 0 | patrol |
-| spawn.patrol.wraith-1 | 0 | 400 | 0 | 0 | spawn |
+| brightwater.player-spawn | 0 | 0 | 0 | 180 | spawn |
+| brightwater.loft-bed | 0 | 2 | 0 | 180 | poi |
+| brightwater.gate | 0 | 25 | 0 | 180 | poi |
+| brightwater.scarecrow | 3 | 27 | 0 | 180 | spawn, scarecrow |
+| lane.start | 0 | 32 | 0 | 180 | poi |
+| lane.cart | 0 | 66 | 0 | 180 | poi |
+| lane.fence | 0 | 87 | 0 | 180 | poi |
+| lane.end | 0 | 108 | 0 | 180 | poi |
+| kettlewick.square | 3 | 127 | 0 | 180 | poi |
+| kettlewick.gate | 0 | 165 | 0 | 180 | poi |
+| kettlewick.bakery-door | 17 | 132 | 0 | 270 | poi |
+| kettlewick.bakery-counter | 25 | 132 | 0 | 90 | poi |
+| kettlewick.barrel | 27 | 135 | 0 | 180 | interact |
+| kettlewick.bakery-hearth | 21.5 | 129 | 0 | 180 | interact |
+| kettlewick.bakery-fire | 26 | 128 | 0 | 180 | fx |
+| kettlewick.notice-board | -9 | 124 | 0 | 180 | interact |
+| kettlewick.tavern-door | -16 | 132 | 0 | 90 | poi |
+| yard.centre | -45 | 120 | 0 | 180 | poi |
+| yard.board | -45 | 127 | 0 | 0 | poi |
+| yard.dummy-1 | -40 | 117 | 0 | 180 | dummy |
+| yard.dummy-2 | -50 | 117 | 0 | 180 | dummy |
+| yard.blocker | -52 | 125 | 0 | 270 | replay |
+| yard.dodge-lane | -36 | 125 | 0 | 180 | replay |
+| yard.pole-1 | -53.5 | 111 | 0 | 270 | replay |
+| yard.pole-2 | -53.5 | 121 | 0 | 270 | replay |
+| chapel.yard-centre | 32 | 60 | 0 | 270 | poi |
+| chapel.door | 46 | 60 | 0 | 270 | poi, door |
+| chapel.kneel | 53 | 60 | 0 | 270 | poi |
+| chapel.altar | 57 | 60 | 0 | 270 | poi |
+| chapel.banner-1 | 45.6 | 54 | 5 | 90 | elevated, banner |
+| chapel.banner-2 | 45.6 | 57 | 5 | 90 | elevated, banner |
+| chapel.banner-3 | 45.6 | 63 | 5 | 90 | elevated, banner |
+| waystone.chapel | 40 | 45 | 0 | 180 | waystone |
+| waystone.kettlewick | 12 | 156 | 0 | 180 | waystone, waystone-lit |
+| waystone.north | 10 | 310 | 0 | 180 | waystone |
+| npc-post.gaut | -3 | 24 | 0 | 180 | npc-post |
+| npc-post.edda | 25 | 131 | 0 | 90 | npc-post |
+| npc-post.stane | -40 | 128 | 0 | 180 | npc-post |
+| npc-post.aelfreda | 52 | 64 | 0 | 270 | npc-post |
+| npc-post.hob | 42 | 47 | 0 | 180 | npc-post |
+| npc-post.wynn | -9 | 44 | 0 | 270 | npc-post |
+| beat.t01.start | 0 | 2 | 0 | 180 | beat |
+| beat.t02.start | 3 | 26 | 0 | 180 | beat |
+| beat.t03.start | 0 | 32 | 0 | 180 | beat |
+| beat.t04.start | 40 | 60 | 0 | 270 | beat |
+| beat.t05.start | 38 | 60 | 0 | 270 | beat |
+| beat.t06.start | 40 | 60 | 0 | 90 | beat |
+| beat.t07.start | 0 | 62 | 0 | 180 | beat |
+| beat.t08.start | 0 | 95 | 0 | 180 | beat |
+| beat.t09.start | 0 | 112 | 0 | 180 | beat |
+| beat.t10.start | 0 | 114 | 0 | 180 | beat |
+| beat.t11.start | 0 | 120 | 0 | 180 | beat |
+| beat.t12.start | 14 | 132 | 0 | 270 | beat |
+| beat.t13.start | 24 | 133 | 0 | 180 | beat |
+| beat.t14.start | 38 | 48 | 0 | 180 | beat |
+| beat.t15.start | 0 | 158 | 0 | 180 | beat |
+| spawn.t05.wraith-1 | 30 | 52 | 0 | 270 | spawn |
+| spawn.t05.wraith-2 | 30 | 68 | 0 | 270 | spawn |
+| spawn.t05.wraith-3 | 36 | 60 | 0 | 270 | spawn |
+| spawn.t08.wraith-1 | -3 | 104 | 0 | 0 | spawn |
+| spawn.t08.wraith-2 | 3 | 106 | 0 | 0 | spawn |
+| spawn.t08.wraith-3 | 0 | 110 | 0 | 0 | spawn |
+| spawn.t09.soldier-1 | 0 | 120 | 0 | 0 | spawn |
+| spawn.t10.wraith-1 | 0 | 124 | 0 | 0 | spawn |
+| spawn.t11.wraith-1 | -8 | 138 | 0 | 0 | spawn |
+| spawn.t11.wraith-2 | 8 | 138 | 0 | 0 | spawn |
+| spawn.t11.wraith-3 | 0 | 142 | 0 | 0 | spawn |
+| spawn.t15.wave-1 | -8 | 190 | 0 | 0 | spawn |
+| spawn.t15.wave-2 | 8 | 190 | 0 | 0 | spawn |
+| spawn.t15.wave-3 | -4 | 198 | 0 | 0 | spawn |
+| spawn.t15.wave-4 | 4 | 198 | 0 | 0 | spawn |
+| m01.villager-1 | -18 | 150 | 0 | 270 | villager |
+| m01.villager-2 | 22 | 110 | 0 | 90 | villager |
+| m01.villager-3 | -10 | 56 | 0 | 270 | villager |
+| spawn.m01.wraith-1 | 0 | 45 | 0 | 180 | spawn |
+| spawn.m01.wraith-2 | 0 | 80 | 0 | 180 | spawn |
+| spawn.m01.wraith-3 | -4 | 128 | 0 | 180 | spawn |
+| spawn.m01.wraith-4 | 4 | 150 | 0 | 180 | spawn |
+| spawn.m01.wraith-5 | -6 | 112 | 0 | 180 | spawn |
+| patrol.north.1 | 20 | 400 | 0 | 180 | patrol |
+| patrol.north.2 | 0 | 420 | 0 | 180 | patrol |
+| patrol.north.3 | -20 | 400 | 0 | 180 | patrol |
+| patrol.north.4 | 0 | 380 | 0 | 180 | patrol |
+| spawn.patrol.wraith-1 | 0 | 400 | 0 | 180 | spawn |
 
 ## Triggers
 
@@ -121,8 +121,10 @@ Metres from the origin, +Z north, yaw 0 faces +Z, yaw 90 faces +X. Anchor `y` is
 | loft | loft | 0 | 0 | 8 x 8 | open |
 | gate-lane | gate | 0 | 25 | 8 x 1 | open |
 | gate-kettlewick | gate | 0 | 165 | 10 x 1 | open |
-| cart | cart | 0 | 70 | 4 x 2.5 | solid |
-| fence-lane | fence | 0 | 90 | 10 x 0.6 | solid |
+| cart | cart | 0 | 70 | 4 x 1 | solid |
+| fence-cart-w | fence | -9 | 70 | 14 x 0.6 | solid |
+| fence-cart-e | fence | 9 | 70 | 14 x 0.6 | solid |
+| fence-lane | fence | 0 | 90 | 32 x 0.6 | solid |
 | bakery | bakery | 24 | 132 | 10 x 10 | enterable |
 | tavern | tavern | -24 | 132 | 12 x 10 | solid |
 | house-01 | house | -16 | 100 | 8 x 8 | solid |
@@ -146,6 +148,6 @@ Metres from the origin, +Z north, yaw 0 faces +Z, yaw 90 faces +X. Anchor `y` is
 | pole-2 | pole | -55 | 121 | 0.4 x 0.4 | solid |
 | chapel | chapel | 52 | 60 | 12 x 18 | enterable |
 | altar | altar | 57 | 60 | 1.6 x 3 | solid |
-| waystone-chapel | waystone | 40 | 45 | 1.6 x 1.6 | solid |
-| waystone-kettlewick | waystone | 12 | 156 | 1.6 x 1.6 | solid |
-| waystone-north | waystone | 10 | 310 | 1.6 x 1.6 | solid |
+| waystone-chapel | waystone | 40 | 46.8 | 1.6 x 1.6 | solid |
+| waystone-kettlewick | waystone | 12 | 157.8 | 1.6 x 1.6 | solid |
+| waystone-north | waystone | 10 | 311.8 | 1.6 x 1.6 | solid |

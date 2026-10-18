@@ -1,14 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import * as THREE from 'three';
+import { describe, expect, it, vi } from 'vitest';
 import { buildProps } from './props';
-import { createLocalChest } from './localDoor';
+import { coreFactories } from './StructureBuilder';
 import { createFakeCore } from './testing/fakeCore';
 
 function setup(fc = createFakeCore()) {
   fc.ctx.anchors.define({ id: 'kettlewick.barrel', position: { x: 27, y: 4, z: 135 }, yaw: 0 });
   fc.ctx.anchors.define({ id: 'kettlewick.bakery-hearth', position: { x: 21.5, y: 4, z: 129 }, yaw: 0 });
   fc.ctx.anchors.define({ id: 'kettlewick.notice-board', position: { x: -9, y: 3, z: 124 }, yaw: 0 });
-  const handle = buildProps({ ...fc.ctx, createChest: (o) => createLocalChest(fc.ctx, o) }, fc.ctx.anchors);
+  fc.ctx.anchors.define({ id: 'chapel.banner-1', position: { x: 40, y: 5, z: 60 }, yaw: 1.5, tags: ['banner'] });
+  fc.ctx.anchors.define({ id: 'chapel.banner-2', position: { x: 40, y: 5, z: 64 }, yaw: 1.5, tags: ['banner'] });
+  const handle = buildProps({ ...fc.ctx, ...coreFactories(fc.ctx) }, fc.ctx.anchors);
   return { fc, handle };
+}
+/** Provides a quests service whose m02/o2 objective is current while `state.current` is true. */
+function withQuests(fc: ReturnType<typeof createFakeCore>, current = true) {
+  const state = { current };
+  fc.services.set('quests', { isObjectiveCurrent: (q: string, o: string) => state.current && q === 'm02' && o === 'o2' });
+  return state;
 }
 const loots = (fc: ReturnType<typeof createFakeCore>) => fc.emitted.filter((e) => e.type === 'loot.granted');
 
@@ -30,8 +39,21 @@ describe('buildProps', () => {
     expect(fc.scene.getObjectByName('barrel')!.position.toArray()).toEqual([27, 4, 135]);
   });
 
+  it('hearth stone is gated: off without a quests service, off when o2 is not current, on when it is', () => {
+    const { fc } = setup();
+    const i = fc.interactables.get('pickup:hearth-stone')!;
+    expect(i.enabled!()).toBe(false);
+    const q = withQuests(fc, false);
+    expect(i.enabled!()).toBe(false);
+    q.current = true;
+    expect(i.enabled!()).toBe(true);
+    fc.services.set('quests', { isObjectiveCurrent: () => { throw new Error('x'); } });
+    expect(i.enabled!()).toBe(false);
+  });
+
   it('hearth stone is taken once, persisted, disabled and hidden', () => {
     const { fc } = setup();
+    withQuests(fc);
     const i = fc.interactables.get('pickup:hearth-stone')!;
     const stone = fc.scene.getObjectByName('hearth-stone')!;
     expect(stone.visible).toBe(true);
@@ -46,6 +68,7 @@ describe('buildProps', () => {
 
   it('hearth stone resyncs from the save in both directions and starts hidden if taken', () => {
     const { fc } = setup();
+    withQuests(fc);
     const i = fc.interactables.get('pickup:hearth-stone')!;
     const stone = fc.scene.getObjectByName('hearth-stone')!;
     fc.flags.set('pickup.hearth-stone.taken', true);
@@ -60,6 +83,19 @@ describe('buildProps', () => {
     fc2.flags.set('pickup.hearth-stone.taken', true);
     setup(fc2);
     expect(fc2.scene.getObjectByName('hearth-stone')!.visible).toBe(false);
+  });
+
+  it('puts a banner mesh at each banner anchor and disposes them', () => {
+    const { fc, handle } = setup();
+    const b1 = fc.scene.getObjectByName('banner:chapel.banner-1') as THREE.Mesh;
+    const b2 = fc.scene.getObjectByName('banner:chapel.banner-2') as THREE.Mesh;
+    expect(b1.position.toArray()).toEqual([40, 5, 60]);
+    expect(b2.position.toArray()).toEqual([40, 5, 64]);
+    expect(b1.rotation.y).toBeCloseTo(1.5);
+    const geoDispose = vi.spyOn(b1.geometry, 'dispose');
+    handle.dispose();
+    expect(geoDispose).toHaveBeenCalled();
+    expect(fc.scene.getObjectByName('banner:chapel.banner-1')).toBeUndefined();
   });
 
   it('the notice board does nothing on interact', () => {
@@ -82,7 +118,7 @@ describe('buildProps', () => {
   it('a missing anchor throws and leaves nothing registered', () => {
     const fc = createFakeCore();
     fc.ctx.anchors.define({ id: 'kettlewick.barrel', position: { x: 0, y: 0, z: 0 }, yaw: 0 });
-    expect(() => buildProps({ ...fc.ctx, createChest: (o) => createLocalChest(fc.ctx, o) }, fc.ctx.anchors)).toThrow(/unknown anchor/);
+    expect(() => buildProps({ ...fc.ctx, ...coreFactories(fc.ctx) }, fc.ctx.anchors)).toThrow(/unknown anchor/);
     expect(fc.interactables.size).toBe(0);
     expect(fc.scene.children).toHaveLength(0);
   });
@@ -90,7 +126,7 @@ describe('buildProps', () => {
   it('a duplicate registration throws and cleans up what was registered', () => {
     const fc = createFakeCore();
     const { handle } = setup(fc);
-    expect(() => buildProps({ ...fc.ctx, createChest: (o) => createLocalChest(fc.ctx, o) }, fc.ctx.anchors)).toThrow(/duplicate/);
+    expect(() => buildProps({ ...fc.ctx, ...coreFactories(fc.ctx) }, fc.ctx.anchors)).toThrow(/duplicate/);
     expect(fc.interactables.size).toBe(3);
     handle.dispose();
   });

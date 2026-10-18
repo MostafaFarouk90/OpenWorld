@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { HurtboxSet } from '../combat/HurtboxSet';
-import { SCARECROW_DEFS, TOPPLE_SECONDS, spawnScarecrow } from './scarecrow';
+import { SCARECROW_DEFS, TOPPLE_SECONDS, spawnScarecrow, type ScarecrowDeps } from './scarecrow';
 import { createFakeCore } from './testing/fakeCore';
 
 const anchor = { position: { x: 3, y: 0, z: 27 }, yaw: 0 };
@@ -9,7 +9,16 @@ const anchor = { position: { x: 3, y: 0, z: 27 }, yaw: 0 };
 function setup() {
   const fc = createFakeCore();
   const removed: unknown[] = [];
-  const deps = { ...fc.ctx, combat: { addTarget: fc.ctx.combat.addTarget, removeTarget: (t: unknown) => void removed.push(t) } };
+  const combat = {
+    addTarget: (set: unknown, actorId?: string) => {
+      const off = fc.ctx.combat.addTarget(set as HurtboxSet, actorId);
+      return () => {
+        removed.push(set);
+        off();
+      };
+    },
+  };
+  const deps = { ...fc.ctx, combat } as unknown as ScarecrowDeps;
   const s = spawnScarecrow(deps, anchor, () => 2);
   return { fc, s, removed };
 }
@@ -75,14 +84,6 @@ describe('spawnScarecrow', () => {
     expect(fc.systems.size).toBe(0);
   });
 
-  it('works when the combat API has no removeTarget', () => {
-    const fc = createFakeCore();
-    const s = spawnScarecrow(fc.ctx, anchor, () => 0);
-    expect(() => fc.fire('actor.died', { actorId: s.actor.id })).not.toThrow();
-    runTopple(fc);
-    expect(fc.actors.size).toBe(0);
-  });
-
   it('dispose mid-topple removes everything and is idempotent', () => {
     const { fc, s } = setup();
     fc.fire('actor.died', { actorId: s.actor.id });
@@ -98,7 +99,9 @@ describe('spawnScarecrow', () => {
   it('dispose while alive removes the target, actor and mesh and ignores later deaths', () => {
     const { fc, s, removed } = setup();
     s.dispose();
-    expect(removed).toHaveLength(1);
+    s.dispose();
+    expect(removed).toHaveLength(1); // the remover runs exactly once
+    expect(fc.targets).toHaveLength(0);
     expect(fc.actors.size).toBe(0);
     fc.fire('actor.died', { actorId: s.actor.id });
     expect(fc.systems.size).toBe(0);
@@ -106,7 +109,7 @@ describe('spawnScarecrow', () => {
 
   it('a failing combat.addTarget cleans up and rethrows', () => {
     const fc = createFakeCore();
-    const deps = { ...fc.ctx, combat: { addTarget: () => { throw new Error('nope'); } } };
+    const deps = { ...fc.ctx, combat: { addTarget: () => { throw new Error('nope'); } } } as unknown as ScarecrowDeps;
     expect(() => spawnScarecrow(deps, anchor, () => 0)).toThrow('nope');
     expect(fc.actors.size).toBe(0);
     expect(fc.scene.children).toHaveLength(0);

@@ -7,7 +7,7 @@ export function renderAnchorsDoc(layout = BRIGHTWATER_LAYOUT): string {
     '# Brightwater anchors, triggers and structures',
     '',
     'Generated from `brightwater.layout.ts` by `npx vite-node tools/gen-region-docs.ts`; a test fails when this file drifts.',
-    'Metres from the origin, +Z north, yaw 0 faces +Z, yaw 90 faces +X. Anchor `y` is absolute and computed from the terrain at runtime.',
+    'Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is absolute and computed from the terrain at runtime.',
     '',
     '## Anchors',
     '',

@@ -26,9 +26,13 @@ describe('stepNpc', () => {
     const s = createNpcState({ ...post, yaw: 1 });
     expect(run(s, 1, { player: null, talkingTo: false })).toBeCloseTo(1);
   });
-  it('turns toward a player inside the glance radius (+X is yaw pi/2)', () => {
+  it('turns toward a player inside the glance radius (+X is yaw -pi/2; yaw 0 faces -Z)', () => {
     const s = createNpcState(post);
-    expect(run(s, 2, { player: { x: 4, z: 0 }, talkingTo: false })).toBeCloseTo(Math.PI / 2);
+    expect(run(s, 2, { player: { x: 4, z: 0 }, talkingTo: false })).toBeCloseTo(-Math.PI / 2);
+    const t = createNpcState(post);
+    expect(run(t, 2, { player: { x: 0, z: 4 }, talkingTo: false })).toBeCloseTo(Math.PI);
+    const u = createNpcState(post);
+    expect(run(u, 1, { player: { x: 0, z: -4 }, talkingTo: false })).toBeCloseTo(0);
   });
   it('ignores a player outside the glance radius', () => {
     const s = createNpcState(post);
@@ -49,9 +53,9 @@ describe('stepNpc', () => {
   it('faces a far player while talking, at the faster rate', () => {
     const s = createNpcState(post);
     stepNpc(s, 0.1, { player: { x: 100, z: 0 }, talkingTo: true });
-    expect(s.yaw).toBeCloseTo(NPC_TUNING.talkTurnRate * 0.1);
+    expect(s.yaw).toBeCloseTo(-NPC_TUNING.talkTurnRate * 0.1);
     run(s, 1, { player: { x: 100, z: 0 }, talkingTo: true });
-    expect(s.yaw).toBeCloseTo(Math.PI / 2);
+    expect(s.yaw).toBeCloseTo(-Math.PI / 2);
   });
   it('talking with a null player goes back to the post', () => {
     const s = createNpcState(post);
@@ -85,12 +89,12 @@ describe('stepNpc', () => {
   });
   it('takes the short way across +-pi and keeps yaw in (-pi, pi]', () => {
     const s = createNpcState({ x: 0, z: 0, yaw: Math.PI - 0.1 });
-    // player behind-left: target -pi+0.1 (yaw just across the wrap); short way is +0.2 rad
-    stepNpc(s, 0.05, { player: { x: -Math.sin(0.1), z: -Math.cos(0.1) }, talkingTo: false });
+    // player at yaw target -pi+0.1 (yaw just across the wrap); short way is +0.2 rad
+    stepNpc(s, 0.05, { player: { x: Math.sin(0.1), z: Math.cos(0.1) }, talkingTo: false });
     // one 0.15 rad step across the seam, not 3 rad the long way
     expect(s.yaw).toBeCloseTo(-Math.PI + 0.05, 5);
     for (let i = 0; i < 20; i++) {
-      stepNpc(s, 0.05, { player: { x: -Math.sin(0.1), z: -Math.cos(0.1) }, talkingTo: false });
+      stepNpc(s, 0.05, { player: { x: Math.sin(0.1), z: Math.cos(0.1) }, talkingTo: false });
       expect(s.yaw).toBeGreaterThan(-Math.PI);
       expect(s.yaw).toBeLessThanOrEqual(Math.PI);
     }
