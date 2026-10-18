@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { ActorsLike, ClockLike, DamageLike, EventsLike, PlayerLike, ServicesLike, Vec3 } from '../vfx/ports';
 import { BURN, RALLY, SURGE } from '../vfx/tuning';
-import type { Burn } from './Burn';
+import type { Burn, BurnZone } from './Burn';
 import { actorsInRadius } from './areas';
 import { RALLY_DEF, SURGE_DEF } from './spellDefs';
 import type { ReleaseContext, SpellCaster } from './SpellCaster';
@@ -19,6 +19,91 @@ export interface SpellEffectDeps {
   clock: ClockLike;
   services: ServicesLike;
   burn: Burn;
+  /** The single shard-use path (Scar decision and its side effects); defaults to the Burn's own. */
+  useShard?: (gain: number, source: string) => unknown;
+  /** Class forms; defaults to a registry holding only the Knight's. */
+  forms?: SurgeForms;
+  /** The player's class id; null or undefined (no class chosen) plays as the Knight. */
+  classId?: () => string | null | undefined;
+}
+
+export const DEFAULT_CLASS_ID = 'knight';
+
+/** What a class's Surge form receives: the shared numbers for the zone, resolved before the Burn gain. */
+export interface SurgeFormContext {
+  casterId: string;
+  zone: BurnZone;
+  feet: Vec3;
+  facingYaw: number;
+  radius: number;
+  poise: number;
+  host: SpellEffectHost;
+  damage: DamageLike;
+}
+export type SurgeFormImpl = (ctx: SurgeFormContext) => void;
+export type RegisterFormResult = { ok: true; dispose(): void } | { ok: false; reason: 'duplicate' | 'bad-class' | 'bad-zone' | 'bad-impl' };
+
+const ZONES: readonly BurnZone[] = ['warm', 'blaze', 'cinder'];
+
+/**
+ * Per-class Surge forms (design 9.7). The shared handler does what is class-independent (heal, Burn, feedback);
+ * a form only decides who is hit and how. An unregistered class or zone plays the Knight's form, with one warning.
+ */
+export class SurgeForms {
+  private readonly forms = new Map<string, SurgeFormImpl>();
+  private readonly warned = new Set<string>();
+
+  register(classId: string, zone: BurnZone, impl: SurgeFormImpl): RegisterFormResult {
+    if (typeof classId !== 'string' || classId.length === 0) return { ok: false, reason: 'bad-class' };
+    if (!ZONES.includes(zone)) return { ok: false, reason: 'bad-zone' };
+    if (typeof impl !== 'function') return { ok: false, reason: 'bad-impl' };
+    const key = `${classId}/${zone}`;
+    if (this.forms.has(key)) return { ok: false, reason: 'duplicate' };
+    this.forms.set(key, impl);
+    return {
+      ok: true,
+      dispose: () => {
+        if (this.forms.get(key) === impl) this.forms.delete(key);
+      },
+    };
+  }
+
+  has(classId: string, zone: BurnZone): boolean {
+    return this.forms.has(`${classId}/${zone}`);
+  }
+
+  resolve(classId: string, zone: BurnZone): SurgeFormImpl | undefined {
+    const own = this.forms.get(`${classId}/${zone}`);
+    if (own) return own;
+    const key = `${classId}/${zone}`;
+    if (!this.warned.has(key)) {
+      this.warned.add(key);
+      console.warn(`[spells] no Surge form for ${key}, using ${DEFAULT_CLASS_ID}`);
+    }
+    return this.forms.get(`${DEFAULT_CLASS_ID}/${zone}`);
+  }
+}
+
+/** The Knight's Surge: one damage.apply per hostile in range; direction lets the damage thread knock back. */
+const knightForm: SurgeFormImpl = (c) => {
+  for (const hit of actorsInRadius(c.host.actors, c.feet, c.radius, { team: 'hostile', alive: true })) {
+    c.damage.apply({
+      attackerId: c.casterId,
+      targetId: hit.actor.id,
+      amount: SURGE.damage,
+      poise: c.poise,
+      kind: 'spell',
+      attackId: SURGE.spellId,
+      point: new THREE.Vector3(hit.position.x, hit.position.y, hit.position.z),
+      direction: toVector3(horizontalDir(c.feet, hit.position, c.facingYaw)),
+    });
+  }
+};
+
+export function createSurgeForms(): SurgeForms {
+  const forms = new SurgeForms();
+  for (const zone of ZONES) forms.register(DEFAULT_CLASS_ID, zone, knightForm);
+  return forms;
 }
 
 function horizontalDir(from: Vec3, to: Vec3, fallbackYaw: number): Vec3 {
@@ -41,6 +126,8 @@ export function registerSurge(host: SpellEffectHost, caster: SpellCaster, deps: 
     if (e.spellId === SURGE_DEF.id && SURGE_DEF.soundCharge) sfx(services, SURGE_DEF.soundCharge);
   });
 
+  const forms = deps.forms ?? createSurgeForms();
+  const useShard = deps.useShard ?? ((gain: number, source: string) => burn.useShard(gain, source));
   const offDef = caster.register(SURGE_DEF, (ctx: ReleaseContext) => {
     const feet = feetOf(host);
     const zone = burn.zone();
@@ -48,23 +135,12 @@ export function registerSurge(host: SpellEffectHost, caster: SpellCaster, deps: 
     const scale = radius / SURGE.radius;
     const poise = zone === 'cinder' ? SURGE.cinderPoise : SURGE.poise;
 
-    // One damage.apply per hostile target; direction lets the damage thread knock back.
-    for (const hit of actorsInRadius(host.actors, feet, radius, { team: 'hostile', alive: true })) {
-      damage.apply({
-        attackerId: ctx.casterId,
-        targetId: hit.actor.id,
-        amount: SURGE.damage,
-        poise,
-        kind: 'spell',
-        attackId: SURGE.spellId,
-        point: new THREE.Vector3(hit.position.x, hit.position.y, hit.position.z),
-        direction: toVector3(horizontalDir(feet, hit.position, host.player.facingYaw)),
-      });
-    }
+    const form = forms.resolve(deps.classId?.() ?? DEFAULT_CLASS_ID, zone);
+    form?.({ casterId: ctx.casterId, zone, feet, facingYaw: host.player.facingYaw, radius, poise, host, damage });
 
     const me = host.actors.get(ctx.casterId);
     if (me) damage.heal(ctx.casterId, me.maxHealth * SURGE.healFraction);
-    burn.add(BURN.surgeGain, 'surge');
+    useShard(BURN.surgeGain, 'surge');
 
     const vfx = services.get('vfx');
     vfx?.spawnEffect('surge', { position: feet, scale }, { zone });

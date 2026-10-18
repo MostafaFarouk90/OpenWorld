@@ -8,10 +8,11 @@ import type { Actor } from '../actors/Actor';
 import type { DamageResult, ModifiableRequest } from '../actors/DamageResolver';
 import type { AnimationController } from '../characters/AnimationController';
 import type { KnightAvatar } from '../characters/KnightAvatar';
-import { KNIGHT_ATTACKS, GROUNDED_STATES } from '../characters/knightClips';
+import { GROUNDED_STATES } from '../characters/knightClips';
 import type { GameContext } from '../core/Game';
 import type { Action } from '../input/actions';
 import type { Vec3 } from '../physics/PhysicsWorld';
+import { AttackSets, SpeedMultipliers, DEFAULT_CLASS_ID, type AttackSet, type RegisterAttackSetResult } from './attackSets';
 import { DodgeModel } from './DodgeModel';
 import { GoldPouch } from './GoldPouch';
 import { GuardModel } from './GuardModel';
@@ -21,7 +22,7 @@ import { PoiseTracker, type PoiseReaction } from './PoiseTracker';
 import { DeathTimeline, resolveRespawnPoint } from './Respawn';
 import { createSecondWind, type SecondWindApi } from './SecondWind';
 import { Stamina } from './Stamina';
-import { DODGE, ORDER, POISE, RESPAWN, STAMINA } from './tuning';
+import { DODGE, GUARD, ORDER, POISE, RESPAWN, STAMINA } from './tuning';
 
 /** Poise handed to damage.stagger so a parry always breaks the attacker. */
 export const PARRY_STAGGER_POISE = 999;
@@ -33,7 +34,8 @@ const RIM_BASH_COOLDOWN_TICKS = 60;
 const KNOCKBACK_TICKS = 9;
 const SPRINT_PROMPT_TICKS = 30;
 const RESPAWN_TELEPORT_WAIT_TICKS = 180;
-const HEAVY_ATTACK_CLIP = '1H_Melee_Attack_Chop';
+export const IRON_STANCE_SKILL = 'knight.ironStance';
+export const FLOWING_CUTS_SKILL = 'knight.flowingCuts';
 const STAB_CLIP = '1H_Melee_Attack_Stab';
 const EYE_HEIGHT = 1.4;
 const CHEST_HEIGHT = 1.2;
@@ -50,6 +52,13 @@ export interface CombatVerbsService {
   /** An attack or a combat action is playing: other one-shot abilities must wait. */
   readonly busy: boolean;
   readonly staggered: boolean;
+  /** A class registers its four attacks once (thread 12 and the class threads); the Knight's is built in. */
+  registerAttackSet(classId: string, set: AttackSet): RegisterAttackSetResult;
+  /**
+   * Multiplies the player's attack animation speed (Tobb's Battle-song); a number or a function read every tick.
+   * Multipliers combine by product, clamped to 0.5..2. Returns the remover.
+   */
+  addAttackSpeedMultiplier(id: string, mult: number | (() => number)): () => void;
 }
 
 declare module '../core/Services' {
@@ -107,6 +116,10 @@ export class CombatVerbs {
   readonly secondWind: SecondWindApi;
   lastRestedWaystoneId: string | null = null;
 
+  readonly attackSets = new AttackSets();
+  readonly attackSpeed = new SpeedMultipliers((id) => console.warn(`combatVerbs: attack speed multiplier "${id}" is invalid, ignored`));
+  private appliedAttackClass: string | null = null;
+  private offIronStance: (() => void) | null = null;
   private controller: AnimationController | null = null;
   private offLocks = new Map<string, () => void>();
   private pending: Pending[] = [];
@@ -222,6 +235,8 @@ export class CombatVerbs {
       get staggered() {
         return self.controller?.currentAction === 'stagger';
       },
+      registerAttackSet: (classId, set) => self.attackSets.register(classId, set),
+      addAttackSpeedMultiplier: (id, mult) => self.attackSpeed.add(id, mult),
     });
     const rig = ctx.cameraRig;
     if (rig) {
@@ -239,6 +254,8 @@ export class CombatVerbs {
     this.offLocks.clear();
     this.deadModifier?.();
     this.deadModifier = null;
+    this.offIronStance?.();
+    this.offIronStance = null;
     this.invuln.remove('dodge');
     this.invuln.remove('respawn');
     this.invuln.remove('secondWind');
@@ -272,6 +289,7 @@ export class CombatVerbs {
     const c = avatar.controller;
     const tick = ctx.clock.tick;
     const a = ctx.input.actions;
+    this.syncClassKit(c);
     if (actor.dead || this.timeline.pending) {
       this.stamina.tick({ blocking: false, sprinting: false });
       return;
@@ -286,7 +304,7 @@ export class CombatVerbs {
     this.guard.setBlockHeld(canGuard && (free || guarding), tick);
 
     if (this.dodge.active) this.stepDodge(c);
-    else if (a.pressed('dodge')) this.tryDodge(c, grounded, free || action === 'block');
+    else if (a.pressed('dodge')) this.tryDodge(c, grounded, free || action === 'block' || this.cutCancellable(c));
 
     if (!this.dodge.active) {
       if (canGuard && free) c.enterAction('block');
@@ -301,8 +319,43 @@ export class CombatVerbs {
     if (a.pressed('jump') && grounded && action === null && !c.movementLocked) this.prompts()?.success('jump');
 
     this.setLock('verbs.exhausted', this.stamina.exhausted ? ['sprint'] : null);
-    this.setLock('verbs.heavy', !this.stamina.canAfford(STAMINA.heavyAttackCost) ? ['attack3'] : null);
+    this.setLock('verbs.heavy', !this.stamina.canAfford(STAMINA.heavyAttackCost) ? [`attack${this.attackSet().heavyIndex + 1}` as Action] : null);
     this.applyMovement();
+  }
+
+  /** The attack set of the chosen class (the Knight's until the M07 choice). */
+  private attackSet(): AttackSet {
+    return this.attackSets.get(this.classId());
+  }
+
+  private classId(): string {
+    return this.ctx.services.get('progression')?.classId ?? DEFAULT_CLASS_ID;
+  }
+
+  /** Per tick: the class's attacks on the controller, attack speed, and Iron Stance's walk-while-guarding. */
+  private syncClassKit(c: AnimationController): void {
+    const id = this.classId();
+    if (this.appliedAttackClass !== id) {
+      // Refused while an attack plays; it is retried next tick.
+      if (c.setAttackSet(this.attackSets.get(id).attacks)) this.appliedAttackClass = id;
+    }
+    c.setAttackSpeed(this.attackSpeed.value());
+    const iron = this.learned(IRON_STANCE_SKILL);
+    c.setWalkWhileBlocking(iron);
+    const guarding = iron && c.currentAction === 'block';
+    if (guarding && !this.offIronStance) {
+      this.offIronStance = this.ctx.player.addMoveModifier('verbs.ironStance', { speedScale: GUARD.ironStanceSpeedScale, lockFacing: true });
+    } else if (!guarding && this.offIronStance) {
+      this.offIronStance();
+      this.offIronStance = null;
+    }
+  }
+
+  /** Flowing Cuts: a dodge may cancel an attack once its damage window has closed (the recovery). */
+  private cutCancellable(c: AnimationController): boolean {
+    if (!this.learned(FLOWING_CUTS_SKILL) || c.state !== 'attack') return false;
+    const att = c.activeAttack();
+    return !!att && att.normalizedTime > att.activeEnd;
   }
 
   private tryDodge(c: AnimationController, grounded: boolean, free: boolean): void {
@@ -424,6 +477,7 @@ export class CombatVerbs {
       facingYaw: this.ctx.player.facingYaw,
       stamina: this.stamina,
       exhausted: this.stamina.exhausted,
+      arcHalfAngle: this.learned(IRON_STANCE_SKILL) ? GUARD.ironStanceArcHalfAngle : undefined,
     });
     if (res.outcome === 'parried') {
       req.outcome = 'parried';
@@ -701,9 +755,10 @@ export class CombatVerbs {
     this.offs.push(
       avatar.controller.events.subscribe((e) => {
         if (e.type !== 'clipStart') return;
-        const i = KNIGHT_ATTACKS.findIndex((a) => a.clip === e.clip);
+        const set = this.attackSet();
+        const i = set.attacks.findIndex((a) => a.clip === e.clip);
         if (i < 0) return;
-        if (e.clip === HEAVY_ATTACK_CLIP) this.stamina.spend(STAMINA.heavyAttackCost);
+        if (i === set.heavyIndex) this.stamina.spend(STAMINA.heavyAttackCost);
         this.prompts()?.success(`attack${i + 1}`);
       }),
     );

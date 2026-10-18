@@ -119,7 +119,13 @@ export type ServicesLike = import('../core/Services').Services;
 
 /** Services of threads that have not merged yet; read through `looseService` so a missing one is just undefined. */
 export interface LooseServices {
-  progression: { addMaxHealthModifier(id: string, fn: () => number): () => void; learned(skillId: string): boolean };
+  progression: {
+    addMaxHealthModifier(id: string, fn: () => number): () => void;
+    learned(skillId: string): boolean;
+    refreshMaxHealth?(): void;
+    /** The chosen class id; null when none (plays as the Knight). */
+    readonly classId?: string | null;
+  };
   abilities: {
     registerHandler(
       skillId: string,

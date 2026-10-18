@@ -7,10 +7,8 @@ export type BurnSaveData = { burn: number; scars: number };
 /**
  * Heartshard Burn (design 9.7): 0..100 heat that decays out of combat and clears on rest, plus permanent Scars.
  *
- * DEFERRAL: Warm-zone max-health loss and Scars are registered with progression as max-health modifiers that
- * return 1 until the designs thread confirms the numbers. `healthMultiplier()` implements the design numbers
- * behind BURN_MAX_HEALTH_PENALTY_ENABLED (false), so flipping that constant is the only change needed.
- * Scars are tracked as a number (always 0 in the slice); `addScar()` exists but nothing calls it.
+ * `healthMultiplier()` (zone penalty times Scar penalty) is registered with progression as a max-health modifier.
+ * Scars come only from `useShard()`: a shard use at Burn 75 or more (read before the gain) adds one.
  */
 export class Burn {
   readonly key = 'burn';
@@ -51,10 +49,22 @@ export class Burn {
     return 'warm';
   }
 
-  /** Not called anywhere in the slice. */
+  /** Internal to the spells plugin and tests; game code goes through `useShard`. */
   addScar(n = 1): void {
     if (!Number.isFinite(n) || n <= 0) return;
     this._scars += Math.floor(n);
+  }
+
+  /**
+   * A shard use (Surge, Leap, rekindle, Release): the Scar is decided on the Burn at the press, before the gain, so
+   * a use that starts at 75 or more scars even when the gain is clamped at 100. `scarred` lets a caller decide at the press
+   * (the Leap charges at takeoff, a few ticks later). A fractional 74.6 does not scar
+   * (`zone()` floors, like every other Burn threshold).
+   */
+  useShard(gain: number, source: string, scarred: boolean = this.zone() === 'cinder'): { gained: number; scarred: boolean } {
+    if (scarred) this.addScar(1);
+    const gained = this.add(gain, source);
+    return { gained, scarred };
   }
 
   /** Fraction of max health that remains: scars (2% each, max 30%) times the zone penalty. */

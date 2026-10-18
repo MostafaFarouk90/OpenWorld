@@ -234,3 +234,54 @@ describe('Rally', () => {
     expect(registerHandler).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('Surge forms', () => {
+  it('the Knight form is built in; registration validates and refuses duplicates', async () => {
+    const { createSurgeForms } = await import('./SurgeAndRally');
+    const forms = createSurgeForms();
+    expect(forms.has('knight', 'warm') && forms.has('knight', 'blaze') && forms.has('knight', 'cinder')).toBe(true);
+    const impl = vi.fn();
+    expect(forms.register('warden', 'blaze', impl).ok).toBe(true);
+    expect(forms.register('warden', 'blaze', impl)).toEqual({ ok: false, reason: 'duplicate' });
+    expect(forms.register('', 'warm', impl)).toEqual({ ok: false, reason: 'bad-class' });
+    expect(forms.register('x', 'lava' as never, impl)).toEqual({ ok: false, reason: 'bad-zone' });
+    expect(forms.register('x', 'warm', null as never)).toEqual({ ok: false, reason: 'bad-impl' });
+  });
+  it('dispose frees the slot; an unknown class plays the Knight form with one warning', async () => {
+    const { createSurgeForms } = await import('./SurgeAndRally');
+    const forms = createSurgeForms();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const r = forms.register('mage', 'warm', vi.fn());
+    if (!r.ok) throw new Error('register');
+    r.dispose();
+    expect(forms.has('mage', 'warm')).toBe(false);
+    expect(forms.resolve('mage', 'warm')).toBe(forms.resolve('knight', 'warm'));
+    forms.resolve('mage', 'warm');
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+  it('the cast runs the class form with the zone numbers; heal and Burn stay shared', async () => {
+    const { createSurgeForms } = await import('./SurgeAndRally');
+    const forms = createSurgeForms();
+    const impl = vi.fn();
+    forms.register('warden', 'blaze', impl);
+    burn.add(45, 't');
+    const useShard = vi.fn((g: number, s: string) => burn.useShard(g, s));
+    registerSurge(w, caster, { ...deps(), forms, classId: () => 'warden', useShard });
+    w.actors.add(new FakeActor('a', 'hostile', 3, 0));
+    caster.cast('player', SURGE.spellId);
+    finish();
+    expect(impl).toHaveBeenCalledWith(expect.objectContaining({ casterId: 'player', zone: 'blaze', radius: 8, poise: SURGE.poise }));
+    expect(w.damage.applied).toHaveLength(0); // the Knight's damage loop did not run
+    expect(useShard).toHaveBeenCalledWith(BURN.surgeGain, 'surge');
+    expect(w.damage.healed).toHaveLength(1);
+  });
+  it('no class (null) plays as the Knight; a throwing-free missing form just skips the damage', async () => {
+    const { createSurgeForms } = await import('./SurgeAndRally');
+    registerSurge(w, caster, { ...deps(), forms: createSurgeForms(), classId: () => null });
+    w.actors.add(new FakeActor('a', 'hostile', 3, 0));
+    caster.cast('player', SURGE.spellId);
+    finish();
+    expect(w.damage.applied.map((r) => r.targetId)).toEqual(['a']);
+  });
+});

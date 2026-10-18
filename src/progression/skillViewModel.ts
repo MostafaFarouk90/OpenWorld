@@ -1,5 +1,5 @@
 import type { ProgressionService } from '../hud/ports';
-import { SKILLS, type SkillBranch, type SkillDef } from './skills';
+import { DEFAULT_CLASS_ID, SKILLS, type SkillBranch, type SkillDef } from './skills';
 
 export type SkillNodeState = 'learned' | 'learnable' | 'no-points' | 'blocked' | 'unavailable';
 
@@ -11,7 +11,7 @@ export interface SkillNode {
 export interface SkillViewModel {
   points: number;
   level: number;
-  branches: { branch: SkillBranch; nodes: SkillNode[] }[];
+  branches: { branch: string; nodes: SkillNode[] }[];
 }
 
 const BRANCHES: readonly SkillBranch[] = ['bulwark', 'vanguard', 'standard'];
@@ -23,7 +23,7 @@ export function skillViewModel(p: ProgressionService): SkillViewModel {
     level: p.level,
     branches: BRANCHES.map((branch) => ({
       branch,
-      nodes: SKILLS.filter((s) => s.branch === branch)
+      nodes: SKILLS.filter((s) => s.classId === DEFAULT_CLASS_ID && s.branch === branch)
         .sort((a, b) => a.tier - b.tier)
         .map((skill) => {
           if (p.learned(skill.id)) return { skill, state: 'learned' as const };

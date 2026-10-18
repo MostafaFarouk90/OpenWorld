@@ -120,6 +120,9 @@ export class AnimationController {
   private airTime = 0;
   private minAirVerticalSpeed = 0;
   private pendingAttack: AttackClipDef | null = null;
+  private attackOrder: string[] = [];
+  private attackSpeed = 1;
+  private walkWhileBlocking = false;
   private attack: AttackRun | null = null;
   private swingCounter = 0;
   private tickCount = 0;
@@ -172,12 +175,7 @@ export class AnimationController {
       const loop = states.some((s) => LOOPING_STATES.has(s) && this.stateClips[s] === name);
       this.ensureAction(byName.get(name)!, loop);
     }
-    for (const def of options.attacks ?? KNIGHT_ATTACKS) {
-      const clip = byName.get(def.clip);
-      if (!clip) continue; // Unknown attacks are refused by playAttack.
-      this.attackDefs.set(def.clip, def);
-      this.ensureAction(clip, false);
-    }
+    this.loadAttacks(options.attacks ?? KNIGHT_ATTACKS);
     this.footsteps = options.footsteps ?? KNIGHT_FOOTSTEPS;
 
     this.currentClip = this.stateClips.idle;
@@ -195,7 +193,10 @@ export class AnimationController {
    * `flinch` is active: the player must not move or jump by input.
    */
   get movementLocked(): boolean {
-    if (this.run) return this.run.kind === 'oneShot' ? this.run.lockMove : MOVEMENT_LOCKING_ACTIONS.has(this.run.kind);
+    if (this.run) {
+      if (this.run.kind === 'block' && this.walkWhileBlocking) return false;
+      return this.run.kind === 'oneShot' ? this.run.lockMove : MOVEMENT_LOCKING_ACTIONS.has(this.run.kind);
+    }
     return this._state === 'attack' || this.pendingAttack !== null;
   }
 
@@ -281,6 +282,43 @@ export class AnimationController {
     return action ? (this.weights.get(clip) ?? 0) : 0;
   }
 
+  /** Iron Stance: a held block no longer locks movement (the caller scales the speed). `blockHit` still does. */
+  setWalkWhileBlocking(on: boolean): void {
+    this.walkWhileBlocking = on;
+  }
+
+  /** The attack clip for input slot 1..4 in the current set, or undefined. */
+  attackClip(slot: number): string | undefined {
+    return Number.isInteger(slot) ? this.attackOrder[slot - 1] : undefined;
+  }
+
+  /**
+   * Replaces the four attacks (a class change). Refused (false) while an attack plays or is queued, or when no clip of
+   * the set exists in the file; nothing changes then.
+   */
+  setAttackSet(defs: readonly AttackClipDef[]): boolean {
+    if (this.disposed || this.attack || this.pendingAttack || this._state === 'attack') return false;
+    if (!defs.some((d) => this.clipsByName.has(d.clip))) return false;
+    this.loadAttacks(defs);
+    return true;
+  }
+
+  /** Playback speed of attack clips (1 = authored); clamped to 0.5..2. Bad values reset to 1. */
+  setAttackSpeed(mult: number): void {
+    this.attackSpeed = Number.isFinite(mult) && mult > 0 ? Math.min(2, Math.max(0.5, mult)) : 1;
+  }
+
+  private loadAttacks(defs: readonly AttackClipDef[]): void {
+    this.attackDefs.clear();
+    this.attackOrder = defs.map((d) => d.clip);
+    for (const def of defs) {
+      const clip = this.clipsByName.get(def.clip);
+      if (!clip) continue; // Unknown attacks are refused by playAttack.
+      this.attackDefs.set(def.clip, def);
+      this.ensureAction(clip, false);
+    }
+  }
+
   /**
    * Queues an attack to start on the next fixed tick. Returns false (and does nothing) for an
    * unknown clip, while not standing on the ground, or while an attack is playing or queued.
@@ -356,7 +394,7 @@ export class AnimationController {
     if (input.grounded) this.minAirVerticalSpeed = 0;
 
     // Playback rate: walk and run follow the actual speed.
-    const rate = this.loopRate(input.horizontalSpeed);
+    const rate = this._state === 'attack' ? this.attackSpeed : this.loopRate(input.horizontalSpeed);
     this.actions.get(this.currentClip)!.timeScale = rate;
 
     this.rampWeights(dt);

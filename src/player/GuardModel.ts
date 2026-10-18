@@ -8,6 +8,8 @@ export interface GuardContext {
   stamina: { canAfford(n: number): boolean; readonly current?: number };
   /** The Knight is exhausted: no block. */
   exhausted?: boolean;
+  /** Half-angle of the covered arc; default `GUARD.arcHalfAngle` (Iron Stance widens it). */
+  arcHalfAngle?: number;
 }
 
 export interface GuardResolution {
@@ -86,7 +88,7 @@ export class GuardModel {
 
   resolve(req: DamageRequestLike, ctx: GuardContext): GuardResolution {
     if (!this.isHeld || this.lockedOut(ctx.tick) || ctx.exhausted || req.unblockable) return HIT;
-    if (this.isUnblockable(req) || !this.inFront(req, ctx.facingYaw)) return HIT;
+    if (this.isUnblockable(req) || !this.inFront(req, ctx.facingYaw, ctx.arcHalfAngle)) return HIT;
 
     if (this.isParry(req, ctx.tick)) return { outcome: 'parried', scale: 0, poiseScale: 0, staminaCost: 0, guardBreak: false };
 
@@ -104,13 +106,13 @@ export class GuardModel {
     return req.attackId !== undefined && this.unblockableAttacks.has(attackKey(req.attackerId, req.attackId));
   }
 
-  private inFront(req: DamageRequestLike, yaw: number): boolean {
+  private inFront(req: DamageRequestLike, yaw: number, arcHalfAngle: number = GUARD.arcHalfAngle): boolean {
     const d = req.direction;
     if (!d) return false;
     const len = Math.hypot(d.x, d.z);
     if (len < 1e-6) return false;
     const dot = (-Math.sin(yaw) * -d.x + -Math.cos(yaw) * -d.z) / len;
-    return dot >= Math.cos(GUARD.arcHalfAngle);
+    return dot >= Math.cos(arcHalfAngle);
   }
 
   private isParry(req: DamageRequestLike, tick: number): boolean {

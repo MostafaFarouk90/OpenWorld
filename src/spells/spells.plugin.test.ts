@@ -157,11 +157,11 @@ describe('spells plugin', () => {
     expect(addMaxHealthModifier).not.toHaveBeenCalled();
     f.tick(40);
     expect(addMaxHealthModifier).toHaveBeenCalledTimes(1);
-    expect(registerHandler).toHaveBeenCalledTimes(1);
+    expect(registerHandler).toHaveBeenCalledTimes(2); // Rally Cry and Banner Plant
     f.tick(200);
     expect(addMaxHealthModifier).toHaveBeenCalledTimes(1);
     f.services.spells!.addBurn(90, 't');
-    expect((addMaxHealthModifier.mock.calls[0] as unknown as [string, () => number])[1]()).toBe(1); // penalty deferred: multiplier stays 1
+    expect((addMaxHealthModifier.mock.calls[0] as unknown as [string, () => number])[1]()).toBeCloseTo(0.636, 3); // Burn 90: cinder zone, 36.4% lost
     plugin.dispose!();
     expect(remove).toHaveBeenCalledTimes(1);
   });
@@ -263,7 +263,7 @@ describe('spells plugin', () => {
   it('Rally through the abilities handler is free; direct cast stays free; no reportTrigger', () => {
     let handler: ((a: unknown) => unknown) | undefined;
     const off = vi.fn();
-    const f = makeCtx({ abilities: { registerHandler: (_id: string, h: never) => { handler = h; return { ok: true, dispose: off }; } } as never });
+    const f = makeCtx({ abilities: { registerHandler: (id: string, h: never) => { if (id === 'knight.rallyCry') handler = h; return { ok: true, dispose: off }; } } as never });
     plugin.setup(f.ctx);
     expect(handler!({ skillId: 'knight.rallyCry', slot: 0, caster: f.world.actors.player, ctx: f.ctx })).toEqual({ ok: true });
     expect(f.services.spells!.ember).toBe(100);
@@ -271,7 +271,7 @@ describe('spells plugin', () => {
     expect(f.services.spells!.cooldown('rally-cry')).toBe(0);
     expect(f.services.spells!.cast('rally-cry').ok).toBe(true);
     plugin.dispose!();
-    expect(off).toHaveBeenCalledTimes(1);
+    expect(off).toHaveBeenCalledTimes(2); // Rally Cry and Banner Plant
   });
 
   it('a throwing registerHandler is logged once across retries', () => {
@@ -280,8 +280,8 @@ describe('spells plugin', () => {
     const f = makeCtx({ abilities: { registerHandler } as never });
     plugin.setup(f.ctx);
     f.tick(60 * 5);
-    expect(registerHandler).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledTimes(1);
+    expect(registerHandler).toHaveBeenCalledTimes(2); // Rally Cry and Banner Plant, once each
+    expect(warn).toHaveBeenCalledTimes(2);
     plugin.dispose!();
     warn.mockRestore();
   });
@@ -371,6 +371,214 @@ describe('spells plugin', () => {
       ticks(f, 60);
       const n = f.world.events.log.filter((l) => l.type === 'burn.changed').length;
       expect(n).toBeLessThanOrEqual(Math.ceil(50 - f.services.spells!.burn) + 1);
+      plugin.dispose!();
+    });
+  });
+});
+
+describe('shard use, Scars and the Leap (slice 2)', () => {
+  const scarEvents = (f: ReturnType<typeof makeCtx>) => f.world.events.log.filter((l) => l.type === 'scar.added').map((l) => l.payload);
+  const progression = () => {
+    const refresh = vi.fn();
+    return { refresh, svc: { addMaxHealthModifier: () => () => undefined, learned: () => false, refreshMaxHealth: refresh, classId: null as string | null } };
+  };
+
+  it('useShard adds the gain and scars only from Burn 75: event, flag, max-health refresh', () => {
+    const p = progression();
+    const f = makeCtx({ progression: p.svc });
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    s.addBurn(74, 't');
+    expect(s.useShard(8, 'test')).toEqual({ gained: 8, scarred: false });
+    expect(scarEvents(f)).toEqual([]);
+    expect(f.state.flags.has('story.f10.scars')).toBe(false);
+    expect(s.useShard(8, 'test')).toMatchObject({ scarred: true });
+    expect(s.scars).toBe(1);
+    expect(scarEvents(f)).toEqual([{ total: 1, source: 'test' }]);
+    expect(f.state.flags.get('story.f10.scars')).toBe(1);
+    expect(p.refresh).toHaveBeenCalled();
+    plugin.dispose!();
+  });
+
+  it('a Scar at Burn 100 (no burn.changed) still refreshes max health', () => {
+    const p = progression();
+    const f = makeCtx({ progression: p.svc });
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    s.addBurn(100, 't');
+    p.refresh.mockClear();
+    f.world.events.log.length = 0;
+    s.useShard(25, 'surge');
+    expect(f.world.events.types()).not.toContain('burn.changed');
+    expect(p.refresh).toHaveBeenCalledTimes(1);
+    expect(s.scars).toBe(1);
+    plugin.dispose!();
+  });
+
+  it('addBurn never scars', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    s.addBurn(90, 'boss');
+    s.addBurn(20, 'boss');
+    expect(s.scars).toBe(0);
+    plugin.dispose!();
+  });
+
+  it('a Surge cast at Burn 75 or more scars once; below it does not', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    s.addBurn(74, 't');
+    s.cast('heartshard-surge');
+    f.tick(60 * 3);
+    expect(s.scars).toBe(0);
+    expect(s.burn).toBeGreaterThan(95);
+    f.tick(60 * 7); // out of the cooldown
+    s.cast('heartshard-surge');
+    f.tick(60 * 3);
+    expect(s.scars).toBe(1);
+    plugin.dispose!();
+  });
+
+  it('a player rekindle gives exactly +10 Burn; a script rekindle gives 0; at 75 or more it scars', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    f.world.events.emit('waystone.rekindled', { waystoneId: 'quenchstone', cause: 'player' });
+    expect(s.burn).toBe(10);
+    f.world.events.emit('waystone.rekindled', { waystoneId: 'quenchstone', cause: 'script' });
+    expect(s.burn).toBe(10);
+    expect(s.scars).toBe(0);
+    s.addBurn(70, 't');
+    f.world.events.emit('waystone.rekindled', { waystoneId: 'quenchstone', cause: 'player' });
+    expect(s.scars).toBe(1);
+    plugin.dispose!();
+  });
+
+  it('save.loaded re-writes the Scar flag from the loaded count', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    f.persisted.get('burn')!.load({ burn: 10, scars: 4 }, 1);
+    f.world.events.emit('save.loaded', {} as never);
+    expect(f.state.flags.get('story.f10.scars')).toBe(4);
+    plugin.dispose!();
+  });
+
+  it('a registered class Surge form is used for that class and the Knight form otherwise', () => {
+    const p = progression();
+    const f = makeCtx({ progression: p.svc });
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    const impl = vi.fn();
+    expect(s.registerSurgeForm('warden', 'warm', impl).ok).toBe(true);
+    expect(s.registerSurgeForm('warden', 'warm', impl)).toEqual({ ok: false, reason: 'duplicate' });
+    p.svc.classId = 'warden';
+    s.cast('heartshard-surge');
+    f.tick(60 * 3);
+    expect(impl).toHaveBeenCalledTimes(1);
+    expect(impl.mock.calls[0][0]).toMatchObject({ zone: 'warm', radius: 6 });
+    plugin.dispose!();
+  });
+
+  describe('the Leap', () => {
+    const grant = (f: ReturnType<typeof makeCtx>) => f.state.setFlag('ability.surge-leap.learned', true);
+    const press = (f: ReturnType<typeof makeCtx>) => {
+      f.pressed.add('surgeLeap');
+      f.tick(1);
+      f.pressed.delete('surgeLeap');
+    };
+
+    it('does nothing before M03 grants it', () => {
+      const f = makeCtx();
+      plugin.setup(f.ctx);
+      press(f);
+      expect(f.world.player.leaps).toHaveLength(0);
+      expect(f.services.spells!.leap.learned).toBe(false);
+      plugin.dispose!();
+    });
+
+    it('asks core for a 6 m leap, charges 8 Burn at takeoff and starts the 4 s cooldown', () => {
+      const f = makeCtx();
+      plugin.setup(f.ctx);
+      grant(f);
+      press(f);
+      expect(f.world.player.leaps).toEqual([{ distance: 6, apex: expect.any(Number) }]);
+      expect(f.services.spells!.burn).toBe(0);
+      f.world.player.feet.y = 0.5;
+      f.tick(1);
+      expect(f.services.spells!.burn).toBeCloseTo(8, 1);
+      const cd = f.services.spells!.leap.cooldown();
+      expect(cd.total).toBe(4);
+      expect(cd.remaining).toBeGreaterThan(3.8);
+      f.tick(60 * 4);
+      expect(f.services.spells!.leap.cooldown().remaining).toBeCloseTo(0, 5);
+      plugin.dispose!();
+    });
+
+    it('a Leap into a wall costs nothing', () => {
+      const f = makeCtx();
+      plugin.setup(f.ctx);
+      grant(f);
+      press(f);
+      f.world.player.leapHandle.active = false;
+      f.world.events.emit('player.leap', { phase: 'cancel', from: { x: 0, y: 0, z: 0 } });
+      f.tick(5);
+      expect(f.services.spells!.burn).toBe(0);
+      expect(f.services.spells!.leap.cooldown().remaining).toBe(0);
+      plugin.dispose!();
+    });
+
+    it('scars at Burn 75 or more, decided at the press', () => {
+      const f = makeCtx();
+      plugin.setup(f.ctx);
+      grant(f);
+      f.services.spells!.addBurn(80, 't');
+      press(f);
+      f.world.player.feet.y = 1;
+      f.tick(1);
+      expect(f.services.spells!.scars).toBe(1);
+      plugin.dispose!();
+    });
+
+    it('is refused when the core refuses, while staggered, in a dialogue, mid-attack, mid-block and mid-cast', () => {
+      const refusals: Array<[string, (f: ReturnType<typeof makeCtx>) => void]> = [
+        ['core refuses', (f) => { f.world.player.leapResult = 'refuse'; }],
+        ['staggered', (f) => { f.world.host.staggered = true; f.world.events.emit('actor.staggered', { actorId: 'player' } as never); }],
+        ['dialogue', (f) => { f.world.events.emit('dialogue.started', { dialogueId: 'd', npcId: 'n' } as never); }],
+        ['attacking', (f) => { (f.world.player as unknown as { avatar: unknown }).avatar = { controller: { activeAttack: () => ({ active: true }), busy: false, currentAction: null } }; }],
+        ['blocking', (f) => { (f.world.player as unknown as { avatar: unknown }).avatar = { controller: { activeAttack: () => null, busy: false, currentAction: 'block' } }; }],
+        ['dodging', (f) => { (f.world.player as unknown as { avatar: unknown }).avatar = { controller: { activeAttack: () => null, busy: false, currentAction: 'dodge' } }; }],
+        ['casting', (f) => { f.services.spells!.cast('heartshard-surge'); f.tick(2); }],
+      ];
+      for (const [name, arrange] of refusals) {
+        const f = makeCtx();
+        plugin.setup(f.ctx);
+        grant(f);
+        arrange(f);
+        const before = f.world.player.leaps.length;
+        const burn = f.services.spells!.burn;
+        press(f);
+        f.world.player.feet.y = 1;
+        f.tick(2);
+        if (name === 'core refuses') {
+          expect(f.world.player.leaps.length).toBe(before + 1);
+        } else {
+          expect(f.world.player.leaps.length, name).toBe(before);
+        }
+        expect(f.services.spells!.burn, name).toBeLessThanOrEqual(burn + 25); // only the casting case moves Burn (the Surge)
+        expect(f.services.spells!.leap.cooldown().remaining, name).toBe(0);
+        plugin.dispose!();
+      }
+    });
+
+    it('a dead player cannot leap', () => {
+      const f = makeCtx();
+      plugin.setup(f.ctx);
+      grant(f);
+      f.world.actors.player.kill();
+      press(f);
+      expect(f.world.player.leaps).toHaveLength(0);
       plugin.dispose!();
     });
   });

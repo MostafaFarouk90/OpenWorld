@@ -52,8 +52,24 @@ export class FakeActors implements ActorsLike {
   all(): Iterable<ActorLike> { return this.map.values(); }
 }
 
+export class FakeState {
+  flags = new Map<string, unknown>();
+  getFlag(k: string): unknown { return this.flags.get(k); }
+  setFlag(k: string, v: unknown): void { this.flags.set(k, v); }
+}
+
 export class FakePlayer implements PlayerLike {
   feet = new THREE.Vector3();
+  /** What `leap()` returns; null = the core refuses. */
+  leapResult: 'ok' | 'refuse' = 'ok';
+  leaps: Array<{ distance: number; apex: number }> = [];
+  leapHandle = { active: true, landed: false, cancel() { this.active = false; } };
+  leap(opts: { distance: number; apex: number }) {
+    this.leaps.push(opts);
+    if (this.leapResult === 'refuse') return null;
+    this.leapHandle = { active: true, landed: false, cancel() { this.active = false; } };
+    return this.leapHandle;
+  }
   facingYaw = 0;
   avatar = null;
   modifiers = new Map<number, { source: string; mod: Parameters<PlayerLike['addMoveModifier']>[1] }>();
@@ -127,6 +143,7 @@ export interface FakeCtx {
   services: Record<string, unknown> & { spells?: SpellsService };
   persisted: Map<string, { key: string; version: number; serialize(): unknown; load(d: unknown, v: number): void }>;
   pressed: Set<string>;
+  state: FakeState;
   /** Runs the fixed systems in phase order for `ticks` ticks of dt. */
   tick(ticks?: number, dt?: number): void;
 }
@@ -137,9 +154,11 @@ export function makeCtx(extra: Record<string, unknown> = {}): FakeCtx {
   const services: Record<string, unknown> = { ...extra };
   const persisted: FakeCtx['persisted'] = new Map();
   const pressed = new Set<string>();
+  const state = new FakeState();
   const phases = ['input', 'intent', 'animation', 'afterCombat', 'rules', 'late'];
   const ctx = {
     scene: new THREE.Scene(),
+    state,
     camera: null,
     events: world.events,
     clock: world.clock,
@@ -156,7 +175,7 @@ export function makeCtx(extra: Record<string, unknown> = {}): FakeCtx {
     input: { actions: { pressed: (a: string) => pressed.has(a) } },
   } as unknown as PluginContext;
   const f: FakeCtx = {
-    ctx, world, systems, services, persisted, pressed,
+    ctx, world, systems, services, persisted, pressed, state,
     tick(ticks = 1, dt = 1 / 60) {
       for (let i = 0; i < ticks; i++) {
         const ordered = [...systems].sort((a, b) => phases.indexOf(a.fixedPhase ?? 'rules') - phases.indexOf(b.fixedPhase ?? 'rules') || (a.order ?? 0) - (b.order ?? 0));
