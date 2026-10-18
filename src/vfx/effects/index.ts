@@ -69,7 +69,7 @@ function timedMesh(ctx: FxContext, mesh: THREE.Object3D, seconds: number, step: 
 }
 
 function ring(ctx: FxContext, t: EffectTransform, radius: number, color: number, seconds: number): EffectInstance {
-  const m = createShockRing({ inner: radius * 0.1, outer: radius * 0.16, color });
+  const m = createShockRing({ inner: radius * 0.125, outer: radius * 0.2, color });
   const o = origin(t);
   m.position.set(o.x, o.y + 0.05, o.z);
   return timedMesh(ctx, m, seconds, (p) => setRingProgress(m, p));
@@ -160,6 +160,6 @@ export const EFFECTS: Record<EffectId, EffectFactory> = {
   'skill-q': (ctx, t, p) => {
     const o = origin(t);
     ctx.points.emit('ember', o, 20, { color: GOLD, rise: 0.8, spread: 0.6, life: 1.2 }, ctx.now());
-    return ring(ctx, t, (t.scale ?? 1) * num(p, 'radius', 8), GOLD, 0.6);
+    return ring(ctx, t, (t.scale ?? 1) * num(p, 'radius', 8), num(p, 'color', GOLD), 0.6);
   },
 };

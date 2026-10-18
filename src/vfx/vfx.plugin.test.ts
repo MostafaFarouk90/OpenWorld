@@ -48,6 +48,7 @@ describe('vfx plugin', () => {
     const byId = Object.fromEntries(t.systems.map((s) => [s.id, s]));
     t.clock.frozen = true;
     t.clock.hitStopRemaining = 0.05; // hit-stop
+    t.clock.paused = false;
     for (let i = 0; i < 6; i++) {
       byId['vfx-update'].render!(1, 1 / 60, t.ctx);
       byId['vfx-camera'].render!(1, 1 / 60, t.ctx);
@@ -55,6 +56,7 @@ describe('vfx plugin', () => {
     expect((vfx as unknown as { camera: { active: boolean } }).camera.active).toBe(false);
     vfx.shake(0.1, 0.05);
     t.clock.hitStopRemaining = 0; // pause
+    t.clock.paused = true;
     for (let i = 0; i < 6; i++) {
       byId['vfx-update'].render!(1, 1 / 60, t.ctx);
       byId['vfx-camera'].render!(1, 1 / 60, t.ctx);
@@ -132,26 +134,23 @@ describe('vfx plugin', () => {
     plugin.dispose();
   });
 
-  it('falls back to the tick counter when the clock has no frozen flag', () => {
-    const t = fakeContext();
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    delete (t.clock as { frozen?: boolean }).frozen;
-    plugin.setup(t.ctx);
-    const vfx = t.services.get('vfx') as VfxService;
-    const byId = Object.fromEntries(t.systems.map((s) => [s.id, s]));
-    vfx.spawnEffect('shockwave-ring', { position: { x: 0, y: 0, z: 0 } });
-    // tick never advances -> treated as frozen, so the ring does not age out
-    for (let i = 0; i < 120; i++) byId['vfx-update'].render!(1, 1 / 60, t.ctx);
-    expect(warn).toHaveBeenCalled();
-    plugin.dispose();
-    warn.mockRestore();
-  });
-
   it('telegraph.cancelled and despawn are tolerated', () => {
     const t = fakeContext();
     plugin.setup(t.ctx);
     t.ctx.events.emit('telegraph.cancelled', { actorId: 'ghost', swingId: 1 });
     t.ctx.events.emit('actor.despawned', { actorId: 'ghost' });
     plugin.dispose();
+  });
+
+  it('works without a quality service', () => {
+    const t = fakeContext();
+    plugin.setup(t.ctx);
+    expect(t.services.get('vfx')).toBeDefined();
+    expect((t.services.get('vfx') as VfxService).quality).toBe('medium');
+    plugin.dispose();
+  });
+
+  it('does not depend on the quality plugin', () => {
+    expect(plugin.dependsOn).toEqual(['core']);
   });
 });

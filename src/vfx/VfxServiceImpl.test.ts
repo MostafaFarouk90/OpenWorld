@@ -138,4 +138,23 @@ describe('VfxServiceImpl', () => {
     vfx.dispose();
     expect(vfx.camera.active).toBe(false);
   });
+
+  it('starts with the Medium decal cap of 16', () => {
+    const { vfx } = make();
+    for (let i = 0; i < 24; i++) vfx.decals.place({ x: i, y: 0, z: 0 }, undefined, 0.5, 0x222222, 0);
+    expect(vfx.decals.liveCount).toBe(16);
+  });
+
+  it('restores materials cloned only by a dissolve once the actor leaves the scene', () => {
+    const scene = new THREE.Scene();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial());
+    const original = mesh.material;
+    scene.add(mesh);
+    const vfx = new VfxServiceImpl({ scene, actorRoot: () => null }, null, vi.fn());
+    void vfx.dissolve(mesh, 0.5);
+    expect(mesh.material).not.toBe(original);
+    scene.remove(mesh); // the despawn event arrives after the removal and the actor root is already gone
+    vfx.forgetActor('whatever');
+    expect(mesh.material).toBe(original);
+  });
 });

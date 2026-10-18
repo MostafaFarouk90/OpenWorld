@@ -64,10 +64,10 @@ describe('HitFeedback', () => {
     expect(clock.hitStop).not.toHaveBeenCalled();
   });
   it('drops hit-stop while the game is paused but keeps hit-stop frozen sims', () => {
-    const paused = setup({ frozen: true, hitStopRemaining: 0 });
+    const paused = setup({ frozen: true, paused: true, hitStopRemaining: 0 });
     paused.fb.onDamage(result());
     expect(paused.clock.hitStop).not.toHaveBeenCalled();
-    const stopping = setup({ frozen: true, hitStopRemaining: 0.02 });
+    const stopping = setup({ frozen: true, paused: false, hitStopRemaining: 0.02 });
     stopping.fb.onDamage(result());
     expect(stopping.clock.hitStop).toHaveBeenCalled();
   });

@@ -38,7 +38,7 @@ export const DEFAULT_TRAIL = { colors: [0x8a4a14, 0xe08a20, 0xffe8b0] as [number
 export const TRAIL_LEAD = 0.02;
 
 export const QUALITY = {
-  low: { renderScale: 0.75, shadows: 'off', shadowDistance: 0, viewDistanceOffset: -1, bloom: false, particleScale: 0.5, decals: 0 },
+  low: { renderScale: 0.75, shadows: 'off', shadowDistance: 0, viewDistanceOffset: -1600, bloom: false, particleScale: 0.5, decals: 0 },
   medium: { renderScale: 0.9, shadows: 'half', shadowDistance: 40, viewDistanceOffset: 0, bloom: true, particleScale: 1, decals: 16 },
   high: { renderScale: 1, shadows: 'full', shadowDistance: 80, viewDistanceOffset: 0, bloom: true, particleScale: 1, decals: 24 },
 } as const;
