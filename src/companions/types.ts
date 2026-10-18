@@ -1,5 +1,6 @@
 import type { ActorId } from '../actors/Actor';
 import type { BanterLines } from './BanterDirector';
+import type { WaitRule } from './WaitDirector';
 
 export interface CompanionDef {
   id: string;
@@ -22,6 +23,8 @@ export interface CompanionDef {
   };
   /** Interior id to the anchor he arrives at when no spot on the grid is found. */
   interiorEntry: Readonly<Record<string, string>>;
+  /** Where he waits instead of following, highest priority first (companions.md section 8). */
+  waits: readonly WaitRule[];
 }
 
 /** The `companions` service (companions.md section 3). */
@@ -53,6 +56,9 @@ export interface NavLike {
 }
 export interface InteriorsLike {
   readonly current: string | null;
+  /** True while a door fade runs (the screen is black at the switch). */
+  readonly transitioning?: boolean;
+  interiorAt?(at: { x: number; y: number; z: number }): string | null;
 }
 
 declare module '../core/Services' {
