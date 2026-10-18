@@ -19,15 +19,22 @@ export interface PostAnchor {
 }
 
 /**
- * Trainer posts. Plan slice-2-harrowmark-city.md gives only the Bastion yard centre (8200, 1730); the five
- * trainer posts stand in that fenced yard, so they share its centre until thread 17's anchor coordinates land.
- * Vendors (Wystan, Merrin, ...) have no coordinates in the plans, so none are listed; add them as kind 'vendor'.
+ * Trainer posts: the anchors thread 17 publishes in src/harrowmark/ANCHORS.md (2.5 m in front of each post, in the
+ * Bastion yard). Vendors (Wystan, Merrin, ...) have no published coordinates yet, so none are listed; add them as
+ * kind 'vendor'.
  */
-const BASTION_YARD = { x: 8200, z: 1730 } as const;
-export const POST_ANCHORS: readonly PostAnchor[] = ['gaut', 'stane', 'pennard', 'gerta', 'ashdown'].map((n) => ({
+const TRAINER_POSTS = [
+  ['gaut', 8150],
+  ['stane', 8175],
+  ['pennard', 8200],
+  ['gerta', 8225],
+  ['ashdown', 8250],
+] as const;
+export const POST_ANCHORS: readonly PostAnchor[] = TRAINER_POSTS.map(([n, x]) => ({
   id: `harrowmark.bastion.trainer.${n}`,
   kind: 'trainer' as const,
-  ...BASTION_YARD,
+  x,
+  z: 1742.5,
 }));
 
 export interface MapSourcePorts {
