@@ -87,3 +87,15 @@ describe('Ember', () => {
     expect(events.length).toBe(n + 2);
   });
 });
+
+describe('Ember boundary notifications', () => {
+  it('regen reports the final full value', () => {
+    const e = new Ember();
+    e.spend(0.4);
+    const seen: number[] = [];
+    e.onChange = (v) => seen.push(v);
+    for (let i = 0; i < 600; i++) e.regen(1 / 60);
+    expect(e.value).toBe(e.max);
+    expect(seen[seen.length - 1]).toBe(e.max);
+  });
+});

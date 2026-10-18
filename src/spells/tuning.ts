@@ -20,7 +20,7 @@ export const BURN_ZONE_PENALTY = {
 export const SPELL_MOVE_SOURCE = 'spell';
 /** Action ids (contracts/input-and-hud.md section 1) the spell locks while casting. lockOn and sprint stay free. */
 export const SPELL_LOCK_ACTIONS: readonly Action[] = [
-  'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'jump', 'surge', 'interact',
+  'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'jump', 'surge', 'surgeLeap', 'interact', 'mercy', 'mount',
   'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6',
 ];
 

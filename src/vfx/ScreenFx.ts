@@ -23,7 +23,7 @@ export class ScreenFx {
       const el = doc.createElement('div');
       el.setAttribute('data-vfx', 'vignette');
       el.style.cssText =
-        'position:fixed;inset:0;pointer-events:none;opacity:0;transition:none;z-index:5;mix-blend-mode:screen;';
+        'position:absolute;inset:0;pointer-events:none;opacity:0;transition:none;mix-blend-mode:screen;';
       this.element = el;
     } else this.element = null;
   }

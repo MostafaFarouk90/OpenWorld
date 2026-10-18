@@ -7,7 +7,7 @@ export function fakeContext(over: Partial<PluginContext> = {}) {
   const listeners = new Map<string, Array<(p: never) => void>>();
   const systems: GameSystem[] = [];
   const services = new Map<string, unknown>();
-  const clock = { tick: 0, seconds: 0, frozen: false, hitStopRemaining: 0, hitStop: vi.fn() };
+  const clock = { tick: 0, seconds: 0, frozen: false, paused: false, hitStopRemaining: 0, hitStop: vi.fn() };
   const actors = new Map<string, { id: string; root: THREE.Object3D | null }>();
   const mounted: Array<{ slot: string; id: string }> = [];
   const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);

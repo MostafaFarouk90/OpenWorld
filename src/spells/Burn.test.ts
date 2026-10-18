@@ -122,3 +122,15 @@ describe('Burn events', () => {
     expect(cb).toHaveBeenCalledWith(30, 0);
   });
 });
+
+describe('Burn boundary notifications', () => {
+  it('decay reports the final 0 even when the rounded value did not change', () => {
+    const b = new Burn();
+    const seen: number[] = [];
+    b.add(1, 't');
+    b.onChange = (v) => seen.push(v);
+    b.decay(10, false);
+    expect(b.value).toBe(0);
+    expect(seen[seen.length - 1]).toBe(0);
+  });
+});

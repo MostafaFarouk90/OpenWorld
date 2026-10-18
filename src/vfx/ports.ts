@@ -1,7 +1,5 @@
-// Structural stand-ins for the slice-1 game core (contracts/game-events-and-flags.md and
-// actors-and-damage.md). Thread 0's core was not on main when thread 7 was written, so threads 7's
-// code depends only on these small interfaces; the plugins satisfy `GamePlugin` structurally.
-// Once core lands, replace each interface here with a re-export of the real type (names match).
+// Small structural views of the game core that thread 7's pure classes depend on (so they test without a Game), plus
+// re-exports of the real core types for the plugins. The plugins use the real GameContext, GamePlugin and GraphicsService.
 import type * as THREE from 'three';
 
 export type Vec3 = { x: number; y: number; z: number };
@@ -62,6 +60,8 @@ export interface ClockLike {
   readonly seconds: number;
   /** Requested from thread 0: true while a hit-stop or pause is skipping simulated ticks. */
   readonly frozen?: boolean;
+  /** True while the game is paused (not merely in hit-stop). */
+  readonly paused?: boolean;
   readonly hitStopRemaining?: number;
   hitStop(seconds: number): void;
 }

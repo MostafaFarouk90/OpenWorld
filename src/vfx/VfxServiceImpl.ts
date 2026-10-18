@@ -59,7 +59,7 @@ export class VfxServiceImpl implements VfxService {
     const s = host.scene;
     this.sparks = new SparkPool(s, this.sparkBudget);
     this.points = new PointsPool(s, this.pointsBudget);
-    this.decals = new DecalPool(s, host.heightAt);
+    this.decals = new DecalPool(s, host.heightAt, QUALITY.medium.decals);
     this.lights = new LightFlashPool(s);
     this.trails = new TrailManager(s);
     this.trailDriver = new TrailDriver(this.trails);
@@ -99,6 +99,28 @@ export class VfxServiceImpl implements VfxService {
   }
 
   private readonly rootsById = new Map<ActorId, THREE.Object3D>();
+  /** Roots whose materials we cloned; any that leave the scene are restored (the despawn event comes after removal). */
+  private readonly touched = new Set<THREE.Object3D>();
+  private sweepIn = 0;
+
+  private sweep(): void {
+    for (const r of [...this.touched]) {
+      let p: THREE.Object3D | null = r;
+      let inScene = false;
+      while (p) {
+        if ((p as THREE.Scene).isScene) {
+          inScene = true;
+          break;
+        }
+        p = p.parent;
+      }
+      if (!inScene) {
+        this.telegraphs.cancel(r);
+        this.materials.restore(r);
+        this.touched.delete(r);
+      }
+    }
+  }
 
   /** Drops everything tied to an actor that went away: trail, telegraph and the cloned materials. */
   forgetActor(actorId: ActorId, root?: THREE.Object3D | null): void {
@@ -108,7 +130,9 @@ export class VfxServiceImpl implements VfxService {
     if (r) {
       this.telegraphs.cancel(r);
       this.materials.restore(r);
+      this.touched.delete(r);
     }
+    this.sweep();
   }
 
   cancelTelegraph(actorId: ActorId): void {
@@ -157,7 +181,10 @@ export class VfxServiceImpl implements VfxService {
 
   telegraph(actorId: ActorId, kind: 'block' | 'dodge', leadSeconds: number, opts?: { parts?: string[] }): void {
     const root = this.host.actorRoot(actorId);
-    if (root) this.rootsById.set(actorId, root);
+    if (root) {
+      this.rootsById.set(actorId, root);
+      this.touched.add(root);
+    }
     this.telegraphs.flash(root, kind, leadSeconds, this.clock.now, opts);
   }
 
@@ -172,6 +199,7 @@ export class VfxServiceImpl implements VfxService {
   }
 
   dissolve(root: THREE.Object3D, seconds: number, opts?: { tint?: number }): Promise<void> {
+    this.touched.add(root);
     return this.dissolver.start(root, seconds, this.clock.now, opts).done;
   }
 
@@ -202,6 +230,10 @@ export class VfxServiceImpl implements VfxService {
     this.trails.update(now);
     this.telegraphs.update(now);
     this.dissolver.update(now);
+    if (++this.sweepIn >= 120) {
+      this.sweepIn = 0;
+      this.sweep();
+    }
   }
 
   dispose(): void {
@@ -218,5 +250,6 @@ export class VfxServiceImpl implements VfxService {
     this.screen.dispose();
     this.camera.clear(null);
     this.rootsById.clear();
+    this.touched.clear();
   }
 }

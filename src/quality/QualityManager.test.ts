@@ -97,7 +97,7 @@ describe('QualityManager', () => {
     q.set('low', 'user');
     expect(g.setRenderScale).toHaveBeenLastCalledWith(0.75);
     expect(g.setShadows).toHaveBeenLastCalledWith('off', 0);
-    expect(g.setViewDistanceOffset).toHaveBeenLastCalledWith(-1);
+    expect(g.setViewDistanceOffset).toHaveBeenLastCalledWith(-1600);
     q.set('medium', 'user');
     expect(g.setRenderScale).toHaveBeenLastCalledWith(0.9);
     expect(g.setShadows).toHaveBeenLastCalledWith('half', 40);

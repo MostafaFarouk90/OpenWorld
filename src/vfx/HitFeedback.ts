@@ -96,7 +96,7 @@ export class HitFeedback {
     if (spellRepeat) return;
 
     const damp = r.kind === 'spell' ? HIT_STACK.spellDamp : 1;
-    const paused = clock.frozen === true && !((clock.hitStopRemaining ?? 0) > 0);
+    const paused = clock.paused === true;
     // Hit-stop requested while the game is paused is dropped: it would extend the stop after unpausing.
     if (plan.hitStop > 0 && !paused) clock.hitStop(plan.hitStop * damp);
     if (plan.shake) vfx.shake(plan.shake.amplitude * damp, plan.shake.seconds);

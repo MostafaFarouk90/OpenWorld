@@ -211,7 +211,7 @@ describe('SpellCaster', () => {
     ];
     for (const a of SPELL_LOCK_ACTIONS) expect(CONTRACT_ACTIONS).toContain(a);
     expect(SPELL_LOCK_ACTIONS).toEqual([
-      'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'jump', 'surge', 'interact',
+      'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'jump', 'surge', 'surgeLeap', 'interact', 'mercy', 'mount',
       'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6',
     ]);
     expect(SPELL_LOCK_ACTIONS).not.toContain('lockOn');

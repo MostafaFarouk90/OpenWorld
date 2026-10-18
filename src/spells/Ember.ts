@@ -63,7 +63,7 @@ export class Ember {
     const previous = this._value;
     if (clamped === previous) return;
     this._value = clamped;
-    if (always || Math.round(clamped) !== Math.round(this.lastNotified)) {
+    if (always || clamped === 0 || clamped === EMBER.max || Math.round(clamped) !== Math.round(this.lastNotified)) {
       const was = this.lastNotified;
       this.lastNotified = clamped;
       this.onChange?.(clamped, was);
