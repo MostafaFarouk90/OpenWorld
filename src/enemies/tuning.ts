@@ -4,6 +4,8 @@ import { PLAYER } from '../config/constants';
  * Enemy AI tuning (thread 2's tuning file; src/config/constants.ts is shared and not edited).
  * Design sources: section 10 "Creature behaviours and AI states", 9.6 (poise), 11.0 (reactions), 5.9 (levels).
  */
+import type { FavourTrack } from './ports';
+
 export const AI = {
   /** Sight cone (full angle, degrees) and range; line of sight is required. Design: "cone of sight". */
   sightConeDegrees: 120,
@@ -115,10 +117,37 @@ export const PAIR = {
   attackStaggerSeconds: 0.4,
 } as const;
 
-/** Boss mercies by bossId (actors-and-damage.md section 7). Amount is the uncapped ledger value. */
-export const BOSS_MERCY: Readonly<Record<string, { verb: 'release'; track: 'ashwalkers'; amount: number; burn: number }>> = {
-  'ashen-prior': { verb: 'release', track: 'ashwalkers', amount: 4, burn: 20 },
+/** A boss's mercy hold (actors-and-damage.md section 7). `amount` is the uncapped ledger value. */
+export interface BossMercyRow {
+  /** The `mercy` event verb; the hold's unlock verb is the same. */
+  verb: 'release' | 'calm';
+  track: FavourTrack;
+  amount: number;
+  /** Burn charged through `useShard` on a true `bosses.release` (a Calm boss charges the Warm Hand's `WARM_HAND_BURN` instead, only when that pays). */
+  burn: number;
+  /** The ledger row of the favour (`MercyEvent.ledgerId`). */
+  ledgerId: string;
+  /** Calm bosses: what the hold accepts, as `MercyDef` does for a beast. */
+  offerings?: readonly { itemId: string; count: number }[];
+  warmHand?: boolean;
+}
+
+export const BOSS_MERCY: Readonly<Record<string, BossMercyRow>> = {
+  'ashen-prior': { verb: 'release', track: 'ashwalkers', amount: 4, burn: 20, ledgerId: 'D01' },
+  // Gaffer Grimtooth's window is his third poise break; his pack scatters with him.
+  'gaffer-grimtooth': {
+    verb: 'calm',
+    track: 'dragons',
+    amount: 3,
+    burn: 0,
+    ledgerId: 'D02',
+    offerings: [{ itemId: 'hearth-bread', count: 1 }],
+    warmHand: true,
+  },
 };
+
+/** The Warm Hand's Burn (design section 3), charged once per hold. */
+export const WARM_HAND_BURN = 10;
 
 export const ASH_GRAB = { speedScale: 0.6, seconds: 2 } as const;
 
