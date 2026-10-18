@@ -82,7 +82,10 @@ const inventoryPlugin: GamePlugin = {
 
     // Items enter only through loot.granted; unknown ids and bad counts are refused by add().
     ctx.events.on('loot.granted', (e) => {
-      for (const s of e.items) if (getItem(s.itemId)) inv.add(s.itemId, s.count);
+      for (const s of e.items) {
+        if (!getItem(s.itemId)) console.warn(`inventory: loot.granted from ${e.sourceId} names unknown item "${s.itemId}"`);
+        else inv.add(s.itemId, s.count);
+      }
     });
     // A staggering hit or a death ends the drink and keeps the charge.
     ctx.events.on('actor.staggered', (e) => {

@@ -39,6 +39,7 @@ export class NextUnlock implements HudWidgetView {
     if (n.kind === 'level') return this.t('hud.nextUnlock.level', { remaining: whole(n.remaining), level: n.level });
     if (n.kind === 'skill') {
       const skill = this.source.skillName?.(n.skillId) ?? n.skillId;
+      if (n.remaining <= 0) return this.t('hud.nextUnlock.learn', { skill });
       return this.t('hud.nextUnlock.skill', { remaining: whole(n.remaining), skill });
     }
     return null;

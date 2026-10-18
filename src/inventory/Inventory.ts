@@ -146,10 +146,12 @@ export class Inventory implements Omit<InventoryService, 'use'> {
   load(data: unknown, version: number): void {
     if (version !== Inventory.version) {
       this.logger.warn(`inventory: unsupported save version ${version}, using defaults`);
+      this.goldAmount = 0;
       return this.reset(NEW_GAME_KIT);
     }
     if (!isRecord(data) || !isRecord(data.items) || (data.equipped !== undefined && !isRecord(data.equipped))) {
       this.logger.warn('inventory: corrupt save, using defaults');
+      this.goldAmount = 0;
       return this.reset(NEW_GAME_KIT);
     }
     const items: Record<string, number> = {};
