@@ -96,7 +96,7 @@ export const MOVES: Readonly<Record<PriorMoveDef['id'], PriorMoveDef>> = {
     damage: 28,
     poise: 30,
   },
-  /** Ash-chain: a blockable 14 m lash that slows (no pull; review should-fix 10). Not parryable: a script hit has no window. */
+  /** Ash-chain: a blockable 14 m lash that slows (no pull; review should-fix 10). Sent with `parryable: false`: a timed block is a plain block. */
   chain: {
     id: 'chain',
     attackId: 'prior.chain',
