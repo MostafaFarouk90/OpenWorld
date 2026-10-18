@@ -1,0 +1,4038 @@
+{
+  "files": {
+    "kaykit-adventurers/LICENSE.txt": {
+      "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+      "bytes": 891,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "LICENSE.txt"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/arrow_bundle.bin": {
+      "sha256": "fd17c7411497a551174926b247f02eed19d3c510c3a914e380b4bf12af45de95",
+      "bytes": 15344,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/arrow_bundle.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/arrow_bundle.gltf": {
+      "sha256": "fb103acce8e347972f019fd3d0711ff4b96827995092dcdd4d67971d5be96703",
+      "bytes": 3078,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/arrow_bundle.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/arrow.bin": {
+      "sha256": "4b12b8c3d0d6a13d50e2f56a07be898d9663052b61ab878659f28875464381f5",
+      "bytes": 2648,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/arrow.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/arrow.gltf": {
+      "sha256": "316d885d2377b8d389edab91df4fc2797264beff317adfd66bc88357d68f6b8c",
+      "bytes": 3058,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/arrow.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/axe_1handed.bin": {
+      "sha256": "0e3e5f009e0706506971fe5b1eae0fa30b0b28c70fd67c4b7943d975a821f4af",
+      "bytes": 12524,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/axe_1handed.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/axe_1handed.gltf": {
+      "sha256": "dbe0ba59abcae66a464809ee281179b10f85e41ef0d69786d39627472ca7e5dd",
+      "bytes": 3087,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/axe_1handed.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/axe_2handed.bin": {
+      "sha256": "e5ca2d08f8baa12b510fb27c6a01bb711f102107c8f672443d1d1945f1fb40c0",
+      "bytes": 21960,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/axe_2handed.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/axe_2handed.gltf": {
+      "sha256": "9570c2300c57db64a412a377c78f1681a66d7c47d75bb7643e69573e66a3a1d5",
+      "bytes": 3083,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/axe_2handed.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/barbarian_texture.png": {
+      "sha256": "7329b2ff9709e8d54c886d5ef49c08bd42b12be3bbb2facb1488a6b48b1e8a80",
+      "bytes": 15089,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/barbarian_texture.png"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/crossbow_1handed.bin": {
+      "sha256": "0401a7f6a6264d60d17fee260518715161aac96f7b4e8e541fd562b1815f9a2a",
+      "bytes": 25200,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/crossbow_1handed.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/crossbow_1handed.gltf": {
+      "sha256": "04fb009d03becf748614610ab21c52cf3a68f4cb21fc0b9544309c498f404136",
+      "bytes": 3083,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/crossbow_1handed.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/crossbow_2handed.bin": {
+      "sha256": "1fcadb445d622190bac4bf9b0e6df2b961ed43309b3cfbf8996259175971a537",
+      "bytes": 34896,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/crossbow_2handed.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/crossbow_2handed.gltf": {
+      "sha256": "c38dcbc7beefb76805aaf99098c681b346a021bb44988daf0c5ce787018673ed",
+      "bytes": 3083,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/crossbow_2handed.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/dagger.bin": {
+      "sha256": "2ef02dbdc53839cd2506f9dea40dcc401cdda830ae6a887f499333cce0d11be3",
+      "bytes": 7656,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/dagger.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/dagger.gltf": {
+      "sha256": "33c577d4d5d268295f13494c930d20d11bf1a82e862aa7bdab4d7d51bc26fcd0",
+      "bytes": 3065,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/dagger.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/knight_texture.png": {
+      "sha256": "5d250ccc5da020e6126bfa3839f83bd9a465a951ed223e4d13c08b1925e154d4",
+      "bytes": 14172,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/knight_texture.png"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/mage_texture.png": {
+      "sha256": "ea49f094b960402635fe51db9f1864960c97271b17f2e3554e5aca1b2bbba144",
+      "bytes": 16311,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/mage_texture.png"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/quiver.bin": {
+      "sha256": "47091e8d290ab093560f92b680c0cd83934ea2190e817d51dd4ddb0c7825934e",
+      "bytes": 13884,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/quiver.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/quiver.gltf": {
+      "sha256": "9d209d5e66037e713393f648c7ae8815687c23d63779e40b17d7917d7e45e015",
+      "bytes": 3065,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/quiver.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/rogue_texture.png": {
+      "sha256": "a4032e877c3b91939f5cdbb630349c1998fdbc3211bbd587c111125500fe4cc5",
+      "bytes": 16670,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/rogue_texture.png"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/shield_badge.bin": {
+      "sha256": "3c0f04767c839868df1f852cb335848c3ba7d94da3078e4c7f8a422f2369560c",
+      "bytes": 10628,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/shield_badge.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/shield_badge.gltf": {
+      "sha256": "51b687316b2f9bfe89e586a6ef5f91cface8a326c9d604c8acea7699d6f3523d",
+      "bytes": 3080,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/shield_badge.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/shield_round_barbarian.bin": {
+      "sha256": "4e948103979c35a8b4cfae14bd875b484ae23da2dc2bfe98207ad8b69a640fef",
+      "bytes": 11752,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/shield_round_barbarian.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/shield_round_barbarian.gltf": {
+      "sha256": "6ce05b06942d93741b2210c035b8c531a0592cb985ed4252b2f9e9935c7c77ce",
+      "bytes": 3112,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/shield_round_barbarian.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/shield_round.bin": {
+      "sha256": "42da365328fc8804f44cd3db6becc8bc98729f11862b63e51b42820559d6e1e0",
+      "bytes": 12008,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/shield_round.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/shield_round.gltf": {
+      "sha256": "ac502d8b193da7b1224139e3b825f856ec9fa15cd5aa6ca10295cc927402c275",
+      "bytes": 3083,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/shield_round.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/shield_spikes.bin": {
+      "sha256": "de615f1d5bd01a6562a91d0f41960e50c4e35712388b38af4e549832b0677e0c",
+      "bytes": 21464,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/shield_spikes.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/shield_spikes.gltf": {
+      "sha256": "c2bb6202c2236ff477573ae4770c55c0586d9a554b6df861bc62d7ec0134e31f",
+      "bytes": 3083,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/shield_spikes.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/shield_square.bin": {
+      "sha256": "10937706e32da2a09c3e9f2399c5daf5fd3b47e22c8b898a06c0d28d7630a6b6",
+      "bytes": 10724,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/shield_square.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/shield_square.gltf": {
+      "sha256": "d2af4fbe4c0e8b93f3c88594b99ab601d5589920d4b0b8dc629143413e7c66c1",
+      "bytes": 3081,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/shield_square.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/smokebomb.bin": {
+      "sha256": "a50b0b4807f6f5f9f21ebf9adda2555fa024c36c8afd1395c3d3d6e9d5566e36",
+      "bytes": 11460,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/smokebomb.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/smokebomb.gltf": {
+      "sha256": "6a71950c30598377555791b6f54db77d9b69c7a0d14f3619ed84f47490bf8ce5",
+      "bytes": 3073,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/smokebomb.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/spellbook_closed.bin": {
+      "sha256": "4cf311c021d81fd418b8eed01dec8f8af743d8f74dd81722f7c5f42f3ba89633",
+      "bytes": 14520,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/spellbook_closed.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/spellbook_closed.gltf": {
+      "sha256": "25d118c6f1937476eeb480a0e2f072a87f416e15464f63185325b1e3584124d2",
+      "bytes": 3083,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/spellbook_closed.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/spellbook_open.bin": {
+      "sha256": "888e45aff64aba1bea6ef3abfad27024b2697f7adbab319c089bc70c077c4a5b",
+      "bytes": 15128,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/spellbook_open.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/spellbook_open.gltf": {
+      "sha256": "5a7891f8fe12a0c84dfbb64454b0b6b51328894011021e5c664bc8701aaf40ad",
+      "bytes": 3076,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/spellbook_open.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/staff.bin": {
+      "sha256": "acf921e547edd8e05e24e0b2edec74fec7c987ccad1ee73549a0726a8059ebce",
+      "bytes": 18576,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/staff.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/staff.gltf": {
+      "sha256": "eb2e277510325a242974ee842453882de2d55b09ec94a43148aff1dd4237c67a",
+      "bytes": 3061,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/staff.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/sword_1handed.bin": {
+      "sha256": "780ebfd002cd181fd5b1626f5a6ae8dda0ff2df58c3ff1fd6e7584f53a969d8a",
+      "bytes": 13256,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/sword_1handed.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/sword_1handed.gltf": {
+      "sha256": "f88345d0c89d52710ddb00555964fe7a6f4024874d7ee902ee4c742c048a1958",
+      "bytes": 3080,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/sword_1handed.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/sword_2handed.bin": {
+      "sha256": "0f54186de924388d70b7b5b7b9052c8dda2e20647c4fb36a949723b7ed6b7646",
+      "bytes": 19912,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/sword_2handed.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/sword_2handed.gltf": {
+      "sha256": "0f67613f6233d637be60cb27e320dd3b855b73d1ca0249df46999f68efb05494",
+      "bytes": 3081,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/sword_2handed.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/wand.bin": {
+      "sha256": "db1c466f40f5ae29468e56dff16af6bfd448518f543a5a4ae2638557084473d9",
+      "bytes": 5956,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/wand.bin"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-adventurers/weapons/wand.gltf": {
+      "sha256": "b726392709e3e7fb4b5157f950500d4a98281503f7cac7d6afdf164578169338",
+      "bytes": 3058,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+        "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+        "path": "addons/kaykit_character_pack_adventures/Assets/gltf/wand.gltf"
+      },
+      "licence": {
+        "path": "kaykit-adventurers/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "ae322141814056dda0deea7540d74c41d87aee1da319977cd1bd84ee5a923629",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/banner_patternA_red.gltf.glb": {
+      "sha256": "64243b0a8110bbc6e5a02f5c0acbe447dc7ea65319123319c402dd26486dad25",
+      "bytes": 25164,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/banner_patternA_red.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/banner_red.gltf.glb": {
+      "sha256": "c69c6eaffc834d6dcc7d19f8fd87145af4323265755588bf5bde85d71e0e3ff3",
+      "bytes": 24216,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/banner_red.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/banner_shield_red.gltf.glb": {
+      "sha256": "d332133c940fa9dc6bea1668f2f8f2c07b5dce5db23b865ade5d035c8dc8e949",
+      "bytes": 55104,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/banner_shield_red.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/banner_thin_red.gltf.glb": {
+      "sha256": "1a96a91574f6ef233dc11286eb66f9f9502ef3c52a425199109f1469d1fb310a",
+      "bytes": 23080,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/banner_thin_red.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/barrel_large.gltf.glb": {
+      "sha256": "9fae6a79056241baf253fe9272dc7a7ddb174e1caf153eb5013c58a596722148",
+      "bytes": 44292,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/barrel_large.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/barrel_small.gltf.glb": {
+      "sha256": "f46d0c421e46080aff079286ce9459a22da25e1b4f3489a04243f17617175212",
+      "bytes": 32060,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/barrel_small.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/bed_decorated.gltf.glb": {
+      "sha256": "253e40b87607ac3646c0b3ecf6d252a198e175dd7cd89fd47fec64a7dcb545c4",
+      "bytes": 94688,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/bed_decorated.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/bed_frame.gltf.glb": {
+      "sha256": "37a9c963005b9db56df45518ed1d47bb37c8441f1207cf9079b0651458906d43",
+      "bytes": 30688,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/bed_frame.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/bottle_A_brown.gltf.glb": {
+      "sha256": "14180809d494fdd48fd3771e02c36a076e8e729b5efb3bea18e1e157d1c11874",
+      "bytes": 26140,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/bottle_A_brown.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/box_large.gltf.glb": {
+      "sha256": "6dacda267f04769f8ebbb7e991885785054923ea3d5eb19e833768a911d5b661",
+      "bytes": 28740,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/box_large.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/candle_lit.gltf.glb": {
+      "sha256": "a884f27540b8b91e3d47914453cbf2c4d48f4ca8504ace9960a8d9b4e79a6c48",
+      "bytes": 22648,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/candle_lit.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/candle_triple.gltf.glb": {
+      "sha256": "3536f0a55df50c728ec9c369c4a6a81c913b33a507ac4a192d418d28fd6677c2",
+      "bytes": 28240,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/candle_triple.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/chair.gltf.glb": {
+      "sha256": "5f133281686d398304c0a458c4d407dd483eeea8aba67220b585ceb89366efa2",
+      "bytes": 36252,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/chair.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/chest_gold.glb": {
+      "sha256": "04708d5f88ed59d361c8a6cec1efe8b7028dbc641dfae0a1467f272e14a94b6e",
+      "bytes": 140140,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/chest_gold.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/chest.glb": {
+      "sha256": "f72fd2201cd42ad399928a0b7bcc34d5b0e6d0624aeaf824fef81852109955f8",
+      "bytes": 81412,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/chest.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/coin_stack_small.gltf.glb": {
+      "sha256": "b7395adb0c3f8d392f42f483d667af672232a25de4e0cdb23c58fca8bab1dd8f",
+      "bytes": 38404,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/coin_stack_small.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/column.gltf.glb": {
+      "sha256": "761adf0fcc1a86ab1c42740b7a8ad340d73982f94257e7892b2c7998f98c304e",
+      "bytes": 20260,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/column.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/crates_stacked.gltf.glb": {
+      "sha256": "43182b077ead9b033804300ef453b7402bdc979f00cfce2d7f0c91dcf6bb5d3c",
+      "bytes": 103704,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/crates_stacked.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/floor_dirt_large.gltf.glb": {
+      "sha256": "48cc8018237fbdca3f7fccef95c93ef32e877d8fc59f481b9369fed71fec895b",
+      "bytes": 24620,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/floor_dirt_large.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/floor_tile_large.gltf.glb": {
+      "sha256": "5b6bbbc683f6729d094732056f157a928435de97ec3cf94c341c7465907fe17b",
+      "bytes": 28100,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/floor_tile_large.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/floor_tile_small.gltf.glb": {
+      "sha256": "645f02c82d1fa15e3e1daa7892b70c8a9d44f44d0e520d76ae6afd08633c5b34",
+      "bytes": 20740,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/floor_tile_small.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/floor_wood_large.gltf.glb": {
+      "sha256": "d22eb1c1fb6ab434e8c9599ecb2cd00c2e34a713783603ba7a3e2cbb1611709d",
+      "bytes": 35612,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/floor_wood_large.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/keg.gltf.glb": {
+      "sha256": "cc620e27439ab8dbbf93b1c4bd94d1d634798757c0314b2c9f12bb445afd0f51",
+      "bytes": 59912,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/keg.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/keyring_hanging.gltf.glb": {
+      "sha256": "6edaf6494c7d0cae9178356fb4e2c11b2af2390933cc083203c5d9c287023364",
+      "bytes": 49108,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/keyring_hanging.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/LICENSE.txt": {
+      "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+      "bytes": 829,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "LICENSE.txt"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/pillar_decorated.gltf.glb": {
+      "sha256": "eecf7d454a1b6767a113e2490cb1536134abea0b57329a50cf2250d3ed8e2f65",
+      "bytes": 62460,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/pillar_decorated.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/pillar.gltf.glb": {
+      "sha256": "e31da496461921475384c62ce761cd23924892bd6f32aeea68bd913545caee33",
+      "bytes": 25552,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/pillar.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/plate_food_A.gltf.glb": {
+      "sha256": "4549db448834c615e753f65327d01b8f55b9d20d915e004c8a0da123cb76e86e",
+      "bytes": 41236,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/plate_food_A.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/rubble_half.gltf.glb": {
+      "sha256": "7514ccbda643c13d5a782579e4f01ee6402eec5519590d3f048d396cdaedec24",
+      "bytes": 38836,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/rubble_half.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/rubble_large.gltf.glb": {
+      "sha256": "0292da1b5788a5a52b616d5d27d3270c676a5fbf9e921b6dd3dc30364d355b54",
+      "bytes": 60196,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/rubble_large.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/shelf_small_candles.gltf.glb": {
+      "sha256": "d6f6a809c1e4635b143fd3c6e790331aa049d625abd390429c1e5887f77cbb96",
+      "bytes": 30036,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/shelf_small_candles.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/shelves.gltf.glb": {
+      "sha256": "8df148ae0f4909512295302491f2b40dc3ae84d072f2cacdfd929c7848d7062e",
+      "bytes": 26996,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/shelves.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/stairs_wide.gltf.glb": {
+      "sha256": "f3301f11a6bb6d9e64fbe625fbc2f0b61ba4f7e1de1ceba348d53c93325d4754",
+      "bytes": 43372,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/stairs_wide.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/stairs_wood.gltf.glb": {
+      "sha256": "3b2cf5c08aec60ea7b217e1c499885d803419dc39a2968e8da0da5e725adb140",
+      "bytes": 34632,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/stairs_wood.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/stairs.gltf.glb": {
+      "sha256": "5ba16e5d919aaa8958435c4b73c1f8a94c98febeacf716faa1359f24e6b27d70",
+      "bytes": 43368,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/stairs.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/stool.gltf.glb": {
+      "sha256": "f9170499ea599e6283d35be600150d2171d9a7af1ae0e8a1ccbe98ef29b71d8e",
+      "bytes": 28528,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/stool.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/sword_shield.gltf.glb": {
+      "sha256": "4dc33b156a166b2c47cf3ac0344f9462946e952ee8c12945bbe6aedddf63af72",
+      "bytes": 47764,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/sword_shield.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/table_long_decorated_A.gltf.glb": {
+      "sha256": "47564d874e79f04212c05487d88ac8cbe9bb50b1865a8eeb1178bcb711aa444d",
+      "bytes": 120792,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/table_long_decorated_A.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/table_long.gltf.glb": {
+      "sha256": "83996a7a544a257630510b61eadebb8842e4313ca3c774b35774cad9b6f949c8",
+      "bytes": 35128,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/table_long.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/table_medium.gltf.glb": {
+      "sha256": "9686a202ea2f825062dfab02d89cded25d7acc07847b88c1e39f0e09e085872a",
+      "bytes": 33832,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/table_medium.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/torch_lit.gltf.glb": {
+      "sha256": "45fcfeb3b129722019d42aef0acae8f6c5f8f6dbdf5d3346ceea1f084b69b396",
+      "bytes": 31244,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/torch_lit.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/torch_mounted.gltf.glb": {
+      "sha256": "a617c159e02932db48ca81ec46f1f100acc8904fb6ece43e919d2f93c13950e9",
+      "bytes": 33220,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/torch_mounted.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/wall_arched.gltf.glb": {
+      "sha256": "916a7d81b8d6ebddb069440a0f9ecb14c9c2a1e5cd7769acf2218d630bd56cb8",
+      "bytes": 69124,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/wall_arched.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/wall_archedwindow_open.gltf.glb": {
+      "sha256": "8c75cb77edc51c94b91c5625828391fb56c70bf31e2235cf5abf718eae0d842a",
+      "bytes": 58028,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/wall_archedwindow_open.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/wall_broken.gltf.glb": {
+      "sha256": "ee7598ef2b88aaeb7b61e46d5f1da1a059de3860b080b38b7a507ca2f461302c",
+      "bytes": 69276,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/wall_broken.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/wall_corner.gltf.glb": {
+      "sha256": "3c8cbcbf3abf78c9dc49f440b152340ef681fee9cccf9ca6ed27b6670a34eb81",
+      "bytes": 49212,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/wall_corner.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/wall_cracked.gltf.glb": {
+      "sha256": "344fb9a709a51b7f04131fded75a5ad38e829d74fcf1784d848f3df0703f804c",
+      "bytes": 138396,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/wall_cracked.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/wall_doorway.glb": {
+      "sha256": "2be5369a2d1d1d8795150b2156d8343b3e37620d78de256cb03276c54ea70c97",
+      "bytes": 100596,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/wall_doorway.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/wall_endcap.gltf.glb": {
+      "sha256": "e9d0fee6895f402d4777f7aa92455b56b5bd506877a654a8027a67a185010e23",
+      "bytes": 33708,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/wall_endcap.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/wall_half.gltf.glb": {
+      "sha256": "9e65c438f55d96cbcd554489bf2dec236feb575a8192c709d3bf6886599339a8",
+      "bytes": 36840,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/wall_half.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/wall_pillar.gltf.glb": {
+      "sha256": "f85030386f9f183bbc03a0817a1967a40758f24828295ed2a1c88d4c004eb5eb",
+      "bytes": 55156,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/wall_pillar.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/wall_window_open.gltf.glb": {
+      "sha256": "7cb4804e55bd90a4c61198b6b9c557ccb87c485b13dfad4b184c9b6d8632438f",
+      "bytes": 57256,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/wall_window_open.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-dungeon-remastered/wall.gltf.glb": {
+      "sha256": "f2f343a7bdf2d45947e3f354494e16095a923485e05637e3804e3b81ce11d921",
+      "bytes": 53132,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+        "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+        "path": "addons/kaykit_dungeon_remastered/Assets/gltf/wall.gltf.glb"
+      },
+      "licence": {
+        "path": "kaykit-dungeon-remastered/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "c5f17abf619731f57f6bbff450f6484214605c13aa96bb75bbcfc70930941ff7",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/bed_double_A.bin": {
+      "sha256": "0eb1bc50981bdb0c0ff95b30b6783dc5d40fd61497a4a21165d366e301c6e53c",
+      "bytes": 24648,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/bed_double_A.bin"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/bed_double_A.gltf": {
+      "sha256": "55451127bbeb9734bb88c1a761a6246eaaf89ac33eee2f703d78053719e5c4e5",
+      "bytes": 3011,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/bed_double_A.gltf"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/bed_single_A.bin": {
+      "sha256": "fc7631db4540d31cbe76dac3c672bc8836ee302796d14bba428bda84b9237f5b",
+      "bytes": 22044,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/bed_single_A.bin"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/bed_single_A.gltf": {
+      "sha256": "7b2852bb66bf82cad3e0d03a499b1480879790fa66b645347e3e73761c4fe3f5",
+      "bytes": 3009,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/bed_single_A.gltf"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/book_set.bin": {
+      "sha256": "3aa3fcc774b46c7ffe2b1a3109bf006749163bbb392cfca930b34bfba4b67853",
+      "bytes": 11576,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/book_set.bin"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/book_set.gltf": {
+      "sha256": "437bfaba3f3413a0b825627a1cb905765a191f4708be51838c9b60c8132cbe61",
+      "bytes": 3051,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/book_set.gltf"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/cabinet_medium.bin": {
+      "sha256": "3fc4bff757a36226ecb9504dd6e9d031a5a6c957cb9cc2bb636f12ab49e877e6",
+      "bytes": 23304,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/cabinet_medium.bin"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/cabinet_medium.gltf": {
+      "sha256": "139419c479c6f8b38ac24e12ce85bf81a199e05067a544db879f7e403446c9dc",
+      "bytes": 3000,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/cabinet_medium.gltf"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/chair_A_wood.bin": {
+      "sha256": "726ea8962909becf3d925d272928a8e26a1f345fc9f8f165e7424221c69be733",
+      "bytes": 16504,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/chair_A_wood.bin"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/chair_A_wood.gltf": {
+      "sha256": "e17a16127b9a3e44ef8888c9d52fe7ec09a06b348934627816a538720793af8d",
+      "bytes": 3032,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/chair_A_wood.gltf"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/chair_stool_wood.bin": {
+      "sha256": "59ebde1791f6c46b6f3880cbe5632e44b123466a1bc7d2d2f3008da9a2a492ac",
+      "bytes": 10832,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/chair_stool_wood.bin"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/chair_stool_wood.gltf": {
+      "sha256": "b1670bee678ab5920ad8ef3a6fb7c6146054bb7b859798f86aaac96be5765f35",
+      "bytes": 3052,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/chair_stool_wood.gltf"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/furniturebits_texture.png": {
+      "sha256": "de62db37a80d1801c3d9eb674890ae04b04469e0c149481a51fa250562c628dc",
+      "bytes": 15605,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/furniturebits_texture.png"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/LICENSE.txt": {
+      "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+      "bytes": 827,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "LICENSE.txt"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/rug_rectangle_A.bin": {
+      "sha256": "10eb71fc2b20b056b6186526d451ee0a560c425495402d7818f4413795aba506",
+      "bytes": 1800,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/rug_rectangle_A.bin"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/rug_rectangle_A.gltf": {
+      "sha256": "892417306a01eac711c6af97b148fc152d375940ec3660964b36e10ea2a8cfda",
+      "bytes": 2971,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/rug_rectangle_A.gltf"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/shelf_B_large_decorated.bin": {
+      "sha256": "80b560eac9dd1d2750149f96f4845ead4c734f446088975a5c0a1c259dd50611",
+      "bytes": 25772,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/shelf_B_large_decorated.bin"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/shelf_B_large_decorated.gltf": {
+      "sha256": "fc613ad31e07529ad1ec9044a8e7e900821c8636efbd714a3238292326a49fad",
+      "bytes": 3069,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/shelf_B_large_decorated.gltf"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/table_medium_long.bin": {
+      "sha256": "b436c4b982a7defac5310f6ca17bf387f24c8c9b843e035c09d23094ace9b788",
+      "bytes": 9328,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/table_medium_long.bin"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/table_medium_long.gltf": {
+      "sha256": "e3ba8f08ce5964d602cde13ecba2b837f90b3ed22d092e28fa489f3c216e2488",
+      "bytes": 2987,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/table_medium_long.gltf"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/table_medium.bin": {
+      "sha256": "0e6ba8fd006f673d946979e45487067f4e274be9bbd07816fd371578d2a37518",
+      "bytes": 9328,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/table_medium.bin"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/table_medium.gltf": {
+      "sha256": "fd5e5fe8bbf1d3729b6bd725165d58490e9cbd8dd46ce42314b01f20951a302b",
+      "bytes": 2973,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/table_medium.gltf"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/table_small.bin": {
+      "sha256": "e18bad66ad227a4a374fd58fbe6870a73c0f3f3687cb363506e0d77e07964066",
+      "bytes": 9328,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/table_small.bin"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-furniture/table_small.gltf": {
+      "sha256": "6ae46ef60d18cf1fe507fbb2fb20235144af2ac7101f410269a761ac91ae9aee",
+      "bytes": 2979,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+        "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+        "path": "addons/kaykit_furniture_bits/Assets/gltf/table_small.gltf"
+      },
+      "licence": {
+        "path": "kaykit-furniture/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "cd675f2adc31eb5fedaedc1072d8ddc27b917f523682f0561837c03dc56393cb",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/arch_gate.bin": {
+      "sha256": "b89db8773e11b4ea6f363781749195821a5824e04368ac7074b2aee1947f6c5d",
+      "bytes": 58264,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/arch_gate.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/arch_gate.gltf": {
+      "sha256": "f2874a339f9af6726866fc85761164d7dcf963c77d1d6bbcb0acae31efce5d39",
+      "bytes": 7059,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/arch_gate.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/arch.bin": {
+      "sha256": "fa7f31b0332c8bade6c1855f3790944a6eab7831da045d0f337d7152f2876df0",
+      "bytes": 28856,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/arch.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/arch.gltf": {
+      "sha256": "166ac2da5f72d843e79ecc250a30b4a8075175afe5036c6f590e755c38d43f01",
+      "bytes": 3035,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/arch.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/bench.bin": {
+      "sha256": "9176f239a3783d116b6cc5f68f4000a17c891d0f944841ccf06c6f9dbc1e734e",
+      "bytes": 10888,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/bench.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/bench.gltf": {
+      "sha256": "3d01b23bf2cb341b16304c4264053248863af9df4d94c72e09793621dea79a06",
+      "bytes": 3035,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/bench.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/candle_triple.bin": {
+      "sha256": "387e220f5c4367aae3025aea7ddbfccf987513da52276dc3833faa669b183c43",
+      "bytes": 9924,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/candle_triple.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/candle_triple.gltf": {
+      "sha256": "e7b0f28c03e4b19fde8af713f952660ad786bd3a80932a2bbe48dfe0d0edede5",
+      "bytes": 3056,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/candle_triple.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/candle.bin": {
+      "sha256": "967670a4871df019615e68e5ebc9f3ee6ef26bce3c37a07b175f7b34f44aa535",
+      "bytes": 3308,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/candle.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/candle.gltf": {
+      "sha256": "838ca7e1c0b1caaa553aae98b36d994fc18a6234574744bafdddae64d428b80c",
+      "bytes": 3037,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/candle.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/coffin.bin": {
+      "sha256": "e1ec36f8d362cb55423ec9b87397c67cbbe68e5ee71c3508e069b591cf9c27b8",
+      "bytes": 18088,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/coffin.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/coffin.gltf": {
+      "sha256": "cde76bb035c737376745b0285b2fdf8306c716bcd03945aff9cf9c85fa3713cb",
+      "bytes": 4828,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/coffin.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/crypt.bin": {
+      "sha256": "e3c89c907d94e2ce9fff4c83a0600f10399d4cc45e81d6c9a13f9913da28d61a",
+      "bytes": 58640,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/crypt.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/crypt.gltf": {
+      "sha256": "0d8b98430f4b6261da71b6801561f83f351445d0bccf2ad155ad4ff126a196ac",
+      "bytes": 2960,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/crypt.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/fence_broken.bin": {
+      "sha256": "6c963c1c094744df089fdc52c632df90800b1bd47707202702f49345631ebb94",
+      "bytes": 29076,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/fence_broken.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/fence_broken.gltf": {
+      "sha256": "f44a7261ff0b61cfd1ce8669372d1884687747fd1d785c01a9d7df7f849551e6",
+      "bytes": 2990,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/fence_broken.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/fence_gate.bin": {
+      "sha256": "7c889d9be8a43cd94758bcafcae19ce80fbd1f168d5f6bff016894ab53e85d78",
+      "bytes": 42056,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/fence_gate.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/fence_gate.gltf": {
+      "sha256": "398277ba630e41636df67ab7632f08a9e1613c7a2b8d5adac79045dd8b12b547",
+      "bytes": 7001,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/fence_gate.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/fence_pillar.bin": {
+      "sha256": "58f08ab74bc73a6ecc018eedc9be9fd46984017271b112bca3da0d9e5220c129",
+      "bytes": 6324,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/fence_pillar.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/fence_pillar.gltf": {
+      "sha256": "95042fd32654eab298866a3505a16375e587b2bbc3200d7e00b4ec3d680e0259",
+      "bytes": 3005,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/fence_pillar.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/fence.bin": {
+      "sha256": "5542f695ba30b0f8d1d57d0d27ea6c310de823e73524acb042adb83f9ef63e4f",
+      "bytes": 26728,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/fence.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/fence.gltf": {
+      "sha256": "341bdb0bc8c4d6895a7184daebf76522866677909992701efbd3a719b348d4a7",
+      "bytes": 2976,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/fence.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/grave_A.bin": {
+      "sha256": "0889692134afe93572f49ff554d902503b0ab7e956db0cd8f82cf7032666ba89",
+      "bytes": 15700,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/grave_A.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/grave_A.gltf": {
+      "sha256": "52bdfcb650333861b1743ebaea418deb952a0cf72d719f5299a6de587d56971b",
+      "bytes": 2990,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/grave_A.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/grave_B.bin": {
+      "sha256": "9dab82502615ec24e74e251cb5718dbfb20c0672b34e5be3a59d9f1ad4d61c5c",
+      "bytes": 13812,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/grave_B.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/grave_B.gltf": {
+      "sha256": "88da646fb99840167700331442cd39cd20bd322899407e8a903c62d5da4538b9",
+      "bytes": 2990,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/grave_B.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/gravemarker_A.bin": {
+      "sha256": "3eef9a77e7df1b3eec41220aa5cd8fb3e91003a2f0e55b77ee70e74afe2c38fb",
+      "bytes": 4016,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/gravemarker_A.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/gravemarker_A.gltf": {
+      "sha256": "484a0a06f912d8d9b97e556decbb8fd557bcdcc867ec35ff392bff629b4fa25b",
+      "bytes": 3050,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/gravemarker_A.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/gravestone.bin": {
+      "sha256": "364c48d60407096299870b727b45e2db3f71a8a36c8ce3933262da72b8a26844",
+      "bytes": 12316,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/gravestone.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/gravestone.gltf": {
+      "sha256": "9c82f5161bdd4f06391f174ef92b82b21f18a6e5a00d386b254ed3cd124f1c21",
+      "bytes": 3066,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/gravestone.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/halloweenbits_texture.png": {
+      "sha256": "1e671e9b176b290a35ce8f5f22c773b3f5e9c7a9cf0e1991de51e44dd3a23e7c",
+      "bytes": 15093,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/halloweenbits_texture.png"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/lantern_hanging.bin": {
+      "sha256": "70b22bad9a65b155b5f574ea523e63fa576b1946a4b77c6645e8023c82ac18db",
+      "bytes": 19472,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/lantern_hanging.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/lantern_hanging.gltf": {
+      "sha256": "b78ac136d5e7edc169247f42d3ddc87478bb9c511c80b6830a666fcfc745b054",
+      "bytes": 3080,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/lantern_hanging.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/lantern_standing.bin": {
+      "sha256": "aaaf6525e6a7d70c50f631fff91b8931e1571418e097ef0ecc99c8da9cc24387",
+      "bytes": 12400,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/lantern_standing.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/lantern_standing.gltf": {
+      "sha256": "7fbaed7c4f33181d22c015e11aa9b3d8d04f77f1658b6a80ed2dc23746fb7fc5",
+      "bytes": 3084,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/lantern_standing.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/LICENSE.txt": {
+      "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+      "bytes": 877,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "LICENSE.txt"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/pillar.bin": {
+      "sha256": "7e71fa4e4aedbc50de02868afe0ee6ab75e4959daf4ea2fe5b7a72ae3e71cda4",
+      "bytes": 6324,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/pillar.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/pillar.gltf": {
+      "sha256": "60defbd019e1347c597312b4d384dc3c6a2de7f8c97497dcdf1a3879cad1deb8",
+      "bytes": 2989,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/pillar.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/post_lantern.bin": {
+      "sha256": "4fe74fc99942043312a311e013d0d9e82135b896f4c7ab6289abbc93738638b8",
+      "bytes": 25584,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/post_lantern.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/post_lantern.gltf": {
+      "sha256": "e2db415a575458f7c4077ed45349d33327a2f431479123e2b276736484dd45bb",
+      "bytes": 5135,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/post_lantern.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/shrine_candles.bin": {
+      "sha256": "42b49ad164197c954967b05fd2fc48525541ddc8e32548819d2f73565a6b27ad",
+      "bytes": 19568,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/shrine_candles.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/shrine_candles.gltf": {
+      "sha256": "21bc3c39fc773b4ee0e09813d8dd242dd9ba35dac2c53c53755e9888c073d1e0",
+      "bytes": 3056,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/shrine_candles.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/shrine.bin": {
+      "sha256": "d8774d8b6768397e588745841b378f1d13c2a6047a1cb8670b2351b6dc1f3b3b",
+      "bytes": 6196,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/shrine.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/shrine.gltf": {
+      "sha256": "7d0afbfe26614d2e9e01a41852f7f3161e7ea0b4fea814f92abd41e9060115b1",
+      "bytes": 3035,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/shrine.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/tree_dead_large.bin": {
+      "sha256": "c786d41c63076af2e8c20809b8c28f1a8d43af9fd94e606f0db1ade2b4c96e55",
+      "bytes": 7200,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/tree_dead_large.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/tree_dead_large.gltf": {
+      "sha256": "a91ca9c22fc5a0be4d44edb6fe9d8b47393e0f47dd0048b60c054adab1a0b2a1",
+      "bytes": 3074,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/tree_dead_large.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/tree_dead_medium.bin": {
+      "sha256": "342430fb243f6645cb05ca038ff023b4a0a3dc4a78ffa26766dc2f0a5e383009",
+      "bytes": 5584,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/tree_dead_medium.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/tree_dead_medium.gltf": {
+      "sha256": "529b143e32affc379fffba541506198fa3a152b592a98fa8db059ebe4e3b2128",
+      "bytes": 3080,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/tree_dead_medium.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/tree_dead_small.bin": {
+      "sha256": "3981451fef1ba2e0a93cb6fc514b8013c4e5896e651a1e6a41bf27ad6fcb6656",
+      "bytes": 5072,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/tree_dead_small.bin"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-halloween/tree_dead_small.gltf": {
+      "sha256": "1f7b1867de93554b5399c26ff6db32925048ae96450cdbc7ee33ffe44bb5c827",
+      "bytes": 3076,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+        "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+        "path": "addons/kaykit_halloween_bits/Assets/gltf/tree_dead_small.gltf"
+      },
+      "licence": {
+        "path": "kaykit-halloween/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "a514c41d8d5f2a07c94c55acd29ba94f50b86837f972e37edb4cbdeb7ba0e0e0",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/barrel.bin": {
+      "sha256": "ff1b034f1ac95b063a2baa3d72a0ad0b33f25337f776e7a25fbc811d9c77dee8",
+      "bytes": 15552,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/barrel.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/barrel.gltf": {
+      "sha256": "24673663eb53ffab6c8db612654856f051c4877bfc02ea25fee89cd95ee4d100",
+      "bytes": 3042,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/barrel.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/bucket_empty.bin": {
+      "sha256": "6e4c2d223e1c17425222dc67ce406c7890d1cf0168f7b8811745dfb024d56fee",
+      "bytes": 6976,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/bucket_empty.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/bucket_empty.gltf": {
+      "sha256": "9ac858e12319da05b9f5ac891b1fcf276a0c942aef3cf6a6c2fa9a1a8dc1a6da",
+      "bytes": 3058,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/bucket_empty.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/bucket_water.bin": {
+      "sha256": "715a23aa28232449c1b99d62a5f9d432f080dda0e766cbe09ef2fee38b4be958",
+      "bytes": 6976,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/bucket_water.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/bucket_water.gltf": {
+      "sha256": "5e7ba97fe666f4a05d1933ea6d2d8555f5846ca4fc0f19e673e922d8441c8c4b",
+      "bytes": 3058,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/bucket_water.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_barracks_red.bin": {
+      "sha256": "9968c3176de8c0c3d16c7efc59306183a531802b9728ef42c58c584538653b15",
+      "bytes": 229676,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_barracks_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_barracks_red.gltf": {
+      "sha256": "3a10bf352be40343281658a0cffa28cef84bb452636c08fe1cc68e35af1b2665",
+      "bytes": 3075,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_barracks_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_blacksmith_red.bin": {
+      "sha256": "7c2cc20a5def985cc7a2378d66fb606a8c830dd902d92ca0653a1699849b9c13",
+      "bytes": 123036,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_blacksmith_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_blacksmith_red.gltf": {
+      "sha256": "5689a8f37fa59a956927b4deaeb6d8ee48228fe29c2c61b71048bec04a7b086f",
+      "bytes": 3100,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_blacksmith_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_bridge_A.bin": {
+      "sha256": "dc78350862e173e7d948dab4dbb3e32234f3ab2302a149da8d0c0da9380040d5",
+      "bytes": 25576,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/building_bridge_A.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_bridge_A.gltf": {
+      "sha256": "7f3a7e8b3e72a66dec70d6a00eb87e62d3ca5c6892b9b965c675cb9d193e4d29",
+      "bytes": 3039,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/building_bridge_A.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_bridge_B.bin": {
+      "sha256": "3303ed6240dc693d38befac1e8adbccfe370490183bc74382ebd7a47e1f73815",
+      "bytes": 25576,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/building_bridge_B.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_bridge_B.gltf": {
+      "sha256": "b5f8d508c1b5cfd528a2276f6105627a386a75a77d987e2068605b1b7762a71d",
+      "bytes": 3039,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/building_bridge_B.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_castle_red.bin": {
+      "sha256": "41423a51068adeadbb1630503d55c4088498200f12ff8286e949c316ab5cdada",
+      "bytes": 317732,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_castle_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_castle_red.gltf": {
+      "sha256": "a9006907e13955578e803f0230a8b641d20bc499aeb6e4ead546e6e6894f4e9c",
+      "bytes": 3069,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_castle_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_church_red.bin": {
+      "sha256": "27849f3449092502cb18ca014825199a92073e87f00b877382c2f970a4733ada",
+      "bytes": 89736,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_church_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_church_red.gltf": {
+      "sha256": "e4dc40472c3c0039c0dde205630ebb3a4e51da2ddf55109a3c2f9a8ba91ad2c3",
+      "bytes": 3086,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_church_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_destroyed.bin": {
+      "sha256": "7f022ee7422b3af497d95b586fd38940b5be0e390e42071f8c696923d92d6bbf",
+      "bytes": 56684,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/building_destroyed.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_destroyed.gltf": {
+      "sha256": "e5cd1027e9c2f7981a29a7d9e036504f6b168680b017a0289313a8fdcbc634bc",
+      "bytes": 3079,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/building_destroyed.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_home_A_red.bin": {
+      "sha256": "5d527ca5908c1bbbe80ffbd9443135e9387654bf2187a94796d018d00c6c5726",
+      "bytes": 55348,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_home_A_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_home_A_red.gltf": {
+      "sha256": "158bcb4149f4d6db461774d7bd67d264262f30145762eddd0a8def8be292286c",
+      "bytes": 3087,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_home_A_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_home_B_red.bin": {
+      "sha256": "4267fe933fff7c58649368f5273346908ad0b5300278e5faa9e923a524fd5c40",
+      "bytes": 82120,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_home_B_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_home_B_red.gltf": {
+      "sha256": "0c43594d4fd7eadf098de4189414764476b18cfbc6ea6c695c1dda01c768fffe",
+      "bytes": 3087,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_home_B_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_market_red.bin": {
+      "sha256": "bd83dace5d97f01c74fbb21eac6844537f264359f3a40b1e25b168e6915b1a2a",
+      "bytes": 152160,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_market_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_market_red.gltf": {
+      "sha256": "d58ea12f4f1bdd052a9d3bf815be5aca2cf253627e6614ef26ee22fc4d5733b6",
+      "bytes": 3088,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_market_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_scaffolding.bin": {
+      "sha256": "eed989f5f3c82d0e251b2dd2fc7e0cc350705160892a409a337c73b5f448fa54",
+      "bytes": 165536,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/building_scaffolding.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_scaffolding.gltf": {
+      "sha256": "1c11a7545694863a7edc58780ee60510b55676b97d6c5eee7e0dc7c256185c7a",
+      "bytes": 3092,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/building_scaffolding.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_tavern_red.bin": {
+      "sha256": "a197beeeb25efe3471a6263adcc824143689e7aa2ed5c3ec6fa12a063e6d6550",
+      "bytes": 170848,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_tavern_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_tavern_red.gltf": {
+      "sha256": "0c34d801a6c0583ec270ba76cff323188ad6b43b763bb67dc593327b63e06f7c",
+      "bytes": 3090,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_tavern_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_tower_A_red.bin": {
+      "sha256": "fb30b7d713c3c28a6c7113bafec5a0d6c0555803d35c20978bfb4fc84534bd12",
+      "bytes": 112860,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_tower_A_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_tower_A_red.gltf": {
+      "sha256": "9275233fb07f3906111f82da7ef43b5c81195922662396a2c4106095ea94bf27",
+      "bytes": 5042,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_tower_A_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_tower_base_red.bin": {
+      "sha256": "aadf84125da5dd0e925ed15617f8edcc5b6d024506b4a5a61f2c09cdafe73044",
+      "bytes": 81708,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_tower_base_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_tower_base_red.gltf": {
+      "sha256": "6180b9765ede8c378823175b18c834aadbca3e69f08738a02750572ae3f2396f",
+      "bytes": 3062,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_tower_base_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_watermill_red.bin": {
+      "sha256": "4a625b4eeae54cc38bc1d44691d685c53611711d639d194961c0c5e6ca8bd9a8",
+      "bytes": 111336,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_watermill_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_watermill_red.gltf": {
+      "sha256": "11866b077aaac2321bba4569196e1ca211dc006ddd7ba2dcdb0be5036e02d1f0",
+      "bytes": 5230,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_watermill_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_well_red.bin": {
+      "sha256": "4c1502df214e4c571c14f60aa199a4a9d610f0161bc31e52065e70daeb311e3d",
+      "bytes": 42340,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_well_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_well_red.gltf": {
+      "sha256": "ed5b51f67c15ee80e65a685ddae9f2b5809aef75d4f8d8691270353698041ed8",
+      "bytes": 3080,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_well_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_windmill_red.bin": {
+      "sha256": "2fa075b2a19a5c8811db95cb8e36402fda881e894de280bc424f33a1562f6dd5",
+      "bytes": 141680,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_windmill_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/building_windmill_red.gltf": {
+      "sha256": "0a32ab29ec4a424e0a272e4116d0d5c471336c6a32470fa5599928eb67944983",
+      "bytes": 7321,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/red/building_windmill_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/crate_A_big.bin": {
+      "sha256": "600d29bdf010f891dcabfb014b6271789e7b45fec7317989a13ccca92908c5c8",
+      "bytes": 7000,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/crate_A_big.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/crate_A_big.gltf": {
+      "sha256": "a96ce5522e45104b5a04cf9605ca30b9572cc79c7633d41f3434b9843010a225",
+      "bytes": 3055,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/crate_A_big.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/crate_A_small.bin": {
+      "sha256": "f46debeb9ad1f44b174f9bd62c382412172676b1cdfa714d15e3b11227f1eeb3",
+      "bytes": 7000,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/crate_A_small.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/crate_A_small.gltf": {
+      "sha256": "3a7fee2b962949d44bdac360405f2cd9c442bf41eea65e057f08b6b2e2d6f6d8",
+      "bytes": 3059,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/crate_A_small.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/crate_long_A.bin": {
+      "sha256": "1fb1050d8da5dfa703ed1d5a6c853682161dd299dfa23112941f625f63eae1c3",
+      "bytes": 14204,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/crate_long_A.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/crate_long_A.gltf": {
+      "sha256": "36b6bc187c410f3a4d7ec1bd88161e20ffd43f4b3a952c14165cfb83f65a06ff",
+      "bytes": 3041,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/crate_long_A.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/crate_open.bin": {
+      "sha256": "e7f3ace70545116f56844b14ab2191efac4d3ed96a454439a6a58b66ad5319c8",
+      "bytes": 12056,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/crate_open.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/crate_open.gltf": {
+      "sha256": "e82806d7cd3d905c4915e81cad1973415aecec83a8d3ad968e0298d8920265ed",
+      "bytes": 3054,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/crate_open.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/fence_stone_straight_gate.bin": {
+      "sha256": "2ea58679c76618ae4ef052df5c036ab4d20eb31c96e4771645c90b33b2cb949f",
+      "bytes": 16112,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/fence_stone_straight_gate.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/fence_stone_straight_gate.gltf": {
+      "sha256": "f1589d939722ad0b59503cc42bd453628583cce92c8524078c81e6f3b4766c7a",
+      "bytes": 5224,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/fence_stone_straight_gate.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/fence_stone_straight.bin": {
+      "sha256": "a8b6f2cd8f0f67996b1e6fb4675a707d1cc43b5d5c743ac6af7c0aec695e3aa9",
+      "bytes": 13800,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/fence_stone_straight.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/fence_stone_straight.gltf": {
+      "sha256": "9738b7f152b3e4d9912cbad772435d9bd8247982be81e713b9b3ddc7579d1439",
+      "bytes": 3079,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/fence_stone_straight.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/fence_wood_straight_gate.bin": {
+      "sha256": "baeccfc22cfaea7ebc8b676278b2faf8d09ce4c638420d10a995fdebcd1d1c4d",
+      "bytes": 19384,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/fence_wood_straight_gate.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/fence_wood_straight_gate.gltf": {
+      "sha256": "ca9cc002a5896f387754e562f2109d5544ab5cf0e6f9555f2fa6a051664258eb",
+      "bytes": 5220,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/fence_wood_straight_gate.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/fence_wood_straight.bin": {
+      "sha256": "fa71b68019e2fe287621f3a5b06b7e18d1dcdd74a6f1c38af7888a8fb0c0078b",
+      "bytes": 15032,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/fence_wood_straight.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/fence_wood_straight.gltf": {
+      "sha256": "5a2af87c5a6b90875e3bc11f289a321a5d4b2459975dba52351edbc58b2132e3",
+      "bytes": 3061,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/fence_wood_straight.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/flag_red.bin": {
+      "sha256": "04aea453efb0632960b2395a356fd0ee2fd4c24e16fe726be956b1ee182cf4b5",
+      "bytes": 2464,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/flag_red.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/flag_red.gltf": {
+      "sha256": "c1f76b1ca3d47a30a868500ecbe2844e89b75b4bebc7283f41bd37561aa58c1f",
+      "bytes": 3020,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/flag_red.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/hexagons_medieval.png": {
+      "sha256": "5301a06866ba3be68dcc14cc429bd6d0f69004b72884283715d7e233f2e9782e",
+      "bytes": 15783,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/hexagons_medieval.png"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/ladder.bin": {
+      "sha256": "07d5f9271a58ae9cc93f3b3877103a6c037b727077b44a5d7a6dc1ae90c2b173",
+      "bytes": 5880,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/ladder.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/ladder.gltf": {
+      "sha256": "de1f471e8c11615388a9caad79aef97414903390ff54924b33bff2547bc19e72",
+      "bytes": 3040,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/ladder.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/LICENSE.txt": {
+      "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+      "bytes": 1027,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "LICENSE.txt"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/pallet.bin": {
+      "sha256": "b3e0e50ac5aaf3784ebc3ac601bf8f9e04474a575a026ba4cbf9d164dfa14e12",
+      "bytes": 5040,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/pallet.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/pallet.gltf": {
+      "sha256": "4e55587c2f2017e7e2965482b0976c75339e7dafcb627de2d275077bb6a97dc3",
+      "bytes": 3019,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/pallet.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/resource_lumber.bin": {
+      "sha256": "90bb1e1f23dbc3de372059b45ae289ec414b1fb50b49852ce0a3b30dc370db8b",
+      "bytes": 11880,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/resource_lumber.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/resource_lumber.gltf": {
+      "sha256": "601a69f44f0c4a9b5070a80bd4a20887960e01f1523a6125c1edc8ba19168f1f",
+      "bytes": 3060,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/resource_lumber.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/rock_single_A.bin": {
+      "sha256": "0f038d45b8df2c9efa034e5d3c3635a475a2683e2e741aa9a0cd197c5689e2ce",
+      "bytes": 1228,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/rock_single_A.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/rock_single_A.gltf": {
+      "sha256": "ddf307987fb18aa8e7594bb399de3943e497b50bc01aae0e7292a38418944915",
+      "bytes": 3031,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/rock_single_A.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/rock_single_B.bin": {
+      "sha256": "fcc0d8a45e7f6ad0eb674de934b0fa54be8f3dd61fa389446dd6b7be2cd2e2c1",
+      "bytes": 1628,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/rock_single_B.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/rock_single_B.gltf": {
+      "sha256": "2014965b7131e6f9a804be7a90ba3800b6035e8af2ff6f0bf67c5e72cac1bf15",
+      "bytes": 3052,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/rock_single_B.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/rock_single_C.bin": {
+      "sha256": "7d63c76a9f576bda17a63c77d8f7c9f617e11ed57e3459d9c8d5da7ebdf0b8f1",
+      "bytes": 2192,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/rock_single_C.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/rock_single_C.gltf": {
+      "sha256": "4cbf4a67fa176d2374b4863348fddf7879b892e612dd455ad14173f17172d45b",
+      "bytes": 3052,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/rock_single_C.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/sack.bin": {
+      "sha256": "5c3e6f5c63f8c4420ed3dfb2027beffc981740b5af9c89be148b56c19b993e02",
+      "bytes": 3240,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/sack.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/sack.gltf": {
+      "sha256": "b61929d6161907aff4f1fd211cd0a8300d002d1a686ba43d07c4aff171fbd9f0",
+      "bytes": 3031,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/sack.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/target.bin": {
+      "sha256": "783dc41050451fb43efafc97b60bf486a50679bac07a782c0beb7af9d05bbe2e",
+      "bytes": 7112,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/target.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/target.gltf": {
+      "sha256": "e92374d50c46b5816a1c118260d27ac49d3e52e8d7de6b0b7a9326a69c43cc44",
+      "bytes": 3016,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/target.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/tent.bin": {
+      "sha256": "fce10cd8e153d14b53a4f0fd902124c214ea29fac370707bb3a604ce2a718fc2",
+      "bytes": 6148,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/tent.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/tent.gltf": {
+      "sha256": "d8920394ddec09d8afa0cfaa2dad1c75b55fd21819fbd7c31392b3b8dce5dca0",
+      "bytes": 3008,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/tent.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/tree_single_A.bin": {
+      "sha256": "437deac68f35338bb309b01e4d346dd4be37557d7a2f033d04765f63e1b88825",
+      "bytes": 3340,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/tree_single_A.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/tree_single_A.gltf": {
+      "sha256": "ac913af6eaed6f15d26a2b75a877aa8dd10de90f26298f3f953abad86a4b4606",
+      "bytes": 3053,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/tree_single_A.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/tree_single_B.bin": {
+      "sha256": "c6a7423ce62f61216f7d8c77e1bd1d8665cbbee59718e59e0e42485f9acfca36",
+      "bytes": 7368,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/tree_single_B.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/tree_single_B.gltf": {
+      "sha256": "1c038591301947c485937e9fdbab182c813ef32df48c02fad3daeb2f1f0421e0",
+      "bytes": 3056,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/nature/tree_single_B.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/wall_corner_A_inside.bin": {
+      "sha256": "295f780d2a9465e260a63fbb7ed6bbb22b4cae553fcd69bc13cc62d53afa4202",
+      "bytes": 21352,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/wall_corner_A_inside.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/wall_corner_A_inside.gltf": {
+      "sha256": "53a9a2b04c310e109f33d218c15613a03d46a36cd7aadf301475a7638de04eb0",
+      "bytes": 3061,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/wall_corner_A_inside.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/wall_corner_A_outside.bin": {
+      "sha256": "8c899f68972f3c78589fd69a99540fd537886f207bdeb37f78ef0bd3f06f255f",
+      "bytes": 24788,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/wall_corner_A_outside.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/wall_corner_A_outside.gltf": {
+      "sha256": "75a1adaba70ec6df4ead3a955d3ac02007c8d7b45081ba087584748e805ebd61",
+      "bytes": 3063,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/wall_corner_A_outside.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/wall_straight_gate.bin": {
+      "sha256": "9e64ec5b8c23113bc1bdb57ae824e067216dcf3d8475e6303e3198556fb8da28",
+      "bytes": 47288,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/wall_straight_gate.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/wall_straight_gate.gltf": {
+      "sha256": "877f3e95f89c23741c38b9d2f8f307c1369042ec5c354d7858d72ab2b9666c3a",
+      "bytes": 7198,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/wall_straight_gate.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/wall_straight.bin": {
+      "sha256": "919cfc7da53ddfba6143eccfbdf8bdffa4bdb5a01e7099d289b99832971d18f4",
+      "bytes": 31088,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/wall_straight.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/wall_straight.gltf": {
+      "sha256": "7f466420a00fac9c6eb568178a81ef2719ac3c710f1fdc4027f8fc46a262ad7a",
+      "bytes": 3009,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/buildings/neutral/wall_straight.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/weaponrack.bin": {
+      "sha256": "3773a0eab3da0c7526a13880b3dc7f2c8c42f97e5b8970d5bf5a522f0ea7f0ea",
+      "bytes": 2940,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/weaponrack.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/weaponrack.gltf": {
+      "sha256": "e6985e05285ae219a0a6317522debb9d48c8b39334820e0c9694f195f1519be5",
+      "bytes": 3027,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/weaponrack.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/wheelbarrow.bin": {
+      "sha256": "72ca612b0dc940c856ed5abbbb9df9562c09bff52cfb2258375b16cbaad29e12",
+      "bytes": 19016,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/wheelbarrow.bin"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "kaykit-medieval-hexagon/wheelbarrow.gltf": {
+      "sha256": "bb037662a3e5be1f4fe597ffc4927d2a6ad88d307da10388cfb178ca5fdae63d",
+      "bytes": 3059,
+      "source": {
+        "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+        "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+        "path": "addons/kaykit_medieval_hexagon_pack/Assets/gltf/decoration/props/wheelbarrow.gltf"
+      },
+      "licence": {
+        "path": "kaykit-medieval-hexagon/LICENSE.txt",
+        "upstreamPath": "LICENSE.txt",
+        "sha256": "881e50d3629fba90629bedc65e9e6f47cfab3609598c296dcb7f70ea83174360",
+        "id": "CC0-1.0"
+      }
+    },
+    "quaternius-farm-animals/Horse.glb": {
+      "sha256": "a3ecd62244f3e4fe0fa702d2de0f34481db0961c6060fbb97c3f6186d15f4d22",
+      "bytes": 362616,
+      "source": {
+        "repo": "https://github.com/tilakpatell/tilakverse-assets",
+        "commit": "85064399bbdacc0e8cc50807179490314bc4ff1c",
+        "path": "quaternius/farm-animals/FBX/Horse.fbx",
+        "sha256": "6db270ddc7591e9a013f96eab445031381fa6d5d68d2feba567f964e0fe68d90",
+        "note": "Third-party re-host of the Quaternius Farm Animals Pack; check this FBX hash against an official quaternius.com download when one is reachable."
+      },
+      "generated": {
+        "tool": "bpy 5.2.2 LTS (headless Blender)",
+        "script": "tools/assets/blender/convert_horse.py",
+        "clips": [
+          "Death",
+          "Idle",
+          "Jump",
+          "Run",
+          "Walk",
+          "WalkSlow"
+        ]
+      },
+      "licence": {
+        "path": "quaternius-farm-animals/LICENSE.txt",
+        "upstreamPath": "quaternius/farm-animals/License.txt",
+        "sha256": "ddd45ec17b154d9469c9f0324f002406c3187723bd2deea1d8d44c55e66a9d4d",
+        "id": "CC0-1.0"
+      }
+    },
+    "quaternius-farm-animals/LICENSE.txt": {
+      "sha256": "ddd45ec17b154d9469c9f0324f002406c3187723bd2deea1d8d44c55e66a9d4d",
+      "bytes": 567,
+      "source": {
+        "repo": "https://github.com/tilakpatell/tilakverse-assets",
+        "commit": "85064399bbdacc0e8cc50807179490314bc4ff1c",
+        "path": "quaternius/farm-animals/License.txt"
+      },
+      "licence": {
+        "path": "quaternius-farm-animals/LICENSE.txt",
+        "upstreamPath": "quaternius/farm-animals/License.txt",
+        "sha256": "ddd45ec17b154d9469c9f0324f002406c3187723bd2deea1d8d44c55e66a9d4d",
+        "id": "CC0-1.0"
+      }
+    }
+  }
+}
