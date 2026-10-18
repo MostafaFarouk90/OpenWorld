@@ -22,6 +22,9 @@ class FakeWorld implements DirectorPorts {
   locks: readonly string[] = [];
   charges: number[] = [];
   xpHeld = false;
+  xpReasons: string[] = [];
+  /** Trigger volumes the player is inside, as the last fixedUpdate saw them. */
+  inside = new Set<string>();
   lvl = 1;
   levelGrants = 0;
   grants: { sourceId: string; items: { itemId: string; count: number }[] }[] = [];
@@ -136,8 +139,12 @@ class FakeWorld implements DirectorPorts {
     if (this.autoFade) return Promise.resolve();
     return new Promise<void>((resolve) => (this.fadePromise = { resolve }));
   }
-  holdKillXp(on: boolean) {
+  holdKillXp(on: boolean, reason?: string) {
     this.xpHeld = on;
+    if (on) this.xpReasons.push(reason ?? '');
+  }
+  playerInTrigger(id: string) {
+    return this.inside.has(id);
   }
   level() {
     return this.lvl;
@@ -976,6 +983,7 @@ describe('Replay board drills', () => {
     passUntil(null);
     expect(d.startDrill(block)).toBe(true);
     expect(w.xpHeld).toBe(true);
+    expect(w.xpReasons.at(-1)).toBe('tutorial.replay');
     w.health = 0.01;
     expect(d.onLethal()).toBe(true);
     expect(d.drillActive).toBeNull();
@@ -986,6 +994,125 @@ describe('Replay board drills', () => {
     ev({ type: 'groupCleared', spawnerId: 'replay.blocker' });
     expect(d.drillActive).toBeNull();
     expect(w.toasts).toContain('tutorial.replay.done');
+  });
+});
+
+describe('trigger goals with the player already inside', () => {
+  const sprintT06 = (): void => {
+    for (let seg = 0; seg < 2; seg++) {
+      for (let i = 0; i < 90; i++) {
+        feet = { x: feet.x + 0.5, y: 0, z: 0 };
+        tick(1, { sprinting: true, moving: true });
+      }
+      tick(1, { sprinting: false });
+    }
+  };
+
+  it('T06 end completes when the sprint steps finish with the player inside the trigger', () => {
+    d.begin('full', 't06');
+    w.inside.add('trg.t06.end');
+    sprintT06();
+    expect(w.beats).toContain('t06:completed');
+    expect(d.beat).toBe('t07');
+  });
+
+  it('T15 gate completes after fast travel lands the player in the gate trigger', () => {
+    d.begin('full', 't14');
+    PASS.t14();
+    w.inside.add('trg.t15.gate'); // stale this tick, current on the next
+    tick();
+    expect(d.beat).toBe('t15');
+    expect(d.currentStep).toBe(1);
+    expect(w.spawned.map((s) => s.spawnerId)).toContain('t15.gate');
+  });
+
+  it('a kettlewick start inside the gate trigger moves on at once', () => {
+    w.inside.add('trg.t15.gate');
+    d.begin('kettlewick');
+    expect(d.currentStep).toBe(1);
+  });
+
+  it('teleport then step current: the stale first check misses, the next tick completes once', () => {
+    d.begin('full', 't15');
+    expect(d.currentStep).toBe(0);
+    w.inside.add('trg.t15.gate'); // volumes catch up on the next fixedUpdate
+    tick();
+    expect(d.currentStep).toBe(1);
+    tick(3);
+    expect(w.spawned.filter((s) => s.spawnerId === 't15.gate')).toHaveLength(1);
+  });
+
+  it('step current then teleport into the trigger completes once', () => {
+    d.begin('full', 't06');
+    sprintT06();
+    expect(d.currentStep).toBe(1);
+    tick(2);
+    expect(d.currentStep).toBe(1);
+    w.inside.add('trg.t06.end');
+    tick();
+    expect(w.beats.filter((b) => b === 't06:completed')).toHaveLength(1);
+    expect(d.beat).toBe('t07');
+  });
+
+  it('a real trigger.enter in the same tick as the check does not double-complete', () => {
+    d.begin('full', 't06');
+    w.inside.add('trg.t06.end');
+    sprintT06();
+    ev({ type: 'trigger', id: 'trg.t06.end' });
+    tick(3);
+    expect(w.beats.filter((b) => b === 't06:completed')).toHaveLength(1);
+    expect(w.beats.filter((b) => b === 't07:started')).toHaveLength(1);
+  });
+
+  it('only the step own trigger goals are fed: a second trigger goal of the step is not consumed', () => {
+    d.begin('full', 't07');
+    w.inside.add('trg.t07.cart');
+    tick();
+    expect(d.beat).toBe('t07');
+    w.inside.add('trg.t07.fence');
+    tick();
+    expect(d.beat).not.toBe('t07');
+  });
+
+  it('a reload resumes a trigger step with the player inside', () => {
+    d.begin('full', 't06');
+    sprintT06();
+    const save = d.serialize();
+    w.inside.add('trg.t06.end');
+    d.load(save);
+    d.onSaveLoaded();
+    tick(2);
+    expect(d.beat).toBe('t07');
+  });
+
+  it('a Replay drill trigger step completes when the player is inside', () => {
+    const drill: DrillDef = { id: 'gate', steps: [[{ kind: 'count', event: 'blocked', count: 1 }], [{ kind: 'trigger', id: 'trg.drill' }]] };
+    d.begin('full');
+    passUntil(null);
+    expect(d.startDrill(drill)).toBe(true);
+    ev({ type: 'blocked' });
+    expect(d.drillActive).toBe('gate');
+    w.inside.add('trg.drill');
+    tick();
+    expect(d.drillActive).toBeNull();
+    expect(w.toasts.filter((t) => t === 'tutorial.replay.done')).toHaveLength(1);
+  });
+});
+
+describe('kill XP pause reasons', () => {
+  it('the run pauses as tutorial, a drill as tutorial.replay, and both release on end', () => {
+    d.begin('full');
+    expect(w.xpHeld).toBe(true);
+    expect(w.xpReasons).toEqual(['tutorial']);
+    passUntil(null);
+    expect(w.xpHeld).toBe(false);
+    const drill: DrillDef = { id: 'block', steps: [[{ kind: 'count', event: 'blocked', count: 1 }]] };
+    expect(d.startDrill(drill)).toBe(true);
+    expect(w.xpHeld).toBe(true);
+    expect(w.xpReasons.at(-1)).toBe('tutorial.replay');
+    ev({ type: 'blocked' });
+    expect(d.drillActive).toBeNull();
+    expect(w.xpHeld).toBe(false);
   });
 });
 
@@ -1105,7 +1232,9 @@ describe('review fixes', () => {
       tick();
       expect(d.complete).toBe(true);
       expect(w2.locks).toEqual([]);
-      expect(w2.calls).toContain('place:gaut@tutorial.gaut.gate');
+      // After M01 the quest posts own Gaut and Aelfreda (src/quests/posts.ts): the tutorial no longer places them.
+      if (quest === 'm01' && state === 'completed') expect(w2.calls).not.toContain('place:gaut@tutorial.gaut.gate');
+      else expect(w2.calls).toContain('place:gaut@tutorial.gaut.gate');
     }
     const w3 = new FakeWorld();
     w3.quests.set('t01', 'completed');

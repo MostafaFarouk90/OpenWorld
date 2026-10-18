@@ -32,6 +32,9 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | yard.dodge-lane | -36 | 125 | 0 | 180 | replay |
 | yard.pole-1 | -53.5 | 111 | 0 | 270 | replay |
 | yard.pole-2 | -53.5 | 121 | 0 | 270 | replay |
+| yard.blocking-dummy-1 | -49 | 108 | 0 | 180 | dummy |
+| yard.blocking-dummy-2 | -45 | 108 | 0 | 180 | dummy |
+| yard.blocking-dummy-3 | -41 | 108 | 0 | 180 | dummy |
 | chapel.yard-centre | 32 | 60 | 0 | 270 | poi |
 | chapel.door | 46 | 60 | 0 | 270 | poi, door |
 | chapel.kneel | 53 | 60 | 0 | 270 | poi |

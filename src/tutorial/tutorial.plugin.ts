@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { PLAYER_ID } from '../actors/teams';
 import type { GameContext } from '../core/Game';
 import type { GamePlugin } from '../core/plugins';
+import { parseAct1 } from '../quests/act1Jump';
 import type { Action } from '../input/actions';
 import { STARTER_KIT } from '../inventory/items';
 import { heightAt } from '../terrain/heightfield';
@@ -77,7 +78,11 @@ function writeCompletion(): void {
 /** `?tutorial=full|veteran|kettlewick|t09`: skip the start screen (tests and smoke runs). */
 export function tutorialFromQuery(search: string): { mode: TutorialMode; at?: BeatId } | null {
   const raw = new URLSearchParams(search).get('tutorial');
-  if (!raw) return null;
+  // A valid `?act1=` jump (dev) finishes the tutorial itself from a Kettlewick start: no start screen.
+  if (!raw) {
+    const act1 = import.meta.env.DEV ? parseAct1(search) : null;
+    return act1 && !('error' in act1) ? { mode: 'kettlewick' } : null;
+  }
   if (raw === 'full' || raw === 'veteran' || raw === 'kettlewick') return { mode: raw };
   if ((BEAT_IDS as readonly string[]).includes(raw) && raw !== 'skirmish') return { mode: 'full', at: raw as BeatId };
   return null;
@@ -194,6 +199,7 @@ function makePorts(ctx: GameContext, ui: {
     despawn: (id) => svc.get('enemies')?.despawnGroup(id),
     resetGroup: (id) => svc.get('enemies')?.reset(id),
     alive: (id) => svc.get('enemies')?.alive(id).length ?? 0,
+    playerInTrigger: (id) => ctx.triggers.isInside(id, PLAYER_ID),
     setLocks: (actions) => {
       locksOff?.();
       locksOff = actions.length > 0 ? ctx.player.addMoveModifier('tutorial.locks', { lockActions: actions as Action[] }) : null;
@@ -226,10 +232,10 @@ function makePorts(ctx: GameContext, ui: {
       // Busy or terrain not ready: never leave a restarted player where they fell.
       if (!outcome || !outcome.ok) ctx.player.teleport(a.position, a.yaw);
     },
-    holdKillXp: (on) => {
+    holdKillXp: (on, reason = 'tutorial') => {
       // Pauses are not saved (Progression.ts), so a hold is always re-taken fresh.
       xpRelease?.();
-      xpRelease = on ? (svc.get('progression')?.pauseKillXp('tutorial') ?? null) : null;
+      xpRelease = on ? (svc.get('progression')?.pauseKillXp(reason) ?? null) : null;
     },
     level: () => svc.get('progression')?.level ?? 1,
     grantLevelTwo: () => {
