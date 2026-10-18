@@ -1,5 +1,5 @@
 import { PLACEHOLDER_SAMPLE_RATE, samplesToWavUrl } from '../audio/proceduralSounds';
-import { SFX_IDS, type SfxId } from './sfxLayers';
+import { SFX_IDS, SPELL_SFX_IDS, type SfxId } from './sfxLayers';
 import { sfxKey, sfxSeconds, SFX_VARIANTS, synthSfx } from './sfxSynth';
 
 export interface SfxAudio {
@@ -78,6 +78,16 @@ export function registerPlaceholderSfx(audio: SfxRegistrar, volume = 0.8): strin
       });
       keys.push(key);
     }
+  }
+  // Spell sounds are played by key by the spells plugin, so they are registered without a variant.
+  for (const id of SPELL_SFX_IDS) {
+    audio.register(id, {
+      src: [samplesToWavUrl(synthSfx(id, 1, PLACEHOLDER_SAMPLE_RATE))],
+      format: ['wav'],
+      volume,
+      refDistance: 3,
+    });
+    keys.push(id);
   }
   return keys;
 }

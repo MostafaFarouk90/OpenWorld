@@ -14,3 +14,8 @@ all in D minor. The canonical length is `round(16 * 240 / 92 * sampleRate)` fram
 2 frames of that is trimmed or zero-padded to match; any other length is rejected with a console warning and
 that stem alone falls back to its placeholder. A stem that is missing or fails to decode also falls back.
 The mixer never changes `playbackRate`, so every variant must be its own stem of the same length.
+
+## Spell sounds
+
+`registerPlaceholderSfx` also registers `sfx.surge.charge`, `sfx.surge.release` and `sfx.rally` under those exact
+keys (no `#variant` suffix) for the spells plugin, which plays them through `services.get('audio')`.
