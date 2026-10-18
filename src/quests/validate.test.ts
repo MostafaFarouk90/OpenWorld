@@ -81,3 +81,10 @@ describe('validateEffects', () => {
     expect(validateEffects([e as never])).toHaveLength(1);
   });
 });
+
+describe('validateEffects unlockMercy verbs', () => {
+  it('accepts release, spare and calm and rejects anything else', () => {
+    expect(validateEffects([{ unlockMercy: 'release' }, { unlockMercy: 'spare' }, { unlockMercy: 'calm' }])).toEqual([]);
+    expect(validateEffects([{ unlockMercy: 'warmHand' } as never, { unlockMercy: '' } as never])).toHaveLength(2);
+  });
+});

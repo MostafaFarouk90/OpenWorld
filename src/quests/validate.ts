@@ -78,7 +78,7 @@ export function validateEffects(effects: Effect[] | undefined, where = 'effects'
     } else if ('placeNpc' in c) {
       if (!isObj(c.placeNpc) || !isStr(c.placeNpc.npcId) || !isStr(c.placeNpc.anchorId)) errs.push(`${w}: placeNpc needs npcId and anchorId`);
     } else if ('unlockMercy' in c) {
-      if (c.unlockMercy !== 'release' && c.unlockMercy !== 'spare') errs.push(`${w}: unlockMercy verb must be release or spare`);
+      if (c.unlockMercy !== 'release' && c.unlockMercy !== 'spare' && c.unlockMercy !== 'calm') errs.push(`${w}: unlockMercy verb must be release, spare or calm`);
     } else if ('grantAbility' in c) {
       if (!isStr(c.grantAbility)) errs.push(`${w}: grantAbility needs an ability id`);
     } else if ('event' in c) {
