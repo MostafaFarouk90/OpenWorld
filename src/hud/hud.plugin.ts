@@ -192,6 +192,10 @@ const hudPlugin: GamePlugin = {
       active: () => bosses?.active?.() ?? [],
       state: (id) => bosses?.state?.(id) ?? null,
       t,
+      // The core controls hint (top-left, up to 560 px) would run under the centred bar; hide it while a boss shows.
+      onVisible: (v) => {
+        if (typeof document !== 'undefined') document.documentElement.classList.toggle('owg-boss-active', v);
+      },
     });
     ctx.events.on('boss.started', (e) => bossBar.started(e.bossId));
     for (const type of ['boss.phase', 'boss.break', 'boss.shield', 'boss.releaseWindow'] as const) {
