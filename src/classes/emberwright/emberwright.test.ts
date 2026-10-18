@@ -287,3 +287,53 @@ describe('lifecycle', () => {
     expect(rig.ember.value).toBe(100);
   });
 });
+
+describe('review fixes', () => {
+  it('a flame ball in flight deals nothing after a save load, a class change or a rest', () => {
+    for (const ev of ['save.loaded', 'class.changed', 'rest'] as const) {
+      rig = makeRig();
+      rig.hostile('t', 0, 8);
+      rig.window('Spellcast_Long');
+      rig.step(0.05);
+      rig.w.events.emit(ev as never, {} as never);
+      rig.step(2);
+      expect(rig.applied(), ev).toHaveLength(0);
+      rig.rt.dispose();
+    }
+  });
+
+  it('props the player must break (toll-post, dummies) take spell hits; neutral people still do not', () => {
+    rig = makeRig();
+    const post = rig.w.actors.add(new FakeActor('post', 'neutral', 0, 6));
+    post.kind = 'toll-post';
+    rig.window('Spellcast_Long');
+    rig.step(2);
+    expect(rig.applied().map((r) => r.targetId)).toEqual(['post']);
+    expect(rig.applied()[0].poise).toBe(FLAME_BALL.poise);
+  });
+
+  it('a cancel request left over from a same-tick stagger does not kill the next cast', async () => {
+    rig = makeRig();
+    rig.hostile('on', 0, 6);
+    rig.rt.castAbility(SKILL.flameLash);
+    rig.step(0.1);
+    rig.w.events.emit('ui.modal' as never, { id: 'inv', open: true } as never);
+    rig.w.events.emit('actor.staggered', { actorId: 'player' } as never);
+    rig.step(1);
+    expect(rig.rt.castAbility(SKILL.flameLash)).toEqual({ ok: true });
+    rig.step(2);
+    expect(rig.applied()).toHaveLength(1);
+  });
+
+  it('Anvil Drop refuses a lock-on target beyond 12 m or behind a wall; Warm Breath refuses with no ally in the cone', () => {
+    rig = makeRig();
+    rig.hostile('far', 0, 20);
+    rig.state.lockOn = 'far';
+    expect(rig.rt.castAbility(SKILL.anvilDrop)).toEqual({ ok: false, reason: 'no-target' });
+    rig.hostile('near', 0, 5);
+    rig.state.lockOn = 'near';
+    rig.state.walls = true;
+    expect(rig.rt.castAbility(SKILL.anvilDrop)).toEqual({ ok: false, reason: 'no-target' });
+    expect(rig.rt.castAbility(SKILL.warmBreath)).toEqual({ ok: false, reason: 'no-target' });
+  });
+});
