@@ -119,6 +119,7 @@ export const HUD_CSS = `
 @keyframes owg-chase-pulse{50%{opacity:.55}}
 .owg-mount{width:260px;pointer-events:none}
 .owg-bar-mount{height:6px}
+.owg-bolts{pointer-events:none;color:#e8d9b5;font-size:12px;text-shadow:0 1px 2px #000}
 .owg-bar-mount .owg-bar-fill{background:#c9a063}
 .owg-classlabel{display:flex;flex-direction:column;gap:2px;margin-top:4px;pointer-events:none;font:12px system-ui,sans-serif;color:#f3ead8;text-shadow:0 1px 2px #000}
 .owg-class-name{font-weight:600}

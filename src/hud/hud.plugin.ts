@@ -9,6 +9,7 @@ import { ActEndingCard, ACT_ENDING_CAMP_FLAGS, ACT_ENDING_GATE_FLAG, ACT_ENDING_
 import { BossBar } from './BossBar';
 import { ChaseTimer } from './ChaseTimer';
 import { ClassLabel } from './ClassLabel';
+import { BoltCounter } from './BoltCounter';
 import { MountStamina } from './MountStamina';
 import { NoiseRing, StealthEye } from './StealthEye';
 import { CompanionPortrait } from './CompanionPortrait';
@@ -25,7 +26,7 @@ import { asHtml, hudDocument, injectCss, projectToScreen, soft } from './soft';
 import type { HudSlot } from '../ui/HudLayer';
 import type { HudWidgetView } from './widget';
 import type { ProgressionService } from './ports';
-import { FOG_OPEN_FLAGS } from '../region/fogWall';
+import { fogOpen } from '../region/fogWall';
 import { getSkill } from '../progression/skills';
 import { LEVEL_CAP, xpForLevel } from '../progression/tuning';
 
@@ -219,7 +220,7 @@ const hudPlugin: GamePlugin = {
     const keyTarget = typeof globalThis.addEventListener === 'function' ? (globalThis as unknown as KeySource) : null;
     const card = new ActContinuesCard(doc, { t, keys: keyTarget, enabled: () => hudOptions.showActContinues,
       // The wall stands iff none of region/fogWall's open flags is true (the same list the map uses).
-      alreadyOpen: () => FOG_OPEN_FLAGS.some((f) => ctx.state.getBool(f)),
+      alreadyOpen: () => fogOpen(ctx.state),
     });
     ctx.events.on('trigger.enter', (e) => card.onTrigger(e.triggerId));
     mount('center', card, 0);
@@ -248,6 +249,7 @@ const hudPlugin: GamePlugin = {
     // Full-viewport slot: the top-center slot is transformed, which would break the ring's position:fixed centring.
     mount('overlay', new NoiseRing(doc, { t, noise: () => soft(ctx, 'stealth')?.noise() }), 5);
     mount('top-center', new ChaseTimer(doc, { t, timer: () => soft(ctx, 'chase')?.timer() }), 20);
+    mount('top-left', new BoltCounter(doc, { t, ammo: () => soft(ctx, 'pathfinder')?.ammo() }), 26);
     mount('top-left', new MountStamina(doc, { t, stamina: () => soft(ctx, 'mount')?.stamina() }), 25);
     mount(
       'top-left',
