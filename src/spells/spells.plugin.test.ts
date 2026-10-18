@@ -559,6 +559,19 @@ describe('shard use, Scars and the Leap (slice 2)', () => {
         expect(trail.stop).toHaveBeenCalled();
       });
 
+      it('rekindling the Quenchstone at Burn 95 scars through the one shard path and flashes the chest (thread 7 seam)', () => {
+        const spawnEffect = vi.fn((_id: string) => ({ stop: vi.fn(), alive: false }));
+        const f = makeCtx({ vfx: { spawnEffect, fovPunch: vi.fn(), pulseScreen: vi.fn() } });
+        plugin.setup(f.ctx);
+        const s = f.services.spells!;
+        s.addBurn(95, 't');
+        f.world.events.emit('waystone.rekindled', { waystoneId: 'quenchstone', cause: 'player' });
+        expect(s.scars).toBe(1);
+        expect(s.burn).toBe(100);
+        expect(spawnEffect.mock.calls.map((c) => c[0])).toContain('scar-flash');
+        plugin.dispose!();
+      });
+
       it('a Scar spawns scar-flash', () => {
         const spawnEffect = vi.fn((_id: string) => ({ stop: vi.fn(), alive: false }));
         const f = makeCtx({ vfx: { spawnEffect, fovPunch: vi.fn(), pulseScreen: vi.fn() } });
