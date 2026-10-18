@@ -2,11 +2,13 @@ import * as THREE from 'three';
 import type { GameContext } from '../core/Game';
 import type { GamePlugin } from '../core/plugins';
 import type { GameServices } from '../core/Services';
+import { InteriorFx } from '../audio/InteriorFx';
 import { BarClock } from './barClock';
+import { BeatScheduler, beatInfoAt, performanceToAudioTime, type BeatInfo } from './beatClock';
 import { isCombatHit } from './hostileSet';
 import { MusicDirector } from './MusicDirector';
 import { musicConfig } from './musicConfig';
-import { impactLayers, isHeavyHit, resolveMaterial, swingLayer } from './sfxLayers';
+import { BARE_SFX, impactLayers, isHeavyHit, resolveMaterial, SFX, swingLayer } from './sfxLayers';
 import { registerPlaceholderSfx, SfxPlayer } from './SfxPlayer';
 import { loadTrackStems } from './stemLoader';
 import { BARLEY_AND_BRAZIER, loopSeconds, type TrackDef } from './tracks';
@@ -18,11 +20,25 @@ declare module '../core/Services' {
     /** Provided by thread 8 (src/music); contracts/music-states.md section 2. */
     music: {
       readonly state: import('./MusicDirector').MusicState;
-      setBoss(on: boolean): void;
+      setBoss(on: boolean, bossId?: string): void;
       duck(reason: string, on: boolean): void;
       setRegionTrack(trackId: string): void;
+      /** contracts/music-states.md section 6. Null while audio is locked or no track plays. */
+      beat(): BeatInfo | null;
+      onBeat(cb: (b: BeatInfo) => void): () => void;
+      toAudioTime(performanceMs: number): number;
     };
   }
+}
+
+/** M05's trinket (thread 6): cosmetic, never used, so its sound plays when it is granted. */
+const WHISTLE_ITEM = 'tobbs-lucky-whistle';
+const BARK_GAP_SECONDS = 0.8;
+
+function hashString(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
 }
 
 const TRACKS: Readonly<Record<string, TrackDef>> = { [BARLEY_AND_BRAZIER.id]: BARLEY_AND_BRAZIER };
@@ -40,6 +56,10 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
   let gameTime = 0; // simulated seconds: stands still while the game is paused
   const audioNow = (): number => audio.context.currentTime;
 
+  let clock: BarClock | null = null;
+  const beats = new BeatScheduler();
+  const fx = InteriorFx.create(audio.context, audio.musicBus ?? null, audio.masterNode ?? null);
+
   const director = new MusicDirector({
     track,
     driver: { setMix: (mix, ramp) => audio.music.setMix(mix, ramp) },
@@ -49,7 +69,14 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
     get state() {
       return director.state;
     },
-    setBoss: (on) => director.setBoss(on, gameTime),
+    setBoss: (on, bossId) => director.setBoss(on, gameTime, bossId),
+    beat() {
+      const state = (audio.context as { state?: string }).state;
+      if (!clock || (state !== undefined && state !== 'running')) return null;
+      return beatInfoAt(clock, track.bpm, audioNow());
+    },
+    onBeat: (cb) => beats.onBeat(cb),
+    toAudioTime: (ms) => performanceToAudioTime(audio.context, ms, performance.now(), musicConfig.beatInputOffsetSeconds),
     duck: (reason, on) => director.duck(reason, on),
     setRegionTrack(trackId) {
       if (!TRACKS[trackId] || trackId !== track.id) {
@@ -109,9 +136,61 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
   ev.on('dialogue.ended', (e) => director.duck(`dialogue:${e.dialogueId}`, false));
   ev.on('cutscene.started', (e) => director.duck(`cutscene:${e.cutsceneId}`, true));
   ev.on('cutscene.ended', (e) => director.duck(`cutscene:${e.cutsceneId}`, false));
-  ev.on('save.loaded', () => director.reset(gameTime));
+  ev.on('save.loaded', () => {
+    director.reset(gameTime);
+    rederiveBosses();
+    // The interiors service sets its current id before `save.loaded`; never reset to outdoors blindly.
+    const interiors = (ctx.services as unknown as { get(name: string): { current?: string | null } | undefined }).get('interiors');
+    fx?.setInterior(interiors?.current ?? null);
+  });
   ev.on('actor.revived', (e) => {
-    if (e.actorId === playerId && e.reason === 'respawn') director.reset(gameTime);
+    if (e.actorId === playerId && e.reason === 'respawn') {
+      director.reset(gameTime);
+      rederiveBosses();
+    }
+  });
+
+  // Boss music follows the core registry only (phases are 1-based).
+  ev.on('boss.started', (e) => director.bossStarted(e.bossId, ctx.bosses?.state(e.bossId)?.phase ?? 1, gameTime));
+  ev.on('boss.phase', (e) => director.bossPhase(e.bossId, e.phase));
+  ev.on('boss.releaseWindow', (e) => director.bossHush(e.bossId, e.open));
+  ev.on('boss.defeated', (e) => director.bossResolved(e.bossId, gameTime));
+  ev.on('boss.released', (e) => director.bossResolved(e.bossId, gameTime));
+  ev.on('boss.ended', (e) => director.bossEnded(e.bossId, gameTime));
+
+  // Interiors: one slot (contracts/interiors-and-nav.md); the same id again is a no-op.
+  ev.on('interior.entered', (e) => fx?.setInterior(e.interiorId));
+  ev.on('interior.exited', () => fx?.setInterior(null));
+
+  // Slice 2 sounds.
+  ev.on('shrine.rekindled', () => {
+    if (director.state !== 'combat' && director.state !== 'boss') sfx.playKey(BARE_SFX.shrineRekindle);
+    director.requestDiscover();
+  });
+  ev.on('wardstones.complete', () => sfx.playKey(BARE_SFX.wardstonesComplete));
+  ev.on('loot.granted', (e) => {
+    if (e.items.some((i) => i.itemId === WHISTLE_ITEM)) sfx.playKey(BARE_SFX.whistle);
+  });
+  ev.on('player.leap', (e) => {
+    if (e.phase === 'start') sfx.play([SFX.leap], e.from);
+    else if (e.phase === 'land' && e.to) sfx.play([SFX.thump], e.to);
+  });
+  const seenPulses: string[] = [];
+  ev.on('mercy', (e) => {
+    if (e.verb !== 'release') return;
+    if (e.pulseId !== undefined) {
+      if (seenPulses.includes(e.pulseId)) return;
+      seenPulses.push(e.pulseId);
+      if (seenPulses.length > 16) seenPulses.shift();
+    }
+    sfx.play([SFX.releasePulse], ctx.player.feet);
+  });
+  ev.on('enemies.yield', (e) => {
+    const at = positionOf(e.actorId, tmpB);
+    if (at) sfx.play([SFX.yieldKneel], at);
+  });
+  ev.on('companion.banter', (e) => {
+    sfx.play([SFX.companionBark], ctx.player.feet, { variant: hashString(e.lineKey), minGapSeconds: BARK_GAP_SECONDS });
   });
 
   ev.on('damage.dealt', (r) => {
@@ -144,6 +223,11 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
     if (at) sfx.play([swingLayer(e.attackId)], at);
   });
 
+  /** Boss ids the registry has right now; after a load or respawn the director forgot them. */
+  function rederiveBosses(): void {
+    for (const id of ctx.bosses?.active() ?? []) director.bossStarted(id, ctx.bosses.state(id)?.phase ?? 1, gameTime);
+  }
+
   ctx.systems.add({
     id: 'music',
     fixedPhase: 'rules',
@@ -151,15 +235,20 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
     fixedUpdate: (dt) => {
       gameTime += dt;
       director.update(gameTime, distanceTo, { audioNow: audioNow(), hostileNear: hostileNearby() });
+      const state = (audio.context as { state?: string }).state;
+      if (clock && (state === undefined || state === 'running')) beats.update(clock, track.bpm, audioNow());
     },
-    dispose: () => director.dispose(),
+    dispose: () => {
+      director.dispose();
+      fx?.dispose();
+    },
   });
 
   // Last, so nothing above can throw after the background load has started with no owner to stop it.
   // --- stems: load in the background, start once ready and unlocked -----------------------------
   void (async () => {
     try {
-      const loaded = await loadTrackStems(audio.context, track, { skipProcedural: ['boss'] });
+      const loaded = await loadTrackStems(audio.context, track, {});
       if (disposed) return; // late result after dispose: discard
       if (loaded.buffers.size === 0) {
         console.warn('Music: no stem could be built; the world stays without music.');
@@ -180,7 +269,8 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
           audio.music.start(director.currentMix());
           const startedAt = audio.music.startedAt;
           if (startedAt === null) return;
-          director.start(new BarClock(startedAt, loopSeconds(track, audio.context.sampleRate), track.bars), gameTime);
+          clock = new BarClock(startedAt, loopSeconds(track, audio.context.sampleRate), track.bars);
+          director.start(clock, gameTime);
         } catch (err) {
           console.warn('Music: could not start the mixer:', err);
         }
@@ -193,6 +283,7 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
   return () => {
     disposed = true;
     director.dispose();
+    fx?.dispose();
     if (audio.music.isPlaying) audio.music.stop();
   };
 }
