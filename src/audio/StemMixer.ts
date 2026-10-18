@@ -18,6 +18,7 @@ export class StemMixer {
   /** Ids reserved by add() calls still fetching, so concurrent duplicates are rejected too. */
   private readonly pending = new Set<string>();
   private playing = false;
+  private startTime: number | null = null;
 
   constructor(
     private readonly ctx: AudioContext,
@@ -48,6 +49,20 @@ export class StemMixer {
     return this.playing;
   }
 
+  /** Audio-clock time all stems started (or are scheduled to start) at; null while stopped. */
+  get startedAt(): number | null {
+    return this.startTime;
+  }
+
+  has(id: string): boolean {
+    return this.stems.has(id);
+  }
+
+  /** Length in frames of a stem's buffer, or undefined for an unknown stem. */
+  frames(id: string): number | undefined {
+    return this.stems.get(id)?.buffer.length;
+  }
+
   /**
    * Starts every stem at the same scheduled time with the given initial gains (stems not named are
    * silent). Calling it while the context is still suspended is safe: the start is scheduled on the
@@ -67,6 +82,7 @@ export class StemMixer {
       stem.source = source;
     }
     this.playing = true;
+    this.startTime = when;
   }
 
   stop(): void {
@@ -76,6 +92,7 @@ export class StemMixer {
       stem.source = null;
     }
     this.playing = false;
+    this.startTime = null;
   }
 
   /** Stops playback and disconnects and forgets every stem. */
