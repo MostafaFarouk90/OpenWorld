@@ -6,7 +6,7 @@ export const MIN_CLASS_STAMINA = 80;
 /** M10's rooftop chase on thread 17's `chase.m10.0..15`; `timer` is filled from the par time when the route loads. */
 export const M10_CHASE: Omit<ChaseDef, 'timer'> & { routePrefix: string } = {
   id: 'm10.rooftops',
-  quest: { id: 'm10', liveUntil: 'o3' },
+  quest: { id: 'm10', liveFrom: 'o2', liveUntil: 'o3' },
   start: { anchor: 'chase.m10.0', radius: 4 },
   restartAnchor: 'chase.m10.0',
   routePrefix: 'chase.m10',

@@ -7,6 +7,7 @@ import { ChaseDirector, type ChaseTimer } from './ChaseDirector';
 import { M10_AFTER_CATCH, M10_CHASE, MIN_CLASS_STAMINA } from './chases';
 import { routeFromAnchors, validateRoute } from './route';
 import { timerFor } from './solvability';
+import { teleporter } from '../stealth/teleporter';
 import { CHASE_STRINGS_EN } from './strings.en';
 
 /** The `chase` service (game-events-and-flags.md section 6, plus thread 8's timer reader). */
@@ -72,6 +73,8 @@ export default {
         const key = nodes.map((n) => `${n.id}:${n.position.x},${n.position.y},${n.position.z}`).join('|');
         if (key === routeKey) return director;
         routeKey = key;
+        // A rebuilt route ends any running chase cleanly first (hold released, chase.lost emitted).
+        director?.abort();
         director?.dispose();
         director = null;
         if (nodes.length === 0) return null;
@@ -84,14 +87,11 @@ export default {
         director = new ChaseDirector({ ...M10_CHASE, timer }, nodes, {
           find: (id) => ctx.anchors.find(id),
           playerFeet: () => ctx.player.feet,
-          live: (def) => questLive(quests(), def.quest.id, def.quest.liveUntil),
+          live: (def) => questLive(quests(), def.quest),
+          // Begins only in plain gameplay: no dialogue or menu open, alive, nobody hostile on the player.
+          canStart: () => ctx.input.contexts.top() === 'gameplay' && !ctx.player.actor.dead && !ctx.services.get('waystones')?.hostileAggro,
           suspend: (reason) => ctx.services.get('save')?.suspend(reason) ?? (() => {}),
-          teleport: (feet, yaw) => {
-            const w = ctx.services.get('waystones');
-            if (w) return w.safeTeleport(feet, yaw);
-            ctx.player.teleport(feet, yaw);
-            return Promise.resolve();
-          },
+          teleport: teleporter(ctx),
           emit: {
             started: (chaseId) => ctx.events.emit('chase.started', { chaseId }),
             caught: (chaseId, seconds) => ctx.events.emit('chase.caught', { chaseId, seconds }),
@@ -99,11 +99,21 @@ export default {
           },
           warn: (m) => console.warn(m),
         });
+        // A load can land between catch and the next objective: the courier waits cornered at the end.
+        if (cornered()) director.onLoaded(true);
         return director;
       };
 
       const figure = courierFigure(ctx);
-      if (figure) offs.push(() => (figure.removeFromParent(), figure.traverse((o) => (o as THREE.Mesh).geometry?.dispose())));
+      if (figure)
+        offs.push(() => {
+          figure.removeFromParent();
+          figure.traverse((o) => {
+            const m = o as THREE.Mesh;
+            m.geometry?.dispose();
+            (m.material as THREE.Material | undefined)?.dispose?.();
+          });
+        });
 
       const cornered = () => {
         const q = quests();
@@ -130,7 +140,8 @@ export default {
         render: () => {
           if (!figure) return;
           const d = director;
-          const show = !!d && (d.active() || (d.courier.cornered && cornered()));
+          // Visible while running, on the Again card, at the catch, and cornered until M10 moves on.
+          const show = !!d && (d.active() || d.state === 'caught' || (d.courier.cornered && cornered()));
           figure.visible = show;
           if (show && d) figure.position.copy(d.courier.position);
         },

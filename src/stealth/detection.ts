@@ -24,10 +24,18 @@ const clamp01 = (n: number) => (Number.isFinite(n) ? Math.max(0, Math.min(1, n))
  * The perception modifiers stealth contributes. Null when nothing applies (not sneaking, not hidden, no blocker and
  * full noise), so enemies outside stealth behave exactly as without a provider.
  */
-export function stealthModifiers(s: PlayerStealthState): PerceptionModifiers | null {
+export function stealthModifiers(s: PlayerStealthState, out?: PerceptionModifiers): PerceptionModifiers | null {
   const noise = clamp01(s.noiseScale);
   if (!s.sneaking && !s.hidden && s.blockers.length === 0 && noise === 1) return null;
-  const m: PerceptionModifiers = { sightRangeScale: 1, coneScale: 1, hearingQuietScale: noise, hearingLoudScale: 1 };
+  // `out` is reused per tick by the perception provider (no allocation on the hot path).
+  const m: PerceptionModifiers = out ?? { sightRangeScale: 1, coneScale: 1, hearingQuietScale: noise, hearingLoudScale: 1 };
+  m.sightRangeScale = 1;
+  m.coneScale = 1;
+  m.hearingQuietScale = noise;
+  m.hearingLoudScale = 1;
+  delete m.targetHeight;
+  delete m.hiddenBelow;
+  delete m.blockSight;
   if (s.sneaking || s.hidden) {
     m.sightRangeScale = STEALTH.sneak.sightRangeScale;
     m.coneScale = STEALTH.sneak.coneScale;
@@ -47,9 +55,10 @@ export function stealthModifiers(s: PlayerStealthState): PerceptionModifiers | n
 /** Radius in metres at which the player can be heard right now; null when not sneaking (the HUD ring hides). */
 export function playerNoise(s: PlayerStealthState): number | null {
   if (!s.sneaking) return null;
-  const m = stealthModifiers(s);
-  if (s.loud) return HEARING.loud * (m?.hearingLoudScale ?? 1);
-  return HEARING.quiet * (m?.hearingQuietScale ?? 1);
+  // Same numbers as stealthModifiers, without building the object (the HUD polls this per frame).
+  if (s.loud) return HEARING.loud * STEALTH.sneak.hearingLoudScale;
+  if (s.hidden) return 0;
+  return HEARING.quiet * (s.moving ? STEALTH.sneak.hearingQuietScale : STEALTH.stillHearingScale) * clamp01(s.noiseScale);
 }
 
 export type AlertState = 'calm' | 'suspicious' | 'alerted';

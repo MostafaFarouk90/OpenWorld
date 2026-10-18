@@ -10,7 +10,7 @@ const DT = 1 / 60;
 
 const SECTION: StealthSectionDef = {
   id: 'test.section',
-  quest: { id: 'q', liveUntil: 'o2', exitArmedAfter: ['o1'] },
+  quest: { id: 'q', liveFrom: 'o1', liveUntil: 'o2', exitArmedAfter: ['o1'] },
   bounds: { anchor: 'sec.centre', half: { x: 20, y: 5, z: 20 } },
   checkpoints: [
     { id: 'cp.a', anchor: 'sec.a', volume: { anchor: 'sec.a', half: { x: 2, y: 3, z: 2 } } },
@@ -33,6 +33,8 @@ function world() {
   const quest = { live: true, armed: false };
   const guards = new Map<string, GuardPerceptionState>([['guard-1', { awareness: 0, sees: false, hears: false, distance: 10 }]]);
   let released = 0;
+  const loading = { v: false };
+  const tp = { hold: false, pending: [] as (() => void)[] };
   const suspensions = new SaveSuspensions(() => void released++);
   const events: string[] = [];
   const saves: string[] = [];
@@ -49,9 +51,11 @@ function world() {
     resetGuards: () => void resets++,
     teleport: (p) => {
       teleports.push({ ...p });
+      if (tp.hold) return new Promise<boolean>((res) => tp.pending.push(() => (Object.assign(feet, p), res(true))));
       Object.assign(feet, p);
-      return Promise.resolve();
+      return Promise.resolve(true);
     },
+    paused: () => loading.v,
     suspend: (r) => suspensions.suspend(r),
     checkpointSave: (r) => {
       saves.push(`${r} held=${suspensions.active}`);
@@ -67,7 +71,7 @@ function world() {
   };
   const d = new StealthDirector([SECTION], ports);
   const at = (x: number, z: number) => Object.assign(feet, { x, y: 0, z });
-  return { d, ports, feet, at, quest, guards, suspensions, events, saves, teleports, resets: () => resets, get released() { return released; } };
+  return { d, ports, feet, at, quest, guards, suspensions, events, saves, teleports, resets: () => resets, loading, tp, get released() { return released; } };
 }
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -260,6 +264,61 @@ describe('StealthDirector', () => {
     w.d.onLoaded();
     expect(w.suspensions.active).toBe(false);
     expect(w.d.section).toBeNull();
+  });
+
+  it('the load itself emits exited for the section it drops', () => {
+    const w = world();
+    w.at(5, 0);
+    w.d.fixedUpdate(DT);
+    w.at(-40, 0);
+    w.d.onLoaded();
+    expect(w.events.at(-1)).toBe('section test.section exited');
+  });
+
+  it('cleared is latched: standing on the armed exit does not loop entered and cleared', () => {
+    const w = world();
+    w.quest.armed = true;
+    w.at(15, 0);
+    for (let i = 0; i < 10; i++) w.d.fixedUpdate(DT);
+    expect(w.events.filter((e) => e.startsWith('section'))).toEqual(['section test.section entered', 'section test.section cleared']);
+    // The window closing and reopening clears the latch.
+    w.quest.live = false;
+    w.d.fixedUpdate(DT);
+    w.quest.live = true;
+    w.quest.armed = false;
+    w.d.fixedUpdate(DT);
+    expect(w.events.filter((e) => e.endsWith('entered'))).toHaveLength(2);
+  });
+
+  it('skips ticks while a save is loading (between the load teleport and save.loaded)', () => {
+    const w = world();
+    w.loading.v = true;
+    w.at(0, 0);
+    w.d.fixedUpdate(DT);
+    expect(w.d.section).toBeNull();
+    w.loading.v = false;
+    w.d.fixedUpdate(DT);
+    expect(w.d.section?.id).toBe('test.section');
+  });
+
+  it('a stale capture teleport resolving late does not end a newer capture', async () => {
+    const w = world();
+    w.at(0, 0);
+    w.d.fixedUpdate(DT);
+    w.tp.hold = true;
+    w.d.onPlayerHitGuard('guard-1');
+    w.d.onLoaded(); // a load while the capture teleport is still in flight starts a newer one
+    expect(w.tp.pending).toHaveLength(2);
+    w.tp.pending[0]();
+    await flush();
+    // Still mid-teleport: a hit is ignored, not a second capture.
+    w.d.onPlayerHitGuard('guard-1');
+    expect(w.events.filter((e) => e.startsWith('caught'))).toHaveLength(1);
+    w.tp.pending[1]();
+    await flush();
+    w.d.fixedUpdate(DT);
+    w.d.onPlayerHitGuard('guard-1');
+    expect(w.events.filter((e) => e.startsWith('caught'))).toHaveLength(2);
   });
 
   it('re-entering never teleports forward', () => {

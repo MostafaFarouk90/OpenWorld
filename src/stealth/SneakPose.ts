@@ -62,6 +62,12 @@ export class SneakPose {
     }
   }
 
+  /** Undoes the last write (the plugin calls this on dispose or before rebinding to a new kit). */
+  dispose(): void {
+    this.restore();
+    this.weight = 0;
+  }
+
   get blend(): number {
     return this.weight;
   }

@@ -1,4 +1,5 @@
 import type { Anchor } from '../layout/AnchorRegistry';
+import type { QuestWindow } from './liveness';
 import type { P3 } from './perceptionPort';
 
 /**
@@ -21,8 +22,8 @@ export interface CheckpointDef {
 
 export interface StealthSectionDef {
   id: string;
-  /** Live while the quest is active and `liveUntil` is not done (quest-derived, no flags; ruling 3). */
-  quest: { id: string; liveUntil: string; exitArmedAfter?: readonly string[] };
+  /** Live from `liveFrom` (current or done) until `liveUntil` is done (quest-derived, no flags; ruling 3). */
+  quest: QuestWindow & { exitArmedAfter?: readonly string[] };
   /** The section's bounds: a box on an anchor, or a whole interior (`interiors.interiorAt(feet)`). */
   bounds: VolumeDef | { interior: string };
   /** First is the section start. */
@@ -37,17 +38,18 @@ export interface StealthSectionDef {
 const v = (anchor: string, hx: number, hy: number, hz: number, offset?: P3): VolumeDef => ({ anchor, half: { x: hx, y: hy, z: hz }, ...(offset ? { offset } : {}) });
 
 /**
- * M06 (thread 17's anchors) and M09 (thread 3a's counting-house def, created when the interior loads; its bounds are
- * the interior itself). Box sizes are greybox readings, retuned against the real layouts before merging.
+ * M06 on thread 17's anchors (src/harrowmark/ANCHORS.md: start z 1234, cp.inside 1275, end 1300; hide spots out to
+ * x +168 and z +81, so the box is 175 x 85 around cp.inside, symmetric so the anchor's 180 degree yaw does not
+ * matter). M09 on thread 3a's counting-house def, created when the interior loads; its bounds are the interior.
  */
 export const SECTIONS: readonly StealthSectionDef[] = [
   {
     id: 'm06.south-gate',
-    quest: { id: 'm06', liveUntil: 'o2' },
-    bounds: v('stealth.m06.checkpoint-1', 40, 12, 40),
+    quest: { id: 'm06', liveFrom: 'o2', liveUntil: 'o2' },
+    bounds: v('stealth.m06.cp.inside', 175, 15, 85),
     checkpoints: [
-      { id: 'gate.start', anchor: 'stealth.m06.start', volume: v('stealth.m06.start', 3, 3, 3) },
-      { id: 'gate.inside', anchor: 'stealth.m06.checkpoint-1', volume: v('stealth.m06.checkpoint-1', 3, 3, 3) },
+      { id: 'gate.start', anchor: 'stealth.m06.start', volume: v('stealth.m06.start', 4, 3, 4) },
+      { id: 'gate.inside', anchor: 'stealth.m06.cp.inside', volume: v('stealth.m06.cp.inside', 4, 3, 4) },
     ],
     exit: v('stealth.m06.end', 3, 3, 3),
     guardGroups: ['stealth.m06.watch'],
@@ -55,7 +57,7 @@ export const SECTIONS: readonly StealthSectionDef[] = [
   },
   {
     id: 'm09.counting-house',
-    quest: { id: 'm09', liveUntil: 'o6', exitArmedAfter: ['o3', 'o4', 'o5'] },
+    quest: { id: 'm09', liveFrom: 'o2', liveUntil: 'o6', exitArmedAfter: ['o3', 'o4', 'o5'] },
     bounds: { interior: 'counting-house' },
     checkpoints: [
       { id: 'ch.entry', anchor: 'stealth.m09.entry', volume: v('stealth.m09.entry', 2, 3, 2) },
