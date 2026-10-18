@@ -43,7 +43,7 @@ export interface AbilityHandlerArgs {
   ctx?: unknown;
 }
 export interface AbilitiesServiceV2 {
-  registerHandler(skillId: string, handler: (args: AbilityHandlerArgs) => AbilityHandlerResult): () => void;
+  registerHandler(skillId: string, handler: (args: AbilityHandlerArgs) => AbilityHandlerResult): { ok: true; dispose(): void } | { ok: false; reason: string };
 }
 
 export function abilitiesOf(services: { get(name: never): unknown }): AbilitiesServiceV2 | undefined {

@@ -124,7 +124,7 @@ export interface LooseServices {
     registerHandler(
       skillId: string,
       handler: (args: { skillId: string; slot: number; caster: { readonly id: string } | null; ctx?: unknown }) => { ok: true } | { ok: false; reason: string },
-    ): () => void;
+    ): { ok: true; dispose(): void } | { ok: false; reason: string };
   };
 }
 export function looseService<K extends keyof LooseServices>(services: { get(name: never): unknown }, name: K): LooseServices[K] | undefined {

@@ -150,7 +150,7 @@ describe('spells plugin', () => {
     plugin.setup(f.ctx);
     const remove = vi.fn();
     const addMaxHealthModifier = vi.fn((_id: string, _fn: (b: number) => number) => remove);
-    const registerHandler = vi.fn(() => () => undefined);
+    const registerHandler = vi.fn(() => ({ ok: true as const, dispose: () => undefined }));
     f.services.progression = { addMaxHealthModifier, learned: () => false };
     f.services.abilities = { registerHandler } as never;
     f.tick(30);
@@ -263,7 +263,7 @@ describe('spells plugin', () => {
   it('Rally through the abilities handler is free; direct cast stays free; no reportTrigger', () => {
     let handler: ((a: unknown) => unknown) | undefined;
     const off = vi.fn();
-    const f = makeCtx({ abilities: { registerHandler: (_id: string, h: never) => { handler = h; return off; } } as never });
+    const f = makeCtx({ abilities: { registerHandler: (_id: string, h: never) => { handler = h; return { ok: true, dispose: off }; } } as never });
     plugin.setup(f.ctx);
     expect(handler!({ skillId: 'knight.rallyCry', slot: 0, caster: f.world.actors.player, ctx: f.ctx })).toEqual({ ok: true });
     expect(f.services.spells!.ember).toBe(100);
