@@ -28,11 +28,8 @@ export interface CrowdsPluginOptions {
   now?: () => number;
 }
 
-/** Services from threads that may not have merged (stealth and chase are thread 18's, PR #47): read loosely, per frame. */
+/** Optional services are resolved every frame (a plugin may load later or fail); untyped ones are read loosely. */
 type LooseServices = { get(name: string): unknown };
-interface ActiveReader {
-  active?(): boolean;
-}
 
 /** Render `world` band 0..99 is enemies and NPCs; the crowd runs its whole frame there (no fixed-step system). */
 export const CROWDS_RENDER_ORDER = 40;
@@ -73,10 +70,10 @@ export function createCrowdsPlugin(opts: CrowdsPluginOptions = {}): GamePlugin {
         cleanups.push(() => view.dispose());
 
         const services = ctx.services as unknown as LooseServices;
-        const isActive = (name: string): boolean => {
-          const s = services.get(name) as ActiveReader | undefined;
+        // Thread 18's readers (stealth.active() is false right after a load until the player re-enters a section).
+        const isActive = (reader: { active(): boolean } | undefined): boolean => {
           try {
-            return typeof s?.active === 'function' ? !!s.active() : false;
+            return !!reader?.active();
           } catch {
             return false;
           }
@@ -102,7 +99,14 @@ export function createCrowdsPlugin(opts: CrowdsPluginOptions = {}): GamePlugin {
         };
         const currentDensity = (): Density => {
           const quality = ((services.get('quality') as { step?: QualityStep } | undefined)?.step ?? 'high') as QualityStep;
-          return densityFor({ gate, stealthActive: isActive('stealth'), chaseActive: isActive('chase'), quality });
+          // The city's gate state includes thread 21's override; the flag watcher below is the fallback (and the load path).
+          let forced: GateState | undefined;
+          try {
+            forced = ctx.services.get('harrowmark')?.southGate.state();
+          } catch {
+            forced = undefined;
+          }
+          return densityFor({ gate: forced ?? gate, stealthActive: isActive(ctx.services.get('stealth')), chaseActive: isActive(ctx.services.get('chase')), quality });
         };
         const applyDensity = (): void => {
           const d = currentDensity();
@@ -148,9 +152,9 @@ export function createCrowdsPlugin(opts: CrowdsPluginOptions = {}): GamePlugin {
             view.group.visible = true;
             if (!compiled) {
               compiled = true;
-              const renderer = (services.get('graphics') as { renderer?: { compile?: (s: unknown, c: unknown) => unknown } } | undefined)?.renderer;
+              const renderer = (services.get('graphics') as { renderer?: { compile?: (s: unknown, c: unknown, target?: unknown) => unknown } } | undefined)?.renderer;
               try {
-                if (renderer?.compile && ctx.camera) renderer.compile(ctx.scene, ctx.camera);
+                if (renderer?.compile && ctx.camera) renderer.compile(view.group, ctx.camera, ctx.scene);
               } catch (err) {
                 console.warn('crowds: shader warm-up failed', err);
               }

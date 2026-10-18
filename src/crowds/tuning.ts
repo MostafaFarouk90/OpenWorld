@@ -23,7 +23,7 @@ export const CROWD_TUNING = {
   /** No figure appears or vanishes within this distance of the player; surplus figures nearer get `leaveGrace`. */
   noPopRadius: 30,
   leaveGrace: 3,
-  /** Sleep when the player is this far from every lane sample and cluster. */
+  /** Sleep when the player is this far outside the box around every lane sample and group. */
   sleepDistance: 170,
   /** LOD ranges from the camera; figures shrink to nothing between fadeStart and drawDistance. */
   lod0Range: 45,

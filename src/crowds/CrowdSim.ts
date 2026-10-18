@@ -160,6 +160,10 @@ export class CrowdSim {
       }
       if (dist2(w.x, w.z, player) < r * r) w.active = false;
     }
+    // Groups near the player hide; `manage` shows them again once the player has moved away.
+    for (let c = 0; c < this.clusters.length; c++) {
+      if (this.clusterShown[c] && dist2(this.clusters[c].cx, this.clusters[c].cz, player) <= r * r) this.showCluster(c, false);
+    }
   }
 
   update(dt: number, player: PlayerPos | null): void {
@@ -182,9 +186,27 @@ export class CrowdSim {
         w.active = false;
         continue;
       }
-      if (w.leaveAt < 0) this.counts[w.lane]++;
+      if (w.leaveAt >= 0) continue;
+      const range = this.ranges[w.lane];
+      if (!range || w.s < range[0] || w.s > range[1]) {
+        // Off its lane's range (the gate turned guarded): it leaves, whatever the count; it never jumps to the range.
+        if (!player || dist2(w.x, w.z, player) > r2) w.active = false;
+        else w.leaveAt = this.time + t.leaveGrace;
+        continue;
+      }
+      this.counts[w.lane]++;
     }
     for (let i = 0; i < this.lanes.length; i++) {
+      // Density came back within the grace: in-range leavers stay rather than vanish near the player.
+      if (this.counts[i] < this.targets[i]) {
+        const range = this.ranges[i];
+        for (const w of this.walkers) {
+          if (this.counts[i] >= this.targets[i]) break;
+          if (!w.active || w.lane !== i || w.leaveAt < 0 || !range || w.s < range[0] || w.s > range[1]) continue;
+          w.leaveAt = -1;
+          this.counts[i]++;
+        }
+      }
       // Surplus: out-of-range walkers first, then the farthest from the player.
       while (this.counts[i] > this.targets[i]) {
         const w = this.pickSurplus(i, player);
@@ -215,14 +237,13 @@ export class CrowdSim {
     }
   }
 
+  /** The farthest staying walker of a lane from the player (out-of-range walkers already left in `manage`). */
   private pickSurplus(lane: number, player: PlayerPos | null): Walker | null {
-    const range = this.ranges[lane];
     let best: Walker | null = null;
     let bestScore = -Infinity;
     for (const w of this.walkers) {
       if (!w.active || w.lane !== lane || w.leaveAt >= 0) continue;
-      const outside = !range || w.s < range[0] || w.s > range[1];
-      const score = (outside ? 1e12 : 0) + (player ? dist2(w.x, w.z, player) : 0);
+      const score = player ? dist2(w.x, w.z, player) : 0;
       if (score > bestScore) {
         bestScore = score;
         best = w;
@@ -312,7 +333,7 @@ export class CrowdSim {
       const pz = player.z - w.z;
       if (Math.abs(player.y - w.y) < a.verticalGate) {
         const ahead = px * fx + pz * fz;
-        const side = px * fz * 1 - pz * fx; // along the walker's right (fz, -fx)
+        const side = pz * fx - px * fz; // along the walker's on-screen right (-fz, fx)
         if (ahead > -0.5 && ahead < a.ahead && Math.abs(side) < a.side) {
           factor = ahead > -0.2 && ahead < a.stop ? 0 : a.slow;
           const playerL = w.l + (px * smp.nx + pz * smp.nz);
@@ -354,11 +375,15 @@ export class CrowdSim {
       w.s = (((w.s + w.dir * ds) % lane.length) + lane.length) % lane.length;
       return;
     }
-    const range = this.ranges[w.lane] ?? [0, lane.length];
+    const range = this.ranges[w.lane];
+    // A leaver outside its range walks on (inside the lane) until its grace ends; it never jumps into the range.
+    const inRange = !!range && w.s >= range[0] && w.s <= range[1];
+    const lo = inRange ? range![0] : 0;
+    const hi = inRange ? range![1] : lane.length;
     w.s += w.dir * ds;
     const t = CROWD_TUNING;
-    if (w.s >= range[1] || w.s <= range[0]) {
-      w.s = Math.max(range[0], Math.min(range[1], w.s));
+    if (w.s >= hi || w.s <= lo) {
+      w.s = Math.max(lo, Math.min(hi, w.s));
       w.pause = t.endPause[0] + this.rng() * (t.endPause[1] - t.endPause[0]);
       w.walking = false;
     }

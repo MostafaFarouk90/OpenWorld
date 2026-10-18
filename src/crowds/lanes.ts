@@ -19,7 +19,10 @@ export interface LaneSample {
   /** Unit tangent in the lane's forward direction. */
   tx: number;
   tz: number;
-  /** Unit normal to the lane's right (forward north gives east: +Z north, +X east). */
+  /**
+   * Unit normal to the lane's right as seen on screen. three.js is right-handed with y up, so a figure facing north (+Z)
+   * has its right hand on -X: the normal is (-tz, tx).
+   */
   nx: number;
   nz: number;
   /** Free lateral intervals (metres along the normal), already smoothed over neighbouring samples. */
@@ -209,8 +212,8 @@ export function buildLane(
     const z = a.z + (b.z - a.z) * u;
     const tx = (b.x - a.x) / (segLen[seg] || 1);
     const tz = (b.z - a.z) / (segLen[seg] || 1);
-    const nx = tz;
-    const nz = -tx;
+    const nx = -tz;
+    const nz = tx;
     const cuts: Interval[] = [];
     for (const o of near) {
       const c = blockedInterval(o, x, z, nx, nz, t.bodyRadius);
@@ -239,6 +242,7 @@ export function buildLane(
 export function sampleIndex(lane: Lane, s: number): number {
   const n = lane.samples.length;
   const step = lane.loop ? lane.length / n : lane.length / Math.max(1, n - 1);
+  if (!(step > 0)) return 0;
   let k = Math.round(s / step);
   if (lane.loop) k = ((k % n) + n) % n;
   else k = Math.max(0, Math.min(n - 1, k));
@@ -249,7 +253,7 @@ export function sampleIndex(lane: Lane, s: number): number {
 export function lanePoint(lane: Lane, s: number, l: number, out: { x: number; y: number; z: number }): typeof out {
   const n = lane.samples.length;
   const step = lane.loop ? lane.length / n : lane.length / Math.max(1, n - 1);
-  let f = s / step;
+  let f = step > 0 ? s / step : 0;
   if (lane.loop) f = ((f % n) + n) % n;
   else f = Math.max(0, Math.min(n - 1, f));
   const i = Math.floor(f);
