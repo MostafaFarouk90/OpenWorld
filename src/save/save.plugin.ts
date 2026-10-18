@@ -1,5 +1,6 @@
 import type { GamePlugin } from '../core/plugins';
 import { heightAt } from '../terrain/heightfield';
+import { groundDistance } from '../waystones/ground';
 import '../waystones/service';
 import { showToast } from '../waystones/toast';
 import { createContinueModal } from './ContinueModal';
@@ -14,6 +15,7 @@ export const AUTOSAVE_INTERVAL_SECONDS = 120;
 const SNAPSHOT_INTERVAL_SECONDS = 10;
 const GROUND_RAY = 0.35;
 const MAX_COORD = 100_000;
+const MAX_ABOVE_GROUND = 200;
 
 interface Grounded {
   x: number;
@@ -32,6 +34,7 @@ export function sanitizePosition(data: unknown): Grounded | null {
   const nz = z as number;
   if (Math.abs(nx) > MAX_COORD || Math.abs(nz) > MAX_COORD) return null;
   const ground = heightAt(nx, nz);
+  if ((y as number) > ground + MAX_ABOVE_GROUND) return null;
   return { x: nx, y: Math.max(y as number, ground) + 0.05, z: nz, yaw: yaw as number };
 }
 
@@ -69,33 +72,45 @@ const save: GamePlugin = {
     void bootRead.then((r) => (boot = r));
     if (typeof navigator !== 'undefined') void navigator.storage?.persist?.().catch(() => undefined);
 
-    let loading = false;
+    // Saves stay locked from boot until the boot decision (Continue, New Game, or no save) has settled,
+    // so a default-state write can never replace the real save.
+    manager.beginLoad();
+    let loading = true;
     let endLoadPending = false;
+    let consumed = false;
+    const unlock = () => {
+      consumed = true;
+      endLoadPending = true; // applied on the next tick, after the settle
+    };
 
     const loadSequence = async (): Promise<boolean> => {
-      if (!boot || !boot.ok || loading) return false;
-      loading = true;
+      if (!boot || !boot.ok || consumed) return false;
+      consumed = true;
       const release = ctx.player.addMoveModifier('save.load', { freeze: true });
       try {
-        manager.beginLoad();
         const report: ApplyReport = manager.applyLoad(boot.file);
         const pos = sanitizePosition(report.playerPosition?.data);
-        const target = pos ?? (() => {
-          const r = waystones()?.respawnPoint();
-          return r ? { x: r.feet.x, y: r.feet.y, z: r.feet.z, yaw: r.yaw } : null;
-        })();
+        const target =
+          pos ??
+          (() => {
+            const r = waystones()?.respawnPoint();
+            return r ? { x: r.feet.x, y: r.feet.y, z: r.feet.z, yaw: r.yaw } : null;
+          })();
         if (target) await waystones()?.safeTeleport({ x: target.x, y: target.y, z: target.z }, target.yaw);
         ports.emitLoaded(boot.slot);
-        endLoadPending = true; // saves unlock on the next tick, after the settle
         return true;
+      } catch (err) {
+        console.error('save: load failed', err);
+        return false;
       } finally {
         release();
+        unlock();
       }
     };
 
     const service: SaveService = {
       saveNow: (reason) => manager.save(reason),
-      hasSave: () => boot?.ok === true,
+      hasSave: () => boot?.ok === true && !consumed,
       get usingFallback() {
         return manager.isUsingFallback;
       },
@@ -103,7 +118,11 @@ const save: GamePlugin = {
         return loading;
       },
       continueNow: loadSequence,
-      newGame: async () => (await manager.newGame()).ok,
+      newGame: async () => {
+        const r = await manager.newGame();
+        unlock();
+        return r.ok;
+      },
     };
     ctx.services.provide('save', service);
 
@@ -113,7 +132,7 @@ const save: GamePlugin = {
       if (bootHandled || !boot) return;
       bootHandled = true;
       if (params.has('new')) {
-        void manager.newGame();
+        void service.newGame();
         return;
       }
       if (params.has('continue') && boot.ok) {
@@ -122,6 +141,8 @@ const save: GamePlugin = {
       }
       const problem = boot.ok ? null : boot.reason === 'corrupt' || boot.reason === 'newer' ? boot.reason : null;
       const unavailable = !boot.ok && boot.reason === 'unavailable';
+      // Nothing to lose when there is no usable save: play on.
+      if (!boot.ok) unlock();
       if (typeof document === 'undefined' || (!boot.ok && !problem && !unavailable)) return;
       const hold = ctx.player.addMoveModifier('save.boot', { freeze: true });
       let closeModal: (() => void) | null = null;
@@ -140,11 +161,16 @@ const save: GamePlugin = {
         },
         onNewGame: () => {
           finish();
-          void manager.newGame();
+          void service.newGame();
         },
       });
       closeModal = ctx.hud.openModal(widget);
-      if (!closeModal) hold();
+      if (closeModal) widget.focusDefault();
+      else {
+        // Another modal is open: try again next tick (a real save stays locked meanwhile).
+        hold();
+        bootHandled = false;
+      }
     };
 
     let sinceSave = 0;
@@ -163,8 +189,7 @@ const save: GamePlugin = {
         manager.addPlaytime(dt);
         if (!waystones()?.travelling && !loading) {
           const f = ctx.player.feet;
-          const hit = ctx.physics.raycast({ x: f.x, y: f.y + 0.2, z: f.z }, { x: 0, y: -1, z: 0 }, GROUND_RAY + 0.2);
-          if (hit) grounded = { x: f.x, y: f.y, z: f.z, yaw: ctx.player.facingYaw };
+          if (groundDistance(ctx, GROUND_RAY) !== null) grounded = { x: f.x, y: f.y, z: f.z, yaw: ctx.player.facingYaw };
         }
         sinceSave += dt;
         if (sinceSave >= AUTOSAVE_INTERVAL_SECONDS) {

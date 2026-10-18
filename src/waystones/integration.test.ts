@@ -122,11 +122,11 @@ describe('waystones + saves on the real game', () => {
 
   it('save then Continue in a fresh game restores waystones, flags and position', async () => {
     const a = await boot();
+    await a.flush();
     await a.run(3);
     a.game.ctx.state.setFlag('story.test', true);
-    // Light the chapel by script and walk the player to it.
-    (a.game.ctx.events.emit as any)('waystone.rekindled', { waystoneId: 'chapel', cause: 'script' });
     const w = a.game.ctx.services.require('waystones');
+    w.rekindle('chapel');
     const t1 = w.travel('kettlewick');
     for (let i = 0; i < 900; i++) {
       await a.run(1);
@@ -152,6 +152,7 @@ describe('waystones + saves on the real game', () => {
     expect(await cont).toBe(true);
     await loaded;
     expect(b.game.ctx.state.getBool('story.test')).toBe(true);
+    expect(b.game.ctx.services.require('waystones').isLit('chapel')).toBe(true);
     const f = b.game.ctx.player.feet;
     expect(Math.hypot(f.x - 12, f.z - 150)).toBeLessThan(3);
     expect(f.y).toBeGreaterThan(heightAt(f.x, f.z) - 0.5);
@@ -174,5 +175,96 @@ describe('waystones + saves on the real game', () => {
     const r = await save.saveNow('manual');
     expect(r.ok).toBe(true);
     expect(save.usingFallback).toBe(true);
+  });
+
+  it('ground ray ignores the player capsule: a teleport into thin air is not released and falls back', async () => {
+    const t = await boot();
+    await t.run(5);
+    const w = t.game.ctx.services.require('waystones');
+    // An anchor 40 m above the terrain: nothing solid below it.
+    t.game.ctx.anchors.define({ id: 'waystone.sky', position: { x: 12, y: heightAt(12, 150) + 40, z: 150 }, yaw: 0, tags: ['waystone', 'waystone-lit'] });
+    await t.run(2);
+    const p = w.travel('sky');
+    let res: unknown = null;
+    void p.then((r) => (res = r));
+    for (let i = 0; i < 1200 && res === null; i++) await t.run(1);
+    expect(res).toEqual({ ok: false, reason: 'terrain-not-ready' });
+    await t.run(120);
+    const f = t.game.ctx.player.feet;
+    expect(Math.hypot(f.x - 0, f.z - 0)).toBeLessThan(3); // back where they stood
+  });
+
+  it('never saves an airborne position', async () => {
+    const t = await boot();
+    await t.run(60);
+    t.game.ctx.player.teleport({ x: 0, y: 40, z: 0 });
+    await t.run(3);
+    await t.flush();
+    const save = t.game.ctx.services.require('save');
+    const r = await save.saveNow('manual');
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const pos = r.file.entries['player-position']?.data as { y: number } | undefined;
+      expect(pos === undefined || pos.y < 5).toBe(true);
+    }
+  });
+
+  it('no save can overwrite the real one between boot and Continue', async () => {
+    const a = await boot();
+    await a.flush();
+    await a.run(3);
+    a.game.ctx.state.setFlag('story.test', true);
+    expect((await a.game.ctx.services.require('save').saveNow('manual')).ok).toBe(true);
+    await a.flush();
+
+    const b = await boot();
+    await b.flush();
+    await b.run(3);
+    const save = b.game.ctx.services.require('save');
+    expect(save.hasSave()).toBe(true);
+    expect(save.loading).toBe(true);
+    const early = await save.saveNow('exit');
+    expect(early.ok).toBe(false);
+    await b.run(2);
+    const cont = save.continueNow();
+    for (let i = 0; i < 900 && save.loading; i++) await b.run(1);
+    expect(await cont).toBe(true);
+    expect(b.game.ctx.state.getBool('story.test')).toBe(true);
+    expect(save.hasSave()).toBe(false); // consumed: no second Continue
+    expect(await save.continueNow()).toBe(false);
+  });
+
+  it('a successful fast travel is autosaved once the player stands on the destination', async () => {
+    const t = await boot();
+    await t.flush();
+    await t.run(5);
+    const w = t.game.ctx.services.require('waystones');
+    const p = w.travel('kettlewick');
+    for (let i = 0; i < 900 && w.travelling; i++) await t.run(1);
+    await p;
+    await t.run(10);
+    await t.flush();
+    const raw = await new Promise<any>((res) => {
+      const r = (fake.factory as any).open('owg', 1);
+      r.onsuccess = () => {
+        const tx = r.result.transaction('saves', 'readonly').objectStore('saves').get('autosave');
+        tx.onsuccess = () => res(tx.result);
+      };
+    });
+    expect(raw?.reason).toBe('waystone');
+    expect(Math.hypot(raw.entries['player-position'].data.x - 12, raw.entries['player-position'].data.z - 150)).toBeLessThan(3);
+  });
+
+  it('a script rekindle lights the stone through the service and emits cause script', async () => {
+    const t = await boot();
+    await t.run(2);
+    const seen: unknown[] = [];
+    t.game.ctx.events.on('waystone.rekindled', (e) => seen.push(e));
+    const w = t.game.ctx.services.require('waystones');
+    expect(w.rekindle('chapel')).toEqual({ ok: true });
+    t.game.fixedUpdate();
+    expect(seen).toEqual([{ waystoneId: 'chapel', cause: 'script' }]);
+    expect(w.isLit('chapel')).toBe(true);
+    expect(t.game.ctx.state.getBool('waystone.chapel.lit')).toBe(true);
   });
 });

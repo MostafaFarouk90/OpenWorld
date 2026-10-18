@@ -31,6 +31,7 @@ export interface NetworkPorts {
   requestSave(reason: 'waystone' | 'rest'): void;
   toast(key: string): void;
   playerFeet(): Vec3;
+  playerYaw?(): number;
   teleport: SafeTeleport;
   log(level: 'warn' | 'info', msg: string): void;
 }
@@ -50,6 +51,8 @@ export type RestResult =
   | { ok: false; reason: 'unknown' | 'not-lit' | 'in-combat' | 'dead' | 'cutscene' | 'dialogue' };
 
 const PREFIX = 'waystone.';
+
+const VALID_ID = /^[A-Za-z0-9_-]{1,63}$/;
 
 function nameOf(anchorId: string): string {
   return anchorId.startsWith(PREFIX) ? anchorId.slice(PREFIX.length) : anchorId;
@@ -147,7 +150,8 @@ export class WaystoneNetwork {
 
   async respawnPlayer(): Promise<void> {
     const p = this.respawnPoint();
-    await this.ports.teleport.start(p.feet, p.yaw);
+    // A respawn takes over any travel in flight (the player died during it).
+    await this.ports.teleport.start(p.feet, p.yaw, null, { takeover: true });
   }
 
   async travel(toId: string): Promise<TravelResult> {
@@ -163,16 +167,15 @@ export class WaystoneNetwork {
     const from = this.nearestId(this.ports.playerFeet());
     if (from === toId && this.dist2(this.ports.playerFeet(), dest.position) < 4) return { ok: false, reason: 'same' };
 
-    const origin = from ? this.anchor(from) : undefined;
+    // If the destination never becomes solid the player goes back to where they stood (known resident).
+    const here = { ...this.ports.playerFeet() };
     this.busy = true;
     try {
-      const res = await this.ports.teleport.start(
-        dest.position,
-        dest.yaw,
-        origin ? { feet: origin.position, yaw: origin.yaw } : null,
-      );
+      const res = await this.ports.teleport.start(dest.position, dest.yaw, {
+        feet: here,
+        yaw: this.ports.playerYaw?.() ?? 0,
+      });
       if (!res.ok) return { ok: false, reason: res.reason === 'busy' ? 'busy' : 'terrain-not-ready' };
-      this.respawnId = toId;
       this.ports.emit('fastTravel', { fromId: from ?? '', toId });
       this.ports.requestSave('waystone');
       return { ok: true };
@@ -215,10 +218,10 @@ export class WaystoneNetwork {
     if (typeof data !== 'object' || data === null) return;
     const d = data as Partial<WaystoneSave>;
     if (Array.isArray(d.lit)) {
-      for (const id of d.lit) if (typeof id === 'string' && id.length > 0 && id.length < 64) this.lit.add(id);
+      for (const id of d.lit) if (typeof id === 'string' && VALID_ID.test(id)) this.lit.add(id);
     }
-    if (typeof d.lastRest === 'string') this.lastRest = d.lastRest;
-    if (typeof d.respawn === 'string') this.respawnId = d.respawn;
+    if (typeof d.lastRest === 'string' && VALID_ID.test(d.lastRest)) this.lastRest = d.lastRest;
+    if (typeof d.respawn === 'string' && VALID_ID.test(d.respawn)) this.respawnId = d.respawn;
     for (const id of this.lit) this.ports.setFlag(`${PREFIX}${id}.lit`, true);
     this.applyPreLit();
   }

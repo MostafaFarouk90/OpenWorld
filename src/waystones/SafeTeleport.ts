@@ -54,9 +54,20 @@ export class SafeTeleport {
     return this.job ? { ...this.job.target } : null;
   }
 
-  start(target: Vec3, yaw: number, fallback: { feet: Vec3; yaw: number } | null = null): Promise<TeleportOutcome> {
+  start(
+    target: Vec3,
+    yaw: number,
+    fallback: { feet: Vec3; yaw: number } | null = null,
+    opts: { takeover?: boolean } = {},
+  ): Promise<TeleportOutcome> {
     if (this.phase !== 'idle' && this.phase !== 'stuck') {
-      return Promise.resolve({ ok: false, reason: 'busy' });
+      if (!opts.takeover) return Promise.resolve({ ok: false, reason: 'busy' });
+      // Cancel the job in flight: its caller hears 'busy', the new one starts from scratch.
+      this.job?.resolve({ ok: false, reason: 'busy' });
+      this.release?.();
+      this.release = null;
+      this.job = null;
+      this.phase = 'idle';
     }
     if (this.phase === 'stuck') this.finishStuck();
     return new Promise((resolve) => {
@@ -66,6 +77,7 @@ export class SafeTeleport {
       this.retried = false;
       this.usedFallback = false;
       this.ports.fade(1, WAYSTONE_TUNING.fadeOutSeconds);
+      this.release = this.ports.freeze();
     });
   }
 
@@ -106,9 +118,9 @@ export class SafeTeleport {
   }
 
   private placeNow(feet: Vec3, yaw: number): void {
-    this.release?.();
     this.ports.place(feet, yaw);
-    this.release = this.ports.freeze();
+    // Frozen since the fade began; only a takeover or a finished job drops the hold.
+    this.release ??= this.ports.freeze();
     this.phase = 'settling';
     this.clock = 0;
     this.ticksSincePlace = 0;

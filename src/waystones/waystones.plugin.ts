@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { PLAYER_ID } from '../actors/teams';
 import type { GamePlugin } from '../core/plugins';
 import { heightAt } from '../terrain/heightfield';
+import { groundDistance } from './ground';
 import { SafeTeleport } from './SafeTeleport';
 import { WAYSTONE_STRINGS_EN } from './strings.en';
 import '../save/service';
@@ -34,15 +35,14 @@ const waystones: GamePlugin = {
       },
       freeze: () => ctx.player.addMoveModifier('waystones.travel', { freeze: true }),
       ready: () => handle?.ready() ?? true,
-      groundedBelow: (d) => {
-        const f = ctx.player.feet;
-        return ctx.physics.raycast({ x: f.x, y: f.y + 0.3, z: f.z }, { x: 0, y: -1, z: 0 }, d + 0.3) !== null;
-      },
+      groundedBelow: (d) => groundDistance(ctx, d) !== null,
       chunksResident: (f) => ctx.terrain.isResident(f.x, f.z, 60),
       fade: (o, s) => void ctx.hud.fade(o, s),
       heightAt,
     });
 
+    let pendingSave: 'waystone' | 'rest' | null = null;
+    let pendingDelay = 0;
     const prompts = () => ctx.services.get('prompts');
     const net = new WaystoneNetwork({
       anchors: ctx.anchors,
@@ -63,9 +63,14 @@ const waystones: GamePlugin = {
         showToast(ctx.hud, ctx.strings.t('waystone.rested'));
         prompts()?.success('rest');
       },
-      requestSave: (reason) => void ctx.services.get('save')?.saveNow(reason),
+      requestSave: (reason) => {
+        // A save requested mid-travel waits until the player is released and has stood on the ground.
+        if (net.travelling) pendingSave = reason;
+        else void ctx.services.get('save')?.saveNow(reason);
+      },
       toast: (key) => showToast(ctx.hud, ctx.strings.t(key)),
       playerFeet: () => ctx.player.feet,
+      playerYaw: () => ctx.player.facingYaw,
       teleport,
       log: (level, msg) => (level === 'warn' ? console.warn(msg) : console.info(msg)),
     });
@@ -112,6 +117,14 @@ const waystones: GamePlugin = {
         syncStones();
         net.applyPreLit();
         teleport.update(dt);
+        if (pendingSave && !net.travelling) {
+          if (++pendingDelay >= 3) {
+            const reason = pendingSave;
+            pendingSave = null;
+            pendingDelay = 0;
+            void ctx.services.get('save')?.saveNow(reason);
+          }
+        }
       },
     });
 
@@ -128,6 +141,7 @@ const waystones: GamePlugin = {
     const service: WaystoneService = {
       respawnPoint: () => net.respawnPoint(),
       respawnPlayer: () => net.respawnPlayer(),
+      rekindle: (id, cause = 'script') => net.rekindle(id, cause),
       travel: async (toId) => {
         const r = await net.travel(toId);
         if (r.ok) prompts()?.success('fastTravel');
@@ -144,7 +158,7 @@ const waystones: GamePlugin = {
       get hostileAggro() {
         return aggro.size > 0;
       },
-      safeTeleport: (feet, yaw) => teleport.start(feet, yaw),
+      safeTeleport: (feet, yaw) => teleport.start(feet, yaw, null, { takeover: false }),
     };
     ctx.services.provide('waystones', service);
 
