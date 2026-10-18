@@ -73,6 +73,17 @@ export interface ForcedMove {
 }
 
 /**
+ * The mount's ride (thread 20): the capsule moves along the unit heading (x, z) at `speed` m/s. At speed 0 it
+ * stands still (it never falls back to walking). `yaw` is the facing (0 = -Z).
+ */
+export interface RideMove {
+  x: number;
+  z: number;
+  speed: number;
+  yaw: number;
+}
+
+/**
  * The player character: a kinematic capsule plus its visual. Simulation runs in `fixedUpdate`;
  * `render` places the mesh at the position interpolated between ticks. The visual is a placeholder
  * capsule until `setAvatar` swaps in a character model (it stays if the model fails to load).
@@ -90,6 +101,7 @@ export class Player {
   private readonly tickCurr = { x: 0, y: 0, z: 0 };
   private facingOverride: number | null = null;
   private forcedMove: ForcedMove | null = null;
+  private ride: RideMove | null = null;
   /** Leap start, land and cancel; the game core maps it to the `player.leap` event. Defaults to `options.onLeap`. */
   onLeap: PlayerOptions['onLeap'] | null = null;
   private leapState: ActiveLeap | null = null;
@@ -151,6 +163,20 @@ export class Player {
    */
   setForcedMove(m: ForcedMove | null): void {
     this.forcedMove = m ? { x: m.x, z: m.z, speed: m.speed, turn: m.turn === true } : null;
+  }
+
+  /**
+   * While set, the player is seated on the mount: the move follows `m` instead of the input, jump is suppressed
+   * and `locomotion()` reports a standing rider. A leap and a forced move (dodge, knockback) still win; move locks
+   * and `speedScale` apply as to normal input. `null` gives control back to the input.
+   */
+  setRide(m: RideMove | null): void {
+    this.ride = m && [m.x, m.z, m.speed, m.yaw].every(Number.isFinite) ? { ...m } : null;
+  }
+
+  /** True while a ride is set (the player is seated). */
+  get seated(): boolean {
+    return this.ride !== null;
   }
 
   /**
@@ -228,7 +254,8 @@ export class Player {
     const dz = this.tickCurr.z - this.tickPrev.z;
     return {
       grounded: this.controller.grounded,
-      horizontalSpeed: Math.hypot(dx, dz) / FIXED_TIMESTEP,
+      // Seated in the saddle: the rider stands still while the horse moves.
+      horizontalSpeed: this.ride ? 0 : Math.hypot(dx, dz) / FIXED_TIMESTEP,
       verticalSpeed: (this.tickCurr.y - this.tickPrev.y) / FIXED_TIMESTEP,
     };
   }
@@ -253,6 +280,7 @@ export class Player {
     }
     const leap = this.leapState;
     const forced = leap ? null : this.forcedMove;
+    const ride = leap || forced ? null : this.ride;
     if (leap) {
       moveX = leap.dirX;
       moveZ = leap.dirZ;
@@ -273,6 +301,13 @@ export class Player {
       moveX = forced.x;
       moveZ = forced.z;
       this.controller.fixedUpdate({ moveX, moveZ, sprint: false, jump: false, speedOverride: forced.speed });
+    } else if (ride) {
+      const locked = (this.options.movementLocked?.() ?? false) || (mod?.lockMove ?? false);
+      const speed = locked ? 0 : ride.speed * Math.min(1, Math.max(0, mod?.speedScale ?? 1));
+      // Zero direction at speed 0: the controller would otherwise fall back to the walk speed.
+      moveX = speed > 0 ? ride.x : 0;
+      moveZ = speed > 0 ? ride.z : 0;
+      this.controller.fixedUpdate({ moveX, moveZ, sprint: false, jump: false, speedOverride: speed > 0 ? speed : undefined });
     } else {
       const locked = (this.options.movementLocked?.() ?? false) || (mod?.lockMove ?? false);
       let jump: boolean;
@@ -291,6 +326,8 @@ export class Player {
     }
     if (this.facingOverride !== null) {
       this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, this.facingOverride);
+    } else if (ride && !mod?.lockFacing) {
+      this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, ride.yaw);
     } else if ((moveX !== 0 || moveZ !== 0) && !mod?.lockFacing && (leap || !forced || forced.turn)) {
       // Mesh faces -Z at rest; turn it towards the movement direction.
       this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, Math.atan2(-moveX, -moveZ));
