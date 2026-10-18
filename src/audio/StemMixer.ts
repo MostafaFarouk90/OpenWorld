@@ -105,16 +105,35 @@ export class StemMixer {
   /**
    * Ramps each named stem to its target gain over `rampSeconds` (spec: 0.4 s). Stems not named keep
    * their current level. A ramp interrupted mid-way starts from the current value, not a jump.
+   *
+   * With `endAt` (an audio time) the ramp ends exactly then: the gain holds its current value until
+   * `endAt - rampSeconds` and ramps from there, so a fade planned for a bar line does not spread
+   * over the whole wait. An `endAt` already too close starts the ramp now and ends at `now + ramp`.
    */
-  setMix(mix: Record<string, number>, rampSeconds: number = AUDIO.stemCrossfadeSeconds): void {
+  setMix(mix: Record<string, number>, rampSeconds: number = AUDIO.stemCrossfadeSeconds, endAt?: number): void {
     const now = this.ctx.currentTime;
+    const scheduled = endAt !== undefined && Number.isFinite(endAt) && endAt > now + rampSeconds;
+    const end = scheduled ? (endAt as number) : now + rampSeconds;
+    const rampStart = scheduled ? end - rampSeconds : now;
     for (const [id, target] of Object.entries(mix)) {
       const param = this.stems.get(id)?.gain.gain;
       if (!param) continue;
       param.cancelScheduledValues(now);
       param.setValueAtTime(param.value, now);
-      param.linearRampToValueAtTime(target, now + rampSeconds);
+      if (rampStart > now) param.setValueAtTime(param.value, rampStart);
+      param.linearRampToValueAtTime(target, end);
     }
+  }
+
+  /** Stops playback and forgets every stem, leaving the mixer ready to load another track. */
+  clear(): void {
+    this.stop();
+    for (const stem of this.stems.values()) stem.gain.disconnect();
+    this.stems.clear();
+  }
+
+  get stemCount(): number {
+    return this.stems.size;
   }
 
   private async fetchAndDecode(id: string, url: string): Promise<AudioBuffer> {

@@ -5,6 +5,8 @@ import { HostileSet } from './hostileSet';
 import type { MixState, TrackDef } from './tracks';
 
 const ANON_BOSS = '\u0000anonymous';
+/** Stands for a section or chase the services say is live but whose id this director never saw. */
+export const DERIVED_ID = '\u0000derived';
 
 export type MusicState = Exclude<MixState, 'talk'>;
 
@@ -32,7 +34,7 @@ interface DiscoverWindow {
  * timers never run while audio is locked.
  */
 export class MusicDirector {
-  private readonly track: TrackDef;
+  private track: TrackDef;
   private readonly driver: MixDriver;
   private readonly random: () => number;
   private readonly cfg: typeof musicConfig;
@@ -47,6 +49,13 @@ export class MusicDirector {
   /** Active registry bosses by id (insertion order: the last started sets the mix), plus the anonymous legacy flag. */
   private readonly bosses = new Map<string, { phase: number; hush: boolean }>();
   private warnedBossIds = new Set<string>();
+  /** Stealth sections in progress (`stealth.section` entered, until cleared or exited). */
+  private readonly stealthSections = new Set<string>();
+  /** Alert level per observing guard; the loudest one picks the stealth overlay. */
+  private readonly alerts = new Map<string, 'suspicious' | 'alerted'>();
+  private chaseId: string | null = null;
+  /** A lost chase is held until here, in case thread 18 restarts it after its "Again" card. */
+  private chaseHoldUntil: number | null = null;
   private combat = false;
   private lastHold = -Infinity;
   private lastHit = -Infinity;
@@ -78,6 +87,24 @@ export class MusicDirector {
     return this.ducks.size > 0 ? 'talk' : this.state;
   }
 
+  /** True while any registry boss (or the legacy flag) is active: a track handover waits. */
+  get bossActive(): boolean {
+    return this.bosses.size > 0;
+  }
+
+  /** Marks the section / chase as live without knowing its id (re-derived from the services after a load). */
+  deriveStealth(active: boolean): void {
+    if (active && this.stealthSections.size === 0) this.stealthSections.add(DERIVED_ID);
+  }
+
+  deriveChase(active: boolean): void {
+    if (active && this.chaseId === null) this.chaseId = DERIVED_ID;
+  }
+
+  private get sneakOrChase(): boolean {
+    return this.stealthSections.size > 0 || this.chaseId !== null;
+  }
+
   private get boss(): boolean {
     return this.bosses.size > 0;
   }
@@ -92,6 +119,7 @@ export class MusicDirector {
   get mixRevision(): string {
     const key = this.mixKey;
     const lead = key === 'boss' ? this.leadBoss : undefined;
+    if (key === 'stealth') return `stealth:${this.alertLevel() ?? ''}`;
     return lead ? `boss:${lead[0]}:${lead[1].phase}:${lead[1].hush ? 'hush' : ''}` : key;
   }
 
@@ -99,6 +127,10 @@ export class MusicDirector {
   currentMix(): Readonly<Record<string, number>> {
     const key = this.mixKey;
     const lead = key === 'boss' ? this.leadBoss : undefined;
+    if (key === 'stealth') {
+      const level = this.alertLevel();
+      return (level && this.track.stealthAlert?.[level]) || this.track.mixes.stealth;
+    }
     if (!lead) return this.track.mixes[key];
     const [id, st] = lead;
     const def = this.track.bossMixes?.[id];
@@ -125,6 +157,28 @@ export class MusicDirector {
     this.lastNow = now;
     this.exploreSince = now;
     this.appliedKey = this.mixRevision; // the mixer was started with currentMix()
+  }
+
+  /**
+   * Region handover: from now the wanted mix comes from `track` and phrases are timed on `clock`
+   * (the new mixer's bar clock). Combat, boss, stealth and chase state carry over; discover and
+   * silence plans made on the old clock are dropped. The caller starts the new mixer with
+   * `currentMix()` and routes later `setMix` calls to it.
+   */
+  switchTrack(track: TrackDef, clock: BarClock, now: number): void {
+    if (this.disposed) return;
+    this.track = track;
+    this.clock = clock;
+    this.warnedBossIds.clear();
+    this.discover = null;
+    this.discoverPending = false;
+    this.silenceUntil = null;
+    this.exploreSince = this.baseState(now) === 'explore' ? now : null;
+    this.appliedKey = this.mixRevision;
+  }
+
+  get trackId(): string {
+    return this.track.id;
   }
 
   // ---- events -------------------------------------------------------------------------------
@@ -160,7 +214,7 @@ export class MusicDirector {
   /** `discover` and `waystone.rekindled`. Dropped during combat, boss and ending, or if one is already planned. */
   requestDiscover(): void {
     if (this.disposed) return;
-    if (this.combat || this.boss || this.endingUntil !== null) return;
+    if (this.combat || this.boss || this.endingUntil !== null || this.sneakOrChase) return;
     if (this.discoverPending || this.discover) return;
     this.discoverPending = true;
   }
@@ -231,6 +285,82 @@ export class MusicDirector {
     else this.exploreSince = now;
   }
 
+  // ---- stealth and chase (thread 18's events, v0.5) ------------------------------------------
+
+  /** `stealth.section` entered. */
+  stealthEntered(sectionId: string): void {
+    if (this.disposed) return;
+    this.stealthSections.delete(DERIVED_ID); // the real section replaces the one derived from the service
+    this.stealthSections.add(sectionId);
+    this.cancelPhrases();
+  }
+
+  /** `stealth.section` cleared or exited: the sneak is over (and so are its alert overlays). */
+  stealthEnded(sectionId: string, now: number): void {
+    if (!this.stealthSections.delete(sectionId) && !this.stealthSections.delete(DERIVED_ID)) return;
+    if (this.stealthSections.size === 0) {
+      this.alerts.clear();
+      this.exploreSince = now;
+    }
+  }
+
+  /** `stealth.alert`: raises or lowers the overlay; ignored outside a section. */
+  stealthAlert(observerId: string, state: 'calm' | 'suspicious' | 'alerted'): void {
+    if (this.stealthSections.size === 0) return;
+    if (state === 'calm') this.alerts.delete(observerId);
+    else this.alerts.set(observerId, state);
+  }
+
+  /** `stealth.caught`: the guards reset with the checkpoint; the section itself stays live. */
+  stealthCaught(): void {
+    this.alerts.clear();
+  }
+
+  private alertLevel(): 'suspicious' | 'alerted' | null {
+    let level: 'suspicious' | 'alerted' | null = null;
+    for (const a of this.alerts.values()) {
+      if (a === 'alerted') return 'alerted';
+      level = 'suspicious';
+    }
+    return level;
+  }
+
+  chaseStarted(chaseId: string): void {
+    if (this.disposed) return;
+    this.chaseId = chaseId;
+    this.chaseHoldUntil = null;
+    this.cancelPhrases();
+  }
+
+  /** `chase.caught`: the courier is caught, a win; the short ending plays. */
+  chaseCaught(chaseId: string, now: number): void {
+    if (this.chaseId !== chaseId && this.chaseId !== null && this.chaseId !== DERIVED_ID) return;
+    this.chaseId = null;
+    this.chaseHoldUntil = null;
+    if (!this.boss) this.endingUntil = now + this.cfg.mercyEndingSeconds;
+  }
+
+  /**
+   * `chase.lost`. Combat takes over at once; otherwise the chase mix is held for the "Again" card
+   * so a restart does not dip to explore.
+   */
+  chaseLost(chaseId: string, reason: 'timer' | 'distance' | 'combat', now: number): void {
+    if (this.chaseId !== chaseId && this.chaseId !== DERIVED_ID) return;
+    if (reason === 'combat') {
+      this.chaseId = null;
+      this.chaseHoldUntil = null;
+    } else {
+      this.chaseHoldUntil = now + this.cfg.chaseRestartHoldSeconds;
+    }
+  }
+
+  private cancelPhrases(): void {
+    this.discover = null;
+    this.discoverPending = false;
+    this.silenceUntil = null;
+    this.exploreSince = null;
+  }
+
   /** Reasons are namespaced by the caller (`dialogue:<id>`, `cutscene:<id>`). Unknown `off` is a no-op. */
   duck(reason: string, on: boolean): void {
     if (on) this.ducks.add(reason);
@@ -242,6 +372,10 @@ export class MusicDirector {
     this.hostiles.clear();
     this.ducks.clear();
     this.bosses.clear();
+    this.stealthSections.clear();
+    this.alerts.clear();
+    this.chaseId = null;
+    this.chaseHoldUntil = null;
     this.combat = false;
     this.lastHold = -Infinity;
     this.lastHit = -Infinity;
@@ -301,6 +435,12 @@ export class MusicDirector {
       }
     }
 
+    if (this.chaseHoldUntil !== null && now >= this.chaseHoldUntil) {
+      this.chaseHoldUntil = null;
+      this.chaseId = null;
+      this.exploreSince = now;
+    }
+
     if (this.endingUntil !== null && now >= this.endingUntil) {
       this.endingUntil = null;
       this.exploreSince = now;
@@ -324,7 +464,7 @@ export class MusicDirector {
   private updateDiscover(now: number): void {
     const clock = this.clock;
     if (!clock) return;
-    const blocked = this.combat || this.boss || this.endingUntil !== null;
+    const blocked = this.combat || this.boss || this.endingUntil !== null || this.sneakOrChase;
     if (blocked) {
       this.discover = null;
       this.discoverPending = false;
@@ -352,7 +492,7 @@ export class MusicDirector {
 
   private updateSilence(now: number): void {
     const plainExplore =
-      !this.combat && !this.boss && this.endingUntil === null && this.discover === null && !this.discoverPending && this.ducks.size === 0;
+      !this.combat && !this.boss && !this.sneakOrChase && this.endingUntil === null && this.discover === null && !this.discoverPending && this.ducks.size === 0;
     if (!plainExplore) {
       this.exploreSince = null;
       this.silenceUntil = null;
@@ -377,6 +517,8 @@ export class MusicDirector {
     if (this.boss) return 'boss';
     if (this.combat) return 'combat';
     if (this.endingUntil !== null) return 'ending';
+    if (this.chaseId !== null) return 'chase';
+    if (this.stealthSections.size > 0) return 'stealth';
     if (this.discover?.active) return 'discover';
     if (this.silenceUntil !== null) return 'silence';
     return 'explore';

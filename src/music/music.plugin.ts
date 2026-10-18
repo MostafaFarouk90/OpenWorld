@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import type { GameContext } from '../core/Game';
 import type { GamePlugin } from '../core/plugins';
 import type { GameServices } from '../core/Services';
+import { AmbienceBed } from '../audio/AmbienceBed';
 import { InteriorFx } from '../audio/InteriorFx';
+import type { StemMixer } from '../audio/StemMixer';
 import { BarClock } from './barClock';
 import { BeatScheduler, beatInfoAt, performanceToAudioTime, type BeatInfo } from './beatClock';
 import { isCombatHit } from './hostileSet';
@@ -11,7 +13,8 @@ import { musicConfig } from './musicConfig';
 import { BARE_SFX, impactLayers, isHeavyHit, resolveMaterial, SFX, swingLayer } from './sfxLayers';
 import { registerPlaceholderSfx, SfxPlayer } from './SfxPlayer';
 import { loadTrackStems } from './stemLoader';
-import { BARLEY_AND_BRAZIER, loopSeconds, type TrackDef } from './tracks';
+import { HandoverMachine, planHandover } from './trackSwitch';
+import { BARLEY_AND_BRAZIER, loopSeconds, TRACKS_BY_ID, type TrackDef } from './tracks';
 
 export type MusicService = GameServices['music'];
 
@@ -41,16 +44,44 @@ function hashString(s: string): number {
   return h >>> 0;
 }
 
-const TRACKS: Readonly<Record<string, TrackDef>> = { [BARLEY_AND_BRAZIER.id]: BARLEY_AND_BRAZIER };
+/** Services this plugin reads lazily: it depends only on core, and some of them come from later plugins. */
+interface LazyServices {
+  region?: { at(x: number, z: number): { id: string; track: string } | null };
+  interiors?: { readonly current: string | null };
+  stealth?: { active(): boolean };
+  chase?: { active(): boolean };
+}
+
+const POLL_SECONDS = 0.25;
+const PROBE_SECONDS = 1;
+const PROBE_METRES = 400;
+const PRELOAD_KEEP_SECONDS = 30;
+const PROBE_DIRECTIONS: ReadonlyArray<readonly [number, number]> = [
+  [1, 0], [Math.SQRT1_2, Math.SQRT1_2], [0, 1], [-Math.SQRT1_2, Math.SQRT1_2],
+  [-1, 0], [-Math.SQRT1_2, -Math.SQRT1_2], [0, -1], [Math.SQRT1_2, -Math.SQRT1_2],
+];
 
 /**
  * Wires the music director and the SFX player into the world. Returns the teardown. Registrations
  * made through the scoped context (events, systems, services) are also undone by the plugin
  * loader; the teardown stops the mixer and cancels a stem load still in flight.
  */
-export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIER): () => void {
-  const audio = ctx.services.get('audio');
-  if (!audio) return () => {}; // no Web Audio: the world runs silently and no music service exists
+export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => void {
+  const maybeAudio = ctx.services.get('audio');
+  if (!maybeAudio) return () => {}; // no Web Audio: the world runs silently and no music service exists
+  const audio: NonNullable<typeof maybeAudio> = maybeAudio;
+
+  const lazy = <K extends keyof LazyServices>(name: K): LazyServices[K] | undefined =>
+    (ctx.services as unknown as { get(n: string): unknown }).get(name) as LazyServices[K] | undefined;
+  const regionAtPlayer = (): { id: string; track: string } | null => {
+    try {
+      return lazy('region')?.at(ctx.player.feet.x, ctx.player.feet.z) ?? null;
+    } catch {
+      return null;
+    }
+  };
+  // The track of the region the player stands in; Brightwater's when no region service answers.
+  let track: TrackDef = initialTrack ?? TRACKS_BY_ID[regionAtPlayer()?.track ?? ''] ?? BARLEY_AND_BRAZIER;
 
   let disposed = false;
   let gameTime = 0; // simulated seconds: stands still while the game is paused
@@ -59,10 +90,24 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
   let clock: BarClock | null = null;
   const beats = new BeatScheduler();
   const fx = InteriorFx.create(audio.context, audio.musicBus ?? null, audio.masterNode ?? null);
+  const bed = AmbienceBed.create(audio.context as never, audio.masterNode ?? null);
+
+  // Region handover state (design 6.1 trigger 6): the idle mixer holds the next track's stems.
+  const machine = new HandoverMachine(track.id);
+  let committed: { track: TrackDef; clock: BarClock; at: number } | null = null;
+  let idleLoaded: string | null = null;
+  let preloading: string | null = null;
+  let loadGeneration = 0;
+  let lastProbeHit = -Infinity;
+  const warnedTracks = new Set<string>();
 
   const director = new MusicDirector({
     track,
-    driver: { setMix: (mix, ramp) => audio.music.setMix(mix, ramp) },
+    driver: {
+      // Once the new mixer is scheduled it alone takes changes, held silent until the bar line.
+      setMix: (mix, ramp = musicConfig.rampSeconds) =>
+        committed ? audio.musicNext.setMix(mix, ramp, committed.at + ramp) : audio.music.setMix(mix, ramp),
+    },
   });
 
   ctx.services.provide('music', {
@@ -73,16 +118,12 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
     beat() {
       const state = (audio.context as { state?: string }).state;
       if (disposed || !clock || (state !== undefined && state !== 'running')) return null;
-      return beatInfoAt(clock, track.bpm, audioNow());
+      return beatInfoAt(clock, track.bpm, audioNow()); // the active track until the swap
     },
     onBeat: (cb) => beats.onBeat(cb),
     toAudioTime: (ms) => performanceToAudioTime(audio.context, ms, performance.now(), musicConfig.beatInputOffsetSeconds),
     duck: (reason, on) => director.duck(reason, on),
-    setRegionTrack(trackId) {
-      if (!TRACKS[trackId] || trackId !== track.id) {
-        console.warn(`Music: unknown or unsupported region track "${trackId}"; slice 1 has only "${track.id}"`);
-      }
-    },
+    setRegionTrack: (trackId) => requestTrack(trackId),
   });
 
   // --- SFX ----------------------------------------------------------------------------------
@@ -139,16 +180,33 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
   ev.on('save.loaded', () => {
     director.reset(gameTime);
     rederiveBosses();
+    rederiveSneakAndChase();
     // The interiors service sets its current id before `save.loaded`; never reset to outdoors blindly.
-    const interiors = (ctx.services as unknown as { get(name: string): { current?: string | null } | undefined }).get('interiors');
-    fx?.setInterior(interiors?.current ?? null);
+    const current = lazy('interiors')?.current ?? null;
+    fx?.setInterior(current);
+    bed?.setInterior(current);
+    pollRegion();
   });
   ev.on('actor.revived', (e) => {
     if (e.actorId === playerId && e.reason === 'respawn') {
       director.reset(gameTime);
       rederiveBosses();
+      rederiveSneakAndChase();
     }
   });
+
+  // Stealth and chase (thread 18, v0.5). A catch keeps the section live; only the alert overlay resets.
+  ev.on('stealth.section', (e) => {
+    if (e.phase === 'entered') director.stealthEntered(e.sectionId);
+    else director.stealthEnded(e.sectionId, gameTime);
+  });
+  ev.on('stealth.alert', (e) => director.stealthAlert(e.observerId, e.state));
+  ev.on('stealth.caught', () => director.stealthCaught());
+  ev.on('chase.started', (e) => director.chaseStarted(e.chaseId));
+  ev.on('chase.caught', (e) => director.chaseCaught(e.chaseId, gameTime));
+  ev.on('chase.lost', (e) => director.chaseLost(e.chaseId, e.reason, gameTime));
+
+  ev.on('region.entered', () => pollRegion());
 
   // Boss music follows the core registry only (phases are 1-based).
   ev.on('boss.started', (e) => director.bossStarted(e.bossId, ctx.bosses?.state(e.bossId)?.phase ?? 1, gameTime));
@@ -159,8 +217,14 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
   ev.on('boss.ended', (e) => director.bossEnded(e.bossId, gameTime));
 
   // Interiors: one slot (contracts/interiors-and-nav.md); the same id again is a no-op.
-  ev.on('interior.entered', (e) => fx?.setInterior(e.interiorId));
-  ev.on('interior.exited', () => fx?.setInterior(null));
+  ev.on('interior.entered', (e) => {
+    fx?.setInterior(e.interiorId);
+    bed?.setInterior(e.interiorId);
+  });
+  ev.on('interior.exited', () => {
+    fx?.setInterior(null);
+    bed?.setInterior(null);
+  });
 
   // Slice 2 sounds.
   ev.on('shrine.rekindled', () => {
@@ -234,7 +298,170 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
     }
   }
 
+  function rederiveSneakAndChase(): void {
+    try {
+      director.deriveStealth(lazy('stealth')?.active() === true);
+      director.deriveChase(lazy('chase')?.active() === true);
+    } catch (err) {
+      console.warn('Music: could not read the stealth or chase service:', err);
+    }
+  }
+
   rederiveBosses(); // a boss registered before this plugin's setup
+  rederiveSneakAndChase();
+
+  // --- region handover ----------------------------------------------------------------------
+  const sampleRate = (): number => audio.context.sampleRate;
+
+  /** Builds `next`'s stems into the idle mixer; false if cancelled, superseded or nothing could be built. */
+  async function preloadIdle(next: TrackDef): Promise<boolean> {
+    const idle = audio.musicNext as StemMixer | undefined;
+    if (!idle) return false;
+    const generation = ++loadGeneration;
+    const stale = (): boolean => disposed || generation !== loadGeneration;
+    if (idleLoaded === next.id && idle.stemCount > 0) return true;
+    idle.clear();
+    idleLoaded = null;
+    preloading = next.id;
+    try {
+      const loaded = await loadTrackStems(audio.context, next, { isCancelled: stale });
+      if (stale() || loaded.cancelled) return false;
+      if (loaded.buffers.size === 0) return false;
+      let added = 0;
+      for (const [id, buffer] of loaded.buffers) {
+        if (stale()) return false;
+        try {
+          await idle.add(id, buffer);
+          added++;
+        } catch (err) {
+          console.warn(`Music: could not add stem "${id}" of ${next.id}:`, err);
+        }
+      }
+      if (stale()) return false;
+      if (added === 0) return false;
+      idleLoaded = next.id;
+      return true;
+    } catch (err) {
+      console.warn(`Music: could not load ${next.id}:`, err);
+      return false;
+    } finally {
+      if (generation === loadGeneration) preloading = null;
+    }
+  }
+
+  async function prepare(next: TrackDef): Promise<void> {
+    const ok = idleLoaded === next.id ? true : await preloadIdle(next);
+    if (disposed) return;
+    if (!ok) {
+      // Superseded or cancelled loads leave the machine as the newer request set it.
+      if (machine.view().target === next.id && idleLoaded !== next.id && preloading === null) {
+        machine.fail(next.id);
+        if (!warnedTracks.has(next.id)) {
+          warnedTracks.add(next.id);
+          console.warn(`Music: could not prepare "${next.id}"; keeping "${track.id}".`);
+        }
+      }
+      return;
+    }
+    tryCommit();
+  }
+
+  function requestTrack(trackId: string): void {
+    const next = TRACKS_BY_ID[trackId];
+    if (!next) {
+      if (!warnedTracks.has(trackId)) {
+        warnedTracks.add(trackId);
+        console.warn(`Music: unknown region track "${trackId}"; keeping "${track.id}"`);
+      }
+      return;
+    }
+    if (!director.started || !clock || disposed) return; // audio is not playing yet: nothing to hand over from
+    if (machine.request(trackId)) void prepare(next);
+    else tryCommit();
+  }
+
+  /** Commits the planned handover once the stems are ready and no boss fight is on. */
+  function tryCommit(): void {
+    const view = machine.view();
+    if (view.phase !== 'loading' || !view.target || idleLoaded !== view.target) return;
+    if (director.bossActive || !clock || committed) return;
+    const next = TRACKS_BY_ID[view.target];
+    const now = audioNow();
+    const at = planHandover(clock, now, musicConfig.rampSeconds);
+    const nextClock = new BarClock(at, loopSeconds(next, sampleRate()), next.bars);
+    try {
+      director.switchTrack(next, nextClock, gameTime);
+      const incoming = audio.musicNext;
+      incoming.start(director.currentMix() as Record<string, number>, Math.max(0, at - now));
+      // The old track fades so it is silent exactly on the bar line; the new one starts at full on it.
+      audio.music.setMix(Object.fromEntries(track.stems.map((s) => [s, 0])), musicConfig.rampSeconds, at);
+      machine.commit(next.id, at);
+      committed = { track: next, clock: nextClock, at };
+    } catch (err) {
+      console.warn(`Music: could not start ${next.id}:`, err);
+      if (clock) director.switchTrack(track, clock, gameTime); // back to the track that is still playing
+      machine.fail(next.id);
+    }
+  }
+
+  /** At the bar line the new mixer becomes the active one. */
+  function swapIfDue(): void {
+    if (!committed || audioNow() < committed.at) return;
+    const done = committed;
+    committed = null;
+    const outgoing = audio.music;
+    audio.swapMusic();
+    try {
+      outgoing.stop(); // already silent; its stems stay cached for the walk back
+    } catch (err) {
+      console.warn('Music: could not stop the outgoing mixer:', err);
+    }
+    idleLoaded = track.id;
+    track = done.track;
+    clock = done.clock;
+    beats.reset();
+    const queued = machine.swap();
+    if (queued) void prepare(TRACKS_BY_ID[queued]);
+  }
+
+  /** What the player's region wants: the bed, and the track (never from the null corridor). */
+  function pollRegion(): void {
+    const info = regionAtPlayer();
+    bed?.setRegion(info?.id ?? null);
+    if (info && TRACKS_BY_ID[info.track]) requestTrack(info.track);
+  }
+
+  /** Preloads the neighbouring region's track when the player is within 400 m of its border. */
+  function probeNeighbours(now: number): void {
+    const region = lazy('region');
+    if (!region || !director.started || committed) return;
+    const { x, z } = ctx.player.feet;
+    let found: string | null = null;
+    for (const [dx, dz] of PROBE_DIRECTIONS) {
+      let at: { track: string } | null = null;
+      try {
+        at = region.at(x + dx * PROBE_METRES, z + dz * PROBE_METRES);
+      } catch {
+        at = null;
+      }
+      if (at && at.track !== track.id && TRACKS_BY_ID[at.track]) {
+        found = at.track;
+        break;
+      }
+    }
+    if (found) {
+      lastProbeHit = now;
+      if (machine.view().phase === 'idle' && idleLoaded !== found && preloading !== found) void preloadIdle(TRACKS_BY_ID[found]);
+    } else if ((idleLoaded || preloading) && machine.view().phase === 'idle' && now - lastProbeHit > PRELOAD_KEEP_SECONDS) {
+      loadGeneration++; // cancels a load in flight and discards its result
+      audio.musicNext?.clear();
+      idleLoaded = null;
+      preloading = null;
+    }
+  }
+
+  let pollClock = 0;
+  let probeClock = 0;
 
   ctx.systems.add({
     id: 'music',
@@ -244,11 +471,23 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
       gameTime += dt;
       director.update(gameTime, distanceTo, { audioNow: audioNow(), hostileNear: hostileNearby() });
       const state = (audio.context as { state?: string }).state;
-      if (clock && (state === undefined || state === 'running')) beats.update(clock, track.bpm, audioNow());
+      const running = state === undefined || state === 'running';
+      if (clock && running) beats.update(clock, track.bpm, audioNow());
+      if (running) swapIfDue();
+      if (running && (pollClock += dt) >= POLL_SECONDS) {
+        pollClock = 0;
+        pollRegion();
+        tryCommit(); // a boss fight that held the handover is over
+      }
+      if (running && (probeClock += dt) >= PROBE_SECONDS) {
+        probeClock = 0;
+        probeNeighbours(gameTime);
+      }
     },
     dispose: () => {
       director.dispose();
       fx?.dispose();
+      bed?.dispose();
     },
   });
 
@@ -291,9 +530,12 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
 
   return () => {
     disposed = true;
+    loadGeneration++;
     director.dispose();
     fx?.dispose();
+    bed?.dispose();
     if (audio.music.isPlaying) audio.music.stop();
+    if (audio.musicNext?.isPlaying) audio.musicNext.stop();
   };
 }
 
