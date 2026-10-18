@@ -10,6 +10,10 @@ function mem(init?: string) {
 }
 function gfx() {
   return {
+    renderScale: 1,
+    shadows: 'full',
+    viewDistanceOffset: 0,
+    postPass: null,
     setRenderScale: vi.fn(),
     setShadows: vi.fn(),
     setViewDistanceOffset: vi.fn(),

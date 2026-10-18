@@ -1,3 +1,4 @@
+import type { Action } from '../input/actions';
 // Spell-framework constants that are not shared with the vfx thread (those live in src/vfx/tuning.ts).
 
 /**
@@ -18,7 +19,7 @@ export const BURN_ZONE_PENALTY = {
 
 export const SPELL_MOVE_SOURCE = 'spell';
 /** Action ids (contracts/input-and-hud.md section 1) the spell locks while casting. lockOn and sprint stay free. */
-export const SPELL_LOCK_ACTIONS: readonly string[] = [
+export const SPELL_LOCK_ACTIONS: readonly Action[] = [
   'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'jump', 'surge', 'interact',
   'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6',
 ];

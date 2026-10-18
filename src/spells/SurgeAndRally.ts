@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { ActorsLike, ClockLike, DamageLike, EventsLike, PlayerLike, ServicesLike, Vec3 } from '../vfx/ports';
 import { BURN, RALLY, SURGE } from '../vfx/tuning';
 import type { Burn } from './Burn';
@@ -37,7 +38,7 @@ function feetOf(host: SpellEffectHost): Vec3 {
 export function registerSurge(host: SpellEffectHost, caster: SpellCaster, deps: SpellEffectDeps): () => void {
   const { services, damage, burn, clock } = deps;
   const offCast = host.events.on('spell.cast', (e) => {
-    if (e.spellId === SURGE_DEF.id && SURGE_DEF.soundCharge) services.get('audio')?.play(SURGE_DEF.soundCharge);
+    if (e.spellId === SURGE_DEF.id && SURGE_DEF.soundCharge) sfx(services, SURGE_DEF.soundCharge);
   });
 
   const offDef = caster.register(SURGE_DEF, (ctx: ReleaseContext) => {
@@ -56,8 +57,8 @@ export function registerSurge(host: SpellEffectHost, caster: SpellCaster, deps: 
         poise,
         kind: 'spell',
         attackId: SURGE.spellId,
-        point: hit.position,
-        direction: horizontalDir(feet, hit.position, host.player.facingYaw),
+        point: new THREE.Vector3(hit.position.x, hit.position.y, hit.position.z),
+        direction: toVector3(horizontalDir(feet, hit.position, host.player.facingYaw)),
       });
     }
 
@@ -70,7 +71,7 @@ export function registerSurge(host: SpellEffectHost, caster: SpellCaster, deps: 
     vfx?.pulseScreen(SURGE_FX.pulse[zone], SURGE_FX.pulseSeconds, SURGE_FX.pulseColor[zone]);
     clock.hitStop(SURGE.hitStop);
     vfx?.shake(SURGE_FX.shake[zone], SURGE_FX.shakeSeconds[zone]);
-    if (SURGE_DEF.soundRelease) services.get('audio')?.play(SURGE_DEF.soundRelease, { position: feet });
+    if (SURGE_DEF.soundRelease) sfx(services, SURGE_DEF.soundRelease, feet);
   });
 
   return () => {
@@ -104,7 +105,7 @@ export function registerRally(host: SpellEffectHost, caster: SpellCaster, deps: 
     }
     // The 'skill-q' effect multiplies scale by params.radius, so the scale stays 1.
     services.get('vfx')?.spawnEffect('skill-q', { position: feet, scale: 1 }, { radius: RALLY.radius, color: RALLY_FX.color });
-    if (RALLY_DEF.soundRelease) services.get('audio')?.play(RALLY_DEF.soundRelease, { position: feet });
+    if (RALLY_DEF.soundRelease) sfx(services, RALLY_DEF.soundRelease, feet);
   });
 
   let offHandler: (() => void) | null = null;
@@ -138,4 +139,20 @@ export function registerRally(host: SpellEffectHost, caster: SpellCaster, deps: 
       offDef();
     },
   };
+}
+
+function toVector3(v: Vec3): THREE.Vector3 {
+  return new THREE.Vector3(v.x, v.y, v.z);
+}
+
+/** Plays a sound key if the audio service exists; a key thread 8 has not registered yet must not break the cast. */
+function sfx(services: ServicesLike, key: string, at?: Vec3): void {
+  const audio = services.get('audio');
+  if (!audio) return;
+  try {
+    if (at) audio.playAt(key, at);
+    else audio.play(key);
+  } catch (e) {
+    console.warn(`spells: sound '${key}' unavailable`, e instanceof Error ? e.message : e);
+  }
 }

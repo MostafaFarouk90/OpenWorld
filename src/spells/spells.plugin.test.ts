@@ -42,9 +42,9 @@ describe('spells plugin', () => {
   it('rekindle adds burn only for cause player', () => {
     const f = makeCtx();
     plugin.setup(f.ctx);
-    f.world.events.emit('waystone.rekindled', { waystoneId: 'w', cause: 'load' });
+    f.world.events.emit('waystone.rekindled', { waystoneId: 'w', cause: 'script' });
     expect(f.services.spells!.burn).toBe(0);
-    f.world.events.emit('waystone.rekindled', { waystoneId: 'w' });
+    f.world.events.emit('waystone.rekindled', { waystoneId: 'w' } as never);
     expect(f.services.spells!.burn).toBe(0);
     f.world.events.emit('waystone.rekindled', { waystoneId: 'w', cause: 'player' });
     expect(f.services.spells!.burn).toBe(BURN.rekindleGain);
@@ -161,7 +161,7 @@ describe('spells plugin', () => {
     f.tick(200);
     expect(addMaxHealthModifier).toHaveBeenCalledTimes(1);
     f.services.spells!.addBurn(90, 't');
-    expect(addMaxHealthModifier.mock.calls[0][1](100)).toBe(100); // penalty deferred
+    expect((addMaxHealthModifier.mock.calls[0] as unknown as [string, () => number])[1]()).toBe(1); // penalty deferred: multiplier stays 1
     plugin.dispose!();
     expect(remove).toHaveBeenCalledTimes(1);
   });

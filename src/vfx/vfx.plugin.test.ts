@@ -66,7 +66,7 @@ describe('vfx plugin', () => {
   it('survives events for unknown actors and a missing camera', () => {
     const t = fakeContext({ camera: null } as never);
     plugin.setup(t.ctx);
-    t.ctx.events.emit('telegraph', { actorId: 'ghost', kind: 'block', attackId: 'x', leadSeconds: 0.5 });
+    t.ctx.events.emit('telegraph', { actorId: 'ghost', kind: 'block', attackId: 'x', moveId: 'm', swingId: 1, leadSeconds: 0.5 });
     t.ctx.events.emit('attack.window', { actorId: 'ghost', attackId: 'x', swingId: 1, phase: 'open' });
     t.ctx.events.emit('actor.despawned', { actorId: 'ghost' });
     const byId = Object.fromEntries(t.systems.map((s) => [s.id, s]));
@@ -76,15 +76,15 @@ describe('vfx plugin', () => {
     plugin.dispose();
   });
 
-  it('rekindle spawns an effect unless it came from a save load; burn drives the vignette', () => {
+  it('rekindle spawns an effect for player and script causes; burn drives the vignette', () => {
     const t = fakeContext();
     plugin.setup(t.ctx);
     const vfx = t.services.get('vfx') as VfxService;
     const spawn = vi.spyOn(vfx, 'spawnEffect');
-    t.ctx.events.emit('waystone.rekindled', { waystoneId: 'w', cause: 'load' });
-    expect(spawn).not.toHaveBeenCalled();
     t.ctx.events.emit('waystone.rekindled', { waystoneId: 'w', cause: 'player' });
     expect(spawn).toHaveBeenCalledWith('waystone-rekindle', expect.anything());
+    t.ctx.events.emit('waystone.rekindled', { waystoneId: 'w', cause: 'script' });
+    expect(spawn).toHaveBeenCalledTimes(2);
     t.ctx.events.emit('burn.changed', { value: 80, previous: 55 });
     plugin.dispose();
   });

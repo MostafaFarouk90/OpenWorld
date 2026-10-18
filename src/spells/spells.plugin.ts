@@ -1,4 +1,5 @@
-import type { ActorId, GamePlugin, PluginContext } from '../vfx/ports';
+import { heightAt } from '../terrain/heightfield';
+import { looseService, type ActorId, type GamePlugin, type PluginContext } from '../vfx/ports';
 import { BURN, EMBER } from '../vfx/tuning';
 import { Burn } from './Burn';
 import { Ember } from './Ember';
@@ -9,6 +10,13 @@ import { registerRally, registerSurge, type RallyRegistration } from './SurgeAnd
 import { onLoose } from './looseEvents';
 import { LATE_BIND_RETRY_SECONDS, PLAYER_STAGGER_LOCK_SECONDS } from './tuning';
 import type { SpellsService } from './types';
+
+/** Thread 1's controller additions (playOneShot, busy); absent until it merges. */
+interface OneShotController {
+  playOneShot?(clip: string, opts?: { lockMove?: boolean }): boolean;
+  readonly busy?: boolean;
+  activeAttack(): unknown;
+}
 
 // Importing types.ts for its `declare module` augmentation of ServiceMap.
 export type { SpellsService } from './types';
@@ -59,7 +67,7 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       actors: ctx.actors,
       ember,
       playClip(clip, opts) {
-        const controller = ctx.player.avatar?.controller;
+        const controller = ctx.player.avatar?.controller as unknown as OneShotController | undefined;
         // Without a controller (or before thread 1 lands playOneShot) the cast still runs, just unanimated.
         if (!controller?.playOneShot) return true;
         return controller.playOneShot(clip, opts);
@@ -67,7 +75,7 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       isStaggered: (id) => id === playerId() && simTime < staggeredUntil,
       isBusy(id) {
         if (id !== playerId()) return false;
-        const c = ctx.player.avatar?.controller;
+        const c = ctx.player.avatar?.controller as unknown as OneShotController | undefined;
         return !!c && (c.busy === true || c.activeAttack() !== null);
       },
       inputBlocked: () => blockers > 0,
@@ -80,7 +88,7 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
     const caster = new SpellCaster(host);
     // Only a running cast can be cancelled; a stale request must not kill the next one.
     const requestCancel = (reason: string): void => { if (caster.state !== 'idle') pendingCancel = reason; };
-    const projectiles = new ProjectileSystem({ actors: ctx.actors, heightAt: ctx.heightAt });
+    const projectiles = new ProjectileSystem({ actors: ctx.actors, heightAt });
     offs.push(() => caster.dispose());
 
     const effectHost = { events: ctx.events, player: ctx.player, actors: ctx.actors };
@@ -144,7 +152,7 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
     const bindLate = (): void => {
       if (!offModifier) {
         // Returns base * 1 while BURN_MAX_HEALTH_PENALTY_ENABLED is false (deferred, see Burn.ts).
-        offModifier = ctx.services.get('progression')?.addMaxHealthModifier('burn', (base) => base * burn.healthMultiplier()) ?? null;
+        offModifier = looseService(ctx.services, 'progression')?.addMaxHealthModifier('burn', () => burn.healthMultiplier()) ?? null;
       }
       rally.bindAbilities();
     };

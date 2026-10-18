@@ -132,7 +132,7 @@ describe('SpellCaster', () => {
   });
   it('died event cancels', () => {
     caster.cast('player', 'test-bolt');
-    w.events.emit('actor.died', { actorId: 'player', killerId: null });
+    w.events.emit('actor.died', { actorId: 'player', killerId: null } as never);
     expect(caster.state).toBe('idle');
     expect(w.player.modifiers.size).toBe(0);
   });
@@ -191,7 +191,7 @@ describe('SpellCaster', () => {
         else if (r < 0.42) ww.events.emit('actor.staggered', { actorId: 'player', byId: null });
         else if (r < 0.46) ww.host.cancelReason = 'rest';
         else if (r < 0.5) ww.host.clipResult = !ww.host.clipResult;
-        else if (r < 0.53) ww.events.emit('actor.died', { actorId: 'player', killerId: null });
+        else if (r < 0.53) ww.events.emit('actor.died', { actorId: 'player', killerId: null } as never);
         else for (let i = 0, n = Math.floor(rnd() * 40); i < n; i++) c.update(DT);
         expect(ww.player.modifiers.size).toBe(c.state === 'idle' ? 0 : 1);
       }

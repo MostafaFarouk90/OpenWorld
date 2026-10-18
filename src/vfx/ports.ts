@@ -6,18 +6,11 @@ import type * as THREE from 'three';
 
 export type Vec3 = { x: number; y: number; z: number };
 export type ActorId = string;
-export type FixedPhase = 'input' | 'intent' | 'animation' | 'afterCombat' | 'rules' | 'late';
-export type RenderPhase = 'world' | 'afterCamera' | 'hud';
 
-export interface GameSystem {
-  id: string;
-  fixedPhase?: FixedPhase;
-  renderPhase?: RenderPhase;
-  order?: number;
-  fixedUpdate?(dt: number, ctx: PluginContext): void;
-  render?(alpha: number, frameTime: number, ctx: PluginContext): void;
-  dispose?(): void;
-}
+export type { GameSystem, FixedPhase, RenderPhase } from '../core/systems';
+export type { GamePlugin } from '../core/plugins';
+export type { GameContext as PluginContext } from '../core/Game';
+export type { GraphicsService, PostPass } from '../core/graphics';
 
 export interface ActorLike {
   readonly id: ActorId;
@@ -53,31 +46,11 @@ export interface DamageResultLike {
   staggered: boolean;
 }
 
-/** Events thread 7 listens to or emits. Real payloads are in the contracts. */
-export interface VfxEventMap {
-  'damage.dealt': DamageResultLike;
-  'attack.window': { actorId: ActorId; attackId: string; swingId: number; phase: 'open' | 'close' };
-  telegraph: { actorId: ActorId; kind: 'block' | 'dodge'; attackId: string; leadSeconds: number };
-  'actor.died': { actorId: ActorId; killerId: ActorId | null };
-  'actor.despawned': { actorId: ActorId };
-  'telegraph.cancelled': { actorId: ActorId; swingId?: number };
-  'actor.staggered': { actorId: ActorId; byId: ActorId | null };
-  'waystone.rekindled': { waystoneId: string; cause?: 'player' | 'load' | 'script' };
-  rest: { waystoneId: string };
-  'ai.aggro': { actorId: ActorId; targetId: ActorId };
-  'ai.calm': { actorId: ActorId };
-  'burn.changed': { value: number; previous: number };
-  'ember.changed': { value: number; previous: number };
-  'spell.cast': { casterId: ActorId; spellId: string };
-  'spell.released': { casterId: ActorId; spellId: string };
-  'spell.cancelled': { casterId: ActorId; spellId: string; reason: string };
-  'dialogue.started': { dialogueId: string; npcId: string };
-  'dialogue.ended': { dialogueId: string; npcId: string };
-  'cutscene.started': { cutsceneId: string };
-  'cutscene.ended': { cutsceneId: string };
-  'save.loaded': { slot: string };
-}
-export type VfxEventType = keyof VfxEventMap;
+import type { GameEventMap } from '../core/events';
+import type { Action } from '../input/actions';
+
+export type VfxEventMap = GameEventMap;
+export type VfxEventType = keyof GameEventMap;
 
 export interface EventsLike {
   on<K extends VfxEventType>(type: K, listener: (payload: VfxEventMap[K]) => void): () => void;
@@ -100,7 +73,7 @@ export interface PlayerLike {
   readonly avatar: AvatarLike | null;
   addMoveModifier(
     source: string,
-    mod: { speedScale?: number; lockMove?: boolean; lockFacing?: boolean; lockActions?: string[] },
+    mod: { speedScale?: number; lockMove?: boolean; lockFacing?: boolean; lockActions?: readonly Action[] },
   ): () => void;
 }
 
@@ -135,67 +108,25 @@ export interface DamageLike {
     poise: number;
     kind: 'melee' | 'spell' | 'fall' | 'script';
     attackId?: string;
-    point?: Vec3;
-    direction?: Vec3;
+    point?: THREE.Vector3;
+    direction?: THREE.Vector3;
   }): DamageResultLike | null;
   stagger(id: ActorId, byId: ActorId, poise: number): boolean;
   heal(id: ActorId, amount: number): number;
 }
 
-export interface ServicesLike {
-  provide<K extends keyof ServiceMap>(name: K, impl: ServiceMap[K]): () => void;
-  get<K extends keyof ServiceMap>(name: K): ServiceMap[K] | undefined;
-}
-/** Filled by `declare module` in vfx/spells/quality, plus the other threads' services we only read. */
-export interface ServiceMap {
-  audio?: { play(key: string, opts?: { position?: Vec3 }): void };
-  progression?: {
-    addMaxHealthModifier(id: string, fn: (base: number) => number): () => void;
-    learned(skillId: string): boolean;
+export type ServicesLike = import('../core/Services').Services;
+
+/** Services of threads that have not merged yet; read through `looseService` so a missing one is just undefined. */
+export interface LooseServices {
+  progression: { addMaxHealthModifier(id: string, fn: () => number): () => void; learned(skillId: string): boolean };
+  abilities: {
+    registerHandler(
+      skillId: string,
+      handler: (args: { skillId: string; slot: number; caster: { readonly id: string } | null; ctx?: unknown }) => { ok: true } | { ok: false; reason: string },
+    ): () => void;
   };
-  abilities?: {
-    registerHandler(skillId: string, handler: (ctx: { casterId: ActorId }) => boolean): () => void;
-    reportTrigger(skillId: string): void;
-  };
-  graphics?: GraphicsService;
 }
-
-/** Requested from thread 0 (coordinator routed): the renderer knobs the quality steps drive. */
-export interface GraphicsService {
-  setRenderScale(scale: number): void;
-  setShadows(mode: 'off' | 'half' | 'full', distanceM?: number): void;
-  setViewDistanceOffset(levels: number): void;
-  setPostPass(pass: PostPass | null): void;
-  /** Requested from thread 0 (not in the v0.3 contract): the composer needs the renderer. */
-  readonly renderer?: THREE.WebGLRenderer;
-}
-/** `render` replaces `renderer.render(scene, camera)` for the frame. */
-export interface PostPass {
-  render(): void;
-  setSize?(width: number, height: number): void;
-  dispose?(): void;
-}
-
-export interface PluginContext {
-  scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera | null;
-  events: EventsLike;
-  clock: ClockLike;
-  player: PlayerLike;
-  actors: ActorsLike;
-  damage: DamageLike;
-  services: ServicesLike;
-  systems: { add(system: GameSystem): () => void };
-  input?: { actions: { pressed(a: string): boolean } };
-  persist: { register(p: { key: string; version: number; serialize(): unknown; load(data: unknown, version: number): void }): () => void };
-  hud: { mount(slot: string, widget: { id: string; element: HTMLElement; order?: number; dispose?(): void }): () => void };
-  /** Height of the terrain at x, z (the world heightfield). */
-  heightAt?(x: number, z: number): number;
-}
-
-export interface GamePlugin {
-  id: string;
-  dependsOn?: string[];
-  setup(ctx: PluginContext): void | Promise<void>;
-  dispose?(): void;
+export function looseService<K extends keyof LooseServices>(services: { get(name: never): unknown }, name: K): LooseServices[K] | undefined {
+  return (services as { get(name: string): unknown }).get(name) as LooseServices[K] | undefined;
 }

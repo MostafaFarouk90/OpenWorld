@@ -7,8 +7,8 @@ export interface QualityService {
   subscribe(fn: (step: QualityStep) => void): () => void;
 }
 
-declare module '../vfx/ports' {
-  interface ServiceMap {
-    quality?: QualityService;
+declare module '../core/Services' {
+  interface GameServices {
+    quality: QualityService;
   }
 }

@@ -62,8 +62,8 @@ export interface VfxService {
   setQuality(q: QualityStep): void;
 }
 
-declare module './ports' {
-  interface ServiceMap {
-    vfx?: VfxService;
+declare module '../core/Services' {
+  interface GameServices {
+    vfx: VfxService;
   }
 }

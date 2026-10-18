@@ -44,7 +44,8 @@ const plugin = {
         }
         return;
       }
-      const renderer = graphics?.renderer;
+      // The core's GraphicsService does not expose the renderer yet (requested); bloom installs once it does.
+      const renderer = (graphics as { renderer?: import('three').WebGLRenderer } | null)?.renderer;
       if (pass || !graphics || !renderer || !ctx.camera) return;
       pass = new BloomPostPass(renderer, ctx.scene, ctx.camera);
       graphics.setPostPass(pass as PostPass);
