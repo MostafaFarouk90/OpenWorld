@@ -123,7 +123,7 @@ describe('the coin grab', () => {
     expect(t.inv!.spent).toEqual([{ amount: 40, reason: 'theft' }]);
     expect(t.inv!.gold).toBe(960);
     expect(t.m.get(id)!.thief!.stolenGold).toBe(40);
-    expect(t.fake.bus.of('enemies.cutpurse.robbed')).toEqual([{ amount: 40 }]);
+    expect(t.fake.bus.of('enemies.cutpurse.robbed')).toEqual([{ actorId: expect.any(String), amount: 40 }]);
     t.tick(0.1);
     expect(t.m.get(id)!.state).toBe('flee');
   });
@@ -132,7 +132,7 @@ describe('the coin grab', () => {
     const t = rig(83);
     t.robbed();
     expect(t.inv!.gold).toBe(83 - 9);
-    expect(t.fake.bus.of('enemies.cutpurse.robbed')).toEqual([{ amount: 9 }]);
+    expect(t.fake.bus.of('enemies.cutpurse.robbed')).toEqual([{ actorId: expect.any(String), amount: 9 }]);
   });
 
   it('with no gold there is no grab: the thief only slashes', () => {
@@ -256,7 +256,7 @@ describe('caught, Spare and kill', () => {
     t.tick(0.05);
     expect(t.m.get(id)!.state).toBe('yield');
     expect(t.m.get(id)!.mercyOpen).toBe(true);
-    expect(t.fake.bus.of('enemies.cutpurse.caught')).toEqual([{ amount: 40 }]);
+    expect(t.fake.bus.of('enemies.cutpurse.caught')).toEqual([{ actorId: expect.any(String), amount: 40 }]);
     interact(t, id);
     expect(t.inv!.gold).toBe(1000);
     expect(t.inv!.added).toEqual([40]);
@@ -300,7 +300,7 @@ describe('caught, Spare and kill', () => {
     t.fake.stagger(id, 'player');
     t.tick(0.1);
     expect(t.m.get(id)!.state).toBe('stagger');
-    expect(t.fake.bus.of('enemies.cutpurse.caught')).toEqual([{ amount: 40 }]);
+    expect(t.fake.bus.of('enemies.cutpurse.caught')).toEqual([{ actorId: expect.any(String), amount: 40 }]);
     t.fake.apply({ attackerId: 'player', targetId: id, amount: 9999, poise: 0, kind: 'melee' });
     t.tick(0.1);
     expect(t.inv!.gold).toBe(1000);
@@ -383,6 +383,19 @@ describe('damage details', () => {
     expect(t.m.get(id!)!.state).toBe('idle');
   });
 
+  it('a revoked spare clears the spared flag again', () => {
+    const t = rig(1000);
+    const id = t.robbed();
+    t.tick(0.3);
+    t.fake.stagger(id, 'player');
+    t.tick(0.05);
+    interact(t, id);
+    expect(t.fake.flags.get('enemies.cutpurse.spared')).toBe(true);
+    t.fake.bus.emit('mercy.revoked', { actorId: id, track: null, removed: 0 });
+    t.tick(0.05);
+    expect(t.fake.flags.get('enemies.cutpurse.spared')).toBe(false);
+  });
+
   it('health below half sends a thief that has not robbed anyone running too, and caught reports 0 gold', () => {
     const t = rig(0);
     const id = t.spawn();
@@ -393,7 +406,7 @@ describe('damage details', () => {
     t.fake.stagger(id, 'player');
     t.tick(0.1);
     expect(t.m.get(id)!.state).toBe('yield'); // not shoved back into the flee by the health check
-    expect(t.fake.bus.of('enemies.cutpurse.caught')).toEqual([{ amount: 0 }]);
+    expect(t.fake.bus.of('enemies.cutpurse.caught')).toEqual([{ actorId: expect.any(String), amount: 0 }]);
     interact(t, id);
     expect(t.inv!.added).toEqual([]);
     expect(t.fake.flags.get('enemies.cutpurse.spared')).toBe(true);

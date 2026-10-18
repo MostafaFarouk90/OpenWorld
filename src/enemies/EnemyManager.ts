@@ -641,6 +641,11 @@ export class EnemyManager {
         else if (e.inMercyExit && e.spawnerId) {
           refill.add(e.spawnerId);
           e.despawnUnseen();
+        } else if (e.thief && e.thief.stolenGold > 0) {
+          // The loaded inventory is the truth about gold: a thief carrying a pouch the save never saw would pay it out
+          // again when killed. It vanishes without counting as an escape and its slot is refilled.
+          if (e.spawnerId) refill.add(e.spawnerId);
+          e.despawnUnseen();
         }
       }
       for (const id of refill) if (!this.spawners.isCleared(id)) this.spawners.spawnGroup(id);

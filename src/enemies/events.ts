@@ -16,11 +16,11 @@ declare module '../core/events' {
     'enemies.state': { actorId: string; from: string; to: string };
     /** A blighted soldier kneels: Spare is open for `seconds`. */
     'enemies.yield': { actorId: string; seconds: number };
-    /** An ash scarecrow was cleared, once each: by the carried torch, by the Surge (or, as a fallback, killed). */
     /** The Alley Cutpurse robbed the player of `amount` gold. */
-    'enemies.cutpurse.robbed': { amount: number };
+    'enemies.cutpurse.robbed': { actorId: string; amount: number };
     /** A fleeing Alley Cutpurse was caught (staggered or cornered); `amount` is the gold it holds. */
-    'enemies.cutpurse.caught': { amount: number };
+    'enemies.cutpurse.caught': { actorId: string; amount: number };
+    /** An ash scarecrow was cleared, once each: by the carried torch, by the Surge (or, as a fallback, killed). */
     'scarecrow.cleared': { actorId: string; scarecrowId: string; method: 'torch' | 'surge' | 'strike' };
   }
 }

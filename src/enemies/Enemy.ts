@@ -106,6 +106,8 @@ export class Enemy {
   private poiseIdle = 0;
   private loco: string | null = null;
   private oneShotLeft = 0;
+  /** Calm's head-lowered pose is held (looped) until `lowerHead(false)` or any state change. */
+  private headLowered = false;
   private speed = 0;
   /** Horizontal speed the mover actually achieved last tick (fed to a quadruped body's gait). */
   private movedSpeed = 0;
@@ -147,6 +149,7 @@ export class Enemy {
       ? new SwitchingMover(host.physics, host.heightAt, spawn.feet)
       : new HeightfieldMover(host.heightAt, spawn.feet);
     this.mover.maxSpeed = Math.max(this.mover.maxSpeed, this.topSpeed(spawn.def, body));
+    this.baseMaxSpeed = this.mover.maxSpeed;
     this.lineOfSight = host.physics
       ? makeLineOfSight(host.physics, host.player.collider, this.mover.collider)
       : () => true;
@@ -361,7 +364,8 @@ export class Enemy {
    */
   lowerHead(on: boolean): void {
     if (this.phase !== 'alive' || this.def.body !== 'quadruped') return;
-    this.body.play(on ? 'HeadLower' : 'Idle');
+    this.headLowered = on;
+    this.setLoco(on ? 'HeadLower' : ENEMY_CLIPS.idle);
   }
 
   /** This enemy fills its spawner's `leaderSlot`; a calmed leader calms its pack. */
@@ -435,7 +439,9 @@ export class Enemy {
     if (intent.goal && intent.speed > 0 && Math.hypot(intent.goal.x - self.x, intent.goal.z - self.z) > intent.stopDistance) {
       // Inside a nav grid (an interior), steer to the next path waypoint; outdoors this is null.
       // Observer-only guards never call nav.path: they walk their patrol in straight kinematic lines.
-      const waypoint = this.observerOnly ? null : this.path.goalFor(dt, self, { x: intent.goal.x, y: pFeet.y, z: intent.goal.z });
+      // The goal's own height: the target's for a chase goal, otherwise this enemy's level (flee, return, patrol).
+      const goalIsTarget = intent.goal.x === pFeet.x && intent.goal.z === pFeet.z;
+      const waypoint = this.observerOnly ? null : this.path.goalFor(dt, self, { x: intent.goal.x, y: goalIsTarget ? pFeet.y : self.y, z: intent.goal.z });
       const out = this.steering.step({
         position: self,
         desired: waypoint ?? intent.goal,
@@ -451,6 +457,8 @@ export class Enemy {
       this.steering.reset();
     }
     const pushed = this.pushTicks > 0;
+    // A shove is faster than any walk: lift the mover's cap for its duration only.
+    this.mover.maxSpeed = pushed ? Math.max(this.baseMaxSpeed, Math.hypot(this.pushVelocity.x, this.pushVelocity.z)) : this.baseMaxSpeed;
     if (pushed) {
       this.pushTicks--;
       velocity = this.pushVelocity;
@@ -634,6 +642,7 @@ export class Enemy {
     this.phase = 'alive';
     this.leaveFrom = null;
     this.goneHow = 'despawned';
+    this.thief?.spareRevoked();
     this.brain.revoked(strikerId);
     return true;
   }
@@ -794,6 +803,7 @@ export class Enemy {
     const s = this.brain.state;
     if (s === 'telegraph' || s === 'attack') return; // the attack clip plays
     if (s === 'yield') return this.setLoco(ENEMY_CLIPS.kneelIdle);
+    if (this.headLowered) return this.setLoco('HeadLower');
     if (this.guard?.up) return this.setLoco(ENEMY_CLIPS.guard);
     if (this.speed > LOCO_RUN_SPEED) this.setLoco(ENEMY_CLIPS.run);
     else if (this.speed > 0.1) this.setLoco(ENEMY_CLIPS.walk);
@@ -849,6 +859,7 @@ export class Enemy {
   private hooks(): BrainHooks {
     return {
       stateChanged: (from, to) => {
+        this.headLowered = false;
         this.host.events.emit('enemies.state', { actorId: this.actor.id, from, to });
         // A knocked-down hound stops mid-leap.
         if (to === 'stagger' && from === 'attack' && this.brain.currentMove?.leap) this.pushTicks = 0;
@@ -954,7 +965,8 @@ export class Enemy {
   pushAlong(dir: { x: number; z: number }, metres: number): boolean {
     if (this.phase !== 'alive' || this.asleep || this.observerOnly) return false;
     if (this.actor.team !== 'hostile' || this.actor.dead) return false;
-    if (this.mercyOpen || this.calmOpen || this.warmHandOpen) return false;
+    // The Calm window counts only once Calm is unlocked (before that a circling hound is just an enemy).
+    if (this.mercyOpen || (this.calmOpen && this.env.mercyUnlocked('calm')) || this.warmHandOpen) return false;
     if (this.thief && this.thief.stolenGold > 0) return false;
     if (!dir || !Number.isFinite(dir.x) || !Number.isFinite(dir.z) || !Number.isFinite(metres) || !(metres > 0)) return false;
     const len = Math.hypot(dir.x, dir.z);
@@ -969,6 +981,7 @@ export class Enemy {
 
   /** Knockback runs in place of steering while it lasts. */
   private pushTicks = 0;
+  private baseMaxSpeed = 0;
   private pushVelocity = { x: 0, z: 0 };
 }
 

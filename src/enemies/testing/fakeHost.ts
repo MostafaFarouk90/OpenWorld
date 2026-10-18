@@ -199,6 +199,8 @@ export interface FakeHostOptions {
   heightAt?: (x: number, z: number) => number;
   /** Player feet at start. */
   playerFeet?: { x: number; y: number; z: number };
+  /** A real physics world: enemies then use the kinematic mover and real raycasts (player collider stays null). */
+  physics?: EnemyHost['physics'];
 }
 
 /** The whole fake core plus a player with real Knight hurtboxes. */
@@ -422,7 +424,7 @@ export class FakeHost {
     const self = this;
     return {
     scene: this.scene,
-    physics: null,
+    physics: this.opts.physics ?? null,
     actors: {
       spawn: (init) => {
         const id = `${init.kind}#${++this.counter}`;

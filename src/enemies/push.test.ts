@@ -3,7 +3,9 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { FIXED_TIMESTEP } from '../config/constants';
 import { EnemyManager } from './EnemyManager';
 import { FakeHost, loadKnight } from './testing/fakeHost';
-import { AI } from './tuning';
+import { PhysicsWorld } from '../physics/PhysicsWorld';
+import { flatGround } from '../physics/flatGround';
+import { AI, MERCY } from './tuning';
 import type { SpawnerDef } from './types';
 
 const DT = FIXED_TIMESTEP;
@@ -115,20 +117,27 @@ describe('enemies.push', () => {
     expect(m.service.push(id, { dir: { x: 1, z: 0 }, metres: 2 })).toBe(false);
   });
 
-  it('refuses while a beast is calmable (calm window open)', () => {
-    const { m, tick, spawn } = rig();
+  it('allows a push on a hound that has not attacked while Calm is locked, refuses it once Calm is unlocked', () => {
+    const { fake, m, tick, spawn } = rig();
     const id = spawn('ember-hound');
     tick(0.2);
     expect(m.get(id)!.calmOpen).toBe(true);
+    expect(m.mercyUnlocked('calm')).toBe(false);
+    expect(m.service.push(id, { dir: { x: 1, z: 0 }, metres: 2 })).toBe(true);
+    tick(1);
+    fake.setFlag(MERCY.flags.calm, true);
+    expect(m.mercyUnlocked('calm')).toBe(true);
     expect(m.service.push(id, { dir: { x: 1, z: 0 }, metres: 2 })).toBe(false);
   });
 
-  it('refuses while a knocked-down beast accepts the Warm Hand', () => {
-    const { m, tick, spawn } = rig();
+  it('refuses while a knocked-down beast accepts the Warm Hand (real poise-break stagger)', () => {
+    const { fake, m, tick, spawn } = rig();
     const id = spawn('ember-hound');
     tick(0.2);
+    fake.stagger(id, 'player');
+    tick(0.05);
     const e = m.get(id)!;
-    Object.defineProperty(e, 'warmHandOpen', { get: () => true });
+    expect(e.warmHandOpen).toBe(true);
     expect(m.service.push(id, { dir: { x: 1, z: 0 }, metres: 2 })).toBe(false);
   });
 
@@ -154,5 +163,34 @@ describe('enemies.push', () => {
     const [id] = m.service.spawnGroup('sc');
     expect(id).toBeDefined();
     expect(m.service.push(id!, { dir: { x: 1, z: 0 }, metres: 2 })).toBe(false);
+  });
+});
+
+describe('enemies.push with real physics', () => {
+  it('moves a wraith the asked distance under the kinematic mover (not capped at walk speed)', async () => {
+    const physics = new PhysicsWorld();
+    await physics.init();
+    physics.addHeightfield(flatGround(200));
+    physics.step();
+    const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: -60 }, physics });
+    fake.provideInventory(100);
+    const m = new EnemyManager(fake.host, FakeHost.factory(gltf), { seed: 3, spawners: [] });
+    const tick = (n: number) => {
+      for (let i = 0; i < n; i++) {
+        m.think(DT);
+        m.animate(DT);
+        fake.combatStep(DT);
+        m.react(DT);
+        physics.step();
+      }
+    };
+    const id = m.spawnLoose('ash-wraith', { x: 0, y: 0, z: 0 }, { leash: false })!;
+    tick(120);
+    const from = m.get(id)!.feet.clone();
+    expect(m.service.push(id, { dir: { x: 1, z: 0 }, metres: 3 })).toBe(true);
+    tick(Math.round(0.25 / DT)); // the knockback lasts 0.2 s
+    const moved = m.get(id)!.feet.x - from.x;
+    expect(moved).toBeGreaterThan(2.5);
+    expect(moved).toBeLessThan(3.5);
   });
 });

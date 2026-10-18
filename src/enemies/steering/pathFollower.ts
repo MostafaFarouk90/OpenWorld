@@ -22,6 +22,8 @@ export class PathFollower {
   private broken = false;
   /** The goal lies outside every grid: past the last waypoint steer to it directly. */
   private goalOutside: XZ | null = null;
+  /** Latched once the last waypoint was reached: the raw goal then holds until the goal moves or the grid is left. */
+  private rawLatched = false;
 
   constructor(
     private readonly nav: () => NavPort | undefined,
@@ -41,8 +43,10 @@ export class PathFollower {
         this.lastGoal = { x: goal.x, z: goal.z };
         const points = nav.path(self, goal);
         if (!points || points.length === 0) return this.clear();
+        if (moved > REPATH_MOVED) this.rawLatched = false;
         this.path = points.map((p) => ({ x: p.x, z: p.z }));
         this.goalOutside = nav.hasGrid(goal) ? null : { x: goal.x, z: goal.z };
+        if (!this.goalOutside) this.rawLatched = false;
         this.next = 0;
       }
     } catch (err) {
@@ -57,7 +61,10 @@ export class PathFollower {
     if (this.goalOutside && this.next >= last) {
       // Chasers and fleeing thieves must not stop at the block edge (contracts/interiors-and-nav.md, Underways).
       const end = this.path[last]!;
-      if (Math.hypot(end.x - self.x, end.z - self.z) < ARRIVE) return this.goalOutside;
+      if (this.rawLatched || Math.hypot(end.x - self.x, end.z - self.z) < ARRIVE) {
+        this.rawLatched = true;
+        return this.goalOutside;
+      }
     }
     return this.path[this.next] ?? null;
   }
@@ -67,6 +74,7 @@ export class PathFollower {
     this.next = 0;
     this.lastGoal = null;
     this.goalOutside = null;
+    this.rawLatched = false;
     this.sinceQuery = Infinity;
     return null;
   }

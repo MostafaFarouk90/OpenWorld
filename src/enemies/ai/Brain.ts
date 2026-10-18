@@ -165,9 +165,12 @@ export class Brain {
     return this._state === 'dead' || this._state === 'released' || this._state === 'spared';
   }
 
+  /** The current stagger is a status stun: no mercy window (design: a stun is not a stagger). */
+  private stunMode = false;
+
   /** Open to its mercy verb: a staggered undead (Release), a yielding human (Spare) or a calmable beast (Calm). */
   get mercyOpen(): boolean {
-    if (this.def.mercy?.when === 'staggered') return this._state === 'stagger';
+    if (this.def.mercy?.when === 'staggered') return this._state === 'stagger' && !this.stunMode;
     // `calming` defs open through the Calm hold, which arrives with the calmed state.
     return this.def.mercy?.when === 'yielding' && this._state === 'yield';
   }
@@ -183,7 +186,7 @@ export class Brain {
 
   /** The Warm Hand on a staggered beast (design 3): open for the length of the knockdown, whatever it did before. */
   get warmHandOpen(): boolean {
-    return this.def.mercy?.when === 'calming' && this._state === 'stagger';
+    return this.def.mercy?.when === 'calming' && this._state === 'stagger' && !this.stunMode;
   }
 
   /** The `circle-rush` phase, for tests and debug; null for other behaviours. */
@@ -348,7 +351,7 @@ export class Brain {
   /** Stunned (an `actor.data['status']` entry): staggered for the remaining stun. */
   stunned(seconds: number): void {
     if (this.finished || this._state === 'spawn' || this._state === 'yield' || !(seconds > 0)) return;
-    this.stagger(seconds);
+    this.stagger(seconds, true);
   }
 
   /** Pack alert, or a scripted aggro. */
@@ -407,7 +410,7 @@ export class Brain {
       this.hooks.yieldStarted(AI.yieldSeconds);
       return true;
     }
-    if (this._state !== 'stagger') return false;
+    if (this._state !== 'stagger' || this.stunMode) return false;
     this.enter('yield');
     this.hooks.yieldStarted(AI.yieldSeconds);
     return true;
@@ -606,13 +609,17 @@ export class Brain {
     this.hooks.calm();
   }
 
-  private stagger(seconds: number): void {
-    this.timer = seconds;
+  /** `stun`: a status stun holds the enemy still like a stagger but opens no mercy window. */
+  private stagger(seconds: number, stun = false): void {
     if (this._state === 'stagger') {
+      this.timer = stun && !this.stunMode ? Math.max(this.timer, seconds) : seconds;
       this.stateTime = 0;
+      if (!stun) this.stunMode = false;
       return;
     }
+    this.timer = seconds;
     this.enter('stagger');
+    this.stunMode = stun;
   }
 
   /** A fleeing thief is caught: it yields (Spare opens) when Spare is unlocked, else it just staggers. */
@@ -673,6 +680,7 @@ export class Brain {
     if (next !== 'chase') this.flinchLeft = 0;
     this._state = next;
     this.stateTime = 0;
+    if (next !== 'stagger') this.stunMode = false;
     if (prev !== next) this.hooks.stateChanged(prev, next);
   }
 

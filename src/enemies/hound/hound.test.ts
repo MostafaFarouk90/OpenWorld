@@ -403,7 +403,10 @@ describe('pack leader', () => {
     const t = rig([led(1, 0)]);
     const [id] = t.m.service.spawnGroup('pack');
     const e = t.m.get(id!)!;
+    t.tick(1);
     e.lowerHead(true);
+    expect(e.body.currentClip).toBe('HeadLower');
+    t.tick(0.3); // the pose is held across ticks until released
     expect(e.body.currentClip).toBe('HeadLower');
     e.lowerHead(false);
     expect(e.body.currentClip).toBe('Idle');
@@ -533,7 +536,9 @@ describe('status data and status ticks', () => {
     const e = stun.m.get(id!)!;
     e.actor.data['status'] = { stun: 0.5 };
     stun.tick(DT);
-    expect(e.state).toBe('stagger');
+    expect(e.state).toBe('stagger'); // held still like a stagger...
+    expect(e.warmHandOpen).toBe(false); // ...but a stun opens no mercy window
+    expect(e.mercyOpen).toBe(false);
     e.actor.data['status'] = undefined;
     stun.tick(1.4);
     expect(e.state).not.toBe('stagger');

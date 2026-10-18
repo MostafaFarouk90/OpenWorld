@@ -207,6 +207,40 @@ describe('the grab at different purses', () => {
     t.m.service.spawnGroup('m07.thieves', { aggro: true, moves: [CUTPURSE_MOVES.grab, CUTPURSE_MOVES.slash] });
     t.tick(8);
     expect(t.inv.spent.reduce((s, x) => s + x.amount, 0)).toBe(taken === 0 ? 0 : taken);
-    expect(t.fake.bus.of('enemies.cutpurse.robbed')).toEqual(taken > 0 ? [{ amount: taken }] : []);
+    expect(t.fake.bus.of('enemies.cutpurse.robbed')).toEqual(taken > 0 ? [{ actorId: expect.any(String), amount: taken }] : []);
+  });
+});
+
+describe('a load while a thief holds a pouch', () => {
+  it('removes the thief without paying out, so killing it afterwards cannot duplicate gold', () => {
+    const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: -3 } });
+    fake.defineAnchor('t', 0, 0);
+    const inv = fake.provideInventory(100);
+    const m = new EnemyManager(fake.host, FakeHost.factory(gltf), {
+      seed: 3,
+      spawners: [{ id: 'thieves', enemy: 'alley-cutpurse', count: 1, anchor: 't', band: { min: 1, max: 1 }, activation: 'manual', respawn: 'never', leash: false }],
+    });
+    const tick = (secs = DT) => {
+      for (let i = 0; i < Math.max(1, Math.round(secs / DT)); i++) {
+        m.think(DT);
+        m.animate(DT);
+        fake.combatStep(DT);
+        m.react(DT);
+      }
+    };
+    const [id] = m.service.spawnGroup('thieves', { aggro: true, leash: false });
+    tick(0.2);
+    const saved = m.spawners.serialize();
+    m.get(id!)!.thief!.grabHit();
+    expect(inv.gold).toBe(90);
+    inv.gold = 100; // the loaded inventory
+    m.spawners.load(saved);
+    fake.bus.emit('save.loaded', {} as never);
+    tick(0.1);
+    expect(m.get(id!)).toBeUndefined(); // gone, not fleeing with the old pouch
+    fake.host.damage.kill?.(id!, 'player');
+    tick(0.5);
+    expect(inv.gold).toBe(100);
+    expect(m.spawners.isCleared('thieves')).toBe(false);
   });
 });

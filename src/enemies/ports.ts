@@ -145,9 +145,9 @@ export interface EnemyEvents {
   'enemies.state': { actorId: ActorId; from: string; to: string };
   'enemies.yield': { actorId: ActorId; seconds: number };
   /** The Alley Cutpurse took `amount` gold (inventory.takeGold reason 'theft'). */
-  'enemies.cutpurse.robbed': { amount: number };
+  'enemies.cutpurse.robbed': { actorId: ActorId; amount: number };
   /** A fleeing cutpurse was caught (staggered or cornered); `amount` is the gold it still holds (0 if none). */
-  'enemies.cutpurse.caught': { amount: number };
+  'enemies.cutpurse.caught': { actorId: ActorId; amount: number };
   /** R01: once per ash scarecrow (`scarecrowId` is its spawner slot's anchor id, e.g. 'r01.scarecrow.3'). */
   'scarecrow.cleared': { actorId: ActorId; scarecrowId: string; method: 'torch' | 'surge' | 'strike' };
   /** Core boss registry (actors-and-damage.md section 7); thread 1 listens to open the boss's mercy hold. */

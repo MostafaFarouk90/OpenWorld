@@ -97,7 +97,7 @@ export class Cutpurse {
     const taken = Math.floor(inv.takeGold(want, 'theft'));
     if (!(taken > 0)) return 0;
     this.held = taken;
-    this.deps.events.emit('enemies.cutpurse.robbed', { amount: taken });
+    this.deps.events.emit('enemies.cutpurse.robbed', { actorId: this.link.actorId, amount: taken });
     this.link.startFlee();
     return taken;
   }
@@ -111,7 +111,7 @@ export class Cutpurse {
     this.endSmoke();
     if (this.caughtSent) return;
     this.caughtSent = true;
-    this.deps.events.emit('enemies.cutpurse.caught', { amount: this.held });
+    this.deps.events.emit('enemies.cutpurse.caught', { actorId: this.link.actorId, amount: this.held });
   }
 
   /** Each fixed tick while alive. `state` is the brain state; `visible` says the player can see the thief. */
@@ -160,6 +160,11 @@ export class Cutpurse {
     }
     this.deps.state.setFlag(CUTPURSE.sparedFlag, true);
     return gold;
+  }
+
+  /** The spare was revoked (the thief was struck down on its way out): the mercy did not happen, the flag goes. */
+  spareRevoked(): void {
+    this.deps.state.setFlag(CUTPURSE.sparedFlag, false);
   }
 
   // ---- smoke ---------------------------------------------------------------------------------------
