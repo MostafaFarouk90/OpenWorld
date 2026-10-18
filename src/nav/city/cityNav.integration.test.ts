@@ -10,6 +10,7 @@ import { heightAt } from '../../terrain/heightfield';
 import { TerrainColliders } from '../../world/TerrainColliders';
 import { World } from '../../world/World';
 import navPlugin from '../nav.plugin';
+import { PathFollower } from '../../enemies/steering/pathFollower';
 import { NavAgent } from '../NavAgent';
 import cityNavPlugin from './cityNav.plugin';
 
@@ -96,6 +97,34 @@ describe('city-nav plugin (real Game)', () => {
     }
     expect(steer).toEqual({ x: goal.x, z: goal.z });
     expect(self.z).toBeGreaterThan(1580);
+  });
+
+  // The followers other threads wrote (thread 5's PathFollower, Tobb's steer) take a path's last point as the end: the
+  // open-edged grid makes that point the goal itself, so none of them parks on the block edge.
+  it('walks thread 5\'s PathFollower off the block to a goal in no grid', async () => {
+    const t = await boot();
+    t.go(8180, 1520);
+    t.run(3);
+    const follower = new PathFollower(() => t.nav, () => {});
+    const goal = t.at(8180, 1650);
+    let self = t.at(8180, 1520);
+    for (let i = 0; i < 600 && Math.hypot(goal.x - self.x, goal.z - self.z) > 0.6; i++) {
+      const w = follower.goalFor(1 / 60, self, goal) ?? goal; // null = no grid here: steer straight, as Enemy does
+      const dx = w.x - self.x;
+      const dz = w.z - self.z;
+      const d = Math.hypot(dx, dz) || 1;
+      self = { x: self.x + (dx / d) * Math.min(0.5, d), y: self.y, z: self.z + (dz / d) * Math.min(0.5, d) };
+    }
+    expect(Math.hypot(goal.x - self.x, goal.z - self.z)).toBeLessThanOrEqual(0.6);
+  });
+
+  it('ends a street path at the goal, so a follower that stops at the last point (Tobb) reaches it', async () => {
+    const t = await boot();
+    t.go(8180, 1520);
+    t.run(3);
+    const goal = t.at(8180, 1650);
+    const path = t.nav.path(t.at(8180, 1520), goal)!;
+    expect(path.at(-1)).toMatchObject({ x: goal.x, z: goal.z });
   });
 
   it('does not load without the city', async () => {

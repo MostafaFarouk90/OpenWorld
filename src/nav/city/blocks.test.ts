@@ -4,7 +4,7 @@ import type { StructureSpec } from '../../region/layoutTypes';
 import { heightAt } from '../../terrain/heightfield';
 import { NavGrid } from '../NavGrid';
 import { findPath } from '../pathfind';
-import { blockGridDef, blocksStreet, CITY_NAV_BLOCKS, footprintRect, MAX_BLOCK_CELLS, type CityNavBlock } from './blocks';
+import { blockGridDef, CITY_RING, blocksStreet, CITY_NAV_BLOCKS, footprintRect, MAX_BLOCK_CELLS, type CityNavBlock } from './blocks';
 
 const structures = HARROWMARK_LAYOUT.structures;
 const anchor = (id: string) => {
@@ -121,6 +121,21 @@ describe('CITY_NAV_BLOCKS', () => {
     }
   });
 
+  it('leaves no walkable cell beyond the ring wall (the guild block, south-east corner)', () => {
+    let beyond = 0;
+    for (const b of CITY_NAV_BLOCKS) {
+      const g = gridFor(b.id);
+      for (let i = 0; i < g.cols * g.rows; i++) {
+        const c = g.cellCentre(i);
+        if (Math.hypot(c.x - CITY_RING.cx, c.z - CITY_RING.cz) >= CITY_RING.r) {
+          beyond++;
+          expect(g.isWalkable(i), `${b.id} (${c.x}, ${c.z})`).toBe(false);
+        }
+      }
+    }
+    expect(beyond).toBeGreaterThan(0);
+  });
+
   it('floors each grid on the plateau and keeps the Rooftop Ward band out', () => {
     const g = gridFor('guild-quarter');
     expect(g.floorY).toBeCloseTo(heightAt(8780, 1520), 3);
@@ -131,10 +146,11 @@ describe('CITY_NAV_BLOCKS', () => {
 describe('blockGridDef', () => {
   const block: CityNavBlock = { id: 'test', rect: { x0: 0, z0: 0, x1: 40, z1: 40 } };
   const flat = () => 5;
+  const open = { cx: 20, cz: 20, r: 1e6 };
 
   it('blocks a rotated footprint by its true shape, padded by half a cell', () => {
     const s = box('diamond', 20, 20, 10, 2, 45);
-    const r = blockGridDef(block, [s], flat);
+    const r = blockGridDef(block, [s], flat, open);
     if (!('def' in r)) throw new Error(r.skipped);
     const g = new NavGrid(r.def);
     expect(g.floorY).toBe(5);
@@ -158,19 +174,30 @@ describe('blockGridDef', () => {
   });
 
   it('counts an enterable structure as wholly blocking', () => {
-    const r = blockGridDef(block, [box('hut', 20, 20, 6, 6, 0, { mode: 'enterable' })], flat);
+    const r = blockGridDef(block, [box('hut', 20, 20, 6, 6, 0, { mode: 'enterable' })], flat, open);
     if (!('def' in r)) throw new Error(r.skipped);
     expect(r.def.blockedOriented).toHaveLength(1);
   });
 
   it('skips a block whose ground varies more than 0.6 m, and keeps one at 0.6 m', () => {
-    const r = blockGridDef(block, [], (x) => (x > 39 ? 5.7 : 5));
+    const r = blockGridDef(block, [], (x) => (x > 39 ? 5.7 : 5), open);
     expect(r).toEqual({ skipped: expect.stringContaining('0.70') });
-    expect('def' in blockGridDef(block, [], (x) => (x > 39 ? 5.6 : 5))).toBe(true);
-    expect('skipped' in blockGridDef(block, [], () => Number.NaN)).toBe(true);
+    expect('def' in blockGridDef(block, [], (x) => (x > 39 ? 5.6 : 5), open)).toBe(true);
+    expect('skipped' in blockGridDef(block, [], () => Number.NaN, open)).toBe(true);
   });
 
   it('throws when a block is over the cell cap', () => {
-    expect(() => blockGridDef({ id: 'huge', rect: { x0: 0, z0: 0, x1: 400, z1: 400 } }, [], flat)).toThrow(/over the cap/);
+    expect(() => blockGridDef({ id: 'huge', rect: { x0: 0, z0: 0, x1: 400, z1: 400 } }, [], flat, open)).toThrow(/over the cap/);
+  });
+
+  it('marks the grid open-edged and blocks the cells beyond the ring wall', () => {
+    const r = blockGridDef(block, [], flat, { cx: 0, cz: 0, r: 30 });
+    if (!('def' in r)) throw new Error(r.skipped);
+    expect(r.def.openEdges).toBe(true);
+    const g = new NavGrid(r.def);
+    for (let iz = 0; iz < g.rows; iz++) for (let ix = 0; ix < g.cols; ix++) {
+      const c = g.cellCentre(iz * g.cols + ix);
+      expect(g.isWalkable(iz * g.cols + ix), `(${c.x}, ${c.z})`).toBe(Math.hypot(c.x, c.z) < 30);
+    }
   });
 });

@@ -1,5 +1,6 @@
 // District-block nav grids for Harrowmark (slice 2 thread 3a, Phase B plan section 8). Pure: no Three, no Rapier.
 // Engine metres, +Z north. The rects avoid one another, so a goal in another block is never a step away.
+import { CENTER, RING_RADIUS, WALL_THICKNESS } from '../../harrowmark/city';
 import type { StructureSpec } from '../../region/layoutTypes';
 import type { NavGridDef, NavOrientedRect, NavRect } from '../NavGrid';
 
@@ -47,6 +48,32 @@ const overlaps = (o: NavOrientedRect, r: NavRect): boolean => {
   return o.cx + ex > r.x0 && o.cx - ex < r.x1 && o.cz + ez > r.z0 && o.cz - ez < r.z1;
 };
 
+/** The ring wall's inner face: cells beyond it are off the street (a block's rect corner may poke past the wall). */
+export const CITY_RING = { cx: CENTER.x, cz: CENTER.z, r: RING_RADIUS - WALL_THICKNESS / 2 } as const;
+
+/**
+ * One-cell strips covering the cells of `rect` whose centre is outside the circle (empty when none is). The strips follow
+ * the grid's columns, so `rect.x0` must be the grid's minX and the cell `CITY_NAV_CELL`.
+ */
+export function outsideCircle(rect: NavRect, ring: { cx: number; cz: number; r: number }): NavRect[] {
+  const out: NavRect[] = [];
+  for (let x = rect.x0; x < rect.x1; x += CITY_NAV_CELL) {
+    const x1 = Math.min(rect.x1, x + CITY_NAV_CELL);
+    // The chord through the column's cell centres: a centre is blocked exactly when it lies outside the circle.
+    const dx = x + CITY_NAV_CELL / 2 - ring.cx;
+    const half = dx * dx < ring.r * ring.r ? Math.sqrt(ring.r * ring.r - dx * dx) : -1;
+    if (half < 0) {
+      out.push({ x0: x, z0: rect.z0, x1, z1: rect.z1 });
+      continue;
+    }
+    const lo = ring.cz - half;
+    const hi = ring.cz + half;
+    if (lo > rect.z0) out.push({ x0: x, z0: rect.z0, x1, z1: Math.min(lo, rect.z1) });
+    if (hi < rect.z1) out.push({ x0: x, z0: Math.max(hi, rect.z0), x1, z1: rect.z1 });
+  }
+  return out;
+}
+
 export type BlockGridResult = { def: NavGridDef } | { skipped: string };
 
 /** The grid def for one block, or why it is skipped (uneven ground). Throws when the block breaks the cell cap. */
@@ -54,6 +81,7 @@ export function blockGridDef(
   block: CityNavBlock,
   structures: readonly StructureSpec[],
   heightAt: (x: number, z: number) => number,
+  ring: { cx: number; cz: number; r: number } = CITY_RING,
 ): BlockGridResult {
   const { rect } = block;
   const cells = Math.ceil((rect.x1 - rect.x0) / CITY_NAV_CELL) * Math.ceil((rect.z1 - rect.z0) / CITY_NAV_CELL);
@@ -89,7 +117,9 @@ export function blockGridDef(
       floorY: max,
       cellSize: CITY_NAV_CELL,
       walkable: [rect],
+      blocked: outsideCircle(rect, ring),
       blockedOriented,
+      openEdges: true,
     },
   };
 }
