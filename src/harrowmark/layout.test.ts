@@ -208,6 +208,46 @@ describe('Harrowmark routes', () => {
   });
 });
 
+describe('crowd lanes against the buildings', () => {
+  const solids = HARROWMARK_LAYOUT.structures.filter((s) => s.mode !== 'open' && !/^(wall|tower|plug|portcullis)\./.test(s.id));
+  const sample = (lane: (typeof CROWD_LANES)[number]) => {
+    const pts = lane.points.map(at);
+    const out: Array<{ x: number; z: number }> = [];
+    const n = lane.loop ? pts.length : pts.length - 1;
+    for (let i = 0; i < n; i++) {
+      const p = pts[i];
+      const q = pts[(i + 1) % pts.length];
+      const steps = Math.max(1, Math.ceil(dist(p, q)));
+      for (let k = 0; k <= steps; k++) out.push({ x: p.x + ((q.x - p.x) * k) / steps, z: p.z + ((q.z - p.z) * k) / steps });
+    }
+    return out;
+  };
+
+  it('keeps every lane, at its full half-width, clear of every solid footprint', () => {
+    for (const lane of CROWD_LANES) {
+      for (const pt of sample(lane)) {
+        for (const s of solids) expect(pointInFootprint(s, pt.x, pt.z, lane.halfWidth), `${lane.id} at ${pt.x},${pt.z} vs ${s.id}`).toBe(false);
+      }
+    }
+  });
+
+  it('catches a lane that runs into a building', () => {
+    const house = solids.find((s) => s.id === 'guild.alley-b')!;
+    expect(pointInFootprint(house, 8940, 1527.5, 1.5)).toBe(true);
+  });
+
+  it('leaves the 3 m Rooftop Ward alleys at least 0.5 m either side of the lane', () => {
+    const lane = CROWD_LANES.find((l) => l.id === 'harrowmark.lane.rooftop-ward-streets')!;
+    expect(lane.halfWidth).toBeLessThanOrEqual(1.0);
+  });
+
+  it('tags the Keep-road braziers and every banner for the crowd keep-out', () => {
+    const tagged = (prefix: string) => HARROWMARK_LAYOUT.anchors.filter((x) => x.id.startsWith(prefix));
+    for (const x of tagged('harrowmark.brazier.keep-road.')) expect(x.tags).toContain('brazier');
+    for (const x of tagged('harrowmark.banner.')) expect(x.tags).toContain('banner');
+  });
+});
+
 describe('Harrowmark world-change anchors', () => {
   it('has 21 braziers along the Keep road, 4 Bastion and 6 Keep banners', () => {
     expect(HARROWMARK_LAYOUT.anchors.filter((a) => a.id.startsWith('harrowmark.brazier.keep-road.'))).toHaveLength(BRAZIER_COUNT);

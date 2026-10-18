@@ -253,12 +253,12 @@ const LANES: Array<{ name: string; pts: Pts; loop: boolean; halfWidth: number }>
   { name: 'main-street-north', loop: false, halfWidth: 8, pts: [[8490, 1770], [8490, 1850], [8490, 1930], [8490, 2010], [8490, 2090], [8490, 2170], [8490, 2250], [8490, 2330], [8490, 2375], [8490, 2420], [8490, 2470], [8490, 2520]] },
   { name: 'market-ring', loop: true, halfWidth: 3, pts: ring(8780, 1520, 30, 8) },
   { name: 'forge-row', loop: false, halfWidth: 6, pts: [[8100, 1520], [8140, 1520], [8180, 1520], [8230, 1520], [8290, 1520]] },
-  { name: 'guild-alley', loop: false, halfWidth: 1.5, pts: [[8940, 1527.5], [8975, 1527.5], [9010, 1527.5], [9040, 1532], [9060, 1542]] },
+  { name: 'guild-alley', loop: false, halfWidth: 1.5, pts: [[8940, 1525], [8958, 1525], [8985, 1525], [9015, 1525], [9040, 1532], [9060, 1542]] },
   { name: 'gate-queue', loop: false, halfWidth: 4, pts: [[8500, 1262], [8500, 1285], [8500, 1312], [8495, 1345]] },
   { name: 'fountain-circuit', loop: true, halfWidth: 4, pts: ring(8500, 1700, 32, 8, Math.PI / 8) },
   { name: 'chapel-approach', loop: false, halfWidth: 4, pts: [[8480, 2150], [8430, 2150], [8392, 2150], [8358, 2150]] },
   { name: 'bastion-edge', loop: false, halfWidth: 5, pts: [[8292, 1690], [8292, 1740], [8292, 1790], [8292, 1850]] },
-  { name: 'rooftop-ward-streets', loop: false, halfWidth: 1.4, pts: [[8897, 2250], [8897, 2310], [8897, 2380], [8897, 2430], [8897, 2480], [8897, 2528], [8897, 2540]] },
+  { name: 'rooftop-ward-streets', loop: false, halfWidth: 1.0, pts: [[8897, 2250], [8897, 2310], [8897, 2380], [8897, 2430], [8897, 2480], [8897, 2528], [8897, 2540]] },
 ];
 
 export const CROWD_LANES: CrowdLane[] = LANES.map((l) => ({
