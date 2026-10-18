@@ -1,0 +1,60 @@
+import type { Vec3 } from '../physics/PhysicsWorld';
+
+/** An axis-aligned rectangle in an interior's local metres (x0 < x1, z0 < z1). */
+export interface LocalRect {
+  x0: number;
+  z0: number;
+  x1: number;
+  z1: number;
+}
+
+/** A walkable room: its floor rectangle and ceiling height above the floor. Rooms that touch are open to each other. */
+export interface RoomDef extends LocalRect {
+  id: string;
+  height: number;
+}
+
+/** What the screen looks like inside (contracts/interiors-and-nav.md section 1). */
+export interface InteriorEnvironment {
+  fogColor: number;
+  fogNear: number;
+  fogFar: number;
+  /** Hemisphere light while inside. */
+  skyColor: number;
+  groundColor: number;
+  ambientIntensity: number;
+  /** The light that follows the player. */
+  lightColor: number;
+  lightIntensity: number;
+  lightDistance: number;
+}
+
+/** A door: the outside anchor is the layout thread's; the inside anchor and the exit interactable's anchor are the interior's. */
+export interface DoorDef {
+  doorId: string;
+  outside: string;
+  inside: string;
+  exit: string;
+}
+
+/**
+ * One interior in local metres (origin at its stair foot, yaw 0 faces -Z). It floats `FLOAT_HEIGHT` above the highest
+ * terrain under its footprint at world `site` (plans/slice-2-interiors-nav.md section 2).
+ */
+export interface InteriorDef {
+  id: string;
+  site: { x: number; z: number };
+  rooms: RoomDef[];
+  /** Solid from floor to ceiling. */
+  pillars: LocalRect[];
+  /** Named obstacles, open by default (collider, mesh and nav cells together). */
+  blockers: { id: string; rect: LocalRect; height: number }[];
+  /** Wall-mounted torch heads: local x, height above the floor, local z. */
+  torches: { x: number; y: number; z: number }[];
+  /** Yaw in degrees (0 faces -Z, 90 faces -X). `facing` overrides yaw with the direction toward that local point. */
+  anchors: { id: string; x: number; z: number; yaw?: number; facing?: { x: number; z: number } }[];
+  /** Boxes: local centre (y above the floor) and half sizes. */
+  triggers: { id: string; center: Vec3; half: Vec3 }[];
+  doors: DoorDef[];
+  environment: InteriorEnvironment;
+}
