@@ -163,6 +163,20 @@ const RECIPES: Record<AnySfxId, Recipe> = {
       return env * (Math.sin(TAU * f * t) * 0.45 + Math.sin(TAU * f * 1.5 * t) * 0.3 + Math.sin(TAU * f * 2 * t) * 0.2 + Math.sin(TAU * f * 3 * t) * 0.1);
     },
   },
+  [SFX.boltShot]: {
+    seconds: 0.18,
+    voice: (p, n) => {
+      const lp = lowpass(0.4);
+      return (t) => (lp(n()) * 0.9 + Math.sin(TAU * (320 - 900 * t) * p * t) * 0.7) * Math.exp(-t * 26) * Math.min(1, t / 0.001);
+    },
+  },
+  [SFX.boltHit]: {
+    seconds: 0.16,
+    voice: (p, n) => {
+      const lp = lowpass(0.3);
+      return (t) => (lp(n()) * 1.3 + Math.sin(TAU * 210 * p * t) * 0.5) * Math.exp(-t * 30) * Math.min(1, t / 0.001);
+    },
+  },
   [SFX.swingLight]: {
     seconds: 0.22,
     voice: (p, n) => {

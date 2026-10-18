@@ -88,14 +88,15 @@ export class Classes implements ClassesService {
       !Array.isArray(k.starter.items) ||
       (k.drill !== undefined && (!Array.isArray(k.drill) || k.drill.some((s) => !s || !(s.count >= 1) || typeof s.id !== 'string')));
     if (bad) return { ok: false, reason: 'bad-kit' };
-    const previous = this.kits.get(k.classId);
+    // Only the built-in default may be replaced; a second registration for a class is refused (contract).
+    if (this.kits.get(k.classId) !== DEFAULT_KITS[k.classId]) return { ok: false, reason: 'duplicate' };
     const frozen: ClassKit = { ...k };
     this.kits.set(k.classId, frozen);
     return {
       ok: true,
       dispose: () => {
         if (this.kits.get(k.classId) !== frozen) return;
-        this.kits.set(k.classId, previous ?? DEFAULT_KITS[k.classId]);
+        this.kits.set(k.classId, DEFAULT_KITS[k.classId]);
       },
     };
   }

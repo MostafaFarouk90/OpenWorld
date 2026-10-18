@@ -1,0 +1,125 @@
+// Throwaway generator run at the slice 1 tip (5a09676): boots every real plugin with a fake IndexedDB,
+// drives the state, saves through the real save service and writes the raw stored file.
+import * as THREE from 'three';
+import { writeFileSync } from 'node:fs';
+import { beforeEach, it, vi } from 'vitest';
+import { Game } from '../core/Game';
+import { MoveModifiers } from '../core/MoveModifiers';
+import type { GamePlugin, PluginModule } from '../core/plugins';
+import { PLUGIN_MODULES } from '../core/pluginManifest';
+import { InputManager } from '../input/InputManager';
+import { PhysicsWorld } from '../physics/PhysicsWorld';
+import { FakeIndexedDb } from '../save/__fixtures__/fakeIndexedDb';
+import { TerrainColliders } from '../world/TerrainColliders';
+import { World } from '../world/World';
+
+const OUT = process.env.OUT_DIR!;
+let physics: PhysicsWorld;
+let fake: FakeIndexedDb;
+beforeEach(async () => {
+  (globalThis as any).self ??= globalThis;
+  physics = new PhysicsWorld();
+  await physics.init();
+  fake = new FakeIndexedDb();
+  (globalThis as any).indexedDB = fake.factory;
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+  vi.spyOn(console, 'info').mockImplementation(() => {});
+});
+
+async function boot() {
+  const scene = new THREE.Scene();
+  const moveModifiers = new MoveModifiers();
+  const world = new World(scene, physics, {
+    colliders: new TerrainColliders(physics, { patchSize: 50, cells: 16 }),
+    moveModifier: () => moveModifiers.state(),
+  });
+  const element = Object.assign(new EventTarget(), { requestPointerLock: () => {} }) as unknown as HTMLElement;
+  const input = new InputManager(element, new EventTarget(), Object.assign(new EventTarget(), { pointerLockElement: null }), { storage: null });
+  const game = new Game({ scene, physics, world, input, moveModifiers, report: () => {} });
+  const mods: Record<string, PluginModule> = {};
+  for (const [k, m] of Object.entries(PLUGIN_MODULES)) mods[k] = m as PluginModule;
+  const statuses = await game.loadPlugins(mods);
+  const failed = statuses.filter((s) => s.state === 'failed');
+  if (failed.length) throw new Error('plugins failed: ' + JSON.stringify(failed));
+  const run = async (n: number) => {
+    for (let i = 0; i < n; i++) {
+      game.fixedUpdate();
+      if (i % 20 === 0) await new Promise((r) => setTimeout(r, 0));
+    }
+  };
+  return { game, ctx: game.ctx, run };
+}
+
+async function save(t: Awaited<ReturnType<typeof boot>>, name: string, note: string) {
+  const svc = t.ctx.services.get('save' as never) as any;
+  await svc.newGame?.(); // settle the boot decision (no save existed) so saving is unlocked
+  await t.run(5);
+  const r = await svc.saveNow('manual');
+  if (!r?.ok) throw new Error(`${name}: save failed ${JSON.stringify(r)}`);
+  const raw = fake.peek('slot-0') as any;
+  raw.savedAt = 1760000000000;
+  writeFileSync(`${OUT}/${name}.json`, JSON.stringify({ _comment: note, ...raw }, null, 2) + '\n');
+}
+
+const tut = () => (globalThis as any).__tutorial;
+const quests = (t: any) => t.ctx.services.get('quests');
+
+async function finishTutorial(t: any) {
+  tut().begin('kettlewick');
+  for (let i = 0; i < 400 && !tut().complete; i++) {
+    await t.run(3);
+    if (tut().beat && !tut().restartInFlight) tut().skipCurrent();
+  }
+  if (!tut().complete) throw new Error('tutorial did not complete');
+  await t.run(10);
+  // A real run learns Rally Cry at T13 (the Kettlewick skip does not): learn it so the fixture carries a knight skill.
+  const p = t.ctx.services.get('progression');
+  if (!p.learned('knight.rallyCry')) {
+    const r = p.learn('knight.rallyCry');
+    if (!r.ok) { p.grantXp(p.xpToNext(), 'fixture'); const r2 = p.learn('knight.rallyCry'); if (!r2.ok) throw new Error('learn failed ' + JSON.stringify(r2)); }
+  }
+  await t.run(2);
+}
+
+const NOTE = (what: string) =>
+  `Slice 1 save (${what}), written by the real save plugin at the slice 1 tip 5a09676 with src/gen/slice1Fixtures.gen.test.ts (OUT_DIR=... npx vitest run src/gen) in a worktree; savedAt normalised.`;
+
+it('writes slice1-tutorial-complete (M01 active)', async () => {
+  const t = await boot();
+  await t.run(5);
+  await finishTutorial(t);
+  if (quests(t).state('m01') !== 'active') quests(t).start('m01');
+  await t.run(5);
+  console.log('m01', quests(t).state('m01'), 'm02', quests(t).state('m02'));
+  await save(t, 'slice1-tutorial-complete', NOTE('tutorial complete, M01 active'));
+}, 120000);
+
+it('writes slice1-mid-m02', async () => {
+  const t = await boot();
+  await t.run(5);
+  await finishTutorial(t);
+  quests(t).complete('m01');
+  quests(t).start('m02');
+  await t.run(5);
+  await save(t, 'slice1-mid-m02', NOTE('M01 done, M02 active'));
+}, 120000);
+
+it('writes slice1-complete (M02 done)', async () => {
+  const t = await boot();
+  await t.run(5);
+  await finishTutorial(t);
+  quests(t).complete('m01');
+  quests(t).start('m02');
+  quests(t).complete('m02');
+  await t.run(5);
+  await save(t, 'slice1-complete', NOTE('tutorial, M01 and M02 completed'));
+}, 120000);
+
+it('writes slice1-mid-tutorial-t09', async () => {
+  const t = await boot();
+  await t.run(5);
+  tut().begin('full', 't09');
+  await t.run(30);
+  if (tut().beat !== 't09') throw new Error('not at t09: ' + tut().beat);
+  await save(t, 'slice1-mid-tutorial-t09', NOTE('mid-tutorial, beat t09'));
+}, 120000);

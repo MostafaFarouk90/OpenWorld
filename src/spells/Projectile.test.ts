@@ -144,3 +144,62 @@ describe('ProjectileSystem', () => {
     }
   });
 });
+
+describe('ProjectileSystem pierce, hostileOnly and the shared host', () => {
+  it('passes through up to `pierce` actors, reporting each once, then stops at the next', () => {
+    const s = setup();
+    for (const [id, z] of [['a', 3], ['b', 5], ['c', 7]] as const) s.actors.add(new FakeActor(id, 'hostile', 0, z));
+    const passed: string[] = [];
+    s.ps.launch(s.base({ pierce: 1, onPass: (h: { actorId: string }) => passed.push(h.actorId) }));
+    run(s.ps, 2);
+    expect(passed).toEqual(['a']);
+    expect(s.hits).toHaveLength(1);
+    expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'b' });
+  });
+  it('a pierced actor is never hit twice, even with a wide radius', () => {
+    const s = setup();
+    s.actors.add(new FakeActor('a', 'hostile', 0, 4));
+    const passed: string[] = [];
+    s.ps.launch(s.base({ pierce: 3, radius: 1.5, onPass: (h: { actorId: string }) => passed.push(h.actorId) }));
+    run(s.ps, 3);
+    expect(passed).toEqual(['a']);
+    expect(s.hits.map((h) => h.kind)).toEqual(['expired']);
+  });
+  it('a wall still stops a piercing projectile', () => {
+    const s = setup({ rayCast: (o: any) => (o.z < 6 ? { point: { x: 0, y: 1, z: 6 } } : null) });
+    s.actors.add(new FakeActor('a', 'hostile', 0, 3));
+    s.actors.add(new FakeActor('behind', 'hostile', 0, 8));
+    s.ps.launch(s.base({ pierce: 2 }));
+    run(s.ps, 2);
+    expect(s.hits).toHaveLength(1);
+    expect(s.hits[0]).toMatchObject({ kind: 'terrain' });
+  });
+  it('hostileOnly skips neutral creatures the default rule would hit', () => {
+    const s = setup();
+    s.actors.add(new FakeActor('beast', 'neutral', 0, 3));
+    s.actors.add(new FakeActor('e', 'hostile', 0, 6));
+    s.ps.launch(s.base({ hostileOnly: true }));
+    run(s.ps, 2);
+    expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'e' });
+  });
+  it('clear(true) drops projectiles without calling back', () => {
+    const s = setup();
+    s.ps.launch(s.base());
+    s.ps.clear(true);
+    expect(s.ps.liveCount).toBe(0);
+    expect(s.hits).toHaveLength(0);
+    s.ps.launch(s.base());
+    s.ps.clear();
+    expect(s.hits.map((h) => h.kind)).toEqual(['expired']);
+  });
+  it('pierce state does not leak into the next projectile that reuses the slot', () => {
+    const s = setup({ capacity: 1 });
+    s.actors.add(new FakeActor('a', 'hostile', 0, 3));
+    s.ps.launch(s.base({ pierce: 1 }));
+    run(s.ps, 2);
+    s.hits.length = 0;
+    s.ps.launch(s.base());
+    run(s.ps, 2);
+    expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'a' });
+  });
+});

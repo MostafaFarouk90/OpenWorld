@@ -15,7 +15,11 @@ export type EffectId =
   | 'waystone-rekindle'
   | 'skill-q'
   | 'release-pulse'
-  | 'yield-glyph';
+  | 'yield-glyph'
+  | 'leap-trail'
+  | 'leap-dust'
+  | 'leap-shell'
+  | 'scar-flash';
 
 export const EFFECT_IDS: readonly EffectId[] = [
   'hit-spark',
@@ -31,6 +35,10 @@ export const EFFECT_IDS: readonly EffectId[] = [
   'skill-q',
   'release-pulse',
   'yield-glyph',
+  'leap-trail',
+  'leap-dust',
+  'leap-shell',
+  'scar-flash',
 ];
 
 export interface EffectTransform {

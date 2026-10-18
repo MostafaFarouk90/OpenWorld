@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MoveModifiers } from './MoveModifiers';
+import { MAX_SPEED_SCALE, MoveModifiers } from './MoveModifiers';
 
 describe('MoveModifiers', () => {
   it('starts neutral', () => {
@@ -17,10 +17,23 @@ describe('MoveModifiers', () => {
     expect(m.state().speedScale).toBeCloseTo(0.25);
   });
 
-  it('clamps each scale to [0, 1] and treats non-finite as 1', () => {
+  it('a boost multiplies with slows, and the combined scale stays at most 1.5 (v0.5)', () => {
+    const m = new MoveModifiers();
+    const boost = m.add('trailblaze', { speedScale: 1.3 });
+    expect(m.state().speedScale).toBeCloseTo(1.3);
+    const slow = m.add('carry', { speedScale: 0.5 });
+    expect(m.state().speedScale).toBeCloseTo(0.65);
+    slow();
+    m.add('second-boost', { speedScale: 1.4 });
+    expect(m.state().speedScale).toBe(MAX_SPEED_SCALE);
+    boost();
+    expect(m.state().speedScale).toBeCloseTo(1.4);
+  });
+
+  it('clamps each scale to [0, 1.5] and treats non-finite as 1', () => {
     const m = new MoveModifiers();
     const a = m.add('a', { speedScale: 3 });
-    expect(m.state().speedScale).toBe(1);
+    expect(m.state().speedScale).toBe(MAX_SPEED_SCALE);
     a();
     const b = m.add('b', { speedScale: -2 });
     expect(m.state().speedScale).toBe(0);

@@ -198,6 +198,8 @@ export interface DirectorPorts {
   despawn(spawnerId: string): void;
   resetGroup(spawnerId: string): void;
   alive(spawnerId: string): number;
+  /** The player is inside the trigger volume as of the last fixed update. */
+  playerInTrigger(triggerId: string): boolean;
 
   // player
   setLocks(actions: readonly string[]): void;
@@ -210,7 +212,8 @@ export interface DirectorPorts {
   fadeTeleport(anchorId: string): Promise<void>;
 
   // progression and items
-  holdKillXp(on: boolean): void;
+  /** `reason` names the kill-XP pause: 'tutorial' for the run, 'tutorial.replay' for Replay drills. */
+  holdKillXp(on: boolean, reason?: string): void;
   level(): number;
   grantLevelTwo(): void;
   grantItems(sourceId: string, items: { itemId: string; count: number }[]): void;

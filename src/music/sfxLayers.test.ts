@@ -20,8 +20,10 @@ describe('SFX ids', () => {
       yieldKneel: 'sfx.yield.kneel',
       leap: 'sfx.leap',
       companionBark: 'sfx.companion.bark',
+      boltShot: 'sfx.bolt.shot',
+      boltHit: 'sfx.bolt.hit',
     });
-    expect(SFX_IDS).toHaveLength(16);
+    expect(SFX_IDS).toHaveLength(18);
   });
 });
 
