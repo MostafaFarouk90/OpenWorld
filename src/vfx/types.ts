@@ -19,7 +19,8 @@ export type EffectId =
   | 'leap-trail'
   | 'leap-dust'
   | 'leap-shell'
-  | 'scar-flash';
+  | 'scar-flash'
+  | 'ash-cloud';
 
 export const EFFECT_IDS: readonly EffectId[] = [
   'hit-spark',
@@ -39,6 +40,7 @@ export const EFFECT_IDS: readonly EffectId[] = [
   'leap-dust',
   'leap-shell',
   'scar-flash',
+  'ash-cloud',
 ];
 
 export interface EffectTransform {
