@@ -13,7 +13,10 @@ import promptsPlugin from '../prompts/prompts.plugin';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 import './events';
+import { FOG_OPEN_FLAGS } from '../region/fogWall';
 import hudPlugin from './hud.plugin';
+import hudSource from './hud.plugin.ts?raw';
+import mapSourcesSource from '../map/MapSources.ts?raw';
 import type { AbilitiesService, InventoryService, ProgressionService } from './ports';
 
 let physics: PhysicsWorld;
@@ -550,6 +553,38 @@ describe('slice 2 widgets and soft services', () => {
     b.ctx.state.setFlag('story.gate.a2', true);
     expect(b.ctx.state.getBool('codex.actEndingSeen')).toBe(false);
     b.dispose();
+  });
+
+  it('a real save.loaded with story.gate.a2 set shows the ending card once', async () => {
+    const t = await setup([corePlugin, hudPlugin]);
+    const changes = () => t.of('flag.changed' as never).filter((e: any) => e.key === 'codex.actEndingSeen').length;
+    expect(t.ctx.state.getBool('codex.actEndingSeen')).toBe(false);
+    t.ctx.state.load({ flags: { 'story.gate.a2': true } });
+    t.game.events.emit('save.loaded', { slot: 'x' });
+    expect(t.ctx.state.getBool('codex.actEndingSeen')).toBe(true);
+    expect(changes()).toBe(1);
+    // A second load of a save that already recorded the ending does not show it again.
+    t.ctx.state.load({ flags: { 'story.gate.a2': true, 'codex.actEndingSeen': true } });
+    t.game.events.emit('save.loaded', { slot: 'x' });
+    expect(changes()).toBe(1);
+    t.dispose();
+  });
+
+  it('the map and the Act 1 continues card use exactly region/fogWall\'s open flags', async () => {
+    expect(mapSourcesSource).toContain("import { FOG_OPEN_FLAGS } from '../region/fogWall'");
+    expect(hudSource).toContain("import { FOG_OPEN_FLAGS } from '../region/fogWall'");
+    // Neither file keeps a list or a literal flag of its own.
+    expect(mapSourcesSource).not.toMatch(/story\.(m05|slice)\./);
+    expect(hudSource).not.toMatch(/getBool\('story\.(m05|slice)\./);
+    expect(FOG_OPEN_FLAGS.length).toBeGreaterThan(0);
+  });
+
+  it('the noise ring mounts in the full-viewport overlay slot, not the transformed top-center slot', async () => {
+    const t = await setup([corePlugin, hudPlugin]);
+    expect(t.ctx.hud.mounted('overlay')).toContain('noise-ring');
+    expect(t.ctx.hud.mounted('top-center')).not.toContain('noise-ring');
+    expect(t.ctx.hud.mounted('top-center')).toContain('stealth-eye');
+    t.dispose();
   });
 
   it('boss lifecycle through the real registry updates without errors and fades out', async () => {

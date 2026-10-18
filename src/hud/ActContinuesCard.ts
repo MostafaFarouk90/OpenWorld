@@ -10,6 +10,8 @@ export const hudOptions = { showActContinues: true };
 
 export interface KeyLike {
   repeat?: boolean;
+  key?: string;
+  code?: string;
 }
 
 export interface KeySource {

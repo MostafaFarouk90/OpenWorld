@@ -269,6 +269,17 @@ describe('codex plugin', () => {
     expect(r.codex.has('scarecrow')).toBe(false);
   });
 
+  it('unlocks one Calm how-to for calm and for warmHand', async () => {
+    const r = await rig();
+    expect(r.codex.has('howto.calm')).toBe(false);
+    r.events.emit('mercy', mercy('calm', 'ember-hound'));
+    expect(r.codex.has('howto.calm')).toBe(true);
+    const r2 = await rig();
+    r2.events.emit('mercy', mercy('warmHand', 'ember-hound'));
+    expect(r2.codex.has('howto.calm')).toBe(true);
+    expect(r2.codex.has('howto.release')).toBe(false);
+  });
+
   it('unlocks on ability.learned, skill.learned, boss.started, aggro, scar, warmth', async () => {
     const r = await rig();
     r.events.emit('ability.learned', { id: 'surge-leap', source: 'm03' });

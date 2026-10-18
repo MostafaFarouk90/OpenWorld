@@ -93,12 +93,27 @@ describe('respecModal options', () => {
     expect(r.confirm).toHaveBeenCalledWith('ok');
   });
 
-  it('duplicate ids reject the open and leave nothing listening', () => {
+  it('duplicate ids reject the open and leave nothing listening, with a console warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const s = setup();
     const r = s.open([{ id: 'a', label: 'A' }, { id: 'a', label: 'Again' }]);
     expect(r.ok).toBe(false);
     expect(s.listeners.size).toBe(0);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('duplicate option id "a"'));
     expect(s.open(OPTS).ok).toBe(true); // not stuck
+    warn.mockRestore();
+  });
+
+  it('arrow keys work when code is a Numpad code and key carries the arrow', () => {
+    const s = setup();
+    s.open(OPTS);
+    const press = (e: RespecKeyEvent) => [...s.listeners].forEach((l) => l(e));
+    press({ code: 'Numpad2', key: 'ArrowDown' });
+    expect(s.checked()).toEqual(['false', 'true', 'false']);
+    press({ code: 'Numpad8', key: 'ArrowUp' });
+    expect(s.checked()).toEqual(['true', 'false', 'false']);
+    press({ code: 'Numpad2', key: '2' }); // NumLock on: a digit, not an arrow
+    expect(s.checked()).toEqual(['true', 'false', 'false']);
   });
 
   it('arrow keys move the selection and wrap both ways', () => {

@@ -1,9 +1,11 @@
+import mapSourcesSource from './MapSources.ts?raw';
 import { describe, expect, it, vi } from 'vitest';
 import { GameEvents } from '../core/events';
 import { FlagGates } from '../state/FlagGates';
 import { WorldState } from '../state/WorldState';
 import { buildForgeState, SHRINE_IDS } from './ForgeMarks';
-import { FOG_OPEN_FLAGS, FOG_WALL, createMapSources, type PostAnchor } from './MapSources';
+import { FOG_OPEN_FLAGS } from '../region/fogWall';
+import { FOG_WALL, createMapSources, type PostAnchor } from './MapSources';
 import { DEFAULT_WORLD_BOUNDS } from './tuning';
 import { FogGrid, buildMarkers } from './MapModel';
 import { createMapModal } from './MapView';
@@ -85,21 +87,29 @@ describe('MapSources', () => {
     expect(make().src.legend(1, 1)).toBeNull();
   });
 
-  it('fog wall marker stands iff story.m05.complete is not true, including via a load', () => {
+  it('fog wall marker stands iff none of region/fogWall FOG_OPEN_FLAGS is true, including via a load', () => {
     const { state, src, load } = make();
+    expect(FOG_OPEN_FLAGS.length).toBeGreaterThan(0);
     expect(src.fogWall()).toMatchObject({ id: 'trg.fog.harrowmark', x: FOG_WALL.x, z: FOG_WALL.z });
-    state.setFlag('story.slice.harrowmarkOpen', true);
-    expect(src.fogWall()).not.toBeNull(); // no fallback to the old flag
-    state.setFlag('story.m05.complete', true);
-    expect(src.fogWall()).toBeNull();
-    load({});
-    expect(src.fogWall()).not.toBeNull();
-    load({ 'story.m05.complete': true });
-    expect(src.fogWall()).toBeNull();
-    load({ 'story.m05.complete': false, 'story.slice.harrowmarkOpen': true });
-    expect(src.fogWall()).not.toBeNull();
     expect(buildMarkers({ waystones: [], fog: src.fogWall() })).toHaveLength(1);
-    expect([...FOG_OPEN_FLAGS]).toEqual(['story.m05.complete']);
+    for (const flag of FOG_OPEN_FLAGS) {
+      state.setFlag(flag, true);
+      expect(src.fogWall()).toBeNull();
+      state.setFlag(flag, false);
+      expect(src.fogWall()).not.toBeNull();
+      load({ [flag]: true });
+      expect(src.fogWall()).toBeNull();
+      load({});
+      expect(src.fogWall()).not.toBeNull();
+      load({ [flag]: false });
+      expect(src.fogWall()).not.toBeNull();
+    }
+  });
+
+  it('the map reads the same open list as the wall itself (one import, no local copy)', () => {
+    const source = mapSourcesSource;
+    expect(source).toContain("import { FOG_OPEN_FLAGS } from '../region/fogWall'");
+    expect(source).not.toMatch(/FOG_OPEN_FLAGS\s*=/);
   });
 
   describe('trainer and vendor posts', () => {

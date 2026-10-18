@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ChaseTimer, CHASE_RED_SECONDS, type ChaseReading } from './ChaseTimer';
 import { ClassLabel, goldText } from './ClassLabel';
 import { StubDocument, textOf, type ElementLike } from './dom';
 import { MountStamina } from './MountStamina';
-import { StealthEye, type StealthEyeReading } from './StealthEye';
+import { NoiseRing, StealthEye, type StealthEyeReading } from './StealthEye';
 
 const shown = (e: ElementLike) => e.style.display !== 'none';
 const find = (e: ElementLike, cls: string): ElementLike => {
@@ -16,10 +16,10 @@ const boom = () => {
 };
 
 describe('StealthEye', () => {
-  const make = (src: { eye?: () => StealthEyeReading | null; noise?: () => number | null }) => new StealthEye(new StubDocument(), { t, ...src });
+  const make = (src: { eye?: () => StealthEyeReading | null }) => new StealthEye(new StubDocument(), { t, ...src });
 
   it('hidden with no service, null readers and throwing readers', () => {
-    for (const w of [make({}), make({ eye: () => null, noise: () => null }), make({ eye: boom, noise: boom })]) {
+    for (const w of [make({}), make({ eye: () => null }), make({ eye: boom })]) {
       expect(() => w.update()).not.toThrow();
       expect(w.visible).toBe(false);
       expect(shown(w.element)).toBe(false);
@@ -61,6 +61,16 @@ describe('StealthEye', () => {
     expect(lid.style.transform).toBe('scaleY(0.2)');
   });
 
+  it('the eye is a meter with a 0..100 range', () => {
+    const w = make({ eye: () => ({ level: 0.4, state: 'calm' }) });
+    w.update();
+    const eye = find(w.element, 'owg-eye');
+    expect(eye.getAttribute('role')).toBe('meter');
+    expect(eye.getAttribute('aria-valuemin')).toBe('0');
+    expect(eye.getAttribute('aria-valuemax')).toBe('100');
+    expect(eye.getAttribute('aria-valuenow')).toBe('40');
+  });
+
   it('eye hides again when the reading goes null', () => {
     let r: StealthEyeReading | null = { level: 0.3, state: 'calm', observerId: null };
     const w = make({ eye: () => r });
@@ -70,13 +80,72 @@ describe('StealthEye', () => {
     w.update();
     expect(w.visible).toBe(false);
   });
+});
 
-  it('noise ring: null hides, 0 shows, scales with metres and caps, junk hides', () => {
+describe('per-frame string allocation', () => {
+  it('ChaseTimer does not call t again while rounded seconds, gap and percent are unchanged', () => {
+    const calls = vi.fn(t);
+    const r: ChaseReading = { remaining: 30, total: 60, gap: 12, phase: 'running' };
+    const w = new ChaseTimer(new StubDocument(), { t: calls, timer: () => r });
+    w.update();
+    const first = calls.mock.calls.length;
+    expect(first).toBeGreaterThan(0);
+    r.remaining = 29.999; // same ceil'd second, percent moves by under the 0.01% grain? keep the percent equal
+    r.remaining = 30;
+    r.gap = 12.2; // rounds to the same metre
+    w.update();
+    w.update();
+    expect(calls.mock.calls.length).toBe(first);
+    r.remaining = 29;
+    w.update();
+    expect(calls.mock.calls.length).toBe(first + 1); // only the seconds string
+    r.gap = 40;
+    w.update();
+    expect(calls.mock.calls.length).toBe(first + 2);
+  });
+
+  it('MountStamina does not format a width again while the percent is unchanged', () => {
+    const s = { value: 50, max: 100 };
+    const w = new MountStamina(new StubDocument(), { t, stamina: () => s });
+    w.update();
+    const fill = find(w.element, 'owg-bar-fill');
+    fill.style.width = 'sentinel';
+    w.update();
+    s.value = 50.001; // same two-decimal percent
+    w.update();
+    expect(fill.style.width).toBe('sentinel');
+    s.value = 60;
+    w.update();
+    expect(fill.style.width).toBe('60%');
+  });
+
+  it('ClassLabel does not call goldText again for an unchanged gold value', () => {
+    let gold = 10;
+    const w = new ClassLabel(new StubDocument(), { t, chosen: () => true, current: () => 'knight', gold: () => gold });
+    w.update();
+    const amount = find(w.element, 'owg-gold-amount');
+    expect(amount.textContent).toBe('10');
+    amount.textContent = 'sentinel';
+    w.update();
+    w.update();
+    expect(amount.textContent).toBe('sentinel');
+    gold = 11;
+    w.update();
+    expect(amount.textContent).toBe('11');
+    gold = 10.7; // floors to 10
+    w.update();
+    expect(amount.textContent).toBe('10');
+  });
+});
+
+describe('NoiseRing', () => {
+  it('null hides, 0 shows, scales with metres and caps, junk hides; throwing readers hide', () => {
     let n: number | null = null;
-    const w = make({ noise: () => n });
+    const w = new NoiseRing(new StubDocument(), { t, noise: () => n });
     const ring = find(w.element, 'owg-noise-ring');
     w.update();
     expect(shown(ring)).toBe(false);
+    expect(w.visible).toBe(false);
     n = 0;
     w.update();
     expect(shown(ring)).toBe(true);
@@ -93,6 +162,7 @@ describe('StealthEye', () => {
       expect(shown(ring)).toBe(false);
     }
     expect(w.visible).toBe(false);
+    expect(() => new NoiseRing(new StubDocument(), { noise: boom }).update()).not.toThrow();
   });
 });
 

@@ -31,9 +31,10 @@ export class ChaseTimer implements HudWidgetView {
   private readonly gapEl;
   private shown = false;
   private lastClass = '';
-  private lastWidth = '';
-  private lastSecs = '';
-  private lastGap = '';
+  // Numeric keys: strings are formatted only when one changes, so a steady frame allocates nothing.
+  private lastPct = -1;
+  private lastSecs = -2;
+  private lastGap = -2;
   private gapShown = true;
 
   constructor(doc: DocumentLike, private readonly source: ChaseTimerSource = {}) {
@@ -53,7 +54,9 @@ export class ChaseTimer implements HudWidgetView {
       if (this.shown) {
         this.shown = false;
         setShown(this.element, false);
-        this.lastClass = this.lastWidth = this.lastSecs = this.lastGap = '';
+        this.lastClass = '';
+        this.lastPct = -1;
+        this.lastSecs = this.lastGap = -2;
         this.gapShown = true;
       }
       return;
@@ -65,21 +68,21 @@ export class ChaseTimer implements HudWidgetView {
       this.lastClass = cls;
       this.element.className = cls;
     }
-    const width = pct(Math.min(1, remaining / r.total));
-    if (width !== this.lastWidth) {
-      this.lastWidth = width;
-      this.fill.style.width = width;
+    const pctNum = Math.round(Math.min(1, remaining / r.total) * 10000) / 100;
+    if (pctNum !== this.lastPct) {
+      this.lastPct = pctNum;
+      this.fill.style.width = pct(pctNum / 100);
     }
-    const secs = again ? this.t('hud.chase.again') : this.t('hud.chase.seconds', { seconds: Math.ceil(remaining) });
-    if (secs !== this.lastSecs) {
-      this.lastSecs = secs;
-      this.secs.textContent = secs;
+    const secsKey = again ? -1 : Math.ceil(remaining);
+    if (secsKey !== this.lastSecs) {
+      this.lastSecs = secsKey;
+      this.secs.textContent = again ? this.t('hud.chase.again') : this.t('hud.chase.seconds', { seconds: secsKey });
     }
     const gapOk = typeof r.gap === 'number' && Number.isFinite(r.gap) && r.gap >= 0;
-    const gap = gapOk ? this.t('hud.chase.gap', { metres: Math.round(r.gap) }) : '';
-    if (gap !== this.lastGap) {
-      this.lastGap = gap;
-      this.gapEl.textContent = gap;
+    const gapKey = gapOk ? Math.round(r.gap) : -1;
+    if (gapKey !== this.lastGap) {
+      this.lastGap = gapKey;
+      this.gapEl.textContent = gapOk ? this.t('hud.chase.gap', { metres: gapKey }) : '';
     }
     if (gapOk !== this.gapShown) {
       this.gapShown = gapOk;

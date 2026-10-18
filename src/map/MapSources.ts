@@ -1,16 +1,13 @@
 // Flag- and service-driven map data: forge marks, fog wall marker, shrine markers and the level legend.
 // Takes narrow ports so it runs against fakes in tests; every soft service is optional.
 
+import { FOG_OPEN_FLAGS } from '../region/fogWall';
 import type { FlagGates } from '../state/FlagGates';
 import { buildForgeState, SHRINE_IDS, SHRINE_POSITIONS, type ForgeState, type ShrineId } from './ForgeMarks';
 import type { PoiInput } from './MapModel';
 
 export const FOG_WALL = { id: 'trg.fog.harrowmark', x: 1100, z: -150 } as const;
-/**
- * The wall (and its marker) stands iff none of these flags is true; no fallback to story.slice.harrowmarkOpen.
- * Thread 4's src/region/fogWall.ts will own this list; keep it in step until it does.
- */
-export const FOG_OPEN_FLAGS = ['story.m05.complete'] as const;
+// The wall (and its marker) stands iff none of FOG_OPEN_FLAGS (src/region/fogWall.ts, the one list) is true.
 /** Vendors are drawn only once the Favour tab is open. */
 export const VENDOR_FLAG = 'story.m08.favourTab';
 

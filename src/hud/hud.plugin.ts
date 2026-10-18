@@ -5,12 +5,12 @@ import type { ElementLike } from './dom';
 import './events';
 import { AbilityBar, LeapState, type AbilitySlotInfo } from './AbilityBar';
 import { ActContinuesCard, hudOptions, type KeySource } from './ActContinuesCard';
-import { ActEndingCard, ACT_ENDING_CAMP_FLAG, ACT_ENDING_GATE_FLAG, ACT_ENDING_SEEN_FLAG } from './ActEndingCard';
+import { ActEndingCard, ACT_ENDING_CAMP_FLAGS, ACT_ENDING_GATE_FLAG, ACT_ENDING_SEEN_FLAG } from './ActEndingCard';
 import { BossBar } from './BossBar';
 import { ChaseTimer } from './ChaseTimer';
 import { ClassLabel } from './ClassLabel';
 import { MountStamina } from './MountStamina';
-import { StealthEye } from './StealthEye';
+import { NoiseRing, StealthEye } from './StealthEye';
 import { CompanionPortrait } from './CompanionPortrait';
 import { createRespecModal, type RespecModalDeps } from './RespecModal';
 import { BuffBar, type BuffInfo } from './BuffBar';
@@ -25,6 +25,7 @@ import { asHtml, hudDocument, injectCss, projectToScreen, soft } from './soft';
 import type { HudSlot } from '../ui/HudLayer';
 import type { HudWidgetView } from './widget';
 import type { ProgressionService } from './ports';
+import { FOG_OPEN_FLAGS } from '../region/fogWall';
 import { getSkill } from '../progression/skills';
 import { LEVEL_CAP, xpForLevel } from '../progression/tuning';
 
@@ -217,8 +218,8 @@ const hudPlugin: GamePlugin = {
     // "Act 1 continues" card, behind hudOptions.showActContinues.
     const keyTarget = typeof globalThis.addEventListener === 'function' ? (globalThis as unknown as KeySource) : null;
     const card = new ActContinuesCard(doc, { t, keys: keyTarget, enabled: () => hudOptions.showActContinues,
-      // The wall stands until M05 is complete (the old story.slice.harrowmarkOpen flag is retired).
-      alreadyOpen: () => ctx.state.getBool('story.m05.complete'),
+      // The wall stands iff none of region/fogWall's open flags is true (the same list the map uses).
+      alreadyOpen: () => FOG_OPEN_FLAGS.some((f) => ctx.state.getBool(f)),
     });
     ctx.events.on('trigger.enter', (e) => card.onTrigger(e.triggerId));
     mount('center', card, 0);
@@ -229,20 +230,23 @@ const hudPlugin: GamePlugin = {
       keys: keyTarget,
       modalOpen: () => ctx.hud.modalOpen !== null,
       seen: () => ctx.state.getBool(ACT_ENDING_SEEN_FLAG),
-      campSeen: () => ctx.state.getBool(ACT_ENDING_CAMP_FLAG),
+      campSeen: () => ACT_ENDING_CAMP_FLAGS.some((f) => ctx.state.getBool(f)),
       markSeen: () => ctx.state.setFlag(ACT_ENDING_SEEN_FLAG, true),
       closed: (endingId) => ctx.events.emit('hud.actEnding.closed', { endingId }),
     });
     ctx.events.on('act.ended', (e) => ending.onActEnded(e));
+    ctx.events.on('save.loaded', () => ending.onLoaded());
     ctx.gates.flag(ACT_ENDING_GATE_FLAG, (open) => ending.onGate(open));
     mount('center', ending, 1);
 
     // Phase B readers: every service optional, looked up on each read (plugins may set up after this one).
     mount(
       'top-center',
-      new StealthEye(doc, { t, eye: () => soft(ctx, 'stealth')?.eye(), noise: () => soft(ctx, 'stealth')?.noise() }),
+      new StealthEye(doc, { t, eye: () => soft(ctx, 'stealth')?.eye() }),
       10,
     );
+    // Full-viewport slot: the top-center slot is transformed, which would break the ring's position:fixed centring.
+    mount('overlay', new NoiseRing(doc, { t, noise: () => soft(ctx, 'stealth')?.noise() }), 5);
     mount('top-center', new ChaseTimer(doc, { t, timer: () => soft(ctx, 'chase')?.timer() }), 20);
     mount('top-left', new MountStamina(doc, { t, stamina: () => soft(ctx, 'mount')?.stamina() }), 25);
     mount(

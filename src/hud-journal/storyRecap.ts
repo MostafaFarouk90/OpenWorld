@@ -98,3 +98,25 @@ export function readFromContext(ctx: GameContext): RecapRead {
 export function recapLines(ctx: GameContext, t: (key: string) => string): string[] {
   return buildRecap(readFromContext(ctx)).map((e) => t(e.textKey));
 }
+
+/** An outcome line is a choice or variant (`m06.stealth`, `d01.released`, `tobb.joined`), not a plain completion. */
+const isOutcome = (e: RecapEntry): boolean => e.id.includes('.');
+
+/**
+ * The latest `max` beats for the ending card, in story order. Outcome lines (what the player chose or caused) come
+ * first, newest first; plain completions only top it up when there are fewer outcomes than `max`. Pure.
+ */
+export function endingRecap(entries: readonly RecapEntry[], max = 6): RecapEntry[] {
+  const picked = new Set<number>();
+  for (const wantOutcome of [true, false]) {
+    for (let i = entries.length - 1; i >= 0 && picked.size < max; i--) {
+      if (isOutcome(entries[i]!) === wantOutcome) picked.add(i);
+    }
+  }
+  return entries.filter((_, i) => picked.has(i));
+}
+
+/** The ending card's body: the latest outcome beats of the same recap the Story tab shows, as display strings. */
+export function endingRecapLines(ctx: GameContext, t: (key: string) => string, max = 6): string[] {
+  return endingRecap(buildRecap(readFromContext(ctx)), max).map((e) => t(e.textKey));
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RECAP_LINES, buildRecap, recapLines, readFromContext, type RecapRead } from './storyRecap';
+import { RECAP_LINES, buildRecap, endingRecap, endingRecapLines, recapLines, readFromContext, type RecapRead } from './storyRecap';
 import { HUD_JOURNAL_STRINGS_EN } from './strings.en';
 
 const mk = (done: string[] = [], flags: Record<string, string | number | boolean> = {}): RecapRead => ({
@@ -97,5 +97,49 @@ describe('readFromContext and recapLines', () => {
     const q = { get: () => ({}), state: () => 'completed' };
     const out = recapLines(ctxWith(q), (k) => `T:${k}`);
     expect(out[0]).toBe('T:hud.journal.recap.m01');
+  });
+});
+
+describe('endingRecap (ending card body)', () => {
+  const FULL_FLAGS = {
+    'world.brightwater.barley': 'saved',
+    'story.m05.tobbJoined': true,
+    'story.m06.route': 'stealth',
+    'story.m08.stance': 'warm',
+    'world.harrowmark.inn.price': 'forgiven',
+    'boss.ashen-prior.outcome': 'defeated',
+    'boss.gaffer-grimtooth.outcome': 'released',
+    'story.r04.choice': 'expose',
+  };
+  const ALL = ['m01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm07', 'm08', 'm09', 'm10', 'd01', 'd02', 'r01', 'r02', 'r03', 'r04'];
+
+  it('a full Act 1 save shows the late outcome beats (M06 route, D01, D02, R04), not Act 1 opening', () => {
+    const out = endingRecap(buildRecap(mk(ALL, FULL_FLAGS))).map((e) => e.id);
+    expect(out).toHaveLength(6);
+    for (const id of ['m06.stealth', 'd01.defeated', 'd02.released', 'r04.expose']) expect(out).toContain(id);
+    expect(out).not.toContain('m01');
+    expect(out).not.toContain('m02');
+    // Story order is kept.
+    expect(out).toEqual(['m06.stealth', 'm08.warm', 'inn.forgiven', 'd01.defeated', 'd02.released', 'r04.expose']);
+  });
+
+  it('with few outcomes it tops up with the latest plain completions, still in story order', () => {
+    const out = endingRecap(buildRecap(mk(ALL, { 'story.r04.choice': 'shield' }))).map((e) => e.id);
+    expect(out).toEqual(['m09', 'm10', 'd01', 'd02', 'r01', 'r02', 'r03', 'r04.shield'].slice(-6));
+  });
+
+  it('is short for a short save and empty for none', () => {
+    expect(endingRecap([])).toEqual([]);
+    expect(endingRecap(buildRecap(mk(['m01', 'm02']))).map((e) => e.id)).toEqual(['m01', 'm02']);
+  });
+
+  it('endingRecapLines maps a full save through t', () => {
+    const q = { get: () => ({}), state: () => 'completed' };
+    const flags = FULL_FLAGS as Record<string, unknown>;
+    const ctx = { services: { get: (n: string) => (n === 'quests' ? q : undefined) }, state: { getFlag: (k: string) => flags[k] } } as never;
+    const lines = endingRecapLines(ctx, (k) => k);
+    expect(lines).toHaveLength(6);
+    expect(lines).toContain('hud.journal.recap.m06.stealth');
+    expect(lines).toContain('hud.journal.recap.d02.released');
   });
 });

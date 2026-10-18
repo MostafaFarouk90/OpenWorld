@@ -18,9 +18,9 @@ declare module '../core/events' {
     'xp.grant': { amount: number; source: string };
     /** Short HUD message; thread 5's HUD shows it in the toast slot. */
     'hud.toast': { textKey: string; params?: Record<string, string | number> };
-    /** A timed buff for the buff bar (thread 7 emits it for Rally Cry and similar). */
     /** The player dismissed the Act 1 mini-ending card; thread 21 starts the camp scene after it. */
     'hud.actEnding.closed': { endingId: string };
+    /** A timed buff for the buff bar (thread 7 emits it for Rally Cry and similar). */
     'buff.applied': { id: string; nameKey: string; seconds: number };
     'buff.removed': { id: string };
   }

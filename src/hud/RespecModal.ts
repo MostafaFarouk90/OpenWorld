@@ -62,7 +62,10 @@ function cleanOptions(raw: unknown): RespecOption[] | null | false {
     const id = (o as RespecOption | null)?.id;
     const label = (o as RespecOption | null)?.label;
     if (typeof id !== 'string' || id === '' || typeof label !== 'string' || label === '') continue;
-    if (seen.has(id)) return false;
+    if (seen.has(id)) {
+      console.warn(`RespecModal: duplicate option id "${id}"; the request is refused`);
+      return false;
+    }
     seen.add(id);
     out.push({ id, label });
   }
@@ -146,7 +149,8 @@ export function createRespecModal(deps: RespecModalDeps): RespecModalService {
       let decided = false;
       let closer: (() => void) | null = null;
       const onKey = (e: RespecKeyEvent): void => {
-        const k = e.code ?? e.key;
+        // A Numpad code (Numpad2...) names no arrow, so then the produced key (ArrowDown) decides.
+        const k = e.code && !e.code.startsWith('Numpad') ? e.code : (e.key ?? e.code);
         if (k === 'Escape' || e.key === 'Escape') {
           finish('cancel');
           return;
