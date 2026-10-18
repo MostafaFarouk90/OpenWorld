@@ -2,12 +2,14 @@
 // main thread (physics, gameplay sampling) and inside terrain workers (chunk meshes).
 // Reference: Vheissu/emerald-bayou.
 //
-// This is the single swappable world-shape module: everything that needs terrain height
-// (meshes, Rapier heightfields, gameplay) goes through `heightAt`. Replace the body of
-// `heightAt` with the real world design (hand-authored heightmaps, region masks) when it lands.
+// This is the single world-shape module: everything that needs terrain height (meshes, Rapier
+// heightfields, the map, gameplay) goes through `heightAt`. v0.5 shapes the procedural ground with
+// ridge suppression, plateaus and graded roads (`shaping.ts`, data in `shape/`); contracts/heightfield.md.
 
-import { TERRAIN } from '../config/constants';
+import { TERRAIN, WORLD_BOUNDS } from '../config/constants';
 import { createNoise2D } from './noise';
+import { WORLD_SHAPE } from './shape';
+import { buildShaper } from './shaping';
 
 const warpNoise = createNoise2D(TERRAIN.seed);
 const continentNoise = createNoise2D(TERRAIN.seed + 1);
@@ -36,8 +38,11 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
-/** Terrain height in metres at world position (x, z). Deterministic and thread-safe. */
-export function heightAt(x: number, z: number): number {
+/**
+ * The procedural ground before any shaping, with the ridge term scaled by `ridgeScale` (1 = natural). Only the
+ * shaper and tests call it; everything else uses `heightAt`.
+ */
+function baseHeight(x: number, z: number, ridgeScale: number): number {
   const spawnDistance = Math.hypot(x, z);
   if (spawnDistance <= SPAWN_FLAT_RADIUS) return 0;
 
@@ -75,6 +80,7 @@ export function heightAt(x: number, z: number): number {
       freq *= 2.1;
     }
     ridges *= mask * 280;
+    if (ridgeScale !== 1) ridges *= ridgeScale;
   }
 
   const detail = detailNoise(x / 45, z / 45) * 0.8;
@@ -83,3 +89,21 @@ export function heightAt(x: number, z: number): number {
   // Blend from the flat meadow (height 0) into natural terrain.
   return natural * smoothstep(SPAWN_FLAT_RADIUS, SPAWN_BLEND_RADIUS, spawnDistance);
 }
+
+/** The unshaped procedural ground (tests, regression baselines). */
+export function naturalHeightAt(x: number, z: number): number {
+  return baseHeight(x, z, 1);
+}
+
+const shaper = buildShaper(WORLD_SHAPE, baseHeight, { bounds: WORLD_BOUNDS, heightRange: HEIGHT_RANGE });
+
+/** Terrain height in metres at world position (x, z). Deterministic and thread-safe. */
+export function heightAt(x: number, z: number): number {
+  return shaper.heightAt(x, z);
+}
+
+/** The world's road profiles (map, tests): centreline height at arc `s` and the road's length. */
+export const worldRoads = {
+  profile: (id: string, s: number) => shaper.roadProfile(id, s),
+  length: (id: string) => shaper.roadLength(id),
+};
