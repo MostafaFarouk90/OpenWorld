@@ -60,8 +60,8 @@ describe('Phase A complete fixtures load on every real plugin', () => {
     expect(h.ctx.state.getBool('enemies.mercy.release')).toBe(true);
     expect(h.ctx.state.getBool('enemies.mercy.spare')).toBe(true);
     expect(h.director().complete).toBe(true);
-    // Phase A: the wall still stands and nothing opened Harrowmark.
-    expect(fogStanding()).toBe(true);
+    // M05 is complete, so the wall is down; nothing wrote the retired Phase A flag.
+    expect(fogStanding()).toBe(false);
     expect(flag('story.slice.harrowmarkOpen')).toBeUndefined();
     // Outdoors at the vault door, Tobb beside the player.
     expect(h.ctx.services.require('interiors').current).toBeNull();
@@ -97,7 +97,7 @@ describe('the mid-D01 vault fixture', () => {
     expect(tobb).not.toBeNull();
     expect(interiors.interiorAt(tobb!)).toBe('chapel-vault');
     expect(horizontal(tobb!, feet)).toBeLessThan(4);
-    expect(fogStanding()).toBe(true);
+    expect(fogStanding()).toBe(false); // M05 is done in this fixture
 
     let done = false;
     void interiors.exit().then(() => (done = true));

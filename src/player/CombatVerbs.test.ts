@@ -1090,6 +1090,114 @@ describe('status ticks (contracts section 10)', () => {
   });
 });
 
+describe('class hooks: dodge distance and timed invulnerability', () => {
+  const dodgeDistance = (t: ReturnType<typeof setup>) => {
+    const z0 = t.ctx.player.feet.z;
+    t.press('KeyN');
+    t.run(1);
+    t.release('KeyN');
+    t.run(40);
+    return Math.abs(t.ctx.player.feet.z - z0);
+  };
+  const svc = (t: ReturnType<typeof setup>) => t.ctx.services.get('combatVerbs') as CombatVerbsService;
+
+  it('a dodge distance multiplier lengthens the dodge, combines by product and is removable', () => {
+    const t = setup();
+    const base = dodgeDistance(t);
+    t.run(60);
+    const off = svc(t).addDodgeDistanceMultiplier('a', 1.2);
+    const longer = dodgeDistance(t);
+    expect(longer / base).toBeGreaterThan(1.1);
+    expect(longer / base).toBeLessThan(1.3);
+    t.run(60);
+    svc(t).addDodgeDistanceMultiplier('b', () => 1.5);
+    const both = dodgeDistance(t);
+    expect(both / base).toBeGreaterThan(1.6);
+    t.run(60);
+    off();
+    expect(dodgeDistance(t) / base).toBeGreaterThan(1.35);
+  });
+
+  it('an invalid multiplier is ignored', () => {
+    const t = setup();
+    const base = dodgeDistance(t);
+    t.run(60);
+    svc(t).addDodgeDistanceMultiplier('bad', NaN);
+    expect(dodgeDistance(t) / base).toBeCloseTo(1, 1);
+  });
+
+  it('addInvulnerability makes hits immune for the time and then ends', () => {
+    const t = setup();
+    const e = t.enemy();
+    svc(t).addInvulnerability('ash-drift', 1);
+    t.run(1);
+    expect(t.actor.invulnerable).toBe(true);
+    expect(t.hit(e)!.outcome).toBe('immune');
+    t.run(58);
+    expect(t.actor.invulnerable).toBe(true);
+    t.run(3);
+    expect(t.actor.invulnerable).toBe(false);
+    expect(t.hit(e, { swingId: 4 })!.outcome).toBe('hit');
+  });
+
+  it('a status tick passes through a timed grant but a hit does not', () => {
+    const t = setup();
+    const e = t.enemy();
+    svc(t).addInvulnerability('ash-drift', 1);
+    t.run(1);
+    expect(t.hit(e)!.outcome).toBe('immune');
+    const r = t.ctx.damage.apply({ attackerId: e.id, targetId: 'player', amount: 2, kind: 'status', statusId: 'burn', statusKind: 'ignite' });
+    expect(r!.outcome).toBe('hit');
+    t.verbs.invuln.add('respawn');
+    expect(t.ctx.damage.apply({ attackerId: e.id, targetId: 'player', amount: 2, kind: 'status', statusId: 'burn2', statusKind: 'ignite' })!.outcome).toBe('immune');
+  });
+
+  it('the same source extends instead of stacking, and the release ends it early', () => {
+    const t = setup();
+    svc(t).addInvulnerability('x', 1);
+    t.run(30);
+    const off = svc(t).addInvulnerability('x', 1);
+    t.run(40);
+    expect(t.actor.invulnerable).toBe(true);
+    off();
+    expect(t.actor.invulnerable).toBe(false);
+    off();
+    expect(t.actor.invulnerable).toBe(false);
+  });
+
+  it('does not clear the dodge i-frames when a timed source ends', () => {
+    const t = setup();
+    svc(t).addInvulnerability('x', 0.05);
+    t.press('KeyN');
+    t.run(1);
+    t.release('KeyN');
+    t.run(8);
+    expect(t.controller.currentAction).toBe('dodge');
+    expect(t.actor.invulnerable).toBe(true);
+  });
+
+  it('refuses a bad source or time and returns a harmless remover', () => {
+    const t = setup();
+    for (const [src, secs] of [['', 1], ['x', 0], ['x', -1], ['x', NaN]] as const) svc(t).addInvulnerability(src, secs)();
+    t.run(2);
+    expect(t.actor.invulnerable).toBe(false);
+  });
+
+  it('death and a load clear it', () => {
+    const t = setup();
+    svc(t).addInvulnerability('x', 10);
+    t.run(2);
+    expect(t.actor.invulnerable).toBe(true);
+    t.game.events.emit('save.loaded', {} as never);
+    expect(t.actor.invulnerable).toBe(false);
+    svc(t).addInvulnerability('y', 10);
+    t.run(2);
+    t.ctx.damage.kill?.('player', null);
+    t.run(5);
+    expect(t.actor.invulnerable).toBe(false);
+  });
+});
+
 describe('holdForcedMove (the Warden shoulder charge)', () => {
   const svc = (t: ReturnType<typeof setup>) => t.ctx.services.get('combatVerbs' as never) as unknown as CombatVerbsService;
   const dist = (t: ReturnType<typeof setup>, a: THREE.Vector3) => Math.hypot(t.ctx.player.feet.x - a.x, t.ctx.player.feet.z - a.z);

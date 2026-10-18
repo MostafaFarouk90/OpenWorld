@@ -7,6 +7,38 @@ const ez0 = box.z0 + MAP_TO_ENGINE_OFFSET.z;
 const ex1 = box.x1 + MAP_TO_ENGINE_OFFSET.x;
 const ez1 = box.z1 + MAP_TO_ENGINE_OFFSET.z;
 
+describe('regionAt, Harrowmark and the corridor (engine coordinates)', () => {
+  it('Brightwater ends at engine x 5500; the corridor to 6500 is null', () => {
+    expect(regionAt(5499.9, 0)?.id).toBe('brightwater');
+    expect(regionAt(5500, 0)).toBeNull();
+    expect(regionAt(6000, 900)).toBeNull();
+    expect(regionAt(6499.9, 900)).toBeNull();
+  });
+
+  it('Harrowmark is x 6500..10500, z 0..4000, half open', () => {
+    const h = { id: 'harrowmark', levelBand: { min: 4, max: 9 }, track: 'seven-gates-one-drum' };
+    expect(regionAt(6500, 900)).toEqual(h);
+    expect(regionAt(10499.9, 3999.9)).toEqual(h);
+    expect(regionAt(10500, 0)).toBeNull();
+    expect(regionAt(8500, 4000)).toBeNull();
+    expect(regionAt(8500, -0.1)).toBeNull();
+    expect(regionAt(8500, 0)?.id).toBe('harrowmark');
+  });
+
+  it('the two boxes never overlap and the corridor is 1000 m wide', () => {
+    const b = REGION_BOXES_MAP;
+    expect(b.harrowmark.x0 - b.brightwater.x1).toBe(1000);
+    for (const x of [5500, 6000, 6499]) expect(regionAt(x, 2000)).toBeNull();
+  });
+
+  it('the road runs through Brightwater, the corridor and into Harrowmark', () => {
+    expect(regionAt(2000, 100)?.id).toBe('brightwater');
+    expect(regionAt(6000, 800)).toBeNull();
+    expect(regionAt(6800, 780)?.id).toBe('harrowmark');
+    expect(regionAt(8500, 1250)?.id).toBe('harrowmark');
+  });
+});
+
 describe('regionAt', () => {
   it('knows the tutorial spawn and the whole tutorial footprint are Brightwater', () => {
     for (const [x, z] of [[0, 0], [52, 60], [-45, 120], [0, 420]]) {

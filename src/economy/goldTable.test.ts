@@ -40,7 +40,10 @@ describe('gold budget', () => {
 
   it('keeps the ford pairs, the patrols and the tutorial soldiers off the purse whitelist', () => {
     const tags = [...PURSE_SPAWNERS, ...THUG_SPAWNERS];
-    for (const s of BRIGHTWATER_SPAWNERS) {
+    // The Dead Road camps are the purse (their ids are the spawn tags); every other Brightwater group stays off it.
+    const camps = new Set(PURSE_SPAWNERS);
+    expect(BRIGHTWATER_SPAWNERS.filter((s) => camps.has(s.id)).map((s) => s.id)).toEqual([...PURSE_SPAWNERS]);
+    for (const s of BRIGHTWATER_SPAWNERS.filter((x) => !camps.has(x.id))) {
       expect(tags).not.toContain(s.id);
       if ('tag' in s && typeof s.tag === 'string') expect(tags).not.toContain(s.tag);
     }

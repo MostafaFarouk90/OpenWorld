@@ -13,6 +13,7 @@ import type {
   ActorInitLike,
   ActorLike,
   AnchorLike,
+  CalmUiPort,
   DamageModifierLike,
   DamageOutcome,
   DamageRequestLike,
@@ -63,6 +64,15 @@ export async function loadKnight(): Promise<{ scene: THREE.Object3D; animations:
 export class FakeStatus implements StatusPort {
   readonly calls: Array<{ actorId: ActorId; spec: Parameters<StatusPort['apply']>[1] }> = [];
   result = true;
+  /** Calm: the statuses on each actor, as `list` returns them. */
+  readonly table = new Map<ActorId, Array<{ id: string; sourceId: ActorId | null }>>();
+  list(actorId: ActorId): readonly { id: string; sourceId: ActorId | null }[] {
+    return this.table.get(actorId) ?? [];
+  }
+  clear(actorId: ActorId, only?: string): void {
+    const rows = this.table.get(actorId) ?? [];
+    this.table.set(actorId, only ? rows.filter((r) => r.id !== only) : []);
+  }
   apply(actorId: ActorId, spec: Parameters<StatusPort['apply']>[1]): boolean {
     this.calls.push({ actorId, spec });
     return this.result;
@@ -134,7 +144,19 @@ export class FakeBus {
 export class FakeInventory implements InventoryPort {
   readonly spent: Array<{ amount: number; reason: string }> = [];
   readonly added: number[] = [];
+  /** Calm: item counts, and what `remove` took. */
+  readonly items = new Map<string, number>();
+  readonly removed: Array<{ itemId: string; count: number }> = [];
   constructor(public gold: number) {}
+  count(itemId: string): number {
+    return this.items.get(itemId) ?? 0;
+  }
+  remove(itemId: string, n: number): boolean {
+    if (this.count(itemId) < n) return false;
+    this.items.set(itemId, this.count(itemId) - n);
+    this.removed.push({ itemId, count: n });
+    return true;
+  }
   addGold(n: number): void {
     if (Number.isFinite(n) && n > 0) {
       this.gold += Math.floor(n);
@@ -229,6 +251,8 @@ export class FakeHost {
   vfx: { dissolve(root: THREE.Object3D, s: number): Promise<void>; spawnEffect?(id: string, t: { position: { x: number; y: number; z: number } }, p?: Record<string, number | string | boolean>): unknown } | undefined;
   /** Thread 2's spells service when a test provides it (`useShard`, or the older `addBurn`). */
   spells: { useShard?(g: number, s: string): void; addBurn?(n: number, s: string): void } | undefined = undefined;
+  /** The Calm prompt's inputs, when a test provides `provideCalmUi`. */
+  calmUi: CalmUiPort | undefined;
   /** The core boss registry fake: tests set `bossOpen` and read `bossReleases`. */
   bossStates = new Map<string, { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | null }>();
   bossReleaseResult = true;
@@ -345,6 +369,41 @@ export class FakeHost {
     this.playerFeet.set(x, this.heightAt(x, z), z);
     this.playerModel.position.copy(this.playerFeet);
     this.playerModel.updateMatrixWorld(true);
+  }
+
+  /** Calm: gives the world an inventory (gold 0) holding these item counts; returns the counts map. */
+  provideItems(items: Record<string, number>): Map<string, number> {
+    this.inventory ??= new FakeInventory(0);
+    for (const [id, n] of Object.entries(items)) this.inventory.items.set(id, n);
+    return this.inventory.items;
+  }
+
+  /** The Calm prompt's inputs as a controllable object: set `focus`, `holding`, `modal` and `wheel`; read `active` and `claims`. */
+  provideCalmUi(): { focus: string | null; holding: boolean; modal: boolean; wheel: number; active: number; claims: number; owners: string[] } {
+    const c = { focus: null as string | null, holding: false, modal: false, wheel: 0, active: 0, claims: 0, owners: [] as string[] };
+    this.calmUi = {
+      focusedId: () => c.focus,
+      holding: () => c.holding,
+      modalOpen: () => c.modal,
+      claimWheel: (owner) => {
+        c.active++;
+        c.claims++;
+        c.owners.push(owner);
+        let live = true;
+        return () => {
+          if (!live) return;
+          live = false;
+          c.active--;
+        };
+      },
+      consumeWheel: () => {
+        const w = c.wheel;
+        c.wheel = 0;
+        return w;
+      },
+      text: (key) => key,
+    };
+    return c;
   }
 
   heightAt = (x: number, z: number): number => this.opts.heightAt?.(x, z) ?? 0;
@@ -534,6 +593,9 @@ export class FakeHost {
         if (name === 'status') return this.status;
         return undefined;
       }) as EnemyHost['services']['get'],
+    },
+    get calmUi() {
+      return self.calmUi;
     },
     bosses: {
       active: () => [...self.bossStates.keys()],

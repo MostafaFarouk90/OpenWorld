@@ -103,16 +103,16 @@ describe('Ember Hound def', () => {
     expect(def.mercy).toEqual({
       verb: 'calm', tier: 'normal', track: 'dragons', when: 'calming', offerings: [{ itemId: 'hearth-bread', count: 1 }, { itemId: 'ember-coal', count: 1 }], warmHand: true,
     });
-    expect(ENEMY_STRINGS_EN['enemies.mercy.calm']).toBe('Hold {key}: Calm');
+    expect(ENEMY_STRINGS_EN['enemies.mercy.calm']).toBe('Hold {key}: Calm ({offering})');
     expect(ENEMY_STRINGS_EN['enemies.name.ember-hound']).toBe('Ember Hound');
   });
 
-  it('is not in any spawner def (no layout anchors exist yet) and builds no hold-T interactable', () => {
+  it('is not in any spawner def (no layout anchors exist yet) and builds the Calm hold-T interactable', () => {
     for (const d of [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS]) expect(d.enemy).not.toBe('ember-hound');
     const t = rig([pack('ember-hound', 2)]);
     t.m.service.spawnGroup('pack');
     expect(t.m.count).toBe(2);
-    expect([...t.fake.interactables.keys()].filter((k) => k.includes('hound'))).toEqual([]);
+    expect([...t.fake.interactables.keys()].filter((k) => k.includes('hound'))).toHaveLength(2);
   });
 });
 
