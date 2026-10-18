@@ -80,7 +80,7 @@ export const MERCY = {
   pulseRadius: 4,
   /** Priority bonus for the lock-on target, so it wins over a nearer creature. */
   lockOnPriority: 100,
-  flags: { release: 'enemies.mercy.release', spare: 'enemies.mercy.spare' },
+  flags: { release: 'enemies.mercy.release', spare: 'enemies.mercy.spare', calm: 'enemies.mercy.calm' },
   /** Burn per completed Release hold; a pulse that frees a boss costs the boss rate (design 3, 9.7). */
   releaseBurn: 10,
   bossReleaseBurn: 20,
