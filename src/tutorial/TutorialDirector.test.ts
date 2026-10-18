@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BEATS, FULL_ORDER, KETTLEWICK_ORDER, LOCKABLE_VERBS, VETERAN_ORDER } from './beats';
 import { createGoal } from './goals';
-import { CRACK_SECONDS, TutorialDirector, VOW_RETRY_SECONDS, type DrillDef } from './TutorialDirector';
+import { CRACK_SECONDS, SPAWN_RETRY_SECONDS, TutorialDirector, VOW_RETRY_SECONDS, type DrillDef } from './TutorialDirector';
 import type { BeatId, DirectorEvent, DirectorPorts, SpawnSpec, TickSample } from './types';
 
 const DT = 1 / 60;
@@ -861,6 +861,22 @@ describe('missing anchors and services', () => {
     passUntil('t08');
     PASS.t08();
     tick();
+    expect(d.beat).toBe('t09');
+    seconds(5);
+    expect(d.beat).toBe('t09');
+    w.noSpawn.delete('t09.soldier');
+    seconds(1);
+    expect(w.spawned.filter((s) => s.spawnerId === 't09.soldier').length).toBeGreaterThan(1);
+    expect(d.beat).toBe('t09');
+  });
+
+  it('a spawner still empty after the retry window counts as done', () => {
+    w.noSpawn.add('t09.soldier');
+    d.begin('full');
+    passUntil('t08');
+    PASS.t08();
+    tick();
+    seconds(SPAWN_RETRY_SECONDS);
     expect(d.beat).toBe('t10');
     expect(w.warnings.some((m) => m.includes('t09.soldier'))).toBe(true);
   });
