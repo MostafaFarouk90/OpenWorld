@@ -1,6 +1,7 @@
 import { SHRINE_TUNING } from './tuning';
 
 const R = SHRINE_TUNING.respec;
+const PERMIT = 'lectern';
 
 export interface RespecQuote {
   free: boolean;
@@ -17,14 +18,41 @@ export interface RespecProgression {
   respec(): RespecResult;
 }
 
-/** Thread 8's `respecModal` service. It never calls progression; `confirm` does. */
+export interface RespecOption {
+  id: string;
+  label: string;
+}
+
+/**
+ * Thread 8's `respecModal` service. It never calls progression; `confirm` does. With `options` (Phase B) it lists
+ * them, shows `quoteFor(id)` for the highlighted one and passes the chosen id to `confirm`.
+ */
 export interface RespecDialog {
-  open(opts: { quote: RespecQuote; confirm: () => RespecResult; cancel: () => void }): boolean;
+  open(opts: {
+    quote: RespecQuote;
+    options?: readonly RespecOption[];
+    quoteFor?: (id: string) => RespecQuote;
+    confirm: (id?: string) => RespecResult;
+    cancel: () => void;
+  }): boolean;
+}
+
+/** What the lectern needs from thread 12's `classes` service. */
+export type ClassQuote = { ok: true; free: boolean; gold: number; canAfford: boolean } | { ok: false; reason: string };
+export interface RespecClasses {
+  chosen(): boolean;
+  current(): string;
+  changeQuote(id: string): ClassQuote;
+  change(id: string): { ok: true } | { ok: false; reason: string };
 }
 
 export interface RespecPorts {
   progression(): Partial<RespecProgression> | undefined;
   dialog(): RespecDialog | undefined;
+  /** Thread 12's service; undefined before it merges. Class change is offered only once a class is chosen. */
+  classes?(): RespecClasses | undefined;
+  classIds?(): readonly string[];
+  className?(id: string): string;
   lit(): boolean;
   inCombat(): boolean;
   /** Seconds on a monotonic sim clock. */
@@ -70,11 +98,11 @@ export class RespecFlow {
     }
     this.close();
     const quote = p.respecQuote();
-    this.release = p.allowRespec('shrine');
+    this.release = p.allowRespec(PERMIT);
     const dialog = this.ports.dialog();
     let opened = false;
     try {
-      opened = !!dialog?.open({ quote, confirm: () => this.confirm(), cancel: () => this.close() });
+      opened = !!dialog?.open({ quote, ...this.classOptions(quote), confirm: (id) => this.confirm(id), cancel: () => this.close() });
     } catch {
       opened = false;
     }
@@ -99,13 +127,36 @@ export class RespecFlow {
     if (this.ports.now() > this.pendingUntil || this.ports.distanceToLectern() > R.radius + 1) this.close();
   }
 
-  confirm(): RespecResult {
+  /**
+   * `id` is the class picked in the dialog: another class is a class change (`classes.change`, which respecs
+   * through progression and starts no drill); the current class, or no id, is the plain skill respec.
+   */
+  confirm(id?: string): RespecResult {
     const p = this.ports.progression();
+    const classes = this.ports.classes?.();
     if (!this.release || !p?.respec) return { ok: false, reason: 'closed' };
-    const r = p.respec();
+    const change = classes && id !== undefined && classes.chosen() && id !== classes.current();
+    const r = change ? classes.change(id) : p.respec();
     this.close();
-    this.ports.toast(r.ok ? 'shrine.respec.done' : 'shrine.respec.refused', r.ok ? undefined : { reason: r.reason });
+    if (r.ok) this.ports.toast(change ? 'shrine.class.done' : 'shrine.respec.done', change ? { name: this.ports.className?.(id) ?? id } : undefined);
+    else this.ports.toast('shrine.respec.refused', { reason: r.reason });
     return r;
+  }
+
+  /** The five classes with the highlighted one's quote, once a class has been chosen; otherwise nothing. */
+  private classOptions(plain: RespecQuote): { options?: RespecOption[]; quoteFor?: (id: string) => RespecQuote } {
+    const classes = this.ports.classes?.();
+    const ids = this.ports.classIds?.();
+    if (!classes?.chosen() || !ids?.length) return {};
+    const current = classes.current();
+    return {
+      options: ids.map((id) => ({ id, label: this.ports.className?.(id) ?? id })),
+      quoteFor: (id) => {
+        if (id === current) return plain;
+        const q = classes.changeQuote(id);
+        return q.ok ? { free: q.free, gold: q.gold, canAfford: q.canAfford } : { free: false, gold: 0, canAfford: false };
+      },
+    };
   }
 
   close(): void {
