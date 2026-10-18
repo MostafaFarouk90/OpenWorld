@@ -258,12 +258,20 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
 
   // Runs before 3b's, 18's and 20's handlers (they depend on this plugin), so their teleports win over a stale-load rescue.
   ctx.events.on('save.loaded', () => controller.onSaveLoaded());
+  // Debug: `?debug&interior=<id>` drops the player at that interior's first entry (the bounds rule does the rest).
+  let debugInterior = debugInteriorParam();
   ctx.systems.add({
     id: 'interiors.tick',
     fixedPhase: 'rules',
     order: INTERIORS_RULES_ORDER,
     fixedUpdate(dt) {
       cooldown = Math.max(0, cooldown - dt);
+      if (debugInterior) {
+        const entry = ctx.anchors.find(layouts.get(debugInterior)?.def.doors[0].inside ?? '');
+        if (entry) ctx.player.teleport({ ...entry.position, y: entry.position.y + 0.05 }, entry.yaw);
+        else console.warn(`interiors: ?interior=${debugInterior} is not an interior`);
+        debugInterior = null;
+      }
       syncDoors();
       controller.tick(dt);
     },
@@ -292,6 +300,12 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     setBlocker,
   };
   ctx.services.provide('interiors', service);
+}
+
+function debugInteriorParam(): string | null {
+  if (typeof location === 'undefined') return null;
+  const q = new URLSearchParams(location.search);
+  return q.has('debug') ? q.get('interior') : null;
 }
 
 export default createInteriorsPlugin();
