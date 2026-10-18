@@ -74,7 +74,8 @@ export const STEERING = {
 export const MERCY = {
   holdSeconds: 0.5,
   radius: 3,
-  coneDegrees: 90,
+  /** Half-angle, as Interactable.coneDegrees takes it: the design's 90 degree cone. */
+  coneDegrees: 45,
   /** Release pulse radius (design section 3). */
   pulseRadius: 4,
   /** Priority bonus for the lock-on target, so it wins over a nearer creature. */

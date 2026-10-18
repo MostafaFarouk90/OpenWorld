@@ -21,7 +21,7 @@ export function mercyInteractableId(slug: string): string {
 
 /** String key of the prompt: "Hold {key}: Release (10 Burn)" or "Hold {key}: Spare". */
 export function mercyPromptKey(def: EnemyDef): string {
-  return def.mercy.verb === 'release' ? 'interact.release' : 'interact.spare';
+  return def.mercy.verb === 'release' ? 'enemies.mercy.release' : 'enemies.mercy.spare';
 }
 
 /**

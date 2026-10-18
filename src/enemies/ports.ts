@@ -159,12 +159,13 @@ export interface InteractableLike {
   action?: 'interact' | 'mercy';
   position(out: THREE.Vector3): THREE.Vector3;
   radius?: number;
+  /** Half-angle of the facing cone (core default 75). */
   coneDegrees?: number;
   promptKey?: string;
   name?: string;
   holdSeconds?: number;
   priority?: number;
-  score?(feet: THREE.Vector3): number;
+  score?(feet: THREE.Vector3Like): number;
   enabled?(): boolean;
   onInteract(actor: ActorLike): void;
 }

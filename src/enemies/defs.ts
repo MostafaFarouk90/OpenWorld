@@ -8,7 +8,7 @@ import type { EnemyDef, EnemyKind, MoveDef } from './types';
  */
 export const ASH_WRAITH: EnemyDef = {
   kind: 'ash-wraith',
-  nameKey: 'enemy.ash-wraith',
+  nameKey: 'enemies.name.ash-wraith',
   model: { prefer: [], tint: 0x8d978a, emissive: 0x0b100a, weapons: 'none' },
   maxHealth: 30,
   maxPoise: 20,
@@ -40,7 +40,7 @@ export const ASH_WRAITH: EnemyDef = {
  */
 export const BLIGHTED_SOLDIER: EnemyDef = {
   kind: 'blighted-soldier',
-  nameKey: 'enemy.blighted-soldier',
+  nameKey: 'enemies.name.blighted-soldier',
   model: { prefer: [], tint: 0x6a625a, weapons: 'sword-shield' },
   maxHealth: 60,
   maxPoise: 40,
