@@ -2,6 +2,8 @@ import type { Actor, ActorId, Team } from '../actors/Actor';
 import type { DamageRequest, DamageResult } from '../actors/DamageResolver';
 import type { FavourBand, FavourSource, FavourTrack, MercyEvent } from '../state/favour';
 import type { FlagValue } from '../state/WorldState';
+import type { ClassId } from '../actors/classes';
+import type { StatusKind } from '../actors/status';
 import { EventBus } from './EventBus';
 
 /** A plain position in event payloads (copied, never a live vector). */
@@ -118,7 +120,43 @@ export interface GameEventMap {
   'wardstone.struck': { index: number; errorMs: number };
   'wardstone.missed': { index: number; reason: 'early' | 'late' | 'order' };
   'wardstones.complete': Record<string, never>;
+
+  // v0.5 (slice 2 Phase B). Appended at the end; owners emit these and never redeclare them.
+  /** Core: the player's class kit was attached (`previous: null`) or swapped (`ctx.player.swapAvatar`). */
+  'player.avatar': { classId: ClassId; previous: ClassId | null };
+  /** Thread 2's `status` service (actors-and-damage.md section 10). */
+  'status.applied': { actorId: ActorId; id: string; kind: StatusKind };
+  'status.expired': { actorId: ActorId; id: string; kind: StatusKind };
+  /** Thread 2: grant an ability outside the tree (quest effects use it as a loose event, like `xp.grant`). */
+  'ability.grant': { id: string; source: string };
+  /** Thread 12. `class.chosen` is M07's first choice; `class.changed` a later change (progression charged the respec). */
+  'class.chosen': { classId: ClassId };
+  'class.changed': { classId: ClassId; previous: ClassId; free: boolean; cost: number };
+  'class.drill': { classId: ClassId; outcome: 'done' | 'skipped' };
+  /** Thread 18 (thread 5's `ai.spotted` maps to `stealth.noticed`). */
+  'stealth.section': { sectionId: string; phase: 'entered' | 'cleared' | 'exited' };
+  'stealth.noticed': { observerId: ActorId; sectionId: string; level: number };
+  'stealth.alert': { observerId: ActorId; sectionId: string; state: 'calm' | 'suspicious' | 'alerted' };
+  'stealth.caught': { observerId: ActorId; sectionId: string; checkpointId: string };
+  'stealth.checkpoint': { sectionId: string; checkpointId: string };
+  'chase.started': { chaseId: string };
+  'chase.caught': { chaseId: string; seconds: number };
+  'chase.lost': { chaseId: string; reason: 'timer' | 'distance' | 'combat' };
+  /** Thread 20. */
+  'mount.summoned': { mountId: string };
+  'mount.mounted': { mountId: string };
+  'mount.dismounted': { mountId: string; reason: 'player' | 'combat' | 'interior' | 'load' | 'script' };
+  /** Thread 19. */
+  'vendor.bought': { vendorId: string; itemId: string; count: number; price: number };
+  'vendor.sold': { vendorId: string; itemId: string; count: number; price: number };
+  /** The inventory, from `takeGold(n, reason)` whenever gold was taken; `total` is what remains. */
+  'gold.spent': { amount: number; reason: GoldSpendReason; total: number };
+  /** Thread 21: the act's mini-ending. */
+  'act.ended': { act: number; endingId: string };
 }
+
+/** Why gold left the pouch (`inventory.takeGold(n, reason)`, v0.5). */
+export type GoldSpendReason = 'bribe' | 'respec' | 'vendor' | 'inn' | 'persuasion' | 'theft' | 'death' | 'script';
 
 export type GameEventType = keyof GameEventMap;
 export class GameEvents extends EventBus<GameEventMap> {}

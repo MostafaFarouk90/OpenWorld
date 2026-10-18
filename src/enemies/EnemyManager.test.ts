@@ -141,7 +141,7 @@ describe('fighting the player', () => {
     expect([...fake.moveModifiers.values()][0]).toEqual({ speedScale: ASH_GRAB.speedScale });
     // keep it from hitting again: kill the player, then wait out the slow
     fake.player.health = 0;
-    fake.bus.emit('actor.died', { actorId: 'player', killerId: id, kind: 'knight', team: 'player', level: 1 });
+    fake.bus.emit('actor.died', { actorId: 'player', killerId: id, kind: 'player', team: 'player', level: 1 });
     tick(ASH_GRAB.seconds + 0.1);
     expect(fake.moveModifiers.size).toBe(0);
   });
@@ -157,7 +157,7 @@ describe('fighting the player', () => {
     const { fake, tick, id } = engagedWraith();
     tick(AI.riseSeconds + AI.noticeSeconds);
     fake.player.health = 0;
-    fake.bus.emit('actor.died', { actorId: 'player', killerId: null, kind: 'knight', team: 'player', level: 1 });
+    fake.bus.emit('actor.died', { actorId: 'player', killerId: null, kind: 'player', team: 'player', level: 1 });
     expect(fake.bus.of('ai.calm').filter((c) => c.actorId === id)).toHaveLength(1);
     const before = fake.bus.of('telegraph').length;
     tick(3);

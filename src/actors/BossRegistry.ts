@@ -33,6 +33,8 @@ export interface BossState {
   phase: number;
   /** Total phases (phases.length + 1). */
   phases: number;
+  /** v0.5: the registered phase health fractions, descending (the boss bar draws its ticks from them). */
+  thresholds: readonly number[];
   breaks: number;
   breaksPerPhase: number;
   shield: boolean;
@@ -138,7 +140,7 @@ export class BossRegistry {
     const boss: Boss = {
       def,
       actorId,
-      thresholds: [...def.phases],
+      thresholds: Object.freeze([...def.phases]),
       phase: 1,
       breaks: 0,
       shield: def.shield ?? false,
@@ -192,6 +194,7 @@ export class BossRegistry {
       maxHealth: actor?.maxHealth ?? 0,
       phase: boss.phase,
       phases: boss.thresholds.length + 1,
+      thresholds: boss.thresholds,
       breaks: boss.breaks,
       breaksPerPhase: boss.def.breaksPerPhase,
       shield: boss.shield,

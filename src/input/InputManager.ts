@@ -44,10 +44,12 @@ export class InputManager {
   /** True while `navigator.keyboard.lock` is active (Ctrl+W and friends reach the game). */
   private lockedState = false;
   private readonly lockListeners = new Set<(state: { supported: boolean; locked: boolean }) => void>();
-  private latest: ActionState = NO_ACTIONS;
+  private latest: SampledActions | null = null;
   private mouseDX = 0;
   private mouseDY = 0;
   private wheel = 0;
+  /** Wheel claims, latest last (v0.5 `claimWheel`). */
+  private readonly wheelClaims: { owner: string }[] = [];
   private unsubscribeBindings: () => void;
 
   /** `win` and `doc` default to the page's window and document; tests pass stand-ins. */
@@ -113,7 +115,12 @@ export class InputManager {
 
   /** The actions sampled by the latest `sampleTick` (NO_ACTIONS before the first). */
   get latestActions(): ActionState {
-    return this.latest;
+    return this.latest ?? NO_ACTIONS;
+  }
+
+  /** The time of the press that made `action` pressed in the latest sample (contracts/input-and-hud.md section 2). */
+  pressedAtMs(action: Action): number | null {
+    return this.latest?.pressedAtMs(action) ?? null;
   }
 
   /** Samples the action map once and derives the legacy snapshot from it. */
@@ -152,11 +159,39 @@ export class InputManager {
     return d;
   }
 
-  /** Wheel scroll since the last call, in normalized steps (positive = away from the player). */
-  consumeWheel(): number {
+  /**
+   * Wheel scroll since the last call, in normalized steps (positive = away from the player). While a claim is
+   * held, only the latest claimant's call drains it; every other call (the camera passes no owner) gets 0 and
+   * drains nothing. With no claim, a call naming an owner gets 0 too.
+   */
+  consumeWheel(owner?: string): number {
+    const top = this.wheelClaims[this.wheelClaims.length - 1];
+    if (top ? owner !== top.owner : owner !== undefined) return 0;
     const w = this.wheel;
     this.wheel = 0;
     return w;
+  }
+
+  /**
+   * Routes the wheel to `owner` until the returned release is called (a Calm prompt cycling offerings). Claims
+   * stack; releasing a lower one leaves the top. Releasing the last claim drops any unread scroll, so it never
+   * zooms the camera afterwards. Releasing twice is a no-op.
+   */
+  claimWheel(owner: string): () => void {
+    const claim = { owner };
+    this.wheelClaims.push(claim);
+    return () => {
+      const i = this.wheelClaims.indexOf(claim);
+      if (i < 0) return;
+      const wasTop = i === this.wheelClaims.length - 1;
+      this.wheelClaims.splice(i, 1);
+      if (wasTop) this.wheel = 0;
+    };
+  }
+
+  /** The owner whose `consumeWheel` drains the wheel now, or null when unclaimed. */
+  get wheelOwner(): string | null {
+    return this.wheelClaims[this.wheelClaims.length - 1]?.owner ?? null;
   }
 
   /** Requests fullscreen, then locks every bound key except Escape. Never throws. */
@@ -247,7 +282,7 @@ export class InputManager {
       const bound = this.bindings.actionsFor({ device: 'key', code }).length > 0;
       if (code === 'Tab' || code === 'AltLeft' || (e.ctrlKey && bound)) e.preventDefault();
     }
-    this.actionMap.keyDown(code, e.repeat);
+    this.actionMap.keyDown(code, e.repeat, e.timeStamp);
   };
 
   private onKeyUp = (e: KeyboardEvent): void => {
@@ -267,7 +302,7 @@ export class InputManager {
 
   private onMouseDown = (e: MouseEvent): void => {
     if (e.button === 3 || e.button === 4) e.preventDefault?.();
-    this.actionMap.mouseDown(e.button);
+    this.actionMap.mouseDown(e.button, e.timeStamp);
   };
 
   private onMouseUp = (e: MouseEvent): void => {

@@ -49,7 +49,8 @@ export interface InventoryService {
   items(): readonly { id: string; count: number }[];
   readonly gold: number;
   addGold(n: number): void;
-  takeGold(n: number): number;
+  /** v0.5: emits `gold.spent { amount, reason, total }` when anything was taken (`reason` defaults to `'script'`). */
+  takeGold(n: number, reason?: 'bribe' | 'respec' | 'vendor' | 'inn' | 'persuasion' | 'theft' | 'death' | 'script'): number;
 }
 
 export type LearnCheck =

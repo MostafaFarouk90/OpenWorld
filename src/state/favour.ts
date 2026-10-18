@@ -37,7 +37,20 @@ export interface MercyEvent {
   amount?: number;
   /** One Release pulse that frees several wraiths: Burn is charged once per pulseId (thread 7). */
   pulseId?: string;
+  /** v0.5: the design's ledger row for boss and quest mercies (for example 'D01', 'D02'); absent for creatures. */
+  ledgerId?: string;
 }
+
+/**
+ * v0.5: the mercy unlock flags (game-events-and-flags.md section 5). Release unlocks in M03, Spare in M04, Calm
+ * in D02 (thread 6's effects); threads 1 and 5 read them.
+ */
+export const MERCY_UNLOCK_FLAGS = {
+  release: 'enemies.mercy.release',
+  spare: 'enemies.mercy.spare',
+  calm: 'enemies.mercy.calm',
+} as const;
+export type MercyUnlockVerb = keyof typeof MERCY_UNLOCK_FLAGS;
 
 export function isFavourTrack(v: unknown): v is FavourTrack {
   return typeof v === 'string' && (FAVOUR_TRACKS as readonly string[]).includes(v);

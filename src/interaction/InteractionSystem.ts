@@ -5,7 +5,20 @@ import type { GameSystem } from '../core/systems';
 import type { ActionState, InputContextStack } from '../input/actions';
 import { parseInteractableId } from './ids';
 
-export type InteractKind = 'talk' | 'door' | 'chest' | 'pickup' | 'waystone' | 'lever' | 'kneel' | 'release' | 'use';
+export type InteractKind =
+  | 'talk'
+  | 'door'
+  | 'chest'
+  | 'pickup'
+  | 'waystone'
+  | 'lever'
+  | 'kneel'
+  | 'release'
+  | 'use'
+  // v0.5: vendors (19), class trainers (12), stealth hide spots (18).
+  | 'shop'
+  | 'trainer'
+  | 'hide';
 
 export type InteractAction = 'interact' | 'mercy';
 const ACTION_LIST: readonly InteractAction[] = ['interact', 'mercy'];
@@ -16,6 +29,11 @@ export interface Interactable {
   position(out: THREE.Vector3): THREE.Vector3;
   radius?: number;
   promptKey?: string;
+  /**
+   * v0.5: extra `{param}` values for the prompt line, read while it shows (the mercy `{cost}`, the Calm offering's
+   * name). `key` and `name` are the core's own and cannot be overridden.
+   */
+  promptParams?(): Record<string, string | number>;
   name?: string;
   holdSeconds?: number;
   priority?: number;
@@ -75,7 +93,8 @@ export class InteractionSystem implements GameSystem {
     this.warn = deps.warn ?? ((m, e) => console.warn(m, e));
     this.offs.push(
       deps.events.on('damage.dealt', (r) => {
-        if (r.outcome === 'hit' && r.targetId === this.safePlayer()?.actor.id) this.cancelAll('damaged');
+        // Status ticks (bleed, ignite) never cancel a hold (actors-and-damage.md section 10).
+        if (r.outcome === 'hit' && r.kind !== 'status' && r.targetId === this.safePlayer()?.actor.id) this.cancelAll('damaged');
       }),
       deps.contexts.onChange((top) => {
         if (top !== 'gameplay') {

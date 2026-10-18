@@ -311,6 +311,17 @@ describe('InteractionSystem hold', () => {
       attackerId: 'x', targetId, amount: 1, kind: 'melee', poise: 1, outcome, dealt: 1, poiseDealt: 1,
       healthAfter: 9, killed: false, saved: false, staggered: false,
     });
+  it('does NOT cancel on a status tick (bleed, ignite; v0.5)', () => {
+    const t = setup();
+    holdItem(t);
+    start(t);
+    t.events.emit('damage.dealt', {
+      attackerId: 'x', targetId: 'player', amount: 1, kind: 'status', statusId: 'bite', statusKind: 'ignite', poise: 0,
+      outcome: 'hit', dealt: 1, poiseDealt: 0, healthAfter: 9, killed: false, saved: false, staggered: false,
+    });
+    expect(t.of('interact.cancelled')).toEqual([]);
+    expect(t.sys.holdProgress).toBeGreaterThan(0);
+  });
   it('cancels on a hit on the player', () => {
     const t = setup();
     holdItem(t);

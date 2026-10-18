@@ -10,6 +10,7 @@ import {
 } from './SaveManager';
 import { SAVE_FORMAT_VERSION, type SaveFile } from './SaveSchema';
 import { IndexedDbSaveStore, MemorySaveStore, type SaveStore, type StoreResult } from './SaveStore';
+import { SaveSuspensions } from './suspend';
 
 // ------------------------------------------------------------------ harness
 
@@ -893,5 +894,130 @@ describe('performance', () => {
     const dt = performance.now() - t0;
     expect(rep.applied.length).toBe(40);
     expect(dt).toBeLessThan(100);
+  });
+});
+
+// ------------------------------------------------------------------ v0.5 save.suspend
+
+describe('save.suspend (v0.5)', () => {
+  /** The save plugin's wiring: holds make gameplay unsafe; the last release runs the deferred save. */
+  function suspended(opts: { store?: SaveStore; persist?: P[] } = {}) {
+    const h = setup(opts);
+    const holds = new SaveSuspensions(() => void h.mgr.notifySafe());
+    h.ports.gameplaySafe = () => (holds.active ? { safe: false, reason: `suspended:${holds.reason}` } : { safe: true });
+    return { ...h, holds };
+  }
+
+  it('a timer save while suspended defers with the reason; two holds need two releases; the last runs it', async () => {
+    const { mgr, holds, logs, store } = suspended();
+    const spy = store as SpyStore;
+    const a = holds.suspend('stealth');
+    const b = holds.suspend('chase');
+    expect(await mgr.autosave('timer')).toEqual({ ok: false, reason: 'deferred' });
+    expect(logs.some((l) => l.msg.includes('suspended:stealth'))).toBe(true);
+    a();
+    await flush();
+    expect(spy.writeLog.length).toBe(0);
+    expect(holds.reason).toBe('chase');
+    b();
+    await flush();
+    expect(spy.writeLog.length).toBe(1);
+    expect(mgr.hasDeferredSave).toBe(false);
+  });
+
+  it('release is idempotent, and a release with nothing deferred writes nothing', async () => {
+    const { holds, store } = suspended();
+    const r = holds.suspend('stealth');
+    r();
+    r();
+    await flush();
+    expect((store as SpyStore).writeLog.length).toBe(0);
+    expect(holds.active).toBe(false);
+  });
+
+  it('suspend and release in one tick: a save requested between them still runs once', async () => {
+    const { mgr, holds, store } = suspended();
+    const r = holds.suspend('stealth');
+    void mgr.save('zone');
+    r();
+    await flush();
+    expect((store as SpyStore).writeLog.length).toBe(1);
+  });
+
+  it('suspend during an in-flight autosave: the started write completes, the queued one defers', async () => {
+    const spy = new SpyStore();
+    spy.holdWrites = true;
+    const { mgr, holds } = suspended({ store: spy });
+    const first = mgr.autosave('timer');
+    const queued = mgr.save('zone');
+    await flush();
+    const r = holds.suspend('stealth');
+    spy.releaseOne();
+    okOutcome(await first);
+    expect(await queued).toEqual({ ok: false, reason: 'deferred' });
+    expect(spy.writeLog.length).toBe(1);
+    expect(mgr.hasDeferredSave).toBe(true);
+    spy.holdWrites = false;
+    r();
+    await flush();
+    expect(spy.writeLog.length).toBe(2);
+  });
+
+  it('the exit snapshot keeps the pre-suspension state', async () => {
+    const a = persistable('a');
+    const { mgr, holds, store } = suspended({ persist: [a] });
+    a.state.v = 'before';
+    expect(mgr.captureSnapshot()).toBe(true);
+    holds.suspend('stealth');
+    a.state.v = 'during';
+    expect(mgr.captureSnapshot()).toBe(false);
+    const o = okOutcome(await mgr.snapshotForExit());
+    expect(o.file.entries.a.data).toBe('before');
+    expect((store as SpyStore).writeLog.length).toBe(1);
+  });
+
+  it('rejects an empty reason; clear drops holds without running the callback', () => {
+    const onAll = vi.fn();
+    const holds = new SaveSuspensions(onAll);
+    expect(() => holds.suspend('')).toThrow();
+    const r = holds.suspend('stealth');
+    holds.clear();
+    expect(holds.active).toBe(false);
+    r();
+    expect(onAll).not.toHaveBeenCalled();
+  });
+
+  it('checkpoint saves the state of the call even when a hold returns before a write in flight finishes', async () => {
+    const spy = new SpyStore();
+    spy.holdWrites = true;
+    const a = persistable('a');
+    const { mgr, holds } = suspended({ store: spy, persist: [a] });
+    // A timer save deferred during the section starts writing when stealth releases its own hold.
+    let r = holds.suspend('stealth');
+    expect(await mgr.autosave('timer')).toEqual({ ok: false, reason: 'deferred' });
+    r();
+    await flush();
+    expect(spy.writeLog.length).toBe(1);
+    a.state.v = 'at-checkpoint';
+    const cp = mgr.checkpoint();
+    r = holds.suspend('stealth');
+    spy.releaseOne();
+    await flush();
+    spy.releaseOne();
+    const o = okOutcome(await cp);
+    expect(o.file.reason).toBe('zone');
+    expect(o.file.entries.a.data).toBe('at-checkpoint');
+    expect(spy.writeLog.length).toBe(2);
+    r();
+  });
+
+  it('checkpoint while another hold is active defers like any save', async () => {
+    const { mgr, holds, store } = suspended();
+    const r = holds.suspend('chase');
+    expect(await mgr.checkpoint()).toEqual({ ok: false, reason: 'deferred' });
+    expect((store as SpyStore).writeLog.length).toBe(0);
+    r();
+    await flush();
+    expect((store as SpyStore).writeLog.length).toBe(1);
   });
 });

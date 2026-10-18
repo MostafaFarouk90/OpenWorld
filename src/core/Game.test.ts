@@ -16,6 +16,7 @@ import { Scope } from './scope';
 import { PLUGIN_MODULES } from './pluginManifest';
 import type { GamePlugin, PluginModule } from './plugins';
 import corePlugin from './core.plugin';
+import inventoryPlugin from '../inventory/inventory.plugin';
 
 const SLICE = '1H_Melee_Attack_Slice_Horizontal';
 let gltf: { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
@@ -728,6 +729,194 @@ describe('v0.4 core additions', () => {
     expect(rig.overridden).toBe(false);
     expect(new Game({ scene: t.scene, physics, world: t.world, input: t.input, moveModifiers: t.moveModifiers }).scopedContext(new Scope()).cameraRig).toBeNull();
     game.dispose();
+    t.world.dispose();
+  });
+});
+
+describe('v0.5 core additions', () => {
+  const newKnight = () =>
+    new KnightAvatar({ model: cloneSkinned(gltf.scene), clips: gltf.animations, sword: null, shield: null }, { warn: () => {} });
+
+  it('the player actor is class-agnostic and attachAvatar emits player.avatar once', () => {
+    const t = setup();
+    expect(t.game.ctx.player.actor.kind).toBe('player');
+    const avatar = t.attachKnight();
+    t.game.attachAvatar(avatar); // same avatar: ignored
+    expect(ofType(t.events, 'player.avatar')).toEqual([{ classId: 'knight', previous: null }]);
+    expect(t.game.ctx.player.avatar).toBe(avatar);
+    expect(avatar.offhand).toBe(avatar.shield);
+    t.game.dispose();
+    t.world.dispose();
+  });
+
+  it('swapAvatar disposes the old kit, re-binds owners and the weapon, and a second swap works', () => {
+    const t = setup();
+    const first = t.attachKnight();
+    const dummy = t.addDummy(0, -1.0);
+    const second = newKnight();
+    const dispose = vi.spyOn(first, 'dispose');
+    t.game.ctx.player.swapAvatar(second);
+    expect(dispose).toHaveBeenCalledTimes(1);
+    expect(t.world.avatar).toBe(second);
+    expect(t.game.ctx.player.avatar).toBe(second);
+    const player = t.game.ctx.actors.player;
+    expect(t.game.ctx.actors.byOwner(second)).toBe(player);
+    expect(t.game.ctx.actors.byOwner(second.model)).toBe(player);
+    expect(t.game.ctx.actors.byOwner(first)).toBeUndefined();
+    expect(t.game.ctx.actors.byOwner(first.model)).toBeUndefined();
+    expect(ofType(t.events, 'player.avatar').at(-1)).toEqual({ classId: 'knight', previous: 'knight' });
+    // The new weapon is armed: a swing lands on the dummy.
+    t.run(2);
+    expect(second.controller.playAttack(SLICE)).toBe(true);
+    t.run(90);
+    expect(ofType(t.events, 'damage.dealt').filter((d) => d.targetId === dummy.id)).toHaveLength(1);
+    const third = newKnight();
+    t.game.ctx.player.swapAvatar(third);
+    expect(t.world.avatar).toBe(third);
+    t.game.ctx.player.swapAvatar(third); // same avatar: no-op
+    expect(ofType(t.events, 'player.avatar')).toHaveLength(3);
+    t.game.dispose();
+    t.world.dispose();
+  });
+
+  it('swapAvatar mid-attack closes the window once and the new controller is idle', () => {
+    const t = setup();
+    const first = t.attachKnight();
+    t.run(2);
+    first.controller.playAttack(SLICE);
+    let opened = false;
+    for (let i = 0; i < 90 && !opened; i++) {
+      t.run(1);
+      opened = ofType(t.events, 'attack.window').some((w) => w.phase === 'open');
+    }
+    expect(opened).toBe(true);
+    const second = newKnight();
+    t.game.ctx.player.swapAvatar(second);
+    t.run(30);
+    const windows = ofType(t.events, 'attack.window');
+    expect(windows.map((w) => w.phase)).toEqual(['open', 'close']);
+    expect(second.controller.activeAttack()).toBeNull();
+    t.game.dispose();
+    t.world.dispose();
+  });
+
+  it('swapAvatar cancels an active leap', () => {
+    const t = setup();
+    t.attachKnight();
+    t.run(2);
+    expect(t.game.ctx.player.leap({ distance: 6, apex: 1 })).not.toBeNull();
+    t.game.ctx.player.swapAvatar(newKnight());
+    expect(ofType(t.events, 'player.leap').map((e) => e.phase)).toEqual(['start', 'cancel']);
+    t.game.dispose();
+    t.world.dispose();
+  });
+
+  it('World.replaceAvatar before any avatar behaves as setAvatar; WorldCombat.detachPlayer twice is safe', () => {
+    const t = setup();
+    const a = newKnight();
+    expect(t.world.replaceAvatar(a)).toBeNull();
+    expect(t.world.avatar).toBe(a);
+    expect(t.world.combat.playerAttacker).not.toBeNull();
+    t.world.combat.detachPlayer();
+    t.world.combat.detachPlayer();
+    expect(t.world.combat.playerAttacker).toBeNull();
+    expect(t.world.combat.playerHurtboxes).toBeNull();
+    t.game.dispose();
+    t.world.dispose();
+  });
+
+  it('a player-sourced status tick revokes mercy; a hostile-sourced one and a script kill do not', async () => {
+    const t = setup();
+    await t.game.loadPlugins(modules(corePlugin));
+    const c = t.game.ctx;
+    const wolf = c.actors.spawn({ kind: 'wolf', team: 'hostile', maxHealth: 100 });
+    const other = c.actors.spawn({ kind: 'hound', team: 'hostile', maxHealth: 100 });
+    c.events.emit('mercy', { verb: 'spare', creature: 'wolf', tier: 'normal', track: 'halvard', actorId: wolf.id });
+    const tick = (attackerId: string | null) =>
+      c.damage.apply({ attackerId, targetId: wolf.id, amount: 2, poise: 0, kind: 'status', statusId: 'bleed:test', statusKind: 'bleed', unblockable: true });
+    tick(other.id);
+    expect(c.state.isMercied(wolf.id)).toBe(true);
+    const hound = c.actors.spawn({ kind: 'hound', team: 'hostile', maxHealth: 100 });
+    c.events.emit('mercy', { verb: 'calm', creature: 'hound', tier: 'normal', track: 'dragons', actorId: hound.id });
+    c.damage.kill(hound.id);
+    expect(ofType(t.events, 'mercy.revoked')).toEqual([]);
+    tick('player');
+    expect(c.state.isMercied(wolf.id)).toBe(false);
+    expect(ofType(t.events, 'mercy.revoked').map((e) => e.actorId)).toEqual([wolf.id]);
+    t.game.dispose();
+    t.world.dispose();
+  });
+
+  it('swapAvatar refuses before the first attach; attachAvatar refuses an avatar the World does not hold', () => {
+    const t = setup();
+    const early = newKnight();
+    expect(t.game.ctx.player.swapAvatar(early)).toBe(false);
+    expect(t.world.avatar).toBeNull();
+    expect(() => t.game.attachAvatar(early)).toThrow(/World holds/);
+    const first = t.attachKnight();
+    expect(t.game.ctx.player.swapAvatar(first)).toBe(false);
+    expect(t.game.ctx.player.swapAvatar(newKnight())).toBe(true);
+    t.game.dispose();
+    t.world.dispose();
+  });
+
+  it('pressedAtMs reports the event time of a press this tick only', () => {
+    const t = setup();
+    const seen: Array<number | null> = [];
+    t.game.systems.add({ id: 'test.at', fixedPhase: 'input', fixedUpdate: (_dt, ctx) => seen.push(ctx.input.pressedAtMs('jump')) });
+    const ev = Object.assign(new Event('keydown'), { code: 'Space', repeat: false, preventDefault: () => {} });
+    Object.defineProperty(ev, 'timeStamp', { value: 1234.5 });
+    t.win.dispatchEvent(ev);
+    t.run(2);
+    expect(seen[0]).toBe(1234.5);
+    expect(seen[1]).toBeNull();
+    t.world.dispose();
+  });
+
+  it('a scoped wheel claim routes the wheel and is released on teardown', async () => {
+    const t = setup();
+    let claimed: (() => void) | null = null;
+    const plugin: GamePlugin = {
+      id: 'claimer',
+      setup(ctx) {
+        claimed = ctx.input.claimWheel('calm');
+      },
+    };
+    await t.game.loadPlugins(modules(plugin));
+    expect(claimed).not.toBeNull();
+    expect(t.input.wheelOwner).toBe('calm');
+    t.game.dispose();
+    expect(t.input.wheelOwner).toBeNull();
+    t.world.dispose();
+  });
+
+  it('BossState carries the registered thresholds', () => {
+    const t = setup();
+    const c = t.game.ctx;
+    const boss = c.actors.spawn({ kind: 'prior', team: 'hostile', maxHealth: 100 });
+    c.bosses.register(boss.id, { bossId: 'test-boss', nameKey: 'boss.test', phases: [0.66, 0.33], breaksPerPhase: 3 });
+    expect(c.bosses.state('test-boss')?.thresholds).toEqual([0.66, 0.33]);
+    t.world.dispose();
+  });
+
+  it('inventory.takeGold(n, reason) emits gold.spent with what was taken; nothing taken emits nothing', async () => {
+    const t = setup();
+    await t.game.loadPlugins(modules(corePlugin, inventoryPlugin));
+    const inv = t.game.ctx.services.get('inventory')!;
+    const start = inv.gold;
+    inv.addGold(30);
+    expect(inv.takeGold(10, 'bribe')).toBe(10);
+    expect(inv.takeGold(5)).toBe(5);
+    const all = inv.gold;
+    expect(inv.takeGold(all + 100, 'theft')).toBe(all);
+    expect(inv.takeGold(5, 'vendor')).toBe(0);
+    expect(inv.takeGold(-1, 'vendor')).toBe(0);
+    expect(ofType(t.events, 'gold.spent')).toEqual([
+      { amount: 10, reason: 'bribe', total: start + 20 },
+      { amount: 5, reason: 'script', total: start + 15 },
+      { amount: start + 15, reason: 'theft', total: 0 },
+    ]);
+    t.game.dispose();
     t.world.dispose();
   });
 });

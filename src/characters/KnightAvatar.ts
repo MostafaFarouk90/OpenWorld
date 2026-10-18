@@ -9,6 +9,7 @@ import {
   RIGHT_HAND_SLOT,
 } from './knightClips';
 import type { LocomotionInput } from './locomotionState';
+import type { PlayerAvatar } from './PlayerAvatar';
 
 /** The parts of AssetLoader the avatar needs; tests pass stand-ins. */
 export interface KnightAssetSource {
@@ -38,13 +39,18 @@ export interface KnightAvatarOptions extends AnimationControllerOptions {
  * then call `fixedUpdate` once per fixed tick after the physics step; see
  * contracts/animation-events.md for the timing combat relies on.
  */
-export class KnightAvatar {
+export class KnightAvatar implements PlayerAvatar {
+  readonly classId = 'knight' as const;
   readonly root = new THREE.Group();
   readonly model: THREE.Object3D;
   readonly controller: AnimationController;
   readonly skeleton: THREE.Skeleton;
   readonly weapon: THREE.Object3D;
   readonly shield: THREE.Object3D;
+  /** PlayerAvatar: the shield is the Knight's off-hand. */
+  get offhand(): THREE.Object3D {
+    return this.shield;
+  }
   /** Empty markers on the blade, for weapon sweeps. */
   readonly weaponHilt = new THREE.Object3D();
   readonly weaponTip = new THREE.Object3D();
