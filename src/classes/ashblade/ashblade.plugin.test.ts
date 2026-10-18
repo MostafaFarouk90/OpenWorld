@@ -8,6 +8,7 @@ import corePlugin from '../../core/core.plugin';
 import { Game } from '../../core/Game';
 import { MoveModifiers } from '../../core/MoveModifiers';
 import type { PluginModule } from '../../core/plugins';
+import { StealthEffects } from '../../stealth/hooks';
 import { InputManager } from '../../input/InputManager';
 import inventoryPlugin from '../../inventory/inventory.plugin';
 import { KinematicMover } from '../../enemies/steering/movers';
@@ -322,6 +323,48 @@ describe('ashblade plugin: Quiet Soles and Ash Cloud', () => {
     t.run(18 * 60 + 5);
     expect(t.ctx.services.require('abilities').use(slot)).toEqual({ ok: true });
     expect(s.blockers).toHaveLength(2);
+  });
+});
+
+describe('ashblade plugin: against the real StealthEffects (thread 18, #47)', () => {
+  /** The `stealth` service shape of stealth.plugin.ts for the two hooks, over the real effects class. */
+  const realStealth = () => {
+    const effects = new StealthEffects();
+    return { effects, hooks: { active: () => false, addNoiseScale: (s: string, v: number) => effects.addNoiseScale(s, v), addSightBlocker: (b: never) => effects.addSightBlocker(b) } };
+  };
+
+  it('Quiet Soles silences footsteps while learned and Ashblade, and lets go on respec', async () => {
+    const t = await boot();
+    const r = realStealth();
+    t.ctx.services.provide('stealth' as never, r.hooks as never);
+    t.asAshblade();
+    t.progression().learn(SKILL.quietSoles);
+    t.run(2);
+    expect(r.effects.noiseScale()).toBe(0);
+    const permit = t.progression().allowRespec('test');
+    t.progression().respec();
+    permit();
+    t.run(2);
+    expect(r.effects.noiseScale()).toBe(1);
+  });
+
+  it('Ash Cloud puts a 3.5 m, 6 s sight blocker ahead of the player that then expires', async () => {
+    const t = await boot();
+    const r = realStealth();
+    t.ctx.services.provide('stealth' as never, r.hooks as never);
+    t.asAshblade();
+    t.progression().learn(SKILL.quietSoles);
+    t.progression().learn(SKILL.ashCloud);
+    const slot = t.progression().bar().indexOf(SKILL.ashCloud);
+    expect(t.ctx.services.require('abilities').use(slot)).toEqual({ ok: true });
+    const [b] = r.effects.blockers();
+    expect(r.effects.blockers()).toHaveLength(1);
+    expect(b.r).toBe(3.5);
+    expect(Math.hypot(b.x - t.ctx.player.feet.x, b.z - t.ctx.player.feet.z)).toBeGreaterThan(1);
+    r.effects.tick(5.9);
+    expect(r.effects.blockers()).toHaveLength(1);
+    r.effects.tick(0.2);
+    expect(r.effects.blockers()).toHaveLength(0);
   });
 });
 
