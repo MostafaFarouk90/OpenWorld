@@ -6,6 +6,7 @@ import { REGION_BANDS, WATCH_GUARD_BAND } from './level';
 import type { AnchorLike } from './ports';
 import { SLICE_SPAWNERS } from './spawnerDefs';
 import { BRIGHTWATER_SPAWNERS } from './brightwaterSpawners';
+import { CUTPURSE } from './cutpurse/tuning';
 import { SpawnerRegistry, type SpawnRequest } from './spawners';
 import { ENEMY_STRINGS_EN } from './strings.en';
 import type { SpawnerDef } from './types';
@@ -35,21 +36,20 @@ describe('HARROWMARK_SPAWNERS table', () => {
   it('has the contract ids, each registered once alongside the other tables', () => {
     const ids = HARROWMARK_SPAWNERS.map((d) => d.id);
     expect(ids).toEqual([
-      'r03.guildhall', 'm07.thieves', 'underways.kennel-1', 'underways.kennel-2', 'grimtooth-summons',
+      'r03.guildhall', 'm07.thieves', 'underways.kennel-1', 'underways.kennel-2', 'grimtooth-summons', 'stealth.m06.watch',
       'stealth.m09.hall', 'stealth.m09.stacks', 'stealth.m09.clerk',
     ]);
     expect(() => registry([...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS], [])).not.toThrow();
     expect(() => registry([...HARROWMARK_SPAWNERS, by('m07.thieves')], [])).toThrow();
   });
 
-  it('uses existing kinds, member anchors that are unique and sized to the count (m07 has one spare)', () => {
+  it('uses existing kinds, member anchors that are unique and sized to the count', () => {
     const all = new Set<string>();
     for (const d of HARROWMARK_SPAWNERS) {
       expect(ENEMY_DEFS[d.enemy as keyof typeof ENEMY_DEFS], d.id).toBeDefined();
       const m = d.memberAnchors ?? [];
       expect(new Set(m).size, d.id).toBe(m.length);
-      if (d.id === 'm07.thieves') expect(m).toHaveLength(d.count - 1);
-      else expect(m, d.id).toHaveLength(d.count);
+      expect(m, d.id).toHaveLength(d.count);
       expect(d.leaderSlot === undefined || (d.leaderSlot >= 0 && d.leaderSlot < d.count), d.id).toBe(true);
       expect(m.length === 0 || m.includes(d.anchor), d.id).toBe(true);
       if (d.id.startsWith('stealth.m09')) for (const a of m) { expect(all.has(a), a).toBe(false); all.add(a); }
@@ -71,6 +71,17 @@ describe('HARROWMARK_SPAWNERS table', () => {
     }
   });
 
+  it('stealth.m06.watch: 3 guards on spawn.m06.watch-1..3, live with M06, patrolling gate-square 1..5', () => {
+    const d = by('stealth.m06.watch');
+    expect(d).toMatchObject({ enemy: 'watch-guard', count: 3, activation: { quest: 'm06' }, band: WATCH_GUARD_BAND, respawn: 'never' });
+    expect(d.memberAnchors).toEqual([1, 2, 3].map((i) => `spawn.m06.watch-${i}`));
+    expect(d.patrol).toEqual([1, 2, 3, 4, 5].map((i) => `patrol.m06.gate-square.${i}`));
+    const { reg, reqs } = registry([d], [...d.memberAnchors!, ...(d.patrol as string[])]);
+    expect(reg.onQuestStarted('m06')).toHaveLength(3);
+    expect(reqs.every((r) => r.patrol.length === 5)).toBe(true);
+    expect(reg.onQuestStarted('m07')).toHaveLength(0);
+  });
+
   it('activates R03 and M07 by quest, kennels on the Underways, summons by hand', () => {
     expect(by('r03.guildhall').activation).toEqual({ quest: 'r03' });
     expect(by('m07.thieves').activation).toEqual({ quest: 'm07' });
@@ -80,6 +91,7 @@ describe('HARROWMARK_SPAWNERS table', () => {
 
   it('kennels never respawn, are not ephemeral, lead from slot 0, and use hounds 1-3 and 4-6', () => {
     for (const id of ['underways.kennel-1', 'underways.kennel-2']) {
+      expect(by(id).tag).toBe('d02.kennels');
       expect(by(id)).toMatchObject({ enemy: 'ember-hound', respawn: 'never', count: 3, leaderSlot: 0 });
       expect(by(id).ephemeral).toBeFalsy();
     }
@@ -99,26 +111,21 @@ describe('HARROWMARK_SPAWNERS table', () => {
     expect(reg.serialize().cleared).not.toContain('grimtooth-summons');
   });
 
-  it('a fleeing cutpurse cannot stall the kill objective: 3 kills remain possible after one escapes', () => {
+  it('m07.thieves is exactly 3 on m07.thieves.1-3; an escape is refilled so 3 kills stay possible', () => {
     const d = by('m07.thieves');
+    expect(d.count).toBe(3);
+    expect(d.memberAnchors).toEqual([1, 2, 3].map((i) => `m07.thieves.${i}`));
     const { reg, reqs } = registry([d], [...d.memberAnchors!]);
     const ids = reg.spawnGroup('m07.thieves');
-    expect(ids).toHaveLength(4);
+    expect(ids).toHaveLength(3);
     expect(reqs.every((r) => r.spawnTag === 'm07.thieves')).toBe(true);
-    // one robs the player and flees away with the gold
-    expect(reg.onMemberGone(ids[0]!, 'despawned')).toBe(false);
-    const killed = ids.slice(1);
-    expect(killed.length).toBeGreaterThanOrEqual(3); // the objective's need
-    killed.forEach((a) => reg.onMemberGone(a, 'died'));
-    expect(reg.alive('m07.thieves')).toHaveLength(0);
-  });
-
-  it('with no escape the group clears once all four are down', () => {
-    const d = by('m07.thieves');
-    const { reg } = registry([d], [...d.memberAnchors!]);
-    const ids = reg.spawnGroup('m07.thieves');
-    const results = ids.map((a) => reg.onMemberGone(a, 'died'));
-    expect(results).toEqual([false, false, false, true]);
+    // one robs the player and escapes with the gold: no clear, and the slot comes back
+    expect(reg.onMemberGone(ids[0]!, 'escaped')).toBe(false);
+    expect(reg.tickRefills(CUTPURSE.refillSeconds + 1)).toHaveLength(1);
+    const alive = reg.alive('m07.thieves');
+    expect(alive).toHaveLength(3);
+    const results = alive.map((a) => reg.onMemberGone(a, 'died'));
+    expect(results).toEqual([false, false, true]);
   });
 
   it('a missing anchor warns once and spawns nothing', () => {

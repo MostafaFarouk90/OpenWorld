@@ -10,7 +10,7 @@ import { ENEMY_CLIPS } from './clips';
 import { Cutpurse } from './cutpurse/Cutpurse';
 import { BURNING_BITE, HOUND } from './hound/tuning';
 import { bodyPitch } from './quadruped/gait';
-import { readStatusData } from './statusData';
+import { readStatusData, STATUS_DATA_KEY } from './statusData';
 import type { EnemyBody } from './body';
 import type { ActorId, ActorLike, EnemyHost, NavPort } from './ports';
 import type { ObserverPose } from './perceptionHook';
@@ -414,7 +414,7 @@ export class Enemy {
       yieldAllowed: this.env.mercyUnlocked('spare'),
       packNearby: this.def.behaviour === 'circle-rush' ? this.env.packNearby(this) : 0,
     };
-    const status = readStatusData(this.actor.data['status']);
+    const status = readStatusData(this.actor.data[STATUS_DATA_KEY]);
     if (status.stunSeconds > 0) this.brain.stunned(status.stunSeconds);
     const intent = this.brain.step(dt, senses);
     if (this.thief) {

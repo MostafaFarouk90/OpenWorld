@@ -382,6 +382,7 @@ describe('pack leader', () => {
     const ids = t.m.service.spawnGroup('pack');
     expect(t.m.service.packLeader('pack')).toBe(ids[1]);
     expect(hounds(t, ids).map((e) => e.isPackLeader)).toEqual([false, true, false]);
+    expect(ids.map((id) => t.m.service.view(id)!.packLeader)).toEqual([false, true, false]);
   });
 
   it('edge: a dead leader leaves no leader (no automatic successor); a group with no leaderSlot has none', () => {
@@ -391,6 +392,8 @@ describe('pack leader', () => {
     t.tick(DT);
     expect(t.m.service.packLeader('pack')).toBeNull();
     expect(t.m.get(ids[1]!)!.isPackLeader).toBe(false);
+    expect(t.m.service.view(ids[1]!)!.packLeader).toBe(false);
+    expect(t.m.service.view(ids[2]!)!.packLeader).toBe(false);
     t.m.service.spawnGroup('plain');
     expect(t.m.service.packLeader('plain')).toBeNull();
     expect(t.m.service.packLeader('missing')).toBeNull();
@@ -511,6 +514,10 @@ describe('status data and status ticks', () => {
     expect(readStatusData('x')).toEqual({ stunSeconds: 0, speedScale: 1 });
     expect(readStatusData([{ kind: 'stun', remaining: 0.8 }, { kind: 'stun', remaining: 0.3 }]).stunSeconds).toBe(0.8);
     expect(readStatusData({ stun: { remaining: 1.5 } }).stunSeconds).toBe(1.5);
+    // The ActorStatusView shape (thread 2's PR #45): stunned, stunRemaining, slow.
+    expect(readStatusData({ stunned: true, stunRemaining: 0.7, slow: 0 })).toEqual({ stunSeconds: 0.7, speedScale: 1 });
+    expect(readStatusData({ stunned: false, stunRemaining: 0, slow: 0.4 }).speedScale).toBeCloseTo(0.6);
+    expect(readStatusData({ stunned: false, stunRemaining: 0, slow: 0 })).toEqual({ stunSeconds: 0, speedScale: 1 });
     expect(readStatusData({ stun: 0 }).stunSeconds).toBe(0);
     expect(readStatusData([{ kind: 'slow', remaining: 2, slow: 0.4 }, { kind: 'slow', remaining: 2, slow: 0.2 }]).speedScale).toBeCloseTo(0.6);
     expect(readStatusData({ slow: { slow: 5, remaining: 1 } }).speedScale).toBeCloseTo(0.1); // clamped to 0.9 removed

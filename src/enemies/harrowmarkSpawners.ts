@@ -33,16 +33,15 @@ export const HARROWMARK_SPAWNERS: readonly SpawnerDef[] = [
     respawn: 'never',
     leash: true,
   },
-  // M07 The Tilted Anvil: o2 kills 3 alley-cutpurses tagged m07.thieves once M07 starts. A cutpurse that robs the
-  // player and flees despawns with the gold (counts as despawned, not as a kill), so the group holds ONE MORE
-  // than the objective needs: one escape still leaves 3 to kill or spare. The fourth member has no anchor of its
-  // own (thread 17 places m07.thieves.1-3) and takes a ring slot around the first. Because an escaped member
-  // never counts as gone, enemies.groupCleared does not fire after an escape; the quest counts kills, not that event.
+  // M07 The Tilted Anvil: o2 kills 3 alley-cutpurses tagged m07.thieves once M07 starts. Exactly 3 members on
+  // m07.thieves.1-3 (thread 17), no margin: a cutpurse that robs the player and escapes (flees and despawns)
+  // frees its slot, and the registry refills it at its anchor after CUTPURSE.refillSeconds while M07 is live, so
+  // the objective cannot stall. An escape never counts as gone, so `enemies.groupCleared` waits for the refill.
   {
     id: 'm07.thieves',
     tag: 'm07.thieves',
     enemy: 'alley-cutpurse',
-    count: 4,
+    count: 3,
     anchor: 'm07.thieves.1',
     memberAnchors: members('m07.thieves.', 1, 3),
     band: { min: 4, max: 5 },
@@ -51,11 +50,12 @@ export const HARROWMARK_SPAWNERS: readonly SpawnerDef[] = [
     leash: false,
   },
   // D02 Hounds of the Underways: six hounds in two kennels, live on entering the Underways (anchors are thread 3a's,
-  // `underways.spawn.hound-1..6`, per the interiors review). Thread 6's o3 needs 4 Calms/kills of 6: a margin of 2
-  // for hounds that flee at 15% health. Not ephemeral: kills and mercy persist. Slot 0 leads each pack.
+  // `underways.spawn.hound-1..6`, per the interiors review) tagged d02.kennels. Thread 6's o3 needs 4 Calms/kills of 6:
+  // a margin of 2 for hounds that flee at 15% health (a fleeing hound goes idle and returns). Not ephemeral: kills and mercy persist. Slot 0 leads each pack.
   ...[1, 2].map(
     (n): SpawnerDef => ({
       id: `underways.kennel-${n}`,
+      tag: 'd02.kennels',
       enemy: 'ember-hound',
       count: 3,
       anchor: `underways.spawn.hound-${n * 3 - 2}`,
@@ -81,6 +81,21 @@ export const HARROWMARK_SPAWNERS: readonly SpawnerDef[] = [
     leash: false,
     ephemeral: true,
     leaderSlot: 0,
+  },
+  // M06 The South Gate (stealth): three observer-only watch guards on the gate square, live while M06 is active.
+  // Guards stand on spawn.m06.watch-1..3 and walk the loop patrol.m06.gate-square.1..5 (thread 17's names;
+  // slice-2-stealth-chase.md section 12 B1 and B3). Thread 18 reads them through enemies.perception.state.
+  {
+    id: 'stealth.m06.watch',
+    enemy: 'watch-guard',
+    count: 3,
+    anchor: 'spawn.m06.watch-1',
+    memberAnchors: members('spawn.m06.watch-', 1, 3),
+    patrol: members('patrol.m06.gate-square.', 1, 5),
+    band: WATCH_GUARD_BAND,
+    activation: { quest: 'm06' },
+    respawn: 'never',
+    leash: false,
   },
   // M09 Oswin's Ledger: observer-only watch-guards in the Counting-House (interior id `counting-house`; anchors
   // spawn.m09.watch-1..4 are 3a's, stealth plan: 4 is the static clerk-watch). Split: hall 2 (watch-1, 2, patrolling

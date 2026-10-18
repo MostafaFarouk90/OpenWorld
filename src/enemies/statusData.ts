@@ -13,10 +13,30 @@ export interface StatusRead {
   speedScale: number;
 }
 
+/**
+ * LOCAL PORT of thread 2's `ActorStatusView` (`src/status/view.ts`, PR #45, not on this branch yet). Same shape: the
+ * object under `actor.data[STATUS_DATA_KEY]`. When that file lands, replace this port with an import of its type and key.
+ * Read it every tick and never keep a reference; `undefined` means no status.
+ */
+export interface ActorStatusView {
+  stunned: boolean;
+  /** Seconds of stun left. */
+  stunRemaining: number;
+  /** Fraction of move speed removed, 0..1 (speed scales by `1 - slow`). */
+  slow: number;
+}
+export const STATUS_DATA_KEY = 'status';
+
 const NONE: StatusRead = { stunSeconds: 0, speedScale: 1 };
 
 export function readStatusData(raw: unknown): StatusRead {
   if (!raw || typeof raw !== 'object') return NONE;
+  if (!Array.isArray(raw) && ('stunned' in raw || 'stunRemaining' in raw || typeof (raw as { slow?: unknown }).slow === 'number')) {
+    const v = raw as Partial<ActorStatusView>;
+    const stun = v.stunned === true ? Math.max(num(v.stunRemaining, 0), 0.05) : 0;
+    const slow = clamp01(num(v.slow, 0));
+    return stun === 0 && slow === 0 ? NONE : { stunSeconds: stun, speedScale: Math.max(0.1, 1 - slow) };
+  }
   let stun = 0;
   let slow = 0;
   const take = (kind: unknown, value: unknown): void => {
