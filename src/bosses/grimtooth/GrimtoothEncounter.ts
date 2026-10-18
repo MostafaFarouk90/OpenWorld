@@ -83,6 +83,12 @@ export class GrimtoothEncounter implements GrimtoothHooks {
   private readonly landing = new THREE.Vector3();
   private readonly leapDir = new THREE.Vector3(0, 0, -1);
   private aimed = false;
+  /** The head's position on the previous airborne tick: each tick tests only the segment swept since (review should-fix). */
+  private readonly prevHead = new THREE.Vector3();
+  /** Fixed ticks run, so a `boss.phase` from the same hit as a tail break does not hand the tail back (review nit). */
+  private ticks = 0;
+  private leapK = -1;
+  private tailSpentAt = -1;
   private leapHit = false;
   private collarFlash = 0;
   private telegraphT = -1;
@@ -134,7 +140,7 @@ export class GrimtoothEncounter implements GrimtoothHooks {
       }),
       ctx.events.on('boss.phase', (p) => {
         if (!mine(p)) return;
-        this.tailSpent = false;
+        if (this.tailSpentAt !== this.ticks) this.tailSpent = false;
         this.brain.onPhase(p.phase);
       }),
       ctx.events.on('boss.releaseWindow', (p) => {
@@ -200,6 +206,7 @@ export class GrimtoothEncounter implements GrimtoothHooks {
   /** Fixed tick: brain, movement, facing, poise regen, telegraph glow, fx and the outcome presentation. */
   tick(dt: number): void {
     if (this.ended || !(dt > 0)) return;
+    this.ticks++;
     this.model?.update(dt);
     this.decal.update(dt);
     this.shell.update(dt, this.root.position, this.root.rotation.y);
@@ -261,6 +268,7 @@ export class GrimtoothEncounter implements GrimtoothHooks {
 
   telegraphCancelled(swingId: number): void {
     this.ctx.events.emit('telegraph.cancelled', { actorId: this.actor.id, swingId });
+    this.aimed = false;
     this.endTelegraph();
   }
 
@@ -268,13 +276,14 @@ export class GrimtoothEncounter implements GrimtoothHooks {
     const player = this.ctx.player.feet;
     this.aimed = true;
     this.aimPoint.set(player.x, this.root.position.y, player.z);
-    this.decal.start(this.root.position, this.leapTarget(this.tmp.copy(this.aimPoint)));
+    this.decal.retarget(this.root.position, this.leapTarget(this.tmp.copy(this.aimPoint)));
   }
 
   leapStart(): void {
     if (!this.aimed) this.aim();
     this.aimed = false;
     this.leapHit = false;
+    this.leapK = -1;
     this.endTelegraph();
     this.takeoff.copy(this.root.position);
     this.leapTarget(this.landing.copy(this.aimPoint));
@@ -282,6 +291,7 @@ export class GrimtoothEncounter implements GrimtoothHooks {
     if (this.leapDir.lengthSq() < 1e-6) this.leapDir.set(-Math.sin(this.root.rotation.y), 0, -Math.cos(this.root.rotation.y));
     this.leapDir.normalize();
     this.root.rotation.y = Math.atan2(-this.leapDir.x, -this.leapDir.z);
+    this.prevHead.set(this.takeoff.x + this.leapDir.x * POUNCE.stopShort, 0, this.takeoff.z + this.leapDir.z * POUNCE.stopShort);
     this.oneShot('pounce');
     this.sfx('sfx.grimtooth.pounce');
   }
@@ -295,9 +305,14 @@ export class GrimtoothEncounter implements GrimtoothHooks {
     if (this.leapHit) return;
     // His head reaches the stop-short distance past his feet, so the swept segment ends at the aim point on landing.
     const head = { x: pos.x + this.leapDir.x * POUNCE.stopShort, z: pos.z + this.leapDir.z * POUNCE.stopShort };
+    const from = { x: this.prevHead.x, z: this.prevHead.z };
+    this.prevHead.set(head.x, 0, head.z);
     const feet = this.ctx.player.feet;
     if (Math.abs(feet.y - pos.y) > 2.5) return;
-    if (distToSegment(feet, this.takeoff, head) > POUNCE.radius) return;
+    // The take-off tick sweeps from his body (feet) so a player standing at his nose is not skipped.
+    const start = this.leapK < 0 ? { x: this.takeoff.x, z: this.takeoff.z } : from;
+    this.leapK = k;
+    if (distToSegment(feet, start, head) > POUNCE.radius) return;
     this.leapHit = true;
     this.hitPlayer(MOVES.pounce, swingId);
   }
@@ -486,6 +501,7 @@ export class GrimtoothEncounter implements GrimtoothHooks {
     const dot = d && len > 1e-6 ? (d.x * -Math.sin(yaw) + d.z * -Math.cos(yaw)) / len : -1;
     if (dot >= GRIMTOOTH.tailFacingDot && !this.tailSpent && this.actor.poise > 0 && this.brain.state !== 'window') {
       this.tailSpent = true;
+      this.tailSpentAt = this.ticks;
       req.poise = Math.max(req.poise ?? 0, this.actor.poise);
       return;
     }
@@ -596,7 +612,8 @@ export class GrimtoothEncounter implements GrimtoothHooks {
     if (this.ended) return;
     this.ended = true;
     // A calm leaves the pack to thread 1's scatter (review B3): only a kill or a reset clears the group.
-    if (end !== 'released') this.resetSummons();
+    // A death or load during the calm walk-off finishes as a reset, and still leaves the scattering pack alone (review B).
+    if (end !== 'released' && this.outcomeKind !== 'released') this.resetSummons();
     for (const off of this.offs.splice(0)) off();
     // As the Prior: the registry drops the registration on `actor.despawned` (exactly one `boss.ended`); only a teardown
     // unregisters first.

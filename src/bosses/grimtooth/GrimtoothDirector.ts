@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { bossOutcomeFlag } from '../../actors/BossRegistry';
 import type { GameContext } from '../../core/Game';
+import { UNDERWAYS_DEF } from '../../interiors/underways/generate';
 import { BossArena, type BossModelState } from '../arena/BossArena';
 import { AshVeil } from '../prior/priorFx';
 import { GrimtoothEncounter, type GrimtoothPlaces } from './GrimtoothEncounter';
@@ -41,6 +42,7 @@ export class GrimtoothDirector {
       gate: ARENA.gate,
       gateClearance: ARENA.gateClearance,
       veilOffset: ARENA.veilOffset,
+      veilPlacement: () => gateVeil(ctx),
       introSource: INTRO_SOURCE,
       veil,
       intro: {
@@ -66,7 +68,6 @@ export class GrimtoothDirector {
         if (!quests) return true;
         return quests.objectiveDone(D02.questId, D02.houndObjective) || quests.state(D02.questId) === 'completed';
       },
-      watchArming: (changed) => ctx.services.get('quests')?.onChange(changed) ?? (() => {}),
       insideForReload: (feet) => {
         const c = ctx.anchors.find(ARENA.centre);
         if (!c) return false;
@@ -109,4 +110,22 @@ export class GrimtoothDirector {
     }
     return { centre: new THREE.Vector3(centre.position.x, centre.position.y, centre.position.z), centreYaw: centre.yaw };
   }
+}
+
+/**
+ * The veil across 3a's real gate: the blocker rect's centre, spanning its long side (review should-fix 3: the door-to-centre
+ * line runs 27 degrees off the corridor, so the default placement would skew it into the wall). 3a's interior is placed by
+ * translation only, so the door anchor gives the local-to-world offset.
+ */
+export function gateVeil(ctx: Pick<GameContext, 'anchors'>): { at: THREE.Vector3Like; yaw: number } | null {
+  const gate = UNDERWAYS_DEF.blockers?.find((b) => b.id === ARENA.gate)?.rect;
+  const localDoor = UNDERWAYS_DEF.anchors.find((a) => a.id === ARENA.arenaDoor);
+  const door = ctx.anchors.find(ARENA.arenaDoor);
+  if (!gate || !localDoor || !door) return null;
+  const ox = door.position.x - localDoor.x;
+  const oz = door.position.z - localDoor.z;
+  const at = { x: (gate.x0 + gate.x1) / 2 + ox, y: door.position.y, z: (gate.z0 + gate.z1) / 2 + oz };
+  // The veil plane spans its local X at yaw 0: across a gate that is wider in X, else turned a quarter.
+  const yaw = gate.x1 - gate.x0 >= gate.z1 - gate.z0 ? 0 : Math.PI / 2;
+  return { at, yaw };
 }

@@ -53,6 +53,18 @@ export class PounceDecal {
     this.apply();
   }
 
+  /** Moves the strip to a new end (the aim lock) without restarting the fill (review nit: it used to refill). */
+  retarget(from: THREE.Vector3Like, to: THREE.Vector3Like): void {
+    if (!this.mesh.visible) {
+      this.start(from, to);
+      return;
+    }
+    const t = this.t;
+    this.start(from, to);
+    this.t = t;
+    this.apply();
+  }
+
   /** Fills 0 to full length over `POUNCE.decalFillSeconds`, then stays until `stop()`. */
   update(dt: number): void {
     if (!this.mesh.visible || !(dt > 0)) return;
