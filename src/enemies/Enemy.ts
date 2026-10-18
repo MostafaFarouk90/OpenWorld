@@ -1013,7 +1013,8 @@ export class Enemy {
     if (this.phase !== 'alive' || this.asleep || this.observerOnly) return false;
     if (this.actor.team !== 'hostile' || this.actor.dead) return false;
     // The Calm window counts only once Calm is unlocked (before that a circling hound is just an enemy).
-    if (this.mercyOpen || (this.calmOpen && this.env.mercyUnlocked('calm')) || this.warmHandOpen) return false;
+    // A calming def's mercy window is Calm's (open only once unlocked) or the Warm Hand's; the other verbs open on `mercyOpen`.
+    if (this.def.mercy?.when === 'calming' ? (this.calmOpen && this.env.mercyUnlocked('calm')) || this.warmHandOpen : this.mercyOpen) return false;
     if (this.thief && this.thief.stolenGold > 0) return false;
     if (!dir || !Number.isFinite(dir.x) || !Number.isFinite(dir.z) || !Number.isFinite(metres) || !(metres > 0)) return false;
     const len = Math.hypot(dir.x, dir.z);
