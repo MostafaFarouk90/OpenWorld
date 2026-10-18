@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ServiceMap } from '../vfx/ports';
 import { BURN, SURGE } from '../vfx/tuning';
 import { Burn } from './Burn';
 import { SpellCaster } from './SpellCaster';
@@ -12,8 +11,8 @@ const DT = 1 / 60;
 let w: World;
 let caster: SpellCaster;
 let burn: Burn;
-let services: Partial<ServiceMap>;
-const svc = () => ({ provide: () => () => undefined, get: (k: keyof ServiceMap) => services[k] }) as never;
+let services: Record<string, any>;
+const svc = () => ({ provide: () => () => undefined, get: (k: string) => services[k] }) as never;
 const deps = () => ({ damage: w.damage, clock: w.clock, services: svc(), burn });
 const finish = (s = 3) => { for (let i = 0; i < s / DT; i++) caster.update(DT); };
 
@@ -67,6 +66,17 @@ describe('Surge', () => {
     expect(w.damage.applied.map((r) => r.targetId)).toEqual(['seven', 'nine']);
     expect(w.damage.applied[0].poise).toBe(SURGE.cinderPoise);
   });
+  it('an unknown sound key does not break the cast', () => {
+    const spawnEffect = vi.fn();
+    services = { audio: { play: () => { throw new Error('Unknown sound'); }, playAt: () => { throw new Error('Unknown sound'); } }, vfx: { spawnEffect, pulseScreen: vi.fn(), shake: vi.fn() } as never };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    registerSurge(w, caster, deps());
+    expect(caster.cast('player', SURGE.spellId).ok).toBe(true);
+    expect(() => finish()).not.toThrow();
+    expect(spawnEffect).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it('tolerates missing vfx/audio and uses them when present', () => {
     registerSurge(w, caster, deps());
     caster.cast('player', SURGE.spellId);
@@ -76,7 +86,7 @@ describe('Surge', () => {
     const spawnEffect = vi.fn();
     const pulseScreen = vi.fn();
     const shake = vi.fn();
-    services = { audio: { play }, vfx: { spawnEffect, pulseScreen, shake } as never };
+    services = { audio: { play, playAt: play }, vfx: { spawnEffect, pulseScreen, shake } as never };
     burn.add(15, 't'); // blaze
     finish(7);
     caster.cast('player', SURGE.spellId);
@@ -160,7 +170,7 @@ describe('Rally', () => {
     const play = vi.fn();
     const spawnEffect = vi.fn();
     const reportTrigger = vi.fn();
-    services = { audio: { play }, vfx: { spawnEffect } as never, abilities: { registerHandler: () => () => undefined, reportTrigger } as never };
+    services = { audio: { play, playAt: play }, vfx: { spawnEffect } as never, abilities: { registerHandler: () => () => undefined, reportTrigger } as never };
     registerRally(w, caster, { services: svc() });
     caster.cast('player', 'rally-cry');
     finish();

@@ -2,8 +2,9 @@
 import * as THREE from 'three';
 import type {
   ActorId, ActorLike, ActorsLike, ClockLike, DamageLike, DamageResultLike, EventsLike, GameSystem, PluginContext, PlayerLike,
-  ServiceMap, VfxEventMap, VfxEventType,
+  VfxEventMap, VfxEventType,
 } from '../vfx/ports';
+import type { SpellsService } from './types';
 import { Ember } from './Ember';
 import type { SpellHost } from './SpellCaster';
 
@@ -123,17 +124,17 @@ export interface FakeCtx {
   ctx: PluginContext;
   world: World;
   systems: GameSystem[];
-  services: Partial<ServiceMap>;
+  services: Record<string, unknown> & { spells?: SpellsService };
   persisted: Map<string, { key: string; version: number; serialize(): unknown; load(d: unknown, v: number): void }>;
   pressed: Set<string>;
   /** Runs the fixed systems in phase order for `ticks` ticks of dt. */
   tick(ticks?: number, dt?: number): void;
 }
 
-export function makeCtx(extra: Partial<ServiceMap> = {}): FakeCtx {
+export function makeCtx(extra: Record<string, unknown> = {}): FakeCtx {
   const world = makeWorld();
   const systems: GameSystem[] = [];
-  const services: Partial<ServiceMap> = { ...extra };
+  const services: Record<string, unknown> = { ...extra };
   const persisted: FakeCtx['persisted'] = new Map();
   const pressed = new Set<string>();
   const phases = ['input', 'intent', 'animation', 'afterCombat', 'rules', 'late'];
@@ -146,8 +147,8 @@ export function makeCtx(extra: Partial<ServiceMap> = {}): FakeCtx {
     actors: world.actors,
     damage: world.damage,
     services: {
-      provide(name: keyof ServiceMap, impl: never) { (services as Record<string, unknown>)[name] = impl; return () => { delete services[name]; }; },
-      get(name: keyof ServiceMap) { return services[name]; },
+      provide(name: string, impl: unknown) { services[name] = impl; return () => { delete services[name]; }; },
+      get(name: string) { return services[name]; },
     },
     systems: { add(s: GameSystem) { systems.push(s); return () => void systems.splice(systems.indexOf(s), 1); } },
     persist: { register(p: FakeCtx['persisted'] extends Map<string, infer V> ? V : never) { persisted.set(p.key, p); return () => void persisted.delete(p.key); } },

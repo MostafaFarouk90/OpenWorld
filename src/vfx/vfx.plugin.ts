@@ -35,7 +35,7 @@ const plugin = {
   dependsOn: ['core', 'quality'],
   setup(ctx: PluginContext) {
     active?.dispose();
-    const ground = ctx.heightAt ?? terrainHeightAt;
+    const ground = terrainHeightAt;
     const vfx = new VfxServiceImpl({
       scene: ctx.scene,
       heightAt: ground,

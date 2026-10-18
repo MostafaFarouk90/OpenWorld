@@ -115,7 +115,7 @@ export class SpellCaster {
     this.active = a;
     if (casterId === this.host.player.actor.id) {
       try {
-        a.removeModifier = this.host.player.addMoveModifier(SPELL_MOVE_SOURCE, { lockMove: def.lockMove, lockActions: [...SPELL_LOCK_ACTIONS] });
+        a.removeModifier = this.host.player.addMoveModifier(SPELL_MOVE_SOURCE, { lockMove: def.lockMove, lockActions: SPELL_LOCK_ACTIONS });
       } catch {
         return abort();
       }

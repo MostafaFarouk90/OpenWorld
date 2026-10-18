@@ -1,3 +1,4 @@
+import { looseService } from '../vfx/ports';
 import type { CastResult } from './SpellCaster';
 import type { SpellDef } from './spellDefs';
 
@@ -17,9 +18,15 @@ export interface SpellsService {
   def(spellId: string): SpellDef | undefined;
 }
 
-declare module '../vfx/ports' {
-  interface ServiceMap {
-    spells?: SpellsService;
+declare module '../core/Services' {
+  interface GameServices {
+    spells: SpellsService;
+  }
+}
+declare module '../core/events' {
+  interface GameEventMap {
+    'ember.changed': { value: number; previous: number };
+    'spell.cancelled': { casterId: string; spellId: string; reason: string };
   }
 }
 
@@ -39,6 +46,6 @@ export interface AbilitiesServiceV2 {
   registerHandler(skillId: string, handler: (args: AbilityHandlerArgs) => AbilityHandlerResult): () => void;
 }
 
-export function abilitiesOf(services: { get(name: 'abilities'): unknown }): AbilitiesServiceV2 | undefined {
-  return services.get('abilities') as AbilitiesServiceV2 | undefined;
+export function abilitiesOf(services: { get(name: never): unknown }): AbilitiesServiceV2 | undefined {
+  return looseService(services, 'abilities') as AbilitiesServiceV2 | undefined;
 }
