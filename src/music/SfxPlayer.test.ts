@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { registerPlaceholderSfx, SfxPlayer } from './SfxPlayer';
-import { SFX, SFX_IDS, type SfxId } from './sfxLayers';
+import { SFX, SFX_IDS, SPELL_SFX_IDS, type SfxId } from './sfxLayers';
 import { sfxSeconds, SFX_VARIANTS } from './sfxSynth';
 
 const POS = { x: 1, y: 2, z: 3 };
@@ -110,10 +110,10 @@ describe('registerPlaceholderSfx', () => {
   it('registers 11 ids x 3 variants as wav and returns the keys', () => {
     const register = vi.fn();
     const keys = registerPlaceholderSfx({ register }, 0.5);
-    expect(keys).toHaveLength(SFX_IDS.length * SFX_VARIANTS);
-    expect(keys).toHaveLength(33);
-    expect(new Set(keys).size).toBe(33);
-    expect(register).toHaveBeenCalledTimes(33);
+    expect(keys).toHaveLength(SFX_IDS.length * SFX_VARIANTS + SPELL_SFX_IDS.length);
+    expect(keys).toHaveLength(36);
+    expect(new Set(keys).size).toBe(36);
+    expect(register).toHaveBeenCalledTimes(36);
     for (const [key, def] of register.mock.calls) {
       expect(keys).toContain(key);
       expect(def.format).toEqual(['wav']);
@@ -122,5 +122,25 @@ describe('registerPlaceholderSfx', () => {
     }
     expect(keys).toContain('sfx.thump#2');
     expect(keys.map((k) => k.split('#')[0])).toEqual(expect.arrayContaining(SFX_IDS as SfxId[]));
+  });
+
+  it('registers the spell sounds under their exact keys, with no variant suffix', () => {
+    const register = vi.fn();
+    const keys = registerPlaceholderSfx({ register });
+    for (const id of ['sfx.surge.charge', 'sfx.surge.release', 'sfx.rally']) {
+      expect(keys).toContain(id);
+      expect(register.mock.calls.filter((c) => c[0] === id)).toHaveLength(1);
+    }
+  });
+
+  it('a registry that throws on unknown keys (as AudioManager does) accepts every spell key after registration, and only those', () => {
+    const known = new Set<string>();
+    registerPlaceholderSfx({ register: (key) => void known.add(key) });
+    const play = (key: string): void => {
+      if (!known.has(key)) throw new Error(`Unknown sound "${key}"`);
+    };
+    for (const id of SPELL_SFX_IDS) expect(() => play(id)).not.toThrow();
+    expect(() => play('sfx.surge.charge#0')).toThrow(/Unknown sound/);
+    expect(() => play('sfx.nonexistent')).toThrow(/Unknown sound/);
   });
 });

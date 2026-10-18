@@ -57,3 +57,22 @@ describe('sfxSeconds / sfxKey', () => {
     expect(sfxKey('sfx.block', 0)).toBe('sfx.block#0');
   });
 });
+
+describe('spell sounds', () => {
+  const ids = ['sfx.surge.charge', 'sfx.surge.release', 'sfx.rally'] as const;
+  it.each(ids.map((id) => [id]))('%s synthesises a valid, non-silent, click-free sample', (id) => {
+    const s = synthSfx(id, 1, SR);
+    expect(s.length).toBe(Math.round(sfxSeconds(id) * SR));
+    let peak = 0;
+    for (const x of s) {
+      expect(Number.isFinite(x)).toBe(true);
+      expect(Math.abs(x)).toBeLessThanOrEqual(1);
+      peak = Math.max(peak, Math.abs(x));
+    }
+    expect(peak).toBeGreaterThan(0.05);
+    expect(Math.abs(s[s.length - 1])).toBeLessThan(0.01);
+  });
+  it('rejects a bad variant for a spell sound', () => {
+    expect(() => synthSfx('sfx.rally', 3, SR)).toThrow();
+  });
+});
