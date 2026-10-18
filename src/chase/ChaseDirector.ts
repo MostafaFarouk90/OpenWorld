@@ -132,18 +132,26 @@ export class ChaseDirector {
     this.elapsed += dt;
     this.courier.step(dt, this.distanceToCourier());
     this.gap = this.distanceToCourier();
-    if (this.gap <= CHASE.catchRadius) {
-      this.phase = 'caught';
-      this.caughtLive = 0;
-      this.dropHold();
-      this.ports.emit.caught(this.def.id, this.elapsed);
-      return;
-    }
+    if (this.gap <= CHASE.catchRadius) return this.caught();
     if (this.elapsed >= this.def.timer) return this.lose('timer');
     // Distance only counts while he is ahead: a player who cut ahead (a Leap) waits for him and is not "lost".
     const ahead = this.courier.progress > this.courier.line.project(this.ports.playerFeet());
     this.farFor = this.gap > CHASE.loseGap && ahead ? this.farFor + dt : 0;
     if (this.farFor >= CHASE.loseSeconds - 1e-9) this.lose('distance');
+  }
+
+  private caught(): void {
+    this.phase = 'caught';
+    this.caughtLive = 0;
+    this.dropHold();
+    this.ports.emit.caught(this.def.id, this.elapsed);
+  }
+
+  /** Test-only (headless runs): catches him now through the normal caught path. False unless a chase is running. */
+  catchNow(): boolean {
+    if (this.disposed || this.phase !== 'running') return false;
+    this.caught();
+    return true;
   }
 
   private begin(): void {
