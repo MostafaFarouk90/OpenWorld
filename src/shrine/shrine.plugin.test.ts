@@ -216,6 +216,53 @@ describe('shrine plugin on the real game', () => {
     for (let n = 1; n <= 5; n++) expect(names).toContain(`wardstone-${n}`);
   });
 
+  it('animates the steam on render once lit', async () => {
+    const t = await boot();
+    t.ctx.state.setFlag('shrine.quenchstone.lit', true);
+    t.run(2);
+    const steam = (() => {
+      let found: THREE.Points | null = null;
+      t.ctx.scene.traverse((o) => {
+        if ((o as THREE.Points).isPoints) found = o as THREE.Points;
+      });
+      return found as THREE.Points | null;
+    })();
+    expect(steam).not.toBeNull();
+    const before = Array.from((steam!.geometry.getAttribute('position') as THREE.BufferAttribute).array.slice(0, 6));
+    t.game.render(0, 0.5);
+    const after = Array.from((steam!.geometry.getAttribute('position') as THREE.BufferAttribute).array.slice(0, 6));
+    expect(after).not.toEqual(before);
+  });
+
+  it('disposing leaves no mesh and no Cooled modifier behind', async () => {
+    const t = await boot();
+    t.ctx.events.emit('rest', { waystoneId: 'quenchstone' });
+    const a = t.ctx.actors.player;
+    const max = a.maxHealth;
+    t.run(2);
+    t.game.dispose();
+    const names: string[] = [];
+    t.ctx.scene.traverse((o) => names.push(o.name));
+    expect(names).not.toContain('quenchstone-basin');
+    expect(a.maxHealth).toBeLessThanOrEqual(max);
+  });
+
+  it('a waystone lit without the shrine flag lights the shrine on the next tick', async () => {
+    const t = await boot();
+    t.ctx.services.require('waystones').rekindle('quenchstone', 'script');
+    t.ctx.state.setFlag('shrine.quenchstone.lit', false);
+    t.run(1);
+    expect(t.ctx.state.getBool('shrine.quenchstone.lit')).toBe(true);
+    expect(t.ctx.services.require('warmth').tier()).toBe(1);
+  });
+
+  it('loading a save without a Cooled entry drops a running buff', async () => {
+    const t = await boot();
+    t.ctx.events.emit('rest', { waystoneId: 'quenchstone' });
+    t.ctx.events.emit('save.loaded', {} as never);
+    expect(t.ctx.services.require('shrine').cooledSeconds()).toBe(0);
+  });
+
   describe('wardstone input', () => {
     async function rhythm() {
       const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(1000);
@@ -258,6 +305,24 @@ describe('shrine plugin on the real game', () => {
       r.t.ctx.state.setFlag('story.m05.tobbJoined', true);
       r.press(1000 + r.beat * 2 + r.beat / 2 - 1);
       expect(of(r.t, 'wardstone.missed')).toHaveLength(1);
+    });
+
+    it('a press exactly 120 ms late is a hit', async () => {
+      const r = await rhythm();
+      r.t.ctx.state.setFlag('story.m05.tobbJoined', true);
+      r.press(1000 + r.beat + 120);
+      expect(of(r.t, 'wardstone.missed')).toEqual([]);
+    });
+
+    it('a menu in the middle of a phrase does not produce a miss afterwards', async () => {
+      const r = await rhythm();
+      r.t.ctx.state.setFlag('story.m05.tobbJoined', true);
+      r.press(1000 + r.beat);
+      const release = r.t.ctx.input.contexts.push('dialogue', 'test');
+      r.press(1000 + r.beat * 6);
+      release();
+      r.press(1000 + r.beat * 9);
+      expect(of(r.t, 'wardstone.missed')).toEqual([]);
     });
 
     it('does nothing in a menu context', async () => {

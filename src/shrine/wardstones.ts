@@ -111,7 +111,7 @@ export class Wardstones {
     if (this.phrases.size === 0) return;
     const passed = this.ports.clock.passedIndex(tMs, W.windowMs);
     if (passed <= this.listenUntil) return;
-    for (const [index, p] of [...this.phrases]) {
+    for (const [index, p] of this.phrases) {
       if (passed >= p.lastIndex + 1) this.miss(index, 'late');
     }
   }

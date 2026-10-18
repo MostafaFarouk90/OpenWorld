@@ -47,7 +47,8 @@ class Grid {
   }
 
   passed(t: number, window: number): number {
-    return Math.floor((t - window - this.epoch) / this.period);
+    // Strict: a beat is gone only once its window is passed, and +window itself is still a hit.
+    return Math.ceil((t - window - this.epoch) / this.period) - 1;
   }
 }
 
@@ -118,6 +119,15 @@ export class AdaptiveBeatClock implements BeatClock {
       return;
     }
     const b = info as BeatInfoLike;
+    // Without a usable audio-time conversion the music grid cannot be judged against.
+    const probe = this.ports.toAudioTime(this.ports.nowMs());
+    if (probe === undefined || !Number.isFinite(probe)) {
+      if (this.music) {
+        this.music = null;
+        this.gen++;
+      }
+      return;
+    }
     if (!this.music) {
       this.music = { grid: new Grid(b.nextBeatTime, b.beatSeconds) };
       this.gen++;

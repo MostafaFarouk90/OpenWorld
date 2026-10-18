@@ -106,6 +106,31 @@ describe('RespecFlow with the dialog', () => {
   });
 });
 
+describe('RespecFlow dismissed dialog', () => {
+  it('dialogClosed() frees the permit so the lectern works again', () => {
+    const dialog: RespecDialog = { open: () => true };
+    const t = make({ dialog });
+    t.flow.interact();
+    t.flow.dialogClosed();
+    expect(t.permits.released).toBe(1);
+    expect(t.flow.open).toBe(false);
+    expect(t.flow.interact()).toBe('dialog');
+    expect(t.permits.held).toBe(2);
+  });
+  it('dialogClosed() leaves the toast fallback alone', () => {
+    const t = make();
+    t.flow.interact();
+    t.flow.dialogClosed();
+    expect(t.flow.open).toBe(true);
+  });
+  it('a dialog that throws on open releases its permit and falls back', () => {
+    const t = make({ dialog: { open: () => { throw new Error('x'); } } });
+    expect(t.flow.interact()).toBe('armed');
+    expect(t.permits.held).toBe(1);
+    expect(t.permits.held - t.permits.released).toBe(1);
+  });
+});
+
 describe('RespecFlow fallback (no dialog service)', () => {
   it('needs a second press within 4 s', () => {
     const t = make();
