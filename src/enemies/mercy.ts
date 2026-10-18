@@ -17,18 +17,23 @@ export interface MercySubject {
   mercyOpen(): boolean;
 }
 
+/** Interaction id of a boss's mercy hold. */
+export function bossMercyInteractableId(bossId: string): string {
+  return `release:boss-${bossId}`;
+}
+
 /** Interaction id for an enemy's mercy hold. */
 export function mercyInteractableId(slug: string): string {
   return `release:${slug}`;
 }
 
-/** String key of the prompt: "Hold {key}: Release (10 Burn)" or "Hold {key}: Spare". */
+/** String key of the prompt: "Hold {key}: Release ({cost} Burn)", "Hold {key}: Calm ({offering})" or "Hold {key}: Spare". */
 export function mercyPromptKey(def: MercyEnemyDef): string {
   if (def.mercy.verb === 'release') return 'enemies.mercy.release';
   return def.mercy.verb === 'calm' ? 'enemies.mercy.calm' : 'enemies.mercy.spare';
 }
 
-/** The verbs of the hold-T interactable built here; Calm's interactable is thread 1's. */
+/** The verbs whose completion `completeMercy` handles by the shared pulse path (Calm has its own, `completeCalm`). */
 export type HoldVerb = 'release' | 'spare';
 
 export function isHoldVerb(verb: UnlockVerb): verb is HoldVerb {
@@ -46,8 +51,12 @@ export function makeMercyInteractable(
     unlocked(verb: UnlockVerb): boolean;
     lockOnTarget(): ActorId | null;
     complete(subject: MercySubject): void;
+    /** Calm only: the offering the prompt shows, or null when the player can pay nothing (no prompt). */
+    calmLabel?(): string | null;
   },
 ): InteractableLike {
+  const calm = subject.def.mercy.verb === 'calm';
+  const open = () => deps.unlocked(subject.def.mercy.verb) && subject.mercyOpen() && (!calm || deps.calmLabel?.() != null);
   return {
     id: mercyInteractableId(subject.slug),
     kind: 'release',
@@ -63,13 +72,20 @@ export function makeMercyInteractable(
     get priority() {
       return deps.lockOnTarget() === subject.actorId ? MERCY.lockOnPriority : 0;
     },
-    enabled: () => deps.unlocked(subject.def.mercy.verb as HoldVerb) && subject.mercyOpen(),
+    promptParams: () => mercyPromptParams(subject.def.mercy.verb, MERCY.releaseBurn, deps.calmLabel?.() ?? ''),
+    enabled: open,
     onInteract: () => {
       // The hold may complete on the tick the window closes; check again.
-      if (!deps.unlocked(subject.def.mercy.verb as HoldVerb) || !subject.mercyOpen()) return;
+      if (!open()) return;
       deps.complete(subject);
     },
   };
+}
+
+/** `{cost}` of a Release prompt and `{offering}` of a Calm prompt (the core's `promptParams`, v0.5). */
+export function mercyPromptParams(verb: UnlockVerb, burn: number, offering: string): Record<string, string | number> {
+  if (verb === 'release') return { cost: burn };
+  return verb === 'calm' ? { offering } : {};
 }
 
 /**
@@ -116,6 +132,9 @@ export function mercyEvents(targets: readonly MercySubject[], pulseId?: string):
 export interface BossMercySubject {
   readonly bossId: string;
   readonly actorId: ActorId;
+  /** The verb of the hold ('release' for the Prior, 'calm' for Grimtooth) and its Burn cost. */
+  readonly verb: UnlockVerb;
+  readonly burn: number;
   feet(out: THREE.Vector3): THREE.Vector3;
 }
 
@@ -131,22 +150,24 @@ export function makeBossMercyInteractable(
     windowOpen(): boolean;
     lockOnTarget(): ActorId | null;
     complete(subject: BossMercySubject): void;
+    /** Calm only: the offering the prompt shows, or null when the player can pay nothing (no prompt). */
+    calmLabel?(): string | null;
   },
 ): InteractableLike {
   return {
-    id: `release:boss-${subject.bossId}`,
+    id: bossMercyInteractableId(subject.bossId),
     kind: 'release',
     action: 'mercy',
     position: (out) => subject.feet(out),
     radius: MERCY.radius,
     coneDegrees: MERCY.coneDegrees,
     holdSeconds: MERCY.holdSeconds,
-    // Stop-gap until Interactable.promptParams (v0.5) lets one key carry the cost.
-    promptKey: 'enemies.mercy.release.boss',
+    promptKey: subject.verb === 'calm' ? 'enemies.mercy.calm' : 'enemies.mercy.release',
+    promptParams: () => mercyPromptParams(subject.verb, subject.burn, deps.calmLabel?.() ?? ''),
     get priority() {
       return deps.lockOnTarget() === subject.actorId ? MERCY.lockOnPriority : 0;
     },
-    enabled: () => deps.unlocked() && deps.windowOpen(),
+    enabled: () => deps.unlocked() && deps.windowOpen() && (subject.verb !== 'calm' || deps.calmLabel?.() != null),
     onInteract: () => {
       if (!deps.unlocked() || !deps.windowOpen()) return;
       deps.complete(subject);

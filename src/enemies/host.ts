@@ -59,6 +59,14 @@ export function hostFromContext(ctx: GameContext, warn: (m: string) => void): En
     // vfx (thread 7) and lockOn (thread 1) are optional: get() returns undefined until they merge.
     services: ctx.services as unknown as ServicesPort,
     bosses: ctx.bosses,
+    calmUi: {
+      focusedId: () => ctx.interaction.focusFor('mercy')?.id ?? null,
+      holding: () => ctx.interaction.holdProgressFor('mercy') > 0,
+      modalOpen: () => ctx.hud.modalOpen !== null,
+      claimWheel: (owner) => ctx.input.claimWheel(owner),
+      consumeWheel: (owner) => ctx.input.consumeWheel(owner),
+      text: (key) => ctx.strings.t(key),
+    },
     player: {
       get actor() {
         return ctx.player.actor as unknown as EnemyHost['player']['actor'];

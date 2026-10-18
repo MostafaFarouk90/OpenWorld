@@ -240,4 +240,20 @@ export const EFFECTS: Record<EffectId, EffectFactory> = {
     ctx.points.emit('ember', o, 24, { color: 0xff6030, spread: 0.4, rise: 1.2, life: 0.6 }, ctx.now());
     return ONE_SHOT;
   },
+  // Section 2 Calm: the offering's glow at hand height, a few warm embers and a small orange-to-gold ring.
+  'calm-offering': (ctx, t, p) => {
+    const o = origin(t);
+    const hand = { x: o.x, y: o.y + 1, z: o.z };
+    ctx.points.emit('ember', hand, num(p, 'count', 24), { spread: 0.5, rise: 1, life: 1.2, color: 0xffa040 }, ctx.now());
+    ctx.lights.flash(hand, 0xffb050, 3, 0.1, 0.9, ctx.now());
+    return ring(ctx, { position: hand }, 1.6, GOLD, 0.8);
+  },
+  // Section 3 Warm Hand: the same without an item, brighter, since the player's own fire is spent.
+  'warm-hand': (ctx, t, p) => {
+    const o = origin(t);
+    const hand = { x: o.x, y: o.y + 1, z: o.z };
+    ctx.points.emit('ember', hand, num(p, 'count', 36), { spread: 0.6, rise: 1.4, life: 1.3, color: WHITE_HOT }, ctx.now());
+    ctx.lights.flash(hand, WHITE_HOT, 4, 0.1, 1.1, ctx.now());
+    return ring(ctx, { position: hand }, 1.8, GOLD, 0.8);
+  },
 };
