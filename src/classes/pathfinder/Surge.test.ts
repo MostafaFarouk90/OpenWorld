@@ -33,6 +33,9 @@ function rig(zone: SurgeFormContext['zone'] = 'warm', radius = 6, poise: number 
     poise,
     host: { events: new FakeEvents(), player: new FakePlayer(player), actors } as never,
     damage,
+    services: { get: () => undefined } as never,
+    clock: { tick: 0, seconds: 0, hitStop: () => undefined } as never,
+    suppressRing: () => undefined,
   };
   const cast = (s = 2) => {
     form(ctx);
