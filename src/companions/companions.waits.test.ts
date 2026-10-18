@@ -140,8 +140,6 @@ function hookPlugin() {
   return { plugin, calls };
 }
 
-const waiting = (t: { ctx: any }) => (t.ctx as any).__tobbWaiting;
-
 describe('Tobb waits: the South Gate (M06 until objective 2)', () => {
   it('waits at the post while Cael walks 200 m away, ignores fast travel and respawns, and rejoins by teleport at o2', async () => {
     const t = await joined();
@@ -229,12 +227,23 @@ describe('Tobb waits: the Keep Hall (M08)', () => {
     expect(t.dist(t.posts[KEEP].position)).toBeLessThan(0.01);
 
     const k = t.posts[KEEP].position;
-    t.teleportPlayer(k.x + 10, k.z);
+    // At black: Cael is outside 20 m away and `current` clears; the door event follows after the fade-in.
+    t.teleportPlayer(k.x + 20, k.z);
     t.interiors.current = null;
-    t.ctx.events.emit('interior.exited', { interiorId: 'keep-hall', doorId: 'keep-hall' });
     t.run(1);
     expect(t.dist(k)).toBeLessThan(0.5);
-    t.run(300);
+    t.run(30);
+    const before = t.pos();
+    t.ctx.events.emit('interior.exited', { interiorId: 'keep-hall', doorId: 'keep-hall' });
+    let maxStep = t.pos().distanceTo(before);
+    let prev = t.pos();
+    for (let i = 0; i < 300; i++) {
+      t.run(1);
+      maxStep = Math.max(maxStep, t.pos().distanceTo(prev));
+      prev = t.pos();
+    }
+    // No pop after the fade: he walks the whole way.
+    expect(maxStep).toBeLessThan(0.5);
     expect(t.distToPlayer()).toBeLessThan(5);
     t.done();
   });
@@ -396,7 +405,7 @@ describe('Tobb on horseback', () => {
     t.done();
   });
 
-  it('a load clears the mounted state (thread 20 re-emits mount.mounted for a mounted load)', async () => {
+  it('a load clears the mounted state (a mounted player always loads dismounted)', async () => {
     const t = await joined();
     t.ctx.events.emit('mount.mounted', { mountId: 'ashmare' });
     t.ctx.persist.loadAll([], t.ctx.events, 'test');
@@ -410,5 +419,3 @@ describe('Tobb on horseback', () => {
     t.done();
   });
 });
-
-void waiting;
