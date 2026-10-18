@@ -91,7 +91,11 @@ export class NavAgent {
       this.idx++;
     }
     const w = this.path[this.idx];
-    return w ? this.give(w.x, w.z) : this.give(target.x, target.z);
+    if (w) return this.give(w.x, w.z);
+    // A path that stops short (the target is behind a closed gate) holds at its end instead of pushing into the obstacle.
+    const last = this.path[this.path.length - 1];
+    if (last && Math.hypot(last.x - target.x, last.z - target.z) > this.arriveRadius) return this.give(last.x, last.z);
+    return this.give(target.x, target.z);
   }
 
   /** Forgets the path so the next call repaths. */

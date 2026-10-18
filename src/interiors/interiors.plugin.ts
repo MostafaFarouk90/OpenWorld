@@ -22,6 +22,8 @@ import { VAULT_DEF } from './vaultDef';
 export const INTERIORS_RULES_ORDER = 400;
 export const INTERIORS_RENDER_ORDER = 400;
 const DOOR_RADIUS = 2;
+/** The exit lands inside the outside door's radius, so its enter prompt waits this long after an exit. */
+const REENTER_COOLDOWN_SECONDS = 1;
 /** Refusals that tell the player why the door did nothing. */
 const TOASTED: Record<string, string> = { aggro: 'interior.refused.aggro', locked: 'interior.refused.locked' };
 
@@ -99,11 +101,15 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     warn: (m) => console.warn(m),
   });
   cleanups.push(() => controller.dispose());
+  cleanups.push(() => env.dispose());
+  let cooldown = 0;
+  ctx.events.on('interior.exited', () => (cooldown = REENTER_COOLDOWN_SECONDS));
+  if (!ctx.physics.ready) throw new Error('interiors: physics is not initialised (the floating interiors need their colliders)');
 
   for (const def of opts.defs ?? [VAULT_DEF]) {
     const layout = layoutInterior(def, ground);
     // Colliders are built now and kept, so a load or a takeover teleport always finds the floor.
-    const b = buildInterior(layout, ctx.physics.ready ? ctx.physics : null);
+    const b = buildInterior(layout, ctx.physics);
     ctx.scene.add(b.root);
     cleanups.push(() => b.dispose());
     built.set(def.id, b);
@@ -144,7 +150,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
               get promptKey() {
                 return side === 'outside' && controller.isDoorLocked(door.doorId) ? 'interact.locked' : text;
               },
-              enabled: () => !controller.transitioning,
+              enabled: () => !controller.transitioning && (side === 'inside' || cooldown <= 0),
               onInteract: () => {
                 const p = side === 'outside' ? controller.enter(layout.def.id, door.doorId) : controller.exit(door.doorId);
                 p.catch(onRefused);
@@ -167,6 +173,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     fixedPhase: 'rules',
     order: INTERIORS_RULES_ORDER,
     fixedUpdate(dt) {
+      cooldown = Math.max(0, cooldown - dt);
       syncDoors();
       controller.tick(dt);
     },

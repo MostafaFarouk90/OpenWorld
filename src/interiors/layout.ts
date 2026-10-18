@@ -4,7 +4,7 @@ import type { InteriorDef, LocalRect } from './types';
 
 /** Interiors float this far above the highest terrain under them (plans/slice-2-interiors-nav.md section 2). */
 export const FLOAT_HEIGHT = 150;
-/** Solid cells and nav cells share this size, so colliders and the grid cannot disagree. */
+/** Solid cells and nav cells share this size, so walls and the grid agree (pillars off the raster are blocked conservatively). */
 export const CELL = 0.5;
 /** Thickness of floor and ceiling slabs. */
 export const SLAB = 0.5;

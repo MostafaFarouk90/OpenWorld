@@ -259,18 +259,63 @@ describe('InteriorController: aborts', () => {
     expect(t.events).toEqual([]);
   });
 
-  it('aborts an exit taken over by fast travel, and the bounds rule keeps events alternating', async () => {
+  it('an exit taken over by travel after placement still sends exited, and the next enter sends entered', async () => {
     const t = setup();
     await t.settle(t.c.enter(VAULT, 'vault'));
     const p = t.c.exit();
     t.run(TRANSITION.fadeOutSeconds + 0.05);
+    t.state.travelling = true;
     Object.assign(t.feet, { x: 500, y: 0, z: 500 });
+    t.log.length = 0;
     t.run(0.1);
     expect(await reason(p)).toBe('aborted');
     expect(t.c.current).toBeNull();
-    // entered once by the door; exited never emitted for the aborted exit, so the alternation is broken only if we emit again.
+    expect(t.log).not.toContain('fade 0'); // travel lifts its own fade
+    expect(t.events.map((e) => e.type)).toEqual(['interior.entered', 'interior.exited']);
+    t.state.travelling = false;
+    Object.assign(t.feet, { x: 0, y: 0, z: 20 });
+    await t.settle(t.c.enter(VAULT, 'vault'));
+    expect(t.events.map((e) => e.type)).toEqual(['interior.entered', 'interior.exited', 'interior.entered']);
+  });
+
+  it('death during an exit after placement sends exited and leaves the fade to the death flow', async () => {
+    const t = setup();
+    await t.settle(t.c.enter(VAULT, 'vault'));
+    const p = t.c.exit();
+    t.run(TRANSITION.fadeOutSeconds + 0.05);
+    t.log.length = 0;
+    t.state.dead = true;
+    t.run(0.05);
+    expect(await reason(p)).toBe('aborted');
+    expect(t.log).not.toContain('fade 0');
+    expect(t.events.map((e) => e.type)).toEqual(['interior.entered', 'interior.exited']);
+  });
+
+  it('a plain scripted teleport during the settle aborts and lifts the black screen', async () => {
+    const t = setup();
+    t.state.ground = false;
+    const p = t.c.enter(VAULT, 'vault');
+    t.run(TRANSITION.fadeOutSeconds + 0.1);
+    Object.assign(t.feet, { x: 100, y: 0, z: 100 });
     t.run(0.1);
-    expect(t.events.map((e) => e.type)).toEqual(['interior.entered']);
+    expect(await reason(p)).toBe('aborted');
+    expect(t.log.at(-1)).toBe('fade 0');
+    t.run(0.1);
+    expect(t.state.applied.at(-1)).toBeNull();
+    expect(t.events).toEqual([]);
+  });
+
+  it('catches a teleport back into the vault during an exit', async () => {
+    const t = setup();
+    await t.settle(t.c.enter(VAULT, 'vault'));
+    const p = t.c.exit();
+    t.run(TRANSITION.fadeOutSeconds + 0.05);
+    Object.assign(t.feet, { x: 0, y: 150, z: 9 }); // straight above the arrival point
+    t.run(0.1);
+    expect(await reason(p)).toBe('aborted');
+    t.run(0.1);
+    expect(t.c.current).toBe(VAULT);
+    expect(t.events.map((e) => e.type)).toEqual(['interior.entered', 'interior.exited', 'interior.entered']);
   });
 
   it('refuses an exit requested during the enter fade, and an enter during the exit fade', async () => {
@@ -380,13 +425,24 @@ describe('InteriorController: saves', () => {
     expect(t.events.map((e) => e.type)).toEqual(['interior.entered', 'interior.exited']);
   });
 
-  it('a saved interior with the feet outdoors (a mismatched pair) ends outdoors after save.loaded, with no events', () => {
+  it('a saved interior with the feet outdoors (a mismatched pair, or an invalid saved position) ends outdoors with no events', () => {
     const t = setup();
     t.c.persistable().load({ interiorId: VAULT, doorId: 'vault' }, 1);
     t.c.onSaveLoaded();
-    // onSaveLoaded announced the vault; the bounds rule then takes the player out, so the pair alternates.
     t.run(0.2);
     expect(t.c.current).toBeNull();
+    expect(t.events).toEqual([]);
+  });
+
+  it('a load restores the outdoors when a vault save puts the feet outdoors while the vault look is on', async () => {
+    const t = setup();
+    await t.settle(t.c.enter(VAULT, 'vault'));
+    t.c.persistable().load({ interiorId: VAULT, doorId: 'vault' }, 1);
+    Object.assign(t.feet, { x: 300, y: 2, z: 300 }); // the loader's waystone fallback, at black
+    t.c.tick(DT);
+    expect(t.state.applied.at(-1)).toBeNull();
+    t.c.onSaveLoaded();
+    t.run(0.1);
     expect(t.events.map((e) => e.type)).toEqual(['interior.entered', 'interior.exited']);
   });
 
@@ -436,12 +492,14 @@ describe('InteriorController: registry', () => {
     expect(() => t.c.add({ id: 'cellar', doors: [{ doorId: 'x', outside: 'a', inside: 'b', exit: 'c' }], contains: () => false })).not.toThrow();
   });
 
-  it('dispose restores the outdoors and rejects a running transition', async () => {
+  it('dispose restores the outdoors, rejects a running transition and lifts the fade', async () => {
     const t = setup();
     await t.settle(t.c.enter(VAULT, 'vault'));
     const p = t.c.exit();
     t.c.dispose();
     expect(await reason(p)).toBe('aborted');
     expect(t.state.applied.at(-1)).toBeNull();
+    expect(t.log.at(-1)).toBe('env null');
+    expect(t.log).toContain('fade 0');
   });
 });
