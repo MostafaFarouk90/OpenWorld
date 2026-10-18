@@ -25,8 +25,8 @@ import { DODGE, ORDER, POISE, RESPAWN, STAMINA } from './tuning';
 
 /** Poise handed to damage.stagger so a parry always breaks the attacker. */
 export const PARRY_STAGGER_POISE = 999;
-export const RIM_BASH_SKILL = 'skill.knight.rimBash';
-export const RIPOSTE_SKILL = 'skill.knight.riposteEdge';
+export const RIM_BASH_SKILL = 'knight.rimBash';
+export const RIPOSTE_SKILL = 'knight.riposteEdge';
 const RIPOSTE_WINDOW_TICKS = 120;
 const RIM_BASH_RANGE = 2.4;
 const RIM_BASH_COOLDOWN_TICKS = 60;
