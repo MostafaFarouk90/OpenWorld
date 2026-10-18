@@ -99,13 +99,16 @@ describe('Release Burn', () => {
     expect(b.fake.bus.of('mercy')).toHaveLength(1);
   });
 
-  it('is not refused when Burn is already full: the hold still completes and charges', () => {
+  it('is never refused by the Burn level: the hold stays enabled whatever Burn reads', () => {
     const { fake, ids, hold } = pack();
-    const calls = shards(fake);
+    const calls: Array<[number, string]> = [];
+    // A spells service whose Burn reads 100: the Burn and Scar arithmetic is thread 2's, this side only charges.
+    fake.spells = { useShard: (g, s) => void calls.push([g, s]) };
+    (fake.spells as { burn?: number }).burn = 100;
     fake.stagger(ids[0], 'player');
     expect(hold(ids[0]).enabled!()).toBe(true);
     hold(ids[0]).onInteract(fake.player);
-    expect(calls).toHaveLength(1);
+    expect(calls).toEqual([[10, 'release']]);
   });
 
   it('a locked verb does nothing: no prompt, no Burn, no event', () => {
@@ -168,6 +171,50 @@ describe('boss Release hold', () => {
     b.bossHold()!.onInteract(b.fake.player);
     expect(b.calls).toEqual([]);
     expect(b.fake.bus.of('mercy')).toEqual([]);
+  });
+
+  it('a refused release leaves a staggered summon staggered and the hold registered', () => {
+    const b = boss();
+    b.open(true);
+    b.fake.stagger(b.ids[0], 'player');
+    b.fake.bossReleaseResult = false;
+    b.bossHold()!.onInteract(b.fake.player);
+    expect(b.fake.bus.of('mercy')).toEqual([]);
+    expect(b.manager.get(b.ids[0])!.state).toBe('stagger');
+    expect(b.bossHold()).toBeDefined();
+  });
+
+  it('a hold completing on the tick the window shut does nothing', () => {
+    const b = boss();
+    b.open(true);
+    const i = b.bossHold()!;
+    b.fake.bossStates.get('ashen-prior')!.releaseOpen = false;
+    i.onInteract(b.fake.player);
+    expect(b.fake.bossReleases).toEqual([]);
+    expect(b.calls).toEqual([]);
+  });
+
+  it('summons still count when a boss.released listener despawns them, and the boss prompt names 20 Burn', () => {
+    const b = boss();
+    b.open(true);
+    b.fake.stagger(b.ids[0], 'player');
+    b.fake.bus.on('boss.released', () => b.manager.service.despawnGroup('pack'));
+    const i = b.bossHold()!;
+    expect(i.promptKey).toBe('enemies.mercy.release.boss');
+    i.onInteract(b.fake.player);
+    const mercies = b.fake.bus.of('mercy');
+    expect(mercies.map((m) => m.tier)).toContain('boss');
+    expect(b.calls).toEqual([[20, 'release']]);
+  });
+
+  it('does nothing when the boss actor is already gone', () => {
+    const b = boss();
+    b.open(true);
+    const i = b.bossHold()!;
+    b.fake.actorMap.delete('boss-1');
+    i.onInteract(b.fake.player);
+    expect(b.fake.bossReleases).toEqual([]);
+    expect(b.calls).toEqual([]);
   });
 
   it('is hidden while Release is locked, and when the registry says the window shut', () => {
@@ -250,6 +297,25 @@ describe('pack Spare', () => {
     expect(s.manager.get(b)!.state).not.toBe('yield');
   });
 
+  it('a refreshed window announces itself again', () => {
+    const s = pair();
+    const [a, b] = s.ids;
+    breakSoldier(s, b, 0.4);
+    breakSoldier(s, a, 0.4);
+    s.hold(a).onInteract(s.fake.player);
+    expect(s.fake.bus.of('enemies.yield').filter((e) => e.actorId === b)).toHaveLength(2);
+  });
+
+  it('a partner beyond the pack radius is not offered', () => {
+    const s = pair();
+    const [a, b] = s.ids;
+    breakSoldier(s, a, 0.4);
+    s.fake.stagger(b, 'player');
+    s.manager.get(b)!.feet.set(AI.packShareRadius + 5, 0, 0);
+    s.hold(a).onInteract(s.fake.player);
+    expect(s.manager.get(b)!.state).toBe('stagger');
+  });
+
   it('a partner in a different group is not offered', () => {
     const s = pair();
     const wraith = s.manager.spawnLoose('blighted-soldier', { x: 0.5, y: 0, z: 0 })!;
@@ -294,18 +360,68 @@ describe('slots and saves', () => {
   });
 });
 
+describe('loading a save that predates the mercy', () => {
+  it('mid walk-off: the leaving soldier is despawned without a spend, and the group refills', () => {
+    const s = pair();
+    const [a] = s.ids;
+    const older = s.manager.spawners.serialize();
+    breakSoldier(s, a, 0.4);
+    s.hold(a).onInteract(s.fake.player);
+    s.tick(0.2);
+    s.manager.spawners.load(older);
+    s.fake.bus.emit('save.loaded', { slot: 'x' });
+    s.tick(0.1);
+    expect(s.manager.get(a)).toBeUndefined();
+    expect(s.manager.spawners.serialize().spent).toEqual([]);
+    expect(s.manager.service.alive('pair')).toHaveLength(2);
+  });
+
+  it('mid dissolve: the released wraith is replaced by a fresh one', () => {
+    const { fake, manager, ids, hold, tick } = pack();
+    const older = manager.spawners.serialize();
+    fake.stagger(ids[0], 'player');
+    hold(ids[0]).onInteract(fake.player);
+    tick(AI.releaseDissolveSeconds / 3);
+    manager.spawners.load(older);
+    fake.bus.emit('save.loaded', { slot: 'x' });
+    tick(0.1);
+    expect(manager.service.alive('pack')).toHaveLength(3);
+    expect(manager.spawners.serialize().spent).toEqual([]);
+  });
+
+  it('a save taken while a soldier merely kneels reloads without the credit', () => {
+    const s = pair();
+    breakSoldier(s, s.ids[0], 0.4);
+    expect(s.manager.get(s.ids[0])!.state).toBe('yield');
+    const saved = s.manager.spawners.serialize();
+    expect(saved.spent).toEqual([]);
+    s.manager.spawners.load(saved);
+    s.fake.bus.emit('save.loaded', { slot: 'x' });
+    expect(s.manager.get(s.ids[0])!.state).toBe('yield');
+    expect(s.fake.bus.of('mercy')).toEqual([]);
+  });
+});
+
 describe('effects', () => {
   it('plays release-pulse on a Release and yield-glyph when a soldier kneels, and survives no vfx', () => {
     const played: string[] = [];
     const a = pack();
-    a.fake.vfx = { dissolve: async () => {}, spawnEffect: (id) => void played.push(id) };
+    const pulses: number[] = [];
+    a.fake.vfx = { dissolve: async () => {}, spawnEffect: (id) => void played.push(id), pulseScreen: (n: number) => void pulses.push(n) } as typeof a.fake.vfx;
     a.fake.stagger(a.ids[0], 'player');
     a.hold(a.ids[0]).onInteract(a.fake.player);
     expect(played).toContain('release-pulse');
+    expect(pulses).toHaveLength(1);
     const b = pair();
     b.fake.vfx = { dissolve: async () => {}, spawnEffect: (id) => void played.push(id) };
     breakSoldier(b, b.ids[0], 0.4);
     expect(played).toContain('yield-glyph');
+    const stopped: string[] = [];
+    const d = pair();
+    d.fake.vfx = { dissolve: async () => {}, spawnEffect: (id) => ({ stop: () => void stopped.push(id) }) };
+    breakSoldier(d, d.ids[0], 0.4);
+    d.hold(d.ids[0]).onInteract(d.fake.player);
+    expect(stopped).toEqual(['yield-glyph']);
     const c = pack();
     c.fake.stagger(c.ids[0], 'player');
     expect(() => c.hold(c.ids[0]).onInteract(c.fake.player)).not.toThrow();
