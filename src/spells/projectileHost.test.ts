@@ -8,7 +8,14 @@ describe('createProjectileHost', () => {
     const host = createProjectileHost({ actors, physics: { raycast } as never });
     expect(host.actors).toBe(actors);
     expect(host.rayCast!({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }, 10)).toEqual({ point: { x: 1, y: 2, z: 3 } });
-    expect(raycast).toHaveBeenCalledWith({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }, 10);
+    expect(raycast).toHaveBeenCalledWith({ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 }, 10, undefined);
+  });
+  it("excludes the player's own collider, which a bolt starts inside", () => {
+    const raycast = vi.fn(() => null);
+    const collider = { id: 'player-capsule' };
+    const host = createProjectileHost({ actors: {} as never, physics: { raycast } as never, world: { player: { controller: { collider } } } });
+    host.rayCast!({ x: 0, y: 1.3, z: 0 }, { x: 1, y: 0, z: 0 }, 5);
+    expect(raycast).toHaveBeenCalledWith({ x: 0, y: 1.3, z: 0 }, { x: 1, y: 0, z: 0 }, 5, collider);
   });
   it('reports no hit when the ray hits nothing, and has a terrain height', () => {
     const host = createProjectileHost({ actors: {} as never, physics: { raycast: () => null } as never });
