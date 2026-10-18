@@ -175,6 +175,11 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       get ember() { return ember.value; },
       get maxEmber() { return ember.max; },
       setMaxEmber: (n) => ember.setMax(n),
+      restoreEmber: (n) => {
+        const before = ember.value;
+        ember.restore(n);
+        return ember.value - before;
+      },
       spendEmber: (n) => ember.spend(n),
       addBurn: (n, source) => void burn.add(n, source),
       useShard: (gain, source) => useShard(gain, source),
