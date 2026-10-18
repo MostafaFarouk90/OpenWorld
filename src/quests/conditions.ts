@@ -52,6 +52,13 @@ function evalInner(c: unknown, env: ConditionEnv): Result {
       if (c.below !== undefined && !(env.state.favour(track) < (c.below as number))) result = false;
       return result;
     }
+    if ('gold' in c) {
+      const need = isObj(c.gold) ? c.gold.atLeast : undefined;
+      if (typeof need !== 'number' || !Number.isFinite(need)) return fail('gold needs { atLeast: number }');
+      const have = env.gold?.();
+      if (typeof have !== 'number') return fail('gold unavailable (no inventory)');
+      return have >= need;
+    }
     if ('quest' in c) {
       if (typeof c.quest !== 'string') return fail('quest id is not a string');
       const states = (Array.isArray(c.state) ? c.state : [c.state]) as QuestState[];

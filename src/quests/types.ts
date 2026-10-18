@@ -20,6 +20,7 @@ export type Condition =
   | { favour: FavourTrack; band?: FavourBand | FavourBand[]; atLeast?: number; below?: number }
   | { quest: string; state: QuestState | QuestState[] }
   | { objective: [questId: string, objectiveId: string]; done: boolean }
+  | { gold: { atLeast: number } }
   | { all: Condition[] }
   | { any: Condition[] }
   | { not: Condition };
@@ -37,6 +38,7 @@ export type Effect =
   | { xp: number }
   | { skillPoints: number }
   | { giveGold: number }
+  | { spendGold: { amount: number; reason: GoldSpendReasonData } }
   | { if: Condition; then: Effect[]; else?: Effect[] }
   | { placeNpc: { npcId: string; anchorId: string } }
   | { unlockMercy: MercyUnlockVerb }
@@ -45,6 +47,9 @@ export type Effect =
 
 /** Mercy verbs a quest can unlock (the flags `enemies.mercy.<verb>`). */
 export type MercyUnlockVerb = 'release' | 'spare' | 'calm';
+
+/** Why a quest effect spends gold (`gold.spent.reason`). */
+export type GoldSpendReasonData = 'bribe' | 'persuasion' | 'script';
 
 /** `if` effects may nest this deep. */
 export const MAX_IF_DEPTH = 3;
@@ -63,7 +68,7 @@ export interface ObjectiveDef {
    */
   target: string | string[];
   /** event only: every listed top-level payload key must equal the value */
-  match?: Record<string, FlagValue>;
+  match?: Record<string, FlagValue | FlagValue[]>;
   /** event only: credited as soon as the objective is current (and on load) when this already holds */
   doneWhen?: Condition;
   /** event only: payload key whose string value counts once per distinct value */
@@ -71,6 +76,8 @@ export interface ObjectiveDef {
   optional?: boolean;
   /** objective is only credited (and, for props, enabled) while this holds */
   when?: Condition;
+  /** same stateless check as `when` (contract name): events before it holds are ignored */
+  startWhen?: Condition;
   /** kill only: credit only actors whose spawn tag equals this */
   spawnTag?: string;
 }

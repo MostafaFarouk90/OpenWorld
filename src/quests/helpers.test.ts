@@ -3,7 +3,7 @@ import { makeWorld, FakeBus, fakeState } from './testKit';
 import { installBridges, TORCH_USED_FLAG } from './bridges';
 import { installPoiRewards } from './poi';
 import { POI_REWARDS } from './content/poi';
-import { PostDirector, resolvePosts, BRIGHTWATER_POST_RULES } from './posts';
+import { PostDirector, resolvePosts, POST_RULES } from './posts';
 import { TorchSystem } from './torch';
 import { JournalTabs, defaultSlots, FAVOUR_TAB_FLAG } from './journalTabs';
 import { buildJournalModel, createJournalPanel } from './JournalPanel';
@@ -86,7 +86,7 @@ describe('quest posts', () => {
   it('moves Gaut to the ford while M04 is active and back after, Aelfreda to the vault during D01', () => {
     const w = makeWorld([m04, d01]);
     const env = () => ({ state: w.state, quests: w.manager });
-    const dir = new PostDirector(BRIGHTWATER_POST_RULES, env, () => w.npcs);
+    const dir = new PostDirector(POST_RULES, env, () => w.npcs);
     w.manager.onChange(() => dir.markDirty());
     dir.update();
     expect(w.npcs.placed).toEqual([]); // nobody moved yet: leave the layout and tutorial alone
@@ -104,7 +104,7 @@ describe('quest posts', () => {
   });
   it('re-applies the quest post after a load and retries until the anchor exists', () => {
     const w = makeWorld([m04]);
-    const dir = new PostDirector(BRIGHTWATER_POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
+    const dir = new PostDirector(POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
     w.manager.start('m04');
     w.npcs.missing.add('npc-post.gaut.ford');
     dir.update();
@@ -139,7 +139,7 @@ describe('quest posts', () => {
   });
   it('a load that rewinds the quest sends Gaut home even though the load did not move him', () => {
     const w = makeWorld([m04]);
-    const dir = new PostDirector(BRIGHTWATER_POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
+    const dir = new PostDirector(POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
     w.manager.start('m04');
     dir.update();
     w.manager.load({ quests: {} }); // an earlier save: M04 inactive
@@ -150,7 +150,7 @@ describe('quest posts', () => {
   it('does not move anyone while a dialogue is open, then catches up', () => {
     const w = makeWorld([m04]);
     let talking = true;
-    const dir = new PostDirector(BRIGHTWATER_POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs, () => talking);
+    const dir = new PostDirector(POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs, () => talking);
     w.manager.start('m04');
     dir.update();
     expect(w.npcs.placed).toEqual([]);
@@ -161,7 +161,7 @@ describe('quest posts', () => {
   it('does nothing without an npcs service, then catches up', () => {
     const w = makeWorld([m04]);
     let svc: typeof w.npcs | undefined;
-    const dir = new PostDirector(BRIGHTWATER_POST_RULES, () => ({ state: w.state, quests: w.manager }), () => svc);
+    const dir = new PostDirector(POST_RULES, () => ({ state: w.state, quests: w.manager }), () => svc);
     w.manager.start('m04');
     dir.update();
     svc = w.npcs;
@@ -169,9 +169,9 @@ describe('quest posts', () => {
     expect(w.npcs.placed).toHaveLength(1);
   });
   it('never puts Tobb in a rule', () => {
-    expect(BRIGHTWATER_POST_RULES.map((r) => r.npcId)).not.toContain('tobb');
+    expect(POST_RULES.map((r) => r.npcId)).not.toContain('tobb');
     const w = makeWorld();
-    expect(Object.keys(resolvePosts(BRIGHTWATER_POST_RULES, { state: w.state, quests: w.manager }))).toEqual(['gaut', 'aelfreda']);
+    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager }))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'gerta', 'pennard']);
   });
 });
 

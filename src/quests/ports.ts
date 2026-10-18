@@ -47,11 +47,22 @@ export interface ProgressionPort {
   /** thread 2: unlocks an ability and emits `ability.learned` */
   grantAbility?(id: string, source: string): void;
 }
-export interface InventoryPort { remove(itemId: string, count: number): boolean; addGold?(n: number): void }
+export interface InventoryPort {
+  remove(itemId: string, count: number): boolean;
+  addGold?(n: number): void;
+  readonly gold?: number;
+  takeGold?(n: number, reason?: string): number;
+}
 export interface NpcPort { place(npcId: string, anchorId: string): boolean }
 export interface EnemiesPort { setMercyUnlocked(verb: 'release' | 'spare' | 'calm', on: boolean): void }
 
-export interface ConditionEnv { state: StatePort; quests: QuestReader; warn?(msg: string): void }
+export interface ConditionEnv {
+  state: StatePort;
+  quests: QuestReader;
+  /** inventory gold; absent or undefined makes a `gold` condition false (with a warning) */
+  gold?: () => number | undefined;
+  warn?(msg: string): void;
+}
 
 export interface EffectEnv {
   state: StatePort;
@@ -67,7 +78,8 @@ export interface EffectEnv {
   warn?(msg: string): void;
 }
 
-export interface EffectResult { effect: Effect; ok: boolean; error?: string }
+/** `halted`: a failed `spendGold`; the rest of the whole effect list (including outer lists) did not run. */
+export interface EffectResult { effect: Effect; ok: boolean; error?: string; halted?: boolean }
 
 /** Actor info lookup for kill objectives (spawn tag filter). */
 export type ActorMetaPort = (actorId: string) => { spawnTag?: string } | undefined;

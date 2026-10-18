@@ -42,7 +42,9 @@ function eventCredit(def: ObjectiveDef, type: string, payload: unknown): Credit 
   const p = isObj(payload) ? payload : undefined;
   if (def.match) {
     if (!p) return null;
-    for (const [k, v] of Object.entries(def.match)) if (p[k] !== v) return null;
+    for (const [k, v] of Object.entries(def.match)) {
+      if (Array.isArray(v) ? !v.includes(p[k]) : p[k] !== v) return null;
+    }
   }
   if (def.dedupeBy !== undefined) {
     const key = p?.[def.dedupeBy];

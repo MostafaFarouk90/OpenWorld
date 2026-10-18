@@ -14,7 +14,7 @@ import { JournalTabs, PLACEHOLDER_KEY, defaultSlots } from './journalTabs';
 import { installBridges } from './bridges';
 import { installPoiRewards } from './poi';
 import { POI_REWARDS } from './content/poi';
-import { PostDirector, BRIGHTWATER_POST_RULES } from './posts';
+import { PostDirector, POST_RULES } from './posts';
 import { TorchSystem } from './torch';
 import { R02Yard, type R02YardDummies } from './r02Yard';
 import { createEffectRunner } from './effects';
@@ -120,8 +120,8 @@ const plugin: GamePlugin = {
       codexUnlock: (id) => svc('codex')?.unlock?.(id),
     }));
     const posts = new PostDirector(
-      BRIGHTWATER_POST_RULES,
-      () => ({ state: ctx.state, quests: manager, warn }),
+      POST_RULES,
+      () => ({ state: ctx.state, quests: manager, gold: () => svc('inventory')?.gold, warn }),
       () => svc('npcs'),
       () => svc('dialogue')?.active === true,
     );
