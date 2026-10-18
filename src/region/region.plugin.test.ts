@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { heightAt } from '../terrain/heightfield';
+import { DEADROAD_LAYOUT } from './deadroad.layout';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
 import { createRegionPlugin, BARLEY_FLAG, BRIGHTWATER_DISCOVERED_FLAG, discoveredFlag } from './region.plugin';
 import { TOLL_POST_BROKEN_FLAG } from './tollPost';
@@ -28,7 +29,7 @@ describe('region plugin', () => {
   it('defines every anchor and trigger of the layout and builds the village', () => {
     const { fc, plugin } = setup();
     plugin.setup(fc.ctx);
-    expect(fc.anchors.size).toBe(BRIGHTWATER_LAYOUT.anchors.length);
+    expect(fc.anchors.size).toBe(BRIGHTWATER_LAYOUT.anchors.length + DEADROAD_LAYOUT.anchors.length);
     // The slice fog wall stands, so its trigger exists too.
     expect(fc.triggers.size).toBe(BRIGHTWATER_LAYOUT.triggers.length + 1);
     expect(fc.triggers.has('trg.fog.harrowmark')).toBe(true);
@@ -82,6 +83,34 @@ describe('region plugin', () => {
     fc.tick('intent');
     expect(fc.emitted.filter((e) => e.type === 'region.entered')).toHaveLength(2);
     expect(fc.emitted.filter((e) => e.type === 'discover')).toHaveLength(1);
+    plugin.dispose?.();
+  });
+
+  it('walking the road: the corridor emits nothing, Harrowmark is entered with previous null, and discover fires once per region', () => {
+    const { fc, plugin } = setup();
+    plugin.setup(fc.ctx);
+    const entered = () => fc.emitted.filter((e) => e.type === 'region.entered').map((e) => (e as { payload: unknown }).payload);
+    const step = (x: number, z: number) => {
+      fc.playerFeet.x = x;
+      fc.playerFeet.z = z;
+      fc.tick('intent');
+    };
+    step(2000, 100);
+    step(6000, 800); // the null corridor (engine x 5500..6500)
+    expect(entered()).toEqual([{ regionId: 'brightwater', previous: null }]);
+    step(6800, 780);
+    expect(entered()).toEqual([{ regionId: 'brightwater', previous: null }, { regionId: 'harrowmark', previous: null }]);
+    expect(fc.flags.get(discoveredFlag('harrowmark'))).toBe(true);
+    step(6000, 800); // back into the corridor: still nothing new
+    expect(entered()).toHaveLength(2);
+    step(2000, 100); // and out the other side: Brightwater again, previous null, no second discover
+    expect(entered()).toHaveLength(3);
+    expect(entered()[2]).toEqual({ regionId: 'brightwater', previous: null });
+    step(6800, 780);
+    expect(fc.emitted.filter((e) => e.type === 'discover').map((e) => (e as { payload: unknown }).payload)).toEqual([
+      { placeId: 'brightwater', kind: 'region' },
+      { placeId: 'harrowmark', kind: 'region' },
+    ]);
     plugin.dispose?.();
   });
 
@@ -219,14 +248,20 @@ describe('region plugin, beyond Kettlewick', () => {
     plugin.dispose?.();
   });
 
-  it('keeps the fog wall standing for a phase A save that finished M05, and opens it on story.slice.harrowmarkOpen', () => {
+  it('raises the fog wall until M05 is complete, lowers it for a save that has finished M05, and ignores the retired flag', () => {
     const { fc, plugin } = setup();
-    fc.flags.set('story.m05.complete', true);
     plugin.setup(fc.ctx);
     expect(fc.triggers.has('trg.fog.harrowmark')).toBe(true);
     fc.ctx.state.setFlag('story.slice.harrowmarkOpen', true);
+    expect(fc.triggers.has('trg.fog.harrowmark')).toBe(true);
+    fc.ctx.state.setFlag('story.m05.complete', true);
     expect(fc.triggers.has('trg.fog.harrowmark')).toBe(false);
     plugin.dispose?.();
+    const loaded = setup();
+    loaded.fc.flags.set('story.m05.complete', true);
+    loaded.plugin.setup(loaded.fc.ctx);
+    expect(loaded.fc.triggers.has('trg.fog.harrowmark')).toBe(false);
+    loaded.plugin.dispose?.();
   });
 
   it('rebuilds Wynn\'s barley when R01 sets the flag, and builds it scorched on a load that has it', () => {
