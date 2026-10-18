@@ -47,7 +47,8 @@ const UNLOCK_EVENTS = ['pointerdown', 'keydown', 'touchend'] as const;
  * counts Howl sounds, so it would suspend the context under playing music.
  */
 export class AudioManager {
-  readonly music: StemMixer;
+  private readonly mixers: [StemMixer, StemMixer];
+  private activeMixer = 0;
   /**
    * The music bus: every stem mixer feeds it and it feeds the master gain, so a duck or a reverb
    * send acts on the music as a whole without touching the stems' own `setMix` ramps. Null if the
@@ -82,9 +83,24 @@ export class AudioManager {
       bus = null;
     }
     this.musicBus = bus;
-    this.music = new StemMixer(Howler.ctx, bus ?? Howler.masterGain);
+    this.mixers = [new StemMixer(Howler.ctx, bus ?? Howler.masterGain), new StemMixer(Howler.ctx, bus ?? Howler.masterGain)];
     if (Howler.ctx.state === 'running') this.unlocked = true;
     else for (const type of UNLOCK_EVENTS) window.addEventListener(type, this.unlock, true);
+  }
+
+  /** The mixer that is playing (or will play) the current region's track. */
+  get music(): StemMixer {
+    return this.mixers[this.activeMixer];
+  }
+
+  /** The idle mixer: preloads the next region's track and takes over at a handover. */
+  get musicNext(): StemMixer {
+    return this.mixers[1 - this.activeMixer];
+  }
+
+  /** Makes the idle mixer the active one (the handover reached its bar line). */
+  swapMusic(): void {
+    this.activeMixer = 1 - this.activeMixer;
   }
 
   /** The node the music bus and the interior reverb feed (Howler's master gain). */
@@ -222,7 +238,7 @@ export class AudioManager {
     for (const type of UNLOCK_EVENTS) window.removeEventListener(type, this.unlock, true);
     this.unlockCallbacks.length = 0;
     for (const id of [...this.emitters.keys()]) this.detach(id);
-    this.music.dispose();
+    for (const mixer of this.mixers) mixer.dispose();
     this.musicBus?.disconnect();
     for (const howl of this.sounds.values()) howl.unload();
     this.sounds.clear();
