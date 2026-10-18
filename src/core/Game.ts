@@ -163,7 +163,7 @@ export class Game {
     const persist = new PersistRegistry();
     const actors = new ActorRegistry(this.events);
     const damage = new DamageResolver(actors, this.events);
-    const combat = new CombatRegistry(world.combat.combat, this.events);
+    const combat = new CombatRegistry(world.combat.combat, this.events, (id) => actors.get(id));
     const state = new WorldState(this.events);
     this.bridge = new DamageBridge(world.combat.combat.bus, actors, damage, combat);
 
@@ -246,12 +246,49 @@ export class Game {
    */
   scopedContext(scope: Scope): GameContext {
     const c = this.ctx;
-    const actors = scoped(c.actors, scope, ['bindOwner'], {
+    // Registrations tied to one actor instance (its spawn, owners, attackers, targets). The core already
+    // cleans these up on despawn, so one listener runs their (idempotent) undos then, which drops them from
+    // the scope; an undo the plugin calls itself leaves its list too. A long session of spawning and
+    // despawning enemies therefore retains nothing. Entries are matched by instance, not only by id, so a
+    // despawned id that is reused before the queued event arrives keeps the new actor's registrations.
+    const byActor = new Map<string, Set<{ actor: Actor; undo: () => void }>>();
+    let watching = false;
+    const forActor = (actorId: string | undefined, undo: () => void): (() => void) => {
+      const actor = actorId === undefined ? undefined : c.actors.get(actorId);
+      if (!actor) return undo;
+      if (!watching) {
+        watching = true;
+        scope.track(
+          c.events.on('actor.despawned', ({ actorId: id }) => {
+            const entries = byActor.get(id);
+            if (!entries) return;
+            const current = c.actors.get(id);
+            for (const e of [...entries]) if (e.actor !== current) e.undo();
+          }),
+        );
+      }
+      let entries = byActor.get(actor.id);
+      if (!entries) byActor.set(actor.id, (entries = new Set()));
+      const list = entries;
+      const entry = {
+        actor,
+        undo: () => {
+          list.delete(entry);
+          if (list.size === 0 && byActor.get(actor.id) === list) byActor.delete(actor.id);
+          undo();
+        },
+      };
+      list.add(entry);
+      return entry.undo;
+    };
+    const actors = scoped(c.actors, scope, [], {
       spawn: ((init: Parameters<ActorRegistry['spawn']>[0]) => {
         const actor = c.actors.spawn(init);
-        scope.track(() => c.actors.despawn(actor.id));
+        // Only this instance: a replacement spawned under the same id is not ours to remove.
+        forActor(actor.id, scope.track(() => c.actors.get(actor.id) === actor && c.actors.despawn(actor.id)));
         return actor;
       }) as never,
+      bindOwner: ((actor: Actor, owner: unknown) => forActor(actor.id, scope.track(c.actors.bindOwner(actor, owner)))) as never,
     });
     const player: PlayerHandle = Object.create(c.player, {
       addMoveModifier: { value: (source: string, mod: MoveModifier) => scope.track(c.player.addMoveModifier(source, mod)) },
@@ -262,11 +299,17 @@ export class Game {
       contexts: { value: contexts },
       bindings: { value: bindings },
     });
+    const pauses = new Map<string, () => void>();
     const clock = scoped(c.clock, scope, [], {
       // A pause a plugin set is lifted when that plugin is torn down.
       setPaused: ((reason: string, paused: boolean) => {
         c.clock.setPaused(reason, paused);
-        if (paused) scope.track(() => c.clock.setPaused(reason, false));
+        const held = pauses.get(reason);
+        if (paused && !held) pauses.set(reason, scope.track(() => c.clock.setPaused(reason, false)));
+        if (!paused && held) {
+          pauses.delete(reason);
+          held();
+        }
       }) as never,
     });
     return {
@@ -277,7 +320,14 @@ export class Game {
       events: scoped(c.events, scope, ['on', 'once', 'onAny']),
       actors,
       damage: scoped(c.damage, scope, ['addModifier', 'addLethalHandler']),
-      combat: scoped(c.combat, scope, ['addAttacker', 'addTarget', 'watch']),
+      combat: scoped(c.combat, scope, [], {
+        addAttacker: ((actorId: string, ...rest: unknown[]) =>
+          forActor(actorId, scope.track((c.combat.addAttacker as (...a: unknown[]) => () => void)(actorId, ...rest)))) as never,
+        addTarget: ((set: unknown, actorId?: string) =>
+          forActor(actorId, scope.track((c.combat.addTarget as (...a: unknown[]) => () => void)(set, actorId)))) as never,
+        watch: ((actorId: string, ...rest: unknown[]) =>
+          forActor(actorId, scope.track((c.combat.watch as (...a: unknown[]) => () => void)(actorId, ...rest)))) as never,
+      }),
       interaction: scoped(c.interaction, scope, ['register']),
       anchors: scoped(c.anchors, scope, ['define']),
       triggers: scoped(c.triggers, scope, ['add']),

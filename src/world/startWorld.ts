@@ -53,6 +53,8 @@ export async function startWorld(container: HTMLElement): Promise<void> {
   const audio = createAudio();
   const assets = new AssetLoader(renderer.renderer);
   const graphics = new Graphics({ renderer: renderer.renderer, scene, camera, sun, viewDistance: TERRAIN.viewDistance });
+  // Registered after the Renderer's own resize listener, so the renderer already has the new size.
+  window.addEventListener('resize', () => graphics.resize(container.clientWidth, container.clientHeight));
   const dummies = new TrainingDummies();
   const moveModifiers = new MoveModifiers();
   // `game` is assigned below; sounds only fire from ticks, which start after it exists.
@@ -131,7 +133,7 @@ export async function startWorld(container: HTMLElement): Promise<void> {
       ready.fixedUpdate();
     },
     render(alpha, frameTime) {
-      ready.render(alpha, frameTime, () => followCamera.update(world.player.feet));
+      ready.render(alpha, frameTime, () => followCamera.update(world.player.feet, frameTime));
       damageNumbers.update(frameTime);
       terrain.update(camera.position);
       followSun(sun, world.player.feet);

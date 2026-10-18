@@ -3,13 +3,18 @@ import * as THREE from 'three';
 /** A replacement for the plain render call (bloom composer, thread 7). */
 export interface PostPass {
   render(): void;
+  /** CSS pixels; called when the pass is installed and on every canvas resize. */
   setSize?(width: number, height: number): void;
+  /** The renderer's pixel ratio; called when the pass is installed and whenever the render scale changes. */
+  setPixelRatio?(ratio: number): void;
 }
 
 export type ShadowMode = 'off' | 'half' | 'full';
 
 /** Quality knobs for the three-step toggle (contracts/vfx-and-feedback.md section 4). */
 export interface GraphicsService {
+  /** The scene's renderer, for building a post pass (an EffectComposer). Do not resize it or render with it yourself. */
+  readonly renderer: THREE.WebGLRenderer;
   readonly renderScale: number;
   readonly shadows: ShadowMode;
   readonly viewDistanceOffset: number;
@@ -20,6 +25,7 @@ export interface GraphicsService {
   setShadows(mode: ShadowMode, distanceM?: number): void;
   /** Metres added to (or taken from) the fog and camera far plane; terrain LOD is not affected yet. */
   setViewDistanceOffset(metres: number): void;
+  /** Installs the pass and immediately forwards the current size and pixel ratio to it. */
   setPostPass(pass: PostPass | null): void;
 }
 
@@ -47,6 +53,10 @@ export class Graphics implements GraphicsService {
     this.warn = deps.warn ?? ((m) => console.warn(m));
   }
 
+  get renderer(): THREE.WebGLRenderer {
+    return this.deps.renderer;
+  }
+
   get renderScale(): number {
     return this._renderScale;
   }
@@ -68,6 +78,13 @@ export class Graphics implements GraphicsService {
     this._renderScale = Math.min(1, Math.max(0.5, scale));
     const dpr = this.deps.devicePixelRatio?.() ?? (typeof window === 'undefined' ? 1 : window.devicePixelRatio);
     this.deps.renderer.setPixelRatio(Math.min(dpr, 2) * this._renderScale);
+    this.forward((p) => p.setPixelRatio?.(this.deps.renderer.getPixelRatio()));
+  }
+
+  /** The scene loop calls this after the renderer was resized; forwards the new size to the post pass. */
+  resize(width: number, height: number): void {
+    if (!(width > 0) || !(height > 0)) return;
+    this.forward((p) => p.setSize?.(width, height));
   }
 
   setShadows(mode: ShadowMode, distanceM?: number): void {
@@ -102,6 +119,21 @@ export class Graphics implements GraphicsService {
 
   setPostPass(pass: PostPass | null): void {
     this._pass = pass;
+    if (!pass) return;
+    const size = this.deps.renderer.getSize(new THREE.Vector2());
+    this.forward((p) => p.setPixelRatio?.(this.deps.renderer.getPixelRatio()));
+    if (size.x > 0 && size.y > 0) this.forward((p) => p.setSize?.(size.x, size.y));
+  }
+
+  /** Calls into the pass; a throwing pass is removed so the plain render takes over. */
+  private forward(call: (pass: PostPass) => void): void {
+    if (!this._pass) return;
+    try {
+      call(this._pass);
+    } catch (err) {
+      this.warn(`Graphics: post pass failed, removed (${err instanceof Error ? err.message : String(err)})`);
+      this._pass = null;
+    }
   }
 
   /** Draws the frame through the post pass when one is set. A failing pass falls back to a plain render. */

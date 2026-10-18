@@ -3,7 +3,8 @@
  * return, so a failed or disposed plugin leaves nothing behind (contracts/game-events-and-flags.md section 1).
  */
 export class Scope {
-  private readonly undos: (() => void)[] = [];
+  /** Live undos in registration order; an undo leaves the set once it has run, so nothing is retained. */
+  private readonly undos = new Set<() => void>();
   private closed = false;
 
   constructor(private readonly report: (message: string, err?: unknown) => void = (m, e) => console.error(m, e)) {}
@@ -13,15 +14,19 @@ export class Scope {
   }
 
   get size(): number {
-    return this.undos.length;
+    return this.undos.size;
   }
 
-  /** Records `undo`; after `close` it runs at once (a late registration from a timed-out setup). */
+  /**
+   * Records `undo` and returns a run-once wrapper; calling it runs the undo and drops it from the scope.
+   * After `close` the undo runs at once (a late registration from a timed-out setup).
+   */
   track(undo: () => void): () => void {
     let done = false;
     const once = () => {
       if (done) return;
       done = true;
+      this.undos.delete(once);
       try {
         undo();
       } catch (err) {
@@ -32,7 +37,7 @@ export class Scope {
       once();
       return once;
     }
-    this.undos.push(once);
+    this.undos.add(once);
     return once;
   }
 
@@ -40,7 +45,7 @@ export class Scope {
   close(): void {
     if (this.closed) return;
     this.closed = true;
-    while (this.undos.length) this.undos.pop()!();
+    for (const undo of [...this.undos].reverse()) undo();
   }
 }
 
