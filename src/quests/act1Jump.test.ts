@@ -268,7 +268,15 @@ describe('?act1= on the real game', () => {
     expect(fake.peek('autosave')).toEqual(slice1Complete);
   }, 60000);
 
-  it.each(ACT1_PHASE_B_JUMP_IDS)('%s: prerequisites done, the quest offerable, the player on the ground in Harrowmark beside the giver, nothing saved', async (id) => {
+  // Defect B2 (threads 6 and 17): before M06 Rook's post stands inside the shut portcullis, so the m06 jump cannot place
+  // the player beside him from the road. `it.fails` pins that until #74 and the Rook post fix land; it then fails and
+  // m06 moves back into the list below.
+  const B2_PENDING: readonly PhaseBId[] = ['m06'];
+  it.fails.each(B2_PENDING)('%s (defect B2 pending: Rook inside the gate before M06)', async (id) => phaseBJump(id), 60000);
+  it.each(ACT1_PHASE_B_JUMP_IDS.filter((id) => !B2_PENDING.includes(id)))('%s: prerequisites done, the quest offerable, the player on the ground in Harrowmark beside the giver, nothing saved', async (id) => phaseBJump(id), 60000);
+
+  type PhaseBId = (typeof ACT1_PHASE_B_JUMP_IDS)[number];
+  async function phaseBJump(id: PhaseBId) {
     const t = await jumpTo(`?act1=${id}&new`);
     expect(t.jump?.phase).toBe('done');
     for (const q of ACT1_PREREQS[id]) expect(t.quests.state(q), q).toBe('completed');
@@ -297,7 +305,7 @@ describe('?act1= on the real game', () => {
     }
     const r = await t.ctx.services.require('save').saveNow('manual');
     expect(r.ok).toBe(false);
-  }, 60000);
+  }
 
   it('without &new nothing happens', async () => {
     const t = await jumpTo('?act1=m04');

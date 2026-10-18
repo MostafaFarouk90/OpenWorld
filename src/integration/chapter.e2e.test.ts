@@ -41,7 +41,7 @@ import {
   enterVaultForD01, finishD01, objectiveDone, PHASE_A_ORDER, playM03, playM04, playM05, playR01, playR02,
   reachPhaseAStart, emptyTrails, type FieldBranch, type PriorBranch, type Trails,
 } from './phaseA';
-import { estimateTiming, timingMarkdown } from './timing';
+import { estimateTiming, estimateTimingFor, PHASE_B_PLAN, timingMarkdown } from './timing';
 
 let h: ChapterHarness | null = null;
 beforeEach(() => {
@@ -182,7 +182,11 @@ async function act1(run: 'A' | 'B') {
 
 describe('Act 1: Harrowmark through "Smoke Over Harrowmark" (all real plugins)', () => {
   it('run A (bribe, Knight, forgiven, expose, steady, Grimtooth calmed): the whole act, the ending once, then a reload', async () => {
-    const { gateStates } = await act1('A');
+    const { gateStates, trails } = await act1('A');
+    // Harrowmark timing estimate on this run's dialogue nodes (src/integration/TIMING.md).
+    const rows = estimateTimingFor(h!, PHASE_B_PLAN, trails);
+    console.log(timingMarkdown(rows));
+    expect(rows.map((r) => r.quest)).toEqual(Object.keys(PHASE_B_PLAN));
     expect(gateStates[0]).toBe('closed');
     expect(gateStates.slice(1).every((s) => s === 'open')).toBe(true);
     expect(flag('story.m06.route')).toBe('bribe');
