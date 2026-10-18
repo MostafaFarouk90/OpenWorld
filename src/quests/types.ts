@@ -36,9 +36,20 @@ export type Effect =
   | { take: string | { itemId: string; count: number }[] }
   | { xp: number }
   | { skillPoints: number }
+  | { giveGold: number }
+  | { if: Condition; then: Effect[]; else?: Effect[] }
+  | { placeNpc: { npcId: string; anchorId: string } }
+  | { unlockMercy: MercyUnlockVerb }
+  | { grantAbility: string }
   | { event: string; payload?: unknown };
 
-export type ObjectiveType = 'goTo' | 'interact' | 'kill' | 'collect' | 'carry' | 'talk';
+/** Mercy verbs a quest can unlock (`calm` arrives with the v0.5 enemies service). */
+export type MercyUnlockVerb = 'release' | 'spare';
+
+/** `if` effects may nest this deep. */
+export const MAX_IF_DEPTH = 3;
+
+export type ObjectiveType = 'goTo' | 'interact' | 'kill' | 'collect' | 'carry' | 'talk' | 'event';
 
 export interface ObjectiveDef {
   id: string;
@@ -46,8 +57,17 @@ export interface ObjectiveDef {
   textKey: string;
   /** default 1 */
   required?: number;
-  /** trigger id (goTo, carry destination), interactable id, actor kind (kill), item id (collect), npc id (talk) */
-  target: string;
+  /**
+   * trigger id (goTo, carry destination), interactable id, actor kind (kill), item id (collect), npc id (talk),
+   * bus event name (event; an array means any of these names)
+   */
+  target: string | string[];
+  /** event only: every listed top-level payload key must equal the value */
+  match?: Record<string, FlagValue>;
+  /** event only: credited as soon as the objective is current (and on load) when this already holds */
+  doneWhen?: Condition;
+  /** event only: payload key whose string value counts once per distinct value */
+  dedupeBy?: string;
   optional?: boolean;
   /** objective is only credited (and, for props, enabled) while this holds */
   when?: Condition;
@@ -61,6 +81,8 @@ export interface QuestDef {
   summaryKey: string;
   objectives: ObjectiveDef[];
   sequential?: boolean;
+  /** start() and complete() from inactive are refused until this holds */
+  startWhen?: Condition;
   onStart?: Effect[];
   onComplete?: Effect[];
   rewards?: Effect[];

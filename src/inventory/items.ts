@@ -18,6 +18,12 @@ export const ITEMS: Record<string, ItemDef> = {
   'hearth-stone': def('hearth-stone', 'quest'),
   'hearth-token': def('hearth-token', 'quest'),
   'hearth-bread': def('hearth-bread', 'consumable', { stackMax: 5, use: { healFlat: 15, drinkSeconds: 0.8 } }),
+  // Brightwater quest rewards (slice 2). Stats are display-only readings: nothing applies gear defense yet.
+  'ford-guard-shield': def('ford-guard-shield', 'offhand', { slot: 'offhand', stats: { defense: 3 } }),
+  'barley-cake': def('barley-cake', 'consumable', { stackMax: 10, use: { healFlat: 10, drinkSeconds: 0.8 } }),
+  'training-weights': def('training-weights', 'trinket', { slot: 'trinket' }),
+  'tobbs-lucky-whistle': def('tobbs-lucky-whistle', 'trinket', { slot: 'trinket' }),
+  'priors-censer': def('priors-censer', 'trinket', { slot: 'trinket' }),
   'healing-flask': def('healing-flask', 'consumable', { stackMax: 5, use: { healFraction: 0.4, drinkSeconds: 1.2 } }),
 };
 

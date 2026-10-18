@@ -5,8 +5,13 @@ describe('items', () => {
   it('has exactly the v2 item ids', () => {
     expect(Object.keys(ITEMS).sort()).toEqual(
       [
+        'barley-cake',
+        'ford-guard-shield',
         'hearth-stone',
         'hearth-token',
+        'priors-censer',
+        'tobbs-lucky-whistle',
+        'training-weights',
         'gauts-spare-blade',
         'gauts-spare-tabard',
         'healing-flask',
@@ -47,6 +52,16 @@ describe('items', () => {
     expect(ITEMS['hearth-stone'].kind).toBe('quest');
     expect(ITEMS['hearth-bread']).toMatchObject({ stackMax: 5, use: { healFlat: 15, drinkSeconds: 0.8 } });
     expect(ITEMS['healing-flask']).toMatchObject({ stackMax: 5, use: { healFraction: 0.4, drinkSeconds: 1.2 } });
+  });
+
+  it('defines the Brightwater quest rewards', () => {
+    expect(ITEMS['ford-guard-shield']).toMatchObject({ kind: 'offhand', slot: 'offhand', stats: { defense: 3 } });
+    expect(ITEMS['barley-cake']).toMatchObject({ kind: 'consumable', stackMax: 10, use: { healFlat: 10 } });
+    for (const id of ['training-weights', 'tobbs-lucky-whistle', 'priors-censer']) {
+      expect(ITEMS[id]).toMatchObject({ kind: 'trinket', slot: 'trinket', stackMax: 1 });
+      expect(ITEMS[id].stats).toBeUndefined();
+      expect(ITEMS[id].use).toBeUndefined(); // the Whistle is not usable
+    }
   });
 
   it('getItem finds known ids and refuses unknown and prototype names', () => {

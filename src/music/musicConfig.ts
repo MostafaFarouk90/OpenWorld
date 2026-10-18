@@ -19,4 +19,6 @@ export const musicConfig = {
   /** A discover request starts on the next half boundary when it is at most this many bars away. */
   halfBoundaryReachBars: 4,
   rampSeconds: AUDIO.stemCrossfadeSeconds,
+  /** Added to `toAudioTime` results; a hook for calibrating input latency against the beat. */
+  beatInputOffsetSeconds: 0,
 } as const;
