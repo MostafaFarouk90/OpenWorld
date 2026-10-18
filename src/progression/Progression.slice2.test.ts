@@ -202,11 +202,36 @@ describe('classes', () => {
     expect(registerClassStats('x', { health: 0, healthPerLevel: 1, stamina: 1, ember: 1 })).toEqual({ ok: false, reason: 'bad-stats' });
     expect(hasClassStats('x')).toBe(false);
   });
-  it('only max health is wired: stamina and Ember rows stay data', () => {
-    const { p, actor } = make();
-    registerClassStats('mage', { health: 85, healthPerLevel: 6, stamina: 80, ember: 100 });
+  it('a class row sets the stamina maximum and tells the listener its Ember maximum', () => {
+    const rows: number[] = [];
+    const actor = fakeActor();
+    const p = new Progression({ emit: () => {}, actor: () => actor, onClassStats: (r) => rows.push(r.ember) });
+    registerClassStats('mage', { health: 85, healthPerLevel: 6, stamina: 80, ember: 160 });
+    actor.stamina = 100;
     p.setClass('mage');
+    expect(actor.maxStamina).toBe(80);
+    expect(actor.stamina).toBe(80);
+    expect(rows).toEqual([160]);
+    p.setClass(null);
     expect(actor.maxStamina).toBe(100);
+    expect(actor.stamina).toBe(80);
+    expect(rows).toEqual([160, 100]);
+  });
+  it('applyClassResources(true) fills stamina; a throwing listener is reported, not fatal', () => {
+    const warnings: string[] = [];
+    const actor = fakeActor();
+    actor.stamina = 10;
+    const p = new Progression({ emit: () => {}, actor: () => actor, logger: { warn: (m) => warnings.push(m) }, onClassStats: () => { throw new Error('boom'); } });
+    p.applyClassResources(true);
+    expect(actor.stamina).toBe(100);
+    expect(warnings.some((w) => w.includes('class stats listener failed'))).toBe(true);
+  });
+  it('works without an actor or a listener', () => {
+    const p = new Progression({ emit: () => {}, actor: () => null });
+    expect(() => p.setClass('knight')).not.toThrow();
+  });
+  it("the Knight's row keeps the shipped Ember maximum of 100", () => {
+    expect(classStats('knight').ember).toBe(100);
   });
 });
 
@@ -217,10 +242,23 @@ describe('class skills', () => {
   });
   it('registers all or nothing and then resolves by id', () => {
     const n = SKILLS.length;
-    expect(registerClassSkills('warden', [def('a', 1), def('b', 2, 'warden.a')])).toEqual({ ok: true, count: 2 });
+    expect(registerClassSkills('warden', [def('a', 1), def('b', 2, 'warden.a')])).toMatchObject({ ok: true, count: 2 });
     expect(SKILLS.length).toBe(n + 2);
     expect(getSkill('warden.b')?.requires).toBe('warden.a');
     expect(getSkill('knight.rimBash')?.classId).toBe('knight');
+  });
+
+  it('registerClassSkills dispose removes only that class and frees the class id again', () => {
+    const r = registerClassSkills('warden', [def('a', 1), def('b', 2, 'warden.a')]);
+    if (!r.ok) throw new Error('refused');
+    expect(getSkill('warden.a')).toBeDefined();
+    r.dispose();
+    expect(getSkill('warden.a')).toBeUndefined();
+    expect(SKILLS.some((s) => s.classId === 'warden')).toBe(false);
+    expect(getSkill('knight.rallyCry')).toBeDefined();
+    expect(registerClassSkills('warden', [def('a', 1)]).ok).toBe(true);
+    r.dispose(); // a stale dispose after re-registration must not remove the new defs
+    expect(getSkill('warden.a')).toBeDefined();
   });
   it.each([
     ['wrong id prefix', 'warden', [{ ...def('a', 1), id: 'knight.zzz' }], 'bad-id'],

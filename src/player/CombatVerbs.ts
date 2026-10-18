@@ -59,6 +59,11 @@ export interface CombatVerbsService {
    * Multipliers combine by product, clamped to 0.5..2. Returns the remover.
    */
   addAttackSpeedMultiplier(id: string, mult: number | (() => number)): () => void;
+  /**
+   * Holds a scripted forced move (the Warden's shoulder charge) for `owner` until it is released with `null`. Applied every
+   * tick while no dodge or knockback is running (those win); several owners: the latest one wins. `x`, `z` is a unit direction.
+   */
+  holdForcedMove(owner: string, move: { x: number; z: number; speed: number } | null): void;
 }
 
 declare module '../core/Services' {
@@ -117,6 +122,7 @@ export class CombatVerbs {
   lastRestedWaystoneId: string | null = null;
 
   readonly attackSets = new AttackSets();
+  private readonly forcedHolds = new Map<string, { x: number; z: number; speed: number }>();
   readonly attackSpeed = new SpeedMultipliers((id) => console.warn(`combatVerbs: attack speed multiplier "${id}" is invalid, ignored`));
   private appliedAttackClass: string | null = null;
   private offIronStance: (() => void) | null = null;
@@ -135,6 +141,11 @@ export class CombatVerbs {
   private sprintTicks = 0;
   private reArmed = false;
   private readonly dodgedSwings = new Set<string>();
+  /**
+   * Invulnerability sources that are i-frames (the dodge, and later Ash-drift): status ticks ignore them. Respawn grace
+   * and Second Wind are not in it, so they still stop ticks. A new i-frame source adds its name here.
+   */
+  readonly iFrameSources = new Set<string>(['dodge']);
   private readonly offs: Array<() => void> = [];
   /** The current avatar's combat target and clip listener (replaced on a kit swap). */
   private readonly avatarOffs: Array<() => void> = [];
@@ -182,6 +193,7 @@ export class CombatVerbs {
       }),
     );
     ctx.damage.addModifier('player-riposte', (req) => this.riposteModifier(req), -150);
+    ctx.damage.addModifier('player-status-ticks', (req, target) => this.statusThroughDodge(req, target), ORDER.statusTicks);
     ctx.damage.addModifier('player-guard', (req, target, attacker) => this.guardModifier(req, target, attacker), ORDER.guardModifier);
     ctx.damage.addLethalHandler(
       'second-wind',
@@ -240,6 +252,12 @@ export class CombatVerbs {
       },
       registerAttackSet: (classId, set) => self.attackSets.register(classId, set),
       addAttackSpeedMultiplier: (id, mult) => self.attackSpeed.add(id, mult),
+      holdForcedMove: (owner, move) => {
+        if (move && Number.isFinite(move.x + move.z + move.speed)) {
+          self.forcedHolds.delete(owner); // re-insert so the latest hold is the last
+          self.forcedHolds.set(owner, { ...move });
+        } else self.forcedHolds.delete(owner);
+      },
     });
     const rig = ctx.cameraRig;
     if (rig) {
@@ -255,6 +273,7 @@ export class CombatVerbs {
     for (const off of this.offs.splice(0)) off();
     for (const off of this.offLocks.values()) off();
     this.offLocks.clear();
+    this.forcedHolds.clear();
     this.deadModifier?.();
     this.deadModifier = null;
     this.offIronStance?.();
@@ -416,7 +435,9 @@ export class CombatVerbs {
       this.knockback.left--;
     } else if (!this.dodge.active) {
       this.knockback = null;
-      player.setForcedMove(null);
+      let hold: { x: number; z: number; speed: number } | null = null;
+      for (const h of this.forcedHolds.values()) hold = h;
+      player.setForcedMove(hold);
     }
     const target = this.lockOn.target;
     if (this.freeDodgeYaw !== null) player.setFacingOverride(this.freeDodgeYaw);
@@ -468,8 +489,14 @@ export class CombatVerbs {
     req.unblockable = true;
   }
 
+  /** Bleed and ignite ticks are not dodgeable (contracts/actors-and-damage.md section 10): the dodge's i-frames do not stop them. */
+  private statusThroughDodge(req: ModifiableRequest, target: Actor): void {
+    if (req.kind === 'status' && target.id === this.actor.id && req.outcome === 'immune' && this.invuln.onlyAmong(this.iFrameSources)) req.outcome = 'hit';
+  }
+
   private guardModifier(req: ModifiableRequest, target: Actor, attacker: Actor | null): void {
-    if (target.id !== this.actor.id || req.outcome === 'immune') return;
+    // Status ticks are neither blockable nor parryable and drain no guard stamina.
+    if (target.id !== this.actor.id || req.outcome === 'immune' || req.kind === 'status') return;
     const c = this.controller;
     const action = c?.currentAction;
     // The tick after a blockHit clip ends the guard is still up; block re-enters on the next intent.
@@ -516,7 +543,7 @@ export class CombatVerbs {
       if (this.learned(RIPOSTE_SKILL)) this.riposteUntil = ctx.clock.tick + RIPOSTE_WINDOW_TICKS;
     } else if (r.outcome === 'immune') {
       const attacker = r.attackerId ? ctx.actors.get(r.attackerId) : undefined;
-      if (attacker?.team === 'hostile' && this.invuln.has('dodge')) {
+      if (attacker?.team === 'hostile' && r.kind !== 'status' && this.invuln.has('dodge')) {
         const key = `${r.attackerId}#${r.swingId ?? r.attackId ?? ctx.clock.tick}`;
         if (!this.dodgedSwings.has(key)) {
           this.dodgedSwings.add(key);
@@ -525,7 +552,8 @@ export class CombatVerbs {
           this.prompts()?.success('dodge');
         }
       }
-    } else {
+    } else if (r.kind !== 'status') {
+      // A bleed tick does not make the player flinch.
       const reaction = this.poise.onDamage({
         outcome: r.outcome,
         reqPoise: r.poise,

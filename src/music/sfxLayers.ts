@@ -16,6 +16,9 @@ export const SFX = {
   yieldKneel: 'sfx.yield.kneel',
   leap: 'sfx.leap',
   companionBark: 'sfx.companion.bark',
+  // Pathfinder crossbow (thread 16).
+  boltShot: 'sfx.bolt.shot',
+  boltHit: 'sfx.bolt.hit',
 } as const;
 
 /** Slice 2 one-shots played or registered under their bare key (no variant suffix). */
