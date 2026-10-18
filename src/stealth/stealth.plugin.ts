@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import type { ActorId } from '../actors/Actor';
 import { PLAYER_ID } from '../actors/teams';
-import { PLAYER } from '../config/constants';
+import { LOUD_SPEED } from '../enemies/tuning';
 import type { GameContext } from '../core/Game';
 import type { GamePlugin } from '../core/plugins';
 import type { Action } from '../input/actions';
 import { IDLE_PLAYER, type PlayerStealthState, playerNoise, stealthModifiers } from './detection';
 import { StealthEffects } from './hooks';
 import { objectivesDone, questLive } from './liveness';
-import type { GuardPerceptionState, PerceptionModifiers } from './perceptionPort';
+import type { PerceptionModifiers } from './perceptionPort';
 import { SECTIONS } from './sections';
 import { SneakPose } from './SneakPose';
 import { type Eye, StealthDirector } from './StealthDirector';
@@ -41,20 +41,9 @@ declare module '../core/Services' {
   }
 }
 
-/**
- * Thread 5's perception hook as agreed (plan section 12, B3). Read through an untyped lookup until thread 5's PR B
- * lands; then this becomes `ctx.services.get('enemies')?.perception`.
- */
-interface PerceptionServiceLike {
-  register(p: { modifiers(targetId: ActorId, observer: unknown): PerceptionModifiers | null }): () => void;
-  state(actorId: ActorId): GuardPerceptionState | null;
-}
-
-function perceptionService(ctx: GameContext): PerceptionServiceLike | null {
-  const any = ctx.services as unknown as { get(n: string): unknown };
-  const enemies = any.get('enemies') as { perception?: PerceptionServiceLike } | undefined;
-  const svc = enemies?.perception;
-  return svc && typeof svc.register === 'function' && typeof svc.state === 'function' ? svc : null;
+/** Thread 5's `enemies.perception` (register a provider, read a guard's awareness). */
+function perceptionService(ctx: GameContext) {
+  return ctx.services.get('enemies')?.perception ?? null;
 }
 
 const MOVE_KEYS: readonly Action[] = ['moveForward', 'moveBack', 'moveLeft', 'moveRight', 'jump', 'dodge'];
@@ -172,7 +161,7 @@ export default {
           player.hidden = director.hidden;
           player.moving = ctx.player.moving && !director.hidden;
           // Loud is real sprinting, not the Shift key (B3).
-          player.loud = speed > PLAYER.walkSpeed + 0.3;
+          player.loud = speed > LOUD_SPEED;
           player.noiseScale = effects.noiseScale();
           player.blockers = effects.blockers();
         },
@@ -227,8 +216,7 @@ export default {
       }
 
       // Thread 5's ai.spotted maps to stealth.noticed; a player hit on a watch guard is a capture.
-      const bus = ctx.events as unknown as { on(type: string, fn: (p: { actorId: ActorId; targetId: ActorId }) => void): () => void };
-      offs.push(bus.on('ai.spotted', (p) => p.targetId === PLAYER_ID && director.onSpotted(p.actorId)));
+      offs.push(ctx.events.on('ai.spotted', (p) => p.targetId === PLAYER_ID && director.onSpotted(p.actorId)));
       offs.push(
         ctx.events.on('damage.dealt', (r) => {
           if (r.attackerId === PLAYER_ID && r.kind !== 'status') director.onPlayerHitGuard(r.targetId);
