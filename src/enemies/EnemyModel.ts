@@ -167,10 +167,12 @@ export function buildEnemyModel(
 
   const owner = model;
   const hurtboxes = new HurtboxSet(model, undefined, owner);
-  const tracer = (w: WeaponChannelParts): WeaponTracer =>
-    new WeaponTracer({ attacker: owner, weapon: w.object, hilt: w.hilt, tip: w.tip, ownHurtboxes: hurtboxes, bus: opts.bus });
-  const tracers: EnemyModel['tracers'] = { right: tracer(weapons.right) };
-  if (weapons.left) tracers.left = tracer(weapons.left);
+  // The CombatRegistry keys windows by tracer attacker, so each channel needs its own: the right hand
+  // uses the model (also the hurtbox owner), the left hand its shield. Enemy binds both to the actor.
+  const tracer = (w: WeaponChannelParts, attacker: object): WeaponTracer =>
+    new WeaponTracer({ attacker, weapon: w.object, hilt: w.hilt, tip: w.tip, ownHurtboxes: hurtboxes, bus: opts.bus });
+  const tracers: EnemyModel['tracers'] = { right: tracer(weapons.right, owner) };
+  if (weapons.left) tracers.left = tracer(weapons.left, weapons.left.object);
 
   let disposed = false;
   const telegraphColor = new THREE.Color();

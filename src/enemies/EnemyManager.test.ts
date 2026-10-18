@@ -19,7 +19,7 @@ const SPAWNERS: SpawnerDef[] = [
   { id: 'pack', enemy: 'ash-wraith', count: 3, anchor: 'spawn.pack', band: { min: 1, max: 1 }, activation: 'manual', respawn: 'never', leash: false },
   { id: 'one', enemy: 'ash-wraith', count: 1, anchor: 'spawn.one', band: { min: 1, max: 1 }, activation: 'manual', respawn: 'never', leash: false },
   { id: 'soldier', enemy: 'blighted-soldier', count: 1, anchor: 'spawn.soldier', band: { min: 1, max: 1 }, activation: 'manual', respawn: 'never', leash: false },
-  { id: 'm01', tag: 'spawn.m01', enemy: 'ash-wraith', count: 2, anchor: 'spawn.m01', band: { min: 1, max: 1 }, activation: { quest: 'm01' }, respawn: 'never', leash: false },
+  { id: 'm01', tag: 'm01', enemy: 'ash-wraith', count: 2, anchor: 'spawn.m01', band: { min: 1, max: 1 }, activation: { quest: 'm01' }, respawn: 'never', leash: false },
   { id: 'missing', enemy: 'ash-wraith', count: 1, anchor: 'spawn.nowhere', band: { min: 1, max: 1 }, activation: 'manual', respawn: 'never' },
 ];
 
@@ -57,7 +57,7 @@ describe('spawning', () => {
     const actor = fake.actorMap.get(ids[0])!;
     expect(actor.team).toBe('hostile');
     expect(actor.kind).toBe('ash-wraith');
-    expect(actor.spawnTag).toBe('spawn.m01');
+    expect(actor.spawnTag).toBe('m01');
     expect(actor.data['audio']).toEqual({ material: 'ash' });
     expect(fake.targetCount).toBe(1 + 2); // player + two wraiths
     expect(fake.attackerCount).toBe(2);

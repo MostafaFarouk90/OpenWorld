@@ -16,10 +16,11 @@ export const SLICE_SPAWNERS: readonly SpawnerDef[] = [
   beat('t15.gate', 'ash-wraith', 5, 'spawn.t15.wraiths'),
   {
     id: 'm01.lanes',
-    tag: 'spawn.m01',
+    tag: 'm01',
     enemy: 'ash-wraith',
-    count: 4,
+    count: 5,
     anchor: 'spawn.m01.wraith-1',
+    memberAnchors: [1, 2, 3, 4, 5].map((i) => `spawn.m01.wraith-${i}`),
     patrol: { tag: 'm01-lanes' },
     band: ONE,
     activation: { quest: 'm01' },

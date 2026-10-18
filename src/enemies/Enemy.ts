@@ -129,6 +129,7 @@ export class Enemy {
     for (const ch of ['right', 'left'] as const) {
       const tracer = model.tracers[ch];
       if (!tracer) continue;
+      if (tracer.attacker !== model.owner) this.removers.push(host.actors.bindOwner(this.actor, tracer.attacker));
       this.removers.push(host.combat.addAttacker(this.actor.id, tracer, animator.windowSource(ch)));
       const parts = model.weapons[ch];
       const trail = parts ? host.services.get('vfx')?.attachTrail?.(`${this.actor.id}.${ch}`, parts.hilt, parts.tip) : undefined;

@@ -52,6 +52,8 @@ export interface ActorsPort {
   spawn(init: ActorInitLike): ActorLike;
   despawn(id: ActorId): void;
   get(id: ActorId): ActorLike | undefined;
+  /** Maps another object (a second weapon's tracer attacker) to the actor; returns unbind. */
+  bindOwner(actor: ActorLike, owner: unknown): () => void;
   readonly player: ActorLike;
 }
 

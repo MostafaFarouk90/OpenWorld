@@ -87,11 +87,26 @@ describe('SpawnerRegistry', () => {
     expect(reqs[1]!.options.aggro).toBe(true);
     expect(reqs[0]!.spentKey).toBe('a#0');
   });
-  it('slice m01.lanes uses tag spawn.m01', () => {
-    const { reg, reqs } = setup([anchor('spawn.m01.wraith-1', 0, 0)], [...SLICE_SPAWNERS]);
+  it('slice m01.lanes spawns five wraiths tagged m01, one per wraith anchor', () => {
+    const anchors = [1, 2, 3, 4, 5].map((i) => anchor(`spawn.m01.wraith-${i}`, i * 10, -i));
+    const { reg, reqs, warn } = setup(anchors, [...SLICE_SPAWNERS]);
     reg.onQuestStarted('m01');
-    expect(reqs.length).toBe(4);
-    expect(reqs.every((r) => r.spawnTag === 'spawn.m01')).toBe(true);
+    expect(reqs.length).toBe(5);
+    expect(reqs.every((r) => r.spawnTag === 'm01')).toBe(true);
+    expect(reqs.map((r) => [r.feet.x, r.feet.z])).toEqual(anchors.map((a) => [a.position.x, a.position.z]));
+    expect(warn).not.toHaveBeenCalled();
+  });
+  it('a missing member anchor warns once and falls back to a ring slot around the main anchor', () => {
+    const { reg, reqs, warn } = setup(
+      [anchor('sp', 0, 0), anchor('m1', 20, 20)],
+      [mk({ count: 2, memberAnchors: ['m1', 'gone'] })],
+    );
+    reg.spawnGroup('s');
+    expect(reqs[0]!.feet).toEqual({ x: 20, y: 2, z: 20 });
+    expect(Math.hypot(reqs[1]!.feet.x, reqs[1]!.feet.z)).toBeCloseTo(WORLD_AI.ringRadius);
+    reg.despawnGroup('s');
+    reg.spawnGroup('s');
+    expect(warn.mock.calls.filter((c) => String(c[0]).includes("'gone'")).length).toBe(1);
   });
   it('level uses band, roll and tierOffset; unknown region warns once and uses default', () => {
     const { reg, reqs, warn } = setup(
