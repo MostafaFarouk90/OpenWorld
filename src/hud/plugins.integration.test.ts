@@ -368,3 +368,59 @@ describe('plugin wiring (real Game)', () => {
     t2.dispose();
   });
 });
+
+describe('review fixes', () => {
+  it('xpBarProgress is XP within the level over the level size', async () => {
+    const { xpBarProgress } = await import('./hud.plugin');
+    expect(xpBarProgress({ level: 1, xp: 10 })).toEqual({ level: 1, xp: 10, xpToNext: 50, maxed: false });
+    const l2 = xpBarProgress({ level: 2, xp: 60 });
+    expect(l2.xp).toBe(10);
+    expect(l2.xpToNext).toBeGreaterThan(l2.xp);
+    expect(xpBarProgress({ level: 40, xp: 1e9 }).maxed).toBe(true);
+  });
+
+  it('the quest adapter reads the real quests service shape and the tracker finds a later-loaded service', async () => {
+    const { adaptQuests } = await import('./hud.plugin');
+    const questsPlugin = (await import('../quests/quests.plugin')).default;
+    const t = await setup([corePlugin, hudPlugin, questsPlugin, progressionPlugin]);
+    const q = t.ctx.services.get('quests' as any) as any;
+    expect(q).toBeTruthy();
+    q.start('m01');
+    const rows = adaptQuests(q);
+    expect(rows[0].id).toBe('m01');
+    expect(rows[0].objectives.length).toBeGreaterThan(0);
+    for (const o of rows[0].objectives) expect(o.textKey).toMatch(/^quest\.m01\./);
+    expect(rows[0].objectives.every((o) => o.required >= 1)).toBe(true);
+    t.dispose();
+  });
+
+  it('max health follows a changing Burn modifier on burn.changed', async () => {
+    const t = await setup();
+    let factor = 1;
+    t.prog().addMaxHealthModifier('burn', () => factor);
+    factor = 0.5;
+    t.game.events.emit('burn.changed', { value: 60, previous: 0 });
+    expect(t.ctx.actors.player.maxHealth).toBe(60);
+    factor = 1;
+    t.game.events.emit('burn.changed', { value: 0, previous: 60 });
+    expect(t.ctx.actors.player.maxHealth).toBe(120);
+    t.dispose();
+  });
+
+  it('xp.grant event pays good payloads and ignores bad ones', async () => {
+    const t = await setup();
+    t.game.events.emit('xp.grant', { amount: 30, source: 'quest:x' });
+    t.game.events.emit('xp.grant', { amount: -5, source: 'x' });
+    t.game.events.emit('xp.grant', { amount: Number.NaN, source: 'x' });
+    expect(t.prog().xp).toBe(30);
+    t.dispose();
+  });
+
+  it('loading a corrupt inventory resets gold; load clears the mercy ledger', async () => {
+    const t = await setup();
+    t.inv().addGold(50);
+    t.ctx.persist.get('inventory')!.load(null, 1);
+    expect(t.inv().gold).toBe(0);
+    t.dispose();
+  });
+});

@@ -287,3 +287,27 @@ describe('PromptManager', () => {
     expect(new Set(MECHANICS).size).toBe(20);
   });
 });
+
+describe('review fixes', () => {
+  it('hide() forgets a faded prompt so hints-always does not bring it back', () => {
+    const { pm } = setup();
+    pm.show('move', 'move', 'prompt.move');
+    pm.success('move');
+    pm.success('move');
+    pm.update(1);
+    pm.hide('move');
+    pm.showHintsAlways = true;
+    expect(pm.rows()).toEqual([]);
+  });
+
+  it('hide() with no id also forgets every faded prompt', () => {
+    const { pm } = setup();
+    pm.show('sprint', 'sprint', 'prompt.sprint');
+    pm.success('sprint');
+    pm.success('sprint');
+    pm.update(1);
+    pm.hide();
+    pm.showHintsAlways = true;
+    expect(pm.rows()).toEqual([]);
+  });
+});

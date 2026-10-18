@@ -50,6 +50,8 @@ const progressionPlugin: GamePlugin = {
     });
     // Other persistables (the player's health) load around us: recompute once everything is in.
     ctx.events.on('save.loaded', () => progression.applyMaxHealth());
+    // Burn and Scar penalties are read from their modifiers, so re-read when Burn moves.
+    ctx.events.on('burn.changed', () => progression.refreshMaxHealth());
 
     ctx.events.on('actor.died', (e) => {
       progression.onKill({ actorId: e.actorId, kind: e.kind, team: e.team, level: e.level, killerId: e.killerId });

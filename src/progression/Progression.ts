@@ -85,6 +85,11 @@ export class Progression implements ProgressionService {
     return levelPoints(this.level) + this.storyPoints - this.spent(this.learnedIds);
   }
 
+  /** Re-evaluates the max-health modifiers (Burn and Scars change over time). */
+  refreshMaxHealth(): void {
+    this.applyMaxHealth();
+  }
+
   xpToNext(): number {
     const level = this.level;
     return level >= LEVEL_CAP ? 0 : xpForLevel(level + 1) - this.totalXp;
@@ -144,7 +149,7 @@ export class Progression implements ProgressionService {
 
   /** Pays 60% (floor) of the kill value, once per creature. */
   onMercy(info: MercyInfo): number {
-    if (this.mercy.has(info.actorId) || this.killed.has(info.actorId)) return 0;
+    if (this.killXpPaused || this.mercy.has(info.actorId) || this.killed.has(info.actorId)) return 0;
     const value = killXp(info.kind, info.level, this.level);
     const pay = Math.floor(value * MERCY_XP_FRACTION);
     this.mercy.set(info.actorId, { paid: pay, revoked: false });
@@ -275,6 +280,8 @@ export class Progression implements ProgressionService {
   }
 
   load(data: unknown): void {
+    this.killed.clear();
+    this.mercy.clear();
     this.totalXp = 0;
     this.storyPoints = 0;
     this.learnedIds = [];

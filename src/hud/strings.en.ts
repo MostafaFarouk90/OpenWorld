@@ -12,6 +12,7 @@ export const HUD_STRINGS_EN: Readonly<Record<string, string>> = {
   'hud.slot.cost': '{cost} Ember',
   'hud.nextUnlock.level': '{remaining} XP to level {level}',
   'hud.nextUnlock.skill': '{remaining} XP to unlock {skill}',
+  'hud.nextUnlock.learn': 'Spend your skill point: {skill}',
   'hud.nextUnlock.points': '{points} skill points to spend',
   'hud.nextUnlock.point': '1 skill point to spend',
 };

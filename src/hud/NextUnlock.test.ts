@@ -48,3 +48,14 @@ describe('NextUnlock', () => {
     expect(root.children).toHaveLength(0);
   });
 });
+
+describe('NextUnlock with a point to spend', () => {
+  it('reads "spend your point", not "0 XP to unlock"', () => {
+    const n = new NextUnlock(new StubDocument(), {
+      nextUnlock: () => ({ kind: 'skill', remaining: 0, skillId: 'knight.rimBash' }),
+      skillPoints: () => 1,
+      skillName: () => 'Shield Rim Bash',
+    });
+    expect(n.label()).toBe('Spend your skill point: Shield Rim Bash');
+  });
+});

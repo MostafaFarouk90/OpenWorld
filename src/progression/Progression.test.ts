@@ -327,3 +327,20 @@ describe('persistence', () => {
     expect(Progression.version).toBe(1);
   });
 });
+
+describe('review fixes', () => {
+  it('mercy XP is also paused by pauseKillXp', () => {
+    const { p } = makeProgression();
+    const resume = p.pauseKillXp('tutorial');
+    expect(p.onMercy({ actorId: 'a#1', kind: 'ash-wraith', level: 1 })).toBe(0);
+    resume();
+    expect(p.onMercy({ actorId: 'a#2', kind: 'ash-wraith', level: 1 })).toBeGreaterThan(0);
+  });
+
+  it('load clears the kill and mercy ledgers so a loaded timeline pays in full', () => {
+    const { p } = makeProgression();
+    p.onMercy({ actorId: 'a#1', kind: 'ash-wraith', level: 1 });
+    p.load({ xp: 0 });
+    expect(p.onKill({ actorId: 'a#1', kind: 'ash-wraith', team: 'hostile', level: 1, killerId: 'player' })).toBe(20);
+  });
+});

@@ -121,8 +121,13 @@ export class PromptManager implements PromptService {
   }
 
   hide(mechanic?: string): void {
-    if (mechanic === undefined) this.entries = [];
-    else this.entries = this.entries.filter((e) => e.mechanic !== mechanic);
+    if (mechanic === undefined) {
+      this.entries = [];
+      this.faded.clear();
+    } else {
+      this.entries = this.entries.filter((e) => e.mechanic !== mechanic);
+      this.faded.delete(mechanic);
+    }
   }
 
   /** Recomputes every row's text, e.g. after a rebind. */

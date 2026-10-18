@@ -86,6 +86,8 @@ export interface ProgressionService {
   assign(slot: number, skillId: string | null): boolean;
   addMaxHealthModifier(id: string, fn: () => number): () => void;
   baseMaxHealth(): number;
+  /** Re-evaluates the max-health modifiers; call after a Burn or Scar change. */
+  refreshMaxHealth(): void;
   nextUnlock(): NextUnlock;
 }
 

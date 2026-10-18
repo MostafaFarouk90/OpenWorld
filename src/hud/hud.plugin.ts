@@ -15,8 +15,9 @@ import { HUD_STRINGS_EN } from './strings.en';
 import { asHtml, hudDocument, injectCss, projectToScreen, soft } from './soft';
 import type { HudSlot } from '../ui/HudLayer';
 import type { HudWidgetView } from './widget';
+import type { ProgressionService } from './ports';
 import { getSkill } from '../progression/skills';
-import { LEVEL_CAP } from '../progression/tuning';
+import { LEVEL_CAP, xpForLevel } from '../progression/tuning';
 
 const scratch = new Vector3();
 
@@ -50,7 +51,7 @@ const hudPlugin: GamePlugin = {
         spells: () => soft(ctx, 'spells'),
         progress: () => {
           const p = progression();
-          return p ? { level: p.level, xp: p.xp, xpToNext: p.xpToNext(), maxed: p.level >= LEVEL_CAP } : null;
+          return p ? xpBarProgress(p) : null;
         },
         t,
       }),
@@ -98,10 +99,11 @@ const hudPlugin: GamePlugin = {
     mount(
       'top-right',
       new QuestTracker(doc, {
-        quests: (() => {
+        // Looked up on every read: the quests plugin may set up after this one.
+        get quests() {
           const q = soft(ctx, 'quests');
           return q ? { active: () => adaptQuests(q) } : undefined;
-        })(),
+        },
         t,
       }),
       0,
@@ -152,25 +154,39 @@ const hudPlugin: GamePlugin = {
   },
 };
 
-/** Tolerates the quests service returning ids or objects until thread 3's shapes are pinned down. */
-function adaptQuests(q: NonNullable<ReturnType<typeof soft<'quests'>>>): TrackedQuest[] {
+/** The XP bar's numbers: XP gained within the current level over the size of that level. */
+export function xpBarProgress(p: Pick<ProgressionService, 'level' | 'xp'>): { level: number; xp: number; xpToNext: number; maxed: boolean } {
+  const base = xpForLevel(p.level);
+  return { level: p.level, xp: p.xp - base, xpToNext: xpForLevel(p.level + 1) - base, maxed: p.level >= LEVEL_CAP };
+}
+
+/** Maps thread 3's `objectives(id)` views ({ def, progress, done, current }) to the tracker's rows. */
+export function adaptQuests(q: NonNullable<ReturnType<typeof soft<'quests'>>>): TrackedQuest[] {
   const out: TrackedQuest[] = [];
   for (const entry of q.active()) {
     const id = typeof entry === 'string' ? entry : (entry as { id?: unknown })?.id;
     if (typeof id !== 'string') continue;
     const objectives = q
       .objectives(id)
-      .filter((o): o is Record<string, unknown> => typeof o === 'object' && o !== null)
-      .map((o) => ({
-        textKey: typeof o.textKey === 'string' ? o.textKey : `quest.${id}.${String(o.id ?? '')}`,
-        progress: typeof o.progress === 'number' ? o.progress : 0,
-        required: typeof o.required === 'number' ? o.required : 1,
-        done: o.done === true,
-        optional: o.optional === true,
+      .filter((v): v is ObjectiveViewLike => typeof v === 'object' && v !== null && typeof (v as ObjectiveViewLike).def === 'object')
+      .filter((v) => v.current === true || v.done === true)
+      .map((v) => ({
+        textKey: v.def.textKey,
+        progress: typeof v.progress === 'number' ? v.progress : 0,
+        required: typeof v.def.required === 'number' && v.def.required > 0 ? v.def.required : 1,
+        done: v.done === true,
+        optional: v.def.optional === true,
       }));
     out.push({ id, titleKey: `quest.${id}.title`, objectives });
   }
   return out;
+}
+
+interface ObjectiveViewLike {
+  def: { textKey: string; required?: number; optional?: boolean };
+  progress?: number;
+  done?: boolean;
+  current?: boolean;
 }
 
 export default hudPlugin;
