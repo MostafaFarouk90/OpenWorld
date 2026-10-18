@@ -1,6 +1,6 @@
 // The slice fog gate (design 5.9): an ash-fall wall across the Dead Road at x 1100 that stands until its flag opens
 // it. The wall is a translucent mesh with drifting ash, one long collider across the valley, a push-back for anyone
-// who gets past it and the "Act 1 continues" trigger, all of which exist only while it stands. The state is derived
+// who gets past it and the trigger the HUD toasts on, all of which exist only while it stands. The state is derived
 // through ctx.gates, so a loaded save applies it with no listener of our own.
 import * as THREE from 'three';
 import type RAPIER from '@dimforge/rapier3d';
@@ -9,7 +9,6 @@ import type { CoreContext } from './coreTypes';
 
 /**
  * The wall stands until M05 is complete (thread 6 writes `story.m05.complete`, and Phase A saves already carry it).
- * `story.slice.harrowmarkOpen` was Phase A's stand-in: nothing writes it, and thread 21 retires its readers.
  */
 export const FOG_OPEN_FLAGS: readonly string[] = ['story.m05.complete'];
 

@@ -169,7 +169,6 @@ describe('?act1= on the real game', () => {
     expect(s.getBool('story.m05.complete')).toBe(true);
     expect(s.getBool('world.deadroad.wardstones.done')).toBe(true);
     expect(s.getBool('shrine.quenchstone.lit')).toBe(true);
-    expect(s.getBool('story.slice.harrowmarkOpen')).toBe(false);
     expect(t.ctx.services.require('companions').active()).toContain('tobb');
     // The session hold keeps every save request away from the store.
     const r = await t.ctx.services.require('save').saveNow('manual');

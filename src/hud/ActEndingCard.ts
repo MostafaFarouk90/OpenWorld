@@ -1,7 +1,17 @@
 import type { DocumentLike, ElementLike } from './dom';
-import type { KeyLike, KeySource } from './ActContinuesCard';
 import { defaultHudT } from './strings.en';
 import { makeEl, setShown, type HudWidgetView, type Translate } from './widget';
+
+export interface KeyLike {
+  repeat?: boolean;
+  key?: string;
+  code?: string;
+}
+
+export interface KeySource {
+  addEventListener(type: 'keydown', listener: (e: KeyLike) => void): void;
+  removeEventListener(type: 'keydown', listener: (e: KeyLike) => void): void;
+}
 
 export const ACT_ENDING_ID = 'smoke-over-harrowmark';
 export const ACT_ENDING_SEEN_FLAG = 'codex.actEndingSeen';

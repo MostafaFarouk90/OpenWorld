@@ -61,9 +61,8 @@ describe('the slice fog wall', () => {
     expect(fc.colliders.size).toBe(1);
   });
 
-  it('is down for a save that finished M05, and the retired Phase A flag no longer opens it', () => {
+  it('is down for a save that finished M05', () => {
     expect(setup({ 'story.m05.complete': true }).fog.standing).toBe(false);
-    expect(setup({ 'story.slice.harrowmarkOpen': true }).fog.standing).toBe(true);
   });
 
   it('opens when story.m05.complete is set during play', () => {
@@ -90,7 +89,6 @@ describe('the slice fog wall', () => {
     const flags = new Map<string, unknown>();
     const state = { getFlag: (k: string) => flags.get(k) };
     expect(fogOpen(state)).toBe(false);
-    flags.set('story.slice.harrowmarkOpen', true);
     expect(fogOpen(state)).toBe(false);
     flags.set('story.m05.complete', true);
     expect(fogOpen(state)).toBe(true);
