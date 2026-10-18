@@ -680,3 +680,31 @@ describe('companions plugin: review additions', () => {
     t.done();
   });
 });
+
+describe('companions plugin: outdoor nav grids', () => {
+  it("a street nav grid outdoors (Harrowmark's blocks) is not an interior: he keeps his slot on the terrain", async () => {
+    const street: GamePlugin = {
+      id: 'fake-streets',
+      dependsOn: ['core'],
+      setup(ctx) {
+        ctx.services.provide('interiors' as never, { current: null } as never);
+        ctx.services.provide('nav' as never, {
+          hasGrid: () => true,
+          floorAt: () => null,
+          path: (_from: unknown, to: { x: number; y: number; z: number }) => [to],
+        } as never);
+      },
+    };
+    const t = await boot([corePlugin, street, companionsPlugin]);
+    // No ray ever hits, so ground comes from the terrain height (outdoors) and never from an interior fallback.
+    vi.spyOn(t.ctx.physics, 'raycast').mockReturnValue(null as never);
+    t.ctx.state.setFlag(JOIN, true);
+    t.run(240);
+    const p = t.tobbPos()!;
+    expect(t.tobb()!.root!.visible).toBe(true);
+    expect(t.distToPlayer()).toBeGreaterThan(1.5);
+    expect(t.distToPlayer()).toBeLessThan(5);
+    expect(Math.abs(p.y - heightAt(p.x, p.z))).toBeLessThan(0.05);
+    t.done();
+  });
+});

@@ -728,12 +728,8 @@ export class CompanionController {
       raycast: (o, d, max) => ctx.physics.raycast(o, d, max, exclude),
       isResident: (x, z) => ctx.terrain.isResident(x, z),
       heightAt,
-      indoors: () => {
-        const i = interiors();
-        if (i?.current) return true;
-        const f = ctx.player.feet;
-        return !!i && !!nav()?.hasGrid({ x: f.x, y: f.y, z: f.z });
-      },
+      // Only a real interior counts: Harrowmark's street blocks have nav grids too, and they are outdoors.
+      indoors: () => !!interiors()?.current,
       get nav() {
         return nav();
       },
