@@ -8,6 +8,7 @@ import { InputManager } from '../input/InputManager';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
+import { ThirdPersonCamera } from '../rendering/ThirdPersonCamera';
 import type { GameEventMap } from './events';
 import { Game } from './Game';
 import { MoveModifiers } from './MoveModifiers';
@@ -643,6 +644,90 @@ describe('plugin scope retention', () => {
     }
     expect(scope.size).toBe(0);
     expect(t.moveModifiers.size).toBe(0);
+    t.world.dispose();
+  });
+});
+
+describe('v0.4 core additions', () => {
+  it('player.leap moves the player forward and emits player.leap start then land', () => {
+    const t = setup();
+    t.run(60);
+    const start = t.game.ctx.player.feet.clone();
+    const handle = t.game.ctx.player.leap({ yaw: 0, distance: 6, apex: 1 })!;
+    expect(handle).not.toBeNull();
+    expect(t.game.ctx.player.leap({ distance: 6, apex: 1 })).toBeNull(); // already leaping
+    t.run(120);
+    const phases = ofType(t.events, 'player.leap').map((e) => e.phase);
+    expect(phases).toEqual(['start', 'land']);
+    const land = ofType(t.events, 'player.leap')[1];
+    expect(land.to).toBeDefined();
+    expect(start.z - t.game.ctx.player.feet.z).toBeGreaterThan(5); // yaw 0 faces -Z
+    expect(handle.landed).toBe(true);
+    t.world.dispose();
+  });
+
+  it('a teleport mid-leap cancels it', () => {
+    const t = setup();
+    t.run(60);
+    const handle = t.game.ctx.player.leap({ distance: 6, apex: 1 })!;
+    t.run(5);
+    t.game.ctx.player.teleport({ x: 30, y: 0, z: 30 });
+    expect(handle.active).toBe(false);
+    expect(ofType(t.events, 'player.leap').map((e) => e.phase)).toEqual(['start', 'cancel']);
+    t.world.dispose();
+  });
+
+  it('gates and boss registrations made by a plugin are removed with its scope', () => {
+    const t = setup();
+    const scope = new Scope();
+    const ctx = t.game.scopedContext(scope);
+    const seen: boolean[] = [];
+    ctx.gates.flag('story.slice.harrowmarkOpen', (open) => seen.push(open));
+    const prior = ctx.actors.spawn({ kind: 'ashen-prior', team: 'hostile', maxHealth: 100, maxPoise: 30 });
+    ctx.bosses.register(prior.id, { bossId: 'ashen-prior', nameKey: 'boss.ashen-prior', phases: [0.5], breaksPerPhase: 3 });
+    expect(t.game.ctx.bosses.active()).toEqual(['ashen-prior']);
+    scope.close();
+    expect(t.game.ctx.bosses.active()).toEqual([]);
+    t.game.ctx.state.setFlag('story.slice.harrowmarkOpen', true);
+    expect(seen).toEqual([false]);
+    t.world.dispose();
+  });
+
+  it('the boss release window ticks on simulated time only', () => {
+    const t = setup();
+    const ctx = t.game.ctx;
+    const prior = ctx.actors.spawn({ kind: 'ashen-prior', team: 'hostile', maxHealth: 100, maxPoise: 10 });
+    ctx.bosses.register(prior.id, { bossId: 'ashen-prior', nameKey: 'boss.ashen-prior', phases: [], breaksPerPhase: 1, releaseWindowSeconds: 0.5 });
+    ctx.damage.stagger(prior.id, 'player', 10);
+    expect(ctx.bosses.state('ashen-prior')!.releaseOpen).toBe(true);
+    ctx.clock.setPaused('test.menu', true);
+    t.run(60);
+    expect(ctx.bosses.state('ashen-prior')!.releaseOpen).toBe(true);
+    ctx.clock.setPaused('test.menu', false);
+    t.run(40);
+    expect(ctx.bosses.state('ashen-prior')!.releaseOpen).toBe(false);
+    t.world.dispose();
+  });
+
+  it('a camera override made through a plugin scope is released on teardown, another plugin\'s stays', () => {
+    const t = setup();
+    const camera = new THREE.PerspectiveCamera(60);
+    const input = { consumeMouseDelta: () => ({ dx: 0, dy: 0 }), consumeWheel: () => 0 } as never;
+    const rig = new ThirdPersonCamera(camera, input, { raycast: () => null } as never, {} as never);
+    const game = new Game({ scene: t.scene, physics, world: t.world, input: t.input, moveModifiers: t.moveModifiers, cameraRig: rig, report: () => {} });
+    const a = new Scope();
+    const b = new Scope();
+    const ha = game.scopedContext(a).cameraRig!.override({ position: { x: 0, y: 5, z: 0 }, lookAt: { x: 0, y: 0, z: 0 } });
+    const hb = game.scopedContext(b).cameraRig!.override({ position: { x: 1, y: 5, z: 0 }, lookAt: { x: 0, y: 0, z: 0 } });
+    a.close();
+    expect(ha.active).toBe(false);
+    expect(hb.active).toBe(true);
+    expect(rig.overridden).toBe(true);
+    hb.release();
+    expect(b.size).toBe(0); // a self-release leaves the scope
+    expect(rig.overridden).toBe(false);
+    expect(new Game({ scene: t.scene, physics, world: t.world, input: t.input, moveModifiers: t.moveModifiers }).scopedContext(new Scope()).cameraRig).toBeNull();
+    game.dispose();
     t.world.dispose();
   });
 });
