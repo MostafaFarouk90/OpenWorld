@@ -146,14 +146,14 @@ describe('Phase A chapter chain (all real plugins)', () => {
 // - kills (cutpurses, guildhall thugs, kennel hounds) are lethal ctx.damage.apply hits from the player;
 // - the class choice calls classes.choose (the trainer desk is a DOM modal) and classes.skipDrill;
 // - if the walk ends with the courier still running, thread 18's catchCourierForTest (the normal chase.caught path);
-// - Gaffer Grimtooth is a TEST-ONLY stand-in (grimtoothStub.ts) on the real boss registry until thread 3b lands: breaks
-//   by damage, then the real Calm hold (T, Hearth Bread) or a lethal hit;
+// - Gaffer Grimtooth (thread 3b's real boss) is broken by damage hits (grimtooth.ts), then the real Calm hold (T,
+//   Hearth Bread) or a lethal hit;
 // - the card has no key target headless: the HUD's actEndingCard.dismiss() closes it as its key would.
 
 import { bootFromSave } from './chapterHarness';
 import { PHASE_A_FIXTURES, readPhaseAFixture } from '../save/__fixtures__/phaseA';
 import { HARNESS_TIP_GOLD, PHASE_B_ORDER, playM06, playPhaseB, reachSouthGate, type PhaseBOptions } from './phaseB';
-import { fightGrimtooth } from './grimtoothStub';
+import { fightGrimtooth } from './grimtooth';
 
 const RUN_A: PhaseBOptions = { route: 'bribe', classId: 'knight', debt: 'forgiven', steward: 'expose', stance: 'steady', grimtooth: 'released' };
 const RUN_B: PhaseBOptions = { route: 'stealth', classId: 'warden', debt: 'collected', steward: 'shield', stance: 'bold', grimtooth: 'defeated' };

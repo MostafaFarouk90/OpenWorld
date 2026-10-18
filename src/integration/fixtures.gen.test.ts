@@ -17,7 +17,7 @@ import { PHASE_A_FIXTURES, FIXTURE_SAVED_AT, readPhaseAFixture } from '../save/_
 import { ACT1_FIXTURES } from '../save/__fixtures__/act1';
 import { bootFromSave } from './chapterHarness';
 import { playPhaseB } from './phaseB';
-import { fightGrimtooth } from './grimtoothStub';
+import { fightGrimtooth } from './grimtooth';
 
 const GEN = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.GEN_FIXTURES === '1';
 
@@ -115,7 +115,7 @@ const ACT1_FIXTURES_WHAT: Record<keyof typeof ACT1_FIXTURES, string> = {
   m10Ashmare: 'Act 1 run A: M10 completed, story.m10.ashmare set, on foot',
   d02Underways: 'Act 1 run A: D02 active (o1, o2 done), inside the Underways before the kennels; bread, Calm and the door from Rook',
   endingCard: 'Act 1 run A: D02 completed, story.gate.a2 set, the ending card shown (codex.actEndingSeen) and not dismissed, no camp yet',
-  complete: 'Act 1 run A: every Act 1 quest completed, Grimtooth calmed (test stand-in until thread 3b), the ending card and the camp scene done',
+  complete: 'Act 1 run A: every Act 1 quest completed, Grimtooth (the real boss) calmed, the ending card and the camp scene done',
 };
 
 describe.skipIf(!GEN)('Act 1 fixtures (GEN_FIXTURES=1 writes them)', () => {

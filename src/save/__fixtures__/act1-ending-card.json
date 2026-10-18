@@ -2,7 +2,7 @@
   "format": 1,
   "savedAt": 1767225600000,
   "reason": "manual",
-  "playtimeSeconds": 168,
+  "playtimeSeconds": 171,
   "entries": {
     "world-state": {
       "version": 1,
@@ -444,7 +444,7 @@
     "progression": {
       "version": 2,
       "data": {
-        "xp": 6176,
+        "xp": 6332,
         "storyPoints": 1,
         "learned": [],
         "bar": [
@@ -473,7 +473,7 @@
     "player": {
       "version": 1,
       "data": {
-        "health": 145,
+        "health": 153,
         "stamina": 100,
         "lastRestedWaystoneId": "chapel",
         "goldPouch": null
@@ -482,14 +482,14 @@
     "burn": {
       "version": 1,
       "data": {
-        "burn": 63.46666666667261,
+        "burn": 62.886666666673136,
         "scars": 1
       }
     },
     "ember": {
       "version": 1,
       "data": {
-        "ember": 95.06666666665988,
+        "ember": 100,
         "max": 100
       }
     },
