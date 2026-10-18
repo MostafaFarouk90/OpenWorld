@@ -439,7 +439,7 @@ export class TutorialDirector {
     const steps = def.steps.map((st) => st.map((spec) => this.data.createGoal(spec)));
     for (const st of steps) for (const g of st) g.sync(this.ports.state);
     this.drill = { def, steps, step: 0, left: DRILL_SECONDS };
-    this.ports.holdKillXp(true);
+    this.ports.holdKillXp(true, 'tutorial.replay');
     this.seedTriggers(steps[0] ?? []);
     for (const sp of def.waves ?? []) {
       this.ports.resetGroup(sp.spawnerId);
@@ -494,7 +494,7 @@ export class TutorialDirector {
     }
     this.placeNpcsFor(id);
     this.ports.setLocks(this.locksFor(id));
-    this.ports.holdKillXp(this.beforeT13(id));
+    this.ports.holdKillXp(this.beforeT13(id), 'tutorial');
     const index = this.data.orders.full.indexOf(id);
     if (index >= 0 && index < this.data.orders.full.indexOf('t05')) this.ports.reArm(0);
     else if (def.crisis || def.cutscene === 'crack') this.ports.reArm(1);
