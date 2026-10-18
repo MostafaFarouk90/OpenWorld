@@ -25,7 +25,11 @@ export interface FakeCore {
   colliders: Set<object>;
   emitted: Array<{ type: string; payload: unknown }>;
   targets: unknown[];
+  /** Mutable: tests move the player by assigning x, y, z. */
+  playerFeet: { x: number; y: number; z: number };
   /** Fires every listener of `type`. */
+  /** Gives the fake physics a real Rapier module (after `await physicsWorld.init()`). */
+  useRapier(rapier: CoreContext['physics']['rapier']): void;
   fire(type: string, payload?: unknown): void;
   /** Runs fixedUpdate of every system of a phase, ascending order. */
   tick(phase: GameSystem['fixedPhase'], dt?: number): void;
@@ -46,6 +50,7 @@ export function createFakeCore(): FakeCore {
   const targets: unknown[] = [];
   const listeners = new Map<string, Set<(p: any) => void>>();
   const counters = new Map<string, number>();
+  const playerFeet = { x: 0, y: 0, z: 0 };
 
   const unique = <T>(map: Map<string, T>, id: string, what: string, value: T): (() => void) => {
     if (map.has(id)) throw new Error(`duplicate ${what} "${id}"`);
@@ -58,6 +63,7 @@ export function createFakeCore(): FakeCore {
   const ctx: CoreContext = {
     scene,
     physics: {
+      rapier: undefined as never,
       addStaticCollider(desc) {
         const c = { desc };
         colliders.add(c);
@@ -140,6 +146,7 @@ export function createFakeCore(): FakeCore {
     },
     systems: { add: (s) => unique(systems, s.id, 'system', s) },
     combat: { addTarget: (t) => void targets.push(t) },
+    player: { feet: playerFeet },
   };
 
   return {
@@ -156,6 +163,10 @@ export function createFakeCore(): FakeCore {
     colliders,
     emitted,
     targets,
+    playerFeet,
+    useRapier(rapier) {
+      (ctx.physics as { rapier: unknown }).rapier = rapier;
+    },
     fire(type, payload) {
       for (const l of [...(listeners.get(type) ?? [])]) l(payload);
     },

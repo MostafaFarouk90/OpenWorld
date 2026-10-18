@@ -30,7 +30,8 @@ const anchors: AnchorSpec[] = [
   a('kettlewick.bakery-door', 17, 132, 90, ['poi']),
   a('kettlewick.bakery-counter', 25, 132, 270, ['poi']),
   a('kettlewick.barrel', 27, 135, 0, ['interact']),
-  a('kettlewick.hearth-stone', 17, 129, 0, ['interact']),
+  a('kettlewick.bakery-hearth', 21.5, 129, 0, ['interact'], { onStructure: 'bakery' }),
+  a('kettlewick.bakery-fire', 26, 128, 0, ['fx'], { onStructure: 'bakery' }),
   a('kettlewick.notice-board', -9, 124, 0, ['interact']),
   a('kettlewick.tavern-door', -16, 132, 270, ['poi']),
 
@@ -55,7 +56,7 @@ const anchors: AnchorSpec[] = [
 
   // Waystones (anchors only; thread 6 owns the stones' behaviour and finds them by tag).
   a('waystone.chapel', 40, 45, 0, ['waystone'], { onStructure: 'waystone-chapel' }),
-  a('waystone.kettlewick', 12, 156, 0, ['waystone'], { onStructure: 'waystone-kettlewick' }),
+  a('waystone.kettlewick', 12, 156, 0, ['waystone', 'waystone-lit'], { onStructure: 'waystone-kettlewick' }),
   a('waystone.north', 10, 310, 0, ['waystone'], { onStructure: 'waystone-north' }),
 
   // NPC posts.
@@ -108,6 +109,7 @@ const anchors: AnchorSpec[] = [
   a('spawn.m01.wraith-2', 0, 80, 0, ['spawn']),
   a('spawn.m01.wraith-3', -4, 128, 0, ['spawn']),
   a('spawn.m01.wraith-4', 4, 150, 0, ['spawn']),
+  a('spawn.m01.wraith-5', -6, 112, 0, ['spawn']),
 
   // First open-world patrol, 235 m beyond the T15 wave.
   a('patrol.north.1', 20, 400, 0, ['patrol']),
@@ -162,7 +164,7 @@ const structures: StructureSpec[] = [
     yawDeg: 0,
     footprint: [10, 10],
     mode: 'enterable',
-    door: { name: 'bakery', side: 'W', width: 2.4, openWhen: ['tutorial.t12.begin'] },
+    door: { name: 'bakery', side: 'W', width: 2.4 },
   },
   { id: 'tavern', kind: 'tavern', x: -24, z: 132, yawDeg: 0, footprint: [12, 10], mode: 'solid' },
   house('house-01', -16, 100),
