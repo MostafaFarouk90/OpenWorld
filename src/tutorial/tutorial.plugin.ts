@@ -192,6 +192,7 @@ function makePorts(ctx: GameContext, ui: {
     despawn: (id) => svc.get('enemies')?.despawnGroup(id),
     resetGroup: (id) => svc.get('enemies')?.reset(id),
     alive: (id) => svc.get('enemies')?.alive(id).length ?? 0,
+    playerInTrigger: (id) => ctx.triggers.isInside(id, PLAYER_ID),
     setLocks: (actions) => {
       locksOff?.();
       locksOff = actions.length > 0 ? ctx.player.addMoveModifier('tutorial.locks', { lockActions: actions as Action[] }) : null;

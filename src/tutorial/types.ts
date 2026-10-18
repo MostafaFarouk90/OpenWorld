@@ -198,6 +198,8 @@ export interface DirectorPorts {
   despawn(spawnerId: string): void;
   resetGroup(spawnerId: string): void;
   alive(spawnerId: string): number;
+  /** The player is inside the trigger volume as of the last fixed update. */
+  playerInTrigger(triggerId: string): boolean;
 
   // player
   setLocks(actions: readonly string[]): void;
