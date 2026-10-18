@@ -132,6 +132,7 @@ export interface EnemyEvents {
   rest: { waystoneId: string };
   'save.loaded': { slot: string };
   'quest.started': { questId: string };
+  'flag.changed': { key: string; value: boolean | number | string | undefined; previous: boolean | number | string | undefined };
   'enemies.groupCleared': { spawnerId: string };
   'enemies.state': { actorId: ActorId; from: string; to: string };
   'enemies.yield': { actorId: ActorId; seconds: number };
