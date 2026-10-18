@@ -42,6 +42,9 @@ const REPATH_SECONDS = 0.5;
 const REPATH_MOVE = 1;
 const WAYPOINT_REACHED = 0.6;
 
+/** A door event this soon after a wait ended with a walk back is the same door's fade-in finishing. */
+const WALK_BACK_DOOR_WINDOW = 2;
+
 const dist3 = (a: Vec3, b: Vec3) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
 export class CompanionController {
@@ -78,6 +81,8 @@ export class CompanionController {
   private mounted = false;
   /** Hidden on horseback after falling too far back; reappears behind the player on dismount. */
   private mountHidden = false;
+  /** Seconds left in which a door event does not teleport him, after a wait ended with a walk back. */
+  private walkBackWindow = 0;
 
   constructor(
     private readonly ctx: GameContext,
@@ -341,6 +346,7 @@ export class CompanionController {
     // A mounted player always loads dismounted (contract v0.5), so the load clears it.
     this.mounted = false;
     this.mountHidden = false;
+    this.walkBackWindow = 0;
     const saved = this.saved;
     this.saved = null;
     if (!this.model) return;
@@ -371,12 +377,11 @@ export class CompanionController {
   }
 
   /**
-   * Door events arrive after the fade-in. A wait that ended at black may already have him walking back in Cael's
-   * space; a teleport then would pop in view, so it is skipped.
+   * Door events arrive after the fade-in. A wait that ended at black (within the last 2 s) may already have him
+   * walking back in Cael's space; a teleport then would pop in view, so it is skipped.
    */
   private onDoor(): void {
-    const m = this.model;
-    if (m && !this.wait && !this.hidden && this.canWalkBack(this.ctx.player.feet)) return;
+    if (this.walkBackWindow > 0 && !this.wait && !this.hidden && this.canWalkBack(this.ctx.player.feet)) return;
     this.requestTeleport();
   }
 
@@ -441,6 +446,7 @@ export class CompanionController {
   fixedUpdate(dt: number): void {
     if (this.disposed || !(dt > 0)) return;
     this.sinceReset += dt;
+    this.walkBackWindow = Math.max(0, this.walkBackWindow - dt);
     // Fights are tracked before he joins too, so a fight already running at the join is not announced as new.
     const edge = this.presence.tick(dt);
     const m = this.model;
@@ -603,6 +609,7 @@ export class CompanionController {
     if (this.canWalkBack(player)) {
       // Clears the trail and the player history, so the first step after the wait is not taken for a jump.
       m.place({ ...m.pos }, m.yaw);
+      this.walkBackWindow = WALK_BACK_DOOR_WINDOW;
       return;
     }
     this.lastTrailPoint = null;
