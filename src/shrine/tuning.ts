@@ -29,6 +29,8 @@ export const SHRINE_TUNING = {
     windowMs: 120,
     phraseLength: 3,
     strikeRange: 3,
+    /** The "Strike on the beat" prompt shows within this many metres of the next stone. */
+    promptRange: 8,
     strikeConeDegrees: 120,
     count: 5,
     /** Beats ignored after the beat source switches, so the player can hear the new beat. */
