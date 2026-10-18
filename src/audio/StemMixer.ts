@@ -125,6 +125,20 @@ export class StemMixer {
     }
   }
 
+  /**
+   * For a mixer started to begin at `at`: sets every stem silent now and exactly `mix` (0 if unnamed)
+   * from `at`. Unlike `setMix` it keeps the hard entry on the bar line.
+   */
+  setMixAt(mix: Record<string, number>, at: number): void {
+    const now = this.ctx.currentTime;
+    for (const [id, stem] of this.stems) {
+      const param = stem.gain.gain;
+      param.cancelScheduledValues(now);
+      param.setValueAtTime(0, now);
+      param.setValueAtTime(mix[id] ?? 0, Math.max(now, at));
+    }
+  }
+
   /** Stops playback and forgets every stem, leaving the mixer ready to load another track. */
   clear(): void {
     this.stop();

@@ -177,6 +177,12 @@ export class MusicDirector {
     this.appliedKey = this.mixRevision;
   }
 
+  /** Before `start`: use `track` for the first loop (the region was not known at construction). */
+  setStartTrack(track: TrackDef): void {
+    if (this.started || this.disposed) return;
+    this.track = track;
+  }
+
   get trackId(): string {
     return this.track.id;
   }
@@ -329,12 +335,13 @@ export class MusicDirector {
     if (this.disposed) return;
     this.chaseId = chaseId;
     this.chaseHoldUntil = null;
+    this.endingUntil = null;
     this.cancelPhrases();
   }
 
   /** `chase.caught`: the courier is caught, a win; the short ending plays. */
   chaseCaught(chaseId: string, now: number): void {
-    if (this.chaseId !== chaseId && this.chaseId !== null && this.chaseId !== DERIVED_ID) return;
+    if (this.chaseId === null || (this.chaseId !== chaseId && this.chaseId !== DERIVED_ID)) return;
     this.chaseId = null;
     this.chaseHoldUntil = null;
     if (!this.boss) this.endingUntil = now + this.cfg.mercyEndingSeconds;
@@ -470,6 +477,8 @@ export class MusicDirector {
       this.discoverPending = false;
       return;
     }
+    // A new track's clock starts in the future: plan the phrase on its grid once it is running.
+    if (this.lastAudio !== null && this.lastAudio < clock.startedAt) return;
     if (this.discoverPending && !this.discover && this.ducks.size === 0) {
       const pos = clock.position(now);
       const half = clock.nextHalf(now);

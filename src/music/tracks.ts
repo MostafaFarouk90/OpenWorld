@@ -145,7 +145,7 @@ export const SEVEN_GATES_ONE_DRUM: TrackDef = {
   bossMixes: {
     'gaffer-grimtooth': {
       phases: [
-        mix(1, 1, 1, 1, 1, 0.7, 1),
+        mix(1, 1, 0.6, 1, 1, 0.7, 1),
         mix(1, 1, 1, 1, 1, 0.85, 1),
         mix(1, 1, 1, 1, 1, 1, 1),
       ],

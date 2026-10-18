@@ -42,6 +42,7 @@ function makeMixer(name: string) {
       m.isPlaying = false;
     }),
     setMix: vi.fn(),
+    setMixAt: vi.fn(),
     dispose: vi.fn(),
   };
   return m;
@@ -189,8 +190,8 @@ describe('region handover', () => {
     e.events.emit('dialogue.started', { dialogueId: 'd', npcId: 'n' });
     e.tick(0.1);
     expect(e.mixers[0].setMix).not.toHaveBeenCalled();
-    const call = e.mixers[1].setMix.mock.calls.at(-1)!;
-    expect(call[2]).toBeCloseTo(at + 0.4, 6);
+    const call = e.mixers[1].setMixAt.mock.calls.at(-1)!;
+    expect(call[1]).toBeCloseTo(at, 6); // the hard downbeat is kept, not ramped
   });
 
   it('a second region.entered while committed queues, and runs after the swap', async () => {
@@ -470,5 +471,46 @@ describe('stealth and chase wiring', () => {
     await e.start();
     expect(() => e.events.emit('save.loaded', {} as never)).not.toThrow();
     expect(e.services.get('music')!.state).toBe('explore');
+  });
+});
+
+describe('review fixes', () => {
+  it('a failed load is not retried every poll, only after a region.entered', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const e = makeEnv({ regionAt: split });
+    setupMusic(e.ctx);
+    await e.start();
+    e.mixers[1].add.mockRejectedValue(new Error('no'));
+    e.feet.x = 1500;
+    e.events.emit('region.entered', { regionId: 'harrowmark', previous: 'brightwater' });
+    await flush();
+    const calls = e.mixers[1].add.mock.calls.length;
+    e.tick(3);
+    await flush();
+    expect(e.mixers[1].add.mock.calls.length).toBe(calls);
+    e.events.emit('region.entered', { regionId: 'harrowmark', previous: 'brightwater' });
+    await flush();
+    expect(e.mixers[1].add.mock.calls.length).toBeGreaterThan(calls);
+  });
+
+  it('each beat is delivered once across the swap', async () => {
+    const e = makeEnv({ regionAt: split });
+    setupMusic(e.ctx);
+    await e.start();
+    const seen: number[] = [];
+    e.services.get('music')!.onBeat((b) => seen.push(Math.round(b.audioTime * 1000)));
+    e.feet.x = 1500;
+    e.events.emit('region.entered', { regionId: 'harrowmark', previous: 'brightwater' });
+    await flush();
+    e.tick(0.1);
+    e.tick(e.mixers[1].startedAt! - clockRef.t + 3);
+    expect(new Set(seen).size).toBe(seen.length);
+  });
+
+  it('a track resolved after setup (region registered later) is the one that starts', async () => {
+    const e = makeEnv({ regionAt: () => HARROWMARK });
+    setupMusic(e.ctx);
+    await e.start();
+    expect(e.services.get('music')!.beat()!.bpm).toBe(96);
   });
 });

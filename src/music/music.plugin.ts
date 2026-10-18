@@ -100,13 +100,15 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
   let loadGeneration = 0;
   let lastProbeHit = -Infinity;
   const warnedTracks = new Set<string>();
+  const failedUntil = new Map<string, number>(); // a track whose load failed is retried after a backoff or a region.entered
+  let discoverAfterSwap = false;
 
   const director = new MusicDirector({
     track,
     driver: {
       // Once the new mixer is scheduled it alone takes changes, held silent until the bar line.
       setMix: (mix, ramp = musicConfig.rampSeconds) =>
-        committed ? audio.musicNext.setMix(mix, ramp, committed.at + ramp) : audio.music.setMix(mix, ramp),
+        committed ? audio.musicNext.setMixAt(mix, committed.at) : audio.music.setMix(mix, ramp),
     },
   });
 
@@ -171,7 +173,11 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
   ev.on('mercy', (e) => {
     if (e.actorId) director.onMercy(e.actorId, gameTime);
   });
-  ev.on('discover', () => director.requestDiscover());
+  ev.on('discover', () => {
+    // A phrase planned on the old clock would be cut at the swap: hold it for the new track.
+    if (machine.view().phase !== 'idle') discoverAfterSwap = true;
+    else director.requestDiscover();
+  });
   ev.on('waystone.rekindled', () => director.requestDiscover());
   ev.on('dialogue.started', (e) => director.duck(`dialogue:${e.dialogueId}`, true));
   ev.on('dialogue.ended', (e) => director.duck(`dialogue:${e.dialogueId}`, false));
@@ -206,7 +212,10 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
   ev.on('chase.caught', (e) => director.chaseCaught(e.chaseId, gameTime));
   ev.on('chase.lost', (e) => director.chaseLost(e.chaseId, e.reason, gameTime));
 
-  ev.on('region.entered', () => pollRegion());
+  ev.on('region.entered', () => {
+    failedUntil.clear();
+    pollRegion();
+  });
 
   // Boss music follows the core registry only (phases are 1-based).
   ev.on('boss.started', (e) => director.bossStarted(e.bossId, ctx.bosses?.state(e.bossId)?.phase ?? 1, gameTime));
@@ -334,7 +343,10 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
           await idle.add(id, buffer);
           added++;
         } catch (err) {
-          console.warn(`Music: could not add stem "${id}" of ${next.id}:`, err);
+          if (!warnedTracks.has(`stem:${next.id}`)) {
+            warnedTracks.add(`stem:${next.id}`);
+            console.warn(`Music: could not add stem "${id}" of ${next.id}:`, err);
+          }
         }
       }
       if (stale()) return false;
@@ -356,6 +368,7 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
       // Superseded or cancelled loads leave the machine as the newer request set it.
       if (machine.view().target === next.id && idleLoaded !== next.id && preloading === null) {
         machine.fail(next.id);
+        failedUntil.set(next.id, gameTime + 20);
         if (!warnedTracks.has(next.id)) {
           warnedTracks.add(next.id);
           console.warn(`Music: could not prepare "${next.id}"; keeping "${track.id}".`);
@@ -375,6 +388,7 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
       }
       return;
     }
+    if ((failedUntil.get(trackId) ?? -Infinity) > gameTime) return;
     if (!director.started || !clock || disposed) return; // audio is not playing yet: nothing to hand over from
     if (machine.request(trackId)) void prepare(next);
     else tryCommit();
@@ -399,6 +413,13 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
       committed = { track: next, clock: nextClock, at };
     } catch (err) {
       console.warn(`Music: could not start ${next.id}:`, err);
+      try {
+        audio.musicNext.stop();
+      } catch {
+        /* nothing was started */
+      }
+      idleLoaded = null;
+      failedUntil.set(next.id, gameTime + 20);
       if (clock) director.switchTrack(track, clock, gameTime); // back to the track that is still playing
       machine.fail(next.id);
     }
@@ -420,6 +441,10 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
     track = done.track;
     clock = done.clock;
     beats.reset();
+    if (discoverAfterSwap) {
+      discoverAfterSwap = false;
+      director.requestDiscover();
+    }
     const queued = machine.swap();
     if (queued) void prepare(TRACKS_BY_ID[queued]);
   }
@@ -444,7 +469,7 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
       } catch {
         at = null;
       }
-      if (at && at.track !== track.id && TRACKS_BY_ID[at.track]) {
+      if (at && at.track !== track.id && TRACKS_BY_ID[at.track] && (failedUntil.get(at.track) ?? -Infinity) <= now) {
         found = at.track;
         break;
       }
@@ -472,7 +497,7 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
       director.update(gameTime, distanceTo, { audioNow: audioNow(), hostileNear: hostileNearby() });
       const state = (audio.context as { state?: string }).state;
       const running = state === undefined || state === 'running';
-      if (clock && running) beats.update(clock, track.bpm, audioNow());
+      if (clock && running) beats.update(clock, track.bpm, audioNow(), committed?.at);
       if (running) swapIfDue();
       if (running && (pollClock += dt) >= POLL_SECONDS) {
         pollClock = 0;
@@ -495,6 +520,17 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
   // --- stems: load in the background, start once ready and unlocked -----------------------------
   void (async () => {
     try {
+      if (initialTrack === undefined) {
+        // Plugins set up in id order, so `region` may not exist yet: resolve the track after setup.
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        if (disposed) return;
+        const wanted = TRACKS_BY_ID[regionAtPlayer()?.track ?? ''];
+        if (wanted && wanted.id !== track.id) {
+          track = wanted;
+          machine.reset(wanted.id);
+          director.setStartTrack(wanted);
+        }
+      }
       const loaded = await loadTrackStems(audio.context, track, {});
       if (disposed) return; // late result after dispose: discard
       if (loaded.buffers.size === 0) {
