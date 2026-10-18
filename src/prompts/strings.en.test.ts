@@ -8,5 +8,6 @@ describe('PROMPT_STRINGS_EN', () => {
     expect(PROMPT_STRINGS_EN['prompt.dodge.rebindOffer']).toBeTruthy();
     expect(PROMPT_STRINGS_EN['prompt.hintsToggle']).toBeTruthy();
     expect(PROMPT_STRINGS_EN['prompt.sprint']).toBe('Hold {key} to sprint');
+    expect(PROMPT_STRINGS_EN['prompt.wardstone-strike']).toBe('Strike on the beat');
   });
 });

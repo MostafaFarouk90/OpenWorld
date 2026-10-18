@@ -1,5 +1,6 @@
 // Quest journal: a pure model builder, a thin DOM widget (no-op without `document`) and the J toggle.
 import type { ObjectiveDef, QuestDef, QuestState } from './types';
+import { TAB_QUESTS, type JournalTabs } from './journalTabs';
 
 /** Ports: what the journal reads. */
 export interface JournalQuestView {
@@ -54,19 +55,26 @@ export function buildJournalModel(quests: JournalQuestSource, strings: JournalSt
 
 export interface JournalWidget { element: HTMLElement | null; refresh(): void; dispose(): void }
 
-export function createJournalPanel(source: () => JournalModel, doc: Document | undefined = typeof document === 'undefined' ? undefined : document): JournalWidget {
+export interface JournalPanelOpts { tabs: JournalTabs; t(key: string): string }
+
+export function createJournalPanel(
+  source: () => JournalModel,
+  doc: Document | undefined = typeof document === 'undefined' ? undefined : document,
+  opts?: JournalPanelOpts,
+): JournalWidget {
   if (!doc) return { element: null, refresh() {}, dispose() {} };
   const root = doc.createElement('div');
   root.className = 'journal-panel';
   root.setAttribute('role', 'dialog');
-  const render = () => {
-    root.textContent = '';
+  let activeTab = TAB_QUESTS;
+
+  const renderQuests = (into: HTMLElement): void => {
     const m = source();
     if (m.empty) {
       const p = doc.createElement('p');
       p.className = 'journal-empty';
       p.textContent = m.emptyText;
-      root.appendChild(p);
+      into.appendChild(p);
       return;
     }
     for (const s of m.sections) {
@@ -84,14 +92,46 @@ export function createJournalPanel(source: () => JournalModel, doc: Document | u
         ul.appendChild(li);
       }
       sec.append(h, sum, ul);
-      root.appendChild(sec);
+      into.appendChild(sec);
     }
   };
+
+  const render = (): void => {
+    root.textContent = '';
+    const tabs = opts?.tabs.visible() ?? [];
+    if (!opts || tabs.length === 0) { renderQuests(root); return; }
+    if (activeTab !== TAB_QUESTS && !tabs.some((t) => t.id === activeTab)) activeTab = TAB_QUESTS;
+    const bar = doc.createElement('div');
+    bar.className = 'journal-tabs';
+    bar.setAttribute('role', 'tablist');
+    const mk = (id: string, title: string): void => {
+      const b = doc.createElement('button');
+      b.type = 'button';
+      b.className = `journal-tab${id === activeTab ? ' active' : ''}`;
+      b.dataset.tab = id;
+      b.textContent = title;
+      b.addEventListener('click', () => { activeTab = id; render(); });
+      bar.appendChild(b);
+    };
+    mk(TAB_QUESTS, opts.t('quest.journal.tab.quests'));
+    for (const t of tabs) mk(t.id, opts.t(t.titleKey));
+    const body = doc.createElement('div');
+    body.className = 'journal-body';
+    if (activeTab === TAB_QUESTS) renderQuests(body);
+    else {
+      try { opts.tabs.get(activeTab)?.render(body); } catch (e) {
+        body.textContent = '';
+        console.warn(`[quests] journal tab "${activeTab}" failed: ${String(e)}`);
+      }
+    }
+    root.append(bar, body);
+  };
   render();
+  const off = opts?.tabs.onChange(render);
   return {
     element: root,
     refresh: render,
-    dispose() { root.remove(); },
+    dispose() { off?.(); root.remove(); },
   };
 }
 

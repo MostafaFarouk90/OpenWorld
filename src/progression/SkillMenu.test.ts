@@ -30,12 +30,13 @@ function setup(points = 1) {
 }
 
 describe('skillViewModel', () => {
-  it('draws all three branches with five tiers; only tier 1 is learnable', () => {
+  it('draws all three branches with five tiers; tiers 1 and 2 are drawn live, 3 to 5 locked', () => {
     const { prog } = setup(1);
     const vm = skillViewModel(prog);
     expect(vm.branches.map((b) => b.nodes.length)).toEqual([5, 5, 5]);
     expect(vm.branches.flatMap((b) => b.nodes).filter((n) => n.state === 'learnable')).toHaveLength(3);
-    expect(vm.branches.flatMap((b) => b.nodes).filter((n) => n.state === 'unavailable')).toHaveLength(12);
+    expect(vm.branches.flatMap((b) => b.nodes).filter((n) => n.state === 'blocked')).toHaveLength(3); // tier 2 waits on tier 1
+    expect(vm.branches.flatMap((b) => b.nodes).filter((n) => n.state === 'unavailable')).toHaveLength(9);
   });
 
   it('with no points tier 1 reads no-points, learned reads learned', () => {
@@ -50,7 +51,7 @@ describe('skillViewModel', () => {
 describe('SkillMenu', () => {
   it('learning spends the point, reports onLearn and re-renders', () => {
     const { prog, menu, learned, learnButtons } = setup(1);
-    learnButtons()[2].click(); // standard: rally cry
+    learnButtons()[4].click(); // standard tier 1: rally cry (tier 2 buttons sit between)
     expect(prog.learned('knight.rallyCry')).toBe(true);
     expect(prog.bar()[0]).toBe('knight.rallyCry');
     expect(learned).toEqual(['knight.rallyCry']);
