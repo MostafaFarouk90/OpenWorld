@@ -56,6 +56,7 @@ export const TOBB: CompanionDef = {
     'tilted-anvil': 'harrowmark.tilted-anvil.entry',
     'counting-house': 'harrowmark.counting-house.entry',
     archive: 'harrowmark.archive.entry',
+    'keep-hall': 'harrowmark.keep-hall.entry',
     underways: 'harrowmark.underways.entry',
   },
   // Quest-derived only (review B1; thread 18's liveness windows). Posts: south-gate and keep are thread 17's,
