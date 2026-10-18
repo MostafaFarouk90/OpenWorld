@@ -104,4 +104,52 @@ describe('NavAgent', () => {
     a.desired(P(0, 0), P(6, 0), 0.1);
     expect(nav.path.mock.calls[0]![2]).toEqual({ radius: 0.7 });
   });
+
+  describe('a path that ends short of the goal', () => {
+    const short = (gridOf: (at: Vec3) => string | null, withGridId = true) => {
+      const nav = {
+        hasGrid: (at: Vec3) => gridOf(at) !== null,
+        ...(withGridId ? { gridId: gridOf } : {}),
+        path: vi.fn(() => [P(2, 0), P(4, 0)]), // ends at the edge cell (4, 0)
+      };
+      return { nav, a: new NavAgent(() => nav) };
+    };
+    const walk = (a: NavAgent, goal: Vec3) => {
+      a.desired(P(0, 0), goal, 0.01);
+      a.desired(P(2, 0), goal, 0.01);
+      return a.desired(P(4, 0), goal, 0.01);
+    };
+
+    it('holds at the last waypoint when the goal is in the same grid (behind a closed gate)', () => {
+      const { a } = short(() => 'g');
+      expect(walk(a, P(9, 0))).toEqual({ x: 4, z: 0 });
+    });
+
+    it('steers at the raw goal when the goal is in no grid', () => {
+      const { a } = short((at) => (at.x < 5 ? 'g' : null));
+      expect(walk(a, P(9, 0))).toEqual({ x: 9, z: 0 });
+    });
+
+    it('steers at the raw goal when the goal is in another grid (a neighbouring block)', () => {
+      const { a } = short((at) => (at.x < 5 ? 'market' : 'alley'));
+      expect(walk(a, P(9, 0))).toEqual({ x: 9, z: 0 });
+    });
+
+    it('falls back to hasGrid when the service has no gridId', () => {
+      const off = short((at) => (at.x < 5 ? 'g' : null), false);
+      expect(walk(off.a, P(9, 0))).toEqual({ x: 9, z: 0 });
+      const same = short(() => 'g', false);
+      expect(walk(same.a, P(9, 0))).toEqual({ x: 4, z: 0 });
+    });
+
+    it('still follows waypoints first, and re-evaluates the goal on each repath', () => {
+      let inside = false;
+      const { a } = short((at) => (at.x < 5 || inside ? 'g' : null));
+      expect(a.desired(P(0, 0), P(9, 0), 0.01)).toEqual({ x: 2, z: 0 });
+      expect(walk(a, P(9, 0))).toEqual({ x: 9, z: 0 });
+      inside = true;
+      a.reset();
+      expect(walk(a, P(9, 0))).toEqual({ x: 4, z: 0 });
+    });
+  });
 });
