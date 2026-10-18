@@ -248,6 +248,19 @@ describe('crowd lanes against the buildings', () => {
   });
 });
 
+describe('Rook at the South Gate', () => {
+  it('stands outside the closed gate, near the threshold, clear of the gate-queue lane and the waystone stand point', () => {
+    const rook = at('npc-post.rook.gate');
+    const gate = at('harrowmark.gate.south');
+    expect(rook.z).toBeLessThan(gate.z + 1); // on the road side, not inside the wall
+    expect(dist(rook, at('harrowmark.gate.south.threshold'))).toBeLessThan(30);
+    for (const id of ['harrowmark.gate.south.queue.1', 'harrowmark.gate.south.queue.2', 'harrowmark.gate.south.queue.3']) expect(dist(rook, at(id)), id).toBeGreaterThanOrEqual(4);
+    expect(dist(rook, { x: 8516, z: 1212 })).toBeGreaterThanOrEqual(4);
+    const lane = CROWD_LANES.find((l) => l.id === 'harrowmark.lane.gate-queue')!;
+    for (const p of lane.points.map(at)) expect(dist(rook, p)).toBeGreaterThan(lane.halfWidth);
+  });
+});
+
 describe('Harrowmark world-change anchors', () => {
   it('has 21 braziers along the Keep road, 4 Bastion and 6 Keep banners', () => {
     expect(HARROWMARK_LAYOUT.anchors.filter((a) => a.id.startsWith('harrowmark.brazier.keep-road.'))).toHaveLength(BRAZIER_COUNT);

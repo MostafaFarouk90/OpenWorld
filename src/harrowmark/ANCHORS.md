@@ -58,7 +58,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | harrowmark.bastion.trainer.gerta | 8225 | 1742.5 | 0 | 0 | trainer |
 | harrowmark.bastion.trainer.ashdown | 8250 | 1742.5 | 0 | 0 | trainer |
 | npc-post.rook | 8360 | 1306 | 0 | 0 | npc-post |
-| npc-post.rook.gate | 8488 | 1272 | 0 | 0 | npc-post |
+| npc-post.rook.gate | 8486 | 1238 | 0 | 0 | npc-post |
 | npc-post.gaut.bastion | 8150 | 1745 | 0 | 0 | npc-post |
 | npc-post.stane.bastion | 8175 | 1745 | 0 | 0 | npc-post |
 | npc-post.pennard.bastion | 8200 | 1745 | 0 | 0 | npc-post |

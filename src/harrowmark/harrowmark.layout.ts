@@ -140,7 +140,7 @@ interface Post {
 }
 const POSTS: Post[] = [
   { id: 'rook', x: 8360, z: 1306, heading: 180 },
-  { id: 'rook.gate', x: 8488, z: 1272, heading: 180 },
+  { id: 'rook.gate', x: 8486, z: 1238, heading: 180 },
   { id: 'gaut.bastion', x: 8150, z: 1745, heading: 180 },
   { id: 'stane.bastion', x: 8175, z: 1745, heading: 180 },
   { id: 'pennard.bastion', x: 8200, z: 1745, heading: 180 },
