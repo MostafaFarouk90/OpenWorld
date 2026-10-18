@@ -8,7 +8,6 @@ function beat(id: string, enemy: SpawnerDef['enemy'], members: readonly string[]
 }
 
 const replay = beat;
-
 const numbered = (prefix: string, n: number): string[] => Array.from({ length: n }, (_, i) => `${prefix}-${i + 1}`);
 
 /** The slice's spawners; anchor ids follow world-layout-and-npcs.md section 2 (anchors are thread 4's). */
@@ -39,7 +38,8 @@ export const SLICE_SPAWNERS: readonly SpawnerDef[] = [
     patrol: ['patrol.north.1', 'patrol.north.2', 'patrol.north.3', 'patrol.north.4'],
     band: { min: 2, max: 3 },
     activation: 'auto',
-    respawn: 'onRest',
+    // Resting respawns no enemies (design ruling), so a dead patrol stays dead, across reloads too.
+    respawn: 'never',
     leash: true,
   },
   // The Replay board's yard (manual; thread 9 spawns them per lesson).

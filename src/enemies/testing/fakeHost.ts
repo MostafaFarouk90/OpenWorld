@@ -179,7 +179,36 @@ export class FakeHost {
   /** Thread 3's quests service, when a test provides it. */
   quests: { active(): string[] } | undefined;
   lockOnTarget: ActorId | null = null;
+  /** Thread 3a's interiors service, when a test provides it. */
+  interiors: { current: string | null } | undefined;
+  private readonly gateWatchers: Array<{ test: (get: (k: string) => boolean) => boolean; listener: (open: boolean, cause: 'init' | 'flag' | 'load' | 'recheck') => void; open: boolean }> = [];
   private counter = 0;
+
+  /** Sets a flag as the real state does: stores it, re-evaluates the gates and emits `flag.changed`. */
+  setFlag(key: string, value: boolean | number | string): void {
+    const previous = this.flags.get(key);
+    this.flags.set(key, value);
+    this.evaluateGates('flag');
+    this.bus.emit('flag.changed', { key, value, previous });
+  }
+
+  /** What a save load does: gates re-evaluate, then `save.loaded`. */
+  loadFlags(flags: Record<string, boolean | number | string>): void {
+    this.flags.clear();
+    for (const [k, v] of Object.entries(flags)) this.flags.set(k, v);
+    this.evaluateGates('load');
+    this.bus.emit('save.loaded', { slot: 'test' });
+  }
+
+  private evaluateGates(cause: 'flag' | 'load'): void {
+    const get = (k: string) => Boolean(this.flags.get(k));
+    for (const w of [...this.gateWatchers]) {
+      const open = w.test(get);
+      if (open === w.open) continue;
+      w.open = open;
+      w.listener(open, cause);
+    }
+  }
 
   constructor(
     knightScene: THREE.Object3D,
@@ -382,13 +411,25 @@ export class FakeHost {
         const v = this.flags.get(key);
         return typeof v === 'boolean' ? v : fallback;
       },
-      setFlag: (key, value) => void this.flags.set(key, value),
+      setFlag: (key, value) => this.setFlag(key, value),
+    },
+    gates: {
+      watch: (test, listener) => {
+        const w = { test, listener, open: test((k) => Boolean(this.flags.get(k))) };
+        this.gateWatchers.push(w);
+        listener(w.open, 'init');
+        return () => {
+          const i = this.gateWatchers.indexOf(w);
+          if (i >= 0) this.gateWatchers.splice(i, 1);
+        };
+      },
     },
     services: {
       get: ((name: string) => {
         if (name === 'vfx') return this.vfx;
         if (name === 'lockOn') return { targetId: this.lockOnTarget };
         if (name === 'quests') return this.quests;
+        if (name === 'interiors') return this.interiors;
         return undefined;
       }) as EnemyHost['services']['get'],
     },

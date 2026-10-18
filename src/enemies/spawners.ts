@@ -1,7 +1,7 @@
 import type { Vec3 } from '../physics/PhysicsWorld';
 import { ENEMY_DEFS } from './defs';
 import { DEFAULT_BAND, bandForRegion, enemyLevel } from './level';
-import type { ActorId, AnchorLike, AnchorsPort } from './ports';
+import type { ActorId, AnchorLike, AnchorsPort, GatesPort } from './ports';
 import { LEVEL, WORLD_AI } from './tuning';
 import type { EnemyDef, LevelBand, SpawnOptions, SpawnerDef } from './types';
 
@@ -25,6 +25,8 @@ export interface SpawnerRegistryDeps {
   warn(msg: string): void;
   spawn(req: SpawnRequest): ActorId | null;
   despawn(actorId: ActorId): void;
+  /** Flag gates for `{ flag, until }` groups; absent (headless) means every gate counts as open. */
+  gates?: GatesPort;
   rng?: () => number;
 }
 
@@ -48,6 +50,9 @@ export class SpawnerRegistry {
   private readonly warned = new Set<string>();
   private spent = new Set<string>();
   private cleared = new Set<string>();
+  private readonly gateOpen = new Map<string, boolean>();
+  private readonly gateOff: Array<() => void> = [];
+  private started = false;
   private warmthTier = 0;
   private lockedBlockLevels: Record<string, number> = {};
   private readonly rng: () => number;
@@ -128,14 +133,15 @@ export class SpawnerRegistry {
     const slots = this.slots.get(rec.spawnerId)!;
     slots[rec.slot] = null;
     if (how === 'despawned') return false;
-    if (how === 'released') this.spent.add(`${rec.spawnerId}#${rec.slot}`);
+    const def = this.defs.get(rec.spawnerId)!;
+    if (how === 'released' && !def.ephemeral) this.spent.add(`${rec.spawnerId}#${rec.slot}`);
     const gone = this.goneSlots.get(rec.spawnerId)!;
     gone.add(rec.slot);
     if (gone.size < slots.length || slots.some((s) => s !== null)) return false;
     if (this.firedCleared.has(rec.spawnerId)) return false;
     this.firedCleared.add(rec.spawnerId);
-    const def = this.defs.get(rec.spawnerId)!;
-    if (def.activation !== 'auto') this.cleared.add(rec.spawnerId);
+    // A group that never respawns stays cleared across reloads, auto groups included.
+    if (!def.ephemeral && (def.activation !== 'auto' || def.respawn === 'never')) this.cleared.add(rec.spawnerId);
     return true;
   }
 
@@ -172,12 +178,61 @@ export class SpawnerRegistry {
     return (this.slots.get(id) ?? []).filter((a): a is ActorId => a !== null);
   }
 
+  /** Starts the auto groups and the gate groups whose gate is open; later gate changes add or remove groups. */
   startAuto(): ActorId[] {
+    this.started = true;
     const out: ActorId[] = [];
     for (const def of this.defs.values()) {
-      if (def.activation === 'auto' && !this.cleared.has(def.id)) out.push(...this.spawnGroup(def.id));
+      if (this.cleared.has(def.id)) continue;
+      if (def.activation === 'auto' || (isGate(def.activation) && this.gateOpen.get(def.id) !== false)) {
+        out.push(...this.spawnGroup(def.id));
+      }
     }
     return out;
+  }
+
+  /** Watches every gate group's flags through `ctx.gates`; call once after the groups are defined. */
+  bindGates(): void {
+    const gates = this.deps.gates;
+    for (const def of this.defs.values()) {
+      const act = def.activation;
+      if (!isGate(act)) continue;
+      const { flag, until } = act;
+      const keys = [flag, until].filter((k): k is string => typeof k === 'string');
+      if (keys.length === 0) {
+        this.deps.warn(`spawners: gate group '${def.id}' names neither flag nor until; treated as auto`);
+        continue;
+      }
+      if (!gates) continue;
+      this.gateOff.push(
+        gates.watch(
+          (get) => (flag === undefined || get(flag)) && (until === undefined || !get(until)),
+          (open) => {
+            const was = this.gateOpen.get(def.id);
+            this.gateOpen.set(def.id, open);
+            if (was === undefined || was === open || !this.started) return;
+            if (open && !this.cleared.has(def.id)) this.spawnGroup(def.id);
+            else if (!open) this.despawnGroup(def.id);
+          },
+          keys,
+        ),
+      );
+    }
+  }
+
+  /** Spawns the groups that wait for `interiorId` (not cleared, not already there). */
+  onInteriorEntered(interiorId: string): ActorId[] {
+    const out: ActorId[] = [];
+    for (const def of this.defs.values()) {
+      const act = def.activation;
+      if (typeof act !== 'object' || !('interior' in act) || act.interior !== interiorId || this.cleared.has(def.id)) continue;
+      out.push(...this.spawnGroup(def.id));
+    }
+    return out;
+  }
+
+  dispose(): void {
+    for (const off of this.gateOff.splice(0)) off();
   }
 
   onRest(): ActorId[] {
@@ -201,7 +256,7 @@ export class SpawnerRegistry {
     const out: ActorId[] = [];
     for (const def of this.defs.values()) {
       const act = def.activation;
-      if (typeof act !== 'object' || act.quest !== questId || this.cleared.has(def.id)) continue;
+      if (typeof act !== 'object' || !('quest' in act) || act.quest !== questId || this.cleared.has(def.id)) continue;
       if (act.flag !== undefined && !flagOn(act.flag)) continue;
       out.push(...this.spawnGroup(def.id));
     }
@@ -212,7 +267,8 @@ export class SpawnerRegistry {
   questsGatedBy(flag: string): string[] {
     const out: string[] = [];
     for (const def of this.defs.values()) {
-      if (typeof def.activation === 'object' && def.activation.flag === flag) out.push(def.activation.quest);
+      const act = def.activation;
+      if (typeof act === 'object' && 'quest' in act && act.flag === flag) out.push(act.quest);
     }
     return out;
   }
@@ -220,9 +276,10 @@ export class SpawnerRegistry {
   // Persistence
 
   serialize(): SpawnersPersisted {
+    const saved = (key: string) => !this.defs.get(key.replace(/#\d+$/, ''))?.ephemeral;
     return {
-      spent: [...this.spent],
-      cleared: [...this.cleared],
+      spent: [...this.spent].filter(saved),
+      cleared: [...this.cleared].filter(saved),
       warmthTier: this.warmthTier,
       lockedBlockLevels: { ...this.lockedBlockLevels },
     };
@@ -358,6 +415,10 @@ export class SpawnerRegistry {
       z: p.z + Math.sin(angle) * WORLD_AI.ringRadius,
     };
   }
+}
+
+function isGate(act: SpawnerDef['activation']): act is { flag?: string; until?: string } {
+  return typeof act === 'object' && !('quest' in act) && !('interior' in act);
 }
 
 function clampTier(w: number): number {

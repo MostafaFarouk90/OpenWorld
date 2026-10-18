@@ -131,6 +131,8 @@ export interface EnemyEvents {
   'mercy.revoked': { actorId: ActorId; track: FavourTrack | null; removed: number };
   rest: { waystoneId: string };
   'save.loaded': { slot: string };
+  'interior.entered': { interiorId: string; doorId: string };
+  'interior.exited': { interiorId: string; doorId: string };
   'quest.started': { questId: string };
   'flag.changed': { key: string; value: boolean | number | string | undefined; previous: boolean | number | string | undefined };
   'enemies.groupCleared': { spawnerId: string };
@@ -181,6 +183,16 @@ export interface StatePort {
   setFlag(key: string, value: boolean | number | string): void;
 }
 
+/** `ctx.gates` (state/FlagGates.ts): flag-derived state that is re-derived on `save.loaded`. */
+export interface GatesPort {
+  /** `listener(open, cause)` at once, then when `test`'s result changes. `get(key)` reads a flag as a boolean. */
+  watch(
+    test: (get: (key: string) => boolean) => boolean,
+    listener: (open: boolean, cause: 'init' | 'flag' | 'load' | 'recheck') => void,
+    keys: readonly string[],
+  ): () => void;
+}
+
 export interface PersistableLike {
   key: string;
   version: number;
@@ -213,6 +225,8 @@ export interface ServicesPort {
   get(name: 'lockOn'): { readonly targetId: ActorId | null } | undefined;
   /** Thread 3's quests service: the started, unfinished quest ids. */
   get(name: 'quests'): { active(): string[] } | undefined;
+  /** Thread 3a's interiors service: the interior id the player is in, or null outdoors. */
+  get(name: 'interiors'): { readonly current: string | null } | undefined;
 }
 
 /** The parts of the AssetLoader the enemy models need (requests-round-1 item 6). */
@@ -234,6 +248,7 @@ export interface EnemyHost {
   anchors: AnchorsPort;
   interaction: InteractionPort;
   state: StatePort;
+  gates: GatesPort;
   services: ServicesPort;
   player: PlayerPort;
   heightAt(x: number, z: number): number;

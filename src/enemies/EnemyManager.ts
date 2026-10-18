@@ -56,9 +56,11 @@ export class EnemyManager {
       warn: (m) => host.warn(m),
       spawn: (req) => this.spawn(req),
       despawn: (id) => this.enemies.get(id)?.despawn(),
+      gates: host.gates,
       rng: this.rng,
     });
     for (const def of opts.spawners ?? []) this.spawners.define(def);
+    this.spawners.bindGates();
     this.listen();
   }
 
@@ -271,6 +273,7 @@ export class EnemyManager {
     });
     on('mercy.revoked', (p) => this.enemies.get(p.actorId)?.revoked(this.host.actors.player.id));
     on('rest', () => this.spawners.onRest());
+    on('interior.entered', (p) => this.spawners.onInteriorEntered(p.interiorId));
     on('quest.started', (p) => this.spawners.onQuestStarted(p.questId, (f) => this.host.state.getBool(f, false)));
     on('flag.changed', (p) => {
       if (p.value !== true) return;
@@ -288,6 +291,8 @@ export class EnemyManager {
       }
       const active = this.host.services.get('quests')?.active() ?? [];
       for (const questId of active) this.spawners.onQuestStarted(questId, (f) => this.host.state.getBool(f, false));
+      const interior = this.host.services.get('interiors')?.current;
+      if (interior) this.spawners.onInteriorEntered(interior);
     });
 
     this.unsubs.push(
@@ -327,6 +332,7 @@ export class EnemyManager {
     if (this.disposed) return;
     this.disposed = true;
     for (const u of this.unsubs.splice(0)) u();
+    this.spawners.dispose();
     for (const e of [...this.enemies.values()]) e.despawn();
     this.enemies.clear();
   }

@@ -104,8 +104,18 @@ export interface SpawnerDef {
   /**
    * auto: at setup and after `rest`; manual: the enemies service; quest: on `quest.started` with this id,
    * and with `flag` only while that quest is active and the flag is true (checked on start, flag change and save load).
+   * gate: like auto, but present only while `flag` is on (when given) and `until` is off (when given); re-derived
+   * through `ctx.gates`, so a load and a later flag change both add or remove the group.
+   * interior: on `interior.entered` with this interior id (and on a load inside it).
    */
-  activation: 'auto' | 'manual' | { quest: string; flag?: string };
+  activation:
+    | 'auto'
+    | 'manual'
+    | { quest: string; flag?: string }
+    | { flag?: string; until?: string }
+    | { interior: string };
+  /** Never saved: no spent slots and no cleared mark (the Prior's summons, which thread 3b resets per wave). */
+  ephemeral?: boolean;
   respawn: 'never' | 'onRest';
   leash?: boolean;
 }

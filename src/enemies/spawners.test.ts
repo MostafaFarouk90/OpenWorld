@@ -249,7 +249,7 @@ describe('SpawnerRegistry', () => {
   it('slice table is well-formed', () => {
     expect(SLICE_SPAWNERS).toHaveLength(11);
     const bw = SLICE_SPAWNERS.find((s) => s.id === 'brightwater.north-patrol')!;
-    expect(bw).toMatchObject({ count: 3, band: { min: 2, max: 3 }, activation: 'auto', respawn: 'onRest', leash: true });
+    expect(bw).toMatchObject({ count: 3, band: { min: 2, max: 3 }, activation: 'auto', respawn: 'never', leash: true });
     expect(new Set(SLICE_SPAWNERS.map((s) => s.id)).size).toBe(11);
     expect(SLICE_SPAWNERS.find((s) => s.id === 't09.soldier')!.enemy).toBe('blighted-soldier');
   });

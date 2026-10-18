@@ -23,6 +23,10 @@ export function hostFromContext(ctx: GameContext, warn: (m: string) => void): En
     anchors: ctx.anchors,
     interaction: ctx.interaction as unknown as InteractionPort,
     state: ctx.state,
+    gates: {
+      watch: (test, listener, keys) =>
+        ctx.gates.watch((state) => test((k) => Boolean(state.getFlag(k))), listener, { keys }),
+    },
     // vfx (thread 7) and lockOn (thread 1) are optional: get() returns undefined until they merge.
     services: ctx.services as unknown as ServicesPort,
     player: {
