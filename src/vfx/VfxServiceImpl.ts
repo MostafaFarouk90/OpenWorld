@@ -13,7 +13,7 @@ import { TelegraphFx } from './Telegraph';
 import { TrailDriver } from './TrailDriver';
 import { TrailManager } from './TrailManager';
 import { VisualClock } from './VisualClock';
-import { QUALITY, type QualityStep } from './tuning';
+import { CAPS, QUALITY, type QualityStep } from './tuning';
 import { createWeaponMarkers } from './weaponMarkers';
 import { EFFECT_IDS, type EffectHandle, type EffectId, type EffectParams, type EffectTransform, type TrailHandle, type VfxService } from './types';
 import type { ActorId } from './ports';
@@ -34,7 +34,9 @@ export class VfxServiceImpl implements VfxService {
   readonly clock = new VisualClock();
   readonly camera = new CameraFx();
   readonly screen: ScreenFx;
-  readonly budget = new ParticleBudget();
+  /** Sparks and points have separate budgets (600 + 3,400 = the 4,000 cap) so one cannot starve the other. */
+  readonly sparkBudget = new ParticleBudget(CAPS.sparkInstances);
+  readonly pointsBudget = new ParticleBudget(CAPS.pointSlots);
   readonly sparks: SparkPool;
   readonly points: PointsPool;
   readonly decals: DecalPool;
@@ -55,8 +57,8 @@ export class VfxServiceImpl implements VfxService {
     private readonly warn: (m: string) => void = (m) => console.warn(m),
   ) {
     const s = host.scene;
-    this.sparks = new SparkPool(s, this.budget);
-    this.points = new PointsPool(s, this.budget);
+    this.sparks = new SparkPool(s, this.sparkBudget);
+    this.points = new PointsPool(s, this.pointsBudget);
     this.decals = new DecalPool(s, host.heightAt);
     this.lights = new LightFlashPool(s);
     this.trails = new TrailManager(s);
@@ -77,12 +79,41 @@ export class VfxServiceImpl implements VfxService {
     return this.step;
   }
 
+  /** Routes `setQuality` to the quality manager (persist, graphics, bloom) when one is attached. */
+  qualityDelegate: ((q: QualityStep) => void) | null = null;
+
   setQuality(q: QualityStep): void {
+    if (!(q in QUALITY)) return;
+    if (this.qualityDelegate) this.qualityDelegate(q);
+    else this.applyQuality(q);
+  }
+
+  /** Applies a step to the pools. Live particles above the new limit drain naturally; decals drop at once. */
+  applyQuality(q: QualityStep): void {
     if (!(q in QUALITY) || q === this.step) return;
     this.step = q;
     const cfg = QUALITY[q];
-    this.budget.scale = cfg.particleScale;
+    this.sparkBudget.scale = cfg.particleScale;
+    this.pointsBudget.scale = cfg.particleScale;
     this.decals.setMax(cfg.decals);
+  }
+
+  private readonly rootsById = new Map<ActorId, THREE.Object3D>();
+
+  /** Drops everything tied to an actor that went away: trail, telegraph and the cloned materials. */
+  forgetActor(actorId: ActorId, root?: THREE.Object3D | null): void {
+    this.trailDriver.detach(actorId);
+    const r = root ?? this.rootsById.get(actorId) ?? null;
+    this.rootsById.delete(actorId);
+    if (r) {
+      this.telegraphs.cancel(r);
+      this.materials.restore(r);
+    }
+  }
+
+  cancelTelegraph(actorId: ActorId): void {
+    const r = this.host.actorRoot(actorId) ?? this.rootsById.get(actorId);
+    if (r) this.telegraphs.cancel(r);
   }
 
   spawnEffect(id: EffectId | string, transform: EffectTransform, params: EffectParams = {}): EffectHandle {
@@ -124,8 +155,10 @@ export class VfxServiceImpl implements VfxService {
     return this.trailDriver.attach(id, hilt, tip, opts);
   }
 
-  telegraph(actorId: ActorId, kind: 'block' | 'dodge', leadSeconds: number): void {
-    this.telegraphs.flash(this.host.actorRoot(actorId), kind, leadSeconds, this.clock.now);
+  telegraph(actorId: ActorId, kind: 'block' | 'dodge', leadSeconds: number, opts?: { parts?: string[] }): void {
+    const root = this.host.actorRoot(actorId);
+    if (root) this.rootsById.set(actorId, root);
+    this.telegraphs.flash(root, kind, leadSeconds, this.clock.now, opts);
   }
 
   shake(amplitude: number, seconds: number): void {
@@ -183,5 +216,7 @@ export class VfxServiceImpl implements VfxService {
     this.telegraphs.dispose();
     this.dissolver.dispose();
     this.screen.dispose();
+    this.camera.clear(null);
+    this.rootsById.clear();
   }
 }

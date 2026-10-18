@@ -16,8 +16,9 @@ const out = { errors: [] as string[], live: {} as Record<string, number>, done: 
 window.__vfxSmoke = out;
 try {
   const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c') as HTMLCanvasElement });
-  renderer.debug.onShaderError = (_gl, _prog, vs, fs) => {
-    out.errors.push(`shader error vs=${vs.getShaderInfoLog?.call(_gl, vs) ?? ''} fs=${fs.getShaderInfoLog?.call(_gl, fs) ?? ''}`);
+  renderer.debug.checkShaderErrors = true;
+  renderer.debug.onShaderError = (gl, _prog, vs, fs) => {
+    out.errors.push(`shader error vs=${gl.getShaderInfoLog(vs) ?? ''} fs=${gl.getShaderInfoLog(fs) ?? ''}`);
   };
   const scene = new THREE.Scene();
   scene.add(new THREE.AmbientLight(0xffffff, 1), new THREE.DirectionalLight(0xffffff, 1));
@@ -25,10 +26,30 @@ try {
   camera.position.set(0, 3, 8);
   camera.lookAt(0, 1, 0);
 
-  const vfx = new VfxServiceImpl({ scene, heightAt: () => 0, actorRoot: (id) => (id === 'dummy' ? dummy : null) });
+  const vfx = new VfxServiceImpl({ scene, heightAt: () => 0, actorRoot: (id) => (id === 'dummy' ? dummy : id === 'skinned' ? skinned : null) });
   const dummy = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.2), new THREE.MeshStandardMaterial({ color: 0x88aa88 }));
   dummy.position.set(0, 1, 0);
   scene.add(dummy);
+  // A skinned mesh like the KayKit characters: the telegraph/dissolve patches must compile with skinning.
+  const bones = [new THREE.Bone(), new THREE.Bone()];
+  bones[1].position.y = 1;
+  bones[0].add(bones[1]);
+  const skinGeo = new THREE.CylinderGeometry(0.3, 0.3, 2, 8, 4);
+  const n = skinGeo.attributes.position.count;
+  const idx = new Uint16Array(n * 4);
+  const wts = new Float32Array(n * 4);
+  for (let i = 0; i < n; i++) {
+    const hi = skinGeo.attributes.position.getY(i) > 0 ? 1 : 0;
+    idx[i * 4] = hi;
+    wts[i * 4] = 1;
+  }
+  skinGeo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(idx, 4));
+  skinGeo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(wts, 4));
+  const skinned = new THREE.SkinnedMesh(skinGeo, new THREE.MeshStandardMaterial({ color: 0x99aa88 }));
+  skinned.add(bones[0]);
+  skinned.bind(new THREE.Skeleton(bones));
+  skinned.position.set(2, 1, 0);
+  scene.add(skinned);
   const blade = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1, 0.05));
   scene.add(blade);
   const markers = vfx.createWeaponMarkers(blade);
@@ -37,13 +58,16 @@ try {
 
   for (const id of EFFECT_IDS) vfx.spawnEffect(id, { position: { x: 0, y: 0, z: 0 }, attach: id === 'wraith-dissolve' ? dummy : undefined });
   vfx.telegraph('dummy', 'block', 0.4);
+  vfx.telegraph('skinned', 'dodge', 0.4);
+  void vfx.dissolve(skinned, 0.5);
+  renderer.compile(scene, camera);
   const bloom = new BloomPostPass(renderer, scene, camera);
 
   for (let i = 0; i < 40; i++) {
     blade.position.set(Math.sin(i / 5), 1, 0);
     vfx.trailDriver.tick(vfx.clock.now);
     vfx.update(1 / 60, false);
-    if (i % 2) bloom.render(renderer, scene, camera, 16);
+    if (i % 2) bloom.render();
     else renderer.render(scene, camera);
   }
   out.live = { sparks: vfx.sparks.liveCount, points: vfx.points.liveCount, trails: vfx.trails.liveCount };

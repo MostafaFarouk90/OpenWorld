@@ -60,6 +60,7 @@ export interface VfxEventMap {
   telegraph: { actorId: ActorId; kind: 'block' | 'dodge'; attackId: string; leadSeconds: number };
   'actor.died': { actorId: ActorId; killerId: ActorId | null };
   'actor.despawned': { actorId: ActorId };
+  'telegraph.cancelled': { actorId: ActorId; swingId?: number };
   'actor.staggered': { actorId: ActorId; byId: ActorId | null };
   'waystone.rekindled': { waystoneId: string; cause?: 'player' | 'load' | 'script' };
   rest: { waystoneId: string };
@@ -165,13 +166,14 @@ export interface GraphicsService {
   setShadows(mode: 'off' | 'half' | 'full', distanceM?: number): void;
   setViewDistanceOffset(levels: number): void;
   setPostPass(pass: PostPass | null): void;
+  /** Requested from thread 0 (not in the v0.3 contract): the composer needs the renderer. */
   readonly renderer?: THREE.WebGLRenderer;
 }
 /** `render` replaces `renderer.render(scene, camera)` for the frame. */
 export interface PostPass {
-  render(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, frameTime: number): void;
+  render(): void;
   setSize?(width: number, height: number): void;
-  dispose(): void;
+  dispose?(): void;
 }
 
 export interface PluginContext {

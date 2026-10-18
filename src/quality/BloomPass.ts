@@ -17,8 +17,19 @@ export class BloomPostPass implements PostPass {
   private pulseLeft = 0;
   private disposed = false;
   private warned = false;
+  private last = 0;
 
-  constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+  /**
+   * `now` returns milliseconds (injectable for tests). The pass is installed with `graphics.setPostPass`,
+   * whose loop calls `render()` with no arguments instead of `renderer.render`, so it keeps its own refs.
+   */
+  constructor(
+    private readonly renderer: THREE.WebGLRenderer,
+    private readonly scene: THREE.Scene,
+    private readonly camera: THREE.Camera,
+    private readonly now: () => number = () => (typeof performance === 'undefined' ? Date.now() : performance.now()),
+  ) {
+    this.last = this.now();
     try {
       const size = new THREE.Vector2(1, 1);
       renderer.getSize?.(size);
@@ -42,24 +53,25 @@ export class BloomPostPass implements PostPass {
     return this.currentStrength();
   }
 
-  render(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera, frameTime: number): void {
-    if (this.pulseLeft > 0 && Number.isFinite(frameTime)) {
-      this.pulseLeft = Math.max(0, this.pulseLeft - frameTime / 1000);
-    }
+  render(): void {
+    const t = this.now();
+    const dt = Number.isFinite(t) ? Math.min(Math.max((t - this.last) / 1000, 0), 0.25) : 0;
+    this.last = t;
+    if (this.pulseLeft > 0) this.pulseLeft = Math.max(0, this.pulseLeft - dt);
     if (this.composer && !this.disposed) {
       try {
         if (this.bloom) {
           this.bloom.enabled = this.enabled;
           this.bloom.strength = this.currentStrength();
         }
-        this.composer.render(Math.max(0, frameTime) / 1000);
+        this.composer.render(dt);
         return;
       } catch (e) {
         this.warn(e);
         this.composer = null;
       }
     }
-    renderer.render(scene, camera);
+    this.renderer.render(this.scene, this.camera);
   }
 
   setSize(width: number, height: number): void {
@@ -79,7 +91,7 @@ export class BloomPostPass implements PostPass {
     if (Number.isFinite(n)) this.baseStrength = Math.max(0, n);
   }
 
-  /** Adds `amount` to the strength, decaying linearly to zero over `seconds` (frameTime is in ms). */
+  /** Adds `amount` to the strength, decaying linearly to zero over `seconds` (measured with the injected clock). */
   pulse(amount: number, seconds: number): void {
     if (!Number.isFinite(amount) || !Number.isFinite(seconds) || seconds <= 0) return;
     this.pulseAmount = amount;

@@ -84,12 +84,36 @@ describe('HitFeedback', () => {
     const fb = new HitFeedback({
       vfx: vfx as never,
       clock: { tick: 0, seconds: 0, hitStop: () => {} },
-      actors: { get: (id: string) => (id === 'a' ? ({ root: { position: { x: 2, y: 0, z: 4 } } } as never) : undefined), all: () => [], player: {} as never },
+      actors: { get: (id: string) => (id === 'a' ? ({ root: {}, worldPosition: (o: { set: (x: number, y: number, z: number) => void }) => (o.set(2, 0, 4), o) } as never) : undefined), all: () => [], player: {} as never },
     });
     fb.onDamage(result({ point: undefined, targetId: 'a' }));
     expect(vfx.spawnEffect.mock.calls[0][1].position).toEqual({ x: 2, y: 1, z: 4 });
     fb.onDamage(result({ point: undefined, targetId: 'gone' }));
     expect(vfx.spawnEffect.mock.calls[1][1].position).toEqual({ x: 0, y: 0, z: 0 });
+  });
+  it('falls and scripted damage give no weapon feedback', () => {
+    const { vfx, clock, fb } = setup();
+    fb.onDamage(result({ kind: 'fall' }));
+    fb.onDamage(result({ kind: 'script' }));
+    expect(vfx.spawnEffect).not.toHaveBeenCalled();
+    expect(clock.hitStop).not.toHaveBeenCalled();
+  });
+  it('a killing blow on an immortal dummy (killed false) uses the normal stack', () => {
+    const { clock, fb } = setup();
+    fb.onDamage(result({ killed: false, attackId: '1H_Melee_Attack_Slice_Diagonal' }));
+    expect(clock.hitStop).toHaveBeenCalledWith(0.05);
+  });
+  it('a poise-only hit (amount 0) still gets sparks and the normal stack', () => {
+    const { vfx, fb } = setup();
+    fb.onDamage(result({ amount: 0, dealt: 0 }));
+    expect(vfx.spawnEffect).toHaveBeenCalledWith('hit-spark', expect.anything(), { count: 24 });
+  });
+  it('heavy extras are placed on the ground under the hit, without a normal', () => {
+    const vfx = { spawnEffect: vi.fn(), shake: vi.fn(), fovPunch: vi.fn(), pulseScreen: vi.fn() };
+    const fb = new HitFeedback({ vfx: vfx as never, clock: { tick: 0, seconds: 0, hitStop: () => {} }, actors: { get: () => undefined, all: () => [], player: {} as never }, ground: () => 7 });
+    fb.onDamage(result({ attackId: '1H_Melee_Attack_Chop', point: { x: 1, y: 1.5, z: 2 }, normal: { x: 1, y: 0, z: 0 } }));
+    const scorch = vfx.spawnEffect.mock.calls.find((c) => c[0] === 'scorch-decal')!;
+    expect(scorch[1]).toEqual({ position: { x: 1, y: 7, z: 2 } });
   });
   it('a parry flashes the screen and spawns the ring', () => {
     const { vfx, fb } = setup();
