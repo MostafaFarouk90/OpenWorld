@@ -7,7 +7,7 @@ import type { ActorStatusView } from './view';
 const DT = 1 / 60;
 
 function harness() {
-  const actors = new Map<ActorId, { dead: boolean; hittable: boolean; team: Team }>([
+  const actors = new Map<ActorId, { dead: boolean; hittable: boolean; invulnerable?: boolean; team: Team }>([
     ['player', { dead: false, hittable: true, team: 'player' }],
     ['wolf', { dead: false, hittable: true, team: 'hostile' }],
     ['guard', { dead: false, hittable: true, team: 'hostile' }],
@@ -63,6 +63,14 @@ describe('apply validation', () => {
     expect(h.engine.apply('wolf', bleed())).toBe(false);
     expect(h.engine.apply('npc', bleed())).toBe(false);
     expect(h.log).toEqual([]);
+  });
+
+  it('refuses an invulnerable enemy but not the player (ticks ignore a dodge)', () => {
+    const h = harness();
+    h.actors.get('wolf')!.invulnerable = true;
+    h.actors.get('player')!.invulnerable = true;
+    expect(h.engine.apply('wolf', bleed())).toBe(false);
+    expect(h.engine.apply('player', bleed({ sourceId: 'wolf' }))).toBe(true);
   });
 
   it('accepts a null source and an unknown source id', () => {
