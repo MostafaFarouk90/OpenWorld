@@ -24,14 +24,12 @@ const done = (w: W, q: string, o: string) => w.manager.objectiveDone(q, o);
 const begin = (w: W, q: string) => { expect(w.manager.start(q)).toBe(true); w.manager.completeObjective(q, 'o1'); };
 
 describe('M06 Gates of Harrowmark', () => {
-  it('start sets story.m06.started; the stealth route completes and records route and gateOpen', () => {
+  it('start sets story.m06.started; the stealth route completes on the cleared section and records route and gateOpen', () => {
     const w = makeWorld([m06]);
     begin(w, 'm06');
     expect(w.flags.get('story.m06.started')).toBe(true);
+    expect(w.flags.has('story.m06.gateOpen')).toBe(false);
     stealth(w, 'm06.south-gate');
-    expect(done(w, 'm06', 'o2')).toBe(true);
-    expect(w.flags.has('story.m06.gateOpen')).toBe(false); // only on completion
-    talk(w, 'rook');
     expect(w.manager.state('m06')).toBe('completed');
     expect(w.flags.get('story.m06.route')).toBe('stealth');
     expect(w.flags.get('story.m06.gateOpen')).toBe(true);
@@ -43,9 +41,9 @@ describe('M06 Gates of Harrowmark', () => {
     begin(w, 'm06');
     w.flags.set('story.m06.route', 'bribe');
     w.manager.completeObjective('m06', 'o2');
-    talk(w, 'rook');
     expect(w.manager.state('m06')).toBe('completed');
     expect(w.flags.get('story.m06.route')).toBe('bribe');
+    expect(w.flags.get('story.m06.gateOpen')).toBe(true);
   });
   it('ignores other sections, other phases and events before the quest starts', () => {
     const w = makeWorld([m06]);
@@ -55,13 +53,7 @@ describe('M06 Gates of Harrowmark', () => {
     stealth(w, 'm06.south-gate', 'entered');
     stealth(w, 'm06.south-gate', 'exited');
     expect(done(w, 'm06', 'o2')).toBe(false);
-  });
-  it('o3 is not current until the gate is passed, so the first talk cannot finish the quest', () => {
-    const w = makeWorld([m06]);
-    begin(w, 'm06');
-    talk(w, 'rook');
     expect(w.manager.state('m06')).toBe('active');
-    expect(w.manager.isObjectiveCurrent('m06', 'o3')).toBe(false);
   });
 });
 
@@ -327,6 +319,21 @@ describe('quest props and the interact-flag bridge', () => {
     expect(p1.enabled()).toBe(false);
     expect(registered.get('use:r04-page-2')!.enabled()).toBe(true);
   });
+  it('a prop whose registration throws is skipped once and does not block the others', () => {
+    const w = makeWorld([m07, r04]);
+    const registered: string[] = [];
+    const warns: string[] = [];
+    const props = new QuestProps(QUEST_PROPS, {
+      bus: w.bus, state: w.state, quests: w.manager, warn: (m) => warns.push(m),
+      anchor: () => ({ x: 0, y: 0, z: 0 }),
+      register: (i) => { if (i.id === 'use:r04-page-1') throw new Error('duplicate'); registered.push(i.id); return () => {}; },
+    });
+    begin(w, 'r04');
+    props.update();
+    props.update();
+    expect(registered).toEqual(['use:r04-page-2', 'use:r04-page-3']);
+    expect(warns).toHaveLength(1);
+  });
   it('dispose unregisters everything', () => {
     const { w, props, registered } = propsWorld({ 'm07.satchel': true });
     begin(w, 'm07');
@@ -342,6 +349,9 @@ describe('quest props and the interact-flag bridge', () => {
     interact(w, 'use:m09-invoice-1');
     expect(w.flags.has('story.m09.invoice.1')).toBe(false);
     begin(w, 'm09');
+    interact(w, 'use:m09-invoice-1'); // o3 is not current yet: the invoice must stay usable
+    expect(w.flags.has('story.m09.invoice.1')).toBe(false);
+    w.bus.emit('interior.entered', { interiorId: 'counting-house' });
     interact(w, 'use:m09-invoice-1', 'mercy');
     expect(w.flags.has('story.m09.invoice.1')).toBe(false);
     interact(w, 'use:m09-invoice-2');

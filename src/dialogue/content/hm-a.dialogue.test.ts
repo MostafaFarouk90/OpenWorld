@@ -234,9 +234,8 @@ describe('Rook: M06 Gates of Harrowmark', () => {
     expect(choicesAt(w, 'npc-rook', 'rook', 'm06-choose')).toEqual(['sneak', 'bribe']);
   });
 
-  it('after a stealth pass the proof scene runs, flags come from the quest, and the idle is the stealth line', () => {
+  it('a stealth pass completes M06 on its own, the flags come from the quest, and the idle is the stealth line', () => {
     const w = stageWorld(); w.stage('m06', 'o1', 'o2');
-    expect(play(w, 'npc-rook', 'rook')).toEqual(['m06-proof', 'm06-proof-2', 'm06-proof-3']);
     expect(w.manager.state('m06')).toBe('completed');
     expect(w.flags.get('story.m06.route')).toBe('stealth');
     afterD02(w);
@@ -492,6 +491,6 @@ describe('Edric and the Regent', () => {
       for (const c of n.choices!) expect(JSON.stringify(c.effects ?? [])).not.toContain('stance');
     }
     const q3 = npcEdric.nodes.find((x) => x.id === 'q3')!;
-    expect(q3.choices!.map((c) => (c.effects as any[]).find((e) => 'setFlag' in e).value)).toEqual(['meek', 'steady', 'bold']);
+    expect(q3.choices!.map((c) => /"story.m08.stance","value":"(\w+)"/.exec(JSON.stringify(c.effects))![1])).toEqual(['meek', 'steady', 'bold']);
   });
 });

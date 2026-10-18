@@ -82,8 +82,8 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
       runList(branch, depth + 1);
     } else if ('spendGold' in c) {
       const { amount, reason } = (c.spendGold ?? {}) as { amount?: unknown; reason?: unknown };
-      if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0) throw new Error('spendGold amount must be a positive integer');
-      if (typeof reason !== 'string' || !reason) throw new Error('spendGold needs a reason');
+      if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0) throw new Halt('spendGold amount must be a positive integer');
+      if (typeof reason !== 'string' || !reason) throw new Halt('spendGold needs a reason');
       const inv = env.inventory?.();
       if (!inv?.takeGold || typeof inv.gold !== 'number') { warnOnce('spendGold: inventory service absent'); throw new Halt('inventory service absent'); }
       if (inv.gold < amount) throw new Halt(`spendGold: need ${amount} gold, have ${inv.gold}`);

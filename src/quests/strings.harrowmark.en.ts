@@ -1,10 +1,9 @@
 // English quest strings for the Harrowmark quests (slice 2 phase B). Merged into questStrings.
 export const questStringsHarrowmark: Record<string, string> = {
   'quest.m06.title': 'Gates of Harrowmark',
-  'quest.m06.summary': 'Captain Rook holds the South Gate. Get inside by stealth, coin or argument, and show him you are not forge-cursed.',
+  'quest.m06.summary': 'Captain Rook holds the South Gate. Get inside by stealth, coin or argument.',
   'quest.m06.o1': 'Speak to Captain Rook at the South Gate',
   'quest.m06.o2': 'Get through the South Gate',
-  'quest.m06.o3': 'Show Captain Rook the Heartshard is no curse',
 
   'quest.m07.title': 'The Tilted Anvil',
   'quest.m07.summary': "Aldith Stonebrewer's satchel was stolen by Gerta's thieves. Get it back, and her back room opens onto the Halvard Bastion training yard.",

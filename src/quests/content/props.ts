@@ -15,5 +15,5 @@ export const QUEST_PROPS: QuestPropSpec[] = [
 
 /** Thread 3a places the M09 invoices and disables each once its flag is set; this writes the flag. */
 export const INTERACT_FLAGS: InteractFlagBridge[] = [1, 2, 3].map((n) => ({
-  interactableId: `use:m09-invoice-${n}`, quest: 'm09', flag: `story.m09.invoice.${n}`,
+  interactableId: `use:m09-invoice-${n}`, quest: 'm09', objective: 'o3', flag: `story.m09.invoice.${n}`,
 }));

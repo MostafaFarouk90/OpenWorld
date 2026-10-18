@@ -3,6 +3,7 @@ import type { ConditionEnv } from './ports';
 
 const TRACKS: readonly string[] = ['halvard', 'oswin', 'grisel', 'dragons', 'ashwalkers'];
 const ERR = Symbol('condition-error');
+let goldWarned = false;
 type Result = boolean | typeof ERR;
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -56,7 +57,10 @@ function evalInner(c: unknown, env: ConditionEnv): Result {
       const need = isObj(c.gold) ? c.gold.atLeast : undefined;
       if (typeof need !== 'number' || !Number.isFinite(need)) return fail('gold needs { atLeast: number }');
       const have = env.gold?.();
-      if (typeof have !== 'number') return fail('gold unavailable (no inventory)');
+      if (typeof have !== 'number') {
+        if (!goldWarned) { goldWarned = true; return fail('gold unavailable (no inventory)'); }
+        return ERR;
+      }
       return have >= need;
     }
     if ('quest' in c) {

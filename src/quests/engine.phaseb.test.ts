@@ -95,12 +95,11 @@ describe('spendGold', () => {
     expect(run.run([spend(5), { setFlag: 'a.after', value: true }])[0].halted).toBe(true);
     expect(w.flags.size).toBe(0);
   });
-  it.each([0, -1, 2.5, NaN])('refuses amount %s without halting', (n) => {
+  it.each([0, -1, 2.5, NaN])('a malformed amount %s halts, so nothing after it runs unpaid', (n) => {
     const { w, run } = runner(100);
     const res = run.run([spend(n), { setFlag: 'a.after', value: true }]);
-    expect(res[0].ok).toBe(false);
-    expect(res[0].halted).toBeUndefined();
-    expect(w.flags.get('a.after')).toBe(true);
+    expect(res[0]).toMatchObject({ ok: false, halted: true });
+    expect(w.flags.has('a.after')).toBe(false);
     expect(w.gold.n).toBe(100);
   });
   it('validates the shape', () => {
@@ -110,7 +109,7 @@ describe('spendGold', () => {
 });
 
 describe('dialogue with a halted spend', () => {
-  it('stays on the node and hides the choice instead of following next', () => {
+  it('stays on the node instead of following next, and the choice disappears once the gold condition fails', () => {
     const w = makeWorld();
     w.gold.n = 60; // enough for the condition, then the take is rigged short
     const effects = createEffectRunner({

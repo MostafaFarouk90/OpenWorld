@@ -17,7 +17,6 @@ export const m06: QuestDef = {
       id: 'o2', type: 'event', target: 'stealth.section', match: { sectionId: 'm06.south-gate', phase: 'cleared' },
       textKey: 'quest.m06.o2',
     },
-    { id: 'o3', type: 'talk', target: 'rook', textKey: 'quest.m06.o3' },
   ],
   onComplete: [
     { if: { flag: 'story.m06.route' }, then: [], else: [{ setFlag: 'story.m06.route', value: 'stealth' }] },

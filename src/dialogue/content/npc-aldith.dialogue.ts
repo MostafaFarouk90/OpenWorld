@@ -70,11 +70,11 @@ export const npcAldith: DialogueDef = {
       choices: [
         {
           id: 'forgive', textKey: P + 'r03-settle.forgive',
-          effects: [{ take: 'brewing-copper' }, { setFlag: 'world.harrowmark.inn.price', value: 'forgiven' }], next: 'r03-forgive-end',
+          effects: [{ take: 'brewing-copper' }, { setFlag: 'world.harrowmark.inn.price', value: 'forgiven' }, { completeObjective: ['r03', 'o4'] }], next: 'r03-forgive-end',
         },
         {
           id: 'collect', textKey: P + 'r03-settle.collect',
-          effects: [{ take: 'brewing-copper' }, { setFlag: 'world.harrowmark.inn.price', value: 'collected' }, { giveGold: R03_COIN_GOLD }],
+          effects: [{ take: 'brewing-copper' }, { setFlag: 'world.harrowmark.inn.price', value: 'collected' }, { giveGold: R03_COIN_GOLD }, { completeObjective: ['r03', 'o4'] }],
           next: 'r03-collect-end',
         },
       ],

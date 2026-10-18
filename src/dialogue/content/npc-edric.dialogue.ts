@@ -9,7 +9,9 @@ const node = (id: string, speaker: 'edric' | 'vey', next: string | null, extra: 
 const question = (q: string, nexts: [string, string, string], extra: (DialogueChoice['effects'])[]): DialogueNode => ({
   id: q, speaker: 'vey', textKey: P + q,
   choices: (['meek', 'honest', 'bold'] as const).map((kind, i) => ({
-    id: kind, textKey: `${P}${q}.${kind}`, effects: extra[i], next: nexts[i],
+    id: kind, textKey: `${P}${q}.${kind}`, next: nexts[i],
+    // applied once per question even if the audience is cut off and replayed
+    effects: [{ if: { flag: `story.m08.audience.${q}` }, then: [], else: [...(extra[i] ?? []), { setFlag: `story.m08.audience.${q}`, value: true }] }],
   })),
 });
 

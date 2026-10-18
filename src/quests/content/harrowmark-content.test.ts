@@ -61,12 +61,15 @@ describe('Harrowmark quest content', () => {
     }
   });
   it('every flag the new content writes is under thread 6\'s prefixes and has the expected single writer', () => {
-    const OWNED = /^(story\.(m|d|r)\d\d\.|world\.harrowmark\.inn\.price$)/;
-    for (const w of written) {
-      if (!PHASE_B.some((q) => w.where.startsWith(q)) && !/npc-(rook|aldith|wystan|edric|merrin|gerta|whitlock|pennard|ashdown|gaut|stane)|scene-act1-camp/.test(w.where)) continue;
-      expect(w.key, `${w.where} writes ${w.key}`).not.toMatch(/^(enemies\.|story\.gate\.|world\.harrowmark\.inn\.room)/);
-      expect(w.key, `${w.where} writes ${w.key}`).toMatch(/^(story\.(m|d|r)\d\d\.|world\.harrowmark\.inn\.price$|world\.brightwater|quest\.|tutorial\.)/);
-      void OWNED;
+    const OWNED = /^(story\.(m|d|r)\d\d\.[a-zA-Z0-9_.-]+|world\.harrowmark\.inn\.price|world\.brightwater\.barley)$/;
+    const keys = [
+      ...written,
+      ...QUEST_PROPS.filter((p) => p.usedFlag).map((p) => ({ where: p.interactableId, key: p.usedFlag! })),
+      ...INTERACT_FLAGS.map((b) => ({ where: b.interactableId, key: b.flag })),
+    ];
+    for (const w of keys) {
+      if (w.key.startsWith('quest.') || w.key.startsWith('tutorial.') || w.key.startsWith('player.')) continue; // Phase A and slice 1 content
+      expect(w.key, `${w.where} writes ${w.key}`).toMatch(OWNED);
     }
     expect(writers('story.m06.started')).toEqual(['m06.onStart']);
     expect(writers('story.m08.keepOpen')).toEqual(['m08.onStart']);

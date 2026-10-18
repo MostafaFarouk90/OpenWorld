@@ -5,16 +5,18 @@ import type { BusPort, QuestReader, StatePort, Unsubscribe } from './ports';
 export const TORCH_USED_FLAG = 'story.r01.torchUsed';
 
 /** An interactable the quest does not own, whose use must leave a flag the owner reads (thread 3a disables a taken invoice). */
-export interface InteractFlagBridge { interactableId: string; quest: string; flag: string }
+export interface InteractFlagBridge { interactableId: string; quest: string; objective: string; flag: string }
 
 export function installBridges(
-  bus: BusPort, state: StatePort, quests: QuestReader, warn?: (m: string) => void, interactFlags: InteractFlagBridge[] = [],
+  bus: BusPort, state: StatePort, quests: QuestReader & { isObjectiveCurrent?(q: string, o: string): boolean }, warn?: (m: string) => void,
+  interactFlags: InteractFlagBridge[] = [],
 ): Unsubscribe {
   const offs: Unsubscribe[] = [];
   offs.push(bus.on('interact', (p: { interactableId?: unknown; action?: unknown } | null | undefined) => {
     if (!p || p.action === 'mercy') return;
     for (const b of interactFlags) {
       if (p.interactableId !== b.interactableId || quests.state(b.quest) !== 'active') continue;
+      if (quests.isObjectiveCurrent && !quests.isObjectiveCurrent(b.quest, b.objective)) continue; // an invoice that earns nothing must stay usable
       try { state.setFlag(b.flag, true); } catch (e) { warn?.(`bridge: could not set ${b.flag}: ${String(e)}`); }
     }
   }));

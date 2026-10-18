@@ -30,6 +30,7 @@ export interface QuestPropPorts {
 
 export class QuestProps {
   private readonly offs = new Map<string, () => void>();
+  private readonly failed = new Set<string>();
   private disposed = false;
 
   constructor(private readonly specs: QuestPropSpec[], private readonly p: QuestPropPorts) {}
@@ -38,19 +39,25 @@ export class QuestProps {
   update(): void {
     if (this.disposed) return;
     for (const s of this.specs) {
-      if (this.offs.has(s.interactableId)) continue;
+      if (this.offs.has(s.interactableId) || this.failed.has(s.interactableId)) continue;
       if (this.p.quests.state(s.objective[0]) === 'inactive') continue;
       const at = this.p.anchor(s.anchorId);
       if (!at) continue;
       const home = { x: at.x, y: at.y, z: at.z };
       const [kind, ...rest] = s.interactableId.split(':');
-      this.offs.set(s.interactableId, this.p.register({
-        id: s.interactableId, kind, name: rest.join(':'), radius: 2, promptKey: s.promptKey,
-        position: (out) => { out.x = home.x; out.y = home.y; out.z = home.z; return out; },
-        enabled: () => !this.disposed && this.p.quests.isObjectiveCurrent(s.objective[0], s.objective[1])
-          && !(s.usedFlag && this.p.state.getFlag(s.usedFlag) === true),
-        onInteract: () => this.use(s),
-      }));
+      try {
+        this.offs.set(s.interactableId, this.p.register({
+          id: s.interactableId, kind, name: rest.join(':'), radius: 2, promptKey: s.promptKey,
+          position: (out) => { out.x = home.x; out.y = home.y; out.z = home.z; return out; },
+          enabled: () => !this.disposed && this.p.quests.isObjectiveCurrent(s.objective[0], s.objective[1])
+            && !(s.usedFlag && this.p.state.getFlag(s.usedFlag) === true),
+          onInteract: () => this.use(s),
+        }));
+      } catch (e) {
+        // a duplicate id (another thread registered it) or a bad anchor: give up on this prop only, once
+        this.failed.add(s.interactableId);
+        this.p.warn?.(`props: could not register ${s.interactableId}: ${String(e)}`);
+      }
     }
   }
 
