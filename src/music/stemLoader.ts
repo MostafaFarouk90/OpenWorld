@@ -12,6 +12,8 @@ export interface LoadedStems {
   /** Where each stem came from; a stem that failed both ways is absent from `buffers` and listed in `failed`. */
   sources: Record<string, 'recorded' | 'procedural'>;
   failed: string[];
+  /** True when `isCancelled` abandoned the load; the buffers are then incomplete and must be discarded. */
+  cancelled?: boolean;
 }
 
 export interface StemLoaderOptions {
@@ -24,6 +26,8 @@ export interface StemLoaderOptions {
   skipProcedural?: readonly string[];
   /** A fetch that has not answered after this long counts as missing (default 5 s). */
   fetchTimeoutMs?: number;
+  /** Checked between stems; true abandons the load (a cancelled preload or a disposed plugin). */
+  isCancelled?: () => boolean;
   /** Awaited between procedural stems so synthesis does not block a frame for long. */
   yieldToMain?: () => Promise<void>;
 }
@@ -94,6 +98,10 @@ export async function loadTrackStems(
   for (let i = 0; i < track.stems.length; i++) {
     const stem = track.stems[i];
     const buffer = recorded[i];
+    if (options.isCancelled?.()) {
+      result.cancelled = true;
+      return result;
+    }
     if (buffer) {
       result.buffers.set(stem, buffer);
       result.sources[stem] = 'recorded';
@@ -102,6 +110,10 @@ export async function loadTrackStems(
     if (options.skipProcedural?.includes(stem)) continue;
     try {
       await yieldToMain();
+      if (options.isCancelled?.()) {
+        result.cancelled = true;
+        return result;
+      }
       const out = ctx.createBuffer(1, length, ctx.sampleRate);
       out.copyToChannel(synthStem(track, stem, ctx.sampleRate) as Float32Array<ArrayBuffer>, 0);
       result.buffers.set(stem, out);
