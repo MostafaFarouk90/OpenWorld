@@ -1,10 +1,12 @@
-// The crowd's per-frame cost (plan section 6, as amended by the review): wall-clock numbers in Node are noise, so this pins
-// scaling (no O(n^2)), a loose tripwire for accidents, and pooling. The real frame cost is measured in the browser.
+// The crowd's per-frame cost (plan section 6, as amended by the review): wall-clock numbers in Node, and on a shared CI
+// runner even their ratios, are noise, so scaling is pinned on a deterministic work count; wall clock only gets a loose
+// tripwire for accidents. The real frame cost is measured in the browser (tools/measure-crowds.mjs).
 import { describe, expect, it } from 'vitest';
 import { CrowdSim } from './CrowdSim';
 import { CrowdView } from './CrowdView';
 import { cityWorld } from './crowdTestKit';
 import { LANE_WALKERS } from './tuning';
+import { densityFor } from './density';
 
 const DT = 1 / 60;
 const world = cityWorld();
@@ -31,20 +33,22 @@ function costPerFrame(scale: number, frames: number): number {
   return ms;
 }
 
-const median = (xs: number[]) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)];
-
 describe('crowd budget', () => {
-  it('scales linearly: double the walkers costs at most 2.5 times as much', () => {
-    // Interleaved after a warm-up pair, so JIT tiering does not favour whichever size runs last.
-    costPerFrame(1, 200);
-    costPerFrame(2, 200);
-    const half: number[] = [];
-    const double: number[] = [];
-    for (let i = 0; i < 4; i++) {
-      half.push(costPerFrame(1, 300));
-      double.push(costPerFrame(2, 300));
-    }
-    expect(median(double) / median(half)).toBeLessThan(2.5);
+  it('scales linearly: double the walkers does at most 2.5 times the work (a quadratic would be 4), steady and while density changes', () => {
+    const work = (scale: number, flip: boolean): number => {
+      const per: Record<string, number> = {};
+      for (const [k, v] of Object.entries(LANE_WALKERS)) per[k] = Math.round(v * scale);
+      const sim = new CrowdSim({ lanes: world.lanes, clusters: world.clusters, laneWalkers: per });
+      sim.reseed(player);
+      const before = sim.ops;
+      for (let i = 0; i < 600; i++) {
+        // Flipping density every second exercises the surplus and spawn paths, where a quadratic would hide.
+        if (flip && i % 60 === 0) sim.setDensity(densityFor({ gate: i % 120 ? 'guarded' : 'open', stealthActive: false, chaseActive: (i / 60) % 4 === 3, quality: 'high' }));
+        sim.update(DT, player);
+      }
+      return sim.ops - before;
+    };
+    for (const flip of [false, true]) expect(work(2, flip) / work(1, flip), flip ? 'changing' : 'steady').toBeLessThan(2.5);
   });
 
   it('stays under a loose 5 ms tripwire per frame at the full count', () => {
