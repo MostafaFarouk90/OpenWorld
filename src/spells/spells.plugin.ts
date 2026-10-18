@@ -199,7 +199,13 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       if (aggro.delete(id) && aggro.size === 0) touchCombat();
     };
     offs.push(
-      ctx.events.on('rest', () => { burn.clear('rest'); requestCancel('rest'); }),
+      ctx.events.on('rest', () => {
+        burn.clear('rest');
+        requestCancel('rest');
+        // The rest healed to the Burn-reduced maximum before this ran; clearing Burn raised it, so top up to the new one.
+        const me = ctx.actors.player;
+        if (!me.dead) me.health = me.maxHealth;
+      }),
       // The single charger of a rekindle (shrines and waystones alike): +10, and a Scar at Burn 75 or more.
       ctx.events.on('waystone.rekindled', (e) => { if (e.cause === 'player') useShard(BURN.rekindleGain, 'rekindle'); }),
       // Same definition as the music director: combat while a hostile targets the player, plus a hysteresis window
@@ -215,7 +221,7 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       ctx.events.on('actor.despawned', (e) => unaggro(e.actorId)),
       onLoose<{ actorId: ActorId }>(ctx.events, 'mercy', (e) => unaggro(e.actorId)),
       onLoose<{ id: string; open: boolean }>(ctx.events, 'ui.modal', (e) => { if (e.open) requestCancel('modal'); }),
-      ctx.events.on('save.loaded', () => { requestCancel('load'); aggro.clear(); lastCombat = -Infinity; leap.reset(); setScarFlag(); }),
+      ctx.events.on('save.loaded', () => { requestCancel('load'); aggro.clear(); lastCombat = -Infinity; leap.reset(); banner.clear(); setScarFlag(); }),
       ctx.events.on('actor.staggered', (e) => { if (e.actorId === playerId()) staggeredUntil = simTime + PLAYER_STAGGER_LOCK_SECONDS; }),
       ctx.events.on('dialogue.started', () => { blockers++; requestCancel('dialogue'); }),
       ctx.events.on('dialogue.ended', () => { blockers = Math.max(0, blockers - 1); }),

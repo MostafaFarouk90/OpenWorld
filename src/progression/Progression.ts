@@ -7,7 +7,7 @@ import {
   type NextUnlock,
   type ProgressionService,
 } from '../hud/ports';
-import { getSkill, SKILLS, type SkillDef } from './skills';
+import { DEFAULT_CLASS_ID, getSkill, SKILLS, type SkillDef } from './skills';
 import {
   BAR_SLOTS,
   LEVEL_CAP,
@@ -175,6 +175,7 @@ export class Progression implements ProgressionService {
     this.freeRespecUsed = true;
     this.emit('ability.bar.changed', {});
     this.emit('skillpoints.changed', { points: this.skillPoints });
+    this.applyMaxHealth();
     return { ok: true, refunded, cost: quote.gold };
   }
 
@@ -267,7 +268,7 @@ export class Progression implements ProgressionService {
     const skill = getSkill(id);
     if (!skill) return { ok: false, reason: 'unknown-skill' };
     if (this.learnedIds.includes(id)) return { ok: false, reason: 'already-learned' };
-    if (!skill.available) return { ok: false, reason: 'unavailable' };
+    if (!skill.available || skill.classId !== (this.chosenClass ?? DEFAULT_CLASS_ID)) return { ok: false, reason: 'unavailable' };
     if (skill.requires && !this.learnedIds.includes(skill.requires)) return { ok: false, reason: 'missing-prereq' };
     if (this.excluded(skill)) return { ok: false, reason: 'excluded' };
     if (this.skillPoints < skill.cost) return { ok: false, reason: 'no-points' };
@@ -360,7 +361,7 @@ export class Progression implements ProgressionService {
     const points = this.skillPoints;
     let cheapest: SkillDef | null = null;
     for (const s of SKILLS) {
-      if (!s.available || this.learnedIds.includes(s.id)) continue;
+      if (!s.available || s.classId !== (this.chosenClass ?? DEFAULT_CLASS_ID) || this.learnedIds.includes(s.id)) continue;
       if (s.requires && !this.learnedIds.includes(s.requires)) continue;
       if (this.excluded(s)) continue;
       if (!cheapest || s.cost < cheapest.cost) cheapest = s;

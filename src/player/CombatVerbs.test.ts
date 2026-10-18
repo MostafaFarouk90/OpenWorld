@@ -625,6 +625,17 @@ describe('class kit: Iron Stance', () => {
     expect(state.lockMove).toBe(false);
   });
 
+  it('guarding with Iron Stance cannot sprint: the sprint action is locked', () => {
+    const t = ironSetup();
+    expect(t.game.moveModifiers.isActionLocked('sprint')).toBe(false);
+    t.press('KeyB');
+    t.run(20);
+    expect(t.game.moveModifiers.isActionLocked('sprint')).toBe(true);
+    t.release('KeyB');
+    t.run(3);
+    expect(t.game.moveModifiers.isActionLocked('sprint')).toBe(false);
+  });
+
   it('removes the modifier when block is released, and never stacks it while held', () => {
     const t = ironSetup();
     t.press('KeyB');

@@ -73,6 +73,8 @@ export interface BannerRegistration {
   state: BannerState;
   /** Plants a banner in front of the player. */
   plant(now: number): void;
+  /** Removes the banner (a loaded save). */
+  clear(): void;
   /** Once per fixed tick with the sim time; `learned` false removes the banner (respec). */
   update(now: number, learned: boolean): void;
   /** The damage modifier body (buffs band). */
@@ -87,6 +89,9 @@ export function createBanner(host: BannerHost): BannerRegistration {
   let lastPulse = 0;
   const tmp = new THREE.Vector3();
 
+  const endBuff = (): void => {
+    host.events.emit('buff.removed', { id: BANNER.skillId });
+  };
   const dropMesh = (): void => {
     if (!mesh) return;
     mesh.removeFromParent();
@@ -113,10 +118,17 @@ export function createBanner(host: BannerHost): BannerRegistration {
       host.events.emit('buff.applied', { id: BANNER.skillId, nameKey: 'skill.knight.bannerPlant.name', seconds: BANNER.lifetimeSeconds });
       host.services.get('vfx')?.spawnEffect('skill-q', { position: at, scale: 1 }, { radius: BANNER.radius, color: RALLY_FX.color });
     },
+    clear() {
+      if (state.active) endBuff();
+      state.remove();
+      dropMesh();
+    },
     update(now, learned) {
+      const was = state.active;
       if (!learned) state.remove();
       else state.update(now);
       if (!state.active) {
+        if (was) endBuff();
         dropMesh();
         return;
       }
@@ -133,6 +145,7 @@ export function createBanner(host: BannerHost): BannerRegistration {
       if (scale < 1) req.amount *= scale;
     },
     dispose() {
+      if (state.active) endBuff();
       state.remove();
       dropMesh();
     },

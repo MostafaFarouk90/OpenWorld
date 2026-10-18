@@ -95,6 +95,25 @@ describe('createBanner', () => {
     expect(scene.children).toHaveLength(0);
   });
 
+  it('removal announces buff.removed once (expiry, respec, dispose, load)', () => {
+    const { b, events } = make();
+    const removed = () => events.log.filter((l) => l.type === 'buff.removed').length;
+    b.plant(0);
+    b.update(21, true);
+    expect(removed()).toBe(1);
+    b.update(22, true);
+    expect(removed()).toBe(1);
+    b.plant(30);
+    b.update(31, false);
+    expect(removed()).toBe(2);
+    b.plant(40);
+    b.clear();
+    expect(removed()).toBe(3);
+    b.plant(50);
+    b.dispose();
+    expect(removed()).toBe(4);
+  });
+
   it('re-planting leaves a single mesh, and dispose removes everything', () => {
     const { b, scene } = make();
     b.plant(0);
