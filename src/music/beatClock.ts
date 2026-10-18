@@ -26,7 +26,7 @@ export function beatInfoAt(clock: BarClock, bpm: number, now: number): BeatInfo 
   const barSeconds = clock.barSeconds;
   const beatSeconds = barSeconds / BEATS_PER_BAR;
   const elapsed = now - clock.startedAt;
-  if (!(elapsed > 0)) {
+  if (!(elapsed >= 0)) {
     return {
       bpm, beatSeconds, barSeconds, bar: 0, beat: 0, step: 0, phase: 0,
       audioTime: clock.startedAt, nextBeatTime: clock.startedAt,

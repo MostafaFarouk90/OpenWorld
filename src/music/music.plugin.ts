@@ -72,7 +72,7 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
     setBoss: (on, bossId) => director.setBoss(on, gameTime, bossId),
     beat() {
       const state = (audio.context as { state?: string }).state;
-      if (!clock || (state !== undefined && state !== 'running')) return null;
+      if (disposed || !clock || (state !== undefined && state !== 'running')) return null;
       return beatInfoAt(clock, track.bpm, audioNow());
     },
     onBeat: (cb) => beats.onBeat(cb),
@@ -225,8 +225,16 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
 
   /** Boss ids the registry has right now; after a load or respawn the director forgot them. */
   function rederiveBosses(): void {
-    for (const id of ctx.bosses?.active() ?? []) director.bossStarted(id, ctx.bosses.state(id)?.phase ?? 1, gameTime);
+    for (const id of ctx.bosses?.active() ?? []) {
+      const st = ctx.bosses.state(id);
+      // A beaten or released boss stays registered until it despawns; its music is over.
+      if (st?.outcome) continue;
+      director.bossStarted(id, st?.phase ?? 1, gameTime);
+      if (st?.releaseOpen) director.bossHush(id, true);
+    }
   }
+
+  rederiveBosses(); // a boss registered before this plugin's setup
 
   ctx.systems.add({
     id: 'music',
@@ -269,6 +277,7 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
           audio.music.start(director.currentMix());
           const startedAt = audio.music.startedAt;
           if (startedAt === null) return;
+          beats.reset();
           clock = new BarClock(startedAt, loopSeconds(track, audio.context.sampleRate), track.bars);
           director.start(clock, gameTime);
         } catch (err) {
