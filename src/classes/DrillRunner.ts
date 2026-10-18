@@ -3,7 +3,15 @@ import type { DrillOutcome, DrillState, DrillStepDef } from './types';
 
 export interface DrillPorts {
   prompts(): { count(mechanic: string): number; show(mechanic: string, action: string, textKey: string, opts?: { force?: boolean }): void; hide(mechanic?: string): void } | undefined;
-  enemies(): { spawnGroup(id: string, opts?: { moves?: readonly string[]; aggro?: boolean }): unknown; despawnGroup(id: string): void } | undefined;
+  enemies():
+    | {
+        spawnGroup(id: string, opts?: { moves?: readonly string[]; aggro?: boolean }): readonly unknown[];
+        despawnGroup(id: string): void;
+        /** Clears the group's cleared and spent marks (a spared spar would otherwise never come back). */
+        reset(id: string): void;
+        alive(id: string): readonly unknown[];
+      }
+    | undefined;
   /** Kill XP is paused for the whole drill (spars cannot be farmed). */
   pauseKillXp(source: string): (() => void) | undefined;
   /** The class of the avatar the player wears now (null before the first one). */
@@ -18,6 +26,7 @@ export interface DrillPorts {
   distanceFromYard(): number | null;
   hasString(key: string): boolean;
   emit(payload: { classId: ClassId; outcome: DrillOutcome }): void;
+  warn?(message: string): void;
 }
 
 /** Walking this far from the yard centre ends the drill as skipped (the yard is about 140 x 100 m). */
@@ -33,6 +42,8 @@ interface Run {
   releaseXp: (() => void) | undefined;
   /** True once the current step's prompt is up and its count baseline taken. */
   begun: boolean;
+  /** The kit failed to load: spar steps run with the avatar worn. */
+  anyKit: boolean;
 }
 
 /**
@@ -56,7 +67,7 @@ export class DrillRunner {
 
   start(classId: ClassId, steps: readonly DrillStepDef[]): boolean {
     if (this.run || steps.length === 0) return false;
-    this.run = { classId, steps, index: 0, base: 0, spar: null, releaseXp: this.ports.pauseKillXp('classes.drill'), begun: false };
+    this.run = { classId, steps, index: 0, base: 0, spar: null, releaseXp: this.ports.pauseKillXp('classes.drill'), begun: false, anyKit: false };
     return true;
   }
 
@@ -72,6 +83,11 @@ export class DrillRunner {
       progress: r.begun ? Math.min(step.count, this.count(step) - r.base) : 0,
       required: step.count,
     };
+  }
+
+  /** The class's kit could not be loaded: stop waiting for it before the spar steps. */
+  kitFailed(classId: ClassId): void {
+    if (this.run?.classId === classId) this.run.anyKit = true;
   }
 
   skip(): boolean {
@@ -103,9 +119,14 @@ export class DrillRunner {
     const step = r.steps[r.index];
     if (!r.begun) {
       // Spars wait for the class's own kit, so a hostile in aggro cannot hold the kit swap back.
-      if (step.spar && this.ports.wornClass() !== r.classId) return;
+      if (step.spar && !r.anyKit && this.ports.wornClass() !== r.classId) return;
       if (step.spar) {
-        this.ports.enemies()?.spawnGroup(step.spar.spawnerId, { moves: step.spar.moves, aggro: true });
+        if (!this.spawnSpar(step.spar)) {
+          this.ports.warn?.(`classes: the drill spar "${step.spar.spawnerId}" did not spawn; step "${step.id}" passed over`);
+          r.index++;
+          if (r.index >= r.steps.length) this.finish('done');
+          return;
+        }
         r.spar = step.spar.spawnerId;
       }
       r.base = this.count(step);
@@ -113,11 +134,22 @@ export class DrillRunner {
       this.ports.prompts()?.show(step.mechanic, step.action, this.textKey(r.classId, step), { force: true });
       return;
     }
-    if (this.count(step) - r.base < step.count) return;
+    if (this.count(step) - r.base < step.count) {
+      // A spar killed, spared or removed before the step is done comes back.
+      if (r.spar && step.spar && (this.ports.enemies()?.alive(r.spar).length ?? 1) === 0) this.spawnSpar(step.spar);
+      return;
+    }
     this.endStep(r, step);
     r.index++;
     r.begun = false;
     if (r.index >= r.steps.length) this.finish('done');
+  }
+
+  private spawnSpar(spar: NonNullable<DrillStepDef['spar']>): boolean {
+    const enemies = this.ports.enemies();
+    if (!enemies) return false;
+    enemies.reset(spar.spawnerId);
+    return enemies.spawnGroup(spar.spawnerId, { moves: spar.moves, aggro: true }).length > 0;
   }
 
   private passOver(classId: ClassId, step: DrillStepDef): boolean {

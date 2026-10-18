@@ -79,6 +79,7 @@ const classesPlugin: GamePlugin = {
       distanceFromYard: yardDistance,
       hasString: (k) => ctx.strings.has(k),
       emit: (p) => ctx.events.emit('class.drill', p),
+      warn,
     };
     const runner = new DrillRunner(drillPorts);
 
@@ -86,7 +87,7 @@ const classesPlugin: GamePlugin = {
     const swapper = new KitSwapper({
       wornClass: () => ctx.player.avatar?.classId ?? null,
       attached: () => attached,
-      idle: () => !inCombat() && !casting && svc<{ busy?: boolean }>('combatVerbs')?.busy !== true,
+      idle: () => !ctx.actors.player.dead && !inCombat() && !casting && svc<{ busy?: boolean }>('combatVerbs')?.busy !== true,
       build: (id): Promise<PlayerAvatar> => {
         if (!assets) return Promise.reject(new Error('no asset loader'));
         const kit = classes.kit(id) ?? DEFAULT_KITS[id];
@@ -94,7 +95,10 @@ const classesPlugin: GamePlugin = {
       },
       swap: (avatar) => ctx.player.swapAvatar(avatar),
       warn,
-      failed: () => toast('classes.kit.failed'),
+      failed: (id) => {
+        runner.kitFailed(id);
+        toast('classes.kit.failed');
+      },
     });
 
     const classes: Classes = new Classes(
@@ -111,11 +115,16 @@ const classesPlugin: GamePlugin = {
       runner,
     );
     ctx.services.provide('classes', classes);
+    // A save without a `classes` entry (every Phase A save) never calls load: reset on its save.loaded instead.
+    let loadedEntry = false;
     ctx.persist.register({
       key: Classes.key,
       version: Classes.version,
       serialize: () => classes.serialize(),
-      load: (data) => classes.load(data),
+      load: (data) => {
+        loadedEntry = true;
+        classes.load(data);
+      },
     });
 
     // classes.available.<id> follow thread 6's `story.m07.classOpen` (M07 o4), re-derived on a load through ctx.gates.
@@ -209,6 +218,8 @@ const classesPlugin: GamePlugin = {
       desk.closeAll();
     });
     ctx.events.on('save.loaded', () => {
+      if (!loadedEntry) classes.load(undefined);
+      loadedEntry = false;
       casting = false;
       desk.closeAll();
       syncAvailable();
