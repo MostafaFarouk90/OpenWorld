@@ -242,6 +242,37 @@ describe('shrine plugin on the real game', () => {
     expect({ held, released }).toEqual({ held: 1, released: 1 });
   });
 
+  it('offers the five classes at the lectern once a class is chosen and changes through classes.change', async () => {
+    let opts: any = null;
+    const changed: string[] = [];
+    const t = await boot({
+      stub: (g) => {
+        g.ctx.strings.register('en', { 'classes.name.warden': 'Warden' });
+        g.ctx.services.provide('respecModal' as never, { open: (o: unknown) => ((opts = o), true) } as never);
+        g.ctx.services.provide(
+          'classes' as never,
+          {
+            chosen: () => true,
+            current: () => 'knight',
+            changeQuote: () => ({ ok: true, free: true, gold: 0, canAfford: true }),
+            change: (id: string) => (changed.push(id), { ok: true }),
+          } as never,
+        );
+      },
+    });
+    const prog = t.ctx.services.require('progression') as any;
+    prog.allowRespec = () => () => {};
+    prog.respecQuote = () => ({ free: true, gold: 0, canAfford: true });
+    prog.respec = () => ({ ok: true });
+    t.ctx.state.setFlag('shrine.quenchstone.lit', true);
+    t.run(2);
+    (t.ctx.interaction as any).items.get('use:quenchstone-respec').onInteract(t.ctx.actors.player);
+    expect(opts.options.map((o: any) => o.id)).toEqual(['knight', 'warden', 'emberwright', 'ashblade', 'pathfinder']);
+    expect(opts.options[1].label).toBe('Warden');
+    opts.confirm('ashblade');
+    expect(changed).toEqual(['ashblade']);
+  });
+
   it('animates the steam on render once lit', async () => {
     const t = await boot();
     t.ctx.state.setFlag('shrine.quenchstone.lit', true);

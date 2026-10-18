@@ -6,7 +6,8 @@ import '../waystones/service';
 import { showToast } from '../waystones/toast';
 import { AdaptiveBeatClock } from './beat';
 import { Cooled } from './cooled';
-import { RespecFlow, type RespecDialog, type RespecProgression } from './respec';
+import { CLASS_IDS } from '../actors/classes';
+import { RespecFlow, type RespecClasses, type RespecDialog, type RespecProgression } from './respec';
 import './service';
 import { Shrine } from './shrine';
 import { ShrineVisuals } from './shrine.visuals';
@@ -144,6 +145,9 @@ const shrinePlugin: GamePlugin = {
     const respec = new RespecFlow({
       progression: () => progression as unknown as Partial<RespecProgression>,
       dialog: () => ctx.services.get('respecModal' as never) as RespecDialog | undefined,
+      classes: () => ctx.services.get('classes' as never) as RespecClasses | undefined,
+      classIds: () => CLASS_IDS,
+      className: (id) => ctx.strings.t(`classes.name.${id}`),
       lit: shrineLit,
       inCombat: () => waystones()?.hostileAggro ?? false,
       now: () => simTime,
