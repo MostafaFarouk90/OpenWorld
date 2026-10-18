@@ -13,7 +13,7 @@ import promptsPlugin from '../prompts/prompts.plugin';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 import './events';
-import { FOG_OPEN_FLAGS } from '../region/fogWall';
+import { FOG_OPEN_FLAGS, FOG_TRIGGER_ID } from '../region/fogWall';
 import hudPlugin from './hud.plugin';
 import hudSource from './hud.plugin.ts?raw';
 import mapSourcesSource from '../map/MapSources.ts?raw';
@@ -495,7 +495,7 @@ describe('slice 2 widgets and soft services', () => {
     t.game.events.emit('companion.aura', { companionId: 'tobb', auraId: 'battle-song', active: true });
     t.game.events.emit('boss.ended', { bossId: 'ghost', actorId: 'nobody', reason: 'despawned' });
     t.game.events.emit('boss.phase', { bossId: 'ghost', phase: 2, previous: 1 });
-    t.game.events.emit('trigger.enter', { triggerId: 'trg.fog.harrowmark', actorId: 'player' });
+    t.game.events.emit('trigger.enter', { triggerId: FOG_TRIGGER_ID, actorId: 'player' });
     t.game.events.emit('save.loaded', { slot: 'x' });
     t.run(2);
     expect(() => t.ctx.hud.update(0.016)).not.toThrow();
@@ -585,8 +585,8 @@ describe('slice 2 widgets and soft services', () => {
     const toasts: string[] = [];
     t.game.events.on('hud.toast', (e) => toasts.push(e.textKey));
     t.game.events.emit('trigger.enter', { triggerId: 'trg.other', actorId: t.ctx.player.actor.id } as never);
-    t.game.events.emit('trigger.enter', { triggerId: 'trg.fog.harrowmark', actorId: t.ctx.player.actor.id } as never);
-    t.game.events.emit('trigger.enter', { triggerId: 'trg.fog.harrowmark', actorId: t.ctx.player.actor.id } as never);
+    t.game.events.emit('trigger.enter', { triggerId: FOG_TRIGGER_ID, actorId: t.ctx.player.actor.id } as never);
+    t.game.events.emit('trigger.enter', { triggerId: FOG_TRIGGER_ID, actorId: t.ctx.player.actor.id } as never);
     expect(toasts).toEqual(['hud.fog.toast']);
     expect(t.ctx.strings.t('hud.fog.toast')).not.toBe('hud.fog.toast');
     t.dispose();
@@ -594,7 +594,7 @@ describe('slice 2 widgets and soft services', () => {
     const none: string[] = [];
     open.game.events.on('hud.toast', (e) => none.push(e.textKey));
     open.ctx.state.setFlag('story.m05.complete', true);
-    open.game.events.emit('trigger.enter', { triggerId: 'trg.fog.harrowmark', actorId: open.ctx.player.actor.id } as never);
+    open.game.events.emit('trigger.enter', { triggerId: FOG_TRIGGER_ID, actorId: open.ctx.player.actor.id } as never);
     expect(none).toEqual([]);
     open.dispose();
   });

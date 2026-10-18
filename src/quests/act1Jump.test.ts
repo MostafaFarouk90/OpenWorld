@@ -12,7 +12,7 @@ import { World } from '../world/World';
 import slice1Complete from '../save/__fixtures__/slice1-complete.json';
 import { tutorialFromQuery } from '../tutorial/tutorial.plugin';
 import {
-  ACT1_GIVERS, ACT1_JUMP_IDS, ACT1_NODE_EFFECTS, ACT1_PHASE_B_JUMP_IDS, ACT1_PREREQS, Act1Jump, type Act1JumpId, GIVER_STAND_OFF,
+  ACT1_GIVERS, ACT1_JUMP_IDS, ACT1_NODE_EFFECTS, ACT1_PHASE_B_JUMP_IDS, ACT1_PREREQS, ACT1_WORLD_AFTER, Act1Jump, type Act1JumpId, GIVER_STAND_OFF,
   nodeEffects, parseAct1,
 } from './act1Jump';
 import { dialogueDefs } from '../dialogue/content';
@@ -53,9 +53,8 @@ describe('node effects are read from the dialogue content', () => {
     expect(nodeEffects('npc-rook', 'm06-choose', dialogueDefs, 'nope')).toBeNull();
     expect(nodeEffects('npc-rook', 'm06-choose', dialogueDefs)).toEqual([]);
   });
-  it('the jumps never write a story flag by hand: every story.* write comes from a dialogue node', () => {
-    const src = JSON.stringify(ACT1_NODE_EFFECTS);
-    expect(src).not.toMatch(/story\./);
+  it('the world flags a jump sets by hand are never story.* (story flags come only from dialogue nodes)', () => {
+    for (const [q, rows] of Object.entries(ACT1_WORLD_AFTER)) for (const w of rows) expect(w.flag, q).not.toMatch(/^story\./);
   });
 });
 
@@ -106,6 +105,14 @@ describe('Act1Jump (fakes)', () => {
     expect(r.log.indexOf('effects:[{"unlockMercy":"spare"}]')).toBeLessThan(r.log.indexOf('complete:m04'));
     expect(r.states.get('m05')).toBe('active');
     expect(r.log.at(-1)).toBe('tp:npc-post.tobb');
+  });
+
+  it.each(ACT1_JUMP_IDS)('%s never writes a story.* flag by hand (only through node effects)', (id) => {
+    const r = rig(id);
+    r.setReady();
+    r.run(40);
+    expect(r.jump.phase).toBe('done');
+    expect(r.log.filter((l) => /^flag:story\./.test(l))).toEqual([]);
   });
 
   it('a jump to M03 unlocks neither the Leap nor any mercy', () => {

@@ -151,7 +151,21 @@ describe('Act1Ending: the load table', () => {
     expect(r.flags.has(ACT1_GATE_FLAG)).toBe(false);
   });
 
-  it('gate set, card not seen: waits for the card', () => {
+  it('gate set, card re-shown by the HUD on this load (marked seen before this handler runs): busy holds the camp until the close', () => {
+    // The real order: FlagGates' save.loaded runs first, the card shows and sets codex.actEndingSeen, then onLoaded.
+    const r = rig({ quests: done, flags: { [ACT1_GATE_FLAG]: true, [ACT1_CARD_SEEN_FLAG]: true } });
+    r.s.busy = true; // the card is up (actEndingCard.active)
+    r.d.onLoaded();
+    r.d.tick();
+    r.d.tick();
+    expect(r.starts).toEqual([]);
+    r.s.busy = false;
+    r.d.onCardClosed(ACT1_ENDING_ID);
+    r.d.tick();
+    expect(r.starts).toHaveLength(1);
+  });
+
+  it('gate set, card not seen (director alone): waits for the card', () => {
     const r = rig({ quests: done, flags: { [ACT1_GATE_FLAG]: true } });
     r.d.onLoaded();
     r.d.tick();

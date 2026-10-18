@@ -148,7 +148,7 @@ describe('Phase A chapter chain (all real plugins)', () => {
 // - if the walk ends with the courier still running, thread 18's catchCourierForTest (the normal chase.caught path);
 // - Gaffer Grimtooth is a TEST-ONLY stand-in (grimtoothStub.ts) on the real boss registry until thread 3b lands: breaks
 //   by damage, then the real Calm hold (T, Hearth Bread) or a lethal hit;
-// - the card has no key target headless: hud.actEnding.closed is emitted on its behalf once it was shown.
+// - the card has no key target headless: the HUD's actEndingCard.dismiss() closes it as its key would.
 
 import { bootFromSave } from './chapterHarness';
 import { PHASE_A_FIXTURES, readPhaseAFixture } from '../save/__fixtures__/phaseA';

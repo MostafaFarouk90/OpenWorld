@@ -31,6 +31,7 @@ const frames = (n: number) => {
 };
 const worldChange = () =>
   (h!.ctx.services.require('harrowmark') as unknown as { worldChange(): { active: boolean; banners: number; braziers: number } }).worldChange();
+const cardActive = () => h!.ctx.services.require('actEndingCard').active();
 const load = async (f: Record<string, unknown>) => {
   h = await bootFromSave(f, { models: true, virtualClock: true });
   expect(h.loaded).toBe(true);
@@ -101,7 +102,10 @@ describe('the ending across a load', () => {
     expect(flag('codex.actEndingSeen')).toBe(true);
     expect(flag('story.d02.campSeen')).toBeUndefined();
     const dialogue = h!.ctx.services.require('dialogue');
-    for (let i = 0; i < 60 && !dialogue.active; i++) frames(1);
+    for (let i = 0; i < 60 && !dialogue.active; i++) {
+      frames(1);
+      expect(cardActive()).toBe(false);
+    }
     expect(dialogue.active).toBe(true);
     expect(h!.of('dialogue.started').at(-1)).toEqual({ dialogueId: 'scene-act1-camp', npcId: 'camp' });
     expect(h!.of('act.ended')).toEqual([]);
@@ -110,6 +114,26 @@ describe('the ending across a load', () => {
     expect(flag('story.d02.campSeen')).toBe(true);
     frames(60);
     expect(dialogue.active).toBe(false);
+  }, 60_000);
+
+  it('a save with the gate set before the card showed (synthetic: act1-ending-card without codex.actEndingSeen): the card first, the camp after its close', async () => {
+    // D02's hand-in is a dialogue (a modal), so the card waits; the dialogue.ended save can land before it shows.
+    const f = await readAct1Fixture(ACT1_FIXTURES.endingCard);
+    const ws = (f.entries as Record<string, { data: { flags: Record<string, unknown> } }>)['world-state'];
+    delete ws.data.flags['codex.actEndingSeen'];
+    await load(f);
+    const dialogue = h!.ctx.services.require('dialogue');
+    frames(120);
+    expect(cardActive()).toBe(true);
+    expect(dialogue.active).toBe(false);
+    expect(h!.of('act.ended')).toEqual([]);
+    expect(flag('codex.actEndingSeen')).toBe(true);
+    // The card's close (no key target headless: the service closes it as its key would).
+    expect(h!.of('hud.actEnding.closed')).toEqual([]);
+    h!.ctx.services.require('actEndingCard').dismiss();
+    for (let i = 0; i < 60 && !dialogue.active; i++) frames(1);
+    expect(dialogue.active).toBe(true);
+    expect(h!.of('dialogue.started').at(-1)).toEqual({ dialogueId: 'scene-act1-camp', npcId: 'camp' });
   }, 60_000);
 
   it('a quit mid-camp (synthetic: act1-complete without story.d02.campSeen): the camp replays', async () => {

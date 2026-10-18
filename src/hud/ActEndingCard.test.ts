@@ -152,6 +152,20 @@ describe('ActEndingCard', () => {
     expect(waiting.card.visible).toBe(false);
   });
 
+  it('a load whose gate re-derives the card (the gates run before onLoaded) keeps it up; a live gate does not shield a later load', () => {
+    const fresh = make();
+    fresh.card.onGate(true); // inside the save.loaded dispatch: shows, marks seen
+    expect(fresh.flags['codex.actEndingSeen']).toBe(true);
+    fresh.card.onLoaded();
+    expect(fresh.card.visible).toBe(true);
+    expect(fresh.card.active).toBe(true);
+    const live = make();
+    live.card.onGate(true); // live, then frames run
+    live.card.update(0.016);
+    live.card.onLoaded(); // a later load of a save that has the once-flag
+    expect(live.card.active).toBe(false);
+  });
+
   it('gate falling hides the card without a closed event; no auto-dismiss otherwise', () => {
     const { card, closed } = make();
     card.onActEnded(END);
