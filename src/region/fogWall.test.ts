@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
-import { FOG_OPEN_FLAGS, FOG_TRIGGER_ID, FOG_WALL_HALF_LENGTH, PUSH_BACK_PAST, PUSH_BACK_TO, buildFogWall, needsPushBack } from './fogWall';
+import { heightAt } from '../terrain/heightfield';
+import { FOG_OPEN_FLAGS, fogColliderExtent, FOG_TRIGGER_ID, FOG_WALL_HALF_LENGTH, PUSH_BACK_PAST, PUSH_BACK_TO, buildFogWall, needsPushBack } from './fogWall';
 import { createFakeCore } from './testing/fakeCore';
 
 let physics: PhysicsWorld;
@@ -123,6 +124,36 @@ describe('the slice fog wall', () => {
     fc.flags.delete('story.slice.harrowmarkOpen');
     fc.fire('save.loaded');
     expect(fc.colliders.size).toBe(0);
+  });
+});
+
+describe('fogColliderExtent and the push-back on real terrain', () => {
+  it('sinks the collider below the lowest ground along its whole length, so no dip lets anyone walk under it', () => {
+    const e = fogColliderExtent(heightAt, { x: 1100, z: -150 });
+    for (let dz = -500; dz <= 500; dz += 5) {
+      expect(heightAt(1100, -150 + dz), `z ${-150 + dz}`).toBeGreaterThan(e.bottom);
+      expect(heightAt(1100, -150 + dz)).toBeLessThan(e.top);
+    }
+  });
+
+  it('puts a pushed-back player above the ground at the destination, even where it rises', () => {
+    const { fc } = setup();
+    for (const z of [-95, 70, -150]) {
+      fc.teleports.length = 0;
+      fc.playerFeet.x = 1200;
+      fc.playerFeet.z = z;
+      fc.playerFeet.y = heightAt(1200, z);
+      fc.tick('intent');
+      expect(fc.teleports[0].feet.y, `z ${z}`).toBeGreaterThan(heightAt(1096, z));
+    }
+  });
+
+  it('leaves a player alone who is past the wall but beyond its length', () => {
+    const { fc } = setup();
+    fc.playerFeet.x = 1200;
+    fc.playerFeet.z = 2000;
+    fc.tick('intent');
+    expect(fc.teleports).toHaveLength(0);
   });
 });
 

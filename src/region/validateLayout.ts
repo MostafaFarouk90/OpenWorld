@@ -166,7 +166,11 @@ export function validateLayout(layout: LayoutData, heightAt: HeightFn, opts: Val
     const bx1 = Math.max(...members.map((a) => a.x)) + pad;
     const bz0 = Math.min(...members.map((a) => a.z)) - pad;
     const bz1 = Math.max(...members.map((a) => a.z)) + pad;
-    const local = blocking.filter((s) => footprintCorners(s).some(([x, z]) => x >= bx0 - 20 && x <= bx1 + 20 && z >= bz0 - 20 && z <= bz1 + 20));
+    // Every structure whose bounding box touches the window, not only those with a corner in it (a long palisade has none).
+    const local = blocking.filter((s) => {
+      const c = footprintCorners(s);
+      return Math.min(...c.map((p) => p[0])) <= bx1 + CLUSTER_LINK * 1.5 && Math.max(...c.map((p) => p[0])) >= bx0 - CLUSTER_LINK * 1.5 && Math.min(...c.map((p) => p[1])) <= bz1 + CLUSTER_LINK * 1.5 && Math.max(...c.map((p) => p[1])) >= bz0 - CLUSTER_LINK * 1.5;
+    });
     const xs = [bx0, bx1, ...local.flatMap((s) => footprintCorners(s).map((c) => c[0]))];
     const zs = [bz0, bz1, ...local.flatMap((s) => footprintCorners(s).map((c) => c[1]))];
     const x0 = Math.min(...xs);
@@ -231,6 +235,14 @@ export function validateLayout(layout: LayoutData, heightAt: HeightFn, opts: Val
         stack.push(n);
       }
     }
+    // A cluster that is not the spawn's must be open to the outside: its flood has to reach the window edge, or the
+    // whole cluster is walled off from the world (the spawn cluster is the world, so it needs no such proof).
+    if (!isSpawnCluster) {
+      let open = false;
+      for (let ix = 0; ix < w && !open; ix++) open = seen[ix] === 1 || seen[(h - 1) * w + ix] === 1;
+      for (let iz = 0; iz < h && !open; iz++) open = seen[iz * w] === 1 || seen[iz * w + w - 1] === 1;
+      if (!open) errors.push(`anchor "${seedAnchor.id}": its cluster is walled off from the rest of the world`);
+    }
     for (const a of members) {
       if (gated(a)) continue;
       const c = cellOf(a.x, a.z);
@@ -245,7 +257,7 @@ export function validateLayout(layout: LayoutData, heightAt: HeightFn, opts: Val
     // Doors must lead somewhere: the doorway cell has to be reachable from outside.
     for (const s of local) {
       const d = doorCentre(s);
-      if (!d || !members.some((a) => Math.hypot(a.x - s.x, a.z - s.z) <= CLUSTER_LINK)) continue;
+      if (!d) continue;
       const c = cellOf(d.x, d.z);
       if (c < 0 || !seen[c]) errors.push(`structure "${s.id}": doorway is not reachable`);
     }

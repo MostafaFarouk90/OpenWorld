@@ -177,6 +177,23 @@ describe('ledge and foundation rules', () => {
     expect(validateLayout(l, () => 0).join('\n')).toContain('anchor "far.trapped": unreachable from "far.seed"');
   });
 
+  it('flags a whole cluster sealed off from the world, which the per-cluster fill would otherwise accept', () => {
+    const ford = BRIGHTWATER_LAYOUT.anchors.filter((a) => a.id.startsWith('ford.') || a.id.includes('.ford') || a.id === 'waystone.hollin-ford');
+    const cx = ford.reduce((s, a) => s + a.x, 0) / ford.length;
+    const wall = (id: string, x: number, z: number, w: number, d: number) => ({ id, kind: 'rock' as const, x, z, yawDeg: 0, footprint: [w, d] as [number, number], mode: 'solid' as const, height: 4 });
+    const sealed: LayoutData = {
+      ...BRIGHTWATER_LAYOUT,
+      structures: [...BRIGHTWATER_LAYOUT.structures, wall('seal-n', cx, -100, 202, 2), wall('seal-s', cx, -220, 202, 2), wall('seal-w', cx - 100, -160, 2, 118), wall('seal-e', cx + 100, -160, 2, 118)],
+    };
+    expect(validateLayout(sealed, heightAt).join('\n')).toContain('walled off');
+  });
+
+  it('sees a structure that crosses a cluster window without a corner inside it', () => {
+    const palisade = { id: 'palisade', kind: 'rock' as const, x: 540, z: -146, yawDeg: 0, footprint: [90, 90] as [number, number], mode: 'solid' as const, height: 3 };
+    const l: LayoutData = { ...BRIGHTWATER_LAYOUT, structures: [...BRIGHTWATER_LAYOUT.structures, palisade] };
+    expect(validateLayout(l, heightAt).join('\n')).toContain('"wardstone.3": inside a solid structure');
+  });
+
   it('does not require a leap-gated anchor to be walkable', () => {
     const errors = validateLayout(BRIGHTWATER_LAYOUT, heightAt).filter((e) => e.includes('poi.leap'));
     expect(errors).toEqual([]);

@@ -101,7 +101,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | npc-post.carter-1 | -445 | -142 | 0 | 270 | npc-post |
 | npc-post.carter-2 | -438 | -139.5 | 0 | 90 | npc-post |
 | npc-post.tobb | -13 | 134 | 0 | 270 | npc-post |
-| poi.leap.chapel-ledge | 72 | 90 | 1.8 | 0 | poi, leap-gated |
+| poi.leap.chapel-ledge | 72 | 90 | 2 | 0 | poi, leap-gated |
 | poi.leap.chapel-ledge.launch | 72 | 84.5 | 0 | 180 | poi |
 | chapel.shard-study | 54.5 | 63 | 0 | 180 | interact |
 | vault.door | 55.5 | 64.5 | 0 | 0 | poi, door |
@@ -114,7 +114,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | r01.scarecrow.4 | -10 | 12 | 0 | 180 | spawn, r01-scarecrow |
 | r01.scarecrow.5 | -10 | 24 | 0 | 180 | spawn, r01-scarecrow |
 | r01.scarecrow.6 | -24 | 28 | 0 | 180 | spawn, r01-scarecrow |
-| poi.leap.reed-island | 55 | -300 | 1.8 | 0 | poi, leap-gated |
+| poi.leap.reed-island | 55 | -300 | 2 | 0 | poi, leap-gated |
 | poi.leap.reed-island.launch | 55 | -305.5 | 0 | 180 | poi |
 | wardstone.1 | 300 | -146 | 0 | 180 | wardstone |
 | wardstone.2 | 420 | -146 | 0 | 180 | wardstone |

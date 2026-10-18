@@ -72,10 +72,14 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
         const solid = layout.structures.filter((st) => st.mode !== 'open');
         let barley = buildBarley(layout.fields, height, 1, solid);
         ctx.scene.add(barley.object);
+        let shown = 'unset';
         const swapBarley = (): void => {
+          const variant = barleyVariantOf(ctx.state.getFlag(BARLEY_FLAG));
+          if (variant === shown) return;
+          shown = variant;
           barley.dispose();
           barley = buildBarley(layout.fields, height, 1, solid, {
-            variant: barleyVariantOf(ctx.state.getFlag(BARLEY_FLAG)),
+            variant,
             variantFields: ['barley-west'],
           });
           ctx.scene.add(barley.object);
@@ -87,7 +91,7 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
           ctx.scene.remove(barley.object);
           barley.dispose();
         });
-        if (ctx.state.getFlag(BARLEY_FLAG) !== undefined) swapBarley();
+        swapBarley();
 
         // The corridor beyond Kettlewick: road, water, reeds; the Leap POIs; the toll-post; the slice fog wall.
         const scenery = buildCorridorScenery(height);

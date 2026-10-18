@@ -17,6 +17,8 @@ export interface NpcManagerOptions {
   loader?: NpcModelLoader;
   playerPosition(): { x: number; z: number } | null;
   warn?: (message: string) => void;
+  /** Terrain height; a walking NPC follows the ground instead of lerping between two anchor heights. */
+  heightAt?: (x: number, z: number) => number;
 }
 
 interface Entry {
@@ -42,6 +44,8 @@ export class NpcManager implements NpcsService {
   private readonly lastPos = new Map<string, Vec3>();
   private readonly specs = new Map<string, NpcSpec>();
   private gateOffs: Array<() => void> = [];
+  /** Models whose GLB has loaded: an NPC that spawns later (a handover undone by a load) takes its model at once. */
+  private readonly loadedModels = new Set<NpcModelId>();
   private readonly talking = new Set<string>();
   private readonly loading = new Map<NpcModelId, Promise<void>>();
   private unsubs: Array<() => void> = [];
@@ -156,6 +160,16 @@ export class NpcManager implements NpcsService {
         walk: null,
       });
       this.lastPos.delete(def.id);
+      const entry = this.entries.get(def.id)!;
+      const loader = this.opts.loader;
+      if (loader && this.loadedModels.has(def.model)) {
+        try {
+          const { model, clips } = prepareNpcModel(loader, def);
+          this.swap(entry, model, clips);
+        } catch (err) {
+          this.warn(`NpcManager: could not build model for npc "${def.id}": ${errMsg(err)}`);
+        }
+      }
     } catch (err) {
       if (actor) this.core.actors.despawn(actor.id);
       if (extras) disposePlaceholder(extras);
@@ -256,6 +270,7 @@ export class NpcManager implements NpcsService {
         this.warn(`NpcManager: model "${model}" failed to load, keeping placeholders: ${errMsg(err)}`);
         return;
       }
+      this.loadedModels.add(model);
       for (const e of this.entries.values()) {
         if (e.def.model !== model || !e.isPlaceholder) continue;
         if (this.disposed) return;
@@ -323,6 +338,7 @@ export class NpcManager implements NpcsService {
     e.pos.x = w.from.x + (w.to.x - w.from.x) * k;
     e.pos.y = w.from.y + (w.to.y - w.from.y) * k;
     e.pos.z = w.from.z + (w.to.z - w.from.z) * k;
+    if (this.opts.heightAt) e.pos.y = this.opts.heightAt(e.pos.x, e.pos.z);
     e.root.position.set(e.pos.x, e.pos.y, e.pos.z);
     e.state.x = e.pos.x;
     e.state.z = e.pos.z;
@@ -378,7 +394,11 @@ export class NpcManager implements NpcsService {
     const e = this.entries.get(id);
     if (e) return { ...e.pos };
     const last = this.lastPos.get(id);
-    return last ? { ...last } : undefined;
+    if (last) return { ...last };
+    // Absent through its gate since the load (never spawned): it still answers with where its post is.
+    const spec = this.specs.get(id);
+    const post = spec?.absentWhen ? this.core.anchors.find(spec.post) : undefined;
+    return post ? { x: post.position.x, y: post.position.y, z: post.position.z } : undefined;
   }
 
   dispose(): void {

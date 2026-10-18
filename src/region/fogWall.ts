@@ -4,6 +4,7 @@
 // through ctx.gates, so a loaded save applies it with no listener of our own.
 import * as THREE from 'three';
 import type RAPIER from '@dimforge/rapier3d';
+import { heightAt as terrainHeight } from '../terrain/heightfield';
 import type { CoreContext } from './coreTypes';
 
 /** Any one of these opens the wall. Phase B adds `story.m05.complete` (thread 6 writes it); nothing writes the first in slice 2. */
@@ -11,7 +12,9 @@ export const FOG_OPEN_FLAGS: readonly string[] = ['story.slice.harrowmarkOpen'];
 export const FOG_TRIGGER_ID = 'trg.fog.harrowmark';
 export const FOG_WALL_HALF_LENGTH = 500;
 const COLLIDER_HALF_THICKNESS = 1.5;
-const COLLIDER_HALF_HEIGHT = 40;
+const COLLIDER_SAMPLE_STEP = 20;
+const COLLIDER_BELOW = 6;
+const COLLIDER_ABOVE = 30;
 const VISIBLE_HALF_WIDTH = 40;
 const WALL_HEIGHT = 30;
 const ASH_COUNT = 400;
@@ -28,15 +31,33 @@ export interface FogWallHandle {
   dispose(): void;
 }
 
+/**
+ * The collider's vertical extent: from below the lowest ground along its whole length to well above the highest, so
+ * no dip in the valley floor lets anyone walk under it. Pure.
+ */
+export function fogColliderExtent(heightAt: (x: number, z: number) => number, wall: { x: number; z: number }): { bottom: number; top: number } {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (let dz = -FOG_WALL_HALF_LENGTH; dz <= FOG_WALL_HALF_LENGTH; dz += COLLIDER_SAMPLE_STEP) {
+    for (const dx of [-COLLIDER_HALF_THICKNESS, 0, COLLIDER_HALF_THICKNESS]) {
+      const h = heightAt(wall.x + dx, wall.z + dz);
+      if (h < lo) lo = h;
+      if (h > hi) hi = h;
+    }
+  }
+  return { bottom: lo - COLLIDER_BELOW, top: hi + COLLIDER_ABOVE };
+}
+
 /** True when `x` is past the wall by enough to be pushed back. Pure. */
-export function needsPushBack(playerX: number, wallX: number): boolean {
-  return Number.isFinite(playerX) && playerX > wallX + PUSH_BACK_PAST;
+export function needsPushBack(playerX: number, wallX: number, playerZ = 0, wallZ = 0): boolean {
+  return Number.isFinite(playerX) && Number.isFinite(playerZ) && playerX > wallX + PUSH_BACK_PAST && Math.abs(playerZ - wallZ) <= FOG_WALL_HALF_LENGTH;
 }
 
 export function buildFogWall(
   deps: FogWallDeps,
   wall: { x: number; z: number; y: number },
   openFlags: readonly string[] = FOG_OPEN_FLAGS,
+  heightAt: (x: number, z: number) => number = terrainHeight,
 ): FogWallHandle {
   let standing = false;
   let group: THREE.Group | null = null;
@@ -75,9 +96,10 @@ export function buildFogWall(
     disposables.push(veilGeo, veilMat, ashGeo, ashMat);
     deps.scene.add(group);
 
-    // One long, tall box across the valley: terrain at the wall is 20 to 70 m high and rises on both sides, so a
-    // 500 m half length either way ends in hills too steep to walk round.
-    const desc = deps.rapier.ColliderDesc.cuboid(COLLIDER_HALF_THICKNESS, COLLIDER_HALF_HEIGHT, FOG_WALL_HALF_LENGTH).setTranslation(wall.x, wall.y + COLLIDER_HALF_HEIGHT - 15, wall.z);
+    // One long box across the valley, sunk below the lowest ground along it. Its ends are not cliffs, so the
+    // push-back below is what holds anyone who walks round them.
+    const ext = fogColliderExtent(heightAt, wall);
+    const desc = deps.rapier.ColliderDesc.cuboid(COLLIDER_HALF_THICKNESS, (ext.top - ext.bottom) / 2, FOG_WALL_HALF_LENGTH).setTranslation(wall.x, (ext.top + ext.bottom) / 2, wall.z);
     collider = deps.physics.addStaticCollider(desc);
 
     removeTrigger = deps.triggers.add({
@@ -91,7 +113,10 @@ export function buildFogWall(
       order: -80,
       fixedUpdate(dt) {
         const feet = deps.player.feet;
-        if (needsPushBack(feet.x, wall.x)) deps.player.teleport({ x: wall.x - PUSH_BACK_TO, y: feet.y + 1, z: feet.z });
+        if (needsPushBack(feet.x, wall.x, feet.z, wall.z)) {
+          const x = wall.x - PUSH_BACK_TO;
+          deps.player.teleport({ x, y: Math.max(feet.y, heightAt(x, feet.z)) + 0.1, z: feet.z });
+        }
         if (ash) {
           const p = ash.geometry.getAttribute('position') as THREE.BufferAttribute;
           for (let i = 0; i < ASH_COUNT; i++) {

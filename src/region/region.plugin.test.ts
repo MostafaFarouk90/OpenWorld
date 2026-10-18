@@ -199,7 +199,7 @@ describe('region plugin, beyond Kettlewick', () => {
   it('spawns the toll-post actor, the corridor scenery and the POI props, and removes them on dispose', () => {
     const { fc, plugin } = setup();
     plugin.setup(fc.ctx);
-    expect([...fc.actors.values()].filter((a) => a.kind === 'toll-post' && a.spawnTag === undefined || a.kind === 'toll-post')).toHaveLength(1);
+    expect([...fc.actors.values()].filter((a) => a.kind === 'toll-post')).toHaveLength(1);
     expect(fc.scene.children.map((c) => c.name)).toEqual(expect.arrayContaining(['corridor-scenery', 'poi-props', 'fog-wall']));
     plugin.dispose?.();
     expect(fc.scene.children).toHaveLength(0);

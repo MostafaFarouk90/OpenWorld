@@ -11,7 +11,8 @@ export type TollPostDeps = Pick<CoreContext, 'scene' | 'actors' | 'combat' | 'ev
 
 export const TOLL_POST_KIND = 'toll-post';
 export const TOLL_POST_SPAWN_TAG = 'ford.toll-post';
-export const TOLL_POST_BROKEN_FLAG = 'place.hollin.toll-post.broken';
+/** Thread 6's one-shot doneWhen for M04's toll objective (the world. prefix is reserved for it). */
+export const TOLL_POST_BROKEN_FLAG = 'world.brightwater.tollPost';
 export const TOLL_POST_HEALTH = 120;
 /** The attack ids that can hurt it: the heavy chop and the Surge. Light and stab swings bounce off. */
 export const TOLL_POST_HEAVY_ATTACKS: readonly string[] = ['1H_Melee_Attack_Chop', 'heartshard-surge'];

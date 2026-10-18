@@ -44,7 +44,7 @@ const anchors: AnchorSpec[] = [
   a('npc-post.tobb', -13, 134, 90, ['npc-post']),
 
   // The chapel: Leap ledge, the Heartshard study, the vault door and Aelfreda's post there.
-  a('poi.leap.chapel-ledge', 72, 90, 180, ['poi', 'leap-gated'], { dy: 1.8, onStructure: 'chapel-ledge' }),
+  a('poi.leap.chapel-ledge', 72, 90, 180, ['poi', 'leap-gated'], { dy: 2, onStructure: 'chapel-ledge' }),
   a('poi.leap.chapel-ledge.launch', 72, 84.5, 0, ['poi']),
   a('chapel.shard-study', 54.5, 63, 0, ['interact'], { onStructure: 'chapel' }),
   // Faces away from the stair (compass 180): the vault exit arrives 1.6 m in front of it.
@@ -62,7 +62,7 @@ const anchors: AnchorSpec[] = [
   a('r01.scarecrow.6', -24, 28, 0, ['spawn', 'r01-scarecrow']),
 
   // The reed island at the river's mouth.
-  a('poi.leap.reed-island', 55, -300, 180, ['poi', 'leap-gated'], { dy: 1.8, onStructure: 'reed-island-ledge' }),
+  a('poi.leap.reed-island', 55, -300, 180, ['poi', 'leap-gated'], { dy: 2, onStructure: 'reed-island-ledge' }),
   a('poi.leap.reed-island.launch', 55, -305.5, 0, ['poi']),
 
   // Wardstones (anchors only; the stones are thread 7's).
@@ -106,7 +106,7 @@ const anchors: AnchorSpec[] = [
 
 const triggers: TriggerSpec[] = [
   { id: 'trg.ford.toll-post', shape: 'sphere', x: -410, z: -150, radius: 9 },
-  { id: 'trg.leap.chapel-ledge', shape: 'sphere', x: 72, z: 90, dy: 1.8, radius: 2.5 },
+  { id: 'trg.leap.chapel-ledge', shape: 'sphere', x: 72, z: 90, dy: 2, radius: 2.5 },
   { id: 'trg.vault.door', shape: 'sphere', x: 55.5, z: 64.5, radius: 2 },
   { id: 'trg.wardstones.road', shape: 'box', x: 540, z: -146, half: [260, 40, 20] },
   { id: 'trg.shrine.basin', shape: 'sphere', x: 965, z: -165, radius: 10 },

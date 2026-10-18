@@ -190,6 +190,8 @@ export function buildGreybox(spec: StructureSpec): THREE.Object3D {
     case 'rock': {
       // A boulder pile: the main block plus two offset blocks so the silhouette is not a box.
       g.add(box(w, h, d, 0, 0, 0, 0x7d7a74, 'rock'));
+      // A ledge keeps a clean top: the cache or lore stone stands on it and the collider is the plain box.
+      if (spec.role === 'ledge') break;
       g.add(box(w * 0.55, h * 0.35, d * 0.5, w * 0.12, h, -d * 0.1, 0x8a8780));
       g.add(box(w * 0.3, h * 0.2, d * 0.3, -w * 0.25, h, d * 0.2, 0x6f6c66));
       break;

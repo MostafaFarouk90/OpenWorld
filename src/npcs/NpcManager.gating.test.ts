@@ -62,7 +62,8 @@ describe('Tobb at the Grey Goose', () => {
     const { fc, m } = setup({ [JOINED]: true });
     expect(m.get('tobb')).toBeUndefined();
     expect([...fc.actors.values()].some((a) => a.kind === 'npc:tobb')).toBe(false);
-    expect(m.position('tobb')).toBeUndefined();
+    // npcs.position keeps answering with his post, which thread 4b's companion starts from.
+    expect(m.position('tobb')).toEqual({ x: post('npc-post.tobb').x, y: 2, z: post('npc-post.tobb').z });
   });
 
   it('comes back when a save without the flag loads over a session that had it, and goes again for one with it', () => {
@@ -169,5 +170,37 @@ describe('the carters at Hollin Ford', () => {
     const at = m.position('carter-1');
     steps(m, 2);
     expect(m.position('carter-1')).toEqual(at);
+  });
+});
+
+describe('review fixes', () => {
+  it('walking carters follow the ground, not a line between the two anchor heights', () => {
+    const fc = createFakeCore();
+    fc.ctx.strings.register('en', NPC_STRINGS_EN);
+    for (const a of BRIGHTWATER_LAYOUT.anchors) {
+      if (a.tags?.includes('npc-post') || a.id === 'ford.carters.walk-off') fc.ctx.anchors.define({ id: a.id, position: { x: a.x, y: 0, z: a.z }, yaw: 0 });
+    }
+    const bump = (x: number) => 3 - Math.abs(x + 460) * 0.2;
+    const m = new NpcManager(fc.ctx, { layoutNpcs: BRIGHTWATER_LAYOUT.npcs, defs: NPC_DEFS, playerPosition: () => null, heightAt: (x) => bump(x) });
+    m.spawnAll();
+    fc.ctx.state.setFlag(FREED, true);
+    steps(m, 2);
+    const p = m.position('carter-1')!;
+    expect(p.y).toBeCloseTo(bump(p.x), 5);
+  });
+
+  it('a Tobb respawned after the model loaded gets the model at once', async () => {
+    const { fakeLoader } = await import('./npcTestKit');
+    const fc = createFakeCore();
+    fc.ctx.strings.register('en', NPC_STRINGS_EN);
+    for (const a of BRIGHTWATER_LAYOUT.anchors) if (a.tags?.includes('npc-post')) fc.ctx.anchors.define({ id: a.id, position: { x: a.x, y: 2, z: a.z }, yaw: 0 });
+    fc.flags.set(JOINED, true);
+    const m = new NpcManager(fc.ctx, { layoutNpcs: BRIGHTWATER_LAYOUT.npcs, defs: NPC_DEFS, playerPosition: () => ({ x: -13, z: 134 }), loader: fakeLoader() });
+    m.spawnAll();
+    await m.loadModels();
+    expect(m.get('edda')!.hasModel).toBe(true); // rogueHooded is loaded (Edda shares Tobb's model)
+    fc.flags.delete(JOINED);
+    fc.fire('save.loaded');
+    expect(m.get('tobb')!.hasModel).toBe(true);
   });
 });
