@@ -1,4 +1,4 @@
-// The ember pouch: after the tutorial, a death leaves a share of carried gold at the death spot to be recovered.
+// The gold pouch: after the tutorial, a death leaves a share of carried gold at the death spot to be recovered.
 import type { Vec3Like } from './types';
 import { RESPAWN } from './tuning';
 
@@ -9,7 +9,7 @@ export interface PouchState {
 
 const finiteNonNeg = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n >= 0;
 
-export class EmberPouch {
+export class GoldPouch {
   private state: PouchState | null = null;
 
   /** Takes floor(share) of carried gold into a pouch at `position`, replacing (and losing) any older pouch. */
