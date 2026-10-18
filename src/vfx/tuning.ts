@@ -77,8 +77,11 @@ export const SURGE = {
   clip: 'Spellcast_Raise',
   emberCost: 40,
   cooldown: 6,
+  /** Absolute gameplay and visual radii per Burn zone (design 9.7: 6 m ring, 8 m Dawnwave arc, 10 m Cinderburst). */
+  zoneRadius: { warm: 6, blaze: 8, cinder: 10 },
   radius: 6,
-  zoneRadiusScale: { warm: 1, blaze: 1.5, cinder: 2 },
+  /** Cinderburst breaks the poise of everything in range. */
+  cinderPoise: 999,
   damage: 15,
   poise: 40,
   healFraction: 0.05,
