@@ -81,13 +81,13 @@ describe('ActEndingCard', () => {
   });
 
   it('load with campSeen set does not show', () => {
-    const { card } = make({ 'story.act1.campSeen': true });
+    const { card } = make({ 'story.d02.campSeen': true });
     card.onGate(true);
     expect(card.visible).toBe(false);
   });
 
   it('camp-seen is honoured under either flag name (thread 6 may ship either)', () => {
-    expect([...ACT_ENDING_CAMP_FLAGS]).toEqual(['story.act1.campSeen', 'story.d02.campSeen']);
+    expect([...ACT_ENDING_CAMP_FLAGS]).toEqual(['story.d02.campSeen']);
     for (const flag of ACT_ENDING_CAMP_FLAGS) {
       const { card } = make({ [flag]: true });
       card.onGate(true);
@@ -100,7 +100,7 @@ describe('ActEndingCard', () => {
     seen.card.onActEnded(END);
     expect(seen.card.visible).toBe(false);
     expect(seen.card.active).toBe(false);
-    const camp = make({ 'story.act1.campSeen': true });
+    const camp = make({ 'story.d02.campSeen': true });
     camp.card.onActEnded(END);
     expect(camp.card.visible).toBe(true);
   });

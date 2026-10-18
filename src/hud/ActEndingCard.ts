@@ -5,9 +5,9 @@ import { makeEl, setShown, type HudWidgetView, type Translate } from './widget';
 
 export const ACT_ENDING_ID = 'smoke-over-harrowmark';
 export const ACT_ENDING_SEEN_FLAG = 'codex.actEndingSeen';
-export const ACT_ENDING_CAMP_FLAG = 'story.act1.campSeen';
+export const ACT_ENDING_CAMP_FLAG = 'story.d02.campSeen';
 /** Thread 6 may ship the camp-seen flag under either name; either one means the camp scene already ran. */
-export const ACT_ENDING_CAMP_FLAGS: readonly string[] = [ACT_ENDING_CAMP_FLAG, 'story.d02.campSeen'];
+export const ACT_ENDING_CAMP_FLAGS: readonly string[] = [ACT_ENDING_CAMP_FLAG];
 export const ACT_ENDING_GATE_FLAG = 'story.gate.a2';
 /** Seconds after the card appears before a key can dismiss it (a key held while playing must not). */
 export const ACT_ENDING_ARM_SECONDS = 0.5;
@@ -27,7 +27,7 @@ export interface ActEndingSource {
   modalOpen?(): boolean;
   /** `codex.actEndingSeen`. */
   seen?(): boolean;
-  /** `story.act1.campSeen` or `story.d02.campSeen`. */
+  /** The camp scene's seen flag (thread 6 sets it at the scene's end). */
   campSeen?(): boolean;
   /** Sets `codex.actEndingSeen` (called once, when the card is first shown). */
   markSeen?(): void;
