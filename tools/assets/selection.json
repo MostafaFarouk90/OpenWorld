@@ -64,12 +64,12 @@
       "licence": "LICENSE.txt",
       "root": "addons/kaykit_halloween_bits/Assets/gltf",
       "groups": [
-        { "kind": "prop", "scale": 1.0, "files": [
+        { "kind": "prop", "scale": 0.78, "files": [
           "crypt.gltf", "grave_A.gltf", "grave_B.gltf", "gravestone.gltf", "gravemarker_A.gltf", "coffin.gltf",
           "fence.gltf", "fence_gate.gltf", "fence_pillar.gltf", "fence_broken.gltf", "arch.gltf", "arch_gate.gltf",
           "lantern_hanging.gltf", "lantern_standing.gltf", "post_lantern.gltf", "shrine.gltf", "shrine_candles.gltf",
           "bench.gltf", "candle.gltf", "candle_triple.gltf", "pillar.gltf" ] },
-        { "kind": "nature", "scale": 1.0, "files": [ "tree_dead_large.gltf", "tree_dead_medium.gltf", "tree_dead_small.gltf" ] }
+        { "kind": "nature", "scale": 0.78, "files": [ "tree_dead_large.gltf", "tree_dead_medium.gltf", "tree_dead_small.gltf" ] }
       ]
     },
     {
@@ -80,7 +80,7 @@
       "licence": "LICENSE.txt",
       "root": "addons/kaykit_furniture_bits/Assets/gltf",
       "groups": [
-        { "kind": "prop", "scale": 1.0, "files": [
+        { "kind": "prop", "scale": 0.78, "files": [
           "bed_single_A.gltf", "bed_double_A.gltf", "chair_A_wood.gltf", "chair_stool_wood.gltf", "table_medium.gltf",
           "table_medium_long.gltf", "table_small.gltf", "shelf_B_large_decorated.gltf", "cabinet_medium.gltf", "book_set.gltf",
           "rug_rectangle_A.gltf" ] }
