@@ -60,6 +60,10 @@ export class DamageResolver {
   private readonly modifiers: Ordered<DamageModifier>[] = [];
   private readonly lethal: Ordered<LethalHandler>[] = [];
   private seq = 0;
+  /** How many hits are being resolved right now (a modifier may apply another). */
+  private depth = 0;
+  /** Event emitters of hits nested inside the outermost hit; they go out after its own events. */
+  private readonly nested: (() => void)[] = [];
 
   constructor(
     private readonly actors: ActorRegistry,
@@ -80,6 +84,21 @@ export class DamageResolver {
   }
 
   private resolve(input: DamageRequest, killerId: ActorId | null, raw: boolean): DamageResult | null {
+    this.depth++;
+    try {
+      return this.resolveOne(input, killerId, raw);
+    } finally {
+      this.depth--;
+      // An outermost hit that was dropped still releases what its modifiers applied.
+      if (this.depth === 0 && this.nested.length > 0) {
+        this.events.batch(() => {
+          for (const emit of this.nested.splice(0)) emit();
+        });
+      }
+    }
+  }
+
+  private resolveOne(input: DamageRequest, killerId: ActorId | null, raw: boolean): DamageResult | null {
     const target = this.actors.get(input.targetId);
     const poiseIn = input.poise ?? input.amount;
     if (!target || target.dead) return null;
@@ -88,7 +107,7 @@ export class DamageResolver {
       return null;
     }
     const attacker = input.attackerId ? this.actors.get(input.attackerId) ?? null : null;
-    if (!target.hittable) return null;
+    if (!target.hittable && !raw) return null;
     if (attacker && !canDamage(attacker.team, target.team)) return null;
 
     const req: ModifiableRequest = { ...input, poise: poiseIn, outcome: target.invulnerable && !raw ? 'immune' : 'hit' };
@@ -144,12 +163,21 @@ export class DamageResolver {
     const staggered = poiseBefore > 0 && target.poise <= 0 && target.maxPoise > 0 && !killed;
 
     const result = this.result(req, dealt, poiseDealt, target, killed, saved, staggered);
-    this.events.batch(() => {
+    const emitOwn = () => {
       this.events.emit('damage.dealt', result);
       if (saved) this.events.emit('actor.saved', { actorId: target.id, handlerId: savedBy, request: input });
       if (staggered) this.events.emit('actor.staggered', { actorId: target.id, byId: input.attackerId });
       if (killed) this.diedEvent(target, killerId);
-    });
+    };
+    if (this.depth > 1) {
+      this.nested.push(emitOwn); // inside another hit: delivered after its events
+    } else {
+      // One batch: this hit's events, then those of hits applied from inside its modifiers.
+      this.events.batch(() => {
+        emitOwn();
+        for (const emit of this.nested.splice(0)) emit();
+      });
+    }
     return result;
   }
 
@@ -161,7 +189,10 @@ export class DamageResolver {
     if (target.poise <= 0) return false;
     target.poise = Math.max(0, target.poise - poise);
     if (target.poise > 0) return false;
-    this.events.emit('actor.staggered', { actorId: id, byId });
+    const emit = () => this.events.emit('actor.staggered', { actorId: id, byId });
+    // From a modifier (parry): after the hit being resolved, like a nested apply.
+    if (this.depth > 0) this.nested.push(emit);
+    else emit();
     return true;
   }
 
@@ -189,7 +220,7 @@ export class DamageResolver {
     return true;
   }
 
-  /** Scripted death (a fall into a ditch); ignores i-frames and modifiers. Lethal handlers may still prevent it. */
+  /** Scripted death (a fall into a ditch); ignores i-frames, modifiers and `hittable`. Lethal handlers may still prevent it. */
   kill(id: ActorId, killerId: ActorId | null = null): void {
     const a = this.actors.get(id);
     if (!a || a.dead || a.immortal) return;

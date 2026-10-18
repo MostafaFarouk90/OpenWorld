@@ -677,3 +677,42 @@ describe('payload geometry', () => {
     expect(r).toMatchObject({ bone: 'head', attackId: 'x', swingId: 4 });
   });
 });
+
+describe('lead additions', () => {
+  it('a parry modifier staggering the attacker delivers damage.dealt (parried) before actor.staggered', () => {
+    const t = make();
+    t.dr.addModifier('parry', (req) => {
+      req.outcome = 'parried';
+      t.dr.stagger(req.attackerId!, req.targetId, 100);
+    });
+    const res = t.dr.apply({ attackerId: t.enemy.id, targetId: t.player.id, amount: 10, kind: 'melee' });
+    expect(res).toMatchObject({ outcome: 'parried', dealt: 0, poiseDealt: 0 });
+    expect(t.log).toEqual(['damage.dealt', 'actor.staggered']);
+    expect(t.of('actor.staggered')[0]).toEqual({ actorId: t.enemy.id, byId: t.player.id });
+  });
+
+  it('events of a nested apply queued by a dropped outer hit are still delivered', () => {
+    const t = make();
+    t.dr.addModifier('chain', (req) => {
+      if (req.targetId === t.enemy.id) {
+        t.dr.apply({ attackerId: t.player.id, targetId: t.dummy.id, amount: 1, kind: 'melee' });
+        t.actors.despawn(t.enemy.id); // the outer target vanishes mid-resolution
+      }
+    });
+    expect(t.hit(t.enemy, 5)).toBeNull();
+    expect(t.of('damage.dealt').map((d) => d.targetId)).toEqual([t.dummy.id]);
+  });
+
+  it('a scripted kill works on a non-hittable NPC', () => {
+    const t = make();
+    t.dr.kill(t.npc.id, null);
+    expect(t.npc.dead).toBe(true);
+    expect(t.of('actor.died')).toHaveLength(1);
+  });
+
+  it('stagger outside any hit emits at once', () => {
+    const t = make();
+    expect(t.dr.stagger(t.enemy.id, null, 25)).toBe(true);
+    expect(t.log).toEqual(['actor.staggered']);
+  });
+});
