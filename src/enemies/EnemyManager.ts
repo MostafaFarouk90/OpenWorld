@@ -540,13 +540,13 @@ export class EnemyManager {
     const at = boss.feet(new THREE.Vector3());
     const pulseId = calm ? undefined : nextPulseId();
     // Release: the pulse also frees every staggered undead within 4 m, under the same pulseId and one charge.
-    // Calm: the pack scatters, every calm-able beast of an ephemeral summon group within the pack radius (the boss's summons are `ephemeral`, so no slot is spent).
+    // Calm: every living member of the boss's summon groups scatters, at any distance (the boss's summons are `ephemeral`, so no slot is spent).
     const around: MercySubject[] = [];
     const p = new THREE.Vector3();
     for (const s of this.subjects.values()) {
       const e = this.enemies.get(s.actorId);
       if (!calm && s.def.mercy.verb === 'release' && s.mercyOpen() && s.feet(p).distanceTo(at) <= MERCY.pulseRadius) around.push(s);
-      if (calm && s.def.mercy.verb === 'calm' && e?.active && !!e.spawnerId && this.spawners.isEphemeral(e.spawnerId) && s.feet(p).distanceTo(at) <= AI.packShareRadius) around.push(s);
+      if (calm && e?.active && !!e.spawnerId && table.summonGroups?.includes(e.spawnerId)) around.push(s);
     }
     // The registry decides: only a true release charges, takes the offering and pays the ledger row.
     if (!bosses.release(boss.bossId)) return;
@@ -569,7 +569,9 @@ export class EnemyManager {
     };
     this.tally.mercy(bossEvent);
     this.host.events.emit('mercy', bossEvent);
-    this.applyMercy(mercyEvents(around.filter((a) => this.enemies.get(a.actorId)?.active), pulseId));
+    // The scattered hounds count for the tally and codex only: the boss row pays the favour (track null = codex only).
+    const scattered = mercyEvents(around.filter((a) => this.enemies.get(a.actorId)?.active), pulseId);
+    this.applyMercy(calm ? scattered.map((ev) => ({ ...ev, track: null })) : scattered);
     if (calm) this.calmFx(at, option!);
     else this.releaseFx(at);
   }

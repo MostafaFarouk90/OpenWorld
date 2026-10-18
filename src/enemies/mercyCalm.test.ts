@@ -678,8 +678,8 @@ describe('offering cycle and the wheel claim', () => {
 
 describe('Grimtooth, boss Calm', () => {
   function boss(opts: { items?: Record<string, number>; unlocked?: boolean; ui?: boolean } = {}) {
-    const t = rig({ items: opts.items ?? { 'hearth-bread': 1 }, calmed: opts.unlocked !== false, ui: opts.ui, spawners: [group('pack', 'fixture-hound', 3, { ephemeral: true })] });
-    const ids = t.m.service.spawnGroup('pack');
+    const t = rig({ items: opts.items ?? { 'hearth-bread': 1 }, calmed: opts.unlocked !== false, ui: opts.ui, spawners: [group('grimtooth-summons', 'fixture-hound', 3, { ephemeral: true })] });
+    const ids = t.m.service.spawnGroup('grimtooth-summons');
     t.tick(0.1);
     const actor = new FakeActor('boss-2', 'gaffer-grimtooth', { kind: 'gaffer-grimtooth', team: 'hostile', maxHealth: 800 });
     t.fake.actorMap.set(actor.id, actor);
@@ -708,15 +708,24 @@ describe('Grimtooth, boss Calm', () => {
     expect(mercies[0]).toMatchObject({ verb: 'calm', tier: 'boss', track: 'dragons', creature: 'gaffer-grimtooth', amount: 3, ledgerId: 'D02' });
     expect(mercies[0]!.pulseId).toBeUndefined();
     expect(mercies.slice(1).map((m) => m.actorId).sort()).toEqual([...b.ids].sort());
+    // Per-hound events are codex and tally only; the boss row pays the favour.
+    expect(mercies.slice(1).every((m) => m.track === null)).toBe(true);
     for (const id of b.ids) expect(b.m.get(id)!.state).toBe('calmed');
     expect(b.bossHold()).toBeUndefined();
     // An ephemeral summon group spends no slot.
     expect(b.m.spawners.serialize().spent).toEqual([]);
   });
 
+  it('a summon far from the arena still scatters, so no straggler stays hostile', () => {
+    const b = boss();
+    b.m.get(b.ids[2]!)!.feet.set(500, 0, 500);
+    b.bossHold()!.onInteract(b.fake.player);
+    for (const id of b.ids) expect(b.m.get(id)!.state).toBe('calmed');
+  });
+
   it('a hound outside the summon group (not ephemeral) near him is left alone', () => {
-    const t = rig({ spawners: [group('pack', 'fixture-hound', 1, { ephemeral: true }), group('kennels', 'fixture-hound', 1)] });
-    const [s] = t.m.service.spawnGroup('pack');
+    const t = rig({ spawners: [group('grimtooth-summons', 'fixture-hound', 1, { ephemeral: true }), group('kennels', 'fixture-hound', 1)] });
+    const [s] = t.m.service.spawnGroup('grimtooth-summons');
     const [k] = t.m.service.spawnGroup('kennels');
     t.tick(0.1);
     const actor = new FakeActor('boss-2', 'gaffer-grimtooth', { kind: 'gaffer-grimtooth', team: 'hostile', maxHealth: 800 });
