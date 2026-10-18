@@ -7,7 +7,7 @@ import { fakeActions, fakeContexts, makeWorld } from './testkit';
 const DT = 1 / 60;
 const loot = [{ itemId: 'bread', count: 2 }, { itemId: 'coin', count: 5 }];
 
-function setup(opened?: boolean, l = loot) {
+function setup(opened?: boolean, l = loot, extra: { canOpen?: () => boolean; onRefused?: () => void } = {}) {
   const w = makeWorld();
   const actor = w.actors.spawn({ id: 'player', kind: 'player', team: 'player', maxHealth: 10 });
   const input = fakeActions();
@@ -20,7 +20,7 @@ function setup(opened?: boolean, l = loot) {
   object.position.set(0, 0, -1);
   const granted = vi.fn();
   w.events.on('loot.granted', granted);
-  const chest = new Chest({ interaction, state: w.state, events: w.events }, { id: 'chest:bakery-barrel', object, loot: l });
+  const chest = new Chest({ interaction, state: w.state, events: w.events }, { id: 'chest:bakery-barrel', object, loot: l, ...extra });
   const use = () => {
     input.release();
     input.press();
@@ -30,6 +30,40 @@ function setup(opened?: boolean, l = loot) {
   };
   return { ...w, interaction, chest, granted, use, input };
 }
+
+describe('Chest veto (v0.5)', () => {
+  it('a locked chest stays shut and focusable, calls onRefused, and opens once the veto passes', () => {
+    let unlocked = false;
+    const onRefused = vi.fn();
+    const t = setup(undefined, loot, { canOpen: () => unlocked, onRefused });
+    t.use();
+    expect(onRefused).toHaveBeenCalledTimes(1);
+    expect(t.chest.opened).toBe(false);
+    expect(t.granted).not.toHaveBeenCalled();
+    expect(t.state.getBool('chest.bakery-barrel.opened')).toBe(false);
+    t.interaction.fixedUpdate(DT);
+    expect(t.interaction.focus?.id).toBe('chest:bakery-barrel');
+    unlocked = true;
+    t.use();
+    expect(t.chest.opened).toBe(true);
+    expect(t.granted).toHaveBeenCalledTimes(1);
+    expect(onRefused).toHaveBeenCalledTimes(1);
+  });
+  it('a throwing veto or onRefused keeps the chest shut without breaking the interaction', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const t = setup(undefined, loot, { canOpen: () => { throw new Error('boom'); }, onRefused: () => { throw new Error('bang'); } });
+    expect(() => t.use()).not.toThrow();
+    expect(t.chest.opened).toBe(false);
+    expect(t.granted).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
+  });
+  it('a non-boolean truthy veto result does not open (only true does)', () => {
+    const t = setup(undefined, loot, { canOpen: (() => 1) as unknown as () => boolean });
+    t.use();
+    expect(t.chest.opened).toBe(false);
+  });
+});
 
 describe('Chest', () => {
   it('opens once: grants loot, sets the flag, then is disabled', () => {
