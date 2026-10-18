@@ -15,6 +15,7 @@ import {
 
 const TMP = new THREE.Vector3();
 const DEG = Math.PI / 180;
+const PROP_KINDS: ReadonlySet<string> = new Set(['toll-post', 'dummy', 'blocking-dummy', 'ash-scarecrow']);
 
 export const FLAME_LASH_DEF: SpellDef = {
   id: 'emberwright-flame-lash', clip: 'Spellcast_Long', emberCost: 0, cooldown: 0, releaseAt: SPELLCAST_CLIPS.Spellcast_Long.release,
@@ -80,6 +81,8 @@ export class EmberwrightRuntime {
   private readonly released = new Set<string>();
   private readonly offs: Array<() => void> = [];
   private disposed = false;
+  /** True while `projectiles.clear()` expires the live ones: a ball in flight must not burst then. */
+  private clearing = false;
 
   constructor(private readonly host: EmberwrightHost) {
     const h = host;
@@ -143,7 +146,7 @@ export class EmberwrightRuntime {
     this.disposed = true;
     this.caster.cancel('dispose');
     this.caster.dispose();
-    this.projectiles.clear();
+    this.clearProjectiles();
     this.pending.length = 0;
     this.grounds.length = 0;
     for (const off of this.offs.splice(0).reverse()) off();
@@ -258,7 +261,7 @@ export class EmberwrightRuntime {
     hit: ProjectileHit, dir: Vec3,
     o: { damage: number; poise: number; ignite: boolean; attackId: string; volley?: Volley; chain?: boolean; blast?: boolean },
   ): void {
-    if (this.disposed) return;
+    if (this.disposed || this.clearing) return;
     this.host.fx(FX.boltImpact, hit.point);
     if (o.blast) {
       this.flameBlast(hit, dir);
@@ -266,7 +269,7 @@ export class EmberwrightRuntime {
     }
     if (hit.kind !== 'actor') return;
     const target = this.host.actors.get(hit.actorId);
-    if (!target || target.team !== 'hostile') return;
+    if (!target || !this.isTarget(target)) return;
     const done = this.strike(target, { damage: o.damage, poise: o.poise, attackId: o.attackId, dir, point: hit.point, ignite: o.ignite });
     if (!done) return;
     o.volley?.hit.add(target.id);
@@ -315,7 +318,7 @@ export class EmberwrightRuntime {
   private flameBlast(hit: ProjectileHit, dir: Vec3): void {
     const point = hit.point;
     this.host.fx(FX.blast, point);
-    for (const h of actorsInRadius(this.host.actors, point, FLAME_BALL.blast, { team: 'hostile', alive: true })) {
+    for (const h of this.targetsIn(point, FLAME_BALL.blast)) {
       const direct = hit.kind === 'actor' && hit.actorId === h.actor.id;
       if (!direct && this.host.blocked(point, h.position)) continue;
       const k = direct ? 1 : FLAME_BALL.splash;
@@ -330,7 +333,7 @@ export class EmberwrightRuntime {
     const f = this.host.player.feet;
     const centre = vec(f);
     this.host.fx(FX.ring, centre, { scale: CINDER_RING.radius / 4 });
-    for (const h of actorsInRadius(this.host.actors, centre, CINDER_RING.radius, { team: 'hostile', alive: true })) {
+    for (const h of this.targetsIn(centre, CINDER_RING.radius)) {
       if (this.host.blocked({ x: f.x, y: f.y + 1, z: f.z }, h.position)) continue;
       const dir = this.flatDir(centre, h.position, { x: Math.sin(this.host.player.facingYaw), y: 0, z: Math.cos(this.host.player.facingYaw) });
       if (this.strike(h.actor, { damage: spellDamage(CINDER_RING.damage), poise: CINDER_RING.poise, attackId: 'emberwright.cinderRing', dir, point: h.position, ignite: false })) {
@@ -357,6 +360,15 @@ export class EmberwrightRuntime {
     return this.host.status()?.apply(targetId, { id: IGNITE.id, kind: 'ignite', dps: IGNITE.dps, seconds: IGNITE.seconds, sourceId: this.host.player.actor.id }) ?? false;
   }
 
+  /** Hostiles, plus the neutral props the player must be able to break (toll-post, dummies); never a neutral person. */
+  private isTarget(a: ActorLike): boolean {
+    return a.team === 'hostile' || (a.team === 'neutral' && PROP_KINDS.has(a.kind));
+  }
+
+  private targetsIn(centre: Vec3, radius: number): ReturnType<typeof actorsInRadius> {
+    return actorsInRadius(this.host.actors, centre, radius, { team: ['hostile', 'neutral'], alive: true }).filter((h) => this.isTarget(h.actor));
+  }
+
   private flatDir(from: Vec3, to: Vec3, fallback: Vec3 = { x: 0, y: 0, z: 1 }): Vec3 {
     const dx = to.x - from.x, dz = to.z - from.z;
     const len = Math.hypot(dx, dz);
@@ -380,6 +392,7 @@ export class EmberwrightRuntime {
       this.anvilTarget = this.pickAnvilTarget();
       if (!this.anvilTarget) return { ok: false, reason: 'no-target' };
     }
+    if (skillId === SKILL.warmBreath && this.alliesInCone().length === 0) return { ok: false, reason: 'no-target' };
     const r = this.caster.cast(id, def.id);
     if (!r.ok) {
       this.anvilTarget = null;
@@ -397,7 +410,7 @@ export class EmberwrightRuntime {
     const f = this.host.player.feet;
     const start = { x: f.x, y: f.y + 1, z: f.z };
     this.host.fx(FX.blast, { x: f.x + dir.x * FLAME_LASH.length * 0.5, y: f.y + 1, z: f.z + dir.z * FLAME_LASH.length * 0.5 });
-    for (const h of actorsInRadius(this.host.actors, start, FLAME_LASH.length + ACTOR_RADIUS, { team: 'hostile', alive: true })) {
+    for (const h of this.targetsIn(start, FLAME_LASH.length + ACTOR_RADIUS)) {
       const rx = h.position.x - f.x, rz = h.position.z - f.z;
       const along = rx * dir.x + rz * dir.z;
       const across = Math.abs(rx * dir.z - rz * dir.x);
@@ -414,9 +427,15 @@ export class EmberwrightRuntime {
     const h = this.host;
     const lockId = h.lockOnTarget();
     const lock = lockId ? h.actors.get(lockId) : undefined;
-    if (lock && !lock.dead && lock.team === 'hostile') return lock.id;
     const f = vec(h.player.feet);
-    const hit = actorsInCone(h.actors, f, h.player.facingYaw, ANVIL_DROP.halfAngleDeg * DEG, ANVIL_DROP.range, { team: 'hostile', alive: true })[0];
+    const chest = { x: f.x, y: f.y + CHEST_HEIGHT, z: f.z };
+    const reachable = (a: ActorLike): boolean => {
+      a.worldPosition(TMP);
+      return Math.hypot(TMP.x - f.x, TMP.z - f.z) <= ANVIL_DROP.range && !h.blocked(chest, { x: TMP.x, y: TMP.y + 1, z: TMP.z });
+    };
+    if (lock && !lock.dead && this.isTarget(lock) && reachable(lock)) return lock.id;
+    const hit = actorsInCone(h.actors, f, h.player.facingYaw, ANVIL_DROP.halfAngleDeg * DEG, ANVIL_DROP.range, { team: ['hostile', 'neutral'], alive: true })
+      .filter((x) => this.isTarget(x.actor) && reachable(x.actor))[0];
     return hit ? hit.actor.id : null;
   }
 
@@ -441,7 +460,7 @@ export class EmberwrightRuntime {
     }
     this.host.fx(FX.ring, at, { scale: 0.6 });
     this.host.fx(FX.anvil, at);
-    for (const h of actorsInRadius(this.host.actors, at, ANVIL_DROP.splashRadius, { team: 'hostile', alive: true })) {
+    for (const h of this.targetsIn(at, ANVIL_DROP.splashRadius)) {
       const primary = h.actor.id === id;
       const k = primary ? 1 : ANVIL_DROP.splash;
       const ok = this.strike(h.actor, {
@@ -452,12 +471,17 @@ export class EmberwrightRuntime {
     }
   }
 
+  private alliesInCone(): ReturnType<typeof actorsInCone> {
+    const h = this.host;
+    return actorsInCone(h.actors, vec(h.player.feet), h.player.facingYaw, WARM_BREATH.halfAngleDeg * DEG, WARM_BREATH.range, { team: 'ally', alive: true });
+  }
+
   private warmBreath(): void {
     if (!this.active()) return;
     const h = this.host;
     const f = vec(h.player.feet);
     this.host.fx(FX.wind, f, { scale: 0.8 });
-    for (const hit of actorsInCone(h.actors, f, h.player.facingYaw, WARM_BREATH.halfAngleDeg * DEG, WARM_BREATH.range, { team: 'ally', alive: true })) {
+    for (const hit of this.alliesInCone()) {
       h.damage.heal(hit.actor.id, hit.actor.maxHealth * WARM_BREATH.healFraction);
     }
   }
@@ -475,14 +499,21 @@ export class EmberwrightRuntime {
       [[FLAME_LASH_DEF.id, FLAME_LASH.ember], [ANVIL_DROP_DEF.id, ANVIL_DROP.ember], [WARM_BREATH_DEF.id, WARM_BREATH.ember]] as Array<[string, number]>
     ).find(([id]) => id === spellId);
     if (!entry) return;
+    this.pendingCancel = null;
     this.anvilTarget = null;
+    this.pendingCancel = null;
     const wasReleased = this.released.delete(spellId);
     if (!wasReleased) this.host.ember()?.restore(entry[1]);
   }
 
+  private clearProjectiles(): void {
+    this.clearing = true;
+    try { this.projectiles.clear(); } finally { this.clearing = false; }
+  }
+
   private reset(reason: string): void {
     this.requestCancel(reason);
-    this.projectiles.clear();
+    this.clearProjectiles();
     this.pending.length = 0;
     this.grounds.length = 0;
     this.fired.clear();
