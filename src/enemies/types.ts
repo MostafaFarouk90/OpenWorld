@@ -89,6 +89,8 @@ export interface LevelBand {
 
 export interface SpawnerDef {
   id: string;
+  /** Written to `actor.spawnTag` (default: the spawner id); thread 3's M01 kill filter reads 'spawn.m01'. */
+  tag?: string;
   enemy: EnemyKind;
   count: number;
   /** Spawn anchor id (world-layout-and-npcs.md section 2). */

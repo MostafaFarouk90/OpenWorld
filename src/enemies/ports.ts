@@ -2,7 +2,7 @@ import type * as THREE from 'three';
 import type { HurtboxSet } from '../combat/HurtboxSet';
 import type { AttackWindowSource } from '../combat/types';
 import type { WeaponTracer } from '../combat/WeaponTracer';
-import type { Vec3 } from '../physics/PhysicsWorld';
+import type { PhysicsWorld, Vec3 } from '../physics/PhysicsWorld';
 
 /**
  * The slice of the game core (contracts/actors-and-damage.md, game-events-and-flags.md,
@@ -29,6 +29,7 @@ export interface ActorLike {
   hittable: boolean;
   invulnerable: boolean;
   root: THREE.Object3D | null;
+  readonly spawnTag?: string;
   data: Record<string, unknown>;
   worldPosition(out: THREE.Vector3): THREE.Vector3;
   restorePoise(n?: number): void;
@@ -42,6 +43,8 @@ export interface ActorInitLike {
   maxPoise?: number;
   root?: THREE.Object3D;
   owner?: unknown;
+  /** Set once at spawn from the spawner's tag (coordinator ruling for thread 3's kill filter). */
+  spawnTag?: string;
 }
 
 export interface ActorsPort {
@@ -183,6 +186,8 @@ export interface PlayerPort {
   readonly feet: THREE.Vector3;
   /** The player's capsule collider, so line-of-sight rays can tell "hit the player" from "hit a wall". */
   readonly collider: unknown;
+  /** Sprinting or attacking this tick (heard at AI.hearingLoud). */
+  loud(): boolean;
   addMoveModifier(source: string, mod: { speedScale?: number }): () => void;
 }
 
@@ -211,6 +216,8 @@ export interface AssetsPort {
 
 export interface EnemyHost {
   scene: THREE.Object3D;
+  /** Null in pure tests: enemies then use the heightfield mover and line of sight is always clear. */
+  physics: PhysicsWorld | null;
   actors: ActorsPort;
   damage: DamagePort;
   combat: CombatPort;
