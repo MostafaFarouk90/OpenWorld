@@ -29,10 +29,11 @@ export class NavAgent {
   private lastZ = 0;
   private warned = false;
   private grid = false;
+  private goalOutside = false;
   private readonly out = { x: 0, z: 0 };
 
   constructor(
-    private readonly nav: () => Pick<NavService, 'path' | 'hasGrid'> | undefined,
+    private readonly nav: () => (Pick<NavService, 'path' | 'hasGrid'> & Partial<Pick<NavService, 'gridId'>>) | undefined,
     opts: NavAgentOptions = {},
   ) {
     this.repathDistance = opts.repathDistance ?? 1;
@@ -79,6 +80,13 @@ export class NavAgent {
         this.warn(err);
       }
       this.path = p ?? [];
+      // A goal in no grid, or in another grid than ours (a neighbouring city block), is "outside".
+      try {
+        this.goalOutside = svc.gridId ? svc.gridId(target) !== svc.gridId(self) : !svc.hasGrid(target);
+      } catch (err) {
+        this.warn(err);
+        this.goalOutside = false;
+      }
       this.idx = 0;
       this.queried = true;
       this.timer = 0;
@@ -92,6 +100,9 @@ export class NavAgent {
     }
     const w = this.path[this.idx];
     if (w) return this.give(w.x, w.z);
+    // A goal outside our grid: the path ended at the nearest edge cell, so walk on straight at the goal (a chaser or a
+    // fleeing thief must not park on a city block's edge).
+    if (this.goalOutside) return this.give(target.x, target.z);
     // A path that stops short (the target is behind a closed gate) holds at its end instead of pushing into the obstacle.
     const last = this.path[this.path.length - 1];
     if (last && Math.hypot(last.x - target.x, last.z - target.z) > this.arriveRadius) return this.give(last.x, last.z);
@@ -108,6 +119,7 @@ export class NavAgent {
     this.path = [];
     this.idx = 0;
     this.queried = false;
+    this.goalOutside = false;
   }
 
   private give(x: number, z: number): { x: number; z: number } {
