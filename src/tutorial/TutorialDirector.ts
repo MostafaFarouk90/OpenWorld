@@ -24,6 +24,8 @@ export const SPAWN_RETRY_SECONDS = 10;
 const SPAWN_RETRY_INTERVAL = 0.5;
 /** Enemy health on a restarted beat (design section 2, "a second failure restarts the beat with enemies at half health"). */
 export const RESTART_HEALTH_SCALE = 0.5;
+/** A Replay drill left running this long ends by itself (an abandoned drill must not keep kill XP paused). */
+export const DRILL_SECONDS = 180;
 
 const KIT: { itemId: string; count: number }[] = [
   { itemId: 'squires-arming-sword', count: 1 },
@@ -87,8 +89,19 @@ export class TutorialDirector {
   /** The kneel step to rebuild when the vow will not open. */
   private kneelStep = -1;
   private smokeTicks = 0;
-  private drill: { def: DrillDef; steps: GoalTracker[][]; step: number } | null = null;
+  private drill: { def: DrillDef; steps: GoalTracker[][]; step: number; left: number } | null = null;
   private started = false;
+  /**
+   * Re-entrancy guard. The real services emit synchronously outside a bus dispatch (quests.complete,
+   * dialogue.close), so an event can arrive while the director is mid-transition. Such events wait in
+   * `queued` and are handled once the outer call returns, and only if the beat and drill they were
+   * raised in are still current (review B1, M1).
+   */
+  private depth = 0;
+  private queued: { beat: BeatId | null; drill: string | null; e: DirectorEvent }[] = [];
+  /** Bumped on load and dispose so a restart fade that resolves later does nothing. */
+  private generation = 0;
+  private disposed = false;
 
   constructor(
     private readonly ports: DirectorPorts,
@@ -152,6 +165,8 @@ export class TutorialDirector {
     s.kitGranted = d.kitGranted === true;
     s.complete = d.complete === true;
     this.leaveBeat();
+    this.generation++;
+    this.restarting = false;
     this.s = s;
     this.loadedEntry = true;
     this.pendingLoad = true;
@@ -166,13 +181,29 @@ export class TutorialDirector {
     this.loadedEntry = false;
     this.pendingLoad = true;
     this.restartPending = false;
-    this.drill = null;
+    this.generation++;
+    this.restarting = false;
+    if (this.drill) this.endDrill(false);
+  }
+
+  /** Plugin teardown: nothing the director scheduled may touch the world afterwards. */
+  dispose(): void {
+    this.disposed = true;
+    this.generation++;
+    this.queued = [];
   }
 
   private migrate(): void {
     this.leaveBeat();
     const s = emptySave();
-    if (this.ports.state.flag('tutorial.complete')) {
+    // A save from before this director existed, past the tutorial: T12 done or M01 under way.
+    const m01 = this.ports.state.questState('m01');
+    if (
+      this.ports.state.flag('tutorial.complete') ||
+      this.ports.state.questState('t12') === 'completed' ||
+      m01 === 'active' ||
+      m01 === 'completed'
+    ) {
       s.complete = true;
     } else {
       const order = this.data.orders.full;
@@ -192,6 +223,10 @@ export class TutorialDirector {
 
   /** From the start screen or `?tutorial=`. `at` jumps to a beat with every earlier reward applied. */
   begin(mode: TutorialMode, at?: BeatId): void {
+    this.guarded(() => this.beginNow(mode, at));
+  }
+
+  private beginNow(mode: TutorialMode, at?: BeatId): void {
     if (this.begun) return;
     this.started = true;
     this.s = emptySave();
@@ -224,6 +259,10 @@ export class TutorialDirector {
 
   /** Hold-Esc: the current beat's rewards (only what is missing), its quest completed, next beat. */
   skipCurrent(): void {
+    this.guarded(() => this.skipNow());
+  }
+
+  private skipNow(): void {
     const id = this.s.beat;
     if (!id || this.restartInFlight || this.pendingLoad) return;
     if (this.ports.vowOpen()) this.ports.closeVow();
@@ -243,6 +282,12 @@ export class TutorialDirector {
    * player. Idempotent while a restart is pending; the beat's enemies go in this very tick (review change 5).
    */
   onLethal(): boolean {
+    let saved = false;
+    this.guarded(() => (saved = this.lethalNow()));
+    return saved;
+  }
+
+  private lethalNow(): boolean {
     if (this.restartInFlight) return true;
     if (this.drill) {
       this.endDrill(false);
@@ -259,6 +304,11 @@ export class TutorialDirector {
   // ---- tick and events ------------------------------------------------------------------------------
 
   tick(sample: TickSample): void {
+    this.guarded(() => this.tickNow(sample));
+  }
+
+  private tickNow(sample: TickSample): void {
+    if (this.disposed) return;
     if (this.pendingLoad) {
       this.pendingLoad = false;
       this.resumeAfterLoad();
@@ -271,6 +321,12 @@ export class TutorialDirector {
     }
     if (this.restarting) return;
     if (this.drill) {
+      this.drill.left -= sample.dt;
+      if (this.drill.left <= 0) {
+        this.endDrill(false);
+        this.ports.toast('tutorial.replay.cancelled');
+        return;
+      }
       this.tickSteps(this.drill.steps, this.drill.step, sample);
       this.advanceDrill();
       return;
@@ -283,7 +339,8 @@ export class TutorialDirector {
       if (this.crackLeft <= 0) {
         this.crackLeft = 0;
         this.ports.cutscene(null);
-        this.spawnWavesFor(this.step);
+        // UpTo, not For: a reload after the last kill resumes at the clear step (review M2).
+        this.spawnWavesUpTo(this.step);
         this.advance();
       }
       return;
@@ -308,6 +365,38 @@ export class TutorialDirector {
   }
 
   onEvent(e: DirectorEvent): void {
+    if (this.disposed) return;
+    if (this.depth > 0) {
+      this.queued.push({ beat: this.s.beat, drill: this.drill?.def.id ?? null, e });
+      return;
+    }
+    this.guarded(() => this.handleEvent(e));
+  }
+
+  /** Runs `fn` with events deferred, then handles the deferred ones that still apply. */
+  private guarded(fn: () => void): void {
+    this.depth++;
+    try {
+      fn();
+    } finally {
+      this.depth--;
+    }
+    if (this.depth > 0) return;
+    let guard = 0;
+    while (this.queued.length > 0 && guard++ < 256) {
+      const q = this.queued.shift()!;
+      if (q.beat !== this.s.beat || q.drill !== (this.drill?.def.id ?? null)) continue;
+      this.depth++;
+      try {
+        this.handleEvent(q.e);
+      } finally {
+        this.depth--;
+      }
+    }
+    this.queued = [];
+  }
+
+  private handleEvent(e: DirectorEvent): void {
     if (this.pendingLoad || this.restartInFlight) return;
     if (e.type === 'skillTriggered' && this.s.t13PendingPassive === e.skillId) {
       this.s.t13PendingPassive = null;
@@ -331,10 +420,25 @@ export class TutorialDirector {
   // ---- Replay board -------------------------------------------------------------------------------------
 
   startDrill(def: DrillDef): boolean {
+    let ok = false;
+    this.guarded(() => (ok = this.startDrillNow(def)));
+    return ok;
+  }
+
+  /** The board while a drill runs: stop it (no reward). */
+  cancelDrill(): void {
+    this.guarded(() => {
+      if (!this.drill) return;
+      this.endDrill(false);
+      this.ports.toast('tutorial.replay.cancelled');
+    });
+  }
+
+  private startDrillNow(def: DrillDef): boolean {
     if (!this.s.complete || this.drill || this.restartInFlight) return false;
     const steps = def.steps.map((st) => st.map((spec) => this.data.createGoal(spec)));
     for (const st of steps) for (const g of st) g.sync(this.ports.state);
-    this.drill = { def, steps, step: 0 };
+    this.drill = { def, steps, step: 0, left: DRILL_SECONDS };
     this.ports.holdKillXp(true);
     for (const sp of def.waves ?? []) {
       this.ports.resetGroup(sp.spawnerId);
@@ -383,7 +487,7 @@ export class TutorialDirector {
     if (mode === 'jump' || (mode === 'fresh' && id === this.order()[0]) || (mode === 'reload' && def.cutscene === 'crack')) {
       this.ports.teleport(def.startAnchor);
     }
-    for (const [npc, anchor] of Object.entries(def.npcs ?? {})) this.ports.placeNpc(npc, anchor);
+    this.placeNpcsFor(id);
     this.ports.setLocks(this.locksFor(id));
     this.ports.holdKillXp(this.beforeT13(id));
     const index = this.data.orders.full.indexOf(id);
@@ -414,6 +518,20 @@ export class TutorialDirector {
     }
     this.spawnWavesUpTo(this.step);
     this.advance();
+  }
+
+  /**
+   * NPC placements are not saved by the npcs service, so every enter re-applies the latest placement
+   * of each NPC up to and including this beat (review: Gaut after a reload in T07 or after the end).
+   */
+  private placeNpcsFor(id: BeatId | null): void {
+    const full = this.data.orders.full;
+    const upTo = id === null ? full.length - 1 : full.indexOf(id);
+    const latest = new Map<string, string>();
+    const beats: BeatId[] = upTo >= 0 ? full.slice(0, upTo + 1) : [];
+    if (id !== null && upTo < 0) beats.push(id); // skirmish (veteran only)
+    for (const b of beats) for (const [npc, anchor] of Object.entries(this.data.beats[b].npcs ?? {})) latest.set(npc, anchor);
+    for (const [npc, anchor] of latest) this.ports.placeNpc(npc, anchor);
   }
 
   /** Per-beat side effects at (re)start that are not goals. */
@@ -451,6 +569,7 @@ export class TutorialDirector {
       this.leaveBeat();
       this.ports.setLocks([]);
       this.ports.holdKillXp(false);
+      if (this.s.complete) this.placeNpcsFor(null);
       return;
     }
     const def = this.def();
@@ -463,13 +582,18 @@ export class TutorialDirector {
     if (!id) return;
     this.restarting = true;
     const def = this.def();
+    const generation = this.generation;
     this.ports.toast('tutorial.toast.restart');
     const finish = (): void => {
-      this.restarting = false;
-      if (this.s.beat !== id) return;
-      this.ports.healFull();
-      for (const w of def.waves ?? []) for (const sp of w) this.ports.resetGroup(sp.spawnerId);
-      this.enter(id, 'restart');
+      // A load or teardown during the fade owns the state now.
+      if (generation !== this.generation || this.disposed) return;
+      this.guarded(() => {
+        this.restarting = false;
+        if (this.s.beat !== id) return;
+        this.ports.healFull();
+        for (const w of def.waves ?? []) for (const sp of w) this.ports.resetGroup(sp.spawnerId);
+        this.enter(id, 'restart');
+      });
     };
     this.ports.fadeTeleport(def.startAnchor).then(finish, (err) => {
       this.ports.warn(`Tutorial: restart teleport failed (${String(err)})`);
@@ -530,6 +654,8 @@ export class TutorialDirector {
       this.onStepDone(id, this.step);
       if (this.s.beat !== id) return;
       this.step++;
+      // Re-read state for goals met while an earlier step was current (review M3: T14 lit).
+      for (const g of this.steps[this.step] ?? []) g.sync(this.ports.state);
       this.captureProgress();
       this.spawnWavesFor(this.step);
       this.showPrompts(this.def());

@@ -122,7 +122,23 @@ describe('tutorial plugin on the real game', () => {
     expect(t.director.restartInFlight).toBe(true);
   });
 
-  it('teardown mid-cutscene emits cutscene.ended once and lifts the locks', async () => {
+  it('skipping T04 while the real vow dialogue is open lands on T05, not past it', async () => {
+    const t = await boot();
+    t.director.begin('full', 't04');
+    t.run(2);
+    t.director.onEvent({ type: 'trigger', id: 'trg.t04.chapel' });
+    t.director.onEvent({ type: 'interact', id: 'kneel:chapel' });
+    t.run(2);
+    expect(t.game.ctx.services.get('dialogue')!.active).toBeTruthy();
+    t.director.skipCurrent();
+    t.run(2);
+    expect(t.director.beat).toBe('t05');
+    const beats = t.events.filter((e) => e.type === 'tutorial.beat').map((e) => e.payload as { beatId: string; state: string });
+    expect(beats.filter((b) => b.beatId === 't05' && b.state === 'started')).toHaveLength(1);
+    expect(beats.some((b) => b.beatId === 't05' && b.state === 'skipped')).toBe(false);
+  });
+
+    it('teardown mid-cutscene emits cutscene.ended once and lifts the locks', async () => {
     const t = await boot();
     t.director.begin('full', 't05');
     t.run(2);
