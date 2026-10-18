@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { PLAYER_ID } from '../actors/teams';
 import type { GameContext } from '../core/Game';
 import type { GamePlugin } from '../core/plugins';
+import { parseAct1 } from '../quests/act1Jump';
 import type { Action } from '../input/actions';
 import { STARTER_KIT } from '../inventory/items';
 import { heightAt } from '../terrain/heightfield';
@@ -77,7 +78,11 @@ function writeCompletion(): void {
 /** `?tutorial=full|veteran|kettlewick|t09`: skip the start screen (tests and smoke runs). */
 export function tutorialFromQuery(search: string): { mode: TutorialMode; at?: BeatId } | null {
   const raw = new URLSearchParams(search).get('tutorial');
-  if (!raw) return null;
+  // A valid `?act1=` jump (dev) finishes the tutorial itself from a Kettlewick start: no start screen.
+  if (!raw) {
+    const act1 = import.meta.env.DEV ? parseAct1(search) : null;
+    return act1 && !('error' in act1) ? { mode: 'kettlewick' } : null;
+  }
   if (raw === 'full' || raw === 'veteran' || raw === 'kettlewick') return { mode: raw };
   if ((BEAT_IDS as readonly string[]).includes(raw) && raw !== 'skirmish') return { mode: 'full', at: raw as BeatId };
   return null;
