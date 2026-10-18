@@ -95,10 +95,10 @@ export interface SparkDodgePorts extends StatusPort {
  * Spark Dodge: a dodge that avoids a hit (`player.dodged`) throws fire sparks at the feet: hostiles within 2.5 m that are
  * already on the player (noticing or fighting) catch `ignite` under their own status id. One burst per 1.5 s.
  */
-export function sparkDodgeHandler(ports: SparkDodgePorts): () => void {
+export function sparkDodgeHandler(ports: SparkDodgePorts): (attackerId?: string) => void {
   const status = makeStatusApplier(ports);
   let readyAt = -Infinity;
-  return () => {
+  return (attackerId) => {
     if (!ports.active()) return;
     const now = ports.tick();
     if (now < readyAt) return;
@@ -107,7 +107,8 @@ export function sparkDodgeHandler(ports: SparkDodgePorts): () => void {
     ports.spark(feet);
     ports.triggered?.();
     for (const h of ports.hostilesNear(feet, SPARK_DODGE.radius)) {
-      if (h.state === undefined || !AGGROED_STATES.has(h.state)) continue;
+      // The attacker whose swing was dodged is on the player by definition, even a boss or foe with no enemy view.
+      if (h.id !== attackerId && (h.state === undefined || !AGGROED_STATES.has(h.state))) continue;
       status.apply(h.id, {
         id: SPARK_DODGE.statusId,
         kind: 'ignite',

@@ -187,7 +187,8 @@ describe('DodgeModel distance scale', () => {
   });
   it('treats a missing, zero, negative or non-finite scale as 1', () => {
     const base = speeds();
-    for (const bad of [0, -1, NaN, Infinity]) expect(speeds(bad === Infinity ? NaN : bad)).toEqual(base);
+    for (const bad of [0, -1, NaN]) expect(speeds(bad)).toEqual(base);
+    expect(speeds(Infinity)).toEqual(base);
   });
   it('resets on the next dodge', () => {
     const m = new DodgeModel();

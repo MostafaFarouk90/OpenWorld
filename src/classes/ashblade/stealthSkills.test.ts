@@ -98,6 +98,7 @@ describe('Ash Cloud', () => {
       stealth: () => undefined,
       feet: () => ({ x: 10, y: 5, z: 20 }),
       facingYaw: () => 0,
+      wallAhead: () => null,
       groundAt: () => null,
       spawnCloud: (at, r, s) => spawned.push({ at, r, s }),
       throwClip,
@@ -128,6 +129,13 @@ describe('Ash Cloud', () => {
       expect(ashCloudHandler(p)()).toEqual({ ok: true });
       expect(s.blockers).toHaveLength(1);
     }
+  });
+
+  it('stops the cloud short of a wall', () => {
+    const s = fakeStealth();
+    const { p } = ports({ stealth: () => s.hooks, wallAhead: () => 1.5 });
+    ashCloudHandler(p)();
+    expect(20 - s.blockers[0].z).toBeCloseTo(1.2);
   });
 
   it('rests the cloud on the ground the cast finds, else at the feet height', () => {

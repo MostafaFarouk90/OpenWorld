@@ -61,6 +61,8 @@ export interface AshCloudPorts {
   facingYaw(): number;
   /** Surface height at a point, or null when there is no ground (the cloud then rests at the feet's height). */
   groundAt(x: number, z: number, nearY: number): number | null;
+  /** Distance to the first wall along a horizontal ray at chest height, or null; stops the cloud landing in the next room. */
+  wallAhead(from: { x: number; y: number; z: number }, dir: { x: number; z: number }, max: number): number | null;
   /** Visual and animation; both best effort. */
   spawnCloud(at: { x: number; y: number; z: number }, radius: number, seconds: number): void;
   throwClip(): void;
@@ -82,8 +84,11 @@ export function ashCloudHandler(p: AshCloudPorts): () => AbilityHandlerResult {
     if (!svc || typeof svc.addSightBlocker !== 'function') return { ok: false, reason: 'no-stealth' };
     const feet = p.feet();
     const yaw = p.facingYaw();
-    const x = feet.x - Math.sin(yaw) * ASH_CLOUD.ahead;
-    const z = feet.z - Math.cos(yaw) * ASH_CLOUD.ahead;
+    const dir = { x: -Math.sin(yaw), z: -Math.cos(yaw) };
+    const wall = p.wallAhead(feet, dir, ASH_CLOUD.ahead);
+    const d = wall === null ? ASH_CLOUD.ahead : Math.max(0, wall - 0.3);
+    const x = feet.x + dir.x * d;
+    const z = feet.z + dir.z * d;
     const y = p.groundAt(x, z, feet.y) ?? feet.y;
     svc.addSightBlocker({ x, z, r: ASH_CLOUD.radius, seconds: ASH_CLOUD.seconds });
     p.throwClip();

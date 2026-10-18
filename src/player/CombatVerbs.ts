@@ -137,6 +137,7 @@ export class CombatVerbs {
   readonly dodgeDistance = new SpeedMultipliers((id) => console.warn(`combatVerbs: dodge distance multiplier "${id}" is invalid, ignored`));
   /** Timed invulnerability sources (`addInvulnerability`): source name to remaining fixed ticks. */
   private readonly timedInvuln = new Map<string, number>();
+  private readonly timedGeneration = new Map<string, number>();
   private appliedAttackClass: string | null = null;
   private offIronStance: (() => void) | null = null;
   private controller: AnimationController | null = null;
@@ -723,12 +724,16 @@ export class CombatVerbs {
     const ticks = Math.ceil(seconds * 60);
     this.timedInvuln.set(key, Math.max(this.timedInvuln.get(key) ?? 0, ticks));
     this.invuln.add(key);
+    const generation = (this.timedGeneration.get(key) ?? 0) + 1;
+    this.timedGeneration.set(key, generation);
     return () => {
-      if (this.timedInvuln.delete(key)) this.invuln.remove(key);
+      // A stale release must not cancel a newer grant of the same source.
+      if (this.timedGeneration.get(key) === generation && this.timedInvuln.delete(key)) this.invuln.remove(key);
     };
   }
 
   private tickTimedInvulnerability(): void {
+    if (this.timedInvuln.size === 0) return;
     for (const [key, left] of this.timedInvuln) {
       if (left <= 1) {
         this.timedInvuln.delete(key);

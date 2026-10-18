@@ -125,7 +125,7 @@ const ashbladePlugin: GamePlugin = {
       spark: (at) => void vfx()?.spawnEffect('ember-burst', { position: at }, { count: 24 }),
       triggered: trigger(SKILL.sparkDodge),
     });
-    offs.push(ctx.events.on('player.dodged', () => spark()));
+    offs.push(ctx.events.on('player.dodged', (e) => spark(e.attackerId)));
 
     // ---- stealth skills ----
     const stealth = () => svc<StealthHooks>('stealth');
@@ -135,6 +135,10 @@ const ashbladePlugin: GamePlugin = {
       stealth,
       feet: () => ({ x: ctx.player.feet.x, y: ctx.player.feet.y, z: ctx.player.feet.z }),
       facingYaw: () => ctx.player.facingYaw,
+      wallAhead: (from, dir, max) => {
+        const hit = ctx.physics.raycast({ x: from.x, y: from.y + ASH_DRIFT.chestHeight, z: from.z }, { x: dir.x, y: 0, z: dir.z }, max, ctx.world.player.controller.collider);
+        return hit ? hit.distance : null;
+      },
       groundAt: (x, z, nearY) => {
         const hit = ctx.physics.raycast({ x, y: nearY + 1.5, z }, { x: 0, y: -1, z: 0 }, 4, ctx.world.player.controller.collider);
         return hit ? hit.point.y : null;
@@ -147,6 +151,7 @@ const ashbladePlugin: GamePlugin = {
     let cloudBound = false;
     let codexBound = false;
     const bindLate = () => {
+      if (cloudBound && codexBound) return;
       const abilities = svc<{ registerHandler(id: string, h: never): { ok: boolean; dispose?(): void } }>('abilities');
       if (!cloudBound && abilities) {
         cloudBound = true;
@@ -166,7 +171,8 @@ const ashbladePlugin: GamePlugin = {
       fixedPhase: 'rules',
       order: 520,
       fixedUpdate() {
-        bindLate();
+        // Services from other threads' PRs may appear late; checking twice a second is plenty.
+        if (ctx.clock.tick % 30 === 0) bindLate();
         soles.tick();
       },
       dispose() {
