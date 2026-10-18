@@ -1,6 +1,6 @@
 import { DEFAULT_CLASS_ID } from './skills';
 
-/** Level-1 and per-level numbers of a class (design 9). Only health is wired in this slice; stamina and Ember are data. */
+/** Level-1 and per-level numbers of a class (design 9): health by level, the stamina maximum and the Ember maximum. */
 export interface ClassBaseStats {
   health: number;
   healthPerLevel: number;
@@ -8,7 +8,11 @@ export interface ClassBaseStats {
   ember: number;
 }
 
-export const KNIGHT_STATS: Readonly<ClassBaseStats> = { health: 120, healthPerLevel: 10, stamina: 100, ember: 30 };
+/**
+ * The Knight's Ember stays at the shipped maximum of 100: design 9 lists 30, which is below the Surge's cost of 40
+ * (review S10). The other classes' rows set their own.
+ */
+export const KNIGHT_STATS: Readonly<ClassBaseStats> = { health: 120, healthPerLevel: 10, stamina: 100, ember: 100 };
 
 const stats = new Map<string, ClassBaseStats>([[DEFAULT_CLASS_ID, { ...KNIGHT_STATS }]]);
 
