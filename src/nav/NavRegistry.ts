@@ -31,6 +31,11 @@ export class NavRegistry {
     return this.gridAt(at) !== null;
   }
 
+  /** Id of the grid containing the point, or null. */
+  gridId(at: Vec3): string | null {
+    return this.gridAt(at)?.id ?? null;
+  }
+
   floorAt(at: Vec3): number | null {
     return this.gridAt(at)?.floorY ?? null;
   }
