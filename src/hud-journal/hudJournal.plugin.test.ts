@@ -10,6 +10,7 @@ import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 import questsPlugin from '../quests/quests.plugin';
 import { FAVOUR_TAB_FLAG, PLACEHOLDER_KEY, TAB_FAVOUR, TAB_STORY, type JournalService, type JournalTabs } from '../quests/journalTabs';
+import { endingOptions } from '../hud/ActEndingCard';
 import hudJournalPlugin from './hudJournal.plugin';
 import { asFake, fakeRoot } from './fakeDom';
 
@@ -91,6 +92,28 @@ describe('hud-journal plugin', () => {
     expect(journal.get(TAB_STORY)).toBeDefined();
     void PLACEHOLDER_KEY;
     t.world.dispose();
+  });
+
+  it('two Games: disposing A leaves B\'s tabs and ending recap alone, and A never clears B\'s hook', async () => {
+    const a = await boot(corePlugin, questsPlugin, hudJournalPlugin);
+    const recapA = endingOptions.recap;
+    expect(recapA).toBeTypeOf('function');
+    const b = await boot(corePlugin, questsPlugin, hudJournalPlugin);
+    const recapB = endingOptions.recap;
+    expect(recapB).toBeTypeOf('function');
+    expect(recapB).not.toBe(recapA);
+    const favB = b.journal!.get(TAB_FAVOUR)!;
+    const storyB = b.journal!.get(TAB_STORY)!;
+    done(a);
+    expect(endingOptions.recap).toBe(recapB);
+    expect(b.journal!.get(TAB_FAVOUR)).toBe(favB);
+    expect(b.journal!.get(TAB_STORY)).toBe(storyB);
+    // A's journal got its own placeholders back.
+    const root = fakeRoot();
+    a.journal!.get(TAB_FAVOUR)!.render(root);
+    expect(asFake(root).byClass('favour-row')).toHaveLength(0);
+    done(b);
+    expect(endingOptions.recap).toBeUndefined();
   });
 
   it('a render that throws is catchable by the caller (the panel catches it)', async () => {

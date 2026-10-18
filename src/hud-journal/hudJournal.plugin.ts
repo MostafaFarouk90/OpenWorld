@@ -3,7 +3,7 @@ import type { GamePlugin } from '../core/plugins';
 import type { JournalService } from '../quests/journalTabs';
 import { FavourTab } from './FavourTab';
 import { createStoryTab } from './StoryTab';
-import { recapLines } from './storyRecap';
+import { endingRecapLines } from './storyRecap';
 import { endingOptions } from '../hud/ActEndingCard';
 import { HUD_JOURNAL_STRINGS_EN } from './strings.en';
 
@@ -19,16 +19,25 @@ const hudJournalPlugin: GamePlugin = {
     const journal = (ctx.services as unknown as { get(n: string): unknown }).get('journal') as JournalService | undefined;
     if (!journal) return;
     const favour = new FavourTab(ctx);
-    // The ending card body is the same recap the Story tab shows.
-    endingOptions.recap = () => recapLines(ctx, (k) => ctx.strings.t(k)).slice(0, 6);
+    // The ending card body is the latest six outcome beats of the recap the Story tab shows (see endingRecap).
+    const mine = (): string[] => endingRecapLines(ctx, (k) => ctx.strings.t(k), ENDING_RECAP_LINES);
+    endingOptions.recap = mine;
     const offs = [journal.registerTab(favour.tab), journal.registerTab(createStoryTab(ctx))];
-    disposers.set(ctx, () => { endingOptions.recap = undefined; for (const off of offs) off(); favour.dispose(); });
-  },
-  dispose() {
-    for (const [ctx, fn] of disposers) { fn(); disposers.delete(ctx); }
+    // Per-instance cleanup: the system is recorded in this plugin's own scope, so closing that scope (and only
+    // that one) disposes it. Plugin-level dispose() has no ctx, so nothing module-wide is kept.
+    ctx.systems.add({
+      id: 'hud-journal.teardown',
+      dispose() {
+        // Only clear the hook if it is still ours: another Game may have set its own since.
+        if (endingOptions.recap === mine) endingOptions.recap = undefined;
+        for (const off of offs) off();
+        favour.dispose();
+      },
+    });
   },
 };
 
-const disposers = new Map<GameContext, () => void>();
+/** Lines of the recap the ending card shows (the latest beats, not Act 1's opening). */
+export const ENDING_RECAP_LINES = 6;
 
 export default hudJournalPlugin;

@@ -22,6 +22,7 @@ export const BESTIARY_IDS = ['blighted-soldier', 'ash-wraith', 'ashen-prior'] as
 export const HOWTO_IDS = {
   release: 'howto.release',
   spare: 'howto.spare',
+  calm: 'howto.calm',
   burnScars: 'howto.burn-scars',
   surgeLeap: 'howto.surge-leap',
   rallyCry: 'howto.rally-cry',
@@ -37,6 +38,7 @@ export const CODEX_ENTRIES: readonly CodexEntryDef[] = [
   entry('lore', LORE_IDS.leapB, 'leap-b'),
   entry('howto', HOWTO_IDS.release, 'release'),
   entry('howto', HOWTO_IDS.spare, 'spare'),
+  entry('howto', HOWTO_IDS.calm, 'calm'),
   entry('howto', HOWTO_IDS.burnScars, 'burn-scars'),
   entry('howto', HOWTO_IDS.surgeLeap, 'surge-leap'),
   entry('howto', HOWTO_IDS.rallyCry, 'rally-cry'),

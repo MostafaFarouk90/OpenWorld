@@ -25,6 +25,7 @@ export interface CodexViewDeps {
 const ENTRY_ACTION: Readonly<Record<string, string>> = {
   'howto.release': 'mercy',
   'howto.spare': 'mercy',
+  'howto.calm': 'mercy',
   'howto.surge-leap': 'surgeLeap',
 };
 

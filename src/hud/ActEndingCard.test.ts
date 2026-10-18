@@ -1,14 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ACT_ENDING_ARM_SECONDS, ActEndingCard, endingOptions } from './ActEndingCard';
+import { ACT_ENDING_ARM_SECONDS, ACT_ENDING_CAMP_FLAGS, ActEndingCard, endingOptions } from './ActEndingCard';
 import { StubDocument, textOf } from './dom';
 
+type Key = { repeat?: boolean; key?: string; code?: string };
 function keys() {
-  const set = new Set<(e: { repeat?: boolean }) => void>();
+  const set = new Set<(e: Key) => void>();
   return {
     set,
-    addEventListener: (_t: 'keydown', l: (e: { repeat?: boolean }) => void) => void set.add(l),
-    removeEventListener: (_t: 'keydown', l: (e: { repeat?: boolean }) => void) => void set.delete(l),
-    press: (repeat = false) => [...set].forEach((l) => l({ repeat })),
+    addEventListener: (_t: 'keydown', l: (e: Key) => void) => void set.add(l),
+    removeEventListener: (_t: 'keydown', l: (e: Key) => void) => void set.delete(l),
+    press: (repeat = false, extra: Key = {}) => [...set].forEach((l) => l({ repeat, ...extra })),
   };
 }
 
@@ -22,7 +23,7 @@ function make(flags: Record<string, boolean> = {}, extra: { recap?: () => string
     keys: k,
     modalOpen: () => modal.open,
     seen: () => !!flags['codex.actEndingSeen'],
-    campSeen: () => !!flags['story.act1.campSeen'],
+    campSeen: () => ACT_ENDING_CAMP_FLAGS.some((f) => !!flags[f]),
     markSeen: () => void (flags['codex.actEndingSeen'] = true),
     closed,
     recap: extra.recap,
@@ -85,10 +86,70 @@ describe('ActEndingCard', () => {
     expect(card.visible).toBe(false);
   });
 
-  it('live act.ended shows even when flags are set (live event is authoritative)', () => {
-    const { card } = make({ 'codex.actEndingSeen': true, 'story.act1.campSeen': true });
+  it('camp-seen is honoured under either flag name (thread 6 may ship either)', () => {
+    expect([...ACT_ENDING_CAMP_FLAGS]).toEqual(['story.act1.campSeen', 'story.d02.campSeen']);
+    for (const flag of ACT_ENDING_CAMP_FLAGS) {
+      const { card } = make({ [flag]: true });
+      card.onGate(true);
+      expect(card.visible).toBe(false);
+    }
+  });
+
+  it('live act.ended respects the once-flag but not the camp flag', () => {
+    const seen = make({ 'codex.actEndingSeen': true });
+    seen.card.onActEnded(END);
+    expect(seen.card.visible).toBe(false);
+    expect(seen.card.active).toBe(false);
+    const camp = make({ 'story.act1.campSeen': true });
+    camp.card.onActEnded(END);
+    expect(camp.card.visible).toBe(true);
+  });
+
+  it('replay: a second act.ended after the card was shown and closed does not show it again', () => {
+    const { card, closed } = make();
     card.onActEnded(END);
+    arm(card);
+    card.dismiss();
+    expect(closed).toHaveBeenCalledTimes(1);
+    card.onActEnded(END);
+    expect(card.visible).toBe(false);
+    expect(card.active).toBe(false);
+  });
+
+  it('Escape never closes the card or emits closed; another key still does', () => {
+    const { card, k, closed } = make();
+    card.onActEnded(END);
+    arm(card);
+    k.press(false, { key: 'Escape', code: 'Escape' });
+    k.press(false, { code: 'Escape' });
+    k.press(false, { key: 'Escape' });
     expect(card.visible).toBe(true);
+    expect(closed).not.toHaveBeenCalled();
+    k.press(false, { key: ' ', code: 'Space' });
+    expect(card.visible).toBe(false);
+    expect(closed).toHaveBeenCalledTimes(1);
+  });
+
+  it('save.loaded hides a showing or waiting card when the loaded save has the once-flag, keeps it otherwise', () => {
+    const showing = make();
+    showing.card.onActEnded(END);
+    showing.card.onLoaded(); // seen was set by showing; the loaded save is what counts, so simulate a load without it
+    expect(showing.card.visible).toBe(false);
+    const kept = make();
+    kept.card.onActEnded(END);
+    delete kept.flags['codex.actEndingSeen'];
+    kept.card.onLoaded();
+    expect(kept.card.visible).toBe(true);
+    const waiting = make();
+    waiting.modal.open = true;
+    waiting.card.onActEnded(END);
+    expect(waiting.card.active).toBe(true);
+    waiting.flags['codex.actEndingSeen'] = true;
+    waiting.card.onLoaded();
+    expect(waiting.card.active).toBe(false);
+    waiting.modal.open = false;
+    waiting.card.update(0.016);
+    expect(waiting.card.visible).toBe(false);
   });
 
   it('gate falling hides the card without a closed event; no auto-dismiss otherwise', () => {

@@ -106,7 +106,8 @@ export const HUD_CSS = `
 .owg-eye-calm{border-color:#9aa8a0}
 .owg-eye-suspicious{border-color:#e8b84a;box-shadow:0 0 6px #e8b84a}
 .owg-eye-alerted{border-color:#d8362c;box-shadow:0 0 8px #d8362c}
-.owg-noise-ring{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);border:2px solid rgba(240,216,144,.45);border-radius:50%;transition:width .1s linear,height .1s linear}
+.owg-noise{pointer-events:none}
+.owg-noise-ring{pointer-events:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);border:2px solid rgba(240,216,144,.45);border-radius:50%;transition:width .1s linear,height .1s linear}
 .owg-chase{display:flex;align-items:center;gap:8px;min-width:220px;pointer-events:none;font:13px system-ui,sans-serif;color:#f3ead8;text-shadow:0 1px 2px #000}
 .owg-chase-bar{flex:1;height:8px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
 .owg-chase-fill{height:100%;width:0;background:#e0a050}

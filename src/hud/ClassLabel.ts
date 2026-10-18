@@ -34,7 +34,7 @@ export class ClassLabel implements HudWidgetView {
   private shownGold = false;
   private shownAll = false;
   private lastName = '';
-  private lastGold = '';
+  private lastGold = -2;
   private lastClassId = '';
   private lastKey = '';
   private lastResolved = '';
@@ -84,16 +84,18 @@ export class ClassLabel implements HudWidgetView {
       if (!nameOn) this.lastName = '';
     }
 
-    const gold = goldText(safeRead(this.source.gold));
-    const goldOn = gold !== null;
-    if (goldOn && gold !== this.lastGold) {
-      this.lastGold = gold;
-      this.goldEl.textContent = gold;
+    const rawGold = safeRead(this.source.gold);
+    const goldOn = typeof rawGold === 'number' && Number.isFinite(rawGold);
+    // Compare the clamped whole number; goldText formats only when it changed.
+    const goldKey = goldOn ? Math.min(GOLD_DISPLAY_MAX + 1, Math.max(0, Math.floor(rawGold))) : -1;
+    if (goldOn && goldKey !== this.lastGold) {
+      this.lastGold = goldKey;
+      this.goldEl.textContent = goldText(rawGold) ?? '';
     }
     if (goldOn !== this.shownGold) {
       this.shownGold = goldOn;
       setShown(this.goldRow, goldOn, 'flex');
-      if (!goldOn) this.lastGold = '';
+      if (!goldOn) this.lastGold = -2;
     }
 
     const any = nameOn || goldOn;

@@ -6,6 +6,8 @@ import { makeEl, setShown, type HudWidgetView, type Translate } from './widget';
 export const ACT_ENDING_ID = 'smoke-over-harrowmark';
 export const ACT_ENDING_SEEN_FLAG = 'codex.actEndingSeen';
 export const ACT_ENDING_CAMP_FLAG = 'story.act1.campSeen';
+/** Thread 6 may ship the camp-seen flag under either name; either one means the camp scene already ran. */
+export const ACT_ENDING_CAMP_FLAGS: readonly string[] = [ACT_ENDING_CAMP_FLAG, 'story.d02.campSeen'];
 export const ACT_ENDING_GATE_FLAG = 'story.gate.a2';
 /** Seconds after the card appears before a key can dismiss it (a key held while playing must not). */
 export const ACT_ENDING_ARM_SECONDS = 0.5;
@@ -25,7 +27,7 @@ export interface ActEndingSource {
   modalOpen?(): boolean;
   /** `codex.actEndingSeen`. */
   seen?(): boolean;
-  /** `story.act1.campSeen`. */
+  /** `story.act1.campSeen` or `story.d02.campSeen`. */
   campSeen?(): boolean;
   /** Sets `codex.actEndingSeen` (called once, when the card is first shown). */
   markSeen?(): void;
@@ -46,6 +48,8 @@ export class ActEndingCard implements HudWidgetView {
   private listening = false;
   private readonly onKey = (e?: KeyLike) => {
     if (!this.shown || e?.repeat || this.age < ACT_ENDING_ARM_SECONDS) return;
+    // Escape belongs to the pause menu: it never closes the card (no hud.actEnding.closed).
+    if (e?.key === 'Escape' || e?.code === 'Escape') return;
     this.dismiss();
   };
 
@@ -71,10 +75,17 @@ export class ActEndingCard implements HudWidgetView {
     return this.pending !== null;
   }
 
-  /** `act.ended`: only Act 1's ending shows. */
+  /** `act.ended`: only Act 1's ending shows, and only once (`codex.actEndingSeen`). */
   onActEnded(e: { act: number; endingId: string } | null | undefined): void {
     if (!e || e.act !== 1 || e.endingId !== ACT_ENDING_ID) return;
+    if (this.safe(this.source.seen)) return;
     this.request(e.endingId);
+  }
+
+  /** `save.loaded`: the loaded save's once-flags win; a card waiting or showing is hidden if the ending was seen. */
+  onLoaded(): void {
+    if (this.pending === null) return;
+    if (this.safe(this.source.seen) || this.safe(this.source.campSeen)) this.hide(true);
   }
 
   /** `ctx.gates.flag('story.gate.a2')`: a load with the gate set re-derives the card; the gate falling hides it. */

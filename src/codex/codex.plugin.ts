@@ -101,6 +101,7 @@ const codex: GamePlugin = {
     const unlockMercy = (verb: string, creature: string | undefined): void => {
       if (verb === 'release') model.unlock(HOWTO_IDS.release);
       else if (verb === 'spare') model.unlock(HOWTO_IDS.spare);
+      else if (verb === 'calm' || verb === 'warmHand') model.unlock(HOWTO_IDS.calm);
       if (creature && BESTIARY.has(creature)) model.unlock(creature);
     };
     ctx.events.on('mercy', (e) => unlockMercy(e.verb, e.creature));
@@ -152,6 +153,7 @@ const codex: GamePlugin = {
         for (const [kind, c] of t) {
           if (c.release > 0) model.unlock(HOWTO_IDS.release);
           if (c.spare > 0) model.unlock(HOWTO_IDS.spare);
+          if (c.calm > 0) model.unlock(HOWTO_IDS.calm);
           if (c.release + c.spare + c.calm + c.killed > 0 && BESTIARY.has(kind)) model.unlock(kind);
         }
       }

@@ -15,7 +15,7 @@ export class MountStamina implements HudWidgetView {
   readonly element;
   private readonly fill;
   private shown = false;
-  private lastWidth = '';
+  private lastPct = -1;
 
   constructor(doc: DocumentLike, private readonly source: MountStaminaSource = {}) {
     const t = source.t ?? defaultHudT;
@@ -30,16 +30,16 @@ export class MountStamina implements HudWidgetView {
     const s = safeRead(this.source.stamina);
     const ok = !!s && typeof s === 'object' && typeof s.value === 'number' && typeof s.max === 'number';
     if (ok) {
-      const width = pct(barFraction(s.value, s.max));
-      if (width !== this.lastWidth) {
-        this.lastWidth = width;
-        this.fill.style.width = width;
+      const p = Math.round(barFraction(s.value, s.max) * 10000) / 100;
+      if (p !== this.lastPct) {
+        this.lastPct = p;
+        this.fill.style.width = pct(p / 100);
       }
     }
     if (ok !== this.shown) {
       this.shown = ok;
       setShown(this.element, ok);
-      if (!ok) this.lastWidth = '';
+      if (!ok) this.lastPct = -1;
     }
   }
 
