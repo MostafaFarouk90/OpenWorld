@@ -58,10 +58,14 @@ const focusOf = (h: ChapterHarness): string | undefined =>
 
 /** Presses F at an anchor, from whichever side puts `interactableId` in focus (a wall or a neighbour can take it). */
 async function useAt(h: ChapterHarness, anchorId: string, interactableId: string, dist = 1.1): Promise<void> {
-  for (const from of [{ x: 1, z: 0 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 0, z: -1 }]) {
-    await h.approach(h.anchor(anchorId), dist, from);
-    h.run(2);
-    if (focusOf(h) === interactableId) break;
+  // Tobb (a talk interactable) follows close behind and can win the focus: try the eight sides, nearer second.
+  const sides = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
+  search: for (const d of [dist, dist * 0.6]) {
+    for (const [x, z] of sides) {
+      await h.approach(h.anchor(anchorId), d, { x, z });
+      h.run(2);
+      if (focusOf(h) === interactableId) break search;
+    }
   }
   ensure(focusOf(h) === interactableId, `${interactableId} in focus at ${anchorId} (focus ${focusOf(h) ?? 'none'})`);
   h.press('KeyF');
