@@ -142,6 +142,11 @@ const save: GamePlugin = {
     const handleBoot = () => {
       if (bootHandled || !boot) return;
       bootHandled = true;
+      // A dev `?act1=` jump holds saves for the whole session, so it starts fresh without clearing the real save.
+      if (params.has('new') && import.meta.env.DEV && params.has('act1')) {
+        unlock();
+        return;
+      }
       if (params.has('new')) {
         void service.newGame();
         return;

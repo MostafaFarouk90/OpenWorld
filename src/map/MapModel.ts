@@ -410,7 +410,8 @@ export interface MapMarker {
 export interface BuildMarkersInput {
   waystones: readonly WaystoneInput[];
   poi?: readonly PoiInput[];
-  quest?: QuestInput | null;
+  /** One quest marker, or several (offer leads). All use the 'quest' kind. */
+  quest?: QuestInput | readonly QuestInput[] | null;
   /** Rekindled shrines with a known position. */
   shrines?: readonly PoiInput[];
   /** The fog wall marker; pass null once the wall is gone. */
@@ -445,8 +446,9 @@ export function buildMarkers(input: BuildMarkersInput): MapMarker[] {
   if (f && isFinitePos(f.x, f.z)) {
     out.push({ id: f.id, kind: 'fog', x: f.x, z: f.z, label: f.label ?? f.id, travelable: false });
   }
-  const q = input.quest;
-  if (q && isFinitePos(q.x, q.z)) {
+  const qs = input.quest ? (Array.isArray(input.quest) ? input.quest : [input.quest]) : [];
+  for (const q of qs as readonly QuestInput[]) {
+    if (!isFinitePos(q.x, q.z)) continue;
     out.push({ id: q.id, kind: 'quest', x: q.x, z: q.z, label: q.label ?? q.id, travelable: false });
   }
   return out;
