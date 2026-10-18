@@ -149,9 +149,9 @@ describe('equip', () => {
     expect(inv.equip('practice-sword')).toEqual({ ok: false, reason: 'not-owned' });
     expect(inv.equip('mystery')).toEqual({ ok: false, reason: 'unknown-item' });
     inv.add('healing-flask', 1);
-    inv.add('brannoc-hearth-stone', 1);
+    inv.add('hearth-stone', 1);
     expect(inv.equip('healing-flask')).toEqual({ ok: false, reason: 'not-equippable' });
-    expect(inv.equip('brannoc-hearth-stone')).toEqual({ ok: false, reason: 'not-equippable' });
+    expect(inv.equip('hearth-stone')).toEqual({ ok: false, reason: 'not-equippable' });
     expect(events.filter((e) => e.type === 'inventory.equipped')).toEqual([]);
   });
 
@@ -292,7 +292,7 @@ describe('persistence', () => {
           'hearth-stone-charm': Infinity,
           'gauts-spare-tabard': 7,
           'squires-arming-sword': 0.4,
-          'brannoc-hearth-stone': null,
+          'hearth-stone': null,
         },
         equipped: {},
       },
@@ -315,7 +315,7 @@ describe('persistence', () => {
   ])('falls back to the new-game kit for %s', (_n, data) => {
     inv.add('healing-flask', 4);
     inv.load(data, 1);
-    expect(inv.serialize()).toEqual({ items: NEW_GAME_KIT.items, equipped: NEW_GAME_KIT.equipped, unknown: {} });
+    expect(inv.serialize()).toEqual({ items: NEW_GAME_KIT.items, equipped: NEW_GAME_KIT.equipped, unknown: {}, gold: 0 });
     expect(warn).toHaveBeenCalled();
   });
 
@@ -327,7 +327,7 @@ describe('persistence', () => {
 
   it('treats a missing equipped and a bad unknown field leniently', () => {
     inv.load({ items: { 'healing-flask': 1 }, unknown: 'oops' }, 1);
-    expect(inv.serialize()).toEqual({ items: { 'healing-flask': 1 }, equipped: {}, unknown: {} });
+    expect(inv.serialize()).toEqual({ items: { 'healing-flask': 1 }, equipped: {}, unknown: {}, gold: 0 });
   });
 
   it('loading twice is idempotent and emits nothing the second time', () => {
@@ -362,5 +362,33 @@ describe('defaults', () => {
     expect(plain.add('mystery', 1)).toBe(0);
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
+  });
+});
+
+describe('Inventory gold', () => {
+  it('adds, takes at most what exists, and ignores bad amounts', () => {
+    const i = new Inventory({ emit: () => {} });
+    i.addGold(50);
+    i.addGold(-5);
+    i.addGold(Number.NaN);
+    i.addGold(2.9);
+    expect(i.gold).toBe(52);
+    expect(i.takeGold(100)).toBe(52);
+    expect(i.gold).toBe(0);
+    expect(i.takeGold(-1)).toBe(0);
+    expect(i.takeGold(Number.NaN)).toBe(0);
+  });
+
+  it('round-trips through a save and defaults bad gold to 0', () => {
+    const i = new Inventory({ emit: () => {} });
+    i.addGold(30);
+    const saved = i.serialize();
+    const j = new Inventory({ emit: () => {} });
+    j.load(saved, 1);
+    expect(j.gold).toBe(30);
+    j.load({ ...saved, gold: -4 }, 1);
+    expect(j.gold).toBe(0);
+    j.load({ ...saved, gold: 'x' }, 1);
+    expect(j.gold).toBe(0);
   });
 });

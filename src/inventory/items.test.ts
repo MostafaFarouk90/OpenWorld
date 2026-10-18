@@ -5,7 +5,8 @@ describe('items', () => {
   it('has exactly the v2 item ids', () => {
     expect(Object.keys(ITEMS).sort()).toEqual(
       [
-        'brannoc-hearth-stone',
+        'hearth-stone',
+        'hearth-token',
         'gauts-spare-blade',
         'gauts-spare-tabard',
         'healing-flask',
@@ -43,7 +44,7 @@ describe('items', () => {
     expect(ITEMS['wooden-round-shield'].stats).toEqual({ defense: 2 });
     expect(ITEMS['gauts-spare-tabard'].stats).toEqual({ defense: 2 });
     expect(ITEMS['hearth-stone-charm'].stats).toEqual({ defense: 1 });
-    expect(ITEMS['brannoc-hearth-stone'].kind).toBe('quest');
+    expect(ITEMS['hearth-stone'].kind).toBe('quest');
     expect(ITEMS['hearth-bread']).toMatchObject({ stackMax: 5, use: { healFlat: 15, drinkSeconds: 0.8 } });
     expect(ITEMS['healing-flask']).toMatchObject({ stackMax: 5, use: { healFraction: 0.4, drinkSeconds: 1.2 } });
   });

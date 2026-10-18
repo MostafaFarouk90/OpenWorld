@@ -20,6 +20,7 @@ export interface InventorySave {
   equipped: Partial<Record<EquipSlot, string>>;
   /** Item ids this build does not know, written back unchanged. */
   unknown: Record<string, unknown>;
+  gold: number;
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -38,6 +39,7 @@ export class Inventory implements Omit<InventoryService, 'use'> {
   private readonly counts = new Map<string, number>();
   private readonly slots = new Map<EquipSlot, string>();
   private unknown: Record<string, unknown> = {};
+  private goldAmount = 0;
   private readonly emit: EmitterPort['emit'];
   private readonly logger: Logger;
 
@@ -115,6 +117,22 @@ export class Inventory implements Omit<InventoryService, 'use'> {
     return [...this.counts].map(([id, count]) => ({ id, count }));
   }
 
+  get gold(): number {
+    return this.goldAmount;
+  }
+
+  addGold(n: number): void {
+    if (Number.isFinite(n) && n > 0) this.goldAmount += Math.floor(n);
+  }
+
+  /** Takes up to n gold and returns what was taken. */
+  takeGold(n: number): number {
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    const taken = Math.min(this.goldAmount, Math.floor(n));
+    this.goldAmount -= taken;
+    return taken;
+  }
+
   reset(kit: InventoryKit): void {
     this.apply(kit.items, kit.equipped, {});
   }
@@ -122,7 +140,7 @@ export class Inventory implements Omit<InventoryService, 'use'> {
   serialize(): InventorySave {
     const equipped: Partial<Record<EquipSlot, string>> = {};
     for (const [slot, id] of this.slots) equipped[slot] = id;
-    return { items: Object.fromEntries(this.counts), equipped, unknown: { ...this.unknown } };
+    return { items: Object.fromEntries(this.counts), equipped, unknown: { ...this.unknown }, gold: this.goldAmount };
   }
 
   load(data: unknown, version: number): void {
@@ -144,6 +162,7 @@ export class Inventory implements Omit<InventoryService, 'use'> {
       }
     }
     const equipped = (data.equipped ?? {}) as Record<string, unknown>;
+    this.goldAmount = typeof data.gold === 'number' && Number.isFinite(data.gold) && data.gold > 0 ? Math.floor(data.gold) : 0;
     this.apply(items, equipped, unknown);
   }
 
