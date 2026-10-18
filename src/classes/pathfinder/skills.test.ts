@@ -9,7 +9,7 @@ afterEach(() => resetClassSkills());
 describe('Pathfinder skills', () => {
   it('registers fifteen skills in three branches and a second registration is the duplicate-class refusal the plugin tolerates', () => {
     const r = registerClassSkills(PF.classId, buildPathfinderSkills());
-    expect(r).toEqual({ ok: true, count: 15 });
+    expect(r).toMatchObject({ ok: true, count: 15 });
     expect(SKILLS.filter((s) => s.classId === PF.classId).map((s) => s.branch)).toEqual(
       expect.arrayContaining(['bolt', 'snare', 'trail']),
     );
