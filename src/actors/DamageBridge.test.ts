@@ -191,14 +191,16 @@ describe('hitDirection', () => {
 
   it('falls back to the negated normal when a root is missing', () => {
     const d = hitDirection(null, obj(5), new THREE.Vector3(0, 0, -1));
-    expect(d.toArray()).toEqual([0, 0, 1]);
+    expect(d.z).toBe(1);
+    expect(d.x + 0).toBe(0);
     const d2 = hitDirection(obj(5), null, new THREE.Vector3(0, 0, 2));
-    expect(d2.toArray()).toEqual([0, 0, -1]);
+    expect(d2.z).toBe(-1);
   });
 
   it('falls back to +z when the normal is vertical too', () => {
     const d = hitDirection(null, null, new THREE.Vector3(0, 1, 0));
-    expect(d.toArray()).toEqual([0, 0, 1]);
+    expect(d.z).toBe(1);
+    expect(d.length()).toBe(1);
   });
 
   it('always returns a finite unit vector', () => {

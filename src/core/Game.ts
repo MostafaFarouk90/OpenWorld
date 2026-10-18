@@ -42,6 +42,8 @@ export interface PlayerHandle {
 
 export interface GameInput {
   readonly actions: ActionState;
+  /** True once fullscreen keyboard lock is active (Ctrl dodge is then safe). */
+  readonly keyboardLocked: boolean;
   readonly bindings: InputBindings;
   readonly contexts: InputContextStack;
 }
@@ -146,6 +148,9 @@ export class Game {
     const gameInput: GameInput = {
       get actions() {
         return game.actions;
+      },
+      get keyboardLocked() {
+        return input.keyboardLocked;
       },
       bindings: input.bindings,
       contexts: input.contexts,
