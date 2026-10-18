@@ -1,4 +1,4 @@
-import { SFX, SFX_IDS, type SfxId } from './sfxLayers';
+import { SFX, SFX_IDS, SPELL_SFX, type SfxId, type SpellSfxId } from './sfxLayers';
 
 const TAU = Math.PI * 2;
 
@@ -31,7 +31,34 @@ const bandHigh = () => {
   };
 };
 
-const RECIPES: Record<SfxId, Recipe> = {
+const RECIPES: Record<SfxId | SpellSfxId, Recipe> = {
+  [SPELL_SFX.surgeCharge]: {
+    seconds: 0.9,
+    voice: (p, n) => {
+      const lp = lowpass(0.2);
+      return (t) => {
+        const rise = 220 + 500 * (t / 0.9) ** 2; // a climbing ember hum
+        const swell = Math.sin((Math.PI * t) / 0.9) ** 1.2;
+        return swell * (Math.sin(TAU * rise * p * t) * 0.5 + Math.sin(TAU * rise * 1.5 * p * t) * 0.2 + lp(n()) * 0.5);
+      };
+    },
+  },
+  [SPELL_SFX.surgeRelease]: {
+    seconds: 0.8,
+    voice: (p, n) => {
+      const lp = lowpass(0.35);
+      return (t) =>
+        (lp(n()) * 1.4 + Math.sin(TAU * (50 + 90 * Math.exp(-t * 14)) * p * t) * 1.0) * Math.exp(-t * 5) * Math.min(1, t / 0.004);
+    },
+  },
+  [SPELL_SFX.rally]: {
+    seconds: 1.1,
+    voice: (p) => (t) => {
+      const env = Math.min(1, t / 0.05) * Math.exp(-t * 2.2);
+      const f = 196 * p; // a brass-like fifth with a slow swell
+      return env * (Math.sin(TAU * f * t) * 0.45 + Math.sin(TAU * f * 1.5 * t) * 0.3 + Math.sin(TAU * f * 2 * t) * 0.2 + Math.sin(TAU * f * 3 * t) * 0.1);
+    },
+  },
   [SFX.swingLight]: {
     seconds: 0.22,
     voice: (p, n) => {
@@ -105,17 +132,17 @@ const RECIPES: Record<SfxId, Recipe> = {
   },
 };
 
-export function sfxSeconds(id: SfxId): number {
+export function sfxSeconds(id: SfxId | SpellSfxId): number {
   return RECIPES[id].seconds;
 }
 
 /** Placeholder one-shot samples; variants differ in pitch (±6%) and noise seed. */
-export function synthSfx(id: SfxId, variant: number, sampleRate: number): Float32Array {
+export function synthSfx(id: SfxId | SpellSfxId, variant: number, sampleRate: number): Float32Array {
   const recipe = RECIPES[id];
   if (!recipe) throw new Error(`No placeholder synth for sound "${id}"`);
   if (!Number.isInteger(variant) || variant < 0 || variant >= SFX_VARIANTS) throw new Error(`Bad SFX variant ${variant}`);
   const pitch = 1 + (variant - 1) * 0.06;
-  const seed = 1000 + SFX_IDS.indexOf(id) * 31 + variant * 7;
+  const seed = 1000 + [...SFX_IDS, ...Object.values(SPELL_SFX)].indexOf(id) * 31 + variant * 7;
   const fn = recipe.voice(pitch, rng(seed));
   const out = new Float32Array(Math.round(recipe.seconds * sampleRate));
   for (let i = 0; i < out.length; i++) {

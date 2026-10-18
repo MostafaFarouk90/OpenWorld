@@ -348,6 +348,21 @@ describe('music plugin SFX and combat hits', () => {
   });
 });
 
+describe('music plugin spell sounds', () => {
+  it('registers the three spell sounds with the audio manager under their exact keys', () => {
+    const e = makeEnv();
+    setupMusic(e.ctx);
+    const keys = e.audio.register.mock.calls.map((c) => c[0] as string);
+    for (const id of ['sfx.surge.charge', 'sfx.surge.release', 'sfx.rally']) expect(keys).toContain(id);
+  });
+
+  it('without an audio service nothing is registered, so a spell plugin must tolerate missing audio', () => {
+    const e = makeEnv({ withAudio: false });
+    setupMusic(e.ctx);
+    expect(e.audio.register).not.toHaveBeenCalled();
+  });
+});
+
 describe('music plugin review fixes', () => {
   const hit = (over: Record<string, unknown>) =>
     ({ attackerId: 'player', targetId: 'w1', amount: 10, poise: 10, kind: 'melee', outcome: 'hit', dealt: 10, poiseDealt: 10, healthAfter: 50, killed: false, saved: false, staggered: false, ...over }) as never;
