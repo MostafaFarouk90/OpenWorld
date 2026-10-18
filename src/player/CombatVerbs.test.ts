@@ -1022,3 +1022,70 @@ describe('class kit swap (v0.5)', () => {
     expect(r.dealt).toBe(10);
   });
 });
+
+describe('status ticks (contracts section 10)', () => {
+  const tick = (t: ReturnType<typeof setup>, from: Actor) =>
+    t.hit(from, { kind: 'status', statusId: 'bleed:t', statusKind: 'bleed', amount: 3, poise: 0, unblockable: true, direction: undefined, attackId: undefined, swingId: undefined })!;
+
+  it('a held block neither blocks nor pays stamina for a tick', () => {
+    const t = setup();
+    const e = t.enemy();
+    t.press('KeyB');
+    t.run(20);
+    const stamina = t.actor.stamina;
+    const r = tick(t, e);
+    expect(r.outcome).toBe('hit');
+    expect(r.dealt).toBe(3);
+    expect(t.actor.stamina).toBe(stamina);
+    t.run(2);
+    expect(t.of('player.blocked')).toHaveLength(0);
+    expect(t.controller.currentAction).toBe('block');
+  });
+
+  it('dodge i-frames do not stop a tick, report no dodge and do not stop real hits being dodged', () => {
+    const t = setup();
+    const e = t.enemy();
+    t.press('KeyN');
+    t.run(1);
+    t.release('KeyN');
+    t.run(3);
+    expect(t.actor.invulnerable).toBe(true);
+    const health = t.actor.health;
+    const r = tick(t, e);
+    expect(r.outcome).toBe('hit');
+    expect(t.actor.health).toBe(health - 3);
+    expect(t.hit(e)!.outcome).toBe('immune');
+    t.run(2);
+    expect(t.of('player.dodged')).toHaveLength(1);
+  });
+
+  it('other invulnerability (a respawn grace) still stops a tick', () => {
+    const t = setup();
+    const e = t.enemy();
+    t.verbs.invuln.add('respawn');
+    t.verbs.invuln.add('dodge');
+    expect(tick(t, e).outcome).toBe('immune');
+    expect(t.of('player.dodged')).toHaveLength(0);
+  });
+
+  it('any registered i-frame source lets a tick through; mixed with grace it does not', () => {
+    const t = setup();
+    const e = t.enemy();
+    t.verbs.iFrameSources.add('ashDrift');
+    t.verbs.invuln.add('ashDrift');
+    expect(tick(t, e).outcome).toBe('hit');
+    t.verbs.invuln.add('respawn');
+    expect(tick(t, e).outcome).toBe('immune');
+    t.verbs.invuln.remove('respawn');
+    t.verbs.invuln.remove('ashDrift');
+    expect(tick(t, e).outcome).toBe('hit');
+  });
+
+  it('a tick does not make the player flinch', () => {
+    const t = setup();
+    const e = t.enemy();
+    tick(t, e);
+    t.run(3);
+    expect(t.controller.currentAction).toBeNull();
+  });
+});
