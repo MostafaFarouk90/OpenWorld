@@ -22,11 +22,21 @@ export interface EnemyAttackClip {
   activeEnd: number;
 }
 
-/** Attack clips used by defs.ts. Placeholder windows until measured. */
+/**
+ * Attack clips used by defs.ts, windows MEASURED from Knight.glb by measureEnemyClips.measure.test.ts
+ * (1/60 s ticks; the run of ticks around the peak where the channel tip moves at >= 45% of its peak speed,
+ * widened by 0.01). Tip used: the claw tip for the wraith, the sword tip for the chop, the shield's far edge
+ * for the bash. Measured peak tip speeds: claw 16.1, sweep 12.8, grab 13.6, chop 37.6, bash (shield) 4.1 m/s.
+ *   wraithClaw  1H_Melee_Attack_Slice_Diagonal  1.000 s  [0.36, 0.44]  (an earlier arm-raise flick at 0.07 is the wind-up)
+ *   wraithSweep 2H_Melee_Attack_Spin            2.400 s  [0.24, 0.55]  (one long spin)
+ *   wraithGrab  Unarmed_Melee_Attack_Punch_B    1.667 s  [0.21, 0.31]
+ *   soldierChop 1H_Melee_Attack_Chop            1.067 s  [0.49, 0.57]  (the player's wider 0.45..0.62 was measured differently)
+ *   soldierBash Block_Attack (left, shield)     1.067 s  [0.27, 0.60]  (a slow push; the sword also flicks at 0.37..0.45)
+ */
 export const ENEMY_ATTACKS = {
-  wraithClaw: { clip: '1H_Melee_Attack_Slice_Diagonal', activeStart: 0.33, activeEnd: 0.48 },
-  wraithSweep: { clip: '2H_Melee_Attack_Spin', activeStart: 0.3, activeEnd: 0.6 },
-  wraithGrab: { clip: 'Unarmed_Melee_Attack_Punch_B', activeStart: 0.3, activeEnd: 0.45 },
-  soldierChop: { clip: '1H_Melee_Attack_Chop', activeStart: 0.45, activeEnd: 0.62 },
-  soldierBash: { clip: 'Block_Attack', activeStart: 0.3, activeEnd: 0.5 },
+  wraithClaw: { clip: '1H_Melee_Attack_Slice_Diagonal', activeStart: 0.36, activeEnd: 0.44 },
+  wraithSweep: { clip: '2H_Melee_Attack_Spin', activeStart: 0.24, activeEnd: 0.55 },
+  wraithGrab: { clip: 'Unarmed_Melee_Attack_Punch_B', activeStart: 0.21, activeEnd: 0.31 },
+  soldierChop: { clip: '1H_Melee_Attack_Chop', activeStart: 0.49, activeEnd: 0.57 },
+  soldierBash: { clip: 'Block_Attack', activeStart: 0.27, activeEnd: 0.6 },
 } as const satisfies Record<string, EnemyAttackClip>;
