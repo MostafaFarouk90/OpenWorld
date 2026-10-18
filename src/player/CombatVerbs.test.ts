@@ -461,7 +461,7 @@ describe('skills and services', () => {
     const t = setup();
     const reportTrigger = vi.fn();
     t.ctx.services.provide('abilities' as never, { reportTrigger } as never);
-    t.ctx.services.provide('progression' as never, { learned: (id: string) => id === 'skill.knight.riposteEdge' } as never);
+    t.ctx.services.provide('progression' as never, { learned: (id: string) => id === 'knight.riposteEdge' } as never);
     const e = t.enemy();
     t.press('KeyB');
     t.run(1);
@@ -472,7 +472,7 @@ describe('skills and services', () => {
       attackerId: 'player', targetId: e.id, amount: 5, poise: 5, kind: 'melee', attackId: '1H_Melee_Attack_Stab', swingId: 4,
     })!;
     expect(stab.unblockable).toBe(true);
-    expect(reportTrigger).toHaveBeenCalledWith('skill.knight.riposteEdge');
+    expect(reportTrigger).toHaveBeenCalledWith('knight.riposteEdge');
   });
 
   it('exposes busy and staggered through the combatVerbs service', () => {
@@ -596,7 +596,7 @@ describe('review fixes', () => {
     t.press('Digit1');
     t.run(2);
     expect(e.poise).toBe(0);
-    expect(reportTrigger).toHaveBeenCalledWith('skill.knight.rimBash');
+    expect(reportTrigger).toHaveBeenCalledWith('knight.rimBash');
   });
 });
 
