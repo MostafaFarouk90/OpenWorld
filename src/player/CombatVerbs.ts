@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import type { Actor } from '../actors/Actor';
 import type { DamageResult, ModifiableRequest } from '../actors/DamageResolver';
 import type { AnimationController } from '../characters/AnimationController';
-import type { KnightAvatar } from '../characters/KnightAvatar';
+import type { PlayerAvatar } from '../characters/PlayerAvatar';
 import { GROUNDED_STATES } from '../characters/knightClips';
 import type { GameContext } from '../core/Game';
 import type { Action } from '../input/actions';
@@ -93,7 +93,7 @@ interface WaystonesPort {
 interface InventoryPort {
   readonly gold: number;
   addGold(n: number): void;
-  takeGold(n: number): number;
+  takeGold(n: number, reason?: 'death'): number;
 }
 interface VfxPort {
   spawnEffect?(id: string, t: { position: Vec3 }): unknown;
@@ -136,6 +136,8 @@ export class CombatVerbs {
   private reArmed = false;
   private readonly dodgedSwings = new Set<string>();
   private readonly offs: Array<() => void> = [];
+  /** The current avatar's combat target and clip listener (replaced on a kit swap). */
+  private readonly avatarOffs: Array<() => void> = [];
 
   constructor(private readonly ctx: GameContext) {
     this.actor = ctx.player.actor;
@@ -751,13 +753,16 @@ export class CombatVerbs {
 
   // ---- helpers ----
 
-  private bindAvatar(avatar: KnightAvatar): void {
+  /** Re-binds when the class kit changes (v0.5 `swapAvatar`): the previous avatar's target and listener are undone. */
+  private bindAvatar(avatar: PlayerAvatar): void {
     if (this.controller === avatar.controller) return;
+    if (this.controller === null) this.offs.push(() => this.unbindAvatar());
+    this.unbindAvatar();
     this.controller = avatar.controller;
     this.appliedAttackClass = null;
     const hurtboxes = this.ctx.world.combat.playerHurtboxes;
-    if (hurtboxes) this.offs.push(this.ctx.combat.addTarget(hurtboxes, this.actor.id));
-    this.offs.push(
+    if (hurtboxes) this.avatarOffs.push(this.ctx.combat.addTarget(hurtboxes, this.actor.id));
+    this.avatarOffs.push(
       avatar.controller.events.subscribe((e) => {
         if (e.type !== 'clipStart') return;
         const set = this.attackSet();
@@ -767,6 +772,10 @@ export class CombatVerbs {
         this.prompts()?.success(`attack${i + 1}`);
       }),
     );
+  }
+
+  private unbindAvatar(): void {
+    for (const off of this.avatarOffs.splice(0).reverse()) off();
   }
 
   private setLock(name: string, actions: readonly Action[] | null): void {

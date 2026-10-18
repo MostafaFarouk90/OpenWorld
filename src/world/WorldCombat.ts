@@ -5,7 +5,7 @@ import { HurtboxSet } from '../combat/HurtboxSet';
 import { WeaponTracer } from '../combat/WeaponTracer';
 import type { HitEvent } from '../combat/types';
 import { COMBAT } from '../config/constants';
-import type { KnightAvatar } from '../characters/KnightAvatar';
+import type { PlayerAvatar } from '../characters/PlayerAvatar';
 
 export interface CombatSounds {
   /** A hit landed at `position` (world space). */
@@ -84,8 +84,8 @@ export class WorldCombat {
     return () => this.hitListeners.delete(listener);
   }
 
-  /** Arms the avatar's sword; its own hurtboxes are never hit. Second calls are ignored. */
-  attachPlayer(avatar: KnightAvatar): void {
+  /** Arms the avatar's weapon; its own hurtboxes are never hit. Second calls are ignored until `detachPlayer`. */
+  attachPlayer(avatar: PlayerAvatar): void {
     if (this.tracer || this.disposed) return;
     avatar.root.updateMatrixWorld(true);
     const own = new HurtboxSet(avatar.model, undefined, avatar);
@@ -100,6 +100,15 @@ export class WorldCombat {
     });
     this.playerWindowSource = new ControllerAttackWindow(avatar.controller);
     this.combat.addAttacker(this.tracer, this.playerWindowSource);
+  }
+
+  /** Disarms the player's avatar (a class kit swap) and frees its hurtboxes. Safe to call twice. */
+  detachPlayer(): void {
+    if (this.tracer) this.combat.removeAttacker(this.tracer);
+    this.tracer = null;
+    this.playerWindowSource = null;
+    this.playerBoxes?.dispose();
+    this.playerBoxes = null;
   }
 
   /** Adds an Idle Knight as a training dummy. `model` is placed in the scene by the caller or here. */

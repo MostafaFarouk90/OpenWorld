@@ -70,7 +70,11 @@ const inventoryPlugin: GamePlugin = {
         return inv.gold;
       },
       addGold: (n) => inv.addGold(n),
-      takeGold: (n) => inv.takeGold(n),
+      takeGold: (n, reason = 'script') => {
+        const taken = inv.takeGold(n);
+        if (taken > 0) ctx.events.emit('gold.spent', { amount: taken, reason, total: inv.gold });
+        return taken;
+      },
     };
     ctx.services.provide('inventory', service);
     ctx.persist.register({

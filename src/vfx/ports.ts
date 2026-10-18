@@ -30,7 +30,7 @@ export interface DamageResultLike {
   targetId: ActorId;
   amount: number;
   poise: number;
-  kind: 'melee' | 'spell' | 'fall' | 'script';
+  kind: 'melee' | 'spell' | 'fall' | 'script' | 'status';
   attackId?: string;
   swingId?: number;
   point?: Vec3;
@@ -81,7 +81,6 @@ export interface AvatarLike {
   readonly root: THREE.Object3D;
   readonly weaponHilt: THREE.Object3D;
   readonly weaponTip: THREE.Object3D;
-  readonly shield: THREE.Object3D;
   readonly controller: ControllerLike;
 }
 
