@@ -13,6 +13,15 @@ export interface PlayerOptions {
   movementLocked?: () => boolean;
   /** Called after a kill-plane respawn has moved the player back to the spawn point. */
   onRespawn?: (spawn: Vec3) => void;
+  /** Asked every tick: the combined movement modifiers of the game core (PlayerHandle.addMoveModifier). */
+  moveModifier?: () => MoveModifierState;
+}
+
+/** Combined movement restriction for one tick; `speedScale` in [0, 1]. */
+export interface MoveModifierState {
+  speedScale: number;
+  lockMove: boolean;
+  lockFacing: boolean;
 }
 
 /**
@@ -96,14 +105,27 @@ export class Player {
 
   /** `moveX`/`moveZ` are the input axes already rotated into world space by the camera. */
   fixedUpdate(input: InputSnapshot, moveX: number, moveZ: number): void {
-    const locked = this.options.movementLocked?.() ?? false;
+    const mod = this.options.moveModifier?.();
+    const locked = (this.options.movementLocked?.() ?? false) || (mod?.lockMove ?? false);
     let jump: boolean;
     ({ moveX, moveZ, jump } = gateMovement(locked, { moveX, moveZ, jump: input.jump }));
+    if (mod && mod.speedScale < 1) {
+      const len = Math.hypot(moveX, moveZ);
+      const scale = Math.max(0, mod.speedScale) / Math.max(1, len);
+      moveX *= scale;
+      moveZ *= scale;
+    }
     this.controller.fixedUpdate({ moveX, moveZ, sprint: input.sprint, jump });
-    if (moveX !== 0 || moveZ !== 0) {
+    if ((moveX !== 0 || moveZ !== 0) && !mod?.lockFacing) {
       // Mesh faces -Z at rest; turn it towards the movement direction.
       this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, Math.atan2(-moveX, -moveZ));
     }
+  }
+
+  /** Turns the simulation (and the next render) to `yaw` (0 = facing -Z), e.g. after a teleport. */
+  setFacingYaw(yaw: number): void {
+    this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, yaw);
+    this.renderFacing.copy(this.facing);
   }
 
   /** Call after `PhysicsWorld.step` so the respawn check sees this tick's result. */

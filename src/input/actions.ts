@@ -91,3 +91,24 @@ export interface InputContextStack {
   top(): InputContext;
   onChange(listener: (top: InputContext) => void): () => void;
 }
+
+// ---- Helpers shared by InputBindings, ActionMap and InputManager ----
+
+export const isAction = (a: unknown): a is Action => typeof a === 'string' && (ACTIONS as readonly string[]).includes(a);
+
+export function isBinding(b: unknown): b is Binding {
+  if (typeof b !== 'object' || b === null) return false;
+  const o = b as Record<string, unknown>;
+  if (o.device === 'key') return typeof o.code === 'string' && o.code.length > 0;
+  if (o.device === 'mouse') return typeof o.button === 'number' && Number.isInteger(o.button) && o.button >= 0 && o.button <= 4;
+  return false;
+}
+
+export function bindingEquals(a: Binding | null, b: Binding | null): boolean {
+  if (a === null || b === null) return a === b;
+  if (a.device === 'key') return b.device === 'key' && a.code === b.code;
+  return b.device === 'mouse' && a.button === b.button;
+}
+
+/** A stable string for a physical input: `k:KeyW` or `m:0`. */
+export const bindingToken = (b: Binding): string => (b.device === 'key' ? `k:${b.code}` : `m:${b.button}`);
