@@ -1,6 +1,7 @@
 // English quest strings. Keys: quest.<id>.title / .summary / .<objectiveId>.
 export const questStrings: Record<string, string> = {
   'quest.journal.title': 'Journal',
+  'quest.lead.m03': 'Sister Aelfreda is asking for you at the chapel.',
   'quest.journal.empty': 'Your journal is empty. Kettlewick has stories waiting.',
   'quest.journal.active': 'Active',
   'quest.journal.completed': 'Completed',

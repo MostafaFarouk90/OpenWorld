@@ -516,6 +516,73 @@ describe('shard use, Scars and the Leap (slice 2)', () => {
       plugin.dispose!();
     });
 
+    describe('effects', () => {
+      const withVfx = () => {
+        const trail = { stop: vi.fn(), alive: true };
+        const spawnEffect = vi.fn((id: string) => (id === 'leap-trail' ? trail : { stop: vi.fn(), alive: false }));
+        const vfx = { spawnEffect, fovPunch: vi.fn(), pulseScreen: vi.fn() };
+        const f = makeCtx({ vfx });
+        plugin.setup(f.ctx);
+        grant(f);
+        press(f);
+        f.world.player.feet.y = 0.5;
+        f.tick(1);
+        return { f, trail, ids: () => spawnEffect.mock.calls.map((c) => c[0]) };
+      };
+
+      it('launch spawns leap-dust, leap-shell and the leap-trail', () => {
+        const { ids } = withVfx();
+        expect(ids()).toEqual(expect.arrayContaining(['leap-dust', 'leap-shell', 'leap-trail']));
+        expect(ids()).not.toContain('shockwave-ring');
+        plugin.dispose!();
+      });
+
+      it('landing spawns leap-dust and stops the trail', () => {
+        const { f, trail, ids } = withVfx();
+        expect(trail.stop).not.toHaveBeenCalled();
+        f.world.events.emit('player.leap', { phase: 'land', from: { x: 0, y: 0, z: 0 }, to: { x: 0, y: 0, z: 6 } });
+        expect(trail.stop).toHaveBeenCalledTimes(1);
+        expect(ids().filter((i) => i === 'leap-dust')).toHaveLength(2);
+        plugin.dispose!();
+      });
+
+      it('a cancelled Leap stops the trail', () => {
+        const { f, trail } = withVfx();
+        f.world.events.emit('player.leap', { phase: 'cancel', from: { x: 0, y: 0, z: 0 } });
+        expect(trail.stop).toHaveBeenCalledTimes(1);
+        plugin.dispose!();
+      });
+
+      it('dispose stops a trail still running', () => {
+        const { trail } = withVfx();
+        plugin.dispose!();
+        expect(trail.stop).toHaveBeenCalled();
+      });
+
+      it('rekindling the Quenchstone at Burn 95 scars through the one shard path and flashes the chest (thread 7 seam)', () => {
+        const spawnEffect = vi.fn((_id: string) => ({ stop: vi.fn(), alive: false }));
+        const f = makeCtx({ vfx: { spawnEffect, fovPunch: vi.fn(), pulseScreen: vi.fn() } });
+        plugin.setup(f.ctx);
+        const s = f.services.spells!;
+        s.addBurn(95, 't');
+        f.world.events.emit('waystone.rekindled', { waystoneId: 'quenchstone', cause: 'player' });
+        expect(s.scars).toBe(1);
+        expect(s.burn).toBe(100);
+        expect(spawnEffect.mock.calls.map((c) => c[0])).toContain('scar-flash');
+        plugin.dispose!();
+      });
+
+      it('a Scar spawns scar-flash', () => {
+        const spawnEffect = vi.fn((_id: string) => ({ stop: vi.fn(), alive: false }));
+        const f = makeCtx({ vfx: { spawnEffect, fovPunch: vi.fn(), pulseScreen: vi.fn() } });
+        plugin.setup(f.ctx);
+        f.services.spells!.addBurn(80, 't');
+        f.services.spells!.useShard(8, 'test');
+        expect(spawnEffect.mock.calls.map((c) => c[0])).toContain('scar-flash');
+        plugin.dispose!();
+      });
+    });
+
     it('a Leap into a wall costs nothing', () => {
       const f = makeCtx();
       plugin.setup(f.ctx);
