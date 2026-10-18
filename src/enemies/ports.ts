@@ -89,6 +89,8 @@ export type DamageModifierLike = (
 export interface DamagePort {
   addModifier(id: string, modifier: DamageModifierLike, order?: number): () => void;
   heal(id: ActorId, amount: number): number;
+  /** Scripted death (the real DamageResolver has it); foes that fire or a torch destroys use it, so `actor.died` still fires. */
+  kill?(id: ActorId, killerId?: ActorId | null): void;
 }
 
 export interface CombatPort {
@@ -131,11 +133,15 @@ export interface EnemyEvents {
   'mercy.revoked': { actorId: ActorId; track: FavourTrack | null; removed: number };
   rest: { waystoneId: string };
   'save.loaded': { slot: string };
+  'interior.entered': { interiorId: string; doorId: string };
+  'interior.exited': { interiorId: string; doorId: string };
   'quest.started': { questId: string };
   'flag.changed': { key: string; value: boolean | number | string | undefined; previous: boolean | number | string | undefined };
   'enemies.groupCleared': { spawnerId: string };
   'enemies.state': { actorId: ActorId; from: string; to: string };
   'enemies.yield': { actorId: ActorId; seconds: number };
+  /** R01: once per ash scarecrow (`scarecrowId` is its spawner slot's anchor id, e.g. 'r01.scarecrow.3'). */
+  'scarecrow.cleared': { actorId: ActorId; scarecrowId: string; method: 'torch' | 'surge' | 'strike' };
   /** Core boss registry (actors-and-damage.md section 7); thread 1 listens to open the boss's mercy hold. */
   'boss.releaseWindow': { bossId: string; open: boolean };
   'boss.released': { bossId: string; actorId: ActorId };
@@ -185,6 +191,23 @@ export interface StatePort {
   setFlag(key: string, value: boolean | number | string): void;
 }
 
+/** Thread 3a's `nav` service (contracts/interiors-and-nav.md section 2). */
+export interface NavPort {
+  hasGrid(at: Vec3): boolean;
+  /** Waypoints including `to`; null means no grid covers this (steer locally). */
+  path(from: Vec3, to: Vec3): Vec3[] | null;
+}
+
+/** `ctx.gates` (state/FlagGates.ts): flag-derived state that is re-derived on `save.loaded`. */
+export interface GatesPort {
+  /** `listener(open, cause)` at once, then when `test`'s result changes. `get(key)` reads a flag as a boolean. */
+  watch(
+    test: (get: (key: string) => boolean) => boolean,
+    listener: (open: boolean, cause: 'init' | 'flag' | 'load' | 'recheck') => void,
+    keys: readonly string[],
+  ): () => void;
+}
+
 export interface PersistableLike {
   key: string;
   version: number;
@@ -214,11 +237,38 @@ export interface VfxLike {
   ): { setEmitting(on: boolean): void; dispose(): void };
 }
 
+/**
+ * The torch the player carries in R01 (plans/slice-2-quests.md: "the quests service exposes the carried torch,
+ * no event"). Not on this branch's quests service yet, so this is the shape agreed from the plan text: the
+ * quests service gains an optional `carriedTorch()`.
+ */
+export interface TorchState {
+  /** Only a lit torch ignites anything. */
+  readonly lit: boolean;
+  /** World position of the flame. */
+  position(out: { x: number; y: number; z: number }): { x: number; y: number; z: number };
+  /** Contact radius around the flame, metres. */
+  readonly radius: number;
+}
+export interface TorchPort {
+  /** The carried torch, or null when the player carries none. */
+  carried(): TorchState | null;
+}
+
+/** Thread 3's quests service as far as enemies use it. */
+export interface QuestsPortLike {
+  active(): string[];
+  carriedTorch?(): TorchState | null;
+}
+
 export interface ServicesPort {
   get(name: 'vfx'): VfxLike | undefined;
   get(name: 'lockOn'): { readonly targetId: ActorId | null } | undefined;
   /** Thread 3's quests service: the started, unfinished quest ids. */
-  get(name: 'quests'): { active(): string[] } | undefined;
+  get(name: 'quests'): QuestsPortLike | undefined;
+  /** Thread 3a's interiors service: the interior id the player is in, or null outdoors. */
+  get(name: 'interiors'): { readonly current: string | null } | undefined;
+  get(name: 'nav'): NavPort | undefined;
   /**
    * Thread 2's spells service. `useShard` charges Burn and adds the Scar at Burn 75 or more; until it
    * merges, `addBurn` charges the Burn alone.
@@ -256,10 +306,13 @@ export interface EnemyHost {
   anchors: AnchorsPort;
   interaction: InteractionPort;
   state: StatePort;
+  gates: GatesPort;
   services: ServicesPort;
   /** The core boss registry; absent in tests that do not need bosses. */
   bosses?: BossesPort;
   player: PlayerPort;
+  /** The carried torch (read through the quests service); absent in hosts that have none. */
+  torch?: TorchPort;
   heightAt(x: number, z: number): number;
   warn(message: string): void;
 }

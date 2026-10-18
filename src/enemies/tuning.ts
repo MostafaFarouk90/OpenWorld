@@ -86,6 +86,31 @@ export const MERCY = {
   bossReleaseBurn: 20,
 } as const;
 
+/** The Charred Footman's guard (design 10 row 2). */
+export const GUARD = {
+  /** Chance per roll that the shield is up; rolled every `rollSeconds` while advancing or recovering. */
+  chance: 0.5,
+  rollSeconds: 1.5,
+  /** A blocked hit keeps this fraction of its damage and poise. */
+  damageScale: 0.15,
+  poiseScale: 0.5,
+  brokenSeconds: 1.0,
+  /** Half-angle of the shield arc in front, and of the open back. */
+  arcDegrees: 100,
+  backDegrees: 70,
+  backDamageScale: 1.25,
+  /** Defender-band modifier order (actors-and-damage.md section 4: -100..-1). */
+  modifierOrder: -50,
+} as const;
+
+/** Footmen advance in pairs on opposite flanks, and start their swings at least this far apart. */
+export const PAIR = {
+  maxPartnerDistance: 8,
+  flankMetres: 2,
+  closeIn: 4,
+  attackStaggerSeconds: 0.4,
+} as const;
+
 /** Boss mercies by bossId (actors-and-damage.md section 7). Amount is the uncapped ledger value. */
 export const BOSS_MERCY: Readonly<Record<string, { verb: 'release'; track: 'ashwalkers'; amount: number; burn: number }>> = {
   'ashen-prior': { verb: 'release', track: 'ashwalkers', amount: 4, burn: 20 },

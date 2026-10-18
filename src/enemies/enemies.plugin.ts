@@ -1,6 +1,7 @@
 import type { GamePlugin } from '../core/plugins';
 import { EnemyManager, type ModelFactory } from './EnemyManager';
 import { hostFromContext } from './host';
+import { BRIGHTWATER_SPAWNERS } from './brightwaterSpawners';
 import { SLICE_SPAWNERS } from './spawnerDefs';
 import { ENEMY_STRINGS_EN } from './strings.en';
 import './events';
@@ -25,7 +26,7 @@ const plugin: GamePlugin = {
       if (!assets) throw new Error('no asset loader (headless)');
       return { model: assets.instantiate(KNIGHT), clips: assets.animations(KNIGHT) };
     };
-    const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: SLICE_SPAWNERS });
+    const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS] });
     manager = m;
 
     ctx.strings.register('en', ENEMY_STRINGS_EN);

@@ -19,6 +19,9 @@ import type {
   EnemyEvents,
   EnemyHost,
   InteractableLike,
+  NavPort,
+  QuestsPortLike,
+  TorchState,
   Team,
 } from '../ports';
 
@@ -59,6 +62,14 @@ export class FakeBus {
   private queue: Array<[string, unknown]> = [];
   private dispatching = false;
   private batching = 0;
+
+  /** Listeners currently registered for `type`, or for every type (leak checks). */
+  listenerCount(type?: string): number {
+    if (type !== undefined) return this.listeners.get(type)?.length ?? 0;
+    let n = 0;
+    for (const l of this.listeners.values()) n += l.length;
+    return n;
+  }
 
   on<K extends keyof EnemyEvents>(type: K, l: (p: EnemyEvents[K]) => void): () => void {
     const list = this.listeners.get(type) ?? [];
@@ -183,9 +194,42 @@ export class FakeHost {
   bossReleaseResult = true;
   readonly bossReleases: string[] = [];
   /** Thread 3's quests service, when a test provides it. */
-  quests: { active(): string[] } | undefined;
+  quests: QuestsPortLike | undefined;
+  /** The torch `provideTorch()` hands out; null means none carried. */
+  torchState: TorchState | null = null;
   lockOnTarget: ActorId | null = null;
+  /** Thread 3a's interiors service, when a test provides it. */
+  interiors: { current: string | null } | undefined;
+  /** Thread 3a's nav service, when a test provides it. */
+  nav: NavPort | undefined;
+  private readonly gateWatchers: Array<{ test: (get: (k: string) => boolean) => boolean; listener: (open: boolean, cause: 'init' | 'flag' | 'load' | 'recheck') => void; open: boolean }> = [];
   private counter = 0;
+
+  /** Sets a flag as the real state does: stores it, re-evaluates the gates and emits `flag.changed`. */
+  setFlag(key: string, value: boolean | number | string): void {
+    const previous = this.flags.get(key);
+    this.flags.set(key, value);
+    this.evaluateGates('flag');
+    this.bus.emit('flag.changed', { key, value, previous });
+  }
+
+  /** What a save load does: gates re-evaluate, then `save.loaded`. */
+  loadFlags(flags: Record<string, boolean | number | string>): void {
+    this.flags.clear();
+    for (const [k, v] of Object.entries(flags)) this.flags.set(k, v);
+    this.evaluateGates('load');
+    this.bus.emit('save.loaded', { slot: 'test' });
+  }
+
+  private evaluateGates(cause: 'flag' | 'load'): void {
+    const get = (k: string) => Boolean(this.flags.get(k));
+    for (const w of [...this.gateWatchers]) {
+      const open = w.test(get);
+      if (open === w.open) continue;
+      w.open = open;
+      w.listener(open, cause);
+    }
+  }
 
   constructor(
     knightScene: THREE.Object3D,
@@ -222,6 +266,27 @@ export class FakeHost {
         attackId: atk?.window.clipName,
         swingId: atk?.window.swingId,
       });
+    });
+  }
+
+  /** Makes the quests service expose a carried torch (`torchState`); the shape is the plan's, not yet on the real service. */
+  provideTorch(state: TorchState | null = null): void {
+    this.torchState = state;
+    this.quests ??= { active: () => [] };
+    this.quests.carriedTorch = () => this.torchState;
+  }
+
+  /** A lit torch at (x, y, z) with the given contact radius. */
+  setTorch(x: number, y: number, z: number, radius = 0.5, lit = true): void {
+    this.provideTorch({
+      lit,
+      radius,
+      position: (out) => {
+        out.x = x;
+        out.y = y;
+        out.z = z;
+        return out;
+      },
     });
   }
 
@@ -346,6 +411,12 @@ export class FakeHost {
           if (i >= 0) this.modifiers.splice(i, 1);
         };
       },
+      kill: (id, killerId = null) => {
+        const a = this.actorMap.get(id);
+        if (!a || a.dead) return;
+        a.health = 0;
+        this.bus.emit('actor.died', { actorId: id, killerId, kind: a.kind, team: a.team, level: a.level });
+      },
       heal: (id, amount) => {
         const a = this.actorMap.get(id);
         if (!a || a.dead || !(amount > 0)) return 0;
@@ -388,13 +459,26 @@ export class FakeHost {
         const v = this.flags.get(key);
         return typeof v === 'boolean' ? v : fallback;
       },
-      setFlag: (key, value) => void this.flags.set(key, value),
+      setFlag: (key, value) => this.setFlag(key, value),
+    },
+    gates: {
+      watch: (test, listener) => {
+        const w = { test, listener, open: test((k) => Boolean(this.flags.get(k))) };
+        this.gateWatchers.push(w);
+        listener(w.open, 'init');
+        return () => {
+          const i = this.gateWatchers.indexOf(w);
+          if (i >= 0) this.gateWatchers.splice(i, 1);
+        };
+      },
     },
     services: {
       get: ((name: string) => {
         if (name === 'vfx') return this.vfx;
         if (name === 'lockOn') return { targetId: this.lockOnTarget };
         if (name === 'quests') return this.quests;
+        if (name === 'interiors') return this.interiors;
+        if (name === 'nav') return this.nav;
         if (name === 'spells') return this.spells;
         return undefined;
       }) as EnemyHost['services']['get'],
@@ -427,6 +511,7 @@ export class FakeHost {
         return () => this.moveModifiers.delete(source);
       },
     },
+    torch: { carried: () => this.quests?.carriedTorch?.() ?? null },
     heightAt: (x, z) => this.heightAt(x, z),
     warn: (m) => void this.warnings.push(m),
     };
