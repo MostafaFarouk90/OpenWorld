@@ -55,10 +55,13 @@ describe('Harrowmark quest content', () => {
     }
     for (const b of INTERACT_FLAGS) expect(b.interactableId).toMatch(/^use:m09-invoice-[123]$/);
   });
-  it('the quests grant none of the class starter gear (thread 12 owns it)', () => {
-    for (const id of ['woodcutters-axe', 'apprentices-staff', 'alley-knives', 'hunting-crossbow', 'hide-jerkin', 'wool-robe', 'leather-vest', 'rangers-cloak']) {
-      expect(ITEMS[id], id).toBeUndefined();
-    }
+  it('the quests and dialogues grant none of the class starter gear (thread 12 owns it)', () => {
+    const starter = ['woodcutters-axe', 'apprentices-staff', 'alley-knives', 'hunting-crossbow', 'hide-jerkin', 'wool-robe', 'leather-vest', 'rangers-cloak'];
+    const granted = new Set<string>();
+    const scan = (effects: Effect[] | undefined) => { for (const e of walk(effects)) for (const g of (e as any).give ?? []) granted.add(g.itemId); };
+    for (const d of defs) { scan(d.onStart); scan(d.onComplete); scan(d.rewards); }
+    for (const d of dialogueDefs) for (const n of d.nodes) { scan(n.effects); for (const c of n.choices ?? []) scan(c.effects); }
+    for (const id of starter) expect(granted.has(id), id).toBe(false);
   });
   it('every flag the new content writes is under thread 6\'s prefixes and has the expected single writer', () => {
     const OWNED = /^(story\.(m|d|r)\d\d\.[a-zA-Z0-9_.-]+|world\.harrowmark\.inn\.price|world\.brightwater\.barley)$/;
