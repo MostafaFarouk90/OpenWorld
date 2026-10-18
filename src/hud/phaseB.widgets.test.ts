@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ChaseTimer, CHASE_RED_SECONDS, type ChaseReading } from './ChaseTimer';
 import { ClassLabel, goldText } from './ClassLabel';
 import { StubDocument, textOf, type ElementLike } from './dom';
+import { BoltCounter } from './BoltCounter';
 import { MountStamina } from './MountStamina';
 import { NoiseRing, StealthEye, type StealthEyeReading } from './StealthEye';
 
@@ -328,5 +329,35 @@ describe('ClassLabel and gold', () => {
     const x = make({ gold: boom });
     x.update();
     expect(x.visible).toBe(false);
+  });
+
+  describe('BoltCounter', () => {
+    const text = (w: BoltCounter) => textOf(find(w.element, 'owg-bolts-text'));
+    it('shows count / max and updates', () => {
+      const a = { count: 12, max: 40 };
+      const w = new BoltCounter(new StubDocument(), { ammo: () => a });
+      w.update();
+      expect(w.visible).toBe(true);
+      expect(text(w)).toBe('12 / 40');
+      a.count = 11;
+      w.update();
+      expect(text(w)).toBe('11 / 40');
+    });
+    it('is hidden when the reader is absent, null, malformed or throws', () => {
+      for (const ammo of [undefined, () => null, () => ({ count: NaN, max: 40 }), () => ({ count: 3, max: 0 }), () => { throw new Error('x'); }] as const) {
+        const w = new BoltCounter(new StubDocument(), { ammo } as never);
+        w.update();
+        expect(w.visible).toBe(false);
+      }
+    });
+    it('hides again when the reader turns null and clamps a negative count', () => {
+      let a: { count: number; max: number } | null = { count: -4, max: 40 };
+      const w = new BoltCounter(new StubDocument(), { ammo: () => a });
+      w.update();
+      expect(text(w)).toBe('0 / 40');
+      a = null;
+      w.update();
+      expect(w.visible).toBe(false);
+    });
   });
 });

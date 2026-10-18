@@ -37,6 +37,7 @@ export const HUD_STRINGS_EN: Readonly<Record<string, string>> = {
   'hud.chase.again': 'Again!',
   'hud.chase.gap': '{metres} m',
   'hud.bar.mount': 'Mount stamina',
+  'hud.bolts.label': 'Crossbow bolts',
   'hud.gold.label': 'Gold',
   'hud.ending.title': 'Smoke Over Harrowmark',
   'hud.ending.hint': 'Press any key to continue',
