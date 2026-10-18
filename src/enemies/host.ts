@@ -29,6 +29,7 @@ export function hostFromContext(ctx: GameContext, warn: (m: string) => void): En
     },
     // vfx (thread 7) and lockOn (thread 1) are optional: get() returns undefined until they merge.
     services: ctx.services as unknown as ServicesPort,
+    bosses: ctx.bosses,
     player: {
       get actor() {
         return ctx.player.actor as unknown as EnemyHost['player']['actor'];

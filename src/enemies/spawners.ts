@@ -136,6 +136,21 @@ export class SpawnerRegistry {
     return out;
   }
 
+  /**
+   * A mercy was accepted: the slot is spent now, not when the enemy finally leaves, so a save during the
+   * dissolve or the walk-off cannot bring it back hostile (and pay a second mercy). Undone by `unspendMercy`.
+   */
+  spendMercy(actorId: ActorId): void {
+    const rec = this.byActor.get(actorId);
+    if (rec) this.spent.add(`${rec.spawnerId}#${rec.slot}`);
+  }
+
+  /** A spared enemy was struck before it left: it is hostile and live again, so its slot is not spent. */
+  unspendMercy(actorId: ActorId): void {
+    const rec = this.byActor.get(actorId);
+    if (rec) this.spent.delete(`${rec.spawnerId}#${rec.slot}`);
+  }
+
   /** Returns true exactly once when the last member of a group dies, is released or is spared. */
   onMemberGone(actorId: ActorId, how: MemberEnd): boolean {
     const rec = this.byActor.get(actorId);
@@ -145,7 +160,7 @@ export class SpawnerRegistry {
     slots[rec.slot] = null;
     if (how === 'despawned') return false;
     const def = this.defs.get(rec.spawnerId)!;
-    if (how === 'released' && !def.ephemeral) this.spent.add(`${rec.spawnerId}#${rec.slot}`);
+    if ((how === 'released' || how === 'spared') && !def.ephemeral) this.spent.add(`${rec.spawnerId}#${rec.slot}`);
     const gone = this.goneSlots.get(rec.spawnerId)!;
     gone.add(rec.slot);
     if (gone.size < slots.length || slots.some((s) => s !== null)) return false;

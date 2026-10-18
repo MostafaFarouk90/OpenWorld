@@ -1,7 +1,8 @@
 import type { GamePlugin } from '../core/plugins';
 import { heightAt } from '../terrain/heightfield';
 import '../waystones/service';
-import { FogGrid, buildMarkers, type MapMarker } from './MapModel';
+import { FogGrid, buildMarkers, mapExtent, type MapMarker } from './MapModel';
+import { createMapSources } from './MapSources';
 import { createMapModal } from './MapView';
 import { createMinimap } from './Minimap';
 import { MAP_STRINGS_EN } from './strings.en';
@@ -23,21 +24,29 @@ const map: GamePlugin = {
 
     ctx.persist.register({
       key: 'map',
-      version: 1,
+      // v2: widened world. v1 was a 4 km square with the same origin and cells; its explored cells are
+      // copied one by one (FogGrid.migrate), so a header mismatch never wipes them.
+      version: 2,
       serialize: () => ({ fog: fog.encode() }),
       load: (data) => {
         const d = typeof data === 'object' && data !== null ? (data as { fog?: unknown }) : {};
-        fog = FogGrid.decode(d.fog, fog.spec);
+        fog = FogGrid.migrate(d.fog, FogGrid.forBounds(bounds).spec);
       },
     });
 
+    const sources = createMapSources(
+      {
+        gates: ctx.gates,
+        events: ctx.events,
+        service: (name) => (ctx.services as unknown as { get(n: string): unknown }).get(name),
+      },
+      (k) => ctx.strings.t(k),
+    );
+
     // Terrain bitmaps are rendered in time-boxed slices, one slice per frame.
     let full: TerrainBitmap | null = null;
-    const fullGen = renderTerrainBitmap(heightAt, {
-      bounds,
-      width: MAP_TUNING.fullMapPixels,
-      height: MAP_TUNING.fullMapPixels,
-    });
+    const px = mapExtent(bounds, MAP_TUNING.fullMapPixels);
+    const fullGen = renderTerrainBitmap(heightAt, { bounds, width: px.width, height: px.height });
     let tile: { bitmap: TerrainBitmap; centerX: number; centerZ: number } | null = null;
     let tileGen: ReturnType<typeof renderLocalTile> | null = null;
     let tileCenter = { x: 0, z: 0 };
@@ -76,7 +85,11 @@ const map: GamePlugin = {
             const lit = waystones()?.isLit(id) ?? false;
             return [{ id, x: p.x, z: p.z, state: lit ? ('rekindled' as const) : ('dormant' as const), discovered: lit || fog.isRevealed(p.x, p.z), label: id }];
           }),
+          shrines: sources.litShrines(),
+          fog: sources.fogWall(),
         }),
+      forge: () => sources.forge(),
+      legend: () => sources.legend(ctx.player.feet.x, ctx.player.feet.z),
       player: () => ({ x: ctx.player.feet.x, z: ctx.player.feet.z, yaw: ctx.player.facingYaw }),
       travelBlockedReason: () => waystones()?.travelBlockedReason() ?? 'busy',
       travel: (id) => void waystones()?.travel(id),

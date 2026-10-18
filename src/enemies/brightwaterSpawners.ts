@@ -10,7 +10,8 @@ function ford(n: number): SpawnerDef {
     count: 2,
     anchor: `spawn.ford.pair-${n}`,
     band: { min: 3, max: 4 },
-    activation: { quest: 'm04' },
+    // Live only once M04 has started and its Spare lesson has unlocked the verb.
+    activation: { quest: 'm04', flag: 'enemies.mercy.spare' },
     respawn: 'never',
     leash: true,
   };
@@ -38,6 +39,19 @@ function patrol(n: number): SpawnerDef {
  * Levels stay inside 1 to 9, and no group respawns on rest.
  */
 export const BRIGHTWATER_SPAWNERS: readonly SpawnerDef[] = [
+  // M03's churchyard wraiths: they rise from the four ash piles once the Release lesson has unlocked the verb.
+  {
+    id: 'brightwater.churchyard',
+    tag: 'm03.churchyard',
+    enemy: 'ash-wraith',
+    count: 4,
+    anchor: 'pile.churchyard.1',
+    memberAnchors: numbered('pile.churchyard', 4),
+    band: { min: 2, max: 3 },
+    activation: { flag: 'enemies.mercy.release' },
+    respawn: 'never',
+    leash: true,
+  },
   ...[1, 2].map((n) => ford(n)),
   ...[1, 2].map((n) => patrol(n)),
   {

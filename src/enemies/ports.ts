@@ -142,6 +142,10 @@ export interface EnemyEvents {
   'enemies.yield': { actorId: ActorId; seconds: number };
   /** R01: once per ash scarecrow (`scarecrowId` is its spawner slot's anchor id, e.g. 'r01.scarecrow.3'). */
   'scarecrow.cleared': { actorId: ActorId; scarecrowId: string; method: 'torch' | 'surge' | 'strike' };
+  /** Core boss registry (actors-and-damage.md section 7); thread 1 listens to open the boss's mercy hold. */
+  'boss.releaseWindow': { bossId: string; open: boolean };
+  'boss.released': { bossId: string; actorId: ActorId };
+  'boss.ended': { bossId: string; actorId: ActorId; reason: 'despawned' | 'unregistered' };
 }
 export type EnemyEventName = keyof EnemyEvents;
 
@@ -222,6 +226,8 @@ export interface PlayerPort {
 }
 
 export interface VfxLike {
+  spawnEffect?(id: string, transform: { position: { x: number; y: number; z: number } }, params?: Record<string, number | string | boolean>): { stop(): void } | unknown;
+  pulseScreen?(strength: number, seconds: number, color?: number): void;
   dissolve(root: THREE.Object3D, seconds: number): Promise<void>;
   attachTrail?(
     id: string,
@@ -263,6 +269,22 @@ export interface ServicesPort {
   /** Thread 3a's interiors service: the interior id the player is in, or null outdoors. */
   get(name: 'interiors'): { readonly current: string | null } | undefined;
   get(name: 'nav'): NavPort | undefined;
+  /**
+   * Thread 2's spells service. `useShard` charges Burn and adds the Scar at Burn 75 or more; until it
+   * merges, `addBurn` charges the Burn alone.
+   */
+  get(name: 'spells'): ShardSpells | undefined;
+}
+
+export interface ShardSpells {
+  useShard?(gain: number, source: string): void;
+  addBurn?(n: number, source: string): void;
+}
+
+/** The slice of the core BossRegistry the mercy hold uses. */
+export interface BossesPort {
+  state(bossId: string): { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | null } | null;
+  release(bossId: string): boolean;
 }
 
 /** The parts of the AssetLoader the enemy models need (requests-round-1 item 6). */
@@ -286,6 +308,8 @@ export interface EnemyHost {
   state: StatePort;
   gates: GatesPort;
   services: ServicesPort;
+  /** The core boss registry; absent in tests that do not need bosses. */
+  bosses?: BossesPort;
   player: PlayerPort;
   /** The carried torch (read through the quests service); absent in hosts that have none. */
   torch?: TorchPort;

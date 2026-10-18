@@ -194,7 +194,44 @@ describe('the shipped Brightwater table', () => {
   it('gates the Dead Road patrols on the wardstones flag and the ford pairs on M04', () => {
     const by = (id: string) => BRIGHTWATER_SPAWNERS.find((d) => d.id === id)!;
     expect(by('brightwater.deadroad.patrol-1').activation).toEqual({ until: 'world.deadroad.wardstones.done' });
-    expect(by('brightwater.ford.pair-2').activation).toEqual({ quest: 'm04' });
+    expect(by('brightwater.ford.pair-2').activation).toEqual({ quest: 'm04', flag: 'enemies.mercy.spare' });
+    expect(by('brightwater.churchyard')).toMatchObject({ tag: 'm03.churchyard', count: 4, activation: { flag: 'enemies.mercy.release' } });
     expect(by('brightwater.vault').activation).toEqual({ interior: 'chapel-vault' });
+  });
+});
+
+describe('lesson gates of the shipped table', () => {
+  function shipped() {
+    const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: -400 } });
+    [1, 2, 3, 4].forEach((i) => fake.defineAnchor(`pile.churchyard.${i}`, i, 0));
+    ['spawn.ford.pair-1', 'spawn.ford.pair-2'].forEach((a, i) => fake.defineAnchor(a, 50 + i * 10, 0));
+    const manager = new EnemyManager(fake.host, FakeHost.factory(gltf), { spawners: BRIGHTWATER_SPAWNERS, seed: 4 });
+    manager.spawners.startAuto();
+    return { fake, manager };
+  }
+
+  it('the churchyard wraiths appear only once the Release lesson sets its flag, tagged m03.churchyard', () => {
+    const { fake, manager } = shipped();
+    expect(manager.service.alive('brightwater.churchyard')).toHaveLength(0);
+    fake.setFlag('enemies.mercy.release', true);
+    const ids = manager.service.alive('brightwater.churchyard');
+    expect(ids).toHaveLength(4);
+    expect(fake.actorMap.get(ids[0]!)!.spawnTag).toBe('m03.churchyard');
+  });
+
+  it('the ford pairs need both M04 and the Spare lesson, in either order', () => {
+    const a = shipped();
+    a.fake.bus.emit('quest.started', { questId: 'm04' });
+    expect(a.manager.service.alive('brightwater.ford.pair-1')).toHaveLength(0);
+    a.fake.quests = { active: () => ['m04'] };
+    a.fake.setFlag('enemies.mercy.spare', true);
+    expect(a.manager.service.alive('brightwater.ford.pair-1')).toHaveLength(2);
+    expect(a.manager.service.alive('brightwater.ford.pair-2')).toHaveLength(2);
+
+    const b = shipped();
+    b.fake.setFlag('enemies.mercy.spare', true);
+    expect(b.manager.service.alive('brightwater.ford.pair-1')).toHaveLength(0);
+    b.fake.bus.emit('quest.started', { questId: 'm04' });
+    expect(b.manager.service.alive('brightwater.ford.pair-1')).toHaveLength(2);
   });
 });

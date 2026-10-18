@@ -81,6 +81,9 @@ export const MERCY = {
   /** Priority bonus for the lock-on target, so it wins over a nearer creature. */
   lockOnPriority: 100,
   flags: { release: 'enemies.mercy.release', spare: 'enemies.mercy.spare' },
+  /** Burn per completed Release hold; a pulse that frees a boss costs the boss rate (design 3, 9.7). */
+  releaseBurn: 10,
+  bossReleaseBurn: 20,
 } as const;
 
 /** The Charred Footman's guard (design 10 row 2). */
@@ -109,6 +112,11 @@ export const PAIR = {
   closeIn: 4,
   attackStaggerSeconds: 0.4,
 } as const;
+
+/** Boss mercies by bossId (actors-and-damage.md section 7). Amount is the uncapped ledger value. */
+export const BOSS_MERCY: Readonly<Record<string, { verb: 'release'; track: 'ashwalkers'; amount: number; burn: number }>> = {
+  'ashen-prior': { verb: 'release', track: 'ashwalkers', amount: 4, burn: 20 },
+};
 
 export const ASH_GRAB = { speedScale: 0.6, seconds: 2 } as const;
 
