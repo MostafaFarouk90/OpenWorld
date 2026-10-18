@@ -58,8 +58,8 @@ export function buildEmberwrightSkills(): SkillDef[] {
   return out;
 }
 
-/** The module registry has no unregister: a plugin restart finds the class registered already, which counts as success. */
+/** Disposed with the plugin; a class already registered (a restart that skipped dispose) counts as success. */
 export function registerEmberwrightSkills(): RegisterSkillsResult {
   const r = registerClassSkills(CLASS_ID, buildEmberwrightSkills());
-  return !r.ok && r.reason === 'duplicate-class' ? { ok: true, count: 0 } : r;
+  return !r.ok && r.reason === 'duplicate-class' ? { ok: true, count: 0, dispose: () => undefined } : r;
 }
