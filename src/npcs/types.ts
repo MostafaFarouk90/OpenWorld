@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import type { ActorLike, Vec3 } from '../region/coreTypes';
+import type { NpcSpec } from '../region/layoutTypes';
 
 export type NpcModelId = 'knight' | 'barbarian' | 'mage' | 'rogue' | 'rogueHooded';
 
@@ -42,6 +43,11 @@ export interface NpcsService {
   place(id: string, anchorId: string): boolean;
   get(id: string): NpcHandle | undefined;
   position(id: string): Vec3 | undefined;
+  /**
+   * Adds a later region's NPCs (one spec and one def each, validated as a set). Returns a remover; a failure throws
+   * and leaves the NPCs already spawned untouched.
+   */
+  register(specs: NpcSpec[], defs: NpcDef[]): () => void;
 }
 
 declare module '../core/Services' {

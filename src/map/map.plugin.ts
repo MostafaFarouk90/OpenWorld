@@ -1,6 +1,8 @@
 import type { GamePlugin } from '../core/plugins';
 import { heightAt } from '../terrain/heightfield';
 import '../waystones/service';
+import '../quests/service';
+import { createLeadSource, type LeadMarker } from '../quests/leads';
 import { FogGrid, buildMarkers, mapExtent, type MapMarker } from './MapModel';
 import { createMapSources } from './MapSources';
 import { createMapModal } from './MapView';
@@ -42,6 +44,26 @@ const map: GamePlugin = {
       },
       (k) => ctx.strings.t(k),
     );
+
+    // Quest-offer leads, re-derived when quest state changes or a save loads (the cache is dropped while a
+    // giver is not placed yet, so it fills in once the NPC exists).
+    const leadSource = createLeadSource({
+      env: () => ({ state: ctx.state, quests: ctx.services.get('quests') ?? { state: () => 'inactive', objectiveDone: () => false } }),
+      npcPosition: (id) => ctx.services.get('npcs')?.position(id),
+      anchor: (id) => ctx.anchors.find(id)?.position,
+      warn: (m) => console.warn(`[map] ${m}`),
+    });
+    let leads: LeadMarker[] | null = null;
+    const dropLeads = () => { leads = null; };
+    for (const e of ['quest.started', 'quest.completed', 'quest.failed', 'save.loaded'] as const) ctx.events.on(e, dropLeads);
+    const currentLeads = (): LeadMarker[] => {
+      if (!leads) {
+        const fresh = leadSource.markers();
+        if (leadSource.skipped) return fresh;
+        leads = fresh;
+      }
+      return leads;
+    };
 
     // Terrain bitmaps are rendered in time-boxed slices, one slice per frame.
     let full: TerrainBitmap | null = null;
@@ -85,8 +107,10 @@ const map: GamePlugin = {
             const lit = waystones()?.isLit(id) ?? false;
             return [{ id, x: p.x, z: p.z, state: lit ? ('rekindled' as const) : ('dormant' as const), discovered: lit || fog.isRevealed(p.x, p.z), label: id }];
           }),
+          poi: sources.posts((x, z) => fog.isRevealed(x, z)),
           shrines: sources.litShrines(),
           fog: sources.fogWall(),
+          quest: currentLeads(),
         }),
       forge: () => sources.forge(),
       legend: () => sources.legend(ctx.player.feet.x, ctx.player.feet.z),

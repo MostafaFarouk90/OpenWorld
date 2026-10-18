@@ -24,6 +24,13 @@ export const DEFAULT_HEIGHT: Record<StructureKind, number> = {
   rock: 2,
   bridge: 0.3,
   stair: 0.2,
+  wall: 9,
+  tower: 12,
+  'stair-step': 0.4,
+  block: 6,
+  stall: 2.6,
+  crate: 1.4,
+  fountain: 1.2,
 };
 
 /** Height of a door slab; the wall above the doorway is closed by a lintel. */
@@ -213,6 +220,25 @@ export function buildGreybox(spec: StructureSpec): THREE.Object3D {
       g.add(box(0.2, 0.15, d, w / 2 + 0.1, h, 0, STONE));
       break;
     }
+    case 'wall':
+    case 'tower':
+    case 'stair-step':
+    case 'block':
+      g.add(box(w, h, d, 0, 0, 0, spec.kind === 'block' ? WALL : STONE, spec.kind));
+      break;
+    case 'stall':
+      post(g, -w * 0.45, -d * 0.4, h);
+      post(g, w * 0.45, -d * 0.4, h);
+      g.add(box(w, 0.9, d * 0.6, 0, 0, d * 0.2, WOOD, 'counter'));
+      g.add(box(w + 0.4, 0.15, d + 0.4, 0, h, 0, ROOF, 'awning'));
+      break;
+    case 'crate':
+      g.add(box(w, h, d, 0, 0, 0, WOOD, 'crate'));
+      break;
+    case 'fountain':
+      g.add(cyl(Math.min(w, d) * 0.5, Math.min(w, d) * 0.5, h, 0, 0, 0, STONE, 16));
+      g.add(cyl(Math.min(w, d) * 0.08, Math.min(w, d) * 0.08, h * 2.2, 0, 0, 0, STONE, 8));
+      break;
     default:
       throw new Error(`greybox: unknown structure kind "${String(spec.kind)}"`);
   }

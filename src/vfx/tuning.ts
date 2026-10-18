@@ -11,8 +11,8 @@ export const HIT_STACK = {
 } as const;
 
 /** Clip names of the attacks that count as heavy (attack 3) and as the stab (attack 4). */
-export const HEAVY_ATTACKS: ReadonlySet<string> = new Set(['1H_Melee_Attack_Chop']);
-export const STAB_ATTACKS: ReadonlySet<string> = new Set(['1H_Melee_Attack_Stab']);
+export const HEAVY_ATTACKS: ReadonlySet<string> = new Set(['1H_Melee_Attack_Chop', '2H_Melee_Attack_Chop']);
+export const STAB_ATTACKS: ReadonlySet<string> = new Set(['1H_Melee_Attack_Stab', '2H_Melee_Attack_Stab']);
 
 export const CAPS = {
   trails: 6,
@@ -32,6 +32,11 @@ export const TRAIL_RAMPS: Record<string, { colors: [number, number, number]; tai
   '1H_Melee_Attack_Slice_Diagonal': { colors: [0xa03a10, 0xff7a20, 0xffd890], tail: 0.2, width: 1 },
   '1H_Melee_Attack_Chop': { colors: [0xd08a30, 0xfff0c0, 0xffffff], tail: 0.28, width: 1.3 },
   '1H_Melee_Attack_Stab': { colors: [0xb8741a, 0xf0b030, 0xfff1b8], tail: 0.2, width: 0.45 },
+  // The Warden's two-handed axe (design 11.3: red-brown and iron, a wider ribbon on the cleave).
+  '2H_Melee_Attack_Slice': { colors: [0x7a3a1a, 0xd0702a, 0xffc890], tail: 0.24, width: 1.6 },
+  '2H_Melee_Attack_Spinning': { colors: [0x8a4a22, 0xe08a30, 0xffd8a0], tail: 0.3, width: 1.4 },
+  '2H_Melee_Attack_Chop': { colors: [0xa04a18, 0xfff0c0, 0xffffff], tail: 0.3, width: 1.6 },
+  '2H_Melee_Attack_Stab': { colors: [0x7a3a1a, 0xd0702a, 0xffc890], tail: 0.2, width: 0.55 },
 };
 export const DEFAULT_TRAIL = { colors: [0x8a4a14, 0xe08a20, 0xffe8b0] as [number, number, number], tail: 0.2, width: 1 };
 /** The player's ribbon starts this far (normalised clip time) before `activeStart`. */

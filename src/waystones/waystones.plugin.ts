@@ -56,10 +56,11 @@ const waystones: GamePlugin = {
         heartshard: debug || ctx.state.getBool('tutorial.heartshard-awakened'),
         allowRestInCombat: ctx.state.getBool('waystone.allowRestInCombat'),
       }),
-      restoreVitals: () => {
+      restoreVitals: (opts) => {
         const a = ctx.player.actor;
         ctx.damage.heal(PLAYER_ID, a.maxHealth);
         a.restoreStamina(a.maxStamina);
+        if (opts?.quiet) return;
         showToast(ctx.hud, ctx.strings.t('waystone.rested'));
         prompts()?.success('rest');
       },
@@ -142,6 +143,8 @@ const waystones: GamePlugin = {
       respawnPoint: () => net.respawnPoint(),
       respawnPlayer: () => net.respawnPlayer(),
       rekindle: (id, cause = 'script') => net.rekindle(id, cause),
+      canRestNow: () => net.canRestNow(),
+      restAt: (placeId) => net.restAt(placeId),
       travel: async (toId) => {
         const r = await net.travel(toId);
         if (r.ok) prompts()?.success('fastTravel');
