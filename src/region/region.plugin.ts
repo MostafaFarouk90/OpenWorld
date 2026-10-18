@@ -71,14 +71,14 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
         cleanups.push(() => props.dispose());
 
         // A scarecrow already knocked down in this save stays down (checked again when a save loads).
-        let scarecrow = ctx.state.getBool(SCARECROW_TOPPLED_FLAG) ? null : spawnScarecrow(ctx, ctx.anchors.get('brightwater.scarecrow'), height);
+        const anchorOf = () => ctx.anchors.get('brightwater.scarecrow');
+        let scarecrow = ctx.state.getBool(SCARECROW_TOPPLED_FLAG) ? null : spawnScarecrow(ctx, anchorOf(), height);
         cleanups.push(() => scarecrow?.dispose());
         cleanups.push(
           ctx.events.on('save.loaded', () => {
-            if (scarecrow && ctx.state.getBool(SCARECROW_TOPPLED_FLAG)) {
-              scarecrow.dispose();
-              scarecrow = null;
-            }
+            // Resync both ways: a save from before the topple stands the scarecrow up again.
+            scarecrow?.dispose();
+            scarecrow = ctx.state.getBool(SCARECROW_TOPPLED_FLAG) ? null : spawnScarecrow(ctx, anchorOf(), height);
           }),
         );
 

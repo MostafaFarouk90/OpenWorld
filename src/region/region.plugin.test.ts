@@ -172,4 +172,21 @@ describe('region plugin', () => {
     expect([...fc.actors.values()]).toHaveLength(0);
     expect(fc.triggers.size).toBe(0);
   });
+
+  it('stands the scarecrow up again when a save from before the topple loads', () => {
+    const { fc, plugin } = setup();
+    plugin.setup(fc.ctx);
+    const count = () => [...fc.actors.values()].filter((a) => a.kind === 'scarecrow').length;
+    expect(count()).toBe(1);
+    fc.flags.set('place.scarecrow.toppled', true);
+    fc.fire('save.loaded');
+    expect(count()).toBe(0);
+    fc.flags.set('place.scarecrow.toppled', false);
+    fc.fire('save.loaded');
+    expect(count()).toBe(1);
+    fc.fire('save.loaded');
+    expect(count()).toBe(1);
+    plugin.dispose?.();
+    expect(count()).toBe(0);
+  });
 });

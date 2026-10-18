@@ -79,6 +79,7 @@ export function buildStructures(
     }
     group.traverse((o) => {
       if (o.userData.greybox) disposeGreybox(o);
+      else if (o.userData.ownGeometry) (o as THREE.Mesh).geometry.dispose();
     });
     group.removeFromParent();
     group.clear();
@@ -129,6 +130,7 @@ export function buildStructures(
             pivot.position.set(fill.cx - spec.x, 0, fill.cz - spec.z - fill.hz);
             slab.position.set(0, DOOR_HEIGHT / 2, fill.hz);
           }
+          slab.userData.ownGeometry = true;
           pivot.add(slab);
           holder.add(pivot);
           const openWhen = spec.door.openWhen ?? [];
