@@ -28,6 +28,10 @@ import { PersistRegistry } from './Persist';
 import { PluginLoader, type LoadOptions, type PluginModule, type PluginStatus } from './plugins';
 import { Scope, scoped } from './scope';
 import { Services } from './Services';
+import { FlagGates } from '../state/FlagGates';
+import { BossRegistry } from '../actors/BossRegistry';
+import type { LeapHandle, LeapOptions } from '../characters/Player';
+import type { CameraShot } from '../rendering/ThirdPersonCamera';
 import { SystemRegistry, type FixedPhase } from './systems';
 
 /** The player as other systems see it (contracts/game-events-and-flags.md section 3). */
@@ -42,6 +46,11 @@ export interface PlayerHandle {
   /** `ready()` turns true once the collider patch there exists and a physics step has made it visible. */
   teleport(feet: Vec3, yaw?: number): { ready(): boolean };
   addMoveModifier(source: string, mod: MoveModifier): () => void;
+  /**
+   * v0.4: the scripted Surge Leap primitive (game-events-and-flags.md section 3). Thread 2 owns the
+   * action, the learned gate, Burn, cooldown and Scar; core owns only the move and `player.leap`.
+   */
+  leap(opts: LeapOptions): LeapHandle | null;
 }
 
 export interface GameInput {
@@ -65,6 +74,10 @@ export interface GameContext {
   readonly damage: DamageResolver;
   readonly combat: CombatRegistry;
   readonly state: WorldState;
+  /** Flag-derived state that is re-derived on `save.loaded` (v0.4; game-events-and-flags.md section 3). */
+  readonly gates: FlagGates;
+  /** v0.4 boss registry (actors-and-damage.md section 7); only it emits `boss.*`. */
+  readonly bosses: BossRegistry;
   readonly input: GameInput;
   readonly interaction: InteractionSystem;
   readonly anchors: AnchorRegistry;
@@ -142,6 +155,8 @@ export class Game {
   readonly systems: SystemRegistry;
   readonly moveModifiers: MoveModifiers;
   private readonly bridge: DamageBridge;
+  private readonly gates: FlagGates;
+  private readonly bosses: BossRegistry;
   private readonly offKeyboardLock: () => void;
   private loader: PluginLoader | null = null;
   private actions: ActionState = NO_ACTIONS;
@@ -165,6 +180,11 @@ export class Game {
     const damage = new DamageResolver(actors, this.events);
     const combat = new CombatRegistry(world.combat.combat, this.events, (id) => actors.get(id));
     const state = new WorldState(this.events);
+    this.gates = new FlagGates(state, this.events, this.report);
+    this.bosses = new BossRegistry({ events: this.events, actors, damage, state, report: this.report });
+    this.systems.add({ id: 'core.bosses', fixedPhase: 'afterCombat', order: -100, fixedUpdate: (dt) => this.bosses.fixedUpdate(dt) });
+    world.player.onLeap = (e) =>
+      this.events.emit('player.leap', { phase: e.phase, from: { ...e.from }, ...(e.to ? { to: { ...e.to } } : {}) });
     this.bridge = new DamageBridge(world.combat.combat.bus, actors, damage, combat);
 
     const playerActor = actors.spawn({ ...playerInit(), root: world.player.mesh, owner: world.player });
@@ -187,6 +207,7 @@ export class Game {
       },
       teleport: (feet, yaw) => this.teleport(feet, yaw),
       addMoveModifier: (source, mod) => this.moveModifiers.add(source, mod),
+      leap: (opts) => world.player.leap(opts),
     };
     const gameInput: GameInput = {
       get actions() {
@@ -224,6 +245,8 @@ export class Game {
       damage,
       combat,
       state,
+      gates: this.gates,
+      bosses: this.bosses,
       input: gameInput,
       interaction,
       anchors: new AnchorRegistry(),
@@ -328,6 +351,9 @@ export class Game {
         watch: ((actorId: string, ...rest: unknown[]) =>
           forActor(actorId, scope.track((c.combat.watch as (...a: unknown[]) => () => void)(actorId, ...rest)))) as never,
       }),
+      gates: scoped(c.gates, scope, ['watch', 'flag']),
+      bosses: scoped(c.bosses, scope, ['register']),
+      cameraRig: c.cameraRig && scopedCameraRig(c.cameraRig, scope),
       interaction: scoped(c.interaction, scope, ['register']),
       anchors: scoped(c.anchors, scope, ['define']),
       triggers: scoped(c.triggers, scope, ['add']),
@@ -400,6 +426,9 @@ export class Game {
     this.systems.dispose();
     this.ctx.hud.dispose();
     this.bridge.dispose();
+    this.gates.dispose();
+    this.bosses.dispose();
+    this.opts.world.player.onLeap = null;
     this.ctx.combat.dispose();
     this.offKeyboardLock();
   }
@@ -420,6 +449,7 @@ export class Game {
 
   private teleport(feet: Vec3, yaw?: number): { ready(): boolean } {
     const world = this.opts.world;
+    world.player.cancelLeap();
     world.player.controller.teleport(feet);
     // The patch under the destination is built now; the controller sees it after the next physics step.
     world.colliders.update(feet.x, feet.z);
@@ -438,4 +468,26 @@ export class Game {
       },
     };
   }
+}
+
+/**
+ * The follow camera for one plugin: `override` returns a handle rather than an undo, so the scope records
+ * `release` itself (game-events-and-flags.md section 3, `cameraRig.override`).
+ */
+function scopedCameraRig(rig: ThirdPersonCamera, scope: Scope): ThirdPersonCamera {
+  return scoped(rig, scope, [], {
+    override: ((shot: CameraShot) => {
+      const handle = rig.override(shot);
+      const release = scope.track(() => handle.release());
+      return {
+        get active() {
+          return handle.active;
+        },
+        release: (blendOut?: number) => {
+          handle.release(blendOut);
+          release();
+        },
+      };
+    }) as never,
+  });
 }

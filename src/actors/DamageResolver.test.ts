@@ -136,6 +136,20 @@ describe('DamageResolver.apply basics', () => {
       expect(npc.health).toBe(10);
     });
 
+    it('a companion (ally, hittable false, untargetable) takes no hostile hit and emits nothing', () => {
+      const { dr, actors, enemy, log } = make();
+      const tobb = actors.spawn({ kind: 'companion:tobb', team: 'ally', maxHealth: 40, hittable: false, untargetable: true });
+      log.length = 0;
+      expect(dr.apply({ attackerId: enemy.id, targetId: tobb.id, amount: 8, kind: 'melee' })).toBeNull();
+      // An area hit (a hostile spell) and an attacker-less hazard are dropped the same way, so no
+      // damage.dealt reaches the mercy revocation either.
+      expect(dr.apply({ attackerId: enemy.id, targetId: tobb.id, amount: 8, kind: 'spell', unblockable: true })).toBeNull();
+      expect(dr.apply({ attackerId: null, targetId: tobb.id, amount: 8, kind: 'fall' })).toBeNull();
+      expect(dr.stagger(tobb.id, enemy.id, 50)).toBe(false);
+      expect(tobb.health).toBe(40);
+      expect(log).toEqual([]);
+    });
+
     it('a hostile can hurt the player', () => {
       const { dr, enemy, player } = make();
       const r = dr.apply({ attackerId: enemy.id, targetId: player.id, amount: 10, kind: 'melee' });

@@ -94,7 +94,7 @@ export class ActorRegistry {
   /** Nearest actor with a root; `alive` defaults to true. */
   nearest(
     position: THREE.Vector3Like,
-    opts: { team?: Team; maxDistance?: number; alive?: boolean; exclude?: ActorId } = {},
+    opts: { team?: Team; maxDistance?: number; alive?: boolean; exclude?: ActorId; targetable?: boolean } = {},
   ): Actor | undefined {
     const alive = opts.alive ?? true;
     let best: Actor | undefined;
@@ -103,6 +103,7 @@ export class ActorRegistry {
       if (!a.root || a.id === opts.exclude) continue;
       if (opts.team && a.team !== opts.team) continue;
       if (alive && a.dead) continue;
+      if (opts.targetable && a.untargetable) continue;
       a.root.getWorldPosition(tmp);
       const d = Math.hypot(tmp.x - position.x, tmp.y - position.y, tmp.z - position.z);
       if (d <= bestD) {
