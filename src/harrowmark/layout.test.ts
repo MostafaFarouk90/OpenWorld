@@ -52,10 +52,19 @@ describe('Harrowmark anchor ids (the contract for threads 3a, 6, 12, 17b, 18, 19
 
   it('gives every door a trigger at its outside anchor', () => {
     for (const d of DOORS) {
-      const t = HARROWMARK_LAYOUT.triggers.find((q) => q.id === `trg.harrowmark.${d.doorId}`)!;
+      const t = HARROWMARK_LAYOUT.triggers.find((q) => q.id === `trg.harrowmark.door.${d.doorId}`)!;
       expect(t).toBeDefined();
       expect(dist(t, at(d.anchor))).toBe(0);
     }
+  });
+
+  it('defines the Bastion yard trigger and Tobb\'s two waits, clear of the door prompts', () => {
+    const t = HARROWMARK_LAYOUT.triggers.find((q) => q.id === 'trg.harrowmark.bastion-yard')!;
+    expect(t.shape).toBe('box');
+    expect(HARROWMARK_LAYOUT.triggers.some((q) => q.id === 'trg.harrowmark.keep-hall')).toBe(false); // 3a's hall box
+    expect(dist(at('npc-post.tobb.keep'), at('harrowmark.keep-hall.door'))).toBeGreaterThanOrEqual(5);
+    expect(dist(at('npc-post.tobb.keep'), arrival(at('harrowmark.keep-hall.door')))).toBeGreaterThanOrEqual(4);
+    expect(at('npc-post.tobb.south-gate').z).toBeGreaterThan(at('harrowmark.gate.south.inside').z);
   });
 
   it('opens the Tilted Anvil back door onto the Bastion yard', () => {

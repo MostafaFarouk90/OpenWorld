@@ -156,6 +156,9 @@ const POSTS: Post[] = [
   { id: 'edric', x: 8488, z: 2575, heading: 180 },
   { id: 'vey.keep', x: 8512, z: 2575, heading: 180 },
   { id: 'aelfreda.chapel', x: 8362, z: 2158, heading: 90 },
+  // Tobb's waits (thread 4b): off the gate square, and a few metres off the Keep door and its arrival point.
+  { id: 'tobb.south-gate', x: 8540, z: 1275, heading: 180 },
+  { id: 'tobb.keep', x: 8520, z: 2588, heading: 180 },
   { id: 'gerta.guild', x: 8780, z: 1520, heading: 180 },
 ];
 const postAnchors = POSTS.map((p) => a(`npc-post.${p.id}`, p.x, p.z, p.heading, ['npc-post']));
@@ -369,8 +372,10 @@ const anchors: AnchorSpec[] = [
 ];
 
 const triggers: TriggerSpec[] = [
-  ...DOORS.map((d) => ({ id: `trg.harrowmark.${d.doorId}`, shape: 'sphere' as const, x: d.x, z: d.z, radius: 2 })),
+  ...DOORS.map((d) => ({ id: `trg.harrowmark.door.${d.doorId}`, shape: 'sphere' as const, x: d.x, z: d.z, radius: 2 })),
   { id: 'trg.harrowmark.gate-south', shape: 'sphere', x: 8500, z: 1256, radius: 6 },
+  // The Bastion training yard (fence 140 x 110 about (8200, 1735)); the quests plan uses it.
+  { id: 'trg.harrowmark.bastion-yard', shape: 'box', x: 8200, z: 1735, half: [70, 6, 55] },
 ];
 
 const patrols: PatrolSpec[] = PATROLS.map((p) => ({ id: p.id, loop: p.loop, points: p.pts.map((_, i) => `${p.id}.${i + 1}`) }));

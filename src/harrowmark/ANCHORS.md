@@ -74,6 +74,8 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | npc-post.edric | 8488 | 2575 | 0 | 0 | npc-post |
 | npc-post.vey.keep | 8512 | 2575 | 0 | 0 | npc-post |
 | npc-post.aelfreda.chapel | 8362 | 2158 | 0 | 270 | npc-post |
+| npc-post.tobb.south-gate | 8540 | 1275 | 0 | 0 | npc-post |
+| npc-post.tobb.keep | 8520 | 2588 | 0 | 0 | npc-post |
 | npc-post.gerta.guild | 8780 | 1520 | 0 | 0 | npc-post |
 | shop.wystan | 8171 | 1787 | 0 | 0 | shop |
 | shop.merrin | 8782 | 1978 | 0 | 90 | shop |
@@ -293,13 +295,14 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 
 | id | shape | x | z | size |
 | --- | --- | --- | --- | --- |
-| trg.harrowmark.tilted-anvil | sphere | 8200 | 1652 | r 2 |
-| trg.harrowmark.tilted-anvil-back | sphere | 8200 | 1683.5 | r 2 |
-| trg.harrowmark.keep-hall | sphere | 8500 | 2596 | r 2 |
-| trg.harrowmark.counting-house | sphere | 8786 | 1990 | r 2 |
-| trg.harrowmark.archive | sphere | 8806 | 2080 | r 2 |
-| trg.harrowmark.underways | sphere | 7958 | 1545 | r 2 |
+| trg.harrowmark.door.tilted-anvil | sphere | 8200 | 1652 | r 2 |
+| trg.harrowmark.door.tilted-anvil-back | sphere | 8200 | 1683.5 | r 2 |
+| trg.harrowmark.door.keep-hall | sphere | 8500 | 2596 | r 2 |
+| trg.harrowmark.door.counting-house | sphere | 8786 | 1990 | r 2 |
+| trg.harrowmark.door.archive | sphere | 8806 | 2080 | r 2 |
+| trg.harrowmark.door.underways | sphere | 7958 | 1545 | r 2 |
 | trg.harrowmark.gate-south | sphere | 8500 | 1256 | r 6 |
+| trg.harrowmark.bastion-yard | box | 8200 | 1735 | half 70 x 6 x 55 |
 
 ## Structures
 
