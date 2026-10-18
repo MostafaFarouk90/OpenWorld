@@ -84,6 +84,18 @@ export async function startWorld(container: HTMLElement): Promise<void> {
   if (audio) game.ctx.services.provide('audio', audio);
   game.ctx.services.provide('graphics', graphics);
   game.ctx.services.provide('dummies', dummies);
+  {
+    const ctx = game.ctx;
+    dummies.configureBlocking({
+      scene: ctx.scene,
+      actors: ctx.actors,
+      damage: ctx.damage,
+      events: ctx.events,
+      combat: ctx.combat,
+      playerFeet: () => ctx.player.feet,
+    });
+    ctx.systems.add({ id: 'world.blockingDummies', fixedPhase: 'afterCombat', order: 50, fixedUpdate: (dt) => dummies.updateBlocking(dt) });
+  }
   const { strings, hud, events } = game.ctx;
   const overlay = createOverlay(hud, strings, input.bindings);
   const damageNumbers = new DamageNumberSprites(scene);

@@ -1,5 +1,9 @@
 import type * as THREE from 'three';
 import type { Vec3 } from '../physics/PhysicsWorld';
+import { BlockingDummies, type BlockingDummyHandle, type BlockingHost } from './BlockingDummies';
+import './dummies.events';
+
+export type { BlockingDummyHandle } from './BlockingDummies';
 
 export interface DummySpot {
   feet: Vec3;
@@ -10,6 +14,12 @@ export interface DummySpot {
 /** Where the training dummies stand; thread 4 feeds the Practice Yard anchors (service 'dummies'). */
 export interface DummiesService {
   place(spots: readonly DummySpot[]): void;
+  /**
+   * Quest R02: dummies with a scripted guard cycle and swing (anchors `yard.blocking-dummy-1..n`).
+   * Replaces the previous blocking dummies; invalid spots warn and are skipped. Returns [] (with a
+   * warning) before the game is wired.
+   */
+  placeBlocking(spots: readonly DummySpot[]): BlockingDummyHandle[];
   readonly count: number;
 }
 
@@ -20,6 +30,8 @@ export interface DummiesService {
 export class TrainingDummies implements DummiesService {
   private models: THREE.Object3D[] = [];
   private spots: DummySpot[] | null = null;
+  private blocking: BlockingDummies | null = null;
+  private blockingHost: BlockingHost | null = null;
 
   constructor(private readonly warn: (message: string) => void = (m) => console.warn(m)) {}
 
@@ -35,6 +47,33 @@ export class TrainingDummies implements DummiesService {
     });
     this.spots = valid.map((s) => ({ feet: { ...s.feet }, yaw: s.yaw }));
     this.apply();
+  }
+
+  /** Wires the blocking dummies to the game; startWorld calls this once the game exists. */
+  configureBlocking(host: BlockingHost): void {
+    this.blocking?.dispose();
+    this.blocking = null;
+    this.blockingHost = host;
+  }
+
+  placeBlocking(spots: readonly DummySpot[]): BlockingDummyHandle[] {
+    if (!this.blockingHost) {
+      this.warn('TrainingDummies: placeBlocking called before the game is wired; nothing placed');
+      return [];
+    }
+    this.blocking ??= new BlockingDummies({ ...this.blockingHost, warn: this.warn });
+    return this.blocking.place(spots);
+  }
+
+  /** Fixed-step driver for the blocking dummies' guard cycle and swings. */
+  updateBlocking(dt: number): void {
+    this.blocking?.update(dt);
+  }
+
+  /** Removes the blocking dummies, their listeners and modifier. */
+  disposeBlocking(): void {
+    this.blocking?.dispose();
+    this.blocking = null;
   }
 
   /** Called once the dummy models are in the scene. */
