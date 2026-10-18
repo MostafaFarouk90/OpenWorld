@@ -5,7 +5,7 @@ import { regionAt } from '../../region/regionMask';
 import { heightAt } from '../../terrain/heightfield';
 import { ALL_INTERIORS } from '../interiors.plugin';
 import { groundRange, layoutInterior, MAX_GROUND_RANGE } from '../layout';
-import { HARROWMARK_SITE_ANCHORS, HARROWMARK_SITES } from './sites';
+import { HARROWMARK_DOORS, HARROWMARK_SITE_ANCHORS, HARROWMARK_SITES } from './sites';
 
 const layouts = ALL_INTERIORS.map((d) => layoutInterior(d, heightAt));
 
@@ -48,13 +48,16 @@ describe('interior sites', () => {
     }
   });
 
-  it('keeps every pair of interiors apart (the plateau puts several floors at one height)', () => {
+  it('keeps every pair of interiors beyond the enemies\' 120 m wake range of each other', () => {
+    // Enemies wake within 120 m (3D) of the player and interior spawns are not despawned on exit, so guards in one interior must
+    // never wake while the player is in another.
+    const gap = (lo1: number, hi1: number, lo2: number, hi2: number) => Math.max(0, lo2 - hi1, lo1 - hi2);
     for (let i = 0; i < layouts.length; i++) {
       for (let j = i + 1; j < layouts.length; j++) {
         const a = layouts[i]!.bounds;
         const b = layouts[j]!.bounds;
-        const overlap = a.min.x < b.max.x && b.min.x < a.max.x && a.min.y < b.max.y && b.min.y < a.max.y && a.min.z < b.max.z && b.min.z < a.max.z;
-        expect(overlap, `${layouts[i]!.def.id} / ${layouts[j]!.def.id}`).toBe(false);
+        const d = Math.hypot(gap(a.min.x, a.max.x, b.min.x, b.max.x), gap(a.min.y, a.max.y, b.min.y, b.max.y), gap(a.min.z, a.max.z, b.min.z, b.max.z));
+        expect(d, `${layouts[i]!.def.id} / ${layouts[j]!.def.id}`).toBeGreaterThanOrEqual(130);
       }
     }
   });
@@ -88,8 +91,8 @@ describe('interior sites', () => {
     for (const [id, anchorId] of Object.entries(HARROWMARK_SITE_ANCHORS)) {
       const a = doors!.find((x) => x.anchor === anchorId);
       expect(a, anchorId).toBeDefined();
-      const site = HARROWMARK_SITES[id as keyof typeof HARROWMARK_SITES];
-      expect(Math.hypot(a!.x - site.x, a!.z - site.z), anchorId).toBeLessThan(0.01);
+      const door = HARROWMARK_DOORS[id as keyof typeof HARROWMARK_DOORS];
+      expect(Math.hypot(a!.x - door.x, a!.z - door.z), anchorId).toBeLessThan(0.01);
     }
   });
 });

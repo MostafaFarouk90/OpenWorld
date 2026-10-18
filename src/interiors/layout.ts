@@ -47,6 +47,27 @@ export interface InteriorLayout {
   nav: NavGridDef;
 }
 
+/**
+ * True when `at` could be someone standing in the interior: over a room, not inside a pillar or a solid prop, and between the floor
+ * and 1.5 m above whatever is under it (the floor, a bed, a shelf top). A load checks a saved spot with it.
+ */
+export function standsIn(layout: InteriorLayout, at: Vec3): boolean {
+  const x = at.x - layout.origin.x;
+  const z = at.z - layout.origin.z;
+  const y = at.y - layout.floorY;
+  const def = layout.def;
+  if (y < -0.5 || !def.rooms.some((r) => inRect(r, x, z))) return false;
+  if (def.pillars.some((p) => inRect(p, x, z))) return false;
+  let top = 0;
+  for (const p of def.props ?? []) {
+    if (!inRect(p.rect, x, z)) continue;
+    // Inside a solid prop (more than its top 0.25 m) is not standing; on top of one is.
+    if (!p.walkable && y < p.height - 0.25) return false;
+    top = Math.max(top, p.height);
+  }
+  return y <= top + 1.5;
+}
+
 export function boundsContain(b: Bounds, p: Vec3): boolean {
   return p.x >= b.min.x && p.x <= b.max.x && p.y >= b.min.y && p.y <= b.max.y && p.z >= b.min.z && p.z <= b.max.z;
 }

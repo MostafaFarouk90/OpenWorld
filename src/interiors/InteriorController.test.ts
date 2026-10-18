@@ -498,7 +498,8 @@ describe('InteriorController: saves', () => {
     t.c.tick(DT);
     t.log.length = 0;
     t.c.onSaveLoaded();
-    expect(t.log.slice(0, 2)).toEqual(['fade 1', 'teleport 150']);
+    expect(t.log.slice(0, 3)).toEqual(['fade 1', 'freeze', 'teleport 150']);
+    expect(t.state.frozen).toBe(1);
     expect(t.feet).toMatchObject({ x: 0, y: 150, z: -1 });
     expect(t.c.current).toBe(VAULT);
     expect(t.c.currentDoor).toBe('vault');
@@ -509,6 +510,7 @@ describe('InteriorController: saves', () => {
       t.run(0.1);
       expect(t.log.at(-1)).toBe('fade 0');
       expect(t.c.transitioning).toBe(false);
+      expect(t.state.frozen).toBe(0);
       expect(t.events).toEqual([{ type: 'interior.entered', payload: { interiorId: VAULT, doorId: 'vault' } }]);
     });
   });

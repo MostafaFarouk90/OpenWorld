@@ -61,8 +61,12 @@ and `.exit`): `tilted-anvil`, `tilted-anvil-back` (onto the Bastion yard), `keep
 
 **Loads.** `current` is set before `save.loaded`. A load keeps the saved door (a back-door entrant leaves by it). When the saved
 spot is no longer floor (a layout changed, or a stuck loader teleport left the player in the sky), the controller fades to black,
-moves the player to the interior's first entry, waits for ground and fades back in. Its `save.loaded` handler runs before those of
-plugins that depend on `interiors` (3b, 18, 20), so their teleports win.
+freezes and moves the player to the interior's first entry, waits for ground and fades back in. Standing on furniture (a bed, a
+shelf top) still counts as floor. A plugin whose own `save.loaded` teleport must win over a rescue (3b, 18, 20) should depend on
+`interiors`, so it subscribes later; without that dependency the order is the plugin loader's tie-break.
+
+**Spacing.** Every pair of interiors is at least 130 m apart (3D), beyond the enemies' 120 m wake range, so guards in one never wake
+while the player is in another. For that the Archive floats 150 m north of its door (`harrowmark/sites.ts`).
 
 **Floating occupants.** NPCs, guards and Tobb posted indoors would stand 150 m up in the sky; `OccupantHider` hides any actor whose
 root is inside an interior that is not `current`, every frame, and shows only those it hid.

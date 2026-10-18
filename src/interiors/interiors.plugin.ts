@@ -11,7 +11,7 @@ import '../waystones/service';
 import { buildInterior, type BuiltInterior } from './build';
 import { SceneEnvironment } from './environment';
 import { InteriorController, InteriorError } from './InteriorController';
-import { boundsContain, layoutInterior, type InteriorLayout } from './layout';
+import { boundsContain, layoutInterior, standsIn, type InteriorLayout } from './layout';
 import type { InteriorsService } from './service';
 import './service';
 import { HARROWMARK_INTERIORS } from './harrowmark';
@@ -24,9 +24,6 @@ import { VAULT_DEF } from './vaultDef';
 
 /** Every interior the game ships (contracts/interiors-and-nav.md section 9). */
 export const ALL_INTERIORS: readonly InteriorDef[] = [VAULT_DEF, ...HARROWMARK_INTERIORS, UNDERWAYS_DEF];
-/** A load this close (horizontally) to a walkable cell, at floor height, still counts as on the floor. */
-const ON_FLOOR_METRES = 1;
-const ON_FLOOR_HEIGHT = 1.5;
 
 /** Thread 3a's band in `rules` (requested for game-events-and-flags.md section 2) and in render `world`. */
 export const INTERIORS_RULES_ORDER = 400;
@@ -94,23 +91,8 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
   const layouts = new Map<string, InteriorLayout>();
   const grids = new Map<string, NavGrid>();
   const onFloor = (id: string, at: { x: number; y: number; z: number }): boolean => {
-    const g = grids.get(id);
-    if (!g || Math.abs(at.y - g.floorY) > ON_FLOOR_HEIGHT) return false;
-    const r = Math.ceil(ON_FLOOR_METRES / g.cellSize);
-    const c0 = Math.floor((at.x - g.minX) / g.cellSize);
-    const r0 = Math.floor((at.z - g.minZ) / g.cellSize);
-    for (let dr = -r; dr <= r; dr++) {
-      for (let dc = -r; dc <= r; dc++) {
-        const c = c0 + dc;
-        const row = r0 + dr;
-        if (c < 0 || row < 0 || c >= g.cols || row >= g.rows) continue;
-        const i = row * g.cols + c;
-        if (!g.isWalkable(i)) continue;
-        const centre = g.cellCentre(i);
-        if (Math.hypot(centre.x - at.x, centre.z - at.z) <= ON_FLOOR_METRES) return true;
-      }
-    }
-    return false;
+    const layout = layouts.get(id);
+    return !!layout && standsIn(layout, at);
   };
 
   const controller = new InteriorController({
@@ -256,7 +238,8 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
   const hider = new OccupantHider();
   cleanups.push(() => hider.dispose());
 
-  // Runs before 3b's, 18's and 20's handlers (they depend on this plugin), so their teleports win over a stale-load rescue.
+  // A plugin whose own save.loaded teleport must win over a stale-load rescue (3b, 18, 20) depends on 'interiors', so it subscribes
+  // after this one; without that dependency the order is the loader's tie-break.
   ctx.events.on('save.loaded', () => controller.onSaveLoaded());
   // Debug: `?debug&interior=<id>` drops the player at that interior's first entry (the bounds rule does the rest).
   let debugInterior = debugInteriorParam();

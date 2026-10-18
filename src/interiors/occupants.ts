@@ -13,7 +13,8 @@ const tmp = new THREE.Vector3();
  * it hid itself; one hidden by anything else stays hidden.
  */
 export class OccupantHider {
-  private readonly hidden = new Set<Occupant>();
+  private readonly hidden = new Map<Occupant, number>();
+  private frame = 0;
 
   update(
     actors: Iterable<Occupant>,
@@ -21,27 +22,28 @@ export class OccupantHider {
     interiorAt: (at: { x: number; y: number; z: number }) => string | null,
     skip?: (a: Occupant) => boolean,
   ): void {
-    const seen = new Set<Occupant>();
+    const frame = ++this.frame;
     for (const a of actors) {
       const root = a.root;
       if (!root || skip?.(a)) continue;
-      seen.add(a);
       root.getWorldPosition(tmp);
       const id = interiorAt(tmp);
       if (id !== null && id !== current) {
+        // Adopt only a visible root: one someone else hid stays theirs to show.
+        if (!this.hidden.has(a) && !root.visible) continue;
         root.visible = false;
-        this.hidden.add(a);
+        this.hidden.set(a, frame);
       } else if (this.hidden.delete(a)) {
         root.visible = true;
       }
     }
     // Despawned actors are forgotten.
-    for (const a of this.hidden) if (!seen.has(a)) this.hidden.delete(a);
+    for (const [a, seen] of this.hidden) if (seen !== frame) this.hidden.delete(a);
   }
 
   /** Shows everything this hider hid (teardown). */
   dispose(): void {
-    for (const a of this.hidden) if (a.root) a.root.visible = true;
+    for (const a of this.hidden.keys()) if (a.root) a.root.visible = true;
     this.hidden.clear();
   }
 
