@@ -289,3 +289,10 @@ describe('markers', () => {
     expect(near?.id).toBe('b');
   });
 });
+
+describe("buildMarkers quest list", () => {
+  it("builds one quest marker per entry", () => {
+    const m = buildMarkers({ waystones: [], quest: [{ id: "a", x: 1, z: 1 }, { id: "b", x: 2, z: 2, label: "B" }, { id: "c", x: NaN, z: 0 }] });
+    expect(m.map((x) => [x.id, x.kind, x.label])).toEqual([["a", "quest", "a"], ["b", "quest", "B"]]);
+  });
+});

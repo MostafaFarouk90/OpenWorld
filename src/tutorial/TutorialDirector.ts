@@ -439,7 +439,8 @@ export class TutorialDirector {
     const steps = def.steps.map((st) => st.map((spec) => this.data.createGoal(spec)));
     for (const st of steps) for (const g of st) g.sync(this.ports.state);
     this.drill = { def, steps, step: 0, left: DRILL_SECONDS };
-    this.ports.holdKillXp(true);
+    this.ports.holdKillXp(true, 'tutorial.replay');
+    this.seedTriggers(steps[0] ?? []);
     for (const sp of def.waves ?? []) {
       this.ports.resetGroup(sp.spawnerId);
       if (this.ports.spawn(sp).length === 0) this.ports.warn(`Tutorial: drill spawner ${sp.spawnerId} spawned nothing`);
@@ -460,7 +461,11 @@ export class TutorialDirector {
   private advanceDrill(): void {
     const d = this.drill;
     if (!d) return;
-    while (d.step < d.steps.length && d.steps[d.step].every((g) => this.satisfied(g))) d.step++;
+    for (;;) {
+      this.seedTriggers(d.steps[d.step] ?? []);
+      if (d.step >= d.steps.length || !d.steps[d.step].every((g) => this.satisfied(g))) break;
+      d.step++;
+    }
     if (d.step >= d.steps.length) this.endDrill(true);
   }
 
@@ -489,7 +494,7 @@ export class TutorialDirector {
     }
     this.placeNpcsFor(id);
     this.ports.setLocks(this.locksFor(id));
-    this.ports.holdKillXp(this.beforeT13(id));
+    this.ports.holdKillXp(this.beforeT13(id), 'tutorial');
     const index = this.data.orders.full.indexOf(id);
     if (index >= 0 && index < this.data.orders.full.indexOf('t05')) this.ports.reArm(0);
     else if (def.crisis || def.cutscene === 'crack') this.ports.reArm(1);
@@ -569,7 +574,8 @@ export class TutorialDirector {
       this.leaveBeat();
       this.ports.setLocks([]);
       this.ports.holdKillXp(false);
-      if (this.s.complete) this.placeNpcsFor(null);
+      // After M01 the quest posts own Gaut and Aelfreda (src/quests/posts.ts).
+      if (this.s.complete && this.ports.state.questState('m01') !== 'completed') this.placeNpcsFor(null);
       return;
     }
     const def = this.def();
@@ -650,6 +656,7 @@ export class TutorialDirector {
     let guard = 0;
     while (this.step < this.steps.length && guard++ < 32) {
       const current = this.steps[this.step];
+      this.seedTriggers(current);
       if (!current.every((g) => this.satisfied(g))) break;
       this.onStepDone(id, this.step);
       if (this.s.beat !== id) return;
@@ -661,6 +668,18 @@ export class TutorialDirector {
       this.showPrompts(this.def());
     }
     if (this.step >= this.steps.length && this.vowRetryLeft < 0) this.finishBeat('completed');
+  }
+
+  /**
+   * `trigger.enter` fires only on a transition, so a step whose trigger already holds the player would
+   * wait for them to step out and back in. Like quest objectives, check on activation; `advance` runs
+   * every tick, which also covers `isInside` being stale in the tick of a teleport or load. The event
+   * goes to those goals only, and a counted goal ignores it.
+   */
+  private seedTriggers(goals: GoalTracker[]): void {
+    for (const g of goals) {
+      if (g.spec.kind === 'trigger' && !g.done && this.ports.playerInTrigger(g.spec.id)) g.onEvent({ type: 'trigger', id: g.spec.id });
+    }
   }
 
   private onStepDone(id: BeatId, step: number): void {

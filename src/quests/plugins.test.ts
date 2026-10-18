@@ -145,6 +145,20 @@ describe('quests and dialogue plugins', () => {
     t.world.dispose();
   });
 
+  it('toasts the M03 lead once on live M02 completion and never on load', async () => {
+    const t = await boot();
+    const q = t.ctx.services.require('quests');
+    const toasts: string[] = [];
+    t.ctx.events.on('hud.toast', (e) => toasts.push(e.textKey));
+    q.start('m02');
+    q.complete('m02');
+    expect(toasts).toEqual(['quest.lead.m03']);
+    t.ctx.events.emit('save.loaded', { slot: 't' });
+    expect(toasts).toEqual(['quest.lead.m03']);
+    t.game.dispose();
+    t.world.dispose();
+  });
+
   it('a dialogue aborted by a save load does not credit the talk objective', async () => {
     const t = await boot();
     const q = t.ctx.services.require('quests');
