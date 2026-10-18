@@ -172,11 +172,16 @@ export class PriorEncounter implements PriorHooks {
 
   /** Fighting and no outcome yet (the gate may close only then). */
   get contested(): boolean {
-    return this.fighting && this.brain.state !== 'released' && this.brain.state !== 'dying';
+    return this.fighting && !this.outcomePlaying;
   }
 
   get done(): boolean {
     return this.ended;
+  }
+
+  /** An outcome presentation is playing (the release dissolve or the death). */
+  get outcomePlaying(): boolean {
+    return this.brain.state === 'released' || this.brain.state === 'dying';
   }
 
   /** Feet position (the root sits at the feet). */
