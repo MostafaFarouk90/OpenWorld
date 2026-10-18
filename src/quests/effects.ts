@@ -1,5 +1,6 @@
 import type { Effect, FavourTrack } from './types';
-import { EFFECT_EVENT_PATTERN } from './types';
+import { EFFECT_EVENT_PATTERN, MAX_IF_DEPTH } from './types';
+import { evalCondition } from './conditions';
 import type { EffectEnv, EffectResult } from './ports';
 
 export interface EffectRunner { run(effects: Effect[] | undefined): EffectResult[] }
@@ -21,7 +22,7 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
         isObj(e) && typeof e.itemId === 'string' && e.itemId !== '' && Number.isInteger(e.count) && (e.count as number) > 0)
       : [];
 
-  function exec(e: Effect): void {
+  function exec(e: Effect, depth: number): void {
     const c = e as any;
     if (!isObj(e)) throw new Error('effect is not an object');
     if ('setFlag' in c) {
@@ -66,6 +67,33 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
       const p = env.progression?.();
       if (!p?.grantSkillPoint) { warnOnce('skillPoints: progression service absent'); throw new Silent('skill point service absent'); }
       p.grantSkillPoint(c.skillPoints, env.sourceId);
+    } else if ('giveGold' in c) {
+      if (typeof c.giveGold !== 'number' || !Number.isFinite(c.giveGold) || c.giveGold <= 0) throw new Error('giveGold must be a positive number');
+      const inv = env.inventory?.();
+      if (!inv?.addGold) { warnOnce('giveGold: inventory service absent'); throw new Silent('inventory service absent'); }
+      inv.addGold(c.giveGold);
+    } else if ('if' in c) {
+      if (depth >= MAX_IF_DEPTH) throw new Error(`if effects nest at most ${MAX_IF_DEPTH} deep`);
+      const holds = evalCondition(c.if, { state: env.state, quests: env.quests, warn: env.warn });
+      const branch = (holds ? c.then : c.else) as Effect[] | undefined;
+      if (branch !== undefined && !Array.isArray(branch)) throw new Error('if branch is not an array');
+      runList(branch, depth + 1);
+    } else if ('placeNpc' in c) {
+      const { npcId, anchorId } = (c.placeNpc ?? {}) as { npcId?: unknown; anchorId?: unknown };
+      if (typeof npcId !== 'string' || typeof anchorId !== 'string' || !npcId || !anchorId) throw new Error('placeNpc needs npcId and anchorId');
+      const npcs = env.npcs?.();
+      if (!npcs) { warnOnce('placeNpc: npcs service absent'); throw new Silent('npcs service absent'); }
+      if (!npcs.place(npcId, anchorId)) warn(`placeNpc: could not place ${npcId} at ${anchorId}`);
+    } else if ('unlockMercy' in c) {
+      if (c.unlockMercy !== 'release' && c.unlockMercy !== 'spare') throw new Error(`unknown mercy verb ${String(c.unlockMercy)}`);
+      const enemies = env.enemies?.();
+      if (!enemies) { warnOnce('unlockMercy: enemies service absent'); throw new Silent('enemies service absent'); }
+      enemies.setMercyUnlocked(c.unlockMercy, true);
+    } else if ('grantAbility' in c) {
+      if (typeof c.grantAbility !== 'string' || !c.grantAbility) throw new Error('grantAbility needs an ability id');
+      const p = env.progression?.();
+      if (!p?.grantAbility) { warnOnce('grantAbility: progression service absent'); throw new Silent('grantAbility service absent'); }
+      p.grantAbility(c.grantAbility, env.sourceId);
     } else if ('event' in c) {
       if (typeof c.event !== 'string' || !EFFECT_EVENT_PATTERN.test(c.event)) {
         throw new Error(`event name rejected: ${String(c.event)}`);
@@ -76,19 +104,19 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
     }
   }
 
-  return {
-    run(effects) {
-      if (!effects) return [];
-      return effects.map((effect): EffectResult => {
-        try {
-          exec(effect);
-          return { effect, ok: true };
-        } catch (err) {
-          const error = err instanceof Error ? err.message : String(err);
-          if (!(err instanceof Silent)) warn(`effect failed: ${error}`);
-          return { effect, ok: false, error };
-        }
-      });
-    },
-  };
+  function runList(effects: Effect[] | undefined, depth: number): EffectResult[] {
+    if (!effects) return [];
+    return effects.map((effect): EffectResult => {
+      try {
+        exec(effect, depth);
+        return { effect, ok: true };
+      } catch (err) {
+        const error = err instanceof Error ? err.message : String(err);
+        if (!(err instanceof Silent)) warn(`effect failed: ${error}`);
+        return { effect, ok: false, error };
+      }
+    });
+  }
+
+  return { run: (effects) => runList(effects, 0) };
 }
