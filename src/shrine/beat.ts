@@ -1,0 +1,135 @@
+import { SHRINE_TUNING } from './tuning';
+
+/** The subset of thread 9's `BeatInfo` (music-states.md section 6) this module reads. */
+export interface BeatInfoLike {
+  beatSeconds: number;
+  nextBeatTime: number;
+}
+
+export interface BeatLocation {
+  /** Index of the beat nearest the time, on this clock's grid. */
+  index: number;
+  /** Signed error in ms: negative is early, positive is late. A half-beat tie reads as late. */
+  errorMs: number;
+}
+
+export type BeatSource = 'music' | 'metronome';
+
+/** Times are `performance.now()` milliseconds. */
+export interface BeatClock {
+  /** The source in use right now; switches when audio unlocks or the music beat goes away. */
+  source(): BeatSource;
+  /** Changes whenever the grid is re-based (a source switch or a re-sync), so judges reset. */
+  generation(): number;
+  locate(tMs: number): BeatLocation;
+  /** Highest beat index whose hit window (+- windowMs) has closed by `tMs`. */
+  passedIndex(tMs: number, windowMs: number): number;
+}
+
+export interface BeatClockPorts {
+  /** `music.beat()`, or undefined when the music service is missing. May return null or throw. */
+  beat(): BeatInfoLike | null | undefined;
+  /** `music.toAudioTime`: a performance timestamp to AudioContext seconds. */
+  toAudioTime(performanceMs: number): number | undefined;
+  nowMs(): number;
+}
+
+/** A grid of beats at `epoch + k * period` (same unit for both). */
+class Grid {
+  constructor(
+    readonly epoch: number,
+    readonly period: number,
+  ) {}
+
+  locate(t: number): { index: number; error: number } {
+    const index = Math.ceil((t - this.epoch) / this.period - 0.5);
+    return { index, error: t - (this.epoch + index * this.period) };
+  }
+
+  passed(t: number, window: number): number {
+    return Math.floor((t - window - this.epoch) / this.period);
+  }
+}
+
+const RESYNC_DRIFT_MS = 15;
+
+/**
+ * Judges against the music clock when it exists, else against a metronome at the track's tempo
+ * (headless runs, locked audio, thread 9 not merged), so the rhythm never blocks the player.
+ */
+export class AdaptiveBeatClock implements BeatClock {
+  private readonly metronome: Grid;
+  private music: { grid: Grid } | null = null;
+  private gen = 0;
+
+  constructor(
+    private readonly ports: BeatClockPorts,
+    bpm: number = SHRINE_TUNING.wardstones.bpm,
+  ) {
+    this.metronome = new Grid(ports.nowMs(), 60000 / bpm);
+  }
+
+  source(): BeatSource {
+    this.refresh();
+    return this.music ? 'music' : 'metronome';
+  }
+
+  generation(): number {
+    this.refresh();
+    return this.gen;
+  }
+
+  locate(tMs: number): BeatLocation {
+    this.refresh();
+    if (this.music) {
+      const a = this.ports.toAudioTime(tMs);
+      if (a !== undefined && Number.isFinite(a)) {
+        const r = this.music.grid.locate(a);
+        return { index: r.index, errorMs: r.error * 1000 };
+      }
+    }
+    const r = this.metronome.locate(tMs);
+    return { index: r.index, errorMs: r.error };
+  }
+
+  passedIndex(tMs: number, windowMs: number): number {
+    this.refresh();
+    if (this.music) {
+      const a = this.ports.toAudioTime(tMs);
+      if (a !== undefined && Number.isFinite(a)) return this.music.grid.passed(a, windowMs / 1000);
+    }
+    return this.metronome.passed(tMs, windowMs);
+  }
+
+  /** Reads `music.beat()` once and re-bases the grid when the source or its tempo changes. */
+  private refresh(): void {
+    let info: BeatInfoLike | null | undefined = null;
+    try {
+      info = this.ports.beat();
+    } catch {
+      info = null;
+    }
+    const ok = !!info && Number.isFinite(info.beatSeconds) && info.beatSeconds > 0 && Number.isFinite(info.nextBeatTime);
+    if (!ok) {
+      if (this.music) {
+        this.music = null;
+        this.gen++;
+      }
+      return;
+    }
+    const b = info as BeatInfoLike;
+    if (!this.music) {
+      this.music = { grid: new Grid(b.nextBeatTime, b.beatSeconds) };
+      this.gen++;
+      return;
+    }
+    // Same tempo and a next-beat time that still sits on the grid: nothing changes.
+    const g = this.music.grid;
+    const off = ((b.nextBeatTime - g.epoch) / g.period) % 1;
+    const driftMs = Math.min(Math.abs(off), 1 - Math.abs(off)) * g.period * 1000;
+    if (Math.abs(b.beatSeconds - g.period) > 1e-6 || driftMs > RESYNC_DRIFT_MS) {
+      this.music = { grid: new Grid(b.nextBeatTime, b.beatSeconds) };
+      this.gen++;
+    }
+  }
+}
