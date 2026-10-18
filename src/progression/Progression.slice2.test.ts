@@ -245,8 +245,28 @@ describe('class skills', () => {
     const { p } = make();
     registerClassSkills('warden', [def('a', 1)]);
     p.grantXp(xpForLevel(2), 'x');
+    p.setClass('warden');
     expect(p.learn('warden.a')).toEqual({ ok: true });
     expect(p.serialize().learned).toEqual(['warden.a']);
+  });
+});
+
+describe('class gating', () => {
+  it('a Knight cannot learn another class\'s skill, and next-unlock never points at it', () => {
+    const { p } = make();
+    registerClassSkills('ranger', [{ id: 'ranger.a', classId: 'ranger', branch: 'trail', tier: 1, cost: 1, kind: 'passive', nameKey: 'k', descKey: 'k', available: true }]);
+    p.grantXp(xpForLevel(2), 'x');
+    expect(p.learn('ranger.a')).toEqual({ ok: false, reason: 'unavailable' });
+    expect(p.nextUnlock()).not.toMatchObject({ skillId: 'ranger.a' });
+    expect(['knight.rimBash', 'knight.riposteEdge', 'knight.rallyCry']).toContain((p.nextUnlock() as { skillId: string }).skillId);
+  });
+  it('after setClass the class skills are learnable and Knight ones are not', () => {
+    const { p } = make();
+    registerClassSkills('ranger', [{ id: 'ranger.a', classId: 'ranger', branch: 'trail', tier: 1, cost: 1, kind: 'passive', nameKey: 'k', descKey: 'k', available: true }]);
+    p.grantXp(xpForLevel(2), 'x');
+    p.setClass('ranger');
+    expect(p.learn('ranger.a')).toEqual({ ok: true });
+    expect(p.learn('knight.rimBash')).toEqual({ ok: false, reason: 'unavailable' });
   });
 });
 

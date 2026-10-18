@@ -344,7 +344,7 @@ export class CombatVerbs {
     c.setWalkWhileBlocking(iron);
     const guarding = iron && c.currentAction === 'block';
     if (guarding && !this.offIronStance) {
-      this.offIronStance = this.ctx.player.addMoveModifier('verbs.ironStance', { speedScale: GUARD.ironStanceSpeedScale, lockFacing: true });
+      this.offIronStance = this.ctx.player.addMoveModifier('verbs.ironStance', { speedScale: GUARD.ironStanceSpeedScale, lockFacing: true, lockActions: ['sprint'] });
     } else if (!guarding && this.offIronStance) {
       this.offIronStance();
       this.offIronStance = null;
@@ -741,7 +741,11 @@ export class CombatVerbs {
       this.deadModifier?.();
       this.deadModifier = null;
     }
-    if (typeof d.health === 'number' && Number.isFinite(d.health)) actor.health = Math.min(actor.maxHealth, Math.max(1, d.health));
+    if (typeof d.health === 'number' && Number.isFinite(d.health)) {
+      // Clamp to the unpenalised maximum: Burn and Scars load after this and progression re-clamps on `save.loaded`.
+      const cap = Math.max(actor.maxHealth, this.svc<{ baseMaxHealth?(): number }>('progression')?.baseMaxHealth?.() ?? 0);
+      actor.health = Math.min(cap, Math.max(1, d.health));
+    }
     if (typeof d.stamina === 'number' && Number.isFinite(d.stamina)) actor.stamina = Math.min(actor.maxStamina, Math.max(0, d.stamina));
   }
 
@@ -750,6 +754,7 @@ export class CombatVerbs {
   private bindAvatar(avatar: KnightAvatar): void {
     if (this.controller === avatar.controller) return;
     this.controller = avatar.controller;
+    this.appliedAttackClass = null;
     const hurtboxes = this.ctx.world.combat.playerHurtboxes;
     if (hurtboxes) this.offs.push(this.ctx.combat.addTarget(hurtboxes, this.actor.id));
     this.offs.push(

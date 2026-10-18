@@ -582,4 +582,21 @@ describe('shard use, Scars and the Leap (slice 2)', () => {
       plugin.dispose!();
     });
   });
+
+  it('resting at Burn 100 ends at full health on the restored maximum', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    const me = f.world.actors.player;
+    // a stand-in for progression: the maximum shrinks with Burn and is re-read on burn.changed
+    const refresh = () => { me.maxHealth = Math.round(120 * (1 - 0.4 * f.services.spells!.burn / 100)); me.health = Math.min(me.health, me.maxHealth); };
+    f.world.events.on('burn.changed', refresh);
+    f.services.spells!.addBurn(100, 't');
+    expect(me.maxHealth).toBe(72);
+    me.health = 72; // the waystone healed to the reduced maximum before `rest`
+    f.world.events.emit('rest', { waystoneId: 'w' });
+    expect(f.services.spells!.burn).toBe(0);
+    expect(me.maxHealth).toBe(120);
+    expect(me.health).toBe(120);
+    plugin.dispose!();
+  });
 });
