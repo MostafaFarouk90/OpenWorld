@@ -24,7 +24,14 @@ export const SNEAK: Readonly<PerceptionModifiers> = Object.freeze({
   hearingLoudScale: 0.7,
 });
 
-/** Scales multiply, blockers concatenate, `hiddenBelow` and `targetHeight` take the minimum. Null for an empty list. */
+/**
+ * Combines provider results into one set of modifiers; null for an empty list (so unmodified perception is untouched).
+ * Fields, per `PerceptionModifiers`:
+ * - `sightRangeScale`, `coneScale`, `hearingQuietScale`, `hearingLoudScale`: multiplied together;
+ * - `blockSight` (array of `{ x, z, r }` discs): concatenated;
+ * - `hiddenBelow`: the minimum across providers;
+ * - `targetHeight`: the minimum across providers (the lowest sight target wins).
+ */
 export function combineModifiers(list: readonly PerceptionModifiers[]): CombinedModifiers | null {
   if (list.length === 0) return null;
   const out: CombinedModifiers = {
@@ -32,7 +39,7 @@ export function combineModifiers(list: readonly PerceptionModifiers[]): Combined
     coneScale: 1,
     hearingQuietScale: 1,
     hearingLoudScale: 1,
-    blockSightRadius: [],
+    blockSight: [],
   };
   const blockers: SightBlocker[] = [];
   for (const m of list) {
@@ -40,12 +47,11 @@ export function combineModifiers(list: readonly PerceptionModifiers[]): Combined
     out.coneScale *= m.coneScale;
     out.hearingQuietScale *= m.hearingQuietScale;
     out.hearingLoudScale *= m.hearingLoudScale;
-    const b = m.blockSightRadius;
-    if (b) blockers.push(...(Array.isArray(b) ? (b as readonly SightBlocker[]) : [b as SightBlocker]));
+    if (m.blockSight) blockers.push(...m.blockSight);
     if (m.hiddenBelow !== undefined) out.hiddenBelow = out.hiddenBelow === undefined ? m.hiddenBelow : Math.min(out.hiddenBelow, m.hiddenBelow);
     if (m.targetHeight !== undefined) out.targetHeight = out.targetHeight === undefined ? m.targetHeight : Math.min(out.targetHeight, m.targetHeight);
   }
-  out.blockSightRadius = blockers;
+  out.blockSight = blockers;
   return out;
 }
 

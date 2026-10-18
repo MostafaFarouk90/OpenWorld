@@ -99,20 +99,20 @@ describe('perception modifiers', () => {
     expect(combineModifiers([])).toBeNull();
   });
 
-  it('sight blockers concatenate, a single blocker object is accepted, and a disc on the ray blocks sight', () => {
+  it('sight blockers concatenate and a disc on the ray blocks sight', () => {
     const a = { x: 0, z: -3, r: 1 };
     const b = { x: 5, z: -5, r: 1 };
-    const m = combineModifiers([{ ...ID, blockSightRadius: a }, { ...ID, blockSightRadius: [b] }, ID])!;
-    expect(m.blockSightRadius).toEqual([a, b]);
+    const m = combineModifiers([{ ...ID, blockSight: [a] }, { ...ID, blockSight: [b] }, ID])!;
+    expect(m.blockSight).toEqual([a, b]);
     expect(perceive(input({ modifiers: m })).sees).toBe(false); // smoke at z -3 on the ray
     expect(perceive(input({ modifiers: m })).distance).toBeCloseTo(10);
     // Only the second blocker covers this ray.
     const t = { x: 10, y: 0, z: -10 };
-    expect(perceive(input({ targetFeet: t, selfYaw: -Math.PI / 4, modifiers: combineModifiers([{ ...ID, blockSightRadius: a }]) })).sees).toBe(true);
+    expect(perceive(input({ targetFeet: t, selfYaw: -Math.PI / 4, modifiers: combineModifiers([{ ...ID, blockSight: [a] }]) })).sees).toBe(true);
     expect(perceive(input({ targetFeet: t, selfYaw: -Math.PI / 4, modifiers: m })).sees).toBe(false);
     // A disc beside the ray, or beyond the target, does not block.
-    expect(perceive(input({ modifiers: combineModifiers([{ ...ID, blockSightRadius: { x: 3, z: -5, r: 1 } }]) })).sees).toBe(true);
-    expect(perceive(input({ modifiers: combineModifiers([{ ...ID, blockSightRadius: { x: 0, z: -14, r: 1 } }]) })).sees).toBe(true);
+    expect(perceive(input({ modifiers: combineModifiers([{ ...ID, blockSight: [{ x: 3, z: -5, r: 1 }] }]) })).sees).toBe(true);
+    expect(perceive(input({ modifiers: combineModifiers([{ ...ID, blockSight: [{ x: 0, z: -14, r: 1 }] }]) })).sees).toBe(true);
     // Smoke does not stop hearing.
     expect(perceive(input({ targetLoud: true, modifiers: m })).hears).toBe(true);
   });
@@ -156,7 +156,7 @@ describe('perception modifiers', () => {
 });
 
 describe('PerceptionHub', () => {
-  const pose: ObserverPose = { actorId: 'e1', kind: 'watch-guard', state: 'idle', spawnerId: null, level: 1, feet: { x: 1, y: 0, z: 2 }, yaw: 0.5, observerOnly: true };
+  const pose: ObserverPose = { actorId: 'e1', kind: 'watch-guard', state: 'idle', spawnerId: null, level: 1, packLeader: false, feet: { x: 1, y: 0, z: 2 }, yaw: 0.5, observerOnly: true };
 
   it('returns null with no providers, passes the pose and target, and unregister removes a provider', () => {
     const hub = new PerceptionHub(() => {});
@@ -168,7 +168,7 @@ describe('PerceptionHub', () => {
         return SNEAK;
       },
     });
-    expect(hub.combined('player', () => pose)).toEqual({ ...SNEAK, blockSightRadius: [] });
+    expect(hub.combined('player', () => pose)).toEqual({ ...SNEAK, blockSight: [] });
     expect(seen).toEqual([['player', pose]]);
     off();
     off();
@@ -277,10 +277,12 @@ describe('stepAwareness', () => {
 });
 
 describe('loudness from speed', () => {
-  it('loud only at sprint pace or while attacking', () => {
+  it('loud only above walk speed + 0.5 m/s, or while attacking', () => {
     expect(loudFromSpeed(0, false)).toBe(false);
     expect(loudFromSpeed(4.5, false)).toBe(false);
-    expect(loudFromSpeed(LOUD_SPEED, false)).toBe(true);
+    expect(loudFromSpeed(LOUD_SPEED, false)).toBe(false);
+    expect(loudFromSpeed(LOUD_SPEED + 0.01, false)).toBe(true);
+    expect(LOUD_SPEED).toBeCloseTo(5);
     expect(loudFromSpeed(7.5, false)).toBe(true);
     expect(loudFromSpeed(0, true)).toBe(true);
     expect(loudFromSpeed(Number.NaN, false)).toBe(false);

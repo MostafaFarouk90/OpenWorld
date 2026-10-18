@@ -42,6 +42,8 @@ export interface ActorInitLike {
   level?: number;
   maxHealth: number;
   maxPoise?: number;
+  /** Takes every hit and stays at full health (the watch guard). */
+  immortal?: boolean;
   root?: THREE.Object3D;
   owner?: unknown;
   /** Set once at spawn from the spawner's tag (coordinator ruling for thread 3's kill filter). */

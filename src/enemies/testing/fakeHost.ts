@@ -159,6 +159,8 @@ export class FakeActor implements ActorLike {
   maxPoise: number;
   hittable = true;
   invulnerable = false;
+  /** Takes every hit and stays at full health, like the core's immortal actors. */
+  readonly immortal: boolean;
   root: THREE.Object3D | null;
   data: Record<string, unknown> = {};
   readonly spawnTag?: string;
@@ -168,6 +170,7 @@ export class FakeActor implements ActorLike {
     init: ActorInitLike,
   ) {
     this.team = init.team;
+    this.immortal = init.immortal ?? false;
     this.level = init.level ?? 1;
     this.maxHealth = this.health = init.maxHealth;
     this.maxPoise = this.poise = init.maxPoise ?? 0;
@@ -219,7 +222,7 @@ export class FakeHost {
   readonly playerHurtboxes: HurtboxSet;
   readonly playerFeet: THREE.Vector3;
   loud = false;
-  /** Measured player speed (m/s) the fake reports; loud at LOUD_SPEED or more, whatever keys are held. */
+  /** Measured player speed (m/s) the fake reports; loud above LOUD_SPEED, whatever keys are held. */
   speed = 0;
   vfx: { dissolve(root: THREE.Object3D, s: number): Promise<void>; spawnEffect?(id: string, t: { position: { x: number; y: number; z: number } }, p?: Record<string, number | string | boolean>): unknown } | undefined;
   /** Thread 2's spells service when a test provides it (`useShard`, or the older `addBurn`). */
@@ -376,7 +379,7 @@ export class FakeHost {
     for (const m of [...this.modifiers].sort((a, b) => a.order - b.order)) m.fn(r, target, attacker);
     const dealt = r.outcome === 'immune' || r.outcome === 'parried' ? 0 : Math.max(0, r.amount);
     const poiseDealt = r.outcome === 'immune' || r.outcome === 'parried' ? 0 : Math.max(0, r.poise);
-    target.health = Math.max(0, target.health - dealt);
+    target.health = target.immortal ? target.maxHealth : Math.max(0, target.health - dealt);
     const before = target.poise;
     target.poise = Math.max(0, target.poise - poiseDealt);
     const staggered = before > 0 && target.poise === 0;

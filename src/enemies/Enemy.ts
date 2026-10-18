@@ -14,6 +14,8 @@ import { readStatusData } from './statusData';
 import type { EnemyBody } from './body';
 import type { ActorId, ActorLike, EnemyHost, NavPort } from './ports';
 import type { ObserverPose } from './perceptionHook';
+
+type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 import { PathFollower } from './steering/pathFollower';
 import { forwardOf, Steering, turnToward, yawTo } from './steering/steering';
 import { HeightfieldMover, SwitchingMover, type EnemyMover } from './steering/movers';
@@ -113,6 +115,7 @@ export class Enemy {
   private ignitedSwing = -1;
   private awareness = 0;
   private lastSees = false;
+  private lastHears = false;
   private lastDistance = Infinity;
   /** Watches only: never targets, never aggros, never attacks (see `damaged`). */
   readonly observerOnly: boolean;
@@ -155,7 +158,9 @@ export class Enemy {
       const maxHealth = Math.max(1, Math.round(spawn.maxHealth * (spawn.options.healthScale ?? 1)));
       this.actor = host.actors.spawn({
         kind: this.def.kind,
-        team: 'hostile',
+        // A watch guard is neutral and immortal: lock-on and hostile checks skip it, and a caught reset has no dead slot.
+        team: this.def.observerOnly ? 'neutral' : 'hostile',
+        immortal: this.def.observerOnly ? true : undefined,
         level: spawn.level,
         maxHealth,
         maxPoise: this.def.maxPoise,
@@ -248,6 +253,9 @@ export class Enemy {
       get level() {
         return self.actor?.level ?? 1;
       },
+      get packLeader() {
+        return !!self.actor && self.isPackLeader;
+      },
     };
   }
 
@@ -257,23 +265,41 @@ export class Enemy {
   }
 
   /** Awareness, line of sight and distance as of the last think; null once gone or while dormant. */
-  perceptionState(): { awareness: number; sees: boolean; distance: number } | null {
+  perceptionState(): { awareness: number; sees: boolean; hears: boolean; distance: number } | null {
     if (this.phase === 'gone' || this.asleep) return null;
-    return { awareness: this.awareness, sees: this.lastSees, distance: this.lastDistance };
+    return { awareness: this.awareness, sees: this.lastSees, hears: this.lastHears, distance: this.lastDistance };
   }
 
-  /** The pose handed to perception providers. */
+  private readonly poseCache: Mutable<ObserverPose> = {
+    actorId: '',
+    kind: 'ash-wraith',
+    state: 'idle',
+    spawnerId: null,
+    level: 1,
+    packLeader: false,
+    feet: { x: 0, y: 0, z: 0 },
+    yaw: 0,
+    observerOnly: false,
+  };
+
+  /**
+   * The pose handed to perception providers. One object per enemy, refilled on every call (nothing is allocated per
+   * call), so a provider must read it during `modifiers` and not keep it.
+   */
   pose(): ObserverPose {
-    return {
-      actorId: this.actor.id,
-      kind: this.def.kind,
-      state: this.brain.state,
-      spawnerId: this.spawnerId,
-      level: this.actor.level,
-      feet: { x: this.mover.feet.x, y: this.mover.feet.y, z: this.mover.feet.z },
-      yaw: this.yaw,
-      observerOnly: this.observerOnly,
-    };
+    const p = this.poseCache;
+    p.actorId = this.actor.id;
+    p.kind = this.def.kind;
+    p.state = this.brain.state;
+    p.spawnerId = this.spawnerId;
+    p.level = this.actor.level;
+    p.packLeader = this.isPackLeader;
+    p.feet.x = this.mover.feet.x;
+    p.feet.y = this.mover.feet.y;
+    p.feet.z = this.mover.feet.z;
+    p.yaw = this.yaw;
+    p.observerOnly = this.observerOnly;
+    return p;
   }
 
   get isGone(): boolean {
@@ -407,7 +433,8 @@ export class Enemy {
     this.stuckGiveUp = false;
     if (intent.goal && intent.speed > 0 && Math.hypot(intent.goal.x - self.x, intent.goal.z - self.z) > intent.stopDistance) {
       // Inside a nav grid (an interior), steer to the next path waypoint; outdoors this is null.
-      const waypoint = this.path.goalFor(dt, self, { x: intent.goal.x, y: pFeet.y, z: intent.goal.z });
+      // Observer-only guards never call nav.path: they walk their patrol in straight kinematic lines.
+      const waypoint = this.observerOnly ? null : this.path.goalFor(dt, self, { x: intent.goal.x, y: pFeet.y, z: intent.goal.z });
       const out = this.steering.step({
         position: self,
         desired: waypoint ?? intent.goal,
@@ -494,10 +521,13 @@ export class Enemy {
       this.damagedThisTick = true;
       this.poiseIdle = 0;
     }
-    // An observer-only guard takes the damage (it can die) and flinches on a hit, but never provokes,
-    // staggers into mercy or chases: the brain is not told, so no `ai.aggro` follows.
+    // An observer-only guard flinches on a hit and its awareness jumps to 1 (one `ai.spotted`; thread 18 counts it as
+    // caught), but it never provokes, staggers into mercy or chases: the brain is not told, so no `ai.aggro` follows.
     if (this.observerOnly) {
-      if (outcome === 'hit' && !staggered && !killed) this.oneShot(ENEMY_CLIPS.flinch, AI.flinchSeconds);
+      if (outcome === 'hit') {
+        if (!staggered && !killed) this.oneShot(ENEMY_CLIPS.flinch, AI.flinchSeconds);
+        this.spotNow(attackerId ?? this.host.actors.player.id);
+      }
       return;
     }
     if (staggered || killed) return; // actor.staggered and actor.died follow in the same batch
@@ -726,9 +756,17 @@ export class Enemy {
     const step = stepAwareness(this.awareness, { ...p, sightRange }, dt);
     this.awareness = step.awareness;
     this.lastSees = p.sees;
+    this.lastHears = p.hears;
     this.lastDistance = p.distance;
     if (step.becameSuspicious) this.host.events.emit('ai.suspicious', { actorId: this.actor.id, targetId, awareness: step.awareness });
     if (step.becameSpotted) this.host.events.emit('ai.spotted', { actorId: this.actor.id, targetId });
+  }
+
+  /** A hit on an observer: awareness goes straight to 1, and `ai.spotted` fires if it was not already there. */
+  private spotNow(targetId: ActorId): void {
+    const was = this.awareness;
+    this.awareness = 1;
+    if (was < 1) this.host.events.emit('ai.spotted', { actorId: this.actor.id, targetId });
   }
 
   private clearSlow(): void {

@@ -11,7 +11,7 @@ import type { Foe } from './foes/Foe';
 import { FoeManager } from './foes/FoeManager';
 import type { FoeDef, RaiseWraithRequest } from './foes/types';
 import { scaleStats } from './level';
-import { isHoldVerb, makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyTargets, nextPulseId, type BossMercySubject, type MercySubject } from './mercy';
+import { isHoldVerb, makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyTargets, nextPulseId, type BossMercySubject, type MercyEnemyDef, type MercySubject } from './mercy';
 import { MercyTally, type TallyRow } from './mercyTally';
 import { makeQuadrupedBody } from './hound/body';
 import { HOUND } from './hound/tuning';
@@ -48,9 +48,9 @@ export interface EnemiesService {
   /** Perception hook for stealth and skills (thread 18, 15). */
   perception: {
     register(provider: PerceptionProvider): Unregister;
+    /** Per-guard read: awareness 0..1, sees and hears as of the enemy's last think; null for an unknown, gone or dormant enemy. */
+    state(actorId: ActorId): { awareness: number; sees: boolean; hears: boolean; distance: number } | null;
   };
-  /** Awareness, line of sight and distance as of the enemy's last think; null for an unknown, gone or dormant enemy. */
-  perceptionState(actorId: ActorId): { awareness: number; sees: boolean; distance: number } | null;
 }
 
 /**
@@ -144,8 +144,10 @@ export class EnemyManager {
     lockBlockLevel: (b, l) => this.spawners.lockBlockLevel(b, l),
     mercyTally: () => this.tally.snapshot(),
     packLeader: (id) => this.packLeaderId(id),
-    perception: { register: (p) => this.perceptionHub.register(p) },
-    perceptionState: (id) => this.enemies.get(id)?.perceptionState() ?? null,
+    perception: {
+      register: (p) => this.perceptionHub.register(p),
+      state: (id) => this.enemies.get(id)?.perceptionState() ?? null,
+    },
   };
 
   readonly perceptionHub = new PerceptionHub((m) => this.host.warn(m));
@@ -215,16 +217,18 @@ export class EnemyManager {
       return null;
     }
     this.enemies.set(enemy.id, enemy);
+    const mercyDef = enemy.def.mercy ? (enemy.def as MercyEnemyDef) : null;
+    if (!mercyDef) return enemy.id; // no mercy row (the watch guard): nothing to register
     const subject: MercySubject = {
       actorId: enemy.id,
-      def: enemy.def,
+      def: mercyDef,
       slug: enemy.slug,
       feet: (out) => out.copy(enemy.feet),
       mercyOpen: () => enemy.mercyOpen,
     };
     this.subjects.set(enemy, subject);
     // Calm's interactable is thread 1's (the Calm type, offerings and state); only Release and Spare are built here.
-    if (isHoldVerb(enemy.def.mercy.verb)) {
+    if (isHoldVerb(mercyDef.mercy.verb)) {
       this.mercyRemovers.set(
         enemy,
         this.host.interaction.register(

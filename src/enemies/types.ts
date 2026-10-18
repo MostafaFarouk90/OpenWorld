@@ -89,7 +89,8 @@ export interface EnemyDef {
   moves: readonly MoveDef[];
   /** Flee below this health fraction (design: pack animals at 0.15); undefined never flees. */
   fleeAtHealth?: number;
-  mercy: MercyDef;
+  /** None for kinds that cannot be spared, released or calmed (the watch guard). */
+  mercy?: MercyDef;
   material: EnemyMaterial;
   /** Raises a shield about half the time; see ai/guard.ts. */
   guard?: boolean;
@@ -179,4 +180,9 @@ export interface EnemyView {
   readonly state: AiState;
   readonly spawnerId: string | null;
   readonly level: number;
+  /**
+   * True while this enemy occupies its spawner's `leaderSlot` and is alive (thread 1's pack Calm reads it).
+   * A dead leader is not replaced: nobody reads true afterwards. Foes and groups without a leader slot read false.
+   */
+  readonly packLeader: boolean;
 }

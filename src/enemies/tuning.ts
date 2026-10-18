@@ -1,3 +1,5 @@
+import { PLAYER } from '../config/constants';
+
 /**
  * Enemy AI tuning (thread 2's tuning file; src/config/constants.ts is shared and not edited).
  * Design sources: section 10 "Creature behaviours and AI states", 9.6 (poise), 11.0 (reactions), 5.9 (levels).
@@ -154,5 +156,8 @@ export const AWARENESS = {
   suspiciousAbove: 0.3,
 } as const;
 
-/** The player counts as loud at this horizontal speed (m/s) or faster: between walk 4.5 and sprint 7.5. Holding Shift while standing still is quiet. */
-export const LOUD_SPEED = 6;
+/**
+ * The player is loud when the measured horizontal speed is strictly above this (walk speed + 0.5 m/s) or an attack is
+ * active. Holding Shift while sneaking or standing still is quiet; the key itself is never read.
+ */
+export const LOUD_SPEED = PLAYER.walkSpeed + 0.5;

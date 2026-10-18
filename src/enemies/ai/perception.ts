@@ -26,17 +26,24 @@ export interface SightBlocker {
   r: number;
 }
 
-/** What a provider returns (see perceptionHook.ts); every scale defaults to 1 when a provider is not combined. */
+/**
+ * What a provider returns (see perceptionHook.ts). Combining several providers:
+ * - `sightRangeScale`, `coneScale`, `hearingQuietScale`, `hearingLoudScale` multiply (1 changes nothing). The effective sight
+ *   range is `AI.sightRange * sightRangeScale`, the cone's full angle `AI.sightConeDegrees * coneScale`, and the hearing
+ *   radius `AI.hearingQuiet * hearingQuietScale` (or `AI.hearingLoud * hearingLoudScale` while the target is loud).
+ * - `blockSight` lists concatenate.
+ * - `hiddenBelow` and `targetHeight` take the minimum across providers (the most hidden / lowest target wins).
+ */
 export interface PerceptionModifiers {
   sightRangeScale: number;
   coneScale: number;
   hearingQuietScale: number;
   hearingLoudScale: number;
-  /** Sight blockers; a single one is accepted. Several providers' blockers concatenate. */
-  blockSightRadius?: SightBlocker | readonly SightBlocker[];
+  /** Sight blockers: ground discs `{ x, z, r }` that a sight ray cannot pass through. Several providers' lists concatenate. */
+  blockSight?: readonly SightBlocker[];
   /** Hidden: not noticed unless closer than this, regardless of the cone. The minimum across providers wins. */
   hiddenBelow?: number;
-  /** Replaces the 1.1 m chest sight target when lower (crouching behind low cover). The minimum wins. */
+  /** Metres above the target's feet that sight rays aim at, when lower than the 1.1 m chest (crouching behind low cover). The minimum wins. */
   targetHeight?: number;
 }
 
@@ -46,7 +53,7 @@ export interface CombinedModifiers {
   coneScale: number;
   hearingQuietScale: number;
   hearingLoudScale: number;
-  blockSightRadius: readonly SightBlocker[];
+  blockSight: readonly SightBlocker[];
   hiddenBelow?: number;
   targetHeight?: number;
 }
@@ -90,7 +97,7 @@ export function perceive(input: PerceptionInput): PerceptionResult {
       const eye = { x: s.x, y: s.y + AI.eyeHeight, z: s.z };
       const height = m?.targetHeight !== undefined ? Math.min(AI.chestHeight, Math.max(0, m.targetHeight)) : AI.chestHeight;
       sees =
-        !(m && m.blockSightRadius.length > 0 && blocked(s, t, m.blockSightRadius)) &&
+        !(m && m.blockSight.length > 0 && blocked(s, t, m.blockSight)) &&
         input.lineOfSight(eye, { x: t.x, y: t.y + height, z: t.z });
     }
   }

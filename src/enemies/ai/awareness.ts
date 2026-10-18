@@ -15,6 +15,13 @@ export interface AwarenessStep {
 }
 
 /**
+ * Fill formula (per second, while `sees || hears`):
+ *   closeness = clamp(1 - distance / sightRange, 0, 1)       sightRange = AI.sightRange * sightRangeScale (stealth-shortened)
+ *   rate      = (1 / fillSeconds) * (edgeFillScale + (1 - edgeFillScale) * closeness)
+ *   awareness = min(1, awareness + rate * dt)
+ * so a seen target at the feet fills in `fillSeconds` and one at the edge of the sight range takes `fillSeconds / edgeFillScale`;
+ * hearing alone uses the same distance rule. Otherwise it drains: `awareness = max(0, awareness - drainPerSecond * dt)`.
+ *
  * Pure awareness step. Fills while the target is seen (or heard) at a rate that grows with closeness
  * (1 / `fillSeconds` at the feet, `edgeFillScale` of that at the effective sight range, `result.sightRange`, default the base range), drains at
  * `drainPerSecond` otherwise, clamped to 0..1. Edges are derived from `prev`, so a meter that drops
@@ -43,9 +50,9 @@ export function stepAwareness(prev: number, result: Pick<PerceptionResult, 'sees
   };
 }
 
-/** Loud means attacking or actually moving at sprint pace; a held sprint key with no movement is quiet. */
+/** Loud means attacking, or real speed above walk speed + 0.5 m/s (`LOUD_SPEED`); a held sprint key with no movement is quiet. */
 export function loudFromSpeed(speed: number, attacking: boolean): boolean {
-  return attacking || (Number.isFinite(speed) && speed >= LOUD_SPEED);
+  return attacking || (Number.isFinite(speed) && speed > LOUD_SPEED);
 }
 
 /**

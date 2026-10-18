@@ -1,12 +1,15 @@
 import * as THREE from 'three';
 import type { ActorId, InteractableLike, MercyEventLike } from './ports';
 import { MERCY } from './tuning';
-import type { EnemyDef, UnlockVerb } from './types';
+import type { EnemyDef, MercyDef, UnlockVerb } from './types';
+
+/** A def that has a mercy row (the watch guard has none and is never a mercy subject). */
+export type MercyEnemyDef = EnemyDef & { mercy: MercyDef };
 
 /** What the mercy interactable needs to know about its enemy. */
 export interface MercySubject {
   readonly actorId: ActorId;
-  readonly def: EnemyDef;
+  readonly def: MercyEnemyDef;
   /** Interactable name part: `<kind>-<n>` (ids are `release:<name>`, name `[a-zA-Z0-9_-]+`). */
   readonly slug: string;
   feet(out: THREE.Vector3): THREE.Vector3;
@@ -20,7 +23,7 @@ export function mercyInteractableId(slug: string): string {
 }
 
 /** String key of the prompt: "Hold {key}: Release (10 Burn)" or "Hold {key}: Spare". */
-export function mercyPromptKey(def: EnemyDef): string {
+export function mercyPromptKey(def: MercyEnemyDef): string {
   if (def.mercy.verb === 'release') return 'enemies.mercy.release';
   return def.mercy.verb === 'calm' ? 'enemies.mercy.calm' : 'enemies.mercy.spare';
 }
@@ -28,7 +31,7 @@ export function mercyPromptKey(def: EnemyDef): string {
 /** The verbs of the hold-T interactable built here; Calm's interactable is thread 1's. */
 export type HoldVerb = 'release' | 'spare';
 
-export function isHoldVerb(verb: EnemyDef['mercy']['verb']): verb is HoldVerb {
+export function isHoldVerb(verb: UnlockVerb): verb is HoldVerb {
   return verb === 'release' || verb === 'spare';
 }
 

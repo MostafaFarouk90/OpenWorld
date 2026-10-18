@@ -69,7 +69,9 @@ export const BLIGHTED_SOLDIER: EnemyDef = {
 
 /**
  * Watch Guard: an observer-only humanoid (Knight fallback model, tinted) for stealth sections. It sees the
- * player and raises `ai.spotted`; it has no moves, never emits `ai.aggro` and never chases. It can be hurt and killed.
+ * player and raises `ai.spotted`; it has no moves, no mercy, never emits `ai.aggro`, never chases and is never
+ * routed through the PathFollower. It is `neutral` and immortal: a hit takes its awareness to 1 (one `ai.spotted`)
+ * and nothing else, so a caught reset never has a dead slot to save. It pays no XP.
  */
 export const WATCH_GUARD: EnemyDef = {
   kind: 'watch-guard',
@@ -80,7 +82,6 @@ export const WATCH_GUARD: EnemyDef = {
   walkSpeed: 1.4,
   chaseSpeed: 2.6,
   moves: [],
-  mercy: { verb: 'spare', tier: 'normal', track: null, when: 'yielding' },
   material: 'metal',
   rises: false,
   observerOnly: true,

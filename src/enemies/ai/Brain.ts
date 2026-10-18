@@ -167,9 +167,9 @@ export class Brain {
 
   /** Open to its mercy verb: a staggered undead (Release), a yielding human (Spare) or a calmable beast (Calm). */
   get mercyOpen(): boolean {
-    if (this.def.mercy.when === 'staggered') return this._state === 'stagger';
+    if (this.def.mercy?.when === 'staggered') return this._state === 'stagger';
     // `calming` defs open through the Calm hold, which arrives with the calmed state.
-    return this.def.mercy.when === 'yielding' && this._state === 'yield';
+    return this.def.mercy?.when === 'yielding' && this._state === 'yield';
   }
 
   /**
@@ -177,13 +177,13 @@ export class Brain {
    * a swing has started (the crouch of a pounce, the lunge of a bite) the window is closed until it disengages.
    */
   get calmOpen(): boolean {
-    if (this.def.mercy.when !== 'calming' || this.attackStarted) return false;
+    if (this.def.mercy?.when !== 'calming' || this.attackStarted) return false;
     return this._state === 'idle' || this._state === 'patrol' || this._state === 'notice' || this._state === 'chase';
   }
 
   /** The Warm Hand on a staggered beast (design 3): open for the length of the knockdown, whatever it did before. */
   get warmHandOpen(): boolean {
-    return this.def.mercy.when === 'calming' && this._state === 'stagger';
+    return this.def.mercy?.when === 'calming' && this._state === 'stagger';
   }
 
   /** The `circle-rush` phase, for tests and debug; null for other behaviours. */
@@ -327,7 +327,7 @@ export class Brain {
       this.catchThief('staggered', this.yieldAllowedNow);
       return;
     }
-    if (this.def.mercy.when === 'yielding' && this.yieldAllowedNow && this.healthFractionNow < AI.yieldBelowHealth) {
+    if (this.def.mercy?.when === 'yielding' && this.yieldAllowedNow && this.healthFractionNow < AI.yieldBelowHealth) {
       this.enter('yield');
       this.hooks.yieldStarted(AI.yieldSeconds);
       return;
@@ -401,7 +401,7 @@ export class Brain {
    * other state is left alone. Returns whether it is now yielding.
    */
   offerYield(): boolean {
-    if (this.finished || this.def.mercy.when !== 'yielding') return false;
+    if (this.finished || this.def.mercy?.when !== 'yielding') return false;
     if (this._state === 'yield') {
       this.stateTime = 0;
       this.hooks.yieldStarted(AI.yieldSeconds);
@@ -618,7 +618,7 @@ export class Brain {
   /** A fleeing thief is caught: it yields (Spare opens) when Spare is unlocked, else it just staggers. */
   private catchThief(how: 'staggered' | 'cornered', yieldAllowed: boolean): void {
     this.hooks.caught?.(how);
-    if (yieldAllowed && this.def.mercy.when === 'yielding') {
+    if (yieldAllowed && this.def.mercy?.when === 'yielding') {
       this.enter('yield');
       this.hooks.yieldStarted(AI.yieldSeconds);
     } else {

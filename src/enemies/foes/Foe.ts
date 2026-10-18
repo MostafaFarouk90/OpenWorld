@@ -103,6 +103,7 @@ export abstract class Foe {
       get level() {
         return self.actor?.level ?? 1;
       },
+      packLeader: false,
     };
   }
 
