@@ -90,7 +90,7 @@ export class GuardModel {
     if (!this.isHeld || this.lockedOut(ctx.tick) || ctx.exhausted || req.unblockable) return HIT;
     if (this.isUnblockable(req) || !this.inFront(req, ctx.facingYaw, ctx.arcHalfAngle)) return HIT;
 
-    if (this.isParry(req, ctx.tick)) return { outcome: 'parried', scale: 0, poiseScale: 0, staminaCost: 0, guardBreak: false };
+    if (req.parryable !== false && this.isParry(req, ctx.tick)) return { outcome: 'parried', scale: 0, poiseScale: 0, staminaCost: 0, guardBreak: false };
 
     const cost = STAMINA.blockHitBase + STAMINA.blockHitRawScale * req.amount;
     if (!ctx.stamina.canAfford(cost)) {

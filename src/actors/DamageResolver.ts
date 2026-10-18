@@ -29,6 +29,11 @@ export interface DamageRequest {
    * Set by the request author or an attacker-side modifier (order band -200..-101). I-frames still apply.
    */
   unblockable?: boolean;
+  /**
+   * v0.5: `false` means a timed block is only a block (scripted boss hits with no `attack.window`):
+   * no `'parried'` outcome and no stagger on the attacker. Omitted means parryable.
+   */
+  parryable?: false;
 }
 
 /** Modifier order bands (contracts/actors-and-damage.md section 4). */

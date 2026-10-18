@@ -40,6 +40,8 @@ export interface DamageRequestLike {
   direction?: Vec3Like;
   /** Added to the contract by thread 0 later; honoured when present. */
   unblockable?: boolean;
+  /** v0.5: `false` turns a timed block into a plain block (no parry, no stagger on the attacker). */
+  parryable?: false;
 }
 
 /** `attack.window` event payload. */
