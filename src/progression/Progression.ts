@@ -7,7 +7,7 @@ import {
   type NextUnlock,
   type ProgressionService,
 } from '../hud/ports';
-import { getSkill, SKILLS, type SkillDef } from './skills';
+import { DEFAULT_CLASS_ID, getSkill, SKILLS, type SkillDef } from './skills';
 import {
   BAR_SLOTS,
   LEVEL_CAP,
@@ -16,14 +16,39 @@ import {
   killXp,
   levelForXp,
   levelPoints,
+  respecGold,
   xpForLevel,
 } from './tuning';
+
+/** Where the granted-ability flags live (the world state's flags). */
+export interface FlagStore {
+  get(key: string): unknown;
+  set(key: string, value: boolean): void;
+}
+
+/** The part of the inventory service respec spends through. */
+export interface GoldPort {
+  readonly gold: number;
+  addGold(n: number): void;
+  takeGold(n: number): number;
+}
 
 export interface ProgressionDeps {
   emit: EmitterPort['emit'];
   logger?: Logger;
   actor: () => ActorPort | null;
+  /** Granted-ability flags; without it grants are refused. */
+  flags?: FlagStore;
+  /** Gold for paid respecs; without it only free ones work. */
+  gold?: () => GoldPort | undefined;
 }
+
+export type RespecQuote = { free: boolean; gold: number; canAfford: boolean };
+export type RespecResult =
+  | { ok: true; refunded: number; cost: number }
+  | { ok: false; reason: 'no-permit' | 'no-gold' | 'nothing-learned' };
+
+export const abilityFlag = (id: string): string => `ability.${id}.learned`;
 
 export interface KillInfo {
   actorId: string;
@@ -44,6 +69,10 @@ export interface ProgressionSave {
   storyPoints: number;
   learned: string[];
   bar: (string | null)[];
+  /** v2: the chosen class (null until the M07 choice). */
+  classId: string | null;
+  /** v2: the one free respec was used. */
+  respecUsed: boolean;
 }
 
 interface MercyEntry {
@@ -53,7 +82,7 @@ interface MercyEntry {
 
 export class Progression implements ProgressionService {
   static readonly key = 'progression';
-  static readonly version = 1;
+  static readonly version = 2;
 
   private totalXp = 0;
   private storyPoints = 0;
@@ -63,11 +92,17 @@ export class Progression implements ProgressionService {
   private killed = new Set<string>();
   private mercy = new Map<string, MercyEntry>();
   private modifiers = new Map<string, () => number>();
+  private chosenClass: string | null = null;
+  private freeRespecUsed = false;
+  private permits = new Set<symbol>();
   private readonly emit: EmitterPort['emit'];
   private readonly logger: Logger;
   private readonly actor: () => ActorPort | null;
 
+  private readonly deps: ProgressionDeps;
+
   constructor(deps: ProgressionDeps) {
+    this.deps = deps;
     this.emit = deps.emit;
     this.logger = deps.logger ?? consoleLogger;
     this.actor = deps.actor;
@@ -75,6 +110,73 @@ export class Progression implements ProgressionService {
 
   get xp(): number {
     return this.totalXp;
+  }
+
+  /** The chosen class; null until the M07 choice, when the player plays as the Knight. */
+  get classId(): string | null {
+    return this.chosenClass;
+  }
+
+  /** Silent: thread 12's `classes.choose` emits `class.chosen`. Re-reads max health for the new class row. */
+  setClass(classId: string | null): void {
+    this.chosenClass = classId;
+    this.applyMaxHealth();
+  }
+
+  /** The flag `ability.<id>.learned` is the single source of truth. */
+  hasAbility(id: string): boolean {
+    return this.deps.flags?.get(abilityFlag(id)) === true;
+  }
+
+  /** Grants an ability outside the tree (the Leap at M03). Returns false when already granted or unavailable. */
+  grantAbility(id: string, source: string): boolean {
+    if (typeof id !== 'string' || id.length === 0 || !this.deps.flags) return false;
+    if (this.hasAbility(id)) return false;
+    this.deps.flags.set(abilityFlag(id), true);
+    this.emit('ability.learned', { id, source });
+    return true;
+  }
+
+  /** A respec is allowed only while someone holds a permit (the shrine, a trainer); dispose to release it. */
+  allowRespec(_source: string): () => void {
+    const key = Symbol('respec');
+    this.permits.add(key);
+    return () => void this.permits.delete(key);
+  }
+
+  respecQuote(): RespecQuote {
+    const free = !this.freeRespecUsed;
+    const gold = free ? 0 : respecGold(this.level);
+    const have = this.deps.gold?.()?.gold ?? 0;
+    return { free, gold, canAfford: free || have >= gold };
+  }
+
+  /**
+   * The only respec: clears the learned skills and the bar and refunds their points. The first is free (the flag lives in
+   * the progression save), later ones cost 25 gold x level capped at 500 through the inventory. Granted abilities (the
+   * Leap) and the class stay. Refused without a permit, with nothing learned (the free use is kept) or without the gold
+   * (nothing changes).
+   */
+  respec(): RespecResult {
+    if (this.permits.size === 0) return { ok: false, reason: 'no-permit' };
+    if (this.learnedIds.length === 0) return { ok: false, reason: 'nothing-learned' };
+    const quote = this.respecQuote();
+    if (quote.gold > 0) {
+      const gold = this.deps.gold?.();
+      const taken = gold ? gold.takeGold(quote.gold) : 0;
+      if (!gold || taken < quote.gold) {
+        if (gold && taken > 0) gold.addGold(taken);
+        return { ok: false, reason: 'no-gold' };
+      }
+    }
+    const refunded = this.spent(this.learnedIds);
+    this.learnedIds = [];
+    this.slots = new Array<string | null>(BAR_SLOTS).fill(null);
+    this.freeRespecUsed = true;
+    this.emit('ability.bar.changed', {});
+    this.emit('skillpoints.changed', { points: this.skillPoints });
+    this.applyMaxHealth();
+    return { ok: true, refunded, cost: quote.gold };
   }
 
   get level(): number {
@@ -166,7 +268,7 @@ export class Progression implements ProgressionService {
     const skill = getSkill(id);
     if (!skill) return { ok: false, reason: 'unknown-skill' };
     if (this.learnedIds.includes(id)) return { ok: false, reason: 'already-learned' };
-    if (!skill.available) return { ok: false, reason: 'unavailable' };
+    if (!skill.available || skill.classId !== (this.chosenClass ?? DEFAULT_CLASS_ID)) return { ok: false, reason: 'unavailable' };
     if (skill.requires && !this.learnedIds.includes(skill.requires)) return { ok: false, reason: 'missing-prereq' };
     if (this.excluded(skill)) return { ok: false, reason: 'excluded' };
     if (this.skillPoints < skill.cost) return { ok: false, reason: 'no-points' };
@@ -216,7 +318,7 @@ export class Progression implements ProgressionService {
   }
 
   baseMaxHealth(): number {
-    return baseMaxHealthForLevel(this.level);
+    return baseMaxHealthForLevel(this.level, this.chosenClass);
   }
 
   addMaxHealthModifier(id: string, fn: () => number): () => void {
@@ -259,7 +361,7 @@ export class Progression implements ProgressionService {
     const points = this.skillPoints;
     let cheapest: SkillDef | null = null;
     for (const s of SKILLS) {
-      if (!s.available || this.learnedIds.includes(s.id)) continue;
+      if (!s.available || s.classId !== (this.chosenClass ?? DEFAULT_CLASS_ID) || this.learnedIds.includes(s.id)) continue;
       if (s.requires && !this.learnedIds.includes(s.requires)) continue;
       if (this.excluded(s)) continue;
       if (!cheapest || s.cost < cheapest.cost) cheapest = s;
@@ -276,10 +378,20 @@ export class Progression implements ProgressionService {
       storyPoints: this.storyPoints,
       learned: this.learnedIds.slice(),
       bar: this.slots.slice(),
+      classId: this.chosenClass,
+      respecUsed: this.freeRespecUsed,
     };
   }
 
-  load(data: unknown): void {
+  /** v1 saves (before slice 2) have no class and no respec flag: they load as the Knight with the free respec unused. */
+  load(data: unknown, version: number = Progression.version): void {
+    if (!Number.isInteger(version) || version < 1) {
+      this.logger.warn(`progression: bad save version ${String(version)}, loading as v${Progression.version}`);
+    } else if (version > Progression.version) {
+      this.logger.warn(`progression: save v${version} is newer than v${Progression.version}; reading the fields this version knows`);
+    }
+    this.chosenClass = null;
+    this.freeRespecUsed = false;
     this.killed.clear();
     this.mercy.clear();
     this.totalXp = 0;
@@ -287,6 +399,9 @@ export class Progression implements ProgressionService {
     this.learnedIds = [];
     this.slots = new Array<string | null>(BAR_SLOTS).fill(null);
     const d = data && typeof data === 'object' && !Array.isArray(data) ? (data as Record<string, unknown>) : {};
+
+    if (typeof d.classId === 'string' && d.classId.length > 0 && version >= 2) this.chosenClass = d.classId;
+    if (d.respecUsed === true && version >= 2) this.freeRespecUsed = true;
 
     const xp = d.xp;
     if (typeof xp === 'number' && Number.isFinite(xp) && xp > 0) this.totalXp = Math.min(xp, xpForLevel(LEVEL_CAP));
