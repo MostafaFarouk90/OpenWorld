@@ -1076,3 +1076,56 @@ describe('status ticks (contracts section 10)', () => {
     expect(t.controller.currentAction).toBeNull();
   });
 });
+
+describe('holdForcedMove (the Warden shoulder charge)', () => {
+  const svc = (t: ReturnType<typeof setup>) => t.ctx.services.get('combatVerbs' as never) as unknown as CombatVerbsService;
+  const dist = (t: ReturnType<typeof setup>, a: THREE.Vector3) => Math.hypot(t.ctx.player.feet.x - a.x, t.ctx.player.feet.z - a.z);
+
+  it('moves the player about 5 m over 21 ticks along the held direction and survives the per-tick clear', () => {
+    const t = setup();
+    const start = t.ctx.player.feet.clone();
+    svc(t).holdForcedMove('charge', { x: 0, z: -1, speed: 5 / 0.35 });
+    t.run(21);
+    svc(t).holdForcedMove('charge', null);
+    t.run(3);
+    const moved = dist(t, start);
+    expect(moved).toBeGreaterThan(4);
+    expect(moved).toBeLessThan(5.6);
+    expect(t.ctx.player.feet.z).toBeLessThan(start.z - 4);
+  });
+
+  it('stops when released', () => {
+    const t = setup();
+    svc(t).holdForcedMove('charge', { x: 0, z: -1, speed: 10 });
+    t.run(5);
+    svc(t).holdForcedMove('charge', null);
+    t.run(2);
+    const z = t.ctx.player.feet.z;
+    t.run(30);
+    expect(Math.abs(t.ctx.player.feet.z - z)).toBeLessThan(0.05);
+  });
+
+  it('a knockback wins over a hold while it lasts', () => {
+    const t = setup();
+    const start = t.ctx.player.feet.clone();
+    svc(t).holdForcedMove('charge', { x: 0, z: -1, speed: 2 });
+    t.hit(t.enemy(), { poise: 30 });
+    t.run(4);
+    expect(t.controller.currentAction).toBe('stagger');
+    // The enemy is ahead (-z): the knockback pushes the player back (+z) although the hold points forward.
+    expect(t.ctx.player.feet.z).toBeGreaterThan(start.z);
+    svc(t).holdForcedMove('charge', null);
+  });
+
+  it('ignores non-finite moves and later owners win', () => {
+    const t = setup();
+    const start = t.ctx.player.feet.clone();
+    svc(t).holdForcedMove('a', { x: NaN, z: 0, speed: 1 });
+    t.run(10);
+    expect(dist(t, start)).toBeLessThan(0.05);
+    svc(t).holdForcedMove('a', { x: 0, z: -1, speed: 3 });
+    svc(t).holdForcedMove('b', { x: 0, z: 1, speed: 3 });
+    t.run(30);
+    expect(t.ctx.player.feet.z).toBeGreaterThan(start.z + 0.5);
+  });
+});

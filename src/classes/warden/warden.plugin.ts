@@ -154,6 +154,8 @@ const wardenPlugin: GamePlugin = {
 
       offs.push(
         (ctx.events as unknown as { on(t: string, f: (p: { skillId?: string }) => void): () => void }).on('skill.learned', (e) => {
+          // Learning does not re-evaluate the max-health modifiers by itself (a respec does).
+          if (e.skillId === SKILL_IDS.thickSkin) progression()?.refreshMaxHealth?.();
           const entry = WARDEN_CODEX_ENTRIES.find((c) => c.skillId === e.skillId);
           if (entry) svc<{ unlock?(id: string): void }>('codex')?.unlock?.(entry.id);
         }),
