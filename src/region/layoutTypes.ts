@@ -1,7 +1,7 @@
 // Plain-data description of the Brightwater tutorial footprint. No THREE, no terrain imports:
 // resolveLayout.ts turns it into anchors on the terrain, validateLayout.ts checks it.
 
-/** +Z is north and yaw 0 faces +Z; yaw 90 degrees faces +X. */
+/** +Z is north; yaw 0 faces -Z (forward = (-sin yaw, -cos yaw)), so yaw 90 degrees faces -X. Specs store yawDeg = heading + 180. */
 export interface AnchorSpec {
   id: string;
   x: number;

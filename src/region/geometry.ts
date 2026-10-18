@@ -21,7 +21,7 @@ export function pointInFootprint(s: StructureSpec, x: number, z: number, margin 
   const yaw = s.yawDeg * DEG;
   const dx = x - s.x;
   const dz = z - s.z;
-  // Local axes: +x rotates with yaw about Y (yaw 0 faces +Z, local x is world +X).
+  // Local axes: +x rotates with yaw about Y (yaw 0 faces -Z, local x is world +X).
   const c = Math.cos(yaw);
   const sn = Math.sin(yaw);
   const lx = dx * c - dz * sn;

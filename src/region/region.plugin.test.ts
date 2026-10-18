@@ -3,7 +3,8 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { heightAt } from '../terrain/heightfield';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
-import { createRegionPlugin, BRIGHTWATER_DISCOVERED_FLAG, type RegionService } from './region.plugin';
+import { createRegionPlugin, BRIGHTWATER_DISCOVERED_FLAG } from './region.plugin';
+import type { RegionService } from './serviceTypes';
 import { createFakeCore } from './testing/fakeCore';
 
 let physics: PhysicsWorld;
@@ -15,6 +16,9 @@ beforeAll(async () => {
 function setup() {
   const fc = createFakeCore();
   fc.useRapier(physics.rapier);
+  // The core Door toggles its collider; the fake core's bare colliders have no setEnabled.
+  const add = fc.ctx.physics.addStaticCollider.bind(fc.ctx.physics);
+  fc.ctx.physics.addStaticCollider = (desc) => Object.assign(add(desc), { setEnabled() {} });
   const plugin = createRegionPlugin();
   return { fc, plugin };
 }
@@ -62,16 +66,16 @@ describe('region plugin', () => {
   it('emits region.entered and discover once, and discover only once per save', () => {
     const { fc, plugin } = setup();
     plugin.setup(fc.ctx);
-    fc.tick('rules');
-    fc.tick('rules');
+    fc.tick('intent');
+    fc.tick('intent');
     expect(fc.emitted.filter((e) => e.type === 'region.entered')).toEqual([{ type: 'region.entered', payload: { regionId: 'brightwater', previous: null } }]);
     expect(fc.emitted.filter((e) => e.type === 'discover')).toEqual([{ type: 'discover', payload: { placeId: 'brightwater', kind: 'region' } }]);
     expect(fc.flags.get(BRIGHTWATER_DISCOVERED_FLAG)).toBe(true);
     // Leave the region and come back: entered again, discover not repeated.
     fc.playerFeet.x = 50_000;
-    fc.tick('rules');
+    fc.tick('intent');
     fc.playerFeet.x = 0;
-    fc.tick('rules');
+    fc.tick('intent');
     expect(fc.emitted.filter((e) => e.type === 'region.entered')).toHaveLength(2);
     expect(fc.emitted.filter((e) => e.type === 'discover')).toHaveLength(1);
     plugin.dispose?.();
@@ -81,9 +85,39 @@ describe('region plugin', () => {
     const { fc, plugin } = setup();
     fc.flags.set(BRIGHTWATER_DISCOVERED_FLAG, true);
     plugin.setup(fc.ctx);
-    fc.tick('rules');
+    fc.tick('intent');
     expect(fc.emitted.filter((e) => e.type === 'discover')).toEqual([]);
     expect(fc.emitted.filter((e) => e.type === 'region.entered')).toHaveLength(1);
+    plugin.dispose?.();
+  });
+
+  it('still discovers when save.loaded arrives late, once per save', () => {
+    const { fc, plugin } = setup();
+    plugin.setup(fc.ctx);
+    fc.playerFeet.x = 50_000; // outside the region while the save is still loading
+    fc.tick('intent');
+    // A save without the flag finishes loading; entering the region now discovers it.
+    fc.fire('save.loaded');
+    fc.playerFeet.x = 0;
+    fc.tick('intent');
+    expect(fc.emitted.filter((e) => e.type === 'discover')).toHaveLength(1);
+    expect(fc.flags.get(BRIGHTWATER_DISCOVERED_FLAG)).toBe(true);
+    // Another save loads late, also without the flag: the next entry discovers again, but only once.
+    fc.flags.delete(BRIGHTWATER_DISCOVERED_FLAG);
+    fc.fire('save.loaded');
+    fc.playerFeet.x = 50_000;
+    fc.tick('intent');
+    fc.playerFeet.x = 0;
+    fc.tick('intent');
+    fc.tick('intent');
+    expect(fc.emitted.filter((e) => e.type === 'discover')).toHaveLength(2);
+    // A save that carries the flag never discovers.
+    fc.fire('save.loaded');
+    fc.playerFeet.x = 50_000;
+    fc.tick('intent');
+    fc.playerFeet.x = 0;
+    fc.tick('intent');
+    expect(fc.emitted.filter((e) => e.type === 'discover')).toHaveLength(2);
     plugin.dispose?.();
   });
 
@@ -130,7 +164,7 @@ describe('region plugin', () => {
 
   it('a throw halfway through setup tears down what was built (no leaked meshes or colliders)', () => {
     const { fc, plugin } = setup();
-    fc.ctx.services.provide('region', {}); // the plugin's service registration will throw as a duplicate
+    fc.ctx.services.provide('region', {} as RegionService); // the plugin's service registration will throw as a duplicate
     expect(() => plugin.setup(fc.ctx)).toThrow(/duplicate service/);
     expect(fc.colliders.size).toBe(0);
     expect(fc.scene.children).toHaveLength(0);

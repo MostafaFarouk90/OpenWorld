@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import { COMBAT, WORLD } from '../config/constants';
 import { SPAWN_FLAT_RADIUS, heightAt } from '../terrain/heightfield';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
+import { pointInFootprint } from './geometry';
 import type { LayoutData } from './layoutTypes';
 import { resolveLayout } from './resolveLayout';
 import { validateLayout } from './validateLayout';
 
-// The two training dummies' positions today (spawn + (3, 0, -4) and (-3, 0, -5)).
-const OLD_DUMMIES = [
-  { id: 'dummy-a', x: 3, z: -4, radius: 1 },
-  { id: 'dummy-b', x: -3, z: -5, radius: 1 },
-];
+// The core's training dummies as the world places them: the spawn plus each COMBAT.dummies offset.
+const OLD_DUMMIES = COMBAT.dummies.map((d, i) => ({ id: `dummy-${i + 1}`, x: WORLD.spawnX + d.x, z: WORLD.spawnZ + d.z, radius: 1 }));
+
+const flat = () => 0;
+const spawnOnly = (): LayoutData => ({ anchors: [{ id: 'brightwater.player-spawn', x: 0, z: 0, yawDeg: 0 }], triggers: [], structures: [], patrols: [], npcs: [], fields: [] });
 
 const clone = (): LayoutData => structuredClone(BRIGHTWATER_LAYOUT);
 const errorsOf = (layout: LayoutData, opts = {}) => validateLayout(layout, heightAt, { keepClear: OLD_DUMMIES, ...opts });
@@ -87,7 +89,9 @@ describe('resolveLayout', () => {
 
   it('computes absolute heights from the terrain plus dy', () => {
     const banner = resolved.anchors.find((a) => a.id === 'chapel.banner-1')!;
-    expect(banner.position.y).toBe(heightAt(49, 60) + 9);
+    const spec = BRIGHTWATER_LAYOUT.anchors.find((a) => a.id === 'chapel.banner-1')!;
+    expect(spec.dy).toBe(5);
+    expect(banner.position.y).toBe(heightAt(spec.x, spec.z) + 5);
     const north = resolved.anchors.find((a) => a.id === 'waystone.north')!;
     expect(north.position.y).toBe(heightAt(10, 310));
     expect(north.position.y).not.toBe(0);
@@ -102,7 +106,9 @@ describe('resolveLayout', () => {
 
   it('converts yaw to radians and keeps tags without sharing the array', () => {
     const kneel = resolved.anchors.find((a) => a.id === 'chapel.kneel')!;
-    expect(kneel.yaw).toBeCloseTo(Math.PI / 2);
+    // Heading 90 (east) is stored as yawDeg 270 because the engine's yaw 0 faces -Z.
+    expect(BRIGHTWATER_LAYOUT.anchors.find((a) => a.id === 'chapel.kneel')!.yawDeg).toBe(270);
+    expect(kneel.yaw).toBeCloseTo((3 * Math.PI) / 2);
     expect(kneel.tags).toEqual(['poi']);
     expect(kneel.tags).not.toBe(BRIGHTWATER_LAYOUT.anchors.find((a) => a.id === 'chapel.kneel')!.tags);
   });
@@ -218,8 +224,9 @@ describe('validateLayout failure paths', () => {
 
   it('flags a structure over a dummy position', () => {
     const l = clone();
-    l.structures.push({ id: 'shed', kind: 'house', x: 3, z: -4, yawDeg: 0, footprint: [3, 3], mode: 'solid' });
-    expect(errorsOf(l).join('\n')).toContain('structure "shed" overlaps "dummy-a"');
+    const d = OLD_DUMMIES[0];
+    l.structures.push({ id: 'shed', kind: 'house', x: d.x, z: d.z, yawDeg: 0, footprint: [3, 3], mode: 'solid' });
+    expect(errorsOf(l).join('\n')).toContain(`structure "shed" overlaps "${d.id}"`);
   });
 
   it('flags enterable structures with no door, a bad door or a rotated frame', () => {
@@ -241,12 +248,62 @@ describe('validateLayout failure paths', () => {
     expect(errorsOf(l).join('\n')).toContain('structure "altar": not fully inside "chapel"');
   });
 
-  it('flags a doorway that cannot be reached from outside', () => {
-    const l = clone();
-    l.structures.push({ id: 'cage-1', kind: 'house', x: 14, z: 132, yawDeg: 0, footprint: [4, 20], mode: 'solid' });
-    l.structures.push({ id: 'cage-2', kind: 'house', x: 14, z: 124, yawDeg: 0, footprint: [20, 4], mode: 'solid' });
-    const e = errorsOf(l).join('\n');
-    expect(e).toMatch(/doorway is not reachable|unreachable from the player spawn|overlap/);
+  it('keeps every real doorway walkable: the door gap is open in the validator grid', () => {
+    const e = errorsOf(BRIGHTWATER_LAYOUT);
+    expect(e.filter((m) => m.includes('doorway'))).toEqual([]);
+    // Standing points on both sides of each real door are reachable (inside the room and at the threshold).
+    for (const id of ['kettlewick.bakery-door', 'kettlewick.bakery-counter', 'chapel.door', 'chapel.kneel']) {
+      expect(e.filter((m) => m.includes(`"${id}"`)), id).toEqual([]);
+    }
+  });
+
+  const hut = (width: number): LayoutData => {
+    const l = spawnOnly();
+    l.structures.push({ id: 'hut', kind: 'house', x: 0, z: 20, yawDeg: 0, footprint: [8, 8], mode: 'enterable', door: { name: 'hut', side: 'S', width } });
+    l.anchors.push({ id: 'area.inside', x: 0, z: 20, yawDeg: 0, onStructure: 'hut' });
+    return l;
+  };
+
+  it('walks into a hut through a wide doorway', () => {
+    expect(validateLayout(hut(2.4), flat)).toEqual([]);
+  });
+
+  it('fails reachability when the doorway is too narrow for the player', () => {
+    const e = validateLayout(hut(0.6), flat).join('\n');
+    expect(e).toContain('structure "hut": doorway is not reachable');
+    expect(e).toContain('anchor "area.inside": unreachable from the player spawn');
+  });
+
+  it('blocks a yaw-90 solid along the rotated axis, not the unrotated one', () => {
+    const l = spawnOnly();
+    // 2 m by 20 m rotated 90 degrees lies along world X: x in [-10, 10], z in [19, 21].
+    l.structures.push({ id: 'bar', kind: 'house', x: 0, z: 20, yawDeg: 90, footprint: [2, 20], mode: 'solid' });
+    l.anchors.push({ id: 'area.in-rotated', x: 8, z: 20, yawDeg: 0 });
+    l.anchors.push({ id: 'area.in-unrotated', x: 0, z: 28, yawDeg: 0 });
+    const e = validateLayout(l, flat).join('\n');
+    expect(e).toContain('anchor "area.in-rotated": inside a solid structure');
+    expect(e).not.toContain('area.in-unrotated');
+  });
+
+  it('puts every waystone stand point on walkable ground, clear of every blocking structure', () => {
+    const e = errorsOf(BRIGHTWATER_LAYOUT);
+    const blocking = BRIGHTWATER_LAYOUT.structures.filter((s) => s.mode !== 'open');
+    const stones = BRIGHTWATER_LAYOUT.anchors.filter((a) => a.tags?.includes('waystone'));
+    expect(stones).toHaveLength(3);
+    for (const a of stones) {
+      expect(e.filter((m) => m.includes(`"${a.id}"`)), a.id).toEqual([]);
+      for (const s of blocking) expect(pointInFootprint(s, a.x, a.z, 0.4), `${a.id} vs ${s.id}`).toBe(false);
+      const stone = BRIGHTWATER_LAYOUT.structures.find((s) => s.id === a.id.replace('.', '-'))!;
+      expect(Math.hypot(stone.x - a.x, stone.z - a.z)).toBeCloseTo(1.8);
+    }
+  });
+
+  it('hangs the banner anchors outside every structure footprint', () => {
+    const banners = BRIGHTWATER_LAYOUT.anchors.filter((a) => a.tags?.includes('banner'));
+    expect(banners).toHaveLength(3);
+    for (const b of banners) {
+      for (const s of BRIGHTWATER_LAYOUT.structures) expect(pointInFootprint(s, b.x, b.z), `${b.id} in ${s.id}`).toBe(false);
+    }
   });
 
   it('reports a missing player spawn instead of crashing', () => {

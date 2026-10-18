@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
 import { BuildingLookup } from './buildingLookup';
-import { localFactories, buildStructures, type StructureDeps } from './StructureBuilder';
+import { coreFactories, buildStructures, type StructureDeps } from './StructureBuilder';
 import { createFakeCore } from './testing/fakeCore';
 import type { StructureSpec } from './layoutTypes';
 import type { AssetId } from '../assets/AssetManifest';
@@ -21,7 +21,7 @@ function makeDeps(fc = createFakeCore(), physicsOverride?: StructureDeps['physic
     ...fc.ctx,
     ...(physicsOverride ? { physics: physicsOverride } : {}),
     rapier: physics.rapier,
-    ...localFactories({ ...fc.ctx, ...(physicsOverride ? { physics: physicsOverride } : {}) }),
+    ...coreFactories(fc.ctx),
   };
 }
 
@@ -47,6 +47,8 @@ const chapel: StructureSpec = {
   door: { name: 'chapel', side: 'W', width: 2.4, openWhen: ['tutorial.t04.begin'] },
 };
 const lookup = new BuildingLookup();
+/** The chapel's door-fill collider is the last one added. */
+const fillOf = (fc: ReturnType<typeof createFakeCore>): { enabled: boolean } => [...fc.colliders].pop() as { enabled: boolean };
 
 describe('buildStructures', () => {
   it('places a solid structure at terrain height with yaw and a footprint cuboid', () => {
@@ -86,7 +88,19 @@ describe('buildStructures', () => {
     expect(door.promptKey).toBe('interact.door');
     door.onInteract({} as never);
     expect(fc.flags.get('door.chapel.open')).toBe(true);
-    expect(fc.colliders.size).toBe(5); // door fill collider removed while open
+    expect(fc.colliders.size).toBe(6);
+    expect(fillOf(fc).enabled).toBe(false); // door fill collider disabled while open
+    h.dispose();
+  });
+
+  it('a door with no openWhen flags is never locked', () => {
+    const fc = createFakeCore();
+    const open = { ...chapel, door: { name: 'chapel', side: 'W' as const, width: 2.4 } };
+    const h = buildStructures(makeDeps(fc), { structures: [open] }, flat, lookup);
+    const door = fc.interactables.get('door:chapel')!;
+    expect(door.promptKey).toBe('interact.door');
+    door.onInteract({} as never);
+    expect(fc.flags.get('door.chapel.open')).toBe(true);
     h.dispose();
   });
 
@@ -101,7 +115,8 @@ describe('buildStructures', () => {
     fc.fire('save.loaded');
     const pivot = h.group.getObjectByName('door-pivot:chapel')!;
     expect(pivot.rotation.y).toBeCloseTo(Math.PI / 2);
-    expect(fc.colliders.size).toBe(5);
+    expect(fc.colliders.size).toBe(6);
+    expect(fillOf(fc).enabled).toBe(false);
     h.dispose();
   });
 
@@ -126,7 +141,7 @@ describe('buildStructures', () => {
       },
       removeCollider: fc.ctx.physics.removeCollider,
       rapier: physics.rapier,
-    };
+    } as unknown as PhysicsWorld;
     const specs = [solid('a'), solid('b', { x: 40 }), chapel];
     expect(() => buildStructures(makeDeps(fc, physicsFake), { structures: specs }, flat, lookup)).toThrow('boom');
     expect(fc.colliders.size).toBe(0);

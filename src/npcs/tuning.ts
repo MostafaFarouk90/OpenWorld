@@ -9,9 +9,9 @@ export const NPC_TUNING = {
   talkTurnRate: 6,
   /** Interaction radius (m) of the 'talk' interactable. */
   talkRadius: 2.5,
-  /** Mixers of NPCs farther than this (m) from the player are not advanced. */
   /** An NPC's GLB starts downloading once the player is this close to its post (first-load budget). */
   modelLoadRadius: 100,
+  /** Mixers of NPCs farther than this (m) from the player are not advanced. */
   animationCullDistance: 80,
   /** Largest dt (s) a behaviour step accepts; bigger values are clamped. */
   maxStepDt: 0.25,

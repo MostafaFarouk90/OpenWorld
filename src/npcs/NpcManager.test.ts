@@ -4,11 +4,13 @@ import { createFakeCore } from '../region/testing/fakeCore';
 import { BRIGHTWATER_LAYOUT } from '../region/brightwater.layout';
 import { NPC_DEFS } from './npcDefs';
 import { NpcManager, type NpcManagerOptions } from './NpcManager';
-import { fakeLoader } from './npcModels.test';
+import { wrapAngle } from './NpcBehavior';
+import { fakeLoader } from './npcTestKit';
 import { NPC_STRINGS_EN } from './strings.en';
 import type { NpcModelLoader } from './types';
 
 const POSTS: Record<string, [number, number, number, number]> = {};
+const postYaw = (id: string) => wrapAngle(POSTS[id][3]);
 function setup(over: Partial<NpcManagerOptions> = {}, player: { x: number; z: number } | null = { x: 0, z: 0 }) {
   const fc = createFakeCore();
   fc.ctx.strings.register('en', NPC_STRINGS_EN);
@@ -88,6 +90,32 @@ describe('spawnAll', () => {
   it('throws on a duplicated id in layout or defs', () => {
     expect(() => setup({ layoutNpcs: [...BRIGHTWATER_LAYOUT.npcs, BRIGHTWATER_LAYOUT.npcs[0]] }).m.spawnAll()).toThrow(/"gaut"/);
     expect(() => setup({ defs: [...NPC_DEFS, NPC_DEFS[0]] }).m.spawnAll()).toThrow(/"gaut"/);
+  });
+});
+
+describe('spawnAll rollback', () => {
+  it('leaves nothing from the failing npc when interactable registration throws midway, and dispose clears the rest', () => {
+    const { fc, m } = setup();
+    const blocker = fc.ctx.interaction.register({ id: 'npc:stane', kind: 'talk', name: 'x', radius: 1, position: (o) => o, onInteract: () => {} });
+    expect(() => m.spawnAll()).toThrow(/duplicate interactable "npc:stane"/);
+    // gaut and edda were spawned before stane failed; stane itself must not be left behind
+    expect(fc.scene.children.map((c) => c.name)).toEqual(['npc:gaut', 'npc:edda']);
+    expect([...fc.actors.values()].some((a) => a.kind === 'npc:stane')).toBe(false);
+    expect(fc.actors.size).toBe(2);
+    expect(m.get('stane')).toBeUndefined();
+    m.dispose();
+    expect(fc.scene.children.length).toBe(0);
+    expect(fc.actors.size).toBe(0);
+    expect([...fc.interactables.keys()]).toEqual(['npc:stane']); // only the blocker
+    void blocker;
+  });
+  it('throws on the first npc leaves scene, actors and interactables empty', () => {
+    const { fc, m } = setup();
+    fc.ctx.interaction.register({ id: 'npc:gaut', kind: 'talk', name: 'x', radius: 1, position: (o) => o, onInteract: () => {} });
+    expect(() => m.spawnAll()).toThrow(/duplicate/);
+    expect(fc.scene.children.length).toBe(0);
+    expect(fc.actors.size).toBe(0);
+    expect(fc.interactables.size).toBe(1);
   });
 });
 
@@ -229,6 +257,39 @@ describe('models', () => {
   });
 });
 
+describe('proximity loading', () => {
+  it('loads only GLBs within the load radius; a far npc stays a placeholder until the player approaches', async () => {
+    const l = fakeLoader();
+    const { m, pl } = setup({ loader: l });
+    m.spawnAll();
+    pl.player = { x: -40, z: 128 }; // at stane; gaut (knight) is ~110 m away, beyond modelLoadRadius
+    m.fixedUpdateBehaviour(1 / 60);
+    await flush();
+    expect(m.get('stane')!.hasModel).toBe(true);
+    expect(m.get('edda')!.hasModel).toBe(true); // 65 m
+    expect(m.get('gaut')!.hasModel).toBe(false);
+    expect(l.loads).not.toContain('knight');
+    pl.player = { x: -3, z: 24 }; // walks to gaut
+    m.fixedUpdateBehaviour(1 / 60);
+    await flush();
+    expect(m.get('gaut')!.hasModel).toBe(true);
+    expect(l.loads.filter((x) => x === 'knight').length).toBe(1);
+  });
+  it('loads nothing without a player position, and never reloads a model already requested', async () => {
+    const l = fakeLoader();
+    const { m, pl } = setup({ loader: l }, null);
+    m.spawnAll();
+    m.fixedUpdateBehaviour(1 / 60);
+    await flush();
+    expect(l.loads.length).toBe(0);
+    pl.player = { x: 0, z: 0 };
+    m.fixedUpdateBehaviour(1 / 60);
+    m.fixedUpdateBehaviour(1 / 60);
+    await flush();
+    expect(l.loads.filter((x) => x === 'mage').length).toBeLessThanOrEqual(1);
+  });
+});
+
 describe('place', () => {
   it('moves the npc, its actor root and its interactable', () => {
     const { fc, m } = setup();
@@ -266,18 +327,18 @@ describe('behaviour wiring', () => {
     m.spawnAll();
     const step = (s: number) => { for (let i = 0; i < s * 60; i++) m.fixedUpdateBehaviour(1 / 60); };
     step(1);
-    expect(m.get('hob')!.yaw).toBeCloseTo(0); // post yaw 0, player far
+    expect(m.get('hob')!.yaw).toBeCloseTo(postYaw('hob')); // player far
     pl.player = { x: 42 + 30, z: 47 }; // 30 m east: outside glance radius
     step(1);
-    expect(m.get('hob')!.yaw).toBeCloseTo(0);
+    expect(m.get('hob')!.yaw).toBeCloseTo(postYaw('hob'));
     fc.fire('dialogue.started', { dialogueId: 'npc-hob', npcId: 'hob' });
     step(1);
-    expect(m.get('hob')!.yaw).toBeCloseTo(Math.PI / 2);
-    expect(m.get('gaut')!.yaw).toBeCloseTo(0); // others unaffected
+    expect(m.get('hob')!.yaw).toBeCloseTo(-Math.PI / 2); // +X player: yaw 0 faces -Z
+    expect(m.get('gaut')!.yaw).toBeCloseTo(postYaw('gaut')); // others unaffected
     fc.fire('dialogue.ended', { dialogueId: 'npc-hob', npcId: 'hob' });
     step(1);
-    expect(m.get('hob')!.yaw).toBeCloseTo(0);
-    expect(m.get('hob')!.root.rotation.y).toBeCloseTo(0);
+    expect(m.get('hob')!.yaw).toBeCloseTo(postYaw('hob'));
+    expect(m.get('hob')!.root.rotation.y).toBeCloseTo(postYaw('hob'));
   });
   it('ignores malformed or unknown dialogue events', () => {
     const { fc, m } = setup({}, { x: 72, z: 47 });
@@ -286,7 +347,7 @@ describe('behaviour wiring', () => {
     fc.fire('dialogue.started', { npcId: 'ghost' });
     fc.fire('dialogue.ended', null);
     m.fixedUpdateBehaviour(1 / 60);
-    expect(m.get('hob')!.yaw).toBe(0);
+    expect(m.get('hob')!.yaw).toBeCloseTo(postYaw('hob'));
   });
 });
 

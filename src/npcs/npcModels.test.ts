@@ -1,41 +1,21 @@
 import * as THREE from 'three';
-import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { describe, expect, it } from 'vitest';
 import { NPC_DEFS } from './npcDefs';
 import { buildPlaceholder, disposePlaceholder, loadNpcModel, pickIdleClip } from './npcModels';
-import type { NpcModelId, NpcModelLoader } from './types';
 
-export function makeSource() {
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-  const geo = new THREE.BoxGeometry(1, 2, 1);
-  const root = new THREE.Group();
-  const bone = new THREE.Bone();
-  bone.name = 'root';
-  root.add(bone);
-  const body = new THREE.Mesh(geo, mat);
-  body.name = 'Body';
-  const sword = new THREE.Mesh(geo, mat);
-  sword.name = '1H_Sword';
-  root.add(body, sword);
-  const clips = [new THREE.AnimationClip('Idle', 1, [new THREE.VectorKeyframeTrack('root.position', [0, 1], [0, 0, 0, 0, 1, 0])])];
-  return { mat, geo, root, clips };
-}
-
-export function fakeLoader(src = makeSource()): NpcModelLoader & { src: ReturnType<typeof makeSource>; loads: string[] } {
-  const loads: string[] = [];
-  return {
-    src,
-    loads,
-    load: async (id: NpcModelId) => void loads.push(id),
-    instantiate: () => SkeletonUtils.clone(src.root),
-    animations: () => src.clips,
-  };
-}
+import { fakeLoader } from './npcTestKit';
 
 const gaut = NPC_DEFS.find((d) => d.id === 'gaut')!;
 const wynn = NPC_DEFS.find((d) => d.id === 'wynn')!;
 
 describe('buildPlaceholder', () => {
+  it('puts the nose on -Z, the facing of yaw 0', () => {
+    const box = new THREE.Box3().setFromObject(buildPlaceholder(gaut));
+    expect(box.min.z).toBeLessThan(-0.19);
+    expect(box.max.z).toBeLessThan(0.31);
+    const nose = buildPlaceholder(gaut).children[2];
+    expect(nose.position.z).toBeLessThan(0);
+  });
   it('is about 1.8 m tall with feet on the origin and disposable', () => {
     const p = buildPlaceholder(gaut);
     const box = new THREE.Box3().setFromObject(p);
@@ -49,11 +29,11 @@ describe('buildPlaceholder', () => {
 });
 
 describe('loadNpcModel', () => {
-  it('scales, tints cloned materials only, hides held items and leaves the model facing +Z', async () => {
+  it('scales, tints cloned materials only, hides held items and turns the model to face +Z by rotating PI (KayKit rig faces +Z natively)', async () => {
     const l = fakeLoader();
     const { model, clips } = await loadNpcModel(l, gaut);
     expect(clips).toBe(l.src.clips);
-    expect(model.rotation.y).toBe(0);
+    expect(model.rotation.y).toBeCloseTo(Math.PI);
     expect(model.scale.x).toBeCloseTo(0.78);
     expect(l.src.mat.color.getHex()).toBe(0xffffff);
     const body = model.getObjectByName('Body') as THREE.Mesh;
