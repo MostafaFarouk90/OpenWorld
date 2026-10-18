@@ -54,7 +54,7 @@ interface ActiveLeap {
   from: Vec3;
 }
 
-/** Combined movement restriction for one tick; `speedScale` in [0, 1]. */
+/** Combined movement restriction for one tick; `speedScale` in [0, 1.5] (above 1 boosts walk and sprint speed). */
 export interface MoveModifierState {
   speedScale: number;
   lockMove: boolean;
@@ -277,13 +277,17 @@ export class Player {
       const locked = (this.options.movementLocked?.() ?? false) || (mod?.lockMove ?? false);
       let jump: boolean;
       ({ moveX, moveZ, jump } = gateMovement(locked, { moveX, moveZ, jump: input.jump }));
+      let speedOverride: number | undefined;
       if (mod && mod.speedScale < 1) {
         const len = Math.hypot(moveX, moveZ);
         const scale = Math.max(0, mod.speedScale) / Math.max(1, len);
         moveX *= scale;
         moveZ *= scale;
+      } else if (mod && mod.speedScale > 1) {
+        // A boost raises the speed itself; the move vector keeps its unit-length clamp.
+        speedOverride = (input.sprint ? PLAYER.sprintSpeed : PLAYER.walkSpeed) * mod.speedScale;
       }
-      this.controller.fixedUpdate({ moveX, moveZ, sprint: input.sprint, jump });
+      this.controller.fixedUpdate({ moveX, moveZ, sprint: input.sprint, jump, speedOverride });
     }
     if (this.facingOverride !== null) {
       this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, this.facingOverride);
