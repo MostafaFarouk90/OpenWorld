@@ -22,3 +22,23 @@ declare module '../vfx/ports' {
     spells?: SpellsService;
   }
 }
+
+/**
+ * Thread 5's `abilities` service as the spells plugin uses it (plans/hud-inventory-skills.md, v2 changes). ports.ts still
+ * declares the old handler shape, so this module reads the service through `abilitiesOf` instead of redeclaring it.
+ */
+export type AbilityHandlerResult = { ok: true } | { ok: false; reason: string };
+export interface AbilityHandlerArgs {
+  skillId: string;
+  slot: number;
+  /** The Actor casting (not an id). */
+  caster: { readonly id: string } | null | undefined;
+  ctx?: unknown;
+}
+export interface AbilitiesServiceV2 {
+  registerHandler(skillId: string, handler: (args: AbilityHandlerArgs) => AbilityHandlerResult): () => void;
+}
+
+export function abilitiesOf(services: { get(name: 'abilities'): unknown }): AbilitiesServiceV2 | undefined {
+  return services.get('abilities') as AbilitiesServiceV2 | undefined;
+}

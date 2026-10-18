@@ -118,4 +118,29 @@ describe('ProjectileSystem', () => {
     s.ps.clear();
     expect(s.hits).toHaveLength(1);
   });
+
+  it('team rule matches canDamage for all 16 pairs', () => {
+    const teams = ['player', 'ally', 'hostile', 'neutral'] as const;
+    const canDamage = (a: string, t: string): boolean => {
+      if (a === 'neutral' || a === t) return false;
+      if (a === 'player' || a === 'ally') return t === 'hostile' || t === 'neutral';
+      return t === 'player' || t === 'ally' || t === 'neutral';
+    };
+    for (const a of teams) {
+      for (const t of teams) {
+        const s = setup();
+        // The real player actor shoots for the 'player' row; other rows add a shooter and park the player away.
+        if (a !== 'player') {
+          s.actors.add(new FakeActor('shooter', a, 0, 0));
+          s.actors.get('player')!.pos.set(50, 0, 50);
+        }
+        const caster = a === 'player' ? 'player' : 'shooter';
+        s.actors.add(new FakeActor('victim', t, 0, 4));
+        s.ps.launch(s.base({ casterId: caster, lifetime: 0.6 }));
+        run(s.ps, 1);
+        const hitVictim = s.hits.some((h) => h.kind === 'actor' && h.actorId === 'victim');
+        expect(hitVictim, `${a} -> ${t}`).toBe(canDamage(a, t));
+      }
+    }
+  });
 });

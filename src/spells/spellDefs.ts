@@ -1,5 +1,5 @@
 import { RALLY, SURGE } from '../vfx/tuning';
-import { TEST_BOLT } from './tuning';
+import { RALLY_SKILL_ID, TEST_BOLT } from './tuning';
 import { SPELLCAST_CLIPS } from './spellClips';
 
 export interface SpellDef {
@@ -39,14 +39,16 @@ export const SURGE_DEF: SpellDef = {
 export const RALLY_DEF: SpellDef = {
   id: 'rally-cry',
   clip: RALLY.clip,
-  emberCost: RALLY.emberCost,
-  cooldown: RALLY.cooldown,
+  // Thread 5's skill data owns Rally's Ember cost and cooldown (it spends them after the handler returns ok),
+  // so a cast through the abilities handler and a direct spells.cast are both free here.
+  emberCost: 0,
+  cooldown: 0,
   releaseAt: SPELLCAST_CLIPS[RALLY.clip].release,
   lockMove: true,
   effect: 'skill-q',
   kind: 'self',
   soundRelease: 'sfx.rally',
-  skillId: RALLY.skillId,
+  skillId: RALLY_SKILL_ID,
 };
 
 export const SPELL_DEFS: Record<string, SpellDef> = {

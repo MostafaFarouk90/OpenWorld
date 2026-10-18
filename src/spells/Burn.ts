@@ -17,6 +17,7 @@ export class Burn {
   readonly version = 1;
   onChange: ((value: number, previous: number) => void) | null = null;
   private _value = 0;
+  private lastNotified = 0;
   private _scars = 0;
 
   get value(): number {
@@ -39,7 +40,7 @@ export class Burn {
   /** Decays 1 per 5 s, only out of combat. dt <= 0 or NaN is ignored. */
   decay(dt: number, inCombat: boolean): void {
     if (inCombat || !(dt > 0) || !Number.isFinite(dt)) return;
-    this.set(this._value - BURN.decayPerSecond * dt);
+    this.set(this._value - BURN.decayPerSecond * dt, false);
   }
 
   zone(): BurnZone {
@@ -93,12 +94,17 @@ export class Burn {
     this.set(burn);
   }
 
-  private set(next: number): number {
+  /** `always` false (decay) notifies only when the rounded, displayed value changes. The internal value stays a float. */
+  private set(next: number, always = true): number {
     const clamped = Math.min(BURN.max, Math.max(0, next));
     const previous = this._value;
     if (clamped === previous) return 0;
     this._value = clamped;
-    this.onChange?.(clamped, previous);
+    if (always || Math.round(clamped) !== Math.round(this.lastNotified)) {
+      const was = this.lastNotified;
+      this.lastNotified = clamped;
+      this.onChange?.(clamped, was);
+    }
     return clamped - previous;
   }
 }

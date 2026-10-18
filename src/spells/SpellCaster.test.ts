@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SpellCaster } from './SpellCaster';
 import { TEST_SPELLS } from './spellDefs';
-import { makeWorld, type World } from './testHost';
+import { SPELL_LOCK_ACTIONS } from './tuning';
+import { FakePlayer, makeWorld, type World } from './testHost';
 
 const bolt = TEST_SPELLS['test-bolt'];
 const DT = 1 / 60;
@@ -31,7 +32,7 @@ describe('SpellCaster', () => {
     ticks(1);
     expect(onRelease).toHaveBeenCalledTimes(1);
     expect(caster.state).toBe('recovering');
-    expect(w.events.types().filter((t) => ['spell.cast', 'clip', 'spell.released'].includes(t))).toEqual(['spell.cast', 'clip', 'spell.released']);
+    expect(w.events.types().filter((t) => ['spell.cast', 'clip', 'spell.released'].includes(t))).toEqual(['clip', 'spell.cast', 'spell.released']);
     expect(caster.cooldown('test-bolt')).toBeGreaterThan(0.9);
     ticks(200);
     expect(caster.state).toBe('idle');
@@ -198,5 +199,45 @@ describe('SpellCaster', () => {
       expect(ww.player.modifiers.size).toBe(0);
       expect(ww.ember.value).toBeGreaterThanOrEqual(0);
     }
+  });
+
+  it('lock actions are real action ids (copy of contracts/input-and-hud.md section 1) and are passed exactly', () => {
+    const CONTRACT_ACTIONS = [
+      'moveForward', 'moveBack', 'moveLeft', 'moveRight', 'sprint', 'jump', 'interact', 'mercy',
+      'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'lockOn', 'surge', 'surgeLeap', 'sneak', 'mount',
+      'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6',
+      'inventory', 'skills', 'journal', 'map', 'menu',
+      'dialogueNext', 'dialogueChoice1', 'dialogueChoice2', 'dialogueChoice3', 'dialogueChoice4',
+    ];
+    for (const a of SPELL_LOCK_ACTIONS) expect(CONTRACT_ACTIONS).toContain(a);
+    expect(SPELL_LOCK_ACTIONS).toEqual([
+      'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'jump', 'surge', 'interact',
+      'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6',
+    ]);
+    expect(SPELL_LOCK_ACTIONS).not.toContain('lockOn');
+    caster.cast('player', 'test-bolt');
+    expect([...w.player.modifiers.values()][0].mod.lockActions).toEqual([...SPELL_LOCK_ACTIONS]);
+  });
+  it('a throwing addMoveModifier refuses with busy, leaves nothing active, refunds and emits nothing', () => {
+    w.player.addMoveModifier = () => { throw new Error('modifier'); };
+    expect(caster.cast('player', 'test-bolt')).toEqual({ ok: false, reason: 'busy' });
+    expect(caster.state).toBe('idle');
+    expect(w.ember.value).toBe(100);
+    expect(w.host.clips).toEqual([]);
+    expect(w.events.types()).not.toContain('spell.cast');
+    expect(caster.cooldown('test-bolt')).toBe(0);
+    w.player.addMoveModifier = FakePlayer.prototype.addMoveModifier;
+  });
+  it('a throwing playClip refuses with busy, releases the modifier and emits nothing', () => {
+    w.host.playClip = () => { throw new Error('clip'); };
+    expect(caster.cast('player', 'test-bolt')).toEqual({ ok: false, reason: 'busy' });
+    expect(caster.state).toBe('idle');
+    expect(w.player.modifiers.size).toBe(0);
+    expect(w.ember.value).toBe(100);
+    expect(w.events.types()).not.toContain('spell.cast');
+  });
+  it('spell.cast is emitted after the clip started', () => {
+    caster.cast('player', 'test-bolt');
+    expect(w.events.types().indexOf('clip')).toBeLessThan(w.events.types().indexOf('spell.cast'));
   });
 });

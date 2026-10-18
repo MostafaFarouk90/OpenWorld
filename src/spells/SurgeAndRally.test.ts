@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ServiceMap } from '../vfx/ports';
-import { BURN, RALLY, SURGE } from '../vfx/tuning';
+import { BURN, SURGE } from '../vfx/tuning';
 import { Burn } from './Burn';
 import { SpellCaster } from './SpellCaster';
+import { RALLY_DEF } from './spellDefs';
 import { registerRally, registerSurge } from './SurgeAndRally';
+import { RALLY_FX, RALLY_SKILL_ID } from './tuning';
 import { FakeActor, makeWorld, type World } from './testHost';
 
 const DT = 1 / 60;
@@ -104,6 +106,41 @@ describe('Surge', () => {
   });
 });
 
+describe('Surge edges', () => {
+  it('hits at exactly 6.0 m and misses at 6.01 m', () => {
+    registerSurge(w, caster, deps());
+    w.actors.add(new FakeActor('edge', 'hostile', 6, 0));
+    w.actors.add(new FakeActor('out', 'hostile', 0, 6.01));
+    caster.cast('player', SURGE.spellId);
+    finish();
+    expect(w.damage.applied.map((r) => r.targetId)).toEqual(['edge']);
+  });
+  it('leaves neutral dummies and actors that die before release untouched', () => {
+    registerSurge(w, caster, deps());
+    w.actors.add(new FakeActor('dummy', 'neutral', 1, 0));
+    const doomed = w.actors.add(new FakeActor('doomed', 'hostile', 2, 0));
+    const live = w.actors.add(new FakeActor('live', 'hostile', 3, 0));
+    caster.cast('player', SURGE.spellId);
+    doomed.kill();
+    finish();
+    expect(w.damage.applied.map((r) => r.targetId)).toEqual([live.id]);
+  });
+  it('G and Q requested on the same tick: the second returns busy', () => {
+    registerSurge(w, caster, deps());
+    registerRally(w, caster, { services: svc() });
+    expect(caster.cast('player', SURGE.spellId).ok).toBe(true);
+    expect(caster.cast('player', 'rally-cry')).toEqual({ ok: false, reason: 'busy' });
+    finish();
+    expect(w.ember.value).toBe(100 - SURGE.emberCost);
+  });
+  it('is refused while the player is attacking', () => {
+    registerSurge(w, caster, deps());
+    w.host.busy = true;
+    expect(caster.cast('player', SURGE.spellId)).toEqual({ ok: false, reason: 'busy' });
+    expect(w.ember.value).toBe(100);
+  });
+});
+
 describe('Rally', () => {
   it('restores 10% stamina to the caster and allies in range only', () => {
     registerRally(w, caster, { services: svc() });
@@ -117,29 +154,60 @@ describe('Rally', () => {
     expect(w.actors.player.stamina).toBe(10);
     expect(near.stamina).toBe(10);
     expect([far.stamina, foe.stamina, dead.stamina]).toEqual([0, 0, 0]);
-    expect(w.ember.value).toBe(100 - RALLY.emberCost);
+    expect(w.ember.value).toBe(100); // thread 5 owns the Ember cost
   });
-  it('registers and unregisters the abilities handler, reports the trigger, plays vfx and sound', () => {
-    const off = vi.fn();
-    let handler: ((c: { casterId: string }) => boolean) | undefined;
-    const reportTrigger = vi.fn();
+  it('plays vfx (radius param, scale 1) and sound, and does not call reportTrigger', () => {
     const play = vi.fn();
     const spawnEffect = vi.fn();
-    services = {
-      abilities: { registerHandler: (id, h) => { expect(id).toBe(RALLY.skillId); handler = h; return off; }, reportTrigger },
-      audio: { play },
-      vfx: { spawnEffect } as never,
-    };
-    const reg = registerRally(w, caster, { services: svc() });
-    expect(handler!({ casterId: 'player' })).toBe(true);
-    expect(handler!({ casterId: 'player' })).toBe(false); // busy
+    const reportTrigger = vi.fn();
+    services = { audio: { play }, vfx: { spawnEffect } as never, abilities: { registerHandler: () => () => undefined, reportTrigger } as never };
+    registerRally(w, caster, { services: svc() });
+    caster.cast('player', 'rally-cry');
     finish();
-    expect(reportTrigger).toHaveBeenCalledWith(RALLY.skillId);
     expect(play.mock.calls[0][0]).toBe('sfx.rally');
-    expect(spawnEffect.mock.calls[0][0]).toBe('skill-q');
+    expect(spawnEffect).toHaveBeenCalledTimes(1);
+    expect(spawnEffect).toHaveBeenCalledWith('skill-q', { position: { x: 0, y: 0, z: 0 }, scale: 1 }, { radius: 8, color: RALLY_FX.color });
+    expect(reportTrigger).not.toHaveBeenCalled();
+  });
+  it('the abilities handler casts for the Actor, is free, refuses with the caster reason, and unregisters on dispose', () => {
+    const off = vi.fn();
+    let handler: ((a: { skillId: string; slot: number; caster: { id: string } | undefined; ctx?: unknown }) => unknown) | undefined;
+    services = { abilities: { registerHandler: (id: string, h: typeof handler) => { expect(id).toBe('knight.rallyCry'); expect(id).toBe(RALLY_SKILL_ID); handler = h; return off; } } as never };
+    const reg = registerRally(w, caster, { services: svc() });
+    expect(RALLY_DEF.emberCost).toBe(0);
+    expect(RALLY_DEF.cooldown).toBe(0);
+    const args = { skillId: RALLY_SKILL_ID, slot: 0, caster: w.actors.player, ctx: {} };
+    expect(handler!(args)).toEqual({ ok: true });
+    expect(w.ember.value).toBe(100);
+    expect(handler!(args)).toEqual({ ok: false, reason: 'busy' });
+    finish();
+    expect(caster.cooldown('rally-cry')).toBe(0); // thread 5 starts the real cooldown
+    expect(w.ember.value).toBe(100);
+    // falls back to the player id without a caster
+    expect(handler!({ ...args, caster: undefined })).toEqual({ ok: true });
+    finish();
+    w.host.staggered = true;
+    expect(handler!(args)).toEqual({ ok: false, reason: 'staggered' });
+    w.host.staggered = false;
+    w.host.blocked = true;
+    expect(handler!(args)).toEqual({ ok: false, reason: 'blocked' });
     reg.dispose();
     expect(off).toHaveBeenCalledTimes(1);
     expect(caster.def('rally-cry')).toBeUndefined();
+  });
+  it('a second registration throwing is logged once and not retried; a direct cast stays free', () => {
+    const registerHandler = vi.fn(() => { throw new Error('duplicate handler'); });
+    services = { abilities: { registerHandler } as never };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const reg = registerRally(w, caster, { services: svc() });
+    expect(reg.bindAbilities()).toBe(false);
+    expect(reg.bindAbilities()).toBe(false);
+    expect(registerHandler).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(caster.cast('player', 'rally-cry').ok).toBe(true);
+    expect(w.ember.value).toBe(100);
+    reg.dispose();
+    warn.mockRestore();
   });
   it('is castable without the abilities service and binds it later', () => {
     const reg = registerRally(w, caster, { services: svc() });
@@ -147,7 +215,7 @@ describe('Rally', () => {
     expect(caster.cast('player', 'rally-cry').ok).toBe(true);
     finish();
     const registerHandler = vi.fn(() => () => undefined);
-    services = { abilities: { registerHandler, reportTrigger: vi.fn() } };
+    services = { abilities: { registerHandler } as never };
     expect(reg.bindAbilities()).toBe(true);
     reg.bindAbilities();
     expect(registerHandler).toHaveBeenCalledTimes(1);

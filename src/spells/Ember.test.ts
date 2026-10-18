@@ -71,4 +71,19 @@ describe('Ember', () => {
     expect(f.value).toBe(EMBER.max);
     expect(f.key).toBe('ember');
   });
+  it('regen notifies at most once per displayed point; spend and restore always notify', () => {
+    const e = new Ember();
+    e.spend(40);
+    const events: Array<[number, number]> = [];
+    e.onChange = (v, p) => events.push([v, p]);
+    const before = e.value;
+    for (let i = 0; i < 60 * 20; i++) e.regen(1 / 60);
+    const change = e.value - before;
+    expect(change).toBeGreaterThan(30);
+    expect(events.length).toBeLessThanOrEqual(Math.ceil(change) + 1);
+    const n = events.length;
+    e.spend(0.2);
+    e.restore(0.2);
+    expect(events.length).toBe(n + 2);
+  });
 });
