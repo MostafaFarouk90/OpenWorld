@@ -2,12 +2,14 @@
 // (thread 10 seam check: the churchyard members once used `pile.churchyard-N` while the layout has `.N`).
 import { describe, expect, it } from 'vitest';
 import { BRIGHTWATER_LAYOUT } from '../region/brightwater.layout';
+import { DEADROAD_LAYOUT } from '../region/deadroad.layout';
 import { VAULT_DEF } from '../interiors/vaultDef';
 import { BRIGHTWATER_SPAWNERS } from './brightwaterSpawners';
 import { SLICE_SPAWNERS } from './spawnerDefs';
 
 const known = new Set<string>([
   ...BRIGHTWATER_LAYOUT.anchors.map((a) => a.id),
+  ...DEADROAD_LAYOUT.anchors.map((a) => a.id),
   ...(VAULT_DEF.anchors ?? []).map((a) => a.id),
 ]);
 
