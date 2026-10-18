@@ -15,13 +15,18 @@ describe('SFX ids', () => {
       armourRing: 'sfx.armour-ring',
       block: 'sfx.block',
       parry: 'sfx.parry',
+      impactPlant: 'sfx.impact.plant',
+      releasePulse: 'sfx.release.pulse',
+      yieldKneel: 'sfx.yield.kneel',
+      leap: 'sfx.leap',
+      companionBark: 'sfx.companion.bark',
     });
-    expect(SFX_IDS).toHaveLength(11);
+    expect(SFX_IDS).toHaveLength(16);
   });
 });
 
 describe('resolveMaterial', () => {
-  it.each(['flesh', 'ash', 'metal', 'wood', 'straw'])('knows %s', (m) => {
+  it.each(['flesh', 'ash', 'metal', 'wood', 'straw', 'plant'])('knows %s', (m) => {
     expect(resolveMaterial(m)).toEqual({ material: m, known: true });
   });
   it('defaults undefined and null to flesh, known', () => {
