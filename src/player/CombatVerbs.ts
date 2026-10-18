@@ -177,7 +177,8 @@ export class CombatVerbs {
         if (e.actorId === this.actor.id) this.deathPending = true;
       }),
       ctx.events.on('rest', (e) => {
-        this.lastRestedWaystoneId = e.waystoneId;
+        // Inn rests (placeId only) do not move the respawn point.
+        if (e.waystoneId) this.lastRestedWaystoneId = e.waystoneId;
       }),
     );
     ctx.damage.addModifier('player-riposte', (req) => this.riposteModifier(req), -150);

@@ -68,7 +68,8 @@ export interface GameEventMap {
   'dialogue.started': { dialogueId: string; npcId: string };
   'dialogue.ended': { dialogueId: string; npcId: string };
   'dialogue.choice': { dialogueId: string; nodeId: string; choiceId: string };
-  rest: { waystoneId: string };
+  /** v0.5: a waystone rest carries `waystoneId` (and moves the respawn point); an inn rest carries only `placeId`. */
+  rest: { waystoneId?: string; placeId?: string };
   'waystone.rekindled': { waystoneId: string; cause: 'player' | 'script' };
   fastTravel: { fromId: string; toId: string };
   'flag.changed': { key: string; value: FlagValue | undefined; previous: FlagValue | undefined };
