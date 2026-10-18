@@ -392,8 +392,11 @@ describe('Harrowmark post rules', () => {
   });
   it('Rook, Gerta and Pennard follow their quests', () => {
     const { w, at } = world();
+    expect(at().rook.anchorId).toBe('npc-post.rook.gate');
     w.manager.start('m06');
     expect(at().rook.anchorId).toBe('npc-post.rook.gate');
+    w.manager.complete('m06');
+    expect(at().rook.anchorId).toBe('npc-post.rook');
     w.manager.start('m07');
     expect(at().gerta.anchorId).toBe('npc-post.gerta.bastion');
     expect(at().pennard.anchorId).toBe('npc-post.pennard.bastion');

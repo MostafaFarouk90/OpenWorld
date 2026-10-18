@@ -41,7 +41,8 @@ export const POST_RULES: PostRule[] = [
   },
   // Stane trains at the Bastion once the Practice Yard work (R02) is done and the class choice has begun (M07)
   { npcId: 'stane', home: 'npc-post.stane', posts: [{ when: { all: [{ quest: 'r02', state: 'completed' }, live('m07')] }, anchorId: 'npc-post.stane.bastion' }] },
-  { npcId: 'rook', home: 'npc-post.rook', posts: [{ when: { quest: 'm06', state: 'active' }, anchorId: 'npc-post.rook.gate' }] },
+  // Rook offers M06 from the gate while the portcullis is shut, so the gate post is his home; he goes into the city once M06 is done
+  { npcId: 'rook', home: 'npc-post.rook.gate', posts: [{ when: { quest: 'm06', state: 'completed' }, anchorId: 'npc-post.rook' }] },
   {
     npcId: 'gerta', home: 'npc-post.gerta.guild',
     posts: [
