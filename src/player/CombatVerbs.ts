@@ -181,6 +181,7 @@ export class CombatVerbs {
       }),
     );
     ctx.damage.addModifier('player-riposte', (req) => this.riposteModifier(req), -150);
+    ctx.damage.addModifier('player-status-ticks', (req, target) => this.statusThroughDodge(req, target), ORDER.statusTicks);
     ctx.damage.addModifier('player-guard', (req, target, attacker) => this.guardModifier(req, target, attacker), ORDER.guardModifier);
     ctx.damage.addLethalHandler(
       'second-wind',
@@ -467,8 +468,14 @@ export class CombatVerbs {
     req.unblockable = true;
   }
 
+  /** Bleed and ignite ticks are not dodgeable (contracts/actors-and-damage.md section 10): the dodge's i-frames do not stop them. */
+  private statusThroughDodge(req: ModifiableRequest, target: Actor): void {
+    if (req.kind === 'status' && target.id === this.actor.id && req.outcome === 'immune' && this.invuln.only('dodge')) req.outcome = 'hit';
+  }
+
   private guardModifier(req: ModifiableRequest, target: Actor, attacker: Actor | null): void {
-    if (target.id !== this.actor.id || req.outcome === 'immune') return;
+    // Status ticks are neither blockable nor parryable and drain no guard stamina.
+    if (target.id !== this.actor.id || req.outcome === 'immune' || req.kind === 'status') return;
     const c = this.controller;
     const action = c?.currentAction;
     // The tick after a blockHit clip ends the guard is still up; block re-enters on the next intent.
@@ -515,7 +522,7 @@ export class CombatVerbs {
       if (this.learned(RIPOSTE_SKILL)) this.riposteUntil = ctx.clock.tick + RIPOSTE_WINDOW_TICKS;
     } else if (r.outcome === 'immune') {
       const attacker = r.attackerId ? ctx.actors.get(r.attackerId) : undefined;
-      if (attacker?.team === 'hostile' && this.invuln.has('dodge')) {
+      if (attacker?.team === 'hostile' && r.kind !== 'status' && this.invuln.has('dodge')) {
         const key = `${r.attackerId}#${r.swingId ?? r.attackId ?? ctx.clock.tick}`;
         if (!this.dodgedSwings.has(key)) {
           this.dodgedSwings.add(key);
@@ -524,7 +531,8 @@ export class CombatVerbs {
           this.prompts()?.success('dodge');
         }
       }
-    } else {
+    } else if (r.kind !== 'status') {
+      // A bleed tick does not make the player flinch.
       const reaction = this.poise.onDamage({
         outcome: r.outcome,
         reqPoise: r.poise,
