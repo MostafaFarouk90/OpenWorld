@@ -46,9 +46,8 @@ const anchors: AnchorSpec[] = [
   a('farmring.centre', 6825, 810, 0, ['poi']),
   a('waystone.farm-ring', 6830, 792, 0, ['waystone']),
 
-  // The South Gate, outside the ring wall: the waystone, and Tobb's and Gaut's M06 waits. The road ends at (8500, 1250).
+  // The South Gate, outside the ring wall: the waystone and Gaut's M06 wait (Tobb's post, npc-post.tobb.south-gate, is thread 17's, just inside the gate). The road ends at (8500, 1250).
   a('waystone.harrowmark-gate', SOUTH_GATE.x, SOUTH_GATE.z, 0, ['waystone']),
-  a('npc-post.tobb.south-gate', SOUTH_GATE.x + 4, SOUTH_GATE.z - 4, 270, ['npc-post']),
   a('npc-post.gaut.south-gate', SOUTH_GATE.x + 8, SOUTH_GATE.z + 2, 270, ['npc-post']),
 ];
 

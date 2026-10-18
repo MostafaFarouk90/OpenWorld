@@ -23,8 +23,8 @@ function build() {
 }
 
 /** A horizontal ray from `from` towards `to` at chest height; true when something solid lies in between. */
-function blocked(from: { x: number; z: number }, to: { x: number; z: number }): boolean {
-  const y = heightAt(from.x, from.z) + 1.2;
+function blocked(from: { x: number; z: number }, to: { x: number; z: number }, groundAt = heightAt(from.x, from.z)): boolean {
+  const y = groundAt + 1.2;
   const len = Math.hypot(to.x - from.x, to.z - from.z);
   const ray = new physics.rapier.Ray({ x: from.x, y, z: from.z }, { x: (to.x - from.x) / len, y: 0, z: (to.z - from.z) / len });
   return physics.world.castRay(ray, len, true) !== null;
@@ -46,7 +46,8 @@ describe('built city colliders', () => {
   it('follows the portcullis: down blocks the South Gate, up opens it', () => {
     const { city } = build();
     const south = gatePosition('south');
-    const through = () => blocked({ x: south.x, z: south.z - 30 }, { x: south.x, z: south.z + 30 });
+    // The ray runs at the gate's own height: the Dead Road climbs to the gate, so the ground 30 m south of it is lower.
+    const through = () => blocked({ x: south.x, z: south.z - 30 }, { x: south.x, z: south.z + 30 }, heightAt(south.x, south.z));
     expect(city.portcullisClosed()).toBe(true);
     expect(through()).toBe(true);
     city.setPortcullis(false);
