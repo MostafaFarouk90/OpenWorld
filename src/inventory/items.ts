@@ -33,6 +33,18 @@ export const ITEMS: Record<string, ItemDef> = {
   'leather-vest': def('leather-vest', 'armour', { slot: 'armour', stats: { defense: 2 } }),
   'hunting-crossbow': def('hunting-crossbow', 'weapon', { slot: 'weapon', stats: { attack: 10 } }),
   'rangers-cloak': def('rangers-cloak', 'armour', { slot: 'armour', stats: { defense: 2 } }),
+  // Harrowmark quest rewards and props (slice 2 phase B). Class starter gear is thread 12's. Stats are display-only.
+  'watch-pass': def('watch-pass', 'quest'),
+  'stolen-satchel': def('stolen-satchel', 'quest'),
+  'brewing-copper': def('brewing-copper', 'quest'),
+  'halvard-signet': def('halvard-signet', 'trinket', { slot: 'trinket' }),
+  'oswin-lockpicks': def('oswin-lockpicks', 'quest', { stackMax: 10 }),
+  'couriers-cloak': def('couriers-cloak', 'armour', { slot: 'armour', stats: { defense: 2 } }),
+  'sewer-master-key': def('sewer-master-key', 'quest'),
+  'lore-tome-1': def('lore-tome-1', 'quest'),
+  'aldiths-stout': def('aldiths-stout', 'consumable', { stackMax: 5, use: { healFlat: 20, drinkSeconds: 1 } }),
+  'ember-coal': def('ember-coal', 'quest', { stackMax: 10 }),
+  'crossbow-bolts': def('crossbow-bolts', 'quest', { stackMax: 40 }),
   'healing-flask': def('healing-flask', 'consumable', { stackMax: 5, use: { healFraction: 0.4, drinkSeconds: 1.2 } }),
 };
 

@@ -49,6 +49,14 @@ export const POST_RULES: PostRule[] = [
       { when: live('m07'), anchorId: 'npc-post.gerta.bastion' },
     ],
   },
+  // the audience: the Regent's court stands in the Keep hall while M08 runs (inside posts are thread 3a's anchors)
+  { npcId: 'edric', home: 'npc-post.edric', posts: [{ when: { quest: 'm08', state: 'active' }, anchorId: 'npc-post.edric.hall' }] },
+  { npcId: 'vey', home: 'npc-post.vey.keep', posts: [{ when: { quest: 'm08', state: 'active' }, anchorId: 'npc-post.vey.hall' }] },
+  // Merrin waits inside the Counting-House once she has sent the player in
+  {
+    npcId: 'merrin', home: 'npc-post.merrin',
+    posts: [{ when: { all: [{ quest: 'm09', state: 'active' }, { objective: ['m09', 'o1'], done: true }] }, anchorId: 'npc-post.merrin.inside' }],
+  },
   { npcId: 'pennard', home: 'npc-post.pennard.archive', posts: [{ when: live('m07'), anchorId: 'npc-post.pennard.bastion' }] },
 ];
 
