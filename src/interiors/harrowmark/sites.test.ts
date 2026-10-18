@@ -80,14 +80,13 @@ describe('interior sites', () => {
   });
 
   // Thread 17's layout is not on main yet; once it is, its door anchors must match the copied sites.
-  const city = import.meta.glob<{ HARROWMARK_LAYOUT?: { anchors: { id: string; x: number; z: number }[] } }>(
-    '../../harrowmark/harrowmark.layout.ts',
-    { eager: true },
-  );
-  const layout = Object.values(city)[0]?.HARROWMARK_LAYOUT;
-  it.skipIf(!layout)("matches thread 17's door anchors", () => {
+  const city = import.meta.glob<{ DOORS?: { anchor: string; x: number; z: number }[] }>('../../harrowmark/harrowmark.layout.ts', {
+    eager: true,
+  });
+  const doors = Object.values(city)[0]?.DOORS;
+  it.skipIf(!doors)("matches thread 17's door anchors", () => {
     for (const [id, anchorId] of Object.entries(HARROWMARK_SITE_ANCHORS)) {
-      const a = layout!.anchors.find((x) => x.id === anchorId);
+      const a = doors!.find((x) => x.anchor === anchorId);
       expect(a, anchorId).toBeDefined();
       const site = HARROWMARK_SITES[id as keyof typeof HARROWMARK_SITES];
       expect(Math.hypot(a!.x - site.x, a!.z - site.z), anchorId).toBeLessThan(0.01);
