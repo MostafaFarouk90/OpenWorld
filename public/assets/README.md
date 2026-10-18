@@ -21,6 +21,8 @@ All packs are CC0 1.0 (public domain). Attribution is not required but appreciat
   - `Rogue.glb`: `e825437cd4d2ee9c1960b517a74a69101e33eb409ae7fa8cedc7134a998fbb7d`
   - `Rogue_Hooded.glb`: `93e6e25213009952276d9cf34f5d96a243767334c66f280db0433ddfabb91545`
 
+- Download budget: the four NPC GLBs total about 14.4 MB. They are loaded lazily, one per distinct model, once the player is within 100 m of an NPC's post; placeholders show until then.
+
 ## Installing a pack
 
 Download the pack from its official URL and unzip it into its folder, e.g.
