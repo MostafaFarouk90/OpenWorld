@@ -256,9 +256,24 @@ export class Game {
     const player: PlayerHandle = Object.create(c.player, {
       addMoveModifier: { value: (source: string, mod: MoveModifier) => scope.track(c.player.addMoveModifier(source, mod)) },
     });
+    const contexts = scoped(c.input.contexts, scope, ['push', 'onChange']);
+    const bindings = scoped(c.input.bindings, scope, ['onChange']);
+    const input: GameInput = Object.create(c.input, {
+      contexts: { value: contexts },
+      bindings: { value: bindings },
+    });
+    const clock = scoped(c.clock, scope, [], {
+      // A pause a plugin set is lifted when that plugin is torn down.
+      setPaused: ((reason: string, paused: boolean) => {
+        c.clock.setPaused(reason, paused);
+        if (paused) scope.track(() => c.clock.setPaused(reason, false));
+      }) as never,
+    });
     return {
       ...c,
       player,
+      input,
+      clock,
       events: scoped(c.events, scope, ['on', 'once', 'onAny']),
       actors,
       damage: scoped(c.damage, scope, ['addModifier', 'addLethalHandler']),

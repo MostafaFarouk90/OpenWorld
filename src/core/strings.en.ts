@@ -17,6 +17,6 @@ export const CORE_STRINGS_EN: Record<string, string> = {
   'interact.mercy': 'Hold {key} to spare {name}',
   'interact.use': '{key} Use {name}',
   'interact.locked': 'Locked',
-  'combat.blocked': 'Blocked',
-  'combat.parried': 'Parried',
+  'core.damage.blocked': 'Blocked',
+  'core.damage.parried': 'Parried',
 };

@@ -392,11 +392,29 @@ describe('mercy', () => {
       expect(ws.creatureMercyFavour('halvard')).toBe(1);
     });
 
-    it('a second mercy for the same actor replaces its credit', () => {
+    it('a second mercy for the same actor adds nothing, so a strike leaves favour and cap where they started', () => {
+      const { ws } = make();
+      expect(ws.recordMercy(mercy({ actorId: 'w' })).applied).toBe(1);
+      expect(ws.recordMercy(mercy({ actorId: 'w', tier: 'elite' }))).toEqual({ applied: 0, capped: false });
+      expect(ws.favour('halvard')).toBe(31);
+      expect(ws.mercyCount()).toBe(1);
+      expect(ws.revokeMercy('w')).toBe(1);
+      expect(ws.favour('halvard')).toBe(30);
+      expect(ws.creatureMercyFavour('halvard')).toBe(0);
+    });
+
+    it('after a revoke the same actor can be mercied again', () => {
       const { ws } = make();
       ws.recordMercy(mercy({ actorId: 'w' }));
-      ws.recordMercy(mercy({ actorId: 'w' }));
-      expect(ws.revokeMercy('w')).toBe(1);
+      ws.revokeMercy('w');
+      expect(ws.recordMercy(mercy({ actorId: 'w' })).applied).toBe(1);
+    });
+
+    it('a second boss mercy on the same actor adds nothing', () => {
+      const { ws } = make();
+      ws.recordMercy(mercy({ tier: 'boss', amount: 4, actorId: 'b' }));
+      ws.recordMercy(mercy({ tier: 'boss', amount: 4, actorId: 'b' }));
+      expect(ws.favour('halvard')).toBe(34);
     });
 
     it('forgetMercy ends the window: no later revoke', () => {

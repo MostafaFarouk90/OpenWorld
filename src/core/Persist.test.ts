@@ -159,6 +159,20 @@ describe('PersistRegistry.loadAll', () => {
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps a refused newer entry: returned with the unknown ones and written back unchanged by saveAll', () => {
+    const { reg, events } = make();
+    const a = item('a'); // version 2
+    reg.register(a);
+    const newer = { key: 'a', version: 3, data: 'future' };
+    const kept = reg.loadAll([newer], events, 's');
+    expect(kept).toEqual([newer]);
+    const out = reg.saveAll(kept);
+    expect(out.filter((e) => e.key === 'a')).toEqual([newer]);
+    // A later successful load clears the refusal.
+    reg.loadAll([{ key: 'a', version: 2, data: 5 }], events, 's');
+    expect(reg.saveAll(kept).find((e) => e.key === 'a')?.version).toBe(2);
+  });
+
   it('refuses non-integer versions', () => {
     const { reg, events, warn } = make();
     const a = item('a');

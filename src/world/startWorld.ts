@@ -87,14 +87,17 @@ export async function startWorld(container: HTMLElement): Promise<void> {
   const damageNumbers = new DamageNumberSprites(scene);
   const params = new URLSearchParams(window.location.search);
   if (params.has('debug')) installDebugKeys(world);
-  installLeaveGuard(strings);
   // The first click that starts play also asks for fullscreen and keyboard lock (Ctrl dodge, contracts/input-and-hud.md).
-  renderer.renderer.domElement.addEventListener('click', () => void input.requestFullscreenAndLock(container), { once: true });
+  // Every click that takes the pointer back asks again: the first Esc leaves fullscreen and drops the lock.
+  renderer.renderer.domElement.addEventListener('click', () => {
+    if (!input.keyboardLocked) void input.requestFullscreenAndLock(container);
+    installLeaveGuard(strings);
+  });
 
   events.on('damage.dealt', (r) => {
     if (!r.point) return;
-    if (r.outcome === 'blocked') damageNumbers.spawnText(strings.t('combat.blocked'), r.point);
-    else if (r.outcome === 'parried') damageNumbers.spawnText(strings.t('combat.parried'), r.point);
+    if (r.outcome === 'blocked') damageNumbers.spawnText(strings.t('core.damage.blocked'), r.point);
+    else if (r.outcome === 'parried') damageNumbers.spawnText(strings.t('core.damage.parried'), r.point);
     else if (r.outcome === 'hit') damageNumbers.spawn(r.dealt, r.point, r.killed || r.attackId === ATTACK_SLOTS[2] ? 1.4 : 1);
   });
 
@@ -155,7 +158,11 @@ function installDebugKeys(world: World): void {
 }
 
 /** Ctrl+W (dodge plus forward) asks before closing the tab instead of ending the session. */
+let leaveGuardInstalled = false;
+/** Installed on the first click only, so dev reloads before playing are not interrupted. */
 function installLeaveGuard(strings: StringTable): void {
+  if (leaveGuardInstalled) return;
+  leaveGuardInstalled = true;
   window.addEventListener('beforeunload', (e) => {
     e.preventDefault();
     // Older browsers show a dialog only when returnValue is set.

@@ -18,6 +18,8 @@ export interface SaveEntry {
 
 export class PersistRegistry {
   private readonly items = new Map<string, Persistable>();
+  /** Keys whose last load was refused as too new; `saveAll` writes their previous entry back unchanged. */
+  private readonly refused = new Set<string>();
 
   constructor(private readonly warn: (message: string, err?: unknown) => void = (m, e) => console.warn(m, e ?? '')) {}
 
@@ -40,12 +42,18 @@ export class PersistRegistry {
 
   /**
    * Serialises every persistable. `previous` (the entries of the slot being overwritten) supplies the
-   * value for keys whose serializer throws and for keys with no registered persistable, kept verbatim.
+   * value for keys whose serializer throws, for keys with no registered persistable, and for keys whose
+   * load was refused as too new, kept verbatim.
    */
   saveAll(previous: readonly SaveEntry[] = []): SaveEntry[] {
     const old = new Map(previous.map((e) => [e.key, e]));
     const out: SaveEntry[] = [];
     for (const p of this.items.values()) {
+      const prevEntry = old.get(p.key);
+      if (this.refused.has(p.key) && prevEntry) {
+        out.push(prevEntry);
+        continue;
+      }
       try {
         out.push({ key: p.key, version: p.version, data: p.serialize() });
       } catch (err) {
@@ -60,11 +68,12 @@ export class PersistRegistry {
 
   /**
    * Loads `entries` into the registered persistables, then emits `save.loaded`. Newer versions are refused
-   * (the owner keeps its defaults); a throwing load is isolated. Returns the entries with no owner, which
-   * the caller keeps and writes back on the next save.
+   * (the owner keeps its defaults); a throwing load is isolated. Returns the entries with no owner and the
+   * refused ones, which the caller keeps and passes to the next `saveAll` as `previous`.
    */
   loadAll(entries: readonly SaveEntry[], events: GameEvents, slot: string): SaveEntry[] {
     const unknown: SaveEntry[] = [];
+    this.refused.clear();
     for (const e of entries) {
       const p = this.items.get(e.key);
       if (!p) {
@@ -73,6 +82,9 @@ export class PersistRegistry {
       }
       if (!Number.isInteger(e.version) || e.version > p.version) {
         this.warn(`Persist: "${e.key}" was saved as version ${e.version}, newer than ${p.version}; keeping defaults`);
+        // Returned with the unknown entries and kept verbatim by the next save, so a rollback loses nothing.
+        unknown.push(e);
+        this.refused.add(e.key);
         continue;
       }
       try {

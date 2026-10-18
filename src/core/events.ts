@@ -60,7 +60,7 @@ export interface GameEventMap {
   'dialogue.ended': { dialogueId: string; npcId: string };
   'dialogue.choice': { dialogueId: string; nodeId: string; choiceId: string };
   rest: { waystoneId: string };
-  'waystone.rekindled': { waystoneId: string };
+  'waystone.rekindled': { waystoneId: string; cause: 'player' | 'script' };
   fastTravel: { fromId: string; toId: string };
   'flag.changed': { key: string; value: FlagValue | undefined; previous: FlagValue | undefined };
   'favour.changed': {
