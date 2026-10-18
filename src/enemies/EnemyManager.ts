@@ -3,6 +3,7 @@ import { isHeavyBlow } from '../combat/heavyBlow';
 import { HumanoidBody, type EnemyBody } from './body';
 import { mulberry32 } from './ai/moveSelect';
 import { ENEMY_DEFS } from './defs';
+import { PathBudget } from './steering/pathFollower';
 import { boneMultiplier, Enemy, type EnemyEnv, type EnemySpawn } from './Enemy';
 import { EnemyAnimator } from './EnemyAnimator';
 import { buildEnemyModel, type EnemyModelSource } from './EnemyModel';
@@ -195,6 +196,7 @@ export class EnemyManager {
 
   think(dt: number): void {
     this.clock += dt;
+    this.pathBudget.reset();
     this.updateDormancy();
     for (const e of this.enemies.values()) e.think(dt);
     this.foes.think(dt);
@@ -586,6 +588,7 @@ export class EnemyManager {
 
   // ---- shared state used by enemies -----------------------------------------------------------------
 
+  private readonly pathBudget = new PathBudget();
   private readonly env: EnemyEnv;
 
   private makeEnv(): EnemyEnv {
@@ -662,6 +665,7 @@ export class EnemyManager {
     },
     mercyUnlocked: (verb: UnlockVerb) => this.mercyUnlocked(verb),
     nav: () => this.host.services.get('nav'),
+    pathBudget: this.pathBudget,
     gone: (self: Enemy, how: MemberEnd) => {
       this.enemies.delete(self.id);
       this.env.releaseToken(self);
