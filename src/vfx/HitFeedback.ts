@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { HEAVY_ATTACKS, HIT_STACK, STAB_ATTACKS } from './tuning';
 import type { ActorsLike, ClockLike, DamageResultLike, Vec3 } from './ports';
 import type { EffectId, VfxService } from './types';
@@ -64,6 +65,8 @@ export interface HitFeedbackDeps {
   vfx: Pick<VfxService, 'spawnEffect' | 'shake' | 'fovPunch' | 'pulseScreen'>;
   clock: ClockLike;
   actors: ActorsLike;
+  /** Terrain height; scorch marks and rings are placed on the ground under the target. */
+  ground?: (x: number, z: number) => number;
 }
 
 /**
@@ -78,6 +81,8 @@ export class HitFeedback {
   constructor(private readonly deps: HitFeedbackDeps) {}
 
   onDamage(r: DamageResultLike): void {
+    // Falls and scripted damage are not weapon hits.
+    if (r.kind !== 'melee' && r.kind !== 'spell') return;
     const plan = planFeedback(r);
     if (!plan.effect) return;
     const { vfx, clock } = this.deps;
@@ -87,7 +92,7 @@ export class HitFeedback {
     const transform = { position: at, normal: r.normal };
 
     vfx.spawnEffect(plan.effect, transform, { count: plan.sparks });
-    for (const id of plan.extra) vfx.spawnEffect(id, transform);
+    for (const id of plan.extra) vfx.spawnEffect(id, this.groundTransform(at));
     if (spellRepeat) return;
 
     const damp = r.kind === 'spell' ? HIT_STACK.spellDamp : 1;
@@ -99,13 +104,19 @@ export class HitFeedback {
     if (plan.pulse > 0) vfx.pulseScreen(plan.pulse * damp, 0.18);
   }
 
+  private groundTransform(at: Vec3): { position: Vec3 } {
+    const g = this.deps.ground?.(at.x, at.z);
+    return { position: { x: at.x, y: typeof g === 'number' && Number.isFinite(g) ? g : at.y, z: at.z } };
+  }
+
   private locate(r: DamageResultLike): Vec3 {
     if (r.point && Number.isFinite(r.point.x + r.point.y + r.point.z)) return r.point;
     const target = this.deps.actors.get(r.targetId);
     if (target?.root) {
-      this.pos.x = target.root.position.x;
-      this.pos.y = target.root.position.y + 1;
-      this.pos.z = target.root.position.z;
+      const p = target.worldPosition(new THREE.Vector3());
+      this.pos.x = p.x;
+      this.pos.y = p.y + 1;
+      this.pos.z = p.z;
     } else {
       this.pos.x = this.pos.y = this.pos.z = 0;
     }

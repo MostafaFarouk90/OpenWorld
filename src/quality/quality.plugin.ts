@@ -1,4 +1,4 @@
-import { QUALITY, type QualityStep } from '../vfx/tuning';
+import { QUALITY } from '../vfx/tuning';
 import type { GamePlugin, PluginContext, PostPass } from '../vfx/ports';
 import { QualityManager } from './QualityManager';
 import { FrameProbe, Governor } from './FrameProbe';
@@ -50,21 +50,11 @@ const plugin = {
       graphics.setPostPass(pass as PostPass);
     };
 
-    const notifyVfx = (step: QualityStep): void => {
-      try {
-        ctx.services.get('vfx')?.setQuality(step);
-      } catch (e) {
-        console.error('[quality] vfx.setQuality failed', e);
-      }
-    };
-    const unsub = quality.subscribe((s) => {
-      syncBloom();
-      notifyVfx(s);
-    });
+    // The vfx plugin sets up after this one, reads `quality.step` and subscribes to it itself.
+    const unsub = quality.subscribe(() => syncBloom());
 
     quality.applyToGraphics();
     syncBloom();
-    notifyVfx(quality.step);
 
     const service: QualityService = {
       get step() {
@@ -88,9 +78,11 @@ const plugin = {
         syncBloom();
         // The probe starts after the first frame the loop runs.
         if (frames <= 1) return;
-        if (Number.isFinite(frameTime) && frameTime > 0) seconds += frameTime / 1000;
-        if (!probe.done) probe.sample(frameTime);
-        else governor.sample(frameTime, seconds);
+        // The render system receives seconds; the probe and governor work in milliseconds.
+        const ms = frameTime * 1000;
+        if (Number.isFinite(frameTime) && frameTime > 0) seconds += frameTime;
+        if (!probe.done) probe.sample(ms);
+        else governor.sample(ms, seconds);
       },
     });
 

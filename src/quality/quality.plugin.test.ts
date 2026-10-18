@@ -56,7 +56,6 @@ describe('quality plugin', () => {
     plugin.setup(f.ctx);
     expect(f.services.get('quality').step).toBe('medium');
     expect(f.graphics.setPostPass).toHaveBeenCalledWith(expect.objectContaining({ dispose: expect.any(Function) }));
-    expect(f.vfx.setQuality).toHaveBeenCalledWith('medium');
     expect(f.systems[0]).toMatchObject({ renderPhase: 'hud', order: 150 });
     plugin.dispose();
   });
@@ -72,7 +71,6 @@ describe('quality plugin', () => {
     f.graphics.setPostPass.mockClear();
     f.services.get('quality').setStep('low');
     expect(f.graphics.setPostPass).toHaveBeenCalledWith(null);
-    expect(f.vfx.setQuality).toHaveBeenLastCalledWith('low');
     f.services.get('quality').setStep('high');
     expect(f.graphics.setPostPass).toHaveBeenLastCalledWith(expect.anything());
     plugin.dispose();
@@ -89,10 +87,27 @@ describe('quality plugin', () => {
     const f = fake();
     plugin.setup(f.ctx);
     const sys = f.systems[0];
-    sys.render(0, 10, f.ctx);
-    for (let i = 0; i < PROBE.warmupFrames + PROBE.sampleFrames; i++) sys.render(0, 10, f.ctx);
+    sys.render(0, 0.01, f.ctx);
+    for (let i = 0; i < PROBE.warmupFrames + PROBE.sampleFrames; i++) sys.render(0, 0.01, f.ctx);
     expect(f.services.get('quality').step).toBe('high');
-    expect(f.vfx.setQuality).toHaveBeenLastCalledWith('high');
+    plugin.dispose();
+  });
+  it('frame times arrive in seconds: 50 ms frames pick low, then the governor never drops below low', () => {
+    const f = fake();
+    plugin.setup(f.ctx);
+    const sys = f.systems[0];
+    for (let i = 0; i < 1 + PROBE.warmupFrames + PROBE.sampleFrames + 5; i++) sys.render(0, 0.05, f.ctx);
+    expect(f.services.get('quality').step).toBe('low');
+    plugin.dispose();
+  });
+  it('the governor steps down after a 5 s window of slow frames (seconds input)', () => {
+    const f = fake();
+    plugin.setup(f.ctx);
+    const sys = f.systems[0];
+    for (let i = 0; i < 1 + PROBE.warmupFrames + PROBE.sampleFrames; i++) sys.render(0, 0.01, f.ctx);
+    expect(f.services.get('quality').step).toBe('high');
+    for (let i = 0; i < 6 / 0.05; i++) sys.render(0, 0.05, f.ctx);
+    expect(f.services.get('quality').step).toBe('medium');
     plugin.dispose();
   });
 });

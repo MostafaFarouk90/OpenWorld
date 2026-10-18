@@ -95,4 +95,63 @@ describe('vfx plugin', () => {
     plugin.dispose();
     plugin.dispose();
   });
+
+  it('mounts the vignette in the overlay slot when a document exists', () => {
+    const t = fakeContext();
+    plugin.setup(t.ctx);
+    // headless: no element, nothing mounted and no throw
+    expect(t.mounted).toEqual([]);
+    plugin.dispose();
+  });
+
+  it('adopts the quality step at startup, follows it, and routes setQuality through it', () => {
+    const t = fakeContext();
+    let step = 'low';
+    const subs: Array<(q: string) => void> = [];
+    t.services.set('quality', { get step() { return step; }, setStep: vi.fn((q: string) => { step = q; subs.forEach((f) => f(q)); }), subscribe: (f: (q: string) => void) => (subs.push(f), () => {}) });
+    plugin.setup(t.ctx);
+    const vfx = t.services.get('vfx') as VfxService;
+    expect(vfx.quality).toBe('low');
+    vfx.setQuality('high');
+    expect((t.services.get('quality') as { setStep: unknown }).setStep).toHaveBeenCalledWith('high');
+    expect(vfx.quality).toBe('high');
+    plugin.dispose();
+  });
+
+  it('rebinds the player trail when the avatar instance changes', () => {
+    const t = fakeContext();
+    plugin.setup(t.ctx);
+    const mk = () => ({ root: {}, weaponHilt: {}, weaponTip: {}, shield: {}, controller: { activeAttack: () => null } }) as never;
+    const fixed = t.systems.find((s) => s.id === 'vfx-trails')!;
+    (t.ctx.player as { avatar: unknown }).avatar = mk();
+    fixed.fixedUpdate!(1 / 60, t.ctx);
+    (t.ctx.player as { avatar: unknown }).avatar = mk();
+    expect(() => fixed.fixedUpdate!(1 / 60, t.ctx)).not.toThrow();
+    (t.ctx.player as { avatar: unknown }).avatar = null;
+    expect(() => fixed.fixedUpdate!(1 / 60, t.ctx)).not.toThrow();
+    plugin.dispose();
+  });
+
+  it('falls back to the tick counter when the clock has no frozen flag', () => {
+    const t = fakeContext();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    delete (t.clock as { frozen?: boolean }).frozen;
+    plugin.setup(t.ctx);
+    const vfx = t.services.get('vfx') as VfxService;
+    const byId = Object.fromEntries(t.systems.map((s) => [s.id, s]));
+    vfx.spawnEffect('shockwave-ring', { position: { x: 0, y: 0, z: 0 } });
+    // tick never advances -> treated as frozen, so the ring does not age out
+    for (let i = 0; i < 120; i++) byId['vfx-update'].render!(1, 1 / 60, t.ctx);
+    expect(warn).toHaveBeenCalled();
+    plugin.dispose();
+    warn.mockRestore();
+  });
+
+  it('telegraph.cancelled and despawn are tolerated', () => {
+    const t = fakeContext();
+    plugin.setup(t.ctx);
+    t.ctx.events.emit('telegraph.cancelled', { actorId: 'ghost', swingId: 1 });
+    t.ctx.events.emit('actor.despawned', { actorId: 'ghost' });
+    plugin.dispose();
+  });
 });

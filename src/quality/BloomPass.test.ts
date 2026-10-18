@@ -38,7 +38,7 @@ beforeEach(() => {
 describe('BloomPostPass', () => {
   it('delegates render to the composer', () => {
     const p = new BloomPostPass(renderer, scene, camera);
-    p.render(renderer, scene, camera, 16);
+    p.render();
     expect(h.composer.render).toHaveBeenCalledTimes(1);
     expect(renderer.render).not.toHaveBeenCalled();
   });
@@ -46,19 +46,26 @@ describe('BloomPostPass', () => {
     h.throwOnConstruct = true;
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
     const p = new BloomPostPass(renderer, scene, camera);
-    p.render(renderer, scene, camera, 16);
-    p.render(renderer, scene, camera, 16);
+    p.render();
+    p.render();
     expect(renderer.render).toHaveBeenCalledTimes(2);
     expect(err).toHaveBeenCalledTimes(1);
     err.mockRestore();
   });
-  it('pulse decays with frameTime (ms) back to base', () => {
-    const p = new BloomPostPass(renderer, scene, camera);
+  it('pulse decays with elapsed time back to base', () => {
+    let t = 1000;
+    const p = new BloomPostPass(renderer, scene, camera, () => t);
     p.pulse(1, 1);
     expect(p.strength).toBeCloseTo(BLOOM.strength + 1);
-    p.render(renderer, scene, camera, 500);
+    t += 250;
+    p.render();
+    t += 250;
+    p.render();
     expect(p.strength).toBeCloseTo(BLOOM.strength + 0.5);
-    p.render(renderer, scene, camera, 600);
+    t += 250;
+    p.render();
+    t += 250;
+    p.render();
     expect(p.strength).toBeCloseTo(BLOOM.strength);
   });
   it('setStrength and setEnabled', () => {
@@ -77,7 +84,7 @@ describe('BloomPostPass', () => {
     p.dispose();
     p.dispose();
     expect(c.dispose).toHaveBeenCalledTimes(1);
-    p.render(renderer, scene, camera, 16);
+    p.render();
     expect(renderer.render).toHaveBeenCalledTimes(1);
   });
 });

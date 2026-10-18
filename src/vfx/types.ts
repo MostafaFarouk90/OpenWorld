@@ -50,7 +50,7 @@ export interface TrailHandle {
 export interface VfxService {
   spawnEffect(id: EffectId | string, transform: EffectTransform, params?: EffectParams): EffectHandle;
   attachTrail(id: string, hilt: THREE.Object3D, tip: THREE.Object3D, opts?: { lifetime?: number; color?: number; attackId?: string }): TrailHandle;
-  telegraph(actorId: ActorId, kind: 'block' | 'dodge', leadSeconds: number): void;
+  telegraph(actorId: ActorId, kind: 'block' | 'dodge', leadSeconds: number, opts?: { parts?: string[] }): void;
   shake(amplitude: number, seconds: number): void;
   fovPunch(degrees: number, seconds?: number): void;
   dissolve(root: THREE.Object3D, seconds: number, opts?: { tint?: number }): Promise<void>;

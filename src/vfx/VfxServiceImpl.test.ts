@@ -64,12 +64,13 @@ describe('VfxServiceImpl', () => {
     vfx.spawnEffect('surge', at);
     vfx.setQuality('low');
     expect(vfx.quality).toBe('low');
-    expect(vfx.budget.scale).toBe(0.5);
+    expect(vfx.sparkBudget.scale).toBe(0.5);
+    expect(vfx.pointsBudget.scale).toBe(0.5);
     vfx.update(1 / 60, false);
     vfx.setQuality('bogus' as never);
     expect(vfx.quality).toBe('low');
     vfx.setQuality('high');
-    expect(vfx.budget.scale).toBe(1);
+    expect(vfx.sparkBudget.scale).toBe(1);
     vfx.update(1 / 60, false);
   });
 
@@ -87,5 +88,54 @@ describe('VfxServiceImpl', () => {
     vfx.dispose();
     vfx.dispose();
     expect(() => vfx.spawnEffect('hit-spark', at)).not.toThrow();
+  });
+
+  it('sparks are not starved by a full points pool', () => {
+    const { vfx } = make();
+    for (let i = 0; i < 20; i++) vfx.points.emit('ember', { x: 0, y: 0, z: 0 }, 400, undefined, 0);
+    expect(vfx.sparks.burst({ x: 0, y: 0, z: 0 }, undefined, 24, undefined, 0)).toBe(24);
+  });
+
+  it('live particles shrink after high to low and low to high does not resurrect decals', () => {
+    const { vfx } = make();
+    vfx.setQuality('high');
+    for (let i = 0; i < 24; i++) vfx.decals.place({ x: i, y: 0, z: 0 }, undefined, 0.5, 0x222222, 0);
+    expect(vfx.decals.liveCount).toBe(24);
+    vfx.setQuality('low');
+    expect(vfx.decals.liveCount).toBe(0);
+    vfx.setQuality('high');
+    expect(vfx.decals.liveCount).toBe(0);
+  });
+
+  it('setQuality goes through the delegate when one is attached; applyQuality does not', () => {
+    const { vfx } = make();
+    const d = vi.fn();
+    vfx.qualityDelegate = d;
+    vfx.setQuality('low');
+    expect(d).toHaveBeenCalledWith('low');
+    expect(vfx.quality).toBe('medium');
+    vfx.applyQuality('low');
+    expect(vfx.quality).toBe('low');
+  });
+
+  it('forgetActor restores cloned materials and cancels the telegraph, also for an already-gone actor', () => {
+    const scene = new THREE.Scene();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial());
+    const original = mesh.material;
+    scene.add(mesh);
+    const vfx = new VfxServiceImpl({ scene, actorRoot: (id) => (id === 'w' ? mesh : null) }, null, vi.fn());
+    vfx.telegraph('w', 'block', 0.4);
+    expect(mesh.material).not.toBe(original);
+    vfx.forgetActor('w');
+    expect(mesh.material).toBe(original);
+    vfx.forgetActor('w');
+    vfx.forgetActor('never-seen');
+  });
+
+  it('dispose clears an active camera shake', () => {
+    const { vfx } = make();
+    vfx.shake(0.1, 1);
+    vfx.dispose();
+    expect(vfx.camera.active).toBe(false);
   });
 });
