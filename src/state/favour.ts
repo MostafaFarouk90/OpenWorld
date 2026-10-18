@@ -19,7 +19,7 @@ export const CREATURE_MERCY_CAP = 10;
 /** Largest favour change a single boss mercy may carry (the ledger's largest is +5). */
 export const BOSS_MERCY_MAX = 20;
 
-export type FavourBand = 'cold' | 'warm' | 'sworn' | 'hearthsworn';
+export type FavourBand = 'cold' | 'banked' | 'stoked' | 'hearthbound';
 export type FavourSource = 'quest' | 'dialogue' | 'mercy' | 'script';
 
 export const MERCY_VERBS = ['spare', 'calm', 'release', 'warmHand'] as const;
@@ -35,16 +35,18 @@ export interface MercyEvent {
   actorId?: ActorId;
   /** Boss mercies only: the ledger value (for example D01 Release: ashwalkers +4). */
   amount?: number;
+  /** One Release pulse that frees several wraiths: Burn is charged once per pulseId (thread 7). */
+  pulseId?: string;
 }
 
 export function isFavourTrack(v: unknown): v is FavourTrack {
   return typeof v === 'string' && (FAVOUR_TRACKS as readonly string[]).includes(v);
 }
 
-/** Cold 0 to 24, Warm 25 to 49, Sworn 50 to 69, Hearthsworn 70 to 100. */
+/** Cold 0 to 24, Banked 25 to 49, Stoked 50 to 69, Hearthbound 70 to 100 (design section 3). */
 export function bandFor(value: number): FavourBand {
-  if (value >= 70) return 'hearthsworn';
-  if (value >= 50) return 'sworn';
-  if (value >= 25) return 'warm';
+  if (value >= 70) return 'hearthbound';
+  if (value >= 50) return 'stoked';
+  if (value >= 25) return 'banked';
   return 'cold';
 }

@@ -195,3 +195,63 @@ describe('InputManager keyboard lock', () => {
     expect(unlock).toHaveBeenCalled();
   });
 });
+
+describe('InputManager keyboard lock state', () => {
+  it('keyboardLockSupported needs navigator.keyboard.lock and fullscreen', () => {
+    vi.stubGlobal('navigator', {});
+    expect(setup().input.keyboardLockSupported).toBe(false);
+    vi.stubGlobal('navigator', { keyboard: {} });
+    expect(setup().input.keyboardLockSupported).toBe(false);
+    vi.stubGlobal('navigator', { keyboard: { lock: vi.fn() } });
+    const a = setup();
+    expect(a.input.keyboardLockSupported).toBe(true);
+    (a.doc as unknown as { fullscreenEnabled: boolean }).fullscreenEnabled = false;
+    expect(a.input.keyboardLockSupported).toBe(false);
+    const noFs = new InputManager(new EventTarget() as unknown as HTMLElement, new EventTarget(), a.doc, { storage: null });
+    (a.doc as unknown as { fullscreenEnabled: boolean }).fullscreenEnabled = true;
+    expect(noFs.keyboardLockSupported).toBe(false);
+  });
+
+  it('is unsupported without a navigator', () => {
+    vi.stubGlobal('navigator', undefined);
+    expect(setup().input.keyboardLockSupported).toBe(false);
+  });
+
+  it('notifies on acquire, fullscreen exit and unlock, and can unsubscribe', async () => {
+    const unlock = vi.fn();
+    vi.stubGlobal('navigator', { keyboard: { lock: vi.fn(async () => {}), unlock } });
+    const { input, doc } = setup();
+    const seen: Array<{ supported: boolean; locked: boolean }> = [];
+    const off = input.onKeyboardLockChange((s) => seen.push(s));
+    await input.requestFullscreenAndLock();
+    await input.requestFullscreenAndLock(); // already locked: no duplicate
+    expect(seen).toEqual([{ supported: true, locked: true }]);
+    ev(doc, 'fullscreenchange');
+    expect(seen[1]).toEqual({ supported: true, locked: false });
+    await input.requestFullscreenAndLock();
+    input.unlockKeyboard();
+    expect(seen.map((s) => s.locked)).toEqual([true, false, true, false]);
+    expect(unlock).toHaveBeenCalledTimes(2);
+    input.unlockKeyboard();
+    expect(seen).toHaveLength(4);
+    off();
+    await input.requestFullscreenAndLock();
+    expect(seen).toHaveLength(4);
+  });
+
+  it('a throwing listener does not break others; a failed re-lock notifies', async () => {
+    const lock = vi.fn(async () => {});
+    vi.stubGlobal('navigator', { keyboard: { lock, unlock: vi.fn() } });
+    const { input } = setup();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const good = vi.fn();
+    input.onKeyboardLockChange(() => { throw new Error('x'); });
+    input.onKeyboardLockChange(good);
+    await input.requestFullscreenAndLock();
+    expect(good).toHaveBeenCalledTimes(1);
+    lock.mockRejectedValueOnce(new Error('no'));
+    input.bindings.rebind('jump', 0, { device: 'key', code: 'KeyP' });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(good).toHaveBeenLastCalledWith({ supported: true, locked: false });
+  });
+});

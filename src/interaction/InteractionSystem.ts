@@ -7,6 +7,9 @@ import { parseInteractableId } from './ids';
 
 export type InteractKind = 'talk' | 'door' | 'chest' | 'pickup' | 'waystone' | 'lever' | 'kneel' | 'release' | 'use';
 
+export type InteractAction = 'interact' | 'mercy';
+const ACTION_LIST: readonly InteractAction[] = ['interact', 'mercy'];
+
 export interface Interactable {
   id: string;
   kind: InteractKind;
@@ -16,6 +19,12 @@ export interface Interactable {
   name?: string;
   holdSeconds?: number;
   priority?: number;
+  /** Which key drives this interactable (default 'interact'). */
+  action?: InteractAction;
+  /** Half-angle of the facing cone in degrees (default 75); 360 or more disables the facing check. */
+  coneDegrees?: number;
+  /** Overrides the default score (distance minus priority); lower wins, ties by id. */
+  score?: (feet: THREE.Vector3Like) => number;
   enabled?(): boolean;
   onInteract(actor: Actor): void;
 }
@@ -30,24 +39,34 @@ export interface InteractionDeps {
 }
 
 export const DEFAULT_INTERACT_RADIUS = 2;
-export const FOCUS_HALF_ANGLE = (75 * Math.PI) / 180;
-const COS_FOCUS = Math.cos(FOCUS_HALF_ANGLE);
+export const DEFAULT_CONE_DEGREES = 75;
+export const FOCUS_HALF_ANGLE = (DEFAULT_CONE_DEGREES * Math.PI) / 180;
 const EPS = 1e-6;
 
 type CancelReason = 'released' | 'focus-lost' | 'damaged' | 'context' | 'dead';
 
-/** Focus, press and hold handling for everything the player can interact with. */
+interface ActionSlot {
+  focus: Interactable | null;
+  hold: { item: Interactable; elapsed: number } | null;
+  progress: number;
+  needRelease: boolean;
+}
+
+const newSlot = (): ActionSlot => ({ focus: null, hold: null, progress: 0, needRelease: false });
+
+/** Focus, press and hold handling for everything the player can interact with, tracked per action. */
 export class InteractionSystem implements GameSystem {
   readonly id = 'core.interaction';
   readonly fixedPhase = 'rules' as const;
   readonly order = -100;
 
+  /** The 'interact' focus (see `focusFor`). */
   focus: Interactable | null = null;
+  /** The 'interact' hold progress (see `holdProgressFor`). */
   holdProgress = 0;
 
   private readonly items = new Map<string, Interactable>();
-  private hold: { item: Interactable; elapsed: number } | null = null;
-  private needRelease = false;
+  private readonly slots: Record<InteractAction, ActionSlot> = { interact: newSlot(), mercy: newSlot() };
   private readonly warn: (m: string, e?: unknown) => void;
   private readonly offs: (() => void)[] = [];
   private readonly tmp = new THREE.Vector3();
@@ -56,13 +75,23 @@ export class InteractionSystem implements GameSystem {
     this.warn = deps.warn ?? ((m, e) => console.warn(m, e));
     this.offs.push(
       deps.events.on('damage.dealt', (r) => {
-        if (this.hold && r.outcome === 'hit' && r.targetId === this.safePlayer()?.actor.id) this.cancel('damaged');
+        if (r.outcome === 'hit' && r.targetId === this.safePlayer()?.actor.id) this.cancelAll('damaged');
       }),
       deps.contexts.onChange((top) => {
-        if (top !== 'gameplay' && this.hold) this.cancel('context');
-        if (top !== 'gameplay') this.focus = null;
+        if (top !== 'gameplay') {
+          this.cancelAll('context');
+          this.clearFocus();
+        }
       }),
     );
+  }
+
+  focusFor(action: InteractAction): Interactable | null {
+    return this.slots[action].focus;
+  }
+
+  holdProgressFor(action: InteractAction): number {
+    return this.slots[action].progress;
   }
 
   register(i: Interactable): () => void {
@@ -76,50 +105,71 @@ export class InteractionSystem implements GameSystem {
 
   fixedUpdate(dt: number): void {
     const actions = this.deps.actions();
-    if (this.needRelease && !actions.down('interact')) this.needRelease = false;
+    for (const a of ACTION_LIST) if (this.slots[a].needRelease && !actions.down(a)) this.slots[a].needRelease = false;
 
     const p = this.deps.player();
     if (p.actor.dead) {
-      if (this.hold) this.cancel('dead');
-      this.focus = null;
+      this.cancelAll('dead');
+      this.clearFocus();
       return;
     }
     if (this.deps.contexts.top() !== 'gameplay') {
-      if (this.hold) this.cancel('context');
-      this.focus = null;
+      this.cancelAll('context');
+      this.clearFocus();
       return;
     }
 
-    this.focus = this.pickFocus(p);
-
-    if (this.hold) {
-      if (this.focus !== this.hold.item) {
-        this.cancel('focus-lost');
-      } else if (!actions.down('interact')) {
-        this.cancel('released');
-      } else {
-        this.advance(dt, p.actor);
-        return;
-      }
+    const picked = this.pickFoci(p);
+    for (const a of ACTION_LIST) {
+      this.slots[a].focus = picked[a];
+      this.updateAction(a, actions, dt, p.actor);
     }
-
-    if (!this.hold && !this.needRelease && this.focus && actions.pressed('interact')) {
-      const hs = this.focus.holdSeconds ?? 0;
-      if (hs > 0) {
-        this.hold = { item: this.focus, elapsed: 0 };
-        this.advance(dt, p.actor);
-      } else {
-        this.complete(this.focus, p.actor);
-      }
-    }
+    this.sync();
   }
 
   dispose(): void {
     for (const off of this.offs.splice(0)) off();
     this.items.clear();
-    this.hold = null;
-    this.focus = null;
-    this.holdProgress = 0;
+    for (const a of ACTION_LIST) this.slots[a] = newSlot();
+    this.sync();
+  }
+
+  private updateAction(a: InteractAction, actions: ActionState, dt: number, actor: Actor): void {
+    const slot = this.slots[a];
+    if (slot.hold) {
+      if (slot.focus !== slot.hold.item) {
+        this.cancel(a, 'focus-lost');
+      } else if (!actions.down(a)) {
+        this.cancel(a, 'released');
+      } else {
+        this.advance(a, dt, actor);
+        return;
+      }
+    }
+    if (!slot.hold && !slot.needRelease && slot.focus && actions.pressed(a)) {
+      const hs = slot.focus.holdSeconds ?? 0;
+      if (hs > 0) {
+        slot.hold = { item: slot.focus, elapsed: 0 };
+        this.advance(a, dt, actor);
+      } else {
+        this.complete(a, slot.focus, actor);
+      }
+    }
+  }
+
+  /** Mirrors the interact slot into the public fields. */
+  private sync(): void {
+    this.focus = this.slots.interact.focus;
+    this.holdProgress = this.slots.interact.progress;
+  }
+
+  private clearFocus(): void {
+    for (const a of ACTION_LIST) this.slots[a].focus = null;
+    this.sync();
+  }
+
+  private cancelAll(reason: CancelReason): void {
+    for (const a of ACTION_LIST) this.cancel(a, reason);
   }
 
   private safePlayer() {
@@ -130,36 +180,47 @@ export class InteractionSystem implements GameSystem {
     }
   }
 
-  private advance(dt: number, actor: Actor): void {
-    const h = this.hold!;
+  private advance(a: InteractAction, dt: number, actor: Actor): void {
+    const slot = this.slots[a];
+    const h = slot.hold!;
     h.elapsed += dt;
     const need = h.item.holdSeconds ?? 0;
     if (h.elapsed + EPS >= need) {
-      this.complete(h.item, actor);
+      this.complete(a, h.item, actor);
     } else {
-      this.holdProgress = h.elapsed / need;
+      slot.progress = h.elapsed / need;
     }
   }
 
-  private complete(item: Interactable, actor: Actor): void {
-    this.hold = null;
-    this.holdProgress = 0;
+  private complete(a: InteractAction, item: Interactable, actor: Actor): void {
+    const slot = this.slots[a];
+    slot.hold = null;
+    slot.progress = 0;
     try {
       item.onInteract(actor);
     } catch (e) {
       this.warn(`InteractionSystem: onInteract of "${item.id}" failed`, e);
       return;
     }
-    this.deps.events.emit('interact', { interactableId: item.id, kind: item.kind, actorId: actor.id });
+    // `action` is not yet in GameEvents' payload types (the core owner adds it); the shape is otherwise unchanged.
+    const payload: { interactableId: string; kind: string; actorId: string; action: InteractAction } = {
+      interactableId: item.id, kind: item.kind, actorId: actor.id, action: a,
+    };
+    this.deps.events.emit('interact', payload);
   }
 
-  private cancel(reason: CancelReason): void {
-    const h = this.hold;
+  private cancel(a: InteractAction, reason: CancelReason): void {
+    const slot = this.slots[a];
+    const h = slot.hold;
     if (!h) return;
-    this.hold = null;
-    this.holdProgress = 0;
-    if (reason !== 'released') this.needRelease = true;
-    this.deps.events.emit('interact.cancelled', { interactableId: h.item.id, reason });
+    slot.hold = null;
+    slot.progress = 0;
+    if (reason !== 'released') slot.needRelease = true;
+    const payload: { interactableId: string; reason: CancelReason; action: InteractAction } = {
+      interactableId: h.item.id, reason, action: a,
+    };
+    this.deps.events.emit('interact.cancelled', payload);
+    this.sync();
   }
 
   private isEnabled(i: Interactable): boolean {
@@ -171,7 +232,19 @@ export class InteractionSystem implements GameSystem {
     }
   }
 
-  private pickFocus(p: ReturnType<InteractionDeps['player']>): Interactable | null {
+  private itemScore(i: Interactable, feet: THREE.Vector3Like, dist: number): number {
+    if (i.score) {
+      try {
+        const v = i.score(feet);
+        if (Number.isFinite(v)) return v;
+      } catch (e) {
+        this.warn(`InteractionSystem: score() of "${i.id}" failed`, e);
+      }
+    }
+    return dist - (i.priority ?? 0);
+  }
+
+  private pickFoci(p: ReturnType<InteractionDeps['player']>): Record<InteractAction, Interactable | null> {
     let fx = -Math.sin(p.facingYaw);
     let fz = -Math.cos(p.facingYaw);
     if (!p.moving && this.deps.cameraForward) {
@@ -184,8 +257,8 @@ export class InteractionSystem implements GameSystem {
         }
       }
     }
-    let best: Interactable | null = null;
-    let bestScore = Infinity;
+    const best: Record<InteractAction, Interactable | null> = { interact: null, mercy: null };
+    const bestScore: Record<InteractAction, number> = { interact: Infinity, mercy: Infinity };
     for (const i of this.items.values()) {
       if (!this.isEnabled(i)) continue;
       i.position(this.tmp);
@@ -194,12 +267,15 @@ export class InteractionSystem implements GameSystem {
       const dz = this.tmp.z - p.feet.z;
       const dist = Math.hypot(dx, dy, dz);
       if (dist > (i.radius ?? DEFAULT_INTERACT_RADIUS)) continue;
+      const cone = i.coneDegrees ?? DEFAULT_CONE_DEGREES;
       const hd = Math.hypot(dx, dz);
-      if (hd > 1e-3 && (dx * fx + dz * fz) / hd < COS_FOCUS) continue;
-      const score = dist - (i.priority ?? 0);
-      if (score < bestScore || (score === bestScore && best && i.id < best.id)) {
-        best = i;
-        bestScore = score;
+      if (cone < 360 && hd > 1e-3 && (dx * fx + dz * fz) / hd < Math.cos((cone * Math.PI) / 180)) continue;
+      const a = i.action === 'mercy' ? 'mercy' : 'interact';
+      const score = this.itemScore(i, p.feet, dist);
+      const cur = best[a];
+      if (score < bestScore[a] || (score === bestScore[a] && cur && i.id < cur.id)) {
+        best[a] = i;
+        bestScore[a] = score;
       }
     }
     return best;

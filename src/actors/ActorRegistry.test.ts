@@ -122,7 +122,7 @@ describe('ActorRegistry despawn', () => {
     const second = vi.fn();
     events.on('actor.died', (p) => registry.despawn(p.actorId));
     events.on('actor.died', second);
-    const payload = { actorId: a.id, killerId: null, kind: a.kind, team: a.team, level: 1 };
+    const payload = { actorId: a.id, killerId: null, kind: a.kind, team: a.team, level: 1, spawnTag: undefined };
     events.emit('actor.died', payload);
     expect(second).toHaveBeenCalledWith(payload);
     expect(registry.get(a.id)).toBeUndefined();

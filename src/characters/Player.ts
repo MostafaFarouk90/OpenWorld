@@ -22,6 +22,8 @@ export interface MoveModifierState {
   speedScale: number;
   lockMove: boolean;
   lockFacing: boolean;
+  /** No gravity and no controller move at all this tick. */
+  freeze?: boolean;
 }
 
 /**
@@ -106,6 +108,10 @@ export class Player {
   /** `moveX`/`moveZ` are the input axes already rotated into world space by the camera. */
   fixedUpdate(input: InputSnapshot, moveX: number, moveZ: number): void {
     const mod = this.options.moveModifier?.();
+    if (mod?.freeze) {
+      this.controller.hold();
+      return;
+    }
     const locked = (this.options.movementLocked?.() ?? false) || (mod?.lockMove ?? false);
     let jump: boolean;
     ({ moveX, moveZ, jump } = gateMovement(locked, { moveX, moveZ, jump: input.jump }));

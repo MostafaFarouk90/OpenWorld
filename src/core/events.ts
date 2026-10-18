@@ -18,17 +18,36 @@ export interface GameEventMap {
   'actor.despawned': { actorId: ActorId };
   'damage.dealt': DamageResult;
   'actor.staggered': { actorId: ActorId; byId: ActorId | null };
-  'actor.died': { actorId: ActorId; killerId: ActorId | null; kind: string; team: Team; level: number };
+  'actor.died': {
+    actorId: ActorId;
+    killerId: ActorId | null;
+    kind: string;
+    team: Team;
+    level: number;
+    spawnTag: string | undefined;
+  };
   'actor.revived': { actorId: ActorId; reason: 'respawn' | 'script'; health: number };
   'actor.saved': { actorId: ActorId; handlerId: string; request: DamageRequest };
   'attack.window': { actorId: ActorId; attackId: string; swingId: number; phase: 'open' | 'close' };
   'ai.aggro': { actorId: ActorId; targetId: ActorId };
   'ai.calm': { actorId: ActorId };
-  telegraph: { actorId: ActorId; kind: 'block' | 'dodge'; attackId: string; leadSeconds: number };
+  /** `attackId` is the clip, equal to the coming `attack.window.attackId`; `swingId` matches it too. */
+  telegraph: {
+    actorId: ActorId;
+    kind: 'block' | 'dodge';
+    attackId: string;
+    moveId: string;
+    swingId: number;
+    leadSeconds: number;
+  };
+  /** The telegraphed window will not open (the attacker was staggered, killed or retargeted). */
+  'telegraph.cancelled': { actorId: ActorId; swingId: number };
+  /** Keyboard lock (fullscreen) state for the Ctrl dodge mitigations. */
+  'input.keyboardLock': { supported: boolean; locked: boolean };
   mercy: MercyEvent;
   'mercy.revoked': { actorId: ActorId; track: FavourTrack | null; removed: number };
-  interact: { interactableId: string; kind: string; actorId: ActorId };
-  'interact.cancelled': { interactableId: string; reason: 'released' | 'focus-lost' | 'damaged' | 'context' | 'dead' };
+  interact: { interactableId: string; kind: string; actorId: ActorId; action: 'interact' | 'mercy' };
+  'interact.cancelled': { interactableId: string; reason: 'released' | 'focus-lost' | 'damaged' | 'context' | 'dead'; action: 'interact' | 'mercy' };
   'loot.granted': { sourceId: string; items: ItemStack[] };
   'trigger.enter': { triggerId: string; actorId: ActorId };
   'trigger.exit': { triggerId: string; actorId: ActorId };

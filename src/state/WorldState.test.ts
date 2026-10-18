@@ -26,12 +26,12 @@ describe('favour helpers', () => {
     expect(bandFor(0)).toBe('cold');
     expect(bandFor(24)).toBe('cold');
     expect(bandFor(24.9)).toBe('cold');
-    expect(bandFor(25)).toBe('warm');
-    expect(bandFor(49)).toBe('warm');
-    expect(bandFor(50)).toBe('sworn');
-    expect(bandFor(69)).toBe('sworn');
-    expect(bandFor(70)).toBe('hearthsworn');
-    expect(bandFor(100)).toBe('hearthsworn');
+    expect(bandFor(25)).toBe('banked');
+    expect(bandFor(49)).toBe('banked');
+    expect(bandFor(50)).toBe('stoked');
+    expect(bandFor(69)).toBe('stoked');
+    expect(bandFor(70)).toBe('hearthbound');
+    expect(bandFor(100)).toBe('hearthbound');
   });
   it('isFavourTrack accepts only the five tracks', () => {
     for (const t of FAVOUR_TRACKS) expect(isFavourTrack(t)).toBe(true);
@@ -167,14 +167,14 @@ describe('favour tracks', () => {
   it('starts at the start values with bands', () => {
     const { ws } = make();
     for (const t of FAVOUR_TRACKS) expect(ws.favour(t)).toBe(FAVOUR_START[t]);
-    expect(ws.favourBand('halvard')).toBe('warm');
+    expect(ws.favourBand('halvard')).toBe('banked');
     expect(ws.favourBand('dragons')).toBe('cold');
   });
 
   it('adds, emits favour.changed with delta, band and source', () => {
     const { ws, of } = make();
     expect(ws.addFavour('oswin', 10, 'quest')).toBe(10);
-    expect(of('favour.changed')).toEqual([{ track: 'oswin', value: 30, previous: 20, delta: 10, source: 'quest', band: 'warm' }]);
+    expect(of('favour.changed')).toEqual([{ track: 'oswin', value: 30, previous: 20, delta: 10, source: 'quest', band: 'banked' }]);
   });
 
   it('clamps at 100 and returns the applied delta', () => {

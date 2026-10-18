@@ -83,6 +83,22 @@ export class TerrainColliders {
     return this.colliders.size;
   }
 
+  /**
+   * True when every patch overlapping the square of half-size `radius` around (x, z) has its collider
+   * registered (visible to the controller after the next physics step).
+   */
+  isResident(x: number, z: number, radius = 0): boolean {
+    if (!Number.isFinite(x) || !Number.isFinite(z) || !(radius >= 0)) return false;
+    const x0 = Math.floor((x - radius) / this.patchSize);
+    const x1 = Math.floor((x + radius) / this.patchSize);
+    const z0 = Math.floor((z - radius) / this.patchSize);
+    const z1 = Math.floor((z + radius) / this.patchSize);
+    for (let iz = z0; iz <= z1; iz++) {
+      for (let ix = x0; ix <= x1; ix++) if (!this.colliders.has(`${ix},${iz}`)) return false;
+    }
+    return true;
+  }
+
   /** Keys waiting to be built and added, head first. */
   get pendingKeys(): string[] {
     return [...this.queue];

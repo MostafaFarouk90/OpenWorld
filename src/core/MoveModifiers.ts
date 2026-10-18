@@ -6,6 +6,8 @@ export interface MoveModifier {
   speedScale?: number;
   lockMove?: boolean;
   lockFacing?: boolean;
+  /** No gravity and no move at all (kneeling, cutscenes, the fast-travel wait). */
+  freeze?: boolean;
   /** These actions report nothing while the modifier is active. */
   lockActions?: readonly Action[];
 }
@@ -35,14 +37,16 @@ export class MoveModifiers {
     let speedScale = 1;
     let lockMove = false;
     let lockFacing = false;
+    let freeze = false;
     for (const m of this.active.values()) {
       if (m.speedScale !== undefined) {
         speedScale *= Number.isFinite(m.speedScale) ? Math.min(1, Math.max(0, m.speedScale)) : 1;
       }
       lockMove ||= m.lockMove === true;
       lockFacing ||= m.lockFacing === true;
+      freeze ||= m.freeze === true;
     }
-    return { speedScale, lockMove, lockFacing };
+    return { speedScale, lockMove, lockFacing, freeze };
   }
 
   isActionLocked(action: Action): boolean {

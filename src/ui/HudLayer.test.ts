@@ -169,7 +169,7 @@ describe('HudLayer DOM', () => {
     const { container, slotEl } = setup(true);
     expect(container!.children).toHaveLength(1);
     const root = container!.children[0];
-    expect(root.children.map((c) => c.dataset.slot)).toEqual([...HUD_SLOTS]);
+    expect(root.children.map((c) => c.dataset.slot)).toEqual(['overlay', ...HUD_SLOTS.filter((x) => x !== 'overlay')]);
     expect(slotEl('bottom-center').style).toMatchObject({ position: 'absolute', display: 'flex', flexDirection: 'column', pointerEvents: 'none' });
     expect(root.style.pointerEvents).toBe('none');
   });
@@ -195,7 +195,7 @@ describe('HudLayer DOM', () => {
   });
 
   it('modal sits in a full-screen container with pointer events, removed on close', () => {
-    const { hud, container } = setup(true);
+    const { hud, container, slotEl } = setup(true);
     const w = widget('m');
     const close = hud.openModal(w)!;
     const root = container!.children[0];
@@ -203,10 +203,11 @@ describe('HudLayer DOM', () => {
     expect(modalEl.style).toMatchObject({ pointerEvents: 'auto', position: 'absolute' });
     expect(modalEl.children).toEqual([w.element]);
     hud.setVisible(false);
-    expect(root.children.filter((c) => c.style.display === 'none')).toHaveLength(HUD_SLOTS.length);
+    expect(root.children.filter((c) => c.style.display === 'none')).toHaveLength(HUD_SLOTS.length - 1);
     expect(modalEl.style.display).toBe('flex');
     close();
     expect(root.children).toHaveLength(HUD_SLOTS.length);
+    expect(slotEl('overlay').style.display).not.toBe('none');
   });
 
   it('dispose removes the root from the container', () => {
@@ -230,5 +231,111 @@ describe('HudLayer headless', () => {
   it('default exitPointerLock is safe in Node', () => {
     const hud = new HudLayer(null, new InputContexts(), new GameEvents());
     expect(() => hud.openModal(widget('m'))).not.toThrow();
+  });
+});
+
+describe('HudLayer overlay, fade and modal context', () => {
+  it('overlay slot is first (below all others), full viewport, click-through, and is mountable', () => {
+    const { container, hud, slotEl } = setup(true);
+    const root = container!.children[0];
+    expect(root.children[0].dataset.slot).toBe('overlay');
+    expect(slotEl('overlay').style).toMatchObject({ inset: '0', position: 'absolute', pointerEvents: 'none' });
+    const w = widget('ov');
+    hud.mount('overlay', w);
+    expect(hud.mounted('overlay')).toEqual(['ov']);
+    expect(slotEl('overlay').children).toContain(w.element);
+  });
+
+  it('headless fade records the clamped target and resolves immediately', async () => {
+    const { hud } = setup(false);
+    expect(hud.fadeOpacity).toBe(0);
+    await hud.fade(0.5, 10);
+    expect(hud.fadeOpacity).toBe(0.5);
+    await hud.fade(5, 1);
+    expect(hud.fadeOpacity).toBe(1);
+    await hud.fade(-3, 0);
+    expect(hud.fadeOpacity).toBe(0);
+    await hud.fade(Number.NaN, 1);
+    expect(hud.fadeOpacity).toBe(0);
+  });
+
+  it('zero seconds sets the DOM opacity at once', async () => {
+    const { hud, slotEl } = setup(true);
+    await hud.fade(1, 0);
+    expect(hud.fadeOpacity).toBe(1);
+    expect(slotEl('overlay').children[0].style).toMatchObject({ opacity: '1', pointerEvents: 'none', background: '#000' });
+  });
+
+  it('animates with requestAnimationFrame, and a new fade cancels the old (its promise resolves)', async () => {
+    let t = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => t);
+    const cbs: Array<() => void> = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: () => void) => cbs.push(cb));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const { hud, slotEl } = setup(true);
+    let first = false;
+    void hud.fade(1, 1).then(() => (first = true));
+    t = 500;
+    cbs.shift()!();
+    expect(hud.fadeOpacity).toBeCloseTo(0.5);
+    expect(slotEl('overlay').children[0].style.opacity).toBe('0.5');
+    let second = false;
+    void hud.fade(0, 1).then(() => (second = true));
+    await Promise.resolve();
+    expect(first).toBe(true);
+    expect(second).toBe(false);
+    t = 1500;
+    cbs.pop()!();
+    await Promise.resolve();
+    expect(hud.fadeOpacity).toBe(0);
+    expect(second).toBe(true);
+    vi.unstubAllGlobals();
+  });
+
+  it('falls back to setTimeout steps without requestAnimationFrame', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('requestAnimationFrame', undefined);
+    const { hud } = setup(true);
+    let done = false;
+    void hud.fade(1, 0.1).then(() => (done = true));
+    await vi.advanceTimersByTimeAsync(50);
+    expect(hud.fadeOpacity).toBeGreaterThan(0);
+    expect(hud.fadeOpacity).toBeLessThan(1);
+    expect(done).toBe(false);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(hud.fadeOpacity).toBe(1);
+    expect(done).toBe(true);
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('dispose resolves a running fade', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('requestAnimationFrame', undefined);
+    const { hud } = setup(true);
+    let done = false;
+    void hud.fade(1, 5).then(() => (done = true));
+    hud.dispose();
+    await Promise.resolve();
+    expect(done).toBe(true);
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('openModal defaults to the menu context; dialogue pushes dialogue and still exits pointer lock', () => {
+    const a = setup(false);
+    const closeA = a.hud.openModal(widget('m'))!;
+    expect(a.contexts.top()).toBe('menu');
+    closeA();
+    const b = setup(false);
+    const close = b.hud.openModal(widget('d'), { context: 'dialogue' })!;
+    expect(b.contexts.top()).toBe('dialogue');
+    expect(b.exitPointerLock).toHaveBeenCalledTimes(1);
+    expect(b.hud.modalOpen).toBe('d');
+    expect(b.modalEvents).toEqual([{ id: 'd', open: true }]);
+    expect(b.hud.openModal(widget('x'), { context: 'dialogue' })).toBeNull();
+    close();
+    expect(b.contexts.top()).toBe('gameplay');
+    expect(b.modalEvents[1]).toEqual({ id: 'd', open: false });
   });
 });

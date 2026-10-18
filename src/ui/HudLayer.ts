@@ -3,10 +3,10 @@ import type { InputContextStack } from '../input/actions';
 
 export type HudSlot =
   | 'top-left' | 'top-center' | 'top-right' | 'center'
-  | 'bottom-left' | 'bottom-center' | 'bottom-right' | 'toast' | 'subtitle';
+  | 'bottom-left' | 'bottom-center' | 'bottom-right' | 'toast' | 'subtitle' | 'overlay';
 
 export const HUD_SLOTS: readonly HudSlot[] = [
-  'top-left', 'top-center', 'top-right', 'center', 'bottom-left', 'bottom-center', 'bottom-right', 'toast', 'subtitle',
+  'top-left', 'top-center', 'top-right', 'center', 'bottom-left', 'bottom-center', 'bottom-right', 'toast', 'subtitle', 'overlay',
 ];
 
 export interface HudWidget {
@@ -15,6 +15,11 @@ export interface HudWidget {
   order?: number;
   update?(frameTime: number): void;
   dispose?(): void;
+}
+
+export interface OpenModalOptions {
+  /** Input context pushed while the modal is open (default 'menu'). */
+  context?: 'menu' | 'dialogue';
 }
 
 export interface HudLayerOptions {
@@ -38,6 +43,7 @@ const SLOT_STYLE: Record<HudSlot, Record<string, string>> = {
   'bottom-center': { bottom: '12px', left: '50%', transform: 'translateX(-50%)', alignItems: 'center', justifyContent: 'flex-end' },
   'bottom-right': { bottom: '12px', right: '12px', alignItems: 'flex-end', justifyContent: 'flex-end' },
   toast: { top: '64px', right: '12px', alignItems: 'flex-end' },
+  overlay: { inset: '0' },
   subtitle: { bottom: '72px', left: '50%', transform: 'translateX(-50%)', alignItems: 'center', justifyContent: 'flex-end' },
 };
 
@@ -51,6 +57,9 @@ export class HudLayer {
   private readonly ids = new Map<string, Mounted>();
   private readonly root: HTMLElement | null = null;
   private readonly slotEls = new Map<HudSlot, HTMLElement>();
+  private readonly fadeEl: HTMLElement | null = null;
+  private fadeValue = 0;
+  private fadeRun: { cancel: () => void } | null = null;
   private modalEl: HTMLElement | null = null;
   private modal: { widget: HudWidget; popContext: () => void } | null = null;
   private seq = 0;
@@ -69,7 +78,8 @@ export class HudLayer {
       const doc = opts.doc ?? document;
       const root = doc.createElement('div');
       Object.assign(root.style, { position: 'absolute', inset: '0', pointerEvents: 'none', overflow: 'hidden' });
-      for (const slot of HUD_SLOTS) {
+      const order: HudSlot[] = ['overlay', ...HUD_SLOTS.filter((x) => x !== 'overlay')];
+      for (const slot of order) {
         const el = doc.createElement('div');
         el.dataset.slot = slot;
         Object.assign(el.style, {
@@ -79,6 +89,10 @@ export class HudLayer {
         root.appendChild(el);
         this.slotEls.set(slot, el);
       }
+      const fade = doc.createElement('div');
+      Object.assign(fade.style, { position: 'absolute', inset: '0', background: '#000', opacity: '0', pointerEvents: 'none' });
+      this.slotEls.get('overlay')!.appendChild(fade);
+      this.fadeEl = fade;
       container.appendChild(root);
       this.root = root;
     }
@@ -86,6 +100,63 @@ export class HudLayer {
 
   get modalOpen(): string | null {
     return this.modal ? this.modal.widget.id : null;
+  }
+
+  /** Current opacity of the full-screen black fade (0..1). */
+  get fadeOpacity(): number {
+    return this.fadeValue;
+  }
+
+  /**
+   * Animates the black fade to `opacity` (clamped 0..1) over `seconds`. A newer fade cancels the older
+   * one, whose promise resolves at once. Headless layers record the target and resolve immediately.
+   */
+  fade(opacity: number, seconds: number): Promise<void> {
+    this.fadeRun?.cancel();
+    this.fadeRun = null;
+    const target = Number.isFinite(opacity) ? Math.min(1, Math.max(0, opacity)) : this.fadeValue;
+    const set = (v: number) => {
+      this.fadeValue = v;
+      if (this.fadeEl) this.fadeEl.style.opacity = String(v);
+    };
+    if (!this.fadeEl || !(seconds > 0) || !Number.isFinite(seconds) || target === this.fadeValue) {
+      set(target);
+      return Promise.resolve();
+    }
+    const from = this.fadeValue;
+    const ms = seconds * 1000;
+    return new Promise<void>((resolve) => {
+      const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      const raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : null;
+      const caf = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : null;
+      const start = now();
+      let handle: unknown = null;
+      let finished = false;
+      let steps = 0;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        if (this.fadeRun === run) this.fadeRun = null;
+        resolve();
+      };
+      const run = {
+        cancel: () => {
+          if (raf && caf && handle !== null) caf(handle as number);
+          else if (handle !== null) clearTimeout(handle as ReturnType<typeof setTimeout>);
+          finish();
+        },
+      };
+      this.fadeRun = run;
+      const step = () => {
+        if (finished) return;
+        // Without rAF, time advances by fixed 16ms steps so the fade length does not depend on timer drift.
+        const t = Math.min(1, raf ? (now() - start) / ms : (++steps * 16) / ms);
+        set(t >= 1 ? target : from + (target - from) * t);
+        if (t >= 1) return finish();
+        handle = raf ? raf(step) : setTimeout(step, 16);
+      };
+      handle = raf ? raf(step) : setTimeout(step, 16);
+    });
   }
 
   mount(slot: HudSlot, widget: HudWidget): () => void {
@@ -110,7 +181,7 @@ export class HudLayer {
     return (this.lists.get(slot) ?? []).map((m) => m.widget.id);
   }
 
-  openModal(widget: HudWidget): (() => void) | null {
+  openModal(widget: HudWidget, opts: OpenModalOptions = {}): (() => void) | null {
     if (this.modal) return null;
     let el: HTMLElement | null = null;
     if (this.root) {
@@ -124,7 +195,7 @@ export class HudLayer {
       this.root.appendChild(el);
     }
     this.modalEl = el;
-    const popContext = this.contexts.push('menu', `modal:${widget.id}`);
+    const popContext = this.contexts.push(opts.context === 'dialogue' ? 'dialogue' : 'menu', `modal:${widget.id}`);
     const modal = { widget, popContext };
     this.modal = modal;
     this.exitPointerLock();
@@ -134,7 +205,8 @@ export class HudLayer {
 
   setVisible(visible: boolean): void {
     this.visible = visible;
-    for (const el of this.slotEls.values()) el.style.display = visible ? 'flex' : 'none';
+    // The overlay (fade) is not part of the HUD and stays visible.
+    for (const [slot, el] of this.slotEls) if (slot !== 'overlay') el.style.display = visible ? 'flex' : 'none';
   }
 
   get isVisible(): boolean {
@@ -156,6 +228,7 @@ export class HudLayer {
   dispose(): void {
     for (const list of this.lists.values()) for (const m of [...list]) this.unmount(m);
     if (this.modal) this.closeModal(this.modal);
+    this.fadeRun?.cancel();
     if (this.root) detach(this.root);
   }
 

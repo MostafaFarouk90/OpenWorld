@@ -37,6 +37,14 @@ describe('defaults', () => {
     }
   });
 
+  it('mercy defaults to KeyT, gameplay only, rebindable, without clashing', () => {
+    const { b } = make();
+    expect(b.get('mercy')).toEqual([key('KeyT'), null]);
+    expect(ACTION_DEFS.mercy.contexts).toEqual(['gameplay']);
+    expect(ACTION_DEFS.mercy.rebindable).toBe(true);
+    expect(b.actionsFor(key('KeyT'))).toEqual(['mercy']);
+  });
+
   it('mouse button 3 is the dodge secondary', () => {
     expect(make().b.get('dodge')[1]).toEqual(mouse(3));
   });

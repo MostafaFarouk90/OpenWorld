@@ -6,6 +6,15 @@ import type { WeaponTracer } from '../combat/WeaponTracer';
 import type { GameEvents } from '../core/events';
 import type { ActorId } from './Actor';
 
+function once(fn: () => void): () => void {
+  let done = false;
+  return () => {
+    if (done) return;
+    done = true;
+    fn();
+  };
+}
+
 interface Watched {
   actorId: ActorId;
   window: AttackWindowSource;
@@ -22,25 +31,57 @@ interface Watched {
  */
 export class CombatRegistry {
   private readonly watched = new Map<unknown, Watched>();
+  /** Removers per actor, run when it despawns. */
+  private readonly byActor = new Map<ActorId, Set<() => void>>();
+  private readonly unsubscribe: () => void;
 
   constructor(
     private readonly system: CombatSystem,
     private readonly events: GameEvents,
-  ) {}
+  ) {
+    this.unsubscribe = events.on('actor.despawned', (e) => this.removeAllOf(e.actorId));
+  }
 
-  /** Traces `tracer` while `window` is active; the tracer's `attacker` must be bound to the actor. */
+  /**
+   * Traces `tracer` while `window` is active; the tracer's `attacker` must be bound to the actor.
+   * Removed automatically when the actor despawns (an open window then emits `close`).
+   */
   addAttacker(actorId: ActorId, tracer: WeaponTracer, window: AttackWindowSource): () => void {
     this.system.addAttacker(tracer, window);
     const stop = this.watch(actorId, tracer.attacker, window);
-    return () => {
+    return this.own(actorId, () => {
       this.system.removeAttacker(tracer);
       stop();
-    };
+    });
   }
 
-  addTarget(set: HurtboxSet): () => void {
+  /** Hurtboxes to trace against; with `actorId` they are removed when that actor despawns. */
+  addTarget(set: HurtboxSet, actorId?: ActorId): () => void {
     this.system.addTarget(set);
-    return () => this.system.removeTarget(set);
+    const remove = () => this.system.removeTarget(set);
+    return actorId === undefined ? once(remove) : this.own(actorId, remove);
+  }
+
+  dispose(): void {
+    this.unsubscribe();
+  }
+
+  private own(actorId: ActorId, remove: () => void): () => void {
+    let set = this.byActor.get(actorId);
+    if (!set) this.byActor.set(actorId, (set = new Set()));
+    const entry = once(() => {
+      set!.delete(entry);
+      if (set!.size === 0 && this.byActor.get(actorId) === set) this.byActor.delete(actorId);
+      remove();
+    });
+    set.add(entry);
+    return entry;
+  }
+
+  private removeAllOf(actorId: ActorId): void {
+    const set = this.byActor.get(actorId);
+    if (!set) return;
+    for (const remove of [...set]) remove();
   }
 
   /**

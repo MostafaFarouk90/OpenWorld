@@ -6,7 +6,7 @@ export const INPUT_CONTEXTS: readonly InputContext[] = ['gameplay', 'menu', 'dia
 export type Binding = { device: 'key'; code: string } | { device: 'mouse'; button: 0 | 1 | 2 | 3 | 4 };
 
 export const ACTIONS = [
-  'moveForward', 'moveBack', 'moveLeft', 'moveRight', 'sprint', 'jump', 'interact',
+  'moveForward', 'moveBack', 'moveLeft', 'moveRight', 'sprint', 'jump', 'interact', 'mercy',
   'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'lockOn', 'surge', 'surgeLeap', 'sneak', 'mount',
   'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6',
   'inventory', 'skills', 'journal', 'map', 'menu',
@@ -38,6 +38,7 @@ export const ACTION_DEFS: Readonly<Record<Action, ActionDef>> = {
   sprint: def(key('ShiftLeft'), key('ShiftRight')),
   jump: def(key('Space')),
   interact: def(key('KeyF')),
+  mercy: def(key('KeyT')),
   attack1: def(key('Digit1'), mouse(0)),
   attack2: def(key('Digit2')),
   attack3: def(key('Digit3')),
