@@ -276,6 +276,35 @@ describe('Surge forms', () => {
     expect(useShard).toHaveBeenCalledWith(BURN.surgeGain, 'surge');
     expect(w.damage.healed).toHaveLength(1);
   });
+  it('a form receives services and the clock, and suppressRing skips only the shared ring', async () => {
+    const { createSurgeForms } = await import('./SurgeAndRally');
+    const spawnEffect = vi.fn();
+    const pulseScreen = vi.fn();
+    const shake = vi.fn();
+    services = { vfx: { spawnEffect, pulseScreen, shake } as never };
+    const forms = createSurgeForms();
+    const seen: Array<{ services: unknown; clock: unknown }> = [];
+    forms.register('warden', 'warm', (c) => { seen.push({ services: c.services, clock: c.clock }); c.suppressRing(); });
+    registerSurge(w, caster, { ...deps(), forms, classId: () => 'warden' });
+    caster.cast('player', SURGE.spellId);
+    finish();
+    expect(seen).toHaveLength(1);
+    expect((seen[0]!.services as { get(k: string): unknown }).get('vfx')).toBeDefined();
+    expect(seen[0]!.clock).toBe(w.clock);
+    expect(spawnEffect).not.toHaveBeenCalledWith('surge', expect.anything(), expect.anything());
+    expect(pulseScreen).toHaveBeenCalled();
+    expect(shake).toHaveBeenCalled();
+    expect(w.clock.hitStops).toEqual([SURGE.hitStop]);
+  });
+  it('the ring is drawn when the form does not suppress it', async () => {
+    const { createSurgeForms } = await import('./SurgeAndRally');
+    const spawnEffect = vi.fn();
+    services = { vfx: { spawnEffect, pulseScreen: vi.fn(), shake: vi.fn() } as never };
+    registerSurge(w, caster, { ...deps(), forms: createSurgeForms(), classId: () => 'knight' });
+    caster.cast('player', SURGE.spellId);
+    finish();
+    expect(spawnEffect).toHaveBeenCalledWith('surge', expect.anything(), expect.anything());
+  });
   it('no class (null) plays as the Knight; a throwing-free missing form just skips the damage', async () => {
     const { createSurgeForms } = await import('./SurgeAndRally');
     registerSurge(w, caster, { ...deps(), forms: createSurgeForms(), classId: () => null });

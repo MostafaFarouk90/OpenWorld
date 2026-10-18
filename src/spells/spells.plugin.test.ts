@@ -39,6 +39,20 @@ describe('spells plugin', () => {
     plugin.dispose!();
   });
 
+  it('restoreEmber adds up to the maximum and reports what was added; bad input adds nothing', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    expect(s.spendEmber(40)).toBe(true);
+    expect(s.restoreEmber(15)).toBe(15);
+    expect(s.ember).toBe(75);
+    expect(s.restoreEmber(500)).toBe(25);
+    expect(s.ember).toBe(100);
+    for (const bad of [0, -3, Number.NaN, Number.POSITIVE_INFINITY]) expect(s.restoreEmber(bad)).toBe(0);
+    expect(s.ember).toBe(100);
+    plugin.dispose!();
+  });
+
   it('applies the Ember maximum of the class when progression appears after the spells', () => {
     const f = makeCtx();
     plugin.setup(f.ctx);
