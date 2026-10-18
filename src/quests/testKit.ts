@@ -40,9 +40,12 @@ export function makeWorld(defs: QuestDef[] = []) {
   const warns: string[] = [];
   const gold = { n: 0 };
   const calls: string[] = [];
+  const spent: { amount: number; reason?: string }[] = [];
   const inventory: InventoryPort = {
     remove: () => true,
     addGold: (n) => { gold.n += n; },
+    get gold() { return gold.n; },
+    takeGold: (n, reason) => { const t = Math.min(gold.n, Math.floor(n)); gold.n -= t; spent.push({ amount: t, reason }); return t; },
   };
   const progression: ProgressionPort = {
     grantXp: (n, s) => { calls.push(`xp:${n}:${s}`); },
@@ -61,5 +64,5 @@ export function makeWorld(defs: QuestDef[] = []) {
     progression: () => progression, inventory: () => inventory, npcs: () => npcs, enemies: () => enemies,
   });
   for (const d of defs) manager.register(d);
-  return { bus, state, flags, favour, warns, gold, calls, npcs, enemies, inside, manager };
+  return { bus, state, flags, favour, warns, gold, spent, calls, npcs, enemies, inside, manager };
 }

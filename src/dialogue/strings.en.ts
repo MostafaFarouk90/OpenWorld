@@ -1,6 +1,13 @@
 // English dialogue strings. Keys: dialogue.<dialogueId>.<nodeId> and
 // dialogue.<dialogueId>.<nodeId>.<choiceId>. The player's name is always {name}.
+import { dialogueStringsHmA } from './strings.hm-a.en';
+import { dialogueStringsHmB } from './strings.hm-b.en';
+import { dialogueStringsHmC } from './strings.hm-c.en';
+
 export const dialogueStrings: Record<string, string> = {
+  ...dialogueStringsHmA,
+  ...dialogueStringsHmB,
+  ...dialogueStringsHmC,
   // ---- Marshal Stane ----
   'dialogue.npc-stane.wave': 'Ho there, {name}! Good to see you walking Kettlewick lane with your head up.',
   'dialogue.npc-stane.wave2': 'Come by the Practice Yard when you have a moment. I am putting up a drill board, and every move you learn can be tried out on it.',
@@ -224,4 +231,15 @@ export const npcNameFallbackStrings: Record<string, string> = {
   'npc.tobb.name': 'Tobb Fenwick',
   'npc.carter-1.name': 'Stranded Carter',
   'npc.carter-2.name': 'Stranded Carter',
+  'npc.rook.name': 'Captain Rook',
+  'npc.aldith.name': 'Aldith Stonebrewer',
+  'npc.wystan.name': 'Lord Wystan Halvard',
+  'npc.edric.name': 'Edric IV',
+  'npc.vey.name': 'Lord-Regent Vey',
+  'npc.merrin.name': 'Lady Merrin Oswin',
+  'npc.gerta.name': 'Gerta Quickfingers',
+  'npc.whitlock.name': 'Whitlock the Archivist',
+  'npc.pennard.name': 'Magister Pennard',
+  'npc.ashdown.name': 'Sergeant Ashdown',
+  'npc.camp.name': 'Camp',
 };

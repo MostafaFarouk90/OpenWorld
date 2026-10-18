@@ -10,4 +10,14 @@ import { d01 } from './d01.quest';
 import { r01 } from './r01.quest';
 import { r02 } from './r02.quest';
 
-export const questDefs: QuestDef[] = [t03, t12, m01, m02, m03, m04, m05, d01, r01, r02];
+import { m06 } from './m06.quest';
+import { m07 } from './m07.quest';
+import { m08 } from './m08.quest';
+import { m09 } from './m09.quest';
+import { m10 } from './m10.quest';
+import { d02 } from './d02.quest';
+import { r03 } from './r03.quest';
+import { r04 } from './r04.quest';
+
+export const questDefs: QuestDef[] = [t03, t12, m01, m02, m03, m04, m05, d01, r01, r02,
+  m06, m07, m08, m09, m10, r03, r04, d02];
