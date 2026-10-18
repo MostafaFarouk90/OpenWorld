@@ -14,6 +14,7 @@ function gfx() {
     shadows: 'full',
     viewDistanceOffset: 0,
     postPass: null,
+    renderer: {} as GraphicsService['renderer'],
     setRenderScale: vi.fn(),
     setShadows: vi.fn(),
     setViewDistanceOffset: vi.fn(),
