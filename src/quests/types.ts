@@ -3,7 +3,7 @@
 
 export type FlagValue = boolean | number | string;
 export type FavourTrack = 'halvard' | 'oswin' | 'grisel' | 'dragons' | 'ashwalkers';
-export type FavourBand = 'cold' | 'warm' | 'sworn' | 'hearthsworn';
+export type FavourBand = 'cold' | 'banked' | 'stoked' | 'hearthbound';
 export type QuestState = 'inactive' | 'active' | 'completed' | 'failed';
 
 export interface MercyEventData {
@@ -33,7 +33,7 @@ export type Effect =
   | { completeObjective: [string, string] }
   | { completeQuest: string }
   | { give: { itemId: string; count: number }[] }
-  | { take: { itemId: string; count: number }[] }
+  | { take: string | { itemId: string; count: number }[] }
   | { xp: number }
   | { skillPoints: number }
   | { event: string; payload?: unknown };
