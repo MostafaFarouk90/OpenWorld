@@ -120,7 +120,7 @@ describe('quest posts', () => {
   });
   it('after M01, Gaut and Aelfreda leave the tutorial gate for their home posts (Aelfreda gives M03 at the chapel)', () => {
     const w = makeWorld([m01, m04]);
-    const dir = new PostDirector(BRIGHTWATER_POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
+    const dir = new PostDirector(POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
     w.manager.start('m01');
     dir.update();
     expect(w.npcs.placed).toEqual([]); // M01 under way: the tutorial's gate placement stands
