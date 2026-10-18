@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { ClassId } from '../actors/classes';
+import { CLASS_IDS, type ClassId } from '../actors/classes';
 import type { GameContext } from '../core/Game';
 import type { GamePlugin } from '../core/plugins';
 import { KnightAvatar } from '../characters/KnightAvatar';
@@ -14,7 +14,19 @@ import { SKILLS } from '../progression/skills';
 import { ClassAvatar, type ClassAssetSource } from './ClassAvatar';
 import { Classes, type ClassInventory } from './Classes';
 import { DrillRunner, type DrillPorts } from './DrillRunner';
-import { CLASSES_OFFERED, CLASS_STATS, DEFAULT_KITS, YARD_ANCHOR, availableFlag, npcBastionPost, trainerAnchor, trainerId } from './kits';
+import {
+  CHOSEN_FLAG,
+  CLASSES_OFFERED,
+  CLASS_OPEN_FLAG,
+  CLASS_STATS,
+  DEFAULT_KITS,
+  YARD_ANCHOR,
+  availableFlag,
+  drillFlag,
+  npcBastionPost,
+  trainerAnchor,
+  trainerId,
+} from './kits';
 import { KitSwapper } from './KitSwapper';
 import { CLASSES_STRINGS_EN } from './strings.en';
 import { TrainerDesk } from './TrainerDesk';
@@ -106,25 +118,25 @@ const classesPlugin: GamePlugin = {
       load: (data) => classes.load(data),
     });
 
-    // classes.available.<id>: open while M07 is active or done (the M05 flag when there is no quest service).
-    const isOpen = (): boolean => {
-      const quests = svc<{ state(id: string): string }>('quests');
-      if (quests) {
-        const s = quests.state('m07');
-        return s === 'active' || s === 'completed';
-      }
-      return ctx.state.getFlag('story.m05.complete') === true;
-    };
+    // classes.available.<id> follow thread 6's `story.m07.classOpen` (M07 o4), re-derived on a load through ctx.gates.
     const syncAvailable = (): void => {
-      const open = isOpen();
+      const open = ctx.state.getFlag(CLASS_OPEN_FLAG) === true;
       for (const id of CLASSES_OFFERED) {
         const key = availableFlag(id);
         const has = ctx.state.getFlag(key) === true;
-        if (open && !has) ctx.state.setFlag(key, true);
-        else if (!open && has) ctx.state.setFlag(key, false);
+        if (open !== has) ctx.state.setFlag(key, open);
       }
     };
-    syncAvailable();
+    ctx.gates.flag(CLASS_OPEN_FLAG, () => syncAvailable());
+    // Mirrors for thread 6's `doneWhen` objectives: `classes.chosen` and `classes.drill.<id>` ('done' | 'skipped').
+    const syncMirrors = (): void => {
+      const chosen = classes.chosen();
+      if ((ctx.state.getFlag(CHOSEN_FLAG) === true) !== chosen) ctx.state.setFlag(CHOSEN_FLAG, chosen);
+      for (const id of CLASS_IDS) {
+        const outcome = classes.drillOutcome(id);
+        if (outcome && ctx.state.getFlag(drillFlag(id)) !== outcome) ctx.state.setFlag(drillFlag(id), outcome);
+      }
+    };
 
     // Trainers: a fixed interactable at its own anchor, beside the NPC's post (the NPC's talk stays its dialogue's).
     const desk = new TrainerDesk({
@@ -174,11 +186,9 @@ const classesPlugin: GamePlugin = {
     }
 
     ctx.events.on('classes.trainer.open', (e) => openTrainer(e.classId));
-    ctx.events.on('quest.started', syncAvailable);
-    ctx.events.on('quest.completed', syncAvailable);
-    ctx.events.on('flag.changed', (e) => {
-      if (e.key === 'story.m05.complete') syncAvailable();
-    });
+    ctx.events.on('class.chosen', syncMirrors);
+    ctx.events.on('class.changed', syncMirrors);
+    ctx.events.on('class.drill', syncMirrors);
     ctx.events.on('player.avatar', () => {
       attached = true;
       // The first avatar is always the Knight; a loaded Warden is dressed as soon as it can be.
@@ -202,6 +212,7 @@ const classesPlugin: GamePlugin = {
       casting = false;
       desk.closeAll();
       syncAvailable();
+      syncMirrors();
       swapper.request(classes.current());
       if (classes.chosen() && classes.drillOutcome(classes.current()) === null) {
         const kit = classes.kit(classes.current());
