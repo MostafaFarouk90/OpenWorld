@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const h = vi.hoisted(() => ({ throwOnConstruct: false, composer: null as any }));
+const h = vi.hoisted(() => ({ throwOnConstruct: false, throwOnRatio: false, composer: null as any }));
 
 vi.mock('three/examples/jsm/postprocessing/EffectComposer.js', () => ({
   EffectComposer: class {
     addPass = vi.fn();
     render = vi.fn();
     setSize = vi.fn();
+    setPixelRatio = vi.fn((r: number) => {
+      if (h.throwOnRatio) throw new Error('lost context');
+      void r;
+    });
     dispose = vi.fn();
     constructor() {
       if (h.throwOnConstruct) throw new Error('no gl');
@@ -86,5 +90,26 @@ describe('BloomPostPass', () => {
     expect(c.dispose).toHaveBeenCalledTimes(1);
     p.render();
     expect(renderer.render).toHaveBeenCalledTimes(1);
+  });
+  it('setPixelRatio reaches the composer, ignores invalid ratios and survives a throwing composer', () => {
+    h.throwOnRatio = false;
+    const p = new BloomPostPass(renderer, scene, camera);
+    p.setPixelRatio(1.5);
+    expect(h.composer.setPixelRatio).toHaveBeenCalledWith(1.5);
+    p.setPixelRatio(Number.NaN);
+    p.setPixelRatio(0);
+    p.setPixelRatio(-1);
+    expect(h.composer.setPixelRatio).toHaveBeenCalledTimes(1);
+    h.throwOnRatio = true;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(() => p.setPixelRatio(2)).not.toThrow();
+    warn.mockRestore();
+    h.throwOnRatio = false;
+  });
+  it('setPixelRatio without a composer is a no-op', () => {
+    h.throwOnConstruct = true;
+    const p = new BloomPostPass(renderer, scene, camera);
+    h.throwOnConstruct = false;
+    expect(() => p.setPixelRatio(2)).not.toThrow();
   });
 });
