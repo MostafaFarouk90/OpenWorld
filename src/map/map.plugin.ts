@@ -90,10 +90,17 @@ const map: GamePlugin = {
       order: 0,
       fixedUpdate() {
         if (typeof document === 'undefined') return;
+        if (ctx.hud.modalOpen === 'map.modal' && (ctx.input.actions.pressed('map') || ctx.input.actions.pressed('menu'))) {
+          closeModal?.();
+          return;
+        }
         if (!ctx.input.actions.pressed('map') || ctx.input.contexts.top() !== 'gameplay' || ctx.hud.modalOpen) return;
         const widget = createMapModal({ model, close: () => closeModal?.() });
         closeModal = ctx.hud.openModal(widget);
-        if (closeModal) ctx.services.get('prompts')?.success('map');
+        if (closeModal) {
+          widget.focusDefault();
+          ctx.services.get('prompts')?.success('map');
+        }
       },
     });
 

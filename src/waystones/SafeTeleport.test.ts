@@ -33,8 +33,8 @@ describe('SafeTeleport', () => {
     await expect(p).resolves.toEqual({ ok: true });
     expect(tp.active).toBe(false);
     expect(log.indexOf('fade:1')).toBeLessThan(log.findIndex((l) => l.startsWith('place')));
-    expect(log.indexOf('freeze')).toBeGreaterThan(log.findIndex((l) => l.startsWith('place')));
-    expect(log.indexOf('release')).toBeGreaterThan(log.indexOf('freeze'));
+    expect(log.indexOf('freeze')).toBeLessThan(log.findIndex((l) => l.startsWith('place'))); // frozen from the fade
+    expect(log.indexOf('release')).toBeGreaterThan(log.findIndex((l) => l.startsWith('place')));
     expect(log[log.length - 1]).toBe('fade:0');
   });
 
@@ -148,5 +148,33 @@ describe('SafeTeleport', () => {
     expect(tp.destination).toBeNull();
     tp.start({ x: 7, y: 10, z: 8 }, 0);
     expect(tp.destination).toMatchObject({ x: 7, z: 8 });
+  });
+});
+
+describe('SafeTeleport takeover and fade freeze', () => {
+  it('freezes the player from the start of the fade', () => {
+    const { tp, log } = setup();
+    void tp.start({ x: 0, y: 10, z: 0 }, 0);
+    expect(log.slice(0, 2)).toEqual(['fade:1', 'freeze']);
+  });
+
+  it('a takeover cancels the job in flight: the old caller hears busy, the new one completes', async () => {
+    const { tp, ports } = setup();
+    const first = tp.start({ x: 1, y: 10, z: 0 }, 0);
+    run(tp, 0.2);
+    const second = tp.start({ x: 2, y: 10, z: 0 }, 0, null, { takeover: true });
+    await expect(first).resolves.toEqual({ ok: false, reason: 'busy' });
+    run(tp, 2);
+    await expect(second).resolves.toEqual({ ok: true });
+    const placed = (ports.place as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0].x);
+    expect(placed).toEqual([2]);
+  });
+
+  it('without takeover a second start is busy and the first still completes', async () => {
+    const { tp } = setup();
+    const first = tp.start({ x: 1, y: 10, z: 0 }, 0);
+    await expect(tp.start({ x: 2, y: 10, z: 0 }, 0)).resolves.toEqual({ ok: false, reason: 'busy' });
+    run(tp, 2);
+    await expect(first).resolves.toEqual({ ok: true });
   });
 });

@@ -19,6 +19,13 @@ export type ContinueResult =
   | { ok: true; file: SaveFile; slot: string }
   | { ok: false; reason: 'no-save' | 'corrupt' | 'newer' | 'unavailable' };
 
+const CHECKPOINT_REASONS: readonly SaveReason[] = ['waystone', 'rest', 'manual'];
+/** Of two coalesced requests keep the one that writes more slots (checkpoints write both). */
+function strongest(a: SaveReason, b: SaveReason): SaveReason {
+  if (CHECKPOINT_REASONS.includes(b)) return b;
+  return CHECKPOINT_REASONS.includes(a) ? a : b;
+}
+
 export interface ApplyReport {
   applied: string[];
   /** Stored version newer than the code's: owner keeps defaults, entry retained verbatim. */
@@ -140,7 +147,7 @@ export class SaveManager {
       out.set(key, entry);
       this.lastValues.set(key, entry);
     } catch (error) {
-      this.ports.log('error', `save: serialize failed for "${key}"; keeping previous value`, { error });
+      this.ports.log(key === PLAYER_POSITION_KEY ? 'warn' : 'error', `save: serialize failed for "${key}"; keeping previous value`, { error });
       const prev = this.lastValues.get(key);
       if (prev) out.set(key, prev);
       else out.delete(key);
@@ -184,7 +191,12 @@ export class SaveManager {
 
     for (const [key, entry] of entries) {
       if (key === PLAYER_POSITION_KEY) {
-        report.playerPosition = entry;
+        if (entry.version > PLAYER_POSITION_VERSION) {
+          this.retained.set(key, entry);
+          report.refusedNewer.push(key);
+        } else {
+          report.playerPosition = entry;
+        }
         continue;
       }
       const p = byKey.get(key);
@@ -239,7 +251,7 @@ export class SaveManager {
     }
     const safety = this.ports.gameplaySafe();
     if (!safety.safe) {
-      this.deferredReason = reason;
+      this.deferredReason = this.deferredReason ? strongest(this.deferredReason, reason) : reason;
       this.ports.log('info', `save: "${reason}" deferred (${safety.reason ?? 'unsafe'})`);
       return { ok: false, reason: 'deferred' };
     }
@@ -305,7 +317,7 @@ export class SaveManager {
   private enqueue(reason: SaveReason, prebuilt?: SaveFile): Promise<SaveOutcome> {
     if (!this.inFlight) return this.start(reason, prebuilt);
     if (this.queued) {
-      this.queued.reason = reason; // latest wins
+      this.queued.reason = strongest(this.queued.reason, reason); // latest state wins, checkpoint slots are kept
       this.queued.prebuilt = prebuilt;
       return this.queued.d.promise;
     }

@@ -282,3 +282,45 @@ describe('persistence', () => {
     expect(net.isLit('kettlewick')).toBe(true);
   });
 });
+
+describe('review fixes', () => {
+  it('rejects malformed waystone ids in a save without throwing or half-loading', () => {
+    const { net, flags } = make(STD());
+    expect(() => net.load({ lit: ['bad id', 'chapel', 'a.b', '../x'], lastRest: 'no spaces', respawn: 'chapel' })).not.toThrow();
+    expect(net.serialize().lit).toEqual(['chapel', 'kettlewick']);
+    expect(net.serialize().lastRest).toBeNull();
+    expect(flags['waystone.chapel.lit']).toBe(true);
+  });
+
+  it('the travel fallback is where the player stood, not the nearest stone', async () => {
+    const { net, teleport, setFeet } = make(STD());
+    net.applyPreLit();
+    net.rekindle('chapel');
+    setFeet({ x: 500, y: 3, z: -40 });
+    const spy = vi.spyOn(teleport, 'start').mockResolvedValue({ ok: true });
+    await net.travel('kettlewick');
+    expect(spy.mock.calls[0][2]).toEqual({ feet: { x: 500, y: 3, z: -40 }, yaw: 0 });
+  });
+
+  it('a respawn takes over a travel in flight', async () => {
+    const { net, teleport, setFeet, placed, pump } = make(STD());
+    net.applyPreLit();
+    net.rekindle('chapel');
+    setFeet({ x: 82, y: 0, z: 52 });
+    const travel = net.travel('kettlewick');
+    teleport.update(0.1);
+    const respawn = net.respawnPlayer();
+    await expect(travel).resolves.toEqual({ ok: false, reason: 'busy' });
+    await pump(respawn);
+    expect(placed.at(-1)).toEqual({ x: 82, z: 52 }); // the chapel was rekindled last
+  });
+
+  it('travel arrival does not move the respawn point', async () => {
+    const { net, pump, setFeet } = make(STD());
+    net.applyPreLit();
+    net.rekindle('chapel');
+    setFeet({ x: 82, y: 0, z: 52 });
+    await pump(net.travel('kettlewick'));
+    expect(net.respawnPoint().waystoneId).toBe('chapel');
+  });
+});

@@ -8,6 +8,8 @@ export interface WaystoneService {
   respawnPlayer(): Promise<void>;
   /** Fast travel to a lit waystone (id without the `waystone.` prefix). */
   travel(toId: string): Promise<TravelResult>;
+  /** Lights a stone (default cause 'script': no Burn is added by the spells service). */
+  rekindle(id: string, cause?: 'player' | 'script'): { ok: boolean; reason?: string };
   isLit(id: string): boolean;
   litIds(): string[];
   ids(): string[];
