@@ -16,8 +16,10 @@ function make(over: Partial<DrillPorts> = {}) {
   const release = vi.fn();
   const shows: { mechanic: string; action: string; textKey: string; opts?: { force?: boolean } }[] = [];
   const hides: (string | undefined)[] = [];
-  const spawn = vi.fn();
+  const alive = { n: 1 };
+  const spawn = vi.fn((): readonly unknown[] => (alive.n > 0 ? ['spar'] : []));
   const despawn = vi.fn();
+  const reset = vi.fn();
   const emitted: { classId: ClassId; outcome: DrillOutcome }[] = [];
   const ports: DrillPorts = {
     prompts: () => ({
@@ -25,7 +27,7 @@ function make(over: Partial<DrillPorts> = {}) {
       show: (mechanic, action, textKey, opts) => void shows.push({ mechanic, action, textKey, opts }),
       hide: (m) => void hides.push(m),
     }),
-    enemies: () => ({ spawnGroup: spawn, despawnGroup: despawn }),
+    enemies: () => ({ spawnGroup: spawn, despawnGroup: despawn, reset, alive: () => Array.from({ length: alive.n }) }),
     pauseKillXp: vi.fn(() => release),
     wornClass: () => s.worn,
     hasSkills: () => s.hasSkills,
@@ -39,7 +41,7 @@ function make(over: Partial<DrillPorts> = {}) {
   const r = new DrillRunner(ports);
   const ends: [ClassId, DrillOutcome][] = [];
   r.onEnd((c, o) => void ends.push([c, o]));
-  return { r, counts, s, release, shows, hides, spawn, despawn, emitted, ends, ports };
+  return { r, counts, s, release, shows, hides, spawn, despawn, reset, alive, emitted, ends, ports };
 }
 
 const step = (id: string, mechanic: DrillStepDef['mechanic'], count = 1, extra: Partial<DrillStepDef> = {}): DrillStepDef => ({
@@ -233,5 +235,44 @@ describe('DrillRunner pass-overs and text', () => {
     t.s.strings.add('classes.drill.warden.c');
     t.r.start('warden', [step('c', 'attack1', 1, { textKey: 'my.key' })]);
     expect(t.r.state()?.textKey).toBe('my.key');
+  });
+});
+
+describe('DrillRunner spars after review', () => {
+  const spar = { spawnerId: 'classes.drill.blocker', moves: ['soldier.chop'] };
+
+  it('resets the group before spawning and respawns a spar killed before the step is done', () => {
+    const t = make();
+    t.r.start('warden', [step('block', 'block', 2, { spar })]);
+    t.r.tick();
+    expect(t.reset).toHaveBeenCalledWith('classes.drill.blocker');
+    expect(t.spawn).toHaveBeenCalledTimes(1);
+    t.alive.n = 0;
+    t.r.tick();
+    // Nothing alive: reset and spawn again (the fake still returns [] while alive is 0).
+    expect(t.spawn).toHaveBeenCalledTimes(2);
+    expect(t.reset).toHaveBeenCalledTimes(2);
+  });
+
+  it('passes over a spar step whose group does not spawn, with a warning', () => {
+    const warn = vi.fn();
+    const t = make({ warn });
+    t.alive.n = 0;
+    t.r.start('warden', [step('block', 'block', 2, { spar }), step('a', 'attack1')]);
+    t.r.tick();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('classes.drill.blocker'));
+    t.r.tick();
+    expect(t.r.state()?.step).toBe(1);
+  });
+
+  it('runs spar steps with the worn avatar once the kit failed to load', () => {
+    const t = make();
+    t.s.worn = 'knight';
+    t.r.start('warden', [step('block', 'block', 1, { spar })]);
+    t.r.tick();
+    expect(t.spawn).not.toHaveBeenCalled();
+    t.r.kitFailed('warden');
+    t.r.tick();
+    expect(t.spawn).toHaveBeenCalledTimes(1);
   });
 });

@@ -50,7 +50,8 @@ export class Classes implements ClassesService {
   ) {
     for (const k of Object.values(DEFAULT_KITS)) this.kits.set(k.classId, k);
     runner.onEnd((classId, outcome) => {
-      this.drills[classId] = outcome;
+      // A replay never undoes a finished drill.
+      this.drills[classId] = this.drills[classId] === 'done' ? 'done' : outcome;
     });
   }
 

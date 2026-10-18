@@ -65,7 +65,15 @@ export class KitSwapper {
     }
     if (!this.ready || !this.ports.idle()) return;
     const avatar = this.ready;
-    if (this.ports.swap(avatar)) {
+    let swapped = false;
+    try {
+      swapped = this.ports.swap(avatar);
+    } catch (err) {
+      this.ports.warn(`classes: the kit swap threw (${err instanceof Error ? err.message : String(err)}); dropped`);
+      this.drop();
+      return;
+    }
+    if (swapped) {
       this.ready = null;
       this.target = null;
     }

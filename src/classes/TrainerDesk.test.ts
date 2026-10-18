@@ -280,7 +280,8 @@ describe('trainerLines', () => {
     const paid = fakeClasses({ chosen: true, quote: { ok: true, free: false, gold: 75, canAfford: false } });
     expect(trainerLines(paid, 'warden')[0]).toEqual({ option: 'change', textKey: 'classes.menu.changeCost', params: { classKey: 'kit.warden', gold: 75 }, disabled: true });
     const refused = fakeClasses({ chosen: true, quote: { ok: false, reason: 'combat' } });
-    expect(opts(refused, 'warden')).toEqual(['close']);
+    expect(opts(refused, 'warden')).toEqual(['change', 'close']);
+    expect(trainerLines(refused, 'warden')[0]).toEqual({ option: 'change', textKey: 'classes.refused.combat', disabled: true });
   });
 
   it('for the current class offers drill or replay, skip while running, and reset', () => {

@@ -5,10 +5,10 @@ import { AnimationController, type AnimationControllerOptions } from '../charact
 import { LEFT_HAND_SLOT, RIGHT_HAND_SLOT } from '../characters/knightClips';
 import type { LocomotionInput } from '../characters/locomotionState';
 import type { PlayerAvatar } from '../characters/PlayerAvatar';
+import { HELD_ITEM } from '../npcs/npcModels';
 import type { ClassKit, KitWeapon } from './types';
 
-/** Every held item built into the KayKit character glbs (the same list `npcs/npcModels.ts` hides). */
-export const HELD_ITEM = /^(1H_|2H_|Knife|Throwable|Badge_|Rectangle_|Round_Shield|Spike_|Spellbook|Mug|Barbarian_Round_Shield)/;
+export { HELD_ITEM };
 
 /** The parts of AssetLoader the avatar needs (ids are `AssetManifest` ids); tests pass stand-ins. */
 export interface ClassAssetSource {

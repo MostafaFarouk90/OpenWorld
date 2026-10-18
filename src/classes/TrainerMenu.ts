@@ -27,6 +27,9 @@ export function trainerLines(classes: ClassesService, classId: ClassId): Trainer
         params: { classKey: name, gold: q.gold },
         disabled: !q.canAfford,
       });
+    } else {
+      // Say why the change is not on offer (in combat, for one).
+      lines.push({ option: 'change', textKey: `classes.refused.${q.reason}`, disabled: true });
     }
   } else {
     const running = classes.drill();

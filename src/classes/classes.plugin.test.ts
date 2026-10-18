@@ -125,9 +125,11 @@ async function boot(opts: BootOpts = {}) {
   ctx.services.provide('enemies' as never, {
     spawnGroup: (id: string) => {
       spawned.push(id);
-      return [];
+      return ['spar'];
     },
     despawnGroup: (id: string) => despawned.push(id),
+    reset: () => {},
+    alive: () => ['spar'],
   } as never);
   const statuses = await game.loadPlugins(modules);
   const knight = await KnightAvatar.load(assets as never);
@@ -357,5 +359,51 @@ describe('classes plugin on the real game', () => {
     u.load({ entries });
     expect(u.classes().drill()).toBeNull();
     expect(u.events.some((e) => e.type === 'hud.toast' && e.payload.textKey === 'classes.drill.resume')).toBe(true);
+  });
+
+  it('a load closes the trainer menu and releases its permit', async () => {
+    const t = await boot();
+    open(t);
+    t.classes().choose('knight');
+    t.ctx.events.emit('classes.trainer.open', { classId: 'knight' });
+    t.load({ entries: {} });
+    t.progression().grantXp(1000, 'test');
+    t.progression().learn('knight.rimBash');
+    expect(t.progression().respec()).toEqual({ ok: false, reason: 'no-permit' });
+  });
+
+  it('a Phase A load in the middle of a drill cancels it silently and despawns its spar', async () => {
+    const t = await boot();
+    open(t);
+    t.classes().choose('knight');
+    await t.run(1);
+    for (const m of ['attack1', 'attack2', 'attack3', 'attack4']) {
+      t.succeed(m, 3);
+      await t.run(2);
+    }
+    await t.run(1);
+    expect(t.spawned).toEqual(['classes.drill.blocker']);
+    t.load(phaseA as never);
+    expect(t.classes().drill()).toBeNull();
+    expect(t.despawned).toContain('classes.drill.blocker');
+    expect(t.events.filter((e) => e.type === 'class.drill')).toEqual([]);
+    expect((t.progression() as any).killXpPaused).toBe(false);
+  });
+
+  it('a stopped replay keeps a finished drill as done', async () => {
+    const t = await boot();
+    open(t);
+    t.classes().choose('knight');
+    await t.run(1);
+    for (const m of ['attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'skills', 'ability']) {
+      t.succeed(m, 3);
+      await t.run(2);
+    }
+    await t.run(2);
+    expect(t.classes().drillOutcome('knight')).toBe('done');
+    expect(t.classes().startDrill()).toBe(true);
+    t.classes().skipDrill();
+    expect(t.classes().drillOutcome('knight')).toBe('done');
+    expect(t.ctx.state.getFlag('classes.drill.knight')).toBe('done');
   });
 });
