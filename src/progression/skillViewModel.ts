@@ -1,5 +1,5 @@
 import type { ProgressionService } from '../hud/ports';
-import { DEFAULT_CLASS_ID, SKILLS, type SkillBranch, type SkillDef } from './skills';
+import { DEFAULT_CLASS_ID, SKILLS, type SkillDef } from './skills';
 
 export type SkillNodeState = 'learned' | 'learnable' | 'no-points' | 'blocked' | 'unavailable';
 
@@ -14,16 +14,22 @@ export interface SkillViewModel {
   branches: { branch: string; nodes: SkillNode[] }[];
 }
 
-const BRANCHES: readonly SkillBranch[] = ['bulwark', 'vanguard', 'standard'];
+/** Branch ids of a class in registration (first-seen) order. */
+export function branchesOf(classId: string): string[] {
+  const out: string[] = [];
+  for (const s of SKILLS) if (s.classId === classId && !out.includes(s.branch)) out.push(s.branch);
+  return out;
+}
 
-/** Pure description of the skill screen: every node of the Knight tree with what the player can do with it. */
-export function skillViewModel(p: ProgressionService): SkillViewModel {
+/** Pure description of the skill screen: every node of the class's tree with what the player can do with it. */
+export function skillViewModel(p: ProgressionService, classId?: string | null): SkillViewModel {
+  const cls = classId ?? p.classId ?? DEFAULT_CLASS_ID;
   return {
     points: p.skillPoints,
     level: p.level,
-    branches: BRANCHES.map((branch) => ({
+    branches: branchesOf(cls).map((branch) => ({
       branch,
-      nodes: SKILLS.filter((s) => s.classId === DEFAULT_CLASS_ID && s.branch === branch)
+      nodes: SKILLS.filter((s) => s.classId === cls && s.branch === branch)
         .sort((a, b) => a.tier - b.tier)
         .map((skill) => {
           if (p.learned(skill.id)) return { skill, state: 'learned' as const };

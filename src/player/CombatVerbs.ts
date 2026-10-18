@@ -59,6 +59,11 @@ export interface CombatVerbsService {
    * Multipliers combine by product, clamped to 0.5..2. Returns the remover.
    */
   addAttackSpeedMultiplier(id: string, mult: number | (() => number)): () => void;
+  /**
+   * Holds a scripted forced move (the Warden's shoulder charge) for `owner` until it is released with `null`. Applied every
+   * tick while no dodge or knockback is running (those win); several owners: the latest one wins. `x`, `z` is a unit direction.
+   */
+  holdForcedMove(owner: string, move: { x: number; z: number; speed: number } | null): void;
 }
 
 declare module '../core/Services' {
@@ -117,6 +122,7 @@ export class CombatVerbs {
   lastRestedWaystoneId: string | null = null;
 
   readonly attackSets = new AttackSets();
+  private readonly forcedHolds = new Map<string, { x: number; z: number; speed: number }>();
   readonly attackSpeed = new SpeedMultipliers((id) => console.warn(`combatVerbs: attack speed multiplier "${id}" is invalid, ignored`));
   private appliedAttackClass: string | null = null;
   private offIronStance: (() => void) | null = null;
@@ -246,6 +252,12 @@ export class CombatVerbs {
       },
       registerAttackSet: (classId, set) => self.attackSets.register(classId, set),
       addAttackSpeedMultiplier: (id, mult) => self.attackSpeed.add(id, mult),
+      holdForcedMove: (owner, move) => {
+        if (move && Number.isFinite(move.x + move.z + move.speed)) {
+          self.forcedHolds.delete(owner); // re-insert so the latest hold is the last
+          self.forcedHolds.set(owner, { ...move });
+        } else self.forcedHolds.delete(owner);
+      },
     });
     const rig = ctx.cameraRig;
     if (rig) {
@@ -261,6 +273,7 @@ export class CombatVerbs {
     for (const off of this.offs.splice(0)) off();
     for (const off of this.offLocks.values()) off();
     this.offLocks.clear();
+    this.forcedHolds.clear();
     this.deadModifier?.();
     this.deadModifier = null;
     this.offIronStance?.();
@@ -422,7 +435,9 @@ export class CombatVerbs {
       this.knockback.left--;
     } else if (!this.dodge.active) {
       this.knockback = null;
-      player.setForcedMove(null);
+      let hold: { x: number; z: number; speed: number } | null = null;
+      for (const h of this.forcedHolds.values()) hold = h;
+      player.setForcedMove(hold);
     }
     const target = this.lockOn.target;
     if (this.freeDodgeYaw !== null) player.setFacingOverride(this.freeDodgeYaw);

@@ -17,6 +17,8 @@ export const ENEMY_COLLISION_GROUP = ((0x0002 << 16) | 0xffff) >>> 0;
 export const IGNORE_ENEMIES_QUERY_GROUPS = ((0xffff << 16) | 0xfffd) >>> 0;
 
 export interface EnemyMover {
+  /** The fastest the mover goes, m/s (default: a walking player's speed). Fast enemies (hounds) raise it. */
+  maxSpeed: number;
   /** Simulated feet this tick. */
   readonly feet: THREE.Vector3;
   /** Horizontal world velocity in m/s; kinematic movers advance one fixed tick (the dt is ignored there). */
@@ -30,6 +32,7 @@ export interface EnemyMover {
 /** Wraps the player's CharacterController: walk only, never sprint or jump. */
 export class KinematicMover implements EnemyMover {
   readonly feet = new THREE.Vector3();
+  maxSpeed: number = PLAYER.walkSpeed;
   private readonly controller: CharacterController;
 
   constructor(physics: PhysicsWorld, feet: Vec3) {
@@ -49,11 +52,17 @@ export class KinematicMover implements EnemyMover {
   move(velocity: { x: number; z: number }, _dt: number): void {
     const vx = Number.isFinite(velocity.x) ? velocity.x : 0;
     const vz = Number.isFinite(velocity.z) ? velocity.z : 0;
+    const speed = Math.hypot(vx, vz);
+    // Faster than a walking player only when the owner raised `maxSpeed` (a hound's chase and leap): the
+    // controller clamps the direction, so the speed itself is passed.
+    const fast = this.maxSpeed > PLAYER.walkSpeed && speed > PLAYER.walkSpeed;
+    const k = fast ? Math.min(1, this.maxSpeed / speed) : 1;
     this.controller.fixedUpdate({
-      moveX: vx / PLAYER.walkSpeed,
-      moveZ: vz / PLAYER.walkSpeed,
+      moveX: fast ? vx / speed : vx / PLAYER.walkSpeed,
+      moveZ: fast ? vz / speed : vz / PLAYER.walkSpeed,
       sprint: false,
       jump: false,
+      ...(fast ? { speedOverride: speed * k } : {}),
     });
     this.syncFeet();
   }
@@ -78,6 +87,8 @@ export class KinematicMover implements EnemyMover {
 
 /** No physics: velocity times dt, y snapped to the terrain height. */
 export class HeightfieldMover implements EnemyMover {
+  /** Unused: the heightfield mover goes exactly as fast as asked. */
+  maxSpeed = Infinity;
   readonly feet = new THREE.Vector3();
   readonly collider = null;
   private readonly prev = new THREE.Vector3();
@@ -118,6 +129,14 @@ export class SwitchingMover implements EnemyMover {
   private readonly kinematic: KinematicMover;
   private readonly flat: HeightfieldMover;
   private _asleep = false;
+
+  get maxSpeed(): number {
+    return this.kinematic.maxSpeed;
+  }
+
+  set maxSpeed(v: number) {
+    this.kinematic.maxSpeed = v;
+  }
 
   constructor(physics: PhysicsWorld, heightAt: (x: number, z: number) => number, feet: Vec3) {
     this.kinematic = new KinematicMover(physics, feet);
