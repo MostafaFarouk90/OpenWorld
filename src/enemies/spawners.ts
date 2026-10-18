@@ -154,6 +154,20 @@ export class SpawnerRegistry {
     }
   }
 
+  /** Despawns the group's live members and forgets that it was cleared or any of its slots spent, so `spawnGroup` refills it. */
+  reset(id: string): void {
+    const slots = this.slots.get(id);
+    if (!slots) {
+      this.warnOnce(`reset:${id}`, `spawners: unknown spawner '${id}'`);
+      return;
+    }
+    this.despawnGroup(id);
+    this.goneSlots.get(id)!.clear();
+    this.firedCleared.delete(id);
+    this.cleared.delete(id);
+    for (let i = 0; i < slots.length; i++) this.spent.delete(`${id}#${i}`);
+  }
+
   alive(id: string): ActorId[] {
     return (this.slots.get(id) ?? []).filter((a): a is ActorId => a !== null);
   }
@@ -182,12 +196,23 @@ export class SpawnerRegistry {
     return out;
   }
 
-  onQuestStarted(questId: string): ActorId[] {
+  /** Spawns the quest-activated groups for `questId`; a group with a `flag` waits until `flagOn(flag)` (its quest is active). */
+  onQuestStarted(questId: string, flagOn: (flag: string) => boolean = () => true): ActorId[] {
     const out: ActorId[] = [];
     for (const def of this.defs.values()) {
-      if (typeof def.activation === 'object' && def.activation.quest === questId && !this.cleared.has(def.id)) {
-        out.push(...this.spawnGroup(def.id));
-      }
+      const act = def.activation;
+      if (typeof act !== 'object' || act.quest !== questId || this.cleared.has(def.id)) continue;
+      if (act.flag !== undefined && !flagOn(act.flag)) continue;
+      out.push(...this.spawnGroup(def.id));
+    }
+    return out;
+  }
+
+  /** Quest ids whose groups wait on `flag`. */
+  questsGatedBy(flag: string): string[] {
+    const out: string[] = [];
+    for (const def of this.defs.values()) {
+      if (typeof def.activation === 'object' && def.activation.flag === flag) out.push(def.activation.quest);
     }
     return out;
   }

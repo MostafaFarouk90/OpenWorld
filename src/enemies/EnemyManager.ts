@@ -17,6 +17,8 @@ export type ModelFactory = (def: EnemyDef) => EnemyModelSource;
 export interface EnemiesService {
   spawnGroup(spawnerId: string, opts?: SpawnOptions): ActorId[];
   despawnGroup(spawnerId: string): void;
+  /** Despawns the group and clears its cleared and spent marks, so the next `spawnGroup` refills every slot. */
+  reset(spawnerId: string): void;
   alive(spawnerId: string): ActorId[];
   view(actorId: ActorId): EnemyView | undefined;
   setMercyUnlocked(verb: 'release' | 'spare', on: boolean): void;
@@ -76,6 +78,7 @@ export class EnemyManager {
   readonly service: EnemiesService = {
     spawnGroup: (id, opts) => this.spawners.spawnGroup(id, opts),
     despawnGroup: (id) => this.spawners.despawnGroup(id),
+    reset: (id) => this.spawners.reset(id),
     alive: (id) => this.spawners.alive(id),
     view: (id) => this.enemies.get(id)?.view,
     setMercyUnlocked: (verb, on) => this.host.state.setFlag(MERCY.flags[verb], on),
@@ -267,7 +270,15 @@ export class EnemyManager {
     });
     on('mercy.revoked', (p) => this.enemies.get(p.actorId)?.revoked(this.host.actors.player.id));
     on('rest', () => this.spawners.onRest());
-    on('quest.started', (p) => this.spawners.onQuestStarted(p.questId));
+    on('quest.started', (p) => this.spawners.onQuestStarted(p.questId, (f) => this.host.state.getBool(f, false)));
+    on('flag.changed', (p) => {
+      if (p.value !== true) return;
+      // A flag-gated group spawns when its flag turns true while its quest is active.
+      const active = this.host.services.get('quests')?.active() ?? [];
+      for (const questId of this.spawners.questsGatedBy(p.key)) {
+        if (active.includes(questId)) this.spawners.onQuestStarted(questId, (f) => f === p.key || this.host.state.getBool(f, false));
+      }
+    });
     on('save.loaded', () => {
       // The live world follows the save: cleared groups and spent piles go, active quests' groups return.
       const spent = new Set(this.spawners.liveInSpentSlots());
@@ -275,7 +286,7 @@ export class EnemyManager {
         if ((e.spawnerId && this.spawners.isCleared(e.spawnerId)) || spent.has(e.id)) e.despawn();
       }
       const active = this.host.services.get('quests')?.active() ?? [];
-      for (const questId of active) this.spawners.onQuestStarted(questId);
+      for (const questId of active) this.spawners.onQuestStarted(questId, (f) => this.host.state.getBool(f, false));
     });
 
     this.unsubs.push(

@@ -27,6 +27,10 @@ const runTopple = (fc: ReturnType<typeof createFakeCore>, seconds = TOPPLE_SECON
 };
 
 describe('spawnScarecrow', () => {
+  it('tags the actor with the straw audio material', () => {
+    expect(setup().s.actor.data['audio']).toEqual({ material: 'straw' });
+  });
+
   it('spawns a neutral mortal hittable actor on the terrain with four hurtboxes', () => {
     const { fc, s } = setup();
     expect(s.actor.kind).toBe('scarecrow');

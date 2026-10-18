@@ -153,8 +153,9 @@ export interface BeatDef {
   /** Verbs locked only during this beat (T05: attack 1 only). */
   extraLocks?: string[];
   prompts?: PromptSpec[];
-  /** Waves: wave n+1 spawns when wave n is cleared. */
+  /** Spawn waves; wave i spawns when step `waveSteps[i]` begins (default: wave i at step i). */
   waves?: SpawnSpec[][];
+  waveSteps?: number[];
   /**
    * Steps run in order; every goal of a step must be done. A combat beat ends with a
    * `cleared` step; if its groups clear before the earlier steps are done, they refill.
@@ -220,6 +221,8 @@ export interface DirectorPorts {
 
   // presentation
   showPrompt(p: PromptSpec): void;
+  /** Successes so far of a prompt mechanic (veteran skirmish shows only unused verbs). */
+  promptCount(mechanic: string): number;
   hidePrompts(): void;
   showLine(key: string): void;
   toast(key: string): void;
