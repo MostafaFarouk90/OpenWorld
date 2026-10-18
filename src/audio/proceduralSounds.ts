@@ -160,3 +160,11 @@ export function footstepUrl(variant = 0): string {
 export function landUrl(): string {
   return toWavUrl(landSamples());
 }
+
+/** Sample rate of the WAVs this module encodes; synthesise at this rate for `samplesToWavUrl`. */
+export const PLACEHOLDER_SAMPLE_RATE = SAMPLE_RATE;
+
+/** Encodes mono samples (at PLACEHOLDER_SAMPLE_RATE) as a WAV object URL for AudioManager.register. */
+export function samplesToWavUrl(samples: Float32Array): string {
+  return toWavUrl(samples);
+}
