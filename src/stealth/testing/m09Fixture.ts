@@ -32,7 +32,7 @@ export const M09_ENTRY: P3 = { x: 2, y: 0, z: 18.5 };
  */
 export const M09_SCRIPT: readonly ScriptStep[] = [
   { wait: 3, sneak: true },
-  { to: { x: 12, y: 0, z: 18.8 }, sneak: true },
+  { to: { x: 12, y: 0, z: 19.3 }, sneak: true }, // 3.3 m from the stacks patrol (the 3 m hide rule)
   { wait: 14, sneak: true, hidden: true },
   { to: { x: 24.5, y: 0, z: 18.8 }, sneak: true },
   { to: { x: 24.5, y: 0, z: 13 }, sneak: true },

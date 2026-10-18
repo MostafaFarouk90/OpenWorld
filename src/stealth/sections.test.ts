@@ -20,7 +20,8 @@ describe('sections data', () => {
   it('uses the settled ids (M06 gate.inside, quest-derived liveness, M09 bounds are the interior)', () => {
     const m06 = SECTIONS.find((s) => s.id === 'm06.south-gate')!;
     expect(m06.checkpoints.map((c) => c.id)).toContain('gate.inside');
-    expect(m06.quest).toEqual({ id: 'm06', liveUntil: 'o2' });
+    expect(m06.quest).toEqual({ id: 'm06', liveFrom: 'o2', liveUntil: 'o2' });
+    expect(m06.checkpoints.map((c) => c.anchor)).toEqual(['stealth.m06.start', 'stealth.m06.cp.inside']);
     const m09 = SECTIONS.find((s) => s.id === 'm09.counting-house')!;
     expect(m09.bounds).toEqual({ interior: 'counting-house' });
     expect(m09.quest.exitArmedAfter).toEqual(['o3', 'o4', 'o5']);
@@ -55,7 +56,7 @@ describe('insideVolume', () => {
 describe('validateSection', () => {
   const def: StealthSectionDef = {
     id: 't',
-    quest: { id: 'q', liveUntil: 'o1' },
+    quest: { id: 'q', liveFrom: 'o1', liveUntil: 'o1' },
     bounds: { anchor: 's.c', half: { x: 20, y: 5, z: 20 } },
     checkpoints: [{ id: 'a', anchor: 's.a', volume: { anchor: 's.a', half: { x: 1, y: 1, z: 1 } } }],
     exit: { anchor: 's.e', half: { x: 1, y: 1, z: 1 } },

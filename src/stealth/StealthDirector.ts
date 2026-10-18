@@ -18,8 +18,10 @@ export interface StealthPorts {
   guardState(id: ActorId): GuardPerceptionState | null;
   /** `enemies.reset(group)` then `spawnGroup(group)` for each of the section's groups. */
   resetGuards(def: StealthSectionDef): void;
-  /** `waystones.safeTeleport` (fade, freeze, ground wait). */
-  teleport(feet: P3, yaw: number): Promise<unknown>;
+  /** `waystones.safeTeleport` (fade, freeze, ground wait); resolves false when the player was not moved. */
+  teleport(feet: P3, yaw: number): Promise<boolean>;
+  /** True while a save is loading (the director skips ticks between the load teleport and `save.loaded`). */
+  paused(): boolean;
   suspend(reason: string): () => void;
   checkpointSave(reason: string): void;
   emit: {
@@ -56,6 +58,10 @@ export class StealthDirector {
   private readonly reached = new Map<string, number>();
   private readonly alerts = new Map<ActorId, GuardAlert>();
   private capturing = false;
+  /** Bumped per capture or load teleport, so a stale promise never clears a newer one's flag. */
+  private teleportGen = 0;
+  /** Sections cleared this window: not re-entered until their quest window closes (no entered/cleared loop). */
+  private readonly cleared = new Set<string>();
   private hiddenAt: string | null = null;
   private readonly eyeOut: Eye = { level: 0, state: 'calm', observerId: null };
   private disposed = false;
@@ -71,6 +77,11 @@ export class StealthDirector {
 
   get hidden(): boolean {
     return this.hiddenAt !== null;
+  }
+
+  /** The hide spot the player is in (null when not hidden). */
+  get hiddenIn(): string | null {
+    return this.hiddenAt;
   }
 
   /** Current checkpoint id for a section (null before its first). */
@@ -90,7 +101,11 @@ export class StealthDirector {
   }
 
   fixedUpdate(dt: number): void {
-    if (this.disposed || this.capturing) return;
+    if (this.disposed || this.capturing || this.ports.paused()) return;
+    for (const id of this.cleared) {
+      const def = this.defs.find((d) => d.id === id);
+      if (!def || !this.ports.sectionLive(def)) this.cleared.delete(id);
+    }
     const feet = this.ports.playerFeet();
     const cur = this.active;
     if (cur) {
@@ -103,7 +118,7 @@ export class StealthDirector {
       return;
     }
     for (const def of this.defs) {
-      if (this.ports.sectionLive(def) && this.inside(def, feet)) {
+      if (!this.cleared.has(def.id) && this.ports.sectionLive(def) && this.inside(def, feet)) {
         this.enter(def);
         this.updateCheckpoints(def, feet);
         return;
@@ -129,6 +144,7 @@ export class StealthDirector {
     this.hiddenAt = null;
     this.alerts.clear();
     cur.release?.();
+    if (phase === 'cleared') this.cleared.add(cur.def.id);
     this.ports.emit.section(cur.def.id, phase);
   }
 
@@ -199,6 +215,8 @@ export class StealthDirector {
     const cp = def.checkpoints[i] ?? def.checkpoints[0];
     const anchor = cp ? this.ports.find(cp.anchor) : undefined;
     this.ports.emit.caught(observerId, def.id, cp?.id ?? '');
+    // Every guard that was not calm goes calm with the reset (music and HUD readers follow).
+    for (const [id, a] of this.alerts) if (a.state !== 'calm') this.ports.emit.alert(id, def.id, 'calm');
     this.hiddenAt = null;
     this.alerts.clear();
     this.resetEye();
@@ -206,14 +224,22 @@ export class StealthDirector {
       this.ports.warn(`stealth: capture in ${def.id} has no checkpoint anchor`);
       return;
     }
-    this.capturing = true;
     // A capture is not an exit: the hold stays, the section stays active, no checkpoint save.
     this.ports.resetGuards(def);
+    this.teleportTo(anchor, 'capture');
+  }
+
+  private teleportTo(anchor: Anchor, why: string): void {
+    const gen = ++this.teleportGen;
+    this.capturing = true;
     this.ports
       .teleport(anchor.position, anchor.yaw)
-      .catch((err) => this.ports.warn(`stealth: capture teleport failed: ${String(err)}`))
+      .then((ok) => {
+        if (!ok) this.ports.warn(`stealth: ${why} teleport did not move the player`);
+      })
+      .catch((err) => this.ports.warn(`stealth: ${why} teleport failed: ${String(err)}`))
       .finally(() => {
-        this.capturing = false;
+        if (gen === this.teleportGen) this.capturing = false;
       });
   }
 
@@ -263,7 +289,7 @@ export class StealthDirector {
   }
 
   /**
-   * The load rule (on `save.loaded`): drop any active section silently (the hold too), then, if the player loaded
+   * The load rule (on `save.loaded`): end any active section (`exited`, the hold released), then, if the player loaded
    * inside a live section, reset its guards and teleport to its stored checkpoint (or its start). The next tick
    * re-enters it and emits `stealth.section entered` again.
    */
@@ -272,7 +298,9 @@ export class StealthDirector {
     this.active = null;
     this.hiddenAt = null;
     this.alerts.clear();
+    this.cleared.clear();
     cur?.release?.();
+    if (cur) this.ports.emit.section(cur.def.id, 'exited');
     const feet = this.ports.playerFeet();
     for (const def of this.defs) {
       if (!this.ports.sectionLive(def) || !this.inside(def, feet)) continue;
@@ -280,13 +308,7 @@ export class StealthDirector {
       const anchor = cp ? this.ports.find(cp.anchor) : undefined;
       if (!anchor) return;
       this.ports.resetGuards(def);
-      this.capturing = true;
-      this.ports
-        .teleport(anchor.position, anchor.yaw)
-        .catch((err) => this.ports.warn(`stealth: load teleport failed: ${String(err)}`))
-        .finally(() => {
-          this.capturing = false;
-        });
+      this.teleportTo(anchor, 'load');
       return;
     }
   }

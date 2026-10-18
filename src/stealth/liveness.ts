@@ -1,17 +1,28 @@
 import type { QuestsService } from '../quests/service';
 
-/** Quest-derived liveness (ruling 3, no flags): the quest is active and `until` is not done. */
-export function questLive(quests: QuestsService | undefined, questId: string, until: string): boolean {
+/** A quest window: from `liveFrom` being current (or done) until `liveUntil` is done. */
+export interface QuestWindow {
+  id: string;
+  liveFrom: string;
+  liveUntil: string;
+}
+
+/**
+ * Quest-derived liveness (ruling 3, no flags). Live while the quest is active, `liveUntil` is not done, and
+ * `liveFrom` is current or done, so a sequential quest never opens a section or the chase before its objective.
+ */
+export function questLive(quests: Pick<QuestsService, 'state' | 'objectiveDone' | 'isObjectiveCurrent'> | undefined, w: QuestWindow): boolean {
   if (!quests) return false;
   try {
-    return quests.state(questId) === 'active' && !quests.objectiveDone(questId, until);
+    if (quests.state(w.id) !== 'active' || quests.objectiveDone(w.id, w.liveUntil)) return false;
+    return quests.objectiveDone(w.id, w.liveFrom) || quests.isObjectiveCurrent(w.id, w.liveFrom);
   } catch {
     return false;
   }
 }
 
 /** Every listed objective is done (M09's exit arms once the three invoices are copied). */
-export function objectivesDone(quests: QuestsService | undefined, questId: string, ids: readonly string[] | undefined): boolean {
+export function objectivesDone(quests: Pick<QuestsService, 'objectiveDone'> | undefined, questId: string, ids: readonly string[] | undefined): boolean {
   if (!ids || ids.length === 0) return true;
   if (!quests) return false;
   try {

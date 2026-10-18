@@ -3,7 +3,11 @@ import type { Anchor } from '../layout/AnchorRegistry';
 export type P3 = { x: number; y: number; z: number };
 export type NodeKind = 'run' | 'vault' | 'drop' | 'gap';
 
-/** A chase node; its kind describes the segment that starts at it (a `gap` node is the take-off edge). */
+/**
+ * A chase node; its kind says how the courier crosses to the next node (thread 17). A `gap` node sits a few metres
+ * before an alley (CHASE.alleyGap wide) that the segment jumps; with a `detour` the gap is the whole segment instead,
+ * crossed by the Leap or walked round by the plank.
+ */
 export interface RouteNode {
   id: string;
   position: P3;
@@ -12,7 +16,11 @@ export interface RouteNode {
   detour?: P3;
 }
 
-const KIND_TAGS: Record<string, NodeKind> = { 'chase-run': 'run', 'chase-vault': 'vault', 'chase-drop': 'drop', 'chase-gap': 'gap' };
+/** Thread 17 tags nodes with bare kinds (`run`, `vault`, `gap`, `drop`, plus `chase` and `elevated`); `chase-*` also reads. */
+const KIND_TAGS: Record<string, NodeKind> = {
+  run: 'run', vault: 'vault', drop: 'drop', gap: 'gap',
+  'chase-run': 'run', 'chase-vault': 'vault', 'chase-drop': 'drop', 'chase-gap': 'gap',
+};
 
 /** Reads `<prefix>.0..n` (stopping at the first missing index) with kind tags and `.detour` anchors. */
 export function routeFromAnchors(find: (id: string) => Anchor | undefined, prefix: string): RouteNode[] {
@@ -74,6 +82,29 @@ export class Polyline {
       else hi = mid - 1;
     }
     return lo;
+  }
+
+  /** Arc length of the point on the line nearest to `p` (3D); 0 for an empty line. */
+  project(p: P3): number {
+    const pts = this.points;
+    if (pts.length < 2) return 0;
+    let best = Infinity;
+    let at = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const dz = b.z - a.z;
+      const len2 = dx * dx + dy * dy + dz * dz;
+      const t = len2 > 0 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy + (p.z - a.z) * dz) / len2)) : 0;
+      const d = Math.hypot(a.x + dx * t - p.x, a.y + dy * t - p.y, a.z + dz * t - p.z);
+      if (d < best) {
+        best = d;
+        at = this.cum[i] + t * (this.cum[i + 1] - this.cum[i]);
+      }
+    }
+    return at;
   }
 
   sampleAt(s: number, out: P3): P3 {

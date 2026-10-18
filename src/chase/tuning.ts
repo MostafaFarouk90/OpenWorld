@@ -22,6 +22,8 @@ export const CHASE = {
   timerOverPar: 1.2,
   /** The "Again" card shows this long before the restart. */
   againSeconds: 2,
+  /** Alley width a plain `gap` segment jumps (the Rooftop Ward's 3 m alleys, thread 17's WARD pitch minus size). */
+  alleyGap: 3,
   /** Seconds a player loses vaulting a chase-vault wall (a jump over 0.9 m). */
   playerVaultSeconds: 0.15,
 } as const;

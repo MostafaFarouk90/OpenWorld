@@ -1,12 +1,13 @@
 import type { Anchor } from '../layout/AnchorRegistry';
+import type { QuestWindow } from '../stealth/liveness';
 import { Courier } from './Courier';
 import type { P3, RouteNode } from './route';
 import { CHASE } from './tuning';
 
 export interface ChaseDef {
   id: string;
-  /** Live while the quest is active and `liveUntil` is not done. */
-  quest: { id: string; liveUntil: string };
+  /** Live from `liveFrom` (current or done) until `liveUntil` is done (M10: o2 `chase.started`, o3 `chase.caught`). */
+  quest: QuestWindow;
   /** Start box on an anchor; the chase arms whenever the player stands in it while live. */
   start: { anchor: string; radius: number };
   /** Where a restart puts the player. */
@@ -20,8 +21,11 @@ export interface ChasePorts {
   playerFeet(): P3;
   /** Quest-derived: M10 active and its chase objective not done. */
   live(def: ChaseDef): boolean;
+  /** The run may begin now: gameplay input (no dialogue or menu), the player alive and no hostile aggro. */
+  canStart(): boolean;
   suspend(reason: string): () => void;
-  teleport(feet: P3, yaw: number): Promise<unknown>;
+  /** Resolves false when the player was not moved (busy); the restart then retries. */
+  teleport(feet: P3, yaw: number): Promise<boolean>;
   emit: {
     started(chaseId: string): void;
     caught(chaseId: string, seconds: number): void;
@@ -52,6 +56,10 @@ export class ChaseDirector {
   private farFor = 0;
   private againLeft = 0;
   private gap = 0;
+  /** The restart teleport has put the player back at the start (the Again card waits for it). */
+  private restartReady = true;
+  private retryIn = 0;
+  private caughtLive = 0;
   private readonly timerOut: ChaseTimer = { remaining: 0, total: 0, gap: 0, phase: 'running' };
   private disposed = false;
 
@@ -98,18 +106,26 @@ export class ChaseDirector {
     if (this.disposed) return;
     const live = this.ports.live(this.def);
     if (this.phase === 'idle') {
-      if (live && this.inStart()) this.begin();
+      if (live && this.ports.canStart() && this.inStart()) this.begin();
+      return;
+    }
+    if (this.phase === 'caught') {
+      // The quest credits the catch at once; if it is still live a moment later, the catch was not credited: re-arm.
+      this.caughtLive = live ? this.caughtLive + dt : 0;
+      if (!live || this.caughtLive >= 1) this.phase = 'idle';
       return;
     }
     if (!live) {
-      // The quest moved on under the chase: a running one is lost (readers end), anything else goes idle.
-      if (this.phase === 'running') this.abort();
-      else this.phase = 'idle';
+      // The quest moved on under the chase: a running one is lost (readers end); the Again card just ends.
+      this.abort();
       return;
     }
     if (this.phase === 'again') {
       this.againLeft -= dt;
-      if (this.againLeft <= 0) this.begin();
+      if (!this.restartReady) {
+        this.retryIn -= dt;
+        if (this.retryIn <= 0) this.sendRestartTeleport();
+      } else if (this.againLeft <= 0 && this.ports.canStart()) this.begin();
       return;
     }
     if (this.phase !== 'running') return;
@@ -118,17 +134,21 @@ export class ChaseDirector {
     this.gap = this.distanceToCourier();
     if (this.gap <= CHASE.catchRadius) {
       this.phase = 'caught';
+      this.caughtLive = 0;
       this.dropHold();
       this.ports.emit.caught(this.def.id, this.elapsed);
       return;
     }
     if (this.elapsed >= this.def.timer) return this.lose('timer');
-    this.farFor = this.gap > CHASE.loseGap ? this.farFor + dt : 0;
+    // Distance only counts while he is ahead: a player who cut ahead (a Leap) waits for him and is not "lost".
+    const ahead = this.courier.progress > this.courier.line.project(this.ports.playerFeet());
+    this.farFor = this.gap > CHASE.loseGap && ahead ? this.farFor + dt : 0;
     if (this.farFor >= CHASE.loseSeconds - 1e-9) this.lose('distance');
   }
 
   private begin(): void {
     this.phase = 'running';
+    this.restartReady = true;
     this.elapsed = 0;
     this.farFor = 0;
     this.courier.reset();
@@ -159,12 +179,32 @@ export class ChaseDirector {
     this.phase = 'again';
     this.againLeft = CHASE.againSeconds;
     this.ports.emit.lost(this.def.id, reason);
-    // The hold stays across the Again card; the restart puts both back at the start.
+    // The hold stays across the Again card; the restart waits for the teleport back to the start.
     this.courier.reset();
+    this.sendRestartTeleport();
+  }
+
+  private sendRestartTeleport(): void {
     const a = this.ports.find(this.def.restartAnchor);
-    if (a) {
-      this.ports.teleport(a.position, a.yaw).catch((err) => this.ports.warn(`chase: restart teleport failed: ${String(err)}`));
-    } else this.ports.warn(`chase: restart anchor ${this.def.restartAnchor} missing`);
+    if (!a) {
+      this.ports.warn(`chase: restart anchor ${this.def.restartAnchor} missing`);
+      this.restartReady = true;
+      return;
+    }
+    this.restartReady = false;
+    this.retryIn = Infinity;
+    const phaseAtSend = this.phase;
+    this.ports
+      .teleport(a.position, a.yaw)
+      .then((ok) => {
+        if (this.phase !== phaseAtSend) return;
+        if (ok) this.restartReady = true;
+        else this.retryIn = 0.5;
+      })
+      .catch((err) => {
+        this.ports.warn(`chase: restart teleport failed: ${String(err)}`);
+        this.retryIn = 0.5;
+      });
   }
 
   private dropHold(): void {

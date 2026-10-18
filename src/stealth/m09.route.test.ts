@@ -27,6 +27,20 @@ describe('M09 scripted headless route (embers-slice-2.md 3B.2)', () => {
     expect(runScript(M09_ENTRY, noHide, guards(0), los).noticed).toBeGreaterThan(0);
   });
 
+  it('the scripted hide spot keeps the 3 m clearance from every patrol line (the section validator rule)', () => {
+    const hide = M09_SCRIPT[1] as { to: { x: number; z: number } };
+    for (const route of Object.values(M09_PATROLS)) {
+      for (let i = 0; i < route.length; i++) {
+        const a = route[i];
+        const b = route[(i + 1) % route.length];
+        const dx = b.x - a.x;
+        const dz = b.z - a.z;
+        const t = Math.max(0, Math.min(1, ((hide.to.x - a.x) * dx + (hide.to.z - a.z) * dz) / (dx * dx + dz * dz)));
+        expect(Math.hypot(hide.to.x - (a.x + t * dx), hide.to.z - (a.z + t * dz))).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+
   it('the ledger stacks block sight; an open floor does not', () => {
     expect(los({ x: 15, y: 1.5, z: 4 }, { x: 15, y: 1.1, z: 16 })).toBe(false);
     expect(los({ x: 4, y: 1.5, z: 4 }, { x: 4, y: 1.1, z: 16 })).toBe(true);

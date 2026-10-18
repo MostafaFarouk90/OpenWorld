@@ -62,6 +62,8 @@ export interface ParOptions {
   neverSprint?: boolean;
   /** Seconds before `'timer'`; default 600 (only a safety cap). */
   timer?: number;
+  /** Multiplies the runner's ground speeds (a sloppier player below 1); default 1. */
+  pace?: number;
 }
 
 export interface ParResult {
@@ -76,7 +78,7 @@ export interface ParResult {
 
 /**
  * The par runner (plans/slice-2-stealth-chase.md section 12): runs the player's line with the real stamina rules,
- * plain jumps whose reach depends on the current speed, optional Leaps (4 s cooldown) across detour gaps, and a
+ * plain jumps over CHASE.alleyGap whose reach depends on the current speed and the landing height, optional Leaps (4 s cooldown) across detour gaps, and a
  * small cost per vault, against the real `Courier`. Applies the chase's caught and lost rules.
  */
 export function runPar(nodes: readonly RouteNode[], opts: ParOptions): ParResult {
@@ -106,7 +108,8 @@ export function runPar(nodes: readonly RouteNode[], opts: ParOptions): ParResult
     if (gap <= CHASE.catchRadius) {
       return { outcome: 'caught', seconds: t, maxGap, leaps, pathLength: line.length };
     }
-    farFor = gap > CHASE.loseGap ? farFor + DT : 0;
+    const mine = courier.line.project(pos);
+    farFor = gap > CHASE.loseGap && courier.progress > mine ? farFor + DT : 0;
     if (farFor >= CHASE.loseSeconds - 1e-9) return { outcome: 'lost', reason: 'distance', seconds: t, maxGap, leaps, pathLength: line.length };
 
     const canSprint = !opts.neverSprint && !st.exhausted && st.current > 0;
@@ -117,8 +120,10 @@ export function runPar(nodes: readonly RouteNode[], opts: ParOptions): ParResult
       speed = airSpeed;
     } else if (wait > 0) {
       wait -= DT;
+    } else if (mine > courier.progress + 1) {
+      // Cut ahead of him (a Leap past his plank): wait for him to run into you.
     } else {
-      speed = canSprint ? PLAYER.sprintSpeed : PLAYER.walkSpeed;
+      speed = (canSprint ? PLAYER.sprintSpeed : PLAYER.walkSpeed) * (opts.pace ?? 1);
       sprinting = canSprint;
       // Take-off: at a path point that starts a gap segment (a plain jump, or the Leap across a detour gap).
       const at = path[nextPoint - 1];
@@ -140,9 +145,10 @@ export function runPar(nodes: readonly RouteNode[], opts: ParOptions): ParResult
             leaps++;
             speed = airSpeed;
           }
-        } else if (jumpReach(speed, node.position.y, to.y) + 1e-6 >= width) {
+        } else if (jumpReach(speed, node.position.y, to.y) + 1e-6 >= Math.min(CHASE.alleyGap, width)) {
+          // A plain gap: the alley starts at the node; the rest of the segment is run.
           airborne = airtime(PLAYER.jumpSpeed, PLAYER.gravity, node.position.y, to.y);
-          airSpeed = width / airborne;
+          airSpeed = Math.min(CHASE.alleyGap, width) / airborne;
           speed = airSpeed;
         } else {
           // Too slow to clear it: stand and recover, then sprint the jump. A runner who can never sprint is stuck.
