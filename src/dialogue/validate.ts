@@ -44,7 +44,7 @@ export function validateDialogueEffects(effects: Effect[] | undefined, where: st
     } else if ('event' in e) {
       if (typeof e.event !== 'string' || !EFFECT_EVENT_PATTERN.test(e.event)) errs.push(`${w}: event name not allowed`);
     } else if ('unlockMercy' in e) {
-      if (e.unlockMercy !== 'release' && e.unlockMercy !== 'spare') errs.push(`${w}: unlockMercy verb must be release or spare`);
+      if (e.unlockMercy !== 'release' && e.unlockMercy !== 'spare' && e.unlockMercy !== 'calm') errs.push(`${w}: unlockMercy verb must be release, spare or calm`);
     } else if ('grantAbility' in e) {
       if (!nonEmpty(e.grantAbility)) errs.push(`${w}: grantAbility needs an ability id`);
     } else if ('giveGold' in e || 'if' in e || 'placeNpc' in e) {
