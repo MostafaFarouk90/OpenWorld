@@ -4,6 +4,9 @@ import { CAMERA } from '../config/constants';
 import type { InputManager } from '../input/InputManager';
 import type { PhysicsQueries } from '../physics/PhysicsWorld';
 
+const LOCK_SMOOTHING = 8;
+const LOCK_PITCH = -0.25;
+
 /**
  * Orbiting third-person camera. Mouse look updates yaw/pitch every rendered frame for
  * responsiveness; the simulation reads `yaw` when it samples input so movement is camera-relative.
@@ -12,9 +15,14 @@ import type { PhysicsQueries } from '../physics/PhysicsWorld';
 export class ThirdPersonCamera {
   yaw = 0;
   pitch = -0.3;
+  /** Returns the lock-on target point (world space) while locked, else null. Set by the player controller. */
+  lockTarget: (() => { x: number; y: number; z: number } | null) | null = null;
+  /** Receives the frame's horizontal mouse delta in pixels while locked (feeds the lock-on swap gesture). */
+  onLockLook: ((dx: number) => void) | null = null;
   private distance: number = CAMERA.distance;
   private readonly target = new THREE.Vector3();
   private readonly offset = new THREE.Vector3();
+  private readonly tmp = new THREE.Vector3();
 
   constructor(
     private readonly camera: THREE.PerspectiveCamera,
@@ -32,10 +40,16 @@ export class ThirdPersonCamera {
   }
 
   /** Places the camera behind `feet` (the interpolated player position). Call once per frame. */
-  update(feet: THREE.Vector3): void {
+  update(feet: THREE.Vector3, frameTime = 1 / 60): void {
     const { dx, dy } = this.input.consumeMouseDelta();
-    this.yaw -= dx * CAMERA.mouseSensitivity;
-    this.pitch = THREE.MathUtils.clamp(this.pitch - dy * CAMERA.mouseSensitivity, CAMERA.minPitch, CAMERA.maxPitch);
+    const lock = this.lockTarget?.() ?? null;
+    if (lock) {
+      this.onLockLook?.(dx);
+      this.easeToward(feet, lock, frameTime);
+    } else {
+      this.yaw -= dx * CAMERA.mouseSensitivity;
+      this.pitch = THREE.MathUtils.clamp(this.pitch - dy * CAMERA.mouseSensitivity, CAMERA.minPitch, CAMERA.maxPitch);
+    }
     this.distance = THREE.MathUtils.clamp(
       this.distance + this.input.consumeWheel() * 0.5,
       CAMERA.minDistance,
@@ -43,6 +57,8 @@ export class ThirdPersonCamera {
     );
 
     this.target.set(feet.x, feet.y + CAMERA.targetHeight, feet.z);
+    // While locked, aim a third of the way to the target so both stay in frame.
+    if (lock) this.target.lerp(this.tmp.set(lock.x, lock.y, lock.z), 1 / 3);
     // Direction from the target back to the camera.
     this.offset.set(
       Math.sin(this.yaw) * Math.cos(this.pitch),
@@ -56,5 +72,20 @@ export class ThirdPersonCamera {
 
     this.camera.position.copy(this.target).addScaledVector(this.offset, dist);
     this.camera.lookAt(this.target);
+  }
+
+  /** Eases yaw toward the target bearing (shortest arc, never overshooting) and pitch toward the lock pitch. */
+  private easeToward(feet: THREE.Vector3, lock: { x: number; y: number; z: number }, frameTime: number): void {
+    const k = 1 - Math.exp(-LOCK_SMOOTHING * frameTime);
+    const hx = lock.x - feet.x;
+    const hz = lock.z - feet.z;
+    // Zero horizontal distance has no bearing: keep the previous yaw.
+    if (Math.hypot(hx, hz) > 1e-6) {
+      const desired = Math.atan2(-hx, -hz);
+      const diff = Math.atan2(Math.sin(desired - this.yaw), Math.cos(desired - this.yaw));
+      this.yaw += diff * k;
+    }
+    const pitchGoal = THREE.MathUtils.clamp(LOCK_PITCH, CAMERA.minPitch, CAMERA.maxPitch);
+    this.pitch += (pitchGoal - this.pitch) * k;
   }
 }
