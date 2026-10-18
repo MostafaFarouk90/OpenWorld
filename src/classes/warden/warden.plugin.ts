@@ -85,7 +85,8 @@ const wardenPlugin: GamePlugin = {
           status: () => svc('status'),
           spells: () => svc<SpellsLike>('spells'),
           attack: () => controller()?.activeAttack() ?? null,
-          interrupted: () => ctx.actors.player.dead || verbs()?.staggered === true,
+          // A dodge, block or reaction cutting the swing short cancels the cleave too.
+          interrupted: () => ctx.actors.player.dead || verbs()?.staggered === true || !!controller()?.currentAction,
           reportTrigger: (id) => (svc<{ reportTrigger?(id: string): void }>('abilities'))?.reportTrigger?.(id),
           fx: {
             howl: (at) => spawn('shockwave-ring', { x: at.x, y: at.y + 0.2, z: at.z }),

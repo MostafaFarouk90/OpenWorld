@@ -70,7 +70,7 @@ describe('Cleaving Swing', () => {
   let r: ReturnType<typeof rig>;
   beforeEach(() => (r = rig()));
 
-  it('hits every hostile in the front arc that the blade did not hit, once, with the blade\'s numbers', () => {
+  it('hits every hostile in the front arc that the blade did not hit, once, with the weapon\'s base numbers', () => {
     r.foe('a', 0, -2);
     r.foe('b', 1, -2);
     r.foe('c', -1.5, -2.5);
@@ -81,7 +81,7 @@ describe('Cleaving Swing', () => {
     const extras = r.applied.filter((a) => a.attackId === CLEAVE_ATTACK_ID);
     expect(extras.map((a) => a.targetId).sort()).toEqual(['b', 'c']);
     for (const e of extras) {
-      expect(e).toMatchObject({ attackerId: 'player', kind: 'melee', amount: 14, poise: 12, swingId: 1 });
+      expect(e).toMatchObject({ attackerId: 'player', kind: 'melee', amount: 10, poise: 10, swingId: 1 });
       expect(e.direction).toBeInstanceOf(THREE.Vector3);
     }
     r.combat.tick();
@@ -119,10 +119,25 @@ describe('Cleaving Swing', () => {
     expect(r.applied.map((a) => a.targetId)).toEqual(['south']);
   });
 
-  it('uses the base damage when the blade hit nothing', () => {
+  it('a target that blocked, parried or was immune to the blade is not cleaved again', () => {
     r.foe('a', 0, -2);
+    r.foe('b', 0.5, -2);
+    r.st.attack = { clip: SLICE, swingId: 1, active: true };
+    r.combat.tick();
+    r.dealt({ targetId: 'a', outcome: 'blocked' });
+    r.dealt({ targetId: 'b', outcome: 'immune' });
     r.swing();
-    expect(r.applied[0]).toMatchObject({ amount: 10, poise: 10 });
+    expect(r.applied).toEqual([]);
+  });
+
+  it('extras use the weapon base, not the blade\'s modified (bone, back-hit, scarecrow) numbers', () => {
+    r.foe('a', 0, -2);
+    r.foe('b', 0.5, -2);
+    r.st.attack = { clip: SLICE, swingId: 1, active: true };
+    r.combat.tick();
+    r.dealt({ targetId: 'a', amount: 1, poise: 1 });
+    r.swing();
+    expect(r.applied[0]).toMatchObject({ targetId: 'b', amount: 10, poise: 10 });
   });
 
   it('does nothing when unlearned, for the other attacks, when interrupted, or when the window never opened', () => {
@@ -287,6 +302,17 @@ describe('War Howl', () => {
     r.hurt(40, { kind: 'status' });
     r.hurt(40, { outcome: 'blocked' });
     expect(r.staggers).toEqual([]);
+  });
+
+  it('after a reset below 50% (a load at low health) the first hit does not howl; it re-arms above 50%', () => {
+    r.player.health = 30;
+    r.combat.reset();
+    r.hurt(25);
+    expect(r.staggers).toEqual([]);
+    r.player.health = 80;
+    r.combat.tick();
+    r.hurt(40);
+    expect(r.staggers).toHaveLength(1);
   });
 
   it('an unlearned skill does not consume the trigger: learned later, the next hit below 50% fires', () => {
