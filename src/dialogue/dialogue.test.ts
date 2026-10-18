@@ -277,6 +277,11 @@ describe('validateDialogue', () => {
     expect(e(def([N('a'), N('a')]))).toMatch(/duplicate/);
     expect(e(def([N('a', { next: 'a' })]))).toMatch(/cycle/);
   });
+  it('unlockMercy accepts release, spare and calm, and rejects other verbs', () => {
+    const e = (v: string) => validateDialogue(def([N('a', { effects: [{ unlockMercy: v } as never] })]), ok).errors.join('\n');
+    for (const v of ['release', 'spare', 'calm']) expect(e(v)).toBe('');
+    expect(e('warmHand')).toMatch(/unlockMercy verb must be release, spare or calm/);
+  });
   it('unreachable warns', () => {
     expect(validateDialogue(def([N('a'), N('b')]), ok).warnings.join()).toMatch(/"b"/);
   });

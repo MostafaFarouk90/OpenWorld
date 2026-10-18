@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "savedAt": 1792200000000,
+  "reason": "waystone",
+  "playtimeSeconds": 2400,
+  "entries": {
+    "progression": {
+      "version": 1,
+      "data": { "xp": 240, "storyPoints": 0, "learned": ["knight.rimBash"], "bar": [null, null, null, null, null, null] }
+    }
+  }
+}

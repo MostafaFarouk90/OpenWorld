@@ -367,7 +367,6 @@ describe('calm is refused once an attack has started', () => {
     expect(e.state).toBe('stagger');
     expect(tryCalm(e)).toBe('refused');
     expect(e.warmHandOpen).toBe(true);
-    expect(e.mercyOpen).toBe(true);
     kill(t, id!);
     t.tick(DT);
     expect(e.warmHandOpen).toBe(false);
