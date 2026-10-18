@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { registerClassStats, resetClassStats } from '../progression/classStats';
 import { BURN } from '../vfx/tuning';
 import plugin from './spells.plugin';
 import { makeCtx } from './testHost';
@@ -24,6 +25,43 @@ describe('spells plugin', () => {
     expect(f.systems).toHaveLength(0);
     expect(f.persisted.size).toBe(0);
     expect(f.world.events.count()).toBe(0);
+  });
+
+  it('setMaxEmber changes maxEmber and refuses bad numbers', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    expect(s.setMaxEmber(60)).toBe(true);
+    expect(s.maxEmber).toBe(60);
+    expect(s.ember).toBe(60);
+    expect(s.setMaxEmber(Number.NaN)).toBe(false);
+    expect(s.maxEmber).toBe(60);
+    plugin.dispose!();
+  });
+
+  it('restoreEmber adds up to the maximum and reports what was added; bad input adds nothing', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    expect(s.spendEmber(40)).toBe(true);
+    expect(s.restoreEmber(15)).toBe(15);
+    expect(s.ember).toBe(75);
+    expect(s.restoreEmber(500)).toBe(25);
+    expect(s.ember).toBe(100);
+    for (const bad of [0, -3, Number.NaN, Number.POSITIVE_INFINITY]) expect(s.restoreEmber(bad)).toBe(0);
+    expect(s.ember).toBe(100);
+    plugin.dispose!();
+  });
+
+  it('applies the Ember maximum of the class when progression appears after the spells', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    registerClassStats('mage', { health: 85, healthPerLevel: 6, stamina: 80, ember: 140 });
+    f.services.progression = { addMaxHealthModifier: () => () => {}, learned: () => false, classId: 'mage' };
+    f.tick(70);
+    expect(f.services.spells!.maxEmber).toBe(140);
+    plugin.dispose!();
+    resetClassStats();
   });
 
   it('rest clears burn and emits burn.changed', () => {

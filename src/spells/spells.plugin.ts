@@ -1,6 +1,7 @@
 import { heightAt } from '../terrain/heightfield';
 import { looseService, type ActorId, type GamePlugin, type PluginContext } from '../vfx/ports';
-import { BURN, EMBER } from '../vfx/tuning';
+import { BURN } from '../vfx/tuning';
+import { classStats } from '../progression/classStats';
 import { Burn, type BurnZone } from './Burn';
 import { createBanner } from './BannerPlant';
 import { LeapController } from './Leap';
@@ -187,7 +188,13 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       get burn() { return burn.value; },
       get scars() { return burn.scars; },
       get ember() { return ember.value; },
-      get maxEmber() { return EMBER.max; },
+      get maxEmber() { return ember.max; },
+      setMaxEmber: (n) => ember.setMax(n),
+      restoreEmber: (n) => {
+        const before = ember.value;
+        ember.restore(n);
+        return ember.value - before;
+      },
       spendEmber: (n) => ember.spend(n),
       addBurn: (n, source) => void burn.add(n, source),
       useShard: (gain, source) => useShard(gain, source),
@@ -271,7 +278,10 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
     const bindLate = (): void => {
       if (!offModifier) {
         // Returns base * 1 while BURN_MAX_HEALTH_PENALTY_ENABLED is false (deferred, see Burn.ts).
-        offModifier = looseService(ctx.services, 'progression')?.addMaxHealthModifier('burn', () => burn.healthMultiplier()) ?? null;
+        const prog = looseService(ctx.services, 'progression');
+        offModifier = prog?.addMaxHealthModifier('burn', () => burn.healthMultiplier()) ?? null;
+        // Progression set up after us: it could not hand us the class row's Ember maximum yet.
+        if (offModifier) ember.setMax(classStats(prog?.classId).ember);
       }
       rally.bindAbilities();
       bindBanner();

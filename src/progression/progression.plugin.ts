@@ -31,12 +31,18 @@ const progressionPlugin: GamePlugin = {
       actor: player,
       flags: { get: (k) => ctx.state.getFlag(k), set: (k, v) => ctx.state.setFlag(k, v) },
       gold: () => (ctx.services as unknown as { get(n: string): unknown }).get('inventory') as GoldPort | undefined,
+      // The class row's Ember maximum; the spells apply it too when they set up after us (see spells.plugin).
+      onClassStats: (row) => {
+        const spells = (ctx.services as unknown as { get(n: string): unknown }).get('spells') as { setMaxEmber?(n: number): boolean } | undefined;
+        spells?.setMaxEmber?.(row.ember);
+      },
     });
     // A fresh game starts at full health on the new maximum; a loaded save restores its own health later.
     const start = player();
     const wasFull = start.health >= start.maxHealth;
     progression.applyMaxHealth();
     if (wasFull) start.health = start.maxHealth;
+    progression.applyClassResources(true);
 
     const abilities = new Abilities({
       progression,
@@ -62,7 +68,10 @@ const progressionPlugin: GamePlugin = {
       load: (data, version) => progression.load(data, version),
     });
     // Other persistables (the player's health) load around us: recompute once everything is in.
-    ctx.events.on('save.loaded', () => progression.applyMaxHealth());
+    ctx.events.on('save.loaded', () => {
+      progression.applyMaxHealth();
+      progression.applyClassResources();
+    });
     // Burn and Scar penalties are read from their modifiers, so re-read when Burn moves.
     ctx.events.on('burn.changed', () => progression.refreshMaxHealth());
 
