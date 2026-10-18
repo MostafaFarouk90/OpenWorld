@@ -117,6 +117,32 @@ export class WaystoneNetwork {
     return { ok: true };
   }
 
+  /** Why a rest is impossible right now (dead, cutscene, dialogue, hostiles near), or null. Waystone rests share it. */
+  canRestNow(): 'dead' | 'cutscene' | 'dialogue' | 'in-combat' | null {
+    const ctx = this.ports.context();
+    if (ctx.dead) return 'dead';
+    if (ctx.cutscene) return 'cutscene';
+    if (ctx.dialogue) return 'dialogue';
+    if (ctx.hostileAggro && !ctx.allowRestInCombat) return 'in-combat';
+    return null;
+  }
+
+  /**
+   * A rest away from any waystone (the inn). Heals and saves like a waystone rest but never touches `respawnId` or
+   * `lastRest`, and the `rest` event carries only `placeId`, so a later death respawns at the last rested waystone.
+   */
+  restAt(placeId: string): { ok: true } | { ok: false; reason: 'dead' | 'cutscene' | 'dialogue' | 'in-combat' } {
+    const blocked = this.canRestNow();
+    if (blocked) {
+      if (blocked === 'in-combat') this.ports.toast('waystone.foesNear');
+      return { ok: false, reason: blocked };
+    }
+    this.ports.restoreVitals();
+    this.ports.emit('rest', { placeId });
+    this.ports.requestSave('rest');
+    return { ok: true };
+  }
+
   rest(id: string): RestResult {
     if (!this.anchor(id)) return { ok: false, reason: 'unknown' };
     if (!this.lit.has(id)) return { ok: false, reason: 'not-lit' };

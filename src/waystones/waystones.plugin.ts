@@ -142,6 +142,8 @@ const waystones: GamePlugin = {
       respawnPoint: () => net.respawnPoint(),
       respawnPlayer: () => net.respawnPlayer(),
       rekindle: (id, cause = 'script') => net.rekindle(id, cause),
+      canRestNow: () => net.canRestNow(),
+      restAt: (placeId) => net.restAt(placeId),
       travel: async (toId) => {
         const r = await net.travel(toId);
         if (r.ok) prompts()?.success('fastTravel');
