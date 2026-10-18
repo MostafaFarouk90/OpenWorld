@@ -2,7 +2,7 @@ import type { StatusService } from '../../actors/status';
 import type { GameContext } from '../../core/Game';
 import type { GamePlugin } from '../../core/plugins';
 import type { SpellsService } from '../../spells/types';
-import { heightAt } from '../../terrain/heightfield';
+import { createProjectileHost } from '../../spells/projectileHost';
 import type { Vec3 } from '../../vfx/ports';
 import '../types';
 import { EMBERWRIGHT_KIT } from './kit';
@@ -43,6 +43,8 @@ const plugin: GamePlugin = {
     registerCodexStrings(ctx);
 
     const spells = (): SpellsService | undefined => svc<SpellsService>('spells');
+    // The shared host of class projectiles (thread 16): actors, terrain height and a ray against walls and doors.
+    const projectileHost = createProjectileHost(ctx);
     const host: EmberwrightHost = {
       events: ctx.events as never,
       actors: ctx.actors as never,
@@ -66,11 +68,8 @@ const plugin: GamePlugin = {
         const hit = ctx.physics.raycast(from, dir, dist, ctx.world.player.controller.collider);
         return !!hit && hit.distance < dist - 0.3;
       },
-      rayCast: (origin, dir, maxDist) => {
-        const hit = ctx.physics.raycast(origin, dir, maxDist, ctx.world.player.controller.collider);
-        return hit ? { point: { x: origin.x + dir.x * hit.distance, y: origin.y + dir.y * hit.distance, z: origin.z + dir.z * hit.distance } } : null;
-      },
-      heightAt,
+      rayCast: projectileHost.rayCast,
+      heightAt: projectileHost.heightAt,
       fx: (id, at, params) => {
         try { svc<VfxPort>('vfx')?.spawnEffect?.(id, { position: at, scale: (params?.scale as number | undefined) ?? 1 }, params); } catch { /* an effect must never break a cast */ }
       },
