@@ -136,6 +136,10 @@ export interface EnemyEvents {
   'enemies.groupCleared': { spawnerId: string };
   'enemies.state': { actorId: ActorId; from: string; to: string };
   'enemies.yield': { actorId: ActorId; seconds: number };
+  /** Core boss registry (actors-and-damage.md section 7); thread 1 listens to open the boss's mercy hold. */
+  'boss.releaseWindow': { bossId: string; open: boolean };
+  'boss.released': { bossId: string; actorId: ActorId };
+  'boss.ended': { bossId: string; actorId: ActorId; reason: 'despawned' | 'unregistered' };
 }
 export type EnemyEventName = keyof EnemyEvents;
 
@@ -199,6 +203,7 @@ export interface PlayerPort {
 }
 
 export interface VfxLike {
+  spawnEffect?(id: string, transform: { position: { x: number; y: number; z: number } }, params?: Record<string, number | string | boolean>): unknown;
   dissolve(root: THREE.Object3D, seconds: number): Promise<void>;
   attachTrail?(
     id: string,
@@ -213,6 +218,22 @@ export interface ServicesPort {
   get(name: 'lockOn'): { readonly targetId: ActorId | null } | undefined;
   /** Thread 3's quests service: the started, unfinished quest ids. */
   get(name: 'quests'): { active(): string[] } | undefined;
+  /**
+   * Thread 2's spells service. `useShard` charges Burn and adds the Scar at Burn 75 or more; until it
+   * merges, `addBurn` charges the Burn alone.
+   */
+  get(name: 'spells'): ShardSpells | undefined;
+}
+
+export interface ShardSpells {
+  useShard?(gain: number, source: string): void;
+  addBurn?(n: number, source: string): void;
+}
+
+/** The slice of the core BossRegistry the mercy hold uses. */
+export interface BossesPort {
+  state(bossId: string): { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | null } | null;
+  release(bossId: string): boolean;
 }
 
 /** The parts of the AssetLoader the enemy models need (requests-round-1 item 6). */
@@ -235,6 +256,8 @@ export interface EnemyHost {
   interaction: InteractionPort;
   state: StatePort;
   services: ServicesPort;
+  /** The core boss registry; absent in tests that do not need bosses. */
+  bosses?: BossesPort;
   player: PlayerPort;
   heightAt(x: number, z: number): number;
   warn(message: string): void;

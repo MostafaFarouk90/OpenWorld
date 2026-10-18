@@ -4,10 +4,12 @@ import { boneMultiplier, Enemy, type EnemyEnv, type EnemySpawn } from './Enemy';
 import { EnemyAnimator } from './EnemyAnimator';
 import { buildEnemyModel, type EnemyModelSource } from './EnemyModel';
 import { scaleStats } from './level';
-import { makeMercyInteractable, mercyEvents, mercyTargets, type MercySubject } from './mercy';
-import type { ActorId, EnemyEvents, EnemyHost } from './ports';
+import { makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyTargets, nextPulseId, type BossMercySubject, type MercySubject } from './mercy';
+import { MercyTally, type TallyRow } from './mercyTally';
+import * as THREE from 'three';
+import type { ActorId, EnemyEvents, EnemyHost, MercyEventLike } from './ports';
 import { SpawnerRegistry, patrolForSlot, type SpawnRequest } from './spawners';
-import { ASH_GRAB, MERCY, WORLD_AI, AI } from './tuning';
+import { ASH_GRAB, BOSS_MERCY, MERCY, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions } from './types';
 
 /** Supplies a fresh model clone (and the shared clips) for a def; the plugin wraps the AssetLoader. */
@@ -25,6 +27,8 @@ export interface EnemiesService {
   mercyUnlocked(verb: 'release' | 'spare'): boolean;
   setWarmthTier(w: number): void;
   lockBlockLevel(blockId: string, level: number): void;
+  /** Mercies and kills per creature kind, for the codex (thread 8). */
+  mercyTally(): Record<string, TallyRow>;
 }
 
 /**
@@ -38,6 +42,8 @@ export class EnemyManager {
   private readonly tokenOf = new Map<Enemy, ActorId>();
   private readonly mercyRemovers = new Map<Enemy, () => void>();
   private readonly subjects = new Map<Enemy, MercySubject>();
+  private readonly bossHolds = new Map<string, () => void>();
+  readonly tally = new MercyTally();
   private readonly unsubs: Array<() => void> = [];
   private readonly rng: () => number;
   private counter = 0;
@@ -85,6 +91,7 @@ export class EnemyManager {
     mercyUnlocked: (verb) => this.mercyUnlocked(verb),
     setWarmthTier: (w) => this.spawners.setWarmthTier(w),
     lockBlockLevel: (b, l) => this.spawners.lockBlockLevel(b, l),
+    mercyTally: () => this.tally.snapshot(),
   };
 
   mercyUnlocked(verb: 'release' | 'spare'): boolean {
@@ -181,13 +188,120 @@ export class EnemyManager {
 
   private completeMercy(initiator: MercySubject): void {
     const covered = mercyTargets(initiator, this.subjects.values());
-    for (const ev of mercyEvents(covered)) {
+    const events = mercyEvents(covered);
+    // One charge per completed hold, however many wraiths the pulse covers (design 9.7).
+    if (initiator.def.mercy.verb === 'release') this.chargeShard(MERCY.releaseBurn, 'release');
+    this.applyMercy(events);
+    if (initiator.def.mercy.verb === 'spare') this.sharePackSpare(initiator);
+    if (initiator.def.mercy.verb === 'release') {
+      const at = initiator.feet(new THREE.Vector3());
+      this.releaseFx(at);
+    }
+  }
+
+  /** Burn and, at 75 or more, a Scar: thread 2's `useShard` when it exists, the bare Burn charge otherwise. */
+  private chargeShard(cost: number, source: string): void {
+    const spells = this.host.services.get('spells');
+    if (!spells) return;
+    if (spells.useShard) spells.useShard(cost, source);
+    else spells.addBurn?.(cost, source);
+  }
+
+  /** The state change, the slot mark, the tally and the `mercy` event for each covered enemy. */
+  private applyMercy(events: readonly MercyEventLike[]): void {
+    for (const ev of events) {
       const enemy = this.enemies.get(ev.actorId!);
       if (!enemy) continue;
+      // Spent now, not when it finally leaves: a save mid-dissolve or mid-walk-off must not bring it back.
+      this.spawners.spendMercy(enemy.id);
       if (ev.verb === 'release') enemy.release();
       else enemy.spare();
+      this.tally.mercy(ev);
       this.host.events.emit('mercy', ev);
     }
+  }
+
+  /** A pack shares its mercy: partners of a spared Footman at a poise break are offered the same (design 10). */
+  private sharePackSpare(spared: MercySubject): void {
+    const sparedEnemy = this.enemies.get(spared.actorId);
+    const spawnerId = sparedEnemy?.spawnerId;
+    if (!sparedEnemy || !spawnerId) return;
+    for (const e of this.enemies.values()) {
+      if (e === sparedEnemy || e.spawnerId !== spawnerId) continue;
+      if (e.feet.distanceTo(sparedEnemy.feet) <= AI.packShareRadius) e.offerYield();
+    }
+  }
+
+  private releaseFx(at: THREE.Vector3): void {
+    this.host.services.get('vfx')?.spawnEffect?.('release-pulse', { position: { x: at.x, y: at.y, z: at.z } });
+  }
+
+  // ---- boss mercy ---------------------------------------------------------------------------------
+
+  /** `boss.releaseWindow`: the boss's hold-T opens with the registry's release window and closes with it. */
+  private onBossWindow(bossId: string, open: boolean): void {
+    this.closeBossHold(bossId);
+    const bosses = this.host.bosses;
+    const table = BOSS_MERCY[bossId];
+    if (!open || !bosses || !table) return;
+    const st = bosses.state(bossId);
+    if (!st) return;
+    const actorId = st.actorId;
+    const subject: BossMercySubject = {
+      bossId,
+      actorId,
+      feet: (out) => {
+        const a = this.host.actors.get(actorId);
+        return a ? a.worldPosition(out) : out.set(0, 0, 0);
+      },
+    };
+    this.bossHolds.set(
+      bossId,
+      this.host.interaction.register(
+        makeBossMercyInteractable(subject, {
+          unlocked: () => this.mercyUnlocked('release'),
+          windowOpen: () => bosses.state(bossId)?.releaseOpen === true,
+          lockOnTarget: () => this.host.services.get('lockOn')?.targetId ?? null,
+          complete: (b) => this.completeBossMercy(b),
+        }),
+      ),
+    );
+  }
+
+  private closeBossHold(bossId: string): void {
+    this.bossHolds.get(bossId)?.();
+    this.bossHolds.delete(bossId);
+  }
+
+  private completeBossMercy(boss: BossMercySubject): void {
+    const bosses = this.host.bosses;
+    const table = BOSS_MERCY[boss.bossId];
+    if (!bosses || !table) return;
+    // The registry decides: only a true release charges Burn and pays the ledger row.
+    if (!bosses.release(boss.bossId)) return;
+    this.closeBossHold(boss.bossId);
+    const at = boss.feet(new THREE.Vector3());
+    const pulseId = nextPulseId();
+    // The pulse also frees every staggered undead within 4 m, under the same pulseId and one charge.
+    const around: MercySubject[] = [];
+    const p = new THREE.Vector3();
+    for (const s of this.subjects.values()) {
+      if (s.def.mercy.verb === 'release' && s.mercyOpen() && s.feet(p).distanceTo(at) <= MERCY.pulseRadius) around.push(s);
+    }
+    this.chargeShard(MERCY.bossReleaseBurn, 'release');
+    const bossEvent: MercyEventLike = {
+      verb: table.verb,
+      tier: 'boss',
+      track: table.track,
+      creature: boss.bossId,
+      actorId: boss.actorId,
+      amount: table.amount,
+      pulseId,
+    };
+    this.tally.mercy(bossEvent);
+    this.host.events.emit('mercy', bossEvent);
+    this.applyMercy(mercyEvents(around, pulseId));
+    this.releaseFx(at);
   }
 
   // ---- shared state used by enemies -----------------------------------------------------------------
@@ -260,7 +374,9 @@ export class EnemyManager {
     });
     on('actor.staggered', (p) => this.enemies.get(p.actorId)?.staggered(p.byId));
     on('actor.died', (p) => {
-      this.enemies.get(p.actorId)?.died();
+      const dying = this.enemies.get(p.actorId);
+      if (dying) this.tally.killed(dying.def.kind);
+      dying?.died();
       for (const e of this.enemies.values()) if (e.id !== p.actorId) e.targetGone(p.actorId);
     });
     on('actor.despawned', (p) => {
@@ -268,7 +384,19 @@ export class EnemyManager {
       this.enemies.get(p.actorId)?.cleanup();
       for (const e of this.enemies.values()) e.targetGone(p.actorId);
     });
-    on('mercy.revoked', (p) => this.enemies.get(p.actorId)?.revoked(this.host.actors.player.id));
+    on('mercy.revoked', (p) => {
+      this.tally.revoked(p.actorId);
+      const e = this.enemies.get(p.actorId);
+      // Hostile again: its slot is live, not spent, so a reload does not drop it.
+      if (e?.revoked(this.host.actors.player.id)) this.spawners.unspendMercy(p.actorId);
+    });
+    on('enemies.yield', (p) => {
+      const e = this.enemies.get(p.actorId);
+      if (e) this.host.services.get('vfx')?.spawnEffect?.('yield-glyph', { position: { x: e.feet.x, y: e.feet.y, z: e.feet.z } }, { seconds: p.seconds });
+    });
+    on('boss.releaseWindow', (p) => this.onBossWindow(p.bossId, p.open));
+    on('boss.released', (p) => this.closeBossHold(p.bossId));
+    on('boss.ended', (p) => this.closeBossHold(p.bossId));
     on('rest', () => this.spawners.onRest());
     on('quest.started', (p) => this.spawners.onQuestStarted(p.questId, (f) => this.host.state.getBool(f, false)));
     on('flag.changed', (p) => {
@@ -326,6 +454,7 @@ export class EnemyManager {
     if (this.disposed) return;
     this.disposed = true;
     for (const u of this.unsubs.splice(0)) u();
+    for (const id of [...this.bossHolds.keys()]) this.closeBossHold(id);
     for (const e of [...this.enemies.values()]) e.despawn();
     this.enemies.clear();
   }

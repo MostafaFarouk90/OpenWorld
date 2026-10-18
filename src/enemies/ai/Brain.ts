@@ -328,6 +328,23 @@ export class Brain {
     this.enter('dead');
   }
 
+  /**
+   * A packmate was spared (design section 10, "a pack shares one state"). A partner at a poise break
+   * kneels for a fresh window whatever its health; one already kneeling has its window refreshed; any
+   * other state is left alone. Returns whether it is now yielding.
+   */
+  offerYield(): boolean {
+    if (this.finished || this.def.mercy.when !== 'yielding') return false;
+    if (this._state === 'yield') {
+      this.stateTime = 0;
+      return true;
+    }
+    if (this._state !== 'stagger') return false;
+    this.enter('yield');
+    this.hooks.yieldStarted(AI.yieldSeconds);
+    return true;
+  }
+
   released(): void {
     if (this.finished) return;
     this.enter('released');

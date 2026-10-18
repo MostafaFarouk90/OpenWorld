@@ -13,7 +13,9 @@ export type EffectId =
   | 'surge'
   | 'wraith-dissolve'
   | 'waystone-rekindle'
-  | 'skill-q';
+  | 'skill-q'
+  | 'release-pulse'
+  | 'yield-glyph';
 
 export const EFFECT_IDS: readonly EffectId[] = [
   'hit-spark',
@@ -27,6 +29,8 @@ export const EFFECT_IDS: readonly EffectId[] = [
   'wraith-dissolve',
   'waystone-rekindle',
   'skill-q',
+  'release-pulse',
+  'yield-glyph',
 ];
 
 export interface EffectTransform {
