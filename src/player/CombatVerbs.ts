@@ -334,13 +334,15 @@ export class CombatVerbs {
       if (guarding && a.pressed('attack1') && this.learned(RIM_BASH_SKILL) && tick >= this.bashReadyAt) this.rimBash(c);
     }
 
-    const sprinting = a.down('sprint') && ctx.player.moving && grounded && !this.stamina.exhausted && action === null && !c.movementLocked;
+    // On horseback Shift gallops on the horse's own stamina (thread 20): no drain, no sprint prompt, no exhaustion lock.
+    const riding = ctx.services.get('mount')?.mounted() === true;
+    const sprinting = !riding && a.down('sprint') && ctx.player.moving && grounded && !this.stamina.exhausted && action === null && !c.movementLocked;
     this.stamina.tick({ blocking: guarding, sprinting });
     this.sprintTicks = sprinting ? this.sprintTicks + 1 : 0;
     if (this.sprintTicks === SPRINT_PROMPT_TICKS) this.prompts()?.success('sprint');
     if (a.pressed('jump') && grounded && action === null && !c.movementLocked) this.prompts()?.success('jump');
 
-    this.setLock('verbs.exhausted', this.stamina.exhausted ? ['sprint'] : null);
+    this.setLock('verbs.exhausted', this.stamina.exhausted && !riding ? ['sprint'] : null);
     this.setLock('verbs.heavy', !this.stamina.canAfford(STAMINA.heavyAttackCost) ? [`attack${this.attackSet().heavyIndex + 1}` as Action] : null);
     this.applyMovement();
   }
