@@ -55,6 +55,7 @@ describe('register and state', () => {
       breaks: 0,
       breaksPerPhase: 3,
       shield: false,
+      thresholds: [0.5],
       releaseOpen: false,
       outcome: null,
     });

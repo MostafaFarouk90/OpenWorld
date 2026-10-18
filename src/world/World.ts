@@ -3,7 +3,7 @@ import { FIXED_TIMESTEP, WORLD } from '../config/constants';
 import type { InputSnapshot } from '../input/InputManager';
 import type { PhysicsWorld, Vec3 } from '../physics/PhysicsWorld';
 import { Player, type PlayerOptions } from '../characters/Player';
-import type { KnightAvatar } from '../characters/KnightAvatar';
+import type { PlayerAvatar } from '../characters/PlayerAvatar';
 import type { Foot } from '../characters/knightClips';
 import { heightAt as terrainHeightAt } from '../terrain/heightfield';
 import { TerrainColliders } from './TerrainColliders';
@@ -53,7 +53,7 @@ export class World {
   readonly spawn: Vec3;
   /** Player sword against training dummies; runs after the avatar each tick. */
   readonly combat: WorldCombat;
-  private _avatar: KnightAvatar | null = null;
+  private _avatar: PlayerAvatar | null = null;
   private unsubscribe: (() => void) | null = null;
   private disposed = false;
   private readonly feet = { x: 0, y: 0, z: 0 };
@@ -80,12 +80,12 @@ export class World {
     });
   }
 
-  get avatar(): KnightAvatar | null {
+  get avatar(): PlayerAvatar | null {
     return this._avatar;
   }
 
-  /** Swaps the placeholder capsule for the Knight and routes its footsteps to the sounds. */
-  setAvatar(avatar: KnightAvatar): void {
+  /** Swaps the placeholder capsule for the class avatar and routes its footsteps to the sounds. */
+  setAvatar(avatar: PlayerAvatar): void {
     if (this._avatar) throw new Error('World: the avatar is already set');
     this._avatar = avatar;
     this.player.setAvatar(avatar.root);
@@ -97,6 +97,24 @@ export class World {
       if (e.type === 'footstep') sounds.footstep(e.foot, this.simulatedFeet());
       else if (e.type === 'land') sounds.land(e.fallSpeed, this.simulatedFeet());
     });
+  }
+
+  /**
+   * A class kit swap (v0.5): unsubscribes the old avatar's sounds, disarms it in combat, disposes it, then
+   * sets `avatar` as `setAvatar` does. Before any avatar is set it is `setAvatar`. Returns the old avatar.
+   */
+  replaceAvatar(avatar: PlayerAvatar): PlayerAvatar | null {
+    const old = this._avatar;
+    if (old === avatar) return null;
+    if (old) {
+      this.unsubscribe?.();
+      this.unsubscribe = null;
+      this.combat.detachPlayer();
+      old.dispose();
+      this._avatar = null;
+    }
+    this.setAvatar(avatar);
+    return old;
   }
 
   /** `move` is the camera-relative input already rotated into world space. */

@@ -229,6 +229,92 @@ describe('InputManager wheel', () => {
   });
 });
 
+describe('InputManager wheel claims (v0.5)', () => {
+  it('unclaimed: the no-owner consumer gets the wheel; a named owner gets 0 and drains nothing', () => {
+    const { element, input } = setup();
+    wheel(element, 120);
+    expect(input.consumeWheel('calm')).toBe(0);
+    expect(input.consumeWheel()).toBe(1);
+  });
+
+  it('a claim routes the wheel to the owner only; others get 0 and drain nothing', () => {
+    const { element, input } = setup();
+    const release = input.claimWheel('calm');
+    expect(input.wheelOwner).toBe('calm');
+    wheel(element, 120);
+    expect(input.consumeWheel()).toBe(0);
+    expect(input.consumeWheel('other')).toBe(0);
+    expect(input.consumeWheel('calm')).toBe(1);
+    expect(input.consumeWheel('calm')).toBe(0);
+    release();
+    expect(input.wheelOwner).toBeNull();
+  });
+
+  it('releasing drops unread scroll so it never reaches the camera; releasing twice is a no-op', () => {
+    const { element, input } = setup();
+    const release = input.claimWheel('calm');
+    wheel(element, 120);
+    release();
+    release();
+    expect(input.consumeWheel()).toBe(0);
+    wheel(element, -3);
+    expect(input.consumeWheel()).toBe(-1);
+  });
+
+  it('claims stack: the top wins, releasing a lower one keeps the top and its scroll', () => {
+    const { element, input } = setup();
+    const lower = input.claimWheel('a');
+    const upper = input.claimWheel('b');
+    wheel(element, 120);
+    expect(input.consumeWheel('a')).toBe(0);
+    lower();
+    expect(input.wheelOwner).toBe('b');
+    expect(input.consumeWheel('b')).toBe(1);
+    wheel(element, 120);
+    upper();
+    expect(input.wheelOwner).toBeNull();
+    expect(input.consumeWheel()).toBe(0);
+  });
+});
+
+describe('InputManager pressedAtMs (v0.5)', () => {
+  const at = (win: EventTarget, code: string, t: number) => {
+    const e = Object.assign(new Event('keydown'), { code, repeat: false, preventDefault: () => {} });
+    Object.defineProperty(e, 'timeStamp', { value: t });
+    win.dispatchEvent(e);
+  };
+
+  it('is the first press latched since the last sample, and null otherwise', () => {
+    const { win, input } = setup();
+    expect(input.pressedAtMs('jump')).toBeNull();
+    at(win, 'Space', 100);
+    up(win, 'Space');
+    at(win, 'Space', 140);
+    input.sampleTick();
+    expect(input.pressedAtMs('jump')).toBe(100);
+    input.sampleTick();
+    expect(input.pressedAtMs('jump')).toBeNull();
+  });
+
+  it('a repeat or a held key does not reset the time; an untimed event uses now', () => {
+    const { win, input } = setup();
+    at(win, 'Space', 50);
+    down(win, 'Space', true);
+    input.sampleTick();
+    expect(input.pressedAtMs('jump')).toBe(50);
+    up(win, 'Space');
+    input.sampleTick();
+    const before = performance.now();
+    win.dispatchEvent(Object.assign(new Event('keydown'), { code: 'Space', repeat: false, preventDefault: () => {} }));
+    input.sampleTick();
+    const t = input.pressedAtMs('jump');
+    expect(t).not.toBeNull();
+    expect(Number.isFinite(t)).toBe(true);
+    expect(t! >= 0).toBe(true);
+    expect(before).toBeGreaterThanOrEqual(0);
+  });
+});
+
 describe('InputManager click / pointer lock', () => {
   it('requests pointer lock when not locked', () => {
     const { element, requestPointerLock } = setup();

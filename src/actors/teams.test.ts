@@ -38,7 +38,7 @@ describe('player and dummy defaults', () => {
   });
 
   it('playerInit has the explicit id and player team', () => {
-    expect(playerInit()).toMatchObject({ id: PLAYER_ID, team: 'player', kind: 'knight', maxHealth: 100 });
+    expect(playerInit()).toMatchObject({ id: PLAYER_ID, team: 'player', kind: 'player', maxHealth: 100 });
     expect(PLAYER_ID).toBe('player');
   });
 

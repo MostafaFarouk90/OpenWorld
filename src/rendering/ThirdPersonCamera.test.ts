@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type RAPIER_API from '@dimforge/rapier3d';
 import { describe, expect, it, vi } from 'vitest';
 import { CAMERA } from '../config/constants';
-import type { InputManager } from '../input/InputManager';
+import { InputManager } from '../input/InputManager';
 import type { PhysicsQueries } from '../physics/PhysicsWorld';
 import { ThirdPersonCamera } from './ThirdPersonCamera';
 
@@ -363,5 +363,45 @@ describe('ThirdPersonCamera lock-on framing', () => {
       1 / 3,
     );
     expect(dir.distanceTo(aim.sub(camera.position).normalize())).toBeLessThan(1e-6);
+  });
+});
+
+describe('ThirdPersonCamera and the wheel claim (v0.5)', () => {
+  function real() {
+    const win = new EventTarget();
+    const doc = Object.assign(new EventTarget(), { pointerLockElement: null as Element | null });
+    const element = Object.assign(new EventTarget(), { requestPointerLock: () => {} }) as unknown as HTMLElement;
+    const input = new InputManager(element, win, doc, { storage: null });
+    const camera = new THREE.PerspectiveCamera();
+    const physics = { raycast: vi.fn(() => null), overlapShape: vi.fn(), sweepShape: vi.fn() } as unknown as PhysicsQueries;
+    const cam = new ThirdPersonCamera(camera, input, physics, { handle: 1 } as unknown as RAPIER_API.Collider);
+    const scroll = (deltaY: number) => element.dispatchEvent(Object.assign(new Event('wheel'), { deltaY }));
+    return { input, camera, cam, scroll };
+  }
+
+  it('holds its distance while the wheel is claimed, and zooms again after release', () => {
+    const { input, camera, cam, scroll } = real();
+    cam.update(feet);
+    const release = input.claimWheel('calm');
+    scroll(120);
+    cam.update(feet);
+    expect(distFromTarget(camera)).toBeCloseTo(CAMERA.distance, 6);
+    expect(input.consumeWheel('calm')).toBe(1);
+    release();
+    scroll(120);
+    cam.update(feet);
+    expect(distFromTarget(camera)).toBeCloseTo(CAMERA.distance + 0.5, 6);
+  });
+
+  it('a claim during a camera override keeps the scroll for the claimant', () => {
+    const { input, cam, scroll } = real();
+    cam.update(feet);
+    const shot = cam.override({ position: { x: 0, y: 5, z: 5 }, lookAt: { x: 0, y: 0, z: 0 } });
+    const release = input.claimWheel('calm');
+    scroll(120);
+    cam.update(feet);
+    expect(input.consumeWheel('calm')).toBe(1);
+    release();
+    shot.release();
   });
 });

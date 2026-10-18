@@ -123,6 +123,12 @@ export const WORLD = {
   colliderBuildBudgetMs: 2,
 } as const;
 
+/**
+ * v0.5: the playable world box in engine metres (+Z north). It holds Brightwater and the whole Harrowmark region
+ * box (x 6500..10500, z 0..4000); the map (thread 8) and the terrain shaping validator read it.
+ */
+export const WORLD_BOUNDS = { minX: -2000, maxX: 10500, minZ: -2000, maxZ: 4500 } as const;
+
 /** Combat hit detection (game-feel defaults; not in the spec). */
 export const COMBAT = {
   baseDamage: 10,

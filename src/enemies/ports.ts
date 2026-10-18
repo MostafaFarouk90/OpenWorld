@@ -63,7 +63,7 @@ export interface DamageRequestLike {
   targetId: ActorId;
   amount: number;
   poise: number;
-  kind: 'melee' | 'spell' | 'fall' | 'script';
+  kind: 'melee' | 'spell' | 'fall' | 'script' | 'status';
   bone?: string;
   attackId?: string;
   swingId?: number;

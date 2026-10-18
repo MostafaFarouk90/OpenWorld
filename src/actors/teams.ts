@@ -23,9 +23,11 @@ export const PLAYER_STATS = {
 } as const;
 
 export const PLAYER_ID = 'player';
+/** The player actor's kind for every class (v0.5); the class is `progression.classId`, never `actor.kind`. */
+export const PLAYER_KIND = 'player';
 
 export function playerInit(): ActorInit {
-  return { id: PLAYER_ID, kind: 'knight', team: 'player', ...PLAYER_STATS };
+  return { id: PLAYER_ID, kind: PLAYER_KIND, team: 'player', ...PLAYER_STATS };
 }
 
 export const DUMMY_INIT: Omit<ActorInit, 'owner' | 'root'> = {

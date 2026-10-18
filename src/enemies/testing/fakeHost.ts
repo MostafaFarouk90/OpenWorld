@@ -202,7 +202,7 @@ export class FakeHost {
     this.playerModel = root;
     root.position.copy(this.playerFeet);
     root.updateMatrixWorld(true);
-    this.player = new FakeActor('player', 'knight', { kind: 'knight', team: 'player', maxHealth: 100, maxPoise: 40, root });
+    this.player = new FakeActor('player', 'player', { kind: 'player', team: 'player', maxHealth: 100, maxPoise: 40, root });
     this.actorMap.set('player', this.player);
     this.playerHurtboxes = new HurtboxSet(model, undefined, model);
     this.owners.set(model, 'player');

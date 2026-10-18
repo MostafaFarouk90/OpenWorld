@@ -15,13 +15,13 @@ export class GoldPouch {
   /** Takes floor(share) of carried gold into a pouch at `position`, replacing (and losing) any older pouch. */
   drop(
     position: Vec3Like,
-    inventory: { gold: number; takeGold(n: number): number } | undefined,
+    inventory: { gold: number; takeGold(n: number, reason?: 'death'): number } | undefined,
     tutorialComplete: boolean,
   ): { gold: number } | null {
     if (!tutorialComplete || !inventory) return null;
     const want = Math.floor(Math.max(0, inventory.gold) * RESPAWN.pouchGoldShare);
     if (want <= 0) return null;
-    const taken = Math.floor(inventory.takeGold(want));
+    const taken = Math.floor(inventory.takeGold(want, 'death'));
     if (!(taken > 0)) return null;
     this.state = { position: { x: position.x, y: position.y, z: position.z }, gold: taken };
     return { gold: taken };

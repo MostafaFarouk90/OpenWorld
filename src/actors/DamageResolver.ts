@@ -2,6 +2,7 @@ import type * as THREE from 'three';
 import type { GameEvents } from '../core/events';
 import type { Actor, ActorId } from './Actor';
 import type { ActorRegistry } from './ActorRegistry';
+import type { StatusKind } from './status';
 import { canDamage } from './teams';
 
 export interface DamageRequest {
@@ -11,7 +12,11 @@ export interface DamageRequest {
   amount: number;
   /** Poise damage before modifiers; defaults to `amount`. */
   poise?: number;
-  kind: 'melee' | 'spell' | 'fall' | 'script';
+  /** v0.5 `'status'`: a bleed or ignite tick (actors-and-damage.md section 10); poise 0, unblockable, not dodgeable. */
+  kind: 'melee' | 'spell' | 'fall' | 'script' | 'status';
+  /** `kind: 'status'` only: the status entry's id and kind. */
+  statusId?: string;
+  statusKind?: StatusKind;
   bone?: string;
   point?: THREE.Vector3;
   normal?: THREE.Vector3;
@@ -24,6 +29,11 @@ export interface DamageRequest {
    * Set by the request author or an attacker-side modifier (order band -200..-101). I-frames still apply.
    */
   unblockable?: boolean;
+  /**
+   * v0.5: `false` means a timed block is only a block (scripted boss hits with no `attack.window`):
+   * no `'parried'` outcome and no stagger on the attacker. Omitted means parryable.
+   */
+  parryable?: false;
 }
 
 /** Modifier order bands (contracts/actors-and-damage.md section 4). */

@@ -5,7 +5,7 @@ import { CombatRegistry } from '../actors/CombatRegistry';
 import { DamageBridge } from '../actors/DamageBridge';
 import { DamageResolver } from '../actors/DamageResolver';
 import { DUMMY_INIT, playerInit } from '../actors/teams';
-import type { KnightAvatar } from '../characters/KnightAvatar';
+import type { PlayerAvatar } from '../characters/PlayerAvatar';
 import { FIXED_TIMESTEP } from '../config/constants';
 import { NO_ACTIONS, type Action, type ActionState, type InputContextStack } from '../input/actions';
 import type { InputBindings } from '../input/InputBindings';
@@ -40,7 +40,8 @@ export interface PlayerHandle {
   /** Simulated feet at the latest tick. */
   readonly feet: THREE.Vector3;
   readonly facingYaw: number;
-  readonly avatar: KnightAvatar | null;
+  /** The current class kit (v0.5: any `PlayerAvatar`; null until the model loads). */
+  readonly avatar: PlayerAvatar | null;
   /** True when the last tick had movement input. */
   readonly moving: boolean;
   /** `ready()` turns true once the collider patch there exists and a physics step has made it visible. */
@@ -51,6 +52,13 @@ export interface PlayerHandle {
    * action, the learned gate, Burn, cooldown and Scar; core owns only the move and `player.leap`.
    */
   leap(opts: LeapOptions): LeapHandle | null;
+  /**
+   * v0.5: swaps the class kit (thread 12; out of combat, not mid-cast). Cancels a leap, replaces the avatar in the
+   * World (the old one is disposed), re-binds the actor owners and the weapon watch, and emits `player.avatar`.
+   * Returns false, changing nothing, before the first avatar is attached (wait for `player.avatar`) or for the
+   * avatar already worn.
+   */
+  swapAvatar(avatar: PlayerAvatar): boolean;
 }
 
 export interface GameInput {
@@ -61,6 +69,15 @@ export interface GameInput {
   readonly keyboardLock: { readonly supported: boolean; readonly locked: boolean };
   readonly bindings: InputBindings;
   readonly contexts: InputContextStack;
+  /**
+   * v0.5: `performance.now()` time of the key or button event that made `action` pressed this tick; null when it
+   * is not pressed this tick (or is locked). Thread 7 maps it to audio time for wardstone judging.
+   */
+  pressedAtMs(action: Action): number | null;
+  /** v0.5: routes the mouse wheel to `owner` until released; the camera then gets nothing (input-and-hud.md section 2). */
+  claimWheel(owner: string): () => void;
+  /** v0.5: the wheel since the last call, for the current claimant only (0 for anyone else). */
+  consumeWheel(owner: string): number;
 }
 
 export interface GameContext {
@@ -166,6 +183,9 @@ export class Game {
   private readonly feet = new THREE.Vector3();
   private readonly report: (message: string, err?: unknown) => void;
   private readonly unbind: (() => void)[] = [];
+  /** Bindings of the current avatar only; a swap undoes them (the game-lifetime ones stay in `unbind`). */
+  private avatarUnbind: (() => void)[] = [];
+  private attached: PlayerAvatar | null = null;
   private disposed = false;
 
   constructor(private readonly opts: GameOptions) {
@@ -208,6 +228,7 @@ export class Game {
       teleport: (feet, yaw) => this.teleport(feet, yaw),
       addMoveModifier: (source, mod) => this.moveModifiers.add(source, mod),
       leap: (opts) => world.player.leap(opts),
+      swapAvatar: (avatar) => this.swapAvatar(avatar),
     };
     const gameInput: GameInput = {
       get actions() {
@@ -221,6 +242,9 @@ export class Game {
       },
       bindings: input.bindings,
       contexts: input.contexts,
+      pressedAtMs: (a) => (game.actions.pressed(a) ? input.pressedAtMs(a) : null),
+      claimWheel: (owner) => input.claimWheel(owner),
+      consumeWheel: (owner) => input.consumeWheel(owner),
     };
     const interaction = new InteractionSystem({
       events: this.events,
@@ -321,6 +345,7 @@ export class Game {
     const input: GameInput = Object.create(c.input, {
       contexts: { value: contexts },
       bindings: { value: bindings },
+      claimWheel: { value: (owner: string) => scope.track(c.input.claimWheel(owner)) },
     });
     const pauses = new Map<string, () => void>();
     const clock = scoped(c.clock, scope, [], {
@@ -376,13 +401,39 @@ export class Game {
     return this.loader?.status() ?? [];
   }
 
-  /** Call after `world.setAvatar`: makes the Knight's sword and hurtboxes resolve to the player actor. */
-  attachAvatar(avatar: KnightAvatar): void {
+  /**
+   * Call after `world.setAvatar`: makes the avatar's weapon and hurtboxes resolve to the player actor, and emits
+   * `player.avatar` with `previous: null`. A second call for the same avatar is ignored.
+   */
+  attachAvatar(avatar: PlayerAvatar): void {
+    if (this.disposed || this.attached === avatar) return;
+    if (this.opts.world.avatar !== avatar) throw new Error('Game: attachAvatar needs the avatar the World holds (world.setAvatar first)');
+    const previous = this.attached?.classId ?? null;
+    this.unbindAvatar();
+    this.attached = avatar;
     const actor = this.ctx.actors.player;
-    this.unbind.push(this.ctx.actors.bindOwner(actor, avatar));
-    if (avatar.model !== (avatar as unknown)) this.unbind.push(this.ctx.actors.bindOwner(actor, avatar.model));
+    this.avatarUnbind.push(this.ctx.actors.bindOwner(actor, avatar));
+    if (avatar.model !== (avatar as unknown)) this.avatarUnbind.push(this.ctx.actors.bindOwner(actor, avatar.model));
     const attacker = this.opts.world.combat.playerAttacker;
-    if (attacker) this.unbind.push(this.ctx.combat.watch(actor.id, attacker.tracer.attacker, attacker.window));
+    if (attacker) this.avatarUnbind.push(this.ctx.combat.watch(actor.id, attacker.tracer.attacker, attacker.window));
+    this.events.emit('player.avatar', { classId: avatar.classId, previous });
+  }
+
+  private unbindAvatar(): void {
+    // The weapon watch closes an open attack window (one `attack.window` close) as it is undone.
+    for (const u of this.avatarUnbind.reverse()) u();
+    this.avatarUnbind = [];
+  }
+
+  private swapAvatar(avatar: PlayerAvatar): boolean {
+    if (this.disposed) throw new Error('Game: disposed');
+    const world = this.opts.world;
+    if (!this.attached || world.avatar === avatar) return false;
+    world.player.cancelLeap();
+    this.unbindAvatar();
+    world.replaceAvatar(avatar);
+    this.attachAvatar(avatar);
+    return true;
   }
 
   /** Registers a training dummy (already added to WorldCombat) as an immortal neutral actor. */
@@ -422,6 +473,7 @@ export class Game {
     if (this.disposed) return;
     this.disposed = true;
     this.loader?.dispose();
+    this.unbindAvatar();
     for (const u of this.unbind.reverse()) u();
     this.systems.dispose();
     this.ctx.hud.dispose();
