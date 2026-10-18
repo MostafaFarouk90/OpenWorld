@@ -169,7 +169,7 @@ describe('stealth and chase plugins on the real core', () => {
     t.f.quests.set('m06', { state: 'active', done: new Set(), current: 'o2' });
     t.f.guardStates.set('guard-1', { awareness: 0, sees: false, hears: false, distance: 9 });
     t.teleport(30, 0);
-    t.ctx.events.emit('ai.spotted' as never, { actorId: 'guard-1', targetId: 'player' } as never);
+    t.ctx.events.emit('ai.spotted', { actorId: 'guard-1', targetId: 'player' });
     expect(t.of('stealth.noticed')).toEqual([{ observerId: 'guard-1', sectionId: 'm06.south-gate', level: 1 }]);
     t.f.guardStates.set('guard-1', { awareness: 1, sees: true, hears: false, distance: 9 });
     t.run(80);
