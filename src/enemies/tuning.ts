@@ -100,6 +100,9 @@ export const WORLD_AI = {
   dormantDistance: 120,
   /** Awake kinematic movers at most; extra enemies stay dormant. */
   maxAwake: 24,
+  /** Wake only this much nearer than `dormantDistance`, and this many ranks inside `maxAwake`. */
+  wakeMargin: 10,
+  wakeRankMargin: 2,
   /** Lift on wake, as the player controller does after a teleport. */
   wakeLift: 0.02,
   /** Spawn ring radius when several enemies share one anchor, and patrol slot ring. */

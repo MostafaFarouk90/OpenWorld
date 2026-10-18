@@ -42,9 +42,8 @@ export function makeMercyInteractable(
     kind: 'release',
     action: 'mercy',
     position: (out) => {
-      subject.feet(out);
-      out.y += 1;
-      return out;
+      // At the feet: the core measures 3D distance from the player's feet, so a raised point shrinks the radius.
+      return subject.feet(out);
     },
     radius: MERCY.radius,
     coneDegrees: MERCY.coneDegrees,

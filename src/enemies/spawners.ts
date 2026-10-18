@@ -46,7 +46,6 @@ export class SpawnerRegistry {
   private readonly lastOpts = new Map<string, SpawnOptions>();
   private readonly byActor = new Map<ActorId, { spawnerId: string; slot: number }>();
   private readonly warned = new Set<string>();
-  private readonly claims = new Map<string, Map<ActorId, number>>();
   private spent = new Set<string>();
   private cleared = new Set<string>();
   private warmthTier = 0;
@@ -124,7 +123,6 @@ export class SpawnerRegistry {
   /** Returns true exactly once when the last member of a group dies, is released or is spared. */
   onMemberGone(actorId: ActorId, how: MemberEnd): boolean {
     const rec = this.byActor.get(actorId);
-    this.releaseClaims(actorId);
     if (!rec) return false;
     this.byActor.delete(actorId);
     const slots = this.slots.get(rec.spawnerId)!;
@@ -152,8 +150,7 @@ export class SpawnerRegistry {
       if (actorId === null || actorId === undefined) continue;
       slots[i] = null;
       this.byActor.delete(actorId);
-      this.releaseClaims(actorId);
-      this.deps.despawn(actorId);
+        this.deps.despawn(actorId);
     }
   }
 
@@ -178,6 +175,13 @@ export class SpawnerRegistry {
     return out;
   }
 
+  /** Live members whose slot the (loaded) save marks spent. */
+  liveInSpentSlots(): ActorId[] {
+    const out: ActorId[] = [];
+    for (const [actorId, rec] of this.byActor) if (this.spent.has(`${rec.spawnerId}#${rec.slot}`)) out.push(actorId);
+    return out;
+  }
+
   onQuestStarted(questId: string): ActorId[] {
     const out: ActorId[] = [];
     for (const def of this.defs.values()) {
@@ -186,34 +190,6 @@ export class SpawnerRegistry {
       }
     }
     return out;
-  }
-
-  /** First claimant gets the anchor itself, later ones distinct ring slots. Undefined when the anchor is missing. */
-  claimWaypoint(actorId: ActorId, anchorId: string): Vec3 | undefined {
-    const anchor = this.deps.anchors.find(anchorId);
-    if (!anchor) {
-      this.warnOnce(`waypoint:${anchorId}`, `spawners: waypoint anchor '${anchorId}' not found`);
-      return undefined;
-    }
-    let map = this.claims.get(anchorId);
-    if (!map) this.claims.set(anchorId, (map = new Map()));
-    let index = map.get(actorId);
-    if (index === undefined) {
-      const used = new Set(map.values());
-      index = 0;
-      while (used.has(index)) index++;
-      map.set(actorId, index);
-    }
-    const p = anchor.position;
-    if (index === 0) return { x: p.x, y: p.y, z: p.z };
-    const k = index - 1;
-    const angle = (k % 8) * (Math.PI / 4);
-    const r = WORLD_AI.ringRadius * (1 + Math.floor(k / 8));
-    return { x: p.x + Math.cos(angle) * r, y: p.y, z: p.z + Math.sin(angle) * r };
-  }
-
-  releaseClaims(actorId: ActorId): void {
-    for (const map of this.claims.values()) map.delete(actorId);
   }
 
   // Persistence
@@ -365,4 +341,19 @@ function clampTier(w: number): number {
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/**
+ * The waypoints for pack member `slot`: each member starts at a different waypoint, and members past
+ * the waypoint count walk a ring offset of the route, so a pack spreads out instead of bunching.
+ */
+export function patrolForSlot(points: readonly { x: number; z: number }[], slot: number): { x: number; z: number }[] {
+  const n = points.length;
+  if (n === 0) return [];
+  const k = slot % n;
+  const lap = Math.floor(slot / n);
+  const angle = ((lap - 1) % 8) * (Math.PI / 4);
+  const dx = lap > 0 ? Math.cos(angle) * WORLD_AI.ringRadius : 0;
+  const dz = lap > 0 ? Math.sin(angle) * WORLD_AI.ringRadius : 0;
+  return [...points.slice(k), ...points.slice(0, k)].map((p) => ({ x: p.x + dx, z: p.z + dz }));
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AnchorLike } from './ports';
 import { SLICE_SPAWNERS } from './spawnerDefs';
-import { SpawnRequest, SpawnerRegistry } from './spawners';
+import { SpawnRequest, SpawnerRegistry, patrolForSlot } from './spawners';
 import { WORLD_AI } from './tuning';
 import type { SpawnerDef } from './types';
 
@@ -143,20 +143,13 @@ describe('SpawnerRegistry', () => {
     reg.spawnGroup('ids');
     expect(warn.mock.calls.filter((c) => String(c[0]).includes('missing'))).toHaveLength(1);
   });
-  it('claimWaypoint gives distinct points and frees on release', () => {
-    const { reg, warn } = setup([anchor('w', 5, 5)], []);
-    const a = reg.claimWaypoint('x', 'w')!;
-    const b = reg.claimWaypoint('y', 'w')!;
-    const c = reg.claimWaypoint('z', 'w')!;
-    expect(a).toEqual({ x: 5, y: 2, z: 5 });
-    expect(b).not.toEqual(a);
-    expect(c).not.toEqual(b);
-    expect(Math.hypot(b.x - 5, b.z - 5)).toBeCloseTo(WORLD_AI.ringRadius);
-    expect(reg.claimWaypoint('y', 'w')).toEqual(b);
-    reg.releaseClaims('x');
-    expect(reg.claimWaypoint('q', 'w')).toEqual(a);
-    expect(reg.claimWaypoint('q', 'none')).toBeUndefined();
-    expect(warn).toHaveBeenCalledOnce();
+  it('patrolForSlot starts each member on its own waypoint and rings the members past the count', () => {
+    const pts = [{ x: 0, z: 0 }, { x: 10, z: 0 }, { x: 10, z: 10 }];
+    expect(patrolForSlot(pts, 0)).toEqual(pts);
+    expect(patrolForSlot(pts, 1)).toEqual([pts[1], pts[2], pts[0]]);
+    const lapped = patrolForSlot(pts, 3);
+    expect(Math.hypot(lapped[0]!.x - pts[0]!.x, lapped[0]!.z - pts[0]!.z)).toBeCloseTo(WORLD_AI.ringRadius);
+    expect(patrolForSlot([], 2)).toEqual([]);
   });
   it('onRest respawns only dead members of onRest spawners, never spent', () => {
     const { reg } = setup([anchor('sp', 0, 0)], [mk({ id: 'r', respawn: 'onRest' }), mk({ id: 'n', respawn: 'never' })]);

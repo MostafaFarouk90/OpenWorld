@@ -210,6 +210,8 @@ export interface VfxLike {
 export interface ServicesPort {
   get(name: 'vfx'): VfxLike | undefined;
   get(name: 'lockOn'): { readonly targetId: ActorId | null } | undefined;
+  /** Thread 3's quests service: the started, unfinished quest ids. */
+  get(name: 'quests'): { active(): string[] } | undefined;
 }
 
 /** The parts of the AssetLoader the enemy models need (requests-round-1 item 6). */

@@ -12,6 +12,11 @@ import { HeightfieldMover, SwitchingMover, type EnemyMover } from './steering/mo
 import { AI } from './tuning';
 import type { AiState, EnemyDef, EnemyView, MoveDef, SpawnOptions, WeaponChannel } from './types';
 
+/** A vfx dissolve that has not settled this long after its length still despawns the enemy. */
+const DISSOLVE_GRACE_SECONDS = 0.5;
+/** Margin on top of the spared walk's expected time before a stuck soldier despawns anyway. */
+const SPARED_LEAVE_MARGIN_SECONDS = 3;
+
 /** What an enemy needs from its manager (shared state across enemies). */
 export interface EnemyEnv {
   host: EnemyHost;
@@ -99,41 +104,53 @@ export class Enemy {
       ? makeLineOfSight(host.physics, host.player.collider, this.mover.collider)
       : () => true;
 
-    host.scene.add(model.root);
-    this.placeRoot(this.mover.feet);
-    model.root.updateMatrixWorld(true);
+    try {
+      host.scene.add(model.root);
+      this.placeRoot(this.mover.feet);
+      model.root.updateMatrixWorld(true);
 
-    const maxHealth = Math.max(1, Math.round(spawn.maxHealth * (spawn.options.healthScale ?? 1)));
-    this.actor = host.actors.spawn({
-      kind: this.def.kind,
-      team: 'hostile',
-      level: spawn.level,
-      maxHealth,
-      maxPoise: this.def.maxPoise,
-      root: model.root,
-      owner: model.owner,
-      spawnTag: spawn.spawnTag,
-    });
-    this.actor.data['audio'] = { material: this.def.material };
-    this.actor.data['enemies'] = this.view;
+      const maxHealth = Math.max(1, Math.round(spawn.maxHealth * (spawn.options.healthScale ?? 1)));
+      this.actor = host.actors.spawn({
+        kind: this.def.kind,
+        team: 'hostile',
+        level: spawn.level,
+        maxHealth,
+        maxPoise: this.def.maxPoise,
+        root: model.root,
+        owner: model.owner,
+        spawnTag: spawn.spawnTag,
+      });
+      this.actor.data['audio'] = { material: this.def.material };
+      this.actor.data['enemies'] = this.view;
 
-    this.brain = new Brain(this.def, this.hooks(), {
-      home: { x: spawn.feet.x, z: spawn.feet.z },
-      patrol: spawn.patrol,
-      leash: spawn.options.leash,
-      aggroOnSpawn: spawn.options.aggro ? host.actors.player.id : null,
-    });
-    if (spawn.options.moves) this.moveFilter = [...spawn.options.moves];
+      this.brain = new Brain(this.def, this.hooks(), {
+        home: { x: spawn.feet.x, z: spawn.feet.z },
+        patrol: spawn.patrol,
+        leash: spawn.options.leash,
+        aggroOnSpawn: spawn.options.aggro ? host.actors.player.id : null,
+      });
+      if (spawn.options.moves) this.moveFilter = [...spawn.options.moves];
 
-    this.removers.push(host.combat.addTarget(model.hurtboxes, this.actor.id));
-    for (const ch of ['right', 'left'] as const) {
-      const tracer = model.tracers[ch];
-      if (!tracer) continue;
-      if (tracer.attacker !== model.owner) this.removers.push(host.actors.bindOwner(this.actor, tracer.attacker));
-      this.removers.push(host.combat.addAttacker(this.actor.id, tracer, animator.windowSource(ch)));
-      const parts = model.weapons[ch];
-      const trail = parts ? host.services.get('vfx')?.attachTrail?.(`${this.actor.id}.${ch}`, parts.hilt, parts.tip) : undefined;
-      if (trail) this.trails[ch] = trail;
+      this.removers.push(host.combat.addTarget(model.hurtboxes, this.actor.id));
+      for (const ch of ['right', 'left'] as const) {
+        const tracer = model.tracers[ch];
+        if (!tracer) continue;
+        if (tracer.attacker !== model.owner) this.removers.push(host.actors.bindOwner(this.actor, tracer.attacker));
+        this.removers.push(host.combat.addAttacker(this.actor.id, tracer, animator.windowSource(ch)));
+        // vfx-and-feedback.md: the trail id is the actor id; the shield gets none.
+        const parts = model.weapons[ch];
+        const trail = parts && ch === 'right' ? host.services.get('vfx')?.attachTrail?.(this.actor.id, parts.hilt, parts.tip) : undefined;
+        if (trail) this.trails[ch] = trail;
+      }
+    } catch (err) {
+      // Roll back what was built so a failed spawn leaves no actor, collider, scene node or registration.
+      for (const remove of this.removers.splice(0)) remove();
+      for (const ch of ['right', 'left'] as const) this.trails[ch]?.dispose();
+      const spawned = (this as { actor?: ActorLike }).actor;
+      if (spawned) host.actors.despawn(spawned.id);
+      model.root.removeFromParent();
+      this.mover.dispose();
+      throw err;
     }
 
     animator.onWindow = (ch, phase, swingId) => {
@@ -291,6 +308,10 @@ export class Enemy {
     }
     this.phaseTime += dt;
     if (this.phase === 'dying' && this.phaseTime >= this.deathClipSeconds()) this.startFade(AI.deathFadeSeconds);
+    if (this.phase === 'fading' && this.fadeHandledByVfx) {
+      if (this.dissolved || this.phaseTime >= this.fadeSeconds + DISSOLVE_GRACE_SECONDS) this.despawn();
+      return;
+    }
     if (this.phase === 'fading' && !this.fadeHandledByVfx) {
       this.model.setOpacity(Math.max(0, 1 - this.phaseTime / this.fadeSeconds));
       if (this.phaseTime >= this.fadeSeconds) this.despawn();
@@ -328,7 +349,9 @@ export class Enemy {
 
   /** actor.died: stop fighting at once, then death clip, dissolve or fade, despawn. */
   died(): void {
-    if (this.phase !== 'alive') return;
+    // A spared soldier walking off can still be struck down (the core revokes its mercy credit).
+    if (this.phase !== 'alive' && this.phase !== 'leaving') return;
+    this.leaveFrom = null;
     this.brain.died();
     this.disarm();
     this.phase = 'dying';
@@ -358,7 +381,7 @@ export class Enemy {
   }
 
   revoked(strikerId: ActorId | null): void {
-    if (this.phase !== 'leaving') return;
+    if (this.phase !== 'leaving' || this.actor.dead) return;
     this.phase = 'alive';
     this.leaveFrom = null;
     this.goneHow = 'despawned';
@@ -383,6 +406,8 @@ export class Enemy {
 
   sleep(): void {
     if (this.asleep || this.phase !== 'alive') return;
+    // Leave combat first so the token, telegraph (cancelled), open window and aggro (calm) are settled.
+    this.brain.standDown();
     this.asleep = true;
     if (this.mover instanceof SwitchingMover) this.mover.sleep();
   }
@@ -423,6 +448,8 @@ export class Enemy {
   private goneHow: 'died' | 'released' | 'spared' | 'despawned' = 'despawned';
   private fadeSeconds: number = AI.deathFadeSeconds;
   private fadeHandledByVfx = false;
+  private dissolved = false;
+  private leaveTime = 0;
 
   /** Out of combat for good: no hurtboxes, no weapons, no slow, no trails, no token, not hittable. */
   private disarm(): void {
@@ -451,10 +478,16 @@ export class Enemy {
     const vfx = this.host.services.get('vfx');
     if (!vfx) return;
     this.fadeHandledByVfx = true;
-    vfx.dissolve(this.model.root, seconds).then(
-      () => this.despawn(),
-      () => this.despawn(),
-    );
+    // The despawn happens in `react` (inside the fixed tick); a dissolve that never settles times out.
+    const done = () => {
+      this.dissolved = true;
+    };
+    try {
+      vfx.dissolve(this.model.root, seconds).then(done, done);
+    } catch (err) {
+      this.host.warn(`enemies: vfx dissolve failed for ${this.actor.id}: ${String(err)}`);
+      this.fadeHandledByVfx = false;
+    }
   }
 
   private deathClipSeconds(): number {
@@ -469,7 +502,10 @@ export class Enemy {
     const v = { x: (away.x / len) * this.def.walkSpeed, z: (away.z / len) * this.def.walkSpeed };
     this.yaw = turnToward(this.yaw, Math.atan2(-v.x, -v.z), AI.turnRate * dt);
     this.mover.move(v, dt);
-    if (this.leaveFrom && self.distanceTo(this.leaveFrom) >= AI.sparedWalkMetres) this.despawn();
+    this.leaveTime += dt;
+    // A soldier pinned against a wall still leaves: after the walk's time plus a margin.
+    const timeout = AI.sparedWalkMetres / Math.max(0.1, this.def.walkSpeed) + SPARED_LEAVE_MARGIN_SECONDS;
+    if ((this.leaveFrom && self.distanceTo(this.leaveFrom) >= AI.sparedWalkMetres) || this.leaveTime >= timeout) this.despawn();
   }
 
   private clearSlow(): void {
