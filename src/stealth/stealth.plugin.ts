@@ -56,7 +56,8 @@ let cleanup: (() => void) | null = null;
 /** Slice 2 thread 18: sneak, stealth sections M06 and M09 (plans/slice-2-stealth-chase.md). */
 export default {
   id: 'stealth',
-  dependsOn: ['core'],
+  // After interiors: our save.loaded teleport into the Counting House must win over thread 3a's stale-load rescue.
+  dependsOn: ['core', 'interiors'],
   setup(ctx) {
     const offs: (() => void)[] = [];
     cleanup = () => {
