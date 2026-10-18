@@ -986,4 +986,38 @@ describe('save.suspend (v0.5)', () => {
     r();
     expect(onAll).not.toHaveBeenCalled();
   });
+
+  it('checkpoint saves the state of the call even when a hold returns before a write in flight finishes', async () => {
+    const spy = new SpyStore();
+    spy.holdWrites = true;
+    const a = persistable('a');
+    const { mgr, holds } = suspended({ store: spy, persist: [a] });
+    // A timer save deferred during the section starts writing when stealth releases its own hold.
+    let r = holds.suspend('stealth');
+    expect(await mgr.autosave('timer')).toEqual({ ok: false, reason: 'deferred' });
+    r();
+    await flush();
+    expect(spy.writeLog.length).toBe(1);
+    a.state.v = 'at-checkpoint';
+    const cp = mgr.checkpoint();
+    r = holds.suspend('stealth');
+    spy.releaseOne();
+    await flush();
+    spy.releaseOne();
+    const o = okOutcome(await cp);
+    expect(o.file.reason).toBe('zone');
+    expect(o.file.entries.a.data).toBe('at-checkpoint');
+    expect(spy.writeLog.length).toBe(2);
+    r();
+  });
+
+  it('checkpoint while another hold is active defers like any save', async () => {
+    const { mgr, holds, store } = suspended();
+    const r = holds.suspend('chase');
+    expect(await mgr.checkpoint()).toEqual({ ok: false, reason: 'deferred' });
+    expect((store as SpyStore).writeLog.length).toBe(0);
+    r();
+    await flush();
+    expect((store as SpyStore).writeLog.length).toBe(1);
+  });
 });

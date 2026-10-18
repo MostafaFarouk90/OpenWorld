@@ -19,10 +19,7 @@ describe('v0.5 class ids, mercy unlock flags and world bounds', () => {
   });
 
   it('the world bounds hold Brightwater and the whole Harrowmark region box', () => {
-    expect(WORLD_BOUNDS.minX).toBeLessThanOrEqual(-1500);
-    expect(WORLD_BOUNDS.maxX).toBeGreaterThanOrEqual(10500);
-    expect(WORLD_BOUNDS.minZ).toBeLessThanOrEqual(-1500);
-    expect(WORLD_BOUNDS.maxZ).toBeGreaterThanOrEqual(4000);
+    expect(WORLD_BOUNDS).toEqual({ minX: -2000, maxX: 10500, minZ: -2000, maxZ: 4500 });
   });
 });
 

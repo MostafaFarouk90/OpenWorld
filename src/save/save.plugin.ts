@@ -130,8 +130,8 @@ const save: GamePlugin = {
       },
       suspend: (reason) => suspensions.suspend(reason),
       checkpoint: (reason) => {
-        console.debug(`save: checkpoint (${reason})`);
-        return manager.save('zone');
+        ports.log('info', `save: checkpoint (${reason})`);
+        return manager.checkpoint();
       },
     };
     ctx.services.provide('save', service);

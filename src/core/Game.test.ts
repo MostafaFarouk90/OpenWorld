@@ -836,8 +836,27 @@ describe('v0.5 core additions', () => {
       c.damage.apply({ attackerId, targetId: wolf.id, amount: 2, poise: 0, kind: 'status', statusId: 'bleed:test', statusKind: 'bleed', unblockable: true });
     tick(other.id);
     expect(c.state.isMercied(wolf.id)).toBe(true);
+    const hound = c.actors.spawn({ kind: 'hound', team: 'hostile', maxHealth: 100 });
+    c.events.emit('mercy', { verb: 'calm', creature: 'hound', tier: 'normal', track: 'dragons', actorId: hound.id });
+    c.damage.kill(hound.id);
+    expect(ofType(t.events, 'mercy.revoked')).toEqual([]);
     tick('player');
     expect(c.state.isMercied(wolf.id)).toBe(false);
+    expect(ofType(t.events, 'mercy.revoked').map((e) => e.actorId)).toEqual([wolf.id]);
+    t.game.dispose();
+    t.world.dispose();
+  });
+
+  it('swapAvatar refuses before the first attach; attachAvatar refuses an avatar the World does not hold', () => {
+    const t = setup();
+    const early = newKnight();
+    expect(t.game.ctx.player.swapAvatar(early)).toBe(false);
+    expect(t.world.avatar).toBeNull();
+    expect(() => t.game.attachAvatar(early)).toThrow(/World holds/);
+    const first = t.attachKnight();
+    expect(t.game.ctx.player.swapAvatar(first)).toBe(false);
+    expect(t.game.ctx.player.swapAvatar(newKnight())).toBe(true);
+    t.game.dispose();
     t.world.dispose();
   });
 

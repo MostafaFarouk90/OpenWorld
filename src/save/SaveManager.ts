@@ -264,6 +264,16 @@ export class SaveManager {
     return this.enqueue(reason);
   }
 
+  /**
+   * v0.5 `save.checkpoint`: a `zone` save of the state right now. The file is built at call time, so a hold taken
+   * again before a write already in flight finishes cannot defer it; while unsafe it defers like `save`.
+   */
+  checkpoint(): Promise<SaveOutcome> {
+    const blocked = this.gate('zone');
+    if (blocked) return Promise.resolve(blocked);
+    return this.enqueue('zone', this.buildFile('zone'));
+  }
+
   /** Call on cutscene.ended / dialogue.ended / actor.revived: runs a deferred save once it is safe. */
   notifySafe(): Promise<SaveOutcome> | undefined {
     const reason = this.deferredReason;

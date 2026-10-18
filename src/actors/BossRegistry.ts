@@ -140,7 +140,7 @@ export class BossRegistry {
     const boss: Boss = {
       def,
       actorId,
-      thresholds: [...def.phases],
+      thresholds: Object.freeze([...def.phases]),
       phase: 1,
       breaks: 0,
       shield: def.shield ?? false,
@@ -194,7 +194,7 @@ export class BossRegistry {
       maxHealth: actor?.maxHealth ?? 0,
       phase: boss.phase,
       phases: boss.thresholds.length + 1,
-      thresholds: [...boss.thresholds],
+      thresholds: boss.thresholds,
       breaks: boss.breaks,
       breaksPerPhase: boss.def.breaksPerPhase,
       shield: boss.shield,

@@ -107,6 +107,8 @@ export class WorldCombat {
     if (this.tracer) this.combat.removeAttacker(this.tracer);
     this.tracer = null;
     this.playerWindowSource = null;
+    // Untraced before it is freed; CombatVerbs' own undo of the same target later is a no-op.
+    if (this.playerBoxes) this.combat.removeTarget(this.playerBoxes);
     this.playerBoxes?.dispose();
     this.playerBoxes = null;
   }

@@ -976,3 +976,38 @@ describe('plugin', () => {
     world.dispose();
   });
 });
+
+describe('class kit swap (v0.5)', () => {
+  it('re-binds to the new avatar: the old target and clip listener are undone, blocking works on the new kit', () => {
+    const t = setup();
+    const old = t.world.avatar!;
+    const oldBoxes = t.world.combat.playerHurtboxes!;
+    const addTarget = vi.spyOn(t.ctx.combat, 'addTarget');
+    const next = new KnightAvatar({ model: cloneSkinned(gltf.scene), clips: gltf.animations, sword: null, shield: null }, { warn: () => {} });
+    expect(t.ctx.player.swapAvatar(next)).toBe(true);
+    t.run(2);
+    const newBoxes = t.world.combat.playerHurtboxes!;
+    expect(newBoxes).not.toBe(oldBoxes);
+    expect(addTarget).toHaveBeenCalledWith(newBoxes, 'player');
+    // The old controller's clips no longer count as player attacks.
+    t.prompts.success.mockClear();
+    old.controller.events.emit({ type: 'clipStart', clip: '1H_Melee_Attack_Slice_Horizontal' } as never);
+    expect(t.prompts.success).not.toHaveBeenCalled();
+    // The new kit blocks.
+    const e = t.enemy();
+    t.press('KeyB');
+    t.run(20);
+    expect(next.controller.currentAction).toBe('block');
+    expect(t.hit(e)!.outcome).toBe('blocked');
+  });
+
+  it('a hostile still hits the player after a swap', () => {
+    const t = setup();
+    const next = new KnightAvatar({ model: cloneSkinned(gltf.scene), clips: gltf.animations, sword: null, shield: null }, { warn: () => {} });
+    t.ctx.player.swapAvatar(next);
+    t.run(2);
+    const r = t.hit(t.enemy())!;
+    expect(r.outcome).toBe('hit');
+    expect(r.dealt).toBe(10);
+  });
+});
