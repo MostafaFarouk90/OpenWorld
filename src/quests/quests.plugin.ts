@@ -139,6 +139,10 @@ const plugin: GamePlugin = {
     manager.onChange(() => yard.markDirty());
     offs.push(() => yard.dispose());
     offs.push(ctx.events.on('save.loaded', () => { posts.reset(); yard.markDirty(); manager.recheck(); }));
+    // Points the player at the next giver; only the live event, so a load never re-announces it.
+    offs.push(ctx.events.on('quest.completed', (e) => {
+      if (e.questId === 'm02') ctx.events.emit('hud.toast', { textKey: 'quest.lead.m03' });
+    }));
     const journalHud = {
       get modalOpen() {
         return ctx.hud.modalOpen;
