@@ -257,6 +257,16 @@ describe('stepAwareness', () => {
     expect([suspicious, spotted]).toEqual([2, 3]);
   });
 
+  it('closeness is over the effective sight range: sneaking fills slower at the same mid range, and still faster the closer', () => {
+    const walk = (d: number) => stepAwareness(0, { sees: true, hears: false, distance: d, sightRange: AI.sightRange }, 0.1).awareness;
+    const sneak = (d: number) => stepAwareness(0, { sees: true, hears: false, distance: d, sightRange: AI.sightRange * SNEAK.sightRangeScale }, 0.1).awareness;
+    expect(sneak(6)).toBeLessThan(walk(6));
+    expect(sneak(3)).toBeGreaterThan(sneak(6));
+    expect(sneak(1)).toBeGreaterThan(sneak(3));
+    expect(sneak(AI.sightRange * 0.5)).toBeCloseTo(walk(AI.sightRange)); // edge of range is the same slow rate
+    expect(stepAwareness(0, { sees: true, hears: false, distance: 6 }, 0.1).awareness).toBeCloseTo(walk(6)); // default is the base range
+  });
+
   it('a loud noise counts like sight, and bad input does not produce NaN', () => {
     expect(stepAwareness(0, { sees: false, hears: true, distance: 5 }, 0.1).awareness).toBeGreaterThan(0);
     expect(stepAwareness(Number.NaN, seen(5), 0.1).awareness).toBeGreaterThan(0);

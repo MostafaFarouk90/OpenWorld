@@ -16,16 +16,18 @@ export interface AwarenessStep {
 
 /**
  * Pure awareness step. Fills while the target is seen (or heard) at a rate that grows with closeness
- * (1 / `fillSeconds` at the feet, `edgeFillScale` of that at the base sight range), drains at
+ * (1 / `fillSeconds` at the feet, `edgeFillScale` of that at the effective sight range, `result.sightRange`, default the base range), drains at
  * `drainPerSecond` otherwise, clamped to 0..1. Edges are derived from `prev`, so a meter that drops
  * back under a threshold re-arms it.
  */
-export function stepAwareness(prev: number, result: Pick<PerceptionResult, 'sees' | 'hears' | 'distance'>, dt: number): AwarenessStep {
+export function stepAwareness(prev: number, result: Pick<PerceptionResult, 'sees' | 'hears' | 'distance'> & { sightRange?: number }, dt: number): AwarenessStep {
   const p = Number.isFinite(prev) ? Math.min(1, Math.max(0, prev)) : 0;
   let next = p;
   if (dt > 0 && Number.isFinite(dt)) {
     if (result.sees || result.hears) {
-      const closeness = Number.isFinite(result.distance) ? Math.min(1, Math.max(0, 1 - result.distance / AI.sightRange)) : 0;
+      // Closeness is measured over the effective sight range (base range times the providers' scale), so sneaking slows detection.
+      const range = result.sightRange !== undefined && result.sightRange > 0 ? result.sightRange : AI.sightRange;
+      const closeness = Number.isFinite(result.distance) ? Math.min(1, Math.max(0, 1 - result.distance / range)) : 0;
       const rate = (1 / AWARENESS.fillSeconds) * (AWARENESS.edgeFillScale + (1 - AWARENESS.edgeFillScale) * closeness);
       next = Math.min(1, p + rate * dt);
     } else {

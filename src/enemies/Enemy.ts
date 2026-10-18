@@ -358,6 +358,7 @@ export class Enemy {
     const player = this.host.actors.player;
     const pFeet = this.host.player.feet;
     const self = this.mover.feet;
+    const mods = this.env.perceptionModifiers(this, player.id);
     const p = perceive({
       selfFeet: self,
       selfYaw: this.yaw,
@@ -366,10 +367,10 @@ export class Enemy {
       targetLoud: this.host.player.loud(),
       damagedBy: this.damagedThisTick,
       lineOfSight: this.lineOfSight,
-      modifiers: this.env.perceptionModifiers(this, player.id),
+      modifiers: mods,
     });
     this.damagedThisTick = false;
-    this.trackAwareness(dt, p, player.id);
+    this.trackAwareness(dt, p, player.id, AI.sightRange * (mods?.sightRangeScale ?? 1));
     const toTarget = yawTo(self, pFeet);
     const senses: Senses = {
       self: { x: self.x, z: self.z },
@@ -721,8 +722,8 @@ export class Enemy {
   }
 
   /** Steps the awareness meter and emits `ai.suspicious` / `ai.spotted` on their edges. */
-  private trackAwareness(dt: number, p: { sees: boolean; hears: boolean; distance: number }, targetId: ActorId): void {
-    const step = stepAwareness(this.awareness, p, dt);
+  private trackAwareness(dt: number, p: { sees: boolean; hears: boolean; distance: number }, targetId: ActorId, sightRange: number): void {
+    const step = stepAwareness(this.awareness, { ...p, sightRange }, dt);
     this.awareness = step.awareness;
     this.lastSees = p.sees;
     this.lastDistance = p.distance;
