@@ -12,9 +12,9 @@ import {
   worldToMap,
   type MapMarker,
 } from './MapModel';
-import { DEFAULT_WORLD_BOUNDS, MAP_TUNING } from './tuning';
+import { LEGACY_V1_BOUNDS, MAP_TUNING } from './tuning';
 
-const B = DEFAULT_WORLD_BOUNDS;
+const B = LEGACY_V1_BOUNDS;
 
 describe('transforms', () => {
   it('maps corners and centre', () => {
@@ -35,8 +35,8 @@ describe('transforms', () => {
   it('works for a non-square, off-centre world', () => {
     const b = { minX: 100, maxX: 24100, minZ: -500, maxZ: 17500 };
     const p = worldToMap(12100, 8500, b, 100);
-    expect(p).toEqual({ u: 50, v: 50 });
-    expect(mapToWorld(50, 50, b, 100)).toEqual({ x: 12100, z: 8500 });
+    expect(p).toEqual({ u: 50, v: 37.5 }); // size is the longer edge; the shorter one is not stretched
+    expect(mapToWorld(50, 37.5, b, 100)).toEqual({ x: 12100, z: 8500 });
   });
 
   it('clamps outside points to the edge and reports it', () => {
@@ -182,11 +182,12 @@ describe('FogGrid', () => {
     expect(() => new FogGrid({ ...spec, rows: 1.5 })).toThrow(RangeError);
   });
 
-  it('forBounds covers the default 4 km world with 50 m cells', () => {
+  it('forBounds covers the default widened world with 50 m cells', () => {
     const g = FogGrid.forBounds();
-    expect(g.cols).toBe(80);
-    expect(g.rows).toBe(80);
+    expect(g.cols).toBe(250);
+    expect(g.rows).toBe(130);
     expect(g.originX).toBe(-2000);
+    expect(g.originZ).toBe(-2000);
   });
 
   it('fits a 24 km x 18 km world: raw 21.6 KB, sparse saves are tiny', () => {
