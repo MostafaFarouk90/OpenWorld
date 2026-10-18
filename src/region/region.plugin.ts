@@ -68,7 +68,7 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
         cleanups.push(() => structures.dispose());
         void structures.upgrade();
 
-        // Wynn's field takes R01's outcome; a loaded save re-derives it through the gates.
+        // Wynn's field takes R01's outcome and re-derives it on a loaded save.
         const solid = layout.structures.filter((st) => st.mode !== 'open');
         let barley = buildBarley(layout.fields, height, 1, solid);
         ctx.scene.add(barley.object);
@@ -80,7 +80,9 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
           });
           ctx.scene.add(barley.object);
         };
-        cleanups.push(ctx.gates.flag(BARLEY_FLAG, (_open, cause) => cause !== 'init' && swapBarley()));
+        // The value changes between two truthy words, which a boolean gate would not notice: listen for the key and for loads.
+        cleanups.push(ctx.events.on('flag.changed', (e: { key?: string } | undefined) => e?.key === BARLEY_FLAG && swapBarley()));
+        cleanups.push(ctx.events.on('save.loaded', swapBarley));
         cleanups.push(() => {
           ctx.scene.remove(barley.object);
           barley.dispose();

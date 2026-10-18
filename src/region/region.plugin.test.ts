@@ -3,7 +3,8 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { heightAt } from '../terrain/heightfield';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
-import { createRegionPlugin, BRIGHTWATER_DISCOVERED_FLAG } from './region.plugin';
+import { createRegionPlugin, BARLEY_FLAG, BRIGHTWATER_DISCOVERED_FLAG, discoveredFlag } from './region.plugin';
+import { TOLL_POST_BROKEN_FLAG } from './tollPost';
 import type { RegionService } from './serviceTypes';
 import { createFakeCore } from './testing/fakeCore';
 
@@ -193,3 +194,68 @@ describe('region plugin', () => {
     expect(count()).toBe(0);
   });
 });
+
+describe('region plugin, beyond Kettlewick', () => {
+  it('spawns the toll-post actor, the corridor scenery and the POI props, and removes them on dispose', () => {
+    const { fc, plugin } = setup();
+    plugin.setup(fc.ctx);
+    expect([...fc.actors.values()].filter((a) => a.kind === 'toll-post' && a.spawnTag === undefined || a.kind === 'toll-post')).toHaveLength(1);
+    expect(fc.scene.children.map((c) => c.name)).toEqual(expect.arrayContaining(['corridor-scenery', 'poi-props', 'fog-wall']));
+    plugin.dispose?.();
+    expect(fc.scene.children).toHaveLength(0);
+    expect(fc.colliders.size).toBe(0);
+    expect(fc.modifiers.size).toBe(0);
+    expect([...fc.actors.values()].filter((a) => a.kind === 'toll-post')).toHaveLength(0);
+  });
+
+  it('builds a broken toll-post when the save says so, and re-syncs on save.loaded both ways', () => {
+    const { fc, plugin } = setup();
+    fc.flags.set(TOLL_POST_BROKEN_FLAG, true);
+    plugin.setup(fc.ctx);
+    const tolls = () => [...fc.actors.values()].filter((a) => a.kind === 'toll-post').length;
+    expect(tolls()).toBe(0);
+    fc.flags.delete(TOLL_POST_BROKEN_FLAG);
+    fc.fire('save.loaded');
+    expect(tolls()).toBe(1);
+    fc.flags.set(TOLL_POST_BROKEN_FLAG, true);
+    fc.fire('save.loaded');
+    expect(tolls()).toBe(0);
+    plugin.dispose?.();
+  });
+
+  it('keeps the fog wall standing for a phase A save that finished M05, and opens it on story.slice.harrowmarkOpen', () => {
+    const { fc, plugin } = setup();
+    fc.flags.set('story.m05.complete', true);
+    plugin.setup(fc.ctx);
+    expect(fc.triggers.has('trg.fog.harrowmark')).toBe(true);
+    fc.ctx.state.setFlag('story.slice.harrowmarkOpen', true);
+    expect(fc.triggers.has('trg.fog.harrowmark')).toBe(false);
+    plugin.dispose?.();
+  });
+
+  it('rebuilds Wynn\'s barley when R01 sets the flag, and builds it scorched on a load that has it', () => {
+    const { fc, plugin } = setup();
+    plugin.setup(fc.ctx);
+    const count = () => (fc.scene.getObjectByName('barley')!.getObjectByName('barley-instances') as THREE.InstancedMesh).count;
+    const full = count();
+    fc.ctx.state.setFlag(BARLEY_FLAG, 'scorched');
+    expect(count()).toBeLessThan(full);
+    fc.ctx.state.setFlag(BARLEY_FLAG, 'saved');
+    expect(count()).toBe(full);
+    plugin.dispose?.();
+    expect(fc.scene.children).toHaveLength(0);
+
+    const again = setup();
+    again.fc.flags.set(BARLEY_FLAG, 'scorched');
+    again.plugin.setup(again.fc.ctx);
+    expect((again.fc.scene.getObjectByName('barley')!.getObjectByName('barley-instances') as THREE.InstancedMesh).count).toBeLessThan(full);
+    again.plugin.dispose?.();
+  });
+
+  it('keys discover by region: place.<regionId>.discovered, with Brightwater\'s key unchanged for old saves', () => {
+    expect(discoveredFlag('harrowmark')).toBe('place.harrowmark.discovered');
+    expect(discoveredFlag('brightwater')).toBe(BRIGHTWATER_DISCOVERED_FLAG);
+    expect(BRIGHTWATER_DISCOVERED_FLAG).toBe('place.brightwater.discovered');
+  });
+});
+

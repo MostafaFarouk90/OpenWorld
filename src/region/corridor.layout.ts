@@ -45,7 +45,7 @@ const anchors: AnchorSpec[] = [
 
   // The chapel: Leap ledge, the Heartshard study, the vault door and Aelfreda's post there.
   a('poi.leap.chapel-ledge', 72, 90, 180, ['poi', 'leap-gated'], { dy: 1.8, onStructure: 'chapel-ledge' }),
-  a('poi.leap.chapel-ledge.launch', 72, 83, 0, ['poi']),
+  a('poi.leap.chapel-ledge.launch', 72, 84.5, 0, ['poi']),
   a('chapel.shard-study', 54.5, 63, 0, ['interact'], { onStructure: 'chapel' }),
   // Faces away from the stair (compass 180): the vault exit arrives 1.6 m in front of it.
   a('vault.door', 55.5, 64.5, 180, ['poi', 'door'], { onStructure: 'chapel' }),
@@ -63,7 +63,7 @@ const anchors: AnchorSpec[] = [
 
   // The reed island at the river's mouth.
   a('poi.leap.reed-island', 55, -300, 180, ['poi', 'leap-gated'], { dy: 1.8, onStructure: 'reed-island-ledge' }),
-  a('poi.leap.reed-island.launch', 55, -307, 0, ['poi']),
+  a('poi.leap.reed-island.launch', 55, -305.5, 0, ['poi']),
 
   // Wardstones (anchors only; the stones are thread 7's).
   a('wardstone.1', 300, -146, 0, ['wardstone']),
