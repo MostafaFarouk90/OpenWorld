@@ -38,6 +38,10 @@ export const COMPANION_TUNING = {
   chestHeight: 1.2,
   teleportBack: 3,
   maxRaysPerTick: 6,
+  /** A wait starts or ends by relocation only out of view or at a door's black, or after this many seconds anyway. */
+  handoffMaxSeconds: 10,
+  /** On horseback, further back than this he is hidden until the player dismounts (no repeated teleports). */
+  mountHideDistance: 40,
 } as const;
 
 export const TOBB_TUNING = {

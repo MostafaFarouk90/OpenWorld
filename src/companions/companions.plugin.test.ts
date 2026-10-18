@@ -536,6 +536,11 @@ describe('companions plugin: with every real plugin', () => {
     const { readFileSync } = (await import(/* @vite-ignore */ fsModule)) as any;
     const verbsSource: string = readFileSync('src/player/CombatVerbs.ts', 'utf8');
     if (verbsSource.includes('addAttackSpeedMultiplier') && ok('combat-verbs')) expect(i.attackSpeedHook).toBe(true);
+    // Thread 3a's inn: once the inn's interior anchors exist, Tobb's hearth post must too; likewise each entry fallback.
+    if (t.ctx.anchors.find('harrowmark.tilted-anvil.entry')) expect(t.ctx.anchors.find('npc-post.tobb.tilted-anvil')).toBeDefined();
+    for (const [interior, anchorId] of Object.entries(TOBB.interiorEntry)) {
+      if (t.ctx.anchors.find(`harrowmark.${interior}.exit`)) expect(t.ctx.anchors.find(anchorId), anchorId).toBeDefined();
+    }
     t.done();
   });
 });
