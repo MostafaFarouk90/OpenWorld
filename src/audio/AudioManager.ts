@@ -48,6 +48,12 @@ const UNLOCK_EVENTS = ['pointerdown', 'keydown', 'touchend'] as const;
  */
 export class AudioManager {
   readonly music: StemMixer;
+  /**
+   * The music bus: every stem mixer feeds it and it feeds the master gain, so a duck or a reverb
+   * send acts on the music as a whole without touching the stems' own `setMix` ramps. Null if the
+   * context cannot make a gain node (then music goes straight to the master gain).
+   */
+  readonly musicBus: GainNode | null;
   private readonly sounds = new Map<string, Howl>();
   private readonly emitters = new Map<number, Emitter>();
   private readonly unlockCallbacks: Array<() => void> = [];
@@ -68,9 +74,22 @@ export class AudioManager {
     if (!Howler.usingWebAudio || !Howler.ctx) {
       throw new Error('Web Audio is unavailable; spatial audio requires it');
     }
-    this.music = new StemMixer(Howler.ctx, Howler.masterGain);
+    let bus: GainNode | null = null;
+    try {
+      bus = Howler.ctx.createGain();
+      bus.connect(Howler.masterGain);
+    } catch {
+      bus = null;
+    }
+    this.musicBus = bus;
+    this.music = new StemMixer(Howler.ctx, bus ?? Howler.masterGain);
     if (Howler.ctx.state === 'running') this.unlocked = true;
     else for (const type of UNLOCK_EVENTS) window.addEventListener(type, this.unlock, true);
+  }
+
+  /** The node the music bus and the interior reverb feed (Howler's master gain). */
+  get masterNode(): AudioNode {
+    return Howler.masterGain;
   }
 
   /** Howler's shared AudioContext, for decoding or building buffers. */
@@ -204,6 +223,7 @@ export class AudioManager {
     this.unlockCallbacks.length = 0;
     for (const id of [...this.emitters.keys()]) this.detach(id);
     this.music.dispose();
+    this.musicBus?.disconnect();
     for (const howl of this.sounds.values()) howl.unload();
     this.sounds.clear();
   }
