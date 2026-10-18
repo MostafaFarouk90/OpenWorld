@@ -95,13 +95,18 @@ for (const id of ['m03', 'm04', 'm05', 'd01', 'r01', 'r02']) {
       // Push east through the trigger and against the wall for 4 s.
       const card = () => [...document.querySelectorAll('.owg-card')].some((el) => el.offsetParent !== null || getComputedStyle(el).display !== 'none');
       let cardSeen = false;
+      const entered = [];
+      ctx.events.on('trigger.enter', (e) => entered.push(e.triggerId));
       for (let i = 0; i < 40; i++) {
         ctx.player.teleport({ x: fog.x - 20 + i, y: fog.y + 1, z: fog.z });
         await new Promise((res) => setTimeout(res, 100));
         cardSeen ||= card();
       }
       await new Promise((res) => setTimeout(res, 1500));
-      return { x: Math.round(ctx.player.feet.x), wallX: Math.round(fog.x), cardSeen, open: ctx.state.getBool('story.slice.harrowmarkOpen') };
+      return {
+        x: Math.round(ctx.player.feet.x), wallX: Math.round(fog.x), cardSeen, open: ctx.state.getBool('story.slice.harrowmarkOpen'),
+        fogTrigger: entered.includes('trg.fog.harrowmark'), modal: ctx.hud.modalOpen,
+      };
     });
     console.log(`[fog] ${JSON.stringify(r)}`);
     expectAll('fog', r, { pushedBack: r.x <= r.wallX + 2, cardShown: r.cardSeen, closed: !r.open });
