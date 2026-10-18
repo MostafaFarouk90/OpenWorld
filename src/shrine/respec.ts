@@ -60,7 +60,8 @@ export class RespecFlow {
       this.ports.toast('shrine.respec.combat');
       return 'refused';
     }
-    // The dialog owns its own buttons; a stray press does not confirm.
+    // The dialog owns its own buttons; a stray press does not confirm. (If it was dismissed without
+    // telling us, `dialogClosed()` has already dropped the permit.)
     if (this.release && this.mode === 'dialog') return 'dialog';
     // Second press of the fallback, inside the window.
     if (this.release && this.ports.now() <= this.pendingUntil) {
@@ -71,7 +72,13 @@ export class RespecFlow {
     const quote = p.respecQuote();
     this.release = p.allowRespec('shrine');
     const dialog = this.ports.dialog();
-    if (dialog && dialog.open({ quote, confirm: () => this.confirm(), cancel: () => this.close() })) {
+    let opened = false;
+    try {
+      opened = !!dialog?.open({ quote, confirm: () => this.confirm(), cancel: () => this.close() });
+    } catch {
+      opened = false;
+    }
+    if (opened) {
       this.mode = 'dialog';
       return 'dialog';
     }
@@ -79,6 +86,11 @@ export class RespecFlow {
     this.pendingUntil = this.ports.now() + R.confirmSeconds;
     this.ports.toast(quote.free ? 'shrine.respec.confirmFree' : 'shrine.respec.confirmCost', { gold: quote.gold });
     return 'armed';
+  }
+
+  /** The dialog's modal closed or the player died: drop the permit if it was a dialog session. */
+  dialogClosed(): void {
+    if (this.mode === 'dialog') this.close();
   }
 
   /** Cancels the fallback when the window passes or the player walks away. */
@@ -100,5 +112,6 @@ export class RespecFlow {
     this.release?.();
     this.release = null;
     this.pendingUntil = 0;
+    this.mode = 'armed';
   }
 }

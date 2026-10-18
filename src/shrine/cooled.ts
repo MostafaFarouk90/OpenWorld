@@ -59,7 +59,7 @@ export class Cooled {
       if (this.remaining > 0) this.stop();
       return null;
     }
-    this.start(Math.min(rem, T.seconds));
+    this.start(Math.min(rem, T.seconds), false);
     return typeof d?.health === 'number' && Number.isFinite(d.health) ? d.health : null;
   }
 
@@ -68,13 +68,13 @@ export class Cooled {
     if (this.remaining > 0) this.ports.emitApplied(this.remaining);
   }
 
-  private start(seconds: number): void {
+  private start(seconds: number, announce = true): void {
     this.remaining = seconds;
     if (!this.dispose) {
       this.dispose = this.ports.addMaxHealthModifier(T.buffId, () => (this.remaining > 0 ? T.multiplier : 1));
     }
     this.ports.refreshMaxHealth();
-    this.ports.emitApplied(seconds);
+    if (announce) this.ports.emitApplied(seconds);
   }
 
   private stop(): void {

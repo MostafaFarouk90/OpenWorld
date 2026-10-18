@@ -232,12 +232,19 @@ describe('AdaptiveBeatClock', () => {
     beat = info(10.62);
     expect(clock.generation()).toBeGreaterThan(g);
   });
+  it('treats a beat without a usable toAudioTime as no music', () => {
+    const clock = new AdaptiveBeatClock({ beat: () => info(10), toAudioTime: () => undefined, nowMs: () => 5000 });
+    expect(clock.source()).toBe('metronome');
+    const nan = new AdaptiveBeatClock({ beat: () => info(10), toAudioTime: () => Number.NaN, nowMs: () => 5000 });
+    expect(nan.source()).toBe('metronome');
+  });
   it('treats a NaN beat as no music', () => {
     expect(make(() => ({ beatSeconds: Number.NaN, nextBeatTime: 1 })).clock.source()).toBe('metronome');
   });
   it('passedIndex counts a beat only after its window closes', () => {
     const { clock } = make(() => info(10.0));
     expect(clock.passedIndex(10_000 + 119, 120)).toBe(-1);
+    expect(clock.passedIndex(10_000 + 120, 120)).toBe(-1);
     expect(clock.passedIndex(10_000 + 121, 120)).toBe(0);
   });
 });

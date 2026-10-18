@@ -61,11 +61,13 @@ const shrinePlugin: GamePlugin = {
       emitRemoved: () => emit('buff.removed', { id: T.cooled.buffId }),
     });
     let savedHealth: number | null = null;
+    let cooledLoaded = false;
     ctx.persist.register({
       key: Cooled.key,
       version: Cooled.version,
       serialize: () => cooled.serialize(ctx.actors.player.health),
       load: (data) => {
+        cooledLoaded = true;
         savedHealth = cooled.load(data);
       },
     });
@@ -80,6 +82,13 @@ const shrinePlugin: GamePlugin = {
       revealRelease?.();
       unfreeze?.();
       revealRelease = unfreeze = null;
+    };
+    // A waystone lit without the shrine flag (older save, script) still lights the shrine, silently.
+    const syncLitFromWaystone = () => {
+      if (!shrineLit() && waystones()?.isLit('quenchstone')) {
+        ctx.state.setFlag('shrine.quenchstone.lit', true);
+        warmth.recompute('flag');
+      }
     };
     const shrine = new Shrine(
       {
@@ -99,7 +108,7 @@ const shrinePlugin: GamePlugin = {
         clearBurn: (r) => spells()?.clearBurn(r),
         reveal: () => {
           const basin = ctx.anchors.find(T.basin.anchorId);
-          if (!basin || !ctx.cameraRig || revealRelease) return;
+          if (!basin || !ctx.cameraRig || revealRelease || waystones()?.hostileAggro || ctx.player.actor.dead) return;
           const c = ctx.cameraRig;
           revealRelease = c.override({
             position: { x: basin.position.x + 7, y: basin.position.y + 4, z: basin.position.z + 7 },
@@ -156,7 +165,7 @@ const shrinePlugin: GamePlugin = {
         radius: T.respec.radius,
         coneDegrees: 360,
         promptKey: 'shrine.respec.prompt',
-        enabled: shrineLit,
+        enabled: () => shrineLit() && typeof (progression as unknown as Partial<RespecProgression>).allowRespec === 'function',
         onInteract: () => void respec.interact(),
       });
     };
@@ -168,12 +177,16 @@ const shrinePlugin: GamePlugin = {
       toAudioTime: (ms) => music()?.toAudioTime?.(ms),
       nowMs: () => performance.now(),
     });
+    // Anchors do not move; cache the list once all five resolve (until then it is rebuilt, as thread 4 may define them late).
+    let stoneCache: StonePos[] | null = null;
     const stonePositions = (): StonePos[] => {
+      if (stoneCache) return stoneCache;
       const out: StonePos[] = [];
       for (let n = 1; n <= T.wardstones.count; n++) {
         const a = ctx.anchors.find(`wardstone.${n}`);
         if (a) out.push({ index: n, x: a.position.x, z: a.position.z });
       }
+      if (out.length === T.wardstones.count) stoneCache = out;
       return out;
     };
     const audio = () => ctx.services.get('audio' as never) as { play(key: string): unknown } | undefined;
@@ -225,6 +238,10 @@ const shrinePlugin: GamePlugin = {
       if (key.startsWith('shrine.') && key.endsWith('.lit')) warmth.recompute('flag');
     });
     ctx.events.on('save.loaded', () => {
+      // A save with no Cooled entry must not keep the previous session's buff.
+      if (!cooledLoaded) cooled.load(null);
+      cooledLoaded = false;
+      syncLitFromWaystone();
       warmth.recompute('load');
       progression.refreshMaxHealth();
       if (savedHealth !== null) {
@@ -240,6 +257,7 @@ const shrinePlugin: GamePlugin = {
     });
     ctx.events.on('ui.modal', (e) => {
       if (e.open) wardstones.reset();
+      else respec.dialogClosed();
     });
 
     ctx.services.provide('warmth', { tier: () => warmth.tier() });
@@ -248,12 +266,19 @@ const shrinePlugin: GamePlugin = {
       nextWardstone: () => wardstones.nextIndex(),
     });
 
+    let firstTick = false;
     ctx.systems.add({
       id: 'shrine.tick',
       fixedPhase: 'rules',
       order: 110,
+      renderPhase: 'world',
       fixedUpdate(dt) {
         simTime += dt;
+        if (!firstTick) {
+          firstTick = true;
+          warmth.recompute('load'); // the enemies service may not have existed at setup
+        }
+        syncLitFromWaystone();
         syncVisuals();
         syncLectern();
         cooled.update(dt);
@@ -261,17 +286,23 @@ const shrinePlugin: GamePlugin = {
         if (revealLeft > 0 && (revealLeft -= dt) <= 0) endReveal();
 
         const alive = !ctx.player.actor.dead;
+        if (!alive) {
+          respec.dialogClosed();
+          endReveal();
+        }
         const hostile = waystones()?.hostileAggro ?? false;
         shrine.basinTick(dt, alive && shrineLit() && !hostile && ctx.triggers.isInside(T.basin.triggerId));
 
         const now = performance.now();
         const playing = ctx.input.contexts.top() === 'gameplay' && alive;
-        if (rhythmOpen && playing && wardstones.nextIndex() !== null) {
-          wardstones.update(now);
+        if (!playing) wardstones.reset(); // a menu, dialogue or death never counts as a skipped beat
+        else if (rhythmOpen && wardstones.nextIndex() !== null) {
+          // Strike first: a press sampled late in the tick must not be pre-empted by its own beat's miss.
           if (ctx.input.actions.pressed('attack1')) {
             const stamped = (ctx.input as unknown as { pressedAtMs?(a: string): number | undefined }).pressedAtMs?.('attack1');
             wardstones.strike(stamped ?? now);
           }
+          wardstones.update(now);
         }
         for (const s of stonePositions()) visuals.setStone(s.index, ctx.state.getBool(STONE_FLAG(s.index)), wardstones.progress(s.index));
         const next = rhythmOpen ? wardstones.nextIndex() : null;
@@ -281,7 +312,13 @@ const shrinePlugin: GamePlugin = {
       render(_alpha, frameTime) {
         visuals.update(frameTime);
       },
-      dispose() {},
+      dispose() {
+        respec.close();
+        respecOff?.();
+        cooled.teardown();
+        endReveal();
+        visuals.dispose();
+      },
     });
   },
 };
