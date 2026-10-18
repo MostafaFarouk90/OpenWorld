@@ -1,5 +1,5 @@
 // The Leap ledges against the real character controller: a plain jump cannot reach the 1.8 m platform, and a Leap
-// (apex 2.2 m, distance 6 m, thread 2's tuning) lands on it from 2.0 to 4.0 m out (measured, the rim at 4.3; the review estimated 2.1
+// (thread 2's tuning: apex 2.2 m, distance 6 m) lands on it from 2.0 to 4.0 m out (measured, the rim at 4.3; the review estimated 2.1
 // to 4.6) but only perches on the rim from 1.5 m, where the rise is blocked, and falls short from 4.6 m or more.
 import * as THREE from 'three';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -8,10 +8,10 @@ import type { InputSnapshot } from '../input/InputManager';
 import { PhysicsWorld, type Vec3 } from '../physics/PhysicsWorld';
 import { flatGround } from '../physics/flatGround';
 import { ledgeCluster } from './corridor.layout';
+import { LEAP } from '../spells/tuning';
 import { groundRange } from './geometry';
 
 const IDLE: InputSnapshot = { moveRight: 0, moveForward: 0, sprint: false, jump: false, attack: 0 };
-const LEAP = { distance: 6, apex: 2.2 } as const;
 
 let physics: PhysicsWorld;
 let player: Player;
@@ -46,7 +46,7 @@ const feet = (): Vec3 => player.controller.interpolatedFeet(1, { x: 0, y: 0, z: 
 
 function leapFrom(distanceFromEdge: number): Vec3 {
   start(distanceFromEdge);
-  const h = player.leap({ yaw: Math.PI, ...LEAP })!;
+  const h = player.leap({ yaw: Math.PI, distance: LEAP.distance, apex: LEAP.apex })!;
   expect(h).not.toBeNull();
   for (let i = 0; i < 200 && h.active; i++) tick(0, 0, IDLE);
   for (let i = 0; i < 30; i++) tick(0, 0, IDLE);

@@ -35,7 +35,7 @@ describe('Tobb at the Grey Goose', () => {
     const { fc, m } = setup();
     expect(m.get('tobb')).toBeDefined();
     const tobb = [...fc.actors.values()].find((a) => a.kind === 'npc:tobb')!;
-    expect(tobb.root!.children.map((c) => c.name)).toContain('tobb-extras');
+    expect(tobb.root!.children.map((c) => c.name)).toContain('tobb-lute');
     expect(m.position('tobb')).toEqual({ x: post('npc-post.tobb').x, y: 2, z: post('npc-post.tobb').z });
     expect(fc.interactables.has('npc:tobb')).toBe(true);
   });

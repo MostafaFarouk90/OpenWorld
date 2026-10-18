@@ -14,6 +14,8 @@ export interface NpcDef {
   idleClip: string;
   /** Props that belong to the NPC (a cloak, a lute); built once per spawn, facing -Z like yaw 0, and kept across the GLB swap. */
   extras?: () => THREE.Object3D;
+  /** Runs on the cloned GLB after the tint (Tobb's green cape). */
+  decorate?: (model: THREE.Object3D) => void;
 }
 
 /** The slice of AssetLoader the NPCs use; tests pass stand-ins. */
