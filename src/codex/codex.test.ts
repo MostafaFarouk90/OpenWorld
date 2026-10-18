@@ -6,7 +6,7 @@ import { StubDocument, textOf, type ElementLike } from '../hud/dom';
 import { StringTable } from '../strings/StringTable';
 import { CodexModel, normaliseTally } from './CodexModel';
 import { CODEX_MODAL_ID, createCodexModal } from './CodexView';
-import { CODEX_ENTRIES, entriesOf } from './entries';
+import { CODEX_ENTRIES, CodexRegistry, HOWTO_IDS, codexEntry, entriesOf } from './entries';
 import codexPlugin from './codex.plugin';
 import { CODEX_STRINGS_EN } from './strings.en';
 import type { CodexService } from './service';
@@ -450,5 +450,113 @@ describe('codex plugin', () => {
     t += 200;
     view.update?.(1 / 60);
     expect(calls.mock.calls.length - base).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('codex.register', () => {
+  const defs = [
+    codexEntry('howto', 'howto.mage.blink', 'mage-blink', 'blink'),
+    codexEntry('lore', 'lore.mage.tower', 'mage-tower'),
+    codexEntry('bestiary', 'mage-imp', 'mage-imp'),
+  ];
+  const view = (reg: CodexRegistry, unlocked: string[] = []) => {
+    const set = new Set(unlocked);
+    const strings = new StringTable();
+    strings.register('en', {
+      ...CODEX_STRINGS_EN,
+      'codex.howto.mage-blink.name': 'Blink', 'codex.howto.mage-blink.body': 'Press {key} to blink.',
+    });
+    const v = createCodexModal({
+      has: (id) => set.has(id), markRead: () => {}, isRead: () => false, tally: () => null,
+      t: (k, p) => strings.t(k, p), glyph: (a) => (a === 'blink' ? 'B' : '?'), entries: reg, doc: new StubDocument(),
+    });
+    return { v, set };
+  };
+
+  it('registers after built-ins in order, in each tab, and dispose removes exactly them (idempotent)', () => {
+    const reg = new CodexRegistry();
+    const builtinHowto = entriesOf('howto').length;
+    const off = reg.register(defs);
+    expect(reg.of('howto').map((e) => e.id).slice(builtinHowto)).toEqual(['howto.mage.blink']);
+    expect(reg.of('lore').at(-1)?.id).toBe('lore.mage.tower');
+    expect(reg.of('bestiary').at(-1)?.id).toBe('mage-imp');
+    const other = reg.register([codexEntry('howto', 'howto.other', 'other')]);
+    off();
+    off();
+    expect(reg.find('howto.mage.blink')).toBeUndefined();
+    expect(reg.find('howto.other')).toBeDefined();
+    other();
+    expect(reg.of('howto')).toHaveLength(builtinHowto);
+  });
+
+  it('skips duplicates (built-in and registered) with a warning, adds the rest; dispose spares the original', () => {
+    const warn = vi.fn();
+    const reg = new CodexRegistry(undefined, warn);
+    const first = reg.register([defs[0]]);
+    const off = reg.register([codexEntry('howto', HOWTO_IDS.release, 'x'), defs[0], defs[1]]);
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(reg.find(HOWTO_IDS.release)?.nameKey).toBe('codex.howto.release.name');
+    expect(reg.find('lore.mage.tower')).toBeDefined();
+    off();
+    expect(reg.find('howto.mage.blink')).toBeDefined();
+    expect(reg.find('lore.mage.tower')).toBeUndefined();
+    first();
+  });
+
+  it('skips invalid entries with a warning', () => {
+    const warn = vi.fn();
+    const reg = new CodexRegistry(undefined, warn);
+    const bad: any[] = [null, { tab: 'howto', nameKey: 'a', bodyKey: 'b' }, { id: 'x', tab: 'nope', nameKey: 'a', bodyKey: 'b' },
+      { id: 'y', tab: 'howto' }, { id: '', tab: 'howto', nameKey: 'a', bodyKey: 'b' }];
+    reg.register([...bad, defs[0]]);
+    expect(warn).toHaveBeenCalledTimes(bad.length);
+    expect(reg.find('howto.mage.blink')).toBeDefined();
+    expect(() => reg.register(undefined as any)).not.toThrow();
+  });
+
+  it('view: glyph action from the def, locked masking, re-render when open on register and dispose', () => {
+    const reg = new CodexRegistry();
+    const { v, set } = view(reg);
+    const root = v.element as unknown as ElementLike;
+    v.key('ArrowRight');
+    v.key('ArrowRight');
+    expect(v.tab).toBe('howto');
+    const off = reg.register([defs[0]]);
+    v.update?.(0);
+    expect(findAll(root, 'codex-modal__item').length).toBe(entriesOf('howto').length + 1);
+    set.add('howto.mage.blink');
+    v.select('howto.mage.blink');
+    expect(textOf(root)).toContain('Press B to blink.');
+    off();
+    v.update?.(0);
+    expect(v.selectedId).not.toBe('howto.mage.blink');
+    expect(textOf(root)).not.toContain('Blink');
+  });
+
+  it('service: unlock before register shows unlocked; persisted unknown ids are retained', async () => {
+    const r = await rig();
+    r.codex.unlock('howto.mage.blink');
+    r.saved.get('codex')!.load({ unlocked: ['howto.mage.blink', 'lore.future'], read: [] }, 1);
+    expect(r.codex.has('howto.mage.blink')).toBe(true);
+    const off = r.codex.register([defs[0]]);
+    expect(r.codex.has('howto.mage.blink')).toBe(true);
+    off();
+    off();
+    expect(r.codex.has('howto.mage.blink')).toBe(true);
+    expect(r.saved.get('codex')!.serialize()).toMatchObject({ unlocked: ['howto.mage.blink', 'lore.future'] });
+  });
+
+  it('service: open codex re-renders on register', async () => {
+    const r = await rig();
+    r.codex.open('howto.release');
+    const w = r.widget();
+    const off = r.codex.register([defs[0]]);
+    r.codex.unlock('howto.mage.blink');
+    w.update(0);
+    w.select('howto.mage.blink');
+    expect(w.selectedId).toBe('howto.mage.blink');
+    off();
+    w.update(0);
+    expect(w.selectedId).not.toBe('howto.mage.blink');
   });
 });
