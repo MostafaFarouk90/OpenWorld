@@ -14,7 +14,10 @@ const core: GamePlugin = {
 
     ctx.events.on('mercy', (e) => ctx.state.recordMercy(e));
     ctx.events.on('damage.dealt', (r) => {
-      if (r.outcome === 'hit' && ctx.state.isMercied(r.targetId)) ctx.state.revokeMercy(r.targetId);
+      // Only the player's side breaks a mercy: scripted kills, falls and hostile area hits do not.
+      if (r.outcome !== 'hit' || r.kind === 'script' || !ctx.state.isMercied(r.targetId)) return;
+      const attacker = r.attackerId ? ctx.actors.get(r.attackerId) : undefined;
+      if (attacker && (attacker.team === 'player' || attacker.team === 'ally')) ctx.state.revokeMercy(r.targetId);
     });
     ctx.events.on('actor.despawned', (e) => ctx.state.forgetMercy(e.actorId));
 

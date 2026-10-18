@@ -61,8 +61,9 @@ export class Door {
       this.offs.push(
         ctx.systems.add({
           id: `door.${parseInteractableId(opts.id).name}`,
+          // Core's band in the animation phase (contracts/game-events-and-flags.md section 1).
           fixedPhase: 'animation',
-          order: 0,
+          order: -100,
           fixedUpdate: (dt) => this.fixedUpdate(dt),
         }),
       );

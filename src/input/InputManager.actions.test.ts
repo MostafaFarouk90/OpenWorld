@@ -185,6 +185,25 @@ describe('InputManager keyboard lock', () => {
     expect(await input.requestFullscreenAndLock(bare)).toBe(true);
   });
 
+  it('stays unlocked when the document reports no fullscreen element (refused fullscreen)', async () => {
+    vi.stubGlobal('navigator', { keyboard: { lock: vi.fn(async () => {}), unlock: vi.fn() } });
+    const { input, doc, requestFullscreen } = setup();
+    requestFullscreen.mockRejectedValueOnce(new Error('refused'));
+    (doc as unknown as { fullscreenElement: Element | null }).fullscreenElement = null;
+    expect(await input.requestFullscreenAndLock()).toBe(false);
+    expect(input.keyboardLocked).toBe(false);
+  });
+
+  it('can lock again after leaving fullscreen', async () => {
+    vi.stubGlobal('navigator', { keyboard: { lock: vi.fn(async () => {}), unlock: vi.fn() } });
+    const { input, doc } = setup();
+    await input.requestFullscreenAndLock();
+    ev(doc, 'fullscreenchange');
+    expect(input.keyboardLocked).toBe(false);
+    expect(await input.requestFullscreenAndLock()).toBe(true);
+    expect(input.keyboardLocked).toBe(true);
+  });
+
   it('leaving fullscreen clears keyboardLocked', async () => {
     const unlock = vi.fn();
     vi.stubGlobal('navigator', { keyboard: { lock: vi.fn(async () => {}), unlock } });

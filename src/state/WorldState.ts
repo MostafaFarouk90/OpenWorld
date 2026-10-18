@@ -153,6 +153,9 @@ export class WorldState implements Persistable {
       this.warn(`WorldState: mercy for unknown track "${String(e.track)}"`);
       return { applied: 0, capped: false };
     }
+    // One creature earns one credit: a second mercy (Calm then Spare, or a duplicate emit) adds nothing,
+    // so a later strike revokes exactly what was gained.
+    if (e.actorId && this.credits.has(e.actorId)) return { applied: 0, capped: false };
     if (e.tier === 'boss') return this.bossMercy(e);
 
     this.mercies++;

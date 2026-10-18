@@ -214,6 +214,12 @@ export class InputManager {
       const kb = this.keyboardApi();
       if (!kb?.lock) return false;
       await kb.lock(this.bindings.boundKeyCodes().filter((c) => c !== 'Escape'));
+      // Browsers honour the lock only in fullscreen, so a refused fullscreen means Ctrl+W is still live.
+      const fs = (this.doc as unknown as { fullscreenElement?: Element | null }).fullscreenElement;
+      if (fs === null) {
+        this.keyboardLocked = false;
+        return false;
+      }
       this.keyboardLocked = true;
       return true;
     } catch {

@@ -322,6 +322,30 @@ describe('Game plugins', () => {
     expect(() => c.damage.addModifier('bad.mod', () => {})).not.toThrow(); // the id is free again
     expect(() => c.services.provide('bad' as never, {} as never)).not.toThrow();
     expect(t.game.systems.size).toBe(before.systems);
+    expect(() => c.interaction.register({ id: 'use:bad', kind: 'use', position: (o) => o, onInteract: () => {} })).not.toThrow();
+    expect(() => c.triggers.add({ id: 'bad-trigger', shape: { type: 'sphere', center: { x: 0, y: 0, z: 0 }, radius: 1 } })).not.toThrow();
+    t.game.dispose();
+    t.world.dispose();
+  });
+
+  it('a failing plugin releases the input contexts, binding listeners and pauses it took', async () => {
+    const t = setup();
+    const onBind = vi.fn();
+    const bad: GamePlugin = {
+      id: 'bad',
+      setup(ctx) {
+        ctx.input.contexts.push('cutscene', 'bad');
+        ctx.input.bindings.onChange(onBind);
+        ctx.clock.setPaused('bad.menu', true);
+        throw new Error('boom');
+      },
+    };
+    await t.game.loadPlugins(modules(corePlugin, bad));
+    const c = t.game.ctx;
+    expect(c.input.contexts.top()).toBe('gameplay');
+    expect(c.clock.paused).toBe(false);
+    c.input.bindings.rebind('jump', 0, { device: 'key', code: 'KeyP' });
+    expect(onBind).not.toHaveBeenCalled();
     t.game.dispose();
     t.world.dispose();
   });
@@ -471,6 +495,48 @@ describe('keyboard lock', () => {
     t.game.dispose();
     t.input.keyboardLocked = false;
     expect(ofType(t.events, 'input.keyboardLock')).toHaveLength(1);
+    t.world.dispose();
+  });
+});
+
+describe('core plugin mercy wiring', () => {
+  async function loaded() {
+    const t = setup();
+    await t.game.loadPlugins(modules(corePlugin));
+    const c = t.game.ctx;
+    const wolf = c.actors.spawn({ kind: 'wolf', team: 'hostile', maxHealth: 100 });
+    c.events.emit('mercy', { verb: 'spare', creature: 'wolf', tier: 'normal', track: 'halvard', actorId: wolf.id });
+    expect(c.state.isMercied(wolf.id)).toBe(true);
+    return { t, c, wolf };
+  }
+
+  it('a player hit revokes the credit', async () => {
+    const { t, c, wolf } = await loaded();
+    c.damage.apply({ attackerId: 'player', targetId: wolf.id, amount: 1, kind: 'melee' });
+    expect(c.state.isMercied(wolf.id)).toBe(false);
+    expect(c.state.favour('halvard')).toBe(30);
+    t.world.dispose();
+  });
+
+  it('blocked and immune hits, scripted kills and hostile hits do not revoke', async () => {
+    const { t, c, wolf } = await loaded();
+    wolf.invulnerable = true;
+    c.damage.apply({ attackerId: 'player', targetId: wolf.id, amount: 1, kind: 'melee' });
+    wolf.invulnerable = false;
+    const other = c.actors.spawn({ kind: 'soldier', team: 'hostile', maxHealth: 10 });
+    c.damage.apply({ attackerId: other.id, targetId: wolf.id, amount: 1, kind: 'melee' });
+    c.damage.apply({ attackerId: null, targetId: wolf.id, amount: 1, kind: 'fall' });
+    expect(c.state.isMercied(wolf.id)).toBe(true);
+    c.damage.kill(wolf.id);
+    expect(c.state.favour('halvard')).toBe(31);
+    t.world.dispose();
+  });
+
+  it('despawn ends the revocation window', async () => {
+    const { t, c, wolf } = await loaded();
+    c.actors.despawn(wolf.id);
+    expect(c.state.isMercied(wolf.id)).toBe(false);
+    expect(c.state.favour('halvard')).toBe(31);
     t.world.dispose();
   });
 });
