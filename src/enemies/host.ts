@@ -1,8 +1,35 @@
 import type { GameContext } from '../core/Game';
 import { heightAt as terrainHeightAt } from '../terrain/heightfield';
 import { loudFromSpeed, makeSpeedMeter } from './ai/awareness';
-import type { EnemyHost, EventsPort, InteractionPort, ServicesPort } from './ports';
+import type { EnemyHost, EventsPort, InteractionPort, ServicesPort, TorchState } from './ports';
 import './events';
+
+/** Contact radius of the carried flame itself; the scarecrow adds its own `contactRadius`. */
+export const TORCH_FLAME_RADIUS = 0.3;
+
+/**
+ * The carried torch as the enemies read it, from the quests service. The shipped service exposes
+ * `torch(): {x,y,z} | null` (src/quests/service.ts); `carriedTorch()` was the shape guessed before it landed and
+ * is still honoured when present. Reading only `carriedTorch` meant no torch ever ignited a scarecrow.
+ */
+export function torchFromQuests(quests: unknown): TorchState | null {
+  const q = quests as { carriedTorch?: () => TorchState | null; torch?: () => { x: number; y: number; z: number } | null } | undefined;
+  if (!q) return null;
+  if (typeof q.carriedTorch === 'function') return q.carriedTorch() ?? null;
+  if (typeof q.torch !== 'function') return null;
+  const at = q.torch();
+  if (!at) return null;
+  return {
+    lit: true,
+    radius: TORCH_FLAME_RADIUS,
+    position: (out) => {
+      out.x = at.x;
+      out.y = at.y;
+      out.z = at.z;
+      return out;
+    },
+  };
+}
 
 /**
  * Adapts the game core to the narrow ports the enemy code is written against. The casts are
@@ -47,7 +74,7 @@ export function hostFromContext(ctx: GameContext, warn: (m: string) => void): En
     },
     torch: {
       // The quests service exposes the carried torch (plans/slice-2-quests.md); absent until it lands.
-      carried: () => (ctx.services as unknown as ServicesPort).get('quests')?.carriedTorch?.() ?? null,
+      carried: () => torchFromQuests((ctx.services as unknown as ServicesPort).get('quests')),
     },
     heightAt: terrainHeightAt,
     warn,

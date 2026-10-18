@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { registerClassStats, resetClassStats } from '../progression/classStats';
 import { BURN } from '../vfx/tuning';
 import plugin from './spells.plugin';
 import { makeCtx } from './testHost';
@@ -24,6 +25,43 @@ describe('spells plugin', () => {
     expect(f.systems).toHaveLength(0);
     expect(f.persisted.size).toBe(0);
     expect(f.world.events.count()).toBe(0);
+  });
+
+  it('setMaxEmber changes maxEmber and refuses bad numbers', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    expect(s.setMaxEmber(60)).toBe(true);
+    expect(s.maxEmber).toBe(60);
+    expect(s.ember).toBe(60);
+    expect(s.setMaxEmber(Number.NaN)).toBe(false);
+    expect(s.maxEmber).toBe(60);
+    plugin.dispose!();
+  });
+
+  it('restoreEmber adds up to the maximum and reports what was added; bad input adds nothing', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    expect(s.spendEmber(40)).toBe(true);
+    expect(s.restoreEmber(15)).toBe(15);
+    expect(s.ember).toBe(75);
+    expect(s.restoreEmber(500)).toBe(25);
+    expect(s.ember).toBe(100);
+    for (const bad of [0, -3, Number.NaN, Number.POSITIVE_INFINITY]) expect(s.restoreEmber(bad)).toBe(0);
+    expect(s.ember).toBe(100);
+    plugin.dispose!();
+  });
+
+  it('applies the Ember maximum of the class when progression appears after the spells', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    registerClassStats('mage', { health: 85, healthPerLevel: 6, stamina: 80, ember: 140 });
+    f.services.progression = { addMaxHealthModifier: () => () => {}, learned: () => false, classId: 'mage' };
+    f.tick(70);
+    expect(f.services.spells!.maxEmber).toBe(140);
+    plugin.dispose!();
+    resetClassStats();
   });
 
   it('rest clears burn and emits burn.changed', () => {
@@ -514,6 +552,73 @@ describe('shard use, Scars and the Leap (slice 2)', () => {
       f.tick(60 * 4);
       expect(f.services.spells!.leap.cooldown().remaining).toBeCloseTo(0, 5);
       plugin.dispose!();
+    });
+
+    describe('effects', () => {
+      const withVfx = () => {
+        const trail = { stop: vi.fn(), alive: true };
+        const spawnEffect = vi.fn((id: string) => (id === 'leap-trail' ? trail : { stop: vi.fn(), alive: false }));
+        const vfx = { spawnEffect, fovPunch: vi.fn(), pulseScreen: vi.fn() };
+        const f = makeCtx({ vfx });
+        plugin.setup(f.ctx);
+        grant(f);
+        press(f);
+        f.world.player.feet.y = 0.5;
+        f.tick(1);
+        return { f, trail, ids: () => spawnEffect.mock.calls.map((c) => c[0]) };
+      };
+
+      it('launch spawns leap-dust, leap-shell and the leap-trail', () => {
+        const { ids } = withVfx();
+        expect(ids()).toEqual(expect.arrayContaining(['leap-dust', 'leap-shell', 'leap-trail']));
+        expect(ids()).not.toContain('shockwave-ring');
+        plugin.dispose!();
+      });
+
+      it('landing spawns leap-dust and stops the trail', () => {
+        const { f, trail, ids } = withVfx();
+        expect(trail.stop).not.toHaveBeenCalled();
+        f.world.events.emit('player.leap', { phase: 'land', from: { x: 0, y: 0, z: 0 }, to: { x: 0, y: 0, z: 6 } });
+        expect(trail.stop).toHaveBeenCalledTimes(1);
+        expect(ids().filter((i) => i === 'leap-dust')).toHaveLength(2);
+        plugin.dispose!();
+      });
+
+      it('a cancelled Leap stops the trail', () => {
+        const { f, trail } = withVfx();
+        f.world.events.emit('player.leap', { phase: 'cancel', from: { x: 0, y: 0, z: 0 } });
+        expect(trail.stop).toHaveBeenCalledTimes(1);
+        plugin.dispose!();
+      });
+
+      it('dispose stops a trail still running', () => {
+        const { trail } = withVfx();
+        plugin.dispose!();
+        expect(trail.stop).toHaveBeenCalled();
+      });
+
+      it('rekindling the Quenchstone at Burn 95 scars through the one shard path and flashes the chest (thread 7 seam)', () => {
+        const spawnEffect = vi.fn((_id: string) => ({ stop: vi.fn(), alive: false }));
+        const f = makeCtx({ vfx: { spawnEffect, fovPunch: vi.fn(), pulseScreen: vi.fn() } });
+        plugin.setup(f.ctx);
+        const s = f.services.spells!;
+        s.addBurn(95, 't');
+        f.world.events.emit('waystone.rekindled', { waystoneId: 'quenchstone', cause: 'player' });
+        expect(s.scars).toBe(1);
+        expect(s.burn).toBe(100);
+        expect(spawnEffect.mock.calls.map((c) => c[0])).toContain('scar-flash');
+        plugin.dispose!();
+      });
+
+      it('a Scar spawns scar-flash', () => {
+        const spawnEffect = vi.fn((_id: string) => ({ stop: vi.fn(), alive: false }));
+        const f = makeCtx({ vfx: { spawnEffect, fovPunch: vi.fn(), pulseScreen: vi.fn() } });
+        plugin.setup(f.ctx);
+        f.services.spells!.addBurn(80, 't');
+        f.services.spells!.useShard(8, 'test');
+        expect(spawnEffect.mock.calls.map((c) => c[0])).toContain('scar-flash');
+        plugin.dispose!();
+      });
     });
 
     it('a Leap into a wall costs nothing', () => {

@@ -1,0 +1,57 @@
+import type { FlagGates } from '../state/FlagGates';
+
+/** `closed`: portcullis down. `guarded`: open but watched (M06's stealth route goes through). `open`: guards stand down. */
+export type GateState = 'closed' | 'guarded' | 'open';
+
+/** Written by thread 6 at M06's start and when o2 resolves by any route. */
+export const M06_STARTED_FLAG = 'story.m06.started';
+export const M06_ROUTE_FLAG = 'story.m06.route';
+
+export const gateStateFor = (started: boolean, route: boolean): GateState => (route ? 'open' : started ? 'guarded' : 'closed');
+
+export interface SouthGate {
+  state(): GateState;
+  /** Forces a state (thread 21's story gate, debug); `null` goes back to the flags. */
+  override(state: GateState | null): void;
+  dispose(): void;
+}
+
+/** Derives the South Gate's state from the two flags through ctx.gates, so a loaded save re-derives it. */
+export function watchSouthGate(gates: Pick<FlagGates, 'flag'>, apply: (state: GateState) => void): SouthGate {
+  let started = false;
+  let route = false;
+  let forced: GateState | null = null;
+  let last: GateState | null = null;
+  // The two init callbacks arrive one after the other: hold the first push until both flags are read.
+  let ready = false;
+  const current = (): GateState => forced ?? gateStateFor(started, route);
+  const push = (): void => {
+    if (!ready) return;
+    const s = current();
+    if (s === last) return;
+    last = s;
+    apply(s);
+  };
+  const offs = [
+    gates.flag(M06_STARTED_FLAG, (on) => {
+      started = on;
+      push();
+    }),
+    gates.flag(M06_ROUTE_FLAG, (on) => {
+      route = on;
+      push();
+    }),
+  ];
+  ready = true;
+  push();
+  return {
+    state: current,
+    override(state) {
+      forced = state;
+      push();
+    },
+    dispose() {
+      for (const off of offs.splice(0)) off();
+    },
+  };
+}
