@@ -5,7 +5,7 @@ import type { PoiReward } from './content/poi';
 export interface PoiPorts {
   bus: BusPort;
   state: StatePort;
-  run(effects: Effect[]): void;
+  run(effects: Effect[]): { ok: boolean }[];
   codexUnlock?(id: string): void;
   warn?(m: string): void;
 }
@@ -17,8 +17,10 @@ export function installPoiRewards(table: PoiReward[], p: PoiPorts): Unsubscribe 
     const r = typeof e?.interactableId === 'string' ? byId.get(e.interactableId) : undefined;
     if (!r || p.state.getFlag(r.onceFlag) === true) return;
     try {
+      // flag last of the effects: a failing effect (service absent) must not burn the one-time reward
+      const results = p.run(r.effects);
+      if (results.some((x) => !x.ok)) { p.warn?.(`poi ${r.interactableId}: reward failed, not marked taken`); return; }
       p.state.setFlag(r.onceFlag, true);
-      p.run(r.effects);
       if (r.codexId) p.codexUnlock?.(r.codexId);
     } catch (err) {
       p.warn?.(`poi ${r.interactableId}: ${String(err)}`);

@@ -33,10 +33,17 @@ describe('M04 The Toll at Hollin Ford', () => {
     died(w, 's1', 'blighted-soldier');
     expect(w.manager.objectives('m04')[2].progress).toBe(1);
   });
-  it('the toll-post cannot be broken before the soldiers are dealt with, and a stranger killing it does not count', () => {
+  it('a toll-post broken before the soldiers are dealt with still counts later (world flag), whoever broke it', () => {
     const w = toFord();
-    died(w, 'tp', 'toll-post');
-    expect(w.manager.objectiveDone('m04', 'o4')).toBe(false);
+    w.bus.emit('actor.died', { actorId: 'tp', killerId: 'a-mob', kind: 'toll-post' });
+    w.flags.set('world.brightwater.tollPost', true);
+    died(w, 's1', 'blighted-soldier');
+    died(w, 's2', 'blighted-soldier');
+    expect(w.manager.objectiveDone('m04', 'o4')).toBe(true);
+    expect(w.manager.isObjectiveCurrent('m04', 'o5')).toBe(true);
+  });
+  it('a stranger killing a soldier does not count', () => {
+    const w = toFord();
     w.bus.emit('actor.died', { actorId: 's1', killerId: 'someone-else', kind: 'blighted-soldier' });
     expect(w.manager.objectives('m04')[2].progress).toBe(0);
   });
@@ -99,6 +106,24 @@ describe('R02 The Marshal\'s Last Drill', () => {
     expect(w.manager.state('r02')).toBe('active');
     talk(w, 'stane');
     expect(w.manager.state('r02')).toBe('completed');
+  });
+});
+
+describe('doneWhen and loading', () => {
+  it('is not read during load, only by recheck() after the world state loaded', () => {
+    const w = makeWorld([m03]);
+    w.manager.start('m03');
+    for (const o of ['o1', 'o2']) w.manager.completeObjective('m03', o);
+    const saved = JSON.parse(JSON.stringify(w.manager.serialize()));
+    w.flags.set('ability.surge-leap.learned', true); // stale session flag, not yet replaced by the loaded world state
+    w.manager.load(saved);
+    expect(w.manager.objectiveDone('m03', 'o3')).toBe(false);
+    w.flags.delete('ability.surge-leap.learned'); // the save never learned it
+    w.manager.recheck();
+    expect(w.manager.objectiveDone('m03', 'o3')).toBe(false);
+    w.flags.set('ability.surge-leap.learned', true);
+    w.manager.recheck();
+    expect(w.manager.objectiveDone('m03', 'o3')).toBe(true);
   });
 });
 

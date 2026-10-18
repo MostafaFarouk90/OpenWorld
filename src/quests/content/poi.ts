@@ -15,7 +15,7 @@ export interface PoiReward {
 export const POI_REWARDS: PoiReward[] = [
   {
     interactableId: 'use:poi-chapel-ledge',
-    onceFlag: 'story.poi.chapelLedge.taken',
+    onceFlag: 'story.m03.ledgeTaken',
     effects: [
       { give: [{ itemId: 'healing-flask', count: 2 }, { itemId: 'barley-cake', count: 2 }] },
       { giveGold: LEDGE_CACHE_GOLD },
@@ -23,7 +23,7 @@ export const POI_REWARDS: PoiReward[] = [
   },
   {
     interactableId: 'use:poi-reed-island',
-    onceFlag: 'story.poi.reedIsland.read',
+    onceFlag: 'story.m03.reedRead',
     effects: [{ xp: 40 }],
     codexId: 'lore.reed-island',
   },

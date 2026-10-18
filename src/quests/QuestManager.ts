@@ -128,7 +128,7 @@ export class QuestManager implements QuestReader, QuestActions {
       return false;
     }
     if (rt.state !== 'inactive') return false;
-    if (!this.startAllowed(def)) return false;
+    if (!this.startAllowed(def)) { this.warnOnce(`start-gated:${id}`, `quests: start of "${id}" refused by its startWhen`); return false; }
     rt.state = 'active';
     rt.objectives = {};
     for (const o of def.objectives) this.dedupe.delete(this.dkey(id, o.id));
@@ -226,8 +226,14 @@ export class QuestManager implements QuestReader, QuestActions {
     }
     this.notify();
     for (const id of [...this.order]) {
-      if (this.rt.get(id)?.state === 'active') this.creditInside(id);
+      // doneWhen reads flags, which may not have loaded yet: `recheck()` on save.loaded credits those
+      if (this.rt.get(id)?.state === 'active') this.creditInside(id, false);
     }
+  }
+
+  /** Credits objectives the world already satisfies (goTo inside a trigger, doneWhen); call after a save loaded. */
+  recheck(): void {
+    for (const id of [...this.order]) if (this.rt.get(id)?.state === 'active') this.creditInside(id);
   }
 
   dispose(): void {
@@ -325,7 +331,7 @@ export class QuestManager implements QuestReader, QuestActions {
    * Objectives that just became current are credited when the world already satisfies them: goTo while the
    * player stands in the trigger, event objectives whose `doneWhen` holds (the event may have fired earlier).
    */
-  private creditInside(questId: string): void {
+  private creditInside(questId: string, doneWhen = true): void {
     const triggers = this.opts.triggers;
     const player = this.opts.playerId();
     const def = this.defs.get(questId);
@@ -333,6 +339,7 @@ export class QuestManager implements QuestReader, QuestActions {
     for (const o of def.objectives) {
       if (!this.isObjectiveCurrent(questId, o.id)) continue;
       if (o.type === 'event' && o.doneWhen) {
+        if (!doneWhen) continue;
         const env: ConditionEnv = { state: this.opts.state, quests: this, warn: this.opts.warn };
         let done = false;
         try { done = evalCondition(o.doneWhen, env); } catch (e) { this.warn(`quests: doneWhen threw: ${String(e)}`); }

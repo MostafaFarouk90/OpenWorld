@@ -44,8 +44,8 @@ export class TorchSystem {
         position: (out) => { out.x = home.x; out.y = home.y; out.z = home.z; return out; },
         radius: 2.5,
         promptKey: 'quest.prompt.torch',
-        enabled: () => !this.disposed && !this.lit && p.active(),
-        onInteract: () => this.light(),
+        enabled: () => !this.disposed && p.active(),
+        onInteract: () => (this.lit ? this.snuff() : this.light()),
       }));
     }
     this.offs.push(

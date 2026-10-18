@@ -73,6 +73,7 @@ const plugin: GamePlugin = {
     ));
     ctx.services.provide('journal', tabs);
 
+    const offs: Array<() => void> = [];
     let torch: TorchSystem | null = null;
     ctx.services.provide('quests', {
       register,
@@ -104,26 +105,27 @@ const plugin: GamePlugin = {
     };
     const makeJournal = () => createJournalPanel(() => buildJournalModel(journalSource, ctx.strings), undefined, { tabs, t: (k) => ctx.strings.t(k) });
     manager.onChange(() => journalState.widget?.refresh());
-    ctx.events.on('flag.changed', () => journalState.widget?.refresh());
+    offs.push(ctx.events.on('flag.changed', () => journalState.widget?.refresh()));
 
     // Event-to-flag bridges, one-time POI rewards and quest-driven NPC posts.
-    installBridges(bus, ctx.state, manager, warn);
+    offs.push(installBridges(bus, ctx.state, manager, warn));
     const svc = (n: string) => (ctx.services as unknown as { get(n: string): any }).get(n);
     const poiEffects = createEffectRunner({
       state: ctx.state, quests: manager, bus, sourceId: 'poi', warn,
       inventory: () => svc('inventory'), progression: () => svc('progression'),
     });
-    installPoiRewards(POI_REWARDS, {
-      bus, state: ctx.state, run: (e) => { poiEffects.run(e); }, warn,
+    offs.push(installPoiRewards(POI_REWARDS, {
+      bus, state: ctx.state, run: (e) => poiEffects.run(e), warn,
       codexUnlock: (id) => svc('codex')?.unlock?.(id),
-    });
+    }));
     const posts = new PostDirector(
       BRIGHTWATER_POST_RULES,
       () => ({ state: ctx.state, quests: manager, warn }),
       () => svc('npcs'),
+      () => svc('dialogue')?.active === true,
     );
     manager.onChange(() => posts.markDirty());
-    ctx.events.on('save.loaded', () => posts.reset());
+    offs.push(ctx.events.on('save.loaded', () => { posts.reset(); manager.recheck(); }));
     const journalHud = {
       get modalOpen() {
         return ctx.hud.modalOpen;
@@ -284,10 +286,12 @@ const plugin: GamePlugin = {
       dispose: () => {
         carry?.dispose();
         carry = null;
+        for (const o of offs.splice(0)) o();
         torch?.dispose();
         torch = null;
         torchMesh?.removeFromParent();
         torchMesh?.geometry.dispose();
+        (torchMesh?.material as THREE.Material | undefined)?.dispose();
         disposeVisuals();
         manager.dispose();
       },

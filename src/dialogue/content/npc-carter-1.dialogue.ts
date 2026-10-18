@@ -21,8 +21,8 @@ export const npcCarter1: DialogueDef = {
     { when: { all: [] }, node: 'idle' },
   ],
   nodes: [
-    { id: 'thanks', speaker: 'carter-1', textKey: P + 'thanks', effects: [{ setFlag: 'story.m04.cartersFreed', value: true }], next: 'thanks-2' },
-    { id: 'thanks-2', speaker: 'carter-1', textKey: P + 'thanks-2', next: null },
+    { id: 'thanks', speaker: 'carter-1', textKey: P + 'thanks', next: 'thanks-2' },
+    { id: 'thanks-2', speaker: 'carter-1', textKey: P + 'thanks-2', effects: [{ setFlag: 'story.m04.cartersFreed', value: true }], next: null },
     { id: 'leaving', speaker: 'carter-1', textKey: P + 'leaving', next: null },
     { id: 'afraid', speaker: 'carter-1', textKey: P + 'afraid', next: null },
     { id: 'gone', speaker: 'carter-1', textKey: P + 'gone', next: null },

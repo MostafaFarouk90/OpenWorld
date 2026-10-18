@@ -55,7 +55,7 @@ describe('POI rewards', () => {
     const w = makeWorld();
     const run = createEffectRunner({ state: w.state, quests: w.manager, bus: w.bus, sourceId: 'poi', inventory: () => ({ remove: () => true, addGold: (n) => { w.gold.n += n; } }), progression: () => ({ grantXp: (n) => { w.calls.push(`xp:${n}`); } }) });
     const codex = vi.fn();
-    installPoiRewards(POI_REWARDS, { bus: w.bus, state: w.state, run: (e) => { run.run(e); }, codexUnlock: codex });
+    installPoiRewards(POI_REWARDS, { bus: w.bus, state: w.state, run: (e) => run.run(e), codexUnlock: codex });
     return { w, codex };
   }
   it('pays the ledge cache once and survives re-use', () => {
@@ -75,9 +75,9 @@ describe('POI rewards', () => {
   });
   it('ignores other interactables and malformed events; a missing codex service is fine', () => {
     const w = makeWorld();
-    installPoiRewards(POI_REWARDS, { bus: w.bus, state: w.state, run: () => {} });
+    installPoiRewards(POI_REWARDS, { bus: w.bus, state: w.state, run: () => [{ ok: true }] });
     expect(() => { w.bus.emit('interact', undefined); w.bus.emit('interact', { interactableId: 5 }); w.bus.emit('interact', { interactableId: 'use:other' }); w.bus.emit('interact', { interactableId: 'use:poi-reed-island' }); }).not.toThrow();
-    expect(w.flags.get('story.poi.reedIsland.read')).toBe(true);
+    expect(w.flags.get('story.m03.reedRead')).toBe(true);
   });
 });
 
@@ -111,9 +111,30 @@ describe('quest posts', () => {
     w.npcs.missing.clear();
     dir.update();
     expect(w.npcs.placed).toEqual([['gaut', 'npc-post.gaut.ford']]);
-    dir.reset(); // save.loaded
+    dir.reset(); // save.loaded: positions survive a load, nothing needs re-placing
     dir.update();
-    expect(w.npcs.placed).toHaveLength(2);
+    expect(w.npcs.placed).toHaveLength(1);
+  });
+  it('a load that rewinds the quest sends Gaut home even though the load did not move him', () => {
+    const w = makeWorld([m04]);
+    const dir = new PostDirector(BRIGHTWATER_POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
+    w.manager.start('m04');
+    dir.update();
+    w.manager.load({ quests: {} }); // an earlier save: M04 inactive
+    dir.reset();
+    dir.update();
+    expect(w.npcs.placed.at(-1)).toEqual(['gaut', 'npc-post.gaut']);
+  });
+  it('does not move anyone while a dialogue is open, then catches up', () => {
+    const w = makeWorld([m04]);
+    let talking = true;
+    const dir = new PostDirector(BRIGHTWATER_POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs, () => talking);
+    w.manager.start('m04');
+    dir.update();
+    expect(w.npcs.placed).toEqual([]);
+    talking = false;
+    dir.update();
+    expect(w.npcs.placed).toHaveLength(1);
   });
   it('does nothing without an npcs service, then catches up', () => {
     const w = makeWorld([m04]);
@@ -157,7 +178,10 @@ describe('torch', () => {
     expect(s.t.position()).toEqual({ x: 1, y: 3.1, z: 3 });
     s.feet.x = 9; s.t.update();
     expect(s.t.position()!.x).toBe(9);
-    expect(s.enabled()).toBe(false); // already lit
+    expect(s.enabled()).toBe(true); // the same brazier puts it out
+    s.interact();
+    expect(s.t.position()).toBeNull();
+    expect(s.removed()).toBe(1);
   });
   it('goes out on death, load, and when the objective stops being current', () => {
     for (const kill of [(s: ReturnType<typeof setup>) => s.bus.emit('actor.died', { actorId: 'p' }), (s: ReturnType<typeof setup>) => s.bus.emit('save.loaded', {}), (s: ReturnType<typeof setup>) => { s.active.on = false; s.t.update(); }]) {
@@ -303,6 +327,7 @@ describe('M05 and M03 gating (real defs)', () => {
     w.flags.set('ability.surge-leap.learned', true);
     w.bus.emit('dialogue.ended', { npcId: 'aelfreda', reason: 'completed' }); // no objective listens; o3 needs doneWhen on becoming current
     w.manager.load(w.manager.serialize());
+    w.manager.recheck();
     expect(w.manager.objectiveDone('m03', 'o3')).toBe(true);
   });
   it('M03 o6 counts a Release like a kill, once per wraith', () => {

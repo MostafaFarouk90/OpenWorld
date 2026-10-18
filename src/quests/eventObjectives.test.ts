@@ -137,6 +137,7 @@ describe('doneWhen', () => {
     expect(w.manager.objectiveDone('q', 'o1')).toBe(true);
     const saved = JSON.parse(JSON.stringify({ quests: { q: { state: 'active', objectives: {} } } }));
     w.manager.load(saved);
+    w.manager.recheck(); // the plugin calls this on save.loaded, after the world state loaded
     expect(w.manager.objectiveDone('q', 'o1')).toBe(true);
   });
   it('a condition that errors counts as not done', () => {
