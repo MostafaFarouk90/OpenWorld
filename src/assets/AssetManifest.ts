@@ -66,6 +66,30 @@ export const ASSETS = {
     pack: 'kaykit-adventurers',
     kind: 'character',
   },
+  barbarian: {
+    id: 'barbarian',
+    url: `${BASE}assets/kaykit-adventurers/characters/Barbarian.glb`,
+    pack: 'kaykit-adventurers',
+    kind: 'character',
+  },
+  mage: {
+    id: 'mage',
+    url: `${BASE}assets/kaykit-adventurers/characters/Mage.glb`,
+    pack: 'kaykit-adventurers',
+    kind: 'character',
+  },
+  rogue: {
+    id: 'rogue',
+    url: `${BASE}assets/kaykit-adventurers/characters/Rogue.glb`,
+    pack: 'kaykit-adventurers',
+    kind: 'character',
+  },
+  rogueHooded: {
+    id: 'rogueHooded',
+    url: `${BASE}assets/kaykit-adventurers/characters/Rogue_Hooded.glb`,
+    pack: 'kaykit-adventurers',
+    kind: 'character',
+  },
   sword: {
     id: 'sword',
     url: `${BASE}assets/kaykit-adventurers/weapons/sword_1handed.gltf`,
