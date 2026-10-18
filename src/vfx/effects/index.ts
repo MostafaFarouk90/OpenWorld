@@ -172,6 +172,29 @@ export const EFFECTS: Record<EffectId, EffectFactory> = {
     const r = ring(ctx, { position: hand }, 4, GOLD, 0.8);
     return r;
   },
+  // Design 11 effect 16 (Ashblade Ash Cloud): grey smoke puffs that keep rising from a `scale` metre radius for `seconds`.
+  'ash-cloud': (ctx, t, p) => {
+    const o = origin(t);
+    const radius = Math.max(0.5, t.scale ?? 3.5);
+    const seconds = Math.max(0.5, num(p, 'seconds', 6));
+    const start = ctx.now();
+    let last = -Infinity;
+    let stopped = false;
+    const puff = (count: number, now: number) =>
+      ctx.points.emit('smoke', { x: o.x, y: o.y + 0.4, z: o.z }, count, { spread: radius * 0.6, rise: 0.8, life: 3 }, now);
+    puff(40, start);
+    return {
+      update(now) {
+        if (stopped || now - start >= seconds) return false;
+        if (now - last >= 0.25) {
+          last = now;
+          puff(8, now);
+        }
+        return true;
+      },
+      stop: () => void (stopped = true),
+    };
+  },
   // Section 3 Spare: a gold glyph above a yielding human for the 2 s window.
   'yield-glyph': (ctx, t, p) => {
     const o = origin(t);

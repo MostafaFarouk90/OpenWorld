@@ -9,6 +9,7 @@ import { MoveModifiers } from '../../core/MoveModifiers';
 import type { PluginModule } from '../../core/plugins';
 import { InputManager } from '../../input/InputManager';
 import inventoryPlugin from '../../inventory/inventory.plugin';
+import { KinematicMover } from '../../enemies/steering/movers';
 import { PhysicsWorld } from '../../physics/PhysicsWorld';
 import combatVerbsPlugin from '../../player/combatVerbs.plugin';
 import progressionPlugin from '../../progression/progression.plugin';
@@ -339,6 +340,24 @@ describe('ashblade plugin: Ash-drift on the real player', () => {
     expect(e.health).toBeLessThan(e.maxHealth);
     // The player ended up on the far side of the target (z less than the target's).
     expect(t.ctx.player.feet.z).toBeLessThan(before.z - 4);
+  });
+});
+
+describe('ashblade plugin: Ash-drift against a real enemy collider', () => {
+  it('hops behind and strikes an enemy with a player-sized capsule (the wall ray must start outside it)', async () => {
+    const t = await boot();
+    const e = t.enemy(-4, Math.PI);
+    const feet = e.worldPosition(new THREE.Vector3());
+    const body = new KinematicMover(physics, { x: feet.x, y: feet.y, z: feet.z });
+    t.asAshblade();
+    t.run(3); // a physics step makes the new collider visible to ray queries
+    const spells = t.ctx.services.require('spells') as any;
+    const start = t.ctx.player.feet.clone();
+    expect(spells.cast('heartshard-surge').ok).toBe(true);
+    t.run(90);
+    expect(e.health).toBeLessThan(e.maxHealth);
+    expect(t.ctx.player.feet.z).toBeLessThan(start.z - 4);
+    body.dispose();
   });
 });
 
