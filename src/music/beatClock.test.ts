@@ -15,6 +15,12 @@ describe('beatInfoAt', () => {
     expect(b).toMatchObject({ bar: 0, beat: 0, step: 0, phase: 0, nextBeatTime: T0, audioTime: T0 });
   });
 
+  it('exactly at the start time the current beat is 0 and the next is one beat later', () => {
+    const b = beatInfoAt(clock, TRACK.bpm, T0);
+    expect(b.beat).toBe(0);
+    expect(b.nextBeatTime).toBeCloseTo(T0 + BEAT, 9);
+  });
+
   it('knows the 92 BPM beat length', () => {
     expect(BEAT).toBeCloseTo(60 / 92, 2);
     expect(beatInfoAt(clock, 92, T0 + 1).beatSeconds).toBeCloseTo(BEAT, 9);

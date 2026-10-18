@@ -118,6 +118,7 @@ export class InteriorFx {
     if (this.disposed) return;
     this.disposed = true;
     this.ramp(this.bus.gain, 1, this.ctx.currentTime, 0);
+    this.bus.disconnect(this.send);
     for (const node of [this.send, this.convolver, this.wet]) node.disconnect();
   }
 

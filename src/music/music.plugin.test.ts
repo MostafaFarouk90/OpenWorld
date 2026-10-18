@@ -75,7 +75,7 @@ function makeEnv(opts: { withAudio?: boolean; unlocked?: boolean; stemFailsFor?:
   addActor('w1', 'hostile', [5, 0, 0], { audio: { material: 'ash' } });
   addActor('dummy', 'neutral', [3, 0, 0], { audio: { material: 'wood' } });
 
-  const bossStates = new Map<string, { phase: number }>();
+  const bossStates = new Map<string, { phase: number; outcome?: string | null; releaseOpen?: boolean }>();
   const systems: Array<{ id: string; fixedPhase?: string; order?: number; fixedUpdate?: (dt: number, c: GameContext) => void }> = [];
   const ctx = {
     events,
@@ -583,6 +583,59 @@ describe('slice 2 music behaviour', () => {
     e.events.emit('save.loaded', {} as never);
     e.tickTo(e.audio.context.currentTime + 0.1);
     expect(e.services.get('music')!.state).toBe('boss');
+  });
+
+  it('save.loaded and respawn do not bring back a boss that already has an outcome', async () => {
+    const e = await start();
+    e.bossStates.set('ashen-prior', { phase: 2, outcome: 'released' });
+    e.events.emit('save.loaded', {} as never);
+    e.events.emit('actor.revived', { actorId: 'player', reason: 'respawn' } as never);
+    e.tickTo(e.audio.context.currentTime + 0.1);
+    expect(e.services.get('music')!.state).toBe('explore');
+  });
+
+  it('an open Release window survives a reload as the hush mix', async () => {
+    const e = await start();
+    e.bossStates.set('ashen-prior', { phase: 1, releaseOpen: true });
+    e.events.emit('save.loaded', {} as never);
+    e.tickTo(e.audio.context.currentTime + 0.1);
+    expect(lastMix(e)).toBe(TRACK.bossMixes!['ashen-prior'].hush);
+  });
+
+  it('a boss registered before setup is picked up', async () => {
+    const e = makeEnv({ unlocked: true });
+    e.bossStates.set('ashen-prior', { phase: 1 });
+    setupMusic(e.ctx);
+    await flush();
+    e.audio.context.currentTime = 1;
+    e.tickTo(1 + 1 / 60);
+    expect(e.services.get('music')!.state).toBe('boss');
+  });
+
+  it('beat() is null after teardown and beats stop while the context is suspended', async () => {
+    const e = makeEnv({ unlocked: true });
+    const down = setupMusic(e.ctx);
+    await flush();
+    e.audio.context.currentTime = 1;
+    e.tickTo(1 + 1 / 60);
+    const cb = vi.fn();
+    e.services.get('music')!.onBeat(cb);
+    e.audio.context.state = 'suspended';
+    for (let i = 0; i < 90; i++) e.tickTo(e.audio.context.currentTime + 1 / 60);
+    expect(cb).not.toHaveBeenCalled();
+    e.audio.context.state = 'running';
+    expect(e.services.get('music')!.beat()).not.toBeNull();
+    down();
+    expect(e.services.get('music')!.beat()).toBeNull();
+  });
+
+  it('load inside the vault with audio locked keeps the interior', async () => {
+    const e = makeEnv({ withBus: true });
+    setupMusic(e.ctx);
+    (e.services as unknown as { provide(n: string, v: unknown): void }).provide('interiors', { current: 'chapel-vault' });
+    busNode.gain.ramps.length = 0;
+    e.events.emit('save.loaded', {} as never);
+    expect(busNode.gain.ramps.at(-1)).toBe(0.75);
   });
 
   it('beat() is null before the mixer plays and while the context is not running, else a BeatInfo', async () => {
