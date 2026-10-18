@@ -34,16 +34,18 @@ function poseDistance(a: Pose, b: Pose): number {
 }
 
 describe('gait weights', () => {
-  it('sum to 1 and pick walk, trot, gallop by speed', () => {
+  it('sum to 1 and pick walk, trot, canter, gallop by speed', () => {
     for (let s = 0; s < 12; s += 0.1) {
       const w = gaitWeights(s);
-      expect(w.walk + w.trot + w.gallop).toBeCloseTo(1, 12);
+      expect(w.walk + w.trot + w.canter + w.gallop).toBeCloseTo(1, 12);
       expect(w.walk).toBeGreaterThanOrEqual(0);
       expect(w.trot).toBeGreaterThanOrEqual(0);
+      expect(w.canter).toBeGreaterThanOrEqual(0);
       expect(w.gallop).toBeGreaterThanOrEqual(0);
     }
     expect(dominantGait(1)).toBe('walk');
     expect(dominantGait(3.8)).toBe('trot');
+    expect(dominantGait(4.3)).toBe('canter');
     expect(dominantGait(8)).toBe('gallop');
   });
 

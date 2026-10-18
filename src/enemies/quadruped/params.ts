@@ -24,7 +24,14 @@ export interface QuadrupedParams {
   scale?: number;
   /** Multiplies the gait speed thresholds (default 1; bigger animals switch gait at higher speeds). */
   gaitSpeedScale?: number;
+  /** Absolute gait-change speeds (m/s, centre of each change) overriding the defaults; see `GaitTuning`. */
+  gaitSpeeds?: { walkToTrot?: number; trotToCanter?: number; canterToGallop?: number };
 }
+
+/** Rig scale of Gaffer Grimtooth, the boss hound (thread 3b). */
+export const GRIMTOOTH_SCALE = 1.8;
+/** Rig scale of the R07 pup. */
+export const PUP_SCALE = 0.5;
 
 /** Ember Hound: a lean, low pack hunter. Walk 2.0 m/s, chase 5.5 m/s. */
 export const HOUND: Readonly<QuadrupedParams> = Object.freeze({
@@ -46,7 +53,7 @@ export const HOUND: Readonly<QuadrupedParams> = Object.freeze({
  * `HORSE` preset (tint, emissive) on top of this.
  */
 export const HORSE_PROPORTIONS: Readonly<
-  Pick<QuadrupedParams, 'bodyLength' | 'bodyHeight' | 'legLength' | 'neckLength' | 'neckAngle' | 'headSize' | 'gaitSpeedScale'>
+  Pick<QuadrupedParams, 'bodyLength' | 'bodyHeight' | 'legLength' | 'neckLength' | 'neckAngle' | 'headSize' | 'gaitSpeeds'>
 > = Object.freeze({
   bodyLength: 2.0,
   bodyHeight: 0.8,
@@ -54,7 +61,8 @@ export const HORSE_PROPORTIONS: Readonly<
   neckLength: 0.8,
   neckAngle: 0.9,
   headSize: 0.55,
-  gaitSpeedScale: 1.8,
+  // Walk below ~4, trot to ~7.5, then it canters at 9 m/s and gallops at 12 m/s.
+  gaitSpeeds: { walkToTrot: 4, trotToCanter: 7.5, canterToGallop: 10.5 },
 });
 
 /** Derived rig-local dimensions (before `scale`); the rig builds from these and gait.ts grounds the pose with them. */

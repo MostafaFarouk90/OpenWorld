@@ -9,7 +9,7 @@ import { makeLineOfSight, perceive, type CombinedModifiers } from './ai/percepti
 import { ENEMY_CLIPS } from './clips';
 import { Cutpurse } from './cutpurse/Cutpurse';
 import { BURNING_BITE, HOUND } from './hound/tuning';
-import { slopePitch } from './hound/slope';
+import { bodyPitch } from './quadruped/gait';
 import { readStatusData } from './statusData';
 import type { EnemyBody } from './body';
 import type { ActorId, ActorLike, EnemyHost, NavPort } from './ports';
@@ -20,6 +20,7 @@ import { PathFollower } from './steering/pathFollower';
 import { forwardOf, Steering, turnToward, yawTo } from './steering/steering';
 import { HeightfieldMover, SwitchingMover, type EnemyMover } from './steering/movers';
 import { AI } from './tuning';
+import type { MemberEnd } from './spawners';
 import type { AiState, EnemyDef, EnemyView, MoveDef, SpawnOptions, UnlockVerb, WeaponChannel } from './types';
 
 /** A vfx dissolve that has not settled this long after its length still despawns the enemy. */
@@ -46,7 +47,7 @@ export interface EnemyEnv {
   /** Combined perception modifiers for this observer vs the target; null with no providers. */
   perceptionModifiers(self: Enemy, targetId: ActorId): CombinedModifiers | null;
   /** Called once the enemy is gone from the world (after despawn). */
-  gone(self: Enemy, how: 'died' | 'released' | 'spared' | 'despawned'): void;
+  gone(self: Enemy, how: MemberEnd): void;
 }
 
 export interface EnemySpawn {
@@ -605,6 +606,13 @@ export class Enemy {
     this.setLoco(ENEMY_CLIPS.walk);
   }
 
+  /** A thief gets away with the pouch (flee window over, blinked out, or gone dormant while fleeing): the spawner may refill its slot. */
+  private escape(): void {
+    if (this.phase === 'gone') return;
+    this.goneHow = 'escaped';
+    this.despawn();
+  }
+
   /** Despawns without reporting the mercy exit, for a load that never saw the mercy. */
   despawnUnseen(): void {
     this.goneHow = 'despawned';
@@ -651,7 +659,7 @@ export class Enemy {
     // Leave combat first so the token, telegraph (cancelled), open window and aggro (calm) are settled.
     this.brain.standDown();
     // A fleeing thief that goes dormant is out of play: its flee window is over.
-    if (this.thief && this.thief.stolenGold > 0) return void this.despawn();
+    if (this.thief && this.thief.stolenGold > 0) return void this.escape();
     this.asleep = true;
     if (this.mover instanceof SwitchingMover) this.mover.sleep();
   }
@@ -688,7 +696,7 @@ export class Enemy {
 
   // ---- internals ---------------------------------------------------------------------------------
 
-  private goneHow: 'died' | 'released' | 'spared' | 'despawned' = 'despawned';
+  private goneHow: MemberEnd = 'despawned';
   private fadeSeconds: number = AI.deathFadeSeconds;
   private fadeHandledByVfx = false;
   private dissolved = false;
@@ -800,7 +808,10 @@ export class Enemy {
     if (typeof q.setSlopePitch === 'function') {
       const f = this.mover.feet;
       const length = (q.params?.bodyLength ?? 0) * (q.params?.scale ?? 1);
-      q.setSlopePitch(slopePitch(this.host.heightAt, f.x, f.z, this.yaw, length));
+      const half = length / 2;
+      const fx = -Math.sin(this.yaw);
+      const fz = -Math.cos(this.yaw);
+      q.setSlopePitch(bodyPitch(this.host.heightAt(f.x + fx * half, f.z + fz * half), this.host.heightAt(f.x - fx * half, f.z - fz * half), length));
     }
   }
 
@@ -891,7 +902,7 @@ export class Enemy {
         setHidden: (hidden) => {
           this.body.root.visible = !hidden;
         },
-        despawn: () => this.despawn(),
+        despawn: () => this.escape(),
       },
       {
         inventory: () => host.services.get('inventory'),

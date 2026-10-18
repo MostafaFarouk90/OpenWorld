@@ -5,15 +5,16 @@
  * positive raises it.
  *
  * Locomotion: `advancePhase` integrates a stride frequency that is a continuous function of speed, so the
- * phase never jumps when the speed changes; `locomotionPose` blends walk, trot and gallop by speed weights
- * (and fades to the idle pose near zero speed), so the leg angles are continuous too.
+ * phase never jumps when the speed changes; `locomotionPose` blends walk, trot, canter and gallop by speed weights
+ * (and fades to the idle pose near zero speed), so the leg angles are continuous too. `QuadrupedGait` wraps
+ * these functions as the one object an owner steps each tick.
  */
 import type { QuadrupedDims } from './params';
 
 export type LegId = 'FL' | 'FR' | 'BL' | 'BR';
 export const LEG_IDS: readonly LegId[] = ['FL', 'FR', 'BL', 'BR'];
-export type GaitName = 'walk' | 'trot' | 'gallop';
-export const GAIT_NAMES: readonly GaitName[] = ['walk', 'trot', 'gallop'];
+export type GaitName = 'walk' | 'trot' | 'canter' | 'gallop';
+export const GAIT_NAMES: readonly GaitName[] = ['walk', 'trot', 'canter', 'gallop'];
 
 const TAU = Math.PI * 2;
 
@@ -94,10 +95,11 @@ const restLegs = (): Record<LegId, LegAngles> => ({
 
 // ---------------------------------------------------------------------------------------------- gaits
 
-/** Phase offsets (fractions of a cycle) per leg. Walk: lateral sequence; trot: diagonal pairs; gallop: rotary-ish. */
+/** Phase offsets (fractions of a cycle) per leg. Walk: lateral sequence; trot: diagonal pairs; canter: three-beat; gallop: rotary-ish. */
 export const GAIT_OFFSETS: Readonly<Record<GaitName, Readonly<Record<LegId, number>>>> = {
   walk: { FL: 0, BR: 0.25, FR: 0.5, BL: 0.75 },
   trot: { FL: 0, BR: 0, FR: 0.5, BL: 0.5 },
+  canter: { BL: 0, BR: 0.33, FL: 0.33, FR: 0.66 },
   gallop: { BL: 0, BR: 0.1, FL: 0.5, FR: 0.6 },
 };
 
@@ -114,13 +116,18 @@ interface GaitShape {
 const SHAPES: Readonly<Record<GaitName, GaitShape>> = {
   walk: { stride: 2.2, swing: 0.34, knee: 0.55, pitch: 0.02, roll: 0.03, bob: 0.02, neck: 0.05 },
   trot: { stride: 3.5, swing: 0.5, knee: 0.75, pitch: 0.03, roll: 0.015, bob: 0.05, neck: 0.04 },
+  canter: { stride: 4.5, swing: 0.68, knee: 0.85, pitch: 0.09, roll: 0.01, bob: 0.12, neck: 0.08 },
   gallop: { stride: 5.5, swing: 0.85, knee: 0.95, pitch: 0.16, roll: 0, bob: 0.2, neck: 0.12 },
 };
 
 export interface GaitTuning {
-  /** Speed (m/s) at which walk gives way to trot, and trot to gallop; the change is spread over `blend`. */
+  /**
+   * Speeds (m/s) at which walk gives way to trot, trot to canter and canter to gallop (the middle of each change,
+   * which is spread over `blend`). A gait is pure when the speed is more than `blend / 2` past its threshold.
+   */
   walkToTrot: number;
-  trotToGallop: number;
+  trotToCanter: number;
+  canterToGallop: number;
   blend: number;
   /** Multiplies the thresholds (QuadrupedParams.gaitSpeedScale). */
   speedScale: number;
@@ -130,7 +137,8 @@ export interface GaitTuning {
 }
 export const DEFAULT_TUNING: Readonly<GaitTuning> = {
   walkToTrot: 2.8,
-  trotToGallop: 4.8,
+  trotToCanter: 4.1,
+  canterToGallop: 4.5,
   blend: 1,
   speedScale: 1,
   idleBelow: 0.05,
@@ -139,28 +147,32 @@ export const DEFAULT_TUNING: Readonly<GaitTuning> = {
 
 export type GaitWeights = Record<GaitName, number>;
 
-/** Smooth weights of the three gaits at a speed; always sum to 1. Non-finite or negative speed counts as 0. */
+/** Smooth weights of the four gaits at a speed; always sum to 1. Non-finite or negative speed counts as 0. */
 export function gaitWeights(speed: number, tuning: Readonly<GaitTuning> = DEFAULT_TUNING): GaitWeights {
   const sc = tuning.speedScale > 0 ? tuning.speedScale : 1;
   const s = Number.isFinite(speed) && speed > 0 ? speed / sc : 0;
   const half = Math.max(1e-6, tuning.blend / 2);
   const t1 = smoothstep(tuning.walkToTrot - half, tuning.walkToTrot + half, s);
-  const t2 = smoothstep(tuning.trotToGallop - half, tuning.trotToGallop + half, s);
-  const gallop = t1 * t2;
-  return { walk: 1 - t1, trot: t1 - gallop, gallop };
+  const t2 = smoothstep(tuning.trotToCanter - half, tuning.trotToCanter + half, s);
+  const t3 = smoothstep(tuning.canterToGallop - half, tuning.canterToGallop + half, s);
+  const beyondTrot = t1 * t2;
+  const gallop = beyondTrot * t3;
+  return { walk: 1 - t1, trot: t1 - beyondTrot, canter: beyondTrot - gallop, gallop };
 }
 
 /** The gait with the largest weight at a speed. */
 export function dominantGait(speed: number, tuning: Readonly<GaitTuning> = DEFAULT_TUNING): GaitName {
   const w = gaitWeights(speed, tuning);
-  return w.gallop >= w.trot && w.gallop >= w.walk ? 'gallop' : w.trot >= w.walk ? 'trot' : 'walk';
+  let best: GaitName = 'walk';
+  for (const g of GAIT_NAMES) if (w[g] > w[best]) best = g;
+  return best;
 }
 
 /** Gait cycles per second at a speed: speed over the weighted stride length. Continuous in speed; 0 at rest. */
 export function strideFrequency(speed: number, legLength: number, tuning: Readonly<GaitTuning> = DEFAULT_TUNING): number {
   if (!(Number.isFinite(speed) && speed > 0) || !(legLength > 0)) return 0;
   const w = gaitWeights(speed, tuning);
-  const stride = (w.walk * SHAPES.walk.stride + w.trot * SHAPES.trot.stride + w.gallop * SHAPES.gallop.stride) * legLength;
+  const stride = (w.walk * SHAPES.walk.stride + w.trot * SHAPES.trot.stride + w.canter * SHAPES.canter.stride + w.gallop * SHAPES.gallop.stride) * legLength;
   return speed / stride;
 }
 
@@ -383,4 +395,82 @@ export function spineHeight(pose: Pose, dims: QuadrupedDims): number {
   }
   const grounded = -lowest;
   return lerp(grounded, dims.bodyRadius * 1.05, clamp01(pose.fall)) + pose.lift * dims.legLen;
+}
+
+// ---------------------------------------------------------------------------------------------- slope
+
+/**
+ * Body pitch (radians, positive = nose up) of a quadruped whose front feet stand at ground height `frontH` and
+ * back feet at `backH`, a body `length` metres apart. Zero for a non-positive length or non-finite heights.
+ */
+export function bodyPitch(frontH: number, backH: number, length: number): number {
+  if (!(length > 0)) return 0;
+  const dy = frontH - backH;
+  return Number.isFinite(dy) ? Math.atan2(dy, length) : 0;
+}
+
+// ---------------------------------------------------------------------------------------------- the gait object
+
+/** The largest change of any leg angle between two poses (radians). */
+export function maxLegDelta(a: Pose, b: Pose): number {
+  let m = 0;
+  for (const id of LEG_IDS) m = Math.max(m, Math.abs(a.legs[id].upper - b.legs[id].upper), Math.abs(a.legs[id].lower - b.legs[id].lower));
+  return m;
+}
+
+/**
+ * The stepping gait of one quadruped: walk, trot, canter and gallop by speed, with a phase that stays continuous
+ * across gait changes. Pure (no three.js); `Pose` angles go to the rig's joints. Build it with `legLength` and
+ * the tuning (`QuadrupedGait.tuningFor(params)` reads a rig's `gaitSpeeds` and `gaitSpeedScale`).
+ */
+export class QuadrupedGait {
+  private _phase = 0;
+  private _speed = 0;
+
+  constructor(
+    private readonly legLength: number,
+    private readonly tuning: Readonly<GaitTuning> = DEFAULT_TUNING,
+  ) {}
+
+  /** The tuning a rig's params ask for: the defaults, overridden by `gaitSpeeds`, and scaled by `gaitSpeedScale`. */
+  static tuningFor(params: { gaitSpeeds?: Partial<Pick<GaitTuning, 'walkToTrot' | 'trotToCanter' | 'canterToGallop'>>; gaitSpeedScale?: number }): GaitTuning {
+    return { ...DEFAULT_TUNING, ...params.gaitSpeeds, speedScale: params.gaitSpeedScale ?? 1 };
+  }
+
+  /** Gait phase, 0..1. */
+  get phase(): number {
+    return this._phase;
+  }
+
+  /** The last speed stepped with. */
+  get speed(): number {
+    return this._speed;
+  }
+
+  /** The dominant gait at the current speed. */
+  get gait(): GaitName {
+    return dominantGait(this._speed, this.tuning);
+  }
+
+  get weights(): GaitWeights {
+    return gaitWeights(this._speed, this.tuning);
+  }
+
+  /** Advances the phase by `dt` seconds at `speed` m/s and returns the new phase. Bad input leaves the phase alone. */
+  step(speed: number, dt: number): number {
+    this._speed = Number.isFinite(speed) && speed > 0 ? speed : 0;
+    this._phase = advancePhase(this._phase, this._speed, dt, this.legLength, this.tuning);
+    return this._phase;
+  }
+
+  /** The pose at the current phase and speed (`t` seconds animates the idle part). */
+  pose(t = 0): Pose {
+    return locomotionPose(this._phase, this._speed, this.tuning, t);
+  }
+
+  /** Back to standing still: phase 0, speed 0 (a load, a respawn). */
+  reset(): void {
+    this._phase = 0;
+    this._speed = 0;
+  }
 }

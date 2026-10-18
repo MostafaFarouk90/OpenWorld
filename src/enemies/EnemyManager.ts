@@ -9,7 +9,7 @@ import { buildEnemyModel, type EnemyModelSource } from './EnemyModel';
 import { isFoeKind } from './foes/defs';
 import type { Foe } from './foes/Foe';
 import { FoeManager } from './foes/FoeManager';
-import type { FoeDef, RaiseWraithRequest } from './foes/types';
+import type { FoeDef, FoeEnd, RaiseWraithRequest } from './foes/types';
 import { scaleStats } from './level';
 import { isHoldVerb, makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyTargets, nextPulseId, type BossMercySubject, type MercyEnemyDef, type MercySubject } from './mercy';
 import { MercyTally, type TallyRow } from './mercyTally';
@@ -19,6 +19,7 @@ import type { ActorId, EnemyEvents, EnemyHost, MercyEventLike } from './ports';
 import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } from './spawners';
 import { ASH_GRAB, BOSS_MERCY, GUARD, MERCY, PAIR, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions, UnlockVerb } from './types';
+import { makeLineOfSight } from './ai/perception';
 import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
 
 
@@ -64,7 +65,7 @@ export class EnemyManager {
   private readonly foes: FoeManager;
   /** Per-enemy end callbacks (the bloom's raised wraiths). */
   private readonly releaseWatchers = new Map<ActorId, { accepted(): void; revoked?(): void }>();
-  private readonly goneWatchers = new Map<ActorId, (how: MemberEnd) => void>();
+  private readonly goneWatchers = new Map<ActorId, (how: FoeEnd) => void>();
   private readonly tokens = new Map<ActorId, Set<Enemy>>();
   private readonly tokenOf = new Map<Enemy, ActorId>();
   private readonly mercyRemovers = new Map<Enemy, () => void>();
@@ -170,6 +171,20 @@ export class EnemyManager {
     this.updateDormancy();
     for (const e of this.enemies.values()) e.think(dt);
     this.foes.think(dt);
+    // Escaped thieves' slots refill out of the player's sight while their group is live.
+    this.spawners.tickRefills(dt, (at) => this.playerCanSee(at));
+  }
+
+  /** Whether the player could see a point on the ground: within sight range and with a clear ray. */
+  private playerCanSee(at: { x: number; y: number; z: number }): boolean {
+    const p = this.host.player.feet;
+    if (Math.hypot(p.x - at.x, p.z - at.z) > AI.sightRange) return false;
+    const physics = this.host.physics;
+    if (!physics) return true;
+    return makeLineOfSight(physics, this.host.player.collider)(
+      { x: at.x, y: at.y + AI.eyeHeight, z: at.z },
+      { x: p.x, y: p.y + AI.chestHeight, z: p.z },
+    );
   }
 
   animate(dt: number): void {
@@ -513,7 +528,7 @@ export class EnemyManager {
     },
     mercyUnlocked: (verb: UnlockVerb) => this.mercyUnlocked(verb),
     nav: () => this.host.services.get('nav'),
-    gone: (self: Enemy, how: 'died' | 'released' | 'spared' | 'despawned') => {
+    gone: (self: Enemy, how: MemberEnd) => {
       this.enemies.delete(self.id);
       this.env.releaseToken(self);
       this.subjects.delete(self);
@@ -524,7 +539,7 @@ export class EnemyManager {
       this.goneWatchers.delete(self.id);
       this.releaseWatchers.delete(self.id);
       if (this.disposed) return;
-      watcher?.(how);
+      watcher?.(how === 'escaped' ? 'despawned' : how);
       this.afterGone(self.id, self.spawnerId, how);
     },
     };

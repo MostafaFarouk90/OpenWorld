@@ -2,7 +2,7 @@ import type * as THREE from 'three';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { FIXED_TIMESTEP } from '../../config/constants';
 import { CircleRush } from './circleRush';
-import { slopePitch } from './slope';
+import { bodyPitch } from '../quadruped/gait';
 import { BURNING_BITE, HOUND } from './tuning';
 import { ENEMY_DEFS, TELEGRAPH_STYLE } from '../defs';
 import type { Enemy } from '../Enemy';
@@ -591,14 +591,12 @@ describe('quadruped body feed', () => {
     expect(speeds[speeds.length - 1]).toBe(0);
   });
 
-  it('slopePitch: flat, uphill, downhill, rotated, and bad input', () => {
-    const slope = (_x: number, z: number) => -0.5 * z;
-    expect(slopePitch(() => 0, 0, 0, 0, 1)).toBe(0);
-    expect(slopePitch(slope, 0, 0, 0, 1)).toBeCloseTo(Math.atan2(0.5, 1)); // facing -Z, height rises that way
-    expect(slopePitch(slope, 0, 0, Math.PI, 1)).toBeCloseTo(-Math.atan2(0.5, 1));
-    expect(slopePitch(slope, 0, 0, Math.PI / 2, 1)).toBeCloseTo(0);
-    expect(slopePitch(slope, 0, 0, 0, 0)).toBe(0);
-    expect(slopePitch(() => Number.NaN, 0, 0, 0, 1)).toBe(0);
+  it('bodyPitch: flat, uphill, downhill and bad input', () => {
+    expect(bodyPitch(0, 0, 1)).toBe(0);
+    expect(bodyPitch(0.5, 0, 1)).toBeCloseTo(Math.atan2(0.5, 1));
+    expect(bodyPitch(0, 0.5, 1)).toBeCloseTo(-Math.atan2(0.5, 1));
+    expect(bodyPitch(1, 0, 0)).toBe(0);
+    expect(bodyPitch(Number.NaN, 0, 1)).toBe(0);
   });
 });
 

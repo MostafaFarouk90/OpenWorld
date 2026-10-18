@@ -15,6 +15,32 @@ export const RIG_NAMES = {
   lowerMesh: (id: LegId) => `leg${id}Lower`,
 } as const;
 
+/** Names of the attachment sockets (plain `Object3D` anchors parented to the joints they ride). */
+export const SOCKET_NAMES = {
+  saddle: 'socket.saddle',
+  mane: 'socket.mane',
+  head: 'socket.head',
+  tail: 'socket.tail',
+  collar: 'socket.collar',
+} as const;
+
+/**
+ * Attachment points for riders and gear (the Ashmare's saddle and mane, Grimtooth's collar spikes). Each is an empty
+ * `Object3D` in the rig's graph, so it follows the pose and the rig's scale. Local axes: -Z forward, +Y up.
+ * - `saddle`: on the spine, top of the back at the middle of the torso (a rider's seat transform);
+ * - `mane`: on the neck, halfway along it at the crest; its -Z runs along the neck towards the head;
+ * - `head`: at the centre of the skull, on the head joint;
+ * - `tail`: at the tip of the tail, on the tail joint;
+ * - `collar`: on the neck just behind the head, where a collar sits.
+ */
+export interface QuadrupedSockets {
+  saddle: THREE.Object3D;
+  mane: THREE.Object3D;
+  head: THREE.Object3D;
+  tail: THREE.Object3D;
+  collar: THREE.Object3D;
+}
+
 export interface QuadrupedJoints {
   spine: THREE.Object3D;
   neck: THREE.Object3D;
@@ -149,6 +175,18 @@ export class QuadrupedRig {
       knee.add(mesh(RIG_NAMES.lowerMesh(id), lower, materials.limbs));
     }
 
+    const socket = (name: string, parent: THREE.Object3D, x: number, y: number, z: number): void => {
+      const o = new THREE.Object3D();
+      o.name = name;
+      o.position.set(x, y, z);
+      parent.add(o);
+    };
+    socket(SOCKET_NAMES.saddle, spine, 0, r, 0);
+    socket(SOCKET_NAMES.mane, neck, 0, neckR, -dims.neckLen / 2);
+    socket(SOCKET_NAMES.head, head, 0, 0, -h * 0.4);
+    socket(SOCKET_NAMES.tail, tail, 0, 0, dims.tailLen);
+    socket(SOCKET_NAMES.collar, neck, 0, 0, -dims.neckLen * 0.9);
+
     const data: RigData = { params: { ...params }, dims, materials };
     root.userData[USER_KEY] = data;
     root.updateMatrixWorld(true);
@@ -165,6 +203,22 @@ export class QuadrupedRig {
     const legs = {} as QuadrupedJoints['legs'];
     for (const id of LEG_IDS) legs[id] = { upper: need(RIG_NAMES.leg(id)), lower: need(RIG_NAMES.knee(id)) };
     return { spine: need(RIG_NAMES.spine), neck: need(RIG_NAMES.neck), head: need(RIG_NAMES.head), tail: need(RIG_NAMES.tail), legs };
+  }
+
+  /** The attachment sockets of a built rig (see `QuadrupedSockets`). @throws Error when `rig` was not built by `QuadrupedRig.build`. */
+  static sockets(rig: THREE.Object3D): QuadrupedSockets {
+    const need = (name: string): THREE.Object3D => {
+      const o = rig.getObjectByName(name);
+      if (!o) throw new Error(`QuadrupedRig: socket "${name}" not found`);
+      return o;
+    };
+    return {
+      saddle: need(SOCKET_NAMES.saddle),
+      mane: need(SOCKET_NAMES.mane),
+      head: need(SOCKET_NAMES.head),
+      tail: need(SOCKET_NAMES.tail),
+      collar: need(SOCKET_NAMES.collar),
+    };
   }
 
   private static data(rig: THREE.Object3D): RigData {

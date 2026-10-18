@@ -8,21 +8,19 @@ import type { EnemyBody } from '../body';
 import type { PlayOptions, WindowPhase } from '../EnemyAnimator';
 import type { MoveDef, WeaponChannel } from '../types';
 import {
-  advancePhase,
   bitePose,
   blendPose,
   clonePose,
   crouchPose,
-  DEFAULT_TUNING,
   flinchPose,
   headLowerPose,
   howlPose,
   idlePose,
   knockdownPose,
-  locomotionPose,
   pouncePose,
   smoothstep,
   spineHeight,
+  QuadrupedGait,
   type GaitTuning,
   type Pose,
 } from './gait';
@@ -179,7 +177,7 @@ export class QuadrupedBody implements EnemyBody {
   private tickCount = 0;
   private disposed = false;
 
-  private phase = 0;
+  private readonly gait: QuadrupedGait;
   private time = 0;
   private speedTarget: number | null = null;
   private speed = 0;
@@ -199,7 +197,8 @@ export class QuadrupedBody implements EnemyBody {
     this.dims = QuadrupedRig.dims(rig);
     this.mats = QuadrupedRig.materials(rig);
     this.joints = QuadrupedRig.joints(rig);
-    this.tuning = { ...DEFAULT_TUNING, speedScale: params.gaitSpeedScale ?? 1 };
+    this.tuning = QuadrupedGait.tuningFor(params);
+    this.gait = new QuadrupedGait(this.dims.legLen, this.tuning);
     this.root = new THREE.Group();
     this.root.name = 'enemy-quadruped';
     this.root.add(rig);
@@ -382,7 +381,7 @@ export class QuadrupedBody implements EnemyBody {
     const wanted = (target - this.speed) * (1 - Math.exp(-SPEED_SMOOTHING * dt));
     this.speed += Math.min(MAX_ACCEL * dt, Math.max(-MAX_DECEL * dt, wanted));
     if (this.speed < 1e-4 && target === 0) this.speed = 0;
-    this.phase = advancePhase(this.phase, this.speed, dt, this.dims.legLen, this.tuning);
+    this.gait.step(this.speed, dt);
     this.slope += (this.slopeTarget - this.slope) * (1 - Math.exp(-SLOPE_SMOOTHING * dt));
 
     if (this.current && !a) this.current.elapsed += dt * this.current.timeScale;
@@ -445,7 +444,7 @@ export class QuadrupedBody implements EnemyBody {
         return idlePose(this.time);
       case 'Walk':
       case 'Run':
-        return locomotionPose(this.phase, this.speed, this.tuning, this.time);
+        return this.gait.pose(this.time);
       case 'Crouch':
         return crouchPose(smoothstep(0, 1, u));
       case 'Pounce':
