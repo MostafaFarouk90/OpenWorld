@@ -130,7 +130,9 @@ function routeEvents(ctx: GameContext, send: (e: DirectorEvent) => void): void {
   ev.on('spell.released', (e) => {
     if (e.casterId === PLAYER_ID) send({ type: 'spellReleased', spellId: e.spellId });
   });
-  ev.on('rest', (e) => send({ type: 'rest', waystoneId: e.waystoneId }));
+  ev.on('rest', (e) => {
+    if (e.waystoneId) send({ type: 'rest', waystoneId: e.waystoneId });
+  });
   ev.on('interact', (e) => {
     if (e.action === 'interact') send({ type: 'interact', id: e.interactableId });
   });
