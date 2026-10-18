@@ -9,7 +9,7 @@ import { STATUS_DATA_KEY, type ActorStatusView } from './view';
 /** What a stunned player cannot do. Movement keys are covered by `lockMove`. */
 const STUN_LOCKED_ACTIONS: readonly Action[] = [
   'sprint', 'jump', 'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'surge', 'surgeLeap',
-  'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6', 'mount',
+  'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6', 'mount', 'interact', 'mercy', 'sneak',
 ];
 
 /**
@@ -18,9 +18,15 @@ const STUN_LOCKED_ACTIONS: readonly Action[] = [
  * Ticks go through the damage bus as `kind: 'status'`; stun and slow reach enemies through
  * `actor.data['status']` (an `ActorStatusView`) and the player through a move modifier. Statuses are not saved.
  */
+let cleanup: (() => void) | null = null;
+
 const statusPlugin: GamePlugin = {
   id: 'status',
   dependsOn: ['core'],
+  dispose() {
+    cleanup?.();
+    cleanup = null;
+  },
   setup(ctx: GameContext) {
     const playerId = (): ActorId => ctx.player.actor.id;
     let playerMod: { stunned: boolean; slow: number; off: (() => void) | null } = { stunned: false, slow: 0, off: null };
@@ -66,6 +72,11 @@ const statusPlugin: GamePlugin = {
       if (e.actorId) engine.clearPlayerSourced(e.actorId);
     });
     ctx.events.on('save.loaded', () => engine.clearAll());
+
+    cleanup = () => {
+      // The scope removes listeners and the service; the views on actors are ours to take down.
+      engine.clearAll();
+    };
 
     ctx.systems.add({
       id: 'status',

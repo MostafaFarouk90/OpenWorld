@@ -170,6 +170,7 @@ describe('status plugin', () => {
       t.status.apply('player', { id: 'stun', kind: 'stun', seconds: 1, sourceId: null });
       expect(state()).toMatchObject({ speedScale: 0, lockMove: true });
       expect(t.game.moveModifiers.isActionLocked('attack1')).toBe(true);
+      for (const a of ['interact', 'mercy', 'sneak', 'dodge'] as const) expect(t.game.moveModifiers.isActionLocked(a)).toBe(true);
       expect(t.game.moveModifiers.isActionLocked('inventory')).toBe(false);
       t.run(1.2);
       expect(state()).toMatchObject({ lockMove: false });
@@ -204,5 +205,6 @@ describe('status plugin', () => {
     t.status.apply(w.id, { id: 'b', kind: 'bleed', dps: 1, seconds: 30, sourceId: 'player' });
     t.game.dispose();
     expect(t.game.ctx.services.get('status')).toBeUndefined();
+    expect(w.data['status']).toBeUndefined();
   });
 });
