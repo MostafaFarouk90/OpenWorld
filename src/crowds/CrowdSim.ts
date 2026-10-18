@@ -68,9 +68,12 @@ export class CrowdSim {
   readonly clusters: ResolvedCluster[];
   /** Pool growths after construction (pinned at 0 by the allocation test). */
   allocations = 0;
-  /** Player proximity tests in the last update (one per live figure: the sim is O(n)). */
+  /** Player proximity tests in the last update (one per live figure). */
   checks = 0;
+  /** Record visits since construction, a deterministic work count: the budget test pins that it grows linearly. */
+  ops = 0;
   private density: Density = FULL;
+  private freeHint = 0;
   private time = 0;
   private rng: () => number;
   private readonly seed: number;
@@ -170,8 +173,14 @@ export class CrowdSim {
     this.time += dt;
     this.checks = 0;
     this.manage(player, false);
-    for (const w of this.walkers) if (w.active) this.stepWalker(w, dt, player);
-    for (const m of this.idle) if (m.active) this.stepIdle(m, dt, player);
+    for (const w of this.walkers) {
+      this.ops++;
+      if (w.active) this.stepWalker(w, dt, player);
+    }
+    for (const m of this.idle) {
+      this.ops++;
+      if (m.active) this.stepIdle(m, dt, player);
+    }
   }
 
   // ------------------------------------------------------------------ population
@@ -181,6 +190,7 @@ export class CrowdSim {
     const r2 = t.noPopRadius * t.noPopRadius;
     this.counts.fill(0);
     for (const w of this.walkers) {
+      this.ops++;
       if (!w.active) continue;
       if (w.leaveAt >= 0 && this.time >= w.leaveAt) {
         w.active = false;
@@ -201,13 +211,24 @@ export class CrowdSim {
       if (this.counts[i] < this.targets[i]) {
         const range = this.ranges[i];
         for (const w of this.walkers) {
+          this.ops++;
           if (this.counts[i] >= this.targets[i]) break;
           if (!w.active || w.lane !== i || w.leaveAt < 0 || !range || w.s < range[0] || w.s > range[1]) continue;
           w.leaveAt = -1;
           this.counts[i]++;
         }
       }
-      // Surplus: out-of-range walkers first, then the farthest from the player.
+      // An emptied lane (the chase) lets everyone go in one pass.
+      if (this.targets[i] === 0 && this.counts[i] > 0) {
+        for (const w of this.walkers) {
+          this.ops++;
+          if (!w.active || w.lane !== i || w.leaveAt >= 0) continue;
+          if (!player || dist2(w.x, w.z, player) > r2) w.active = false;
+          else w.leaveAt = this.time + t.leaveGrace;
+        }
+        this.counts[i] = 0;
+      }
+      // Surplus: the farthest from the player first.
       while (this.counts[i] > this.targets[i]) {
         const w = this.pickSurplus(i, player);
         if (!w) break;
@@ -242,6 +263,7 @@ export class CrowdSim {
     let best: Walker | null = null;
     let bestScore = -Infinity;
     for (const w of this.walkers) {
+      this.ops++;
       if (!w.active || w.lane !== lane || w.leaveAt >= 0) continue;
       const score = player ? dist2(w.x, w.z, player) : 0;
       if (score > bestScore) {
@@ -255,10 +277,15 @@ export class CrowdSim {
   private spawn(laneIndex: number, player: PlayerPos | null): boolean {
     const range = this.ranges[laneIndex];
     if (!range) return false;
+    // Free slots are searched from where the last one was found, so a full repopulation stays linear.
     let w: Walker | null = null;
-    for (const x of this.walkers) {
-      if (!x.active) {
-        w = x;
+    const n = this.walkers.length;
+    for (let k = 0; k < n; k++) {
+      this.ops++;
+      const j = (this.freeHint + k) % n;
+      if (!this.walkers[j].active) {
+        w = this.walkers[j];
+        this.freeHint = (j + 1) % n;
         break;
       }
     }
@@ -302,6 +329,7 @@ export class CrowdSim {
     this.clusterLeaveAt[c] = -1;
     const pal = CROWD_TUNING.palette.length;
     for (const m of this.idle) {
+      this.ops++;
       if (m.cluster !== c) continue;
       m.active = on;
       if (!on) continue;
