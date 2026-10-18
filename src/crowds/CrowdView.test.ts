@@ -61,12 +61,16 @@ describe('crowd view', () => {
     const values = new Set(Array.from(limb.array as Float32Array));
     expect([...values].sort()).toEqual([-1, 0, 1]);
     expect(g.getAttribute('position').count / 3).toBeLessThan(400);
-    const shader = { uniforms: {} as Record<string, { value: unknown }>, vertexShader: '#include <common>\n#include <begin_vertex>' };
+    const shader = { uniforms: {} as Record<string, { value: unknown }>, vertexShader: THREE.ShaderLib.lambert.vertexShader };
     const uTime = { value: 2 };
     patchWalkShader(shader, uTime);
     expect(shader.uniforms.uTime).toBe(uTime);
-    expect(shader.vertexShader).toMatch(/attribute vec3 aWalk/);
-    expect(shader.vertexShader).toMatch(/crowdSw/);
+    expect(shader.vertexShader.match(/attribute vec3 aWalk;/g)).toHaveLength(1);
+    expect(shader.vertexShader.match(/#include <common>/g)).toHaveLength(1);
+    // The walk follows begin_vertex (where `transformed` exists) and precedes the projection.
+    const v = shader.vertexShader;
+    expect(v.indexOf('#include <begin_vertex>')).toBeLessThan(v.indexOf('float crowdSw'));
+    expect(v.indexOf('float crowdSw')).toBeLessThan(v.indexOf('#include <project_vertex>'));
     g.dispose();
   });
 

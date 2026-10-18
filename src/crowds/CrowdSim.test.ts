@@ -28,7 +28,7 @@ describe('crowd simulation', () => {
     expect(sim.capacity).toBe(147);
   });
 
-  it('keeps to the right of its own walking direction (+Z north, +X east)', () => {
+  it('keeps to its own right as seen on screen (three.js: a figure facing +Z has its right hand on -X)', () => {
     const { sim, lanes } = citySim();
     sim.reseed(FAR);
     const north = lanes.findIndex((l) => l.name === 'main-street-north'); // points run south to north at x 8490
@@ -36,8 +36,8 @@ describe('crowd simulation', () => {
     const walkers = live(sim).filter((w) => w.lane === north && w.walking);
     expect(walkers.some((w) => w.dir === 1) && walkers.some((w) => w.dir === -1)).toBe(true);
     for (const w of walkers) {
-      if (w.dir === 1) expect(w.x).toBeGreaterThan(8490); // heading north: right is east
-      else expect(w.x).toBeLessThan(8490);
+      if (w.dir === 1) expect(w.x).toBeLessThan(8490); // heading +Z: the right hand is on -X
+      else expect(w.x).toBeGreaterThan(8490);
       // Facing: yaw 0 faces -Z, so a north-bound walker has yaw +-PI.
       if (w.dir === 1) expect(Math.abs(Math.abs(w.yaw) - Math.PI)).toBeLessThan(1e-6);
     }
@@ -158,12 +158,37 @@ describe('crowd simulation', () => {
     expect(live(sim).length).toBeGreaterThan(100);
   });
 
-  it('moves walkers out of the stealth box when the gate turns guarded mid-visit', () => {
+  it('clears the stealth box when the gate turns guarded mid-visit, without any walker jumping', () => {
+    for (const seed of [1, 7, 23, 31]) {
+      const { sim } = citySim(seed);
+      const player: PlayerPos = { x: 8500, y: 20, z: 1330 }; // in the gate square, watching
+      sim.reseed(player);
+      run(sim, 2, player);
+      sim.setDensity(guarded);
+      const last = new Map(live(sim).map((w) => [w, { x: w.x, z: w.z }]));
+      run(sim, CROWD_TUNING.leaveGrace + 0.2, player, () => {
+        for (const w of live(sim)) {
+          const p = last.get(w);
+          if (p && Math.hypot(w.x - p.x, w.z - p.z) > 1) throw new Error(`seed ${seed}: a walker jumped ${Math.hypot(w.x - p.x, w.z - p.z).toFixed(1)} m`);
+          last.set(w, { x: w.x, z: w.z });
+        }
+      });
+      for (const w of live(sim)) expect(w.x > 8325 && w.x < 8675 && w.z > 1190 && w.z < 1360).toBe(false);
+    }
+  });
+
+  it('keeps nearby walkers when a density dip recovers within the grace', () => {
     const { sim } = citySim();
-    sim.reseed(FAR);
-    sim.setDensity(guarded);
-    run(sim, CROWD_TUNING.leaveGrace + 0.2, FAR);
-    for (const w of live(sim)) expect(w.x > 8325 && w.x < 8675 && w.z > 1190 && w.z < 1360).toBe(false);
+    const player: PlayerPos = { x: 8490, y: 20, z: 2000 };
+    sim.reseed(player);
+    run(sim, 20, player);
+    const near = live(sim).filter((w) => Math.hypot(w.x - player.x, w.z - player.z) < 30);
+    expect(near.length).toBeGreaterThan(0);
+    sim.setDensity(chase);
+    sim.update(DT, player);
+    sim.setDensity(full);
+    run(sim, CROWD_TUNING.leaveGrace + 1, player);
+    for (const w of near) expect(w.active).toBe(true);
   });
 
   it('re-seeds to the same crowd on a load, and keeps 30 m clear around a player who loads mid-street', () => {
@@ -186,6 +211,21 @@ describe('crowd simulation', () => {
     const player: PlayerPos = { x: w.x, y: w.y, z: w.z };
     sim.clearPlayer(player);
     for (const x of live(sim)) expect(Math.hypot(x.x - player.x, x.z - player.z)).toBeGreaterThanOrEqual(30 - 1e-6);
+  });
+
+  it('hides groups within 30 m on wake and shows them again once the player walks away', () => {
+    const { sim, clusters } = citySim();
+    sim.reseed(FAR);
+    const market = clusters[0];
+    const player: PlayerPos = { x: market.cx + 2, y: 20, z: market.cz };
+    sim.clearPlayer(player);
+    const inMarket = () => sim.idle.filter((m) => m.active && Math.hypot(m.x - market.cx, m.z - market.cz) < 3).length;
+    expect(inMarket()).toBe(0);
+    sim.update(DT, player);
+    expect(inMarket()).toBe(0);
+    player.x += 60;
+    sim.update(DT, player);
+    expect(inMarket()).toBe(market.spots.length);
   });
 
   it('sleeps far from every lane, also at the closed gate it stays awake', () => {

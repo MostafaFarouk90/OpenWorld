@@ -74,3 +74,21 @@ describe('crowd content against the Harrowmark layout', () => {
     }
   });
 });
+
+describe('lane edge cases', () => {
+  it('samples a lane shorter than a sample step without NaN', async () => {
+    const { buildLane, sampleIndex, lanePoint } = await import('./lanes');
+    const anchors = new Map([
+      ['t.a', { id: 't.a', position: { x: 0, y: 0, z: 0 }, yaw: 0 }],
+      ['t.b', { id: 't.b', position: { x: 0, y: 0, z: 0.2 }, yaw: 0 }],
+      ['t.c', { id: 't.c', position: { x: 0, y: 0, z: 0.2 }, yaw: 0 }],
+    ]);
+    for (const points of [['t.a', 't.b'], ['t.b', 't.c']]) {
+      const lane = buildLane({ id: 'harrowmark.lane.tiny', points, loop: false, halfWidth: 2 }, (id) => anchors.get(id), [], () => 0);
+      const k = sampleIndex(lane, 0.1);
+      expect(k >= 0 && k < lane.samples.length).toBe(true);
+      const p = lanePoint(lane, 0.1, 0.5, { x: 0, y: 0, z: 0 });
+      expect(Number.isFinite(p.x) && Number.isFinite(p.z)).toBe(true);
+    }
+  });
+});

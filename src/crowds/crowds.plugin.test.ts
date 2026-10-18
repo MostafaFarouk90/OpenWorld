@@ -81,6 +81,40 @@ describe('crowds plugin', () => {
     plugin.dispose?.();
   });
 
+  it('follows the city gate state, overrides included (thread 21 story gate)', () => {
+    const { fc, plugin, frame, at, svc } = setup();
+    let forced: 'closed' | 'guarded' | 'open' = 'open';
+    fc.services.set('harrowmark', { southGate: { state: () => forced } });
+    plugin.setup(fc.ctx);
+    at(8490, 2000);
+    frame();
+    expect(svc().density().guarded).toBe(false);
+    forced = 'guarded';
+    frame();
+    expect(svc().density().guarded).toBe(true);
+    plugin.dispose?.();
+  });
+
+  it('warms the crowd shaders once, on the first wake, with the camera', () => {
+    const { fc, plugin, frame, at } = setup();
+    const compile = vi.fn();
+    fc.services.set('graphics', { renderer: { compile } });
+    (fc.ctx as unknown as { camera: THREE.PerspectiveCamera }).camera = new THREE.PerspectiveCamera();
+    plugin.setup(fc.ctx);
+    at(0, 0, 0);
+    frame();
+    expect(compile).not.toHaveBeenCalled();
+    at(8490, 2000);
+    frame(0.5);
+    at(0, 0, 0);
+    frame();
+    at(8490, 2000);
+    frame();
+    expect(compile).toHaveBeenCalledTimes(1);
+    expect(compile.mock.calls[0][0]).toBe(group(fc));
+    plugin.dispose?.();
+  });
+
   it('polls thread 18 stealth and chase readers each frame and empties the streets for the chase', () => {
     const { fc, plugin, frame, at, svc } = setup();
     let chasing = false;
@@ -163,12 +197,14 @@ describe('crowds plugin', () => {
     const meshes: THREE.InstancedMesh[] = [];
     group(fc).traverse((o) => (o as THREE.InstancedMesh).isInstancedMesh && meshes.push(o as THREE.InstancedMesh));
     const spies = meshes.map((m) => vi.spyOn(m.geometry, 'dispose'));
+    const old = fc.services.get('crowds') as Svc;
     plugin.dispose?.();
+    fc.ctx.state.setFlag('story.m06.started', true);
+    expect(old.density().guarded).toBe(false);
     expect(group(fc)).toBeUndefined();
     expect(fc.systems.has('crowds')).toBe(false);
     expect(fc.services.has('crowds')).toBe(false);
     for (const s of spies) expect(s).toHaveBeenCalled();
-    expect(() => fc.ctx.state.setFlag('story.m06.started', true)).not.toThrow();
   });
 
   it('fails setup cleanly on a missing lane anchor, leaving nothing behind', () => {
