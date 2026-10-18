@@ -31,13 +31,15 @@ interface Watched {
  */
 export class CombatRegistry {
   private readonly watched = new Map<unknown, Watched>();
-  /** Removers per actor, run when it despawns. */
-  private readonly byActor = new Map<ActorId, Set<() => void>>();
+  /** Removers per actor, run when that actor instance despawns. */
+  private readonly byActor = new Map<ActorId, Set<{ instance: unknown; remove: () => void }>>();
   private readonly unsubscribe: () => void;
 
   constructor(
     private readonly system: CombatSystem,
     private readonly events: GameEvents,
+    /** The live actor for an id (ActorRegistry.get), so a despawned id reused before the queued event keeps the new actor's entries. */
+    private readonly current: (id: ActorId) => unknown = () => undefined,
   ) {
     this.unsubscribe = events.on('actor.despawned', (e) => this.removeAllOf(e.actorId));
   }
@@ -69,19 +71,23 @@ export class CombatRegistry {
   private own(actorId: ActorId, remove: () => void): () => void {
     let set = this.byActor.get(actorId);
     if (!set) this.byActor.set(actorId, (set = new Set()));
-    const entry = once(() => {
-      set!.delete(entry);
-      if (set!.size === 0 && this.byActor.get(actorId) === set) this.byActor.delete(actorId);
-      remove();
-    });
+    const entry = {
+      instance: this.current(actorId),
+      remove: once(() => {
+        set!.delete(entry);
+        if (set!.size === 0 && this.byActor.get(actorId) === set) this.byActor.delete(actorId);
+        remove();
+      }),
+    };
     set.add(entry);
-    return entry;
+    return entry.remove;
   }
 
   private removeAllOf(actorId: ActorId): void {
     const set = this.byActor.get(actorId);
     if (!set) return;
-    for (const remove of [...set]) remove();
+    const live = this.current(actorId);
+    for (const e of [...set]) if (live === undefined || e.instance !== live) e.remove();
   }
 
   /**

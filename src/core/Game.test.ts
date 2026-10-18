@@ -573,6 +573,49 @@ describe('plugin scope retention', () => {
     t.world.dispose();
   });
 
+  it('an id despawned and respawned inside a dispatch keeps the new actor and its registrations', () => {
+    const t = setup();
+    const scope = new Scope();
+    const ctx = t.game.scopedContext(scope);
+    const first = ctx.actors.spawn({ id: 'boss', kind: 'boss', team: 'hostile', maxHealth: 10 });
+    ctx.combat.addTarget({ update: () => {}, tickFlash: () => {} } as never, first.id);
+    let second: ReturnType<typeof ctx.actors.spawn> | undefined;
+    ctx.events.once('rest', () => {
+      ctx.actors.despawn('boss');
+      second = ctx.actors.spawn({ id: 'boss', kind: 'boss', team: 'hostile', maxHealth: 10 });
+      ctx.combat.addTarget({ update: () => {}, tickFlash: () => {} } as never, second.id);
+    });
+    t.game.events.emit('rest', { waystoneId: null } as never);
+    expect(t.game.ctx.actors.get('boss')).toBe(second);
+    expect(t.world.combat.combat.targetCount).toBe(1);
+    scope.close();
+    expect(t.game.ctx.actors.get('boss')).toBeUndefined();
+    expect(t.world.combat.combat.targetCount).toBe(0);
+    t.world.dispose();
+  });
+
+  it('closing a scope does not despawn a same-id replacement spawned elsewhere', () => {
+    const t = setup();
+    const scope = new Scope();
+    const ctx = t.game.scopedContext(scope);
+    ctx.actors.spawn({ id: 'guard', kind: 'npc', team: 'neutral', maxHealth: 10 });
+    t.game.ctx.actors.despawn('guard');
+    const other = t.game.ctx.actors.spawn({ id: 'guard', kind: 'npc', team: 'neutral', maxHealth: 10 });
+    scope.close();
+    expect(t.game.ctx.actors.get('guard')).toBe(other);
+    t.world.dispose();
+  });
+
+  it('registrations on an actor that never despawns leave the scope when the plugin removes them', () => {
+    const t = setup();
+    const scope = new Scope();
+    const ctx = t.game.scopedContext(scope);
+    for (let i = 0; i < 100; i++) ctx.combat.addTarget({ update: () => {}, tickFlash: () => {} } as never, 'player')();
+    expect(scope.size).toBe(1); // the despawn listener only
+    expect(t.world.combat.combat.targetCount).toBe(0);
+    t.world.dispose();
+  });
+
   it('pausing and resuming the same reason repeatedly retains one entry at most', () => {
     const t = setup();
     const scope = new Scope();
