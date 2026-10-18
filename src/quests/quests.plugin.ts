@@ -16,6 +16,7 @@ import { installPoiRewards } from './poi';
 import { POI_REWARDS } from './content/poi';
 import { PostDirector, BRIGHTWATER_POST_RULES } from './posts';
 import { TorchSystem } from './torch';
+import { R02Yard, type R02YardDummies } from './r02Yard';
 import { createEffectRunner } from './effects';
 import type { BusPort } from './ports';
 import type { QuestDef } from './types';
@@ -125,7 +126,19 @@ const plugin: GamePlugin = {
       () => svc('dialogue')?.active === true,
     );
     manager.onChange(() => posts.markDirty());
-    offs.push(ctx.events.on('save.loaded', () => { posts.reset(); manager.recheck(); }));
+    // R02's blocking dummies stand in the yard only while R02 is active.
+    const yard = new R02Yard({
+      active: () => manager.state('r02') === 'active',
+      spot: (id) => {
+        const a = ctx.anchors.find(id);
+        return a ? { feet: { x: a.position.x, y: a.position.y, z: a.position.z }, yaw: a.yaw } : null;
+      },
+      dummies: () => svc('dummies') as R02YardDummies | undefined,
+      warn,
+    });
+    manager.onChange(() => yard.markDirty());
+    offs.push(() => yard.dispose());
+    offs.push(ctx.events.on('save.loaded', () => { posts.reset(); yard.markDirty(); manager.recheck(); }));
     const journalHud = {
       get modalOpen() {
         return ctx.hud.modalOpen;
@@ -282,6 +295,7 @@ const plugin: GamePlugin = {
         }
         torch?.update();
         posts.update();
+        yard.update();
       },
       dispose: () => {
         carry?.dispose();
