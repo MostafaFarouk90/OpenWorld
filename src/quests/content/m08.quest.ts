@@ -10,6 +10,7 @@ export const m08: QuestDef = {
   summaryKey: 'quest.m08.summary',
   sequential: true,
   onStart: [
+    { setFlag: 'story.m08.started', value: true },
     { setFlag: 'story.m08.keepOpen', value: true },
     { setFlag: 'story.m08.favourTab', value: true },
   ],

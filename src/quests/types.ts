@@ -131,4 +131,4 @@ export interface QuestsSaveData { quests: Record<string, QuestRuntime> }
 export interface DialogueSaveData { seen: string[] }
 
 /** Effect `event` names are limited to these namespaces so data cannot forge combat events. */
-export const EFFECT_EVENT_PATTERN = /^(tutorial|cutscene|reward|story|npc)\.[a-zA-Z0-9_.-]+$/;
+export const EFFECT_EVENT_PATTERN = /^((tutorial|cutscene|reward|story|npc)\.[a-zA-Z0-9_.-]+|classes\.trainer\.open)$/;

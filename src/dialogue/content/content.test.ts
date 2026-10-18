@@ -35,7 +35,7 @@ describe('dialogue content', () => {
   });
 
   it('speakers are known', () => {
-    for (const d of dialogueDefs) for (const n of d.nodes) expect(['gaut', 'edda', 'stane', 'aelfreda', 'wynn', 'tobb', 'carter-1', 'carter-2', 'cael']).toContain(n.speaker);
+    for (const d of dialogueDefs) for (const n of d.nodes) expect(['gaut', 'edda', 'stane', 'aelfreda', 'wynn', 'tobb', 'carter-1', 'carter-2', 'cael', 'rook', 'aldith', 'wystan', 'edric', 'vey', 'merrin', 'gerta', 'whitlock', 'pennard', 'ashdown']).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {

@@ -13,6 +13,7 @@ export const m07: QuestDef = {
   titleKey: 'quest.m07.title',
   summaryKey: 'quest.m07.summary',
   sequential: true,
+  onStart: [{ setFlag: 'story.m07.started', value: true }],
   objectives: [
     { id: 'o1', type: 'talk', target: 'aldith', textKey: 'quest.m07.o1' },
     { id: 'o2', type: 'kill', target: 'alley-cutpurse', required: 3, spawnTag: 'm07.thieves', textKey: 'quest.m07.o2' },

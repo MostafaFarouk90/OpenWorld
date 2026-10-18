@@ -4,6 +4,9 @@ const P = 'dialogue.npc-stane.';
 const r02Active: Condition = { quest: 'r02', state: 'active' };
 const done = (o: string): Condition => ({ objective: ['r02', o], done: true });
 
+const classOpen: Condition = { flag: 'story.m07.classOpen', equals: true };
+const m07Seen: Condition = { any: [{ quest: 'm07', state: 'active' }, { quest: 'm07', state: 'completed' }] };
+
 export const npcStane: DialogueDef = {
   id: 'npc-stane',
   start: [
@@ -13,6 +16,8 @@ export const npcStane: DialogueDef = {
     { when: { all: [r02Active, done('o3')] }, node: 'r02-tip-guard' },
     { when: { all: [r02Active, done('o2')] }, node: 'r02-tip-parry' },
     { when: r02Active, node: 'r02-tip-open' },
+    { when: classOpen, node: 'trainer-open' },
+    { when: { all: [m07Seen, { not: classOpen }] }, node: 'trainer-closed' },
     { when: { quest: 'r02', state: 'completed' }, node: 'idle-after' },
     { when: { all: [] }, node: 'idle' },
   ],
@@ -36,6 +41,16 @@ export const npcStane: DialogueDef = {
     { id: 'r02-tip-guard', speaker: 'stane', textKey: P + 'r02-tip-guard', next: null },
     { id: 'r02-done', speaker: 'stane', textKey: P + 'r02-done', next: 'r02-done-2' },
     { id: 'r02-done-2', speaker: 'stane', textKey: P + 'r02-done-2', next: null },
+    // class trainer (Halvard Bastion yard)
+    { id: 'trainer-closed', speaker: 'stane', textKey: P + 'trainer-closed', next: null },
+    { id: 'trainer-open', speaker: 'stane', textKey: P + 'trainer-open', next: 'trainer-open-2' },
+    {
+      id: 'trainer-open-2', speaker: 'stane', textKey: P + 'trainer-open-2',
+      choices: [
+        { id: 'train', textKey: P + 'trainer-open-2.train', effects: [{ event: 'classes.trainer.open', payload: { classId: 'warden' } }], next: null },
+        { id: 'leave', textKey: P + 'trainer-open-2.leave', next: null },
+      ],
+    },
     { id: 'idle-after', speaker: 'stane', textKey: P + 'idle-after', next: null },
 
     { id: 'idle', speaker: 'stane', textKey: P + 'idle', next: null },
