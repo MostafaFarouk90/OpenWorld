@@ -2,7 +2,8 @@
 // finished through the director (Kettlewick skip, then every beat skipped), each prerequisite quest is started and
 // completed on the real quests service, and the dialogue-node effects that real play runs on the way (the Leap,
 // the mercy unlocks, the carters) are read from the dialogue content and run through the quest effect runner. Saves
-// are held for the whole session so a jump never overwrites a real save.
+// are held for the whole session, and the `&new` boot skips the slot clear (save.plugin.ts), so a jump neither
+// overwrites nor deletes a real save.
 import { dialogueDefs } from '../dialogue/content';
 import { QUEST_LEADS } from './leads';
 import type { DialogueDef, Effect } from './types';
