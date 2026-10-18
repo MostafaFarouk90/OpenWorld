@@ -6,7 +6,7 @@ import type { ActorStatusView } from './view';
 
 /** The slice of the game the engine needs; the plugin fills it from the real context. */
 export interface StatusPorts {
-  actor(id: ActorId): { readonly dead: boolean; readonly hittable: boolean; readonly team: Team } | undefined;
+  actor(id: ActorId): { readonly dead: boolean; readonly hittable: boolean; readonly invulnerable?: boolean; readonly team: Team } | undefined;
   /** Applies a tick; returns false when the request was dropped. */
   tick(req: DamageRequest): boolean;
   applied(actorId: ActorId, id: string, kind: StatusKind): void;
@@ -46,7 +46,8 @@ export class StatusEngine {
       slow = Math.min(STATUS.maxSlow, spec.slow);
     }
     const actor = this.ports.actor(actorId);
-    if (!actor || actor.dead || !actor.hittable) return false;
+    // An immune actor (a boss in an invulnerable phase) refuses; the player's i-frames do not, since ticks ignore a dodge.
+    if (!actor || actor.dead || !actor.hittable || (actor.invulnerable && actor.team !== 'player')) return false;
 
     const list = this.entries.get(actorId) ?? [];
     const sourceId = spec.sourceId ?? null;
