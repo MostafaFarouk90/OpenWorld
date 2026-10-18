@@ -336,7 +336,7 @@ export async function playM10(h: ChapterHarness, t: QuestTrail): Promise<void> {
 // ---------------------------------------------------------------------------------------------------------------
 // D02 Hounds of the Underways
 
-/** The test-only Grimtooth stand-in (until thread 3b lands): see grimtoothStub.ts. */
+/** Drives Gaffer Grimtooth (src/integration/grimtooth.ts). */
 export type GrimtoothDriver = (h: ChapterHarness, branch: GrimBranch) => Promise<void>;
 
 export async function playD02(h: ChapterHarness, t: QuestTrail, branch: GrimBranch, fightGrimtooth: GrimtoothDriver, inside?: () => Promise<void>): Promise<void> {

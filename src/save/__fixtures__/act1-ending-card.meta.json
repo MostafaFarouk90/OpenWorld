@@ -2,7 +2,7 @@
   "fixture": "act1-ending-card.json",
   "what": "Act 1 run A: D02 completed, story.gate.a2 set, the ending card shown (codex.actEndingSeen) and not dismissed, no camp yet",
   "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/fixtures.gen.test.ts",
-  "generatingCommit": "78632ff662437a53233b20c677ac19b34f45b91c",
+  "generatingCommit": "26f66f302cdd1eda9b3dd75766ee131e36587482",
   "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving",
   "playtimeSeconds": "rounded to whole seconds",
   "source": "the real save plugin (saveNow(\"manual\")), read back from the fake IndexedDB slot-0"
