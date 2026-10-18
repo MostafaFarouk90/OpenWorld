@@ -33,7 +33,7 @@ export interface CityValidateOptions {
 }
 
 const defaultOutsideOk = (id: string): boolean =>
-  /^harrowmark\.gate\.[a-z]+$/.test(id) || id.startsWith('harrowmark.gate.south.queue.') || id === 'stealth.m06.start';
+  /^harrowmark\.gate\.[a-z]+$/.test(id) || id.startsWith('harrowmark.gate.south.queue.') || id === 'stealth.m06.start' || id === 'npc-post.rook.gate';
 
 export function validateCity(layout: LayoutData, opts: CityValidateOptions = {}): string[] {
   const errors: string[] = [];
