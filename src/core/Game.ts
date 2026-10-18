@@ -163,7 +163,7 @@ export class Game {
     const persist = new PersistRegistry();
     const actors = new ActorRegistry(this.events);
     const damage = new DamageResolver(actors, this.events);
-    const combat = new CombatRegistry(world.combat.combat, this.events);
+    const combat = new CombatRegistry(world.combat.combat, this.events, (id) => actors.get(id));
     const state = new WorldState(this.events);
     this.bridge = new DamageBridge(world.combat.combat.bus, actors, damage, combat);
 
@@ -246,33 +246,46 @@ export class Game {
    */
   scopedContext(scope: Scope): GameContext {
     const c = this.ctx;
-    // Registrations tied to one actor (its spawn, owners, attackers, targets). The core already cleans these
-    // up on despawn, so one listener runs their (idempotent) undos then, which drops them from the scope:
-    // a long session of spawning and despawning enemies retains nothing.
-    const byActor = new Map<string, Array<() => void>>();
+    // Registrations tied to one actor instance (its spawn, owners, attackers, targets). The core already
+    // cleans these up on despawn, so one listener runs their (idempotent) undos then, which drops them from
+    // the scope; an undo the plugin calls itself leaves its list too. A long session of spawning and
+    // despawning enemies therefore retains nothing. Entries are matched by instance, not only by id, so a
+    // despawned id that is reused before the queued event arrives keeps the new actor's registrations.
+    const byActor = new Map<string, Set<{ actor: Actor; undo: () => void }>>();
     let watching = false;
     const forActor = (actorId: string | undefined, undo: () => void): (() => void) => {
-      if (actorId === undefined) return undo;
+      const actor = actorId === undefined ? undefined : c.actors.get(actorId);
+      if (!actor) return undo;
       if (!watching) {
         watching = true;
         scope.track(
           c.events.on('actor.despawned', ({ actorId: id }) => {
-            const undos = byActor.get(id);
-            if (!undos) return;
-            byActor.delete(id);
-            for (const u of undos) u();
+            const entries = byActor.get(id);
+            if (!entries) return;
+            const current = c.actors.get(id);
+            for (const e of [...entries]) if (e.actor !== current) e.undo();
           }),
         );
       }
-      const list = byActor.get(actorId) ?? [];
-      list.push(undo);
-      byActor.set(actorId, list);
-      return undo;
+      let entries = byActor.get(actor.id);
+      if (!entries) byActor.set(actor.id, (entries = new Set()));
+      const list = entries;
+      const entry = {
+        actor,
+        undo: () => {
+          list.delete(entry);
+          if (list.size === 0 && byActor.get(actor.id) === list) byActor.delete(actor.id);
+          undo();
+        },
+      };
+      list.add(entry);
+      return entry.undo;
     };
     const actors = scoped(c.actors, scope, [], {
       spawn: ((init: Parameters<ActorRegistry['spawn']>[0]) => {
         const actor = c.actors.spawn(init);
-        forActor(actor.id, scope.track(() => c.actors.despawn(actor.id)));
+        // Only this instance: a replacement spawned under the same id is not ours to remove.
+        forActor(actor.id, scope.track(() => c.actors.get(actor.id) === actor && c.actors.despawn(actor.id)));
         return actor;
       }) as never,
       bindOwner: ((actor: Actor, owner: unknown) => forActor(actor.id, scope.track(c.actors.bindOwner(actor, owner)))) as never,
