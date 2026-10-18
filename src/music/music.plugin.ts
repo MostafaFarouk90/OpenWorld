@@ -5,6 +5,7 @@ import type { GameServices } from '../core/Services';
 import { BarClock } from './barClock';
 import { isCombatHit } from './hostileSet';
 import { MusicDirector } from './MusicDirector';
+import { musicConfig } from './musicConfig';
 import { impactLayers, isHeavyHit, resolveMaterial, swingLayer } from './sfxLayers';
 import { registerPlaceholderSfx, SfxPlayer } from './SfxPlayer';
 import { loadTrackStems } from './stemLoader';
@@ -36,6 +37,7 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
   if (!audio) return () => {}; // no Web Audio: the world runs silently and no music service exists
 
   let disposed = false;
+  let gameTime = 0; // simulated seconds: stands still while the game is paused
   const audioNow = (): number => audio.context.currentTime;
 
   const director = new MusicDirector({
@@ -47,7 +49,7 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
     get state() {
       return director.state;
     },
-    setBoss: (on) => director.setBoss(on, audioNow()),
+    setBoss: (on) => director.setBoss(on, gameTime),
     duck: (reason, on) => director.duck(reason, on),
     setRegionTrack(trackId) {
       if (!TRACKS[trackId] || trackId !== track.id) {
@@ -55,35 +57,6 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
       }
     },
   });
-
-  // --- stems: load in the background, start once ready and unlocked -----------------------------
-  void (async () => {
-    try {
-      const loaded = await loadTrackStems(audio.context, track);
-      if (disposed) return; // late result after dispose: discard
-      if (loaded.buffers.size === 0) {
-        console.warn('Music: no stem could be built; the world stays without music.');
-        return;
-      }
-      for (const [id, buffer] of loaded.buffers) {
-        try {
-          await audio.music.add(id, buffer);
-        } catch (err) {
-          console.warn(`Music: could not add stem "${id}":`, err);
-        }
-      }
-      if (disposed) return;
-      audio.onUnlock(() => {
-        if (disposed || director.started || audio.music.isPlaying) return;
-        audio.music.start(director.currentMix());
-        const startedAt = audio.music.startedAt;
-        if (startedAt === null) return;
-        director.start(new BarClock(startedAt, loopSeconds(track, audio.context.sampleRate), track.bars), audioNow());
-      });
-    } catch (err) {
-      console.warn('Music: stems failed to load; the world stays without music.', err);
-    }
-  })();
 
   // --- SFX ----------------------------------------------------------------------------------
   const sfx = new SfxPlayer({ audio, now: audioNow });
@@ -107,18 +80,28 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
     return p ? p.distanceTo(ctx.player.feet) : undefined;
   };
 
+  /** Any living, unmercied hostile-team actor within 12 m keeps the fight going, aggroed or not. */
+  const hostileNearby = (): boolean => {
+    for (const a of ctx.actors.all()) {
+      if (a.team !== 'hostile' || a.dead || !a.root || ctx.state.isMercied(a.id)) continue;
+      if (a.worldPosition(tmpA).distanceTo(ctx.player.feet) <= musicConfig.hostileClearRadius) return true;
+    }
+    return false;
+  };
+
   // --- events -------------------------------------------------------------------------------
   const ev = ctx.events;
   const playerId = ctx.actors.player.id;
 
   ev.on('ai.aggro', (e) => {
     if (e.targetId === playerId) director.onAggro(e.actorId);
+    else director.onCalm(e.actorId, gameTime); // retargeted to someone else
   });
-  ev.on('ai.calm', (e) => director.onCalm(e.actorId, audioNow()));
-  ev.on('actor.died', (e) => director.onCalm(e.actorId, audioNow()));
-  ev.on('actor.despawned', (e) => director.onCalm(e.actorId, audioNow()));
+  ev.on('ai.calm', (e) => director.onCalm(e.actorId, gameTime));
+  ev.on('actor.died', (e) => director.onCalm(e.actorId, gameTime));
+  ev.on('actor.despawned', (e) => director.onCalm(e.actorId, gameTime));
   ev.on('mercy', (e) => {
-    if (e.actorId) director.onMercy(e.actorId, audioNow());
+    if (e.actorId) director.onMercy(e.actorId, gameTime);
   });
   ev.on('discover', () => director.requestDiscover());
   ev.on('waystone.rekindled', () => director.requestDiscover());
@@ -126,17 +109,23 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
   ev.on('dialogue.ended', (e) => director.duck(`dialogue:${e.dialogueId}`, false));
   ev.on('cutscene.started', (e) => director.duck(`cutscene:${e.cutsceneId}`, true));
   ev.on('cutscene.ended', (e) => director.duck(`cutscene:${e.cutsceneId}`, false));
-  ev.on('save.loaded', () => director.reset(audioNow()));
+  ev.on('save.loaded', () => director.reset(gameTime));
   ev.on('actor.revived', (e) => {
-    if (e.actorId === playerId && e.reason === 'respawn') director.reset(audioNow());
+    if (e.actorId === playerId && e.reason === 'respawn') director.reset(gameTime);
   });
 
   ev.on('damage.dealt', (r) => {
     const target = ctx.actors.get(r.targetId);
     const attacker = r.attackerId ? ctx.actors.get(r.attackerId) : undefined;
-    if (isCombatHit(r.kind, attacker?.team, target?.team)) director.onCombatHit(audioNow());
+    const combatHit = isCombatHit(r.kind, attacker?.team, target?.team);
+    if (combatHit) {
+      director.onCombatHit(gameTime);
+      // A hostile that hits the player is part of the fight even if its aggro event named someone else.
+      if (combatHit === 'hostile-hit-player' && r.attackerId) director.onAggro(r.attackerId);
+    }
 
-    if (!target) return;
+    // Spell sounds belong to the spells thread; falls and script damage are silent here.
+    if (!target || r.kind !== 'melee') return;
     const raw = (target.data['audio'] as { material?: unknown } | undefined)?.material;
     const { material, known } = resolveMaterial(raw);
     if (!known && !warnedMaterials.has(String(raw))) {
@@ -159,9 +148,47 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
     id: 'music',
     fixedPhase: 'rules',
     order: 200,
-    fixedUpdate: () => director.update(audioNow(), distanceTo),
+    fixedUpdate: (dt) => {
+      gameTime += dt;
+      director.update(gameTime, distanceTo, { audioNow: audioNow(), hostileNear: hostileNearby() });
+    },
     dispose: () => director.dispose(),
   });
+
+  // Last, so nothing above can throw after the background load has started with no owner to stop it.
+  // --- stems: load in the background, start once ready and unlocked -----------------------------
+  void (async () => {
+    try {
+      const loaded = await loadTrackStems(audio.context, track, { skipProcedural: ['boss'] });
+      if (disposed) return; // late result after dispose: discard
+      if (loaded.buffers.size === 0) {
+        console.warn('Music: no stem could be built; the world stays without music.');
+        return;
+      }
+      for (const [id, buffer] of loaded.buffers) {
+        try {
+          await audio.music.add(id, buffer);
+        } catch (err) {
+          console.warn(`Music: could not add stem "${id}":`, err);
+        }
+      }
+      if (disposed) return;
+      audio.onUnlock(() => {
+        // Runs inside the audio manager's resume callback: never let it throw into the other callbacks.
+        try {
+          if (disposed || director.started || audio.music.isPlaying) return;
+          audio.music.start(director.currentMix());
+          const startedAt = audio.music.startedAt;
+          if (startedAt === null) return;
+          director.start(new BarClock(startedAt, loopSeconds(track, audio.context.sampleRate), track.bars), gameTime);
+        } catch (err) {
+          console.warn('Music: could not start the mixer:', err);
+        }
+      });
+    } catch (err) {
+      console.warn('Music: stems failed to load; the world stays without music.', err);
+    }
+  })();
 
   return () => {
     disposed = true;
@@ -170,17 +197,16 @@ export function setupMusic(ctx: GameContext, track: TrackDef = BARLEY_AND_BRAZIE
   };
 }
 
-let teardown: (() => void) | null = null;
+const teardowns: Array<() => void> = [];
 
 const plugin: GamePlugin = {
   id: 'music',
   dependsOn: ['core'],
   setup(ctx) {
-    teardown = setupMusic(ctx);
+    teardowns.push(setupMusic(ctx));
   },
   dispose() {
-    teardown?.();
-    teardown = null;
+    for (const down of teardowns.splice(0).reverse()) down();
   },
 };
 

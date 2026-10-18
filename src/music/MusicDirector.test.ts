@@ -15,17 +15,18 @@ function setup(opts: { startAt?: number; random?: () => number } = {}) {
   const director = new MusicDirector({ track: TRACK, driver, random: opts.random ?? (() => 0.5) });
   const t0 = opts.startAt ?? 0;
   director.start(new BarClock(t0, LOOP, 16), t0);
-  /** Advance the audio clock in 1/60 s ticks to `until`. */
+  /** Advance the clock in 1/60 s ticks to `until`. */
   let now = t0;
-  const run = (until: number, dist: (id: string) => number | undefined = NEAR): void => {
+  const runExtra = (until: number, extra: { audioNow?: number; hostileNear?: boolean }, dist: (id: string) => number | undefined = NEAR): void => {
     while (now < until - 1e-9) {
       now = Math.min(until, now + 1 / 60);
-      director.update(now, dist);
+      director.update(now, dist, extra);
     }
   };
+  const run = (until: number, dist: (id: string) => number | undefined = NEAR): void => runExtra(until, {}, dist);
   const mixNames = (): string[] =>
     calls.map((c) => (Object.entries(TRACK.mixes).find(([, m]) => m === c.mix)?.[0] ?? '?'));
-  return { director, driver, calls, run, mixNames, now: () => now };
+  return { director, driver, calls, run, runExtra, mixNames, now: () => now };
 }
 
 describe('MusicDirector basics', () => {
@@ -125,24 +126,49 @@ describe('combat enter and exit', () => {
     expect(t.director.state).toBe('combat');
   });
 
-  it('ignores a hostile with unknown distance when entering, and counts it while holding', () => {
+  it('ignores a hostile with unknown distance when entering', () => {
     const t = setup();
     t.director.onAggro('w1');
     t.run(1, () => undefined);
     expect(t.director.state).toBe('explore');
-    t.director.onAggro('w2');
-    t.run(2, (id) => (id === 'w2' ? 5 : undefined));
-    expect(t.director.state).toBe('combat');
-    t.run(30, () => undefined); // distances lost: still held by the set
-    expect(t.director.state).toBe('combat');
   });
 
-  it('a hostile beyond the leash radius no longer holds combat', () => {
+  it('a set member whose actor vanished (no position) cannot hold combat forever', () => {
+    const t = setup();
+    t.director.onAggro('w1');
+    t.run(1, () => 5);
+    expect(t.director.state).toBe('combat');
+    t.run(5, () => undefined);
+    expect(t.director.state).toBe('combat'); // still inside the 6 s window
+    t.run(8, () => undefined);
+    expect(t.director.state).toBe('explore');
+  });
+
+  it('a far but known aggroed hostile keeps holding combat', () => {
     const t = setup();
     t.director.onAggro('w1');
     t.run(1, () => 10);
-    t.run(20, () => 60);
+    t.run(40, () => 70);
+    expect(t.director.state).toBe('combat');
+  });
+
+  it('a calmed hostile still within 12 m (hostileNear) holds combat; leaving lets the timer run out', () => {
+    const t = setup();
+    t.director.onAggro('w1');
+    t.run(1, () => 5);
+    t.director.onCalm('w1', t.now());
+    t.runExtra(20, { hostileNear: true });
+    expect(t.director.state).toBe('combat');
+    t.runExtra(t.now() + 7, { hostileNear: false });
     expect(t.director.state).toBe('explore');
+  });
+
+  it('a hit on the player that lands before start() is ignored', () => {
+    const d = new MusicDirector({ track: TRACK, driver: { setMix: vi.fn() } });
+    d.onCombatHit(0);
+    d.start(new BarClock(0, LOOP, 16), 0);
+    d.update(0.1, NEAR);
+    expect(d.state).toBe('explore');
   });
 
   it('exits 6 s after the set empties, not before', () => {
@@ -332,7 +358,7 @@ describe('discover (A/B bar scheduling)', () => {
     expect(t.mixNames()).toEqual(['discover', 'explore']);
   });
 
-  it('more than 4 bars from the half boundary it starts on the next bar line and ends on the following half boundary', () => {
+  it('more than 4 bars from the half boundary it starts on the next bar line and lasts 8 bars', () => {
     const t = setup();
     t.run(2.5 * BAR); // half boundary is 5.5 bars away
     t.director.requestDiscover();
@@ -340,9 +366,9 @@ describe('discover (A/B bar scheduling)', () => {
     expect(t.director.state).toBe('explore');
     t.run(3.1 * BAR);
     expect(t.director.state).toBe('discover');
-    t.run(7.9 * BAR);
+    t.run(10.9 * BAR);
     expect(t.director.state).toBe('discover');
-    t.run(8.1 * BAR);
+    t.run(11.1 * BAR);
     expect(t.director.state).toBe('explore');
   });
 
@@ -405,12 +431,44 @@ describe('discover (A/B bar scheduling)', () => {
     expect(t.director.state).toBe('explore');
   });
 
-  it('requests before start() are ignored', () => {
-    const d = new MusicDirector({ track: TRACK, driver: { setMix: vi.fn() } });
+  it('a request made before start() (the opening region discovery) plays once the mixer runs', () => {
+    const setMix = vi.fn();
+    const d = new MusicDirector({ track: TRACK, driver: { setMix } });
     d.requestDiscover();
     d.start(new BarClock(0, LOOP, 16), 0);
-    d.update(30 * BAR, NEAR);
-    expect(d.state).toBe('explore');
+    d.update(0.1, NEAR);
+    d.update(0.5 * BAR, NEAR);
+    d.update(8.1 * BAR, NEAR);
+    expect(d.state).toBe('discover');
+  });
+
+  it('every phrase is 8 bars long, wherever the request lands', () => {
+    for (const startBars of [0.2, 3.5, 7.9, 11.9, 15.5]) {
+      const t = setup();
+      t.run(startBars * BAR);
+      t.director.requestDiscover();
+      t.run(t.now() + 0.01);
+      let startedAt = -1;
+      let endedAt = -1;
+      while (t.now() < 40 * BAR && endedAt < 0) {
+        t.run(t.now() + 1 / 60);
+        if (startedAt < 0 && t.director.state === 'discover') startedAt = t.now();
+        if (startedAt >= 0 && t.director.state !== 'discover') endedAt = t.now();
+      }
+      expect((endedAt - startedAt) / BAR).toBeCloseTo(8, 1);
+    }
+  });
+
+  it('a pause longer than the planned phrase drops it instead of skipping through it', () => {
+    const t = setup();
+    t.run(5 * BAR);
+    t.director.requestDiscover();
+    t.run(t.now() + 1 / 60);
+    // game time barely moves, audio time jumps 40 s (menu pause or a background tab)
+    t.director.update(t.now() + 1 / 60, NEAR, { audioNow: t.now() + 40 });
+    expect(t.director.state).toBe('explore');
+    t.runExtra(t.now() + 1, { audioNow: t.now() + 41 });
+    expect(t.mixNames()).toEqual([]);
   });
 });
 
