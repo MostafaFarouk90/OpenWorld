@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { isHeavyBlow } from '../../combat/heavyBlow';
 import { KnightAvatar } from '../../characters/KnightAvatar';
 import corePlugin from '../../core/core.plugin';
 import { Game } from '../../core/Game';
@@ -112,10 +113,11 @@ describe('ashblade plugin: registrations', () => {
     expect(t.ctx.strings.t('hud.skills.branch.smokecloak')).toBe('Smokecloak');
   });
 
-  it('says once that the heavy clip hook, status, stealth and codex are not there yet and carries on', async () => {
+  it('registers the Dualwield chop as a heavy blow and leaves the light slash alone', async () => {
     const t = await boot();
     t.run(3);
-    expect(warns.some((w) => w.includes('registerHeavyClip'))).toBe(true);
+    expect(isHeavyBlow({ attackId: 'Dualwield_Melee_Attack_Chop' })).toBe(true);
+    expect(isHeavyBlow({ attackId: 'Dualwield_Melee_Attack_Slice' })).toBe(false);
     expect(t.statuses.find((s) => s.id === 'ashblade')?.state).toBe('ok');
   });
 
@@ -125,7 +127,7 @@ describe('ashblade plugin: registrations', () => {
     expect(t.ctx.services.require('classes').kit('ashblade')?.drill).toHaveLength(8);
   });
 
-  it('a second Game in the same process still loads (the skills registry has no dispose)', async () => {
+  it('a second Game in the same process still loads', async () => {
     await boot();
     const again = await boot();
     expect(again.statuses.find((s) => s.id === 'ashblade')?.state).toBe('ok');

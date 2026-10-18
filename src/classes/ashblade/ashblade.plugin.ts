@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { ClassesService } from '../../actors/classes';
 import type { DamageResult } from '../../actors/DamageResolver';
-import * as heavyBlow from '../../combat/heavyBlow';
+import { registerHeavyClip } from '../../combat/heavyBlow';
 import type { GameContext } from '../../core/Game';
 import type { GamePlugin } from '../../core/plugins';
 import type { AttackSet } from '../../player/attackSets';
@@ -43,9 +43,10 @@ const ashbladePlugin: GamePlugin = {
     const trigger = (id: string) => () => void svc<{ reportTrigger?(id: string): boolean }>('abilities')?.reportTrigger?.(id);
     ctx.strings.register('en', ASHBLADE_STRINGS_EN);
 
-    // ---- skills (no dispose exists; a repeat setup in one process is a warned no-op) ----
+    // ---- skills ----
     const skills = registerClassSkills(CLASS_ID, ASHBLADE_SKILLS);
-    if (!skills.ok && skills.reason !== 'duplicate-class') warn(`ashblade: skills refused (${skills.reason})`);
+    if (skills.ok) offs.push(skills.dispose);
+    else warn(`ashblade: skills refused (${skills.reason})`);
 
     // ---- attack set, heavy chop ----
     const verbs = svc<{
@@ -57,11 +58,7 @@ const ashbladePlugin: GamePlugin = {
       const r = verbs.registerAttackSet(CLASS_ID, ASHBLADE_ATTACK_SET);
       if (r.ok) offs.push(() => r.dispose?.());
       else warn(`ashblade: attack set refused (${r.reason})`);
-      const reg = (heavyBlow as unknown as { registerHeavyClip?: (clip: string) => (() => void) | void }).registerHeavyClip;
-      if (typeof reg === 'function') {
-        const off = reg(ASHBLADE_HEAVY_CLIP);
-        if (typeof off === 'function') offs.push(off);
-      } else warn('ashblade: heavyBlow.registerHeavyClip is absent, the crossed chop is not a heavy blow');
+      offs.push(registerHeavyClip(ASHBLADE_HEAVY_CLIP));
       if (typeof verbs.addDodgeDistanceMultiplier === 'function') {
         offs.push(verbs.addDodgeDistanceMultiplier(SKILL.quickSlip, () => (has(SKILL.quickSlip) ? QUICK_SLIP.distanceScale : 1)));
       } else warn('ashblade: combatVerbs.addDodgeDistanceMultiplier is absent, Quick Slip is inert');
