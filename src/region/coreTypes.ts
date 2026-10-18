@@ -107,6 +107,7 @@ export interface ServicesApi {
 
 export interface StringsApi {
   register(locale: string, table: Record<string, string>, opts?: { override?: boolean }): void;
+  t(key: string, params?: Record<string, string | number>): string;
 }
 
 export interface PhysicsApi {
