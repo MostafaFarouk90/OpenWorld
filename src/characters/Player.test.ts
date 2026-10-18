@@ -276,10 +276,18 @@ describe('Player', () => {
       expect(player.facingYaw).toBeCloseTo(-Math.PI / 2, 6); // facing +X
     });
 
-    it('without an override a forced move turns the player towards its direction', () => {
+    it('a forced move does not turn the player unless asked (knockback keeps facing the enemy)', () => {
       addGround();
       const player = settled();
       player.setForcedMove({ x: 0, z: 1, speed: 5 });
+      tick(player);
+      expect(player.facingYaw).toBeCloseTo(0, 6);
+    });
+
+    it('a forced move with turn set faces its direction', () => {
+      addGround();
+      const player = settled();
+      player.setForcedMove({ x: 0, z: 1, speed: 5, turn: true });
       tick(player);
       expect(Math.abs(player.facingYaw)).toBeCloseTo(Math.PI, 6);
     });

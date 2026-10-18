@@ -79,7 +79,7 @@ interface AbilitiesPort {
   reportTrigger?(id: string): void;
 }
 interface WaystonesPort {
-  respawnPlayer?(): void;
+  respawnPlayer?(): Promise<void> | void;
 }
 interface InventoryPort {
   readonly gold: number;
@@ -242,6 +242,8 @@ export class CombatVerbs {
     this.invuln.remove('dodge');
     this.invuln.remove('respawn');
     this.invuln.remove('secondWind');
+    this.controller?.exitAction();
+    if (this.lockOn.target !== null) this.ctx.events.emit('lockon.changed', { targetId: null });
     const rig = this.ctx.cameraRig;
     if (rig) {
       rig.lockTarget = null;
@@ -262,14 +264,14 @@ export class CombatVerbs {
   private intent(): void {
     const { ctx, actor } = this;
     const avatar = ctx.world.avatar;
+    this.expireGrace();
+    this.secondWind.tickGrace();
+    this.poise.tick();
     if (!avatar) return;
     this.bindAvatar(avatar);
     const c = avatar.controller;
     const tick = ctx.clock.tick;
     const a = ctx.input.actions;
-    this.expireGrace();
-    this.secondWind.tickGrace();
-    this.poise.tick();
     if (actor.dead || this.timeline.pending) {
       this.stamina.tick({ blocking: false, sprinting: false });
       return;
@@ -281,7 +283,7 @@ export class CombatVerbs {
     const free = action === null && GROUNDED_STATES.has(c.state);
     const canGuard =
       a.down('block') && !this.stamina.exhausted && !this.guard.lockedOut(tick) && grounded && action !== 'stagger' && !this.dodge.active;
-    this.guard.setBlockHeld(canGuard, tick);
+    this.guard.setBlockHeld(canGuard && (free || guarding), tick);
 
     if (this.dodge.active) this.stepDodge(c);
     else if (a.pressed('dodge')) this.tryDodge(c, grounded, free || action === 'block');
@@ -292,11 +294,11 @@ export class CombatVerbs {
       if (guarding && a.pressed('attack1') && this.learned(RIM_BASH_SKILL) && tick >= this.bashReadyAt) this.rimBash(c);
     }
 
-    const sprinting = a.down('sprint') && ctx.player.moving && grounded && !this.stamina.exhausted;
+    const sprinting = a.down('sprint') && ctx.player.moving && grounded && !this.stamina.exhausted && action === null && !c.movementLocked;
     this.stamina.tick({ blocking: guarding, sprinting });
     this.sprintTicks = sprinting ? this.sprintTicks + 1 : 0;
     if (this.sprintTicks === SPRINT_PROMPT_TICKS) this.prompts()?.success('sprint');
-    if (a.pressed('jump') && grounded) this.prompts()?.success('jump');
+    if (a.pressed('jump') && grounded && action === null && !c.movementLocked) this.prompts()?.success('jump');
 
     this.setLock('verbs.exhausted', this.stamina.exhausted ? ['sprint'] : null);
     this.setLock('verbs.heavy', !this.stamina.canAfford(STAMINA.heavyAttackCost) ? ['attack3'] : null);
@@ -348,6 +350,7 @@ export class CombatVerbs {
     this.dodge.tick();
     this.freeDodgeYaw = null;
     this.invuln.remove('dodge');
+    this.ctx.world.player.setForcedMove(null);
   }
 
   private applyMovement(): void {
@@ -411,8 +414,11 @@ export class CombatVerbs {
 
   private guardModifier(req: ModifiableRequest, target: Actor, attacker: Actor | null): void {
     if (target.id !== this.actor.id || req.outcome === 'immune') return;
-    const action = this.controller?.currentAction;
-    if (action !== 'block' && action !== 'blockHit') return;
+    const c = this.controller;
+    const action = c?.currentAction;
+    // The tick after a blockHit clip ends the guard is still up; block re-enters on the next intent.
+    const gap = action === null && this.guard.held && !!c && GROUNDED_STATES.has(c.state);
+    if (action !== 'block' && action !== 'blockHit' && !gap) return;
     const res = this.guard.resolve(req, {
       tick: this.ctx.clock.tick,
       facingYaw: this.ctx.player.facingYaw,
@@ -454,7 +460,7 @@ export class CombatVerbs {
     } else if (r.outcome === 'immune') {
       const attacker = r.attackerId ? ctx.actors.get(r.attackerId) : undefined;
       if (attacker?.team === 'hostile' && this.invuln.has('dodge')) {
-        const key = `${r.attackerId}#${r.swingId ?? r.attackId ?? ''}`;
+        const key = `${r.attackerId}#${r.swingId ?? r.attackId ?? ctx.clock.tick}`;
         if (!this.dodgedSwings.has(key)) {
           this.dodgedSwings.add(key);
           if (this.dodgedSwings.size > 64) this.dodgedSwings.delete(this.dodgedSwings.values().next().value as string);
@@ -522,13 +528,18 @@ export class CombatVerbs {
       if (w.ready() || ctx.clock.tick - w.since > RESPAWN_TELEPORT_WAIT_TICKS) this.finishRespawn(c, w.source);
       return;
     }
-    if (this.timeline.tick() === 'respawn' && actor.dead) this.beginRespawn(c);
+    if (this.timeline.tick() === 'respawn') {
+      if (actor.dead) this.beginRespawn(c);
+      else this.finishRespawn(c, 'external');
+    }
   }
 
   private onDeath(c: AnimationController | null): void {
     const { ctx } = this;
     this.abortDodge();
     this.knockback = null;
+    this.ctx.world.player.setForcedMove(null);
+    this.ctx.world.player.setFacingOverride(null);
     this.pending.length = 0;
     this.guard.setBlockHeld(false, ctx.clock.tick);
     c?.enterAction('dying');
@@ -540,12 +551,37 @@ export class CombatVerbs {
 
   private beginRespawn(c: AnimationController | null): void {
     const { ctx } = this;
-    const waystones = ctx.services.get('waystones' as never) as WaystonesPort | undefined;
+    const waystones = this.svc<WaystonesPort>('waystones');
     if (waystones?.respawnPlayer) {
-      waystones.respawnPlayer();
+      let result: unknown;
+      try {
+        result = waystones.respawnPlayer();
+      } catch {
+        this.teleportToFallback();
+        return;
+      }
+      if (result && typeof (result as Promise<void>).then === 'function') {
+        let settled = false;
+        const wait = { ready: () => settled, since: ctx.clock.tick, source: 'waystone' };
+        this.respawnWait = wait;
+        (result as Promise<void>).then(
+          () => {
+            settled = true;
+          },
+          () => {
+            if (this.respawnWait === wait) this.teleportToFallback();
+          },
+        );
+        return;
+      }
       this.finishRespawn(c, 'waystone');
       return;
     }
+    this.teleportToFallback();
+  }
+
+  private teleportToFallback(): void {
+    const { ctx } = this;
     let point;
     try {
       point = resolveRespawnPoint({
@@ -564,10 +600,11 @@ export class CombatVerbs {
     const { ctx, actor } = this;
     this.respawnWait = null;
     this.timeline.cancel();
-    ctx.damage.revive(actor.id, RESPAWN.healthFraction, 'respawn');
+    if (actor.dead) ctx.damage.revive(actor.id, RESPAWN.healthFraction, 'respawn');
     actor.restoreStamina(actor.maxStamina);
     actor.restorePoise();
     c?.exitAction();
+    this.ctx.world.player.setForcedMove(null);
     this.deadModifier?.();
     this.deadModifier = null;
     this.invuln.add('respawn');

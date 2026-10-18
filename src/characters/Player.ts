@@ -31,6 +31,8 @@ export interface ForcedMove {
   x: number;
   z: number;
   speed: number;
+  /** Turn the Knight along the move. Default false: knockback must not spin the player away from the enemy. */
+  turn?: boolean;
 }
 
 /**
@@ -107,7 +109,7 @@ export class Player {
    * normal movement. `null` gives control back to the input.
    */
   setForcedMove(m: ForcedMove | null): void {
-    this.forcedMove = m ? { x: m.x, z: m.z, speed: m.speed } : null;
+    this.forcedMove = m ? { x: m.x, z: m.z, speed: m.speed, turn: m.turn === true } : null;
   }
 
   /** What the controller actually did over the last tick, for animation. */
@@ -159,7 +161,7 @@ export class Player {
     }
     if (this.facingOverride !== null) {
       this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, this.facingOverride);
-    } else if ((moveX !== 0 || moveZ !== 0) && !mod?.lockFacing) {
+    } else if ((moveX !== 0 || moveZ !== 0) && !mod?.lockFacing && (!forced || forced.turn)) {
       // Mesh faces -Z at rest; turn it towards the movement direction.
       this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, Math.atan2(-moveX, -moveZ));
     }
