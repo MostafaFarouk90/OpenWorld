@@ -386,3 +386,58 @@ export function createGoal(spec: GoalSpec): GoalTracker {
     detail: () => impl.detail?.() ?? null,
   };
 }
+
+/**
+ * Units the quest tracker counts for a goal (`tutorial.goal` events): what "0/3" means per kind.
+ * Kinds without a natural count are one unit, earned when the goal is done.
+ */
+export function goalRequired(spec: GoalSpec): number {
+  switch (spec.kind) {
+    case 'kill':
+    case 'count':
+    case 'sprint':
+      return spec.count;
+    case 'gaze':
+      return spec.anchors.length;
+    case 'attacks':
+      return spec.slots.length + 1;
+    case 'lockSwap':
+      return spec.kills + 1;
+    case 'equipped':
+      return spec.items.length;
+    default:
+      return 1;
+  }
+}
+
+/** Units earned so far, from a tracker's `progress` (and `done`), clamped to `goalRequired`. */
+export function goalUnits(spec: GoalSpec, progress: number, done: boolean): number {
+  const req = goalRequired(spec);
+  if (done) return req;
+  let u: number;
+  switch (spec.kind) {
+    case 'kill':
+    case 'count':
+    case 'sprint':
+    case 'gaze':
+    case 'equipped':
+      u = Math.floor(progress);
+      break;
+    case 'attacks': {
+      const mask = Math.floor(progress) & 30;
+      u = spec.slots.filter((sl) => (mask & (1 << sl)) !== 0).length;
+      break;
+    }
+    case 'lockSwap':
+      u = progress < 2 ? 0 : 1 + Math.floor(progress - 2);
+      break;
+    default:
+      u = 0;
+  }
+  return Math.max(0, Math.min(req, u));
+}
+
+/** Total units of a step (all its goals): the `required` of the step's tracker objective. */
+export function stepRequired(step: readonly GoalSpec[]): number {
+  return step.reduce((n, g) => n + goalRequired(g), 0);
+}

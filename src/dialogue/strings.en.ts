@@ -14,12 +14,35 @@ export const dialogueStrings: Record<string, string> = {
   'dialogue.npc-stane.wave3': 'I will be there, Marshal. Save me a dummy.',
   'dialogue.npc-stane.idle': 'Keep your guard up and your feet light, {name}. The Yard is open to anyone who wants to work.',
 
+  // ---- Hob Waygrey (Knighting Day T14: fast travel) ----
+  'dialogue.npc-hob.travel': 'Mind the stone, {name}. It has slept since the Sunforge cracked. Kneel beside it and the shard in your chest will rekindle it.',
+  'dialogue.npc-hob.travel2': 'Then open your map. Every lit waystone is marked, and you may pick one to be there in a blink.',
+  'dialogue.npc-hob.travel3': 'Try the Kettlewick stone. It is lit already. Pick it on the map and the road will fold up under your feet.',
+  'dialogue.npc-hob.idle': 'Rekindle a waystone, open your map, and pick a lit stone. That is all there is to the old roads, {name}.',
+
   // ---- Sister Aelfreda ----
   'dialogue.npc-aelfreda.shard': 'The Heartshard leaves marks on the air around you, {name}, like heat shimmering over a summer road.',
   'dialogue.npc-aelfreda.shard2': 'The ash wraiths can feel it. Steady hands and slow breaths, and come back to the chapel if you need rest.',
   'dialogue.npc-aelfreda.idle': 'The brazier is lit and the stew is on, {name}. Come in out of the wind whenever you like.',
 
   // ---- Sir Gaut ----
+  // Knighting Day beat reminders (the current goal)
+  'dialogue.npc-gaut.tut-t01': "Down to the gate, {name}, and knock that scarecrow over with a swing of your sword.",
+  'dialogue.npc-gaut.tut-t02': "Eyes up, {name}. Look at each of the three banners on the chapel, one after another.",
+  'dialogue.npc-gaut.tut-t03': "Up the lane into Kettlewick. Speak to Marshal Stane and Edda, and read the notice board.",
+  'dialogue.npc-gaut.tut-t04': "Go into the chapel, {name}, kneel at the altar, and speak your vow.",
+  'dialogue.npc-gaut.tut-t05': "Strike the wraiths down. Three of them, and the churchyard is clear.",
+  'dialogue.npc-gaut.tut-t06': "Run, {name}! Sprint the lane. Two long runs before the roof falls.",
+  'dialogue.npc-gaut.tut-t07': "The lane is blocked. Leap the burning cart and then the fence.",
+  'dialogue.npc-gaut.tut-t08': "Slice, chop, then stab: the stab is quick and reaches far. Land each once, then chain four blows.",
+  'dialogue.npc-gaut.tut-t09': "Raise your shield and block his swing three times.",
+  'dialogue.npc-gaut.tut-t10': "That sweep cannot be blocked. Dodge clear with a direction, three times over.",
+  'dialogue.npc-gaut.tut-t11': "Lock on, flick to switch target, and fell two of the wraiths.",
+  'dialogue.npc-gaut.tut-t12': "Into Edda's bakery. Open your pack, equip the sword and tabard, and drink a flask from the barrel.",
+  'dialogue.npc-gaut.tut-t13': "You have a skill point. Open your skills, learn one, and put it to use.",
+  'dialogue.npc-gaut.tut-t14': "Go to the chapel waystone and rekindle it. Then open your map and travel to Kettlewick.",
+  'dialogue.npc-gaut.tut-t15': "To the Kettlewick gate. Loose the Heartshard's surge on the wave, then rest at a waystone.",
+  'dialogue.npc-gaut.tut-t-skirmish': "Show me what you know, {name}. Clear the square.",
   'dialogue.npc-gaut.brief-cold': '{name}. I vouched for you before the whole Halvard household, so give them no reason to doubt me.',
   'dialogue.npc-gaut.brief-banked': '{name}, well met. I hoped you would come to me first, and I am glad of it.',
   'dialogue.npc-gaut.brief-1': 'Ash wraiths are drifting up the lanes of Kettlewick, born of the Sunforge crack. Cut down five of them.',
@@ -225,6 +248,7 @@ export const dialogueStrings: Record<string, string> = {
 export const npcNameFallbackStrings: Record<string, string> = {
   'npc.gaut.name': 'Sir Gaut',
   'npc.edda.name': 'Edda Brannoc',
+  'npc.hob.name': 'Hob Waygrey',
   'npc.stane.name': 'Marshal Stane',
   'npc.aelfreda.name': 'Sister Aelfreda',
   'npc.wynn.name': 'Wynn Tillman',

@@ -4,7 +4,7 @@ import type { AnchorsApi, CoreContext } from './coreTypes';
 import { greyMat } from './greybox';
 import type { ChestOptions, Disposable } from './StructureBuilder';
 
-export type PropsDeps = Pick<CoreContext, 'scene' | 'interaction' | 'state' | 'events' | 'services'> & {
+export type PropsDeps = Pick<CoreContext, 'scene' | 'interaction' | 'state' | 'events' | 'services' | 'strings'> & {
   createChest: (opts: ChestOptions) => Disposable;
 };
 
@@ -14,7 +14,13 @@ export interface PropsHandle {
 
 export const BARREL_ANCHOR = 'kettlewick.barrel';
 export const HEARTH_STONE_ANCHOR = 'kettlewick.bakery-hearth';
+/** T02 banners, doubled from 1 x 2.4 so they read from the lane (clarity review item 19). */
+export const BANNER_SIZE = { w: 2, h: 4.8 } as const;
+export const BRAZIER_ANCHOR = 'chapel.brazier';
 export const NOTICE_BOARD_ANCHOR = 'kettlewick.notice-board';
+/** Notices read from the board (pre-crack: no road north, no M01 hint), shown as toasts. */
+const NOTICE_REREAD_MS = 8000;
+export const NOTICE_BOARD_NOTICES = ['notice.board.knighting', 'notice.board.yard', 'notice.board.road'] as const;
 
 /**
  * Quests (thread 3) say which objective is current; until that service is on main, or if its plugin failed,
@@ -119,21 +125,56 @@ export function buildProps(deps: PropsDeps, anchors: AnchorsApi): PropsHandle {
       }),
     );
 
-    // Notice board: quests listen to the core `interact` event, so there is nothing to do here.
+    let lastRead = -Infinity;
+    // Notice board: quests listen to the core `interact` event (T03); reading it also posts the notices.
     cleanups.push(
       deps.interaction.register({
         id: 'use:notice-board',
         kind: 'use',
+        name: deps.strings.t('prop.notice-board.name'),
         position: (out) => out.set(boardAnchor.position.x, boardAnchor.position.y, boardAnchor.position.z),
         radius: 2.5,
         promptKey: 'interact.use',
-        onInteract() {},
+        onInteract() {
+          if (disposed) return;
+          // One read per few seconds, so repeated presses don't stack toasts.
+          const now = Date.now();
+          if (now - lastRead < NOTICE_REREAD_MS) return;
+          lastRead = now;
+          // After the crack the knighting notice is stale; the board says what happened instead.
+          const after = deps.state.getBool('tutorial.heartshard-awakened');
+          for (const textKey of NOTICE_BOARD_NOTICES) {
+            deps.events.emit('hud.toast', { textKey: after && textKey === 'notice.board.knighting' ? 'notice.board.after' : textKey });
+          }
+        },
       }),
     );
 
+    // The Kindling Ember brazier: a tripod bowl on the altar (optional so partial layouts still build).
+    const brazierAnchor = anchors.find(BRAZIER_ANCHOR);
+    if (brazierAnchor) {
+      const brazier = new THREE.Group();
+      brazier.name = 'brazier';
+      const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.18, 0.2, 10), greyMat(0x3a3430));
+      bowl.position.y = 0.2;
+      const coals = new THREE.Mesh(new THREE.CircleGeometry(0.26, 10), new THREE.MeshBasicMaterial({ color: 0x4a1a0a }));
+      coals.rotation.x = -Math.PI / 2;
+      coals.position.y = 0.31;
+      brazier.add(bowl, coals);
+      for (let i = 0; i < 3; i++) {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.22, 5), greyMat(0x2a2623));
+        const ang = (i / 3) * Math.PI * 2;
+        leg.position.set(Math.cos(ang) * 0.15, 0.1, Math.sin(ang) * 0.15);
+        brazier.add(leg);
+      }
+      brazier.position.set(brazierAnchor.position.x, brazierAnchor.position.y, brazierAnchor.position.z);
+      group.add(brazier);
+      cleanups.push(() => (coals.material as THREE.Material).dispose());
+    }
+
     // T02 look targets: cloth banners on the chapel's west face, one per `banner` anchor.
     for (const a of anchors.withTag('banner')) {
-      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(1, 2.4), new THREE.MeshStandardMaterial({ color: 0xb02a2a, side: THREE.DoubleSide, flatShading: true }));
+      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(BANNER_SIZE.w, BANNER_SIZE.h), new THREE.MeshStandardMaterial({ color: 0xb02a2a, side: THREE.DoubleSide, flatShading: true }));
       cloth.name = `banner:${a.id}`;
       cloth.position.set(a.position.x, a.position.y, a.position.z);
       cloth.rotation.y = a.yaw;

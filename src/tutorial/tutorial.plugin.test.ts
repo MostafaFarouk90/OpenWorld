@@ -220,3 +220,169 @@ describe('tutorialFromQuery', () => {
     expect(tutorialFromQuery('')).toBeNull();
   });
 });
+
+describe('clarity wiring on the real game', () => {
+  const frame = (t: Awaited<ReturnType<typeof boot>>, n = 1) => {
+    for (let i = 0; i < n; i++) {
+      t.run(1);
+      t.game.render(1, 1 / 60);
+    }
+  };
+  const target = (t: Awaited<ReturnType<typeof boot>>) => t.game.ctx.services.get('tutorial')!.target();
+  const near = (t: Awaited<ReturnType<typeof boot>>, anchor: string) => {
+    const p = target(t);
+    const a = t.game.ctx.anchors.find(anchor)!.position;
+    return !!p && Math.hypot(p.x - a.x, p.z - a.z) < 0.01;
+  };
+
+  it('the tutorial service points at the current step: the gate, then the scarecrow, and nothing in a fight', async () => {
+    const t = await boot();
+    t.director.begin('full');
+    frame(t, 2);
+    expect(near(t, 'brightwater.gate')).toBe(true);
+    t.director.onEvent({ type: 'trigger', id: 'trg.t01.gate' });
+    frame(t, 2);
+    expect(near(t, 'brightwater.scarecrow')).toBe(true);
+  });
+
+  it('a fight has no beacon: the enemies are the target', async () => {
+    const t = await boot();
+    t.director.begin('full', 't09');
+    frame(t, 2);
+    expect(target(t)).toBeNull();
+  });
+
+  it('T03 points at the first talk still open', async () => {
+    const t = await boot();
+    t.director.begin('full', 't03');
+    frame(t, 2);
+    expect(near(t, 'npc-post.stane')).toBe(true);
+    t.game.ctx.services.get('quests')!.completeObjective('t03', 'o1');
+    frame(t, 1);
+    expect(near(t, 'npc-post.edda')).toBe(true);
+  });
+
+  it('T12 points at the barrel while the flask is still owed', async () => {
+    const t = await boot();
+    t.director.begin('full', 't12');
+    frame(t, 2);
+    expect(near(t, 'kettlewick.barrel')).toBe(true);
+  });
+
+  it('a save load restores the beacon on the loaded step', async () => {
+    const t = await boot();
+    t.director.begin('full', 't07');
+    frame(t, 2);
+    expect(near(t, 'lane.cart')).toBe(true);
+    const saved = t.director.serialize();
+    t.dispose();
+    // A fresh game that loads the save (begin would be ignored on a run that has begun).
+    const t2 = await boot();
+    frame(t2, 2);
+    expect(near(t2, 'lane.cart')).toBe(false);
+    t2.director.load(saved);
+    t2.director.onSaveLoaded();
+    frame(t2, 4);
+    expect(t2.director.beat).toBe('t07');
+    expect(near(t2, 'lane.cart')).toBe(true);
+  });
+
+  it('the village burns from the crack and the townsfolk are gone until the fires are out (M01)', async () => {
+    const t = await boot();
+    t.director.begin('full', 't03');
+    frame(t, 2);
+    const fires = () => t.game.ctx.scene.getObjectByName('crisis-dressing')!.children.filter((c) => c.name.startsWith('crisis-fire:') && c.visible).length;
+    const folk = () => t.game.ctx.scene.children.filter((c) => c.name.startsWith('townsfolk.') && c.visible).length;
+    expect(fires()).toBe(0);
+    expect(folk()).toBeGreaterThan(0);
+    t.game.ctx.state.setFlag('tutorial.heartshard-awakened', true); // the crack
+    frame(t, 2);
+    expect(fires()).toBeGreaterThan(0);
+    expect(fires()).toBeLessThanOrEqual(3);
+    expect(folk()).toBe(0);
+    t.game.ctx.state.setFlag('tutorial.complete', true);
+    frame(t, 1);
+    expect(folk()).toBe(0); // still burning: nobody idles beside the fires
+    const q = t.game.ctx.services.get('quests')!;
+    q.start('m01');
+    q.complete('m01');
+    frame(t, 1);
+    expect(folk()).toBeGreaterThan(0);
+  });
+
+  it('a run past the T12 kit step marks the kit objective done, so the journal objective is current', async () => {
+    const t = await boot();
+    t.director.begin('full', 't13');
+    frame(t, 2);
+    expect(t.game.ctx.state.getBool('tutorial.t12.kitDone')).toBe(true);
+    expect(t.game.ctx.services.get('quests')!.state('t12')).toBe('completed');
+  });
+
+  it('learning a passive at T13 leaves its quest open until the skill first triggers (review M1)', async () => {
+    const t = await boot();
+    t.director.begin('full', 't13');
+    frame(t, 2);
+    expect(t.game.ctx.services.get('progression')!.learn('knight.rimBash').ok).toBe(true);
+    frame(t, 3);
+    expect(t.director.beat).toBe('t14');
+    expect(t.game.ctx.services.get('quests')!.state('t13')).toBe('active');
+  });
+
+  it('an old save made mid-T12 (quest holds only o1) still completes the bakery beat (review B1)', async () => {
+    const t = await boot();
+    t.director.begin('full', 't12');
+    frame(t, 2);
+    const inv = t.game.ctx.services.get('inventory')!;
+    inv.equip('squires-arming-sword' as never);
+    frame(t, 2);
+    const save = t.director.serialize();
+    // What a save from before the step objectives holds: t12 active with only the journal objective.
+    (t.game.ctx.persist as unknown as { get(k: string): { load(d: unknown): void } }).get('quests').load({
+      quests: { ...JSON.parse(JSON.stringify((t.game.ctx.persist as unknown as { get(k: string): { serialize(): { quests: object } } }).get('quests').serialize().quests)), t12: { state: 'active', objectives: { o1: 0 } } },
+    });
+    const q = t.game.ctx.services.get('quests')!;
+    expect(q.objectives('t12')[0].progress).toBe(0);
+    t.director.load(save);
+    t.director.onSaveLoaded();
+    frame(t, 2);
+    expect(q.objectives('t12')[0].progress).toBe(1); // reconciled with the director's one equipped item
+    inv.equip('gauts-spare-tabard' as never);
+    t.director.onEvent({ type: 'itemUsed' } as never);
+    frame(t, 3);
+    expect(q.objectives('t12')[0].done).toBe(true);
+    t.game.ctx.events.emit('interact', { interactableId: 'use:t12-journal-open' } as never);
+    frame(t, 3);
+    expect(q.state('t12')).toBe('completed');
+  });
+
+  it('a feedback sound that throws never stalls a beat transition (review M2)', async () => {
+    const t = await boot();
+    // Headless has no audio service; stand in one whose every key is unregistered.
+    const play = vi.fn(() => {
+      throw new Error('Unknown sound');
+    });
+    (t.game.ctx.services as unknown as { provide(k: string, v: unknown): void }).provide('audio', { play });
+    t.director.begin('full', 't07');
+    frame(t, 2);
+    t.director.onEvent({ type: 'trigger', id: 'trg.t07.cart' });
+    frame(t, 1);
+    expect(t.director.currentStep).toBe(1);
+    t.director.onEvent({ type: 'trigger', id: 'trg.t07.fence' });
+    frame(t, 2);
+    expect(t.director.beat).toBe('t08');
+    expect(play).toHaveBeenCalled();
+  });
+
+  it('?act1= style state (M01 and M02 done) shows no fire', async () => {
+    const t = await boot();
+    t.game.ctx.state.setFlag('tutorial.heartshard-awakened', true);
+    const q = t.game.ctx.services.get('quests')!;
+    for (const id of ['m01', 'm02']) {
+      q.start(id);
+      q.complete(id);
+    }
+    frame(t, 2);
+    const fires = t.game.ctx.scene.getObjectByName('crisis-dressing')!.children.filter((c) => c.name.startsWith('crisis-fire:') && c.visible);
+    expect(fires).toHaveLength(0);
+  });
+});

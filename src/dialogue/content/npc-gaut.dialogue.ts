@@ -11,9 +11,31 @@ const done = (o: string): Condition => ({ objective: ['m04', o], done: true });
 const classOpen: Condition = { flag: 'story.m07.classOpen', equals: true };
 const m07Seen: Condition = { any: [{ quest: 'm07', state: 'active' }, { quest: 'm07', state: 'completed' }] };
 
+/** A migrated save can leave a marker quest active after the run ended; Gaut must not repeat it then. */
+const inTutorial = { not: { flag: 'tutorial.complete', equals: true } } as const;
+
 export const npcGaut: DialogueDef = {
   id: 'npc-gaut',
   start: [
+    // Knighting Day: while a tutorial beat is active, Gaut repeats its goal (these come before the M01 briefing,
+    // which is already active during T13 to T15).
+    { when: { all: [{ quest: 't01', state: 'active' }, inTutorial] }, node: 'tut-t01' },
+    { when: { all: [{ quest: 't02', state: 'active' }, inTutorial] }, node: 'tut-t02' },
+    { when: { all: [{ quest: 't03', state: 'active' }, inTutorial] }, node: 'tut-t03' },
+    { when: { all: [{ quest: 't04', state: 'active' }, inTutorial] }, node: 'tut-t04' },
+    { when: { all: [{ quest: 't05', state: 'active' }, inTutorial] }, node: 'tut-t05' },
+    { when: { all: [{ quest: 't06', state: 'active' }, inTutorial] }, node: 'tut-t06' },
+    { when: { all: [{ quest: 't07', state: 'active' }, inTutorial] }, node: 'tut-t07' },
+    { when: { all: [{ quest: 't08', state: 'active' }, inTutorial] }, node: 'tut-t08' },
+    { when: { all: [{ quest: 't09', state: 'active' }, inTutorial] }, node: 'tut-t09' },
+    { when: { all: [{ quest: 't10', state: 'active' }, inTutorial] }, node: 'tut-t10' },
+    { when: { all: [{ quest: 't11', state: 'active' }, inTutorial] }, node: 'tut-t11' },
+    { when: { all: [{ quest: 't12', state: 'active' }, inTutorial] }, node: 'tut-t12' },
+    { when: { all: [{ quest: 't13', state: 'active' }, inTutorial] }, node: 'tut-t13' },
+    { when: { all: [{ quest: 't14', state: 'active' }, inTutorial] }, node: 'tut-t14' },
+    { when: { all: [{ quest: 't15', state: 'active' }, inTutorial] }, node: 'tut-t15' },
+    { when: { all: [{ quest: 't-skirmish', state: 'active' }, inTutorial] }, node: 'tut-t-skirmish' },
+
     {
       when: { all: [m01Active, { objective: ['m01', 'o1'], done: true }, { objective: ['m01', 'o2'], done: true }] },
       node: 'report',
@@ -43,6 +65,24 @@ export const npcGaut: DialogueDef = {
     { when: { all: [] }, node: 'idle' },
   ],
   nodes: [
+    // tutorial beats
+    { id: 'tut-t01', speaker: 'gaut', textKey: P + 'tut-t01', next: null },
+    { id: 'tut-t02', speaker: 'gaut', textKey: P + 'tut-t02', next: null },
+    { id: 'tut-t03', speaker: 'gaut', textKey: P + 'tut-t03', next: null },
+    { id: 'tut-t04', speaker: 'gaut', textKey: P + 'tut-t04', next: null },
+    { id: 'tut-t05', speaker: 'gaut', textKey: P + 'tut-t05', next: null },
+    { id: 'tut-t06', speaker: 'gaut', textKey: P + 'tut-t06', next: null },
+    { id: 'tut-t07', speaker: 'gaut', textKey: P + 'tut-t07', next: null },
+    { id: 'tut-t08', speaker: 'gaut', textKey: P + 'tut-t08', next: null },
+    { id: 'tut-t09', speaker: 'gaut', textKey: P + 'tut-t09', next: null },
+    { id: 'tut-t10', speaker: 'gaut', textKey: P + 'tut-t10', next: null },
+    { id: 'tut-t11', speaker: 'gaut', textKey: P + 'tut-t11', next: null },
+    { id: 'tut-t12', speaker: 'gaut', textKey: P + 'tut-t12', next: null },
+    { id: 'tut-t13', speaker: 'gaut', textKey: P + 'tut-t13', next: null },
+    { id: 'tut-t14', speaker: 'gaut', textKey: P + 'tut-t14', next: null },
+    { id: 'tut-t15', speaker: 'gaut', textKey: P + 'tut-t15', next: null },
+    { id: 'tut-t-skirmish', speaker: 'gaut', textKey: P + 'tut-t-skirmish', next: null },
+
     // briefing (first visit while M01 is active)
     { id: 'brief-cold', speaker: 'gaut', textKey: P + 'brief-cold', next: 'brief-1' },
     { id: 'brief-banked', speaker: 'gaut', textKey: P + 'brief-banked', next: 'brief-1' },

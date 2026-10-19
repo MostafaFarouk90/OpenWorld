@@ -21,6 +21,7 @@ export class NextUnlock implements HudWidgetView {
   private readonly t: Translate;
   private readonly text;
   private readonly badge;
+  private readonly num;
 
   constructor(
     doc: DocumentLike,
@@ -30,6 +31,8 @@ export class NextUnlock implements HudWidgetView {
     this.element = makeEl(doc, 'div', 'owg-nextunlock');
     this.text = makeEl(doc, 'div', 'owg-nextunlock-text', this.element);
     this.badge = makeEl(doc, 'div', 'owg-points', this.element);
+    // T13: a gold numeral ("1") beside the text; appended last so child order is unchanged, CSS puts it first.
+    this.num = makeEl(doc, 'div', 'owg-points-num', this.element);
     this.update();
   }
 
@@ -53,6 +56,8 @@ export class NextUnlock implements HudWidgetView {
     setShown(this.badge, points > 0);
     this.badge.textContent =
       points > 0 ? this.t(points === 1 ? 'hud.nextUnlock.point' : 'hud.nextUnlock.points', { points }) : null;
+    setShown(this.num, points > 0);
+    this.num.textContent = points > 0 ? String(points) : null;
     setShown(this.element, label !== null || points > 0);
   }
 

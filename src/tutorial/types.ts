@@ -138,6 +138,8 @@ export interface PromptSpec {
   mechanic: string;
   action: string;
   textKey: string;
+  /** Shown only while this step is current (T01: strike once at the gate); all steps when absent. */
+  step?: number;
 }
 
 export interface BeatDef {
@@ -166,6 +168,11 @@ export interface BeatDef {
   lines?: string[];
   /** Whether this beat starts inside the cutscene. */
   cutscene?: 'knighting' | 'crack';
+  /**
+   * Where the objective beacon points while step i is current (an anchor id), or null for none
+   * (fights: the enemies are the target). Missing entries mean no beacon.
+   */
+  targets?: (string | null)[];
 }
 
 // ---- ports ----------------------------------------------------------------------------------------
@@ -233,6 +240,16 @@ export interface DirectorPorts {
   cutscene(kind: 'knighting' | 'crack' | null): void;
   crackEffects(): void;
   emitBeat(beatId: BeatId, state: 'started' | 'completed' | 'skipped'): void;
+  /** `delta` more units of step `step`'s goals were earned (the tracker counts `tutorial.goal`). */
+  goalProgress(beatId: BeatId, step: number, delta: number): void;
+  /** What the quest tracker already counted for a step (its `tutorial.goal` objective), or null if it has none. */
+  trackedUnits(beatId: BeatId, step: number): number | null;
+  /** A step of a beat finished (not the last one): a soft tick. */
+  stepDone(beatId: BeatId, step: number): void;
+  /** A beat finished the normal way: toast and stinger. */
+  beatDone(beatId: BeatId): void;
+  /** One success of a prompt mechanic (move and look fade after two). */
+  promptSuccess(mechanic: string): void;
   recordCompletion(): void;
 }
 

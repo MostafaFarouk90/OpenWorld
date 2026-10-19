@@ -3,7 +3,7 @@ import type { Action, PromptRow, PromptService } from './types';
 
 export const MECHANICS: readonly string[] = [
   'move', 'look', 'attack1', 'attack2', 'attack3', 'attack4', 'interact', 'sprint', 'jump', 'block',
-  'dodge', 'lockOn', 'inventory', 'journal', 'skills', 'ability', 'map', 'fastTravel', 'surge', 'rest', 'wardstone-strike',
+  'dodge', 'lockOn', 'inventory', 'journal', 'skills', 'ability', 'map', 'fastTravel', 'surge', 'rest', 'wardstone-strike', 'lockSwap',
 ];
 
 export const FADE_MS = 400;
