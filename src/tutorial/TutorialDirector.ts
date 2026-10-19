@@ -536,11 +536,12 @@ export class TutorialDirector {
     this.steps = def.steps.map((st) => st.map((spec) => this.data.createGoal(spec)));
     this.step = Math.max(0, Math.min(this.s.progress['step'] ?? 0, this.steps.length));
     this.wavesSpawned = 0;
-    // A restarted beat respawns its enemies, so its "cleared" goals start over; the rest is kept.
+    // Everything earned is kept, groups already cleared included: a restart respawns only the groups still
+    // owed (spawnWave), so the tracker, which never goes back, always matches the director (review m11).
     this.steps.forEach((st, si) =>
       st.forEach((g, gi) => {
         const p = this.s.progress[`${si}.${gi}`];
-        if (p !== undefined && !(mode === 'restart' && g.spec.kind === 'cleared')) g.restore(p);
+        if (p !== undefined) g.restore(p);
       }),
     );
     // What the tracker already counted (a fresh beat counted nothing); state synced below is new credit.
@@ -815,7 +816,22 @@ export class TutorialDirector {
   private spawnWave(i: number): void {
     if (this.wavesSpawned & (1 << i)) return;
     this.wavesSpawned |= 1 << i;
-    for (const sp of this.def().waves![i]) this.spawnOne(sp);
+    for (const sp of this.def().waves![i]) if (!this.groupCounted(sp.spawnerId)) this.spawnOne(sp);
+  }
+
+  /** A group every "cleared" goal from this step on has already counted (kept across a restart or reload). */
+  private groupCounted(spawnerId: string): boolean {
+    let seen = false;
+    for (const st of this.steps.slice(this.step)) {
+      for (const g of st) {
+        if (g.spec.kind !== 'cleared') continue;
+        const i = g.spec.spawnerIds.indexOf(spawnerId);
+        if (i < 0) continue;
+        if (!(g.progress & (1 << i))) return false;
+        seen = true;
+      }
+    }
+    return seen;
   }
 
   private spawnOne(sp: SpawnSpec): void {
