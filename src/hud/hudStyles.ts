@@ -72,6 +72,7 @@ export const HUD_CSS = `
 .owg-leap-ring{position:absolute;inset:0;border-radius:6px}
 .owg-leap-glyph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700}
 .owg-boss{display:flex;flex-direction:column;align-items:center;gap:3px;width:480px;max-width:80vw;pointer-events:none;font:14px system-ui,sans-serif;color:#f3ead8;text-shadow:0 1px 2px #000;transition:opacity 1.5s linear}
+.owg-boss-active .owg-controls-hint{display:none}
 .owg-boss-name{font-weight:700;letter-spacing:.05em}
 .owg-boss-bar{position:relative;width:100%;height:14px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.25);border-radius:3px;overflow:hidden}
 .owg-boss-fill{height:100%;width:0;background:#a8302a;transition:width .12s linear}
