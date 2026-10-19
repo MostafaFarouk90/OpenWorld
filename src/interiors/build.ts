@@ -13,7 +13,13 @@ export interface BuiltInterior {
   readonly root: THREE.Group;
   setBlocker(blockerId: string, closed: boolean): boolean;
   hasBlocker(blockerId: string): boolean;
+  /** Hides or shows the merged greybox of a surface kind (the asset swap dresses it with models). Colliders are untouched. */
+  setKindVisible(kind: BoxKind, visible: boolean): void;
+  /** Rebuilds the prop greybox without the props whose `propId` is listed (the dressed ones). */
+  hidePropBoxes(propIds: ReadonlySet<string>): void;
   dispose(): void;
+  /** True once `dispose` has run (late dressing checks it). */
+  readonly disposed: boolean;
 }
 
 const COLOURS: Record<BoxKind, number> = {
@@ -61,9 +67,13 @@ export function buildInterior(layout: InteriorLayout, physics: PhysicsWorld | nu
     list.push(boxGeometry(b));
     byKind.set(b.kind, list);
   }
+  const kindMeshes = new Map<BoxKind, THREE.Mesh>();
+  // Prop boxes keep their own geometry so the dressed ones can be dropped from the merge later.
+  const propGeos: Array<{ propId?: string; geo: THREE.BufferGeometry }> = [];
   for (const [kind, geos] of byKind) {
     const merged = mergeGeometries(geos);
-    for (const g of geos) g.dispose();
+    if (kind === 'prop') for (const [i, b] of layout.boxes.filter((x) => x.kind === 'prop').entries()) propGeos.push({ propId: b.propId, geo: geos[i] });
+    else for (const g of geos) g.dispose();
     if (!merged) continue;
     const material = new THREE.MeshStandardMaterial({ color: COLOURS[kind], roughness: 0.95, metalness: 0 });
     const mesh = new THREE.Mesh(merged, material);
@@ -71,8 +81,10 @@ export function buildInterior(layout: InteriorLayout, physics: PhysicsWorld | nu
     mesh.castShadow = false;
     mesh.receiveShadow = false;
     root.add(mesh);
+    kindMeshes.set(kind, mesh);
     disposables.push(merged, material);
   }
+  disposables.push({ dispose: () => propGeos.forEach((p) => p.geo.dispose()) });
 
   const torchGeo = new THREE.BoxGeometry(0.18, 0.3, 0.18);
   const torchMat = new THREE.MeshStandardMaterial({ color: 0x331a08, emissive: 0xff9a3c, emissiveIntensity: 2.5 });
@@ -106,8 +118,12 @@ export function buildInterior(layout: InteriorLayout, physics: PhysicsWorld | nu
   }
 
   let disposed = false;
+  let current: THREE.BufferGeometry | null = null;
   return {
     layout,
+    get disposed() {
+      return disposed;
+    },
     root,
     setBlocker(id, closed) {
       const b = blockers.get(id);
@@ -117,11 +133,33 @@ export function buildInterior(layout: InteriorLayout, physics: PhysicsWorld | nu
       return true;
     },
     hasBlocker: (id) => blockers.has(id),
+    setKindVisible(kind, visible) {
+      const m = kindMeshes.get(kind);
+      if (m) m.visible = visible;
+    },
+    hidePropBoxes(propIds) {
+      const mesh = kindMeshes.get('prop');
+      if (!mesh) return;
+      const keep = propGeos.filter((p) => !(p.propId && propIds.has(p.propId))).map((p) => p.geo);
+      const next = keep.length > 0 ? mergeGeometries(keep) : null;
+      mesh.geometry.dispose();
+      current = next;
+      if (next) {
+        mesh.geometry = next;
+        mesh.visible = true;
+      } else {
+        mesh.geometry = new THREE.BufferGeometry();
+        mesh.visible = false;
+      }
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
       root.removeFromParent();
       for (const d of disposables) d.dispose();
+      current?.dispose();
+      // The dressing's instance buffers (geometry and atlas material are the shared library's).
+      root.traverse((o) => (o as THREE.InstancedMesh).isInstancedMesh && (o as THREE.InstancedMesh).dispose());
       if (physics) for (const c of colliders) physics.removeCollider(c as Parameters<PhysicsWorld['removeCollider']>[0]);
     },
   };

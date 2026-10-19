@@ -1,5 +1,6 @@
 // Plugin `region`: lays the Brightwater tutorial footprint onto the terrain (anchors, triggers, greybox
 // structures, props, the scarecrow, barley), exposes the `region` service and reports region changes.
+import { modelLibraryFor } from '../assets/swap/ModelLibrary';
 import { heightAt } from '../terrain/heightfield';
 import { BuildingLookup } from './buildingLookup';
 import { barleyVariantOf, buildBarley } from './barley';
@@ -18,6 +19,7 @@ import { resolveLayout } from './resolveLayout';
 import { SCARECROW_TOPPLED_FLAG, spawnScarecrow } from './scarecrow';
 import type { RegionService } from './serviceTypes';
 import { buildStructures, coreFactories } from './StructureBuilder';
+import { createStructureArt } from './structureArt';
 import { REGION_STRINGS_EN } from './strings.en';
 import { validateLayout } from './validateLayout';
 
@@ -74,7 +76,7 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
           for (const t of resolved.triggers) cleanups.push(ctx.triggers.add({ id: t.id, who: t.who, once: t.once, shape: t.shape }));
         }
 
-        const lookup = new BuildingLookup();
+        const lookup = new BuildingLookup(undefined, undefined, createStructureArt(modelLibraryFor(ctx.assets)));
         const built = layouts.map((l) => buildStructures({ ...ctx, rapier: ctx.physics.rapier, ...coreFactories(ctx) }, l, height, lookup));
         for (const structures of built) {
           cleanups.push(() => structures.dispose());

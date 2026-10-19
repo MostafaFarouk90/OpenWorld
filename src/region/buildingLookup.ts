@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import type { AssetId } from '../assets/AssetManifest';
 import { buildGreybox } from './greybox';
+import type { StructureArt } from './structureArt';
 import type { StructureKind, StructureSpec } from './layoutTypes';
 
 export const STRUCTURE_MODELS: Record<StructureKind, AssetId | null> = {
@@ -45,6 +46,8 @@ export class BuildingLookup {
   constructor(
     private readonly loader?: ModelLoader,
     private readonly models: Record<string, AssetId | null> = STRUCTURE_MODELS,
+    /** The asset swap's per-kind builders; tried before the one-model-per-kind map. Never throws into the lookup. */
+    private readonly art?: StructureArt,
   ) {}
 
   private assertKind(spec: StructureSpec): void {
@@ -56,6 +59,17 @@ export class BuildingLookup {
   /** The real model for the spec, or null when the kind has none or it failed to load. Unknown kind throws. */
   async tryReal(spec: StructureSpec): Promise<THREE.Object3D | null> {
     this.assertKind(spec);
+    if (this.art) {
+      try {
+        const real = await this.art(spec);
+        if (real) return real;
+      } catch (err) {
+        if (!this.warned.has(`art:${spec.kind}`)) {
+          this.warned.add(`art:${spec.kind}`);
+          console.warn(`BuildingLookup: art for kind "${spec.kind}" failed, using greybox`, err);
+        }
+      }
+    }
     const id = this.models[spec.kind];
     if (!id || !this.loader) return null;
     try {

@@ -5,7 +5,12 @@ export type AssetPackId =
   | 'kaykit-adventurers'
   | 'kaykit-medieval-builder'
   | 'quaternius-medieval-village'
-  | 'quaternius-fantasy-props';
+  | 'quaternius-fantasy-props'
+  | 'kaykit-medieval-hexagon'
+  | 'kaykit-dungeon-remastered'
+  | 'kaykit-halloween'
+  | 'kaykit-furniture'
+  | 'quaternius-farm-animals';
 
 /** Broad category of an asset, used by gameplay code to decide how to spawn it. */
 export type AssetKind = 'character' | 'weapon' | 'prop' | 'structure';
@@ -53,6 +58,41 @@ export const ASSET_PACKS: Record<
     license: 'CC0-1.0',
     source: 'https://quaternius.com/packs/fantasypropsmegakit.html',
     folder: 'assets/quaternius-fantasy-props/',
+  },
+  'kaykit-medieval-hexagon': {
+    name: 'KayKit Medieval Hexagon Pack',
+    author: 'Kay Lousberg',
+    license: 'CC0-1.0',
+    source: 'https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0',
+    folder: 'assets/kaykit-medieval-hexagon/',
+  },
+  'kaykit-dungeon-remastered': {
+    name: 'KayKit Dungeon Remastered',
+    author: 'Kay Lousberg',
+    license: 'CC0-1.0',
+    source: 'https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0',
+    folder: 'assets/kaykit-dungeon-remastered/',
+  },
+  'kaykit-halloween': {
+    name: 'KayKit Halloween Bits',
+    author: 'Kay Lousberg',
+    license: 'CC0-1.0',
+    source: 'https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0',
+    folder: 'assets/kaykit-halloween/',
+  },
+  'kaykit-furniture': {
+    name: 'KayKit Furniture Bits',
+    author: 'Kay Lousberg',
+    license: 'CC0-1.0',
+    source: 'https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0',
+    folder: 'assets/kaykit-furniture/',
+  },
+  'quaternius-farm-animals': {
+    name: 'Quaternius Farm Animals',
+    author: 'Quaternius',
+    license: 'CC0-1.0',
+    source: 'https://quaternius.com',
+    folder: 'assets/quaternius-farm-animals/',
   },
 };
 
