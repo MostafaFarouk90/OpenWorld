@@ -151,7 +151,9 @@ export const PRESENTATION = {
 
 /** Look (design 10 row 18: a scaled Ember Hound, spikes from instanced cones). */
 export const LOOK = {
-  tint: 0x2e1a14,
+  /** Proportions over the hound's: stocky, big-headed, short-tailed. */
+  build: { bodyHeight: 0.5, legLength: 0.5, neckLength: 0.36, headSize: 0.35, tailLength: 0.35 },
+  tint: 0x1c1210,
   emissive: 0x4a1200,
   collarFlash: 0xff2a10,
   spikeCount: 8,

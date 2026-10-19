@@ -8,6 +8,7 @@ import {
   EMBEDDED_SWORD,
   EMBEDDED_WEAPONS,
 } from '../characters/knightClips';
+import { HELD_ITEM } from '../npcs/npcModels';
 import type { EnemyDef } from './types';
 
 /** Bone the wraith's claw follows (Three.js strips the dot from glTF `hand.r`). */
@@ -52,6 +53,8 @@ export interface EnemyModelSource {
   /** An already-cloned Knight scene (AssetLoader.instantiate / SkeletonUtils.clone). */
   model: THREE.Object3D;
   clips: readonly THREE.AnimationClip[];
+  /** A fresh object for a recipe prop (`ModelRecipe.props`), or null when that model is not loaded. */
+  prop?: (id: string) => THREE.Object3D | null;
 }
 
 type Tintable = THREE.Material & { color?: THREE.Color; emissive?: THREE.Color };
@@ -72,7 +75,7 @@ export function buildEnemyModel(
   root.name = `enemy-${def.kind}`;
   const model = source.model;
   model.rotation.y = Math.PI;
-  model.scale.setScalar(KNIGHT.modelScale);
+  model.scale.setScalar(KNIGHT.modelScale * (def.model.scale ?? 1));
   root.add(model);
 
   let skeleton: THREE.Skeleton | null = null;
@@ -117,7 +120,7 @@ export function buildEnemyModel(
     baseTransparent.set(m, m.transparent);
   }
 
-  // Weapons: hide every embedded one, then show what the recipe carries.
+  // Weapons: hide every embedded one (every held item of whichever KayKit body this is), then show what the recipe carries.
   const embedded = new Map<string, THREE.Object3D>();
   for (const name of EMBEDDED_WEAPONS) {
     const obj = model.getObjectByName(name);
@@ -125,6 +128,30 @@ export function buildEnemyModel(
       obj.visible = false;
       embedded.set(name, obj);
     }
+  }
+  model.traverse((o) => {
+    if (HELD_ITEM.test(o.name) && !(o.parent && HELD_ITEM.test(o.parent.name))) o.visible = false;
+  });
+  for (const name of def.model.hide ?? []) {
+    const obj = model.getObjectByName(name);
+    if (obj) obj.visible = false;
+  }
+  for (const name of def.model.show ?? []) {
+    const obj = model.getObjectByName(name);
+    if (obj) obj.visible = true;
+  }
+  for (const p of def.model.props ?? []) {
+    const obj = source.prop?.(p.id);
+    const parent = model.getObjectByName(p.bone);
+    if (!obj || !parent) continue;
+    obj.name = `enemy-prop:${p.id}`;
+    // The bone chain carries the model's scale (and the recipe's): divide it out so `scale` is metres per model unit.
+    parent.updateWorldMatrix(true, false);
+    const world = new THREE.Vector3().setFromMatrixScale(parent.matrixWorld).y || 1;
+    obj.scale.setScalar((p.scale ?? 1) / world);
+    if (p.position) obj.position.set(p.position[0] / world, p.position[1] / world, p.position[2] / world);
+    if (p.rotation) obj.rotation.set(p.rotation[0], p.rotation[1], p.rotation[2]);
+    parent.add(obj);
   }
   const need = (name: string): THREE.Object3D => {
     const obj = embedded.get(name);

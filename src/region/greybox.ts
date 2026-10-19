@@ -17,10 +17,10 @@ export const DEFAULT_HEIGHT: Record<StructureKind, number> = {
   board: 2,
   pole: 2.5,
   cart: 1,
-  fence: 0.9,
-  gate: 3,
+  fence: 1.6,
+  gate: 5,
   loft: 3,
-  'yard-fence': 1.1,
+  'yard-fence': 1.6,
   rock: 2,
   bridge: 0.3,
   stair: 0.2,
@@ -34,7 +34,7 @@ export const DEFAULT_HEIGHT: Record<StructureKind, number> = {
 };
 
 /** Height of a door slab; the wall above the doorway is closed by a lintel. */
-export const DOOR_HEIGHT = 2.6;
+export const DOOR_HEIGHT = 3;
 
 export function structureHeight(spec: StructureSpec): number {
   if (spec.height !== undefined) return spec.height;

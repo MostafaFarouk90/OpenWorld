@@ -1,4 +1,5 @@
 import type { AssetId } from '../assets/AssetManifest';
+import { ModelLibrary, modelLibraryFor } from '../assets/swap/ModelLibrary';
 import type { GamePlugin } from '../core/plugins';
 import { ENEMY_DEFS } from './defs';
 import { EnemyManager, type ModelFactory } from './EnemyManager';
@@ -25,17 +26,24 @@ const plugin: GamePlugin = {
   setup(ctx) {
     const warn = (m: string) => console.warn(`[enemies] ${m}`);
     const assets = ctx.assets;
+    // Pack props worn by recipes (the watch guard's pot helm): preloaded here, skipped by the model builder until loaded.
+    const lib = modelLibraryFor(assets);
+    void lib.preload([...new Set(Object.values(ENEMY_DEFS).flatMap((d) => (d.model.props ?? []).map((p) => p.id)))]);
+    const prop = (id: string) => {
+      const t = lib.peek(id);
+      return t ? ModelLibrary.object(t) : null;
+    };
     const makeModel: ModelFactory = (def) => {
       if (!assets) throw new Error('no asset loader (headless)');
       // The recipe's preferred models (the cutpurse's Rogue) when loaded, the Knight otherwise.
       for (const id of def.model.prefer) {
         try {
-          return { model: assets.instantiate(id as AssetId), clips: assets.animations(id as AssetId) };
+          return { model: assets.instantiate(id as AssetId), clips: assets.animations(id as AssetId), prop };
         } catch {
           // not loaded (yet): try the next, then the Knight
         }
       }
-      return { model: assets.instantiate(KNIGHT), clips: assets.animations(KNIGHT) };
+      return { model: assets.instantiate(KNIGHT), clips: assets.animations(KNIGHT), prop };
     };
     const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS] });
     manager = m;

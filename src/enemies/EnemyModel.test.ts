@@ -107,11 +107,11 @@ describe('buildEnemyModel', () => {
     }
   });
 
-  it('tints each kind differently and leaves the soldier without emissive', () => {
+  it('tints each kind differently and gives the soldier its recipe emissive', () => {
     const w = build(ASH_WRAITH).materials[0] as THREE.MeshStandardMaterial;
     const s = build(BLIGHTED_SOLDIER).materials[0] as THREE.MeshStandardMaterial;
     expect(w.color.getHex()).not.toBe(s.color.getHex());
-    expect(s.emissive.getHex()).toBe(((sourceMaterials().values().next().value) as THREE.MeshStandardMaterial).emissive.getHex());
+    expect(s.emissive.getHex()).toBe(BLIGHTED_SOLDIER.model.emissive);
   });
 
   it('shows the sword and shield for sword-shield and hides every other embedded weapon', () => {

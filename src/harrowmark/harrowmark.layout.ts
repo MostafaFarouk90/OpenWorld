@@ -103,7 +103,7 @@ const structures: StructureSpec[] = [
   solid('underways.gatehouse', 'house', 7948, 1545, 10, 12, 5),
   // Bastion
   solid('bastion.hall', 'house', 8200, 1810, 80, 30, 9),
-  open('bastion.yard-fence', 'yard-fence', 8200, 1735, 140, 110, 1.1),
+  open('bastion.yard-fence', 'yard-fence', 8200, 1735, 140, 110, 1.6),
   solid('bastion.drill-blocker', 'block', 8165, 1710, 6, 1.2, 2.2),
   // Fountain
   solid('fountain', 'fountain', 8500, 1700, 12, 12, 1.2),
