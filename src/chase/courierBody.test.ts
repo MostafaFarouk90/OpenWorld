@@ -63,6 +63,16 @@ describe('courier body', () => {
     b.step(1 / 60, 500, 500);
     expect(b.animation).toBe('idle');
   });
+  it('a placement mid-chase (the Again card, a cornered load) keeps his facing and does not read as a sprint', () => {
+    const b = body();
+    travel(b, 7, 0.3, 0, 0, [0, -1]);
+    const yaw = b.facing;
+    b.step(1 / 60, 0, 60); // reset to the start, far from where he was
+    expect(b.facing).toBeCloseTo(yaw, 6);
+    for (let i = 0; i < 30; i++) b.step(1 / 60, 0, 60);
+    expect(b.animation).toBe('idle');
+    expect(b.facing).toBeCloseTo(yaw, 6);
+  });
   it('without a Running clip he still moves, on the idle pose; without any clip nothing throws', () => {
     const b = body(['Idle']);
     travel(b, 7, 0.6);
@@ -71,13 +81,15 @@ describe('courier body', () => {
     travel(none, 7, 0.6);
     expect(none.animation).toBe('none');
   });
-  it('dispose frees the geometry and is idempotent', () => {
+  it('dispose frees the private materials, leaves the shared geometry alone, and is idempotent', () => {
     const b = body();
     const mesh = b.root.children[0]!.children[0] as THREE.Mesh;
-    const spy = vi.spyOn(mesh.geometry, 'dispose');
+    const geo = vi.spyOn(mesh.geometry, 'dispose');
+    const spy = vi.spyOn(mesh.material as THREE.Material, 'dispose');
     b.dispose();
     b.dispose();
     expect(spy).toHaveBeenCalledTimes(1);
+    expect(geo).not.toHaveBeenCalled();
     expect(() => b.step(1 / 60, 1, 1)).not.toThrow();
   });
 });

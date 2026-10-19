@@ -9,6 +9,8 @@ export const COURIER_DEF: NpcDef = {
 export const COURIER_RUN_CLIP = 'Running_A';
 /** Metres per second above which he counts as running (below it, or paused at a vault or drop, he idles). */
 export const COURIER_RUN_SPEED = 0.6;
+/** A move this long in one frame is a placement (restart, cornered, load), not travel: his top speed is about 7 m/s. */
+const TELEPORT_DISTANCE = 3;
 const SPEED_WINDOW = 0.15;
 /** Seconds without movement before he idles (a render frame between two fixed steps sees none). */
 const STILL_GRACE = 0.2;
@@ -63,7 +65,9 @@ export class CourierBody {
       const dx = x - this.last.x;
       const dz = z - this.last.z;
       const moved = Math.hypot(dx, dz);
-      if (moved > 1e-6) {
+      if (moved > TELEPORT_DISTANCE) {
+        this.window = 0; this.windowDist = 0; this.stillFor = 0;
+      } else if (moved > 1e-6) {
         this.yaw = Math.atan2(-dx, -dz);
         // Position changes at the fixed step, so a render frame can see none: speed is measured over a short window.
         this.window += dt;
@@ -73,7 +77,7 @@ export class CourierBody {
         this.stillFor += dt;
         if (this.stillFor >= STILL_GRACE) { this.setMoving(false); this.window = 0; this.windowDist = 0; }
       }
-      if (moved > 1e-6) this.stillFor = 0;
+      if (moved > 1e-6 && moved <= TELEPORT_DISTANCE) this.stillFor = 0;
     }
     this.last = { x, z };
     this.root.rotation.y = this.yaw;
@@ -91,7 +95,7 @@ export class CourierBody {
     this.root.traverse((o) => {
       const m = o as THREE.Mesh;
       if (!m.isMesh) return;
-      m.geometry?.dispose();
+      // Geometry is shared with the loader's cached glb (clones reuse it), so only the private material clones go.
       for (const mat of Array.isArray(m.material) ? m.material : [m.material]) mat?.dispose?.();
     });
   }
