@@ -189,6 +189,26 @@ describe('economy plugin on the real game', () => {
     expect(modals).toEqual([]);
   });
 
+  it('a save with no vendors entry resets stock, buy-back and the paid set; one with an entry keeps it', async () => {
+    const t = await boot();
+    const shopSave = () => t.ctx.persist.get('vendors')!.serialize() as { stock: Record<string, Record<string, number>>; buyBack: Record<string, unknown[]> };
+    const died = () => t.ctx.events.emit('actor.died', { actorId: 'e1', killerId: 'player', kind: 'blighted-soldier', team: 'enemy', level: 1, spawnTag: 'deadroad.camp-1' } as never);
+    const dirty = { stock: { wystan: { 'marshals-longsword': 0 } }, buyBack: { wystan: [{ itemId: 'barley-cake', count: 1, price: 2 }] } };
+    t.ctx.persist.get('vendors')!.load(dirty, 1);
+    expect(shopSave().stock.wystan['marshals-longsword']).toBe(0);
+    t.ctx.events.emit('save.loaded', { slot: 'a' }); // the entry was loaded: kept
+    expect(shopSave().stock.wystan['marshals-longsword']).toBe(0);
+    expect(shopSave().buyBack.wystan).toHaveLength(1);
+    died();
+    died();
+    expect(t.inv.gold).toBe(4);
+    t.ctx.events.emit('save.loaded', { slot: 'b' }); // no entry this time: back to defaults
+    expect(shopSave().stock.wystan['marshals-longsword']).toBe(1);
+    expect(shopSave().buyBack.wystan).toEqual([]);
+    died();
+    expect(t.inv.gold).toBe(8); // the paid set was cleared
+  });
+
   it('vendor and persistence registrations exist', async () => {
     const t = await boot();
     expect(t.ctx.persist.get('vendors')).toBeTruthy();
