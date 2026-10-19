@@ -2,7 +2,7 @@
 // the river and the Hollin Brook as draped water, and reeds on the river banks. Visual only: nothing here collides.
 import * as THREE from 'three';
 import { DEAD_ROAD_FULL, LANE_TRACK_DRAWN, LANE_WIDTH, ROAD_WIDTH } from './deadRoad';
-import { ribbonGeometry, sampleStations, type HeightFn, type Station } from './ribbon';
+import { drapedWaterGeometry, ribbonGeometry, sampleStations, type HeightFn, type Station } from './ribbon';
 import { BROOK_COURSE, BROOK_WIDTH, RIVER_COURSE, RIVER_WIDTH } from './water';
 
 export interface SceneryHandle {
@@ -11,7 +11,8 @@ export interface SceneryHandle {
 }
 
 const ROAD_LIFT = 0.06;
-const WATER_LIFT = 0.12;
+/** Above the road's lift so the ford crossing reads as water, and enough to clear coarse terrain LOD near the banks. */
+export const WATER_LIFT = 0.2;
 export const VERGE_SPACING = 40;
 export const VERGE_GAP_FRACTION = 0.2;
 export const REED_COUNT = 700;
@@ -66,10 +67,10 @@ export function buildCorridorScenery(heightAt: HeightFn): SceneryHandle {
   const lane = new THREE.Mesh(track(ribbonGeometry(sampleStations(LANE_TRACK_DRAWN, 2), LANE_WIDTH, heightAt, { lift: ROAD_LIFT })), dirt);
   lane.name = 'lane-track';
   lane.frustumCulled = false;
-  const river = new THREE.Mesh(track(ribbonGeometry(sampleStations(RIVER_COURSE, 3), RIVER_WIDTH, heightAt, { lift: WATER_LIFT, flat: true, monotone: true })), water);
+  const river = new THREE.Mesh(track(drapedWaterGeometry(sampleStations(RIVER_COURSE, 3), RIVER_WIDTH, heightAt, WATER_LIFT)), water);
   river.name = 'river';
   river.frustumCulled = false;
-  const brook = new THREE.Mesh(track(ribbonGeometry(sampleStations(BROOK_COURSE, 3), BROOK_WIDTH, heightAt, { lift: WATER_LIFT, flat: true, monotone: true })), water);
+  const brook = new THREE.Mesh(track(drapedWaterGeometry(sampleStations(BROOK_COURSE, 2), BROOK_WIDTH, heightAt, WATER_LIFT, 3)), water);
   brook.name = 'hollin-brook';
   brook.frustumCulled = false;
   group.add(road, lane, river, brook);
