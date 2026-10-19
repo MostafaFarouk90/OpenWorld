@@ -17,7 +17,7 @@ describe('GrimtoothModel', () => {
     expect(m.body).toBeInstanceOf(QuadrupedBody);
     expect(m.body.params.scale).toBe(GRIMTOOTH_SCALE);
     expect(m.owner.scale.x).toBeCloseTo(1.8);
-    const hound = new QuadrupedBody({ ...HOUND, scale: 1 });
+    const hound = new QuadrupedBody({ ...HOUND, ...LOOK.build, scale: 1 });
     m.collar.visible = false; // the spikes are not part of the size comparison
     expect(height(m.root) / height(hound.root)).toBeCloseTo(1.8, 1);
     hound.dispose();

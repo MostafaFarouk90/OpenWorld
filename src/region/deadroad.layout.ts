@@ -58,7 +58,7 @@ const structures: StructureSpec[] = [
   // Farmhouses, a yard fence and the stone, all on the flat plateau and east of x 6500 (inside Harrowmark's box).
   { id: 'farmring-house-1', kind: 'house', x: 6808, z: 835, yawDeg: 0, footprint: [8, 6], mode: 'solid', height: 4 },
   { id: 'farmring-house-2', kind: 'house', x: 6890, z: 850, yawDeg: 0, footprint: [8, 6], mode: 'solid', height: 4 },
-  { id: 'farmring-yard-fence', kind: 'yard-fence', x: 6825, z: 868, yawDeg: 0, footprint: [60, 0.6], mode: 'solid', height: 1.2 },
+  { id: 'farmring-yard-fence', kind: 'yard-fence', x: 6825, z: 868, yawDeg: 0, footprint: [60, 0.6], mode: 'solid', height: 1.6 },
   { id: 'waystone-farm-ring', kind: 'waystone', x: 6830, z: 793.8, yawDeg: 0, footprint: [1.6, 1.6], mode: 'solid', height: 2.4 },
   { id: 'waystone-harrowmark-gate', kind: 'waystone', x: SOUTH_GATE.x, z: SOUTH_GATE.z + 1.8, yawDeg: 0, footprint: [1.6, 1.6], mode: 'solid', height: 2.4 },
 ];

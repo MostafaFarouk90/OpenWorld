@@ -20,7 +20,7 @@ beforeAll(async () => {
   art = createStructureArt(lib);
 });
 
-const swapped = (l: { structures: StructureSpec[] }) => l.structures.filter((s) => ['house', 'tavern', 'mill', 'well', 'pole', 'fence', 'yard-fence', 'chapel', 'bakery'].includes(s.kind) && !(s.kind === 'chapel' && s.mode !== 'enterable'));
+const swapped = (l: { structures: StructureSpec[] }) => l.structures.filter((s) => ['house', 'tavern', 'mill', 'well', 'pole', 'fence', 'yard-fence', 'gate', 'chapel', 'bakery'].includes(s.kind) && !(s.kind === 'chapel' && s.mode !== 'enterable'));
 const aabb = (o: THREE.Object3D) => {
   o.updateMatrixWorld(true);
   return new THREE.Box3().setFromObject(o);
@@ -30,7 +30,7 @@ describe('structure art (Brightwater and the Dead Road, real geometry)', () => {
   it('builds art for every swapped structure and none for the kinds it leaves alone', async () => {
     for (const l of [BRIGHTWATER_LAYOUT, DEADROAD_LAYOUT]) {
       for (const s of swapped(l)) expect(await art(s), s.id).not.toBeNull();
-      for (const s of l.structures.filter((x) => ['rock', 'altar', 'waystone', 'cart', 'gate', 'loft', 'board', 'stair', 'bridge'].includes(x.kind))) {
+      for (const s of l.structures.filter((x) => ['rock', 'altar', 'waystone', 'cart', 'loft', 'board', 'stair', 'bridge'].includes(x.kind))) {
         expect(await art(s), s.id).toBeNull();
       }
     }

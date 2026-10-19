@@ -36,14 +36,14 @@ export const PUP_SCALE = 0.5;
 /** Ember Hound: a lean, low pack hunter. Walk 2.0 m/s, chase 5.5 m/s. */
 export const HOUND: Readonly<QuadrupedParams> = Object.freeze({
   bodyLength: 0.95,
-  bodyHeight: 0.42,
-  legLength: 0.55,
-  neckLength: 0.3,
+  bodyHeight: 0.38,
+  legLength: 0.6,
+  neckLength: 0.32,
   neckAngle: 0.55,
   headSize: 0.27,
-  tailLength: 0.6,
-  tint: 0x4a2e22,
-  emissive: 0x3a0e00,
+  tailLength: 0.7,
+  tint: 0x8a4a2a,
+  emissive: 0x5a1800,
   scale: 1,
   gaitSpeedScale: 1,
 });
