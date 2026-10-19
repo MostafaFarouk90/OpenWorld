@@ -12,21 +12,29 @@ export interface DialoguePanelModel {
   nextHint: string | null;
 }
 
-export interface PanelStrings { t(key: string): string; has(key: string): boolean }
+export interface PanelStrings { t(key: string, params?: Record<string, string | number>): string; has(key: string): boolean }
+
+/** Names the key bound to an input action (e.g. 'dialogueNext' gives 'Space'). */
+export type GlyphSource = (action: string) => string;
 
 export const EMPTY_MODEL: DialoguePanelModel = {
   visible: false, speakerId: '', speakerName: '', portrait: { color: '#444', initials: '?' }, text: '', choices: [], nextHint: null,
 };
 
 /** Pure mapping from the runner's view to what the panel shows. */
-export function buildPanelModel(view: DialogueView | null, strings?: PanelStrings): DialoguePanelModel {
+export function buildPanelModel(view: DialogueView | null, strings?: PanelStrings, glyph?: GlyphSource): DialoguePanelModel {
   if (!view) return EMPTY_MODEL;
   const nameKey = `npc.${view.speaker}.name`;
   let speakerName = view.speaker;
   if (view.speakerName !== undefined) speakerName = view.speakerName;
   else try { if (strings?.has(nameKey)) speakerName = strings.t(nameKey); } catch { /* keep id */ }
   let hint = 'Space: next';
-  try { if (strings?.has('dialogue.next')) hint = strings.t('dialogue.next'); } catch { /* keep default */ }
+  try {
+    if (strings?.has('dialogue.next')) {
+      const key = glyph?.('dialogueNext');
+      hint = strings.t('dialogue.next', { key: key && key !== '?' ? key : 'Space' });
+    }
+  } catch { /* keep default */ }
   return {
     visible: true,
     speakerId: view.speaker,
@@ -40,7 +48,7 @@ export function buildPanelModel(view: DialogueView | null, strings?: PanelString
 
 export interface DialoguePanelHandle { element: HTMLElement | null; dispose(): void }
 
-export function createDialoguePanel(runner: DialogueRunner, doc?: Document): DialoguePanelHandle {
+export function createDialoguePanel(runner: DialogueRunner, doc?: Document, glyph?: GlyphSource): DialoguePanelHandle {
   const d = doc ?? (typeof document !== 'undefined' ? document : undefined);
   if (!d) return { element: null, dispose() {} };
   const root = d.createElement('div');
@@ -69,7 +77,7 @@ export function createDialoguePanel(runner: DialogueRunner, doc?: Document): Dia
   });
 
   const render = (): void => {
-    const m = buildPanelModel(runner.view(), runner.strings);
+    const m = buildPanelModel(runner.view(), runner.strings, glyph);
     root.style.display = m.visible ? 'flex' : 'none';
     if (!m.visible) return;
     plate.style.background = m.portrait.color;

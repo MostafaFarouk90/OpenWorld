@@ -54,7 +54,7 @@ export const questStrings: Record<string, string> = {
 
   'quest.m05.title': 'Wardstones for the Dead Road',
   'quest.m05.summary': 'Tobb knows a rhythm that keeps wraiths from crossing the Dead Road. Strike the wardstones, rekindle the shrine and bring a bard along.',
-  'quest.m05.o1': 'Strike the wardstones along the Dead Road',
+  'quest.m05.o1': 'Strike the wardstones along the Dead Road (gold marker)',
   'quest.m05.o2': 'Rekindle the Quenchstone Shrine',
   'quest.m05.o3': 'Talk with Tobb',
 

@@ -21,10 +21,16 @@ export const DEFAULT_WORLD_BOUNDS: Readonly<WorldBounds> = Object.freeze({ ...WO
 export const MAP_TUNING = {
   /** Full-map terrain bitmap resolution (pixels per edge). */
   fullMapPixels: 256,
-  /** Minimap local tile resolution (pixels per edge). */
-  minimapTilePixels: 128,
-  /** Metres per minimap pixel (128 px * 2.5 = 320 m across). */
+  /** Minimap local tile resolution (pixels per edge): 192 px * 2.5 = 480 m, wider than the circle so drift never shows black. */
+  minimapTilePixels: 192,
+  /** Metres per minimap tile pixel. */
   minimapMetresPerPixel: 2.5,
+  /** Metres across the minimap circle. */
+  minimapViewMetres: 320,
+  /** The tile is rebuilt once the player is this far from its centre (tile half-span 240 m minus view radius 160 m leaves 80 m). */
+  minimapRefreshDistance: 40,
+  /** Per-slice budget while the tile no longer covers the circle, so the black gap lasts a few frames. */
+  minimapUrgentSliceBudgetMs: 16,
   /** Fog-of-discovery cell edge in metres. */
   fogCellSize: 50,
   /** Radius around the player that gets revealed, metres. */

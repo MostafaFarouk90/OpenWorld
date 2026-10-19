@@ -32,6 +32,15 @@ describe('buildJournalModel', () => {
     expect(o[2].done).toBe(true);
     expect(o[0].text).toBe('T:a.o0');
   });
+  it('a completed quest shows every objective done, even unticked ones (dev jump, skipped beat)', () => {
+    const m = buildJournalModel({ all: () => [q('c', 'completed', [[3, 0], [1, 0]]), q('a', 'active', [[3, 1], [1, 0]]), q('f', 'failed', [[1, 0]])] }, strings);
+    const by = Object.fromEntries(m.sections.map((s) => [s.questId, s]));
+    expect(by.c.objectives.map((o) => o.done)).toEqual([true, true]);
+    expect(by.c.objectives[0].progress).toBe('(3/3)');
+    expect(by.a.objectives.map((o) => o.done)).toEqual([false, false]);
+    expect(by.a.objectives[0].progress).toBe('(1/3)');
+    expect(by.f.objectives[0].done).toBe(false);
+  });
   it('empty log uses the empty key', () => {
     const m = buildJournalModel({ all: () => [] }, strings);
     expect(m.empty).toBe(true);

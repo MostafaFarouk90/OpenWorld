@@ -64,9 +64,9 @@ export function createMinimap(deps: MinimapDeps): MinimapWidget {
     if (!layer) return false;
     stats.draws++;
     const pl = model.player();
-    // Display pixels per tile pixel, and metres per display pixel.
-    const scale = MINIMAP_SIZE / tile.bitmap.width;
-    const mPerPx = MAP_TUNING.minimapMetresPerPixel / scale;
+    // The circle always shows minimapViewMetres, whatever the tile's size: metres per display pixel, then display pixels per tile pixel.
+    const mPerPx = MAP_TUNING.minimapViewMetres / MINIMAP_SIZE;
+    const scale = MAP_TUNING.minimapMetresPerPixel / mPerPx;
     const tileW = tile.bitmap.width * scale;
     const tileH = tile.bitmap.height * scale;
 

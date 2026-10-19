@@ -51,6 +51,19 @@ const calls = (c: any, name: string) => c.ctx.calls.filter((x: any) => x[0] === 
 const ws = (id: string, x: number, z: number, state: 'rekindled' | 'dormant' = 'rekindled'): MapMarker =>
   ({ id, kind: 'waystone', x, z, label: id, state, travelable: state === 'rekindled' });
 
+describe('Minimap view scale', () => {
+  it('draws a wider tile at the same on-screen scale: the circle always shows minimapViewMetres', () => {
+    const { w, state, canvas } = make();
+    state.tile = { bitmap: { width: 192, height: 192, bounds: BOUNDS, pixels: new Uint8ClampedArray(192 * 192 * 4) }, centerX: 0, centerZ: 0 };
+    w.update(1);
+    const [, args] = calls(canvas, 'drawImage')[0];
+    // 192 tile px * 2.5 m = 480 m drawn at 2 m per display px: 240 px, larger than the 160 px circle
+    expect(args[3]).toBeCloseTo(240, 6);
+    expect(args[4]).toBeCloseTo(240, 6);
+    expect(args[1]).toBeCloseTo(-120, 6);
+  });
+});
+
 describe('Minimap', () => {
   it('has id, order, round style and label', () => {
     const { w } = make();
