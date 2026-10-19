@@ -104,6 +104,21 @@ describe('MusicReverb', () => {
     expect(hp.frequency.value).toBeGreaterThanOrEqual(200);
   });
 
+  it('stays inside its CPU budget: no convolver, a fixed small graph, short delay lines', () => {
+    // Measured at 0.2 to 3.5 ms of CPU per second of audio (offline render, headless Chromium). The
+    // ceiling is structural so it cannot drift: the context given here has no createConvolver at all,
+    // so a convolution of an impulse response would throw and the reverb would come back null.
+    const { made } = setup();
+    const ctxKeys = Object.keys(makeCtx().ctx as object);
+    expect(ctxKeys).not.toContain('createConvolver');
+    expect(made.some((n) => n.kind === 'convolver')).toBe(false);
+    expect(made.length).toBeLessThanOrEqual(22);
+    expect(made.filter((n) => n.kind === 'delay').length).toBeLessThanOrEqual(4);
+    const totalDelay = made.filter((n) => n.kind === 'delay').reduce((sum, n) => sum + n.delayTime.value, 0);
+    expect(totalDelay).toBeLessThanOrEqual(0.2); // seconds of delay line, a few thousand samples
+    expect(DEFAULT_MUSIC_REVERB.decaySeconds).toBeLessThanOrEqual(2);
+  });
+
   it('connects the bus last, so a failed build leaves the live bus alone', () => {
     const { ctx } = makeCtx();
     const bus = node('bus');
