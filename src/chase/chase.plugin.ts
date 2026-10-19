@@ -135,6 +135,7 @@ export default {
       }
       if (figure)
         offs.push(() => {
+          body?.dispose(); // first: its geometry belongs to the loader's cache, the walk below frees only the capsule
           figure.removeFromParent();
           figure.traverse((o) => {
             const m = o as THREE.Mesh;
