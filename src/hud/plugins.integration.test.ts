@@ -589,8 +589,8 @@ describe('slice 2 widgets and soft services', () => {
     t.game.events.emit('trigger.enter', { triggerId: FOG_TRIGGER_ID, actorId: t.ctx.player.actor.id } as never);
     expect(toasts).toEqual(['hud.fog.toast']);
     expect(t.ctx.strings.t('hud.fog.toast')).not.toBe('hud.fog.toast');
-    // states the real rule (M05 handed in: wardstones struck and the shrine lit), not the old 'cleared'
-    expect(t.ctx.strings.t('hud.fog.toast')).toMatch(/wardstones.*shrine/);
+    // states the real rule (the wall opens when M05 is complete), not the old 'cleared'
+    expect(t.ctx.strings.t('hud.fog.toast')).toMatch(/Tobb.*work/);
     expect(t.ctx.strings.t('hud.fog.toast')).not.toMatch(/cleared/);
     t.dispose();
     const open = await setup([corePlugin, hudPlugin]);

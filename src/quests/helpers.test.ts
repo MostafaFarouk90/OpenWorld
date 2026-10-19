@@ -285,7 +285,7 @@ describe('journal tabs', () => {
 
   it('the panel is the plain quest list without tabs', () => {
     const w = createJournalPanel(model, doc);
-    expect((w.element as unknown as El).find((e) => e.className === 'journal-tabs')).toHaveLength(0);
+    expect((w.element as unknown as El).find((e) => e.className.split(' ').includes('journal-tabs'))).toHaveLength(0);
     expect((w.element as unknown as El).textContent).toContain('T:quest.journal.empty');
   });
   it('shows tab buttons, switches on click, and a tab that throws does not break the panel', () => {

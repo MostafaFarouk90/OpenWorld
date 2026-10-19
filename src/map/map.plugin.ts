@@ -75,7 +75,12 @@ const map: GamePlugin = {
         objectiveDone: (q, o) => quests.objectiveDone(q, o),
         nextWardstone: () => ctx.services.get('shrine')?.nextWardstone() ?? null,
         anchor: (id) => ctx.anchors.find(id)?.position,
-        npcPosition: (id) => ctx.services.get('npcs')?.position(id),
+        // Tobb is a companion once M05 starts: his NPC position is where he stood at the handover.
+        npcPosition: (id) => {
+          const aid = id === 'tobb' ? ctx.services.get('companions')?.actorId('tobb') : null;
+          const root = aid ? ctx.actors.get(aid)?.root : undefined;
+          return root ? { x: root.position.x, z: root.position.z } : ctx.services.get('npcs')?.position(id);
+        },
       });
     };
 
@@ -86,6 +91,7 @@ const map: GamePlugin = {
     let tile: { bitmap: TerrainBitmap; centerX: number; centerZ: number } | null = null;
     let tileGen: ReturnType<typeof renderLocalTile> | null = null;
     let tileCenter = { x: 0, z: 0 };
+    let tileGenUrgent = false;
 
     const stepGenerators = () => {
       if (!full) {
@@ -95,9 +101,10 @@ const map: GamePlugin = {
       const f = ctx.player.feet;
       const plan = minimapTilePlan(tile, f.x, f.z);
       // A build begun far from where the player now is would land off-centre: drop it and start from here.
-      if (plan === 'urgent' && tileGen && Math.hypot(f.x - tileCenter.x, f.z - tileCenter.z) > MAP_TUNING.minimapRefreshDistance) tileGen = null;
+      if (plan === 'urgent' && tileGen && (!tileGenUrgent || Math.hypot(f.x - tileCenter.x, f.z - tileCenter.z) > MAP_TUNING.minimapRefreshDistance)) tileGen = null;
       if (!tileGen && plan !== 'ok') {
         tileCenter = { x: f.x, z: f.z };
+        tileGenUrgent = plan === 'urgent';
         tileGen = renderLocalTile(heightAt, f.x, f.z, plan === 'urgent' ? { budgetMs: MAP_TUNING.minimapUrgentSliceBudgetMs } : {});
       }
       if (tileGen) {
