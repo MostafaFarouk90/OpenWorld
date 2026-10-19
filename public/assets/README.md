@@ -10,9 +10,9 @@ All packs are CC0 1.0 (public domain). Attribution is not required but appreciat
 | KayKit Halloween Bits | Kay Lousberg | CC0 1.0 | https://kaylousberg.itch.io (official mirror: https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0) | `public/assets/kaykit-halloween/` | subset committed: crypt, graves, fences, lanterns, shrine, dead trees (no pumpkins or skulls) |
 | KayKit Furniture Bits | Kay Lousberg | CC0 1.0 | https://kaylousberg.itch.io (official mirror: https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0) | `public/assets/kaykit-furniture/` | subset committed: wooden beds, chairs, tables, shelves, books, a rug |
 | Quaternius Farm Animals | Quaternius | CC0 1.0 | https://quaternius.com (re-host used: https://github.com/tilakpatell/tilakverse-assets, `quaternius/farm-animals`) | `public/assets/quaternius-farm-animals/` | Horse.glb converted from Horse.fbx by `tools/assets/blender/convert_horse.py` (clips Idle, Walk, WalkSlow, Run, Jump, Death) |
-| KayKit Medieval Builder Pack | Kay Lousberg | CC0 1.0 | https://kaylousberg.itch.io/kaykit-medieval-builder-pack | `public/assets/kaykit-medieval-builder/` | not committed — the official hosts (itch.io, quaternius.com) were unreachable from the build environment; download manually |
-| Medieval Village MegaKit | Quaternius | CC0 1.0 | https://quaternius.com/packs/medievalvillagemegakit.html | `public/assets/quaternius-medieval-village/` | not committed — the official hosts (itch.io, quaternius.com) were unreachable from the build environment; download manually |
-| Fantasy Props MegaKit | Quaternius | CC0 1.0 | https://quaternius.com/packs/fantasypropsmegakit.html | `public/assets/quaternius-fantasy-props/` | not committed — the official hosts (itch.io, quaternius.com) were unreachable from the build environment; download manually |
+| KayKit Medieval Builder Pack | Kay Lousberg | CC0 1.0 | https://kaylousberg.itch.io/kaykit-medieval-builder-pack | — | **replaced** by Medieval Hexagon plus Dungeon Remastered (Mostafa, 2026-10-19; see `design/changes-applied.md`) |
+| Medieval Village MegaKit | Quaternius | CC0 1.0 | https://quaternius.com/packs/medievalvillagemegakit.html | — | **no longer needed**: houses come from Medieval Hexagon (Mostafa, 2026-10-19) |
+| Fantasy Props MegaKit | Quaternius | CC0 1.0 | https://quaternius.com/packs/fantasypropsmegakit.html | — | **no longer needed**: props come from Dungeon Remastered, Furniture and Halloween Bits (Mostafa, 2026-10-19) |
 
 ### Provenance: KayKit Adventurers
 
