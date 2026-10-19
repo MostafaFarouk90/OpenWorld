@@ -137,9 +137,8 @@ function routeEvents(ctx: GameContext, send: (e: DirectorEvent) => void): void {
     if (e.action === 'interact') send({ type: 'interact', id: e.interactableId });
   });
   loose<unknown>('tutorial.vow.complete', () => send({ type: 'vowComplete' }));
-  // `reason` is emitted by the dialogue runner but not typed in core/events.ts yet (thread 0 item after PR #21).
   ev.on('dialogue.ended', (e) =>
-    send({ type: 'dialogueEnded', dialogueId: e.dialogueId, reason: (e as { reason?: string }).reason }),
+    send({ type: 'dialogueEnded', dialogueId: e.dialogueId, reason: e.reason }),
   );
   ev.on('ui.modal', (e) => send({ type: 'modal', id: e.id, open: e.open }));
 }
@@ -500,12 +499,12 @@ const tutorial: GamePlugin = {
         });
       },
     });
-    // Render band request for thread 0 (after PR #21): the cutscene camera runs before the follow camera update.
+    // Render `world` band 300..399 (tutorial, thread 9): after VFX and damage numbers, before the follow camera update.
     let pulse = 0;
     ctx.systems.add({
       id: 'tutorial-cutscene-camera',
       renderPhase: 'world',
-      order: 250,
+      order: 300,
       render: (_alpha, frameTime) => {
         cutscene.render(frameTime);
         skipUi?.update(skip.progress, skip.hintVisible);

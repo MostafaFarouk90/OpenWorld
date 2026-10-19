@@ -2,8 +2,10 @@
 import type { BusPort, StatePort, StringsPort, QuestReader } from '../quests/ports';
 import type { Condition, DialogueDef, DialogueNode, DialogueSaveData, Effect } from '../quests/types';
 import { evalCondition as defaultEval } from '../quests/conditions';
+import type { DialogueEndReason } from '../core/events';
 
-export type CloseReason = 'skip' | 'death' | 'load' | 'dispose' | 'script';
+/** Why a dialogue was closed early; the core event type is the source of truth. */
+export type CloseReason = Exclude<DialogueEndReason, 'completed'>;
 
 export interface DialogueView {
   dialogueId: string;
