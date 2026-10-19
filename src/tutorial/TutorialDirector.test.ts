@@ -1390,3 +1390,43 @@ describe('clarity review fixes', () => {
   });
 
 });
+
+describe('restart keeps the tracker equal to the real count (review m11)', () => {
+  const restart = async () => {
+    expect(d.onLethal()).toBe(true); // Second Wind
+    expect(d.onLethal()).toBe(true); // restart
+    tick();
+    await Promise.resolve();
+    await Promise.resolve();
+  };
+
+  it('T15: the gate wave cleared before a failure stays counted and is not respawned', async () => {
+    d.begin('full', 't15');
+    ev({ type: 'trigger', id: 'trg.t15.gate' });
+    ev({ type: 'groupCleared', spawnerId: 't15.gate' });
+    expect(d.currentStep).toBe(1);
+    expect(w.goals.filter((g) => g === 't15.1')).toHaveLength(1); // the clear, not the spell yet
+    const before = w.spawned.length;
+    await restart();
+    expect(d.beat).toBe('t15');
+    expect(d.currentStep).toBe(1);
+    expect(w.spawned.slice(before).map((s) => s.spawnerId)).not.toContain('t15.gate');
+    // Only the spell is owed: one more unit, and the step passes on it alone.
+    ev({ type: 'spellReleased', spellId: 'heartshard-surge' });
+    expect(d.currentStep).toBe(2);
+    expect(w.goals.filter((g) => g === 't15.1')).toHaveLength(2);
+  });
+
+  it('T15: a wave not yet cleared at the failure respawns, and the tracker still ends at the real count', async () => {
+    d.begin('full', 't15');
+    ev({ type: 'trigger', id: 'trg.t15.gate' });
+    ev({ type: 'spellReleased', spellId: 'heartshard-surge' });
+    const before = w.spawned.length;
+    await restart();
+    expect(w.spawned.slice(before).map((s) => s.spawnerId)).toContain('t15.gate');
+    expect(w.goals.filter((g) => g === 't15.1')).toHaveLength(1);
+    ev({ type: 'groupCleared', spawnerId: 't15.gate' });
+    expect(d.currentStep).toBe(2);
+    expect(w.goals.filter((g) => g === 't15.1')).toHaveLength(2);
+  });
+});
