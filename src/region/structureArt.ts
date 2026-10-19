@@ -14,6 +14,8 @@ export const MAX_BUILDING_SCALE = 8.8;
 const DUNGEON_UNIT = 1.2;
 /** Height of the opening in `dun/wall_doorway` at raw scale (its baked leaf is 2.75 tall). */
 export const DOOR_OPENING_RAW = 2.75;
+/** Height of the scaled doorway piece (4 raw tall, scaled so its opening is the door height). */
+const DOORWAY_TOP = 4 * (DOOR_HEIGHT / DOOR_OPENING_RAW);
 
 export type StructureArt = (spec: StructureSpec) => Promise<THREE.Object3D | null>;
 
@@ -176,11 +178,16 @@ async function enterableShell(lib: ModelLibrary, spec: StructureSpec): Promise<T
         const useDoor = seg.kind === 'door' && ground;
         const id = useDoor ? 'dun/wall_doorway' : !ground || seg.kind === 'door' || i % 3 !== 1 ? 'dun/wall' : 'dun/wall_window_open';
         if (useDoor) {
-          // The opening is DOOR_OPENING_RAW tall: scale it to the 2.6 m door slab and close the rest of the course with a lintel.
+          // The opening is DOOR_OPENING_RAW tall: scale it to the door slab and close the rest of the course with a lintel.
           const sy = DOOR_HEIGHT / DOOR_OPENING_RAW;
           place(id, seg.len / 4, sy, thick, x, z, s.rot, 0);
           const rest = rowH * 4 - 4 * sy;
           if (rest > 0.05) place('dun/wall', seg.len / 4, rest / 4, thick, x, z, s.rot, 4 * sy);
+        } else if (seg.kind === 'door' && DOORWAY_TOP > r * rowH * 4) {
+          // The doorway piece reaches into this course: start the wall above its top instead of overlapping it.
+          const top = DOORWAY_TOP;
+          const h = (r + 1) * rowH * 4 - top;
+          if (h > 0.05) place(id, seg.len / 4, h / 4, thick, x, z, s.rot, top);
         } else {
           place(id, seg.len / 4, rowH, thick, x, z, s.rot, r * rowH * 4);
         }
