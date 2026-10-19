@@ -403,6 +403,29 @@ describe('the Ashmare on the real game', () => {
     expect(reasons(t)).toEqual(['load']);
   });
 
+  it('a save with no mount entry resets stamina and puts the horse back at the stables; the next entry still loads', async () => {
+    const t = await boot({ stables: true });
+    t.ride();
+    t.hold(['KeyW', 'ShiftLeft'], 300);
+    t.press('KeyH');
+    const before = t.mount().serialize();
+    expect(before.stamina).toBeLessThan(T.staminaMax);
+    const stables = t.ctx.anchors.get(T.stablesAnchor)!.position;
+    expect(Math.hypot(before.placed!.x - stables.x, before.placed!.z - stables.z)).toBeGreaterThan(5);
+    t.ctx.events.emit('save.loaded', { slot: 'old' });
+    const after = t.mount().serialize();
+    expect(after.stamina).toBe(T.staminaMax);
+    expect(Math.hypot(after.placed!.x - stables.x, after.placed!.z - stables.z)).toBeLessThan(0.5);
+    t.load({ placed: before.placed, stamina: 30 });
+    expect(t.mount().serialize().stamina).toBe(30);
+  });
+
+  it('a save with no mount entry before the award leaves no horse', async () => {
+    const t = await boot({ stables: true });
+    t.ctx.events.emit('save.loaded', { slot: 'phase-a' });
+    expect(t.mount().serialize()).toEqual({ placed: null, stamina: T.staminaMax });
+  });
+
   it('slides along a wall at the gallop instead of stopping dead, and a move lock stops the horse model too', async () => {
     const t = await boot({ stables: true });
     t.ride();
