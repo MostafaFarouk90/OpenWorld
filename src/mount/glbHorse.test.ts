@@ -175,12 +175,10 @@ describe('loadHorseVisual', () => {
     g.dispose();
   });
 
-  it('falls back to the procedural horse, warning once, when the asset is unusable', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('falls back to the procedural horse and reports the failure when the asset is unusable', () => {
     const bad: HorseAsset = { instantiate: () => new THREE.Group(), clips: [] };
-    expect(loadHorseVisual(bad).glb).toBeFalsy();
-    expect(loadHorseVisual(bad).glb).toBeFalsy();
-    expect(warn).toHaveBeenCalledTimes(1);
-    warn.mockRestore();
+    const failed = vi.fn();
+    expect(loadHorseVisual(bad, failed).glb).toBeFalsy();
+    expect(failed).toHaveBeenCalledTimes(1);
   });
 });

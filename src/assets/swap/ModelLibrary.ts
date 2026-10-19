@@ -87,6 +87,10 @@ export class ModelLibrary {
     return fitToBox(t.bounds, target, policy);
   }
 
+  get isDisposed(): boolean {
+    return this.disposed;
+  }
+
   dispose(): void {
     this.disposed = true;
     for (const t of this.ready.values()) for (const p of t.parts) p.geometry.dispose();
@@ -143,7 +147,7 @@ const shared = new WeakMap<object, ModelLibrary>();
 export function modelLibraryFor(assets: (ModelSource & object) | null | undefined): ModelLibrary {
   if (!assets) return new ModelLibrary(undefined);
   let lib = shared.get(assets);
-  if (!lib) {
+  if (!lib || lib.isDisposed) {
     lib = new ModelLibrary(assets);
     shared.set(assets, lib);
   }

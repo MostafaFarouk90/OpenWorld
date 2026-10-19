@@ -77,7 +77,7 @@ async function fence(lib: ModelLibrary, spec: StructureSpec): Promise<THREE.Obje
   const root = new THREE.Group();
   root.name = `fence:${spec.id}`;
   const raw = t.bounds.max.z - t.bounds.min.z;
-  const s = FENCE_HEIGHT / (t.bounds.max.y - t.bounds.min.y);
+  const s = Math.min(FENCE_HEIGHT, structureHeight(spec)) / (t.bounds.max.y - t.bounds.min.y);
   const [w, d] = spec.footprint;
   const run = (len: number, at: (c: number) => [number, number], rotY: number): void => {
     for (const piece of tileLine(len, raw * s)) {
@@ -171,7 +171,10 @@ async function enterableShell(lib: ModelLibrary, spec: StructureSpec): Promise<T
   // The greybox's roof and tower stub go on top; the wall and lintel boxes are replaced.
   const grey = buildGreybox(spec);
   for (const child of [...grey.children]) {
-    if (child.name === 'wall' || child.name === 'lintel') continue;
+    if (child.name === 'wall' || child.name === 'lintel') {
+      child.traverse((o) => (o as THREE.Mesh).isMesh && (o as THREE.Mesh).geometry.dispose());
+      continue;
+    }
     child.userData.ownGeometry = true;
     root.add(child);
   }

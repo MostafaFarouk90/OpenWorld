@@ -102,4 +102,23 @@ describe('interior art', () => {
     expect((built.root.getObjectByName(`${built.root.name}-prop`) as THREE.Mesh).visible).toBe(false);
     built.dispose();
   });
+
+  it('adds nothing when the interior was disposed before the models arrived, and frees the dressing on dispose', async () => {
+    const layout = layoutInterior(HARROWMARK_INTERIORS[0], () => 0);
+    const early = buildInterior(layout, null);
+    const pending = dressInterior(lib, early);
+    early.dispose();
+    expect(await pending).toBe(0);
+    expect(early.disposed).toBe(true);
+    expect(early.root.children.some((c) => c.name.endsWith('-art'))).toBe(false);
+
+    const built = buildInterior(layoutInterior(HARROWMARK_INTERIORS[0], () => 0), null);
+    expect(await dressInterior(lib, built)).toBeGreaterThan(0);
+    const freed: string[] = [];
+    built.root.traverse((o) => {
+      if ((o as THREE.InstancedMesh).isInstancedMesh) (o as THREE.InstancedMesh).addEventListener('dispose' as never, () => freed.push(o.name));
+    });
+    built.dispose();
+    expect(freed.length).toBeGreaterThan(0);
+  });
 });

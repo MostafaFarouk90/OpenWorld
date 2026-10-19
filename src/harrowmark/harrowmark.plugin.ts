@@ -67,7 +67,8 @@ export function createHarrowmarkPlugin(opts: HarrowmarkPluginOptions = {}): Game
             if (!m) return;
             if (stopped) return m.dispose();
             models = m;
-            city.group.add(m.root);
+            // Not under the city group: that group's dispose frees every mesh geometry, and these are the shared library's.
+            ctx.scene.add(m.root);
           },
           (err) => console.warn('harrowmark: the city models failed, keeping the greybox', err),
         );

@@ -18,6 +18,8 @@ export interface BuiltInterior {
   /** Rebuilds the prop greybox without the props whose `propId` is listed (the dressed ones). */
   hidePropBoxes(propIds: ReadonlySet<string>): void;
   dispose(): void;
+  /** True once `dispose` has run (late dressing checks it). */
+  readonly disposed: boolean;
 }
 
 const COLOURS: Record<BoxKind, number> = {
@@ -116,8 +118,12 @@ export function buildInterior(layout: InteriorLayout, physics: PhysicsWorld | nu
   }
 
   let disposed = false;
+  let current: THREE.BufferGeometry | null = null;
   return {
     layout,
+    get disposed() {
+      return disposed;
+    },
     root,
     setBlocker(id, closed) {
       const b = blockers.get(id);
@@ -137,6 +143,7 @@ export function buildInterior(layout: InteriorLayout, physics: PhysicsWorld | nu
       const keep = propGeos.filter((p) => !(p.propId && propIds.has(p.propId))).map((p) => p.geo);
       const next = keep.length > 0 ? mergeGeometries(keep) : null;
       mesh.geometry.dispose();
+      current = next;
       if (next) {
         mesh.geometry = next;
         mesh.visible = true;
@@ -150,6 +157,9 @@ export function buildInterior(layout: InteriorLayout, physics: PhysicsWorld | nu
       disposed = true;
       root.removeFromParent();
       for (const d of disposables) d.dispose();
+      current?.dispose();
+      // The dressing's instance buffers (geometry and atlas material are the shared library's).
+      root.traverse((o) => (o as THREE.InstancedMesh).isInstancedMesh && (o as THREE.InstancedMesh).dispose());
       if (physics) for (const c of colliders) physics.removeCollider(c as Parameters<PhysicsWorld['removeCollider']>[0]);
     },
   };
