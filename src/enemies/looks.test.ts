@@ -5,6 +5,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { diskSource } from '../assets/swap/testing/diskSource';
 import { HELD_ITEM } from '../npcs/npcModels';
 import { buildEnemyModel } from './EnemyModel';
+import { LOOK } from '../bosses/grimtooth/tuning';
 import { ENEMY_DEFS } from './defs';
 import type { EnemyDef } from './types';
 
@@ -14,6 +15,9 @@ beforeAll(async () => {
   src = await diskSource();
   for (const id of [...BODIES, 'hex/bucket_empty']) await src.load(id);
 });
+
+/** World length of the soldier's sword (hilt to tip) at modelScale 0.78, measured before the look changes. */
+const SWORD_REACH = 1.0994;
 
 /** The body a def uses (first preferred body, else the Knight): what enemies.plugin picks when everything is loaded. */
 const bodyOf = (d: EnemyDef): string => d.model.prefer[0] ?? 'knight';
@@ -106,5 +110,22 @@ describe('enemy looks', () => {
     const head = m.owner.getObjectByName('head')!.getWorldPosition(new THREE.Vector3());
     expect(pot.getWorldPosition(new THREE.Vector3()).y).toBeGreaterThan(head.y);
     m.dispose();
+  });
+
+  it('keeps the attack reach of the thug, soldier and Grimtooth at their original values (look never changes hitboxes)', () => {
+    const thug = ENEMY_DEFS['guildhall-thug'];
+    const soldier = ENEMY_DEFS['blighted-soldier'];
+    expect(thug.model.scale).toBeUndefined();
+    expect(soldier.model.scale).toBeUndefined();
+    const t = build(thug);
+    const so = build(soldier);
+    expect(t.owner.scale.x).toBeCloseTo(0.78, 6);
+    expect(so.owner.scale.x).toBeCloseTo(0.78, 6);
+    for (const m of [t, so]) m.root.updateMatrixWorld(true);
+    const len = (m: typeof t) => m.weapons.right.hilt.getWorldPosition(new THREE.Vector3()).distanceTo(m.weapons.right.tip.getWorldPosition(new THREE.Vector3()));
+    expect(len(t)).toBeCloseTo(0.6, 3);
+    expect(len(so)).toBeCloseTo(SWORD_REACH, 3);
+    // Grimtooth's reach-defining proportions are the original hound's (neck, head, legs); only tint and scale differ.
+    expect(LOOK.build).toEqual({ bodyHeight: 0.42, legLength: 0.55, neckLength: 0.3, headSize: 0.27, tailLength: 0.6 });
   });
 });
