@@ -87,7 +87,17 @@ const economyPlugin: GamePlugin = {
       emit: (type, payload) => emit(type, payload),
       warn,
     });
-    ctx.persist.register({ key: Shop.key, version: Shop.version, serialize: () => shop.serialize(), load: (d, v) => shop.load(d, v) });
+    // A save with no `vendors` entry (every Phase A save) must reset to defaults, not keep the previous session's stock.
+    let shopLoaded = false;
+    ctx.persist.register({
+      key: Shop.key,
+      version: Shop.version,
+      serialize: () => shop.serialize(),
+      load: (d, v) => {
+        shopLoaded = true;
+        shop.load(d, v);
+      },
+    });
 
     let menu: VendorMenu | null = null;
     let closeMenu: (() => void) | null = null;
@@ -173,6 +183,9 @@ const economyPlugin: GamePlugin = {
       },
     });
     ctx.events.on('save.loaded', () => {
+      if (!shopLoaded) shop.reset();
+      shopLoaded = false;
+      purse.reset();
       if (!innLoaded) inn.load(null, Inn.version);
       innLoaded = false;
       progression.refreshMaxHealth();
