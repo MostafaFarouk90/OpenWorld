@@ -16,6 +16,7 @@ import { CORRIDOR_LAYOUT } from './corridor.layout';
 import { DEADROAD_LAYOUT } from './deadroad.layout';
 import { groundRange } from './geometry';
 import { DOOR_HEIGHT, structureHeight } from './greybox';
+import { GATE_PILLAR_AT, GATE_PILLAR_HALF } from './StructureBuilder';
 import type { StructureSpec } from './layoutTypes';
 import { GATE_CLEARANCE, createStructureArt } from './structureArt';
 
@@ -97,7 +98,7 @@ describe('the jump against a fence (real character controller)', () => {
     expect(crossed).toBe(true);
   });
 
-  it('the old 1.2 m fence could be hopped over (so the 1.6 m result means something)', async () => {
+  it('a 1.0 m fence could be hopped over (so the 1.6 m result means something)', async () => {
     let over = false;
     for (let d = 0.2; d <= 3.4 && !over; d += 0.2) {
       const r = await simulate(1.0, d);
@@ -163,5 +164,14 @@ describe('openings fit the Knight and the horse', () => {
     expect(p.footprint[0]).toBeGreaterThanOrEqual(GATE_GAP);
     expect(GATE_GAP).toBeGreaterThanOrEqual(2 * 2.6);
     expect(structureHeight(p)).toBeGreaterThanOrEqual(GATE_CLEARANCE);
+  });
+
+  it('gate pillar colliders sit on the arch pillars and leave a 5 m clear opening', () => {
+    for (const w of [8, 10]) {
+      const inner = (w / 2) * (GATE_PILLAR_AT - GATE_PILLAR_HALF);
+      expect(2 * inner).toBeGreaterThanOrEqual(5);
+      // the outer face stays inside the footprint
+      expect((w / 2) * (GATE_PILLAR_AT + GATE_PILLAR_HALF)).toBeLessThanOrEqual(w / 2);
+    }
   });
 });

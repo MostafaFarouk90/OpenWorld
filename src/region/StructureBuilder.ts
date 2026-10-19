@@ -45,6 +45,8 @@ export type { ChestOptions, DoorOptions };
 
 const VISUAL = 'visual';
 const POST_HALF = 0.25;
+export const GATE_PILLAR_AT = 0.82;
+export const GATE_PILLAR_HALF = 0.09;
 
 export function buildStructures(
   deps: StructureDeps,
@@ -157,13 +159,15 @@ export function buildStructures(
         }
       } else if (spec.kind === 'gate' || spec.kind === 'loft') {
         const [w, d] = spec.footprint;
-        const xs = spec.kind === 'gate' ? [-1, 1].map((s) => s * (w / 2 - 0.3)) : [-1, 1].map((s) => s * (w / 2 - POST_HALF));
+        // The arch's pillars sit at about 0.82 of the half span and are about 0.09 of it wide each side (pinned in sizes.test.ts).
+        const xs = spec.kind === 'gate' ? [-1, 1].map((s) => s * (w / 2) * GATE_PILLAR_AT) : [-1, 1].map((s) => s * (w / 2 - POST_HALF));
         const zs = spec.kind === 'gate' ? [0] : [-1, 1].map((s) => s * (d / 2 - POST_HALF));
         for (const lx of xs) {
           for (const lz of zs) {
             const wx = spec.x + lx * Math.cos(yaw) + lz * Math.sin(yaw);
             const wz = spec.z - lx * Math.sin(yaw) + lz * Math.cos(yaw);
-            addCuboid(wx, heightAt(wx, wz) + h / 2, wz, POST_HALF * 0.8, h / 2, POST_HALF * 0.8, yaw);
+            const half = spec.kind === 'gate' ? (w / 2) * GATE_PILLAR_HALF : POST_HALF * 0.8;
+            addCuboid(wx, heightAt(wx, wz) + h / 2, wz, half, h / 2, half, yaw);
           }
         }
       }
