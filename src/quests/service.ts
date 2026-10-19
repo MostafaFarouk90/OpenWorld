@@ -1,3 +1,4 @@
+import type { DialogueEndReason } from '../core/events';
 import type { QuestDef, QuestState } from './types';
 import type { ObjectiveView } from './QuestManager';
 import type { JournalService } from './journalTabs';
@@ -26,7 +27,7 @@ export interface DialogueService {
   /** False (and nothing changes) when a dialogue or modal is already open, or the id is unknown. */
   start(dialogueId: string, npcId: string): boolean;
   readonly active: boolean;
-  close(reason?: 'skip' | 'death' | 'load' | 'dispose' | 'script'): void;
+  close(reason?: Exclude<DialogueEndReason, 'completed'>): void;
   hasSeen(nodeId: string): boolean;
 }
 

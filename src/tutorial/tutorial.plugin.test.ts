@@ -138,6 +138,18 @@ describe('tutorial plugin on the real game', () => {
     expect(beats.some((b) => b.beatId === 't05' && b.state === 'skipped')).toBe(false);
   });
 
+    it('the cutscene camera renders in the tutorial world band, after VFX and damage numbers', async () => {
+    const t = await boot();
+    // Probes at the band edges pin the order inside 300..399.
+    t.game.systems.add({ id: 'probe.299', renderPhase: 'world', order: 299, render: () => {} });
+    t.game.systems.add({ id: 'probe.400', renderPhase: 'world', order: 400, render: () => {} });
+    const order = t.game.systems.order('world');
+    const at = order.indexOf('tutorial-cutscene-camera');
+    expect(at).toBeGreaterThan(order.indexOf('probe.299'));
+    expect(at).toBeLessThan(order.indexOf('probe.400'));
+    expect(at).toBeGreaterThan(order.indexOf('enemies.render'));
+  });
+
     it('teardown mid-cutscene emits cutscene.ended once and lifts the locks', async () => {
     const t = await boot();
     t.director.begin('full', 't05');

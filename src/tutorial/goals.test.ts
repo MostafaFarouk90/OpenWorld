@@ -76,7 +76,7 @@ describe('trigger / consume / travel / rest / interact / spell / lit / quest / v
 
   it('vow also completes on dialogueEnded of its dialogue with any reason', () => {
     const g = createGoal({ kind: 'vow', dialogueId: 'd' });
-    g.onEvent({ type: 'dialogueEnded', dialogueId: 'd', reason: 'cancelled' });
+    g.onEvent({ type: 'dialogueEnded', dialogueId: 'd', reason: 'script' });
     expect(g.done).toBe(true);
   });
   it('quest completes on sync from questState', () => {

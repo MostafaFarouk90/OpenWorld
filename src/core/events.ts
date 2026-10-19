@@ -22,6 +22,9 @@ export interface ItemStack {
  * Shared game events (contracts/game-events-and-flags.md section 4). Threads add events of their own
  * namespace by module augmentation: `declare module '../core/events' { interface GameEventMap { ... } }`.
  */
+/** Why a dialogue ended; the dialogue runner always sets it. */
+export type DialogueEndReason = 'completed' | 'skip' | 'death' | 'load' | 'dispose' | 'script';
+
 export interface GameEventMap {
   'actor.spawned': { actor: Actor };
   'actor.despawned': { actorId: ActorId };
@@ -66,7 +69,8 @@ export interface GameEventMap {
   'quest.failed': { questId: string };
   'quest.objective': { questId: string; objectiveId: string; progress: number; required: number; done: boolean };
   'dialogue.started': { dialogueId: string; npcId: string };
-  'dialogue.ended': { dialogueId: string; npcId: string };
+  /** `reason` is 'completed' for a normal end, otherwise why it was closed (DialogueRunner `CloseReason`). */
+  'dialogue.ended': { dialogueId: string; npcId: string; reason?: DialogueEndReason };
   'dialogue.choice': { dialogueId: string; nodeId: string; choiceId: string };
   /** v0.5: a waystone rest carries `waystoneId` (and moves the respawn point); an inn rest carries only `placeId`. */
   rest: { waystoneId?: string; placeId?: string };
