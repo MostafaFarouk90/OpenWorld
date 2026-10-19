@@ -8,9 +8,12 @@ import { MoveModifiers } from '../core/MoveModifiers';
 import type { PluginModule } from '../core/plugins';
 import { diskSource } from '../assets/swap/testing/diskSource';
 import { KnightAvatar } from '../characters/KnightAvatar';
+import { HARROWMARK_LAYOUT } from '../harrowmark/harrowmark.layout';
 import { InputManager } from '../input/InputManager';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
+import { resolveLayout } from '../region/resolveLayout';
 import combatVerbsPlugin from '../player/combatVerbs.plugin';
+import { heightAt } from '../terrain/heightfield';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 import mountPlugin from './mount.plugin';
@@ -431,6 +434,18 @@ describe('the Ashmare on the real game', () => {
     const t = await boot({ stables: true });
     t.ctx.events.emit('save.loaded', { slot: 'phase-a' });
     expect(t.mount().serialize()).toEqual({ placed: null, stamina: T.staminaMax });
+  });
+
+  it('on story.m10.ashmare the horse stands at the real Harrowmark stables anchor', async () => {
+    const t = await boot();
+    const yard = resolveLayout(HARROWMARK_LAYOUT, heightAt).anchors.find((a) => a.id === T.stablesAnchor)!;
+    t.ctx.anchors.define({ id: yard.id, position: yard.position, yaw: yard.yaw, tags: yard.tags });
+    expect(t.mount().serialize().placed).toBeNull();
+    t.award();
+    const placed = t.mount().serialize().placed!;
+    expect(placed.x).toBeCloseTo(yard.position.x, 3);
+    expect(placed.y).toBeCloseTo(yard.position.y, 3);
+    expect(placed.z).toBeCloseTo(yard.position.z, 3);
   });
 
   it('slides along a wall at the gallop instead of stopping dead, and a move lock stops the horse model too', async () => {
