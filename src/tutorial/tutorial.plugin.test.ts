@@ -8,6 +8,7 @@ import { InputManager } from '../input/InputManager';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
+import { ThirdPersonCamera } from '../rendering/ThirdPersonCamera';
 import type { TutorialDirector } from './TutorialDirector';
 import { tutorialFromQuery } from './tutorial.plugin';
 
@@ -28,7 +29,7 @@ afterEach(() => {
 });
 
 /** Every real plugin, headless (no document: no start screen, no DOM widgets). */
-async function boot() {
+async function boot(opts: { cameraRig?: ThirdPersonCamera } = {}) {
   const scene = new THREE.Scene();
   const moveModifiers = new MoveModifiers();
   const world = new World(scene, physics, {
@@ -39,7 +40,7 @@ async function boot() {
   const doc = Object.assign(new EventTarget(), { pointerLockElement: null as Element | null });
   const element = Object.assign(new EventTarget(), { requestPointerLock: () => {} }) as unknown as HTMLElement;
   const input = new InputManager(element, win, doc, { storage: null });
-  const game = new Game({ scene, physics, world, input, moveModifiers, report: () => {} });
+  const game = new Game({ scene, physics, world, input, moveModifiers, cameraRig: opts.cameraRig, report: () => {} });
   const events: Array<{ type: keyof GameEventMap; payload: unknown }> = [];
   game.events.onAny((type, payload) => events.push({ type, payload }));
   const statuses = await game.loadPlugins(PLUGIN_MODULES);
@@ -161,6 +162,52 @@ describe('tutorial plugin on the real game', () => {
     expect(ended).toBe(1);
     expect(t.moveModifiers.isActionLocked('attack2')).toBe(false);
     expect(t.moveModifiers.state().freeze).toBe(false);
+  });
+});
+
+describe('arrival facing', () => {
+  const rig = () =>
+    new ThirdPersonCamera(
+      new THREE.PerspectiveCamera(60),
+      { consumeMouseDelta: () => ({ dx: 0, dy: 0 }), consumeWheel: () => 0 } as never,
+      { raycast: () => null } as never,
+      {} as never,
+    );
+  /** Degrees between the camera's forward and the direction to an anchor. */
+  const offAxis = (t: Awaited<ReturnType<typeof boot>>, cam: ThirdPersonCamera, anchor: string) => {
+    const a = t.game.ctx.anchors.find(anchor)!.position;
+    const p = t.game.ctx.player.feet;
+    const f = cam.toWorld(0, 1);
+    const dx = a.x - p.x;
+    const dz = a.z - p.z;
+    return (Math.acos((f.x * dx + f.z * dz) / Math.hypot(dx, dz)) * 180) / Math.PI;
+  };
+
+  it('a fresh run starts looking at the village gate and the scarecrow', async () => {
+    const cam = rig();
+    const t = await boot({ cameraRig: cam });
+    cam.yaw = 0; // as booted: looking south, away from the village
+    t.director.begin('full');
+    t.run(2);
+    expect(offAxis(t, cam, 'brightwater.scarecrow')).toBeLessThan(15);
+  });
+
+  it('a ?tutorial= jump faces that beat\'s first target (T05: the churchyard wraiths)', async () => {
+    const cam = rig();
+    const t = await boot({ cameraRig: cam });
+    t.director.begin('full', 't05');
+    t.run(2);
+    expect(offAxis(t, cam, 'spawn.t05.wraith-3')).toBeLessThan(40);
+  });
+
+  it('a save load arrives facing the saved heading', async () => {
+    const cam = rig();
+    const t = await boot({ cameraRig: cam });
+    // The save plugin restores the player through the waystones' safe teleport (save.plugin.ts).
+    void t.game.ctx.services.get('waystones')!.safeTeleport({ x: 0, y: 0, z: 40 }, Math.PI / 2);
+    t.run(120); // past the fade-out
+    expect(cam.yaw).toBeCloseTo(Math.PI / 2);
+    expect(t.game.ctx.player.facingYaw).toBeCloseTo(Math.PI / 2);
   });
 });
 
