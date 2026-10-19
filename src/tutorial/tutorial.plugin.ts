@@ -184,7 +184,7 @@ function makePorts(ctx: GameContext, ui: {
     teleport: (id) => {
       const a = anchorPos(id);
       if (!a) return warnOnce(`Tutorial: anchor ${id} is missing; no teleport`);
-      ctx.player.teleport(a.position, a.yaw);
+      ctx.player.teleport(a.position, a.yaw, { faceCamera: true });
     },
     placeNpc: (npc, anchor) => {
       const npcs = svc.get('npcs');
@@ -229,7 +229,7 @@ function makePorts(ctx: GameContext, ui: {
       const ws = svc.get('waystones');
       const outcome = ws ? await ws.safeTeleport(a.position, a.yaw) : null;
       // Busy or terrain not ready: never leave a restarted player where they fell.
-      if (!outcome || !outcome.ok) ctx.player.teleport(a.position, a.yaw);
+      if (!outcome || !outcome.ok) ctx.player.teleport(a.position, a.yaw, { faceCamera: true });
     },
     holdKillXp: (on, reason = 'tutorial') => {
       // Pauses are not saved (Progression.ts), so a hold is always re-taken fresh.

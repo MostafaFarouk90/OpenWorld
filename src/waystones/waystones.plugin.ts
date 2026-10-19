@@ -31,7 +31,7 @@ const waystones: GamePlugin = {
     let handle: { ready(): boolean } | null = null;
     const teleport = new SafeTeleport({
       place: (feet, yaw) => {
-        handle = ctx.player.teleport(feet, yaw);
+        handle = ctx.player.teleport(feet, yaw, { faceCamera: true });
       },
       freeze: () => ctx.player.addMoveModifier('waystones.travel', { freeze: true }),
       ready: () => handle?.ready() ?? true,

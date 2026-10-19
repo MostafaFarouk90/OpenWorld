@@ -700,7 +700,7 @@ export class CombatVerbs {
     } catch {
       point = { position: ctx.world.spawn, yaw: 0, source: 'world' as const };
     }
-    const handle = ctx.player.teleport(point.position, point.yaw);
+    const handle = ctx.player.teleport(point.position, point.yaw, { faceCamera: true });
     this.respawnWait = { ready: () => handle.ready(), since: ctx.clock.tick, source: point.source };
   }
 
