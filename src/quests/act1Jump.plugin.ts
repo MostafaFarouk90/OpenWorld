@@ -42,7 +42,8 @@ const plugin: GamePlugin = {
       if (teleport === 'pending') return false;
       const ws = ctx.services.get('waystones');
       if (!ws || ++teleportTries > TELEPORT_TRIES) {
-        ctx.player.teleport(pos, yaw, { faceCamera: true });
+        ctx.player.teleport(pos, yaw);
+        if (ctx.cameraRig) ctx.cameraRig.yaw = yaw;
         return true;
       }
       teleport = 'pending';

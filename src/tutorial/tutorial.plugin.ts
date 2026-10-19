@@ -159,6 +159,11 @@ function makePorts(ctx: GameContext, ui: {
   let locksOff: (() => void) | null = null;
   let xpRelease: (() => void) | null = null;
   const anchorPos = (id: string) => ctx.anchors.find(id) ?? null;
+  /** Arrive facing the anchor: the follow camera turns with the player (Game.teleport turns only the model). */
+  const arrive = (a: { position: { x: number; y: number; z: number }; yaw: number }) => {
+    ctx.player.teleport(a.position, a.yaw);
+    if (ctx.cameraRig) ctx.cameraRig.yaw = a.yaw;
+  };
 
   const ports: DirectorPorts = {
     state: {
@@ -184,7 +189,7 @@ function makePorts(ctx: GameContext, ui: {
     teleport: (id) => {
       const a = anchorPos(id);
       if (!a) return warnOnce(`Tutorial: anchor ${id} is missing; no teleport`);
-      ctx.player.teleport(a.position, a.yaw, { faceCamera: true });
+      arrive(a);
     },
     placeNpc: (npc, anchor) => {
       const npcs = svc.get('npcs');
@@ -229,7 +234,7 @@ function makePorts(ctx: GameContext, ui: {
       const ws = svc.get('waystones');
       const outcome = ws ? await ws.safeTeleport(a.position, a.yaw) : null;
       // Busy or terrain not ready: never leave a restarted player where they fell.
-      if (!outcome || !outcome.ok) ctx.player.teleport(a.position, a.yaw, { faceCamera: true });
+      if (!outcome || !outcome.ok) arrive(a);
     },
     holdKillXp: (on, reason = 'tutorial') => {
       // Pauses are not saved (Progression.ts), so a hold is always re-taken fresh.

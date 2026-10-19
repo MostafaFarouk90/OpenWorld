@@ -44,12 +44,8 @@ export interface PlayerHandle {
   readonly avatar: PlayerAvatar | null;
   /** True when the last tick had movement input. */
   readonly moving: boolean;
-  /**
-   * `ready()` turns true once the collider patch there exists and a physics step has made it visible.
-   * `faceCamera` also turns the follow camera to `yaw`: for arrivals (new game, beat jumps, fast travel,
-   * save loads, respawn), never for in-combat blinks.
-   */
-  teleport(feet: Vec3, yaw?: number, opts?: { faceCamera?: boolean }): { ready(): boolean };
+  /** `ready()` turns true once the collider patch there exists and a physics step has made it visible. */
+  teleport(feet: Vec3, yaw?: number): { ready(): boolean };
   addMoveModifier(source: string, mod: MoveModifier): () => void;
   /**
    * v0.4: the scripted Surge Leap primitive (game-events-and-flags.md section 3). Thread 2 owns the
@@ -229,7 +225,7 @@ export class Game {
       get moving() {
         return game.moving;
       },
-      teleport: (feet, yaw, opts) => this.teleport(feet, yaw, opts),
+      teleport: (feet, yaw) => this.teleport(feet, yaw),
       addMoveModifier: (source, mod) => this.moveModifiers.add(source, mod),
       leap: (opts) => world.player.leap(opts),
       swapAvatar: (avatar) => this.swapAvatar(avatar),
@@ -503,17 +499,13 @@ export class Game {
     this.worldSteps++;
   }
 
-  private teleport(feet: Vec3, yaw?: number, opts?: { faceCamera?: boolean }): { ready(): boolean } {
+  private teleport(feet: Vec3, yaw?: number): { ready(): boolean } {
     const world = this.opts.world;
     world.player.cancelLeap();
     world.player.controller.teleport(feet);
     // The patch under the destination is built now; the controller sees it after the next physics step.
     world.colliders.update(feet.x, feet.z);
-    if (yaw !== undefined && Number.isFinite(yaw)) {
-      world.player.setFacingYaw(yaw);
-      // Arrivals turn the follow camera too, so the view and WASD face the arrival heading.
-      if (opts?.faceCamera && this.ctx.cameraRig) this.ctx.cameraRig.yaw = yaw;
-    }
+    if (yaw !== undefined && Number.isFinite(yaw)) world.player.setFacingYaw(yaw);
     let residentSince: number | null = world.colliders.isResident(feet.x, feet.z, TELEPORT_READY_RADIUS)
       ? this.worldSteps
       : null;

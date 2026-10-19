@@ -252,29 +252,6 @@ describe('PlayerHandle', () => {
     t.world.dispose();
   });
 
-  it('teleport with a yaw turns the follow camera to it, so the view and WASD face the arrival heading', () => {
-    const t = setup();
-    const camera = new THREE.PerspectiveCamera(60);
-    const input = { consumeMouseDelta: () => ({ dx: 0, dy: 0 }), consumeWheel: () => 0 } as never;
-    const rig = new ThirdPersonCamera(camera, input, { raycast: () => null } as never, {} as never);
-    const game = new Game({ scene: t.scene, physics, world: t.world, input: t.input, moveModifiers: t.moveModifiers, cameraRig: rig, report: () => {} });
-    game.ctx.player.teleport({ x: 0, y: 0, z: 2 }, Math.PI, { faceCamera: true }); // heading north (+Z)
-    expect(rig.yaw).toBeCloseTo(Math.PI);
-    const fwd = rig.toWorld(0, 1);
-    expect(fwd.z).toBeCloseTo(1);
-    expect(fwd.x).toBeCloseTo(0);
-    expect(game.ctx.player.facingYaw).toBeCloseTo(Math.PI);
-    // No yaw, or a blink without faceCamera (Ash-drift in combat): the camera stays put.
-    rig.yaw = 1;
-    game.ctx.player.teleport({ x: 5, y: 0, z: 5 }, undefined, { faceCamera: true });
-    expect(rig.yaw).toBe(1);
-    game.ctx.player.teleport({ x: 6, y: 0, z: 6 }, 2);
-    expect(rig.yaw).toBe(1);
-    expect(game.ctx.player.facingYaw).toBeCloseTo(2);
-    game.dispose();
-    t.world.dispose();
-  });
-
   it('teleport moves the player, builds the collider patch there and turns it', () => {
     const t = setup();
     t.run(10);

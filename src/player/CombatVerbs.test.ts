@@ -14,6 +14,7 @@ import { InputManager } from '../input/InputManager';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
+import { ThirdPersonCamera } from '../rendering/ThirdPersonCamera';
 import { KNIGHT_ATTACKS } from '../characters/knightClips';
 import { CombatVerbs, type CombatVerbsService } from './CombatVerbs';
 import { STAMINA } from './tuning';
@@ -41,7 +42,7 @@ afterEach(() => vi.restoreAllMocks());
 const modules = (...plugins: GamePlugin[]): Record<string, PluginModule> =>
   Object.fromEntries(plugins.map((p) => [`/src/test/${p.id}.plugin.ts`, { default: p }]));
 
-function setup(opts: { tutorialComplete?: boolean } = {}) {
+function setup(opts: { tutorialComplete?: boolean; cameraRig?: ThirdPersonCamera } = {}) {
   const scene = new THREE.Scene();
   const moveModifiers = new MoveModifiers();
   const world = new World(scene, physics, {
@@ -52,7 +53,7 @@ function setup(opts: { tutorialComplete?: boolean } = {}) {
   const doc = Object.assign(new EventTarget(), { pointerLockElement: null as Element | null });
   const element = Object.assign(new EventTarget(), { requestPointerLock: () => {} }) as unknown as HTMLElement;
   const input = new InputManager(element, win, doc, { storage: null });
-  const game = new Game({ scene, physics, world, input, moveModifiers, report: () => {} });
+  const game = new Game({ scene, physics, world, input, moveModifiers, cameraRig: opts.cameraRig, report: () => {} });
   const ctx = game.ctx;
   ctx.state.setFlag('tutorial.complete', opts.tutorialComplete ?? true);
   // Plain keys for the mouse bindings the tests press.
@@ -361,6 +362,23 @@ describe('Second Wind, death and respawn', () => {
     t.hit(t.enemy(), { amount: 500 });
     t.run(170);
     expect(t.of('player.respawned')[0].source).toBe('waystone');
+  });
+
+  it('respawn turns the follow camera to the waystone anchor\'s heading', () => {
+    const rig = new ThirdPersonCamera(
+      new THREE.PerspectiveCamera(60),
+      { consumeMouseDelta: () => ({ dx: 0, dy: 0 }), consumeWheel: () => 0 } as never,
+      { raycast: () => null } as never,
+      {} as never,
+    );
+    const t = setup({ cameraRig: rig });
+    t.ctx.anchors.define({ id: 'waystone.mill', position: { x: t.world.spawn.x + 20, y: t.world.spawn.y, z: t.world.spawn.z }, yaw: 2 });
+    t.game.events.emit('rest', { waystoneId: 'mill' });
+    rig.yaw = 0;
+    t.hit(t.enemy(), { amount: 500 });
+    t.run(170);
+    expect(t.of('player.respawned')[0].source).toBe('waystone');
+    expect(rig.yaw).toBeCloseTo(2);
   });
 
   it('an inn rest (placeId only) keeps the last rested waystone (v0.5)', () => {
