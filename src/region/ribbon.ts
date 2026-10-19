@@ -85,3 +85,37 @@ export function ribbonGeometry(stations: readonly Station[], width: number, heig
   g.computeVertexNormals();
   return g;
 }
+
+/**
+ * Water draped across its whole width: `lanes` strips side by side, every vertex `lift` above the ground under it.
+ * A flat sheet at one level per station sank under the higher bank wherever the course runs across a slope, so the
+ * terrain broke through it in patches; a draped sheet cannot be buried by the ground it was sampled from. With no
+ * carved channel it tilts with the ground (a little across a side slope), which reads as water; being buried did not.
+ * The `flat` and `monotone` options of ribbonGeometry stay for a carved channel later.
+ */
+export function drapedWaterGeometry(stations: readonly Station[], width: number, heightAt: HeightFn, lift: number, lanes = 6): THREE.BufferGeometry {
+  if (!(width > 0) || !Number.isFinite(width)) throw new Error('ribbon: width must be positive');
+  if (!Number.isInteger(lanes) || lanes < 1) throw new Error('ribbon: lanes must be a positive integer');
+  const cols = lanes + 1;
+  const half = width / 2;
+  const pos = new Float32Array(stations.length * cols * 3);
+  const idx: number[] = [];
+  stations.forEach((s, i) => {
+    for (let k = 0; k < cols; k++) {
+      const off = half - (width * k) / lanes;
+      const x = s.x + s.nx * off;
+      const z = s.z + s.nz * off;
+      pos.set([x, heightAt(x, z) + lift, z], (i * cols + k) * 3);
+      if (i === 0 || k === 0) continue;
+      const a = (i - 1) * cols + k - 1;
+      const b = i * cols + k - 1;
+      // Same winding as ribbonGeometry: faces up.
+      idx.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
