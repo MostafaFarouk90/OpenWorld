@@ -4,10 +4,15 @@ All packs are CC0 1.0 (public domain). Attribution is not required but appreciat
 
 | Pack | Author | License | Official URL | Local folder | Status |
 | --- | --- | --- | --- | --- | --- |
-| KayKit Adventurers | Kay Lousberg | CC0 1.0 | https://kaylousberg.itch.io/kaykit-adventurers (mirror: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0) | `public/assets/kaykit-adventurers/` | subset committed: Knight.glb, Barbarian.glb, Mage.glb, Rogue.glb, Rogue_Hooded.glb, sword_1handed, shield_round |
-| KayKit Medieval Builder Pack | Kay Lousberg | CC0 1.0 | https://kaylousberg.itch.io/kaykit-medieval-builder-pack | `public/assets/kaykit-medieval-builder/` | not committed — the official hosts (itch.io, quaternius.com) were unreachable from the build environment; download manually |
-| Medieval Village MegaKit | Quaternius | CC0 1.0 | https://quaternius.com/packs/medievalvillagemegakit.html | `public/assets/quaternius-medieval-village/` | not committed — the official hosts (itch.io, quaternius.com) were unreachable from the build environment; download manually |
-| Fantasy Props MegaKit | Quaternius | CC0 1.0 | https://quaternius.com/packs/fantasypropsmegakit.html | `public/assets/quaternius-fantasy-props/` | not committed — the official hosts (itch.io, quaternius.com) were unreachable from the build environment; download manually |
+| KayKit Adventurers | Kay Lousberg | CC0 1.0 | https://kaylousberg.itch.io/kaykit-adventurers (mirror: https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0) | `public/assets/kaykit-adventurers/` | subset committed: Knight.glb, Barbarian.glb, Mage.glb, Rogue.glb, Rogue_Hooded.glb; every class weapon and shield in `weapons/` (20 models) |
+| KayKit Medieval Hexagon Pack | Kay Lousberg | CC0 1.0 | https://kaylousberg.itch.io (official mirror: https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0) | `public/assets/kaykit-medieval-hexagon/` | subset committed: red buildings, castle and towers, neutral walls, fences and bridges, props, a few trees and rocks |
+| KayKit Dungeon Remastered | Kay Lousberg | CC0 1.0 | https://kaylousberg.itch.io (official mirror: https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0) | `public/assets/kaykit-dungeon-remastered/` | subset committed: walls, doorways, floors, stairs, pillars for interiors; torches, candles, chests, tables, red banners |
+| KayKit Halloween Bits | Kay Lousberg | CC0 1.0 | https://kaylousberg.itch.io (official mirror: https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0) | `public/assets/kaykit-halloween/` | subset committed: crypt, graves, fences, lanterns, shrine, dead trees (no pumpkins or skulls) |
+| KayKit Furniture Bits | Kay Lousberg | CC0 1.0 | https://kaylousberg.itch.io (official mirror: https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0) | `public/assets/kaykit-furniture/` | subset committed: wooden beds, chairs, tables, shelves, books, a rug |
+| Quaternius Farm Animals | Quaternius | CC0 1.0 | https://quaternius.com (re-host used: https://github.com/tilakpatell/tilakverse-assets, `quaternius/farm-animals`) | `public/assets/quaternius-farm-animals/` | Horse.glb converted from Horse.fbx by `tools/assets/blender/convert_horse.py` (clips Idle, Walk, WalkSlow, Run, Jump, Death) |
+| KayKit Medieval Builder Pack | Kay Lousberg | CC0 1.0 | https://kaylousberg.itch.io/kaykit-medieval-builder-pack | — | **replaced** by Medieval Hexagon plus Dungeon Remastered (Mostafa, 2026-10-19; see `design/changes-applied.md`) |
+| Medieval Village MegaKit | Quaternius | CC0 1.0 | https://quaternius.com/packs/medievalvillagemegakit.html | — | **no longer needed**: houses come from Medieval Hexagon (Mostafa, 2026-10-19) |
+| Fantasy Props MegaKit | Quaternius | CC0 1.0 | https://quaternius.com/packs/fantasypropsmegakit.html | — | **no longer needed**: props come from Dungeon Remastered, Furniture and Halloween Bits (Mostafa, 2026-10-19) |
 
 ### Provenance: KayKit Adventurers
 
@@ -22,6 +27,32 @@ All packs are CC0 1.0 (public domain). Attribution is not required but appreciat
   - `Rogue_Hooded.glb`: `93e6e25213009952276d9cf34f5d96a243767334c66f280db0433ddfabb91545`
 
 - Download budget: the four NPC GLBs total about 14.4 MB. They are loaded lazily, one per distinct model, once the player is within 100 m of an NPC's post; placeholders show until then.
+
+### Provenance: imported packs (2026-10-18)
+
+`public/assets/provenance.json` records every imported file: source repo, commit, upstream path,
+licence file path and SHA-256, and the file's own SHA-256 and size. `src/assets/importedAssets.test.ts`
+re-checks all of it, loads every model, and caps the imported bytes at 25 MB.
+
+- Re-import: clone each repo in `tools/assets/selection.json` at its pinned commit into one folder,
+  then `node tools/assets/import-packs.mjs <that folder>`. Edit `selection.json` to add or drop files.
+- Horse: `tools/assets/blender/convert_horse.py` (pinned `bpy==5.2.2`, see `tools/assets/blender/requirements.txt`).
+  Source `Horse.fbx` SHA-256 `6db270ddc7591e9a013f96eab445031381fa6d5d68d2feba567f964e0fe68d90` at re-host commit
+  `85064399bbdacc0e8cc50807179490314bc4ff1c`. The re-host is a third party: **check that FBX hash against an
+  official quaternius.com download of the Farm Animals Pack when someone can reach it.** The GLB is not
+  byte-stable across Blender versions, so its committed SHA-256 is the pin; CI never runs Blender.
+  The horse's two provenance entries and its fit entry were written by hand from the script's output;
+  `import-packs.mjs` keeps entries that carry a `generated` field (and their licence files) across re-imports.
+- `public/assets/fit.json` gives each model a game-scale factor: Hexagon buildings and walls 5.5 (door
+  matches the Knight), castle and towers 9, Hexagon props and trees 4.3; Dungeon, Halloween, Furniture and
+  weapons 0.78 (the Knight's modelScale; all three packs are authored at the same size); horse 0.3.
+  `yOffset` is 0 everywhere and pivots are as authored: buildings, walls, props and trees sit at base centre
+  with y min about 0 (bridges reach y -1, floors -0.1); weapons pivot at the grip; wall-mounted and hanging
+  pieces (banners, shelves, torches, lanterns, keyring) pivot at their mount point. Factors and offsets are
+  starting points for the asset-swap thread.
+- The Adventurers weapon import moved here from slice-2 thread 12 by the coordinator's ruling of 2026-10-18
+  (plans/asset-routes-review.md follow-up, thread "Asset routes").
+- Nothing is registered in `AssetManifest.ts` yet; the asset-swap thread wires models in.
 
 ## Installing a pack
 
