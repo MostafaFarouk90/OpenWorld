@@ -24,6 +24,8 @@ export interface BossBarSource {
   /** `ctx.bosses.state(id)`; absent or null: the boss is unknown (nothing shown for it). */
   state?(bossId: string): BossView | null | undefined;
   t?: Translate;
+  /** Called when the bar goes from hidden to shown or back, so other widgets can make room. */
+  onVisible?(visible: boolean): void;
 }
 
 export const BOSS_FADE_SECONDS = 1.5;
@@ -57,6 +59,7 @@ export class BossBar implements HudWidgetView {
   private tickKey = '';
   private pipKey = '';
   private shownId: string | null = null;
+  private visible = false;
 
   constructor(
     private readonly doc: DocumentLike,
@@ -142,10 +145,12 @@ export class BossBar implements HudWidgetView {
     const s = id ? (live ?? this.cache.get(id) ?? null) : null;
     if (!id || !s) {
       setShown(this.element, false);
+      this.setVisible(false);
       return;
     }
     const left = this.leaving.get(id);
     setShown(this.element, true, 'flex');
+    this.setVisible(true);
     this.element.style.opacity = left === undefined ? '1' : String(Math.round(barFraction(left, BOSS_FADE_SECONDS) * 100) / 100);
     this.element.className = `owg-boss${s.shield ? ' owg-boss-shielded' : ''}${s.releaseOpen ? ' owg-boss-release' : ''}`;
     this.name.textContent = this.t(s.nameKey);
@@ -171,12 +176,23 @@ export class BossBar implements HudWidgetView {
     this.flag.textContent = s.releaseOpen ? this.t('hud.boss.release') : s.shield ? this.t('hud.boss.shield') : null;
   }
 
+  private setVisible(v: boolean): void {
+    if (v === this.visible) return;
+    this.visible = v;
+    try {
+      this.source.onVisible?.(v);
+    } catch {
+      // a broken listener must not break the bar
+    }
+  }
+
   /** The boss id currently drawn (null when hidden). */
   get shown(): string | null {
     return this.shownId;
   }
 
   dispose(): void {
+    this.setVisible(false);
     this.element.remove();
   }
 }

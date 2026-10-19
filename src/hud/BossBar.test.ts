@@ -177,3 +177,26 @@ describe('BossBar', () => {
     expect(bar.element.children[1]!.children[0]!.style.width).toBe('0%');
   });
 });
+
+describe('BossBar visibility callback', () => {
+  it('reports shown and hidden transitions once each, and survives a throwing listener', () => {
+    const calls: boolean[] = [];
+    let live: BossView | null = view();
+    const bar = new BossBar(new StubDocument(), {
+      active: () => (live ? ['prior'] : []),
+      state: () => live,
+      onVisible: (v) => {
+        calls.push(v);
+        throw new Error('listener');
+      },
+    });
+    bar.update();
+    bar.update();
+    expect(calls).toEqual([true]);
+    live = null;
+    bar.finished('prior');
+    bar.update(BOSS_FADE_SECONDS + 1);
+    expect(calls[calls.length - 1]).toBe(false);
+    bar.dispose();
+  });
+});

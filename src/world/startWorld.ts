@@ -280,6 +280,7 @@ function createOverlay(hud: Game['ctx']['hud'], strings: StringTable, bindings: 
   const message = document.createElement('div');
   const hitLine = document.createElement('div');
   const help = document.createElement('div');
+  help.className = 'owg-controls-hint';
   help.style.opacity = '0.85';
   panel.append(message, hitLine, help);
   hud.mount('top-left', { id: 'core.overlay', element: panel, order: 0 });
