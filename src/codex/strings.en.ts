@@ -14,7 +14,7 @@ const CHROME: Record<string, string> = {
 
 /** Placeholder greybox text; thread 6 / the writer replace the lore bodies. */
 const BODIES: Record<string, [string, string]> = {
-  'bestiary.blighted-soldier': ['Blighted Footman', 'A soldier of the old garrison, bound to his post by the Blight. Shield high, he waits for you to tire. Strike when the shield drops.'],
+  'bestiary.blighted-soldier': ['Charred Footman', 'A soldier of the old garrison, bound to his post by the Blight. Shield high, he waits for you to tire. Strike when the shield drops.'],
   'bestiary.ash-wraith': ['Ashwalker Wraith', 'What is left of a person the forge-fire took. It claws in wide, slow arcs. When it staggers, it can be Released.'],
   'bestiary.ashen-prior': ['The Ashen Prior', 'Keeper of the vault below the chapel. His grief burns hotter than his flame. He can be broken, or he can be freed.'],
   'lore.leap-a': ['The Leap Stone, North', '[Greybox] A carved stone on the first ridge. It speaks of those who crossed the gap in a single breath.'],

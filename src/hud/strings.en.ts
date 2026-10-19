@@ -21,7 +21,7 @@ export const HUD_STRINGS_EN: Readonly<Record<string, string>> = {
   'hud.boss.release': 'Release open',
   'hud.companion.tobb': 'Tobb',
   'hud.companion.aura': 'Battle-song',
-  'hud.fog.toast': 'The ash-fall pushes you back. The road east waits until the Dead Road is cleared.',
+  'hud.fog.toast': 'The ash-fall pushes you back. The road east stays shut until the wardstones are struck and the shrine is lit.',
   'hud.respec.title': 'Respec',
   'hud.respec.free': 'Your first respec is free.',
   'hud.respec.cost': 'Respec costs {gold} gold.',

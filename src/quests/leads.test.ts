@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dialogueDefs } from '../dialogue/content';
-import { QUEST_LEADS, createLeadSource } from './leads';
+import { QUEST_LEADS, createLeadSource, m05ObjectiveLead } from './leads';
 import { makeWorld } from './testKit';
 import type { QuestDef } from './types';
 
@@ -65,5 +65,33 @@ describe('quest leads', () => {
     expect(src.skipped).toBe(true);
     ids();
     expect(warn.filter((m) => m.includes('lead m03'))).toHaveLength(1);
+  });
+});
+
+describe('M05 objective lead (Tobb)', () => {
+  const anchors: Record<string, { x: number; z: number }> = {
+    'wardstone.1': { x: 300, z: 10 }, 'wardstone.3': { x: 500, z: 20 }, 'shrine.quenchstone.basin': { x: 965, z: 0 },
+  };
+  const mk = (state: string, done: string[], next: number | null, npc: { x: number; z: number } | null = { x: 7, z: 8 }) =>
+    m05ObjectiveLead({
+      questState: () => state,
+      objectiveDone: (_q, o) => done.includes(o),
+      nextWardstone: () => next,
+      anchor: (id) => anchors[id],
+      npcPosition: () => npc ?? undefined,
+    });
+
+  it('points at the next wardstone, then the basin, then Tobb', () => {
+    expect(mk('active', [], 3)).toEqual([{ id: 'lead.m05.objective', x: 500, z: 20, label: 'tobb' }]);
+    expect(mk('active', [], null)[0]).toMatchObject({ x: 300, z: 10 });
+    expect(mk('active', ['o1'], null)[0]).toMatchObject({ x: 965, z: 0 });
+    expect(mk('active', ['o1', 'o2'], null)[0]).toMatchObject({ x: 7, z: 8 });
+  });
+  it('is empty when M05 is not active, finished, or the target is missing', () => {
+    expect(mk('inactive', [], 1)).toEqual([]);
+    expect(mk('completed', ['o1', 'o2', 'o3'], null)).toEqual([]);
+    expect(mk('active', ['o1', 'o2'], null, null)).toEqual([]);
+    expect(mk('active', [], 4)).toEqual([]); // wardstone.4 has no anchor here
+    expect(mk('active', ['o1', 'o2'], null, { x: NaN, z: 0 })).toEqual([]);
   });
 });

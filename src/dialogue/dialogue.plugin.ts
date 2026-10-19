@@ -62,7 +62,7 @@ const plugin: GamePlugin = {
     // The dialogue is a HUD modal that pushes the `dialogue` input context (input-and-hud.md item 10).
     // The panel element is detached on close and re-attached on the next open; the widget itself has no
     // dispose, so the panel lives for the plugin's lifetime.
-    const panel = createDialoguePanel(runner);
+    const panel = createDialoguePanel(runner, undefined, (a) => (ctx.input as unknown as { bindings?: { glyph(a: string): string } }).bindings?.glyph(a) ?? '?');
     let closeModal: (() => void) | null = null;
     const openModal = (): boolean => {
       // Headless (tests): the HUD has no DOM, so any element stands in.

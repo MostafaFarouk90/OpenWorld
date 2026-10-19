@@ -110,7 +110,7 @@ describe('CodexView', () => {
 
   it('shows names and detail when unlocked', () => {
     const { root } = makeView(['blighted-soldier']);
-    expect(textOf(root)).toContain('Blighted Footman');
+    expect(textOf(root)).toContain('Charred Footman');
   });
 
   it('keyboard: tabs wrap, selection clamps', () => {
@@ -144,10 +144,10 @@ describe('CodexView', () => {
 
   it('refreshes on update when an entry unlocks', () => {
     const { view, set, root } = makeView();
-    expect(textOf(root)).not.toContain('Blighted Footman');
+    expect(textOf(root)).not.toContain('Charred Footman');
     set.add('blighted-soldier');
     view.update?.(0.1);
-    expect(textOf(root)).toContain('Blighted Footman');
+    expect(textOf(root)).toContain('Charred Footman');
   });
 
   it('select jumps to the entry tab', () => {

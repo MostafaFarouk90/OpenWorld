@@ -35,11 +35,13 @@ export function buildJournalModel(quests: JournalQuestSource, strings: JournalSt
       summary: strings.t(q.def.summaryKey),
       objectives: q.objectives.map((o) => {
         const req = o.def.required ?? 1;
+        // A completed quest is finished whatever its objectives say: a jump or a skipped beat completes it without ticking them.
+        const finished = q.state === 'completed';
         return {
           id: o.def.id,
           text: strings.t(o.def.textKey),
-          progress: req > 1 ? `(${Math.min(o.progress, req)}/${req})` : '',
-          done: o.done,
+          progress: req > 1 ? `(${finished ? req : Math.min(o.progress, req)}/${req})` : '',
+          done: o.done || finished,
           current: o.current,
           optional: !!o.def.optional,
         };
@@ -64,7 +66,7 @@ export function createJournalPanel(
 ): JournalWidget {
   if (!doc) return { element: null, refresh() {}, dispose() {} };
   const root = doc.createElement('div');
-  root.className = 'journal-panel';
+  root.className = 'owg-menu owg-journal journal-panel';
   root.setAttribute('role', 'dialog');
   let activeTab = TAB_QUESTS;
 
@@ -72,22 +74,28 @@ export function createJournalPanel(
     const m = source();
     if (m.empty) {
       const p = doc.createElement('p');
-      p.className = 'journal-empty';
+      p.className = 'journal-empty owg-jempty';
       p.textContent = m.emptyText;
       into.appendChild(p);
       return;
     }
     for (const s of m.sections) {
       const sec = doc.createElement('section');
-      sec.className = `journal-quest journal-${s.state}`;
+      sec.className = `journal-quest journal-${s.state} owg-jq owg-jq-${s.state}`;
       const h = doc.createElement('h3');
       h.textContent = s.title;
+      if (s.state !== 'active' && opts?.t) {
+        const tag = doc.createElement('span');
+        tag.className = 'journal-state owg-jstate';
+        tag.textContent = opts.t(`quest.journal.state.${s.state}`);
+        h.appendChild(tag);
+      }
       const sum = doc.createElement('p');
       sum.textContent = s.summary;
       const ul = doc.createElement('ul');
       for (const o of s.objectives) {
         const li = doc.createElement('li');
-        li.className = o.done ? 'done' : o.current ? 'current' : '';
+        li.className = o.done ? 'done owg-done' : o.current && s.state === 'active' ? 'current owg-cur' : '';
         li.textContent = `${o.done ? '[x]' : '[ ]'} ${o.text}${o.progress ? ' ' + o.progress : ''}`;
         ul.appendChild(li);
       }
@@ -102,12 +110,12 @@ export function createJournalPanel(
     if (!opts || tabs.length === 0) { renderQuests(root); return; }
     if (activeTab !== TAB_QUESTS && !tabs.some((t) => t.id === activeTab)) activeTab = TAB_QUESTS;
     const bar = doc.createElement('div');
-    bar.className = 'journal-tabs';
+    bar.className = 'journal-tabs owg-jtabs';
     bar.setAttribute('role', 'tablist');
     const mk = (id: string, title: string): void => {
       const b = doc.createElement('button');
       b.type = 'button';
-      b.className = `journal-tab${id === activeTab ? ' active' : ''}`;
+      b.className = `journal-tab owg-jtab${id === activeTab ? ' active owg-on' : ''}`;
       b.dataset.tab = id;
       b.textContent = title;
       b.addEventListener('click', () => { activeTab = id; render(); });

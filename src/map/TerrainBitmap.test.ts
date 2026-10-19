@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bitmapCacheKey, drain, localTileBounds, renderLocalTile, renderTerrainBitmap, tintForHeight } from './TerrainBitmap';
+import { bitmapCacheKey, drain, localTileBounds, minimapTilePlan, tileCoversView, renderLocalTile, renderTerrainBitmap, tintForHeight } from './TerrainBitmap';
 import { DEFAULT_WORLD_BOUNDS, MAP_TUNING } from './tuning';
 
 const sampler = (x: number, z: number): number => 120 * Math.sin(x / 300) * Math.cos(z / 420) + 20;
@@ -103,13 +103,13 @@ describe('local tile', () => {
     expect(localTileBounds(1000.4, 0)).toEqual(localTileBounds(1000.9, 0));
   });
 
-  it('renders 128x128 by default and matches the full renderer on the same bounds', () => {
+  it('renders the default tile size and matches the full renderer on the same bounds', () => {
     const tile = drain(renderLocalTile(sampler, 100, 100, { pixels: 16 }));
     expect(tile.width).toBe(16);
     const same = drain(renderTerrainBitmap(sampler, { bounds: tile.bounds, width: 16, height: 16 }));
     expect(Array.from(tile.pixels)).toEqual(Array.from(same.pixels));
     const def = drain(renderLocalTile(() => 10, 0, 0));
-    expect(def.pixels.length).toBe(128 * 128 * 4);
+    expect(def.pixels.length).toBe(MAP_TUNING.minimapTilePixels ** 2 * 4);
   });
 });
 
@@ -120,5 +120,24 @@ describe('bitmapCacheKey', () => {
     expect(bitmapCacheKey('v2', DEFAULT_WORLD_BOUNDS, 256, 256)).not.toBe(k);
     expect(bitmapCacheKey('v1', { ...DEFAULT_WORLD_BOUNDS, maxX: 1 }, 256, 256)).not.toBe(k);
     expect(bitmapCacheKey('v1', DEFAULT_WORLD_BOUNDS, 128, 256)).not.toBe(k);
+  });
+});
+
+describe('minimap tile coverage', () => {
+  const tile = { centerX: 1000, centerZ: 1000 };
+  const half = (MAP_TUNING.minimapTilePixels * MAP_TUNING.minimapMetresPerPixel) / 2;
+  it('the tile is wider than the circle, so the refresh distance never exposes black', () => {
+    expect(half - MAP_TUNING.minimapViewMetres / 2).toBeGreaterThanOrEqual(MAP_TUNING.minimapRefreshDistance);
+    // at the refresh distance (worst case on a diagonal axis) the circle is still covered
+    expect(minimapTilePlan(tile, 1000 + MAP_TUNING.minimapRefreshDistance - 1, 1000)).toBe('ok');
+    expect(tileCoversView(1000, 1000, half, 1000 + MAP_TUNING.minimapRefreshDistance, 1000, MAP_TUNING.minimapViewMetres / 2)).toBe(true);
+  });
+  it('plans a normal refresh past the refresh distance', () => {
+    expect(minimapTilePlan(tile, 1000 + MAP_TUNING.minimapRefreshDistance + 1, 1000)).toBe('refresh');
+  });
+  it('plans an urgent rebuild when the circle is no longer covered, and when there is no tile', () => {
+    expect(minimapTilePlan(tile, 1000 + 500, 1000)).toBe('urgent');
+    expect(minimapTilePlan(tile, 1000, 1000 - half)).toBe('urgent');
+    expect(minimapTilePlan(null, 0, 0)).toBe('urgent');
   });
 });

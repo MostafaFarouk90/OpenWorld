@@ -70,3 +70,26 @@ export function createLeadSource(ports: LeadPorts): { markers(): LeadMarker[]; r
     },
   };
 }
+
+export interface ObjectiveLeadPorts {
+  questState: (id: string) => string;
+  objectiveDone: (questId: string, objectiveId: string) => boolean;
+  /** The next wardstone to strike (1..5), or null when none is left. */
+  nextWardstone: () => number | null;
+  anchor: (anchorId: string) => { x: number; z: number } | undefined;
+  npcPosition: (npcId: string) => { x: number; z: number } | undefined;
+}
+
+/**
+ * M05 (Tobb): where the quest's current objective is, as one marker on the map and minimap: the next wardstone, then the
+ * Quenchstone basin, then Tobb. Empty unless M05 is active; a missing anchor or NPC yields no marker, never a wrong one.
+ * Computed on demand (it follows the objectives and the rhythm game, which the offer-lead cache does not watch).
+ */
+export function m05ObjectiveLead(p: ObjectiveLeadPorts): LeadMarker[] {
+  if (p.questState('m05') !== 'active') return [];
+  let target: { x: number; z: number } | undefined;
+  if (!p.objectiveDone('m05', 'o1')) target = p.anchor(`wardstone.${p.nextWardstone() ?? 1}`);
+  else if (!p.objectiveDone('m05', 'o2')) target = p.anchor('shrine.quenchstone.basin');
+  else if (!p.objectiveDone('m05', 'o3')) target = p.npcPosition('tobb');
+  return target && Number.isFinite(target.x) && Number.isFinite(target.z) ? [{ id: 'lead.m05.objective', x: target.x, z: target.z, label: 'tobb' }] : [];
+}
