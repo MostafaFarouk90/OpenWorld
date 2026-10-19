@@ -70,7 +70,7 @@ export class ModelLibrary {
     g.name = `model:${t.id}`;
     for (const part of t.parts) {
       const m = new THREE.Mesh(part.geometry, part.material);
-      m.castShadow = true;
+      m.castShadow = false;
       m.receiveShadow = true;
       g.add(m);
     }
@@ -100,7 +100,12 @@ export class ModelLibrary {
     try {
       await this.source.load(id);
       if (this.disposed) return null;
-      const parts = extractMeshParts(this.source.instantiate(id));
+      const root = this.source.instantiate(id);
+      // The baked door leaves and portcullis bars: the core's Door and the city's portcullis are the only moving parts.
+      const doors: THREE.Object3D[] = [];
+      root.traverse((o) => o !== root && /_door(_left|_right)?$/i.test(o.name) && doors.push(o));
+      for (const o of doors) o.removeFromParent();
+      const parts = extractMeshParts(root);
       if (parts.length === 0) throw new Error('no static meshes');
       const pack = this.source.packOf?.(id);
       if (pack) {
@@ -127,4 +132,20 @@ export class ModelLibrary {
       return null;
     }
   }
+}
+
+const shared = new WeakMap<object, ModelLibrary>();
+
+/**
+ * The one library per AssetLoader, so the region, the city, the interiors and the props share loads and the pack atlas
+ * material. Without a loader (headless tests) it is a library with no source: every template is null and callers keep the greybox.
+ */
+export function modelLibraryFor(assets: (ModelSource & object) | null | undefined): ModelLibrary {
+  if (!assets) return new ModelLibrary(undefined);
+  let lib = shared.get(assets);
+  if (!lib) {
+    lib = new ModelLibrary(assets);
+    shared.set(assets, lib);
+  }
+  return lib;
 }

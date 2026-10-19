@@ -79,6 +79,14 @@ export function fitToBox(bounds: Bounds, target: FitTarget, policy: FitPolicy = 
   };
 }
 
+/** A fit with chosen scales (uniform or not) rather than derived from a target box. */
+export function explicitFit(bounds: Bounds, sx: number, sy: number, sz: number, pivot: 'base' | 'keep' = 'base'): Fit {
+  if (![sx, sy, sz].every((v) => v > 0 && Number.isFinite(v))) throw new RangeError(`explicitFit: bad scale ${sx},${sy},${sz}`);
+  const cx = (bounds.min.x + bounds.max.x) / 2;
+  const cz = (bounds.min.z + bounds.max.z) / 2;
+  return { sx, sy, sz, offset: { x: -cx * sx, y: pivot === 'keep' ? 0 : -bounds.min.y * sy, z: -cz * sz }, clamped: false };
+}
+
 export interface Cell {
   /** Centre relative to the footprint centre. */
   cx: number;
