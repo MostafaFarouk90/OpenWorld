@@ -1,13 +1,29 @@
 name: CI
 
+# PRs run once per push (no separate branch-push run); main runs after merge.
+# Markdown at the repo root and asset provenance notes are skipped. Anything
+# under src/ (e.g. the ANCHORS.md files that drift tests read) always runs CI.
 on:
   pull_request:
+    paths-ignore:
+      - '*.md'
+      - 'public/assets/**/*.md'
+      - 'LICENSE'
   push:
     branches: [main]
+    paths-ignore:
+      - '*.md'
+      - 'public/assets/**/*.md'
+      - 'LICENSE'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

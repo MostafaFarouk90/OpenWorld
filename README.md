@@ -27,3 +27,14 @@ npm test         # unit tests (Vitest), src/**/*.test.ts
 | `src/characters/` | Character rigs and animation (reserved) |
 | `public/assets/` | CC0 asset packs; see `public/assets/README.md` for sources and install steps |
 | `public/decoders/` | Draco and Basis (KTX2) decoders from three@0.168, fetched only when a model needs them |
+
+## CI minutes
+
+GitHub Actions has a fixed monthly budget. One CI run (install, build, full vitest suite) costs roughly 4 to 5 minutes, and the suite is the bulk of it. Working rule:
+
+- Run `npm run build` and `npx vitest run` locally before pushing.
+- Squash work locally and push once per review round, not once per commit.
+- Never push an empty commit, or close and reopen a PR, to re-run CI.
+- A new push cancels the stale run for the same branch (concurrency group); let it.
+- Root-level Markdown and `public/assets/**/*.md` skip CI. Files under `src/` (including the `ANCHORS.md` drift-test inputs) always run it.
+- CI timeout is 20 minutes; a run that hits it is a bug to fix, not to re-run.
