@@ -275,12 +275,7 @@ describe('?act1= on the real game', () => {
     expect(fake.peek('autosave')).toEqual(slice1Complete);
   }, 60000);
 
-  // Defect B2 (threads 6 and 17): before M06 Rook's post stands inside the shut portcullis, so the m06 jump cannot place
-  // the player beside him from the road. `it.fails` pins that until #74 and the Rook post fix land; it then fails and
-  // m06 moves back into the list below.
-  const B2_PENDING: readonly PhaseBId[] = ['m06'];
-  it.fails.each(B2_PENDING)('%s (defect B2 pending: Rook inside the gate before M06)', async (id) => phaseBJump(id), 60000);
-  it.each(ACT1_PHASE_B_JUMP_IDS.filter((id) => !B2_PENDING.includes(id)))('%s: prerequisites done, the quest offerable, the player on the ground in Harrowmark beside the giver, nothing saved', async (id) => phaseBJump(id), 60000);
+  it.each(ACT1_PHASE_B_JUMP_IDS)('%s: prerequisites done, the quest offerable, the player on the ground in Harrowmark beside the giver, nothing saved', async (id) => phaseBJump(id), 60000);
 
   type PhaseBId = (typeof ACT1_PHASE_B_JUMP_IDS)[number];
   async function phaseBJump(id: PhaseBId) {
@@ -294,7 +289,7 @@ describe('?act1= on the real game', () => {
     expect(t.ctx.services.require('interiors').current).toBeNull();
     const giver = t.ctx.services.require('npcs').position(ACT1_GIVERS[id]);
     expect(giver, ACT1_GIVERS[id]).toBeDefined();
-    expect(Math.hypot(giver!.x - feet.x, giver!.z - feet.z)).toBeLessThan(GIVER_STAND_OFF + 2);
+    expect(Math.hypot(giver!.x - feet.x, giver!.z - feet.z), JSON.stringify({ feet, giver })).toBeLessThan(GIVER_STAND_OFF + 2);
     const s = t.ctx.state;
     if (id === 'm06') expect(feet.z).toBeLessThan(1250 - 1); // south of the portcullis
     else expect(s.getFlag('story.m06.route')).toBe('bribe');

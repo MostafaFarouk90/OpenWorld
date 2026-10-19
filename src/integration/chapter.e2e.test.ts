@@ -240,6 +240,35 @@ describe('Act 1: Harrowmark through "Smoke Over Harrowmark" (all real plugins)',
     for (const n of CAMP_NOT.B) expect(dialogue.hasSeen(n), n).toBe(false);
   }, 300_000);
 
+  it('M06 reachability: walking up the road (held move key), Rook is talkable outside the shut portcullis and F opens his offer', async () => {
+    h = await bootFromSave(await readPhaseAFixture(PHASE_A_FIXTURES.releasedSaved), { models: true, virtualClock: true });
+    const ctx = h.ctx;
+    expect(ctx.services.require('harrowmark').southGate.state()).toBe('closed');
+    expect(qstate('m06')).toBe('inactive');
+    const rookPost = h.anchor('npc-post.rook.gate');
+    await h.runAsync(30);
+    const rook = ctx.services.require('npcs').position('rook')!;
+    expect(Math.hypot(rook.x - rookPost.x, rook.z - rookPost.z)).toBeLessThan(1);
+    expect(rook.z).toBeLessThan(1250); // the road side of the portcullis
+    // From 40 m down the road, walk north (+Z) until he is in focus. Headless there is no camera rig, so movement is in
+    // the world frame (forward is -Z): back walks north; the facing follows the movement.
+    await h.teleport({ x: rook.x, z: rook.z - 40 }, 10, Math.PI);
+    const focus = () => (ctx.interaction as unknown as { focusFor(a: string): { id: string } | null }).focusFor('interact')?.id;
+    h.key('keydown', 'KeyS');
+    let seen: string | undefined;
+    for (let i = 0; i < 60 * 15 && seen !== 'npc:rook'; i++) {
+      h.run(1);
+      seen = focus();
+    }
+    h.key('keyup', 'KeyS');
+    expect(seen, JSON.stringify({ feet: ctx.player.feet, rook, yaw: (ctx.player as unknown as { yaw?: number }).yaw })).toBe('npc:rook');
+    expect(ctx.player.feet.z).toBeLessThan(1250);
+    h.run(10);
+    if (focus() === 'npc:rook') h.press('KeyF');
+    expect(ctx.services.require('dialogue').active).toBe(true);
+    expect(h.of('dialogue.started').at(-1)).toEqual({ dialogueId: 'npc-rook', npcId: 'rook' });
+  }, 60_000);
+
   it('M06 by persuasion: the tipped argument at Halvard Banked with 25 gold, the gate closed then open', async () => {
     h = await bootFromSave(await readPhaseAFixture(PHASE_A_FIXTURES.releasedSaved), { models: true, virtualClock: true });
     await reachSouthGate(h);
