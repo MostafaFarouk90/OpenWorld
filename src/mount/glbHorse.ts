@@ -18,6 +18,21 @@ export interface HorseAsset {
 /** Raw glb units to metres. */
 export const GLB_HORSE_SCALE = 0.3;
 const CROSSFADE = 0.25;
+/**
+ * The Quaternius horse ships Idle, Walk, WalkSlow and Run, no gallop clip. A clip named Gallop is used if the asset ever
+ * gains one; until then the gallop is Run at a faster pace plus a procedural lean and stride bob, so Shift reads
+ * differently from the canter.
+ */
+export const GALLOP_CLIP = "Gallop";
+const GALLOP_LEAN = -0.05;
+const GALLOP_BOB = 0.05;
+const GALLOP_RUN_SCALE = { divisor: 7.5, min: 1.4, max: 1.8 };
+
+/** The procedural gallop on top of the clip: body pitch (radians, negative is nose down) and lift (metres), at a gallop weight 0..1 and a stride phase 0..1. */
+export function gallopPose(weight: number, phase: number): { pitch: number; lift: number } {
+  const w = THREE.MathUtils.clamp(Number.isFinite(weight) ? weight : 0, 0, 1);
+  return { pitch: GALLOP_LEAN * w, lift: GALLOP_BOB * w * Math.abs(Math.sin(phase * Math.PI * 2)) };
+}
 /** Metres the saddle sits above the torso bone (the back's surface). */
 const SADDLE_ABOVE_TORSO = 0.27;
 const TINT = new THREE.Color(0x2a211d);
@@ -77,6 +92,7 @@ export class GlbHorse implements HorseVisual {
   private readonly effects: HorseEffects;
   private readonly owned: THREE.Material[] = [];
   private slope = 0;
+  private gallop = 0;
   private disposed = false;
 
   constructor(asset: HorseAsset) {
@@ -171,6 +187,11 @@ export class GlbHorse implements HorseVisual {
     }
   }
 
+  /** The clip playing now and its pace (tests, debugging). */
+  get playing(): { clip: string; timeScale: number } | null {
+    return this.current ? { clip: this.current.getClip().name, timeScale: this.current.timeScale } : null;
+  }
+
   get mode(): GaitMode {
     return modeOf(this.gait);
   }
@@ -250,15 +271,24 @@ export class GlbHorse implements HorseVisual {
     if (this.disposed) return;
     this.gait.step(speed, dt);
     this.slope += (slope - this.slope) * Math.min(1, dt * 8);
-    this.rig.rotation.x = this.slope;
     const mode = this.mode;
+    this.gallop += ((mode === "gallop" ? 1 : 0) - this.gallop) * Math.min(1, dt * 6);
+    const g = gallopPose(this.gallop, this.gait.phase);
+    this.rig.rotation.x = this.slope + g.pitch;
+    this.rig.position.y = g.lift;
     if (mode === "idle") this.play("Idle", 1);
     else if (mode === "walk")
       this.play(
         speed < 1.4 ? "WalkSlow" : "Walk",
         THREE.MathUtils.clamp(speed / 2.4, 0.6, 1.6),
       );
-    else this.play("Run", THREE.MathUtils.clamp(speed / 9, 0.7, 1.5));
+    else if (mode === "gallop") {
+      if (this.actions.has(GALLOP_CLIP)) this.play(GALLOP_CLIP, THREE.MathUtils.clamp(speed / 12, 0.8, 1.4));
+      else {
+        const r = GALLOP_RUN_SCALE;
+        this.play("Run", THREE.MathUtils.clamp(speed / r.divisor, r.min, r.max));
+      }
+    } else this.play("Run", THREE.MathUtils.clamp(speed / 9, 0.7, 1.5));
     this.mixer.update(dt);
     this.rig.updateMatrixWorld(true);
     this.place();
@@ -273,7 +303,9 @@ export class GlbHorse implements HorseVisual {
   reset(): void {
     this.gait.reset();
     this.slope = 0;
+    this.gallop = 0;
     this.rig.rotation.x = 0;
+    this.rig.position.y = 0;
     this.mixer.stopAllAction();
     this.current = null;
     this.play("Idle", 1, 0);
