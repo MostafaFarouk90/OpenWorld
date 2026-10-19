@@ -6,6 +6,7 @@ import corePlugin from '../core/core.plugin';
 import { Game } from '../core/Game';
 import { MoveModifiers } from '../core/MoveModifiers';
 import type { PluginModule } from '../core/plugins';
+import { diskSource } from '../assets/swap/testing/diskSource';
 import { KnightAvatar } from '../characters/KnightAvatar';
 import { InputManager } from '../input/InputManager';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
@@ -34,13 +35,17 @@ async function readKnight() {
   knightGltf = await new Promise<any>((resolve, reject) => new GLTFLoader().parse(buf, '', resolve, reject));
   return knightGltf!;
 }
+/** The Quaternius horse: null fails the load (the procedural horse stays), a promise lets a test choose when it arrives. */
+let horseLoad: Promise<void> | null = null;
+let horse: Awaited<ReturnType<typeof diskSource>> | null = null;
 const assets = {
   load: async (id: string) => {
+    if (id === 'horse' && horseLoad) return horseLoad;
     if (id !== 'knight') throw new Error(`asset "${id}" failed`);
     return readKnight();
   },
-  instantiate: () => cloneSkinned(knightGltf!.scene),
-  animations: () => knightGltf!.animations,
+  instantiate: (id: string) => (id === 'horse' ? horse!.instantiate('horse') : cloneSkinned(knightGltf!.scene)),
+  animations: (id: string) => (id === 'horse' ? horse!.animations('horse') : knightGltf!.animations),
 };
 
 let physics: PhysicsWorld;
@@ -53,6 +58,8 @@ beforeEach(async () => {
   vi.spyOn(console, 'info').mockImplementation(() => {});
 });
 afterEach(() => {
+  horseLoad = null;
+  horse = null;
   for (const { game, world } of games.splice(0)) {
     game.dispose();
     world.dispose();
@@ -445,3 +452,86 @@ describe('the Ashmare on the real game', () => {
   });
 });
 
+describe('the glb Ashmare', () => {
+  const visualOf = (t: T0) => (t.mount() as unknown as { visual: { glb?: boolean } | null }).visual;
+  const hurtCount = (t: T0) => (t.mount() as unknown as { hurtboxes: { count: number } | null }).hurtboxes?.count;
+  const flush = async () => {
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+  };
+
+  it('is the horse that stands at the stables once the glb has loaded, and carries the rider at saddle height', async () => {
+    horse = await diskSource();
+    await horse.load('horse');
+    horseLoad = Promise.resolve();
+    const t = await boot({ stables: true });
+    await flush();
+    t.award();
+    expect(visualOf(t)?.glb).toBe(true);
+    t.press('KeyH');
+    expect(t.mount().mounted()).toBe(true);
+    expect(hurtCount(t)).toBe(3);
+    t.run(30);
+    expect(t.ctx.player.avatar!.root.position.y).toBeGreaterThan(1.2);
+    t.hold(['KeyW', 'ShiftLeft'], 120);
+    expect(t.mount().mounted()).toBe(true);
+  });
+
+  it('keeps the procedural horse when the glb fails, and swaps a standing one when it arrives late', async () => {
+    horse = await diskSource();
+    await horse.load('horse');
+    let arrive!: () => void;
+    horseLoad = new Promise<void>((r) => (arrive = r));
+    const t = await boot({ stables: true });
+    t.award();
+    expect(visualOf(t)?.glb).toBeFalsy();
+    arrive();
+    await flush();
+    expect(visualOf(t)?.glb).toBe(true);
+    t.press('KeyH');
+    expect(t.mount().mounted()).toBe(true);
+    expect(hurtCount(t)).toBe(3);
+  });
+
+  it('does not swap under a rider: the glb horse takes over at the next dismount', async () => {
+    horse = await diskSource();
+    await horse.load('horse');
+    let arrive!: () => void;
+    horseLoad = new Promise<void>((r) => (arrive = r));
+    const t = await boot({ stables: true });
+    t.ride();
+    arrive();
+    await flush();
+    expect(visualOf(t)?.glb).toBeFalsy();
+    expect(t.mount().mounted()).toBe(true);
+    t.press('KeyH');
+    expect(t.mount().mounted()).toBe(false);
+    expect(visualOf(t)?.glb).toBe(true);
+  });
+
+  it('a failed glb load leaves the procedural horse and a single warning', async () => {
+    const t = await boot({ stables: true });
+    await flush();
+    t.ride();
+    expect(visualOf(t)?.glb).toBeFalsy();
+    const warns = (console.warn as unknown as { mock: { calls: unknown[][] } }).mock.calls.filter((c) => String(c[0]).includes('glb horse failed to load'));
+    expect(warns.length).toBe(1);
+  });
+
+  it('keeps the procedural horse without rebuilding when the glb horse cannot be built', async () => {
+    horse = await diskSource();
+    await horse.load('horse');
+    horseLoad = Promise.resolve();
+    // An asset whose skeleton lacks the bones the horse reads.
+    (horse as unknown as { instantiate: () => THREE.Object3D }).instantiate = () => new THREE.Group();
+    const t = await boot({ stables: true });
+    await flush();
+    t.award();
+    expect(visualOf(t)?.glb).toBeFalsy();
+    const first = visualOf(t);
+    t.ride();
+    t.press('KeyH');
+    expect(visualOf(t)).toBe(first);
+    const warns = (console.warn as unknown as { mock: { calls: unknown[][] } }).mock.calls.filter((c) => String(c[0]).includes('glb horse failed to build'));
+    expect(warns.length).toBe(1);
+  });
+});
