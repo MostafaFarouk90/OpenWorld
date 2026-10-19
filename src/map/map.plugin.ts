@@ -4,18 +4,17 @@ import '../tutorial/service';
 import { heightAt } from '../terrain/heightfield';
 import '../waystones/service';
 import '../quests/service';
-import { createLeadSource, type LeadMarker } from '../quests/leads';
+import { createLeadSource, m05ObjectiveLead, type LeadMarker } from '../quests/leads';
+import '../shrine/service';
 import { FogGrid, buildMarkers, mapExtent, type MapMarker } from './MapModel';
 import { createMapSources } from './MapSources';
 import { createMapModal } from './MapView';
 import { createMinimap } from './Minimap';
 import { MAP_STRINGS_EN } from './strings.en';
-import { renderLocalTile, renderTerrainBitmap, type TerrainBitmap } from './TerrainBitmap';
+import { renderLocalTile, renderTerrainBitmap, minimapTilePlan, type TerrainBitmap } from './TerrainBitmap';
 import { DEFAULT_WORLD_BOUNDS, MAP_TUNING } from './tuning';
 import type { MapViewModel } from './viewTypes';
 
-/** Metres the player may drift from the minimap tile centre before it is redrawn. */
-const TILE_REFRESH_DISTANCE = 20;
 
 const map: GamePlugin = {
   id: 'map',
@@ -67,6 +66,24 @@ const map: GamePlugin = {
       return leads;
     };
 
+    // Where an active quest's current objective is (M05 Tobb): the gold marker the offer lead was.
+    const objectiveLeads = (): LeadMarker[] => {
+      const quests = ctx.services.get('quests');
+      if (!quests) return [];
+      return m05ObjectiveLead({
+        questState: (id) => quests.state(id),
+        objectiveDone: (q, o) => quests.objectiveDone(q, o),
+        nextWardstone: () => ctx.services.get('shrine')?.nextWardstone() ?? null,
+        anchor: (id) => ctx.anchors.find(id)?.position,
+        // Tobb is a companion once M05 starts: his NPC position is where he stood at the handover.
+        npcPosition: (id) => {
+          const aid = id === 'tobb' ? ctx.services.get('companions')?.actorId('tobb') : null;
+          const root = aid ? ctx.actors.get(aid)?.root : undefined;
+          return root ? { x: root.position.x, z: root.position.z } : ctx.services.get('npcs')?.position(id);
+        },
+      });
+    };
+
     // Terrain bitmaps are rendered in time-boxed slices, one slice per frame.
     let full: TerrainBitmap | null = null;
     const px = mapExtent(bounds, MAP_TUNING.fullMapPixels);
@@ -74,18 +91,21 @@ const map: GamePlugin = {
     let tile: { bitmap: TerrainBitmap; centerX: number; centerZ: number } | null = null;
     let tileGen: ReturnType<typeof renderLocalTile> | null = null;
     let tileCenter = { x: 0, z: 0 };
+    let tileGenUrgent = false;
 
     const stepGenerators = () => {
       if (!full) {
         const r = fullGen.next();
         if (r.done) full = r.value;
       }
-      if (!tileGen) {
-        const f = ctx.player.feet;
-        if (!tile || Math.hypot(f.x - tile.centerX, f.z - tile.centerZ) > TILE_REFRESH_DISTANCE) {
-          tileCenter = { x: f.x, z: f.z };
-          tileGen = renderLocalTile(heightAt, f.x, f.z);
-        }
+      const f = ctx.player.feet;
+      const plan = minimapTilePlan(tile, f.x, f.z);
+      // A build begun far from where the player now is would land off-centre: drop it and start from here.
+      if (plan === 'urgent' && tileGen && (!tileGenUrgent || Math.hypot(f.x - tileCenter.x, f.z - tileCenter.z) > MAP_TUNING.minimapRefreshDistance)) tileGen = null;
+      if (!tileGen && plan !== 'ok') {
+        tileCenter = { x: f.x, z: f.z };
+        tileGenUrgent = plan === 'urgent';
+        tileGen = renderLocalTile(heightAt, f.x, f.z, plan === 'urgent' ? { budgetMs: MAP_TUNING.minimapUrgentSliceBudgetMs } : {});
       }
       if (tileGen) {
         const r = tileGen.next();
@@ -112,7 +132,7 @@ const map: GamePlugin = {
           poi: sources.posts((x, z) => fog.isRevealed(x, z)),
           shrines: sources.litShrines(),
           fog: sources.fogWall(),
-          quest: withTutorialLead(currentLeads(), ctx.services.get('tutorial')),
+          quest: withTutorialLead([...currentLeads(), ...objectiveLeads()], ctx.services.get('tutorial')),
         }),
       forge: () => sources.forge(),
       legend: () => sources.legend(ctx.player.feet.x, ctx.player.feet.z),

@@ -173,6 +173,22 @@ export function renderLocalTile(
   });
 }
 
+/** True while a minimap tile centred on (cx, cz) with the given half-span covers a circle of `viewRadius` around (x, z). */
+export function tileCoversView(cx: number, cz: number, halfSpan: number, x: number, z: number, viewRadius: number): boolean {
+  return Math.max(Math.abs(x - cx), Math.abs(z - cz)) + viewRadius <= halfSpan;
+}
+
+/**
+ * What the minimap tile needs for a player at (x, z): 'urgent' when the circle is no longer fully covered (a jump, fast
+ * travel or a gallop outran the tile), 'refresh' when the player drifted past the refresh distance, else 'ok'.
+ */
+export function minimapTilePlan(tile: { centerX: number; centerZ: number } | null, x: number, z: number): 'ok' | 'refresh' | 'urgent' {
+  if (!tile) return 'urgent';
+  const half = (MAP_TUNING.minimapTilePixels * MAP_TUNING.minimapMetresPerPixel) / 2;
+  if (!tileCoversView(tile.centerX, tile.centerZ, half, x, z, MAP_TUNING.minimapViewMetres / 2)) return 'urgent';
+  return Math.hypot(x - tile.centerX, z - tile.centerZ) > MAP_TUNING.minimapRefreshDistance ? 'refresh' : 'ok';
+}
+
 /** Cache key by (terrain version, bounds, resolution). */
 export function bitmapCacheKey(terrainVersion: string | number, bounds: WorldBounds, width: number, height: number): string {
   return `${terrainVersion}|${bounds.minX},${bounds.maxX},${bounds.minZ},${bounds.maxZ}|${width}x${height}`;

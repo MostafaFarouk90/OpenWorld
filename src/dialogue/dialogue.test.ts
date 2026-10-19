@@ -288,6 +288,16 @@ describe('validateDialogue', () => {
 });
 
 describe('panel', () => {
+  it('footer shows the bound key, not the literal {key}', () => {
+    const { runner } = make();
+    runner.register(def([N('a')]));
+    runner.start('d', 'x');
+    const strings = { t: (_k: string, p?: Record<string, string | number>) => `${p?.key ?? '{key}'}: next`, has: () => true };
+    expect(buildPanelModel(runner.view(), strings, () => 'E').nextHint).toBe('E: next');
+    // no glyph source, or an unbound action ('?'): the default key, never a literal placeholder
+    expect(buildPanelModel(runner.view(), strings).nextHint).toBe('Space: next');
+    expect(buildPanelModel(runner.view(), strings, () => '?').nextHint).toBe('Space: next');
+  });
   it('model with portrait fallback', () => {
     const { runner } = make();
     runner.register(def([N('a', { speaker: 'mystery-man', portrait: 'weird' })]));

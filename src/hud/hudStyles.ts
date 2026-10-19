@@ -46,6 +46,21 @@ export const HUD_CSS = `
 .owg-menu{min-width:520px;max-width:90vw;max-height:80vh;overflow:auto;padding:16px;border-radius:8px;background:rgba(20,16,12,.94);border:1px solid #6a5a3a;color:#e8dfc8;font:14px system-ui,sans-serif;pointer-events:auto}
 .owg-menu-head{display:flex;align-items:center;gap:16px;margin-bottom:12px}
 .owg-menu-title{margin:0;flex:1;font-size:18px}
+.owg-journal{width:560px}
+.owg-journal .owg-jtabs{display:flex;gap:6px;margin-bottom:12px}
+.owg-journal .owg-jtab{padding:3px 12px;border:1px solid #6a5a3a;border-radius:4px;background:#2a2216;color:#e8dfc8;cursor:pointer;font:inherit}
+.owg-journal .owg-jtab.owg-on{background:#4d3f24;border-color:#c9a64a;color:#f0d890}
+.owg-journal .owg-jq{margin:0 0 12px;padding:8px 12px;border-radius:6px;background:rgba(255,255,255,.05);border-left:3px solid #c9a64a}
+.owg-journal .owg-jq h3{margin:0 0 4px;font-size:16px;color:#f0d890}
+.owg-journal .owg-jq p{margin:0 0 6px;opacity:.8}
+.owg-journal .owg-jq ul{margin:0;padding:0;list-style:none}
+.owg-journal .owg-jq li{padding:1px 0}
+.owg-journal .owg-jq li.owg-cur{color:#ffe9a0;font-weight:600}
+.owg-journal .owg-jq li.owg-done{opacity:.6;text-decoration:line-through}
+.owg-journal .owg-jq.owg-jq-completed{border-left-color:#6a8a4a;opacity:.8}
+.owg-journal .owg-jq.owg-jq-failed{border-left-color:#8a3a3a;opacity:.7}
+.owg-journal .owg-jstate{margin-left:8px;font-size:11px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;opacity:.7}
+.owg-journal .owg-jempty{opacity:.6}
 .owg-btn{padding:3px 10px;border:1px solid #8a7440;border-radius:4px;background:#3a2f1c;color:#f0e4c0;cursor:pointer;font:inherit}
 .owg-btn:hover{background:#4d3f24}
 .owg-equip-slots{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
