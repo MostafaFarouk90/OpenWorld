@@ -13,6 +13,9 @@ mkdirSync(out, { recursive: true });
 
 // name: anchor id to look at, look-at height above it, camera offset (dx, dy, dz) from the look-at point, in metres.
 const STOPS = {
+  'bw-gate-lane': { anchor: 'brightwater.gate', look: 2.5, cam: [10, 2.5, 14] },
+  'bw-fences': { anchor: 'lane.fence', look: 1, cam: [7, 2.2, -12] },
+  'bw-gate-kettlewick': { anchor: 'kettlewick.gate', look: 2.5, cam: [10, 2.5, 14] },
   'bw-bakery': { anchor: 'kettlewick.bakery-door', look: 3, cam: [-18, 7, 14] },
   'bw-chapel': { anchor: 'chapel.door', look: 4, cam: [-28, 9, 20] },
   'bw-tavern': { anchor: 'kettlewick.tavern-door', look: 3, cam: [-18, 7, 14] },

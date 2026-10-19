@@ -55,7 +55,8 @@ export interface GrimtoothModel {
  */
 export function buildGrimtoothModel(warn?: (m: string) => void): GrimtoothModel {
   const body = new QuadrupedBody(
-    { ...HOUND, tint: LOOK.tint, emissive: LOOK.emissive, scale: GRIMTOOTH_SCALE },
+    // Reach-defining proportions stay at the original hound's (LOOK.build); the alpha reads by scale and soot-black tint.
+    { ...HOUND, ...LOOK.build, tint: LOOK.tint, emissive: LOOK.emissive, scale: GRIMTOOTH_SCALE },
     { warn },
   );
   const rig = body.owner;
