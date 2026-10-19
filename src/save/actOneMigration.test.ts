@@ -10,6 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootFromSave, type ChapterHarness } from '../integration/chapterHarness';
 import { CLASS_IDS } from '../actors/classes';
+import { MOUNT_TUNING } from '../mount/tuning';
 import { PHASE_A_FIXTURES, readPhaseAFixture } from './__fixtures__/phaseA';
 
 const SLICE1 = import.meta.glob<unknown>('./__fixtures__/slice1-*.json', { eager: true, import: 'default' });
@@ -71,6 +72,14 @@ describe('every old fixture loads into the Phase B game', () => {
     }
     const inv = before.inventory?.data as { gold?: number } | undefined;
     if (inv?.gold !== undefined) expect(ctx.services.require('inventory').gold).toBe(inv.gold);
+    // No mount or vendors entry: their owners' save.loaded resets (#77, #73) leave full stamina, no horse, empty buy-back.
+    const m = ctx.persist.get('mount')?.serialize() as { stamina: number; placed: unknown } | undefined;
+    expect(m).toBeDefined();
+    expect(m!.stamina).toBe(MOUNT_TUNING.staminaMax);
+    expect(m!.placed ?? null).toBeNull();
+    const v = ctx.persist.get('vendors')?.serialize() as { buyBack: Record<string, unknown[]> } | undefined;
+    expect(v).toBeDefined();
+    for (const [vendor, items] of Object.entries(v!.buyBack)) expect(items, vendor).toEqual([]);
     // No section or chase to resume.
     expect(ctx.services.get('stealth')?.eye?.() ?? null).toBeFalsy();
 

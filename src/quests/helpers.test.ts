@@ -82,11 +82,26 @@ describe('POI rewards', () => {
   });
 });
 
+// These worlds hold Brightwater quests only; Rook's gate post (until M06 is done) would be placed in every one of them.
+const BRIGHTWATER_RULES = POST_RULES.filter((r) => r.npcId !== 'rook');
+
 describe('quest posts', () => {
+  it('places Rook at the South Gate from the start (he spawns at npc-post.rook) and in the city once M06 is done', () => {
+    const w = makeWorld([{ ...m04, id: 'm06' }]);
+    const dir = new PostDirector(POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
+    dir.update();
+    expect(w.npcs.placed).toContainEqual(['rook', 'npc-post.rook.gate']);
+    w.manager.start('m06');
+    w.manager.complete('m06');
+    dir.markDirty();
+    dir.update();
+    expect(w.npcs.placed.at(-1)).toEqual(['rook', 'npc-post.rook']);
+  });
+
   it('moves Gaut to the ford while M04 is active and back after, Aelfreda to the vault during D01', () => {
     const w = makeWorld([m04, d01]);
     const env = () => ({ state: w.state, quests: w.manager });
-    const dir = new PostDirector(POST_RULES, env, () => w.npcs);
+    const dir = new PostDirector(BRIGHTWATER_RULES, env, () => w.npcs);
     w.manager.onChange(() => dir.markDirty());
     dir.update();
     expect(w.npcs.placed).toEqual([]); // nobody moved yet: leave the layout and tutorial alone
@@ -104,7 +119,7 @@ describe('quest posts', () => {
   });
   it('re-applies the quest post after a load and retries until the anchor exists', () => {
     const w = makeWorld([m04]);
-    const dir = new PostDirector(POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
+    const dir = new PostDirector(BRIGHTWATER_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
     w.manager.start('m04');
     w.npcs.missing.add('npc-post.gaut.ford');
     dir.update();
@@ -120,7 +135,7 @@ describe('quest posts', () => {
   });
   it('after M01, Gaut and Aelfreda leave the tutorial gate for their home posts (Aelfreda gives M03 at the chapel)', () => {
     const w = makeWorld([m01, m04]);
-    const dir = new PostDirector(POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
+    const dir = new PostDirector(BRIGHTWATER_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
     w.manager.start('m01');
     dir.update();
     expect(w.npcs.placed).toEqual([]); // M01 under way: the tutorial's gate placement stands
@@ -139,7 +154,7 @@ describe('quest posts', () => {
   });
   it('a load that rewinds the quest sends Gaut home even though the load did not move him', () => {
     const w = makeWorld([m04]);
-    const dir = new PostDirector(POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
+    const dir = new PostDirector(BRIGHTWATER_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
     w.manager.start('m04');
     dir.update();
     w.manager.load({ quests: {} }); // an earlier save: M04 inactive
@@ -150,7 +165,7 @@ describe('quest posts', () => {
   it('does not move anyone while a dialogue is open, then catches up', () => {
     const w = makeWorld([m04]);
     let talking = true;
-    const dir = new PostDirector(POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs, () => talking);
+    const dir = new PostDirector(BRIGHTWATER_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs, () => talking);
     w.manager.start('m04');
     dir.update();
     expect(w.npcs.placed).toEqual([]);
@@ -161,7 +176,7 @@ describe('quest posts', () => {
   it('does nothing without an npcs service, then catches up', () => {
     const w = makeWorld([m04]);
     let svc: typeof w.npcs | undefined;
-    const dir = new PostDirector(POST_RULES, () => ({ state: w.state, quests: w.manager }), () => svc);
+    const dir = new PostDirector(BRIGHTWATER_RULES, () => ({ state: w.state, quests: w.manager }), () => svc);
     w.manager.start('m04');
     dir.update();
     svc = w.npcs;
