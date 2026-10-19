@@ -1,0 +1,106 @@
+{
+  "$comment": "Files imported by tools/assets/import-packs.mjs. Each pack is pinned to a commit; 'files' are upstream paths relative to 'root'. fitDefaults give the game-scale factor per category (public/assets/fit.json).",
+  "packs": [
+    {
+      "id": "kaykit-medieval-hexagon",
+      "name": "KayKit Medieval Hexagon Pack 1.0",
+      "repo": "https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0",
+      "commit": "84fa4e91af6a88989be7c99e0891cede11f2ca38",
+      "licence": "LICENSE.txt",
+      "root": "addons/kaykit_medieval_hexagon_pack/Assets/gltf",
+      "groups": [
+        { "kind": "building", "scale": 5.5, "files": [
+          "buildings/red/building_tavern_red.gltf", "buildings/red/building_home_A_red.gltf", "buildings/red/building_home_B_red.gltf",
+          "buildings/red/building_church_red.gltf", "buildings/red/building_blacksmith_red.gltf", "buildings/red/building_market_red.gltf",
+          "buildings/red/building_barracks_red.gltf", "buildings/red/building_well_red.gltf", "buildings/red/building_windmill_red.gltf",
+          "buildings/red/building_watermill_red.gltf", "buildings/neutral/building_destroyed.gltf", "buildings/neutral/building_scaffolding.gltf",
+          "buildings/neutral/building_bridge_A.gltf", "buildings/neutral/building_bridge_B.gltf" ] },
+        { "kind": "landmark", "scale": 9, "files": [
+          "buildings/red/building_castle_red.gltf", "buildings/red/building_tower_A_red.gltf", "buildings/red/building_tower_base_red.gltf" ] },
+        { "kind": "wall", "scale": 5.5, "files": [
+          "buildings/neutral/wall_straight.gltf", "buildings/neutral/wall_straight_gate.gltf",
+          "buildings/neutral/wall_corner_A_inside.gltf", "buildings/neutral/wall_corner_A_outside.gltf",
+          "buildings/neutral/fence_stone_straight.gltf", "buildings/neutral/fence_stone_straight_gate.gltf",
+          "buildings/neutral/fence_wood_straight.gltf", "buildings/neutral/fence_wood_straight_gate.gltf" ] },
+        { "kind": "prop", "scale": 4.3, "files": [
+          "decoration/props/barrel.gltf", "decoration/props/bucket_water.gltf", "decoration/props/bucket_empty.gltf",
+          "decoration/props/crate_A_big.gltf", "decoration/props/crate_A_small.gltf", "decoration/props/crate_long_A.gltf",
+          "decoration/props/crate_open.gltf", "decoration/props/sack.gltf", "decoration/props/ladder.gltf", "decoration/props/pallet.gltf",
+          "decoration/props/resource_lumber.gltf", "decoration/props/weaponrack.gltf", "decoration/props/wheelbarrow.gltf",
+          "decoration/props/tent.gltf", "decoration/props/target.gltf", "decoration/props/flag_red.gltf" ] },
+        { "kind": "nature", "scale": 4.3, "files": [
+          "decoration/nature/tree_single_A.gltf", "decoration/nature/tree_single_B.gltf",
+          "decoration/nature/rock_single_A.gltf", "decoration/nature/rock_single_B.gltf", "decoration/nature/rock_single_C.gltf" ] }
+      ]
+    },
+    {
+      "id": "kaykit-dungeon-remastered",
+      "name": "KayKit Dungeon Remastered 1.0",
+      "repo": "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0",
+      "commit": "b0ca9bd96a8072ab36a3a5464f00ed1e06a16d07",
+      "licence": "LICENSE.txt",
+      "root": "addons/kaykit_dungeon_remastered/Assets/gltf",
+      "groups": [
+        { "kind": "interior", "scale": 0.78, "files": [
+          "wall.gltf.glb", "wall_doorway.glb", "wall_arched.gltf.glb", "wall_archedwindow_open.gltf.glb", "wall_window_open.gltf.glb",
+          "wall_corner.gltf.glb", "wall_half.gltf.glb", "wall_broken.gltf.glb", "wall_cracked.gltf.glb", "wall_pillar.gltf.glb",
+          "wall_endcap.gltf.glb", "pillar.gltf.glb", "pillar_decorated.gltf.glb", "column.gltf.glb",
+          "floor_tile_large.gltf.glb", "floor_tile_small.gltf.glb", "floor_wood_large.gltf.glb", "floor_dirt_large.gltf.glb",
+          "stairs.gltf.glb", "stairs_wide.gltf.glb", "stairs_wood.gltf.glb", "rubble_large.gltf.glb", "rubble_half.gltf.glb" ] },
+        { "kind": "prop", "scale": 0.78, "files": [
+          "torch_lit.gltf.glb", "torch_mounted.gltf.glb", "candle_lit.gltf.glb", "candle_triple.gltf.glb", "chest.glb", "chest_gold.glb",
+          "barrel_large.gltf.glb", "barrel_small.gltf.glb", "keg.gltf.glb", "box_large.gltf.glb", "crates_stacked.gltf.glb",
+          "table_long.gltf.glb", "table_medium.gltf.glb", "table_long_decorated_A.gltf.glb", "chair.gltf.glb", "stool.gltf.glb",
+          "shelves.gltf.glb", "shelf_small_candles.gltf.glb", "bed_frame.gltf.glb", "bed_decorated.gltf.glb",
+          "banner_red.gltf.glb", "banner_patternA_red.gltf.glb", "banner_thin_red.gltf.glb", "banner_shield_red.gltf.glb",
+          "sword_shield.gltf.glb", "coin_stack_small.gltf.glb", "plate_food_A.gltf.glb", "bottle_A_brown.gltf.glb", "keyring_hanging.gltf.glb" ] }
+      ]
+    },
+    {
+      "id": "kaykit-halloween",
+      "name": "KayKit Halloween Bits 1.0",
+      "repo": "https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0",
+      "commit": "6dc69bf6b2fa766a985754f35ec6a0324090e6c6",
+      "licence": "LICENSE.txt",
+      "root": "addons/kaykit_halloween_bits/Assets/gltf",
+      "groups": [
+        { "kind": "prop", "scale": 0.78, "files": [
+          "crypt.gltf", "grave_A.gltf", "grave_B.gltf", "gravestone.gltf", "gravemarker_A.gltf", "coffin.gltf",
+          "fence.gltf", "fence_gate.gltf", "fence_pillar.gltf", "fence_broken.gltf", "arch.gltf", "arch_gate.gltf",
+          "lantern_hanging.gltf", "lantern_standing.gltf", "post_lantern.gltf", "shrine.gltf", "shrine_candles.gltf",
+          "bench.gltf", "candle.gltf", "candle_triple.gltf", "pillar.gltf" ] },
+        { "kind": "nature", "scale": 0.78, "files": [ "tree_dead_large.gltf", "tree_dead_medium.gltf", "tree_dead_small.gltf" ] }
+      ]
+    },
+    {
+      "id": "kaykit-furniture",
+      "name": "KayKit Furniture Bits 1.0",
+      "repo": "https://github.com/KayKit-Game-Assets/KayKit-Furniture-Bits-1.0",
+      "commit": "96d5930a8dbdb363409bbc2d3341718b00e17c9c",
+      "licence": "LICENSE.txt",
+      "root": "addons/kaykit_furniture_bits/Assets/gltf",
+      "groups": [
+        { "kind": "prop", "scale": 0.78, "files": [
+          "bed_single_A.gltf", "bed_double_A.gltf", "chair_A_wood.gltf", "chair_stool_wood.gltf", "table_medium.gltf",
+          "table_medium_long.gltf", "table_small.gltf", "shelf_B_large_decorated.gltf", "cabinet_medium.gltf", "book_set.gltf",
+          "rug_rectangle_A.gltf" ] }
+      ]
+    },
+    {
+      "id": "kaykit-adventurers",
+      "name": "KayKit Adventurers 1.0",
+      "repo": "https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0",
+      "commit": "672074b73ba276876a19e8816ecdc5241817ab47",
+      "licence": "LICENSE.txt",
+      "root": "addons/kaykit_character_pack_adventures/Assets/gltf",
+      "dest": "weapons",
+      "groups": [
+        { "kind": "weapon", "scale": 0.78, "files": [
+          "sword_1handed.gltf", "shield_round.gltf", "sword_2handed.gltf", "axe_1handed.gltf", "axe_2handed.gltf", "staff.gltf", "wand.gltf",
+          "spellbook_closed.gltf", "spellbook_open.gltf", "dagger.gltf", "crossbow_1handed.gltf", "crossbow_2handed.gltf",
+          "quiver.gltf", "arrow.gltf", "arrow_bundle.gltf", "shield_square.gltf", "shield_spikes.gltf", "shield_badge.gltf",
+          "shield_round_barbarian.gltf", "smokebomb.gltf" ] }
+      ]
+    }
+  ]
+}
