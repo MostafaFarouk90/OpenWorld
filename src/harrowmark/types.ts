@@ -9,6 +9,8 @@ export interface HarrowmarkService {
   };
   /** Merged draw calls of the static city greybox. */
   drawCalls(): number;
+  /** The asset swap's instanced model tier: meshes built, chunks and meshes in the shown chunks, triangles of the shown chunks. Zeros until the models load or when they cannot. */
+  modelBatches?(): { built: number; chunks: number; shownChunks: number; shownMeshes: number; shownTriangles: number };
   /** The mini-ending's built counts. */
   worldChange(): { active: boolean; banners: number; braziers: number };
 }

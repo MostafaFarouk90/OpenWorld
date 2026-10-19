@@ -54,6 +54,32 @@ describe('harrowmark plugin', () => {
     plugin.dispose?.();
   });
 
+  it('reports no model batches without an asset loader, and keeps the greybox when every model fails or the plugin goes first', async () => {
+    const empty = { built: 0, chunks: 0, shownChunks: 0, shownMeshes: 0, shownTriangles: 0 };
+    const headless = setup();
+    headless.plugin.setup(headless.fc.ctx);
+    expect((headless.fc.services.get('harrowmark') as HarrowmarkService).modelBatches?.()).toEqual(empty);
+    headless.plugin.dispose?.();
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const failing = setup();
+    (failing.fc.ctx as { assets: unknown }).assets = { load: () => Promise.reject(new Error('offline')), instantiate: () => { throw new Error('offline'); } };
+    failing.plugin.setup(failing.fc.ctx);
+    const svc = failing.fc.services.get('harrowmark') as HarrowmarkService;
+    const calls = svc.drawCalls();
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(svc.modelBatches?.().shownMeshes).toBe(0);
+    expect(svc.drawCalls()).toBe(calls);
+    failing.plugin.dispose?.();
+
+    const never = setup();
+    (never.fc.ctx as { assets: unknown }).assets = { load: () => new Promise(() => {}), instantiate: () => { throw new Error('unused'); } };
+    never.plugin.setup(never.fc.ctx);
+    never.plugin.dispose?.();
+    warn.mockRestore();
+  });
+
   it('closes the South Gate until M06 starts, leaves it open but guarded, then fully open', () => {
     const { fc, plugin } = setup();
     plugin.setup(fc.ctx);

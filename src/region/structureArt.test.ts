@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { ModelLibrary } from '../assets/swap/ModelLibrary';
 import { diskSource } from '../assets/swap/testing/diskSource';
+import { SWAP_ASSETS } from '../assets/swap/swapModels';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
 import { BuildingLookup } from './buildingLookup';
 import { DEADROAD_LAYOUT } from './deadroad.layout';
@@ -11,9 +12,11 @@ import type { StructureSpec } from './layoutTypes';
 import { createStructureArt } from './structureArt';
 
 let lib: ModelLibrary;
+let source: Awaited<ReturnType<typeof diskSource>>;
 let art: ReturnType<typeof createStructureArt>;
 beforeAll(async () => {
-  lib = new ModelLibrary(await diskSource());
+  source = await diskSource();
+  lib = new ModelLibrary(source);
   art = createStructureArt(lib);
 });
 
@@ -114,6 +117,32 @@ describe('structure art (Brightwater and the Dead Road, real geometry)', () => {
     const chapel = BRIGHTWATER_LAYOUT.structures.find((s) => s.id === 'chapel')!;
     const box = aabb((await art(chapel))!);
     expect(box.max.y).toBeGreaterThanOrEqual(structureHeight(chapel) - 0.01);
+  });
+});
+
+describe('the download set of the swapped region', () => {
+  it('stays under 4 MB for every model Brightwater and the Dead Road use, atlas textures counted once', async () => {
+    for (const layout of [BRIGHTWATER_LAYOUT, DEADROAD_LAYOUT]) for (const spec of swapped(layout)) await art(spec);
+    expect(source.loaded.size).toBeGreaterThan(5);
+    const fsModule = 'node:fs';
+    const fs = (await import(/* @vite-ignore */ fsModule)) as unknown as {
+      statSync(p: string): { size: number };
+      readFileSync(p: string, enc: 'utf8'): string;
+    };
+    const files = new Set<string>();
+    for (const id of source.loaded) {
+      const url = SWAP_ASSETS[id].url.replace(import.meta.env.BASE_URL, '/');
+      const path = 'public' + url;
+      files.add(path);
+      if (path.endsWith('.gltf')) {
+        const dir = path.slice(0, path.lastIndexOf('/') + 1);
+        const json = JSON.parse(fs.readFileSync(path, 'utf8')) as { buffers?: Array<{ uri?: string }>; images?: Array<{ uri?: string }> };
+        for (const r of [...(json.buffers ?? []), ...(json.images ?? [])]) if (r.uri && !r.uri.startsWith('data:')) files.add(dir + decodeURIComponent(r.uri));
+      }
+    }
+    let bytes = 0;
+    for (const f of files) bytes += fs.statSync(f).size;
+    expect(bytes).toBeLessThan(4 * 1024 * 1024);
   });
 });
 

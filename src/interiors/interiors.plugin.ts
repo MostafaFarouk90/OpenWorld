@@ -8,7 +8,9 @@ import { heightAt } from '../terrain/heightfield';
 import { groundDistance } from '../waystones/ground';
 import { showToast } from '../waystones/toast';
 import '../waystones/service';
+import { modelLibraryFor } from '../assets/swap/ModelLibrary';
 import { buildInterior, type BuiltInterior } from './build';
+import { dressInterior } from './interiorArt';
 import { SceneEnvironment } from './environment';
 import { InteriorController, InteriorError } from './InteriorController';
 import { boundsContain, layoutInterior, standsIn, type InteriorLayout } from './layout';
@@ -130,6 +132,8 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     const b = buildInterior(layout, ctx.physics);
     ctx.scene.add(b.root);
     cleanups.push(() => b.dispose());
+    // The Dungeon Remastered dressing streams in after setup; until then (or without a loader) the greybox shows.
+    void dressInterior(modelLibraryFor(ctx.assets), b).catch((err) => console.warn(`interiors: could not dress "${def.id}", keeping the greybox`, err));
     built.set(def.id, b);
     layouts.set(def.id, layout);
     cleanups.push(controller.add({ id: def.id, doors: def.doors, contains: (p) => boundsContain(layout.bounds, p) }));

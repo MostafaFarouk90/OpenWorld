@@ -1,9 +1,12 @@
 // Plugin `harrowmark`: the greybox city inside the ring wall. Anchors, triggers, walls and districts, the South Gate's
 // portcullis, the Harrowmark cast (through `npcs.register`) and the mini-ending world change. Failing here costs only
 // this city: the region and npcs plugins do not depend on it.
+import type * as THREE from 'three';
 import { heightAt } from '../terrain/heightfield';
 import type { CoreContext, GamePlugin } from '../region/coreTypes';
 import { resolveLayout } from '../region/resolveLayout';
+import { modelLibraryFor } from '../assets/swap/ModelLibrary';
+import { buildCityModels, type CityModels } from './cityArt';
 import { buildCity } from './cityBuild';
 import { watchSouthGate } from './gate';
 import { DOORS, HARROWMARK_LAYOUT } from './harrowmark.layout';
@@ -51,6 +54,40 @@ export function createHarrowmarkPlugin(opts: HarrowmarkPluginOptions = {}): Game
         const city = buildCity({ ...ctx, rapier: ctx.physics.rapier }, layout.structures, height);
         cleanups.push(() => city.dispose());
 
+        // The asset swap: instanced KayKit models per 96 m chunk, shown by distance. The greybox above stays as the far tier and
+        // the fallback; without a loader (headless) or when no model loads this is a no-op.
+        let models: CityModels | null = null;
+        let stopped = false;
+        cleanups.push(() => {
+          stopped = true;
+          models?.dispose();
+        });
+        void buildCityModels(modelLibraryFor(ctx.assets), layout.structures, height).then(
+          (m) => {
+            if (!m) return;
+            if (stopped) return m.dispose();
+            models = m;
+            city.group.add(m.root);
+          },
+          (err) => console.warn('harrowmark: the city models failed, keeping the greybox', err),
+        );
+        let sinceLod = 1;
+        cleanups.push(
+          ctx.systems.add({
+            id: 'harrowmark-models',
+            renderPhase: 'world',
+            order: 900,
+            render: (_alpha, frameTime) => {
+              sinceLod += frameTime;
+              const cam = ctx.camera?.position;
+              if (!models || !cam || sinceLod < 0.25) return;
+              sinceLod = 0;
+              const step = ctx.services.get('quality')?.step;
+              models.chunks.update(cam.x, cam.y, cam.z, step === 'low' ? 0.6 : step === 'medium' ? 0.85 : 1);
+            },
+          }),
+        );
+
         const gate = watchSouthGate(ctx.gates, (state) => city.setPortcullis(state === 'closed'));
         cleanups.push(() => gate.dispose());
 
@@ -70,6 +107,14 @@ export function createHarrowmarkPlugin(opts: HarrowmarkPluginOptions = {}): Game
           ctx.services.provide('harrowmark', {
             southGate: { state: gate.state, override: gate.override },
             drawCalls: () => city.drawCalls,
+            modelBatches: () => {
+              const m = models;
+              if (!m) return { built: 0, chunks: 0, shownChunks: 0, shownMeshes: 0, shownTriangles: 0 };
+              const shown = m.chunks.visibleKeys();
+              let meshes = 0;
+              for (const k of shown) m.chunks.groups.get(k)!.traverse((o) => (o as THREE.InstancedMesh).isInstancedMesh && meshes++);
+              return { built: m.stats.batches, chunks: m.chunks.groups.size, shownChunks: shown.length, shownMeshes: meshes, shownTriangles: m.visibleTriangles() };
+            },
             worldChange: () => ({ active: change.active, ...change.counts() }),
           }),
         );

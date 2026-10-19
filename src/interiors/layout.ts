@@ -27,6 +27,8 @@ export interface SolidBox {
   min: Vec3;
   max: Vec3;
   blockerId?: string;
+  /** `PropDef.id` of a `prop` box (the asset swap hides the greybox of props it dresses). */
+  propId?: string;
 }
 
 export interface Bounds {
@@ -221,7 +223,7 @@ export function layoutInterior(def: InteriorDef, heightAt: (x: number, z: number
     boxes.push({ kind: 'pillar', min: w(p.x0, 0, p.z0), max: w(p.x1, h, p.z1) });
   }
   for (const p of props) {
-    boxes.push({ kind: 'prop', min: w(p.rect.x0, 0, p.rect.z0), max: w(p.rect.x1, p.height, p.rect.z1) });
+    boxes.push({ kind: 'prop', min: w(p.rect.x0, 0, p.rect.z0), max: w(p.rect.x1, p.height, p.rect.z1), ...(p.id ? { propId: p.id } : {}) });
   }
   for (const b of def.blockers) {
     boxes.push({ kind: 'blocker', blockerId: b.id, min: w(b.rect.x0, 0, b.rect.z0), max: w(b.rect.x1, b.height, b.rect.z1) });
