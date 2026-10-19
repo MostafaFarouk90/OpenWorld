@@ -12,7 +12,8 @@ import type { EnemyDef, EnemyKind, MoveDef } from './types';
 export const ASH_WRAITH: EnemyDef = {
   kind: 'ash-wraith',
   nameKey: 'enemies.name.ash-wraith',
-  model: { prefer: [], tint: 0x8d978a, emissive: 0x0b100a, weapons: 'none' },
+  // The Mage body (robed, pointed hat), ash-pale with a sickly green glow: nothing like the player's Knight.
+  model: { prefer: ['mage'], tint: 0xbcc8c0, emissive: 0x1f4d2c, weapons: 'none' },
   maxHealth: 30,
   maxPoise: 20,
   walkSpeed: 1.0,
@@ -45,7 +46,8 @@ export const ASH_WRAITH: EnemyDef = {
 export const BLIGHTED_SOLDIER: EnemyDef = {
   kind: 'blighted-soldier',
   nameKey: 'enemies.name.charred-footman',
-  model: { prefer: [], tint: 0x6a625a, weapons: 'sword-shield' },
+  // Still the Knight rig (the embedded sword and shield drive the tracers), but charred red, broader, and bare-headed.
+  model: { prefer: [], tint: 0x8a3c30, emissive: 0x2a0c04, weapons: 'sword-shield', scale: 1.08, hide: ['Knight_Helmet'] },
   maxHealth: 60,
   maxPoise: 40,
   walkSpeed: 1.4,
@@ -76,7 +78,15 @@ export const BLIGHTED_SOLDIER: EnemyDef = {
 export const WATCH_GUARD: EnemyDef = {
   kind: 'watch-guard',
   nameKey: 'enemies.name.watch-guard',
-  model: { prefer: [], tint: 0x5a6470, weapons: 'none' },
+  // City law: steel-blue Knight rig, a pot helm instead of the Knight's helmet, a tower shield and a long sword on show.
+  model: {
+    prefer: [],
+    tint: 0x5f86c8,
+    weapons: 'none',
+    hide: ['Knight_Helmet'],
+    show: ['Rectangle_Shield', '2H_Sword'],
+    props: [{ id: 'hex/bucket_empty', bone: 'head', position: [0, 0.2, 0], rotation: [Math.PI, 0, 0], scale: 2.4 }],
+  },
   maxHealth: 40,
   maxPoise: 30,
   walkSpeed: 1.4,

@@ -21,7 +21,7 @@ export const CUTPURSE_MOVES = { slash: 'cutpurse.slash', grab: 'cutpurse.grab', 
 export const ALLEY_CUTPURSE: EnemyDef = {
   kind: 'alley-cutpurse',
   nameKey: 'enemies.name.alley-cutpurse',
-  model: { prefer: ['rogue'], tint: 0x6b4a2c, weapons: 'none' },
+  model: { prefer: ['rogueHooded', 'rogue'], tint: 0x6a5a48, weapons: 'none', show: ['Knife'], scale: 0.95 },
   maxHealth: 25,
   maxPoise: 10,
   walkSpeed: 1.8,

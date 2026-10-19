@@ -163,11 +163,11 @@ const structures: StructureSpec[] = [
   { id: 'loft', kind: 'loft', x: 0, z: 0, yawDeg: 0, footprint: [8, 8], mode: 'open' },
   { id: 'gate-lane', kind: 'gate', x: 0, z: 25, yawDeg: 0, footprint: [8, 1], mode: 'open' },
   { id: 'gate-kettlewick', kind: 'gate', x: 0, z: 165, yawDeg: 0, footprint: [10, 1], mode: 'open' },
-  // T07: a cart and a fence that must be jumped (apex of a jump is about 1.05 m, so both stay low), with
-  // fences either side so the lane is walled from house to house.
+  // T07: a cart and a low rail that must be jumped (apex of a jump is about 1.05 m, so both stay low: the two hurdles of the
+  // tutorial), with tall fences (1.6 m, beyond any jump) either side of the cart so the lane is walled from house to house.
   { id: 'cart', kind: 'cart', x: 0, z: 70, yawDeg: 0, footprint: [4, 1], mode: 'solid', height: 0.6 },
-  { id: 'fence-cart-w', kind: 'fence', x: -9, z: 70, yawDeg: 0, footprint: [14, 0.6], mode: 'solid', height: 0.6 },
-  { id: 'fence-cart-e', kind: 'fence', x: 9, z: 70, yawDeg: 0, footprint: [14, 0.6], mode: 'solid', height: 0.6 },
+  { id: 'fence-cart-w', kind: 'fence', x: -9, z: 70, yawDeg: 0, footprint: [14, 0.6], mode: 'solid', height: 1.6 },
+  { id: 'fence-cart-e', kind: 'fence', x: 9, z: 70, yawDeg: 0, footprint: [14, 0.6], mode: 'solid', height: 1.6 },
   { id: 'fence-lane', kind: 'fence', x: 0, z: 90, yawDeg: 0, footprint: [32, 0.6], mode: 'solid', height: 0.6 },
   // Kettlewick: fourteen houses (bakery and tavern included), mill and well.
   {
@@ -178,7 +178,7 @@ const structures: StructureSpec[] = [
     yawDeg: 0,
     footprint: [10, 10],
     mode: 'enterable',
-    door: { name: 'bakery', side: 'W', width: 2.4 },
+    door: { name: 'bakery', side: 'W', width: 2.6 },
   },
   { id: 'tavern', kind: 'tavern', x: -24, z: 132, yawDeg: 0, footprint: [12, 10], mode: 'solid' },
   house('house-01', -16, 100),
@@ -211,7 +211,7 @@ const structures: StructureSpec[] = [
     footprint: [12, 18],
     mode: 'enterable',
     height: 8,
-    door: { name: 'chapel', side: 'W', width: 2.4, openWhen: ['tutorial.t04.begin', 'tutorial.skipped'] },
+    door: { name: 'chapel', side: 'W', width: 2.6, openWhen: ['tutorial.t04.begin', 'tutorial.skipped'] },
   },
   { id: 'altar', kind: 'altar', x: 57, z: 60, yawDeg: 0, footprint: [1.6, 3], mode: 'solid', height: 1.1, inside: 'chapel' },
   { id: 'waystone-chapel', kind: 'waystone', x: 40, z: 46.8, yawDeg: 0, footprint: [1.6, 1.6], mode: 'solid', height: 2.4 },

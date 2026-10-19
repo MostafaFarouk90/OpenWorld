@@ -62,6 +62,27 @@ export interface ModelRecipe {
   tint: number;
   emissive?: number;
   weapons: 'none' | 'sword-shield';
+  /** Look only (never behaviour): uniform scale on top of `KNIGHT.modelScale` (default 1). */
+  scale?: number;
+  /** Named nodes of the model to hide, e.g. the Knight's helmet. */
+  hide?: readonly string[];
+  /** Held items built into the model to show for looks (`1H_Axe`, `Rectangle_Shield`); they take no part in tracers. */
+  show?: readonly string[];
+  /** Pack models worn on a bone (a pot helm on the head); skipped when the pack is not loaded. */
+  props?: readonly ModelProp[];
+}
+
+/** A pack model attached to a bone for looks. Offsets are in the bone's space (metres at the bone's world scale). */
+export interface ModelProp {
+  /** Swap model id, e.g. `hex/bucket_empty`. */
+  id: string;
+  /** Three.js bone name (dots stripped): `head`, `handslotr`. */
+  bone: string;
+  position?: readonly [number, number, number];
+  /** Euler angles, radians. */
+  rotation?: readonly [number, number, number];
+  /** Uniform scale in metres per model unit (the bone's own scale is divided out). */
+  scale?: number;
 }
 
 /** The verbs a quest can unlock (flags `enemies.mercy.<verb>`). The Warm Hand rides on Calm. */

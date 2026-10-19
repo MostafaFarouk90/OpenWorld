@@ -10,7 +10,6 @@ import type { StructureSpec } from './layoutTypes';
 
 /** Largest uniform scale of a Hexagon building: keeps a door under about 1.6x the Knight's height (door fits at 5.5). */
 export const MAX_BUILDING_SCALE = 8.8;
-const FENCE_HEIGHT = 1.0;
 /** Dungeon wall pieces are 4 x 4 raw; this is the scale of a plain run (door opening 2.4 m wide). */
 const DUNGEON_UNIT = 1.2;
 /** Height of the opening in `dun/wall_doorway` at raw scale (its baked leaf is 2.75 tall). */
@@ -36,6 +35,8 @@ export function createStructureArt(lib: ModelLibrary): StructureArt {
       case 'fence':
       case 'yard-fence':
         return fence(lib, spec);
+      case 'gate':
+        return spec.mode === 'open' ? gate(lib, spec) : null;
       case 'chapel':
       case 'bakery':
         return spec.mode === 'enterable' ? enterableShell(lib, spec) : null;
@@ -70,6 +71,24 @@ async function pole(lib: ModelLibrary, spec: StructureSpec): Promise<THREE.Objec
   return ModelLibrary.object(t, explicitFit(t.bounds, s, s, s));
 }
 
+/** Clear height of a gate's opening: a mounted rider (about 3.3 m) with 1.5 m to spare. */
+export const GATE_CLEARANCE = 5;
+
+/** Height of the opening under the crown of `hal/arch` at raw scale (the model is 4.41 tall; measured by ray, apex at x = 0). */
+export const ARCH_OPENING_TOP_RAW = 3.66;
+
+/**
+ * A stone arch (the open one, not `arch_gate` with its iron bars) stretched over the gate's footprint, with the opening's crown
+ * 0.2 m above the clearance so a rider passes under it.
+ */
+async function gate(lib: ModelLibrary, spec: StructureSpec): Promise<THREE.Object3D | null> {
+  const t = await lib.template('hal/arch');
+  if (!t) return null;
+  const [w] = spec.footprint;
+  const sy = (Math.max(structureHeight(spec), GATE_CLEARANCE) + 0.2) / ARCH_OPENING_TOP_RAW;
+  return ModelLibrary.object(t, explicitFit(t.bounds, w / (t.bounds.max.x - t.bounds.min.x), sy, sy));
+}
+
 /** Wooden fence pieces along the footprint's long edges (and all four for a yard fence). */
 async function fence(lib: ModelLibrary, spec: StructureSpec): Promise<THREE.Object3D | null> {
   const t = await lib.template('hex/fence_wood_straight');
@@ -77,7 +96,7 @@ async function fence(lib: ModelLibrary, spec: StructureSpec): Promise<THREE.Obje
   const root = new THREE.Group();
   root.name = `fence:${spec.id}`;
   const raw = t.bounds.max.z - t.bounds.min.z;
-  const s = Math.min(FENCE_HEIGHT, structureHeight(spec)) / (t.bounds.max.y - t.bounds.min.y);
+  const s = structureHeight(spec) / (t.bounds.max.y - t.bounds.min.y);
   const [w, d] = spec.footprint;
   const run = (len: number, at: (c: number) => [number, number], rotY: number): void => {
     for (const piece of tileLine(len, raw * s)) {
