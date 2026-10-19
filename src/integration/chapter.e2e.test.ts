@@ -41,7 +41,7 @@ import {
   enterVaultForD01, finishD01, objectiveDone, PHASE_A_ORDER, playM03, playM04, playM05, playR01, playR02,
   reachPhaseAStart, emptyTrails, type FieldBranch, type PriorBranch, type Trails,
 } from './phaseA';
-import { estimateTiming, timingMarkdown } from './timing';
+import { estimateTiming, estimateTimingFor, PHASE_B_PLAN, timingMarkdown } from './timing';
 
 let h: ChapterHarness | null = null;
 beforeEach(() => {
@@ -124,5 +124,157 @@ describe('Phase A chapter chain (all real plugins)', () => {
 
   it('Prior defeated, field scorched', async () => {
     await chain('scorched', 'defeated');
+  }, 120_000);
+});
+
+// ---------------------------------------------------------------------------------------------------------------
+// Act 1, Phase B (Harrowmark) through "Smoke Over Harrowmark" (thread 21), src/integration/phaseB.ts.
+//
+// Each run starts from a real Phase A end save (bootFromSave, so the Phase A to Phase B migration is exercised too).
+// Driven for real, as in Phase A: every talk, offer and choice through the dialogue service and key presses; goTo
+// objectives through the real triggers; the interiors (Keep hall, Counting-House, Underways) through their door
+// interactables; the satchel, the copper, the R04 pages and the M09 invoices pressed with F; the M06 and M09 stealth
+// sections walked on thread 18's scripted routes (sneak held) and cleared by the real section exit; the M10 chase
+// started from its start box and run along thread 18's chase line until the courier is caught; Rook's D02 offer
+// (bread, Calm, the Underways door); the kennel hounds from their real spawners; the Act 1 ending director, the
+// HUD's card (shown; codex.actEndingSeen), thread 17's world change and the camp scene read to its end.
+//
+// Shortcuts (each through the owning service's public API):
+// - M06 bribe and persuasion gold is granted by the harness (HARNESS_BRIBE_GOLD / HARNESS_TIP_GOLD); thread 19's purses
+//   and chests are not farmed;
+// - the stealth sections run with thread 18's makeUndetectable (detection has its own tests in src/stealth);
+// - kills (cutpurses, guildhall thugs, kennel hounds) are lethal ctx.damage.apply hits from the player;
+// - the class choice calls classes.choose (the trainer desk is a DOM modal) and classes.skipDrill;
+// - if the walk ends with the courier still running, thread 18's catchCourierForTest (the normal chase.caught path);
+// - Gaffer Grimtooth (thread 3b's real boss) is broken by damage hits (grimtooth.ts), then the real Calm hold (T,
+//   Hearth Bread) or a lethal hit;
+// - the card has no key target headless: the HUD's actEndingCard.dismiss() closes it as its key would.
+
+import { bootFromSave } from './chapterHarness';
+import { PHASE_A_FIXTURES, readPhaseAFixture } from '../save/__fixtures__/phaseA';
+import { HARNESS_TIP_GOLD, PHASE_B_ORDER, playM06, playPhaseB, reachSouthGate, type PhaseBOptions } from './phaseB';
+import { fightGrimtooth } from './grimtooth';
+
+const RUN_A: PhaseBOptions = { route: 'bribe', classId: 'knight', debt: 'forgiven', steward: 'expose', stance: 'steady', grimtooth: 'released' };
+const RUN_B: PhaseBOptions = { route: 'stealth', classId: 'warden', debt: 'collected', steward: 'shield', stance: 'bold', grimtooth: 'defeated' };
+
+const CAMP_LINES: Record<'A' | 'B', string[]> = {
+  A: ['gate-bribe', 'prior-released', 'grim-released', 'steward-expose', 'debt-forgiven'],
+  B: ['gate-stealth', 'prior-defeated', 'grim-defeated', 'steward-shield', 'debt-collected'],
+};
+const CAMP_NOT: Record<'A' | 'B', string[]> = {
+  A: ['gate-stealth', 'gate-persuasion', 'prior-defeated', 'prior-rumour', 'grim-defeated', 'steward-shield', 'debt-collected'],
+  B: ['gate-bribe', 'gate-persuasion', 'prior-released', 'prior-rumour', 'grim-released', 'steward-expose', 'debt-forgiven'],
+};
+
+async function act1(run: 'A' | 'B') {
+  const opts = run === 'A' ? RUN_A : RUN_B;
+  const fixture = run === 'A' ? PHASE_A_FIXTURES.releasedSaved : PHASE_A_FIXTURES.defeatedScorched;
+  h = await bootFromSave(await readPhaseAFixture(fixture), { models: true, virtualClock: true });
+  expect(h.statuses.filter((s) => s.state !== 'ok')).toEqual([]);
+  const gateStates: string[] = [];
+  const harrowmark = () => h!.ctx.services.require('harrowmark');
+  gateStates.push(harrowmark().southGate.state());
+  const trails = await playPhaseB(h, { ...opts, after: () => void gateStates.push(harrowmark().southGate.state()) }, fightGrimtooth);
+  for (const q of PHASE_B_ORDER) expect(qstate(q), q).toBe('completed');
+  return { trails, gateStates };
+}
+
+describe('Act 1: Harrowmark through "Smoke Over Harrowmark" (all real plugins)', () => {
+  it('run A (bribe, Knight, forgiven, expose, steady, Grimtooth calmed): the whole act, the ending once, then a reload', async () => {
+    const { gateStates, trails } = await act1('A');
+    // Harrowmark timing estimate on this run's dialogue nodes (src/integration/TIMING.md).
+    const rows = estimateTimingFor(h!, PHASE_B_PLAN, trails);
+    console.log(timingMarkdown(rows));
+    expect(rows.map((r) => r.quest)).toEqual(Object.keys(PHASE_B_PLAN));
+    expect(gateStates[0]).toBe('closed');
+    expect(gateStates.slice(1).every((s) => s === 'open')).toBe(true);
+    expect(flag('story.m06.route')).toBe('bribe');
+    expect(h!.ctx.services.require('classes').current()).toBe('knight');
+    expect(flag('boss.gaffer-grimtooth.outcome')).toBe('released');
+    expect(h!.of('mercy').some((e) => (e as { ledgerId?: string }).ledgerId === 'D02')).toBe(true);
+    // The ending: once, in order (act.ended before the camp), the card seen, the world change, the camp lines.
+    expect(h!.of('act.ended')).toEqual([{ act: 1, endingId: 'smoke-over-harrowmark' }]);
+    const types = h!.events.map((e) => e.type as string);
+    expect(types.indexOf('act.ended')).toBeLessThan(types.indexOf('hud.actEnding.closed'));
+    expect(types.indexOf('hud.actEnding.closed')).toBeLessThan(types.lastIndexOf('story.act1.camp.begin' as never));
+    const dialogue = h!.ctx.services.require('dialogue');
+    for (const n of CAMP_LINES.A) expect(dialogue.hasSeen(n), n).toBe(true);
+    for (const n of CAMP_NOT.A) expect(dialogue.hasSeen(n), n).toBe(false);
+    expect(flag('codex.actEndingSeen')).toBe(true);
+    expect(flag('story.d02.campSeen')).toBe(true);
+    // Nothing of Act 2 opened.
+    expect([...h!.ctx.state.flagsWith('story.m11'), ...h!.ctx.state.flagsWith('story.gate.a3')]).toEqual([]);
+
+    // A save after the ending loads with the world change standing, no card, no camp, no second act.ended.
+    await h!.runAsync(5);
+    expect((await h!.ctx.services.require('save').saveNow('manual')).ok).toBe(true);
+    await h!.flush();
+    const saved = JSON.parse(JSON.stringify(h!.fake.peek('slot-0')));
+    h!.dispose();
+    const r = await bootFromSave(saved, { models: true, virtualClock: true });
+    h = r;
+    expect(r.loaded).toBe(true);
+    for (let i = 0; i < 120; i++) {
+      r.run(1);
+      r.ctx.hud.update(1 / 60);
+    }
+    expect(r.of('act.ended')).toEqual([]);
+    expect(r.ctx.services.require('dialogue').active).toBe(false);
+    expect(r.of('dialogue.started')).toEqual([]);
+    expect(flag('story.gate.a2')).toBe(true);
+    const wc = (r.ctx.services.require('harrowmark') as unknown as { worldChange(): { active: boolean; banners: number; braziers: number } }).worldChange();
+    expect(wc).toEqual({ active: true, banners: 10, braziers: 21 });
+  }, 300_000);
+
+  it('run B (stealth, Warden, collected, shield, bold, Grimtooth defeated)', async () => {
+    const { gateStates } = await act1('B');
+    expect(gateStates[0]).toBe('closed');
+    expect(gateStates[1]).toBe('open');
+    expect(flag('story.m06.route')).toBe('stealth');
+    expect(h!.ctx.services.require('classes').current()).toBe('warden');
+    expect(flag('story.m08.stance')).toBe('bold');
+    expect(h!.of('act.ended')).toHaveLength(1);
+    const dialogue = h!.ctx.services.require('dialogue');
+    for (const n of CAMP_LINES.B) expect(dialogue.hasSeen(n), n).toBe(true);
+    for (const n of CAMP_NOT.B) expect(dialogue.hasSeen(n), n).toBe(false);
+  }, 300_000);
+
+  it('M06 reachability: walking up the road (held move key), Rook is talkable outside the shut portcullis and F opens his offer', async () => {
+    h = await bootFromSave(await readPhaseAFixture(PHASE_A_FIXTURES.releasedSaved), { models: true, virtualClock: true });
+    const ctx = h.ctx;
+    expect(ctx.services.require('harrowmark').southGate.state()).toBe('closed');
+    expect(qstate('m06')).toBe('inactive');
+    const rookPost = h.anchor('npc-post.rook.gate');
+    await h.runAsync(30);
+    const rook = ctx.services.require('npcs').position('rook')!;
+    expect(Math.hypot(rook.x - rookPost.x, rook.z - rookPost.z)).toBeLessThan(1);
+    expect(rook.z).toBeLessThan(1250); // the road side of the portcullis
+    // From 40 m down the road, walk north (+Z) until he is in focus. Headless there is no camera rig, so movement is in
+    // the world frame (forward is -Z): back walks north; the facing follows the movement.
+    await h.teleport({ x: rook.x, z: rook.z - 40 }, 10, Math.PI);
+    const focus = () => (ctx.interaction as unknown as { focusFor(a: string): { id: string } | null }).focusFor('interact')?.id;
+    h.key('keydown', 'KeyS');
+    let seen: string | undefined;
+    for (let i = 0; i < 60 * 15 && seen !== 'npc:rook'; i++) {
+      h.run(1);
+      seen = focus();
+    }
+    h.key('keyup', 'KeyS');
+    expect(seen, JSON.stringify({ feet: ctx.player.feet, rook, yaw: (ctx.player as unknown as { yaw?: number }).yaw })).toBe('npc:rook');
+    expect(ctx.player.feet.z).toBeLessThan(1250);
+    h.run(10);
+    if (focus() === 'npc:rook') h.press('KeyF');
+    expect(ctx.services.require('dialogue').active).toBe(true);
+    expect(h.of('dialogue.started').at(-1)).toEqual({ dialogueId: 'npc-rook', npcId: 'rook' });
+  }, 60_000);
+
+  it('M06 by persuasion: the tipped argument at Halvard Banked with 25 gold, the gate closed then open', async () => {
+    h = await bootFromSave(await readPhaseAFixture(PHASE_A_FIXTURES.releasedSaved), { models: true, virtualClock: true });
+    await reachSouthGate(h);
+    await playM06(h, { talks: [] }, 'persuasion');
+    expect(flag('story.m06.route')).toBe('persuasion');
+    expect(h.ctx.services.require('inventory').gold).toBe(0);
+    expect(h.of('gold.spent').at(-1)).toMatchObject({ amount: HARNESS_TIP_GOLD, reason: 'persuasion' });
   }, 120_000);
 });

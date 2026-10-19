@@ -1,0 +1,9 @@
+{
+  "fixture": "act1-m06-through-gate.json",
+  "what": "Act 1 run A from phaseA-complete-released-saved: M06 completed by bribe (harness-granted 50 gold), the South Gate open, M07 not started",
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/fixtures.gen.test.ts",
+  "generatingCommit": "26f66f302cdd1eda9b3dd75766ee131e36587482",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving",
+  "playtimeSeconds": "rounded to whole seconds",
+  "source": "the real save plugin (saveNow(\"manual\")), read back from the fake IndexedDB slot-0"
+}
