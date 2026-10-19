@@ -562,7 +562,11 @@ export class MountController implements MountService {
     }
     if (this.visual || this.disposed) return this.visual;
     try {
-      const v = this.opts.visual ? this.opts.visual() : loadHorseVisual(this.horseAsset);
+      const v = this.opts.visual ? this.opts.visual() : loadHorseVisual(this.horseAsset, (err) => {
+        // Keep the procedural horse for good: no rebuild loop, one warning.
+        this.horseAsset = null;
+        console.warn('mount: the glb horse failed to build, using the procedural one', err);
+      });
       this.ctx.scene.add(v.root);
       v.root.updateMatrixWorld(true);
       this.hurtboxes = new HurtboxSet(v.rig, v.hurtboxDefs, this.hurtOwner);

@@ -126,7 +126,7 @@ export function planInterior(interiorId: string, boxes: readonly SolidBox[], tpl
  */
 export async function dressInterior(lib: ModelLibrary, built: BuiltInterior): Promise<number> {
   const templates = await lib.preload(interiorModelIds());
-  if (templates.length === 0) return 0;
+  if (templates.length === 0 || built.disposed) return 0;
   const byId = new Map(templates.map((t) => [t.id, t]));
   const { pieces, dressedProps, covers } = planInterior(built.layout.def.id, built.layout.boxes, (id) => byId.get(id) ?? null);
   if (pieces.length === 0) return 0;

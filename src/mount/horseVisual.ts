@@ -105,16 +105,13 @@ class ProceduralHorse implements HorseVisual {
  * The one place the horse's look comes from: the glb horse once its asset has loaded (`asset`), else the procedural rig.
  * Synchronous on purpose; the mount preloads the glb and rebuilds its hurtboxes when the look swaps.
  */
-export function loadHorseVisual(asset?: HorseAsset | null): HorseVisual {
+export function loadHorseVisual(asset?: HorseAsset | null, onGlbFailed?: (err: unknown) => void): HorseVisual {
   if (asset) {
     try {
       return new GlbHorse(asset);
     } catch (err) {
-      if (!warnedGlb) console.warn('mount: the glb horse failed to build, using the procedural one', err);
-      warnedGlb = true;
+      onGlbFailed?.(err);
     }
   }
   return new ProceduralHorse();
 }
-
-let warnedGlb = false;

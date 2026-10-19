@@ -516,4 +516,22 @@ describe('the glb Ashmare', () => {
     const warns = (console.warn as unknown as { mock: { calls: unknown[][] } }).mock.calls.filter((c) => String(c[0]).includes('glb horse failed to load'));
     expect(warns.length).toBe(1);
   });
+
+  it('keeps the procedural horse without rebuilding when the glb horse cannot be built', async () => {
+    horse = await diskSource();
+    await horse.load('horse');
+    horseLoad = Promise.resolve();
+    // An asset whose skeleton lacks the bones the horse reads.
+    (horse as unknown as { instantiate: () => THREE.Object3D }).instantiate = () => new THREE.Group();
+    const t = await boot({ stables: true });
+    await flush();
+    t.award();
+    expect(visualOf(t)?.glb).toBeFalsy();
+    const first = visualOf(t);
+    t.ride();
+    t.press('KeyH');
+    expect(visualOf(t)).toBe(first);
+    const warns = (console.warn as unknown as { mock: { calls: unknown[][] } }).mock.calls.filter((c) => String(c[0]).includes('glb horse failed to build'));
+    expect(warns.length).toBe(1);
+  });
 });

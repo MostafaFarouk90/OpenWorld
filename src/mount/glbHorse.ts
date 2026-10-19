@@ -3,11 +3,11 @@
 // The glb faces +Z and is 6.9 units tall, so it hangs from a holder turned half a turn and scaled to a 2.1 m horse; the
 // sockets and the hurtbox proxies live in the rig's own (metre) frame and are re-placed from the skeleton every tick,
 // so no bone rest rotation or scale ever reaches them.
-import * as THREE from 'three';
-import type { HurtboxDef } from '../combat/types';
-import { HorseEffects } from './horseEffects';
-import type { HorseVisual } from './horseVisual';
-import { HORSE, QuadrupedGait, modeOf, type GaitMode } from './rig';
+import * as THREE from "three";
+import type { HurtboxDef } from "../combat/types";
+import { HorseEffects } from "./horseEffects";
+import type { HorseVisual } from "./horseVisual";
+import { HORSE, QuadrupedGait, modeOf, type GaitMode } from "./rig";
 
 /** The loaded glb: a fresh skeleton-safe clone per call, and the shared clips. */
 export interface HorseAsset {
@@ -24,7 +24,16 @@ const TINT = new THREE.Color(0x2a211d);
 const GLOW = new THREE.Color(0x2a0a00);
 
 /** The skeleton bones the horse reads (names as GLTFLoader sanitises them: no dots). */
-const BONES = ['Torso', 'Hips', 'Shoulders', 'Neck', 'Head', 'Head_end', 'Tail1', 'Tail4_end'] as const;
+const BONES = [
+  "Torso",
+  "Hips",
+  "Shoulders",
+  "Neck",
+  "Head",
+  "Head_end",
+  "Tail1",
+  "Tail4_end",
+] as const;
 type BoneName = (typeof BONES)[number];
 
 const LEG_LENGTH = HORSE.legLength;
@@ -53,20 +62,26 @@ export class GlbHorse implements HorseVisual {
   private readonly holder = new THREE.Group();
   private readonly model: THREE.Object3D;
   private readonly bones = new Map<BoneName, THREE.Object3D>();
-  private readonly sockets: Record<'mane' | 'head' | 'tail' | 'collar', THREE.Object3D>;
-  private readonly proxies: Record<'spine' | 'neck' | 'head', THREE.Object3D>;
+  private readonly sockets: Record<
+    "mane" | "head" | "tail" | "collar",
+    THREE.Object3D
+  >;
+  private readonly proxies: Record<"spine" | "neck" | "head", THREE.Object3D>;
   private readonly mixer: THREE.AnimationMixer;
   private readonly actions = new Map<string, THREE.AnimationAction>();
   private current: THREE.AnimationAction | null = null;
-  private readonly gait = new QuadrupedGait(LEG_LENGTH, QuadrupedGait.tuningFor(HORSE));
+  private readonly gait = new QuadrupedGait(
+    LEG_LENGTH,
+    QuadrupedGait.tuningFor(HORSE),
+  );
   private readonly effects: HorseEffects;
   private readonly owned: THREE.Material[] = [];
   private slope = 0;
   private disposed = false;
 
   constructor(asset: HorseAsset) {
-    this.root.name = 'ashmare';
-    this.rig.name = 'quadruped';
+    this.root.name = "ashmare";
+    this.rig.name = "quadruped";
     this.root.add(this.rig);
     this.holder.rotation.y = Math.PI;
     this.holder.scale.setScalar(GLB_HORSE_SCALE);
@@ -74,44 +89,86 @@ export class GlbHorse implements HorseVisual {
     this.model = asset.instantiate();
     this.holder.add(this.model);
     this.ashen();
-    for (const name of BONES) {
-      const b = this.model.getObjectByName(name);
-      if (!b) throw new Error(`GlbHorse: bone "${name}" not found`);
-      this.bones.set(name, b);
+    try {
+      for (const name of BONES) {
+        const b = this.model.getObjectByName(name);
+        if (!b) throw new Error(`GlbHorse: bone "${name}" not found`);
+        this.bones.set(name, b);
+      }
+      this.mixer = new THREE.AnimationMixer(this.model);
+      for (const clip of asset.clips)
+        this.actions.set(clip.name, this.mixer.clipAction(clip));
+      for (const need of ["Idle", "Walk", "WalkSlow", "Run"])
+        if (!this.actions.has(need))
+          throw new Error(`GlbHorse: clip "${need}" not found`);
+
+      const named = (name: string): THREE.Object3D => {
+        const o = new THREE.Object3D();
+        o.name = name;
+        this.rig.add(o);
+        return o;
+      };
+      this.saddle.name = "socket.saddle";
+      this.rig.add(this.saddle);
+      this.sockets = {
+        mane: named("socket.mane"),
+        head: named("socket.head"),
+        tail: named("socket.tail"),
+        collar: named("socket.collar"),
+      };
+      // The hurtbox bones: HurtboxSet finds them by these names, and their capsules are bone-local (metres, -Z along the part).
+      this.proxies = {
+        spine: named("spine"),
+        neck: named("neck"),
+        head: named("head"),
+      };
+
+      this.play("Idle", 1, 0);
+      this.mixer.update(0);
+      this.holder.updateMatrixWorld(true);
+      this.place();
+      const at = (n: BoneName): THREE.Vector3 =>
+        this.rigPoint(n, new THREE.Vector3());
+      // Chest to rump, not the feet: the slope pitch spans the body.
+      this.length = Math.abs(at("Tail1").z - at("Neck").z);
+      const neckLen = at("Neck").distanceTo(at("Head"));
+      const headLen = at("Head").distanceTo(at("Head_end"));
+      const half = Math.abs(at("Hips").z - at("Shoulders").z) / 2 + 0.1;
+      this.hurtboxDefs = [
+        {
+          name: "torso",
+          bone: "spine",
+          start: { x: 0, y: 0, z: -half },
+          end: { x: 0, y: 0, z: half },
+          radius: BODY_RADIUS,
+        },
+        {
+          name: "abdomen",
+          bone: "neck",
+          start: { x: 0, y: 0, z: 0 },
+          end: { x: 0, y: 0, z: -neckLen },
+          radius: NECK_RADIUS,
+        },
+        {
+          name: "hips",
+          bone: "head",
+          start: { x: 0, y: 0, z: 0 },
+          end: { x: 0, y: 0, z: -headLen },
+          radius: HEAD_RADIUS,
+        },
+      ];
+      this.effects = new HorseEffects(
+        this.sockets.mane,
+        this.root,
+        neckLen,
+        this.length,
+      );
+      this.reset();
+    } catch (err) {
+      // A half-built horse frees its private materials; the caller falls back to the procedural one.
+      for (const m of this.owned) m.dispose();
+      throw err;
     }
-    this.mixer = new THREE.AnimationMixer(this.model);
-    for (const clip of asset.clips) this.actions.set(clip.name, this.mixer.clipAction(clip));
-    for (const need of ['Idle', 'Walk', 'WalkSlow', 'Run']) if (!this.actions.has(need)) throw new Error(`GlbHorse: clip "${need}" not found`);
-
-    const named = (name: string): THREE.Object3D => {
-      const o = new THREE.Object3D();
-      o.name = name;
-      this.rig.add(o);
-      return o;
-    };
-    this.saddle.name = 'socket.saddle';
-    this.rig.add(this.saddle);
-    this.sockets = { mane: named('socket.mane'), head: named('socket.head'), tail: named('socket.tail'), collar: named('socket.collar') };
-    // The hurtbox bones: HurtboxSet finds them by these names, and their capsules are bone-local (metres, -Z along the part).
-    this.proxies = { spine: named('spine'), neck: named('neck'), head: named('head') };
-
-    this.play('Idle', 1, 0);
-    this.mixer.update(0);
-    this.holder.updateMatrixWorld(true);
-    this.place();
-    const at = (n: BoneName): THREE.Vector3 => this.rigPoint(n, new THREE.Vector3());
-    // Chest to rump, not the feet: the slope pitch spans the body.
-    this.length = Math.abs(at('Tail1').z - at('Neck').z);
-    const neckLen = at('Neck').distanceTo(at('Head'));
-    const headLen = at('Head').distanceTo(at('Head_end'));
-    const half = Math.abs(at('Hips').z - at('Shoulders').z) / 2 + 0.1;
-    this.hurtboxDefs = [
-      { name: 'torso', bone: 'spine', start: { x: 0, y: 0, z: -half }, end: { x: 0, y: 0, z: half }, radius: BODY_RADIUS },
-      { name: 'abdomen', bone: 'neck', start: { x: 0, y: 0, z: 0 }, end: { x: 0, y: 0, z: -neckLen }, radius: NECK_RADIUS },
-      { name: 'hips', bone: 'head', start: { x: 0, y: 0, z: 0 }, end: { x: 0, y: 0, z: -headLen }, radius: HEAD_RADIUS },
-    ];
-    this.effects = new HorseEffects(this.sockets.mane, this.root, neckLen, this.length);
-    this.reset();
   }
 
   get mode(): GaitMode {
@@ -148,14 +205,14 @@ export class GlbHorse implements HorseVisual {
   /** Re-places the saddle, sockets and hurtbox proxies on the current pose. Needs fresh world matrices. */
   private place(): void {
     const v = (n: BoneName) => this.rigPoint(n, new THREE.Vector3());
-    const torso = v('Torso');
-    const hips = v('Hips');
-    const shoulders = v('Shoulders');
-    const neck = v('Neck');
-    const head = v('Head');
-    const headEnd = v('Head_end');
-    const tailRoot = v('Tail1');
-    const tailTip = v('Tail4_end');
+    const torso = v("Torso");
+    const hips = v("Hips");
+    const shoulders = v("Shoulders");
+    const neck = v("Neck");
+    const head = v("Head");
+    const headEnd = v("Head_end");
+    const tailRoot = v("Tail1");
+    const tailTip = v("Tail4_end");
 
     this.saddle.position.set(0, torso.y + SADDLE_ABOVE_TORSO, torso.z);
     this.sockets.mane.position.lerpVectors(neck, head, 0.5).y += 0.22;
@@ -169,7 +226,10 @@ export class GlbHorse implements HorseVisual {
 
     // The torso capsule runs along the body's own -Z; it tilts with the pose (shoulders to hips).
     this.proxies.spine.position.set(0, torso.y, (hips.z + shoulders.z) / 2);
-    aimMinusZ(this.proxies.spine, _p.copy(this.proxies.spine.position).add(shoulders).sub(hips));
+    aimMinusZ(
+      this.proxies.spine,
+      _p.copy(this.proxies.spine.position).add(shoulders).sub(hips),
+    );
     this.proxies.neck.position.copy(neck);
     aimMinusZ(this.proxies.neck, head);
     this.proxies.head.position.copy(head);
@@ -192,9 +252,13 @@ export class GlbHorse implements HorseVisual {
     this.slope += (slope - this.slope) * Math.min(1, dt * 8);
     this.rig.rotation.x = this.slope;
     const mode = this.mode;
-    if (mode === 'idle') this.play('Idle', 1);
-    else if (mode === 'walk') this.play(speed < 1.4 ? 'WalkSlow' : 'Walk', THREE.MathUtils.clamp(speed / 2.4, 0.6, 1.6));
-    else this.play('Run', THREE.MathUtils.clamp(speed / 9, 0.7, 1.5));
+    if (mode === "idle") this.play("Idle", 1);
+    else if (mode === "walk")
+      this.play(
+        speed < 1.4 ? "WalkSlow" : "Walk",
+        THREE.MathUtils.clamp(speed / 2.4, 0.6, 1.6),
+      );
+    else this.play("Run", THREE.MathUtils.clamp(speed / 9, 0.7, 1.5));
     this.mixer.update(dt);
     this.rig.updateMatrixWorld(true);
     this.place();
@@ -212,7 +276,7 @@ export class GlbHorse implements HorseVisual {
     this.rig.rotation.x = 0;
     this.mixer.stopAllAction();
     this.current = null;
-    this.play('Idle', 1, 0);
+    this.play("Idle", 1, 0);
     this.mixer.update(0);
     this.root.updateMatrixWorld(true);
     this.place();

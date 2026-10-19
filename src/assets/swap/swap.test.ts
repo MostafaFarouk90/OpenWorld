@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ASSETS, validateManifest } from '../AssetManifest';
 import { fitToBox, hashPick, tile, tileLine } from './fit';
 import { ModelBatches } from './ModelBatches';
-import { ModelLibrary, type ModelSource } from './ModelLibrary';
+import { ModelLibrary, modelLibraryFor, type ModelSource } from './ModelLibrary';
 import { SWAP_ASSETS, SWAP_FIT, swapIdOf } from './swapModels';
 
 const files = new Set(Object.keys(import.meta.glob('/public/assets/**/*.{glb,gltf}')));
@@ -166,6 +166,14 @@ describe('ModelLibrary', () => {
     expect(box.min.y).toBeCloseTo(0);
     expect(box.max.y).toBeCloseTo(4);
     expect(box.getSize(new THREE.Vector3()).x).toBeCloseTo(4);
+  });
+
+  it('hands out a fresh shared library once the old one was disposed', () => {
+    const src = fakeSource();
+    const a = modelLibraryFor(src as never);
+    expect(modelLibraryFor(src as never)).toBe(a);
+    a.dispose();
+    expect(modelLibraryFor(src as never)).not.toBe(a);
   });
 
   it('does not build after dispose', async () => {
