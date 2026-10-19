@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { synthStem } from './stemSynth';
+import { STEM_PEAK, synthStem } from './stemSynth';
 import { BARLEY_AND_BRAZIER, SEVEN_GATES_ONE_DRUM, TRACKS_BY_ID, loopSamples, loopSeconds, validateTrack, type TrackDef } from './tracks';
 
 const SR = 8000;
 const T = SEVEN_GATES_ONE_DRUM;
 const L = loopSamples(T, SR);
-const PEAK_LIMIT: Record<string, number> = { kick: 0.4, snare: 0.36, hat: 0.28, bass: 0.4, vocal: 0.32, melody: 0.24, boss: 0.1 };
+const PEAK_LIMIT = STEM_PEAK;
 
 const render = (track: TrackDef): Record<string, Float32Array> =>
   Object.fromEntries(track.stems.map((id) => [id, synthStem(track, id, SR)]));

@@ -4,6 +4,7 @@ import type { GamePlugin } from '../core/plugins';
 import type { GameServices } from '../core/Services';
 import { AmbienceBed } from '../audio/AmbienceBed';
 import { InteriorFx } from '../audio/InteriorFx';
+import { MusicReverb } from '../audio/MusicReverb';
 import type { StemMixer } from '../audio/StemMixer';
 import { BarClock } from './barClock';
 import { BeatScheduler, beatInfoAt, performanceToAudioTime, type BeatInfo } from './beatClock';
@@ -90,6 +91,8 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
   let clock: BarClock | null = null;
   const beats = new BeatScheduler();
   const fx = InteriorFx.create(audio.context, audio.musicBus ?? null, audio.masterNode ?? null);
+  // One cheap shared reverb outdoors; indoors the interior's own takes over.
+  const reverb = MusicReverb.create(audio.context as never, audio.musicBus ?? null, audio.masterNode ?? null);
   const bed = AmbienceBed.create(audio.context as never, audio.masterNode ?? null);
 
   // Region handover state (design 6.1 trigger 6): the idle mixer holds the next track's stems.
@@ -190,6 +193,7 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
     // The interiors service sets its current id before `save.loaded`; never reset to outdoors blindly.
     const current = lazy('interiors')?.current ?? null;
     fx?.setInterior(current);
+    reverb?.setIndoors(current !== null);
     bed?.setInterior(current);
     pollRegion();
   });
@@ -228,10 +232,12 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
   // Interiors: one slot (contracts/interiors-and-nav.md); the same id again is a no-op.
   ev.on('interior.entered', (e) => {
     fx?.setInterior(e.interiorId);
+    reverb?.setIndoors(true);
     bed?.setInterior(e.interiorId);
   });
   ev.on('interior.exited', () => {
     fx?.setInterior(null);
+    reverb?.setIndoors(false);
     bed?.setInterior(null);
   });
 
@@ -512,6 +518,7 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
     dispose: () => {
       director.dispose();
       fx?.dispose();
+      reverb?.dispose();
       bed?.dispose();
     },
   });
@@ -569,6 +576,7 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
     loadGeneration++;
     director.dispose();
     fx?.dispose();
+    reverb?.dispose();
     bed?.dispose();
     if (audio.music.isPlaying) audio.music.stop();
     if (audio.musicNext?.isPlaying) audio.musicNext.stop();

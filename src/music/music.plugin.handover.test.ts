@@ -49,9 +49,27 @@ function makeMixer(name: string) {
 }
 const clockRef = { t: 0 };
 
-function makeNode() {
-  const param = () => ({ value: 1, cancelScheduledValues: vi.fn(), setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() });
-  return { gain: param(), frequency: param(), buffer: null as unknown, loop: false, type: '', connect: vi.fn(), disconnect: vi.fn(), start: vi.fn(), stop: vi.fn() };
+interface FakeParam {
+  value: number;
+  cancelScheduledValues: ReturnType<typeof vi.fn>;
+  setValueAtTime: ReturnType<typeof vi.fn>;
+  linearRampToValueAtTime: ReturnType<typeof vi.fn>;
+}
+interface FakeNode {
+  gain: FakeParam;
+  frequency: FakeParam;
+  Q: FakeParam;
+  delayTime: FakeParam;
+  connect: ReturnType<typeof vi.fn>;
+  disconnect: ReturnType<typeof vi.fn>;
+  [key: string]: unknown;
+}
+const madeNodes: FakeNode[] = [];
+function makeNode(): FakeNode {
+  const param = (): FakeParam => ({ value: 1, cancelScheduledValues: vi.fn(), setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() });
+  const node: FakeNode = { gain: param(), frequency: param(), Q: param(), delayTime: param(), buffer: null as unknown, loop: false, type: '', connect: vi.fn(), disconnect: vi.fn(), start: vi.fn(), stop: vi.fn() };
+  madeNodes.push(node);
+  return node;
 }
 
 type RegionAt = (x: number, z: number) => { id: string; track: string } | null;
@@ -75,6 +93,7 @@ function makeEnv(opts: { regionAt?: RegionAt; stealthActive?: boolean; chaseActi
             createGain: () => makeNode(),
       createConvolver: () => makeNode(),
       createBiquadFilter: () => makeNode(),
+      createDelay: () => makeNode(),
       createBufferSource: () => makeNode(),
     },
     get music() {
@@ -132,6 +151,7 @@ function makeEnv(opts: { regionAt?: RegionAt; stealthActive?: boolean; chaseActi
 }
 
 beforeEach(() => {
+  madeNodes.length = 0;
   vi.spyOn(console, 'info').mockImplementation(() => {});
 });
 afterEach(() => vi.restoreAllMocks());
@@ -512,5 +532,66 @@ describe('review fixes', () => {
     setupMusic(e.ctx);
     await e.start();
     expect(e.services.get('music')!.beat()!.bpm).toBe(96);
+  });
+});
+
+describe('Barley tempo is pinned at 92 BPM (the wardstone phrases are written against it)', () => {
+  it('beat() reports 92 BPM with a 2.6087 s bar, and beats arrive 60/92 s apart', async () => {
+    const e = makeEnv();
+    setupMusic(e.ctx);
+    await e.start();
+    const beat = e.services.get('music')!.beat()!;
+    expect(beat.bpm).toBe(92);
+    expect(beat.barSeconds).toBeCloseTo(240 / 92, 6);
+    expect(beat.beatSeconds).toBeCloseTo(60 / 92, 6);
+    const times: number[] = [];
+    e.services.get('music')!.onBeat((b) => times.push(b.audioTime));
+    e.tick(12);
+    expect(times.length).toBeGreaterThanOrEqual(15);
+    for (let i = 1; i < times.length; i++) expect(times[i] - times[i - 1]).toBeCloseTo(60 / 92, 6);
+  });
+
+  it('the track data keeps 92 BPM, 16 bars and the 40 s-ish loop', () => {
+    expect(BARLEY.bpm).toBe(92);
+    expect(BARLEY.bars).toBe(16);
+    expect((BARLEY.bars * 240) / BARLEY.bpm).toBeCloseTo(41.739, 3);
+  });
+});
+
+describe('shared reverb wiring', () => {
+  /** The reverb's output gain is the only fake gain node that starts at its outdoor wet level. */
+  const wetOut = () => madeNodes.find((n) => n.gain.value === 0.16 && n.delayTime.value === 1)!;
+
+  it('is built outdoors and fades out inside an interior, back in when leaving', async () => {
+    const e = makeEnv();
+    setupMusic(e.ctx);
+    await e.start();
+    const out = wetOut();
+    expect(out).toBeDefined();
+    e.events.emit('interior.entered', { interiorId: 'keep-hall' } as never);
+    expect(out.gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0, expect.any(Number));
+    e.events.emit('interior.exited', { interiorId: 'keep-hall' } as never);
+    expect(out.gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0.16, expect.any(Number));
+  });
+
+  it('save.loaded re-derives it from the interiors service, and dispose disconnects it', async () => {
+    const e = makeEnv();
+    (e.services as unknown as { provide(n: string, v: unknown): void }).provide('interiors', { current: 'archive' });
+    const down = setupMusic(e.ctx);
+    await e.start();
+    const out = wetOut();
+    e.events.emit('save.loaded', {} as never);
+    expect(out.gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0, expect.any(Number));
+    down();
+    expect(out.disconnect).toHaveBeenCalled();
+  });
+
+  it('a context without delay or filter nodes still plays music (no reverb)', async () => {
+    const e = makeEnv();
+    delete (e.audio.context as Record<string, unknown>).createDelay;
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    setupMusic(e.ctx);
+    await e.start();
+    expect(e.mixers[0].isPlaying).toBe(true);
   });
 });
