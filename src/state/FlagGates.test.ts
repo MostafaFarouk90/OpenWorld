@@ -20,8 +20,8 @@ function make() {
 describe('FlagGates.watch', () => {
   it('calls at once with the current value, cause init', () => {
     const t = make();
-    t.state.setFlag('story.slice.harrowmarkOpen', true);
-    t.gates.flag('story.slice.harrowmarkOpen', t.listener);
+    t.state.setFlag('test.gate.flag', true);
+    t.gates.flag('test.gate.flag', t.listener);
     expect(t.calls).toEqual([[true, 'init']]);
   });
 

@@ -1,9 +1,32 @@
 import type { DocumentLike, ElementLike } from './dom';
-import type { KeyLike, KeySource } from './ActContinuesCard';
 import { defaultHudT } from './strings.en';
 import { makeEl, setShown, type HudWidgetView, type Translate } from './widget';
 
+export interface KeyLike {
+  repeat?: boolean;
+  key?: string;
+  code?: string;
+}
+
+export interface KeySource {
+  addEventListener(type: 'keydown', listener: (e: KeyLike) => void): void;
+  removeEventListener(type: 'keydown', listener: (e: KeyLike) => void): void;
+}
+
 export const ACT_ENDING_ID = 'smoke-over-harrowmark';
+
+/** `actEndingCard` service: whether the card is waiting or showing (the Act 1 director holds the camp until it closes). */
+export interface ActEndingCardService {
+  active(): boolean;
+  /** Closes the card as its key would (emits `hud.actEnding.closed`); for headless runs with no key target. */
+  dismiss(): void;
+}
+
+declare module '../core/Services' {
+  interface GameServices {
+    actEndingCard: ActEndingCardService;
+  }
+}
 export const ACT_ENDING_SEEN_FLAG = 'codex.actEndingSeen';
 export const ACT_ENDING_CAMP_FLAG = 'story.d02.campSeen';
 /** Thread 6 may ship the camp-seen flag under either name; either one means the camp scene already ran. */
@@ -71,6 +94,8 @@ export class ActEndingCard implements HudWidgetView {
   }
 
   /** True while an ending is waiting or showing (a modal can hide a pending card). */
+  private gateRequested = false;
+
   get active(): boolean {
     return this.pending !== null;
   }
@@ -84,7 +109,11 @@ export class ActEndingCard implements HudWidgetView {
 
   /** `save.loaded`: the loaded save's once-flags win; a card waiting or showing is hidden if the ending was seen. */
   onLoaded(): void {
+    const fresh = this.gateRequested;
+    this.gateRequested = false;
     if (this.pending === null) return;
+    // A card the gate re-derived during this same load already checked the loaded flags (and its own show set `seen`).
+    if (fresh) return;
     if (this.safe(this.source.seen) || this.safe(this.source.campSeen)) this.hide(true);
   }
 
@@ -97,6 +126,8 @@ export class ActEndingCard implements HudWidgetView {
     if (this.pending !== null) return;
     if (this.safe(this.source.seen) || this.safe(this.source.campSeen)) return;
     this.request(ACT_ENDING_ID);
+    // The gates re-derive inside the save.loaded dispatch, before this card's onLoaded; no frame runs in between.
+    this.gateRequested = true;
   }
 
   dismiss(): void {
@@ -111,6 +142,7 @@ export class ActEndingCard implements HudWidgetView {
   }
 
   update(dt = 0): void {
+    this.gateRequested = false;
     if (this.pending === null) return;
     const blocked = this.safe(this.source.modalOpen);
     if (blocked) {

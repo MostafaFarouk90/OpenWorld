@@ -248,11 +248,10 @@ describe('region plugin, beyond Kettlewick', () => {
     plugin.dispose?.();
   });
 
-  it('raises the fog wall until M05 is complete, lowers it for a save that has finished M05, and ignores the retired flag', () => {
+  it('raises the fog wall until M05 is complete, lowers it for a save that has finished M05', () => {
     const { fc, plugin } = setup();
     plugin.setup(fc.ctx);
     expect(fc.triggers.has('trg.fog.harrowmark')).toBe(true);
-    fc.ctx.state.setFlag('story.slice.harrowmarkOpen', true);
     expect(fc.triggers.has('trg.fog.harrowmark')).toBe(true);
     fc.ctx.state.setFlag('story.m05.complete', true);
     expect(fc.triggers.has('trg.fog.harrowmark')).toBe(false);

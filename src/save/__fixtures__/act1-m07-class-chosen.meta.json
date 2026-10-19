@@ -1,0 +1,9 @@
+{
+  "fixture": "act1-m07-class-chosen.json",
+  "what": "Act 1 run B from phaseA-complete-defeated-scorched: M06 by stealth, M07 completed, the Warden chosen, its drill skipped, in the Bastion yard",
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/fixtures.gen.test.ts",
+  "generatingCommit": "26f66f302cdd1eda9b3dd75766ee131e36587482",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving",
+  "playtimeSeconds": "rounded to whole seconds",
+  "source": "the real save plugin (saveNow(\"manual\")), read back from the fake IndexedDB slot-0"
+}

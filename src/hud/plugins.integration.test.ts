@@ -13,7 +13,7 @@ import promptsPlugin from '../prompts/prompts.plugin';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 import './events';
-import { FOG_OPEN_FLAGS } from '../region/fogWall';
+import { FOG_OPEN_FLAGS, FOG_TRIGGER_ID } from '../region/fogWall';
 import hudPlugin from './hud.plugin';
 import hudSource from './hud.plugin.ts?raw';
 import mapSourcesSource from '../map/MapSources.ts?raw';
@@ -478,7 +478,7 @@ describe('slice 2 widgets and soft services', () => {
     expect(t.statuses.find((s) => s.id === 'hud')?.state).toBe('ok');
     expect(t.ctx.hud.mounted('top-center')).toContain('boss-bar');
     expect(t.ctx.hud.mounted('top-left')).toEqual(expect.arrayContaining(['status-bars', 'companion-portrait']));
-    expect(t.ctx.hud.mounted('center')).toContain('act-continues');
+    expect(t.ctx.hud.mounted('center')).not.toContain('act-continues'); // retired by thread 21
     expect(t.ctx.services.get('respecModal' as any)).toBeTruthy();
     t.run(2);
     t.ctx.hud.update(0.016);
@@ -495,7 +495,7 @@ describe('slice 2 widgets and soft services', () => {
     t.game.events.emit('companion.aura', { companionId: 'tobb', auraId: 'battle-song', active: true });
     t.game.events.emit('boss.ended', { bossId: 'ghost', actorId: 'nobody', reason: 'despawned' });
     t.game.events.emit('boss.phase', { bossId: 'ghost', phase: 2, previous: 1 });
-    t.game.events.emit('trigger.enter', { triggerId: 'trg.fog.harrowmark', actorId: 'player' });
+    t.game.events.emit('trigger.enter', { triggerId: FOG_TRIGGER_ID, actorId: 'player' });
     t.game.events.emit('save.loaded', { slot: 'x' });
     t.run(2);
     expect(() => t.ctx.hud.update(0.016)).not.toThrow();
@@ -508,7 +508,7 @@ describe('slice 2 widgets and soft services', () => {
     for (const svc of ['stealth', 'chase', 'mount', 'classes']) expect(t.ctx.services.get(svc as any)).toBeUndefined();
     expect(t.ctx.hud.mounted('top-center')).toEqual(expect.arrayContaining(['stealth-eye', 'chase-timer', 'boss-bar']));
     expect(t.ctx.hud.mounted('top-left')).toEqual(expect.arrayContaining(['status-bars', 'mount-stamina', 'class-label', 'companion-portrait']));
-    expect(t.ctx.hud.mounted('center')).toEqual(expect.arrayContaining(['act-ending-card', 'act-continues']));
+    expect(t.ctx.hud.mounted('center')).toEqual(expect.arrayContaining(['act-ending-card']));
     t.run(2);
     expect(() => t.ctx.hud.update(0.016)).not.toThrow();
     expect(t.ctx.hud.mounted('top-left')).toContain('status-bars');
@@ -570,14 +570,33 @@ describe('slice 2 widgets and soft services', () => {
     t.dispose();
   });
 
-  it('the map and the Act 1 continues card use exactly region/fogWall\'s open flags', async () => {
+  it('the map and the fog toast use exactly region/fogWall\'s open flags', async () => {
     expect(mapSourcesSource).toContain("from '../region/fogWall'");
     expect(mapSourcesSource).toContain('fogOpen(');
-    expect(hudSource).toContain("import { fogOpen } from '../region/fogWall'");
+    expect(hudSource).toMatch(/import \{[^}]*\bfogOpen\b[^}]*\} from '..\/region\/fogWall'/);
     // Neither file keeps a list or a literal flag of its own.
     expect(mapSourcesSource).not.toMatch(/story\.(m05|slice)\./);
     expect(hudSource).not.toMatch(/getBool\('story\.(m05|slice)\./);
     expect(FOG_OPEN_FLAGS.length).toBeGreaterThan(0);
+  });
+
+  it('the fog wall toasts once per session on its trigger while it stands, never once M05 is complete', async () => {
+    const t = await setup([corePlugin, hudPlugin]);
+    const toasts: string[] = [];
+    t.game.events.on('hud.toast', (e) => toasts.push(e.textKey));
+    t.game.events.emit('trigger.enter', { triggerId: 'trg.other', actorId: t.ctx.player.actor.id } as never);
+    t.game.events.emit('trigger.enter', { triggerId: FOG_TRIGGER_ID, actorId: t.ctx.player.actor.id } as never);
+    t.game.events.emit('trigger.enter', { triggerId: FOG_TRIGGER_ID, actorId: t.ctx.player.actor.id } as never);
+    expect(toasts).toEqual(['hud.fog.toast']);
+    expect(t.ctx.strings.t('hud.fog.toast')).not.toBe('hud.fog.toast');
+    t.dispose();
+    const open = await setup([corePlugin, hudPlugin]);
+    const none: string[] = [];
+    open.game.events.on('hud.toast', (e) => none.push(e.textKey));
+    open.ctx.state.setFlag('story.m05.complete', true);
+    open.game.events.emit('trigger.enter', { triggerId: FOG_TRIGGER_ID, actorId: open.ctx.player.actor.id } as never);
+    expect(none).toEqual([]);
+    open.dispose();
   });
 
   it('the noise ring mounts in the full-viewport overlay slot, not the transformed top-center slot', async () => {

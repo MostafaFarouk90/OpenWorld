@@ -1,5 +1,6 @@
 import type { ChapterHarness } from './chapterHarness';
-import type { PhaseAQuest, Trails } from './phaseA';
+import type { PhaseAQuest, QuestTrail, Trails } from './phaseA';
+import type { PhaseBQuest } from './phaseB';
 
 /**
  * Phase A play-time estimate (formula and table in src/integration/TIMING.md):
@@ -29,8 +30,16 @@ export const BEAT_S = {
   scarecrow: 30,
   /** one counted drill event on the blocking dummies (hit, parry, guard break) */
   drillEvent: 15,
-  /** the Ashen Prior, intro to outcome */
+  /** the Ashen Prior, intro to outcome; Gaffer Grimtooth likewise */
   boss: 360,
+  /** one stealth section walked (sneaking, waiting out patrols, hiding) from start to exit */
+  stealthSection: 240,
+  /** the M10 courier chase, start box to catch, one attempt */
+  chase: 150,
+  /** choosing a class at the trainer desk */
+  classChoice: 60,
+  /** the class drill (design 3: skippable, about 4 minutes; counted as played) */
+  drill: 240,
 } as const;
 
 /** A route point: an anchor, a trigger centre, or the door marker (no travel across it). */
@@ -38,7 +47,7 @@ type Point = { anchor: string } | { trigger: string } | 'DOOR';
 const A = (anchor: string): Point => ({ anchor });
 const T = (trigger: string): Point => ({ trigger });
 
-interface QuestPlan {
+export interface QuestPlan {
   design: number;
   route: Point[];
   beats: Partial<Record<keyof typeof BEAT_S, number>>;
@@ -102,8 +111,63 @@ export const PHASE_A_PLAN: Record<PhaseAQuest, QuestPlan> = {
   },
 };
 
+/**
+ * Phase B (Harrowmark), on run A's trails (src/integration/chapter.e2e.test.ts). Doors into interiors are loads (no
+ * travel across them); travel inside an interior is not counted (its rooms are small next to the city legs).
+ */
+export const PHASE_B_PLAN: Record<PhaseBQuest, QuestPlan> = {
+  m06: {
+    design: 45,
+    route: [A('npc-post.rook.gate'), A('stealth.m06.start'), A('stealth.m06.cp.inside'), A('stealth.m06.end'), A('npc-post.rook.gate')],
+    beats: { stealthSection: 1 },
+    note: 'the stealth route (the bribe and the argument skip the section)',
+  },
+  m07: {
+    design: 40,
+    route: [A('npc-post.aldith'), A('m07.thieves.1'), A('m07.satchel'), A('npc-post.aldith'), T('trg.harrowmark.bastion-yard')],
+    beats: { killUnit: 3, interact: 1, classChoice: 1, drill: 1 },
+    note: 'three cutpurses, the satchel, the class choice and its drill',
+  },
+  r03: {
+    design: 40,
+    route: [A('npc-post.aldith'), A('r03.guildhall.1'), A('r03.brewing-copper'), A('npc-post.aldith')],
+    beats: { killUnit: 3, interact: 1 },
+    note: 'three guildhall thugs and the copper',
+  },
+  r04: {
+    design: 40,
+    route: [A('npc-post.whitlock'), A('r04.page-1'), A('r04.page-2'), A('r04.page-3'), A('npc-post.whitlock')],
+    beats: { interact: 3 },
+    note: 'three pages across the city',
+  },
+  m08: {
+    design: 50,
+    route: [A('npc-post.wystan'), A('harrowmark.keep-hall.door'), 'DOOR', A('harrowmark.keep-hall.door'), A('npc-post.wystan')],
+    beats: { interact: 2 },
+    note: 'the audience is dialogue (three questions); doors in and out',
+  },
+  m09: {
+    design: 55,
+    route: [A('npc-post.merrin'), A('harrowmark.counting-house.door'), 'DOOR', A('harrowmark.counting-house.door'), A('npc-post.merrin')],
+    beats: { stealthSection: 1, interact: 5 },
+    note: 'one stealth section, three invoices, two doors',
+  },
+  m10: {
+    design: 45,
+    route: [A('npc-post.gerta.guild'), A('chase.m10.0'), 'DOOR', A('chase.m10.15'), A('npc-post.gerta.guild')],
+    beats: { chase: 1 },
+    note: 'the chase line itself is the chase beat (no travel counted along it)',
+  },
+  d02: {
+    design: 60,
+    route: [A('npc-post.rook'), A('harrowmark.underways.door'), 'DOOR', A('harrowmark.underways.door'), A('npc-post.rook')],
+    beats: { interact: 2, killUnit: 4, boss: 1 },
+    note: 'kennels (4 of 6 hounds), Grimtooth; doors in and out',
+  },
+};
+
 export interface TimingRow {
-  quest: PhaseAQuest;
+  quest: string;
   travelM: number;
   travelS: number;
   nodes: number;
@@ -117,14 +181,19 @@ export interface TimingRow {
 }
 
 export function estimateTiming(h: ChapterHarness, trails: Trails): TimingRow[] {
+  return estimateTimingFor(h, PHASE_A_PLAN, trails);
+}
+
+/** The same estimate for any plan table and the trails one run of it visited. */
+export function estimateTimingFor<Q extends string>(h: ChapterHarness, planTable: Record<Q, QuestPlan>, trails: Record<Q, QuestTrail>): TimingRow[] {
   const at = (p: Exclude<Point, 'DOOR'>): { x: number; z: number } => {
     if ('anchor' in p) return h.anchor(p.anchor);
     const c = h.triggerCentre(p.trigger);
     if (!c) throw new Error(`timing: trigger ${p.trigger} is not registered`);
     return c;
   };
-  return (Object.keys(PHASE_A_PLAN) as PhaseAQuest[]).map((quest) => {
-    const plan = PHASE_A_PLAN[quest];
+  return (Object.keys(planTable) as Q[]).map((quest) => {
+    const plan = planTable[quest];
     let travelM = 0;
     let prev: { x: number; z: number } | null = null;
     for (const p of plan.route) {

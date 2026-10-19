@@ -1,8 +1,9 @@
-// `?act1=m03|m04|m05|d01|r01|r02&new`: dev and smoke jumps to the start of a Phase A quest (see act1Jump.ts).
+// `?act1=<quest>&new`: dev and smoke jumps to the start of an Act 1 quest (ids and rules in act1Jump.ts).
 // Compiled out of production builds (import.meta.env.DEV).
 import type { GamePlugin } from '../core/plugins';
 import { createEffectRunner } from './effects';
-import { Act1Jump, parseAct1 } from './act1Jump';
+import { Act1Jump, GIVER_STAND_OFF, parseAct1 } from './act1Jump';
+import { POST_RULES, resolvePosts } from './posts';
 import type { BusPort } from './ports';
 import type { TutorialDirector } from '../tutorial/TutorialDirector';
 
@@ -34,6 +35,28 @@ const plugin: GamePlugin = {
     });
     let teleport: 'idle' | 'pending' | 'ok' = 'idle';
     let teleportTries = 0;
+    // One safe teleport in flight at a time; a refused one (busy, terrain loading) is retried on a later tick, and
+    // after TELEPORT_TRIES refusals the player is placed directly, as the tutorial's restart does.
+    const place = (pos: { x: number; y: number; z: number }, yaw: number): boolean => {
+      if (teleport === 'ok') return true;
+      if (teleport === 'pending') return false;
+      const ws = ctx.services.get('waystones');
+      if (!ws || ++teleportTries > TELEPORT_TRIES) {
+        ctx.player.teleport(pos, yaw);
+        return true;
+      }
+      teleport = 'pending';
+      void ws.safeTeleport(pos, yaw).then(
+        (o) => { teleport = o.ok ? 'ok' : 'idle'; },
+        () => { teleport = 'idle'; },
+      );
+      return false;
+    };
+    /** The NPC's post now: the quest post rules, else its layout post. */
+    const postOf = (npcId: string): string => {
+      const posts = resolvePosts(POST_RULES, { state: ctx.state, quests: quests as never });
+      return posts[npcId]?.anchorId ?? `npc-post.${npcId}`;
+    };
     const jump = new Act1Jump(parsed.id, {
       tutorial: () => (globalThis as { __tutorial?: TutorialDirector }).__tutorial,
       quests,
@@ -42,27 +65,37 @@ const plugin: GamePlugin = {
       },
       setFlag: (flag, value) => ctx.state.setFlag(flag, value),
       rekindle: (id) => void svc('waystones')?.rekindle(id, 'script'),
+      giveGold: (amount) => {
+        for (const r of runner.run([{ giveGold: amount }])) if (!r.ok) console.warn(`[act1] gold grant failed: ${r.error ?? ''}`);
+      },
+      chooseClass: (id) => {
+        const classes = svc('classes');
+        if (!classes) return false;
+        const r = classes.choose(id);
+        if (!r.ok) return false;
+        classes.skipDrill?.();
+        return true;
+      },
       teleportTo: (anchorId) => {
         const a = ctx.anchors.find(anchorId);
         if (!a) {
           console.warn(`[act1] anchor ${anchorId} missing; staying put`);
           return true;
         }
-        // One safe teleport in flight at a time; a refused one (busy, terrain loading) is retried on a later tick,
-        // and after TELEPORT_TRIES refusals the player is placed directly, as the tutorial's restart does.
-        if (teleport === 'ok') return true;
-        if (teleport === 'pending') return false;
-        const ws = ctx.services.get('waystones');
-        if (!ws || ++teleportTries > TELEPORT_TRIES) {
-          ctx.player.teleport(a.position, a.yaw);
+        return place(a.position, a.yaw);
+      },
+      standBy: (npcId) => {
+        const anchorId = postOf(npcId);
+        const a = ctx.anchors.find(anchorId);
+        if (!a) {
+          console.warn(`[act1] post ${anchorId} of ${npcId} missing; staying put`);
           return true;
         }
-        teleport = 'pending';
-        void ws.safeTeleport(a.position, a.yaw).then(
-          (o) => { teleport = o.ok ? 'ok' : 'idle'; },
-          () => { teleport = 'idle'; },
-        );
-        return false;
+        // Yaw 0 faces -Z (NpcBehavior): stand in front of the giver, turned to face them.
+        const fx = -Math.sin(a.yaw);
+        const fz = -Math.cos(a.yaw);
+        const pos = { x: a.position.x + fx * GIVER_STAND_OFF, y: a.position.y, z: a.position.z + fz * GIVER_STAND_OFF };
+        return place(pos, a.yaw + Math.PI);
       },
       ready: () => !save || !save.loading,
       warn: (m) => console.warn(`[act1] ${m}`),
