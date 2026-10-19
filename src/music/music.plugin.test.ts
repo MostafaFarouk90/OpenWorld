@@ -21,7 +21,7 @@ function fakeBuffer(len: number) {
 
 function makeNode() {
   const param = () => ({ value: 1, ramps: [] as number[], cancelScheduledValues: vi.fn(), setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(function (this: { value: number; ramps: number[] }, to: number) { this.value = to; this.ramps.push(to); }) });
-  return { gain: param(), buffer: null as unknown, connect: vi.fn(), disconnect: vi.fn() };
+  return { gain: param(), frequency: param(), Q: param(), delayTime: param(), type: '', buffer: null as unknown, connect: vi.fn(), disconnect: vi.fn() };
 }
 const busNode = makeNode();
 
@@ -54,6 +54,8 @@ function makeEnv(opts: { withAudio?: boolean; unlocked?: boolean; stemFailsFor?:
       decodeAudioData: vi.fn(async () => fakeBuffer(L)),
       createGain: () => makeNode(),
       createConvolver: () => makeNode(),
+      createDelay: () => makeNode(),
+      createBiquadFilter: () => makeNode(),
     } as Record<string, unknown> & { currentTime: number; state: string },
     musicBus: (opts.withBus ? busNode : undefined) as ReturnType<typeof makeNode> | undefined,
     masterNode: (opts.withBus ? makeNode() : undefined) as ReturnType<typeof makeNode> | undefined,

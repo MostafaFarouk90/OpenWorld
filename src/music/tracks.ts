@@ -40,10 +40,17 @@ export interface TrackSynth {
   vocalB: readonly number[];
   tuneA: readonly TuneNote[];
   tuneB: readonly TuneNote[];
+  /** Root scale degree of the chord under each bar (four bars, repeated); defaults to `bassA` / `bassB`. */
+  chordA?: readonly number[];
+  chordB?: readonly number[];
+  /** How far the off-beat sixteenths lag, as a fraction of a step (0 straight, 0.2 a lilt). */
+  swing?: number;
+  /** Peak timing looseness in seconds on off-beat hits (downbeats stay put); default 0.005. */
+  jitter?: number;
   voices: {
     snare: 'snap' | 'rimshot';
     vocal: 'hum' | 'throat-chant';
-    melody: 'whistle' | 'trumpet';
+    melody: 'flute' | 'trumpet';
     boss: 'tolling-gong' | 'steam-anvil';
   };
 }
@@ -69,8 +76,9 @@ export const BARLEY_SYNTH: TrackSynth = {
   ],
   tonic: 146.83,
   scale: [0, 2, 3, 5, 7, 8, 10],
-  bassA: [0, 0, 5, 4],
-  bassB: [0, 2, 5, 4],
+  // The pad and the lute follow the bass roots: Dm, Bb, Am, Bb then Dm, Gm, Bb, Am.
+  bassA: [0, 5, 4, 5],
+  bassB: [0, 3, 5, 4],
   vocalA: [0, 0, 2, 0],
   vocalB: [0, 4, 2, 0],
   tuneA: [
@@ -81,7 +89,8 @@ export const BARLEY_SYNTH: TrackSynth = {
     [11, 2], [10, 1], [9, 1], [8, 2], [7, 2], [9, 3], [8, 1], [7, 4],
     [4, 1], [5, 1], [6, 2], [7, 2], [9, 2], [8, 2], [6, 2], [7, 4],
   ],
-  voices: { snare: 'snap', vocal: 'hum', melody: 'whistle', boss: 'tolling-gong' },
+  swing: 0.14,
+  voices: { snare: 'snap', vocal: 'hum', melody: 'flute', boss: 'tolling-gong' },
 };
 
 /** "Barley and Brazier", Brightwater Fields (design 6.3). */
@@ -91,21 +100,21 @@ export const BARLEY_AND_BRAZIER: TrackDef = {
   bars: 16,
   stems: ['kick', 'snare', 'hat', 'bass', 'vocal', 'melody', 'boss'],
   mixes: {
-    explore: mix(0, 0, 0.15, 0.6, 0.3, 0, 0),
-    discover: mix(0, 0, 0.15, 0.6, 0.3, 0.9, 0),
+    explore: mix(0, 0, 0.12, 0.6, 0.65, 0, 0),
+    discover: mix(0, 0, 0.12, 0.6, 0.65, 0.6, 0),
     silence: mix(0, 0, 0, 0, 0, 0, 0),
     combat: mix(1, 0.9, 0.8, 1, 0.9, 0.35, 0),
     boss: mix(1, 1, 1, 1, 1, 0.7, 1),
-    ending: mix(0, 0, 0, 0.4, 0, 1, 0),
-    talk: mix(0, 0, 0, 0.5, 0, 0.5, 0),
+    ending: mix(0, 0, 0, 0.4, 0.3, 0.8, 0),
+    talk: mix(0, 0, 0, 0.6, 0.45, 0.5, 0),
     // Slice 2 phase B (this thread's reading; not in design 6.1). Alert overlays are in `stealthAlert`.
-    stealth: mix(0, 0, 0.1, 0.5, 0.2, 0, 0),
+    stealth: mix(0, 0, 0.1, 0.6, 0.5, 0, 0),
     chase: mix(1, 0.6, 1, 0.9, 0.5, 0.2, 0),
   },
   synth: BARLEY_SYNTH,
   stealthAlert: {
-    suspicious: mix(0.15, 0, 0.1, 0.5, 0.2, 0, 0),
-    alerted: mix(0.3, 0.1, 0.1, 0.5, 0.2, 0, 0),
+    suspicious: mix(0.15, 0, 0.1, 0.6, 0.5, 0, 0),
+    alerted: mix(0.3, 0.1, 0.1, 0.6, 0.5, 0, 0),
   },
   bossMixes: {
     // Design 6.1 trigger 3: phase 2 and 3 re-ramp the same seven stems (hat, boss and melody lift).
@@ -135,12 +144,12 @@ export const SEVEN_GATES_ONE_DRUM: TrackDef = {
     boss: mix(1, 1, 1, 1, 1, 0.7, 1),
     ending: mix(0, 0, 0, 0.4, 0, 1, 0),
     talk: mix(0, 0, 0, 0.5, 0, 0.5, 0),
-    stealth: mix(0, 0, 0.1, 0.5, 0.2, 0, 0),
+    stealth: mix(0, 0, 0.1, 0.6, 0.3, 0, 0),
     chase: mix(1, 0.6, 1, 0.9, 0.5, 0.2, 0),
   },
   stealthAlert: {
-    suspicious: mix(0.15, 0, 0.1, 0.5, 0.2, 0, 0),
-    alerted: mix(0.3, 0.1, 0.1, 0.5, 0.2, 0, 0),
+    suspicious: mix(0.15, 0, 0.1, 0.6, 0.3, 0, 0),
+    alerted: mix(0.3, 0.1, 0.1, 0.6, 0.3, 0, 0),
   },
   bossMixes: {
     'gaffer-grimtooth': {
