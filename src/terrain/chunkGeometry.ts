@@ -95,18 +95,14 @@ export function buildChunkIndices(segments: number): Uint16Array | Uint32Array {
 }
 
 /** Placeholder ground palette by height and steepness (normal.y), until real materials land. */
-function surfaceColor(height: number, up: number, out: Float32Array, o: number): void {
+export function surfaceColor(height: number, up: number, out: Float32Array, o: number): void {
   let r: number;
   let g: number;
   let b: number;
-  if (height < 2) {
-    // Shore sand.
-    r = 0.62;
-    g = 0.55;
-    b = 0.38;
-  } else if (height < 140) {
-    // Meadow grass, drying slightly with altitude.
-    const t = height / 140;
+  if (height < 140) {
+    // Meadow grass, drying slightly with altitude. Low ground is grass too: the spawn meadow sits at exactly 0 and
+    // there is no sea, so a sand band by height painted the whole tutorial meadow (and the brook's valley) beige.
+    const t = Math.max(height, 0) / 140;
     r = 0.2 + 0.1 * t;
     g = 0.36 + 0.02 * t;
     b = 0.12 + 0.04 * t;
