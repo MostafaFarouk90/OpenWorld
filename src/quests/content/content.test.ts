@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { questDefs } from './index';
+import { t12 } from './t12.quest';
+import { BEATS } from '../../tutorial/beats';
+import { stepRequired } from '../../tutorial/goals';
+import { TUTORIAL_QUESTS } from '../../tutorial/quests';
 import { questStrings } from '../strings.en';
 import { dialogueStrings, npcNameFallbackStrings } from '../../dialogue/strings.en';
 import { dialogueDefs } from '../../dialogue/content';
@@ -92,17 +96,108 @@ function play(w: ReturnType<typeof world>, id: string, npc: string, pick: (node:
   return texts;
 }
 
-describe('t12 journal objective', () => {
-  it('opening the journal credits only once the director sets tutorial.t12.kit', () => {
+describe('t12 kit and journal objectives', () => {
+  const goal = (w: ReturnType<typeof world>, step = 0, beatId = 't12') => w.bus.emit('tutorial.goal', { beatId, step });
+  const kitDef = t12.objectives[0];
+
+  it('counts the kit step first (required equals the step), then the journal', () => {
+    expect(t12.objectives.map((o) => o.id)).toEqual(['kit', 'o1']);
+    expect(kitDef.required).toBe(stepRequired(BEATS.t12.steps[0]));
+    expect(kitDef.required).toBe(3);
+    expect(t12.sequential).toBe(true);
     const w = world('banked');
     expect(w.qm.start('t12')).toBe(true);
+    // wrong beat or step earns nothing
+    goal(w, 0, 't13');
+    goal(w, 1);
+    expect(w.qm.objectives('t12')[0].progress).toBe(0);
+    goal(w);
+    goal(w);
+    expect(w.qm.objectives('t12')[0].progress).toBe(2);
+    goal(w);
+    expect(w.qm.objectives('t12')[0].done).toBe(true);
+    expect(w.qm.state('t12')).toBe('active');
+  });
+
+  it('opening the journal credits only after the kit objective and once the director sets tutorial.t12.kit', () => {
+    const w = world('banked');
+    expect(w.qm.start('t12')).toBe(true);
+    w.flags.set('tutorial.t12.kit', true);
+    w.bus.emit('flag.changed', { key: 'tutorial.t12.kit', value: true, previous: undefined });
+    w.bus.emit('interact', { interactableId: 'use:t12-journal-open' });
+    expect(w.qm.state('t12')).toBe('active'); // kit not done yet
+    goal(w); goal(w); goal(w);
+    w.bus.emit('interact', { interactableId: 'use:t12-journal-open' });
+    expect(w.qm.state('t12')).toBe('completed');
+    expect(w.qm.state('m01')).toBe('active');
+  });
+
+  it('the journal gate still holds the press back until the flag is set', () => {
+    const w = world('banked');
+    w.qm.start('t12');
+    goal(w); goal(w); goal(w);
     w.bus.emit('interact', { interactableId: 'use:t12-journal-open' });
     expect(w.qm.state('t12')).toBe('active');
     w.flags.set('tutorial.t12.kit', true);
     w.bus.emit('flag.changed', { key: 'tutorial.t12.kit', value: true, previous: undefined });
     w.bus.emit('interact', { interactableId: 'use:t12-journal-open' });
     expect(w.qm.state('t12')).toBe('completed');
-    expect(w.qm.state('m01')).toBe('active');
+  });
+
+  it('a save made before the kit objective existed (journal only) loads without errors, and kitDone unblocks it', () => {
+    const w = world('banked');
+    w.qm.load({ quests: { t12: { state: 'active', objectives: { o1: 0 } } } });
+    expect(w.qm.state('t12')).toBe('active');
+    w.flags.set('tutorial.t12.kit', true);
+    w.flags.set('tutorial.t12.kitDone', true);
+    w.qm.recheck();
+    expect(w.qm.objectives('t12')[0].done).toBe(true);
+    w.bus.emit('interact', { interactableId: 'use:t12-journal-open' });
+    expect(w.qm.state('t12')).toBe('completed');
+  });
+});
+
+describe('Knighting Day dialogue roots', () => {
+  const gautBeats = ['t01', 't02', 't03', 't04', 't05', 't06', 't07', 't08', 't09', 't10', 't11', 't12', 't13', 't14', 't15', 't-skirmish'];
+
+  it('Gaut repeats the goal of whichever beat is active, ahead of the M01 briefing', () => {
+    for (const q of gautBeats) {
+      const w = world('banked');
+      for (const d of TUTORIAL_QUESTS) w.qm.register(d);
+      w.qm.start(q);
+      if (q === 't15') w.qm.start('m01'); // M01 is already active during T13 to T15
+      expect(play(w, 'npc-gaut', 'gaut'), q).toEqual([`tut-${q}`]);
+    }
+  });
+
+  it('Gaut falls back to his usual lines when no beat is active', () => {
+    const w = world('banked');
+    for (const d of TUTORIAL_QUESTS) w.qm.register(d);
+    expect(play(w, 'npc-gaut', 'gaut')).toEqual(['idle-banked']);
+  });
+
+  it('Hob teaches fast travel in three lines during T14, then reminds', () => {
+    const w = world('banked');
+    for (const d of TUTORIAL_QUESTS) w.qm.register(d);
+    w.qm.start('t14');
+    expect(play(w, 'npc-hob', 'hob')).toEqual(['travel', 'travel2', 'travel3']);
+    w.qm.complete('t14');
+    expect(play(w, 'npc-hob', 'hob')).toEqual(['idle']);
+    const text = ['travel', 'travel2', 'travel3'].map((n) => all[`dialogue.npc-hob.${n}`]).join(' ');
+    expect(text).toMatch(/rekindle/);
+    expect(text).toMatch(/map/);
+    expect(text).toMatch(/waystone|stone/);
+    // Keys are remappable, so dialogue never names one (review M5).
+    const gaut = Object.entries(all).filter(([k]) => k.startsWith('dialogue.npc-gaut.tut-') || k.startsWith('dialogue.npc-hob.'));
+    for (const [k, v] of gaut) expect(v, k).not.toMatch(/\b(Press|Hold [A-Z]\b|Shift|Space|Tab|Ctrl|right mouse|with [A-Z0-9]\b)/);
+  });
+
+  it('a marker quest left active after the run ended does not hold Gaut on tutorial lines (review m6)', () => {
+    const w = world('banked');
+    for (const d of TUTORIAL_QUESTS) w.qm.register(d);
+    w.qm.start('t14');
+    w.flags.set('tutorial.complete', true);
+    expect(play(w, 'npc-gaut', 'gaut')).not.toEqual(['tut-t14']);
   });
 });
 

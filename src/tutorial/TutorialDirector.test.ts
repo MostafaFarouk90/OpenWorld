@@ -199,6 +199,27 @@ class FakeWorld implements DirectorPorts {
   recordCompletion() {
     this.completions++;
   }
+  goals: string[] = [];
+  /** What the fake quest tracker holds per `beat.step`; unset means the quest has no step objective. */
+  tracked = new Map<string, number>();
+  trackedUnits(beat: BeatId, step: number) {
+    return this.tracked.get(`${beat}.${step}`) ?? null;
+  }
+  goalProgress(beat: BeatId, step: number, delta: number) {
+    for (let i = 0; i < delta; i++) this.goals.push(`${beat}.${step}`);
+  }
+  stepTicks: string[] = [];
+  stepDone(beat: BeatId, step: number) {
+    this.stepTicks.push(`${beat}.${step}`);
+  }
+  beatsDone: string[] = [];
+  beatDone(beat: BeatId) {
+    this.beatsDone.push(beat);
+  }
+  successes: string[] = [];
+  promptSuccess(m: string) {
+    this.successes.push(m);
+  }
 }
 
 const data = {
@@ -698,10 +719,13 @@ describe('failure: Second Wind then beat restart', () => {
     expect(last.healthScale).toBe(0.5);
     expect(w.health).toBe(1);
     expect(w.charges.at(-1)).toBe(1);
-    // Counters start again.
-    ev({ type: 'blocked' });
+    // The block earned before the failure is kept (review 21), so two more pass the step, and the
+    // tracker counted exactly three: it never goes backwards or double counts.
     ev({ type: 'blocked' });
     expect(d.currentStep).toBe(0);
+    ev({ type: 'blocked' });
+    expect(d.currentStep).toBe(1);
+    expect(w.goals.filter((g) => g === 't09.0')).toHaveLength(3);
   });
 
   it('three lethal hits during the fade cause one restart', async () => {
@@ -1263,4 +1287,106 @@ describe('review fixes', () => {
       .pop();
     expect(gaut[0]).toBe(`place:gaut@${expected}`);
   });
+});
+
+describe('clarity review fixes', () => {
+  it('a skirmish restart in its last step respawns only the wave that step still needs (review M3)', async () => {
+    d.begin('veteran');
+    passUntil('skirmish');
+    ev({ type: 'dodged' });
+    ev({ type: 'groupCleared', spawnerId: 't08.lane' });
+    ev({ type: 'groupCleared', spawnerId: 't10.sweeper' });
+    expect(d.currentStep).toBe(2);
+    expect(d.onLethal()).toBe(true); // Second Wind
+    expect(d.onLethal()).toBe(true); // restart
+    const before = w.spawned.length;
+    tick();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(d.beat).toBe('skirmish');
+    expect(d.currentStep).toBe(2);
+    const respawned = w.spawned.slice(before).map((s) => s.spawnerId);
+    expect(respawned).toEqual(expect.arrayContaining(['t09.soldier', 't11.square']));
+    expect(respawned).not.toContain('t08.lane');
+    expect(respawned).not.toContain('t10.sweeper');
+  });
+
+  it('skirmish counts: the tracker gets one unit per step goal (review 24)', () => {
+    d.begin('veteran');
+    passUntil('skirmish');
+    ev({ type: 'dodged' });
+    ev({ type: 'groupCleared', spawnerId: 't08.lane' });
+    ev({ type: 'groupCleared', spawnerId: 't10.sweeper' });
+    ev({ type: 'groupCleared', spawnerId: 't09.soldier' });
+    ev({ type: 'groupCleared', spawnerId: 't11.square' });
+    expect(d.beat).toBe('t12');
+    expect(w.goals.filter((g) => g.startsWith('skirmish.'))).toEqual(['skirmish.0', 'skirmish.1', 'skirmish.2']);
+  });
+
+  it('T06 calls "Again!" once, after the first sprint', () => {
+    d.begin('full');
+    passUntil('t06');
+    for (let seg = 0; seg < 2; seg++) {
+      for (let i = 0; i < 90; i++) {
+        feet = { x: feet.x + 0.5, y: 0, z: 0 };
+        tick(1, { sprinting: true, moving: true });
+      }
+      tick(1, { sprinting: false });
+      expect(w.calls.filter((c) => c === 'line:tutorial.line.t06.again')).toHaveLength(1);
+    }
+  });
+
+  it('a reload sends the tracker what an old save lacks, so the step objectives fill (review B1)', () => {
+    d.begin('full');
+    passUntil('t09');
+    ev({ type: 'blocked' });
+    const save = d.serialize();
+    const w2 = new FakeWorld();
+    w2.tracked.set('t09.0', 0); // an old save: the quest has the step objective but counted nothing
+    w = w2;
+    d = new TutorialDirector(w2, data);
+    d.load(save);
+    d.onSaveLoaded();
+    tick();
+    expect(w2.goals.filter((g) => g === 't09.0')).toHaveLength(1);
+    ev({ type: 'blocked' });
+    ev({ type: 'blocked' });
+    expect(w2.goals.filter((g) => g === 't09.0')).toHaveLength(3);
+  });
+
+  it('a reload whose tracker already agrees sends nothing, and beats finish with one beatDone each', () => {
+    d.begin('full');
+    passUntil('t09');
+    ev({ type: 'blocked' });
+    const save = d.serialize();
+    const w2 = new FakeWorld();
+    w2.tracked.set('t09.0', 1);
+    w = w2;
+    d = new TutorialDirector(w2, data);
+    d.load(save);
+    d.onSaveLoaded();
+    tick();
+    expect(w2.goals).toEqual([]);
+    expect(w2.beatsDone).toEqual([]);
+    passUntil(null);
+    expect(new Set(w2.beatsDone).size).toBe(w2.beatsDone.length);
+  });
+
+  it('currentTarget is null during the crack and during a restart, and follows the step otherwise', async () => {
+    d.begin('full', 't05');
+    expect(d.currentTarget()).toBeNull();
+    d = new TutorialDirector((w = new FakeWorld()), data);
+    d.begin('full', 't07');
+    expect(d.currentTarget()).toBe('lane.cart');
+    ev({ type: 'trigger', id: 'trg.t07.cart' });
+    expect(d.currentTarget()).toBe('lane.fence');
+    d = new TutorialDirector((w = new FakeWorld()), data);
+    d.begin('full', 't09');
+    w.autoFade = false;
+    d.onLethal();
+    d.onLethal();
+    expect(d.restartInFlight).toBe(true);
+    expect(d.currentTarget()).toBeNull();
+  });
+
 });

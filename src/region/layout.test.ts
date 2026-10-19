@@ -92,8 +92,8 @@ describe('resolveLayout', () => {
   it('computes absolute heights from the terrain plus dy', () => {
     const banner = resolved.anchors.find((a) => a.id === 'chapel.banner-1')!;
     const spec = BRIGHTWATER_LAYOUT.anchors.find((a) => a.id === 'chapel.banner-1')!;
-    expect(spec.dy).toBe(5);
-    expect(banner.position.y).toBe(heightAt(spec.x, spec.z) + 5);
+    expect(spec.dy).toBe(7.6);
+    expect(banner.position.y).toBe(heightAt(spec.x, spec.z) + 7.6);
     const north = resolved.anchors.find((a) => a.id === 'waystone.north')!;
     expect(north.position.y).toBe(heightAt(10, 310));
     expect(north.position.y).not.toBe(0);

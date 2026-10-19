@@ -1,4 +1,6 @@
 import type { GamePlugin } from '../core/plugins';
+import { withTutorialLead } from './tutorialLead';
+import '../tutorial/service';
 import { heightAt } from '../terrain/heightfield';
 import '../waystones/service';
 import '../quests/service';
@@ -110,7 +112,7 @@ const map: GamePlugin = {
           poi: sources.posts((x, z) => fog.isRevealed(x, z)),
           shrines: sources.litShrines(),
           fog: sources.fogWall(),
-          quest: currentLeads(),
+          quest: withTutorialLead(currentLeads(), ctx.services.get('tutorial')),
         }),
       forge: () => sources.forge(),
       legend: () => sources.legend(ctx.player.feet.x, ctx.player.feet.z),

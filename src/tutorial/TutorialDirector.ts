@@ -11,7 +11,10 @@ import type {
   TutorialMode,
 } from './types';
 import { BEAT_IDS } from './types';
+import { goalRequired, goalUnits } from './goals';
 
+/** Set once the T12 kit step (equip and drink) is done; the t12 quest's kit objective reads it. */
+const KIT_DONE_FLAG = 'tutorial.t12.kitDone';
 /** Seconds the T05 crack plays before the wraiths rise. */
 export const CRACK_SECONDS = 2.5;
 /** Seconds the director retries `dialogue.start` at the kneel before giving up (review change 13). */
@@ -26,6 +29,8 @@ const SPAWN_RETRY_INTERVAL = 0.5;
 export const RESTART_HEALTH_SCALE = 0.5;
 /** A Replay drill left running this long ends by itself (an abandoned drill must not keep kill XP paused). */
 export const DRILL_SECONDS = 180;
+/** A turn of the view this large counts as one success of the look prompt. */
+export const LOOK_SUCCESS_RADIANS = 0.5;
 
 const KIT: { itemId: string; count: number }[] = [
   { itemId: 'squires-arming-sword', count: 1 },
@@ -102,6 +107,10 @@ export class TutorialDirector {
   /** Bumped on load and dispose so a restart fade that resolves later does nothing. */
   private generation = 0;
   private disposed = false;
+  /** Tracker units already reported per goal of the current beat (`tutorial.goal`). */
+  private units: number[][] = [];
+  private wasMoving = false;
+  private lookRef: { x: number; y: number; z: number } | null = null;
 
   constructor(
     private readonly ports: DirectorPorts,
@@ -138,6 +147,12 @@ export class TutorialDirector {
       if (!g.done && g.spec.kind === 'gaze') return g.detail();
     }
     return null;
+  }
+  /** The anchor the objective beacon marks now, or null (fights, cutscenes, drills, done). */
+  currentTarget(): string | null {
+    if (this.s.complete || this.drill || !this.s.beat || this.crackLeft > 0 || this.restartInFlight || this.pendingLoad) return null;
+    if (this.vowRetryLeft >= 0) return null;
+    return this.def().targets?.[this.step] ?? null;
   }
   snapshot(): DirectorSave {
     this.captureProgress();
@@ -295,6 +310,8 @@ export class TutorialDirector {
       return true;
     }
     if (this.s.complete || !this.s.beat) return false;
+    // A restart keeps the goals already earned (review 21): the tracker never goes backwards.
+    this.captureProgress();
     this.restartPending = true;
     for (const w of this.def().waves ?? []) for (const sp of w) this.ports.despawn(sp.spawnerId);
     this.ports.cutscene(null);
@@ -359,9 +376,27 @@ export class TutorialDirector {
     }
     if (id === 't12') this.tickSmoke();
     this.tickRetries(sample.dt);
+    this.tickPromptSuccess(sample);
 
     this.tickSteps(this.steps, this.step, sample);
     this.advance();
+  }
+
+  /** Move and look have no verb event: count a start of walking and a real turn of the view (review 13). */
+  private tickPromptSuccess(sample: TickSample): void {
+    if (sample.moving && !this.wasMoving) this.ports.promptSuccess('move');
+    this.wasMoving = sample.moving;
+    const f = sample.camera?.forward;
+    if (!f) return;
+    if (!this.lookRef) {
+      this.lookRef = { ...f };
+      return;
+    }
+    const dot = f.x * this.lookRef.x + f.y * this.lookRef.y + f.z * this.lookRef.z;
+    if (dot < Math.cos(LOOK_SUCCESS_RADIANS)) {
+      this.ports.promptSuccess('look');
+      this.lookRef = { ...f };
+    }
   }
 
   onEvent(e: DirectorEvent): void {
@@ -484,7 +519,6 @@ export class TutorialDirector {
     this.leaveBeat();
     this.s.beat = id;
     if (mode === 'fresh' || mode === 'jump') this.s.progress = {};
-    if (mode === 'restart') this.s.progress = {};
     this.healthScale = mode === 'restart' ? RESTART_HEALTH_SCALE : 1;
     if (mode === 'fresh' || mode === 'jump') this.ports.emitBeat(id, 'started');
 
@@ -502,13 +536,19 @@ export class TutorialDirector {
     this.steps = def.steps.map((st) => st.map((spec) => this.data.createGoal(spec)));
     this.step = Math.max(0, Math.min(this.s.progress['step'] ?? 0, this.steps.length));
     this.wavesSpawned = 0;
+    // A restarted beat respawns its enemies, so its "cleared" goals start over; the rest is kept.
     this.steps.forEach((st, si) =>
       st.forEach((g, gi) => {
         const p = this.s.progress[`${si}.${gi}`];
-        if (p !== undefined) g.restore(p);
-        g.sync(this.ports.state);
+        if (p !== undefined && !(mode === 'restart' && g.spec.kind === 'cleared')) g.restore(p);
       }),
     );
+    // What the tracker already counted (a fresh beat counted nothing); state synced below is new credit.
+    this.units = this.steps.map((st, si) =>
+      st.map((g, gi) => (si < this.step ? goalRequired(g.spec) : this.s.progress[`${si}.${gi}`] === undefined ? 0 : goalUnits(g.spec, g.progress, g.done))),
+    );
+    if (mode === 'reload') this.reconcileTracker(id);
+    for (const st of this.steps) for (const g of st) g.sync(this.ports.state);
 
     this.beatSetup(id, mode);
     this.showPrompts(def);
@@ -550,13 +590,18 @@ export class TutorialDirector {
       } else if (mode !== 'fresh' && !this.consumeDone() && !this.ports.hasConsumable()) {
         this.ports.grantItems('tutorial:t12.refill', [{ itemId: 'healing-flask', count: 1 }]);
       }
-      if (this.kitStepDone()) this.ports.setFlag('tutorial.t12.kit', true);
+      if (this.kitStepDone()) {
+        this.ports.setFlag('tutorial.t12.kit', true);
+        this.ports.setFlag(KIT_DONE_FLAG, true);
+      }
       this.smokeTicks = this.consumeDone() ? 0 : SMOKE_RETRY_TICKS;
     }
     if (id === 't13' && this.ports.level() < 2) this.ports.grantLevelTwo();
   }
 
   private leaveBeat(): void {
+    this.units = [];
+    this.lookRef = null;
     this.steps = [];
     this.step = 0;
     this.wavesSpawned = 0;
@@ -620,6 +665,7 @@ export class TutorialDirector {
     if (!this.s.finished.includes(id)) this.s.finished.push(id);
     this.ports.hidePrompts();
     this.ports.emitBeat(id, how);
+    if (how === 'completed') this.ports.beatDone(id);
     const order = this.order();
     const next = order[order.indexOf(id) + 1];
     this.s.progress = {};
@@ -657,9 +703,12 @@ export class TutorialDirector {
     while (this.step < this.steps.length && guard++ < 32) {
       const current = this.steps[this.step];
       this.seedTriggers(current);
+      this.reportUnits(id, this.step, false);
       if (!current.every((g) => this.satisfied(g))) break;
+      this.reportUnits(id, this.step, true);
       this.onStepDone(id, this.step);
       if (this.s.beat !== id) return;
+      if (this.step < this.steps.length - 1) this.ports.stepDone(id, this.step);
       this.step++;
       // Re-read state for goals met while an earlier step was current (review M3: T14 lit).
       for (const g of this.steps[this.step] ?? []) g.sync(this.ports.state);
@@ -668,6 +717,40 @@ export class TutorialDirector {
       this.showPrompts(this.def());
     }
     if (this.step >= this.steps.length && this.vowRetryLeft < 0) this.finishBeat('completed');
+  }
+
+  /**
+   * After a load the tracker may hold less than the director restored (a save from before step objectives
+   * existed holds none): send the difference, so the quest's step objectives fill when the steps do (review B1).
+   */
+  private reconcileTracker(id: BeatId): void {
+    for (let si = 0; si <= this.step && si < this.steps.length; si++) {
+      const tracked = this.ports.trackedUnits(id, si);
+      if (tracked === null) continue;
+      const own = this.units[si].reduce((a, b) => a + b, 0);
+      if (own > tracked) this.ports.goalProgress(id, si, own - tracked);
+    }
+  }
+
+  /** Reports newly earned tracker units of a step; `complete` tops every goal up to its required count. */
+  private reportUnits(id: BeatId, step: number, complete: boolean): void {
+    const goals = this.steps[step];
+    const seen = this.units[step];
+    if (!goals || !seen) return;
+    let delta = 0;
+    goals.forEach((g, gi) => {
+      // A learned passive passes T13 but its quest waits for the first trigger (skillTriggered completes it; review M1).
+      if (complete && g.spec.kind === 'skill' && !g.done) return;
+      const u = complete ? goalRequired(g.spec) : goalUnits(g.spec, g.progress, g.done);
+      if (u > seen[gi]) {
+        delta += u - seen[gi];
+        seen[gi] = u;
+      }
+    });
+    if (delta <= 0) return;
+    this.ports.goalProgress(id, step, delta);
+    // T06: Gaut calls for the second run once the first one counts (coordinator ruling: "Again!").
+    if (id === 't06' && step === 0 && !complete && seen.reduce((a, b) => a + b, 0) === 1) this.ports.showLine('tutorial.line.t06.again');
   }
 
   /**
@@ -684,6 +767,8 @@ export class TutorialDirector {
 
   private onStepDone(id: BeatId, step: number): void {
     const current = this.steps[step];
+    // The t12 quest's kit objective is done by this flag too, so a save after the kit step never waits on it.
+    if (id === 't12' && current.some((g) => g.spec.kind === 'consume')) this.ports.setFlag(KIT_DONE_FLAG, true);
     if (current.some((g) => g.spec.kind === 'interact' && g.spec.id.startsWith('kneel:'))) {
       this.ports.cutscene('knighting');
       this.kneelStep = step;
@@ -708,9 +793,18 @@ export class TutorialDirector {
     return this.def().waveSteps?.[i] ?? i;
   }
 
+  /** Waves up to this step that a goal from this step on still needs cleared (a restart or reload keeps the step; review M3). */
   private spawnWavesUpTo(step: number): void {
     const waves = this.def().waves ?? [];
-    for (let i = 0; i < waves.length; i++) if (this.waveStep(i) <= step) this.spawnWave(i);
+    for (let i = 0; i < waves.length; i++) if (this.waveStep(i) <= step && this.waveNeeded(i, step)) this.spawnWave(i);
+  }
+
+  private waveNeeded(i: number, step: number): boolean {
+    const ids = new Set(this.def().waves![i].map((sp) => sp.spawnerId));
+    const clearedBy = (from: number) =>
+      this.steps.slice(from).some((st) => st.some((g) => g.spec.kind === 'cleared' && g.spec.spawnerIds.some((s) => ids.has(s))));
+    // A wave no goal clears (a T10-style hazard) belongs to its own step only.
+    return clearedBy(step) || (!clearedBy(0) && this.waveStep(i) === step);
   }
 
   private spawnWavesFor(step: number): void {
@@ -789,6 +883,7 @@ export class TutorialDirector {
   private showPrompts(def: BeatDef): void {
     this.ports.hidePrompts();
     for (const p of def.prompts ?? []) {
+      if (p.step !== undefined && p.step !== this.step) continue;
       if (def.id === 'skirmish' && this.ports.promptCount(p.mechanic) > 0) continue;
       if (def.id === 't12' && p.mechanic === 'journal' && !this.kitStepDone()) continue;
       this.ports.showPrompt(p);
@@ -882,6 +977,7 @@ export class TutorialDirector {
         this.ports.equip('squires-arming-sword');
         this.ports.equip('gauts-spare-tabard');
         this.ports.setFlag('tutorial.t12.kit', true);
+        this.ports.setFlag(KIT_DONE_FLAG, true);
         break;
       case 't13':
         if (this.ports.level() < 2) this.ports.grantLevelTwo();

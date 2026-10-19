@@ -58,4 +58,17 @@ describe('NextUnlock with a point to spend', () => {
     });
     expect(n.label()).toBe('Spend your skill point: Shield Rim Bash');
   });
+
+  it('shows the gold numeral only while skill points are available', () => {
+    const { w, state } = make({ kind: 'none' }, 0);
+    const num = w.element.children[2]!;
+    expect(num.style.display).toBe('none');
+    state.points = 1;
+    w.update();
+    expect(num.style.display).not.toBe('none');
+    expect(num.textContent).toBe('1');
+    state.points = 0;
+    w.update();
+    expect(num.style.display).toBe('none');
+  });
 });

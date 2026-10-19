@@ -18,6 +18,7 @@ export const questStrings: Record<string, string> = {
 
   'quest.t12.title': 'Gear Up',
   'quest.t12.summary': 'Edda has set out what Sir Gaut left for you. Dress for the road and learn your journal.',
+  'quest.t12.kit': 'Equip the sword and tabard, then drink a flask',
   'quest.t12.o1': 'Open your quest log',
 
   'quest.m01.title': 'Ash on the Wind',

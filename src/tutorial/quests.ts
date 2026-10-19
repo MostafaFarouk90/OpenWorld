@@ -1,14 +1,31 @@
-import type { QuestDef } from '../quests/types';
+import type { ObjectiveDef, QuestDef } from '../quests/types';
+import { BEATS } from './beats';
+import { stepRequired } from './goals';
+import type { BeatId } from './types';
+
+/** The `tutorial.goal` objective of one beat step (the director emits one event per earned unit). */
+export function stepObjective(beat: BeatId, step: number, textKey: string = `tutorial.${beat}.o${step + 1}`): ObjectiveDef {
+  return {
+    id: `o${step + 1}`,
+    type: 'event',
+    target: 'tutorial.goal',
+    match: { beatId: beat, step },
+    required: stepRequired(BEATS[beat].steps[step]),
+    textKey,
+  };
+}
 
 /**
- * One marker quest per tutorial beat (the director completes `o1` itself with completeObjective;
- * nothing ever emits the interact target). t03 and t12 are owned by thread 3 and are not defined here.
+ * One marker quest per tutorial beat: one `event` objective per beat step, credited by the director's
+ * `tutorial.goal` events (the tracker shows p/required). The director still completes the quest itself
+ * with completeQuest. t03 and t12 are owned by thread 3 and are not defined here.
  */
-const marker = (beat: string, questId: string = beat): QuestDef => ({
+const marker = (beat: BeatId, questId: string = beat): QuestDef => ({
   id: questId,
   titleKey: `tutorial.${beat}.title`,
   summaryKey: `tutorial.${beat}.summary`,
-  objectives: [{ id: 'o1', type: 'interact', target: `use:tutorial-${beat}`, textKey: `tutorial.${beat}.o1` }],
+  sequential: true,
+  objectives: BEATS[beat].steps.map((_, i) => stepObjective(beat, i)),
 });
 
 export const TUTORIAL_QUEST_BEATS = [
