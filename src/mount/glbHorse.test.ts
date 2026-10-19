@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { HurtboxSet } from '../combat/HurtboxSet';
 import { diskSource } from '../assets/swap/testing/diskSource';
-import { GlbHorse, type HorseAsset } from './glbHorse';
+import { GALLOP_CLIP, GlbHorse, gallopPose, type HorseAsset } from './glbHorse';
 import { loadHorseVisual } from './horseVisual';
 import { HORSE, QuadrupedGait, modeOf, type GaitMode } from './rig';
 
@@ -19,6 +19,61 @@ const run = (h: GlbHorse, speed: number, seconds: number, slope = 0): void => {
   for (let i = 0; i < Math.round(seconds * 60); i++) h.update(speed, slope, 1 / 60);
   h.root.updateMatrixWorld(true);
 };
+
+describe('GlbHorse gallop', () => {
+  it('the asset has no gallop clip (Run is the base) and the gallop plays Run faster than the canter', () => {
+    expect(asset.clips.some((c) => c.name === GALLOP_CLIP)).toBe(false);
+    const canter = new GlbHorse(asset);
+    run(canter, 9, 1.5);
+    const gallop = new GlbHorse(asset);
+    run(gallop, 12, 1.5);
+    expect(canter.mode).toBe('canter');
+    expect(gallop.mode).toBe('gallop');
+    expect(canter.playing!.clip).toBe('Run');
+    expect(gallop.playing!.clip).toBe('Run');
+    expect(gallop.playing!.timeScale).toBeGreaterThan(canter.playing!.timeScale + 0.2);
+  });
+  it('leans nose down and bobs at the gallop, level at the canter, and settles when he slows', () => {
+    const h = new GlbHorse(asset);
+    run(h, 9, 1.5);
+    expect(h.rig.rotation.x).toBeCloseTo(0, 6);
+    run(h, 12, 1.5);
+    expect(h.rig.rotation.x).toBeLessThan(-0.03);
+    let maxLift = 0;
+    for (let i = 0; i < 90; i++) { h.update(12, 0, 1 / 60); maxLift = Math.max(maxLift, h.rig.position.y); }
+    expect(maxLift).toBeGreaterThan(0.01);
+    expect(maxLift).toBeLessThanOrEqual(0.0501);
+    run(h, 3, 2);
+    expect(Math.abs(h.rig.rotation.x)).toBeLessThan(0.002);
+    h.reset();
+    expect(h.rig.rotation.x).toBe(0);
+    expect(h.rig.position.y).toBe(0);
+  });
+  it('the lean adds to the slope', () => {
+    const h = new GlbHorse(asset);
+    run(h, 12, 2, 0.2);
+    expect(h.rig.rotation.x).toBeCloseTo(0.2 - 0.05, 1);
+  });
+  it('picks up a real Gallop clip when the asset has one', () => {
+    const gallopClip = asset.clips.find((c) => c.name === 'Run')!.clone();
+    gallopClip.name = GALLOP_CLIP;
+    const h = new GlbHorse({ instantiate: asset.instantiate, clips: [...asset.clips, gallopClip] });
+    run(h, 12, 1.5);
+    expect(h.playing!.clip).toBe(GALLOP_CLIP);
+    run(h, 9, 2);
+    expect(h.playing!.clip).toBe('Run');
+  });
+  it('gallopPose is bounded and ignores bad input', () => {
+    expect(Math.abs(gallopPose(0, 0.25).pitch)).toBe(0);
+    expect(gallopPose(0, 0.25).lift).toBe(0);
+    const p = gallopPose(1, 0.25);
+    expect(p.pitch).toBeLessThan(0);
+    expect(p.lift).toBeCloseTo(0.05, 6);
+    expect(gallopPose(5, 0.25).lift).toBeLessThanOrEqual(0.05 + 1e-9);
+    expect(Math.abs(gallopPose(NaN, 0.25).pitch)).toBe(0);
+    expect(gallopPose(NaN, 0.25).lift).toBe(0);
+  });
+});
 
 describe('GlbHorse', () => {
   it('stands on the ground, 2 m tall, facing -Z, with the saddle where a rider sits', () => {
