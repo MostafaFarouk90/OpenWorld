@@ -3,8 +3,8 @@ export const MOUNT_TUNING = {
   mountId: 'ashmare',
   /** The story flag thread 6 sets when M10 awards the horse; thread 20 only reads it. */
   flag: 'story.m10.ashmare',
-  /** Where an unplaced horse stands (thread 17's anchor at Wace Carter's stables by the South Gate). */
-  stablesAnchor: 'harrowmark.stables.ashmare',
+  /** Where an unplaced horse stands: thread 17's open yard north of Wace Carter's stable hall (stables.test.ts pins it). */
+  stablesAnchor: 'harrowmark.stables.yard',
 
   walkSpeed: 3.5,
   canterSpeed: 9,
