@@ -47,7 +47,7 @@ export const BLIGHTED_SOLDIER: EnemyDef = {
   kind: 'blighted-soldier',
   nameKey: 'enemies.name.charred-footman',
   // Still the Knight rig (the embedded sword and shield drive the tracers), but charred red, broader, and bare-headed.
-  model: { prefer: [], tint: 0x8a3c30, emissive: 0x2a0c04, weapons: 'sword-shield', scale: 1.08, hide: ['Knight_Helmet'] },
+  model: { prefer: [], tint: 0x8a3c30, emissive: 0x2a0c04, weapons: 'sword-shield', hide: ['Knight_Helmet'] },
   maxHealth: 60,
   maxPoise: 40,
   walkSpeed: 1.4,

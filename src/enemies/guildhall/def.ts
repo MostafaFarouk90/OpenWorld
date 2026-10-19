@@ -24,7 +24,7 @@ export const THUG_MOVES = { club: 'thug.club', shove: 'thug.shove' } as const;
 export const GUILDHALL_THUG: EnemyDef = {
   kind: 'guildhall-thug',
   nameKey: 'enemies.name.guildhall-thug',
-  model: { prefer: ['barbarian'], tint: 0xa08060, weapons: 'none', show: ['1H_Axe'], scale: 1.15 },
+  model: { prefer: ['barbarian'], tint: 0xa08060, weapons: 'none', show: ['1H_Axe'] },
   maxHealth: 45,
   maxPoise: 25,
   walkSpeed: 1.4,

@@ -92,7 +92,34 @@ async function gate(lib: ModelLibrary, spec: StructureSpec): Promise<THREE.Objec
 }
 
 /** Wooden fence pieces along the footprint's long edges (and all four for a yard fence). */
+/** Fences below this are jump hurdles (the tutorial's lane rail): drawn as a log on stakes so they never read as a barrier. */
+export const HURDLE_MAX_HEIGHT = 1;
+const LOG_MAT = new THREE.MeshStandardMaterial({ color: 0x7a5232, roughness: 0.95 });
+
+function hurdleLog(spec: StructureSpec): THREE.Object3D {
+  const root = new THREE.Group();
+  root.name = `fence:${spec.id}`;
+  const h = structureHeight(spec);
+  const [w, d] = spec.footprint;
+  const alongX = w >= d;
+  const len = alongX ? w : d;
+  const log = new THREE.Mesh(new THREE.CylinderGeometry(h * 0.42, h * 0.42, len, 10), LOG_MAT);
+  log.userData.ownGeometry = true;
+  log.position.y = h * 0.42;
+  log.rotation.z = alongX ? Math.PI / 2 : 0;
+  if (!alongX) log.rotation.x = 0;
+  root.add(log);
+  for (const end of [-1, 1]) {
+    const stake = new THREE.Mesh(new THREE.BoxGeometry(0.16, h, 0.16), LOG_MAT);
+    stake.userData.ownGeometry = true;
+    stake.position.set(alongX ? end * (len / 2 - 0.4) : 0, h / 2, alongX ? 0.3 : end * (len / 2 - 0.4));
+    root.add(stake);
+  }
+  return root;
+}
+
 async function fence(lib: ModelLibrary, spec: StructureSpec): Promise<THREE.Object3D | null> {
+  if (spec.kind === 'fence' && structureHeight(spec) < HURDLE_MAX_HEIGHT) return hurdleLog(spec);
   const t = await lib.template('hex/fence_wood_straight');
   if (!t) return null;
   const root = new THREE.Group();
