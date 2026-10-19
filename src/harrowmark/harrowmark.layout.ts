@@ -140,7 +140,7 @@ interface Post {
 }
 const POSTS: Post[] = [
   { id: 'rook', x: 8360, z: 1306, heading: 180 },
-  { id: 'rook.gate', x: 8488, z: 1272, heading: 180 },
+  { id: 'rook.gate', x: 8486, z: 1238, heading: 180 },
   { id: 'gaut.bastion', x: 8150, z: 1745, heading: 180 },
   { id: 'stane.bastion', x: 8175, z: 1745, heading: 180 },
   { id: 'pennard.bastion', x: 8200, z: 1745, heading: 180 },
@@ -253,12 +253,12 @@ const LANES: Array<{ name: string; pts: Pts; loop: boolean; halfWidth: number }>
   { name: 'main-street-north', loop: false, halfWidth: 8, pts: [[8490, 1770], [8490, 1850], [8490, 1930], [8490, 2010], [8490, 2090], [8490, 2170], [8490, 2250], [8490, 2330], [8490, 2375], [8490, 2420], [8490, 2470], [8490, 2520]] },
   { name: 'market-ring', loop: true, halfWidth: 3, pts: ring(8780, 1520, 30, 8) },
   { name: 'forge-row', loop: false, halfWidth: 6, pts: [[8100, 1520], [8140, 1520], [8180, 1520], [8230, 1520], [8290, 1520]] },
-  { name: 'guild-alley', loop: false, halfWidth: 1.5, pts: [[8940, 1527.5], [8975, 1527.5], [9010, 1527.5], [9040, 1532], [9060, 1542]] },
+  { name: 'guild-alley', loop: false, halfWidth: 1.5, pts: [[8940, 1525], [8958, 1525], [8985, 1525], [9015, 1525], [9040, 1532], [9060, 1542]] },
   { name: 'gate-queue', loop: false, halfWidth: 4, pts: [[8500, 1262], [8500, 1285], [8500, 1312], [8495, 1345]] },
   { name: 'fountain-circuit', loop: true, halfWidth: 4, pts: ring(8500, 1700, 32, 8, Math.PI / 8) },
   { name: 'chapel-approach', loop: false, halfWidth: 4, pts: [[8480, 2150], [8430, 2150], [8392, 2150], [8358, 2150]] },
   { name: 'bastion-edge', loop: false, halfWidth: 5, pts: [[8292, 1690], [8292, 1740], [8292, 1790], [8292, 1850]] },
-  { name: 'rooftop-ward-streets', loop: false, halfWidth: 1.4, pts: [[8897, 2250], [8897, 2310], [8897, 2380], [8897, 2430], [8897, 2480], [8897, 2528], [8897, 2540]] },
+  { name: 'rooftop-ward-streets', loop: false, halfWidth: 1.0, pts: [[8897, 2250], [8897, 2310], [8897, 2380], [8897, 2430], [8897, 2480], [8897, 2528], [8897, 2540]] },
 ];
 
 export const CROWD_LANES: CrowdLane[] = LANES.map((l) => ({
@@ -328,6 +328,10 @@ const anchors: AnchorSpec[] = [
   a('chest.harrowmark.4', 8540, 2520, 270, ['chest']),
   // Quest anchors (thread 6)
   a('m06.gate-brazier', 8533.5, 1284, 90, ['quest']),
+  // M06 watch-guard posts on the gate square, facing the gate (thread 5's spawner reads these; the yaw is the starting facing).
+  a('spawn.m06.watch-1', 8478, 1270, 180, ['spawn']),
+  a('spawn.m06.watch-2', 8522, 1270, 180, ['spawn']),
+  a('spawn.m06.watch-3', 8512, 1300, 180, ['spawn']),
   a('m07.bastion-yard', 8200, 1715, 180, ['quest']),
   a('m07.satchel', 8975, 1523, 90, ['quest', 'pickup']),
   ...numbered('m07.thieves', [[8990, 1514], [8995, 1530], [8984, 1536]], ['spawn'], 270),
