@@ -7,6 +7,7 @@ import type { CoreContext } from '../region/coreTypes';
 import { buildGreybox, disposeGreybox, greyMat, structureHeight } from '../region/greybox';
 import type { StructureSpec } from '../region/layoutTypes';
 import { PORTCULLIS_ID } from './city';
+import { coverageOf } from './cityArt';
 
 export type BuildDeps = Pick<CoreContext, 'scene' | 'physics'> & { rapier: Pick<typeof RAPIER, 'ColliderDesc'> };
 
@@ -80,7 +81,21 @@ export function buildCity(deps: BuildDeps, structures: StructureSpec[], heightAt
       const holder = new THREE.Group();
       holder.position.set(spec.x, y, spec.z);
       holder.rotation.y = yaw;
-      const visual = buildGreybox(spec);
+      // A structure the asset swap dresses has its greybox pulled in from the sides (and the top, except a walkable deck) so the
+      // models stand in front of it without z-fighting; the collider above is untouched and the greybox is the far tier.
+      const cover = coverageOf(spec);
+      // A dressed house is a plain box (no pyramid roof): the models carry the roofs, and the keep's castle must not sit under a greybox one.
+      const dressedKinds = ['house', 'tavern', 'chapel'];
+      const visual = buildGreybox(
+        cover
+          ? { ...spec, kind: dressedKinds.includes(spec.kind) ? 'block' : spec.kind, footprint: [spec.footprint[0] - 2 * cover.inset, spec.footprint[1] - 2 * cover.inset], height: Math.max(0.5, h - cover.topInset) }
+          : spec,
+      );
+      if (cover?.deck) {
+        const deck = buildGreybox({ ...spec, kind: 'block', footprint: spec.footprint, height: cover.deck });
+        deck.position.y = h - cover.deck;
+        visual.add(deck);
+      }
       holder.add(visual);
       holder.updateMatrixWorld(true);
       const bucket = buckets.get(districtOf(spec.id)) ?? new Map<THREE.Material, THREE.BufferGeometry[]>();

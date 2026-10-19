@@ -13,6 +13,7 @@ import type { Vec3 } from '../physics/PhysicsWorld';
 import type { GateCause } from '../state/FlagGates';
 import { heightAt as terrainHeightAt } from '../terrain/heightfield';
 import '../hud/events';
+import type { HorseAsset } from './glbHorse';
 import { loadHorseVisual, type HorseVisual } from './horseVisual';
 import { freeDistance, rapierCastPorts, type CastPorts } from './probes';
 import { bodyPitch } from './rig';
@@ -86,6 +87,7 @@ export class MountController implements MountService {
   private arriving: { to: HorseSpot; speed: number; timer: number } | null = null;
   private visual: HorseVisual | null = null;
   private hurtboxes: HurtboxSet | null = null;
+  private horseAsset: HorseAsset | null = null;
   private readonly hurtOwner = { mount: MOUNT_TUNING.mountId };
   private offTarget: (() => void) | null = null;
   private offOwner: (() => void) | null = null;
@@ -119,6 +121,7 @@ export class MountController implements MountService {
     private readonly opts: MountControllerOptions = {},
   ) {
     this.heightAt = opts.heightAt ?? terrainHeightAt;
+    this.preloadHorse();
     const exclude = () => ctx.world.player.controller.collider;
     this.casts = rapierCastPorts(ctx.physics, exclude, this.heightAt);
     const nav = () => anyService<NavLike>(ctx, 'nav') ?? null;
@@ -534,10 +537,32 @@ export class MountController implements MountService {
     this.currYaw = yaw;
   }
 
+  /** Loads the glb horse in the background; until it arrives (or if it never does) the procedural horse is the Ashmare. */
+  private preloadHorse(): void {
+    const assets = this.ctx.assets;
+    if (!assets || this.opts.visual) return;
+    assets.load('horse').then(
+      () => {
+        if (this.disposed) return;
+        this.horseAsset = { instantiate: () => assets.instantiate('horse'), clips: assets.animations('horse') };
+        // A horse already standing is rebuilt now; a ridden one at the next dismount.
+        if (this.horse && !this.offTarget) this.place(this.horse);
+      },
+      (err: unknown) => console.warn('mount: the glb horse failed to load, keeping the procedural one', err),
+    );
+  }
+
   private ensureVisual(): HorseVisual | null {
+    // The procedural horse stands in until the glb has loaded; it swaps at the next placement or mount while no hurtboxes are bound.
+    if (this.visual && !this.visual.glb && this.horseAsset && !this.opts.visual && !this.offTarget && !this.disposed) {
+      this.hurtboxes?.dispose();
+      this.hurtboxes = null;
+      this.visual.dispose();
+      this.visual = null;
+    }
     if (this.visual || this.disposed) return this.visual;
     try {
-      const v = (this.opts.visual ?? loadHorseVisual)();
+      const v = this.opts.visual ? this.opts.visual() : loadHorseVisual(this.horseAsset);
       this.ctx.scene.add(v.root);
       v.root.updateMatrixWorld(true);
       this.hurtboxes = new HurtboxSet(v.rig, v.hurtboxDefs, this.hurtOwner);

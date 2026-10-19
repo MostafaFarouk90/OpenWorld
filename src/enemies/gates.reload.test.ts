@@ -30,7 +30,8 @@ beforeAll(async () => {
 let modelReady: () => void = () => {};
 const assets = () =>
   ({
-    load: () => new Promise((res) => { modelReady = () => res(gltf); }),
+    // Only the Knight is served: the swap models (horse, buildings) load in the background and must not take over `modelReady`.
+    load: (id: string) => (id === 'knight' ? new Promise((res) => { modelReady = () => res(gltf); }) : Promise.reject(new Error(`asset "${id}" is not served in this test`))),
     instantiate: () => cloneSkinned(gltf.scene),
     animations: () => gltf.animations,
     has: () => true,
