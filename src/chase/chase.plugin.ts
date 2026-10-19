@@ -9,6 +9,8 @@ import { routeFromAnchors, validateRoute } from './route';
 import { timerFor } from './solvability';
 import { teleporter } from '../stealth/teleporter';
 import { CHASE_STRINGS_EN } from './strings.en';
+import { loadCourierBody, type CourierBody } from './courierBody';
+import type { NpcModelLoader } from '../npcs/types';
 
 /** The `chase` service (game-events-and-flags.md section 6, plus thread 8's timer reader). */
 export interface ChaseService {
@@ -23,7 +25,7 @@ declare module '../core/Services' {
   }
 }
 
-/** Greybox courier (a brown capsule) until the asset swap brings the Rogue model. Null headless. */
+/** The courier's figure: a brown capsule until the hooded Rogue loads (and for good if it cannot). Null headless. */
 function courierFigure(ctx: GameContext): THREE.Object3D | null {
   if (!ctx.camera) return null;
   const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(0.33, 1.1, 4, 8), new THREE.MeshStandardMaterial({ color: 0x6b4a2e }));
@@ -112,8 +114,28 @@ export default {
       };
 
       const figure = courierFigure(ctx);
+      let body: CourierBody | null = null;
+      let disposedPlugin = false;
+      if (figure) {
+        const assets = ctx.assets as unknown as Partial<NpcModelLoader> | null;
+        const loader = assets && typeof assets.load === 'function' && typeof assets.instantiate === 'function' && typeof assets.animations === 'function' ? (assets as NpcModelLoader) : null;
+        void loadCourierBody(loader, (m) => console.warn(m)).then((b) => {
+          if (!b) return;
+          if (disposedPlugin) { b.dispose(); return; }
+          body = b;
+          for (const c of [...figure.children]) {
+            figure.remove(c);
+            const m = c as THREE.Mesh;
+            m.geometry?.dispose();
+            (m.material as THREE.Material | undefined)?.dispose?.();
+          }
+          figure.add(b.root);
+        });
+        offs.push(() => { disposedPlugin = true; body?.dispose(); });
+      }
       if (figure)
         offs.push(() => {
+          body?.dispose(); // first: its geometry belongs to the loader's cache, the walk below frees only the capsule
           figure.removeFromParent();
           figure.traverse((o) => {
             const m = o as THREE.Mesh;
@@ -144,13 +166,16 @@ export default {
         id: 'chase.figure',
         renderPhase: 'world',
         order: 70,
-        render: () => {
+        render: (_alpha, frameTime) => {
           if (!figure) return;
           const d = director;
           // Visible while running, on the Again card, at the catch, and cornered until M10 moves on.
           const show = !!d && (d.active() || d.state === 'caught' || (d.courier.cornered && cornered()));
           figure.visible = show;
-          if (show && d) figure.position.copy(d.courier.position);
+          if (show && d) {
+            figure.position.copy(d.courier.position);
+            body?.step(frameTime, d.courier.position.x, d.courier.position.z);
+          } else body?.resetTrack();
         },
       });
 
