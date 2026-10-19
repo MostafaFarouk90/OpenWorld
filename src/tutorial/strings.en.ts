@@ -7,6 +7,7 @@ export const TUTORIAL_STRINGS_EN: Record<string, string> = {
   'tutorial.start.hints': 'Show hints always',
   'tutorial.skip.hint': 'Hold Esc to skip this beat',
   'tutorial.toast.open': 'Brightwater is open',
+  'tutorial.toast.beatDone': '{title}: done',
   'tutorial.toast.skipped': 'Beat skipped',
   'tutorial.toast.restart': 'The Heartshard pulls you back',
   'tutorial.carry.drop': 'Block to set the villager down',
@@ -38,8 +39,9 @@ export const TUTORIAL_STRINGS_EN: Record<string, string> = {
   'tutorial.prompt.attack3': 'Press {key} for the heavy chop',
   'tutorial.prompt.attack4': 'Press {key} for the stab',
   'tutorial.prompt.block': 'Hold {key} to block',
-  'tutorial.prompt.dodge': 'Press {key} to dodge',
+  'tutorial.prompt.dodge': 'Tap {key} with a direction to dodge',
   'tutorial.prompt.lockOn': 'Press {key} to lock on',
+  'tutorial.prompt.lockSwap': 'Flick the mouse to switch target',
   'tutorial.prompt.inventory': 'Press {key} to open your pack',
   'tutorial.prompt.journal': 'Press {key} to open your journal',
   'tutorial.prompt.skills': 'Press {key} to open your skills',
@@ -47,35 +49,50 @@ export const TUTORIAL_STRINGS_EN: Record<string, string> = {
   'tutorial.prompt.map': 'Press {key} to open the map',
   'tutorial.prompt.fastTravel': 'Choose a lit waystone on the map to travel',
   'tutorial.prompt.surge': 'Press {key} to loose the Heartshard',
-  'tutorial.prompt.rest': 'Press {key} at a waystone to rest',
+  'tutorial.prompt.rest': 'Hold {key} at a waystone to rest',
+  'tutorial.prompt.rekindle': 'Hold {key} at the chapel waystone to rekindle it',
 
-  // subtitle lines
-  'tutorial.line.t01.1': 'Sir Gaut: Up, lad! The scarecrow will not topple itself.',
-  'tutorial.line.t02.1': 'Sir Gaut: Mark the chapel banners, one by one. A knight keeps his eyes open.',
-  'tutorial.line.t05.1': 'Aelfreda: The shard has woken! Hold them off, squire.',
-  'tutorial.line.t06.1': 'Sir Gaut: Run!',
-  'tutorial.line.t08.1': 'Sir Gaut: The slice is fastest, the chop slower, the stab slowest. Mix them.',
+  // subtitle lines: every beat opens with "go here, do this"
+  'tutorial.line.t01.1': 'Sir Gaut: Up, lad! Walk down to the gate, then knock the scarecrow over.',
+  'tutorial.line.t02.1': 'Sir Gaut: Look up at the three banners on the chapel. Turn your view to each in turn.',
+  'tutorial.line.t03.1': 'Sir Gaut: Up the lane to Kettlewick, lad. Speak to three people or things on the way.',
+  'tutorial.line.t04.1': 'Sister Aelfreda: Come into the chapel, Cael. Kneel at the altar and speak your vow.',
+  'tutorial.line.t05.1': 'Aelfreda: The shard has woken! Strike down the wraiths, squire.',
+  'tutorial.line.t12.smoke': "Edda: Smoke's in your lungs, love. Drink.",
+  'tutorial.line.t06.again': 'Sir Gaut: Again! Back up the lane, at a run!',
+  'tutorial.line.t06.1': 'Sir Gaut: Run! Sprint the lane before the roof falls, then sprint it again!',
+  'tutorial.line.t07.1': 'Sir Gaut: The lane is blocked! Jump the burning cart, then the fence.',
+  'tutorial.line.t08.1': 'Sir Gaut: Slice, then chop, then stab. The stab is quick and reaches far, the chop is slow and heavy. Land each, then chain four.',
+  'tutorial.line.t09.1': 'Sir Gaut: A blighted soldier! Hold your shield up and block three of his swings.',
+  'tutorial.line.t10.1': 'Sir Gaut: That sweep cannot be blocked. Dodge it three times, then finish it.',
+  'tutorial.line.t11.1': 'Sir Gaut: Three wraiths in the square! Lock on, switch targets, and fell two.',
+  'tutorial.line.t12.1': 'Edda: In here, love. Put on the sword and tabard, then drink a flask from the barrel.',
+  'tutorial.line.t13.1': 'Sir Gaut: You have earned a skill. Open your skills, learn one, and use it.',
+  'tutorial.line.t14.1': 'Hob: Go to the chapel waystone and rekindle it, then open the map and travel to Kettlewick.',
+  'tutorial.line.t15.0': 'Sir Gaut: To the gate! Loose the Heartshard on the wave, then rest at a waystone.',
   'tutorial.line.t15.1': 'Aelfreda: The shard leaves its mark on all it touches. Use it sparingly.',
+  'tutorial.line.skirmish.1': 'Sir Gaut: Show me what you know. Clear the square.',
 };
 
-const beatText: Record<string, [string, string, string]> = {
-  t01: ['The Scarecrow', 'Gaut sets you to the practice yard.', 'Topple the scarecrow and reach the gate'],
-  t02: ['Eyes Up', 'A knight learns to look.', 'Look at each chapel banner in turn'],
-  t04: ['The Vow', 'Kneel in the chapel and take your vow.', 'Kneel at the chapel altar'],
-  t05: ['The Heartshard', 'The Sunforge cracks and ash wraiths come.', 'Defeat the ash wraiths'],
-  t06: ['Run', 'The chapel roof is falling.', 'Sprint down the lane'],
-  t07: ['Over the Wall', 'The lane is blocked.', 'Jump the cart and the fence'],
-  t08: ['Three Strikes', 'Gaut teaches the slice, chop and stab.', 'Land each strike, then chain four blows'],
-  t09: ['The Shield', 'A blighted soldier swings his blade.', 'Block three swings'],
-  t10: ['The Roll', 'The wraith sweeps low and cannot be blocked.', 'Dodge three sweeps'],
-  t11: ['Lock On', 'Wraiths close on the square.', 'Lock on, swap targets, and fell two wraiths'],
-  t13: ['A Knight\'s Skill', 'Your new level brings a new skill.', 'Learn a skill and put it to use'],
-  t14: ['The Waystone', 'Light the chapel waystone and travel.', 'Rekindle the waystone, then fast travel'],
-  t15: ['The Gate', 'The last wave stands at the gate.', 'Loose the Heartshard, clear the wave and rest'],
-  skirmish: ['The Skirmish', 'A veteran proves their skill in the square.', 'Clear the square of foes'],
+
+const beatText: Record<string, [string, string, string[]]> = {
+  t01: ['The Scarecrow', 'Cael wakes in the barley loft and Gaut calls him to the gate.', ['Walk to the gate', 'Knock the scarecrow down']],
+  t02: ['Eyes Up', 'A knight learns to look.', ['Look at each chapel banner']],
+  t04: ['The Vow', 'Kneel in the chapel and take your vow.', ['Go to the chapel door', 'Kneel at the altar', 'Speak your vow']],
+  t05: ['The Heartshard', 'The Sunforge cracks and ash wraiths come.', ['Defeat the ash wraiths', 'Clear the churchyard']],
+  t06: ['Run', 'The chapel roof is falling.', ['Sprint along the lane, twice', 'Reach the end of the lane']],
+  t07: ['Over the Wall', 'The lane is blocked.', ['Jump the burning cart', 'Jump the fence']],
+  t08: ['Three Strikes', 'Gaut teaches the slice, chop and stab.', ['Land a slice, a chop and a stab, then chain four blows', 'Defeat the lane wraiths']],
+  t09: ['The Shield', 'A blighted soldier swings his blade.', ['Block the soldier\'s swings', 'Defeat the soldier']],
+  t10: ['The Roll', 'The wraith sweeps low and cannot be blocked.', ['Dodge the wraith\'s sweeps', 'Defeat the wraith']],
+  t11: ['Lock On', 'Wraiths close on the square.', ['Lock on, swap targets and fell two wraiths', 'Clear the square']],
+  t13: ['A Knight\'s Skill', 'Your new level brings a new skill.', ['Learn a skill and put it to use']],
+  t14: ['The Waystone', 'Light the chapel waystone and travel.', ['Go to the chapel waystone', 'Rekindle the waystone', 'Fast travel to Kettlewick']],
+  t15: ['The Gate', 'The last wave stands at the gate.', ['Go to the Kettlewick gate', 'Loose the Heartshard and clear the wave', 'Rest at a waystone']],
+  skirmish: ['The Skirmish', 'A veteran proves their skill in the square.', ['Dodge a wraith\'s sweep', 'Clear the lane wraiths and the sweeper', 'Clear the soldier and the square']],
 };
-for (const [id, [title, summary, o1]] of Object.entries(beatText)) {
+for (const [id, [title, summary, objectives]] of Object.entries(beatText)) {
   TUTORIAL_STRINGS_EN[`tutorial.${id}.title`] = title;
   TUTORIAL_STRINGS_EN[`tutorial.${id}.summary`] = summary;
-  TUTORIAL_STRINGS_EN[`tutorial.${id}.o1`] = o1;
+  objectives.forEach((text, i) => (TUTORIAL_STRINGS_EN[`tutorial.${id}.o${i + 1}`] = text));
 }

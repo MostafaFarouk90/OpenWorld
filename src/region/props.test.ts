@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { buildProps } from './props';
 import { coreFactories } from './StructureBuilder';
 import { createFakeCore } from './testing/fakeCore';
+import { REGION_STRINGS_EN } from './strings.en';
 
 function setup(fc = createFakeCore()) {
+  fc.ctx.strings.register('en', REGION_STRINGS_EN);
   fc.ctx.anchors.define({ id: 'kettlewick.barrel', position: { x: 27, y: 4, z: 135 }, yaw: 0 });
   fc.ctx.anchors.define({ id: 'kettlewick.bakery-hearth', position: { x: 21.5, y: 4, z: 129 }, yaw: 0 });
   fc.ctx.anchors.define({ id: 'kettlewick.notice-board', position: { x: -9, y: 3, z: 124 }, yaw: 0 });
@@ -27,6 +29,35 @@ describe('buildProps', () => {
     expect(fc.interactables.get('chest:bakery-barrel')!.kind).toBe('chest');
     expect(fc.interactables.get('pickup:hearth-stone')!.kind).toBe('pickup');
     expect(fc.interactables.get('use:notice-board')!.kind).toBe('use');
+  });
+
+  it('the notice board has a display name and shows the pre-crack notices when read', () => {
+    const { fc } = setup();
+    const board = fc.interactables.get('use:notice-board')!;
+    expect(board.name).toBe('Notice board');
+    board.onInteract({} as never);
+    const toasts = fc.emitted.filter((e) => e.type === 'hud.toast').map((e) => (e.payload as { textKey: string }).textKey);
+    expect(toasts).toEqual(['notice.board.knighting', 'notice.board.yard', 'notice.board.road']);
+    const text = toasts.map((k) => REGION_STRINGS_EN[k]).join(' ');
+    expect(text).toMatch(/knights/);
+    expect(text).toMatch(/Practice Yard is open/);
+    expect(text).toMatch(/Dead Road runs east to Harrowmark/);
+    expect(text).not.toMatch(/north|M01|wraith|ash/i);
+  });
+
+  it('the notice board does not stack toasts on repeat presses, and swaps the knighting notice after the crack', () => {
+    const { fc } = setup();
+    const board = fc.interactables.get('use:notice-board')!;
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+    const toasts = () => fc.emitted.filter((e) => e.type === 'hud.toast').map((e) => (e.payload as { textKey: string }).textKey);
+    board.onInteract({} as never);
+    board.onInteract({} as never);
+    expect(toasts()).toHaveLength(3);
+    fc.ctx.state.setFlag('tutorial.heartshard-awakened', true);
+    now.mockReturnValue(1_010_000);
+    board.onInteract({} as never);
+    expect(toasts().slice(3)).toEqual(['notice.board.after', 'notice.board.yard', 'notice.board.road']);
+    now.mockRestore();
   });
 
   it('places the barrel at its anchor and grants one healing flask once', () => {
@@ -85,6 +116,17 @@ describe('buildProps', () => {
     expect(fc2.scene.getObjectByName('hearth-stone')!.visible).toBe(false);
   });
 
+  it('builds the brazier only when its anchor exists', () => {
+    expect(setup().fc.scene.getObjectByName('brazier')).toBeUndefined();
+    const fc = createFakeCore();
+    fc.ctx.anchors.define({ id: 'chapel.brazier', position: { x: 57, y: 1.1, z: 61 }, yaw: 0 });
+    const { handle } = setup(fc);
+    const b = fc.scene.getObjectByName('brazier')!;
+    expect(b.position.toArray()).toEqual([57, 1.1, 61]);
+    handle.dispose();
+    expect(fc.scene.getObjectByName('brazier')).toBeUndefined();
+  });
+
   it('puts a banner mesh at each banner anchor and disposes them', () => {
     const { fc, handle } = setup();
     const b1 = fc.scene.getObjectByName('banner:chapel.banner-1') as THREE.Mesh;
@@ -92,16 +134,18 @@ describe('buildProps', () => {
     expect(b1.position.toArray()).toEqual([40, 5, 60]);
     expect(b2.position.toArray()).toEqual([40, 5, 64]);
     expect(b1.rotation.y).toBeCloseTo(1.5);
+    const p = (b1.geometry as THREE.PlaneGeometry).parameters;
+    expect([p.width, p.height]).toEqual([2, 4.8]);
     const geoDispose = vi.spyOn(b1.geometry, 'dispose');
     handle.dispose();
     expect(geoDispose).toHaveBeenCalled();
     expect(fc.scene.getObjectByName('banner:chapel.banner-1')).toBeUndefined();
   });
 
-  it('the notice board does nothing on interact', () => {
+  it('the notice board only posts toasts on interact (no loot, no flags)', () => {
     const { fc } = setup();
     fc.interactables.get('use:notice-board')!.onInteract({} as never);
-    expect(fc.emitted).toHaveLength(0);
+    expect(fc.emitted.every((e) => e.type === 'hud.toast')).toBe(true);
     expect(fc.flags.size).toBe(0);
   });
 

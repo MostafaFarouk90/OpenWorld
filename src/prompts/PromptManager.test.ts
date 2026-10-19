@@ -42,6 +42,16 @@ describe('PromptManager', () => {
     expect(pm.rows()).toEqual([{ mechanic: 'sprint', text: 'Hold Shift to sprint', opacity: 1, state: 'shown' }]);
   });
 
+  it('shows a lockSwap prompt whose text has no {key}, counting it as a known mechanic', () => {
+    const { pm, warns, glyphs } = setup();
+    glyphs.lockOn = 'Tab';
+    pm.show('lockSwap', 'lockOn' as never, 'prompt.lockSwap');
+    expect(pm.rows()[0].text).toBe('[[prompt.lockSwap]]');
+    pm.success('lockSwap');
+    expect(warns).toEqual([]);
+    expect(pm.count('lockSwap')).toBe(1);
+  });
+
   it('counts successes without a prompt and mirrors flags', () => {
     const { pm, flags } = setup();
     pm.success('sprint');
@@ -283,9 +293,10 @@ describe('PromptManager', () => {
   });
 
   it('MECHANICS covers the contract list', () => {
-    expect(MECHANICS).toHaveLength(21);
-    expect(new Set(MECHANICS).size).toBe(21);
+    expect(MECHANICS).toHaveLength(22);
+    expect(new Set(MECHANICS).size).toBe(22);
     expect(MECHANICS).toContain('wardstone-strike');
+    expect(MECHANICS).toContain('lockSwap');
   });
 });
 

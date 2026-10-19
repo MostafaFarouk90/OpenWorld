@@ -86,7 +86,7 @@ export function createMinimap(deps: MinimapDeps): MinimapWidget {
 
     const edge = R - 5;
     for (const m of model.markers()) {
-      if (m.kind !== 'waystone') continue;
+      if (m.kind !== 'waystone' && m.kind !== 'quest') continue;
       let ox = (m.x - pl.x) / mPerPx;
       let oz = (m.z - pl.z) / mPerPx;
       const d = Math.hypot(ox, oz);
@@ -94,6 +94,18 @@ export function createMinimap(deps: MinimapDeps): MinimapWidget {
       if (out) {
         ox = (ox / d) * edge;
         oz = (oz / d) * edge;
+      }
+      if (m.kind === 'quest') {
+        const r = out ? 3 : 4;
+        ctx.beginPath();
+        ctx.moveTo(ox, oz - r);
+        ctx.lineTo(ox + r, oz);
+        ctx.lineTo(ox, oz + r);
+        ctx.lineTo(ox - r, oz);
+        ctx.closePath();
+        ctx.fillStyle = '#ffd24a';
+        ctx.fill();
+        continue;
       }
       ctx.beginPath();
       ctx.arc(ox, oz, out ? 3 : 4, 0, Math.PI * 2);

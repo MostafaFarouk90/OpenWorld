@@ -37,6 +37,7 @@ export const HUD_CSS = `
 .owg-shake{animation:owg-shake .3s linear}
 @keyframes owg-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
 .owg-nextunlock{display:flex;align-items:center;gap:8px;pointer-events:none;font:12px system-ui,sans-serif;color:#d8d0c0;text-shadow:0 1px 2px #000}
+.owg-points-num{order:-1;align-self:flex-start;width:20px;flex:none;height:20px;line-height:20px;text-align:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a0,#d8a830 70%);color:#2a1c00;font-weight:800;box-shadow:0 0 8px #f0c040}
 .owg-points{padding:1px 8px;border-radius:9px;background:#d8a830;color:#2a1c00;font-weight:700}
 .owg-prompts{display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
 .owg-prompt{padding:4px 12px;border-radius:4px;background:rgba(0,0,0,.6);color:#f2ead8;font:14px system-ui,sans-serif;white-space:pre-line;text-align:center;transition:opacity .4s linear}

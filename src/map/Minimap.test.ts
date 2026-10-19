@@ -11,7 +11,7 @@ function fakeEl(tag = 'div'): any {
   if (tag === 'canvas') {
     const calls: Array<[string, unknown[]]> = [];
     const ctx: any = { calls };
-    for (const n of ['clearRect', 'fillRect', 'drawImage', 'putImageData', 'beginPath', 'arc', 'fill', 'stroke', 'save', 'restore', 'translate', 'rotate', 'clip']) {
+    for (const n of ['clearRect', 'fillRect', 'drawImage', 'putImageData', 'beginPath', 'arc', 'fill', 'stroke', 'save', 'restore', 'translate', 'rotate', 'clip', 'moveTo', 'lineTo', 'closePath']) {
       ctx[n] = (...a: unknown[]) => { calls.push([n, a]); };
     }
     ctx.createImageData = (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) });
@@ -119,5 +119,14 @@ describe('Minimap', () => {
     const n = w.stats.draws;
     w.update(5);
     expect(w.stats.draws).toBe(n);
+  });
+
+  it('draws quest markers as gold diamonds and still draws waystones', () => {
+    const { w, state, canvas } = make();
+    state.markers = [ws('a', 10, 0), { id: 'q', kind: 'quest', x: 20, z: 0, label: 'q', travelable: false } as MapMarker];
+    w.update(1);
+    expect(calls(canvas, 'moveTo').length).toBe(1);
+    expect(calls(canvas, 'arc').length).toBeGreaterThanOrEqual(3); // clip, waystone, player
+    expect(calls(canvas, 'fill').length).toBeGreaterThanOrEqual(3);
   });
 });

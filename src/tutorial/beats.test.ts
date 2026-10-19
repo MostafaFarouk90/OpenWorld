@@ -58,6 +58,21 @@ describe('tutorial beats', () => {
         const keys = [...(b.prompts ?? []).map((p) => p.textKey), ...(b.lines ?? [])];
         for (const k of keys) expect(TUTORIAL_STRINGS_EN[k], k).toBeTruthy();
       });
+      it('opens with a line, and every string key resolves', () => {
+        expect((b.lines ?? []).length).toBeGreaterThan(0);
+        for (const l of b.lines ?? []) expect(TUTORIAL_STRINGS_EN[l], l).toMatch(/^(Sir Gaut|Sister Aelfreda|Aelfreda|Edda|Hob): /);
+      });
+      it('objective targets are one per step and resolve to real anchors', () => {
+        if (!b.targets) return;
+        expect(b.targets).toHaveLength(b.steps.length);
+        for (const t of b.targets) if (t !== null) expect(anchorIds.has(t), t).toBe(true);
+      });
+      it('prompts use one {key} at most and their step exists', () => {
+        for (const p of b.prompts ?? []) {
+          expect((TUTORIAL_STRINGS_EN[p.textKey].match(/\{key\}/g) ?? []).length, p.textKey).toBeLessThanOrEqual(1);
+          if (p.step !== undefined) expect(p.step).toBeLessThan(b.steps.length);
+        }
+      });
       it('unlocks and locks are lockable verbs', () => {
         for (const v of [...(b.unlocks ?? []), ...(b.extraLocks ?? [])]) expect(LOCKABLE_VERBS).toContain(v);
       });
@@ -74,6 +89,22 @@ describe('tutorial beats', () => {
       });
     });
   }
+
+  it('T01 is walk to the gate, then topple the scarecrow, with each prompt on its step', () => {
+    expect(BEATS.t01.steps).toEqual([[{ kind: 'trigger', id: 'trg.t01.gate' }], [{ kind: 'flag', key: 'place.scarecrow.toppled' }]]);
+    expect(BEATS.t01.targets).toEqual(['brightwater.gate', 'brightwater.scarecrow']);
+    expect(BEATS.t01.prompts?.map((p) => [p.mechanic, p.step])).toEqual([['move', 0], ['attack1', 1]]);
+  });
+
+  it('teaches the right verbs: dodge text, lock swap, rekindle and rest prompts', () => {
+    expect(TUTORIAL_STRINGS_EN['tutorial.prompt.dodge']).toBe('Tap {key} with a direction to dodge');
+    expect(BEATS.t11.prompts?.map((p) => p.mechanic)).toContain('lockSwap');
+    expect(TUTORIAL_STRINGS_EN['tutorial.prompt.rekindle']).toBe('Hold {key} at the chapel waystone to rekindle it');
+    expect(BEATS.t14.prompts?.some((p) => p.textKey === 'tutorial.prompt.rekindle' && p.action === 'interact')).toBe(true);
+    expect(TUTORIAL_STRINGS_EN['tutorial.prompt.rest']).toBe('Hold {key} at a waystone to rest');
+    expect(BEATS.t06.steps[0]).toEqual([{ kind: 'sprint', meters: 40, count: 2 }]);
+    expect(TUTORIAL_STRINGS_EN['tutorial.t01.summary']).toMatch(/barley loft/);
+  });
 
   it('quest ids resolve to tutorial quests (except thread 3 t03 and t12)', () => {
     const ids = new Set(TUTORIAL_QUESTS.map((q) => q.id));

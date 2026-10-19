@@ -25,6 +25,11 @@ const anchors: AnchorSpec[] = [
   a('lane.start', 0, 32, 0, ['poi']),
   a('lane.cart', 0, 66, 0, ['poi']),
   a('lane.fence', 0, 87, 0, ['poi']),
+  // Crisis fires (tutorial CrisisDressing): lit after the Heartshard awakens, out when M01 completes.
+  // Offsets sit on house flanks, clear of the lane centre line and of every beat trigger.
+  a('lane.fire-cart', 0, 70, 0, ['fx'], { dy: 0.6, onStructure: 'cart' }),
+  a('lane.fire-house-08', -10.8, 80, 90, ['fx']),
+  a('lane.fire-house-09', 9.2, 76, 270, ['fx']),
   a('lane.end', 0, 108, 0, ['poi']),
 
   // Kettlewick.
@@ -36,6 +41,8 @@ const anchors: AnchorSpec[] = [
   a('kettlewick.bakery-hearth', 21.5, 129, 0, ['interact'], { onStructure: 'bakery' }),
   a('kettlewick.bakery-fire', 26, 128, 0, ['fx'], { onStructure: 'bakery' }),
   a('kettlewick.notice-board', -9, 124, 0, ['interact']),
+  a('kettlewick.fire-house-01', -11.2, 100, 90, ['fx']),
+  a('kettlewick.fire-house-02', 11.2, 104, 270, ['fx']),
   a('kettlewick.tavern-door', -16, 132, 270, ['poi']),
 
   // Practice Yard and the Replay board.
@@ -58,10 +65,16 @@ const anchors: AnchorSpec[] = [
   a('chapel.door', 46, 60, 90, ['poi', 'door']),
   a('chapel.kneel', 53, 60, 90, ['poi'], { onStructure: 'chapel' }),
   a('chapel.altar', 57, 60, 90, ['poi'], { onStructure: 'altar' }),
-  // T02 look targets: banners hung on the chapel's west face, either side of the door.
-  a('chapel.banner-1', 45.6, 54, 270, ['elevated', 'banner'], { dy: 5 }),
-  a('chapel.banner-2', 45.6, 57, 270, ['elevated', 'banner'], { dy: 5 }),
-  a('chapel.banner-3', 45.6, 63, 270, ['elevated', 'banner'], { dy: 5 }),
+  // The Kindling Ember brazier, on the altar's north end (top surface, 1.1 m) (T04/T05).
+  a('chapel.brazier', 57, 61, 90, ['poi'], { onStructure: 'altar', dy: 1.1 }),
+  // The burning chapel yard.
+  a('chapel.fire-1', 30, 55, 90, ['fx']),
+  a('chapel.fire-2', 31, 65, 90, ['fx']),
+  // T02 look targets (design: "banners on the chapel roof"): 2 x 4.8 m cloth flying from the roof line
+  // (the chapel is 8 m tall), either side of the door, so they read from the lane and from the spawn.
+  a('chapel.banner-1', 45.6, 54, 270, ['elevated', 'banner'], { dy: 7.6 }),
+  a('chapel.banner-2', 45.6, 57, 270, ['elevated', 'banner'], { dy: 7.6 }),
+  a('chapel.banner-3', 45.6, 63, 270, ['elevated', 'banner'], { dy: 7.6 }),
 
   // Waystones: the anchor is where the player stands (fast travel, respawn), 1.8 m south of the stone, facing it.
   // Thread 6 owns the stones' behaviour and finds them by tag.

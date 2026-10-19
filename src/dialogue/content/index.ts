@@ -1,6 +1,7 @@
 import type { DialogueDef } from '../../quests/types';
 import { npcStane } from './npc-stane.dialogue';
 import { npcEdda } from './npc-edda.dialogue';
+import { npcHob } from './npc-hob.dialogue';
 import { npcGaut } from './npc-gaut.dialogue';
 import { npcAelfreda } from './npc-aelfreda.dialogue';
 import { npcWynn } from './npc-wynn.dialogue';
@@ -20,6 +21,6 @@ import { npcAshdown } from './npc-ashdown.dialogue';
 import { sceneAct1Camp } from './scene-act1-camp.dialogue';
 
 export const dialogueDefs: DialogueDef[] = [
-  npcStane, npcEdda, npcGaut, npcAelfreda, npcWynn, npcTobb, npcCarter1, npcCarter2, t04Vow,
+  npcStane, npcEdda, npcGaut, npcHob, npcAelfreda, npcWynn, npcTobb, npcCarter1, npcCarter2, t04Vow,
   npcRook, npcAldith, npcWystan, npcEdric, npcMerrin, npcGerta, npcWhitlock, npcPennard, npcAshdown, sceneAct1Camp,
 ];

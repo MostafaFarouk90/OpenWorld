@@ -14,6 +14,9 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | lane.start | 0 | 32 | 0 | 180 | poi |
 | lane.cart | 0 | 66 | 0 | 180 | poi |
 | lane.fence | 0 | 87 | 0 | 180 | poi |
+| lane.fire-cart | 0 | 70 | 0.6 | 180 | fx |
+| lane.fire-house-08 | -10.8 | 80 | 0 | 270 | fx |
+| lane.fire-house-09 | 9.2 | 76 | 0 | 90 | fx |
 | lane.end | 0 | 108 | 0 | 180 | poi |
 | kettlewick.square | 3 | 127 | 0 | 180 | poi |
 | kettlewick.gate | 0 | 165 | 0 | 180 | poi |
@@ -23,6 +26,8 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | kettlewick.bakery-hearth | 21.5 | 129 | 0 | 180 | interact |
 | kettlewick.bakery-fire | 26 | 128 | 0 | 180 | fx |
 | kettlewick.notice-board | -9 | 124 | 0 | 180 | interact |
+| kettlewick.fire-house-01 | -11.2 | 100 | 0 | 270 | fx |
+| kettlewick.fire-house-02 | 11.2 | 104 | 0 | 90 | fx |
 | kettlewick.tavern-door | -16 | 132 | 0 | 90 | poi |
 | yard.centre | -45 | 120 | 0 | 180 | poi |
 | yard.board | -45 | 127 | 0 | 0 | poi |
@@ -39,9 +44,12 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | chapel.door | 46 | 60 | 0 | 270 | poi, door |
 | chapel.kneel | 53 | 60 | 0 | 270 | poi |
 | chapel.altar | 57 | 60 | 0 | 270 | poi |
-| chapel.banner-1 | 45.6 | 54 | 5 | 90 | elevated, banner |
-| chapel.banner-2 | 45.6 | 57 | 5 | 90 | elevated, banner |
-| chapel.banner-3 | 45.6 | 63 | 5 | 90 | elevated, banner |
+| chapel.brazier | 57 | 61 | 1.1 | 270 | poi |
+| chapel.fire-1 | 30 | 55 | 0 | 270 | fx |
+| chapel.fire-2 | 31 | 65 | 0 | 270 | fx |
+| chapel.banner-1 | 45.6 | 54 | 7.6 | 90 | elevated, banner |
+| chapel.banner-2 | 45.6 | 57 | 7.6 | 90 | elevated, banner |
+| chapel.banner-3 | 45.6 | 63 | 7.6 | 90 | elevated, banner |
 | waystone.chapel | 40 | 45 | 0 | 180 | waystone |
 | waystone.kettlewick | 12 | 156 | 0 | 180 | waystone, waystone-lit |
 | waystone.north | 10 | 310 | 0 | 180 | waystone |

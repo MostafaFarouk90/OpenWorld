@@ -37,8 +37,10 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
   t01: {
     id: 't01', questId: 't01', startAnchor: 'beat.t01.start',
     npcs: { gaut: 'npc-post.gaut' },
-    prompts: [prompt('move', 'moveForward'), prompt('attack1')],
-    steps: [[{ kind: 'trigger', id: 'trg.t01.gate' }, { kind: 'flag', key: 'place.scarecrow.toppled' }]],
+    // The strike prompt waits for the gate (design T01: "at the gate ... the prompt says Press 1").
+    prompts: [{ ...prompt('move', 'moveForward'), step: 0 }, { ...prompt('attack1'), step: 1 }],
+    steps: [[{ kind: 'trigger', id: 'trg.t01.gate' }], [{ kind: 'flag', key: 'place.scarecrow.toppled' }]],
+    targets: ['brightwater.gate', 'brightwater.scarecrow'],
     lines: ['tutorial.line.t01.1'],
   },
   t02: {
@@ -53,6 +55,7 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
     id: 't03', questId: 't03', startAnchor: 'beat.t03.start',
     prompts: [prompt('interact')],
     steps: [[{ kind: 'quest', questId: 't03' }]],
+    lines: ['tutorial.line.t03.1'],
   },
   t04: {
     id: 't04', questId: 't04', startAnchor: 'beat.t04.start',
@@ -64,6 +67,8 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
       [{ kind: 'interact', id: 'kneel:chapel' }],
       [{ kind: 'vow', dialogueId: 't04-vow' }],
     ],
+    targets: ['chapel.door', 'chapel.kneel', null],
+    lines: ['tutorial.line.t04.1'],
   },
   t05: {
     id: 't05', questId: 't05', startAnchor: 'beat.t05.start',
@@ -84,6 +89,7 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
     npcs: { gaut: 'tutorial.gaut.lane' },
     prompts: [prompt('sprint')],
     steps: [[{ kind: 'sprint', meters: 40, count: 2 }], [{ kind: 'trigger', id: 'trg.t06.end' }]],
+    targets: [null, 'tutorial.gaut.lane'],
     lines: ['tutorial.line.t06.1'],
   },
   t07: {
@@ -91,6 +97,8 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
     crisis: true,
     prompts: [prompt('jump')],
     steps: [[{ kind: 'trigger', id: 'trg.t07.cart' }], [{ kind: 'trigger', id: 'trg.t07.fence' }]],
+    targets: ['lane.cart', 'lane.fence'],
+    lines: ['tutorial.line.t07.1'],
   },
   t08: {
     id: 't08', questId: 't08', startAnchor: 'beat.t08.start',
@@ -113,6 +121,7 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
     prompts: [prompt('block')],
     waves: [[{ spawnerId: 't09.soldier', moves: ['soldier.chop'], aggro: true }]],
     steps: [[{ kind: 'count', event: 'blocked', count: 3 }], [{ kind: 'cleared', spawnerIds: ['t09.soldier'] }]],
+    lines: ['tutorial.line.t09.1'],
   },
   t10: {
     id: 't10', questId: 't10', startAnchor: 'beat.t10.start',
@@ -122,15 +131,17 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
     prompts: [prompt('dodge')],
     waves: [[{ spawnerId: 't10.sweeper', moves: ['wraith.sweep'], aggro: true }]],
     steps: [[{ kind: 'count', event: 'dodged', count: 3 }], [{ kind: 'cleared', spawnerIds: ['t10.sweeper'] }]],
+    lines: ['tutorial.line.t10.1'],
   },
   t11: {
     id: 't11', questId: 't11', startAnchor: 'beat.t11.start',
     crisis: true,
     unlocks: ['lockOn'],
     npcs: { gaut: 'tutorial.gaut.square' },
-    prompts: [prompt('lockOn')],
+    prompts: [prompt('lockOn'), prompt('lockSwap', 'lockOn')],
     waves: [[{ spawnerId: 't11.square', aggro: true }]],
     steps: [[{ kind: 'lockSwap', kills: 2 }], [{ kind: 'cleared', spawnerIds: ['t11.square'] }]],
+    lines: ['tutorial.line.t11.1'],
   },
   t12: {
     id: 't12', questId: 't12', startAnchor: 'beat.t12.start',
@@ -143,6 +154,8 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
       ],
       [{ kind: 'quest', questId: 't12' }],
     ],
+    targets: ['kettlewick.barrel', null],
+    lines: ['tutorial.line.t12.1'],
   },
   t13: {
     id: 't13', questId: 't13', startAnchor: 'beat.t13.start',
@@ -150,23 +163,30 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
     npcs: { gaut: 'tutorial.gaut.square' },
     prompts: [prompt('skills'), prompt('ability', 'ability1')],
     steps: [[{ kind: 'skill', actives: ['knight.rallyCry'], passives: ['knight.rimBash', 'knight.riposteEdge'] }]],
+    lines: ['tutorial.line.t13.1'],
   },
   t14: {
     id: 't14', questId: 't14', startAnchor: 'beat.t14.start',
     npcs: { gaut: 'tutorial.gaut.square', hob: 'npc-post.hob' },
-    prompts: [prompt('map'), prompt('fastTravel', 'map')],
+    prompts: [
+      { ...P('interact', 'interact', 'tutorial.prompt.rekindle'), step: 1 },
+      { ...prompt('map'), step: 2 },
+      { ...prompt('fastTravel', 'map'), step: 2 },
+    ],
     steps: [
       [{ kind: 'trigger', id: 'trg.t14.chapel' }],
       [{ kind: 'lit', waystoneId: 'chapel' }],
       [{ kind: 'travel' }],
     ],
+    targets: ['waystone.chapel', 'waystone.chapel', null],
+    lines: ['tutorial.line.t14.1'],
   },
   t15: {
     id: 't15', questId: 't15', startAnchor: 'beat.t15.start',
     crisis: true,
     unlocks: ['surge'],
     npcs: { gaut: 'tutorial.gaut.gate', aelfreda: 'tutorial.aelfreda.gate' },
-    prompts: [prompt('surge'), prompt('rest', 'interact')],
+    prompts: [{ ...prompt('surge'), step: 1 }, { ...prompt('rest', 'interact'), step: 2 }],
     waves: [[{ spawnerId: 't15.gate', aggro: true }]],
     waveSteps: [1],
     steps: [
@@ -174,7 +194,8 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
       [{ kind: 'spell', spellId: 'heartshard-surge' }, { kind: 'cleared', spawnerIds: ['t15.gate'] }],
       [{ kind: 'rest' }],
     ],
-    lines: ['tutorial.line.t15.1'],
+    targets: ['kettlewick.gate', null, 'waystone.kettlewick'],
+    lines: ['tutorial.line.t15.0', 'tutorial.line.t15.1'],
   },
   skirmish: {
     id: 'skirmish', questId: 't-skirmish', startAnchor: 'beat.t11.start',
@@ -194,5 +215,6 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
       [{ kind: 'cleared', spawnerIds: ['t08.lane', 't10.sweeper'] }],
       [{ kind: 'cleared', spawnerIds: ['t09.soldier', 't11.square'] }],
     ],
+    lines: ['tutorial.line.skirmish.1'],
   },
 };

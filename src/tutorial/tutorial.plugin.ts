@@ -12,6 +12,7 @@ import '../hud/events';
 import '../quests/service';
 import '../save/service';
 import '../waystones/service';
+import './events';
 import { BEATS, FULL_ORDER, KETTLEWICK_ORDER, LOCKABLE_VERBS, TUTORIAL_ANCHORS, VETERAN_ORDER } from './beats';
 import { CutsceneDirector, type CutsceneShot } from './Cutscene';
 import { createGoal } from './goals';
@@ -20,7 +21,14 @@ import { createReplayMenu } from './ReplayMenu';
 import { createSkipWidget, SkipHold } from './SkipHold';
 import { createStartScreen } from './StartScreen';
 import { TUTORIAL_STRINGS_EN } from './strings.en';
+import { setBanners } from './Banners';
+import { TutorialBeacon } from './Beacon';
+import { CrisisDressing } from './CrisisDressing';
+import '../quality/types';
+import './service';
+import { Townsfolk } from './Townsfolk';
 import { TutorialDirector, type DrillDef } from './TutorialDirector';
+import type { NpcModelLoader } from '../npcs/types';
 import { BEAT_IDS, type BeatId, type DirectorEvent, type DirectorPorts, type TickSample, type TutorialMode } from './types';
 
 /** localStorage key recording that a run finished once ("Skip to Kettlewick" is then offered). */
@@ -146,8 +154,10 @@ function routeEvents(ctx: GameContext, send: (e: DirectorEvent) => void): void {
 /** Builds the director's ports over the merged services (every service optional). */
 function makePorts(ctx: GameContext, ui: {
   cutscene: CutsceneDirector;
-  line(key: string, slot: 'subtitle' | 'toast'): void;
-}): { ports: DirectorPorts; dispose(): void } {
+  line(key: string, slot: 'subtitle' | 'toast', params?: Record<string, string | number>): void;
+  /** Where the T05 ember-burst starts: above the chapel brazier. */
+  brazier?(): { x: number; y: number; z: number } | null;
+}): { ports: DirectorPorts; dispose(): void; flushToasts(): void } {
   const svc = ctx.services;
   const warned = new Set<string>();
   const warnOnce = (m: string) => {
@@ -155,7 +165,27 @@ function makePorts(ctx: GameContext, ui: {
     warned.add(m);
     console.warn(m);
   };
+  /** Feedback sounds never throw into a beat transition (an unregistered key throws; review M2). */
+  const play = (key: string) => {
+    try {
+      svc.get('audio')?.play(key);
+    } catch (err) {
+      warnOnce(`Tutorial: sound ${key} failed: ${String(err)}`);
+    }
+  };
   const beatStart = new Map<BeatId, number>();
+  let lastToastTick = -1;
+  let smokeLineShown = false;
+  let pendingBeatToast: { beatId: BeatId; tick: number } | null = null;
+  const flushToasts = (): void => {
+    const p = pendingBeatToast;
+    if (!p || p.tick === ctx.clock.tick) return;
+    pendingBeatToast = null;
+    if (lastToastTick === p.tick) return;
+    const questId = BEATS[p.beatId].questId;
+    const titleKey = svc.get('quests')?.get(questId)?.titleKey ?? `tutorial.${p.beatId}.title`;
+    ui.line('tutorial.toast.beatDone', 'toast', { title: ctx.strings.t(titleKey) });
+  };
   let locksOff: (() => void) | null = null;
   let xpRelease: (() => void) | null = null;
   const anchorPos = (id: string) => ctx.anchors.find(id) ?? null;
@@ -220,6 +250,11 @@ function makePorts(ctx: GameContext, ui: {
       const amount = Math.min(a.maxHealth * f, a.health - 1);
       if (amount <= 0) return;
       ctx.damage.apply({ attackerId: null, targetId: a.id, amount, poise: 0, kind: 'script', unblockable: true });
+      // Edda explains the drain on the first hit (plan item 6).
+      if (!smokeLineShown) {
+        smokeLineShown = true;
+        ui.line('tutorial.line.t12.smoke', 'subtitle');
+      }
     },
     healFull: () => {
       const a = ctx.player.actor;
@@ -258,7 +293,28 @@ function makePorts(ctx: GameContext, ui: {
     promptCount: (m) => svc.get('prompts')?.count(m as never) ?? 0,
     hidePrompts: () => svc.get('prompts')?.hide(),
     showLine: (key) => ui.line(key, 'subtitle'),
-    toast: (key) => ui.line(key, 'toast'),
+    toast: (key) => {
+      lastToastTick = ctx.clock.tick;
+      ui.line(key, 'toast');
+    },
+    trackedUnits: (beatId, step) => {
+      const views = svc.get('quests')?.objectives(BEATS[beatId].questId) ?? [];
+      const o = views.find((v) => {
+        const m = v.def.type === 'event' && v.def.target === 'tutorial.goal' ? (v.def.match as { beatId?: string; step?: number } | undefined) : undefined;
+        return m?.beatId === beatId && m.step === step;
+      });
+      return o ? o.progress : null;
+    },
+    goalProgress: (beatId, step, delta) => {
+      for (let i = 0; i < delta; i++) ctx.events.emit('tutorial.goal', { beatId, step });
+    },
+    stepDone: (_beatId, step) => play(`sfx.wardstone.${Math.min(5, step + 1)}`),
+    beatDone: (beatId) => {
+      play('sfx.wardstones.complete');
+      // Shown on the next tick unless another tutorial toast went out in the same one (review 23).
+      pendingBeatToast = { beatId, tick: ctx.clock.tick };
+    },
+    promptSuccess: (m) => svc.get('prompts')?.success(m),
     cutscene: (kind) => {
       const c = ui.cutscene;
       if (kind === null) return c.end();
@@ -277,7 +333,9 @@ function makePorts(ctx: GameContext, ui: {
       const f = ctx.player.feet;
       vfx.shake(0.6, 1.5);
       vfx.pulseScreen(0.8, 1.2, 0xffc040);
-      vfx.spawnEffect('ember-burst', { position: { x: f.x, y: f.y + 1, z: f.z } });
+      // The Kindling Ember bursts from the brazier (design T05, review 16); the player's feet if it has no anchor.
+      const at = ui.brazier?.() ?? { x: f.x, y: f.y + 1, z: f.z };
+      vfx.spawnEffect('ember-burst', { position: at });
     },
     emitBeat: (beatId, state) => {
       if (state === 'started') beatStart.set(beatId, ctx.clock.seconds);
@@ -295,6 +353,7 @@ function makePorts(ctx: GameContext, ui: {
   };
   return {
     ports,
+    flushToasts,
     dispose: () => {
       xpRelease?.();
       xpRelease = null;
@@ -307,7 +366,8 @@ function makePorts(ctx: GameContext, ui: {
 
 const tutorial: GamePlugin = {
   id: 'tutorial',
-  dependsOn: ['core', 'quests'],
+  // region: the fires, villagers, banners and brazier read its anchors at setup.
+  dependsOn: ['core', 'quests', 'region'],
   setup(ctx) {
     ctx.strings.register('en', TUTORIAL_STRINGS_EN);
     for (const a of TUTORIAL_ANCHORS) {
@@ -318,7 +378,7 @@ const tutorial: GamePlugin = {
     for (const def of TUTORIAL_QUESTS) if (!quests?.get(def.id)) quests?.register(def);
 
     const d = doc();
-    const t = (key: string) => ctx.strings.t(key);
+    const t = (key: string, params?: Record<string, string | number>) => ctx.strings.t(key, params);
     const cutscene = new CutsceneDirector({
       emit: (name, payload) => ctx.events.emit(name, payload),
       pushContext: () => ctx.input.contexts.push('cutscene', 'tutorial'),
@@ -337,10 +397,10 @@ const tutorial: GamePlugin = {
     });
     let lineSeq = 0;
     const timers = new Set<ReturnType<typeof setTimeout>>();
-    const line = (key: string, slot: 'subtitle' | 'toast') => {
+    const line = (key: string, slot: 'subtitle' | 'toast', params?: Record<string, string | number>) => {
       if (!d) return;
       const element = d.createElement('div');
-      element.textContent = t(key);
+      element.textContent = t(key, params);
       element.style.cssText = 'background:rgba(20,16,12,.8);color:#f3e6c8;padding:6px 12px;border-radius:4px;margin-bottom:6px;font:15px serif';
       const unmount = ctx.hud.mount(slot, { id: `tutorial.line.${++lineSeq}`, element });
       const timer = setTimeout(() => {
@@ -350,7 +410,8 @@ const tutorial: GamePlugin = {
       timers.add(timer);
     };
 
-    const wired = makePorts(ctx, { cutscene, line });
+    let crisis: CrisisDressing | null = null;
+    const wired = makePorts(ctx, { cutscene, line, brazier: () => crisis?.burstAtBrazier() ?? null });
     const director = new TutorialDirector(wired.ports, {
       beats: BEATS,
       orders: { full: FULL_ORDER, veteran: VETERAN_ORDER, kettlewick: KETTLEWICK_ORDER },
@@ -463,6 +524,69 @@ const tutorial: GamePlugin = {
     const onLockChange = () => skip.onPointerLockChange(!!d?.pointerLockElement);
     d?.addEventListener('pointerlockchange', onLockChange);
 
+    // Objective beacon (plan item 1): ring and pillar at the current step's target, an edge arrow, the map marker.
+    const T03_TARGETS: Array<[string, string]> = [['o1', 'npc-post.stane'], ['o2', 'npc-post.edda'], ['o3', 'kettlewick.notice-board']];
+    const targetAnchor = (): string | null => {
+      const id = director.currentTarget();
+      if (id || director.beat !== 't03') return id;
+      // T03 is one quest step with three talks: point at the first one still open.
+      const q = ctx.services.get('quests');
+      if (!q || q.state('t03') !== 'active') return null;
+      return T03_TARGETS.find(([o]) => !q.objectiveDone('t03', o))?.[1] ?? null;
+    };
+    const beaconTarget = (): { x: number; y: number; z: number } | null => {
+      const id = targetAnchor();
+      const a = id ? ctx.anchors.find(id) : undefined;
+      if (id && !a) wired.ports.warn(`[tutorial] beacon target ${id} has no anchor`);
+      return a ? { x: a.position.x, y: a.position.y, z: a.position.z } : null;
+    };
+    const unprovide = ctx.services.provide('tutorial', { target: beaconTarget });
+    const beacon = new TutorialBeacon({
+      scene: ctx.scene,
+      doc: d,
+      mountOverlay: (w) => ctx.hud.mount('overlay', w),
+      heightAt,
+    });
+    const cutsceneOff = ctx.events.on('cutscene.started', () => beacon.setSuppressed('cutscene', true));
+    const cutsceneEndOff = ctx.events.on('cutscene.ended', () => beacon.setSuppressed('cutscene', false));
+    const modalOff = ctx.events.on('ui.modal', () => beacon.setSuppressed('modal', ctx.hud.modalOpen !== null));
+
+    // Idle villagers (plan item 10): calm before the crack, gone from the white-out until the tutorial ends.
+    const assets = ctx.assets as unknown;
+    const isLoader = (x: unknown): x is NpcModelLoader => {
+      const l = x as Partial<NpcModelLoader> | null | undefined;
+      return !!l && typeof l.load === 'function' && typeof l.instantiate === 'function' && typeof l.animations === 'function';
+    };
+    const townsfolk = new Townsfolk({ scene: ctx.scene, anchors: ctx.anchors, heightAt, loader: isLoader(assets) ? assets : undefined });
+    const flagOn = (k: string) => wired.ports.state.flag(k);
+    // Back once M01 is done and the fires are out, not beside the burning houses (review m4).
+    const townsfolkVisible = () => !flagOn('tutorial.heartshard-awakened') || ctx.services.get('quests')?.state('m01') === 'completed';
+    const square = ctx.anchors.find('kettlewick.square')?.position ?? { x: 3, y: 0, z: 127 };
+
+    // Kettlewick burns from the crack (plan item 7): the bakery until M02, the rest until M01, read through quest state.
+    crisis = new CrisisDressing({
+      scene: ctx.scene,
+      anchors: ctx.anchors,
+      questState: (id) => ctx.services.get('quests')?.state(id) ?? 'inactive',
+      flag: flagOn,
+      quality: () => ctx.services.get('quality')?.step ?? 'medium',
+    });
+    const dressing = crisis;
+    const refreshCrisis = () => {
+      dressing.refresh();
+      // The Kindling Ember stays lit in the brazier once the vow (T04) is done.
+      dressing.kindle(ctx.services.get('quests')?.state('t04') === 'completed');
+    };
+    refreshCrisis();
+    const crisisOffs = [
+      ctx.events.on('flag.changed', refreshCrisis),
+      ctx.events.on('quest.completed', refreshCrisis),
+      ctx.events.on('quest.started', refreshCrisis),
+      ctx.events.on('save.loaded', refreshCrisis),
+    ];
+    const bannerSeen: string[] = [];
+    let bannerLast: string | null | undefined;
+
     const fwd = new THREE.Vector3();
     ctx.systems.add({
       id: 'tutorial-skip',
@@ -487,6 +611,7 @@ const tutorial: GamePlugin = {
       fixedPhase: 'rules',
       order: 300,
       fixedUpdate: (dt) => {
+        wired.flushToasts();
         if (!director.begun && !startClose && saveReady() && ctx.hud.modalOpen === null) openStart();
         const cam = ctx.camera;
         let camera: TickSample['camera'] = null;
@@ -505,7 +630,6 @@ const tutorial: GamePlugin = {
       },
     });
     // Render `world` band 300..399 (tutorial, thread 9): after VFX and damage numbers, before the follow camera update.
-    let pulse = 0;
     ctx.systems.add({
       id: 'tutorial-cutscene-camera',
       renderPhase: 'world',
@@ -513,12 +637,26 @@ const tutorial: GamePlugin = {
       render: (_alpha, frameTime) => {
         cutscene.render(frameTime);
         skipUi?.update(skip.progress, skip.hintVisible);
-        // Pulse the T02 banner the player should look at.
-        pulse += frameTime;
-        const target = director.detail();
-        for (const id of ['chapel.banner-1', 'chapel.banner-2', 'chapel.banner-3']) {
-          const mesh = ctx.scene.getObjectByName(`banner:${id}`);
-          if (mesh) mesh.scale.setScalar(id === target ? 1 + 0.15 * Math.sin(pulse * 6) : 1);
+        beacon.setTarget(beaconTarget());
+        const f = ctx.player.feet;
+        const win = d?.defaultView;
+        beacon.update(frameTime, ctx.camera ?? null, { x: f.x, y: f.y, z: f.z }, {
+          width: win?.innerWidth || 1280,
+          height: win?.innerHeight || 720,
+        });
+        const folkOn = townsfolkVisible();
+        townsfolk.setVisible(folkOn);
+        // Their idle animation only matters near Kettlewick.
+        if (folkOn && Math.hypot(f.x - square.x, f.z - square.z) < 90) townsfolk.update(frameTime);
+        dressing.smoke(director.beat === 't12' && director.currentStep === 0);
+        dressing.update(frameTime, { x: f.x, y: f.y, z: f.z });
+        // T02: the banner to look at glows; the ones already seen stay dimly lit (review 19).
+        const banner = director.beat === 't02' ? director.detail() : null;
+        if (bannerLast !== banner) {
+          if (bannerLast && !bannerSeen.includes(bannerLast)) bannerSeen.push(bannerLast);
+          bannerLast = banner;
+          // Only on a change: setBanners walks the scene (review m1).
+          setBanners(ctx.scene, banner, bannerSeen);
         }
       },
     });
@@ -527,6 +665,14 @@ const tutorial: GamePlugin = {
       director.dispose();
       cutscene.dispose();
       wired.dispose();
+      beacon.dispose();
+      townsfolk.dispose();
+      dressing.dispose();
+      for (const off of crisisOffs) off();
+      unprovide();
+      cutsceneOff();
+      cutsceneEndOff();
+      modalOff();
       d?.removeEventListener('pointerlockchange', onLockChange);
       for (const timer of timers) clearTimeout(timer);
       timers.clear();
