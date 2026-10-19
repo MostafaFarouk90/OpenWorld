@@ -52,10 +52,10 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | npc-post.hob | 42 | 47 | 0 | 180 | npc-post |
 | npc-post.wynn | -9 | 44 | 0 | 270 | npc-post |
 | beat.t01.start | 0 | 2 | 0 | 180 | beat |
-| beat.t02.start | 3 | 26 | 0 | 180 | beat |
-| beat.t03.start | 0 | 32 | 0 | 180 | beat |
+| beat.t02.start | 3 | 26 | 0 | 233 | beat |
+| beat.t03.start | 0 | 32 | 0 | 157 | beat |
 | beat.t04.start | 40 | 60 | 0 | 270 | beat |
-| beat.t05.start | 38 | 60 | 0 | 270 | beat |
+| beat.t05.start | 38 | 60 | 0 | 90 | beat |
 | beat.t06.start | 40 | 60 | 0 | 90 | beat |
 | beat.t07.start | 0 | 62 | 0 | 180 | beat |
 | beat.t08.start | 0 | 95 | 0 | 180 | beat |
@@ -64,7 +64,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | beat.t11.start | 0 | 120 | 0 | 180 | beat |
 | beat.t12.start | 14 | 132 | 0 | 270 | beat |
 | beat.t13.start | 24 | 133 | 0 | 180 | beat |
-| beat.t14.start | 38 | 48 | 0 | 180 | beat |
+| beat.t14.start | 38 | 48 | 0 | 326 | beat |
 | beat.t15.start | 0 | 158 | 0 | 180 | beat |
 | spawn.t05.wraith-1 | 30 | 52 | 0 | 270 | spawn |
 | spawn.t05.wraith-2 | 30 | 68 | 0 | 270 | spawn |

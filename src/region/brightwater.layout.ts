@@ -79,10 +79,10 @@ const anchors: AnchorSpec[] = [
 
   // Tutorial beats: where each starts.
   a('beat.t01.start', 0, 2, 0, ['beat']),
-  a('beat.t02.start', 3, 26, 0, ['beat']),
-  a('beat.t03.start', 0, 32, 0, ['beat']),
+  a('beat.t02.start', 3, 26, 53, ['beat']), // toward the chapel banners
+  a('beat.t03.start', 0, 32, 337, ['beat']), // up the lane toward Stane in the yard
   a('beat.t04.start', 40, 60, 90, ['beat']),
-  a('beat.t05.start', 38, 60, 90, ['beat']),
+  a('beat.t05.start', 38, 60, 270, ['beat']), // the churchyard wraiths rise to the west
   a('beat.t06.start', 40, 60, 270, ['beat']),
   a('beat.t07.start', 0, 62, 0, ['beat']),
   a('beat.t08.start', 0, 95, 0, ['beat']),
@@ -91,7 +91,7 @@ const anchors: AnchorSpec[] = [
   a('beat.t11.start', 0, 120, 0, ['beat']),
   a('beat.t12.start', 14, 132, 90, ['beat']),
   a('beat.t13.start', 24, 133, 0, ['beat']),
-  a('beat.t14.start', 38, 48, 0, ['beat']),
+  a('beat.t14.start', 38, 48, 146, ['beat']), // the chapel waystone, just south-east
   a('beat.t15.start', 0, 158, 0, ['beat']),
 
   // Enemy spawn points per beat.

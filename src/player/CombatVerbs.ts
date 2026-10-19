@@ -701,6 +701,7 @@ export class CombatVerbs {
       point = { position: ctx.world.spawn, yaw: 0, source: 'world' as const };
     }
     const handle = ctx.player.teleport(point.position, point.yaw);
+    if (ctx.cameraRig) ctx.cameraRig.yaw = point.yaw; // respawn facing the anchor's heading
     this.respawnWait = { ready: () => handle.ready(), since: ctx.clock.tick, source: point.source };
   }
 

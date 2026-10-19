@@ -80,3 +80,43 @@ describe('tutorial beats', () => {
     for (const b of beats) if (b.id !== 't03' && b.id !== 't12') expect(ids.has(b.questId), b.id).toBe(true);
   });
 });
+
+describe('beat start facings', () => {
+  // The first thing each beat asks for; the player must arrive looking at it (Mostafa, 2026-10-19:
+  // "I should be facing the village and the scarecrow").
+  const TARGETS: Partial<Record<(typeof FULL_ORDER)[number], string>> = {
+    t01: 'brightwater.scarecrow',
+    t02: 'chapel.banner-2',
+    t03: 'trg.t03.stane',
+    t04: 'trg.t04.chapel',
+    t05: 'spawn.t05.wraith-3',
+    t06: 'trg.t06.end',
+    t07: 'trg.t07.cart',
+    t08: 'spawn.t08.wraith-1',
+    t09: 'spawn.t09.soldier-1',
+    t10: 'spawn.t10.wraith-1',
+    t11: 'trg.t11.square',
+    t12: 'trg.t12.bakery',
+    t14: 'trg.t14.chapel',
+    t15: 'trg.t15.gate',
+  };
+  const point = (id: string): { x: number; z: number } => {
+    const p = BRIGHTWATER_LAYOUT.anchors.find((a) => a.id === id) ?? BRIGHTWATER_LAYOUT.triggers.find((t) => t.id === id);
+    if (!p) throw new Error(`missing ${id}`);
+    return { x: p.x, z: p.z };
+  };
+
+  for (const [beat, target] of Object.entries(TARGETS)) {
+    it(`${beat} starts facing ${target}`, () => {
+      const start = BRIGHTWATER_LAYOUT.anchors.find((a) => a.id === BEATS[beat as keyof typeof BEATS].startAnchor)!;
+      const yaw = (start.yawDeg * Math.PI) / 180;
+      // Engine yaw 0 looks down -Z (ThirdPersonCamera.toWorld).
+      const forward = { x: -Math.sin(yaw), z: -Math.cos(yaw) };
+      const t = point(target);
+      const dx = t.x - start.x;
+      const dz = t.z - start.z;
+      const cos = (forward.x * dx + forward.z * dz) / Math.hypot(dx, dz);
+      expect(Math.acos(Math.min(1, cos)) * (180 / Math.PI)).toBeLessThan(25);
+    });
+  }
+});

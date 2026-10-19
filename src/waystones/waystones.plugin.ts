@@ -32,6 +32,8 @@ const waystones: GamePlugin = {
     const teleport = new SafeTeleport({
       place: (feet, yaw) => {
         handle = ctx.player.teleport(feet, yaw);
+        // Fast travel and save loads arrive facing the heading: the follow camera turns with the player.
+        if (ctx.cameraRig) ctx.cameraRig.yaw = yaw;
       },
       freeze: () => ctx.player.addMoveModifier('waystones.travel', { freeze: true }),
       ready: () => handle?.ready() ?? true,
