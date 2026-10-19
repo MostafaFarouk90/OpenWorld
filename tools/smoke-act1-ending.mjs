@@ -102,6 +102,8 @@ const bossState = () => ev(() => window.__game.game.ctx.bosses.state('gaffer-gri
 for (let i = 0; i < 40 && !(await bossState()); i++) await wait(250);
 await wait(500);
 const bar = await ev(() => [...document.querySelectorAll('[class*=boss]')].filter((e) => e.offsetParent).map((e) => e.className).slice(0, 3));
+const hint = await ev(() => { const e = document.querySelector('.owg-controls-hint'); return e ? getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(e).display !== 'none' && e.offsetParent !== null : null; });
+log('controls hint visible under the boss bar', hint);
 log('boss', JSON.stringify(await bossState()), 'bar', JSON.stringify(bar));
 await shot('3-intro');
 const fps = await ev(() => new Promise((r) => { let n = 0; const t0 = performance.now(); const f = () => { n++; if (performance.now() - t0 < 1000) requestAnimationFrame(f); else r(n); }; requestAnimationFrame(f); }));
