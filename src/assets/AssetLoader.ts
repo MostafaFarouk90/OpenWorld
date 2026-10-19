@@ -4,7 +4,11 @@ import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { ASSETS, isSupportedModelUrl, type AssetEntry, type AssetId } from './AssetManifest';
+import { ASSETS, isSupportedModelUrl, type AssetEntry } from './AssetManifest';
+import { SWAP_ASSETS } from './swap/swapModels';
+
+/** Any manifest id: the typed `ASSETS` keys or a swap model id (`hex/…`, `dun/…`, `horse`). */
+type AssetId = string;
 
 export interface AssetLoaderOptions {
   manager?: THREE.LoadingManager;
@@ -40,7 +44,7 @@ export class AssetLoader {
   constructor(renderer: THREE.WebGLRenderer, options: AssetLoaderOptions = {}) {
     this.renderer = renderer;
     this.manager = options.manager;
-    this.manifest = options.manifest ?? ASSETS;
+    this.manifest = options.manifest ?? { ...SWAP_ASSETS, ...ASSETS };
     this.timeoutMs = options.timeoutMs ?? 60_000;
   }
 
@@ -76,6 +80,11 @@ export class AssetLoader {
     );
     this.cache.set(id, promise);
     return promise;
+  }
+
+  /** The pack an asset belongs to (undefined for an unknown id). */
+  packOf(id: AssetId): string | undefined {
+    return this.manifest[id]?.pack;
   }
 
   /** Loads several assets in parallel. */
