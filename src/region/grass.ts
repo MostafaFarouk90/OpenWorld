@@ -2,6 +2,7 @@
 // scattered per ground cell from a seed so a cell always grows the same grass, rebuilt only when the player crosses a
 // cell. Built-in Lambert material, no custom shader, so nothing here can fail to compile on a weaker GPU.
 import * as THREE from 'three';
+import { surfaceColor } from '../terrain/chunkGeometry';
 
 export const GRASS = {
   /** Side of one scatter cell (m). */
@@ -9,7 +10,7 @@ export const GRASS = {
   /** Cells grown in each direction from the player's cell: (2r + 1)^2 cells. */
   radiusCells: 5,
   /** Tufts per cell at density 1. */
-  perCell: 40,
+  perCell: 56,
   /** No grass above this height (the heath and snow bands of the terrain palette). */
   maxHeight: 140,
   /** No grass where the ground normal's y is below this (the terrain shows bare rock from 0.82). */
@@ -22,8 +23,9 @@ export const GRASS = {
   thinFrom: 0.5,
   edgeKeep: 0.35,
   /**
-   * New cells scattered per frame, nearest first. Scattering a cell costs about 1 to 2 ms (accept checks and collider
-   * rays), so a whole new row at once would hitch; the far edge fills in over a few frames instead.
+   * New cells scattered per frame, nearest first (an arrival grows the 3 x 3 under the player at once). A cell costs
+   * about 0.35 ms in node without the collider rays, so a whole new row at once would hitch; the far edge fills in
+   * over a few frames instead.
    */
   cellsPerFrame: 3,
 } as const;
@@ -42,6 +44,19 @@ export interface Tuft {
   rot: number;
   scale: number;
   tone: number;
+  /** Linear RGB: the terrain's own colour under the tuft (the meadow band, drying a little with height), lifted. */
+  color: [number, number, number];
+}
+
+/** Blades are a little lighter than the ground they grow from, by 1 + this * (0.5 + tone). */
+export const GRASS_LIFT = 0.35;
+
+/** The colour of a tuft standing on ground of this height and steepness: the terrain's colour, lifted by `tone`. */
+export function tuftColor(height: number, up: number, tone: number): [number, number, number] {
+  const c = new Float32Array(3);
+  surfaceColor(height, up, c, 0);
+  const k = 1 + GRASS_LIFT * (0.5 + tone);
+  return [Math.min(c[0] * k, 1), Math.min(c[1] * k, 1), Math.min(c[2] * k, 1)];
 }
 
 export type GrassAccept = (x: number, z: number) => boolean;
@@ -84,9 +99,10 @@ export function cellTufts(cx: number, cz: number, heightAt: HeightFn, accept: Gr
     if (i >= n) continue;
     const y = heightAt(x, z);
     if (!Number.isFinite(y) || y > GRASS.maxHeight) continue;
-    if (groundUp(heightAt, x, z) < GRASS.minUp) continue;
+    const up = groundUp(heightAt, x, z);
+    if (up < GRASS.minUp) continue;
     if (!accept(x, z)) continue;
-    out.push({ x, y, z, rot, scale, tone });
+    out.push({ x, y, z, rot, scale, tone, color: tuftColor(y, up, tone) });
   }
   return out;
 }
@@ -160,12 +176,14 @@ export class GrassField {
     if (!this.object.visible) return false;
     const cx = Math.floor(x / GRASS.cellSize);
     const cz = Math.floor(z / GRASS.cellSize);
+    let budget = this.cellsPerFrame;
     if (!this.centre || this.centre.cx !== cx || this.centre.cz !== cz) {
+      // An arrival (load, fast travel, respawn, a door) lands in bare cells: grow the 3 x 3 under the player at once.
+      if (!this.centre || Math.max(Math.abs(this.centre.cx - cx), Math.abs(this.centre.cz - cz)) > 1) budget = Math.max(budget, 9);
       this.centre = { cx, cz };
       this.evict();
       this.dirty = true;
     }
-    let budget = this.cellsPerFrame;
     for (const [dx, dz] of GrassField.offsets) {
       if (budget <= 0) break;
       const key = `${cx + dx},${cz + dz}`;
@@ -245,7 +263,7 @@ export class GrassField {
           q.setFromAxisAngle(up, t.rot);
           m.compose(p.set(t.x, t.y, t.z), q, s.set(sc, sc, sc));
           this.mesh.setMatrixAt(i, m);
-          col.setHSL(0.25 + t.tone * 0.07, 0.45, 0.26 + t.tone * 0.12);
+          col.setRGB(t.color[0], t.color[1], t.color[2], THREE.LinearSRGBColorSpace);
           this.mesh.setColorAt(i, col);
           i++;
         }
