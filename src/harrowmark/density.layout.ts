@@ -1,5 +1,5 @@
-// Act 1 density pass, batch 3 (the quests thread; additive to thread 17's city layout): the anchors, triggers and NPCs the
-// fuller M06, M07, R02 (in the Bastion yard), R03 and R04 need. Engine metres, +Z north; compass headings as in
+// Act 1 density pass, batches 3 and 4 (the quests thread; additive to thread 17's city layout): the anchors, triggers and NPCs
+// the fuller M06, M07, R02 (in the Bastion yard), R03 and R04 need, then M08, M09, M10 and D02. Engine metres, +Z north; compass headings as in
 // harrowmark.layout.ts. The two gate refugees stand on thread 17's queue anchors outside the wall.
 import type { AnchorSpec, LayoutData, NpcSpec, TriggerSpec } from '../region/layoutTypes';
 import { a } from './layout.helpers';
@@ -37,11 +37,29 @@ const anchors: AnchorSpec[] = [
   a('npc-post.sexton', 8372, 2142, 270, ['npc-post']),
   a('npc-post.fence', 8727, 1545, 90, ['npc-post']),
   a('npc-post.crabbe', 8774, 1984, 90, ['npc-post']),
+
+  // ---- batch 4: Harrowmark part 2 ----
+  // M08: the Bastion armourer by Wystan's steps, the Keep gate guard, and Lord Aldous Grisel outside the Keep (inside the
+  // hall while the audience waits; npc-post.grisel.hall is in src/interiors/harrowmark/keepHall.ts).
+  a('npc-post.armourer', 8228, 1786, 180, ['npc-post']),
+  a('npc-post.keep-guard', 8507, 2590, 270, ['npc-post']),
+  a('npc-post.grisel', 8522, 2588, 180, ['npc-post']),
+  // M09: Oswin's clerk drinking on the Tilted Anvil's bench, and his satchel beside him (the side-door key)
+  a('npc-post.clerk', 8190, 1649, 180, ['npc-post']),
+  a('m09.clerk-key', 8187.5, 1649, 180, ['quest', 'interact']),
+  // M10: two of Vey's men who come for the sealed orders once Cael has them
+  a('spawn.m10.ambush-1', 8590, 2484, 180, ['spawn']),
+  a('spawn.m10.ambush-2', 8610, 2484, 180, ['spawn']),
+  // D02: the two strays in the Watch Barracks yard, Rook's Calm lesson
+  a('spawn.d02.stray-1', 8345, 1390, 180, ['spawn']),
+  a('spawn.d02.stray-2', 8352, 1394, 180, ['spawn']),
 ];
 
 const triggers: TriggerSpec[] = [
   // M06 ends at the Tilted Anvil's sign on Forge Row, where Aldith offers M07.
   { id: 'trg.harrowmark.anvil-sign', shape: 'sphere', x: 8204, z: 1645, radius: 7 },
+  // M10: the Ashmare's first ride ends inside the South Gate.
+  { id: 'trg.harrowmark.m10-ride', shape: 'sphere', x: 8500, z: 1282, radius: 9 },
 ];
 
 const npcs: NpcSpec[] = [
@@ -54,6 +72,11 @@ const npcs: NpcSpec[] = [
   { id: 'sexton', post: 'npc-post.sexton' },
   { id: 'fence', post: 'npc-post.fence' },
   { id: 'crabbe', post: 'npc-post.crabbe', presentWhen: 'story.r04.pagesFound' },
+  // batch 4
+  { id: 'armourer', post: 'npc-post.armourer' },
+  { id: 'keep-guard', post: 'npc-post.keep-guard' },
+  { id: 'grisel', post: 'npc-post.grisel', presentWhen: 'story.m08.started' },
+  { id: 'clerk', post: 'npc-post.clerk', presentWhen: 'story.m09.started' },
 ];
 
 export const DENSITY_LAYOUT_HM: LayoutData = { anchors, triggers, structures: [], patrols: [], npcs, fields: [] };

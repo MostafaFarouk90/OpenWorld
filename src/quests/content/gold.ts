@@ -7,3 +7,5 @@ export const M06_TIP_GOLD = 25;
 export const R03_COIN_GOLD = 150;
 // Act 1 density pass: Mother Quill's price for R04's third page (Gerta's name gets it free).
 export const R04_FENCE_GOLD = 20;
+// M09 (density pass): a drink for Merrin's clerk, for the side-door key.
+export const M09_CLERK_GOLD = 10;

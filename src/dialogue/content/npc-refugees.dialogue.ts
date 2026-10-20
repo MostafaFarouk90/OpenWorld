@@ -12,9 +12,9 @@ const hild = line(H, 'refugee-1');
 const cael1 = line(H, 'cael');
 
 /**
- * The two gate refugees of M06 (density pass): Hild, a charcoal-burner from Cinderreach whose kiln-black hands the
+ * The two gate refugees of M06 (density pass): Tilda, a charcoal-burner from Cinderreach whose kiln-black hands the
  * sergeant calls ash-touched, and Old Beorn, a forge-hand with a burn that still glows. Their stories are the queue
- * objective; once Rook has seen the brazier judge Cael, Hild hears that it may judge them too (the word objective).
+ * objective; once Rook has seen the brazier judge Cael, Tilda hears that it may judge them too (the word objective).
  */
 export const npcRefugee1: DialogueDef = {
   id: 'npc-refugee-1',

@@ -301,7 +301,7 @@ describe('Rook: D02', () => {
     const w = stageWorld(); w.finish(...D02_PREREQUISITES);
     expect(play(w, 'npc-rook', 'rook', 2)).toEqual(['d02-offer', 'd02-offer-2']);
     expect(w.manager.state('d02')).toBe('inactive');
-    expect(play(w, 'npc-rook', 'rook', 'accept')).toEqual(['d02-offer', 'd02-offer-2', 'd02-calm', 'd02-calm-2']);
+    expect(play(w, 'npc-rook', 'rook', 'accept')).toEqual(['d02-offer', 'd02-offer-2', 'd02-calm', 'd02-calm-2', 'd02-stray', 'd02-stray-2', 'd02-stray-3']);
     expect(w.manager.state('d02')).toBe('active');
     expect(w.manager.objectiveDone('d02', 'o1')).toBe(true);
     expect(w.flags.get('story.d02.breadGiven')).toBe(true);
@@ -320,21 +320,33 @@ describe('Rook: D02', () => {
 
   it('reminders follow the objectives and the report follows the Grimtooth outcome', () => {
     const w = stageWorld(); w.finish(...D02_PREREQUISITES.filter((q) => q !== 'd02')); w.stage('d02', 'o1');
+    // the density pass: the stray, the valves, the sluice and the den's crates
+    expect(first(w, 'npc-rook', 'rook')).toBe('d02-stray-remind');
+    w.manager.completeObjective('d02', 'stray');
+    expect(play(w, 'npc-rook', 'rook')).toEqual(['d02-lesson', 'd02-lesson-2', 'd02-lesson-3', 'd02-lesson-4', 'd02-lesson-5']);
+    expect(w.manager.objectiveDone('d02', 'lesson')).toBe(true);
     expect(first(w, 'npc-rook', 'rook')).toBe('d02-descend-remind');
     w.manager.completeObjective('d02', 'o2');
     expect(first(w, 'npc-rook', 'rook')).toBe('d02-hounds-remind');
     w.manager.completeObjective('d02', 'o3');
+    expect(first(w, 'npc-rook', 'rook')).toBe('d02-valves-remind');
+    w.manager.completeObjective('d02', 'tally');
+    w.manager.completeObjective('d02', 'valves');
+    expect(first(w, 'npc-rook', 'rook')).toBe('d02-sluice-remind');
+    w.manager.completeObjective('d02', 'sluice');
     expect(first(w, 'npc-rook', 'rook')).toBe('d02-grimtooth-remind');
     w.manager.completeObjective('d02', 'o4');
     w.flags.set('boss.gaffer-grimtooth.outcome', 'released');
-    expect(play(w, 'npc-rook', 'rook')).toEqual(['d02-report-released', 'd02-report-released-2']);
+    expect(first(w, 'npc-rook', 'rook')).toBe('d02-crates-remind');
+    w.manager.completeObjective('d02', 'crates');
+    expect(play(w, 'npc-rook', 'rook')).toEqual(['d02-report-released', 'd02-report-released-2', 'd02-crates', 'd02-crates-2', 'd02-crates-3']);
     expect(w.manager.state('d02')).toBe('completed');
   });
 
   it('defeated outcome gets its own report', () => {
-    const w = stageWorld(); w.finish(...D02_PREREQUISITES.filter((q) => q !== 'd02')); w.stage('d02', 'o1', 'o2', 'o3', 'o4');
+    const w = stageWorld(); w.finish(...D02_PREREQUISITES.filter((q) => q !== 'd02')); w.stage('d02', 'o1', 'stray', 'lesson', 'o2', 'o3', 'tally', 'valves', 'sluice', 'o4', 'crates');
     w.flags.set('boss.gaffer-grimtooth.outcome', 'defeated');
-    expect(play(w, 'npc-rook', 'rook')).toEqual(['d02-report-defeated', 'd02-report-defeated-2']);
+    expect(play(w, 'npc-rook', 'rook')).toEqual(['d02-report-defeated', 'd02-report-defeated-2', 'd02-crates', 'd02-crates-2', 'd02-crates-3']);
   });
 });
 
@@ -428,16 +440,25 @@ describe('Wystan: M08', () => {
     const w = stageWorld(); w.finish('m07');
     expect(play(w, 'npc-wystan', 'wystan', 2)).toEqual(['m08-offer', 'm08-offer-2']);
     expect(w.manager.state('m08')).toBe('inactive');
-    expect(play(w, 'npc-wystan', 'wystan', 'accept')).toEqual(['m08-offer', 'm08-offer-2', 'm08-brief']);
+    expect(play(w, 'npc-wystan', 'wystan', 'accept')).toEqual(['m08-offer', 'm08-offer-2', 'm08-brief', 'm08-brief-2', 'm08-brief-3', 'm08-brief-4', 'm08-brief-5']);
     expect(w.manager.objectiveDone('m08', 'o1')).toBe(true);
   });
 
   it('reminds by stage and reports by stance', () => {
     const w = stageWorld(); w.finish('m07'); w.stage('m08', 'o1');
+    // the density pass: the fitting and the warden first, the screen before the report
+    expect(first(w, 'npc-wystan', 'wystan')).toBe('m08-fit-remind');
+    w.manager.completeObjective('m08', 'fit');
+    expect(first(w, 'npc-wystan', 'wystan')).toBe('m08-pass-remind');
+    w.manager.completeObjective('m08', 'pass');
+    expect(first(w, 'npc-wystan', 'wystan')).toBe('m08-go-remind');
+    w.manager.completeObjective('m08', 'wait');
     expect(first(w, 'npc-wystan', 'wystan')).toBe('m08-go-remind');
     w.manager.completeObjective('m08', 'o2');
     expect(first(w, 'npc-wystan', 'wystan')).toBe('m08-hall-remind');
     w.manager.completeObjective('m08', 'o3');
+    expect(first(w, 'npc-wystan', 'wystan')).toBe('m08-screen-remind');
+    w.manager.completeObjective('m08', 'screen');
     expect(w.dr.start('npc-wystan', 'wystan')).toBe(true); w.dr.close('script');
     for (const [stance, node] of [['meek', 'm08-report-meek'], ['bold', 'm08-report-bold'], ['steady', 'm08-report-steady'], [undefined, 'm08-report-steady']] as const) {
       if (stance) w.flags.set('story.m08.stance', stance); else w.flags.delete('story.m08.stance');
@@ -446,7 +467,7 @@ describe('Wystan: M08', () => {
       w.dr.close('script');
     }
     w.flags.set('story.m08.stance', 'bold');
-    expect(play(w, 'npc-wystan', 'wystan')).toEqual(['m08-report-bold']);
+    expect(play(w, 'npc-wystan', 'wystan')).toEqual(['m08-report-bold', 'm08-heard', 'm08-heard-2', 'm08-heard-3']);
     expect(w.manager.objectiveDone('m08', 'o4')).toBe(true); // the report credits the last talk objective
     expect(w.manager.state('m08')).toBe('completed');
   });
@@ -464,8 +485,9 @@ describe('Wystan: M08', () => {
 });
 
 describe('Edric and the Regent', () => {
-  const ready = () => { const w = stageWorld({ gold: 0 }); w.finish('m07'); w.stage('m08', 'o1', 'o2'); return w; };
-  const answers = (a: string, b: string, c: string) => (n: string) => (n === 'q1' ? a : n === 'q2' ? b : n === 'q3' ? c : 1);
+  const ready = () => { const w = stageWorld({ gold: 0 }); w.finish('m07'); w.stage('m08', 'o1', 'fit', 'pass', 'wait', 'o2'); return w; };
+  // the fourth is the king's own question (density pass)
+  const answers = (a: string, b: string, c: string, d = 'truth') => (n: string) => (n === 'q1' ? a : n === 'q2' ? b : n === 'q3' ? c : n === 'edric-ask-2' ? d : 1);
 
   it('is a polite child outside the audience', () => {
     expect(first(stageWorld(), 'npc-edric', 'edric')).toBe('idle-child');
@@ -481,7 +503,8 @@ describe('Edric and the Regent', () => {
     w.bus.on('story.m08.audience.begin', () => events.push('begin'));
     w.bus.on('story.m08.audience.end', () => events.push('end'));
     const seen = play(w, 'npc-edric', 'edric', answers('honest', 'honest', 'honest'));
-    expect(seen).toEqual(['aud-1', 'aud-2', 'q1', 'q1-honest', 'q2', 'q2-honest', 'q3', 'q3-honest', 'aud-end', 'aud-end-2']);
+    expect(seen).toEqual(['aud-1', 'aud-2', 'q1', 'q1-honest', 'q2', 'q2-honest', 'q3', 'q3-honest', 'edric-ask', 'edric-ask-2', 'edric-answer-truth', 'aud-end', 'aud-end-2']);
+    expect(w.flags.get('story.m08.edricAsked')).toBe('truth');
     expect(events).toEqual(['begin', 'end']);
     expect(w.manager.objectiveDone('m08', 'o3')).toBe(true);
     for (const q of ['q1', 'q2', 'q3']) {
@@ -490,15 +513,16 @@ describe('Edric and the Regent', () => {
       expect(n.choices!.map((c) => c.id)).toEqual(['meek', 'honest', 'bold']);
     }
     for (const id of ['aud-end', 'aud-end-2']) expect(npcEdric.nodes.find((x) => x.id === id)!.speaker).toBe('edric');
-    expect(npcEdric.nodes.length).toBeLessThanOrEqual(20);
+    expect(npcEdric.nodes.length).toBeLessThanOrEqual(24); // 20, plus the king's own question (density pass)
   });
 
   it('all answers are reachable and nothing can fail', () => {
     const kinds = ['meek', 'honest', 'bold'];
     const visited = new Set<string>();
-    for (const a of kinds) for (const b of kinds) for (const c of kinds) {
+    const asks = ['truth', 'brave', 'turn'];
+    for (const a of kinds) for (const b of kinds) for (const [i, c] of kinds.entries()) {
       const w = ready();
-      const seen = play(w, 'npc-edric', 'edric', answers(a, b, c));
+      const seen = play(w, 'npc-edric', 'edric', answers(a, b, c, asks[i]));
       seen.forEach((s) => visited.add(s));
       expect(seen.at(-1)).toBe('aud-end-2');
       expect(w.manager.objectiveDone('m08', 'o3')).toBe(true);

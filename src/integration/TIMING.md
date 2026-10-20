@@ -114,9 +114,20 @@ wraiths); they are exploration and not counted.
 M07 and R04 lose some travel: M07's giver leg now starts at the Tilted Anvil's sign (where M06 ends) instead of the
 South Gate, and R04's pages no longer cross the city three times.
 
-Every batch 1 to 3 quest clears the 40% floor. The act stands at about 262 of 695 (38%): batch 4 (M08 to M10, D02)
-carries the rest of the way to the act target, and Mostafa's timed play after batch 1 sets the real-time factor that
-decides whether 50% stands.
+### Batch 4 against the target
+
+| quest | before | after | design | after % |
+| --- | ---: | ---: | ---: | ---: |
+| M08 | 14.0 | 22.4 | 50 | 45 |
+| M09 | 8.9 | 26.0 | 55 | 47 |
+| M10 | 10.9 | 18.6 | 45 | 41 |
+| D02 | 16.5 | 24.4 | 60 | 41 |
+
+Every Act 1 quest now clears the 40% floor. The act stands at about 303 of 695 formula minutes (44%), short of the 50%
+act target by about 45 minutes. The four batch 4 quests were the last ones in the pass; closing the gap means either
+more Act 1 content outside the quest chain (Harrowmark and Dead Road side activities, which the formula does not count
+today) or a real-time factor from a timed play that shows formula minutes undercount real play (Mostafa's timed run of
+Brightwater was asked for after batch 1).
 
 ## Phase B (Harrowmark)
 
@@ -135,7 +146,11 @@ it) [1 interact, the gate brazier]; M07 3 kill units (cutpurses), 1 interact (sa
 choice, 1 drill; R03 3 kill units (guildhall thugs) [2 more, the snatchers], 1 interact (copper); R04 [4 interacts:
 the stacks lock, the page behind it, the archive door in and out; the sexton, the fence and Crabbe are dialogue]; M08 2 interacts (doors; the audience is dialogue); M09 1 stealth section, 5 interacts
 (3 invoices, 2 doors); M10 1 chase (the chase line counts as the beat, not as travel); D02 2 interacts, 4 kill units
-(kennel hounds), 1 boss (Grimtooth). Route points are the giver posts, the objective anchors and the interior doors;
+(kennel hounds), 1 boss (Grimtooth). Batch 4 adds: M08 1 note (the screen; the armourer, the warden, Merrin, Grisel
+and the king's own question are dialogue); M09 1 note (the day-book), 4 interacts (the satchel key, the strongbox, the
+door out to Simeon and back in to Merrin); M10 1 note (the orders), 2 kill units (Vey's men), and the ride from the
+stables to the South Gate as travel; D02 1 note (the tally; the den's crates are read as dialogue nodes), 2 interacts
+(the valves), 5 kill units (two strays, three sluice hounds). Route points are the giver posts, the objective anchors and the interior doors;
 travel inside an interior counts 0.
 
 | quest | travel m | travel min | nodes | talk min | beats min | estimate min | design min | delta % | |
@@ -144,16 +159,17 @@ travel inside an interior counts 0.
 | M07 | 1682 | 6.2 | 15 | 5.0 | 7.9 | 19.1 | 40 | -52 | **>25% off** |
 | R03 | 1463 | 5.4 | 21 | 7.0 | 3.9 | 16.3 | 40 | -59 | **>25% off** |
 | R04 | 2424 | 9.0 | 26 | 8.7 | 0.7 | 18.3 | 40 | -54 | **>25% off** |
-| M08 | 2421 | 9.0 | 14 | 4.7 | 0.3 | 14.0 | 50 | -72 | **>25% off** |
-| M09 | 645 | 2.4 | 5 | 1.7 | 4.8 | 8.9 | 55 | -84 | **>25% off** |
-| M10 | 1642 | 6.1 | 7 | 2.3 | 2.5 | 10.9 | 45 | -76 | **>25% off** |
-| D02 | 1407 | 5.2 | 6 | 2.0 | 9.3 | 16.5 | 60 | -72 | **>25% off** |
-| **total** | | | | | | **122.2** | **375** | **-67** | **>25% off** |
+| M08 | 2456 | 9.1 | 38 | 12.7 | 0.7 | 22.4 | 50 | -55 | **>25% off** |
+| M09 | 3383 | 12.5 | 23 | 7.7 | 5.8 | 26.0 | 55 | -53 | **>25% off** |
+| M10 | 2137 | 7.9 | 19 | 6.3 | 4.3 | 18.6 | 45 | -59 | **>25% off** |
+| D02 | 1248 | 4.6 | 17 | 5.7 | 14.1 | 24.4 | 60 | -59 | **>25% off** |
+| **total** | | | | | | **163.3** | **375** | **-56** | **>25% off** |
 
-Re-measured after batch 3 (M06, M07, R03, R04); M08 to M10 and D02 are unchanged until batch 4.
+Re-measured after batch 4 (M08 to M10, D02); M06, M07, R03 and R04 as after batch 3.
 
 Harrowmark has the same shape as Phase A: the city legs (R04's three pages cross 2.3 km) are the largest share, and
-M09 is almost all interior. Dialogue is short everywhere except the M08 audience (14 nodes).
+M09 now has a real city leg (the key from the Tilted Anvil and back). The M08 audience and its court are the longest
+dialogue (38 nodes).
 
 ## Whole act
 
@@ -161,8 +177,8 @@ M09 is almost all interior. Dialogue is short everywhere except the M08 audience
 | --- | ---: | ---: |
 | Opening (M01, M02) | 34.4 | 75 |
 | Phase A (M03 to M05, R01, R02, D01) | 105.7 | 245 |
-| Phase B (M06 to M10, R03, R04, D02) | 122.2 | 375 |
-| **Act 1** | **262.3** | **695** |
+| Phase B (M06 to M10, R03, R04, D02) | 163.3 | 375 |
+| **Act 1** | **303.4** | **695** |
 
 The tutorial itself (Knighting Day) sits outside these tables; it has its own smoke timing in
 plans/knighting-day-smoke.md. Before the density pass the act measured 136 formula minutes without the opening.

@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { stealthRoute, chaseRoute, makeUndetectable, catchCourierForTest } from '../stealth/testing/headless';
 import type { ChapterHarness } from './chapterHarness';
-import { describeQuest, ensure, heal, killAsPlayer, npcPosition, objectiveDone, runHealed, talkTo, type QuestTrail } from './phaseA';
-import { R04_FENCE_GOLD } from '../quests/content/gold';
+import { describeQuest, ensure, heal, killAsPlayer, npcPosition, objectiveDone, readNote, runHealed, talkTo, type QuestTrail } from './phaseA';
+import { M09_CLERK_GOLD, R04_FENCE_GOLD } from '../quests/content/gold';
 
 /**
  * Slice 2 Phase B (Harrowmark) and the Act 1 ending, played on a `bootFromSave(<Phase A fixture>, { models: true,
@@ -114,6 +114,18 @@ async function killGroup(h: ChapterHarness, spawnTag: string, kind: string, requ
   }
   ensure(killed >= required, `${required} ${kind} of ${spawnTag} killed (got ${killed})`);
   h.run(2);
+}
+
+/** Walks to the Ashmare in the stables yard and mounts her with H (thread 20's mount controller). */
+async function mountAshmare(h: ChapterHarness): Promise<void> {
+  const mount = h.ctx.services.require('mount');
+  await h.approach(h.anchor('harrowmark.stables.yard'), 1.5);
+  // H mounts when she is within reach, and whistles her over when she is not
+  for (let i = 0; i < 20 && !mount.mounted(); i++) {
+    h.press('KeyH');
+    await h.runAsync(60);
+  }
+  ensure(h.ctx.services.require('mount').mounted(), 'mounted on the Ashmare');
 }
 
 /** Walks a scripted route by short steps (sneaking: left Alt held), each step a teleport onto the ground. */
@@ -309,15 +321,29 @@ export async function playM08(h: ChapterHarness, t: QuestTrail, stance: Stance):
   const q = quests(h);
   await talkTo(h, t, 'wystan', [1]);
   ensure(q.state('m08') === 'active' && h.ctx.state.getBool('story.m08.favourTab'), `M08 offered, the Favour tab open: ${describeQuest(h, 'm08')}`);
+  // the density pass: the fitting at the Bastion, the warden at the Keep gate (who opens the door), the two who wait
+  // in the hall, and the screen after the audience
+  await talkTo(h, t, 'armourer');
+  ensure(objectiveDone(h, 'm08', 'fit'), `the fitting (${describeQuest(h, 'm08')})`);
+  ensure(!h.ctx.state.getBool('story.m08.keepOpen'), 'the Keep shut before the warden');
+  await talkTo(h, t, 'keep-guard');
+  ensure(objectiveDone(h, 'm08', 'pass') && h.ctx.state.getBool('story.m08.keepOpen'), `the warden, the Keep open (${describeQuest(h, 'm08')})`);
   await h.runAsync(10);
   await enterInterior(h, 'keep-hall', 'keep-hall');
+  await h.runAsync(5);
+  await talkTo(h, t, 'merrin');
+  await talkTo(h, t, 'grisel');
+  ensure(objectiveDone(h, 'm08', 'wait'), `waiting in the hall (${describeQuest(h, 'm08')})`);
   for (let i = 0; i < 30 && !objectiveDone(h, 'm08', 'o2'); i++) h.run(1);
   if (!objectiveDone(h, 'm08', 'o2')) await h.enterTrigger('trg.harrowmark.keep-hall');
   ensure(objectiveDone(h, 'm08', 'o2'), `o2 the Keep hall (${describeQuest(h, 'm08')})`);
   await h.runAsync(10);
   const pick = stance === 'meek' ? 1 : stance === 'steady' ? 2 : 3;
-  await talkTo(h, t, 'edric', [pick, pick, pick]);
+  await talkTo(h, t, 'edric', [pick, pick, pick, pick]);
   ensure(objectiveDone(h, 'm08', 'o3') && h.ctx.state.getFlag('story.m08.stance') === stance, `o3 the audience (${String(h.ctx.state.getFlag('story.m08.stance'))})`);
+  ensure(h.ctx.state.getFlag('story.m08.edricAsked') === ['truth', 'brave', 'turn'][pick - 1], 'the king\'s own question');
+  await readNote(h, t, 'note-m08-screen', 'm08.screen');
+  ensure(objectiveDone(h, 'm08', 'screen'), `the screen (${describeQuest(h, 'm08')})`);
   await leaveInterior(h);
   await talkTo(h, t, 'wystan');
   ensure(q.state('m08') === 'completed', `M08 completed: ${describeQuest(h, 'm08')}`);
@@ -329,10 +355,25 @@ export async function playM08(h: ChapterHarness, t: QuestTrail, stance: Stance):
 export async function playM09(h: ChapterHarness, t: QuestTrail, inside?: () => Promise<void>): Promise<void> {
   const q = quests(h);
   await talkTo(h, t, 'merrin', [1]);
-  ensure(q.state('m09') === 'active' && h.ctx.state.getBool('story.m09.houseOpen'), `M09 offered, the door open: ${describeQuest(h, 'm09')}`);
+  ensure(q.state('m09') === 'active' && !h.ctx.state.getBool('story.m09.houseOpen'), `M09 offered, the door still shut: ${describeQuest(h, 'm09')}`);
+  await h.runAsync(10);
+  // the density pass: the side-door key from Merrin's clerk at the Tilted Anvil. Headless the quiet way is walked
+  // (let him talk, then lift it from the satchel) unless gold is spare for a drink.
+  const buy = gold(h) >= M09_CLERK_GOLD + 40;
+  // the clerk's visible choices: buy (10+ gold), Merrin's name (Oswin Banked or better), listen, leave
+  const trusted = ['banked', 'stoked', 'hearthbound'].includes(h.ctx.state.favourBand('oswin'));
+  const listen = 1 + (gold(h) >= M09_CLERK_GOLD ? 1 : 0) + (trusted ? 1 : 0);
+  await talkTo(h, t, 'clerk', [buy ? 1 : listen]);
+  if (!buy) {
+    ensure(h.ctx.state.getBool('story.m09.clerkDozing'), 'the clerk dozing');
+    await useAt(h, 'm09.clerk-key', 'use:m09-clerk-key');
+  }
+  ensure(objectiveDone(h, 'm09', 'key') && h.ctx.state.getBool('story.m09.houseOpen'), `the key, the door open (${describeQuest(h, 'm09')})`);
   await h.runAsync(10);
   await enterInterior(h, 'counting-house', 'counting-house');
   ensure(objectiveDone(h, 'm09', 'o2'), 'o2 inside the Counting-House');
+  await readNote(h, t, 'note-m09-daybook', 'm09.daybook');
+  ensure(objectiveDone(h, 'm09', 'daybook'), `the day-book (${describeQuest(h, 'm09')})`);
   const path = stealthRoute('m09.counting-house', (id) => h.ctx.anchors.find(id));
   const invoices = ['m09.invoice-1', 'm09.invoice-2', 'm09.invoice-3'].map((id) => h.anchor(id));
   const off = makeUndetectable(h.ctx);
@@ -345,7 +386,12 @@ export async function playM09(h: ChapterHarness, t: QuestTrail, inside?: () => P
       h.key('keyup', 'AltLeft');
       h.run(2);
     }
-    ensure(objectiveDone(h, 'm09', 'o3'), `o3 three invoices (${describeQuest(h, 'm09')})`);
+    await h.approach(h.anchor('m09.strongbox'), 1.0);
+    h.key('keydown', 'AltLeft');
+    h.press('KeyF');
+    h.key('keyup', 'AltLeft');
+    h.run(2);
+    ensure(objectiveDone(h, 'm09', 'o3'), `o3 three invoices and the strongbox (${describeQuest(h, 'm09')})`);
     await walkRoute(h, path.slice(5), { sneak: true, step: 1.5, until: () => objectiveDone(h, 'm09', 'o4') });
     for (let i = 0; i < 60 && !objectiveDone(h, 'm09', 'o4'); i++) h.run(1);
   } finally {
@@ -353,6 +399,11 @@ export async function playM09(h: ChapterHarness, t: QuestTrail, inside?: () => P
   }
   ensure(objectiveDone(h, 'm09', 'o4'), `o4 out clean (${describeQuest(h, 'm09')})`);
   await inside?.();
+  // the key back to Simeon, then Merrin (inside the Counting-House)
+  if (interiors(h).current) await leaveInterior(h);
+  await talkTo(h, t, 'clerk');
+  ensure(objectiveDone(h, 'm09', 'return'), `the key returned (${describeQuest(h, 'm09')})`);
+  await enterInterior(h, 'counting-house', 'counting-house');
   await talkTo(h, t, 'merrin');
   ensure(q.state('m09') === 'completed', `M09 completed: ${describeQuest(h, 'm09')}`);
   if (interiors(h).current) await leaveInterior(h);
@@ -377,9 +428,22 @@ export async function playM10(h: ChapterHarness, t: QuestTrail): Promise<void> {
   ensure(h.of('chase.caught').length === 1, `chase events ${JSON.stringify(h.events.filter((e) => String(e.type).startsWith('chase.')).map((e) => e.type))}`);
   h.run(5);
   ensure(objectiveDone(h, 'm10', 'o3'), `o3 caught (${describeQuest(h, 'm10')})`);
+  // the density pass: the orders where the courier fell, Vey's men, Gerta's reading, then Wace and the first ride
+  await readNote(h, t, 'note-m10-orders', 'm10.courier-orders');
+  ensure(objectiveDone(h, 'm10', 'orders'), `the orders (${describeQuest(h, 'm10')})`);
+  await killGroup(h, 'm10.ambush', 'guildhall-thug', 2, 'spawn.m10.ambush-1');
+  ensure(objectiveDone(h, 'm10', 'ambush'), `Vey's men (${describeQuest(h, 'm10')})`);
   await h.runAsync(30);
   await talkTo(h, t, 'gerta');
-  ensure(q.state('m10') === 'completed' && h.ctx.state.getBool('story.m10.ashmare'), `M10 completed, the Ashmare unlocked: ${describeQuest(h, 'm10')}`);
+  ensure(objectiveDone(h, 'm10', 'o4') && h.ctx.state.getBool('story.m10.ashmare'), `the orders to Gerta, the Ashmare unlocked: ${describeQuest(h, 'm10')}`);
+  await talkTo(h, t, 'wace');
+  ensure(objectiveDone(h, 'm10', 'wace'), `Wace (${describeQuest(h, 'm10')})`);
+  await mountAshmare(h);
+  ensure(objectiveDone(h, 'm10', 'ride'), `mounted (${describeQuest(h, 'm10')})`);
+  await h.enterTrigger('trg.harrowmark.m10-ride');
+  ensure(q.state('m10') === 'completed', `M10 completed: ${describeQuest(h, 'm10')}`);
+  h.press('KeyH');
+  h.run(60);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -394,6 +458,11 @@ export async function playD02(h: ChapterHarness, t: QuestTrail, branch: GrimBran
   ensure(q.state('d02') === 'active', `D02 offered: ${describeQuest(h, 'd02')}`);
   ensure(h.ctx.state.getBool('story.d02.underwaysOpen') && h.ctx.state.getBool('enemies.mercy.calm'), 'the Underways open and Calm taught');
   ensure(h.ctx.services.require('inventory').count('hearth-bread') >= 5, 'the Hearth Bread');
+  // the density pass: Rook's stray in the barracks yard first
+  await killGroup(h, 'd02.stray', 'ember-hound', 2, 'spawn.d02.stray-1');
+  ensure(objectiveDone(h, 'd02', 'stray'), `the strays (${describeQuest(h, 'd02')})`);
+  await talkTo(h, t, 'rook');
+  ensure(objectiveDone(h, 'd02', 'lesson'), `Rook's lesson (${describeQuest(h, 'd02')})`);
   await enterInterior(h, 'underways', 'underways');
   ensure(objectiveDone(h, 'd02', 'o2'), 'o2 into the Underways');
   await inside?.();
@@ -401,10 +470,19 @@ export async function playD02(h: ChapterHarness, t: QuestTrail, branch: GrimBran
   ensure(kennel, 'the kennel anchors');
   await killGroup(h, 'd02.kennels', 'ember-hound', 4, 'underways.spawn.hound-1', 1.5);
   ensure(objectiveDone(h, 'd02', 'o3'), `o3 the hounds (${describeQuest(h, 'd02')})`);
+  // the flooded tunnel: the tally on the wall, two valves, three hounds through the sluice, then the arena gate opens
+  await readNote(h, t, 'note-d02-tally', 'd02.tally');
+  ensure(objectiveDone(h, 'd02', 'tally'), `the tally (${describeQuest(h, 'd02')})`);
+  for (const n of [1, 2]) await useAt(h, `d02.valve-${n}`, `use:d02-valve-${n}`);
+  ensure(objectiveDone(h, 'd02', 'valves'), `the valves (${describeQuest(h, 'd02')})`);
+  await killGroup(h, 'd02.sluice', 'ember-hound', 3, 'underways.spawn.sluice-1', 1.5);
+  ensure(objectiveDone(h, 'd02', 'sluice') && h.ctx.state.getBool('story.d02.sluiceClear'), `the sluice (${describeQuest(h, 'd02')})`);
   await fightGrimtooth(h, branch);
   ensure(h.ctx.state.getFlag('boss.gaffer-grimtooth.outcome') === branch, `Grimtooth ${String(h.ctx.state.getFlag('boss.gaffer-grimtooth.outcome'))}`);
   ensure(objectiveDone(h, 'd02', 'o4'), 'o4 the outcome');
   runHealed(h, 3);
+  await readNote(h, t, 'note-d02-crates', 'd02.den-crates');
+  ensure(objectiveDone(h, 'd02', 'crates'), `the den's crates (${describeQuest(h, 'd02')})`);
   await leaveInterior(h);
   await talkTo(h, t, 'rook');
   ensure(q.state('d02') === 'completed', `D02 completed: ${describeQuest(h, 'd02')}`);
