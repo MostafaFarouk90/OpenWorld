@@ -34,6 +34,17 @@ export const QUEST_PROPS: QuestPropSpec[] = [
     interactableId: `use:r01-stake-${n}`, anchorId: `r01.stake-${n}`, promptKey: 'quest.prompt.stake', objective: ['r01', 'aftermath'],
     usedFlag: `story.r01.stake.${n}`, look: 'stake', lookOnlyUsed: true, when: { not: { flag: 'story.r01.scorched', equals: true } },
   })),
+
+  // ---- batch 2: D01's prayer braziers in the vault antechamber (anchors in the vault def) ----
+  ...[1, 2, 3].map((n): QuestPropSpec => ({
+    interactableId: `use:d01-brazier-${n}`, anchorId: `d01.brazier-${n}`, promptKey: 'quest.prompt.brazier', objective: ['d01', 'braziers'],
+    usedFlag: `story.d01.brazier.${n}`, look: 'brazier',
+  })),
+  // the Prior's censer set on the chapel altar after the vault
+  {
+    interactableId: 'use:d01-altar', anchorId: 'd01.altar', promptKey: 'quest.prompt.altar', objective: ['d01', 'altar'],
+    usedFlag: 'story.d01.censerSet', look: 'candle', lookOnlyUsed: true,
+  },
 ];
 
 /** Thread 3a places the M09 invoices and disables each once its flag is set; this writes the flag. */

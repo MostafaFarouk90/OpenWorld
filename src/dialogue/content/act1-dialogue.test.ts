@@ -20,6 +20,7 @@ function world(band: FavourBand = 'banked') {
   const started: string[] = [];
   const mercy: string[] = [];
   const abilities: string[] = [];
+  const completed: [string, string][] = [];
   const bus: BusPort = { on: () => () => {}, emit: () => {} };
   const state: StatePort = {
     getFlag: (k) => flags.get(k), setFlag: (k, v) => { flags.set(k, v); }, clearFlag: (k) => { flags.delete(k); },
@@ -30,7 +31,7 @@ function world(band: FavourBand = 'banked') {
     objectiveDone: (q: string, o: string) => odone.has(`${q}.${o}`),
     start: (id: string) => { started.push(id); qstate.set(id, 'active'); return true; },
     complete: () => true,
-    completeObjective: () => true,
+    completeObjective: (q: string, o: string) => { completed.push([q, o]); odone.add(`${q}.${o}`); return true; },
   };
   const effects = createEffectRunner({
     state, quests: quests as any, bus, sourceId: 'test',
@@ -41,7 +42,7 @@ function world(band: FavourBand = 'banked') {
   const dr = new DialogueRunner({ bus, state, quests, effects, strings });
   for (const d of dialogueDefs) dr.register(d);
   const set = (q: string, s: QS, ...done: string[]) => { qstate.set(q, s); for (const o of done) odone.add(`${q}.${o}`); };
-  return { flags, dr, set, started, mercy, abilities, qstate };
+  return { flags, dr, set, started, mercy, abilities, qstate, completed };
 }
 
 /** Question hubs loop back on themselves; the default pick leaves them by their last choice. */
@@ -177,7 +178,8 @@ describe('Aelfreda', () => {
     w.set('m05', 'completed');
     expect(play(w, 'npc-aelfreda', 'aelfreda', () => 2).at(-1)).toBe('d01-later');
     expect(w.started).toEqual([]);
-    expect(play(w, 'npc-aelfreda', 'aelfreda').at(-1)).toBe('d01-brief');
+    // the briefing names Prior Aldhelm and the antechamber (density pass, batch 2)
+    expect(play(w, 'npc-aelfreda', 'aelfreda')).toEqual(['d01-offer', 'd01-offer-2', ...['', '-2', '-3', '-4', '-5', '-6'].map((x) => `d01-brief${x}`)]);
     expect(w.started).toEqual(['d01']);
   });
 
@@ -186,9 +188,24 @@ describe('Aelfreda', () => {
       const w = world(); w.set('d01', 'active');
       expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe('d01-remind');
       w.set('d01', 'active', 'o3');
+      // the density pass: first look where he fell, then the outcome talk sends the censer to the altar, then the vigil
+      // came up without it: she brought it up herself and the censer objective is done in the talk
+      expect(play(w, 'npc-aelfreda', 'aelfreda')).toEqual(['d01-censer-found', 'd01-censer-2']);
+      expect(w.completed).toContainEqual(['d01', 'censer']);
+      w.set('d01', 'active', 'o3', 'censer');
       expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe('d01-remind');
       w.flags.set('boss.ashen-prior.outcome', outcome);
-      expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe(`d01-${outcome}`);
+      expect(play(w, 'npc-aelfreda', 'aelfreda')).toEqual([`d01-${outcome}`, `d01-${outcome}-2`, 'd01-censer', 'd01-censer-2']);
+      w.set('d01', 'active', 'o3', 'censer', 'o4');
+      expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe('d01-altar-remind');
+      w.set('d01', 'active', 'o3', 'censer', 'o4', 'altar');
+      if (outcome === 'released') w.flags.set('story.m05.ballad', 'names'); else w.flags.delete('story.m05.ballad');
+      const pick = outcome === 'released' ? 1 : 3;
+      expect(play(w, 'npc-aelfreda', 'aelfreda', () => pick)).toEqual([
+        // vigil-5 only when Tobb sings the road's names (released: yes; defeated: no ballad flag)
+        'd01-vigil', 'd01-vigil-2', 'd01-vigil-3', 'd01-vigil-4', ...(outcome === 'released' ? ['d01-vigil-5'] : []), 'd01-record', outcome === 'released' ? 'd01-record-name' : 'd01-record-silence', 'd01-close',
+      ]);
+      expect(w.flags.get('story.d01.prior')).toBe(outcome === 'released' ? 'name' : 'silence');
       w.set('d01', 'completed');
       expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe(`idle-${outcome}`);
       expect(w.started).toEqual([]);
@@ -330,7 +347,11 @@ describe('Tobb', () => {
     w.set('m05', 'active', 'o1');
     expect(first(w, 'npc-tobb', 'tobb')).toBe('remind');
     w.set('m05', 'active', 'o2');
-    expect(play(w, 'npc-tobb', 'tobb')).toEqual(['done', 'done-2']);
+    // the bond scene at the lit shrine (density pass, batch 2)
+    expect(w.flags.get('story.m05.tobbBond')).toBeUndefined();
+    expect(play(w, 'npc-tobb', 'tobb', () => 3)).toEqual(['done', 'bond-1', 'bond-2', 'bond-3', 'bond-4', 'bond-5', 'bond-names', 'bond-6', 'done-2']);
+    expect(w.flags.get('story.m05.ballad')).toBe('names');
+    expect(w.flags.get('story.m05.tobbBond')).toBe(true);
     expect(dialogueStrings['dialogue.npc-tobb.done-2']).toMatch(/Whistle/);
     w.set('m05', 'completed');
     expect(first(w, 'npc-tobb', 'tobb')).toBe('banter');

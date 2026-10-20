@@ -171,9 +171,9 @@ export const dialogueStrings: Record<string, string> = {
   'dialogue.npc-aelfreda.d01-later': 'Prepare well. The bell will keep tolling until you do.',
   'dialogue.npc-aelfreda.d01-remind': 'The vault stair is behind the altar, {name}. The Prior has waited long enough.',
   'dialogue.npc-aelfreda.d01-released': 'The tolling has stopped. You let him go, {name}. He waited a long time for someone to do that.',
-  'dialogue.npc-aelfreda.d01-released-2': 'The chapel feels lighter. Keep what he left behind, and come sit by the fire.',
+  'dialogue.npc-aelfreda.d01-released-2': 'The chapel feels lighter. Come and sit by the fire a while.',
   'dialogue.npc-aelfreda.d01-defeated': 'The tolling has stopped. You ended him, {name}, and I will pray for him all the same.',
-  'dialogue.npc-aelfreda.d01-defeated-2': 'It was a hard thing and a needful one. Keep what he left behind, and sit by the fire a while.',
+  'dialogue.npc-aelfreda.d01-defeated-2': 'It was a hard thing and a needful one. Sit by the fire a while.',
   'dialogue.npc-aelfreda.idle-released': 'The chapel is quiet since the Prior was freed, {name}. I light a candle for him each evening.',
   'dialogue.npc-aelfreda.idle-defeated': 'The vault is silent now, {name}. I still light a candle for the Prior each evening.',
 

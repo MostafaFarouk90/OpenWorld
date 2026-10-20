@@ -346,7 +346,11 @@ describe('M05 and M03 gating (real defs)', () => {
     w.flags.set('world.deadroad.wardstones.done', true);
     w.flags.set('shrine.quenchstone.lit', true);
     w.manager.start('m05');
+    // the density pass: the journal first, then the stones credit at once; the shrine push still has to be held
+    w.bus.emit('dialogue.ended', { npcId: 'note-m05-journal', reason: 'completed' });
     expect(w.manager.objectiveDone('m05', 'o1')).toBe(true);
+    expect(w.manager.isObjectiveCurrent('m05', 'push')).toBe(true);
+    for (let i = 0; i < 4; i++) w.bus.emit('actor.died', { actorId: `s${i}`, killerId: 'p', kind: 'ash-wraith', spawnTag: 'm05.shrine' });
     expect(w.manager.objectiveDone('m05', 'o2')).toBe(true);
     expect(w.manager.isObjectiveCurrent('m05', 'o3')).toBe(true);
     w.bus.emit('dialogue.ended', { npcId: 'tobb', reason: 'completed' });
@@ -357,7 +361,9 @@ describe('M05 and M03 gating (real defs)', () => {
   it('M05 completion survives a save and load without re-running (the flag stays set)', () => {
     const w = makeWorld([m05]);
     w.manager.start('m05');
+    w.bus.emit('dialogue.ended', { npcId: 'note-m05-journal', reason: 'completed' });
     w.bus.emit('wardstones.complete', {});
+    for (let i = 0; i < 4; i++) w.bus.emit('actor.died', { actorId: `s${i}`, killerId: 'p', kind: 'ash-wraith', spawnTag: 'm05.shrine' });
     w.bus.emit('shrine.rekindled', { shrineId: 'other' });
     expect(w.manager.objectiveDone('m05', 'o2')).toBe(false);
     w.bus.emit('shrine.rekindled', { shrineId: 'quenchstone' });

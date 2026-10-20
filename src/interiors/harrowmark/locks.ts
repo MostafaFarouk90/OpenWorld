@@ -10,11 +10,16 @@ export const HARROWMARK_DOOR_LOCKS: Readonly<Record<string, string>> = {
   'keep-hall': 'story.m08.keepOpen',
   'counting-house': 'story.m09.houseOpen',
   underways: 'story.d02.underwaysOpen',
+  // Act 1 density pass, batch 2 (quests thread; additive): the chapel vault stays shut until D01 is taken.
+  vault: 'story.d01.vaultOpen',
 };
 
 /** Blockers closed while their flag is unset: the corridor to the back room follows the back door. */
 export const HARROWMARK_FLAG_BLOCKERS: Readonly<Record<string, string>> = {
   'tilted-anvil.backroom.gate': 'world.harrowmark.inn.room',
+  // Density pass, batch 2: the vault's arena gate opens once the antechamber's wraiths are down (the Prior's arena still
+  // closes and reopens it during his fight).
+  'vault.arena.gate': 'story.d01.antechamberClear',
 };
 
 /** M09's invoices (thread 6 counts `use:m09-invoice-<n>` and writes `story.m09.invoice.<n>` when one is taken). */

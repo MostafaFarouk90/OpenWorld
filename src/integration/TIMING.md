@@ -67,16 +67,18 @@ Beats: M01 9 kill units (five lane wraiths, four at the mill), 5 carries (three 
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | M03 | 293 | 1.1 | 31 | 10.3 | 4.9 | 16.3 | 40 | -59 | **>25% off** |
 | M04 | 732 | 2.7 | 35 | 11.7 | 4.9 | 19.3 | 45 | -57 | **>25% off** |
-| M05 | 1573 | 5.8 | 7 | 2.3 | 7.2 | 15.3 | 40 | -62 | **>25% off** |
+| M05 | 1582 | 5.9 | 14 | 4.7 | 10.5 | 21.0 | 40 | -47 | **>25% off** |
 | R01 | 430 | 1.6 | 16 | 5.3 | 7.3 | 14.2 | 35 | -59 | **>25% off** |
 | R02 | 139 | 0.5 | 5 | 1.7 | 2.0 | 4.2 | 30 | -86 | **>25% off** |
-| D01 | 205 | 0.8 | 5 | 1.7 | 9.3 | 11.8 | 55 | -79 | **>25% off** |
-| **total** | | | | | | **81.1** | **245** | **-67** | **>25% off** |
+| D01 | 266 | 1.0 | 20 | 6.7 | 14.7 | 22.3 | 55 | -59 | **>25% off** |
+| **total** | | | | | | **97.3** | **245** | **-60** | **>25% off** |
 
 Beats since batch 1: M03 2 interacts (shard study, candle), 1 leap, 4 kill units, 4 notes (font, Ember, record,
 Wulfric's grave); M04 5 kill units (four Footmen and the Toll Sergeant), 1 structure, 3 interacts (wagons), 1 note
 (the toll ledger); R01 1 interact, 8 scarecrows, 3 kill units (the root), 2 carries (the stubble fire), 1 note (the
-shawl). M05, R02 and D01 as before.
+shawl). Since batch 2: M05 1 note (the pilgrim's journal), 4 more kill units (the shrine push); D01 4 more interacts
+(three braziers, the altar), 4 more kill units (the antechamber walls), 5 notes (four tablets, the censer). R02 as
+before.
 
 ### Batch 1 against the target (50% for the act, 40% floor per quest)
 
@@ -88,9 +90,19 @@ shawl). M05, R02 and D01 as before.
 | M04 | 9.1 | 19.3 | 45 | 43 |
 | R01 | 6.1 | 14.2 | 35 | 41 |
 
-Every batch 1 quest clears the 40% floor; none reaches 50% by the formula. The act stands at about 213 of 695
-(31%): batches 2 to 4 carry the rest of the way to the act target, and Mostafa's timed play after batch 1 sets the
-real-time factor that decides whether 50% stands.
+### Batch 2 against the target
+
+| quest | before | after | design | after % |
+| --- | ---: | ---: | ---: | ---: |
+| M05 | 15.3 | 21.0 | 40 | 52 |
+| D01 | 11.8 | 22.3 | 55 | 41 |
+
+Batch 2 also adds three Dead Road points of interest outside any quest (two waymarker stones and a barrow with two
+wraiths); they are exploration and not counted.
+
+Every batch 1 and batch 2 quest clears the 40% floor. The act stands at about 229 of 695 (33%): batches 3 and 4
+(Harrowmark) carry the rest of the way to the act target, and Mostafa's timed play after batch 1 sets the real-time
+factor that decides whether 50% stands.
 
 ## Phase B (Harrowmark)
 
@@ -134,9 +146,9 @@ M09 is almost all interior. Dialogue is short everywhere except the M08 audience
 | part | estimate min | design min |
 | --- | ---: | ---: |
 | Opening (M01, M02) | 34.4 | 75 |
-| Phase A (M03 to M05, R01, R02, D01) | 81.1 | 245 |
+| Phase A (M03 to M05, R01, R02, D01) | 97.3 | 245 |
 | Phase B (M06 to M10, R03, R04, D02) | 97.4 | 375 |
-| **Act 1** | **212.9** | **695** |
+| **Act 1** | **229.1** | **695** |
 
 The tutorial itself (Knighting Day) sits outside these tables; it has its own smoke timing in
 plans/knighting-day-smoke.md. Before the density pass the act measured 136 formula minutes without the opening.
