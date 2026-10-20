@@ -50,13 +50,15 @@ export class QuestTracker implements HudWidgetView {
       const box = makeEl(this.doc, 'div', 'owg-quest');
       box.setAttribute('data-quest', q.id);
       makeEl(this.doc, 'div', 'owg-quest-title', box).textContent = this.t(q.titleKey);
+      // The first open objective is the one to do now (owg-cur); its count sits in a pill.
+      const cur = q.objectives.find((o) => !o.done && !o.optional);
       for (const o of q.objectives) {
-        const row = makeEl(this.doc, 'div', `owg-objective${o.done ? ' owg-done' : ''}${o.optional ? ' owg-optional' : ''}`, box);
+        const row = makeEl(this.doc, 'div', `owg-objective${o.done ? ' owg-done' : ''}${o.optional ? ' owg-optional' : ''}${o === cur ? ' owg-cur' : ''}`, box);
         const prog = objectiveProgress(o);
         let text = this.t(o.textKey);
-        if (prog) text += ` ${prog}`;
         if (o.optional) text += ` ${this.t('hud.quest.optional')}`;
-        row.textContent = text;
+        makeEl(this.doc, 'span', 'owg-objective-text', row).textContent = text;
+        if (prog) makeEl(this.doc, 'span', 'owg-count', row).textContent = prog;
       }
       return box;
     });

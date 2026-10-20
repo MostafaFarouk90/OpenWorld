@@ -32,6 +32,8 @@ interface Entry {
   force: boolean;
   offer: boolean;
   text: string;
+  key?: string;
+  keyAt?: number;
   fadeMs: number;
   fading: boolean;
 }
@@ -158,6 +160,7 @@ export class PromptManager implements PromptService {
     return this.entries.map((e) => ({
       mechanic: e.mechanic,
       text: e.text,
+      ...(e.key ? { key: e.key, keyAt: e.keyAt } : {}),
       opacity: e.fading ? Math.max(0, 1 - e.fadeMs / FADE_MS) : 1,
       state: e.fading ? 'fading' : 'shown',
     }));
@@ -208,6 +211,10 @@ export class PromptManager implements PromptService {
   private compose(e: Entry): void {
     const params = { key: this.deps.bindings.glyph(e.action) };
     let text = this.deps.strings.t(e.textKey, params);
+    // Where {key} lands, found with a sentinel: the glyph may also be a letter earlier in the text ("Press P").
+    const at = params.key ? this.deps.strings.t(e.textKey, { key: '\u0001' }).indexOf('\u0001') : -1;
+    e.key = at >= 0 ? params.key : undefined;
+    e.keyAt = at >= 0 ? at : undefined;
     if (e.offer) text += `\n${this.deps.strings.t('prompt.dodge.rebindOffer', params)}`;
     e.text = text;
   }

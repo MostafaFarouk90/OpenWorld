@@ -23,6 +23,7 @@ import { createStartScreen } from './StartScreen';
 import { TUTORIAL_STRINGS_EN } from './strings.en';
 import { setBanners } from './Banners';
 import { TutorialBeacon } from './Beacon';
+import { BeatCards, LineCards } from './Cards';
 import { CrisisDressing } from './CrisisDressing';
 import '../quality/types';
 import './service';
@@ -33,7 +34,6 @@ import { BEAT_IDS, type BeatId, type DirectorEvent, type DirectorPorts, type Tic
 
 /** localStorage key recording that a run finished once ("Skip to Kettlewick" is then offered). */
 export const COMPLETION_KEY = 'owg.tutorial.v1';
-const LINE_MS = 5000;
 /** Design section 2 beat minutes (39 in total; the skirmish replaces T06 to T11, about 5). */
 const DESIGN_MINUTES: Record<BeatId, number> = {
   t01: 2, t02: 1, t03: 2.5, t04: 3.5, t05: 3, t06: 1.5, t07: 1.5, t08: 4, t09: 3, t10: 3, t11: 3, t12: 3, t13: 2, t14: 2.5, t15: 3.5,
@@ -155,9 +155,11 @@ function routeEvents(ctx: GameContext, send: (e: DirectorEvent) => void): void {
 function makePorts(ctx: GameContext, ui: {
   cutscene: CutsceneDirector;
   line(key: string, slot: 'subtitle' | 'toast', params?: Record<string, string | number>): void;
+  /** The top-center beat card: the beat's title as it starts and as it is done. */
+  beatCard?(kind: 'start' | 'done', beatId: BeatId): void;
   /** Where the T05 ember-burst starts: above the chapel brazier. */
   brazier?(): { x: number; y: number; z: number } | null;
-}): { ports: DirectorPorts; dispose(): void; flushToasts(): void } {
+}): { ports: DirectorPorts; dispose(): void } {
   const svc = ctx.services;
   const warned = new Set<string>();
   const warnOnce = (m: string) => {
@@ -174,18 +176,7 @@ function makePorts(ctx: GameContext, ui: {
     }
   };
   const beatStart = new Map<BeatId, number>();
-  let lastToastTick = -1;
   let smokeLineShown = false;
-  let pendingBeatToast: { beatId: BeatId; tick: number } | null = null;
-  const flushToasts = (): void => {
-    const p = pendingBeatToast;
-    if (!p || p.tick === ctx.clock.tick) return;
-    pendingBeatToast = null;
-    if (lastToastTick === p.tick) return;
-    const questId = BEATS[p.beatId].questId;
-    const titleKey = svc.get('quests')?.get(questId)?.titleKey ?? `tutorial.${p.beatId}.title`;
-    ui.line('tutorial.toast.beatDone', 'toast', { title: ctx.strings.t(titleKey) });
-  };
   let locksOff: (() => void) | null = null;
   let xpRelease: (() => void) | null = null;
   const anchorPos = (id: string) => ctx.anchors.find(id) ?? null;
@@ -294,7 +285,6 @@ function makePorts(ctx: GameContext, ui: {
     hidePrompts: () => svc.get('prompts')?.hide(),
     showLine: (key) => ui.line(key, 'subtitle'),
     toast: (key) => {
-      lastToastTick = ctx.clock.tick;
       ui.line(key, 'toast');
     },
     trackedUnits: (beatId, step) => {
@@ -311,8 +301,8 @@ function makePorts(ctx: GameContext, ui: {
     stepDone: (_beatId, step) => play(`sfx.wardstone.${Math.min(5, step + 1)}`),
     beatDone: (beatId) => {
       play('sfx.wardstones.complete');
-      // Shown on the next tick unless another tutorial toast went out in the same one (review 23).
-      pendingBeatToast = { beatId, tick: ctx.clock.tick };
+      // The done card (top-center) shows before the next beat's start card, which queues behind it.
+      ui.beatCard?.('done', beatId);
     },
     promptSuccess: (m) => svc.get('prompts')?.success(m),
     cutscene: (kind) => {
@@ -338,7 +328,10 @@ function makePorts(ctx: GameContext, ui: {
       vfx.spawnEffect('ember-burst', { position: at });
     },
     emitBeat: (beatId, state) => {
-      if (state === 'started') beatStart.set(beatId, ctx.clock.seconds);
+      if (state === 'started') {
+        beatStart.set(beatId, ctx.clock.seconds);
+        ui.beatCard?.('start', beatId);
+      }
       else {
         // Timing check for the manual smoke (review recommendation 5): play time against the design's minutes.
         const began = beatStart.get(beatId);
@@ -353,7 +346,6 @@ function makePorts(ctx: GameContext, ui: {
   };
   return {
     ports,
-    flushToasts,
     dispose: () => {
       xpRelease?.();
       xpRelease = null;
@@ -395,31 +387,36 @@ const tutorial: GamePlugin = {
       doc: d ?? ({ createElement: () => ({ style: {}, className: '', appendChild() {}, remove() {} }) } as unknown as Document),
       warn: (m) => console.warn(m),
     });
-    let lineSeq = 0;
-    const timers = new Set<ReturnType<typeof setTimeout>>();
-    const line = (key: string, slot: 'subtitle' | 'toast', params?: Record<string, string | number>) => {
-      if (!d) return;
-      const element = d.createElement('div');
-      element.textContent = t(key, params);
-      element.style.cssText = 'background:rgba(20,16,12,.8);color:#f3e6c8;padding:6px 12px;border-radius:4px;margin-bottom:6px;font:15px serif';
-      const unmount = ctx.hud.mount(slot, { id: `tutorial.line.${++lineSeq}`, element });
-      const timer = setTimeout(() => {
-        timers.delete(timer);
-        unmount();
-      }, LINE_MS);
-      timers.add(timer);
+    // Beat lines, toasts and the beat card as readable cards (plans/knighting-day-cards.md).
+    const cardDeps = { doc: d, mount: (slot: 'subtitle' | 'toast' | 'top-center', w: { id: string; element: HTMLElement }, order?: number) => ctx.hud.mount(slot, { ...w, order }) };
+    const lines = new LineCards(cardDeps);
+    const beatCards = new BeatCards(cardDeps);
+    const line = (key: string, slot: 'subtitle' | 'toast', params?: Record<string, string | number>) => lines.show(t(key, params), slot);
+    let directorRef: TutorialDirector | null = null;
+    const beatCard = (kind: 'start' | 'done', beatId: BeatId) => {
+      const titleKey = ctx.services.get('quests')?.get(BEATS[beatId].questId)?.titleKey ?? `tutorial.${beatId}.title`;
+      const order = directorRef ? { full: FULL_ORDER, veteran: VETERAN_ORDER, kettlewick: KETTLEWICK_ORDER }[directorRef.mode] : FULL_ORDER;
+      const n = order.indexOf(beatId) + 1;
+      const kicker = kind === 'done' ? t('tutorial.card.done') : n > 0 && order.length > 1 ? t('tutorial.card.kicker', { n, total: order.length }) : t('tutorial.card.title');
+      beatCards.show({ kind, kicker, title: t(titleKey) });
     };
 
     let crisis: CrisisDressing | null = null;
-    const wired = makePorts(ctx, { cutscene, line, brazier: () => crisis?.burstAtBrazier() ?? null });
+    const wired = makePorts(ctx, { cutscene, line, beatCard, brazier: () => crisis?.burstAtBrazier() ?? null });
     const director = new TutorialDirector(wired.ports, {
       beats: BEATS,
       orders: { full: FULL_ORDER, veteran: VETERAN_ORDER, kettlewick: KETTLEWICK_ORDER },
       lockable: LOCKABLE_VERBS,
       createGoal,
     });
+    directorRef = director;
     routeEvents(ctx, (e) => director.onEvent(e));
-    ctx.events.on('save.loaded', () => director.onSaveLoaded());
+    ctx.events.on('save.loaded', () => {
+      // Cards up before the load are about another beat.
+      lines.clear();
+      beatCards.clear();
+      director.onSaveLoaded();
+    });
     ctx.persist.register({
       key: 'tutorial',
       version: 1,
@@ -611,7 +608,6 @@ const tutorial: GamePlugin = {
       fixedPhase: 'rules',
       order: 300,
       fixedUpdate: (dt) => {
-        wired.flushToasts();
         if (!director.begun && !startClose && saveReady() && ctx.hud.modalOpen === null) openStart();
         const cam = ctx.camera;
         let camera: TickSample['camera'] = null;
@@ -636,6 +632,11 @@ const tutorial: GamePlugin = {
       order: 300,
       render: (_alpha, frameTime) => {
         cutscene.render(frameTime);
+        // Cards wait out a cutscene (the HUD is hidden) instead of running out unread.
+        if (ctx.hud.isVisible) {
+          lines.tick(frameTime);
+          beatCards.tick(frameTime);
+        }
         skipUi?.update(skip.progress, skip.hintVisible);
         beacon.setTarget(beaconTarget());
         const f = ctx.player.feet;
@@ -667,6 +668,8 @@ const tutorial: GamePlugin = {
       wired.dispose();
       beacon.dispose();
       townsfolk.dispose();
+      lines.dispose();
+      beatCards.dispose();
       dressing.dispose();
       for (const off of crisisOffs) off();
       unprovide();
@@ -674,19 +677,19 @@ const tutorial: GamePlugin = {
       cutsceneEndOff();
       modalOff();
       d?.removeEventListener('pointerlockchange', onLockChange);
-      for (const timer of timers) clearTimeout(timer);
-      timers.clear();
       closeReplay();
       const c = startClose;
       startClose = null;
       c?.();
     };
     (globalThis as { __tutorial?: TutorialDirector }).__tutorial = director;
+    (globalThis as { __tutorialCards?: { lines: LineCards; beats: BeatCards } }).__tutorialCards = { lines, beats: beatCards };
   },
   dispose() {
     tutorialDispose?.();
     tutorialDispose = null;
     delete (globalThis as { __tutorial?: TutorialDirector }).__tutorial;
+    delete (globalThis as { __tutorialCards?: unknown }).__tutorialCards;
   },
 };
 

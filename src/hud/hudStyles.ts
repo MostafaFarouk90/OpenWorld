@@ -22,10 +22,14 @@ export const HUD_CSS = `
 .owg-lockon-layer{position:fixed;inset:0;pointer-events:none}
 .owg-lockon{position:absolute;width:36px;height:36px;border:2px solid #f0d060;border-radius:50%;box-shadow:0 0 8px rgba(240,208,96,.7)}
 .owg-lockon-arrow{width:0;height:0;border:none;border-radius:0;box-shadow:none;border-left:16px solid #f0d060;border-top:9px solid transparent;border-bottom:9px solid transparent}
-.owg-quests{display:flex;flex-direction:column;gap:8px;max-width:280px;pointer-events:none;font:13px/1.3 system-ui,sans-serif;color:#f3ead8;text-shadow:0 1px 2px #000}
-.owg-quest-title{font-weight:600;color:#f0d890}
-.owg-objective{padding-left:10px}
-.owg-objective.owg-done{text-decoration:line-through;opacity:.6}
+.owg-quests{display:flex;flex-direction:column;gap:8px;width:300px;max-width:40vw;pointer-events:none;font:14px/1.35 system-ui,sans-serif;color:#f3ead8}
+.owg-quest{padding:8px 12px 9px;border-radius:6px;background:rgba(20,16,12,.84);border:1px solid #6a5a3a;border-left:3px solid #c9a64a;box-shadow:0 2px 10px rgba(0,0,0,.45)}
+.owg-quest-title{font-weight:700;font-size:15px;color:#f0d890;margin-bottom:4px}
+.owg-objective{position:relative;padding:1px 0 1px 14px}
+.owg-objective.owg-cur{color:#ffe9a0;font-weight:600}
+.owg-objective.owg-cur::before{content:'▸';position:absolute;left:0}
+.owg-objective.owg-done{text-decoration:line-through;opacity:.55}
+.owg-count{display:inline-block;margin-left:6px;padding:0 6px;border-radius:8px;background:#3a2f1c;color:#f0d890;font-size:12px;font-weight:600}
 .owg-objective.owg-optional{font-style:italic}
 .owg-abilities{display:flex;gap:6px;pointer-events:none}
 .owg-slot{position:relative;width:48px;height:48px;border-radius:6px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.3);color:#fff;font:12px system-ui,sans-serif}
@@ -40,9 +44,10 @@ export const HUD_CSS = `
 .owg-points-num{order:-1;align-self:flex-start;width:20px;flex:none;height:20px;line-height:20px;text-align:center;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a0,#d8a830 70%);color:#2a1c00;font-weight:800;box-shadow:0 0 8px #f0c040}
 .owg-points{padding:1px 8px;border-radius:9px;background:#d8a830;color:#2a1c00;font-weight:700}
 .owg-prompts{display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
-.owg-prompt{padding:4px 12px;border-radius:4px;background:rgba(0,0,0,.6);color:#f2ead8;font:14px system-ui,sans-serif;white-space:pre-line;text-align:center;transition:opacity .4s linear}
+.owg-prompt{padding:6px 14px;border-radius:6px;background:rgba(20,16,12,.84);border:1px solid #6a5a3a;box-shadow:0 2px 10px rgba(0,0,0,.45);color:#f3ead8;font:15px system-ui,sans-serif;white-space:pre-line;text-align:center;transition:opacity .4s linear}
+.owg-key{display:inline-block;min-width:22px;padding:1px 7px;margin:0 3px;border-radius:4px;background:#f0e6c8;color:#1c140a;font:700 14px system-ui,sans-serif;text-align:center;box-shadow:0 2px 0 #8a7a50}
 .owg-toasts{display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
-.owg-toast{padding:4px 12px;border-radius:4px;background:rgba(0,0,0,.65);color:#f2ead8;font:13px system-ui,sans-serif}
+.owg-toast{padding:6px 16px;border-radius:6px;background:rgba(20,16,12,.84);border:1px solid #6a5a3a;border-left:3px solid #6a9a4a;box-shadow:0 2px 10px rgba(0,0,0,.45);color:#f3ead8;font:15px system-ui,sans-serif}
 .owg-menu{min-width:520px;max-width:90vw;max-height:80vh;overflow:auto;padding:16px;border-radius:8px;background:rgba(20,16,12,.94);border:1px solid #6a5a3a;color:#e8dfc8;font:14px system-ui,sans-serif;pointer-events:auto}
 .owg-menu-head{display:flex;align-items:center;gap:16px;margin-bottom:12px}
 .owg-menu-title{margin:0;flex:1;font-size:18px}

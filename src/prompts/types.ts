@@ -11,6 +11,10 @@ export interface PromptService {
 export interface PromptRow {
   mechanic: string;
   text: string;
+  /** The bound key glyph inside `text`, drawn as a keycap; absent when the text names no key. */
+  key?: string;
+  /** Index of `key` in `text` (where {key} was), so a matching letter earlier in the text is not taken for it. */
+  keyAt?: number;
   /** 1 while shown, falling to 0 over the fade. */
   opacity: number;
   state: 'shown' | 'fading';

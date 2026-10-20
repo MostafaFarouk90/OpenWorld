@@ -31,12 +31,31 @@ describe('QuestTracker', () => {
     const q = new QuestTracker(new StubDocument(), { quests: { active: () => list }, t });
     const rows = q.element.children[0]!.children.slice(1);
     expect(rows[0]!.className).toContain('owg-done');
-    expect(rows[0]!.textContent).toBe('Known 3/3');
+    expect(textOf(rows[0]!)).toBe('Known 3/3');
+    expect(rows[0]!.children[1]!.className).toBe('owg-count');
     expect(rows[1]!.className).toContain('owg-optional');
-    expect(rows[1]!.textContent).toContain('1/4');
-    expect(rows[1]!.textContent).toContain('hud.quest.optional');
+    expect(textOf(rows[1]!)).toContain('1/4');
+    expect(textOf(rows[1]!)).toContain('hud.quest.optional');
     expect(rows[2]!.className).not.toContain('owg-done');
-    expect(rows[2]!.textContent).toBe('[[o3]]');
+    expect(textOf(rows[2]!)).toBe('[[o3]]');
+    // The first open, non-optional objective is the current one.
+    expect(rows.map((r) => r.className.includes('owg-cur'))).toEqual([false, false, true]);
+  });
+  it('every tracked quest is its own card and the next open objective is marked current', () => {
+    const list = [
+      quest('a', [
+        { textKey: 'o1', progress: 1, required: 1, done: true },
+        { textKey: 'o2', progress: 0, required: 3, done: false },
+        { textKey: 'o3', progress: 0, required: 1, done: false },
+      ]),
+      quest('b', [{ textKey: 'p1', progress: 0, required: 1, done: false }]),
+    ];
+    const q = new QuestTracker(new StubDocument(), { quests: { active: () => list }, t });
+    expect(q.element.children.map((c) => c.className)).toEqual(['owg-quest', 'owg-quest']);
+    const rows = q.element.children[0]!.children.slice(1);
+    expect(rows.filter((r) => r.className.includes('owg-cur'))).toHaveLength(1);
+    expect(rows[1]!.className).toContain('owg-cur');
+    expect(textOf(rows[1]!)).toBe('[[o2]] 0/3');
   });
   it('missing string keys render what t returns', () => {
     const q = new QuestTracker(new StubDocument(), { quests: { active: () => [quest('z')] }, t });
