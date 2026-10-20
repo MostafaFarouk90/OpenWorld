@@ -115,6 +115,15 @@ describe('BeatCards', () => {
     expect(b.showing?.title).toBe('Over the Wall');
     expect(mounted).toHaveLength(1);
   });
+  it('clear(slot) drops one slot and keeps the other', () => {
+    const { d } = deps();
+    const c = new LineCards(d);
+    c.show('Sir Gaut: Go.', 'subtitle');
+    c.show('Saved', 'toast');
+    c.clear('subtitle');
+    expect(c.count('subtitle')).toBe(0);
+    expect(c.count('toast')).toBe(1);
+  });
   it('tutorial toasts mount under the beat card in top-center, capped at two', () => {
     const { d, mounted, mount } = deps();
     const c = new LineCards(d);

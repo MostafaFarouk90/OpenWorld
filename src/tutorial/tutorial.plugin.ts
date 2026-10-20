@@ -411,6 +411,15 @@ const tutorial: GamePlugin = {
     });
     directorRef = director;
     routeEvents(ctx, (e) => director.onEvent(e));
+    // A skipped beat's lines, and the last beat's once it ends, are about a beat that is over: drop them (the
+    // `?act1=` jump skips T15 at once, which left Gaut's and Aelfreda's T15 lines up over Brightwater).
+    ctx.events.on('tutorial.beat', (e) => {
+      if (e.state === 'started') return;
+      const order = { full: FULL_ORDER, veteran: VETERAN_ORDER, kettlewick: KETTLEWICK_ORDER }[director.mode];
+      const last = order[order.length - 1] === e.beatId;
+      if (e.state === 'skipped' || last) lines.clear('subtitle');
+      if (e.state === 'skipped' && last) beatCards.clear();
+    });
     ctx.events.on('save.loaded', () => {
       // Cards up before the load are about another beat.
       lines.clear();

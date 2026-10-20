@@ -408,6 +408,42 @@ describe('clarity wiring on the real game', () => {
     expect(cards.lines.count('subtitle')).toBe(0);
   });
 
+  it('the ?act1= jump (kettlewick, T15 skipped at once) leaves no T15 lines or beat card up', async () => {
+    const t = await boot();
+    const cards = (globalThis as { __tutorialCards?: { beats: { showing: unknown }; lines: { count(s: string): number } } }).__tutorialCards!;
+    t.director.begin('kettlewick');
+    frame(t, 2);
+    expect(t.director.beat).toBe('t15');
+    expect(cards.lines.count('subtitle')).toBeGreaterThan(0);
+    t.director.skipCurrent();
+    frame(t, 2);
+    expect(t.director.complete).toBe(true);
+    expect(cards.lines.count('subtitle')).toBe(0);
+    expect(cards.beats.showing).toBeNull();
+  });
+
+  it('a skipped beat drops its lines before the next beat\'s lines show; the tutorial\'s end drops the last beat\'s', async () => {
+    const t = await boot();
+    const cards = (globalThis as { __tutorialCards?: { beats: { showing: { kind: string } | null }; lines: { count(s: string): number } } }).__tutorialCards!;
+    t.director.begin('full', 't15');
+    frame(t, 2);
+    const t15Lines = cards.lines.count('subtitle');
+    expect(t15Lines).toBeGreaterThan(0);
+    // A normal finish of the last beat: its lines go, its done card stays.
+    t.game.ctx.events.emit('tutorial.beat', { beatId: 't15', state: 'completed' });
+    expect(cards.lines.count('subtitle')).toBe(0);
+    t.dispose();
+    // A skip mid-tutorial clears only the skipped beat's lines; the next beat's own lines still show.
+    const t2 = await boot();
+    const cards2 = (globalThis as { __tutorialCards?: { lines: { count(s: string): number } } }).__tutorialCards!;
+    t2.director.begin('full', 't14');
+    frame(t2, 2);
+    t2.director.skipCurrent();
+    frame(t2, 2);
+    expect(t2.director.beat).toBe('t15');
+    expect(cards2.lines.count('subtitle')).toBe(t15Lines);
+  });
+
   it('cards wait out a cutscene instead of running out unseen', async () => {
     const t = await boot();
     const cards = (globalThis as { __tutorialCards?: { beats: { showing: unknown } } }).__tutorialCards!;
