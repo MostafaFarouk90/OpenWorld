@@ -3,10 +3,15 @@ import type { QuestDef } from '../types';
 /** The five class ids; thread 12 mirrors `classes.drill.<id>` ('done' | 'skipped') for the drill that was run. */
 const CLASS_IDS = ['knight', 'warden', 'emberwright', 'ashblade', 'pathfinder'];
 
+/** The Guild Quarter stallholders who saw the thieves run, and the coins dropped on the way (density pass). */
+export const M07_STALLHOLDERS = ['stallholder-1', 'stallholder-2'];
+export const M07_COINS = ['use:m07-coin-1', 'use:m07-coin-2', 'use:m07-coin-3'];
+
 /**
  * M07 The Tilted Anvil. `story.m07.classOpen` is written by Aldith's hand-in node (o4): thread 12 refuses a class
  * choice until it is set. Thread 19 opens the back room on the o4 `quest.objective` event. o6 and o7 read thread 12's
- * mirror flags so a choice made before the objective is current still counts.
+ * mirror flags so a choice made before the objective is current still counts. The density pass asks two stallholders
+ * where the thieves ran and follows their dropped coins to the alley before the fight.
  */
 export const m07: QuestDef = {
   id: 'm07',
@@ -16,6 +21,14 @@ export const m07: QuestDef = {
   onStart: [{ setFlag: 'story.m07.started', value: true }],
   objectives: [
     { id: 'o1', type: 'talk', target: 'aldith', textKey: 'quest.m07.o1' },
+    {
+      id: 'ask', type: 'event', target: 'dialogue.ended', match: { npcId: M07_STALLHOLDERS, reason: 'completed' },
+      dedupeBy: 'npcId', required: 2, textKey: 'quest.m07.ask',
+    },
+    {
+      id: 'coins', type: 'event', target: 'interact', match: { interactableId: M07_COINS }, dedupeBy: 'interactableId',
+      required: 3, textKey: 'quest.m07.coins',
+    },
     { id: 'o2', type: 'kill', target: 'alley-cutpurse', required: 3, spawnTag: 'm07.thieves', textKey: 'quest.m07.o2' },
     { id: 'o3', type: 'interact', target: 'pickup:satchel', textKey: 'quest.m07.o3' },
     { id: 'o4', type: 'talk', target: 'aldith', textKey: 'quest.m07.o4' },

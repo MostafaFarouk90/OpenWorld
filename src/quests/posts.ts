@@ -41,11 +41,22 @@ export const POST_RULES: PostRule[] = [
       { when: m01Done, anchorId: 'npc-post.aelfreda' },
     ],
   },
-  // Stane trains at the Bastion once the Practice Yard work (R02) is done and the class choice has begun (M07)
-  { npcId: 'stane', home: 'npc-post.stane', posts: [{ when: { all: [{ quest: 'r02', state: 'completed' }, live('m07')] }, anchorId: 'npc-post.stane.bastion' }] },
-  // Rook offers M06 from the gate while the portcullis is shut and goes into the city once M06 is done. The gate is a
-  // post, not his home: the NPC spawns at npc-post.rook and a home post is never applied to an NPC no rule has moved.
-  { npcId: 'rook', home: 'npc-post.rook', posts: [{ when: { not: { quest: 'm06', state: 'completed' } }, anchorId: 'npc-post.rook.gate' }] },
+  // Stane runs his board in the Halvard Bastion yard from M06 on, R02 included whatever its state (density pass; he
+  // trains Wardens there from M07). Before M06 he keeps the Practice Yard.
+  { npcId: 'stane', home: 'npc-post.stane', posts: [{ when: live('m06'), anchorId: 'npc-post.stane.bastion' }] },
+  // Rook offers M06 from the gate while the portcullis is shut, waits at the gate brazier inside once Cael is through
+  // (density pass) and goes into the city once M06 is done. The gate is a post, not his home: the NPC spawns at
+  // npc-post.rook and a home post is never applied to an NPC no rule has moved.
+  {
+    npcId: 'rook', home: 'npc-post.rook',
+    posts: [
+      { when: { all: [{ quest: 'm06', state: 'active' }, { objective: ['m06', 'o2'], done: true }] }, anchorId: 'npc-post.rook.inner' },
+      { when: { not: { quest: 'm06', state: 'completed' } }, anchorId: 'npc-post.rook.gate' },
+    ],
+  },
+  // the gate refugees come inside once the brazier may judge them (M06, density pass)
+  { npcId: 'refugee-1', home: 'harrowmark.gate.south.queue.1', posts: [{ when: { flag: 'story.m06.queueTested' }, anchorId: 'npc-post.refugee-1.inside' }] },
+  { npcId: 'refugee-2', home: 'harrowmark.gate.south.queue.3', posts: [{ when: { flag: 'story.m06.queueTested' }, anchorId: 'npc-post.refugee-2.inside' }] },
   {
     npcId: 'gerta', home: 'npc-post.gerta.guild',
     posts: [

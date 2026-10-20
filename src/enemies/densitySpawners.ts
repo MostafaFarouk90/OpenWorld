@@ -58,4 +58,26 @@ export const DENSITY_SPAWNERS_A: readonly SpawnerDef[] = [
     anchor: 'spawn.deadroad.barrow-1', memberAnchors: members('spawn.deadroad.barrow', 2),
     band: { min: 3, max: 4 }, activation: 'auto', respawn: 'never', leash: true,
   },
+
+  // ---- batch 3: Harrowmark part 1 ----
+  // R02: Stane's sparring bouts, one veteran and then two at once. They stand where Stane runs the drill: his story
+  // node writes the yard's or the Bastion's flag (src/dialogue/content/npc-stane.dialogue.ts).
+  ...(['yard', 'bastion'] as const).flatMap((site): SpawnerDef[] => [
+    {
+      id: `density.r02.bout-${site}`, tag: 'r02.bout', enemy: 'yard-veteran', count: 1,
+      anchor: `spawn.r02.${site}-bout`, memberAnchors: [`spawn.r02.${site}-bout`],
+      band: { min: 2, max: 3 }, activation: { quest: 'r02', flag: `story.r02.bout.${site}` }, respawn: 'never', leash: true,
+    },
+    {
+      id: `density.r02.pair-${site}`, tag: 'r02.pair', enemy: 'yard-veteran', count: 2,
+      anchor: `spawn.r02.${site}-pair-1`, memberAnchors: members(`spawn.r02.${site}-pair`, 2),
+      band: { min: 2, max: 3 }, activation: { quest: 'r02', flag: `story.r02.pair.${site}` }, respawn: 'never', leash: true,
+    },
+  ]),
+  // R03: two more of Pellam's men try to take the copper back on the way to the Anvil (gone once dealt with).
+  {
+    id: 'density.r03.snatch', tag: 'r03.snatch', enemy: 'guildhall-thug', count: 2,
+    anchor: 'spawn.r03.snatch-1', memberAnchors: members('spawn.r03.snatch', 2),
+    band: { min: 5, max: 6 }, activation: { flag: 'story.r03.copperTaken', until: 'story.r03.snatchBeaten' }, respawn: 'never', leash: true,
+  },
 ];

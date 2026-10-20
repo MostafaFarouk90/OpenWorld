@@ -90,6 +90,12 @@ const anchors: AnchorSpec[] = [
   a('poi.deadroad.barrow', 860, -126, 180, ['poi']),
   a('spawn.deadroad.barrow-1', 855, -122, 180, ['spawn']),
   a('spawn.deadroad.barrow-2', 865, -122, 180, ['spawn']),
+
+  // Batch 3: R02's sparring bouts in the Practice Yard (before M06; from M06 on they are in the Bastion yard), between
+  // the training dummies and the blocking dummies.
+  a('spawn.r02.yard-bout', -45, 115, 0, ['spawn']),
+  a('spawn.r02.yard-pair-1', -48, 114, 0, ['spawn']),
+  a('spawn.r02.yard-pair-2', -42, 114, 0, ['spawn']),
 ];
 
 const triggers: TriggerSpec[] = [

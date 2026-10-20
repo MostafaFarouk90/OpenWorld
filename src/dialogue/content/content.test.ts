@@ -35,7 +35,9 @@ describe('dialogue content', () => {
   });
 
   it('speakers are known', () => {
-    for (const d of dialogueDefs) for (const n of d.nodes) expect(['gaut', 'edda', 'stane', 'aelfreda', 'hob', 'wynn', 'tobb', 'carter-1', 'carter-2', 'cael', 'rook', 'aldith', 'wystan', 'edric', 'vey', 'merrin', 'gerta', 'whitlock', 'pennard', 'ashdown', 'carter-3', 'aldwin', 'garrick', 'note']).toContain(n.speaker);
+    for (const d of dialogueDefs) for (const n of d.nodes) expect(['gaut', 'edda', 'stane', 'aelfreda', 'hob', 'wynn', 'tobb', 'carter-1', 'carter-2', 'cael', 'rook', 'aldith', 'wystan', 'edric', 'vey', 'merrin', 'gerta', 'whitlock', 'pennard', 'ashdown', 'carter-3', 'aldwin', 'garrick', 'note',
+      // density pass, batch 3
+      'refugee-1', 'refugee-2', 'stallholder-1', 'stallholder-2', 'guild-doorman', 'pellam', 'sexton', 'fence', 'crabbe']).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {

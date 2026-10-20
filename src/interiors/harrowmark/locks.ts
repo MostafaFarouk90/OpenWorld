@@ -20,6 +20,8 @@ export const HARROWMARK_FLAG_BLOCKERS: Readonly<Record<string, string>> = {
   // Density pass, batch 2: the vault's arena gate opens once the antechamber's wraiths are down (the Prior's arena still
   // closes and reopens it during his fight).
   'vault.arena.gate': 'story.d01.antechamberClear',
+  // Batch 3: the Archive stacks open with Whitlock's key in R04 (and stay open after).
+  'archive.stacks.gate': 'story.r04.stacksOpen',
 };
 
 /** M09's invoices (thread 6 counts `use:m09-invoice-<n>` and writes `story.m09.invoice.<n>` when one is taken). */

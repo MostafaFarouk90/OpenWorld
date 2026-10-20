@@ -2,6 +2,8 @@ import type { InteriorDef } from '../types';
 import { HARROWMARK_SITES } from './sites';
 
 export const ARCHIVE_ID = 'archive';
+/** Closes the arch into the stacks until Whitlock's key opens it (R04, Act 1 density pass). */
+export const ARCHIVE_STACKS_GATE = 'archive.stacks.gate';
 
 /**
  * The Harrowmark archive (greybox), 18 x 20 m. A reading room by the door (four tables, Whitlock's lectern at the far side) opens
@@ -28,7 +30,8 @@ export const ARCHIVE_DEF: InteriorDef = {
     { id: 'shelf.4', rect: { x0: 7, z0: -17.5, x1: 7.5, z1: -12.5 }, height: 3 },
     { id: 'shelf.5', rect: { x0: -3, z0: -18.5, x1: 3, z1: -18 }, height: 3 },
   ],
-  blockers: [],
+  // Act 1 density pass, batch 3 (quests thread; additive): the stacks' gate in the arch (src/interiors/harrowmark/locks.ts)
+  blockers: [{ id: ARCHIVE_STACKS_GATE, rect: { x0: -3, z0: -11, x1: 3, z1: -10 }, height: 6 }],
   torches: [
     { x: -8.9, y: 3, z: -2 },
     { x: 8.9, y: 3, z: -2 },
@@ -43,6 +46,9 @@ export const ARCHIVE_DEF: InteriorDef = {
     { id: 'harrowmark.archive.entry', x: 0, z: -1, yaw: 0 },
     { id: 'harrowmark.archive.exit', x: 0, z: 0.5, yaw: 180 },
     { id: 'npc-post.whitlock.inside', x: 0, z: -9.25, yaw: 180 },
+    // R04 (density pass): the lock on the stacks' gate, and the first torn page at the back of the stacks
+    { id: 'r04.stacks-lock', x: 2.2, z: -9.3, yaw: 0 },
+    { id: 'r04.stacks-page', x: -2.6, z: -16.2, yaw: 270 },
   ],
   triggers: [],
   doors: [

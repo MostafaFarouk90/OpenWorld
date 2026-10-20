@@ -290,14 +290,51 @@ describe('Stane', () => {
     expect(first(w, 'npc-stane', 'stane')).toBe('r02-tip-parry');
     w.set('r02', 'active', 'o3');
     expect(first(w, 'npc-stane', 'stane')).toBe('r02-tip-guard');
+    // the density pass: a story, the bout (called in the yard before M06), a story, the pair, then the last word
     w.set('r02', 'active', 'o4');
-    expect(play(w, 'npc-stane', 'stane')).toEqual(['r02-done', 'r02-done-2']);
+    expect(play(w, 'npc-stane', 'stane')).toEqual(['r02-story1', 'r02-story1-2', 'r02-story1-3']);
+    expect(w.flags.get('story.r02.bout.yard')).toBe(true);
+    w.set('r02', 'active', 'story1');
+    expect(first(w, 'npc-stane', 'stane')).toBe('r02-tip-bout');
+    w.set('r02', 'active', 'bout');
+    expect(play(w, 'npc-stane', 'stane')).toEqual(['r02-story2', 'r02-story2-2', 'r02-story2-2b', 'r02-story2-2c', 'r02-story2-3']);
+    expect(w.flags.get('story.r02.pair.yard')).toBe(true);
+    w.set('r02', 'active', 'story2');
+    expect(first(w, 'npc-stane', 'stane')).toBe('r02-tip-pair');
+    w.set('r02', 'active', 'pair');
+    expect(play(w, 'npc-stane', 'stane')).toEqual(['r02-done', 'r02-last', 'r02-last-2', 'r02-last-3', 'r02-done-2']);
+    expect(w.flags.get('story.r02.bout.bastion')).toBeUndefined();
     w.set('r02', 'completed');
     expect(first(w, 'npc-stane', 'stane')).toBe('idle-after');
     expect(dialogueStrings['dialogue.npc-stane.idle-after']).toMatch(/Bastion/);
     expect(w.started).toEqual([]);
   });
 });
+
+describe('Stane in the Bastion (density pass)', () => {
+  it('greets with the Bastion offer from M06 on and calls the bouts in the Bastion yard', () => {
+    const w = world(); w.set('m02', 'completed'); w.flags.set('story.m06.started', true);
+    expect(first(w, 'npc-stane', 'stane')).toBe('r02-offer-bastion');
+    w.set('r02', 'active', 'o1', 'o2', 'o3', 'o4', 'story1');
+    play(w, 'npc-stane', 'stane');
+    expect(w.flags.get('story.r02.bout.bastion')).toBe(true);
+    expect(w.flags.get('story.r02.bout.yard')).toBeUndefined();
+  });
+  it('offers the Warden trainer beside the drill once the class is open', () => {
+    const w = world(); w.set('m02', 'completed'); w.flags.set('story.m06.started', true); w.flags.set('story.m07.classOpen', true);
+    expect(choicesAtNode(w, 'r02-offer-2')).toEqual(['accept', 'later', 'train']);
+    const v = world(); v.set('m02', 'completed');
+    expect(choicesAtNode(v, 'r02-offer-2')).toEqual(['accept', 'later']);
+  });
+});
+
+function choicesAtNode(w: ReturnType<typeof world>, node: string): string[] {
+  expect(w.dr.start('npc-stane', 'stane')).toBe(true);
+  for (let i = 0; i < 10 && w.dr.view()!.nodeId !== node; i++) w.dr.advance();
+  const ids = w.dr.view()!.choices.map((c) => c.id);
+  w.dr.close('script');
+  return ids;
+}
 
 describe('Wynn', () => {
   it('offers R01, starts on accept, reminds, thanks, then idles by barley flag', () => {

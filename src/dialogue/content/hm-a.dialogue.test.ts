@@ -149,7 +149,27 @@ const choicesAt = (w: SW, d: string, npc: string, node: string): string[] => {
 /** The route idles show once D02 is done (until then Rook talks about the sewers). */
 const afterD02 = (w: SW) => { w.finish(...D02_PREREQUISITES); w.finish('d02'); };
 
+/** M06 (density pass): the brazier, Rook's proof, the word to the queue and the Anvil's sign, after the route. */
+const finishInside = (w: SW) => { for (const o of ['brazier', 'proof', 'word', 'anvil']) w.manager.completeObjective('m06', o); };
+
 describe('Rook: M06 Gates of Harrowmark', () => {
+  it('density pass: sends Cael down the queue, then walks the inside steps in order', () => {
+    const w = stageWorld({ gold: 0 }); w.finish('m05');
+    expect(play(w, 'npc-rook', 'rook', 'accept').slice(-2)).toEqual(['m06-queue-send', 'm06-queue-send-2']);
+    expect(first(w, 'npc-rook', 'rook')).toBe('m06-queue-remind');
+    w.manager.completeObjective('m06', 'queue');
+    w.manager.completeObjective('m06', 'o2');
+    expect(first(w, 'npc-rook', 'rook')).toBe('m06-brazier-remind');
+    w.manager.completeObjective('m06', 'brazier');
+    const proof = play(w, 'npc-rook', 'rook');
+    expect(proof[0]).toBe('m06-proof');
+    expect(proof.at(-1)).toBe('m06-queue-ask');
+    w.manager.completeObjective('m06', 'proof');
+    expect(first(w, 'npc-rook', 'rook')).toBe('m06-word-remind');
+    w.manager.completeObjective('m06', 'word');
+    expect(first(w, 'npc-rook', 'rook')).toBe('m06-anvil-remind');
+  });
+
   it('offers after M05 (cold and banked variants), accept starts and credits o1, later does not', () => {
     for (const [band, node] of [['cold', 'm06-intro-cold'], ['banked', 'm06-intro']] as const) {
       const w = stageWorld({ band: { halvard: band } }); w.finish('m05');
@@ -162,7 +182,7 @@ describe('Rook: M06 Gates of Harrowmark', () => {
   });
 
   it('sneaking leaves the quest at o2, and he asks again next time', () => {
-    const w = stageWorld({ gold: 500 }); w.stage('m06', 'o1');
+    const w = stageWorld({ gold: 500 }); w.stage('m06', 'o1', 'queue');
     expect(play(w, 'npc-rook', 'rook', 'sneak')).toEqual(['m06-choose-again', 'm06-choose', 'm06-sneak']);
     expect(w.manager.objectiveDone('m06', 'o2')).toBe(false);
     expect(w.flags.get('story.m06.route')).toBeUndefined();
@@ -170,23 +190,25 @@ describe('Rook: M06 Gates of Harrowmark', () => {
   });
 
   it('bribe needs the full fee: hidden at 49, charged at 50, walks into the proof and completes M06', () => {
-    const poor = stageWorld({ gold: M06_BRIBE_GOLD - 1 }); poor.stage('m06', 'o1');
+    const poor = stageWorld({ gold: M06_BRIBE_GOLD - 1 }); poor.stage('m06', 'o1', 'queue');
     expect(choicesAt(poor, 'npc-rook', 'rook', 'm06-choose')).toEqual(['sneak', 'argue-tip']);
-    const w = stageWorld({ gold: M06_BRIBE_GOLD }); w.stage('m06', 'o1');
+    const w = stageWorld({ gold: M06_BRIBE_GOLD }); w.stage('m06', 'o1', 'queue');
     expect(choicesAt(w, 'npc-rook', 'rook', 'm06-choose')).toEqual(['sneak', 'bribe', 'argue-tip']);
     const seen = play(w, 'npc-rook', 'rook', 'bribe');
-    expect(seen).toEqual(['m06-choose-again', 'm06-choose', 'm06-bribe-ok', 'm06-proof', 'm06-proof-2', 'm06-proof-3']);
+    expect(seen).toEqual(['m06-choose-again', 'm06-choose', 'm06-bribe-ok', 'm06-inside']);
     expect(w.gold.n).toBe(0);
     expect(w.spent).toEqual([{ amount: M06_BRIBE_GOLD, reason: 'bribe' }]);
     expect(w.flags.get('story.m06.route')).toBe('bribe');
     expect(w.flags.get('story.m06.gateOpen')).toBe(true);
+    expect(w.manager.state('m06')).toBe('active');
+    finishInside(w);
     expect(w.manager.state('m06')).toBe('completed');
     afterD02(w);
     expect(first(w, 'npc-rook', 'rook')).toBe('idle-bribe');
   });
 
   it('a bribe that the purse cannot cover halts: no flags, no objective, same node', () => {
-    const w = stageWorld({ gold: 10 }); w.stage('m06', 'o1');
+    const w = stageWorld({ gold: 10 }); w.stage('m06', 'o1', 'queue');
     w.seen.gold = M06_BRIBE_GOLD; // the condition believes there is enough, the purse disagrees
     expect(w.dr.start('npc-rook', 'rook')).toBe(true);
     w.dr.advance(); // choose-again -> choose
@@ -204,13 +226,14 @@ describe('Rook: M06 Gates of Harrowmark', () => {
 
   it('argument is free at Stoked and Hearthbound and never charges', () => {
     for (const band of ['stoked', 'hearthbound'] as const) {
-      const w = stageWorld({ band: { halvard: band }, gold: 0 }); w.stage('m06', 'o1');
+      const w = stageWorld({ band: { halvard: band }, gold: 0 }); w.stage('m06', 'o1', 'queue');
       expect(choicesAt(w, 'npc-rook', 'rook', 'm06-choose')).toEqual(['sneak', 'argue-free']);
       const seen = play(w, 'npc-rook', 'rook', 'argue-free');
-      expect(seen.slice(-4)).toEqual(['m06-argue-ok', 'm06-proof', 'm06-proof-2', 'm06-proof-3']);
+      expect(seen.slice(-2)).toEqual(['m06-argue-ok', 'm06-inside']);
       expect(w.flags.get('story.m06.route')).toBe('persuasion');
       expect(w.flags.get('story.m06.gateOpen')).toBe(true);
       expect(w.spent).toEqual([]);
+      finishInside(w);
       expect(w.manager.state('m06')).toBe('completed');
       afterD02(w);
       expect(first(w, 'npc-rook', 'rook')).toBe('idle-persuasion');
@@ -218,26 +241,30 @@ describe('Rook: M06 Gates of Harrowmark', () => {
   });
 
   it('at Banked the argument costs the tip (25), hidden at 24', () => {
-    const poor = stageWorld({ band: { halvard: 'banked' }, gold: M06_TIP_GOLD - 1 }); poor.stage('m06', 'o1');
+    const poor = stageWorld({ band: { halvard: 'banked' }, gold: M06_TIP_GOLD - 1 }); poor.stage('m06', 'o1', 'queue');
     expect(choicesAt(poor, 'npc-rook', 'rook', 'm06-choose')).toEqual(['sneak']);
-    const w = stageWorld({ band: { halvard: 'banked' }, gold: M06_TIP_GOLD }); w.stage('m06', 'o1');
+    const w = stageWorld({ band: { halvard: 'banked' }, gold: M06_TIP_GOLD }); w.stage('m06', 'o1', 'queue');
     expect(choicesAt(w, 'npc-rook', 'rook', 'm06-choose')).toEqual(['sneak', 'argue-tip']);
     const seen = play(w, 'npc-rook', 'rook', 'argue-tip');
     expect(seen).toContain('m06-argue-tip-ok');
     expect(w.gold.n).toBe(0);
     expect(w.flags.get('story.m06.route')).toBe('persuasion');
+    finishInside(w);
     expect(w.manager.state('m06')).toBe('completed');
   });
 
   it('Cold favour gets only sneak and bribe', () => {
-    const w = stageWorld({ band: { halvard: 'cold' }, gold: 1000 }); w.stage('m06', 'o1');
+    const w = stageWorld({ band: { halvard: 'cold' }, gold: 1000 }); w.stage('m06', 'o1', 'queue');
     expect(choicesAt(w, 'npc-rook', 'rook', 'm06-choose')).toEqual(['sneak', 'bribe']);
   });
 
-  it('a stealth pass completes M06 on its own, the flags come from the quest, and the idle is the stealth line', () => {
-    const w = stageWorld(); w.stage('m06', 'o1', 'o2');
+  it('a stealth pass needs no Rook, the flags come from the quest, and the idle is the stealth line', () => {
+    // (in the game the objective-flag bridge writes both as soon as o2 is done: src/quests/content/objectiveFlags.ts)
+    const w = stageWorld(); w.stage('m06', 'o1', 'queue', 'o2');
+    finishInside(w);
     expect(w.manager.state('m06')).toBe('completed');
     expect(w.flags.get('story.m06.route')).toBe('stealth');
+    expect(w.flags.get('story.m06.gateOpen')).toBe(true);
     afterD02(w);
     expect(first(w, 'npc-rook', 'rook')).toBe('idle-stealth');
   });
@@ -320,12 +347,16 @@ describe('Aldith: M07 and R03', () => {
 
   it('reminders, then the return sets classOpen once and takes the satchel once', () => {
     const w = stageWorld(); w.finish('m06'); w.stage('m07', 'o1');
+    expect(first(w, 'npc-aldith', 'aldith')).toBe('m07-remind-ask');
+    w.manager.completeObjective('m07', 'ask');
+    expect(first(w, 'npc-aldith', 'aldith')).toBe('m07-remind-coins');
+    w.manager.completeObjective('m07', 'coins');
     expect(first(w, 'npc-aldith', 'aldith')).toBe('m07-remind-thieves');
     w.manager.completeObjective('m07', 'o2');
     expect(first(w, 'npc-aldith', 'aldith')).toBe('m07-remind-satchel');
     w.manager.completeObjective('m07', 'o3');
     expect(w.flags.get('story.m07.classOpen')).toBeUndefined();
-    expect(play(w, 'npc-aldith', 'aldith')).toEqual(['m07-return', 'm07-return-2']);
+    expect(play(w, 'npc-aldith', 'aldith')).toEqual(['m07-return', 'm07-return-2', 'm07-backroom', 'm07-backroom-2']);
     expect(w.flags.get('story.m07.classOpen')).toBe(true);
     expect(w.removed).toEqual(['stolen-satchelx1']);
     expect(w.manager.objectiveDone('m07', 'o4')).toBe(true);
@@ -334,7 +365,7 @@ describe('Aldith: M07 and R03', () => {
   });
 
   it('a second run of the return node (flag already set) takes nothing', () => {
-    const w = stageWorld(); w.finish('m06'); w.stage('m07', 'o1', 'o2', 'o3');
+    const w = stageWorld(); w.finish('m06'); w.stage('m07', 'o1', 'ask', 'coins', 'o2', 'o3');
     w.flags.set('story.m07.classOpen', true);
     play(w, 'npc-aldith', 'aldith');
     expect(w.removed).toEqual([]);
@@ -346,15 +377,21 @@ describe('Aldith: M07 and R03', () => {
     expect(w.manager.state('r03')).toBe('inactive');
     expect(play(w, 'npc-aldith', 'aldith', 'accept').at(-1)).toBe('r03-brief');
     expect(w.manager.objectiveDone('r03', 'o1')).toBe(true);
+    expect(first(w, 'npc-aldith', 'aldith')).toBe('r03-remind-doorman');
+    w.manager.completeObjective('r03', 'doorman');
     expect(first(w, 'npc-aldith', 'aldith')).toBe('r03-remind-thugs');
     w.manager.completeObjective('r03', 'o2');
+    expect(first(w, 'npc-aldith', 'aldith')).toBe('r03-remind-pellam');
+    w.manager.completeObjective('r03', 'pellam');
     expect(first(w, 'npc-aldith', 'aldith')).toBe('r03-remind-copper');
+    w.manager.completeObjective('r03', 'o3');
+    expect(first(w, 'npc-aldith', 'aldith')).toBe('r03-remind-snatch');
   });
 
   it('forgiving the debt pays nothing and marks the inn price forgiven', () => {
-    const w = stageWorld({ gold: 7 }); w.finish('m06', 'm07'); w.stage('r03', 'o1', 'o2', 'o3');
+    const w = stageWorld({ gold: 7 }); w.finish('m06', 'm07'); w.stage('r03', 'o1', 'doorman', 'o2', 'pellam', 'o3', 'snatch');
     expect(choicesAt(w, 'npc-aldith', 'aldith', 'r03-settle')).toEqual(['forgive', 'collect']);
-    expect(play(w, 'npc-aldith', 'aldith', 'forgive')).toEqual(['r03-settle', 'r03-forgive-end']);
+    expect(play(w, 'npc-aldith', 'aldith', 'forgive')).toEqual(['r03-plea-plain', 'r03-plea-aldith', 'r03-settle', 'r03-forgive-end']);
     expect(w.gold.n).toBe(7);
     expect(w.flags.get('world.harrowmark.inn.price')).toBe('forgiven');
     expect(w.removed).toEqual(['brewing-copperx1']);
@@ -364,12 +401,18 @@ describe('Aldith: M07 and R03', () => {
   });
 
   it('collecting pays R03_COIN_GOLD and marks the price collected', () => {
-    const w = stageWorld({ gold: 7 }); w.finish('m06', 'm07'); w.stage('r03', 'o1', 'o2', 'o3');
-    expect(play(w, 'npc-aldith', 'aldith', 'collect')).toEqual(['r03-settle', 'r03-collect-end']);
+    const w = stageWorld({ gold: 7 }); w.finish('m06', 'm07'); w.stage('r03', 'o1', 'doorman', 'o2', 'pellam', 'o3', 'snatch');
+    expect(play(w, 'npc-aldith', 'aldith', 'collect')).toEqual(['r03-plea-plain', 'r03-plea-aldith', 'r03-settle', 'r03-collect-end']);
     expect(w.gold.n).toBe(7 + R03_COIN_GOLD);
     expect(w.flags.get('world.harrowmark.inn.price')).toBe('collected');
     expect(w.manager.state('r03')).toBe('completed');
     expect(first(w, 'npc-aldith', 'aldith')).toBe('idle-collected');
+  });
+
+  it('quotes Pellam back as Cael promised him, before the choice', () => {
+    const w = stageWorld(); w.finish('m06', 'm07'); w.stage('r03', 'o1', 'doorman', 'o2', 'pellam', 'o3', 'snatch');
+    w.flags.set('story.r03.promise', 'speak');
+    expect(play(w, 'npc-aldith', 'aldith', 'forgive').slice(0, 3)).toEqual(['r03-plea-speak', 'r03-plea-aldith', 'r03-settle']);
   });
 
   it('plain idle before any of it', () => {

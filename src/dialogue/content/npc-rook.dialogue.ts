@@ -50,9 +50,14 @@ export const npcRook: DialogueDef = {
       node: 'd02-locked-early',
     },
 
-    // M06 Gates of Harrowmark
-    { when: { all: [active('m06'), done('m06', 'o2')] }, node: 'm06-proof' },
-    { when: active('m06'), node: 'm06-choose-again' },
+    // M06 Gates of Harrowmark (the density pass: the queue first, then the route, then the brazier inside the gate,
+    // the districts, a word for the queue and the walk to the Tilted Anvil)
+    { when: { all: [active('m06'), done('m06', 'word')] }, node: 'm06-anvil-remind' },
+    { when: { all: [active('m06'), done('m06', 'proof')] }, node: 'm06-word-remind' },
+    { when: { all: [active('m06'), done('m06', 'brazier')] }, node: 'm06-proof' },
+    { when: { all: [active('m06'), done('m06', 'o2')] }, node: 'm06-brazier-remind' },
+    { when: { all: [active('m06'), done('m06', 'queue')] }, node: 'm06-choose-again' },
+    { when: active('m06'), node: 'm06-queue-remind' },
     { when: { all: [inactive('m06'), completed('m05'), { favour: 'halvard', band: 'cold' }] }, node: 'm06-intro-cold' },
     { when: { all: [inactive('m06'), completed('m05')] }, node: 'm06-intro' },
 
@@ -70,11 +75,14 @@ export const npcRook: DialogueDef = {
     {
       id: 'm06-offer', speaker: 'rook', textKey: P + 'm06-offer',
       choices: [
-        { id: 'accept', textKey: P + 'm06-offer.accept', effects: [{ startQuest: 'm06' }, { completeObjective: ['m06', 'o1'] }], next: 'm06-choose' },
+        { id: 'accept', textKey: P + 'm06-offer.accept', effects: [{ startQuest: 'm06' }, { completeObjective: ['m06', 'o1'] }], next: 'm06-queue-send' },
         { id: 'later', textKey: P + 'm06-offer.later', next: 'm06-later' },
       ],
     },
     say('m06-later'),
+    say('m06-queue-send', 'm06-queue-send-2'),
+    say('m06-queue-send-2'),
+    say('m06-queue-remind'),
     say('m06-choose-again', 'm06-choose'),
     {
       id: 'm06-choose', speaker: 'rook', textKey: P + 'm06-choose',
@@ -96,12 +104,24 @@ export const npcRook: DialogueDef = {
       ],
     },
     say('m06-sneak'),
-    say('m06-bribe-ok', 'm06-proof'),
-    say('m06-argue-ok', 'm06-proof'),
-    say('m06-argue-tip-ok', 'm06-proof'),
+    say('m06-bribe-ok', 'm06-inside'),
+    say('m06-argue-ok', 'm06-inside'),
+    say('m06-argue-tip-ok', 'm06-inside'),
+    say('m06-inside'),
+    say('m06-brazier-remind'),
+    // at the gate brazier, after the shard was held to it: the proof, the districts and a word for the queue
     say('m06-proof', 'm06-proof-2'),
     say('m06-proof-2', 'm06-proof-3'),
-    say('m06-proof-3'),
+    say('m06-proof-3', 'm06-districts'),
+    say('m06-districts', 'm06-districts-forge'),
+    say('m06-districts-forge', 'm06-districts-guild'),
+    say('m06-districts-guild', 'm06-districts-oswin'),
+    say('m06-districts-oswin', 'm06-districts-keep'),
+    say('m06-districts-keep', 'm06-districts-bastion'),
+    say('m06-districts-bastion', 'm06-queue-ask'),
+    say('m06-queue-ask'),
+    say('m06-word-remind'),
+    say('m06-anvil-remind'),
 
     // ---- D02 ----
     say('d02-offer', 'd02-offer-2'),

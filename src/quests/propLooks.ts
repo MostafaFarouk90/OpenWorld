@@ -3,7 +3,7 @@
 // at the prop's anchor and hides it when the prop is spent.
 import * as THREE from 'three';
 
-export type PropLook = 'page' | 'grave' | 'rubble' | 'candle' | 'box' | 'chain' | 'stake' | 'hearth' | 'bucket' | 'brazier';
+export type PropLook = 'page' | 'grave' | 'rubble' | 'candle' | 'box' | 'chain' | 'stake' | 'hearth' | 'bucket' | 'brazier' | 'coin';
 
 const mats = new Map<number, THREE.MeshStandardMaterial>();
 const mat = (color: number, emissive = 0): THREE.MeshStandardMaterial => {
@@ -56,6 +56,10 @@ export function buildPropLook(look: PropLook): THREE.Group {
       break;
     case 'brazier':
       g.add(box(0.2, 0.9, 0.2, 0x3a3a3a, 0.45), box(0.7, 0.2, 0.7, 0x2a2a2a, 0.95), box(0.4, 0.12, 0.4, 0xff7a20, 1.08, 0xff7a20));
+      break;
+    case 'coin':
+      // a dropped coin with a faint glint, so it reads on the cobbles
+      g.add(box(0.14, 0.03, 0.14, 0xd8b040, 0.02, 0x6a5010));
       break;
   }
   return g;

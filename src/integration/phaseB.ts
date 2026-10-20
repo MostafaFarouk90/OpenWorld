@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { stealthRoute, chaseRoute, makeUndetectable, catchCourierForTest } from '../stealth/testing/headless';
 import type { ChapterHarness } from './chapterHarness';
 import { describeQuest, ensure, heal, killAsPlayer, npcPosition, objectiveDone, runHealed, talkTo, type QuestTrail } from './phaseA';
+import { R04_FENCE_GOLD } from '../quests/content/gold';
 
 /**
  * Slice 2 Phase B (Harrowmark) and the Act 1 ending, played on a `bootFromSave(<Phase A fixture>, { models: true,
@@ -166,9 +167,14 @@ export async function playM06(h: ChapterHarness, t: QuestTrail, route: GateRoute
     grantGold(h, Math.max(0, HARNESS_TIP_GOLD - gold(h)));
     pick = 2;
   }
-  const goldBefore = gold(h);
-  await talkTo(h, t, 'rook', [1, pick]);
+  await talkTo(h, t, 'rook', [1]);
   ensure(q.state('m06') !== 'inactive' && objectiveDone(h, 'm06', 'o1'), `M06 offered and o1 credited: ${describeQuest(h, 'm06')}`);
+  // the density pass: Rook sends Cael down the queue first (two refugees), then asks how Cael means to pass
+  await talkTo(h, t, 'refugee-1');
+  await talkTo(h, t, 'refugee-2');
+  ensure(objectiveDone(h, 'm06', 'queue'), `the queue heard (${describeQuest(h, 'm06')})`);
+  const goldBefore = gold(h);
+  if (route !== 'stealth') await talkTo(h, t, 'rook', [pick]);
   if (route === 'stealth') {
     await h.runAsync(5);
     ensure(gate() === 'guarded', `the gate is guarded once M06 starts (${gate()})`);
@@ -187,8 +193,18 @@ export async function playM06(h: ChapterHarness, t: QuestTrail, route: GateRoute
     ensure(spent === (route === 'bribe' ? HARNESS_BRIBE_GOLD : HARNESS_TIP_GOLD), `${route} paid ${spent}`);
   }
   await h.runAsync(5);
-  ensure(q.state('m06') === 'completed', `M06 completed: ${describeQuest(h, 'm06')}`);
   ensure(h.ctx.state.getFlag('story.m06.route') === route, `route ${String(h.ctx.state.getFlag('story.m06.route'))}`);
+  ensure(gate() === 'open', `the gate is open once Cael is through (${gate()})`);
+  // inside: the shard at the gate brazier, Rook's proof and the districts, the word to the queue, the Anvil's sign
+  await useAt(h, 'm06.gate-brazier', 'use:m06-gate-brazier');
+  ensure(objectiveDone(h, 'm06', 'brazier'), `the brazier (${describeQuest(h, 'm06')})`);
+  await talkTo(h, t, 'rook');
+  ensure(objectiveDone(h, 'm06', 'proof'), `Rook's proof (${describeQuest(h, 'm06')})`);
+  await talkTo(h, t, 'refugee-1');
+  ensure(objectiveDone(h, 'm06', 'word'), `the word to the queue (${describeQuest(h, 'm06')})`);
+  await h.enterTrigger('trg.harrowmark.anvil-sign');
+  await h.runAsync(5);
+  ensure(q.state('m06') === 'completed', `M06 completed: ${describeQuest(h, 'm06')}`);
   ensure(gate() === 'open', `the gate is open after M06 (${gate()})`);
 }
 
@@ -199,6 +215,12 @@ export async function playM07(h: ChapterHarness, t: QuestTrail, classId: PhaseBO
   const q = quests(h);
   await talkTo(h, t, 'aldith', [1]);
   ensure(q.state('m07') === 'active' && objectiveDone(h, 'm07', 'o1'), `M07 offered: ${describeQuest(h, 'm07')}`);
+  // the density pass: the stallholders who saw the thieves run, then the coins dropped on the way to the alley
+  await talkTo(h, t, 'stallholder-1');
+  await talkTo(h, t, 'stallholder-2');
+  ensure(objectiveDone(h, 'm07', 'ask'), `the stallholders asked (${describeQuest(h, 'm07')})`);
+  for (const n of [1, 2, 3]) await useAt(h, `m07.coin-${n}`, `use:m07-coin-${n}`);
+  ensure(objectiveDone(h, 'm07', 'coins'), `the coin trail (${describeQuest(h, 'm07')})`);
   await killGroup(h, 'm07.thieves', 'alley-cutpurse', 3, 'm07.thieves.1');
   ensure(objectiveDone(h, 'm07', 'o2'), `o2 three cutpurses (${describeQuest(h, 'm07')})`);
   await useAt(h, 'm07.satchel', 'pickup:satchel');
@@ -228,10 +250,19 @@ export async function playR03(h: ChapterHarness, t: QuestTrail, debt: PhaseBOpti
   const q = quests(h);
   await talkTo(h, t, 'aldith', [1]);
   ensure(q.state('r03') === 'active', `R03 offered: ${describeQuest(h, 'r03')}`);
+  // the density pass: the doorman's word calls the thugs out; Pellam pleads once they are down; the copper is
+  // snatched for on the way back
+  await talkTo(h, t, 'guild-doorman');
+  ensure(objectiveDone(h, 'r03', 'doorman'), `the doorman (${describeQuest(h, 'r03')})`);
   await killGroup(h, 'r03.guildhall', 'guildhall-thug', 3, 'r03.guildhall.1');
   ensure(objectiveDone(h, 'r03', 'o2'), `o2 the thugs (${describeQuest(h, 'r03')})`);
+  await h.runAsync(10);
+  await talkTo(h, t, 'pellam', [debt === 'forgiven' ? 1 : 2]);
+  ensure(objectiveDone(h, 'r03', 'pellam'), `Pellam's plea (${describeQuest(h, 'r03')})`);
   await useAt(h, 'r03.brewing-copper', 'pickup:brewing-copper');
   ensure(objectiveDone(h, 'r03', 'o3'), 'o3 the copper');
+  await killGroup(h, 'r03.snatch', 'guildhall-thug', 2, 'spawn.r03.snatch-1');
+  ensure(objectiveDone(h, 'r03', 'snatch'), `the snatch beaten off (${describeQuest(h, 'r03')})`);
   const before = gold(h);
   await talkTo(h, t, 'aldith', [debt === 'forgiven' ? 1 : 2]);
   ensure(q.state('r03') === 'completed', `R03 completed: ${describeQuest(h, 'r03')}`);
@@ -246,8 +277,24 @@ export async function playR04(h: ChapterHarness, t: QuestTrail, steward: PhaseBO
   const q = quests(h);
   await talkTo(h, t, 'whitlock', [1]);
   ensure(q.state('r04') === 'active', `R04 offered: ${describeQuest(h, 'r04')}`);
-  for (const n of [1, 2, 3]) await useAt(h, `r04.page-${n}`, `use:r04-page-${n}`);
+  // the density pass: Whitlock's key opens the stacks for the first page; the sexton and a Guild fence hold the others;
+  // Steward Crabbe owns up before Whitlock reads them
+  await enterInterior(h, 'archive', 'archive');
+  await useAt(h, 'r04.stacks-lock', 'use:r04-stacks-lock');
+  ensure(objectiveDone(h, 'r04', 'stacks'), `the stacks unlocked (${describeQuest(h, 'r04')})`);
+  await h.runAsync(5);
+  await useAt(h, 'r04.stacks-page', 'use:r04-page-1');
+  ensure(objectiveDone(h, 'r04', 'page1'), `the page in the stacks (${describeQuest(h, 'r04')})`);
+  await leaveInterior(h);
+  await talkTo(h, t, 'sexton');
+  ensure(objectiveDone(h, 'r04', 'page2'), `the sexton's page (${describeQuest(h, 'r04')})`);
+  // Mother Quill: pay (shown at 20+ gold), Gerta's name, or leave; the harness gives Gerta's name
+  await talkTo(h, t, 'fence', [gold(h) >= R04_FENCE_GOLD ? 2 : 1]);
+  ensure(objectiveDone(h, 'r04', 'page3') && h.ctx.state.getFlag('story.r04.fence') === 'gerta', `the fence's page (${describeQuest(h, 'r04')})`);
   ensure(objectiveDone(h, 'r04', 'o2'), `o2 three pages (${describeQuest(h, 'r04')})`);
+  await h.runAsync(10);
+  await talkTo(h, t, 'crabbe');
+  ensure(objectiveDone(h, 'r04', 'crabbe'), `Crabbe (${describeQuest(h, 'r04')})`);
   await talkTo(h, t, 'whitlock', [steward === 'expose' ? 1 : 2]);
   ensure(q.state('r04') === 'completed', `R04 completed: ${describeQuest(h, 'r04')}`);
   ensure(h.ctx.state.getFlag('story.r04.choice') === steward, 'the steward choice');

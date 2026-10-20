@@ -3,6 +3,7 @@ import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { createFakeCore } from '../region/testing/fakeCore';
 import { createHarrowmarkPlugin } from './harrowmark.plugin';
 import { HARROWMARK_LAYOUT, HARROWMARK_NPCS } from './harrowmark.layout';
+import { DENSITY_LAYOUT_HM } from './density.layout';
 import { HARROWMARK_NPC_DEFS } from './npcDefs';
 import type { HarrowmarkService } from './types';
 
@@ -40,7 +41,8 @@ describe('harrowmark plugin', () => {
     expect(registered).toHaveLength(1);
     expect(registered[0].specs).toEqual(HARROWMARK_LAYOUT.npcs);
     expect(registered[0].defs).toBe(HARROWMARK_NPC_DEFS);
-    expect(HARROWMARK_NPCS).toBe(HARROWMARK_LAYOUT.npcs);
+    // the density pass's NPCs follow thread 17's cast (src/harrowmark/density.layout.ts)
+    expect(HARROWMARK_LAYOUT.npcs).toEqual([...HARROWMARK_NPCS, ...DENSITY_LAYOUT_HM.npcs]);
     expect(fc.colliders.size).toBe(HARROWMARK_LAYOUT.structures.filter((s) => s.mode === 'solid').length);
     plugin.dispose?.();
   });

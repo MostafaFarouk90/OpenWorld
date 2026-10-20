@@ -179,14 +179,27 @@ describe('Gerta and M10', () => {
   });
 });
 
+/** R04 (density pass): every objective before Whitlock reads the pages, and the reading itself. */
+const R04_TO_CRABBE = ['o1', 'stacks', 'page1', 'page2', 'page3', 'o2', 'crabbe'];
+const R04_READ = ['r04-read-1', 'r04-read-1b', 'r04-read-2', 'r04-read-2b', 'r04-read-3', 'r04-read-3b'];
+
 describe('Whitlock and R04', () => {
+  it('density pass: reminds about the pages, then Crabbe, then reads them', () => {
+    const s = setup();
+    s.progress('r04', 'o1', 'stacks', 'page1', 'page2', 'page3');
+    expect(s.w.manager.objectiveDone('r04', 'o2')).toBe(true); // o2 follows the three pages (kept for old saves)
+    expect(s.first('npc-whitlock', 'whitlock')).toBe('r04-crabbe-remind');
+    s.w.manager.completeObjective('r04', 'crabbe');
+    expect(s.first('npc-whitlock', 'whitlock')).toBe('r04-read-1');
+  });
+
   it('offers R04 after M07 and starts it on accept only', () => {
     const s = setup();
     expect(s.first('npc-whitlock', 'whitlock')).toBe('idle');
     s.w.manager.complete('m07');
     expect(s.play('npc-whitlock', 'whitlock', (n) => (n === 'r04-offer-2' ? 2 : 1)).at(-1)).toBe('r04-later');
     expect(s.w.manager.state('r04')).toBe('inactive');
-    expect(s.play('npc-whitlock', 'whitlock').at(-1)).toBe('r04-brief');
+    expect(s.play('npc-whitlock', 'whitlock').at(-1)).toBe('r04-brief-3');
     expect(s.w.manager.state('r04')).toBe('active');
     expect(s.w.manager.objectiveDone('r04', 'o1')).toBe(true);
     expect(s.first('npc-whitlock', 'whitlock')).toBe('r04-remind');
@@ -194,8 +207,8 @@ describe('Whitlock and R04', () => {
 
   it('expose gives halvard +5, oswin -5 and the flag, then completes R04', () => {
     const s = setup();
-    s.progress('r04', 'o1', 'o2');
-    expect(s.play('npc-whitlock', 'whitlock', () => 1)).toEqual(['r04-pages', 'r04-expose-end']);
+    s.progress('r04', ...R04_TO_CRABBE);
+    expect(s.play('npc-whitlock', 'whitlock', () => 1)).toEqual([...R04_READ, 'r04-pages', 'r04-expose-end']);
     expect(s.favourCalls).toEqual([{ track: 'halvard', delta: 5 }, { track: 'oswin', delta: -5 }]);
     expect(s.w.flags.get('story.r04.choice')).toBe('expose');
     expect(s.w.manager.state('r04')).toBe('completed');
@@ -204,8 +217,8 @@ describe('Whitlock and R04', () => {
 
   it('shield gives halvard -3, oswin +5 and the flag, then completes R04', () => {
     const s = setup();
-    s.progress('r04', 'o1', 'o2');
-    expect(s.play('npc-whitlock', 'whitlock', () => 2)).toEqual(['r04-pages', 'r04-shield-end']);
+    s.progress('r04', ...R04_TO_CRABBE);
+    expect(s.play('npc-whitlock', 'whitlock', () => 2)).toEqual([...R04_READ, 'r04-pages', 'r04-shield-end']);
     expect(s.favourCalls).toEqual([{ track: 'halvard', delta: -3 }, { track: 'oswin', delta: 5 }]);
     expect(s.w.flags.get('story.r04.choice')).toBe('shield');
     expect(s.w.manager.state('r04')).toBe('completed');
@@ -214,10 +227,10 @@ describe('Whitlock and R04', () => {
 
   it('asking loops back to the decision without effects', () => {
     const s = setup();
-    s.progress('r04', 'o1', 'o2');
+    s.progress('r04', ...R04_TO_CRABBE);
     let asked = 0;
     const seen = s.play('npc-whitlock', 'whitlock', (n) => (n === 'r04-pages' && asked++ < 2 ? 3 : 1));
-    expect(seen).toEqual(['r04-pages', 'r04-ask', 'r04-pages', 'r04-ask', 'r04-pages', 'r04-expose-end']);
+    expect(seen).toEqual([...R04_READ, 'r04-pages', 'r04-ask', 'r04-pages', 'r04-ask', 'r04-pages', 'r04-expose-end']);
     expect(s.favourCalls).toEqual([{ track: 'halvard', delta: 5 }, { track: 'oswin', delta: -5 }]);
   });
 
