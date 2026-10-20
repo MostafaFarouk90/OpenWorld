@@ -9,7 +9,7 @@ export const D01_BRAZIERS = [1, 2, 3].map((n) => `use:d01-brazier-${n}`);
  * D01 Prayers in the Vault. Either outcome completes it; the outcome lives in `boss.ashen-prior.outcome`
  * (written by the core boss registry), which Aelfreda's dialogue reads. Neither defeat nor release is required.
  * The density pass (batch 2): the vault door stays locked until D01 is taken (`story.d01.vaultOpen`); inside, Prior
- * Aldhelm's three prayer tablets, the antechamber's three braziers, which wake four wraiths from the walls, and the arena
+ * Aldhelm's four prayer tablets, the antechamber's three braziers, which wake four wraiths from the walls, and the arena
  * gate that opens once they are down (`story.d01.antechamberClear`); after the outcome his censer, carried up and set on
  * the chapel altar, and a short vigil with Aelfreda that decides what goes in the record of him (`story.d01.prior`).
  */

@@ -23,7 +23,6 @@ export const NOTE_DIALOGUES: DialogueDef[] = [
   note('note-m05-journal', 4),
   note('note-deadroad-stone-1', 2),
   note('note-deadroad-stone-2', 2),
-  note('note-deadroad-reed', 2),
   note('note-deadroad-barrow', 2),
   note('note-d01-tablet-1', 2),
   note('note-d01-tablet-2', 2),

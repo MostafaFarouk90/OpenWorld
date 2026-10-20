@@ -71,6 +71,7 @@ describe('quest leads', () => {
 describe('M05 objective lead (Tobb)', () => {
   const anchors: Record<string, { x: number; z: number }> = {
     'wardstone.1': { x: 300, z: 10 }, 'wardstone.3': { x: 500, z: 20 }, 'shrine.quenchstone.basin': { x: 965, z: 0 },
+    'm05.journal': { x: 480, z: -134 },
   };
   const mk = (state: string, done: string[], next: number | null, npc: { x: number; z: number } | null = { x: 7, z: 8 }) =>
     m05ObjectiveLead({
@@ -81,17 +82,20 @@ describe('M05 objective lead (Tobb)', () => {
       npcPosition: () => npc ?? undefined,
     });
 
-  it('points at the next wardstone, then the basin, then Tobb', () => {
-    expect(mk('active', [], 3)).toEqual([{ id: 'lead.m05.objective', x: 500, z: 20, label: 'tobb' }]);
-    expect(mk('active', [], null)[0]).toMatchObject({ x: 300, z: 10 });
-    expect(mk('active', ['o1'], null)[0]).toMatchObject({ x: 965, z: 0 });
-    expect(mk('active', ['o1', 'o2'], null)[0]).toMatchObject({ x: 7, z: 8 });
+  it('points at the pilgrim\'s pack, then the next wardstone, then the basin, then Tobb', () => {
+    // the density pass: the journal first, even when every stone is already struck
+    expect(mk('active', [], 3)[0]).toMatchObject({ x: 480, z: -134 });
+    expect(mk('active', [], null)[0]).toMatchObject({ x: 480, z: -134 });
+    expect(mk('active', ['journal'], 3)).toEqual([{ id: 'lead.m05.objective', x: 500, z: 20, label: 'tobb' }]);
+    expect(mk('active', ['journal'], null)[0]).toMatchObject({ x: 300, z: 10 });
+    expect(mk('active', ['journal', 'o1'], null)[0]).toMatchObject({ x: 965, z: 0 });
+    expect(mk('active', ['journal', 'o1', 'o2'], null)[0]).toMatchObject({ x: 7, z: 8 });
   });
   it('is empty when M05 is not active, finished, or the target is missing', () => {
     expect(mk('inactive', [], 1)).toEqual([]);
-    expect(mk('completed', ['o1', 'o2', 'o3'], null)).toEqual([]);
-    expect(mk('active', ['o1', 'o2'], null, null)).toEqual([]);
-    expect(mk('active', [], 4)).toEqual([]); // wardstone.4 has no anchor here
-    expect(mk('active', ['o1', 'o2'], null, { x: NaN, z: 0 })).toEqual([]);
+    expect(mk('completed', ['journal', 'o1', 'o2', 'o3'], null)).toEqual([]);
+    expect(mk('active', ['journal', 'o1', 'o2'], null, null)).toEqual([]);
+    expect(mk('active', ['journal'], 4)).toEqual([]); // wardstone.4 has no anchor here
+    expect(mk('active', ['journal', 'o1', 'o2'], null, { x: NaN, z: 0 })).toEqual([]);
   });
 });

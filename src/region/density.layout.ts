@@ -73,7 +73,7 @@ const anchors: AnchorSpec[] = [
   a('r01.bucket-2', -6, 50, 90, ['carry']),
 
   // ---- batch 2: the chapel altar where D01's censer is set ----
-  a('d01.altar', 52, 62, 180, ['interact'], { onStructure: 'chapel' }),
+  a('d01.altar', 55.9, 60, 90, ['interact'], { onStructure: 'chapel' }),
 
   // ---- batch 2: the Dead Road (M05) ----
   // A pilgrim's pack under a toppled milestone, halfway between the second and third stones.
@@ -83,8 +83,8 @@ const anchors: AnchorSpec[] = [
   a('spawn.m05.shrine-2', 978, -174, 270, ['spawn']),
   a('spawn.m05.shrine-3', 952, -154, 90, ['spawn']),
   a('spawn.m05.shrine-4', 978, -154, 270, ['spawn']),
-  // Road points of interest (design 4.3, outside any quest): two waymarker stones of the road's dead (the third lore
-  // stone is on the reed-island ledge, Leap-gated) and a barrow whose two wraiths never respawn.
+  // Road points of interest (design 4.3, outside any quest): two waymarker stones of the road's dead and a barrow whose
+  // two wraiths never respawn.
   a('poi.deadroad.stone-1', 200, -134, 180, ['poi']),
   a('poi.deadroad.stone-2', 700, -168, 0, ['poi']),
   a('poi.deadroad.barrow', 860, -126, 180, ['poi']),

@@ -599,7 +599,7 @@ export async function finishD01(h: ChapterHarness, t: QuestTrail, prior: PriorBr
   const q = quests(h);
   const interiors = h.ctx.services.require('interiors');
   heal(h);
-  // Prior Aldhelm's three prayer tablets, the three braziers, and what the walls give up (density pass, batch 2)
+  // Prior Aldhelm's four prayer tablets, the three braziers, and what the walls give up (density pass, batch 2)
   for (const n of [1, 2, 3, 4]) await readNote(h, t, `note-d01-tablet-${n}`, `d01.tablet-${n}`);
   ensure(objectiveDone(h, 'd01', 'tablets'), 'the four tablets');
   ensure(!h.ctx.state.getBool('story.d01.antechamberClear'), 'the arena gate is shut');

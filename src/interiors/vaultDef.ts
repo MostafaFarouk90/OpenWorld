@@ -84,7 +84,7 @@ export const VAULT_DEF: InteriorDef = {
     { id: 'vault.pile.1', x: 4.5, z: -11.5, yaw: 90 },
     { id: 'vault.pile.2', x: 4.5, z: -16.5, yaw: 90 },
     { id: 'vault.pile.3', x: 10, z: -17, yaw: 90 },
-    // Act 1 density pass, batch 2 (quests thread; additive): Prior Aldhelm's three prayer tablets, the antechamber's
+    // Act 1 density pass, batch 2 (quests thread; additive): Prior Aldhelm's four prayer tablets, the antechamber's
     // three prayer braziers (lit, they open the arena gate) and the four wraiths the walls give up when they are lit.
     { id: 'd01.tablet-1', x: -1, z: -9, yaw: 270 },
     { id: 'd01.tablet-2', x: -1, z: -16, yaw: 270 },

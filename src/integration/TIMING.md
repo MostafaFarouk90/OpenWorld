@@ -70,7 +70,7 @@ Beats: M01 9 kill units (five lane wraiths, four at the mill), 5 carries (three 
 | M05 | 1582 | 5.9 | 14 | 4.7 | 10.5 | 21.0 | 40 | -47 | **>25% off** |
 | R01 | 430 | 1.6 | 16 | 5.3 | 7.3 | 14.2 | 35 | -59 | **>25% off** |
 | R02 | 139 | 0.5 | 5 | 1.7 | 2.0 | 4.2 | 30 | -86 | **>25% off** |
-| D01 | 260 | 1.0 | 20 | 6.7 | 14.7 | 22.3 | 55 | -59 | **>25% off** |
+| D01 | 266 | 1.0 | 20 | 6.7 | 14.7 | 22.3 | 55 | -59 | **>25% off** |
 | **total** | | | | | | **97.3** | **245** | **-60** | **>25% off** |
 
 Beats since batch 1: M03 2 interacts (shard study, candle), 1 leap, 4 kill units, 4 notes (font, Ember, record,
@@ -97,8 +97,8 @@ before.
 | M05 | 15.3 | 21.0 | 40 | 52 |
 | D01 | 11.8 | 22.3 | 55 | 41 |
 
-Batch 2 also adds four Dead Road points of interest outside any quest (two waymarker stones, a stone on the Leap-gated
-reed-island ledge, and a barrow with two wraiths); they are exploration and not counted.
+Batch 2 also adds three Dead Road points of interest outside any quest (two waymarker stones and a barrow with two
+wraiths); they are exploration and not counted.
 
 Every batch 1 and batch 2 quest clears the 40% floor. The act stands at about 229 of 695 (33%): batches 3 and 4
 (Harrowmark) carry the rest of the way to the act target, and Mostafa's timed play after batch 1 sets the real-time

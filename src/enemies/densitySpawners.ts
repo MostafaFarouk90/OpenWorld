@@ -43,13 +43,14 @@ export const DENSITY_SPAWNERS_A: readonly SpawnerDef[] = [
   {
     id: 'density.m05.shrine', tag: 'm05.shrine', enemy: 'ash-wraith', count: 4,
     anchor: 'spawn.m05.shrine-1', memberAnchors: members('spawn.m05.shrine', 4),
-    band: { min: 3, max: 4 }, activation: { quest: 'm05', flag: 'story.m05.stonesStruck' }, respawn: 'never', leash: true,
+    // a gate that closes once the push objective is done, so an old save credited past it raises nobody
+    band: { min: 3, max: 4 }, activation: { flag: 'story.m05.stonesStruck', until: 'story.m05.shrineHeld' }, respawn: 'never', leash: true,
   },
   // D01: the antechamber walls give up four wraiths once the three prayer braziers burn (anchors in the vault def).
   {
     id: 'density.d01.antechamber', tag: 'd01.antechamber', enemy: 'ash-wraith', count: 4,
     anchor: 'd01.spawn.wall-1', memberAnchors: members('d01.spawn.wall', 4),
-    band: { min: 4, max: 5 }, activation: { quest: 'd01', flag: 'story.d01.braziersLit' }, respawn: 'never', leash: true,
+    band: { min: 4, max: 5 }, activation: { flag: 'story.d01.braziersLit', until: 'story.d01.antechamberClear' }, respawn: 'never', leash: true,
   },
   // A Dead Road point of interest: two wraiths in the barrow off the road; there from the start, never respawning.
   {

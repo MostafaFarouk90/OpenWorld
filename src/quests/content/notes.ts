@@ -38,10 +38,9 @@ export const QUEST_NOTES: QuestNoteSpec[] = [
 
   // ---- batch 2: the Dead Road and the vault ----
   { interactableId: 'use:note-m05-journal', anchorId: 'm05.journal', codexId: NOTE_CODEX.pilgrimJournal },
-  // road points of interest, readable any time (the reed-island stone is on the Leap-gated ledge)
+  // road points of interest, readable any time (the reed-island ledge already has its own lore stone, content/poi.ts)
   { interactableId: 'use:note-deadroad-stone-1', anchorId: 'poi.deadroad.stone-1', codexId: NOTE_CODEX.roadDead },
   { interactableId: 'use:note-deadroad-stone-2', anchorId: 'poi.deadroad.stone-2', codexId: NOTE_CODEX.roadDead },
-  { interactableId: 'use:note-deadroad-reed', anchorId: 'poi.leap.reed-island', codexId: NOTE_CODEX.roadDead },
   { interactableId: 'use:note-deadroad-barrow', anchorId: 'poi.deadroad.barrow', codexId: NOTE_CODEX.roadDead },
   // Prior Aldhelm's prayer tablets in the vault corridor and ossuary
   ...[1, 2, 3, 4].map((n): QuestNoteSpec => ({
@@ -64,7 +63,6 @@ export const NOTE_LOOKS: Record<string, 'page' | 'grave' | 'box'> = {
   'use:note-m05-journal': 'page',
   'use:note-deadroad-stone-1': 'grave',
   'use:note-deadroad-stone-2': 'grave',
-  'use:note-deadroad-reed': 'grave',
   'use:note-deadroad-barrow': 'grave',
   'use:note-d01-tablet-1': 'grave',
   'use:note-d01-tablet-2': 'grave',

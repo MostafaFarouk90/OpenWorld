@@ -584,8 +584,10 @@ describe('batch 2: the Dead Road and the vault', () => {
   it('locks the vault door on story.d01.vaultOpen and the arena gate on the antechamber, and gates the new groups', () => {
     expect(HARROWMARK_DOOR_LOCKS.vault).toBe('story.d01.vaultOpen');
     expect(HARROWMARK_FLAG_BLOCKERS['vault.arena.gate']).toBe('story.d01.antechamberClear');
-    expect(spawner('density.m05.shrine').activation).toEqual({ quest: 'm05', flag: 'story.m05.stonesStruck' });
-    expect(spawner('density.d01.antechamber').activation).toEqual({ quest: 'd01', flag: 'story.d01.braziersLit' });
+    // gates that close once their own kill objective is done, so a save credited past them raises nobody
+    expect(spawner('density.m05.shrine').activation).toEqual({ flag: 'story.m05.stonesStruck', until: 'story.m05.shrineHeld' });
+    expect(spawner('density.d01.antechamber').activation).toEqual({ flag: 'story.d01.braziersLit', until: 'story.d01.antechamberClear' });
+    expect(OBJECTIVE_FLAGS).toContainEqual({ quest: 'm05', objective: 'push', flag: 'story.m05.shrineHeld' });
     expect(spawner('density.deadroad.barrow')).toMatchObject({ activation: 'auto', respawn: 'never', count: 2 });
   });
 
@@ -618,6 +620,32 @@ describe('batch 2: the Dead Road and the vault', () => {
     c.manager.load({ quests: { d01: { state: 'active', objectives: { o1: 1, o2: 1 } } } }, 1);
     for (const o of ['tablets', 'braziers', 'wake']) expect(c.manager.objectiveDone('d01', o), o).toBe(true);
     expect(c.manager.isObjectiveCurrent('d01', 'o3')).toBe(true);
+  });
+
+  it('an old save credited past a push or the walls syncs both gate flags, so those groups stay away', () => {
+    const open = (flags: { getFlag(k: string): unknown }, act: { flag?: string; until?: string }) =>
+      flags.getFlag(act.flag!) === true && flags.getFlag(act.until!) !== true;
+    const a = makeWorld([m05]);
+    const ba = installObjectiveFlags(OBJECTIVE_FLAGS, a.bus, a.state, a.manager);
+    a.manager.load({ quests: { m05: { state: 'active', objectives: { o1: 1, o2: 1 } } } }, 1);
+    ba.sync();
+    expect(open(a.state, spawner('density.m05.shrine').activation as { flag: string; until: string })).toBe(false);
+    ba.dispose();
+    const b = makeWorld([d01]);
+    const bb = installObjectiveFlags(OBJECTIVE_FLAGS, b.bus, b.state, b.manager);
+    b.manager.load({ quests: { d01: { state: 'active', objectives: { o1: 1, o2: 1, o3: 1 } } } }, 1);
+    bb.sync();
+    expect(open(b.state, spawner('density.d01.antechamber').activation as { flag: string; until: string })).toBe(false);
+    // a live run in between: the walls are open after the braziers and shut again when the wake is done
+    const c = makeWorld([d01]);
+    const bc = installObjectiveFlags(OBJECTIVE_FLAGS, c.bus, c.state, c.manager);
+    c.manager.start('d01');
+    for (const o of ['o1', 'tablets', 'braziers']) c.manager.completeObjective('d01', o);
+    expect(open(c.state, spawner('density.d01.antechamber').activation as { flag: string; until: string })).toBe(true);
+    c.manager.completeObjective('d01', 'wake');
+    expect(open(c.state, spawner('density.d01.antechamber').activation as { flag: string; until: string })).toBe(false);
+    bb.dispose();
+    bc.dispose();
   });
 
   it('D01: the braziers are props enabled only while their objective is current, each counted once', () => {

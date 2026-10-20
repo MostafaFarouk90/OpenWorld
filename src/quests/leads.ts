@@ -88,7 +88,9 @@ export interface ObjectiveLeadPorts {
 export function m05ObjectiveLead(p: ObjectiveLeadPorts): LeadMarker[] {
   if (p.questState('m05') !== 'active') return [];
   let target: { x: number; z: number } | undefined;
-  if (!p.objectiveDone('m05', 'o1')) target = p.anchor(`wardstone.${p.nextWardstone() ?? 1}`);
+  // the density pass: the pilgrim's pack first, then the stones, then the shrine (its push and its rekindling)
+  if (!p.objectiveDone('m05', 'journal')) target = p.anchor('m05.journal');
+  else if (!p.objectiveDone('m05', 'o1')) target = p.anchor(`wardstone.${p.nextWardstone() ?? 1}`);
   else if (!p.objectiveDone('m05', 'o2')) target = p.anchor('shrine.quenchstone.basin');
   else if (!p.objectiveDone('m05', 'o3')) target = p.npcPosition('tobb');
   return target && Number.isFinite(target.x) && Number.isFinite(target.z) ? [{ id: 'lead.m05.objective', x: target.x, z: target.z, label: 'tobb' }] : [];

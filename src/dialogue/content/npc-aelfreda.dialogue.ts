@@ -33,7 +33,7 @@ export const npcAelfreda: DialogueDef = {
     },
     { when: { all: [d01Active, done('d01', 'altar')] }, node: 'd01-vigil' },
     { when: { all: [d01Active, done('d01', 'o4')] }, node: 'd01-altar-remind' },
-    { when: { all: [d01Active, done('d01', 'o3'), notDone('d01', 'censer')] }, node: 'd01-censer-remind' },
+    { when: { all: [d01Active, done('d01', 'o3'), notDone('d01', 'censer')] }, node: 'd01-censer-found' },
     { when: { all: [d01Active, done('d01', 'o3'), priorOutcome('released')] }, node: 'd01-released' },
     { when: { all: [d01Active, done('d01', 'o3'), priorOutcome('defeated')] }, node: 'd01-defeated' },
     { when: d01Active, node: 'd01-remind' },
@@ -160,13 +160,18 @@ export const npcAelfreda: DialogueDef = {
     // the censer goes on the altar (density pass, batch 2), then a short vigil there
     { id: 'd01-censer', speaker: 'aelfreda', textKey: P + 'd01-censer', next: 'd01-censer-2' },
     { id: 'd01-censer-2', speaker: 'aelfreda', textKey: P + 'd01-censer-2', next: null },
-    { id: 'd01-censer-remind', speaker: 'aelfreda', textKey: P + 'd01-censer-remind', next: null },
+    // came up without his censer (or an old save from before it existed): she went down and brought it up herself
+    {
+      id: 'd01-censer-found', speaker: 'aelfreda', textKey: P + 'd01-censer-found',
+      effects: [{ completeObjective: ['d01', 'censer'] }], next: 'd01-censer-2',
+    },
     { id: 'd01-altar-remind', speaker: 'aelfreda', textKey: P + 'd01-altar-remind', next: null },
     { id: 'd01-vigil', speaker: 'aelfreda', textKey: P + 'd01-vigil', next: 'd01-vigil-2' },
     { id: 'd01-vigil-2', speaker: 'cael', textKey: P + 'd01-vigil-2', next: 'd01-vigil-3' },
     { id: 'd01-vigil-3', speaker: 'aelfreda', textKey: P + 'd01-vigil-3', next: 'd01-vigil-4' },
     { id: 'd01-vigil-4', speaker: 'aelfreda', textKey: P + 'd01-vigil-4', next: 'd01-vigil-5' },
-    { id: 'd01-vigil-5', speaker: 'cael', textKey: P + 'd01-vigil-5', next: 'd01-record' },
+    // only when Tobb is singing the road's names (M05's bond scene)
+    { id: 'd01-vigil-5', speaker: 'cael', textKey: P + 'd01-vigil-5', when: { flag: 'story.m05.ballad', equals: 'names' }, next: 'd01-record' },
     // what goes in the Hearthkeepers' record of him (story.d01.prior)
     {
       id: 'd01-record', speaker: 'aelfreda', textKey: P + 'd01-record',

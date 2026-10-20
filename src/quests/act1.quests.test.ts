@@ -73,7 +73,7 @@ describe('M04 The Toll at Hollin Ford', () => {
 });
 
 describe('D01 Prayers in the Vault', () => {
-  /** The density pass's antechamber: three tablets read, three braziers lit, the four wall wraiths put down. */
+  /** The density pass's antechamber: four tablets read, three braziers lit, the four wall wraiths put down. */
   const antechamber = (w: ReturnType<typeof makeWorld>) => {
     for (const id of D01_TABLETS) talk(w, id, 'completed');
     for (const id of D01_BRAZIERS) w.bus.emit('interact', { interactableId: id, actorId: 'p' });

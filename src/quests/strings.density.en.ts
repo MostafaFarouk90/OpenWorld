@@ -69,7 +69,7 @@ export const questStringsDensityA: Record<string, string> = {
   'codex.lore.pilgrim-journal.name': 'A Pilgrim\'s Journal',
   'codex.lore.pilgrim-journal.body': 'Found under a milestone on the Dead Road. The pilgrims walked close at night while the ash moved, and the old wardstones had gone dark since the brothers left the chapel.',
   'codex.lore.road-dead.name': 'The Road\'s Dead',
-  'codex.lore.road-dead.body': 'The Dead Road\'s waymarkers carry the names of those it kept, cut by the living as they pass. Among the newest is Wat Fenwick, carter, Tobb\'s brother.',
+  'codex.lore.road-dead.body': 'The Dead Road\'s waymarkers carry the names of those it kept, cut by the living as they pass. Among the newest is Wat Fenwick, carter.',
   'codex.lore.prior-aldhelm.name': 'Prior Aldhelm',
-  'codex.lore.prior-aldhelm.body': 'He kept vigil in the chapel vault for forty years and cut his nightly prayer for the road\'s dead into its walls. The last tablet ends with one word, cut deep: "Stay."',
+  'codex.lore.prior-aldhelm.body': 'He kept vigil in the chapel vault for forty years and cut his nightly prayer for the road\'s dead into its walls. The tablet in the ossuary ends with one word, cut deep: "Stay."',
 };

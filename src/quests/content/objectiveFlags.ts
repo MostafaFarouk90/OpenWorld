@@ -16,6 +16,7 @@ export const OBJECTIVE_FLAGS: ObjectiveFlag[] = [
   { quest: 'r01', objective: 'shawl', flag: 'story.r01.shawlRead' },
   // batch 2: the shrine push waits for the fifth stone (and so for the pilgrim's journal before it)
   { quest: 'm05', objective: 'o1', flag: 'story.m05.stonesStruck' },
+  { quest: 'm05', objective: 'push', flag: 'story.m05.shrineHeld' },
   // the vault door opens once D01 is taken (a quest-level row: set while D01 is active or completed)
   { quest: 'd01', flag: 'story.d01.vaultOpen' },
   // the antechamber walls wake when the three braziers burn; the arena gate opens once those wraiths are down

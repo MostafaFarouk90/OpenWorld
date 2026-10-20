@@ -154,7 +154,7 @@ export const PHASE_A_PLAN: Record<PhaseAQuest, QuestPlan> = {
     from: A('npc-post.stane'),
     route: [
       A('npc-post.aelfreda'), A('vault.door'), 'DOOR', A('vault.entry'), A('d01.tablet-1'), A('d01.tablet-2'), A('d01.tablet-3'),
-      A('d01.brazier-1'), A('d01.brazier-2'), A('d01.brazier-3'), A('d01.tablet-4'), T('trg.vault.arena'), A('vault.arena.centre'),
+      A('d01.tablet-4'), A('d01.brazier-1'), A('d01.brazier-2'), A('d01.brazier-3'), T('trg.vault.arena'), A('vault.arena.centre'),
       A('d01.censer'), A('vault.exit'), 'DOOR', A('vault.door'), A('npc-post.aelfreda.vault'), A('d01.altar'), A('npc-post.aelfreda.vault'),
     ],
     // The corridor's three wraiths and the Blightbloom, the antechamber's four, then the Prior.
