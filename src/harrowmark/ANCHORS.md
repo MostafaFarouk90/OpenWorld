@@ -319,7 +319,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | npc-post.keep-guard | 8507 | 2590 | 0 | 90 | npc-post |
 | npc-post.grisel | 8522 | 2588 | 0 | 0 | npc-post |
 | npc-post.clerk | 8190 | 1649 | 0 | 0 | npc-post |
-| m09.clerk-key | 8187.5 | 1649 | 0 | 0 | quest, interact |
+| m09.clerk-key | 8186.5 | 1649 | 0 | 0 | quest, interact |
 | spawn.m10.ambush-1 | 8590 | 2484 | 0 | 0 | spawn |
 | spawn.m10.ambush-2 | 8610 | 2484 | 0 | 0 | spawn |
 | spawn.d02.stray-1 | 8345 | 1390 | 0 | 0 | spawn |

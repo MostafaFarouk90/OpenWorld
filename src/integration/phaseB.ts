@@ -456,13 +456,13 @@ export async function playD02(h: ChapterHarness, t: QuestTrail, branch: GrimBran
   const q = quests(h);
   await talkTo(h, t, 'rook', [1]);
   ensure(q.state('d02') === 'active', `D02 offered: ${describeQuest(h, 'd02')}`);
-  ensure(h.ctx.state.getBool('story.d02.underwaysOpen') && h.ctx.state.getBool('enemies.mercy.calm'), 'the Underways open and Calm taught');
+  ensure(!h.ctx.state.getBool('story.d02.underwaysOpen') && h.ctx.state.getBool('enemies.mercy.calm'), 'Calm taught, the Underways still shut');
   ensure(h.ctx.services.require('inventory').count('hearth-bread') >= 5, 'the Hearth Bread');
   // the density pass: Rook's stray in the barracks yard first
   await killGroup(h, 'd02.stray', 'ember-hound', 2, 'spawn.d02.stray-1');
   ensure(objectiveDone(h, 'd02', 'stray'), `the strays (${describeQuest(h, 'd02')})`);
   await talkTo(h, t, 'rook');
-  ensure(objectiveDone(h, 'd02', 'lesson'), `Rook's lesson (${describeQuest(h, 'd02')})`);
+  ensure(objectiveDone(h, 'd02', 'lesson') && h.ctx.state.getBool('story.d02.underwaysOpen'), `Rook's lesson, the Underways open (${describeQuest(h, 'd02')})`);
   await enterInterior(h, 'underways', 'underways');
   ensure(objectiveDone(h, 'd02', 'o2'), 'o2 into the Underways');
   await inside?.();

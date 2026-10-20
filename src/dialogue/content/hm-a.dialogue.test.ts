@@ -305,7 +305,7 @@ describe('Rook: D02', () => {
     expect(w.manager.state('d02')).toBe('active');
     expect(w.manager.objectiveDone('d02', 'o1')).toBe(true);
     expect(w.flags.get('story.d02.breadGiven')).toBe(true);
-    expect(w.flags.get('story.d02.underwaysOpen')).toBe(true);
+    expect(w.flags.has('story.d02.underwaysOpen')).toBe(false); // the door opens on Rook's word after the strays (density pass)
     expect(w.enemies.unlocked).toEqual(['calm']);
     expect(w.bus.of('loot.granted').filter((p) => p?.itemId === 'hearth-bread' || JSON.stringify(p).includes('hearth-bread')).length).toBeLessThanOrEqual(1);
   });

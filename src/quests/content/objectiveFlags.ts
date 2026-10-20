@@ -51,6 +51,8 @@ export const OBJECTIVE_FLAGS: ObjectiveFlag[] = [
   { quest: 'm08', objective: 'pass', flag: 'story.m08.keepOpen' },
   // M09: the clerk's key opens the Counting-House side door, however Cael came by it
   { quest: 'm09', objective: 'key', flag: 'story.m09.houseOpen' },
+  // Simeon sits on the Anvil's bench once M09 has started (a quest-level row, so an old save catches up on load)
+  { quest: 'm09', flag: 'story.m09.started' },
   // the quiet way writes its route here (a drink or Merrin's name already wrote theirs)
   { quest: 'm09', objective: 'key', flag: 'story.m09.keyRoute', value: 'lifted' },
   // M10: Vey's men come for the sealed orders once Cael has them, and stop once beaten; the Ashmare is Cael's once
@@ -61,6 +63,8 @@ export const OBJECTIVE_FLAGS: ObjectiveFlag[] = [
   // D02: Rook's stray is gone once dealt with; the flooded tunnel's hounds come with the drained water; the arena gate
   // opens once they are dealt with (src/interiors/harrowmark/locks.ts)
   { quest: 'd02', objective: 'stray', flag: 'story.d02.strayDealt' },
+  // the Underways door opens once Rook has had his word on the strays (so the kennels cannot be emptied before o3 counts)
+  { quest: 'd02', objective: 'lesson', flag: 'story.d02.underwaysOpen' },
   { quest: 'd02', objective: 'valves', flag: 'story.d02.valvesOpen' },
   { quest: 'd02', objective: 'sluice', flag: 'story.d02.sluiceClear' },
 ];

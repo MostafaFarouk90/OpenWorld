@@ -32,7 +32,7 @@ export const dialogueStringsDensityC: Record<string, string> = {
   'dialogue.npc-merrin.m08-wait': '{name}. So Wystan is showing you off too. I am Merrin Oswin. We have not been introduced, which is the Regent\'s doing, not mine.',
   'dialogue.npc-merrin.m08-wait-2': 'Every house in Harrowmark waits on this hall today. Some of us to be seen, and some of us to see who else is waiting.',
   'dialogue.npc-merrin.m08-wait-3': 'And who else is waiting?',
-  'dialogue.npc-merrin.m08-wait-4': 'Lord Grisel, down from the north, which is unusual. After the audience, find me at the Counting-House. I may have work for someone the Regent has just looked at.',
+  'dialogue.npc-merrin.m08-wait-4': 'Lord Grisel, who has waited longer than any of us. After the audience, find me at the Counting-House. I may have work for someone the Regent has just looked at.',
 
   'dialogue.npc-grisel.wait': 'So this is Halvard\'s shard-bearer. Smaller than the songs.',
   'dialogue.npc-grisel.wait-2': 'There are songs?',
@@ -65,7 +65,7 @@ export const dialogueStringsDensityC: Record<string, string> = {
   'dialogue.npc-merrin.m09-remind-invoices': 'Three invoices from the desk in the office, and the strongbox beside it. Hide with F when a lamp swings your way.',
   'dialogue.npc-merrin.m09-order': 'And this, from the strongbox. Not an invoice. An order, under the Crucible\'s mark.',
   'dialogue.npc-merrin.m09-order-2': 'What does it ask for?',
-  'dialogue.npc-merrin.m09-order-3': 'One heart. Whole, not in pieces, delivered by the north road before the frost. No price written, which means the price was never meant to be paid in coin.',
+  'dialogue.npc-merrin.m09-order-3': 'One heart. Whole, not in pieces, delivered before the frost. No price written, which means the price was never meant to be paid in coin.',
   'dialogue.npc-merrin.m09-order-4': 'It is not enough for the Council, {name}. It is enough for me. Say nothing of it yet.',
 
   'dialogue.npc-clerk.meet': 'Another one from Lady Merrin? I can tell. You have the look of somebody sent to fetch me.',

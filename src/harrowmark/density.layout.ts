@@ -46,7 +46,7 @@ const anchors: AnchorSpec[] = [
   a('npc-post.grisel', 8522, 2588, 180, ['npc-post']),
   // M09: Oswin's clerk drinking on the Tilted Anvil's bench, and his satchel beside him (the side-door key)
   a('npc-post.clerk', 8190, 1649, 180, ['npc-post']),
-  a('m09.clerk-key', 8187.5, 1649, 180, ['quest', 'interact']),
+  a('m09.clerk-key', 8186.5, 1649, 180, ['quest', 'interact']),
   // M10: two of Vey's men who come for the sealed orders once Cael has them
   a('spawn.m10.ambush-1', 8590, 2484, 180, ['spawn']),
   a('spawn.m10.ambush-2', 8610, 2484, 180, ['spawn']),

@@ -84,7 +84,7 @@ export const npcClerk: DialogueDef = {
   id: 'npc-clerk',
   start: [
     // the key goes back once Cael is out clean: into his hand, or back into the satchel while he sleeps
-    { when: { all: [m09Active, { objective: ['m09', 'o4'], done: true }, { flag: 'story.m09.keyRoute', equals: 'lifted' }] }, node: 'return-asleep' },
+    { when: { all: [m09Active, { objective: ['m09', 'o4'], done: true }, { flag: 'story.m09.clerkDozing' }] }, node: 'return-asleep' },
     { when: { all: [m09Active, { objective: ['m09', 'o4'], done: true }] }, node: 'return' },
     { when: { all: [m09Active, { not: keyDone }, { flag: 'story.m09.clerkDozing' }] }, node: 'dozing' },
     { when: { all: [m09Active, { not: keyDone }] }, node: 'meet' },
