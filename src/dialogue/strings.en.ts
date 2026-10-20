@@ -5,6 +5,7 @@ import { dialogueStringsHmB } from './strings.hm-b.en';
 import { dialogueStringsHmC } from './strings.hm-c.en';
 import { dialogueStringsDensityA } from './strings.density.en';
 import { dialogueStringsDensityB } from './strings.density-b.en';
+import { dialogueStringsDensityC } from './strings.density-c.en';
 
 export const dialogueStrings: Record<string, string> = {
   ...dialogueStringsHmA,
@@ -12,6 +13,7 @@ export const dialogueStrings: Record<string, string> = {
   ...dialogueStringsHmC,
   ...dialogueStringsDensityA,
   ...dialogueStringsDensityB,
+  ...dialogueStringsDensityC,
   // ---- Marshal Stane ----
   'dialogue.npc-stane.wave': 'Ho there, {name}! Good to see you walking Kettlewick lane with your head up.',
   'dialogue.npc-stane.wave2': 'Come by the Practice Yard when you have a moment. I am putting up a drill board, and every move you learn can be tried out on it.',

@@ -49,10 +49,22 @@ export const npcEdric: DialogueDef = {
       [...tone('honest')!, { setFlag: 'story.m08.stance', value: 'steady' }],
       [...tone('bold')!, { setFlag: 'story.m08.stance', value: 'bold' }],
     ]),
-    node('q3-meek', 'vey', 'aud-end'),
-    node('q3-honest', 'edric', 'aud-end'),
-    node('q3-bold', 'vey', 'aud-end'),
+    node('q3-meek', 'vey', 'edric-ask'),
+    node('q3-honest', 'edric', 'edric-ask'),
+    node('q3-bold', 'vey', 'edric-ask'),
 
+    // the density pass: the boy's own question, after the Regent's (no favour; remembered as story.m08.edricAsked)
+    node('edric-ask', 'edric', 'edric-ask-2'),
+    {
+      id: 'edric-ask-2', speaker: 'edric', textKey: P + 'edric-ask-2',
+      choices: (['truth', 'brave', 'turn'] as const).map((id) => ({
+        id, textKey: `${P}edric-ask-2.${id}`, next: `edric-answer-${id}`,
+        effects: [{ setFlag: 'story.m08.edricAsked', value: id }],
+      })),
+    },
+    node('edric-answer-truth', 'edric', 'aud-end'),
+    node('edric-answer-brave', 'edric', 'aud-end'),
+    node('edric-answer-turn', 'edric', 'aud-end'),
     node('aud-end', 'edric', 'aud-end-2'),
     node('aud-end-2', 'edric', null, { effects: [{ event: 'story.m08.audience.end' }] }),
 

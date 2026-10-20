@@ -15,6 +15,6 @@ function stallholder(n: 1 | 2): DialogueDef {
   };
 }
 
-/** M07's Guild Quarter stallholders (density pass): Godric the pie-man saw the thieves run, Wenna heard where they count. */
+/** M07's Guild Quarter stallholders (density pass): Godric the pie-man saw the thieves run, Maera heard where they count. */
 export const npcStallholder1 = stallholder(1);
 export const npcStallholder2 = stallholder(2);
