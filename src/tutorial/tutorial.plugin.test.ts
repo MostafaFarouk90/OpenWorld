@@ -373,6 +373,54 @@ describe('clarity wiring on the real game', () => {
     expect(play).toHaveBeenCalled();
   });
 
+  it('beat cards: a fresh run names the beat "1 of 15", a finished beat shows its done card first, a reload shows none', async () => {
+    const t = await boot();
+    const cards = () => (globalThis as { __tutorialCards?: { beats: { showing: { kind: string; kicker: string; title: string } | null } } }).__tutorialCards!.beats;
+    t.director.begin('full');
+    frame(t, 2);
+    expect(cards().showing).toMatchObject({ kind: 'start', kicker: 'Knighting Day · 1 of 15' });
+    t.director.onEvent({ type: 'trigger', id: 'trg.t01.gate' });
+    t.game.ctx.state.setFlag('place.scarecrow.toppled', true);
+    t.director.onEvent({ type: 'flag', key: 'place.scarecrow.toppled' } as never);
+    frame(t, 2);
+    expect(t.director.beat).toBe('t02');
+    expect(cards().showing?.kind).toBe('done');
+    frame(t, 160); // past the done card
+    expect(cards().showing).toMatchObject({ kind: 'start', kicker: 'Knighting Day · 2 of 15' });
+    const saved = t.director.serialize();
+    t.dispose();
+    const t2 = await boot();
+    t2.director.load(saved);
+    t2.director.onSaveLoaded();
+    frame(t2, 4);
+    expect(t2.director.beat).toBe('t02');
+    expect(cards().showing).toBeNull();
+  });
+
+  it('a save load in the same session clears the cards about the beat before it', async () => {
+    const t = await boot();
+    const cards = (globalThis as { __tutorialCards?: { beats: { showing: unknown }; lines: { count(s: string): number } } }).__tutorialCards!;
+    t.director.begin('full', 't03');
+    frame(t, 2);
+    expect(cards.beats.showing).not.toBeNull();
+    t.game.ctx.events.emit('save.loaded', { slot: 'auto' });
+    expect(cards.beats.showing).toBeNull();
+    expect(cards.lines.count('subtitle')).toBe(0);
+  });
+
+  it('cards wait out a cutscene instead of running out unseen', async () => {
+    const t = await boot();
+    const cards = (globalThis as { __tutorialCards?: { beats: { showing: unknown } } }).__tutorialCards!;
+    t.director.begin('full', 't03');
+    frame(t, 2);
+    t.game.ctx.hud.setVisible(false);
+    for (let i = 0; i < 400; i++) t.game.render(1, 1 / 60);
+    expect(cards.beats.showing).not.toBeNull();
+    t.game.ctx.hud.setVisible(true);
+    for (let i = 0; i < 300; i++) t.game.render(1, 1 / 60);
+    expect(cards.beats.showing).toBeNull();
+  });
+
   it('?act1= style state (M01 and M02 done) shows no fire', async () => {
     const t = await boot();
     t.game.ctx.state.setFlag('tutorial.heartshard-awakened', true);
