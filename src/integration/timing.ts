@@ -124,12 +124,12 @@ export const PHASE_A_PLAN: Record<PhaseAQuest, QuestPlan> = {
     design: 40,
     from: A('npc-post.gaut.ford'),
     route: [
-      A('npc-post.tobb'), A('wardstone.1'), A('wardstone.2'), A('wardstone.3'), A('wardstone.4'), A('wardstone.5'),
-      A('waystone.quenchstone'),
+      A('npc-post.tobb'), A('wardstone.1'), A('wardstone.2'), A('m05.journal'), A('wardstone.3'), A('wardstone.4'), A('wardstone.5'),
+      A('spawn.m05.shrine-1'), A('waystone.quenchstone'),
     ],
-    // The Dead Road patrols (2 x 3 wraiths) stand on the route until the stones are done.
-    beats: { wardstone: 5, interact: 1, killUnit: 6 },
-    note: 'Tobb walks with the player: no return leg; two road patrols (6 wraiths)',
+    // The Dead Road patrols (2 x 3 wraiths) stand on the route until the stones are done; then the shrine push (4).
+    beats: { wardstone: 5, interact: 1, killUnit: 10, note: 1 },
+    note: 'Tobb walks with the player: no return leg; the journal, two road patrols (6 wraiths), the shrine push (4), the bond scene',
   },
   r01: {
     design: 35,
@@ -153,12 +153,13 @@ export const PHASE_A_PLAN: Record<PhaseAQuest, QuestPlan> = {
     design: 55,
     from: A('npc-post.stane'),
     route: [
-      A('npc-post.aelfreda'), A('vault.door'), 'DOOR', A('vault.entry'), T('trg.vault.arena'), A('vault.arena.centre'),
-      A('vault.exit'), 'DOOR', A('vault.door'), A('npc-post.aelfreda.vault'),
+      A('npc-post.aelfreda'), A('vault.door'), 'DOOR', A('vault.entry'), A('d01.tablet-1'), A('d01.tablet-2'), A('d01.tablet-3'),
+      A('d01.brazier-1'), A('d01.brazier-2'), A('d01.brazier-3'), A('d01.tablet-4'), T('trg.vault.arena'), A('vault.arena.centre'),
+      A('d01.censer'), A('vault.exit'), 'DOOR', A('vault.door'), A('npc-post.aelfreda.vault'), A('d01.altar'), A('npc-post.aelfreda.vault'),
     ],
-    // The corridor's three wraiths and the Blightbloom, then the Prior.
-    beats: { interact: 2, killUnit: 4, boss: 1 },
-    note: 'vault: 3 wraiths + Blightbloom, then the Prior',
+    // The corridor's three wraiths and the Blightbloom, the antechamber's four, then the Prior.
+    beats: { interact: 6, killUnit: 8, boss: 1, note: 5 },
+    note: 'vault: 3 wraiths + Blightbloom, four tablets, three braziers, four wall wraiths, the Prior, his censer, the altar vigil',
   },
 };
 

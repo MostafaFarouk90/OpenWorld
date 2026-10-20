@@ -89,6 +89,7 @@ describe('Tobb with the real services', () => {
     const t = await boot();
     await t.join();
     const interiors = t.ctx.services.require('interiors');
+    t.ctx.state.setFlag('story.d01.vaultOpen', true); // D01 taken (the density pass locks the door until then)
     await t.settle(interiors.enter('chapel-vault', 'vault'));
     await t.run(60);
     expect(interiors.current).toBe('chapel-vault');

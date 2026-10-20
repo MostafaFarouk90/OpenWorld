@@ -177,7 +177,8 @@ describe('Aelfreda', () => {
     w.set('m05', 'completed');
     expect(play(w, 'npc-aelfreda', 'aelfreda', () => 2).at(-1)).toBe('d01-later');
     expect(w.started).toEqual([]);
-    expect(play(w, 'npc-aelfreda', 'aelfreda').at(-1)).toBe('d01-brief');
+    // the briefing names Prior Aldhelm and the antechamber (density pass, batch 2)
+    expect(play(w, 'npc-aelfreda', 'aelfreda')).toEqual(['d01-offer', 'd01-offer-2', ...['', '-2', '-3', '-4', '-5', '-6'].map((x) => `d01-brief${x}`)]);
     expect(w.started).toEqual(['d01']);
   });
 
@@ -186,9 +187,20 @@ describe('Aelfreda', () => {
       const w = world(); w.set('d01', 'active');
       expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe('d01-remind');
       w.set('d01', 'active', 'o3');
+      // the density pass: first look where he fell, then the outcome talk sends the censer to the altar, then the vigil
+      expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe('d01-censer-remind');
+      w.set('d01', 'active', 'o3', 'censer');
       expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe('d01-remind');
       w.flags.set('boss.ashen-prior.outcome', outcome);
-      expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe(`d01-${outcome}`);
+      expect(play(w, 'npc-aelfreda', 'aelfreda')).toEqual([`d01-${outcome}`, `d01-${outcome}-2`, 'd01-censer', 'd01-censer-2']);
+      w.set('d01', 'active', 'o3', 'censer', 'o4');
+      expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe('d01-altar-remind');
+      w.set('d01', 'active', 'o3', 'censer', 'o4', 'altar');
+      const pick = outcome === 'released' ? 1 : 3;
+      expect(play(w, 'npc-aelfreda', 'aelfreda', () => pick)).toEqual([
+        'd01-vigil', 'd01-vigil-2', 'd01-vigil-3', 'd01-vigil-4', 'd01-vigil-5', 'd01-record', outcome === 'released' ? 'd01-record-name' : 'd01-record-silence', 'd01-close',
+      ]);
+      expect(w.flags.get('story.d01.prior')).toBe(outcome === 'released' ? 'name' : 'silence');
       w.set('d01', 'completed');
       expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe(`idle-${outcome}`);
       expect(w.started).toEqual([]);
@@ -330,7 +342,11 @@ describe('Tobb', () => {
     w.set('m05', 'active', 'o1');
     expect(first(w, 'npc-tobb', 'tobb')).toBe('remind');
     w.set('m05', 'active', 'o2');
-    expect(play(w, 'npc-tobb', 'tobb')).toEqual(['done', 'done-2']);
+    // the bond scene at the lit shrine (density pass, batch 2)
+    expect(w.flags.get('story.m05.tobbBond')).toBeUndefined();
+    expect(play(w, 'npc-tobb', 'tobb', () => 3)).toEqual(['done', 'bond-1', 'bond-2', 'bond-3', 'bond-4', 'bond-5', 'bond-names', 'bond-6', 'done-2']);
+    expect(w.flags.get('story.m05.ballad')).toBe('names');
+    expect(w.flags.get('story.m05.tobbBond')).toBe(true);
     expect(dialogueStrings['dialogue.npc-tobb.done-2']).toMatch(/Whistle/);
     w.set('m05', 'completed');
     expect(first(w, 'npc-tobb', 'tobb')).toBe('banter');

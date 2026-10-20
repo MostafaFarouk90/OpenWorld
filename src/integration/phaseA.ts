@@ -392,6 +392,9 @@ export async function playM05(h: ChapterHarness, t: QuestTrail): Promise<void> {
   ensure(q.state('m05') === 'active' && h.ctx.state.getBool('story.m05.tobbJoined'), 'M05 started by the join choice');
   await h.runAsync(10);
   ensure(companions.active().includes('tobb') && companions.actorId('tobb'), 'Tobb joined as a companion');
+  // the pilgrim's journal under the toppled milestone (density pass, batch 2)
+  await readNote(h, t, 'note-m05-journal', 'm05.journal');
+  ensure(objectiveDone(h, 'm05', 'journal'), 'the pilgrim\'s journal');
   // o1: five wardstones, west to east, three strikes each on consecutive beats.
   const shrine = h.ctx.services.require('shrine');
   for (let n = 1; n <= SHRINE_TUNING.wardstones.count; n++) {
@@ -402,14 +405,18 @@ export async function playM05(h: ChapterHarness, t: QuestTrail): Promise<void> {
     ensure(h.ctx.state.getBool(`world.deadroad.wardstone.${n}`), `wardstone ${n} struck (next: ${shrine.nextWardstone()})`);
   }
   ensure(h.ctx.state.getBool('world.deadroad.wardstones.done') && objectiveDone(h, 'm05', 'o1'), 'o1 the wardstones');
+  // the dead's last push at the Quenchstone
+  await killTagged(h, 'ash-wraith', 'm05.shrine', 4, h.anchor('spawn.m05.shrine-1'));
+  ensure(objectiveDone(h, 'm05', 'push'), 'the shrine held');
   // o2: rekindle the Quenchstone waystone by holding F; the shrine lights with it.
   heal(h);
   await h.approach(h.anchor('waystone.quenchstone'), 1.5);
   h.hold('KeyF', WAYSTONE_TUNING.rekindleHoldSeconds + 0.2);
   await h.runAsync(10);
   ensure(h.ctx.state.getBool('shrine.quenchstone.lit') && objectiveDone(h, 'm05', 'o2'), 'o2 the Quenchstone rekindled');
-  // o3: Tobb has followed; talk to him where he stands.
-  await talkTo(h, t, 'tobb');
+  // o3: Tobb has followed; talk to him where he stands (the bond scene: sing the road's dead).
+  await talkTo(h, t, 'tobb', [3]);
+  ensure(h.ctx.state.getFlag('story.m05.tobbBond') === true && h.ctx.state.getFlag('story.m05.ballad') === 'names', 'the bond scene');
   ensure(q.state('m05') === 'completed' && h.ctx.state.getBool('story.m05.complete'), 'M05 completed, story.m05.complete set');
 }
 
@@ -568,8 +575,15 @@ export type PriorBranch = 'released' | 'defeated';
 /** Offer, the vault door (F), o1 on entering. Leaves the player inside the vault at its entry. */
 export async function enterVaultForD01(h: ChapterHarness, t: QuestTrail): Promise<void> {
   const q = quests(h);
+  // the vault door refuses before D01 is taken (density pass, batch 2)
+  ensure(!h.ctx.state.getBool('story.d01.vaultOpen'), 'the vault is locked before D01');
+  await h.approach(h.anchor('vault.door'), 1.2);
+  h.press('KeyF');
+  await h.runAsync(30);
+  ensure(h.ctx.services.require('interiors').current === null, 'the locked vault door did not open');
   await talkTo(h, t, 'aelfreda', [1]);
   ensure(q.state('d01') === 'active', 'Aelfreda offers D01 once M03 and M05 are completed');
+  ensure(h.ctx.state.getBool('story.d01.vaultOpen'), 'taking D01 opens the vault');
   await h.runAsync(5);
   ensure(npcPosition(h, 'aelfreda').distanceTo(h.anchor('npc-post.aelfreda.vault')) < 2, 'Aelfreda waits at the vault door');
   const interiors = h.ctx.services.require('interiors');
@@ -584,6 +598,15 @@ export async function enterVaultForD01(h: ChapterHarness, t: QuestTrail): Promis
 export async function finishD01(h: ChapterHarness, t: QuestTrail, prior: PriorBranch): Promise<void> {
   const q = quests(h);
   const interiors = h.ctx.services.require('interiors');
+  heal(h);
+  // Prior Aldhelm's three prayer tablets, the three braziers, and what the walls give up (density pass, batch 2)
+  for (const n of [1, 2, 3, 4]) await readNote(h, t, `note-d01-tablet-${n}`, `d01.tablet-${n}`);
+  ensure(objectiveDone(h, 'd01', 'tablets'), 'the four tablets');
+  ensure(!h.ctx.state.getBool('story.d01.antechamberClear'), 'the arena gate is shut');
+  for (const n of [1, 2, 3]) await useAt(h, `d01.brazier-${n}`);
+  ensure(objectiveDone(h, 'd01', 'braziers'), 'the three braziers');
+  await killTagged(h, 'ash-wraith', 'd01.antechamber', 4, h.anchor('d01.spawn.wall-1'));
+  ensure(objectiveDone(h, 'd01', 'wake') && h.ctx.state.getBool('story.d01.antechamberClear'), 'the antechamber clear, the gate open');
   heal(h);
   await h.enterTrigger('trg.vault.arena');
   ensure(objectiveDone(h, 'd01', 'o2'), 'o2 the arena trigger');
@@ -627,6 +650,9 @@ export async function finishD01(h: ChapterHarness, t: QuestTrail, prior: PriorBr
   ensure(h.ctx.state.getFlag('boss.ashen-prior.outcome') === prior, `boss.ashen-prior.outcome is ${prior}`);
   ensure(objectiveDone(h, 'd01', 'o3'), 'o3 the outcome');
   runHealed(h, PRESENTATION.deathClipSeconds + PRESENTATION.deathDissolveSeconds + 1);
+  // his censer where he fell (density pass, batch 2)
+  await readNote(h, t, 'note-d01-censer', 'd01.censer');
+  ensure(objectiveDone(h, 'd01', 'censer'), 'the censer found');
   // Out through the vault exit (F); Aelfreda waits at the door.
   await h.approach(h.anchor('vault.exit'), 1.2);
   h.press('KeyF');
@@ -634,6 +660,11 @@ export async function finishD01(h: ChapterHarness, t: QuestTrail, prior: PriorBr
   ensure(interiors.current === null, 'out of the vault');
   await talkTo(h, t, 'aelfreda');
   ensure(h.ctx.services.require('dialogue').hasSeen(prior === 'released' ? 'd01-released' : 'd01-defeated'), 'her outcome node');
+  // the censer on the altar, then the vigil with Aelfreda: his name goes in the record
+  await useAt(h, 'd01.altar');
+  ensure(objectiveDone(h, 'd01', 'altar'), 'the censer on the altar');
+  await talkTo(h, t, 'aelfreda', [1]);
+  ensure(h.ctx.state.getFlag('story.d01.prior') === 'name', 'his name goes in the record');
   ensure(q.state('d01') === 'completed', `D01 completed: ${describeQuest(h, 'd01')}`);
 }
 

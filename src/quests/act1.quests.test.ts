@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { makeWorld } from './testKit';
 import { m04 } from './content/m04.quest';
-import { d01 } from './content/d01.quest';
+import { d01, D01_BRAZIERS, D01_TABLETS } from './content/d01.quest';
 import { r02 } from './content/r02.quest';
 import { m03 } from './content/m03.quest';
 import { M04_WAGONS } from './content/m04.quest';
@@ -73,15 +73,42 @@ describe('M04 The Toll at Hollin Ford', () => {
 });
 
 describe('D01 Prayers in the Vault', () => {
+  /** The density pass's antechamber: three tablets read, three braziers lit, the four wall wraiths put down. */
+  const antechamber = (w: ReturnType<typeof makeWorld>) => {
+    for (const id of D01_TABLETS) talk(w, id, 'completed');
+    for (const id of D01_BRAZIERS) w.bus.emit('interact', { interactableId: id, actorId: 'p' });
+    for (let i = 0; i < 4; i++) w.bus.emit('actor.died', { actorId: `wall${i}`, killerId: 'p', kind: 'ash-wraith', spawnTag: 'd01.antechamber' });
+  };
   const enterVault = (w: ReturnType<typeof makeWorld>) => {
     w.manager.start('d01');
     w.bus.emit('interior.entered', { interiorId: 'chapel-vault', doorId: 'vault.door' });
+    antechamber(w);
     w.bus.emit('trigger.enter', { triggerId: 'trg.vault.arena', actorId: 'p' });
   };
+  it('walks the antechamber in order: a brazier before the tablets and a wraith from elsewhere count for nothing', () => {
+    const w = makeWorld([d01]);
+    w.manager.start('d01');
+    w.bus.emit('interior.entered', { interiorId: 'chapel-vault', doorId: 'vault.door' });
+    w.bus.emit('interact', { interactableId: D01_BRAZIERS[0], actorId: 'p' });
+    expect(w.manager.objectives('d01').find((o) => o.def.id === 'braziers')!.progress).toBe(0);
+    for (const id of [D01_TABLETS[0], D01_TABLETS[0], D01_TABLETS[1]]) talk(w, id, 'completed');
+    talk(w, D01_TABLETS[2], 'aborted');
+    expect(w.manager.isObjectiveCurrent('d01', 'tablets')).toBe(true);
+    talk(w, D01_TABLETS[2], 'completed');
+    talk(w, D01_TABLETS[3], 'completed');
+    for (const id of [...D01_BRAZIERS, D01_BRAZIERS[0]]) w.bus.emit('interact', { interactableId: id, actorId: 'p' });
+    expect(w.manager.isObjectiveCurrent('d01', 'wake')).toBe(true);
+    w.bus.emit('actor.died', { actorId: 'x', killerId: 'p', kind: 'ash-wraith', spawnTag: 'brightwater.vault' });
+    expect(w.manager.objectives('d01').find((o) => o.def.id === 'wake')!.progress).toBe(0);
+  });
   it.each(['boss.defeated', 'boss.released'])('completes on %s', (ev) => {
     const w = makeWorld([d01]);
     enterVault(w);
     w.bus.emit(ev, { bossId: 'ashen-prior', actorId: 'x' });
+    talk(w, 'note-d01-censer', 'completed');
+    talk(w, 'aelfreda');
+    expect(w.manager.state('d01')).toBe('active'); // the censer still goes on the altar, then the vigil
+    w.bus.emit('interact', { interactableId: 'use:d01-altar', actorId: 'p' });
     talk(w, 'aelfreda');
     expect(w.manager.state('d01')).toBe('completed');
     expect(w.calls).toContain('xp:600:quest:d01');
@@ -97,6 +124,8 @@ describe('D01 Prayers in the Vault', () => {
     w.manager.start('d01');
     w.bus.emit('interior.entered', { interiorId: 'cellar', doorId: 'x' });
     expect(w.manager.objectiveDone('d01', 'o1')).toBe(false);
+    w.bus.emit('interior.entered', { interiorId: 'chapel-vault', doorId: 'vault.door' });
+    antechamber(w);
     w.bus.emit('boss.defeated', { bossId: 'ashen-prior' }); // before o1/o2: ignored, the flag handles it later
     expect(w.manager.objectiveDone('d01', 'o3')).toBe(false);
   });

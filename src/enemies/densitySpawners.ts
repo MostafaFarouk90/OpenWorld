@@ -37,4 +37,24 @@ export const DENSITY_SPAWNERS_A: readonly SpawnerDef[] = [
     anchor: 'spawn.r01.root-1', memberAnchors: members('spawn.r01.root', 3),
     band: { min: 2, max: 3 }, activation: { quest: 'r01', flag: 'story.r01.rootWoke' }, respawn: 'never', leash: true,
   },
+
+  // ---- batch 2: the Dead Road and the vault ----
+  // M05: the road's dead make one last push at the Quenchstone once all five stones are struck.
+  {
+    id: 'density.m05.shrine', tag: 'm05.shrine', enemy: 'ash-wraith', count: 4,
+    anchor: 'spawn.m05.shrine-1', memberAnchors: members('spawn.m05.shrine', 4),
+    band: { min: 3, max: 4 }, activation: { quest: 'm05', flag: 'story.m05.stonesStruck' }, respawn: 'never', leash: true,
+  },
+  // D01: the antechamber walls give up four wraiths once the three prayer braziers burn (anchors in the vault def).
+  {
+    id: 'density.d01.antechamber', tag: 'd01.antechamber', enemy: 'ash-wraith', count: 4,
+    anchor: 'd01.spawn.wall-1', memberAnchors: members('d01.spawn.wall', 4),
+    band: { min: 4, max: 5 }, activation: { quest: 'd01', flag: 'story.d01.braziersLit' }, respawn: 'never', leash: true,
+  },
+  // A Dead Road point of interest: two wraiths in the barrow off the road; there from the start, never respawning.
+  {
+    id: 'density.deadroad.barrow', tag: 'deadroad.barrow', enemy: 'ash-wraith', count: 2,
+    anchor: 'spawn.deadroad.barrow-1', memberAnchors: members('spawn.deadroad.barrow', 2),
+    band: { min: 3, max: 4 }, activation: 'auto', respawn: 'never', leash: true,
+  },
 ];
