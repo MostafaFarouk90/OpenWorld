@@ -1,5 +1,5 @@
 import type { ChapterHarness } from './chapterHarness';
-import type { PhaseAQuest, QuestTrail, Trails } from './phaseA';
+import type { OpeningQuest, PhaseAQuest, QuestTrail, Trails } from './phaseA';
 import type { PhaseBQuest } from './phaseB';
 
 /**
@@ -10,9 +10,13 @@ import type { PhaseBQuest } from './phaseB';
  * travel_m sums straight horizontal (x, z) distances between consecutive route points: the giver's post anchor,
  * each objective's anchor or trigger centre, back to the giver (where the giver stands for the hand-in). A door
  * between the world and the vault is a load, so the leg across it counts 0 (`DOOR`). Nodes read are the dialogue
- * nodes the chain test actually visited per quest (one key press each).
+ * nodes the chain test actually visited per quest (one key press each); a readable note counts as one `note` beat
+ * instead of its nodes. `from` is the leg from where the previous quest in the same area ended to this quest's giver
+ * (in-area giver-to-giver legs, density pass). A point marked `ride` is reached on horseback (RIDE_MPS).
  */
 export const WALK_MPS = 4.5;
+/** mounted legs (the Ashmare at a canter) */
+export const RIDE_MPS = 9;
 export const TALK_NODE_S = 20;
 /** Seconds per beat unit (all assumptions, chosen before comparing). */
 export const BEAT_S = {
@@ -40,42 +44,85 @@ export const BEAT_S = {
   classChoice: 60,
   /** the class drill (design 3: skippable, about 4 minutes; counted as played) */
   drill: 240,
+  /** one carry: picking it up and setting it down (the walk with it is in the route) */
+  carry: 15,
+  /** one readable note, found and read (replaces its dialogue nodes) */
+  note: 20,
+  /** one sparring opponent on the Replay board */
+  bout: 90,
+  /** one pass of the lock-on pole drill */
+  pole: 30,
 } as const;
 
-/** A route point: an anchor, a trigger centre, or the door marker (no travel across it). */
-type Point = { anchor: string } | { trigger: string } | 'DOOR';
+/** A route point: an anchor, a trigger centre, or the door marker (no travel across it). `ride`: reached mounted. */
+type Point = { anchor: string; ride?: boolean } | { trigger: string; ride?: boolean } | 'DOOR';
 const A = (anchor: string): Point => ({ anchor });
 const T = (trigger: string): Point => ({ trigger });
 
 export interface QuestPlan {
   design: number;
+  /** where the previous quest in the same area ended (its giver or hand-in); the leg to this route's start counts */
+  from?: Point;
   route: Point[];
   beats: Partial<Record<keyof typeof BEAT_S, number>>;
   note: string;
 }
 
+/** The Brightwater opening after the tutorial (density pass; played headless since batch 1). */
+export const OPENING_PLAN: Record<OpeningQuest, QuestPlan> = {
+  m01: {
+    design: 40,
+    // Gaut and Aelfreda stand at the Kettlewick gate (the tutorial's T15 spot) through M01.
+    route: [
+      A('beat.t15.start'), A('spawn.m01.wraith-4'), A('spawn.m01.wraith-3'), A('spawn.m01.wraith-5'), A('spawn.m01.wraith-2'),
+      A('spawn.m01.wraith-1'), A('m01.villager-3'), T('m01.chapel-door'), A('m01.villager-2'), T('m01.chapel-door'),
+      A('m01.villager-1'), T('m01.chapel-door'), A('m01.bucket-1'), T('m01.tavern-door'), A('m01.bucket-2'), T('m01.tavern-door'),
+      A('npc-post.tobb'), A('spawn.m01.mill-1'), A('npc-post.aldwin'), A('beat.t15.start'),
+    ],
+    beats: { killUnit: 9, carry: 5 },
+    note: 'five lane wraiths, three villagers, two buckets, Tobb, the mill (four wraiths) and the miller, Aelfreda',
+  },
+  m02: {
+    design: 35,
+    from: A('beat.t15.start'),
+    route: [
+      A('npc-post.edda'), A('m02.bucket-1'), T('m02.bakery-door'), A('m02.bucket-2'), T('m02.bakery-door'), T('m02.bakery'),
+      A('m02.rubble-1'), A('m02.rubble-2'), A('spawn.m02.oven-3'), A('kettlewick.bakery-hearth'), A('m02.badge'), T('m02.granary'),
+      A('npc-post.garrick'), A('npc-post.edda.granary'), A('m02.common-hearth'),
+    ],
+    beats: { carry: 2, interact: 4, killUnit: 3, note: 1 },
+    note: 'two buckets, the thatch (2), the oven yard (3), the stone, the badge, the granary, Garrick, Edda, the hearth',
+  },
+};
+
 export const PHASE_A_PLAN: Record<PhaseAQuest, QuestPlan> = {
   m03: {
     design: 40,
+    from: A('m02.common-hearth'),
     route: [
-      A('npc-post.aelfreda'), A('chapel.shard-study'), A('npc-post.aelfreda'), A('poi.leap.chapel-ledge.launch'),
-      A('poi.leap.chapel-ledge'), A('npc-post.aelfreda'), A('pile.churchyard.1'), A('npc-post.aelfreda'),
+      A('npc-post.aelfreda'), A('chapel.shard-study'), A('chapel.font'), A('chapel.ember-study'), A('chapel.record'), A('npc-post.aelfreda'),
+      A('poi.leap.chapel-ledge.launch'), A('m03.candle'), A('m03.grave-wulfric'), A('npc-post.aelfreda'), A('pile.churchyard.1'),
+      A('npc-post.aelfreda'),
     ],
-    // o6 asks for one wraith, but all four rise together: the fight is the pack.
-    beats: { interact: 1, leap: 1, killUnit: 4 },
-    note: 'four churchyard wraiths rise together',
+    // all four churchyard wraiths now count (they rise together)
+    beats: { interact: 2, leap: 1, killUnit: 4, note: 4 },
+    note: 'four studies, the Leap and the candle, Wulfric\'s grave, four churchyard wraiths, the record',
   },
   m04: {
     design: 45,
+    from: A('npc-post.aelfreda'),
     route: [
       A('npc-post.gaut'), T('trg.ford.toll-post'), A('npc-post.gaut.ford'), A('spawn.ford.pair-1'), A('spawn.ford.pair-2'),
-      A('ford.toll-post'), A('npc-post.carter-1'), A('npc-post.gaut.ford'),
+      A('spawn.ford.sergeant'), A('ford.toll-post'), A('m04.toll-box'), A('npc-post.gaut.ford'), A('m04.wagon-1'), A('m04.wagon-2'), A('m04.wagon-3'),
+      A('npc-post.carter-2'), A('npc-post.carter-3'), A('npc-post.carter-1'), A('npc-post.gaut.ford'),
     ],
-    beats: { killUnit: 4, structure: 1 },
-    note: 'o3 needs two, both pairs (four) aggro at the ford; Gaut hands in at the ford post',
+    // the four Footmen and the Toll Sergeant (counted as one unit, though an elite)
+    beats: { killUnit: 5, structure: 1, interact: 3, note: 1 },
+    note: 'four Footmen, the Toll Sergeant, the post, the ledger, three wagons, three carters; Gaut hands in at the ford',
   },
   m05: {
     design: 40,
+    from: A('npc-post.gaut.ford'),
     route: [
       A('npc-post.tobb'), A('wardstone.1'), A('wardstone.2'), A('wardstone.3'), A('wardstone.4'), A('wardstone.5'),
       A('waystone.quenchstone'),
@@ -86,21 +133,25 @@ export const PHASE_A_PLAN: Record<PhaseAQuest, QuestPlan> = {
   },
   r01: {
     design: 35,
+    // M05 ends at the Quenchstone, outside Brightwater: no giver leg
     route: [
-      A('npc-post.wynn'), A('r01.brazier.1'), A('r01.scarecrow.1'), A('r01.scarecrow.2'), A('r01.scarecrow.3'),
-      A('r01.scarecrow.6'), A('r01.scarecrow.5'), A('r01.scarecrow.4'), A('npc-post.wynn'),
+      A('npc-post.wynn'), A('r01.shawl'), A('r01.brazier.1'), A('r01.scarecrow.1'), A('r01.scarecrow.2'), A('r01.scarecrow.3'),
+      A('r01.scarecrow.6'), A('r01.scarecrow.5'), A('r01.scarecrow.4'), A('r01.scarecrow.7'), A('r01.scarecrow.8'),
+      A('spawn.r01.root-1'), A('r01.bucket-1'), T('r01.stubble'), A('r01.bucket-2'), T('r01.stubble'), A('npc-post.wynn'),
     ],
-    beats: { interact: 1, scarecrow: 6 },
-    note: 'torch route (brazier first)',
+    beats: { interact: 1, scarecrow: 8, killUnit: 3, carry: 2, note: 1 },
+    note: 'torch route (brazier first), eight scarecrows, the root (3), the stubble fire (two buckets)',
   },
   r02: {
     design: 30,
+    from: A('npc-post.wynn'),
     route: [A('npc-post.stane'), A('yard.blocking-dummy-1'), A('yard.blocking-dummy-2'), A('yard.blocking-dummy-3'), A('npc-post.stane')],
     beats: { drillEvent: 8 },
     note: '3 open hits + 3 parries + 2 guard breaks',
   },
   d01: {
     design: 55,
+    from: A('npc-post.stane'),
     route: [
       A('npc-post.aelfreda'), A('vault.door'), 'DOOR', A('vault.entry'), T('trg.vault.arena'), A('vault.arena.centre'),
       A('vault.exit'), 'DOOR', A('vault.door'), A('npc-post.aelfreda.vault'),
@@ -124,42 +175,49 @@ export const PHASE_B_PLAN: Record<PhaseBQuest, QuestPlan> = {
   },
   m07: {
     design: 40,
+    from: A('npc-post.rook.gate'),
     route: [A('npc-post.aldith'), A('m07.thieves.1'), A('m07.satchel'), A('npc-post.aldith'), T('trg.harrowmark.bastion-yard')],
     beats: { killUnit: 3, interact: 1, classChoice: 1, drill: 1 },
     note: 'three cutpurses, the satchel, the class choice and its drill',
   },
   r03: {
     design: 40,
+    from: T('trg.harrowmark.bastion-yard'),
     route: [A('npc-post.aldith'), A('r03.guildhall.1'), A('r03.brewing-copper'), A('npc-post.aldith')],
     beats: { killUnit: 3, interact: 1 },
     note: 'three guildhall thugs and the copper',
   },
   r04: {
     design: 40,
+    from: A('npc-post.aldith'),
     route: [A('npc-post.whitlock'), A('r04.page-1'), A('r04.page-2'), A('r04.page-3'), A('npc-post.whitlock')],
     beats: { interact: 3 },
     note: 'three pages across the city',
   },
   m08: {
     design: 50,
+    from: A('npc-post.whitlock'),
     route: [A('npc-post.wystan'), A('harrowmark.keep-hall.door'), 'DOOR', A('harrowmark.keep-hall.door'), A('npc-post.wystan')],
     beats: { interact: 2 },
     note: 'the audience is dialogue (three questions); doors in and out',
   },
   m09: {
     design: 55,
+    from: A('npc-post.wystan'),
     route: [A('npc-post.merrin'), A('harrowmark.counting-house.door'), 'DOOR', A('harrowmark.counting-house.door'), A('npc-post.merrin')],
     beats: { stealthSection: 1, interact: 5 },
     note: 'one stealth section, three invoices, two doors',
   },
   m10: {
     design: 45,
+    from: A('npc-post.merrin'),
     route: [A('npc-post.gerta.guild'), A('chase.m10.0'), 'DOOR', A('chase.m10.15'), A('npc-post.gerta.guild')],
     beats: { chase: 1 },
     note: 'the chase line itself is the chase beat (no travel counted along it)',
   },
   d02: {
     design: 60,
+    from: A('npc-post.gerta.guild'),
     route: [A('npc-post.rook'), A('harrowmark.underways.door'), 'DOOR', A('harrowmark.underways.door'), A('npc-post.rook')],
     beats: { interact: 2, killUnit: 4, boss: 1 },
     note: 'kennels (4 of 6 hounds), Grimtooth; doors in and out',
@@ -195,19 +253,24 @@ export function estimateTimingFor<Q extends string>(h: ChapterHarness, planTable
   return (Object.keys(planTable) as Q[]).map((quest) => {
     const plan = planTable[quest];
     let travelM = 0;
+    let travelS = 0;
     let prev: { x: number; z: number } | null = null;
-    for (const p of plan.route) {
+    for (const p of plan.from ? [plan.from, ...plan.route] : plan.route) {
       if (p === 'DOOR') {
         prev = null;
         continue;
       }
       const cur = at(p);
-      if (prev) travelM += Math.hypot(cur.x - prev.x, cur.z - prev.z);
+      if (prev) {
+        const m = Math.hypot(cur.x - prev.x, cur.z - prev.z);
+        travelM += m;
+        travelS += m / (p.ride ? RIDE_MPS : WALK_MPS);
+      }
       prev = cur;
     }
-    const nodes = trails[quest].talks.reduce((n, t) => n + t.nodes, 0);
+    // a note is one `note` beat, not its nodes
+    const nodes = trails[quest].talks.filter((t) => !t.npc.startsWith('note-')).reduce((n, t) => n + t.nodes, 0);
     const beatS = Object.entries(plan.beats).reduce((s, [k, n]) => s + BEAT_S[k as keyof typeof BEAT_S] * (n ?? 0), 0);
-    const travelS = travelM / WALK_MPS;
     const talkS = nodes * TALK_NODE_S;
     const estimateMin = (travelS + talkS + beatS) / 60;
     const deltaPct = ((estimateMin - plan.design) / plan.design) * 100;

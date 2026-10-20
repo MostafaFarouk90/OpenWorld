@@ -1,5 +1,6 @@
 // English quest strings. Keys: quest.<id>.title / .summary / .<objectiveId>.
 import { questStringsHarrowmark } from './strings.harrowmark.en';
+import { questStringsDensityA } from './strings.density.en';
 
 export const questStrings: Record<string, string> = {
   ...questStringsHarrowmark,
@@ -78,4 +79,6 @@ export const questStrings: Record<string, string> = {
   'quest.r02.o3': 'Parry three attacks',
   'quest.r02.o4': 'Break two guards',
   'quest.r02.o5': 'Report to Marshal Stane',
+  // the density pass's lines last, so they replace the older ones
+  ...questStringsDensityA,
 };

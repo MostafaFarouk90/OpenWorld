@@ -44,8 +44,12 @@ function world(band: FavourBand = 'banked') {
   return { flags, dr, set, started, mercy, abilities, qstate };
 }
 
+/** Question hubs loop back on themselves; the default pick leaves them by their last choice. */
+const HUB_EXIT: Record<string, number> = { 'm03-ask': 3, 'm04-spare-ask': 3, ask: 3 };
+const defaultPick = (n: string): number => HUB_EXIT[n] ?? 1;
+
 /** Run to the end picking choices (1-based); returns the visited node ids. */
-function play(w: ReturnType<typeof world>, id: string, npc: string, pick: (n: string) => number = () => 1): string[] {
+function play(w: ReturnType<typeof world>, id: string, npc: string, pick: (n: string) => number = defaultPick): string[] {
   expect(w.dr.start(id, npc)).toBe(true);
   const seen: string[] = [];
   for (let i = 0; i < 60 && w.dr.isOpen; i++) {
@@ -120,15 +124,23 @@ describe('Aelfreda', () => {
     const w = world(); w.set('m02', 'completed');
     expect(play(w, 'npc-aelfreda', 'aelfreda', () => 2)).toEqual(['m03-offer', 'm03-offer-2', 'm03-later']);
     expect(w.started).toEqual([]);
-    expect(play(w, 'npc-aelfreda', 'aelfreda', () => 1)).toEqual(['m03-offer', 'm03-offer-2', 'm03-brief']);
+    // the questions loop back to the hub until the player is ready
+    const asked = ['keepers', 'ulthred'];
+    const pick = (n: string) => (n === 'm03-ask' ? (asked.length ? (asked.shift() === 'keepers' ? 1 : 2) : 3) : 1);
+    expect(play(w, 'npc-aelfreda', 'aelfreda', pick)).toEqual([
+      'm03-offer', 'm03-offer-2', 'm03-ask', 'm03-keepers', 'm03-keepers-2', 'm03-ask', 'm03-ulthred', 'm03-ulthred-2', 'm03-ask', 'm03-brief',
+    ]);
     expect(w.started).toEqual(['m03']);
   });
 
-  it('M03 flow: study reminder, Leap grant at o2, Release unlock at o4, no double grants', () => {
+  it('M03 flow: study reminders, Leap grant after the studies, candle and grave, Release unlock, no double grants', () => {
     const w = world(); w.set('m02', 'completed'); w.set('m03', 'active', 'o1');
     expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe('m03-study');
     expect(w.abilities).toEqual([]);
     w.set('m03', 'active', 'o2');
+    expect(play(w, 'npc-aelfreda', 'aelfreda')).toEqual(['study-more', 'study-more-2']);
+    expect(w.abilities).toEqual([]);
+    w.set('m03', 'active', 'study');
     expect(play(w, 'npc-aelfreda', 'aelfreda')).toEqual(['leap', 'leap-2']);
     expect(w.abilities).toEqual(['surge-leap']);
     w.set('m03', 'active', 'o3');
@@ -136,12 +148,24 @@ describe('Aelfreda', () => {
     expect(w.abilities).toEqual(['surge-leap']);
     expect(w.mercy).toEqual([]);
     w.set('m03', 'active', 'o4');
-    expect(play(w, 'npc-aelfreda', 'aelfreda')).toEqual(['burn', 'burn-2', 'burn-3', 'release', 'release-2']);
+    expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe('candle-remind');
+    w.set('m03', 'active', 'candle');
+    expect(play(w, 'npc-aelfreda', 'aelfreda')).toEqual(['grave-send', 'grave-send-2']);
+    expect(w.mercy).toEqual([]);
+    w.set('m03', 'active', 'grave');
+    expect(play(w, 'npc-aelfreda', 'aelfreda', (n) => (n === 'burn-tell' ? 2 : 1))).toEqual([
+      'burn', 'burn-2', 'burn-wulfric', 'burn-wulfric-2', 'burn-gloves', 'burn-gloves-2', 'burn-3', 'burn-tell', 'burn-kept', 'candle-lit', 'release', 'release-2',
+    ]);
+    expect(w.flags.get('story.m03.scarsTold')).toBe('kept');
     expect(w.mercy).toEqual(['release']);
     w.set('m03', 'active', 'o5');
     expect(first(w, 'npc-aelfreda', 'aelfreda')).toBe('release-hint');
     w.set('m03', 'active', 'o6');
-    expect(play(w, 'npc-aelfreda', 'aelfreda')).toEqual(['m03-report', 'm03-report-2']);
+    expect(play(w, 'npc-aelfreda', 'aelfreda', () => 3)).toEqual([
+      'm03-report', 'm03-report-ask', 'm03-report-quiet', 'm03-record', 'm03-record-blank', 'm03-report-gaut', 'm03-report-2',
+    ]);
+    expect(w.flags.get('story.m03.firstRelease')).toBe('quiet');
+    expect(w.flags.get('story.m03.record')).toBe('blank');
     expect(w.mercy).toEqual(['release']);
     expect(w.abilities).toEqual(['surge-leap']);
     expect(w.started).toEqual([]);
@@ -178,7 +202,9 @@ describe('Gaut', () => {
     expect(first(w, 'npc-gaut', 'gaut')).toBe('brief-cold');
     expect(w.flags.get('quest.m01.briefed')).toBe(true);
     expect(first(w, 'npc-gaut', 'gaut')).toBe('remind');
-    w.set('m01', 'active', 'o1', 'o2');
+    w.set('m01', 'active', 'o1', 'o2', 'tobb', 'miller');
+    expect(first(w, 'npc-gaut', 'gaut')).toBe('remind'); // Aelfreda at the chapel gate still to see
+    w.set('m01', 'active', 'rescued');
     expect(first(w, 'npc-gaut', 'gaut')).toBe('report');
   });
 
@@ -199,13 +225,20 @@ describe('Gaut', () => {
     expect(first(w, 'npc-gaut', 'gaut')).toBe('m04-ford');
     expect(w.mercy).toEqual([]);
     w.set('m04', 'active', 'o1');
-    expect(play(w, 'npc-gaut', 'gaut')).toEqual(['m04-spare', 'm04-spare-2', 'm04-spare-3']);
+    expect(play(w, 'npc-gaut', 'gaut')).toEqual(['m04-spare', 'm04-spare-2', 'm04-spare-why', 'm04-spare-ask', 'm04-spare-3']);
     expect(w.mercy).toEqual(['spare']);
     w.set('m04', 'active', 'o2');
     expect(first(w, 'npc-gaut', 'gaut')).toBe('m04-spare-remind');
     w.set('m04', 'active', 'o3');
+    expect(first(w, 'npc-gaut', 'gaut')).toBe('m04-sergeant');
+    w.set('m04', 'active', 'sergeant');
     expect(first(w, 'npc-gaut', 'gaut')).toBe('m04-tollpost');
     w.set('m04', 'active', 'o4');
+    expect(first(w, 'npc-gaut', 'gaut')).toBe('m04-ledger');
+    w.set('m04', 'active', 'ledger');
+    expect(play(w, 'npc-gaut', 'gaut', () => 2)).toEqual(['m04-ledger-read', 'm04-ledger-read-2', 'm04-ledger-read-3', 'm04-ledger-keep', 'm04-ledger-cael', 'm04-carters']);
+    expect(w.flags.get('story.m04.ledger')).toBe('cael');
+    w.set('m04', 'active', 'shown');
     expect(first(w, 'npc-gaut', 'gaut')).toBe('m04-carters');
     w.set('m04', 'active', 'o5');
     expect(first(w, 'npc-gaut', 'gaut')).toBe('m04-report-banked');
@@ -254,12 +287,22 @@ describe('Wynn', () => {
     const w = world(); w.set('m02', 'completed');
     expect(play(w, 'npc-wynn', 'wynn', (n) => (n === 'offer-3' ? 2 : 1)).at(-1)).toBe('later');
     expect(w.started).toEqual([]);
-    expect(play(w, 'npc-wynn', 'wynn').at(-1)).toBe('brief-2');
+    expect(play(w, 'npc-wynn', 'wynn').at(-1)).toBe('ask');
     expect(w.started).toEqual(['r01']);
     w.set('r01', 'active', 'o1');
     expect(first(w, 'npc-wynn', 'wynn')).toBe('remind');
     w.set('r01', 'active', 'o2');
-    expect(play(w, 'npc-wynn', 'wynn')).toEqual(['done', 'done-2']);
+    expect(first(w, 'npc-wynn', 'wynn')).toBe('root');
+    w.set('r01', 'active', 'root');
+    expect(first(w, 'npc-wynn', 'wynn')).toBe('after-saved');
+    w.flags.set('story.r01.scorched', true);
+    expect(first(w, 'npc-wynn', 'wynn')).toBe('after-scorched');
+    w.set('r01', 'active', 'aftermath');
+    expect(play(w, 'npc-wynn', 'wynn', () => 2)).toEqual(['done-scorched', 'clothes', 'clothes-burn', 'done', 'done-2']);
+    expect(w.flags.get('story.r01.clothes')).toBe('burned');
+    w.flags.delete('story.r01.scorched');
+    expect(play(w, 'npc-wynn', 'wynn')).toEqual(['done-saved', 'clothes', 'clothes-chapel', 'done', 'done-2']);
+    expect(w.flags.get('story.r01.clothes')).toBe('chapel');
     w.set('r01', 'completed');
     w.flags.set('world.brightwater.barley', 'scorched');
     expect(first(w, 'npc-wynn', 'wynn')).toBe('idle-scorched');
@@ -298,14 +341,17 @@ describe('Tobb', () => {
 });
 
 describe('Carters', () => {
-  it('carter-1 thanks (setting the freed flag) only after the post is broken', () => {
+  it('carter-1 thanks (setting the freed flag) only once the wagons are free and the other two carters heard', () => {
     const w = world();
     expect(first(w, 'npc-carter-1', 'carter-1')).toBe('idle');
     w.set('m04', 'active', 'o3');
     expect(first(w, 'npc-carter-1', 'carter-1')).toBe('afraid');
     expect(w.flags.get('story.m04.cartersFreed')).toBeUndefined();
-    w.set('m04', 'active', 'o4');
-    expect(play(w, 'npc-carter-1', 'carter-1')).toEqual(['thanks', 'thanks-2']);
+    w.set('m04', 'active', 'o4', 'ledger', 'wagons');
+    expect(first(w, 'npc-carter-1', 'carter-1')).toBe('wait');
+    expect(w.flags.get('story.m04.cartersFreed')).toBeUndefined();
+    w.set('m04', 'active', 'carters');
+    expect(play(w, 'npc-carter-1', 'carter-1')).toEqual(['thanks', 'ox', 'thanks-2']);
     expect(w.flags.get('story.m04.cartersFreed')).toBe(true);
     w.set('m04', 'active', 'o5');
     expect(first(w, 'npc-carter-1', 'carter-1')).toBe('leaving');
@@ -313,15 +359,17 @@ describe('Carters', () => {
     expect(first(w, 'npc-carter-1', 'carter-1')).toBe('gone');
   });
 
-  it('carter-2 has the same situations and never sets flags', () => {
+  it('carter-2 thanks, tells of the seed once the wagons are free, then packs up; never sets flags', () => {
     const w = world();
     expect(first(w, 'npc-carter-2', 'carter-2')).toBe('idle');
     w.set('m04', 'active', 'o3');
     expect(first(w, 'npc-carter-2', 'carter-2')).toBe('afraid');
     w.set('m04', 'active', 'o4');
     expect(first(w, 'npc-carter-2', 'carter-2')).toBe('thanks');
+    w.set('m04', 'active', 'ledger', 'wagons');
+    expect(play(w, 'npc-carter-2', 'carter-2')).toEqual(['seed', 'seed-2', 'seed-3']);
     expect(w.flags.size).toBe(0);
-    w.set('m04', 'active', 'o5');
+    w.set('m04', 'active', 'carters');
     expect(first(w, 'npc-carter-2', 'carter-2')).toBe('leaving');
     w.set('m04', 'completed');
     expect(first(w, 'npc-carter-2', 'carter-2')).toBe('gone');
@@ -342,10 +390,10 @@ describe('no reward is granted twice', () => {
   });
 
   it('replaying a full Aelfreda M03 run at every stage grants exactly once', () => {
-    const w = world(); w.set('m02', 'completed'); w.set('m03', 'active', 'o1', 'o2');
+    const w = world(); w.set('m02', 'completed'); w.set('m03', 'active', 'o1', 'o2', 'study');
     for (let i = 0; i < 2; i++) play(w, 'npc-aelfreda', 'aelfreda'); // second visit is a no-grant branch only once o3 is done
     expect(w.abilities.length).toBeGreaterThanOrEqual(1);
-    const w2 = world(); w2.set('m03', 'active', 'o1', 'o2'); play(w2, 'npc-aelfreda', 'aelfreda');
+    const w2 = world(); w2.set('m03', 'active', 'o1', 'o2', 'study'); play(w2, 'npc-aelfreda', 'aelfreda');
     w2.set('m03', 'active', 'o3'); play(w2, 'npc-aelfreda', 'aelfreda'); play(w2, 'npc-aelfreda', 'aelfreda');
     expect(w2.abilities).toEqual(['surge-leap']);
   });

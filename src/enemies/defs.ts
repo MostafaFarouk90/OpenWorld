@@ -70,6 +70,35 @@ export const BLIGHTED_SOLDIER: EnemyDef = {
 };
 
 /**
+ * The Toll Sergeant (Act 1 density pass, quests thread; additive here): the Charred Footman's officer who holds the
+ * Hollin Ford bridge in M04 once his four men are beaten. Same moves and the same rig, harder and heavier; bigger and
+ * darker so he reads apart from his men; an elite Spare (Halvard +2 by the favour rules). He stands alone, so there is no pack to share it.
+ */
+export const TOLL_SERGEANT: EnemyDef = {
+  kind: 'toll-sergeant',
+  nameKey: 'enemies.name.toll-sergeant',
+  model: { prefer: [], tint: 0x5a2420, emissive: 0x2a0c04, weapons: 'sword-shield', hide: ['Knight_Helmet'], scale: 1.12 },
+  maxHealth: 110,
+  maxPoise: 55,
+  walkSpeed: 1.4,
+  chaseSpeed: 2.6,
+  moves: [
+    move('soldier.chop', ENEMY_ATTACKS.soldierChop, {
+      windup: 0.6, telegraph: 'block', weapon: 'right', damage: 24, poise: 30,
+      range: [0, 1.6], cooldown: 1.4, recover: 0.7, weight: 3,
+    }),
+    move('soldier.bash', ENEMY_ATTACKS.soldierBash, {
+      windup: 0.55, telegraph: 'block', weapon: 'left', damage: 12, poise: 30,
+      range: [0, 1.0], cooldown: 2.6, recover: 0.7, weight: 1,
+    }),
+  ],
+  mercy: { verb: 'spare', tier: 'elite', track: 'halvard', when: 'yielding' },
+  material: 'metal',
+  rises: false,
+  guard: true,
+};
+
+/**
  * Watch Guard: an observer-only humanoid (Knight fallback model, tinted) for stealth sections. It sees the
  * player and raises `ai.spotted`; it has no moves, no mercy, never emits `ai.aggro`, never chases and is never
  * routed through the PathFollower. It is `neutral` and immortal: a hit takes its awareness to 1 (one `ai.spotted`)
@@ -104,6 +133,7 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'ember-hound': EMBER_HOUND,
   'watch-guard': WATCH_GUARD,
   'guildhall-thug': GUILDHALL_THUG,
+  'toll-sergeant': TOLL_SERGEANT,
 };
 
 /**
@@ -118,6 +148,7 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   'ember-hound': { part: 'tail', color: 0xff5a1f },
   'watch-guard': { part: 'weapon', color: 0xd04030 },
   'guildhall-thug': { part: 'hand', color: 0xd04030 },
+  'toll-sergeant': { part: 'weapon', color: 0xd04030 },
 };
 
 function move(

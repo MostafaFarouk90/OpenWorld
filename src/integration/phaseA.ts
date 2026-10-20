@@ -13,6 +13,8 @@ import { CLOCK_START_MS, type ChapterHarness } from './chapterHarness';
  */
 
 export type PhaseAQuest = 'm03' | 'm04' | 'm05' | 'r01' | 'r02' | 'd01';
+/** The Brightwater opening after the tutorial, played by `reachPhaseAStart(h, { play })`. */
+export type OpeningQuest = 'm01' | 'm02';
 export const PHASE_A_ORDER: readonly PhaseAQuest[] = ['m03', 'm04', 'm05', 'r01', 'r02', 'd01'];
 
 /** What one quest's play visited: dialogue nodes read per talk, for the timing estimate. */
@@ -107,6 +109,59 @@ export function chopUntil(h: ChapterHarness, done: () => boolean, tries = 12): b
 }
 
 const actorsOfKind = (h: ChapterHarness, kind: string) => [...h.ctx.actors.all()].filter((a) => a.kind === kind && !a.dead);
+const tagOf = (a: unknown) => (a as { spawnTag?: string }).spawnTag;
+
+/** Waits for `count` live actors of `kind` from the spawner tagged `tag`, standing near `near` so they load. */
+async function spawnedTagged(h: ChapterHarness, kind: string, tag: string, count: number, near?: THREE.Vector3): Promise<string[]> {
+  if (near) await h.approach(near, 6);
+  let ids: string[] = [];
+  for (let i = 0; i < 20 && ids.length < count; i++) {
+    await h.runAsync(30);
+    heal(h);
+    ids = actorsOfKind(h, kind).filter((a) => tagOf(a) === tag).map((a) => a.id);
+  }
+  ensure(ids.length >= count, `${count} ${kind} from ${tag} spawned (${ids.length})`);
+  return ids;
+}
+
+/** Kills every live actor of `kind` from spawner `tag` as the player, waiting for `count` of them to rise first. */
+async function killTagged(h: ChapterHarness, kind: string, tag: string, count: number, near?: THREE.Vector3): Promise<void> {
+  const ids = await spawnedTagged(h, kind, tag, count, near);
+  for (const id of ids) ensure(killAsPlayer(h, id), `${kind} ${id} killed`);
+  h.run(2);
+  heal(h);
+}
+
+/** Stands at an anchor and presses F on what is there (a prop, a pickup). */
+async function useAt(h: ChapterHarness, anchorId: string, dist = 1.2): Promise<void> {
+  heal(h);
+  await h.approach(h.anchor(anchorId), dist);
+  h.press('KeyF');
+  h.run(2);
+}
+
+/** Reads a note: F at its anchor opens a short dialogue, read through with F. */
+export async function readNote(h: ChapterHarness, trail: QuestTrail, noteId: string, anchorId: string): Promise<void> {
+  const dialogue = h.ctx.services.require('dialogue');
+  await useAt(h, anchorId);
+  ensure(dialogue.active, `the note ${noteId} opened at ${anchorId}`);
+  let nodes = 0;
+  for (; nodes < 20 && dialogue.active; nodes++) {
+    h.press('KeyF');
+    h.run(1);
+  }
+  ensure(!dialogue.active, `the note ${noteId} closed`);
+  trail.talks.push({ npc: noteId, dialogueId: noteId, nodes });
+  await h.runAsync(2);
+}
+
+/** Carries what lies at `anchorId` (F) into `triggerId`. */
+async function carryTo(h: ChapterHarness, anchorId: string, triggerId: string, deliveredFlag: string): Promise<void> {
+  await useAt(h, anchorId);
+  await h.enterTrigger(triggerId);
+  h.run(2);
+  ensure(h.ctx.state.getBool(deliveredFlag), `${anchorId} carried into ${triggerId}`);
+}
 
 // ---------------------------------------------------------------------------------------------------------------
 // Start state
@@ -116,7 +171,7 @@ const actorsOfKind = (h: ChapterHarness, kind: string) => [...h.ctx.actors.all()
  * start (every beat before T15 completed with its rewards), T15 skipped with the director's own skip, then
  * `quests.complete` for M01 and M02.
  */
-export async function reachPhaseAStart(h: ChapterHarness): Promise<void> {
+export async function reachPhaseAStart(h: ChapterHarness, opts: { play?: Record<OpeningQuest, QuestTrail> } = {}): Promise<void> {
   await h.flush();
   const director = h.director();
   director.begin('kettlewick');
@@ -128,9 +183,73 @@ export async function reachPhaseAStart(h: ChapterHarness): Promise<void> {
   ensure(director.complete, 'tutorial completes');
   const q = quests(h);
   ensure(q.state('m01') === 'active', 'the tutorial hands M01 over');
-  ensure(q.complete('m01'), 'M01 completes');
-  ensure(q.complete('m02'), 'M02 completes');
+  if (opts.play) {
+    await playM01(h, opts.play.m01);
+    await playM02(h, opts.play.m02);
+  } else {
+    ensure(q.complete('m01'), 'M01 completes');
+    ensure(q.complete('m02'), 'M02 completes');
+  }
   await h.runAsync(30);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// M01 Ash on the Wind (density pass: the Grey Goose door, Tobb, the mill and its miller, Aelfreda at the gate)
+
+export async function playM01(h: ChapterHarness, t: QuestTrail): Promise<void> {
+  const q = quests(h);
+  // Gaut's briefing, asking where the missing are and about the crack before setting off (choices loop back)
+  if (!h.ctx.state.getBool('quest.m01.briefed')) await talkTo(h, t, 'gaut', [2, 3, 1]);
+  ensure(h.ctx.state.getBool('quest.m01.briefed'), 'Gaut briefed M01');
+  // o1: the lane wraiths.
+  await killTagged(h, 'ash-wraith', 'm01', 5);
+  ensure(objectiveDone(h, 'm01', 'o1'), `o1 five wraiths: ${describeQuest(h, 'm01')}`);
+  // o2: three villagers to the chapel door.
+  for (let n = 1; n <= 3; n++) await carryTo(h, `m01.villager-${n}`, 'm01.chapel-door', `quest.m01.villager${n}.delivered`);
+  ensure(objectiveDone(h, 'm01', 'o2'), 'o2 three villagers');
+  // tavern: two well buckets to the Grey Goose door; its fire goes out.
+  for (let n = 1; n <= 2; n++) await carryTo(h, `m01.bucket-${n}`, 'm01.tavern-door', `story.m01.bucket${n}.delivered`);
+  ensure(objectiveDone(h, 'm01', 'tavern') && h.ctx.state.getBool('story.m01.tavernDoused'), 'the Grey Goose door doused');
+  await talkTo(h, t, 'tobb');
+  ensure(objectiveDone(h, 'm01', 'tobb'), 'Tobb met at the Grey Goose');
+  // the mill's wraiths, then the miller (who walks to the chapel)
+  await killTagged(h, 'ash-wraith', 'm01.mill', 4, h.anchor('npc-post.aldwin'));
+  ensure(objectiveDone(h, 'm01', 'mill'), 'the mill cleared');
+  await talkTo(h, t, 'aldwin');
+  ensure(objectiveDone(h, 'm01', 'miller') && h.ctx.state.getBool('story.m01.millerSafe'), 'the miller found safe');
+  await talkTo(h, t, 'aelfreda');
+  ensure(objectiveDone(h, 'm01', 'rescued'), 'Aelfreda at the gate');
+  await talkTo(h, t, 'gaut');
+  ensure(q.state('m01') === 'completed', `M01 completed: ${describeQuest(h, 'm01')}`);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// M02 A Mother's Bread (density pass: the bakery door, the thatch, the oven yard, the granary, Garrick, the hearth)
+
+export async function playM02(h: ChapterHarness, t: QuestTrail): Promise<void> {
+  const q = quests(h);
+  await talkTo(h, t, 'edda', [1]);
+  ensure(q.state('m02') === 'active', 'Edda offers M02');
+  for (let n = 1; n <= 2; n++) await carryTo(h, `m02.bucket-${n}`, 'm02.bakery-door', `story.m02.bucket${n}.delivered`);
+  ensure(objectiveDone(h, 'm02', 'door'), 'the bakery door doused');
+  await h.enterTrigger('m02.bakery');
+  ensure(objectiveDone(h, 'm02', 'o1'), 'o1 the bakery');
+  for (let n = 1; n <= 2; n++) await useAt(h, `m02.rubble-${n}`);
+  ensure(objectiveDone(h, 'm02', 'rubble'), `the thatch cleared: ${describeQuest(h, 'm02')}`);
+  await killTagged(h, 'ash-wraith', 'm02.oven-yard', 3, h.anchor('spawn.m02.oven-3'));
+  ensure(objectiveDone(h, 'm02', 'oven'), 'the oven yard');
+  await useAt(h, 'kettlewick.bakery-hearth');
+  ensure(objectiveDone(h, 'm02', 'o2'), `o2 the hearth-stone: ${describeQuest(h, 'm02')}`);
+  await readNote(h, t, 'note-m02-badge', 'm02.badge');
+  ensure(objectiveDone(h, 'm02', 'badge'), 'the badge found in the loft');
+  await h.enterTrigger('m02.granary');
+  ensure(objectiveDone(h, 'm02', 'granary'), 'the granary');
+  await talkTo(h, t, 'garrick', [1]);
+  ensure(objectiveDone(h, 'm02', 'garrick') && h.ctx.state.getFlag('story.m02.garrick') === 'forgiven', 'Garrick forgiven');
+  await talkTo(h, t, 'edda', [1, 2, 3, 4]);
+  ensure(objectiveDone(h, 'm02', 'o3'), 'o3 Edda at the granary');
+  await useAt(h, 'm02.common-hearth');
+  ensure(q.state('m02') === 'completed', `M02 completed: ${describeQuest(h, 'm02')}`);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -140,13 +259,19 @@ export async function playM03(h: ChapterHarness, t: QuestTrail): Promise<void> {
   const q = quests(h);
   const dialogue = h.ctx.services.require('dialogue');
   // Aelfreda's offer (M02 completed): accept. Ending the offer talk credits o1 (talk to Aelfreda).
-  await talkTo(h, t, 'aelfreda', [1]);
+  // accept, then ask about the Hearthkeepers and Ulthred before beginning (a first-time player's questions)
+  await talkTo(h, t, 'aelfreda', [1, 1, 2, 3]);
   ensure(q.state('m03') === 'active' && objectiveDone(h, 'm03', 'o1'), `M03 offered and o1 credited: ${describeQuest(h, 'm03')}`);
   // o2: the shard study, pressed with F where it stands.
   await h.approach(h.anchor('chapel.shard-study'), 1.2);
   h.press('KeyF');
   h.run(2);
   ensure(objectiveDone(h, 'm03', 'o2'), 'o2 the shard study');
+  // the cracked font and the Kindling Ember (Cael's own reading)
+  await readNote(h, t, 'note-m03-font', 'chapel.font');
+  await readNote(h, t, 'note-m03-ember', 'chapel.ember-study');
+  await readNote(h, t, 'note-m03-record', 'chapel.record');
+  ensure(objectiveDone(h, 'm03', 'study'), `the three studies: ${describeQuest(h, 'm03')}`);
   // o3: her `leap` node grants the Surge Leap.
   await talkTo(h, t, 'aelfreda');
   ensure(dialogue.hasSeen('leap'), 'the leap node ran');
@@ -158,25 +283,28 @@ export async function playM03(h: ChapterHarness, t: QuestTrail): Promise<void> {
   h.press('KeyV');
   for (let i = 0; i < 120 && !objectiveDone(h, 'm03', 'o4'); i++) h.run(1);
   ensure(objectiveDone(h, 'm03', 'o4'), `o4 the ledge reached by a Leap (feet ${h.ctx.player.feet.toArray()})`);
+  // the warding candle on the ledge (the player stands on it after the Leap)
+  for (let i = 0; i < 30 && !h.ctx.state.getBool('story.m03.candleTaken'); i++) {
+    h.press('KeyF');
+    h.run(10);
+  }
+  ensure(objectiveDone(h, 'm03', 'candle'), `the candle taken from the ledge (feet ${h.ctx.player.feet.toArray()}): ${describeQuest(h, 'm03')}`);
+  await readNote(h, t, 'note-m03-wulfric', 'm03.grave-wulfric');
+  ensure(objectiveDone(h, 'm03', 'grave'), 'Wulfric\'s grave read');
   // o5: Burn and Scars, then the `release` node unlocks Release.
   ensure(!h.ctx.state.getBool('enemies.mercy.release'), 'Release still locked before the lesson');
-  await talkTo(h, t, 'aelfreda');
+  await talkTo(h, t, 'aelfreda', [1]);
   ensure(dialogue.hasSeen('release'), 'the release node ran');
+  ensure(h.ctx.state.getFlag('story.m03.scarsTold') === 'village', 'the Scars told to the village');
   ensure(h.ctx.state.getBool('enemies.mercy.release') && objectiveDone(h, 'm03', 'o5'), 'o5 and Release unlocked');
-  // o6: the churchyard wraiths rise once Release is unlocked; one is killed as the player.
-  await h.approach(h.anchor('pile.churchyard.1'), 6);
-  let wraith: string | undefined;
-  for (let i = 0; i < 10 && !wraith; i++) {
-    await h.runAsync(30);
-    wraith = actorsOfKind(h, 'ash-wraith').find((a) => (a as { spawnTag?: string }).spawnTag === 'm03.churchyard')?.id;
-  }
-  ensure(wraith, 'the churchyard wraiths spawned on the Release flag');
-  ensure(killAsPlayer(h, wraith), 'churchyard wraith killed');
-  h.run(2);
-  ensure(objectiveDone(h, 'm03', 'o6'), 'o6 credited by the kill');
+  // o6: the four churchyard wraiths rise once Release is unlocked; they are killed as the player.
+  await killTagged(h, 'ash-wraith', 'm03.churchyard', 4, h.anchor('pile.churchyard.1'));
+  ensure(objectiveDone(h, 'm03', 'o6'), `o6 credited by the kills: ${describeQuest(h, 'm03')}`);
   heal(h);
-  // o7: report.
-  await talkTo(h, t, 'aelfreda');
+  // o7: report (the first Release felt warm).
+  await talkTo(h, t, 'aelfreda', [1, 1]);
+  ensure(h.ctx.state.getFlag('story.m03.firstRelease') === 'warm', 'the first Release told');
+  ensure(h.ctx.state.getFlag('story.m03.record') === 'cold', 'the record finished honestly');
   ensure(q.state('m03') === 'completed', `M03 completed: ${describeQuest(h, 'm03')}`);
 }
 
@@ -186,7 +314,7 @@ export async function playM03(h: ChapterHarness, t: QuestTrail): Promise<void> {
 export async function playM04(h: ChapterHarness, t: QuestTrail): Promise<void> {
   const q = quests(h);
   const dialogue = h.ctx.services.require('dialogue');
-  await talkTo(h, t, 'gaut', [1]);
+  await talkTo(h, t, 'gaut', [2, 1]);
   ensure(q.state('m04') === 'active', 'Gaut offers M04 once M03 is completed');
   await h.runAsync(5);
   // The post rule moves Gaut to the ford while M04 is active.
@@ -195,19 +323,24 @@ export async function playM04(h: ChapterHarness, t: QuestTrail): Promise<void> {
   await h.enterTrigger('trg.ford.toll-post');
   ensure(objectiveDone(h, 'm04', 'o1'), 'o1 the ford trigger');
   ensure(!h.ctx.state.getBool('enemies.mercy.spare'), 'Spare still locked before the lesson');
-  await talkTo(h, t, 'gaut');
+  await talkTo(h, t, 'gaut', [1, 2, 3]);
   ensure(dialogue.hasSeen('m04-spare'), 'the m04-spare node ran');
   ensure(h.ctx.state.getBool('enemies.mercy.spare') && objectiveDone(h, 'm04', 'o2'), 'o2 and Spare unlocked');
-  // o3: the Footman pairs activate on M04 + the Spare flag; two are killed as the player.
-  let soldiers: string[] = [];
-  for (let i = 0; i < 10 && soldiers.length < 2; i++) {
-    await h.runAsync(30);
-    soldiers = actorsOfKind(h, 'blighted-soldier').map((a) => a.id);
+  // o3: the Footman pairs activate on M04 + the Spare flag; all four are killed as the player.
+  for (let round = 0; round < 6 && !objectiveDone(h, 'm04', 'o3'); round++) {
+    let soldiers: string[] = [];
+    for (let i = 0; i < 10 && !soldiers.length; i++) {
+      await h.runAsync(30);
+      heal(h);
+      soldiers = actorsOfKind(h, 'blighted-soldier').map((a) => a.id);
+    }
+    for (const id of soldiers) ensure(killAsPlayer(h, id), `soldier ${id} killed`);
+    h.run(2);
   }
-  ensure(soldiers.length >= 2, 'the ford soldiers spawned');
-  for (const id of soldiers.slice(0, 2)) ensure(killAsPlayer(h, id), `soldier ${id} killed`);
-  h.run(2);
-  ensure(objectiveDone(h, 'm04', 'o3'), 'o3 two soldiers');
+  ensure(objectiveDone(h, 'm04', 'o3'), `o3 four soldiers: ${describeQuest(h, 'm04')}`);
+  // the Toll Sergeant steps onto the bridge
+  await killTagged(h, 'toll-sergeant', 'm04.sergeant', 1, h.anchor('spawn.ford.sergeant'));
+  ensure(objectiveDone(h, 'm04', 'sergeant') && h.ctx.state.getFlag('story.m04.sergeant') === 'killed', 'the sergeant beaten');
   // o4: the toll post: only a heavy blow breaks it, so real chops (key 3) from the road side.
   const post = actorsOfKind(h, 'toll-post')[0];
   ensure(post?.root, 'the toll post stands');
@@ -217,6 +350,15 @@ export async function playM04(h: ChapterHarness, t: QuestTrail): Promise<void> {
   ensure(chopUntil(h, () => objectiveDone(h, 'm04', 'o4'), 30), `the toll post broken by chops (health ${post.health})`);
   ensure(objectiveDone(h, 'm04', 'o4') && h.ctx.state.getBool('world.brightwater.tollPost'), 'o4 and the toll-post flag');
   heal(h);
+  await readNote(h, t, 'note-m04-toll-box', 'm04.toll-box');
+  ensure(objectiveDone(h, 'm04', 'ledger'), 'the toll ledger read');
+  await talkTo(h, t, 'gaut', [2]);
+  ensure(objectiveDone(h, 'm04', 'shown') && h.ctx.state.getFlag('story.m04.ledger') === 'cael', 'the ledger shown to Gaut, Cael keeps it');
+  for (let n = 1; n <= 3; n++) await useAt(h, `m04.wagon-${n}`);
+  ensure(objectiveDone(h, 'm04', 'wagons'), `the wagons unchained: ${describeQuest(h, 'm04')}`);
+  await talkTo(h, t, 'carter-2');
+  await talkTo(h, t, 'carter-3');
+  ensure(objectiveDone(h, 'm04', 'carters'), 'the other two carters heard');
   await talkTo(h, t, 'carter-1');
   ensure(h.ctx.state.getBool('story.m04.cartersFreed') && objectiveDone(h, 'm04', 'o5'), 'o5 the carters freed');
   await talkTo(h, t, 'gaut');
@@ -299,11 +441,18 @@ async function restNearest(h: ChapterHarness): Promise<boolean> {
 
 export async function playR01(h: ChapterHarness, t: QuestTrail, field: FieldBranch): Promise<void> {
   const q = quests(h);
-  await talkTo(h, t, 'wynn', [1]);
+  await talkTo(h, t, 'wynn', [1, 1, 2, 3]);
   ensure(q.state('r01') === 'active' && objectiveDone(h, 'r01', 'o1'), 'R01 offered, o1 credited');
+  await readNote(h, t, 'note-r01-shawl', 'r01.shawl');
+  ensure(objectiveDone(h, 'r01', 'shawl'), 'the shawl read');
   await h.runAsync(30);
-  const crows = actorsOfKind(h, 'ash-scarecrow');
-  ensure(crows.length === 6, `six ash scarecrows while R01 is active (${crows.length})`);
+  let crows = actorsOfKind(h, 'ash-scarecrow');
+  for (let i = 0; i < 10 && crows.length < 8; i++) {
+    await h.approach(h.anchor('r01.scarecrow.8'), 6);
+    await h.runAsync(30);
+    crows = actorsOfKind(h, 'ash-scarecrow');
+  }
+  ensure(crows.length === 8, `eight ash scarecrows while R01 is active (${crows.length})`);
   const cleared = (id: string) => h.of('scarecrow.cleared').some((e) => e.actorId === id);
   if (field === 'scorched') {
     // Light the torch at a brazier (F), then carry it into each scarecrow: it burns for 4 s and clears.
@@ -339,8 +488,20 @@ export async function playR01(h: ChapterHarness, t: QuestTrail, field: FieldBran
     ensure(spells.burn === 0, `Burn cleared by the rest (${spells.burn})`);
     ensure(!h.ctx.state.getBool('story.r01.torchUsed'), 'no torch used');
   }
-  ensure(objectiveDone(h, 'r01', 'o2'), 'o2 six scarecrows');
-  await talkTo(h, t, 'wynn');
+  ensure(objectiveDone(h, 'r01', 'o2'), 'o2 eight scarecrows');
+  ensure(h.ctx.state.getBool('story.r01.scorched') === (field === 'scorched'), `the field decided ${field}`);
+  // the root wakes under the barley
+  await killTagged(h, 'ash-wraith', 'r01.root', 3, h.anchor('spawn.r01.root-1'));
+  ensure(objectiveDone(h, 'r01', 'root'), 'the root driven off');
+  if (field === 'scorched') {
+    for (let n = 1; n <= 2; n++) await carryTo(h, `r01.bucket-${n}`, 'r01.stubble', `story.r01.bucket${n}.delivered`);
+  } else {
+    for (let n = 1; n <= 3; n++) await useAt(h, `r01.stake-${n}`);
+  }
+  h.run(5);
+  ensure(objectiveDone(h, 'r01', 'aftermath'), `the ${field} field set right: ${describeQuest(h, 'r01')}`);
+  await talkTo(h, t, 'wynn', [1]);
+  ensure(h.ctx.state.getFlag('story.r01.clothes') === 'chapel', 'the mourning clothes go back to the chapel');
   ensure(q.state('r01') === 'completed', `R01 completed: ${describeQuest(h, 'r01')}`);
   ensure(h.ctx.state.getFlag('world.brightwater.barley') === field, `the field is ${field}`);
 }

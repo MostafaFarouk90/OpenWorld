@@ -43,6 +43,8 @@ export const INVENTORY_STRINGS_EN: Record<string, string> = {
   'item.crossbow-bolts.desc': 'Iron-tipped and fletched with goose feathers.',
   'item.hearth-stone-charm.name': 'Hearth-Stone Charm',
   'item.hearth-stone-charm.desc': 'A warm pebble on a cord. Defense +{defense}.',
+  'item.warding-candle.name': 'Warding Candle',
+  'item.warding-candle.desc': 'A thick chapel candle of tallow and ash-root. Lit at a grave, it steadies the dead.',
   'item.hearth-stone.name': 'Brannoc Hearth-Stone',
   'item.hearth-token.name': 'Hearth-Token',
   'item.hearth-token.desc': "Edda's family token, pressed into your hand for luck.",

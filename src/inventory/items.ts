@@ -16,6 +16,7 @@ export const ITEMS: Record<string, ItemDef> = {
   'gauts-spare-blade': def('gauts-spare-blade', 'weapon', { slot: 'weapon', stats: { attack: 14 } }),
   'hearth-stone-charm': def('hearth-stone-charm', 'trinket', { slot: 'trinket', stats: { defense: 1 } }),
   'hearth-stone': def('hearth-stone', 'quest'),
+  'warding-candle': def('warding-candle', 'quest'),
   'hearth-token': def('hearth-token', 'quest'),
   'hearth-bread': def('hearth-bread', 'consumable', { stackMax: 5, use: { healFlat: 15, drinkSeconds: 0.8 } }),
   // Brightwater quest rewards (slice 2). Stats are display-only readings: nothing applies gear defense yet.

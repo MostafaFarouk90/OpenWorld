@@ -123,7 +123,8 @@ const structures: StructureSpec[] = [
 ];
 
 const npcs: NpcSpec[] = [
-  { id: 'tobb', post: 'npc-post.tobb', idleClip: 'Idle', absentWhen: 'story.m05.tobbJoined' },
+  // presentWhen (Act 1 density pass): Tobb is inside the burning Grey Goose until Cael douses its door in M01.
+  { id: 'tobb', post: 'npc-post.tobb', idleClip: 'Idle', absentWhen: 'story.m05.tobbJoined', presentWhen: 'story.m01.tavernDoused' },
   { id: 'carter-1', post: 'npc-post.carter-1', idleClip: 'Idle', walkOff: { whenFlag: 'story.m04.cartersFreed', to: 'ford.carters.walk-off' } },
   { id: 'carter-2', post: 'npc-post.carter-2', idleClip: 'Idle', walkOff: { whenFlag: 'story.m04.cartersFreed', to: 'ford.carters.walk-off' } },
 ];

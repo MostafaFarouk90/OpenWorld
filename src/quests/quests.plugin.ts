@@ -19,12 +19,20 @@ import { TorchSystem } from './torch';
 import { R02Yard, type R02YardDummies } from './r02Yard';
 import { QuestProps } from './props';
 import { QUEST_PROPS, INTERACT_FLAGS } from './content/props';
+import { CARRY_ITEMS } from './content/carry';
+import { QuestNotes } from './notes';
+import { QUEST_NOTES, NOTE_LOOKS, NOTE_CODEX } from './content/notes';
+import { installObjectiveFlags } from './objectiveFlags';
+import { OBJECTIVE_FLAGS } from './content/objectiveFlags';
+import { QuestLooks, lookSpecs } from './looks';
+import { buildPropLook, disposePropLook } from './propLooks';
+import { codexEntry } from '../codex/entries';
 import { createEffectRunner } from './effects';
 import type { BusPort } from './ports';
 import type { QuestDef } from './types';
+import { QUESTS_SAVE_VERSION } from './types';
 import './service';
 
-const VILLAGERS = 3;
 /** Synthetic interact id that completes T12's "open the quest log" objective. */
 const JOURNAL_OPENED = 'use:t12-journal-open';
 
@@ -95,9 +103,9 @@ const plugin: GamePlugin = {
     });
     ctx.persist.register({
       key: 'quests',
-      version: 1,
+      version: QUESTS_SAVE_VERSION,
       serialize: () => manager.serialize(),
-      load: (data) => manager.load(data),
+      load: (data, version) => manager.load(data, version),
     });
 
     // Journal (J).
@@ -140,7 +148,11 @@ const plugin: GamePlugin = {
     });
     manager.onChange(() => yard.markDirty());
     offs.push(() => yard.dispose());
-    offs.push(ctx.events.on('save.loaded', () => { posts.reset(); yard.markDirty(); manager.recheck(); }));
+    // Story flags set as objectives finish (fires, spawners, walk-offs read them).
+    const objectiveFlags = installObjectiveFlags(OBJECTIVE_FLAGS, bus, ctx.state, manager, warn);
+    offs.push(objectiveFlags.dispose);
+    objectiveFlags.sync();
+    offs.push(ctx.events.on('save.loaded', () => { posts.reset(); yard.markDirty(); manager.recheck(); objectiveFlags.sync(); }));
     // Points the player at the next giver; only the live event, so a load never re-announces it.
     offs.push(ctx.events.on('quest.completed', (e) => {
       if (e.questId === 'm02') ctx.events.emit('hud.toast', { textKey: 'quest.lead.m03' });
@@ -155,37 +167,45 @@ const plugin: GamePlugin = {
 
     // Carrying is built on the first rules tick, after every plugin (and thread 4's anchors) exists.
     let carry: CarrySystem | null = null;
-    const visuals: THREE.Mesh[] = [];
+    const visuals: THREE.Object3D[] = [];
     const disposeVisuals = (): void => {
       for (const m of visuals) {
-        m.removeFromParent();
-        m.geometry.dispose();
-        (m.material as THREE.Material).dispose();
+        if ((m as THREE.Mesh).isMesh) {
+          m.removeFromParent();
+          (m as THREE.Mesh).geometry.dispose();
+          ((m as THREE.Mesh).material as THREE.Material).dispose();
+        } else {
+          disposePropLook(m);
+        }
       }
       visuals.length = 0;
     };
     const buildCarry = (): CarrySystem => {
       const carryables: Carryable[] = [];
-      for (let i = 1; i <= VILLAGERS; i++) {
-        const mesh = new THREE.Mesh(
-          new THREE.CapsuleGeometry(0.3, 1.0, 4, 8),
-          new THREE.MeshStandardMaterial({ color: 0x8a6d4b }),
-        );
+      for (const item of CARRY_ITEMS) {
+        // villagers are capsules held at chest height; buckets are the greybox bucket held low
+        const villager = item.look === 'villager';
+        const mesh: THREE.Object3D = villager
+          ? new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 1.0, 4, 8), new THREE.MeshStandardMaterial({ color: 0x8a6d4b }))
+          : buildPropLook('bucket');
+        const lift = villager ? 0.8 : -0.3;
         mesh.visible = false;
         ctx.scene.add(mesh);
         visuals.push(mesh);
-        const anchor = ctx.anchors.find(`m01.villager-${i}`);
+        const anchor = ctx.anchors.find(item.homeAnchor);
+        const needs = item.requiresFlag;
         carryables.push({
-          id: `villager-${i}`,
-          interactableId: `pickup:villager-${i}`,
+          id: item.id,
+          interactableId: item.interactableId,
           home: () => anchor && { x: anchor.position.x, y: anchor.position.y, z: anchor.position.z },
-          setPosition: (p) => mesh.position.set(p.x, p.y + 0.8, p.z),
+          setPosition: (p) => mesh.position.set(p.x, p.y + lift, p.z),
           setVisible: (on) => { mesh.visible = on; },
-          deliveredFlag: `quest.m01.villager${i}.delivered`,
-          questId: 'm01',
-          objectiveId: 'o2',
-          destination: 'm01.chapel-door',
-          promptKey: 'quest.prompt.carry',
+          deliveredFlag: item.deliveredFlag,
+          questId: item.questId,
+          objectiveId: item.objectiveId,
+          destination: item.destination,
+          promptKey: item.promptKey,
+          ...(needs ? { requires: () => ctx.state.getFlag(needs) === true } : {}),
         });
       }
       return new CarrySystem({
@@ -204,7 +224,7 @@ const plugin: GamePlugin = {
             ctx.interaction.register({
               id: i.id,
               kind: 'pickup',
-              name: 'villager',
+              name: i.id.replace(/^pickup:/, ''),
               position: (out) => {
                 i.position(out);
                 return out;
@@ -274,8 +294,10 @@ const plugin: GamePlugin = {
 
     // Built once, after M01 has started (or was loaded as started), when every plugin and thread 4's
     // anchors exist. A build failure is logged once and never retried (no leaked meshes).
+    const propEnv = () => ({ state: ctx.state, quests: manager, gold: () => svc('inventory')?.gold, warn });
     const props = new QuestProps(QUEST_PROPS, {
       bus,
+      env: propEnv,
       state: ctx.state,
       quests: manager,
       anchor: (id) => {
@@ -290,6 +312,48 @@ const plugin: GamePlugin = {
         }),
       warn,
     });
+    // Readable notes: F opens a short dialogue under the note's own id; the first full read unlocks its codex entry.
+    const notes = new QuestNotes(QUEST_NOTES, {
+      bus,
+      env: propEnv,
+      anchor: (id) => {
+        const a = ctx.anchors.find(id);
+        return a && { x: a.position.x, y: a.position.y, z: a.position.z };
+      },
+      register: (i) =>
+        ctx.interaction.register({
+          id: i.id, kind: 'use', name: i.id.replace(/^use:/, ''), radius: i.radius, promptKey: i.promptKey, enabled: i.enabled,
+          position: (out) => { i.position(out); return out; },
+          onInteract: () => i.onInteract(),
+        }),
+      startDialogue: (d, n) => svc('dialogue')?.start?.(d, n) === true,
+      codexUnlock: (id) => svc('codex')?.unlock?.(id),
+      warn,
+    });
+    const looks = new QuestLooks(lookSpecs(QUEST_PROPS, QUEST_NOTES, NOTE_LOOKS), {
+      state: ctx.state,
+      quests: manager,
+      anchor: (id) => {
+        const a = ctx.anchors.find(id);
+        return a && { x: a.position.x, y: a.position.y, z: a.position.z, yaw: a.yaw };
+      },
+      build: (look, at) => {
+        const g = buildPropLook(look);
+        g.position.set(at.x, at.y, at.z);
+        g.rotation.y = at.yaw;
+        ctx.scene.add(g);
+        return { setVisible: (on) => { g.visible = on; }, dispose: () => disposePropLook(g) };
+      },
+      warn,
+    });
+    // The notes' lore entries, registered once the codex service exists.
+    let codexOff: (() => void) | null = null;
+    const registerLore = (): void => {
+      const codex = svc('codex');
+      if (codexOff || !codex?.register) return;
+      const slug = (id: string) => id.replace(/^lore\./, '');
+      codexOff = codex.register(Object.values(NOTE_CODEX).map((id) => codexEntry('lore', id, slug(id))));
+    };
     let propTick = 0;
     let carryTried = false;
     ctx.systems.add({
@@ -317,7 +381,12 @@ const plugin: GamePlugin = {
           }
         }
         torch?.update();
-        if (++propTick % 30 === 0) props.update();
+        if (++propTick % 30 === 0) {
+          props.update();
+          notes.update();
+          looks.update();
+          registerLore();
+        }
         posts.update();
         yard.update();
       },
@@ -326,6 +395,9 @@ const plugin: GamePlugin = {
         carry = null;
         for (const o of offs.splice(0)) o();
         props.dispose();
+        notes.dispose();
+        looks.dispose();
+        codexOff?.();
         torch?.dispose();
         torch = null;
         torchMesh?.removeFromParent();

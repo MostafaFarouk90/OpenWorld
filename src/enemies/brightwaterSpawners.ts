@@ -10,8 +10,9 @@ function ford(n: number): SpawnerDef {
     count: 2,
     anchor: `spawn.ford.pair-${n}`,
     band: { min: 3, max: 4 },
-    // Live only once M04 has started and its Spare lesson has unlocked the verb.
-    activation: { quest: 'm04', flag: 'enemies.mercy.spare' },
+    // Live only once M04 has started and Gaut's Spare lesson is over (the density pass's objective flag; the verb
+    // unlocks mid-talk, so gating on it lost kills when the talk was cut short).
+    activation: { quest: 'm04', flag: 'story.m04.spareTaught' },
     respawn: 'never',
     leash: true,
   };
@@ -58,7 +59,8 @@ function camp(n: number): SpawnerDef {
  * Levels stay inside 1 to 9, and no group respawns on rest.
  */
 export const BRIGHTWATER_SPAWNERS: readonly SpawnerDef[] = [
-  // M03's churchyard wraiths: they rise from the four ash piles once the Release lesson has unlocked the verb.
+  // M03's churchyard wraiths: they rise from the four ash piles once Aelfreda's Release lesson is over (the density
+  // pass's objective flag, set when M03's o5 is done).
   {
     id: 'brightwater.churchyard',
     tag: 'm03.churchyard',
@@ -67,7 +69,7 @@ export const BRIGHTWATER_SPAWNERS: readonly SpawnerDef[] = [
     anchor: 'pile.churchyard.1',
     memberAnchors: [1, 2, 3, 4].map((i) => `pile.churchyard.${i}`), // thread 4's layout ids (dot, not dash)
     band: { min: 2, max: 3 },
-    activation: { flag: 'enemies.mercy.release' },
+    activation: { flag: 'story.m03.releaseTaught' },
     respawn: 'never',
     leash: true,
   },
@@ -100,7 +102,8 @@ export const BRIGHTWATER_SPAWNERS: readonly SpawnerDef[] = [
       ephemeral: true,
     }),
   ),
-  // R01 Wynn's scarecrows: only while R01 is active; cleared by the torch or the Surge, never by plain hits.
+  // R01 Wynn's scarecrows: only while R01 is active and the shawl is read (density pass); cleared by the torch or the
+  // Surge, never by plain hits.
   {
     id: 'r01.scarecrows',
     enemy: 'ash-scarecrow',
@@ -108,7 +111,7 @@ export const BRIGHTWATER_SPAWNERS: readonly SpawnerDef[] = [
     anchor: 'r01.scarecrow.1',
     memberAnchors: [1, 2, 3, 4, 5, 6].map((i) => `r01.scarecrow.${i}`),
     band: { min: 2, max: 3 },
-    activation: { quest: 'r01' },
+    activation: { quest: 'r01', flag: 'story.r01.shawlRead' },
     respawn: 'never',
     leash: false,
   },

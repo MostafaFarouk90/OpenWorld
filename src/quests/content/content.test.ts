@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { questDefs } from './index';
 import { t12 } from './t12.quest';
+import { M02_RUBBLE } from './m02.quest';
 import { BEATS } from '../../tutorial/beats';
 import { stepRequired } from '../../tutorial/goals';
 import { TUTORIAL_QUESTS } from '../../tutorial/quests';
@@ -246,6 +247,21 @@ describe('M01 and M02 walk-through with the real QuestManager', () => {
     expect(w.qm.state('m02')).toBe('active');
 
     for (let i = 0; i < 3; i++) w.bus.emit('carry.delivered', { destinationId: 'm01.chapel-door', carryId: `v${i}` });
+    // the density pass: the Grey Goose door, Tobb inside, the mill and its miller, Aelfreda at the chapel gate
+    expect(play(w, 'npc-gaut', 'gaut')[0]).toBe('remind');
+    for (let i = 1; i <= 2; i++) w.bus.emit('carry.delivered', { destinationId: 'm01.tavern-door', carryId: `bucket-m01-${i}` });
+    expect(w.qm.objectiveDone('m01', 'tavern')).toBe(true);
+    expect(play(w, 'npc-tobb', 'tobb')[0]).toBe('m01-meet');
+    expect(w.qm.objectiveDone('m01', 'tobb')).toBe(true);
+    for (let i = 0; i < 4; i++) {
+      w.tags[`mw${i}`] = 'm01.mill';
+      w.bus.emit('actor.died', { actorId: `mw${i}`, killerId: 'p', kind: 'ash-wraith' });
+    }
+    expect(w.qm.objectiveDone('m01', 'mill')).toBe(true);
+    expect(play(w, 'npc-aldwin', 'aldwin')[0]).toBe('m01-safe');
+    expect(w.flags.get('story.m01.millerSafe')).toBe(true);
+    expect(play(w, 'npc-aelfreda', 'aelfreda')[0]).toBe('m01-rescued');
+    expect(w.qm.objectiveDone('m01', 'rescued')).toBe(true);
     expect(play(w, 'npc-gaut', 'gaut')[0]).toBe('report');
     expect(w.qm.state('m01')).toBe('completed');
     expect(w.given.some((g) => g.itemId === 'gauts-spare-blade')).toBe(true);
@@ -253,18 +269,36 @@ describe('M01 and M02 walk-through with the real QuestManager', () => {
 
     // m02
     expect(play(w, 'npc-edda', 'edda')[0]).toBe('fetch-reminder');
+    for (let i = 1; i <= 2; i++) w.bus.emit('carry.delivered', { destinationId: 'm02.bakery-door', carryId: `bucket-m02-${i}` });
     w.bus.emit('trigger.enter', { triggerId: 'm02.bakery', actorId: 'p' });
+    for (const id of M02_RUBBLE) w.bus.emit('interact', { interactableId: id });
+    for (let i = 0; i < 3; i++) {
+      w.tags[`ov${i}`] = 'm02.oven-yard';
+      w.bus.emit('actor.died', { actorId: `ov${i}`, killerId: 'p', kind: 'ash-wraith' });
+    }
     w.bus.emit('interact', { interactableId: 'pickup:hearth-stone' });
     expect(w.qm.objectiveDone('m02', 'o2')).toBe(true);
-    // choose topics 1, 2, 3 then leave (4)
+    expect(play(w, 'npc-edda', 'edda')[0]).toBe('granary-wait');
+    expect(play(w, 'note-m02-badge', 'note-m02-badge')).toHaveLength(3);
+    expect(w.qm.objectiveDone('m02', 'badge')).toBe(true);
+    w.bus.emit('trigger.enter', { triggerId: 'm02.granary', actorId: 'p' });
+    expect(play(w, 'npc-garrick', 'garrick', () => 3)[0]).toBe('m02-door');
+    expect(w.flags.get('story.m02.garrick')).toBe('silent');
+    // at the granary: choose topics 1, 2, 3 then leave (4)
     const picks = [1, 2, 3, 4];
     const nodes = play(w, 'npc-edda', 'edda', (n) => (n === 'hub' ? picks.shift()! : 1));
-    expect(nodes[0]).toBe('disgrace');
+    expect(nodes[0]).toBe('granary');
+    expect(nodes).toContain('disgrace');
     expect(nodes.filter((n) => n === 'hub').length).toBe(4);
+    expect(nodes.at(-1)).toBe('hearth-ask-2');
     expect(w.flags.get('quest.m02.learnedDisgrace')).toBe(true);
+    expect(w.qm.state('m02')).toBe('active');
+    expect(play(w, 'npc-edda', 'edda')[0]).toBe('hearth-remind');
+    w.bus.emit('interact', { interactableId: 'use:m02-common-hearth' });
     expect(w.qm.state('m02')).toBe('completed');
     expect(w.given.some((g) => g.itemId === 'hearth-stone-charm')).toBe(true);
     expect(w.xp()).toBe(550);
+    expect(play(w, 'npc-edda', 'edda')[0]).toBe('farewell');
     expect(play(w, 'npc-edda', 'edda')[0]).toBe('idle');
   });
 
@@ -306,7 +340,7 @@ describe('M01 and M02 walk-through with the real QuestManager', () => {
       const w = world();
       w.flags.set('tutorial.t04.tone', t);
       w.qm.start('m02');
-      w.qm.completeObjective('m02', 'o2');
+      for (const o of ['door', 'o1', 'rubble', 'oven', 'o2', 'badge', 'granary', 'garrick']) w.qm.completeObjective('m02', o);
       const picks = [1, 4];
       const nodes = play(w, 'npc-edda', 'edda', (n) => (n === 'hub' ? picks.shift()! : 1));
       expect(nodes.filter((n) => n.startsWith('why-cael-'))).toEqual([`why-cael-${t}`]);

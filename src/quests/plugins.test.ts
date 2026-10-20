@@ -10,6 +10,8 @@ import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 import dialoguePlugin from '../dialogue/dialogue.plugin';
 import questsPlugin from './quests.plugin';
+import { CARRY_ITEMS } from './content/carry';
+import { M02_RUBBLE } from './content/m02.quest';
 
 let physics: PhysicsWorld;
 beforeAll(() => {
@@ -99,7 +101,7 @@ describe('quests and dialogue plugins', () => {
     t.game.fixedUpdate();
     t.game.fixedUpdate();
     const warned = (console.warn as unknown as ReturnType<typeof vi.fn>).mock.calls.filter((c) => String(c[0]).includes('no home anchor'));
-    expect(warned).toHaveLength(3);
+    expect(warned).toHaveLength(CARRY_ITEMS.length); // villagers and well buckets
     t.game.dispose();
     t.world.dispose();
   });
@@ -134,12 +136,32 @@ describe('quests and dialogue plugins', () => {
       ev.emit('carry.delivered', { carryId: `villager-${i}`, destinationId: 'm01.chapel-door' });
     }
     expect(q.objectives('m01')[1].done).toBe(true);
-    ev.emit('dialogue.ended', { dialogueId: 'npc-gaut', npcId: 'gaut', reason: 'completed' } as never);
+    const talk = (npcId: string) => ev.emit('dialogue.ended', { dialogueId: `npc-${npcId}`, npcId, reason: 'completed' } as never);
+    for (let i = 1; i <= 2; i++) ev.emit('carry.delivered', { carryId: `bucket-m01-${i}`, destinationId: 'm01.tavern-door' });
+    talk('tobb');
+    for (let i = 0; i < 4; i++) {
+      ev.emit('actor.died', { actorId: `mw${i}`, killerId: pid, kind: 'ash-wraith', team: 'enemy', level: 1, spawnTag: 'm01.mill' } as never);
+    }
+    talk('aldwin');
+    talk('aelfreda');
+    expect(t.ctx.state.getFlag('story.m01.tavernDoused')).toBe(true); // the objective-flag bridge
+    talk('gaut');
     expect(q.state('m01')).toBe('completed');
     q.start('m02');
+    for (let i = 1; i <= 2; i++) ev.emit('carry.delivered', { carryId: `bucket-m02-${i}`, destinationId: 'm02.bakery-door' });
     ev.emit('trigger.enter', { triggerId: 'm02.bakery', actorId: pid });
+    for (const id of M02_RUBBLE) ev.emit('interact', { interactableId: id, kind: 'use', actorId: pid, action: 'interact' });
+    expect(t.ctx.state.getFlag('story.m02.rubbleCleared')).toBe(true);
+    for (let i = 0; i < 3; i++) {
+      ev.emit('actor.died', { actorId: `ov${i}`, killerId: pid, kind: 'ash-wraith', team: 'enemy', level: 1, spawnTag: 'm02.oven-yard' } as never);
+    }
     ev.emit('interact', { interactableId: 'pickup:hearth-stone', kind: 'pickup', actorId: pid, action: 'interact' });
-    ev.emit('dialogue.ended', { dialogueId: 'npc-edda', npcId: 'edda', reason: 'completed' } as never);
+    talk('note-m02-badge');
+    ev.emit('trigger.enter', { triggerId: 'm02.granary', actorId: pid });
+    talk('garrick');
+    talk('edda');
+    expect(q.state('m02')).toBe('active');
+    ev.emit('interact', { interactableId: 'use:m02-common-hearth', kind: 'use', actorId: pid, action: 'interact' });
     expect(q.state('m02')).toBe('completed');
     t.game.dispose();
     t.world.dispose();

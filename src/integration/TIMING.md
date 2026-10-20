@@ -12,14 +12,19 @@ estimate_min = ( travel_m / WALK  +  TALK_NODE x nodes_read  +  sum(beat_count x
 
 - `travel_m`: sum of straight horizontal (x, z) distances between consecutive route points: the giver's post anchor,
   each objective's anchor or trigger centre in play order, back to where the giver stands for the hand-in. Crossing
-  the vault door is a load, so that leg counts 0. Travel between quests (giver to giver) is not counted.
-- `nodes_read`: dialogue nodes visited in the chain run (one key press each), offers included.
+  the vault door is a load, so that leg counts 0. Since the density pass (batch 1) the in-area leg from where the
+  previous quest ended to this quest's giver counts too (`from` in the plan; none across regions, e.g. M05's
+  Quenchstone to Wynn). A leg marked `ride` is mounted (RIDE, 9 m/s).
+- `nodes_read`: dialogue nodes visited in the chain run (one key press each), offers included. Since batch 1 the chain
+  asks every question a hub offers once, as a first-time player would, and a readable note counts as one `note` beat
+  instead of its nodes.
 
 ## Constants (assumptions, fixed before comparing)
 
 | constant | value |
 | --- | --- |
 | WALK | 4.5 m/s |
+| RIDE | 9 m/s (mounted legs) |
 | TALK_NODE | 20 s per dialogue node read |
 | killUnit | 45 s per enemy in a kill objective or the fight around it |
 | interact | 10 s (shard study, brazier, door, rekindle) |
@@ -29,6 +34,10 @@ estimate_min = ( travel_m / WALK  +  TALK_NODE x nodes_read  +  sum(beat_count x
 | scarecrow | 30 s each |
 | drillEvent | 15 s per counted drill event on the blocking dummies |
 | boss | 360 s (the Ashen Prior, intro to outcome) |
+| carry | 15 s per carry (pick up and set down; the walk with it is in the route) |
+| note | 20 s per readable note (found and read; replaces its nodes) |
+| bout | 90 s per sparring opponent (Replay board, batch 3) |
+| pole | 30 s per pass of the lock-on pole drill (batch 3) |
 
 Beat counts per quest: M03 1 interact, 1 leap, 4 kill units (the four churchyard wraiths rise together); M04 4 kill
 units (both Footman pairs), 1 structure; M05 5 wardstones, 1 interact, 6 kill units (two Dead Road patrols of 3);
@@ -37,20 +46,51 @@ units (3 vault wraiths and the Blightbloom), 1 boss.
 
 ## Result
 
+Re-measured after the density pass, batch 1 (Brightwater: M01, M02, M03, M04, R01). "Before" is the slice 2
+measurement (no giver legs, shortest dialogue path, M01 and M02 not played); the rows not touched by batch 1 (M05, R02,
+D01) moved only by the new giver legs.
+
+### The opening (M01, M02), played headless since batch 1
+
 | quest | travel m | travel min | nodes | talk min | beats min | estimate min | design min | delta % | |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| M03 | 124 | 0.5 | 12 | 4.0 | 3.4 | 7.9 | 40 | -80 | **>25% off** |
-| M04 | 572 | 2.1 | 11 | 3.7 | 3.3 | 9.1 | 45 | -80 | **>25% off** |
-| M05 | 1086 | 4.0 | 7 | 2.3 | 7.2 | 13.5 | 40 | -66 | **>25% off** |
-| R01 | 168 | 0.6 | 7 | 2.3 | 3.2 | 6.1 | 35 | -83 | **>25% off** |
-| R02 | 50 | 0.2 | 5 | 1.7 | 2.0 | 3.9 | 30 | -87 | **>25% off** |
-| D01 | 93 | 0.3 | 5 | 1.7 | 9.3 | 11.3 | 55 | -79 | **>25% off** |
-| **total** | | | | | | **51.8** | **245** | **-79** | **>25% off** |
+| M01 | 727 | 2.7 | 29 | 9.7 | 8.0 | 20.4 | 40 | -49 | **>25% off** |
+| M02 | 263 | 1.0 | 28 | 9.3 | 3.8 | 14.1 | 35 | -60 | **>25% off** |
+| **total** | | | | | | **34.4** | **75** | **-54** | **>25% off** |
 
-Every quest is flagged: the content as built is about a fifth of the design minutes. The largest share is M05's
-1.1 km road walk (4 min); no quest has enough dialogue (5 to 12 nodes) or fights to approach its budget. Even
-doubling every beat constant and the dialogue time leaves the total near 100 minutes. Either the design minutes
-assume content not built yet (side activities, exploration, deaths and retries), or the quests need more beats.
+Beats: M01 9 kill units (five lane wraiths, four at the mill), 5 carries (three villagers, two buckets); M02 2 carries,
+4 interacts (two thatch heaps, the stone, the common hearth), 3 kill units (the oven yard), 1 note (the badge).
+
+### Phase A
+
+| quest | travel m | travel min | nodes | talk min | beats min | estimate min | design min | delta % | |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| M03 | 293 | 1.1 | 31 | 10.3 | 4.9 | 16.3 | 40 | -59 | **>25% off** |
+| M04 | 732 | 2.7 | 35 | 11.7 | 4.9 | 19.3 | 45 | -57 | **>25% off** |
+| M05 | 1573 | 5.8 | 7 | 2.3 | 7.2 | 15.3 | 40 | -62 | **>25% off** |
+| R01 | 430 | 1.6 | 16 | 5.3 | 7.3 | 14.2 | 35 | -59 | **>25% off** |
+| R02 | 139 | 0.5 | 5 | 1.7 | 2.0 | 4.2 | 30 | -86 | **>25% off** |
+| D01 | 205 | 0.8 | 5 | 1.7 | 9.3 | 11.8 | 55 | -79 | **>25% off** |
+| **total** | | | | | | **81.1** | **245** | **-67** | **>25% off** |
+
+Beats since batch 1: M03 2 interacts (shard study, candle), 1 leap, 4 kill units, 4 notes (font, Ember, record,
+Wulfric's grave); M04 5 kill units (four Footmen and the Toll Sergeant), 1 structure, 3 interacts (wagons), 1 note
+(the toll ledger); R01 1 interact, 8 scarecrows, 3 kill units (the root), 2 carries (the stubble fire), 1 note (the
+shawl). M05, R02 and D01 as before.
+
+### Batch 1 against the target (50% for the act, 40% floor per quest)
+
+| quest | before | after | design | after % |
+| --- | ---: | ---: | ---: | ---: |
+| M01 | about 7 | 20.4 | 40 | 51 |
+| M02 | about 4 | 14.1 | 35 | 40 |
+| M03 | 7.9 | 16.3 | 40 | 41 |
+| M04 | 9.1 | 19.3 | 45 | 43 |
+| R01 | 6.1 | 14.2 | 35 | 41 |
+
+Every batch 1 quest clears the 40% floor; none reaches 50% by the formula. The act stands at about 213 of 695
+(31%): batches 2 to 4 carry the rest of the way to the act target, and Mostafa's timed play after batch 1 sets the
+real-time factor that decides whether 50% stands.
 
 ## Phase B (Harrowmark)
 
@@ -73,15 +113,18 @@ travel inside an interior counts 0.
 
 | quest | travel m | travel min | nodes | talk min | beats min | estimate min | design min | delta % | |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| M06 | 136 | 0.5 | 8 | 2.7 | 4.0 | 7.2 | 45 | -84 | **>25% off** |
-| M07 | 1668 | 6.2 | 5 | 1.7 | 7.4 | 15.3 | 40 | -62 | **>25% off** |
-| R03 | 1348 | 5.0 | 5 | 1.7 | 2.4 | 9.1 | 40 | -77 | **>25% off** |
-| R04 | 2307 | 8.5 | 5 | 1.7 | 0.5 | 10.7 | 40 | -73 | **>25% off** |
-| M08 | 1736 | 6.4 | 14 | 4.7 | 0.3 | 11.4 | 50 | -77 | **>25% off** |
-| M09 | 13 | 0.0 | 5 | 1.7 | 4.8 | 6.5 | 55 | -88 | **>25% off** |
-| M10 | 1167 | 4.3 | 7 | 2.3 | 2.5 | 9.2 | 45 | -80 | **>25% off** |
-| D02 | 935 | 3.5 | 6 | 2.0 | 9.3 | 14.8 | 60 | -75 | **>25% off** |
-| **total** | | | | | | **84.2** | **375** | **-78** | **>25% off** |
+| M06 | 144 | 0.5 | 8 | 2.7 | 4.0 | 7.2 | 45 | -84 | **>25% off** |
+| M07 | 2161 | 8.0 | 5 | 1.7 | 7.4 | 17.1 | 40 | -57 | **>25% off** |
+| R03 | 1436 | 5.3 | 5 | 1.7 | 2.4 | 9.4 | 40 | -76 | **>25% off** |
+| R04 | 3041 | 11.3 | 5 | 1.7 | 0.5 | 13.4 | 40 | -66 | **>25% off** |
+| M08 | 2421 | 9.0 | 14 | 4.7 | 0.3 | 14.0 | 50 | -72 | **>25% off** |
+| M09 | 645 | 2.4 | 5 | 1.7 | 4.8 | 8.9 | 55 | -84 | **>25% off** |
+| M10 | 1642 | 6.1 | 7 | 2.3 | 2.5 | 10.9 | 45 | -76 | **>25% off** |
+| D02 | 1407 | 5.2 | 6 | 2.0 | 9.3 | 16.5 | 60 | -72 | **>25% off** |
+| **total** | | | | | | **97.4** | **375** | **-74** | **>25% off** |
+
+Re-measured with the giver legs (batch 1); the Harrowmark content is unchanged until batches 3 and 4, so the change
+from 84.2 is the legs alone.
 
 Harrowmark has the same shape as Phase A: the city legs (R04's three pages cross 2.3 km) are the largest share, and
 M09 is almost all interior. Dialogue is short everywhere except the M08 audience (14 nodes).
@@ -90,13 +133,10 @@ M09 is almost all interior. Dialogue is short everywhere except the M08 audience
 
 | part | estimate min | design min |
 | --- | ---: | ---: |
-| Phase A (M03 to M05, R01, R02, D01) | 51.8 | 245 |
-| Phase B (M06 to M10, R03, R04, D02) | 84.2 | 375 |
-| **Phase A + B** | **136.0** | **620** |
-| tutorial and Brightwater opening (M01, M02), not estimated here | n/a | 75 |
-| **Act 1** | **136.0 + opening** | **695** |
+| Opening (M01, M02) | 34.4 | 75 |
+| Phase A (M03 to M05, R01, R02, D01) | 81.1 | 245 |
+| Phase B (M06 to M10, R03, R04, D02) | 97.4 | 375 |
+| **Act 1** | **212.9** | **695** |
 
-The 75 design minutes of the opening sit outside both tables (slice 1 shipped them and has its own smoke timing in
-plans/knighting-day-smoke.md). The review's ruling names D01 with M01 and M02; D01's 55 minutes are already in the
-Phase A table, so they are not counted twice. Without the opening the built act runs at about 22% of its design
-minutes; the conclusion above holds for the whole act.
+The tutorial itself (Knighting Day) sits outside these tables; it has its own smoke timing in
+plans/knighting-day-smoke.md. Before the density pass the act measured 136 formula minutes without the opening.

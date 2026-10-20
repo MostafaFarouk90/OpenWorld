@@ -19,7 +19,7 @@ export type AiState =
   | 'calmed'
   | 'dead';
 
-export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse' | 'ember-hound' | 'watch-guard' | 'guildhall-thug';
+export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse' | 'ember-hound' | 'watch-guard' | 'guildhall-thug' | 'toll-sergeant';
 
 /** The impact-sound materials of `actor.data.audio.material` ('straw' and 'wood' are the foes'). */
 export type EnemyMaterial = 'ash' | 'metal' | 'straw' | 'wood';

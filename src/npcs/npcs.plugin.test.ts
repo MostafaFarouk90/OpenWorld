@@ -7,6 +7,7 @@ import type { NpcsService } from './types';
 
 function world() {
   const fc = createFakeCore();
+  fc.flags.set('story.m01.tavernDoused', true); // Tobb stands at the Grey Goose once its door is out (density pass)
   for (const n of BRIGHTWATER_LAYOUT.npcs) {
     const a = BRIGHTWATER_LAYOUT.anchors.find((x) => x.id === n.post)!;
     fc.ctx.anchors.define({ id: a.id, position: { x: a.x, y: 0, z: a.z }, yaw: 0 });

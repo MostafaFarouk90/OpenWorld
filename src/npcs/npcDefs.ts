@@ -27,4 +27,8 @@ export const NPC_DEFS: NpcDef[] = [
   { ...def('tobb', 'rogueHooded'), extras: buildLute, decorate: applyTobbCloak },
   def('carter-1', 'barbarian', { tint: 0x8a7a5a }),
   def('carter-2', 'rogue', { tint: 0x7a6a4a }),
+  // Act 1 density pass: the third carter at Hollin Ford, the Kettlewick miller (flour-pale) and the reeve's man.
+  def('carter-3', 'barbarian', { tint: 0x6a5a40 }),
+  def('aldwin', 'barbarian', { scale: 0.95, tint: 0xd8d0c0 }),
+  def('garrick', 'barbarian', { tint: 0x6a6258 }),
 ];

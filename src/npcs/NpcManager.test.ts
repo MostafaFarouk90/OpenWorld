@@ -13,6 +13,7 @@ const POSTS: Record<string, [number, number, number, number]> = {};
 const postYaw = (id: string) => wrapAngle(POSTS[id][3]);
 function setup(over: Partial<NpcManagerOptions> = {}, player: { x: number; z: number } | null = { x: 0, z: 0 }) {
   const fc = createFakeCore();
+  fc.flags.set('story.m01.tavernDoused', true); // Tobb stands at the Grey Goose once its door is out (density pass)
   fc.ctx.strings.register('en', NPC_STRINGS_EN);
   for (const n of BRIGHTWATER_LAYOUT.npcs) {
     const a = BRIGHTWATER_LAYOUT.anchors.find((x) => x.id === n.post)!;

@@ -55,6 +55,8 @@ export interface Carryable {
   /** trigger id where the villager is delivered */
   destination: string;
   promptKey?: string;
+  /** an extra condition for picking it up (R01's buckets wait for a scorched field) */
+  requires?(): boolean;
 }
 
 export interface CarryPorts {
@@ -164,7 +166,7 @@ export class CarrySystem {
 
   private isPickable(s: Slot): boolean {
     return !this.disposed && !this.carrying && !this.isDelivered(s)
-      && this.p.objectiveCurrent(s.c.questId, s.c.objectiveId);
+      && this.p.objectiveCurrent(s.c.questId, s.c.objectiveId) && (s.c.requires?.() ?? true);
   }
 
   private pickup(s: Slot): void {

@@ -37,7 +37,7 @@ export const npcGaut: DialogueDef = {
     { when: { all: [{ quest: 't-skirmish', state: 'active' }, inTutorial] }, node: 'tut-t-skirmish' },
 
     {
-      when: { all: [m01Active, { objective: ['m01', 'o1'], done: true }, { objective: ['m01', 'o2'], done: true }] },
+      when: { all: [m01Active, ...['o1', 'o2', 'tobb', 'miller', 'rescued'].map((o): Condition => ({ objective: ['m01', o], done: true }))] },
       node: 'report',
     },
     { when: { all: [m01Active, notBriefed, cold] }, node: 'brief-cold' },
@@ -49,8 +49,11 @@ export const npcGaut: DialogueDef = {
     { when: { all: [{ quest: 'm03', state: 'completed' }, { quest: 'm04', state: 'inactive' }] }, node: 'm04-offer-banked' },
     { when: { all: [m04Active, done('o5'), cold] }, node: 'm04-report-cold' },
     { when: { all: [m04Active, done('o5')] }, node: 'm04-report-banked' },
-    { when: { all: [m04Active, done('o4')] }, node: 'm04-carters' },
-    { when: { all: [m04Active, done('o3')] }, node: 'm04-tollpost' },
+    { when: { all: [m04Active, done('shown')] }, node: 'm04-carters' },
+    { when: { all: [m04Active, done('ledger')] }, node: 'm04-ledger-read' },
+    { when: { all: [m04Active, done('o4')] }, node: 'm04-ledger' },
+    { when: { all: [m04Active, done('sergeant')] }, node: 'm04-tollpost' },
+    { when: { all: [m04Active, done('o3')] }, node: 'm04-sergeant' },
     { when: { all: [m04Active, done('o2')] }, node: 'm04-spare-remind' },
     { when: { all: [m04Active, done('o1')] }, node: 'm04-spare' },
     { when: m04Active, node: 'm04-ford' },
@@ -86,15 +89,20 @@ export const npcGaut: DialogueDef = {
     // briefing (first visit while M01 is active)
     { id: 'brief-cold', speaker: 'gaut', textKey: P + 'brief-cold', next: 'brief-1' },
     { id: 'brief-banked', speaker: 'gaut', textKey: P + 'brief-banked', next: 'brief-1' },
-    { id: 'brief-1', speaker: 'gaut', textKey: P + 'brief-1', next: 'brief-2' },
+    { id: 'brief-1', speaker: 'gaut', textKey: P + 'brief-1', next: 'brief-goose' },
+    { id: 'brief-goose', speaker: 'gaut', textKey: P + 'brief-goose', next: 'brief-mill' },
+    { id: 'brief-mill', speaker: 'gaut', textKey: P + 'brief-mill', next: 'brief-2' },
     {
       id: 'brief-2', speaker: 'gaut', textKey: P + 'brief-2',
       effects: [{ setFlag: 'quest.m01.briefed', value: true }],
       choices: [
         { id: 'ready', textKey: P + 'brief-2.ready', next: 'brief-end' },
         { id: 'where', textKey: P + 'brief-2.where', next: 'brief-where' },
+        { id: 'crack', textKey: P + 'brief-2.crack', next: 'brief-crack' },
       ],
     },
+    { id: 'brief-crack', speaker: 'gaut', textKey: P + 'brief-crack', next: 'brief-crack-2' },
+    { id: 'brief-crack-2', speaker: 'gaut', textKey: P + 'brief-crack-2', next: 'brief-2' },
     { id: 'brief-where', speaker: 'gaut', textKey: P + 'brief-where', next: 'brief-2' },
     { id: 'brief-end', speaker: 'gaut', textKey: P + 'brief-end', next: null },
 
@@ -102,7 +110,8 @@ export const npcGaut: DialogueDef = {
 
     // report (the talk objective finishes M01 when this dialogue ends)
     { id: 'report', speaker: 'gaut', textKey: P + 'report', next: 'report-2' },
-    { id: 'report-2', speaker: 'gaut', textKey: P + 'report-2', next: 'report-3' },
+    { id: 'report-2', speaker: 'gaut', textKey: P + 'report-2', next: 'report-tobb' },
+    { id: 'report-tobb', speaker: 'gaut', textKey: P + 'report-tobb', next: 'report-3' },
     { id: 'report-3', speaker: 'gaut', textKey: P + 'report-3', next: null },
 
     // ---- M04 offer ----
@@ -123,16 +132,52 @@ export const npcGaut: DialogueDef = {
     { id: 'm04-ford', speaker: 'gaut', textKey: P + 'm04-ford', next: null },
     // the Spare lesson (reachable only while o1 is done and o2 is not)
     { id: 'm04-spare', speaker: 'gaut', textKey: P + 'm04-spare', effects: [{ unlockMercy: 'spare' }], next: 'm04-spare-2' },
-    { id: 'm04-spare-2', speaker: 'gaut', textKey: P + 'm04-spare-2', next: 'm04-spare-3' },
+    { id: 'm04-spare-2', speaker: 'gaut', textKey: P + 'm04-spare-2', next: 'm04-spare-why' },
+    { id: 'm04-spare-why', speaker: 'gaut', textKey: P + 'm04-spare-why', next: 'm04-spare-ask' },
+    {
+      id: 'm04-spare-ask', speaker: 'gaut', textKey: P + 'm04-spare-ask',
+      choices: [
+        { id: 'enemy', textKey: P + 'm04-spare-ask.enemy', next: 'm04-spare-enemy' },
+        { id: 'post', textKey: P + 'm04-spare-ask.post', next: 'm04-spare-post' },
+        { id: 'go', textKey: P + 'm04-spare-ask.go', next: 'm04-spare-3' },
+      ],
+    },
+    { id: 'm04-spare-enemy', speaker: 'gaut', textKey: P + 'm04-spare-enemy', next: 'm04-spare-ask' },
+    { id: 'm04-spare-post', speaker: 'gaut', textKey: P + 'm04-spare-post', next: 'm04-spare-ask' },
     { id: 'm04-spare-3', speaker: 'gaut', textKey: P + 'm04-spare-3', next: null },
     { id: 'm04-spare-remind', speaker: 'gaut', textKey: P + 'm04-spare-remind', next: null },
+    { id: 'm04-sergeant', speaker: 'gaut', textKey: P + 'm04-sergeant', next: null },
     { id: 'm04-tollpost', speaker: 'gaut', textKey: P + 'm04-tollpost', next: null },
+    { id: 'm04-ledger', speaker: 'gaut', textKey: P + 'm04-ledger', next: null },
     { id: 'm04-carters', speaker: 'gaut', textKey: P + 'm04-carters', next: null },
+    // the ledger read together: the Crucible (seeds M09 and Act 2), and who carries it
+    { id: 'm04-ledger-read', speaker: 'gaut', textKey: P + 'm04-ledger-read', next: 'm04-ledger-read-2' },
+    { id: 'm04-ledger-read-2', speaker: 'cael', textKey: P + 'm04-ledger-read-2', next: 'm04-ledger-read-3' },
+    { id: 'm04-ledger-read-3', speaker: 'gaut', textKey: P + 'm04-ledger-read-3', next: 'm04-ledger-keep' },
+    {
+      id: 'm04-ledger-keep', speaker: 'gaut', textKey: P + 'm04-ledger-keep',
+      choices: [
+        { id: 'gaut', textKey: P + 'm04-ledger-keep.gaut', effects: [{ setFlag: 'story.m04.ledger', value: 'gaut' }], next: 'm04-ledger-gaut' },
+        { id: 'cael', textKey: P + 'm04-ledger-keep.cael', effects: [{ setFlag: 'story.m04.ledger', value: 'cael' }], next: 'm04-ledger-cael' },
+      ],
+    },
+    { id: 'm04-ledger-gaut', speaker: 'gaut', textKey: P + 'm04-ledger-gaut', next: 'm04-carters' },
+    { id: 'm04-ledger-cael', speaker: 'gaut', textKey: P + 'm04-ledger-cael', next: 'm04-carters' },
 
     // report (the talk objective finishes M04 when this dialogue ends; the quest rewards give the shield)
     { id: 'm04-report-cold', speaker: 'gaut', textKey: P + 'm04-report-cold', next: 'm04-report-2' },
     { id: 'm04-report-banked', speaker: 'gaut', textKey: P + 'm04-report-banked', next: 'm04-report-2' },
-    { id: 'm04-report-2', speaker: 'gaut', textKey: P + 'm04-report-2', next: null },
+    { id: 'm04-report-2', speaker: 'gaut', textKey: P + 'm04-report-2', next: 'm04-report-spared' },
+    // what became of the Toll Sergeant, then the Regent's ledger
+    {
+      id: 'm04-report-spared', speaker: 'gaut', textKey: P + 'm04-report-spared',
+      when: { flag: 'story.m04.sergeant', equals: 'spared' }, next: 'm04-report-killed',
+    },
+    {
+      id: 'm04-report-killed', speaker: 'gaut', textKey: P + 'm04-report-killed',
+      when: { not: { flag: 'story.m04.sergeant', equals: 'spared' } }, next: 'm04-report-ledger',
+    },
+    { id: 'm04-report-ledger', speaker: 'gaut', textKey: P + 'm04-report-ledger', next: null },
 
     { id: 'm06-gate-wait', speaker: 'gaut', textKey: P + 'm06-gate-wait', next: null },
     // class trainer (Halvard Bastion yard)

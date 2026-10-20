@@ -1,0 +1,58 @@
+// Act 1 density pass, batch 1: objective lines, prompts and the codex lore the notes unlock. Spread after the base
+// table in strings.en.ts, so a key here replaces the older line (M03's churchyard and M04's soldiers grew).
+export const questStringsDensityA: Record<string, string> = {
+  'quest.m01.tavern': 'Douse the fire at the Grey Goose door (well buckets)',
+  'quest.m01.tobb': 'See who was trapped in the Grey Goose',
+  'quest.m01.mill': 'Clear the wraiths from the mill',
+  'quest.m01.miller': 'Check on the miller',
+  'quest.m01.rescued': 'Speak with Sister Aelfreda at the Kettlewick gate',
+  'quest.m01.o3': 'Report to Sir Gaut',
+
+  'quest.m02.door': 'Douse the fire at the bakery door (well buckets)',
+  'quest.m02.rubble': 'Clear the fallen thatch from the hearth',
+  'quest.m02.oven': 'Drive the wraiths from the oven yard',
+  'quest.m02.badge': 'Look in the family chest in the loft',
+  'quest.m02.granary': 'Find your mother at the granary',
+  'quest.m02.garrick': 'Talk with Garrick Thorne',
+  'quest.m02.o3': 'Talk with Edda',
+  'quest.m02.hearth': 'Set the hearth-stone in the Grey Goose yard',
+
+  'quest.m03.study': 'Study the cracked font, the Kindling Ember and the Hearthkeepers\' record',
+  'quest.m03.candle': 'Fetch the warding candle from the cliff ledge',
+  'quest.m03.grave': 'Read Brother Wulfric\'s grave',
+  'quest.m03.o6': 'Release or defeat the wraiths in the churchyard',
+
+  'quest.m04.o3': 'Beat four blighted soldiers (Spare them if they yield)',
+  'quest.m04.sergeant': 'Face the toll-sergeant on the bridge',
+  'quest.m04.ledger': 'Search the toll box',
+  'quest.m04.shown': 'Show Sir Gaut the ledger',
+  'quest.m04.wagons': 'Break the chains on the stranded wagons',
+  'quest.m04.carters': 'Hear out the other carters',
+
+  'quest.r01.shawl': 'Look at the scrap on the west fence',
+  'quest.r01.root': 'Drive off what woke under the field',
+  'quest.r01.aftermath': 'Set the field right',
+
+  'quest.prompt.read': '{key} Read',
+  'quest.prompt.study': '{key} Study',
+  'quest.prompt.rubble': '{key} Clear the thatch',
+  'quest.prompt.commonHearth': '{key} Set the hearth-stone',
+  'quest.prompt.candle': '{key} Take the candle',
+  'quest.prompt.wagon': '{key} Break the chain',
+  'quest.prompt.stake': '{key} Plant a stake',
+  'quest.prompt.bucket': '{key} Carry the bucket',
+
+
+  'codex.lore.disgrace.name': 'The Squire\'s Disgrace',
+  'codex.lore.disgrace.body': 'Two winters ago the Regent\'s reeve ordered Kettlewick\'s granary burned for withheld tax. The squire Brannoc refused before witnesses and was stripped of rank and badge. The granary still stands.',
+  'codex.lore.regent-order.name': 'The Regent\'s Order',
+  'codex.lore.regent-order.body': 'A notice by Reeve Holt, still nailed by the granary door: the store to be burned before the village. Nobody has had the heart to take it down, or the nerve.',
+  'codex.lore.wulfric.name': 'Brother Wulfric',
+  'codex.lore.wulfric.body': 'A Hearthkeeper who carried the Kindling Ember for forty years. It left him scarred. His stone warns that the fire remembers those who do not respect it.',
+  'codex.lore.hearthkeepers.name': 'The Hearthkeepers',
+  'codex.lore.hearthkeepers.body': 'The chapel\'s keepers record every knighting with the same line: the Ember came warm from the Forge. Today\'s line stops half written.',
+  'codex.lore.toll-ledger.name': 'The Toll Ledger',
+  'codex.lore.toll-ledger.body': 'Every toll at Hollin Ford was written twice, once for the reeve and once for "the Crucible". A sealed cart from Cinderreach was sent east in a hurry.',
+  'codex.lore.mourning-box.name': 'The Mourning Box',
+  'codex.lore.mourning-box.body': 'Wynn dressed her scarecrows from the village mourning box. Ash remembers the dead, and the clothes of the dead gave it something to hold.',
+};
