@@ -9,6 +9,7 @@ import { validateQuest } from '../validate';
 import { validateDialogue } from '../../dialogue/validate';
 import { M06_BRIBE_GOLD, M06_TIP_GOLD, R03_COIN_GOLD } from './gold';
 import { QUEST_PROPS, INTERACT_FLAGS } from './props';
+import { OBJECTIVE_FLAGS } from './objectiveFlags';
 import { FAVOUR_START, CREATURE_MERCY_CAP, bandFor } from '../../state/favour';
 import { DialogueRunner } from '../../dialogue/DialogueRunner';
 import { QuestManager } from '../QuestManager';
@@ -75,12 +76,18 @@ describe('Harrowmark quest content', () => {
       expect(w.key, `${w.where} writes ${w.key}`).toMatch(OWNED);
     }
     expect(writers('story.m06.started')).toEqual(['m06.onStart']);
-    expect(writers('story.m08.keepOpen')).toEqual(['m08.onStart']);
+    // density pass, batch 4: the Keep and the Counting-House open through the objective-flag bridge (the warden's pass,
+    // the clerk's key; src/quests/content/objectiveFlags.ts), and Gerta's hand-in writes the Ashmare before the ride
+    expect(writers('story.m08.keepOpen')).toEqual([]);
+    expect(OBJECTIVE_FLAGS.filter((r) => r.flag === 'story.m08.keepOpen')).toEqual([{ quest: 'm08', objective: 'pass', flag: 'story.m08.keepOpen' }]);
     expect(writers('story.m08.favourTab')).toEqual(['m08.onStart']);
-    expect(writers('story.m10.ashmare')).toEqual(['m10.onComplete']);
+    expect(writers('story.m10.ashmare')).toHaveLength(2);
+    expect(writers('story.m10.ashmare')).toContain('m10.onComplete');
     expect(writers('story.m07.classOpen')).toHaveLength(1);
-    expect(writers('story.m09.houseOpen')).toHaveLength(1);
-    expect(writers('story.d02.underwaysOpen')).toHaveLength(1);
+    expect(writers('story.m09.houseOpen')).toEqual([]);
+    expect(OBJECTIVE_FLAGS.filter((r) => r.flag === 'story.m09.houseOpen')).toEqual([{ quest: 'm09', objective: 'key', flag: 'story.m09.houseOpen' }]);
+    expect(writers('story.d02.underwaysOpen')).toEqual([]); // the objective-flag row on D02's `lesson` (density pass)
+    expect(OBJECTIVE_FLAGS.filter((r) => r.flag === 'story.d02.underwaysOpen')).toEqual([{ quest: 'd02', objective: 'lesson', flag: 'story.d02.underwaysOpen' }]);
     expect(writers('story.d02.campSeen')).toHaveLength(1);
     expect(writers('story.d02.campSeen')[0]).toMatch(/^scene-act1-camp\./);
     expect(writers('story.act1.campSeen')).toEqual([]);

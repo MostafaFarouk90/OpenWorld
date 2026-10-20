@@ -2,6 +2,7 @@
 import { questStringsHarrowmark } from './strings.harrowmark.en';
 import { questStringsDensityA } from './strings.density.en';
 import { questStringsDensityB } from './strings.density-b.en';
+import { questStringsDensityC } from './strings.density-c.en';
 
 export const questStrings: Record<string, string> = {
   ...questStringsHarrowmark,
@@ -83,4 +84,5 @@ export const questStrings: Record<string, string> = {
   // the density pass's lines last, so they replace the older ones
   ...questStringsDensityA,
   ...questStringsDensityB,
+  ...questStringsDensityC,
 };

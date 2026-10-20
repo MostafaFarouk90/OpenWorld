@@ -215,30 +215,42 @@ export const PHASE_B_PLAN: Record<PhaseBQuest, QuestPlan> = {
   m08: {
     design: 50,
     from: A('npc-post.whitlock'),
-    route: [A('npc-post.wystan'), A('harrowmark.keep-hall.door'), 'DOOR', A('harrowmark.keep-hall.door'), A('npc-post.wystan')],
-    beats: { interact: 2 },
-    note: 'the audience is dialogue (three questions); doors in and out',
+    route: [
+      A('npc-post.wystan'), A('npc-post.armourer'), A('npc-post.keep-guard'), A('harrowmark.keep-hall.door'), 'DOOR',
+      A('harrowmark.keep-hall.door'), A('npc-post.wystan'),
+    ],
+    beats: { interact: 2, note: 1 },
+    note: 'the fitting, the warden, Merrin and Grisel waiting, the audience (three questions and the king\'s own), the screen; doors in and out',
   },
   m09: {
     design: 55,
     from: A('npc-post.wystan'),
-    route: [A('npc-post.merrin'), A('harrowmark.counting-house.door'), 'DOOR', A('harrowmark.counting-house.door'), A('npc-post.merrin')],
-    beats: { stealthSection: 1, interact: 5 },
-    note: 'one stealth section, three invoices, two doors',
+    route: [
+      A('npc-post.merrin'), A('npc-post.clerk'), A('m09.clerk-key'), A('harrowmark.counting-house.door'), 'DOOR',
+      A('harrowmark.counting-house.door'), A('npc-post.clerk'), A('harrowmark.counting-house.door'),
+    ],
+    beats: { stealthSection: 1, interact: 9, note: 1 },
+    note: 'the clerk and his key, the day-book, one stealth section, three invoices and the strongbox, the key back, four doors (Merrin reports inside)',
   },
   m10: {
     design: 45,
     from: A('npc-post.merrin'),
-    route: [A('npc-post.gerta.guild'), A('chase.m10.0'), 'DOOR', A('chase.m10.15'), A('npc-post.gerta.guild')],
-    beats: { chase: 1 },
-    note: 'the chase line itself is the chase beat (no travel counted along it)',
+    route: [
+      A('npc-post.gerta.guild'), A('chase.m10.0'), 'DOOR', A('chase.m10.15'), A('m10.courier-orders'), A('spawn.m10.ambush-1'),
+      A('npc-post.gerta.guild'), A('npc-post.wace'), A('harrowmark.stables.yard'), T('trg.harrowmark.m10-ride'),
+    ],
+    beats: { chase: 1, note: 1, killUnit: 2 },
+    note: 'the chase line itself is the chase beat (no travel counted along it); the orders, Vey\'s two men, Wace, the first ride',
   },
   d02: {
     design: 60,
-    from: A('npc-post.gerta.guild'),
-    route: [A('npc-post.rook'), A('harrowmark.underways.door'), 'DOOR', A('harrowmark.underways.door'), A('npc-post.rook')],
-    beats: { interact: 2, killUnit: 4, boss: 1 },
-    note: 'kennels (4 of 6 hounds), Grimtooth; doors in and out',
+    from: T('trg.harrowmark.m10-ride'),
+    route: [
+      A('npc-post.rook'), A('spawn.d02.stray-1'), A('npc-post.rook'), A('harrowmark.underways.door'), 'DOOR',
+      A('harrowmark.underways.door'), A('npc-post.rook'),
+    ],
+    beats: { interact: 4, killUnit: 9, boss: 1, note: 2 },
+    note: 'two strays and Rook\'s word, kennels (4 of 6 hounds), the tally, two valves and three sluice hounds, Grimtooth, his den; doors in and out',
   },
 };
 

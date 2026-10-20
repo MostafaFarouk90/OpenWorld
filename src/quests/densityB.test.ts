@@ -43,7 +43,7 @@ describe('batch 3 objective flags', () => {
     expect(v.flags.get('story.m06.route')).toBe('bribe');
   });
 
-  it('M06: the refugees move inside only once Hild has heard the word', () => {
+  it('M06: the refugees move inside only once Tilda has heard the word', () => {
     const w = flagsWorld();
     w.manager.start('m06');
     for (const o of ['o1', 'queue', 'o2', 'brazier', 'proof']) w.manager.completeObjective('m06', o);

@@ -5,7 +5,7 @@ export const questStringsDensityB: Record<string, string> = {
   'quest.m06.queue': 'Ask the two in Rook\'s queue why they wait',
   'quest.m06.brazier': 'Hold the Heartshard to the gate brazier',
   'quest.m06.proof': 'Speak to Captain Rook at the gate brazier',
-  'quest.m06.word': 'Tell Hild in the queue that the brazier will judge them too',
+  'quest.m06.word': 'Tell Tilda in the queue that the brazier will judge them too',
   'quest.m06.anvil': 'Find the Tilted Anvil on Forge Row',
   'quest.prompt.shardBrazier': '{key} Hold the Heartshard to the brazier',
 

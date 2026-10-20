@@ -89,7 +89,7 @@ function setup() {
 }
 
 describe('Merrin and M09', () => {
-  it('offers M09 only after M08 and sets houseOpen on accept, not before', () => {
+  it('offers M09 only after M08; accepting starts it but leaves the door to the clerk\'s key (density pass)', () => {
     const s = setup();
     expect(s.first('npc-merrin', 'merrin')).toBe('idle');
     s.w.manager.complete('m08');
@@ -101,9 +101,10 @@ describe('Merrin and M09', () => {
     expect(s.dr.view()!.nodeId).toBe('m09-offer-2');
     expect(s.w.flags.get('story.m09.houseOpen')).toBeUndefined();
     s.dr.choose(1);
-    expect(s.dr.view()!.nodeId).toBe('m09-brief');
-    expect(s.w.flags.get('story.m09.houseOpen')).toBe(true);
-    s.dr.advance();
+    expect(s.dr.view()!.nodeId).toBe('m09-brief-key');
+    expect(s.w.flags.get('story.m09.houseOpen')).toBeUndefined();
+    for (let i = 0; i < 4; i++) s.dr.advance();
+    expect(s.dr.isOpen).toBe(false);
     expect(s.w.manager.state('m09')).toBe('active');
     expect(s.w.manager.objectiveDone('m09', 'o1')).toBe(true);
   });
@@ -113,13 +114,18 @@ describe('Merrin and M09', () => {
     s.progress('m09');
     expect(s.first('npc-merrin', 'merrin')).toBe('m09-brief');
     s.w.manager.completeObjective('m09', 'o1');
+    expect(s.first('npc-merrin', 'merrin')).toBe('m09-remind-key');
+    s.w.manager.completeObjective('m09', 'key');
     expect(s.first('npc-merrin', 'merrin')).toBe('m09-remind-enter');
     s.w.manager.completeObjective('m09', 'o2');
     expect(s.first('npc-merrin', 'merrin')).toBe('m09-remind-invoices');
+    s.w.manager.completeObjective('m09', 'daybook');
     s.w.manager.completeObjective('m09', 'o3');
     expect(s.first('npc-merrin', 'merrin')).toBe('m09-remind-exit');
     s.w.manager.completeObjective('m09', 'o4');
-    expect(s.play('npc-merrin', 'merrin')).toEqual(['m09-report', 'm09-report-2']);
+    expect(s.first('npc-merrin', 'merrin')).toBe('m09-remind-return');
+    s.w.manager.completeObjective('m09', 'return');
+    expect(s.play('npc-merrin', 'merrin')).toEqual(['m09-report', 'm09-report-2', 'm09-order', 'm09-order-2', 'm09-order-3', 'm09-order-4']);
     expect(s.w.manager.state('m09')).toBe('completed');
     expect(s.first('npc-merrin', 'merrin')).toBe('idle-after');
     expect(all['dialogue.npc-merrin.idle-after']).toMatch(/lockpicks/);
@@ -161,7 +167,17 @@ describe('Gerta and M10', () => {
     s.w.manager.completeObjective('m10', 'o2');
     expect(s.first('npc-gerta', 'gerta')).toBe('m10-retry');
     s.w.manager.completeObjective('m10', 'o3');
-    expect(s.play('npc-gerta', 'gerta')).toEqual(['m10-report', 'm10-report-2', 'm10-report-3']);
+    // the density pass: the orders, Vey's men, then the report sets the Ashmare before Wace and the ride
+    expect(s.first('npc-gerta', 'gerta')).toBe('m10-orders-remind');
+    s.w.manager.completeObjective('m10', 'orders');
+    expect(s.first('npc-gerta', 'gerta')).toBe('m10-ambush-remind');
+    s.w.manager.completeObjective('m10', 'ambush');
+    expect(s.w.flags.has('story.m10.ashmare')).toBe(false);
+    expect(s.play('npc-gerta', 'gerta')).toEqual(['m10-report', 'm10-report-2', 'm10-read', 'm10-read-2', 'm10-read-3', 'm10-read-4', 'm10-report-3']);
+    expect(s.w.manager.objectiveDone('m10', 'o4')).toBe(true);
+    expect(s.w.flags.get('story.m10.ashmare')).toBe(true);
+    expect(s.first('npc-gerta', 'gerta')).toBe('m10-wace-remind');
+    for (const o of ['wace', 'ride', 'gate']) s.w.manager.completeObjective('m10', o);
     expect(s.w.manager.state('m10')).toBe('completed');
     expect(all['dialogue.npc-gerta.idle-courier']).toMatch(/courier/);
   });

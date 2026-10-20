@@ -546,7 +546,8 @@ describe('density content tables', () => {
       expect(anchors.has(c.homeAnchor), c.homeAnchor).toBe(true);
       expect(triggers.has(c.destination), c.destination).toBe(true);
     }
-    for (const n of QUEST_NOTES) expect(anchors.has(n.anchorId), n.anchorId).toBe(true);
+    // Harrowmark's notes (batch 4) are checked in densityC.test.ts
+    for (const n of QUEST_NOTES.filter((x) => !/note-(m08|m09|m10|d02)-/.test(x.interactableId))) expect(anchors.has(n.anchorId), n.anchorId).toBe(true);
     const brightwaterProps = QUEST_PROPS.filter((p) => ['m02', 'm03', 'm04', 'r01', 'd01'].includes(p.objective[0]));
     for (const p of brightwaterProps) expect(anchors.has(p.anchorId), p.anchorId).toBe(true);
   });

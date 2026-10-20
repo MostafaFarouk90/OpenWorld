@@ -31,11 +31,18 @@ export const npcRook: DialogueDef = {
   id: 'npc-rook',
   start: [
     // D02 in progress
-    { when: { all: [active('d02'), done('d02', 'o4'), outcome('released')] }, node: 'd02-report-released' },
-    { when: { all: [active('d02'), done('d02', 'o4'), outcome('defeated')] }, node: 'd02-report-defeated' },
-    { when: { all: [active('d02'), done('d02', 'o3')] }, node: 'd02-grimtooth-remind' },
+    { when: { all: [active('d02'), done('d02', 'crates'), outcome('released')] }, node: 'd02-report-released' },
+    { when: { all: [active('d02'), done('d02', 'crates'), outcome('defeated')] }, node: 'd02-report-defeated' },
+    // density pass: the stray, the sluice and the den's crates
+    { when: { all: [active('d02'), done('d02', 'o4')] }, node: 'd02-crates-remind' },
+    { when: { all: [active('d02'), done('d02', 'sluice')] }, node: 'd02-grimtooth-remind' },
+    { when: { all: [active('d02'), done('d02', 'valves')] }, node: 'd02-sluice-remind' },
+    { when: { all: [active('d02'), done('d02', 'o3')] }, node: 'd02-valves-remind' },
     { when: { all: [active('d02'), done('d02', 'o2')] }, node: 'd02-hounds-remind' },
-    { when: active('d02'), node: 'd02-descend-remind' },
+    { when: { all: [active('d02'), done('d02', 'lesson')] }, node: 'd02-descend-remind' },
+    // his word on the strays
+    { when: { all: [active('d02'), done('d02', 'stray')] }, node: 'd02-lesson' },
+    { when: active('d02'), node: 'd02-stray-remind' },
 
     // D02 offer, or the first unfinished prerequisite
     {
@@ -139,18 +146,34 @@ export const npcRook: DialogueDef = {
           else: [{ give: [{ itemId: 'hearth-bread', count: 5 }] }, { setFlag: 'story.d02.breadGiven', value: true }],
         },
         { unlockMercy: 'calm' },
-        { setFlag: 'story.d02.underwaysOpen', value: true },
       ],
     }),
-    say('d02-calm-2'),
+    say('d02-calm-2', 'd02-stray'),
+    // density pass: Rook's lesson on a stray in the barracks yard before the Underways
+    say('d02-stray', 'd02-stray-2'),
+    { id: 'd02-stray-2', speaker: 'cael', textKey: P + 'd02-stray-2', next: 'd02-stray-3' },
+    say('d02-stray-3'),
+    say('d02-stray-remind'),
+    say('d02-lesson', 'd02-lesson-2'),
+    { id: 'd02-lesson-2', speaker: 'cael', textKey: P + 'd02-lesson-2', next: 'd02-lesson-3' },
+    say('d02-lesson-3', 'd02-lesson-4'),
+    { id: 'd02-lesson-4', speaker: 'cael', textKey: P + 'd02-lesson-4', next: 'd02-lesson-5' },
+    say('d02-lesson-5'),
+    say('d02-valves-remind'),
+    say('d02-sluice-remind'),
+    say('d02-crates-remind'),
     ...['r01', 'r02', 'm07', 'm08', 'm09', 'm10', 'r03', 'r04', 'early'].map((q) => say(`d02-locked-${q}`)),
     say('d02-descend-remind'),
     say('d02-hounds-remind'),
     say('d02-grimtooth-remind'),
     say('d02-report-released', 'd02-report-released-2'),
-    say('d02-report-released-2'),
+    say('d02-report-released-2', 'd02-crates'),
     say('d02-report-defeated', 'd02-report-defeated-2'),
-    say('d02-report-defeated-2'),
+    say('d02-report-defeated-2', 'd02-crates'),
+    // density pass: what Cael found in the den
+    { id: 'd02-crates', speaker: 'cael', textKey: P + 'd02-crates', next: 'd02-crates-2' },
+    say('d02-crates-2', 'd02-crates-3'),
+    say('d02-crates-3'),
 
     // ---- idles ----
     say('idle-stealth'),

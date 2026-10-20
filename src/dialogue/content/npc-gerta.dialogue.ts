@@ -10,7 +10,11 @@ export const npcGerta: DialogueDef = {
   start: [
     // M10 Smoke Over the Rooftops
     { when: { all: [{ quest: 'm09', state: 'completed' }, { quest: 'm10', state: 'inactive' }] }, node: 'm10-offer' },
-    { when: { all: [m10Active, done('m10', 'o3')] }, node: 'm10-report' },
+    // density pass: the orders, Vey's men, then Wace Carter and the first ride
+    { when: { all: [m10Active, done('m10', 'o4')] }, node: 'm10-wace-remind' },
+    { when: { all: [m10Active, done('m10', 'ambush')] }, node: 'm10-report' },
+    { when: { all: [m10Active, done('m10', 'orders')] }, node: 'm10-ambush-remind' },
+    { when: { all: [m10Active, done('m10', 'o3')] }, node: 'm10-orders-remind' },
     { when: { all: [m10Active, done('m10', 'o2')] }, node: 'm10-retry' },
     { when: m10Active, node: 'm10-go-again' },
 
@@ -42,8 +46,20 @@ export const npcGerta: DialogueDef = {
     { id: 'm10-go-again', speaker: 'gerta', textKey: P + 'm10-go-again', next: null },
     { id: 'm10-retry', speaker: 'gerta', textKey: P + 'm10-retry', next: null },
     { id: 'm10-report', speaker: 'gerta', textKey: P + 'm10-report', next: 'm10-report-2' },
-    { id: 'm10-report-2', speaker: 'gerta', textKey: P + 'm10-report-2', next: 'm10-report-3' },
-    { id: 'm10-report-3', speaker: 'gerta', textKey: P + 'm10-report-3', next: null },
+    { id: 'm10-report-2', speaker: 'gerta', textKey: P + 'm10-report-2', next: 'm10-read' },
+    // density pass: what the orders say, as much as Gerta tells
+    { id: 'm10-read', speaker: 'cael', textKey: P + 'm10-read', next: 'm10-read-2' },
+    { id: 'm10-read-2', speaker: 'gerta', textKey: P + 'm10-read-2', next: 'm10-read-3' },
+    { id: 'm10-read-3', speaker: 'cael', textKey: P + 'm10-read-3', next: 'm10-read-4' },
+    { id: 'm10-read-4', speaker: 'gerta', textKey: P + 'm10-read-4', next: 'm10-report-3' },
+    // the Ashmare is Cael's from here: she stands in the stables yard by the South Gate, where Wace Carter keeps her
+    {
+      id: 'm10-report-3', speaker: 'gerta', textKey: P + 'm10-report-3', next: null,
+      effects: [{ setFlag: 'story.m10.ashmare', value: true }],
+    },
+    { id: 'm10-orders-remind', speaker: 'gerta', textKey: P + 'm10-orders-remind', next: null },
+    { id: 'm10-ambush-remind', speaker: 'gerta', textKey: P + 'm10-ambush-remind', next: null },
+    { id: 'm10-wace-remind', speaker: 'gerta', textKey: P + 'm10-wace-remind', next: null },
 
     { id: 'trainer-closed', speaker: 'gerta', textKey: P + 'trainer-closed', next: null },
     { id: 'trainer-open', speaker: 'gerta', textKey: P + 'trainer-open', next: 'trainer-open-2' },

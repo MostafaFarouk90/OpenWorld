@@ -87,6 +87,10 @@ export const COUNTING_HOUSE_DEF: InteriorDef = {
     { id: 'm09.invoice-2', x: 12.25, z: -17.5, yaw: 90 },
     { id: 'm09.invoice-3', x: 9.5, z: -19.25, yaw: 180 },
     { id: 'npc-post.merrin.inside', x: -3.25, z: -2.25, facing: { x: 0, z: 2 } },
+    // Act 1 density pass, batch 4 (quests thread; additive): the Regent's day-book on the entry cabinet and his strongbox
+    // in the office corner (M09)
+    { id: 'm09.daybook', x: 4.4, z: -1.5, yaw: 90 },
+    { id: 'm09.strongbox', x: 12, z: -19.5, yaw: 90 },
   ],
   triggers: [],
   doors: [

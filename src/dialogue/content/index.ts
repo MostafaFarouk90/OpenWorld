@@ -27,6 +27,7 @@ import { npcRefugee1, npcRefugee2 } from './npc-refugees.dialogue';
 import { npcStallholder1, npcStallholder2 } from './npc-stallholders.dialogue';
 import { npcGuildDoorman, npcPellam } from './npc-guild-r03.dialogue';
 import { npcCrabbe, npcFence, npcSexton } from './npc-r04-witnesses.dialogue';
+import { npcArmourer, npcClerk, npcGrisel, npcKeepGuard, npcWace } from './npc-court.dialogue';
 
 export const dialogueDefs: DialogueDef[] = [
   npcStane, npcEdda, npcGaut, npcHob, npcAelfreda, npcWynn, npcTobb, npcCarter1, npcCarter2, t04Vow,
@@ -34,4 +35,6 @@ export const dialogueDefs: DialogueDef[] = [
   npcCarter3, npcAldwin, npcGarrick, ...NOTE_DIALOGUES,
   // Act 1 density pass, batch 3 (Harrowmark part 1)
   npcRefugee1, npcRefugee2, npcStallholder1, npcStallholder2, npcGuildDoorman, npcPellam, npcSexton, npcFence, npcCrabbe,
+  // batch 4 (Harrowmark part 2)
+  npcArmourer, npcKeepGuard, npcGrisel, npcClerk, npcWace,
 ];

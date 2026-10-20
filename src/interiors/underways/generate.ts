@@ -313,6 +313,17 @@ export function generateUnderways(seed: number = UNDERWAYS_SEED): InteriorDef {
       { id: 'harrowmark.underways.entry', x: 0, z: 0.5, yaw: 180 },
       { id: 'harrowmark.underways.exit', x: 0, z: -3, yaw: 0 },
       ...kennelAnchors,
+      // Act 1 density pass, batch 4 (quests thread; additive): the two sluice valves in the last cell before the arena,
+      // a smelter hand's tally chalked on the same cell's wall, the hounds the drained tunnel lets through (one cell back),
+      // and the Gaffer's crates in the arena's far corner.
+      { id: 'd02.valve-1', x: hook.x - 1.4, z: hook.z - 1.4, facing: hook },
+      { id: 'd02.valve-2', x: hook.x + 1.4, z: hook.z + 1.4, facing: hook },
+      { id: 'd02.tally', x: hook.x + 1.4, z: hook.z - 1.4, facing: hook },
+      ...[[-1, 0], [1, 0], [0, 1]].map(([dx, dz], j) => {
+        const back = centre(plan.mainPath[plan.mainPath.length - 2]!);
+        return { id: `underways.spawn.sluice-${j + 1}`, x: back.x + dx!, z: back.z + dz!, facing: hook };
+      }),
+      { id: 'd02.den-crates', x: bc.x + 9, z: bc.z + 9, facing: arenaCentre },
       { id: 'underways.arena.door', x: hook.x, z: hook.z, facing: arenaCentre },
       { id: 'underways.arena.centre', ...arenaCentre, facing: { x: edge.x, z: edge.z } },
       ...[
