@@ -90,6 +90,7 @@ describe('harrowmark plugin', () => {
     expect(svc.southGate.state()).toBe('closed');
     expect(portcullis()).toBe(0);
     fc.ctx.state.setFlag('story.m06.started', true);
+    fc.ctx.state.setFlag('story.m06.queueHeard', true); // the queue heard (batch 3 density pass)
     expect(svc.southGate.state()).toBe('guarded');
     expect(portcullis()).toBe(1);
     fc.ctx.state.setFlag('story.m06.route', 'stealth');
@@ -101,6 +102,7 @@ describe('harrowmark plugin', () => {
   it('re-derives the gate and the world change from a loaded save', () => {
     const { fc, plugin } = setup();
     fc.flags.set('story.m06.started', true);
+    fc.flags.set('story.m06.queueHeard', true);
     fc.flags.set('story.gate.a2', true);
     plugin.setup(fc.ctx);
     const svc = fc.services.get('harrowmark') as HarrowmarkService;

@@ -62,6 +62,7 @@ describe('crowds plugin', () => {
     frame(0.2);
     expect(svc().density().guarded).toBe(false);
     fc.ctx.state.setFlag('story.m06.started', true);
+    fc.ctx.state.setFlag('story.m06.queueHeard', true); // the queue heard (batch 3 density pass)
     frame(0.2);
     expect(svc().density().guarded).toBe(true);
     fc.ctx.state.setFlag('story.m06.route', 'bribe');
@@ -73,6 +74,7 @@ describe('crowds plugin', () => {
   it('reads a guarded gate from a loaded save without a full-density frame first', () => {
     const { fc, plugin, frame, at, svc } = setup();
     fc.flags.set('story.m06.started', true);
+    fc.flags.set('story.m06.queueHeard', true);
     plugin.setup(fc.ctx);
     at(8490, 2000);
     frame();

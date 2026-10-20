@@ -3,6 +3,9 @@ import { npcRook } from './npc-rook.dialogue';
 import { npcAldith } from './npc-aldith.dialogue';
 import { npcWystan } from './npc-wystan.dialogue';
 import { npcEdric } from './npc-edric.dialogue';
+import { npcFence } from './npc-r04-witnesses.dialogue';
+import { dialogueStringsDensityB } from '../strings.density-b.en';
+import { R04_FENCE_GOLD } from '../../quests/content/gold';
 import { dialogueStringsHmA } from '../strings.hm-a.en';
 import { dialogueStrings, npcNameFallbackStrings } from '../strings.en';
 import { questStrings } from '../../quests/strings.en';
@@ -17,7 +20,7 @@ import type { InventoryPort, StatePort, StringsPort } from '../../quests/ports';
 import type { FavourBand, FavourTrack } from '../../quests/types';
 
 const defs = [npcRook, npcAldith, npcWystan, npcEdric];
-const all: Record<string, string> = { ...questStrings, ...dialogueStrings, ...npcNameFallbackStrings, ...dialogueStringsHmA };
+const all: Record<string, string> = { ...questStrings, ...dialogueStrings, ...npcNameFallbackStrings, ...dialogueStringsHmA, ...dialogueStringsDensityB };
 const hasKey = (k: string) => k in all;
 
 describe('Harrowmark A dialogue content', () => {
@@ -535,5 +538,38 @@ describe('Edric and the Regent', () => {
     }
     const q3 = npcEdric.nodes.find((x) => x.id === 'q3')!;
     expect(q3.choices!.map((c) => /"story.m08.stance","value":"(\w+)"/.exec(JSON.stringify(c.effects))![1])).toEqual(['meek', 'steady', 'bold']);
+  });
+});
+
+describe('Mother Quill: the third R04 page (density pass)', () => {
+  const at = (gold: number, metGerta = false) => {
+    const w = stageWorld({ gold });
+    w.dr.register(npcFence);
+    if (metGerta) w.finish('m10');
+    w.stage('r04', 'o1');
+    return w;
+  };
+
+  it('sells it at 20 gold; Gerta\'s name only once she is met; Whitlock\'s name only when the purse is short', () => {
+    expect(choicesAt(at(R04_FENCE_GOLD), 'npc-fence', 'fence', 'offer-2')).toEqual(['pay', 'leave']);
+    expect(choicesAt(at(R04_FENCE_GOLD, true), 'npc-fence', 'fence', 'offer-2')).toEqual(['pay', 'gerta', 'leave']);
+    expect(choicesAt(at(R04_FENCE_GOLD - 1), 'npc-fence', 'fence', 'offer-2')).toEqual(['whitlock', 'leave']);
+  });
+
+  it('paying spends the gold and hands over the page; leaving hands over nothing', () => {
+    const w = at(R04_FENCE_GOLD + 5);
+    expect(play(w, 'npc-fence', 'fence', 'pay')).toEqual(['offer', 'offer-2', 'paid']);
+    expect(w.gold.n).toBe(5);
+    expect(w.flags.get('story.r04.fence')).toBe('paid');
+    expect(w.flags.get('story.r04.page.3')).toBe(true);
+    expect(w.manager.objectiveDone('r04', 'page3')).toBe(true);
+    expect(first(w, 'npc-fence', 'fence')).toBe('after');
+    const v = at(0);
+    play(v, 'npc-fence', 'fence', 'leave');
+    expect(v.manager.objectiveDone('r04', 'page3')).toBe(false);
+    expect(play(v, 'npc-fence', 'fence', 'whitlock').at(-1)).toBe('whitlock');
+    expect(v.flags.get('story.r04.fence')).toBe('whitlock');
+    expect(v.manager.objectiveDone('r04', 'page3')).toBe(true);
+    expect(v.gold.n).toBe(0);
   });
 });

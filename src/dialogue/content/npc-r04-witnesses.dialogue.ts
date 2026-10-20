@@ -38,7 +38,10 @@ export const npcSexton: DialogueDef = {
 const Q = 'dialogue.npc-fence.';
 const quill = line(Q, 'fence');
 
-/** R04 (density pass): Mother Quill sells the third page for 20 gold, or gives it to a friend of Gerta's. */
+/**
+ * R04 (density pass): Mother Quill sells the third page for 20 gold, gives it to a friend of Gerta's (once Cael has met
+ * her), or, to a Cael who cannot pay, for Whitlock's sake.
+ */
 export const npcFence: DialogueDef = {
   id: 'npc-fence',
   start: [
@@ -56,12 +59,22 @@ export const npcFence: DialogueDef = {
           effects: [{ spendGold: { amount: R04_FENCE_GOLD, reason: 'script' } }, { setFlag: 'story.r04.fence', value: 'paid' }, ...page(3)],
           next: 'paid',
         },
-        { id: 'gerta', textKey: Q + 'offer-2.gerta', effects: [{ setFlag: 'story.r04.fence', value: 'gerta' }, ...page(3)], next: 'gerta' },
+        // Gerta's name only once Cael has met her (M10); Whitlock's name when the purse is short, so the page is never
+        // out of reach
+        {
+          id: 'gerta', textKey: Q + 'offer-2.gerta', when: { any: [{ quest: 'm10', state: 'active' }, { quest: 'm10', state: 'completed' }] },
+          effects: [{ setFlag: 'story.r04.fence', value: 'gerta' }, ...page(3)], next: 'gerta',
+        },
+        {
+          id: 'whitlock', textKey: Q + 'offer-2.whitlock', when: { not: { gold: { atLeast: R04_FENCE_GOLD } } },
+          effects: [{ setFlag: 'story.r04.fence', value: 'whitlock' }, ...page(3)], next: 'whitlock',
+        },
         { id: 'leave', textKey: Q + 'offer-2.leave', next: 'leave' },
       ],
     },
     quill('paid'),
     quill('gerta'),
+    quill('whitlock'),
     quill('leave'),
     quill('after'),
     quill('idle'),

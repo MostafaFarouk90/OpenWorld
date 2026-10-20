@@ -5,6 +5,11 @@ export type GateState = 'closed' | 'guarded' | 'open';
 
 /** Written by thread 6 at M06's start and when o2 resolves by any route. */
 export const M06_STARTED_FLAG = 'story.m06.started';
+/**
+ * Raises the portcullis under guard (the density pass, batch 3): set once Cael has heard the queue (M06 `queue`, by
+ * the quests' objective-flag bridge), so the gate stays shut until the route is chosen.
+ */
+export const M06_GUARDED_FLAG = 'story.m06.queueHeard';
 export const M06_ROUTE_FLAG = 'story.m06.route';
 
 export const gateStateFor = (started: boolean, route: boolean): GateState => (route ? 'open' : started ? 'guarded' : 'closed');
@@ -33,7 +38,7 @@ export function watchSouthGate(gates: Pick<FlagGates, 'flag'>, apply: (state: Ga
     apply(s);
   };
   const offs = [
-    gates.flag(M06_STARTED_FLAG, (on) => {
+    gates.flag(M06_GUARDED_FLAG, (on) => {
       started = on;
       push();
     }),

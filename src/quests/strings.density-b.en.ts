@@ -21,7 +21,7 @@ export const questStringsDensityB: Record<string, string> = {
 
   'quest.r03.summary': 'Jory Pellam owes the Tilted Anvil, and his men took Aldith\'s brewing copper. Get it back, and decide what the debt is worth.',
   'quest.r03.doorman': 'Have a word with the Guildhall doorman',
-  'quest.r03.o2': 'Beat Pellam\'s thugs at the old stable',
+  'quest.r03.o2': 'Beat Pellam\'s thugs at the Guildhall',
   'quest.r03.pellam': 'Hear Jory Pellam out',
   'quest.r03.snatch': 'Keep the copper from Pellam\'s men',
 

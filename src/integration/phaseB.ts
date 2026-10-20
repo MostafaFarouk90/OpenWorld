@@ -169,6 +169,7 @@ export async function playM06(h: ChapterHarness, t: QuestTrail, route: GateRoute
   }
   await talkTo(h, t, 'rook', [1]);
   ensure(q.state('m06') !== 'inactive' && objectiveDone(h, 'm06', 'o1'), `M06 offered and o1 credited: ${describeQuest(h, 'm06')}`);
+  ensure(gate() === 'closed', `the gate stays shut while Cael hears the queue (${gate()})`);
   // the density pass: Rook sends Cael down the queue first (two refugees), then asks how Cael means to pass
   await talkTo(h, t, 'refugee-1');
   await talkTo(h, t, 'refugee-2');
@@ -288,9 +289,10 @@ export async function playR04(h: ChapterHarness, t: QuestTrail, steward: PhaseBO
   await leaveInterior(h);
   await talkTo(h, t, 'sexton');
   ensure(objectiveDone(h, 'r04', 'page2'), `the sexton's page (${describeQuest(h, 'r04')})`);
-  // Mother Quill: pay (shown at 20+ gold), Gerta's name, or leave; the harness gives Gerta's name
-  await talkTo(h, t, 'fence', [gold(h) >= R04_FENCE_GOLD ? 2 : 1]);
-  ensure(objectiveDone(h, 'r04', 'page3') && h.ctx.state.getFlag('story.r04.fence') === 'gerta', `the fence's page (${describeQuest(h, 'r04')})`);
+  // Mother Quill: pay (shown at 20+ gold), Gerta's name (after M10, not yet met here), Whitlock's name (under 20 gold)
+  const canPay = gold(h) >= R04_FENCE_GOLD;
+  await talkTo(h, t, 'fence', [1]);
+  ensure(objectiveDone(h, 'r04', 'page3') && h.ctx.state.getFlag('story.r04.fence') === (canPay ? 'paid' : 'whitlock'), `the fence's page (${describeQuest(h, 'r04')})`);
   ensure(objectiveDone(h, 'r04', 'o2'), `o2 three pages (${describeQuest(h, 'r04')})`);
   await h.runAsync(10);
   await talkTo(h, t, 'crabbe');

@@ -26,6 +26,8 @@ export const OBJECTIVE_FLAGS: ObjectiveFlag[] = [
   { quest: 'r01', objective: 'o2', flag: 'story.r01.rootWoke' },
 
   // ---- batch 3: Harrowmark part 1 ----
+  // the portcullis rises under guard once Cael has heard the queue (src/harrowmark/gate.ts M06_GUARDED_FLAG)
+  { quest: 'm06', objective: 'queue', flag: 'story.m06.queueHeard' },
   // Through the gate by any route: the stealth section writes the route here (a bribe or an argument already wrote
   // theirs), which opens the gate while Rook waits at the brazier inside.
   { quest: 'm06', objective: 'o2', flag: 'story.m06.route', value: 'stealth' },

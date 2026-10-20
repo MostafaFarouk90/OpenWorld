@@ -141,7 +141,7 @@ export const dialogueStrings: Record<string, string> = {
   'dialogue.npc-stane.r02-tip-open': 'Watch the dummy, {name}. When its guard drops, that is your moment. Three clean hits.',
   'dialogue.npc-stane.r02-tip-parry': 'Hold block as its swing lands and the parry will come. Three of them, and do not flinch.',
   'dialogue.npc-stane.r02-tip-guard': 'Now break two guards. A few heavy blows against a raised guard will crack it open.',
-  'dialogue.npc-stane.r02-done': 'Hit, parry, break, and three veterans yielded in one afternoon. I could not have asked for more.',
+  'dialogue.npc-stane.r02-done': 'Hit, parry, break, and three veterans beaten in one afternoon. I could not have asked for more.',
   'dialogue.npc-stane.r02-done-2': 'Take these weights. Wear them on the road and your arms will thank you later.',
   'dialogue.npc-stane.idle-after': 'The Yard is yours any time, {name}. When you reach Harrowmark, look for me at the Bastion. I will have a new set of dummies.',
 

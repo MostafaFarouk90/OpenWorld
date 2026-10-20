@@ -109,10 +109,13 @@ describe('batch 3 gates and spawns', () => {
   const by = (id: string) => [...DENSITY_SPAWNERS_A, ...HARROWMARK_SPAWNERS].find((s) => s.id === id)!;
 
   it('each R02 bout has a spawner per site, live only once Stane calls it there', () => {
-    for (const site of ['yard', 'bastion']) {
-      expect(by(`density.r02.bout-${site}`)).toMatchObject({ tag: 'r02.bout', enemy: 'yard-veteran', count: 1, respawn: 'never', activation: { quest: 'r02', flag: `story.r02.bout.${site}` } });
-      expect(by(`density.r02.pair-${site}`)).toMatchObject({ tag: 'r02.pair', enemy: 'yard-veteran', count: 2, respawn: 'never', activation: { quest: 'r02', flag: `story.r02.pair.${site}` } });
+    for (const bout of ['bout', 'pair']) {
+      // a bout called in the Practice Yard is called off when M06 starts (Stane calls it again in the Bastion)
+      expect(by(`density.r02.${bout}-yard`)).toMatchObject({ tag: `r02.${bout}`, enemy: 'yard-veteran', respawn: 'never', activation: { flag: `story.r02.${bout}.yard`, until: R02_AT_BASTION } });
+      expect(by(`density.r02.${bout}-bastion`)).toMatchObject({ tag: `r02.${bout}`, enemy: 'yard-veteran', respawn: 'never', activation: { quest: 'r02', flag: `story.r02.${bout}.bastion` } });
     }
+    expect(by('density.r02.bout-yard').count).toBe(1);
+    expect(by('density.r02.pair-bastion').count).toBe(2);
     expect(r02.objectives.find((o) => o.id === 'bout')).toMatchObject({ type: 'kill', target: 'yard-veteran', spawnTag: 'r02.bout' });
     expect(r02.objectives.find((o) => o.id === 'pair')).toMatchObject({ type: 'kill', target: 'yard-veteran', required: 2, spawnTag: 'r02.pair' });
   });

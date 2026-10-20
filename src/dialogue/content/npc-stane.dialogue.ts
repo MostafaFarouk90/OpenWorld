@@ -34,6 +34,7 @@ export const npcStane: DialogueDef = {
     { when: r02Active, node: 'r02-tip-open' },
     { when: classOpen, node: 'trainer-open' },
     { when: { all: [m07Seen, { not: classOpen }] }, node: 'trainer-closed' },
+    { when: { all: [{ quest: 'r02', state: 'completed' }, atBastion] }, node: 'idle-bastion' },
     { when: { quest: 'r02', state: 'completed' }, node: 'idle-after' },
     { when: { all: [] }, node: 'idle' },
   ],
@@ -85,6 +86,7 @@ export const npcStane: DialogueDef = {
       ],
     },
     { id: 'idle-after', speaker: 'stane', textKey: P + 'idle-after', next: null },
+    { id: 'idle-bastion', speaker: 'stane', textKey: P + 'idle-bastion', next: null },
 
     { id: 'idle', speaker: 'stane', textKey: P + 'idle', next: null },
   ],
