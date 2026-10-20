@@ -70,6 +70,9 @@ describe('grass on the real core', () => {
     ['the mill', -45, 165],
     ['Hollin Ford', -420, -150],
     ['the river', -100, -300],
+    ['the fog wall', 1100, -150],
+    ['the Dead Road east', 2250, 330],
+    ['the farm ring', 6825, 780],
   ])('no tuft near %s stands on a road, in water, in a footprint or under a collider', async (_label, x, z) => {
     await game.loadPlugins(modules);
     physics.step();

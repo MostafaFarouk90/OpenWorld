@@ -3,9 +3,12 @@ import * as THREE from 'three';
 import { heightAt } from '../terrain/heightfield';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
 import { DEADROAD_LAYOUT } from './deadroad.layout';
-import { cellTufts, distanceToPolyline, GRASS, GRASS_MAX_INSTANCES, GRASS_MAX_TRIANGLES, GRASS_TRIANGLES_PER_TUFT, GrassField, groundUp, tuftGeometry } from './grass';
+import { tuftColor, cellTufts, distanceToPolyline, GRASS, GRASS_MAX_INSTANCES, GRASS_MAX_TRIANGLES, GRASS_TRIANGLES_PER_TUFT, GrassField, groundUp, tuftGeometry } from './grass';
 import { pointInFootprint } from './geometry';
-import { GRASS_DENSITY, grassAcceptFor, grassEnabled, staticColliderAt } from './region.plugin';
+import { CITY_NO_GRASS_RADIUS, GRASS_DENSITY, grassAcceptFor, grassEnabled, staticColliderAt } from './region.plugin';
+import { CENTER } from '../harrowmark/city';
+import { HARROWMARK_LAYOUT } from '../harrowmark/harrowmark.layout';
+import { surfaceColor } from '../terrain/chunkGeometry';
 import { RIVER_WIDTH } from './water';
 
 const flat = () => 0;
@@ -67,9 +70,9 @@ describe('groundUp and distanceToPolyline', () => {
 });
 
 describe('tuftGeometry and the budget', () => {
-  it('pins the cap: one mesh of at most 5,000 tufts and 30,000 triangles', () => {
-    expect(GRASS_MAX_INSTANCES).toBe(4840);
-    expect(GRASS_MAX_TRIANGLES).toBeLessThanOrEqual(30_000);
+  it('pins the cap: one mesh of at most 7,000 tufts and 41,000 triangles, wherever the player is', () => {
+    expect(GRASS_MAX_INSTANCES).toBe(6776);
+    expect(GRASS_MAX_TRIANGLES).toBeLessThanOrEqual(41_000);
     const f = new GrassField(() => 0, () => true, 1, Infinity);
     f.update(0, 0, 0);
     const meshes: THREE.InstancedMesh[] = [];
@@ -173,16 +176,17 @@ describe('GrassField', () => {
     let calls = 0;
     const f = new GrassField(flat, () => (calls++, true), 1, 3);
     expect(f.update(1, 0, 1)).toBe(true);
-    expect(calls).toBe(3 * GRASS.perCell);
+    // The first frame is an arrival (the 3 x 3), every later frame scatters three.
+    expect(calls).toBe(9 * GRASS.perCell);
     expect(f.complete).toBe(false);
-    // The first cells are the player's own and its neighbours, so grass appears at their feet first.
+    // The first cells are the player's own and its eight neighbours, so grass appears at their feet first.
     const mesh = f.object.getObjectByName('grass-instances') as THREE.InstancedMesh;
     const m = new THREE.Matrix4();
     const p = new THREE.Vector3();
     for (let i = 0; i < mesh.count; i++) {
       mesh.getMatrixAt(i, m);
       p.setFromMatrixPosition(m);
-      expect(Math.hypot(p.x - 4, p.z - 4)).toBeLessThan(2 * GRASS.cellSize);
+      expect(Math.hypot(p.x - 4, p.z - 4)).toBeLessThanOrEqual(1.5 * GRASS.cellSize * Math.SQRT2);
     }
     const cells = (2 * GRASS.radiusCells + 1) ** 2;
     let frames = 1;
@@ -190,8 +194,22 @@ describe('GrassField', () => {
       f.update(1, 0, 1);
       frames++;
     }
-    expect(frames).toBe(Math.ceil(cells / 3));
+    expect(frames).toBe(1 + Math.ceil((cells - 9) / 3));
     expect(f.update(1, 0, 1)).toBe(false);
+    f.dispose();
+  });
+
+  it('grows the 3 x 3 cells under the player at once after an arrival (a jump of more than one cell)', () => {
+    let calls = 0;
+    const f = new GrassField(flat, () => (calls++, true), 1, 3);
+    f.update(1, 0, 1);
+    expect(calls).toBe(9 * GRASS.perCell);
+    calls = 0;
+    f.update(1 + GRASS.cellSize, 0, 1);
+    expect(calls).toBe(3 * GRASS.perCell);
+    calls = 0;
+    f.update(500, 0, 500);
+    expect(calls).toBe(9 * GRASS.perCell);
     f.dispose();
   });
 
@@ -285,3 +303,64 @@ describe('grassAcceptFor (the real layouts)', () => {
     expect(accept(8000, 2000)).toBe(false);
   });
 });
+
+describe('grass beyond Brightwater', () => {
+  const accept = grassAcceptFor([BRIGHTWATER_LAYOUT, DEADROAD_LAYOUT], heightAt);
+
+  it('grows along the Dead Road corridor and the fields outside Harrowmark (it had none before)', () => {
+    for (const [x, z] of [[2250, 330], [6000, 900], [7300, 2000]] as const) {
+      const f = new GrassField(heightAt, accept, 1, Infinity);
+      f.update(x, heightAt(x, z), z);
+      expect(f.count, `${x},${z}`).toBeGreaterThan(500);
+      f.dispose();
+    }
+  });
+
+  it('keeps out of the walled city and its streets, right up to the wall', () => {
+    expect(accept(CENTER.x, CENTER.z)).toBe(false);
+    expect(accept(CENTER.x + CITY_NO_GRASS_RADIUS - 1, CENTER.z)).toBe(false);
+    const f = new GrassField(heightAt, accept, 1, Infinity);
+    f.update(CENTER.x, heightAt(CENTER.x, CENTER.z), CENTER.z);
+    expect(f.count).toBe(0);
+    f.dispose();
+  });
+
+  it('keeps every Harrowmark structure inside the no-grass radius, and out of the corridor farm buildings', () => {
+    for (const st of HARROWMARK_LAYOUT.structures) expect(Math.hypot(st.x - CENTER.x, st.z - CENTER.z), st.id).toBeLessThan(CITY_NO_GRASS_RADIUS);
+    const east = DEADROAD_LAYOUT.structures.filter((st) => st.x > 5000);
+    expect(east.length).toBeGreaterThan(0);
+    for (const st of east) expect(accept(st.x, st.z), st.id).toBe(false);
+  });
+});
+
+describe('tuftColor', () => {
+  const ground = (h: number, up: number) => {
+    const c = new Float32Array(3);
+    surfaceColor(h, up, c, 0);
+    return c;
+  };
+
+  it('follows the ground it can stand on: green at 0 m, drier at 130 m, always lifted the same', () => {
+    for (const [h, up] of [[0, 1], [80, 0.95], [130, 0.9]] as const) {
+      const g = ground(h, up);
+      const t = tuftColor(h, up, 0.5);
+      for (let k = 0; k < 3; k++) expect(t[k] / g[k]).toBeCloseTo(1 + 0.35, 5);
+    }
+    const meadow = tuftColor(0, 1, 0);
+    expect(meadow[1]).toBeGreaterThan(meadow[0]);
+    const dry = tuftColor(130, 1, 0);
+    expect(dry[0] / dry[1]).toBeGreaterThan(meadow[0] / meadow[1]);
+  });
+
+  it('is lighter for a higher tone and never above 1', () => {
+    const lo = tuftColor(10, 1, 0);
+    const hi = tuftColor(10, 1, 1);
+    expect(hi[1]).toBeGreaterThan(lo[1]);
+    for (const v of tuftColor(300, 1, 1)) expect(v).toBeLessThanOrEqual(1);
+  });
+
+  it('stores the colour on every tuft', () => {
+    for (const t of cellTufts(2, 2, () => 5, () => true)) expect(t.color).toEqual(tuftColor(5, groundUp(() => 5, t.x, t.z), t.tone));
+  });
+});
+

@@ -26,6 +26,7 @@ import { buildStructures, coreFactories } from './StructureBuilder';
 import { createStructureArt } from './structureArt';
 import { REGION_STRINGS_EN } from './strings.en';
 import { validateLayout } from './validateLayout';
+import { CENTER as CITY_CENTER, MAX_STRUCTURE_RADIUS } from '../harrowmark/city';
 import { BROOK_COURSE, BROOK_WIDTH, RIVER_COURSE, RIVER_WIDTH } from './water';
 
 export interface RegionPluginOptions {
@@ -73,9 +74,13 @@ export function staticColliderAt(physics: RayQuery, x: number, ground: number, z
   return hit.point.y > ground + 0.1;
 }
 
+/** Inside this radius of Harrowmark's centre is the walled city: streets and yards, no grass. */
+export const CITY_NO_GRASS_RADIUS = MAX_STRUCTURE_RADIUS + 4;
+
 /**
- * Where grass may grow: Brightwater only (Harrowmark is streets and yards), never in the water, on the Dead Road or
- * the lane, inside a structure's footprint (a tuft would poke through a floor) or under any static collider.
+ * Where grass may grow: everywhere outside Harrowmark's walls (Brightwater, the Dead Road corridor and the farms around
+ * the city), never in the water, on the Dead Road or the lane, inside a structure's footprint (a tuft would poke
+ * through a floor) or under any static collider. (Every Harrowmark structure stands inside the wall's radius.)
  */
 export function grassAcceptFor(layouts: readonly LayoutData[], heightAt: (x: number, z: number) => number, physics?: RayQuery): GrassAccept {
   // A bounding radius per structure skips the rotated-footprint test for all but the few nearby.
@@ -87,7 +92,7 @@ export function grassAcceptFor(layouts: readonly LayoutData[], heightAt: (x: num
     [LANE_TRACK_DRAWN, LANE_WIDTH / 2 + 0.3],
   ];
   return (x, z) =>
-    regionAt(x, z)?.id === 'brightwater' &&
+    Math.hypot(x - CITY_CENTER.x, z - CITY_CENTER.z) > CITY_NO_GRASS_RADIUS &&
     !strips.some(([pts, half]) => distanceToPolyline(pts, x, z) < half) &&
     !structures.some(({ st, reach }) => Math.abs(x - st.x) <= reach && Math.abs(z - st.z) <= reach && pointInFootprint(st, x, z, 0.4)) &&
     !(physics && staticColliderAt(physics, x, heightAt(x, z), z));
