@@ -37,13 +37,26 @@ describe('R01 torch bridge', () => {
     expect(() => { w.bus.emit('scarecrow.cleared', undefined); w.bus.emit('scarecrow.cleared', { method: 'torch' }); }).not.toThrow();
     expect(warn).toHaveBeenCalled();
   });
-  it('R01 ends scorched after a mixed torch and Surge clear, saved after Surge only', () => {
-    for (const [methods, field] of [[['surge', 'torch', 'surge', 'surge', 'torch', 'surge'], 'scorched'], [['surge', 'surge', 'surge', 'surge', 'surge', 'surge'], 'saved']] as const) {
+  it('R01 follows the majority of the clears (a tie saves the field), then asks for the matching aftermath', () => {
+    const cases = [
+      [['torch', 'torch', 'surge', 'torch', 'torch', 'surge', 'torch', 'surge'], 'scorched'],
+      [['surge', 'surge', 'surge', 'surge', 'surge', 'surge', 'surge', 'torch'], 'saved'],
+      [['torch', 'surge', 'torch', 'surge', 'torch', 'surge', 'torch', 'surge'], 'saved'],
+    ] as const;
+    for (const [methods, field] of cases) {
       const w = makeWorld([r01]);
       installBridges(w.bus, w.state, w.manager);
       w.manager.start('r01');
       w.bus.emit('dialogue.ended', { npcId: 'wynn', reason: 'completed' });
+      w.bus.emit('dialogue.ended', { npcId: 'note-r01-shawl', reason: 'completed' });
       methods.forEach((m, i) => w.bus.emit('scarecrow.cleared', { method: m, scarecrowId: `s${i}`, actorId: `a${i}` }));
+      expect(w.flags.get('story.r01.scorched'), methods.join()).toBe(field === 'scorched');
+      for (const id of ['r1', 'r2', 'r3']) w.bus.emit('actor.died', { actorId: id, killerId: 'p', kind: 'ash-wraith', spawnTag: 'r01.root' });
+      expect(w.manager.isObjectiveCurrent('r01', 'aftermath')).toBe(true);
+      const aftermath = field === 'scorched' ? ['story.r01.bucket1.delivered', 'story.r01.bucket2.delivered'] : ['story.r01.stake.1', 'story.r01.stake.2', 'story.r01.stake.3'];
+      for (const k of aftermath) { w.flags.set(k, true); w.bus.emit('flag.changed', { key: k, value: true }); }
+      expect(w.flags.get('story.r01.aftermathDone')).toBe(true);
+      w.bus.emit('flag.changed', { key: 'story.r01.aftermathDone', value: true });
       w.bus.emit('dialogue.ended', { npcId: 'wynn', reason: 'completed' });
       expect(w.manager.state('r01')).toBe('completed');
       expect(w.flags.get('world.brightwater.barley')).toBe(field);
@@ -142,11 +155,11 @@ describe('quest posts', () => {
     w.manager.complete('m01');
     dir.markDirty();
     dir.update();
-    expect(w.npcs.placed).toEqual([['gaut', 'npc-post.gaut'], ['aelfreda', 'npc-post.aelfreda']]);
+    expect(w.npcs.placed).toEqual([['gaut', 'npc-post.gaut'], ['aelfreda', 'npc-post.aelfreda'], ['aldwin', 'npc-post.aldwin']]);
     // A load re-places them even at home (the tutorial may have put them back at the gate meanwhile).
     dir.reset();
     dir.update();
-    expect(w.npcs.placed.slice(2)).toEqual([['gaut', 'npc-post.gaut'], ['aelfreda', 'npc-post.aelfreda']]);
+    expect(w.npcs.placed.slice(3)).toEqual([['gaut', 'npc-post.gaut'], ['aelfreda', 'npc-post.aelfreda'], ['aldwin', 'npc-post.aldwin']]);
     w.manager.start('m04');
     dir.markDirty();
     dir.update();
@@ -186,7 +199,7 @@ describe('quest posts', () => {
   it('never puts Tobb in a rule', () => {
     expect(POST_RULES.map((r) => r.npcId)).not.toContain('tobb');
     const w = makeWorld();
-    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager }))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'gerta', 'edric', 'vey', 'merrin', 'pennard']);
+    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager }))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'gerta', 'edric', 'vey', 'merrin', 'pennard', 'edda', 'aldwin']);
   });
 });
 
@@ -361,7 +374,10 @@ describe('M05 and M03 gating (real defs)', () => {
     w.manager.start('m03');
     w.bus.emit('dialogue.ended', { npcId: 'aelfreda', reason: 'completed' });
     w.bus.emit('interact', { interactableId: 'use:shard-study' });
+    w.bus.emit('dialogue.ended', { npcId: 'note-m03-font', reason: 'completed' });
     w.flags.set('ability.surge-leap.learned', true);
+    w.bus.emit('dialogue.ended', { npcId: 'note-m03-ember', reason: 'completed' });
+    w.bus.emit('dialogue.ended', { npcId: 'note-m03-record', reason: 'completed' });
     w.bus.emit('dialogue.ended', { npcId: 'aelfreda', reason: 'completed' }); // no objective listens; o3 needs doneWhen on becoming current
     w.manager.load(w.manager.serialize());
     w.manager.recheck();
@@ -370,10 +386,15 @@ describe('M05 and M03 gating (real defs)', () => {
   it('M03 o6 counts a Release like a kill, once per wraith', () => {
     const w = makeWorld([m03]);
     w.manager.start('m03');
-    for (const o of ['o1', 'o2', 'o3', 'o4', 'o5']) w.manager.completeObjective('m03', o);
+    for (const o of ['o1', 'o2', 'study', 'o3', 'o4', 'candle', 'grave', 'o5']) w.manager.completeObjective('m03', o);
     w.bus.emit('mercy', { verb: 'release', creature: 'ash-wraith', actorId: 'w0', spawnTag: 'm01' }); // Kettlewick wraith
-    expect(w.manager.objectiveDone('m03', 'o6')).toBe(false);
+    expect(w.manager.objectives('m03').find((o) => o.def.id === 'o6')!.progress).toBe(0);
     w.bus.emit('mercy', { verb: 'release', creature: 'ash-wraith', actorId: 'w1', spawnTag: 'm03.churchyard' });
+    w.bus.emit('mercy', { verb: 'release', creature: 'ash-wraith', actorId: 'w1', spawnTag: 'm03.churchyard' }); // same wraith
+    w.bus.emit('actor.died', { actorId: 'w1', killerId: 'p', kind: 'ash-wraith', spawnTag: 'm03.churchyard' }); // and its death
+    expect(w.manager.objectives('m03').find((o) => o.def.id === 'o6')!.progress).toBe(1);
+    for (const id of ['w2', 'w3']) w.bus.emit('mercy', { verb: 'release', creature: 'ash-wraith', actorId: id, spawnTag: 'm03.churchyard' });
+    w.bus.emit('actor.died', { actorId: 'w4', killerId: 'p', kind: 'ash-wraith', spawnTag: 'm03.churchyard' });
     expect(w.manager.objectiveDone('m03', 'o6')).toBe(true);
     expect(w.manager.state('m03')).toBe('active'); // o7 report remains
   });

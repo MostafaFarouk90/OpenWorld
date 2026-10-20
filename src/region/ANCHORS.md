@@ -155,6 +155,51 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | pile.deadroad.4 | 570 | -154 | 0 | 180 | pile |
 | pile.deadroad.5 | 690 | -154 | 0 | 180 | pile |
 | pile.deadroad.6 | 840 | -154 | 0 | 180 | pile |
+| m01.bucket-1 | 2.2 | 128.6 | 0 | 270 | carry |
+| m01.bucket-2 | 2.2 | 131.4 | 0 | 270 | carry |
+| kettlewick.fire-tavern-door | -17.4 | 135.2 | 0 | 270 | fx |
+| spawn.m01.mill-1 | -37 | 158 | 0 | 180 | spawn |
+| spawn.m01.mill-2 | -53 | 158 | 0 | 180 | spawn |
+| spawn.m01.mill-3 | -37 | 172 | 0 | 0 | spawn |
+| spawn.m01.mill-4 | -53 | 172 | 0 | 0 | spawn |
+| npc-post.aldwin | -38.6 | 165 | 0 | 270 | npc-post |
+| m01.miller.walk-off | 39 | 66 | 0 | 270 | poi |
+| m02.bucket-1 | -2.2 | 128.6 | 0 | 90 | carry |
+| m02.bucket-2 | -2.2 | 131.4 | 0 | 90 | carry |
+| kettlewick.fire-bakery-door | 18.4 | 135.4 | 0 | 90 | fx |
+| m02.rubble-1 | 22.6 | 130.2 | 0 | 180 | interact |
+| m02.rubble-2 | 21 | 131.4 | 0 | 180 | interact |
+| spawn.m02.oven-1 | 32 | 128 | 0 | 90 | spawn |
+| spawn.m02.oven-2 | 32 | 136 | 0 | 90 | spawn |
+| spawn.m02.oven-3 | 34 | 132 | 0 | 90 | spawn |
+| m02.badge | 20.6 | 135.6 | 0 | 270 | interact |
+| npc-post.edda.granary | -36.4 | 145 | 0 | 90 | npc-post |
+| npc-post.garrick | -36.6 | 149 | 0 | 90 | npc-post |
+| m02.order-board | -36.8 | 141.6 | 0 | 90 | interact |
+| m02.common-hearth | -11.5 | 127 | 0 | 180 | interact |
+| chapel.font | 48.4 | 56.6 | 0 | 270 | interact |
+| chapel.ember-study | 55.4 | 61.8 | 0 | 270 | interact |
+| chapel.record | 48.4 | 66 | 0 | 270 | interact |
+| m03.candle | 73.2 | 89.2 | 2 | 0 | poi, leap-gated |
+| m03.grave-wulfric | 23.5 | 61 | 0 | 270 | interact |
+| spawn.ford.sergeant | -419 | -150 | 0 | 270 | spawn |
+| m04.toll-box | -411 | -153.4 | 0 | 90 | interact |
+| m04.wagon-1 | -439.4 | -143.6 | 0 | 180 | interact |
+| m04.wagon-2 | -447 | -131.4 | 0 | 180 | interact |
+| m04.wagon-3 | -435 | -129.4 | 0 | 180 | interact |
+| npc-post.carter-3 | -441 | -126.8 | 0 | 0 | npc-post |
+| r01.shawl | -7.2 | 30 | 0 | 90 | interact |
+| r01.scarecrow.7 | 14 | 20 | 0 | 180 | spawn, r01-scarecrow |
+| r01.scarecrow.8 | 28 | 32 | 0 | 180 | spawn, r01-scarecrow |
+| spawn.r01.root-1 | -30 | 20 | 0 | 180 | spawn |
+| spawn.r01.root-2 | -27 | 17 | 0 | 180 | spawn |
+| spawn.r01.root-3 | -33 | 17 | 0 | 180 | spawn |
+| r01.stake-1 | -20 | 40 | 0 | 180 | interact |
+| r01.stake-2 | -34 | 36 | 0 | 180 | interact |
+| r01.stake-3 | -14 | 31 | 0 | 180 | interact |
+| r01.fire-stubble | 30 | 38 | 0 | 180 | fx |
+| r01.bucket-1 | -6 | 48 | 0 | 270 | carry |
+| r01.bucket-2 | -6 | 50 | 0 | 270 | carry |
 
 ## Triggers
 
@@ -182,6 +227,10 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | trg.vault.door | sphere | 55.5 | 64.5 | r 2 |
 | trg.wardstones.road | box | 540 | -146 | half 260 x 40 x 20 |
 | trg.shrine.basin | sphere | 965 | -165 | r 10 |
+| m01.tavern-door | sphere | -15.5 | 133 | r 3 |
+| m02.bakery-door | sphere | 17.6 | 132.2 | r 1.5 |
+| m02.granary | sphere | -35.5 | 145 | r 4 |
+| r01.stubble | sphere | 30 | 38 | r 3 |
 
 ## Structures
 
@@ -233,3 +282,6 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | reed-island-wall-e | rock | 59.5 | -300 | 3 x 5 | solid |
 | waystone-hollin-ford | waystone | -398 | -138.2 | 1.6 x 1.6 | solid |
 | waystone-quenchstone | waystone | 965 | -160.2 | 1.6 x 1.6 | solid |
+| granary | house | -42 | 145 | 8 x 8 | solid |
+| ford-cart-2 | cart | -447 | -133 | 2.6 x 1.2 | solid |
+| ford-cart-3 | cart | -435 | -131 | 2.6 x 1.2 | solid |

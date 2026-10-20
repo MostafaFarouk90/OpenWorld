@@ -569,13 +569,18 @@ describe('persistence', () => {
     expect(calls).toEqual([]);
     expect(m.state('a')).toBe('completed');
   });
-  it('load replaces earlier state and rebuilds with empty dedupe sets', () => {
+  it('load replaces earlier state and restores the saved dedupe keys (density pass review)', () => {
     const m = make();
     m.register(quest('k', [obj('o', 'kill', 'wraith', { required: 3 })]));
     m.start('k');
     died('w1');
-    m.load(m.serialize());
-    died('w1'); // acceptable: dedupe set is empty after load
+    m.load(JSON.parse(JSON.stringify(m.serialize())));
+    died('w1'); // the same death cannot count twice across a load
+    expect(m.objectives('k')[0].progress).toBe(1);
+    died('w2');
+    expect(m.objectives('k')[0].progress).toBe(2);
+    m.load({ quests: { k: { state: 'active', objectives: { o: 1 } } } }); // a save without keys starts with none
+    died('w1');
     expect(m.objectives('k')[0].progress).toBe(2);
   });
 });

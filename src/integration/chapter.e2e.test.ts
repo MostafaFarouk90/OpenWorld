@@ -39,9 +39,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootChapter, type ChapterHarness } from './chapterHarness';
 import {
   enterVaultForD01, finishD01, objectiveDone, PHASE_A_ORDER, playM03, playM04, playM05, playR01, playR02,
-  reachPhaseAStart, emptyTrails, type FieldBranch, type PriorBranch, type Trails,
+  reachPhaseAStart, emptyTrails, type FieldBranch, type PriorBranch, type QuestTrail, type Trails,
 } from './phaseA';
-import { estimateTiming, estimateTimingFor, PHASE_B_PLAN, timingMarkdown } from './timing';
+import { estimateTiming, estimateTimingFor, OPENING_PLAN, PHASE_B_PLAN, timingMarkdown } from './timing';
 
 let h: ChapterHarness | null = null;
 beforeEach(() => {
@@ -58,10 +58,15 @@ const flag = (k: string) => h!.ctx.state.getFlag(k);
 const qstate = (id: string) => h!.ctx.services.require('quests').state(id);
 const fogStanding = () => h!.triggerCentre('trg.fog.harrowmark') !== null && h!.ctx.scene.getObjectByName('fog-wall') !== undefined;
 
+let opening: Record<'m01' | 'm02', QuestTrail> | null = null;
+
 async function chain(field: FieldBranch, prior: PriorBranch): Promise<Trails> {
   h = await bootChapter({ models: true, virtualClock: true });
   expect(h.statuses.filter((s) => s.state !== 'ok')).toEqual([]);
-  await reachPhaseAStart(h);
+  // M01 and M02 are played (the density pass); their trails feed the timing estimate
+  const pre: Record<'m01' | 'm02', QuestTrail> = { m01: { talks: [] }, m02: { talks: [] } };
+  opening = pre;
+  await reachPhaseAStart(h, { play: pre });
   // Start state: tutorial complete, M01 and M02 completed, nothing of Phase A started, mercy locked.
   expect(h.director().complete).toBe(true);
   expect([qstate('m01'), qstate('m02')]).toEqual(['completed', 'completed']);
@@ -118,7 +123,10 @@ describe('Phase A chapter chain (all real plugins)', () => {
     const trails = await chain('saved', 'released');
     // Timing estimate from the real anchors and the dialogue nodes this run read (src/integration/TIMING.md).
     const rows = estimateTiming(h!, trails);
+    const openingRows = estimateTimingFor(h!, OPENING_PLAN, opening!);
+    console.log(timingMarkdown(openingRows));
     console.log(timingMarkdown(rows));
+    expect(openingRows.map((r) => r.quest)).toEqual(['m01', 'm02']);
     expect(rows.map((r) => r.quest)).toEqual([...PHASE_A_ORDER]);
   }, 120_000);
 

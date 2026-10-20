@@ -73,6 +73,8 @@ describe('Brightwater layout data', () => {
 
   it('puts every structure but the far waystone inside the flat meadow', () => {
     const corridor = new Set(CORRIDOR_LAYOUT.structures.map((c) => c.id));
+    // the density pass's extra Hollin Ford wagons sit on the corridor's flat ford pad
+    for (const id of ['ford-cart-2', 'ford-cart-3']) corridor.add(id);
     for (const s of BRIGHTWATER_LAYOUT.structures) {
       if (s.id === 'waystone-north' || corridor.has(s.id)) continue;
       expect(Math.hypot(s.x, s.z) + Math.hypot(...s.footprint) / 2).toBeLessThanOrEqual(SPAWN_FLAT_RADIUS);

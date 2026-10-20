@@ -194,8 +194,8 @@ describe('the shipped Brightwater table', () => {
   it('gates the Dead Road patrols on the wardstones flag and the ford pairs on M04', () => {
     const by = (id: string) => BRIGHTWATER_SPAWNERS.find((d) => d.id === id)!;
     expect(by('brightwater.deadroad.patrol-1').activation).toEqual({ until: 'world.deadroad.wardstones.done' });
-    expect(by('brightwater.ford.pair-2').activation).toEqual({ quest: 'm04', flag: 'enemies.mercy.spare' });
-    expect(by('brightwater.churchyard')).toMatchObject({ tag: 'm03.churchyard', count: 4, activation: { flag: 'enemies.mercy.release' } });
+    expect(by('brightwater.ford.pair-2').activation).toEqual({ quest: 'm04', flag: 'story.m04.spareTaught' });
+    expect(by('brightwater.churchyard')).toMatchObject({ tag: 'm03.churchyard', count: 4, activation: { flag: 'story.m03.releaseTaught' } });
     expect(by('brightwater.vault').activation).toEqual({ interior: 'chapel-vault' });
   });
 
@@ -229,7 +229,9 @@ describe('lesson gates of the shipped table', () => {
   it('the churchyard wraiths appear only once the Release lesson sets its flag, tagged m03.churchyard', () => {
     const { fake, manager } = shipped();
     expect(manager.service.alive('brightwater.churchyard')).toHaveLength(0);
-    fake.setFlag('enemies.mercy.release', true);
+    fake.setFlag('enemies.mercy.release', true); // the verb unlocks mid-talk: not yet (density pass review)
+    expect(manager.service.alive('brightwater.churchyard')).toHaveLength(0);
+    fake.setFlag('story.m03.releaseTaught', true);
     const ids = manager.service.alive('brightwater.churchyard');
     expect(ids).toHaveLength(4);
     expect(fake.actorMap.get(ids[0]!)!.spawnTag).toBe('m03.churchyard');
@@ -240,12 +242,14 @@ describe('lesson gates of the shipped table', () => {
     a.fake.bus.emit('quest.started', { questId: 'm04' });
     expect(a.manager.service.alive('brightwater.ford.pair-1')).toHaveLength(0);
     a.fake.quests = { active: () => ['m04'] };
-    a.fake.setFlag('enemies.mercy.spare', true);
+    a.fake.setFlag('enemies.mercy.spare', true); // the verb alone is not enough (density pass review)
+    expect(a.manager.service.alive('brightwater.ford.pair-1')).toHaveLength(0);
+    a.fake.setFlag('story.m04.spareTaught', true);
     expect(a.manager.service.alive('brightwater.ford.pair-1')).toHaveLength(2);
     expect(a.manager.service.alive('brightwater.ford.pair-2')).toHaveLength(2);
 
     const b = shipped();
-    b.fake.setFlag('enemies.mercy.spare', true);
+    b.fake.setFlag('story.m04.spareTaught', true);
     expect(b.manager.service.alive('brightwater.ford.pair-1')).toHaveLength(0);
     b.fake.bus.emit('quest.started', { questId: 'm04' });
     expect(b.manager.service.alive('brightwater.ford.pair-1')).toHaveLength(2);

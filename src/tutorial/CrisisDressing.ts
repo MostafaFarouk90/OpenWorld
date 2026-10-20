@@ -18,6 +18,16 @@ export const FIRE_ANCHORS: readonly string[] = [
   'chapel.fire-1',
   'chapel.fire-2',
 ];
+/**
+ * Fires the Act 1 quests put out (quests thread, density pass): lit while `litFlag` is on, out once any `outFlags`
+ * is on or `outQuest` is completed. The quests own the flags; the dressing only draws them.
+ */
+export interface QuestFire { anchor: string; litFlag: string; outFlags: readonly string[]; outQuest: string }
+export const QUEST_FIRES: readonly QuestFire[] = [
+  { anchor: 'kettlewick.fire-tavern-door', litFlag: FIRE_FLAG, outFlags: ['story.m01.tavernDoused'], outQuest: 'm01' },
+  { anchor: 'kettlewick.fire-bakery-door', litFlag: FIRE_FLAG, outFlags: ['story.m02.doorDoused'], outQuest: 'm02' },
+  { anchor: 'r01.fire-stubble', litFlag: 'story.r01.scorched', outFlags: ['story.r01.stubbleOut'], outQuest: 'r01' },
+];
 export const MAX_ACTIVE = 3;
 /** Cards per fire: three flame cards and a smoke card; Low halves it (one flame, one smoke). */
 export const CARDS_FULL = 4;
@@ -110,6 +120,11 @@ export class CrisisDressing {
       }
       this.fires.push(this.buildFire(id, anchor.position));
     }
+    for (const q of QUEST_FIRES) {
+      const anchor = deps.anchors.find(q.anchor);
+      if (anchor) this.fires.push(this.buildFire(q.anchor, anchor.position));
+      else missing.push(q.anchor);
+    }
     const brazier = deps.anchors.find(BRAZIER_ANCHOR);
     if (brazier) {
       this.brazierPos = new THREE.Vector3(brazier.position.x, brazier.position.y, brazier.position.z);
@@ -153,7 +168,11 @@ export class CrisisDressing {
     const awakened = this.deps.flag(FIRE_FLAG);
     const m01 = this.deps.questState('m01') === 'completed';
     const m02 = this.deps.questState('m02') === 'completed';
-    for (const f of this.fires) f.enabled = awakened && (f.id === BAKERY_FIRE ? !m02 : !m01);
+    for (const f of this.fires) {
+      const q = QUEST_FIRES.find((x) => x.anchor === f.id);
+      if (q) f.enabled = this.deps.flag(q.litFlag) && !q.outFlags.some((k) => this.deps.flag(k)) && this.deps.questState(q.outQuest) !== 'completed';
+      else f.enabled = awakened && (f.id === BAKERY_FIRE ? !m02 : !m01);
+    }
     this.cull(this.lastPlayer);
   }
 

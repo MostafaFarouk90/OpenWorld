@@ -6,14 +6,29 @@ const m05Active: Condition = { quest: 'm05', state: 'active' };
 export const npcTobb: DialogueDef = {
   id: 'npc-tobb',
   start: [
+    // M01: Cael douses the Grey Goose door and Tobb steps out (credits m01 `tobb`); a second meeting from then on
+    {
+      when: { all: [{ quest: 'm01', state: 'active' }, { objective: ['m01', 'tavern'], done: true }, { objective: ['m01', 'tobb'], done: false }] },
+      node: 'm01-meet',
+    },
+    { when: { all: [{ quest: 'm01', state: 'active' }, { objective: ['m01', 'tobb'], done: true }] }, node: 'm01-after' },
     { when: { all: [{ quest: 'm04', state: 'completed' }, { quest: 'm05', state: 'inactive' }] }, node: 'intro' },
     { when: { all: [m05Active, { objective: ['m05', 'o1'], done: true }, { objective: ['m05', 'o2'], done: true }] }, node: 'done' },
     { when: m05Active, node: 'remind' },
     { when: { all: [{ quest: 'm05', state: 'completed' }, { quest: 'd01', state: 'completed' }] }, node: 'banter-prior' },
     { when: { quest: 'm05', state: 'completed' }, node: 'banter' },
+    { when: { quest: 'm01', state: 'completed' }, node: 'idle-met' },
     { when: { all: [] }, node: 'idle' },
   ],
   nodes: [
+    { id: 'm01-meet', speaker: 'tobb', textKey: P + 'm01-meet', next: 'm01-meet-2' },
+    { id: 'm01-meet-2', speaker: 'tobb', textKey: P + 'm01-meet-2', next: 'm01-meet-3' },
+    { id: 'm01-meet-3', speaker: 'tobb', textKey: P + 'm01-meet-3', next: 'm01-meet-4' },
+    { id: 'm01-meet-4', speaker: 'cael', textKey: P + 'm01-meet-4', next: 'm01-meet-5' },
+    { id: 'm01-meet-5', speaker: 'tobb', textKey: P + 'm01-meet-5', next: 'm01-meet-6' },
+    { id: 'm01-meet-6', speaker: 'tobb', textKey: P + 'm01-meet-6', next: null },
+    { id: 'm01-after', speaker: 'tobb', textKey: P + 'm01-after', next: null },
+    { id: 'idle-met', speaker: 'tobb', textKey: P + 'idle-met', next: null },
     { id: 'intro', speaker: 'tobb', textKey: P + 'intro', next: 'intro-2' },
     { id: 'intro-2', speaker: 'tobb', textKey: P + 'intro-2', next: 'intro-3' },
     {

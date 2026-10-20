@@ -74,7 +74,9 @@ describe('CrisisDressing', () => {
     expect(dress.activeFires).toBe(3);
     state.m01 = 'completed';
     dress.refresh();
-    expect(dress.activeFires).toBe(1);
+    // the bakery and, until M02's buckets douse it, its door (the density pass's quest fire)
+    expect(dress.activeFires).toBe(2);
+    expect(scene.getObjectByName('crisis-fire:kettlewick.fire-bakery-door')!.visible).toBe(true);
     expect(scene.getObjectByName(`crisis-fire:${BAKERY_FIRE}`)!.visible).toBe(true);
     state.m02 = 'completed';
     dress.refresh();
@@ -85,7 +87,8 @@ describe('CrisisDressing', () => {
   it('a load with the flag set and m01 completed but m02 not shows only the bakery fire', () => {
     const { dress, scene } = setup({ flag: true, m01: 'completed', m02: 'active' });
     dress.update(0.1, near);
-    expect(dress.activeFires).toBe(1);
+    // the bakery and its door fire (doused by M02's buckets)
+    expect(dress.activeFires).toBe(2);
     expect(scene.getObjectByName(`crisis-fire:${BAKERY_FIRE}`)!.visible).toBe(true);
   });
 

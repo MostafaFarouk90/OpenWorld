@@ -4,6 +4,7 @@ import { m04 } from './content/m04.quest';
 import { d01 } from './content/d01.quest';
 import { r02 } from './content/r02.quest';
 import { m03 } from './content/m03.quest';
+import { M04_WAGONS } from './content/m04.quest';
 
 const talk = (w: ReturnType<typeof makeWorld>, npcId: string, reason?: string) => w.bus.emit('dialogue.ended', { npcId, reason });
 const died = (w: ReturnType<typeof makeWorld>, actorId: string, kind: string) => w.bus.emit('actor.died', { actorId, killerId: 'p', kind });
@@ -16,11 +17,24 @@ describe('M04 The Toll at Hollin Ford', () => {
     talk(w, 'gaut');
     return w;
   }
-  it('plays through with one kill and one Spare', () => {
+  it('plays through with kills and Spares, the sergeant, the ledger, the wagons and the carters', () => {
     const w = toFord();
     died(w, 's1', 'blighted-soldier');
     w.bus.emit('mercy', { verb: 'spare', creature: 'blighted-soldier', actorId: 's2' });
+    died(w, 's3', 'blighted-soldier');
+    w.bus.emit('mercy', { verb: 'spare', creature: 'blighted-soldier', actorId: 's4' });
+    w.bus.emit('mercy', { verb: 'spare', creature: 'toll-sergeant', actorId: 'sg', spawnTag: 'm04.sergeant' });
+    expect(w.manager.isObjectiveCurrent('m04', 'o4')).toBe(true);
     died(w, 'tp', 'toll-post');
+    talk(w, 'note-m04-toll-box', 'completed');
+    talk(w, 'gaut', 'completed');
+    for (const id of M04_WAGONS) w.bus.emit('interact', { interactableId: id });
+    talk(w, 'carter-1', 'completed'); // out of turn: carter-1 waits for the other two
+    expect(w.manager.isObjectiveCurrent('m04', 'carters')).toBe(true);
+    talk(w, 'carter-2', 'completed');
+    talk(w, 'carter-2', 'completed');
+    expect(w.manager.isObjectiveCurrent('m04', 'carters')).toBe(true); // the same carter twice counts once
+    talk(w, 'carter-3', 'completed');
     talk(w, 'carter-1');
     talk(w, 'gaut');
     expect(w.manager.state('m04')).toBe('completed');
@@ -37,10 +51,12 @@ describe('M04 The Toll at Hollin Ford', () => {
     const w = toFord();
     w.bus.emit('actor.died', { actorId: 'tp', killerId: 'a-mob', kind: 'toll-post' });
     w.flags.set('world.brightwater.tollPost', true);
-    died(w, 's1', 'blighted-soldier');
-    died(w, 's2', 'blighted-soldier');
+    for (const id of ['s1', 's2', 's3', 's4']) died(w, id, 'blighted-soldier');
+    died(w, 'sg', 'toll-sergeant');
+    expect(w.manager.objectiveDone('m04', 'sergeant')).toBe(false); // the sergeant counts only from his own spawner
+    w.bus.emit('actor.died', { actorId: 'sg', killerId: 'p', kind: 'toll-sergeant', spawnTag: 'm04.sergeant' });
     expect(w.manager.objectiveDone('m04', 'o4')).toBe(true);
-    expect(w.manager.isObjectiveCurrent('m04', 'o5')).toBe(true);
+    expect(w.manager.isObjectiveCurrent('m04', 'ledger')).toBe(true);
   });
   it('a stranger killing a soldier does not count', () => {
     const w = toFord();
@@ -113,7 +129,7 @@ describe('doneWhen and loading', () => {
   it('is not read during load, only by recheck() after the world state loaded', () => {
     const w = makeWorld([m03]);
     w.manager.start('m03');
-    for (const o of ['o1', 'o2']) w.manager.completeObjective('m03', o);
+    for (const o of ['o1', 'o2', 'study']) w.manager.completeObjective('m03', o);
     const saved = JSON.parse(JSON.stringify(w.manager.serialize()));
     w.flags.set('ability.surge-leap.learned', true); // stale session flag, not yet replaced by the loaded world state
     w.manager.load(saved);
@@ -137,7 +153,7 @@ describe('M03 grants nothing by itself', () => {
   it('rewards: 300 xp and 1 skill point on completion', () => {
     const w = makeWorld([m03]);
     w.manager.start('m03');
-    for (const o of ['o1', 'o2', 'o3', 'o4', 'o5', 'o6', 'o7']) w.manager.completeObjective('m03', o);
+    for (const o of m03.objectives.map((x) => x.id)) w.manager.completeObjective('m03', o);
     expect(w.calls).toEqual(['xp:300:quest:m03', 'sp:1']);
   });
 });

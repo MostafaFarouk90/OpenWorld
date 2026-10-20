@@ -98,6 +98,8 @@ describe('Phase A spawner gates survive a real save and load', () => {
     quests.start('m04');
     a.ctx.state.setFlag('enemies.mercy.release', true);
     a.ctx.state.setFlag('enemies.mercy.spare', true);
+    // the ford pairs wait for the end of Gaut's lesson (the density pass's story.m04.spareTaught)
+    for (const o of ['o1', 'o2']) quests.completeObjective('m04', o);
     await a.run(60);
     const before = Object.fromEntries(GROUPS.map((g) => [g, a.alive(g)]));
     expect(before['brightwater.churchyard']).toBe(4);

@@ -63,6 +63,11 @@ export interface ObjectiveDef {
   /** default 1 */
   required?: number;
   /**
+   * The count before `required` grew (the Act 1 density pass). Progress at or above it in a save older than
+   * QUESTS_SAVE_VERSION 2 counts as done: the enemies behind the old count are dead and never respawn.
+   */
+  legacyRequired?: number;
+  /**
    * trigger id (goTo, carry destination), interactable id, actor kind (kill), item id (collect), npc id (talk),
    * bus event name (event; an array means any of these names)
    */
@@ -126,7 +131,13 @@ export interface ObjectiveRuntime { progress: number }
 export interface QuestRuntime { state: QuestState; objectives: Record<string, number> }
 
 /** Persisted data for the `quests` Persistable (the Persistable carries the only version). */
-export interface QuestsSaveData { quests: Record<string, QuestRuntime> }
+export interface QuestsSaveData {
+  quests: Record<string, QuestRuntime>;
+  /** Credited dedupe keys of active quests (quest id, objective id, keys), so a load cannot count one twice. Omitted when empty. */
+  dedupe?: Record<string, Record<string, string[]>>;
+}
+/** Version 2: objectives may carry `legacyRequired`, and the dedupe keys are saved. */
+export const QUESTS_SAVE_VERSION = 2;
 /** Persisted data for the `dialogue` Persistable. */
 export interface DialogueSaveData { seen: string[] }
 

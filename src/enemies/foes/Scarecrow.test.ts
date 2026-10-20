@@ -12,9 +12,11 @@ beforeAll(async () => {
 });
 
 const SURGE = 'heartshard-surge';
+const SHAWL = 'story.r01.shawlRead';
 
-/** Starts R01 and returns the six scarecrows. */
+/** Starts R01 with the shawl read (the density pass's gate) and returns the six scarecrows. */
 function r01(kit: Kit): Scarecrow[] {
+  kit.fake.flags.set(SHAWL, true);
   kit.fake.quests = { active: () => ['r01'] };
   kit.fake.bus.emit('quest.started', { questId: 'r01' });
   return kit.manager.service.alive('r01.scarecrows').map((id) => kit.manager.getFoe(id) as Scarecrow);
@@ -40,6 +42,15 @@ describe('scarecrow spawning', () => {
     expect(sc.map((s) => s.scarecrowId)).toEqual([1, 2, 3, 4, 5, 6].map((i) => `r01.scarecrow.${i}`));
     expect(kit.manager.count).toBe(0);
     expect(kit.manager.foeCount).toBe(6);
+  });
+
+  it('R01 starting spawns none until the shawl is read, then all six on the flag', () => {
+    const kit = foeKit(gltf);
+    kit.fake.quests = { active: () => ['r01'] };
+    kit.fake.bus.emit('quest.started', { questId: 'r01' });
+    expect(kit.manager.foeCount).toBe(0);
+    kit.fake.setFlag(SHAWL, true);
+    expect(kit.manager.service.alive('r01.scarecrows')).toHaveLength(6);
   });
 
   it('another quest starting spawns none', () => {
@@ -326,6 +337,7 @@ describe('scarecrow group and persistence', () => {
     const saved = JSON.parse(JSON.stringify(kit.manager.spawners.serialize()));
     const kit2 = foeKit(gltf);
     kit2.manager.spawners.load(saved);
+    kit2.fake.flags.set(SHAWL, true);
     kit2.fake.quests = { active: () => ['r01'] };
     kit2.fake.bus.emit('save.loaded', { slot: 'a' });
     kit2.fake.bus.emit('quest.started', { questId: 'r01' });
@@ -340,6 +352,7 @@ describe('scarecrow group and persistence', () => {
     const saved = JSON.parse(JSON.stringify(kit.manager.spawners.serialize()));
     const kit2 = foeKit(gltf);
     kit2.manager.spawners.load(saved);
+    kit2.fake.flags.set(SHAWL, true);
     kit2.fake.quests = { active: () => ['r01'] };
     kit2.fake.bus.emit('save.loaded', { slot: 'a' });
     expect(kit2.manager.foeCount).toBe(4);
@@ -373,7 +386,7 @@ describe('scarecrow group and persistence', () => {
     expect(d.memberAnchors).toHaveLength(6);
     expect(d.band).toEqual({ min: 2, max: 3 });
     expect(d.respawn).toBe('never');
-    expect(d.activation).toEqual({ quest: 'r01' });
+    expect(d.activation).toEqual({ quest: 'r01', flag: SHAWL });
   });
 
   it('disposing the manager leaves nothing behind', () => {

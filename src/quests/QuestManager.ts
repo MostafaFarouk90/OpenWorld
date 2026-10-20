@@ -1,6 +1,7 @@
 import type {
   Effect, ObjectiveDef, QuestDef, QuestRuntime, QuestState, QuestsSaveData,
 } from './types';
+import { QUESTS_SAVE_VERSION } from './types';
 import type {
   ActorMetaPort, BusPort, ConditionEnv, EnemiesPort, InventoryPort, NpcPort, ProgressionPort, QuestActions, QuestReader,
   StatePort, TriggerPort, Unsubscribe,
@@ -33,6 +34,8 @@ export class QuestManager implements QuestReader, QuestActions {
   private readonly order: string[] = []; // active quests in start order
   private readonly unknown = new Map<string, QuestRuntime>(); // save entries of unregistered quests
   private readonly dedupe = new Map<string, Set<string>>();
+  /** The version of the last loaded save, for entries applied when their quest registers late. */
+  private loadedVersion = QUESTS_SAVE_VERSION;
   private readonly listeners = new Set<() => void>();
   private readonly unsubs: Unsubscribe[] = [];
   private readonly subscribed = new Set<string>();
@@ -67,7 +70,7 @@ export class QuestManager implements QuestReader, QuestActions {
     const saved = this.unknown.get(copy.id);
     if (saved) {
       this.unknown.delete(copy.id);
-      this.applyEntry(copy, rt, saved);
+      this.applyEntry(copy, rt, saved, this.loadedVersion);
       if (rt.state === 'active') this.order.push(copy.id);
       this.notify();
     }
@@ -184,10 +187,19 @@ export class QuestManager implements QuestReader, QuestActions {
     for (const id of this.order) put(id, this.rt.get(id)!);
     for (const [id, rt] of this.rt) if (rt.state !== 'inactive' && !(id in quests)) put(id, rt);
     for (const [id, rt] of this.unknown) put(id, rt);
-    return { quests };
+    const dedupe: Record<string, Record<string, string[]>> = {};
+    for (const id of this.order) {
+      for (const o of this.defs.get(id)?.objectives ?? []) {
+        const keys = this.dedupe.get(this.dkey(id, o.id));
+        if (keys && keys.size > 0) (dedupe[id] ??= {})[o.id] = [...keys];
+      }
+    }
+    return Object.keys(dedupe).length > 0 ? { quests, dedupe } : { quests };
   }
 
-  load(data: unknown): void {
+  /** `version` is the Persistable's (default: current); below 2, `legacyRequired` counts are honoured. */
+  load(data: unknown, version: number = QUESTS_SAVE_VERSION): void {
+    this.loadedVersion = version;
     this.order.length = 0;
     this.unknown.clear();
     this.dedupe.clear();
@@ -218,12 +230,13 @@ export class QuestManager implements QuestReader, QuestActions {
       const def = this.defs.get(id);
       const rt = this.rt.get(id);
       if (def && rt) {
-        this.applyEntry(def, rt, entry);
+        this.applyEntry(def, rt, entry, version);
         if (rt.state === 'active') this.order.push(id);
       } else {
         this.unknown.set(id, entry);
       }
     }
+    this.loadDedupe((data as { dedupe?: unknown }).dedupe);
     this.notify();
     for (const id of [...this.order]) {
       // doneWhen reads flags, which may not have loaded yet: `recheck()` on save.loaded credits those
@@ -244,15 +257,44 @@ export class QuestManager implements QuestReader, QuestActions {
 
   // ---- internals ---------------------------------------------------------------------------
 
-  private applyEntry(def: QuestDef, rt: QuestRuntime, entry: QuestRuntime): void {
+  private applyEntry(def: QuestDef, rt: QuestRuntime, entry: QuestRuntime, version: number): void {
     rt.state = entry.state;
     rt.objectives = {};
     for (const o of def.objectives) {
       const v = entry.objectives[o.id];
       if (v === undefined) continue;
       if (v > required(o)) this.warn(`quests: clamped progress of "${def.id}.${o.id}" to ${required(o)}`);
-      rt.objectives[o.id] = Math.min(v, required(o));
+      const legacyDone = version < 2 && o.legacyRequired !== undefined && v >= o.legacyRequired;
+      rt.objectives[o.id] = legacyDone ? required(o) : Math.min(v, required(o));
     }
+    if (rt.state === 'active') this.migrateEntry(def, rt, entry);
+  }
+
+  /** Restores saved dedupe keys for active quests' registered objectives; anything malformed is dropped. */
+  private loadDedupe(raw: unknown): void {
+    if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return;
+    for (const [qid, perObj] of Object.entries(raw as Record<string, unknown>)) {
+      if (this.rt.get(qid)?.state !== 'active' || typeof perObj !== 'object' || perObj === null) continue;
+      for (const [oid, keys] of Object.entries(perObj as Record<string, unknown>)) {
+        if (!this.defs.get(qid)?.objectives.some((o) => o.id === oid) || !Array.isArray(keys)) continue;
+        const set = new Set(keys.filter((k): k is string => typeof k === 'string'));
+        if (set.size > 0) this.dedupe.set(this.dkey(qid, oid), set);
+      }
+    }
+  }
+
+  /**
+   * A save made before objectives were added or a `required` grew (the Act 1 density pass): in a sequential quest a
+   * later objective (array order) with progress means the player is past every earlier one, so each earlier objective
+   * short of its count is credited in full and nobody is sent back. Unordered quests are left as saved.
+   */
+  private migrateEntry(def: QuestDef, rt: QuestRuntime, entry: QuestRuntime): void {
+    if (!def.sequential) return;
+    const objs = def.objectives;
+    const laterStarted = (i: number): boolean => objs.slice(i + 1).some((x) => (entry.objectives[x.id] ?? 0) > 0);
+    objs.forEach((o, i) => {
+      if ((entry.objectives[o.id] ?? 0) < required(o) && laterStarted(i)) rt.objectives[o.id] = required(o);
+    });
   }
 
   private progress(questId: string, o: ObjectiveDef): number {

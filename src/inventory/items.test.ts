@@ -20,6 +20,7 @@ describe('items', () => {
         'ford-guard-shield',
         'hearth-stone',
         'hearth-token',
+        'warding-candle',
         'priors-censer',
         'tobbs-lucky-whistle',
         'training-weights',
