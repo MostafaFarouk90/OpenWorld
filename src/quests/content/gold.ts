@@ -5,3 +5,5 @@ export const LEDGE_CACHE_GOLD = 15;
 export const M06_BRIBE_GOLD = 50;
 export const M06_TIP_GOLD = 25;
 export const R03_COIN_GOLD = 150;
+// Act 1 density pass: Mother Quill's price for R04's third page (Gerta's name gets it free).
+export const R04_FENCE_GOLD = 20;

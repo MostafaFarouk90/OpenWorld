@@ -79,8 +79,9 @@ describe('Harrowmark anchor ids (the contract for threads 3a, 6, 12, 17b, 18, 19
 
 describe('Harrowmark NPCs', () => {
   it('has a def for every spec and a post anchor for every spec', () => {
-    expect(HARROWMARK_NPC_DEFS.map((d) => d.id).sort()).toEqual(HARROWMARK_NPCS.map((n) => n.id).sort());
-    for (const n of HARROWMARK_NPCS) expect(anchors.has(n.post), n.id).toBe(true);
+    // the layout's cast includes the density pass's NPCs (src/harrowmark/density.layout.ts)
+    expect(HARROWMARK_NPC_DEFS.map((d) => d.id).sort()).toEqual(HARROWMARK_LAYOUT.npcs.map((n) => n.id).sort());
+    for (const n of HARROWMARK_LAYOUT.npcs) expect(anchors.has(n.post), n.id).toBe(true);
   });
 
   it('does not repeat a Brightwater NPC (Gaut, Stane, Aelfreda, Tobb move by rule)', () => {

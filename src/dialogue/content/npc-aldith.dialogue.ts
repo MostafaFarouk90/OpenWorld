@@ -18,13 +18,18 @@ export const npcAldith: DialogueDef = {
     { when: { all: [active('m07'), done('m07', 'o4')] }, node: 'm07-bastion-remind' },
     { when: { all: [active('m07'), done('m07', 'o3')] }, node: 'm07-return' },
     { when: { all: [active('m07'), done('m07', 'o2')] }, node: 'm07-remind-satchel' },
-    { when: active('m07'), node: 'm07-remind-thieves' },
+    { when: { all: [active('m07'), done('m07', 'coins')] }, node: 'm07-remind-thieves' },
+    { when: { all: [active('m07'), done('m07', 'ask')] }, node: 'm07-remind-coins' },
+    { when: active('m07'), node: 'm07-remind-ask' },
     { when: { all: [completed('m06'), inactive('m07')] }, node: 'm07-offer' },
 
     // R03 The Brewer's Debt
-    { when: { all: [active('r03'), done('r03', 'o3')] }, node: 'r03-settle' },
-    { when: { all: [active('r03'), done('r03', 'o2')] }, node: 'r03-remind-copper' },
-    { when: active('r03'), node: 'r03-remind-thugs' },
+    { when: { all: [active('r03'), done('r03', 'snatch')] }, node: 'r03-plea-speak' },
+    { when: { all: [active('r03'), done('r03', 'o3')] }, node: 'r03-remind-snatch' },
+    { when: { all: [active('r03'), done('r03', 'pellam')] }, node: 'r03-remind-copper' },
+    { when: { all: [active('r03'), done('r03', 'o2')] }, node: 'r03-remind-pellam' },
+    { when: { all: [active('r03'), done('r03', 'doorman')] }, node: 'r03-remind-thugs' },
+    { when: active('r03'), node: 'r03-remind-doorman' },
     { when: { all: [completed('m07'), inactive('r03')] }, node: 'r03-offer' },
 
     { when: price('forgiven'), node: 'idle-forgiven' },
@@ -42,6 +47,8 @@ export const npcAldith: DialogueDef = {
       ],
     },
     say('m07-brief'),
+    say('m07-remind-ask'),
+    say('m07-remind-coins'),
     say('m07-remind-thieves'),
     say('m07-remind-satchel'),
     say('m07-return', 'm07-return-2', {
@@ -50,7 +57,10 @@ export const npcAldith: DialogueDef = {
         else: [{ take: 'stolen-satchel' }, { setFlag: 'story.m07.classOpen', value: true }],
       }],
     }),
-    say('m07-return-2'),
+    say('m07-return-2', 'm07-backroom'),
+    // the density pass: Aldith shows Cael the back room before sending them through to the Bastion yard
+    say('m07-backroom', 'm07-backroom-2'),
+    say('m07-backroom-2'),
     say('m07-bastion-remind'),
 
     // ---- R03 ----
@@ -58,13 +68,31 @@ export const npcAldith: DialogueDef = {
     {
       id: 'r03-offer-2', speaker: 'aldith', textKey: P + 'r03-offer-2',
       choices: [
-        { id: 'accept', textKey: P + 'r03-offer-2.accept', effects: [{ startQuest: 'r03' }, { completeObjective: ['r03', 'o1'] }], next: 'r03-brief' },
+        { id: 'accept', textKey: P + 'r03-offer-2.accept', effects: [{ startQuest: 'r03' }, { completeObjective: ['r03', 'o1'] }], next: 'r03-who' },
         { id: 'later', textKey: P + 'r03-offer-2.later', next: null },
       ],
     },
+    // the density pass: Aldith names the debtor, and sends Cael to the Guildhall door
+    say('r03-who', 'r03-who-2'),
+    say('r03-who-2', 'r03-who-3'),
+    { id: 'r03-who-3', speaker: 'cael', textKey: P + 'r03-who-3', next: 'r03-who-4' },
+    say('r03-who-4', 'r03-brief'),
     say('r03-brief'),
+    say('r03-remind-doorman'),
     say('r03-remind-thugs'),
+    say('r03-remind-pellam'),
     say('r03-remind-copper'),
+    say('r03-remind-snatch'),
+    // Pellam's plea, quoted back before the choice (as Cael promised him, or plainly)
+    {
+      id: 'r03-plea-speak', speaker: 'cael', textKey: P + 'r03-plea-speak', next: 'r03-plea-plain',
+      when: { flag: 'story.r03.promise', equals: 'speak' },
+    },
+    {
+      id: 'r03-plea-plain', speaker: 'cael', textKey: P + 'r03-plea-plain', next: 'r03-plea-aldith',
+      when: { not: { flag: 'story.r03.promise', equals: 'speak' } },
+    },
+    say('r03-plea-aldith', 'r03-settle'),
     {
       id: 'r03-settle', speaker: 'aldith', textKey: P + 'r03-settle',
       choices: [

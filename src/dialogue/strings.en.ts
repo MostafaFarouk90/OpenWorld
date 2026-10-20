@@ -4,12 +4,14 @@ import { dialogueStringsHmA } from './strings.hm-a.en';
 import { dialogueStringsHmB } from './strings.hm-b.en';
 import { dialogueStringsHmC } from './strings.hm-c.en';
 import { dialogueStringsDensityA } from './strings.density.en';
+import { dialogueStringsDensityB } from './strings.density-b.en';
 
 export const dialogueStrings: Record<string, string> = {
   ...dialogueStringsHmA,
   ...dialogueStringsHmB,
   ...dialogueStringsHmC,
   ...dialogueStringsDensityA,
+  ...dialogueStringsDensityB,
   // ---- Marshal Stane ----
   'dialogue.npc-stane.wave': 'Ho there, {name}! Good to see you walking Kettlewick lane with your head up.',
   'dialogue.npc-stane.wave2': 'Come by the Practice Yard when you have a moment. I am putting up a drill board, and every move you learn can be tried out on it.',
@@ -131,7 +133,7 @@ export const dialogueStrings: Record<string, string> = {
 
   // ---- Marshal Stane: R02 ----
   'dialogue.npc-stane.r02-offer': 'Well, {name}. You have learned the moves, and now I would like to see if they have stuck.',
-  'dialogue.npc-stane.r02-offer-2': 'Three challenges on the blocking dummies in the Yard: hit one while it is open, parry three of its swings, and break two guards. Fancy it?',
+  'dialogue.npc-stane.r02-offer-2': 'Three challenges. The blocking dummies first: hit one while it is open, parry three of its swings, break two guards. Then a bout with one of the yard\'s veterans, then two at once. Fancy it?',
   'dialogue.npc-stane.r02-offer-2.accept': 'Set them up, Marshal.',
   'dialogue.npc-stane.r02-offer-2.later': 'Another day. My feet are still warming up.',
   'dialogue.npc-stane.r02-brief': 'Good. Wait for a dummy to drop its guard, then strike. Do not rush, they are patient and so am I.',
@@ -139,7 +141,7 @@ export const dialogueStrings: Record<string, string> = {
   'dialogue.npc-stane.r02-tip-open': 'Watch the dummy, {name}. When its guard drops, that is your moment. Three clean hits.',
   'dialogue.npc-stane.r02-tip-parry': 'Hold block as its swing lands and the parry will come. Three of them, and do not flinch.',
   'dialogue.npc-stane.r02-tip-guard': 'Now break two guards. A few heavy blows against a raised guard will crack it open.',
-  'dialogue.npc-stane.r02-done': 'Hit, parry and break, all in one afternoon. I could not have asked for more.',
+  'dialogue.npc-stane.r02-done': 'Hit, parry, break, and three veterans beaten in one afternoon. I could not have asked for more.',
   'dialogue.npc-stane.r02-done-2': 'Take these weights. Wear them on the road and your arms will thank you later.',
   'dialogue.npc-stane.idle-after': 'The Yard is yours any time, {name}. When you reach Harrowmark, look for me at the Bastion. I will have a new set of dummies.',
 

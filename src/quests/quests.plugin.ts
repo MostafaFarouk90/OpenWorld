@@ -17,6 +17,7 @@ import { POI_REWARDS } from './content/poi';
 import { PostDirector, POST_RULES } from './posts';
 import { TorchSystem } from './torch';
 import { R02Yard, type R02YardDummies } from './r02Yard';
+import { R02_AT_BASTION } from './content/r02.quest';
 import { QuestProps } from './props';
 import { QUEST_PROPS, INTERACT_FLAGS } from './content/props';
 import { CARRY_ITEMS } from './content/carry';
@@ -136,9 +137,10 @@ const plugin: GamePlugin = {
       () => svc('dialogue')?.active === true,
     );
     manager.onChange(() => posts.markDirty());
-    // R02's blocking dummies stand in the yard only while R02 is active.
+    // R02's blocking dummies stand in the yard only while R02 is active (the Bastion yard from M06 on).
     const yard = new R02Yard({
       active: () => manager.state('r02') === 'active',
+      atBastion: () => ctx.state.getBool(R02_AT_BASTION),
       spot: (id) => {
         const a = ctx.anchors.find(id);
         return a ? { feet: { x: a.position.x, y: a.position.y, z: a.position.z }, yaw: a.yaw } : null;

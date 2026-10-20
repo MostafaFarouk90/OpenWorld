@@ -22,6 +22,21 @@ const interact = (w: W, interactableId: string, action = 'interact') => w.bus.em
 const done = (w: W, q: string, o: string) => w.manager.objectiveDone(q, o);
 /** Starts a quest and credits its talk-to-the-giver objective the way the accept choice does. */
 const begin = (w: W, q: string) => { expect(w.manager.start(q)).toBe(true); w.manager.completeObjective(q, 'o1'); };
+/** M06 (density pass): the two refugees in the queue before the route. */
+const queue = (w: W) => { talk(w, 'refugee-1', 'completed'); talk(w, 'refugee-2', 'completed'); };
+/** M06 (density pass): after the route, the brazier, Rook's proof, the word to the queue and the Anvil's sign. */
+const inside = (w: W) => {
+  interact(w, 'use:m06-gate-brazier');
+  talk(w, 'rook');
+  talk(w, 'refugee-1');
+  w.bus.emit('trigger.enter', { triggerId: 'trg.harrowmark.anvil-sign', actorId: 'p' });
+};
+/** M07 (density pass): the two stallholders and the three coins before the thieves. */
+const trail = (w: W) => {
+  talk(w, 'stallholder-1', 'completed');
+  talk(w, 'stallholder-2', 'completed');
+  for (const n of [1, 2, 3]) interact(w, `use:m07-coin-${n}`);
+};
 
 describe('M06 Gates of Harrowmark', () => {
   it('start sets story.m06.started; the stealth route completes on the cleared section and records route and gateOpen', () => {
@@ -29,7 +44,11 @@ describe('M06 Gates of Harrowmark', () => {
     begin(w, 'm06');
     expect(w.flags.get('story.m06.started')).toBe(true);
     expect(w.flags.has('story.m06.gateOpen')).toBe(false);
+    queue(w);
     stealth(w, 'm06.south-gate');
+    expect(done(w, 'm06', 'o2')).toBe(true);
+    expect(w.manager.state('m06')).toBe('active');
+    inside(w);
     expect(w.manager.state('m06')).toBe('completed');
     expect(w.flags.get('story.m06.route')).toBe('stealth');
     expect(w.flags.get('story.m06.gateOpen')).toBe(true);
@@ -39,8 +58,10 @@ describe('M06 Gates of Harrowmark', () => {
   it('a route written by a bribe or argument node is not overwritten on completion', () => {
     const w = makeWorld([m06]);
     begin(w, 'm06');
+    queue(w);
     w.flags.set('story.m06.route', 'bribe');
     w.manager.completeObjective('m06', 'o2');
+    inside(w);
     expect(w.manager.state('m06')).toBe('completed');
     expect(w.flags.get('story.m06.route')).toBe('bribe');
     expect(w.flags.get('story.m06.gateOpen')).toBe(true);
@@ -49,6 +70,9 @@ describe('M06 Gates of Harrowmark', () => {
     const w = makeWorld([m06]);
     stealth(w, 'm06.south-gate');
     begin(w, 'm06');
+    stealth(w, 'm06.south-gate'); // the queue is not heard yet: the section is not live
+    expect(done(w, 'm06', 'o2')).toBe(false);
+    queue(w);
     stealth(w, 'm09.counting-house');
     stealth(w, 'm06.south-gate', 'entered');
     stealth(w, 'm06.south-gate', 'exited');
@@ -62,6 +86,7 @@ describe('M07 The Tilted Anvil', () => {
   function toSatchel() {
     const w = makeWorld([m07]);
     begin(w, 'm07');
+    trail(w);
     return w;
   }
   it('plays through kills and Spares, the satchel, the yard, the class and the drill', () => {
@@ -83,9 +108,9 @@ describe('M07 The Tilted Anvil', () => {
   it('a cutpurse from another group does not count; a fled cutpurse (no kill, no mercy) never counts', () => {
     const w = toSatchel();
     kill(w, 'c1', 'other');
-    expect(w.manager.objectives('m07')[1].progress).toBe(0);
+    expect(w.manager.objectives('m07')[3].progress).toBe(0);
     w.bus.emit('actor.despawned', { actorId: 'c1' });
-    expect(w.manager.objectives('m07')[1].progress).toBe(0);
+    expect(w.manager.objectives('m07')[3].progress).toBe(0);
   });
   it('a class chosen and drilled early is credited the moment o6 and o7 become current', () => {
     const w = toSatchel();
@@ -257,17 +282,35 @@ describe('R03 and R04', () => {
   it('R03 plays through; the thugs need their spawn tag', () => {
     const w = makeWorld([r03]);
     begin(w, 'r03');
+    talk(w, 'guild-doorman');
     w.bus.emit('actor.died', { actorId: 't0', killerId: 'p', kind: 'guildhall-thug', spawnTag: 'elsewhere' });
     for (const id of ['t1', 't2', 't3']) w.bus.emit('actor.died', { actorId: id, killerId: 'p', kind: 'guildhall-thug', spawnTag: 'r03.guildhall' });
+    talk(w, 'pellam');
     interact(w, 'pickup:brewing-copper');
+    // the snatch: two more of Pellam's men, by their own tag (a Spare counts)
+    w.bus.emit('actor.died', { actorId: 't4', killerId: 'p', kind: 'guildhall-thug', spawnTag: 'r03.guildhall' });
+    expect(done(w, 'r03', 'snatch')).toBe(false);
+    w.bus.emit('actor.died', { actorId: 's1', killerId: 'p', kind: 'guildhall-thug', spawnTag: 'r03.snatch' });
+    w.bus.emit('mercy', { verb: 'spare', creature: 'guildhall-thug', actorId: 's2', spawnTag: 'r03.snatch' });
     talk(w, 'aldith');
     expect(w.manager.state('r03')).toBe('completed');
   });
   it('R04 pages in any order, dedupe repeats, then the verdict talk', () => {
     const w = makeWorld([r04]);
     begin(w, 'r04');
-    for (const n of [2, 2, 3, 1]) interact(w, `use:r04-page-${n}`);
+    // the fence and the sexton hand over their pages before the stacks are even open (their dialogues' effects)
+    w.flags.set('story.r04.page.3', true);
+    w.manager.completeObjective('r04', 'page3');
+    w.flags.set('story.r04.page.2', true);
+    w.manager.completeObjective('r04', 'page2');
+    interact(w, 'use:r04-page-1'); // the stacks are still locked: not current
+    expect(done(w, 'r04', 'page1')).toBe(false);
+    interact(w, 'use:r04-stacks-lock');
+    interact(w, 'use:r04-page-1');
     expect(done(w, 'r04', 'o2')).toBe(true);
+    talk(w, 'whitlock');
+    expect(w.manager.state('r04')).toBe('active'); // Crabbe first
+    talk(w, 'crabbe');
     talk(w, 'whitlock', 'skip');
     expect(w.manager.state('r04')).toBe('active');
     talk(w, 'whitlock');
@@ -304,20 +347,28 @@ describe('quest props and the interact-flag bridge', () => {
     props.update();
     const sat = registered.get('pickup:satchel')!;
     expect(sat.enabled()).toBe(false);
+    trail(w);
+    expect(sat.enabled()).toBe(false);
     for (const id of ['a', 'b', 'c']) w.bus.emit('actor.died', { actorId: id, killerId: 'p', kind: 'alley-cutpurse', spawnTag: 'm07.thieves' });
     expect(sat.enabled()).toBe(true);
     sat.onInteract();
     expect(w.bus.of('loot.granted')[0]).toMatchObject({ items: [{ itemId: 'stolen-satchel', count: 1 }] });
   });
-  it('a page disables itself once taken', () => {
-    const { w, props, registered } = propsWorld({ 'r04.page-1': true, 'r04.page-2': true, 'r04.page-3': true });
+  it('the stacks lock, then the page in the stacks, each disabled once used', () => {
+    const { w, props, registered } = propsWorld({ 'r04.stacks-lock': true, 'r04.stacks-page': true });
     begin(w, 'r04');
     props.update();
+    const lock = registered.get('use:r04-stacks-lock')!;
     const p1 = registered.get('use:r04-page-1')!;
+    expect(lock.enabled()).toBe(true);
+    expect(p1.enabled()).toBe(false);
+    lock.onInteract();
+    interact(w, 'use:r04-stacks-lock'); // the interaction system emits this on use
+    expect(lock.enabled()).toBe(false);
     expect(p1.enabled()).toBe(true);
     p1.onInteract();
     expect(p1.enabled()).toBe(false);
-    expect(registered.get('use:r04-page-2')!.enabled()).toBe(true);
+    expect(w.flags.get('story.r04.page.1')).toBe(true);
   });
   it('a prop whose registration throws is skipped once and does not block the others', () => {
     const w = makeWorld([m07, r04]);
@@ -331,7 +382,7 @@ describe('quest props and the interact-flag bridge', () => {
     begin(w, 'r04');
     props.update();
     props.update();
-    expect(registered).toEqual(['use:r04-page-2', 'use:r04-page-3']);
+    expect(registered).toEqual(['use:r04-stacks-lock']);
     expect(warns).toHaveLength(1);
   });
   it('dispose unregisters everything', () => {
@@ -367,15 +418,18 @@ describe('Harrowmark post rules', () => {
     const at = () => resolvePosts(POST_RULES, { state: w.state, quests: w.manager });
     return { w, at };
   }
-  it('Stane stays in the Practice Yard until R02 is done AND M07 has started', () => {
+  it('Stane keeps the Practice Yard until M06 starts, then the Bastion yard whatever R02\'s state (density pass)', () => {
     const { w, at } = world();
     expect(at().stane).toEqual({ anchorId: 'npc-post.stane', home: true });
+    w.manager.start('r02');
+    expect(at().stane.home).toBe(true); // R02 in the Practice Yard before M06
+    w.manager.start('m06');
+    expect(at().stane.anchorId).toBe('npc-post.stane.bastion'); // R02 open, M06 started: the Bastion
+    w.manager.complete('m06');
     w.manager.start('m07');
-    expect(at().stane.anchorId).toBe('npc-post.stane'); // M07 started, R02 open
-    w.manager.start('r02'); w.manager.complete('r02');
     expect(at().stane.anchorId).toBe('npc-post.stane.bastion');
   });
-  it('R02 done but M07 not started keeps Stane at home', () => {
+  it('R02 done before M06 keeps Stane at home', () => {
     const { w, at } = world();
     w.manager.start('r02'); w.manager.complete('r02');
     expect(at().stane.home).toBe(true);
@@ -395,6 +449,8 @@ describe('Harrowmark post rules', () => {
     expect(at().rook.anchorId).toBe('npc-post.rook.gate');
     w.manager.start('m06');
     expect(at().rook.anchorId).toBe('npc-post.rook.gate');
+    w.manager.completeObjective('m06', 'o2');
+    expect(at().rook.anchorId).toBe('npc-post.rook.inner'); // waits at the gate brazier inside (density pass)
     w.manager.complete('m06');
     expect(at().rook.anchorId).toBe('npc-post.rook');
     w.manager.start('m07');
