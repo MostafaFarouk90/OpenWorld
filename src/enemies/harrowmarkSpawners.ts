@@ -29,7 +29,8 @@ export const HARROWMARK_SPAWNERS: readonly SpawnerDef[] = [
     anchor: 'r03.guildhall.1',
     memberAnchors: members('r03.guildhall.', 1, 3),
     band: { min: 5, max: 6 },
-    activation: { quest: 'r03' },
+    // Act 1 density pass (quests thread): the thugs move once the Guildhall doorman has had his word
+    activation: { quest: 'r03', flag: 'story.r03.doormanTalked' },
     respawn: 'never',
     leash: true,
   },
@@ -45,7 +46,8 @@ export const HARROWMARK_SPAWNERS: readonly SpawnerDef[] = [
     anchor: 'm07.thieves.1',
     memberAnchors: members('m07.thieves.', 1, 3),
     band: { min: 4, max: 5 },
-    activation: { quest: 'm07' },
+    // Act 1 density pass (quests thread): the thieves wait in their alley until Cael has followed the coins there
+    activation: { quest: 'm07', flag: 'story.m07.trailFollowed' },
     respawn: 'never',
     leash: false,
   },

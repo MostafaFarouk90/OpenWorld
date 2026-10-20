@@ -149,6 +149,16 @@ describe('R02 The Marshal\'s Last Drill', () => {
     expect(w.manager.objectiveDone('r02', 'o4')).toBe(false);
     for (let i = 0; i < 2; i++) w.bus.emit('dummy.guardBroken', { dummyId: 'd3' });
     expect(w.manager.state('r02')).toBe('active');
+    // the density pass: a story, a bout, a story, two at once (kills or Spares, by tag), then Stane
+    talk(w, 'stane');
+    const vet = (id: string, tag: string) => w.bus.emit('actor.died', { actorId: id, killerId: 'p', kind: 'yard-veteran', spawnTag: tag });
+    vet('v0', 'r02.pair'); // the pair's tag does not count for the single bout
+    expect(w.manager.objectiveDone('r02', 'bout')).toBe(false);
+    w.bus.emit('mercy', { verb: 'spare', creature: 'yard-veteran', actorId: 'v1', spawnTag: 'r02.bout' });
+    talk(w, 'stane');
+    vet('v2', 'r02.pair');
+    w.bus.emit('mercy', { verb: 'spare', creature: 'yard-veteran', actorId: 'v3', spawnTag: 'r02.pair' });
+    expect(w.manager.objectiveDone('r02', 'pair')).toBe(true);
     talk(w, 'stane');
     expect(w.manager.state('r02')).toBe('completed');
   });

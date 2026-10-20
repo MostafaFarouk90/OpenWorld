@@ -9,7 +9,9 @@ export const npcWhitlock: DialogueDef = {
   start: [
     // R04 The Archivist's Missing Pages
     { when: { all: [{ quest: 'm07', state: 'completed' }, { quest: 'r04', state: 'inactive' }] }, node: 'r04-offer' },
-    { when: { all: [r04Active, done('r04', 'o2')] }, node: 'r04-pages' },
+    // the density pass: Whitlock reads the three pages aloud once Crabbe has been asked about the steward's mark
+    { when: { all: [r04Active, done('r04', 'crabbe')] }, node: 'r04-read-1' },
+    { when: { all: [r04Active, done('r04', 'o2')] }, node: 'r04-crabbe-remind' },
     { when: r04Active, node: 'r04-remind' },
 
     { when: { all: [{ quest: 'r04', state: 'completed' }, { flag: 'story.r04.choice', equals: 'expose' }] }, node: 'idle-expose' },
@@ -29,9 +31,15 @@ export const npcWhitlock: DialogueDef = {
         { id: 'later', textKey: P + 'r04-offer-2.later', next: 'r04-later' },
       ],
     },
-    { id: 'r04-brief', speaker: 'whitlock', textKey: P + 'r04-brief', next: null },
+    { id: 'r04-brief', speaker: 'whitlock', textKey: P + 'r04-brief', next: 'r04-brief-2' },
+    { id: 'r04-brief-2', speaker: 'whitlock', textKey: P + 'r04-brief-2', next: 'r04-brief-3' },
+    { id: 'r04-brief-3', speaker: 'whitlock', textKey: P + 'r04-brief-3', next: null },
     { id: 'r04-later', speaker: 'whitlock', textKey: P + 'r04-later', next: null },
     { id: 'r04-remind', speaker: 'whitlock', textKey: P + 'r04-remind', next: null },
+    { id: 'r04-crabbe-remind', speaker: 'whitlock', textKey: P + 'r04-crabbe-remind', next: null },
+    ...['1', '1b', '2', '2b', '3', '3b'].map((k, i, all) => ({
+      id: `r04-read-${k}`, speaker: 'whitlock', textKey: `${P}r04-read-${k}`, next: i + 1 < all.length ? `r04-read-${all[i + 1]}` : 'r04-pages',
+    })),
 
     // The decision. Every choice decides (Esc aborts without crediting the talk objective), 'ask' loops back here.
     {

@@ -145,9 +145,13 @@ export const PHASE_A_PLAN: Record<PhaseAQuest, QuestPlan> = {
   r02: {
     design: 30,
     from: A('npc-post.wynn'),
-    route: [A('npc-post.stane'), A('yard.blocking-dummy-1'), A('yard.blocking-dummy-2'), A('yard.blocking-dummy-3'), A('npc-post.stane')],
-    beats: { drillEvent: 8 },
-    note: '3 open hits + 3 parries + 2 guard breaks',
+    // the chain plays R02 in the Practice Yard before Harrowmark (from M06 on it runs in the Bastion yard)
+    route: [
+      A('npc-post.stane'), A('yard.blocking-dummy-1'), A('yard.blocking-dummy-2'), A('yard.blocking-dummy-3'), A('npc-post.stane'),
+      A('spawn.r02.yard-bout'), A('npc-post.stane'), A('spawn.r02.yard-pair-1'), A('npc-post.stane'),
+    ],
+    beats: { drillEvent: 8, bout: 3 },
+    note: '3 open hits + 3 parries + 2 guard breaks, two stories, a bout with one yard veteran and one with two',
   },
   d01: {
     design: 55,
@@ -170,30 +174,43 @@ export const PHASE_A_PLAN: Record<PhaseAQuest, QuestPlan> = {
 export const PHASE_B_PLAN: Record<PhaseBQuest, QuestPlan> = {
   m06: {
     design: 45,
-    route: [A('npc-post.rook.gate'), A('stealth.m06.start'), A('stealth.m06.cp.inside'), A('stealth.m06.end'), A('npc-post.rook.gate')],
-    beats: { stealthSection: 1 },
-    note: 'the stealth route (the bribe and the argument skip the section)',
+    route: [
+      A('npc-post.rook.gate'), A('harrowmark.gate.south.queue.1'), A('harrowmark.gate.south.queue.3'), A('npc-post.rook.gate'),
+      A('stealth.m06.start'), A('stealth.m06.cp.inside'), A('stealth.m06.end'), A('m06.gate-brazier'), A('npc-post.rook.inner'),
+      A('harrowmark.gate.south.queue.1'), T('trg.harrowmark.anvil-sign'),
+    ],
+    beats: { stealthSection: 1, interact: 1 },
+    note: 'the queue (two refugees), the stealth route (the bribe and the argument skip the section), the brazier, Rook\'s districts, the word to the queue, the Anvil',
   },
   m07: {
     design: 40,
-    from: A('npc-post.rook.gate'),
-    route: [A('npc-post.aldith'), A('m07.thieves.1'), A('m07.satchel'), A('npc-post.aldith'), T('trg.harrowmark.bastion-yard')],
-    beats: { killUnit: 3, interact: 1, classChoice: 1, drill: 1 },
-    note: 'three cutpurses, the satchel, the class choice and its drill',
+    from: T('trg.harrowmark.anvil-sign'),
+    route: [
+      A('npc-post.aldith'), A('npc-post.stallholder-1'), A('npc-post.stallholder-2'), A('m07.coin-1'), A('m07.coin-2'), A('m07.coin-3'),
+      A('m07.thieves.1'), A('m07.satchel'), A('npc-post.aldith'), T('trg.harrowmark.bastion-yard'),
+    ],
+    beats: { killUnit: 3, interact: 4, classChoice: 1, drill: 1 },
+    note: 'two stallholders, three coins, three cutpurses, the satchel, the class choice and its drill',
   },
   r03: {
     design: 40,
     from: T('trg.harrowmark.bastion-yard'),
-    route: [A('npc-post.aldith'), A('r03.guildhall.1'), A('r03.brewing-copper'), A('npc-post.aldith')],
-    beats: { killUnit: 3, interact: 1 },
-    note: 'three guildhall thugs and the copper',
+    route: [
+      A('npc-post.aldith'), A('npc-post.guild-doorman'), A('r03.guildhall.1'), A('npc-post.pellam'), A('r03.brewing-copper'),
+      A('spawn.r03.snatch-1'), A('npc-post.aldith'),
+    ],
+    beats: { killUnit: 5, interact: 1 },
+    note: 'the doorman, three guildhall thugs, Pellam\'s plea, the copper, the two snatchers',
   },
   r04: {
     design: 40,
     from: A('npc-post.aldith'),
-    route: [A('npc-post.whitlock'), A('r04.page-1'), A('r04.page-2'), A('r04.page-3'), A('npc-post.whitlock')],
-    beats: { interact: 3 },
-    note: 'three pages across the city',
+    route: [
+      A('npc-post.whitlock'), A('harrowmark.archive.door'), 'DOOR', A('harrowmark.archive.door'), A('npc-post.sexton'),
+      A('npc-post.fence'), A('npc-post.crabbe'), A('npc-post.whitlock'),
+    ],
+    beats: { interact: 4 },
+    note: 'the stacks lock and the page behind it (two doors), the sexton, the fence, Crabbe, Whitlock reads the pages',
   },
   m08: {
     design: 50,

@@ -3,6 +3,7 @@ import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { createFakeCore } from '../region/testing/fakeCore';
 import { createHarrowmarkPlugin } from './harrowmark.plugin';
 import { HARROWMARK_LAYOUT, HARROWMARK_NPCS } from './harrowmark.layout';
+import { DENSITY_LAYOUT_HM } from './density.layout';
 import { HARROWMARK_NPC_DEFS } from './npcDefs';
 import type { HarrowmarkService } from './types';
 
@@ -40,7 +41,8 @@ describe('harrowmark plugin', () => {
     expect(registered).toHaveLength(1);
     expect(registered[0].specs).toEqual(HARROWMARK_LAYOUT.npcs);
     expect(registered[0].defs).toBe(HARROWMARK_NPC_DEFS);
-    expect(HARROWMARK_NPCS).toBe(HARROWMARK_LAYOUT.npcs);
+    // the density pass's NPCs follow thread 17's cast (src/harrowmark/density.layout.ts)
+    expect(HARROWMARK_LAYOUT.npcs).toEqual([...HARROWMARK_NPCS, ...DENSITY_LAYOUT_HM.npcs]);
     expect(fc.colliders.size).toBe(HARROWMARK_LAYOUT.structures.filter((s) => s.mode === 'solid').length);
     plugin.dispose?.();
   });
@@ -88,6 +90,7 @@ describe('harrowmark plugin', () => {
     expect(svc.southGate.state()).toBe('closed');
     expect(portcullis()).toBe(0);
     fc.ctx.state.setFlag('story.m06.started', true);
+    fc.ctx.state.setFlag('story.m06.queueHeard', true); // the queue heard (batch 3 density pass)
     expect(svc.southGate.state()).toBe('guarded');
     expect(portcullis()).toBe(1);
     fc.ctx.state.setFlag('story.m06.route', 'stealth');
@@ -99,6 +102,7 @@ describe('harrowmark plugin', () => {
   it('re-derives the gate and the world change from a loaded save', () => {
     const { fc, plugin } = setup();
     fc.flags.set('story.m06.started', true);
+    fc.flags.set('story.m06.queueHeard', true);
     fc.flags.set('story.gate.a2', true);
     plugin.setup(fc.ctx);
     const svc = fc.services.get('harrowmark') as HarrowmarkService;

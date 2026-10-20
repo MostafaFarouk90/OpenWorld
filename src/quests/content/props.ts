@@ -8,9 +8,11 @@ import type { InteractFlagBridge } from '../bridges';
 export const QUEST_PROPS: QuestPropSpec[] = [
   { interactableId: 'pickup:satchel', anchorId: 'm07.satchel', promptKey: 'quest.prompt.satchel', objective: ['m07', 'o3'], give: { itemId: 'stolen-satchel', count: 1 } },
   { interactableId: 'pickup:brewing-copper', anchorId: 'r03.brewing-copper', promptKey: 'quest.prompt.brewingCopper', objective: ['r03', 'o3'], give: { itemId: 'brewing-copper', count: 1 } },
-  ...[1, 2, 3].map((n): QuestPropSpec => ({
-    interactableId: `use:r04-page-${n}`, anchorId: `r04.page-${n}`, promptKey: 'quest.prompt.page', objective: ['r04', 'o2'], usedFlag: `story.r04.page.${n}`,
-  })),
+  // R04's first page waits in the Archive stacks (density pass; the second and third come from the sexton and the fence)
+  {
+    interactableId: 'use:r04-page-1', anchorId: 'r04.stacks-page', promptKey: 'quest.prompt.page', objective: ['r04', 'page1'],
+    usedFlag: 'story.r04.page.1', look: 'page', hideWhenUsed: true,
+  },
 
   // ---- Act 1 density pass, batch 1 (anchors in src/region/density.layout.ts) ----
   ...[1, 2].map((n): QuestPropSpec => ({
@@ -44,6 +46,23 @@ export const QUEST_PROPS: QuestPropSpec[] = [
   {
     interactableId: 'use:d01-altar', anchorId: 'd01.altar', promptKey: 'quest.prompt.altar', objective: ['d01', 'altar'],
     usedFlag: 'story.d01.censerSet', look: 'candle', lookOnlyUsed: true,
+  },
+
+  // ---- batch 3: Harrowmark part 1 (anchors in src/harrowmark/density.layout.ts and the Archive def) ----
+  // M06: the Heartshard held to the gate brazier inside the South Gate (thread 17's m06.gate-brazier anchor)
+  {
+    interactableId: 'use:m06-gate-brazier', anchorId: 'm06.gate-brazier', promptKey: 'quest.prompt.shardBrazier',
+    objective: ['m06', 'brazier'], usedFlag: 'story.m06.shardShown', look: 'brazier',
+  },
+  // M07: the coins the thieves dropped on the way to their alley
+  ...[1, 2, 3].map((n): QuestPropSpec => ({
+    interactableId: `use:m07-coin-${n}`, anchorId: `m07.coin-${n}`, promptKey: 'quest.prompt.coin', objective: ['m07', 'coins'],
+    usedFlag: `story.m07.coin.${n}`, look: 'coin', hideWhenUsed: true,
+  })),
+  // R04: Whitlock's key in the stacks lock (the lock opens the stacks' gate, src/interiors/harrowmark/locks.ts)
+  {
+    interactableId: 'use:r04-stacks-lock', anchorId: 'r04.stacks-lock', promptKey: 'quest.prompt.stacksLock',
+    objective: ['r04', 'stacks'], usedFlag: 'story.r04.stacksUnlocked',
   },
 ];
 

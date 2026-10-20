@@ -24,6 +24,17 @@ export const HARROWMARK_NPC_DEFS: NpcDef[] = [
   def('merrin', 'mage', { tint: 0x2f8a86 }),
   def('edric', 'rogue', { scale: 0.72, tint: 0xd9b23a }),
   def('vey', 'knight', { tint: 0x1c1c22 }),
+  // Act 1 density pass, batch 3 (quests thread; additive): the gate refugees, two stallholders, the Guildhall doorman,
+  // Jory Pellam, the chapel sexton, the Guild fence and Steward Crabbe.
+  def('refugee-1', 'rogueHooded', { scale: 0.92, tint: 0x8a8a84 }),
+  def('refugee-2', 'barbarian', { scale: 0.95, tint: 0x6f6a62 }),
+  def('stallholder-1', 'barbarian', { tint: 0xa07a4a }),
+  def('stallholder-2', 'mage', { tint: 0x7a5a8a }),
+  def('guild-doorman', 'barbarian', { scale: 1.05, tint: 0x3a3a40 }),
+  def('pellam', 'rogue', { tint: 0x5a6a3a }),
+  def('sexton', 'mage', { tint: 0x5a4a3a }),
+  def('fence', 'rogueHooded', { tint: 0x2a2a2a }),
+  def('crabbe', 'mage', { tint: 0x2f6a68 }),
 ];
 
 export const HARROWMARK_NPC_STRINGS_EN: Record<string, string> = {
@@ -39,4 +50,13 @@ export const HARROWMARK_NPC_STRINGS_EN: Record<string, string> = {
   'npc.merrin.name': 'Lady Merrin Oswin',
   'npc.edric.name': 'King Edric IV',
   'npc.vey.name': 'Lord-Regent Morcant Vey',
+  'npc.refugee-1.name': 'Hild the Charcoal-Burner',
+  'npc.refugee-2.name': 'Old Beorn',
+  'npc.stallholder-1.name': 'Godric the Pie-Man',
+  'npc.stallholder-2.name': 'Wenna the Ribbon-Seller',
+  'npc.guild-doorman.name': 'Leofric the Doorman',
+  'npc.pellam.name': 'Jory Pellam',
+  'npc.sexton.name': 'Sexton Elric',
+  'npc.fence.name': 'Mother Quill',
+  'npc.crabbe.name': 'Steward Hereward Crabbe',
 };

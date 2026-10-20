@@ -561,6 +561,15 @@ export async function playR02(h: ChapterHarness, t: QuestTrail): Promise<void> {
     chopUntil(h, () => objectiveDone(h, 'r02', 'o4') || h.of('dummy.guardBroken').some((e) => e.dummyId === d.id));
   }
   ensure(objectiveDone(h, 'r02', 'o4'), `o4 two guard breaks (${h.of('dummy.guardBroken').length})`);
+  // the density pass: a story of the ford, a bout with one yard veteran, a second story, a bout with two, the last word
+  await talkTo(h, t, 'stane');
+  ensure(objectiveDone(h, 'r02', 'story1') && h.ctx.state.getBool('story.r02.bout.yard'), `R02 story1, the bout called: ${describeQuest(h, 'r02')}`);
+  await killTagged(h, 'yard-veteran', 'r02.bout', 1, h.anchor('spawn.r02.yard-bout'));
+  ensure(objectiveDone(h, 'r02', 'bout'), `R02 bout won: ${describeQuest(h, 'r02')}`);
+  await talkTo(h, t, 'stane');
+  ensure(objectiveDone(h, 'r02', 'story2'), `R02 story2: ${describeQuest(h, 'r02')}`);
+  await killTagged(h, 'yard-veteran', 'r02.pair', 2, h.anchor('spawn.r02.yard-pair-1'));
+  ensure(objectiveDone(h, 'r02', 'pair'), `R02 pair won: ${describeQuest(h, 'r02')}`);
   await talkTo(h, t, 'stane');
   ensure(q.state('r02') === 'completed', `R02 completed: ${describeQuest(h, 'r02')}`);
   h.run(2);

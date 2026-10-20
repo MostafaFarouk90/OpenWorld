@@ -6,6 +6,7 @@
 import type { AnchorSpec, LayoutData, NpcSpec, PatrolSpec, StructureSpec, TriggerSpec } from '../region/layoutTypes';
 import { GATE_NAMES, gateBearing, inward, outward, polar, wallStructures, PORTCULLIS_ID } from './city';
 import { a, numbered, open, solid, stairs } from './layout.helpers';
+import { DENSITY_LAYOUT_HM } from './density.layout';
 
 export const H = (id: string) => `harrowmark.${id}`;
 
@@ -373,11 +374,12 @@ const triggers: TriggerSpec[] = [
 const patrols: PatrolSpec[] = PATROLS.map((p) => ({ id: p.id, loop: p.loop, points: p.pts.map((_, i) => `${p.id}.${i + 1}`) }));
 
 export const HARROWMARK_LAYOUT: LayoutData = {
-  anchors,
-  triggers,
+  // the Act 1 density pass adds its anchors, triggers and NPCs (src/harrowmark/density.layout.ts)
+  anchors: [...anchors, ...DENSITY_LAYOUT_HM.anchors],
+  triggers: [...triggers, ...DENSITY_LAYOUT_HM.triggers],
   structures,
   patrols,
-  npcs: HARROWMARK_NPCS,
+  npcs: [...HARROWMARK_NPCS, ...DENSITY_LAYOUT_HM.npcs],
   fields: [],
 };
 

@@ -211,6 +211,9 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | poi.deadroad.barrow | 860 | -126 | 0 | 0 | poi |
 | spawn.deadroad.barrow-1 | 855 | -122 | 0 | 0 | spawn |
 | spawn.deadroad.barrow-2 | 865 | -122 | 0 | 0 | spawn |
+| spawn.r02.yard-bout | -45 | 115 | 0 | 180 | spawn |
+| spawn.r02.yard-pair-1 | -48 | 114 | 0 | 180 | spawn |
+| spawn.r02.yard-pair-2 | -42 | 114 | 0 | 180 | spawn |
 
 ## Triggers
 

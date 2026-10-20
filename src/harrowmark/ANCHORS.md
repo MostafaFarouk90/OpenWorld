@@ -294,6 +294,27 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | harrowmark.banner.keep.4 | 8510 | 2598.5 | 10 | 0 | banner, elevated |
 | harrowmark.banner.keep.5 | 8526 | 2598.5 | 10 | 0 | banner, elevated |
 | harrowmark.banner.keep.6 | 8542 | 2598.5 | 10 | 0 | banner, elevated |
+| npc-post.rook.inner | 8530 | 1289 | 0 | 315 | npc-post |
+| npc-post.refugee-1.inside | 8452 | 1338 | 0 | 270 | npc-post |
+| npc-post.refugee-2.inside | 8455 | 1343 | 0 | 300 | npc-post |
+| npc-post.stallholder-1 | 8763.8 | 1529.5 | 0 | 300 | npc-post |
+| npc-post.stallholder-2 | 8789.5 | 1536.4 | 0 | 30 | npc-post |
+| m07.coin-1 | 8830 | 1522 | 0 | 270 | quest, interact |
+| m07.coin-2 | 8885 | 1524 | 0 | 270 | quest, interact |
+| m07.coin-3 | 8928 | 1523 | 0 | 270 | quest, interact |
+| bastion.r02.dummy-1 | 8170 | 1730 | 0 | 180 | dummy |
+| bastion.r02.dummy-2 | 8175 | 1730 | 0 | 180 | dummy |
+| bastion.r02.dummy-3 | 8180 | 1730 | 0 | 180 | dummy |
+| spawn.r02.bastion-bout | 8195 | 1728 | 0 | 120 | spawn |
+| spawn.r02.bastion-pair-1 | 8190 | 1722 | 0 | 150 | spawn |
+| spawn.r02.bastion-pair-2 | 8200 | 1722 | 0 | 210 | spawn |
+| npc-post.guild-doorman | 8858 | 1582 | 0 | 0 | npc-post |
+| npc-post.pellam | 8858 | 1622 | 0 | 270 | npc-post |
+| spawn.r03.snatch-1 | 8745 | 1626 | 0 | 270 | spawn |
+| spawn.r03.snatch-2 | 8750 | 1632 | 0 | 270 | spawn |
+| npc-post.sexton | 8372 | 2142 | 0 | 90 | npc-post |
+| npc-post.fence | 8727 | 1545 | 0 | 270 | npc-post |
+| npc-post.crabbe | 8774 | 1984 | 0 | 270 | npc-post |
 
 ## Triggers
 
@@ -307,6 +328,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | trg.harrowmark.door.underways | sphere | 7958 | 1545 | r 2 |
 | trg.harrowmark.gate-south | sphere | 8500 | 1256 | r 6 |
 | trg.harrowmark.bastion-yard | box | 8200 | 1735 | half 70 x 6 x 55 |
+| trg.harrowmark.anvil-sign | sphere | 8204 | 1645 | r 7 |
 
 ## Structures
 

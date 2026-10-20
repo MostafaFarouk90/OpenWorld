@@ -12,14 +12,16 @@ import { TrainingDummies } from '../world/TrainingDummies';
 import { HEAVY_CHOP_CLIP } from '../combat/heavyBlow';
 import dialoguePlugin from '../dialogue/dialogue.plugin';
 import questsPlugin from './quests.plugin';
-import { R02Yard, R02_DUMMY_ANCHORS } from './r02Yard';
+import { R02Yard, R02_BASTION_DUMMY_ANCHORS, R02_DUMMY_ANCHORS } from './r02Yard';
 
 describe('R02Yard (unit)', () => {
   const spot = { feet: { x: 0, y: 0, z: 0 }, yaw: 0 };
   function rig(opts: { wired?: boolean; missing?: string[] } = {}) {
     let active = false;
+    let bastion = false;
     let wired = opts.wired ?? true;
     const placed: number[] = [];
+    const asked: string[] = [];
     let disposed = 0;
     const warn = vi.fn();
     const dummies = {
@@ -33,14 +35,16 @@ describe('R02Yard (unit)', () => {
     let provided = true;
     const yard = new R02Yard({
       active: () => active,
-      spot: (id) => (opts.missing?.includes(id) ? null : spot),
+      atBastion: () => bastion,
+      spot: (id) => { asked.push(id); return opts.missing?.includes(id) ? null : spot; },
       dummies: () => (provided ? dummies : undefined),
       warn,
     });
     return {
-      yard, placed, warn,
+      yard, placed, warn, asked,
       disposed: () => disposed,
       setActive: (v: boolean) => { active = v; yard.markDirty(); },
+      setBastion: (v: boolean) => { bastion = v; yard.markDirty(); },
       setWired: (v: boolean) => { wired = v; },
       setProvided: (v: boolean) => { provided = v; },
     };
@@ -80,6 +84,23 @@ describe('R02Yard (unit)', () => {
     r.yard.update();
     expect(r.placed).toEqual([2]);
     expect(r.warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('stands in the Bastion yard from M06 on, and moves there if R02 is running when Stane does (density pass)', () => {
+    const r = rig();
+    r.setActive(true);
+    r.yard.update();
+    expect(r.asked).toEqual([...R02_DUMMY_ANCHORS]);
+    r.asked.length = 0;
+    r.setBastion(true);
+    r.yard.update();
+    expect(r.asked).toEqual([...R02_BASTION_DUMMY_ANCHORS]);
+    expect(r.placed).toEqual([3, 3]); // placing replaces the yard's dummies
+    r.yard.update();
+    expect(r.placed).toEqual([3, 3]); // and nothing more while the site holds
+    r.setActive(false);
+    r.yard.update();
+    expect(r.disposed()).toBe(1);
   });
 
   it('dispose removes standing dummies', () => {
@@ -168,6 +189,14 @@ describe('R02 on the real blocking dummies', () => {
     t.hit(ids[2], HEAVY_CHOP_CLIP);
     t.hit(ids[1], HEAVY_CHOP_CLIP);
     expect(t.quests.objectiveDone('r02', 'o4')).toBe(true);
+    // the density pass: Stane's story, a bout, another story, two at once (Spares by tag), then the hand-in
+    const spare = (actorId: string, spawnTag: string) =>
+      t.ctx.events.emit('mercy' as never, { verb: 'spare', creature: 'yard-veteran', actorId, spawnTag } as never);
+    t.talkStane();
+    spare('v1', 'r02.bout');
+    t.talkStane();
+    spare('v2', 'r02.pair');
+    spare('v3', 'r02.pair');
     t.talkStane();
     expect(t.quests.state('r02')).toBe('completed');
     t.ticks(1);

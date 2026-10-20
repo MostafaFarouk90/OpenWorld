@@ -99,6 +99,35 @@ export const TOLL_SERGEANT: EnemyDef = {
 };
 
 /**
+ * A Halvard yard veteran (Act 1 density pass, quests thread; additive here): Marshal Stane's sparring partner in R02.
+ * The Footman's moves at sparring weight on a living man in Halvard blue: light blows, yields when beaten (Spare), and
+ * a sparring yield pays no favour (codex only). He fights in the Practice Yard or the Bastion yard, never on the road.
+ */
+export const YARD_VETERAN: EnemyDef = {
+  kind: 'yard-veteran',
+  nameKey: 'enemies.name.yard-veteran',
+  model: { prefer: [], tint: 0x4a5f86, weapons: 'sword-shield', hide: ['Knight_Helmet'] },
+  maxHealth: 70,
+  maxPoise: 40,
+  walkSpeed: 1.4,
+  chaseSpeed: 2.6,
+  moves: [
+    move('soldier.chop', ENEMY_ATTACKS.soldierChop, {
+      windup: 0.65, telegraph: 'block', weapon: 'right', damage: 8, poise: 20,
+      range: [0, 1.6], cooldown: 1.8, recover: 0.8, weight: 3,
+    }),
+    move('soldier.bash', ENEMY_ATTACKS.soldierBash, {
+      windup: 0.6, telegraph: 'block', weapon: 'left', damage: 4, poise: 20,
+      range: [0, 1.0], cooldown: 3, recover: 0.8, weight: 1,
+    }),
+  ],
+  mercy: { verb: 'spare', tier: 'normal', track: null, when: 'yielding' },
+  material: 'metal',
+  rises: false,
+  guard: true,
+};
+
+/**
  * Watch Guard: an observer-only humanoid (Knight fallback model, tinted) for stealth sections. It sees the
  * player and raises `ai.spotted`; it has no moves, no mercy, never emits `ai.aggro`, never chases and is never
  * routed through the PathFollower. It is `neutral` and immortal: a hit takes its awareness to 1 (one `ai.spotted`)
@@ -134,6 +163,7 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'watch-guard': WATCH_GUARD,
   'guildhall-thug': GUILDHALL_THUG,
   'toll-sergeant': TOLL_SERGEANT,
+  'yard-veteran': YARD_VETERAN,
 };
 
 /**
@@ -149,6 +179,7 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   'watch-guard': { part: 'weapon', color: 0xd04030 },
   'guildhall-thug': { part: 'hand', color: 0xd04030 },
   'toll-sergeant': { part: 'weapon', color: 0xd04030 },
+  'yard-veteran': { part: 'weapon', color: 0xd04030 },
 };
 
 function move(

@@ -27,6 +27,8 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'guildhall-thug': 28,
   // M04's Toll Sergeant (Act 1 density pass): an elite Footman.
   'toll-sergeant': 70,
+  // R02's sparring yard veterans (density pass, batch 3)
+  'yard-veteran': 30,
   dummy: 0,
   scarecrow: 0,
 };

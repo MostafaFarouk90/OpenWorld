@@ -18,4 +18,5 @@ export const ENEMY_STRINGS_EN: Record<string, string> = {
   'enemies.name.blightbloom': 'Blightbloom',
   'enemies.name.toll-post': 'Toll Post',
   'enemies.name.toll-sergeant': 'Toll Sergeant',
+  'enemies.name.yard-veteran': 'Yard Veteran',
 };

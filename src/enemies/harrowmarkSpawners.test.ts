@@ -83,8 +83,9 @@ describe('HARROWMARK_SPAWNERS table', () => {
   });
 
   it('activates R03 and M07 by quest, kennels on the Underways, summons by hand', () => {
-    expect(by('r03.guildhall').activation).toEqual({ quest: 'r03' });
-    expect(by('m07.thieves').activation).toEqual({ quest: 'm07' });
+    // the density pass: the thugs wait for the doorman's word, the thieves for the coin trail
+    expect(by('r03.guildhall').activation).toEqual({ quest: 'r03', flag: 'story.r03.doormanTalked' });
+    expect(by('m07.thieves').activation).toEqual({ quest: 'm07', flag: 'story.m07.trailFollowed' });
     expect(by('underways.kennel-1').activation).toEqual({ interior: 'underways' });
     expect(by('grimtooth-summons').activation).toBe('manual');
   });

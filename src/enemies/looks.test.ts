@@ -43,8 +43,9 @@ describe('enemy looks', () => {
     expect(new Set(sigs).size).toBe(HUMANOIDS.length);
     // And at most two of them share a body (the soldier and the guard are the Knight rig: helmet and tint tell them apart).
     const perBody = new Map<string, number>();
-    // (the toll sergeant is a bigger, darker soldier on purpose: he leads them, so he is left out of the count)
-    for (const d of HUMANOIDS.filter((x) => x.kind !== 'toll-sergeant')) perBody.set(bodyOf(d), (perBody.get(bodyOf(d)) ?? 0) + 1);
+    // (the toll sergeant is a bigger, darker soldier on purpose: he leads them, so he is left out of the count; the yard
+    // veteran is a living Halvard soldier in Halvard blue on the same rig, seen only in the training yards)
+    for (const d of HUMANOIDS.filter((x) => x.kind !== 'toll-sergeant' && x.kind !== 'yard-veteran')) perBody.set(bodyOf(d), (perBody.get(bodyOf(d)) ?? 0) + 1);
     expect([...perBody.values()].every((n) => n <= 2)).toBe(true);
     // None of them wears the player's Knight look unchanged (Knight body, no helmet change, no scale): the Knight-rig kinds hide the helmet.
     for (const d of HUMANOIDS.filter((x) => bodyOf(x) === 'knight')) expect(d.model.hide, d.kind).toContain('Knight_Helmet');
