@@ -18,7 +18,6 @@ export const m09: QuestDef = {
   titleKey: 'quest.m09.title',
   summaryKey: 'quest.m09.summary',
   sequential: true,
-  onStart: [{ setFlag: 'story.m09.started', value: true }],
   objectives: [
     { id: 'o1', type: 'talk', target: 'merrin', textKey: 'quest.m09.o1' },
     // the clerk's dialogue completes it for the drink or Merrin's name; the satchel prop for the quiet way

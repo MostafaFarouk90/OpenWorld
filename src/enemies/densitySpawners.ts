@@ -98,7 +98,7 @@ export const DENSITY_SPAWNERS_A: readonly SpawnerDef[] = [
   {
     id: 'density.d02.stray', tag: 'd02.stray', enemy: 'ember-hound', count: 2,
     anchor: 'spawn.d02.stray-1', memberAnchors: members('spawn.d02.stray', 2),
-    band: { min: 6, max: 6 }, activation: { flag: 'story.d02.underwaysOpen', until: 'story.d02.strayDealt' }, respawn: 'never', leash: true,
+    band: { min: 6, max: 6 }, activation: { flag: 'story.d02.breadGiven', until: 'story.d02.strayDealt' }, respawn: 'never', leash: true,
   },
   // D02: three hounds come through the drained sluice once both valves are open (anchors in the Underways generator).
   {

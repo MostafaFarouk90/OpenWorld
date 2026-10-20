@@ -100,7 +100,9 @@ describe('batch 4 objective flags', () => {
     expect(w.flags.has('story.d02.strayDealt')).toBe(false);
     w.bus.emit('actor.died', { actorId: 's2', killerId: 'p', kind: 'ember-hound', spawnTag: 'd02.stray' });
     expect(w.flags.get('story.d02.strayDealt')).toBe(true);
+    expect(w.flags.has('story.d02.underwaysOpen')).toBe(false); // the door waits for Rook's word
     talk(w, 'rook');
+    expect(w.flags.get('story.d02.underwaysOpen')).toBe(true);
     w.bus.emit('interior.entered', { interiorId: 'underways' });
     for (const id of ['h1', 'h2', 'h3', 'h4']) w.bus.emit('actor.died', { actorId: id, killerId: 'p', kind: 'ember-hound', spawnTag: 'd02.kennels' });
     talk(w, 'note-d02-tally');
@@ -120,7 +122,7 @@ describe('batch 4 spawns, gates and places', () => {
 
   it('each new group has its tag, enemy, count and a gate that closes once it is dealt with', () => {
     expect(by('density.m10.ambush')).toMatchObject({ tag: 'm10.ambush', enemy: 'guildhall-thug', count: 2, respawn: 'never', activation: { flag: 'story.m10.ordersTaken', until: 'story.m10.ambushBeaten' } });
-    expect(by('density.d02.stray')).toMatchObject({ tag: 'd02.stray', enemy: 'ember-hound', respawn: 'never', activation: { flag: 'story.d02.underwaysOpen', until: 'story.d02.strayDealt' } });
+    expect(by('density.d02.stray')).toMatchObject({ tag: 'd02.stray', enemy: 'ember-hound', respawn: 'never', activation: { flag: 'story.d02.breadGiven', until: 'story.d02.strayDealt' } });
     expect(by('density.d02.stray').count).toBe(2);
     expect(by('density.d02.sluice')).toMatchObject({ tag: 'd02.sluice', enemy: 'ember-hound', count: 3, respawn: 'never', activation: { flag: 'story.d02.valvesOpen', until: 'story.d02.sluiceClear' } });
     expect(m10.objectives.find((o) => o.id === 'ambush')).toMatchObject({ type: 'kill', target: 'guildhall-thug', required: 2, spawnTag: 'm10.ambush' });
@@ -201,7 +203,8 @@ describe('saves from before the new steps', () => {
     expect(w.manager.objectiveDone('m09', 'key')).toBe(true);
     expect(w.manager.isObjectiveCurrent('m09', 'daybook')).toBe(true);
     w.objectiveFlags.sync();
-    expect(w.flags.get('story.m09.keyRoute')).toBe('lifted'); // Simeon gets it back in his sleep
+    expect(w.flags.get('story.m09.started')).toBe(true); // Simeon is on his bench for the key's return
+    expect(DENSITY_LAYOUT_HM.npcs.find((n) => n.id === 'clerk')!.presentWhen).toBe('story.m09.started');
     const x = flagsWorld([m09]);
     x.manager.load({ quests: { m09: { state: 'active', objectives: { o1: 1, o2: 1, o3: 3, o4: 1 } } } });
     expect(x.manager.isObjectiveCurrent('m09', 'return')).toBe(true); // copies done and out: the key goes back
@@ -235,8 +238,8 @@ describe('batch 4 dialogues', () => {
 
   it('every new string is used, no dashes, no literal player name', () => {
     expect(Object.keys(questStringsDensityC).every((k) => k in questStrings)).toBe(true);
-    for (const [k, v] of Object.entries(dialogueStringsDensityC)) {
-      expect(all[k], k).toBe(v);
+    for (const [k, v] of Object.entries({ ...dialogueStringsDensityC, ...questStringsDensityC })) {
+      expect(all[k] ?? questStrings[k], k).toBe(v);
       expect(v, k).not.toMatch(/[‒-―]| - /);
       expect(v, k).not.toMatch(/Cael/);
     }

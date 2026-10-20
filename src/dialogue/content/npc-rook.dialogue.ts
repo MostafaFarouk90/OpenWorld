@@ -146,7 +146,6 @@ export const npcRook: DialogueDef = {
           else: [{ give: [{ itemId: 'hearth-bread', count: 5 }] }, { setFlag: 'story.d02.breadGiven', value: true }],
         },
         { unlockMercy: 'calm' },
-        { setFlag: 'story.d02.underwaysOpen', value: true },
       ],
     }),
     say('d02-calm-2', 'd02-stray'),

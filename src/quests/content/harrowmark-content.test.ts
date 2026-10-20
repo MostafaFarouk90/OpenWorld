@@ -86,7 +86,8 @@ describe('Harrowmark quest content', () => {
     expect(writers('story.m07.classOpen')).toHaveLength(1);
     expect(writers('story.m09.houseOpen')).toEqual([]);
     expect(OBJECTIVE_FLAGS.filter((r) => r.flag === 'story.m09.houseOpen')).toEqual([{ quest: 'm09', objective: 'key', flag: 'story.m09.houseOpen' }]);
-    expect(writers('story.d02.underwaysOpen')).toHaveLength(1);
+    expect(writers('story.d02.underwaysOpen')).toEqual([]); // the objective-flag row on D02's `lesson` (density pass)
+    expect(OBJECTIVE_FLAGS.filter((r) => r.flag === 'story.d02.underwaysOpen')).toEqual([{ quest: 'd02', objective: 'lesson', flag: 'story.d02.underwaysOpen' }]);
     expect(writers('story.d02.campSeen')).toHaveLength(1);
     expect(writers('story.d02.campSeen')[0]).toMatch(/^scene-act1-camp\./);
     expect(writers('story.act1.campSeen')).toEqual([]);
