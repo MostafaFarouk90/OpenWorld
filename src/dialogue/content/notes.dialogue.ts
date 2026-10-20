@@ -29,4 +29,11 @@ export const NOTE_DIALOGUES: DialogueDef[] = [
   note('note-d01-tablet-3', 3),
   note('note-d01-tablet-4', 2),
   note('note-d01-censer', 3, 'cael'),
+  // batch 4: the Regent's word overheard at the Keep hall's screen, his day-book, the courier's sealed orders, Grimtooth's
+  // den and the sluice tally
+  note('note-m08-screen', 4, 'cael'),
+  note('note-m09-daybook', 3, 'cael'),
+  note('note-m10-orders', 2, 'cael'),
+  note('note-d02-tally', 3, 'cael'),
+  note('note-d02-crates', 3, 'cael'),
 ];

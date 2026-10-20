@@ -35,6 +35,11 @@ export const HARROWMARK_NPC_DEFS: NpcDef[] = [
   def('sexton', 'mage', { tint: 0x5a4a3a }),
   def('fence', 'rogueHooded', { tint: 0x2a2a2a }),
   def('crabbe', 'mage', { tint: 0x2f6a68 }),
+  // Batch 4: the Bastion armourer, the Keep gate guard, Lord Aldous Grisel and Oswin's clerk.
+  def('armourer', 'barbarian', { tint: 0x5a5a60 }),
+  def('keep-guard', 'knight', { tint: 0x8a7a3a }),
+  def('grisel', 'knight', { tint: 0x2f4a2f }),
+  def('clerk', 'mage', { scale: 0.95, tint: 0x3a6a68 }),
 ];
 
 export const HARROWMARK_NPC_STRINGS_EN: Record<string, string> = {
@@ -50,13 +55,17 @@ export const HARROWMARK_NPC_STRINGS_EN: Record<string, string> = {
   'npc.merrin.name': 'Lady Merrin Oswin',
   'npc.edric.name': 'King Edric IV',
   'npc.vey.name': 'Lord-Regent Morcant Vey',
-  'npc.refugee-1.name': 'Hild the Charcoal-Burner',
+  'npc.refugee-1.name': 'Tilda the Charcoal-Burner',
   'npc.refugee-2.name': 'Old Beorn',
   'npc.stallholder-1.name': 'Godric the Pie-Man',
-  'npc.stallholder-2.name': 'Wenna the Ribbon-Seller',
+  'npc.stallholder-2.name': 'Maera the Ribbon-Seller',
   'npc.guild-doorman.name': 'Leofric the Doorman',
   'npc.pellam.name': 'Jory Pellam',
   'npc.sexton.name': 'Sexton Elric',
   'npc.fence.name': 'Mother Quill',
   'npc.crabbe.name': 'Steward Hereward Crabbe',
+  'npc.armourer.name': 'Armourer Brand',
+  'npc.keep-guard.name': 'Keep Warden Ordric',
+  'npc.grisel.name': 'Lord Aldous Grisel',
+  'npc.clerk.name': 'Simeon Penhallow, Counting-House Clerk',
 };

@@ -50,6 +50,32 @@ export const QUEST_NOTES: QuestNoteSpec[] = [
   { interactableId: 'use:note-d01-censer', anchorId: 'd01.censer', when: {
     any: [{ flag: 'boss.ashen-prior.outcome', equals: 'released' }, { flag: 'boss.ashen-prior.outcome', equals: 'defeated' }],
   } },
+
+  // ---- batch 4: Harrowmark part 2 ----
+  // M08: the carved screen behind the dais, where the Regent's private word carries once the audience is over
+  {
+    interactableId: 'use:note-m08-screen', anchorId: 'm08.screen', promptKey: 'quest.prompt.listen',
+    when: { all: [{ quest: 'm08', state: 'active' }, { objective: ['m08', 'o3'], done: true }] },
+  },
+  // M09: the Regent's day-book on the entry cabinet, read once inside
+  {
+    interactableId: 'use:note-m09-daybook', anchorId: 'm09.daybook',
+    when: { all: [{ quest: 'm09', state: 'active' }, { objective: ['m09', 'o2'], done: true }] },
+  },
+  // M10: the sealed orders, where the courier dropped them, once he is caught
+  {
+    interactableId: 'use:note-m10-orders', anchorId: 'm10.courier-orders',
+    when: { all: [{ quest: 'm10', state: 'active' }, { objective: ['m10', 'o3'], done: true }] },
+  },
+  // D02: a smelter hand's tally chalked by the sluice valves, read once the kennels are behind
+  {
+    interactableId: 'use:note-d02-tally', anchorId: 'd02.tally',
+    when: { all: [{ quest: 'd02', state: 'active' }, { objective: ['d02', 'o3'], done: true }] },
+  },
+  // D02: the crates in Grimtooth's den, once the fight has an outcome
+  { interactableId: 'use:note-d02-crates', anchorId: 'd02.den-crates', when: {
+    any: [{ flag: 'boss.gaffer-grimtooth.outcome', equals: 'released' }, { flag: 'boss.gaffer-grimtooth.outcome', equals: 'defeated' }],
+  } },
 ];
 
 /** The look drawn at each note's anchor. */
@@ -69,4 +95,8 @@ export const NOTE_LOOKS: Record<string, 'page' | 'grave' | 'box'> = {
   'use:note-d01-tablet-3': 'grave',
   'use:note-d01-tablet-4': 'grave',
   'use:note-d01-censer': 'box',
+  'use:note-m09-daybook': 'page',
+  'use:note-m10-orders': 'page',
+  'use:note-d02-tally': 'grave',
+  'use:note-d02-crates': 'box',
 };

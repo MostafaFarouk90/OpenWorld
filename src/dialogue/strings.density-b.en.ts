@@ -43,7 +43,7 @@ export const dialogueStringsDensityB: Record<string, string> = {
 
   // ---- M07: the trail to the alley ----
   'dialogue.npc-aldith.m07-brief': 'Good. They ran east, toward the Guild Quarter market. Ask at the stalls. Somebody always sees a cutpurse run.',
-  'dialogue.npc-aldith.m07-remind-ask': 'Ask at the market stalls. Godric sells pies and sees everything; Wenna sells ribbons and hears the rest.',
+  'dialogue.npc-aldith.m07-remind-ask': 'Ask at the market stalls. Godric sells pies and sees everything; Maera sells ribbons and hears the rest.',
   'dialogue.npc-aldith.m07-remind-coins': 'Coins on the cobbles? Then follow them. A thief with a split purse leaves a trail.',
   'dialogue.npc-aldith.m07-remind-thieves': 'Three of those alley rats took it, and they do not scare. Find them in their alley and teach them manners.',
   'dialogue.npc-aldith.m07-backroom': 'Come, I will show you the back room. Through the corridor; mind the step. The bed is clean, and the door at the end opens on the Bastion yard.',

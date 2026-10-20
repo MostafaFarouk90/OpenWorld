@@ -22,6 +22,9 @@ export const HARROWMARK_FLAG_BLOCKERS: Readonly<Record<string, string>> = {
   'vault.arena.gate': 'story.d01.antechamberClear',
   // Batch 3: the Archive stacks open with Whitlock's key in R04 (and stay open after).
   'archive.stacks.gate': 'story.r04.stacksOpen',
+  // Batch 4: the Underways' arena gate opens once the hounds from the drained sluice are dealt with (Grimtooth's arena
+  // still closes and reopens it during his fight).
+  'underways.arena.gate': 'story.d02.sluiceClear',
 };
 
 /** M09's invoices (thread 6 counts `use:m09-invoice-<n>` and writes `story.m09.invoice.<n>` when one is taken). */

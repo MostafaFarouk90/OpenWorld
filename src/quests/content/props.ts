@@ -64,6 +64,24 @@ export const QUEST_PROPS: QuestPropSpec[] = [
     interactableId: 'use:r04-stacks-lock', anchorId: 'r04.stacks-lock', promptKey: 'quest.prompt.stacksLock',
     objective: ['r04', 'stacks'], usedFlag: 'story.r04.stacksUnlocked',
   },
+
+  // ---- batch 4: Harrowmark part 2 ----
+  // M09: the side-door key from the clerk's satchel, once he has talked himself to sleep (a drink or Merrin's name gets
+  // it from him in his dialogue instead)
+  {
+    interactableId: 'use:m09-clerk-key', anchorId: 'm09.clerk-key', promptKey: 'quest.prompt.satchelKey',
+    objective: ['m09', 'key'], usedFlag: 'story.m09.keyLifted', when: { flag: 'story.m09.clerkDozing' },
+  },
+  // M09: Vey's strongbox in the Counting-House office, the fourth paper of o3
+  {
+    interactableId: 'use:m09-strongbox', anchorId: 'm09.strongbox', promptKey: 'quest.prompt.strongbox',
+    objective: ['m09', 'o3'], usedFlag: 'story.m09.strongbox', look: 'box',
+  },
+  // D02: the two sluice valves that drain the flooded tunnel before the arena
+  ...[1, 2].map((n): QuestPropSpec => ({
+    interactableId: `use:d02-valve-${n}`, anchorId: `d02.valve-${n}`, promptKey: 'quest.prompt.valve', objective: ['d02', 'valves'],
+    usedFlag: `story.d02.valve.${n}`, look: 'chain',
+  })),
 ];
 
 /** Thread 3a places the M09 invoices and disables each once its flag is set; this writes the flag. */

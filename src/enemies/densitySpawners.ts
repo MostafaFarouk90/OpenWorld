@@ -86,4 +86,24 @@ export const DENSITY_SPAWNERS_A: readonly SpawnerDef[] = [
     anchor: 'spawn.r03.snatch-1', memberAnchors: members('spawn.r03.snatch', 2),
     band: { min: 5, max: 6 }, activation: { flag: 'story.r03.copperTaken', until: 'story.r03.snatchBeaten' }, respawn: 'never', leash: true,
   },
+
+  // ---- batch 4: Harrowmark part 2 ----
+  // M10: two of Vey's hired men come for the sealed orders once Cael has picked them up.
+  {
+    id: 'density.m10.ambush', tag: 'm10.ambush', enemy: 'guildhall-thug', count: 2,
+    anchor: 'spawn.m10.ambush-1', memberAnchors: members('spawn.m10.ambush', 2),
+    band: { min: 6, max: 7 }, activation: { flag: 'story.m10.ordersTaken', until: 'story.m10.ambushBeaten' }, respawn: 'never', leash: true,
+  },
+  // D02: Rook's lesson, two stray ember hounds in the Watch Barracks yard (Calm them, or put them down).
+  {
+    id: 'density.d02.stray', tag: 'd02.stray', enemy: 'ember-hound', count: 2,
+    anchor: 'spawn.d02.stray-1', memberAnchors: members('spawn.d02.stray', 2),
+    band: { min: 6, max: 6 }, activation: { flag: 'story.d02.underwaysOpen', until: 'story.d02.strayDealt' }, respawn: 'never', leash: true,
+  },
+  // D02: three hounds come through the drained sluice once both valves are open (anchors in the Underways generator).
+  {
+    id: 'density.d02.sluice', tag: 'd02.sluice', enemy: 'ember-hound', count: 3,
+    anchor: 'underways.spawn.sluice-1', memberAnchors: members('underways.spawn.sluice', 3),
+    band: { min: 6, max: 7 }, activation: { flag: 'story.d02.valvesOpen', until: 'story.d02.sluiceClear' }, respawn: 'never', leash: true,
+  },
 ];

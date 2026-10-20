@@ -315,6 +315,15 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | npc-post.sexton | 8372 | 2142 | 0 | 90 | npc-post |
 | npc-post.fence | 8727 | 1545 | 0 | 270 | npc-post |
 | npc-post.crabbe | 8774 | 1984 | 0 | 270 | npc-post |
+| npc-post.armourer | 8228 | 1786 | 0 | 0 | npc-post |
+| npc-post.keep-guard | 8507 | 2590 | 0 | 90 | npc-post |
+| npc-post.grisel | 8522 | 2588 | 0 | 0 | npc-post |
+| npc-post.clerk | 8190 | 1649 | 0 | 0 | npc-post |
+| m09.clerk-key | 8187.5 | 1649 | 0 | 0 | quest, interact |
+| spawn.m10.ambush-1 | 8590 | 2484 | 0 | 0 | spawn |
+| spawn.m10.ambush-2 | 8610 | 2484 | 0 | 0 | spawn |
+| spawn.d02.stray-1 | 8345 | 1390 | 0 | 0 | spawn |
+| spawn.d02.stray-2 | 8352 | 1394 | 0 | 0 | spawn |
 
 ## Triggers
 
@@ -329,6 +338,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | trg.harrowmark.gate-south | sphere | 8500 | 1256 | r 6 |
 | trg.harrowmark.bastion-yard | box | 8200 | 1735 | half 70 x 6 x 55 |
 | trg.harrowmark.anvil-sign | sphere | 8204 | 1645 | r 7 |
+| trg.harrowmark.m10-ride | sphere | 8500 | 1282 | r 9 |
 
 ## Structures
 

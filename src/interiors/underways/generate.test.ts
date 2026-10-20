@@ -39,7 +39,8 @@ describe('the Underways generator', () => {
   it('is deterministic: the shipped seed gives the pinned layout', () => {
     expect(hashDef(generateUnderways(UNDERWAYS_SEED))).toBe(hashDef(generateUnderways(UNDERWAYS_SEED)));
     // Update deliberately when the layout is meant to change (old saves inside land at the entry, see InteriorController).
-    expect(hashDef(UNDERWAYS_DEF)).toBe('ca3161c1');
+    // bbcbf1f0: the density pass (batch 4) added the D02 valve, tally, sluice-hound and crate anchors; no room moved.
+    expect(hashDef(UNDERWAYS_DEF)).toBe('bbcbf1f0');
   });
 
   it('gives different tunnels for different seeds, and refuses a non-integer seed', () => {
@@ -87,6 +88,8 @@ describe('the shipped Underways', () => {
       'underways.arena.centre',
       ...[1, 2, 3, 4].map((i) => `underways.summon.${i}`),
       ...[1, 2, 3, 4, 5, 6].map((i) => `underways.spawn.hound-${i}`),
+      // the density pass, batch 4 (D02)
+      'd02.valve-1', 'd02.valve-2', 'd02.tally', 'd02.den-crates', ...[1, 2, 3].map((i) => `underways.spawn.sluice-${i}`),
     ]) {
       expect(ids, id).toContain(id);
     }

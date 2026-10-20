@@ -37,6 +37,25 @@ const trail = (w: W) => {
   talk(w, 'stallholder-2', 'completed');
   for (const n of [1, 2, 3]) interact(w, `use:m07-coin-${n}`);
 };
+/** M08 (density pass): the fitting, the warden, and the two waiting in the hall. */
+const court = (w: W) => { talk(w, 'armourer'); talk(w, 'keep-guard'); talk(w, 'merrin', 'completed'); talk(w, 'grisel', 'completed'); };
+/** M10 (density pass): the orders read where the courier fell and Vey's two men beaten. */
+const orders = (w: W) => {
+  talk(w, 'note-m10-orders');
+  for (const id of ['v1', 'v2']) w.bus.emit('actor.died', { actorId: id, killerId: 'p', kind: 'guildhall-thug', spawnTag: 'm10.ambush' });
+};
+/** D02 (density pass): Rook's stray in the barracks yard. */
+const stray = (w: W) => {
+  w.bus.emit('mercy', { verb: 'calm', creature: 'ember-hound', actorId: 's0', spawnTag: 'd02.stray' });
+  w.bus.emit('actor.died', { actorId: 's1', killerId: 'p', kind: 'ember-hound', spawnTag: 'd02.stray' });
+  talk(w, 'rook');
+};
+/** D02 (density pass): the two sluice valves and the three hounds that come through. */
+const sluice = (w: W) => {
+  talk(w, 'note-d02-tally');
+  for (const n of [1, 2]) interact(w, `use:d02-valve-${n}`);
+  for (const id of ['x1', 'x2', 'x3']) w.bus.emit('actor.died', { actorId: id, killerId: 'p', kind: 'ember-hound', spawnTag: 'd02.sluice' });
+};
 
 describe('M06 Gates of Harrowmark', () => {
   it('start sets story.m06.started; the stealth route completes on the cleared section and records route and gateOpen', () => {
@@ -138,24 +157,27 @@ describe('M07 The Tilted Anvil', () => {
 });
 
 describe('M08 Kneel Before the Boy', () => {
-  it('opens the Keep and the Favour tab on start, never writes them again, and completes through the audience', () => {
+  it('opens the Favour tab on start, never writes it again, and completes through the court and the audience', () => {
     const w = makeWorld([m08]);
     begin(w, 'm08');
-    expect(w.flags.get('story.m08.keepOpen')).toBe(true);
     expect(w.flags.get('story.m08.favourTab')).toBe(true);
+    expect(w.flags.has('story.m08.keepOpen')).toBe(false); // the warden's pass opens it (densityC.test.ts)
+    court(w);
+    expect(done(w, 'm08', 'wait')).toBe(true);
     w.bus.emit('trigger.enter', { triggerId: 'trg.harrowmark.keep-hall', actorId: 'p' });
     talk(w, 'edric', 'skip');
     expect(done(w, 'm08', 'o3')).toBe(false);
     talk(w, 'edric');
+    talk(w, 'note-m08-screen');
     talk(w, 'wystan');
     expect(w.manager.state('m08')).toBe('completed');
     expect(w.bus.of('loot.granted')[0]).toMatchObject({ items: [{ itemId: 'halvard-signet', count: 1 }] });
   });
-  it('the Keep flag survives the quest completing', () => {
+  it('the Favour tab flag survives the quest completing', () => {
     const w = makeWorld([m08]);
     begin(w, 'm08');
     w.manager.complete('m08');
-    expect(w.flags.get('story.m08.keepOpen')).toBe(true);
+    expect(w.flags.get('story.m08.favourTab')).toBe(true);
   });
 });
 
@@ -163,21 +185,25 @@ describe('M09 Oswin\'s Ledger', () => {
   function inside() {
     const w = makeWorld([m09]);
     begin(w, 'm09');
+    interact(w, 'use:m09-clerk-key'); // the density pass: the clerk's key first, the day-book inside
     w.bus.emit('interior.entered', { interiorId: 'counting-house' });
+    talk(w, 'note-m09-daybook');
     return w;
   }
-  it('copies the invoices in any order, once each, then needs a clean exit', () => {
+  it('copies the invoices and searches the strongbox in any order, once each, then needs a clean exit', () => {
     const w = inside();
     interact(w, 'use:m09-invoice-3');
     interact(w, 'use:m09-invoice-3');
     interact(w, 'use:m09-invoice-1');
     interact(w, 'use:elsewhere');
+    interact(w, 'use:m09-strongbox');
     expect(done(w, 'm09', 'o3')).toBe(false);
     interact(w, 'use:m09-invoice-2');
     expect(done(w, 'm09', 'o3')).toBe(true);
     stealth(w, 'm09.counting-house', 'exited');
     expect(done(w, 'm09', 'o4')).toBe(false);
     stealth(w, 'm09.counting-house');
+    talk(w, 'clerk'); // the key back (density pass)
     talk(w, 'merrin');
     expect(w.manager.state('m09')).toBe('completed');
     expect(w.bus.of('loot.granted')[0]).toMatchObject({ items: [{ itemId: 'oswin-lockpicks', count: 5 }] });
@@ -185,21 +211,23 @@ describe('M09 Oswin\'s Ledger', () => {
   it('another interior does not satisfy o2', () => {
     const w = makeWorld([m09]);
     begin(w, 'm09');
+    interact(w, 'use:m09-clerk-key');
     w.bus.emit('interior.entered', { interiorId: 'archive' });
     expect(done(w, 'm09', 'o2')).toBe(false);
   });
   it('invoice interactions before the objective is current earn nothing', () => {
     const w = makeWorld([m09]);
     begin(w, 'm09');
+    interact(w, 'use:m09-clerk-key');
     interact(w, 'use:m09-invoice-1');
     w.bus.emit('interior.entered', { interiorId: 'counting-house' });
-    expect(w.manager.objectives('m09')[2].progress).toBe(0);
+    expect(w.manager.objectives('m09')[4].progress).toBe(0); // o3, after the density pass's key and day-book
   });
 });
 
 describe('M10 Smoke Over the Rooftops', () => {
   const chase = (w: W, type: string, chaseId = 'm10.rooftops') => w.bus.emit(type, { chaseId });
-  it('needs the start and then the catch for the right chase; sets the Ashmare flag on completion only', () => {
+  it('needs the start and then the catch for the right chase; sets the Ashmare flag on completion (Gerta\'s node sets it first in play)', () => {
     const w = makeWorld([m10]);
     begin(w, 'm10');
     chase(w, 'chase.caught');
@@ -212,7 +240,13 @@ describe('M10 Smoke Over the Rooftops', () => {
     chase(w, 'chase.caught');
     expect(done(w, 'm10', 'o3')).toBe(true);
     expect(w.flags.has('story.m10.ashmare')).toBe(false);
+    orders(w);
     talk(w, 'gerta');
+    // the density pass: Wace, the first ride, the South Gate
+    talk(w, 'wace');
+    w.bus.emit('mount.mounted', { mountId: 'ashmare' });
+    expect(w.manager.state('m10')).toBe('active');
+    w.bus.emit('trigger.enter', { triggerId: 'trg.harrowmark.m10-ride', actorId: 'p' });
     expect(w.manager.state('m10')).toBe('completed');
     expect(w.flags.get('story.m10.ashmare')).toBe(true);
   });
@@ -244,20 +278,23 @@ describe('D02 Hounds of the Underways', () => {
   }
   it('a calmed, released or killed hound all count once; the boss events in one tick credit once', () => {
     const w = running();
+    stray(w);
     w.bus.emit('interior.entered', { interiorId: 'underways' });
     const tag = 'd02.kennels';
     w.bus.emit('mercy', { verb: 'calm', creature: 'ember-hound', actorId: 'h1', spawnTag: tag });
     w.bus.emit('actor.died', { actorId: 'h1', killerId: 'p', kind: 'ember-hound', spawnTag: tag });
     w.bus.emit('mercy', { verb: 'calm', creature: 'ember-hound', actorId: 'h2', spawnTag: tag });
     w.bus.emit('actor.died', { actorId: 'h3', killerId: 'p', kind: 'ember-hound', spawnTag: 'other' });
-    expect(w.manager.objectives('d02')[2].progress).toBe(2);
+    expect(w.manager.objectives('d02')[4].progress).toBe(2); // o3, after the density pass's strays and Rook's word
     w.bus.emit('actor.died', { actorId: 'h3', killerId: 'p', kind: 'ember-hound', spawnTag: tag });
     w.bus.emit('actor.died', { actorId: 'h4', killerId: 'p', kind: 'ember-hound', spawnTag: tag });
     expect(done(w, 'd02', 'o3')).toBe(true);
+    sluice(w);
     w.flags.set('boss.gaffer-grimtooth.outcome', 'released');
     w.bus.emit('boss.released', { bossId: 'gaffer-grimtooth', actorId: 'g' });
     w.bus.emit('boss.defeated', { bossId: 'gaffer-grimtooth', actorId: 'g' });
     expect(done(w, 'd02', 'o4')).toBe(true);
+    talk(w, 'note-d02-crates');
     talk(w, 'rook');
     expect(w.manager.state('d02')).toBe('completed');
     expect(w.bus.of('loot.granted').at(-1)).toMatchObject({ items: [{ itemId: 'sewer-master-key', count: 1 }] });
@@ -265,8 +302,10 @@ describe('D02 Hounds of the Underways', () => {
   it('a boss outcome recorded before the objective is current is credited by doneWhen', () => {
     const w = running();
     w.flags.set('boss.gaffer-grimtooth.outcome', 'defeated');
+    stray(w);
     w.bus.emit('interior.entered', { interiorId: 'underways' });
     for (const id of ['h1', 'h2', 'h3', 'h4']) w.bus.emit('actor.died', { actorId: id, killerId: 'p', kind: 'ember-hound', spawnTag: 'd02.kennels' });
+    sluice(w);
     expect(done(w, 'd02', 'o4')).toBe(true);
   });
   it('other bosses do not count', () => {
@@ -400,9 +439,11 @@ describe('quest props and the interact-flag bridge', () => {
     interact(w, 'use:m09-invoice-1');
     expect(w.flags.has('story.m09.invoice.1')).toBe(false);
     begin(w, 'm09');
+    interact(w, 'use:m09-clerk-key');
     interact(w, 'use:m09-invoice-1'); // o3 is not current yet: the invoice must stay usable
     expect(w.flags.has('story.m09.invoice.1')).toBe(false);
     w.bus.emit('interior.entered', { interiorId: 'counting-house' });
+    talk(w, 'note-m09-daybook');
     interact(w, 'use:m09-invoice-1', 'mercy');
     expect(w.flags.has('story.m09.invoice.1')).toBe(false);
     interact(w, 'use:m09-invoice-2');
@@ -459,16 +500,23 @@ describe('Harrowmark post rules', () => {
     w.manager.start('m10');
     expect(at().gerta.anchorId).toBe('npc-post.gerta.guild');
   });
-  it('Edric and Vey stand in the hall only while M08 is active; Merrin goes inside after sending the player', () => {
+  it('Edric, Vey and Grisel stand in the hall while M08 is active, Merrin until the audience; Merrin goes inside once Cael has the key', () => {
     const { w, at } = world();
     w.manager.start('m08');
     expect(at().edric.anchorId).toBe('npc-post.edric.hall');
     expect(at().vey.anchorId).toBe('npc-post.vey.hall');
+    expect(at().grisel.anchorId).toBe('npc-post.grisel.hall');
+    expect(at().merrin.anchorId).toBe('npc-post.merrin.hall');
+    w.manager.completeObjective('m08', 'o3');
+    expect(at().merrin.home).toBe(true); // off to the Counting-House once the audience is done
     w.manager.complete('m08');
     expect(at().edric.home).toBe(true);
+    expect(at().grisel.home).toBe(true);
     w.manager.start('m09');
     expect(at().merrin.home).toBe(true);
     w.manager.completeObjective('m09', 'o1');
+    expect(at().merrin.home).toBe(true);
+    w.manager.completeObjective('m09', 'key');
     expect(at().merrin.anchorId).toBe('npc-post.merrin.inside');
   });
   it('re-applies after a load, including a rewind to before M07', () => {

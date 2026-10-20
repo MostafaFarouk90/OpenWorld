@@ -67,11 +67,17 @@ export const POST_RULES: PostRule[] = [
   // the audience: the Regent's court stands in the Keep hall while M08 runs (inside posts are thread 3a's anchors)
   { npcId: 'edric', home: 'npc-post.edric', posts: [{ when: { quest: 'm08', state: 'active' }, anchorId: 'npc-post.edric.hall' }] },
   { npcId: 'vey', home: 'npc-post.vey.keep', posts: [{ when: { quest: 'm08', state: 'active' }, anchorId: 'npc-post.vey.hall' }] },
-  // Merrin waits inside the Counting-House once she has sent the player in
+  // Merrin waits her turn in the Keep hall during the audience (density pass), then inside the Counting-House once
+  // Cael has the side-door key (the clerk's, density pass)
   {
     npcId: 'merrin', home: 'npc-post.merrin',
-    posts: [{ when: { all: [{ quest: 'm09', state: 'active' }, { objective: ['m09', 'o1'], done: true }] }, anchorId: 'npc-post.merrin.inside' }],
+    posts: [
+      { when: { all: [{ quest: 'm08', state: 'active' }, { objective: ['m08', 'o3'], done: false }] }, anchorId: 'npc-post.merrin.hall' },
+      { when: { all: [{ quest: 'm09', state: 'active' }, { objective: ['m09', 'key'], done: true }] }, anchorId: 'npc-post.merrin.inside' },
+    ],
   },
+  // Lord Grisel waits in the Keep hall while M08 runs, then outside the Keep (density pass)
+  { npcId: 'grisel', home: 'npc-post.grisel', posts: [{ when: { quest: 'm08', state: 'active' }, anchorId: 'npc-post.grisel.hall' }] },
   { npcId: 'pennard', home: 'npc-post.pennard.archive', posts: [{ when: live('m07'), anchorId: 'npc-post.pennard.bastion' }] },
   // Density pass: Edda waits at the granary once the hearth-stone is out of the bakery, until M02 ends; Aldwin walks to
   // the chapel when he is found safe (his walk-off) and is back at the mill once M01 is done.

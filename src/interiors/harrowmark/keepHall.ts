@@ -32,6 +32,11 @@ export const KEEP_HALL_DEF: InteriorDef = {
     { id: 'npc-post.edric.hall', x: 0, z: -26.5, yaw: 180 },
     { id: 'npc-post.vey.hall', x: 2.5, z: -26.5, yaw: 180 },
     { id: 'm08.keep-hall', x: 0, z: -21.5, facing: { x: 0, z: -26.5 } },
+    // Act 1 density pass, batch 4 (quests thread; additive): Merrin and Lord Grisel wait their turn near the door, and a
+    // carved screen by the west wall hides the Regent's private word after the audience.
+    { id: 'npc-post.merrin.hall', x: 5, z: -5, facing: { x: 0, z: -5 } },
+    { id: 'npc-post.grisel.hall', x: -5, z: -5, facing: { x: 0, z: -5 } },
+    { id: 'm08.screen', x: -5.6, z: -12.5, yaw: 90 },
   ],
   triggers: [{ id: 'trg.harrowmark.keep-hall', center: { x: 0, y: 2, z: -21.5 }, half: { x: 7, y: 2, z: 1.5 } }],
   doors: [
