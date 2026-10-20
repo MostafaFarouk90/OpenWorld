@@ -1,7 +1,10 @@
 // Interactable props the Harrowmark quests need that no layout thread places: they are anchored at ids the layout threads
 // reserve for them and enabled only while their objective is current. Registration is retried until the anchor exists.
-import type { BusPort, QuestReader, StatePort } from './ports';
+import type { BusPort, ConditionEnv, QuestReader, StatePort } from './ports';
 import type { Vec3Like } from './carry';
+import type { Condition } from './types';
+import type { PropLook } from './propLooks';
+import { evalCondition } from './conditions';
 
 export interface QuestPropSpec {
   /** `<kind>:<name>`, no dots */
@@ -14,12 +17,22 @@ export interface QuestPropSpec {
   give?: { itemId: string; count: number };
   /** flag set on use; the prop is disabled once it is set (so a repeat use cannot count twice) */
   usedFlag?: string;
+  /** also needs this to be enabled (an objective shared by two outcomes, for one) */
+  when?: Condition;
+  /** a greybox look the quests plugin draws at the anchor once the quest has begun */
+  look?: PropLook;
+  /** hide the look once `usedFlag` is set (a taken candle, a cleared heap) */
+  hideWhenUsed?: boolean;
+  /** draw the look only once `usedFlag` is set (a stake planted, not lying about) */
+  lookOnlyUsed?: boolean;
 }
 
 export interface QuestPropPorts {
   bus: BusPort;
   state: StatePort;
   quests: QuestReader & { isObjectiveCurrent(q: string, o: string): boolean };
+  /** for `when`; absent means a spec with `when` is never enabled */
+  env?(): ConditionEnv;
   anchor(id: string): Vec3Like | undefined;
   register(i: {
     id: string; kind: string; name: string; radius: number; promptKey: string;
@@ -50,7 +63,7 @@ export class QuestProps {
           id: s.interactableId, kind, name: rest.join(':'), radius: 2, promptKey: s.promptKey,
           position: (out) => { out.x = home.x; out.y = home.y; out.z = home.z; return out; },
           enabled: () => !this.disposed && this.p.quests.isObjectiveCurrent(s.objective[0], s.objective[1])
-            && !(s.usedFlag && this.p.state.getFlag(s.usedFlag) === true),
+            && !(s.usedFlag && this.p.state.getFlag(s.usedFlag) === true) && this.whenHolds(s),
           onInteract: () => this.use(s),
         }));
       } catch (e) {
@@ -59,6 +72,13 @@ export class QuestProps {
         this.p.warn?.(`props: could not register ${s.interactableId}: ${String(e)}`);
       }
     }
+  }
+
+  private whenHolds(s: QuestPropSpec): boolean {
+    if (!s.when) return true;
+    const env = this.p.env?.();
+    if (!env) return false;
+    try { return evalCondition(s.when, env); } catch { return false; }
   }
 
   /** Specs still waiting on an anchor (for tests and diagnostics). */
@@ -71,7 +91,7 @@ export class QuestProps {
   }
 
   private use(s: QuestPropSpec): void {
-    if (this.disposed) return;
+    if (this.disposed || !this.whenHolds(s)) return;
     if (s.usedFlag) {
       try { this.p.state.setFlag(s.usedFlag, true); } catch (e) { this.p.warn?.(`props: could not set ${s.usedFlag}: ${String(e)}`); }
     }

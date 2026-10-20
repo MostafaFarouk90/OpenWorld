@@ -23,9 +23,13 @@ export const npcEdda: DialogueDef = {
   start: [
     { when: { quest: 't12', state: 'active' }, node: 'bakery' },
     { when: { all: [{ quest: 't03', state: 'active' }, { not: { flag: 'quest.t03.eddaGift', equals: true } }] }, node: 'gift' },
-    { when: { all: [{ quest: 'm02', state: 'active' }, { objective: ['m02', 'o2'], done: true }] }, node: 'disgrace' },
+    // M02: at the granary once the stone is out; the story waits for the reeve's man at the door (o3 after `garrick`)
+    { when: { all: [{ quest: 'm02', state: 'active' }, { objective: ['m02', 'o3'], done: true }] }, node: 'hearth-remind' },
+    { when: { all: [{ quest: 'm02', state: 'active' }, { objective: ['m02', 'garrick'], done: true }] }, node: 'granary' },
+    { when: { all: [{ quest: 'm02', state: 'active' }, { objective: ['m02', 'o2'], done: true }] }, node: 'granary-wait' },
     { when: { quest: 'm02', state: 'active' }, node: 'fetch-reminder' },
     { when: { all: [{ any: [{ objective: ['m01', 'o1'], done: true }, { quest: 'm01', state: 'completed' }] }, { quest: 'm02', state: 'inactive' }] }, node: 'offer' },
+    { when: { all: [{ quest: 'm02', state: 'completed' }, { not: { flag: 'quest.m02.farewellSeen', equals: true } }] }, node: 'farewell' },
     { when: { all: [] }, node: 'idle' },
   ],
   nodes: [
@@ -62,7 +66,13 @@ export const npcEdda: DialogueDef = {
 
     { id: 'fetch-reminder', speaker: 'edda', textKey: `${D}fetch-reminder`, next: null },
 
-    // M02 disgrace conversation (hub)
+    { id: 'granary-wait', speaker: 'edda', textKey: `${D}granary-wait`, next: null },
+    { id: 'hearth-remind', speaker: 'edda', textKey: `${D}hearth-remind`, next: null },
+
+    // M02 at the granary: what it was, then the disgrace conversation (hub)
+    { id: 'granary', speaker: 'edda', textKey: `${D}granary`, next: 'granary-2' },
+    { id: 'granary-2', speaker: 'edda', textKey: `${D}granary-2`, next: 'granary-3' },
+    { id: 'granary-3', speaker: 'edda', textKey: `${D}granary-3`, next: 'disgrace' },
     { id: 'disgrace', speaker: 'edda', textKey: `${D}disgrace`, effects: [{ setFlag: 'quest.m02.learnedDisgrace', value: true }], next: 'disgrace-2' },
     { id: 'disgrace-2', speaker: 'edda', textKey: `${D}disgrace-2`, next: 'hub' },
     {
@@ -71,7 +81,7 @@ export const npcEdda: DialogueDef = {
         { id: 'why', textKey: `${D}hub.why`, next: 'why-1' },
         { id: 'regent', textKey: `${D}hub.regent`, next: 'regent-1' },
         { id: 'gaut', textKey: `${D}hub.gaut`, next: 'gaut-1' },
-        { id: 'leave', textKey: `${D}hub.leave`, next: 'farewell' },
+        { id: 'leave', textKey: `${D}hub.leave`, next: 'hearth-ask' },
       ],
     },
     { id: 'why-1', speaker: 'edda', textKey: `${D}why-1`, next: 'why-2' },
@@ -83,7 +93,9 @@ export const npcEdda: DialogueDef = {
     { id: 'gaut-1', speaker: 'edda', textKey: `${D}gaut-1`, next: 'gaut-2' },
     { id: 'gaut-2', speaker: 'edda', textKey: `${D}gaut-2`, next: 'gaut-cael-earnest' },
     ...toneChain('gaut-cael', 'hub'),
-    { id: 'farewell', speaker: 'edda', textKey: `${D}farewell`, next: null },
+    { id: 'hearth-ask', speaker: 'edda', textKey: `${D}hearth-ask`, next: 'hearth-ask-2' },
+    { id: 'hearth-ask-2', speaker: 'edda', textKey: `${D}hearth-ask-2`, next: null },
+    { id: 'farewell', speaker: 'edda', textKey: `${D}farewell`, effects: [{ setFlag: 'quest.m02.farewellSeen', value: true }], next: null },
 
     { id: 'idle', speaker: 'edda', textKey: `${D}idle`, next: null },
   ],

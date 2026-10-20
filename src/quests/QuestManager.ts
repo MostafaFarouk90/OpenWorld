@@ -253,6 +253,21 @@ export class QuestManager implements QuestReader, QuestActions {
       if (v > required(o)) this.warn(`quests: clamped progress of "${def.id}.${o.id}" to ${required(o)}`);
       rt.objectives[o.id] = Math.min(v, required(o));
     }
+    if (rt.state === 'active') this.migrateEntry(def, rt, entry);
+  }
+
+  /**
+   * A save made before objectives were added or a `required` grew (the Act 1 density pass): in a sequential quest a
+   * later objective (array order) with progress means the player is past every earlier one, so each earlier objective
+   * short of its count is credited in full and nobody is sent back. Unordered quests are left as saved.
+   */
+  private migrateEntry(def: QuestDef, rt: QuestRuntime, entry: QuestRuntime): void {
+    if (!def.sequential) return;
+    const objs = def.objectives;
+    const laterStarted = (i: number): boolean => objs.slice(i + 1).some((x) => (entry.objectives[x.id] ?? 0) > 0);
+    objs.forEach((o, i) => {
+      if ((entry.objectives[o.id] ?? 0) < required(o) && laterStarted(i)) rt.objectives[o.id] = required(o);
+    });
   }
 
   private progress(questId: string, o: ObjectiveDef): number {

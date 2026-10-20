@@ -3,11 +3,13 @@
 import { dialogueStringsHmA } from './strings.hm-a.en';
 import { dialogueStringsHmB } from './strings.hm-b.en';
 import { dialogueStringsHmC } from './strings.hm-c.en';
+import { dialogueStringsDensityA } from './strings.density.en';
 
 export const dialogueStrings: Record<string, string> = {
   ...dialogueStringsHmA,
   ...dialogueStringsHmB,
   ...dialogueStringsHmC,
+  ...dialogueStringsDensityA,
   // ---- Marshal Stane ----
   'dialogue.npc-stane.wave': 'Ho there, {name}! Good to see you walking Kettlewick lane with your head up.',
   'dialogue.npc-stane.wave2': 'Come by the Practice Yard when you have a moment. I am putting up a drill board, and every move you learn can be tried out on it.',
@@ -46,12 +48,12 @@ export const dialogueStrings: Record<string, string> = {
   'dialogue.npc-gaut.brief-cold': '{name}. I vouched for you before the whole Halvard household, so give them no reason to doubt me.',
   'dialogue.npc-gaut.brief-banked': '{name}, well met. I hoped you would come to me first, and I am glad of it.',
   'dialogue.npc-gaut.brief-1': 'Ash wraiths are drifting up the lanes of Kettlewick, born of the Sunforge crack. Cut down five of them.',
-  'dialogue.npc-gaut.brief-2': 'Some villagers are frozen with fright. Lift them with F and carry three to the chapel door, where Sister Aelfreda keeps the hearth.',
+  'dialogue.npc-gaut.brief-2': 'Some villagers are frozen with fright in the lanes. Lift them with F and carry three to the chapel door, where Sister Aelfreda keeps the hearth.',
   'dialogue.npc-gaut.brief-2.ready': 'Five wraiths, three villagers. I will not fail you.',
   'dialogue.npc-gaut.brief-2.where': 'Where will I find the villagers?',
   'dialogue.npc-gaut.brief-where': 'Listen for their calls in the lanes. A frightened soul rarely hides well, and the wraiths gather where the fear is.',
   'dialogue.npc-gaut.brief-end': 'Then go. Keep your shield high and your heart higher.',
-  'dialogue.npc-gaut.remind': 'Five wraiths, three villagers carried to the chapel door, and then come and tell me. Shield up, {name}.',
+  'dialogue.npc-gaut.remind': 'Five wraiths in the lanes, three villagers carried to the chapel door, the Grey Goose door and the mill. Then a word with Sister Aelfreda, and come and tell me. Shield up, {name}.',
   'dialogue.npc-gaut.report': 'Five wraiths down and three souls safe at the chapel door. That is a fine morning\'s work.',
   'dialogue.npc-gaut.report-2': 'Taking you on again cost me something in this realm, {name}. After today, I would pay it twice.',
   'dialogue.npc-gaut.report-3': 'Take my spare blade. It has served me well, and I think it will serve you better.',
@@ -104,7 +106,7 @@ export const dialogueStrings: Record<string, string> = {
   'dialogue.npc-edda.gaut-cael-wry': 'I knew he was stubborn. I did not know he was also reckless enough to bet on me.',
   'dialogue.npc-edda.gaut-cael-humble': 'I do not feel I deserve that much faith, but I will try to.',
 
-  'dialogue.npc-edda.farewell': 'Go on, then. The stone sits warm at last, and so do I. Come back for supper.',
+  'dialogue.npc-edda.farewell': 'Look at them, all round the Goose hearth. The stone sits warm at last, and so do I. Come back for supper.',
   'dialogue.npc-edda.idle': 'The oven is warm and the door is open, {name}. Come home when you can.',
 
   // ---- T04 vow ----
@@ -157,7 +159,6 @@ export const dialogueStrings: Record<string, string> = {
   'dialogue.npc-aelfreda.burn-3': 'Rest at a waystone to clear the Burn, and keep a steady hand near the top. Mending a Scar is a rite for another day.',
   'dialogue.npc-aelfreda.release': 'There is a gentler use of the shard. Not every dead soul wants to fight, and you can let them go.',
   'dialogue.npc-aelfreda.release-2': 'When a wraith is staggered, hold T beside it. A pulse frees every staggered dead in reach for ten Burn, and they never rise from that ash again.',
-  'dialogue.npc-aelfreda.release-hint': 'The wraith in the churchyard is yours to free, {name}. Stagger it, then hold T. If it ends in a kill instead, I will think no less of you.',
   'dialogue.npc-aelfreda.m03-report': 'You kept your head and the shard stayed kind to you. That is the whole of the lesson, {name}.',
   'dialogue.npc-aelfreda.m03-report-2': 'Thank you for listening. The stew is on if you want a bowl.',
 
@@ -188,24 +189,23 @@ export const dialogueStrings: Record<string, string> = {
   'dialogue.npc-gaut.m04-ford': 'The ford is west of the village, {name}. Look for the toll-post, and I will be waiting.',
   'dialogue.npc-gaut.m04-spare': 'Here you are. Listen well, because this matters more than any blade.',
   'dialogue.npc-gaut.m04-spare-2': 'A soldier who is beaten and yields can be shown mercy. When the gold glow shows over him, hold T and he lays down his weapon.',
-  'dialogue.npc-gaut.m04-spare-3': 'The Footman pair ahead will test you. Spare them if they yield, and win by steel if they do not. I will not ask more.',
-  'dialogue.npc-gaut.m04-spare-remind': 'Two blighted soldiers by the post. Spare them if they yield, or win by steel if they do not. Either way, finish it, {name}.',
+  'dialogue.npc-gaut.m04-spare-3': 'The two Footman pairs ahead will test you. Spare them if they yield, and win by steel if they do not. I will not ask more.',
+  'dialogue.npc-gaut.m04-spare-remind': 'Four blighted soldiers by the post. Spare them if they yield, or win by steel if they do not. Either way, finish it, {name}.',
   'dialogue.npc-gaut.m04-tollpost': 'The soldiers are done with. Now break the toll-post itself, {name}, and the road is open again.',
-  'dialogue.npc-gaut.m04-carters': 'The post is down. Go and free the carters, they have waited long enough.',
+  'dialogue.npc-gaut.m04-carters': 'Unchain the wagons and hear the carters out, {name}. They have waited two days for someone to listen.',
   'dialogue.npc-gaut.m04-report-cold': '{name}. The post is broken and the carters are on their way. You did that with a steady hand, and I will say so.',
   'dialogue.npc-gaut.m04-report-banked': '{name}, well done. The post is broken and the carters are on their way. Hollin Ford is a road again.',
   'dialogue.npc-gaut.m04-report-2': 'Thank you. You did it as a Halvard should, and I am proud to ride beside you.',
 
   // ---- Wynn Tillman ----
   'dialogue.npc-wynn.offer': 'Oh, {name}, thank the Hearth. Look at my barley. The scarecrows have gone wrong in the night.',
-  'dialogue.npc-wynn.offer-2': 'Ash has got into them, six at least, and now they walk the rows and trample the stalks. A sword only knocks them down, and they get back up.',
+  'dialogue.npc-wynn.offer-2': 'Ash has got into them, eight of them, and now they walk the rows and trample the stalks. A sword only knocks them down, and they get back up.',
   'dialogue.npc-wynn.offer-3': 'Fire clears them quick, but the field stays scorched. A purifying Surge saves the barley, though it costs you Burn. There are torches at the braziers by the field.',
   'dialogue.npc-wynn.offer-3.accept': 'I will clear them, Wynn.',
   'dialogue.npc-wynn.offer-3.later': 'Let me think it over.',
-  'dialogue.npc-wynn.brief': 'Bless you. Six scarecrows in all, scattered through the field. Take your pick of fire or Surge.',
+  'dialogue.npc-wynn.brief': 'Bless you. Eight scarecrows in all, over both fields. Take your pick of fire or Surge.',
   'dialogue.npc-wynn.brief-2': 'I will say only this: I would sooner have a green field, but I will not blame you either way.',
   'dialogue.npc-wynn.later': 'Take your time, but not too long. The barley is not getting any taller.',
-  'dialogue.npc-wynn.remind': 'Six ash scarecrows in the barley, {name}. A sword only knocks them down. Fire or a Surge clears them for good.',
   'dialogue.npc-wynn.done': 'They are gone, every one. Thank you, {name}. I can stand in my own field again.',
   'dialogue.npc-wynn.done-2': 'Take these barley cakes, still warm. You have earned a good meal.',
   'dialogue.npc-wynn.idle-scorched': 'The field is black, but it will grow back, {name}. I sell barley cakes now, if you want a few.',
@@ -213,7 +213,7 @@ export const dialogueStrings: Record<string, string> = {
   'dialogue.npc-wynn.idle': 'Good day, {name}. I have barley cakes if you are hungry, and seed if you are planting.',
 
   // ---- Tobb Fenwick ----
-  'dialogue.npc-tobb.intro': 'Ah, the famous {name}! I have written four verses about you already, and you have only just walked in.',
+  'dialogue.npc-tobb.intro': 'My rescuer returns! I have written four verses about the Grey Goose door already, {name}, and none of them rhyme.',
   'dialogue.npc-tobb.intro-2': 'The Dead Road is full of wraiths and it is getting worse. Wardstones along it would keep them from crossing, if someone struck them in the right rhythm.',
   'dialogue.npc-tobb.intro-3': 'I have the rhythm, and you have the sword arm. Shall we make a song of it, and I come along?',
   'dialogue.npc-tobb.intro-3.join': 'Gladly. Come along, Tobb.',
@@ -255,6 +255,10 @@ export const npcNameFallbackStrings: Record<string, string> = {
   'npc.tobb.name': 'Tobb Fenwick',
   'npc.carter-1.name': 'Stranded Carter',
   'npc.carter-2.name': 'Stranded Carter',
+  'npc.carter-3.name': 'Stranded Carter',
+  'npc.aldwin.name': 'Aldwin the Miller',
+  'npc.garrick.name': 'Garrick Thorne',
+  'npc.note.name': 'Written page',
   'npc.rook.name': 'Captain Rook',
   'npc.aldith.name': 'Aldith Stonebrewer',
   'npc.wystan.name': 'Lord Wystan Halvard',

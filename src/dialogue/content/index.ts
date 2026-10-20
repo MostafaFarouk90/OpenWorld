@@ -19,8 +19,13 @@ import { npcWhitlock } from './npc-whitlock.dialogue';
 import { npcPennard } from './npc-pennard.dialogue';
 import { npcAshdown } from './npc-ashdown.dialogue';
 import { sceneAct1Camp } from './scene-act1-camp.dialogue';
+import { npcCarter3 } from './npc-carter-3.dialogue';
+import { npcAldwin } from './npc-aldwin.dialogue';
+import { npcGarrick } from './npc-garrick.dialogue';
+import { NOTE_DIALOGUES } from './notes.dialogue';
 
 export const dialogueDefs: DialogueDef[] = [
   npcStane, npcEdda, npcGaut, npcHob, npcAelfreda, npcWynn, npcTobb, npcCarter1, npcCarter2, t04Vow,
   npcRook, npcAldith, npcWystan, npcEdric, npcMerrin, npcGerta, npcWhitlock, npcPennard, npcAshdown, sceneAct1Camp,
+  npcCarter3, npcAldwin, npcGarrick, ...NOTE_DIALOGUES,
 ];
