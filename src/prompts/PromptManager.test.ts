@@ -39,7 +39,21 @@ describe('PromptManager', () => {
   it('shows a prompt with the current glyph', () => {
     const { pm } = setup();
     pm.show('sprint', 'sprint', 'prompt.sprint');
-    expect(pm.rows()).toEqual([{ mechanic: 'sprint', text: 'Hold Shift to sprint', opacity: 1, state: 'shown' }]);
+    expect(pm.rows()).toEqual([{ mechanic: 'sprint', text: 'Hold Shift to sprint', key: 'Shift', keyAt: 5, opacity: 1, state: 'shown' }]);
+  });
+
+  it('the keycap position is where {key} was, not an earlier capital of the same letter', () => {
+    const { pm, glyphs } = setup();
+    glyphs.sprint = 'H';
+    pm.show('sprint', 'sprint', 'prompt.sprint');
+    expect(pm.rows()[0]).toMatchObject({ text: 'Hold H to sprint', key: 'H', keyAt: 5 });
+  });
+
+  it('a text that does not name its key carries no keycap glyph', () => {
+    const { pm, glyphs } = setup();
+    glyphs.lockOn = 'Tab';
+    pm.show('lockSwap', 'lockOn' as never, 'prompt.lockSwap');
+    expect(pm.rows()[0].key).toBeUndefined();
   });
 
   it('shows a lockSwap prompt whose text has no {key}, counting it as a known mechanic', () => {

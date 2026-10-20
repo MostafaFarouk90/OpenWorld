@@ -17,4 +17,24 @@ describe('PromptList', () => {
     list.render([]);
     expect(list.element.children).toHaveLength(0);
   });
+
+  it('draws the key glyph as a keycap inside the text, and plain text without one', () => {
+    const list = new PromptList(new StubDocument());
+    list.render([
+      { mechanic: 'sprint', text: 'Hold Shift to sprint', key: 'Shift', opacity: 1, state: 'shown' },
+      { mechanic: 'lockSwap', text: 'Flick the mouse to switch target', opacity: 1, state: 'shown' },
+    ]);
+    const [withKey, plain] = list.element.children;
+    expect(withKey.children.map((c) => c.className)).toEqual(['', 'owg-key', '']);
+    expect(withKey.children[1].textContent).toBe('Shift');
+    expect(withKey.children.map((c) => c.textContent).join('')).toBe('Hold Shift to sprint');
+    expect(plain.children).toHaveLength(0);
+    expect(plain.textContent).toBe('Flick the mouse to switch target');
+  });
+
+  it('splits at keyAt, so a rebound P is the keycap and not the P of "Press"', () => {
+    const list = new PromptList(new StubDocument());
+    list.render([{ mechanic: 'interact', text: 'Press P to speak or use', key: 'P', keyAt: 6, opacity: 1, state: 'shown' }]);
+    expect(list.element.children[0].children.map((c) => c.textContent)).toEqual(['Press ', 'P', ' to speak or use']);
+  });
 });
