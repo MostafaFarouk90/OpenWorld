@@ -84,6 +84,21 @@ export const VAULT_DEF: InteriorDef = {
     { id: 'vault.pile.1', x: 4.5, z: -11.5, yaw: 90 },
     { id: 'vault.pile.2', x: 4.5, z: -16.5, yaw: 90 },
     { id: 'vault.pile.3', x: 10, z: -17, yaw: 90 },
+    // Act 1 density pass, batch 2 (quests thread; additive): Prior Aldhelm's four prayer tablets, the antechamber's
+    // three prayer braziers (lit, they open the arena gate) and the four wraiths the walls give up when they are lit.
+    { id: 'd01.tablet-1', x: -1, z: -9, yaw: 270 },
+    { id: 'd01.tablet-2', x: -1, z: -16, yaw: 270 },
+    { id: 'd01.tablet-3', x: 10.9, z: -11, yaw: 90 },
+    { id: 'd01.tablet-4', x: 3.2, z: -28, yaw: 90 },
+    // where the Prior's censer falls in the arena
+    { id: 'd01.censer', x: 0, z: -46, yaw: 180 },
+    { id: 'd01.brazier-1', x: -3.2, z: -24, yaw: 0 },
+    { id: 'd01.brazier-2', x: 3.2, z: -24, yaw: 0 },
+    { id: 'd01.brazier-3', x: -3.2, z: -28, yaw: 0 },
+    { id: 'd01.spawn.wall-1', x: -2.4, z: -26.5, facing: { x: 0, z: -26 } },
+    { id: 'd01.spawn.wall-2', x: 2.4, z: -26.5, facing: { x: 0, z: -26 } },
+    { id: 'd01.spawn.wall-3', x: 2.4, z: -28, facing: { x: 0, z: -26 } },
+    { id: 'd01.spawn.wall-4', x: 0, z: -22, facing: { x: 0, z: -26 } },
   ],
   triggers: [{ id: 'trg.vault.arena', center: { x: 0, y: 2, z: -33 }, half: { x: 3, y: 2, z: 1.5 } }],
   doors: [{ doorId: 'vault', outside: 'vault.door', inside: 'vault.entry', exit: 'vault.exit' }],

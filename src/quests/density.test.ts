@@ -25,6 +25,10 @@ import { PostDirector, POST_RULES } from './posts';
 import { BRIGHTWATER_SPAWNERS } from '../enemies/brightwaterSpawners';
 import { DENSITY_SPAWNERS_A } from '../enemies/densitySpawners';
 import { CORRIDOR_LAYOUT } from '../region/corridor.layout';
+import { VAULT_DEF } from '../interiors/vaultDef';
+import { HARROWMARK_DOOR_LOCKS, HARROWMARK_FLAG_BLOCKERS } from '../interiors/harrowmark/locks';
+import { m05 } from './content/m05.quest';
+import { d01, D01_BRAZIERS, D01_TABLETS } from './content/d01.quest';
 import { npcCarter3 } from '../dialogue/content/npc-carter-3.dialogue';
 import { evalCondition } from './conditions';
 
@@ -408,7 +412,8 @@ describe('looks', () => {
     looks.update();
     expect(looks.builtKeys()).not.toContain('use:note-m02-order'); // no anchor yet
     expect(looks.builtKeys()).not.toContain('use:note-m03-wulfric'); // its build failed
-    expect(warn).toHaveBeenCalledTimes(1);
+    // one warning per failed build (every grave look fails here)
+    expect(warn).toHaveBeenCalledTimes(Object.values(NOTE_LOOKS).filter((l) => l === 'grave').length);
     expect(built.length).toBe(looks.builtKeys().length);
     looks.dispose();
     expect(disposed.length).toBe(built.length);
@@ -534,14 +539,15 @@ describe('quest fires (CrisisDressing)', () => {
 
 describe('density content tables', () => {
   it('every carry item, note and prop has a layout anchor, and every destination a trigger', () => {
-    const anchors = new Set(BRIGHTWATER_LAYOUT.anchors.map((a) => a.id));
+    // the vault's anchors are its interior def's (defined at runtime)
+    const anchors = new Set([...BRIGHTWATER_LAYOUT.anchors, ...VAULT_DEF.anchors].map((a) => a.id));
     const triggers = new Set(BRIGHTWATER_LAYOUT.triggers.map((t) => t.id));
     for (const c of CARRY_ITEMS) {
       expect(anchors.has(c.homeAnchor), c.homeAnchor).toBe(true);
       expect(triggers.has(c.destination), c.destination).toBe(true);
     }
     for (const n of QUEST_NOTES) expect(anchors.has(n.anchorId), n.anchorId).toBe(true);
-    const brightwaterProps = QUEST_PROPS.filter((p) => ['m02', 'm03', 'm04', 'r01'].includes(p.objective[0]));
+    const brightwaterProps = QUEST_PROPS.filter((p) => ['m02', 'm03', 'm04', 'r01', 'd01'].includes(p.objective[0]));
     for (const p of brightwaterProps) expect(anchors.has(p.anchorId), p.anchorId).toBe(true);
   });
 
@@ -552,5 +558,100 @@ describe('density content tables', () => {
     const off = installBridges(bus, state, w.manager);
     expect(typeof off).toBe('function');
     off();
+  });
+});
+
+describe('batch 2: the Dead Road and the vault', () => {
+  const spawner = (id: string) => DENSITY_SPAWNERS_A.find((d) => d.id === id)!;
+
+  it('a quest-level objective flag goes on when the quest starts, and catches up on active or completed saves only', () => {
+    const w = makeWorld([d01]);
+    const bridge = installObjectiveFlags(OBJECTIVE_FLAGS, w.bus, w.state, w.manager);
+    bridge.sync();
+    expect(w.state.getFlag('story.d01.vaultOpen')).not.toBe(true);
+    w.manager.start('d01');
+    expect(w.state.getFlag('story.d01.vaultOpen')).toBe(true);
+    bridge.dispose();
+    const v = makeWorld([d01]);
+    const b2 = installObjectiveFlags(OBJECTIVE_FLAGS, v.bus, v.state, v.manager);
+    v.manager.load({ quests: { d01: { state: 'active', objectives: { o1: 1 } } } });
+    b2.sync();
+    expect(v.state.getFlag('story.d01.vaultOpen')).toBe(true);
+    expect(v.state.getFlag('story.d01.antechamberClear')).not.toBe(true);
+    b2.dispose();
+  });
+
+  it('locks the vault door on story.d01.vaultOpen and the arena gate on the antechamber, and gates the new groups', () => {
+    expect(HARROWMARK_DOOR_LOCKS.vault).toBe('story.d01.vaultOpen');
+    expect(HARROWMARK_FLAG_BLOCKERS['vault.arena.gate']).toBe('story.d01.antechamberClear');
+    // gates that close once their own kill objective is done, so a save credited past them raises nobody
+    expect(spawner('density.m05.shrine').activation).toEqual({ flag: 'story.m05.stonesStruck', until: 'story.m05.shrineHeld' });
+    expect(spawner('density.d01.antechamber').activation).toEqual({ flag: 'story.d01.braziersLit', until: 'story.d01.antechamberClear' });
+    expect(OBJECTIVE_FLAGS).toContainEqual({ quest: 'm05', objective: 'push', flag: 'story.m05.shrineHeld' });
+    expect(spawner('density.deadroad.barrow')).toMatchObject({ activation: 'auto', respawn: 'never', count: 2 });
+  });
+
+  it('M05: the shrine push waits for the stones as an objective (so the journal first), and only its own wraiths count', () => {
+    const w = makeWorld([m05]);
+    const bridge = installObjectiveFlags(OBJECTIVE_FLAGS, w.bus, w.state, w.manager);
+    w.manager.start('m05');
+    w.flags.set('world.deadroad.wardstones.done', true);
+    w.bus.emit('wardstones.complete', {});
+    expect(w.state.getFlag('story.m05.stonesStruck')).not.toBe(true); // the journal is still current
+    w.bus.emit('dialogue.ended', { npcId: 'note-m05-journal', reason: 'completed' });
+    expect(w.manager.objectiveDone('m05', 'o1')).toBe(true);
+    expect(w.state.getFlag('story.m05.stonesStruck')).toBe(true);
+    w.bus.emit('actor.died', { actorId: 'p1', killerId: 'p', kind: 'ash-wraith', spawnTag: 'brightwater.deadroad.patrol-1' });
+    expect(w.manager.objectives('m05').find((o) => o.def.id === 'push')!.progress).toBe(0);
+    for (let i = 0; i < 4; i++) w.bus.emit('actor.died', { actorId: `s${i}`, killerId: 'p', kind: 'ash-wraith', spawnTag: 'm05.shrine' });
+    expect(w.manager.isObjectiveCurrent('m05', 'o2')).toBe(true);
+    bridge.dispose();
+  });
+
+  it('old saves keep their place: past the stones credits the journal, past the shrine credits the push', () => {
+    const a = makeWorld([m05]);
+    a.manager.load({ quests: { m05: { state: 'active', objectives: { o1: 1 } } } }, 1);
+    expect(a.manager.objectiveDone('m05', 'journal')).toBe(true);
+    expect(a.manager.isObjectiveCurrent('m05', 'push')).toBe(true);
+    const b = makeWorld([m05]);
+    b.manager.load({ quests: { m05: { state: 'active', objectives: { o1: 1, o2: 1 } } } }, 1);
+    expect(b.manager.isObjectiveCurrent('m05', 'o3')).toBe(true);
+    const c = makeWorld([d01]);
+    c.manager.load({ quests: { d01: { state: 'active', objectives: { o1: 1, o2: 1 } } } }, 1);
+    for (const o of ['tablets', 'braziers', 'wake']) expect(c.manager.objectiveDone('d01', o), o).toBe(true);
+    expect(c.manager.isObjectiveCurrent('d01', 'o3')).toBe(true);
+  });
+
+  it('an old save credited past a push or the walls syncs both gate flags, so those groups stay away', () => {
+    const open = (flags: { getFlag(k: string): unknown }, act: { flag?: string; until?: string }) =>
+      flags.getFlag(act.flag!) === true && flags.getFlag(act.until!) !== true;
+    const a = makeWorld([m05]);
+    const ba = installObjectiveFlags(OBJECTIVE_FLAGS, a.bus, a.state, a.manager);
+    a.manager.load({ quests: { m05: { state: 'active', objectives: { o1: 1, o2: 1 } } } }, 1);
+    ba.sync();
+    expect(open(a.state, spawner('density.m05.shrine').activation as { flag: string; until: string })).toBe(false);
+    ba.dispose();
+    const b = makeWorld([d01]);
+    const bb = installObjectiveFlags(OBJECTIVE_FLAGS, b.bus, b.state, b.manager);
+    b.manager.load({ quests: { d01: { state: 'active', objectives: { o1: 1, o2: 1, o3: 1 } } } }, 1);
+    bb.sync();
+    expect(open(b.state, spawner('density.d01.antechamber').activation as { flag: string; until: string })).toBe(false);
+    // a live run in between: the walls are open after the braziers and shut again when the wake is done
+    const c = makeWorld([d01]);
+    const bc = installObjectiveFlags(OBJECTIVE_FLAGS, c.bus, c.state, c.manager);
+    c.manager.start('d01');
+    for (const o of ['o1', 'tablets', 'braziers']) c.manager.completeObjective('d01', o);
+    expect(open(c.state, spawner('density.d01.antechamber').activation as { flag: string; until: string })).toBe(true);
+    c.manager.completeObjective('d01', 'wake');
+    expect(open(c.state, spawner('density.d01.antechamber').activation as { flag: string; until: string })).toBe(false);
+    bb.dispose();
+    bc.dispose();
+  });
+
+  it('D01: the braziers are props enabled only while their objective is current, each counted once', () => {
+    const braziers = QUEST_PROPS.filter((p) => p.objective[0] === 'd01' && p.objective[1] === 'braziers');
+    expect(braziers.map((p) => p.interactableId)).toEqual(D01_BRAZIERS);
+    expect(new Set(braziers.map((p) => p.usedFlag)).size).toBe(3);
+    expect(QUEST_NOTES.map((n) => n.interactableId)).toEqual(expect.arrayContaining(D01_TABLETS.map((t) => `use:${t}`)));
   });
 });

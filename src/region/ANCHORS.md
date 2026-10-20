@@ -200,6 +200,17 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | r01.fire-stubble | 30 | 38 | 0 | 180 | fx |
 | r01.bucket-1 | -6 | 48 | 0 | 270 | carry |
 | r01.bucket-2 | -6 | 50 | 0 | 270 | carry |
+| d01.altar | 55.9 | 60 | 0 | 270 | interact |
+| m05.journal | 480 | -134 | 0 | 0 | interact |
+| spawn.m05.shrine-1 | 952 | -174 | 0 | 270 | spawn |
+| spawn.m05.shrine-2 | 978 | -174 | 0 | 90 | spawn |
+| spawn.m05.shrine-3 | 952 | -154 | 0 | 270 | spawn |
+| spawn.m05.shrine-4 | 978 | -154 | 0 | 90 | spawn |
+| poi.deadroad.stone-1 | 200 | -134 | 0 | 0 | poi |
+| poi.deadroad.stone-2 | 700 | -168 | 0 | 180 | poi |
+| poi.deadroad.barrow | 860 | -126 | 0 | 0 | poi |
+| spawn.deadroad.barrow-1 | 855 | -122 | 0 | 0 | spawn |
+| spawn.deadroad.barrow-2 | 865 | -122 | 0 | 0 | spawn |
 
 ## Triggers
 

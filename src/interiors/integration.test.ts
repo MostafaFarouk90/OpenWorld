@@ -39,7 +39,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function boot() {
+async function boot(vaultOpen = true) {
   (globalThis as { self?: unknown }).self ??= globalThis;
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0x9db8d3, 720, 4560);
@@ -69,6 +69,8 @@ async function boot() {
   };
   // Thread 4 defines the chapel side after this plugin (the door must still appear).
   game.ctx.anchors.define({ id: 'vault.door', position: { x: 57, y: y(57, 66), z: 66 }, yaw: Math.PI });
+  // D01 taken: the vault door opens (the density pass locks it until then; see the lock test below)
+  if (vaultOpen) game.ctx.state.setFlag('story.d01.vaultOpen', true);
   return { game, scene, statuses, run, events, interiors: () => game.ctx.services.get('interiors')!, nav: () => game.ctx.services.get('nav')! };
 }
 
@@ -98,6 +100,23 @@ describe('interiors on the real game', () => {
     expect(t.game.ctx.interaction.focusFor('interact')?.id).toBe('door:vault');
     const root = t.scene.getObjectByName(`interior-${VAULT_ID}`)!;
     expect(root.visible).toBe(false);
+  });
+
+  it('keeps the vault door locked until D01 is taken, and the arena gate shut until the antechamber is clear', async () => {
+    const t = await boot(false);
+    t.game.ctx.player.teleport({ x: 57, y: heightAt(57, 66) + 0.05, z: 64.5 });
+    await t.run(3);
+    await expect(settle(t, t.interiors().enter(VAULT_ID, 'vault'))).rejects.toThrow(/locked/);
+    expect(t.interiors().current).toBeNull();
+    t.game.ctx.state.setFlag('story.d01.vaultOpen', true);
+    await settle(t, t.interiors().enter(VAULT_ID, 'vault'));
+    expect(t.interiors().current).toBe(VAULT_ID);
+    const door = t.game.ctx.anchors.get('vault.arena.door').position;
+    const ray = () => t.game.ctx.physics.raycast({ x: door.x, y: door.y + 1, z: door.z }, { x: 0, y: 0, z: -1 }, 4);
+    expect(ray()).not.toBeNull();
+    t.game.ctx.state.setFlag('story.d01.antechamberClear', true);
+    await t.run(1);
+    expect(ray()).toBeNull();
   });
 
   it('enters the vault onto a real floor, shows it, and exits back to the chapel', async () => {

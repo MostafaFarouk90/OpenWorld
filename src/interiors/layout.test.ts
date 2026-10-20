@@ -28,6 +28,11 @@ describe('the chapel vault layout', () => {
       ...[1, 2, 3].map((i) => `vault.spawn.wraith-${i}`),
       ...[1, 2, 3].map((i) => `vault.pile.${i}`),
       'vault.bloom',
+      // the density pass, batch 2 (quests thread): tablets, braziers and the antechamber's wall wraiths
+      ...[1, 2, 3, 4].map((i) => `d01.tablet-${i}`),
+      'd01.censer',
+      ...[1, 2, 3].map((i) => `d01.brazier-${i}`),
+      ...[1, 2, 3, 4].map((i) => `d01.spawn.wall-${i}`),
     ].sort();
     expect(ids).toEqual(expected);
     expect(layout.triggers.map((t) => t.id)).toEqual(['trg.vault.arena']);
