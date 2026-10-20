@@ -105,9 +105,9 @@ export class LineCards {
     }
   }
 
-  /** Drops every card (a save load: they are about the beat before it). */
-  clear(): void {
-    for (const list of Object.values(this.live)) for (const l of list.splice(0)) l.unmount();
+  /** Drops every card, or one slot's (a save load or a skip: they are about a beat that is over). */
+  clear(slot?: 'subtitle' | 'toast'): void {
+    for (const list of slot ? [this.live[slot]] : Object.values(this.live)) for (const l of list.splice(0)) l.unmount();
   }
 
   dispose(): void {
