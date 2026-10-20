@@ -30,7 +30,7 @@ export const m03: QuestDef = {
     { id: 'candle', type: 'collect', target: 'warding-candle', textKey: 'quest.m03.candle' },
     { id: 'grave', type: 'talk', target: 'note-m03-wulfric', textKey: 'quest.m03.grave' },
     { id: 'o5', type: 'talk', target: 'aelfreda', textKey: 'quest.m03.o5' },
-    { id: 'o6', type: 'kill', target: 'ash-wraith', required: 4, spawnTag: 'm03.churchyard', textKey: 'quest.m03.o6' },
+    { id: 'o6', type: 'kill', target: 'ash-wraith', required: 4, legacyRequired: 1, spawnTag: 'm03.churchyard', textKey: 'quest.m03.o6' },
     { id: 'o7', type: 'talk', target: 'aelfreda', textKey: 'quest.m03.o7' },
   ],
   rewards: [{ xp: 300 }, { skillPoints: 1 }],

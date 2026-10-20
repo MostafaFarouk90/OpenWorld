@@ -17,7 +17,7 @@ export const m04: QuestDef = {
   objectives: [
     { id: 'o1', type: 'goTo', target: 'trg.ford.toll-post', textKey: 'quest.m04.o1' },
     { id: 'o2', type: 'talk', target: 'gaut', textKey: 'quest.m04.o2' },
-    { id: 'o3', type: 'kill', target: 'blighted-soldier', required: 4, textKey: 'quest.m04.o3' },
+    { id: 'o3', type: 'kill', target: 'blighted-soldier', required: 4, legacyRequired: 2, textKey: 'quest.m04.o3' },
     { id: 'sergeant', type: 'kill', target: 'toll-sergeant', spawnTag: 'm04.sergeant', textKey: 'quest.m04.sergeant' },
     {
       // The post is a structure anyone can break at any time, so the world flag (thread 4) also credits it.

@@ -30,6 +30,7 @@ import { codexEntry } from '../codex/entries';
 import { createEffectRunner } from './effects';
 import type { BusPort } from './ports';
 import type { QuestDef } from './types';
+import { QUESTS_SAVE_VERSION } from './types';
 import './service';
 
 /** Synthetic interact id that completes T12's "open the quest log" objective. */
@@ -102,9 +103,9 @@ const plugin: GamePlugin = {
     });
     ctx.persist.register({
       key: 'quests',
-      version: 1,
+      version: QUESTS_SAVE_VERSION,
       serialize: () => manager.serialize(),
-      load: (data) => manager.load(data),
+      load: (data, version) => manager.load(data, version),
     });
 
     // Journal (J).

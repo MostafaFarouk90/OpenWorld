@@ -5,7 +5,7 @@ export const questStringsDensityA: Record<string, string> = {
   'quest.m01.tobb': 'See who was trapped in the Grey Goose',
   'quest.m01.mill': 'Clear the wraiths from the mill',
   'quest.m01.miller': 'Check on the miller',
-  'quest.m01.rescued': 'Speak with Sister Aelfreda at the chapel gate',
+  'quest.m01.rescued': 'Speak with Sister Aelfreda at the Kettlewick gate',
   'quest.m01.o3': 'Report to Sir Gaut',
 
   'quest.m02.door': 'Douse the fire at the bakery door (well buckets)',

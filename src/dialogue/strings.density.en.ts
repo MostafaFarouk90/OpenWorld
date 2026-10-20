@@ -22,7 +22,7 @@ export const dialogueStringsDensityA: Record<string, string> = {
   // ---- M01: the miller ----
   'dialogue.npc-aldwin.m01-safe': 'Is it gone? The grey things went round and round the mill like they wanted the flour. I held the door with a sack of barley.',
   'dialogue.npc-aldwin.m01-safe-2': 'You are Edda\'s child. I ground the wheat for your naming loaf, and here you are with a sword and a light in your chest.',
-  'dialogue.npc-aldwin.m01-safe-3': 'Go to the chapel, Aldwin. Sister Aelfreda is keeping everyone together there.',
+  'dialogue.npc-aldwin.m01-safe-3': 'Go to the chapel, Aldwin. The hearth is lit there and the others are waiting.',
   'dialogue.npc-aldwin.m01-safe-4': 'I will. Somebody has to tell them the mill still turns. That is worth more than bread this morning.',
   'dialogue.npc-aldwin.m01-wait': 'I am not opening this door while those grey things are circling, {name}. Not for you, not for the Regent himself.',
   'dialogue.npc-aldwin.idle-chapel': 'I am staying with the others until Sir Gaut says the lanes are clear.',
@@ -131,6 +131,7 @@ export const dialogueStringsDensityA: Record<string, string> = {
   'dialogue.npc-carter-3.east-3': 'They drove it east toward Harrowmark in the dark, and the driver never came back for it. I have not slept right since.',
   'dialogue.npc-carter-3.east-4': 'Tell Sir Gaut. He will know what to make of it.',
   'dialogue.npc-carter-3.afraid': 'Keep your voice down near the bridge. The sergeant has ears like a hound.',
+  'dialogue.npc-carter-3.chained': 'The post is down, but our wheels are still chained. His men locked every wagon before they ran.',
   'dialogue.npc-carter-3.leaving': 'We are going. Thank you, {name}.',
   'dialogue.npc-carter-3.gone': 'Safe on the road, thanks to you.',
   'dialogue.npc-carter-3.idle': 'Waiting on the ford, same as everyone.',

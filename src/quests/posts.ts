@@ -10,6 +10,8 @@ export interface PostRule {
   home: string;
   /** first matching entry wins; none matching means home */
   posts: { when: Condition; anchorId: string }[];
+  /** While this holds the director does not place the NPC at all (a walk-off or another system owns it). */
+  leaveWhen?: Condition;
 }
 
 // The tutorial leaves Gaut and Aelfreda at the Kettlewick gate (T15) for M01; once M01 is done they go home, so
@@ -66,7 +68,12 @@ export const POST_RULES: PostRule[] = [
     npcId: 'edda', home: 'npc-post.edda',
     posts: [{ when: { all: [{ quest: 'm02', state: 'active' }, { objective: ['m02', 'o2'], done: true }] }, anchorId: 'npc-post.edda.granary' }],
   },
-  { npcId: 'aldwin', home: 'npc-post.aldwin', posts: [{ when: m01Done, anchorId: 'npc-post.aldwin' }] },
+  {
+    npcId: 'aldwin', home: 'npc-post.aldwin',
+    // while M01 runs after he was found, his walk-off owns him (a load mid-M01 must not snap him back to the mill)
+    leaveWhen: { all: [{ quest: 'm01', state: 'active' }, { flag: 'story.m01.millerSafe' }] },
+    posts: [{ when: m01Done, anchorId: 'npc-post.aldwin' }],
+  },
 ];
 
 /** The anchor each NPC should stand at now. */
@@ -115,7 +122,10 @@ export class PostDirector {
     const npcs = this.npcs();
     if (!npcs) return;
     let pending = false;
-    for (const [npcId, want] of Object.entries(resolvePosts(this.rules, this.env()))) {
+    const env = this.env();
+    const left = new Set(this.rules.filter((r) => r.leaveWhen && evalCondition(r.leaveWhen, env)).map((r) => r.npcId));
+    for (const [npcId, want] of Object.entries(resolvePosts(this.rules, env))) {
+      if (left.has(npcId)) continue;
       const had = this.applied.get(npcId);
       if (want.home && had === undefined) continue;
       if (had === want.anchorId) continue;

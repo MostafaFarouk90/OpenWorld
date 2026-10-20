@@ -29,7 +29,7 @@ export const DENSITY_SPAWNERS_A: readonly SpawnerDef[] = [
   {
     id: 'r01.scarecrows-east', enemy: 'ash-scarecrow', count: 2,
     anchor: 'r01.scarecrow.7', memberAnchors: ['r01.scarecrow.7', 'r01.scarecrow.8'],
-    band: { min: 2, max: 3 }, activation: { quest: 'r01' }, respawn: 'never', leash: false,
+    band: { min: 2, max: 3 }, activation: { quest: 'r01', flag: 'story.r01.shawlRead' }, respawn: 'never', leash: false,
   },
   // R01: the root under the barley wakes as three wraiths once the scarecrows are gone.
   {

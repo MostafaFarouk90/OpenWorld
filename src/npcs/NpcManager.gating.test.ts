@@ -9,10 +9,12 @@ import { NPC_TUNING } from './tuning';
 
 const JOINED = 'story.m05.tobbJoined';
 const FREED = 'story.m04.cartersFreed';
+const DOUSED = 'story.m01.tavernDoused';
 
+/** The Grey Goose door is out unless a test says otherwise (Tobb is inside until it is doused: the density pass). */
 function setup(flags: Record<string, boolean> = {}) {
   const fc = createFakeCore();
-  for (const [k, v] of Object.entries(flags)) fc.flags.set(k, v);
+  for (const [k, v] of Object.entries({ [DOUSED]: true, ...flags })) fc.flags.set(k, v);
   fc.ctx.strings.register('en', NPC_STRINGS_EN);
   for (const a of BRIGHTWATER_LAYOUT.anchors) {
     if (a.tags?.includes('npc-post') || a.id === 'ford.carters.walk-off') {
@@ -37,6 +39,15 @@ describe('Tobb at the Grey Goose', () => {
     const tobb = [...fc.actors.values()].find((a) => a.kind === 'npc:tobb')!;
     expect(tobb.root!.children.map((c) => c.name)).toContain('tobb-lute');
     expect(m.position('tobb')).toEqual({ x: post('npc-post.tobb').x, y: 2, z: post('npc-post.tobb').z });
+    expect(fc.interactables.has('npc:tobb')).toBe(true);
+  });
+
+  it('is not there while the Grey Goose door burns, and steps out when it is doused (density pass)', () => {
+    const { fc, m } = setup({ [DOUSED]: false });
+    expect(m.get('tobb')).toBeUndefined();
+    expect(fc.interactables.has('npc:tobb')).toBe(false);
+    fc.ctx.state.setFlag(DOUSED, true);
+    expect(m.get('tobb')).toBeDefined();
     expect(fc.interactables.has('npc:tobb')).toBe(true);
   });
 
@@ -195,6 +206,7 @@ describe('review fixes', () => {
     fc.ctx.strings.register('en', NPC_STRINGS_EN);
     for (const a of BRIGHTWATER_LAYOUT.anchors) if (a.tags?.includes('npc-post')) fc.ctx.anchors.define({ id: a.id, position: { x: a.x, y: 2, z: a.z }, yaw: 0 });
     fc.flags.set(JOINED, true);
+    fc.flags.set(DOUSED, true);
     const m = new NpcManager(fc.ctx, { layoutNpcs: BRIGHTWATER_LAYOUT.npcs, defs: NPC_DEFS, playerPosition: () => ({ x: -13, z: 134 }), loader: fakeLoader() });
     m.spawnAll();
     await m.loadModels();

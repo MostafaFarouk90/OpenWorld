@@ -21,6 +21,12 @@ import { m01 } from './content/m01.quest';
 import { CrisisDressing, FIRE_FLAG } from '../tutorial/CrisisDressing';
 import { BRIGHTWATER_LAYOUT } from '../region/brightwater.layout';
 import type { QuestDef } from './types';
+import { PostDirector, POST_RULES } from './posts';
+import { BRIGHTWATER_SPAWNERS } from '../enemies/brightwaterSpawners';
+import { DENSITY_SPAWNERS_A } from '../enemies/densitySpawners';
+import { CORRIDOR_LAYOUT } from '../region/corridor.layout';
+import { npcCarter3 } from '../dialogue/content/npc-carter-3.dialogue';
+import { evalCondition } from './conditions';
 
 const at = { x: 1, y: 0, z: 2 };
 
@@ -190,6 +196,123 @@ describe('save migration (sequential quests that grew)', () => {
     v.manager.load(saved);
     expect(v.manager.isObjectiveCurrent('m02', 'oven')).toBe(true);
     expect(v.manager.objectiveDone('m02', 'rubble')).toBe(true);
+  });
+});
+
+describe('review fixes: legacy kill counts and saved dedupe keys', () => {
+  it('a version 1 save at the old kill count counts as done (the old enemies are dead and never respawn)', () => {
+    const w = makeWorld([m03, m04]);
+    w.manager.load({ quests: { m03: { state: 'active', objectives: { o1: 1, o2: 1, study: 3, o3: 1, o4: 1, o5: 1, o6: 1 } }, m04: { state: 'active', objectives: { o1: 1, o2: 1, o3: 2 } } } }, 1);
+    expect(w.manager.objectiveDone('m03', 'o6')).toBe(true);
+    expect(w.manager.isObjectiveCurrent('m03', 'o7')).toBe(true);
+    expect(w.manager.objectiveDone('m04', 'o3')).toBe(true);
+    expect(w.manager.isObjectiveCurrent('m04', 'sergeant')).toBe(true);
+  });
+
+  it('a version 1 save short of the old count, and any version 2 save, keep their progress', () => {
+    const w = makeWorld([m04]);
+    w.manager.load({ quests: { m04: { state: 'active', objectives: { o1: 1, o2: 1, o3: 1 } } } }, 1);
+    expect(w.manager.objectives('m04').find((o) => o.def.id === 'o3')!.progress).toBe(1);
+    const v = makeWorld([m04]);
+    v.manager.load({ quests: { m04: { state: 'active', objectives: { o1: 1, o2: 1, o3: 2 } } } }, 2);
+    expect(v.manager.objectiveDone('m04', 'o3')).toBe(false);
+  });
+
+  it('only the two grown kill objectives carry a legacy count', () => {
+    const legacy = [m01, m02, m03, m04, r01].flatMap((q) => q.objectives.filter((o) => o.legacyRequired !== undefined).map((o) => `${q.id}.${o.id}:${o.legacyRequired}`));
+    expect(legacy).toEqual(['m03.o6:1', 'm04.o3:2']);
+  });
+
+  it('dedupe keys survive a save and load, so a scarecrow cleared before the save cannot count twice', () => {
+    const w = makeWorld([r01]);
+    w.manager.start('r01');
+    for (const o of ['o1', 'shawl']) if (r01.objectives.some((x) => x.id === o)) w.manager.completeObjective('r01', o);
+    expect(w.manager.isObjectiveCurrent('r01', 'o2')).toBe(true);
+    w.bus.emit('scarecrow.cleared', { scarecrowId: 'r01.scarecrows#0' });
+    const saved = JSON.parse(JSON.stringify(w.manager.serialize()));
+    expect(saved.dedupe).toEqual({ r01: { o2: ['r01.scarecrows#0'] } });
+    const v = makeWorld([r01]);
+    v.manager.load(saved);
+    v.bus.emit('scarecrow.cleared', { scarecrowId: 'r01.scarecrows#0' });
+    expect(v.manager.objectives('r01').find((o) => o.def.id === 'o2')!.progress).toBe(1);
+    v.bus.emit('scarecrow.cleared', { scarecrowId: 'r01.scarecrows#1' });
+    expect(v.manager.objectives('r01').find((o) => o.def.id === 'o2')!.progress).toBe(2);
+  });
+
+  it('malformed or stale dedupe data is dropped, and a save with no keys has no dedupe field', () => {
+    const w = makeWorld([r01]);
+    expect(w.manager.serialize()).toEqual({ quests: {} });
+    w.manager.load({ quests: { r01: { state: 'completed', objectives: {} } }, dedupe: { r01: { o2: ['x'] }, zz: 5, m01: null } });
+    expect(w.manager.serialize().dedupe).toBeUndefined();
+    const v = makeWorld([r01]);
+    v.manager.load({ quests: { r01: { state: 'active', objectives: { o1: 1, shawl: 1 } } }, dedupe: { r01: { o2: [1, 'a'], nope: ['b'] } } });
+    expect(v.manager.serialize().dedupe).toEqual({ r01: { o2: ['a'] } });
+  });
+});
+
+describe('review fixes: spawns wait for the end of their lesson or note', () => {
+  const flagOf = (q: string, o: string) => OBJECTIVE_FLAGS.find((f) => f.quest === q && f.objective === o)?.flag;
+  const act = (id: string) => [...BRIGHTWATER_SPAWNERS, ...DENSITY_SPAWNERS_A].find((d) => d.id === id)!.activation;
+
+  it('the churchyard, the ford pairs and both scarecrow groups gate on the objective flag, not the unlocked verb', () => {
+    expect(act('brightwater.churchyard')).toEqual({ flag: flagOf('m03', 'o5') });
+    expect(act('brightwater.ford.pair-1')).toEqual({ quest: 'm04', flag: flagOf('m04', 'o2') });
+    expect(act('brightwater.ford.pair-2')).toEqual({ quest: 'm04', flag: flagOf('m04', 'o2') });
+    expect(act('r01.scarecrows')).toEqual({ quest: 'r01', flag: flagOf('r01', 'shawl') });
+    expect(act('r01.scarecrows-east')).toEqual({ quest: 'r01', flag: flagOf('r01', 'shawl') });
+  });
+
+  it('the flags go on only when the objective is done (a talk cut short sets nothing)', () => {
+    const w = makeWorld([m03, r01]);
+    const bridge = installObjectiveFlags(OBJECTIVE_FLAGS, w.bus, w.state, w.manager);
+    w.manager.start('r01');
+    w.manager.start('m03');
+    w.state.setFlag('enemies.mercy.release', true); // the verb unlocks mid-talk
+    expect(w.state.getFlag('story.m03.releaseTaught')).not.toBe(true);
+    expect(w.state.getFlag('story.r01.shawlRead')).not.toBe(true);
+    for (const o of ['o1', 'shawl']) if (r01.objectives.some((x) => x.id === o)) w.manager.completeObjective('r01', o);
+    expect(w.state.getFlag('story.r01.shawlRead')).toBe(true);
+    bridge.dispose();
+  });
+});
+
+describe('review fixes: NPC placement and lines', () => {
+  it('Aldwin is left to his walk-off while M01 runs after he is found, even across an in-session load', () => {
+    const w = makeWorld([m01]);
+    const dir = new PostDirector(POST_RULES, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
+    w.manager.complete('m01');
+    dir.update();
+    expect(w.npcs.placed).toContainEqual(['aldwin', 'npc-post.aldwin']);
+    const before = w.npcs.placed.length;
+    // an earlier save loads: M01 active, the miller already found
+    w.manager.load({ quests: { m01: { state: 'active', objectives: { miller: 1 } } } });
+    w.state.setFlag('story.m01.millerSafe', true);
+    dir.reset();
+    dir.update();
+    expect(w.npcs.placed.slice(before).filter(([id]) => id === 'aldwin')).toEqual([]);
+    // not found yet: the mill post is restored as before
+    w.state.setFlag('story.m01.millerSafe', false);
+    dir.markDirty();
+    dir.update();
+    expect(w.npcs.placed.slice(before)).toContainEqual(['aldwin', 'npc-post.aldwin']);
+  });
+
+  it('Tobb is not at the Grey Goose door until it is doused', () => {
+    const tobb = CORRIDOR_LAYOUT.npcs.find((n) => n.id === 'tobb')!;
+    expect(tobb.presentWhen).toBe('story.m01.tavernDoused');
+    expect(OBJECTIVE_FLAGS).toContainEqual({ quest: 'm01', objective: 'tavern', flag: 'story.m01.tavernDoused' });
+  });
+
+  it('the third carter says the wagons are chained after the post falls, and only leaves once the carters are heard', () => {
+    const w = makeWorld([m04]);
+    const env = { state: w.state, quests: w.manager };
+    const start = () => (npcCarter3.start as { when: Parameters<typeof evalCondition>[0]; node: string }[]).find((e) => evalCondition(e.when, env))!.node;
+    w.manager.load({ quests: { m04: { state: 'active', objectives: { o1: 1, o2: 1, o3: 4, sergeant: 1, ledger: 1, shown: 1, o4: 1 } } } });
+    expect(start()).toBe('chained');
+    w.manager.completeObjective('m04', 'wagons');
+    expect(start()).toBe('east');
+    w.manager.completeObjective('m04', 'carters');
+    expect(start()).toBe('leaving');
   });
 });
 
