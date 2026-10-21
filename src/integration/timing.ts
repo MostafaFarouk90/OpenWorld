@@ -54,6 +54,38 @@ export const BEAT_S = {
   pole: 30,
 } as const;
 
+/**
+ * Act 2 additions (plan Part 7). Seconds per beat unit for the beats Act 2 adds; the Act 1 table above is unchanged.
+ * `structure` is the heavier Act 2 kind (a brazier cart, the boulder); Act 1's 20 s toll post stays in `BEAT_S`.
+ */
+export const ACT2_BEAT_S = {
+  ...BEAT_S,
+  /** a readable search point (a body, a ledger, a way-post) */
+  search: 20,
+  /** a wave enemy of A7's raid */
+  waveEnemy: 45,
+  /** a sheep walked home */
+  herd: 45,
+  /** one round of the trial duel */
+  duelRound: 90,
+  /** one rhythm run at an anvil */
+  rhythm: 60,
+  /** a valve puzzle attempt */
+  puzzle: 120,
+  /** one ride of the Deepgate lift */
+  lift: 30,
+  /** a counted set piece (the ride-out, the Anvil's song, the first flight) */
+  set: 60,
+  /** a heavy structure (a cart, the boulder) */
+  structure: 65,
+} as const;
+/** Following a route-bound NPC (Wenna's route) walks at this pace. */
+export const ROUTE_FOLLOW_MPS = 2;
+/** Act 2 counts travel at most this share of the talk-and-beats time, so riding alone can never meet a floor. Opt-in: Act 1's numbers keep their uncapped travel. */
+export const ACT2_TRAVEL_CAP = 3 / 7;
+/** The travel seconds an Act 2 quest may count. */
+export const cappedTravelS = (travelS: number, talkAndBeatsS: number): number => Math.min(travelS, ACT2_TRAVEL_CAP * talkAndBeatsS);
+
 /** A route point: an anchor, a trigger centre, or the door marker (no travel across it). `ride`: reached mounted. */
 type Point = { anchor: string; ride?: boolean } | { trigger: string; ride?: boolean } | 'DOOR';
 const A = (anchor: string): Point => ({ anchor });

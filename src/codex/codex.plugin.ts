@@ -189,6 +189,13 @@ const codex: GamePlugin = {
           warn(`codex: quests.state() failed: ${String(e)}`);
         }
       }
+      // Tempered gear in the pack is the forge used, whichever quest it was for.
+      const inv = (ctx.services as unknown as Loose).get('inventory') as { items?: () => { id: string }[]; gear?: (id: string) => { temper: number } } | undefined;
+      try {
+        if (inv?.items?.().some((i) => (inv.gear?.(i.id).temper ?? 0) > 0)) model.unlock(ACT2_CODEX_IDS.tempering);
+      } catch (e) {
+        warn(`codex: inventory gear read failed: ${String(e)}`);
+      }
       const t = tally();
       if (t) {
         for (const [kind, c] of t) {

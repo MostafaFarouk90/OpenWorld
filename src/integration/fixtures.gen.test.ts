@@ -14,10 +14,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootChapter, type ChapterHarness } from './chapterHarness';
 import { ensure, playPhaseA, reachPhaseAStart } from './phaseA';
 import { PHASE_A_FIXTURES, FIXTURE_SAVED_AT, readPhaseAFixture } from '../save/__fixtures__/phaseA';
-import { ACT1_FIXTURES } from '../save/__fixtures__/act1';
+import { ACT1_FIXTURES, readAct1Fixture } from '../save/__fixtures__/act1';
 import { bootFromSave } from './chapterHarness';
 import { playPhaseB } from './phaseB';
 import { fightGrimtooth } from './grimtooth';
+import { ACT2_C_FIXTURES } from '../save/__fixtures__/act2c';
+import { playPhaseC, PHASE_C_RUN_B } from './phaseC';
 
 const GEN = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.GEN_FIXTURES === '1';
 
@@ -160,4 +162,47 @@ describe.skipIf(!GEN)('Act 1 fixtures (GEN_FIXTURES=1 writes them)', () => {
     expect(chosen).not.toBeNull();
     await write(ACT1_FIXTURES.m07ClassChosen, chosen!, ACT1_FIXTURES_WHAT.m07ClassChosen);
   }, 300_000);
+});
+
+const ACT2_C_FIXTURES_WHAT: Record<keyof typeof ACT2_C_FIXTURES, string> = {
+  m11Start: 'Act 2 run A from act1-complete: Act 1 done, M11 not yet offered (Gaut gives it)',
+  m12Start: 'Act 2 run A: M11 completed, the Cinder Road stone lit, M12 not yet offered',
+  m12MidWave: 'Act 2 run A: M12 active, its raid in progress (the first raiders standing)',
+  m14HushedAnvil: 'Act 2 run A: M14 active, the Hushed Anvil rekindled; murals, keeper and tempering ahead',
+  d03Scorchhold: 'Act 2 run A: D03 active, the gate and the courtyard done, the keep papers current',
+  completeDefeated: 'Act 2 run A (R05 safe road, R06 cleansed, R07 spared, R11 slain, Redmane defeated): M11 to D03 completed',
+  completeSpared: 'Act 2 run B (R05 fox, R06 sealed, R07 culled, R11 spared, Redmane spared): M11 to D03 completed',
+};
+
+
+describe.skipIf(!GEN)('Act 2 Phase C fixtures (GEN_FIXTURES=1 writes them)', () => {
+  it('run A: the first branch of every choice, with the checkpoints on the way', async () => {
+    const t = await bootFromSave(await readAct1Fixture(ACT1_FIXTURES.complete), { models: true, virtualClock: true });
+    h = t;
+    const out: Partial<Record<keyof typeof ACT2_C_FIXTURES, Record<string, unknown>>> = {};
+    await playPhaseC(t, undefined, {
+      hooks: {
+        before: async (q) => { if (q === 'm11') out.m11Start = await saveFixture(t); },
+        after: async (q) => { if (q === 'm11') out.m12Start = await saveFixture(t); },
+        inWave: async (q) => { if (q === 'm12' && !out.m12MidWave) out.m12MidWave = await saveFixture(t); },
+        afterObjective: async (q, o) => {
+          if (q === 'm14' && o === 'rekindle') out.m14HushedAnvil = await saveFixture(t);
+          if (q === 'd03' && o === 'perch') out.d03Scorchhold = await saveFixture(t);
+        },
+      },
+    });
+    out.completeDefeated = await saveFixture(t);
+    for (const k of Object.keys(ACT2_C_FIXTURES) as (keyof typeof ACT2_C_FIXTURES)[]) {
+      if (k === 'completeSpared') continue;
+      expect(out[k], k).toBeDefined();
+      await write(ACT2_C_FIXTURES[k], out[k]!, ACT2_C_FIXTURES_WHAT[k]);
+    }
+  }, 600_000);
+
+  it('run B: the second branch of every choice', async () => {
+    const t = await bootFromSave(await readAct1Fixture(ACT1_FIXTURES.complete), { models: true, virtualClock: true });
+    h = t;
+    await playPhaseC(t, undefined, { choices: PHASE_C_RUN_B });
+    await write(ACT2_C_FIXTURES.completeSpared, await saveFixture(t), ACT2_C_FIXTURES_WHAT.completeSpared);
+  }, 600_000);
 });

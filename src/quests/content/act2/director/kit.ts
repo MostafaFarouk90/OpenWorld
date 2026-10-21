@@ -32,6 +32,8 @@ export interface Kit {
   after(ticks: number, fn: () => void): void;
   /** Runs `fn` every `everyTicks` fixed ticks. */
   every(everyTicks: number, fn: () => void): Off;
+  /** The spawner group's members still standing: `enemies.alive` keeps a member until its death animation has finished. */
+  standing(spawnerId: string): string[];
   warn(message: string): void;
 }
 
@@ -78,6 +80,7 @@ export function makeKit(ctx: GameContext, warn: (m: string) => void, offs: Off[]
       offs.push(off);
       return off;
     },
+    standing: (id) => (ctx.services.get('enemies')?.alive(id) ?? []).filter((a) => !(ctx as { actors?: { get(id: string): { dead?: boolean } | undefined } }).actors?.get(a)?.dead),
     warn,
   };
   const tick = (): void => {
