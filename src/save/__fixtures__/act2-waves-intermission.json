@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "savedAt": 1767225600000,
+  "reason": "manual",
+  "playtimeSeconds": 0,
+  "entries": {
+    "waves": {
+      "version": 1,
+      "data": {
+        "defId": "cinderford-raid",
+        "index": 0,
+        "phase": "intermission"
+      }
+    }
+  }
+}
