@@ -68,6 +68,19 @@ export const SECTIONS: readonly StealthSectionDef[] = [
     guardGroups: ['stealth.m09.hall', 'stealth.m09.stacks', 'stealth.m09.clerk'],
     hideSpots: [1, 2, 3, 4].map((i) => ({ id: `hide:m09-${i}`, anchor: `hide.m09.${i}` })),
   },
+  // Act 2 (A12): M15's hunters' camp, on A3's anchors in cinderreach/huntersCamp.ts; the bounds cover the camp's 90 x 90 m trigger.
+  {
+    id: 'm15.camp',
+    quest: { id: 'm15', liveFrom: 'scout', liveUntil: 'scout' },
+    bounds: v('cinderreach.stealth.m15.centre', 48, 15, 48),
+    checkpoints: [
+      { id: 'camp.start', anchor: 'cinderreach.stealth.m15.start', volume: v('cinderreach.stealth.m15.start', 4, 3, 4) },
+      { id: 'camp.inside', anchor: 'cinderreach.stealth.m15.cp.inside', volume: v('cinderreach.stealth.m15.cp.inside', 4, 3, 4) },
+    ],
+    exit: v('cinderreach.stealth.m15.end', 3, 3, 3),
+    guardGroups: ['stealth.m15.watch'],
+    hideSpots: [1, 2, 3, 4].map((i) => ({ id: `hide:m15-${i}`, anchor: `cinderreach.hide.m15.${i}` })),
+  },
 ];
 
 export const isInteriorBounds = (b: StealthSectionDef['bounds']): b is { interior: string } => 'interior' in b;

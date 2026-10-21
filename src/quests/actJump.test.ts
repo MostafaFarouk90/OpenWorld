@@ -23,7 +23,7 @@ describe('registry', () => {
   it('registers act 1 and act 2 at load', () => {
     expect(getActJump(1)?.prereqs).toBe(ACT1_PREREQS);
     expect(getActJump(2)?.prereqs).toBe(ACT2_PREREQS);
-    expect(ACT2_PREREQS).toEqual({});
+    expect(Object.keys(ACT2_PREREQS)).toEqual(['m11', 'm12', 'r06', 'r05', 'm13', 'r07', 'r11', 'm14', 'm15', 'd03']);
   });
   it('throws on a duplicate act and the undo frees it', () => {
     expect(() => registerActJump(1, { prereqs: {} })).toThrow(/already registered/);
@@ -49,17 +49,23 @@ describe('resolveActJump', () => {
     expect(resolveActJump('?act1=m04&new', warn)).toEqual({ act: 1, id: 'm04', fresh: true, prereqs: ACT1_PREREQS.m04 });
     expect(warn).not.toHaveBeenCalled();
   });
-  it('refuses ?act2=m11 with an empty table: one warning, no result', () => {
+  it('refuses an Act 2 id the table lacks: one warning, no result', () => {
     const warn = vi.fn();
-    expect(resolveActJump('?act2=m11&new', warn)).toBeNull();
+    expect(resolveActJump('?act2=m16&new', warn)).toBeNull();
     expect(warn).toHaveBeenCalledTimes(1);
   });
+  it('resolves ?act2=m11&new with all of Act 1 as its prerequisites', () => {
+    const r = resolveActJump('?act2=m11&new', vi.fn());
+    expect(r?.prereqs).toContain('d02');
+    expect(r?.prereqs).toHaveLength(15);
+  });
   it('resolves an act 2 id once the table has it, and refuses an unregistered act', () => {
+    const saved = ACT2_PREREQS.m11;
     ACT2_PREREQS.m11 = ['m10'];
     try {
       expect(resolveActJump('?act2=m11&new', vi.fn())?.prereqs).toEqual(['m10']);
     } finally {
-      delete ACT2_PREREQS.m11;
+      ACT2_PREREQS.m11 = saved;
     }
     const warn = vi.fn();
     expect(resolveActJump('?act9=x&new', warn)).toBeNull();
@@ -68,12 +74,7 @@ describe('resolveActJump', () => {
   it('refuses a toString-style id and a missing &new', () => {
     const warn = vi.fn();
     expect(resolveActJump('?act2=toString&new', warn)).toBeNull();
-    ACT2_PREREQS.m11 = [];
-    try {
-      expect(resolveActJump('?act2=m11', warn)).toBeNull();
-    } finally {
-      delete ACT2_PREREQS.m11;
-    }
+    expect(resolveActJump('?act2=m11', warn)).toBeNull();
     expect(warn).toHaveBeenCalledTimes(2);
   });
   it('returns null for a URL with no act parameter, silently', () => {

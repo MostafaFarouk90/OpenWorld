@@ -12,7 +12,7 @@ export interface CarryItemSpec {
   objectiveId: string;
   destination: string;
   promptKey: string;
-  look: 'villager' | 'bucket';
+  look: 'villager' | 'bucket' | 'wounded' | 'bundle';
   /** pickable only while this flag is true too */
   requiresFlag?: string;
 }
