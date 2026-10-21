@@ -125,6 +125,22 @@ describe('TerrainManager', () => {
     manager.dispose();
   });
 
+  it('draws Act 2 chunks with the ground material and Act 1 chunks with the plain one', () => {
+    const { manager, camera, answerAll } = setup();
+    // Near Cinderreach's west edge the quadtree's chunks straddle both kinds of ground.
+    camera.set(14850, 60, 2500);
+    manager.update(camera);
+    for (let i = 0; i < 6; i++) answerAll();
+    const meshes = manager.group.children as THREE.Mesh[];
+    const act2 = meshes.filter((m) => m.geometry.getAttribute('ground'));
+    const act1 = meshes.filter((m) => !m.geometry.getAttribute('ground'));
+    expect(act2.length).toBeGreaterThan(0);
+    expect(act1.length).toBeGreaterThan(0);
+    for (const m of act2) expect((m.material as THREE.Material).name).toBe('terrain-act2-ground');
+    for (const m of act1) expect((m.material as THREE.Material).name).not.toBe('terrain-act2-ground');
+    manager.dispose();
+  });
+
   it('gives every built mesh a bounding box containing all vertices, skirts included', () => {
     const { manager, camera, answerAll } = setup();
     manager.update(camera);
@@ -281,14 +297,15 @@ describe('TerrainManager', () => {
       expect(manager.group.children).toHaveLength(0);
     });
 
-    it('disposes the shared material', () => {
+    it('disposes both shared materials (Act 1 and the Act 2 ground)', () => {
       const { manager, camera, answerAll } = setup();
       manager.update(camera);
       answerAll();
       const spy = vi.spyOn(THREE.Material.prototype, 'dispose');
       manager.dispose();
       const materials = spy.mock.contexts.filter((c) => c instanceof THREE.MeshStandardMaterial);
-      expect(materials).toHaveLength(1);
+      expect(materials).toHaveLength(2);
+      expect(materials.map((m) => (m as THREE.Material).name)).toContain('terrain-act2-ground');
     });
 
     it('disposes the geometry of every resident chunk', () => {

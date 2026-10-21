@@ -3,6 +3,7 @@
 // vertex. Neighbouring chunks at different LOD levels disagree slightly along shared edges; the
 // skirts fill those cracks without any runtime vertex stitching.
 
+import { chunkGround } from './ground';
 import { heightAt } from './heightfield';
 
 export interface ChunkRequest {
@@ -26,6 +27,11 @@ export interface ChunkData {
   /** Height range of the surface (skirts excluded). */
   minY: number;
   maxY: number;
+  /**
+   * Act 2 ground weights per vertex (ember seam, ash-fog), only on chunks an Act 2 ground rule reaches (ground.ts).
+   * Absent on every Act 1 chunk, which keeps the plain terrain material.
+   */
+  ground?: Float32Array;
 }
 
 /** Vertex count for a chunk: grid plus one skirt vertex per border vertex. */
@@ -146,6 +152,8 @@ export function buildChunkData(req: ChunkRequest): ChunkData {
   const positions = new Float32Array(vertexCount * 3);
   const normals = new Float32Array(vertexCount * 3);
   const colors = new Float32Array(vertexCount * 3);
+  const act2 = chunkGround(centerX, centerZ, size, heightAt);
+  const ground = act2 ? new Float32Array(vertexCount * 2) : undefined;
   let minY = Infinity;
   let maxY = -Infinity;
 
@@ -167,6 +175,7 @@ export function buildChunkData(req: ChunkRequest): ChunkData {
       normals[v + 2] = nz / len;
 
       surfaceColor(h, ny / len, colors, v);
+      if (act2 && ground) act2.vertex(centerX - half + i * step, centerZ - half + j * step, h, ny / len, colors, v, ground, (j * row + i) * 2);
       if (h < minY) minY = h;
       if (h > maxY) maxY = h;
     }
@@ -182,7 +191,12 @@ export function buildChunkData(req: ChunkRequest): ChunkData {
       normals[dst + k] = normals[src + k];
       colors[dst + k] = colors[src + k];
     }
+    if (ground) {
+      const gs = borderGridIndex(i, segments) * 2;
+      ground[(gridVerts + i) * 2] = ground[gs];
+      ground[(gridVerts + i) * 2 + 1] = ground[gs + 1];
+    }
   }
 
-  return { positions, normals, colors, minY, maxY };
+  return ground ? { positions, normals, colors, minY, maxY, ground } : { positions, normals, colors, minY, maxY };
 }

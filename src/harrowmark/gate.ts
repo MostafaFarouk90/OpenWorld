@@ -12,6 +12,9 @@ export const M06_STARTED_FLAG = 'story.m06.started';
 export const M06_GUARDED_FLAG = 'story.m06.queueHeard';
 export const M06_ROUTE_FLAG = 'story.m06.route';
 
+/** Set at the end of Act 1: the River Gate's shutter opens while it holds. */
+export const RIVER_GATE_FLAG = 'story.gate.a2';
+
 export const gateStateFor = (started: boolean, route: boolean): GateState => (route ? 'open' : started ? 'guarded' : 'closed');
 
 export interface SouthGate {
@@ -59,4 +62,26 @@ export function watchSouthGate(gates: Pick<FlagGates, 'flag'>, apply: (state: Ga
       for (const off of offs.splice(0)) off();
     },
   };
+}
+
+export interface RiverGate {
+  open(): boolean;
+  dispose(): void;
+}
+
+/** Derives the River Gate's shutter from the Act 1 flag through ctx.gates, so a loaded Act 1 save closes it again. `apply` runs once at the start and then only on change. */
+export function watchRiverGate(gates: Pick<FlagGates, 'flag'>, apply: (open: boolean) => void): RiverGate {
+  let open = false;
+  let last: boolean | null = null;
+  const push = (): void => {
+    if (open === last) return;
+    last = open;
+    apply(open);
+  };
+  const off = gates.flag(RIVER_GATE_FLAG, (on) => {
+    open = !!on;
+    push();
+  });
+  push();
+  return { open: () => open, dispose: off };
 }

@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { heightAt } from '../terrain/heightfield';
 import { buildCity, districtOf } from './cityBuild';
-import { gatePosition, polar } from './city';
+import { RIVER_PORTCULLIS_ID, gatePosition, polar } from './city';
 import { HARROWMARK_LAYOUT } from './harrowmark.layout';
 
 let physics: PhysicsWorld;
@@ -31,7 +31,7 @@ function blocked(from: { x: number; z: number }, to: { x: number; z: number }, g
 }
 
 describe('built city colliders', () => {
-  it('blocks the wall, the six plugged gates and a building; leaves the street open', () => {
+  it('blocks the wall, the five plugged gates and the closed River shutter and a building; leaves the street open', () => {
     const { city } = build();
     expect(blocked({ x: 8300, z: 1500 }, { x: 8300, z: 1180 })).toBe(true); // straight through the south wall west of the gate
     for (const g of ['smelter', 'west', 'northwest', 'northeast', 'river', 'guild'] as const) {
@@ -55,6 +55,29 @@ describe('built city colliders', () => {
     expect(through()).toBe(false);
     expect(city.group.getObjectByName('portcullis')!.visible).toBe(false);
     city.setPortcullis(true);
+    physics.world.step();
+    expect(through()).toBe(true);
+    city.dispose();
+  });
+
+  it('follows the river shutter on its own: closed blocks, open frees it, closed again blocks, and the South Gate is untouched', () => {
+    const { city } = build();
+    const river = gatePosition('river');
+    const through = () => {
+      const a = polar(77.14, 700);
+      const b = polar(77.14, 800);
+      return blocked(a, b, heightAt(river.x, river.z));
+    };
+    expect(city.shutterClosed(RIVER_PORTCULLIS_ID)).toBe(true);
+    expect(through()).toBe(true);
+    city.setShutter(RIVER_PORTCULLIS_ID, false);
+    physics.world.step();
+    expect(through()).toBe(false);
+    expect(city.shutterClosed(RIVER_PORTCULLIS_ID)).toBe(false);
+    expect(city.portcullisClosed()).toBe(true);
+    const south = gatePosition('south');
+    expect(blocked({ x: south.x, z: south.z - 30 }, { x: south.x, z: south.z + 30 }, heightAt(south.x, south.z))).toBe(true);
+    city.setShutter(RIVER_PORTCULLIS_ID, true);
     physics.world.step();
     expect(through()).toBe(true);
     city.dispose();

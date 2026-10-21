@@ -115,6 +115,19 @@ describe('harrowmark plugin', () => {
     plugin.dispose?.();
   });
 
+  it('opens the River Gate shutter once story.gate.a2 is set, and closes it again on a save load without it', () => {
+    const { fc, plugin } = setup();
+    plugin.setup(fc.ctx);
+    const svc = fc.services.get('harrowmark') as HarrowmarkService;
+    expect(svc.riverGate.open()).toBe(false);
+    fc.ctx.state.setFlag('story.gate.a2', true);
+    expect(svc.riverGate.open()).toBe(true);
+    fc.flags.clear();
+    fc.fire('save.loaded');
+    expect(svc.riverGate.open()).toBe(false);
+    plugin.dispose?.();
+  });
+
   it('lets the story gate override the South Gate', () => {
     const { fc, plugin } = setup();
     plugin.setup(fc.ctx);

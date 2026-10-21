@@ -46,6 +46,24 @@ export interface FogWallDef {
   openWhen: FlagCondition;
   /** HUD toast on walking into the wall while it stands. */
   toastKey: string;
+  /**
+   * Metres before the wall a pushed-back player lands (default PUSH_BACK_TO). A1's Act 2 faces use 1, so the whole
+   * move stays under the mount's 5 m ride break and a rider stays mounted.
+   */
+  pushBackTo?: number;
+  /**
+   * Beyond this distance (metres, from the wall's segment) the wall is hidden and its ash not animated; unset draws it
+   * at every distance (the slice wall). The Act 2 faces stand far from the play area for most of the game.
+   */
+  cullBeyond?: number;
+}
+
+/** Horizontal distance from `feet` to the wall's segment (its line, clamped to its length). Pure. */
+export function distanceToWall(def: FogWallDef, feet: { x: number; z: number }, wall: { x: number; z: number }): number {
+  const n = def.axis === 'x' ? feet.x - wall.x : feet.z - wall.z;
+  const t = def.axis === 'x' ? feet.z - wall.z : feet.x - wall.x;
+  const over = Math.max(0, Math.abs(t) - def.halfLength);
+  return Math.sqrt(n * n + over * over);
 }
 
 /** The slice wall, unchanged since v0.4: across the Dead Road, closed toward the east until M05. */
@@ -169,12 +187,20 @@ export function buildFogWallDef(
   let removeSystem: (() => void) | null = null;
   let ash: THREE.Points | null = null;
   const disposables: Array<{ dispose(): void }> = [];
+  // Like containment, the Act 2 faces leave a player alone inside an interior, while a save loads and during waystone
+  // travel (the slice wall keeps its v0.4 behaviour exactly).
+  const services = (deps as { services?: { get(name: string): unknown } }).services;
+  const exempt = (): boolean => {
+    if (def.id === FOG_HARROWMARK.id || !services) return false;
+    const busy = (name: string, key: string) => Boolean((services.get(name) as Record<string, unknown> | undefined)?.[key]);
+    return busy('interiors', 'current') || busy('interiors', 'transitioning') || busy('save', 'loading') || busy('waystones', 'travelling');
+  };
 
   const raise = (): void => {
     if (standing) return;
     standing = true;
     group = new THREE.Group();
-    group.name = 'fog-wall';
+    group.name = def.id === FOG_HARROWMARK.id ? 'fog-wall' : `fog-wall:${def.id}`;
     group.position.set(wall.x, wall.y, wall.z);
     const veilMat = new THREE.MeshBasicMaterial({ color: 0x8a8378, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false });
     const veilGeo = new THREE.PlaneGeometry(VISIBLE_HALF_WIDTH * 2, WALL_HEIGHT);
@@ -223,9 +249,14 @@ export function buildFogWallDef(
       order: -80,
       fixedUpdate(dt) {
         const feet = deps.player.feet;
-        if (needsPushBackDef(def, feet, wall)) {
-          const back = def.axis === 'x' ? { x: wall.x - PUSH_BACK_TO * def.blockedSide, z: feet.z } : { x: feet.x, z: wall.z - PUSH_BACK_TO * def.blockedSide };
+        if (needsPushBackDef(def, feet, wall) && !exempt()) {
+          const to = def.pushBackTo ?? PUSH_BACK_TO;
+          const back = def.axis === 'x' ? { x: wall.x - to * def.blockedSide, z: feet.z } : { x: feet.x, z: wall.z - to * def.blockedSide };
           deps.player.teleport({ x: back.x, y: Math.max(feet.y, heightAt(back.x, back.z)) + 0.1, z: back.z });
+        }
+        if (def.cullBeyond !== undefined && group) {
+          group.visible = distanceToWall(def, feet, wall) <= def.cullBeyond;
+          if (!group.visible) return;
         }
         if (ash) {
           const p = ash.geometry.getAttribute('position') as THREE.BufferAttribute;
