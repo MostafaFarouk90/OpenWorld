@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { StatusService } from '../../actors/status';
 import type { GameContext } from '../../core/Game';
 import type { GamePlugin } from '../../core/plugins';
@@ -11,7 +12,8 @@ import { EmberwrightRuntime } from './runtime';
 import { SKILL, registerEmberwrightSkills } from './skills';
 import { EMBERWRIGHT_STRINGS_EN } from './strings.en';
 import { surgeFormsFor } from './surgeForms';
-import { CLASS_ID, EMBERWRIGHT_ATTACK_SET } from './tuning';
+import { EmberwrightTier3, type FamiliarBody } from './tier3';
+import { CLASS_ID, EMBERWRIGHT_ATTACK_SET, IRON_FAMILIAR } from './tuning';
 
 const RETRY_SECONDS = 1;
 const CODEX = [
@@ -23,7 +25,7 @@ type Loose = { get(name: string): unknown };
 interface EnemiesPush { push?(actorId: string, o: { dir: Vec3; metres: number }): boolean }
 interface CodexPort { register(entries: ReadonlyArray<{ tab: string; id: string; nameKey: string; bodyKey: string }>): () => void }
 interface VfxPort {
-  spawnEffect?(id: string, t: { position: Vec3; scale?: number }, params?: Record<string, unknown>): unknown;
+  spawnEffect?(id: string, t: { position: Vec3; scale?: number; yaw?: number }, params?: Record<string, unknown>): unknown;
   pulseScreen?(strength: number, seconds: number, color?: number): void;
 }
 
@@ -36,6 +38,7 @@ const plugin: GamePlugin = {
   id: 'emberwright',
   dependsOn: ['core', 'progression', 'combat-verbs', 'classes', 'spells'],
   setup(ctx: GameContext) {
+    cleanup?.(); // a second setup on one context starts from nothing
     const offs: Array<() => void> = [];
     const loose = ctx.services as unknown as Loose;
     const svc = <T>(name: string): T | undefined => loose.get(name) as T | undefined;
@@ -78,6 +81,55 @@ const plugin: GamePlugin = {
     const rt = new EmberwrightRuntime(host);
     offs.push(() => rt.dispose());
     offs.push(ctx.damage.addModifier('emberwright-staff', (req) => rt.meleeModifier(req as never), -150));
+
+    // ---- tier 3 (Act 2): Fire Wall, Iron Familiar, Smoke Screen
+    const tier3 = new EmberwrightTier3({
+      base: {
+        isEmberwright: () => host.avatarClass() === CLASS_ID && host.classId() === CLASS_ID,
+        learned: (id) => host.learned(id),
+        canAct: () => !ctx.player.actor.dead && !host.status()?.has(ctx.player.actor.id, 'stun'),
+        playerId: () => ctx.player.actor.id,
+        feet: () => ctx.player.feet,
+        facingYaw: () => ctx.player.facingYaw,
+        actors: () => ctx.actors as never,
+        apply: (req) => ctx.damage.apply(req as never) as never,
+        effect: (id, t, params) => {
+          try {
+            const h = svc<VfxPort>('vfx')?.spawnEffect?.(id, t, params) as { stop?(): void } | undefined;
+            return h && typeof h.stop === 'function' ? () => h.stop!() : null;
+          } catch { return null; }
+        },
+      },
+      ignite: (id, spec) => svc<StatusService>('status')?.apply(id, spec) ?? false,
+      spawn: (id, at): FamiliarBody | null => {
+        const geo = new THREE.OctahedronGeometry(0.28);
+        const mat = new THREE.MeshStandardMaterial({ color: 0x8aa0c0, emissive: 0x2a4060, metalness: 0.8, roughness: 0.4 });
+        const root = new THREE.Group();
+        root.add(new THREE.Mesh(geo, mat));
+        root.position.set(at.x, at.y, at.z);
+        const free = (): void => { ctx.scene.remove(root); geo.dispose(); mat.dispose(); };
+        ctx.scene.add(root);
+        try {
+          const actor = ctx.actors.spawn({ id, kind: IRON_FAMILIAR.kind, team: 'ally', maxHealth: IRON_FAMILIAR.health, hittable: false, untargetable: true, root });
+          return { actor: actor as never, place: (x, y, z) => root.position.set(x, y, z), dispose: () => { ctx.actors.despawn(id); free(); } };
+        } catch (err) {
+          free();
+          console.warn('[emberwright] familiar spawn failed', err);
+          return null;
+        }
+      },
+      mayEngage: (id) => svc<{ mayEngage(id: string): boolean }>('allyEngagement')?.mayEngage(id) ?? false,
+      stealth: () => svc('stealth'),
+      perception: () => svc<{ perception?: never }>('enemies')?.perception,
+      warn: (m) => console.warn(m),
+    });
+    offs.push(() => tier3.reset());
+    const resetTier3 = (): void => tier3.reset();
+    offs.push(
+      ctx.events.on('save.loaded', resetTier3),
+      ctx.events.on('class.changed', resetTier3),
+      ctx.events.on('actor.died', (e) => { if (e.actorId === ctx.player.actor.id) tier3.reset(); }),
+    );
 
     // The controller of the worn avatar: clip starts (the fizzle cue and the Gust Step push).
     let offAvatar: (() => void) | null = null;
@@ -138,8 +190,8 @@ const plugin: GamePlugin = {
       once('abilities', () => {
         const abilities = svc<{ registerHandler(id: string, h: (a: unknown) => { ok: true } | { ok: false; reason: string }): { ok: boolean; dispose?(): void } }>('abilities');
         if (!abilities) return false;
-        for (const id of [SKILL.flameLash, SKILL.anvilDrop, SKILL.warmBreath]) {
-          const r = abilities.registerHandler(id, () => rt.castAbility(id));
+        for (const id of [SKILL.flameLash, SKILL.anvilDrop, SKILL.warmBreath, SKILL.fireWall, SKILL.ironFamiliar, SKILL.smokeScreen]) {
+          const r = abilities.registerHandler(id, () => (id === SKILL.fireWall || id === SKILL.ironFamiliar || id === SKILL.smokeScreen ? tier3.cast(id) : rt.castAbility(id)));
           if (r.ok && r.dispose) offs.push(r.dispose);
         }
         return true;
@@ -161,6 +213,7 @@ const plugin: GamePlugin = {
         order: 110,
         fixedUpdate(dt) {
           rt.update(dt);
+          tier3.update(dt);
           retry += dt;
           if (retry >= RETRY_SECONDS) {
             retry = 0;

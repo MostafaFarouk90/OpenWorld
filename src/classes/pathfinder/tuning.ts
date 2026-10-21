@@ -17,6 +17,11 @@ export const PF = {
   tripwire: { lifetime: 12, cooldown: 8, cap: 2, radius: 1.2, poise: 40 },
   cinderTrap: { lifetime: 20, cap: 3, radius: 1.2, blast: 3, damage: 20, poise: 30, igniteDps: 4, igniteSeconds: 3, placeDistance: 2, cooldown: 20, ember: 15 },
   falconEye: { radius: 25, seconds: 12, weakPoise: 10, cooldown: 30, ember: 15 },
+  /** Tier 3 (Act 2): Ember Quarrel ignite, Net Launcher root and aim, Light Step air jump (picks of this thread). */
+  emberQuarrel: { statusId: 'pathfinder.emberQuarrel.ignite', dps: 3, seconds: 3 },
+  netLauncher: { statusId: 'pathfinder.netLauncher.root', seconds: 4, range: 18, aimRadius: 1.5, chestHeight: 1.1, cooldown: 16, ember: 15 },
+  /** The air jump reaches 70% of a ground jump; height scales with the launch speed squared, so the speed is its square root. */
+  lightStep: { airJumps: 1, heightScale: 0.7 },
   surge: { range: 30, speed: 45, chainRadius: 8, chainArcs: 3, chainScale: 0.7, pierce: 2, radius: 0.2 },
   skillIds: {
     steadyShot: 'pathfinder.steadyShot',
@@ -25,6 +30,9 @@ export const PF = {
     cinderTrap: 'pathfinder.cinderTrap',
     trailblaze: 'pathfinder.trailblaze',
     falconEye: 'pathfinder.falconEye',
+    emberQuarrel: 'pathfinder.emberQuarrel',
+    netLauncher: 'pathfinder.netLauncher',
+    lightStep: 'pathfinder.lightStep',
   },
   trailblazeScale: 1.1,
 } as const;

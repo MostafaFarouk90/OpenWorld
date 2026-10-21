@@ -40,6 +40,8 @@ export class CharacterController {
   private _grounded = false;
   /** Extra jumps allowed while airborne (double jump); 0 disables. Reset on landing. */
   airJumps = 0;
+  /** Launch speed (m/s) of an air jump; when unset the air jump uses the grounded jump's speed. */
+  airJumpSpeed?: number;
   private airJumpsLeft = 0;
   private prevJump = false;
   private platformSource: ((collider: RAPIER_API.Collider) => Vec3 | null) | undefined;
@@ -132,11 +134,12 @@ export class CharacterController {
     const jumpEdge = intent.jump && !this.prevJump;
     this.prevJump = intent.jump;
     if (this._grounded) this.airJumpsLeft = this.airJumps;
+    else if (this.airJumpsLeft > this.airJumps) this.airJumpsLeft = Math.max(0, this.airJumps);
     if (this._grounded && intent.jump) {
       this.verticalVelocity = intent.jumpSpeed ?? PLAYER.jumpSpeed;
     } else if (!this._grounded && jumpEdge && this.airJumpsLeft > 0) {
       this.airJumpsLeft--;
-      this.verticalVelocity = intent.jumpSpeed ?? PLAYER.jumpSpeed;
+      this.verticalVelocity = this.airJumpSpeed ?? intent.jumpSpeed ?? PLAYER.jumpSpeed;
     } else if (this._grounded && this.verticalVelocity < 0) {
       // Keep a small downward push while grounded so ground detection and snapping stay engaged.
       this.verticalVelocity = -1;
