@@ -21,4 +21,6 @@ export const WAYSTONE_TUNING = {
  */
 export const WAYSTONE_LOCKS: Readonly<Record<string, string>> = {
   'harrowmark-gate': 'story.m06.route',
+  // Act 2 (A9): the Deepgate Shaft head stone is the Weeping Bellows' waystone; it stays dark until the puzzle is solved.
+  'weeping-bellows': 'world.bellows.solved',
 };
