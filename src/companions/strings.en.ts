@@ -15,6 +15,12 @@ export const COMPANION_STRINGS_EN: Record<string, string> = {
   'companion.tobb.bark.area.brightwater.1': 'Brightwater again. The barley remembers you, even if the barley cannot read.',
   'companion.tobb.bark.area.harrowmark.1': 'Harrowmark. Ten thousand souls and not one of them has heard of me. Yet.',
   'companion.tobb.bark.area.harrowmark.2': 'Mind your purse, squire. In this city even the pigeons have a guild.',
+  // Act 2 (A5, invented lines, logged in design/changes-applied.md).
+  'companion.tobb.bark.area.cinderreach.1': 'Hills the colour of a burnt loaf. I shall call the song "Crust". No? "Crust" it is.',
+  'companion.tobb.bark.area.cinderreach.2': 'Every sheep up here has seen more fire than I have. They look so calm about it.',
+  'companion.tobb.bark.area.oldsmoke.1': 'Oldsmoke. Even the echoes cough down here.',
+  'companion.tobb.bark.area.oldsmoke.2': 'A ballad about mines needs a low note. I have one. It lives in my boots.',
+  'companion.tobb.bark.area.dell.1': 'Foxes made of firelight. Nobody will believe this verse, so I shall rhyme it twice.',
   'companion.tobb.bark.area.bastionYard.1': 'The Bastion yard. Pick a weapon you can sing about. Nothing rhymes with halberd.',
   'companion.tobb.bark.area.bastionYard.2': 'Drill sergeants. They shout in four-four time, at least.',
   'companion.tobb.bark.area.tiltedAnvil.1': 'The Tilted Anvil! Warm hearth, cheap ale, and a crowd that has not heard my material.',

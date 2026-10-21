@@ -34,7 +34,7 @@ export interface FollowStep {
   teleport: TeleportReason | null;
 }
 
-export type FollowTuning = typeof COMPANION_TUNING;
+export type FollowTuning = { readonly [K in keyof typeof COMPANION_TUNING]: number };
 
 const finite = (v: Vec3): boolean => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
 /** Smoothed player speed (m/s) above which the player counts as moving. */
