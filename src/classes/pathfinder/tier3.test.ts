@@ -18,7 +18,7 @@ import { FakeActor as SpellActor, FakeActors } from '../../spells/testHost';
 import { StatusEngine } from '../../status/StatusEngine';
 import { SURGE } from '../../vfx/tuning';
 import '../../hud/events';
-import { LightStep, NetLauncher, emberQuarrelHandler, type AirJumper } from './tier3';
+import { LightStep, NetLauncher, emberQuarrelHandler, terrainBlocked, type AirJumper } from './tier3';
 import { PF } from './tuning';
 
 const DT = FIXED_TIMESTEP;
@@ -202,6 +202,18 @@ describe('Net Launcher', () => {
     const hidden = rig({ lock: 'lock', blocked: true });
     hidden.foe('lock', 0, -5);
     expect(hidden.net.cast()).toEqual({ ok: false, reason: 'no-target' });
+  });
+
+  it('an ineligible lock-on target (dead, in a mercy state, out of range) refuses instead of netting someone else', () => {
+    const t = rig({ lock: 'lock' });
+    t.foe('front', 0, -5);
+    const lock = t.foe('lock', 0, -7);
+    (lock as unknown as { mercyState: () => string }).mercyState = () => 'spared';
+    expect(t.net.cast()).toEqual({ ok: false, reason: 'no-target' });
+    (lock as unknown as { mercyState: () => string }).mercyState = () => 'none';
+    lock.kill();
+    expect(t.net.cast()).toEqual({ ok: false, reason: 'no-target' });
+    expect(t.calls).toEqual([]);
   });
 
   it('skips dead foes, allies, foes in a mercy state and terrain-blocked foes', () => {
@@ -469,9 +481,9 @@ describe('Light Step on the real CharacterController', () => {
   function rig() {
     // Each rig stands on its own patch of the shared ground: two capsules in one spot would stack.
     const c = new CharacterController(physics, { x: (lane += 10), y: 0, z: 0 });
-    const st = { active: true, fx: 0 };
+    const st = { active: true, fx: 0, triggers: 0 };
     const feetY = (): number => c.interpolatedFeet(1, { x: 0, y: 0, z: 0 }).y;
-    const ls = new LightStep({ active: () => st.active, controller: () => c, feetY, fx: () => void st.fx++ });
+    const ls = new LightStep({ active: () => st.active, controller: () => c, feetY, fx: () => void st.fx++, triggered: () => void st.triggers++ });
     const step = (jump: boolean): number => {
       ls.tick(DT);
       c.fixedUpdate({ ...IDLE, jump });
@@ -530,6 +542,14 @@ describe('Light Step on the real CharacterController', () => {
     expect(r.st.fx).toBe(1);
   });
 
+  it('a normal ground jump fires no effect and no trigger', () => {
+    const r = rig();
+    r.step(true);
+    for (let i = 0; i < 60; i++) r.step(false);
+    expect(r.st.fx).toBe(0);
+    expect(r.st.triggers).toBe(0);
+  });
+
   it('lands and gets its air jump back', () => {
     const r = rig();
     r.step(true);
@@ -565,5 +585,30 @@ describe('Light Step on the real CharacterController', () => {
     const vyAfter = (r.feetY() - y2) / DT;
     expect(vyAfter).toBeLessThan(vyBefore + 1);
     expect(r.st.fx).toBe(0);
+  });
+});
+
+describe('Net Launcher line of sight on real colliders', () => {
+  let physics: PhysicsWorld;
+  beforeEach(async () => {
+    physics = new PhysicsWorld();
+    await physics.init();
+  });
+  const R = () => physics.rapier;
+  const kinematicBox = (x: number, z: number, half: number) => {
+    const body = physics.world.createRigidBody(R().RigidBodyDesc.kinematicPositionBased().setTranslation(x, 1, z));
+    physics.world.createCollider(R().ColliderDesc.cuboid(half, 2, half), body);
+  };
+  const from = { x: 0, y: 1.3, z: 0 };
+
+  it('a foe collider on the target, or another foe in the line, does not block; a wall does', () => {
+    const blocked = terrainBlocked(physics as never);
+    kinematicBox(0, -10, 1.5); // the target itself, a big one
+    kinematicBox(0, -5, 1); // another foe in front
+    physics.step();
+    expect(blocked(from, { x: 0, y: 1.1, z: -10 })).toBe(false);
+    physics.addStaticCollider(R().ColliderDesc.cuboid(5, 3, 0.2).setTranslation(0, 1, -3));
+    physics.step();
+    expect(blocked(from, { x: 0, y: 1.1, z: -10 })).toBe(true);
   });
 });

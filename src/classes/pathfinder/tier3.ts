@@ -50,6 +50,43 @@ export function emberQuarrelHandler(ports: EmberQuarrelPorts): (r: DamageResult)
   };
 }
 
+/** The slice of the physics world the line-of-sight check reads. */
+export interface RayWorld {
+  raycast(
+    origin: Vec3,
+    direction: Vec3,
+    maxDistance: number,
+    exclude?: never,
+  ): { distance: number; collider: { parent(): { isFixed(): boolean } | null } } | null;
+}
+
+/**
+ * Line of sight for the net: only fixed colliders (terrain, walls, doors) block it. Actors move on kinematic bodies, so a
+ * big foe or another foe in the line never refuses the shot.
+ */
+export function terrainBlocked(world: RayWorld, exclude?: unknown): (from: Vec3, to: Vec3) => boolean {
+  return (from, to) => {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const dz = to.z - from.z;
+    const len = Math.hypot(dx, dy, dz);
+    if (len < 1e-3) return false;
+    const dir = { x: dx / len, y: dy / len, z: dz / len };
+    let start = from;
+    let left = len - 1;
+    // A moving body in the way is stepped past; the cap keeps a crowd from looping.
+    for (let i = 0; i < 6 && left > 0; i++) {
+      const hit = world.raycast(start, dir, left, exclude as never);
+      if (!hit) return false;
+      if (hit.collider.parent()?.isFixed() ?? true) return true;
+      const adv = hit.distance + 0.05;
+      start = { x: start.x + dir.x * adv, y: start.y + dir.y * adv, z: start.z + dir.z * adv };
+      left -= adv;
+    }
+    return false;
+  };
+}
+
 export type NetResult = { ok: true } | { ok: false; reason: string };
 
 export interface NetLauncherPorts {
@@ -113,7 +150,9 @@ export class NetLauncher {
     const m = this.p.origin(this.from);
     const origin = { x: m.x, y: m.y, z: m.z };
     const lock = this.p.lockTarget();
-    if (lock !== null && this.eligible(lock)) {
+    if (lock !== null) {
+      // A lock-on that cannot be netted (dead, in a mercy state, away) is a refusal, never a different target.
+      if (!this.eligible(lock)) return null;
       this.p.actors.get(lock)!.worldPosition(this.at);
       this.at.y += PF.netLauncher.chestHeight;
       const d = Math.hypot(this.at.x - origin.x, this.at.y - origin.y, this.at.z - origin.z);

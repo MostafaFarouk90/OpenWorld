@@ -55,7 +55,7 @@ export const FIRE_WALL = {
   dps: 8, tickSeconds: 0.5, igniteId: 'emberwright.fireWall.ignite', igniteSeconds: 3, igniteDps: 2, attackId: 'emberwright.fireWall', effectId: 'fire-wall',
 } as const;
 export const IRON_FAMILIAR = {
-  skillId: 'emberwright.ironFamiliar', ember: 30, cooldown: 40, health: 60, hover: 1.2, seconds: 20, followMax: 3, followStop: 2, speed: 7, spawnSide: 1,
+  skillId: 'emberwright.ironFamiliar', ember: 30, cooldown: 40, health: 60, hover: 1.2, seconds: 20, followMax: 3, followStop: 2, snapDistance: 10, speed: 7, spawnSide: 1,
   strikeSeconds: 1.5, retrySeconds: 0.25, range: 12, damage: 6, idPrefix: 'familiar:', kind: 'familiar', attackId: 'emberwright.ironFamiliar', effectId: 'iron-familiar',
 } as const;
 export const SMOKE_SCREEN = { skillId: 'emberwright.smokeScreen', ember: 20, cooldown: 25, ahead: 6, radius: 5, seconds: 8, sightRange: 3, effectId: 'smoke-screen' } as const;

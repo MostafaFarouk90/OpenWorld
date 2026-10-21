@@ -22,7 +22,7 @@ import { Marks } from './Marks';
 import { SceneFx } from './SceneFx';
 import { createPathfinderSurge } from './Surge';
 import { Traps } from './Traps';
-import { LightStep, NetLauncher, emberQuarrelHandler } from './tier3';
+import { LightStep, NetLauncher, emberQuarrelHandler, terrainBlocked } from './tier3';
 import { buildPathfinderSkills } from './skills';
 import { PATHFINDER_STRINGS_EN } from './strings.en';
 import { PATHFINDER_ATTACKS, PATHFINDER_HEAVY_INDEX, PF } from './tuning';
@@ -233,15 +233,7 @@ const pathfinderPlugin: GamePlugin = {
       origin: chest,
       aim,
       lockTarget: () => svc<{ targetId: string | null }>('lockOn')?.targetId ?? null,
-      blocked: (from, to) => {
-        const dx = to.x - from.x;
-        const dy = to.y - from.y;
-        const dz = to.z - from.z;
-        const len = Math.hypot(dx, dy, dz);
-        if (len < 1e-3) return false;
-        const hit = ctx.physics.raycast(from, { x: dx / len, y: dy / len, z: dz / len }, len, ctx.world.player.controller.collider);
-        return hit !== null && hit !== undefined && hit.distance < len - 1;
-      },
+      blocked: (from, to) => terrainBlocked(ctx.physics as never, ctx.world.player.controller.collider)(from, to),
       fx: (at) => void vfx()?.spawnEffect('net-launcher', { position: at }, { radius: 1.2 }),
       triggered: trigger(PF.skillIds.netLauncher),
     });

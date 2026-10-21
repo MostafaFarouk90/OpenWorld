@@ -118,6 +118,7 @@ const plugin: GamePlugin = {
           return null;
         }
       },
+      blocked: (from, to) => host.blocked(from, to),
       mayEngage: (id) => svc<{ mayEngage(id: string): boolean }>('allyEngagement')?.mayEngage(id) ?? false,
       stealth: () => svc('stealth'),
       perception: () => svc<{ perception?: never }>('enemies')?.perception,
