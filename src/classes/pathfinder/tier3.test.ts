@@ -400,9 +400,11 @@ describe('Net Launcher against real enemies keeps mercy open', () => {
     expect(t.revoked).toEqual([]);
   });
 
-  it('A6b hunter Spare on a rooted foe is not on this tree (no hunter def, no rooted handling in the AI), so only "a rooted foe is not struck" is asserted here', () => {
-    expect(Object.keys(ENEMY_DEFS)).not.toContain('hunter-spearman');
-    expect(Object.keys(ENEMY_DEFS)).not.toContain('hunter-harpooner');
+  it('the real hunter defs open Spare when rooted (the manager path with a net root is in enemies/hunters/hunters.test.ts)', () => {
+    for (const kind of ['hunter-spearman', 'hunter-harpooner'] as const) {
+      expect(ENEMY_DEFS[kind].yieldWhenRooted, kind).toBe(true);
+      expect(ENEMY_DEFS[kind].mercy, kind).toMatchObject({ verb: 'spare', when: 'yielding' });
+    }
   });
 });
 

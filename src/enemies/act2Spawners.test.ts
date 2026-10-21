@@ -32,7 +32,8 @@ describe('spawner tables', () => {
 
   it('keeps every Act 2 anchor under cinderreach. or oldsmoke., with a known band and a matching member count', () => {
     expect(ACT2_SPAWNERS.length).toBeGreaterThan(0);
-    for (const d of ACT2_SPAWNERS) {
+    // The `dev.ground.*` groups belong to the `?ground=1` hook (anchors defined at run time) and have no band of a region.
+    for (const d of ACT2_SPAWNERS.filter((x) => !x.id.startsWith('dev.ground.'))) {
       expect(d.anchor, d.id).toMatch(/^(cinderreach|oldsmoke)\./);
       for (const a of d.memberAnchors ?? []) expect(a, d.id).toMatch(/^(cinderreach|oldsmoke)\./);
       expect(['cinderreach', 'oldsmoke'], d.id).toContain(d.band);
