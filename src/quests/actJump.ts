@@ -84,7 +84,8 @@ export const ACT2_PREREQS: Record<string, readonly string[]> = {
   r06: [...THROUGH_ACT1, 'm11', 'm12'],
   r05: [...THROUGH_ACT1, 'm11', 'm12'],
   m13: [...THROUGH_ACT1, 'm11', 'm12'],
-  r07: [...THROUGH_ACT1, 'm11', 'm12', 'm13'],
+  // Ketta offers R05 first (her dialogue order) and only stands at Stonefold once R05 is done: R07 needs R05 played.
+  r07: [...THROUGH_ACT1, 'm11', 'm12', 'm13', 'r05'],
   r11: [...THROUGH_ACT1, 'm11', 'm12', 'm13'],
   m14: [...THROUGH_ACT1, 'm11', 'm12', 'm13'],
   m15: [...THROUGH_ACT1, 'm11', 'm12', 'm13', 'm14'],

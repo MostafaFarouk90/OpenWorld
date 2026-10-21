@@ -25,6 +25,8 @@ export interface QuestPropSpec {
   hideWhenUsed?: boolean;
   /** draw the look only once `usedFlag` is set (a stake planted, not lying about) */
   lookOnlyUsed?: boolean;
+  /** Wins focus over an NPC standing on the same spot (equal distance ties go to `npc:`); only while its objective is current. */
+  priority?: number;
 }
 
 export interface QuestPropPorts {
@@ -35,7 +37,7 @@ export interface QuestPropPorts {
   env?(): ConditionEnv;
   anchor(id: string): Vec3Like | undefined;
   register(i: {
-    id: string; kind: string; name: string; radius: number; promptKey: string;
+    id: string; kind: string; name: string; radius: number; promptKey: string; priority?: number;
     position(out: Vec3Like): Vec3Like; enabled(): boolean; onInteract(): void;
   }): () => void;
   warn?(m: string): void;
@@ -60,7 +62,7 @@ export class QuestProps {
       const [kind, ...rest] = s.interactableId.split(':');
       try {
         this.offs.set(s.interactableId, this.p.register({
-          id: s.interactableId, kind, name: rest.join(':'), radius: 2, promptKey: s.promptKey,
+          id: s.interactableId, kind, name: rest.join(':'), radius: 2, promptKey: s.promptKey, ...(s.priority ? { priority: s.priority } : {}),
           position: (out) => { out.x = home.x; out.y = home.y; out.z = home.z; return out; },
           enabled: () => !this.disposed && this.p.quests.isObjectiveCurrent(s.objective[0], s.objective[1])
             && !(s.usedFlag && this.p.state.getFlag(s.usedFlag) === true) && this.whenHolds(s),

@@ -40,10 +40,19 @@ export const ACT2_QUEST_UNLOCKS: readonly { quest: string; at: 'started' | 'comp
   { quest: 'm16', at: 'started', entry: ACT2_CODEX_IDS.deepgate },
   { quest: 'r08', at: 'started', entry: ACT2_CODEX_IDS.pickett },
   { quest: 'm19', at: 'completed', entry: ACT2_CODEX_IDS.nursery },
+  // M14's two temperings are done by the time it is: a save past it has used the forge.
+  { quest: 'm14', at: 'completed', entry: ACT2_CODEX_IDS.tempering },
 ];
 
 /** Flags whose truthiness unlocks an entry (backfilled on load). */
-export const ACT2_FLAG_UNLOCKS: readonly { flag: string; entry: string }[] = [{ flag: 'place.oldsmoke.discovered', entry: ACT2_CODEX_IDS.oldsmokeMines }];
+export const ACT2_FLAG_UNLOCKS: readonly { flag: string; entry: string }[] = [
+  { flag: 'place.oldsmoke.discovered', entry: ACT2_CODEX_IDS.oldsmokeMines },
+  // A save from before the entries existed (or a load that missed the event) still knows what its flags say happened:
+  // the party (either companion joined), the Hearth Rite (A5's per-act spent flag, `riteFlag(act)`).
+  { flag: 'story.m13.hrolfJoined', entry: ACT2_CODEX_IDS.party },
+  { flag: 'story.m14.aelfredaJoined', entry: ACT2_CODEX_IDS.party },
+  ...[1, 2, 3, 4].map((a) => ({ flag: `aelfreda.rite.a${a}`, entry: ACT2_CODEX_IDS.hearthRite })),
+];
 
 /** Event-driven unlocks: `discover` place ids, and plain events. */
 export const ACT2_DISCOVER_UNLOCKS: Readonly<Record<string, string>> = {

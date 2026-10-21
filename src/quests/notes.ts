@@ -16,6 +16,8 @@ export interface QuestNoteSpec {
   codexId?: string;
   /** prompt shown with F; default `quest.prompt.read` */
   promptKey?: string;
+  /** Wins focus over an NPC standing on the same spot (equal distance ties go to `npc:`). */
+  priority?: number;
 }
 
 /** The dialogue id (and the npc id it runs under) of a note. */
@@ -26,7 +28,7 @@ export interface QuestNotePorts {
   env(): ConditionEnv;
   anchor(id: string): Vec3Like | undefined;
   register(i: {
-    id: string; radius: number; promptKey: string;
+    id: string; radius: number; promptKey: string; priority?: number;
     position(out: Vec3Like): Vec3Like; enabled(): boolean; onInteract(): void;
   }): () => void;
   /** dialogue service start; false when another modal or dialogue is open */
@@ -61,7 +63,7 @@ export class QuestNotes {
       const id = noteDialogueId(s.interactableId);
       try {
         this.offs.set(s.interactableId, this.p.register({
-          id: s.interactableId, radius: 2, promptKey: s.promptKey ?? 'quest.prompt.read',
+          id: s.interactableId, radius: 2, promptKey: s.promptKey ?? 'quest.prompt.read', ...(s.priority ? { priority: s.priority } : {}),
           position: (out) => { out.x = home.x; out.y = home.y; out.z = home.z; return out; },
           enabled: () => !this.disposed && this.readable(s),
           onInteract: () => { if (this.readable(s)) this.p.startDialogue(id, id); },

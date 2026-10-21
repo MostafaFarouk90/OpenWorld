@@ -76,7 +76,7 @@ export function installM11(k: Kit): Off[] {
     k.later(() => {
       const en = ctx.services.get('enemies');
       if (!en) return;
-      if (en.alive('q12.m11.ambush-1').length === 0 && en.alive('q12.m11.ambush-2').length === 0 && ambushKills() >= 3 && ambushKills() < 6) ambush(2);
+      if (k.standing('q12.m11.ambush-1').length === 0 && k.standing('q12.m11.ambush-2').length === 0 && ambushKills() >= 3 && ambushKills() < 6) ambush(2);
     });
   });
   k.on('save.loaded', () => {

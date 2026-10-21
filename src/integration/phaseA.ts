@@ -112,7 +112,7 @@ const actorsOfKind = (h: ChapterHarness, kind: string) => [...h.ctx.actors.all()
 const tagOf = (a: unknown) => (a as { spawnTag?: string }).spawnTag;
 
 /** Waits for `count` live actors of `kind` from the spawner tagged `tag`, standing near `near` so they load. */
-async function spawnedTagged(h: ChapterHarness, kind: string, tag: string, count: number, near?: THREE.Vector3): Promise<string[]> {
+export async function spawnedTagged(h: ChapterHarness, kind: string, tag: string, count: number, near?: THREE.Vector3): Promise<string[]> {
   if (near) await h.approach(near, 6);
   let ids: string[] = [];
   for (let i = 0; i < 20 && ids.length < count; i++) {
@@ -156,7 +156,7 @@ export async function readNote(h: ChapterHarness, trail: QuestTrail, noteId: str
 }
 
 /** Carries what lies at `anchorId` (F) into `triggerId`. */
-async function carryTo(h: ChapterHarness, anchorId: string, triggerId: string, deliveredFlag: string): Promise<void> {
+export async function carryTo(h: ChapterHarness, anchorId: string, triggerId: string, deliveredFlag: string): Promise<void> {
   await useAt(h, anchorId);
   await h.enterTrigger(triggerId);
   h.run(2);

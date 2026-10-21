@@ -1,0 +1,9 @@
+{
+  "fixture": "act2-m11-start.json",
+  "what": "Act 2 run A from act1-complete: Act 1 done, M11 not yet offered (Gaut gives it)",
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/fixtures.gen.test.ts",
+  "generatingCommit": "3305611f40e129d7cddbd587deb2d8933136c40a",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving",
+  "playtimeSeconds": "rounded to whole seconds",
+  "source": "the real save plugin (saveNow(\"manual\")), read back from the fake IndexedDB slot-0"
+}

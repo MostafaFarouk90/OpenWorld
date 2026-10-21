@@ -174,18 +174,22 @@ export class Act1Jump {
   }
 
   private completeQuest(q: string): void {
-    const p = this.ports;
-    if (p.quests.state(q) === 'completed') return;
-    if (p.quests.state(q) === 'inactive') p.quests.start(q);
-    if (ACT1_GOLD_BEFORE[q]) p.giveGold(ACT1_GOLD_BEFORE[q]);
-    for (const ref of ACT1_NODE_EFFECTS[q] ?? []) {
-      const effects = nodeEffects(ref.dialogueId, ref.nodeId, dialogueDefs, ref.choiceId);
-      if (effects) p.runEffects(effects);
-      else p.warn(`act1: dialogue node ${ref.dialogueId}:${ref.nodeId}${ref.choiceId ? `/${ref.choiceId}` : ''} is missing`);
-    }
-    if (q === 'm07' && !p.chooseClass('knight')) p.warn('act1: the M07 class choice was refused');
-    for (const w of ACT1_WORLD_AFTER[q] ?? []) p.setFlag(w.flag, w.value);
-    for (const id of ACT1_REKINDLE_AFTER[q] ?? []) p.rekindle(id);
-    if (!p.quests.complete(q)) p.warn(`act1: could not complete ${q}`);
+    completeAct1Quest(this.ports, q);
   }
+}
+
+/** Completes one Act 1 prerequisite on the real quests service, with the effects real play runs on the way (shared with the Act 2 jump). */
+export function completeAct1Quest(p: Act1JumpPorts, q: string, classId = 'knight'): void {
+  if (p.quests.state(q) === 'completed') return;
+  if (p.quests.state(q) === 'inactive') p.quests.start(q);
+  if (ACT1_GOLD_BEFORE[q]) p.giveGold(ACT1_GOLD_BEFORE[q]);
+  for (const ref of ACT1_NODE_EFFECTS[q] ?? []) {
+    const effects = nodeEffects(ref.dialogueId, ref.nodeId, dialogueDefs, ref.choiceId);
+    if (effects) p.runEffects(effects);
+    else p.warn(`act1: dialogue node ${ref.dialogueId}:${ref.nodeId}${ref.choiceId ? `/${ref.choiceId}` : ''} is missing`);
+  }
+  if (q === 'm07' && !p.chooseClass(classId)) p.warn('act1: the M07 class choice was refused');
+  for (const w of ACT1_WORLD_AFTER[q] ?? []) p.setFlag(w.flag, w.value);
+  for (const id of ACT1_REKINDLE_AFTER[q] ?? []) p.rekindle(id);
+  if (!p.quests.complete(q)) p.warn(`act1: could not complete ${q}`);
 }

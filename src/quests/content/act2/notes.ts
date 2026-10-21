@@ -98,8 +98,12 @@ export const ACT2_NOTE_LIST: Act2Note[] = [
   ], 'box'),
 ];
 
+/** Notes on the spot an NPC stands on (Ealdred, Wynne, Corwin): the note outranks him while it is current (focus ties go to `npc:`). */
+const NOTES_UNDER_NPCS: ReadonlySet<string> = new Set(['note-m13-shield', 'note-r11-camp-1', 'note-m15-map']);
+
 export const ACT2_QUEST_NOTES: QuestNoteSpec[] = ACT2_NOTE_LIST.map((x) => ({
   interactableId: `use:${x.id}`, anchorId: x.anchorId, ...(x.codexId ? { codexId: x.codexId } : {}),
+  ...(NOTES_UNDER_NPCS.has(x.id) ? { priority: 1 } : {}),
 }));
 
 export const ACT2_NOTE_LOOKS: Record<string, 'page' | 'grave' | 'box'> = Object.fromEntries(

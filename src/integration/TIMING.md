@@ -182,3 +182,39 @@ dialogue (38 nodes).
 
 The tutorial itself (Knighting Day) sits outside these tables; it has its own smoke timing in
 plans/knighting-day-smoke.md. Before the density pass the act measured 136 formula minutes without the opening.
+
+# Act 2 play-time estimate (Phase C)
+
+Act 2 uses the same formula with the extra constants below (`ACT2_BEAT_S`, `ROUTE_FOLLOW_MPS`, `ACT2_TRAVEL_CAP` in
+src/integration/timing.ts), a **shorter-branch** rule for choice quests, and an **opt-in travel cap**. The cap makes
+Act 2's figures stricter than Act 1's and not comparable with the 44% above: Act 1 counts all travel (R04 travels 9.0 of
+18.3 min, M09 12.5 of 26.0), Act 2 counts travel up to 3/7 of the talk-and-beats time, so riding alone can never meet a
+floor. Act 1's tables above do not move.
+
+New constants: search 20 s, carry 15 s, wave enemy 45 s, herded animal 45 s, duel round 90 s, rhythm run 60 s, puzzle
+attempt 120 s, lift ride 30 s, set piece 60 s, structure (cart, boulder) 65 s, route-follow 2 m/s, mounted 9 m/s.
+
+The rule (plan Part 7, Q7): the act reaches 50% of its design minutes and every quest clears **40% of its own design
+minutes** on its shorter branch. The floor fails the test (`src/integration/act2Timing.test.ts`,
+`src/quests/content/act2/pacing.test.ts`); the 50% aggregate is reported only. The plan's Part 7 arithmetic is checked
+exactly (Phase C: 460 design min, 236.3 min estimated, 51.4%); shipped content is checked one-sided (under the floor
+fails, over is fine).
+
+## Phase C as shipped (A12's rows on the real anchors, capped travel)
+
+| quest | design min | floor 40% | estimate min | uncapped min | travel m |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| M11 | 45 | 18 | 32.3 | 41.0 | 7160 |
+| M12 | 50 | 20 | 39.9 | 44.5 | 8174 |
+| R06 | 40 | 16 | 20.8 | 20.8 | 1216 |
+| R05 | 35 | 14 | 22.5 | 23.5 | 2105 |
+| M13 | 50 | 20 | 21.6 | 21.6 | 445 |
+| R07 | 35 | 14 | 14.1 | 14.1 | 516 |
+| R11 | 40 | 16 | 22.2 | 22.2 | 1641 |
+| M14 | 55 | 22 | 25.8 | 25.8 | 1331 |
+| M15 | 50 | 20 | 22.8 | 22.8 | 227 |
+| D03 | 60 | 24 | 30.0 | 30.0 | 423 |
+| **Phase C** | **460** | **184** | **252.0** | | |
+
+Phase C reaches 54.8% of its design minutes as shipped (the plan figure is 51.4%). Thin margins: R07 (14.1 against a
+floor of 14), M13 (21.6 against 20), M15 (22.8 against 20). Taking a beat out of R07 fails the test.
