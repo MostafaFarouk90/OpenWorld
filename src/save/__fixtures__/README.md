@@ -22,3 +22,9 @@ OUT_DIR=$PWD/out npx vitest run src/gen
 | `slice1-mid-tutorial-t09.json` | Full run, beat t09 under way |
 
 Load tests: `src/save/slice1Fixtures.test.ts`.
+
+## Act 2 waves (`act2-waves-*.json`)
+
+Hand-written minimal saves for the A7 `waves` persistable (stored shape `{ defId, index, phase, barricade?, done? }`), read by
+`src/waves/persist.test.ts`. `pre-a7` has no `waves` entry and must load idle. They carry no inventory entry, so
+`Inventory.test` skips them.
