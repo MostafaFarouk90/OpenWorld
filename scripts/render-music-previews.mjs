@@ -82,10 +82,27 @@ const result = await page.evaluate(
       ['sevengates-boss', seven, seven.bossMixes['gaffer-grimtooth'].phases[1], {}],
       ['sevengates-interior-underways', seven, seven.mixes.explore, { interior: 'underways' }],
     ];
+    const ash = TRACKS_BY_ID['ash-on-the-pasture'];
+    const ham = TRACKS_BY_ID['hammers-below'];
+    jobs.push(
+      ['ashpasture-explore', ash, ash.mixes.explore, {}],
+      ['ashpasture-discover', ash, ash.mixes.discover, {}],
+      ['ashpasture-stealth', ash, ash.mixes.stealth, {}],
+      ['ashpasture-chase', ash, ash.mixes.chase, {}],
+      ['ashpasture-combat', ash, ash.mixes.combat, {}],
+      ['ashpasture-boss-redmane', ash, ash.bossMixes['thrandil-redmane'].phases[1], {}],
+      ['hammersbelow-explore', ham, ham.mixes.explore, {}],
+      ['hammersbelow-discover', ham, ham.mixes.discover, {}],
+      ['hammersbelow-stealth', ham, ham.mixes.stealth, {}],
+      ['hammersbelow-chase', ham, ham.mixes.chase, {}],
+      ['hammersbelow-combat', ham, ham.mixes.combat, {}],
+      ['hammersbelow-boss-slagmaw', ham, ham.bossMixes['the-slagmaw'].phases[1], {}],
+      ['hammersbelow-interior-mine', ham, ham.mixes.explore, { interior: 'mine-old-galleries' }],
+    );
     const files = [];
     for (const [name, track, mix, opts] of jobs) {
       const { samples } = await render(track, mix, opts);
-      files.push({ name, samples });
+      files.push({ name, samples: Float32Array.from(samples) });
     }
     // Reverb cost: the same combat render with and without the shared reverb, median of 5.
     const med = (xs) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)];
@@ -96,7 +113,9 @@ const result = await page.evaluate(
       without.push((await render(barley, barley.mixes.combat, { reverb: false })).ms);
       withRv.push((await render(barley, barley.mixes.combat, { reverb: true })).ms);
     }
-    return { files, cost: { withMs: med(withRv), withoutMs: med(without), seconds: SECONDS } };
+    // Too large to return in one message: the files stay on the page and are fetched one at a time below.
+    window.__previewFiles = files;
+    return { names: files.map((f) => f.name), cost: { withMs: med(withRv), withoutMs: med(without), seconds: SECONDS } };
   },
   { SECONDS, RATE },
 );
@@ -123,7 +142,14 @@ function wav(samples) {
   return buf;
 }
 
-for (const f of result.files) {
+for (const name of result.names) {
+  const f = { name, samples: await page.evaluate((n) => {
+    const f = window.__previewFiles.find((x) => x.name === n);
+    let bin = '';
+    const bytes = new Uint8Array(f.samples.buffer);
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }, name).then((b64) => new Float32Array(Buffer.from(b64, 'base64').buffer.slice(0))) };
   writeFileSync(`${outDir}/${f.name}.wav`, wav(f.samples));
   let sq = 0;
   let pk = 0;

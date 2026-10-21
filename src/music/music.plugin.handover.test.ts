@@ -5,7 +5,7 @@ import type { GameEventMap } from '../core/events';
 import type { GameContext } from '../core/Game';
 import { Services } from '../core/Services';
 import { setupMusic } from './music.plugin';
-import { BARLEY_AND_BRAZIER as BARLEY, RESERVED_TRACKS, RESERVED_TRACK_IDS, SEVEN_GATES_ONE_DRUM as SEVEN, TRACKS_BY_ID } from './tracks';
+import { ASH_ON_THE_PASTURE as ASH, BARLEY_AND_BRAZIER as BARLEY, HAMMERS_BELOW as HAMMERS, RESERVED_TRACKS, RESERVED_TRACK_IDS, SEVEN_GATES_ONE_DRUM as SEVEN, TRACKS_BY_ID } from './tracks';
 
 const SR = 8000;
 
@@ -596,38 +596,93 @@ describe('shared reverb wiring', () => {
   });
 });
 
-describe('reserved Act 2 tracks', () => {
-  it('a region naming a reserved track keeps the current regional track, silently', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const RESERVED = { id: 'ember-pasture', track: RESERVED_TRACKS[0].id };
-    const e = makeEnv({ regionAt: (x) => (x < 1000 ? BRIGHT : RESERVED) });
+describe('Act 2 tracks (registered by A14; the old reserved-track block asserted they were not)', () => {
+  const ASH_REGION = { id: 'cinderreach', track: ASH.id };
+  const HAMMERS_REGION = { id: 'oldsmoke', track: HAMMERS.id };
+
+  it('the reserved lists are empty and both tracks are registered', () => {
+    expect(RESERVED_TRACK_IDS).toEqual([]);
+    expect(RESERVED_TRACKS).toEqual([]);
+    expect(TRACKS_BY_ID[ASH.id]).toBe(ASH);
+    expect(TRACKS_BY_ID[HAMMERS.id]).toBe(HAMMERS);
+  });
+
+  it('starting inside Cinderreach plays Ash on the Pasture at 94 BPM', async () => {
+    const e = makeEnv({ regionAt: () => ASH_REGION });
     setupMusic(e.ctx);
     await e.start();
-    expect(e.services.get('music')!.beat()!.bpm).toBe(92);
+    expect(e.mixers[0].isPlaying).toBe(true);
+    expect(e.services.get('music')!.beat()!.bpm).toBe(94);
+  });
+
+  it('Harrowmark to Cinderreach hands over on a bar line: 96 BPM until the swap, 94 after', async () => {
+    const e = makeEnv({ regionAt: (x) => (x < 1000 ? HARROWMARK : ASH_REGION) });
+    setupMusic(e.ctx);
+    await e.start();
     e.feet.x = 1500;
-    expect(() => {
-      e.events.emit('region.entered', { regionId: 'ember-pasture', previous: 'brightwater' });
-      e.tick(2);
-    }).not.toThrow();
+    e.events.emit('region.entered', { regionId: 'cinderreach', previous: 'harrowmark' });
     await flush();
-    e.tick(5);
-    expect(e.mixers[0].isPlaying).toBe(true);
+    e.tick(0.1);
+    const at = e.mixers[1].startedAt!;
+    const firstStart = e.mixers[0].startedAt!;
+    const bar = 240 / SEVEN.bpm;
+    const barsIn = (at - firstStart) / bar;
+    expect(Math.abs(barsIn - Math.round(barsIn))).toBeLessThan(1e-3); // the new track starts on a bar of the old one
     expect(e.audio.swapMusic).not.toHaveBeenCalled();
-    expect(e.services.get('music')!.beat()!.bpm).toBe(92);
-    expect(warn.mock.calls.filter((c) => String(c[0]).startsWith('Music:'))).toEqual([]);
+    expect(e.services.get('music')!.beat()!.bpm).toBe(96);
+    e.tick(at - clockRef.t + 0.05);
+    expect(e.audio.swapMusic).toHaveBeenCalledTimes(1);
+    expect(e.services.get('music')!.beat()!.bpm).toBe(94);
   });
 
-  it('starting inside a reserved-track region falls back to the default track', async () => {
-    const e = makeEnv({ regionAt: () => ({ id: 'forge-yard', track: RESERVED_TRACKS[1].id }) });
+  it('Cinderreach to Oldsmoke hands over from 94 to 98 BPM', async () => {
+    const e = makeEnv({ regionAt: (x) => (x < 1000 ? ASH_REGION : HAMMERS_REGION) });
     setupMusic(e.ctx);
     await e.start();
-    expect(e.mixers[0].isPlaying).toBe(true);
-    expect(e.services.get('music')!.beat()!.bpm).toBe(92);
+    e.feet.x = 1500;
+    e.events.emit('region.entered', { regionId: 'oldsmoke', previous: 'cinderreach' });
+    await flush();
+    e.tick(0.1);
+    const at = e.mixers[1].startedAt!;
+    expect(e.services.get('music')!.beat()!.bpm).toBe(94);
+    e.tick(at - clockRef.t + 0.05);
+    expect(e.services.get('music')!.beat()!.bpm).toBe(98);
   });
 
-  it('documents the reserved ids and BPMs, none of them registered yet', () => {
-    expect(RESERVED_TRACK_IDS).toEqual(['ash-on-the-pasture', 'hammers-below']);
-    expect(RESERVED_TRACKS.map((t) => t.bpm)).toEqual([94, 98]);
-    for (const t of RESERVED_TRACKS) expect(TRACKS_BY_ID[t.id]).toBeUndefined();
+  it.each([ASH, HAMMERS])('a synth failure on $id keeps the old track and warns', async (track) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const region = { id: 'x', track: track.id };
+    const e = makeEnv({ regionAt: (x) => (x < 1000 ? BRIGHT : region) });
+    setupMusic(e.ctx);
+    await e.start();
+    e.mixers[1].add.mockRejectedValue(new Error('synth failed'));
+    e.feet.x = 1500;
+    e.events.emit('region.entered', { regionId: 'x', previous: 'brightwater' });
+    await flush();
+    e.tick(0.5);
+    expect(e.mixers[1].start).not.toHaveBeenCalled();
+    expect(e.services.get('music')!.beat()!.bpm).toBe(92);
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it('a track id nothing registers (a later act) warns exactly once now that nothing is reserved', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const e = makeEnv();
+    setupMusic(e.ctx);
+    await e.start();
+    e.services.get('music')!.setRegionTrack('greyfen');
+    e.services.get('music')!.setRegionTrack('greyfen');
+    expect(warn.mock.calls.filter((c) => String(c[0]).includes('greyfen'))).toHaveLength(1);
+  });
+
+  it('music.setRegionTrack switches to either Act 2 track by id', async () => {
+    const e = makeEnv();
+    setupMusic(e.ctx);
+    await e.start();
+    e.services.get('music')!.setRegionTrack('hammers-below');
+    await flush();
+    e.tick(0.1);
+    e.tick(e.mixers[1].startedAt! - clockRef.t + 0.05);
+    expect(e.services.get('music')!.beat()!.bpm).toBe(98);
   });
 });

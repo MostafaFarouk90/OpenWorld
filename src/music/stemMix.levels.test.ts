@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { STEM_PEAK, synthStem } from './stemSynth';
-import { BARLEY_AND_BRAZIER, SEVEN_GATES_ONE_DRUM, loopSamples, type StemMix, type TrackDef } from './tracks';
+import { ASH_ON_THE_PASTURE, BARLEY_AND_BRAZIER, HAMMERS_BELOW, SEVEN_GATES_ONE_DRUM, loopSamples, type StemMix, type TrackDef } from './tracks';
 
 // Level guard for the music-quality voices: every mix variant stays under full scale, the states sit in
 // a sensible loudness order against explore, and nothing drops far below the old sound.
@@ -26,7 +26,7 @@ function sum(track: TrackDef, stems: Record<string, Float32Array>, mix: StemMix)
 
 const db = (x: number): number => 20 * Math.log10(x);
 
-describe.each([BARLEY_AND_BRAZIER, SEVEN_GATES_ONE_DRUM])('$id levels', (track) => {
+describe.each([BARLEY_AND_BRAZIER, SEVEN_GATES_ONE_DRUM, ASH_ON_THE_PASTURE, HAMMERS_BELOW])('$id levels', (track) => {
   const stems = rendered(track);
 
   it('stem peaks are exactly their STEM_PEAK', () => {

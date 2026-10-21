@@ -1,3 +1,7 @@
+import { ASH_ON_THE_PASTURE, HAMMERS_BELOW } from './act2Tracks';
+
+export { ASH_ON_THE_PASTURE, HAMMERS_BELOW };
+
 export type MixState = 'explore' | 'discover' | 'silence' | 'combat' | 'boss' | 'ending' | 'talk' | 'stealth' | 'chase';
 
 export type StemMix = Readonly<Record<string, number>>;
@@ -48,10 +52,14 @@ export interface TrackSynth {
   /** Peak timing looseness in seconds on off-beat hits (downbeats stay put); default 0.005. */
   jitter?: number;
   voices: {
-    snare: 'snap' | 'rimshot';
-    vocal: 'hum' | 'throat-chant';
-    melody: 'flute' | 'trumpet';
-    boss: 'tolling-gong' | 'steam-anvil';
+    snare: 'snap' | 'rimshot' | 'thigh-slap' | 'metal-rim';
+    vocal: 'hum' | 'throat-chant' | 'lip-buzz' | 'anvil-clang';
+    melody: 'flute' | 'trumpet' | 'whistle-click' | 'cave-howl';
+    boss: 'tolling-gong' | 'steam-anvil' | 'gallop-hey' | 'pound-clang';
+    /** Optional per-stem voices (Act 2); absent means the Act 1 voice. */
+    kick?: 'boxy';
+    hat?: 'steam';
+    bass?: 'dum';
   };
 }
 
@@ -116,7 +124,7 @@ export const BARLEY_AND_BRAZIER: TrackDef = {
     suspicious: mix(0.15, 0, 0.1, 0.6, 0.5, 0, 0),
     alerted: mix(0.3, 0.1, 0.1, 0.6, 0.5, 0, 0),
   },
-  // Boss mix keys are boss ids. 'thrandil-redmane' and 'the-slagmaw' (Act 2) are documentation only until A14 adds them.
+  // Boss mix keys are boss ids.
   bossMixes: {
     // Design 6.1 trigger 3: phase 2 and 3 re-ramp the same seven stems (hat, boss and melody lift).
     'ashen-prior': {
@@ -189,19 +197,15 @@ export const SEVEN_GATES_ONE_DRUM: TrackDef = {
   },
 };
 
-/**
- * Act 2 tracks A14 has not built yet (v0.6 item 20). A region may name one: the music plugin keeps the current
- * regional track playing until the track is registered in `TRACKS_BY_ID`.
- */
-export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [
-  { id: 'ash-on-the-pasture', bpm: 94 },
-  { id: 'hammers-below', bpm: 98 },
-];
-export const RESERVED_TRACK_IDS = ['ash-on-the-pasture', 'hammers-below'] as const;
+/** Reserved track ids (v0.6 item 20). Empty since A14 registered the two Act 2 tracks; kept so imports stay valid. */
+export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [];
+export const RESERVED_TRACK_IDS: readonly string[] = [];
 
 export const TRACKS_BY_ID: Readonly<Record<string, TrackDef>> = {
   [BARLEY_AND_BRAZIER.id]: BARLEY_AND_BRAZIER,
   [SEVEN_GATES_ONE_DRUM.id]: SEVEN_GATES_ONE_DRUM,
+  [ASH_ON_THE_PASTURE.id]: ASH_ON_THE_PASTURE,
+  [HAMMERS_BELOW.id]: HAMMERS_BELOW,
 };
 
 /** The one canonical sample length of every stem: round(bars * 240 / bpm * sampleRate). */

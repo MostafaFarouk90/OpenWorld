@@ -24,9 +24,25 @@ export const INTERIOR_PRESETS: Readonly<Record<string, InteriorPreset>> = {
   'counting-house': { seconds: 0.6, damping: 0.7, wet: 0.18, duck: 0.85 },
   archive: { seconds: 0.9, damping: 0.8, wet: 0.2, duck: 0.8 },
   underways: { seconds: 2.2, damping: 0.9, wet: 0.45, duck: 0.7 },
+  // Act 2: Scorchhold's keep sounds like a keep; Grisel Hall is a stone audience hall.
+  'scorchhold-keep': { seconds: 1.0, damping: 0.45, wet: 0.3, duck: 0.8 },
+  'grisel-hall': { seconds: 1.3, damping: 0.5, wet: 0.3, duck: 0.8 },
 };
 
+/** The Oldsmoke mines: long, dark and wet, close to the Underways. */
+export const MINE_PRESET: InteriorPreset = { seconds: 2.6, damping: 0.85, wet: 0.5, duck: 0.7 };
+
+/** Interior ids added to the mine rule by name rather than by the `mine-` prefix (empty: A4 names its interiors `mine-<name>`). */
+export const MINE_INTERIOR_IDS: ReadonlySet<string> = new Set<string>();
+
+/** True for `mine-<name>` (a bare `mine-` is not an id) and for any id in {@link MINE_INTERIOR_IDS}. */
+export function isMineInterior(interiorId: string | null): boolean {
+  if (typeof interiorId !== 'string') return false;
+  return (interiorId.startsWith('mine-') && interiorId.length > 5) || MINE_INTERIOR_IDS.has(interiorId);
+}
+
 export function presetFor(interiorId: string): InteriorPreset {
+  if (isMineInterior(interiorId)) return MINE_PRESET;
   return Object.prototype.hasOwnProperty.call(INTERIOR_PRESETS, interiorId) ? INTERIOR_PRESETS[interiorId] : DEFAULT_INTERIOR_PRESET;
 }
 

@@ -1,4 +1,5 @@
 import { Biquad, TAU, onePole, pluck, rng, sawBlep, smooth, soften } from './dsp';
+import { createAct2Voices, type Act2Voices } from './act2Voices';
 import { BARLEY_SYNTH, loopSamples, type TrackDef, type TrackSynth, type TuneNote } from './tracks';
 
 // Procedural placeholder stems until recorded ones exist. Every stem is exactly loopSamples() long.
@@ -9,13 +10,13 @@ import { BARLEY_SYNTH, loopSamples, type TrackDef, type TrackSynth, type TuneNot
 // a plucked lute, a warm detuned pad, a breathy flute, accents, small timing looseness, ghost notes
 // and fills, and a dynamic arc across the sixteen bars.
 
-function tokens(bar: string): string[] {
+export function tokens(bar: string): string[] {
   return bar.trim().split(/\s+/);
 }
 
 type Voice = (t: number, n: number) => number;
 
-class Track {
+export class Track {
   readonly data: Float32Array;
   constructor(
     readonly length: number,
@@ -59,7 +60,7 @@ class Track {
   }
 }
 
-interface Ctx {
+export interface Ctx {
   syn: TrackSynth;
   /** Frequency of a semitone offset from the tonic. */
   d(semitones: number): number;
@@ -85,7 +86,7 @@ function ctxFor(syn: TrackSynth): Ctx {
   };
 }
 
-interface Grid {
+export interface Grid {
   bars: number;
   barSamples: number;
   stepSamples: number;
@@ -110,7 +111,7 @@ function grid(track: TrackDef, length: number, sampleRate: number): Grid {
 }
 
 /** Loudness of the bar inside the loop: each four-bar phrase builds a little, the third peaks. */
-function arc(bar: number, bars: number): number {
+export function arc(bar: number, bars: number): number {
   const phrase = Math.min(3, Math.floor((bar * 4) / bars));
   const within = (((bar * 4) / bars) % 1);
   return [0.88, 0.95, 1, 0.92][phrase] * (0.95 + 0.05 * within);
@@ -120,7 +121,7 @@ function arc(bar: number, bars: number): number {
  * Human feel for one stem: off-beat sixteenths lag by the swing, and everything that is not on a
  * quarter note wanders a few milliseconds, from a seeded generator so the stem is reproducible.
  */
-class Feel {
+export class Feel {
   private readonly r: () => number;
   constructor(
     private readonly g: Grid,
@@ -520,12 +521,28 @@ export const STEM_PEAK: Readonly<Record<string, number>> = { kick: 0.4, snare: 0
 
 const VOICES: Record<string, (t: Track, g: Grid, c: Ctx) => void> = { kick, snare, hat, bass, vocal, melody, boss };
 
+let act2: Act2Voices | null = null;
+
+/** The Act 2 voice table, built on first use with this file's helpers (act2Voices.ts imports only types from here). */
+function act2Voices(): Act2Voices {
+  return (act2 ??= createAct2Voices({ tokens, arc, Feel }));
+}
+
+/** The voice name a track picks for a stem, or null when it uses the stem's Act 1 voice. */
+function voiceName(syn: TrackSynth, stemId: string): string | null {
+  const v = syn.voices as Record<string, string | undefined>;
+  return v[stemId] ?? null;
+}
+
 /** Renders one placeholder stem as exactly `loopSamples(track, sampleRate)` mono samples. */
 export function synthStem(track: TrackDef, stemId: string, sampleRate: number): Float32Array {
-  const voice = VOICES[stemId];
-  if (!voice) throw new Error(`No placeholder synth for stem "${stemId}"`);
+  const base = VOICES[stemId];
+  if (!base) throw new Error(`No placeholder synth for stem "${stemId}"`);
+  const syn = track.synth ?? BARLEY_SYNTH;
+  const name = voiceName(syn, stemId);
+  const voice = (name !== null && act2Voices()[name]) || base;
   const length = loopSamples(track, sampleRate);
   const t = new Track(length, sampleRate);
-  voice(t, grid(track, length, sampleRate), ctxFor(track.synth ?? BARLEY_SYNTH));
+  voice(t, grid(track, length, sampleRate), ctxFor(syn));
   return t.finish(STEM_PEAK[stemId] ?? 0.15);
 }
