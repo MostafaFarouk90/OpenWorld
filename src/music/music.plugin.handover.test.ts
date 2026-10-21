@@ -5,7 +5,7 @@ import type { GameEventMap } from '../core/events';
 import type { GameContext } from '../core/Game';
 import { Services } from '../core/Services';
 import { setupMusic } from './music.plugin';
-import { BARLEY_AND_BRAZIER as BARLEY, SEVEN_GATES_ONE_DRUM as SEVEN } from './tracks';
+import { BARLEY_AND_BRAZIER as BARLEY, RESERVED_TRACKS, RESERVED_TRACK_IDS, SEVEN_GATES_ONE_DRUM as SEVEN, TRACKS_BY_ID } from './tracks';
 
 const SR = 8000;
 
@@ -593,5 +593,41 @@ describe('shared reverb wiring', () => {
     setupMusic(e.ctx);
     await e.start();
     expect(e.mixers[0].isPlaying).toBe(true);
+  });
+});
+
+describe('reserved Act 2 tracks', () => {
+  it('a region naming a reserved track keeps the current regional track, silently', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const RESERVED = { id: 'ember-pasture', track: RESERVED_TRACKS[0].id };
+    const e = makeEnv({ regionAt: (x) => (x < 1000 ? BRIGHT : RESERVED) });
+    setupMusic(e.ctx);
+    await e.start();
+    expect(e.services.get('music')!.beat()!.bpm).toBe(92);
+    e.feet.x = 1500;
+    expect(() => {
+      e.events.emit('region.entered', { regionId: 'ember-pasture', previous: 'brightwater' });
+      e.tick(2);
+    }).not.toThrow();
+    await flush();
+    e.tick(5);
+    expect(e.mixers[0].isPlaying).toBe(true);
+    expect(e.audio.swapMusic).not.toHaveBeenCalled();
+    expect(e.services.get('music')!.beat()!.bpm).toBe(92);
+    expect(warn.mock.calls.filter((c) => String(c[0]).startsWith('Music:'))).toEqual([]);
+  });
+
+  it('starting inside a reserved-track region falls back to the default track', async () => {
+    const e = makeEnv({ regionAt: () => ({ id: 'forge-yard', track: RESERVED_TRACKS[1].id }) });
+    setupMusic(e.ctx);
+    await e.start();
+    expect(e.mixers[0].isPlaying).toBe(true);
+    expect(e.services.get('music')!.beat()!.bpm).toBe(92);
+  });
+
+  it('documents the reserved ids and BPMs, none of them registered yet', () => {
+    expect(RESERVED_TRACK_IDS).toEqual(['ash-on-the-pasture', 'hammers-below']);
+    expect(RESERVED_TRACKS.map((t) => t.bpm)).toEqual([94, 98]);
+    for (const t of RESERVED_TRACKS) expect(TRACKS_BY_ID[t.id]).toBeUndefined();
   });
 });

@@ -29,18 +29,20 @@ const statusPlugin: GamePlugin = {
   },
   setup(ctx: GameContext) {
     const playerId = (): ActorId => ctx.player.actor.id;
-    let playerMod: { stunned: boolean; slow: number; off: (() => void) | null } = { stunned: false, slow: 0, off: null };
+    let playerMod: { stunned: boolean; rooted: boolean; slow: number; off: (() => void) | null } = { stunned: false, rooted: false, slow: 0, off: null };
 
     const syncPlayer = (view: ActorStatusView | null): void => {
       const stunned = view?.stunned ?? false;
+      const rooted = view?.rooted === true;
       const slow = view?.slow ?? 0;
-      if (playerMod.off && playerMod.stunned === stunned && playerMod.slow === slow) return;
+      if (playerMod.off && playerMod.stunned === stunned && playerMod.rooted === rooted && playerMod.slow === slow) return;
       playerMod.off?.();
-      playerMod = { stunned, slow, off: null };
-      if (!stunned && slow === 0) return;
+      playerMod = { stunned, rooted, slow, off: null };
+      if (!stunned && !rooted && slow === 0) return;
+      // v0.6 root: speed 0, actions (attacks, spells, dodge-in-place) stay free.
       playerMod.off = ctx.player.addMoveModifier('status', stunned
         ? { speedScale: 0, lockMove: true, lockActions: STUN_LOCKED_ACTIONS }
-        : { speedScale: 1 - slow });
+        : { speedScale: rooted ? 0 : 1 - slow });
     };
 
     const engine = new StatusEngine({

@@ -308,13 +308,25 @@ describe('Calm eligibility', () => {
     expect(u.m.get(b)!.brain.struck).toBe(false);
   });
 
-  it('an ally strike counts', () => {
+  it('v0.6: an ally strike never counts (Calm stays possible after a companion hit)', () => {
     const t = rig();
     const id = one(t);
     const ally = new FakeActor('ally-1', 'companion', { kind: 'companion', team: 'ally', maxHealth: 50 });
     t.fake.actorMap.set(ally.id, ally);
     t.hit(id, { attackerId: 'ally-1' });
-    expect(t.m.get(id)!.brain.struck).toBe(true);
+    expect(t.m.get(id)!.brain.struck).toBe(false);
+    expect(t.m.get(id)!.calmOpen).toBe(true);
+    t.hit(id, { attackerId: 'ally-1', kind: 'status' });
+    expect(t.m.get(id)!.brain.struck).toBe(false);
+  });
+
+  it('v0.6 mercyState: none while hunting, calming once calmed and walking off', () => {
+    const t = rig();
+    const id = one(t);
+    const actor = t.fake.actorMap.get(id)!;
+    expect(actor.mercyState?.()).toBe('none');
+    t.m.get(id)!.calm();
+    expect(actor.mercyState?.()).toBe('calming');
   });
 
   it('refuses once a swing has started (telegraph, attack, and until it disengages) but allows a chase', () => {

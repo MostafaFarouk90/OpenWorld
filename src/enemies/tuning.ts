@@ -119,8 +119,8 @@ export const PAIR = {
 
 /** A boss's mercy hold (actors-and-damage.md section 7). `amount` is the uncapped ledger value. */
 export interface BossMercyRow {
-  /** The `mercy` event verb; the hold's unlock verb is the same. */
-  verb: 'release' | 'calm';
+  /** The `mercy` event verb; the hold's unlock verb is the same. v0.6 `spare` (Redmane) ends with outcome `'spared'`. */
+  verb: 'release' | 'calm' | 'spare';
   track: FavourTrack;
   amount: number;
   /** Burn charged through `useShard` on a true `bosses.release` (a Calm boss charges the Warm Hand's `WARM_HAND_BURN` instead, only when that pays). */
@@ -147,7 +147,12 @@ export const BOSS_MERCY: Readonly<Record<string, BossMercyRow>> = {
     warmHand: true,
     summonGroups: ['grimtooth-summons'],
   },
+  // v0.6 (Act 2, D03): Thrandil Redmane yields and is spared; A8 builds the fight and the hold.
+  'thrandil-redmane': { verb: 'spare', track: 'oswin', amount: 3, burn: 0, ledgerId: 'D03' },
 };
+
+/** v0.6: boss ids reserved for Act 2 (A8). Act 1's are 'ashen-prior' and 'gaffer-grimtooth'. */
+export const ACT2_BOSS_IDS = ['thrandil-redmane', 'the-slagmaw'] as const;
 
 /** The Warm Hand's Burn (design section 3), charged once per hold. */
 export const WARM_HAND_BURN = 10;

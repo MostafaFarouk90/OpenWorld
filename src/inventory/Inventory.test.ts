@@ -232,7 +232,7 @@ describe('reset', () => {
 describe('persistence', () => {
   it('has a key and version', () => {
     expect(Inventory.key).toBe('inventory');
-    expect(Inventory.version).toBe(1);
+    expect(Inventory.version).toBe(2);
   });
 
   it('round trips', () => {
@@ -320,7 +320,7 @@ describe('persistence', () => {
   });
 
   it('falls back to defaults for an unsupported version', () => {
-    inv.load({ items: { 'healing-flask': 1 }, equipped: {} }, 2);
+    inv.load({ items: { 'healing-flask': 1 }, equipped: {} }, 3);
     expect(inv.serialize().items).toEqual(NEW_GAME_KIT.items);
     expect(warn).toHaveBeenCalled();
   });
@@ -390,5 +390,78 @@ describe('Inventory gold', () => {
     expect(j.gold).toBe(0);
     j.load({ ...saved, gold: 'x' }, 1);
     expect(j.gold).toBe(0);
+  });
+});
+
+describe('gear (v2)', () => {
+  it('defaults to temper 0 and sets a clamped temper on held items without emitting', () => {
+    inv.add('practice-sword', 1);
+    events.length = 0;
+    expect(inv.gear('practice-sword')).toEqual({ temper: 0 });
+    expect(inv.setTemper('practice-sword', 3, 'keen')).toBe(true);
+    expect(inv.gear('practice-sword')).toEqual({ temper: 3, affix: 'keen' });
+    inv.setTemper('practice-sword', 99);
+    expect(inv.gear('practice-sword')).toEqual({ temper: 5, affix: 'keen' });
+    inv.setTemper('practice-sword', -4);
+    expect(inv.gear('practice-sword').temper).toBe(0);
+    expect(events).toEqual([]);
+  });
+
+  it('refuses unknown, unheld and non-finite', () => {
+    expect(inv.setTemper('nope', 1)).toBe(false);
+    expect(inv.setTemper('practice-sword', 1)).toBe(false);
+    inv.add('practice-sword', 1);
+    expect(inv.setTemper('practice-sword', Number.NaN)).toBe(false);
+    expect(inv.gear('practice-sword').temper).toBe(0);
+  });
+
+  it('drops the record when the item leaves the pack', () => {
+    inv.add('practice-sword', 1);
+    inv.setTemper('practice-sword', 2);
+    inv.remove('practice-sword', 1);
+    inv.add('practice-sword', 1);
+    expect(inv.gear('practice-sword').temper).toBe(0);
+  });
+
+  it('round trips v2 and sanitises bad records', () => {
+    inv.add('practice-sword', 1);
+    inv.setTemper('practice-sword', 4, 'ember');
+    const saved = inv.serialize();
+    const b = new Inventory({ emit: () => {}, logger: { warn } });
+    b.load(JSON.parse(JSON.stringify(saved)), 2);
+    expect(b.gear('practice-sword')).toEqual({ temper: 4, affix: 'ember' });
+    b.load({ items: { 'practice-sword': 1 }, gear: { 'practice-sword': { temper: 9 }, nope: { temper: 1 }, 'healing-flask': 'x' } }, 2);
+    expect(b.gear('practice-sword').temper).toBe(5);
+    expect(b.serialize().gear).toEqual({ 'practice-sword': { temper: 5 } });
+    b.load({ items: { 'practice-sword': 1 }, gear: 'bad' }, 2);
+    expect(b.gear('practice-sword').temper).toBe(0);
+  });
+
+  it('loads v1 data with temper 0 everywhere and ignores a stray gear field', () => {
+    inv.load({ items: { 'practice-sword': 1 }, equipped: {}, gold: 7, gear: { 'practice-sword': { temper: 3 } } }, 1);
+    expect(inv.gear('practice-sword').temper).toBe(0);
+    expect(inv.gold).toBe(7);
+    expect(inv.serialize().gear).toBeUndefined();
+  });
+
+  it('loads every real v1 save fixture with items and gold intact', () => {
+    const fixtures = import.meta.glob('../save/__fixtures__/*.json', { eager: true, import: 'default' }) as Record<string, any>;
+    let checked = 0;
+    for (const [f, save] of Object.entries(fixtures)) {
+      const entry = save?.entries?.inventory;
+      if (!entry || entry.version !== 1) continue;
+      const fresh = new Inventory({ emit: () => {}, logger: { warn } });
+      fresh.load(entry.data, entry.version);
+      const known = Object.entries(entry.data.items as Record<string, number>).filter(([id]) => fresh.items().some((i) => i.id === id));
+      expect(fresh.items().length, f).toBe(known.length);
+      expect(fresh.items().length, f).toBeGreaterThan(0);
+      for (const { id, count } of fresh.items()) {
+        expect(count, `${f}:${id}`).toBe(entry.data.items[id]);
+        expect(fresh.gear(id).temper).toBe(0);
+      }
+      expect(fresh.gold, f).toBe(entry.data.gold ?? 0);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(3);
   });
 });

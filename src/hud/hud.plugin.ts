@@ -4,7 +4,7 @@ import type { GamePlugin } from '../core/plugins';
 import type { ElementLike } from './dom';
 import './events';
 import { AbilityBar, LeapState, type AbilitySlotInfo } from './AbilityBar';
-import { ActEndingCard, ACT_ENDING_CAMP_FLAGS, ACT_ENDING_GATE_FLAG, ACT_ENDING_SEEN_FLAG, type KeySource } from './ActEndingCard';
+import { ActEndingCard, ACT_ENDING_CAMP_FLAGS, ACT_ENDING_GATE_FLAG, ACT_ENDING_SEEN_FLAG, ACT_ENDING_SEEN_FLAG_V06, type KeySource } from './ActEndingCard';
 import { BossBar } from './BossBar';
 import { ChaseTimer } from './ChaseTimer';
 import { ClassLabel } from './ClassLabel';
@@ -25,7 +25,7 @@ import { asHtml, hudDocument, injectCss, projectToScreen, soft } from './soft';
 import type { HudSlot } from '../ui/HudLayer';
 import type { HudWidgetView } from './widget';
 import type { ProgressionService } from './ports';
-import { FOG_TRIGGER_ID, fogOpen } from '../region/fogWall';
+import { FOG_TRIGGER_ID, fogOpen, fogOpenById, fogWallForTrigger } from '../region/fogWall';
 import { getSkill } from '../progression/skills';
 import { LEVEL_CAP, xpForLevel } from '../progression/tuning';
 
@@ -228,15 +228,26 @@ const hudPlugin: GamePlugin = {
       fogToasted = true;
       ctx.events.emit('hud.toast', { textKey: 'hud.fog.toast' });
     });
+    // v0.6: the other fog walls (A1's Act 2 faces), one toast per wall per session with the wall's own text.
+    const fogToastedIds = new Set<string>();
+    ctx.events.on('trigger.enter', (e) => {
+      const wall = e.triggerId === FOG_TRIGGER_ID ? undefined : fogWallForTrigger(e.triggerId);
+      if (!wall || fogToastedIds.has(wall.id) || fogOpenById(wall.id, ctx.state)) return;
+      fogToastedIds.add(wall.id);
+      ctx.events.emit('hud.toast', { textKey: wall.toastKey });
+    });
 
     // Act 1 mini-ending card: live on act.ended, re-derived on load only while neither once-flag is set.
     const ending = new ActEndingCard(doc, {
       t,
       keys: keyTarget,
       modalOpen: () => ctx.hud.modalOpen !== null,
-      seen: () => ctx.state.getBool(ACT_ENDING_SEEN_FLAG),
+      seen: () => ctx.state.getBool(ACT_ENDING_SEEN_FLAG) || ctx.state.getBool(ACT_ENDING_SEEN_FLAG_V06),
       campSeen: () => ACT_ENDING_CAMP_FLAGS.some((f) => ctx.state.getBool(f)),
-      markSeen: () => ctx.state.setFlag(ACT_ENDING_SEEN_FLAG, true),
+      markSeen: () => {
+        ctx.state.setFlag(ACT_ENDING_SEEN_FLAG, true);
+        ctx.state.setFlag(ACT_ENDING_SEEN_FLAG_V06, true);
+      },
       closed: (endingId) => ctx.events.emit('hud.actEnding.closed', { endingId }),
     });
     ctx.events.on('act.ended', (e) => ending.onActEnded(e));

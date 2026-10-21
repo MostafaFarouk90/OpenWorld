@@ -10,6 +10,8 @@ export interface ActorStatusView {
   stunRemaining: number;
   /** Largest active slow fraction 0..0.9, 0 when not slowed. */
   slow: number;
+  /** v0.6: present (true) only while a root entry is active: no movement, actions free. */
+  rooted?: true;
 }
 
 export const STATUS_DATA_KEY = 'status';

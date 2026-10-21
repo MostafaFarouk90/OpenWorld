@@ -3,8 +3,9 @@ import type { ActorId } from './Actor';
 /**
  * Status effects (contracts/actors-and-damage.md section 10, v0.5). Core defines the shape; thread 2
  * provides `services.provide('status', …)`. The kind is `ignite`, never "burn": the Burn meter is another thing.
+ * v0.6 `root` (Act 2 nets): locks movement, not actions; the strongest (longest remaining) instance wins, as with stun.
  */
-export type StatusKind = 'bleed' | 'ignite' | 'stun' | 'slow';
+export type StatusKind = 'bleed' | 'ignite' | 'stun' | 'slow' | 'root';
 
 export interface StatusSpec {
   /** Same id on the same actor refreshes to the longer remaining time and never stacks `dps`. */

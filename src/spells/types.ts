@@ -8,6 +8,11 @@ import type { RegisterFormResult, SurgeFormImpl } from './SurgeAndRally';
 export interface SpellsService {
   readonly burn: number;
   readonly scars: number;
+  /**
+   * Optional (v0.6 item 16): A5 implements it. Removes up to `n` Scars for the Hearth rite (flag `aelfreda.rite.a<act>`)
+   * and returns how many were removed. `scars` stays a number.
+   */
+  removeScars?(n: number, reason: 'hearth-rite'): number;
   readonly ember: number;
   readonly maxEmber: number;
   spendEmber(n: number): boolean;

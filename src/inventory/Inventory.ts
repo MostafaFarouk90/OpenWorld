@@ -21,7 +21,17 @@ export interface InventorySave {
   /** Item ids this build does not know, written back unchanged. */
   unknown: Record<string, unknown>;
   gold: number;
+  /** v2: per-item gear instance data, only for items with a temper or an affix. Absent in v1 saves. */
+  gear?: Record<string, GearRecord>;
 }
+
+/** Per-item instance data (one record per item id). `temper` is 0..5. */
+export interface GearRecord {
+  temper: number;
+  affix?: string;
+}
+
+export const MAX_TEMPER = 5;
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -34,12 +44,14 @@ function wholeCount(n: number): number {
 /** Owned items and equipment slots. Pure state: no world access. */
 export class Inventory implements Omit<InventoryService, 'use'> {
   static readonly key = 'inventory';
-  static readonly version = 1;
+  /** v2 adds gear instance data (temper, affix). v1 saves load with temper 0 everywhere. */
+  static readonly version = 2;
 
   private readonly counts = new Map<string, number>();
   private readonly slots = new Map<EquipSlot, string>();
   private unknown: Record<string, unknown> = {};
   private goldAmount = 0;
+  private readonly gearData = new Map<string, GearRecord>();
   private readonly emit: EmitterPort['emit'];
   private readonly logger: Logger;
 
@@ -81,6 +93,7 @@ export class Inventory implements Omit<InventoryService, 'use'> {
     else {
       this.counts.delete(id);
       for (const slot of EQUIP_SLOTS) if (this.slots.get(slot) === id) this.setSlot(slot, null);
+      this.gearData.delete(id);
     }
     this.emit('inventory.changed', { itemId: id, count: left });
     return true;
@@ -113,6 +126,27 @@ export class Inventory implements Omit<InventoryService, 'use'> {
     return sum;
   }
 
+  /** The gear record of an item; temper 0 when it has none. */
+  gear(itemId: string): GearRecord {
+    const g = this.gearData.get(itemId);
+    return g ? { ...g } : { temper: 0 };
+  }
+
+  /**
+   * Sets an item's temper (clamped 0..5, whole) and affix. Refused (false) for unknown or unheld items.
+   * Silent: the caller (A10) emits `gear.tempered`. An omitted affix leaves the current one; `undefined` cannot clear it.
+   */
+  setTemper(itemId: string, level: number, affix?: string): boolean {
+    if (!getItem(itemId) || !this.has(itemId) || !Number.isFinite(level)) return false;
+    const temper = Math.min(MAX_TEMPER, Math.max(0, Math.floor(level)));
+    const next: GearRecord = { temper };
+    const keep = affix ?? this.gearData.get(itemId)?.affix;
+    if (keep) next.affix = keep;
+    if (temper === 0 && !next.affix) this.gearData.delete(itemId);
+    else this.gearData.set(itemId, next);
+    return true;
+  }
+
   items(): readonly { id: string; count: number }[] {
     return [...this.counts].map(([id, count]) => ({ id, count }));
   }
@@ -134,17 +168,22 @@ export class Inventory implements Omit<InventoryService, 'use'> {
   }
 
   reset(kit: InventoryKit): void {
+    this.gearData.clear();
     this.apply(kit.items, kit.equipped, {});
   }
 
   serialize(): InventorySave {
     const equipped: Partial<Record<EquipSlot, string>> = {};
     for (const [slot, id] of this.slots) equipped[slot] = id;
-    return { items: Object.fromEntries(this.counts), equipped, unknown: { ...this.unknown }, gold: this.goldAmount };
+    const gear: Record<string, GearRecord> = {};
+    for (const [id, g] of this.gearData) gear[id] = { ...g };
+    const save: InventorySave = { items: Object.fromEntries(this.counts), equipped, unknown: { ...this.unknown }, gold: this.goldAmount };
+    if (this.gearData.size > 0) save.gear = gear;
+    return save;
   }
 
   load(data: unknown, version: number): void {
-    if (version !== Inventory.version) {
+    if (version !== 1 && version !== Inventory.version) {
       this.logger.warn(`inventory: unsupported save version ${version}, using defaults`);
       this.goldAmount = 0;
       return this.reset(NEW_GAME_KIT);
@@ -166,6 +205,20 @@ export class Inventory implements Omit<InventoryService, 'use'> {
     const equipped = (data.equipped ?? {}) as Record<string, unknown>;
     this.goldAmount = typeof data.gold === 'number' && Number.isFinite(data.gold) && data.gold > 0 ? Math.floor(data.gold) : 0;
     this.apply(items, equipped, unknown);
+    // v1 has no gear records; a malformed v2 record is dropped, not fatal.
+    this.gearData.clear();
+    if (version >= 2 && isRecord(data.gear)) {
+      for (const [id, raw] of Object.entries(data.gear)) {
+        if (!this.has(id) || !isRecord(raw) || typeof raw.temper !== 'number' || !Number.isFinite(raw.temper)) {
+          this.logger.warn(`inventory: dropped bad gear record "${id}"`);
+          continue;
+        }
+        const temper = Math.min(MAX_TEMPER, Math.max(0, Math.floor(raw.temper)));
+        const rec: GearRecord = { temper };
+        if (typeof raw.affix === 'string' && raw.affix) rec.affix = raw.affix;
+        if (temper > 0 || rec.affix) this.gearData.set(id, rec);
+      }
+    }
   }
 
   /** Replaces all state from untrusted input, sanitising it, and emits what changed. */

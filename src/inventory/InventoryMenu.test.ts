@@ -20,6 +20,7 @@ function setup() {
     remove: (i: string, n: number) => inv.remove(i, n), equip: (i: string) => inv.equip(i), unequip: (s: any) => inv.unequip(s),
     equipped: (s: any) => inv.equipped(s), equippedStat: (s: any) => inv.equippedStat(s), use: () => ({ ok: false, reason: 'busy' }) as const,
     reset: (k: any) => inv.reset(k), items: () => inv.items(), get gold() { return inv.gold; }, addGold: (n: number) => inv.addGold(n), takeGold: (n: number) => inv.takeGold(n),
+    gear: (i: string) => inv.gear(i), setTemper: (i: string, l: number, a?: string) => inv.setTemper(i, l, a),
   };
   const menu = new InventoryMenu(new StubDocument(), { inventory: service, t, close: () => closed++ });
   const buttons = (): StubElement[] => {

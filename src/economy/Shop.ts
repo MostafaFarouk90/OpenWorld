@@ -1,7 +1,7 @@
 import type { ItemDef } from '../hud/ports';
 import type { FavourBand } from '../state/favour';
 import { bandPrice, listPrice, sellPrice } from './prices';
-import { bandAtLeast, isVendorId, SHOP_LIST_PRICES, VENDORS, type StockLine, type VendorId } from './stock';
+import { bandAtLeast, discountPercent, isVendorId, SHOP_LIST_PRICES, VENDORS, type StockLine, type VendorDiscount, type VendorId } from './stock';
 
 export const BUY_BACK_MAX = 12;
 
@@ -33,6 +33,10 @@ export interface ShopPorts {
   isOpen(vendorId: VendorId): boolean;
   emit(type: 'vendor.bought' | 'vendor.sold', payload: { vendorId: string; itemId: string; count: number; price: number }): void;
   warn(message: string): void;
+  /** Reads a story flag for `VENDOR_DISCOUNTS`; absent means no discounts apply. */
+  flag?(key: string): unknown;
+  /** Test seam: the discount table (default `VENDOR_DISCOUNTS`). */
+  discounts?: readonly VendorDiscount[];
 }
 
 export type ShopFailure =
@@ -107,7 +111,8 @@ export class Shop {
   quote(vendorId: VendorId, itemId: string): number | undefined {
     const list = this.unitList(itemId);
     if (list === undefined) return undefined;
-    return bandPrice(list, VENDORS[vendorId].track ? this.ports.band(vendorId) : null);
+    const off = this.ports.flag ? discountPercent(vendorId, this.ports.flag, this.ports.discounts) : 0;
+    return bandPrice(list, VENDORS[vendorId].track ? this.ports.band(vendorId) : null, off);
   }
 
   /** What the vendor sells right now: lines whose band is reached and whose item is registered. */

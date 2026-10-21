@@ -33,6 +33,9 @@ function nonNegative(v: number | undefined, name: string): number {
   return n;
 }
 
+/** v0.6 (actors-and-damage.md section 11): where a foe stands in its mercy, for the ally-hit rules. */
+export type MercyState = 'none' | 'yielding' | 'staggered' | 'calming' | 'releasing' | 'leaving';
+
 /**
  * Health, poise, stamina and identity of anything that fights or can be hit
  * (contracts/actors-and-damage.md section 1). Only DamageResolver changes health and `dead`.
@@ -56,6 +59,8 @@ export class Actor {
   root: THREE.Object3D | null;
   /** I-frames: damage requests resolve as 'immune'. */
   invulnerable = false;
+  /** v0.6: set by the enemy and boss code; absent reads as 'none'. */
+  mercyState?: () => MercyState;
   /** Per-thread scratch keyed by namespace, e.g. data['enemies']. */
   readonly data: Record<string, unknown> = {};
   /** @internal set by DamageResolver */

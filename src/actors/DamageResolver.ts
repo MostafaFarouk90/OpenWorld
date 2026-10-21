@@ -1,6 +1,6 @@
 import type * as THREE from 'three';
 import type { GameEvents } from '../core/events';
-import type { Actor, ActorId } from './Actor';
+import type { Actor, ActorId, MercyState } from './Actor';
 import type { ActorRegistry } from './ActorRegistry';
 import type { StatusKind } from './status';
 import { canDamage } from './teams';
@@ -34,6 +34,11 @@ export interface DamageRequest {
    * no `'parried'` outcome and no stagger on the attacker. Omitted means parryable.
    */
   parryable?: false;
+  /**
+   * v0.6: on outcome 'hit' the resolver emits `actor.pulled { actorId, fromId, distance }`; the player's combat verbs
+   * and the enemy mover apply a forced move of at most `distance` toward the attacker over PULL_SECONDS.
+   */
+  pull?: { distance: number };
 }
 
 /** Modifier order bands (contracts/actors-and-damage.md section 4). */
@@ -73,6 +78,19 @@ interface Ordered<F> {
   seq: number;
 }
 
+/** Mercy states in which an ally's hit is dropped. `staggered` is held at 1 HP instead (ALLY_STAGGER_FLOOR_ID). */
+const ALLY_HOLDS: ReadonlySet<MercyState> = new Set(['yielding', 'calming', 'releasing', 'leaving']);
+/** The built-in lethal handler that keeps a staggered foe alive under an ally's hit (the player decides its mercy). */
+export const ALLY_STAGGER_FLOOR_ID = 'core.ally-stagger-floor';
+
+export function mercyStateOf(a: Actor): MercyState {
+  try {
+    return a.mercyState?.() ?? 'none';
+  } catch {
+    return 'none';
+  }
+}
+
 function finiteOrZero(v: number): number {
   return Number.isFinite(v) && v > 0 ? v : 0;
 }
@@ -95,7 +113,19 @@ export class DamageResolver {
     private readonly actors: ActorRegistry,
     private readonly events: GameEvents,
     private readonly warn: (message: string, err?: unknown) => void = (m, e) => console.warn(m, e ?? ''),
-  ) {}
+  ) {
+    // First of all lethal handlers: an ally's hit on a staggered foe lands but leaves it at 1 HP.
+    this.addLethalHandler(
+      ALLY_STAGGER_FLOOR_ID,
+      (target, r) => {
+        const attacker = r.attackerId ? this.actors.get(r.attackerId) : undefined;
+        if (attacker?.team !== 'ally' || mercyStateOf(target) !== 'staggered') return false;
+        target.health = Math.min(1, target.maxHealth);
+        return true;
+      },
+      Number.MIN_SAFE_INTEGER,
+    );
+  }
 
   addModifier(id: string, fn: DamageModifier, order = 0): () => void {
     return this.insert(this.modifiers, id, fn, order, 'modifier');
@@ -135,6 +165,9 @@ export class DamageResolver {
     const attacker = input.attackerId ? this.actors.get(input.attackerId) ?? null : null;
     if (!target.hittable && !raw) return null;
     if (attacker && !canDamage(attacker.team, target.team)) return null;
+    // v0.6 core rule (not a modifier, so nothing reorders it): an ally never hits a foe that is yielding, being calmed,
+    // being released or leaving, status ticks included. No events.
+    if (attacker?.team === 'ally' && ALLY_HOLDS.has(mercyStateOf(target))) return null;
 
     const req: ModifiableRequest = { ...input, poise: poiseIn, outcome: target.invulnerable && !raw ? 'immune' : 'hit' };
     // `raw` (scripted kills) skips i-frames and modifiers such as block.
@@ -197,11 +230,15 @@ export class DamageResolver {
     const staggered = poiseBefore > 0 && target.poise <= 0 && target.maxPoise > 0 && !killed;
 
     const result = this.result(req, dealt, poiseDealt, target, killed, saved, staggered);
+    const pullIn = req.pull?.distance;
+    const pulled =
+      req.outcome === 'hit' && input.attackerId && typeof pullIn === 'number' && Number.isFinite(pullIn) && pullIn > 0 ? pullIn : 0;
     const emitOwn = () => {
       this.events.emit('damage.dealt', result);
       if (saved) this.events.emit('actor.saved', { actorId: target.id, handlerId: savedBy, request: input });
       if (staggered) this.events.emit('actor.staggered', { actorId: target.id, byId: input.attackerId });
       if (killed) this.diedEvent(target, killerId);
+      else if (pulled) this.events.emit('actor.pulled', { actorId: target.id, fromId: input.attackerId!, distance: pulled });
     };
     if (this.depth > 1) {
       this.nested.push(emitOwn); // inside another hit: delivered after its events

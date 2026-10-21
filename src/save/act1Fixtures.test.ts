@@ -100,6 +100,8 @@ describe('the ending across a load', () => {
     await load(await readAct1Fixture(ACT1_FIXTURES.endingCard));
     expect(flag('story.gate.a2')).toBe(true);
     expect(flag('codex.actEndingSeen')).toBe(true);
+    // v0.6 alias (WorldState.load): the legacy key also loads as the per-act key.
+    expect(flag('codex.actEnding.a1.seen')).toBe(true);
     expect(flag('story.d02.campSeen')).toBeUndefined();
     const dialogue = h!.ctx.services.require('dialogue');
     for (let i = 0; i < 60 && !dialogue.active; i++) {
@@ -116,6 +118,21 @@ describe('the ending across a load', () => {
     expect(dialogue.active).toBe(false);
   }, 60_000);
 
+  it('a v0.6 save with only codex.actEnding.a1.seen (synthetic): no card, the camp starts', async () => {
+    const f = await readAct1Fixture(ACT1_FIXTURES.endingCard);
+    const ws = (f.entries as Record<string, { data: { flags: Record<string, unknown> } }>)['world-state'];
+    delete ws.data.flags['codex.actEndingSeen'];
+    ws.data.flags['codex.actEnding.a1.seen'] = true;
+    await load(f);
+    const dialogue = h!.ctx.services.require('dialogue');
+    for (let i = 0; i < 60 && !dialogue.active; i++) {
+      frames(1);
+      expect(cardActive()).toBe(false);
+    }
+    expect(dialogue.active).toBe(true);
+    expect(h!.of('act.ended')).toEqual([]);
+  }, 60_000);
+
   it('a save with the gate set before the card showed (synthetic: act1-ending-card without codex.actEndingSeen): the card first, the camp after its close', async () => {
     // D02's hand-in is a dialogue (a modal), so the card waits; the dialogue.ended save can land before it shows.
     const f = await readAct1Fixture(ACT1_FIXTURES.endingCard);
@@ -128,6 +145,7 @@ describe('the ending across a load', () => {
     expect(dialogue.active).toBe(false);
     expect(h!.of('act.ended')).toEqual([]);
     expect(flag('codex.actEndingSeen')).toBe(true);
+    expect(flag('codex.actEnding.a1.seen')).toBe(true);
     // The card's close (no key target headless: the service closes it as its key would).
     expect(h!.of('hud.actEnding.closed')).toEqual([]);
     h!.ctx.services.require('actEndingCard').dismiss();

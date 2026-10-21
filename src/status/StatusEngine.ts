@@ -24,7 +24,7 @@ interface Entry extends StatusEntry {
   playerSourced: boolean;
 }
 
-const KINDS: readonly StatusKind[] = ['bleed', 'ignite', 'stun', 'slow'];
+const KINDS: readonly StatusKind[] = ['bleed', 'ignite', 'stun', 'slow', 'root'];
 
 /**
  * Pure bookkeeping for status effects: validation, refresh, strongest-wins, ticks and expiry. It owns no
@@ -97,7 +97,7 @@ export class StatusEngine {
     return (this.entries.get(actorId) ?? []).map((e) => ({ id: e.id, kind: e.kind, remaining: e.remaining, sourceId: e.sourceId }));
   }
 
-  /** The strongest stun and slow in effect on the actor. */
+  /** The strongest stun and slow in effect on the actor, and whether any root is (roots only differ in length). */
   view(actorId: ActorId): ActorStatusView {
     const view: ActorStatusView = { stunned: false, stunRemaining: 0, slow: 0 };
     for (const e of this.entries.get(actorId) ?? []) {
@@ -105,6 +105,7 @@ export class StatusEngine {
         view.stunned = true;
         view.stunRemaining = Math.max(view.stunRemaining, e.remaining);
       } else if (e.kind === 'slow') view.slow = Math.max(view.slow, e.slow);
+      else if (e.kind === 'root') view.rooted = true;
     }
     return view;
   }
