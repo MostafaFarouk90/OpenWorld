@@ -4,6 +4,8 @@ export const BELLOWS = {
   puzzleId: 'weeping-bellows',
   shrineId: 'weeping-bellows',
   centerAnchor: 'mines.weeping-bellows.center',
+  /** The `?bellows=1` stand-in centre (dev only). */
+  devCenterAnchor: 'mines.weeping-bellows.dev-center',
   /** The waystone anchor is A4's (the Deepgate Shaft head); the lock in WAYSTONE_LOCKS keeps it dark until solved. */
   waystoneId: 'weeping-bellows',
   solvedFlag: 'world.bellows.solved',

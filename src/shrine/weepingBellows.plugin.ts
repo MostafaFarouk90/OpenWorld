@@ -135,8 +135,9 @@ const weepingBellowsPlugin: GamePlugin = {
       if (!c && devHook) {
         // ?bellows=1: a stand-in cavern centre, defined once and owned by this plugin.
         const stone = ctx.anchors.find(`waystone.${B.waystoneId}`)?.position;
-        offs.push(ctx.anchors.define({ id: B.centerAnchor, position: devBellowsCenter(stone, ctx.player.feet), yaw: 0 }));
-        c = ctx.anchors.find(B.centerAnchor);
+        // Under its own id, so A4's real anchor can still be defined later without a duplicate throw.
+        offs.push(ctx.anchors.define({ id: B.devCenterAnchor, position: devBellowsCenter(stone, ctx.player.feet), yaw: 0 }));
+        c = ctx.anchors.find(B.devCenterAnchor);
       }
       if (!c) return;
       placed = true;
@@ -163,6 +164,7 @@ const weepingBellowsPlugin: GamePlugin = {
           onInteract: () => {
             ctx.state.setFlag(B.plaqueFlag, true);
             toast('bellows.plaque.read', { marks: B.plaque.map((p) => p + 1).join(' '), order: B.order.map((i) => i + 1).join(' ') });
+            toast('bellows.pike.hint');
           },
         }),
       );

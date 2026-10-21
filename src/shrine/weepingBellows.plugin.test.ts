@@ -239,14 +239,29 @@ describe('Weeping Bellows plugin', () => {
     expect(t.ctx.services.require('waystones').isLit('weeping-bellows')).toBe(true);
   });
 
-  it('a solved puzzle re-derives on load: valves at the plaque and locked, shrine and W lit', async () => {
+  it('a solved puzzle re-derives on load: valves at the plaque and locked, even from mid-puzzle, and a save without it clears it', async () => {
     const t = await boot();
     t.run(2);
+    wheel(t, 1).onInteract(player(t)); // mid-puzzle when the load arrives
     t.ctx.state.setFlag('world.bellows.solved', true);
     t.ctx.events.emit('save.loaded', {} as never);
     expect(positionOf(t, 1)).toBe(PLAQUE[0]);
     expect(wheel(t, 1).enabled?.()).toBe(false);
     expect(t.ctx.services.require('puzzles').pressure('weeping-bellows')).toBeNull();
+    t.ctx.state.setFlag('world.bellows.solved', false);
+    t.ctx.events.emit('save.loaded', {} as never);
+    expect(positionOf(t, 1)).toBe(initialRouting()[0]);
+    expect(wheel(t, 1).enabled?.()).toBe(true);
+  });
+
+  it('a save with the shrine flag lit and the puzzle solved keeps W at 2 with the Quenchstone', async () => {
+    const t = await boot();
+    t.run(2);
+    t.ctx.state.setFlag('shrine.quenchstone.lit', true);
+    t.ctx.state.setFlag('world.bellows.solved', true);
+    t.ctx.state.setFlag('shrine.weeping-bellows.lit', true);
+    t.ctx.events.emit('save.loaded', {} as never);
+    expect(t.ctx.services.require('warmth').tier()).toBe(2);
   });
 
   it('only the player counts: another actor dying does not reset the puzzle', async () => {
@@ -279,6 +294,15 @@ describe('Bellows Blessing', () => {
     expect(fire).toBeCloseTo(17, 5);
     expect(ignite).toBeCloseTo(17, 5);
     expect(other).toBeCloseTo(20, 5);
+  });
+
+  it('does not touch fire damage to anyone but the player', async () => {
+    const t = await boot();
+    t.run(2);
+    solveBlessing(t);
+    const foe = t.ctx.actors.spawn({ kind: 'wraith', team: 'hostile', maxHealth: 100, maxPoise: 20 });
+    expect(hit(t, { element: 'fire' }, 20, foe.id)).toBeCloseTo(20, 5);
+    expect(hit(t, { kind: 'status', statusKind: 'ignite', statusId: 's' }, 20, foe.id)).toBeCloseTo(20, 5);
   });
 
   it('expires after 30 minutes and persists', async () => {
@@ -333,12 +357,13 @@ describe('?bellows=1 dev hook', () => {
     vi.stubGlobal('location', { search: '?bellows=1' });
     const t = await boot({ center: false });
     t.run(3);
-    expect(t.ctx.anchors.find('mines.weeping-bellows.center')).toBeDefined();
+    expect(t.ctx.anchors.find('mines.weeping-bellows.dev-center')).toBeDefined();
+    // A4's real anchor can still be defined afterwards.
+    expect(() => t.ctx.anchors.define({ id: 'mines.weeping-bellows.center', position: CENTER, yaw: 0 })).not.toThrow();
     wheel(t, 1).onInteract(player(t));
     expect(t.ctx.services.require('puzzles').pressure('weeping-bellows')).not.toBeNull();
     const c = await boot({ center: true });
     c.run(3);
-    const a = c.ctx.anchors.find('mines.weeping-bellows.center')!;
-    expect(a.position).toEqual(CENTER);
+    expect(c.ctx.anchors.find('mines.weeping-bellows.dev-center')).toBeUndefined();
   });
 });
