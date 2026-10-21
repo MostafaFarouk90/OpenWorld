@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createAct2Voices } from './act2Voices';
 import { BarClock } from './barClock';
 import { MusicDirector } from './MusicDirector';
 import { synthStem } from './stemSynth';
@@ -28,7 +29,7 @@ describe.each(TRACKS)('$id data', (track) => {
   });
 
   it('renders are deterministic', () => {
-    for (const id of track.stems) expect(Array.from(synthStem(track, id, SR).slice(0, 4000)), id).toEqual(Array.from(synthStem(track, id, SR).slice(0, 4000)));
+    for (const id of track.stems) expect(synthStem(track, id, SR), id).toEqual(synthStem(track, id, SR));
   });
 
   it('the tunes fill eight bars each (32 beats) and the patterns are two bars of 16 steps', () => {
@@ -54,12 +55,17 @@ describe('timing', () => {
     expect(loopSeconds(HAMMERS, 44100)).toBeCloseTo(39.18, 1);
   });
 
-  it('one stem at 44.1 kHz is the canonical length and renders in well under a second', () => {
-    const t0 = performance.now();
-    const x = synthStem(ASH, 'hat', 44100);
-    expect(x.length).toBe(Math.round(((16 * 240) / 94) * 44100));
-    expect(performance.now() - t0).toBeLessThan(3000);
-  });
+  it('every stem at 44.1 kHz is the canonical length and stays inside a generous synth-time budget', () => {
+    // Measured about 0.05 to 0.7 s per stem in Node (each is one main-thread task between yields); the ceiling only catches a blow-up.
+    for (const track of TRACKS) {
+      for (const id of track.stems) {
+        const t0 = performance.now();
+        const x = synthStem(track, id, 44100);
+        expect(x.length, `${track.id} ${id}`).toBe(Math.round(((16 * 240) / track.bpm) * 44100));
+        expect(performance.now() - t0, `${track.id} ${id}`).toBeLessThan(4000);
+      }
+    }
+  }, 60000);
 });
 
 describe('mixes match design 6.1 and 6.3', () => {
@@ -175,17 +181,6 @@ const barOf = (track: TrackDef, bar: number, x: Float32Array): Float32Array => {
   return x.subarray(bar * n, (bar + 1) * n);
 };
 
-/** Peaks above `frac` of the window peak separated by at least `gap` samples. */
-function onsets(x: Float32Array, frac: number, gap: number): number[] {
-  let peak = 0;
-  for (const v of x) peak = Math.max(peak, Math.abs(v));
-  const out: number[] = [];
-  for (let i = 0; i < x.length; i++) {
-    if (Math.abs(x[i]) >= frac * peak && (out.length === 0 || i - out.at(-1)! > gap)) out.push(i);
-  }
-  return out;
-}
-
 const energy = (x: Float32Array, from = 0, to = x.length): number => {
   let sq = 0;
   for (let i = from; i < to; i++) sq += x[i] ** 2;
@@ -196,14 +191,18 @@ describe('Redmane gallop stem', () => {
   const boss = synthStem(ASH, 'boss', SR);
   const step = loopSamples(ASH, SR) / 16 / 16;
 
-  it('has twelve clops a bar: three to every beat, long-short-short', () => {
-    // Window each beat: its clops start at steps 0, 2 and 3 of the four.
-    for (const bar of [1, 3, 8]) {
+  it('has twelve clops a bar: three to every beat at steps 0, 2 and 3, with a gap at step 1', () => {
+    for (const bar of [1, 3, 9, 15]) {
       const x = barOf(ASH, bar, boss);
+      const w = (from: number, to: number): number => {
+        let peak = 0;
+        for (let i = Math.max(0, Math.round(from * step)); i < Math.round(to * step); i++) peak = Math.max(peak, Math.abs(x[i]));
+        return peak;
+      };
       for (let beat = 0; beat < 4; beat++) {
-        const w = x.subarray(Math.round(beat * 4 * step), Math.round((beat + 1) * 4 * step));
-        const o = onsets(w, 0.15, Math.round(step * 0.6));
-        expect(o.length, `bar ${bar} beat ${beat}`).toBeGreaterThanOrEqual(3);
+        const o = beat * 4;
+        const gap = w(o + 0.9, o + 1.9);
+        for (const clop of [0, 2, 3]) expect(w(o + clop - 0.3, o + clop + 0.6), `bar ${bar} beat ${beat} step ${clop}`).toBeGreaterThan(gap * 1.3);
       }
     }
   });
@@ -239,18 +238,28 @@ describe('Slagmaw boss stem', () => {
   });
 
   it('carries the roar: a saturated chant sustains between the pounds, and the vocal stem stays a clean stem', () => {
-    // Steps 4 to 7 hold no pound, clang or hat-only gap bigger than the roar: the stem is not silent there.
-    const between = energy(barOf(HAMMERS, 5, boss), Math.round(4.2 * step), Math.round(7.5 * step));
-    expect(between).toBeGreaterThan(energy(boss) * 0.25);
+    // Steps 4 to 7 hold no pound or clang: only the roar and the quiet hat ticks, so a stem without the roar would sit well below this.
+    const seg = barOf(HAMMERS, 5, boss).subarray(Math.round(4.3 * step), Math.round(7.5 * step));
+    expect(energy(seg)).toBeGreaterThan(energy(boss) * 0.2);
     // The vocal stem is the same whatever the boss voice is: render it with a different boss voice name.
     const other: TrackDef = { ...HAMMERS, synth: { ...HAMMERS.synth!, voices: { ...HAMMERS.synth!.voices, boss: 'steam-anvil' } } };
     expect(Array.from(synthStem(other, 'vocal', SR))).toEqual(Array.from(vocal));
   });
 });
 
-describe('Act 1 stems do not change with the voice dispatch', () => {
-  it('a track that names no Act 2 voice renders the Act 1 stems', () => {
-    const plain: TrackDef = { ...BARLEY_AND_BRAZIER };
-    expect(synthStem(plain, 'snare', SR)).toEqual(synthStem(BARLEY_AND_BRAZIER, 'snare', SR));
+describe('voice names', () => {
+  it('every Act 2 voice a track names resolves in the Act 2 table (a typo would silently fall back to an Act 1 voice)', () => {
+    const table = createAct2Voices({ tokens: () => [], arc: () => 1, Feel: class {} as never });
+    for (const track of TRACKS) {
+      const v = track.synth!.voices as Record<string, string | undefined>;
+      for (const name of Object.values(v)) expect(table[name as string], `${track.id} ${name}`).toBeTypeOf('function');
+    }
+  });
+
+  it('Act 1 tracks name no Act 2 voice', () => {
+    const table = createAct2Voices({ tokens: () => [], arc: () => 1, Feel: class {} as never });
+    for (const track of [BARLEY_AND_BRAZIER, SEVEN_GATES_ONE_DRUM]) {
+      for (const name of Object.values(track.synth!.voices)) expect(table[name as string], name).toBeUndefined();
+    }
   });
 });

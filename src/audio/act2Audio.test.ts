@@ -49,7 +49,7 @@ describe('Act 2 beds', () => {
     const a = makeBedSamples(id, sr);
     const b = makeBedSamples(id, sr);
     expect(a.length).toBe(Math.round((id === 'cinderreach' ? 25 : 27) * sr));
-    expect(Array.from(a.slice(0, 2000))).toEqual(Array.from(b.slice(0, 2000)));
+    expect(a).toEqual(b);
     let peak = 0;
     let maxStep = 0;
     for (let i = 0; i < a.length; i++) {
