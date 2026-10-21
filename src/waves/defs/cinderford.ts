@@ -50,8 +50,8 @@ export const CINDERFORD_RAID: WaveSetDef = {
         { lane: '1', kind: 'blighted-soldier', count: 3, delay: 0, stagger: 2 },
         { lane: '3', kind: 'ash-wraith', count: 3, delay: 3, stagger: 1.5 },
         { lane: '2', kind: 'ember-hound', count: 2, delay: 8, stagger: 1.5 },
-        // TODO(A7 rebase): ember-wyrm once A6a merges
-        { lane: 'wyrm', kind: 'ember-hound', count: 1, delay: 20, stagger: 0 },
+        // The Ember Wyrm closer (A6a).
+        { lane: 'wyrm', kind: 'ember-wyrm', count: 1, delay: 20, stagger: 0 },
       ],
       carts: [{ lane: '1', delay: 6 }],
     },
