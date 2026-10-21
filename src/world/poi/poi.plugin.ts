@@ -67,7 +67,7 @@ export function spurCorridorFor(p: PoiPlacement, radius: number) {
   return {
     id: `corridor.poi.a2.${p.site.id}`,
     points: [[r.x, r.z], [pose.x, pose.z]] as [number, number][],
-    halfWidth: radius + 6,
+    halfWidth: radius + 10,
     openWhen: p.road === 'oldsmoke-pass' ? REGION_INFO.oldsmoke.openWhen : REGION_INFO.cinderreach.openWhen,
   };
 }
@@ -170,7 +170,9 @@ export function createPoiPlugin(opts: PoiPluginOptions = {}): GamePlugin {
           on('loot.granted', (e: { sourceId?: string }) => {
             const gold = e?.sourceId ? ACT2_POI_GOLD[e.sourceId] : undefined;
             if (!gold) return;
-            svc('inventory')?.addGold?.(gold);
+            const inv = svc('inventory');
+            if (!inv?.addGold) return;
+            inv.addGold(gold);
             toast(ctx.strings.t('economy.gold.found', { gold }));
           }),
         );
@@ -201,6 +203,7 @@ export function createPoiPlugin(opts: PoiPluginOptions = {}): GamePlugin {
         cleanups.push(() => {
           ctx.scene.remove(revealGroup);
         });
+        const glimmered = new Set<string>();
         const foxChests = FOXFIRE_CHESTS.map((f) => {
           const pos = foxChestPos(f);
           const id = foxChestId(f.n);
@@ -210,7 +213,11 @@ export function createPoiPlugin(opts: PoiPluginOptions = {}): GamePlugin {
               id,
               makeChest(id, pos.x, pos.z, lootFor('foxfire'), revealGroup),
               () => ctx.state.getBool(`chest.${id.slice(id.indexOf(':') + 1)}.opened`),
-              () => toast(ctx.strings.t('poi.a2.foxfire.glimmer')),
+              () => {
+                if (glimmered.has(id)) return;
+                glimmered.add(id);
+                toast(ctx.strings.t('poi.a2.foxfire.glimmer'));
+              },
             ),
           };
         });
@@ -227,7 +234,8 @@ export function createPoiPlugin(opts: PoiPluginOptions = {}): GamePlugin {
         };
         // A6b emits fox.cache when the fed fox reaches the cache; we own the flag (runtime guard: the type may not exist yet).
         cleanups.push(
-          on(FOX_CACHE_EVENT, () => {
+          on(FOX_CACHE_EVENT, (e: { foxId?: unknown } | null | undefined) => {
+            if (typeof e?.foxId !== 'string' || e.foxId === '') return;
             if (!ctx.state.getBool(FOX_CACHE_FLAG)) ctx.state.setFlag(FOX_CACHE_FLAG, true);
             syncReveal();
           }),
@@ -336,10 +344,8 @@ export function createPoiPlugin(opts: PoiPluginOptions = {}): GamePlugin {
               structures.dispose();
               for (const p of procs) disposeProc(p);
               root.removeFromParent();
-              root.traverse((o) => {
-                const mesh = o as THREE.Mesh;
-                if (mesh.isMesh && (o.parent as THREE.Object3D | null)?.type !== 'InstancedMesh') mesh.geometry?.dispose?.();
-              });
+              // Model geometry belongs to the library; only the instance buffers are ours.
+              root.traverse((o) => (o as THREE.InstancedMesh).isInstancedMesh && (o as THREE.InstancedMesh).dispose());
             },
           };
           c.building = false;

@@ -156,7 +156,6 @@ function hunterPen(id: string, p: PoiParams): PoiPiece {
     const t = (i / 12) * Math.PI * 2;
     a.parts.push(part('hex/fence_wood_straight', Math.cos(t) * 7, Math.sin(t) * 7, (t * 180) / Math.PI + 90, 1));
   }
-  a.structures.push({ id: `poi-a2-${id}-pen`, kind: 'poi-pen', x: 0, z: 0, yawDeg: 0, footprint: [14, 14], mode: 'open', height: 1.6 });
   for (let i = 0; i < cages; i++) a.parts.push(part('proc:cage', -3 + i * 3, 0, 0, 1));
   for (const t of ring(rng, 3, 3, 5)) a.parts.push(part('proc:net', t.x, t.z, t.yaw, 1));
   a.parts.push(part('hex/tent', 0, 10, 180, 1), part('hex/flag_red', -8, 9, 0, 1), part('hex/weaponrack', 8, 9, 90, 1));
@@ -187,7 +186,7 @@ export const TEMPLATE_BUILDERS: Record<PoiTemplate, (id: string, p: PoiParams) =
 };
 
 /** Every structure kind the templates use that is not a built-in (registered by registerPoiKinds). */
-export const POI_STRUCTURE_KINDS = ['poi-cave-mouth', 'poi-ruin-wall', 'poi-pen', 'poi-lookout'] as const;
+export const POI_STRUCTURE_KINDS = ['poi-cave-mouth', 'poi-ruin-wall', 'poi-lookout'] as const;
 
 export function buildPiece(id: string, template: PoiTemplate, params: PoiParams = {}): PoiPiece {
   if (!/^[a-z0-9-]+$/.test(id)) throw new Error(`poi: bad site id "${id}"`);

@@ -46,9 +46,8 @@ export function placePiece(site: PoiSite, pose: PoiPose): PlacedPoi {
   });
   const structures: StructureSpec[] = piece.structures.map((s) => {
     const w = toWorld(pose, s.x, s.z);
-    // Axis-aligned solids keep their footprint: a quarter turn swaps its sides, other angles are not used for solids.
-    const quarter = Math.round(pose.yawDeg / 90) % 2 !== 0;
-    return { ...s, x: w.x, z: w.z, yawDeg: s.yawDeg + pose.yawDeg, footprint: quarter ? [s.footprint[1], s.footprint[0]] : s.footprint };
+    // The footprint stays in the structure's own frame; the builder rotates the collider by yawDeg.
+    return { ...s, x: w.x, z: w.z, yawDeg: s.yawDeg + pose.yawDeg };
   });
   const triggers: TriggerSpec[] = [
     // Discovery: stepping within 25 m of the main anchor.
