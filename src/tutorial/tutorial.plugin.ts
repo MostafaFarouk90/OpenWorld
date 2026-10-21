@@ -1,3 +1,4 @@
+import { CombatForgiveness, lessonVerb, type LessonVerb } from './forgiveness';
 import * as THREE from 'three';
 import { PLAYER_ID } from '../actors/teams';
 import type { GameContext } from '../core/Game';
@@ -105,7 +106,7 @@ function shotToward(from: THREE.Vector3Like, to: { x: number; z: number }, pitch
 const doc = (): Document | null => (typeof document === 'undefined' ? null : document);
 
 /** Normalises the merged plugins' bus events into the director's events. */
-function routeEvents(ctx: GameContext, send: (e: DirectorEvent) => void): void {
+function routeEvents(ctx: GameContext, send: (e: DirectorEvent) => void, lesson: () => LessonVerb | null, forgiveness: CombatForgiveness): void {
   const ev = ctx.events;
   const loose = <P>(type: string, fn: (p: P) => void) =>
     (ev as unknown as { on(t: string, f: (p: P) => void): () => void }).on(type, fn);
@@ -123,6 +124,12 @@ function routeEvents(ctx: GameContext, send: (e: DirectorEvent) => void): void {
   ev.on('player.parried', () => send({ type: 'blocked' }));
   ev.on('player.dodged', () => send({ type: 'dodged' }));
   ev.on('damage.dealt', (r) => {
+    // Block and dodge lessons: a hit that got through a player who tried still counts (see forgiveness.ts).
+    if (r.targetId === PLAYER_ID && r.outcome === 'hit' && r.kind !== 'status' && ctx.actors.get(r.attackerId ?? '')?.team === 'hostile') {
+      const verb = lesson();
+      const credit = verb ? forgiveness.onHitTaken(ctx.clock.seconds, verb) : null;
+      if (credit) send({ type: credit });
+    }
     if (r.attackerId !== PLAYER_ID || r.dealt <= 0) return;
     const i = r.attackId ? ATTACK_SLOTS.indexOf(r.attackId) : -1;
     send({ type: 'hit', slot: (i >= 0 ? i + 1 : 0) as 0 | 1 | 2 | 3 | 4, targetId: r.targetId, killed: r.killed });
@@ -411,7 +418,14 @@ const tutorial: GamePlugin = {
       createGoal,
     });
     directorRef = director;
-    routeEvents(ctx, (e) => director.onEvent(e));
+    const forgiveness = new CombatForgiveness();
+    routeEvents(ctx, (e) => director.onEvent(e), () => lessonVerb(director.beat, director.currentStep), forgiveness);
+    ctx.systems.add({
+      id: 'tutorial-forgiveness',
+      fixedPhase: 'input',
+      order: 110,
+      fixedUpdate: () => forgiveness.observe(ctx.clock.seconds, ctx.input.actions.pressed('dodge'), ctx.input.actions.down('block')),
+    });
     // A skipped beat's lines, and the last beat's once it ends, are about a beat that is over: drop them (the
     // `?act1=` jump skips T15 at once, which left Gaut's and Aelfreda's T15 lines up over Brightwater).
     ctx.events.on('tutorial.beat', (e) => {

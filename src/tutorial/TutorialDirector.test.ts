@@ -717,13 +717,12 @@ describe('failure: Second Wind then beat restart', () => {
     expect(last.healthScale).toBe(0.5);
     expect(w.health).toBe(1);
     expect(w.charges.at(-1)).toBe(1);
-    // The block earned before the failure is kept (review 21), so two more pass the step, and the
-    // tracker counted exactly three: it never goes backwards or double counts.
-    ev({ type: 'blocked' });
+    // The block earned before the failure is kept (review 21), so one more passes the step (it needs two), and the
+    // tracker counted exactly two: it never goes backwards or double counts.
     expect(d.currentStep).toBe(0);
     ev({ type: 'blocked' });
     expect(d.currentStep).toBe(1);
-    expect(w.goals.filter((g) => g === 't09.0')).toHaveLength(3);
+    expect(w.goals.filter((g) => g === 't09.0')).toHaveLength(2);
   });
 
   it('three lethal hits during the fade cause one restart', async () => {
@@ -1348,8 +1347,7 @@ describe('clarity review fixes', () => {
     tick();
     expect(w2.goals.filter((g) => g === 't09.0')).toHaveLength(1);
     ev({ type: 'blocked' });
-    ev({ type: 'blocked' });
-    expect(w2.goals.filter((g) => g === 't09.0')).toHaveLength(3);
+    expect(w2.goals.filter((g) => g === 't09.0')).toHaveLength(2);
   });
 
   it('a reload whose tracker already agrees sends nothing, and beats finish with one beatDone each', () => {
