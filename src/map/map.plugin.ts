@@ -4,7 +4,8 @@ import '../tutorial/service';
 import { heightAt } from '../terrain/heightfield';
 import '../waystones/service';
 import '../quests/service';
-import { createLeadSource, m05ObjectiveLead, type LeadMarker } from '../quests/leads';
+import { createLeadSource, killObjectiveLeads, m05ObjectiveLead, type LeadMarker } from '../quests/leads';
+import { KILL_FAILSAFE_QUESTS, currentKillTargets } from '../quests/killFailsafe';
 import '../shrine/service';
 import { FogGrid, buildMarkers, mapExtent, type MapMarker } from './MapModel';
 import { createMapSources } from './MapSources';
@@ -77,7 +78,21 @@ const map: GamePlugin = {
     const objectiveLeads = (): LeadMarker[] => {
       const quests = ctx.services.get('quests');
       if (!quests) return [];
-      return m05ObjectiveLead({
+      const kills = killObjectiveLeads({
+        targets: () => (ctx.state.getBool('tutorial.complete') ? currentKillTargets(quests, KILL_FAILSAFE_QUESTS) : []),
+        nearestLiving: (tag) => {
+          const f = ctx.player.feet;
+          let best: { x: number; z: number } | undefined;
+          let bestD = Infinity;
+          for (const a of ctx.actors.all()) {
+            if (a.dead || (a as { spawnTag?: string }).spawnTag !== tag || !a.root) continue;
+            const d = (a.root.position.x - f.x) ** 2 + (a.root.position.z - f.z) ** 2;
+            if (d < bestD) { bestD = d; best = { x: a.root.position.x, z: a.root.position.z }; }
+          }
+          return best;
+        },
+      });
+      return [...kills, ...m05ObjectiveLead({
         questState: (id) => quests.state(id),
         objectiveDone: (q, o) => quests.objectiveDone(q, o),
         nextWardstone: () => ctx.services.get('shrine')?.nextWardstone() ?? null,
@@ -88,7 +103,7 @@ const map: GamePlugin = {
           const root = aid ? ctx.actors.get(aid)?.root : undefined;
           return root ? { x: root.position.x, z: root.position.z } : ctx.services.get('npcs')?.position(id);
         },
-      });
+      })];
     };
 
     // Terrain bitmaps are rendered in time-boxed slices, one slice per frame.

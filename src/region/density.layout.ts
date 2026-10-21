@@ -99,10 +99,10 @@ const anchors: AnchorSpec[] = [
 ];
 
 const triggers: TriggerSpec[] = [
-  { id: 'm01.tavern-door', shape: 'sphere', x: -15.5, z: 133, radius: 3 },
-  { id: 'm02.bakery-door', shape: 'sphere', x: 17.6, z: 132.2, radius: 1.5 },
-  { id: 'm02.granary', shape: 'sphere', x: -35.5, z: 145, radius: 4 },
-  { id: 'r01.stubble', shape: 'sphere', x: 30, z: 38, radius: 3 },
+  { id: 'm01.tavern-door', shape: 'sphere', x: -15.5, z: 133, radius: 5 },
+  { id: 'm02.bakery-door', shape: 'sphere', x: 17.6, z: 132.2, radius: 3 },
+  { id: 'm02.granary', shape: 'sphere', x: -35.5, z: 145, radius: 5.5 },
+  { id: 'r01.stubble', shape: 'sphere', x: 30, z: 38, radius: 5 },
 ];
 
 const structures: StructureSpec[] = [
