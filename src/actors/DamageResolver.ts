@@ -39,6 +39,11 @@ export interface DamageRequest {
    * and the enemy mover apply a forced move of at most `distance` toward the attacker over PULL_SECONDS.
    */
   pull?: { distance: number };
+  /**
+   * v0.6 (A9): `'fire'` marks wyrm breath, lava and similar so fire resistance (the Bellows Blessing) can reduce it.
+   * Ignite status ticks count as fire without the tag.
+   */
+  element?: 'fire';
 }
 
 /** Modifier order bands (contracts/actors-and-damage.md section 4). */

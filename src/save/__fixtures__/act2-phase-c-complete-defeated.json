@@ -2,7 +2,7 @@
   "format": 1,
   "savedAt": 1767225600000,
   "reason": "manual",
-  "playtimeSeconds": 311,
+  "playtimeSeconds": 426,
   "entries": {
     "world-state": {
       "version": 1,
@@ -1010,7 +1010,7 @@
     "progression": {
       "version": 2,
       "data": {
-        "xp": 14622,
+        "xp": 14462,
         "storyPoints": 1,
         "learned": [],
         "bar": [
@@ -1039,7 +1039,7 @@
     "player": {
       "version": 1,
       "data": {
-        "health": 187,
+        "health": 194,
         "stamina": 100,
         "lastRestedWaystoneId": "chapel",
         "goldPouch": null
@@ -1048,7 +1048,7 @@
     "burn": {
       "version": 1,
       "data": {
-        "burn": 61.06666666669298,
+        "burn": 55.54333333336467,
         "scars": 0
       }
     },
@@ -1433,7 +1433,7 @@
     "map": {
       "version": 2,
       "data": {
-        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAfQAAAF8ANAQwAPg/x8AOn6A//8DADngB/j/PwA6frz//wMAOeDj//8/ADoc///fAQA68A8APf8APfAPAD3/AD3gBwA9PAD8B2AAPYAfAD38AQA84B8APf8BADzwDwA9PoYAO+Dh8T4AO36A/wMAOvAP+H8AO/+A/wMAOuAf8D8AO/wD+AEAOoA/AAEPADvwB2AAPH+AADzgAzwAPBjgBwA9fgA94AcAPT4APcABAAueAwA88H0APID/DwAQPAAr/P8AEOAHACrg3wcAEP4AK/44ABDgHwAeBgALwAcAEf4BAB3wAAw8ABHwDwAdgB8AGyAAAv8AHvgBABqADwAB8A8AHYAfABv4AQAB/wAe+AEAFB4ABcAfAAHgDwAeBgAU4AMABfgBAAH8ADPAPwAFgB8AAcAHADP+AwAF8AA24H8APf4PADzg/wA93A8APXwAPgMA4wgCAD38ADwe4A8AO/AD/gEAOz/gHwA78AP8AwA7P4B/ADvgAeAHAD0+AD3AAwCEARwAPeADADwcPwA84PMDADw/PwA88OMDADw/HAA8+AMAPIA/AD34AQA9DwA9YADkcw=="
+        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAfQAAAF8ANAQwAPg/x8AOn6A//8DADngB/j/PwA6frz//wMAOeDj//8/ADoc///fAQA68A8APf8APfAPAD3/AD3gBwA9PAD8B2AAPYAfAD38AQA84B8APf8BADzwDwA9PoYAO+Dh8T4AO36A/wMAOvAP+H8AO/+A/wMAOuAf8D8AO/wD+AEAOoA/AAEPADvwB2AAPH+AADzgAzwAPBjgBwA9fgA94AcAPT4APcABAAueAwA88H0APID/DwAQPAAr/P8AEOAHACrg3wcAEP4AK/44ABDgHwAeBgALwAcAEf4BAB3wAAw8ABHwDwAdgB8AHv8AHvgBABsPAAHwDwAdgB8AG/gBAAH/AB74AQAUHgAFgB8AAeAPAB4GABTgAwAF+AEAAfwAM8A/AAYfAAHABwAz/gcABfAANuD/AAXAAwA2/g8ABX4ANuD/AAXgBwA23A8ABX4AN/wABeADADaAAwAFCACbCXgAPB7ADwA78AP8ADw/wD8AO/AD/AMAOz+AfwA74AHgBwA9PgA9wAEAhAEcAD3gAwA8DD8APODzAwA8Pz8APPjjAwA7gD8cADz4AwA9PwA94AEAPQwAonQ="
       }
     },
     "mount": {
@@ -1499,6 +1499,10 @@
         "kitGranted": true,
         "complete": true
       }
+    },
+    "shrine.bellowsBlessing": {
+      "version": 1,
+      "data": null
     },
     "player-position": {
       "version": 1,

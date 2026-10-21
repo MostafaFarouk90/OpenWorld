@@ -2,7 +2,7 @@
   "fixture": "act2-m14-hushed-anvil.json",
   "what": "Act 2 run A: M14 active, the Hushed Anvil rekindled; murals, keeper and tempering ahead",
   "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/fixtures.gen.test.ts",
-  "generatingCommit": "3305611f40e129d7cddbd587deb2d8933136c40a",
+  "generatingCommit": "19fe5c10371cd2bc78ae7272b432bf7abd317547",
   "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving",
   "playtimeSeconds": "rounded to whole seconds",
   "source": "the real save plugin (saveNow(\"manual\")), read back from the fake IndexedDB slot-0"
