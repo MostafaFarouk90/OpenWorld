@@ -80,11 +80,13 @@ const hushedAnvilPlugin: GamePlugin = {
       const s = site.position;
       const at = (o: { x: number; z: number }) => ({ x: s.x + o.x, y: s.y, z: s.z + o.z });
       if (!ctx.anchors.find(H.waystoneAnchor)) {
-        ctx.anchors.define({ id: H.waystoneAnchor, position: at(H.waystoneOffset), yaw: 0, tags: ['waystone'] });
+        offs.push(ctx.anchors.define({ id: H.waystoneAnchor, position: at(H.waystoneOffset), yaw: 0, tags: ['waystone'] }));
       }
       const stationPos = at(H.stationOffset);
       const murals = H.muralOffsets.map(at);
       visuals.build(s, stationPos, murals);
+      // A load that ran before the anchors existed saw the waystone as unlit.
+      binding.sync();
       offs.push(
         ctx.interaction.register({
           id: 'use:hushed-anvil-station',

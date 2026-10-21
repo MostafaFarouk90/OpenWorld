@@ -22,9 +22,8 @@ export class HushedAnvilVisuals {
 
   constructor() {
     this.root.name = 'hushed-anvil';
-    this.lantern = new THREE.PointLight(H.lantern.color, H.lantern.unlit, H.lantern.distance);
+    this.lantern = new THREE.PointLight(H.lantern.color, 0, H.lantern.distance);
     this.root.add(this.lantern);
-    this.root.visible = false;
   }
 
   get hasSite(): boolean {
@@ -60,7 +59,7 @@ export class HushedAnvilVisuals {
       s.name = `hushed-anvil-mural-${i + 1}`;
       this.root.add(s);
     });
-    this.root.visible = true;
+    this.apply(0);
   }
 
   setLit(on: boolean): void {
@@ -75,7 +74,8 @@ export class HushedAnvilVisuals {
   }
 
   private apply(flicker: number): void {
-    const base = this.lit ? H.lantern.lit : H.lantern.unlit;
+    // Until placed the light stays in the scene at intensity 0 (toggling visibility would recompile shaders).
+    const base = !this.built ? 0 : this.lit ? H.lantern.lit : H.lantern.unlit;
     this.lantern.intensity = base * (1 + flicker);
     this.lanternMat.emissiveIntensity = this.lit ? 1.6 : 0.3;
   }

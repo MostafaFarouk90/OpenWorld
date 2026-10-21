@@ -9,6 +9,7 @@ import { PUZZLE_STRINGS_EN } from './strings.en';
  * The shared puzzle services (A9). Puzzle state is never saved: leaving the room by dying, fast travel or a load
  * stops every pressure clock and tells the puzzle to reset, with no penalty.
  */
+/** Timers are ticked by the puzzle that owns them (the controller); this service only reads them, so there is one clock. */
 const puzzlesPlugin: GamePlugin = {
   id: 'puzzles',
   dependsOn: ['core'],

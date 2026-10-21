@@ -63,6 +63,7 @@ const kindlingDellPlugin: GamePlugin = {
       // A save with no entry must not keep the previous session's buff.
       if (!loaded) fox.load(null);
       loaded = false;
+      setFlag(FOX_FIRE.flag, fox.active());
       fox.announce();
     });
     ctx.services.provide('foxFire', {

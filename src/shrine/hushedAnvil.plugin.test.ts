@@ -153,6 +153,43 @@ describe('Hushed Anvil: rekindle and Warmth', () => {
   });
 });
 
+describe('Hushed Anvil: lights and degradation', () => {
+  const visibleLights = (t: Awaited<ReturnType<typeof boot>>) => {
+    let n = 0;
+    t.ctx.scene.traverse((o) => {
+      const l = o as THREE.PointLight;
+      if (!l.isPointLight) return;
+      for (let p: THREE.Object3D | null = l; p; p = p.parent) if (!p.visible) return;
+      n++;
+    });
+    return n;
+  };
+
+  it('the visible light count does not change when the site anchor appears, and the lantern is dim until then', async () => {
+    const t = await boot({ site: false });
+    t.run(3);
+    const before = visibleLights(t);
+    t.ctx.anchors.define({ id: 'cinderreach.hushed-anvil.site', position: SITE, yaw: 0 });
+    t.run(3);
+    expect(visibleLights(t)).toBe(before);
+  });
+
+  it('the Dell with no bed anchor or trigger degrades quietly', async () => {
+    const t = await boot();
+    expect(() => t.run(5)).not.toThrow();
+    expect(t.interactables.has('use:kindling-bed')).toBe(false);
+    expect(t.ctx.state.getBool('world.kindling-dell.found')).toBe(false);
+  });
+
+  it('a stale saved mirror flag is corrected after a load', async () => {
+    const t = await boot();
+    t.run(1);
+    t.ctx.state.setFlag('buff.foxFire.active', true);
+    t.ctx.events.emit('save.loaded', {} as never);
+    expect(t.ctx.state.getBool('buff.foxFire.active')).toBe(false);
+  });
+});
+
 describe('Hushed Anvil: murals and the tempering station', () => {
   it('each mural sets its flag and unlocks its codex entry, and can be read again', async () => {
     const t = await boot();

@@ -11,7 +11,6 @@ export const HUSHED_ANVIL = {
     { x: 0, z: -7 },
     { x: 6, z: -4 },
   ],
-  stationFlagPrefix: 'world.hushed-anvil',
   radius: 2,
   lantern: { unlit: 0.5, lit: 2.2, distance: 14, color: 0xffb561 },
 } as const;
