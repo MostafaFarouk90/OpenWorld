@@ -11,6 +11,7 @@ import { HARROWMARK_SPAWNERS } from './harrowmarkSpawners';
 import { SLICE_SPAWNERS } from './spawnerDefs';
 import { WYRM_SPAWNERS } from './wyrm/spawners';
 import { ENEMY_STRINGS_EN } from './strings.en';
+import { WAVE_SPAWNERS } from '../waves/spawners';
 import './events';
 
 const KNIGHT = 'knight';
@@ -49,7 +50,7 @@ const plugin: GamePlugin = {
       }
       return { model: assets.instantiate(KNIGHT), clips: assets.animations(KNIGHT), prop };
     };
-    const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS, ...ACT2_SPAWNERS] });
+    const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS, ...ACT2_SPAWNERS, ...WAVE_SPAWNERS] });
     manager = m;
 
     ctx.strings.register('en', ENEMY_STRINGS_EN);
