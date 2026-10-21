@@ -19,6 +19,8 @@ export interface BehaviourContext {
   readonly def: EnemyDef;
   readonly actorId: ActorId;
   readonly spawnerId: string | null;
+  /** The spawner slot (null for a loose spawn). */
+  readonly slot: number | null;
   readonly options: Readonly<SpawnOptions>;
   readonly host: EnemyHost;
   readonly body: EnemyBody;
@@ -39,6 +41,12 @@ export interface BehaviourContext {
   indoors(): boolean;
   /** Plays a one-shot clip held for `seconds` (the stagger clip from touchdown, a roar). */
   playOneShot(clip: string, seconds: number): void;
+  /** Moves this tick with `velocity` (m/s), turning toward it: for a `leave` override, which steers itself. */
+  move(velocity: { x: number; z: number }, dt: number): void;
+  /** Leaves the fight without a mercy (no credit, no loot, slot spent): the enemy goes into its `leave` as 'retired'. */
+  retire(): void;
+  /** Ends a leave: despawns now. */
+  finish(): void;
 }
 
 /** The optional hooks. Each runs at the named point of `Enemy`; see the call sites for the exact order. */
@@ -71,8 +79,8 @@ export interface BehaviourOverlay {
   actorPosition?(out: THREE.Vector3): void;
   /** `actor.pulled`: true refuses the pull (an airborne flier). */
   refusesPull?(): boolean;
-  /** Leaving after a mercy (`how` is 'calmed' or 'spared'): true when the overlay moved the enemy this tick itself. */
-  leave?(dt: number, how: 'calmed' | 'spared'): boolean;
+  /** Leaving after a mercy, or retired: true when the overlay moved (or held) the enemy this tick itself. */
+  leave?(dt: number, how: 'calmed' | 'spared' | 'retired'): boolean;
   /** Before the enemy goes dormant (a flier lands first). */
   sleep?(): void;
   /** A hit landed (outcome hit, not a status tick). */

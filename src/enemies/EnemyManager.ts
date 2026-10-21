@@ -260,6 +260,7 @@ export class EnemyManager {
         damageScale: stats.damageScale,
         patrol: patrolForSlot(req.patrol.map((a) => a.position), req.slot),
         options: req.options,
+        slot: req.slot,
       };
       enemy = new Enemy(this.env, spawn, this.makeBody(def));
     } catch (err) {
@@ -690,7 +691,7 @@ export class EnemyManager {
       this.goneWatchers.delete(self.id);
       this.releaseWatchers.delete(self.id);
       if (this.disposed) return;
-      watcher?.(how === 'escaped' || how === 'calmed' ? 'despawned' : how);
+      watcher?.(how === 'escaped' || how === 'calmed' || how === 'retired' ? 'despawned' : how);
       this.afterGone(self.id, self.spawnerId, how);
     },
     };

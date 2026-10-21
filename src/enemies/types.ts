@@ -213,6 +213,8 @@ export interface SpawnerDef {
   leash?: boolean;
   /** `false` turns off the Footman's guard for this group (the slice 1 tutorial soldiers fight without it). */
   guard?: boolean;
+  /** Members spawn peaceful (`SpawnOptions.peaceful`) unless the spawn call says otherwise: the resting den wyrm. */
+  peaceful?: boolean;
 }
 
 export interface SpawnOptions {
