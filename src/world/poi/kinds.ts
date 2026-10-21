@@ -1,7 +1,7 @@
 import { registerStructureKind } from '../../region/structureKinds';
 import { POI_STRUCTURE_KINDS } from './templates';
 
-const HEIGHTS: Record<(typeof POI_STRUCTURE_KINDS)[number], number> = { 'poi-cave-mouth': 4, 'poi-ruin-wall': 3, 'poi-pen': 1.6, 'poi-lookout': 1.8 };
+const HEIGHTS: Record<(typeof POI_STRUCTURE_KINDS)[number], number> = { 'poi-cave-mouth': 4, 'poi-ruin-wall': 3, 'poi-lookout': 1.8 };
 let refs = 0;
 let undos: Array<() => void> = [];
 

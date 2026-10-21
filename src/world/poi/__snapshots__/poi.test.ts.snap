@@ -13,7 +13,7 @@ exports[`templates > golden: template output is stable (change shows in review) 
   "4/3/4/1",
   "17/4/0/1",
   "17/6/4/2",
-  "22/5/1/1",
+  "22/5/0/1",
   "6/2/1/0",
 ]
 `;

@@ -148,6 +148,13 @@ describe('poi plugin: clusters near the player', () => {
     expect(gold).toEqual([20]);
   });
 
+  it('pays no gold and shows no gold toast when the inventory service is missing', () => {
+    const { fc, gold } = atCluster('cave-2');
+    fc.services.delete('inventory');
+    fc.fire('loot.granted', { sourceId: 'chest:poi-a2-cave-2', items: [] });
+    expect(gold).toEqual([]);
+  });
+
   it('a chest opened before a load stays opened after it', () => {
     const { fc } = atCluster('cave-2', { 'chest.poi-a2-cave-2.opened': true });
     fc.fire('save.loaded');
@@ -213,6 +220,15 @@ describe('poi plugin: fox cache', () => {
     expect(fc.interactables.has(FOX_CACHE_CHEST_ID)).toBe(false);
     fc.fire('save.loaded');
     fc.tick('rules');
+    expect(fc.interactables.has(FOX_CACHE_CHEST_ID)).toBe(false);
+  });
+
+  it('ignores a fox.cache event with no fox id', () => {
+    const { fc } = rig();
+    fc.fire('fox.cache', {});
+    fc.fire('fox.cache', undefined);
+    fc.fire('fox.cache', { foxId: 7 });
+    expect(fc.flags.get(FOX_CACHE_FLAG)).toBeUndefined();
     expect(fc.interactables.has(FOX_CACHE_CHEST_ID)).toBe(false);
   });
 
