@@ -17,9 +17,9 @@ describe('Warden skill data', () => {
     }
   });
 
-  it('tiers 1 and 2 are available, 3 to 5 are not; tier 5 rows are exclusive capstones', () => {
+  it('tiers 1 to 3 are available, 4 and 5 are not; tier 5 rows are exclusive capstones', () => {
     for (const s of WARDEN_SKILLS) {
-      expect(s.available).toBe(s.tier <= 2);
+      expect(s.available).toBe(s.tier <= 3);
       expect(s.capstone === true).toBe(s.tier === 5);
       expect(s.exclusiveGroup === 'capstone').toBe(s.tier === 5);
     }
@@ -40,9 +40,9 @@ describe('Warden skill data', () => {
     expect(WARDEN_SKILLS.filter((s) => s.tier === 1 && s.kind === 'active')).toEqual([]);
   });
 
-  it('only Boulder Shoulder has a cooldown and an Ember cost among the live skills', () => {
+  it('only the three live actives have a cooldown and an Ember cost', () => {
     const live = WARDEN_SKILLS.filter((s) => s.available && (s.cooldown || s.emberCost));
-    expect(live.map((s) => s.id)).toEqual([SKILL_IDS.boulderShoulder]);
+    expect(live.map((s) => s.id).sort()).toEqual([SKILL_IDS.bloodChant, SKILL_IDS.boulderShoulder, SKILL_IDS.whirlingHew].sort());
     const b = getSkillIn(SKILL_IDS.boulderShoulder);
     expect(b.cooldown).toBe(10);
     expect(b.emberCost).toBe(10);

@@ -1,10 +1,10 @@
 import { TIER_COST, type SkillDef } from '../../progression/skills';
-import { BOULDER, WARDEN_CLASS_ID } from './tuning';
+import { BLOOD_CHANT, BOULDER, WARDEN_CLASS_ID, WHIRLING_HEW } from './tuning';
 
 type Branch = 'hewer' | 'stonehide' | 'howlcaller';
 type Row = [name: string, kind: 'active' | 'passive'];
 
-/** Design 9.2. Tiers 1 and 2 are live; 3 to 5 are listed so the tree draws its full shape. */
+/** Design 9.2. Tiers 1 to 3 are live; 4 and 5 are listed so the tree draws its full shape. */
 const TREE: Record<Branch, Row[]> = {
   hewer: [
     ['cleavingSwing', 'passive'],
@@ -30,6 +30,12 @@ const TREE: Record<Branch, Row[]> = {
   ],
 };
 
+const ACTIVE_COSTS: Record<string, { cooldown: number; emberCost: number }> = {
+  [`${WARDEN_CLASS_ID}.boulderShoulder`]: BOULDER,
+  [`${WARDEN_CLASS_ID}.whirlingHew`]: WHIRLING_HEW,
+  [`${WARDEN_CLASS_ID}.bloodChant`]: BLOOD_CHANT,
+};
+
 function build(): SkillDef[] {
   const out: SkillDef[] = [];
   for (const branch of ['hewer', 'stonehide', 'howlcaller'] as const) {
@@ -44,16 +50,17 @@ function build(): SkillDef[] {
         kind,
         nameKey: `skill.${WARDEN_CLASS_ID}.${name}.name`,
         descKey: `skill.${WARDEN_CLASS_ID}.${name}.desc`,
-        available: tier <= 2,
+        available: tier <= 3,
       };
       if (i > 0) def.requires = `${WARDEN_CLASS_ID}.${TREE[branch][i - 1][0]}`;
       if (tier === 5) {
         def.capstone = true;
         def.exclusiveGroup = 'capstone';
       }
-      if (def.id === `${WARDEN_CLASS_ID}.boulderShoulder`) {
-        def.cooldown = BOULDER.cooldown;
-        def.emberCost = BOULDER.emberCost;
+      const active = ACTIVE_COSTS[def.id];
+      if (active) {
+        def.cooldown = active.cooldown;
+        def.emberCost = active.emberCost;
       }
       out.push(def);
     });

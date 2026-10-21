@@ -29,8 +29,8 @@ describe('Ashblade skill data', () => {
     expect(tier1Actives).toEqual([]);
   });
 
-  it('is learnable at tiers 1 and 2 only, with exclusive capstones', () => {
-    for (const s of ASHBLADE_SKILLS) expect(s.available).toBe(s.tier <= 2);
+  it('is learnable at tiers 1 to 3 only, with exclusive capstones', () => {
+    for (const s of ASHBLADE_SKILLS) expect(s.available).toBe(s.tier <= 3);
     const caps = ASHBLADE_SKILLS.filter((s) => s.tier === 5);
     expect(caps).toHaveLength(3);
     for (const c of caps) expect([c.capstone, c.exclusiveGroup]).toEqual([true, 'capstone']);
@@ -59,10 +59,11 @@ describe('Ashblade tier gating through Progression', () => {
     return p;
   };
 
-  it('refuses a tier 2 skill before its tier 1 and a tier 3 skill always', () => {
+  it('refuses a tier 2 skill before its tier 1, a tier 3 skill before its tier 2 and a tier 4 skill always', () => {
     const p = ready(6);
     expect(p.learn(SKILL.ashCloud)).toEqual({ ok: false, reason: 'missing-prereq' });
-    expect(p.learn('ashblade.sootCloak')).toEqual({ ok: false, reason: 'unavailable' });
+    expect(p.learn(SKILL.sootCloak)).toEqual({ ok: false, reason: 'missing-prereq' });
+    expect(p.learn('ashblade.cinderMark')).toEqual({ ok: false, reason: 'unavailable' });
     expect(p.learn(SKILL.quietSoles)).toEqual({ ok: true });
     expect(p.learn(SKILL.ashCloud)).toEqual({ ok: true });
   });

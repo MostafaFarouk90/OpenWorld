@@ -1,0 +1,9 @@
+{
+  "fixture": "act2-tier3-warden-learned.json",
+  "what": "act1-m07-class-chosen with the Warden Hewer chain learned through tier 3 (cleavingSwing, deepWound, whirlingHew)",
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/tier3Fixture.test.ts",
+  "generatingCommit": "f6c8d4d362b4118b5c52ca86a10bff654b894d4b",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving",
+  "playtimeSeconds": "rounded to whole seconds",
+  "source": "the real save plugin (saveNow(\"manual\")), read back from the fake IndexedDB slot-0"
+}

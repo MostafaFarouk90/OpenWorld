@@ -6,6 +6,7 @@ import type { PointsPool } from '../PointsPool';
 import type { DecalPool } from '../DecalPool';
 import type { LightFlashPool } from '../LightFlashPool';
 import type { Dissolver } from '../Dissolver';
+import { tier3Effects } from './tier3';
 import { createFresnelShell, createShockRing, disposeFx, setRingProgress, setShellProgress } from '../shaders/fresnelShell';
 
 export interface FxContext {
@@ -27,11 +28,11 @@ export type EffectFactory = (ctx: FxContext, t: EffectTransform, p: EffectParams
 
 const ONE_SHOT: EffectInstance = { update: () => false, stop: () => {} };
 
-const num = (p: EffectParams, k: string, d: number): number => {
+export const num = (p: EffectParams, k: string, d: number): number => {
   const v = p[k];
   return typeof v === 'number' && Number.isFinite(v) ? v : d;
 };
-const origin = (t: EffectTransform): Vec3 => {
+export const origin = (t: EffectTransform): Vec3 => {
   if (t.attach) {
     const v = new THREE.Vector3();
     t.attach.getWorldPosition(v);
@@ -41,7 +42,7 @@ const origin = (t: EffectTransform): Vec3 => {
 };
 
 /** A timed mesh effect: calls `step(progress)` until `seconds` pass, then removes the mesh. */
-function timedMesh(ctx: FxContext, mesh: THREE.Object3D, seconds: number, step: (p: number) => void): EffectInstance {
+export function timedMesh(ctx: FxContext, mesh: THREE.Object3D, seconds: number, step: (p: number) => void): EffectInstance {
   const start = ctx.now();
   ctx.scene.add(mesh);
   let done = false;
@@ -68,7 +69,7 @@ function timedMesh(ctx: FxContext, mesh: THREE.Object3D, seconds: number, step: 
   };
 }
 
-function ring(ctx: FxContext, t: EffectTransform, radius: number, color: number, seconds: number): EffectInstance {
+export function ring(ctx: FxContext, t: EffectTransform, radius: number, color: number, seconds: number): EffectInstance {
   const m = createShockRing({ inner: radius * 0.125, outer: radius * 0.2, color });
   const o = origin(t);
   m.position.set(o.x, o.y + 0.05, o.z);
@@ -256,4 +257,5 @@ export const EFFECTS: Record<EffectId, EffectFactory> = {
     ctx.lights.flash(hand, WHITE_HOT, 4, 0.1, 1.1, ctx.now());
     return ring(ctx, { position: hand }, 1.8, GOLD, 0.8);
   },
+  ...tier3Effects({ ring, timedMesh, origin, num }),
 };

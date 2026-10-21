@@ -65,7 +65,7 @@ export class SkillMenu {
           this.el('span', 'owg-skill-desc', t(n.skill.descKey)),
         );
         if (n.state === 'learned') node.append(this.el('span', 'owg-skill-state', t('hud.skills.learned')));
-        else if (n.state === 'unavailable') node.append(this.el('span', 'owg-skill-state', t('hud.skills.locked')));
+        else if (n.state === 'unavailable') node.append(this.el('span', 'owg-skill-state', t(n.skill.tier >= 4 ? 'hud.skills.act3' : 'hud.skills.locked')));
         else {
           const btn = this.el('button', 'owg-btn', t('hud.skills.learn', { cost: n.skill.cost }));
           btn.onclick = () => {

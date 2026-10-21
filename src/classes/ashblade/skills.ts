@@ -8,27 +8,27 @@ type Row = [name: string, kind: 'active' | 'passive', live: boolean];
 
 /**
  * Design 9.4. Smokecloak tiers 1 and 2 are swapped against the design table (Quiet Soles first, Ash Cloud second) so Rally
- * Cry stays the only tier-1 active in the game. Tiers 3 to 5 are listed so the tree draws its shape, not yet learnable.
+ * Cry stays the only tier-1 active in the game. Tier 3 is live (Act 2); tiers 4 and 5 are listed so the tree draws its shape, not yet learnable.
  */
 const TREE: Record<AshbladeBranch, Row[]> = {
   duskedge: [
     ['backSlit', 'passive', true],
     ['bleedingEmber', 'passive', true],
-    ['twinFangs', 'passive', false],
+    ['twinFangs', 'passive', true],
     ['cinderMark', 'active', false],
     ['deathByAThousandSparks', 'active', false],
   ],
   smokecloak: [
     ['quietSoles', 'passive', true],
     ['ashCloud', 'active', true],
-    ['sootCloak', 'passive', false],
+    ['sootCloak', 'passive', true],
     ['decoyFootprints', 'active', false],
     ['ghostOfTheHearth', 'active', false],
   ],
   flicker: [
     ['quickSlip', 'passive', true],
     ['sparkDodge', 'passive', true],
-    ['wallSkitter', 'passive', false],
+    ['wallSkitter', 'passive', true],
     ['phoenixRoll', 'passive', false],
     ['flickerStrike', 'active', false],
   ],
