@@ -12,6 +12,8 @@ import { BoltCounter } from './BoltCounter';
 import { MountStamina } from './MountStamina';
 import { NoiseRing, StealthEye } from './StealthEye';
 import { CompanionPortrait } from './CompanionPortrait';
+import { PartyScreen } from './PartyScreen';
+import { StructureBar } from './StructureBar';
 import { createRespecModal, type RespecModalDeps } from './RespecModal';
 import { BuffBar, type BuffInfo } from './BuffBar';
 import { LockOnMarker } from './LockOnMarker';
@@ -205,19 +207,82 @@ const hudPlugin: GamePlugin = {
     }
     mount('top-center', bossBar, 0);
 
-    // Companion portrait: read at setup and on save.loaded (a load emits no join events).
+    // Companion portrait: the row set follows the party's active() (a swap emits no `left`), re-read at setup, on
+    // `save.loaded` and on every join, leave and party change.
     const companionSvc = () => soft(ctx, 'companions');
+    const partySvc = () => ctx.services.get('party');
     const portrait = new CompanionPortrait(doc, {
       active: () => companionSvc()?.active() ?? [],
       actorId: (id) => companionSvc()?.actorId(id) ?? null,
       actor: (id) => ctx.actors.get(id),
+      info: (id) => partySvc()?.options().find((o) => o.id === id),
       t,
     });
     ctx.events.on('save.loaded', () => portrait.reload());
-    ctx.events.on('companion.joined', (e) => portrait.joined(e.companionId, e.actorId));
-    ctx.events.on('companion.left', (e) => portrait.left(e.companionId));
+    for (const type of ['companion.joined', 'companion.left', 'party.changed'] as const) ctx.events.on(type, () => portrait.reload(true));
     ctx.events.on('companion.aura', (e) => portrait.aura(e.companionId, e.active));
+    ctx.events.on('companion.downed', (e) => portrait.downed(e.companionId, true));
+    ctx.events.on('companion.stood', (e) => portrait.downed(e.companionId, false));
     mount('top-left', portrait, 40);
+
+    // Barricade and brazier-cart health (A7's structures).
+    const structureBar = new StructureBar(doc, {
+      actor: (id) => ctx.actors.get(id),
+      structure: (id) => ctx.services.get('waves')?.structure(id),
+      t,
+    });
+    ctx.events.on('structure.damaged', (e) => structureBar.damaged(e.id, e.health));
+    ctx.events.on('structure.destroyed', (e) => structureBar.destroyed(e.id));
+    ctx.events.on('wave.started', () => structureBar.waveStarted());
+    ctx.events.on('wave.cleared', () => structureBar.waveCleared());
+    ctx.events.on('waves.failed', () => structureBar.reset());
+    ctx.events.on('save.loaded', () => structureBar.reset(true));
+    mount('top-center', structureBar, 2);
+
+    // The Party screen: key P (read-only outside the waystone window) or a waystone rest with two companions.
+    const downedIds = new Set<string>();
+    ctx.events.on('companion.downed', (e) => downedIds.add(e.companionId));
+    ctx.events.on('companion.stood', (e) => downedIds.delete(e.companionId));
+    ctx.events.on('save.loaded', () => downedIds.clear());
+    let closeParty: (() => void) | null = null;
+    const openParty = (): void => {
+      const svc = partySvc();
+      if (!svc || ctx.hud.modalOpen) return;
+      const screen = new PartyScreen(doc, {
+        canChange: () => svc.canChange(),
+        options: () => svc.options(),
+        maxActive: () => companionSvc()?.maxActive?.() ?? 1,
+        change: (ids) => svc.change(ids),
+        downed: () => downedIds,
+        close: () => closeParty?.(),
+        t,
+      });
+      const off = ctx.hud.openModal({ id: screen.id, element: asHtml(screen.element), update: () => screen.update(), dispose: () => screen.dispose() }, { context: 'menu' });
+      if (!off) {
+        screen.dispose();
+        return;
+      }
+      closeParty = () => {
+        off();
+        closeParty = null;
+      };
+    };
+    ctx.events.on('party.offered', () => openParty());
+    ctx.events.on('save.loaded', () => closeParty?.());
+    ctx.systems.add({
+      id: 'hud.party.input',
+      fixedPhase: 'input',
+      order: 0,
+      fixedUpdate() {
+        const actions = ctx.input.actions;
+        if (ctx.hud.modalOpen === 'party-screen') {
+          if (actions.pressed('party') || actions.pressed('menu')) closeParty?.();
+          return;
+        }
+        if (!actions.pressed('party') || ctx.input.contexts.top() !== 'gameplay' || ctx.hud.modalOpen) return;
+        openParty();
+      },
+    });
 
     const keyTarget = typeof globalThis.addEventListener === 'function' ? (globalThis as unknown as KeySource) : null;
 

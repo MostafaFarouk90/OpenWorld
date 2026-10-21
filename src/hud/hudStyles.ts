@@ -110,6 +110,22 @@ export const HUD_CSS = `
 .owg-companion-name{font-weight:600}
 .owg-aura-pip{width:8px;height:8px;border-radius:50%;background:#444;border:1px solid #888}
 .owg-aura-on{background:#f0d060;border-color:#f0d060;box-shadow:0 0 6px #f0d060}
+.owg-companion-meta{font-size:10px;opacity:.75;margin-left:auto}
+.owg-companion-down{opacity:.55}
+.owg-structure-list{display:flex;flex-direction:column;gap:4px;width:320px;margin-top:6px;padding:6px 10px;border-radius:6px;background:rgba(20,16,12,.92);border:1px solid #6a5a3a;color:#e8dfc8;font:12px system-ui,sans-serif;pointer-events:none}
+.owg-structure-name{font-weight:600;margin-bottom:2px}
+.owg-structure-bar{height:8px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
+.owg-structure-fill{height:100%;width:100%;background:#c8883a}
+.owg-structure-barricade .owg-structure-fill{background:#7aa0c8}
+.owg-party{min-width:380px;pointer-events:auto;text-align:left}
+.owg-party .owg-card-title{text-align:center}
+.owg-party-row{display:flex;align-items:center;gap:10px;padding:8px;margin:4px 0;border-radius:6px;border:1px solid rgba(255,255,255,.12)}
+.owg-party-on{border-color:#f0d060;background:rgba(240,208,96,.08)}
+.owg-party-name{font-weight:600;flex:1}
+.owg-party-meta{font-size:11px;opacity:.75}
+.owg-party-slot,.owg-party-status{margin-top:8px;font-size:12px;opacity:.85;text-align:center}
+.owg-party-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.owg-btn-off{opacity:.4;cursor:default}
 .owg-companion-bar{height:6px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
 .owg-companion-fill{height:100%;width:0;background:#5aa65a}
 .owg-card{max-width:420px;padding:20px 28px;text-align:center;border-radius:8px;background:rgba(20,16,12,.92);border:1px solid #6a5a3a;color:#e8dfc8;font:14px system-ui,sans-serif;pointer-events:none}

@@ -14,6 +14,8 @@ import { MAP_STRINGS_EN } from './strings.en';
 import { renderLocalTile, renderTerrainBitmap, minimapTilePlan, type TerrainBitmap } from './TerrainBitmap';
 import { DEFAULT_WORLD_BOUNDS, MAP_TUNING } from './tuning';
 import type { MapViewModel } from './viewTypes';
+import { chipsKey, openRegionAt, regionChips, type RegionChip } from './regionLayer';
+import '../region/containment';
 
 
 const map: GamePlugin = {
@@ -42,8 +44,13 @@ const map: GamePlugin = {
         gates: ctx.gates,
         events: ctx.events,
         service: (name) => (ctx.services as unknown as { get(n: string): unknown }).get(name),
+        flag: (key) => ctx.state.getBool(key),
+        anchor: (id) => {
+          const p = ctx.anchors.find(id)?.position;
+          return p ? { x: p.x, z: p.z } : undefined;
+        },
       },
-      (k) => ctx.strings.t(k),
+      (k, p) => ctx.strings.t(k, p),
     );
 
     // Quest-offer leads, re-derived when quest state changes or a save loads (the cache is dropped while a
@@ -116,6 +123,21 @@ const map: GamePlugin = {
       }
     };
 
+    // Region chips follow containment.openRegions(), polled where the views redraw (no new events). The array is reused
+    // while the open set is unchanged.
+    let chips: RegionChip[] = regionChips([]);
+    let chipsSig = chipsKey(chips);
+    const openNow = () => ctx.services.get('containment')?.openRegions() ?? [];
+    const currentChips = (): RegionChip[] => {
+      const next = regionChips(openNow());
+      const sig = chipsKey(next);
+      if (sig !== chipsSig) {
+        chips = next;
+        chipsSig = sig;
+      }
+      return chips;
+    };
+
     const model: MapViewModel = {
       bounds,
       fullBitmap: () => full,
@@ -129,11 +151,16 @@ const map: GamePlugin = {
             const lit = waystones()?.isLit(id) ?? false;
             return [{ id, x: p.x, z: p.z, state: lit ? ('rekindled' as const) : ('dormant' as const), discovered: lit || fog.isRevealed(p.x, p.z), label: id }];
           }),
-          poi: sources.posts((x, z) => fog.isRevealed(x, z)),
           shrines: sources.litShrines(),
+          poi: [...sources.posts((x, z) => fog.isRevealed(x, z)), ...sources.a2Pois()],
           fog: sources.fogWall(),
           quest: withTutorialLead([...currentLeads(), ...objectiveLeads()], ctx.services.get('tutorial')),
         }),
+      regions: currentChips,
+      regionCaption: () => {
+        const id = openRegionAt(ctx.player.feet.x, ctx.player.feet.z, openNow());
+        return id ? ctx.strings.t(`map.region.${id}`) : null;
+      },
       forge: () => sources.forge(),
       legend: () => sources.legend(ctx.player.feet.x, ctx.player.feet.z),
       player: () => ({ x: ctx.player.feet.x, z: ctx.player.feet.z, yaw: ctx.player.facingYaw }),

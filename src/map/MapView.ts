@@ -116,6 +116,32 @@ export function createMapModal(deps: MapViewDeps): MapModalWidget {
     stats.fogBuilds++;
   }
 
+  /** Closed regions are shaded like unexplored ground; every chip is a dark card with the region (or "Unknown lands"). Markers draw over both. */
+  function drawRegions(): void {
+    const chips = model.regions?.();
+    if (!ctx || !chips) return;
+    for (const c of chips) {
+      if (!c.closed) continue;
+      const a = worldToMap(c.box.x0, c.box.z0, model.bounds, size);
+      const b = worldToMap(c.box.x1, c.box.z1, model.bounds, size);
+      ctx.fillStyle = 'rgba(6,6,10,0.7)';
+      ctx.fillRect(a.u, a.v, b.u - a.u, b.v - a.v);
+    }
+    if (typeof ctx.fillText !== 'function') return;
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const c of chips) {
+      const p = worldToMap(c.x, c.z, model.bounds, size);
+      const text = model.t(c.labelKey);
+      const w = (ctx.measureText?.(text).width ?? text.length * 7) + 12;
+      ctx.fillStyle = 'rgba(20,16,12,0.92)';
+      ctx.fillRect(p.u - w / 2, p.v - 10, w, 20);
+      ctx.fillStyle = c.closed ? '#9a9486' : '#e8dfc8';
+      ctx.fillText(text, p.u, p.v);
+    }
+  }
+
   function drawMarker(m: MapMarker, selected: boolean): void {
     if (!ctx) return;
     const p = worldToMap(m.x, m.z, model.bounds, size);
@@ -225,6 +251,7 @@ export function createMapModal(deps: MapViewDeps): MapModalWidget {
     ctx.fillRect(0, 0, extent.width, extent.height);
     if (terrainLayer) ctx.drawImage(terrainLayer, 0, 0, extent.width, extent.height);
     if (fogLayer) ctx.drawImage(fogLayer, 0, 0, extent.width, extent.height);
+    drawRegions();
     for (const m of model.markers()) drawMarker(m, m.id === selectedId);
     const pl = model.player();
     const a = playerArrowPosition(pl.x, pl.z, model.bounds, size);

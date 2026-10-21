@@ -9,7 +9,7 @@ export const ACTIONS = [
   'moveForward', 'moveBack', 'moveLeft', 'moveRight', 'sprint', 'jump', 'interact', 'mercy',
   'attack1', 'attack2', 'attack3', 'attack4', 'block', 'dodge', 'lockOn', 'surge', 'surgeLeap', 'sneak', 'mount',
   'ability1', 'ability2', 'ability3', 'ability4', 'ability5', 'ability6',
-  'inventory', 'skills', 'journal', 'map', 'codex', 'menu',
+  'inventory', 'skills', 'journal', 'map', 'codex', 'party', 'menu',
   'dialogueNext', 'dialogueChoice1', 'dialogueChoice2', 'dialogueChoice3', 'dialogueChoice4',
 ] as const;
 export type Action = (typeof ACTIONS)[number];
@@ -62,6 +62,8 @@ export const ACTION_DEFS: Readonly<Record<Action, ActionDef>> = {
   map: def(key('KeyM'), null, ['gameplay', 'menu']),
   // v0.4: the codex is its own modal (thread 8), not a journal tab.
   codex: def(key('KeyL'), null, ['gameplay', 'menu']),
+  // v0.6 (A15): the Party screen.
+  party: def(key('KeyP'), null, ['gameplay', 'menu']),
   menu: def(key('Escape'), null, INPUT_CONTEXTS, false),
   dialogueNext: def(key('Space'), key('KeyF'), ['dialogue']),
   dialogueChoice1: def(key('Digit1'), null, ['dialogue']),

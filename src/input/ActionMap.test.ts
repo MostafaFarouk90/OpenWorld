@@ -92,10 +92,10 @@ describe('ActionMap edges', () => {
 
   it('follows rebinds', () => {
     const { map, bindings } = setup();
-    bindings.rebind('jump', 0, { device: 'key', code: 'KeyP' });
+    bindings.rebind('jump', 0, { device: 'key', code: 'KeyU' });
     map.keyDown('Space');
     expect(map.sample().down('jump')).toBe(false);
-    map.keyDown('KeyP');
+    map.keyDown('KeyU');
     expect(map.sample().pressed('jump')).toBe(true);
   });
 

@@ -15,12 +15,16 @@ export interface CompanionPortraitSource {
   actorId?(id: string): string | null | undefined;
   /** `ctx.actors.get(actorId)`; undefined for an unknown actor. */
   actor?(actorId: string): CompanionActorView | null | undefined;
+  /** Role and bond rank for a joined companion (A5's `party.options()`); absent for Tobb in Act 1. */
+  info?(id: string): { role?: string; rank?: number } | undefined;
   t?: Translate;
 }
 
 interface Row {
   actorId: string | null;
   aura: boolean;
+  downed: boolean;
+  meta: ElementLike;
   root: ElementLike;
   name: ElementLike;
   pip: ElementLike;
@@ -47,8 +51,11 @@ export class CompanionPortrait implements HudWidgetView {
     this.reload();
   }
 
-  /** Re-derives who is joined from the service (setup and `save.loaded`; a load emits no join events). */
-  reload(): void {
+  /**
+   * Re-derives who is in the party from `active()` (setup, `save.loaded`, `party.changed`, joins and leaves: a swap
+   * emits no `left`). A load starts from a clean slate (aura events arrive again); other refreshes keep the pips.
+   */
+  reload(keepAura = false): void {
     let ids: readonly string[] = [];
     try {
       ids = this.source.active?.() ?? [];
@@ -57,8 +64,12 @@ export class CompanionPortrait implements HudWidgetView {
     }
     for (const id of [...this.rows.keys()]) if (!ids.includes(id)) this.left(id);
     for (const id of ids) this.joined(id, this.queryActor(id));
-    // A load starts from a clean slate: aura events arrive again if it is still on.
-    for (const row of this.rows.values()) row.aura = false;
+    if (!keepAura) {
+      for (const row of this.rows.values()) {
+        row.aura = false;
+        row.downed = false;
+      }
+    }
     this.update();
   }
 
@@ -77,12 +88,13 @@ export class CompanionPortrait implements HudWidgetView {
       const head = makeEl(this.doc, 'div', 'owg-companion-head', root);
       const name = makeEl(this.doc, 'div', 'owg-companion-name', head);
       const pip = makeEl(this.doc, 'div', 'owg-aura-pip', head);
+      const meta = makeEl(this.doc, 'div', 'owg-companion-meta', head);
       const bar = makeEl(this.doc, 'div', 'owg-companion-bar', root);
       const fill = makeEl(this.doc, 'div', 'owg-companion-fill', bar);
       const label = this.t(`hud.companion.${companionId}`);
       name.textContent = label.startsWith('[[') ? titleCase(companionId) : label;
       pip.setAttribute('title', this.t('hud.companion.aura'));
-      row = { actorId, aura: false, root, name, pip, fill };
+      row = { actorId, aura: false, downed: false, meta, root, name, pip, fill };
       this.rows.set(companionId, row);
     } else if (actorId) row.actorId = actorId;
     this.update();
@@ -100,6 +112,27 @@ export class CompanionPortrait implements HudWidgetView {
     const row = this.rows.get(companionId);
     if (row) row.aura = active;
     this.update();
+  }
+
+  /** `companion.downed` / `companion.stood`: the bar greys and the name shows the kneel. */
+  downed(companionId: string, down: boolean): void {
+    const row = this.rows.get(companionId);
+    if (row) row.downed = down;
+    this.update();
+  }
+
+  private metaText(id: string, downed: boolean): string {
+    let info: { role?: string; rank?: number } | undefined;
+    try {
+      info = this.source.info?.(id);
+    } catch {
+      info = undefined;
+    }
+    const parts: string[] = [];
+    if (info?.role) parts.push(this.t(`hud.companion.role.${info.role}`));
+    if (typeof info?.rank === 'number' && Number.isFinite(info.rank) && info.rank > 0) parts.push(this.t('hud.companion.rank', { rank: info.rank }));
+    if (downed) parts.push(this.t('hud.companion.downed'));
+    return parts.join(' · ');
   }
 
   get count(): number {
@@ -127,6 +160,8 @@ export class CompanionPortrait implements HudWidgetView {
       }
       row.fill.style.width = a ? pct(barFraction(a.health, a.maxHealth)) : '0%';
       row.pip.className = row.aura ? 'owg-aura-pip owg-aura-on' : 'owg-aura-pip';
+      row.meta.textContent = this.metaText(id, row.downed);
+      row.root.className = row.downed ? 'owg-companion owg-companion-down' : 'owg-companion';
     }
   }
 
