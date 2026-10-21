@@ -37,9 +37,9 @@ describe('WAVE_SPAWNERS', () => {
     for (const sp of WAVE_SPAWNERS) expect(others.has(sp.id)).toBe(false);
   });
 
-  it('uses only Act 1 kinds until A6a lands, the closer being a single marked entry', () => {
+  it('uses the Act 1 kinds plus the Ember Wyrm closer', () => {
     const kinds = new Set(WAVE_SPAWNERS.map((s) => s.enemy));
-    expect([...kinds].sort()).toEqual(['ash-wraith', 'blighted-soldier', 'ember-hound']);
+    expect([...kinds].sort()).toEqual(['ash-wraith', 'blighted-soldier', 'ember-hound', 'ember-wyrm']);
   });
 });
 
