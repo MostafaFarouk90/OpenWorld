@@ -60,4 +60,16 @@ describe('ForgeShrineBinding', () => {
     expect(log.flags).toEqual([]);
     expect(log.emitted).toEqual([]);
   });
+
+  it('lightNow lights and announces once, and respects canLight', () => {
+    let ok = false;
+    const { b, log } = make({ canLight: () => ok });
+    b.lightNow();
+    expect(log.flags).toEqual([]);
+    ok = true;
+    b.lightNow();
+    b.lightNow();
+    expect(log.flags).toHaveLength(1);
+    expect(log.emitted).toEqual(['hushed-anvil']);
+  });
 });
