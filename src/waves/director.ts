@@ -293,9 +293,15 @@ export class WaveDirector implements WavesService {
       this.warnOnce(`lane:${item.cart.lane}`, `cart lane '${item.cart.lane}' has no anchor; the cart is skipped`);
       return;
     }
+    // A3's lanes run 115 to 235 m up the road; the cart joins it `CART.startDistance` from the line, in sight of the player.
+    const dx = lane.x - target.x;
+    const dz = lane.z - target.z;
+    const len = Math.hypot(dx, dz);
+    const k = len > CART.startDistance ? CART.startDistance / len : 1;
+    const start = { x: target.x + dx * k, y: target.y + (lane.y - target.y) * k, z: target.z + dz * k };
     const cart = world.carts.spawn({
       id: cartId(run.def.id, run.index, item.n),
-      start: lane,
+      start,
       end: target,
       origin: world.origin,
       onResolve: (c, how) => this.onCart(c, how),

@@ -19,6 +19,8 @@ export const CART = {
   impactDamage: 250,
   /** A lane of about this many seconds is what the reachability tests assume (about 48 m at `speed`). */
   nominalApproachSeconds: 40,
+  /** A cart starts at most this far (m) from the barricade along its lane: about `nominalApproachSeconds` at `speed`. */
+  startDistance: 48,
   /** After a cart is destroyed or has struck: collapse, then shrink away. */
   collapseSeconds: 1.2,
   vanishSeconds: 0.6,

@@ -141,6 +141,13 @@ describe('carts and the barricade', () => {
     expect(kit.of('structure.destroyed')).toEqual([]); // an arrival is not a destruction
   });
 
+  it('a cart starts no further than CART.startDistance from the barricade, however far its lane anchor is', () => {
+    kit.waves().start(ID);
+    driveTo(1);
+    until(() => kit.director().parts!.carts.all.length > 0, 20, killAll);
+    expect(kit.director().parts!.carts.all[0].length).toBeLessThanOrEqual(CART.startDistance + 0.01);
+  });
+
   it('a cart stopped on its lane never arrives and the barricade is untouched', () => {
     kit.waves().start(ID);
     driveTo(1);
