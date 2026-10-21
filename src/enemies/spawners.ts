@@ -40,9 +40,10 @@ export interface SpawnerRegistryDeps {
 /**
  * How a member left. 'escaped' is a thief that fled and despawned with the loot: its slot is freed (not spent, not
  * gone, no `groupCleared`) and refilled later while the group is live. Only thief kinds escape; the registry treats
- * 'escaped' from any other kind as a plain 'despawned'.
+ * 'escaped' from any other kind as a plain 'despawned'. 'retired' is a member that left the fight without a mercy (a
+ * wyrmling flying off, A6a): its slot is spent like a mercy's, so it never refills, but nothing is paid.
  */
-export type MemberEnd = 'died' | 'released' | 'spared' | 'calmed' | 'despawned' | 'escaped';
+export type MemberEnd = 'died' | 'released' | 'spared' | 'calmed' | 'despawned' | 'escaped' | 'retired';
 
 /** A freed thief slot waiting to be refilled. */
 interface PendingRefill {
@@ -152,7 +153,7 @@ export class SpawnerRegistry {
         piles: def.piles,
         level,
         patrol,
-        options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard },
+        options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard, ...(def.peaceful && opts.peaceful === undefined ? { peaceful: true } : {}) },
         spentKey,
       });
       if (actorId === null) continue;
@@ -200,7 +201,8 @@ export class SpawnerRegistry {
     }
     if (how === 'despawned' || how === 'escaped') return false;
     const key = `${rec.spawnerId}#${rec.slot}`;
-    if ((how === 'released' || how === 'spared' || how === 'calmed') && !def.ephemeral) this.spent.add(key);
+    // 'retired' (a wyrmling that flew off without a mercy) spends the slot the same way, with no credit.
+    if ((how === 'released' || how === 'spared' || how === 'calmed' || how === 'retired') && !def.ephemeral) this.spent.add(key);
     // A member of a never-respawning world group (not a manual lesson group, which replays) that died stays dead across a save, so a group that was
     // partly cleared before a save can still be cleared afterwards.
     if (how === 'died' && def.respawn === 'never' && def.activation !== 'manual' && !def.ephemeral) this.dead.add(key);

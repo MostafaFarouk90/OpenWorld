@@ -164,6 +164,8 @@ export interface EnemyEvents {
   'boss.ended': { bossId: string; actorId: ActorId; reason: 'despawned' | 'unregistered' };
   /** The player's dodge i-frames avoided `attackerId`'s hit (actors-and-damage.md section 10; the hound's dodge counter). */
   'player.dodged': { attackerId: ActorId | null };
+  /** Core: an actor's attack window opened or closed (the wyrmling watches the player's swings). */
+  'attack.window': { actorId: ActorId; attackId: string; swingId: number; phase: 'open' | 'close' };
 }
 export type EnemyEventName = keyof EnemyEvents;
 
@@ -259,6 +261,8 @@ export interface VfxLike {
     tip: THREE.Object3D,
     opts?: { lifetime?: number; color?: number },
   ): { setEmitting(on: boolean): void; dispose(): void };
+  /** The vfx quality step (`low` halves the wyrm's breath and drops its smoke). */
+  readonly quality?: 'low' | 'medium' | 'high';
 }
 
 /**

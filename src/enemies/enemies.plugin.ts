@@ -8,6 +8,7 @@ import { BRIGHTWATER_SPAWNERS } from './brightwaterSpawners';
 import { DENSITY_SPAWNERS_A } from './densitySpawners';
 import { HARROWMARK_SPAWNERS } from './harrowmarkSpawners';
 import { SLICE_SPAWNERS } from './spawnerDefs';
+import { WYRM_SPAWNERS } from './wyrm/spawners';
 import { ENEMY_STRINGS_EN } from './strings.en';
 import './events';
 
@@ -46,7 +47,7 @@ const plugin: GamePlugin = {
       }
       return { model: assets.instantiate(KNIGHT), clips: assets.animations(KNIGHT), prop };
     };
-    const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A] });
+    const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS] });
     manager = m;
 
     ctx.strings.register('en', ENEMY_STRINGS_EN);

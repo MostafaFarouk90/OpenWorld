@@ -352,7 +352,7 @@ export class Brain {
       this.hooks.yieldStarted(AI.yieldSeconds);
       return;
     }
-    this.stagger(AI.breakStaggerSeconds);
+    this.stagger(this.def.breakStaggerSeconds ?? AI.breakStaggerSeconds);
   }
 
   /**
