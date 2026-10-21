@@ -219,32 +219,32 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 
 | id | shape | x | z | size |
 | --- | --- | --- | --- | --- |
-| trg.t01.gate | sphere | 0 | 25 | r 3 |
+| trg.t01.gate | sphere | 0 | 25 | r 6 |
 | trg.t03.stane | sphere | -38 | 122 | r 5 |
 | trg.t03.edda | sphere | 22 | 131 | r 4 |
-| trg.t04.chapel | sphere | 50 | 60 | r 5 |
-| trg.t06.start | sphere | 40 | 60 | r 3 |
-| trg.t06.end | sphere | 0 | 60 | r 3 |
-| trg.t07.cart | sphere | 0 | 74 | r 2.5 |
-| trg.t07.fence | sphere | 0 | 94 | r 2.5 |
+| trg.t04.chapel | sphere | 50 | 60 | r 7 |
+| trg.t06.start | sphere | 40 | 60 | r 5 |
+| trg.t06.end | sphere | 0 | 60 | r 6 |
+| trg.t07.cart | sphere | 0 | 74 | r 5 |
+| trg.t07.fence | sphere | 0 | 94 | r 5 |
 | trg.t11.square | box | 0 | 130 | half 12 x 30 x 12 |
 | trg.t12.bakery | box | 24 | 132 | half 4.5 x 30 x 4.5 |
-| trg.t14.chapel | sphere | 40 | 45 | r 4 |
-| trg.t14.kettlewick | sphere | 12 | 156 | r 4 |
+| trg.t14.chapel | sphere | 40 | 45 | r 6 |
+| trg.t14.kettlewick | sphere | 12 | 156 | r 6 |
 | trg.t15.gate | sphere | 0 | 165 | r 8 |
 | trg.yard.board | sphere | -45 | 127 | r 6 |
 | trg.region.brightwater-north | box | 0 | 240 | half 80 x 400 x 4 |
-| m01.chapel-door | sphere | 43 | 60 | r 3 |
+| m01.chapel-door | sphere | 43 | 60 | r 5 |
 | m02.bakery | box | 24 | 132 | half 4.5 x 30 x 4.5 |
 | trg.ford.toll-post | sphere | -410 | -150 | r 9 |
-| trg.leap.chapel-ledge | sphere | 72 | 90 | r 2.5 |
-| trg.vault.door | sphere | 55.5 | 64.5 | r 2 |
+| trg.leap.chapel-ledge | sphere | 72 | 90 | r 2.6 |
+| trg.vault.door | sphere | 55.5 | 64.5 | r 3.5 |
 | trg.wardstones.road | box | 540 | -146 | half 260 x 40 x 20 |
 | trg.shrine.basin | sphere | 965 | -165 | r 10 |
-| m01.tavern-door | sphere | -15.5 | 133 | r 3 |
-| m02.bakery-door | sphere | 17.6 | 132.2 | r 1.5 |
-| m02.granary | sphere | -35.5 | 145 | r 4 |
-| r01.stubble | sphere | 30 | 38 | r 3 |
+| m01.tavern-door | sphere | -15.5 | 133 | r 5 |
+| m02.bakery-door | sphere | 17.6 | 132.2 | r 3 |
+| m02.granary | sphere | -35.5 | 145 | r 5.5 |
+| r01.stubble | sphere | 30 | 38 | r 5 |
 
 ## Structures
 

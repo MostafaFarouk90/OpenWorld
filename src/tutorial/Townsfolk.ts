@@ -22,8 +22,8 @@ export interface TownsfolkSpot {
 
 /** Hand-picked: off the lane (|x| > 3), outside the T11 square (|x| < 12, 118 < z < 142), clear of buildings and triggers. */
 export const TOWNSFOLK_SPOTS: readonly TownsfolkSpot[] = [
-  { id: 'baker-queue-1', near: 'kettlewick.bakery-door', dx: -1.5, dz: 2, face: [1, -0.6], model: 'barbarian', tint: 0xb89a6a, scale: 0.95 },
-  { id: 'baker-queue-2', near: 'kettlewick.bakery-door', dx: -2.5, dz: -3.5, face: [0.4, 1], model: 'rogue', tint: 0x9a7a5a, scale: 1 },
+  { id: 'baker-queue-1', near: 'kettlewick.bakery-door', dx: -2.5, dz: 3.5, face: [1, -0.6], model: 'barbarian', tint: 0xb89a6a, scale: 0.95 },
+  { id: 'baker-queue-2', near: 'kettlewick.bakery-door', dx: -3, dz: -4.5, face: [0.4, 1], model: 'rogue', tint: 0x9a7a5a, scale: 1 },
   { id: 'tavern-loiterer', near: 'kettlewick.tavern-door', dx: 1.5, dz: -6, face: [-1, 0.8], model: 'barbarian', tint: 0x7a6a8a, scale: 1.02 },
   { id: 'south-chat-1', near: 'kettlewick.square', dx: -13.5, dz: -15, face: [1, 0.3], model: 'rogueHooded', tint: 0x6a7a5a, scale: 0.98 },
   { id: 'south-chat-2', near: 'kettlewick.square', dx: 6.5, dz: -14, face: [-1, -0.2], model: 'rogue', tint: 0xa88a6a, scale: 0.92 },

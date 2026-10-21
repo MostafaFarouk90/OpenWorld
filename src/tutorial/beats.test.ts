@@ -102,7 +102,7 @@ describe('tutorial beats', () => {
     expect(TUTORIAL_STRINGS_EN['tutorial.prompt.rekindle']).toBe('Hold {key} at the chapel waystone to rekindle it');
     expect(BEATS.t14.prompts?.some((p) => p.textKey === 'tutorial.prompt.rekindle' && p.action === 'interact')).toBe(true);
     expect(TUTORIAL_STRINGS_EN['tutorial.prompt.rest']).toBe('Hold {key} at a waystone to rest');
-    expect(BEATS.t06.steps[0]).toEqual([{ kind: 'sprint', meters: 40, count: 2 }]);
+    expect(BEATS.t06.steps[0]).toEqual([{ kind: 'sprint', meters: 25, count: 2 }]);
     expect(TUTORIAL_STRINGS_EN['tutorial.t01.summary']).toMatch(/barley loft/);
   });
 

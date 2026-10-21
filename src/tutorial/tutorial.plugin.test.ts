@@ -318,14 +318,14 @@ describe('clarity wiring on the real game', () => {
     expect(t.game.ctx.services.get('quests')!.state('t12')).toBe('completed');
   });
 
-  it('learning a passive at T13 leaves its quest open until the skill first triggers (review M1)', async () => {
+  it('learning a passive at T13 completes its quest at once (QA round 3)', async () => {
     const t = await boot();
     t.director.begin('full', 't13');
     frame(t, 2);
     expect(t.game.ctx.services.get('progression')!.learn('knight.rimBash').ok).toBe(true);
     frame(t, 3);
     expect(t.director.beat).toBe('t14');
-    expect(t.game.ctx.services.get('quests')!.state('t13')).toBe('active');
+    expect(t.game.ctx.services.get('quests')!.state('t13')).toBe('completed');
   });
 
   it('an old save made mid-T12 (quest holds only o1) still completes the bakery beat (review B1)', async () => {

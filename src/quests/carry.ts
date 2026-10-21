@@ -21,6 +21,8 @@ export interface MoveModifierSpec {
 export interface CarryPlayerPort {
   id(): string | undefined;
   feet(): Vec3Like;
+  /** Facing, radians (0 = -Z); lets a carried villager ride in front of the player. */
+  facingYaw?(): number;
   addMoveModifier(source: string, mod: MoveModifierSpec): () => void;
 }
 
@@ -46,7 +48,7 @@ export interface Carryable {
   /** home anchor position; undefined when the anchor is missing (carryable is skipped with one warning) */
   home(): Vec3Like | undefined;
   /** visual placeholder control */
-  setPosition(p: Vec3Like): void;
+  setPosition(p: Vec3Like, carrierYaw?: number): void;
   setVisible(on: boolean): void;
   /** e.g. 'quest.m01.villager1.delivered' */
   deliveredFlag: string;
@@ -79,8 +81,6 @@ export const CARRY_LOCKED_ACTIONS: readonly string[] = [
 ];
 export const CARRY_SPEED_SCALE = 0.6;
 const MODIFIER_SOURCE = 'carry';
-/** Carried visual sits slightly above the feet so it reads as held. */
-const CARRY_LIFT = 1.0;
 
 interface Slot {
   c: Carryable;
@@ -142,8 +142,8 @@ export class CarrySystem {
     if (!this.p.objectiveCurrent(s.c.questId, s.c.objectiveId)) { this.drop('objective'); return; }
     if (this.p.isActionHeld('block')) { this.drop('voluntary'); return; }
     const f = this.p.player.feet();
-    s.pos = { x: f.x, y: f.y + CARRY_LIFT, z: f.z };
-    s.c.setPosition(s.pos);
+    s.pos = { x: f.x, y: f.y, z: f.z };
+    s.c.setPosition(s.pos, this.p.player.facingYaw?.() ?? 0);
   }
 
   dispose(): void {

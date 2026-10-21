@@ -17,14 +17,14 @@ function setup(opts: { missingHome?: string; current?: (q: string, o: string) =>
   const interactables = new Map<string, PickupInteractable>();
   let block = false;
   const warns: string[] = [];
-  const vis = new Map<string, { pos: any; on: boolean }>();
+  const vis = new Map<string, { pos: any; on: boolean; yaw?: number }>();
   const carryables: Carryable[] = [1, 2, 3].map((n) => {
     const id = `villager-${n}`;
     vis.set(id, { pos: null, on: true });
     return {
       id, interactableId: `pickup:${id}`,
       home: () => (opts.missingHome === id ? undefined : { x: n * 10, y: 0, z: 0 }),
-      setPosition: (p) => { vis.get(id)!.pos = { ...p }; },
+      setPosition: (p, yaw) => { vis.get(id)!.pos = { ...p }; vis.get(id)!.yaw = yaw; },
       setVisible: (on) => { vis.get(id)!.on = on; },
       deliveredFlag: `quest.m01.villager${n}.delivered`,
       questId: 'm01', objectiveId: 'carry', destination: 'chapel',
@@ -34,7 +34,7 @@ function setup(opts: { missingHome?: string; current?: (q: string, o: string) =>
     bus,
     flags: { get: (k) => flags.get(k) === true, set: (k, v) => { flags.set(k, v); } },
     player: {
-      id: () => 'player', feet: () => feet,
+      id: () => 'player', feet: () => feet, facingYaw: () => 1.25,
       addMoveModifier: (_s, m) => { mods++; addCalls++; lastMod = m; let done = false; return () => { if (!done) { done = true; mods--; } }; },
     },
     interactables: { register: (i) => { interactables.set(i.id, i); return () => { interactables.delete(i.id); }; } },
@@ -90,6 +90,13 @@ describe('CarrySystem', () => {
     expect(t.ev('carry.dropped')).toEqual([{ carryId: 'villager-1', reason: 'damaged' }]);
     expect(t.vis.get('villager-1')!.pos.x).toBe(7);
     expect(t.enabled(1)).toBe(true);
+  });
+  it('a carried villager follows the player\'s feet and facing; a dropped or home one stands without a carrier yaw', () => {
+    const t = setup(); t.pick(1);
+    expect(t.vis.get('villager-1')!.pos).toEqual({ x: 5, y: 0, z: 5 });
+    expect(t.vis.get('villager-1')!.yaw).toBe(1.25);
+    t.bus.emit('damage.dealt', { targetId: 'player', outcome: 'hit' });
+    expect(t.vis.get('villager-1')!.yaw).toBeUndefined();
   });
   it('death drops', () => {
     const t = setup(); t.pick(1);

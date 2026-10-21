@@ -599,19 +599,17 @@ describe('T12 kit and flask', () => {
 });
 
 describe('T13 passives', () => {
-  it('a passive finishes T13 pending and passes on its first trigger later', () => {
+  it('a passive completes T13 as soon as it is learned', () => {
     d.begin('full');
     passUntil('t13');
     ev({ type: 'learned', skillId: 'knight.rimBash' });
     tick();
     expect(d.beat).toBe('t14');
-    expect(w.quests.get('t13')).toBe('active');
-    expect(d.snapshot().t13PendingPassive).toBe('knight.rimBash');
-    ev({ type: 'skillTriggered', skillId: 'knight.rimBash' });
     expect(w.quests.get('t13')).toBe('completed');
+    expect(d.snapshot().t13PendingPassive).toBeNull();
   });
 
-  it('an untriggered passive is passed when the tutorial ends', () => {
+  it('an untriggered passive never reopens T13', () => {
     d.begin('full');
     passUntil('t13');
     ev({ type: 'learned', skillId: 'knight.riposteEdge' });

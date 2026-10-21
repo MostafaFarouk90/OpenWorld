@@ -29,6 +29,23 @@ const waystones: GamePlugin = {
     ctx.events.on('actor.died', (e) => aggro.delete(e.actorId));
     ctx.events.on('actor.despawned', (e) => aggro.delete(e.actorId));
 
+    // A foe that aggroed and never emitted `ai.calm` (it lost the player, or is stuck out of reach) must not block rest and
+    // fast travel for ever (QA round 3): drop the ones that are gone or far away.
+    const hostileNow = (): boolean => {
+      if (aggro.size === 0) return false;
+      const f = ctx.player.feet;
+      const limit2 = WAYSTONE_TUNING.staleAggroDistance ** 2;
+      // Filter without deleting: a far foe that is still hunting must count again once it closes in.
+      for (const id of aggro) {
+        const a = ctx.actors.get(id);
+        if (!a) return true; // not in the registry (yet): cannot judge, so it counts
+        if (a.dead) continue;
+        const p = a.root?.position;
+        if (!p || (p.x - f.x) ** 2 + (p.z - f.z) ** 2 <= limit2) return true;
+      }
+      return false;
+    };
+
     let handle: { ready(): boolean } | null = null;
     const teleport = new SafeTeleport({
       place: (feet, yaw) => {
@@ -57,7 +74,7 @@ const waystones: GamePlugin = {
         dead: ctx.player.actor.dead,
         cutscene: ctx.input.contexts.top() === 'cutscene',
         dialogue: ctx.input.contexts.top() === 'dialogue',
-        hostileAggro: aggro.size > 0,
+        hostileAggro: hostileNow(),
         heartshard: debug || ctx.state.getBool('tutorial.heartshard-awakened'),
         allowRestInCombat: ctx.state.getBool('waystone.allowRestInCombat'),
       }),
@@ -150,7 +167,7 @@ const waystones: GamePlugin = {
       if (ctx.player.actor.dead) return 'dead';
       if (c === 'cutscene') return 'cutscene';
       if (c === 'dialogue') return 'dialogue';
-      if (aggro.size > 0) return 'in-combat';
+      if (hostileNow()) return 'in-combat';
       return null;
     };
 
@@ -174,7 +191,7 @@ const waystones: GamePlugin = {
         return net.travelling;
       },
       get hostileAggro() {
-        return aggro.size > 0;
+        return hostileNow();
       },
       safeTeleport: (feet, yaw) => teleport.start(feet, yaw, null, { takeover: false }),
     };

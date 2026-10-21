@@ -272,7 +272,11 @@ export function createMapModal(deps: MapViewDeps): MapModalWidget {
   }
 
   function tryTravel(m: MapMarker | null | undefined): void {
-    if (!m || !m.travelable) return;
+    if (!m) return;
+    if (!m.travelable) {
+      if (m.kind === 'waystone') status.textContent = model.t('map.blocked.dormant');
+      return;
+    }
     const reason = model.travelBlockedReason();
     if (reason !== null) {
       status.textContent = model.t(`map.blocked.${reason}`);

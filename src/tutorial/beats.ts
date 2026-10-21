@@ -48,7 +48,7 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
     npcs: { gaut: 'npc-post.gaut' },
     // 'look' has no input action of its own; the prompt service needs a known action.
     prompts: [prompt('look', 'moveForward')],
-    steps: [[{ kind: 'gaze', anchors: ['chapel.banner-1', 'chapel.banner-2', 'chapel.banner-3'], degrees: 4, dwell: 0.25 }]],
+    steps: [[{ kind: 'gaze', anchors: ['chapel.banner-1', 'chapel.banner-2', 'chapel.banner-3'], degrees: 10, dwell: 0.15 }]],
     lines: ['tutorial.line.t02.1'],
   },
   t03: {
@@ -88,7 +88,7 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
     crisis: true,
     npcs: { gaut: 'tutorial.gaut.lane' },
     prompts: [prompt('sprint')],
-    steps: [[{ kind: 'sprint', meters: 40, count: 2 }], [{ kind: 'trigger', id: 'trg.t06.end' }]],
+    steps: [[{ kind: 'sprint', meters: 25, count: 2 }], [{ kind: 'trigger', id: 'trg.t06.end' }]],
     targets: [null, 'tutorial.gaut.lane'],
     lines: ['tutorial.line.t06.1'],
   },
@@ -108,7 +108,7 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
     prompts: [prompt('attack2'), prompt('attack3'), prompt('attack4')],
     waves: [[{ spawnerId: 't08.lane', healthScale: 2, aggro: true }]],
     steps: [
-      [{ kind: 'attacks', slots: [2, 3, 4], chain: 4, window: 1.5 }],
+      [{ kind: 'attacks', slots: [2, 3, 4], chain: 3, window: 3 }],
       [{ kind: 'cleared', spawnerIds: ['t08.lane'] }],
     ],
     lines: ['tutorial.line.t08.1'],

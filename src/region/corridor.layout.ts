@@ -106,8 +106,8 @@ const anchors: AnchorSpec[] = [
 
 const triggers: TriggerSpec[] = [
   { id: 'trg.ford.toll-post', shape: 'sphere', x: -410, z: -150, radius: 9 },
-  { id: 'trg.leap.chapel-ledge', shape: 'sphere', x: 72, z: 90, dy: 2, radius: 2.5 },
-  { id: 'trg.vault.door', shape: 'sphere', x: 55.5, z: 64.5, radius: 2 },
+  { id: 'trg.leap.chapel-ledge', shape: 'sphere', x: 72, z: 90, dy: 2, radius: 2.6 },
+  { id: 'trg.vault.door', shape: 'sphere', x: 55.5, z: 64.5, radius: 3.5 },
   { id: 'trg.wardstones.road', shape: 'box', x: 540, z: -146, half: [260, 40, 20] },
   { id: 'trg.shrine.basin', shape: 'sphere', x: 965, z: -165, radius: 10 },
 ];

@@ -657,12 +657,10 @@ export class TutorialDirector {
     const id = this.s.beat!;
     const def = this.def(id);
     const pendingPassive = id === 't13' && how === 'completed' ? this.pendingPassive() : null;
-    if (pendingPassive) {
-      this.s.t13PendingPassive = pendingPassive;
-      this.ports.toast('tutorial.t13.passive');
-    } else {
-      this.ports.completeQuest(def.questId);
-    }
+    // QA round 3: a passive cannot be used on demand, so the quest completes on learning it (the toast still
+    // tells the player it wakes in the next fight) instead of waiting for a trigger that may never come.
+    if (pendingPassive) this.ports.toast('tutorial.t13.passive');
+    this.ports.completeQuest(def.questId);
     if (!this.s.finished.includes(id)) this.s.finished.push(id);
     this.ports.hidePrompts();
     this.ports.emitBeat(id, how);
@@ -740,8 +738,6 @@ export class TutorialDirector {
     if (!goals || !seen) return;
     let delta = 0;
     goals.forEach((g, gi) => {
-      // A learned passive passes T13 but its quest waits for the first trigger (skillTriggered completes it; review M1).
-      if (complete && g.spec.kind === 'skill' && !g.done) return;
       const u = complete ? goalRequired(g.spec) : goalUnits(g.spec, g.progress, g.done);
       if (u > seen[gi]) {
         delta += u - seen[gi];
