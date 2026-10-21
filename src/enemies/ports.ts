@@ -259,6 +259,8 @@ export interface VfxLike {
     tip: THREE.Object3D,
     opts?: { lifetime?: number; color?: number },
   ): { setEmitting(on: boolean): void; dispose(): void };
+  /** The vfx quality step (`low` halves the wyrm's breath and drops its smoke). */
+  readonly quality?: 'low' | 'medium' | 'high';
 }
 
 /**

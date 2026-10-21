@@ -5,6 +5,7 @@ import { mulberry32 } from './ai/moveSelect';
 import { ENEMY_DEFS } from './defs';
 import { PathBudget } from './steering/pathFollower';
 import { boneMultiplier, Enemy, type EnemyEnv, type EnemySpawn } from './Enemy';
+import { makeWyrmBody } from './wyrm/body';
 import { EnemyAnimator } from './EnemyAnimator';
 import { buildEnemyModel, type EnemyModelSource } from './EnemyModel';
 import { isFoeKind } from './foes/defs';
@@ -74,6 +75,8 @@ export interface EnemiesService {
  * listeners, the damage modifier, attack tokens, pack alerts, mercy and dormancy.
  */
 const PULL_TMP = new THREE.Vector3();
+/** After the defender band (guards, shields): a wing hit breaks poise whatever the swing carried. */
+const POISE_BREAK_BONES_ORDER = 50;
 
 export class EnemyManager {
   readonly spawners: SpawnerRegistry;
@@ -305,6 +308,10 @@ export class EnemyManager {
   /** The body for a def: the procedural quadruped, or the Knight rig from the model factory. */
   private makeBody(def: EnemyDef): EnemyBody {
     if (def.body === 'quadruped') return makeQuadrupedBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
+    if (def.body === 'wyrm') {
+      const lowQuality = this.host.services.get('vfx')?.quality === 'low';
+      return makeWyrmBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m), lowQuality });
+    }
     const source = this.makeModel(def);
     const model = buildEnemyModel(source, def, { bus: this.host.combat.bus });
     const animator = new EnemyAnimator(model.owner, source.clips, { warn: (m) => this.host.warn(m) });
@@ -819,6 +826,17 @@ export class EnemyManager {
           }
         },
         GUARD.modifierOrder,
+      ),
+      // A def's `poiseBreakBones` (the Ember Wyrm's wings): a player-team or ally hit there breaks poise at once.
+      this.host.damage.addModifier(
+        'enemies.poiseBreakBones',
+        (req, target, attacker) => {
+          if (req.outcome !== 'hit' || req.kind === 'status' || req.kind === 'script' || !req.bone || !attacker) return;
+          if (attacker.team !== 'player' && attacker.team !== 'ally') return;
+          const bones = this.enemies.get(target.id)?.def.poiseBreakBones;
+          if (bones && bones.includes(req.bone)) req.poise = Math.max(req.poise ?? 0, target.poise);
+        },
+        POISE_BREAK_BONES_ORDER,
       ),
       this.host.damage.addModifier(
         'enemies.moves',

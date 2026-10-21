@@ -29,6 +29,9 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'toll-sergeant': 70,
   // R02's sparring yard veterans (density pass, batch 3)
   'yard-veteran': 30,
+  // Act 2 wyrms (A6a; A6b owns any retune).
+  'ember-wyrm': 180,
+  wyrmling: 15,
   dummy: 0,
   scarecrow: 0,
 };

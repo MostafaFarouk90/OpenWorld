@@ -20,4 +20,6 @@ export const ENEMY_STRINGS_EN: Record<string, string> = {
   'enemies.name.toll-sergeant': 'Toll Sergeant',
   'enemies.name.yard-veteran': 'Yard Veteran',
   'enemies.name.hrolf-trial': 'Hrolf Ironbrow',
+  'enemies.name.ember-wyrm': 'Ember Wyrm',
+  'enemies.name.wyrmling': 'Wyrmling',
 };
