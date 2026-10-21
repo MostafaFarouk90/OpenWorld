@@ -29,7 +29,7 @@ export function shaftHeadLayout(): Pick<LayoutData, 'anchors' | 'triggers' | 'st
       solid('oldsmoke-shaft-collar', 'deepgate-collar', S.x, S.z, 10, 10, 0.8),
       open('oldsmoke-shaft-headframe', 'deepgate-headframe', S.x, S.z, 10, 8, 14),
       solid('oldsmoke-winch-house', 'house', WINCH.x, WINCH.z, 8, 6),
-      // Rope catwalks: winch house to headframe, headframe north to the first spoil heap.
+      // Rope catwalks (decoration): winch house to headframe, and headframe south toward the shaft-head lane.
       open('oldsmoke-catwalk-1', 'deepgate-rope-bridge', S.x + 17, S.z - 2, 22, 2.4, 3),
       open('oldsmoke-catwalk-2', 'deepgate-rope-bridge', S.x, S.z - 24, 2.4, 30, 3),
       solid('oldsmoke-waystone-bellows', 'waystone', S.x + 18, S.z + 22 + 1.8, 1.6, 1.6, 2.4),

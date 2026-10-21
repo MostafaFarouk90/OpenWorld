@@ -9,6 +9,7 @@ import navPlugin from '../nav/nav.plugin';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { heightAt } from '../terrain/heightfield';
 import { HALL_DOOR } from './sites';
+import { OLDSMOKE_LAYOUT } from './oldsmoke.layout';
 import { GRISEL_HALL_DOOR_ID, GRISEL_HALL_ID } from './griselHall';
 import { groundDistance } from '../waystones/ground';
 import waystonesPlugin from '../waystones/waystones.plugin';
@@ -100,6 +101,11 @@ async function reason(t: Booted, p: Promise<unknown>): Promise<string> {
 const near = (a: { x: number; z: number }, b: { x: number; z: number }) => Math.hypot(a.x - b.x, a.z - b.z);
 
 describe('Grisel Hall on the real game', () => {
+  it('stands the layout\'s door anchor where the interior floats (HALL_DOOR)', () => {
+    const door = OLDSMOKE_LAYOUT.anchors.find((a) => a.id === 'oldsmoke.hall.door')!;
+    expect([door.x, door.z]).toEqual([HALL_DOOR.x, HALL_DOOR.z]);
+  });
+
   it('stays locked until A13 starts M16, then enters onto a real floor and exits to the door', async () => {
     const t = await boot();
     expect(t.statuses.filter((s) => s.state !== 'ok')).toEqual([]);

@@ -64,9 +64,14 @@ describe('Deepgate NPC posts', () => {
   });
 
   it('Aldous and the hall stewards move onto the hall\'s own posts; Wenna too until M19 hands her to A13', () => {
-    expect(at('aldous', env()).anchorId).toBe('oldsmoke.hall.aldous');
+    // Aldous and Wenna hold the forecourt for M16, then sit in the hall.
+    expect(at('aldous', env()).home).toBe(true);
+    expect(at('aldous', env({ m16: 'active' })).home).toBe(true);
+    expect(at('aldous', env({ m16: 'completed' })).anchorId).toBe('oldsmoke.hall.aldous');
+    expect(at('wenna', env()).home).toBe(true);
+    expect(evalCondition(OLDSMOKE_POST_RULES.find((r) => r.npcId === 'steward-hall-1')!.leaveWhen, env({}, { [HALL_HOSTILE_FLAG]: true }))).toBe(true);
     for (const n of [1, 2, 3, 4]) expect(at(`steward-hall-${n}`, env()).anchorId).toBe(`oldsmoke.hall.steward.${n}`);
-    expect(at('wenna', env()).anchorId).toBe('oldsmoke.hall.wenna');
+    expect(at('wenna', env({ m16: 'completed' })).anchorId).toBe('oldsmoke.hall.wenna');
     // From M19 the director does not place her at all (`leaveWhen`): A13's route owns her.
     const leave = OLDSMOKE_POST_RULES.find((r) => r.npcId === 'wenna')!.leaveWhen;
     expect(evalCondition(leave, env())).toBe(false);
