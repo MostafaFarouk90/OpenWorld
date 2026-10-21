@@ -6,6 +6,7 @@ import { DEADROAD_LAYOUT } from '../region/deadroad.layout';
 import { VAULT_DEF } from '../interiors/vaultDef';
 import { BRIGHTWATER_SPAWNERS } from './brightwaterSpawners';
 import { SLICE_SPAWNERS } from './spawnerDefs';
+import { WYRM_SPAWNERS } from './wyrm/spawners';
 
 const known = new Set<string>([
   ...BRIGHTWATER_LAYOUT.anchors.map((a) => a.id),
@@ -14,13 +15,16 @@ const known = new Set<string>([
 ]);
 
 describe('spawner anchors exist', () => {
-  for (const def of [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS]) {
+  for (const def of [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...WYRM_SPAWNERS]) {
     it(def.id, () => {
       const members = Array.isArray(def.memberAnchors) ? def.memberAnchors : []; // { tag } picks by tag at runtime
       const route = Array.isArray(def.patrol) ? def.patrol : [];
       const ids = [def.anchor, ...members, ...route].filter((x): x is string => typeof x === 'string');
-      // Harrowmark anchors arrive with the city layout (Phase B, thread 17); every other anchor must exist now.
-      expect(ids.filter((id) => !known.has(id) && !id.startsWith('harrowmark.'))).toEqual([]);
+      // Harrowmark anchors arrive with the city layout (Phase B, thread 17); the Act 2 wyrm anchors with A2's points of
+      // interest (`poi.a2.`) and A3's Cinderreach places (`cinderreach.`); `dev.` anchors are defined by the `?wyrms=1`
+      // hook. Every other anchor must exist now.
+      const pending = ['harrowmark.', 'poi.a2.', 'cinderreach.', 'dev.'];
+      expect(ids.filter((id) => !known.has(id) && !pending.some((p) => id.startsWith(p)))).toEqual([]);
     });
   }
 });

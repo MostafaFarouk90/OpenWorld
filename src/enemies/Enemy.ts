@@ -65,6 +65,8 @@ export interface EnemySpawn {
   damageScale: number;
   patrol: { x: number; z: number }[];
   options: SpawnOptions & { leash: boolean };
+  /** The spawner slot this member fills (behaviour overlays key per-slot state on it: a wyrmling's chain). */
+  slot?: number;
 }
 
 type Phase = 'alive' | 'dying' | 'fading' | 'leaving' | 'gone';
@@ -713,6 +715,21 @@ export class Enemy {
     this.setLoco(ENEMY_CLIPS.walk);
   }
 
+  /**
+   * Leaves the fight without a mercy (a wyrmling flying off, `wyrms.flyAway`): out of combat, walks or flies off as
+   * the overlay says, then despawns as 'retired' (its slot is spent, no credit, no loot). Alive enemies only.
+   */
+  retire(): void {
+    if (this.phase !== 'alive') return;
+    this.brain.standDown();
+    this.disarm();
+    this.goneHow = 'retired';
+    this.phase = 'leaving';
+    this.leaveFrom = this.mover.feet.clone();
+    this.leaveTime = 0;
+    this.setLoco(ENEMY_CLIPS.walk);
+  }
+
   /** The player or an ally struck this enemy (damage.dealt, outcome hit, not a script): Calm closes unless it staggers. */
   markStruck(): void {
     this.brain.markStruck();
@@ -868,7 +885,7 @@ export class Enemy {
   }
 
   private leave(dt: number): void {
-    if (this.overlay?.leave && (this.goneHow === 'calmed' || this.goneHow === 'spared') && this.overlay.leave(dt, this.goneHow)) return;
+    if (this.overlay?.leave && (this.goneHow === 'calmed' || this.goneHow === 'spared' || this.goneHow === 'retired') && this.overlay.leave(dt, this.goneHow)) return;
     const self = this.mover.feet;
     const p = this.host.player.feet;
     const away = { x: self.x - p.x, z: self.z - p.z };
@@ -1049,6 +1066,7 @@ export class Enemy {
       def: this.def,
       actorId: this.actor.id,
       spawnerId: this.spawnerId,
+      slot: spawn.slot ?? null,
       options: spawn.options,
       host,
       body: this.body,
@@ -1069,6 +1087,12 @@ export class Enemy {
       },
       indoors: () => !!this.env.nav() || !!host.services.get('interiors')?.current,
       playOneShot: (clip, seconds) => this.oneShot(clip, seconds),
+      move: (velocity, dt) => {
+        if (Math.hypot(velocity.x, velocity.z) > 0.05) this.yaw = turnToward(this.yaw, Math.atan2(-velocity.x, -velocity.z), AI.turnRate * dt);
+        this.mover.move(velocity, dt);
+      },
+      retire: () => this.retire(),
+      finish: () => this.despawn(),
     });
   }
 

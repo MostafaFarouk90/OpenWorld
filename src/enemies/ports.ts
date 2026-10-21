@@ -164,6 +164,8 @@ export interface EnemyEvents {
   'boss.ended': { bossId: string; actorId: ActorId; reason: 'despawned' | 'unregistered' };
   /** The player's dodge i-frames avoided `attackerId`'s hit (actors-and-damage.md section 10; the hound's dodge counter). */
   'player.dodged': { attackerId: ActorId | null };
+  /** Core: an actor's attack window opened or closed (the wyrmling watches the player's swings). */
+  'attack.window': { actorId: ActorId; attackId: string; swingId: number; phase: 'open' | 'close' };
 }
 export type EnemyEventName = keyof EnemyEvents;
 
