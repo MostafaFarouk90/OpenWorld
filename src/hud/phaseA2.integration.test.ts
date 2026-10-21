@@ -117,6 +117,16 @@ describe('Act 2 HUD wiring (real Game)', () => {
     t.dispose();
   });
 
+  it('Escape closes the Party screen opened by party.offered', async () => {
+    const t = await setup();
+    provideParty(t);
+    t.game.events.emit('party.offered', { waystoneId: 'w' });
+    expect(t.ctx.hud.modalOpen).toBe('party-screen');
+    t.press('Escape');
+    expect(t.ctx.hud.modalOpen).toBeNull();
+    t.dispose();
+  });
+
   it('party.offered opens the screen once, never over another modal, and a load closes it', async () => {
     const t = await setup();
     provideParty(t);

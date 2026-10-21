@@ -209,6 +209,10 @@ const hudPlugin: GamePlugin = {
 
     // Companion portrait: the row set follows the party's active() (a swap emits no `left`), re-read at setup, on
     // `save.loaded` and on every join, leave and party change.
+    const downedIds = new Set<string>();
+    ctx.events.on('companion.downed', (e) => downedIds.add(e.companionId));
+    ctx.events.on('companion.stood', (e) => downedIds.delete(e.companionId));
+    ctx.events.on('save.loaded', () => downedIds.clear());
     const companionSvc = () => soft(ctx, 'companions');
     const partySvc = () => ctx.services.get('party');
     const portrait = new CompanionPortrait(doc, {
@@ -216,10 +220,11 @@ const hudPlugin: GamePlugin = {
       actorId: (id) => companionSvc()?.actorId(id) ?? null,
       actor: (id) => ctx.actors.get(id),
       info: (id) => partySvc()?.options().find((o) => o.id === id),
+      isDowned: (id) => downedIds.has(id),
       t,
     });
     ctx.events.on('save.loaded', () => portrait.reload());
-    for (const type of ['companion.joined', 'companion.left', 'party.changed'] as const) ctx.events.on(type, () => portrait.reload(true));
+    for (const type of ['companion.joined', 'companion.left', 'party.changed', 'companion.bond'] as const) ctx.events.on(type, () => portrait.reload(true));
     ctx.events.on('companion.aura', (e) => portrait.aura(e.companionId, e.active));
     ctx.events.on('companion.downed', (e) => portrait.downed(e.companionId, true));
     ctx.events.on('companion.stood', (e) => portrait.downed(e.companionId, false));
@@ -229,6 +234,10 @@ const hudPlugin: GamePlugin = {
     const structureBar = new StructureBar(doc, {
       actor: (id) => ctx.actors.get(id),
       structure: (id) => ctx.services.get('waves')?.structure(id),
+      running: () => {
+        const w = ctx.services.get('waves');
+        return w ? w.current !== null : undefined;
+      },
       t,
     });
     ctx.events.on('structure.damaged', (e) => structureBar.damaged(e.id, e.health));
@@ -236,14 +245,10 @@ const hudPlugin: GamePlugin = {
     ctx.events.on('wave.started', () => structureBar.waveStarted());
     ctx.events.on('wave.cleared', () => structureBar.waveCleared());
     ctx.events.on('waves.failed', () => structureBar.reset());
-    ctx.events.on('save.loaded', () => structureBar.reset(true));
+    ctx.events.on('save.loaded', () => structureBar.loaded());
     mount('top-center', structureBar, 2);
 
     // The Party screen: key P (read-only outside the waystone window) or a waystone rest with two companions.
-    const downedIds = new Set<string>();
-    ctx.events.on('companion.downed', (e) => downedIds.add(e.companionId));
-    ctx.events.on('companion.stood', (e) => downedIds.delete(e.companionId));
-    ctx.events.on('save.loaded', () => downedIds.clear());
     let closeParty: (() => void) | null = null;
     const openParty = (): void => {
       const svc = partySvc();

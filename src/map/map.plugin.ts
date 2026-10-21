@@ -14,7 +14,7 @@ import { MAP_STRINGS_EN } from './strings.en';
 import { renderLocalTile, renderTerrainBitmap, minimapTilePlan, type TerrainBitmap } from './TerrainBitmap';
 import { DEFAULT_WORLD_BOUNDS, MAP_TUNING } from './tuning';
 import type { MapViewModel } from './viewTypes';
-import { chipsKey, openRegionAt, regionChips, type RegionChip } from './regionLayer';
+import { openRegionAt, regionChips, type RegionChip } from './regionLayer';
 import '../region/containment';
 
 
@@ -126,14 +126,16 @@ const map: GamePlugin = {
     // Region chips follow containment.openRegions(), polled where the views redraw (no new events). The array is reused
     // while the open set is unchanged.
     let chips: RegionChip[] = regionChips([]);
-    let chipsSig = chipsKey(chips);
+
     const openNow = () => ctx.services.get('containment')?.openRegions() ?? [];
+    let openSig = '';
     const currentChips = (): RegionChip[] => {
-      const next = regionChips(openNow());
-      const sig = chipsKey(next);
-      if (sig !== chipsSig) {
-        chips = next;
-        chipsSig = sig;
+      const open = openNow();
+      const sig = open.join(',');
+      if (sig !== openSig) {
+        openSig = sig;
+        chips = regionChips(open);
+
       }
       return chips;
     };

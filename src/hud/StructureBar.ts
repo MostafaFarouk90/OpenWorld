@@ -9,10 +9,13 @@ export interface StructureActorView {
 }
 
 export interface StructureBarSource {
-  /** `ctx.actors.get(id)`: structures are actors; health is read from it every update (a restore emits no event). */
+  /** Optional actor lookup. Carts and the barricade are not registered under their structure ids today, so health normally comes from `structure.damaged` (A7 emits it at spawn, on every hit and on a restore); a matching actor wins. */
   actor?(id: string): StructureActorView | null | undefined;
   /** `waves.structure(id)`: kind and maximum health, the fallback when the actor is not found. */
   structure?(id: string): { kind: string; maxHealth: number } | undefined;
+  /** True while a wave set is running (`waves.current !== null`); undefined without the service. A stop emits no event, so update() polls it. */
+  running?(): boolean | undefined;
+  /** Companion-style seed: `save.loaded` marks a wave as possibly running until the poll says otherwise. */
   t?: Translate;
 }
 
@@ -29,6 +32,14 @@ interface Row {
 export const STRUCTURE_BAR_MAX_ROWS = 4;
 /** After the last damage or clear event the bars stay this long when no wave is running. */
 export const STRUCTURE_BAR_LINGER_SECONDS = 8;
+
+function safeRun(read: (() => boolean | undefined) | undefined): boolean | undefined {
+  try {
+    return read?.();
+  } catch {
+    return undefined;
+  }
+}
 
 const isCart = (id: string): boolean => id.includes('.cart.');
 
@@ -95,7 +106,13 @@ export class StructureBar implements HudWidgetView {
     this.update(0);
   }
 
-  /** `waves.failed`, a stop, `save.loaded`: the restart removes the carts and restores the barricade. */
+  /** `save.loaded`: a resumed wave announces its own structures (in either listener order), so nothing is dropped here; update() settles whether a run exists. */
+  loaded(): void {
+    this.waveActive = true;
+    this.idle = 0;
+  }
+
+  /** `waves.failed`, a stop: the restart removes the carts and restores the barricade. */
   reset(all = false): void {
     this.dropCarts();
     if (all) {
@@ -141,6 +158,12 @@ export class StructureBar implements HudWidgetView {
 
   update(frameTime = 0): void {
     if (Number.isFinite(frameTime) && frameTime > 0) this.idle += frameTime;
+    const running = safeRun(this.source.running);
+    if (running === false && this.waveActive) {
+      // A stop (or a load with no run): nothing is left to show.
+      for (const id of [...this.rows.keys()]) this.drop(id);
+      this.waveActive = false;
+    } else if (running === true) this.waveActive = true;
     for (const row of [...this.rows.values()]) {
       const a = this.actorOf(row.id);
       const max = this.source.structure?.(row.id)?.maxHealth ?? a?.maxHealth;

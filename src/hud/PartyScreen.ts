@@ -102,7 +102,10 @@ export class PartyScreen implements HudWidgetView {
     if (!this.options().some((o) => o.id === id)) return;
     const max = this.maxActive();
     if (this.selected.has(id)) {
-      if (this.selected.size <= 1) return; // the party is never empty
+      if (this.selected.size <= 1) {
+        this.setStatus('hud.party.last'); // the party is never empty
+        return;
+      }
       this.selected.delete(id);
     } else if (this.selected.size < max) {
       this.selected.add(id);
@@ -146,6 +149,7 @@ export class PartyScreen implements HudWidgetView {
     if (canChange !== !this.locked) {
       this.locked = !canChange;
       if (!canChange) this.resyncSelection();
+      this.setStatus(null); // a stale "The party is set." must not sit beside disabled controls
     }
     // Drop selections that no longer exist (a companion left while the screen was open).
     for (const id of [...this.selected]) if (!opts.some((o) => o.id === id)) this.selected.delete(id);

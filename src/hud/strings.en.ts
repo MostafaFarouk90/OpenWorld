@@ -38,6 +38,7 @@ export const HUD_STRINGS_EN: Readonly<Record<string, string>> = {
   'hud.party.readonly': 'Rest at a waystone to change who travels with you.',
   'hud.party.locked': 'The party can only change at a waystone rest.',
   'hud.party.full': 'Every seat is taken. Send someone to wait first.',
+  'hud.party.last': 'Someone has to travel with you.',
   'hud.party.changed': 'The party is set.',
   'hud.party.refused': 'That could not be done.',
   'hud.party.slot2': 'A second seat opens after The Houses Stand.',

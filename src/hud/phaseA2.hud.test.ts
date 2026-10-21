@@ -68,6 +68,15 @@ describe('CompanionPortrait with a party', () => {
     expect(textOf(p.element)).not.toContain('Tank');
   });
 
+  it('a re-seated companion keeps the kneel state from the source', () => {
+    const down = new Set(['hrolf']);
+    const p = new CompanionPortrait(new StubDocument(), { active: () => ['hrolf'], actorId: () => 'A_h', actor: () => ({ health: 5, maxHealth: 10 }), isDowned: (id) => down.has(id), t });
+    expect(textOf(p.element)).toContain('Down');
+    down.clear();
+    p.reload();
+    expect(textOf(p.element)).not.toContain('Down');
+  });
+
   it('Act 1 with Tobb only and no info shows just name and bar', () => {
     const p = new CompanionPortrait(new StubDocument(), { active: () => ['tobb'], actorId: () => 'a', actor: () => ({ health: 1, maxHealth: 2 }), t: (k) => (k === 'hud.companion.tobb' ? 'Tobb' : `[[${k}]]`) });
     expect(textOf(p.element)).toBe('Tobb');
@@ -181,7 +190,44 @@ describe('StructureBar', () => {
     expect(b.element.style.display).toBe('block');
   });
 
-  it('a load clears everything', () => {
+  it('a stop (no event) clears the bars when the poll sees no run', () => {
+    const run = { on: true };
+    const b = new StructureBar(new StubDocument(), { structure: () => ({ kind: 'barricade', maxHealth: 400 }), running: () => run.on, t });
+    b.waveStarted();
+    b.damaged('cinderford.barricade', 400);
+    b.update(0.1);
+    expect(b.count).toBe(1);
+    run.on = false;
+    b.update(0.1);
+    expect(b.count).toBe(0);
+    expect(b.element.style.display).toBe('none');
+  });
+
+  it('a load keeps what the resumed wave announced, in either listener order, and clears when no run exists', () => {
+    const run = { on: true };
+    const b = new StructureBar(new StubDocument(), { structure: () => ({ kind: 'barricade', maxHealth: 400 }), running: () => run.on, t });
+    b.damaged('cinderford.barricade', 250); // director first
+    b.loaded();
+    b.update(0.1);
+    expect(b.count).toBe(1);
+    const c = new StructureBar(new StubDocument(), { structure: () => ({ kind: 'barricade', maxHealth: 400 }), running: () => run.on, t });
+    c.loaded(); // hud first
+    c.damaged('cinderford.barricade', 250);
+    c.update(0.1);
+    expect(c.count).toBe(1);
+    run.on = false;
+    c.update(0.1);
+    expect(c.count).toBe(0);
+  });
+
+  it('a throwing running() poll is ignored', () => {
+    const b = new StructureBar(new StubDocument(), { structure: () => ({ kind: 'cart', maxHealth: 600 }), running: () => { throw new Error('x'); }, t });
+    b.damaged('x.cart.1.1', 600);
+    expect(() => b.update(1)).not.toThrow();
+    expect(b.count).toBe(1);
+  });
+
+  it('a load with the waves service reset clears everything', () => {
     const { b } = make();
     b.waveStarted();
     b.damaged('cinderford.barricade', 400);
@@ -254,6 +300,19 @@ describe('PartyScreen', () => {
     expect(screen.selectedIds).toEqual(['aelfreda']);
     screen.toggle('aelfreda');
     expect(screen.selectedIds).toEqual(['aelfreda']);
+  });
+
+  it('removing the last member says so; a stale success message clears when the window expires', () => {
+    const { screen, s } = make();
+    screen.toggle('hrolf');
+    expect(textOf(screen.element)).toContain('Someone has to travel with you.');
+    screen.toggle('aelfreda');
+    screen.apply();
+    expect(textOf(screen.element)).toContain('The party is set.');
+    s.can = false;
+    screen.update();
+    expect(textOf(screen.element)).not.toContain('The party is set.');
+    expect(textOf(screen.element)).toContain('Rest at a waystone');
   });
 
   it('a full party with more companions than seats refuses with a message', () => {

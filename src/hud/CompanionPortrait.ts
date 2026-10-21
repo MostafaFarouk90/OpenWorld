@@ -17,6 +17,8 @@ export interface CompanionPortraitSource {
   actor?(actorId: string): CompanionActorView | null | undefined;
   /** Role and bond rank for a joined companion (A5's `party.options()`); absent for Tobb in Act 1. */
   info?(id: string): { role?: string; rank?: number } | undefined;
+  /** Whether a companion is kneeling now, so a re-seated companion keeps the state. */
+  isDowned?(id: string): boolean;
   t?: Translate;
 }
 
@@ -65,9 +67,10 @@ export class CompanionPortrait implements HudWidgetView {
     for (const id of [...this.rows.keys()]) if (!ids.includes(id)) this.left(id);
     for (const id of ids) this.joined(id, this.queryActor(id));
     if (!keepAura) {
-      for (const row of this.rows.values()) {
+      for (const [id, row] of this.rows) {
         row.aura = false;
-        row.downed = false;
+        row.downed = this.source.isDowned?.(id) === true;
+        this.refreshMeta(id, row);
       }
     }
     this.update();
@@ -94,9 +97,12 @@ export class CompanionPortrait implements HudWidgetView {
       const label = this.t(`hud.companion.${companionId}`);
       name.textContent = label.startsWith('[[') ? titleCase(companionId) : label;
       pip.setAttribute('title', this.t('hud.companion.aura'));
-      row = { actorId, aura: false, downed: false, meta, root, name, pip, fill };
+      row = { actorId, aura: false, downed: this.source.isDowned?.(companionId) === true, meta, root, name, pip, fill };
+      this.refreshMeta(companionId, row);
       this.rows.set(companionId, row);
     } else if (actorId) row.actorId = actorId;
+    // A join, swap or bond event may have changed the rank: refresh once here, never per frame.
+    this.refreshMeta(companionId, row);
     this.update();
   }
 
@@ -117,8 +123,15 @@ export class CompanionPortrait implements HudWidgetView {
   /** `companion.downed` / `companion.stood`: the bar greys and the name shows the kneel. */
   downed(companionId: string, down: boolean): void {
     const row = this.rows.get(companionId);
-    if (row) row.downed = down;
+    if (row) {
+      row.downed = down;
+      this.refreshMeta(companionId, row);
+    }
     this.update();
+  }
+
+  private refreshMeta(id: string, row: Row): void {
+    row.meta.textContent = this.metaText(id, row.downed);
   }
 
   private metaText(id: string, downed: boolean): string {
@@ -160,7 +173,6 @@ export class CompanionPortrait implements HudWidgetView {
       }
       row.fill.style.width = a ? pct(barFraction(a.health, a.maxHealth)) : '0%';
       row.pip.className = row.aura ? 'owg-aura-pip owg-aura-on' : 'owg-aura-pip';
-      row.meta.textContent = this.metaText(id, row.downed);
       row.root.className = row.downed ? 'owg-companion owg-companion-down' : 'owg-companion';
     }
   }
