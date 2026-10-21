@@ -29,10 +29,10 @@ export interface RegionDef {
   /** Map-space box (min inclusive, max exclusive). */
   box: MapBox;
   levelBand: { min: number; max: number };
-  /** Music track id (a reserved id plays the previous regional track until it is built; music-states.md 8). */
+  /** Music track id (an id with no registered track keeps the previous regional track; music-states.md 8). */
   track: string;
   /** Ambience bed id, or null for none yet. */
-  bed: 'brightwater' | 'harrowmark' | null;
+  bed: RegionBedId | null;
   /** Ground rules key for the terrain worker; A1 fills the Act 2 ones. */
   ground: string | null;
   /** When the region is part of the open area (containment). */
@@ -49,6 +49,9 @@ export interface RegionDef {
 export const PHASE_HOLDS: readonly string[] = ['story.phase.oldsmokeOpen'];
 
 const NEVER: FlagCondition = { any: ['region.never'] };
+
+/** Ambience bed ids a region can name (A14 built the Act 2 ones). */
+export type RegionBedId = 'brightwater' | 'harrowmark' | 'cinderreach' | 'oldsmoke';
 
 export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
   brightwater: {
@@ -75,7 +78,7 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
     box: { x0: 16500, z0: 500, x1: 23500, z1: 6500 },
     levelBand: { min: 8, max: 14 },
     track: 'ash-on-the-pasture',
-    bed: null,
+    bed: 'cinderreach',
     ground: null,
     openWhen: { all: ['story.gate.a2'] },
     reserved: false,
@@ -85,7 +88,7 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
     box: { x0: 18000, z0: 8000, x1: 23000, z1: 13000 },
     levelBand: { min: 12, max: 19 },
     track: 'hammers-below',
-    bed: null,
+    bed: 'oldsmoke',
     ground: null,
     openWhen: { all: ['story.d03.complete', ...PHASE_HOLDS] },
     reserved: false,

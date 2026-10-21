@@ -5,9 +5,11 @@
  * interiors ramp over 0.4 s. Buffers are generated lazily, once per id.
  */
 
-import { REGION_IDS, REGION_INFO } from '../region/regions';
+import { REGION_IDS, REGION_INFO, type RegionBedId } from '../region/regions';
+import { fillAct2Bed } from './ambienceAct2';
+import { isMineInterior } from './InteriorFx';
 
-export type BedId = 'brightwater' | 'harrowmark' | 'underways';
+export type BedId = RegionBedId | 'underways';
 
 export interface AmbienceContext {
   readonly currentTime: number;
@@ -29,7 +31,7 @@ const FOLD_SECONDS = 1;
 
 /** Region beds come from the region registry (v0.6); A14 adds the Act 2 beds there. */
 const REGION_BEDS: readonly BedId[] = [...new Set(REGION_IDS.map((id) => REGION_INFO[id].bed))].filter(
-  (b): b is 'brightwater' | 'harrowmark' => b !== null,
+  (b): b is RegionBedId => b !== null,
 );
 
 /** The bed a region plays, or null (silence) for none or an unknown id. */
@@ -37,8 +39,8 @@ function bedFor(regionId: string | null): BedId | null {
   if (regionId === null || !Object.prototype.hasOwnProperty.call(REGION_INFO, regionId)) return null;
   return REGION_INFO[regionId as keyof typeof REGION_INFO].bed;
 }
-const LOOP_SECONDS: Readonly<Record<BedId, number>> = { brightwater: 24, harrowmark: 28, underways: 26 };
-const SEEDS: Readonly<Record<BedId, number>> = { brightwater: 0x1b2c3d, harrowmark: 0x4e5f60, underways: 0x717283 };
+const LOOP_SECONDS: Readonly<Record<BedId, number>> = { brightwater: 24, harrowmark: 28, underways: 26, cinderreach: 25, oldsmoke: 27 };
+const SEEDS: Readonly<Record<BedId, number>> = { brightwater: 0x1b2c3d, harrowmark: 0x4e5f60, underways: 0x717283, cinderreach: 0x2d3e4f, oldsmoke: 0x5a6b7c };
 
 function rng(seed: number): () => number {
   let s = seed >>> 0;
@@ -162,6 +164,8 @@ export function makeBedSamples(id: BedId, sampleRate: number): Float32Array<Arra
         return (l2 - l1) * 2.2 * env;
       });
     }
+  } else if (id === 'cinderreach' || id === 'oldsmoke') {
+    fillAct2Bed(id, x, n, sr, SEEDS[id]);
   } else {
     // Dripping water: sparse decaying sine pings, some with a quieter echo.
     const drips = 15 + Math.floor(u() * 5);
@@ -308,7 +312,8 @@ export class AmbienceBed {
   private apply(seconds: number): void {
     try {
       const inUnderways = this.interiorId === 'underways';
-      const muffled = this.interiorId !== null && !inUnderways;
+      // A mine keeps the Oldsmoke bed (drips and steam are already what it sounds like down there): no muffle.
+      const muffled = this.interiorId !== null && !inUnderways && !isMineInterior(this.interiorId);
       for (const id of REGION_BEDS) this.setBed(id, bedFor(this.regionId) === id && !inUnderways ? 1 : 0, seconds);
       this.setBed('underways', inUnderways ? 1 : 0, seconds);
       const bus = muffled ? INTERIOR_GAIN : 1;
