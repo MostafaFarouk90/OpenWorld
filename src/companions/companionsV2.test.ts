@@ -69,14 +69,14 @@ describe('companions v2: def', () => {
 });
 
 describe('companions v2: party', () => {
-  it('with Tobb joined and nothing ever set he is active', async () => {
+  it('with Tobb joined he is active (A5: a runtime join stores the set with the joiner in the first seat)', async () => {
     const t = await boot();
     expect(t.svc().active()).toEqual([]);
     t.svc().join('tobb');
     expect(t.svc().active()).toEqual(['tobb']);
     expect(t.svc().isActive('tobb')).toBe(true);
     expect(t.svc().isActive('nobody')).toBe(false);
-    expect(t.persistable().serialize()).toMatchObject({ active: null });
+    expect(t.persistable().serialize()).toMatchObject({ active: ['tobb'] });
     t.done();
   });
 
@@ -119,12 +119,16 @@ describe('companions v2: party', () => {
     t.done();
   });
 
-  it('a companion who joins into a stored set with room is added; with no room he is not', async () => {
+  it('a companion who joins takes the first seat; with no room the others leave the party (A5 joiner rule)', async () => {
     const t = await boot();
     // A stored empty set (limit 1): Tobb joining takes the free seat.
     t.load({ positions: {}, active: [] }, 2);
     t.svc().join('tobb');
     expect(t.svc().active()).toEqual(['tobb']);
+    // The seat is full: Hrolf joining takes it and Tobb waits (A0 shipped "with no room he is not"; A5 reverses it).
+    t.svc().join('hrolf');
+    expect(t.svc().active()).toEqual(['hrolf']);
+    expect(t.svc().isActive('tobb')).toBe(false);
     t.done();
   });
 

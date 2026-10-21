@@ -3,18 +3,24 @@
 // load re-derives them and a chase retry does not release him.
 import type { Vec3 } from './FollowModel';
 
-export type WaitReason = 'gate' | 'keep' | 'stealth' | 'chase';
+export type WaitReason = 'gate' | 'keep' | 'stealth' | 'chase' | 'party';
 
-/** A wait holds while its quest is active and `until` is not done, or while the player is inside `interior`. */
+/**
+ * A wait holds while its quest is active and `until` is not done, or while the player is inside `interior`, or (A5's
+ * party rule, applied by the controller ahead of the def's own waits) while the companion is joined but not active.
+ */
 export type WaitRule =
   | { reason: WaitReason; anchorId: string; quest: string; until: string }
-  | { reason: WaitReason; anchorId: string; interior: string };
+  | { reason: WaitReason; anchorId: string; interior: string }
+  | { reason: 'party'; anchorId: string; inactive: true };
 
 export interface WaitView {
   /** Quest state, or undefined when there is no quests service. */
   questState(questId: string): string | undefined;
   objectiveDone(questId: string, objectiveId: string): boolean;
   interior: string | null;
+  /** True while the companion is joined but not in the party (A5); absent reads as active. */
+  inactive?: boolean;
   /** False for an anchor no layout defines (the rule is skipped). */
   anchorExists(anchorId: string): boolean;
 }
@@ -25,6 +31,7 @@ export interface Wait {
 }
 
 export function ruleHolds(rule: WaitRule, view: WaitView): boolean {
+  if ('inactive' in rule) return view.inactive === true;
   if ('interior' in rule) return view.interior === rule.interior;
   return view.questState(rule.quest) === 'active' && !view.objectiveDone(rule.quest, rule.until);
 }

@@ -47,6 +47,8 @@ export class NpcManager implements NpcsService {
   /** Models whose GLB has loaded: an NPC that spawns later (a handover undone by a load) takes its model at once. */
   private readonly loadedModels = new Set<NpcModelId>();
   private readonly talking = new Set<string>();
+  /** NPCs hidden by `setHidden` (A5): figure and extras invisible, talk off. */
+  private readonly hiddenIds = new Set<string>();
   private readonly loading = new Map<NpcModelId, Promise<void>>();
   private unsubs: Array<() => void> = [];
   private readonly warn: (m: string) => void;
@@ -194,6 +196,7 @@ export class NpcManager implements NpcsService {
         name: this.core.strings.t(def.nameKey),
         radius: NPC_TUNING.talkRadius,
         position: (out) => out.set(pos.x, pos.y, pos.z),
+        enabled: () => !this.hiddenIds.has(def.id),
         onInteract: () => this.talkTo(def),
       });
       this.entries.set(def.id, {
@@ -212,6 +215,7 @@ export class NpcManager implements NpcsService {
       });
       this.lastPos.delete(def.id);
       const entry = this.entries.get(def.id)!;
+      this.applyHidden(entry);
       const loader = this.opts.loader;
       if (loader && this.loadedModels.has(def.model)) {
         try {
@@ -358,6 +362,7 @@ export class NpcManager implements NpcsService {
     e.figure = model;
     e.isPlaceholder = false;
     e.root.add(model);
+    this.applyHidden(e);
     const clip = pickIdleClip(clips, e.def.idleClip);
     if (clip) {
       const mixer = new THREE.AnimationMixer(model);
@@ -422,6 +427,25 @@ export class NpcManager implements NpcsService {
     e.state = createNpcState({ x: e.pos.x, z: e.pos.z, yaw: anchor.yaw });
     e.root.rotation.y = e.state.yaw;
     return true;
+  }
+
+  /**
+   * Kept for an id not registered yet too (false then): a later `register()` spawns it hidden. Not cleared on a
+   * load; the owner (the escort, a trial) shows it again when it ends.
+   */
+  setHidden(id: string, hidden: boolean): boolean {
+    if (hidden) this.hiddenIds.add(id);
+    else this.hiddenIds.delete(id);
+    const e = this.entries.get(id);
+    if (e) this.applyHidden(e);
+    return this.specs.has(id);
+  }
+
+  /** The figure and extras, not the root: the interiors' occupant hider owns the root's visibility. */
+  private applyHidden(e: Entry): void {
+    const show = !this.hiddenIds.has(e.def.id);
+    e.figure.visible = show;
+    if (e.extras) e.extras.visible = show;
   }
 
   get(id: string): NpcHandle | undefined {

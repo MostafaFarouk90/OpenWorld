@@ -19,7 +19,14 @@ export interface CompanionDef {
   /** The `npcs` service id of the pre-join NPC. */
   npcId: string;
   dialogueId: string;
-  aura: { id: string; buffId: string; nameKey: string; seconds: number; attackSpeed: number };
+  /** Battle-song on block (Tobb only). Absent for a companion whose aura is not a block-triggered attack-speed buff. */
+  aura?: { id: string; buffId: string; nameKey: string; seconds: number; attackSpeed: number };
+  /** The figure's model and dress; absent means Tobb's look (the shipped default). */
+  look?: CompanionLook;
+  /** A5's own health pool (Stonehide and the downed rule); absent: the 1 HP immortal actor Tobb has. */
+  vitals?: { maxHealth: number };
+  /** Hrolf's Stonehide (design 8.1): takes `share` of enemy hits on Cael within `radius` m. */
+  stonehide?: { auraId: string; buffId: string; nameKey: string; share: number; radius: number };
   banter: BanterLines;
   /** Area-bark places: trigger id, interior id and region id to place id. */
   places: {
@@ -45,15 +52,30 @@ export interface CompanionsService {
   maxActive(): number;
   /**
    * Sets the party. Refuses (returns false, changes nothing) on an unknown, unjoined or duplicated id, or more ids than
-   * `maxActive()`. Joining while there is room adds the companion; `companion.bond` is A5's event, not emitted here.
+   * `maxActive()`. A runtime join puts the joiner in the first seat (the others wait at the Tilted Anvil; A5,
+   * changing A0's "only a free seat" rule). Emits `party.changed` when the set changes.
    */
   setActive(ids: readonly string[]): boolean;
+  /** Raises the bond rank (1 to 5, never lower, joined only); `companion.bond` on a change. The only rank writer. */
+  setRank(id: string, rank: number): boolean;
   isActive(id: string): boolean;
   actorId(id: string): ActorId | null;
   /** 0 when not joined. */
   rank(id: string): number;
   /** Which optional services resolved (the all-plugins test asserts these). */
   integration(): { npcs: boolean; attackSpeedHook: boolean; nav: boolean };
+}
+
+/** How a companion looks: the NPC def its model comes from, and what is done to the model once loaded. */
+export interface CompanionLook {
+  npcDef: import('../npcs/types').NpcDef;
+  /** Called on the loaded model (tints, shown and hidden meshes). */
+  dress?(model: import('three').Object3D): void;
+  /** Props that live on the root (Tobb's lute); built once, disposed with the figure. */
+  props?(): import('three').Object3D | null;
+  disposeProps?(props: import('three').Object3D): void;
+  /** Optional clips by role; a missing one falls back (attack: none, kneel: a dip of the model). */
+  clips?: { attack?: readonly string[]; kneel?: readonly string[] };
 }
 
 /** Thread 2's attack-speed hook on `combatVerbs` (actors-and-damage.md section 8). */

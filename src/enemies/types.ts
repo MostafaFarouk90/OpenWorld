@@ -19,7 +19,7 @@ export type AiState =
   | 'calmed'
   | 'dead';
 
-export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse' | 'ember-hound' | 'watch-guard' | 'guildhall-thug' | 'toll-sergeant' | 'yard-veteran';
+export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse' | 'ember-hound' | 'watch-guard' | 'guildhall-thug' | 'toll-sergeant' | 'yard-veteran' | 'hrolf-trial';
 
 /**
  * Act 2 kind ids (v0.6 item 14), reserved here so no other thread takes them. A6a and A6b move each id into
