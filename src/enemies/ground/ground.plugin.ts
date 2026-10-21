@@ -30,7 +30,7 @@ type Hunter = (typeof HUNTERS)[number];
  * bestiary entries. The enemies themselves live in `enemies/`.
  */
 const plugin: GamePlugin = {
-  id: 'enemies.ground',
+  id: 'ground-enemies',
   dependsOn: ['enemies'],
   setup(ctx) {
     const svc = ctx.services as unknown as { get(name: string): any };
@@ -89,11 +89,17 @@ const plugin: GamePlugin = {
       onInteract() {
         const fox = this.target;
         const inv = svc.get('inventory');
-        if (!fox?.spawnerId || !fox.fox || !inv?.remove(FOX.foodItem, 1)) return;
         const cache = ctx.anchors.find(FOX.cacheAnchor);
-        if (!cache) return;
-        ctx.state.setFlag(fedKey(fox.spawnerId), true);
-        fox.fox.lead([{ x: cache.position.x, z: cache.position.z }], { done: () => ctx.events.emit('fox.cache', { foxId: fox.id }) });
+        // Check the cache exists before the cake is taken: a missing anchor must not eat it for nothing.
+        if (!fox?.spawnerId || !fox.fox || !cache || !inv?.remove(FOX.foodItem, 1)) return;
+        const spawnerId = fox.spawnerId;
+        // The fed mark is written on arrival, so a reload mid-lead (the lead is not saved) leaves it feedable again.
+        fox.fox.lead([{ x: cache.position.x, z: cache.position.z }], {
+          done: () => {
+            ctx.state.setFlag(fedKey(spawnerId), true);
+            ctx.events.emit('fox.cache', { foxId: fox.id });
+          },
+        });
       },
     };
     offs.push(ctx.interaction.register(foxFeed as never));
@@ -135,7 +141,18 @@ const plugin: GamePlugin = {
       build: (kind) => (kind === 'cinder-golem' ? buildCairn(GOLEM) : CrawlerBody.buildCurled()),
       free: (kind, o) => (kind === 'cinder-golem' ? disposeCairn(o) : CrawlerBody.disposeProp(o)),
     });
-    ctx.persist.register({ key: 'enemies.ground', version: 1, serialize: () => settled.serialize(), load: (d) => settled.load(d) });
+    // A load also drops the herd and a flask in the air; done here, ahead of `save.loaded`, so a quest that restarts its herd on that
+    // event is not wiped by this plugin's own handler.
+    ctx.persist.register({
+      key: 'enemies.ground',
+      version: 1,
+      serialize: () => settled.serialize(),
+      load: (d) => {
+        settled.load(d);
+        thrower.clear();
+        herdSvc.clear();
+      },
+    });
 
     // ---- hunter.spared and settling, from the shared `mercy` event
     const sparedSeen = new Set<string>();
@@ -158,7 +175,12 @@ const plugin: GamePlugin = {
     let flask: THREE.Mesh | null = null;
     const flaskAt = (p: { x: number; y: number; z: number } | null): void => {
       if (!p) {
-        if (flask) ctx.scene.remove(flask);
+        if (flask) {
+          flask.removeFromParent();
+          flask.geometry.dispose();
+          (flask.material as THREE.Material).dispose();
+          flask = null;
+        }
         return;
       }
       if (!flask) {
@@ -229,11 +251,45 @@ const plugin: GamePlugin = {
         },
       }),
     );
+    // Dev only, `?ground=1`: one of each ground kind and a herd, 2 s after load, ahead of the player.
+    if (import.meta.env?.DEV && typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('ground') === '1') {
+      let t = 0;
+      let done = false;
+      offs.push(
+        ctx.systems.add({
+          id: 'enemies.ground.dev',
+          fixedPhase: 'afterCombat',
+          order: GROUND_ORDER + 1,
+          fixedUpdate(dt) {
+            t += dt;
+            if (done || t < 2) return;
+            done = true;
+            const f = ctx.player.feet;
+            // dz is metres ahead of the player's facing (negative: ahead, as everywhere else: yaw 0 faces -Z), dx to the right.
+            const yaw = ctx.player.facingYaw;
+            const at = (dx: number, dz: number) => {
+              const x = f.x + dx * Math.cos(yaw) + dz * Math.sin(yaw);
+              const z = f.z - dx * Math.sin(yaw) + dz * Math.cos(yaw);
+              return { x, y: heightAt(x, z), z };
+            };
+            const def = (id: string, p: { x: number; y: number; z: number }) => ctx.anchors.define({ id, position: p, yaw: 0 });
+            def('dev.ground.cinder-golem', at(0, -14));
+            def('dev.ground.slag-crawler', at(-8, -6));
+            def('dev.ground.kindling-fox', at(4, -4));
+            for (let i = 1; i <= 4; i++) def(`dev.ground.hunters.${i}`, at(10 + i, -12));
+            for (let i = 1; i <= 4; i++) def(`dev.ground.sheep.${i}`, at(-12 + i, 4));
+            for (const id of ['cinder-golem', 'slag-crawler', 'kindling-fox']) enemies.spawnGroup(`dev.ground.${id}`);
+            enemies.spawnGroup('dev.ground.hunters');
+            herdSvc.start('dev', [1, 2, 3, 4].map((i) => `dev.ground.sheep.${i}`));
+            herdSvc.follow('dev', true);
+          },
+        }),
+      );
+    }
     const clear = (): void => {
       thrower.clear();
       herdSvc.clear();
     };
-    offs.push(ctx.events.on('save.loaded', clear));
     offs.push(() => {
       clear();
       settled.clear();

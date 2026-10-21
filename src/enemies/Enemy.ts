@@ -294,7 +294,7 @@ export class Enemy {
   coolingHit(sourceId: ActorId | null): boolean {
     if (this.phase !== 'alive' || this.observerOnly) return false;
     if (this.def.mercy?.freeCalm !== 'cooled') return false;
-    this.ceiling?.wake();
+    this.ceiling?.wake(true);
     this.cooled = true;
     this.brain.knockedDown(sourceId);
     return true;
@@ -314,7 +314,8 @@ export class Enemy {
       dripStarted: (lead) =>
         this.host.events.emit('telegraph', { actorId: this.actor.id, kind: 'dodge', attackId: 'Drop', moveId: CRAWLER_DROP.id, swingId: -1, leadSeconds: lead }),
       landed: () => {
-        self.env.attacks?.hitArea(self.shooter, CRAWLER_DROP);
+        // A cooled crawler lands harmless: the cooling hit that dropped it is what staggers it.
+        if (!self.cooled) self.env.attacks?.hitArea(self.shooter, CRAWLER_DROP);
         self.brain.alert(self.host.actors.player.id);
       },
     };

@@ -9,6 +9,13 @@ import plugin from './ground.plugin';
 import { FoxGuide } from '../fox/guide';
 
 // ---------------------------------------------------------------- fox service
+describe('plugin registration', () => {
+  it('has an id the plugin loader accepts (lowercase letters, digits and dashes) and depends on enemies', () => {
+    expect(plugin.id).toMatch(/^[a-z][a-z0-9-]*$/);
+    expect(plugin.dependsOn).toEqual(['enemies']);
+  });
+});
+
 describe('createFoxService', () => {
   const anchors: Record<string, { x: number; z: number }> = { a: { x: 10, z: 0 }, b: { x: 20, z: 0 } };
   const mk = (list: FoxHandle[]) => {

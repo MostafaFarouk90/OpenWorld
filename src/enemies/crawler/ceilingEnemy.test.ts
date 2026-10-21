@@ -223,7 +223,15 @@ describe('Slag Crawler cooling and Calm', () => {
     const r = rig({ player: { x: 0, z: 20 } });
     expect(r.ground.ceiling!.state).toBe('hanging');
     expect(r.ground.coolingHit(r.player.id)).toBe(true);
-    expect(r.ground.ceiling!.state).toBe('dripping');
+    expect(r.ground.ceiling!.state).toBe('falling');
+  });
+
+  it('a cooled crawler lands harmless: no landing circle hit', () => {
+    const r = rig({ player: { x: 0, z: 2 } });
+    expect(r.ground.coolingHit(r.player.id)).toBe(true);
+    r.seconds(2);
+    expect(r.ground.ceiling!.state).toBe('landed');
+    expect(r.player.health).toBe(r.player.maxHealth);
   });
 
   it('the cooled flag ends with the stagger', () => {

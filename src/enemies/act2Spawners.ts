@@ -60,4 +60,17 @@ export const ACT2_SPAWNERS: readonly SpawnerDef[] = [
     anchor: 'cinderreach.r05.fox', memberAnchors: ['cinderreach.r05.fox'],
     band: 'cinderreach', activation: 'manual', respawn: 'never', leash: false,
   },
+  // Dev only (`?ground=1`, ground/ground.plugin.ts defines the `dev.ground.*` anchors): one of each kind near the player.
+  ...(['cinder-golem', 'slag-crawler', 'kindling-fox'] as const).map(
+    (kind): SpawnerDef => ({
+      id: `dev.ground.${kind}`, tag: `dev.ground.${kind}`, enemy: kind, count: 1,
+      anchor: `dev.ground.${kind}`, memberAnchors: [`dev.ground.${kind}`],
+      band: { min: 6, max: 6 }, activation: 'manual', respawn: 'never', leash: false,
+    }),
+  ),
+  {
+    id: 'dev.ground.hunters', tag: 'dev.ground.hunters', enemy: 'hunter-spearman', memberKinds: HUNTER_PACK_KINDS, count: 4,
+    anchor: 'dev.ground.hunters.1', memberAnchors: members('dev.ground.hunters.', 1, 4),
+    band: { min: 6, max: 6 }, activation: 'manual', leaderSlot: HUNTER_PACK_LEADER_SLOT, respawn: 'never', leash: false,
+  },
 ];
