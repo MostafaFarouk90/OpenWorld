@@ -67,6 +67,12 @@ async function boot() {
     'chest.harrowmark.2': { x: 30, z: 0 },
     'shop.wystan': { x: 40, z: 0 },
     'shop.dunstan': { x: 50, z: 0 },
+    'shop.osgar': { x: 60, z: 0 },
+    'shop.ketta': { x: 70, z: 0 },
+    'shop.maud': { x: 80, z: 0 },
+    'shop.slagg': { x: 90, z: 0 },
+    'shop.pike': { x: 100, z: 0 },
+    'shop.aldous': { x: 110, z: 0 },
   };
   for (const [id, p] of Object.entries(spots)) ctx.anchors.define({ id, position: { x: p.x, y: 0, z: p.z }, yaw: 0 });
   const interactables = new Map<string, Interactable>();
@@ -214,5 +220,32 @@ describe('economy plugin on the real game', () => {
     expect(t.ctx.persist.get('vendors')).toBeTruthy();
     expect(t.ctx.persist.get('inn')).toBeTruthy();
     expect(typeof t.ctx.services.require('vendors').open).toBe('function');
+  });
+
+  it('Act 2 vendor gates read quest state and the Maud sealed choice', async () => {
+    const t = await boot();
+    const states: Record<string, string> = {};
+    (t.ctx.services as any).provide('quests', { state: (id: string) => states[id] ?? 'inactive' });
+    const open = (v: string) => t.interactables.get(`shop:${v}`)!.enabled!();
+    for (const v of ['osgar', 'ketta', 'maud', 'slagg', 'pike', 'aldous']) expect(open(v), v).toBe(false);
+    states.m12 = 'active';
+    expect([open('osgar'), open('maud'), open('ketta'), open('slagg')]).toEqual([true, true, false, false]);
+    t.ctx.state.setFlag('story.r06.choice', 'sealed');
+    expect(open('maud')).toBe(false);
+    expect(open('osgar')).toBe(true);
+    states.r05 = 'active';
+    expect(open('ketta')).toBe(true);
+    states.m16 = 'active';
+    expect([open('slagg'), open('pike'), open('aldous')]).toEqual([true, true, true]);
+  });
+
+  it('using maud-stew applies Hearty; other items do not', async () => {
+    const t = await boot();
+    const a = t.ctx.actors.player;
+    const base = a.maxHealth;
+    t.ctx.events.emit('item.used', { itemId: 'healing-flask' });
+    expect(a.maxHealth).toBeCloseTo(base, 1);
+    t.ctx.events.emit('item.used', { itemId: 'maud-stew' });
+    expect(a.maxHealth).toBeCloseTo(base * 1.1, 1);
   });
 });
