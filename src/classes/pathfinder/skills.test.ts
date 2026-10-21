@@ -16,10 +16,10 @@ describe('Pathfinder skills', () => {
     expect(registerClassSkills(PF.classId, buildPathfinderSkills())).toEqual({ ok: false, reason: 'duplicate-class' });
   });
 
-  it('only tiers 1 and 2 can be learned; each tier costs TIER_COST and requires the one below', () => {
+  it('only tiers 1 to 3 can be learned; each tier costs TIER_COST and requires the one below', () => {
     const defs = buildPathfinderSkills();
     for (const d of defs) {
-      expect(d.available).toBe(d.tier <= 2);
+      expect(d.available).toBe(d.tier <= 3);
       expect(d.cost).toBe(TIER_COST[d.tier - 1]);
       if (d.tier > 1) expect(defs.find((s) => s.id === d.requires)).toMatchObject({ branch: d.branch, tier: d.tier - 1 });
       else expect(d.requires).toBeUndefined();
@@ -34,6 +34,7 @@ describe('Pathfinder skills', () => {
     const eye = defs.find((d) => d.id === PF.skillIds.falconEye)!;
     expect(trap).toMatchObject({ kind: 'active', tier: 2, cooldown: 20, emberCost: 15 });
     expect(eye).toMatchObject({ kind: 'active', tier: 2, cooldown: 30, emberCost: 15 });
+    expect(defs.find((d) => d.id === PF.skillIds.netLauncher)).toMatchObject({ kind: 'active', tier: 3, cooldown: 16, emberCost: 15 });
   });
 
   it('keeps the node rule: one flat percentage bump on Bolt (Steady Shot) and one on Trail (Trailblaze), none on Snare', () => {

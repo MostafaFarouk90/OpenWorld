@@ -24,6 +24,12 @@ export const TIER3_EFFECT_IDS = [
   'twin-fangs',
   'soot-cloak',
   'wall-skitter',
+  'fire-wall',
+  'iron-familiar',
+  'smoke-screen',
+  'ember-quarrel',
+  'net-launcher',
+  'light-step',
 ] as const;
 export type Tier3EffectId = (typeof TIER3_EFFECT_IDS)[number];
 
@@ -34,7 +40,9 @@ const NO_FX: EffectInstance = { update: () => false, stop: () => {} };
 /**
  * Particle use per cast against the 11.1 cap of 4,000 live points: oathward-bubble 0 (burst 60), halvard-charge 30,
  * squire-resolve 24, whirling-hew 40, grit-teeth 4 per second, blood-rune 6 per second over 20 s, twin-fangs 8 sparks,
- * soot-cloak 30, wall-skitter 12.
+ * soot-cloak 30, wall-skitter 12, fire-wall 12 cards x 2 embers per 0.25 s for 8 s (peak 150 live), iron-familiar 48,
+ * smoke-screen 40 puffs then 8 per 0.25 s with a 3 s life (peak about 110), ember-quarrel 6 per 0.1 s for 0.6 s,
+ * net-launcher 20 plus one 4 s decal, light-step 14.
  */
 export function tier3Effects(h: Tier3Helpers): Record<Tier3EffectId, EffectFactory> {
   const { ring, timedMesh, origin, num } = h;
@@ -153,6 +161,100 @@ export function tier3Effects(h: Tier3Helpers): Record<Tier3EffectId, EffectFacto
       const o = origin(t);
       ctx.points.emit('ash', { x: o.x, y: o.y + 0.5, z: o.z }, 12, { color: 0xc8b898, spread: 0.3, rise: 0.3, life: 0.4 }, ctx.now());
       return NO_FX;
+    },
+    // Fire Wall (effect 12): a line of `cards` flame columns across `length` metres facing `yaw`, kept alive for `seconds`.
+    'fire-wall': (ctx, t, p) => {
+      const o = origin(t);
+      const yaw = t.yaw ?? 0;
+      const seconds = num(p, 'seconds', 8);
+      const length = num(p, 'length', 6);
+      const cards = 12;
+      const start = ctx.now();
+      let last = -Infinity;
+      let done = false;
+      // The wall runs perpendicular to the facing: (cos yaw, -sin yaw).
+      const rx = Math.cos(yaw);
+      const rz = -Math.sin(yaw);
+      return {
+        update(now) {
+          if (done || now - start >= seconds) return false;
+          if (now - last >= 0.25) {
+            last = now;
+            // A short repeating glow, so stopping the effect leaves no light behind.
+            ctx.lights.flash({ x: o.x, y: o.y + 1, z: o.z }, 0xff7020, 6, 0.1, 0.4, now);
+            for (let i = 0; i < cards; i++) {
+              const d = (i / (cards - 1) - 0.5) * length;
+              ctx.points.emit('ember', { x: o.x + rx * d, y: o.y + 0.2, z: o.z + rz * d }, 2, { color: 0xff7a20, spread: 0.15, rise: 2.2, life: 0.9 }, now);
+            }
+          }
+          return true;
+        },
+        stop() {
+          done = true;
+        },
+      };
+    },
+    // Iron Familiar: pieces fly in as embers and a blue-grey eye light, then a ring when the guard is whole.
+    'iron-familiar': (ctx, t) => {
+      const o = origin(t);
+      ctx.points.emit('ember', { x: o.x, y: o.y + 1.2, z: o.z }, 48, { color: 0x8aa0c0, spread: 1.4, rise: -0.6, life: 0.7 }, ctx.now());
+      ctx.lights.flash({ x: o.x, y: o.y + 1.2, z: o.z }, 0x80b0ff, 4, 0.3, 0.6, ctx.now());
+      return ring(ctx, t, 1.6, 0x8aa0c0, 0.5);
+    },
+    // Smoke Screen (effect 16): a grey cloud of `radius` that keeps puffing for `seconds` (the sprites live 3 s, the cloud 8 s).
+    'smoke-screen': (ctx, t, p) => {
+      const o = origin(t);
+      const radius = Math.max(0.5, t.scale ?? 5);
+      const seconds = Math.max(0.5, num(p, 'seconds', 8));
+      const start = ctx.now();
+      let last = -Infinity;
+      let done = false;
+      ctx.points.emit('smoke', { x: o.x, y: o.y + 0.4, z: o.z }, 40, { spread: radius * 0.6, rise: 0.7, life: 3 }, start);
+      return {
+        update(now) {
+          if (done || now - start >= seconds) return false;
+          if (now - last >= 0.25) {
+            last = now;
+            ctx.points.emit('smoke', { x: o.x, y: o.y + 0.4, z: o.z }, 8, { spread: radius * 0.6, rise: 0.7, life: 3 }, now);
+          }
+          return true;
+        },
+        stop() {
+          done = true;
+        },
+      };
+    },
+    // Ember Quarrel: a short ember trail behind the bolt, attached to the bolt when given.
+    'ember-quarrel': (ctx, t) => {
+      const start = ctx.now();
+      let last = -Infinity;
+      let done = false;
+      return {
+        update(now) {
+          if (done || now - start >= 0.6) return false;
+          if (now - last >= 0.1) {
+            last = now;
+            ctx.points.emit('ember', origin(t), 6, { color: 0xff8030, spread: 0.1, rise: 0.3, life: 0.4 }, now);
+          }
+          return true;
+        },
+        stop() {
+          done = true;
+        },
+      };
+    },
+    // Net Launcher: rope sparks and a 4 s net decal under the target.
+    'net-launcher': (ctx, t, p) => {
+      const o = origin(t);
+      ctx.sparks.burst({ x: o.x, y: o.y + 1, z: o.z }, t.normal, 20, { color: 0xc8b890, lineSparks: true }, ctx.now());
+      ctx.decals.place({ x: o.x, y: o.y, z: o.z }, t.normal, num(p, 'radius', 1.2), 0x3a3020, ctx.now());
+      return NO_FX;
+    },
+    // Light Step: a small puff and ring under the feet in the air.
+    'light-step': (ctx, t) => {
+      const o = origin(t);
+      ctx.points.emit('ash', o, 14, { color: 0xe8e0d0, spread: 0.4, rise: 0.2, life: 0.4 }, ctx.now());
+      return ring(ctx, t, 1.2, 0xe8e0d0, 0.3);
     },
   };
 }

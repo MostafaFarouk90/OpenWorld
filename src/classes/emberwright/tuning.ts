@@ -49,6 +49,17 @@ export const ANVIL_DROP = {
 } as const;
 export const WARM_BREATH = { skillId: 'emberwright.warmBreath', ember: 18, cooldown: 12, range: 6, halfAngleDeg: 35, healFraction: 0.2 } as const;
 
+/** Tier 3 (Act 2). Every figure is this thread's (design 9.3 names the skills only); see design/changes-applied.md. */
+export const FIRE_WALL = {
+  skillId: 'emberwright.fireWall', ember: 25, cooldown: 20, cards: 12, length: 6, ahead: 4, seconds: 8, halfThickness: 0.8, halfHeight: 3,
+  dps: 8, tickSeconds: 0.5, igniteId: 'emberwright.fireWall.ignite', igniteSeconds: 3, igniteDps: 2, attackId: 'emberwright.fireWall', effectId: 'fire-wall',
+} as const;
+export const IRON_FAMILIAR = {
+  skillId: 'emberwright.ironFamiliar', ember: 30, cooldown: 40, health: 60, hover: 1.2, seconds: 20, followMax: 3, followStop: 2, snapDistance: 10, speed: 7, spawnSide: 1,
+  strikeSeconds: 1.5, retrySeconds: 0.25, range: 12, damage: 6, idPrefix: 'familiar:', kind: 'familiar', attackId: 'emberwright.ironFamiliar', effectId: 'iron-familiar',
+} as const;
+export const SMOKE_SCREEN = { skillId: 'emberwright.smokeScreen', ember: 20, cooldown: 25, ahead: 6, radius: 5, seconds: 8, sightRange: 3, effectId: 'smoke-screen' } as const;
+
 export const SURGE_FORM = { emberRefill: 0.4, groundSeconds: 5, groundRadius: 6, groundTick: 0.5 } as const;
 
 /** Effects that exist in the vfx plugin today (EFFECT_IDS is closed); dedicated ids come with the vfx owner. */
