@@ -123,12 +123,15 @@ export class HeightfieldMover implements EnemyMover {
 
 /**
  * Awake: kinematic. Asleep: heightfield, while the kinematic body stays parked at the feet so the
- * player still bumps into it. Switches only on `sleep()` and `wake()`.
+ * player still bumps into it. Switches only on `sleep()` and `wake()`, and on `fly()` for a flier (the Ember Wyrm):
+ * flying runs on the heightfield with the kinematic collider disabled, so walls do not stop it and nothing bumps an
+ * invisible capsule under it; `wake()` never brings the kinematic path back while flying.
  */
 export class SwitchingMover implements EnemyMover {
   private readonly kinematic: KinematicMover;
   private readonly flat: HeightfieldMover;
   private _asleep = false;
+  private _flying = false;
 
   get maxSpeed(): number {
     return this.kinematic.maxSpeed;
@@ -147,8 +150,16 @@ export class SwitchingMover implements EnemyMover {
     return this._asleep;
   }
 
+  get flying(): boolean {
+    return this._flying;
+  }
+
+  private get onFlat(): boolean {
+    return this._asleep || this._flying;
+  }
+
   get feet(): THREE.Vector3 {
-    return this._asleep ? this.flat.feet : this.kinematic.feet;
+    return this.onFlat ? this.flat.feet : this.kinematic.feet;
   }
 
   get collider(): unknown {
@@ -156,7 +167,7 @@ export class SwitchingMover implements EnemyMover {
   }
 
   move(velocity: { x: number; z: number }, dt: number): void {
-    if (this._asleep) this.flat.move(velocity, dt);
+    if (this.onFlat) this.flat.move(velocity, dt);
     else this.kinematic.move(velocity, dt);
   }
 
@@ -166,24 +177,49 @@ export class SwitchingMover implements EnemyMover {
   }
 
   interpolatedFeet(alpha: number, out: THREE.Vector3): THREE.Vector3 {
-    return this._asleep ? this.flat.interpolatedFeet(alpha, out) : this.kinematic.interpolatedFeet(alpha, out);
+    return this.onFlat ? this.flat.interpolatedFeet(alpha, out) : this.kinematic.interpolatedFeet(alpha, out);
   }
 
   /** Switch to the heightfield mover at the current feet and park the kinematic body there. */
   sleep(): void {
     if (this._asleep) return;
-    const f = this.kinematic.feet;
-    this.flat.teleport(f);
-    this.kinematic.teleport(f);
+    if (!this._flying) {
+      const f = this.kinematic.feet;
+      this.flat.teleport(f);
+      this.kinematic.teleport(f);
+    }
     this._asleep = true;
   }
 
-  /** Switch back: teleport the kinematic body to the current feet lifted by WORLD_AI.wakeLift. */
+  /** Switch back: teleport the kinematic body to the current feet lifted by WORLD_AI.wakeLift (not while flying). */
   wake(): void {
     if (!this._asleep) return;
+    this._asleep = false;
+    if (this._flying) return;
     const f = this.flat.feet;
     this.kinematic.teleport({ x: f.x, y: f.y + WORLD_AI.wakeLift, z: f.z });
-    this._asleep = false;
+  }
+
+  /**
+   * `fly(true)`: take off onto the heightfield at the current feet and disable the kinematic collider. `fly(false, at)`:
+   * touch down at `at` (default: the current feet; the owner picks an open spot), re-enable the collider and teleport
+   * the kinematic body there lifted by WORLD_AI.wakeLift. Repeated calls are no-ops.
+   */
+  fly(on: boolean, at?: Vec3): void {
+    if (on === this._flying) return;
+    const collider = this.kinematic.collider as { setEnabled?(enabled: boolean): void } | null;
+    if (on) {
+      if (!this._asleep) this.flat.teleport(this.kinematic.feet);
+      collider?.setEnabled?.(false);
+      this._flying = true;
+      return;
+    }
+    const f = at && Number.isFinite(at.x) && Number.isFinite(at.y) && Number.isFinite(at.z) ? at : this.flat.feet;
+    this._flying = false;
+    this.flat.teleport(f);
+    collider?.setEnabled?.(true);
+    if (this._asleep) this.kinematic.teleport(f);
+    else this.kinematic.teleport({ x: f.x, y: f.y + WORLD_AI.wakeLift, z: f.z });
   }
 
   dispose(): void {

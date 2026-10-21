@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { COMBAT, FIXED_TIMESTEP } from '../config/constants';
 import { Brain, type BrainHooks, type Senses } from './ai/Brain';
+import { makeBehaviour, type BehaviourOverlay } from './behaviours';
 import { Guard, type GuardHit } from './ai/guard';
 import { MoveSelector } from './ai/moveSelect';
 import { pairGoal } from './ai/pair';
@@ -64,6 +65,8 @@ export interface EnemySpawn {
   damageScale: number;
   patrol: { x: number; z: number }[];
   options: SpawnOptions & { leash: boolean };
+  /** The spawner slot this member fills (behaviour overlays key per-slot state on it: a wyrmling's chain). */
+  slot?: number;
 }
 
 type Phase = 'alive' | 'dying' | 'fading' | 'leaving' | 'gone';
@@ -136,6 +139,10 @@ export class Enemy {
   private readonly tmp = new THREE.Vector3();
   private readonly prevRoot = new THREE.Vector3();
   private readonly lineOfSight: (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }) => boolean;
+  /** The def's behaviour overlay (behaviours.ts); null for every Act 1 kind. */
+  private readonly overlay: BehaviourOverlay | null;
+  /** A peaceful spawn (the resting den wyrm) notices nothing until it is hit. */
+  private peaceful: boolean;
 
   constructor(
     private readonly env: EnemyEnv,
@@ -149,6 +156,7 @@ export class Enemy {
     this.spawnerId = spawn.spawnerId;
     this.damageScale = spawn.damageScale * (spawn.options.damageScale ?? 1);
     this.observerOnly = spawn.options.observerOnly ?? this.def.observerOnly ?? false;
+    this.peaceful = spawn.options.peaceful === true;
     this.path = new PathFollower(() => env.nav(), (m) => host.warn(m), env.pathBudget);
     this.guard = (spawn.options.guard ?? this.def.guard) ? new Guard() : null;
     this.yaw = this.targetYaw = spawn.yaw;
@@ -192,6 +200,17 @@ export class Enemy {
       });
       if (spawn.options.moves) this.moveFilter = [...spawn.options.moves];
       this.thief = this.def.thief ? this.makeThief() : null;
+      this.overlay = this.makeOverlay(spawn);
+      if (this.overlay?.actorPosition) {
+        // The overlay's position (a flier's body in the air) for lock-on and aims; the feet stay the simulated position.
+        const overlay = this.overlay;
+        const base = this.actor.worldPosition.bind(this.actor);
+        this.actor.worldPosition = (out) => {
+          base(out);
+          overlay.actorPosition!(out);
+          return out;
+        };
+      }
 
       this.removers.push(host.combat.addTarget(body.hurtboxes, this.actor.id));
       for (const ch of ['right', 'left'] as const) {
@@ -208,6 +227,7 @@ export class Enemy {
       // Roll back what was built so a failed spawn leaves no actor, collider, scene node or registration.
       for (const remove of this.removers.splice(0)) remove();
       for (const ch of ['right', 'left'] as const) this.trails[ch]?.dispose();
+      (this as unknown as { overlay?: BehaviourOverlay | null }).overlay?.dispose?.();
       const spawned = (this as { actor?: ActorLike }).actor;
       if (spawned) host.actors.despawn(spawned.id);
       body.root.removeFromParent();
@@ -368,7 +388,9 @@ export class Enemy {
   }
 
   get mercyOpen(): boolean {
-    return this.phase === 'alive' && this.brain.mercyOpen;
+    if (this.phase !== 'alive') return false;
+    const open = this.brain.mercyOpen;
+    return this.overlay?.mercyOpen ? this.overlay.mercyOpen(open) : open;
   }
 
   /**
@@ -376,7 +398,9 @@ export class Enemy {
    * Refused once a swing has started, while staggered (that is the Warm Hand's) and when not alive.
    */
   get calmOpen(): boolean {
-    return this.phase === 'alive' && !this.asleep && this.brain.calmOpen;
+    if (this.phase !== 'alive' || this.asleep) return false;
+    const open = this.brain.calmOpen;
+    return this.overlay?.calmOpen ? this.overlay.calmOpen(open) : open;
   }
 
   /**
@@ -388,21 +412,23 @@ export class Enemy {
     if (this.phase === 'fading' && this.goneHow === 'released') return 'releasing';
     if (this.phase !== 'alive') return 'none';
     if (this.brain.state === 'yield') return 'yielding';
-    if (this.brain.state === 'stagger' && this.brain.mercyOpen) return 'staggered';
+    if (this.brain.state === 'stagger' && this.mercyOpen) return 'staggered';
     return 'none';
   }
 
   /** The Warm Hand is possible: a staggered (knocked down) calm-type beast. */
   get warmHandOpen(): boolean {
-    return this.phase === 'alive' && this.brain.warmHandOpen;
+    if (this.phase !== 'alive') return false;
+    const open = this.brain.warmHandOpen;
+    return this.overlay?.warmHandOpen ? this.overlay.warmHandOpen(open) : open;
   }
 
   /**
-   * Thread 1's Calm: the head-lowered pose while an offering is accepted (quadruped bodies only; a no-op on a humanoid).
-   * `on` false returns to the idle clip.
+   * Thread 1's Calm: the head-lowered pose while an offering is accepted (quadruped and wyrm bodies; a no-op on a
+   * humanoid). `on` false returns to the idle clip.
    */
   lowerHead(on: boolean): void {
-    if (this.phase !== 'alive' || this.def.body !== 'quadruped') return;
+    if (this.phase !== 'alive' || (this.def.body !== 'quadruped' && this.def.body !== 'wyrm')) return;
     this.headLowered = on;
     this.setLoco(on ? 'HeadLower' : ENEMY_CLIPS.idle);
   }
@@ -448,7 +474,7 @@ export class Enemy {
       targetAlive: !player.dead,
       targetPos: { x: pFeet.x, z: pFeet.z },
       // An observer-only guard never acquires a target: the brain stays calm.
-      notices: p.notices && !this.observerOnly,
+      notices: p.notices && !this.observerOnly && !this.peaceful,
       sees: p.sees,
       distance: p.distance,
       facingErrorDeg: Math.abs(wrap(toTarget - this.yaw)) * (180 / Math.PI),
@@ -457,9 +483,11 @@ export class Enemy {
       yieldAllowed: this.env.mercyUnlocked('spare'),
       packNearby: this.def.behaviour === 'circle-rush' ? this.env.packNearby(this) : 0,
     };
+    if (this.overlay?.notices) senses.notices = this.overlay.notices(senses.notices, senses);
     const status = readStatusData(this.actor.data[STATUS_DATA_KEY]);
-    if (status.stunSeconds > 0) this.brain.stunned(status.stunSeconds);
+    if (status.stunSeconds > 0 && !this.overlay?.stunned?.(status.stunSeconds)) this.brain.stunned(status.stunSeconds);
     const intent = this.brain.step(dt, senses);
+    this.overlay?.intent?.(dt, intent, senses);
     if (this.thief) {
       if (status.stunSeconds > 0) this.thief.stunned();
       const visible = p.distance <= AI.sightRange && canSeeChest(this.lineOfSight, self, pFeet, mods?.targetHeight);
@@ -511,6 +539,10 @@ export class Enemy {
       velocity = this.pushVelocity;
     }
     if (this.thief?.holdStill) velocity = { x: 0, z: 0 };
+    if (this.overlay?.clampVelocity) {
+      velocity = { x: velocity.x, z: velocity.z };
+      this.overlay.clampVelocity(velocity, dt);
+    }
     this.speed = pushed ? 0 : Math.hypot(velocity.x, velocity.z);
     const bx = self.x;
     const bz = self.z;
@@ -530,6 +562,7 @@ export class Enemy {
     if (this.oneShotLeft > 0) this.oneShotLeft -= dt;
     if (this.phase === 'alive' && this.oneShotLeft <= 0) this.chooseLoco();
     this.feedQuadruped();
+    this.overlay?.animate?.(dt);
     this.body.fixedUpdate(dt);
     this.body.root.updateMatrixWorld(true);
   }
@@ -576,6 +609,8 @@ export class Enemy {
     if (outcome === 'hit') {
       this.damagedThisTick = true;
       this.poiseIdle = 0;
+      this.peaceful = false;
+      this.overlay?.hit?.(attackerId);
     }
     // An observer-only guard flinches on a hit and its awareness jumps to 1 (one `ai.spotted`; thread 18 counts it as
     // caught), but it never provokes, staggers into mercy or chases: the brain is not told, so no `ai.aggro` follows.
@@ -623,6 +658,8 @@ export class Enemy {
       this.actor.maxHealth > 0 ? this.actor.health / this.actor.maxHealth : 0,
       this.env.mercyUnlocked('spare'),
     );
+    this.peaceful = false;
+    if (this.overlay?.staggered?.(byId)) return;
     this.brain.staggered(byId);
   }
 
@@ -678,6 +715,24 @@ export class Enemy {
     this.setLoco(ENEMY_CLIPS.walk);
   }
 
+  /**
+   * Leaves the fight without a mercy (a wyrmling flying off, `wyrms.flyAway`): out of combat, walks or flies off as
+   * the overlay says, then despawns as 'retired' (its slot is spent, no credit, no loot). Alive enemies only.
+   */
+  retire(): boolean {
+    if (this.phase !== 'alive') return false;
+    // A dormant enemy wakes so the overlay's leave (altitude, fade) reaches the drawn body.
+    if (this.asleep) this.wake();
+    this.brain.standDown();
+    this.disarm();
+    this.goneHow = 'retired';
+    this.phase = 'leaving';
+    this.leaveFrom = this.mover.feet.clone();
+    this.leaveTime = 0;
+    this.setLoco(ENEMY_CLIPS.walk);
+    return true;
+  }
+
   /** The player or an ally struck this enemy (damage.dealt, outcome hit, not a script): Calm closes unless it staggers. */
   markStruck(): void {
     this.brain.markStruck();
@@ -697,8 +752,9 @@ export class Enemy {
   }
 
   /** Leaving or dissolving after an accepted mercy. */
+  /** Leaving after a mercy, or retired (a wyrmling flying off): a load the leave never reached refills the slot. */
   get inMercyExit(): boolean {
-    return this.goneHow === 'released' || this.goneHow === 'spared' || this.goneHow === 'calmed';
+    return this.goneHow === 'released' || this.goneHow === 'spared' || this.goneHow === 'calmed' || this.goneHow === 'retired';
   }
 
   /** A packmate was spared: see `Brain.offerYield`. */
@@ -735,6 +791,7 @@ export class Enemy {
 
   sleep(): void {
     if (this.asleep || this.phase !== 'alive') return;
+    this.overlay?.sleep?.();
     // Leave combat first so the token, telegraph (cancelled), open window and aggro (calm) are settled.
     this.brain.standDown();
     // A fleeing thief that goes dormant is out of play: its flee window is over.
@@ -772,6 +829,7 @@ export class Enemy {
     this.phase = 'gone';
     this.body.onWindow = null;
     this.body.onClipEnd = null;
+    this.overlay?.dispose?.();
     this.body.dispose();
     this.mover.dispose();
     this.env.gone(this, this.goneHow);
@@ -831,6 +889,7 @@ export class Enemy {
   }
 
   private leave(dt: number): void {
+    if (this.overlay?.leave && (this.goneHow === 'calmed' || this.goneHow === 'spared' || this.goneHow === 'retired') && this.overlay.leave(dt, this.goneHow)) return;
     const self = this.mover.feet;
     const p = this.host.player.feet;
     const away = { x: self.x - p.x, z: self.z - p.z };
@@ -896,6 +955,8 @@ export class Enemy {
     if (s === 'telegraph' || s === 'attack') return; // the attack clip plays
     if (s === 'yield') return this.setLoco(ENEMY_CLIPS.kneelIdle);
     if (this.headLowered) return this.setLoco('HeadLower');
+    const own = this.overlay?.loco?.();
+    if (own) return this.setLoco(own);
     if (this.guard?.up) return this.setLoco(ENEMY_CLIPS.guard);
     if (this.speed > LOCO_RUN_SPEED) this.setLoco(ENEMY_CLIPS.run);
     else if (this.speed > 0.1) this.setLoco(ENEMY_CLIPS.walk);
@@ -955,9 +1016,10 @@ export class Enemy {
         this.host.events.emit('enemies.state', { actorId: this.actor.id, from, to });
         // A knocked-down hound stops mid-leap.
         if (to === 'stagger' && from === 'attack' && this.brain.currentMove?.leap) this.pushTicks = 0;
-        if (to === 'stagger') this.oneShot(ENEMY_CLIPS.stagger, AI.breakStaggerSeconds);
+        if (to === 'stagger') this.oneShot(ENEMY_CLIPS.stagger, this.def.breakStaggerSeconds ?? AI.breakStaggerSeconds);
         else if (to === 'yield') this.oneShot(ENEMY_CLIPS.kneel, AI.yieldSeconds);
         else if (from === 'yield' || from === 'stagger') this.oneShotLeft = 0;
+        this.overlay?.stateChanged?.(from, to);
       },
       aggro: (targetId) => this.host.events.emit('ai.aggro', { actorId: this.actor.id, targetId }),
       calm: () => this.host.events.emit('ai.calm', { actorId: this.actor.id }),
@@ -967,7 +1029,8 @@ export class Enemy {
         return this.body.playAttack(move, lead);
       },
       cancelAttack: () => this.body.cancelAttack(),
-      telegraph: (move, swingId, lead) =>
+      telegraph: (move, swingId, lead) => {
+        this.overlay?.telegraphed?.(move, swingId);
         this.host.events.emit('telegraph', {
           actorId: this.actor.id,
           kind: move.telegraph,
@@ -975,10 +1038,15 @@ export class Enemy {
           moveId: move.id,
           swingId,
           leadSeconds: lead,
-        }),
+        });
+      },
       telegraphCancelled: (swingId) => this.host.events.emit('telegraph.cancelled', { actorId: this.actor.id, swingId }),
-      pickMove: (distance) =>
-        this.moves.pick(this.thief ? this.thief.availableMoves(this.def.moves) : this.def.moves, distance, this.env.rng, this.moveFilter),
+      pickMove: (distance) => {
+        let moves = this.thief ? this.thief.availableMoves(this.def.moves) : this.def.moves;
+        const allow = this.overlay?.allowMove;
+        if (allow) moves = moves.filter((m) => allow(m));
+        return this.moves.pick(moves, distance, this.env.rng, this.moveFilter);
+      },
       caught: (how) => this.thief?.caught(how),
       markMoveUsed: (move: MoveDef) => this.moves.markUsed(move.id, this.def.moves),
       acquireToken: (targetId) => this.env.acquireToken(this, targetId),
@@ -992,6 +1060,44 @@ export class Enemy {
       },
       alertPack: (targetId) => this.env.alertPack(this, targetId),
     };
+  }
+
+  /** The def's behaviour overlay with its context (behaviours.ts); null when the def has none. */
+  private makeOverlay(spawn: EnemySpawn): BehaviourOverlay | null {
+    if (!this.def.behaviour || this.def.behaviour === 'circle-rush') return null;
+    const host = this.host;
+    return makeBehaviour({
+      def: this.def,
+      actorId: this.actor.id,
+      spawnerId: this.spawnerId,
+      slot: spawn.slot ?? null,
+      options: spawn.options,
+      host,
+      body: this.body,
+      brain: this.brain,
+      feet: () => this.mover.feet,
+      yaw: () => this.yaw,
+      rng: () => this.env.rng(),
+      fly: (on, at) => {
+        if (this.mover instanceof SwitchingMover) this.mover.fly(on, at);
+        else if (!on && at) this.mover.teleport(at);
+      },
+      raycast: (origin, dir, length) => {
+        const physics = host.physics;
+        if (!physics) return null;
+        const hit = physics.raycast(origin, dir, length, this.mover.collider as never);
+        if (!hit || hit.collider === host.player.collider) return null;
+        return { distance: hit.distance, point: hit.point };
+      },
+      indoors: () => !!this.env.nav() || !!host.services.get('interiors')?.current,
+      playOneShot: (clip, seconds) => this.oneShot(clip, seconds),
+      move: (velocity, dt) => {
+        if (Math.hypot(velocity.x, velocity.z) > 0.05) this.yaw = turnToward(this.yaw, Math.atan2(-velocity.x, -velocity.z), AI.turnRate * dt);
+        this.mover.move(velocity, dt);
+      },
+      retire: () => this.retire(),
+      finish: () => this.despawn(),
+    });
   }
 
   private makeThief(): Cutpurse {
@@ -1025,11 +1131,23 @@ export class Enemy {
     const move = this.brain.currentMove;
     if (!move?.leap || this.phase !== 'alive') return;
     const self = this.mover.feet;
+    const windowSeconds = (move.activeEnd - move.activeStart) * (this.body.clipDuration(move.clip) ?? 0.5);
+    const ticks = Math.max(1, Math.round(windowSeconds / FIXED_TIMESTEP));
+    const locked = this.overlay?.leapPoint?.(move);
+    if (locked) {
+      // A locked point (the wyrm's dive): straight there, no stop-short; the decal drawn at the telegraph is where it lands.
+      const dx = locked.x - self.x;
+      const dz = locked.z - self.z;
+      const len = Math.hypot(dx, dz);
+      const metres = Math.min(move.leap.maxMetres, len);
+      const speed = metres / (ticks * FIXED_TIMESTEP);
+      this.pushTicks = ticks;
+      this.pushVelocity = len > 1e-6 ? { x: (dx / len) * speed, z: (dz / len) * speed } : { x: 0, z: 0 };
+      return;
+    }
     const p = this.host.player.feet;
     const toTarget = Math.hypot(p.x - self.x, p.z - self.z);
     const metres = Math.max(0, Math.min(move.leap.maxMetres, toTarget - HOUND.leapStopShort));
-    const windowSeconds = (move.activeEnd - move.activeStart) * (this.body.clipDuration(move.clip) ?? 0.5);
-    const ticks = Math.max(1, Math.round(windowSeconds / FIXED_TIMESTEP));
     const f = forwardOf(this.yaw);
     const speed = metres / (ticks * FIXED_TIMESTEP);
     this.pushTicks = ticks;
@@ -1078,6 +1196,7 @@ export class Enemy {
    */
   pulledToward(from: { x: number; z: number }, metres: number): boolean {
     if (this.phase !== 'alive' || this.actor.dead || this.actor.invulnerable) return false;
+    if (this.overlay?.refusesPull?.()) return false;
     if (!Number.isFinite(from.x) || !Number.isFinite(from.z) || !Number.isFinite(metres) || !(metres > 0)) return false;
     const dx = from.x - this.mover.feet.x;
     const dz = from.z - this.mover.feet.z;
