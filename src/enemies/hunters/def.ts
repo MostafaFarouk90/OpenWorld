@@ -11,7 +11,7 @@ export const HUNTER_SPEARMAN: EnemyDef = {
   kind: 'hunter-spearman',
   nameKey: 'enemies.name.hunter-spearman',
   model: {
-    prefer: ['barbarian'],
+    prefer: ['rogue'],
     tint: 0xd8806a,
     emissive: 0x2a0a06,
     weapons: 'none',
