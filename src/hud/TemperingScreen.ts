@@ -112,9 +112,14 @@ export const createTemperingScreen: TemperingScreenFactory = (host: ScreenHost):
     button(body, t('gear.screen.close'), () => session.close());
   };
 
-  const onKey = (e: { key?: string; code?: string; repeat?: boolean }): void => {
+  const onKey = (e: { key?: string; code?: string; repeat?: boolean; timeStamp?: number }): void => {
     if (e.repeat) return;
-    if (e.key === '1' || e.code === 'Digit1') session.strike();
+    if (e.key !== '1' && e.code !== 'Digit1') return;
+    // The press time, not the time this handler ran: a key queued behind a long frame is still judged where it landed.
+    // `timeStamp` shares `performance.now()`'s origin (the gear plugin's clock); a value from elsewhere falls back to now.
+    const stamp = e.timeStamp;
+    const now = typeof performance !== 'undefined' ? performance.now() : NaN;
+    session.strike(typeof stamp === 'number' && Number.isFinite(stamp) && Number.isFinite(now) && stamp > 0 && stamp <= now && now - stamp < 1000 ? stamp : undefined);
   };
   host.keys?.addEventListener('keydown', onKey);
   const off = session.subscribe(render);
@@ -125,10 +130,8 @@ export const createTemperingScreen: TemperingScreenFactory = (host: ScreenHost):
     return null;
   }
   render();
+  // The session notifies on every tick of a run (the gear plugin calls session.update), so the subscription is the redraw.
   return {
-    update: () => {
-      if (session.state === 'rhythm') render();
-    },
     dispose: () => {
       off();
       host.keys?.removeEventListener('keydown', onKey);

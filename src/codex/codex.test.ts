@@ -627,16 +627,37 @@ describe('Act 2 codex (A15)', () => {
     expect(r.codex.has('lore.place.deepgate')).toBe(false);
   });
 
-  it('quest flags backfill on load and on change; a false flag unlocks nothing', async () => {
+  it('quest events unlock their places; a different quest or phase does not; no flag names are involved', async () => {
     const r = await rig();
-    r.flags.set('story.d03.started', true);
-    r.flags.set('story.r08.started', false);
+    r.events.emit('quest.started', { questId: 'd03' });
+    expect(r.codex.has('lore.place.scorchhold')).toBe(true);
+    r.events.emit('quest.started', { questId: 'm19' }); // the nursery waits for completion
+    expect(r.codex.has('lore.nursery')).toBe(false);
+    r.events.emit('quest.completed', { questId: 'm19' });
+    expect(r.codex.has('lore.nursery')).toBe(true);
+    r.events.emit('quest.started', { questId: 'r08' });
+    expect(r.codex.has('lore.pickett')).toBe(true);
+    r.events.emit('quest.started', { questId: 'm01' });
+    expect(r.codex.has('lore.place.deepgate')).toBe(false);
+  });
+
+  it('a load backfills from the quests service and the discovery flag', async () => {
+    const r = await rig();
+    const states: Record<string, string> = { d03: 'completed', m16: 'active', r08: 'inactive', m19: 'active' };
+    r.services.provide('quests' as any, { state: (id: string) => states[id] ?? 'inactive' } as any);
+    r.flags.set('place.oldsmoke.discovered', true);
     r.events.emit('save.loaded', { slot: 't' });
     expect(r.codex.has('lore.place.scorchhold')).toBe(true);
+    expect(r.codex.has('lore.place.deepgate')).toBe(true);
     expect(r.codex.has('lore.pickett')).toBe(false);
-    r.flags.set('story.m19.complete', true);
-    r.events.emit('flag.changed' as any, { key: 'story.m19.complete', value: true });
-    expect(r.codex.has('lore.nursery')).toBe(true);
+    expect(r.codex.has('lore.nursery')).toBe(false);
+    expect(r.codex.has('lore.place.oldsmoke-mines')).toBe(true);
+  });
+
+  it('a throwing quests service does not break the load', async () => {
+    const r = await rig();
+    r.services.provide('quests' as any, { state: () => { throw new Error('x'); } } as any);
+    expect(() => r.events.emit('save.loaded', { slot: 't' })).not.toThrow();
   });
 
   it('the entries show in their tabs', async () => {
