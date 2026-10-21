@@ -147,6 +147,23 @@ function rig(items: Record<string, number> = {}) {
 const FRONT = new THREE.Vector3(0, 0, 1); // attacker in front (golem faces -Z at yaw 0): the swing travels toward +Z, away from the facing
 const BEHIND = new THREE.Vector3(0, 0, -1);
 
+describe('area and ranged moves hurt once per swing', () => {
+  it('while an area move is current, a tracer hit from the golem deals nothing but its own area hit stands', () => {
+    const r = rig();
+    r.enemy.brain.alert('player');
+    let move = r.enemy.brain.currentMove;
+    for (let i = 0; i < 600 && !(move?.area || move?.ranged); i++) {
+      r.frames(1);
+      move = r.enemy.brain.currentMove;
+    }
+    expect(move?.area || move?.ranged).toBeTruthy();
+    const tracer = r.fake.apply({ attackerId: r.id, targetId: 'player', amount: 40, poise: 40, kind: 'melee', attackId: move!.clip })!;
+    expect(tracer.outcome).toBe('immune');
+    const own = r.fake.apply({ attackerId: r.id, targetId: 'player', amount: 40, poise: 40, kind: 'melee', attackId: `ranged:${move!.id}` })!;
+    expect(own.outcome).toBe('hit');
+  });
+});
+
 describe('Cinder Golem poise rules through the manager', () => {
   it('a heavy front hit (huge poise, bone chest) deals health damage but no stagger and no poise loss', () => {
     const r = rig();

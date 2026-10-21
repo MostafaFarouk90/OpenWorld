@@ -47,3 +47,14 @@ export function makeGroundProp(id: string): THREE.Object3D | null {
   }
   return null;
 }
+
+/** Frees a prop from `makeGroundProp` (its geometries and its materials) and detaches it. */
+export function disposeGroundProp(o: THREE.Object3D): void {
+  o.removeFromParent();
+  o.traverse((n) => {
+    const m = n as THREE.Mesh;
+    if (!m.isMesh) return;
+    m.geometry.dispose();
+    for (const mat of Array.isArray(m.material) ? m.material : [m.material]) mat.dispose();
+  });
+}

@@ -8,7 +8,7 @@ import { GroundAttacks } from './ranged/GroundAttacks';
 import { makeGolemBody } from './golem/body';
 import { GOLEM_CORE_ORDER, isCoreHit } from './golem/rules';
 import { makeCrawlerBody } from './crawler/body';
-import { makeGroundProp } from './ranged/props';
+import { disposeGroundProp, makeGroundProp } from './ranged/props';
 import { RANGED_ATTACK_PREFIX } from './ranged/tuning';
 import { boneMultiplier, Enemy, type EnemyEnv, type EnemySpawn } from './Enemy';
 import { makeWyrmBody } from './wyrm/body';
@@ -352,10 +352,28 @@ export class EnemyManager {
     }
     const made = this.makeModel(def);
     // Procedural props (the hunters' spear and harpoon) come from ranged/props.ts, the rest from the pack library.
-    const source = { ...made, prop: (id: string) => (id.startsWith('proc/') ? makeGroundProp(id) : (made.prop?.(id) ?? null)) };
+    const procedural: THREE.Object3D[] = [];
+    const source = {
+      ...made,
+      prop: (id: string) => {
+        if (!id.startsWith('proc/')) return made.prop?.(id) ?? null;
+        const p = makeGroundProp(id);
+        if (p) procedural.push(p);
+        return p;
+      },
+    };
     const model = buildEnemyModel(source, def, { bus: this.host.combat.bus });
     const animator = new EnemyAnimator(model.owner, source.clips, { warn: (m) => this.host.warn(m) });
-    return new HumanoidBody(model, animator);
+    const body = new HumanoidBody(model, animator);
+    if (procedural.length) {
+      // The model builder frees only what it cloned; the procedural props own their geometry and materials.
+      const dispose = body.dispose.bind(body);
+      body.dispose = () => {
+        dispose();
+        for (const p of procedural) disposeGroundProp(p);
+      };
+    }
+    return body;
   }
 
   /** Spawns one enemy without a spawner (tests, debug). */
@@ -907,6 +925,11 @@ export class EnemyManager {
           if (!enemy || !move) return;
           // A ranged or area hit carries its own amounts (the move may have changed in flight).
           if (req.attackId?.startsWith(RANGED_ATTACK_PREFIX)) return;
+          // A ranged or area move hurts through its bolt or circle only: the fist or spear sweeping the same window deals nothing.
+          if (move.ranged || move.area) {
+            req.outcome = 'immune';
+            return;
+          }
           req.amount = move.damage * enemy.damageScale * boneMultiplier(req.bone);
           req.poise = move.poise;
           req.attackId = move.clip;
