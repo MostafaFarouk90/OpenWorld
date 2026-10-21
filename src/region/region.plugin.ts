@@ -11,6 +11,8 @@ import { installContainment } from './containmentSystem';
 import { buildFogWallDef, fogWalls } from './fogWall';
 import { pointInFootprint } from './geometry';
 import { distanceToPolyline, GrassField, type GrassAccept } from './grass';
+import { drawnWidth } from './act2/act2Roads';
+import { ACT2_ROAD_STRIPS } from './act2/act2World';
 import { buildPoiProps } from './poiProps';
 import { watchTollPost } from './tollPost';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
@@ -91,10 +93,21 @@ export function grassAcceptFor(layouts: readonly LayoutData[], heightAt: (x: num
     [BROOK_COURSE, BROOK_WIDTH / 2 + 0.5],
     [DEAD_ROAD_FULL, ROAD_WIDTH / 2 + 0.3],
     [LANE_TRACK_DRAWN, LANE_WIDTH / 2 + 0.3],
+    // The Act 2 roads' gravel ribbons (thread A1), as wide as drawn.
+    ...ACT2_ROAD_STRIPS.map((r) => [r.points, drawnWidth(r.halfWidth) / 2 + 0.3] as [readonly (readonly [number, number])[], number]),
   ];
+  // A padded box per strip skips the polyline walk for every strip far from the tuft.
+  const boxed = strips.map(([pts, half]) => ({
+    pts,
+    half,
+    minX: Math.min(...pts.map((p) => p[0])) - half,
+    maxX: Math.max(...pts.map((p) => p[0])) + half,
+    minZ: Math.min(...pts.map((p) => p[1])) - half,
+    maxZ: Math.max(...pts.map((p) => p[1])) + half,
+  }));
   return (x, z) =>
     Math.hypot(x - CITY_CENTER.x, z - CITY_CENTER.z) > CITY_NO_GRASS_RADIUS &&
-    !strips.some(([pts, half]) => distanceToPolyline(pts, x, z) < half) &&
+    !boxed.some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ && distanceToPolyline(b.pts, x, z) < b.half) &&
     !structures.some(({ st, reach }) => Math.abs(x - st.x) <= reach && Math.abs(z - st.z) <= reach && pointInFootprint(st, x, z, 0.4)) &&
     !(physics && staticColliderAt(physics, x, heightAt(x, z), z));
 }

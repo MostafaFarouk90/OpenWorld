@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createFakeCore } from '../region/testing/fakeCore';
-import { M06_ROUTE_FLAG, M06_GUARDED_FLAG, M06_STARTED_FLAG, gateStateFor, watchSouthGate, type GateState } from './gate';
+import { M06_ROUTE_FLAG, M06_GUARDED_FLAG, RIVER_GATE_FLAG, watchRiverGate, M06_STARTED_FLAG, gateStateFor, watchSouthGate, type GateState } from './gate';
 
 function setup(flags: Record<string, boolean | string> = {}) {
   const fc = createFakeCore();
@@ -75,5 +75,33 @@ describe('South Gate state', () => {
     gate.dispose();
     fc.ctx.state.setFlag(M06_GUARDED_FLAG, true);
     expect(seen).toEqual(['closed']);
+  });
+});
+
+describe('River Gate', () => {
+  it('is closed with no flag, opens when Act 1 ends, closes on an Act 1 save load, and applies only on change', () => {
+    const fc = createFakeCore();
+    const seen: boolean[] = [];
+    const gate = watchRiverGate(fc.ctx.gates, (open) => seen.push(open));
+    expect(gate.open()).toBe(false);
+    fc.ctx.state.setFlag(RIVER_GATE_FLAG, true);
+    fc.ctx.state.setFlag(RIVER_GATE_FLAG, true);
+    fc.ctx.state.setFlag('unrelated', true);
+    expect(gate.open()).toBe(true);
+    fc.flags.clear();
+    fc.fire('save.loaded');
+    expect(gate.open()).toBe(false);
+    expect(seen).toEqual([false, true, false]);
+    gate.dispose();
+    fc.ctx.state.setFlag(RIVER_GATE_FLAG, true);
+    expect(seen).toEqual([false, true, false]);
+  });
+
+  it('starts open when the save already carries the flag', () => {
+    const fc = createFakeCore();
+    fc.flags.set(RIVER_GATE_FLAG, true);
+    const seen: boolean[] = [];
+    expect(watchRiverGate(fc.ctx.gates, (o) => seen.push(o)).open()).toBe(true);
+    expect(seen).toEqual([true]);
   });
 });

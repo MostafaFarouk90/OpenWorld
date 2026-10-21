@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { footprintCorners } from '../region/geometry';
-import { CENTER, GATE_NAMES, MAX_STRUCTURE_RADIUS, PORTCULLIS_ID, gateBearing, gatePosition, polar, wallStructures, yawAlong } from './city';
+import { CENTER, GATE_NAMES, MAX_STRUCTURE_RADIUS, PORTCULLIS_ID, RIVER_PORTCULLIS_ID, SHUTTER_IDS, gateBearing, gatePosition, polar, wallStructures, yawAlong } from './city';
 import { HARROWMARK_PLATEAU } from '../terrain/shape/harrowmark';
 import { HARROWMARK_LAYOUT } from './harrowmark.layout';
 
@@ -25,11 +25,14 @@ describe('ring wall', () => {
     }
   });
 
-  it('plugs six gates and leaves only the South Gate with a portcullis', () => {
+  it('plugs five gates and gives the South and River Gates a shutter each', () => {
     expect(wall.filter((w) => w.id.startsWith('plug.')).map((w) => w.id).sort()).toEqual(
-      GATE_NAMES.filter((g) => g !== 'south').map((g) => `plug.${g}`).sort(),
+      GATE_NAMES.filter((g) => g !== 'south' && g !== 'river').map((g) => `plug.${g}`).sort(),
     );
     expect(wall.filter((w) => w.id === PORTCULLIS_ID)).toHaveLength(1);
+    expect(wall.filter((w) => w.id === RIVER_PORTCULLIS_ID)).toHaveLength(1);
+    expect(SHUTTER_IDS).toEqual([PORTCULLIS_ID, RIVER_PORTCULLIS_ID]);
+    expect(wall.filter((w) => SHUTTER_IDS.includes(w.id)).every((w) => w.kind === 'gate')).toBe(true);
   });
 
   it('stays inside the plateau box and within the structure radius', () => {
@@ -73,5 +76,6 @@ describe('ring wall', () => {
     const ids = HARROWMARK_LAYOUT.structures.map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain(PORTCULLIS_ID);
+    expect(ids).toContain(RIVER_PORTCULLIS_ID);
   });
 });

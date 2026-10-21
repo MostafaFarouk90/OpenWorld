@@ -21,7 +21,9 @@ export function handleChunkMessage(data: unknown): WorkerReply {
     const chunk = buildChunkData(raw.request as ChunkRequest);
     return {
       message: { id, ok: true, data: chunk },
-      transfer: [chunk.positions.buffer, chunk.normals.buffer, chunk.colors.buffer],
+      transfer: chunk.ground
+        ? [chunk.positions.buffer, chunk.normals.buffer, chunk.colors.buffer, chunk.ground.buffer]
+        : [chunk.positions.buffer, chunk.normals.buffer, chunk.colors.buffer],
     };
   } catch (error) {
     return { message: { id, ok: false, error: String(error) }, transfer: [] };

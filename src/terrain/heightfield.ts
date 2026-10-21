@@ -90,6 +90,9 @@ function baseHeight(x: number, z: number, ridgeScale: number): number {
   return natural * smoothstep(SPAWN_FLAT_RADIUS, SPAWN_BLEND_RADIUS, spawnDistance);
 }
 
+/** The ground before shaping with a ridge multiplier: what `buildShaper` takes (tests rebuild other shapes on it). */
+export const shapeBaseHeight: (x: number, z: number, ridgeScale: number) => number = baseHeight;
+
 /** The unshaped procedural ground (tests, regression baselines). */
 export function naturalHeightAt(x: number, z: number): number {
   return baseHeight(x, z, 1);

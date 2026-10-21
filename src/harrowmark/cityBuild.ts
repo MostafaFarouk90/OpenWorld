@@ -1,24 +1,27 @@
 // Builds the city's greybox: visuals merged per district and material (a handful of draw calls instead of one per
-// box) plus a static cuboid per solid structure. The South Gate's portcullis is the one piece with a switch.
+// box) plus a static cuboid per solid structure. The gate shutters (the South Gate's portcullis, the River Gate's) are the pieces with a switch.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type RAPIER from '@dimforge/rapier3d';
 import type { CoreContext } from '../region/coreTypes';
 import { buildGreybox, disposeGreybox, greyMat, structureHeight } from '../region/greybox';
 import type { StructureSpec } from '../region/layoutTypes';
-import { PORTCULLIS_ID } from './city';
+import { PORTCULLIS_ID, SHUTTER_IDS } from './city';
 import { coverageOf } from './cityArt';
 
 export type BuildDeps = Pick<CoreContext, 'scene' | 'physics'> & { rapier: Pick<typeof RAPIER, 'ColliderDesc'> };
 
 export interface CityHandle {
   group: THREE.Group;
-  /** Number of merged meshes (draw calls, before the portcullis). */
+  /** Number of merged meshes (draw calls, before the shutters). */
   drawCalls: number;
   colliders: number;
   /** Raises or lowers the South Gate's portcullis: collider and mesh. */
   setPortcullis(closed: boolean): void;
   portcullisClosed(): boolean;
+  /** Raises or lowers any gate shutter by structure id (`portcullis.south|river`); an unknown id is ignored. */
+  setShutter(id: string, closed: boolean): void;
+  shutterClosed(id: string): boolean;
   dispose(): void;
 }
 
@@ -33,9 +36,7 @@ export function buildCity(deps: BuildDeps, structures: StructureSpec[], heightAt
   group.name = 'harrowmark-city';
   const colliders: RAPIER.Collider[] = [];
   const buckets = new Map<string, Map<THREE.Material, THREE.BufferGeometry[]>>();
-  let portcullisCollider: RAPIER.Collider | null = null;
-  let portcullisMesh: THREE.Group | null = null;
-  let closed = true;
+  const shutters = new Map<string, { mesh: THREE.Group; collider: RAPIER.Collider; closed: boolean }>();
   let disposed = false;
 
   const addCuboid = (cx: number, cy: number, cz: number, hx: number, hy: number, hz: number, yaw: number): RAPIER.Collider => {
@@ -45,6 +46,15 @@ export function buildCity(deps: BuildDeps, structures: StructureSpec[], heightAt
     colliders.push(c);
     return c;
   };
+
+  const setShutter = (id: string, next: boolean): void => {
+    const s = shutters.get(id);
+    if (!s) return;
+    s.closed = next;
+    s.collider.setEnabled(next);
+    s.mesh.visible = next;
+  };
+  const shutterClosed = (id: string): boolean => shutters.get(id)?.closed ?? true;
 
   const dispose = (): void => {
     if (disposed) return;
@@ -69,12 +79,13 @@ export function buildCity(deps: BuildDeps, structures: StructureSpec[], heightAt
       const y = heightAt(spec.x, spec.z);
       const yaw = (spec.yawDeg * Math.PI) / 180;
       const h = structureHeight(spec);
-      if (spec.id === PORTCULLIS_ID) {
-        portcullisMesh = buildPortcullis(spec, h);
-        portcullisMesh.position.set(spec.x, y, spec.z);
-        portcullisMesh.rotation.y = yaw;
-        group.add(portcullisMesh);
-        portcullisCollider = addCuboid(spec.x, y + h / 2, spec.z, spec.footprint[0] / 2, h / 2, spec.footprint[1] / 2, yaw);
+      if (SHUTTER_IDS.includes(spec.id)) {
+        const mesh = buildPortcullis(spec, h);
+        mesh.position.set(spec.x, y, spec.z);
+        mesh.rotation.y = yaw;
+        group.add(mesh);
+        const collider = addCuboid(spec.x, y + h / 2, spec.z, spec.footprint[0] / 2, h / 2, spec.footprint[1] / 2, yaw);
+        shutters.set(spec.id, { mesh, collider, closed: true });
         continue;
       }
       if (spec.mode === 'solid') addCuboid(spec.x, y + h / 2, spec.z, spec.footprint[0] / 2, h / 2, spec.footprint[1] / 2, yaw);
@@ -129,12 +140,10 @@ export function buildCity(deps: BuildDeps, structures: StructureSpec[], heightAt
       group,
       drawCalls,
       colliders: colliders.length,
-      setPortcullis(next: boolean) {
-        closed = next;
-        portcullisCollider?.setEnabled(next);
-        if (portcullisMesh) portcullisMesh.visible = next;
-      },
-      portcullisClosed: () => closed,
+      setPortcullis: (next: boolean) => setShutter(PORTCULLIS_ID, next),
+      portcullisClosed: () => shutterClosed(PORTCULLIS_ID),
+      setShutter,
+      shutterClosed,
       dispose,
     };
   } catch (err) {
