@@ -21,6 +21,9 @@ export interface FollowInput {
   groundAt(x: number, z: number, yHint: number): number | null;
   /** Stand still and face the player (talking to him). */
   hold?: boolean;
+  /** A5: walk to this point instead of the follow slot (Hrolf closing on a foe), facing `face` once there. */
+  goal?: { x: number; z: number } | null;
+  face?: { x: number; z: number } | null;
   /** Indoors: the next waypoint from `from` towards `to` on the nav grid, or null to use the trail. */
   steer?(from: Vec3, to: { x: number; z: number }): { x: number; z: number } | null;
 }
@@ -197,6 +200,7 @@ export class FollowModel {
     if (input.groundAt(this.pos.x, this.pos.z, this.pos.y) === null) return this.teleport('unsupported');
 
     if (input.hold) return this.stand(player, dt);
+    if (input.goal) return this.approach(input.goal, input.face ?? input.goal, player, input, dt);
 
     const toPlayer = dist2d(this.pos, player);
     const target = this.pickTarget(player, input.playerYaw, toPlayer, input);
@@ -234,7 +238,34 @@ export class FollowModel {
     return { gait: this.gait, teleport: null };
   }
 
-  private stand(player: Vec3, dt: number): FollowStep {
+  /** Straight to `goal` at the run speed (the sprint when far), then stands facing `face`. */
+  private approach(goal: { x: number; z: number }, face: { x: number; z: number }, player: Vec3, input: FollowInput, dt: number): FollowStep {
+    const t = this.tuning;
+    const dx = goal.x - this.pos.x;
+    const dz = goal.z - this.pos.z;
+    const d = Math.hypot(dx, dz);
+    if (d <= t.arriveRadius) {
+      this.stand(face, dt);
+      return { gait: this.gait, teleport: null };
+    }
+    this.settled = false;
+    const want = d > t.directRadius ? t.sprintSpeed : t.runSpeed;
+    this.speed = want;
+    this.gait = this.nextGait(want);
+    const stepLen = Math.min(d, want * dt);
+    const nx = this.pos.x + (dx / d) * stepLen;
+    const nz = this.pos.z + (dz / d) * stepLen;
+    const ny = input.groundAt(nx, nz, this.pos.y);
+    if (ny === null) return this.teleport('unsupported');
+    this.pos.x = nx;
+    this.pos.z = nz;
+    this.pos.y = ny;
+    this.turnTo(yawToward(dx, dz), dt);
+    if (this.trackStuck(dist2d(this.pos, player), dt)) return this.teleport('stuck');
+    return { gait: this.gait, teleport: null };
+  }
+
+  private stand(player: { x: number; z: number }, dt: number): FollowStep {
     this.gait = 'idle';
     this.speed = 0;
     this.settled = true;

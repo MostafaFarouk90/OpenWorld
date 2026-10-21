@@ -128,6 +128,34 @@ export const YARD_VETERAN: EnemyDef = {
 };
 
 /**
+ * Hrolf Ironbrow in his trial of strength (Act 2, thread A5; additive here, plans/act2-A5.md section 8): the Barbarian
+ * with Hrolf's axe and look on the yard veteran's sparring weight, a little heavier. The trial service holds both sides
+ * at 1 HP; no mercy and no XP row (a sparring bout pays nothing). M13 (A12) spawns him in the Stonefold ring.
+ */
+export const HROLF_TRIAL: EnemyDef = {
+  kind: 'hrolf-trial',
+  nameKey: 'enemies.name.hrolf-trial',
+  model: { prefer: ['barbarian'], tint: 0x8a4b2a, weapons: 'none', show: ['1H_Axe'], hide: ['Barbarian_Round_Shield'], scale: 1.05 },
+  maxHealth: 120,
+  maxPoise: 45,
+  walkSpeed: 1.4,
+  chaseSpeed: 2.6,
+  moves: [
+    move('hrolf.chop', ENEMY_ATTACKS.soldierChop, {
+      windup: 0.7, telegraph: 'block', weapon: 'right', damage: 9, poise: 24,
+      range: [0, 1.7], cooldown: 1.9, recover: 0.8, weight: 3,
+    }),
+    move('hrolf.shove', ENEMY_ATTACKS.soldierBash, {
+      windup: 0.6, telegraph: 'block', weapon: 'right', damage: 5, poise: 22,
+      range: [0, 1.1], cooldown: 3, recover: 0.8, weight: 1,
+    }),
+  ],
+  material: 'metal',
+  rises: false,
+  // No guard: his shield is hidden for the duel, so nothing may block Cael's blows with it.
+};
+
+/**
  * Watch Guard: an observer-only humanoid (Knight fallback model, tinted) for stealth sections. It sees the
  * player and raises `ai.spotted`; it has no moves, no mercy, never emits `ai.aggro`, never chases and is never
  * routed through the PathFollower. It is `neutral` and immortal: a hit takes its awareness to 1 (one `ai.spotted`)
@@ -164,6 +192,7 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'guildhall-thug': GUILDHALL_THUG,
   'toll-sergeant': TOLL_SERGEANT,
   'yard-veteran': YARD_VETERAN,
+  'hrolf-trial': HROLF_TRIAL,
 };
 
 /**
@@ -180,6 +209,7 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   'guildhall-thug': { part: 'hand', color: 0xd04030 },
   'toll-sergeant': { part: 'weapon', color: 0xd04030 },
   'yard-veteran': { part: 'weapon', color: 0xd04030 },
+  'hrolf-trial': { part: 'weapon', color: 0xd04030 },
 };
 
 function move(

@@ -61,3 +61,23 @@ export const TOBB_TUNING = {
   /** `interior.entered` this soon after a load or respawn is a re-emit, not a walk through a door. */
   reEmitWindowSeconds: 2,
 } as const;
+
+/** Hrolf Ironbrow (plans/act2-A5.md sections 1.5 and 8): light hits, Stonehide 20% within 4 m (design 8.1). */
+export const HROLF_TUNING = {
+  maxHealth: 200,
+  damage: 5,
+  poise: 8,
+  range: 1.9,
+  cooldown: 2,
+  /** Foes this close to Cael are candidates. */
+  aggroRadius: 10,
+  /** Further than this from Cael he drops the fight and comes back. */
+  leash: 15,
+  /** Seconds from the swing's start to the hit frame. */
+  hitFrame: 0.35,
+  swingSeconds: 0.8,
+  stonehideShare: 0.2,
+  stonehideRadius: 4,
+  /** He closes to this much inside his reach before swinging. */
+  closeIn: 0.6,
+} as const;

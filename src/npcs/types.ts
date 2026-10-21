@@ -48,6 +48,11 @@ export interface NpcsService {
    * and leaves the NPCs already spawned untouched.
    */
   register(specs: NpcSpec[], defs: NpcDef[]): () => void;
+  /**
+   * Act 2 (A5, additive): hides an NPC's figure and turns its talk prompt off while a stand-in plays it (Gaut on his
+   * escort horse, Hrolf in his trial). Not saved; every hide clears on `save.loaded`. False for an unknown id.
+   */
+  setHidden(id: string, hidden: boolean): boolean;
 }
 
 declare module '../core/Services' {

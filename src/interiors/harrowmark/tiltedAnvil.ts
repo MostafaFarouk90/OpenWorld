@@ -50,6 +50,9 @@ export const TILTED_ANVIL_DEF: InteriorDef = {
     { id: 'inn.room', x: 7, z: -12.5, yaw: 270 },
     { id: 'npc-post.aldith.inside', x: -10, z: -3.25, facing: { x: 0, z: -3.25 } },
     { id: 'npc-post.tobb.tilted-anvil', x: 8, z: -2, facing: { x: 11, z: -2 } },
+    // Act 2 (A5): where an inactive companion waits by the hearth.
+    { id: 'npc-post.hrolf.tilted-anvil', x: 8.2, z: -4, facing: { x: 11, z: -2 } },
+    { id: 'npc-post.aelfreda.tilted-anvil', x: 8.2, z: 0, facing: { x: 11, z: -2 } },
   ],
   triggers: [],
   doors: [
