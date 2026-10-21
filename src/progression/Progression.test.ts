@@ -178,7 +178,8 @@ describe('skills', () => {
     expect(p.learn('nope')).toEqual({ ok: false, reason: 'unknown-skill' });
     p.grantXp(xpForLevel(5), 'x');
     expect(p.learn('knight.ironStance')).toEqual({ ok: false, reason: 'missing-prereq' });
-    expect(p.learn('knight.oathward')).toEqual({ ok: false, reason: 'unavailable' });
+    expect(p.learn('knight.oathward')).toEqual({ ok: false, reason: 'missing-prereq' });
+    expect(p.learn('knight.bastionWall')).toEqual({ ok: false, reason: 'unavailable' });
     expect(p.learn('knight.unbrokenOath')).toEqual({ ok: false, reason: 'unavailable' });
     p.learn('knight.rimBash');
     expect(p.learn('knight.rimBash')).toEqual({ ok: false, reason: 'already-learned' });
@@ -241,6 +242,7 @@ describe('nextUnlock', () => {
     q.learn('knight.riposteEdge');
     q.learn('knight.rallyCry');
     for (const id of ['knight.ironStance', 'knight.flowingCuts', 'knight.bannerPlant']) q.learn(id);
+    for (const id of ['knight.oathward', 'knight.chargeOfTheHalvard', 'knight.squiresResolve']) q.learn(id);
     expect(q.nextUnlock()).toEqual({ kind: 'none' });
   });
 });

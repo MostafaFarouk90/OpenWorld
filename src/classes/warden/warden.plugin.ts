@@ -9,9 +9,10 @@ import { WARDEN_ATTACK_SET } from './attackSet';
 import { BoulderShoulder } from './BoulderShoulder';
 import { WARDEN_KIT } from './kit';
 import { WARDEN_SKILLS } from './skills';
+import { BloodChant, GritTeeth, WhirlingHew } from './tier3';
 import { WARDEN_CODEX_ENTRIES, WARDEN_CODEX_STRINGS_EN, WARDEN_STRINGS_EN } from './strings.en';
 import { wardenSurgeForm } from './surge';
-import { SKILL_IDS, THICK_SKIN, WARDEN_CLASS_ID, WARDEN_CLIPS } from './tuning';
+import { BLOOD_CHANT, DEEP_WOUND, GRIT_TEETH, SKILL_IDS, THICK_SKIN, WARDEN_CLASS_ID, WARDEN_CLIPS, WHIRLING_HEW } from './tuning';
 import { WardenCombat } from './WardenCombat';
 
 type Loose = { get(name: string): unknown };
@@ -35,7 +36,11 @@ interface ClassesLike {
   registerKit(kit: ClassKit): { ok: true; dispose(): void } | { ok: false; reason: string };
 }
 interface VfxLike {
-  spawnEffect?(id: string, t: { position: { x: number; y: number; z: number }; scale?: number }): unknown;
+  spawnEffect?(
+    id: string,
+    t: { position: { x: number; y: number; z: number }; scale?: number; attach?: unknown },
+    params?: Record<string, number | string | boolean>,
+  ): { stop(): void } | unknown;
 }
 
 let cleanup: (() => void) | null = null;
@@ -138,6 +143,75 @@ const wardenPlugin: GamePlugin = {
       if (handler?.ok) offs.push(handler.dispose);
       else warn(`warden: Boulder Shoulder handler not registered (${handler ? handler.reason : 'no abilities service'})`);
 
+      // Tier 3 (Act 2): Whirling Hew, Grit Teeth and Blood Chant. Their logic is in tier3.ts; this block only binds the services.
+      const feetAt = () => ({ x: ctx.player.feet.x, y: ctx.player.feet.y, z: ctx.player.feet.z });
+      const blockedNow = (withBusy: boolean): string | null => {
+        if (ctx.actors.player.dead) return 'dead';
+        if (verbs()?.staggered) return 'staggered';
+        if (withBusy && (verbs()?.busy || controller()?.currentAction)) return 'busy';
+        return null;
+      };
+      /** Spawns a timed effect that rides the player; returns what stops it. */
+      const followFx = (id: string, seconds: number): (() => void) | undefined => {
+        const handle = svc<VfxLike>('vfx')?.spawnEffect?.(id, { position: feetAt(), attach: ctx.player.avatar?.root }, { seconds }) as { stop?(): void } | undefined;
+        return handle?.stop ? () => handle.stop!() : undefined;
+      };
+      const trigger = (id: string) => svc<{ reportTrigger?(id: string): void }>('abilities')?.reportTrigger?.(id);
+
+      const hew = new WhirlingHew(
+        {
+          actors: ctx.actors as never,
+          damage: ctx.damage as never,
+          feet: () => ctx.player.feet,
+          blockedReason: () => blockedNow(true),
+          playClip: (clip) => controller()?.playOneShot?.(clip, { lockMove: true }) === true,
+          interrupted: () => ctx.actors.player.dead || verbs()?.staggered === true || controller()?.currentAction === 'dodge',
+          reportTrigger: trigger,
+          fx: { spin: (at) => void svc<VfxLike>('vfx')?.spawnEffect?.('whirling-hew', { position: at }, { reach: WHIRLING_HEW.reach }) },
+          skillId: SKILL_IDS.whirlingHew,
+        },
+        playerId,
+      );
+      offs.push(() => hew.cancel());
+      const hewHandler = looseService(ctx.services, 'abilities')?.registerHandler(SKILL_IDS.whirlingHew, () => hew.start());
+      if (hewHandler?.ok) offs.push(hewHandler.dispose);
+      else warn(`warden: Whirling Hew handler not registered (${hewHandler ? hewHandler.reason : 'no abilities service'})`);
+
+      const grit = new GritTeeth(
+        {
+          events: ctx.events,
+          now: () => ctx.clock.seconds,
+          learned,
+          staggered: () => verbs()?.staggered === true,
+          fx: (seconds) => followFx(GRIT_TEETH.effect, seconds),
+          skillId: SKILL_IDS.gritTeeth,
+        },
+        playerId,
+      );
+      offs.push(() => grit.dispose());
+      offs.push(ctx.damage.addModifier(GRIT_TEETH.modifierId, (req, target) => grit.modify(req, target.id), GRIT_TEETH.order));
+
+      const chant = new BloodChant(
+        {
+          events: ctx.events,
+          actors: ctx.actors as never,
+          now: () => ctx.clock.seconds,
+          learned,
+          status: () => svc('status'),
+          blockedReason: () => blockedNow(false),
+          fx: (seconds) => followFx(BLOOD_CHANT.effect, seconds),
+          reportTrigger: trigger,
+          deepWoundId: DEEP_WOUND.id,
+          skillId: SKILL_IDS.bloodChant,
+          warn,
+        },
+        playerId,
+      );
+      offs.push(() => chant.dispose());
+      const chantHandler = looseService(ctx.services, 'abilities')?.registerHandler(SKILL_IDS.bloodChant, () => chant.start());
+      if (chantHandler?.ok) offs.push(chantHandler.dispose);
+      else warn(`warden: Blood Chant handler not registered (${chantHandler ? chantHandler.reason : 'no abilities service'})`);
+
       const kit = svc<ClassesLike>('classes')?.registerKit(WARDEN_KIT);
       if (kit?.ok) offs.push(kit.dispose);
       else warn(`warden: kit not registered (${kit ? kit.reason : 'no classes service'})`);
@@ -164,8 +238,14 @@ const wardenPlugin: GamePlugin = {
           if (e.classId === WARDEN_CLASS_ID && e.previous !== WARDEN_CLASS_ID) return;
           combat.reset();
           boulder.cancel();
+          hew.cancel();
+          grit.reset();
+          chant.reset();
         }),
-        ctx.events.on('save.loaded', () => boulder.cancel()),
+        ctx.events.on('save.loaded', () => {
+          boulder.cancel();
+          hew.cancel();
+        }),
         ctx.systems.add({
           id: 'warden.fixed',
           fixedPhase: 'afterCombat',
@@ -175,6 +255,10 @@ const wardenPlugin: GamePlugin = {
             if (boulder.charging && !learned(SKILL_IDS.boulderShoulder)) boulder.cancel();
             combat.tick();
             boulder.tick();
+            if (hew.spinning && !learned(SKILL_IDS.whirlingHew)) hew.cancel();
+            hew.tick();
+            grit.tick();
+            chant.tick();
           },
         }),
       );
