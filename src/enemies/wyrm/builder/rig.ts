@@ -17,7 +17,7 @@ import { segmentProfile, seeded, WYRM_SHAPE, wyrmParams, type WyrmParams } from 
 import { WyrmSpine, type Vec3Like } from './spine';
 
 /** Hurtbox joint names (the bone names `HurtboxSet` looks up); `head` keeps the x2 bone multiplier. */
-export const WYRM_JOINTS = ['head', 'neck', 'torso', 'tail', 'wingL', 'wingR'] as const;
+export const WYRM_JOINTS = ['head', 'neck', 'torso', 'belly', 'tail', 'tailTip', 'wingL', 'wingR'] as const;
 export type WyrmJoint = (typeof WYRM_JOINTS)[number];
 
 /** Breath particles (design 11 effect 21, reduced: logged): flame and smoke. */
@@ -91,6 +91,8 @@ const TMP_M = new THREE.Matrix4();
 const TMP_Q = new THREE.Quaternion();
 const TMP_S = new THREE.Vector3();
 const TMP_Q2 = new THREE.Quaternion();
+/** Dorsal spikes lean back toward the tail (about the body-left axis; positive would tip them toward the head). */
+const SPIKE_LEAN = -0.6;
 const TMP_E = new THREE.Euler();
 const HALF_TURN = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
 
@@ -270,7 +272,9 @@ export class WyrmRig {
       head: { half: WYRM_SHAPE.headLength * s * 0.34, radius: 0.3 * s },
       neck: { half: this.spine.length * 0.09, radius: r * 0.75 },
       torso: { half: this.spine.length * 0.14, radius: r * 1.05 },
+      belly: { half: this.spine.length * 0.1, radius: r * 0.8 },
       tail: { half: this.spine.length * 0.17, radius: r * 0.55 },
+      tailTip: { half: this.spine.length * 0.07, radius: r * 0.35 },
       wingL: { half: wingL * 0.33, radius: 0.32 * s * p.wingspan },
       wingR: { half: wingL * 0.33, radius: 0.32 * s * p.wingspan },
     };
@@ -332,6 +336,15 @@ export class WyrmRig {
     return out;
   }
 
+  /**
+   * Lays the body straight behind the head, level, along the root's facing (a spawn, a teleport, a landing). The
+   * root faces -Z at yaw 0, so the body runs back along +Z turned by `yaw`.
+   */
+  resetSpine(root: RootFrame, altitude: number, pose: WyrmPose): void {
+    const head = this.headWorld(root, altitude, pose);
+    this.spine.reset(head, { x: Math.sin(root.yaw), y: 0, z: Math.cos(root.yaw) });
+  }
+
   /** Chains the collar to `post` (world), or removes the chain with null. */
   setChain(post: Vec3Like | null): void {
     this.chainTo = post ? new THREE.Vector3(post.x, post.y, post.z) : null;
@@ -346,7 +359,7 @@ export class WyrmRig {
     if (this.disposed) return;
     this.time = (this.time + (dt > 0 ? dt : 0)) % 1000;
     const u = this.uniforms;
-    u.uTime.value = this.time;
+    u.uWyrmTime.value = this.time;
     u.uMouth.value = clamp01(pose.mouth);
     u.uFlash.value = clamp01(pose.flash);
     u.uTailGlow.value = clamp01(pose.tailGlow);
@@ -371,6 +384,26 @@ export class WyrmRig {
         const lift = this.segRadius[i]!;
         this.lp[i]!.y -= lift * Math.abs(Math.sin(pose.roll)) * 0.5;
         this.lt[i]!.applyQuaternion(TMP_Q);
+      }
+    }
+
+    if (pose.whip !== 0) {
+      // The tail whip: everything behind the chest swings round it in the ground plane, the tip furthest.
+      const ci = Math.round(0.3 * (n - 1));
+      const chest = this.lp[ci]!;
+      for (let i = ci + 1; i < n; i++) {
+        const w = pose.whip * Math.min(1, (i - ci) / Math.max(1, n - 1 - ci) * 1.6);
+        const c = Math.cos(w);
+        const sn = Math.sin(w);
+        const p = this.lp[i]!;
+        const dx = p.x - chest.x;
+        const dz = p.z - chest.z;
+        p.x = chest.x + c * dx + sn * dz;
+        p.z = chest.z - sn * dx + c * dz;
+        const t = this.lt[i]!;
+        const tx = t.x;
+        t.x = c * tx + sn * t.z;
+        t.z = -sn * tx + c * t.z;
       }
     }
 
@@ -419,8 +452,16 @@ export class WyrmRig {
     const n = this.params.segments;
     // Spine: every segment at full detail, every other one (twice as long) past 40 m.
     const step = this.lod >= 1 ? 2 : 1;
+    const segAttr = this.spineMesh.geometry.getAttribute('aSeg') as THREE.InstancedBufferAttribute;
+    const segs = segAttr.array as Float32Array;
     let k = 0;
-    for (let i = 0; i < n; i += step) {
+    for (let j = 0; j < n; j += step) {
+      // Past 40 m every other segment, and always the tail tip.
+      const i = step > 1 && j + step >= n ? n - 1 : j;
+      if (segs[k] !== i) {
+        segs[k] = i;
+        segAttr.needsUpdate = true;
+      }
       this.basis(this.lt[i]!, pose.roll);
       const r = this.segRadius[i]!;
       TMP_S.set(r, r * 0.86, Math.max(r, this.segLength * 0.78 * step));
@@ -441,7 +482,7 @@ export class WyrmRig {
           this.a.copy(this.lp[i]!).addScaledVector(this.y, r * 0.75);
           // Spikes lean back toward the tail.
           TMP_Q.setFromRotationMatrix(TMP_M.makeBasis(this.x, this.y, this.z));
-          TMP_Q.multiply(new THREE.Quaternion().setFromAxisAngle(this.c.set(1, 0, 0), 0.6));
+          TMP_Q.multiply(TMP_Q2.setFromAxisAngle(this.c.set(1, 0, 0), SPIKE_LEAN));
           TMP_M.compose(this.a, TMP_Q, TMP_S.set(r * 0.4, h, r * 0.4));
           this.spikeMesh.setMatrixAt(j, TMP_M);
         }
@@ -458,7 +499,10 @@ export class WyrmRig {
     this.placeJoint('head', this.headPivot.position, this.headDir(), WYRM_SHAPE.headLength * s * 0.25);
     this.placeSpan('neck', Math.round(0.02 * (n - 1)), Math.round(0.16 * (n - 1)));
     this.placeSpan('torso', Math.round(0.14 * (n - 1)), Math.round(0.42 * (n - 1)));
+    this.placeSpan('belly', Math.round(0.18 * (n - 1)), Math.round(0.4 * (n - 1)));
+    this.joints.belly.position.y -= this.segRadius[Math.round(0.3 * (n - 1))]! * 0.45;
     this.placeSpan('tail', Math.round(0.45 * (n - 1)), Math.round(0.85 * (n - 1)));
+    this.placeSpan('tailTip', Math.round(0.85 * (n - 1)), n - 1);
     for (const side of [-1, 1] as const) {
       const W = side < 0 ? u.uWingL.value : u.uWingR.value;
       const L = WYRM_SHAPE.wingLength * s * this.params.wingspan * (1 - 0.6 * fold);
@@ -484,18 +528,9 @@ export class WyrmRig {
     }
     const tailI = n - 1;
     const midTail = Math.round(0.7 * (n - 1));
-    if (pose.whip !== 0) {
-      // The whip: the tail swings round the chest through `whip` radians, low to the ground.
-      const chest = this.lp[Math.round(0.3 * (n - 1))]!;
-      const back = this.b.copy(this.lt[Math.round(0.3 * (n - 1))]!).negate().setY(0).normalize();
-      back.applyAxisAngle(UP, pose.whip);
-      const len = this.spine.length * 0.7;
-      this.tailTip.hilt.position.copy(chest).addScaledVector(back, len * 0.35).setY(Math.min(chest.y, 0.6 * s));
-      this.tailTip.tip.position.copy(chest).addScaledVector(back, len).setY(Math.min(chest.y, 0.5 * s));
-    } else {
-      this.tailTip.hilt.position.copy(this.lp[midTail]!);
-      this.tailTip.tip.position.copy(this.lp[tailI]!);
-    }
+    // The tail channel runs along the tail itself (bent round the chest by a whip in `apply`).
+    this.tailTip.hilt.position.copy(this.lp[midTail]!);
+    this.tailTip.tip.position.copy(this.lp[tailI]!);
 
     // Spit cone decal: on the ground under the jet, filling with the inhale.
     const cone = clamp01(pose.cone);
@@ -768,11 +803,18 @@ function channel(name: string, parent: THREE.Object3D): { object: THREE.Object3D
 }
 
 /** A tapered-bone instance from a to b with base radius r (the bone geometry runs z 0..1). */
+const SEG_D = new THREE.Vector3();
+const SEG_Q = new THREE.Quaternion();
+const SEG_S = new THREE.Vector3();
+const SEG_M = new THREE.Matrix4();
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+
+/** A unit bone (z 0..1) stretched from `a` to `b` with radius `r`. Returns a shared matrix: use it before the next call. */
 function segmentMatrix(a: THREE.Vector3, b: THREE.Vector3, r: number): THREE.Matrix4 {
-  const d = new THREE.Vector3().subVectors(b, a);
+  const d = SEG_D.subVectors(b, a);
   const len = Math.max(1e-4, d.length());
-  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), d.multiplyScalar(1 / len));
-  return new THREE.Matrix4().compose(a, q, new THREE.Vector3(r, r, len));
+  SEG_Q.setFromUnitVectors(Z_AXIS, d.multiplyScalar(1 / len));
+  return SEG_M.compose(a, SEG_Q, SEG_S.set(r, r, len));
 }
 
 function clamp01(v: number): number {

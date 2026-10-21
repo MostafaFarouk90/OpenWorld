@@ -77,6 +77,20 @@ const MAX_LEAD_SCALE = 4;
 const FLYING_ABOVE = 0.3;
 /** Seconds of one wingbeat in flight. */
 const FLAP_SECONDS = 0.8;
+/** Rate (1/s) at which the base pose eases between flight and ground. */
+const BASE_EASE = 8;
+/** Metres a camera must come back inside an LOD band before the finer level returns. */
+const LOD_HYSTERESIS = 3;
+
+function lodFor(distance: number, current: number): number {
+  const [near, far] = LOD_DISTANCES;
+  const raw = distance > far ? 2 : distance > near ? 1 : 0;
+  if (raw >= current) return raw;
+  // Coming closer: only once inside the band by the margin.
+  if (current === 2 && distance > far - LOD_HYSTERESIS) return 2;
+  if (current >= 1 && raw === 0 && distance > near - LOD_HYSTERESIS) return 1;
+  return raw;
+}
 
 export interface WyrmBodyOptions {
   bus?: DamageBus;
@@ -154,7 +168,12 @@ export class WyrmBody implements EnemyBody {
   private opacity = 1;
   private cameraDistance = 0;
   private readonly pose: WyrmPose = restPose();
+  private readonly rest: Readonly<WyrmPose> = restPose();
   private readonly headTmp = { x: 0, y: 0, z: 0 };
+  private readonly frame: RootFrame = { x: 0, y: 0, z: 0, yaw: 0 };
+  /** The base flight/ground pose eases between the two instead of snapping (fold, flap, billow, leg tuck). */
+  private readonly base = { fold: 0.85, flap: -0.15, billow: 0, legTuck: 0 };
+  private spineSet = false;
 
   constructor(params: Partial<WyrmParams>, options: WyrmBodyOptions = {}) {
     this.warn = options.warn ?? ((m: string) => console.warn(m));
@@ -175,9 +194,12 @@ export class WyrmBody implements EnemyBody {
     this.tracers = { right: tracer(this.rig.mouth, this.owner), left: tracer(this.rig.tailTip, this.rig.tailTip.object) };
     this.sources = { right: this.makeSource('right'), left: this.makeSource('left') };
     // The camera distance for the LOD comes from the spine's own render callback (the body has no camera).
+    const camPos = new THREE.Vector3();
     this.rig.spineMesh.onBeforeRender = (_r, _s, camera) => {
-      const p = camera.getWorldPosition(new THREE.Vector3());
-      this.cameraDistance = Math.hypot(p.x - this.root.position.x, p.y - this.root.position.y, p.z - this.root.position.z);
+      // The main view only: a second pass (a portrait, a shadow camera) would flip the LOD.
+      if (!(camera as THREE.PerspectiveCamera).isPerspectiveCamera) return;
+      camera.getWorldPosition(camPos);
+      this.cameraDistance = Math.hypot(camPos.x - this.root.position.x, camPos.y - this.root.position.y, camPos.z - this.root.position.z);
     };
     this.hurtboxes.update();
   }
@@ -322,9 +344,14 @@ export class WyrmBody implements EnemyBody {
     const attackTime = a ? Math.min(a.duration, a.clipTime + advance) : 0;
     this.evaluate(a, attackTime, dt);
 
-    // LOD from the last rendered camera distance (0 when nothing renders: full detail).
-    this.rig.lod = this.cameraDistance > LOD_DISTANCES[1] ? 2 : this.cameraDistance > LOD_DISTANCES[0] ? 1 : 0;
+    // LOD from the last rendered camera distance (0 when nothing renders: full detail), with 3 m of hysteresis.
+    this.rig.lod = lodFor(this.cameraDistance, this.rig.lod);
     const frame = this.rootFrame();
+    if (!this.spineSet) {
+      // First tick at the real spawn: the body laid out behind the head along the root's facing.
+      this.spineSet = true;
+      this.rig.resetSpine(frame, this.altitudeNow, this.pose);
+    }
     const head = this.rig.headWorld(frame, this.altitudeNow, this.pose, this.headTmp);
     this.rig.spine.step(dt, head, { speed: this.speed, flying: this.altitudeNow > FLYING_ABOVE });
     const visual = this.rig.lod < 2 || this.tickCount % 2 === 0;
@@ -352,6 +379,13 @@ export class WyrmBody implements EnemyBody {
     this.rig.dispose();
   }
 
+  /** Lays the body straight behind the head along the facing (after a teleport or a landing far from the trail). */
+  resetSpine(): void {
+    if (this.disposed) return;
+    this.spineSet = true;
+    this.rig.resetSpine(this.rootFrame(), this.altitudeNow, this.pose);
+  }
+
   /** The pose drawn last tick (tests). */
   get lastPose(): Readonly<WyrmPose> {
     return this.pose;
@@ -361,25 +395,32 @@ export class WyrmBody implements EnemyBody {
 
   private rootFrame(): RootFrame {
     const r = this.root;
-    return { x: r.position.x, y: r.position.y, z: r.position.z, yaw: r.rotation.y };
+    const f = this.frame;
+    f.x = r.position.x;
+    f.y = r.position.y;
+    f.z = r.position.z;
+    f.yaw = r.rotation.y;
+    return f;
   }
 
   private evaluate(a: AttackRun | null, attackTime: number, dt: number): void {
     const p = this.pose;
-    Object.assign(p, restPose());
+    Object.assign(p, this.rest);
     const flying = this.altitudeNow > FLYING_ABOVE;
-    // Base: flight or ground locomotion.
-    if (flying) {
-      const beat = (this.time / FLAP_SECONDS) * Math.PI * 2;
-      p.flap = 0.15 + 0.55 * Math.sin(beat);
-      p.fold = 0;
-      p.billow = 1;
-      p.legTuck = 1;
-      p.headPitch = -0.1;
-    } else {
-      p.flap = -0.15;
-      p.fold = 0.85;
-      p.legTuck = 0;
+    // Base: flight or ground locomotion, eased over about 0.25 s so takeoff and touchdown do not snap.
+    const b = this.base;
+    const k = Math.min(1, dt * BASE_EASE);
+    const beat = (this.time / FLAP_SECONDS) * Math.PI * 2;
+    b.fold += ((flying ? 0 : 0.85) - b.fold) * k;
+    b.flap += ((flying ? 0.15 + 0.55 * Math.sin(beat) : -0.15) - b.flap) * (flying ? Math.min(1, k * 3) : k);
+    b.billow += ((flying ? 1 : 0) - b.billow) * k;
+    b.legTuck += ((flying ? 1 : 0) - b.legTuck) * k;
+    p.fold = b.fold;
+    p.flap = b.flap;
+    p.billow = b.billow;
+    p.legTuck = b.legTuck;
+    if (flying) p.headPitch = -0.1;
+    else {
       this.legPhase += dt * (1.5 + this.speed * 2.2);
       p.legPhase = this.legPhase;
     }

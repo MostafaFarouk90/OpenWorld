@@ -6,6 +6,8 @@ export const EMBER_WYRM = {
   takeoffSeconds: 0.8,
   landingSeconds: 1.0,
   fallSeconds: 0.5,
+  /** The dive's stoop from cruise height to the ground, about its window's length. */
+  diveStoopSeconds: 0.5,
   cruiseAltitude: 5,
   strafeAltitude: 2,
   circleRadius: [9, 12] as const,
