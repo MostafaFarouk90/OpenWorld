@@ -11,6 +11,7 @@ import { Burn } from '../spells/Burn';
 import { WorldState } from '../state/WorldState';
 import { EnemyManager } from './EnemyManager';
 import { FakeActor, FakeHost, loadKnight } from './testing/fakeHost';
+import { bossMercyPromptKey } from './mercy';
 import { AI, MERCY } from './tuning';
 import type { SpawnerDef } from './types';
 
@@ -29,7 +30,9 @@ const SPAWNERS: SpawnerDef[] = [
  * The real InteractionSystem (focus, 0.5 s hold), BossRegistry, WorldState favour and Burn
  * (`useShard`, Scars) driving the real EnemyManager; only the enemy bodies and the avatar are fakes.
  */
-function rig(opts: { burn?: number; releaseUnlocked?: boolean } = {}) {
+function rig(opts: { burn?: number; releaseUnlocked?: boolean; boss?: 'ashen-prior' | 'thrandil-redmane' } = {}) {
+  const bossId = opts.boss ?? 'ashen-prior';
+  const spare = bossId === 'thrandil-redmane';
   const events = new GameEvents((m, e) => {
     throw new Error(`${m} ${String(e)}`);
   });
@@ -48,12 +51,18 @@ function rig(opts: { burn?: number; releaseUnlocked?: boolean } = {}) {
   const burn = new Burn();
   burn.add(opts.burn ?? 0, 'test');
 
+  const registered: Interactable[] = [];
   const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: 1.5 } });
   fake.defineAnchor('spawn.pack', 0, 0);
   const host = {
     ...fake.host,
     bosses,
-    interaction: { register: (i: unknown) => interaction.register(i as Interactable) },
+    interaction: {
+      register: (i: unknown) => {
+        registered.push(i as Interactable);
+        return interaction.register(i as Interactable);
+      },
+    },
     services: {
       get: ((name: string) => {
         if (name === 'spells') return { useShard: (g: number, s: string) => burn.useShard(g, s) };
@@ -62,16 +71,16 @@ function rig(opts: { burn?: number; releaseUnlocked?: boolean } = {}) {
     },
   };
   const manager = new EnemyManager(host, FakeHost.factory(gltf), { spawners: SPAWNERS, seed: 7 });
-  manager.service.setMercyUnlocked('release', opts.releaseUnlocked ?? true);
+  manager.service.setMercyUnlocked(spare ? 'spare' : 'release', opts.releaseUnlocked ?? true);
 
   // The real bus feeds the enemies code; the enemies code's mercy events feed the real favour ledger.
   const forward = ['boss.releaseWindow', 'boss.released', 'boss.ended'] as const;
   for (const t of forward) events.on(t, (p) => (fake.bus.emit as (t: string, p: unknown) => void)(t, p));
   fake.bus.on('mercy', (e) => void state.recordMercy(e as Parameters<WorldState['recordMercy']>[0]));
 
-  const bossActor = actors.spawn({ kind: 'ashen-prior', team: 'hostile', maxHealth: 100, maxPoise: 10 });
-  fake.actorMap.set(bossActor.id, new FakeActor(bossActor.id, 'ashen-prior', { kind: 'ashen-prior', team: 'hostile', maxHealth: 100, root: new THREE.Group() }));
-  bosses.register(bossActor.id, { bossId: 'ashen-prior', nameKey: 'boss.ashen-prior', phases: [], breaksPerPhase: 1 });
+  const bossActor = actors.spawn({ kind: bossId, team: 'hostile', maxHealth: 100, maxPoise: 10 });
+  fake.actorMap.set(bossActor.id, new FakeActor(bossActor.id, bossId, { kind: bossId, team: 'hostile', maxHealth: 100, root: new THREE.Group() }));
+  bosses.register(bossActor.id, { bossId, nameKey: `boss.${bossId}`, phases: [], breaksPerPhase: 1, ...(spare ? { mercyVerb: 'spare' as const } : {}) });
   const seen: string[] = [];
   events.onAny((t) => void seen.push(t));
   const openWindow = () => {
@@ -90,8 +99,9 @@ function rig(opts: { burn?: number; releaseUnlocked?: boolean } = {}) {
     input.release('mercy');
     tick(1);
   };
-  const startFavour = state.favour('ashwalkers');
-  const gained = () => state.favour('ashwalkers') - startFavour;
+  const track = spare ? 'oswin' : 'ashwalkers';
+  const startFavour = state.favour(track);
+  const gained = () => state.favour(track) - startFavour;
   const settle = (seconds: number) => {
     for (let i = 0; i < Math.round(seconds / DT); i++) {
       manager.think(DT);
@@ -100,7 +110,7 @@ function rig(opts: { burn?: number; releaseUnlocked?: boolean } = {}) {
       manager.react(DT);
     }
   };
-  return { events, state, bosses, burn, manager, fake, bossActor, openWindow, holdMercy, seen, gained, settle };
+  return { events, state, bosses, burn, manager, fake, bossActor, openWindow, holdMercy, seen, gained, settle, registered };
 }
 
 describe('the Prior release, end to end', () => {
@@ -174,5 +184,56 @@ describe('the Prior release, end to end', () => {
     expect(r.burn.value).toBe(20);
     expect(r.fake.bus.of('mercy').map((m) => m.tier).sort()).toEqual(['boss', 'normal']);
     expect(r.gained()).toBe(5);
+  });
+});
+
+describe("Redmane's Spare, end to end (A8)", () => {
+  const spared = (r: ReturnType<typeof rig>) => r.bosses.state('thrandil-redmane')!;
+
+  it('the Spare prompt reads Spare (not the Release string with a literal {cost}), for release, calm and spare alike', () => {
+    expect(bossMercyPromptKey('spare')).toBe('enemies.mercy.spare');
+    expect(bossMercyPromptKey('release')).toBe('enemies.mercy.release');
+    expect(bossMercyPromptKey('calm')).toBe('enemies.mercy.calm');
+    const r = rig({ boss: 'thrandil-redmane' });
+    r.openWindow();
+    const hold = r.registered.find((i) => i.id === 'release:boss-thrandil-redmane') ?? r.registered.at(-1)!;
+    expect(hold.promptKey).toBe('enemies.mercy.spare');
+    expect(hold.promptParams?.()).toEqual({});
+  });
+
+  it('a full hold spares him: boss.released then boss.spared, outcome spared, Oswin +3 exactly once, no Burn', () => {
+    const r = rig({ boss: 'thrandil-redmane' });
+    r.openWindow();
+    expect(spared(r).releaseOpen).toBe(true);
+    r.holdMercy(MERCY.holdSeconds + 0.1);
+    expect(spared(r).outcome).toBe('spared');
+    expect(r.seen.indexOf('boss.released')).toBeGreaterThanOrEqual(0);
+    expect(r.seen.indexOf('boss.spared')).toBeGreaterThan(r.seen.indexOf('boss.released'));
+    expect(r.gained()).toBe(3);
+    expect(r.fake.bus.of('mercy').filter((m) => m.tier === 'boss')).toHaveLength(1);
+    expect(r.fake.bus.of('mercy').find((m) => m.tier === 'boss')).toMatchObject({ verb: 'spare', track: 'oswin', ledgerId: 'D03', amount: 3 });
+    expect(r.burn.value).toBe(0);
+  });
+
+  it('a Spare at Burn 80 adds no Scar and no Burn; the Prior release at Burn 80 still scars', () => {
+    const r = rig({ boss: 'thrandil-redmane', burn: 80 });
+    r.openWindow();
+    r.holdMercy(MERCY.holdSeconds + 0.1);
+    expect(spared(r).outcome).toBe('spared');
+    expect(r.burn.scars).toBe(0);
+    expect(r.burn.value).toBe(80);
+    const p = rig({ burn: 80 });
+    p.openWindow();
+    p.holdMercy(MERCY.holdSeconds + 0.1);
+    expect(p.burn.scars).toBe(1);
+    expect(p.burn.value).toBe(100);
+  });
+
+  it('while Spare is locked the hold never starts', () => {
+    const r = rig({ boss: 'thrandil-redmane', releaseUnlocked: false });
+    r.openWindow();
+    r.holdMercy(MERCY.holdSeconds + 0.5);
+    expect(spared(r).outcome).toBeNull();
+    expect(r.gained()).toBe(0);
   });
 });

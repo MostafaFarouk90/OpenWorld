@@ -71,6 +71,19 @@ describe('BossBar', () => {
     expect(textOf(bar.element)).toContain('hud.boss.release');
   });
 
+  it('a Spare boss (Redmane) reads "Spare open", not "Release open"; the Prior and Grimtooth still read Release', () => {
+    const { bar, states } = make([view({ bossId: 'thrandil-redmane', releaseOpen: true })]);
+    expect(textOf(bar.element)).toContain('hud.boss.spare');
+    expect(textOf(bar.element)).not.toContain('hud.boss.release');
+    states.set('thrandil-redmane', view({ bossId: 'thrandil-redmane', releaseOpen: false }));
+    bar.update();
+    expect(textOf(bar.element)).not.toContain('hud.boss.spare');
+    for (const id of ['ashen-prior', 'gaffer-grimtooth']) {
+      const b = make([view({ bossId: id, releaseOpen: true })]);
+      expect(textOf(b.bar.element)).toContain('hud.boss.release');
+    }
+  });
+
   it('phase change redraws ticks and pips from state', () => {
     const { bar, states } = make([view()]);
     states.set('prior', view({ phases: 2, breaks: 3, phase: 2 }));

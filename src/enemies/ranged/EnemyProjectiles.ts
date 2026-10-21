@@ -138,6 +138,7 @@ export class EnemyProjectiles {
       attackId: RANGED_ATTACK_PREFIX + move.id,
       direction,
       unblockable: move.telegraph === 'dodge',
+      ...(move.parryable === false ? { parryable: false as const } : {}),
       point: this.tmp.set(point.x, point.y, point.z).clone(),
       ...(spec.pull ? { pull: { distance: spec.pull } } : {}),
     });

@@ -17,6 +17,11 @@ Slice 2 thread 3b; plans in plans/slice-2-ashen-prior.md and plans/slice-2-grimt
 | `grimtooth/GrimtoothEncounter.ts` | One Grimtooth: registration (three phases, one break each), the pounce leap with its per-tick hit, the bite and its burn, howls into `grimtooth-summons` (2 then 3), the tail weak spot (order 98) and 8% floor (99), the calm walk-off (the pack left to thread 1's scatter) and the death. |
 | `grimtooth/GrimtoothBrain.ts` | Pure state machine: circle, close, crouch and leap, bite, backstep, howls, break, the mercy window. |
 | `grimtooth/GrimtoothModel.ts`, `grimtooth/grimtoothFx.ts`, `grimtooth/tuning.ts` | Thread 5's hound rig at 1.8x with collar spikes; the pounce decal and calm shell; every number. |
+| `redmane/redmane.plugin.ts` | Plugin `thrandil-redmane` (Act 2, A8; depends on `interiors` and `enemies`): strings, the `bosses.redmane` system (intent, -139), the Barbarian model on demand. |
+| `redmane/RedmaneDirector.ts` | The D03 arena config on A3's Scorchhold keep: `trg.scorchhold.keep.arena`, armed by `story.d03.started`, the intro and horn, the gate (3.5 m clearance plus the rect test `gateClear`) and its veil, reload rule inside the arena rectangle only. |
+| `redmane/RedmaneEncounter.ts` | One Redmane: registration (two phases, three breaks each, `mercyVerb` from `BOSS_MERCY`), the brain's hooks (lance charge sweep, thrust, the net on A6b's `EnemyProjectiles`, harpoon traps), the dodge counter (x2, 1 s) and the 8% floor, the Spare (unhittable, lance dropped, kneel, fade) and the death. |
+| `redmane/RedmaneBrain.ts` | Pure state machine: approach, thrust, couch and charge (phase 2 may chain a second charge after a feint), net, trap, break stagger, the Spare-window lie-low. |
+| `redmane/RedmaneModel.ts`, `redmane/redmaneFx.ts`, `redmane/tuning.ts` | KayKit Barbarian at 1.15 with a red tabard and a procedural lance; the charge lane and the trap field; every number. |
 
 Not here, by ruling: the hold-T Release and Calm on the bosses and the pack scatter (thread 1 calls `ctx.bosses.release`, charges Burn and favour), the boss
 music (thread 9 follows `boss.*`), the D01 quest and reward (thread 6), the boss bar (thread 8).

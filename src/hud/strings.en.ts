@@ -19,6 +19,7 @@ export const HUD_STRINGS_EN: Readonly<Record<string, string>> = {
   'hud.leap.name': 'Surge Leap',
   'hud.boss.shield': 'Shielded',
   'hud.boss.release': 'Release open',
+  'hud.boss.spare': 'Spare open',
   'hud.companion.tobb': 'Tobb',
   'hud.companion.aura': 'Battle-song',
   'hud.fog.toast': "The ash-fall pushes you back. The road east stays shut until you have finished Tobb's work on the Dead Road.",
