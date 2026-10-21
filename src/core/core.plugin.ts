@@ -1,3 +1,9 @@
+import * as THREE from 'three';
+import { AllyEngagement } from '../actors/allyEngage';
+import { PlayerPull } from '../actors/pull';
+import { FIXED_TIMESTEP } from '../config/constants';
+import { heightAt } from '../terrain/heightfield';
+import { Platforms } from '../physics/platforms';
 import { createPromptWidget } from '../interaction/PromptWidget';
 import type { GamePlugin } from './plugins';
 import { CORE_STRINGS_EN } from './strings.en';
@@ -12,14 +18,46 @@ const core: GamePlugin = {
     ctx.strings.register('en', CORE_STRINGS_EN);
     ctx.persist.register(ctx.state);
 
+    // Moving platforms: Game.fixedUpdate steps them just before the world (controller + physics step), so each frame delta is ready for the carry.
+    const platforms = new Platforms({ onArrived: (id, stop) => ctx.events.emit('platform.arrived', { id, stop }) });
+    ctx.services.provide('platforms', platforms);
+    ctx.persist.register({
+      key: 'platforms',
+      version: 1,
+      serialize: () => platforms.serialize(),
+      load: (data) => platforms.load(data),
+    });
+    ctx.world?.player?.controller?.setPlatformSource?.((collider) => platforms.delta(collider));
+
     ctx.events.on('mercy', (e) => ctx.state.recordMercy(e));
     ctx.events.on('damage.dealt', (r) => {
-      // Only the player's side breaks a mercy: scripted kills, falls and hostile area hits do not.
+      // Only the player breaks a mercy: scripted kills, falls, hostile area hits and (v0.6) allies' hits do not.
       if (r.outcome !== 'hit' || r.kind === 'script' || !ctx.state.isMercied(r.targetId)) return;
       const attacker = r.attackerId ? ctx.actors.get(r.attackerId) : undefined;
-      if (attacker && (attacker.team === 'player' || attacker.team === 'ally')) ctx.state.revokeMercy(r.targetId);
+      if (attacker && attacker.team === 'player') ctx.state.revokeMercy(r.targetId);
     });
     ctx.events.on('actor.despawned', (e) => ctx.state.forgetMercy(e.actorId));
+    ctx.services.provide('allyEngagement', new AllyEngagement(ctx.events, ctx.actors));
+
+    // v0.6 pull on the player: held through the combat verbs' forced move (walls stop it), before they apply it.
+    const at = new THREE.Vector3();
+    const pull = new PlayerPull(
+      {
+        playerId: () => ctx.player.actor.id,
+        invulnerable: () => ctx.player.actor.invulnerable,
+        playerFeet: () => ctx.player.feet,
+        sourcePosition: (id) => {
+          const a = ctx.actors.get(id);
+          return a ? a.worldPosition(at) : null;
+        },
+        heightAt,
+        hold: (move) => ctx.services.get('combatVerbs')?.holdForcedMove('core.pull', move),
+      },
+      FIXED_TIMESTEP,
+    );
+    ctx.events.on('actor.pulled', (e) => pull.onPulled(e));
+    ctx.events.on('save.loaded', () => pull.stop());
+    ctx.systems.add({ id: 'core.pull', fixedPhase: 'intent', order: 5, fixedUpdate: () => pull.fixedUpdate() });
 
     // Headless runs (tests) have no DOM to draw the prompt into.
     if (typeof document !== 'undefined') {

@@ -100,7 +100,6 @@ async function main(): Promise<void> {
           }
           prev = img;
         }
-        console.log('probe', pose, mode, name, performance.now() | 0);
         results.push({ base: name, pose, mode, flips, meanFlips: flips.reduce((a, b) => a + b, 0) / flips.length, maxFlips: Math.max(...flips), edgePixels: edge });
       }
     }

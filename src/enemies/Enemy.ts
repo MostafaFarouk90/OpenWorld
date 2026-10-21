@@ -12,7 +12,7 @@ import { BURNING_BITE, HOUND } from './hound/tuning';
 import { bodyPitch } from './quadruped/gait';
 import { readStatusData, STATUS_DATA_KEY } from './statusData';
 import type { EnemyBody } from './body';
-import type { ActorId, ActorLike, EnemyHost, NavPort } from './ports';
+import type { ActorId, ActorLike, EnemyHost, MercyStateLike as MercyState, NavPort } from './ports';
 import type { ObserverPose } from './perceptionHook';
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
@@ -181,6 +181,7 @@ export class Enemy {
       });
       this.actor.data['audio'] = { material: this.def.material };
       this.actor.data['enemies'] = this.view;
+      this.actor.mercyState = () => this.mercyState();
 
       this.brain = new Brain(this.def, this.hooks(), {
         home: { x: spawn.feet.x, z: spawn.feet.z },
@@ -376,6 +377,19 @@ export class Enemy {
    */
   get calmOpen(): boolean {
     return this.phase === 'alive' && !this.asleep && this.brain.calmOpen;
+  }
+
+  /**
+   * v0.6 ally rules (actors-and-damage.md section 11): yielding (kneeling), staggered with a mercy window open,
+   * calming (calmed, walking off), leaving (spared, walking off) or releasing (dissolving).
+   */
+  mercyState(): MercyState {
+    if (this.phase === 'leaving') return this.goneHow === 'calmed' ? 'calming' : 'leaving';
+    if (this.phase === 'fading' && this.goneHow === 'released') return 'releasing';
+    if (this.phase !== 'alive') return 'none';
+    if (this.brain.state === 'yield') return 'yielding';
+    if (this.brain.state === 'stagger' && this.brain.mercyOpen) return 'staggered';
+    return 'none';
   }
 
   /** The Warm Hand is possible: a staggered (knocked down) calm-type beast. */
@@ -1055,6 +1069,24 @@ export class Enemy {
     this.pushTicks = Math.max(1, Math.round(seconds / FIXED_TIMESTEP));
     const speed = m / (this.pushTicks * FIXED_TIMESTEP);
     this.pushVelocity = { x: (dir.x / len) * speed, z: (dir.z / len) * speed };
+    return true;
+  }
+
+  /**
+   * v0.6 `actor.pulled`: a forced move of at most `metres` toward `from` over 0.25 s, stopping 1 m short of it. The mover
+   * collides with walls and follows the ground. Ignored while invulnerable or not alive. Returns whether it started.
+   */
+  pulledToward(from: { x: number; z: number }, metres: number): boolean {
+    if (this.phase !== 'alive' || this.actor.dead || this.actor.invulnerable) return false;
+    if (!Number.isFinite(from.x) || !Number.isFinite(from.z) || !Number.isFinite(metres) || !(metres > 0)) return false;
+    const dx = from.x - this.mover.feet.x;
+    const dz = from.z - this.mover.feet.z;
+    const len = Math.hypot(dx, dz);
+    const m = Math.min(metres, len - 1);
+    if (!(m > 0)) return false;
+    this.pushTicks = Math.max(1, Math.round(0.25 / FIXED_TIMESTEP));
+    const speed = m / (this.pushTicks * FIXED_TIMESTEP);
+    this.pushVelocity = { x: (dx / len) * speed, z: (dz / len) * speed };
     return true;
   }
 

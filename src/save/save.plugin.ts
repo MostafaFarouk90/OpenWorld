@@ -1,3 +1,4 @@
+import '../physics/platforms';
 import type { GamePlugin } from '../core/plugins';
 import { heightAt } from '../terrain/heightfield';
 import { groundDistance } from '../waystones/ground';
@@ -23,6 +24,24 @@ interface Grounded {
   y: number;
   z: number;
   yaw: number;
+  /** Set when the player was standing on a moving platform (contracts v0.6 item 9). */
+  platformId?: string;
+}
+
+/**
+ * Where to put a player saved on platform `platformId`: the platform's last stop (x/z) with the feet on its top
+ * (+0.05). Null when `data` names no platform or that platform is not registered, so the caller falls back to
+ * `sanitizePosition`.
+ */
+export function platformLoadTarget(
+  data: unknown,
+  platforms: { standingPoint(id: string): { x: number; y: number; z: number } | null } | undefined,
+): { x: number; y: number; z: number } | null {
+  if (typeof data !== 'object' || data === null || !platforms) return null;
+  const id = (data as Record<string, unknown>).platformId;
+  if (typeof id !== 'string') return null;
+  const p = platforms.standingPoint(id);
+  return p ? { x: p.x, y: p.y + 0.05, z: p.z } : null;
 }
 
 /** Position from a save entry, lifted onto the terrain; null when implausible. */
@@ -95,7 +114,9 @@ const save: GamePlugin = {
       try {
         const report: ApplyReport = manager.applyLoad(boot.file);
         const pos = sanitizePosition(report.playerPosition?.data);
+        const onPlatform = platformLoadTarget(report.playerPosition?.data, ctx.services.get('platforms'));
         const target =
+          (onPlatform && pos ? { ...onPlatform, yaw: pos.yaw } : null) ??
           pos ??
           (() => {
             const r = waystones()?.respawnPoint();
@@ -205,7 +226,12 @@ const save: GamePlugin = {
         manager.addPlaytime(dt);
         if (!waystones()?.travelling && !loading) {
           const f = ctx.player.feet;
-          if (groundDistance(ctx, GROUND_RAY) !== null) grounded = { x: f.x, y: f.y, z: f.z, yaw: ctx.player.facingYaw };
+          if (groundDistance(ctx, GROUND_RAY) !== null) {
+            grounded = { x: f.x, y: f.y, z: f.z, yaw: ctx.player.facingYaw };
+            const ground = ctx.world?.player?.controller?.groundCollider?.();
+            const platformId = ground ? ctx.services.get('platforms')?.idOf(ground) : undefined;
+            if (platformId !== undefined) grounded.platformId = platformId;
+          }
         }
         sinceSave += dt;
         if (sinceSave >= AUTOSAVE_INTERVAL_SECONDS) {

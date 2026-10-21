@@ -47,7 +47,7 @@ export const endingOptions: { recap?: () => readonly string[] } = {};
 
 export interface ActEndingSource {
   /** Which act's ending this card shows (v0.6, integration/actEndings.ts); default Act 1's. */
-  ending?: { act: number; endingId: string };
+  ending?: { act: number; endingId: string; titleKey?: string };
   t?: Translate;
   keys?: KeySource | null;
   /** True while any HUD modal is open: the card hides and comes back after. */
@@ -80,13 +80,13 @@ export class ActEndingCard implements HudWidgetView {
     this.dismiss();
   };
 
-  private readonly ending: { act: number; endingId: string };
+  private readonly ending: { act: number; endingId: string; titleKey?: string };
 
   constructor(private readonly doc: DocumentLike, private readonly source: ActEndingSource = {}) {
     this.t = source.t ?? defaultHudT;
     this.ending = source.ending ?? { act: 1, endingId: ACT_ENDING_ID };
     this.element = makeEl(doc, 'div', 'owg-card owg-ending');
-    makeEl(doc, 'h2', 'owg-card-title', this.element).textContent = this.t('hud.ending.title');
+    makeEl(doc, 'h2', 'owg-card-title', this.element).textContent = this.t(this.ending.titleKey ?? 'hud.ending.title');
     this.body = makeEl(doc, 'div', 'owg-card-body owg-ending-body', this.element);
     makeEl(doc, 'div', 'owg-card-hint', this.element).textContent = this.t('hud.ending.hint');
     this.element.onclick = () => {

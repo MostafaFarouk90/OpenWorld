@@ -24,6 +24,8 @@ export interface ActorStatusView {
   stunRemaining: number;
   /** Fraction of move speed removed, 0..1 (speed scales by `1 - slow`). */
   slow: number;
+  /** v0.6: present while rooted. */
+  rooted?: true;
 }
 export const STATUS_DATA_KEY = 'status';
 
@@ -35,6 +37,8 @@ export function readStatusData(raw: unknown): StatusRead {
     const v = raw as Partial<ActorStatusView>;
     const stun = v.stunned === true ? Math.max(num(v.stunRemaining, 0), 0.05) : 0;
     const slow = clamp01(num(v.slow, 0));
+    // v0.6 root: no movement at all (the 0.1 floor is a slow's).
+    if (v.rooted === true) return { stunSeconds: stun, speedScale: 0 };
     return stun === 0 && slow === 0 ? NONE : { stunSeconds: stun, speedScale: Math.max(0.1, 1 - slow) };
   }
   let stun = 0;

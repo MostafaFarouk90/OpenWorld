@@ -10,6 +10,7 @@ import {
   ACT1_ENDING_QUESTS,
   ACT1_GATE_FLAG,
 } from './act1Ending';
+import type { ActEndingDirectorDef } from './actEndingDirector';
 
 export interface ActEndingDef {
   act: number;
@@ -75,3 +76,16 @@ export function cardSeenFlags(def: ActEndingDef): readonly string[] {
 export const FLAG_ALIASES: readonly (readonly [legacy: string, current: string])[] = ACT_ENDINGS.flatMap((d) =>
   (d.legacyCardSeenFlags ?? []).map((legacy) => [legacy, d.cardSeenFlag] as const),
 );
+
+/** The director's view of a row (`new ActEndingDirector(directorDef(actEnding(2)!), ports)`). */
+export function directorDef(def: ActEndingDef): ActEndingDirectorDef {
+  return {
+    act: def.act,
+    endingId: def.endingId,
+    requires: def.requires,
+    gateFlag: def.gateFlag,
+    cardSeenFlags: cardSeenFlags(def),
+    campDialogueId: def.campDialogueId,
+    campSeenFlag: def.campSeenFlag,
+  };
+}

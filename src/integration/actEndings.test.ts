@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SAVED_FLAG_ALIASES, WorldState } from '../state/WorldState';
-import { ACT_ENDINGS, FLAG_ALIASES, actEnding, cardSeenFlags, worldChangeFlag } from './actEndings';
+import { ACT_ENDINGS, FLAG_ALIASES, actEnding, cardSeenFlags, directorDef, worldChangeFlag } from './actEndings';
+import { ActEndingDirector } from './actEndingDirector';
 import { ACT1_CARD_SEEN_FLAG, ACT1_ENDING_ID } from './act1Ending';
 
 describe('act-ending table (v0.6)', () => {
@@ -55,5 +56,64 @@ describe('WorldState.load alias', () => {
   it('no legacy key, no alias; a false legacy key does not alias', () => {
     expect(load({}).getFlag('codex.actEnding.a1.seen')).toBeUndefined();
     expect(load({ 'codex.actEndingSeen': false }).getFlag('codex.actEnding.a1.seen')).toBeUndefined();
+  });
+});
+
+describe('ActEndingDirector for Act 2 (the generic director on the table row)', () => {
+  function make() {
+    const flags = new Map<string, unknown>();
+    const quests = new Map<string, string>();
+    const ended: { act: number; endingId: string }[] = [];
+    let camps = 0;
+    const d = new ActEndingDirector(directorDef(actEnding(2)!), {
+      questState: (id) => quests.get(id) ?? 'inactive',
+      getFlag: (k) => flags.get(k),
+      setFlag: (k, v) => void flags.set(k, v),
+      emitActEnded: (e) => void ended.push(e),
+      busy: () => false,
+      inCombat: () => false,
+      startCamp: () => (camps++, true),
+    });
+    return { d, flags, quests, ended, camps: () => camps };
+  }
+
+  it('ends once on the second of m22 and d04, with act 2 and its id', () => {
+    const t = make();
+    t.quests.set('m22', 'completed');
+    t.d.onQuestCompleted('m22');
+    expect(t.ended).toEqual([]);
+    t.quests.set('d04', 'completed');
+    t.d.onQuestCompleted('d04');
+    t.d.onQuestCompleted('d04');
+    expect(t.ended).toEqual([{ act: 2, endingId: 'the-houses-stand' }]);
+    expect(t.flags.get('story.gate.a3')).toBe(true);
+    expect(t.flags.get('story.gate.a2')).toBeUndefined();
+  });
+
+  it("Act 1's completions and card do nothing to it", () => {
+    const t = make();
+    t.quests.set('m10', 'completed');
+    t.quests.set('d02', 'completed');
+    t.d.onQuestCompleted('d02');
+    t.d.onCardClosed('smoke-over-harrowmark');
+    expect(t.ended).toEqual([]);
+    expect(t.d.pending).toBe(false);
+  });
+
+  it('card closed arms the camp; it runs once on the tick', () => {
+    const t = make();
+    t.flags.set('story.gate.a3', true);
+    t.d.onCardClosed('the-houses-stand');
+    t.d.tick();
+    t.d.tick();
+    expect(t.camps()).toBe(1);
+  });
+
+  it('a load with the a2 card seen and no camp arms the camp', () => {
+    const t = make();
+    t.flags.set('story.gate.a3', true);
+    t.flags.set('codex.actEnding.a2.seen', true);
+    t.d.onLoaded();
+    expect(t.d.pending).toBe(true);
   });
 });
