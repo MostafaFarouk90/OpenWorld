@@ -177,4 +177,44 @@ describe('SafeTeleport takeover and fade freeze', () => {
     run(tp, 2);
     await expect(first).resolves.toEqual({ ok: true });
   });
+
+  describe('containment (v0.6)', () => {
+    // Open while x < 100: anything past it comes back to x = 99.
+    const contain = (x: number, z: number) => (x < 100 ? { x, z } : { x: 99, z });
+
+    it('a closed target is moved into the open area and re-grounded', async () => {
+      const { tp, ports } = setup({ contain, heightAt: (x) => (x === 99 ? 4 : 10) });
+      const p = tp.start({ x: 500, y: 50, z: 7 }, 0);
+      run(tp, 1);
+      await expect(p).resolves.toEqual({ ok: true });
+      expect(ports.place).toHaveBeenCalledWith({ x: 99, y: 4.05, z: 7 }, 0);
+      expect(tp.destination).toBeNull();
+    });
+
+    it('an open target is untouched (its y kept)', async () => {
+      const { tp, ports } = setup({ contain });
+      const p = tp.start({ x: 5, y: 12, z: 5 }, 0);
+      run(tp, 1);
+      await p;
+      expect(ports.place).toHaveBeenCalledWith({ x: 5, y: 12, z: 5 }, 0);
+    });
+
+    it('the fallback is contained too', async () => {
+      const { tp, ports, state } = setup({ contain });
+      state.grounded = false;
+      void tp.start({ x: 5, y: 10, z: 5 }, 0, { feet: { x: 300, y: 10, z: 1 }, yaw: 2 });
+      run(tp, 12);
+      const placed = (ports.place as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0] as { x: number });
+      expect(placed.some((f) => f.x === 300)).toBe(false);
+      expect(placed.some((f) => f.x === 99)).toBe(true);
+    });
+
+    it('no contain port: the old behaviour', async () => {
+      const { tp, ports } = setup();
+      const p = tp.start({ x: 500, y: 10, z: 7 }, 0);
+      run(tp, 1);
+      await p;
+      expect(ports.place).toHaveBeenCalledWith({ x: 500, y: 10, z: 7 }, 0);
+    });
+  });
 });

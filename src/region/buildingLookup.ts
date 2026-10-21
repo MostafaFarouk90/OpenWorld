@@ -4,9 +4,10 @@ import * as THREE from 'three';
 import type { AssetId } from '../assets/AssetManifest';
 import { buildGreybox } from './greybox';
 import type { StructureArt } from './structureArt';
-import type { StructureKind, StructureSpec } from './layoutTypes';
+import type { BuiltInStructureKind, StructureSpec } from './layoutTypes';
+import { isKnownStructureKind, structureRecipe } from './structureKinds';
 
-export const STRUCTURE_MODELS: Record<StructureKind, AssetId | null> = {
+export const STRUCTURE_MODELS: Record<BuiltInStructureKind, AssetId | null> = {
   loft: null,
   gate: null,
   cart: null,
@@ -51,7 +52,7 @@ export class BuildingLookup {
   ) {}
 
   private assertKind(spec: StructureSpec): void {
-    if (!Object.prototype.hasOwnProperty.call(this.models, spec.kind)) {
+    if (!Object.prototype.hasOwnProperty.call(this.models, spec.kind) && !isKnownStructureKind(spec.kind)) {
       throw new Error(`BuildingLookup: unknown structure kind "${String(spec.kind)}" (structure "${spec.id}")`);
     }
   }
@@ -70,7 +71,10 @@ export class BuildingLookup {
         }
       }
     }
-    const id = this.models[spec.kind];
+    // A registered kind falls back to its recipe's model.
+    const id = Object.prototype.hasOwnProperty.call(this.models, spec.kind)
+      ? this.models[spec.kind]
+      : ((structureRecipe(spec.kind)?.model as AssetId | undefined) ?? null);
     if (!id || !this.loader) return null;
     try {
       await this.loader.load(id);

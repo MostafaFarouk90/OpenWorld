@@ -124,10 +124,11 @@ export const WORLD = {
 } as const;
 
 /**
- * v0.5: the playable world box in engine metres (+Z north). It holds Brightwater and the whole Harrowmark region
- * box (x 6500..10500, z 0..4000); the map (thread 8) and the terrain shaping validator read it.
+ * The playable world box in engine metres (+Z north). v0.6 (Act 2): the whole design map (24 x 18 km, engine = map
+ * - 1000), from x -2000 to 23000 and z -2000 to 17000. The minimums are unchanged so the map's v1 fog-of-war origin
+ * stays put. The map (thread 8), the terrain shaping validator and containment read it.
  */
-export const WORLD_BOUNDS = { minX: -2000, maxX: 10500, minZ: -2000, maxZ: 4500 } as const;
+export const WORLD_BOUNDS = { minX: -2000, maxX: 23000, minZ: -2000, maxZ: 17000 } as const;
 
 /** Combat hit detection (game-feel defaults; not in the spec). */
 export const COMBAT = {

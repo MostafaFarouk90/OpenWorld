@@ -52,6 +52,14 @@ function clampFavour(v: number): number {
  * World-state flag store with favour tracks and the mercy ledger (contracts/game-events-and-flags.md
  * section 5, design section 3 "Favour tracks and mercy").
  */
+/**
+ * v0.6 save aliases: a loaded legacy key (true) also sets its current key. `codex.actEndingSeen` became
+ * `codex.actEnding.a1.seen` (integration/actEndings.ts keeps the same pair; a test holds them equal).
+ */
+export const SAVED_FLAG_ALIASES: readonly (readonly [legacy: string, current: string])[] = [
+  ['codex.actEndingSeen', 'codex.actEnding.a1.seen'],
+];
+
 export class WorldState implements Persistable {
   readonly key = WORLD_STATE_KEY;
   readonly version = WORLD_STATE_VERSION;
@@ -225,6 +233,9 @@ export class WorldState implements Persistable {
         if (FLAG_KEY.test(k) && isFlagValue(v)) flags.set(k, v);
         else this.warn(`WorldState: dropped invalid saved flag "${k}"`);
       }
+    }
+    for (const [legacy, current] of SAVED_FLAG_ALIASES) {
+      if (flags.get(legacy) === true && !flags.has(current)) flags.set(current, true);
     }
     this.flags = flags;
     for (const t of FAVOUR_TRACKS) {

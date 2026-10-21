@@ -70,6 +70,8 @@ const inventoryPlugin: GamePlugin = {
         return inv.gold;
       },
       addGold: (n) => inv.addGold(n),
+      gear: (itemId) => inv.gear(itemId),
+      setTemper: (itemId, level, affix) => inv.setTemper(itemId, level, affix),
       takeGold: (n, reason = 'script') => {
         const taken = inv.takeGold(n);
         if (taken > 0) ctx.events.emit('gold.spent', { amount: taken, reason, total: inv.gold });

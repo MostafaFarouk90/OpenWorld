@@ -19,6 +19,8 @@ export interface ItemDef {
   stackMax: number;
   stats?: { attack?: number; defense?: number };
   use?: { healFraction?: number; healFlat?: number; drinkSeconds?: number };
+  /** v0.6 (A10): gear tier 1..5; absent for non-gear. */
+  gearTier?: 1 | 2 | 3 | 4 | 5;
 }
 
 export type EquipResult =
@@ -51,6 +53,10 @@ export interface InventoryService {
   addGold(n: number): void;
   /** v0.5: emits `gold.spent { amount, reason, total }` when anything was taken (`reason` defaults to `'script'`). */
   takeGold(n: number, reason?: 'bribe' | 'respec' | 'vendor' | 'inn' | 'persuasion' | 'theft' | 'death' | 'script'): number;
+  /** v0.6: an item's tempering (temper 0 when never tempered). */
+  gear(itemId: string): { temper: number; affix?: string };
+  /** v0.6: sets temper 0..5 (clamped) on a held item; false when unknown or not held. Does not emit (A10 emits `gear.tempered`). */
+  setTemper(itemId: string, level: number, affix?: string): boolean;
 }
 
 export type LearnCheck =

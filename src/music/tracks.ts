@@ -116,6 +116,7 @@ export const BARLEY_AND_BRAZIER: TrackDef = {
     suspicious: mix(0.15, 0, 0.1, 0.6, 0.5, 0, 0),
     alerted: mix(0.3, 0.1, 0.1, 0.6, 0.5, 0, 0),
   },
+  // Boss mix keys are boss ids. 'thrandil-redmane' and 'the-slagmaw' (Act 2) are documentation only until A14 adds them.
   bossMixes: {
     // Design 6.1 trigger 3: phase 2 and 3 re-ramp the same seven stems (hat, boss and melody lift).
     'ashen-prior': {
@@ -187,6 +188,16 @@ export const SEVEN_GATES_ONE_DRUM: TrackDef = {
     voices: { snare: 'rimshot', vocal: 'throat-chant', melody: 'trumpet', boss: 'steam-anvil' },
   },
 };
+
+/**
+ * Act 2 tracks A14 has not built yet (v0.6 item 20). A region may name one: the music plugin keeps the current
+ * regional track playing until the track is registered in `TRACKS_BY_ID`.
+ */
+export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [
+  { id: 'ash-on-the-pasture', bpm: 94 },
+  { id: 'hammers-below', bpm: 98 },
+];
+export const RESERVED_TRACK_IDS = ['ash-on-the-pasture', 'hammers-below'] as const;
 
 export const TRACKS_BY_ID: Readonly<Record<string, TrackDef>> = {
   [BARLEY_AND_BRAZIER.id]: BARLEY_AND_BRAZIER,

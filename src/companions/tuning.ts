@@ -44,6 +44,9 @@ export const COMPANION_TUNING = {
   mountHideDistance: 40,
 } as const;
 
+/** How long a companion kneels at 0 HP before standing (companions.md section 9). */
+export const COMPANION_DOWNED_SECONDS = 8;
+
 export const TOBB_TUNING = {
   auraSeconds: 4,
   auraMultiplier: 1.05,

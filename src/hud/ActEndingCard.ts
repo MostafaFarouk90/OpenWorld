@@ -28,6 +28,8 @@ declare module '../core/Services' {
   }
 }
 export const ACT_ENDING_SEEN_FLAG = 'codex.actEndingSeen';
+/** v0.6 per-act seen flag for Act 1 (a save with the legacy key loads with this one too). Act 1 writes both. */
+export const ACT_ENDING_SEEN_FLAG_V06 = 'codex.actEnding.a1.seen';
 export const ACT_ENDING_CAMP_FLAG = 'story.d02.campSeen';
 /** Thread 6 may ship the camp-seen flag under either name; either one means the camp scene already ran. */
 export const ACT_ENDING_CAMP_FLAGS: readonly string[] = [ACT_ENDING_CAMP_FLAG];
@@ -44,6 +46,8 @@ export const ACT_ENDING_MAX_LINES = 12;
 export const endingOptions: { recap?: () => readonly string[] } = {};
 
 export interface ActEndingSource {
+  /** Which act's ending this card shows (v0.6, integration/actEndings.ts); default Act 1's. */
+  ending?: { act: number; endingId: string };
   t?: Translate;
   keys?: KeySource | null;
   /** True while any HUD modal is open: the card hides and comes back after. */
@@ -76,8 +80,11 @@ export class ActEndingCard implements HudWidgetView {
     this.dismiss();
   };
 
+  private readonly ending: { act: number; endingId: string };
+
   constructor(private readonly doc: DocumentLike, private readonly source: ActEndingSource = {}) {
     this.t = source.t ?? defaultHudT;
+    this.ending = source.ending ?? { act: 1, endingId: ACT_ENDING_ID };
     this.element = makeEl(doc, 'div', 'owg-card owg-ending');
     makeEl(doc, 'h2', 'owg-card-title', this.element).textContent = this.t('hud.ending.title');
     this.body = makeEl(doc, 'div', 'owg-card-body owg-ending-body', this.element);
@@ -102,7 +109,7 @@ export class ActEndingCard implements HudWidgetView {
 
   /** `act.ended`: only Act 1's ending shows, and only once (`codex.actEndingSeen`). */
   onActEnded(e: { act: number; endingId: string } | null | undefined): void {
-    if (!e || e.act !== 1 || e.endingId !== ACT_ENDING_ID) return;
+    if (!e || e.act !== this.ending.act || e.endingId !== this.ending.endingId) return;
     if (this.safe(this.source.seen)) return;
     this.request(e.endingId);
   }
@@ -125,7 +132,7 @@ export class ActEndingCard implements HudWidgetView {
     }
     if (this.pending !== null) return;
     if (this.safe(this.source.seen) || this.safe(this.source.campSeen)) return;
-    this.request(ACT_ENDING_ID);
+    this.request(this.ending.endingId);
     // The gates re-derive inside the save.loaded dispatch, before this card's onLoaded; no frame runs in between.
     this.gateRequested = true;
   }

@@ -156,8 +156,31 @@ export interface GameEventMap {
   'vendor.sold': { vendorId: string; itemId: string; count: number; price: number };
   /** The inventory, from `takeGold(n, reason)` whenever gold was taken; `total` is what remains. */
   'gold.spent': { amount: number; reason: GoldSpendReason; total: number };
-  /** Thread 21: the act's mini-ending. */
+  /** Thread 21: the act's mini-ending. v0.6: any (act, endingId) registered in `ACT_ENDINGS`. */
   'act.ended': { act: number; endingId: string };
+
+  // ---- v0.6 (Act 2, thread A0; contracts/CHANGES-v0.6.md) ----
+  /** A5: a companion's bond rank changed (`companion.<id>.rank`). */
+  'companion.bond': { companionId: string; rank: number };
+  /** The resolver, on a `hit` whose request carried `pull`: the mover drags the actor toward `fromId`. */
+  'actor.pulled': { actorId: ActorId; fromId: ActorId; distance: number };
+  /** The core boss registry, when a `spare` mercy ends the fight (outcome `'spared'`). */
+  'boss.spared': { bossId: string; actorId: ActorId };
+  /** Core `platforms`: a moving platform stopped at `stop` (index into its path). */
+  'platform.arrived': { id: string; stop: number };
+  /** A7's wave director (core types only). A failure restarts the current wave. */
+  'wave.started': { defId: string; index: number };
+  'wave.cleared': { defId: string; index: number };
+  'waves.failed': { defId: string; index: number };
+  /** A7: a defended structure (brazier cart, barricade). */
+  'structure.damaged': { id: string; health: number };
+  'structure.destroyed': { id: string };
+  /** A9: puzzle components (valves, pressure, ordered braziers). */
+  'puzzle.state': { id: string; phase: string };
+  'puzzle.solved': { id: string };
+  'puzzle.failed': { id: string };
+  /** A10: an item was tempered to `level` (1..5). */
+  'gear.tempered': { itemId: string; level: number; affix?: string };
 }
 
 /** Why gold left the pouch (`inventory.takeGold(n, reason)`, v0.5). */

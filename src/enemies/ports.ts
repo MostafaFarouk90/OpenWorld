@@ -347,7 +347,7 @@ export interface ShardSpells {
 
 /** The slice of the core BossRegistry the mercy hold uses. */
 export interface BossesPort {
-  state(bossId: string): { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | null } | null;
+  state(bossId: string): { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | 'spared' | null } | null;
   release(bossId: string): boolean;
   /** Ids of the registered bosses (the core registry has it); lets the enemies tell a boss actor from a plain enemy. */
   active?(): string[];

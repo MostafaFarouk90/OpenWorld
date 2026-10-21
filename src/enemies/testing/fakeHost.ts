@@ -254,7 +254,7 @@ export class FakeHost {
   /** The Calm prompt's inputs, when a test provides `provideCalmUi`. */
   calmUi: CalmUiPort | undefined;
   /** The core boss registry fake: tests set `bossOpen` and read `bossReleases`. */
-  bossStates = new Map<string, { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | null }>();
+  bossStates = new Map<string, { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | 'spared' | null }>();
   bossReleaseResult = true;
   readonly bossReleases: string[] = [];
   /** Thread 3's quests service, when a test provides it. */

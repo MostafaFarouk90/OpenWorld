@@ -7,6 +7,7 @@
 // are held for the whole session, and the `&new` boot skips the slot clear (save.plugin.ts), so a jump neither
 // overwrites nor deletes a real save.
 import { dialogueDefs } from '../dialogue/content';
+import { registerActJump, type ActPoint } from './actJump';
 import { QUEST_LEADS } from './leads';
 import type { DialogueDef, Effect } from './types';
 
@@ -35,6 +36,8 @@ export const ACT1_PREREQS: Record<Act1JumpId, readonly string[]> = {
   r04: [...THROUGH_M05, 'm06', 'm07'],
   d02: [...THROUGH_M05, 'r01', 'r02', 'm06', 'm07', 'm08', 'm09', 'm10', 'r03', 'r04'],
 };
+
+registerActJump(1, { prereqs: ACT1_PREREQS });
 
 /** The giver whose offer a Phase B jump leaves the player beside (the NPC's post under the post rules at that point). */
 export const ACT1_GIVERS: Record<(typeof ACT1_PHASE_B_JUMP_IDS)[number], string> = {
@@ -114,6 +117,8 @@ export interface Act1JumpPorts {
   /** True once saves have settled (the `&new` boot finished). */
   ready(): boolean;
   warn(msg: string): void;
+  /** Optional containment clamp: every teleport destination (a position) goes through it when present. */
+  clamp?(at: ActPoint): ActPoint;
 }
 
 export type Act1Phase = 'waiting' | 'tutorial' | 'quests' | 'place' | 'done' | 'failed';

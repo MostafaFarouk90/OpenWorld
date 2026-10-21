@@ -15,6 +15,11 @@ export interface TeleportPorts {
   chunksResident(feet: Vec3): boolean;
   fade(opacity: number, seconds: number): void;
   heightAt(x: number, z: number): number;
+  /**
+   * v0.6 containment: the target moved into the open area (x, z only), or the same point when open. Optional; a
+   * moved target is re-grounded here. Covers fast travel and save loads (`safeTeleport`).
+   */
+  contain?(x: number, z: number): { x: number; z: number };
 }
 
 export type TeleportOutcome = { ok: true } | { ok: false; reason: 'terrain-not-ready' | 'busy' };
@@ -71,7 +76,8 @@ export class SafeTeleport {
     }
     if (this.phase === 'stuck') this.finishStuck();
     return new Promise((resolve) => {
-      this.job = { target: this.clampToTerrain(target), yaw, fallback, resolve };
+      const contained = fallback ? { feet: this.contain(fallback.feet), yaw: fallback.yaw } : null;
+      this.job = { target: this.clampToTerrain(this.contain(target)), yaw, fallback: contained, resolve };
       this.phase = 'fading-out';
       this.clock = 0;
       this.retried = false;
@@ -110,6 +116,12 @@ export class SafeTeleport {
       default:
         break;
     }
+  }
+
+  private contain(p: Vec3): Vec3 {
+    const q = this.ports.contain?.(p.x, p.z);
+    if (!q || (q.x === p.x && q.z === p.z)) return p;
+    return { x: q.x, y: this.ports.heightAt(q.x, q.z) + 0.05, z: q.z };
   }
 
   private clampToTerrain(p: Vec3): Vec3 {

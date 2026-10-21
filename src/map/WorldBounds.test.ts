@@ -4,12 +4,26 @@ import { FogGrid, buildMarkers, hitTestMarker, mapExtent, mapToWorld, worldToMap
 import { WORLD_BOUNDS } from '../config/constants';
 import { DEFAULT_WORLD_BOUNDS, LEGACY_V1_BOUNDS, MAP_TUNING } from './tuning';
 
+/** The v0.5 widened world (every Act 1 save's fog grid); the geometry tests below still use it as a sample box. */
 const WIDE = { minX: -2000, maxX: 10500, minZ: -2000, maxZ: 4500 };
+const ACT1_BOUNDS = WIDE;
+/** v0.6: the whole design map. */
+const DESIGN_MAP = { minX: -2000, maxX: 23000, minZ: -2000, maxZ: 17000 };
 
 describe('non-square, off-origin bounds', () => {
-  it('the default is the widened world with the v1 origin', () => {
-    expect(DEFAULT_WORLD_BOUNDS).toEqual(WIDE);
+  it('the default is the whole design map with the v1 origin (v0.6)', () => {
+    expect(DEFAULT_WORLD_BOUNDS).toEqual(DESIGN_MAP);
     expect(MAP_TUNING.fogCellSize).toBe(50);
+  });
+
+  it('v0.6: an Act 1 save explored on the v0.5 bounds loads cell for cell into the widened grid', () => {
+    const old = FogGrid.forBounds(ACT1_BOUNDS);
+    const spots: [number, number][] = [[0, 0], [1200, -150], [8500, 2000], [10400, 4400], [-1990, -1990]];
+    for (const [x, z] of spots) old.reveal(x, z, 120);
+    const grown = FogGrid.migrate(old.encode(), FogGrid.forBounds().spec);
+    expect(grown.revealedCount).toBe(old.revealedCount);
+    for (const [x, z] of spots) expect(grown.isRevealed(x, z)).toBe(true);
+    expect(grown.isRevealed(20000, 3000)).toBe(false);
   });
 
   it('guard: the default equals core WORLD_BOUNDS, as a frozen copy', () => {

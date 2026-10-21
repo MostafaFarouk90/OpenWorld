@@ -64,7 +64,9 @@ describe('region plugin', () => {
     expect(region.waystoneObject('yard.centre')).toBeUndefined();
     expect(region.waystoneObject('waystone.missing')).toBeUndefined();
     expect(region.at(0, 0)?.id).toBe('brightwater');
-    expect(region.at(20_000, 0)).toBeNull();
+    // v0.6: (20000, 0) is Cinderreach; the unnamed country east of Harrowmark is still null.
+    expect(region.at(20_000, 0)?.id).toBe('cinderreach');
+    expect(region.at(13_000, -1_500)).toBeNull();
     plugin.dispose?.();
   });
 

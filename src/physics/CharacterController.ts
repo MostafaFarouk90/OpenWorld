@@ -28,6 +28,8 @@ const CENTRE_HEIGHT = PLAYER.halfHeight + PLAYER.radius;
  * requested feet height and settle onto the ground on the next tick.
  */
 const PLACEMENT_LIFT = CHARACTER_CONTROLLER.offset * 2;
+/** A hit normal at least this upright is ground the controller can climb. */
+const WALKABLE_NORMAL_Y = Math.cos(CHARACTER_CONTROLLER.maxSlopeClimbAngle);
 
 export class CharacterController {
   readonly body: RAPIER_API.RigidBody;
@@ -186,7 +188,16 @@ export class CharacterController {
     if (n === 0) return null;
     for (let i = 0; i < n; i++) {
       const hit = this.controller.computedCollision(i);
-      if (!hit || hit.toi > CHARACTER_CONTROLLER.offset) return null;
+      if (!hit) return null;
+      if (hit.toi > CHARACTER_CONTROLLER.offset) {
+        // Far from the origin float32 rounding tilts a heightfield's normal by a few degrees where the capsule
+        // crosses a cell diagonal, and Rapier stops the move on that phantom floor just outside the skin. A walkable
+        // terrain floor never blocks a horizontal move, so skip it; steps, boxes and steeper ground are real obstacles.
+        if (hit.normal1.y >= WALKABLE_NORMAL_Y && hit.collider?.shape.type === this.physics.rapier.ShapeType.HeightField) {
+          continue;
+        }
+        return null;
+      }
       const into = dx * hit.normal1.x + dz * hit.normal1.z;
       const horizontal = hit.normal1.x * hit.normal1.x + hit.normal1.z * hit.normal1.z;
       if (into < 0 && horizontal > 1e-6) {

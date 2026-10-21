@@ -6,6 +6,7 @@ import { Act1Jump, GIVER_STAND_OFF, parseAct1 } from './act1Jump';
 import { POST_RULES, resolvePosts } from './posts';
 import type { BusPort } from './ports';
 import type { TutorialDirector } from '../tutorial/TutorialDirector';
+import '../region/containment';
 
 const TELEPORT_TRIES = 30;
 
@@ -42,7 +43,8 @@ const plugin: GamePlugin = {
       if (teleport === 'pending') return false;
       const ws = ctx.services.get('waystones');
       if (!ws || ++teleportTries > TELEPORT_TRIES) {
-        ctx.player.teleport(pos, yaw);
+        // safeTeleport contains its target itself (v0.6); the direct placement goes through the same clamp.
+        ctx.player.teleport(ctx.services.get('containment')?.clamp(pos) ?? pos, yaw);
         if (ctx.cameraRig) ctx.cameraRig.yaw = yaw;
         return true;
       }

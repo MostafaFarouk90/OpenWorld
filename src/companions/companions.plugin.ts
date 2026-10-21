@@ -6,11 +6,14 @@ import { TOBB } from './tobb';
 import type { AttackSpeedHook, CompanionDef, CompanionsService } from './types';
 
 export const COMPANIONS_PERSIST_KEY = 'companions';
-export const COMPANIONS_PERSIST_VERSION = 1;
+export const COMPANIONS_PERSIST_VERSION = 2;
+/** The flag that raises the party limit from one to two. */
+export const PARTY_GATE_FLAG = 'story.gate.a3';
 /** Companion defs this slice; Hrolf (M13) and Aelfreda (M14) add theirs later. */
 export const COMPANION_DEFS: readonly CompanionDef[] = [TOBB];
 
 let controllers: CompanionController[] = [];
+let partyOffs: (() => void)[] = [];
 
 function readSpot(v: unknown): SavedSpot | null {
   const s = v as Partial<SavedSpot> | null;
@@ -21,8 +24,27 @@ function readSpot(v: unknown): SavedSpot | null {
     : null;
 }
 
-export function createCompanionsService(ctx: GameContext, list: readonly CompanionController[]): CompanionsService {
+/** The stored party: null until set or loaded (every joined companion is then active, up to the limit). */
+export interface PartyStore {
+  raw: string[] | null;
+}
+
+function readActive(v: unknown): string[] | null {
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : null;
+}
+
+export function createCompanionsService(
+  ctx: GameContext,
+  list: readonly CompanionController[],
+  party: PartyStore = { raw: null },
+): CompanionsService {
   const byId = (id: string) => list.find((c) => c.def.id === id);
+  const maxActive = () => (ctx.state.getBool(PARTY_GATE_FLAG) ? 2 : 1);
+  const active = () => {
+    const joined = list.filter((c) => c.joined).map((c) => c.def.id);
+    const set = party.raw;
+    return (set ? joined.filter((id) => set.includes(id)) : joined).slice(0, maxActive());
+  };
   return {
     join(id) {
       const c = byId(id);
@@ -32,7 +54,17 @@ export function createCompanionsService(ctx: GameContext, list: readonly Compani
       const c = byId(id);
       if (c && ctx.state.hasFlag(c.def.joinFlag)) ctx.state.clearFlag(c.def.joinFlag);
     },
-    active: () => list.filter((c) => c.joined).map((c) => c.def.id),
+    active,
+    maxActive,
+    setActive(ids) {
+      const ok =
+        ids.length <= maxActive() &&
+        new Set(ids).size === ids.length &&
+        ids.every((id) => !!byId(id)?.joined);
+      if (ok) party.raw = [...ids];
+      return ok;
+    },
+    isActive: (id) => active().includes(id),
     actorId: (id) => byId(id)?.actorId ?? null,
     rank: (id) => byId(id)?.rank() ?? 0,
     integration() {
@@ -50,6 +82,7 @@ export function createCompanionsService(ctx: GameContext, list: readonly Compani
 function teardown(): void {
   const list = controllers;
   controllers = [];
+  for (const off of partyOffs.splice(0)) off();
   for (const c of list) {
     try {
       c.dispose();
@@ -68,7 +101,23 @@ export default {
       ctx.strings.register('en', COMPANION_STRINGS_EN);
       controllers = COMPANION_DEFS.map((def) => new CompanionController(ctx, def));
       const list = controllers;
-      ctx.services.provide('companions', createCompanionsService(ctx, list));
+      const party: PartyStore = { raw: null };
+      const service = createCompanionsService(ctx, list, party);
+      ctx.services.provide('companions', service);
+      // A new joiner takes a free seat when a set was stored; with none stored, the default already covers them.
+      partyOffs.push(
+        ctx.events.on('companion.joined', ({ companionId }) => {
+          if (party.raw && !party.raw.includes(companionId) && service.active().length < service.maxActive()) {
+            party.raw = [...party.raw, companionId];
+          }
+        }),
+        // The raw list is only stored on load; the flags may load after this entry, so it is checked here.
+        ctx.events.on('save.loaded', () => {
+          if (!party.raw) return;
+          const ids = new Set(list.filter((c) => c.joined).map((c) => c.def.id));
+          party.raw = [...new Set(party.raw)].filter((id) => ids.has(id)).slice(0, service.maxActive());
+        }),
+      );
       ctx.persist.register({
         key: COMPANIONS_PERSIST_KEY,
         version: COMPANIONS_PERSIST_VERSION,
@@ -78,12 +127,14 @@ export default {
             const s = c.serialize();
             if (s) positions[c.def.id] = s;
           }
-          return { positions };
+          return { positions, active: party.raw ? [...party.raw] : null };
         },
         load: (data) => {
           const positions = (data as { positions?: unknown } | null)?.positions;
           const map = positions && typeof positions === 'object' ? (positions as Record<string, unknown>) : {};
           for (const c of list) c.stashSaved(readSpot(map[c.def.id]));
+          // v1 has no `active`: null, so the joined companions are active up to the limit.
+          party.raw = readActive((data as { active?: unknown } | null)?.active);
         },
       });
       // Band requested from core (v0.4.x): `animation` 200..249 companions; render `world` 0..99 (NPCs and companions).

@@ -184,8 +184,9 @@ describe('FogGrid', () => {
 
   it('forBounds covers the default widened world with 50 m cells', () => {
     const g = FogGrid.forBounds();
-    expect(g.cols).toBe(250);
-    expect(g.rows).toBe(130);
+    // v0.6: the whole design map, 25 x 19 km.
+    expect(g.cols).toBe(500);
+    expect(g.rows).toBe(380);
     expect(g.originX).toBe(-2000);
     expect(g.originZ).toBe(-2000);
   });
