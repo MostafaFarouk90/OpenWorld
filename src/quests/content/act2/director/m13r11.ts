@@ -50,6 +50,7 @@ export function installR11(k: Kit): Off[] {
   const resolve = (outcome: 'spared' | 'slain'): void => {
     if (!k.active('r11') || k.str('story.r11.choice')) return;
     k.set('story.r11.choice', outcome);
+    k.emit('story.r11.resolved');
     k.favour('dragons', outcome === 'spared' ? 5 : -4);
     k.later(() => ctx.services.get('enemies')?.despawnGroup(R11_WYRM));
   };

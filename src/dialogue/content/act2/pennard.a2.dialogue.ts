@@ -11,6 +11,7 @@ export const PENNARD_A2 = buildTree({
       when: all(qActive('r06'), flagIs('story.r06.branch', 'cleanse'), objDone('r06', 'fire'), objOpen('r06', 'rite'), not(flagIs('story.r06.emberwright'))),
       seg: 'a2-rite-start',
     },
+    { when: all(qActive('r06'), objDone('r06', 'rite')), seg: 'a2-rite-done' },
     { when: qActive('r06'), seg: 'a2-wait' },
   ],
   segments: {
@@ -22,6 +23,7 @@ export const PENNARD_A2 = buildTree({
         P('Stand here, by the stone. When I speak the first line, there is no stopping. Ready?', [{ setFlag: 'story.r06.riteStarted', value: true }, { event: 'story.r06.riteStart' }]),
       ],
     },
+    'a2-rite-done': { lines: [P('It is finished. The water is quiet. Tell Mother Maud the well will hold.')] },
     'a2-wait': { lines: [P('Mother Maud sent word. I shall ride out once the choice is made. Until then I am reading everything I own about wells.')] },
   },
 });

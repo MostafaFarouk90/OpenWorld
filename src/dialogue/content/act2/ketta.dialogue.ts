@@ -9,12 +9,12 @@ export const KETTA = buildTree({
   start: [
     { when: step('r07', 'pups', 'report'), seg: 'r07-report' },
     { when: step('r07', 'mother', 'choice'), seg: 'r07-choice' },
-    { when: qActive('r07'), seg: 'r07-wait' },
-    { when: all(qDone('m13'), qIdle('r07')), seg: 'r07-brief' },
     { when: step('r05', 'herdHome', 'report'), seg: 'r05-report' },
     { when: step('r05', 'hounds', 'choice'), seg: 'r05-choice' },
-    { when: qActive('r05'), seg: 'r05-wait' },
     { when: all(qDone('m12'), qIdle('r05')), seg: 'r05-brief' },
+    { when: all(qDone('m13'), qIdle('r07')), seg: 'r07-brief' },
+    { when: qActive('r05'), seg: 'r05-wait' },
+    { when: qActive('r07'), seg: 'r07-wait' },
     { when: all(), seg: 'idle' },
   ],
   segments: {
