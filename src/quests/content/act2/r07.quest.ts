@@ -25,5 +25,6 @@ export const r07: QuestDef = {
     interacts('pups', 'quest.r07.pups', R07_PUPS, { doneWhen: spared }),
     { id: 'report', type: 'talk', target: 'ketta', textKey: 'quest.r07.report' },
   ],
-  rewards: [{ xp: 350 }, { give: [{ itemId: 'pup-companion', count: 1 }] }],
+  // The pup collar is for the one who spared the den (design 3: culling leaves no pup).
+  rewards: [{ xp: 350 }, { if: spared, then: [{ give: [{ itemId: 'pup-companion', count: 1 }] }] }],
 };

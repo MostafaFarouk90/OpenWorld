@@ -165,6 +165,10 @@ export class Herd {
             }
           }
         }
+      } else if (this._following && player && Math.hypot(player.x - s.x, player.z - s.z) <= HERD.rejoinRadius && !this.inFog(s)) {
+        // A sheep left grazing while the herd follows (it started, or strayed, further than loseDistance from the player)
+        // joins again when the player comes to it: the herd would otherwise never follow a player who arrives after it started.
+        s.mode = 'follow';
       } else {
         // Graze: pick a nearby spot now and then, drift to it.
         s.wanderLeft -= dt;

@@ -90,3 +90,7 @@ export const ACT2_PROPS: QuestPropSpec[] = [
     objective: ['d03', 'prisoners'] as [string, string], usedFlag: `story.d03.prisoner.${n}`, look: 'chain' as const,
   })),
 ];
+
+/** Props on the spot an NPC stands on (Pell in the second hollow, Osric at the first sign, the bound carter): the prop outranks him while it is current (focus ties go to `npc:`). */
+const UNDER_NPCS: ReadonlySet<string> = new Set(['use:r05-hollow-2', 'use:r07-sign-1', 'use:m15-free-carter']);
+for (const p of ACT2_PROPS) if (UNDER_NPCS.has(p.interactableId)) p.priority = 1;

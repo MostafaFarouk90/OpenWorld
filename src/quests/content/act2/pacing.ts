@@ -2,24 +2,9 @@
 // same formula as src/integration/TIMING.md (travel at walking pace, 20 s a dialogue node, beat seconds), with the route
 // read from real layout anchors. A16 owns the act-wide estimator; this table lets the quests be checked against their
 // design floors without it.
-import { BEAT_S, RIDE_MPS, TALK_NODE_S, WALK_MPS } from '../../../integration/timing';
+import { ACT2_BEAT_S, RIDE_MPS, TALK_NODE_S, WALK_MPS, cappedTravelS } from '../../../integration/timing';
 
-/** Seconds per beat unit for the beats Act 2 adds; the rest come from the Act 1 table. */
-export const ACT2_BEAT_S = {
-  ...BEAT_S,
-  /** a wave enemy of A7's raid */
-  waveEnemy: 45,
-  /** a sheep walked home */
-  herd: 45,
-  /** one round of the trial duel */
-  duelRound: 90,
-  /** one rhythm run at the Hushed Anvil */
-  rhythm: 60,
-  /** a counted set piece (the ride-out, the Anvil's song, the first flight) */
-  set: 60,
-  /** a heavy structure (a cart, the boulder) */
-  structure: 65,
-} as const;
+export { ACT2_BEAT_S };
 
 export type Act2Beat = keyof typeof ACT2_BEAT_S;
 
@@ -91,7 +76,7 @@ export const ACT2_PACE: readonly PaceRow[] = [
 
 export type AnchorPos = Readonly<Record<string, { x: number; z: number }>>;
 
-export interface PaceResult { quest: string; minutes: number; travelM: number }
+export interface PaceResult { quest: string; minutes: number; travelM: number; uncappedMinutes: number }
 
 /** The row's estimated minutes (straight horizontal legs; a mounted leg at the canter). An unknown anchor throws. */
 export function paceMinutes(row: PaceRow, anchors: AnchorPos): PaceResult {
@@ -106,7 +91,8 @@ export function paceMinutes(row: PaceRow, anchors: AnchorPos): PaceResult {
     travelM += d;
     seconds += d / (i <= (row.rideLegs ?? 0) ? RIDE_MPS : WALK_MPS);
   }
-  seconds += row.nodes * TALK_NODE_S;
-  for (const [beat, n] of Object.entries(row.beats) as [Act2Beat, number][]) seconds += ACT2_BEAT_S[beat] * n;
-  return { quest: row.quest, minutes: seconds / 60, travelM };
+  let talkAndBeatsS = row.nodes * TALK_NODE_S;
+  for (const [beat, n] of Object.entries(row.beats) as [Act2Beat, number][]) talkAndBeatsS += ACT2_BEAT_S[beat] * n;
+  // Travel counts at most 3/7 of the talk-and-beats time (Part 7): the capped figure is the one the floors read.
+  return { quest: row.quest, minutes: (cappedTravelS(seconds, talkAndBeatsS) + talkAndBeatsS) / 60, travelM, uncappedMinutes: (seconds + talkAndBeatsS) / 60 };
 }

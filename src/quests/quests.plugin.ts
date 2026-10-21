@@ -309,7 +309,7 @@ const plugin: GamePlugin = {
       },
       register: (i) =>
         ctx.interaction.register({
-          id: i.id, kind: i.kind as 'use' | 'pickup', name: i.name, radius: i.radius, promptKey: i.promptKey, enabled: i.enabled,
+          id: i.id, kind: i.kind as 'use' | 'pickup', name: i.name, radius: i.radius, promptKey: i.promptKey, enabled: i.enabled, priority: i.priority,
           position: (out) => { i.position(out); return out; },
           onInteract: () => i.onInteract(),
         }),
@@ -325,7 +325,7 @@ const plugin: GamePlugin = {
       },
       register: (i) =>
         ctx.interaction.register({
-          id: i.id, kind: 'use', name: i.id.replace(/^use:/, ''), radius: i.radius, promptKey: i.promptKey, enabled: i.enabled,
+          id: i.id, kind: 'use', name: i.id.replace(/^use:/, ''), radius: i.radius, promptKey: i.promptKey, enabled: i.enabled, priority: i.priority,
           position: (out) => { i.position(out); return out; },
           onInteract: () => i.onInteract(),
         }),

@@ -101,6 +101,31 @@ describe('Herd', () => {
     expect(herd.modes()).toEqual(['graze', 'follow']);
   });
 
+  it('a herd told to follow while the player is far away follows once the player walks up to it (R05 fox road)', () => {
+    const far = HERD.loseDistance + 60;
+    const { herd, player } = mk([{ x: far, z: 0 }, { x: far + 3, z: 0 }]);
+    herd.setFollowing(true);
+    run(herd, 1);
+    expect(herd.modes()).toEqual(['graze', 'graze']);
+    // Still far: nothing changes.
+    player.p = { x: far - 20, z: 0 };
+    run(herd, 1);
+    expect(herd.followers).toBe(0);
+    // The player arrives within the rejoin radius of both, and walks home: the sheep come along.
+    player.p = { x: far + 1.5, z: 0 };
+    run(herd, 1);
+    expect(herd.followers).toBe(2);
+    player.p = { x: far - 40, z: 0 };
+    run(herd, 25);
+    for (const p of herd.positions()) expect(Math.hypot(p.x - player.p.x, p.z - player.p.z)).toBeLessThan(HERD.followDistance + 1);
+  });
+
+  it('a grazing sheep does not join a herd that is not following', () => {
+    const { herd } = mk([{ x: 2, z: 0 }]);
+    run(herd, 2);
+    expect(herd.followers).toBe(0);
+  });
+
   it('dispose disposes every view once and empties the herd', () => {
     const { herd, views } = mk(ring(5));
     herd.dispose();

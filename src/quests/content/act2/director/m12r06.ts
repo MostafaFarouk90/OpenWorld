@@ -44,7 +44,7 @@ export function installR06(k: Kit): Off[] {
       const en = ctx.services.get('enemies');
       if (!en) return;
       const wave = k.num('story.r06.riteWave');
-      if (en.alive(R06_RITE_GROUPS[wave - 1] ?? '').length > 0) return;
+      if (k.standing(R06_RITE_GROUPS[wave - 1] ?? '').length > 0) return;
       if (wave === 1) {
         k.set('story.r06.riteWave', 2);
         spawnWave(2);

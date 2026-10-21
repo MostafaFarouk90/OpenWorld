@@ -58,10 +58,10 @@ const focusOf = (h: ChapterHarness): string | undefined =>
   (h.ctx.interaction as unknown as { focusFor(a: string): { id: string } | null }).focusFor('interact')?.id;
 
 /** Presses F at an anchor, from whichever side puts `interactableId` in focus (a wall or a neighbour can take it). */
-async function useAt(h: ChapterHarness, anchorId: string, interactableId: string, dist = 1.1): Promise<void> {
+export async function useAt(h: ChapterHarness, anchorId: string, interactableId: string, dist = 1.1, extraDists: number[] = []): Promise<void> {
   // Tobb (a talk interactable) follows close behind and can win the focus: try the eight sides, nearer second.
   const sides = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]];
-  search: for (const d of [dist, dist * 0.6]) {
+  search: for (const d of [dist, dist * 0.6, ...extraDists]) {
     for (const [x, z] of sides) {
       await h.approach(h.anchor(anchorId), d, { x, z });
       h.run(2);
