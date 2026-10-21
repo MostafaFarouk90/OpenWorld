@@ -21,6 +21,8 @@ export const CINDER_KINDS: Readonly<Record<string, StructureRecipe>> = {
   'cinder-blightbloom': { height: 0.8, collider: 'open' },
   /** Planks over Cinderford's well (R06 sealed). Not in the layout: the plugin toggles it. */
   'cinder-boarded-well': { height: 1.5, collider: 'solid' },
+  /** The shut Scorchhold gate (D03 until the charges are set). Not in the layout: the plugin toggles it. */
+  'cinder-fort-gate': { height: 8, collider: 'solid' },
   /** A small marker stone (the resting wyrm's den after R11 spared). Toggled by the plugin. */
   'cinder-marker': { height: 0.5, collider: 'open' },
 };

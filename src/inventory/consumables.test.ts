@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActorPort } from '../hud/ports';
 import { ConsumableUser } from './consumables';
 import { Inventory } from './Inventory';
+import '../quests/content/act2/items';
 
 let events: { type: string; payload: unknown }[];
 let actor: ActorPort & { dead: boolean };
@@ -230,5 +231,33 @@ describe('with the inventory', () => {
     const d = user.drinking!;
     d.remaining = 99;
     expect(user.lockSeconds).toBeCloseTo(1.2);
+  });
+});
+
+describe('a consumable with no health effect (the Fox-Fire Ember, A12)', () => {
+  beforeEach(() => {
+    inv.add('fox-fire-ember', 1);
+  });
+
+  it('is usable at full health, spends its charge, heals nothing and says item.used', () => {
+    actor.health = actor.maxHealth;
+    expect(user.begin('fox-fire-ember')).toEqual({ ok: true, healed: 0 });
+    user.update(1);
+    expect(heal).not.toHaveBeenCalled();
+    expect(inv.count('fox-fire-ember')).toBe(0);
+    expect(used()).toEqual([{ type: 'item.used', payload: { itemId: 'fox-fire-ember' } }]);
+  });
+
+  it('is usable below full health too, with the same effect', () => {
+    expect(user.begin('fox-fire-ember').ok).toBe(true);
+    user.update(1);
+    expect(heal).not.toHaveBeenCalled();
+    expect(actor.health).toBe(50);
+    expect(used()).toHaveLength(1);
+  });
+
+  it('still refuses a healing flask at full health (the exception is the item\'s own)', () => {
+    actor.health = actor.maxHealth;
+    expect(user.begin('healing-flask')).toEqual({ ok: false, reason: 'full-health' });
   });
 });

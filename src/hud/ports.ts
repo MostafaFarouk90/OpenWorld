@@ -18,7 +18,8 @@ export interface ItemDef {
   /** 1 for gear. */
   stackMax: number;
   stats?: { attack?: number; defense?: number };
-  use?: { healFraction?: number; healFlat?: number; drinkSeconds?: number };
+  /** `noHeal`: a consumable with no health effect (A12's Fox-Fire Ember): usable at full health, `item.used` carries the effect. */
+  use?: { healFraction?: number; healFlat?: number; drinkSeconds?: number; noHeal?: boolean };
   /** v0.6 (A10): gear tier 1..5; absent for non-gear. */
   gearTier?: 1 | 2 | 3 | 4 | 5;
 }

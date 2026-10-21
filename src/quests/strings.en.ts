@@ -3,6 +3,7 @@ import { questStringsHarrowmark } from './strings.harrowmark.en';
 import { questStringsDensityA } from './strings.density.en';
 import { questStringsDensityB } from './strings.density-b.en';
 import { questStringsDensityC } from './strings.density-c.en';
+import { ACT2_QUEST_STRINGS } from './content/act2/strings';
 
 export const questStrings: Record<string, string> = {
   ...questStringsHarrowmark,
@@ -85,4 +86,6 @@ export const questStrings: Record<string, string> = {
   ...questStringsDensityA,
   ...questStringsDensityB,
   ...questStringsDensityC,
+  // Act 2 Cinderreach quests (A12)
+  ...ACT2_QUEST_STRINGS,
 };
