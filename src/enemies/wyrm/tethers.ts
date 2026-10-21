@@ -41,6 +41,7 @@ export class WyrmTethers {
   private readonly defs = new Map<string, { posts: readonly TetherPost[]; length: number; exitAnchor?: string }>();
   private readonly freed = new Set<string>();
   private readonly chain: Chain = { post: { x: 0, y: 0, z: 0 }, length: WYRMLING.chainLength };
+  private readonly flags = { getFlag: (k: string) => this.ports.flag(k) };
 
   constructor(private readonly ports: TetherPorts) {}
 
@@ -64,7 +65,7 @@ export class WyrmTethers {
     const def = this.defs.get(spawnerId);
     const post = def?.posts[slot];
     if (!def || !post || this.freed.has(key(spawnerId, slot))) return null;
-    if (post.until && flagConditionHolds(post.until, { getFlag: (k) => this.ports.flag(k) })) return null;
+    if (post.until && flagConditionHolds(post.until, this.flags)) return null;
     const at = this.ports.anchor(post.anchor);
     if (!at) return null;
     this.chain.post = at;

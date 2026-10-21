@@ -185,14 +185,22 @@ export class OrskScene {
     if (this.finished) return;
     const beats = this.seq.time === 0 ? [...this.seq.step(0), ...this.seq.step(dt)] : this.seq.step(dt);
     this.animate(dt);
-    for (const b of beats) this.fire(b);
+    this.fireAll(beats);
   }
 
   /** Jumps to the end: every remaining beat once, in order, then done. */
   skip(): void {
     if (this.finished) return;
     const beats = this.seq.time === 0 ? [...this.seq.step(0), ...this.seq.skip()] : this.seq.skip();
-    for (const b of beats) this.fire(b);
+    this.fireAll(beats);
+  }
+
+  /** Fires in order; a listener that skips or disposes mid-way ends the loop (the skip fired the rest itself). */
+  private fireAll(beats: readonly OrskBeat[]): void {
+    for (const b of beats) {
+      if (this.finished) return;
+      this.fire(b);
+    }
   }
 
   /** Teardown without the remaining beats (scope teardown). Idempotent. */
