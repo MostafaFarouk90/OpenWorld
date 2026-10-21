@@ -13,6 +13,12 @@ import { BURNING_BITE, HOUND } from './hound/tuning';
 import { bodyPitch } from './quadruped/gait';
 import { readStatusData, STATUS_DATA_KEY } from './statusData';
 import type { EnemyBody } from './body';
+import type { GroundAttacks } from './ranged/GroundAttacks';
+import type { Shooter } from './ranged/EnemyProjectiles';
+import { CeilingDrop, type CeilingEnv } from './crawler/ceiling';
+import { FoxGuide } from './fox/guide';
+import { CRAWLER_DROP } from './crawler/def';
+import { TELEGRAPH_STYLE } from './defs';
 import type { ActorId, ActorLike, EnemyHost, MercyStateLike as MercyState, NavPort } from './ports';
 import type { ObserverPose } from './perceptionHook';
 
@@ -51,6 +57,8 @@ export interface EnemyEnv {
   perceptionModifiers(self: Enemy, targetId: ActorId): CombinedModifiers | null;
   /** Called once the enemy is gone from the world (after despawn). */
   gone(self: Enemy, how: MemberEnd): void;
+  /** A6b: ranged and area effects of a move's window (absent in hosts without ground attacks). */
+  attacks?: GroundAttacks;
 }
 
 export interface EnemySpawn {
@@ -178,8 +186,10 @@ export class Enemy {
       this.actor = host.actors.spawn({
         kind: this.def.kind,
         // A watch guard is neutral and immortal: lock-on and hostile checks skip it, and a caught reset has no dead slot.
-        team: this.observerOnly ? 'neutral' : 'hostile',
-        immortal: this.observerOnly ? true : undefined,
+        team: this.observerOnly || this.def.behaviour === 'guide' ? 'neutral' : 'hostile',
+        immortal: this.observerOnly || this.def.behaviour === 'guide' ? true : undefined,
+        // The fox is untargetable: lock-on, swings and bolts pass through it.
+        hittable: this.def.behaviour === 'guide' ? false : undefined,
         level: spawn.level,
         maxHealth,
         maxPoise: this.def.maxPoise,
@@ -211,6 +221,8 @@ export class Enemy {
           return out;
         };
       }
+      this.fox = this.def.behaviour === 'guide' ? new FoxGuide({ x: spawn.feet.x, z: spawn.feet.z }) : null;
+      this.ceiling = this.def.behaviour === 'ceiling' && spawn.options.hanging !== false ? new CeilingDrop(this.ceilingEnv(), this.mover.feet) : null;
 
       this.removers.push(host.combat.addTarget(body.hurtboxes, this.actor.id));
       for (const ch of ['right', 'left'] as const) {
@@ -240,6 +252,7 @@ export class Enemy {
       if (phase === 'open') {
         this.brain.windowOpened(swingId);
         this.startLeap();
+        this.windowEffects();
       }
     };
     body.onClipEnd = (clip, interrupted) => {
@@ -251,6 +264,95 @@ export class Enemy {
   }
 
   private moveFilter: string[] | undefined;
+
+  // ---- A6b: ground-enemy state --------------------------------------------------------------------
+
+  /** A cooling hit has it staggered (the crawler's free Calm window); cleared when the stagger ends. */
+  private cooled = false;
+  /** The Cinder Golem's core was just hit (set by the manager's damage modifier, consumed by the poise break it causes). */
+  private coreArmed = false;
+  /** The crawler's ceiling state, or null for every other kind. */
+  readonly ceiling: CeilingDrop | null;
+  /** The Kindling Fox's guiding brain (no Brain moves, no perception), or null for every other kind. */
+  readonly fox: FoxGuide | null;
+
+  /** True from a cooling hit until the stagger it caused ends. */
+  get isCooled(): boolean {
+    return this.cooled;
+  }
+
+  /** The golem's back core was hit this tick. */
+  markCoreHit(): void {
+    if (this.def.behaviour === 'back-core') this.coreArmed = true;
+  }
+
+  /**
+   * A cooling hit (the thrown Cooling Draught's splash, Gust Step, valve spray) through the `cooling` service: staggers
+   * regardless of poise, provokes its source, and does not mark the enemy struck, so Calm stays open ("cooling hit then
+   * hold T"). Only kinds with a `freeCalm: 'cooled'` row or a ceiling form react. False when it had no effect.
+   */
+  coolingHit(sourceId: ActorId | null): boolean {
+    if (this.phase !== 'alive' || this.observerOnly) return false;
+    if (this.def.mercy?.freeCalm !== 'cooled') return false;
+    this.ceiling?.wake();
+    this.cooled = true;
+    this.brain.knockedDown(sourceId);
+    return true;
+  }
+
+  private ceilingEnv(): CeilingEnv {
+    const self = this;
+    return {
+      playerFeet: () => (this.host.actors.player.dead ? null : this.host.player.feet),
+      feet: () => this.mover.feet,
+      ceilingHeight: () => {
+        const f = this.mover.feet;
+        const hit = this.host.physics?.raycast({ x: f.x, y: f.y + 0.5, z: f.z }, { x: 0, y: 1, z: 0 }, 6, this.mover.collider as never);
+        return hit ? Math.max(0, hit.point.y - f.y - 0.3) : 3;
+      },
+      telegraph: (t) => this.body.setTelegraph(t, TELEGRAPH_STYLE['slag-crawler'].color),
+      dripStarted: (lead) =>
+        this.host.events.emit('telegraph', { actorId: this.actor.id, kind: 'dodge', attackId: 'Drop', moveId: CRAWLER_DROP.id, swingId: -1, leadSeconds: lead }),
+      landed: () => {
+        self.env.attacks?.hitArea(self.shooter, CRAWLER_DROP);
+        self.brain.alert(self.host.actors.player.id);
+      },
+    };
+  }
+
+  /** Facing yaw (0 faces -Z). */
+  get facing(): number {
+    return this.yaw;
+  }
+
+  /** Where the mercy hold's prompt sits: the golem's exposed back core, else the feet. */
+  mercyAnchor(out: THREE.Vector3): THREE.Vector3 {
+    const core = (this.body as { coreWorldPosition?: (o: THREE.Vector3) => THREE.Vector3 }).coreWorldPosition;
+    if (this.def.behaviour === 'back-core' && core) return core.call(this.body, out);
+    return out.copy(this.mover.feet);
+  }
+
+  /** The attacker as the ranged and area helpers see it. */
+  get shooter(): Shooter {
+    const self = this;
+    return {
+      get id() {
+        return self.actor.id;
+      },
+      damageScale: this.damageScale,
+      feet: this.mover.feet,
+      get yaw() {
+        return self.yaw;
+      },
+    };
+  }
+
+  /** A6b: a move with `ranged` or `area` does its extra effect as its window opens (the tracer still sweeps). */
+  private windowEffects(): void {
+    const move = this.brain.currentMove;
+    if (!move || (!move.ranged && !move.area) || this.phase !== 'alive' || !this.env.attacks) return;
+    this.env.attacks.windowOpened(this.shooter, move);
+  }
 
   /** The fastest the def moves: the chase, or a leap's average speed. */
   private topSpeed(def: EnemyDef, body: EnemyBody): number {
@@ -410,6 +512,7 @@ export class Enemy {
   mercyState(): MercyState {
     if (this.phase === 'leaving') return this.goneHow === 'calmed' ? 'calming' : 'leaving';
     if (this.phase === 'fading' && this.goneHow === 'released') return 'releasing';
+    if (this.phase === 'fading' && this.goneHow === 'calmed') return 'calming';
     if (this.phase !== 'alive') return 'none';
     if (this.brain.state === 'yield') return 'yielding';
     if (this.brain.state === 'stagger' && this.mercyOpen) return 'staggered';
@@ -451,6 +554,15 @@ export class Enemy {
       if (!this.asleep) this.mover.move({ x: 0, z: 0 }, dt);
       return;
     }
+    if (this.fox) return this.thinkFox(dt);
+    if (this.ceiling && !this.ceiling.landed) {
+      // Hanging, dripping or falling: no perception, no brain, no movement until it lands.
+      this.coreArmed = false;
+      this.ceiling.step(dt);
+      this.mover.move({ x: 0, z: 0 }, dt);
+      return;
+    }
+    this.coreArmed = false;
     const player = this.host.actors.player;
     const pFeet = this.host.player.feet;
     const self = this.mover.feet;
@@ -485,6 +597,7 @@ export class Enemy {
     };
     if (this.overlay?.notices) senses.notices = this.overlay.notices(senses.notices, senses);
     const status = readStatusData(this.actor.data[STATUS_DATA_KEY]);
+    if (status.rooted) senses.rooted = true;
     if (status.stunSeconds > 0 && !this.overlay?.stunned?.(status.stunSeconds)) this.brain.stunned(status.stunSeconds);
     const intent = this.brain.step(dt, senses);
     this.overlay?.intent?.(dt, intent, senses);
@@ -555,6 +668,36 @@ export class Enemy {
     this.movedSpeed = dt > 0 ? Math.hypot(this.mover.feet.x - bx, this.mover.feet.z - bz) / dt : 0;
   }
 
+  /** The fox: a guide, no perception or fighting; walks `FoxGuide`'s goal with the ordinary steering. */
+  private thinkFox(dt: number): void {
+    const self = this.mover.feet;
+    const player = this.host.actors.player;
+    const p = this.host.player.feet;
+    const step = this.fox!.step(dt, self, player.dead ? null : { x: p.x, z: p.z }, this.def.walkSpeed);
+    let velocity = { x: 0, z: 0 };
+    if (step.goal && step.speed > 0 && Math.hypot(step.goal.x - self.x, step.goal.z - self.z) > 0.8) {
+      velocity = this.steering.step({
+        position: self,
+        desired: { x: step.goal.x, z: step.goal.z },
+        speed: step.speed,
+        neighbours: this.env.neighbours(this),
+        heightAt: this.host.heightAt,
+        castFeeler: this.castFeeler,
+        dt,
+      }).move;
+    } else {
+      this.steering.reset();
+    }
+    this.speed = Math.hypot(velocity.x, velocity.z);
+    const bx = self.x;
+    const bz = self.z;
+    if (step.face && this.speed < 0.05) this.targetYaw = yawTo(self, step.face);
+    else if (this.speed > 0.05) this.targetYaw = Math.atan2(-velocity.x, -velocity.z);
+    this.yaw = turnToward(this.yaw, this.targetYaw, AI.turnRate * dt);
+    this.mover.move(velocity, dt);
+    this.movedSpeed = dt > 0 ? Math.hypot(this.mover.feet.x - bx, this.mover.feet.z - bz) / dt : 0;
+  }
+
   /** `animation` phase: root at the simulated pose, mixer by one tick, matrices current for combat. */
   animate(dt: number): void {
     if (this.phase === 'gone' || this.asleep) return;
@@ -611,6 +754,8 @@ export class Enemy {
       this.poiseIdle = 0;
       this.peaceful = false;
       this.overlay?.hit?.(attackerId);
+      // A hit on a hanging crawler drops it at once.
+      if (this.ceiling && !this.ceiling.landed) this.ceiling.wake(true);
     }
     // An observer-only guard flinches on a hit and its awareness jumps to 1 (one `ai.spotted`; thread 18 counts it as
     // caught), but it never provokes, staggers into mercy or chases: the brain is not told, so no `ai.aggro` follows.
@@ -649,6 +794,15 @@ export class Enemy {
 
   staggered(byId: ActorId | null): void {
     if (this.phase !== 'alive') return;
+    // The Cinder Golem staggers only when its back core was hit (a parry, a shield bash or `damage.stagger` from the front
+    // does nothing): the damage modifier arms `coreArmed` before the break event arrives.
+    if (this.def.behaviour === 'back-core') {
+      if (!this.coreArmed) {
+        this.actor.restorePoise();
+        return;
+      }
+      this.coreArmed = false;
+    }
     this.poiseIdle = 0;
     if (this.observerOnly) {
       this.oneShot(ENEMY_CLIPS.stagger, AI.breakStaggerSeconds);
@@ -705,6 +859,7 @@ export class Enemy {
    */
   calm(): void {
     if (this.phase !== 'alive') return;
+    if (this.def.settles) return this.settle();
     this.lowerHead(true); // before the phase leaves 'alive'
     this.brain.calmed();
     this.goneHow = 'calmed';
@@ -731,6 +886,15 @@ export class Enemy {
     this.leaveTime = 0;
     this.setLoco(ENEMY_CLIPS.walk);
     return true;
+  }
+
+  /** Calm accepted by a kind that settles (golem cairn, crawler curl): no walk-off; the static form is built by ground/settled.ts. */
+  private settle(): void {
+    this.ceiling?.settleToFloor();
+    this.brain.calmed();
+    this.goneHow = 'calmed';
+    this.actor.invulnerable = true;
+    this.startFade(0.6);
   }
 
   /** The player or an ally struck this enemy (damage.dealt, outcome hit, not a script): Calm closes unless it staggers. */
@@ -947,11 +1111,13 @@ export class Enemy {
   private placeRoot(feet: THREE.Vector3): void {
     this.prevRoot.copy(this.body.root.position);
     this.body.root.position.copy(feet);
+    if (this.ceiling) this.body.root.position.y += this.ceiling.lift;
     this.body.root.rotation.set(0, this.yaw, 0);
   }
 
   private chooseLoco(): void {
     const s = this.brain.state;
+    if (this.ceiling && !this.ceiling.landed) return this.setLoco(this.ceiling.clip);
     if (s === 'telegraph' || s === 'attack') return; // the attack clip plays
     if (s === 'yield') return this.setLoco(ENEMY_CLIPS.kneelIdle);
     if (this.headLowered) return this.setLoco('HeadLower');
@@ -1016,6 +1182,7 @@ export class Enemy {
         this.host.events.emit('enemies.state', { actorId: this.actor.id, from, to });
         // A knocked-down hound stops mid-leap.
         if (to === 'stagger' && from === 'attack' && this.brain.currentMove?.leap) this.pushTicks = 0;
+        if (from === 'stagger') this.cooled = false;
         if (to === 'stagger') this.oneShot(ENEMY_CLIPS.stagger, this.def.breakStaggerSeconds ?? AI.breakStaggerSeconds);
         else if (to === 'yield') this.oneShot(ENEMY_CLIPS.kneel, AI.yieldSeconds);
         else if (from === 'yield' || from === 'stagger') this.oneShotLeft = 0;

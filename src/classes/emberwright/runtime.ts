@@ -531,6 +531,7 @@ export class EmberwrightRuntime {
     if (!clip.startsWith(GUST_STEP.clipPrefix) || !this.active() || !this.host.learned(SKILL.gustStep) || !this.canAct()) return;
     const f = vec(this.host.player.feet);
     this.host.fx(FX.wind, f, { scale: 0.4 });
+    this.host.cool?.(f, GUST_STEP.pushRadius);
     for (const h of actorsInRadius(this.host.actors, f, GUST_STEP.pushRadius, { team: 'hostile', alive: true })) {
       this.host.push(h.actor.id, this.flatDir(f, h.position, { x: Math.sin(this.host.player.facingYaw), y: 0, z: Math.cos(this.host.player.facingYaw) }), GUST_STEP.pushMetres);
     }

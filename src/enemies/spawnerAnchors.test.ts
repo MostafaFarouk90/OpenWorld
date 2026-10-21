@@ -5,6 +5,7 @@ import { BRIGHTWATER_LAYOUT } from '../region/brightwater.layout';
 import { DEADROAD_LAYOUT } from '../region/deadroad.layout';
 import { VAULT_DEF } from '../interiors/vaultDef';
 import { BRIGHTWATER_SPAWNERS } from './brightwaterSpawners';
+import { ACT2_SPAWNERS } from './act2Spawners';
 import { SLICE_SPAWNERS } from './spawnerDefs';
 import { WYRM_SPAWNERS } from './wyrm/spawners';
 
@@ -14,8 +15,12 @@ const known = new Set<string>([
   ...(VAULT_DEF.anchors ?? []).map((a) => a.id),
 ]);
 
+// REMOVE when A1/A3/A4 land their anchors: Act 2's spawn anchors (cinderreach.spawn.*, oldsmoke.spawn.*, cinderreach.r05.fox) arrive with
+// their region layouts, exactly as harrowmark. did; a missing anchor warns once and spawns nothing meanwhile.
+const ACT2_ANCHOR_EXEMPT = ['cinderreach.', 'oldsmoke.'];
+
 describe('spawner anchors exist', () => {
-  for (const def of [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...WYRM_SPAWNERS]) {
+  for (const def of [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...WYRM_SPAWNERS, ...ACT2_SPAWNERS]) {
     it(def.id, () => {
       const members = Array.isArray(def.memberAnchors) ? def.memberAnchors : []; // { tag } picks by tag at runtime
       const route = Array.isArray(def.patrol) ? def.patrol : [];
@@ -23,7 +28,7 @@ describe('spawner anchors exist', () => {
       // Harrowmark anchors arrive with the city layout (Phase B, thread 17); the Act 2 wyrm anchors with A2's points of
       // interest (`poi.a2.`) and A3's Cinderreach places (`cinderreach.`); `dev.` anchors are defined by the `?wyrms=1`
       // hook. Every other anchor must exist now.
-      const pending = ['harrowmark.', 'poi.a2.', 'cinderreach.', 'dev.'];
+      const pending = [...ACT2_ANCHOR_EXEMPT, 'harrowmark.', 'poi.a2.', 'cinderreach.', 'dev.'];
       expect(ids.filter((id) => !known.has(id) && !pending.some((p) => id.startsWith(p)))).toEqual([]);
     });
   }
