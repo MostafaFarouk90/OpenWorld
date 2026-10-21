@@ -37,7 +37,9 @@ export type EnemyKind =
   | 'cinder-golem'
   | 'kindling-fox'
   | 'hunter-spearman'
-  | 'hunter-harpooner';
+  | 'hunter-harpooner'
+  // Act 2 (A4): House Grisel's steward guard (Deepgate's hall, M20's stewards).
+  | 'steward-guard';
 
 /**
  * Act 2 kind ids (v0.6 item 14), reserved here so no other thread takes them. A6a and A6b move each id into
