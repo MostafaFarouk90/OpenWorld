@@ -17,6 +17,15 @@ export function huntersCampLayout(): Pick<LayoutData, 'anchors' | 'triggers' | '
       a('npc-post.carter-bound', ...front(C.cages[1], 1.5), 0, ['npc-post']),
       // Ambient pack (1 to 4, slot 4 a harpooner) and M15's two packs of four (5 to 8).
       ...numbered('cinderreach.spawn.huntercamp', ring(C.centre.x, C.centre.z, 34, 8, 20), ['spawn']),
+      // M15's stealth section (A12; src/stealth/sections.ts `m15.camp`): start on the road side, a checkpoint inside, the exit by
+      // the wyrmling's cage; three watch guards walk a loop round the camp and four hide spots sit between the tents.
+      a('cinderreach.stealth.m15.start', C.centre.x, C.centre.z - 40, 0, ['stealth']),
+      a('cinderreach.stealth.m15.cp.inside', C.centre.x, C.centre.z - 12, 0, ['stealth']),
+      a('cinderreach.stealth.m15.end', ...front(C.cages[0], 1.5), 0, ['stealth']),
+      a('cinderreach.stealth.m15.centre', C.centre.x, C.centre.z, 0, ['stealth']),
+      ...[0, 1, 2, 3].map((i) => a(`cinderreach.hide.m15.${i + 1}`, C.centre.x + 20 * Math.cos((i * Math.PI) / 2 + 0.6), C.centre.z + 20 * Math.sin((i * Math.PI) / 2 + 0.6), 0, ['hide'])),
+      ...ring(C.centre.x, C.centre.z, 26, 3, 40).map(([x, z], i) => a(`cinderreach.spawn.m15.watch.${i + 1}`, x, z, 0, ['spawn'])),
+      ...numbered('cinderreach.patrol.m15.camp', ring(C.centre.x, C.centre.z, 36, 4, 20), ['patrol']),
       a('npc-post.osgar.camp', C.centre.x, C.centre.z - 46, 0, ['npc-post']),
       ...numbered('cinderreach.post.camp', [[C.centre.x - 6, C.centre.z - 46], [C.centre.x + 6, C.centre.z - 46]], ['npc-post'], 0),
     ],

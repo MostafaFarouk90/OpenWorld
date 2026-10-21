@@ -71,6 +71,23 @@ export function clampJumpDestination(ports: { clamp?(at: ActPoint): ActPoint }, 
   return ports.clamp ? ports.clamp(at) : at;
 }
 
-/** Act 2 prerequisites: filled with m11..m22, d03, d04, r05..r11 by the Act 2 content lane. */
-export const ACT2_PREREQS: Record<string, readonly string[]> = {};
+/** All of Act 1, in play order (Act 2 opens on its end: `story.gate.a2`). */
+const THROUGH_ACT1 = ['m01', 'm02', 'm03', 'm04', 'm05', 'r01', 'r02', 'm06', 'm07', 'm08', 'm09', 'm10', 'r03', 'r04', 'd02'] as const;
+
+/**
+ * Act 2 prerequisites, transitive and in play order. Phase C (A12): M11 to M15, R05 to R07, R11 and D03. A12 registers no
+ * runner of its own: the table is read by whatever runs `?act2=` (A16's harness) and by the Cinderreach chain test.
+ */
+export const ACT2_PREREQS: Record<string, readonly string[]> = {
+  m11: [...THROUGH_ACT1],
+  m12: [...THROUGH_ACT1, 'm11'],
+  r06: [...THROUGH_ACT1, 'm11', 'm12'],
+  r05: [...THROUGH_ACT1, 'm11', 'm12'],
+  m13: [...THROUGH_ACT1, 'm11', 'm12'],
+  r07: [...THROUGH_ACT1, 'm11', 'm12', 'm13'],
+  r11: [...THROUGH_ACT1, 'm11', 'm12', 'm13'],
+  m14: [...THROUGH_ACT1, 'm11', 'm12', 'm13'],
+  m15: [...THROUGH_ACT1, 'm11', 'm12', 'm13', 'm14'],
+  d03: [...THROUGH_ACT1, 'm11', 'm12', 'm13', 'm14', 'm15'],
+};
 registerActJump(2, { prereqs: ACT2_PREREQS });

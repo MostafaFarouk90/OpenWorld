@@ -25,6 +25,7 @@ import { QuestNotes } from './notes';
 import { QUEST_NOTES, NOTE_LOOKS, NOTE_CODEX } from './content/notes';
 import { installObjectiveFlags } from './objectiveFlags';
 import { OBJECTIVE_FLAGS } from './content/objectiveFlags';
+import { ACT2_PROPS, ACT2_CARRY, ACT2_OBJECTIVE_FLAGS, ACT2_QUEST_NOTES, ACT2_NOTE_LOOKS, ACT2_NOTE_CODEX, ACT2_QUEST_ITEM_STRINGS } from './content/act2';
 import { QuestLooks, lookSpecs } from './looks';
 import { buildPropLook, disposePropLook } from './propLooks';
 import { codexEntry } from '../codex/entries';
@@ -42,7 +43,7 @@ const plugin: GamePlugin = {
   dependsOn: ['core'],
   setup(ctx) {
     const warn = (m: string): void => console.warn(`[quests] ${m}`);
-    ctx.strings.register('en', { ...questStrings, ...journalStrings, 'quest.prompt.carry': '{key} Carry the villager' });
+    ctx.strings.register('en', { ...questStrings, ...journalStrings, ...ACT2_QUEST_ITEM_STRINGS, 'quest.prompt.carry': '{key} Carry the villager' });
 
     const bus = ctx.events as unknown as BusPort;
     const manager = new QuestManager({
@@ -151,7 +152,7 @@ const plugin: GamePlugin = {
     manager.onChange(() => yard.markDirty());
     offs.push(() => yard.dispose());
     // Story flags set as objectives finish (fires, spawners, walk-offs read them).
-    const objectiveFlags = installObjectiveFlags(OBJECTIVE_FLAGS, bus, ctx.state, manager, warn);
+    const objectiveFlags = installObjectiveFlags([...OBJECTIVE_FLAGS, ...ACT2_OBJECTIVE_FLAGS], bus, ctx.state, manager, warn);
     offs.push(objectiveFlags.dispose);
     objectiveFlags.sync();
     offs.push(ctx.events.on('save.loaded', () => { posts.reset(); yard.markDirty(); manager.recheck(); objectiveFlags.sync(); }));
@@ -184,12 +185,12 @@ const plugin: GamePlugin = {
     };
     const buildCarry = (): CarrySystem => {
       const carryables: Carryable[] = [];
-      for (const item of CARRY_ITEMS) {
+      for (const item of [...CARRY_ITEMS, ...ACT2_CARRY]) {
         // villagers are capsules held at chest height; buckets are the greybox bucket held low
-        const villager = item.look === 'villager';
+        const villager = item.look === 'villager' || item.look === 'wounded';
         const mesh: THREE.Object3D = villager
-          ? new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 1.0, 4, 8), new THREE.MeshStandardMaterial({ color: 0x8a6d4b }))
-          : buildPropLook('bucket');
+          ? new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 1.0, 4, 8), new THREE.MeshStandardMaterial({ color: item.look === 'wounded' ? 0x7a5a4a : 0x8a6d4b }))
+          : buildPropLook(item.look === 'bundle' ? 'box' : 'bucket');
         const lift = villager ? 0.8 : -0.3;
         mesh.visible = false;
         ctx.scene.add(mesh);
@@ -297,7 +298,7 @@ const plugin: GamePlugin = {
     // Built once, after M01 has started (or was loaded as started), when every plugin and thread 4's
     // anchors exist. A build failure is logged once and never retried (no leaked meshes).
     const propEnv = () => ({ state: ctx.state, quests: manager, gold: () => svc('inventory')?.gold, warn });
-    const props = new QuestProps(QUEST_PROPS, {
+    const props = new QuestProps([...QUEST_PROPS, ...ACT2_PROPS], {
       bus,
       env: propEnv,
       state: ctx.state,
@@ -315,7 +316,7 @@ const plugin: GamePlugin = {
       warn,
     });
     // Readable notes: F opens a short dialogue under the note's own id; the first full read unlocks its codex entry.
-    const notes = new QuestNotes(QUEST_NOTES, {
+    const notes = new QuestNotes([...QUEST_NOTES, ...ACT2_QUEST_NOTES], {
       bus,
       env: propEnv,
       anchor: (id) => {
@@ -332,7 +333,7 @@ const plugin: GamePlugin = {
       codexUnlock: (id) => svc('codex')?.unlock?.(id),
       warn,
     });
-    const looks = new QuestLooks(lookSpecs(QUEST_PROPS, QUEST_NOTES, NOTE_LOOKS), {
+    const looks = new QuestLooks(lookSpecs([...QUEST_PROPS, ...ACT2_PROPS], [...QUEST_NOTES, ...ACT2_QUEST_NOTES], { ...NOTE_LOOKS, ...ACT2_NOTE_LOOKS }), {
       state: ctx.state,
       quests: manager,
       anchor: (id) => {
@@ -354,7 +355,7 @@ const plugin: GamePlugin = {
       const codex = svc('codex');
       if (codexOff || !codex?.register) return;
       const slug = (id: string) => id.replace(/^lore\./, '');
-      codexOff = codex.register(Object.values(NOTE_CODEX).map((id) => codexEntry('lore', id, slug(id))));
+      codexOff = codex.register([...Object.values(NOTE_CODEX), ...ACT2_NOTE_CODEX].map((id) => codexEntry('lore', id, slug(id))));
     };
     let propTick = 0;
     let carryTried = false;

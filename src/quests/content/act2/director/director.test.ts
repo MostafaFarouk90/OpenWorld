@@ -1,0 +1,789 @@
+// The Cinderreach director against stub services on the real event bus and the real flag store: each rule fires from the
+// event the game raises, writes what the other threads read, and rebuilds itself from the flags on a load.
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { EventBus } from '../../../../core/EventBus';
+import type { GameContext } from '../../../../core/Game';
+import type { GameEventMap } from '../../../../core/events';
+import { Services } from '../../../../core/Services';
+import { WorldState } from '../../../../state/WorldState';
+import type { QuestState } from '../../../types';
+import plugin, { ACT2_QUEST_IDS } from './cinderreachDirector.plugin';
+
+type Fn = (...a: any[]) => any;
+
+interface Rig {
+  events: EventBus<GameEventMap>;
+  state: WorldState;
+  calls: Array<[string, ...unknown[]]>;
+  quest: Map<string, QuestState>;
+  done: Set<string>;
+  current: Set<string>;
+  progress: Map<string, number>;
+  alive: Map<string, string[]>;
+  stubs: Record<string, any>;
+  step(n?: number): void;
+  emit<K extends keyof GameEventMap>(type: K, payload: GameEventMap[K]): void;
+  named(name: string): void;
+  active(...ids: string[]): void;
+  warn: ReturnType<typeof vi.spyOn>;
+  dispose(): void;
+}
+
+function rig(opts: { classId?: string; dialogueOpen?: boolean } = {}): Rig {
+  const events = new EventBus<GameEventMap>(() => {});
+  const state = new WorldState(events, () => {});
+  const services = new Services();
+  const calls: Rig['calls'] = [];
+  const rec = (name: string, ret: unknown = true): Fn => (...a) => {
+    calls.push([name, ...a]);
+    return typeof ret === 'function' ? (ret as Fn)(...a) : ret;
+  };
+  const quest = new Map<string, QuestState>();
+  const done = new Set<string>();
+  const current = new Set<string>();
+  const progress = new Map<string, number>();
+  const alive = new Map<string, string[]>();
+  let escortActive: { id: string; phase: string } | null = null;
+  const stubs: Record<string, any> = {
+    quests: {
+      state: (id: string) => quest.get(id) ?? 'inactive',
+      objectiveDone: (q: string, o: string) => done.has(`${q}.${o}`),
+      isObjectiveCurrent: (q: string, o: string) => current.has(`${q}.${o}`),
+      objectives: (q: string) => [...progress.entries()].filter(([k]) => k.startsWith(`${q}.`)).map(([k, p]) => ({ def: { id: k.split('.')[1] }, progress: p, done: false, current: false })),
+    },
+    dialogue: { start: rec('dialogue.start', () => !opts.dialogueOpen) },
+    escort: {
+      start: rec('escort.start', (o: { id: string }) => { escortActive = { id: o.id, phase: 'riding' }; return true; }),
+      active: () => escortActive,
+      dismount: rec('escort.dismount', () => { if (escortActive) escortActive.phase = 'dismounting'; return Promise.resolve(); }),
+      stop: rec('escort.stop', () => { escortActive = null; return true; }),
+    },
+    enemies: {
+      spawnGroup: rec('enemies.spawnGroup', (id: string) => { alive.set(id, [`${id}#1`, `${id}#2`, `${id}#3`]); return alive.get(id)!; }),
+      despawnGroup: rec('enemies.despawnGroup', (id: string) => void alive.delete(id)),
+      alive: (id: string) => alive.get(id) ?? [],
+    },
+    waves: { start: rec('waves.start', true) },
+    classes: { current: () => opts.classId ?? 'knight' },
+    herd: { start: rec('herd.start'), follow: rec('herd.follow'), stop: rec('herd.stop'), count: vi.fn(() => 0) },
+    foxes: { guide: rec('foxes.guide') },
+    trials: { start: rec('trials.start') },
+    wyrms: { tether: rec('wyrms.tether', () => () => {}), unchain: rec('wyrms.unchain'), flyAway: rec('wyrms.flyAway') },
+    foxFire: { apply: rec('foxFire.apply') },
+    inventory: { add: rec('inventory.add', 1) },
+  };
+  for (const [k, v] of Object.entries(stubs)) services.provide(k as never, v as never);
+  let tickSystem: { fixedUpdate(dt: number): void } | null = null;
+  const ctx = {
+    events, state, services,
+    player: { feet: { x: 0, y: 7, z: 0 } },
+    systems: { add: (s: { fixedUpdate(dt: number): void }) => { tickSystem = s; return () => {}; } },
+  } as unknown as GameContext;
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  plugin.setup(ctx);
+  return {
+    events, state, calls, quest, done, current, progress, alive, stubs, warn,
+    step: (n = 1) => { for (let i = 0; i < n; i++) tickSystem!.fixedUpdate(1 / 60); },
+    emit: (type, payload) => events.emit(type, payload),
+    named: (name) => events.emit(name as keyof GameEventMap, {} as never),
+    active: (...ids) => ids.forEach((id) => quest.set(id, 'active')),
+    dispose: () => plugin.dispose?.(),
+  };
+}
+
+const called = (r: Rig, name: string): unknown[][] => r.calls.filter((c) => c[0] === name).map((c) => c.slice(1));
+let r: Rig;
+beforeEach(() => {
+  vi.restoreAllMocks();
+});
+const objective = (q: string, o: string) => ({ questId: q, objectiveId: o, progress: 1, required: 1, done: true });
+
+describe('director: every quest', () => {
+  it('writes story.<id>.complete when one of the ten completes, and only for them', () => {
+    r = rig();
+    for (const id of ACT2_QUEST_IDS) {
+      expect(r.state.getBool(`story.${id}.complete`)).toBe(false);
+      r.emit('quest.completed', { questId: id });
+      expect(r.state.getBool(`story.${id}.complete`), id).toBe(true);
+    }
+    r.emit('quest.completed', { questId: 'm10' });
+    expect(r.state.getFlag('story.m10.complete')).toBeUndefined();
+    r.dispose();
+  });
+
+  it('re-derives the complete flags on a load (a flag lost, a quest completed)', () => {
+    r = rig();
+    r.quest.set('r05', 'completed');
+    r.emit('save.loaded', { slot: 'a' });
+    expect(r.state.getBool('story.r05.complete')).toBe(true);
+    expect(r.state.getBool('story.r06.complete')).toBe(false);
+    r.dispose();
+  });
+
+  it('the Fox-Fire Ember lights the Dell fire; another item does not', () => {
+    r = rig();
+    r.emit('item.used', { itemId: 'maud-remedy' });
+    expect(called(r, 'foxFire.apply')).toHaveLength(0);
+    r.emit('item.used', { itemId: 'fox-fire-ember' });
+    expect(called(r, 'foxFire.apply')).toHaveLength(1);
+    r.dispose();
+  });
+
+  it('dispose removes every listener', () => {
+    r = rig();
+    r.dispose();
+    r.emit('quest.completed', { questId: 'm11' });
+    expect(r.state.getBool('story.m11.complete')).toBe(false);
+  });
+});
+
+describe('director: M11 Road of Cinders', () => {
+  it('the banner starts the ride-out dialogue and the escort with two riders on a road route', () => {
+    r = rig();
+    r.active('m11');
+    r.emit('quest.objective', objective('m11', 'banner'));
+    r.step();
+    expect(r.state.getBool('story.m11.rideout')).toBe(true);
+    expect(called(r, 'dialogue.start')).toEqual([['npc-gaut', 'gaut']]);
+    const [opts] = called(r, 'escort.start')[0] as [{ id: string; riders: number; route: Array<{ x: number; y: number; z: number }> }];
+    expect(opts.id).toBe('m11');
+    expect(opts.riders).toBe(2);
+    expect(opts.route.length).toBeGreaterThan(10);
+    expect(opts.route.every((p) => p.y === 7)).toBe(true);
+    r.dispose();
+  });
+
+  it('ignores other objectives, other quests and an escort already running', () => {
+    r = rig();
+    r.active('m11');
+    r.emit('quest.objective', objective('m11', 'brief'));
+    r.emit('quest.objective', objective('m12', 'banner'));
+    r.step();
+    expect(called(r, 'escort.start')).toHaveLength(0);
+    r.emit('quest.objective', objective('m11', 'banner'));
+    r.step();
+    r.done.add('m11.banner');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'escort.start')).toHaveLength(1); // still riding: no second start
+    r.dispose();
+  });
+
+  it('a load on the road restarts the escort; after the ring it does not', () => {
+    r = rig();
+    r.active('m11');
+    r.done.add('m11.banner');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'escort.start')).toHaveLength(1);
+    r.dispose();
+    r = rig();
+    r.active('m11');
+    r.done.add('m11.banner');
+    r.done.add('m11.ring');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'escort.start')).toHaveLength(0);
+    r.dispose();
+  });
+
+  it('banters once per stage, in order, only on the ride', () => {
+    r = rig();
+    r.active('m11');
+    r.emit('trigger.enter', { triggerId: 'trg.cinderreach.m11.stage.1', actorId: 'player' });
+    r.step();
+    expect(called(r, 'dialogue.start')).toHaveLength(0); // no escort running
+    r.emit('quest.objective', objective('m11', 'banner'));
+    r.step();
+    const before = called(r, 'dialogue.start').length;
+    r.emit('trigger.enter', { triggerId: 'trg.cinderreach.m11.stage.2', actorId: 'player' });
+    r.step();
+    expect(r.state.getFlag('story.m11.stage')).toBe(2);
+    r.emit('trigger.enter', { triggerId: 'trg.cinderreach.m11.stage.1', actorId: 'player' });
+    r.emit('trigger.enter', { triggerId: 'trg.cinderreach.m11.stage.2', actorId: 'player' });
+    r.emit('trigger.enter', { triggerId: 'trg.cinderreach.m11.stage.3', actorId: 'someone-else' });
+    r.step();
+    expect(called(r, 'dialogue.start')).toHaveLength(before + 1);
+    expect(r.state.getFlag('story.m11.stageSeen')).toBe(2);
+    r.dispose();
+  });
+
+  it('retries the banter when another dialogue is open', () => {
+    r = rig({ dialogueOpen: true });
+    r.active('m11');
+    r.emit('quest.objective', objective('m11', 'banner'));
+    r.step(2);
+    expect(called(r, 'dialogue.start').length).toBeGreaterThanOrEqual(2); // asked, then asked again next tick
+    r.dispose();
+  });
+
+  it('the ring dismounts the column once, then the first Footmen group comes out; the second after three kills', () => {
+    r = rig();
+    r.active('m11');
+    r.emit('quest.objective', objective('m11', 'banner'));
+    r.step();
+    r.emit('trigger.enter', { triggerId: 'trg.cinderreach.m11.ring', actorId: 'player' });
+    r.emit('trigger.enter', { triggerId: 'trg.cinderreach.m11.ring', actorId: 'player' });
+    expect(called(r, 'escort.dismount')).toHaveLength(1); // the second entry finds the column already dismounting
+    r.emit('escort.dismounted', { escortId: 'm11' });
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toEqual([['q12.m11.ambush-1']]);
+    r.progress.set('m11.ambush', 3);
+    r.alive.delete('q12.m11.ambush-1');
+    r.emit('actor.died', { actorId: 'x', killerId: 'player', kind: 'blighted-soldier', team: 'foe', level: 1, spawnTag: 'm11.ambush' } as never);
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toEqual([['q12.m11.ambush-1'], ['q12.m11.ambush-2']]);
+    r.dispose();
+  });
+
+  it('does not bring the second group while the first still stands, or after the sixth kill', () => {
+    r = rig();
+    r.active('m11');
+    r.alive.set('q12.m11.ambush-1', ['a']);
+    r.progress.set('m11.ambush', 3);
+    r.emit('actor.died', { actorId: 'x', spawnTag: 'm11.ambush' } as never);
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toHaveLength(0);
+    r.alive.clear();
+    r.progress.set('m11.ambush', 6);
+    r.emit('actor.died', { actorId: 'x', spawnTag: 'm11.ambush' } as never);
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toHaveLength(0);
+    r.dispose();
+  });
+
+  it('a load mid-ambush refills the group the kill count says', () => {
+    r = rig();
+    r.active('m11');
+    r.done.add('m11.ring');
+    r.progress.set('m11.ambush', 1);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toEqual([['q12.m11.ambush-1']]);
+    r.progress.set('m11.ambush', 4);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')[1]).toEqual(['q12.m11.ambush-2']);
+    r.dispose();
+  });
+
+  it('the first bloom wakes the wraiths, the stone raises the speech, and the end of the quest stops the escort', () => {
+    r = rig();
+    r.active('m11');
+    r.emit('interact', { interactableId: 'use:m11-bloom-2', kind: 'prop', actorId: 'player', action: 'interact' });
+    expect(r.state.getBool('story.m11.bloomHit')).toBe(true);
+    r.emit('waystone.rekindled', { waystoneId: 'cinder-road', cause: 'player' });
+    r.step();
+    expect(r.state.getBool('story.m11.speech')).toBe(true);
+    expect(called(r, 'dialogue.start')).toEqual([['npc-gaut', 'gaut']]);
+    r.emit('quest.completed', { questId: 'm11' });
+    expect(called(r, 'escort.stop')).toHaveLength(1);
+    r.dispose();
+  });
+
+  it('a different waystone, a mercy on a bloom or an inactive quest does nothing', () => {
+    r = rig();
+    r.emit('interact', { interactableId: 'use:m11-bloom-1', kind: 'prop', actorId: 'player', action: 'interact' });
+    r.emit('waystone.rekindled', { waystoneId: 'cinderford', cause: 'player' });
+    r.step();
+    expect(r.state.getFlag('story.m11.bloomHit')).toBeUndefined();
+    expect(r.state.getFlag('story.m11.speech')).toBeUndefined();
+    r.dispose();
+  });
+});
+
+describe('director: M12 Cinderford Under Siege', () => {
+  it('starts the raid when prep is done, once per completion event', () => {
+    r = rig();
+    r.active('m12');
+    r.emit('quest.objective', objective('m12', 'prep'));
+    r.step();
+    expect(called(r, 'waves.start')).toEqual([['cinderford-raid']]);
+    r.dispose();
+  });
+
+  it('ignores other objectives and a prep reported undone, and does not start on a load', () => {
+    r = rig();
+    r.emit('quest.objective', objective('m12', 'raid'));
+    r.emit('quest.objective', { ...objective('m12', 'prep'), done: false });
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'waves.start')).toHaveLength(0);
+    r.dispose();
+  });
+
+  it('warns once when A7 refuses (already running or done)', () => {
+    r = rig();
+    r.stubs.waves.start = () => false;
+    r.emit('quest.objective', objective('m12', 'prep'));
+    r.step();
+    expect(r.warn).toHaveBeenCalledWith(expect.stringContaining('raid'));
+    r.dispose();
+  });
+});
+
+describe('director: R06 The Cinderford Well', () => {
+  it('mirrors the Emberwright class as a flag, now and on a class change', () => {
+    r = rig({ classId: 'emberwright' });
+    expect(r.state.getBool('story.r06.emberwright')).toBe(true);
+    r.stubs.classes.current = () => 'warden';
+    r.emit('class.changed', { classId: 'warden', previous: 'emberwright', free: true, cost: 0 });
+    expect(r.state.getBool('story.r06.emberwright')).toBe(false);
+    r.stubs.classes.current = () => 'emberwright';
+    r.emit('save.loaded', { slot: 'a' });
+    expect(r.state.getBool('story.r06.emberwright')).toBe(true);
+    r.dispose();
+  });
+
+  it('runs the rite as two waves, the second after the first is down, then raises riteDone and clears the hold', () => {
+    r = rig();
+    r.active('r06');
+    r.state.setFlag('story.r06.riteStarted', true);
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    r.named('story.r06.riteStart');
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toEqual([['q12.r06.rite-1']]);
+    r.alive.delete('q12.r06.rite-1');
+    r.emit('actor.died', { actorId: 'x', spawnTag: 'r06.rite' } as never);
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')[1]).toEqual(['q12.r06.rite-2']);
+    expect(r.state.getFlag('story.r06.riteWave')).toBe(2);
+    expect(raised).not.toContain('story.r06.riteDone');
+    r.alive.delete('q12.r06.rite-2');
+    r.emit('actor.died', { actorId: 'y', spawnTag: 'r06.rite' } as never);
+    r.step();
+    expect(raised).toContain('story.r06.riteDone');
+    expect(r.state.getFlag('story.r06.riteStarted')).toBeUndefined();
+    r.dispose();
+  });
+
+  it('does not begin the rite twice, or while the quest is not active', () => {
+    r = rig();
+    r.named('story.r06.riteStart');
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toHaveLength(0);
+    r.active('r06');
+    r.named('story.r06.riteStart');
+    r.named('story.r06.riteStart');
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toHaveLength(1);
+    r.dispose();
+  });
+
+  it('a wave that still has a wraith standing does not advance the rite', () => {
+    r = rig();
+    r.active('r06');
+    r.state.setFlag('story.r06.riteStarted', true);
+    r.named('story.r06.riteStart');
+    r.step();
+    r.emit('actor.died', { actorId: 'x', spawnTag: 'r06.rite' } as never);
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toHaveLength(1);
+    r.dispose();
+  });
+
+  it('a load rebuilds the wave the player was in (wave 2 refills wave 2, not wave 1)', () => {
+    r = rig();
+    r.active('r06');
+    r.state.setFlag('story.r06.riteStarted', true);
+    r.state.setFlag('story.r06.riteWave', 2);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toEqual([['q12.r06.rite-2']]);
+    r.dispose();
+  });
+
+  it('writes the choice flag last, from the branch: sealed or cleansed', () => {
+    r = rig();
+    r.state.setFlag('story.r06.branch', 'seal');
+    expect(r.state.getFlag('story.r06.choice')).toBeUndefined();
+    r.emit('quest.completed', { questId: 'r06' });
+    expect(r.state.getFlag('story.r06.choice')).toBe('sealed');
+    r.dispose();
+    r = rig();
+    r.state.setFlag('story.r06.branch', 'cleanse');
+    r.emit('quest.completed', { questId: 'r06' });
+    expect(r.state.getFlag('story.r06.choice')).toBe('cleansed');
+    r.dispose();
+  });
+});
+
+describe('director: R05 Ketta\'s Lost Flock', () => {
+  const choose = (c: string) => {
+    r.active('r05');
+    r.done.add('r05.choice');
+    r.state.setFlag('story.r05.choice', c);
+    r.named('story.r05.branched');
+    r.step();
+  };
+
+  it('the safe road starts a flock of eight following the player, and credits the herd at six home', () => {
+    r = rig();
+    choose('safe');
+    const [id, flock, opts] = called(r, 'herd.start')[0] as [string, string[], { fogAnchors: string[] }];
+    expect(id).toBe('r05');
+    expect(flock).toHaveLength(8);
+    expect(opts.fogAnchors).toHaveLength(3);
+    expect(called(r, 'herd.follow')).toEqual([['r05', true]]);
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    r.stubs.herd.count.mockReturnValue(5);
+    r.step(30);
+    expect(raised).not.toContain('story.r05.herdHome');
+    r.stubs.herd.count.mockReturnValue(6);
+    r.step(30);
+    expect(raised).toContain('story.r05.herdHome');
+    expect(r.state.getBool('story.r05.herdHome')).toBe(true);
+    expect(called(r, 'herd.follow')[1]).toEqual(['r05', false]);
+    r.dispose();
+  });
+
+  it('the fox leads four stops; the flock of six starts after the fourth and needs four home', () => {
+    r = rig();
+    choose('fox');
+    expect(called(r, 'enemies.spawnGroup')).toEqual([['cinderreach.fox.r05']]);
+    expect((called(r, 'foxes.guide')[0][1] as string[])).toHaveLength(4);
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    for (const stop of [0, 1, 2]) r.emit('fox.arrived', { foxId: 'f', stop });
+    expect(raised).not.toContain('story.r05.foxStops');
+    expect(called(r, 'herd.start')).toHaveLength(0);
+    r.emit('fox.arrived', { foxId: 'f', stop: 3 });
+    r.step();
+    expect(raised).toContain('story.r05.foxStops');
+    expect((called(r, 'herd.start')[0][1] as string[])).toHaveLength(6);
+    r.stubs.herd.count.mockReturnValue(3);
+    r.step(30);
+    expect(r.state.getBool('story.r05.herdHome')).toBe(false);
+    r.stubs.herd.count.mockReturnValue(4);
+    r.step(30);
+    expect(r.state.getBool('story.r05.herdHome')).toBe(true);
+    r.dispose();
+  });
+
+  it('a load mid-guide sends the fox down the remaining stops and counts them from there', () => {
+    r = rig();
+    choose('fox');
+    r.emit('fox.arrived', { foxId: 'f', stop: 0 });
+    r.emit('fox.arrived', { foxId: 'f', stop: 1 });
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    const guides = called(r, 'foxes.guide');
+    expect((guides[1][1] as string[]).map((a) => a.slice(-1))).toEqual(['3', '4']);
+    r.emit('fox.arrived', { foxId: 'f', stop: 1 }); // the second remaining stop = the fourth overall
+    r.step();
+    expect(r.state.getNumber ? r.state.getNumber('story.r05.foxNext') : 0).toBe(4);
+    r.dispose();
+  });
+
+  it('a load with the herd out rebuilds it from the flags, and one after the herd came home does not', () => {
+    r = rig();
+    choose('safe');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'herd.stop')).toEqual([['r05']]);
+    expect(called(r, 'herd.start')).toHaveLength(2);
+    r.state.setFlag('story.r05.herdHome', true);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'herd.start')).toHaveLength(2);
+    r.dispose();
+  });
+
+  it('ignores a fox arrival on the safe road or with no choice made, and cleans up when the quest completes', () => {
+    r = rig();
+    r.active('r05');
+    r.emit('fox.arrived', { foxId: 'f', stop: 3 });
+    expect(r.state.getNumber('story.r05.foxNext')).toBe(0);
+    choose('safe');
+    r.emit('fox.arrived', { foxId: 'f', stop: 3 });
+    expect(r.state.getNumber('story.r05.foxNext')).toBe(0);
+    r.emit('quest.completed', { questId: 'r05' });
+    expect(called(r, 'herd.stop')).toEqual([['r05']]);
+    expect(called(r, 'enemies.despawnGroup')).toEqual([['cinderreach.fox.r05']]);
+    r.dispose();
+  });
+});
+
+describe('director: M13 The Warden\'s Oath', () => {
+  it('starts the trial against the spawned double, with Hrolf\'s NPC standing in', () => {
+    r = rig();
+    r.active('m13');
+    r.current.add('m13.duel');
+    r.named('story.m13.duelStart');
+    r.step();
+    const [opts] = called(r, 'trials.start')[0] as [{ id: string; opponentId: string; breaksToWin: number; standInNpcId: string }];
+    expect(opts).toEqual({ id: 'm13', opponentId: 'q12.m13.trial#1', breaksToWin: 3, standInNpcId: 'hrolf' });
+    r.dispose();
+  });
+
+  it('puts the double away however the trial ends', () => {
+    r = rig();
+    r.active('m13');
+    r.current.add('m13.duel');
+    r.named('story.m13.duelStart');
+    r.step();
+    r.emit('trial.ended', { trialId: 'm13', reason: 'left' } as never);
+    r.step();
+    expect(r.alive.has('q12.m13.trial')).toBe(false);
+    r.emit('trial.won', { trialId: 'other' });
+    r.dispose();
+  });
+
+  it('does nothing when the duel is not the current objective, and cleans up when the trial will not start', () => {
+    r = rig();
+    r.active('m13');
+    r.named('story.m13.duelStart');
+    r.step();
+    expect(called(r, 'trials.start')).toHaveLength(0);
+    r.current.add('m13.duel');
+    r.stubs.trials.start = () => false;
+    r.named('story.m13.duelStart');
+    r.step();
+    expect(r.warn).toHaveBeenCalledWith(expect.stringContaining('trial did not start'));
+    expect(r.alive.has('q12.m13.trial')).toBe(false);
+    r.dispose();
+  });
+});
+
+describe('director: R11 Hrolf\'s Brother\'s Axe', () => {
+  it('plays the den scene once, after the second ledge', () => {
+    r = rig();
+    r.active('r11');
+    r.emit('trigger.enter', { triggerId: 'trg.cinderreach.den', actorId: 'player' });
+    r.step();
+    expect(called(r, 'dialogue.start')).toHaveLength(0); // ledges not climbed
+    r.done.add('r11.ledge2');
+    r.emit('trigger.enter', { triggerId: 'trg.cinderreach.den', actorId: 'player' });
+    r.step();
+    expect(called(r, 'dialogue.start')).toEqual([['scene-r11-den', 'hrolf']]);
+    r.done.add('r11.den');
+    r.emit('trigger.enter', { triggerId: 'trg.cinderreach.den', actorId: 'player' });
+    r.step();
+    expect(called(r, 'dialogue.start')).toHaveLength(1);
+    r.dispose();
+  });
+
+  it('a mercy on the den wyrm is a spare: flag, then dragons +5, then the group goes', () => {
+    r = rig();
+    r.active('r11');
+    r.alive.set('wyrm.r11.den', ['wyrm#1']);
+    const favour = vi.spyOn(r.state, 'addFavour');
+    r.emit('mercy', { verb: 'spare', tier: 'normal', track: 'dragons', creature: 'ember-wyrm', actorId: 'wyrm#1' });
+    expect(r.state.getFlag('story.r11.choice')).toBe('spared');
+    expect(favour).toHaveBeenCalledWith('dragons', 5, 'quest');
+    r.step();
+    expect(called(r, 'enemies.despawnGroup')).toEqual([['wyrm.r11.den']]);
+    r.dispose();
+  });
+
+  it('the wyrm\'s death is a slaying: dragons -4; the second outcome is ignored', () => {
+    r = rig();
+    r.active('r11');
+    const favour = vi.spyOn(r.state, 'addFavour');
+    r.emit('actor.died', { actorId: 'wyrm#1', killerId: 'player', kind: 'ember-wyrm', team: 'foe', level: 1, spawnTag: 'r11.den' } as never);
+    expect(r.state.getFlag('story.r11.choice')).toBe('slain');
+    r.alive.set('wyrm.r11.den', ['wyrm#1']);
+    r.emit('mercy', { verb: 'spare', tier: 'normal', track: 'dragons', creature: 'ember-wyrm', actorId: 'wyrm#1' });
+    expect(r.state.getFlag('story.r11.choice')).toBe('slain');
+    expect(favour).toHaveBeenCalledTimes(1);
+    expect(favour).toHaveBeenCalledWith('dragons', -4, 'quest');
+    r.dispose();
+  });
+
+  it('a mercy on some other creature, or an ember-wyrm elsewhere, is not the choice; nor is a death outside the quest', () => {
+    r = rig();
+    r.active('r11');
+    r.alive.set('wyrm.r11.den', ['wyrm#1']);
+    r.emit('mercy', { verb: 'spare', tier: 'normal', track: 'dragons', creature: 'ember-wyrm', actorId: 'wyrm-nest#9' });
+    r.emit('actor.died', { actorId: 'wyrm-nest#9', spawnTag: 'wyrm.nest' } as never);
+    expect(r.state.getFlag('story.r11.choice')).toBeUndefined();
+    r.quest.set('r11', 'completed');
+    r.emit('actor.died', { actorId: 'wyrm#1', spawnTag: 'r11.den' } as never);
+    expect(r.state.getFlag('story.r11.choice')).toBeUndefined();
+    r.dispose();
+  });
+
+  it('the axe is the full one after a slaying and the rested one after a spare, with its reaction scene', () => {
+    for (const [choice, item] of [['slain', 'brothers-axe-full'], ['spared', 'brothers-axe-lesser']] as const) {
+      r = rig();
+      r.active('r11');
+      r.state.setFlag('story.r11.choice', choice);
+      r.emit('interact', { interactableId: 'use:r11-axe', kind: 'prop', actorId: 'player', action: 'interact' });
+      r.step();
+      expect(called(r, 'inventory.add')).toEqual([[item, 1]]);
+      expect(called(r, 'dialogue.start')).toEqual([['scene-r11-axe', 'hrolf']]);
+      r.dispose();
+    }
+  });
+});
+
+describe('director: M14 Hushed Anvil Rites', () => {
+  it('each mural raises its own reflection through the keeper', () => {
+    r = rig();
+    r.active('m14');
+    r.emit('interact', { interactableId: 'use:hushed-anvil-mural-2', kind: 'prop', actorId: 'player', action: 'interact' });
+    r.step();
+    expect(r.state.getFlag('story.m14.mural')).toBe(2);
+    expect(called(r, 'dialogue.start')).toEqual([['npc-lantern-keeper', 'lantern-keeper']]);
+    r.dispose();
+  });
+
+  it('the Anvil sings after the second tempering: the keeper speaks, and the beat is set when the hold clears', () => {
+    r = rig();
+    r.active('m14');
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    r.emit('quest.objective', objective('m14', 'temper'));
+    r.step();
+    expect(r.state.getBool('story.m14.singsHold')).toBe(true);
+    // the keeper tree clears the hold on its last line, then the dialogue ends
+    r.state.clearFlag('story.m14.singsHold');
+    r.emit('dialogue.ended', { dialogueId: 'npc-lantern-keeper', npcId: 'lantern-keeper', reason: 'completed' });
+    expect(raised).toContain('story.m14.set');
+    expect(r.state.getFlag('story.m14.singsPending')).toBeUndefined();
+    r.dispose();
+  });
+
+  it('a song skipped before its last line is offered again; a mural talk does not set the beat', () => {
+    r = rig();
+    r.active('m14');
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    r.emit('quest.objective', objective('m14', 'temper'));
+    r.step();
+    r.emit('dialogue.ended', { dialogueId: 'npc-lantern-keeper', npcId: 'lantern-keeper', reason: 'skip' });
+    r.step();
+    expect(called(r, 'dialogue.start')).toHaveLength(2);
+    expect(raised).not.toContain('story.m14.set');
+    r.emit('dialogue.ended', { dialogueId: 'npc-osgar', npcId: 'osgar', reason: 'completed' });
+    expect(raised).not.toContain('story.m14.set');
+    r.dispose();
+  });
+
+  it('a load after the hold cleared but before the beat was heard still sets the beat', () => {
+    r = rig();
+    r.active('m14');
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    r.state.setFlag('story.m14.singsPending', true);
+    r.emit('save.loaded', { slot: 'a' });
+    expect(raised).toContain('story.m14.set');
+    r.dispose();
+  });
+});
+
+describe('director: M15 The Hunters\' Pens', () => {
+  it('chains the caged wyrmling at the pen from setup', () => {
+    r = rig();
+    expect(called(r, 'wyrms.tether')).toEqual([['q12.m15.cage', [{ anchor: 'cinderreach.m15.cage' }]]]);
+    r.dispose();
+  });
+
+  it('counts one witness per distinct spared hunter', () => {
+    r = rig();
+    for (const id of ['h1', 'h2', 'h1']) r.emit('hunter.spared', { actorId: id, kind: 'hunter-spearman' });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(2);
+    r.dispose();
+  });
+
+  it('the cage frees the wyrmling, which flies after four seconds and sets the first flight', () => {
+    r = rig();
+    r.active('m15');
+    r.alive.set('q12.m15.cage', ['wyrmling#1']);
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    r.emit('interact', { interactableId: 'use:m15-cage', kind: 'prop', actorId: 'player', action: 'interact' });
+    r.step();
+    expect(called(r, 'wyrms.unchain')).toEqual([['wyrmling#1']]);
+    r.emit('wyrm.unchained', { actorId: 'wyrmling#1' });
+    r.step(239);
+    expect(called(r, 'wyrms.flyAway')).toHaveLength(0);
+    r.step(2);
+    expect(called(r, 'wyrms.flyAway')).toEqual([['wyrmling#1']]);
+    expect(raised).toContain('story.m15.set');
+    expect(r.state.getBool('story.m15.flown')).toBe(true);
+    r.dispose();
+  });
+
+  it('a cage with no wyrmling to free (it was despawned) still sets the flight, with a warning', () => {
+    r = rig();
+    r.active('m15');
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    r.emit('interact', { interactableId: 'use:m15-cage', kind: 'prop', actorId: 'player', action: 'interact' });
+    r.step();
+    expect(raised).toContain('story.m15.set');
+    expect(r.warn).toHaveBeenCalled();
+    r.dispose();
+  });
+
+  it('the flight is set only once, and a load with the cage open but no flight sets it', () => {
+    r = rig();
+    r.active('m15');
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    r.state.setFlag('story.m15.cageOpen', true);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    r.emit('wyrm.unchained', { actorId: 'w' });
+    r.step(300);
+    expect(raised.filter((t) => t === 'story.m15.set')).toHaveLength(1);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(raised.filter((t) => t === 'story.m15.set')).toHaveLength(1);
+    r.dispose();
+  });
+});
+
+describe('director: D03 The Fall of Scorchhold', () => {
+  it('records a defeat without Redmane standing by Osgar', () => {
+    r = rig();
+    r.emit('boss.defeated', { bossId: 'thrandil-redmane', actorId: 'b' });
+    expect(r.state.getFlag('story.d03.outcome')).toBe('defeated');
+    expect(r.state.getBool('story.d03.redmaneHeld')).toBe(false);
+    r.dispose();
+  });
+
+  it('records a spare, holds Redmane for the testimony, and pays no favour of its own', () => {
+    r = rig();
+    const favour = vi.spyOn(r.state, 'addFavour');
+    r.emit('boss.spared', { bossId: 'thrandil-redmane', actorId: 'b' });
+    expect(r.state.getFlag('story.d03.outcome')).toBe('spared');
+    expect(r.state.getBool('story.d03.redmaneHeld')).toBe(true);
+    expect(favour).not.toHaveBeenCalled();
+    r.dispose();
+  });
+
+  it('keeps the first outcome and ignores other bosses', () => {
+    r = rig();
+    r.emit('boss.defeated', { bossId: 'gaffer-grimtooth', actorId: 'g' });
+    expect(r.state.getFlag('story.d03.outcome')).toBeUndefined();
+    r.emit('boss.spared', { bossId: 'thrandil-redmane', actorId: 'b' });
+    r.emit('boss.defeated', { bossId: 'thrandil-redmane', actorId: 'b' });
+    expect(r.state.getFlag('story.d03.outcome')).toBe('spared');
+    r.dispose();
+  });
+
+  it('follows A8\'s outcome flag on a load', () => {
+    r = rig();
+    r.state.setFlag('boss.thrandil-redmane.outcome', 'spared');
+    r.emit('save.loaded', { slot: 'a' });
+    expect(r.state.getFlag('story.d03.outcome')).toBe('spared');
+    expect(r.state.getBool('story.d03.redmaneHeld')).toBe(true);
+    r.dispose();
+  });
+
+  it('a freed prisoner speaks once the cage opens, only while D03 is active', () => {
+    r = rig();
+    r.emit('interact', { interactableId: 'use:d03-prisoner-1', kind: 'prop', actorId: 'player', action: 'interact' });
+    r.step();
+    expect(called(r, 'dialogue.start')).toHaveLength(0);
+    r.active('d03');
+    r.emit('interact', { interactableId: 'use:d03-prisoner-2', kind: 'prop', actorId: 'player', action: 'interact' });
+    r.step();
+    expect(called(r, 'dialogue.start')).toEqual([['scene-d03-prisoner', 'prisoner']]);
+    r.dispose();
+  });
+});

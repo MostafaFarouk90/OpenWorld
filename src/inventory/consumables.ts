@@ -41,7 +41,7 @@ export class ConsumableUser {
     if (!actor || actor.dead) return { ok: false, reason: 'dead' };
     if (this.current) return { ok: false, reason: 'busy' };
     if (inventory.count(id) < 1) return { ok: false, reason: 'no-charges' };
-    if (actor.health >= actor.maxHealth) return { ok: false, reason: 'full-health' };
+    if (actor.health >= actor.maxHealth && !def.use.noHeal) return { ok: false, reason: 'full-health' };
     this.current = { itemId: id, remaining: def.use.drinkSeconds ?? DEFAULT_DRINK_SECONDS };
     return { ok: true, healed: 0 };
   }
@@ -58,7 +58,7 @@ export class ConsumableUser {
     const use = getItem(cur.itemId)?.use;
     if (!use || !inventory.remove(cur.itemId, 1)) return;
     const amount = (use.healFlat ?? 0) + (use.healFraction ?? 0) * actor.maxHealth;
-    env.heal(amount);
+    if (amount > 0) env.heal(amount);
     env.emit('item.used', { itemId: cur.itemId });
   }
 

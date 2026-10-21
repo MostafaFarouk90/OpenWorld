@@ -16,6 +16,9 @@ const GATE_W = 14;
 /** Where the keep's door stands outside (the interior floats over this point). */
 export const KEEP_DOOR = { x: F.x, z: F.z + 32 };
 
+/** The south gate's opening (D03's shut-gate toggle sits in it; A12). */
+export const FORT_GATE = { x: ROAD_END_SCORCHHOLD.x, z: F.z - HZ, w: GATE_W, d: 1.5 } as const;
+
 export function scorchholdLayout(): Pick<LayoutData, 'anchors' | 'triggers' | 'structures'> {
   const inset = TOWER / 2 + 0.3;
   const gx = ROAD_END_SCORCHHOLD.x;
@@ -40,6 +43,8 @@ export function scorchholdLayout(): Pick<LayoutData, 'anchors' | 'triggers' | 's
   return {
     anchors: [
       a('cinderreach.d03.gate', gx, F.z - HZ, 0, ['objective']),
+      // D03's three charge points, a few metres outside the shut gate (A12).
+      ...numbered('cinderreach.d03.gate', [[gx - 4, F.z - HZ - 3], [gx, F.z - HZ - 3], [gx + 4, F.z - HZ - 3]], ['objective'], 0),
       a('cinderreach.scorchhold.keep.door', KEEP_DOOR.x, KEEP_DOOR.z, 0, ['poi', 'door']),
       // Courtyard packs (1 to 6), quarry golems outside the west wall (7 and 8), harpooners on the walls.
       ...numbered('cinderreach.spawn.scorchhold', [[F.x - 50, F.z - 40], [F.x - 25, F.z - 55], [F.x + 20, F.z - 50], [F.x + 50, F.z - 35], [F.x - 40, F.z - 10], [F.x + 45, F.z - 10], [F.x - 115, F.z - 20], [F.x - 115, F.z + 20]], ['spawn'], 0),
