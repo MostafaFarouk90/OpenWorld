@@ -1,6 +1,7 @@
 // One companion wired into the game: joined state from its flag, the actor and figure, follow and teleport-behind,
 // Battle-song, banter, the talk interactable and saved position (plans/slice-2-tobb.md, section 13 overrides);
 // Phase B adds quest-derived waits and horseback following (plans/slice-2-tobb-phase-b.md and its review).
+// Act 2 (A5, plans/act2-A5.md): the party wait, own vitals and the downed rule, Hrolf's light fighting and Stonehide.
 import * as THREE from 'three';
 import type { Actor } from '../actors/Actor';
 import type { GameContext } from '../core/Game';
@@ -12,11 +13,15 @@ import { AuraWindow } from './AuraWindow';
 import { BanterDirector, type Bark } from './BanterDirector';
 import { CombatPresence } from './CombatPresence';
 import { CompanionFigure } from './CompanionFigure';
+import { ENEMY_DEFS } from '../enemies/defs';
+import { HrolfBrain, type BrainView, type Foe } from './HrolfBrain';
+import { CompanionVitals, type VitalsEdge } from './vitals';
+import './events';
 import { FollowModel, behind, yawToward, type Vec3 } from './FollowModel';
 import { RayBudget, findSpot, groundAt, type GroundPorts } from './ground';
-import { COMPANION_TUNING, TOBB_TUNING } from './tuning';
+import { COMPANION_TUNING, HROLF_TUNING, TOBB_TUNING } from './tuning';
 import type { AttackSpeedHook, CompanionDef, InteriorsLike, NavLike } from './types';
-import { deriveWait, inView, sameWait, type ViewPorts, type Wait, type WaitView } from './WaitDirector';
+import { deriveWait, inView, sameWait, type ViewPorts, type Wait, type WaitRule, type WaitView } from './WaitDirector';
 
 export interface SavedSpot {
   x: number;
@@ -28,7 +33,16 @@ export interface SavedSpot {
 export interface ControllerOptions {
   rng?: () => number;
   warn?: (message: string) => void;
+  /** The party seat (A5): false sends a joined companion to his Tilted Anvil post. Absent reads as always active. */
+  isActive?: () => boolean;
+  /** True while a non-lethal trial runs (Hrolf never fights then). */
+  trialRunning?: () => boolean;
+  /** The shared bark gate (A5): false holds this bark because another companion just spoke. Absent always allows. */
+  claimBark?: (id: string) => boolean;
 }
+
+/** The camp post an inactive companion waits at (the Tilted Anvil, A5). */
+export const partyPost = (id: string): string => `npc-post.${id}.tilted-anvil`;
 
 /** Untyped lookups for services whose types live in threads that may not be merged yet. */
 function anyService<T>(ctx: GameContext, name: string): T | undefined {
@@ -73,6 +87,18 @@ export class CompanionController {
   private readonly offs: (() => void)[] = [];
   private readonly warn: (m: string) => void;
   private disposed = false;
+  private readonly isActive: () => boolean;
+  private readonly claimBark: (id: string) => boolean;
+  private readonly trialRunning: () => boolean;
+  private readonly rules: readonly WaitRule[];
+  /** A5's own health pool; null for Tobb (no damage reaches him). */
+  readonly vitals: CompanionVitals | null;
+  private readonly brain: HrolfBrain | null;
+  /** Foes Cael has landed a hit on (a beast needs one before Hrolf joins in). */
+  private readonly struck = new Set<string>();
+  private stonehideOn = false;
+  /** A vitals edge raised inside a damage modifier, emitted on the next tick. */
+  private pendingEdge: VitalsEdge = null;
   /** The post he stands at instead of following, or null. Derived each tick from quest and interior state. */
   private wait: Wait | null = null;
   private waitYaw = 0;
@@ -90,7 +116,13 @@ export class CompanionController {
     opts: ControllerOptions = {},
   ) {
     this.warn = opts.warn ?? ((m) => console.warn(m));
-    this.aura = new AuraWindow(def.aura.seconds);
+    this.isActive = opts.isActive ?? (() => true);
+    this.trialRunning = opts.trialRunning ?? (() => false);
+    this.claimBark = opts.claimBark ?? (() => true);
+    this.rules = [{ reason: 'party', anchorId: partyPost(def.id), inactive: true }, ...def.waits];
+    this.vitals = def.vitals ? new CompanionVitals(def.vitals.maxHealth, def.downed.kneelSeconds) : null;
+    this.brain = def.combat ? new HrolfBrain({ ...HROLF_TUNING, ...def.combat }) : null;
+    this.aura = new AuraWindow(def.aura?.seconds ?? 1);
     this.director = new BanterDirector(def.banter, opts.rng ?? Math.random);
     this.listen();
     this.offs.push(ctx.gates.flag(def.joinFlag, (open, cause) => (open ? this.onJoined(cause) : this.onLeft(cause))));
@@ -127,6 +159,19 @@ export class CompanionController {
     return this.auraUndo !== null;
   }
 
+  get downed(): boolean {
+    return this.vitals?.downed ?? false;
+  }
+
+  get stonehideActive(): boolean {
+    return this.stonehideOn;
+  }
+
+  /** Hrolf's current target, for tests and the debug overlay. */
+  get combatTarget(): string | null {
+    return this.brain?.currentTarget ?? null;
+  }
+
   rank(): number {
     if (!this.ctx.state.getBool(this.def.joinFlag)) return 0;
     return Math.max(1, Math.floor(this.ctx.state.getNumber(this.def.rankFlag, 1)));
@@ -148,11 +193,15 @@ export class CompanionController {
 
   private onJoined(cause: GateCause): void {
     if (this.disposed) return;
-    if (this.ctx.state.getNumber(this.def.rankFlag, 0) < 1) this.ctx.state.setFlag(this.def.rankFlag, 1);
+    const firstRank = this.ctx.state.getNumber(this.def.rankFlag, 0) < 1;
+    if (firstRank) this.ctx.state.setFlag(this.def.rankFlag, 1);
     if (this.actor) return;
     const start = cause === 'flag' ? this.handoverSpot() : null;
     const actor = this.spawn(start);
-    if (cause === 'flag') this.ctx.events.emit('companion.joined', { companionId: this.def.id, actorId: actor.id });
+    if (cause === 'flag') {
+      this.ctx.events.emit('companion.joined', { companionId: this.def.id, actorId: actor.id });
+      if (firstRank) this.ctx.events.emit('companion.bond', { companionId: this.def.id, rank: 1 });
+    }
   }
 
   private onLeft(cause: GateCause): void {
@@ -172,7 +221,7 @@ export class CompanionController {
   }
 
   private spawn(start: Vec3 | null): Actor {
-    const figure = new CompanionFigure();
+    const figure = new CompanionFigure(this.def.look);
     const feet = this.ctx.player.feet;
     const at = start ?? { x: feet.x, y: feet.y, z: feet.z };
     figure.root.position.set(at.x, at.y, at.z);
@@ -182,12 +231,13 @@ export class CompanionController {
       actor = this.ctx.actors.spawn({
         kind: `companion:${this.def.id}`,
         team: 'ally',
-        maxHealth: 1,
+        maxHealth: this.vitals?.maxHealth ?? 1,
         immortal: true,
         hittable: false,
         untargetable: true,
         root: figure.root,
       });
+      this.vitals?.restore();
       this.unregisterTalk = this.ctx.interaction.register({
         id: `companion:${this.def.id}`,
         kind: 'talk',
@@ -240,6 +290,10 @@ export class CompanionController {
     this.wait = null;
     this.handoffAge = 0;
     this.mountHidden = false;
+    this.brain?.reset();
+    this.setStonehide(false);
+    this.vitals?.restore();
+    this.pendingEdge = null;
   }
 
   private loader(): NpcModelLoader | null {
@@ -278,6 +332,7 @@ export class CompanionController {
       }),
       ev.on('player.respawned', () => {
         this.playerDead = false;
+        this.standUp();
         this.director.suppress('death', false);
         this.sinceReset = 0;
         this.requestTeleport();
@@ -322,8 +377,20 @@ export class CompanionController {
         if (this.presence.aggro(actorId) === 'start') this.emitBark(this.director.combat('start'));
       }),
       ev.on('ai.calm', ({ actorId }) => this.presence.remove(actorId)),
-      ev.on('actor.died', ({ actorId }) => this.presence.remove(actorId)),
-      ev.on('actor.despawned', ({ actorId }) => this.presence.remove(actorId)),
+      ev.on('actor.died', ({ actorId }) => {
+        this.presence.remove(actorId);
+        this.struck.delete(actorId);
+      }),
+      ev.on('actor.despawned', ({ actorId }) => {
+        this.presence.remove(actorId);
+        this.struck.delete(actorId);
+      }),
+      ev.on('damage.dealt', (r) => {
+        if (!this.brain || r.outcome !== 'hit' || r.kind === 'script' || r.attackerId !== playerId()) return;
+        this.struck.add(r.targetId);
+      }),
+      // Resting restores health (design 8.2): a waystone or inn rest refills him and ends a kneel.
+      ev.on('rest', () => this.standUp()),
       ev.on('trigger.enter', ({ triggerId, actorId }) => {
         const place = this.def.places.triggers[triggerId];
         if (place && actorId === playerId()) this.emitBark(this.director.area(place));
@@ -338,6 +405,9 @@ export class CompanionController {
 
   private onLoaded(): void {
     this.endAura();
+    this.struck.clear();
+    this.brain?.reset();
+    this.standUp();
     this.director.saveLoaded();
     this.presence.reset();
     this.playerDead = this.ctx.player.actor.dead;
@@ -352,7 +422,7 @@ export class CompanionController {
     if (!this.model) return;
     // A load is black: a wait that holds is applied at once and the saved spot is ignored.
     this.handoffAge = 0;
-    const want = deriveWait(this.def.waits, this.waitView());
+    const want = deriveWait(this.rules, this.waitView());
     if (want) {
       this.enterWait(want);
       return;
@@ -396,7 +466,8 @@ export class CompanionController {
   // ---- aura --------------------------------------------------------------------------------------------------
 
   private onBlock(): void {
-    if (!this.actor || this.hidden || this.wait || this.playerDead) return;
+    // Battle-song is Tobb's: a def without `aura` gives nothing on a block.
+    if (!this.def.aura || !this.actor || this.hidden || this.wait || this.playerDead || !this.isActive()) return;
     const verbs = this.ctx.services.get('combatVerbs') as unknown as Partial<AttackSpeedHook> | undefined;
     if (typeof verbs?.addAttackSpeedMultiplier !== 'function') {
       this.warnOnce('hook', 'companions: combatVerbs.addAttackSpeedMultiplier is missing; Battle-song does nothing');
@@ -421,7 +492,7 @@ export class CompanionController {
   private endAura(): void {
     this.aura.cancel();
     const undo = this.auraUndo;
-    if (!undo) return;
+    if (!undo || !this.def.aura) return;
     this.auraUndo = null;
     try {
       undo();
@@ -435,7 +506,8 @@ export class CompanionController {
   // ---- banter ------------------------------------------------------------------------------------------------
 
   private emitBark(b: Bark | null): void {
-    if (!b || !this.actor || this.hidden || this.wait) return;
+    // An inactive companion in the hand-off window (still walking to his post) stays quiet.
+    if (!b || !this.actor || this.hidden || this.wait || !this.isActive() || !this.claimBark(this.def.id)) return;
     this.ctx.events.emit('companion.banter', { companionId: this.def.id, lineKey: b.lineKey, trigger: b.trigger });
     const t = this.ctx.strings;
     this.ctx.events.emit('hud.toast', { textKey: 'companion.say', params: { name: t.t(this.def.nameKey), line: t.t(b.lineKey) } });
@@ -460,6 +532,7 @@ export class CompanionController {
     const ports = this.ports();
 
     this.updateWait(dt, player, p.facingYaw);
+    this.tickVitals(dt);
     if (this.wait) {
       // At his post: no follow and no teleport; he faces Cael while they talk.
       m.gait = 'idle';
@@ -471,7 +544,11 @@ export class CompanionController {
       this.teleportPending = false;
       this.setHidden(true);
     }
-    if (!this.wait && !this.mountHidden) this.follow(dt, player, p.facingYaw, ports);
+    const step = this.brainStep(dt, player);
+    if (!this.wait && !this.mountHidden) this.follow(dt, player, p.facingYaw, ports, step?.goal ?? null, step?.face ?? null);
+    if (step?.swing) this.figure?.playAttack(HROLF_TUNING.swingSeconds);
+    if (step?.hit) this.strike(step.hit);
+    this.updateStonehide(player);
 
     if (this.aura.tick(dt)) this.endAura();
     if (edge === 'end') this.emitBark(this.director.combat('end'));
@@ -482,8 +559,21 @@ export class CompanionController {
     this.applyPose(1);
   }
 
-  private follow(dt: number, player: Vec3, playerYaw: number, ports: GroundPorts): void {
+  private follow(
+    dt: number,
+    player: Vec3,
+    playerYaw: number,
+    ports: GroundPorts,
+    goal: { x: number; z: number } | null = null,
+    face: { x: number; z: number } | null = null,
+  ): void {
     const m = this.model!;
+    // Kneeling: he stays where he fell; a fast travel or door still places him behind Cael.
+    if (this.downed && !this.teleportPending) {
+      m.gait = 'idle';
+      m.speed = 0;
+      return;
+    }
     if (!this.teleportPending) {
       const newest = m.trail.newest();
       if (newest) this.lastTrailPoint = newest;
@@ -493,6 +583,8 @@ export class CompanionController {
         playerYaw,
         groundAt: (x, z, y) => groundAt(ports, x, z, y),
         hold: this.talking,
+        goal,
+        face,
         steer: (from, to) => this.steer(from, to, dt),
       });
       if (step.teleport) {
@@ -514,6 +606,7 @@ export class CompanionController {
       questState: (id) => (q && q.get(id) ? q.state(id) : undefined),
       objectiveDone: (id, o) => !!q && !!q.get(id) && q.objectiveDone(id, o),
       interior: this.interiors()?.current ?? null,
+      inactive: this.actor !== null && !this.isActive(),
       anchorExists: (id) => {
         if (this.ctx.anchors.find(id)) return true;
         this.warnOnce(`anchor:${id}`, `companions: wait post "${id}" is not defined; ${this.def.id} keeps following`);
@@ -552,7 +645,7 @@ export class CompanionController {
    * he can walk back, or after `handoffMaxSeconds` regardless.
    */
   private updateWait(dt: number, player: Vec3, playerYaw: number): void {
-    const want = deriveWait(this.def.waits, this.waitView());
+    const want = deriveWait(this.rules, this.waitView());
     if (sameWait(want, this.wait)) {
       this.handoffAge = 0;
       return;
@@ -593,6 +686,9 @@ export class CompanionController {
     this.mountHidden = false;
     this.path = null;
     this.endAura();
+    this.brain?.reset();
+    this.setStonehide(false);
+    this.standUp();
     m.place(a.position, a.yaw);
     this.prev.x = m.pos.x;
     this.prev.y = m.pos.y;
@@ -661,6 +757,12 @@ export class CompanionController {
     this.place(r, yaw);
   }
 
+  /** Puts him at `at` at once (tests and debug tools); ignored while waiting or not spawned. */
+  placeAt(at: Vec3, yaw = this.yaw): void {
+    if (!this.model || this.wait) return;
+    this.place(at, yaw);
+  }
+
   private place(at: Vec3, yaw: number): void {
     const m = this.model;
     if (!m) return;
@@ -677,7 +779,11 @@ export class CompanionController {
   private setHidden(h: boolean): void {
     if (this.hidden === h) return;
     this.hidden = h;
-    if (h) this.endAura();
+    if (h) {
+      this.endAura();
+      this.brain?.reset();
+      this.setStonehide(false);
+    }
     this.director.setActive(!h && this.actor !== null && !this.wait);
     if (this.figure) this.figure.root.visible = !h;
   }
@@ -715,7 +821,151 @@ export class CompanionController {
     return pts[0];
   }
 
+  // ---- vitals, fighting and Stonehide (A5) ----------------------------------------------------------------------
+
+  /** Standing, following and visible: the state in which he fights, shares damage or heals. */
+  get ready(): boolean {
+    return (
+      this.actor !== null &&
+      !!this.model &&
+      !this.hidden &&
+      !this.wait &&
+      !this.mountHidden &&
+      !this.downed &&
+      !this.playerDead &&
+      this.isActive()
+    );
+  }
+
+  private tickVitals(dt: number): void {
+    const v = this.vitals;
+    if (!v) return;
+    const pending = this.pendingEdge;
+    this.pendingEdge = null;
+    const edge = v.tick(dt, this.presence.fighting);
+    this.syncHealth();
+    if (pending) this.emitEdge(pending);
+    if (edge) this.emitEdge(edge);
+  }
+
+  private emitEdge(edge: VitalsEdge): void {
+    if (edge === 'downed') {
+      this.brain?.reset();
+      this.setStonehide(false);
+      this.figure?.setKneel(true);
+      this.ctx.events.emit('companion.downed', { companionId: this.def.id });
+    } else if (edge === 'stood') {
+      this.figure?.setKneel(false);
+      this.ctx.events.emit('companion.stood', { companionId: this.def.id });
+    }
+  }
+
+  /** Full health, standing (a load, a respawn, a rest, a wait). */
+  private standUp(): void {
+    const v = this.vitals;
+    if (!v) return;
+    const wasPending = this.pendingEdge === 'downed';
+    this.pendingEdge = null;
+    const edge = v.restore();
+    this.syncHealth();
+    // A fall not yet announced is simply undone; an announced one gets its `companion.stood`.
+    if (edge && !wasPending) this.emitEdge(edge);
+    else this.figure?.setKneel(false);
+  }
+
+  private syncHealth(): void {
+    if (this.actor && this.vitals) this.actor.health = this.vitals.health;
+  }
+
+  private brainStep(dt: number, player: Vec3) {
+    const b = this.brain;
+    const m = this.model;
+    if (!b || !m) return null;
+    const view: BrainView = {
+      self: { x: m.pos.x, z: m.pos.z },
+      player: { x: player.x, z: player.z },
+      canAct: this.ready && !this.talking && !this.teleportPending,
+      playerInCombat: this.presence.fighting,
+      trialRunning: this.trialRunning(),
+      foes: () => this.foes(),
+      mayEngage: (id) => this.ctx.services.get('allyEngagement')?.mayEngage(id) ?? false,
+      struckByPlayer: (id) => this.struck.has(id),
+    };
+    return b.tick(dt, view);
+  }
+
+  private foes(): Foe[] {
+    const out: Foe[] = [];
+    const defs = ENEMY_DEFS as unknown as Readonly<Record<string, { mercy?: { verb?: string } | null } | undefined>>;
+    for (const a of this.ctx.actors.ofTeam('hostile')) {
+      if (a.dead) continue;
+      const at = a.worldPosition(this.probe);
+      // Fail safe: a kind outside ENEMY_DEFS (a boss, a later registry) is treated as a beast, so it needs Cael's hit first.
+      const def = defs[a.kind];
+      out.push({ id: a.id, x: at.x, z: at.z, health: a.health, beast: !def || def.mercy?.verb === 'calm' });
+    }
+    return out;
+  }
+
+  /** One light hit; never below 1 HP (the `companions.ally-no-kill` handler holds what modifiers add on top). */
+  private strike(targetId: string): void {
+    const self = this.actor;
+    const m = this.model;
+    const target = this.ctx.actors.get(targetId);
+    const c = this.def.combat;
+    if (!self || !m || !c || !target || target.dead || !(target.health > 1)) return;
+    const at = target.worldPosition(this.probe);
+    const dir = new THREE.Vector3(at.x - m.pos.x, 0, at.z - m.pos.z);
+    if (dir.lengthSq() > 1e-8) dir.normalize();
+    else dir.set(0, 0, -1);
+    this.ctx.damage.apply({
+      attackerId: self.id,
+      targetId,
+      amount: Math.min(c.damage, target.health - 1),
+      poise: HROLF_TUNING.poise,
+      kind: 'melee',
+      attackId: `companion.${this.def.id}.chop`,
+      direction: dir,
+    });
+  }
+
+  /**
+   * Stonehide (design 8.1), called from the plugin's damage modifier: takes `share` of an enemy's melee or spell hit
+   * on Cael while he stands within `radius`, and returns what Cael still takes.
+   */
+  shareHit(amount: number, player: Vec3): number {
+    const sh = this.def.stonehide;
+    const v = this.vitals;
+    const m = this.model;
+    if (!sh || !v || !m || !this.ready || this.trialRunning() || !(amount > 0)) return amount;
+    if (Math.hypot(m.pos.x - player.x, m.pos.z - player.z) > sh.radius) return amount;
+    const share = amount * sh.share;
+    const edge = v.take(share);
+    if (edge) this.pendingEdge = edge;
+    this.syncHealth();
+    return amount - share;
+  }
+
+  private updateStonehide(player: Vec3): void {
+    const sh = this.def.stonehide;
+    const m = this.model;
+    if (!sh || !m) return;
+    // Not in a trial: the duel's blows are Cael's alone (plan section 8 item 6).
+    this.setStonehide(this.ready && !this.trialRunning() && Math.hypot(m.pos.x - player.x, m.pos.z - player.z) <= sh.radius);
+  }
+
+  private setStonehide(on: boolean): void {
+    const sh = this.def.stonehide;
+    if (!sh || on === this.stonehideOn) return;
+    this.stonehideOn = on;
+    // A standing aura: the HUD's buff row ignores a non-finite duration, the pip reads `companion.aura`.
+    if (on) this.ctx.events.emit('buff.applied', { id: sh.buffId, nameKey: sh.nameKey, seconds: Infinity });
+    else this.ctx.events.emit('buff.removed', { id: sh.buffId });
+    this.ctx.events.emit('companion.aura', { companionId: this.def.id, auraId: sh.auraId, active: on });
+  }
+
   /** Built once; services are looked up per call, since 3a's may arrive after this plugin. */
+
   private cachedPorts: GroundPorts | null = null;
 
   private ports(): GroundPorts {

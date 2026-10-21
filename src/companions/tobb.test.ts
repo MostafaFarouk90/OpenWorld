@@ -54,11 +54,11 @@ describe('TOBB definition', () => {
   });
   it('the name and aura name keys resolve', () => {
     expect(COMPANION_STRINGS_EN[TOBB.nameKey]).toBe('Tobb Fenwick');
-    expect(COMPANION_STRINGS_EN[TOBB.aura.nameKey]).toBeTruthy();
+    expect(COMPANION_STRINGS_EN[TOBB.aura!.nameKey]).toBeTruthy();
   });
   it('the aura is 4 s and x1.05, from the tuning', () => {
-    expect(TOBB.aura.seconds).toBe(4);
-    expect(TOBB.aura.attackSpeed).toBe(1.05);
+    expect(TOBB.aura!.seconds).toBe(4);
+    expect(TOBB.aura!.attackSpeed).toBe(1.05);
     expect(TOBB_TUNING.auraSeconds).toBe(4);
     expect(TOBB_TUNING.auraMultiplier).toBe(1.05);
   });
@@ -80,6 +80,6 @@ describe('TOBB definition', () => {
     expect(TOBB.id).toBe('tobb');
     expect(TOBB.npcId).toBe('tobb');
     expect(TOBB.dialogueId).toBe('npc-tobb');
-    expect(TOBB.aura.buffId.startsWith('companion.tobb.')).toBe(true);
+    expect(TOBB.aura!.buffId.startsWith('companion.tobb.')).toBe(true);
   });
 });

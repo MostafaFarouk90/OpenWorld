@@ -48,7 +48,8 @@ and `.exit`): `tilted-anvil`, `tilted-anvil-back` (onto the Bastion yard), `keep
 `story.m08.keepOpen`, `counting-house` on `story.m09.houseOpen`, `underways` on `story.d02.underwaysOpen` (thread 6).
 
 **Anchors and triggers defined here** (local coordinates in each def file):
-- Tilted Anvil: `inn.aldith`, `inn.room`, `npc-post.aldith.inside`, `npc-post.tobb.tilted-anvil`; blocker `tilted-anvil.backroom.gate`.
+- Tilted Anvil: `inn.aldith`, `inn.room`, `npc-post.aldith.inside`, `npc-post.tobb.tilted-anvil`, `npc-post.hrolf.tilted-anvil` and
+  `npc-post.aelfreda.tilted-anvil` (the party posts, A5); blocker `tilted-anvil.backroom.gate`.
 - Keep hall: `npc-post.edric.hall`, `npc-post.vey.hall` (both on the 0.4 m dais), `m08.keep-hall`; trigger `trg.harrowmark.keep-hall`.
 - Counting-House (thread 18's names): `stealth.m09.entry`, `stealth.m09.cp.hall`, `stealth.m09.cp.office`, `stealth.m09.exit`,
   `hide.m09.1..4`, `patrol.m09.hall.1..n`, `patrol.m09.stacks.1..n` (closed loops), `spawn.m09.watch-1..4`, `m09.invoice-1..3`
