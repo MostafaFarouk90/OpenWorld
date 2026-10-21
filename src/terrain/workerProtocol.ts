@@ -49,5 +49,7 @@ export function isValidReply(message: unknown, segments?: number): message is Ch
   if (!(colors instanceof Float32Array)) return false;
   if (!isFiniteNumber(minY) || !isFiniteNumber(maxY) || minY > maxY) return false;
   const expected = segments === undefined ? positions.length : chunkVertexCount(segments) * 3;
+  const { ground } = message.data;
+  if (ground !== undefined && !(ground instanceof Float32Array && ground.length === (expected / 3) * 2)) return false;
   return positions.length === expected && normals.length === expected && colors.length === expected;
 }

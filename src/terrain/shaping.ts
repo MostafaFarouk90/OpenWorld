@@ -256,131 +256,6 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
     }
   }
 
-  // ---- roads
-  const roads = new Map<string, BuiltRoad>();
-  for (const r of shape.roads) {
-    const where = `terrain shape: road "${r.id}"`;
-    claimId('road', r.id);
-    if (!Array.isArray(r.points) || r.points.length < 2) throw new Error(`${where}: needs at least 2 points`);
-    if (!finite(r.halfWidth, r.blend, r.maxGrade, r.startTaper) || r.halfWidth <= 0 || r.blend <= 0) {
-      throw new Error(`${where}: halfWidth and blend must be > 0`);
-    }
-    if (r.maxGrade <= 0 || r.maxGrade >= 1) throw new Error(`${where}: maxGrade must be in (0, 1)`);
-    if (r.startTaper < 0) throw new Error(`${where}: startTaper must be >= 0`);
-    const sideSlope = r.maxSideSlope ?? DEFAULT_MAX_SIDE_SLOPE;
-    if (!Number.isFinite(sideSlope) || sideSlope <= 0) throw new Error(`${where}: maxSideSlope must be > 0`);
-    for (const p of r.points) {
-      if (!p || !finite(p.x, p.z)) throw new Error(`${where}: points must be finite`);
-      if (bounds && !inBox(bounds, p.x, p.z)) throw new Error(`${where}: point (${p.x}, ${p.z}) outside the world bounds`);
-    }
-
-    const segments: Segment[] = [];
-    let length = 0;
-    for (let i = 0; i < r.points.length - 1; i++) {
-      const a = r.points[i];
-      const b = r.points[i + 1];
-      const len = Math.hypot(b.x - a.x, b.z - a.z);
-      if (!(len > 1e-6)) throw new Error(`${where}: segment ${i} has zero length`);
-      segments.push({
-        ax: a.x,
-        az: a.z,
-        dx: (b.x - a.x) / len,
-        dz: (b.z - a.z) / len,
-        len,
-        s0: length,
-        aabb: { minX: Math.min(a.x, b.x), maxX: Math.max(a.x, b.x), minZ: Math.min(a.z, b.z), maxZ: Math.max(a.z, b.z) },
-      });
-      length += len;
-    }
-    if (r.startTaper >= length) throw new Error(`${where}: startTaper is longer than the road`);
-
-    // Centreline ground every `step` metres, the last sample exactly at the end.
-    const n = Math.max(2, Math.ceil(length / PROFILE_STEP) + 1);
-    const step = length / (n - 1);
-    const g = new Float64Array(n);
-    let seg = 0;
-    for (let i = 0; i < n; i++) {
-      const s = i * step;
-      while (seg < segments.length - 1 && s > segments[seg].s0 + segments[seg].len) seg++;
-      const sg = segments[seg];
-      const t = Math.min(Math.max(s - sg.s0, 0), sg.len);
-      g[i] = ground(sg.ax + sg.dx * t, sg.az + sg.dz * t);
-    }
-    const start = g[0];
-    const end = g[n - 1];
-    const grade = r.maxGrade;
-    if (Math.abs(end - start) > grade * length + 1e-9) {
-      throw new Error(`${where}: the ends differ by ${Math.abs(end - start).toFixed(1)} m, more than maxGrade allows`);
-    }
-    // Pinned ends, then one forward clamp: within the cones from both ends, every step within the grade.
-    const heights = new Float64Array(n);
-    for (let i = 0; i < n; i++) {
-      const s = i * step;
-      const lo = Math.max(start - grade * s, end - grade * (length - s));
-      const hi = Math.min(start + grade * s, end + grade * (length - s));
-      let h = Math.min(Math.max(g[i], lo), hi);
-      if (i > 0) h = Math.min(Math.max(h, heights[i - 1] - grade * step), heights[i - 1] + grade * step);
-      heights[i] = h;
-    }
-    heights[0] = start;
-    heights[n - 1] = end;
-    // Blend width per sample: the worst cut or fill at the centre, both road edges and both outer blend edges,
-    // over the side slope, times 1.5 (the smoothstep's peak slope). Measured twice, the second time at the widened
-    // edge, so a hillside rising beside the road counts. Capped at MAX_ROAD_BLEND.
-    const blends = new Float64Array(n);
-    let maxBlend = r.blend;
-    seg = 0;
-    for (let i = 0; i < n; i++) {
-      const s = i * step;
-      while (seg < segments.length - 1 && s > segments[seg].s0 + segments[seg].len) seg++;
-      const sg = segments[seg];
-      const t = Math.min(Math.max(s - sg.s0, 0), sg.len);
-      const cx = sg.ax + sg.dx * t;
-      const cz = sg.az + sg.dz * t;
-      let cut = Math.abs(heights[i] - g[i]);
-      for (const off of [r.halfWidth, -r.halfWidth]) cut = Math.max(cut, Math.abs(heights[i] - ground(cx + sg.dz * off, cz - sg.dx * off)));
-      let b = Math.min(MAX_ROAD_BLEND, Math.max(r.blend, (1.5 * cut) / sideSlope));
-      for (let pass = 0; pass < 2; pass++) {
-        const reachOut = r.halfWidth + b;
-        let edgeCut = cut;
-        for (const off of [reachOut, -reachOut]) edgeCut = Math.max(edgeCut, Math.abs(heights[i] - ground(cx + sg.dz * off, cz - sg.dx * off)));
-        b = Math.min(MAX_ROAD_BLEND, Math.max(b, (1.5 * edgeCut) / sideSlope));
-      }
-      blends[i] = b;
-    }
-    // Widths change slowly along the road (a running max over BLEND_WINDOW samples each way), so a narrow sample
-    // between wide ones cannot leave a steep notch at the blend edge.
-    const raw = blends.slice();
-    for (let i = 0; i < n; i++) {
-      let b = raw[i];
-      for (let k = Math.max(0, i - BLEND_WINDOW); k <= Math.min(n - 1, i + BLEND_WINDOW); k++) b = Math.max(b, raw[k]);
-      blends[i] = b;
-      maxBlend = Math.max(maxBlend, b);
-    }
-    // Hairpins: two non-neighbouring segments whose blends overlap would give one point two arc positions (a cliff).
-    const reachAll = r.halfWidth + maxBlend;
-    for (let i = 0; i < segments.length; i++) {
-      for (let j = i + 2; j < segments.length; j++) {
-        const gap = segmentGap(segments[i], segments[j]);
-        if (gap < 2 * reachAll) {
-          throw new Error(`${where}: segments ${i} and ${j} are ${gap.toFixed(1)} m apart, closer than twice the road's reach (${reachAll.toFixed(0)} m)`);
-        }
-      }
-    }
-    const reach = r.halfWidth + maxBlend;
-    for (const sg of segments) sg.aabb = expand(sg.aabb, reach);
-    const aabb = segments.reduce<ShapeBox>(
-      (acc, sg) => ({
-        minX: Math.min(acc.minX, sg.aabb.minX),
-        maxX: Math.max(acc.maxX, sg.aabb.maxX),
-        minZ: Math.min(acc.minZ, sg.aabb.minZ),
-        maxZ: Math.max(acc.maxZ, sg.aabb.maxZ),
-      }),
-      { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity },
-    );
-    roads.set(r.id, { def: r, segments, length, heights, blends, step, aabb });
-  }
-
   /** Arc position and distance of (x, z) on a road, blended across bend bisectors; null outside its reach. */
   const locate = (road: BuiltRoad, x: number, z: number): { s: number; d: number } | null => {
     let d1 = Infinity;
@@ -429,6 +304,146 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
     return taper * (1 - smoothstep(hw, hw + blend, d));
   };
 
+  /** Lays every road in `list` over `h` at (x, z), in order. */
+  const applyRoads = (list: Iterable<BuiltRoad>, x: number, z: number, h: number): number => {
+    for (const road of list) {
+      if (!inBox(road.aabb, x, z)) continue;
+      const at = locate(road, x, z);
+      if (!at) continue;
+      const w = roadWeight(road, at.s, at.d);
+      if (w > 0) h += (sample(road.heights, road.step, road.length, at.s) - h) * w;
+    }
+    return h;
+  };
+
+  // ---- roads
+  const roads = new Map<string, BuiltRoad>();
+  // A road is fitted on the ground with every earlier road already laid, so a branch listed after its trunk starts at
+  // the trunk's surface (v0.6, A1): the first road (the Dead Road) sees exactly the ground it always did.
+  const roadGround = (x: number, z: number): number => applyRoads(roads.values(), x, z, ground(x, z));
+  for (const r of shape.roads) {
+    const where = `terrain shape: road "${r.id}"`;
+    claimId('road', r.id);
+    if (!Array.isArray(r.points) || r.points.length < 2) throw new Error(`${where}: needs at least 2 points`);
+    if (!finite(r.halfWidth, r.blend, r.maxGrade, r.startTaper) || r.halfWidth <= 0 || r.blend <= 0) {
+      throw new Error(`${where}: halfWidth and blend must be > 0`);
+    }
+    if (r.maxGrade <= 0 || r.maxGrade >= 1) throw new Error(`${where}: maxGrade must be in (0, 1)`);
+    if (r.startTaper < 0) throw new Error(`${where}: startTaper must be >= 0`);
+    const sideSlope = r.maxSideSlope ?? DEFAULT_MAX_SIDE_SLOPE;
+    if (!Number.isFinite(sideSlope) || sideSlope <= 0) throw new Error(`${where}: maxSideSlope must be > 0`);
+    for (const p of r.points) {
+      if (!p || !finite(p.x, p.z)) throw new Error(`${where}: points must be finite`);
+      if (bounds && !inBox(bounds, p.x, p.z)) throw new Error(`${where}: point (${p.x}, ${p.z}) outside the world bounds`);
+    }
+
+    const segments: Segment[] = [];
+    let length = 0;
+    for (let i = 0; i < r.points.length - 1; i++) {
+      const a = r.points[i];
+      const b = r.points[i + 1];
+      const len = Math.hypot(b.x - a.x, b.z - a.z);
+      if (!(len > 1e-6)) throw new Error(`${where}: segment ${i} has zero length`);
+      segments.push({
+        ax: a.x,
+        az: a.z,
+        dx: (b.x - a.x) / len,
+        dz: (b.z - a.z) / len,
+        len,
+        s0: length,
+        aabb: { minX: Math.min(a.x, b.x), maxX: Math.max(a.x, b.x), minZ: Math.min(a.z, b.z), maxZ: Math.max(a.z, b.z) },
+      });
+      length += len;
+    }
+    if (r.startTaper >= length) throw new Error(`${where}: startTaper is longer than the road`);
+
+    // Centreline ground every `step` metres, the last sample exactly at the end.
+    const n = Math.max(2, Math.ceil(length / PROFILE_STEP) + 1);
+    const step = length / (n - 1);
+    const g = new Float64Array(n);
+    let seg = 0;
+    for (let i = 0; i < n; i++) {
+      const s = i * step;
+      while (seg < segments.length - 1 && s > segments[seg].s0 + segments[seg].len) seg++;
+      const sg = segments[seg];
+      const t = Math.min(Math.max(s - sg.s0, 0), sg.len);
+      g[i] = roadGround(sg.ax + sg.dx * t, sg.az + sg.dz * t);
+    }
+    const start = g[0];
+    const end = g[n - 1];
+    const grade = r.maxGrade;
+    if (Math.abs(end - start) > grade * length + 1e-9) {
+      throw new Error(`${where}: the ends differ by ${Math.abs(end - start).toFixed(1)} m, more than maxGrade allows`);
+    }
+    // Pinned ends, then one forward clamp: within the cones from both ends, every step within the grade.
+    const heights = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const s = i * step;
+      const lo = Math.max(start - grade * s, end - grade * (length - s));
+      const hi = Math.min(start + grade * s, end + grade * (length - s));
+      let h = Math.min(Math.max(g[i], lo), hi);
+      if (i > 0) h = Math.min(Math.max(h, heights[i - 1] - grade * step), heights[i - 1] + grade * step);
+      heights[i] = h;
+    }
+    heights[0] = start;
+    heights[n - 1] = end;
+    // Blend width per sample: the worst cut or fill at the centre, both road edges and both outer blend edges,
+    // over the side slope, times 1.5 (the smoothstep's peak slope). Measured twice, the second time at the widened
+    // edge, so a hillside rising beside the road counts. Capped at MAX_ROAD_BLEND.
+    const blends = new Float64Array(n);
+    let maxBlend = r.blend;
+    seg = 0;
+    for (let i = 0; i < n; i++) {
+      const s = i * step;
+      while (seg < segments.length - 1 && s > segments[seg].s0 + segments[seg].len) seg++;
+      const sg = segments[seg];
+      const t = Math.min(Math.max(s - sg.s0, 0), sg.len);
+      const cx = sg.ax + sg.dx * t;
+      const cz = sg.az + sg.dz * t;
+      let cut = Math.abs(heights[i] - g[i]);
+      for (const off of [r.halfWidth, -r.halfWidth]) cut = Math.max(cut, Math.abs(heights[i] - roadGround(cx + sg.dz * off, cz - sg.dx * off)));
+      let b = Math.min(MAX_ROAD_BLEND, Math.max(r.blend, (1.5 * cut) / sideSlope));
+      for (let pass = 0; pass < 2; pass++) {
+        const reachOut = r.halfWidth + b;
+        let edgeCut = cut;
+        for (const off of [reachOut, -reachOut]) edgeCut = Math.max(edgeCut, Math.abs(heights[i] - roadGround(cx + sg.dz * off, cz - sg.dx * off)));
+        b = Math.min(MAX_ROAD_BLEND, Math.max(b, (1.5 * edgeCut) / sideSlope));
+      }
+      blends[i] = b;
+    }
+    // Widths change slowly along the road (a running max over BLEND_WINDOW samples each way), so a narrow sample
+    // between wide ones cannot leave a steep notch at the blend edge.
+    const raw = blends.slice();
+    for (let i = 0; i < n; i++) {
+      let b = raw[i];
+      for (let k = Math.max(0, i - BLEND_WINDOW); k <= Math.min(n - 1, i + BLEND_WINDOW); k++) b = Math.max(b, raw[k]);
+      blends[i] = b;
+      maxBlend = Math.max(maxBlend, b);
+    }
+    // Hairpins: two non-neighbouring segments whose blends overlap would give one point two arc positions (a cliff).
+    const reachAll = r.halfWidth + maxBlend;
+    for (let i = 0; i < segments.length; i++) {
+      for (let j = i + 2; j < segments.length; j++) {
+        const gap = segmentGap(segments[i], segments[j]);
+        if (gap < 2 * reachAll) {
+          throw new Error(`${where}: segments ${i} and ${j} are ${gap.toFixed(1)} m apart, closer than twice the road's reach (${reachAll.toFixed(0)} m)`);
+        }
+      }
+    }
+    const reach = r.halfWidth + maxBlend;
+    for (const sg of segments) sg.aabb = expand(sg.aabb, reach);
+    const aabb = segments.reduce<ShapeBox>(
+      (acc, sg) => ({
+        minX: Math.min(acc.minX, sg.aabb.minX),
+        maxX: Math.max(acc.maxX, sg.aabb.maxX),
+        minZ: Math.min(acc.minZ, sg.aabb.minZ),
+        maxZ: Math.max(acc.maxZ, sg.aabb.maxZ),
+      }),
+      { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity },
+    );
+    roads.set(r.id, { def: r, segments, length, heights, blends, step, aabb });
+  }
+
   const builtRoads = [...roads.values()];
   // The protected box may be touched only by a road's taper, with weight exactly 0.
   if (protectedBox) {
@@ -457,16 +472,7 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
   return {
     ridgeScale,
     heightAt(x, z) {
-      let h = suppressed(x, z);
-      h = plateaued(x, z, h);
-      for (const road of builtRoads) {
-        if (!inBox(road.aabb, x, z)) continue;
-        const at = locate(road, x, z);
-        if (!at) continue;
-        const w = roadWeight(road, at.s, at.d);
-        if (w > 0) h += (sample(road.heights, road.step, road.length, at.s) - h) * w;
-      }
-      return h;
+      return applyRoads(builtRoads, x, z, plateaued(x, z, suppressed(x, z)));
     },
     roadProfile(id, s) {
       const road = roads.get(id);

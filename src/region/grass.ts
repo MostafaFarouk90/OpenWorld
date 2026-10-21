@@ -3,6 +3,7 @@
 // cell. Built-in Lambert material, no custom shader, so nothing here can fail to compile on a weaker GPU.
 import * as THREE from 'three';
 import { surfaceColor } from '../terrain/chunkGeometry';
+import { grassRule } from '../terrain/ground';
 
 export const GRASS = {
   /** Side of one scatter cell (m). */
@@ -51,10 +52,18 @@ export interface Tuft {
 /** Blades are a little lighter than the ground they grow from, by 1 + this * (0.5 + tone). */
 export const GRASS_LIFT = 0.35;
 
-/** The colour of a tuft standing on ground of this height and steepness: the terrain's colour, lifted by `tone`. */
-export function tuftColor(height: number, up: number, tone: number): [number, number, number] {
+/**
+ * The colour of a tuft standing on ground of this height and steepness: the terrain's colour, lifted by `tone`. Given
+ * (x, z), an Act 2 ground rule there (terrain/ground.ts) swaps in its own grass colour by its weight: Cinderreach's
+ * yellow, Oldsmoke's rust. Without (x, z), or where no rule reaches, the colour is Act 1's exactly.
+ */
+export function tuftColor(height: number, up: number, tone: number, x?: number, z?: number): [number, number, number] {
   const c = new Float32Array(3);
   surfaceColor(height, up, c, 0);
+  if (x !== undefined && z !== undefined) {
+    const rule = grassRule(x, z);
+    if (rule.tint) for (let i = 0; i < 3; i++) c[i] += (rule.tint[i] - c[i]) * rule.weight;
+  }
   const k = 1 + GRASS_LIFT * (0.5 + tone);
   return [Math.min(c[0] * k, 1), Math.min(c[1] * k, 1), Math.min(c[2] * k, 1)];
 }
@@ -97,12 +106,15 @@ export function cellTufts(cx: number, cz: number, heightAt: HeightFn, accept: Gr
     const scale = 0.7 + rand() * 0.6;
     const tone = rand();
     if (i >= n) continue;
+    // A thinner ground rule (Oldsmoke keeps 0.4) drops the later candidates, as `density` does.
+    const rule = grassRule(x, z);
+    if (rule.density < 1 && i >= GRASS.perCell * rule.density) continue;
     const y = heightAt(x, z);
     if (!Number.isFinite(y) || y > GRASS.maxHeight) continue;
     const up = groundUp(heightAt, x, z);
     if (up < GRASS.minUp) continue;
     if (!accept(x, z)) continue;
-    out.push({ x, y, z, rot, scale, tone, color: tuftColor(y, up, tone) });
+    out.push({ x, y, z, rot, scale, tone, color: tuftColor(y, up, tone, x, z) });
   }
   return out;
 }

@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { TERRAIN } from '../config/constants';
 import { buildChunkIndices, type ChunkData, type ChunkRequest } from './chunkGeometry';
+import { createGroundMaterial, wrapGroundTime, type GroundUniforms } from './groundShader';
 import { heightAt } from './heightfield';
 import { buildPhysicsHeightfield, type PhysicsHeightfield } from './physicsHeightfield';
 import { LodQuadtree, type QuadNode, type QuadtreeHost } from './quadtree';
@@ -31,6 +32,10 @@ export function skirtDepthFor(size: number): number {
 export class TerrainManager {
   readonly group = new THREE.Group();
   private readonly material: THREE.MeshStandardMaterial;
+  /** Act 2 chunks (those with a `ground` attribute) draw with this one; Act 1 chunks keep `material`. */
+  private readonly groundMaterial: THREE.MeshStandardMaterial;
+  private readonly groundUniforms: GroundUniforms;
+  private readonly clock = new THREE.Clock();
   private readonly indices: Uint16Array | Uint32Array;
   private readonly pool: WorkerPool;
   private readonly tree: LodQuadtree<THREE.Mesh>;
@@ -41,11 +46,11 @@ export class TerrainManager {
   constructor(scene: THREE.Scene, workerFactory?: WorkerFactory) {
     this.group.name = 'terrain';
     scene.add(this.group);
-    this.material = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 0.95,
-      metalness: 0,
-    });
+    const params: THREE.MeshStandardMaterialParameters = { vertexColors: true, roughness: 0.95, metalness: 0 };
+    this.material = new THREE.MeshStandardMaterial(params);
+    const ground = createGroundMaterial(params);
+    this.groundMaterial = ground.material;
+    this.groundUniforms = ground.uniforms;
     this.indices = buildChunkIndices(TERRAIN.chunkSegments);
     this.pool = new WorkerPool(TERRAIN.workerCount, workerFactory);
 
@@ -82,6 +87,7 @@ export class TerrainManager {
   /** Streams and selects chunks for the given viewpoint. Call once per rendered frame. */
   update(cameraPosition: THREE.Vector3): void {
     if (this.disposed) return;
+    this.groundUniforms.uGroundTime.value = wrapGroundTime(this.clock.getElapsedTime());
     // Dispatch after the whole frame's requests are queued, so the nearest chunks go first.
     this.pool.batch(() => this.tree.update(cameraPosition));
   }
@@ -95,6 +101,7 @@ export class TerrainManager {
     this.tree.dispose();
     this.jobs.clear();
     this.material.dispose();
+    this.groundMaterial.dispose();
     this.group.removeFromParent();
   }
 
@@ -130,6 +137,7 @@ export class TerrainManager {
     geometry.setAttribute('position', new THREE.BufferAttribute(data.positions, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(data.normals, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(data.colors, 3));
+    if (data.ground) geometry.setAttribute('ground', new THREE.BufferAttribute(data.ground, 2));
     // Shared CPU index array; each geometry gets its own attribute so disposal stays independent.
     geometry.setIndex(new THREE.BufferAttribute(this.indices, 1));
 
@@ -141,7 +149,7 @@ export class TerrainManager {
     );
     geometry.boundingSphere = geometry.boundingBox.getBoundingSphere(new THREE.Sphere());
 
-    const mesh = new THREE.Mesh(geometry, this.material);
+    const mesh = new THREE.Mesh(geometry, data.ground ? this.groundMaterial : this.material);
     mesh.name = `terrain-chunk-${node.size}@${node.centerX},${node.centerZ}`;
     mesh.position.set(node.centerX, 0, node.centerZ);
     mesh.receiveShadow = true;
