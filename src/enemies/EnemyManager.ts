@@ -637,7 +637,8 @@ export class EnemyManager {
       this.host.warn(`enemies: ${boss.bossId} calmed but ${option.itemId} could not be taken`);
     }
     if (option?.kind === 'warmHand') this.chargeShard(WARM_HAND_BURN, 'warmHand');
-    else if (!calm) this.chargeShard(table.burn, 'release');
+    // A Spare (v0.6) costs no Burn and must not touch the shard at all: `useShard(0)` still scars a player in the cinder zone.
+    else if (table.verb === 'release') this.chargeShard(table.burn, 'release');
     const bossEvent: MercyEventLike = {
       verb: option?.kind === 'warmHand' ? 'warmHand' : table.verb,
       tier: 'boss',

@@ -1,3 +1,4 @@
+import { BOSS_MERCY } from '../enemies/tuning';
 import type { DocumentLike, ElementLike } from './dom';
 import { defaultHudT } from './strings.en';
 import { barFraction } from './StatusBars';
@@ -173,7 +174,7 @@ export class BossBar implements HudWidgetView {
       this.pips.replaceChildren();
       for (let i = 0; i < per; i++) makeEl(this.doc, 'div', i < on ? 'owg-boss-pip owg-boss-pip-on' : 'owg-boss-pip', this.pips);
     }
-    this.flag.textContent = s.releaseOpen ? this.t('hud.boss.release') : s.shield ? this.t('hud.boss.shield') : null;
+    this.flag.textContent = s.releaseOpen ? this.t(BOSS_MERCY[s.bossId]?.verb === 'spare' ? 'hud.boss.spare' : 'hud.boss.release') : s.shield ? this.t('hud.boss.shield') : null;
   }
 
   private setVisible(v: boolean): void {

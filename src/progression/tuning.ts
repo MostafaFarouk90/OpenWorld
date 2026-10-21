@@ -18,6 +18,8 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'ashen-prior': 200,
   // Gaffer Grimtooth, D02 (thread 3b, as the D01 row: plans/slice-2-grimtooth.md section 11).
   'gaffer-grimtooth': 260,
+  // Hunt-Captain Thrandil Redmane, D03 (Act 2, A8; a reading, A16's headless run retunes).
+  'thrandil-redmane': 300,
   // Thread 5's kinds: R01 and the toll post pay through their quests; hounds and cutpurses are phase B.
   'ash-scarecrow': 0,
   'toll-post': 0,
