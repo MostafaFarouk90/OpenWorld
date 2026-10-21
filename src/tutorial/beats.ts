@@ -120,7 +120,7 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
     npcs: { gaut: 'tutorial.gaut.square' },
     prompts: [prompt('block')],
     waves: [[{ spawnerId: 't09.soldier', moves: ['soldier.chop'], aggro: true }]],
-    steps: [[{ kind: 'count', event: 'blocked', count: 3 }], [{ kind: 'cleared', spawnerIds: ['t09.soldier'] }]],
+    steps: [[{ kind: 'count', event: 'blocked', count: 2 }], [{ kind: 'cleared', spawnerIds: ['t09.soldier'] }]],
     lines: ['tutorial.line.t09.1'],
   },
   t10: {
@@ -130,7 +130,7 @@ export const BEATS: Readonly<Record<BeatId, BeatDef>> = {
     npcs: { gaut: 'tutorial.gaut.square' },
     prompts: [prompt('dodge')],
     waves: [[{ spawnerId: 't10.sweeper', moves: ['wraith.sweep'], aggro: true }]],
-    steps: [[{ kind: 'count', event: 'dodged', count: 3 }], [{ kind: 'cleared', spawnerIds: ['t10.sweeper'] }]],
+    steps: [[{ kind: 'count', event: 'dodged', count: 2 }], [{ kind: 'cleared', spawnerIds: ['t10.sweeper'] }]],
     lines: ['tutorial.line.t10.1'],
   },
   t11: {

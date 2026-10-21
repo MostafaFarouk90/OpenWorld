@@ -217,16 +217,59 @@ describe('ThirdPersonCamera collision', () => {
     expect(distFromTarget(camera)).toBeCloseTo(3 - CAMERA.collisionMargin, 6);
   });
 
-  it('never goes closer than 0.3 for a tiny hit distance', () => {
+  it('never goes closer than the clear distance for a tiny hit distance, so it stays out of the player', () => {
     const { cam, camera } = setup(0.05);
     cam.update(feet);
-    expect(distFromTarget(camera)).toBeCloseTo(0.3, 6);
+    expect(distFromTarget(camera)).toBeCloseTo(CAMERA.minClearDistance, 6);
   });
 
-  it('never goes closer than 0.3 for a zero hit distance', () => {
+  it('never goes closer than the clear distance for a zero hit distance', () => {
     const { cam, camera } = setup(0);
     cam.update(feet);
-    expect(distFromTarget(camera)).toBeCloseTo(0.3, 6);
+    expect(distFromTarget(camera)).toBeCloseTo(CAMERA.minClearDistance, 6);
+  });
+
+  it('is pulled in in front of a character standing behind the player, and clear of the body', () => {
+    const { cam, camera } = setup();
+    // yaw 0, pitch -0.3: the camera sits behind (+Z) and above. A character 3.4 m behind, tall enough to meet the ray.
+    const t = targetOf(feet);
+    cam.characters = (visit) => visit(feet.x, feet.y + 1, t.z + 3.4);
+    cam.update(feet);
+    const d = distFromTarget(camera);
+    expect(d).toBeLessThan(CAMERA.distance);
+    expect(d).toBeGreaterThanOrEqual(CAMERA.minClearDistance);
+    // the camera is outside the cylinder (horizontally) or above it
+    const dx = camera.position.x - feet.x;
+    const dz = camera.position.z - (t.z + 3.4);
+    const outside = Math.hypot(dx, dz) >= CAMERA.characterRadius - 1e-6 || camera.position.y > feet.y + 1 + CAMERA.characterHeight;
+    expect(outside).toBe(true);
+  });
+
+  it('leaves a character alone when it stands too close behind the player to be pulled in front of', () => {
+    const { cam, camera } = setup();
+    const t = targetOf(feet);
+    cam.characters = (visit) => visit(feet.x, feet.y + 1, t.z + 1.0);
+    cam.update(feet);
+    expect(distFromTarget(camera)).toBeCloseTo(CAMERA.distance, 6);
+  });
+
+  it('ignores characters that are not on the camera ray or are off to the side', () => {
+    const { cam, camera } = setup();
+    const t = targetOf(feet);
+    cam.characters = (visit) => {
+      visit(feet.x + 4, feet.y, t.z + 3); // beside
+      visit(feet.x, feet.y, t.z - 3); // in front of the player, behind the camera's back
+    };
+    cam.update(feet);
+    expect(distFromTarget(camera)).toBeCloseTo(CAMERA.distance, 6);
+  });
+
+  it('ignores a character whose body already holds the orbit point (a lock-on target)', () => {
+    const { cam, camera } = setup();
+    const t = targetOf(feet);
+    cam.characters = (visit) => visit(t.x, feet.y, t.z);
+    cam.update(feet);
+    expect(distFromTarget(camera)).toBeCloseTo(CAMERA.distance, 6);
   });
 
   it('does not permanently shrink the zoom distance after a hit', () => {

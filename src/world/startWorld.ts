@@ -83,6 +83,17 @@ export async function startWorld(container: HTMLElement): Promise<void> {
   });
   // Core services exist before any plugin sets up; audio is provided while still locked.
   if (audio) game.ctx.services.provide('audio', audio);
+  {
+    const actors = game.ctx.actors;
+    // NPCs and enemies have no collider the camera ray can hit: keep it out of their bodies too.
+    followCamera.characters = (visit) => {
+      for (const a of actors.all()) {
+        // companions trail behind the player and would make the camera pop in and out
+        if (a.dead || a === actors.player || !a.root || a.team === 'ally') continue;
+        visit(a.root.position.x, a.root.position.y, a.root.position.z);
+      }
+    };
+  }
   game.ctx.services.provide('graphics', graphics);
   game.ctx.services.provide('dummies', dummies);
   {
