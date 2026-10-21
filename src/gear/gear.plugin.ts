@@ -1,3 +1,4 @@
+import type { TemperStationService } from '../shrine/temperStation';
 import type { GameContext } from '../core/Game';
 import type { GamePlugin } from '../core/plugins';
 import '../hud/events';
@@ -32,10 +33,6 @@ declare module '../core/Services' {
   }
 }
 
-/** A9's `temperStation` (plans/act2-A9.md item 5), typed here so this plugin loads without it. */
-interface SoftTemperStation {
-  setHandler(fn: (stationId: string, opts: { firstTemperOfTier: boolean }) => void): () => void;
-}
 interface SoftQuests {
   state?(id: string): string;
 }
@@ -176,7 +173,7 @@ const gearPlugin: GamePlugin = {
     let offSaddle: (() => void) | null = null;
     let placed = false;
     const link = (): void => {
-      const station = soft<SoftTemperStation>('temperStation');
+      const station = soft<TemperStationService>('temperStation');
       if (station && !offHandler) {
         offHandler = station.setHandler((id) => {
           if (id === 'hushed-anvil') openScreen('anvil');
