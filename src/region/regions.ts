@@ -29,7 +29,7 @@ export interface RegionDef {
   /** Map-space box (min inclusive, max exclusive). */
   box: MapBox;
   levelBand: { min: number; max: number };
-  /** Music track id (a reserved id plays the previous regional track until it is built; music-states.md 8). */
+  /** Music track id (an id with no registered track keeps the previous regional track; music-states.md 8). */
   track: string;
   /** Ambience bed id, or null for none yet. */
   bed: RegionBedId | null;
