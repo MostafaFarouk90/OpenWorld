@@ -46,6 +46,8 @@ export const ACT_ENDING_MAX_LINES = 12;
 export const endingOptions: { recap?: () => readonly string[] } = {};
 
 export interface ActEndingSource {
+  /** HUD widget id; two cards (Act 1 and Act 2) are mounted, so each needs its own. Default `act-ending-card`. */
+  widgetId?: string;
   /** Which act's ending this card shows (v0.6, integration/actEndings.ts); default Act 1's. */
   ending?: { act: number; endingId: string; titleKey?: string };
   t?: Translate;
@@ -65,7 +67,7 @@ export interface ActEndingSource {
 
 /** "Smoke Over Harrowmark" mini-ending card (center). No auto-dismiss: a fresh key or a click closes it. */
 export class ActEndingCard implements HudWidgetView {
-  readonly id = 'act-ending-card';
+  readonly id: string;
   readonly element;
   private readonly t: Translate;
   private readonly body: ElementLike;
@@ -83,6 +85,7 @@ export class ActEndingCard implements HudWidgetView {
   private readonly ending: { act: number; endingId: string; titleKey?: string };
 
   constructor(private readonly doc: DocumentLike, private readonly source: ActEndingSource = {}) {
+    this.id = source.widgetId ?? 'act-ending-card';
     this.t = source.t ?? defaultHudT;
     this.ending = source.ending ?? { act: 1, endingId: ACT_ENDING_ID };
     this.element = makeEl(doc, 'div', 'owg-card owg-ending');

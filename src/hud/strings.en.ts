@@ -61,6 +61,13 @@ export const HUD_STRINGS_EN: Readonly<Record<string, string>> = {
   'hud.bolts.label': 'Crossbow bolts',
   'hud.gold.label': 'Gold',
   'hud.ending.title': 'Smoke Over Harrowmark',
+  'hud.ending.a2.title': 'The Houses Stand',
+  'hud.ending.a2.line.1': 'Houses Halvard and Oswin have pledged themselves to the Council.',
+  'hud.ending.a2.line.2': 'The Silver Fountain in Harrowmark runs again.',
+  'hud.ending.a2.line.3': 'The closed market stalls open their shutters.',
+  'hud.ending.a2.line.4': 'Wenna Grisel has joined your camp.',
+  'hud.ending.a2.line.5': 'A second companion may now ride beside you.',
+  'hud.pressure.label': 'The Bellows hold for {seconds} s',
   'hud.ending.hint': 'Press any key to continue',
 };
 
