@@ -78,6 +78,11 @@ export const CAMERA = {
   mouseSensitivity: 0.0025,
   /** Gap kept between the camera and any collider it would otherwise clip into. */
   collisionMargin: 0.2,
+  /** The camera never comes closer than this to its orbit point, so a wall at the player's back cannot put it inside the body (player capsule radius 0.35). */
+  minClearDistance: 1.3,
+  /** Other characters (NPCs, enemies) block the camera as upright cylinders this wide and tall. */
+  characterRadius: 0.55,
+  characterHeight: 2.1,
 } as const;
 
 /** KayKit Knight avatar and animation blending (game-feel defaults, measured from Knight.glb where noted). */

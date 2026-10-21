@@ -61,6 +61,11 @@ export class ThirdPersonCamera {
   mountDistance = 0;
   /** Receives the frame's horizontal mouse delta in pixels while locked (feeds the lock-on swap gesture). */
   onLockLook: ((dx: number) => void) | null = null;
+  /**
+   * Calls `visit` with the feet of every character the camera must not enter (NPCs, enemies; not the player, whose
+   * collider the raycast ignores). Set by the world; null leaves only the physics raycast.
+   */
+  characters: ((visit: (x: number, y: number, z: number) => void) => void) | null = null;
   private distance: number = CAMERA.distance;
   private readonly target = new THREE.Vector3();
   private readonly offset = new THREE.Vector3();
@@ -260,12 +265,47 @@ export class ThirdPersonCamera {
 
     let dist = this.distance + this.mountDistance;
     const hit = this.physics.raycast(this.target, this.offset, dist + CAMERA.collisionMargin, this.ignore);
-    if (hit) dist = Math.max(hit.distance - CAMERA.collisionMargin, 0.3);
+    if (hit) dist = hit.distance - CAMERA.collisionMargin;
+    if (this.characters) dist = Math.min(dist, this.characterClearance(dist));
+    // Never inside the player: a wall right behind them is clipped instead.
+    dist = Math.max(dist, Math.min(CAMERA.minClearDistance, this.distance + this.mountDistance));
 
     this.followPos.copy(this.target).addScaledVector(this.offset, dist);
     this.camera.position.copy(this.followPos);
     this.camera.lookAt(this.target);
     this.applyBlend(frameTime);
+  }
+
+  /** The distance along the camera ray (from `target` along `offset`) to the first character cylinder, less a margin; `max` if none. */
+  private characterClearance(max: number): number {
+    const r = CAMERA.characterRadius;
+    const ox = this.target.x;
+    const oy = this.target.y;
+    const oz = this.target.z;
+    const dx = this.offset.x;
+    const dy = this.offset.y;
+    const dz = this.offset.z;
+    const a = dx * dx + dz * dz;
+    let best = max;
+    this.characters?.((fx, fy, fz) => {
+      const px = ox - fx;
+      const pz = oz - fz;
+      if (px * px + pz * pz < r * r) return; // the orbit point is already inside it (a lock-on target): nothing to pull in from
+      if (a < 1e-9) return; // looking straight down or up
+      const b = px * dx + pz * dz;
+      const c = px * px + pz * pz - r * r;
+      const disc = b * b - a * c;
+      if (disc < 0) return;
+      const t = (-b - Math.sqrt(disc)) / a;
+      if (t <= 0 || t >= best + CAMERA.collisionMargin) return;
+      const y = oy + dy * t;
+      if (y < fy - 0.1 || y > fy + CAMERA.characterHeight) return;
+      // Too close to be pulled in front of: the minimum clear distance would put the camera inside it anyway, so a character
+      // standing right behind the player is left alone (the camera then sits behind it, outside its body).
+      if (t - CAMERA.collisionMargin < CAMERA.minClearDistance) return;
+      best = Math.min(best, t - CAMERA.collisionMargin);
+    });
+    return best;
   }
 
   /** Eases yaw toward the target bearing (shortest arc, never overshooting) and pitch toward the lock pitch. */
