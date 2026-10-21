@@ -18,8 +18,8 @@ describe('v0.5 class ids, mercy unlock flags and world bounds', () => {
     expect(MERCY_UNLOCK_FLAGS).toEqual({ release: 'enemies.mercy.release', spare: 'enemies.mercy.spare', calm: 'enemies.mercy.calm' });
   });
 
-  it('the world bounds hold Brightwater and the whole Harrowmark region box', () => {
-    expect(WORLD_BOUNDS).toEqual({ minX: -2000, maxX: 10500, minZ: -2000, maxZ: 4500 });
+  it('the world bounds hold the whole design map (v0.6; the v0.5 minimums unchanged)', () => {
+    expect(WORLD_BOUNDS).toEqual({ minX: -2000, maxX: 23000, minZ: -2000, maxZ: 17000 });
   });
 });
 

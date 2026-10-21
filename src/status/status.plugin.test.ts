@@ -180,6 +180,21 @@ describe('status plugin', () => {
       expect(t.game.moveModifiers.size).toBe(0);
     });
 
+    it('v0.6 root: speed 0, movement keys and actions free; the longer of two roots wins; lifts on expiry', async () => {
+      const t = await boot();
+      const state = () => t.game.moveModifiers.state();
+      t.status.apply('player', { id: 'root.a', kind: 'root', seconds: 1, sourceId: null });
+      t.status.apply('player', { id: 'root.b', kind: 'root', seconds: 2, sourceId: null });
+      expect(t.status.has('player', 'root')).toBe(true);
+      expect(state()).toMatchObject({ speedScale: 0, lockMove: false });
+      for (const a of ['attack1', 'dodge', 'mercy'] as const) expect(t.game.moveModifiers.isActionLocked(a)).toBe(false);
+      t.run(1.2);
+      expect(state().speedScale).toBe(0);
+      t.run(1);
+      expect(state().speedScale).toBe(1);
+      expect(t.game.moveModifiers.size).toBe(0);
+    });
+
     it('dying clears the player status and the modifier', async () => {
       const t = await boot();
       t.status.apply('player', { id: 'stun', kind: 'stun', seconds: 30, sourceId: null });

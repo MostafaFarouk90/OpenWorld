@@ -73,6 +73,8 @@ export interface EnemiesService {
  * Every live enemy: spawning through the spawners, the four systems' per-tick work, the bus
  * listeners, the damage modifier, attack tokens, pack alerts, mercy and dormancy.
  */
+const PULL_TMP = new THREE.Vector3();
+
 export class EnemyManager {
   readonly spawners: SpawnerRegistry;
   private readonly enemies = new Map<ActorId, Enemy>();
@@ -364,6 +366,10 @@ export class EnemyManager {
   // ---- mercy -------------------------------------------------------------------------------------
 
   /** The player or an ally (the core's mercy-revoke test). */
+  private playerTeam(actorId: ActorId | null): boolean {
+    return !!actorId && this.host.actors.get(actorId)?.team === 'player';
+  }
+
   private playerSide(actorId: ActorId | null): boolean {
     if (!actorId) return false;
     const team = this.host.actors.get(actorId)?.team;
@@ -692,7 +698,8 @@ export class EnemyManager {
     on('damage.dealt', (r) => {
       const target = this.enemies.get(r.targetId);
       // The core revokes a mercy on this same test (core.plugin.ts); Calm closes on it too, status ticks included.
-      if (target && r.outcome === 'hit' && r.kind !== 'script' && this.playerSide(r.attackerId)) target.markStruck();
+      // v0.6: the player only; an ally's hit never closes Calm (actors-and-damage.md section 11).
+      if (target && r.outcome === 'hit' && r.kind !== 'script' && this.playerTeam(r.attackerId)) target.markStruck();
       // A status tick (bleed, ignite) never flinches, alerts or provokes (actors-and-damage.md section 10).
       if (r.kind === 'status') return;
       if (target) target.damaged(r.attackerId, r.outcome, r.poiseDealt, r.staggered, r.killed, r.kind);
@@ -708,6 +715,11 @@ export class EnemyManager {
       if (p.attackerId) this.enemies.get(p.attackerId)?.playerDodged();
     });
     on('actor.staggered', (p) => this.enemies.get(p.actorId)?.staggered(p.byId));
+    on('actor.pulled', (p) => {
+      const enemy = this.enemies.get(p.actorId);
+      const from = enemy ? this.host.actors.get(p.fromId) : undefined;
+      if (enemy && from) enemy.pulledToward(from.worldPosition(PULL_TMP), p.distance);
+    });
     on('actor.died', (p) => {
       const dying = this.enemies.get(p.actorId);
       if (dying) this.tally.killed(dying.def.kind);

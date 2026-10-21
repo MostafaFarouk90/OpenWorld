@@ -7,6 +7,7 @@ import { SafeTeleport } from './SafeTeleport';
 import { WAYSTONE_STRINGS_EN } from './strings.en';
 import '../save/service';
 import './service';
+import '../region/containment';
 import { showToast } from './toast';
 import { WAYSTONE_LOCKS, WAYSTONE_TUNING } from './tuning';
 import type { WaystoneService } from './service';
@@ -41,6 +42,8 @@ const waystones: GamePlugin = {
       chunksResident: (f) => ctx.terrain.isResident(f.x, f.z, 60),
       fade: (o, s) => void ctx.hud.fade(o, s),
       heightAt,
+      // Looked up per call: the region plugin provides it, and may set up after this one.
+      contain: (x, z) => ctx.services.get('containment')?.nearestOpen(x, z) ?? { x, z },
     });
 
     let pendingSave: 'waystone' | 'rest' | null = null;

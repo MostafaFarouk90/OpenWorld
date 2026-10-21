@@ -32,9 +32,13 @@ export interface ActorLike {
   root: THREE.Object3D | null;
   readonly spawnTag?: string;
   data: Record<string, unknown>;
+  /** v0.6 (actors/Actor.ts `MercyState`): set by Enemy for the ally-hit rules. */
+  mercyState?: () => MercyStateLike;
   worldPosition(out: THREE.Vector3): THREE.Vector3;
   restorePoise(n?: number): void;
 }
+
+export type MercyStateLike = 'none' | 'yielding' | 'staggered' | 'calming' | 'releasing' | 'leaving';
 
 export interface ActorInitLike {
   kind: string;
@@ -119,6 +123,8 @@ export interface MercyEventLike {
 export interface EnemyEvents {
   'damage.dealt': DamageResultLike;
   'actor.staggered': { actorId: ActorId; byId: ActorId | null };
+  /** v0.6: a hit with `pull` landed. */
+  'actor.pulled': { actorId: ActorId; fromId: ActorId; distance: number };
   'actor.died': { actorId: ActorId; killerId: ActorId | null; kind: string; team: Team; level: number };
   'actor.despawned': { actorId: ActorId };
   'actor.revived': { actorId: ActorId; reason: string; health: number };
@@ -315,7 +321,7 @@ export interface StatusPort {
     actorId: ActorId,
     spec: {
       id: string;
-      kind: 'bleed' | 'ignite' | 'stun' | 'slow';
+      kind: 'bleed' | 'ignite' | 'stun' | 'slow' | 'root';
       dps?: number;
       seconds: number;
       sourceId: ActorId | null;
@@ -347,7 +353,7 @@ export interface ShardSpells {
 
 /** The slice of the core BossRegistry the mercy hold uses. */
 export interface BossesPort {
-  state(bossId: string): { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | null } | null;
+  state(bossId: string): { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | 'spared' | null } | null;
   release(bossId: string): boolean;
   /** Ids of the registered bosses (the core registry has it); lets the enemies tell a boss actor from a plain enemy. */
   active?(): string[];

@@ -274,4 +274,41 @@ describe('ActEndingCard', () => {
     card.dispose();
     expect(k.set.size).toBe(0);
   });
+
+  describe('another act (v0.6 table rows)', () => {
+    const A2 = { act: 2, endingId: 'the-houses-stand', titleKey: 'hud.ending.a2.title' };
+    function makeA2() {
+      const flags: Record<string, boolean> = {};
+      const card = new ActEndingCard(new StubDocument(), {
+        ending: A2,
+        t: (x) => x,
+        seen: () => !!flags['codex.actEnding.a2.seen'],
+        markSeen: () => void (flags['codex.actEnding.a2.seen'] = true),
+      });
+      return { card, flags };
+    }
+    it('shows on its own act.ended, once, with its title', () => {
+      const { card, flags } = makeA2();
+      card.onActEnded({ act: 2, endingId: 'the-houses-stand' });
+      expect(card.visible).toBe(true);
+      expect(textOf(card.element)).toContain('hud.ending.a2.title');
+      expect(flags['codex.actEnding.a2.seen']).toBe(true);
+      card.dismiss();
+      card.onActEnded({ act: 2, endingId: 'the-houses-stand' });
+      expect(card.visible).toBe(false);
+    });
+    it("ignores Act 1's ending and unknown acts", () => {
+      const { card } = makeA2();
+      card.onActEnded(END);
+      card.onActEnded({ act: 3, endingId: 'the-houses-stand' });
+      expect(card.visible).toBe(false);
+    });
+    it('the gate re-derives its own ending id', () => {
+      const closed = vi.fn();
+      const card = new ActEndingCard(new StubDocument(), { ending: A2, t: (x) => x, closed });
+      card.onGate(true);
+      card.dismiss();
+      expect(closed).toHaveBeenCalledWith('the-houses-stand');
+    });
+  });
 });

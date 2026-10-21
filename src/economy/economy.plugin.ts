@@ -84,6 +84,7 @@ const economyPlugin: GamePlugin = {
         return track ? ctx.state.favourBand(track) : null;
       },
       isOpen,
+      flag: (key) => ctx.state.getFlag(key),
       emit: (type, payload) => emit(type, payload),
       warn,
     });

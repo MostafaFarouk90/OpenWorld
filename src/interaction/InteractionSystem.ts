@@ -18,7 +18,9 @@ export type InteractKind =
   // v0.5: vendors (19), class trainers (12), stealth hide spots (18).
   | 'shop'
   | 'trainer'
-  | 'hide';
+  | 'hide'
+  // v0.6: Act 2 valve wheels (A9's puzzles, the Slagmaw's cooling valves).
+  | 'valve';
 
 export type InteractAction = 'interact' | 'mercy';
 const ACTION_LIST: readonly InteractAction[] = ['interact', 'mercy'];

@@ -26,7 +26,7 @@ export type TriggerSpec = {
   | { shape: 'box'; half: [number, number, number]; yawDeg?: number }
 );
 
-export type StructureKind =
+export type BuiltInStructureKind =
   | 'loft'
   | 'gate'
   | 'cart'
@@ -53,6 +53,39 @@ export type StructureKind =
   | 'stall'
   | 'crate'
   | 'fountain';
+
+/** The 25 built-in kinds, in the order of the union above. Registered kinds (structureKinds.ts) are not in it. */
+export const BUILT_IN_STRUCTURE_KINDS: readonly BuiltInStructureKind[] = [
+  'loft',
+  'gate',
+  'cart',
+  'fence',
+  'house',
+  'bakery',
+  'tavern',
+  'mill',
+  'well',
+  'chapel',
+  'altar',
+  'waystone',
+  'board',
+  'yard-fence',
+  'pole',
+  'rock',
+  'bridge',
+  'stair',
+  'wall',
+  'tower',
+  'stair-step',
+  'block',
+  'stall',
+  'crate',
+  'fountain',
+];
+
+/** A built-in kind or a registered one (v0.6 item 17); `(string & {})` keeps the built-ins autocompleting. */
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type StructureKind = BuiltInStructureKind | (string & {});
 
 /**
  * solid: one static box over the footprint (nobody enters).

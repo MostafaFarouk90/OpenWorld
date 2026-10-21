@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { installFarPrecision } from './farPrecision';
 
 /** Owns the WebGL renderer, scene, camera and resize handling. */
 export class Renderer {
@@ -11,6 +12,8 @@ export class Renderer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(container.clientWidth, container.clientHeight);
     this.renderer.shadowMap.enabled = true;
+    // Before any shader compiles: skinning and shadows stay precise far from the origin (Act 2, 22 km out).
+    installFarPrecision(this.renderer);
     container.appendChild(this.renderer.domElement);
 
     this.camera = new THREE.PerspectiveCamera(

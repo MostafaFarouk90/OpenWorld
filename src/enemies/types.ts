@@ -21,6 +21,13 @@ export type AiState =
 
 export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse' | 'ember-hound' | 'watch-guard' | 'guildhall-thug' | 'toll-sergeant' | 'yard-veteran';
 
+/**
+ * Act 2 kind ids (v0.6 item 14), reserved here so no other thread takes them. A6a and A6b move each id into
+ * `EnemyKind` in the same change that adds its `ENEMY_DEFS` and `TELEGRAPH_STYLE` rows (both are full records).
+ */
+export type Act2EnemyKind = 'ember-wyrm' | 'wyrmling' | 'slag-crawler' | 'cinder-golem' | 'kindling-fox' | 'hunter-spearman' | 'hunter-harpooner';
+export const ACT2_ENEMY_KINDS: readonly Act2EnemyKind[] = ['ember-wyrm', 'wyrmling', 'slag-crawler', 'cinder-golem', 'kindling-fox', 'hunter-spearman', 'hunter-harpooner'];
+
 /** The impact-sound materials of `actor.data.audio.material` ('straw' and 'wood' are the foes'). */
 export type EnemyMaterial = 'ash' | 'metal' | 'straw' | 'wood';
 
@@ -96,8 +103,15 @@ export interface MercyDef {
   when: 'staggered' | 'yielding' | 'calming';
   /** Calm: item ids that open it (thread 1 reads them; data only here). */
   offerings?: readonly { itemId: string; count: number }[];
+  /** How offerings reach the beast: held out in hand (default) or thrown. */
+  delivery?: 'held' | 'thrown';
   /** A staggered (knocked down) beast accepts the Warm Hand (thread 1's Calm). */
   warmHand?: boolean;
+}
+
+/** The offering delivery of a mercy def; `held` when unset. */
+export function offeringDelivery(def: Pick<MercyDef, 'delivery'>): 'held' | 'thrown' {
+  return def.delivery ?? 'held';
 }
 
 export interface EnemyDef {

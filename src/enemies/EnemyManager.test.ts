@@ -335,6 +335,41 @@ describe('mercy', () => {
     expect(fake.bus.of('ai.aggro').filter((a) => a.actorId === id).length).toBe(2);
   });
 
+  it('v0.6 actor.pulled: the enemy is drawn toward the source, stopping short; ignored while invulnerable', () => {
+    const s = setup({ x: 0, z: -12 });
+    const [id] = s.manager.service.spawnGroup('one');
+    const enemy = s.manager.get(id)!;
+    const startZ = enemy.feet.z;
+    s.fake.actorMap.get(id)!.invulnerable = true;
+    s.fake.bus.emit('actor.pulled', { actorId: id, fromId: 'player', distance: 4 });
+    s.fake.actorMap.get(id)!.invulnerable = false;
+    s.tick(0.4);
+    expect(Math.abs(enemy.feet.z - startZ)).toBeLessThan(0.5);
+    s.fake.bus.emit('actor.pulled', { actorId: id, fromId: 'player', distance: 4 });
+    s.tick(0.4);
+    expect(startZ - enemy.feet.z).toBeGreaterThan(3);
+    expect(startZ - enemy.feet.z).toBeLessThan(4.6);
+  });
+
+  it('v0.6 mercyState: yielding while kneeling, leaving once spared', () => {
+    const { fake, manager, id } = yieldingSoldier(true);
+    const actor = fake.actorMap.get(id)!;
+    expect(actor.mercyState?.()).toBe('yielding');
+    fake.interactables.get(mercyInteractableId(manager.get(id)!.slug))!.onInteract(fake.player);
+    expect(actor.mercyState?.()).toBe('leaving');
+  });
+
+  it('v0.6 mercyState: a staggered wraith reads staggered, then releasing in its dissolve', () => {
+    const { fake, manager, ids } = staggeredPack();
+    manager.service.setMercyUnlocked('release', true);
+    const actor = fake.actorMap.get(ids[0])!;
+    expect(actor.mercyState?.()).toBe('none');
+    fake.stagger(ids[0], 'player');
+    expect(actor.mercyState?.()).toBe('staggered');
+    fake.interactables.get(mercyInteractableId(manager.get(ids[0])!.slug))!.onInteract(fake.player);
+    expect(actor.mercyState?.()).toBe('releasing');
+  });
+
   it('a spared soldier walks off and despawns as spared (group cleared)', () => {
     const { fake, manager, id, tick } = yieldingSoldier(true);
     fake.interactables.get(mercyInteractableId(manager.get(id)!.slug))!.onInteract(fake.player);

@@ -47,7 +47,8 @@ describe('v0.5 event payloads', () => {
   it('damage kind, status fields and the mercy ledger id', () => {
     expectTypeOf<DamageRequest['kind']>().toEqualTypeOf<'melee' | 'spell' | 'fall' | 'script' | 'status'>();
     expectTypeOf<DamageRequest['statusKind']>().toEqualTypeOf<StatusKind | undefined>();
-    expectTypeOf<StatusKind>().toEqualTypeOf<'bleed' | 'ignite' | 'stun' | 'slow'>();
+    // v0.6 adds 'root' (pinned in events.v06.types.test.ts); the v0.5 kinds stay.
+    expectTypeOf<Exclude<StatusKind, 'root'>>().toEqualTypeOf<'bleed' | 'ignite' | 'stun' | 'slow'>();
     expectTypeOf<MercyEvent['ledgerId']>().toEqualTypeOf<string | undefined>();
   });
 });

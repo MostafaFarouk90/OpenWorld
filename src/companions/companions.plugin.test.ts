@@ -12,7 +12,7 @@ import questsPlugin from '../quests/quests.plugin';
 import { heightAt } from '../terrain/heightfield';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
-import companionsPlugin from './companions.plugin';
+import companionsPlugin, { COMPANIONS_PERSIST_VERSION } from './companions.plugin';
 import { TOBB } from './tobb';
 import './types';
 
@@ -573,7 +573,7 @@ describe('companions plugin: review additions', () => {
     const before = t.tobbPos()!;
     const f = t.ctx.player.feet;
     const unknown = t.ctx.persist.loadAll(
-      [{ key: 'companions', version: 2, data: { positions: { tobb: { x: f.x + 1, y: f.y, z: f.z + 1, yaw: 0 } } } }],
+      [{ key: 'companions', version: COMPANIONS_PERSIST_VERSION + 1, data: { positions: { tobb: { x: f.x + 1, y: f.y, z: f.z + 1, yaw: 0 } } } }],
       t.ctx.events,
       'slot',
     );

@@ -8,6 +8,12 @@ export interface CompanionDef {
   /** The single source of truth for "joined" (written by quest effects, or by `companions.join`). */
   joinFlag: string;
   rankFlag: string;
+  /** Party role (companions.md section 9). */
+  role: 'support' | 'tank' | 'healer';
+  /** Absent for a companion who never fights (Tobb). Fights only under actors-and-damage section 11. */
+  combat?: { damage: number; range: number; cooldown: number; aggroRadius: number };
+  /** At 0 HP the companion kneels for `kneelSeconds` and stands with some health; companions never die before M52. */
+  downed: { kneelSeconds: number };
   /** Where the pre-join NPC stands; the spawn fallback at the handover. */
   npcPost: string;
   /** The `npcs` service id of the pre-join NPC. */
@@ -33,8 +39,16 @@ export interface CompanionsService {
   join(id: string): void;
   /** Clears it (not used in slice 2). */
   leave(id: string): void;
-  /** Joined companion ids. */
+  /** Joined companions that are in the party (`isActive`), in def order. */
   active(): string[];
+  /** Party size limit: 1 while the flag `story.gate.a3` is falsy, 2 after (read live). */
+  maxActive(): number;
+  /**
+   * Sets the party. Refuses (returns false, changes nothing) on an unknown, unjoined or duplicated id, or more ids than
+   * `maxActive()`. Joining while there is room adds the companion; `companion.bond` is A5's event, not emitted here.
+   */
+  setActive(ids: readonly string[]): boolean;
+  isActive(id: string): boolean;
   actorId(id: string): ActorId | null;
   /** 0 when not joined. */
   rank(id: string): number;

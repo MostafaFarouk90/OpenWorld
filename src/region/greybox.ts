@@ -2,10 +2,11 @@
 // applies yaw. Materials are shared and flat-shaded; geometries are per mesh (the builder disposes them).
 import * as THREE from 'three';
 import { doorFillBox, wallBoxes } from './geometry';
-import type { StructureKind, StructureSpec } from './layoutTypes';
+import type { BuiltInStructureKind, StructureSpec } from './layoutTypes';
+import { structureRecipe } from './structureKinds';
 import { buildWaystoneMesh } from './waystoneMesh';
 
-export const DEFAULT_HEIGHT: Record<StructureKind, number> = {
+export const DEFAULT_HEIGHT: Record<BuiltInStructureKind, number> = {
   house: 5,
   tavern: 5,
   bakery: 5,
@@ -38,7 +39,9 @@ export const DOOR_HEIGHT = 3;
 
 export function structureHeight(spec: StructureSpec): number {
   if (spec.height !== undefined) return spec.height;
-  const h = DEFAULT_HEIGHT[spec.kind];
+  const h = Object.prototype.hasOwnProperty.call(DEFAULT_HEIGHT, spec.kind)
+    ? DEFAULT_HEIGHT[spec.kind as BuiltInStructureKind]
+    : structureRecipe(spec.kind)?.height;
   if (h === undefined) throw new Error(`greybox: unknown structure kind "${String(spec.kind)}"`);
   return h;
 }
@@ -240,7 +243,9 @@ export function buildGreybox(spec: StructureSpec): THREE.Object3D {
       g.add(cyl(Math.min(w, d) * 0.08, Math.min(w, d) * 0.08, h * 2.2, 0, 0, 0, STONE, 8));
       break;
     default:
-      throw new Error(`greybox: unknown structure kind "${String(spec.kind)}"`);
+      // A registered kind (structureKinds.ts) has no bespoke greybox: one box over the footprint at the recipe height.
+      if (!structureRecipe(spec.kind)) throw new Error(`greybox: unknown structure kind "${String(spec.kind)}"`);
+      g.add(box(w, h, d, 0, 0, 0, STONE, spec.kind));
   }
   return g;
 }

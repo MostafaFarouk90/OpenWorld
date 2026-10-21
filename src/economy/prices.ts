@@ -25,9 +25,9 @@ export function listPrice(itemId: string): number | undefined {
   return Object.prototype.hasOwnProperty.call(LIST_PRICES, itemId) ? LIST_PRICES[itemId] : undefined;
 }
 
-/** Whole gold, at least 1. Odd list prices round to nearest. */
-export function bandPrice(list: number, band: FavourBand | null): number {
-  const mult = band ? BAND_PRICE[band] : 1;
+/** Whole gold, at least 1. Odd list prices round to nearest. `discountPercent` is a flag discount off the buy price. */
+export function bandPrice(list: number, band: FavourBand | null, discountPercent = 0): number {
+  const mult = (band ? BAND_PRICE[band] : 1) * (1 - discountPercent / 100);
   return Math.max(1, Math.round(list * mult));
 }
 
