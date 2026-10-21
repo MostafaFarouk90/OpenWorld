@@ -160,4 +160,80 @@ describe('Act 2 HUD wiring (real Game)', () => {
     t.ctx.hud.update(0.016);
     t.dispose();
   });
+
+  it('Act 2 ending card: the gate shows it once, it sets its own seen flag when shown, and dismissing emits the Act 2 id', async () => {
+    const t = await setup();
+    const closed: string[] = [];
+    t.game.events.on('hud.actEnding.closed', (e) => closed.push(e.endingId));
+    expect(t.ctx.services.get('actEndingCard')!.active()).toBe(false);
+    t.ctx.state.setFlag('story.gate.a3', true);
+    expect(t.ctx.services.get('actEndingCard')!.active()).toBe(true);
+    t.ctx.hud.update(0.016);
+    expect(t.ctx.state.getBool('codex.actEnding.a2.seen')).toBe(true);
+    expect(t.ctx.state.getBool('codex.actEnding.a1.seen')).toBe(false);
+    t.ctx.services.get('actEndingCard')!.dismiss();
+    expect(closed).toEqual(['the-houses-stand']);
+    expect(t.ctx.services.get('actEndingCard')!.active()).toBe(false);
+    t.dispose();
+  });
+
+  it('Act 1 and Act 2 cards answer only their own act', async () => {
+    const t = await setup();
+    t.game.events.emit('act.ended', { act: 2, endingId: 'smoke-over-harrowmark' });
+    expect(t.ctx.services.get('actEndingCard')!.active()).toBe(false);
+    t.game.events.emit('act.ended', { act: 1, endingId: 'the-houses-stand' });
+    expect(t.ctx.services.get('actEndingCard')!.active()).toBe(false);
+    t.game.events.emit('act.ended', { act: 1, endingId: 'smoke-over-harrowmark' });
+    expect(t.ctx.services.get('actEndingCard')!.active()).toBe(true);
+    t.ctx.services.get('actEndingCard')!.dismiss();
+    t.game.events.emit('act.ended', { act: 2, endingId: 'the-houses-stand' });
+    expect(t.ctx.services.get('actEndingCard')!.active()).toBe(true);
+    t.dispose();
+  });
+
+  it('an Act 1 complete save (gate a2, legacy seen key only) shows no card of either act', async () => {
+    const t = await setup();
+    t.ctx.state.setFlag('codex.actEndingSeen', true);
+    t.ctx.state.setFlag('story.gate.a2', true);
+    t.game.events.emit('save.loaded', { slot: 'x' });
+    expect(t.ctx.services.get('actEndingCard')!.active()).toBe(false);
+    t.dispose();
+  });
+
+  it('an Act 2 save with the card seen, or the camp seen, does not replay it on load', async () => {
+    const t = await setup();
+    t.ctx.state.setFlag('codex.actEnding.a2.seen', true);
+    t.ctx.state.setFlag('story.gate.a3', true);
+    t.game.events.emit('save.loaded', { slot: 'x' });
+    expect(t.ctx.services.get('actEndingCard')!.active()).toBe(false);
+    t.dispose();
+    const u = await setup();
+    u.ctx.state.setFlag('story.a2.campSeen', true);
+    u.ctx.state.setFlag('story.gate.a3', true);
+    u.game.events.emit('save.loaded', { slot: 'x' });
+    expect(u.ctx.services.get('actEndingCard')!.active()).toBe(false);
+    u.dispose();
+  });
+
+  it('swaps in the tempering screen once the gear service exists, and only once', async () => {
+    const t = await setup();
+    const calls: unknown[] = [];
+    t.run(2);
+    expect(calls).toEqual([]);
+    (t.ctx.services as any).provide('gear', { setScreen: (f: unknown) => calls.push(f) });
+    t.run(5);
+    expect(calls).toHaveLength(1);
+    expect(typeof calls[0]).toBe('function');
+    t.dispose();
+  });
+
+  it('the pressure bar reads the puzzles service and survives puzzle events with none', async () => {
+    const t = await setup();
+    t.game.events.emit('puzzle.state', { id: 'weeping-bellows', phase: 'pressure' });
+    t.game.events.emit('puzzle.failed', { id: 'weeping-bellows' });
+    t.game.events.emit('puzzle.solved', { id: 'weeping-bellows' });
+    t.ctx.hud.update(0.016);
+    expect(t.ctx.hud.mounted('top-center')).toContain('pressure-bar');
+    t.dispose();
+  });
 });

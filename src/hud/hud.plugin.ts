@@ -13,6 +13,9 @@ import { MountStamina } from './MountStamina';
 import { NoiseRing, StealthEye } from './StealthEye';
 import { CompanionPortrait } from './CompanionPortrait';
 import { PartyScreen } from './PartyScreen';
+import { PressureBar } from './PressureBar';
+import { createTemperingScreen } from './TemperingScreen';
+import { actEnding, cardSeenFlags } from '../integration/actEndings';
 import { StructureBar } from './StructureBar';
 import { createRespecModal, type RespecModalDeps } from './RespecModal';
 import { BuffBar, type BuffInfo } from './BuffBar';
@@ -324,7 +327,55 @@ const hudPlugin: GamePlugin = {
     ctx.events.on('save.loaded', () => ending.onLoaded());
     ctx.gates.flag(ACT_ENDING_GATE_FLAG, (open) => ending.onGate(open));
     mount('center', ending, 1);
-    ctx.services.provide('actEndingCard', { active: () => ending.active, dismiss: () => ending.dismiss() });
+
+    // Act 2's "The Houses Stand" card: its own once-flag, gate and camp flag from the act-ending table (A0), its own
+    // recap lines. Act 1's card never shows for act 2 (and the reverse): each only answers its own act and ending id.
+    const row2 = actEnding(2)!;
+    const seen2 = cardSeenFlags(row2);
+    const ending2 = new ActEndingCard(doc, {
+      widgetId: 'act-ending-card-a2',
+      ending: { act: row2.act, endingId: row2.endingId, titleKey: row2.cardKey },
+      t,
+      keys: keyTarget,
+      modalOpen: () => ctx.hud.modalOpen !== null,
+      seen: () => seen2.some((f) => ctx.state.getBool(f)),
+      campSeen: () => ctx.state.getBool(row2.campSeenFlag),
+      markSeen: () => ctx.state.setFlag(row2.cardSeenFlag, true),
+      closed: (endingId) => ctx.events.emit('hud.actEnding.closed', { endingId }),
+      recap: () => [1, 2, 3, 4, 5].map((n) => t(`hud.ending.a2.line.${n}`)),
+    });
+    ctx.events.on('act.ended', (e) => ending2.onActEnded(e));
+    ctx.events.on('save.loaded', () => ending2.onLoaded());
+    ctx.gates.flag(row2.gateFlag, (open) => ending2.onGate(open));
+    mount('center', ending2, 2);
+    // One service for both cards: whichever is waiting or showing (Act 1's first when, unusually, both are pending).
+    ctx.services.provide('actEndingCard', {
+      active: () => ending.active || ending2.active,
+      dismiss: () => (ending.active ? ending.dismiss() : ending2.dismiss()),
+    });
+
+    // The Weeping Bellows' pressure countdown (A9's sim-time clock).
+    const pressureBar = new PressureBar(doc, { pressure: (id) => ctx.services.get('puzzles')?.pressure(id), t });
+    ctx.events.on('puzzle.state', (e) => pressureBar.state(e.id, e.phase));
+    ctx.events.on('puzzle.failed', (e) => pressureBar.stop(e.id));
+    ctx.events.on('puzzle.solved', (e) => pressureBar.stop(e.id));
+    ctx.events.on('save.loaded', () => pressureBar.reset());
+    mount('top-center', pressureBar, 3);
+
+    // The tempering screen replaces A10's fallback panel once the gear service exists (retried until then).
+    let screenSet = false;
+    ctx.systems.add({
+      id: 'hud.tempering.link',
+      fixedPhase: 'rules',
+      order: 461,
+      fixedUpdate() {
+        if (screenSet) return;
+        const gear = ctx.services.get('gear');
+        if (!gear) return;
+        gear.setScreen(createTemperingScreen);
+        screenSet = true;
+      },
+    });
 
     // Phase B readers: every service optional, looked up on each read (plugins may set up after this one).
     mount(

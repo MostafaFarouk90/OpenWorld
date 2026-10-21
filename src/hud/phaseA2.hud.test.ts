@@ -365,3 +365,30 @@ describe('PartyScreen', () => {
     expect(() => { screen.update(); screen.apply(); screen.toggle('q'); }).not.toThrow();
   });
 });
+
+describe('Act 2 ending card text', () => {
+  it('renders its own title and recap lines; Act 1\'s recap hook is not used', async () => {
+    const { ActEndingCard } = await import('./ActEndingCard');
+    const card = new ActEndingCard(new StubDocument(), {
+      widgetId: 'act-ending-card-a2',
+      ending: { act: 2, endingId: 'the-houses-stand', titleKey: 'hud.ending.a2.title' },
+      t,
+      recap: () => [1, 2, 3, 4, 5].map((n) => t(`hud.ending.a2.line.${n}`)),
+      seen: () => false,
+    });
+    expect(card.id).toBe('act-ending-card-a2');
+    card.onActEnded({ act: 2, endingId: 'the-houses-stand' });
+    card.update(0.016);
+    const txt = textOf(card.element);
+    expect(txt).toContain('The Houses Stand');
+    expect(txt).toContain('Silver Fountain');
+    expect(txt).toContain('Wenna Grisel');
+    expect(txt).toContain('second companion');
+    expect(txt).not.toContain('[[');
+  });
+
+  it('every Act 2 ending string key A0 and A15 name exists', () => {
+    expect(HUD_STRINGS_EN['hud.ending.a2.title']).toBe('The Houses Stand');
+    for (let n = 1; n <= 5; n++) expect(HUD_STRINGS_EN[`hud.ending.a2.line.${n}`]).toBeTruthy();
+  });
+});
