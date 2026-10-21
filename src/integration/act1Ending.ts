@@ -16,6 +16,8 @@
 export const ACT1_ENDING_ID = 'smoke-over-harrowmark';
 export const ACT1_GATE_FLAG = 'story.gate.a2';
 export const ACT1_CARD_SEEN_FLAG = 'codex.actEndingSeen';
+/** v0.6 key (integration/actEndings.ts); a legacy save loads with both, the card writes both. */
+export const ACT1_CARD_SEEN_FLAG_V06 = 'codex.actEnding.a1.seen';
 export const ACT1_CAMP_SEEN_FLAG = 'story.d02.campSeen';
 export const ACT1_CAMP_DIALOGUE = 'scene-act1-camp';
 /** The camp's npc id: never a real NPC's, so a later `talk` objective cannot be credited by the scene. */
@@ -87,7 +89,7 @@ export class Act1Ending {
     if (this.seen(ACT1_CAMP_SEEN_FLAG)) return;
     // Card seen: the camp is owed. A card the HUD re-shows on this load is marked seen before this handler runs (its
     // gate watcher goes first), so the tick also waits while the card is up (`busy`); its `closed` arms it again.
-    if (this.seen(ACT1_CARD_SEEN_FLAG)) this.campPending = true;
+    if (this.seen(ACT1_CARD_SEEN_FLAG) || this.seen(ACT1_CARD_SEEN_FLAG_V06)) this.campPending = true;
   }
 
   /** `dialogue.ended` for the camp: it ran to its end (campSeen set) or was cut short (re-armed). */

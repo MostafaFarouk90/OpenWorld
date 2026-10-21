@@ -1,5 +1,6 @@
 import { doorCentre, footprintCorners, footprintsOverlap, footprintWithin, pointInFootprint, wallBoxes } from './geometry';
 import { FOUNDATION_KINDS, LEDGE_MAX_HEIGHT, LEDGE_MIN_DEPTH, LEDGE_MIN_HEIGHT, type LayoutData, type StructureSpec } from './layoutTypes';
+import { isKnownStructureKind } from './structureKinds';
 import { resolveAnchor, type HeightFn, type ResolvedAnchor } from './resolveLayout';
 
 export interface ValidateOptions {
@@ -67,6 +68,7 @@ export function validateLayout(layout: LayoutData, heightAt: HeightFn, opts: Val
       errors.push(`trigger "${t.id}": size must be positive`);
   }
   for (const s of layout.structures) {
+    if (!isKnownStructureKind(s.kind)) errors.push(`structure "${s.id}": unknown kind "${String(s.kind)}" (not built in or registered)`);
     if (!finite(s.x, s.z, s.yawDeg) || !s.footprint.every((v) => v > 0 && Number.isFinite(v))) {
       errors.push(`structure "${s.id}": bad position or footprint`);
       continue;

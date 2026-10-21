@@ -1,5 +1,5 @@
 import { COMPANION_STRINGS_EN } from './strings.en';
-import { TOBB_TUNING } from './tuning';
+import { COMPANION_DOWNED_SECONDS, TOBB_TUNING } from './tuning';
 import type { CompanionDef } from './types';
 
 const pool = (prefix: string): string[] =>
@@ -11,6 +11,8 @@ export const TOBB: CompanionDef = {
   nameKey: 'companion.tobb.name',
   joinFlag: 'story.m05.tobbJoined',
   rankFlag: 'companion.tobb.rank',
+  role: 'support',
+  downed: { kneelSeconds: COMPANION_DOWNED_SECONDS },
   npcPost: 'npc-post.tobb',
   npcId: 'tobb',
   dialogueId: 'npc-tobb',

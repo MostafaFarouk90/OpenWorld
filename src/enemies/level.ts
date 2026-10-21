@@ -1,3 +1,4 @@
+import { REGION_IDS, REGION_INFO } from '../region/regions';
 import { LEVEL } from './tuning';
 import type { EnemyDef, LevelBand } from './types';
 
@@ -15,12 +16,12 @@ export interface LevelContext {
 
 export const DEFAULT_BAND: LevelBand = { min: 1, max: 1 };
 
-export const REGION_BANDS: Record<string, LevelBand> = {
-  brightwater: { min: 1, max: 9 },
-  harrowmark: { min: 4, max: 9 },
-};
+/** Level band of every built region, from the region registry (v0.6; reserved regions have none yet). */
+export const REGION_BANDS: Record<string, LevelBand> = Object.fromEntries(
+  REGION_IDS.filter((id) => !REGION_INFO[id].reserved).map((id) => [id, { ...REGION_INFO[id].levelBand }]),
+);
 
-/** The Watch Guard's level band for spawner groups (inside every REGION_BANDS entry, so the lead can use it as is). */
+/** The Watch Guard's level band for spawner groups (inside the Brightwater and Harrowmark bands, where guards stand). */
 export const WATCH_GUARD_BAND: LevelBand = { min: 4, max: 6 };
 
 export function bandForRegion(id: string): LevelBand | undefined {

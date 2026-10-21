@@ -5,6 +5,8 @@
  * interiors ramp over 0.4 s. Buffers are generated lazily, once per id.
  */
 
+import { REGION_IDS, REGION_INFO } from '../region/regions';
+
 export type BedId = 'brightwater' | 'harrowmark' | 'underways';
 
 export interface AmbienceContext {
@@ -25,7 +27,16 @@ const PEAK = 0.7;
 /** Tail of the loop that is folded back onto its head so the seam is continuous. */
 const FOLD_SECONDS = 1;
 
-const REGION_BEDS: readonly BedId[] = ['brightwater', 'harrowmark'];
+/** Region beds come from the region registry (v0.6); A14 adds the Act 2 beds there. */
+const REGION_BEDS: readonly BedId[] = [...new Set(REGION_IDS.map((id) => REGION_INFO[id].bed))].filter(
+  (b): b is 'brightwater' | 'harrowmark' => b !== null,
+);
+
+/** The bed a region plays, or null (silence) for none or an unknown id. */
+function bedFor(regionId: string | null): BedId | null {
+  if (regionId === null || !Object.prototype.hasOwnProperty.call(REGION_INFO, regionId)) return null;
+  return REGION_INFO[regionId as keyof typeof REGION_INFO].bed;
+}
 const LOOP_SECONDS: Readonly<Record<BedId, number>> = { brightwater: 24, harrowmark: 28, underways: 26 };
 const SEEDS: Readonly<Record<BedId, number>> = { brightwater: 0x1b2c3d, harrowmark: 0x4e5f60, underways: 0x717283 };
 
@@ -257,7 +268,7 @@ export class AmbienceBed {
   setRegion(regionId: string | null): void {
     if (this.disposed || regionId === this.regionId) return;
     this.regionId = regionId;
-    if (regionId !== null && !(REGION_BEDS as readonly string[]).includes(regionId) && !this.warned.has(regionId)) {
+    if (regionId !== null && bedFor(regionId) === null && !this.warned.has(regionId)) {
       this.warned.add(regionId);
       console.warn(`Ambience: no bed for region "${regionId}"`);
     }
@@ -298,7 +309,7 @@ export class AmbienceBed {
     try {
       const inUnderways = this.interiorId === 'underways';
       const muffled = this.interiorId !== null && !inUnderways;
-      for (const id of REGION_BEDS) this.setBed(id, this.regionId === id && !inUnderways ? 1 : 0, seconds);
+      for (const id of REGION_BEDS) this.setBed(id, bedFor(this.regionId) === id && !inUnderways ? 1 : 0, seconds);
       this.setBed('underways', inUnderways ? 1 : 0, seconds);
       const bus = muffled ? INTERIOR_GAIN : 1;
       if (bus !== this.busTarget) {

@@ -21,7 +21,8 @@ export interface BossDef {
   releaseWindowSeconds?: number;
 }
 
-export type BossOutcome = 'defeated' | 'released';
+/** v0.6 adds `'spared'` (a `spare` mercy row, Redmane). Saves holding only the two older outcomes load unchanged. */
+export type BossOutcome = 'defeated' | 'released' | 'spared';
 
 export interface BossState {
   bossId: string;

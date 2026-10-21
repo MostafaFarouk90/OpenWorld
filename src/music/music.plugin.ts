@@ -15,7 +15,7 @@ import { BARE_SFX, impactLayers, isHeavyHit, resolveMaterial, SFX, swingLayer } 
 import { registerPlaceholderSfx, SfxPlayer } from './SfxPlayer';
 import { loadTrackStems } from './stemLoader';
 import { HandoverMachine, planHandover } from './trackSwitch';
-import { BARLEY_AND_BRAZIER, loopSeconds, TRACKS_BY_ID, type TrackDef } from './tracks';
+import { BARLEY_AND_BRAZIER, loopSeconds, RESERVED_TRACK_IDS, TRACKS_BY_ID, type TrackDef } from './tracks';
 
 export type MusicService = GameServices['music'];
 
@@ -388,7 +388,8 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
   function requestTrack(trackId: string): void {
     const next = TRACKS_BY_ID[trackId];
     if (!next) {
-      if (!warnedTracks.has(trackId)) {
+      // A reserved id (an Act 2 track not built yet) is expected: keep the regional track without a warning.
+      if (!warnedTracks.has(trackId) && !(RESERVED_TRACK_IDS as readonly string[]).includes(trackId)) {
         warnedTracks.add(trackId);
         console.warn(`Music: unknown region track "${trackId}"; keeping "${track.id}"`);
       }

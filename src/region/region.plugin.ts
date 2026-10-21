@@ -7,7 +7,8 @@ import { barleyVariantOf, buildBarley } from './barley';
 import { buildCorridorScenery } from './corridorScenery';
 import { DEAD_ROAD_FULL, LANE_TRACK_DRAWN, LANE_WIDTH, ROAD_WIDTH } from './deadRoad';
 import { FOG_WALL_X } from './corridor.layout';
-import { buildFogWall } from './fogWall';
+import { installContainment } from './containmentSystem';
+import { buildFogWallDef, fogWalls } from './fogWall';
 import { pointInFootprint } from './geometry';
 import { distanceToPolyline, GrassField, type GrassAccept } from './grass';
 import { buildPoiProps } from './poiProps';
@@ -173,9 +174,12 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
         const poi = buildPoiProps(ctx, ctx.anchors);
         cleanups.push(() => poi.dispose());
         cleanups.push(watchTollPost(ctx));
-        const fogAnchor = ctx.anchors.find('fog.harrowmark');
-        if (fogAnchor && ctx.physics.rapier) {
-          const fog = buildFogWall({ ...ctx, rapier: ctx.physics.rapier }, { x: FOG_WALL_X, y: fogAnchor.position.y, z: fogAnchor.position.z });
+        // Every registered fog wall whose anchor exists (v0.6 data). The slice wall keeps its x at FOG_WALL_X.
+        for (const def of fogWalls()) {
+          const fogAnchor = ctx.anchors.find(def.anchorId);
+          if (!fogAnchor || !ctx.physics.rapier) continue;
+          const x = def.id === 'fog.harrowmark' ? FOG_WALL_X : fogAnchor.position.x;
+          const fog = buildFogWallDef({ ...ctx, rapier: ctx.physics.rapier }, def, { x, y: fogAnchor.position.y, z: fogAnchor.position.z });
           cleanups.push(() => fog.dispose());
         }
 
@@ -242,6 +246,10 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
           },
         };
         cleanups.push(ctx.services.provide('region', service));
+
+        // Containment (v0.6): provides `containment`; its push-back runs before the tracker below.
+        const containment = installContainment(ctx, height);
+        cleanups.push(() => containment.dispose());
 
         let current: string | null = null;
         cleanups.push(

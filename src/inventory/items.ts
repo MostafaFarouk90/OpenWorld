@@ -1,14 +1,18 @@
 import type { InventoryKit, ItemDef } from '../hud/ports';
 
+/** `ItemDef` plus gear tier (v0.6 item 12). Move the field into `ItemDef` (src/hud/ports.ts) when that file is open for edit. */
+/** Kept as a name for item tables; `gearTier` lives on `ItemDef` since v0.6. */
+export type GearItemDef = ItemDef;
+
 function def(
   id: string,
   kind: ItemDef['kind'],
-  rest: Partial<Pick<ItemDef, 'slot' | 'stackMax' | 'stats' | 'use'>> = {},
-): ItemDef {
+  rest: Partial<Pick<GearItemDef, 'slot' | 'stackMax' | 'stats' | 'use' | 'gearTier'>> = {},
+): GearItemDef {
   return { id, nameKey: `item.${id}.name`, descKey: `item.${id}.desc`, kind, stackMax: 1, ...rest };
 }
 
-export const ITEMS: Record<string, ItemDef> = {
+export const ITEMS: Record<string, GearItemDef> = {
   'practice-sword': def('practice-sword', 'weapon', { slot: 'weapon', stats: { attack: 8 } }),
   'wooden-round-shield': def('wooden-round-shield', 'offhand', { slot: 'offhand', stats: { defense: 2 } }),
   'squires-arming-sword': def('squires-arming-sword', 'weapon', { slot: 'weapon', stats: { attack: 12 } }),
@@ -53,14 +57,14 @@ export const ITEMS: Record<string, ItemDef> = {
  * Adds item definitions from another module (the economy). Call at module scope so ids exist before a save loads
  * (`Inventory.load` stashes unknown ids). A duplicate id throws.
  */
-export function registerItems(defs: readonly ItemDef[]): void {
+export function registerItems(defs: readonly GearItemDef[]): void {
   for (const d of defs) {
     if (Object.prototype.hasOwnProperty.call(ITEMS, d.id)) throw new Error(`registerItems: duplicate item id "${d.id}"`);
     ITEMS[d.id] = d;
   }
 }
 
-export function getItem(id: string): ItemDef | undefined {
+export function getItem(id: string): GearItemDef | undefined {
   return Object.prototype.hasOwnProperty.call(ITEMS, id) ? ITEMS[id] : undefined;
 }
 

@@ -32,12 +32,13 @@ function rig(player = { x: 0, z: -8 }) {
 }
 
 describe('watch guard kind', () => {
-  it('is a humanoid with no moves, observer-only, named, and banded inside the region bands', () => {
+  it('is a humanoid with no moves, observer-only, named, and banded inside the Act 1 region bands', () => {
     const def = ENEMY_DEFS['watch-guard'];
     expect(def.observerOnly).toBe(true);
     expect(def.moves).toEqual([]);
     expect(ENEMY_STRINGS_EN[def.nameKey]).toBe('Watch Guard');
-    for (const band of Object.values(REGION_BANDS)) {
+    // Guards stand only in Brightwater and Harrowmark (Act 2 regions have higher bands, v0.6).
+    for (const band of [REGION_BANDS.brightwater, REGION_BANDS.harrowmark]) {
       expect(WATCH_GUARD_BAND.min).toBeGreaterThanOrEqual(band.min);
       expect(WATCH_GUARD_BAND.max).toBeLessThanOrEqual(band.max);
     }

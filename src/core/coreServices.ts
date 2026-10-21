@@ -19,6 +19,16 @@ export interface PromptService {
   showHintsAlways: boolean;
 }
 
+/** v0.6 (Act 2): the wave director's surface. Core types it; A7 provides `services.provide('waves', …)`. */
+export interface WavesService {
+  /** Starts a wave set by def id; false when unknown or one is already running. */
+  start(defId: string): boolean;
+  /** Stops the running set without a result. */
+  stop(): void;
+  /** The running set and wave index, or null. */
+  readonly current: { defId: string; index: number } | null;
+}
+
 /** Services the core itself provides in the world scene (contracts/game-events-and-flags.md section 6). */
 declare module './Services' {
   interface GameServices {
@@ -28,6 +38,8 @@ declare module './Services' {
     dummies: DummiesService;
     /** Provided by thread 5. */
     prompts: PromptService;
+    /** v0.6: provided by A7. */
+    waves: WavesService;
   }
 }
 
