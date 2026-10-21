@@ -108,7 +108,7 @@ export function killObjectiveLeads(p: {
   for (const t of p.targets()) {
     const pos = p.nearestLiving(t.spawnTag);
     if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.z)) {
-      out.push({ id: `lead.${t.questId}.${t.objectiveId}`, x: pos.x, z: pos.z, label: t.spawnTag });
+      out.push({ id: `lead.${t.questId}.${t.objectiveId}`, x: pos.x, z: pos.z, label: t.questId });
     }
   }
   return out;

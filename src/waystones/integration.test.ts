@@ -106,6 +106,10 @@ describe('waystones + saves on the real game', () => {
     near.root!.position.x = pf.x + 200;
     expect(w.hostileAggro).toBe(false);
     expect(w.travelBlockedReason()).toBeNull();
+    // coming back into range counts again (the aggro event is not re-sent)
+    near.root!.position.x = pf.x + 10;
+    expect(w.hostileAggro).toBe(true);
+    near.root!.position.x = pf.x + 200;
     // a stuck foe that is still close keeps the block
     const close = spawnAt(5);
     t.game.ctx.events.emit('ai.aggro', { actorId: close.id, targetId: 'player' } as never);

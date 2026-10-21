@@ -3,7 +3,7 @@ export const WAYSTONE_TUNING = {
   restHoldSeconds: 1.0,
   interactRadius: 2.5,
   restBlockedAggroRadius: 30,
-  /** A foe that aggroed and never calmed (lost the player, got stuck) stops blocking rest and travel beyond this distance (m). */
+  /** A foe that aggroed and never calmed (lost the player, got stuck) stops blocking rest and travel while beyond this distance (m). */
   staleAggroDistance: 60,
   /** Fade to black before a teleport. */
   fadeOutSeconds: 0.3,

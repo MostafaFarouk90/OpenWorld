@@ -35,12 +35,15 @@ const waystones: GamePlugin = {
       if (aggro.size === 0) return false;
       const f = ctx.player.feet;
       const limit2 = WAYSTONE_TUNING.staleAggroDistance ** 2;
-      for (const id of [...aggro]) {
+      // Filter without deleting: a far foe that is still hunting must count again once it closes in.
+      for (const id of aggro) {
         const a = ctx.actors.get(id);
-        const p = a?.root?.position;
-        if (!a || a.dead || (p && (p.x - f.x) ** 2 + (p.z - f.z) ** 2 > limit2)) aggro.delete(id);
+        if (!a) return true; // not in the registry (yet): cannot judge, so it counts
+        if (a.dead) continue;
+        const p = a.root?.position;
+        if (!p || (p.x - f.x) ** 2 + (p.z - f.z) ** 2 <= limit2) return true;
       }
-      return aggro.size > 0;
+      return false;
     };
 
     let handle: { ready(): boolean } | null = null;

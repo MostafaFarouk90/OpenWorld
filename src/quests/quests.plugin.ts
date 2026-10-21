@@ -369,7 +369,8 @@ const plugin: GamePlugin = {
       codexOff = codex.register([...Object.values(NOTE_CODEX), ...ACT2_NOTE_CODEX].map((id) => codexEntry('lore', id, slug(id))));
     };
     const killFailsafe = new KillFailsafe({
-      targets: () => currentKillTargets(manager, KILL_FAILSAFE_QUESTS),
+      // the groups are gated on the tutorial's end (M01 is already active during T13 to T15)
+      targets: () => (ctx.state.getBool('tutorial.complete') ? currentKillTargets(manager, KILL_FAILSAFE_QUESTS) : []),
       live: (tag) => {
         let n = 0;
         for (const a of ctx.actors.all()) if (!a.dead && (a as { spawnTag?: string }).spawnTag === tag) n++;

@@ -79,7 +79,7 @@ const map: GamePlugin = {
       const quests = ctx.services.get('quests');
       if (!quests) return [];
       const kills = killObjectiveLeads({
-        targets: () => currentKillTargets(quests, KILL_FAILSAFE_QUESTS),
+        targets: () => (ctx.state.getBool('tutorial.complete') ? currentKillTargets(quests, KILL_FAILSAFE_QUESTS) : []),
         nearestLiving: (tag) => {
           const f = ctx.player.feet;
           let best: { x: number; z: number } | undefined;

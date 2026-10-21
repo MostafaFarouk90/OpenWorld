@@ -237,7 +237,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | m01.chapel-door | sphere | 43 | 60 | r 5 |
 | m02.bakery | box | 24 | 132 | half 4.5 x 30 x 4.5 |
 | trg.ford.toll-post | sphere | -410 | -150 | r 9 |
-| trg.leap.chapel-ledge | sphere | 72 | 90 | r 3.2 |
+| trg.leap.chapel-ledge | sphere | 72 | 90 | r 2.6 |
 | trg.vault.door | sphere | 55.5 | 64.5 | r 3.5 |
 | trg.wardstones.road | box | 540 | -146 | half 260 x 40 x 20 |
 | trg.shrine.basin | sphere | 965 | -165 | r 10 |
