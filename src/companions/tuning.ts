@@ -81,3 +81,15 @@ export const HROLF_TUNING = {
   /** He closes to this much inside his reach before swinging. */
   closeIn: 0.6,
 } as const;
+
+/** Sister Aelfreda (design 8.1): Calming flame heals 2% of Cael's max health every 5 s out of combat. Never attacks. */
+export const AELFREDA_TUNING = {
+  flameEverySeconds: 5,
+  flameHealFraction: 0.02,
+} as const;
+
+/** Act 2 trigger ids the companions bark at (A3's layout and A9's Kindling Dell). */
+export const ACT2_TRIGGERS = {
+  dell: 'trg.cinderreach.dell',
+  den: 'trg.cinderreach.den',
+} as const;

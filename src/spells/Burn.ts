@@ -55,6 +55,14 @@ export class Burn {
     this._scars += Math.floor(n);
   }
 
+  /** Removes up to `n` Scars (the Hearth Rite, A5), never below 0; returns how many went. */
+  removeScars(n: number): number {
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    const removed = Math.min(this._scars, Math.floor(n));
+    this._scars -= removed;
+    return removed;
+  }
+
   /**
    * A shard use (Surge, Leap, rekindle, Release): the Scar is decided on the Burn at the press, before the gain, so
    * a use that starts at 75 or more scars even when the gain is clamped at 100. `scarred` lets a caller decide at the press
