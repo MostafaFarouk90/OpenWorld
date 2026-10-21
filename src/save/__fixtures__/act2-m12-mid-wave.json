@@ -949,6 +949,10 @@
         "complete": true
       }
     },
+    "shrine.bellowsBlessing": {
+      "version": 1,
+      "data": null
+    },
     "player-position": {
       "version": 1,
       "data": {
