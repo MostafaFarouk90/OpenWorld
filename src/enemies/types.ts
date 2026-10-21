@@ -78,6 +78,8 @@ export interface MoveDef {
   onHit?: 'slow' | 'steal' | 'ignite';
   /** A6b: fires a projectile when the window opens (rock, slag glob, net, harpoon); see ranged/. */
   ranged?: RangedSpec;
+  /** A8: a blockable ranged hit sent with `parryable: false` (a script boss's net: a timed block is a plain block, never a free break). */
+  parryable?: false;
   /** A6b: when the window opens, hits every valid actor inside the circle once (stomp, slam, landing); see ranged/area.ts. */
   area?: AreaSpec;
   /** A forward leap while the window is open (the hound's pounce): up to `maxMetres` in a straight line, stopping short of the target. */

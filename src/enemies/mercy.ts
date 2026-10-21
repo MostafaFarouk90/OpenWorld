@@ -128,6 +128,11 @@ export function mercyEvents(targets: readonly MercySubject[], pulseId?: string):
   }));
 }
 
+/** The prompt string of a boss hold: Release, Calm, or (v0.6, Redmane) Spare. */
+export function bossMercyPromptKey(verb: UnlockVerb): string {
+  return verb === 'calm' ? 'enemies.mercy.calm' : verb === 'spare' ? 'enemies.mercy.spare' : 'enemies.mercy.release';
+}
+
 /** What the boss hold needs to know about the boss. */
 export interface BossMercySubject {
   readonly bossId: string;
@@ -162,7 +167,7 @@ export function makeBossMercyInteractable(
     radius: MERCY.radius,
     coneDegrees: MERCY.coneDegrees,
     holdSeconds: MERCY.holdSeconds,
-    promptKey: subject.verb === 'calm' ? 'enemies.mercy.calm' : 'enemies.mercy.release',
+    promptKey: bossMercyPromptKey(subject.verb),
     promptParams: () => mercyPromptParams(subject.verb, subject.burn, deps.calmLabel?.() ?? ''),
     get priority() {
       return deps.lockOnTarget() === subject.actorId ? MERCY.lockOnPriority : 0;

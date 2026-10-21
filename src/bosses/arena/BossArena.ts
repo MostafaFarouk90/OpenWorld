@@ -75,6 +75,11 @@ export interface BossArenaConfig<M, P extends { centre: THREE.Vector3 }, E exten
   modelState?: () => BossModelState;
   /** Extra start condition (D02: the kennels are done), re-checked every tick while the player stands in the trigger. */
   armed?: () => boolean;
+  /**
+   * Extra test for closing the gate, beyond the radial `gateClearance` (A8): a wide gate (the Scorchhold keep's is 14 m) can
+   * stand within reach of a player far off the door's axis, so it names the place where closing is safe. Default: none.
+   */
+  gateClear?: (feet: THREE.Vector3Like) => boolean;
   /** Whether a load at `feet` puts the player back at the door. Default: anywhere in `interiorId`. */
   insideForReload?: (feet: THREE.Vector3Like) => boolean;
   warn?: (message: string) => void;
@@ -296,6 +301,7 @@ export class BossArena<M, P extends { centre: THREE.Vector3 }, E extends ArenaEn
     const toCentre = Math.hypot(feet.x - centre.position.x, feet.z - centre.position.z);
     const doorToCentre = Math.hypot(centre.position.x - door.position.x, centre.position.z - door.position.z);
     if (fromDoor < this.cfg.gateClearance || toCentre >= doorToCentre) return;
+    if (this.cfg.gateClear && !this.cfg.gateClear(feet)) return;
     this.gateClosed = true;
     try {
       this.interiors()?.setBlocker?.(this.cfg.gate, true);
