@@ -1,0 +1,15 @@
+export const HUSHED_ANVIL_STRINGS_EN = {
+  'hushedAnvil.mural.prompt': 'Read the carving',
+  'hushedAnvil.station.prompt': 'Strike the anvil',
+  'hushedAnvil.station.dark': 'The anvil is cold. Rekindle the waystone first.',
+  'hushedAnvil.station.idle': 'The anvil hums, and the smith\'s art is not yet taught to you.',
+  'hushedAnvil.mural.1': 'A crowned smith stands over a glowing anvil, hammer raised.',
+  'hushedAnvil.mural.2': 'Winged fire-bearers kneel in a line, a chain from each throat to the anvil\'s foot.',
+  'hushedAnvil.mural.3': 'The anvil sings alone. Beneath it someone has scratched: "We kept the note."',
+  'codex.lore.hushed-anvil-mural-1.name': 'Mural: the crowned smith',
+  'codex.lore.hushed-anvil-mural-1.body': 'A crowned smith stands over a glowing anvil with his hammer raised. The carver gave him no face, only the crown and the light from the forge.',
+  'codex.lore.hushed-anvil-mural-2.name': 'Mural: the chained fire-bearers',
+  'codex.lore.hushed-anvil-mural-2.body': 'Winged fire-bearers kneel in a row. A chain runs from each to the foot of the anvil. The fire in their wings is drawn into the iron.',
+  'codex.lore.hushed-anvil-mural-3.name': 'Mural: the anvil that sang',
+  'codex.lore.hushed-anvil-mural-3.body': 'The last panel shows the anvil alone on a ridge, with wind in its hollow. A line is scratched below it by a later hand: "We kept the note."',
+} as const;
