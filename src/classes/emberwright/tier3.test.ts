@@ -226,6 +226,36 @@ describe('Iron Familiar', () => {
   });
 });
 
+describe('Iron Familiar: teleports and walls', () => {
+  it('snaps next to the player at the hover height when the player is more than 10 m away, and follows normally inside that', () => {
+    const { w, f, bodies } = familiarRig();
+    f.cast();
+    w.player.feet.set(9, 5, 0);
+    f.update(DT);
+    expect(bodies[0].placed[0]).toBeLessThan(2); // 9 m away: walks, no snap
+    w.player.feet.set(300, 7, -200); // fast travel
+    f.update(DT);
+    const [x, y, z] = bodies[0].placed;
+    expect(Math.hypot(x - 300, z + 200)).toBeCloseTo(IRON_FAMILIAR.spawnSide);
+    expect(y).toBeCloseTo(7 + IRON_FAMILIAR.hover);
+  });
+
+  it('skips a foe it has no line of sight to and strikes the next one', () => {
+    const b = familiarRig();
+    hostile(b.w, 'behindWall', 3, 0);
+    hostile(b.w, 'open', 6, 0);
+    b.engage.add('behindWall');
+    b.engage.add('open');
+    const wall = new IronFamiliar({ ...b.ports, spawn: (id, at) => {
+      const actor = b.w.actors.add(new FakeActor(id, 'ally', at.x, at.z));
+      return { actor, place: (x: number, y: number, z: number) => actor.pos.set(x, y, z), dispose: () => void b.w.actors.map.delete(id) };
+    }, mayEngage: () => true, blocked: (_from, to) => Math.abs(to.x - 3) < 0.1 } as IronFamiliarPorts);
+    wall.cast();
+    run(wall, 1.6);
+    expect(b.w.damage.applied.map((r) => r.targetId)).toEqual(['open']);
+  });
+});
+
 describe('Smoke Screen', () => {
   function rig(opts: { stealth?: boolean; perception?: boolean } = {}) {
     const b = base();

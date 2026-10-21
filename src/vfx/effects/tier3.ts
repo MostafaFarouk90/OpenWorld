@@ -175,12 +175,13 @@ export function tier3Effects(h: Tier3Helpers): Record<Tier3EffectId, EffectFacto
       // The wall runs perpendicular to the facing: (cos yaw, -sin yaw).
       const rx = Math.cos(yaw);
       const rz = -Math.sin(yaw);
-      ctx.lights.flash({ x: o.x, y: o.y + 1, z: o.z }, 0xff7020, 7, 0.2, seconds, start);
       return {
         update(now) {
           if (done || now - start >= seconds) return false;
           if (now - last >= 0.25) {
             last = now;
+            // A short repeating glow, so stopping the effect leaves no light behind.
+            ctx.lights.flash({ x: o.x, y: o.y + 1, z: o.z }, 0xff7020, 6, 0.1, 0.4, now);
             for (let i = 0; i < cards; i++) {
               const d = (i / (cards - 1) - 0.5) * length;
               ctx.points.emit('ember', { x: o.x + rx * d, y: o.y + 0.2, z: o.z + rz * d }, 2, { color: 0xff7a20, spread: 0.15, rise: 2.2, life: 0.9 }, now);

@@ -1,5 +1,6 @@
 // Emberwright tier 3 (Act 2): Fire Wall, Iron Familiar, Smoke Screen. Ports-based so the unit tests need no game; the plugin
-// wires them in one block. Nothing here allocates per tick (the actor scans run at 2 Hz, 0.67 Hz and on cast only).
+// wires them in one block. Nothing here allocates per tick: the actor scans run at 2 Hz (Fire Wall), 0.67 Hz (a familiar strike)
+// and 4 Hz (a familiar with nothing to strike), and on cast.
 import * as THREE from 'three';
 import type { StatusSpec } from '../../actors/status';
 import { AI } from '../../enemies/tuning';
@@ -169,6 +170,8 @@ export interface IronFamiliarPorts extends Tier3Ports {
   spawn(id: ActorId, at: Vec3): FamiliarBody | null;
   /** `allyEngagement.mayEngage`: alive, no mercy state, and aggroed on the player or an ally. Absent service: false. */
   mayEngage(targetId: ActorId): boolean;
+  /** True when a static collider lies between the two points; absent means no line-of-sight check. */
+  blocked?(from: Vec3, to: Vec3): boolean;
 }
 
 /**
@@ -241,7 +244,12 @@ export class IronFamiliar {
     const dx = f.x - this.x;
     const dz = f.z - this.z;
     const d = Math.hypot(dx, dz);
-    if (d > IRON_FAMILIAR.followMax) {
+    if (d > IRON_FAMILIAR.snapDistance) {
+      // Fast travel, an interior, a long fall or a gallop: rejoin at the spawn offset instead of flying across the map.
+      const yaw = this.p.facingYaw();
+      this.x = f.x + Math.cos(yaw) * IRON_FAMILIAR.spawnSide;
+      this.z = f.z - Math.sin(yaw) * IRON_FAMILIAR.spawnSide;
+    } else if (d > IRON_FAMILIAR.followMax) {
       const step = Math.min(IRON_FAMILIAR.speed * dt, d - IRON_FAMILIAR.followStop);
       this.x += (dx / d) * step;
       this.z += (dz / d) * step;
@@ -264,6 +272,7 @@ export class IronFamiliar {
       a.worldPosition(SCRATCH);
       const d = Math.hypot(SCRATCH.x - this.x, SCRATCH.y - y, SCRATCH.z - this.z);
       if (d > bestD || !this.p.mayEngage(a.id)) continue;
+      if (this.p.blocked?.({ x: this.x, y, z: this.z }, { x: SCRATCH.x, y: SCRATCH.y + 1, z: SCRATCH.z })) continue;
       bestD = d;
       best = a.id;
     }
@@ -381,6 +390,7 @@ export interface Tier3Deps {
   ignite(targetId: ActorId, spec: StatusSpec): boolean;
   spawn(id: ActorId, at: Vec3): FamiliarBody | null;
   mayEngage(targetId: ActorId): boolean;
+  blocked?(from: Vec3, to: Vec3): boolean;
   stealth: SmokeScreenPorts['stealth'];
   perception: SmokeScreenPorts['perception'];
   warn(message: string): void;
@@ -394,7 +404,7 @@ export class EmberwrightTier3 {
 
   constructor(d: Tier3Deps) {
     this.fireWall = new FireWall({ ...d.base, ignite: d.ignite });
-    this.familiar = new IronFamiliar({ ...d.base, spawn: d.spawn, mayEngage: d.mayEngage });
+    this.familiar = new IronFamiliar({ ...d.base, spawn: d.spawn, mayEngage: d.mayEngage, blocked: d.blocked });
     this.smoke = new SmokeScreen({ ...d.base, stealth: d.stealth, perception: d.perception, warn: d.warn });
   }
 
