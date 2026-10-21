@@ -31,7 +31,8 @@ interface SoftQuests {
   state?(id: string): string;
 }
 interface SoftClasses {
-  chosen?(): string | null;
+  chosen?(): boolean;
+  current?(): string;
 }
 
 const economyPlugin: GamePlugin = {
@@ -124,7 +125,10 @@ const economyPlugin: GamePlugin = {
         buy: (itemId, seen) => shop.buy(id, itemId, 1, seen),
         sell: (itemId) => shop.sell(id, itemId),
         buyBack: (i) => shop.buyBack(id, i),
-        classId: () => soft<SoftClasses>('classes')?.chosen?.() ?? null,
+        classId: () => {
+          const c = soft<SoftClasses>('classes');
+          return c?.chosen?.() ? (c.current?.() ?? null) : null;
+        },
         t,
         toast,
         close: () => closeMenu?.(),

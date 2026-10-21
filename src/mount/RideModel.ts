@@ -67,6 +67,7 @@ export class RideModel {
   /** Adds a source of extra maximum stamina; returns the undo. */
   addStaminaBonus(fn: () => number): () => void {
     this.bonuses.push(fn);
+    this.lastMax = this.max;
     return () => {
       this.bonuses = this.bonuses.filter((f) => f !== fn);
       this.syncMax();

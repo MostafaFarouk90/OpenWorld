@@ -467,6 +467,27 @@ describe('the Ashmare on the real game', () => {
   });
 });
 
+describe('the Ashmare saddle stamina bonus', () => {
+  it('a save above the base max survives a mount entry that loads before the bonus source is known', async () => {
+    const t = await boot({ stables: true });
+    let bonus = 0;
+    t.mount().addStaminaBonus(() => bonus);
+    t.persist().load({ placed: null, stamina: 120 }, 1);
+    expect(t.mount().model.stamina).toBe(T.staminaMax);
+    bonus = 30;
+    t.ctx.events.emit('save.loaded', { slot: 'test' });
+    expect(t.mount().model.stamina).toBe(120);
+    expect(t.mount().model.max).toBe(T.staminaMax + 30);
+  });
+
+  it('without the bonus the same save clamps to the base max', async () => {
+    const t = await boot({ stables: true });
+    t.mount().addStaminaBonus(() => 0);
+    t.load({ placed: null, stamina: 120 });
+    expect(t.mount().model.stamina).toBe(T.staminaMax);
+  });
+});
+
 describe('the glb Ashmare', () => {
   const visualOf = (t: T0) => (t.mount() as unknown as { visual: { glb?: boolean } | null }).visual;
   const hurtCount = (t: T0) => (t.mount() as unknown as { hurtboxes: { count: number } | null }).hurtboxes?.count;
