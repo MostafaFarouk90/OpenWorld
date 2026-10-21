@@ -560,3 +560,89 @@ describe('codex.register', () => {
     expect(w.selectedId).not.toBe('howto.mage.blink');
   });
 });
+
+describe('Act 2 codex (A15)', () => {
+  it('every Act 2 entry has name and body strings, unique ids, and none collides with Act 1 or the other threads\' ids', async () => {
+    const { ACT2_CODEX_ENTRIES, ACT2_CODEX_STRINGS_EN } = await import('./act2');
+    const ids = ACT2_CODEX_ENTRIES.map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const e of ACT2_CODEX_ENTRIES) {
+      expect(ACT2_CODEX_STRINGS_EN[e.nameKey], e.nameKey).toBeTruthy();
+      expect(ACT2_CODEX_STRINGS_EN[e.bodyKey], e.bodyKey).toBeTruthy();
+    }
+    const others = [...CODEX_ENTRIES.map((e) => e.id), 'lore.hushed-anvil.mural-1', 'lore.hushed-anvil.mural-2', 'lore.hushed-anvil.mural-3', 'lore.poi.lore-stone-1', 'cinder-golem', 'slag-crawler', 'kindling-fox', 'hunter-spearman', 'hunter-harpooner', 'ember-wyrm', 'wyrmling'];
+    for (const id of ids) expect(others).not.toContain(id);
+  });
+
+  it('registers cleanly with the built-ins (no duplicate warning)', async () => {
+    await rig();
+    expect((console.warn as any).mock.calls.filter((c: unknown[]) => String(c[0]).includes('codex'))).toEqual([]);
+  });
+
+  it('a registered boss id unlocks on boss.started, once; an unknown boss does nothing; Act 1 ids behave as before', async () => {
+    const r = await rig();
+    expect(r.codex.has('thrandil-redmane')).toBe(false);
+    r.events.emit('boss.started', { bossId: 'thrandil-redmane', actorId: 'b' });
+    expect(r.codex.has('thrandil-redmane')).toBe(true);
+    r.events.emit('boss.started', { bossId: 'the-slagmaw', actorId: 'b2' });
+    expect(r.codex.has('the-slagmaw')).toBe(true);
+    r.events.emit('boss.started', { bossId: 'nobody', actorId: 'b3' });
+    expect(r.codex.has('nobody')).toBe(false);
+    r.events.emit('boss.started', { bossId: 'ashen-prior', actorId: 'b4' });
+    expect(r.codex.has('ashen-prior')).toBe(true);
+  });
+
+  it('a registered bestiary kind unlocks on sight and on a mercy event; a lore id is not treated as a creature', async () => {
+    const r = await rig();
+    const off = r.codex.register([codexEntry('bestiary', 'ember-wyrm', 'ember-wyrm')]);
+    r.events.emit('mercy', mercy('calm', 'ember-wyrm'));
+    expect(r.codex.has('ember-wyrm')).toBe(true);
+    r.events.emit('mercy', mercy('calm', 'lore.pickett'));
+    expect(r.codex.has('lore.pickett')).toBe(false);
+    off();
+  });
+
+  it('how-tos unlock on their events', async () => {
+    const r = await rig();
+    r.events.emit('boss.spared', { bossId: 'someone-else', actorId: 'a' });
+    expect(r.codex.has('howto.spare-redmane')).toBe(false);
+    r.events.emit('boss.spared', { bossId: 'thrandil-redmane', actorId: 'a' });
+    expect(r.codex.has('howto.spare-redmane')).toBe(true);
+    r.events.emit('gear.tempered', { itemId: 'x', level: 1 });
+    expect(r.codex.has('howto.tempering')).toBe(true);
+    r.events.emit('rite.performed', { act: 2, removed: 1 });
+    expect(r.codex.has('howto.hearth-rite')).toBe(true);
+    r.events.emit('party.offered', { waystoneId: 'w' });
+    expect(r.codex.has('howto.party')).toBe(true);
+  });
+
+  it('places unlock on discovery; unknown places and a repeat do nothing new', async () => {
+    const r = await rig();
+    r.events.emit('discover', { placeId: 'waystone.cinderford', kind: 'waystone' });
+    expect(r.codex.has('lore.place.cinderford')).toBe(true);
+    r.events.emit('discover', { placeId: 'oldsmoke', kind: 'region' });
+    expect(r.codex.has('lore.place.oldsmoke-mines')).toBe(true);
+    r.events.emit('discover', { placeId: 'camp-1', kind: 'poi' });
+    r.events.emit('discover', { placeId: 'waystone.cinderford', kind: 'waystone' });
+    expect(r.codex.has('lore.place.deepgate')).toBe(false);
+  });
+
+  it('quest flags backfill on load and on change; a false flag unlocks nothing', async () => {
+    const r = await rig();
+    r.flags.set('story.d03.started', true);
+    r.flags.set('story.r08.started', false);
+    r.events.emit('save.loaded', { slot: 't' });
+    expect(r.codex.has('lore.place.scorchhold')).toBe(true);
+    expect(r.codex.has('lore.pickett')).toBe(false);
+    r.flags.set('story.m19.complete', true);
+    r.events.emit('flag.changed' as any, { key: 'story.m19.complete', value: true });
+    expect(r.codex.has('lore.nursery')).toBe(true);
+  });
+
+  it('the entries show in their tabs', async () => {
+    const r = await rig();
+    r.codex.unlock('thrandil-redmane');
+    r.codex.open('thrandil-redmane');
+    expect(r.widget().selectedId).toBe('thrandil-redmane');
+  });
+});

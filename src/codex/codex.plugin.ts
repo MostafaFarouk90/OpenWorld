@@ -5,6 +5,7 @@ import { CODEX_MODAL_ID, createCodexModal, type CodexModalWidget } from './Codex
 import { SHRINE_IDS } from '../map/ForgeMarks';
 import { BESTIARY_IDS, CodexRegistry, HOWTO_IDS } from './entries';
 import { CODEX_STRINGS_EN } from './strings.en';
+import { ACT2_CODEX_ENTRIES, ACT2_CODEX_IDS, ACT2_CODEX_STRINGS_EN, ACT2_DISCOVER_UNLOCKS, ACT2_FLAG_UNLOCKS } from './act2';
 import type { CodexService, MercyCounts } from './service';
 import './service';
 
@@ -13,6 +14,7 @@ const FIRST_USE_FLAGS: readonly { flag: string; entry: string }[] = [
   { flag: 'prompt.surge.count', entry: HOWTO_IDS.burnScars },
   { flag: 'prompt.surgeLeap.count', entry: HOWTO_IDS.surgeLeap },
   { flag: 'ability.surge-leap.learned', entry: HOWTO_IDS.surgeLeap },
+  ...ACT2_FLAG_UNLOCKS,
 ];
 
 const ABILITY_ENTRIES: Readonly<Record<string, string>> = {
@@ -38,9 +40,13 @@ const codex: GamePlugin = {
   dependsOn: ['core'],
   setup(ctx: GameContext) {
     ctx.strings.register('en', CODEX_STRINGS_EN);
+    ctx.strings.register('en', ACT2_CODEX_STRINGS_EN);
     const model = new CodexModel();
     const warn = (m: string) => console.warn(m);
     const registry = new CodexRegistry(undefined, warn);
+    registry.register(ACT2_CODEX_ENTRIES);
+    /** A kind or boss id that first-sight unlocks cover: the built-in Act 1 set plus every registered bestiary entry (Act 2 ids register at runtime). */
+    const isBestiary = (id: string): boolean => BESTIARY.has(id) || registry.find(id)?.tab === 'bestiary';
 
     /** Optional: thread 1's `enemies.mercyTally()`; zeros are shown when it is absent. */
     const tally = (): Map<string, MercyCounts> | null => {
@@ -111,7 +117,7 @@ const codex: GamePlugin = {
       if (verb === 'release') model.unlock(HOWTO_IDS.release);
       else if (verb === 'spare') model.unlock(HOWTO_IDS.spare);
       else if (verb === 'calm' || verb === 'warmHand') model.unlock(HOWTO_IDS.calm);
-      if (creature && BESTIARY.has(creature)) model.unlock(creature);
+      if (creature && isBestiary(creature)) model.unlock(creature);
     };
     ctx.events.on('mercy', (e) => unlockMercy(e.verb, e.creature));
     onLoose(ctx, 'ability.learned', (e: { id?: unknown }) => {
@@ -122,17 +128,28 @@ const codex: GamePlugin = {
       const entry = typeof e?.skillId === 'string' ? SKILL_ENTRIES[e.skillId] : undefined;
       if (entry) model.unlock(entry);
     });
+    // Act 2: how-tos by event, places by discovery.
+    onLoose(ctx, 'gear.tempered', () => void model.unlock(ACT2_CODEX_IDS.tempering));
+    onLoose(ctx, 'rite.performed', () => void model.unlock(ACT2_CODEX_IDS.hearthRite));
+    onLoose(ctx, 'boss.spared', (e: { bossId?: unknown }) => {
+      if (e?.bossId === ACT2_CODEX_IDS.redmane) model.unlock(ACT2_CODEX_IDS.spareRedmane);
+    });
+    onLoose(ctx, 'party.offered', () => void model.unlock(ACT2_CODEX_IDS.party));
+    onLoose(ctx, 'discover', (e: { placeId?: unknown }) => {
+      const entry = typeof e?.placeId === 'string' ? ACT2_DISCOVER_UNLOCKS[e.placeId] : undefined;
+      if (entry) model.unlock(entry);
+    });
     onLoose(ctx, 'scar.added', () => void model.unlock(HOWTO_IDS.burnScars));
     onLoose(ctx, 'warmth.changed', (e: { tier?: unknown }) => {
       if (typeof e?.tier === 'number' && e.tier > 0) model.unlock(HOWTO_IDS.warmthTier);
     });
     onLoose(ctx, 'boss.started', (e: { bossId?: unknown }) => {
-      if (typeof e?.bossId === 'string' && BESTIARY.has(e.bossId)) model.unlock(e.bossId);
+      if (typeof e?.bossId === 'string' && isBestiary(e.bossId)) model.unlock(e.bossId);
     });
     onLoose(ctx, 'ai.aggro', (e: { actorId?: unknown }) => {
       if (typeof e?.actorId !== 'string') return;
       const kind = (ctx.actors.get(e.actorId) as { kind?: string } | undefined)?.kind;
-      if (kind && BESTIARY.has(kind)) model.unlock(kind);
+      if (kind && isBestiary(kind)) model.unlock(kind);
     });
 
     const used = (flag: string): boolean => ctx.state.getBool(flag) || ctx.state.getNumber(flag) > 0;
@@ -163,7 +180,7 @@ const codex: GamePlugin = {
           if (c.release > 0) model.unlock(HOWTO_IDS.release);
           if (c.spare > 0) model.unlock(HOWTO_IDS.spare);
           if (c.calm > 0) model.unlock(HOWTO_IDS.calm);
-          if (c.release + c.spare + c.calm + c.killed > 0 && BESTIARY.has(kind)) model.unlock(kind);
+          if (c.release + c.spare + c.calm + c.killed > 0 && isBestiary(kind)) model.unlock(kind);
         }
       }
       // Mercy used but the tally could not split it: the first mercy is the Release (wraiths come first).

@@ -126,6 +126,27 @@ export const HUD_CSS = `
 .owg-party-slot,.owg-party-status{margin-top:8px;font-size:12px;opacity:.85;text-align:center}
 .owg-party-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 .owg-btn-off{opacity:.4;cursor:default}
+.owg-pressure{min-width:260px;padding:8px 14px;margin-top:6px;text-align:center}
+.owg-pressure-label{font-size:13px;margin-bottom:4px}
+.owg-pressure-bar{height:8px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
+.owg-pressure-fill{height:100%;width:100%;background:#d8a040}
+.owg-pressure-urgent .owg-pressure-fill{background:#d85a40;animation:owg-pressure-flash .5s steps(2) infinite}
+@keyframes owg-pressure-flash{50%{opacity:.45}}
+.owg-tempering{min-width:420px;max-width:560px;text-align:left;pointer-events:auto}
+.owg-tempering .owg-card-title{text-align:center}
+.owg-tempering-purse,.owg-tempering-state,.owg-tempering-cost{font-size:12px;opacity:.9;margin:4px 0}
+.owg-tempering-ok{color:#a8d878;margin:6px 0}
+.owg-tempering-warn{color:#e89a7a;margin:6px 0}
+.owg-tempering-list{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.owg-tempering-row{display:flex;gap:6px;flex-wrap:wrap;padding:4px;border-radius:5px;border:1px solid transparent}
+.owg-tempering-sel{border-color:#f0d060;background:rgba(240,208,96,.08)}
+.owg-tempering-strip{display:flex;gap:3px;margin:12px 0}
+.owg-tempering-cell{flex:1;height:22px;border-radius:3px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
+.owg-tempering-mark{border-color:#f0d060}
+.owg-tempering-perfect{background:#7ac878}
+.owg-tempering-good{background:#d8c060}
+.owg-tempering-miss{background:#c85a48}
+.owg-tempering-head{box-shadow:0 0 0 2px #fff}
 .owg-companion-bar{height:6px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
 .owg-companion-fill{height:100%;width:0;background:#5aa65a}
 .owg-card{max-width:420px;padding:20px 28px;text-align:center;border-radius:8px;background:rgba(20,16,12,.92);border:1px solid #6a5a3a;color:#e8dfc8;font:14px system-ui,sans-serif;pointer-events:none}
