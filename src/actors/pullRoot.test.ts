@@ -142,7 +142,7 @@ describe('root status', () => {
     expect(e.view('a')).toEqual({ stunned: false, stunRemaining: 0, slow: 0 });
   });
   it('an enemy reads a root as speed 0 (a slow keeps its 0.1 floor)', () => {
-    expect(readStatusData({ stunned: false, stunRemaining: 0, slow: 0, rooted: true })).toEqual({ stunSeconds: 0, speedScale: 0 });
+    expect(readStatusData({ stunned: false, stunRemaining: 0, slow: 0, rooted: true })).toEqual({ stunSeconds: 0, speedScale: 0, rooted: true });
     expect(readStatusData({ stunned: false, stunRemaining: 0, slow: 0.95 }).speedScale).toBeCloseTo(0.1);
   });
 });

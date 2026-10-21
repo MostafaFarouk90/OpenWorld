@@ -541,7 +541,7 @@ describe('Pack Calm', () => {
 });
 
 describe('offering cycle and the wheel claim', () => {
-  const NAMES = (o: CalmOption) => (o.kind === 'warmHand' ? 'warm' : o.itemId);
+  const NAMES = (o: CalmOption) => (o.kind === 'item' ? o.itemId : o.kind === 'warmHand' ? 'warm' : 'free');
 
   it('claims the wheel only while the focused prompt has more than one option; wheel steps wrap', () => {
     const t = rig({ ui: true, items: { 'hearth-bread': 1, 'ember-coal': 1 } });

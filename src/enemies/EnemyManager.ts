@@ -4,6 +4,12 @@ import { HumanoidBody, type EnemyBody } from './body';
 import { mulberry32 } from './ai/moveSelect';
 import { ENEMY_DEFS } from './defs';
 import { PathBudget } from './steering/pathFollower';
+import { GroundAttacks } from './ranged/GroundAttacks';
+import { makeGolemBody } from './golem/body';
+import { GOLEM_CORE_ORDER, isCoreHit } from './golem/rules';
+import { makeCrawlerBody } from './crawler/body';
+import { disposeGroundProp, makeGroundProp } from './ranged/props';
+import { RANGED_ATTACK_PREFIX } from './ranged/tuning';
 import { boneMultiplier, Enemy, type EnemyEnv, type EnemySpawn } from './Enemy';
 import { makeWyrmBody } from './wyrm/body';
 import { EnemyAnimator } from './EnemyAnimator';
@@ -55,6 +61,13 @@ export interface EnemiesService {
    * non-hostile actor, a boss, an enemy in any mercy window, and a thief carrying gold.
    */
   push(actorId: ActorId, push: { dir: { x: number; z: number }; metres: number }): boolean;
+  /** A6b ground enemies: the live enemies and the thrown Calm, for ground/ground.plugin.ts (not a public contract). */
+  ground: {
+    get(actorId: ActorId): Enemy | undefined;
+    all(): Enemy[];
+    /** A thrown offering landed: Calm like a held one's. False when the beast is not open to it. */
+    calmByThrow(actorId: ActorId): boolean;
+  };
   /** Perception hook for stealth and skills (thread 18, 15). */
   perception: {
     register(provider: PerceptionProvider): Unregister;
@@ -97,6 +110,7 @@ export class EnemyManager {
   private readonly calm: CalmCycle;
   private readonly unsubs: Array<() => void> = [];
   private readonly rng: () => number;
+  private readonly attacks: GroundAttacks;
   private readonly scratch = new THREE.Vector3();
   private readonly tokenAt = new Map<Enemy, number>();
   private clock = 0;
@@ -110,6 +124,7 @@ export class EnemyManager {
   ) {
     this.rng = mulberry32(opts.seed ?? 0x5eed);
     this.calm = new CalmCycle(host.calmUi);
+    this.attacks = new GroundAttacks(host);
     this.env = this.makeEnv();
     this.spawners = new SpawnerRegistry({
       anchors: host.anchors,
@@ -169,12 +184,31 @@ export class EnemyManager {
     mercyTally: () => this.tally.snapshot(),
     packLeader: (id) => this.packLeaderId(id),
     push: (id, p) => this.pushEnemy(id, p),
+    ground: {
+      get: (id) => this.enemies.get(id),
+      all: () => this.all(),
+      calmByThrow: (id) => this.calmByThrow(id),
+    },
     perception: {
       register: (p) => this.perceptionHub.register(p),
       state: (id) => this.enemies.get(id)?.perceptionState() ?? null,
       face: (id, at) => this.enemies.get(id)?.faceToward(at) ?? false,
     },
   };
+
+  /**
+   * A thrown offering landed on `actorId` (the Cooling Draught): a Calm like a held offering's, without the inventory step (the
+   * thrower consumed it). Refused unless Calm is unlocked and the beast is still open to it (alive, unstruck, not mid-swing).
+   */
+  private calmByThrow(actorId: ActorId): boolean {
+    const enemy = this.enemies.get(actorId);
+    const subject = enemy ? this.subjects.get(enemy) : undefined;
+    if (!enemy || !subject || !this.mercyUnlocked('calm') || enemy.def.mercy?.verb !== 'calm') return false;
+    if (!enemy.mercyOpen) return false;
+    this.applyMercy(mercyEvents([subject]));
+    this.calmFx(enemy.feet, { kind: 'free' });
+    return true;
+  }
 
   readonly perceptionHub = new PerceptionHub((m) => this.host.warn(m));
 
@@ -204,6 +238,7 @@ export class EnemyManager {
     this.pathBudget.reset();
     this.updateDormancy();
     for (const e of this.enemies.values()) e.think(dt);
+    this.attacks.update(dt);
     this.foes.think(dt);
     // Escaped thieves' slots refill out of the player's sight while their group is live.
     this.spawners.tickRefills(dt, (at) => this.playerCanSee(at));
@@ -274,7 +309,7 @@ export class EnemyManager {
       actorId: enemy.id,
       def: mercyDef,
       slug: enemy.slug,
-      feet: (out) => out.copy(enemy.feet),
+      feet: (out) => enemy.mercyAnchor(out),
       mercyOpen: () => enemy.mercyOpen,
     };
     this.subjects.set(enemy, subject);
@@ -282,7 +317,7 @@ export class EnemyManager {
     const removeCalm =
       mercyDef.mercy.verb === 'calm'
         ? this.calm.register(holdId, () =>
-            enemy.mercyOpen && this.mercyUnlocked('calm') ? calmOptions(mercyDef.mercy, this.host.services.get('inventory')) : [],
+            enemy.mercyOpen && this.mercyUnlocked('calm') ? calmOptions(mercyDef.mercy, this.host.services.get('inventory'), { cooled: enemy.isCooled }) : [],
           )
         : null;
     const removeHold = this.host.interaction.register(
@@ -308,15 +343,37 @@ export class EnemyManager {
 
   /** The body for a def: the procedural quadruped, or the Knight rig from the model factory. */
   private makeBody(def: EnemyDef): EnemyBody {
+    if (def.body === 'golem') return makeGolemBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
+    if (def.body === 'crawler') return makeCrawlerBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'quadruped') return makeQuadrupedBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'wyrm') {
       const lowQuality = this.host.services.get('vfx')?.quality === 'low';
       return makeWyrmBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m), lowQuality });
     }
-    const source = this.makeModel(def);
+    const made = this.makeModel(def);
+    // Procedural props (the hunters' spear and harpoon) come from ranged/props.ts, the rest from the pack library.
+    const procedural: THREE.Object3D[] = [];
+    const source = {
+      ...made,
+      prop: (id: string) => {
+        if (!id.startsWith('proc/')) return made.prop?.(id) ?? null;
+        const p = makeGroundProp(id);
+        if (p) procedural.push(p);
+        return p;
+      },
+    };
     const model = buildEnemyModel(source, def, { bus: this.host.combat.bus });
     const animator = new EnemyAnimator(model.owner, source.clips, { warn: (m) => this.host.warn(m) });
-    return new HumanoidBody(model, animator);
+    const body = new HumanoidBody(model, animator);
+    if (procedural.length) {
+      // The model builder frees only what it cloned; the procedural props own their geometry and materials.
+      const dispose = body.dispose.bind(body);
+      body.dispose = () => {
+        dispose();
+        for (const p of procedural) disposeGroundProp(p);
+      };
+    }
+    return body;
   }
 
   /** Spawns one enemy without a spawner (tests, debug). */
@@ -608,6 +665,7 @@ export class EnemyManager {
   private makeEnv(): EnemyEnv {
     return {
     host: this.host,
+    attacks: this.attacks,
     rng: () => this.rng(),
     neighbours: (self: Enemy) => {
       const out: { x: number; z: number }[] = [];
@@ -729,12 +787,14 @@ export class EnemyManager {
       if (enemy && from) enemy.pulledToward(from.worldPosition(PULL_TMP), p.distance);
     });
     on('actor.died', (p) => {
+      this.attacks.shooterGone(p.actorId);
       const dying = this.enemies.get(p.actorId);
       if (dying) this.tally.killed(dying.def.kind);
       dying?.died();
       for (const e of this.enemies.values()) if (e.id !== p.actorId) e.targetGone(p.actorId);
     });
     on('actor.despawned', (p) => {
+      this.attacks.shooterGone(p.actorId);
       // Despawned by someone else (a script): clean up without despawning again.
       this.enemies.get(p.actorId)?.cleanup();
       for (const e of this.enemies.values()) e.targetGone(p.actorId);
@@ -775,6 +835,7 @@ export class EnemyManager {
       }
     });
     on('save.loaded', () => {
+      this.attacks.clear();
       // The live world follows the save: cleared groups and spent piles go, active quests' groups return.
       const spent = new Set(this.spawners.liveInSpentSlots());
       // An enemy leaving after a mercy the loaded save never saw is gone from this world: despawn it
@@ -839,6 +900,22 @@ export class EnemyManager {
         },
         POISE_BREAK_BONES_ORDER,
       ),
+      // The Cinder Golem: only its back core breaks poise (an instant break); everything else deals health damage only.
+      this.host.damage.addModifier(
+        'enemies.core',
+        (req, target) => {
+          if (req.outcome !== 'hit' || (req.kind !== 'melee' && req.kind !== 'spell')) return;
+          const enemy = this.enemies.get(target.id);
+          if (!enemy || enemy.def.behaviour !== 'back-core') return;
+          if (isCoreHit(req.bone, req.direction, enemy.facing)) {
+            req.poise = Math.max(req.poise, target.maxPoise);
+            enemy.markCoreHit();
+          } else {
+            req.poise = 0;
+          }
+        },
+        GOLEM_CORE_ORDER,
+      ),
       this.host.damage.addModifier(
         'enemies.moves',
         (req, _target, attacker) => {
@@ -846,6 +923,13 @@ export class EnemyManager {
           const enemy = this.enemies.get(attacker.id);
           const move = enemy?.brain.currentMove;
           if (!enemy || !move) return;
+          // A ranged or area hit carries its own amounts (the move may have changed in flight).
+          if (req.attackId?.startsWith(RANGED_ATTACK_PREFIX)) return;
+          // A ranged or area move hurts through its bolt or circle only: the fist or spear sweeping the same window deals nothing.
+          if (move.ranged || move.area) {
+            req.outcome = 'immune';
+            return;
+          }
           req.amount = move.damage * enemy.damageScale * boneMultiplier(req.bone);
           req.poise = move.poise;
           req.attackId = move.clip;
@@ -885,6 +969,7 @@ export class EnemyManager {
     this.disposed = true;
     for (const u of this.unsubs.splice(0)) u();
     this.spawners.dispose();
+    this.attacks.dispose();
     this.foes.dispose();
     for (const id of [...this.bossHolds.keys()]) this.closeBossHold(id);
     this.calm.dispose();

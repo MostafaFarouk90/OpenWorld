@@ -5,7 +5,13 @@ import type { MercyDef } from './types';
 export type CalmInventory = Pick<InventoryPort, 'count' | 'remove'>;
 
 /** What a Calm hold can pay: an item from the inventory, or the Warm Hand (10 Burn, no item). */
-export type CalmOption = { kind: 'item'; itemId: string; count: number } | { kind: 'warmHand' };
+export type CalmOption = { kind: 'item'; itemId: string; count: number } | { kind: 'warmHand' } | { kind: 'free' };
+
+/** What a Calm prompt knows about the beast besides its def (A6b). */
+export interface CalmContext {
+  /** A cooling hit has it staggered (the crawler's free Calm). */
+  cooled?: boolean;
+}
 
 /** Owner name of the wheel claim (`input.claimWheel`). */
 export const CALM_WHEEL_OWNER = 'enemies.calm';
@@ -15,10 +21,18 @@ export const CALM_WHEEL_OWNER = 'enemies.calm';
  * in the def's order (Hearth Bread before Ember Coal), then the Warm Hand when the beast takes it. Empty means
  * no prompt (design section 2: no offering, no Calm).
  */
-export function calmOptions(mercy: Pick<MercyDef, 'offerings' | 'warmHand'>, inventory: CalmInventory | undefined): CalmOption[] {
+export function calmOptions(
+  mercy: Pick<MercyDef, 'offerings' | 'warmHand' | 'delivery' | 'freeCalm'>,
+  inventory: CalmInventory | undefined,
+  context: CalmContext = {},
+): CalmOption[] {
   const out: CalmOption[] = [];
-  for (const o of mercy.offerings ?? []) {
-    if ((inventory?.count(o.itemId) ?? 0) >= o.count) out.push({ kind: 'item', itemId: o.itemId, count: o.count });
+  if (mercy.freeCalm === 'always' || (mercy.freeCalm === 'cooled' && context.cooled)) out.push({ kind: 'free' });
+  // A thrown offering (the Cooling Draught) is never a hold-T item: it has its own throw prompt (ground/throw.ts).
+  if (mercy.delivery !== 'thrown') {
+    for (const o of mercy.offerings ?? []) {
+      if ((inventory?.count(o.itemId) ?? 0) >= o.count) out.push({ kind: 'item', itemId: o.itemId, count: o.count });
+    }
   }
   if (mercy.warmHand) out.push({ kind: 'warmHand' });
   return out;
@@ -26,11 +40,12 @@ export function calmOptions(mercy: Pick<MercyDef, 'offerings' | 'warmHand'>, inv
 
 /** True when `option` is still payable (an item the inventory still holds, or the Warm Hand). */
 export function calmPayable(option: CalmOption, inventory: CalmInventory | undefined): boolean {
-  return option.kind === 'warmHand' || (inventory?.count(option.itemId) ?? 0) >= option.count;
+  return option.kind === 'warmHand' || option.kind === 'free' || (inventory?.count(option.itemId) ?? 0) >= option.count;
 }
 
 /** The prompt's `{offering}` text: the item's name, or "Warm Hand, 10 Burn". */
 export function calmOptionLabel(option: CalmOption, text: (key: string) => string): string {
+  if (option.kind === 'free') return text('enemies.calm.free');
   return option.kind === 'warmHand' ? text('enemies.calm.warmHand') : text(`enemies.calm.offering.${option.itemId}`);
 }
 
@@ -128,4 +143,4 @@ export class CalmCycle {
   }
 }
 
-const keyOf = (o: CalmOption): string => (o.kind === 'warmHand' ? 'warmHand' : o.itemId);
+const keyOf = (o: CalmOption): string => (o.kind === 'item' ? o.itemId : o.kind);

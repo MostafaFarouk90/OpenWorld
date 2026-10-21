@@ -48,6 +48,8 @@ export interface ActorInitLike {
   maxPoise?: number;
   /** Takes every hit and stays at full health (the watch guard). */
   immortal?: boolean;
+  /** False: nothing damages it, lock-on skips it and projectiles pass (the fox and the sheep). */
+  hittable?: boolean;
   root?: THREE.Object3D;
   owner?: unknown;
   /** Set once at spawn from the spawner's tag (coordinator ruling for thread 3's kill filter). */
@@ -58,6 +60,8 @@ export interface ActorsPort {
   spawn(init: ActorInitLike): ActorLike;
   despawn(id: ActorId): void;
   get(id: ActorId): ActorLike | undefined;
+  /** Every live actor (the core registry has it; the projectile sweep reads it). */
+  all?(): Iterable<ActorLike>;
   /** Maps another object (a second weapon's tracer attacker) to the actor; returns unbind. */
   bindOwner(actor: ActorLike, owner: unknown): () => void;
   readonly player: ActorLike;
@@ -93,6 +97,8 @@ export type DamageModifierLike = (
 ) => void;
 
 export interface DamagePort {
+  /** Applies a request (A6b: ranged hits and area hits). Null when refused (dead, unhittable, same team). */
+  apply?(req: DamageRequestLike & { pull?: { distance: number }; point?: THREE.Vector3 }): DamageResultLike | null;
   addModifier(id: string, modifier: DamageModifierLike, order?: number): () => void;
   heal(id: ActorId, amount: number): number;
   /** Scripted death (the real DamageResolver has it); foes that fire or a torch destroys use it, so `actor.died` still fires. */
@@ -224,9 +230,12 @@ export interface NavPort {
 
 /** `ctx.gates` (state/FlagGates.ts): flag-derived state that is re-derived on `save.loaded`. */
 export interface GatesPort {
-  /** `listener(open, cause)` at once, then when `test`'s result changes. `get(key)` reads a flag as a boolean. */
+  /**
+   * `listener(open, cause)` at once, then when `test`'s result changes. `get(key)` reads a flag as a boolean; `str(key)` reads
+   * a string flag (a quest choice such as `story.r07.choice`), undefined when the flag is unset or not a string.
+   */
   watch(
-    test: (get: (key: string) => boolean) => boolean,
+    test: (get: (key: string) => boolean, str: (key: string) => string | undefined) => boolean,
     listener: (open: boolean, cause: 'init' | 'flag' | 'load' | 'recheck') => void,
     keys: readonly string[],
   ): () => void;

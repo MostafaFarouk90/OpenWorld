@@ -4,6 +4,7 @@ import type { GamePlugin } from '../core/plugins';
 import { ENEMY_DEFS } from './defs';
 import { EnemyManager, type ModelFactory } from './EnemyManager';
 import { hostFromContext } from './host';
+import { ACT2_SPAWNERS } from './act2Spawners';
 import { BRIGHTWATER_SPAWNERS } from './brightwaterSpawners';
 import { DENSITY_SPAWNERS_A } from './densitySpawners';
 import { HARROWMARK_SPAWNERS } from './harrowmarkSpawners';
@@ -29,8 +30,9 @@ const plugin: GamePlugin = {
     const warn = (m: string) => console.warn(`[enemies] ${m}`);
     const assets = ctx.assets;
     // Pack props worn by recipes (the watch guard's pot helm): preloaded here, skipped by the model builder until loaded.
+    // `proc/` ids are procedural (the hunters' spear and harpoon, ranged/props.ts), never loaded.
     const lib = modelLibraryFor(assets);
-    void lib.preload([...new Set(Object.values(ENEMY_DEFS).flatMap((d) => (d.model.props ?? []).map((p) => p.id)))]);
+    void lib.preload([...new Set(Object.values(ENEMY_DEFS).flatMap((d) => (d.model.props ?? []).map((p) => p.id)).filter((id) => !id.startsWith('proc/')))]);
     const prop = (id: string) => {
       const t = lib.peek(id);
       return t ? ModelLibrary.object(t) : null;
@@ -47,7 +49,7 @@ const plugin: GamePlugin = {
       }
       return { model: assets.instantiate(KNIGHT), clips: assets.animations(KNIGHT), prop };
     };
-    const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS] });
+    const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS, ...ACT2_SPAWNERS] });
     manager = m;
 
     ctx.strings.register('en', ENEMY_STRINGS_EN);

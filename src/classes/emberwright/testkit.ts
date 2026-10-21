@@ -17,6 +17,7 @@ export interface Rig {
   ember: { value: number; max: number };
   statusCalls: Array<{ id: string; spec: StatusSpec }>;
   pushes: Array<{ id: string; dir: Vec3; metres: number }>;
+  cools: Array<{ at: Vec3; radius: number }>;
   fx: Array<{ id: string; at: Vec3 }>;
   fizzles: number;
   /** What damage.apply answers; default a plain hit. */
@@ -34,7 +35,7 @@ export function makeRig(opts: { learned?: string[] } = {}): Rig {
   const learned = new Set(opts.learned ?? []);
   const state: Rig['state'] = { classId: 'emberwright', avatarClass: 'emberwright', lockOn: null, walls: false, yielding: new Set(), stunned: false, wallZ: null };
   const ember = { value: 100, max: 100 };
-  const rig = { w, learned, state, ember, statusCalls: [], pushes: [], fx: [], fizzles: 0, result: {} } as unknown as Rig;
+  const rig = { w, learned, state, ember, statusCalls: [], pushes: [], cools: [], fx: [], fizzles: 0, result: {} } as unknown as Rig;
   const damage = w.damage;
   const base = damage.apply.bind(damage);
   damage.apply = (req) => {
@@ -53,6 +54,7 @@ export function makeRig(opts: { learned?: string[] } = {}): Rig {
       has: (_id, kind) => kind === 'stun' && state.stunned,
     }),
     push: (id, dir, metres) => { rig.pushes.push({ id, dir, metres }); return true; },
+    cool: (at, radius) => { rig.cools.push({ at: vec(at), radius }); return 0; },
     learned: (id) => learned.has(id),
     classId: () => state.classId,
     avatarClass: () => state.avatarClass,

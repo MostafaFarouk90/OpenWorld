@@ -11,6 +11,8 @@ export interface StatusRead {
   stunSeconds: number;
   /** Multiplier on move speed: 1 - the largest slow fraction, in [0.1, 1]. */
   speedScale: number;
+  /** v0.6: rooted (a net). */
+  rooted?: boolean;
 }
 
 /**
@@ -30,6 +32,7 @@ export interface ActorStatusView {
 export const STATUS_DATA_KEY = 'status';
 
 const NONE: StatusRead = { stunSeconds: 0, speedScale: 1 };
+const ROOTED_ONLY: StatusRead = { stunSeconds: 0, speedScale: 0, rooted: true };
 
 export function readStatusData(raw: unknown): StatusRead {
   if (!raw || typeof raw !== 'object') return NONE;
@@ -38,12 +41,18 @@ export function readStatusData(raw: unknown): StatusRead {
     const stun = v.stunned === true ? Math.max(num(v.stunRemaining, 0), 0.05) : 0;
     const slow = clamp01(num(v.slow, 0));
     // v0.6 root: no movement at all (the 0.1 floor is a slow's).
-    if (v.rooted === true) return { stunSeconds: stun, speedScale: 0 };
+    if (v.rooted === true) return stun === 0 ? ROOTED_ONLY : { stunSeconds: stun, speedScale: 0, rooted: true };
     return stun === 0 && slow === 0 ? NONE : { stunSeconds: stun, speedScale: Math.max(0.1, 1 - slow) };
   }
   let stun = 0;
   let slow = 0;
+  let rooted = false;
   const take = (kind: unknown, value: unknown): void => {
+    if (kind === 'root') {
+      const v = value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+      if (num(v ? (v['remaining'] ?? v['seconds']) : value, 1) > 0) rooted = true;
+      return;
+    }
     if (kind !== 'stun' && kind !== 'slow') return;
     const v = value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
     const remaining = num(v ? (v['remaining'] ?? v['seconds']) : value, kind === 'slow' ? 1 : 0);
@@ -56,6 +65,7 @@ export function readStatusData(raw: unknown): StatusRead {
   } else {
     for (const [kind, value] of Object.entries(raw as Record<string, unknown>)) take(kind, value);
   }
+  if (rooted) return { stunSeconds: stun, speedScale: 0, rooted: true };
   return stun === 0 && slow === 0 ? NONE : { stunSeconds: stun, speedScale: Math.max(0.1, 1 - slow) };
 }
 
