@@ -12,7 +12,7 @@ interface SoftServices {
     active(): readonly unknown[];
     objectives(id: string): readonly unknown[];
   };
-  companions: { active(): readonly string[]; actorId(id: string): string | null };
+  companions: { active(): readonly string[]; actorId(id: string): string | null; maxActive?(): number };
   inventory: { readonly gold: number };
   stealth: {
     active?(): boolean;

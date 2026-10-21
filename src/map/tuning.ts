@@ -19,8 +19,8 @@ export const LEGACY_V1_BOUNDS: Readonly<WorldBounds> = Object.freeze({ minX: -20
 export const DEFAULT_WORLD_BOUNDS: Readonly<WorldBounds> = Object.freeze({ ...WORLD_BOUNDS });
 
 export const MAP_TUNING = {
-  /** Full-map terrain bitmap resolution (pixels per edge). */
-  fullMapPixels: 256,
+  /** Full-map terrain bitmap resolution (pixels per edge of the longer side): 25 km at 384 px is about 65 m a pixel, time-sliced and built once. */
+  fullMapPixels: 384,
   /** Minimap local tile resolution (pixels per edge): 192 px * 2.5 = 480 m, wider than the circle so drift never shows black. */
   minimapTilePixels: 192,
   /** Metres per minimap tile pixel. */

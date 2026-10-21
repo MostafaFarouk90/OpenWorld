@@ -32,6 +32,15 @@ export function createMinimap(deps: MinimapDeps): MinimapWidget {
   canvas.height = MINIMAP_SIZE;
   Object.assign(canvas.style, { width: `${MINIMAP_SIZE}px`, height: `${MINIMAP_SIZE}px`, display: 'block', borderRadius: '50%' });
   element.appendChild(canvas);
+  const caption = doc.createElement('div');
+  caption.className = 'minimap__caption';
+  Object.assign(caption.style, {
+    position: 'absolute', left: '0', right: '0', bottom: '6px', textAlign: 'center', font: '11px sans-serif',
+    color: '#e8dfc8', textShadow: '0 0 3px #000, 0 0 3px #000', pointerEvents: 'none',
+  });
+  element.style.position = 'relative';
+  element.appendChild(caption);
+  let captionText = '';
   const ctx = canvas.getContext('2d');
   const stats = { draws: 0, tileBuilds: 0 };
 
@@ -123,6 +132,11 @@ export function createMinimap(deps: MinimapDeps): MinimapWidget {
     ctx.arc(R, R, 4, 0, Math.PI * 2);
     ctx.fillStyle = '#fff';
     ctx.fill();
+    const text = model.regionCaption?.() ?? '';
+    if (text !== captionText) {
+      captionText = text;
+      caption.textContent = text;
+    }
     return true;
   }
 
