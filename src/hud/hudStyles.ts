@@ -73,6 +73,7 @@ export const HUD_CSS = `
 .owg-slot-name{opacity:.7;min-width:64px}
 .owg-slot-item{flex:1}
 .owg-item{display:flex;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.owg-dim{opacity:.55}
 .owg-item-name{min-width:200px;font-weight:600}
 .owg-item-desc{flex:1;opacity:.75}
 .owg-empty{opacity:.6}

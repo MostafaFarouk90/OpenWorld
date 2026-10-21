@@ -33,6 +33,8 @@ export interface MountService {
   stamina(): { value: number; max: number } | null;
   /** A region speed cap (m/s) at a point, e.g. the Ashen Waste's drifts in Act 2; returns the undo. */
   addSpeedCap(capAt: (x: number, z: number) => number): () => void;
+  /** Extra maximum stamina (the Ashmare saddle, Act 2); sources add up, the bar keeps its fill proportion. Returns the undo. */
+  addStaminaBonus(fn: () => number): () => void;
 }
 
 declare module '../core/Services' {
@@ -92,6 +94,8 @@ export class MountController implements MountService {
   private offTarget: (() => void) | null = null;
   private offOwner: (() => void) | null = null;
   private offLocks: (() => void) | null = null;
+  /** The stamina a save held, re-applied on `save.loaded` once bonuses (the saddle) are known. */
+  private savedStamina: number | null = null;
   private readonly speedCaps = new Set<(x: number, z: number) => number>();
   private readonly offs: (() => void)[] = [];
   private readonly lastFeet = new THREE.Vector3();
@@ -163,6 +167,10 @@ export class MountController implements MountService {
     };
   }
 
+  addStaminaBonus(fn: () => number): () => void {
+    return this.model.addStaminaBonus(fn);
+  }
+
   summon(): void {
     if (this._mounted) return;
     const refused = this.refusal();
@@ -216,6 +224,9 @@ export class MountController implements MountService {
         // A save without a `mount` entry (or one refused as newer) never reaches `load`: load the defaults here.
         if (!this.loadedEntry) this.load(null);
         this.loadedEntry = false;
+        // The mount entry may load before the inventory that supplies a stamina bonus: put the saved fill back now.
+        if (this.savedStamina !== null) this.model.setStamina(this.savedStamina);
+        this.savedStamina = null;
         if (!this.available) this.removeHorse();
       }),
     );
@@ -637,7 +648,8 @@ export class MountController implements MountService {
     this.loadedEntry = true;
     if (this._mounted) this.dismount('load');
     const d = (data ?? {}) as Partial<MountSave>;
-    this.model.setStamina(typeof d.stamina === 'number' ? d.stamina : this.model.max);
+    this.savedStamina = typeof d.stamina === 'number' ? d.stamina : null;
+    this.model.setStamina(this.savedStamina ?? this.model.max);
     this.arriving = null;
     this.lastFeetValid = false;
     const spot = readSpot(d.placed);

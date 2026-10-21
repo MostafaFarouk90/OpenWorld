@@ -31,7 +31,8 @@ interface SoftQuests {
   state?(id: string): string;
 }
 interface SoftClasses {
-  chosen?(): string | null;
+  chosen?(): boolean;
+  current?(): string;
 }
 
 const economyPlugin: GamePlugin = {
@@ -61,6 +62,16 @@ const economyPlugin: GamePlugin = {
         case 'gerta':
           // At her Guild Quarter stall before M07 starts and after M10; in the Bastion in between.
           return questState('m07') === 'inactive' || questState('m10') === 'completed';
+        case 'osgar':
+          return questState('m12') !== 'inactive';
+        case 'maud':
+          return questState('m12') !== 'inactive' && ctx.state.getString('story.r06.choice') !== 'sealed';
+        case 'ketta':
+          return questState('r05') !== 'inactive';
+        case 'slagg':
+        case 'pike':
+        case 'aldous':
+          return questState('m16') !== 'inactive';
         default:
           return ctx.state.getBool('tutorial.complete');
       }
@@ -80,10 +91,11 @@ const economyPlugin: GamePlugin = {
       getItem,
       grant: (sourceId, itemId, count) => ctx.events.emit('loot.granted', { sourceId, items: [{ itemId, count }] }),
       band: (v) => {
-        const track = ({ wystan: 'halvard', merrin: 'oswin' } as Partial<Record<VendorId, 'halvard' | 'oswin'>>)[v];
+        const track = ({ wystan: 'halvard', merrin: 'oswin', aldous: 'grisel' } as Partial<Record<VendorId, 'halvard' | 'oswin' | 'grisel'>>)[v];
         return track ? ctx.state.favourBand(track) : null;
       },
       isOpen,
+      gearRecord: (id) => inventory.gear(id),
       flag: (key) => ctx.state.getFlag(key),
       emit: (type, payload) => emit(type, payload),
       warn,
@@ -113,6 +125,10 @@ const economyPlugin: GamePlugin = {
         buy: (itemId, seen) => shop.buy(id, itemId, 1, seen),
         sell: (itemId) => shop.sell(id, itemId),
         buyBack: (i) => shop.buyBack(id, i),
+        classId: () => {
+          const c = soft<SoftClasses>('classes');
+          return c?.chosen?.() ? (c.current?.() ?? null) : null;
+        },
         t,
         toast,
         close: () => closeMenu?.(),
@@ -242,6 +258,10 @@ const economyPlugin: GamePlugin = {
         cancelInn?.();
       });
     }
+    // Maud's stew is Hearty food: the same duration as a night at the inn.
+    ctx.events.on('item.used', (e) => {
+      if (e.itemId === 'maud-stew') inn.applyHearty(INN.heartySeconds);
+    });
     ctx.services.provide('inn', {
       rest: () => openInn(),
       applyHearty: (s) => inn.applyHearty(s),

@@ -3,7 +3,7 @@ import type { InventoryService } from '../hud/ports';
 import { getItem } from '../inventory/items';
 import { sellPrice } from './prices';
 import type { BuyBackEntry, Offer, ShopFailure, ShopResult } from './Shop';
-import { SHOP_LIST_PRICES, VENDORS, type VendorId } from './stock';
+import { SELL_FLAT, SHOP_LIST_PRICES, VENDORS, type VendorId } from './stock';
 
 type T = (key: string, params?: Record<string, string | number>) => string;
 
@@ -15,6 +15,8 @@ export interface VendorMenuDeps {
   buy(itemId: string, seenPrice: number): ShopResult;
   sell(itemId: string): ShopResult;
   buyBack(index: number): ShopResult;
+  /** The player's class id, to dim off-class rows; absent means no dimming. */
+  classId?(): string | null;
   t: T;
   toast(text: string): void;
   close(): void;
@@ -75,8 +77,8 @@ export class VendorMenu {
     }
 
     const list = this.el('div', 'owg-item-list');
-    const row = (name: string, note: string, label: string, onclick: () => void): void => {
-      const r = this.el('div', 'owg-item');
+    const row = (name: string, note: string, label: string, onclick: () => void, dim = false): void => {
+      const r = this.el('div', 'owg-item' + (dim ? ' owg-dim' : ''));
       r.append(this.el('span', 'owg-item-name', name), this.el('span', 'owg-item-desc', note));
       const b = this.el('button', 'owg-btn', label);
       b.onclick = onclick;
@@ -91,15 +93,17 @@ export class VendorMenu {
     };
     if (this.tab === 'buy') {
       for (const o of this.deps.offers()) {
-        row(nameOf(o.itemId), o.remaining === null ? '' : t('economy.shop.left', { n: o.remaining }), t('economy.shop.buy', { price: o.price }), () =>
-          this.act(this.deps.buy(o.itemId, o.price)),
-        );
+        const cls = this.deps.classId?.();
+        const off = !!o.classes && !!cls && !o.classes.includes(cls);
+        const left = o.remaining === null ? '' : t('economy.shop.left', { n: o.remaining });
+        const note = off ? [left, t('economy.shop.otherClass')].filter(Boolean).join(' · ') : left;
+        row(nameOf(o.itemId), note, t('economy.shop.buy', { price: o.price }), () => this.act(this.deps.buy(o.itemId, o.price)), off);
       }
     } else if (this.tab === 'sell') {
       for (const { id, count } of this.deps.inventory.items()) {
         const def = getItem(id);
-        if (!def || def.kind === 'quest') continue;
-        const price = sellPrice(id) ?? (SHOP_LIST_PRICES[id] !== undefined ? Math.max(1, Math.floor(SHOP_LIST_PRICES[id] * 0.4)) : undefined);
+        if (!def || (def.kind === 'quest' && SELL_FLAT[id] === undefined)) continue;
+        const price = SELL_FLAT[id] ?? sellPrice(id) ?? (SHOP_LIST_PRICES[id] !== undefined ? Math.max(1, Math.floor(SHOP_LIST_PRICES[id] * 0.4)) : undefined);
         if (price === undefined) continue;
         row(`${nameOf(id)}${count > 1 ? ` x${count}` : ''}`, '', t('economy.shop.sell', { price }), () => this.act(this.deps.sell(id)));
       }
