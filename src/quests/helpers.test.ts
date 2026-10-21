@@ -1,3 +1,4 @@
+import { OLDSMOKE_POST_RULES } from '../oldsmoke/postRules';
 import { describe, it, expect, vi } from 'vitest';
 import { makeWorld, FakeBus, fakeState } from './testKit';
 import { installBridges, TORCH_USED_FLAG } from './bridges';
@@ -96,7 +97,9 @@ describe('POI rewards', () => {
 });
 
 // These worlds hold Brightwater quests only; Rook's gate post (until M06 is done) would be placed in every one of them.
-const BRIGHTWATER_RULES = POST_RULES.filter((r) => r.npcId !== 'rook');
+// Deepgate's always-on hall rows (Act 2, A4) would place their cast in every world too.
+const DEEPGATE_NPCS = new Set(OLDSMOKE_POST_RULES.map((r) => r.npcId));
+const BRIGHTWATER_RULES = POST_RULES.filter((r) => r.npcId !== 'rook' && !DEEPGATE_NPCS.has(r.npcId));
 
 describe('quest posts', () => {
   it('places Rook at the South Gate from the start (he spawns at npc-post.rook) and in the city once M06 is done', () => {
@@ -199,7 +202,7 @@ describe('quest posts', () => {
   it('never puts Tobb in a rule', () => {
     expect(POST_RULES.map((r) => r.npcId)).not.toContain('tobb');
     const w = makeWorld();
-    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager }))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'refugee-1', 'refugee-2', 'gerta', 'edric', 'vey', 'merrin', 'grisel', 'pennard', 'edda', 'aldwin', 'osgar', 'ketta']);
+    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager })).filter((id) => !DEEPGATE_NPCS.has(id))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'refugee-1', 'refugee-2', 'gerta', 'edric', 'vey', 'merrin', 'grisel', 'pennard', 'edda', 'aldwin', 'osgar', 'ketta']);
   });
 });
 

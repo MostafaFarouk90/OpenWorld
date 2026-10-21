@@ -3,6 +3,7 @@
 import type { Condition } from './types';
 import type { ConditionEnv, NpcPort } from './ports';
 import { evalCondition } from './conditions';
+import { OLDSMOKE_POST_RULES } from '../oldsmoke/postRules';
 
 export interface PostRule {
   npcId: string;
@@ -24,6 +25,8 @@ const live = (q: string): Condition => ({ quest: q, state: ['active', 'completed
  * thread 4's). First matching entry wins. NPCs a rule names that are not in the world yet are retried until placed.
  */
 export const POST_RULES: PostRule[] = [
+  // Act 2 (A4, additive): Deepgate's cast. First, so a row here wins; none of these NPCs has an Act 1 row.
+  ...OLDSMOKE_POST_RULES,
   {
     npcId: 'gaut', home: 'npc-post.gaut',
     posts: [

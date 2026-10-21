@@ -28,4 +28,5 @@ export const ENEMY_STRINGS_EN: Record<string, string> = {
   'enemies.name.kindling-fox': 'Kindling Fox',
   'enemies.name.hunter-spearman': 'Dragon-Hunter Spearman',
   'enemies.name.hunter-harpooner': 'Dragon-Hunter Harpooner',
+  'enemies.name.steward-guard': 'Steward Guard',
 };

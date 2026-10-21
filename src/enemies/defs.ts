@@ -188,6 +188,35 @@ export const WATCH_GUARD: EnemyDef = {
   observerOnly: true,
 };
 
+/**
+ * House Grisel's steward guard (Act 2, thread A4; additive here): the yard veteran's sword-and-shield body in Grisel green at the
+ * Charred Footman's weight (full damage), and no yield: sworn men fight to the end, so there is no Spare. Deepgate's hall guards
+ * and M20's stewards (A13) share this one definition. A taste call, logged in design/changes-applied.md.
+ */
+export const STEWARD_GUARD: EnemyDef = {
+  kind: 'steward-guard',
+  nameKey: 'enemies.name.steward-guard',
+  model: { prefer: [], tint: 0x3f6a4a, weapons: 'sword-shield', hide: ['Knight_Helmet'] },
+  maxHealth: 60,
+  maxPoise: 40,
+  walkSpeed: 1.4,
+  chaseSpeed: 2.6,
+  moves: [
+    move('soldier.chop', ENEMY_ATTACKS.soldierChop, {
+      windup: 0.6, telegraph: 'block', weapon: 'right', damage: 20, poise: 25,
+      range: [0, 1.6], cooldown: 1.6, recover: 0.7, weight: 3,
+    }),
+    move('soldier.bash', ENEMY_ATTACKS.soldierBash, {
+      windup: 0.6, telegraph: 'block', weapon: 'left', damage: 10, poise: 25,
+      range: [0, 1.0], cooldown: 3, recover: 0.7, weight: 1,
+    }),
+  ],
+  material: 'metal',
+  rises: false,
+  guard: true,
+  pairAdvance: true,
+};
+
 export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'ash-wraith': ASH_WRAITH,
   'blighted-soldier': BLIGHTED_SOLDIER,
@@ -205,6 +234,7 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'kindling-fox': KINDLING_FOX,
   'hunter-spearman': HUNTER_SPEARMAN,
   'hunter-harpooner': HUNTER_HARPOONER,
+  'steward-guard': STEWARD_GUARD,
 };
 
 /**
@@ -231,6 +261,7 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   'kindling-fox': { part: 'tail', color: 0xe8863a },
   'hunter-spearman': { part: 'weapon', color: 0xd04030 },
   'hunter-harpooner': { part: 'weapon', color: 0xd04030 },
+  'steward-guard': { part: 'weapon', color: 0xd04030 },
 };
 
 function move(
