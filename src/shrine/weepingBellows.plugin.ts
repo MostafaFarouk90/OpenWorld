@@ -7,6 +7,7 @@ import { valveInteractable } from '../puzzles/ValveWheel';
 import '../waystones/service';
 import { showToast } from '../waystones/toast';
 import { BellowsBlessing } from './bellowsBlessing';
+import { devBellowsCenter, devBellowsRequested } from './bellowsDevHook';
 import { ForgeShrineBinding } from './forgeShrine';
 import { BELLOWS as B, BLESSING, initialRouting } from './weepingBellows.tuning';
 import { BELLOWS_STRINGS_EN } from './weepingBellows.strings.en';
@@ -127,9 +128,16 @@ const weepingBellowsPlugin: GamePlugin = {
     ctx.scene.add(visuals.root);
     const offs: (() => void)[] = [];
     let placed = false;
+    const devHook = devBellowsRequested((globalThis as { location?: { search?: string } }).location?.search);
     const place = () => {
       if (placed) return;
-      const c = ctx.anchors.find(B.centerAnchor);
+      let c = ctx.anchors.find(B.centerAnchor);
+      if (!c && devHook) {
+        // ?bellows=1: a stand-in cavern centre, defined once and owned by this plugin.
+        const stone = ctx.anchors.find(`waystone.${B.waystoneId}`)?.position;
+        offs.push(ctx.anchors.define({ id: B.centerAnchor, position: devBellowsCenter(stone, ctx.player.feet), yaw: 0 }));
+        c = ctx.anchors.find(B.centerAnchor);
+      }
       if (!c) return;
       placed = true;
       const layout = bellowsLayout(c.position);

@@ -31,6 +31,7 @@ const modules: Record<string, PluginModule> = {
 };
 
 import { BELLOWS, initialRouting } from './weepingBellows.tuning';
+import { devBellowsCenter, devBellowsRequested } from './bellowsDevHook';
 import { WAYSTONE_LOCKS } from '../waystones/tuning';
 
 const CENTER = { x: 20200, y: 150, z: 9500 };
@@ -307,3 +308,37 @@ const solveBlessing = (t: T) => {
     t.ctx.events.emit('spell.released', { casterId: 'player', spellId: 'heartshard-surge' });
   }
 };
+
+describe('?bellows=1 dev hook', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('is off without the URL flag, and for other values', () => {
+    for (const q of [undefined, '', '?debug', '?bellows=0', '?bellows=', '?bellow=1']) expect(devBellowsRequested(q)).toBe(false);
+    expect(devBellowsRequested('?debug&bellows=1')).toBe(true);
+  });
+
+  it('places the stand-in centre 20 m north of the stone, else ahead of the player', () => {
+    expect(devBellowsCenter({ x: 5, y: 6, z: 100 }, { x: 0, y: 0, z: 0 })).toEqual({ x: 5, y: 6, z: 80 });
+    expect(devBellowsCenter(undefined, { x: 1, y: 2, z: 3 })).toEqual({ x: 1, y: 2, z: -11 });
+  });
+
+  it('without the URL flag and without A4\'s anchor the plugin defines no centre anchor', async () => {
+    const t = await boot({ center: false });
+    t.run(5);
+    expect(t.ctx.anchors.find('mines.weeping-bellows.center')).toBeUndefined();
+    expect(t.interactables.has('valve:bellows-1')).toBe(false);
+  });
+
+  it('with the flag the real puzzle appears at the stand-in spot and works; A4\'s anchor, once real, is not replaced', async () => {
+    vi.stubGlobal('location', { search: '?bellows=1' });
+    const t = await boot({ center: false });
+    t.run(3);
+    expect(t.ctx.anchors.find('mines.weeping-bellows.center')).toBeDefined();
+    wheel(t, 1).onInteract(player(t));
+    expect(t.ctx.services.require('puzzles').pressure('weeping-bellows')).not.toBeNull();
+    const c = await boot({ center: true });
+    c.run(3);
+    const a = c.ctx.anchors.find('mines.weeping-bellows.center')!;
+    expect(a.position).toEqual(CENTER);
+  });
+});
