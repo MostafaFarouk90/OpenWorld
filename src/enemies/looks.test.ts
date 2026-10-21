@@ -21,7 +21,7 @@ const SWORD_REACH = 1.0994;
 
 /** The body a def uses (first preferred body, else the Knight): what enemies.plugin picks when everything is loaded. */
 const bodyOf = (d: EnemyDef): string => d.model.prefer[0] ?? 'knight';
-const HUMANOIDS = Object.values(ENEMY_DEFS).filter((d) => d.kind !== 'ember-hound');
+const HUMANOIDS = Object.values(ENEMY_DEFS).filter((d) => (d.body ?? 'humanoid') === 'humanoid');
 const build = (d: EnemyDef, withProps = true) =>
   buildEnemyModel(
     { model: src.instantiate(bodyOf(d)), clips: src.animations(bodyOf(d)), prop: withProps ? (id) => (id === 'hex/bucket_empty' ? new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.14)) : null) : undefined },

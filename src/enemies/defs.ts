@@ -2,6 +2,7 @@ import { ENEMY_ATTACKS } from './clips';
 import { ALLEY_CUTPURSE } from './cutpurse/def';
 import { GUILDHALL_THUG } from './guildhall/def';
 import { EMBER_HOUND } from './hound/def';
+import { EMBER_WYRM_DEF, WYRMLING_DEF } from './wyrm/defs';
 import type { EnemyDef, EnemyKind, MoveDef } from './types';
 
 /**
@@ -193,13 +194,15 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'toll-sergeant': TOLL_SERGEANT,
   'yard-veteran': YARD_VETERAN,
   'hrolf-trial': HROLF_TRIAL,
+  'ember-wyrm': EMBER_WYRM_DEF,
+  wyrmling: WYRMLING_DEF,
 };
 
 /**
  * Telegraph look per kind, for thread 7 (design 11.6): which part flashes and in what colour.
  * The `telegraph` event names only the actor; thread 7 maps `actor.kind` through this table.
  */
-export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapon' | 'tail'; color: number }>> = {
+export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapon' | 'tail' | 'mouth' | 'wing'; color: number }>> = {
   'ash-wraith': { part: 'hand', color: 0x9fbf8f },
   'blighted-soldier': { part: 'weapon', color: 0xd04030 },
   'alley-cutpurse': { part: 'hand', color: 0xc8b070 },
@@ -210,6 +213,9 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   'toll-sergeant': { part: 'weapon', color: 0xd04030 },
   'yard-veteran': { part: 'weapon', color: 0xd04030 },
   'hrolf-trial': { part: 'weapon', color: 0xd04030 },
+  // The wyrms light their mouths (design 11.6: the spit's inhale glow; the dive's wing flash is drawn by the body).
+  'ember-wyrm': { part: 'mouth', color: 0xff7a2a },
+  wyrmling: { part: 'mouth', color: 0xffb040 },
 };
 
 function move(

@@ -19,7 +19,19 @@ export type AiState =
   | 'calmed'
   | 'dead';
 
-export type EnemyKind = 'ash-wraith' | 'blighted-soldier' | 'alley-cutpurse' | 'ember-hound' | 'watch-guard' | 'guildhall-thug' | 'toll-sergeant' | 'yard-veteran' | 'hrolf-trial';
+export type EnemyKind =
+  | 'ash-wraith'
+  | 'blighted-soldier'
+  | 'alley-cutpurse'
+  | 'ember-hound'
+  | 'watch-guard'
+  | 'guildhall-thug'
+  | 'toll-sergeant'
+  | 'yard-veteran'
+  | 'hrolf-trial'
+  // Act 2 (A6a): the procedural wyrms.
+  | 'ember-wyrm'
+  | 'wyrmling';
 
 /**
  * Act 2 kind ids (v0.6 item 14), reserved here so no other thread takes them. A6a and A6b move each id into
@@ -60,6 +72,8 @@ export interface MoveDef {
   onHit?: 'slow' | 'steal' | 'ignite';
   /** A forward leap while the window is open (the hound's pounce): up to `maxMetres` in a straight line, stopping short of the target. */
   leap?: { maxMetres: number };
+  /** A flier's moves (the Ember Wyrm): offered only in the air or only on the ground; unset offers it in both. */
+  flight?: 'air' | 'ground';
 }
 
 export interface ModelRecipe {
@@ -136,10 +150,17 @@ export interface EnemyDef {
   rises: boolean;
   /** Alley Cutpurse behaviour (cutpurse/): steals on a grab, flees with the gold, can be caught and spared. */
   thief?: boolean;
-  /** Which body the enemy gets: the Knight rig (default) or the procedural quadruped. */
-  body?: 'humanoid' | 'quadruped';
-  /** `circle-rush`: circle the target while a packmate is near, then rush (ai/Brain, hound/circleRush.ts). */
-  behaviour?: 'circle-rush';
+  /** Which body the enemy gets: the Knight rig (default), the procedural quadruped, or the procedural wyrm (wyrm/). */
+  body?: 'humanoid' | 'quadruped' | 'wyrm';
+  /**
+   * `circle-rush`: circle the target while a packmate is near, then rush (ai/Brain, hound/circleRush.ts). The others
+   * are behaviour overlays (behaviours.ts): `wyrm-flight` (the Ember Wyrm) and `skittish` (the wyrmling).
+   */
+  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish';
+  /** Seconds a poise break holds the stagger (and its mercy window); default `AI.breakStaggerSeconds` (1.2). */
+  breakStaggerSeconds?: number;
+  /** Hurtboxes on which a player-team or ally hit breaks poise at once (the Ember Wyrm's wings). */
+  poiseBreakBones?: readonly string[];
   /** Overrides `AI.attackersPerTarget` (the largest limit among the holders and the requester applies). */
   attackersPerTarget?: number;
   /** Seconds between two members of one spawner taking an attack token (default: the pair stagger for `pairAdvance`, else none). */
@@ -214,6 +235,8 @@ export interface SpawnOptions {
   guard?: boolean;
   /** Watch only (default: the def's `observerOnly`); see EnemyDef.observerOnly. */
   observerOnly?: boolean;
+  /** Asleep in place (the resting den wyrm): never notices the player until it is hit. */
+  peaceful?: boolean;
 }
 
 export interface EnemyView {
