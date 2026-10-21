@@ -222,7 +222,7 @@ describe('quest posts', () => {
   it('never puts Tobb in a rule', () => {
     expect(POST_RULES.map((r) => r.npcId)).not.toContain('tobb');
     const w = makeWorld();
-    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager })).filter((id) => !DEEPGATE_NPCS.has(id))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'refugee-1', 'refugee-2', 'gerta', 'edric', 'vey', 'merrin', 'grisel', 'pennard', 'edda', 'aldwin', 'osgar', 'ketta']);
+    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager })).filter((id) => !DEEPGATE_NPCS.has(id))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'refugee-1', 'refugee-2', 'gerta', 'edric', 'grisel-steward', 'vey', 'merrin', 'grisel', 'pennard', 'edda', 'aldwin', 'osgar', 'ketta']);
   });
 });
 

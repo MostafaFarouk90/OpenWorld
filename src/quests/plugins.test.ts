@@ -1,4 +1,4 @@
-import { ACT2_CARRY } from './content/act2/carry';
+import { ACT2_CARRY } from './content/act2';
 import * as THREE from 'three';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import corePlugin from '../core/core.plugin';
@@ -102,7 +102,7 @@ describe('quests and dialogue plugins', () => {
     t.game.fixedUpdate();
     t.game.fixedUpdate();
     const warned = (console.warn as unknown as ReturnType<typeof vi.fn>).mock.calls.filter((c) => String(c[0]).includes('no home anchor'));
-    expect(warned).toHaveLength(CARRY_ITEMS.length + ACT2_CARRY.length); // villagers and well buckets, then Act 2's wounded, bundles and logs
+    expect(warned).toHaveLength(CARRY_ITEMS.length + ACT2_CARRY.length); // villagers and well buckets, then Act 2's wounded, bundles and logs (Cinderreach and Oldsmoke)
     t.game.dispose();
     t.world.dispose();
   });

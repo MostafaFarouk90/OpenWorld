@@ -1,4 +1,5 @@
 import type { QuestNoteSpec } from '../../notes';
+import { OLDSMOKE_NOTE_LIST } from './oldsmoke/notes';
 
 /** A readable note: one short dialogue (id = the note id, the talk target) read with F. Speaker 'note' is a written page, 'cael' his own reading. */
 export interface Act2Note {
@@ -14,6 +15,7 @@ const n = (id: string, anchorId: string, speaker: 'note' | 'cael', lines: string
   ({ id, anchorId, speaker, lines, look, ...(codexId ? { codexId } : {}) });
 
 export const ACT2_NOTE_LIST: Act2Note[] = [
+  ...OLDSMOKE_NOTE_LIST,
   // M11: what happened on the road
   n('note-m11-waypost', 'cinderreach.m11.search.1', 'cael', [
     'The way-post is scorched black on the Harrowmark side. Someone chiselled "STILL 11 MILES" below the old mark, then ran out of time.',

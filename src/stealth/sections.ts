@@ -81,6 +81,20 @@ export const SECTIONS: readonly StealthSectionDef[] = [
     guardGroups: ['stealth.m15.watch'],
     hideSpots: [1, 2, 3, 4].map((i) => ({ id: `hide:m15-${i}`, anchor: `cinderreach.hide.m15.${i}` })),
   },
+  // Act 2 Phase D (A13): M21's spy branch, in Grisel Hall (A4's interior `grisel-hall`; the hall's anchors are the interior's own).
+  {
+    id: 'm21.grisel-hall',
+    quest: { id: 'm21', liveFrom: 'stealth', liveUntil: 'stealth' },
+    bounds: { interior: 'grisel-hall' },
+    checkpoints: [
+      { id: 'hall.start', anchor: 'oldsmoke.stealth.m21.start', volume: v('oldsmoke.stealth.m21.start', 2, 3, 2) },
+      { id: 'hall.gallery', anchor: 'oldsmoke.stealth.m21.cp.gallery', volume: v('oldsmoke.stealth.m21.cp.gallery', 2, 3, 2) },
+      { id: 'hall.study', anchor: 'oldsmoke.stealth.m21.cp.study', volume: v('oldsmoke.stealth.m21.cp.study', 2, 3, 2) },
+    ],
+    exit: v('oldsmoke.stealth.m21.end', 2, 3, 2),
+    guardGroups: ['stealth.m21.watch'],
+    hideSpots: [1, 2, 3, 4].map((i) => ({ id: `hide:m21-${i}`, anchor: `oldsmoke.hide.m21.${i}` })),
+  },
 ];
 
 export const isInteriorBounds = (b: StealthSectionDef['bounds']): b is { interior: string } => 'interior' in b;

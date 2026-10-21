@@ -23,7 +23,9 @@ describe('quest content', () => {
     const ids = questDefs.map((q) => q.id);
     expect(ids).toEqual(['t03', 't12', 'm01', 'm02', 'm03', 'm04', 'm05', 'd01', 'r01', 'r02', 'm06', 'm07', 'm08', 'm09', 'm10', 'r03', 'r04', 'd02',
       // Act 2 (A12)
-      'm11', 'm12', 'r06', 'r05', 'm13', 'r07', 'r11', 'm14', 'm15', 'd03']);
+      'm11', 'm12', 'r06', 'r05', 'm13', 'r07', 'r11', 'm14', 'm15', 'd03',
+      // Act 2 Oldsmoke surface (A13)
+      'm16', 'r09', 'r10', 'm21', 'm22']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 

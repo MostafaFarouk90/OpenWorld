@@ -74,7 +74,9 @@ export const POST_RULES: PostRule[] = [
     ],
   },
   // the audience: the Regent's court stands in the Keep hall while M08 runs (inside posts are thread 3a's anchors)
-  { npcId: 'edric', home: 'npc-post.edric', posts: [{ when: { quest: 'm08', state: 'active' }, anchorId: 'npc-post.edric.hall' }] },
+  // Act 2 (A13, additive): he is in the hall again for the M22 Council, and speaks to Cael after it
+  { npcId: 'edric', home: 'npc-post.edric', posts: [{ when: { any: [{ quest: 'm08', state: 'active' }, { quest: 'm22', state: 'active' }] }, anchorId: 'npc-post.edric.hall' }] },
+  { npcId: 'grisel-steward', home: 'npc-post.grisel', posts: [{ when: { quest: 'm22', state: 'active' }, anchorId: 'npc-post.grisel.hall' }] },
   { npcId: 'vey', home: 'npc-post.vey.keep', posts: [{ when: { quest: 'm08', state: 'active' }, anchorId: 'npc-post.vey.hall' }] },
   // Merrin waits her turn in the Keep hall during the audience (density pass), then inside the Counting-House once
   // Cael has the side-door key (the clerk's, density pass)

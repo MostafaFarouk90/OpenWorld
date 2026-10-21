@@ -2,6 +2,7 @@ import { buildTree, type Line } from './build';
 import { all, flagIs, objDone, objOpen, qActive, qDone, qIdle, step } from './cond';
 
 const O = (t: string, fx?: Line['fx']): Line => (fx ? { s: 'osgar', t, fx } : { s: 'osgar', t });
+const C2 = (t: string): Line => ({ s: 'cael', t });
 
 const d03Report = (outcome: string) =>
   all(qActive('d03'), objDone('d03', 'testimony'), objOpen('d03', 'report'), flagIs('story.d03.outcome', outcome));
@@ -22,9 +23,22 @@ export const OSGAR = buildTree({
     { when: all(qActive('m12'), objDone('m12', 'prep'), objOpen('m12', 'raid')), seg: 'm12-ready' },
     { when: all(qActive('m12'), objOpen('m12', 'prep')), seg: 'm12-wait' },
     { when: all(qDone('m11'), qIdle('m12')), seg: 'm12-brief' },
+    // Act 2 Phase D (A13, additive): the invitation from Deepgate arrives after Scorchhold falls
+    { when: qActive('m16'), seg: 'm16-wait' },
+    { when: all(qDone('d03'), qIdle('m16')), seg: 'm16-offer' },
     { when: all(), seg: 'idle' },
   ],
   segments: {
+    'm16-offer': {
+      lines: [
+        O('A rider came through at dawn with a sealed letter, and it is for you. The green wax is House Grisel, the hand is Lord Aldous\'s own.'),
+        O('He writes that he has heard of Scorchhold, and that Deepgate would see the Knight who brought a hunt-captain down. He offers an alliance, if the shard is more than a rumour.'),
+        C2('An alliance with the House that holds the pass.'),
+        O('With the House that holds the pass, and the mines, and the one forge in the north that has never gone cold. A man who says no to that had better have a very good reason.'),
+        O('The pass is open now, since the fort fell. Ride it to Deepgate, and ask for the lord. The stewards at the gate will be nervous; they are always nervous.', [{ startQuest: 'm16' }]),
+      ],
+    },
+    'm16-wait': { lines: [O('Deepgate, {name}. The pass road, the gate, the lord\'s forecourt. Go before the weather turns.')] },
     'd03-report-spared': {
       lines: [
         O('I heard it all, {name}. Redmane stood in my own hall and said it plainly, and he did not flinch. You were right to spare him, though I did not like it.'),
