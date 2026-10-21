@@ -20,4 +20,12 @@ export const HROLF_STRINGS_EN: Record<string, string> = {
   'companion.hrolf.bark.area.tiltedAnvil.1': 'A hearth and a full pot. Leave me here a week and I will be a happy man.',
   'companion.hrolf.bark.area.cinderreach.1': 'Smell that? Ash and heather. That is home, little knight.',
   'companion.hrolf.bark.area.cinderreach.2': 'The seams glow brighter every year. The hills are angry, and so am I.',
+  'companion.hrolf.bark.area.oldsmoke.1': 'Grisel digs deep and pays shallow. Every miner here knows it.',
+  'companion.hrolf.bark.area.oldsmoke.2': 'Too much rock above my head. Keep talking, little knight, so I forget it.',
+  'companion.hrolf.bark.area.dell.1': 'The little fire-foxes. My mother left them crusts. They never ate them. Polite foxes.',
+  // R11 at the wyrm den, by how it ended (story.r11.choice).
+  'companion.hrolf.bark.area.den.spared.1': 'The wyrm lives, and so does my brother\'s name. He would have liked that better than a trophy.',
+  'companion.hrolf.bark.area.den.spared.2': 'I keep listening for wings. Not afraid. Hoping, I think.',
+  'companion.hrolf.bark.area.den.slain.1': 'The axe is heavy today. It was never heavy when he carried it.',
+  'companion.hrolf.bark.area.den.slain.2': 'Done is done. I will not come back here. Walk on, little knight.',
 };

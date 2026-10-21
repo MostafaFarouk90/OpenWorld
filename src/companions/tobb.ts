@@ -1,5 +1,5 @@
 import { COMPANION_STRINGS_EN } from './strings.en';
-import { COMPANION_DOWNED_SECONDS, TOBB_TUNING } from './tuning';
+import { ACT2_TRIGGERS, COMPANION_DOWNED_SECONDS, TOBB_TUNING } from './tuning';
 import type { CompanionDef } from './types';
 
 const pool = (prefix: string): string[] =>
@@ -34,6 +34,9 @@ export const TOBB: CompanionDef = {
       bastionYard: pool('area.bastionYard'),
       tiltedAnvil: pool('area.tiltedAnvil'),
       underways: pool('area.underways'),
+      cinderreach: pool('area.cinderreach'),
+      oldsmoke: pool('area.oldsmoke'),
+      dell: pool('area.dell'),
     },
     combatStart: pool('combatStart'),
     combatEnd: pool('combatEnd'),
@@ -47,10 +50,12 @@ export const TOBB: CompanionDef = {
       'trg.shrine.basin': 'shrine',
       // Thread 17's Harrowmark layout.
       'trg.harrowmark.bastion-yard': 'bastionYard',
+      // Act 2: A9's Kindling Dell.
+      [ACT2_TRIGGERS.dell]: 'dell',
     },
     interiors: { 'chapel-vault': 'vault', 'tilted-anvil': 'tiltedAnvil', underways: 'underways' },
     // `harrowmark` is thread 4's region-mask id for the city (to confirm when the mask lands).
-    regions: { brightwater: 'brightwater', harrowmark: 'harrowmark' },
+    regions: { brightwater: 'brightwater', harrowmark: 'harrowmark', cinderreach: 'cinderreach', oldsmoke: 'oldsmoke' },
   },
   // Thread 3a's interior-side anchors (`harrowmark.<id>.entry`).
   interiorEntry: {

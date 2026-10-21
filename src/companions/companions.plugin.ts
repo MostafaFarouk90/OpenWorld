@@ -1,14 +1,17 @@
 import type { GameContext } from '../core/Game';
 import type { GamePlugin } from '../core/plugins';
 import { CompanionController, type SavedSpot } from './CompanionController';
+import { AELFREDA } from './aelfreda';
 import { HROLF } from './hrolf';
 import { PartyWindow, type PartyService } from './party';
 import { COMPANION_STRINGS_EN } from './strings.en';
 import { HROLF_STRINGS_EN } from './strings.hrolf.en';
+import { AELFREDA_STRINGS_EN } from './strings.aelfreda.en';
 import { TOBB } from './tobb';
 import { BarkGate } from './barkGate';
 import { Trials } from './trials';
 import { Escort } from './escort/escort';
+import { createExtras, type Extras } from './extras';
 import type { HorseLoader } from './escort/escortHorse';
 import type { NpcModelLoader } from '../npcs/types';
 import { heightAt } from '../terrain/heightfield';
@@ -20,7 +23,7 @@ export const COMPANIONS_PERSIST_VERSION = 2;
 /** The flag that raises the party limit from one to two. */
 export const PARTY_GATE_FLAG = 'story.gate.a3';
 /** Companion defs; Aelfreda (M14) adds hers in A5's second PR. */
-export const COMPANION_DEFS: readonly CompanionDef[] = [TOBB, HROLF];
+export const COMPANION_DEFS: readonly CompanionDef[] = [TOBB, HROLF, AELFREDA];
 /** Holds any companion's hit at 1 HP: kills, XP and every mercy choice stay with Cael (plans/act2-A5.md section 8). */
 export const ALLY_NO_KILL_ID = 'companions.ally-no-kill';
 /** Stonehide's damage modifier: late in the buffs band, after A10's armour on Cael. */
@@ -31,6 +34,7 @@ let controllers: CompanionController[] = [];
 let partyOffs: (() => void)[] = [];
 let trials: Trials | null = null;
 let escort: Escort | null = null;
+let extras: Extras | null = null;
 
 function readSpot(v: unknown): SavedSpot | null {
   const s = v as Partial<SavedSpot> | null;
@@ -124,6 +128,8 @@ function teardown(): void {
   trials = null;
   escort?.dispose();
   escort = null;
+  extras?.dispose();
+  extras = null;
   for (const off of partyOffs.splice(0)) off();
   for (const c of list) {
     try {
@@ -142,6 +148,7 @@ export default {
     try {
       ctx.strings.register('en', COMPANION_STRINGS_EN);
       ctx.strings.register('en', HROLF_STRINGS_EN);
+      ctx.strings.register('en', AELFREDA_STRINGS_EN);
       const party: PartyStore = { raw: null };
       // Late-bound: the controllers ask for their seat, the service is built from the controllers.
       let service: CompanionsService | null = null;
@@ -162,16 +169,17 @@ export default {
           ? (a as unknown as NpcModelLoader & HorseLoader)
           : null;
       };
+      const groundAt = (x: number, z: number, yHint: number): number | null => {
+        const hit = ctx.physics.raycast({ x, y: yHint + 4, z }, { x: 0, y: -1, z: 0 }, 40, ctx.world.player.controller.collider);
+        if (hit) return hit.point.y;
+        const h = heightAt(x, z);
+        return Number.isFinite(h) ? h : null;
+      };
       escort = new Escort({
         events: ctx.events,
         scene: ctx.scene,
         playerFeet: () => ctx.player.feet,
-        groundAt: (x, z, yHint) => {
-          const hit = ctx.physics.raycast({ x, y: yHint + 4, z }, { x: 0, y: -1, z: 0 }, 40, ctx.world.player.controller.collider);
-          if (hit) return hit.point.y;
-          const h = heightAt(x, z);
-          return Number.isFinite(h) ? h : null;
-        },
+        groundAt,
         setNpcHidden: (id, h) => void npcs()?.setHidden?.(id, h),
         horses: loader,
         npcs: loader,
@@ -282,6 +290,8 @@ export default {
           party.raw = readActive((data as { active?: unknown } | null)?.active);
         },
       });
+      extras = createExtras(ctx, { aelfredaJoined: () => list.some((c) => c.def.id === AELFREDA.id && c.joined), groundAt });
+      const ex = extras;
       // Band requested from core (v0.4.x): `animation` 200..249 companions; render `world` 0..99 (NPCs and companions).
       ctx.systems.add({
         id: 'companions.follow',
@@ -293,6 +303,7 @@ export default {
           tr.fixedUpdate(dt);
           esc.fixedUpdate(dt);
           for (const c of list) c.fixedUpdate(dt);
+          ex.fixedUpdate(dt);
         },
       });
       ctx.systems.add({

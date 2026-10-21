@@ -198,6 +198,15 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       spendEmber: (n) => ember.spend(n),
       addBurn: (n, source) => void burn.add(n, source),
       useShard: (gain, source) => useShard(gain, source),
+      // A5's Hearth Rite (v0.6 item 16): the flag, max health and `scar.removed` (typed in src/companions/events.ts).
+      removeScars: (n, reason) => {
+        const removed = burn.removeScars(n);
+        if (removed === 0) return 0;
+        setScarFlag();
+        looseService(ctx.services, 'progression')?.refreshMaxHealth?.();
+        ctx.events.emit('scar.removed', { count: removed, total: burn.scars, reason });
+        return removed;
+      },
       registerSurgeForm: (classId, zone, impl: SurgeFormImpl) => forms.register(classId, zone, impl),
       leap: {
         get learned() { return learnedLeap(); },

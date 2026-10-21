@@ -438,6 +438,32 @@ describe('shard use, Scars and the Leap (slice 2)', () => {
     plugin.dispose!();
   });
 
+  it('removeScars (A5 Hearth Rite): never below 0, flag, max-health refresh and scar.removed; 0 removed is silent', () => {
+    const p = progression();
+    const f = makeCtx({ progression: p.svc });
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    expect(s.removeScars!(1, 'hearth-rite')).toBe(0);
+    expect(f.world.events.log.filter((l) => l.type === 'scar.removed')).toEqual([]);
+    s.addBurn(100, 't');
+    s.useShard(0, 'test');
+    s.useShard(0, 'test');
+    expect(s.scars).toBe(2);
+    p.refresh.mockClear();
+    expect(s.removeScars!(1, 'hearth-rite')).toBe(1);
+    expect(s.scars).toBe(1);
+    expect(f.state.flags.get('story.f10.scars')).toBe(1);
+    expect(p.refresh).toHaveBeenCalled();
+    expect(s.removeScars!(5, 'hearth-rite')).toBe(1);
+    expect(s.scars).toBe(0);
+    expect(f.state.flags.get('story.f10.scars')).toBe(0);
+    expect(f.world.events.log.filter((l) => l.type === 'scar.removed').map((l) => l.payload)).toEqual([
+      { count: 1, total: 1, reason: 'hearth-rite' },
+      { count: 1, total: 0, reason: 'hearth-rite' },
+    ]);
+    plugin.dispose!();
+  });
+
   it('a Scar at Burn 100 (no burn.changed) still refreshes max health', () => {
     const p = progression();
     const f = makeCtx({ progression: p.svc });

@@ -13,7 +13,8 @@ const ids = (l: LayoutData | undefined, kind: 'triggers' | 'anchors') => new Set
 // Thread 4 adds the Dead Road triggers; until its layout has any of them this check is skipped. Once one exists,
 // all must, so a rename fails here instead of silently skipping.
 const defined = ids(BRIGHTWATER_LAYOUT, 'triggers');
-const brightwaterTriggers = Object.keys(TOBB.places.triggers).filter((id) => !isCity(id));
+// Act 2 triggers (trg.cinderreach.*) live in A3's layout, not Brightwater's.
+const brightwaterTriggers = Object.keys(TOBB.places.triggers).filter((id) => !isCity(id) && !id.startsWith('trg.cinderreach.'));
 const deadRoadIn = brightwaterTriggers.some((id) => defined.has(id));
 
 describe("Tobb's area-bark places", () => {

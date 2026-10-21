@@ -28,6 +28,7 @@ import { npcStallholder1, npcStallholder2 } from './npc-stallholders.dialogue';
 import { npcGuildDoorman, npcPellam } from './npc-guild-r03.dialogue';
 import { npcCrabbe, npcFence, npcSexton } from './npc-r04-witnesses.dialogue';
 import { npcArmourer, npcClerk, npcGrisel, npcKeepGuard, npcWace } from './npc-court.dialogue';
+import { npcAelfredaCompanion } from '../../companions/dialogue/npcAelfredaCompanion.dialogue';
 
 export const dialogueDefs: DialogueDef[] = [
   npcStane, npcEdda, npcGaut, npcHob, npcAelfreda, npcWynn, npcTobb, npcCarter1, npcCarter2, t04Vow,
@@ -37,4 +38,6 @@ export const dialogueDefs: DialogueDef[] = [
   npcRefugee1, npcRefugee2, npcStallholder1, npcStallholder2, npcGuildDoorman, npcPellam, npcSexton, npcFence, npcCrabbe,
   // batch 4 (Harrowmark part 2)
   npcArmourer, npcKeepGuard, npcGrisel, npcClerk, npcWace,
+  // Act 2 (A5): Sister Aelfreda's companion talk, the Hearth Rite
+  npcAelfredaCompanion,
 ];

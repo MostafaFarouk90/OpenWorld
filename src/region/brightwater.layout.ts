@@ -242,7 +242,8 @@ export const BRIGHTWATER_LAYOUT: LayoutData = {
     { id: 'gaut', post: 'npc-post.gaut', idleClip: 'Idle' },
     { id: 'edda', post: 'npc-post.edda', idleClip: 'Idle' },
     { id: 'stane', post: 'npc-post.stane', idleClip: 'Idle' },
-    { id: 'aelfreda', post: 'npc-post.aelfreda', idleClip: 'Idle' },
+    // A5: gone once she has joined the party (M14); the companion stands in for her.
+    { id: 'aelfreda', post: 'npc-post.aelfreda', idleClip: 'Idle', absentWhen: 'story.m14.aelfredaJoined' },
     { id: 'hob', post: 'npc-post.hob', idleClip: 'Idle' },
     { id: 'wynn', post: 'npc-post.wynn', idleClip: 'Idle' },
     ...CORRIDOR_LAYOUT.npcs,
