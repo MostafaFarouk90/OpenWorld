@@ -29,6 +29,11 @@ export class ForgeShrineBinding {
     if (announce) this.ports.emitRekindled(this.id);
   }
 
+  /** Lights the shrine now (a scripted solve whose waystone anchor does not exist yet). Respects `canLight`. */
+  lightNow(): void {
+    this.light(true);
+  }
+
   /** `waystone.rekindled`. A script rekindle lights the shrine too, announced the same. */
   onRekindled(waystoneId: string): void {
     if (waystoneId !== this.id) return;
