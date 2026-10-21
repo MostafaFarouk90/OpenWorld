@@ -58,6 +58,7 @@ export const DEFENDER = {
   scanSeconds: 0.25,
   /** A post leash: they never walk, so this only decides where a revived one stands. */
   lethalHandlerId: 'waves.defender-floor',
+  noKillHandlerId: 'waves.defender-no-kill',
   swingAttackId: 'waves.militia-swing',
   hurtRadius: 0.45,
 } as const;

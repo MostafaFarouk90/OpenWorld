@@ -144,7 +144,7 @@ export class Defender {
     let actor: Actor | null = null;
     try {
       hurtboxes = new HurtboxSet(root, this.body.hurtboxDefs, root);
-      // Not untargetable-by-enemies: a tracer that overlaps him hits him. Lock-on and companions skip allies anyway.
+      // Untargetable for AI and lock-on picks; a tracer that overlaps him still hits him.
       actor = host.actors.spawn({ kind: DEFENDER.kind, team: 'ally', maxHealth: DEFENDER.maxHealth, maxPoise: 0, root, owner: root, untargetable: true });
       actor.data['audio'] = { material: 'metal' };
       this.removers.push(host.combat.addTarget(hurtboxes, actor.id));
@@ -257,6 +257,7 @@ export class Defender {
 export class Defenders {
   private readonly list = new Map<ActorId, Defender>();
   private unhandle: (() => void) | null = null;
+  private unhandleNoKill: (() => void) | null = null;
 
   constructor(
     private readonly host: DefenderHost,
@@ -290,6 +291,17 @@ export class Defenders {
       d.knockDown();
       return true;
     });
+    // A modifier after the swing (a back-hit multiplier) can lift it past the cap, so the rule is enforced on resolve:
+    // a militiaman's hit never kills, credit, XP and mercy stay with the player.
+    this.unhandleNoKill = this.host.damage.addLethalHandler(
+      DEFENDER.noKillHandlerId,
+      (target, r) => {
+        if (!r.attackerId || !this.list.has(r.attackerId) || this.list.has(target.id)) return false;
+        target.health = Math.min(1, target.maxHealth);
+        return true;
+      },
+      -1,
+    );
   }
 
   /** Everyone stands at their post at full health. */
@@ -304,6 +316,8 @@ export class Defenders {
   despawnAll(): void {
     this.unhandle?.();
     this.unhandle = null;
+    this.unhandleNoKill?.();
+    this.unhandleNoKill = null;
     for (const d of this.list.values()) d.dispose();
     this.list.clear();
   }
