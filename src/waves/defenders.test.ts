@@ -92,6 +92,19 @@ describe('militia', () => {
     expect(kit.of('actor.died').filter((e) => e.actorId === foe.id)).toEqual([]);
   });
 
+  it('a later modifier that amplifies the swing (a back-hit) still cannot make it kill', () => {
+    const d = defenders().all[2];
+    const foe = hostile(7);
+    const undo = kit.ctx.damage.addModifier('test.amplify', (req) => {
+      req.amount *= 1.25;
+    }, -50);
+    const r = kit.ctx.damage.apply({ attackerId: d.id, targetId: foe.id, amount: 6, kind: 'melee', attackId: DEFENDER.swingAttackId });
+    undo();
+    expect(r?.killed).toBe(false);
+    expect(foe.dead).toBe(false);
+    expect(foe.health).toBe(1);
+  });
+
   it('does not swing at a hostile out of reach, a mercy state, or a cart', () => {
     const d = defenders().all[3];
     const foe = hostile(40);
