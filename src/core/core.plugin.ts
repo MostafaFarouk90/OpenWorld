@@ -19,7 +19,14 @@ const core: GamePlugin = {
     ctx.persist.register(ctx.state);
 
     // Moving platforms: Game.fixedUpdate steps them just before the world (controller + physics step), so each frame delta is ready for the carry.
-    const platforms = new Platforms({ onArrived: (id, stop) => ctx.events.emit('platform.arrived', { id, stop }) });
+    const carry = (collider: Parameters<Platforms['delta']>[0]) => platforms.delta(collider);
+    const platforms: Platforms = new Platforms({
+      onArrived: (id, stop) => ctx.events.emit('platform.arrived', { id, stop }),
+      // The carry (and its ground ray) runs only while a platform exists; nothing in Act 1 registers one.
+      onCountChanged: (n) => ctx.world?.player?.controller?.setPlatformSource?.(n > 0 ? carry : undefined),
+      // A save on a platform loads at its last stop: hold every platform still until the load has placed the player.
+      paused: () => ctx.services.get('save')?.loading === true,
+    });
     ctx.services.provide('platforms', platforms);
     ctx.persist.register({
       key: 'platforms',
@@ -27,7 +34,6 @@ const core: GamePlugin = {
       serialize: () => platforms.serialize(),
       load: (data) => platforms.load(data),
     });
-    ctx.world?.player?.controller?.setPlatformSource?.((collider) => platforms.delta(collider));
 
     ctx.events.on('mercy', (e) => ctx.state.recordMercy(e));
     ctx.events.on('damage.dealt', (r) => {

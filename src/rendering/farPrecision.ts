@@ -20,6 +20,9 @@ const anchor = new THREE.Vector3();
 const offset = new THREE.Matrix4();
 const identity = new THREE.Matrix4();
 const shift = new THREE.Matrix4();
+const held = new THREE.Matrix4();
+/** Each skinned mesh's bindMatrixInverse before the anchor was folded in (its last updateMatrixWorld). */
+const unshifted = new WeakMap<THREE.SkinnedMesh, THREE.Matrix4>();
 let frameCamera: THREE.Camera | null = null;
 let patched = false;
 const wrapped = new WeakSet<THREE.WebGLRenderer>();
@@ -89,7 +92,26 @@ function patchThree(): void {
   THREE.SkinnedMesh.prototype.updateMatrixWorld = function patched(this: THREE.SkinnedMesh, force?: boolean): void {
     // The base call rebuilds bindMatrixInverse from scratch in either bind mode, so folding the anchor in is idempotent.
     updateMatrixWorld.call(this, force);
+    let plain = unshifted.get(this);
+    if (!plain) unshifted.set(this, (plain = new THREE.Matrix4()));
+    plain.copy(this.bindMatrixInverse);
     this.bindMatrixInverse.multiply(shift.makeTranslation(anchor.x, anchor.y, anchor.z));
+  };
+
+  // The CPU-side skinning (bounding sphere and box for frustum culling, raycasts, getVertexPosition) multiplies the
+  // un-shifted bone world matrices, so it needs the plain inverse: with the shifted one every culling sphere would sit
+  // one anchor away and the mesh would be culled.
+  const applyBoneTransform = THREE.SkinnedMesh.prototype.applyBoneTransform;
+  THREE.SkinnedMesh.prototype.applyBoneTransform = function patched(this: THREE.SkinnedMesh, index: number, vector: THREE.Vector3): THREE.Vector3 {
+    const plain = unshifted.get(this);
+    if (!plain) return applyBoneTransform.call(this, index, vector);
+    held.copy(this.bindMatrixInverse);
+    this.bindMatrixInverse.copy(plain);
+    try {
+      return applyBoneTransform.call(this, index, vector);
+    } finally {
+      this.bindMatrixInverse.copy(held);
+    }
   };
 
   const chunk = THREE.ShaderChunk.shadowmap_vertex;

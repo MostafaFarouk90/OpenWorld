@@ -89,6 +89,27 @@ describe('farPrecision', () => {
       expect(maxError(products(mesh), reference)).toBeLessThan(1e-5);
     });
 
+    it('CPU-side skinning ignores the anchor: the culling sphere sits on the mesh and the frustum sees it', () => {
+      setRenderAnchor({ x: 0, z: 0 });
+      const ref = rig();
+      ref.computeBoundingSphere();
+      setRenderAnchor({ x: 22000, z: 3000 });
+      const mesh = rig();
+      mesh.computeBoundingSphere();
+      expect(mesh.boundingSphere!.center.distanceTo(ref.boundingSphere!.center)).toBeLessThan(1e-6);
+      const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+      camera.position.set(22000.37, 1.5, 3010.81);
+      camera.lookAt(22000.37, 1.5, 3000.81);
+      camera.updateMatrixWorld(true);
+      const frustum = new THREE.Frustum().setFromProjectionMatrix(
+        new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse),
+      );
+      (mesh as { boundingSphere: THREE.Sphere | null }).boundingSphere = null;
+      expect(frustum.intersectsObject(mesh)).toBe(true);
+      // The GPU path still uses the shifted inverse.
+      expect(maxError(products(mesh), reference)).toBeLessThan(1e-5);
+    });
+
     it('the shadow chunk reads the view-space position', () => {
       expect(THREE.ShaderChunk.shadowmap_vertex).toContain(SHADOW_COORD_VIEW);
       expect(THREE.ShaderChunk.shadowmap_vertex).not.toContain(SHADOW_COORD_WORLD);

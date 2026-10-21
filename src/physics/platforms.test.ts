@@ -112,6 +112,36 @@ describe('Platforms movement', () => {
   });
 });
 
+describe('Platforms pause and count', () => {
+  it('holds still with a zero delta while paused, and moves on after', () => {
+    let paused = true;
+    const p = new Platforms({ paused: () => paused });
+    const b = box(A, { x: 1, y: 0.1, z: 1 });
+    p.register('p', b, path([A, B], 3, 0));
+    for (let i = 0; i < 30; i++) {
+      p.fixedUpdate(DT);
+      physics.step();
+    }
+    expect(b.translation().y).toBeCloseTo(0, 6);
+    expect(p.delta(b)).toEqual({ x: 0, y: 0, z: 0 });
+    paused = false;
+    p.fixedUpdate(DT);
+    expect(p.delta(b).y).toBeCloseTo(3 * DT, 6);
+  });
+
+  it('reports the count after each register and undo', () => {
+    const counts: number[] = [];
+    const p = new Platforms({ onCountChanged: (n) => counts.push(n) });
+    const u1 = p.register('a', box(A, { x: 1, y: 0.1, z: 1 }), path([A, B]));
+    const u2 = p.register('b', box({ x: 5, y: 0, z: 0 }, { x: 1, y: 0.1, z: 1 }), path([A, B]));
+    u1();
+    u1();
+    u2();
+    expect(counts).toEqual([1, 2, 1, 0]);
+    expect(p.count).toBe(0);
+  });
+});
+
 describe('Platforms persistence', () => {
   it('round trips serialize/load', () => {
     const b = box(A, { x: 1, y: 0.1, z: 1 });
