@@ -7,6 +7,7 @@ import { POST_RULES, resolvePosts } from './posts';
 import type { BusPort } from './ports';
 import type { TutorialDirector } from '../tutorial/TutorialDirector';
 import '../region/containment';
+import { heightAt } from '../terrain/heightfield';
 
 const TELEPORT_TRIES = 30;
 
@@ -44,7 +45,8 @@ const plugin: GamePlugin = {
       const ws = ctx.services.get('waystones');
       if (!ws || ++teleportTries > TELEPORT_TRIES) {
         // safeTeleport contains its target itself (v0.6); the direct placement goes through the same clamp.
-        ctx.player.teleport(ctx.services.get('containment')?.clamp(pos) ?? pos, yaw);
+        const at = ctx.services.get('containment')?.clamp(pos) ?? pos;
+        ctx.player.teleport(at === pos ? pos : { ...at, y: heightAt(at.x, at.z) + 0.05 }, yaw);
         if (ctx.cameraRig) ctx.cameraRig.yaw = yaw;
         return true;
       }

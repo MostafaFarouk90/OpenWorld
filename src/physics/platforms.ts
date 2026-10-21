@@ -12,6 +12,10 @@ export interface PlatformPath {
 export interface PlatformPorts {
   /** Called once each time a platform reaches stop `stop` (not for the starting stop). */
   onArrived?(id: string, stop: number): void;
+  /** After each register and undo: how many platforms are registered (the core wires the player's carry only while any are). */
+  onCountChanged?(count: number): void;
+  /** True while platforms must hold still (a save loading: the load target is a platform's last stop). */
+  paused?(): boolean;
 }
 
 interface Entry {
@@ -68,14 +72,24 @@ export class Platforms {
       delete this.pending[id];
       this.applyStop(entry, saved);
     }
+    this.ports.onCountChanged?.(this.entries.size);
     return () => {
       if (this.entries.get(id) !== entry) return;
       this.entries.delete(id);
       this.byBody.delete(body.handle);
+      this.ports.onCountChanged?.(this.entries.size);
     };
   }
 
+  get count(): number {
+    return this.entries.size;
+  }
+
   fixedUpdate(dt: number): void {
+    if (this.entries.size === 0 || this.ports.paused?.()) {
+      for (const e of this.entries.values()) e.delta = { x: 0, y: 0, z: 0 };
+      return;
+    }
     for (const e of this.entries.values()) this.step(e, dt);
   }
 

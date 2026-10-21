@@ -129,11 +129,14 @@ describe('boss spare (v0.6)', () => {
     expect(t.foe.health).toBe(1);
   });
 
-  it("the actor's own state shows through while the boss reads none", () => {
+  it("the actor's own state shows through while the boss reads none; unregister restores it", () => {
     const t = make();
     t.set('yielding');
-    t.bosses.register(t.foe.id, DEF);
+    const own = t.foe.mercyState;
+    const undo = t.bosses.register(t.foe.id, DEF);
     expect(t.foe.mercyState!()).toBe('yielding');
+    undo();
+    expect(t.foe.mercyState).toBe(own);
   });
 });
 

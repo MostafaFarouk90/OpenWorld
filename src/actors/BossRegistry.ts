@@ -94,6 +94,7 @@ export class BossRegistry {
   private readonly byActor = new Map<ActorId, string>();
   private readonly offs: (() => void)[] = [];
   private disposed = false;
+  private readonly unwrapMercy = new Map<Boss, () => void>();
 
   constructor(deps: BossRegistryDeps) {
     this.events = deps.events;
@@ -163,10 +164,15 @@ export class BossRegistry {
     this.byActor.set(actorId, def.bossId);
     // The boss's mercy state wins while registered; the actor's own (if any) shows through when it reads 'none'.
     const own = actor.mercyState;
-    actor.mercyState = () => {
+    const wrapped = (): MercyState => {
       const b = this.bosses.get(def.bossId) === boss ? this.mercyState(def.bossId) : 'none';
       return b !== 'none' ? b : (own?.() ?? 'none');
     };
+    actor.mercyState = wrapped;
+    // Unwrapped when the registration ends, so a re-register (the vault reset) does not nest.
+    this.unwrapMercy.set(boss, () => {
+      if (actor.mercyState === wrapped) actor.mercyState = own;
+    });
     this.events.emit('boss.started', { bossId: def.bossId, actorId });
     return () => {
       if (this.bosses.get(def.bossId) === boss) this.drop(boss, 'unregistered');
@@ -259,6 +265,8 @@ export class BossRegistry {
   /** Unregisters and tells the HUD, music and mercy prompt the encounter is over (a reload reset, a teardown). */
   private drop(boss: Boss, reason: 'despawned' | 'unregistered'): void {
     this.closeWindow(boss);
+    this.unwrapMercy.get(boss)?.();
+    this.unwrapMercy.delete(boss);
     this.bosses.delete(boss.def.bossId);
     if (this.byActor.get(boss.actorId) === boss.def.bossId) this.byActor.delete(boss.actorId);
     if (!this.disposed) this.events.emit('boss.ended', { bossId: boss.def.bossId, actorId: boss.actorId, reason });
