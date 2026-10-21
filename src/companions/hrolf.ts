@@ -1,7 +1,10 @@
 import { HROLF_LOOK } from './hrolfLook';
 import { HROLF_STRINGS_EN } from './strings.hrolf.en';
-import { COMPANION_DOWNED_SECONDS, HROLF_TUNING } from './tuning';
+import { ACT2_TRIGGERS, COMPANION_DOWNED_SECONDS, HROLF_TUNING } from './tuning';
 import type { CompanionDef } from './types';
+
+/** A12's R11 writes it: 'spared' or 'slain'. */
+export const R11_CHOICE_FLAG = 'story.r11.choice';
 
 const pool = (prefix: string): string[] =>
   Object.keys(HROLF_STRINGS_EN).filter((k) => k.startsWith(`companion.hrolf.bark.${prefix}.`));
@@ -39,15 +42,25 @@ export const HROLF: CompanionDef = {
       harrowmark: pool('area.harrowmark'),
       tiltedAnvil: pool('area.tiltedAnvil'),
       cinderreach: pool('area.cinderreach'),
+      oldsmoke: pool('area.oldsmoke'),
+      dell: pool('area.dell'),
+      'den.spared': pool('area.den.spared'),
+      'den.slain': pool('area.den.slain'),
     },
     combatStart: pool('combatStart'),
     combatEnd: pool('combatEnd'),
     elapsed: pool('elapsed'),
   },
   places: {
-    triggers: {},
+    triggers: { [ACT2_TRIGGERS.dell]: 'dell', [ACT2_TRIGGERS.den]: 'den' },
     interiors: { 'tilted-anvil': 'tiltedAnvil' },
-    regions: { harrowmark: 'harrowmark', cinderreach: 'cinderreach' },
+    regions: { harrowmark: 'harrowmark', cinderreach: 'cinderreach', oldsmoke: 'oldsmoke' },
+  },
+  // R11 (design 3): at the wyrm den he speaks by how it ended; nothing before the choice.
+  areaVariant: (place, flag) => {
+    if (place !== 'den') return place;
+    const c = flag(R11_CHOICE_FLAG);
+    return c === 'spared' || c === 'slain' ? `den.${c}` : null;
   },
   interiorEntry: {
     'tilted-anvil': 'harrowmark.tilted-anvil.entry',

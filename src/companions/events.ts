@@ -1,5 +1,5 @@
-// Act 2 companion events (thread A5, plans/act2-A5.md section 8): the party window, the downed rule, the trial duel
-// and Gaut's escort. Typed here by augmentation; core's `events.ts` stays A0's.
+// Act 2 companion events (thread A5, plans/act2-A5.md sections 2 and 8): the party window, the downed rule, the trial
+// duel, Gaut's escort and the Hearth Rite. Typed here by augmentation; core's `events.ts` stays A0's.
 import type { ActorId } from '../actors/Actor';
 
 export type TrialSide = 'player' | 'opponent';
@@ -24,5 +24,11 @@ declare module '../core/events' {
     'escort.stopped': { escortId: string };
     /** Dialogue `event` effect (the accepted `story.*` namespace): raise a companion's bond rank. */
     'story.companion.rank': { companionId: string; rank: number };
+    /** `spells.removeScars` (the Hearth Rite): `count` Scars went, `total` remain. */
+    'scar.removed': { count: number; total: number; reason: string };
+    /** Dialogue `event` effect from Aelfreda's talk tree: perform the Hearth Rite (the `rite` service decides). */
+    'npc.aelfreda.hearthRite': Record<string, never> | undefined;
+    /** The rite ran: the act it was spent for and the Scars removed. */
+    'rite.performed': { act: number; removed: number };
   }
 }

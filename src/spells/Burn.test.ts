@@ -207,4 +207,18 @@ describe('Burn.healthMultiplier (design 9.7)', () => {
     expect(b.scars).toBe(25);
     expect(b.healthMultiplier(true)).toBeCloseTo(0.7, 4);
   });
+
+  it('removeScars (A5): floors at 0, whole numbers only, bad input removes nothing; max health recovers', () => {
+    const b = new Burn();
+    b.addScar(3);
+    const before = b.healthMultiplier(true);
+    expect(b.removeScars(1)).toBe(1);
+    expect(b.scars).toBe(2);
+    expect(b.healthMultiplier(true)).toBeGreaterThan(before);
+    expect(b.removeScars(1.9)).toBe(1);
+    expect(b.removeScars(10)).toBe(1);
+    expect(b.scars).toBe(0);
+    for (const n of [0, -1, NaN, Infinity]) expect(b.removeScars(n)).toBe(0);
+    expect(b.scars).toBe(0);
+  });
 });

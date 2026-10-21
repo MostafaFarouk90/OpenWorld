@@ -27,7 +27,14 @@ export interface CompanionDef {
   vitals?: { maxHealth: number };
   /** Hrolf's Stonehide (design 8.1): takes `share` of enemy hits on Cael within `radius` m. */
   stonehide?: { auraId: string; buffId: string; nameKey: string; share: number; radius: number };
+  /** Aelfreda's Calming flame (design 8.1): out of combat, heals Cael `healFraction` of max health every `everySeconds`. */
+  calmingFlame?: { auraId: string; buffId: string; nameKey: string; everySeconds: number; healFraction: number };
   banter: BanterLines;
+  /**
+   * A place whose lines depend on the story (Hrolf at the wyrm den after R11): returns the pool to use, or null for
+   * no bark. Absent: the place id as it is.
+   */
+  areaVariant?(place: string, flag: (key: string) => unknown): string | null;
   /** Area-bark places: trigger id, interior id and region id to place id. */
   places: {
     triggers: Readonly<Record<string, string>>;

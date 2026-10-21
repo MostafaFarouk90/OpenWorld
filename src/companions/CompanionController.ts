@@ -97,6 +97,9 @@ export class CompanionController {
   /** Foes Cael has landed a hit on (a beast needs one before Hrolf joins in). */
   private readonly struck = new Set<string>();
   private stonehideOn = false;
+  private flameOn = false;
+  /** Seconds since Calming flame last healed (it heals every `everySeconds` while it burns). */
+  private flameClock = 0;
   /** A vitals edge raised inside a damage modifier, emitted on the next tick. */
   private pendingEdge: VitalsEdge = null;
   /** The post he stands at instead of following, or null. Derived each tick from quest and interior state. */
@@ -165,6 +168,10 @@ export class CompanionController {
 
   get stonehideActive(): boolean {
     return this.stonehideOn;
+  }
+
+  get calmingFlameActive(): boolean {
+    return this.flameOn;
   }
 
   /** Hrolf's current target, for tests and the debug overlay. */
@@ -292,6 +299,7 @@ export class CompanionController {
     this.mountHidden = false;
     this.brain?.reset();
     this.setStonehide(false);
+    this.setFlame(false);
     this.vitals?.restore();
     this.pendingEdge = null;
   }
@@ -341,7 +349,7 @@ export class CompanionController {
       ev.on('interior.entered', ({ interiorId }) => {
         this.onDoor();
         const place = this.def.places.interiors[interiorId];
-        if (place && this.sinceReset > TOBB_TUNING.reEmitWindowSeconds) this.emitBark(this.director.area(place));
+        if (place && this.sinceReset > TOBB_TUNING.reEmitWindowSeconds) this.emitBark(this.area(place));
       }),
       ev.on('interior.exited', () => this.onDoor()),
       ev.on('mount.mounted', () => {
@@ -393,12 +401,12 @@ export class CompanionController {
       ev.on('rest', () => this.standUp()),
       ev.on('trigger.enter', ({ triggerId, actorId }) => {
         const place = this.def.places.triggers[triggerId];
-        if (place && actorId === playerId()) this.emitBark(this.director.area(place));
+        if (place && actorId === playerId()) this.emitBark(this.area(place));
       }),
       ev.on('region.entered', ({ regionId }) => {
         // The tracker reports `previous: null` on every entry, so a load or respawn is told apart by time instead.
         const place = this.def.places.regions[regionId];
-        if (place && this.sinceReset > TOBB_TUNING.reEmitWindowSeconds) this.emitBark(this.director.area(place));
+        if (place && this.sinceReset > TOBB_TUNING.reEmitWindowSeconds) this.emitBark(this.area(place));
       }),
     );
   }
@@ -505,6 +513,12 @@ export class CompanionController {
 
   // ---- banter ------------------------------------------------------------------------------------------------
 
+  /** The area bark for `place`, through the def's story variant (Hrolf's R11 lines). */
+  private area(place: string): Bark | null {
+    const v = this.def.areaVariant ? this.def.areaVariant(place, (k) => this.ctx.state.getFlag(k)) : place;
+    return v ? this.director.area(v) : null;
+  }
+
   private emitBark(b: Bark | null): void {
     // An inactive companion in the hand-off window (still walking to his post) stays quiet.
     if (!b || !this.actor || this.hidden || this.wait || !this.isActive() || !this.claimBark(this.def.id)) return;
@@ -549,6 +563,7 @@ export class CompanionController {
     if (step?.swing) this.figure?.playAttack(HROLF_TUNING.swingSeconds);
     if (step?.hit) this.strike(step.hit);
     this.updateStonehide(player);
+    this.tickFlame(dt);
 
     if (this.aura.tick(dt)) this.endAura();
     if (edge === 'end') this.emitBark(this.director.combat('end'));
@@ -688,6 +703,7 @@ export class CompanionController {
     this.endAura();
     this.brain?.reset();
     this.setStonehide(false);
+    this.setFlame(false);
     this.standUp();
     m.place(a.position, a.yaw);
     this.prev.x = m.pos.x;
@@ -783,6 +799,7 @@ export class CompanionController {
       this.endAura();
       this.brain?.reset();
       this.setStonehide(false);
+      this.setFlame(false);
     }
     this.director.setActive(!h && this.actor !== null && !this.wait);
     if (this.figure) this.figure.root.visible = !h;
@@ -852,6 +869,7 @@ export class CompanionController {
     if (edge === 'downed') {
       this.brain?.reset();
       this.setStonehide(false);
+      this.setFlame(false);
       this.figure?.setKneel(true);
       this.ctx.events.emit('companion.downed', { companionId: this.def.id });
     } else if (edge === 'stood') {
@@ -952,6 +970,34 @@ export class CompanionController {
     if (!sh || !m) return;
     // Not in a trial: the duel's blows are Cael's alone (plan section 8 item 6).
     this.setStonehide(this.ready && !this.trialRunning() && Math.hypot(m.pos.x - player.x, m.pos.z - player.z) <= sh.radius);
+  }
+
+  /**
+   * Calming flame (design 8.1, plans/act2-A5.md section 2): while she is ready, Cael is out of combat, alive and hurt,
+   * she heals him `healFraction` of his max health every `everySeconds`. Never in combat, never at full health.
+   */
+  private tickFlame(dt: number): void {
+    const cf = this.def.calmingFlame;
+    if (!cf) return;
+    const pl = this.ctx.player.actor;
+    // Not in a trial either: the duel's rounds are Cael's alone (as Stonehide).
+    const on = this.ready && !this.presence.fighting && !this.trialRunning() && !pl.dead && pl.health < pl.maxHealth;
+    this.setFlame(on);
+    if (!on) return;
+    this.flameClock += dt;
+    if (this.flameClock < cf.everySeconds) return;
+    this.flameClock -= cf.everySeconds;
+    this.ctx.damage.heal(pl.id, pl.maxHealth * cf.healFraction);
+  }
+
+  private setFlame(on: boolean): void {
+    const cf = this.def.calmingFlame;
+    if (!cf || on === this.flameOn) return;
+    this.flameOn = on;
+    this.flameClock = 0;
+    if (on) this.ctx.events.emit('buff.applied', { id: cf.buffId, nameKey: cf.nameKey, seconds: Infinity });
+    else this.ctx.events.emit('buff.removed', { id: cf.buffId });
+    this.ctx.events.emit('companion.aura', { companionId: this.def.id, auraId: cf.auraId, active: on });
   }
 
   private setStonehide(on: boolean): void {
