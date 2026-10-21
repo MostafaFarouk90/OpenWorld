@@ -41,10 +41,10 @@ function run(body: WyrmBody, seconds: number, each?: () => void): void {
 const capsule = (body: WyrmBody, name: string) => body.hurtboxes.capsules.find((c) => c.name === name)!;
 
 describe('WyrmBody structure', () => {
-  it('exposes the EnemyBody members: six hurtboxes, mouth and tail tracers with their own attackers', () => {
+  it('exposes the EnemyBody members: eight hurtboxes, mouth and tail tracers with their own attackers', () => {
     const { body } = make();
     expect(body.root.children).toContain(body.owner);
-    expect(body.hurtboxes.capsules.map((c) => c.name)).toEqual(['head', 'neck', 'torso', 'tail', 'wingL', 'wingR']);
+    expect(body.hurtboxes.capsules.map((c) => c.name)).toEqual(['head', 'neck', 'torso', 'belly', 'tail', 'tailTip', 'wingL', 'wingR']);
     expect(body.hurtboxes.missing).toEqual([]);
     expect(body.tracers.right.attacker).toBe(body.owner);
     expect(body.tracers.left!.attacker).not.toBe(body.owner);
@@ -73,11 +73,15 @@ describe('WyrmBody structure', () => {
     const ground = capsule(body, 'torso').a.y;
     expect(body.lastPose.fold).toBeGreaterThan(0.5);
     body.setAltitude(5);
-    run(body, 0.2);
+    run(body, 0.05);
+    // The flight pose eases in (no snap on takeoff)...
+    expect(body.lastPose.fold).toBeGreaterThan(0.3);
+    run(body, 0.6);
     body.hurtboxes.update();
     expect(capsule(body, 'torso').a.y).toBeGreaterThan(ground + 4);
-    expect(body.lastPose.fold).toBe(0);
-    expect(body.lastPose.legTuck).toBe(1);
+    // ...and is there within about half a second.
+    expect(body.lastPose.fold).toBeLessThan(0.05);
+    expect(body.lastPose.legTuck).toBeGreaterThan(0.95);
     body.setAltitude(Number.NaN);
     expect(body.altitude).toBe(0);
     body.dispose();
@@ -205,8 +209,47 @@ describe('WyrmBody telegraph looks', () => {
   });
 });
 
+describe('WyrmBody spawn layout and the whip', () => {
+  it('the first tick lays the body out behind the head along the facing, level and above ground', () => {
+    for (const yaw of [0, Math.PI / 2, 2.5]) {
+      const { body } = make();
+      body.root.position.set(1200, 7, -300);
+      body.root.rotation.set(0, yaw, 0);
+      body.fixedUpdate(DT);
+      const sp = body.rig.spine.positions;
+      const n = body.rig.spine.count;
+      const hx = sp[0]!;
+      const hz = sp[2]!;
+      const tx = sp[(n - 1) * 3]!;
+      const tz = sp[(n - 1) * 3 + 2]!;
+      // Facing is -Z at yaw 0: the tail lies back along +Z turned by yaw.
+      const len = Math.hypot(tx - hx, tz - hz);
+      expect(((tx - hx) / len) * Math.sin(yaw) + ((tz - hz) / len) * Math.cos(yaw)).toBeGreaterThan(0.95);
+      for (let i = 0; i < n; i++) expect(sp[i * 3 + 1]!).toBeGreaterThan(7);
+      body.dispose();
+    }
+  });
+
+  it('the whip swings the tail mesh and its hurtbox with the tracer', () => {
+    const { body } = make();
+    run(body, 0.2);
+    body.hurtboxes.update();
+    const before = capsule(body, 'tailTip').b.clone();
+    body.playAttack(move({ id: 'ember-wyrm.tailWhip', weapon: 'left', ...WYRM_ATTACKS.tailWhip }), 0.5);
+    let moved = 0;
+    run(body, 0.8, () => {
+      body.hurtboxes.update();
+      moved = Math.max(moved, capsule(body, 'tailTip').b.distanceTo(before));
+      const tip = body.rig.tailTip.tip.getWorldPosition(new THREE.Vector3());
+      expect(tip.distanceTo(body.rig.joints.tailTip.getWorldPosition(new THREE.Vector3()))).toBeLessThan(1);
+    });
+    expect(moved).toBeGreaterThan(1.5);
+    body.dispose();
+  });
+});
+
 describe('WyrmBody LOD and budget', () => {
-  it('picks the LOD from the camera distance and survives dispose twice', () => {
+  it('picks the LOD from the camera distance (with hysteresis coming back) and survives dispose twice', () => {
     const { body } = make();
     body.lastCameraDistance = 60;
     body.fixedUpdate(DT);
@@ -214,6 +257,15 @@ describe('WyrmBody LOD and budget', () => {
     body.lastCameraDistance = 120;
     body.fixedUpdate(DT);
     expect(body.lod).toBe(2);
+    body.lastCameraDistance = 88;
+    body.fixedUpdate(DT);
+    expect(body.lod).toBe(2);
+    body.lastCameraDistance = 86;
+    body.fixedUpdate(DT);
+    expect(body.lod).toBe(1);
+    body.lastCameraDistance = 39;
+    body.fixedUpdate(DT);
+    expect(body.lod).toBe(1);
     body.lastCameraDistance = Number.POSITIVE_INFINITY;
     body.fixedUpdate(DT);
     expect(body.lod).toBe(0);

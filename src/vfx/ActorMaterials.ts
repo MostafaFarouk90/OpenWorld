@@ -80,7 +80,7 @@ export class ActorMaterials {
       const next = list.map((m) => {
         if (!m || !(m as THREE.MeshStandardMaterial).isMeshStandardMaterial) return m;
         const clone = (m as THREE.MeshStandardMaterial).clone();
-        this.install(clone);
+        this.install(clone, m);
         mine.push(clone);
         return clone;
       });
@@ -117,7 +117,12 @@ export class ActorMaterials {
     this.entries.delete(root);
   }
 
-  private install(mat: THREE.MeshStandardMaterial): void {
+  /**
+   * `original`'s own shader patch (a procedural body's, e.g. the wyrm's scales and membranes) survives: `clone()` drops
+   * `onBeforeCompile`, so it runs first here and its cache key joins ours. Materials without one (every Knight-rig and
+   * quadruped material) get exactly the actor patch and `ACTOR_FX_CACHE_KEY`, as before.
+   */
+  private install(mat: THREE.MeshStandardMaterial, original?: THREE.Material): void {
     const fx: ActorFxUniforms = {
       uTelegraph: { value: 0 },
       uTelegraphColor: { value: new THREE.Color(0xffd23a) },
@@ -126,6 +131,16 @@ export class ActorMaterials {
       uTime: { value: 0 },
     };
     mat.userData.fx = fx;
+    const own = original && original.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile ? original : null;
+    if (own) {
+      const ownKey = own.customProgramCacheKey();
+      mat.onBeforeCompile = (shader, renderer) => {
+        own.onBeforeCompile(shader, renderer);
+        patchActorShader(shader as unknown as ShaderLike, fx);
+      };
+      mat.customProgramCacheKey = () => `${ACTOR_FX_CACHE_KEY}|${ownKey}`;
+      return;
+    }
     mat.onBeforeCompile = (shader) => patchActorShader(shader as unknown as ShaderLike, fx);
     mat.customProgramCacheKey = () => ACTOR_FX_CACHE_KEY;
   }

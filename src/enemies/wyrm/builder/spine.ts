@@ -23,6 +23,10 @@ export interface SpineStep {
 const FLIGHT_CARRY = 0.85;
 /** Per second, the share of the remaining pitch a flying body levels out. */
 const FLIGHT_LEVEL_RATE = 0.8;
+/** Seconds after landing during which the body still settles level with the head. */
+const SETTLE_AFTER_FLIGHT = 1.5;
+/** Per second, the levelling rate while it settles after landing (faster than in the air). */
+const SETTLE_LEVEL_RATE = 3;
 
 /** Control spans along the body; the trail commits a point every `length / CONTROL_SPANS` metres. */
 const CONTROL_SPANS = 6;
@@ -47,8 +51,11 @@ export class WyrmSpine {
   /** Committed trail points, newest first (world). */
   private trail: Vec3Like[] = [];
   private phase = 0;
+  private readonly sample: Vec3Like = { x: 0, y: 0, z: 0 };
   /** Head height last tick (NaN before the first): in flight the trail rises and falls with it. */
   private lastHeadY = Number.NaN;
+  /** Seconds since the head last flew (Infinity: never): a landed body keeps levelling briefly instead of hanging. */
+  private sinceFlight = Number.POSITIVE_INFINITY;
   // Scratch for the curve: control points and samples.
   private ctrl: Vec3Like[] = [];
   private sx: number[] = [];
@@ -107,10 +114,13 @@ export class WyrmSpine {
     // level instead of hanging from its head; on the ground the body follows the trail over every slope.
     const dy = head.y - this.lastHeadY;
     this.lastHeadY = head.y;
-    if (s.flying) {
+    if (s.flying) this.sinceFlight = 0;
+    else if (Number.isFinite(dt) && dt > 0) this.sinceFlight += dt;
+    if (s.flying || this.sinceFlight < SETTLE_AFTER_FLIGHT) {
       const carried = Number.isFinite(dy) ? dy * FLIGHT_CARRY : 0;
       // The pitch left over eases out, so a hovering wyrm levels off.
-      const level = dt > 0 && Number.isFinite(dt) ? Math.min(1, dt * FLIGHT_LEVEL_RATE) : 0;
+      const rate = s.flying ? FLIGHT_LEVEL_RATE : SETTLE_LEVEL_RATE;
+      const level = dt > 0 && Number.isFinite(dt) ? Math.min(1, dt * rate) : 0;
       for (const p of this.trail) p.y += carried + (head.y - (p.y + carried)) * level;
     }
     const first = this.trail[0]!;
@@ -192,7 +202,7 @@ export class WyrmSpine {
       const p2 = ctrl[i + 1]!;
       const p3 = ctrl[i + 2] ?? mirror(p2, p1);
       for (let k = 1; k <= SAMPLES_PER_SPAN; k++) {
-        const q = centripetal(p0, p1, p2, p3, k / SAMPLES_PER_SPAN);
+        const q = centripetal(p0, p1, p2, p3, k / SAMPLES_PER_SPAN, this.sample);
         const n = sx.length - 1;
         arc += Math.hypot(q.x - sx[n]!, q.y - sy[n]!, q.z - sz[n]!);
         sx.push(q.x);
@@ -267,23 +277,28 @@ function mirror(a: Vec3Like, b: Vec3Like): Vec3Like {
 }
 
 /** Centripetal Catmull-Rom (alpha 0.5) between p1 and p2 at t in [0, 1]: no cusps or loops on uneven spacing. */
-export function centripetal(p0: Vec3Like, p1: Vec3Like, p2: Vec3Like, p3: Vec3Like, t: number): Vec3Like {
-  const knot = (a: Vec3Like, b: Vec3Like) => Math.max(1e-6, Math.sqrt(dist(a, b)));
-  const t0 = 0;
-  const t1 = t0 + knot(p0, p1);
-  const t2 = t1 + knot(p1, p2);
-  const t3 = t2 + knot(p2, p3);
+export function centripetal(p0: Vec3Like, p1: Vec3Like, p2: Vec3Like, p3: Vec3Like, t: number, out: Vec3Like = { x: 0, y: 0, z: 0 }): Vec3Like {
+  // Barry and Goldman's pyramid, unrolled per axis so a tick allocates nothing.
+  const t1 = Math.max(1e-6, Math.sqrt(dist(p0, p1)));
+  const t2 = t1 + Math.max(1e-6, Math.sqrt(dist(p1, p2)));
+  const t3 = t2 + Math.max(1e-6, Math.sqrt(dist(p2, p3)));
   const tt = t1 + (t2 - t1) * t;
-  const lerp = (a: Vec3Like, b: Vec3Like, ta: number, tb: number): Vec3Like => {
-    const d = tb - ta;
-    const wa = (tb - tt) / d;
-    const wb = (tt - ta) / d;
-    return { x: a.x * wa + b.x * wb, y: a.y * wa + b.y * wb, z: a.z * wa + b.z * wb };
+  const w = (ta: number, tb: number) => (tt - ta) / (tb - ta);
+  const w01 = w(0, t1);
+  const w12 = w(t1, t2);
+  const w23 = w(t2, t3);
+  const w02 = w(0, t2);
+  const w13 = w(t1, t3);
+  const axis = (a: number, b: number, c: number, d: number): number => {
+    const a1 = a + (b - a) * w01;
+    const a2 = b + (c - b) * w12;
+    const a3 = c + (d - c) * w23;
+    const b1 = a1 + (a2 - a1) * w02;
+    const b2 = a2 + (a3 - a2) * w13;
+    return b1 + (b2 - b1) * w12;
   };
-  const a1 = lerp(p0, p1, t0, t1);
-  const a2 = lerp(p1, p2, t1, t2);
-  const a3 = lerp(p2, p3, t2, t3);
-  const b1 = lerp(a1, a2, t0, t2);
-  const b2 = lerp(a2, a3, t1, t3);
-  return lerp(b1, b2, t1, t2);
+  out.x = axis(p0.x, p1.x, p2.x, p3.x);
+  out.y = axis(p0.y, p1.y, p2.y, p3.y);
+  out.z = axis(p0.z, p1.z, p2.z, p3.z);
+  return out;
 }

@@ -39,7 +39,7 @@ export interface WyrmUniforms {
   /** Ember glow on the tail, 0..1 (the tail whip's wind-up). */
   uTailGlow: { value: number };
   /** Seconds, wrapped; drives the slow crack pulse. */
-  uTime: { value: number };
+  uWyrmTime: { value: number };
   /** Spine segments, for the per-instance tail fraction. */
   uSegments: { value: number };
   /** Membrane billow amplitude in metres (0 past the near LOD). */
@@ -68,7 +68,7 @@ export function makeUniforms(p: WyrmPalette, segments: number): WyrmUniforms {
     uMouth: { value: 0 },
     uFlash: { value: 0 },
     uTailGlow: { value: 0 },
-    uTime: { value: 0 },
+    uWyrmTime: { value: 0 },
     uSegments: { value: segments },
     uBillow: { value: 0 },
     uFold: { value: 0 },
@@ -86,7 +86,7 @@ function bind(shader: ShaderLike, u: WyrmUniforms, names: readonly (keyof WyrmUn
 }
 
 const SCALE_UNIFORMS = [
-  'uScale', 'uBelly', 'uRim', 'uRimStrength', 'uCrack', 'uHorn', 'uEye', 'uMouthColor', 'uFrame', 'uMouth', 'uFlash', 'uTailGlow', 'uTime', 'uSegments',
+  'uScale', 'uBelly', 'uRim', 'uRimStrength', 'uCrack', 'uHorn', 'uEye', 'uMouthColor', 'uFrame', 'uMouth', 'uFlash', 'uTailGlow', 'uWyrmTime', 'uSegments',
 ] as const;
 
 /** The scale role: base and belly colour by part, ember fresnel rim, glowing cracks from object-space position, eyes and mouth core. */
@@ -127,7 +127,7 @@ uniform vec3 uFrame;
 uniform float uMouth;
 uniform float uFlash;
 uniform float uTailGlow;
-uniform float uTime;
+uniform float uWyrmTime;
 uniform float uSegments;
 varying float vPart;
 varying float vSeg;
@@ -148,7 +148,7 @@ diffuseColor.rgb *= wyrmBase;`,
       `#include <emissivemap_fragment>
 float wyrmFres = pow(1.0 - clamp(abs(dot(normal, normalize(vViewPosition))), 0.0, 1.0), 3.0);
 float wyrmCell = abs(sin(vObjPos.x * 9.0 + 1.3) * sin(vObjPos.y * 7.0 + vObjPos.z * 5.0));
-float wyrmCrack = smoothstep(0.08, 0.0, wyrmCell) * (0.6 + 0.4 * sin(uTime * 1.7 + vSeg * 0.6));
+float wyrmCrack = smoothstep(0.08, 0.0, wyrmCell) * (0.6 + 0.4 * sin(uWyrmTime * 1.7 + vSeg * 0.6));
 float wyrmTail = smoothstep(0.55, 0.9, vSeg / max(1.0, uSegments - 1.0));
 totalEmissiveRadiance += (uRim * wyrmFres * uRimStrength + uCrack * wyrmCrack * 0.35 + uRim * wyrmTail * uTailGlow * 1.6) * wyrmIs(0.0)
   + uEye * 1.6 * wyrmIs(2.0)
