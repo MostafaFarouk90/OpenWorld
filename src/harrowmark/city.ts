@@ -1,4 +1,4 @@
-// Harrowmark's ring wall: a circle of 56 chords around the city centre, seven gates, six of them plugged.
+// Harrowmark's ring wall: a circle of 56 chords around the city centre, seven gates, five of them plugged and two with shutters.
 // Plain data and maths only (no THREE), so the layout, the validator and the tests share it.
 import type { StructureSpec } from '../region/layoutTypes';
 
@@ -44,7 +44,7 @@ export const gatePosition = (name: GateName, r = RING_RADIUS): { x: number; z: n
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
-/** The wall pieces, gate towers and the six plugs. Structure ids: `wall.<n>`, `tower.<gate>-l|r`, `plug.<gate>`. */
+/** The wall pieces, gate towers, the five plugs and the two shutters. Structure ids: `wall.<n>`, `tower.<gate>-l|r`, `plug.<gate>`, `portcullis.south|river`. */
 export function wallStructures(): StructureSpec[] {
   const out: StructureSpec[] = [];
   const step = 360 / CHORDS;
@@ -92,10 +92,11 @@ export function wallStructures(): StructureSpec[] {
         height: TOWER_HEIGHT,
       });
     }
-    // The South Gate's passage is the portcullis (gate.ts); the other six are plugged for good.
+    // The South Gate's passage is the portcullis (gate.ts) and the River Gate's the second shutter (opens at the end of Act 1); the other five are plugged for good.
+    const shutter = gate === 'south' ? PORTCULLIS_ID : gate === 'river' ? RIVER_PORTCULLIS_ID : null;
     out.push({
-      id: gate === 'south' ? PORTCULLIS_ID : `plug.${gate}`,
-      kind: gate === 'south' ? 'gate' : 'wall',
+      id: shutter ?? `plug.${gate}`,
+      kind: shutter ? 'gate' : 'wall',
       x: round(mid.x),
       z: round(mid.z),
       yawDeg: round(yaw),
@@ -108,3 +109,6 @@ export function wallStructures(): StructureSpec[] {
 }
 
 export const PORTCULLIS_ID = 'portcullis.south';
+export const RIVER_PORTCULLIS_ID = 'portcullis.river';
+/** The gate pieces with a switch (cityBuild's setShutter). */
+export const SHUTTER_IDS: readonly string[] = [PORTCULLIS_ID, RIVER_PORTCULLIS_ID];

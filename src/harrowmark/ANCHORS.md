@@ -408,7 +408,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | wall.40b | wall | 9237.44 | 2139.53 | 28.12 x 4 | solid |
 | tower.river-l | tower | 9228.97 | 2176.64 | 8 x 7 | solid |
 | tower.river-r | tower | 9233.42 | 2157.14 | 8 x 7 | solid |
-| plug.river | wall | 9231.2 | 2166.89 | 12 x 2.4 | solid |
+| portcullis.river | gate | 9231.2 | 2166.89 | 12 x 2.4 | solid |
 | wall.41 | wall | 9245.28 | 2083.97 | 84.24 x 4 | solid |
 | wall.42 | wall | 9250 | 2000 | 84.24 x 4 | solid |
 | wall.43 | wall | 9245.28 | 1916.03 | 84.24 x 4 | solid |
