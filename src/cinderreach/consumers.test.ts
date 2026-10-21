@@ -11,6 +11,9 @@ const CONSUMED_ANCHORS = [
   ...family('cinderreach.m12.prep', 3), ...family('cinderreach.m12.wounded', 4), ...family('cinderreach.m11.bloom', 3),
   ...family('cinderreach.m14.golem', 2), ...family('cinderreach.hushed-anvil.ledge', 3), ...family('cinderreach.den.ledge', 2),
   ...family('cinderreach.spawn.anvil', 2), ...family('cinderreach.spawn.cinderford', 3), ...family('cinderreach.spawn.road', 4),
+  // A6b's ground enemies (merged in #114).
+  ...family('cinderreach.spawn.pasture', 3), ...family('cinderreach.spawn.huntercamp', 4), 'cinderreach.spawn.fox.1', 'cinderreach.r05.fox',
+  'cinderreach.spawn.scorchhold.7', 'cinderreach.spawn.scorchhold.8',
   ...family('cinderreach.pasture.hollow', 3), ...family('cinderreach.r05.track', 3),
 ];
 
