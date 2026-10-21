@@ -719,8 +719,10 @@ export class Enemy {
    * Leaves the fight without a mercy (a wyrmling flying off, `wyrms.flyAway`): out of combat, walks or flies off as
    * the overlay says, then despawns as 'retired' (its slot is spent, no credit, no loot). Alive enemies only.
    */
-  retire(): void {
-    if (this.phase !== 'alive') return;
+  retire(): boolean {
+    if (this.phase !== 'alive') return false;
+    // A dormant enemy wakes so the overlay's leave (altitude, fade) reaches the drawn body.
+    if (this.asleep) this.wake();
     this.brain.standDown();
     this.disarm();
     this.goneHow = 'retired';
@@ -728,6 +730,7 @@ export class Enemy {
     this.leaveFrom = this.mover.feet.clone();
     this.leaveTime = 0;
     this.setLoco(ENEMY_CLIPS.walk);
+    return true;
   }
 
   /** The player or an ally struck this enemy (damage.dealt, outcome hit, not a script): Calm closes unless it staggers. */
@@ -749,8 +752,9 @@ export class Enemy {
   }
 
   /** Leaving or dissolving after an accepted mercy. */
+  /** Leaving after a mercy, or retired (a wyrmling flying off): a load the leave never reached refills the slot. */
   get inMercyExit(): boolean {
-    return this.goneHow === 'released' || this.goneHow === 'spared' || this.goneHow === 'calmed';
+    return this.goneHow === 'released' || this.goneHow === 'spared' || this.goneHow === 'calmed' || this.goneHow === 'retired';
   }
 
   /** A packmate was spared: see `Brain.offerYield`. */

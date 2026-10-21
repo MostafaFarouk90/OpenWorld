@@ -1,6 +1,6 @@
 // Wyrm showcase (dev only, plans/act2-A6a.md 4): the Ember Wyrm, a wyrmling and Orsk at 3x side by side on their own
 // renderer, at the origin or at the far edge of Cinderreach (`?far=1`). Open /tools/wyrm-showcase/ under `npx vite`.
-// `?pose=ground|fly|spit|fold` picks the Ember Wyrm's pose; `?t=<seconds>` freezes the clock there (renders);
+// `?cam=` frames one exhibit; `?pose=ground|fly|spit|fold` picks the Ember Wyrm's pose; `?t=<seconds>` freezes the clock there (renders);
 // `window.__showcase.ready` turns true after the first frame. Not part of the build or of vitest.
 import * as THREE from 'three';
 import { installFarPrecision } from '../../src/rendering/farPrecision';
@@ -108,8 +108,18 @@ const orsk = exhibit(new WyrmRig({ scale: 3, palette: 'orsk', seed: 28 }), -26, 
 });
 const exhibits = [ember, wyrmling, orsk];
 
-camera.position.copy(BASE).add(new THREE.Vector3(-6, 9, 34));
-camera.lookAt(BASE.clone().add(new THREE.Vector3(-8, 3, 0)));
+// `?cam=ember|wyrmling|orsk` frames one exhibit; the default frames all three.
+const CAMS: Record<string, [THREE.Vector3, THREE.Vector3]> = {
+  all: [new THREE.Vector3(-8, 7, 26), new THREE.Vector3(-8, 2.5, 0)],
+  ember: [new THREE.Vector3(2, 3.5, 10), new THREE.Vector3(-1, 1.6, 0)],
+  wyrmling: [new THREE.Vector3(10.5, 1.2, 3.2), new THREE.Vector3(9.5, 0.4, 0.5)],
+  orsk: [new THREE.Vector3(-18, 8, 26), new THREE.Vector3(-26, 4, 0)],
+};
+const [camAt, camLook] = CAMS[Q.get('cam') ?? 'all'] ?? CAMS.all!;
+// The flying pose is 5 m up: raise the shot with it.
+const lift = new THREE.Vector3(0, POSE === 'fly' && Q.get('cam') === 'ember' ? 4.5 : 0, 0);
+camera.position.copy(BASE).add(camAt).add(lift);
+camera.lookAt(BASE.clone().add(camLook).add(lift));
 
 const head = { x: 0, y: 0, z: 0 };
 let t = 0;

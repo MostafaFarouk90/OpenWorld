@@ -101,7 +101,7 @@ describe('wyrm.plugin', () => {
     h.ctx.anchors.define({ id: 'test.post', position: { x: 1, y: 0, z: 1 }, yaw: 0 });
     const remove = svc.tether('nursery', [{ anchor: 'test.post' }]);
     const flown: string[] = [];
-    const untrack = WYRM_HUB.track!('w-1', { spawnerId: 'nursery', slot: 0, flyAway: () => flown.push('w-1') });
+    const untrack = WYRM_HUB.track!('w-1', { spawnerId: 'nursery', slot: 0, flyAway: () => flown.push('w-1') > 0 });
     expect(WYRM_HUB.chainFor!('nursery', 0)).not.toBeNull();
     expect(svc.unchain('w-1')).toBe(true);
     expect(WYRM_HUB.chainFor!('nursery', 0)).toBeNull();

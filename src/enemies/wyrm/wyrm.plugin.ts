@@ -51,13 +51,19 @@ const plugin: GamePlugin = {
     // ---- sounds (placeholders; a recording registered under the same key replaces one)
     const audio = ctx.services.get('audio');
     if (audio && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+      const urls: string[] = [];
       for (const key of WYRM_SOUND_KEYS) {
         try {
-          audio.register(`sfx.wyrm.${key}`, { src: [samplesToWavUrl(wyrmSoundSamples(key))], format: ['wav'], volume: WYRM_SOUND_VOLUME[key] });
+          const url = samplesToWavUrl(wyrmSoundSamples(key));
+          urls.push(url);
+          audio.register(`sfx.wyrm.${key}`, { src: [url], format: ['wav'], volume: WYRM_SOUND_VOLUME[key] });
         } catch (err) {
           warn(`sound ${key} not registered (${String(err)})`);
         }
       }
+      offs.push(() => {
+        for (const u of urls) URL.revokeObjectURL(u);
+      });
     }
     const at = new THREE.Vector3();
     const sfx = (key: string, p: { x: number; y: number; z: number }): void => {
@@ -101,12 +107,7 @@ const plugin: GamePlugin = {
         ctx.events.emit('wyrm.unchained', { actorId });
         return true;
       },
-      flyAway: (actorId) => {
-        const h = handles.get(actorId);
-        if (!h) return false;
-        h.flyAway();
-        return true;
-      },
+      flyAway: (actorId) => handles.get(actorId)?.flyAway() ?? false,
       playOrsk: (req: OrskRequest): OrskPlayback | null => {
         if (orsk?.playing) {
           warn('playOrsk: already playing; refused');

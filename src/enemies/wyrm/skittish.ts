@@ -17,14 +17,18 @@ export interface SkittishHub extends WyrmHub {
 export interface WyrmlingHandle {
   readonly spawnerId: string | null;
   readonly slot: number | null;
-  /** Leaves without a mercy: flies (or walks, indoors) off and despawns as 'retired'. */
-  flyAway(): void;
+  /** Leaves without a mercy: flies (or walks, indoors) off and despawns as 'retired'. False when it was not alive (already leaving, calmed, dead). */
+  flyAway(): boolean;
 }
 
 /** The bread a wyrmling lets you come close for (any of them). */
 export const WYRMLING_BREAD = ['hearth-bread', 'barley-cake'] as const;
 /** Cornered: it may attack for this long after its last escape was blocked. */
 const CORNERED_SECONDS = 3;
+/** Coos are not played past this distance from the player. */
+const COO_RANGE = 25;
+/** Pulled back into its circle at most this fast (a spawn outside the circle eases in). */
+const CHAIN_PULL_SPEED = 4;
 
 type Body = Partial<Pick<WyrmBody, 'setAltitude' | 'setChain' | 'setOpacity'>>;
 
@@ -67,12 +71,20 @@ export function makeSkittishOverlay(ctx: BehaviourContext, hub: SkittishHub = {}
   };
   const hasBread = () => {
     const inv = ctx.host.services.get('inventory');
-    return !!inv && WYRMLING_BREAD.some((id) => inv.count(id) > 0);
+    if (!inv) return false;
+    for (const id of WYRMLING_BREAD) if (inv.count(id) > 0) return true;
+    return false;
   };
   const sfx = (key: string) => {
     const f = ctx.feet();
+    if (key === 'coo') {
+      const p = ctx.host.player.feet;
+      if (Math.hypot(f.x - p.x, f.z - p.z) > COO_RANGE) return;
+    }
     hub.sfx?.(key, { x: f.x, y: f.y, z: f.z });
   };
+  const goal = { x: 0, z: 0 };
+  const look = { x: 0, z: 0 };
   refreshChain();
 
   return {
@@ -98,20 +110,26 @@ export function makeSkittishOverlay(ctx: BehaviourContext, hub: SkittishHub = {}
       if (d < near) {
         const ux = d > 1e-6 ? dx / d : 1;
         const uz = d > 1e-6 ? dz / d : 0;
-        intent.goal = { x: self.x + ux * 3, z: self.z + uz * 3 };
+        goal.x = self.x + ux * 3;
+        goal.z = self.z + uz * 3;
+        intent.goal = goal;
         intent.speed = ctx.def.chaseSpeed;
         intent.face = null;
         intent.stopDistance = 0.2;
         fleeing = true;
       } else if (d > WYRMLING.keepAway[1] && !breadOk) {
-        intent.goal = { x: p.x, z: p.z };
+        goal.x = look.x = p.x;
+        goal.z = look.z = p.z;
+        intent.goal = goal;
         intent.speed = ctx.def.walkSpeed;
-        intent.face = { x: p.x, z: p.z };
+        intent.face = look;
         intent.stopDistance = (WYRMLING.keepAway[0] + WYRMLING.keepAway[1]) / 2;
       } else {
+        look.x = p.x;
+        look.z = p.z;
         intent.goal = null;
         intent.speed = 0;
-        intent.face = { x: p.x, z: p.z };
+        intent.face = look;
         headLow = breadOk;
       }
     },
@@ -124,7 +142,8 @@ export function makeSkittishOverlay(ctx: BehaviourContext, hub: SkittishHub = {}
       if (!chain) return;
       const f = ctx.feet();
       const post = chain.post;
-      const nx = f.x + v.x * dt - post.x;
+      // Outside the circle (a spawn off its ring): the pull-back below eases it in; nothing else to clamp yet.
+    const nx = f.x + v.x * dt - post.x;
       const nz = f.z + v.z * dt - post.z;
       const r = Math.hypot(nx, nz);
       if (r <= chain.length) return;
@@ -141,7 +160,7 @@ export function makeSkittishOverlay(ctx: BehaviourContext, hub: SkittishHub = {}
       const cz = f.z - post.z;
       const cr = Math.hypot(cx, cz);
       if (cr > chain.length && dt > 0) {
-        const back = (cr - chain.length) / dt;
+        const back = Math.min(CHAIN_PULL_SPEED, (cr - chain.length) / dt);
         v.x -= (cx / cr) * back;
         v.z -= (cz / cr) * back;
       }

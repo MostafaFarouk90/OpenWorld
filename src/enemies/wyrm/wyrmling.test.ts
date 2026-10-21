@@ -199,6 +199,30 @@ describe('Wyrmling: skittish', () => {
     expect(t.handles.size).toBe(0);
   });
 
+  it('a load during the fly-off (a save that never saw it): the flier goes and the slot is refilled, not spent', () => {
+    const t = rig({ playerZ: -4 });
+    const { id } = t.spawn({ aggro: true });
+    t.tick(0.5);
+    expect(t.handles.get(id)!.flyAway()).toBe(true);
+    // Already leaving: a second call does nothing.
+    expect(t.handles.get(id)!.flyAway()).toBe(false);
+    t.tick(1);
+    t.fake.loadFlags({});
+    expect(t.m.get(id)).toBeUndefined();
+    const live = t.m.service.alive('cage');
+    expect(live).toHaveLength(1);
+    expect(live[0]).not.toBe(id);
+    expect(t.m.spawners.serialize().spent).toEqual([]);
+  });
+
+  it('flyAway on a calmed wyrmling is refused', () => {
+    const t = rig({ playerZ: -1.8, items: { 'hearth-bread': 1 } });
+    const { id } = t.spawn();
+    t.tick(2.5);
+    t.hold(id).onInteract(t.fake.player);
+    expect(t.handles.get(id)!.flyAway()).toBe(false);
+  });
+
   it('indoors a freed wyrmling hops and walks to the exit door, then fades', () => {
     const t = rig({ playerZ: -4, indoors: true });
     const remove = t.tethers.tether('cage', [], { exitAnchor: 'door' });

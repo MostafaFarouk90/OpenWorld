@@ -119,6 +119,20 @@ describe('OrskScene', () => {
     expect(beats).toEqual(['started', 'chainsBroken', 'roar', 'roofBurst', 'gone']);
   });
 
+  it('a beat listener that skips mid-fire: every beat still fires exactly once', () => {
+    const { p, beats } = ports();
+    let o: OrskScene | null = null;
+    const beat = p.beat;
+    p.beat = (b) => {
+      beat(b);
+      if (b === 'started') o!.skip();
+    };
+    o = new OrskScene(p, REQ);
+    o.fixedUpdate(DT);
+    o.fixedUpdate(DT);
+    expect(beats).toEqual(['started', 'chainsBroken', 'roar', 'roofBurst', 'gone']);
+  });
+
   it('headless (no camera): still every beat, and done resolves', async () => {
     const { p, beats } = ports({ camera: false });
     const o = new OrskScene(p, REQ);

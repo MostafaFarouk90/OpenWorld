@@ -43,8 +43,8 @@ export interface BehaviourContext {
   playOneShot(clip: string, seconds: number): void;
   /** Moves this tick with `velocity` (m/s), turning toward it: for a `leave` override, which steers itself. */
   move(velocity: { x: number; z: number }, dt: number): void;
-  /** Leaves the fight without a mercy (no credit, no loot, slot spent): the enemy goes into its `leave` as 'retired'. */
-  retire(): void;
+  /** Leaves the fight without a mercy (no credit, no loot, slot spent): the enemy goes into its `leave` as 'retired'. False when it is not alive (already leaving, calmed, dead). */
+  retire(): boolean;
   /** Ends a leave: despawns now. */
   finish(): void;
 }
