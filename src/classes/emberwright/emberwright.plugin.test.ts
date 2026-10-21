@@ -46,11 +46,11 @@ const fullServices = () => {
 };
 
 describe('emberwright plugin', () => {
-  it('registers the skills, attack set, three Surge forms, kit and three ability handlers, and disposes them all', () => {
+  it('registers the skills, attack set, three Surge forms, kit and six ability handlers, and disposes them all', () => {
     const s = fullServices();
     boot(s.services);
     expect(s.calls).toEqual(['attack:emberwright', 'surge:emberwright:warm', 'surge:emberwright:blaze', 'surge:emberwright:cinder', 'kit:emberwright']);
-    expect([...s.handlers.keys()].sort()).toEqual([SKILL.anvilDrop, SKILL.flameLash, SKILL.warmBreath].sort());
+    expect([...s.handlers.keys()].sort()).toEqual([SKILL.anvilDrop, SKILL.flameLash, SKILL.warmBreath, SKILL.fireWall, SKILL.ironFamiliar, SKILL.smokeScreen].sort());
     expect(SKILLS.filter((x) => x.classId === 'emberwright')).toHaveLength(15);
     plugin.dispose?.();
     expect(s.calls).toEqual(expect.arrayContaining(['attack-off', 'kit-off', 'surge-off:warm', 'surge-off:blaze', 'surge-off:cinder']));
@@ -66,7 +66,7 @@ describe('emberwright plugin', () => {
     ctx.tick(61);
     expect(s.calls.filter((c) => c.startsWith('attack:'))).toHaveLength(1);
     expect(s.calls.filter((c) => c.startsWith('kit:'))).toHaveLength(1);
-    expect(s.handlers.size).toBe(3);
+    expect(s.handlers.size).toBe(6);
   });
 
   it('a refused attack set is not fatal: the class keeps the Knight set and the rest still registers', () => {

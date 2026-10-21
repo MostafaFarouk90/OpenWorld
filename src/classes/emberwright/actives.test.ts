@@ -244,7 +244,7 @@ describe('Surge forms', () => {
 });
 
 describe('skills', () => {
-  it('registers once, tier 1 and 2 live, 3 to 5 listed unavailable, tier 5 exclusive capstones, tier 1 passives', () => {
+  it('registers once, tier 1 to 3 live, 4 and 5 listed unavailable, tier 5 exclusive capstones, tier 1 passives', () => {
     resetClassSkills();
     const first = registerEmberwrightSkills();
     expect(first).toMatchObject({ ok: true, count: 15 });
@@ -252,7 +252,7 @@ describe('skills', () => {
     const mine = SKILLS.filter((s) => s.classId === 'emberwright');
     expect(mine).toHaveLength(15);
     expect(mine.filter((s) => s.available).map((s) => s.id).sort()).toEqual(
-      ['anvilDrop', 'emberBolt', 'flameLash', 'forgeSpark', 'gustStep', 'warmBreath'].map((n) => `emberwright.${n}`).sort(),
+      ['anvilDrop', 'emberBolt', 'fireWall', 'flameLash', 'forgeSpark', 'gustStep', 'ironFamiliar', 'smokeScreen', 'warmBreath'].map((n) => `emberwright.${n}`).sort(),
     );
     for (const s of mine.filter((x) => x.tier === 1)) expect(s.kind).toBe('passive');
     for (const s of mine.filter((x) => x.tier === 5)) expect(s).toMatchObject({ capstone: true, exclusiveGroup: 'capstone' });

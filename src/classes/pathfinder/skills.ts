@@ -3,7 +3,7 @@ import { PF } from './tuning';
 
 type Row = [name: string, kind: 'active' | 'passive'];
 
-/** Design 9.5. Tiers 1 and 2 are live; tiers 3 to 5 are listed so the tree draws its full shape. */
+/** Design 9.5. Tiers 1 to 3 are live; tiers 4 and 5 are listed so the tree draws its full shape. */
 const TREE: Record<string, Row[]> = {
   bolt: [
     ['steadyShot', 'passive'],
@@ -43,7 +43,7 @@ export function buildPathfinderSkills(): SkillDef[] {
         kind,
         nameKey: `skill.${PF.classId}.${name}.name`,
         descKey: `skill.${PF.classId}.${name}.desc`,
-        available: tier <= 2,
+        available: tier <= 3,
       };
       if (i > 0) def.requires = `${PF.classId}.${rows[i - 1][0]}`;
       if (tier === 5) {
@@ -59,5 +59,8 @@ export function buildPathfinderSkills(): SkillDef[] {
   const eye = out.find((s) => s.id === PF.skillIds.falconEye)!;
   eye.cooldown = PF.falconEye.cooldown;
   eye.emberCost = PF.falconEye.ember;
+  const net = out.find((s) => s.id === PF.skillIds.netLauncher)!;
+  net.cooldown = PF.netLauncher.cooldown;
+  net.emberCost = PF.netLauncher.ember;
   return out;
 }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { DamageResult } from '../../actors/DamageResolver';
 import type { StatusService } from '../../actors/status';
 import type { PlayerAvatar } from '../../characters/PlayerAvatar';
 import type { AnimationEvent } from '../../characters/AnimationEvents';
@@ -12,6 +13,7 @@ import { registerClassSkills } from '../../progression/skills';
 import { ProjectileSystem } from '../../spells/Projectile';
 import { createProjectileHost } from '../../spells/projectileHost';
 import type { Vec3 } from '../../vfx/ports';
+import type { VfxService } from '../../vfx/types';
 import { DEFAULT_KITS } from '../kits';
 import '../types';
 import { Ammo } from './Ammo';
@@ -20,6 +22,7 @@ import { Marks } from './Marks';
 import { SceneFx } from './SceneFx';
 import { createPathfinderSurge } from './Surge';
 import { Traps } from './Traps';
+import { LightStep, NetLauncher, emberQuarrelHandler, terrainBlocked } from './tier3';
 import { buildPathfinderSkills } from './skills';
 import { PATHFINDER_STRINGS_EN } from './strings.en';
 import { PATHFINDER_ATTACKS, PATHFINDER_HEAVY_INDEX, PF } from './tuning';
@@ -56,6 +59,8 @@ const pathfinderPlugin: GamePlugin = {
   id: 'pathfinder',
   dependsOn: ['core', 'combat-verbs', 'classes', 'spells', 'progression'],
   setup(ctx: GameContext) {
+    // A second setup without a dispose in between (a reload) first releases the previous run.
+    cleanup?.();
     const loose = ctx.services as unknown as Loose;
     const svc = <T>(name: string): T | undefined => loose.get(name) as T | undefined;
     const offs: Array<() => void> = [];
@@ -64,7 +69,7 @@ const pathfinderPlugin: GamePlugin = {
     const playerId = (): string => ctx.actors.player.id;
     const isPathfinder = (): boolean => svc<ProgressionPort>('progression')?.classId === PF.classId;
     const learned = (id: string): boolean => svc<ProgressionPort>('progression')?.learned?.(id) === true;
-    ctx.strings.register('en', PATHFINDER_STRINGS_EN);
+    offs.push(ctx.strings.register('en', PATHFINDER_STRINGS_EN));
     const toast = (textKey: string): void => ctx.events.emit('hud.toast', { textKey });
 
     // ---- skills, kit, attack set, Surge form
@@ -206,6 +211,41 @@ const pathfinderPlugin: GamePlugin = {
       else if (r) console.warn(`pathfinder: Surge form ${zone} refused (${r.reason})`);
     }
 
+    // ---- tier 3 (Act 2): Ember Quarrel, Net Launcher, Light Step
+    const pf = (id: string): boolean => isPathfinder() && learned(id);
+    const trigger = (id: string) => (): void => void svc<{ reportTrigger?(id: string): boolean }>('abilities')?.reportTrigger?.(id);
+    const vfx = (): VfxService | undefined => svc<VfxService>('vfx');
+    const warn = (m: string): void => console.warn(m);
+    const statusOf = () => svc<StatusService>('status');
+    const ember = emberQuarrelHandler({
+      playerId,
+      active: () => pf(PF.skillIds.emberQuarrel),
+      status: statusOf,
+      warn,
+      fx: (at) => void vfx()?.spawnEffect('ember-quarrel', { position: at }),
+      triggered: trigger(PF.skillIds.emberQuarrel),
+    });
+    offs.push(ctx.events.on('damage.dealt', (r: DamageResult) => ember(r)));
+    const net = new NetLauncher({
+      actors: ctx.actors,
+      playerId,
+      status: statusOf,
+      origin: chest,
+      aim,
+      lockTarget: () => svc<{ targetId: string | null }>('lockOn')?.targetId ?? null,
+      blocked: (from, to) => terrainBlocked(ctx.physics as never, ctx.world.player.controller.collider)(from, to),
+      fx: (at) => void vfx()?.spawnEffect('net-launcher', { position: at }, { radius: 1.2 }),
+      triggered: trigger(PF.skillIds.netLauncher),
+    });
+    const lightStep = new LightStep({
+      active: () => pf(PF.skillIds.lightStep) && !ctx.actors.player.dead,
+      controller: () => ctx.world.player.controller,
+      feetY: () => ctx.player.feet.y,
+      fx: () => void vfx()?.spawnEffect('light-step', { position: { x: ctx.player.feet.x, y: ctx.player.feet.y, z: ctx.player.feet.z } }),
+      triggered: trigger(PF.skillIds.lightStep),
+    });
+    offs.push(() => lightStep.reset());
+
     // ---- active skills (the abilities service spends the Ember and starts the cooldown after an ok)
     let handlersBound = false;
     const bindHandlers = (): void => {
@@ -222,6 +262,7 @@ const pathfinderPlugin: GamePlugin = {
         const at = { x: f.x - Math.sin(yaw) * PF.cinderTrap.placeDistance, y: f.y, z: f.z - Math.cos(yaw) * PF.cinderTrap.placeDistance };
         return traps.placeCinder(at) ? { ok: true } : { ok: false, reason: 'trap-limit' };
       });
+      reg(PF.skillIds.netLauncher, () => net.cast());
       reg(PF.skillIds.falconEye, () => {
         if (marks.cast(ctx.player.feet) === 0) return { ok: false, reason: 'no-targets' };
         fx.hawk(PF.falconEye.seconds);
@@ -286,8 +327,11 @@ const pathfinderPlugin: GamePlugin = {
       projectiles.clear(true);
       crossbow.swingEnded();
     };
-    offs.push(ctx.events.on('class.changed', reset));
-    offs.push(ctx.events.on('save.loaded', reset));
+    // Every tier 3 skill's state: Light Step's controller fields (Ember Quarrel and the net keep none; their statuses live on the foes).
+    const resetTier3 = (): void => lightStep.reset();
+    offs.push(ctx.events.on('class.changed', () => (reset(), resetTier3())));
+    offs.push(ctx.events.on('save.loaded', () => (reset(), resetTier3())));
+    offs.push(ctx.events.on('actor.died', (e) => void (e.actorId === playerId() && resetTier3())));
     offs.push(ctx.events.on('player.avatar', () => bindController()));
 
     offs.push(
@@ -312,6 +356,7 @@ const pathfinderPlugin: GamePlugin = {
             wasDodging = dodging;
           } else if (traps.count() > 0 || marks.count > 0) reset();
           syncTrailblaze();
+          lightStep.tick(dt);
           projectiles.update(dt);
           traps.update();
           marks.update();
