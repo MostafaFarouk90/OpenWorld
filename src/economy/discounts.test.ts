@@ -32,9 +32,9 @@ const TABLE: VendorDiscount[] = [
 ];
 
 describe('vendor discounts', () => {
-  it('ships an empty table that changes nothing', () => {
-    expect(VENDOR_DISCOUNTS).toEqual([]);
-    const { shop } = shopWith({ 'story.r10.choice': 'x' });
+  it('ships the Act 2 union table and changes no Act 1 vendor', () => {
+    for (const d of VENDOR_DISCOUNTS) expect(d.vendors.every((v) => ['aldous', 'slagg', 'pike'].includes(v))).toBe(true);
+    const { shop } = shopWith({ 'story.r10.choice': 'miners', 'story.r09.choice': 'miners' });
     expect(shop.quote('edda', 'barley-cake')).toBe(6);
   });
 
@@ -62,10 +62,11 @@ describe('vendor discounts', () => {
 });
 
 describe('Act 2 vendors', () => {
-  it('are in the full record with empty lines', () => {
+  it('are in the full record; wenna (Act 4) stays empty and the rest are stocked', () => {
     for (const id of ['aldous', 'wenna', 'slagg', 'pike', 'ketta', 'maud', 'osgar'] as const) {
       expect(VENDORS[id].id).toBe(id);
-      expect(VENDORS[id].lines).toEqual([]);
+      if (id === 'wenna') expect(VENDORS[id].lines).toEqual([]);
+      else expect(VENDORS[id].lines.length).toBeGreaterThan(0);
       expect(VENDOR_IDS).toContain(id);
     }
   });

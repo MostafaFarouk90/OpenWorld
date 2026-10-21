@@ -62,12 +62,19 @@ export class AdaptiveBeatClock implements BeatClock {
   private readonly metronome: Grid;
   private music: { grid: Grid } | null = null;
   private gen = 0;
+  private readonly divisions: number;
 
+  /**
+   * `divisions` (A10, default 1) splits every beat into that many equal steps for both grids, so `locate` and
+   * `passedIndex` count steps (4 gives the tempering bar's 16 steps). Anything but a whole number >= 1 reads as 1.
+   */
   constructor(
     private readonly ports: BeatClockPorts,
     bpm: number = SHRINE_TUNING.wardstones.bpm,
+    divisions = 1,
   ) {
-    this.metronome = new Grid(ports.nowMs(), 60000 / bpm);
+    this.divisions = Number.isInteger(divisions) && divisions >= 1 ? divisions : 1;
+    this.metronome = new Grid(ports.nowMs(), 60000 / bpm / this.divisions);
   }
 
   source(): BeatSource {
@@ -129,7 +136,7 @@ export class AdaptiveBeatClock implements BeatClock {
       return;
     }
     if (!this.music) {
-      this.music = { grid: new Grid(b.nextBeatTime, b.beatSeconds) };
+      this.music = { grid: new Grid(b.nextBeatTime, b.beatSeconds / this.divisions) };
       this.gen++;
       return;
     }
@@ -137,8 +144,8 @@ export class AdaptiveBeatClock implements BeatClock {
     const g = this.music.grid;
     const off = ((b.nextBeatTime - g.epoch) / g.period) % 1;
     const driftMs = Math.min(Math.abs(off), 1 - Math.abs(off)) * g.period * 1000;
-    if (Math.abs(b.beatSeconds - g.period) > 1e-6 || driftMs > RESYNC_DRIFT_MS) {
-      this.music = { grid: new Grid(b.nextBeatTime, b.beatSeconds) };
+    if (Math.abs(b.beatSeconds / this.divisions - g.period) > 1e-6 || driftMs > RESYNC_DRIFT_MS) {
+      this.music = { grid: new Grid(b.nextBeatTime, b.beatSeconds / this.divisions) };
       this.gen++;
     }
   }
