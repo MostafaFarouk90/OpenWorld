@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`templates > golden: template output is stable (change shows in review) 1`] = `
+[
+  "12/4/0/1",
+  "15/3/0/0",
+  "10/3/0/0",
+  "9/4/1/1",
+  "9/6/5/2",
+  "9/2/1/1",
+  "12/4/5/2",
+  "4/1/0/1",
+  "4/3/4/1",
+  "17/4/0/1",
+  "17/6/4/2",
+  "22/5/0/1",
+  "6/2/1/0",
+]
+`;
