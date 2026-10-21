@@ -59,9 +59,7 @@ describe('the persistables', () => {
   it('every registered key is in at least one fixture, or is an Act 2 key an Act 1 save lacks', async () => {
     h = await bootFromSave(await readAct1Fixture(ACT1_FIXTURES.complete), { models: false, virtualClock: true });
     const keys = h.ctx.persist.all().map((p) => p.key);
-    const inAct1 = new Set(Object.keys((FIXTURES['./__fixtures__/act1-complete.json'].entries as Entries)));
     const inAny = new Set(NAMES.flatMap((n) => Object.keys((FIXTURES[n].entries as Entries))));
-    const act2Only = keys.filter((k) => !inAct1.has(k));
     // The keys an Act 1 save lacks are the ones Act 2 added: the Act 1 loads above are their no-key loads, and the
     // Phase C fixtures carry them.
     // Every key is carried by some fixture (a loader test exists for it) except those the build registers but no save has

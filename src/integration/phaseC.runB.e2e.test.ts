@@ -29,6 +29,6 @@ describe('Phase C run B', () => {
     // Every quest's objectives were completed in order, and what was raised instead of played is named.
     for (const q of PHASE_C_ORDER) expect(trails[q].order.length, q).toBeGreaterThan(0);
     const scripted = PHASE_C_ORDER.flatMap((q) => trails[q].scripted);
-    expect(scripted).toEqual(['r05.herdHome(fox)', 'r11.wyrm(spare)', 'm14.temper(session opened without the screen)']);
+    expect(scripted).toEqual(['r11.wyrm(spare)', 'm14.temper(session opened without the screen)']);
   }, 240_000);
 });

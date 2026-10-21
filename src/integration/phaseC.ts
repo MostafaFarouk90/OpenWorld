@@ -250,20 +250,22 @@ const HANDLERS: Record<string, Handler> = {
     }
     ensure(h.ctx.state.getNumber('story.r05.foxNext') >= 4, 'the fox led the way to all four stops');
   },
-  'r05.herdHome': async (h, t) => {
+  'r05.herdHome': async (h) => {
     // The sheep follow once the player is among them: go to the flock first (the fox branch ends at the Dell).
-    await h.teleport(h.anchor('cinderreach.pasture.flock.4'), 2);
-    await h.runAsync(120);
-    const hollows = [1, 2, 3].map((n) => { const a = h.anchor(`cinderreach.pasture.hollow.${n}`); return { x: a.x, z: a.z, r: 20 }; });
-    const fox = h.ctx.state.getString('story.r05.choice') === 'fox';
-    await leadTo(h, h.anchor('cinderreach.r05.home'), () => flagDone(h, 'story.r05.herdHome'), fox ? 90 : 900, 2.2, hollows);
-    if (!flagDone(h, 'story.r05.herdHome') && fox) {
-      // SHORTCUT (open question in the PR): on the fox road the flock of six did not follow the stepped walk headless; the
-      // fold's own check (four sheep at the fold) is the director's, so raise what it would.
-      t.scripted.push('r05.herdHome(fox)');
-      h.ctx.state.setFlag('story.r05.herdHome', true);
-      h.ctx.events.emit('story.r05.herdHome' as never, {} as never);
+    // A sheep that started further than 45 m from the player grazes until the player is within 5 m of it: walk the pasture
+    // anchor to anchor (at walking pace, so the ones already gathered keep up) as a player gathering the flock would.
+    const first = h.anchor('cinderreach.pasture.flock.1');
+    await h.teleport({ x: first.x + 2.5, z: first.z }, 2);
+    for (let n = 1; n <= 8; n++) {
+      const a = h.ctx.anchors.find(`cinderreach.pasture.flock.${n}`);
+      if (!a) continue;
+      const at = new THREE.Vector3(a.position.x, a.position.y, a.position.z);
+      await leadTo(h, at, () => Math.hypot(h.ctx.player.feet.x - at.x, h.ctx.player.feet.z - at.z) < 2, 120, 2.2);
+      await h.runAsync(60);
+      heal(h);
     }
+    const hollows = [1, 2, 3].map((n) => { const a = h.anchor(`cinderreach.pasture.hollow.${n}`); return { x: a.x, z: a.z, r: 20 }; });
+    await leadTo(h, h.anchor('cinderreach.r05.home'), () => flagDone(h, 'story.r05.herdHome'), 900, 2.2, hollows);
     ensure(flagDone(h, 'story.r05.herdHome'), 'the flock is home');
   },
   // R07: Ketta's choice (1 spare the pups, 2 cull the den)
