@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { synthStem } from './stemSynth';
-import { BARLEY_AND_BRAZIER, SEVEN_GATES_ONE_DRUM, loopSamples, type TrackDef } from './tracks';
+import { ASH_ON_THE_PASTURE, BARLEY_AND_BRAZIER, HAMMERS_BELOW, SEVEN_GATES_ONE_DRUM, loopSamples, type TrackDef } from './tracks';
 
 // What makes the stems sound played rather than triggered (music-quality plan): hits differ in
 // level, off-beats wander a few milliseconds while the quarter notes stay on the grid, phrases do
 // not repeat bar for bar, and the pad follows the chords.
 
 const SR = 8000;
-const TRACKS: TrackDef[] = [BARLEY_AND_BRAZIER, SEVEN_GATES_ONE_DRUM];
+const TRACKS: TrackDef[] = [BARLEY_AND_BRAZIER, SEVEN_GATES_ONE_DRUM, ASH_ON_THE_PASTURE, HAMMERS_BELOW];
 
 const stepSamples = (t: TrackDef): number => loopSamples(t, SR) / t.bars / 16;
 const tokens = (bar: string): string[] => bar.trim().split(/\s+/);
@@ -130,4 +130,8 @@ describe('stability across sample rates', () => {
   };
   it.each([8000, 22050, 44100])('every Barley stem is finite at %d Hz', (rate) => finiteAt(BARLEY_AND_BRAZIER, rate));
   it('every Seven Gates stem is finite at 22.05 kHz', () => finiteAt(SEVEN_GATES_ONE_DRUM, 22050));
+  it.each([ASH_ON_THE_PASTURE, HAMMERS_BELOW])('every $id stem is finite at 8 and 22.05 kHz', (track) => {
+    finiteAt(track, 8000);
+    finiteAt(track, 22050);
+  });
 });
