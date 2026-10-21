@@ -52,7 +52,7 @@ describe('defaults', () => {
   it('get returns a copy', () => {
     const { b } = make();
     const g = b.get('jump') as [Binding | null, Binding | null];
-    g[0] = key('KeyP');
+    g[0] = key('KeyU');
     expect(b.get('jump')[0]).toEqual(key('Space'));
   });
 });
@@ -62,8 +62,8 @@ describe('rebind', () => {
     const { b } = make();
     const l = vi.fn();
     b.onChange(l);
-    expect(b.rebind('jump', 0, key('KeyP'))).toEqual({ ok: true });
-    expect(b.get('jump')[0]).toEqual(key('KeyP'));
+    expect(b.rebind('jump', 0, key('KeyU'))).toEqual({ ok: true });
+    expect(b.get('jump')[0]).toEqual(key('KeyU'));
     expect(l).toHaveBeenCalledTimes(1);
   });
 
@@ -116,16 +116,16 @@ describe('rebind', () => {
   });
 
   it('non-rebindable menu is reserved', () => {
-    expect(make().b.rebind('menu', 0, key('KeyP'))).toEqual({ ok: false, reason: 'reserved' });
+    expect(make().b.rebind('menu', 0, key('KeyU'))).toEqual({ ok: false, reason: 'reserved' });
   });
 
   it('unknown action and invalid bindings', () => {
     const { b } = make();
-    expect(b.rebind('nope' as never, 0, key('KeyP'))).toEqual({ ok: false, reason: 'unknown-action' });
+    expect(b.rebind('nope' as never, 0, key('KeyU'))).toEqual({ ok: false, reason: 'unknown-action' });
     expect(b.rebind('jump', 0, { device: 'key', code: '' })).toEqual({ ok: false, reason: 'invalid-binding' });
     expect(b.rebind('jump', 0, { device: 'mouse', button: 7 } as never)).toEqual({ ok: false, reason: 'invalid-binding' });
     expect(b.rebind('jump', 0, null as never)).toEqual({ ok: false, reason: 'invalid-binding' });
-    expect(b.rebind('jump', 5 as never, key('KeyP'))).toEqual({ ok: false, reason: 'invalid-binding' });
+    expect(b.rebind('jump', 5 as never, key('KeyU'))).toEqual({ ok: false, reason: 'invalid-binding' });
   });
 
   it('menu-only vs gameplay actions may share keys', () => {
@@ -148,7 +148,7 @@ describe('clear / reset / glyph / actionsFor', () => {
     expect(b.get('dodge')[1]).toBeNull();
     b.clear('menu', 0);
     expect(b.get('menu')[0]).toEqual(key('Escape'));
-    b.rebind('jump', 0, key('KeyP'));
+    b.rebind('jump', 0, key('KeyU'));
     b.resetToDefaults();
     expect(b.get('jump')[0]).toEqual(key('Space'));
     expect(b.get('dodge')[1]).toEqual(mouse(3));
@@ -172,7 +172,7 @@ describe('clear / reset / glyph / actionsFor', () => {
     expect(b.glyph('block')).toBe('Mouse4');
     b.rebind('block', 0, mouse(4));
     expect(b.glyph('block')).toBe('Mouse5');
-    b.rebind('attack1', 0, key('KeyP'));
+    b.rebind('attack1', 0, key('KeyU'));
     b.clear('attack1', 0);
     expect(b.glyph('attack1')).toBe('LMB');
     b.rebind('moveForward', 0, key('ArrowUp'), { swap: true });
@@ -187,7 +187,7 @@ describe('clear / reset / glyph / actionsFor', () => {
     expect(b.actionsFor(key('Digit1'))).toEqual(['attack1', 'dialogueChoice1']);
     expect(b.actionsFor(key('Digit1'), 'dialogue')).toEqual(['dialogueChoice1']);
     expect(b.actionsFor(mouse(3))).toEqual(['dodge']);
-    expect(b.actionsFor(key('KeyP'))).toEqual([]);
+    expect(b.actionsFor(key('KeyU'))).toEqual([]);
   });
 
   it('onChange unsubscribes', () => {
@@ -195,7 +195,7 @@ describe('clear / reset / glyph / actionsFor', () => {
     const l = vi.fn();
     const off = b.onChange(l);
     off();
-    b.rebind('jump', 0, key('KeyP'));
+    b.rebind('jump', 0, key('KeyU'));
     expect(l).not.toHaveBeenCalled();
   });
 });
@@ -205,24 +205,24 @@ describe('persistence', () => {
     const s = store();
     const a = new InputBindings(s, vi.fn());
     expect(JSON.parse(s.data.get('owg.bindings.v1') ?? '{}')).toEqual({});
-    a.rebind('jump', 0, key('KeyP'));
-    expect(JSON.parse(s.data.get('owg.bindings.v1')!)).toEqual({ jump: [key('KeyP'), null] });
+    a.rebind('jump', 0, key('KeyU'));
+    expect(JSON.parse(s.data.get('owg.bindings.v1')!)).toEqual({ jump: [key('KeyU'), null] });
     const b = new InputBindings(s, vi.fn());
-    expect(b.get('jump')).toEqual([key('KeyP'), null]);
+    expect(b.get('jump')).toEqual([key('KeyU'), null]);
     expect(b.get('interact')[0]).toEqual(key('KeyF'));
   });
 
   it('merges over defaults that changed', () => {
-    const s = store(JSON.stringify({ jump: [key('KeyP'), null] }));
+    const s = store(JSON.stringify({ jump: [key('KeyU'), null] }));
     const { b } = make(s);
-    expect(b.get('jump')[0]).toEqual(key('KeyP'));
+    expect(b.get('jump')[0]).toEqual(key('KeyU'));
     expect(b.get('mount')[0]).toEqual(key('KeyH'));
   });
 
   it('reset persists defaults', () => {
     const s = store();
     const a = new InputBindings(s, vi.fn());
-    a.rebind('jump', 0, key('KeyP'));
+    a.rebind('jump', 0, key('KeyU'));
     a.resetToDefaults();
     expect(new InputBindings(s, vi.fn()).get('jump')[0]).toEqual(key('Space'));
   });
@@ -239,19 +239,19 @@ describe('persistence', () => {
 
   it('drops unknown actions, invalid bindings and fixed actions with warnings', () => {
     const s = store(JSON.stringify({
-      ghost: [key('KeyP'), null],
+      ghost: [key('KeyU'), null],
       jump: [{ device: 'key' }, null],
-      sneak: [key('KeyP')],
-      menu: [key('KeyP'), null],
+      sneak: [key('KeyU')],
+      menu: [key('KeyU'), null],
       lockOn: [key('Escape'), null],
-      surge: [key('KeyP'), null],
+      surge: [key('KeyU'), null],
     }));
     const { b, warn } = make(s);
     expect(warn).toHaveBeenCalledTimes(5);
     expect(b.get('jump')[0]).toEqual(key('Space'));
     expect(b.get('menu')[0]).toEqual(key('Escape'));
     expect(b.get('lockOn')[0]).toEqual(key('Tab'));
-    expect(b.get('surge')[0]).toEqual(key('KeyP'));
+    expect(b.get('surge')[0]).toEqual(key('KeyU'));
   });
 
   it('drops a stored override that conflicts', () => {
@@ -276,14 +276,14 @@ describe('persistence', () => {
     };
     const b = new InputBindings(bad, warn);
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(b.rebind('jump', 0, key('KeyP')).ok).toBe(true);
-    expect(b.get('jump')[0]).toEqual(key('KeyP'));
+    expect(b.rebind('jump', 0, key('KeyU')).ok).toBe(true);
+    expect(b.get('jump')[0]).toEqual(key('KeyU'));
   });
 
   it('setItem throwing warns once and keeps working', () => {
     const warn = vi.fn();
     const b = new InputBindings({ getItem: () => null, setItem: () => { throw new Error('quota'); } }, warn);
-    b.rebind('jump', 0, key('KeyP'));
+    b.rebind('jump', 0, key('KeyU'));
     b.rebind('jump', 0, key('KeyO'));
     expect(warn).toHaveBeenCalledTimes(1);
     expect(b.get('jump')[0]).toEqual(key('KeyO'));
@@ -291,6 +291,6 @@ describe('persistence', () => {
 
   it('null storage works', () => {
     const { b } = make(null);
-    expect(b.rebind('jump', 0, key('KeyP')).ok).toBe(true);
+    expect(b.rebind('jump', 0, key('KeyU')).ok).toBe(true);
   });
 });

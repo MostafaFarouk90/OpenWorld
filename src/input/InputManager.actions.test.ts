@@ -87,10 +87,10 @@ describe('InputManager sampleTick', () => {
 
   it('rebinding changes the snapshot', () => {
     const { input, win } = setup();
-    input.bindings.rebind('jump', 0, { device: 'key', code: 'KeyP' });
+    input.bindings.rebind('jump', 0, { device: 'key', code: 'KeyU' });
     kd(win, 'Space');
     expect(input.sample().jump).toBe(false);
-    kd(win, 'KeyP');
+    kd(win, 'KeyU');
     expect(input.sample().jump).toBe(true);
   });
 });
@@ -105,7 +105,7 @@ describe('InputManager preventDefault and browser keys', () => {
     expect(kd(win, 'AltLeft')).toHaveBeenCalled();
     expect(kd(win, 'KeyW', { ctrlKey: true })).toHaveBeenCalled();
     expect(kd(win, 'KeyW')).not.toHaveBeenCalled();
-    expect(kd(win, 'KeyP', { ctrlKey: true })).not.toHaveBeenCalled(); // unbound
+    expect(kd(win, 'KeyU', { ctrlKey: true })).not.toHaveBeenCalled(); // unbound
   });
 
   it('never prevents F-keys', () => {
@@ -152,10 +152,10 @@ describe('InputManager keyboard lock', () => {
     expect(codes[0]).toEqual(expect.arrayContaining(['KeyW', 'ControlLeft', 'Space', 'Tab', 'AltLeft', 'Digit1']));
     expect(new Set(codes[0]).size).toBe(codes[0].length);
     // A later rebind re-locks with the new list.
-    input.bindings.rebind('jump', 0, { device: 'key', code: 'KeyP' });
+    input.bindings.rebind('jump', 0, { device: 'key', code: 'KeyU' });
     await Promise.resolve();
     expect(lock).toHaveBeenCalledTimes(2);
-    expect((lock.mock.calls[1] as unknown as [string[]])[0]).toContain('KeyP');
+    expect((lock.mock.calls[1] as unknown as [string[]])[0]).toContain('KeyU');
     // Uses an explicit target
     const other = { requestFullscreen: vi.fn(async () => {}) } as unknown as HTMLElement;
     await input.requestFullscreenAndLock(other);
@@ -269,7 +269,7 @@ describe('InputManager keyboard lock state', () => {
     await input.requestFullscreenAndLock();
     expect(good).toHaveBeenCalledTimes(1);
     lock.mockRejectedValueOnce(new Error('no'));
-    input.bindings.rebind('jump', 0, { device: 'key', code: 'KeyP' });
+    input.bindings.rebind('jump', 0, { device: 'key', code: 'KeyU' });
     await new Promise((r) => setTimeout(r, 0));
     expect(good).toHaveBeenLastCalledWith({ supported: true, locked: false });
   });

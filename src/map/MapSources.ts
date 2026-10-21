@@ -5,6 +5,26 @@ import { FOG_OPEN_FLAGS, fogOpen } from '../region/fogWall';
 import type { FlagGates } from '../state/FlagGates';
 import { buildForgeState, SHRINE_IDS, SHRINE_POSITIONS, type ForgeState, type ShrineId } from './ForgeMarks';
 import type { PoiInput } from './MapModel';
+import { ACT2_POI_PLACEMENTS, resolvePose } from '../world/poi/placement.act2';
+import { discoveredFlag, takenFlag } from '../world/poi/content';
+
+/** Shrines whose position comes from a published anchor (SHRINE_POSITIONS stays Act 1's table). */
+export const SHRINE_ANCHORS: Readonly<Partial<Record<ShrineId, string>>> = { 'hushed-anvil': 'cinderreach.hushed-anvil.site' };
+
+export interface Act2PoiSite {
+  id: string;
+  template: string;
+  x: number;
+  z: number;
+}
+
+/** The Act 2 POI sites with world positions (pure: roads give the pose, no anchors needed). */
+export function act2PoiSites(): Act2PoiSite[] {
+  return ACT2_POI_PLACEMENTS.map((p) => {
+    const pose = resolvePose(p);
+    return { id: p.site.id, template: p.site.template, x: pose.x, z: pose.z };
+  });
+}
 
 export const FOG_WALL = { id: 'trg.fog.harrowmark', x: 1100, z: -150 } as const;
 // The wall (and its marker) stands iff none of FOG_OPEN_FLAGS (src/region/fogWall.ts, the one list) is true.
@@ -42,6 +62,10 @@ export interface MapSourcePorts {
   events: { on(type: 'warmth.changed', fn: (e: { tier: number; previous: number }) => void): () => void };
   /** Soft service lookup by name; may return undefined. */
   service(name: string): unknown;
+  /** Flag reader for the discovered and taken POI flags; without it no Act 2 POI is drawn. */
+  flag?(key: string): boolean;
+  /** Published anchor position, for shrines that have no entry in SHRINE_POSITIONS. */
+  anchor?(id: string): { x: number; z: number } | undefined;
 }
 
 export interface MapSources {
@@ -51,6 +75,8 @@ export interface MapSources {
   /** Trainer and vendor markers whose post is revealed on the fog grid; vendors also need the favour flag. */
   posts(isRevealed: (x: number, z: number) => boolean): PoiInput[];
   litShrines(): PoiInput[];
+  /** Act 2 points of interest the player has found (`place.poi.a2.<id>.discovered`); emptied ones say so. */
+  a2Pois(): PoiInput[];
   dispose(): void;
 }
 
@@ -62,7 +88,12 @@ function call<T>(fn: () => T): T | undefined {
   }
 }
 
-export function createMapSources(ports: MapSourcePorts, label: (key: string) => string = (k) => k, anchors: readonly PostAnchor[] = POST_ANCHORS): MapSources {
+export function createMapSources(
+  ports: MapSourcePorts,
+  label: (key: string, params?: Record<string, string | number>) => string = (k) => k,
+  anchors: readonly PostAnchor[] = POST_ANCHORS,
+  poiSites: readonly Act2PoiSite[] = act2PoiSites(),
+): MapSources {
   const lit = new Map<ShrineId, boolean>();
   let fogIsOpen = false;
   let vendorsOpen = false;
@@ -112,8 +143,17 @@ export function createMapSources(ports: MapSourcePorts, label: (key: string) => 
       }),
     litShrines: () =>
       SHRINE_IDS.flatMap((id) => {
-        const p = SHRINE_POSITIONS[id];
+        const anchorId = SHRINE_ANCHORS[id];
+        const p = SHRINE_POSITIONS[id] ?? (anchorId ? call(() => ports.anchor?.(anchorId)) : undefined);
         return p && lit.get(id) ? [{ id: `shrine.${id}`, x: p.x, z: p.z, label: label(`map.shrine.${id}`) }] : [];
+      }),
+    a2Pois: () =>
+      poiSites.flatMap((p) => {
+        if (!ports.flag || !call(() => ports.flag!(discoveredFlag(p.id)))) return [];
+        if (!Number.isFinite(p.x) || !Number.isFinite(p.z)) return [];
+        const name = label(`map.poi.${p.template}`);
+        const taken = call(() => ports.flag!(takenFlag(p.id))) === true;
+        return [{ id: `poi.a2.${p.id}`, x: p.x, z: p.z, label: taken ? label('map.poi.emptied', { name }) : name }];
       }),
     dispose() {
       for (const off of offs.splice(0)) off();

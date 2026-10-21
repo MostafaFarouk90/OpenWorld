@@ -132,3 +132,15 @@ describe('fog migration v1 -> v2', () => {
     expect(m.revealedCount).toBeLessThan(wide.revealedCount);
   });
 });
+
+describe('v0.6 full-map bitmap size (A15)', () => {
+  it('the 384 px map leaves the fog grid untouched: cells stay 50 m on the same origin', () => {
+    expect(MAP_TUNING.fullMapPixels).toBe(384);
+    const g = FogGrid.forBounds();
+    expect(g.spec.cellSize).toBe(50);
+    expect(g.cols).toBe(500);
+    expect(g.rows).toBe(380);
+    g.reveal(-1990, -1990, 60);
+    expect(g.isRevealed(-1990, -1990)).toBe(true);
+  });
+});
