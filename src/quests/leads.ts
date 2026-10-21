@@ -95,3 +95,21 @@ export function m05ObjectiveLead(p: ObjectiveLeadPorts): LeadMarker[] {
   else if (!p.objectiveDone('m05', 'o3')) target = p.npcPosition('tobb');
   return target && Number.isFinite(target.x) && Number.isFinite(target.z) ? [{ id: 'lead.m05.objective', x: target.x, z: target.z, label: 'tobb' }] : [];
 }
+
+/**
+ * Kill objectives have no place on the map by themselves ("drive off the wraiths" with no idea where): a marker on the
+ * nearest living enemy of each current group.
+ */
+export function killObjectiveLeads(p: {
+  targets: () => Array<{ questId: string; objectiveId: string; spawnTag: string }>;
+  nearestLiving: (spawnTag: string) => { x: number; z: number } | undefined;
+}): LeadMarker[] {
+  const out: LeadMarker[] = [];
+  for (const t of p.targets()) {
+    const pos = p.nearestLiving(t.spawnTag);
+    if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.z)) {
+      out.push({ id: `lead.${t.questId}.${t.objectiveId}`, x: pos.x, z: pos.z, label: t.spawnTag });
+    }
+  }
+  return out;
+}

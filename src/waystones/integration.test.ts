@@ -88,6 +88,30 @@ describe('waystones + saves on the real game', () => {
     expect(t.game.ctx.state.getBool('waystone.chapel.lit')).toBe(false);
   });
 
+  it('a foe that aggroed and never calmed stops blocking travel once it is gone or far away (QA round 3)', async () => {
+    const t = await boot();
+    await t.run(2);
+    const w = t.game.ctx.services.require('waystones');
+    const pf = t.game.ctx.player.feet;
+    const spawnAt = (dx: number) => {
+      const root = new THREE.Object3D();
+      root.position.set(pf.x + dx, pf.y, pf.z);
+      return t.game.ctx.actors.spawn({ kind: 'ash-wraith', team: 'hostile', maxHealth: 10, root });
+    };
+    const near = spawnAt(8);
+    t.game.ctx.events.emit('ai.aggro', { actorId: near.id, targetId: 'player' } as never);
+    expect(w.hostileAggro).toBe(true);
+    expect(w.travelBlockedReason()).toBe('in-combat');
+    // it wanders off without ever calming
+    near.root!.position.x = pf.x + 200;
+    expect(w.hostileAggro).toBe(false);
+    expect(w.travelBlockedReason()).toBeNull();
+    // a stuck foe that is still close keeps the block
+    const close = spawnAt(5);
+    t.game.ctx.events.emit('ai.aggro', { actorId: close.id, targetId: 'player' } as never);
+    expect(w.hostileAggro).toBe(true);
+  });
+
   it('respawn point falls back to the spawn anchor, never null', async () => {
     const t = await boot();
     const r = t.game.ctx.services.require('waystones').respawnPoint();

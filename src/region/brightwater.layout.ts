@@ -144,22 +144,22 @@ const anchors: AnchorSpec[] = [
 ];
 
 const triggers: TriggerSpec[] = [
-  { id: 'trg.t01.gate', shape: 'sphere', x: 0, z: 25, radius: 3 },
+  { id: 'trg.t01.gate', shape: 'sphere', x: 0, z: 25, radius: 6 },
   { id: 'trg.t03.stane', shape: 'sphere', x: -38, z: 122, radius: 5 },
   { id: 'trg.t03.edda', shape: 'sphere', x: 22, z: 131, radius: 4 },
-  { id: 'trg.t04.chapel', shape: 'sphere', x: 50, z: 60, radius: 5 },
-  { id: 'trg.t06.start', shape: 'sphere', x: 40, z: 60, radius: 3 },
-  { id: 'trg.t06.end', shape: 'sphere', x: 0, z: 60, radius: 3 },
-  { id: 'trg.t07.cart', shape: 'sphere', x: 0, z: 74, radius: 2.5 },
-  { id: 'trg.t07.fence', shape: 'sphere', x: 0, z: 94, radius: 2.5 },
+  { id: 'trg.t04.chapel', shape: 'sphere', x: 50, z: 60, radius: 7 },
+  { id: 'trg.t06.start', shape: 'sphere', x: 40, z: 60, radius: 5 },
+  { id: 'trg.t06.end', shape: 'sphere', x: 0, z: 60, radius: 6 },
+  { id: 'trg.t07.cart', shape: 'sphere', x: 0, z: 74, radius: 5 },
+  { id: 'trg.t07.fence', shape: 'sphere', x: 0, z: 94, radius: 5 },
   { id: 'trg.t11.square', shape: 'box', x: 0, z: 130, half: [12, 30, 12] },
   { id: 'trg.t12.bakery', shape: 'box', x: 24, z: 132, half: [4.5, 30, 4.5] },
-  { id: 'trg.t14.chapel', shape: 'sphere', x: 40, z: 45, radius: 4 },
-  { id: 'trg.t14.kettlewick', shape: 'sphere', x: 12, z: 156, radius: 4 },
+  { id: 'trg.t14.chapel', shape: 'sphere', x: 40, z: 45, radius: 6 },
+  { id: 'trg.t14.kettlewick', shape: 'sphere', x: 12, z: 156, radius: 6 },
   { id: 'trg.t15.gate', shape: 'sphere', x: 0, z: 165, radius: 8 },
   { id: 'trg.yard.board', shape: 'sphere', x: -45, z: 127, radius: 6 },
   { id: 'trg.region.brightwater-north', shape: 'box', x: 0, z: 240, half: [80, 400, 4] },
-  { id: 'm01.chapel-door', shape: 'sphere', x: 43, z: 60, radius: 3 },
+  { id: 'm01.chapel-door', shape: 'sphere', x: 43, z: 60, radius: 5 },
   { id: 'm02.bakery', shape: 'box', x: 24, z: 132, half: [4.5, 30, 4.5] },
 ];
 

@@ -3,6 +3,8 @@ import type { GamePlugin } from '../core/plugins';
 import type { MoveModifier } from '../core/MoveModifiers';
 import { QuestManager } from './QuestManager';
 import { CarrySystem, type Carryable } from './carry';
+import { KILL_FAILSAFE_QUESTS, KillFailsafe, currentKillTargets } from './killFailsafe';
+import { VillagerBody, isModelLoader } from './carryBody';
 import {
   buildJournalModel, createJournalPanel, createJournalToggleState, toggleJournal,
 } from './JournalPanel';
@@ -171,7 +173,9 @@ const plugin: GamePlugin = {
     // Carrying is built on the first rules tick, after every plugin (and thread 4's anchors) exists.
     let carry: CarrySystem | null = null;
     const visuals: THREE.Object3D[] = [];
+    const bodies: VillagerBody[] = [];
     const disposeVisuals = (): void => {
+      for (const b of bodies.splice(0)) b.dispose();
       for (const m of visuals) {
         if ((m as THREE.Mesh).isMesh) {
           m.removeFromParent();
@@ -185,23 +189,28 @@ const plugin: GamePlugin = {
     };
     const buildCarry = (): CarrySystem => {
       const carryables: Carryable[] = [];
+      let villagers = 0;
       for (const item of [...CARRY_ITEMS, ...ACT2_CARRY]) {
-        // villagers are capsules held at chest height; buckets are the greybox bucket held low
+        // villagers are KayKit figures (a capsule until the model loads), cradled across the Knight's arms; buckets are the greybox bucket held low
         const villager = item.look === 'villager' || item.look === 'wounded';
-        const mesh: THREE.Object3D = villager
-          ? new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 1.0, 4, 8), new THREE.MeshStandardMaterial({ color: item.look === 'wounded' ? 0x7a5a4a : 0x8a6d4b }))
-          : buildPropLook(item.look === 'bundle' ? 'box' : 'bucket');
-        const lift = villager ? 0.8 : -0.3;
+        const body = villager
+          ? new VillagerBody(villagers++, item.look === 'wounded' ? 0x7a5a4a : 0x8a6d4b, isModelLoader(ctx.assets) ? ctx.assets : null)
+          : null;
+        const mesh: THREE.Object3D = body ? body.root : buildPropLook(item.look === 'bundle' ? 'box' : 'bucket');
         mesh.visible = false;
         ctx.scene.add(mesh);
-        visuals.push(mesh);
+        if (body) bodies.push(body);
+        else visuals.push(mesh);
         const anchor = ctx.anchors.find(item.homeAnchor);
         const needs = item.requiresFlag;
         carryables.push({
           id: item.id,
           interactableId: item.interactableId,
           home: () => anchor && { x: anchor.position.x, y: anchor.position.y, z: anchor.position.z },
-          setPosition: (p) => mesh.position.set(p.x, p.y + lift, p.z),
+          setPosition: (p, yaw) => {
+            if (body) body.setPose(p, yaw);
+            else mesh.position.set(p.x, p.y + (yaw === undefined ? -0.3 : 0.7), p.z);
+          },
           setVisible: (on) => { mesh.visible = on; },
           deliveredFlag: item.deliveredFlag,
           questId: item.questId,
@@ -220,6 +229,7 @@ const plugin: GamePlugin = {
         player: {
           id: () => ctx.player.actor.id,
           feet: () => ctx.player.feet,
+          facingYaw: () => ctx.player.facingYaw,
           addMoveModifier: (s, m) => ctx.player.addMoveModifier(s, m as MoveModifier),
         },
         interactables: {
@@ -274,6 +284,7 @@ const plugin: GamePlugin = {
         player: {
           id: () => ctx.player.actor.id,
           feet: () => ctx.player.feet,
+          facingYaw: () => ctx.player.facingYaw,
           addMoveModifier: (s, m) => ctx.player.addMoveModifier(s, m as MoveModifier),
         },
         braziers: [1, 2].map((n) => ({
@@ -357,6 +368,17 @@ const plugin: GamePlugin = {
       const slug = (id: string) => id.replace(/^lore\./, '');
       codexOff = codex.register([...Object.values(NOTE_CODEX), ...ACT2_NOTE_CODEX].map((id) => codexEntry('lore', id, slug(id))));
     };
+    const killFailsafe = new KillFailsafe({
+      targets: () => currentKillTargets(manager, KILL_FAILSAFE_QUESTS),
+      live: (tag) => {
+        let n = 0;
+        for (const a of ctx.actors.all()) if (!a.dead && (a as { spawnTag?: string }).spawnTag === tag) n++;
+        return n;
+      },
+      spawnGroup: (id, opts) => svc('enemies')?.spawnGroup(id, opts),
+      reset: (id) => svc('enemies')?.reset(id),
+      warn,
+    });
     let propTick = 0;
     let carryTried = false;
     ctx.systems.add({
@@ -374,6 +396,8 @@ const plugin: GamePlugin = {
           }
         }
         carry?.update(dt);
+        killFailsafe.update(dt);
+        for (const b of bodies) b.update(dt);
         if (!torchTried && manager.state('r01') !== 'inactive') {
           torchTried = true;
           try {

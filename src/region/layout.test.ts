@@ -119,7 +119,7 @@ describe('resolveLayout', () => {
 
   it('resolves trigger shapes with defaults', () => {
     const sphere = resolved.triggers.find((t) => t.id === 'trg.t01.gate')!;
-    expect(sphere).toMatchObject({ who: 'player', once: false, shape: { type: 'sphere', radius: 3 } });
+    expect(sphere).toMatchObject({ who: 'player', once: false, shape: { type: 'sphere', radius: 6 } });
     const box = resolved.triggers.find((t) => t.id === 'trg.t11.square')!;
     expect(box.shape).toMatchObject({ type: 'box', half: { x: 12, y: 30, z: 12 }, yaw: 0 });
   });

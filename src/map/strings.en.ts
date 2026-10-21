@@ -5,6 +5,7 @@ export const MAP_STRINGS_EN: Record<string, string> = {
   'map.blocked.cutscene': 'You cannot travel during a cutscene.',
   'map.blocked.dialogue': 'You cannot travel while talking.',
   'map.blocked.dead': 'You cannot travel while down.',
+  'map.blocked.dormant': 'This waystone is still cold. Kneel at it to rekindle it first.',
   'map.blocked.busy': 'You cannot travel right now.',
   'map.markers.waystone': 'Waystone',
   'map.markers.shrine': 'Shrine',
