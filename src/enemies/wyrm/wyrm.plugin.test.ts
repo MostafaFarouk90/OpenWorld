@@ -116,6 +116,13 @@ describe('wyrm.plugin', () => {
     expect(svc.flyAway('w-1')).toBe(false);
     // A load restores the freed set.
     h.ctx.persist.get('wyrms')!.load({ freed: [] }, 1);
+    h.ctx.events.emit('save.loaded', { slot: 'test' });
+    expect(WYRM_HUB.chainFor!('nursery', 0)).not.toBeNull();
+    // A save with no `wyrms` entry: nothing freed in the loaded world.
+    svc.unchain('w-2');
+    WYRM_HUB.track!('w-2', { spawnerId: 'nursery', slot: 0, flyAway: () => true });
+    expect(svc.unchain('w-2')).toBe(true);
+    h.ctx.events.emit('save.loaded', { slot: 'test' });
     expect(WYRM_HUB.chainFor!('nursery', 0)).not.toBeNull();
     remove();
     expect(WYRM_HUB.chainFor!('nursery', 0)).toBeNull();

@@ -137,8 +137,19 @@ const plugin: GamePlugin = {
       key: WYRMS_PERSIST.key,
       version: WYRMS_PERSIST.version,
       serialize: () => tethers.serialize(),
-      load: (data) => tethers.load(data),
+      load: (data) => {
+        loaded = true;
+        tethers.load(data);
+      },
     });
+    // A save without a `wyrms` entry (older, or before any chain was freed) never calls load: it frees nothing.
+    let loaded = false;
+    offs.push(
+      ctx.events.on('save.loaded', () => {
+        if (!loaded) tethers.load(null);
+        loaded = false;
+      }),
+    );
     offs.push(() => {
       orsk?.dispose();
       orsk = null;
