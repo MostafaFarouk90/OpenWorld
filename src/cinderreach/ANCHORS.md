@@ -15,8 +15,8 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | cinderreach.m11.search.2 | 13465.6 | 2525.27 | 0 | 180 | objective |
 | cinderreach.m11.search.3 | 14029.35 | 2242.85 | 0 | 180 | objective |
 | cinderreach.m11.search.4 | 14393.07 | 2409.61 | 0 | 180 | objective |
-| cinderreach.m11.ambush.1 | 13394.63 | 2595.9 | 0 | 270 | spawn |
-| cinderreach.m11.ambush.2 | 13981.42 | 2227.75 | 0 | 270 | spawn |
+| cinderreach.m11.ambush.1 | 13609.89 | 2359.12 | 0 | 270 | spawn |
+| cinderreach.m11.ambush.2 | 13724.24 | 2233.33 | 0 | 270 | spawn |
 | cinderreach.spawn.road.1 | 11834.83 | 2369.09 | 0 | 270 | spawn |
 | cinderreach.spawn.road.2 | 11830.3 | 2375.69 | 0 | 270 | spawn |
 | cinderreach.spawn.road.3 | 12576.47 | 2878.97 | 0 | 270 | spawn |
@@ -188,10 +188,28 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | cinderreach.spawn.huntercamp.6 | 20334.19 | 4735.63 | 0 | 180 | spawn |
 | cinderreach.spawn.huntercamp.7 | 20333.05 | 4761.63 | 0 | 180 | spawn |
 | cinderreach.spawn.huntercamp.8 | 20350.63 | 4780.81 | 0 | 180 | spawn |
+| cinderreach.stealth.m15.start | 20365 | 4710 | 0 | 180 | stealth |
+| cinderreach.stealth.m15.cp.inside | 20365 | 4738 | 0 | 180 | stealth |
+| cinderreach.stealth.m15.end | 20374 | 4756 | 0 | 180 | stealth |
+| cinderreach.stealth.m15.centre | 20365 | 4750 | 0 | 180 | stealth |
+| cinderreach.hide.m15.1 | 20381.51 | 4761.29 | 0 | 180 | hide |
+| cinderreach.hide.m15.2 | 20353.71 | 4766.51 | 0 | 180 | hide |
+| cinderreach.hide.m15.3 | 20348.49 | 4738.71 | 0 | 180 | hide |
+| cinderreach.hide.m15.4 | 20376.29 | 4733.49 | 0 | 180 | hide |
+| cinderreach.spawn.m15.watch.1 | 20381.71 | 4769.92 | 0 | 180 | spawn |
+| cinderreach.spawn.m15.watch.2 | 20373.89 | 4725.57 | 0 | 180 | spawn |
+| cinderreach.spawn.m15.watch.3 | 20339.39 | 4754.51 | 0 | 180 | spawn |
+| cinderreach.patrol.m15.camp.1 | 20377.31 | 4783.83 | 0 | 180 | patrol |
+| cinderreach.patrol.m15.camp.2 | 20398.83 | 4737.69 | 0 | 180 | patrol |
+| cinderreach.patrol.m15.camp.3 | 20352.69 | 4716.17 | 0 | 180 | patrol |
+| cinderreach.patrol.m15.camp.4 | 20331.17 | 4762.31 | 0 | 180 | patrol |
 | npc-post.osgar.camp | 20365 | 4704 | 0 | 180 | npc-post |
 | cinderreach.post.camp.1 | 20359 | 4704 | 0 | 180 | npc-post |
 | cinderreach.post.camp.2 | 20371 | 4704 | 0 | 180 | npc-post |
 | cinderreach.d03.gate | 19964.3 | 4815 | 0 | 180 | objective |
+| cinderreach.d03.gate.1 | 19960.3 | 4812 | 0 | 180 | objective |
+| cinderreach.d03.gate.2 | 19964.3 | 4812 | 0 | 180 | objective |
+| cinderreach.d03.gate.3 | 19968.3 | 4812 | 0 | 180 | objective |
 | cinderreach.scorchhold.keep.door | 19950 | 4932 | 0 | 180 | poi, door |
 | cinderreach.spawn.scorchhold.1 | 19900 | 4860 | 0 | 180 | spawn |
 | cinderreach.spawn.scorchhold.2 | 19925 | 4845 | 0 | 180 | spawn |
@@ -212,6 +230,9 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | id | shape | x | z | size |
 | --- | --- | --- | --- | --- |
 | trg.cinderreach.m11.ring | sphere | 13670 | 2308 | r 18 |
+| trg.cinderreach.m11.stage.1 | sphere | 10361.07 | 2502.75 | r 30 |
+| trg.cinderreach.m11.stage.2 | sphere | 11641.7 | 2323.62 | r 30 |
+| trg.cinderreach.m11.stage.3 | sphere | 12762.2 | 2853.66 | r 30 |
 | trg.cinderreach.cinderford.well | sphere | 21050 | 2410 | r 8 |
 | trg.cinderreach.den | sphere | 16150 | 4250 | r 40 |
 | trg.cinderreach.r07.den | sphere | 16990 | 4340 | r 20 |

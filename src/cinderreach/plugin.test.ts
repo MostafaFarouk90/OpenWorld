@@ -51,16 +51,19 @@ describe('cinderreach plugin', () => {
     const { fc, plugin } = setup();
     plugin.setup(fc.ctx);
     const svc = () => (fc.services.get('cinderreach') as { shownToggles(): string[] }).shownToggles();
-    expect(svc()).toEqual(['well-blight']);
+    // The shut Scorchhold gate (A12) shows until D03's charges set `story.d03.gateDown`.
+    expect(svc().sort()).toEqual(['fort-gate', 'well-blight']);
     fc.ctx.state.setFlag('story.r06.choice', 'sealed');
-    expect(svc().sort()).toEqual(['boarded-well', 'well-blight']);
+    expect(svc().sort()).toEqual(['boarded-well', 'fort-gate', 'well-blight']);
     fc.ctx.state.setFlag('story.r06.choice', 'cleansed');
-    expect(svc()).toEqual([]);
+    expect(svc()).toEqual(['fort-gate']);
     fc.ctx.state.setFlag('story.r11.choice', 'spared');
+    expect(svc().sort()).toEqual(['den-marker', 'fort-gate']);
+    fc.ctx.state.setFlag('story.d03.gateDown', true);
     expect(svc()).toEqual(['den-marker']);
     fc.flags.clear();
     fc.fire('save.loaded');
-    expect(svc()).toEqual(['well-blight']);
+    expect(svc().sort()).toEqual(['fort-gate', 'well-blight']);
     expect(fc.ctx.state.getBool(CINDERFORD_SEALED_FLAG)).toBe(false);
     expect(fc.ctx.state.getBool(DEN_SPARED_FLAG)).toBe(false);
     plugin.dispose?.();

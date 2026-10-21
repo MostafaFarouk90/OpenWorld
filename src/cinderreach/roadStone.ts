@@ -19,13 +19,15 @@ export function roadStoneLayout(): Pick<LayoutData, 'anchors' | 'triggers' | 'st
       ...SITES_FIT.blooms.map((b, i) => a(`cinderreach.m11.bloom.${i + 1}`, b.x, b.z, 0, ['objective'])),
       // Way-post, wreck, dead courier and scout's body along the road either side of the stone.
       ...numbered('cinderreach.m11.search', [at(4300, -5), at(4700, 5), at(5450, -5), at(5850, 5)], ['objective']),
-      ...numbered('cinderreach.m11.ambush', [at(4600), at(5400)], ['spawn'], 90),
+      // A12: the two Footman groups stand close enough to the stone to meet the dismounted column (they were 400 m out).
+      ...numbered('cinderreach.m11.ambush', [at(4920), at(5090)], ['spawn'], 90),
       // Ambient footmen on the open road, in pairs (A6b's Footman groups).
       ...numbered('cinderreach.spawn.road', [at(2800, -4), at(2800, 4), at(3700, -4), at(3700, 4)], ['spawn'], 90),
       ...numbered('cinderreach.m11.wraith', ring(s.x, s.z, 13, 5, 20), ['spawn'], 0),
       a('npc-post.gaut.cinder-road', station.x, station.z, 90, ['npc-post']),
     ],
-    triggers: [sphere('trg.cinderreach.m11.ring', s.x, s.z, 18)],
+    // The three banter stages of the ride out (A12), spaced along the road before the station.
+    triggers: [sphere('trg.cinderreach.m11.ring', s.x, s.z, 18), ...[1200, 2600, 3900].map((arc, i) => sphere(`trg.cinderreach.m11.stage.${i + 1}`, ...at(arc), 30))],
     structures: [
       solid('cinderreach-waystone-cinder-road', 'waystone', s.x, s.z, 1.6, 1.6, 2.4),
       ...SITES_FIT.blooms.map((b, i) => open(`cinderreach-m11-bloom-${i + 1}`, 'cinder-blightbloom', b.x, b.z, 3, 3)),

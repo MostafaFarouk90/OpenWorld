@@ -39,7 +39,9 @@ describe('dialogue content', () => {
       // density pass, batch 3
       'refugee-1', 'refugee-2', 'stallholder-1', 'stallholder-2', 'guild-doorman', 'pellam', 'sexton', 'fence', 'crabbe',
       // batch 4
-      'armourer', 'keep-guard', 'grisel', 'clerk', 'wace']).toContain(n.speaker);
+      'armourer', 'keep-guard', 'grisel', 'clerk', 'wace',
+      // Act 2 (A12)
+      'osgar', 'brand', 'carter-bound', 'corwin', 'redmane', 'maud', 'beornwyn', 'ketta', 'pell', 'osric', 'hrolf', 'ealdred', 'wynne', 'lantern-keeper', 'prisoner', 'household-1', 'household-2', 'household-3', 'household-4', 'keeper']).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {
