@@ -37,6 +37,8 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   // Act 2 ground enemies (A6b, provisional: A16's headless run is the authority; fox and sheep pay nothing).
   'hunter-spearman': 65,
   'hunter-harpooner': 80,
+  // Act 2 (A4/A13): Grisel's steward guards (provisional, a Footman's worth).
+  'steward-guard': 30,
   'slag-crawler': 60,
   'cinder-golem': 180,
   dummy: 0,
