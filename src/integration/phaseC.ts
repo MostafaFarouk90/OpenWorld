@@ -262,6 +262,7 @@ const HANDLERS: Record<string, Handler> = {
       // fold's own check (four sheep at the fold) is the director's, so raise what it would.
       t.scripted.push('r05.herdHome(fox)');
       h.ctx.state.setFlag('story.r05.herdHome', true);
+      h.ctx.events.emit('story.r05.herdHome' as never, {} as never);
     }
     ensure(flagDone(h, 'story.r05.herdHome'), 'the flock is home');
   },
