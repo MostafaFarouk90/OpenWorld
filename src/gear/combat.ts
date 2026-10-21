@@ -18,6 +18,7 @@ export interface DamageHost {
 }
 
 export const ATTACK_MODIFIER = { id: 'gear.attack', order: -120 } as const;
+export const EMBER_MODIFIER = { id: 'gear.ember', order: 99 } as const;
 export const DEFENCE_MODIFIER = { id: 'gear.defence', order: 50 } as const;
 
 const temperK = (temper: number): number => 1 + GEAR_TUNING.combat.temperPerLevel * temper;
@@ -72,9 +73,17 @@ export function registerGearModifiers(damage: DamageHost, ports: CombatPorts, pl
         let k = f;
         if (weapon === 'sworn' && target.kind.includes('wraith')) k *= 1 + AFFIX_EFFECTS.sworn.bonus;
         if (k !== 1) req.amount *= k;
-        if (weapon === 'ember' && req.outcome === 'hit' && target.team !== 'player' && req.amount > 0) ports.ignite?.(target.id, playerId);
       },
       ATTACK_MODIFIER.order,
+    ),
+    // After block, parry and shields have settled the outcome: only a hit that lands ignites.
+    damage.addModifier(
+      EMBER_MODIFIER.id,
+      (req, target) => {
+        if (req.attackerId !== playerId || req.kind === 'status') return;
+        if (equippedAffixes(ports).weapon === 'ember' && req.outcome === 'hit' && target.team !== 'player' && req.amount > 0) ports.ignite?.(target.id, playerId);
+      },
+      EMBER_MODIFIER.order,
     ),
     damage.addModifier(
       DEFENCE_MODIFIER.id,

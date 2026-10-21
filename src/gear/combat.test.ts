@@ -4,7 +4,7 @@ import { ActorRegistry } from '../actors/ActorRegistry';
 import { DamageResolver } from '../actors/DamageResolver';
 import { playerInit } from '../actors/teams';
 import { GameEvents } from '../core/events';
-import { ATTACK_MODIFIER, DEFENCE_MODIFIER, defenceRating, registerGearModifiers, weaponFactor } from './combat';
+import { ATTACK_MODIFIER, DEFENCE_MODIFIER, EMBER_MODIFIER, defenceRating, registerGearModifiers, weaponFactor } from './combat';
 import { testInventory } from './testkit';
 
 function rig(items: Record<string, number>, equipped: string[], temper: Record<string, [number, string?]> = {}) {
@@ -107,5 +107,23 @@ describe('affixes in combat', () => {
     const t = rig({ 'practice-sword': 1 }, ['practice-sword'], { 'practice-sword': [0, 'gleam'] });
     expect(t.hitFoe().dealt).toBe(100);
     expect(t.ignite).not.toHaveBeenCalled();
+  });
+});
+
+describe('gear.ember', () => {
+  it('runs after the defender band and ignites only a hit that lands', () => {
+    const t = rig({ 'practice-sword': 1 }, ['practice-sword'], { 'practice-sword': [1, 'ember'] });
+    expect(EMBER_MODIFIER).toEqual({ id: 'gear.ember', order: 99 });
+    t.hitFoe();
+    expect(t.ignite).toHaveBeenCalledTimes(1);
+    let blocking = true;
+    t.dr.addModifier('test.block', (req) => {
+      if (blocking) req.outcome = 'blocked';
+    }, 10);
+    t.hitFoe();
+    expect(t.ignite).toHaveBeenCalledTimes(1);
+    blocking = false;
+    t.hitFoe();
+    expect(t.ignite).toHaveBeenCalledTimes(2);
   });
 });
