@@ -109,7 +109,7 @@ describe('R09 Sooty Coin', () => {
     for (let i = 0; i < 9; i++) killOf(w, 'slag-crawler', 'r09.nest', `c${i}`);
     for (const id of ['r09-chest-1', 'r09-chest-2', 'r09-chest-3']) chest(w, id);
     reads(w, R09_OFFICE);
-    talk(w, 'steward-market-2');
+    talk(w, 'steward-market-2', 'completed');
     talk(w, 'miner-2');
   }
 
@@ -140,6 +140,17 @@ describe('R09 Sooty Coin', () => {
     chest(w, 'r09-chest-1');
     w.bus.emit('carry.delivered', { carryId: 'r09-chest-2', destinationId: 'trg.elsewhere' });
     expect(w.manager.objectives('r09').find((o) => o.def.id === 'chests')!.progress).toBe(1);
+  });
+
+  it('the clerk talk is skipped when R10 ended on the miners\' side (the clerk has left the market)', () => {
+    const w = world();
+    w.flags.set('story.r10.choice', 'miners');
+    begin(w, 'r09');
+    talk(w, 'slagg');
+    for (let i = 0; i < 9; i++) killOf(w, 'slag-crawler', 'r09.nest', `c${i}`);
+    for (const id of ['r09-chest-1', 'r09-chest-2', 'r09-chest-3']) chest(w, id);
+    reads(w, R09_OFFICE);
+    expect(current(w, 'r09')).toBe('miners');
   });
 
   it('the nests need nine crawlers of their tag', () => {
@@ -304,11 +315,12 @@ describe('M21 Parley at Deepgate', () => {
     w.flags.set('story.m21.branch', 'spy');
     toAudience(w);
     expect(done(w, 'm21', 'loyalists')).toBe(true);
+    expect(current(w, 'm21')).toBe('letters');
+    letters(w);
     expect(current(w, 'm21')).toBe('stealth');
     w.bus.emit('stealth.section', { sectionId: M21_SECTION, phase: 'entered' });
     expect(done(w, 'm21', 'stealth')).toBe(false);
     section(w);
-    letters(w);
     expect(current(w, 'm21')).toBe('aftermath');
     talk(w, 'aldous');
     talk(w, 'wenna');

@@ -208,6 +208,29 @@ describe('M21 at the audience', () => {
   });
 });
 
+describe('M21 and M22 are offered by their givers', () => {
+  it('Wenna offers M21 once M20 is done and starts it', () => {
+    const w = world();
+    w.set('m20', 'completed');
+    expect(opens(w, 'npc-wenna', 'wenna')).toBe('m21-offer');
+    play(w, 'npc-wenna', 'wenna');
+    expect(w.log).toContain('start m21');
+  });
+  it('Wystan offers M22 only when all twenty prerequisites are done', () => {
+    const ids = ['m11', 'm12', 'm13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19', 'm20', 'm21', 'r05', 'r06', 'r07', 'r08', 'r09', 'r10', 'r11', 'd03', 'd04'];
+    for (const missing of ids) {
+      const w = world();
+      for (const q of ids) if (q !== missing) w.set(q, 'completed');
+      expect(opens(w, 'npc-wystan', 'wystan'), missing).not.toBe('a2-m22-offer');
+    }
+    const w = world();
+    for (const q of ids) w.set(q, 'completed');
+    expect(opens(w, 'npc-wystan', 'wystan')).toBe('a2-m22-offer');
+    play(w, 'npc-wystan', 'wystan');
+    expect(w.log).toContain('start m22');
+  });
+});
+
 describe('the spy letter', () => {
   it('Aldous hands it over once on the spy aftermath, and not on the confront one', () => {
     const w = world();

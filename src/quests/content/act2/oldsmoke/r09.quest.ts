@@ -20,7 +20,8 @@ export const r09: QuestDef = {
     { id: 'nests', type: 'kill', target: 'slag-crawler', required: 9, spawnTag: 'r09.nest', textKey: 'quest.r09.nests' },
     story('chests', 'quest.r09.chests', 'carry.delivered', { required: 3, match: { destinationId: R09_OFFICE_TRIGGER }, dedupeBy: 'carryId' }),
     reads('office', 'quest.r09.office', R09_OFFICE),
-    { id: 'clerk', type: 'talk', target: 'steward-market-2', textKey: 'quest.r09.clerk' },
+    // The clerk leaves the market when R10 ends on the miners' side (A4's post rule), so that case skips the talk.
+    story('clerk', 'quest.r09.clerk', 'dialogue.ended', { match: { npcId: 'steward-market-2', reason: 'completed' }, doneWhen: { flag: 'story.r10.choice', equals: 'miners' } }),
     { id: 'miners', type: 'talk', target: 'miner-2', textKey: 'quest.r09.miners' },
     story('choice', 'quest.r09.choice', 'story.r09.chosen', { doneWhen: { any: [{ flag: 'story.r09.choice', equals: 'stewards' }, { flag: 'story.r09.choice', equals: 'miners' }] } }),
     { id: 'report', type: 'talk', target: 'slagg', textKey: 'quest.r09.report' },

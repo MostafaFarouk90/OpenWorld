@@ -9,7 +9,7 @@ const QUEST_TEXT: Record<string, QuestText> = {
     o: {
       ride: 'Ride the Oldsmoke pass to Deepgate', search: 'Search the pass road', ambush: 'Beat the hounds that hunt the pass',
       gate: "Pass the stewards' gate check", court: "Hear Lord Aldous in the Grisel forecourt", brazier: 'Light the dead brazier before the court',
-      silence: 'Let the court take it in', wenna: 'Hear Lady Wenna out', report: 'Take the answer to Lord Aldous',
+      silence: 'Speak to Lord Aldous as the court falls silent', wenna: 'Hear Lady Wenna out', report: 'Take the answer to Lord Aldous',
     },
   },
   r09: {

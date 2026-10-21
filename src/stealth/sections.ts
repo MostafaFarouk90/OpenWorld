@@ -84,7 +84,7 @@ export const SECTIONS: readonly StealthSectionDef[] = [
   // Act 2 Phase D (A13): M21's spy branch, in Grisel Hall (A4's interior `grisel-hall`; the hall's anchors are the interior's own).
   {
     id: 'm21.grisel-hall',
-    quest: { id: 'm21', liveFrom: 'stealth', liveUntil: 'stealth' },
+    quest: { id: 'm21', liveFrom: 'letters', liveUntil: 'stealth', exitArmedAfter: ['letters'] },
     bounds: { interior: 'grisel-hall' },
     checkpoints: [
       { id: 'hall.start', anchor: 'oldsmoke.stealth.m21.start', volume: v('oldsmoke.stealth.m21.start', 2, 3, 2) },

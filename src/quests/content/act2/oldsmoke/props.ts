@@ -14,7 +14,7 @@ export const OLDSMOKE_PROPS: QuestPropSpec[] = [
     objective: ['r10', 'ruling'], usedFlag: 'story.r10.ruled', look: 'stake',
   },
   {
-    interactableId: 'use:r10-keys', anchorId: 'oldsmoke.r10.hall.stewards', promptKey: 'quest.prompt.keys',
+    interactableId: 'use:r10-keys', anchorId: 'oldsmoke.market.guard.4', promptKey: 'quest.prompt.keys',
     objective: ['r10', 'keys'], usedFlag: 'story.r10.keysReturned', look: 'box',
   },
   // M21: the proof of the sale (evidence) and, on the spy branch, the letters in the study

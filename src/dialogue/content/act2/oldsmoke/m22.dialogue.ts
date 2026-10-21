@@ -1,5 +1,5 @@
 import { buildTree, type Line } from '../build';
-import { all, flagIs, objDone, objOpen, qActive, step, not } from '../cond';
+import { all, flagIs, objDone, objOpen, qActive, qDone, qIdle, step, not } from '../cond';
 
 const Wy = (t: string, when?: Line['when']): Line => ({ s: 'wystan', t, ...(when ? { when } : {}) });
 const Me = (t: string, when?: Line['when']): Line => ({ s: 'merrin', t, ...(when ? { when } : {}) });
@@ -7,6 +7,8 @@ const Ed = (t: string, when?: Line['when']): Line => ({ s: 'edric', t, ...(when 
 const To = (t: string): Line => ({ s: 'tobb', t });
 const C = (t: string, when?: Line['when']): Line => ({ s: 'cael', t, ...(when ? { when } : {}) });
 
+/** Q5: the quests M22 waits for (the same twenty as the quest's startWhen). */
+const M22_PREREQS = ['m11', 'm12', 'm13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19', 'm20', 'm21', 'r05', 'r06', 'r07', 'r08', 'r09', 'r10', 'r11', 'd03', 'd04'];
 const miners = flagIs('story.r10.choice', 'miners');
 const confront = flagIs('story.m21.choice', 'confront');
 const spared = flagIs('story.d03.outcome', 'spared');
@@ -142,8 +144,17 @@ export const EDRIC_A2 = buildTree({
 const W2 = (t: string): Line => ({ s: 'wystan', t });
 export const WYSTAN_A2 = buildTree({
   id: 'npc-wystan',
-  start: [{ when: all(qActive('m22'), objDone('m22', 'raised'), objOpen('m22', 'report')), seg: 'a2-m22-report' }],
+  start: [
+    { when: all(qActive('m22'), objDone('m22', 'raised'), objOpen('m22', 'report')), seg: 'a2-m22-report' },
+    { when: all(qIdle('m22'), ...M22_PREREQS.map((q) => qDone(q))), seg: 'a2-m22-offer' },
+  ],
   segments: {
+    'a2-m22-offer': {
+      lines: [
+        W2('Every House has seen what you have done, {name}, and the Council will sit when you walk into the Keep hall.'),
+        { ...W2('Come to the hall. Say what you saw, and let the Houses answer.'), fx: [{ startQuest: 'm22' }] },
+      ],
+    },
     'a2-m22-report': {
       lines: [
         W2('The banner is up and the Council is dismissed. Halvard and Oswin stand, and Deepgate waits. It is more than I had hoped, and less than I need.'),

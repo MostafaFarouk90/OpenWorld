@@ -15,18 +15,29 @@ export function installM16(k: Kit): void {
   });
 }
 
-/** M22: the Council meets when Cael enters the Keep hall; the banner raised starts its two-line scene. */
+/**
+ * M22: the Council meets when Cael is in the Keep hall with the council objective open; the banner raised starts its
+ * two-line scene. Both retry every half second until the dialogue opens (another modal may hold it for a tick), and the
+ * council also starts when the objective opens with Cael already standing in the hall.
+ */
 export function installM22(k: Kit): void {
   const { ctx } = k;
-  k.on('trigger.enter', (e) => {
-    if (e.actorId !== 'player' || e.triggerId !== 'trg.harrowmark.keep-hall') return;
-    k.later(() => {
-      if (k.active('m22') && k.objCurrent('m22', 'council')) ctx.services.get('dialogue')?.start('scene-m22-council', 'wystan');
-    });
-  });
+  let inKeep = false;
+  let bannerPending = false;
+  const dialogueFree = (): boolean => !ctx.services.get('dialogue')?.active;
+  k.on('trigger.enter', (e) => { if (e.actorId === 'player' && e.triggerId === 'trg.harrowmark.keep-hall') inKeep = true; });
+  k.on('trigger.exit', (e) => { if (e.actorId === 'player' && e.triggerId === 'trg.harrowmark.keep-hall') inKeep = false; });
   k.on('interact', (e) => {
     if (e.action === 'mercy' || e.interactableId !== M22_BANNER || !k.active('m22')) return;
-    k.later(() => void ctx.services.get('dialogue')?.start('scene-m22-banner', 'wystan'));
+    bannerPending = true;
+  });
+  k.every(30, () => {
+    if (!k.active('m22') || !dialogueFree()) return;
+    if (bannerPending && k.objCurrent('m22', 'raised')) {
+      if (ctx.services.get('dialogue')?.start('scene-m22-banner', 'wystan')) bannerPending = false;
+    } else if (inKeep && k.objCurrent('m22', 'council')) {
+      ctx.services.get('dialogue')?.start('scene-m22-council', 'wystan');
+    }
   });
 }
 

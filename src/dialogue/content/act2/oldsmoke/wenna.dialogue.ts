@@ -1,5 +1,5 @@
 import { buildTree, type Line } from '../build';
-import { all, flagIs, objDone, objOpen, qActive } from '../cond';
+import { all, flagIs, objDone, objOpen, qActive, qDone, qIdle } from '../cond';
 
 const W = (t: string, fx?: Line['fx'], when?: Line['when']): Line => ({ s: 'wenna', t, ...(fx ? { fx } : {}), ...(when ? { when } : {}) });
 const C = (t: string): Line => ({ s: 'cael', t });
@@ -8,6 +8,7 @@ const C = (t: string): Line => ({ s: 'cael', t });
 export const WENNA = buildTree({
   id: 'npc-wenna',
   start: [
+    { when: all(qDone('m20'), qIdle('m21')), seg: 'm21-offer' },
     { when: all(qActive('m21'), objDone('m21', 'aftermath'), objOpen('m21', 'report')), seg: 'm21-report' },
     { when: all(qActive('m21'), objOpen('m21', 'counsel')), seg: 'm21-counsel' },
     { when: qActive('m21'), seg: 'm21-wait' },
@@ -16,6 +17,12 @@ export const WENNA = buildTree({
     { when: all(), seg: 'idle' },
   ],
   segments: {
+    'm21-offer': {
+      lines: [
+        W('The galleries are behind us, and my father knows what you found. He will not run from it. He will make an argument of it.'),
+        W('Come to the hall. Let the steward bring you in, let my father speak, and then decide how you answer him.', [{ startQuest: 'm21' }]),
+      ],
+    },
     'm16-aside': {
       lines: [
         W('You lit it. I did not think you would. I did not think anyone could.'),

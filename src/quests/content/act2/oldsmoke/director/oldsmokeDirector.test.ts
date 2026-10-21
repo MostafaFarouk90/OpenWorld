@@ -21,6 +21,7 @@ function rig(opts: { anchors?: boolean } = {}) {
   const current = new Set<string>();
   const dialogues: Array<[string, string]> = [];
   const triggers: string[] = [];
+  const busy = { on: false };
   const rekindled: unknown[] = [];
   services.provide('quests' as never, {
     state: (id: string) => quest.get(id) ?? 'inactive',
@@ -28,7 +29,7 @@ function rig(opts: { anchors?: boolean } = {}) {
     isObjectiveCurrent: (q: string, o: string) => current.has(`${q}.${o}`),
     objectives: () => [],
   } as never);
-  services.provide('dialogue' as never, { start: (id: string, npc: string) => { dialogues.push([id, npc]); return true; } } as never);
+  services.provide('dialogue' as never, { get active() { return busy.on; }, start: (id: string, npc: string) => { if (busy.on) return false; dialogues.push([id, npc]); return true; } } as never);
   events.on('waystone.rekindled', (p) => void rekindled.push(p));
   let tick: { fixedUpdate(dt: number): void } | null = null;
   const ctx = {
@@ -41,7 +42,7 @@ function rig(opts: { anchors?: boolean } = {}) {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   plugin.setup(ctx);
   return {
-    events, state, quest, current, dialogues, triggers, rekindled, warn,
+    events, state, quest, current, busy, dialogues, triggers, rekindled, warn,
     step: (n = 1) => { for (let i = 0; i < n; i++) tick!.fixedUpdate(1 / 60); },
     interact: (interactableId: string, action = 'interact') => events.emit('interact', { interactableId, kind: 'use', actorId: 'player', action } as never),
     dispose: () => plugin.dispose?.(),
@@ -116,8 +117,35 @@ describe('oldsmoke director: M22 scenes', () => {
     r.quest.set('m22', 'active');
     r.current.add('m22.council');
     enter(r);
-    r.step();
+    r.step(30);
     expect(r.dialogues).toEqual([['scene-m22-council', 'wystan']]);
+    r.dispose();
+  });
+
+  it('starts it when the objective opens with Cael already in the hall, and retries while another dialogue holds the floor', () => {
+    const r = rig();
+    r.quest.set('m22', 'active');
+    enter(r);
+    r.step(30); // the council objective is not open yet
+    expect(r.dialogues).toEqual([]);
+    r.current.add('m22.council');
+    r.busy.on = true;
+    r.step(30);
+    expect(r.dialogues).toEqual([]);
+    r.busy.on = false;
+    r.step(30);
+    expect(r.dialogues).toEqual([['scene-m22-council', 'wystan']]);
+    r.dispose();
+  });
+
+  it('does not start it after Cael has left the hall', () => {
+    const r = rig();
+    r.quest.set('m22', 'active');
+    r.current.add('m22.council');
+    enter(r);
+    r.events.emit('trigger.exit', { triggerId: 'trg.harrowmark.keep-hall', actorId: 'player' } as never);
+    r.step(30);
+    expect(r.dialogues).toEqual([]);
     r.dispose();
   });
 
@@ -127,10 +155,10 @@ describe('oldsmoke director: M22 scenes', () => {
     r.quest.set('m22', 'active');
     enter(r, 'trg.harrowmark.keep-hall', 'wyrm');
     enter(r, 'trg.harrowmark.counting-house');
-    r.step();
+    r.step(30);
     expect(r.dialogues).toEqual([]);
     enter(r); // M22 active but the council objective is not current
-    r.step();
+    r.step(30);
     expect(r.dialogues).toEqual([]);
     r.dispose();
   });
@@ -138,12 +166,19 @@ describe('oldsmoke director: M22 scenes', () => {
   it('the banner starts its two-line scene, only during M22', () => {
     const r = rig();
     r.interact(M22_BANNER);
-    r.step();
+    r.step(30);
     expect(r.dialogues).toEqual([]);
     r.quest.set('m22', 'active');
+    r.current.add('m22.raised');
+    r.busy.on = true;
     r.interact(M22_BANNER);
-    r.step();
+    r.step(30);
+    expect(r.dialogues).toEqual([]); // held: it retries
+    r.busy.on = false;
+    r.step(30);
     expect(r.dialogues).toEqual([['scene-m22-banner', 'wystan']]);
+    r.step(60);
+    expect(r.dialogues).toHaveLength(1);
     r.dispose();
   });
 

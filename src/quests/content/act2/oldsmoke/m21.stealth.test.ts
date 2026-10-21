@@ -19,7 +19,7 @@ const open = () => true;
 describe('M21 stealth section', () => {
   it('is registered for the quest with interior bounds, four hide spots and the watch guard group', () => {
     expect(section).toBeDefined();
-    expect(section.quest).toEqual({ id: 'm21', liveFrom: 'stealth', liveUntil: 'stealth' });
+    expect(section.quest).toEqual({ id: 'm21', liveFrom: 'letters', liveUntil: 'stealth', exitArmedAfter: ['letters'] });
     expect(section.bounds).toEqual({ interior: 'grisel-hall' });
     expect(section.hideSpots).toHaveLength(4);
     expect(section.checkpoints.map((c) => c.id)).toEqual(['hall.start', 'hall.gallery', 'hall.study']);
