@@ -6,6 +6,7 @@ export const ENEMY_STRINGS_EN: Record<string, string> = {
   'enemies.calm.offering.ember-coal': 'Ember Coal',
   'enemies.calm.offering.barley-cake': 'Barley Cake',
   'enemies.calm.warmHand': 'Warm Hand, 10 Burn',
+  'enemies.calm.free': 'Stay your hand',
   'enemies.mercy.spare': 'Hold {key}: Spare',
   'enemies.name.ash-wraith': 'Ash Wraith',
   'enemies.name.alley-cutpurse': 'Alley Cutpurse',
@@ -22,4 +23,9 @@ export const ENEMY_STRINGS_EN: Record<string, string> = {
   'enemies.name.hrolf-trial': 'Hrolf Ironbrow',
   'enemies.name.ember-wyrm': 'Ember Wyrm',
   'enemies.name.wyrmling': 'Wyrmling',
+  'enemies.name.cinder-golem': 'Cinder Golem',
+  'enemies.name.slag-crawler': 'Slag Crawler',
+  'enemies.name.kindling-fox': 'Kindling Fox',
+  'enemies.name.hunter-spearman': 'Dragon-Hunter Spearman',
+  'enemies.name.hunter-harpooner': 'Dragon-Hunter Harpooner',
 };

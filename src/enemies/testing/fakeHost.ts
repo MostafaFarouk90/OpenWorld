@@ -180,7 +180,7 @@ export class FakeActor implements ActorLike {
   maxHealth: number;
   poise: number;
   maxPoise: number;
-  hittable = true;
+  hittable: boolean;
   invulnerable = false;
   /** Takes every hit and stays at full health, like the core's immortal actors. */
   readonly immortal: boolean;
@@ -195,6 +195,7 @@ export class FakeActor implements ActorLike {
   ) {
     this.team = init.team;
     this.immortal = init.immortal ?? false;
+    this.hittable = init.hittable ?? true;
     this.level = init.level ?? 1;
     this.maxHealth = this.health = init.maxHealth;
     this.maxPoise = this.poise = init.maxPoise ?? 0;
@@ -272,7 +273,7 @@ export class FakeHost {
   inventory: FakeInventory | undefined;
   /** Thread 2's status service, when a test provides it (`new FakeStatus()`); absent means the burning bite is a no-op. */
   status: StatusPort | undefined;
-  private readonly gateWatchers: Array<{ test: (get: (k: string) => boolean) => boolean; listener: (open: boolean, cause: 'init' | 'flag' | 'load' | 'recheck') => void; open: boolean }> = [];
+  private readonly gateWatchers: Array<{ test: (get: (k: string) => boolean, str: (k: string) => string | undefined) => boolean; listener: (open: boolean, cause: 'init' | 'flag' | 'load' | 'recheck') => void; open: boolean }> = [];
   private counter = 0;
 
   /** Sets a flag as the real state does: stores it, re-evaluates the gates and emits `flag.changed`. */
@@ -291,10 +292,15 @@ export class FakeHost {
     this.bus.emit('save.loaded', { slot: 'test' });
   }
 
+  private readonly flagString = (k: string): string | undefined => {
+    const v = this.flags.get(k);
+    return typeof v === 'string' ? v : undefined;
+  };
+
   private evaluateGates(cause: 'flag' | 'load'): void {
     const get = (k: string) => Boolean(this.flags.get(k));
     for (const w of [...this.gateWatchers]) {
-      const open = w.test(get);
+      const open = w.test(get, this.flagString);
       if (open === w.open) continue;
       w.open = open;
       w.listener(open, cause);
@@ -502,6 +508,7 @@ export class FakeHost {
         this.bus.emit('actor.despawned', { actorId: id });
       },
       get: (id) => this.actorMap.get(id),
+      all: () => this.actorMap.values(),
       bindOwner: (actor, owner) => {
         if (!this.actorMap.has(actor.id)) throw new Error(`FakeHost: "${actor.id}" is not registered`);
         this.owners.set(owner, actor.id);
@@ -514,6 +521,7 @@ export class FakeHost {
       },
     },
     damage: {
+      apply: (req) => this.apply(req),
       addModifier: (id, fn, order = 0) => {
         const entry = { id, fn, order };
         this.modifiers.push(entry);
@@ -574,7 +582,7 @@ export class FakeHost {
     },
     gates: {
       watch: (test, listener) => {
-        const w = { test, listener, open: test((k) => Boolean(this.flags.get(k))) };
+        const w = { test, listener, open: test((k) => Boolean(this.flags.get(k)), this.flagString) };
         this.gateWatchers.push(w);
         listener(w.open, 'init');
         return () => {

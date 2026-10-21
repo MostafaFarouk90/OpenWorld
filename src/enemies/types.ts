@@ -31,14 +31,20 @@ export type EnemyKind =
   | 'hrolf-trial'
   // Act 2 (A6a): the procedural wyrms.
   | 'ember-wyrm'
-  | 'wyrmling';
+  | 'wyrmling'
+  // Act 2 ground enemies (A6b)
+  | 'slag-crawler'
+  | 'cinder-golem'
+  | 'kindling-fox'
+  | 'hunter-spearman'
+  | 'hunter-harpooner';
 
 /**
  * Act 2 kind ids (v0.6 item 14), reserved here so no other thread takes them. A6a and A6b move each id into
  * `EnemyKind` in the same change that adds its `ENEMY_DEFS` and `TELEGRAPH_STYLE` rows (both are full records).
  */
-export type Act2EnemyKind = 'ember-wyrm' | 'wyrmling' | 'slag-crawler' | 'cinder-golem' | 'kindling-fox' | 'hunter-spearman' | 'hunter-harpooner';
-export const ACT2_ENEMY_KINDS: readonly Act2EnemyKind[] = ['ember-wyrm', 'wyrmling', 'slag-crawler', 'cinder-golem', 'kindling-fox', 'hunter-spearman', 'hunter-harpooner'];
+export type Act2EnemyKind = 'ember-wyrm' | 'wyrmling';
+export const ACT2_ENEMY_KINDS: readonly Act2EnemyKind[] = ['ember-wyrm', 'wyrmling'];
 
 /** The impact-sound materials of `actor.data.audio.material` ('straw' and 'wood' are the foes'). */
 export type EnemyMaterial = 'ash' | 'metal' | 'straw' | 'wood';
@@ -70,10 +76,39 @@ export interface MoveDef {
   /** Selection weight; 0 means only when a spawn's move filter names it (the T10 red sweep). */
   weight: number;
   onHit?: 'slow' | 'steal' | 'ignite';
+  /** A6b: fires a projectile when the window opens (rock, slag glob, net, harpoon); see ranged/. */
+  ranged?: RangedSpec;
+  /** A6b: when the window opens, hits every valid actor inside the circle once (stomp, slam, landing); see ranged/area.ts. */
+  area?: AreaSpec;
   /** A forward leap while the window is open (the hound's pounce): up to `maxMetres` in a straight line, stopping short of the target. */
   leap?: { maxMetres: number };
   /** A flier's moves (the Ember Wyrm): offered only in the air or only on the ground; unset offers it in both. */
   flight?: 'air' | 'ground';
+}
+
+/** What a ranged move fires. `root` (seconds) and `pull` (metres) are applied only on an outcome `hit`. */
+export interface RangedSpec {
+  shape: 'rock' | 'glob' | 'net' | 'harpoon';
+  /** Metres per second. */
+  speed: number;
+  /** The projectile stops after this many metres. */
+  maxRange: number;
+  /** Hit radius, metres. */
+  radius: number;
+  /** Aim height above the shooter's feet (hand or mouth). */
+  originHeight: number;
+  root?: number;
+  pull?: number;
+  /** Seconds of burning on a hit (the slag glob). */
+  ignite?: number;
+}
+
+/** A circle on the ground, in front of the attacker or on the target, hit once per swing. */
+export interface AreaSpec {
+  radius: number;
+  /** `self`: centred on the attacker; `front`: `offset` metres ahead of it. */
+  centre: 'self' | 'front';
+  offset?: number;
 }
 
 export interface ModelRecipe {
@@ -114,13 +149,18 @@ export interface MercyDef {
   tier: 'normal' | 'elite';
   track: FavourTrack | null;
   /** Release opens on a stagger (undead); Spare on a yield (humans); Calm before the first attack (beasts). */
-  when: 'staggered' | 'yielding' | 'calming';
+  when: 'staggered' | 'yielding' | 'calming' | 'exposed';
   /** Calm: item ids that open it (thread 1 reads them; data only here). */
   offerings?: readonly { itemId: string; count: number }[];
   /** How offerings reach the beast: held out in hand (default) or thrown. */
   delivery?: 'held' | 'thrown';
   /** A staggered (knocked down) beast accepts the Warm Hand (thread 1's Calm). */
   warmHand?: boolean;
+  /**
+   * A Calm that costs nothing (A6b): `always` while the window is open (the golem's Still on its exposed core), or `cooled`
+   * only while a cooling hit has it staggered (the crawler). It shows as its own option in the prompt.
+   */
+  freeCalm?: 'always' | 'cooled';
 }
 
 /** The offering delivery of a mercy def; `held` when unset. */
@@ -150,17 +190,24 @@ export interface EnemyDef {
   rises: boolean;
   /** Alley Cutpurse behaviour (cutpurse/): steals on a grab, flees with the gold, can be caught and spared. */
   thief?: boolean;
-  /** Which body the enemy gets: the Knight rig (default), the procedural quadruped, or the procedural wyrm (wyrm/). */
-  body?: 'humanoid' | 'quadruped' | 'wyrm';
+  /** Which body the enemy gets: the Knight rig (default), the procedural quadruped, the wyrm (wyrm/), or A6b's golem and crawler. */
+  body?: 'humanoid' | 'quadruped' | 'wyrm' | 'golem' | 'crawler';
   /**
-   * `circle-rush`: circle the target while a packmate is near, then rush (ai/Brain, hound/circleRush.ts). The others
-   * are behaviour overlays (behaviours.ts): `wyrm-flight` (the Ember Wyrm) and `skittish` (the wyrmling).
+   * `circle-rush`: circle the target while a packmate is near, then rush (ai/Brain, hound/circleRush.ts). `wyrm-flight` (the Ember Wyrm) and
+   * `skittish` (the wyrmling) are behaviour overlays (behaviours.ts). A6b: `ceiling` (crawler drop), `back-core` (golem), `guide` (fox, sheep: harmless).
    */
-  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish';
+  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide';
   /** Seconds a poise break holds the stagger (and its mercy window); default `AI.breakStaggerSeconds` (1.2). */
   breakStaggerSeconds?: number;
   /** Hurtboxes on which a player-team or ally hit breaks poise at once (the Ember Wyrm's wings). */
   poiseBreakBones?: readonly string[];
+  /** Spare opens when rooted or staggered under `AI.yieldBelowHealth` (the hunters), not only at a poise break. */
+  yieldWhenRooted?: boolean;
+  /**
+   * An accepted Calm leaves a static form where it stands (a cairn, a curled crawler) instead of walking off; kept across saves
+   * by the ground persistable (ground/settled.ts).
+   */
+  settles?: 'cairn' | 'curled';
   /** Overrides `AI.attackersPerTarget` (the largest limit among the holders and the requester applies). */
   attackersPerTarget?: number;
   /** Seconds between two members of one spawner taking an attack token (default: the pair stagger for `pairAdvance`, else none). */
@@ -181,6 +228,8 @@ export interface SpawnerDef {
   /** Written to `actor.spawnTag` (default: the spawner id); thread 3's M01 kill objective matches 'm01'. */
   tag?: string;
   enemy: EnemyKind | FoeKind;
+  /** A6b: the kind of slot i (a mixed pack, e.g. spearmen with one harpooner); a missing entry uses `enemy`. */
+  memberKinds?: readonly EnemyKind[];
   count: number;
   /** Spawn anchor id (world-layout-and-npcs.md section 2). */
   anchor: string;
@@ -198,12 +247,14 @@ export interface SpawnerDef {
    * gate: like auto, but present only while `flag` is on (when given) and `until` is off (when given); re-derived
    * through `ctx.gates`, so a load and a later flag change both add or remove the group.
    * interior: on `interior.entered` with this interior id (and on a load inside it).
+   * A6b: a gate may carry `unlessChoice`: present unless the string flag `flag` equals `equals` (R07's hound groups); an unset
+   * or any other value counts as present.
    */
   activation:
     | 'auto'
     | 'manual'
     | { quest: string; flag?: string }
-    | { flag?: string; until?: string }
+    | { flag?: string; until?: string; unlessChoice?: { flag: string; equals: string } }
     | { interior: string };
   /** The pack leader's slot (one per group): a calmed leader calms its pack (thread 1). */
   leaderSlot?: number;
@@ -239,6 +290,8 @@ export interface SpawnOptions {
   observerOnly?: boolean;
   /** Asleep in place (the resting den wyrm): never notices the player until it is hit. */
   peaceful?: boolean;
+  /** A `ceiling` kind (the Slag Crawler) spawns hanging (default true); `false` puts it on the floor, awake. */
+  hanging?: boolean;
 }
 
 export interface EnemyView {

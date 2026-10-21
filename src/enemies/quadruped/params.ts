@@ -136,3 +136,33 @@ export function quadrupedDims(p: QuadrupedParams): QuadrupedDims {
     restTail: 0.5,
   };
 }
+
+/** Kindling Fox (A6b): a small ember-tinted fox, a guide that never fights. */
+export const FOX: Readonly<QuadrupedParams> = Object.freeze({
+  bodyLength: 0.62,
+  bodyHeight: 0.24,
+  legLength: 0.34,
+  neckLength: 0.2,
+  neckAngle: 0.6,
+  headSize: 0.16,
+  tailLength: 0.55,
+  tint: 0xe8863a,
+  emissive: 0x5a2000,
+  scale: 1,
+  gaitSpeedScale: 0.7,
+});
+
+/** A sheep of the R05 flock (A6b): woolly, round, slow. */
+export const SHEEP: Readonly<QuadrupedParams> = Object.freeze({
+  bodyLength: 0.95,
+  bodyHeight: 0.58,
+  legLength: 0.45,
+  neckLength: 0.22,
+  neckAngle: 0.5,
+  headSize: 0.2,
+  tailLength: 0.15,
+  tint: 0xe9e3d3,
+  emissive: 0x000000,
+  scale: 1,
+  gaitSpeedScale: 0.8,
+});

@@ -1,6 +1,10 @@
 import { ENEMY_ATTACKS } from './clips';
 import { ALLEY_CUTPURSE } from './cutpurse/def';
 import { GUILDHALL_THUG } from './guildhall/def';
+import { SLAG_CRAWLER } from './crawler/def';
+import { KINDLING_FOX } from './fox/def';
+import { CINDER_GOLEM } from './golem/def';
+import { HUNTER_HARPOONER, HUNTER_SPEARMAN } from './hunters/def';
 import { EMBER_HOUND } from './hound/def';
 import { EMBER_WYRM_DEF, WYRMLING_DEF } from './wyrm/defs';
 import type { EnemyDef, EnemyKind, MoveDef } from './types';
@@ -196,13 +200,18 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'hrolf-trial': HROLF_TRIAL,
   'ember-wyrm': EMBER_WYRM_DEF,
   wyrmling: WYRMLING_DEF,
+  'slag-crawler': SLAG_CRAWLER,
+  'cinder-golem': CINDER_GOLEM,
+  'kindling-fox': KINDLING_FOX,
+  'hunter-spearman': HUNTER_SPEARMAN,
+  'hunter-harpooner': HUNTER_HARPOONER,
 };
 
 /**
  * Telegraph look per kind, for thread 7 (design 11.6): which part flashes and in what colour.
  * The `telegraph` event names only the actor; thread 7 maps `actor.kind` through this table.
  */
-export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapon' | 'tail' | 'mouth' | 'wing'; color: number }>> = {
+export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapon' | 'tail' | 'mouth' | 'wing' | 'core' | 'maw'; color: number }>> = {
   'ash-wraith': { part: 'hand', color: 0x9fbf8f },
   'blighted-soldier': { part: 'weapon', color: 0xd04030 },
   'alley-cutpurse': { part: 'hand', color: 0xc8b070 },
@@ -216,6 +225,12 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   // The wyrms light their mouths (design 11.6: the spit's inhale glow; the dive's wing flash is drawn by the body).
   'ember-wyrm': { part: 'mouth', color: 0xff7a2a },
   wyrmling: { part: 'mouth', color: 0xffb040 },
+  // A6b, design 11.6: core glow (golem), rear-up and drip (crawler), visor/weapon flash and the red net and harpoon lines (hunters).
+  'cinder-golem': { part: 'core', color: 0xff6a20 },
+  'slag-crawler': { part: 'maw', color: 0xff7a2a },
+  'kindling-fox': { part: 'tail', color: 0xe8863a },
+  'hunter-spearman': { part: 'weapon', color: 0xd04030 },
+  'hunter-harpooner': { part: 'weapon', color: 0xd04030 },
 };
 
 function move(

@@ -32,6 +32,8 @@ export interface Senses {
   yieldAllowed: boolean;
   /** Living packmates of the same spawner within `HOUND.packRadius` (the `circle-rush` behaviour; absent counts as 0). */
   packNearby?: number;
+  /** Rooted by a status (a net): with `def.yieldWhenRooted` and health under `AI.yieldBelowHealth`, Spare opens at once. */
+  rooted?: boolean;
 }
 
 /** Side effects the brain asks for; Enemy implements them (tests use spies). */
@@ -84,6 +86,8 @@ export interface BrainOptions {
 }
 
 const STOP_AT_TARGET = 1.1;
+/** States a net can make yield (the hunters). */
+const ROOT_YIELD_STATES: ReadonlySet<AiState> = new Set<AiState>(['notice', 'chase', 'telegraph', 'attack', 'recover']);
 /** States that hold a target or a swing. */
 const COMBAT: ReadonlySet<AiState> = new Set<AiState>(['notice', 'chase', 'telegraph', 'attack', 'recover', 'stagger', 'yield', 'flee']);
 
@@ -184,6 +188,9 @@ export class Brain {
         return this._state === 'stagger' && !this.stunMode;
       case 'yielding':
         return this._state === 'yield';
+      case 'exposed':
+        // The golem's back core, open for the whole poise-break stagger (def.breakStaggerSeconds).
+        return this._state === 'stagger' && !this.stunMode;
       case 'calming':
         return (this.warmHandOpen && !this.stunMode) || (!this.struckByPlayer && this.calmOpen);
       default:
@@ -221,6 +228,13 @@ export class Brain {
       // A caught thief (stagger, yield) is not sent running again by the health check.
       const caughtNow = this.def.thief && (this._state === 'yield' || this._state === 'stagger');
       if (this.aggroTarget && s.healthFraction < this.def.fleeAtHealth && this._state !== 'flee' && !caughtNow) this.enter('flee');
+    }
+
+    if (this.def.yieldWhenRooted && s.rooted && s.yieldAllowed && s.healthFraction < AI.yieldBelowHealth && ROOT_YIELD_STATES.has(this._state) && this.def.mercy?.when === 'yielding') {
+      // A rooted hunter under half health surrenders (design 10 row 30); a staggered one already does through `staggered`.
+      this.enter('yield');
+      this.hooks.yieldStarted(AI.yieldSeconds);
+      return this.intent(null, 0);
     }
 
     switch (this._state) {

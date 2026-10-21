@@ -31,6 +31,12 @@ const CANDIDATES: Array<{ clip: string; def: EnemyDef; channel: 'right' | 'left'
   { clip: 'Unarmed_Melee_Attack_Punch_A', def: ASH_WRAITH, channel: 'right' },
   { clip: '1H_Melee_Attack_Slice_Diagonal', def: BLIGHTED_SOLDIER, channel: 'right' },
   { clip: 'Block_Attack', def: BLIGHTED_SOLDIER, channel: 'right' },
+  // A6b: the hunters' spear thrust and the throws (net, rock, harpoon).
+  { clip: '1H_Melee_Attack_Stab', def: ASH_WRAITH, channel: 'right' },
+  { clip: '2H_Melee_Attack_Stab', def: ASH_WRAITH, channel: 'right' },
+  { clip: 'Throw', def: ASH_WRAITH, channel: 'right' },
+  { clip: '1H_Ranged_Shoot', def: ASH_WRAITH, channel: 'right' },
+  { clip: 'Unarmed_Melee_Attack_Kick', def: ASH_WRAITH, channel: 'right' },
 ];
 
 async function loadKnight(): Promise<{ scene: THREE.Object3D; animations: THREE.AnimationClip[] }> {
@@ -117,6 +123,8 @@ describe.skipIf(!(globalThis as any).process?.env?.MEASURE_ENEMY_CLIPS)('measure
       soldierBash: { m: soldier, channels: ['left', 'right'] },
       cutpurseSlash: { m: cutpurse, channels: ['right'] },
       cutpurseGrab: { m: cutpurse, channels: ['right'] },
+      hunterThrust: { m: wraith, channels: ['right'] },
+      hunterThrow: { m: wraith, channels: ['right'] },
     };
     const line = (label: string, clip: THREE.AnimationClip, r: Measured) =>
       console.log(

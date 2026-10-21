@@ -259,6 +259,16 @@ describe('Gust Step', () => {
     expect(rig.applied()).toHaveLength(0);
   });
 
+  it('a Gust Step dodge also sends a cooling hit (radius 2 m) for Slag Crawlers; without the skill it does not', () => {
+    rig = makeRig({ learned: [SKILL.gustStep] });
+    rig.rt.onClipStartDodge('Dodge_Forward');
+    rig.rt.onClipStartDodge('Running_A');
+    expect(rig.cools.map((c) => c.radius)).toEqual([GUST_STEP.pushRadius]);
+    rig = makeRig();
+    rig.rt.onClipStartDodge('Dodge_Forward');
+    expect(rig.cools).toHaveLength(0);
+  });
+
   it('without the skill nothing is pushed; with no push service the adapter just reports false', () => {
     rig = makeRig();
     rig.hostile('close', 1, 0);

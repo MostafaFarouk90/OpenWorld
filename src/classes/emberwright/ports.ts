@@ -18,6 +18,8 @@ export interface EmberwrightHost {
    * the plugin adapts it in one place, and returns false when the service is not there yet.
    */
   push(actorId: ActorId, dir: Vec3, metres: number): boolean;
+  /** A6b's `cooling.hitArea`: a cooling hit on Slag Crawlers within `radius` of `at` (the Gust Step's wind). Absent until A6b lands. */
+  cool?(at: Vec3, radius: number): number;
   learned(skillId: string): boolean;
   /** Progression's class id (null before the M07 choice). */
   classId(): string | null;
