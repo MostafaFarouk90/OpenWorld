@@ -1,7 +1,7 @@
 import type { ItemDef } from '../hud/ports';
 import type { FavourBand } from '../state/favour';
 import { bandPrice, listPrice, sellPrice } from './prices';
-import { bandAtLeast, discountPercent, isVendorId, SHOP_LIST_PRICES, VENDORS, type StockLine, type VendorDiscount, type VendorId } from './stock';
+import { bandAtLeast, discountPercent, isVendorId, SELL_FLAT, SHOP_LIST_PRICES, stockWhenHolds, VENDORS, type StockLine, type VendorDiscount, type VendorId } from './stock';
 
 export const BUY_BACK_MAX = 12;
 
@@ -35,6 +35,8 @@ export interface ShopPorts {
   warn(message: string): void;
   /** Reads a story flag for `VENDOR_DISCOUNTS`; absent means no discounts apply. */
   flag?(key: string): unknown;
+  /** A gear piece's temper and affix; a piece with either cannot be sold (removing it would drop the record). */
+  gearRecord?(itemId: string): { temper: number; affix?: string };
   /** Test seam: the discount table (default `VENDOR_DISCOUNTS`). */
   discounts?: readonly VendorDiscount[];
 }
@@ -52,7 +54,8 @@ export type ShopFailure =
   | 'equipped'
   | 'not-owned'
   | 'no-such-entry'
-  | 'price-rose';
+  | 'price-rose'
+  | 'tempered';
 
 export type ShopResult = { ok: true; total: number } | { ok: false; reason: ShopFailure };
 
@@ -62,6 +65,8 @@ export interface Offer {
   price: number;
   /** Units left, or null when unlimited. */
   remaining: number | null;
+  /** Classes the piece is meant for (absent: all); the menu dims the row for others. */
+  classes?: readonly string[];
 }
 
 const isCount = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n > 0;
@@ -123,6 +128,7 @@ export class Shop {
     const out: Offer[] = [];
     for (const l of def.lines) {
       if (def.track && band && !bandAtLeast(band, l.from)) continue;
+      if (!stockWhenHolds(l.when, this.ports.flag)) continue;
       if (!this.ports.getItem(l.itemId)) {
         this.warnOnce(`economy: ${vendorId} stocks unregistered item "${l.itemId}"; skipped`);
         continue;
@@ -132,7 +138,7 @@ export class Shop {
         this.warnOnce(`economy: no list price for "${l.itemId}"; skipped`);
         continue;
       }
-      out.push({ itemId: l.itemId, price, remaining: this.remainingOf(vendorId, l) });
+      out.push({ itemId: l.itemId, price, remaining: this.remainingOf(vendorId, l), ...(l.classes ? { classes: l.classes } : {}) });
     }
     return out;
   }
@@ -177,12 +183,14 @@ export class Shop {
     if (!VENDORS[vendorId].buys) return { ok: false, reason: 'cannot-sell' };
     const def = this.ports.getItem(itemId);
     if (!def) return { ok: false, reason: 'unknown-item' };
-    if (def.kind === 'quest') return { ok: false, reason: 'cannot-sell' };
+    if (def.kind === 'quest' && SELL_FLAT[itemId] === undefined) return { ok: false, reason: 'cannot-sell' };
     const unit = this.sellUnit(itemId);
     if (unit === undefined) return { ok: false, reason: 'cannot-sell' };
     const have = this.ports.count(itemId);
     if (have < count) return { ok: false, reason: 'not-owned' };
     if (have - count < 1 && this.ports.isEquipped(itemId)) return { ok: false, reason: 'equipped' };
+    const rec = this.ports.gearRecord?.(itemId);
+    if (rec && (rec.temper > 0 || rec.affix)) return { ok: false, reason: 'tempered' };
     if (!this.ports.remove(itemId, count)) return { ok: false, reason: 'not-owned' };
     const total = unit * count;
     this.ports.addGold(total);
@@ -200,6 +208,7 @@ export class Shop {
   }
 
   private sellUnit(itemId: string): number | undefined {
+    if (SELL_FLAT[itemId] !== undefined) return SELL_FLAT[itemId];
     const unit = sellPrice(itemId);
     if (unit !== undefined) return unit;
     const shop = SHOP_LIST_PRICES[itemId];

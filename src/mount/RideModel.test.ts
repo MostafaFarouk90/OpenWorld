@@ -115,3 +115,45 @@ describe('RideModel', () => {
     expect(m.dirX).toBeCloseTo(1, 5);
   });
 });
+
+describe('RideModel stamina bonus (the Ashmare saddle)', () => {
+  it('raises the cap and keeps the fill proportion when the bonus appears', () => {
+    const m = new RideModel();
+    let bonus = 0;
+    m.addStaminaBonus(() => bonus);
+    expect(m.max).toBe(T.staminaMax);
+    m.setStamina(50);
+    bonus = 30;
+    expect(m.max).toBe(T.staminaMax + 30);
+    m.rest(0.01);
+    expect(m.stamina).toBeCloseTo(65 + T.staminaRegen * 0.01, 3);
+  });
+
+  it('clamps back when the bonus goes away and the undo removes the source', () => {
+    const m = new RideModel();
+    const off = m.addStaminaBonus(() => 30);
+    m.setStamina(m.max);
+    expect(m.stamina).toBe(T.staminaMax + 30);
+    off();
+    expect(m.max).toBe(T.staminaMax);
+    expect(m.stamina).toBeCloseTo(T.staminaMax, 3);
+  });
+
+  it('regenerates up to the raised cap and refill fills it', () => {
+    const m = new RideModel();
+    m.addStaminaBonus(() => 30);
+    m.setStamina(T.staminaMax);
+    for (let i = 0; i < 600; i++) m.rest(0.1);
+    expect(m.stamina).toBe(T.staminaMax + 30);
+    m.setStamina(0);
+    m.refill();
+    expect(m.stamina).toBe(T.staminaMax + 30);
+  });
+
+  it('ignores bad bonus values', () => {
+    const m = new RideModel();
+    m.addStaminaBonus(() => Number.NaN);
+    m.addStaminaBonus(() => -10);
+    expect(m.max).toBe(T.staminaMax);
+  });
+});

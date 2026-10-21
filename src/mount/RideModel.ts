@@ -46,13 +46,41 @@ export class RideModel {
   /** True on a tick that drained stamina. */
   galloping = false;
   private sinceGallop = Infinity;
+  private bonuses: (() => number)[] = [];
+  private lastMax: number;
 
   constructor(private readonly t: Tuning = MOUNT_TUNING) {
     this.stamina = t.staminaMax;
+    this.lastMax = t.staminaMax;
   }
 
+  /** The stamina cap: the tuned maximum plus every added bonus (the Ashmare saddle). */
   get max(): number {
-    return this.t.staminaMax;
+    let extra = 0;
+    for (const f of this.bonuses) {
+      const n = f();
+      if (Number.isFinite(n) && n > 0) extra += n;
+    }
+    return this.t.staminaMax + extra;
+  }
+
+  /** Adds a source of extra maximum stamina; returns the undo. */
+  addStaminaBonus(fn: () => number): () => void {
+    this.bonuses.push(fn);
+    return () => {
+      this.bonuses = this.bonuses.filter((f) => f !== fn);
+      this.syncMax();
+    };
+  }
+
+  /** Keeps the bar's fill proportional when the cap changes (a bonus gained or lost). */
+  syncMax(): number {
+    const max = this.max;
+    if (max !== this.lastMax) {
+      this.stamina = Math.min(max, this.stamina * (max / this.lastMax));
+      this.lastMax = max;
+    }
+    return max;
   }
 
   /** Unit direction of the heading. */
@@ -72,12 +100,13 @@ export class RideModel {
 
   /** Refills the bar (a rest). */
   refill(): void {
-    this.stamina = this.t.staminaMax;
+    this.stamina = this.syncMax();
     this.exhausted = false;
   }
 
   setStamina(v: number): void {
-    this.stamina = Math.min(this.t.staminaMax, Math.max(0, finite(v, this.t.staminaMax)));
+    const max = this.syncMax();
+    this.stamina = Math.min(max, Math.max(0, finite(v, max)));
     this.exhausted = this.stamina <= 0;
   }
 
@@ -85,6 +114,7 @@ export class RideModel {
   step(input: RideInput, env: Readonly<RideEnv>, dt: number): number {
     const t = this.t;
     if (!(dt > 0) || !Number.isFinite(dt)) return this.speed;
+    this.syncMax();
     dt = Math.min(dt, 0.25);
     const ix = finite(input.dirX);
     const iz = finite(input.dirZ);
@@ -129,7 +159,7 @@ export class RideModel {
       if (this.stamina <= 0) this.exhausted = true;
     } else {
       this.sinceGallop += dt;
-      if (this.sinceGallop >= t.regenDelay) this.stamina = Math.min(t.staminaMax, this.stamina + t.staminaRegen * dt);
+      if (this.sinceGallop >= t.regenDelay) this.stamina = Math.min(this.max, this.stamina + t.staminaRegen * dt);
     }
     if (this.exhausted && this.stamina >= t.exhaustedUntil) this.exhausted = false;
     return this.speed;
@@ -138,10 +168,11 @@ export class RideModel {
   /** Stamina regenerates while unmounted too (the horse rests), with the same delay. */
   rest(dt: number): void {
     if (!(dt > 0) || !Number.isFinite(dt)) return;
+    this.syncMax();
     this.speed = 0;
     this.galloping = false;
     this.sinceGallop += dt;
-    if (this.sinceGallop >= this.t.regenDelay) this.stamina = Math.min(this.t.staminaMax, this.stamina + this.t.staminaRegen * dt);
+    if (this.sinceGallop >= this.t.regenDelay) this.stamina = Math.min(this.max, this.stamina + this.t.staminaRegen * dt);
     if (this.exhausted && this.stamina >= this.t.exhaustedUntil) this.exhausted = false;
   }
 }
