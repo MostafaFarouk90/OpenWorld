@@ -27,6 +27,10 @@ export const POST_RULES: PostRule[] = [
   {
     npcId: 'gaut', home: 'npc-post.gaut',
     posts: [
+      // Act 2 (A3, additive): the Act 1 rows below stay true for the rest of the game, so these go first. Gaut waits on the
+      // Cinder Road for M11 (A5's escort hides his figure while he rides) and then holds Cinderford.
+      { when: { quest: 'm11', state: 'active' }, anchorId: 'npc-post.gaut.cinder-road' },
+      { when: { quest: 'm11', state: 'completed' }, anchorId: 'npc-post.gaut.cinderford' },
       { when: live('m07'), anchorId: 'npc-post.gaut.bastion' },
       { when: { quest: 'm06', state: 'active' }, anchorId: 'npc-post.gaut.south-gate' },
       { when: { quest: 'm04', state: 'active' }, anchorId: 'npc-post.gaut.ford' },
@@ -36,6 +40,8 @@ export const POST_RULES: PostRule[] = [
   {
     npcId: 'aelfreda', home: 'npc-post.aelfreda',
     posts: [
+      // Act 2 (A3, additive): M13 opens M14, which Aelfreda gives at the Hushed Anvil; once it is done she is A5's companion.
+      { when: { all: [{ quest: 'm13', state: 'completed' }, { not: { quest: 'm14', state: 'completed' } }] }, anchorId: 'npc-post.aelfreda.anvil' },
       { when: { quest: 'd01', state: 'active' }, anchorId: 'npc-post.aelfreda.vault' },
       { when: { quest: 'm06', state: 'completed' }, anchorId: 'npc-post.aelfreda.chapel' },
       { when: m01Done, anchorId: 'npc-post.aelfreda' },
@@ -78,7 +84,14 @@ export const POST_RULES: PostRule[] = [
   },
   // Lord Grisel waits in the Keep hall while M08 runs, then outside the Keep (density pass)
   { npcId: 'grisel', home: 'npc-post.grisel', posts: [{ when: { quest: 'm08', state: 'active' }, anchorId: 'npc-post.grisel.hall' }] },
-  { npcId: 'pennard', home: 'npc-post.pennard.archive', posts: [{ when: live('m07'), anchorId: 'npc-post.pennard.bastion' }] },
+  {
+    npcId: 'pennard', home: 'npc-post.pennard.archive',
+    posts: [
+      // Act 2 (A3, additive): Magister Pennard rides out to Cinderford's refuge from R06's start, unless the well is sealed (a sealed well closes the refuge).
+      { when: { all: [{ quest: 'r06', state: ['active', 'completed'] }, { not: { flag: 'story.r06.choice', equals: 'sealed' } }] }, anchorId: 'npc-post.pennard.cinderford' },
+      { when: live('m07'), anchorId: 'npc-post.pennard.bastion' },
+    ],
+  },
   // Density pass: Edda waits at the granary once the hearth-stone is out of the bakery, until M02 ends; Aldwin walks to
   // the chapel when he is found safe (his walk-off) and is back at the mill once M01 is done.
   {
@@ -90,6 +103,25 @@ export const POST_RULES: PostRule[] = [
     // while M01 runs after he was found, his walk-off owns him (a load mid-M01 must not snap him back to the mill)
     leaveWhen: { all: [{ quest: 'm01', state: 'active' }, { flag: 'story.m01.millerSafe' }] },
     posts: [{ when: m01Done, anchorId: 'npc-post.aldwin' }],
+  },
+  // Act 2 (A3, additive): Osgar holds the Cinderford barricade, then the hunters' camp for M15, then Scorchhold for D03.
+  {
+    npcId: 'osgar', home: 'npc-post.osgar.barricade',
+    posts: [
+      { when: live('d03'), anchorId: 'npc-post.osgar.scorchhold' },
+      { when: live('m15'), anchorId: 'npc-post.osgar.camp' },
+    ],
+  },
+  // Ketta keeps the pasture while R05 can still be offered or is open (M12 opens R05 and M13 together); she gives R07 at
+  // Stonefold once M13 and R05 are both done (or R07 is already live), and her shop moves with her.
+  {
+    npcId: 'ketta', home: 'npc-post.ketta.pasture',
+    posts: [
+      {
+        when: { any: [live('r07'), { all: [{ quest: 'm13', state: 'completed' }, { quest: 'r05', state: 'completed' }] }] },
+        anchorId: 'npc-post.ketta.stonefold',
+      },
+    ],
   },
 ];
 
