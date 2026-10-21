@@ -2,6 +2,7 @@ import type { AudioManager } from '../audio/AudioManager';
 import type { DummiesService } from '../world/TrainingDummies';
 import type { Action } from '../input/actions';
 import type { GraphicsService } from './graphics';
+import type { AllyEngagementService } from '../actors/allyEngage';
 
 /**
  * Tutorial prompt manager (contracts/input-and-hud.md section 6). Core defines it; thread 5 provides
@@ -40,6 +41,8 @@ declare module './Services' {
     prompts: PromptService;
     /** v0.6: provided by A7. */
     waves: WavesService;
+    /** v0.6: provided by the core plugin; companion AI checks it before choosing a target. */
+    allyEngagement: AllyEngagementService;
   }
 }
 

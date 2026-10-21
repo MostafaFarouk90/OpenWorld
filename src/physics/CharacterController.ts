@@ -38,6 +38,14 @@ export class CharacterController {
 
   private verticalVelocity = 0;
   private _grounded = false;
+  /** Extra jumps allowed while airborne (double jump); 0 disables. Reset on landing. */
+  airJumps = 0;
+  private airJumpsLeft = 0;
+  private prevJump = false;
+  private platformSource: ((collider: RAPIER_API.Collider) => Vec3 | null) | undefined;
+  private groundCollider_: RAPIER_API.Collider | null = null;
+  private wallNormal: Vec3 | null = null;
+  private wallSlideMax: number | null = null;
   private readonly prev = { x: 0, y: 0, z: 0 };
   private readonly curr = { x: 0, y: 0, z: 0 };
 
@@ -73,6 +81,26 @@ export class CharacterController {
     return this._grounded;
   }
 
+  /** Supplies the frame translation of a moving platform; while grounded on one, the character is carried by it. */
+  setPlatformSource(fn: ((collider: RAPIER_API.Collider) => Vec3 | null) | undefined): void {
+    this.platformSource = fn;
+  }
+
+  /** The collider the character stood on after the last move, or null when airborne. */
+  groundCollider(): RAPIER_API.Collider | null {
+    return this._grounded ? this.groundCollider_ : null;
+  }
+
+  /** The first near-vertical surface (|normal.y| < 0.3) touched by the last move, or null. */
+  wallContact(): { normal: Vec3 } | null {
+    return this.wallNormal ? { normal: { ...this.wallNormal } } : null;
+  }
+
+  /** One-tick request: on the next fixedUpdate, touching a wall while falling is clamped to `maxFallSpeed` m/s. */
+  wallSlide(maxFallSpeed: number): void {
+    this.wallSlideMax = maxFallSpeed;
+  }
+
   /**
    * Computes this tick's movement and queues it as the body's next kinematic translation.
    * Call once per fixed tick (FIXED_TIMESTEP), before `PhysicsWorld.step`.
@@ -96,15 +124,29 @@ export class CharacterController {
           ? PLAYER.sprintSpeed
           : PLAYER.walkSpeed;
 
+    const jumpEdge = intent.jump && !this.prevJump;
+    this.prevJump = intent.jump;
+    if (this._grounded) this.airJumpsLeft = this.airJumps;
     if (this._grounded && intent.jump) {
+      this.verticalVelocity = intent.jumpSpeed ?? PLAYER.jumpSpeed;
+    } else if (!this._grounded && jumpEdge && this.airJumpsLeft > 0) {
+      this.airJumpsLeft--;
       this.verticalVelocity = intent.jumpSpeed ?? PLAYER.jumpSpeed;
     } else if (this._grounded && this.verticalVelocity < 0) {
       // Keep a small downward push while grounded so ground detection and snapping stay engaged.
       this.verticalVelocity = -1;
     }
     this.verticalVelocity = Math.max(this.verticalVelocity - PLAYER.gravity * dt, -PLAYER.maxFallSpeed);
+    const slideMax = this.wallSlideMax;
+    this.wallSlideMax = null;
+    if (slideMax !== null && this.wallNormal && !this._grounded && this.verticalVelocity < -slideMax) {
+      this.verticalVelocity = -slideMax;
+    }
 
     const desired = { x: mx * speed * dt, y: this.verticalVelocity * dt, z: mz * speed * dt };
+    // The platform's own frame translation, added after the collision move: the move is resolved against the
+    // platform where it still is (so snap-to-ground keeps the feet on it), then rides along with it.
+    const carry = this._grounded && this.platformSource && this.groundCollider_ ? this.platformSource(this.groundCollider_) : null;
     this.controller.computeColliderMovement(this.collider, desired);
     let move = this.controller.computedMovement();
     this._grounded = this.controller.computedGrounded();
@@ -128,9 +170,21 @@ export class CharacterController {
       }
     }
 
+    this.readContacts(move, desired);
+
     // Hitting a ceiling cancels upward velocity instead of gluing the player to it.
     if (this.verticalVelocity > 0 && move.y < desired.y * 0.5) this.verticalVelocity = 0;
 
+    if (carry) {
+      // Rapier already rides a kinematic ground at the body's last-step velocity; add only the difference so
+      // the character follows the platform's actual frame translation exactly, with or without that support.
+      const v = this.groundCollider_?.parent()?.linvel();
+      move = {
+        x: move.x + carry.x - (v ? v.x * dt : 0),
+        y: move.y + carry.y - (v ? v.y * dt : 0),
+        z: move.z + carry.z - (v ? v.z * dt : 0),
+      };
+    }
     const t = this.body.translation();
     this.body.setNextKinematicTranslation({ x: t.x + move.x, y: t.y + move.y, z: t.z + move.z });
     this.curr.x = t.x + move.x;
@@ -159,6 +213,8 @@ export class CharacterController {
     this.physics.world.propagateModifiedBodyPositionsToColliders();
     this.verticalVelocity = 0;
     this._grounded = false;
+    this.groundCollider_ = null;
+    this.wallNormal = null;
     this.readFeet(this.curr);
     Object.assign(this.prev, this.curr);
   }
@@ -206,6 +262,51 @@ export class CharacterController {
       }
     }
     return { x: dx, y: 0, z: dz };
+  }
+
+  /** Ground collider and wall normal from the last computed move. */
+  private readContacts(move: Vec3, desired: Vec3): void {
+    this.wallNormal = null;
+    let ground: RAPIER_API.Collider | null = null;
+    let groundToi = Infinity;
+    const n = this.controller.numComputedCollisions();
+    for (let i = 0; i < n; i++) {
+      const hit = this.controller.computedCollision(i);
+      if (!hit) continue;
+      if (hit.normal1.y > 0.7) {
+        if (hit.collider && hit.toi < groundToi) {
+          ground = hit.collider;
+          groundToi = hit.toi;
+        }
+      }
+      else if (!this.wallNormal && Math.abs(hit.normal1.y) < 0.3) {
+        this.wallNormal = { x: hit.normal1.x, y: hit.normal1.y, z: hit.normal1.z };
+      }
+    }
+    // A character pressed into a wall inside the skin gets no collision back; probe along the blocked move.
+    const wanted = Math.hypot(desired.x, desired.z);
+    if (!this.wallNormal && wanted > 1e-6 && Math.hypot(move.x, move.z) < wanted * 0.9) {
+      const t = this.body.translation();
+      const hit = this.physics.raycast(
+        { x: t.x + move.x, y: t.y + move.y, z: t.z + move.z },
+        { x: desired.x / wanted, y: 0, z: desired.z / wanted },
+        PLAYER.radius + CHARACTER_CONTROLLER.offset * 3,
+        this.collider,
+      );
+      if (hit && Math.abs(hit.normal.y) < 0.3) this.wallNormal = { ...hit.normal };
+    }
+    // Snap-to-ground ticks can report no ground hit; a short ray finds what is under the feet (only when carrying).
+    if (this._grounded && !ground && this.platformSource) {
+      const t = this.body.translation();
+      const hit = this.physics.raycast(
+        { x: t.x + move.x, y: t.y + move.y - CENTRE_HEIGHT + 0.1, z: t.z + move.z },
+        { x: 0, y: -1, z: 0 },
+        0.1 + CHARACTER_CONTROLLER.snapToGround + CHARACTER_CONTROLLER.offset * 2,
+        this.collider,
+      );
+      ground = hit?.collider ?? null;
+    }
+    this.groundCollider_ = this._grounded ? ground : null;
   }
 
   private readFeet(out: Vec3): void {

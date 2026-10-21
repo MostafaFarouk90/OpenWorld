@@ -452,6 +452,7 @@ export class Game {
     this.actions = lockedActions(actions, (a) => this.moveModifiers.isActionLocked(a));
     this.moving = snapshot.moveRight !== 0 || snapshot.moveForward !== 0;
     for (const phase of SIMULATED_PHASES_BEFORE_WORLD) this.systems.runFixed(phase, dt, this.ctx);
+    this.ctx.services.get('platforms')?.fixedUpdate(dt);
     this.stepWorld(applyLocks(snapshot, this.actions), dt);
     for (const phase of SIMULATED_PHASES_AFTER_WORLD) this.systems.runFixed(phase, dt, this.ctx);
   }

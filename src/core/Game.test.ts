@@ -324,7 +324,10 @@ describe('Game plugins', () => {
     expect(c.anchors.find('bad.anchor')).toBeUndefined();
     expect(() => c.damage.addModifier('bad.mod', () => {})).not.toThrow(); // the id is free again
     expect(() => c.services.provide('bad' as never, {} as never)).not.toThrow();
-    expect(t.game.systems.size).toBe(before.systems);
+    // The core plugin's own system (v0.6 `core.pull`) stays; nothing of 'bad' does.
+    expect(t.game.systems.size).toBe(before.systems + 1);
+    expect(t.game.systems.order('intent')).toContain('core.pull');
+    expect(t.game.systems.order('rules')).not.toContain('bad.system');
     expect(() => c.interaction.register({ id: 'use:bad', kind: 'use', position: (o) => o, onInteract: () => {} })).not.toThrow();
     expect(() => c.triggers.add({ id: 'bad-trigger', shape: { type: 'sphere', center: { x: 0, y: 0, z: 0 }, radius: 1 } })).not.toThrow();
     t.game.dispose();

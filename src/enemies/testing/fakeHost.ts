@@ -27,6 +27,7 @@ import type {
   StatusPort,
   TorchState,
   Team,
+  MercyStateLike,
 } from '../ports';
 
 /**
@@ -185,6 +186,7 @@ export class FakeActor implements ActorLike {
   readonly immortal: boolean;
   root: THREE.Object3D | null;
   data: Record<string, unknown> = {};
+  mercyState?: () => MercyStateLike;
   readonly spawnTag?: string;
   constructor(
     readonly id: ActorId,

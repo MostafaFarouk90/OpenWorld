@@ -1,6 +1,6 @@
 import type { GameEvents } from '../core/events';
 import type { WorldState } from '../state/WorldState';
-import type { ActorId } from './Actor';
+import type { ActorId, MercyState } from './Actor';
 import type { ActorRegistry } from './ActorRegistry';
 import type { DamageResolver, DamageResult, ModifiableRequest } from './DamageResolver';
 
@@ -19,6 +19,11 @@ export interface BossDef {
   shieldBreakers?: readonly string[];
   /** Simulated seconds the release window stays open; default 4. */
   releaseWindowSeconds?: number;
+  /**
+   * v0.6: the boss's mercy verb (`BOSS_MERCY[bossId].verb`); default 'release'. `release()` maps it to the
+   * outcome: 'release' to 'released', 'spare' to 'spared'.
+   */
+  mercyVerb?: 'release' | 'spare';
 }
 
 /** v0.6 adds `'spared'` (a `spare` mercy row, Redmane). Saves holding only the two older outcomes load unchanged. */
@@ -156,6 +161,12 @@ export class BossRegistry {
     boss.phase = this.phaseFor(boss, actor.health / actor.maxHealth);
     this.bosses.set(def.bossId, boss);
     this.byActor.set(actorId, def.bossId);
+    // The boss's mercy state wins while registered; the actor's own (if any) shows through when it reads 'none'.
+    const own = actor.mercyState;
+    actor.mercyState = () => {
+      const b = this.bosses.get(def.bossId) === boss ? this.mercyState(def.bossId) : 'none';
+      return b !== 'none' ? b : (own?.() ?? 'none');
+    };
     this.events.emit('boss.started', { bossId: def.bossId, actorId });
     return () => {
       if (this.bosses.get(def.bossId) === boss) this.drop(boss, 'unregistered');
@@ -172,13 +183,29 @@ export class BossRegistry {
     this.changeShield(boss, up);
   }
 
+  /**
+   * v0.6 ally rules: the release window reads as 'staggered' (an ally's hit holds it at 1 HP), a released boss
+   * as 'releasing', a spared one as 'leaving'. Unregistered ids read 'none'.
+   */
+  mercyState(bossId: string): MercyState {
+    const boss = this.bosses.get(bossId);
+    if (!boss) return 'none';
+    if (boss.outcome === 'released') return 'releasing';
+    if (boss.outcome === 'spared') return 'leaving';
+    return boss.windowOpen ? 'staggered' : 'none';
+  }
+
   /** Spares the boss: true only while registered, alive, without outcome and with the window open. */
   release(bossId: string): boolean {
     const boss = this.bosses.get(bossId);
     if (!boss || boss.outcome || !boss.windowOpen) return false;
     if (this.actors.get(boss.actorId)?.dead !== false) return false;
-    this.setOutcome(boss, 'released');
+    const spared = boss.def.mercyVerb === 'spare';
+    this.setOutcome(boss, spared ? 'spared' : 'released');
+    // `boss.released` stays the "ended by mercy" event every listener (HUD, music, companions) already reads;
+    // a spare adds `boss.spared` after it.
     this.events.emit('boss.released', { bossId, actorId: boss.actorId });
+    if (spared) this.events.emit('boss.spared', { bossId, actorId: boss.actorId });
     this.closeWindow(boss);
     return true;
   }

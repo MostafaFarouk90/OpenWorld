@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootFromSave, type ChapterHarness } from '../integration/chapterHarness';
 import { heightAt } from '../terrain/heightfield';
 import { CONTAINMENT_TOAST_KEY } from '../region/containmentSystem';
-import { ACT1_FIXTURES, readAct1Fixture } from './__fixtures__/act1';
+import { ACT1_FIXTURES, readAct1Fixture, type Act1Fixture } from './__fixtures__/act1';
 
 let h: (ChapterHarness & { loaded: boolean }) | null = null;
 beforeEach(() => {
@@ -24,7 +24,7 @@ afterEach(() => {
 // Engine (18000, 2500): Cinderreach (engine x 15500..22500, z -500..5500).
 const AT = { x: 18000, z: 2500 };
 
-async function loadAt(fixture: string, mutate?: (flags: Record<string, unknown>) => void) {
+async function loadAt(fixture: Act1Fixture, mutate?: (flags: Record<string, unknown>) => void) {
   const f = await readAct1Fixture(fixture);
   const entries = f.entries as Record<string, { data: Record<string, unknown> }>;
   entries['player-position'].data = { x: AT.x, y: heightAt(AT.x, AT.z) + 0.05, z: AT.z, yaw: 0 };
