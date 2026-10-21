@@ -30,6 +30,14 @@ interface Rig {
 function rig(opts: { without?: string[] } = {}): Rig {
   const f = makeCtx();
   (f.ctx as any).strings = { register: vi.fn() };
+  // The shared fake damage has no modifier list; tier 3 registers Grit Teeth's. Duplicates throw like the real resolver.
+  const modifierIds = new Set<string>();
+  (f.world.damage as any).addModifier = (id: string) => {
+    if (modifierIds.has(id)) throw new Error(`duplicate modifier "${id}"`);
+    modifierIds.add(id);
+    return () => void modifierIds.delete(id);
+  };
+  (f.world.damage as any).modifierIds = modifierIds;
   const actor = f.world.actors.player;
   actor.maxHealth = 150;
   actor.health = 150;
@@ -167,16 +175,16 @@ describe('warden plugin: skills in play', () => {
     expect(r.actor.maxHealth).toBe(Math.round(base * 1.1));
   });
 
-  it('tier gating: tier 2 needs tier 1 of its branch; tier 3 is not available yet', () => {
+  it('tier gating: tier 2 needs tier 1 of its branch; tier 3 is available and tier 4 is not', () => {
     const r = rig();
     wardenPlugin.setup(r.f.ctx);
     r.progression.grantXp(xpForLevel(14), 'x');
     expect(r.progression.canLearn(SKILL_IDS.boulderShoulder)).toEqual({ ok: false, reason: 'missing-prereq' });
     expect(r.progression.learn(SKILL_IDS.thickSkin)).toEqual({ ok: true });
     expect(r.progression.canLearn(SKILL_IDS.boulderShoulder)).toEqual({ ok: true });
-    expect(getSkill('warden.gritTeeth')?.available).toBe(false);
+    expect(getSkill('warden.gritTeeth')?.available).toBe(true);
     r.progression.learn(SKILL_IDS.boulderShoulder);
-    expect(r.progression.canLearn('warden.gritTeeth')).toEqual({ ok: false, reason: 'unavailable' });
+    expect(r.progression.canLearn('warden.gritTeeth')).toEqual({ ok: true });
   });
 
   it('Boulder Shoulder through the abilities service: Ember, cooldown, hold, refusals', () => {

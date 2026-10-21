@@ -101,6 +101,11 @@ export class CharacterController {
     this.wallSlideMax = maxFallSpeed;
   }
 
+  /** Sets the vertical speed (m/s, up positive) for the next fixedUpdate: a scripted launch such as a wall kick. */
+  launch(speed: number): void {
+    if (Number.isFinite(speed)) this.verticalVelocity = speed;
+  }
+
   /**
    * Computes this tick's movement and queues it as the body's next kinematic translation.
    * Call once per fixed tick (FIXED_TIMESTEP), before `PhysicsWorld.step`.

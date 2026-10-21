@@ -36,6 +36,7 @@ export const SKILL_STRINGS_EN: Record<string, string> = {
   'hud.skills.learn': 'Learn ({cost})',
   'hud.skills.learned': 'Learned',
   'hud.skills.locked': 'Not available yet',
+  'hud.skills.act3': 'Opens in Act 3',
   'hud.skills.needPrereq': 'Needs {skill}',
   'hud.skills.branch.bulwark': 'Bulwark',
   'hud.skills.branch.vanguard': 'Vanguard',

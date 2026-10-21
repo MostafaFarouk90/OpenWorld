@@ -68,7 +68,7 @@ function build(): SkillDef[] {
         kind,
         nameKey: `skill.${id}.name`,
         descKey: `skill.${id}.desc`,
-        available: tier <= 2,
+        available: tier <= 3,
       };
       if (i > 0) def.requires = `knight.${TREE[branch][i - 1][0]}`;
       if (tier === 5) {
@@ -88,6 +88,17 @@ function build(): SkillDef[] {
   if (banner) {
     banner.cooldown = 45;
     banner.emberCost = 20;
+  }
+  // Tier 3 actives (Act 2, A11): Oathward 30 s and 15 Ember; Charge of the Halvard 12 s and 15 Ember.
+  const oath = out.find((s) => s.id === 'knight.oathward');
+  if (oath) {
+    oath.cooldown = 30;
+    oath.emberCost = 15;
+  }
+  const charge = out.find((s) => s.id === 'knight.chargeOfTheHalvard');
+  if (charge) {
+    charge.cooldown = 12;
+    charge.emberCost = 15;
   }
   return out;
 }

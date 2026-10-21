@@ -21,6 +21,9 @@ export const SKILL_IDS = {
   boulderShoulder: 'warden.boulderShoulder',
   warHowl: 'warden.warHowl',
   emberRage: 'warden.emberRage',
+  whirlingHew: 'warden.whirlingHew',
+  gritTeeth: 'warden.gritTeeth',
+  bloodChant: 'warden.bloodChant',
 } as const;
 
 /** Cleaving Swing: attack 1 hits every hostile in the front arc (design 11.3: arc 120 degrees; the 3 m range is own). */
@@ -59,3 +62,46 @@ export const SURGE_AXE = {
   ignite: { id: 'warden.axeIgnite', seconds: 3, dps: 3 },
 } as const;
 export const FISSURE = { length: 10, width: 4 } as const;
+
+/**
+ * Tier 3 (Act 2, own numbers where the design gives none). Whirling Hew: a full circle of 2.6 m, 1.2x the weapon base that attack 2
+ * uses, one hit per foe, poise equal to the damage. The spin clip is 0.667 s (40 ticks) and its blade is hot from 25% to 75%.
+ */
+export const WHIRLING_HEW = {
+  reach: 2.6,
+  damageFactor: 1.2,
+  cooldown: 14,
+  emberCost: 20,
+  clip: WARDEN_CLIPS.spinning,
+  attackId: 'warden.whirlingHew',
+  ticks: 40,
+  hitFromTick: 10,
+  hitToTick: 30,
+} as const;
+
+/**
+ * Grit Teeth: half damage for 4 s after the player is staggered, no stacking, 10 s between windows (counted from the start of one).
+ * Order 50 sits mid buffs band (0..99): after the block and parry of the defender band (-100..-1) have settled the outcome and
+ * amount, so a blocked hit is halved from what is left, and ahead of nothing else that scales damage taken.
+ */
+export const GRIT_TEETH = {
+  modifierId: 'warden.gritTeeth',
+  order: 50,
+  factor: 0.5,
+  seconds: 4,
+  cooldownSeconds: 10,
+  buffId: 'warden.gritTeeth',
+  nameKey: 'buff.warden.gritTeeth',
+  effect: 'grit-teeth',
+} as const;
+
+/** Blood Chant: 20 s; every hit by an ally-team attacker on a hostile leaves a bleed under its own status id (Deep Wound's spec). */
+export const BLOOD_CHANT = {
+  seconds: 20,
+  cooldown: 45,
+  emberCost: 25,
+  buffId: 'warden.bloodChant',
+  nameKey: 'buff.warden.bloodChant',
+  effect: 'blood-rune',
+  bleed: { id: 'warden.bloodChant.bleed', seconds: DEEP_WOUND.seconds, dps: DEEP_WOUND.dps },
+} as const;

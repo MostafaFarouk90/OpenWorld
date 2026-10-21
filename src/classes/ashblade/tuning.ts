@@ -13,6 +13,9 @@ export const SKILL = {
   ashCloud: 'ashblade.ashCloud',
   quickSlip: 'ashblade.quickSlip',
   sparkDodge: 'ashblade.sparkDodge',
+  twinFangs: 'ashblade.twinFangs',
+  sootCloak: 'ashblade.sootCloak',
+  wallSkitter: 'ashblade.wallSkitter',
 } as const;
 
 export const BACK_SLIT = {
@@ -80,3 +83,47 @@ export const ASH_DRIFT = {
 
 /** AI states in which a hostile is already fighting or has noticed the player. */
 export const AGGROED_STATES: ReadonlySet<string> = new Set(['notice', 'chase', 'telegraph', 'attack', 'recover', 'stagger']);
+
+/** Tier 3 (Act 2). Numbers from plans/act2-A11.md; the lean and kick values are provisional. */
+export const TWIN_FANGS = {
+  /** Each of the two hits deals this share of the attack's damage (and poise): 1.2x in all. */
+  hitScale: 0.6,
+  /** Seconds after the first hit; 7 fixed ticks. */
+  delaySeconds: 0.12,
+  /** The second hit is a distinct attack id so it is never scaled again nor chains. */
+  attackId: 'ashblade.twinFangs.second',
+  effectId: 'twin-fangs',
+  /** Cap on queued second hits (one per target per swing in practice). */
+  maxQueued: 16,
+} as const;
+
+/** Order inside the attacker band: before Back-Slit (-150), so the stored base damage is the unmodified one. */
+export const TWIN_FANGS_ORDER = -151;
+
+export const SOOT_CLOAK = {
+  seconds: 5,
+  cooldownSeconds: 12,
+  /** Radius of the sight-blocker disc kept at the feet. */
+  radius: 1.2,
+  /** Seconds between disc refreshes; each disc lives a little longer so a late tick leaves no gap. */
+  refreshSeconds: 0.25,
+  discSeconds: 0.6,
+  noiseScale: 0.5,
+  noiseSource: 'ashblade.sootCloak',
+  effectId: 'soot-cloak',
+} as const;
+
+export const WALL_SKITTER = {
+  /** Fall speed (m/s) while sliding down a wall. */
+  slideSpeed: 0.5,
+  /** Seconds of sliding per airtime; reset on landing. */
+  maxSeconds: 1.2,
+  /** Wall kick: horizontal push along the wall normal for `kickTicks` fixed ticks at `kickSpeed` m/s. */
+  kickSpeed: 6,
+  kickTicks: 8,
+  kickOwner: 'ashblade.wallKick',
+  /** Avatar root roll (radians) toward the wall, eased per tick. */
+  leanRadians: 0.3,
+  leanEase: 0.25,
+  effectId: 'wall-skitter',
+} as const;
