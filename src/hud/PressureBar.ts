@@ -1,11 +1,12 @@
 import type { DocumentLike } from './dom';
+import { PRESSURE_PHASE } from '../puzzles/tuning';
 import { defaultHudT } from './strings.en';
 import { barFraction } from './StatusBars';
 import { makeEl, pct, setShown, type HudWidgetView, type Translate } from './widget';
 
 /** The Weeping Bellows' puzzle id. A9's second PR registers its puzzle under this id; the bar reads it by service, so a different id there is a one-line change here. */
 export const BELLOWS_PUZZLE_ID = 'weeping-bellows';
-export const PRESSURE_PHASE_ID = 'pressure';
+export const PRESSURE_PHASE_ID = PRESSURE_PHASE;
 /** Under this many seconds the bar flashes. */
 export const PRESSURE_URGENT_SECONDS = 10;
 
@@ -31,6 +32,9 @@ export class PressureBar implements HudWidgetView {
   private readonly fill;
   private hidden = new Set<string>();
   private shownId: string | null = null;
+  private last = new Map<string, number>();
+  private text = '';
+  private urgent = false;
 
   constructor(
     doc: DocumentLike,
@@ -62,6 +66,7 @@ export class PressureBar implements HudWidgetView {
   /** `save.loaded`: the room resets with no clock. */
   reset(): void {
     this.hidden = new Set(this.ids);
+    this.last.clear();
     this.hide();
   }
 
@@ -71,6 +76,7 @@ export class PressureBar implements HudWidgetView {
 
   private hide(): void {
     this.shownId = null;
+    this.text = '';
     setShown(this.element, false);
   }
 
@@ -85,9 +91,16 @@ export class PressureBar implements HudWidgetView {
       }
       if (!p || !(p.total > 0) || !Number.isFinite(p.remaining)) {
         // The clock stopped by itself: the next one that starts is a new run.
-        if (!p) this.hidden.delete(id);
+        if (!p) {
+          this.hidden.delete(id);
+          this.last.delete(id);
+        }
         continue;
       }
+      // A clock that jumps up is a new run (the failed run's clock may never have been seen as null).
+      const before = this.last.get(id);
+      if (before !== undefined && p.remaining > before + 0.5) this.hidden.delete(id);
+      this.last.set(id, p.remaining);
       if (this.hidden.has(id)) continue;
       found = { id, remaining: Math.max(0, p.remaining), total: p.total };
       break;
@@ -96,11 +109,19 @@ export class PressureBar implements HudWidgetView {
       if (this.shownId !== null) this.hide();
       return;
     }
+    if (this.shownId === null) setShown(this.element, true);
     this.shownId = found.id;
-    setShown(this.element, true);
-    this.label.textContent = this.t('hud.pressure.label', { seconds: Math.ceil(found.remaining) });
+    const text = this.t('hud.pressure.label', { seconds: Math.ceil(found.remaining) });
+    if (text !== this.text) {
+      this.text = text;
+      this.label.textContent = text;
+    }
     this.fill.style.width = pct(barFraction(found.remaining, found.total));
-    this.element.className = found.remaining <= PRESSURE_URGENT_SECONDS ? 'owg-card owg-pressure owg-pressure-urgent' : 'owg-card owg-pressure';
+    const urgent = found.remaining <= PRESSURE_URGENT_SECONDS;
+    if (urgent !== this.urgent || this.element.className === '') {
+      this.urgent = urgent;
+      this.element.className = urgent ? 'owg-card owg-pressure owg-pressure-urgent' : 'owg-card owg-pressure';
+    }
   }
 
   dispose(): void {

@@ -348,7 +348,7 @@ const hudPlugin: GamePlugin = {
     ctx.events.on('save.loaded', () => ending2.onLoaded());
     ctx.gates.flag(row2.gateFlag, (open) => ending2.onGate(open));
     mount('center', ending2, 2);
-    // One service for both cards: whichever is waiting or showing.
+    // One service for both cards: whichever is waiting or showing (Act 1's first when, unusually, both are pending).
     ctx.services.provide('actEndingCard', {
       active: () => ending.active || ending2.active,
       dismiss: () => (ending.active ? ending.dismiss() : ending2.dismiss()),

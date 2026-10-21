@@ -117,7 +117,7 @@ export const HUD_CSS = `
 .owg-structure-bar{height:8px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
 .owg-structure-fill{height:100%;width:100%;background:#c8883a}
 .owg-structure-barricade .owg-structure-fill{background:#7aa0c8}
-.owg-party{min-width:380px;pointer-events:auto;text-align:left}
+.owg-card.owg-party{min-width:380px;max-width:560px;pointer-events:auto;text-align:left}
 .owg-party .owg-card-title{text-align:center}
 .owg-party-row{display:flex;align-items:center;gap:10px;padding:8px;margin:4px 0;border-radius:6px;border:1px solid rgba(255,255,255,.12)}
 .owg-party-on{border-color:#f0d060;background:rgba(240,208,96,.08)}
@@ -126,13 +126,13 @@ export const HUD_CSS = `
 .owg-party-slot,.owg-party-status{margin-top:8px;font-size:12px;opacity:.85;text-align:center}
 .owg-party-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 .owg-btn-off{opacity:.4;cursor:default}
-.owg-pressure{min-width:260px;padding:8px 14px;margin-top:6px;text-align:center}
+.owg-card.owg-pressure{min-width:260px;padding:8px 14px;margin-top:6px;text-align:center}
 .owg-pressure-label{font-size:13px;margin-bottom:4px}
 .owg-pressure-bar{height:8px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);border-radius:3px;overflow:hidden}
 .owg-pressure-fill{height:100%;width:100%;background:#d8a040}
 .owg-pressure-urgent .owg-pressure-fill{background:#d85a40;animation:owg-pressure-flash .5s steps(2) infinite}
 @keyframes owg-pressure-flash{50%{opacity:.45}}
-.owg-tempering{min-width:420px;max-width:560px;text-align:left;pointer-events:auto}
+.owg-card.owg-tempering{min-width:420px;max-width:560px;text-align:left;pointer-events:auto}
 .owg-tempering .owg-card-title{text-align:center}
 .owg-tempering-purse,.owg-tempering-state,.owg-tempering-cost{font-size:12px;opacity:.9;margin:4px 0}
 .owg-tempering-ok{color:#a8d878;margin:6px 0}

@@ -28,20 +28,22 @@ export const ACT2_CODEX_ENTRIES: readonly CodexEntryDef[] = [
   codexEntry('lore', ACT2_CODEX_IDS.oldsmokeMines, 'place-oldsmoke-mines'),
   codexEntry('lore', ACT2_CODEX_IDS.pickett, 'pickett'),
   codexEntry('lore', ACT2_CODEX_IDS.nursery, 'nursery'),
-  codexEntry('howto', ACT2_CODEX_IDS.tempering, 'tempering', 'attack1'),
+  codexEntry('howto', ACT2_CODEX_IDS.tempering, 'tempering'),
   codexEntry('howto', ACT2_CODEX_IDS.hearthRite, 'hearth-rite'),
   codexEntry('howto', ACT2_CODEX_IDS.spareRedmane, 'spare-redmane', 'mercy'),
   codexEntry('howto', ACT2_CODEX_IDS.party, 'party', 'party'),
 ];
 
-/** Flags whose truthiness unlocks an entry (backfilled on load, like the Act 1 first-use flags). Quest flags are read, never written. */
-export const ACT2_FLAG_UNLOCKS: readonly { flag: string; entry: string }[] = [
-  { flag: 'story.d03.started', entry: ACT2_CODEX_IDS.scorchhold },
-  { flag: 'story.m16.started', entry: ACT2_CODEX_IDS.deepgate },
-  { flag: 'story.r08.started', entry: ACT2_CODEX_IDS.pickett },
-  { flag: 'story.m19.complete', entry: ACT2_CODEX_IDS.nursery },
-  { flag: 'place.oldsmoke.discovered', entry: ACT2_CODEX_IDS.oldsmokeMines },
+/** Quest-state unlocks, read from quest events and (on load) the quests service: no quest flag names are guessed. */
+export const ACT2_QUEST_UNLOCKS: readonly { quest: string; at: 'started' | 'completed'; entry: string }[] = [
+  { quest: 'd03', at: 'started', entry: ACT2_CODEX_IDS.scorchhold },
+  { quest: 'm16', at: 'started', entry: ACT2_CODEX_IDS.deepgate },
+  { quest: 'r08', at: 'started', entry: ACT2_CODEX_IDS.pickett },
+  { quest: 'm19', at: 'completed', entry: ACT2_CODEX_IDS.nursery },
 ];
+
+/** Flags whose truthiness unlocks an entry (backfilled on load). */
+export const ACT2_FLAG_UNLOCKS: readonly { flag: string; entry: string }[] = [{ flag: 'place.oldsmoke.discovered', entry: ACT2_CODEX_IDS.oldsmokeMines }];
 
 /** Event-driven unlocks: `discover` place ids, and plain events. */
 export const ACT2_DISCOVER_UNLOCKS: Readonly<Record<string, string>> = {
@@ -76,9 +78,9 @@ export const ACT2_CODEX_STRINGS_EN: Record<string, string> = {
     'Chained wyrmlings, fed on slag, kept in the sealed galleries under Grisel Hall. This is where the dragon-heart trade begins.',
   'codex.howto.tempering.name': 'Tempering',
   'codex.howto.tempering.body':
-    'Gear can be tempered up to +5 for gold and ore. At the Hushed Anvil, strike on the beat with {key}: a perfect bar may leave a mark on the piece. A smith can temper to +3 without the beat.',
+    'Gear can be tempered up to +5 for gold and ore. At the Hushed Anvil, strike on the beat (key 1 or the Strike button): a perfect bar may leave a mark on the piece. A smith can temper to +3 without the beat.',
   'codex.howto.hearth-rite.name': 'The Hearth Rite',
-  'codex.howto.hearth-rite.body': 'Once each act, Sister Aelfreda can lift one Scar from you at a hearth. Burn costs you nothing for it.',
+  'codex.howto.hearth-rite.body': 'Once each act, Sister Aelfreda can lift one Scar from you at a hearth.',
   'codex.howto.spare-redmane.name': 'Sparing a captain',
   'codex.howto.spare-redmane.body': 'Some foes can be spared rather than released. When Redmane kneels, hold {key}: a spared man can speak for you later.',
   'codex.howto.party.name': 'The party',

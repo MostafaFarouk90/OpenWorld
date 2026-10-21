@@ -60,6 +60,18 @@ describe('PressureBar', () => {
     expect(b.visible).toBe(true);
   });
 
+  it('a failed run whose clock never read null still shows the next run (the clock jumps back up)', () => {
+    const { b, s } = make();
+    s.clock = { remaining: 12, total: 45 };
+    b.update();
+    b.stop(BELLOWS_PUZZLE_ID);
+    b.update();
+    expect(b.visible).toBe(false);
+    s.clock = { remaining: 45, total: 45 };
+    b.update();
+    expect(b.visible).toBe(true);
+  });
+
   it('hides on every non-pressure phase and returns on the pressure phase', () => {
     const { b, s } = make();
     s.clock = { remaining: 30, total: 45 };
@@ -135,7 +147,7 @@ describe('TemperingScreen over A10\'s session', () => {
       lessonActive: () => m14 === 'active',
       emitTempered: () => {},
     });
-    const listeners = new Set<(e: { key?: string; code?: string; repeat?: boolean }) => void>();
+    const listeners = new Set<(e: { key?: string; code?: string; repeat?: boolean; timeStamp?: number }) => void>();
     const modal = { open: false, closed: 0 };
     const host: ScreenHost = {
       session,
@@ -212,7 +224,7 @@ describe('TemperingScreen over A10\'s session', () => {
     w.press('1');
     const judged = () => w.session.view().run!.judged[0];
     expect(judged()).toBe('perfect');
-    for (let i = 0; i < 500; i++) w.screen.update!(); // a fast or slow HUD never moves a judgement
+    for (let i = 0; i < 500; i++) w.session.update(); // a fast or slow HUD never moves a judgement
     expect(judged()).toBe('perfect');
     expect(strip().children[first]!.className).toContain('owg-tempering-perfect');
     // Another key and a repeat do nothing.
@@ -226,7 +238,7 @@ describe('TemperingScreen over A10\'s session', () => {
     clickText(w.buttons(), 'tier 1');
     clickText(w.buttons(), 'Temper');
     w.clock.t = (4 + PATTERNS[1][0]!) * STEP + 80;
-    for (let i = 0; i < 5; i++) w.screen.update!();
+    for (let i = 0; i < 5; i++) w.session.update();
     w.press('1');
     expect(w.session.view().run!.judged[0]).toBe('good');
   });
@@ -243,13 +255,52 @@ describe('TemperingScreen over A10\'s session', () => {
     }
     w.clock.t = (4 + 16) * STEP;
     w.session.update(); // the gear plugin's fixed tick finishes the run
-    w.screen.update!();
+    w.session.update();
     expect(w.session.state).toBe('affix-reveal');
     expect(textOf(w.el())).toContain('Keep');
     expect(textOf(w.el())).toContain('Replace with');
     clickText(w.buttons(), 'Keep');
     expect(w.inv.gear('practice-sword').affix).toBe(other);
     expect(w.inv.gear('practice-sword').temper).toBe(2);
+  });
+
+  it('a keydown is judged at its own time stamp, not when the handler runs', () => {
+    const w = makeWithElement();
+    clickText(w.buttons(), 'tier 1');
+    clickText(w.buttons(), 'Temper');
+    const stamps: Array<number | undefined> = [];
+    const real = w.session.strike.bind(w.session);
+    w.session.strike = (tMs?: number) => {
+      stamps.push(tMs);
+      real(tMs);
+    };
+    w.listeners.forEach((f) => f({ key: '1' })); // no stamp: the session reads its own clock
+    w.listeners.forEach((f) => f({ key: '1', timeStamp: Number.NaN }));
+    w.listeners.forEach((f) => f({ key: '1', timeStamp: performance.now() + 5000 })); // from the future: ignored
+    expect(stamps).toEqual([undefined, undefined, undefined]);
+    const recent = performance.now() - 10;
+    w.listeners.forEach((f) => f({ key: '1', timeStamp: recent }));
+    expect(stamps[3]).toBe(recent);
+  });
+
+  it('Replace swaps the affix; a smith run needs no beat and Continue returns to the list', () => {
+    const w = makeWithElement();
+    const other = pickAffix('practice-sword', 2) === 'ember' ? 'gleam' : 'ember';
+    w.inv.setTemper('practice-sword', 1, other);
+    clickText(w.buttons(), 'tier 1');
+    clickText(w.buttons(), 'Temper');
+    for (const st of PATTERNS[1]) {
+      w.clock.t = (4 + st) * STEP;
+      w.press('1');
+    }
+    w.clock.t = (4 + 16) * STEP;
+    w.session.update();
+    clickText(w.buttons(), 'Replace with');
+    expect(w.inv.gear('practice-sword').affix).toBe(pickAffix('practice-sword', 2));
+    expect(w.session.state).toBe('affix-reveal');
+    clickText(w.buttons(), 'Continue');
+    clickText(w.buttons(), 'Continue');
+    expect(w.session.state).toBe('picking');
   });
 
   it('closing mid-run takes nothing and closes the modal; disposing removes the key listener', () => {

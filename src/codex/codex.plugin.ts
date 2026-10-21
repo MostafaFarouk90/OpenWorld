@@ -5,7 +5,7 @@ import { CODEX_MODAL_ID, createCodexModal, type CodexModalWidget } from './Codex
 import { SHRINE_IDS } from '../map/ForgeMarks';
 import { BESTIARY_IDS, CodexRegistry, HOWTO_IDS } from './entries';
 import { CODEX_STRINGS_EN } from './strings.en';
-import { ACT2_CODEX_ENTRIES, ACT2_CODEX_IDS, ACT2_CODEX_STRINGS_EN, ACT2_DISCOVER_UNLOCKS, ACT2_FLAG_UNLOCKS } from './act2';
+import { ACT2_CODEX_ENTRIES, ACT2_CODEX_IDS, ACT2_CODEX_STRINGS_EN, ACT2_DISCOVER_UNLOCKS, ACT2_FLAG_UNLOCKS, ACT2_QUEST_UNLOCKS } from './act2';
 import type { CodexService, MercyCounts } from './service';
 import './service';
 
@@ -135,6 +135,11 @@ const codex: GamePlugin = {
       if (e?.bossId === ACT2_CODEX_IDS.redmane) model.unlock(ACT2_CODEX_IDS.spareRedmane);
     });
     onLoose(ctx, 'party.offered', () => void model.unlock(ACT2_CODEX_IDS.party));
+    for (const at of ['started', 'completed'] as const) {
+      onLoose(ctx, `quest.${at}`, (e: { questId?: unknown }) => {
+        for (const u of ACT2_QUEST_UNLOCKS) if (u.at === at && u.quest === e?.questId) model.unlock(u.entry);
+      });
+    }
     onLoose(ctx, 'discover', (e: { placeId?: unknown }) => {
       const entry = typeof e?.placeId === 'string' ? ACT2_DISCOVER_UNLOCKS[e.placeId] : undefined;
       if (entry) model.unlock(entry);
@@ -174,6 +179,16 @@ const codex: GamePlugin = {
         warn(`codex: warmth.tier() failed: ${String(e)}`);
       }
       if (tier > 0 || SHRINE_IDS.some((id) => ctx.state.getBool(`shrine.${id}.lit`))) model.unlock(HOWTO_IDS.warmthTier);
+      // Act 2 quest unlocks: a started quest counts for its entry, a completed one for both.
+      const quests = (ctx.services as unknown as Loose).get('quests') as { state?: (id: string) => string } | undefined;
+      for (const u of ACT2_QUEST_UNLOCKS) {
+        try {
+          const st = quests?.state?.(u.quest);
+          if (st === 'completed' || (u.at === 'started' && (st === 'active' || st === 'failed'))) model.unlock(u.entry);
+        } catch (e) {
+          warn(`codex: quests.state() failed: ${String(e)}`);
+        }
+      }
       const t = tally();
       if (t) {
         for (const [kind, c] of t) {
