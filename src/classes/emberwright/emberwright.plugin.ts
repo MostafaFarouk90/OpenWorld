@@ -60,6 +60,7 @@ const plugin: GamePlugin = {
       status: () => svc<StatusService>('status'),
       // One adapter for thread 5's push (draft PR #53): enemies.push(actorId, { dir, metres }).
       push: (id, dir, metres) => svc<EnemiesPush>('enemies')?.push?.(id, { dir, metres }) ?? false,
+      cool: (at, radius) => svc<{ hitArea?(at: Vec3, radius: number, sourceId?: string | null, kind?: string): number }>('cooling')?.hitArea?.(at, radius, ctx.player.actor.id, 'wind') ?? 0,
       learned: (id) => svc<{ learned(id: string): boolean }>('progression')?.learned(id) === true,
       classId: () => svc<{ classId?: string | null }>('progression')?.classId ?? null,
       avatarClass: () => ctx.player.avatar?.classId ?? null,

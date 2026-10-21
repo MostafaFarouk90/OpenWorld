@@ -37,6 +37,8 @@ export interface EnemyAttackClip {
  *   soldierBash Block_Attack (left, shield)     1.067 s  [0.27, 0.60]  (a slow push; the sword also flicks at 0.37..0.45)
  *   cutpurseSlash 1H_Melee_Attack_Slice_Horizontal 1.067 s [0.18, 0.29]  (right hand, same rule; peak 23.7 m/s)
  *   cutpurseGrab  Unarmed_Melee_Attack_Punch_A  1.467 s  [0.24, 0.33]  (a snatch with the right hand; peak 7.4 m/s)
+ *   hunterThrust  1H_Melee_Attack_Stab           1.600 s  [0.20, 0.28]  (peak 12.4 m/s)
+ *   hunterThrow   Throw                          1.367 s  [0.40, 0.57]  (peak 13.2 m/s; the release)
  */
 export const ENEMY_ATTACKS = {
   wraithClaw: { clip: '1H_Melee_Attack_Slice_Diagonal', activeStart: 0.36, activeEnd: 0.44 },
@@ -46,4 +48,8 @@ export const ENEMY_ATTACKS = {
   soldierBash: { clip: 'Block_Attack', activeStart: 0.27, activeEnd: 0.6 },
   cutpurseSlash: { clip: '1H_Melee_Attack_Slice_Horizontal', activeStart: 0.18, activeEnd: 0.29 },
   cutpurseGrab: { clip: 'Unarmed_Melee_Attack_Punch_A', activeStart: 0.24, activeEnd: 0.33 },
+  // A6b (measured by measureEnemyClips.measure.test.ts, candidates): the hunters' spear thrust and the overarm throw of the
+  // net, the rock and the harpoon (the window is the release).
+  hunterThrust: { clip: '1H_Melee_Attack_Stab', activeStart: 0.2, activeEnd: 0.28 },
+  hunterThrow: { clip: 'Throw', activeStart: 0.4, activeEnd: 0.57 },
 } as const satisfies Record<string, EnemyAttackClip>;

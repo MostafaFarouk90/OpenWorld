@@ -146,7 +146,7 @@ export class SpawnerRegistry {
         spawnerId: id,
         spawnTag: def.tag ?? def.id,
         slot,
-        def: enemyDef,
+        def: memberDef(def, slot) ?? enemyDef,
         feet,
         yaw: own ? own.yaw : anchor.yaw,
         anchorId: own ? own.id : anchor.id,
@@ -323,8 +323,8 @@ export class SpawnerRegistry {
     for (const def of this.defs.values()) {
       const act = def.activation;
       if (!isGate(act)) continue;
-      const { flag, until } = act;
-      const keys = [flag, until].filter((k): k is string => typeof k === 'string');
+      const { flag, until, unlessChoice } = act;
+      const keys = [flag, until, unlessChoice?.flag].filter((k): k is string => typeof k === 'string');
       if (keys.length === 0) {
         this.deps.warn(`spawners: gate group '${def.id}' names neither flag nor until; treated as auto`);
         continue;
@@ -332,7 +332,10 @@ export class SpawnerRegistry {
       if (!gates) continue;
       this.gateOff.push(
         gates.watch(
-          (get) => (flag === undefined || get(flag)) && (until === undefined || !get(until)),
+          (get, str) =>
+            (flag === undefined || get(flag)) &&
+            (until === undefined || !get(until)) &&
+            (unlessChoice === undefined || str(unlessChoice.flag) !== unlessChoice.equals),
           (open) => {
             const was = this.gateOpen.get(def.id);
             this.gateOpen.set(def.id, open);
@@ -597,8 +600,14 @@ export class SpawnerRegistry {
   }
 }
 
-function isGate(act: SpawnerDef['activation']): act is { flag?: string; until?: string } {
+function isGate(act: SpawnerDef['activation']): act is { flag?: string; until?: string; unlessChoice?: { flag: string; equals: string } } {
   return typeof act === 'object' && !('quest' in act) && !('interior' in act);
+}
+
+/** The def of slot `slot` of a mixed pack (`memberKinds`), or undefined to use the group's `enemy`. */
+function memberDef(def: SpawnerDef, slot: number): EnemyDef | undefined {
+  const kind = def.memberKinds?.[slot];
+  return kind ? ENEMY_DEFS[kind] : undefined;
 }
 
 function clampTier(w: number): number {

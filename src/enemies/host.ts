@@ -54,7 +54,18 @@ export function hostFromContext(ctx: GameContext, warn: (m: string) => void): En
     state: ctx.state,
     gates: {
       watch: (test, listener, keys) =>
-        ctx.gates.watch((state) => test((k) => Boolean(state.getFlag(k))), listener, { keys }),
+        ctx.gates.watch(
+          (state) =>
+            test(
+              (k) => Boolean(state.getFlag(k)),
+              (k) => {
+                const v = state.getFlag(k);
+                return typeof v === 'string' ? v : undefined;
+              },
+            ),
+          listener,
+          { keys },
+        ),
     },
     // vfx (thread 7) and lockOn (thread 1) are optional: get() returns undefined until they merge.
     services: ctx.services as unknown as ServicesPort,
