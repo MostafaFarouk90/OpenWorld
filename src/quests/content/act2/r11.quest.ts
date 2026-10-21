@@ -24,7 +24,7 @@ export const r11: QuestDef = {
     { id: 'ledge2', type: 'goTo', target: 'trg.q12.leap.den.2', textKey: 'quest.r11.ledge2' },
     story('den', 'quest.r11.den', 'dialogue.ended', { match: { dialogueId: 'scene-r11-den', reason: 'completed' } }),
     { id: 'hounds', type: 'kill', target: 'ember-hound', required: 4, spawnTag: 'r11.hounds', textKey: 'quest.r11.hounds' },
-    { id: 'wyrm', type: 'kill', target: 'ember-wyrm', spawnTag: 'r11.den', textKey: 'quest.r11.wyrm' },
+    story('wyrm', 'quest.r11.wyrm', 'story.r11.resolved', { doneWhen: { any: [{ flag: 'story.r11.choice', equals: 'spared' }, { flag: 'story.r11.choice', equals: 'slain' }] } }),
     { id: 'axe', type: 'interact', target: R11_AXE, textKey: 'quest.r11.axe' },
     { id: 'report', type: 'talk', target: 'hrolf', textKey: 'quest.r11.report' },
   ],

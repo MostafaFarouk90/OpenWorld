@@ -76,6 +76,8 @@ function rig(opts: { classId?: string; dialogueOpen?: boolean } = {}): Rig {
   let tickSystem: { fixedUpdate(dt: number): void } | null = null;
   const ctx = {
     events, state, services,
+    anchors: { find: () => undefined },
+    triggers: { add: () => () => {} },
     player: { feet: { x: 0, y: 7, z: 0 } },
     systems: { add: (s: { fixedUpdate(dt: number): void }) => { tickSystem = s; return () => {}; } },
   } as unknown as GameContext;

@@ -1,7 +1,6 @@
-import { HUNTER_PACK_KINDS, HUNTER_PACK_LEADER_SLOT } from '../../../enemies/hunters/def';
 import { wyrmlingSpawner } from '../../../enemies/wyrm/spawners';
 import { WATCH_GUARD_BAND } from '../../../enemies/level';
-import type { EnemyKind, SpawnerDef } from '../../../enemies/types';
+import type { SpawnerDef } from '../../../enemies/types';
 
 const range = (prefix: string, from: number, to: number): string[] => Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${from + i}`);
 const common = { band: 'cinderreach', respawn: 'never' as const };
@@ -15,7 +14,7 @@ export const ACT2_SPAWNERS_A12: readonly SpawnerDef[] = [
   })),
   {
     id: 'q12.m11.wraiths', tag: 'm11.wraith', enemy: 'ash-wraith', count: 5, anchor: 'cinderreach.m11.wraith.1',
-    memberAnchors: range('cinderreach.m11.wraith.', 1, 5), activation: { quest: 'm11', flag: 'story.m11.bloomHit' }, leash: true, ...common,
+    memberAnchors: range('cinderreach.m11.wraith.', 1, 5), activation: { quest: 'm11', flag: 'story.m11.wraithsOut' }, leash: true, ...common,
   },
   // R05: the hounds in the fog, once the tracks are read
   {
@@ -39,31 +38,34 @@ export const ACT2_SPAWNERS_A12: readonly SpawnerDef[] = [
   },
   {
     id: 'q12.r07.mother', tag: 'r07.mother', enemy: 'ember-hound', count: 1, anchor: 'cinderreach.spawn.houndden.4',
-    memberAnchors: ['cinderreach.spawn.houndden.4'], activation: { quest: 'r07', flag: 'story.r07.denWoke' }, leash: true, ...common,
+    memberAnchors: ['cinderreach.spawn.houndden.4'], activation: { quest: 'r07', flag: 'story.r07.motherHere' }, leash: true, ...common,
   },
   // R11: four hounds ringed about the wyrm's rest; they wake with the den scene (A6a spawns the wyrm itself)
   {
     id: 'q12.r11.hounds', tag: 'r11.hounds', enemy: 'ember-hound', count: 4, anchor: 'cinderreach.den.wyrm.rest',
     activation: { quest: 'r11', flag: 'story.r11.denSeen' }, leash: true, ...common,
   },
-  // M14: the ridge's golems and hounds, from the start of the quest
+  // M14: the ridge's golems once the ledges are climbed, then its hounds (a kill counts only on the current objective)
   {
     id: 'q12.m14.golems', tag: 'm14.golems', enemy: 'cinder-golem', count: 2, anchor: 'cinderreach.m14.golem.1',
-    memberAnchors: range('cinderreach.m14.golem.', 1, 2), activation: { quest: 'm14', flag: 'story.m14.started' }, leash: true, ...common,
+    memberAnchors: range('cinderreach.m14.golem.', 1, 2), activation: { quest: 'm14', flag: 'story.m14.golemsOut' }, leash: true, ...common,
   },
   {
     id: 'q12.m14.hounds', tag: 'm14.hounds', enemy: 'ember-hound', count: 3, anchor: 'cinderreach.spawn.anvil.1',
-    activation: { quest: 'm14', flag: 'story.m14.started' }, leash: true, ...common,
+    activation: { quest: 'm14', flag: 'story.m14.houndsOut' }, leash: true, ...common,
   },
-  // M15: two hunter packs at the pens (A6b's ambient camp pack is separate)
+  // M15: two hunter packs of spearmen at the pens, then the two harpooners once the spearmen are down (A6b's ambient camp pack is separate)
   {
-    id: 'q12.m15.pack-a', tag: 'm15.pack', enemy: 'hunter-spearman', memberKinds: HUNTER_PACK_KINDS as readonly EnemyKind[], count: 4,
-    anchor: 'cinderreach.spawn.huntercamp.5', memberAnchors: range('cinderreach.spawn.huntercamp.', 5, 8),
-    leaderSlot: HUNTER_PACK_LEADER_SLOT, activation: { quest: 'm15', flag: 'story.m15.scouted' }, leash: true, ...common,
+    id: 'q12.m15.pack-a', tag: 'm15.pack', enemy: 'hunter-spearman', count: 3, anchor: 'cinderreach.spawn.huntercamp.5',
+    memberAnchors: range('cinderreach.spawn.huntercamp.', 5, 7), activation: { quest: 'm15', flag: 'story.m15.scouted' }, leash: true, ...common,
   },
   {
-    id: 'q12.m15.pack-b', tag: 'm15.pack', enemy: 'hunter-spearman', memberKinds: HUNTER_PACK_KINDS as readonly EnemyKind[], count: 4,
-    anchor: 'cinderreach.spawn.huntercamp.7', leaderSlot: HUNTER_PACK_LEADER_SLOT, activation: { quest: 'm15', flag: 'story.m15.scouted' }, leash: true, ...common,
+    id: 'q12.m15.pack-b', tag: 'm15.pack', enemy: 'hunter-spearman', count: 3, anchor: 'cinderreach.spawn.huntercamp.8',
+    activation: { quest: 'm15', flag: 'story.m15.scouted' }, leash: true, ...common,
+  },
+  {
+    id: 'q12.m15.harps', tag: 'm15.pack', enemy: 'hunter-harpooner', count: 2, anchor: 'cinderreach.spawn.huntercamp.5',
+    activation: { quest: 'm15', flag: 'story.m15.harpsOut' }, leash: true, ...common,
   },
   // M15 stealth section: three observer-only watch guards on a loop round the camp, live while the scout objective is open
   {
@@ -72,14 +74,17 @@ export const ACT2_SPAWNERS_A12: readonly SpawnerDef[] = [
   },
   // M15: the caged wyrmling at the pen (tethered by the director; unchained and sent flying when the cage is opened)
   wyrmlingSpawner('q12.m15.cage', 'cinderreach.m15.cage', 1, { tag: 'm15.cage', activation: { quest: 'm15' }, ephemeral: true, peaceful: true }),
-  // D03: the courtyard (six spearmen, two harpooners) and the wall harpooners, once the gate is down
+  // D03: the courtyard spearmen once the gate is down, the courtyard harpooners once they are dead, then the wall harpooners
   {
-    id: 'q12.d03.court', tag: 'd03.court', enemy: 'hunter-spearman', count: 8, anchor: 'cinderreach.spawn.scorchhold.1',
-    memberKinds: [...Array(6).fill('hunter-spearman'), 'hunter-harpooner', 'hunter-harpooner'] as EnemyKind[],
+    id: 'q12.d03.court', tag: 'd03.court', enemy: 'hunter-spearman', count: 6, anchor: 'cinderreach.spawn.scorchhold.1',
     memberAnchors: range('cinderreach.spawn.scorchhold.', 1, 6), activation: { quest: 'd03', flag: 'story.d03.gateDown' }, leash: true, ...common,
   },
   {
+    id: 'q12.d03.yard', tag: 'd03.court', enemy: 'hunter-harpooner', count: 2, anchor: 'cinderreach.spawn.scorchhold.1',
+    memberAnchors: range('cinderreach.spawn.scorchhold.', 1, 2), activation: { quest: 'd03', flag: 'story.d03.yardOut' }, leash: true, ...common,
+  },
+  {
     id: 'q12.d03.perch', tag: 'd03.perch', enemy: 'hunter-harpooner', count: 3, anchor: 'cinderreach.spawn.scorchhold.perch.1',
-    memberAnchors: range('cinderreach.spawn.scorchhold.perch.', 1, 3), activation: { quest: 'd03', flag: 'story.d03.gateDown' }, leash: true, ...common,
+    memberAnchors: range('cinderreach.spawn.scorchhold.perch.', 1, 3), activation: { quest: 'd03', flag: 'story.d03.perchOut' }, leash: true, ...common,
   },
 ];

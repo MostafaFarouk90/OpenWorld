@@ -6,6 +6,7 @@ import { installR05 } from './r05';
 import { installM13, installR11 } from './m13r11';
 import { installM14, installM15 } from './m14m15';
 import { installD03 } from './d03';
+import { ACT2_TRIGGERS } from '../triggers';
 
 export const ACT2_QUEST_IDS = ['m11', 'm12', 'r06', 'r05', 'm13', 'r07', 'r11', 'm14', 'm15', 'd03'] as const;
 
@@ -19,11 +20,18 @@ let offs: Off[] = [];
  */
 const plugin: GamePlugin = {
   id: 'cinderreach-quests',
-  dependsOn: ['core', 'quests', 'dialogue', 'enemies', 'cinderreach', 'inventory'],
+  dependsOn: ['core', 'quests', 'dialogue', 'enemies', 'cinderreach', 'inventory', 'wyrms', 'classes', 'waves'],
   setup(ctx) {
     offs = [];
     const warn = (m: string): void => void console.warn(m);
     const { kit, tick } = makeKit(ctx, warn, offs);
+
+    // The drop-offs and ledges the quests name (`trg.q12.*`): spheres at A3's anchors, which A3 publishes no trigger for.
+    for (const t of ACT2_TRIGGERS) {
+      const at = ctx.anchors.find(t.anchorId);
+      if (!at) { warn(`[cinderreach-quests] trigger ${t.id}: no anchor ${t.anchorId}`); continue; }
+      offs.push(ctx.triggers.add({ id: t.id, shape: { type: 'sphere', center: at.position, radius: t.radius } }));
+    }
 
     for (const install of [installM11, installM12, installR06, installR05, installM13, installR11, installM14, installM15, installD03]) {
       offs.push(...install(kit));

@@ -26,7 +26,7 @@ export const r05: QuestDef = {
     story('choice', 'quest.r05.choice', 'story.r05.branched'),
     story('foxStops', 'quest.r05.foxStops', 'story.r05.foxStops', { doneWhen: safe }),
     story('dell', 'quest.r05.dell', 'interact', { match: { interactableId: 'use:r05-dell-stone' }, doneWhen: safe }),
-    story('herdHome', 'quest.r05.herdHome', 'story.r05.herdHome'),
+    story('herdHome', 'quest.r05.herdHome', 'story.r05.herdHome', { doneWhen: { flag: 'story.r05.herdHome', equals: true } }),
     { id: 'report', type: 'talk', target: 'ketta', textKey: 'quest.r05.report' },
   ],
   rewards: [{ xp: 350 }, { give: [{ itemId: 'fox-fire-ember', count: 1 }] }],
