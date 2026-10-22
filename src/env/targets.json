@@ -348,5 +348,7 @@
    "d": 2.0,
    "h": 9.0
   }
- }
+ },
+ "maxTriangles": 6000,
+ "maxFileMB": 1.5
 }

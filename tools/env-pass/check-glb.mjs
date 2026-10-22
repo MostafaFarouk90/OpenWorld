@@ -1,6 +1,6 @@
 // Checks uploaded or scripted .glb/.gltf environment objects against src/env/targets.json.
 // Usage: node tools/env-pass/check-glb.mjs <dir-or-file> [more ...]   (file name without extension is the object id)
-// Reports measured size (from the POSITION accessor bounds, node transforms ignored: authored meshes are expected to be baked),
+// Reports measured world-space size (node transforms applied), triangle count and file size against the budgets in targets.json,
 // the pivot (base should sit at y 0 and the footprint centre near x 0, z 0) and the size verdict. Exit 1 on any problem.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
@@ -17,18 +17,55 @@ function gltfJson(file) {
   return JSON.parse(buf.subarray(20, 20 + len).toString('utf8'));
 }
 
+// Column-major 4x4 from a node's matrix or translation/rotation/scale.
+function nodeMatrix(n) {
+  if (n.matrix) return n.matrix.slice();
+  const [x, y, z, w] = n.rotation ?? [0, 0, 0, 1];
+  const [sx, sy, sz] = n.scale ?? [1, 1, 1];
+  const [tx, ty, tz] = n.translation ?? [0, 0, 0];
+  return [
+    (1 - 2 * (y * y + z * z)) * sx, 2 * (x * y + z * w) * sx, 2 * (x * z - y * w) * sx, 0,
+    2 * (x * y - z * w) * sy, (1 - 2 * (x * x + z * z)) * sy, 2 * (y * z + x * w) * sy, 0,
+    2 * (x * z + y * w) * sz, 2 * (y * z - x * w) * sz, (1 - 2 * (x * x + y * y)) * sz, 0,
+    tx, ty, tz, 1,
+  ];
+}
+const mul = (a, b) => {
+  const o = new Array(16).fill(0);
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) o[c * 4 + r] += a[k * 4 + r] * b[c * 4 + k];
+  return o;
+};
+
+// World-space bounds of every mesh in the default scene (node transforms applied, so a Z-up export that a node rotates upright reads as upright).
 function bounds(g) {
   const lo = [Infinity, Infinity, Infinity];
   const hi = [-Infinity, -Infinity, -Infinity];
-  for (const m of g.meshes ?? [])
-    for (const p of m.primitives) {
-      const a = g.accessors[p.attributes.POSITION];
-      for (let i = 0; i < 3; i++) {
-        lo[i] = Math.min(lo[i], a.min[i]);
-        hi[i] = Math.max(hi[i], a.max[i]);
+  const visit = (i, parent) => {
+    const n = g.nodes[i];
+    const m = mul(parent, nodeMatrix(n));
+    if (n.mesh !== undefined)
+      for (const p of g.meshes[n.mesh].primitives) {
+        const a = g.accessors[p.attributes.POSITION];
+        for (let k = 0; k < 8; k++) {
+          const v = [k & 1 ? a.max[0] : a.min[0], k & 2 ? a.max[1] : a.min[1], k & 4 ? a.max[2] : a.min[2]];
+          for (let ax = 0; ax < 3; ax++) {
+            const t = m[ax] * v[0] + m[4 + ax] * v[1] + m[8 + ax] * v[2] + m[12 + ax];
+            lo[ax] = Math.min(lo[ax], t);
+            hi[ax] = Math.max(hi[ax], t);
+          }
+        }
       }
-    }
+    for (const c of n.children ?? []) visit(c, m);
+  };
+  const I = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  for (const r of g.scenes[g.scene ?? 0].nodes) visit(r, I);
   return { lo, hi };
+}
+
+function stats(g, file) {
+  let tris = 0;
+  for (const m of g.meshes ?? []) for (const p of m.primitives) if (p.indices !== undefined) tris += g.accessors[p.indices].count / 3;
+  return { tris, images: (g.images ?? []).length, mb: statSync(file).size / 1e6 };
 }
 
 const files = [];
@@ -41,9 +78,13 @@ for (const f of files) {
   const id = path.basename(f).replace(/\.(glb|gltf)$/, '');
   const want = cfg.objects[id];
   try {
-    const { lo, hi } = bounds(gltfJson(f));
+    const gj = gltfJson(f);
+    const { lo, hi } = bounds(gj);
+    const st = stats(gj, f);
     const size = { w: hi[0] - lo[0], d: hi[2] - lo[2], h: hi[1] - lo[1] };
     const problems = [];
+    if (st.tris > cfg.maxTriangles) problems.push(`${Math.round(st.tris)} triangles, budget ${cfg.maxTriangles}`);
+    if (st.mb > cfg.maxFileMB) problems.push(`file ${st.mb.toFixed(1)} MB, budget ${cfg.maxFileMB} MB`);
     if (!want) problems.push('no target in src/env/targets.json');
     else
       for (const [k, name] of [['w', 'width'], ['d', 'depth'], ['h', 'height']]) {
