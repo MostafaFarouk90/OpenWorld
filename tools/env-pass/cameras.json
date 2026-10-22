@@ -1,0 +1,21 @@
+{
+  "$comment": "One camera table for the environment pass: the design mock (design-mock.html) and the in-game harness (shoot-game.mjs) both read it, so before, design and after shots share poses. Metres, +Z north. pos y and look y are heights above the ground at that x,z; eyeAbsolute true means pos y is already absolute. fov in degrees.",
+  "tiles": {
+    "b1-lane": {
+      "spec": "lane.spec.json",
+      "cameras": {
+        "eye":   { "pos": [0, 1.7, 34],      "look": [0, 2.5, 108], "fov": 60 },
+        "drone": { "pos": [-45, 35, 28],     "look": [0, 0, 80],    "fov": 60 },
+        "bird":  { "pos": [0, 170, 74.99],   "look": [0, 0, 75],    "fov": 60 }
+      },
+      "states": { "calm": {}, "fire": { "flags": [], "note": "lane burning, T05 to T08; flag name to be confirmed against src/tutorial before the B1 pilot" } }
+    },
+    "b1-meadow": {
+      "cameras": {
+        "eye":   { "pos": [0, 1.7, -30],    "look": [0, 2, 40],  "fov": 60 },
+        "drone": { "pos": [-70, 45, -60],   "look": [0, 0, 10],  "fov": 60 },
+        "bird":  { "pos": [0, 170, 19.99],  "look": [0, 0, 25],  "fov": 60 }
+      }
+    }
+  }
+}
