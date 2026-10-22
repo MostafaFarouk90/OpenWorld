@@ -26,6 +26,9 @@ export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record
   high: { tree: 1, bush: 1, rock: 1, wood: 1, ground: 1, prop: 1, hedge: 1 },
 };
 
+/** Side of a draw cell (m): batches are split by cell so distance hiding works while the player stands inside a tile. */
+const CELL = 64;
+
 export function classOf(id: string): PlacementClass {
   if (/^(oak|birch|elm|autumn|ash-tree)/.test(id)) return 'tree';
   if (/^(bush|fern|reeds)/.test(id)) return 'bush';
@@ -80,7 +83,9 @@ function tintedMaterial(base: THREE.Material, tint: Tint): THREE.Material {
 export class PlacementField {
   readonly object = new THREE.Group();
   readonly stats: FieldStats = { rows: 0, placeholders: 0, batches: 0, triangles: 0 };
-  private readonly byClass = new Map<PlacementClass, { group: THREE.Group; models: InstancedModel[]; totals: number[]; sphere: THREE.Sphere }>();
+  private readonly byClass = new Map<PlacementClass, { group: THREE.Group; batches: Array<{ model: InstancedModel; total: number; sphere: THREE.Sphere }> }>();
+  /** Clones and generated geometry this field owns (template parts and the shared placeholder material belong to others). */
+  private readonly owned: Array<{ dispose(): void }> = [];
   private disposed = false;
 
   constructor(
@@ -106,7 +111,11 @@ export class PlacementField {
     const up = new THREE.Vector3(0, 1, 0);
     for (const [id, e] of entries) {
       const resolved = await this.partsFor(id, e.ref);
-      if (this.disposed) return;
+      if (this.disposed) {
+        if (resolved?.placeholder) for (const p of resolved.parts) p.geometry.dispose();
+        return;
+      }
+      if (resolved?.placeholder) for (const p of resolved.parts) this.owned.push(p.geometry);
       if (!resolved) continue;
       if (resolved.placeholder) this.stats.placeholders += e.rows.length;
       let parts = resolved.parts;
@@ -115,30 +124,40 @@ export class PlacementField {
         parts = parts.map((p) => {
           const k = `${p.material.uuid}|${tintKey(tint)}`;
           let mat = mats.get(k);
-          if (!mat) mats.set(k, (mat = tintedMaterial(p.material, tint)));
+          if (!mat) {
+            mats.set(k, (mat = tintedMaterial(p.material, tint)));
+            this.owned.push(mat);
+          }
           return { geometry: p.geometry, material: mat };
         });
       }
       const sorted = [...e.rows].sort((a, b) => a.order - b.order);
-      const batch = new InstancedModel(parts, sorted.length);
+      // One batch per grid cell, so the distance test can hide the far cells of a large tile while the player stands inside it.
+      const cells = new Map<string, PlacementRow[]>();
       for (const { row } of sorted) {
-        const s = (row.scale ?? 1) * resolved.scale;
-        q.setFromAxisAngle(up, ((row.yaw ?? 0) * Math.PI) / 180);
-        m.compose(new THREE.Vector3(row.x, this.heightAt(row.x, row.z), row.z), q, new THREE.Vector3(s, s, s));
-        batch.addInstance(m);
+        const k = `${Math.floor(row.x / CELL)},${Math.floor(row.z / CELL)}`;
+        (cells.get(k) ?? cells.set(k, []).get(k)!).push(row);
       }
-      const slot = this.slot(e.cls);
-      slot.group.add(batch);
-      slot.models.push(batch);
-      slot.totals.push(sorted.length);
-      this.stats.batches += batch.meshes.length;
-      this.stats.triangles += resolved.triangles * sorted.length;
+      for (const cellRows of cells.values()) {
+        const batch = new InstancedModel(parts, cellRows.length);
+        for (const mesh of batch.meshes) mesh.castShadow = e.cls === 'tree' || e.cls === 'prop';
+        for (const row of cellRows) {
+          const s = (row.scale ?? 1) * resolved.scale;
+          q.setFromAxisAngle(up, ((row.yaw ?? 0) * Math.PI) / 180);
+          m.compose(new THREE.Vector3(row.x, this.heightAt(row.x, row.z), row.z), q, new THREE.Vector3(s, s, s));
+          batch.addInstance(m);
+        }
+        for (const mesh of batch.meshes) mesh.computeBoundingSphere();
+        const sphere = new THREE.Sphere();
+        new THREE.Box3().setFromObject(batch).getBoundingSphere(sphere);
+        const slot = this.slot(e.cls);
+        slot.group.add(batch);
+        slot.batches.push({ model: batch, total: cellRows.length, sphere });
+        this.stats.batches += batch.meshes.length;
+        this.stats.triangles += resolved.triangles * cellRows.length;
+      }
     }
-    for (const slot of this.byClass.values()) {
-      const box = new THREE.Box3().setFromObject(slot.group);
-      if (!box.isEmpty()) box.getBoundingSphere(slot.sphere);
-      for (const mdl of slot.models) for (const mesh of mdl.meshes) mesh.computeBoundingSphere();
-    }
+    this.setDensity(this.density);
   }
 
   private slot(cls: PlacementClass) {
@@ -147,7 +166,7 @@ export class PlacementField {
       const group = new THREE.Group();
       group.name = `env:${cls}`;
       this.object.add(group);
-      s = { group, models: [], totals: [], sphere: new THREE.Sphere() };
+      s = { group, batches: [] };
       this.byClass.set(cls, s);
     }
     return s;
@@ -169,22 +188,27 @@ export class PlacementField {
     return this.partsFor(id, { source: 'placeholder', shape: classShape(id) });
   }
 
+  private density: 'low' | 'medium' | 'high' = 'medium';
+
   /** Keep this share of each class (see DENSITY); the same instances are dropped every time. */
   setDensity(step: 'low' | 'medium' | 'high'): void {
+    this.density = step;
     for (const [cls, slot] of this.byClass) {
       const keep = DENSITY[step][cls];
-      slot.models.forEach((mdl, i) => {
-        const n = Math.ceil(slot.totals[i] * keep);
-        for (const mesh of mdl.meshes) mesh.count = n;
-      });
+      for (const b of slot.batches) {
+        const n = Math.ceil(b.total * keep);
+        for (const mesh of b.model.meshes) mesh.count = n;
+      }
     }
   }
 
-  /** Hide classes whose instances are all beyond their range from the player. */
+  /** Hide each batch (a grid cell of one model) that is beyond its class range from the player. */
   update(px: number, pz: number): void {
     for (const [cls, slot] of this.byClass) {
-      const d = Math.hypot(px - slot.sphere.center.x, pz - slot.sphere.center.z) - slot.sphere.radius;
-      slot.group.visible = d <= CLASS_RANGE[cls];
+      for (const b of slot.batches) {
+        const d = Math.hypot(px - b.sphere.center.x, pz - b.sphere.center.z) - b.sphere.radius;
+        b.model.visible = d <= CLASS_RANGE[cls];
+      }
     }
   }
 
@@ -192,19 +216,25 @@ export class PlacementField {
     return [...this.byClass.keys()];
   }
 
-  /** Instances currently drawn per class. */
-  drawn(): Record<string, number> {
+  /** Instances currently drawn per class (batches in range only when `visibleOnly`). */
+  drawn(visibleOnly = false): Record<string, number> {
     const out: Record<string, number> = {};
-    for (const [cls, slot] of this.byClass) out[cls] = slot.models.reduce((s, mdl) => s + (mdl.meshes[0]?.count ?? 0), 0);
+    for (const [cls, slot] of this.byClass)
+      out[cls] = slot.batches.reduce((n, b) => n + (visibleOnly && !b.model.visible ? 0 : (b.model.meshes[0]?.count ?? 0)), 0);
     return out;
+  }
+
+  /** Batches of a class currently visible and in total (tests, debug). */
+  batchCounts(cls: PlacementClass): { visible: number; total: number } {
+    const b = this.byClass.get(cls)?.batches ?? [];
+    return { visible: b.filter((x) => x.model.visible).length, total: b.length };
   }
 
   dispose(): void {
     this.disposed = true;
     this.object.removeFromParent();
-    for (const slot of this.byClass.values()) {
-      for (const mdl of slot.models) for (const mesh of mdl.meshes) mesh.dispose();
-    }
+    for (const slot of this.byClass.values()) for (const b of slot.batches) for (const mesh of b.model.meshes) mesh.dispose();
+    for (const o of this.owned.splice(0)) o.dispose();
     this.byClass.clear();
   }
 }

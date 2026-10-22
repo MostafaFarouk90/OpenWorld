@@ -4,7 +4,8 @@ import { CLASS_RANGE, classOf, DENSITY, PlacementField, priority, type Placement
 import { placeholderGeometry, targetSize } from './placeholders';
 
 const flat = () => 2;
-const rows = (n: number, id: string, x0 = 0): PlacementRow[] => Array.from({ length: n }, (_, i) => ({ id, x: x0 + i, z: i * 2, yaw: i * 10 }));
+// all rows inside one 64 m draw cell, so per-batch rounding does not blur the density arithmetic
+const rows = (n: number, id: string, x0 = 0): PlacementRow[] => Array.from({ length: n }, (_, i) => ({ id, x: x0 + (i % 50), z: Math.floor(i / 50) * 2, yaw: i * 10 }));
 
 describe('classOf', () => {
   it('sorts ids into the draw classes', () => {
@@ -44,6 +45,7 @@ describe('placeholder geometry', () => {
 describe('PlacementField without a model source', () => {
   it('draws every row as a placeholder and counts them', async () => {
     const field = new PlacementField(new ModelLibrary(undefined, () => undefined), flat);
+    field.setDensity('high');
     await field.build([...rows(40, 'oak-b'), ...rows(10, 'grass-clump-b'), ...rows(5, 'barrel')]);
     expect(field.stats.rows).toBe(55);
     expect(field.stats.placeholders).toBe(55);
@@ -76,17 +78,43 @@ describe('PlacementField without a model source', () => {
     field.dispose();
   });
 
-  it('hides a class beyond its range and shows it again near', async () => {
+  it('hides far cells of a class while the player stands inside the tile', async () => {
     const field = new PlacementField(new ModelLibrary(undefined, () => undefined), flat);
-    await field.build(rows(5, 'grass-clump-a'));
-    const group = field.object.children[0];
+    // ground cover spread over 600 m: far cells must hide although the player is inside the covered area
+    await field.build([0, 150, 300, 450, 600].map((x) => ({ id: 'grass-clump-a', x, z: 0 })));
     field.update(0, 0);
-    expect(group.visible).toBe(true);
-    field.update(CLASS_RANGE.ground + 500, 0);
-    expect(group.visible).toBe(false);
-    field.update(5, 5);
-    expect(group.visible).toBe(true);
+    const c = field.batchCounts('ground');
+    expect(c.total).toBe(5);
+    expect(c.visible).toBeGreaterThan(0);
+    expect(c.visible).toBeLessThan(c.total);
+    expect(field.drawn(true).ground).toBeLessThan(field.drawn().ground);
+    field.update(CLASS_RANGE.ground + 5000, 0);
+    expect(field.batchCounts('ground').visible).toBe(0);
+    field.update(300, 0);
+    expect(field.batchCounts('ground').visible).toBeGreaterThan(0);
     field.dispose();
+  });
+
+  it('keeps instance matrices when density changes and applies the set density to a late build', async () => {
+    const field = new PlacementField(new ModelLibrary(undefined, () => undefined), flat);
+    field.setDensity('low');
+    await field.build(rows(100, 'grass-clump-a'));
+    expect(field.drawn().ground).toBe(Math.ceil(100 * DENSITY.low.ground));
+    const mesh = (field.object.children[0].children[0] as import('three').Group).children[0] as import('three').InstancedMesh;
+    const before = Array.from(mesh.instanceMatrix.array.slice(0, 16));
+    field.setDensity('high');
+    field.setDensity('low');
+    expect(Array.from(mesh.instanceMatrix.array.slice(0, 16))).toEqual(before);
+    field.dispose();
+  });
+
+  it('disposing during an in-flight build leaves nothing in the scene', async () => {
+    const field = new PlacementField(new ModelLibrary(undefined, () => undefined), flat);
+    const done = field.build([...rows(10, 'oak-b'), ...rows(10, 'barrel')]);
+    field.dispose();
+    await done;
+    expect(field.classes()).toEqual([]);
+    expect(field.object.parent).toBeNull();
   });
 
   it('survives an empty row list and a disposed field', async () => {

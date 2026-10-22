@@ -7,18 +7,24 @@ import { NodeIO } from '@gltf-transform/core';
 import { weld, simplify, prune, dedup, textureCompress, getBounds, flatten, transformMesh } from '@gltf-transform/functions';
 import { MeshoptSimplifier } from 'meshoptimizer';
 import sharp from 'sharp';
-import { readFileSync, readdirSync, mkdirSync, statSync, unlinkSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdirSync, statSync, unlinkSync, existsSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const [src, out] = process.argv.slice(2);
+if (!src || !out) throw new Error('usage: ingest.mjs <srcDir> <outDir> [--remove]');
+if (path.resolve(src) === path.resolve(out)) throw new Error('srcDir and outDir must differ (an ingested file would be simplified again and removed)');
 const remove = process.argv.includes('--remove');
 const cfg = JSON.parse(readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../src/env/targets.json'), 'utf8'));
 mkdirSync(out, { recursive: true });
 await MeshoptSimplifier.ready;
 const io = new NodeIO();
 const TRI_TARGET = 4500;
+// keep the entries of earlier batches: the manifest lists every runtime file, not just this run's
+const manifestPath = path.join(out, 'manifest.json');
+const previous = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')).objects : {};
 const results = [];
+let failed = 0;
 
 for (const f of readdirSync(src).filter((n) => n.endsWith('.glb'))) {
   const id = f.replace(/\.glb$/, '');
@@ -26,9 +32,17 @@ for (const f of readdirSync(src).filter((n) => n.endsWith('.glb'))) {
   if (!want) { console.log(`skip ${id}: no target in targets.json`); continue; }
   const doc = await io.read(path.join(src, f));
   const root = doc.getRoot();
+  if (root.listSkins().length || root.listAnimations().length) { console.log(`FAIL ${id}: skinned or animated files are not supported (static scenery only)`); failed++; continue; }
   await doc.transform(flatten()); // bake node transforms into the scene graph's world matrices
   const scene = root.listScenes()[0];
   // apply world matrices to the vertex data, then clear the nodes' transforms
+  // a mesh shared by several nodes would be transformed once per node: give each node its own copy first
+  const seen = new Set();
+  for (const node of scene.listChildren()) {
+    const mesh = node.getMesh();
+    if (mesh && seen.has(mesh)) node.setMesh(mesh.clone());
+    if (mesh) seen.add(mesh);
+  }
   for (const node of scene.listChildren()) {
     const mesh = node.getMesh();
     if (mesh) { transformMesh(mesh, node.getWorldMatrix()); node.setMatrix([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]); }
@@ -66,14 +80,17 @@ for (const f of readdirSync(src).filter((n) => n.endsWith('.glb'))) {
     mat.setMetallicFactor(0).setRoughnessFactor(1);
   }
   await doc.transform(textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [512, 512], quality: 80 }), prune());
-  const dest = path.join(out, f);
-  await io.write(dest, doc);
   let after = 0;
   for (const m of doc.getRoot().listMeshes()) for (const p of m.listPrimitives()) after += (p.getIndices()?.getCount() ?? 0) / 3;
+  if (after > cfg.maxTriangles) { console.log(`FAIL ${id}: ${Math.round(after)} triangles after simplifying, budget ${cfg.maxTriangles}; source kept, nothing written`); failed++; continue; }
+  const dest = path.join(out, f);
+  await io.write(dest, doc);
   const mb = statSync(dest).size / 1e6;
+  if (mb > cfg.maxFileMB) { console.log(`FAIL ${id}: ${mb.toFixed(2)} MB, budget ${cfg.maxFileMB} MB; source kept`); unlinkSync(dest); failed++; continue; }
   results.push({ id, scale: +s.toFixed(3), trisBefore: Math.round(tris), trisAfter: Math.round(after), mb: +mb.toFixed(2) });
   console.log(`${id}: scale ${s.toFixed(3)}, ${Math.round(tris)} -> ${Math.round(after)} tris, ${mb.toFixed(2)} MB`);
-  if (remove && mb < cfg.maxFileMB) unlinkSync(path.join(src, f));
+  if (remove) unlinkSync(path.join(src, f));
 }
-import('node:fs').then(({ writeFileSync }) => writeFileSync(path.join(out, 'manifest.json'), JSON.stringify({ $comment: 'Written by tools/env-pass/ingest.mjs. Runtime copies of environment objects: size in metres (w, d, h), pivot at the base centre, front +Z.', objects: Object.fromEntries(results.map((r) => [r.id, r])) }, null, 1)));
-console.log(`${results.length} files written to ${out}${remove ? ' (sources removed)' : ''}`);
+writeFileSync(manifestPath, JSON.stringify({ $comment: 'Written by tools/env-pass/ingest.mjs. Runtime copies of environment objects: size in metres (w, d, h), pivot at the base centre, front +Z.', objects: { ...previous, ...Object.fromEntries(results.map((r) => [r.id, r])) } }, null, 1));
+console.log(`${results.length} files written to ${out}${remove ? ' (sources removed)' : ''}${failed ? `, ${failed} failed` : ''}`);
+process.exit(failed ? 1 : 0);
