@@ -1,0 +1,215 @@
+// Draws a tile's placement rows: every row resolves to a model (src/env/resolve.ts), rows sharing a model and tint become one
+// InstancedMesh per part, grouped by class (trees, bushes, ground cover, ...) so a class can be hidden by distance and thinned by
+// quality. Instances are added in a fixed pseudo-random priority order, so lowering the density drops the same ones every time.
+import * as THREE from 'three';
+import { InstancedModel } from '../assets/instancing';
+import type { ModelLibrary, ModelTemplate } from '../assets/swap/ModelLibrary';
+import { placeholderGeometry, placeholderMaterial } from './placeholders';
+import { hueMatrix, resolveModel, type ModelRef, type Tint } from './resolve';
+
+export interface PlacementRow {
+  id: string;
+  x: number;
+  z: number;
+  yaw?: number;
+  scale?: number;
+}
+
+export type PlacementClass = 'tree' | 'bush' | 'rock' | 'wood' | 'ground' | 'prop' | 'hedge';
+
+/** Hide a class when the player is further than this from its nearest instance sphere edge (metres). */
+export const CLASS_RANGE: Readonly<Record<PlacementClass, number>> = { tree: 700, bush: 260, rock: 420, wood: 160, ground: 120, prop: 260, hedge: 320 };
+/** Share of each class kept per quality step. */
+export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record<PlacementClass, number>>>> = {
+  low: { tree: 0.7, bush: 0.5, rock: 0.7, wood: 0.4, ground: 0.35, prop: 0.7, hedge: 1 },
+  medium: { tree: 1, bush: 0.85, rock: 1, wood: 0.8, ground: 0.7, prop: 1, hedge: 1 },
+  high: { tree: 1, bush: 1, rock: 1, wood: 1, ground: 1, prop: 1, hedge: 1 },
+};
+
+export function classOf(id: string): PlacementClass {
+  if (/^(oak|birch|elm|autumn|ash-tree)/.test(id)) return 'tree';
+  if (/^(bush|fern|reeds)/.test(id)) return 'bush';
+  if (/^(boulder|rock|basalt|ember-rock|slag)/.test(id)) return 'rock';
+  if (/^(stump|log|mushroom|charred)/.test(id)) return 'wood';
+  if (/^(grass|flower)/.test(id)) return 'ground';
+  if (/^(hedge|picket|wattle|stonewall|scorched-fence)/.test(id)) return 'hedge';
+  return 'prop';
+}
+
+/** Deterministic 0..1 from a row index, so the order in which density thins instances never changes. */
+export function priority(i: number): number {
+  let h = Math.imul(i + 1, 2654435761) >>> 0;
+  h ^= h >>> 15;
+  h = Math.imul(h, 2246822519) >>> 0;
+  h ^= h >>> 13;
+  return (h >>> 0) / 4294967296;
+}
+
+export interface FieldStats {
+  rows: number;
+  /** Rows that resolved to a scripted placeholder (no model yet). */
+  placeholders: number;
+  batches: number;
+  triangles: number;
+}
+
+interface Entry {
+  cls: PlacementClass;
+  ref: ModelRef;
+  rows: Array<{ row: PlacementRow; order: number }>;
+}
+
+const tintKey = (t?: Tint): string => (t ? `${t.hue ?? 0}/${t.sat ?? 1}/${t.mul ?? 0xffffff}` : '');
+
+function tintedMaterial(base: THREE.Material, tint: Tint): THREE.Material {
+  const m = base.clone() as THREE.MeshStandardMaterial;
+  if (tint.mul !== undefined && m.color) m.color.multiply(new THREE.Color(tint.mul));
+  if (tint.hue || (tint.sat !== undefined && tint.sat !== 1)) {
+    const k = hueMatrix(tint.hue ?? 0, tint.sat ?? 1);
+    m.customProgramCacheKey = () => `env-hue-${tint.hue ?? 0}-${tint.sat ?? 1}`;
+    m.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <map_fragment>',
+        `#include <map_fragment>\n diffuseColor.rgb = mat3(${k[0]}, ${k[3]}, ${k[6]}, ${k[1]}, ${k[4]}, ${k[7]}, ${k[2]}, ${k[5]}, ${k[8]}) * diffuseColor.rgb;`,
+      );
+    };
+  }
+  return m;
+}
+
+export class PlacementField {
+  readonly object = new THREE.Group();
+  readonly stats: FieldStats = { rows: 0, placeholders: 0, batches: 0, triangles: 0 };
+  private readonly byClass = new Map<PlacementClass, { group: THREE.Group; models: InstancedModel[]; totals: number[]; sphere: THREE.Sphere }>();
+  private disposed = false;
+
+  constructor(
+    private readonly lib: ModelLibrary,
+    private readonly heightAt: (x: number, z: number) => number,
+  ) {
+    this.object.name = 'env.placements';
+  }
+
+  async build(rows: readonly PlacementRow[]): Promise<void> {
+    const entries = new Map<string, Entry>();
+    rows.forEach((row, i) => {
+      const ref = resolveModel(row.id);
+      const key = `${row.id}`;
+      const e = entries.get(key) ?? { cls: classOf(row.id), ref, rows: [] };
+      entries.set(key, e);
+      e.rows.push({ row, order: priority(i) });
+    });
+    this.stats.rows = rows.length;
+    const mats = new Map<string, THREE.Material>();
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const up = new THREE.Vector3(0, 1, 0);
+    for (const [id, e] of entries) {
+      const resolved = await this.partsFor(id, e.ref);
+      if (this.disposed) return;
+      if (!resolved) continue;
+      if (resolved.placeholder) this.stats.placeholders += e.rows.length;
+      let parts = resolved.parts;
+      const tint = e.ref.source !== 'placeholder' && !resolved.placeholder ? e.ref.tint : undefined;
+      if (tint) {
+        parts = parts.map((p) => {
+          const k = `${p.material.uuid}|${tintKey(tint)}`;
+          let mat = mats.get(k);
+          if (!mat) mats.set(k, (mat = tintedMaterial(p.material, tint)));
+          return { geometry: p.geometry, material: mat };
+        });
+      }
+      const sorted = [...e.rows].sort((a, b) => a.order - b.order);
+      const batch = new InstancedModel(parts, sorted.length);
+      for (const { row } of sorted) {
+        const s = (row.scale ?? 1) * resolved.scale;
+        q.setFromAxisAngle(up, ((row.yaw ?? 0) * Math.PI) / 180);
+        m.compose(new THREE.Vector3(row.x, this.heightAt(row.x, row.z), row.z), q, new THREE.Vector3(s, s, s));
+        batch.addInstance(m);
+      }
+      const slot = this.slot(e.cls);
+      slot.group.add(batch);
+      slot.models.push(batch);
+      slot.totals.push(sorted.length);
+      this.stats.batches += batch.meshes.length;
+      this.stats.triangles += resolved.triangles * sorted.length;
+    }
+    for (const slot of this.byClass.values()) {
+      const box = new THREE.Box3().setFromObject(slot.group);
+      if (!box.isEmpty()) box.getBoundingSphere(slot.sphere);
+      for (const mdl of slot.models) for (const mesh of mdl.meshes) mesh.computeBoundingSphere();
+    }
+  }
+
+  private slot(cls: PlacementClass) {
+    let s = this.byClass.get(cls);
+    if (!s) {
+      const group = new THREE.Group();
+      group.name = `env:${cls}`;
+      this.object.add(group);
+      s = { group, models: [], totals: [], sphere: new THREE.Sphere() };
+      this.byClass.set(cls, s);
+    }
+    return s;
+  }
+
+  private async partsFor(id: string, ref: ModelRef): Promise<{ parts: ModelTemplate['parts']; scale: number; triangles: number; placeholder: boolean } | null> {
+    if (ref.source === 'placeholder') {
+      const geometry = placeholderGeometry(id, ref.shape);
+      const tris = (geometry.index?.count ?? geometry.getAttribute('position').count) / 3;
+      return { parts: [{ geometry, material: placeholderMaterial() }], scale: 1, triangles: tris, placeholder: true };
+    }
+    const t = await this.lib.template(ref.model);
+    if (t) {
+      let scale = ref.scale;
+      if (ref.fitHeight) scale = ref.fitHeight / (t.bounds.max.y - t.bounds.min.y);
+      return { parts: t.parts, scale, triangles: t.triangles, placeholder: false };
+    }
+    // The model did not load (offline, headless): fall back to the placeholder for this id.
+    return this.partsFor(id, { source: 'placeholder', shape: classShape(id) });
+  }
+
+  /** Keep this share of each class (see DENSITY); the same instances are dropped every time. */
+  setDensity(step: 'low' | 'medium' | 'high'): void {
+    for (const [cls, slot] of this.byClass) {
+      const keep = DENSITY[step][cls];
+      slot.models.forEach((mdl, i) => {
+        const n = Math.ceil(slot.totals[i] * keep);
+        for (const mesh of mdl.meshes) mesh.count = n;
+      });
+    }
+  }
+
+  /** Hide classes whose instances are all beyond their range from the player. */
+  update(px: number, pz: number): void {
+    for (const [cls, slot] of this.byClass) {
+      const d = Math.hypot(px - slot.sphere.center.x, pz - slot.sphere.center.z) - slot.sphere.radius;
+      slot.group.visible = d <= CLASS_RANGE[cls];
+    }
+  }
+
+  classes(): PlacementClass[] {
+    return [...this.byClass.keys()];
+  }
+
+  /** Instances currently drawn per class. */
+  drawn(): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const [cls, slot] of this.byClass) out[cls] = slot.models.reduce((s, mdl) => s + (mdl.meshes[0]?.count ?? 0), 0);
+    return out;
+  }
+
+  dispose(): void {
+    this.disposed = true;
+    this.object.removeFromParent();
+    for (const slot of this.byClass.values()) {
+      for (const mdl of slot.models) for (const mesh of mdl.meshes) mesh.dispose();
+    }
+    this.byClass.clear();
+  }
+}
+
+function classShape(id: string): 'tree' | 'bush' | 'grass' | 'flower' | 'rock' | 'box' {
+  const c = classOf(id);
+  return c === 'tree' ? 'tree' : c === 'bush' ? 'bush' : c === 'rock' ? 'rock' : c === 'ground' ? 'grass' : 'box';
+}
