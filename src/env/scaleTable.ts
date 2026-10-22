@@ -17,14 +17,20 @@ export const SCALE_TOLERANCE: number = targets.tolerance;
 
 export const TARGETS: Readonly<Record<string, Size>> = targets.objects;
 
-/** Fixed world sizes every sheet is judged against (metres). Door size is decided in G0a with the coordinator; see the plan. */
+/** Fixed world sizes every sheet is judged against (metres). Doorways: clear opening at least 2.2 m high and 1.1 m wide (plan section 11). */
 export const WORLD_SIZES = {
   knight: KNIGHT_HEIGHT,
   fence: 1.6,
   gate: 5,
   hurdle: 0.6,
   tree: { min: 8, max: 12 },
+  doorway: { minHeight: 2.2, minWidth: 1.1 },
 } as const;
+
+/** True when a clear opening is tall and wide enough for the Knight to walk through. */
+export function doorwayOk(width: number, height: number): boolean {
+  return width >= WORLD_SIZES.doorway.minWidth && height >= WORLD_SIZES.doorway.minHeight;
+}
 
 export interface AuditResult {
   ok: boolean;

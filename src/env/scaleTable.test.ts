@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { auditSize, KNIGHT_HEIGHT, SCALE_TOLERANCE, TARGETS, treeHeightOk, WORLD_SIZES } from './scaleTable';
+import { auditSize, doorwayOk, KNIGHT_HEIGHT, SCALE_TOLERANCE, TARGETS, treeHeightOk, WORLD_SIZES } from './scaleTable';
 
 describe('scale table', () => {
   it('has targets for the starter set', () => {
@@ -39,5 +39,11 @@ describe('scale table', () => {
     expect(SCALE_TOLERANCE).toBeGreaterThan(0);
     expect(treeHeightOk(5.1)).toBe(false);
     expect(treeHeightOk(10)).toBe(true);
+  });
+
+  it('judges doorways by clear opening', () => {
+    expect(doorwayOk(1.1, 2.2)).toBe(true);
+    expect(doorwayOk(1.0, 2.6)).toBe(false);
+    expect(doorwayOk(1.4, 2.0)).toBe(false);
   });
 });
