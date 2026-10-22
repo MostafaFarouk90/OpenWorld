@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { GRASS, cellTufts, tuftColor } from '../region/grass';
 import { REGION_IDS, engineBox } from '../region/regions';
 import { buildChunkData, chunkVertexCount, surfaceColor } from './chunkGeometry';
+import { tintGround } from './shape/detailGround';
 import { heightAt } from './heightfield';
 import {
   ACT2_GROUND_ORIGIN,
@@ -237,6 +238,8 @@ describe('chunk data', () => {
       const rows = 17 * 17;
       for (let v = 0; v < rows; v++) {
         surfaceColor(d.positions[v * 3 + 1], d.normals[v * 3 + 1], c, 0);
+        // Brightwater's B1 tile tints the base colour (shape/detailGround.ts); everywhere else this is the identity.
+        tintGround(x - size / 2 + (v % 17) * (size / 16), z - size / 2 + Math.floor(v / 17) * (size / 16), c, 0);
         // The worker colours from float64 heights and normals; these are float32 copies of them.
         for (let k = 0; k < 3; k++) expect(d.colors[v * 3 + k]).toBeCloseTo(c[k], 5);
       }

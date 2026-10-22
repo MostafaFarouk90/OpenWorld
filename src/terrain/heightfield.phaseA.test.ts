@@ -4,6 +4,7 @@ import { BRIGHTWATER_LAYOUT } from '../region/brightwater.layout';
 import GOLDEN from './__fixtures__/phase-a-anchor-heights.json';
 import { HEIGHT_RANGE, heightAt, naturalHeightAt, worldRoads } from './heightfield';
 import { DEAD_ROAD } from './shape/deadRoad';
+import { detailRelief } from './shape/detailRelief';
 import { HARROWMARK_PLATEAU } from './shape/harrowmark';
 import { PHASE_A_PROTECTED } from './shaping';
 
@@ -29,7 +30,7 @@ describe('Phase A ground is unchanged by terrain shaping', () => {
     const b = PHASE_A_PROTECTED;
     for (let x = b.minX; x <= b.maxX; x += 25) {
       for (let z = b.minZ; z <= b.maxZ; z += 25) {
-        if (heightAt(x, z) !== naturalHeightAt(x, z)) throw new Error(`shaped Phase A ground at (${x}, ${z})`);
+        if (heightAt(x, z) !== naturalHeightAt(x, z) + detailRelief(x, z)) throw new Error(`shaped Phase A ground at (${x}, ${z})`);
       }
     }
   });

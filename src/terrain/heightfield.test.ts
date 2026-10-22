@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { TERRAIN } from '../config/constants';
 import { buildChunkData } from './chunkGeometry';
 import { HEIGHT_RANGE, SPAWN_BLEND_RADIUS, SPAWN_FLAT_RADIUS, heightAt } from './heightfield';
+import { RELIEF_MAX, detailRelief } from './shape/detailRelief';
 import { createNoise2D } from './noise';
 
 /** Deterministic PRNG so the sample sets are reproducible. */
@@ -97,17 +98,21 @@ describe('heightAt', () => {
     expect(heightAt(1234.5, -987.25)).toBe(heightAt(1234.5, -987.25));
   });
 
-  it('is exactly 0 at the origin and within SPAWN_FLAT_RADIUS, including on the radius', () => {
+  it('is exactly 0 at the origin and within SPAWN_FLAT_RADIUS, bar the B1 detail relief', () => {
     expect(heightAt(0, 0)).toBe(0);
-    expect(heightAt(SPAWN_FLAT_RADIUS, 0)).toBe(0);
     expect(heightAt(-SPAWN_FLAT_RADIUS, 0)).toBe(0);
     expect(heightAt(0, SPAWN_FLAT_RADIUS)).toBe(0);
     expect(heightAt(0, -SPAWN_FLAT_RADIUS)).toBe(0);
+    // The eastern edge is inside the B1 blend band: the meadow there carries the (clamped) relief and nothing else.
+    expect(heightAt(SPAWN_FLAT_RADIUS, 0)).toBe(detailRelief(SPAWN_FLAT_RADIUS, 0));
     const rand = lcg(5);
     for (let i = 0; i < 500; i++) {
       const angle = rand() * Math.PI * 2;
       const r = rand() * SPAWN_FLAT_RADIUS;
-      expect(heightAt(Math.cos(angle) * r, Math.sin(angle) * r)).toBe(0);
+      const x = Math.cos(angle) * r;
+      const z = Math.sin(angle) * r;
+      expect(heightAt(x, z)).toBe(detailRelief(x, z));
+      expect(Math.abs(heightAt(x, z))).toBeLessThanOrEqual(RELIEF_MAX);
     }
   });
 
@@ -126,7 +131,7 @@ describe('heightAt', () => {
   });
 
   it('leaves the meadow continuously (no jump just outside the flat radius)', () => {
-    expect(Math.abs(heightAt(SPAWN_FLAT_RADIUS + 0.01, 0))).toBeLessThan(0.01);
+    expect(Math.abs(heightAt(SPAWN_FLAT_RADIUS + 0.01, 0) - detailRelief(SPAWN_FLAT_RADIUS + 0.01, 0))).toBeLessThan(0.01);
   });
 });
 

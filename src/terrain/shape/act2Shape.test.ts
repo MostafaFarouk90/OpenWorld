@@ -24,6 +24,7 @@ import {
   STONEFOLD_ROAD,
 } from './cinderRoad';
 import { DEEPGATE_PLATEAU, OLDSMOKE_PASS_ROAD, OLDSMOKE_PLATEAUS, OLDSMOKE_ROADS, OLDSMOKE_STACKS } from './oldsmokePass';
+import { detailRelief } from './detailRelief';
 import { WORLD_SHAPE } from './index';
 import { roadLength, roadPoint } from './roadPoint';
 import { DEAD_ROAD, DEAD_ROAD_PLATEAUS } from './deadRoad';
@@ -340,7 +341,7 @@ describe('Act 1 ground is unchanged outside the Cinder Road reach', () => {
       for (let z = -1500; z <= 4000; z += 50) {
         if (inBox(reach, x, z)) continue;
         compared++;
-        if (heightAt(x, z) !== act1.heightAt(x, z)) throw new Error(`Act 1 ground moved at (${x}, ${z})`);
+        if (heightAt(x, z) !== act1.heightAt(x, z) + detailRelief(x, z)) throw new Error(`Act 1 ground moved at (${x}, ${z})`);
       }
     }
     expect(compared).toBeGreaterThan(20000);

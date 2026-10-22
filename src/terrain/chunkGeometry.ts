@@ -5,6 +5,7 @@
 
 import { chunkGround } from './ground';
 import { heightAt } from './heightfield';
+import { tintGround } from './shape/detailGround';
 
 export interface ChunkRequest {
   /** World-space centre of the chunk footprint. */
@@ -175,6 +176,7 @@ export function buildChunkData(req: ChunkRequest): ChunkData {
       normals[v + 2] = nz / len;
 
       surfaceColor(h, ny / len, colors, v);
+      tintGround(centerX - half + i * step, centerZ - half + j * step, colors, v);
       if (act2 && ground) act2.vertex(centerX - half + i * step, centerZ - half + j * step, h, ny / len, colors, v, ground, (j * row + i) * 2);
       if (h < minY) minY = h;
       if (h > maxY) maxY = h;
