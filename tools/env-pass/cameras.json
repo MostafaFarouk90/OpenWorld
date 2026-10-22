@@ -4,17 +4,140 @@
     "b1-lane": {
       "spec": "lane.spec.json",
       "cameras": {
-        "eye":   { "pos": [0, 1.7, 34],      "look": [0, 2.5, 108], "fov": 60 },
-        "drone": { "pos": [-45, 35, 28],     "look": [0, 0, 80],    "fov": 60 },
-        "bird":  { "pos": [0, 170, 74.99],   "look": [0, 0, 75],    "fov": 60 }
+        "eye": {
+          "pos": [
+            0,
+            1.7,
+            34
+          ],
+          "look": [
+            0,
+            2.5,
+            108
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -45,
+            35,
+            28
+          ],
+          "look": [
+            0,
+            0,
+            80
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            0,
+            170,
+            74.99
+          ],
+          "look": [
+            0,
+            0,
+            75
+          ],
+          "fov": 60
+        }
       },
-      "states": { "calm": {}, "fire": { "flags": [], "note": "lane burning, T05 to T08; flag name to be confirmed against src/tutorial before the B1 pilot" } }
+      "states": {
+        "calm": {},
+        "fire": {
+          "flags": [],
+          "note": "lane burning, T05 to T08; flag name to be confirmed against src/tutorial before the B1 pilot"
+        }
+      },
+      "placements": "b1/b1.placements.json"
     },
     "b1-meadow": {
       "cameras": {
-        "eye":   { "pos": [0, 1.7, -30],    "look": [0, 2, 40],  "fov": 60 },
-        "drone": { "pos": [-70, 45, -60],   "look": [0, 0, 10],  "fov": 60 },
-        "bird":  { "pos": [0, 170, 19.99],  "look": [0, 0, 25],  "fov": 60 }
+        "eye": {
+          "pos": [
+            0,
+            1.7,
+            -30
+          ],
+          "look": [
+            0,
+            2,
+            40
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -70,
+            45,
+            -60
+          ],
+          "look": [
+            0,
+            0,
+            10
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            0,
+            170,
+            19.99
+          ],
+          "look": [
+            0,
+            0,
+            25
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b1-kettlewick": {
+      "placements": "b1/b1.placements.json",
+      "cameras": {
+        "eye": {
+          "pos": [
+            0,
+            1.7,
+            112
+          ],
+          "look": [
+            3,
+            3,
+            150
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -60,
+            40,
+            95
+          ],
+          "look": [
+            3,
+            0,
+            140
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            3,
+            170,
+            139.99
+          ],
+          "look": [
+            3,
+            0,
+            140
+          ],
+          "fov": 60
+        }
       }
     }
   }

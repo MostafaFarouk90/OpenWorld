@@ -16,14 +16,14 @@ const server = http.createServer((req, res) => {
 }).listen(0);
 const port = server.address().port;
 const entry = JSON.parse(readFileSync('tools/env-pass/cameras.json', 'utf8')).tiles[tile];
-if (!entry?.spec) { console.log(`no design spec for ${tile}`); process.exit(1); }
+if (!entry?.spec && !entry?.placements) { console.log(`no design spec for ${tile}`); process.exit(1); }
 const cams = Object.keys(entry.cameras);
 const outDir = path.join(outRoot, tile);
 mkdirSync(outDir, { recursive: true });
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 for (const cam of cams) {
-  await page.goto(`http://localhost:${port}/tools/env-pass/design-mock.html?tile=${tile}&view=${cam}&mode=design`);
+  await page.goto(`http://localhost:${port}/tools/env-pass/${entry.placements ? 'placement-mock' : 'design-mock'}.html?tile=${tile}&view=${cam}&mode=design`);
   await page.waitForFunction(() => window.__done, null, { timeout: 60000 });
   await page.screenshot({ path: path.join(outDir, `design-${cam}.png`) });
   console.log('mock', cam);
