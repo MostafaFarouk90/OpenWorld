@@ -86,11 +86,20 @@ for (const f of files) {
     if (st.tris > cfg.maxTriangles) problems.push(`${Math.round(st.tris)} triangles, budget ${cfg.maxTriangles}`);
     if (st.mb > cfg.maxFileMB) problems.push(`file ${st.mb.toFixed(1)} MB, budget ${cfg.maxFileMB} MB`);
     if (!want) problems.push('no target in src/env/targets.json');
-    else
+    else {
+      // Driver axis (height, or the longest side for wide things) must match the target; the other axes are the artist's proportions
+      // and only fail beyond a generous band (the targets' proportions are guesses for generated objects).
+      const wide = Math.max(want.w, want.d) > 1.8 * want.h;
+      if (wide) {
+        const got = Math.max(size.w, size.d), tgt = Math.max(want.w, want.d), dev = (got - tgt) / tgt;
+        if (Math.abs(dev) > cfg.tolerance) problems.push(`longest side ${got.toFixed(2)} m, want ${tgt} m (${Math.round(dev * 100)}%)`);
+      }
       for (const [k, name] of [['w', 'width'], ['d', 'depth'], ['h', 'height']]) {
         const dev = (size[k] - want[k]) / want[k];
-        if (Math.abs(dev) > cfg.tolerance) problems.push(`${name} ${size[k].toFixed(2)} m, want ${want[k]} m (${Math.round(dev * 100)}%)`);
+        const driver = !wide && k === 'h';
+        if (Math.abs(dev) > (driver ? cfg.tolerance : cfg.proportionTolerance)) problems.push(`${name} ${size[k].toFixed(2)} m, want ${want[k]} m (${Math.round(dev * 100)}%)`);
       }
+    }
     if (Math.abs(lo[1]) > 0.05) problems.push(`pivot: base at y ${lo[1].toFixed(2)}, want 0`);
     const cx = (lo[0] + hi[0]) / 2;
     const cz = (lo[2] + hi[2]) / 2;

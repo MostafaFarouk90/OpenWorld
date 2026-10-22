@@ -1,0 +1,117 @@
+{
+ "$comment": "Written by tools/env-pass/ingest.mjs. Runtime copies of environment objects: size in metres (w, d, h), pivot at the base centre, front +Z.",
+ "objects": {
+  "autumn-tree-a": {
+   "id": "autumn-tree-a",
+   "scale": 8.452,
+   "trisBefore": 50016,
+   "trisAfter": 6892,
+   "mb": 0.39
+  },
+  "birch-a": {
+   "id": "birch-a",
+   "scale": 6.773,
+   "trisBefore": 49982,
+   "trisAfter": 4644,
+   "mb": 0.27
+  },
+  "boulder-large-a": {
+   "id": "boulder-large-a",
+   "scale": 3.16,
+   "trisBefore": 50000,
+   "trisAfter": 4500,
+   "mb": 0.2
+  },
+  "bush-flowering-a": {
+   "id": "bush-flowering-a",
+   "scale": 1.096,
+   "trisBefore": 50000,
+   "trisAfter": 9142,
+   "mb": 0.56
+  },
+  "bush-round-a": {
+   "id": "bush-round-a",
+   "scale": 1.204,
+   "trisBefore": 50000,
+   "trisAfter": 4500,
+   "mb": 0.23
+  },
+  "elm-or-ash-a": {
+   "id": "elm-or-ash-a",
+   "scale": 8.689,
+   "trisBefore": 50004,
+   "trisAfter": 4500,
+   "mb": 0.22
+  },
+  "fern-a": {
+   "id": "fern-a",
+   "scale": 1.6,
+   "trisBefore": 50008,
+   "trisAfter": 5416,
+   "mb": 0.32
+  },
+  "flower-patch-yellow": {
+   "id": "flower-patch-yellow",
+   "scale": 0.765,
+   "trisBefore": 50000,
+   "trisAfter": 9658,
+   "mb": 0.57
+  },
+  "grass-clump-a": {
+   "id": "grass-clump-a",
+   "scale": 0.478,
+   "trisBefore": 49980,
+   "trisAfter": 4500,
+   "mb": 0.25
+  },
+  "hedge-corner": {
+   "id": "hedge-corner",
+   "scale": 2.846,
+   "trisBefore": 49954,
+   "trisAfter": 9970,
+   "mb": 0.59
+  },
+  "hedge-straight": {
+   "id": "hedge-straight",
+   "scale": 3.151,
+   "trisBefore": 49884,
+   "trisAfter": 8078,
+   "mb": 0.48
+  },
+  "log-fallen-a": {
+   "id": "log-fallen-a",
+   "scale": 2.696,
+   "trisBefore": 49998,
+   "trisAfter": 4642,
+   "mb": 0.27
+  },
+  "mushrooms-a": {
+   "id": "mushrooms-a",
+   "scale": 0.339,
+   "trisBefore": 50004,
+   "trisAfter": 4500,
+   "mb": 0.21
+  },
+  "oak-a": {
+   "id": "oak-a",
+   "scale": 14.031,
+   "trisBefore": 50000,
+   "trisAfter": 4500,
+   "mb": 0.21
+  },
+  "rock-cluster-a": {
+   "id": "rock-cluster-a",
+   "scale": 2.359,
+   "trisBefore": 49998,
+   "trisAfter": 4500,
+   "mb": 0.25
+  },
+  "stump-a": {
+   "id": "stump-a",
+   "scale": 0.952,
+   "trisBefore": 49992,
+   "trisAfter": 4500,
+   "mb": 0.23
+  }
+ }
+}

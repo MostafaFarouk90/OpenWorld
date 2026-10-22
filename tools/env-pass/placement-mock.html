@@ -1,0 +1,59 @@
+<!doctype html><meta charset=utf-8><body style="margin:0;background:#222">
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js"}}</script>
+<script type="module">
+// Design mock from a placements file: structures as boxes with roofs, every placement as a simple solid at its real target size
+// (src/env/targets.json, KayKit sizes for the rest). Cameras come from tools/env-pass/cameras.json (?tile=&view=). Schematic only:
+// it fixes where things stand, their size and the ground reading, not final art.
+import * as THREE from 'three';
+const q = new URLSearchParams(location.search); const tileId = q.get('tile'), view = q.get('view') || 'eye';
+const table = (await (await fetch('cameras.json')).json()).tiles[tileId];
+const data = await (await fetch(table.placements)).json();
+const sizes = (await (await fetch('/src/env/targets.json')).json()).objects;
+const W = 1280, H = 720;
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setSize(W, H); document.body.appendChild(r.domElement);
+const s = new THREE.Scene(); s.background = new THREE.Color(0x9db8d6); s.fog = new THREE.Fog(0x9db8d6, 140, 650);
+s.add(new THREE.HemisphereLight(0xdfe8ff, 0x4a3f2a, 1.0)); const sun = new THREE.DirectionalLight(0xfff2d0, 1.4); sun.position.set(-60, 100, -40); s.add(sun);
+const n2 = (x, z) => Math.sin(x * 0.21 + Math.sin(z * 0.17) * 2) * Math.sin(z * 0.13 + x * 0.05) + 0.5 * Math.sin(x * 0.6 + z * 0.45);
+// relief is zero at structures only in the real build; the mock keeps ground flat (relief is G0c) so the mock shows placement, not terrain
+const hgt = () => 0;
+const cx = 30, cz = 100, half = 300;
+const g = new THREE.PlaneGeometry(half * 2, half * 2, 240, 240); g.rotateX(-Math.PI / 2);
+const pos = g.attributes.position, col = new Float32Array(pos.count * 3);
+const A = new THREE.Color(0x6f9650), B = new THREE.Color(0x587d3f), C = new THREE.Color(0x8aa05a), D = new THREE.Color(0x7a5a38), E = new THREE.Color(0x9a8a6a);
+for (let i = 0; i < pos.count; i++) {
+  const x = pos.getX(i) + cx, z = pos.getZ(i) + cz; pos.setX(i, x); pos.setZ(i, z);
+  const n = n2(x, z); let c = A.clone().lerp(n > 0.3 ? C : B, Math.min(1, Math.abs(n) * 0.8));
+  const d = Math.abs(x); if (z > -2 && z < 170) { if (d < 3.6) c = D.clone().lerp(E, (n + 1) * 0.2); else if (d < 5.2) c = E.clone().lerp(A, (d - 3.6) / 1.6); }
+  col.set([c.r, c.g, c.b], i * 3);
+}
+g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
+s.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true })));
+const mat = (c, f) => new THREE.MeshLambertMaterial({ color: c, flatShading: !!f });
+const box = (w, h, d, c, x, z, ry = 0, y = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c)); m.position.set(x, y + h / 2, z); m.rotation.y = ry; s.add(m); return m; };
+for (const st of data.structures) {
+  if (['house', 'tavern', 'bakery', 'granary'].includes(st.kind)) { const w = Math.min(st.w, 6.4), d = Math.min(st.d, 6.4); box(w * 0.7, 3.2, d * 0.7, 0xcfc6b4, st.x, st.z); const rf = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.55, 2.4, 4), mat(0xa83a2c)); rf.position.set(st.x, 4.4, st.z); rf.rotation.y = Math.PI / 4; s.add(rf); }
+  else if (['mill', 'chapel', 'loft'].includes(st.kind)) { box(st.w * 0.7, 5, st.d * 0.7, 0xbfb6a4, st.x, st.z); }
+  else if (st.kind === 'cart') box(4, 1.2, 1, 0x6b4a2b, st.x, st.z, 0, 0.4);
+  else if (st.kind === 'fence') box(st.w, 0.9, 0.5, 0x5a2f26, st.x, st.z);
+  else if (st.kind === 'gate') { box(0.5, 4, 0.5, 0x4a3a2a, st.x - st.w / 2, st.z); box(0.5, 4, 0.5, 0x4a3a2a, st.x + st.w / 2, st.z); box(st.w, 0.5, 0.5, 0x4a3a2a, st.x, st.z, 0, 4); }
+}
+const knight = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 1.2, 4, 8), mat(0xffd24a)); knight.position.set(0.8, 0.9, 52); s.add(knight);
+const T = { oak: 0x3f6f35, birch: 0x7aa04a, elm: 0x5a8c44, autumn: 0xc07a30 };
+for (const p of data.placements) {
+  const id = p.id, k = p.scale ?? 1, sz = sizes[id];
+  if (id.startsWith('oak') || id.startsWith('birch') || id.startsWith('elm') || id.startsWith('autumn')) {
+    const t = sz ?? { w: 6, d: 6, h: 9 }, f = id.startsWith('birch') ? 'birch' : id.startsWith('elm') ? 'elm' : id.startsWith('autumn') ? 'autumn' : 'oak';
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2 * t.h / 9 * k, 0.4 * t.h / 9 * k, t.h * 0.4 * k, 7), mat(f === 'birch' ? 0xe8e4da : 0x5a3d22)); trunk.position.set(p.x, t.h * 0.2 * k, p.z); s.add(trunk);
+    const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(t.w * 0.5 * k, 0), mat(T[f], true)); crown.scale.set(1, t.h * 0.34 / (t.w * 0.5), 1); crown.position.set(p.x, t.h * 0.62 * k, p.z); s.add(crown);
+  } else if (id.startsWith('bush')) { const t = sz ?? { w: 1.4, h: 1.1 }; const m = new THREE.Mesh(new THREE.IcosahedronGeometry(t.w * 0.5 * k, 0), mat(id.includes('flower') ? 0x7ab060 : 0x4c7f3b, true)); m.position.set(p.x, t.h * 0.5 * k, p.z); m.scale.y = t.h / t.w; s.add(m); if (id.includes('flower')) { for (let i = 0; i < 4; i++) { const f = new THREE.Mesh(new THREE.SphereGeometry(0.1, 4, 3), mat(0xf2d0e0)); f.position.set(p.x + Math.sin(i * 1.7) * 0.5 * k, t.h * 0.7 * k, p.z + Math.cos(i * 1.7) * 0.5 * k); s.add(f); } } }
+  else if (id.startsWith('hedge')) { const m = box(0.9, 1.6, 3.4, 0x3f6b34, p.x, p.z, 0); }
+  else if (id.startsWith('boulder') || id.startsWith('rock')) { const t = sz ?? { w: 2, h: 1.5 }; const m = new THREE.Mesh(new THREE.DodecahedronGeometry(t.w * 0.5 * k, 0), mat(0x8a8a90, true)); m.position.set(p.x, t.h * 0.35 * k, p.z); m.scale.y = t.h / t.w; s.add(m); }
+  else if (id.startsWith('grass')) { const m = new THREE.Mesh(new THREE.ConeGeometry(0.25 * k, 0.6 * k, 4), mat(0x7aa04a)); m.position.set(p.x, 0.3 * k, p.z); s.add(m); }
+  else if (id.startsWith('flower')) { const col = { yellow: 0xe8d85a, white: 0xf2f2f2, purple: 0xc86ad0, red: 0xe86a5a }[id.split('-')[2]]; const m = new THREE.Mesh(new THREE.SphereGeometry(0.3 * k, 5, 4), mat(col)); m.position.set(p.x, 0.3, p.z); m.scale.y = 0.6; s.add(m); }
+  else if (id === 'post_lantern') { box(0.15, 3.4, 0.15, 0x2b2b2b, p.x, p.z); box(0.45, 0.45, 0.45, 0xffc05a, p.x, p.z, 0, 3.4); }
+  else { const t = sz ?? { w: 1, d: 1, h: 0.9 }; const dim = sz ? [t.w, t.h, t.d] : [1, 0.9, 1]; box(dim[0] * k, dim[1] * k, dim[2] * k, 0x8a6a40, p.x, p.z, p.yaw * Math.PI / 180); }
+}
+const c = table.cameras[view]; const cam = new THREE.PerspectiveCamera(c.fov, W / H, 0.1, 2500);
+cam.position.set(c.pos[0], c.pos[1], c.pos[2]); cam.lookAt(c.look[0], c.look[1], c.look[2]);
+r.render(s, cam); window.__done = true;
+</script>
