@@ -15,6 +15,9 @@ export const MOVE_SFX: Readonly<Record<string, Act2SfxKey>> = {
 };
 
 export const GOLEM_KIND = 'cinder-golem';
+export const CRAWLER_KIND = 'slag-crawler';
+/** The id prefix of the Weeping Bellows' valve wheels (`valve:<valvePrefix>-<n>`); the Slagmaw's and the mines' wheels are not these. */
+export const BELLOWS_VALVE_PREFIX = 'valve:bellows-';
 /** The puzzle id of the Weeping Bellows (A9; `BELLOWS.puzzleId`). */
 export const BELLOWS_PUZZLE_ID = 'weeping-bellows';
 
@@ -32,6 +35,8 @@ export interface Act2SfxPorts {
   actor(id: string): { kind: string; position: Point | null } | undefined;
   /** `waves.structure(id)`. */
   structure(id: string): { kind: 'cart' | 'barricade'; maxHealth: number } | undefined;
+  /** Called with a key just before it is played, so a lazily rendered sound can be registered first. */
+  ensure?(key: Act2SfxKey): void;
 }
 
 /**
@@ -39,6 +44,7 @@ export interface Act2SfxPorts {
  * event to the matching method. A missing audio service, or a key nobody registered, is a silent no-op.
  */
 export class Act2SfxRouter {
+  private readonly lastHealth = new Map<string, number>();
   constructor(private readonly ports: Act2SfxPorts) {}
 
   /** `telegraph`: a ground enemy's wind-up. */
@@ -59,6 +65,7 @@ export class Act2SfxRouter {
 
   /** `cooling.hit`: a slag crawler quenched. */
   cooled(e: { actorId: string }): void {
+    if (this.ports.actor(e.actorId)?.kind !== CRAWLER_KIND) return;
     this.at('sfx.crawler.hiss', e.actorId);
   }
 
@@ -66,8 +73,12 @@ export class Act2SfxRouter {
   structureDamaged(e: { id: string; health: number }): void {
     const s = this.ports.structure(e.id);
     if (!s) return;
-    if (s.kind === 'barricade') this.flat('sfx.barricade.ram');
-    else if (e.health < s.maxHealth) this.flat('sfx.cart.hit');
+    if (s.kind === 'barricade') {
+      // The wave start (`announce`) and a restart (`restore`) emit this at full health: only a drop is a ram.
+      const last = this.lastHealth.get(e.id) ?? s.maxHealth;
+      this.lastHealth.set(e.id, e.health);
+      if (e.health < last) this.flat('sfx.barricade.ram');
+    } else if (e.health < s.maxHealth) this.flat('sfx.cart.hit');
   }
 
   /** `structure.destroyed`. */
@@ -78,8 +89,8 @@ export class Act2SfxRouter {
   }
 
   /** `interact`: a valve wheel turned. */
-  interact(e: { kind: string; action: string }): void {
-    if (e.kind === 'valve' && e.action === 'interact') this.flat('sfx.bellows.valve');
+  interact(e: { kind: string; action: string; interactableId?: string }): void {
+    if (e.kind === 'valve' && e.action === 'interact' && e.interactableId?.startsWith(BELLOWS_VALVE_PREFIX)) this.flat('sfx.bellows.valve');
   }
 
   /** `puzzle.state`: the Bellows pressure clock starts. */
@@ -99,6 +110,7 @@ export class Act2SfxRouter {
 
   private flat(key: Act2SfxKey): void {
     try {
+      this.ports.ensure?.(key);
       this.ports.audio()?.play(key);
     } catch {
       // an unregistered key is silent
@@ -109,6 +121,7 @@ export class Act2SfxRouter {
     const audio = this.ports.audio();
     if (!audio) return;
     try {
+      this.ports.ensure?.(key);
       const p = this.ports.actor(actorId)?.position;
       if (p) audio.playAt(key, p);
       else audio.play(key);

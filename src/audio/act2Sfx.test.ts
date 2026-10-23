@@ -29,7 +29,9 @@ function fakeCtx(opts: { audio?: boolean } = { audio: true }) {
       get: (id: string) =>
         id === 'golem#1'
           ? { kind: 'cinder-golem', root: {}, worldPosition: (v: { set: (x: number, y: number, z: number) => void }) => (v.set(1, 2, 3), v) }
-          : id === 'crawler#1'
+          : id === 'slagmaw#1'
+            ? { kind: 'the-slagmaw', root: null, worldPosition: (v: unknown) => v }
+            : id === 'crawler#1'
             ? { kind: 'slag-crawler', root: null, worldPosition: (v: unknown) => v }
             : undefined,
     },
@@ -47,10 +49,12 @@ function fakeCtx(opts: { audio?: boolean } = { audio: true }) {
 const setup = (c: ReturnType<typeof fakeCtx>) => (plugin.setup as (ctx: unknown) => void)(c.ctx);
 
 beforeEach(() => {
+  vi.useFakeTimers();
   vi.stubGlobal('URL', { createObjectURL: () => 'blob:test', revokeObjectURL: () => {} });
 });
 afterEach(() => {
   plugin.dispose?.();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -73,9 +77,38 @@ describe('act2 sfx keys', () => {
     }
   });
 
+  it('renders lazily: nothing is rendered or registered during setup, the idle slices then register every key', () => {
+    const c = fakeCtx();
+    setup(c);
+    expect(c.registered).toEqual([]);
+    vi.advanceTimersToNextTimer();
+    expect(c.registered).toHaveLength(1);
+    vi.runAllTimers();
+    expect(c.registered).toHaveLength(ACT2_SFX_KEYS.length);
+  });
+
+  it('renders a key at once when it is about to be played before its slice', () => {
+    const c = fakeCtx();
+    setup(c);
+    c.emit('puzzle.solved', { id: 'weeping-bellows' });
+    expect(c.registered.map((r) => r.key)).toEqual(['sfx.bellows.solved']);
+    expect(c.played).toEqual(['sfx.bellows.solved']);
+    vi.runAllTimers();
+    expect(c.registered.filter((r) => r.key === 'sfx.bellows.solved')).toHaveLength(1);
+  });
+
+  it('stops rendering on dispose', () => {
+    const c = fakeCtx();
+    setup(c);
+    plugin.dispose?.();
+    vi.runAllTimers();
+    expect(c.registered).toEqual([]);
+  });
+
   it('registers every key once, with its volume', () => {
     const c = fakeCtx();
     setup(c);
+    vi.runAllTimers();
     expect(c.registered.map((r) => r.key).sort()).toEqual([...ACT2_SFX_KEYS].sort());
     for (const r of c.registered) expect(r.def.volume).toBe(ACT2_SFX_VOLUME[r.key as (typeof ACT2_SFX_KEYS)[number]]);
   });
@@ -95,6 +128,7 @@ describe('slagmaw sounds', () => {
   it('registers all six with a volume, and each renders a real, finite, deterministic sound of its own', () => {
     const c = fakeCtx();
     setup(c);
+    vi.runAllTimers();
     const reg = new Map(c.registered.map((r) => [r.key, r.def.volume]));
     const renders = SIX.map((key) => {
       expect(reg.get(key), key).toBe(ACT2_SFX_VOLUME[key as keyof typeof ACT2_SFX_VOLUME]);
@@ -159,6 +193,11 @@ describe('act2 sfx hooks', () => {
     setup(c);
     c.emit('cooling.hit', { actorId: 'crawler#1', kind: 'draught' });
     expect(c.played).toEqual(['sfx.crawler.hiss']);
+    // The Slagmaw's own cooling hit (and any other non-crawler) is silent here.
+    c.emit('cooling.hit', { actorId: 'slagmaw#1', kind: 'valve' });
+    c.emit('cooling.hit', { actorId: 'unknown', kind: 'valve' });
+    expect(c.played).toEqual(['sfx.crawler.hiss']);
+    expect(c.playedAt).toEqual([]);
   });
 
   it('plays the barricade ram, cart hit (not its spawn event), cart break and barricade fall', () => {
@@ -174,11 +213,26 @@ describe('act2 sfx hooks', () => {
     expect(c.played).toEqual(['sfx.barricade.ram', 'sfx.cart.hit', 'sfx.cart.break', 'sfx.barricade.fall']);
   });
 
+  it('does not ram on a barricade announce or restore at full health, only on a drop', () => {
+    const c = fakeCtx();
+    setup(c);
+    c.emit('structure.damaged', { id: 'barricade', health: 300 });
+    c.emit('structure.damaged', { id: 'barricade', health: 300 });
+    expect(c.played).toEqual([]);
+    c.emit('structure.damaged', { id: 'barricade', health: 250 });
+    c.emit('structure.damaged', { id: 'barricade', health: 300 }); // restore
+    c.emit('structure.damaged', { id: 'barricade', health: 300 }); // next wave announce
+    c.emit('structure.damaged', { id: 'barricade', health: 290 });
+    expect(c.played).toEqual(['sfx.barricade.ram', 'sfx.barricade.ram']);
+  });
+
   it('plays the Bellows valve, pressure hiss, solved chime and failed vent, only for its puzzle', () => {
     const c = fakeCtx();
     setup(c);
     c.emit('interact', { interactableId: 'valve:bellows-1', kind: 'valve', actorId: 'player', action: 'interact' });
     c.emit('interact', { interactableId: 'valve:bellows-1', kind: 'valve', actorId: 'player', action: 'mercy' });
+    // Other wheels (the Slagmaw's, the mine pools') have their own sounds.
+    c.emit('interact', { interactableId: 'deepdelve.slagmaw.valve.1', kind: 'valve', actorId: 'player', action: 'interact' });
     c.emit('interact', { interactableId: 'chest:1', kind: 'chest', actorId: 'player', action: 'interact' });
     c.emit('puzzle.state', { id: 'weeping-bellows', phase: 'pressure' });
     c.emit('puzzle.state', { id: 'weeping-bellows', phase: 'lighting' });

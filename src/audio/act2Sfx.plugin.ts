@@ -25,19 +25,39 @@ const plugin: GamePlugin = {
   setup(ctx) {
     const offs: Array<() => void> = [];
     const audio = ctx.services.get('audio');
-    if (audio && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
-      const urls: string[] = [];
-      for (const key of ACT2_SFX_KEYS) {
-        try {
-          const url = samplesToWavUrl(samples(key));
-          urls.push(url);
-          audio.register(key, { src: [url], format: ['wav'], volume: ACT2_SFX_VOLUME[key] });
-        } catch (err) {
-          console.warn(`[act2-sfx] sound ${key} not registered (${String(err)})`);
-        }
+    // The sounds render lazily (about a second of synthesis in all): one key per idle slice after setup, and a key the
+    // router is about to play is rendered at once if its slice has not come yet.
+    const urls: string[] = [];
+    const done = new Set<string>();
+    const ensure = (key: (typeof ACT2_SFX_KEYS)[number]) => {
+      const a = ctx.services.get('audio');
+      if (!a || done.has(key)) return;
+      done.add(key);
+      try {
+        const url = samplesToWavUrl(samples(key));
+        urls.push(url);
+        a.register(key, { src: [url], format: ['wav'], volume: ACT2_SFX_VOLUME[key] });
+      } catch (err) {
+        console.warn(`[act2-sfx] sound ${key} not registered (${String(err)})`);
       }
+    };
+    const canRender = !!audio && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function';
+    if (canRender) {
+      let i = 0;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const slice = () => {
+        timer = null;
+        const key = ACT2_SFX_KEYS[i++];
+        if (key === undefined) return;
+        ensure(key);
+        timer = setTimeout(slice, 0);
+      };
+      timer = setTimeout(slice, 0);
       offs.push(() => {
-        for (const u of urls) URL.revokeObjectURL(u);
+        if (timer !== null) clearTimeout(timer);
+        timer = null;
+        i = ACT2_SFX_KEYS.length;
+        for (const u of urls.splice(0)) URL.revokeObjectURL(u);
       });
     }
 
@@ -50,6 +70,9 @@ const plugin: GamePlugin = {
         return { kind: a.kind, position: a.root ? a.worldPosition(tmp) : null };
       },
       structure: (id) => ctx.services.get('waves')?.structure(id),
+      ensure: (key) => {
+        if (canRender) ensure(key);
+      },
     });
     const ev = ctx.events;
     offs.push(
