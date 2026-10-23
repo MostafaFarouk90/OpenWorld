@@ -35,10 +35,24 @@ export class SlagmawDirector {
     SlagmawEncounter
   >;
   private warnedPlaces = false;
+  /** The last attempt could not mount its valves: stay unarmed (no retry every interval) until the next trigger enter. */
+  private mountFailed = false;
+  private readonly offs: (() => void)[] = [];
 
   constructor(ctx: GameContext, opts: SlagmawDirectorOptions = {}) {
     const warn =
       opts.warn ?? ((m: string) => console.warn(`[the-slagmaw] ${m}`));
+    // Registered before the arena's own enter handler, so a fresh enter clears the failure before the arena re-arms.
+    const player = () => ctx.player.actor.id;
+    this.offs.push(
+      ctx.events.on("trigger.enter", (e) => {
+        if (e.triggerId === ARENA.arenaTrigger && e.actorId === player())
+          this.mountFailed = false;
+      }),
+      ctx.events.on("actor.died", (e) => {
+        if (e.actorId === player()) this.mountFailed = false;
+      }),
+    );
     const veil = new AshVeil(14, 3);
     (veil.mesh.material as THREE.MeshBasicMaterial).color.setHex(
       LOOK.veilColor,
@@ -69,16 +83,21 @@ export class SlagmawDirector {
         },
       },
       places: () => this.places(ctx, warn),
-      makeEncounter: (places, model, onEnd) =>
-        new SlagmawEncounter(ctx, {
+      makeEncounter: (places, model, onEnd) => {
+        const encounter: SlagmawEncounter = new SlagmawEncounter(ctx, {
           model,
           places,
           warn,
-          onEnd: () => onEnd(),
-        }),
+          onEnd: () => {
+            if (encounter.mountFailed) this.mountFailed = true;
+            onEnd();
+          },
+        });
+        return encounter;
+      },
       makeModel: opts.makeModel,
       modelState: opts.modelState,
-      armed: () => ctx.state.hasFlag(D04_STARTED_FLAG),
+      armed: () => !this.mountFailed && ctx.state.hasFlag(D04_STARTED_FLAG),
       // A4's gate blocker is not on main: the arena's own radial clearance stands until its rect is known.
       gateClear: () => true,
       insideForReload: (feet) => {
@@ -111,6 +130,7 @@ export class SlagmawDirector {
   }
 
   dispose(): void {
+    for (const off of this.offs.splice(0)) off();
     this.arena.dispose();
   }
 

@@ -126,7 +126,6 @@ describe('register and state', () => {
     ['breaks 0', { breaksPerPhase: 0 }],
     ['breaks 1.5', { breaksPerPhase: 1.5 }],
     ['breaks NaN', { breaksPerPhase: NaN }],
-    ['window 0', { releaseWindowSeconds: 0 }],
     ['window NaN', { releaseWindowSeconds: NaN }],
     ['window -1', { releaseWindowSeconds: -1 }],
   ] as [string, Partial<BossDef>][])('rejects invalid def: %s', (_n, patch) => {
@@ -189,6 +188,26 @@ describe('breaks', () => {
     expect(of('boss.break').at(-1)).toEqual({ bossId: 'ashen-prior', phase: 2, breaks: 3, last: true });
     expect(of('boss.releaseWindow')).toEqual([{ bossId: 'ashen-prior', open: true }]);
     expect(bosses.state('ashen-prior')!.releaseOpen).toBe(true);
+  });
+});
+
+describe('releaseWindowSeconds 0 (no window)', () => {
+  it('a last break still emits but opens no window; nothing to release', () => {
+    const m = started({ ...DEF, releaseWindowSeconds: 0 });
+    m.hit(60);
+    m.stagger();
+    m.stagger();
+    m.stagger();
+    expect(m.of('boss.break').at(-1)).toEqual({ bossId: 'ashen-prior', phase: 2, breaks: 3, last: true });
+    expect(m.of('boss.releaseWindow')).toHaveLength(0);
+    expect(m.bosses.state('ashen-prior')!.releaseOpen).toBe(false);
+    expect(m.bosses.release('ashen-prior')).toBe(false);
+    expect(m.bosses.mercyState('ashen-prior')).toBe('none');
+    m.stagger();
+    expect(m.of('boss.break').at(-1)).toMatchObject({ breaks: 4, last: true });
+    expect(m.of('boss.releaseWindow')).toHaveLength(0);
+    m.hit(500);
+    expect(m.state.getString('boss.ashen-prior.outcome')).toBe('defeated');
   });
 });
 

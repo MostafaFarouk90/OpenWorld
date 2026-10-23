@@ -28,12 +28,6 @@ import {
 export const SLAGMAW_FLOOR_MODIFIER_ID = "bosses.slagmaw.floor";
 export const SLAGMAW_CRUST_MODIFIER_ID = "bosses.slagmaw.crust";
 
-/**
- * The registry refuses a zero window, and its `last` break always opens one. The Slagmaw has no mercy (no `BOSS_MERCY` row, so
- * nothing offers a Release), so the window is the smallest the registry allows: it closes on its next tick.
- */
-export const SLAGMAW_WINDOW_SECONDS = 0.001;
-
 export const SLAGMAW_BOSS_DEF: BossDef = {
   bossId: SLAGMAW_BOSS_ID,
   nameKey: SLAGMAW_NAME_KEY,
@@ -41,10 +35,8 @@ export const SLAGMAW_BOSS_DEF: BossDef = {
   breaksPerPhase: SLAGMAW.breaksPerPhase,
   shield: false,
   shieldBreakers: [],
-  releaseWindowSeconds: Math.max(
-    SLAGMAW.releaseWindowSeconds,
-    SLAGMAW_WINDOW_SECONDS,
-  ),
+  // The Slagmaw has no mercy (no `BOSS_MERCY` row): 0 = the registry opens no release window on the `last` break.
+  releaseWindowSeconds: SLAGMAW.releaseWindowSeconds,
 };
 
 /** How many globs can be in the air at once (one spit every 1.4 s or slower, a 24 m range at 13 m/s). */
@@ -132,6 +124,8 @@ export class SlagmawEncounter implements SlagmawHooks {
   private coolT = 0;
   /** The valve whose douse is spraying (index), or -1. */
   private douseValve = -1;
+  /** `mountValves` threw in `register()`: the director stops arming until the next trigger enter. */
+  mountFailed = false;
   private douseT = 0;
   private outcomeT = 0;
   private outcomePlayingFlag = false;
@@ -209,9 +203,10 @@ export class SlagmawEncounter implements SlagmawHooks {
           this.actor.restorePoise();
           return;
         }
-        // The break belongs to the valve that cooled him, even when the same hit crossed a phase threshold.
+        // The break belongs to the valve that cooled him (it is spent), even when the same hit crossed a phase threshold. A cooled
+        // `last` break lifts the floor whichever valve cooled him: a hit that jumped phases can make valve 1 or 2 the last one.
         const valve = this.valves[this.douseValve];
-        if (p.last && this.douseValve === this.valves.length - 1) this.floorLifted = true;
+        if (p.last) this.floorLifted = true;
         if (valve) {
           valve.spent = true;
           valve.wheel.locked = true;
@@ -311,6 +306,7 @@ export class SlagmawEncounter implements SlagmawHooks {
       this.mountValves();
     } catch (err) {
       this.warn(`could not mount the coolant valves: ${err instanceof Error ? err.message : String(err)}`);
+      this.mountFailed = true;
       this.finish("reset");
       return false;
     }

@@ -12,7 +12,7 @@ import { killXp } from "../../progression/tuning";
 import { TerrainColliders } from "../../world/TerrainColliders";
 import { World } from "../../world/World";
 import { OUTCOME_FLAG } from "./SlagmawDirector";
-import { SLAGMAW_BOSS_DEF, SLAGMAW_WINDOW_SECONDS } from "./SlagmawEncounter";
+import { SLAGMAW_BOSS_DEF } from "./SlagmawEncounter";
 import slagmawPlugin, { slagmawDirector } from "./slagmaw.plugin";
 import {
   ARENA,
@@ -305,11 +305,10 @@ describe("The Slagmaw on the real core", () => {
     expect(t.game.systems.has("bosses.slagmaw")).toBe(false);
   });
 
-  it("the contract the registry and A12 read: no mercy row, a one-tick window, kill XP 380, name key and outcome flag", () => {
+  it("the contract the registry and A12 read: no mercy row, no release window (0), kill XP 380, name key and outcome flag", () => {
     expect(BOSS_MERCY[SLAGMAW_BOSS_ID]).toBeUndefined();
     expect(SLAGMAW_BOSS_DEF.mercyVerb).toBeUndefined();
-    expect(SLAGMAW_BOSS_DEF.releaseWindowSeconds).toBe(SLAGMAW_WINDOW_SECONDS);
-    expect(SLAGMAW_WINDOW_SECONDS).toBeLessThan(TICK);
+    expect(SLAGMAW_BOSS_DEF.releaseWindowSeconds).toBe(0);
     expect(killXp(SLAGMAW_BOSS_ID, 15, 15)).toBe(380);
     expect(OUTCOME_FLAG).toBe("boss.the-slagmaw.outcome");
   });
@@ -345,6 +344,38 @@ describe("The Slagmaw on the real core", () => {
       console.warn as unknown as { mock: { calls: unknown[][] } }
     ).mock.calls.filter((c) => String(c[0]).includes("anchors missing"));
     expect(warns).toHaveLength(1);
+    t.teardown();
+  });
+
+  it("valves that cannot mount: one warning per attempt (not per retry), no leaked valves, a fresh trigger enter tries again", async () => {
+    const t = await setup();
+    const items = (
+      t.ctx.interaction as unknown as { items: Map<string, unknown> }
+    ).items;
+    t.ctx.interaction.register({
+      id: "valve:slagmaw-1",
+      kind: "use",
+      position: (out: THREE.Vector3) => out,
+    } as never);
+    const warns = () =>
+      (console.warn as unknown as { mock: { calls: unknown[][] } }).mock.calls.filter(
+        (c) => String(c[0]).includes("coolant valves"),
+      );
+    t.enter();
+    t.run(secs(PRESENTATION.introSeconds) + 1);
+    // Several retry intervals while the player stays in the trigger.
+    t.run(secs(PRESENTATION.retrySeconds * 4 + PRESENTATION.introSeconds));
+    expect(warns()).toHaveLength(1);
+    expect(t.boss()).toBeNull();
+    expect(t.ctx.bosses.active()).toEqual([]);
+    expect(items.has("valve:slagmaw-2")).toBe(false);
+    expect(items.has("valve:slagmaw-3")).toBe(false);
+    // Leaving and re-entering is a new attempt (and warns once more).
+    t.exit();
+    t.enter();
+    t.run(secs(PRESENTATION.introSeconds) + 1);
+    t.run(secs(PRESENTATION.retrySeconds * 4 + PRESENTATION.introSeconds));
+    expect(warns()).toHaveLength(2);
     t.teardown();
   });
 
@@ -697,8 +728,9 @@ describe("The Slagmaw on the real core", () => {
     expect(u.state()!.releaseOpen).toBe(false);
     u.coolAndBreak(3);
     expect(u.of("boss.break").map((b) => b.last)).toEqual([false, false, true]);
-    // The registry needs a window; it is a single tick and nothing offers it.
+    // The def has no window at all: the event never fires and nothing offers a Release.
     u.run(2);
+    expect(u.of("boss.releaseWindow")).toEqual([]);
     expect(u.state()!.releaseOpen).toBe(false);
     expect(u.ctx.bosses.release(SLAGMAW_BOSS_ID)).toBe(false);
     u.runHealed(SLAGMAW.breakSeconds + 5);
@@ -708,6 +740,23 @@ describe("The Slagmaw on the real core", () => {
     expect(u.ctx.state.hasFlag(OUTCOME_FLAG)).toBe(false);
     expect(u.ctx.bosses.mercyState(SLAGMAW_BOSS_ID)).toBe("none");
     u.teardown();
+  });
+
+  it("a cooled last break lifts the floor whichever valve cooled him (a hit that jumps to phase 3 while valve 1 cools him)", async () => {
+    const t = await setup();
+    t.startFight();
+    t.toSurfaced();
+    t.turn(1);
+    expect(t.enc().crustCooled).toBe(true);
+    // One hit crosses both thresholds and breaks poise: the break is the last one, cooled by valve 1.
+    t.hit(1e6, SLAGMAW.maxPoise);
+    expect(t.of("boss.break").map((b) => [b.phase, b.last])).toEqual([[3, true]]);
+    expect(t.valve(1).enabled()).toBe(false);
+    t.until(() => t.boss()!.hittable);
+    t.hit(1e6, 0);
+    expect(t.of("boss.defeated")).toHaveLength(1);
+    expect(t.ctx.state.getFlag(OUTCOME_FLAG)).toBe("defeated");
+    t.teardown();
   });
 
   it("the kill: defeated, the outcome flag, no Spare; he sinks and fades, the valves go, the gate opens", async () => {

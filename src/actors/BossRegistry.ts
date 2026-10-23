@@ -17,7 +17,7 @@ export interface BossDef {
   shield?: boolean;
   /** attackIds that drop the shield, e.g. ['heartshard-surge'] (the Surge's attackId). */
   shieldBreakers?: readonly string[];
-  /** Simulated seconds the release window stays open; default 4. */
+  /** Simulated seconds the release window stays open; default 4. 0 = no window (a `last` break still emits, but opens none). */
   releaseWindowSeconds?: number;
   /**
    * v0.6: the boss's mercy verb (`BOSS_MERCY[bossId].verb`); default 'release'. `release()` maps it to the
@@ -137,8 +137,8 @@ export class BossRegistry {
       throw new Error(`BossRegistry: "${def.bossId}" breaksPerPhase must be an integer >= 1`);
     }
     const windowSeconds = def.releaseWindowSeconds ?? DEFAULT_RELEASE_WINDOW_SECONDS;
-    if (typeof windowSeconds !== 'number' || !Number.isFinite(windowSeconds) || windowSeconds <= 0) {
-      throw new Error(`BossRegistry: "${def.bossId}" releaseWindowSeconds must be a finite number > 0`);
+    if (typeof windowSeconds !== 'number' || !Number.isFinite(windowSeconds) || windowSeconds < 0) {
+      throw new Error(`BossRegistry: "${def.bossId}" releaseWindowSeconds must be a finite number >= 0`);
     }
     if (this.world.hasFlag(bossOutcomeFlag(def.bossId))) {
       throw new Error(`BossRegistry: boss "${def.bossId}" already has an outcome (${bossOutcomeFlag(def.bossId)})`);
@@ -340,7 +340,7 @@ export class BossRegistry {
     boss.breaks++;
     const last = boss.phase === boss.thresholds.length + 1 && boss.breaks >= boss.def.breaksPerPhase;
     this.events.emit('boss.break', { bossId: boss.def.bossId, phase: boss.phase, breaks: boss.breaks, last });
-    if (last) {
+    if (last && boss.windowSeconds > 0) {
       const wasOpen = boss.windowOpen;
       boss.windowLeft = boss.windowSeconds;
       boss.windowOpen = true;
