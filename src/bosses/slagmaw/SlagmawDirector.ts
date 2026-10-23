@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { bossOutcomeFlag } from "../../actors/BossRegistry";
 import type { GameContext } from "../../core/Game";
+import { DEEPDELVE_DEF } from "../../oldsmoke/mines/deepdelve";
 import { BossArena, type BossModelState } from "../arena/BossArena";
 import { AshVeil } from "../prior/priorFx";
 import { SlagmawEncounter, type SlagmawPlaces } from "./SlagmawEncounter";
@@ -25,8 +26,8 @@ export interface SlagmawDirectorOptions {
 /**
  * The D04 fight's lifecycle around one SlagmawEncounter (plans/act2-A8.md, "PR 2"), on the shared boss arena: A4's Deepdelve arena
  * trigger, armed only once `story.d04.started` is set (re-checked while the player stands in the trigger), the intro and the
- * rumble, the gate and its veil, and the reload rule inside the arena rectangle only. A4's anchors are not on main yet: with
- * any of them missing the director warns once and the fight does not start.
+ * rumble, the gate and its veil (both fitted to A4's real 4 m gate blocker), and the reload rule inside the arena rectangle
+ * only. With any of the anchors missing the director warns once and the fight does not start.
  */
 export class SlagmawDirector {
   private readonly arena: BossArena<
@@ -53,7 +54,7 @@ export class SlagmawDirector {
         if (e.actorId === player()) this.mountFailed = false;
       }),
     );
-    const veil = new AshVeil(14, 3);
+    const veil = new AshVeil(ARENA.veilWidth, ARENA.veilHeight);
     (veil.mesh.material as THREE.MeshBasicMaterial).color.setHex(
       LOOK.veilColor,
     );
@@ -68,6 +69,7 @@ export class SlagmawDirector {
       gate: ARENA.gate,
       gateClearance: ARENA.gateClearance,
       veilOffset: ARENA.veilOffset,
+      veilPlacement: () => gateVeil(ctx),
       introSource: INTRO_SOURCE,
       veil,
       intro: {
@@ -98,8 +100,7 @@ export class SlagmawDirector {
       makeModel: opts.makeModel,
       modelState: opts.modelState,
       armed: () => !this.mountFailed && ctx.state.hasFlag(D04_STARTED_FLAG),
-      // A4's gate blocker is not on main: the arena's own radial clearance stands until its rect is known.
-      gateClear: () => true,
+      gateClear: (feet) => gateIsClear(ctx, feet),
       insideForReload: (feet) => {
         const c = ctx.anchors.find(ARENA.centre);
         if (!c) return false;
@@ -162,4 +163,52 @@ export class SlagmawDirector {
       ),
     };
   }
+}
+
+/** A4's gate blocker rect and door anchor, in Deepdelve-local metres. */
+function localGate() {
+  const gate = DEEPDELVE_DEF.blockers?.find((b) => b.id === ARENA.gate)?.rect;
+  const door = DEEPDELVE_DEF.anchors.find((a) => a.id === ARENA.arenaDoor);
+  return gate && door ? { gate, door } : null;
+}
+
+/**
+ * The veil across A4's real gate: the blocker rect's centre, spanning its long side (the Deepdelve gate runs along z, so the
+ * veil turns a quarter). Interiors are placed by translation only, so the door anchor gives the local-to-world offset.
+ */
+export function gateVeil(
+  ctx: Pick<GameContext, "anchors">,
+): { at: THREE.Vector3Like; yaw: number } | null {
+  const local = localGate();
+  const door = ctx.anchors.find(ARENA.arenaDoor);
+  if (!local || !door) return null;
+  const { gate } = local;
+  const ox = door.position.x - local.door.x;
+  const oz = door.position.z - local.door.z;
+  const at = {
+    x: (gate.x0 + gate.x1) / 2 + ox,
+    y: door.position.y,
+    z: (gate.z0 + gate.z1) / 2 + oz,
+  };
+  const yaw = gate.x1 - gate.x0 >= gate.z1 - gate.z0 ? 0 : Math.PI / 2;
+  return { at, yaw };
+}
+
+/** The capsule half-width plus a margin: the gate closes only when the player stands this far past its arena side. */
+export const GATE_MARGIN = 0.8;
+
+/**
+ * Where the gate may close: the player is wholly on the arena side of the blocker rect (the arena lies east, at larger x), by
+ * `GATE_MARGIN`. The trigger starts only 0.5 m past the rect, so the arena's radial clearance alone could shut the blocker on
+ * a player standing in it. Unknown anchors: clear (the arena's own checks stand).
+ */
+export function gateIsClear(
+  ctx: Pick<GameContext, "anchors">,
+  feet: THREE.Vector3Like,
+): boolean {
+  const local = localGate();
+  const door = ctx.anchors.find(ARENA.arenaDoor);
+  if (!local || !door) return true;
+  const ox = door.position.x - local.door.x;
+  return feet.x >= local.gate.x1 + ox + GATE_MARGIN;
 }

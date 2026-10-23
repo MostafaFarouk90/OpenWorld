@@ -11,7 +11,19 @@ import { PhysicsWorld } from "../../physics/PhysicsWorld";
 import { killXp } from "../../progression/tuning";
 import { TerrainColliders } from "../../world/TerrainColliders";
 import { World } from "../../world/World";
-import { OUTCOME_FLAG } from "./SlagmawDirector";
+import { layoutInterior } from "../../interiors/layout";
+import {
+  DEEPDELVE_ARENA,
+  DEEPDELVE_ARENA_TRIGGER,
+  DEEPDELVE_DEF,
+} from "../../oldsmoke/mines/deepdelve";
+import { heightAt } from "../../terrain/heightfield";
+import {
+  GATE_MARGIN,
+  gateIsClear,
+  gateVeil,
+  OUTCOME_FLAG,
+} from "./SlagmawDirector";
 import { SLAGMAW_BOSS_DEF, SLAGMAW_WINDOW_SECONDS } from "./SlagmawEncounter";
 import slagmawPlugin, { slagmawDirector } from "./slagmaw.plugin";
 import {
@@ -99,8 +111,12 @@ type Opts = {
   flag?: boolean;
   model?: boolean;
   interior?: string | null;
-  anchors?: boolean;
+  /** false: none; "deepdelve": A4's real layout, translated so the arena centre sits on the player's spawn. */
+  anchors?: boolean | "deepdelve";
 };
+
+/** A4's Deepdelve laid out the way the interiors plugin does it (translation only), for the real anchors and trigger. */
+const DEEPDELVE_LAYOUT = layoutInterior(DEEPDELVE_DEF, heightAt);
 
 async function setup(opts: Opts = {}) {
   const scene = new THREE.Scene();
@@ -157,13 +173,48 @@ async function setup(opts: Opts = {}) {
   const run = (n: number) => {
     for (let i = 0; i < n; i++) game.fixedUpdate();
   };
+  /** Ticks and renders, so the player's root follows their feet and the real trigger volumes see them. */
+  const walk = (n: number) => {
+    for (let i = 0; i < n; i++) {
+      game.fixedUpdate();
+      game.render(1, TICK);
+    }
+  };
   run(2);
   const p = ctx.player.feet.clone();
-  // Door 6 m behind the player (+Z), centre 9 m ahead, the three valves a few metres around the player.
+  // Deepdelve's arena runs east: door 7 m behind the player (-X, so they stand 1.2 m clear of the gate rect), centre 9 m ahead
+  // (+X), the three valves a few metres around the player.
   const at = (dx: number, dz: number) => ({ x: p.x + dx, y: p.y, z: p.z + dz });
-  if (opts.anchors !== false) {
-    ctx.anchors.define({ id: ARENA.arenaDoor, position: at(0, 6), yaw: 0 });
-    ctx.anchors.define({ id: ARENA.centre, position: at(0, -9), yaw: 0 });
+  /** Deepdelve-local metres to world, for the "deepdelve" anchors (identity offset otherwise unused). */
+  let local = (x: number, z: number) => ({ x, y: p.y, z });
+  if (opts.anchors === "deepdelve") {
+    const c = DEEPDELVE_LAYOUT.anchors.find((a) => a.id === ARENA.centre)!;
+    const o = DEEPDELVE_LAYOUT.origin;
+    // The layout's floor 5 cm under the feet (the player rests on the floor; A4's trigger bottom is flush with it).
+    const shift = { x: p.x - c.position.x, y: p.y - c.position.y - 0.05, z: p.z - c.position.z };
+    local = (x, z) => ({ x: o.x + x + shift.x, y: p.y, z: o.z + z + shift.z });
+    const ids = [ARENA.arenaDoor, ARENA.centre, ARENA.gate, ...ARENA.valves];
+    for (const a of DEEPDELVE_LAYOUT.anchors.filter((x) => ids.includes(x.id)))
+      ctx.anchors.define({
+        id: a.id,
+        position: { x: a.position.x + shift.x, y: a.position.y + shift.y, z: a.position.z + shift.z },
+        yaw: a.yaw,
+      });
+    // Start at the door, outside the trigger, before the trigger exists.
+    ctx.player.teleport(local(145, -20), -Math.PI / 2);
+    walk(2);
+    const trg = DEEPDELVE_LAYOUT.triggers.find((x) => x.id === ARENA.arenaTrigger)!;
+    ctx.triggers.add({
+      id: trg.id,
+      shape: {
+        type: "box",
+        center: { x: trg.center.x + shift.x, y: trg.center.y + shift.y, z: trg.center.z + shift.z },
+        half: trg.half,
+      },
+    });
+  } else if (opts.anchors !== false) {
+    ctx.anchors.define({ id: ARENA.arenaDoor, position: at(-7, 0), yaw: -Math.PI / 2 });
+    ctx.anchors.define({ id: ARENA.centre, position: at(9, 0), yaw: -Math.PI / 2 });
     ctx.anchors.define({ id: ARENA.valves[0], position: at(3, 0), yaw: 0 });
     ctx.anchors.define({ id: ARENA.valves[1], position: at(-3, 0), yaw: 0 });
     ctx.anchors.define({ id: ARENA.valves[2], position: at(0, 3), yaw: 0 });
@@ -288,6 +339,8 @@ async function setup(opts: Opts = {}) {
     moveModifiers,
     teardown,
     at,
+    local,
+    walk,
   };
 }
 
@@ -924,6 +977,124 @@ describe("The Slagmaw on the real core", () => {
     t.ctx.damage.kill(t.ctx.player.actor.id);
     t.run(2);
     expect(view.root.parent).toBeNull();
+    t.teardown();
+  });
+
+  it("A8's ids are A4's Deepdelve ids, and the arena constants fit its real 30 x 30 m floor and valves", () => {
+    expect(DEEPDELVE_DEF.id).toBe(ARENA.interiorId);
+    expect(DEEPDELVE_ARENA_TRIGGER).toBe(ARENA.arenaTrigger);
+    expect(DEEPDELVE_DEF.blockers.map((b) => b.id)).toContain(ARENA.gate);
+    const local = (id: string) => DEEPDELVE_DEF.anchors.find((a) => a.id === id)!;
+    const c = local(ARENA.centre);
+    const half = (DEEPDELVE_ARENA.x1 - DEEPDELVE_ARENA.x0) / 2;
+    expect(c.x).toBe((DEEPDELVE_ARENA.x0 + DEEPDELVE_ARENA.x1) / 2);
+    expect(c.z).toBe((DEEPDELVE_ARENA.z0 + DEEPDELVE_ARENA.z1) / 2);
+    // Reload covers the floor exactly; eruptions stay 2 m off the walls.
+    expect(ARENA.reloadHalfExtent).toBe(half);
+    expect(ARENA.arenaHalfExtent).toBeLessThanOrEqual(half - 2);
+    const valves = ARENA.valves.map(local);
+    for (const v of valves) {
+      expect(Math.abs(v.x - c.x)).toBeLessThanOrEqual(ARENA.arenaHalfExtent);
+      expect(Math.abs(v.z - c.z)).toBeLessThanOrEqual(ARENA.arenaHalfExtent);
+    }
+    // No two valve sprays overlap, so a cool is always the valve the player turned.
+    for (let i = 0; i < valves.length; i++)
+      for (let j = i + 1; j < valves.length; j++)
+        expect(
+          Math.hypot(valves[i].x - valves[j].x, valves[i].z - valves[j].z),
+        ).toBeGreaterThan(2 * COOLING.radius);
+  });
+
+  it("gateIsClear and gateVeil follow the door anchor's translation onto A4's gate rect", () => {
+    const anchors = new Map<string, { position: THREE.Vector3Like; yaw: number }>();
+    const ctx = { anchors: { find: (id: string) => anchors.get(id) } } as never;
+    expect(gateIsClear(ctx, { x: 0, y: 0, z: 0 })).toBe(true);
+    expect(gateVeil(ctx)).toBeNull();
+    const gate = DEEPDELVE_DEF.blockers.find((b) => b.id === ARENA.gate)!.rect;
+    const door = DEEPDELVE_DEF.anchors.find((a) => a.id === ARENA.arenaDoor)!;
+    const o = { x: 1000, y: 7, z: -500 };
+    anchors.set(ARENA.arenaDoor, { position: { x: door.x + o.x, y: o.y, z: door.z + o.z }, yaw: 0 });
+    const edge = gate.x1 + o.x + GATE_MARGIN;
+    expect(gateIsClear(ctx, { x: edge - 0.01, y: o.y, z: door.z + o.z })).toBe(false);
+    expect(gateIsClear(ctx, { x: edge, y: o.y, z: door.z + o.z })).toBe(true);
+    const v = gateVeil(ctx)!;
+    expect(v.at.x).toBeCloseTo((gate.x0 + gate.x1) / 2 + o.x);
+    expect(v.at.z).toBeCloseTo((gate.z0 + gate.z1) / 2 + o.z);
+    expect(v.at.y).toBe(o.y);
+    // The rect runs along z: the veil turns a quarter to span it.
+    expect(v.yaw).toBeCloseTo(Math.PI / 2);
+    expect(ARENA.veilWidth).toBeGreaterThanOrEqual(gate.z1 - gate.z0);
+    expect(ARENA.veilWidth).toBeLessThanOrEqual(gate.z1 - gate.z0 + 1);
+  });
+
+  it("Deepdelve: a player frozen at the trigger edge, inside the gate's reach, keeps it open; one step clear closes it with the veil on the gate", async () => {
+    const t = await setup({ anchors: "deepdelve" });
+    const veil = t.ctx.scene.getObjectByName("slagmaw-gate-veil")!;
+    expect(veil).toBeDefined();
+    // 0.1 m inside the trigger, 0.6 m past the blocker rect: the capsule still overlaps it.
+    t.ctx.player.teleport(t.local(150.6, -20), -Math.PI / 2);
+    t.walk(3);
+    expect(t.of("boss.started")).toEqual([]);
+    expect(slagmawDirector()!.introRunning).toBe(true);
+    t.run(secs(PRESENTATION.introSeconds) + 2);
+    expect(t.state()).not.toBeNull();
+    t.runHealed(1);
+    expect(t.interiors.log).toEqual([]);
+    expect(veil.visible).toBe(false);
+    t.ctx.player.teleport(t.local(151, -20), -Math.PI / 2);
+    t.run(3);
+    expect(t.interiors.log).toEqual([`blocker:${ARENA.gate}:true`]);
+    expect(veil.visible).toBe(true);
+    const at = t.local(149.25, -20);
+    expect(veil.position.x).toBeCloseTo(at.x);
+    expect(veil.position.z).toBeCloseTo(at.z);
+    expect(veil.rotation.y).toBeCloseTo(Math.PI / 2);
+    const geo = (veil as THREE.Mesh).geometry as THREE.PlaneGeometry;
+    expect(geo.parameters.width).toBe(ARENA.veilWidth);
+    t.teardown();
+  });
+
+  it("Deepdelve end to end: walk in through the real trigger, intro, three phases at the real valves, the kill, the gate opens", async () => {
+    const t = await setup({ anchors: "deepdelve" });
+    expect(t.interiors.log).toEqual([]);
+    t.ctx.player.teleport(t.local(153, -20), -Math.PI / 2);
+    t.walk(3);
+    expect(t.moveModifiers.state().freeze).toBe(true);
+    t.run(secs(PRESENTATION.introSeconds) + 2);
+    expect(t.of("boss.started")).toHaveLength(1);
+    expect(t.interiors.log).toEqual([`blocker:${ARENA.gate}:true`]);
+    expect(t.enc()).not.toBeNull();
+    const phase = (n: number, below: number | null) => {
+      const v = t.ctx.anchors.find(ARENA.valves[n - 1])!.position;
+      // Stand by valve N and let him dive and come up under the player, inside its spray.
+      t.ctx.player.teleport({ x: v.x + 1, y: v.y, z: v.z }, 0);
+      t.toBurrowed();
+      t.coolAndBreak(n);
+      t.settle();
+      if (below !== null) {
+        t.toSurfaced();
+        t.toFraction(below);
+        expect(t.state()!.phase).toBe(n + 1);
+        t.settle();
+      }
+    };
+    phase(1, 0.65);
+    phase(2, 0.32);
+    phase(3, null);
+    expect(t.of("boss.break").map((b) => [b.phase, b.last])).toEqual([
+      [1, false],
+      [2, false],
+      [3, true],
+    ]);
+    t.until(() => t.boss()!.hittable);
+    t.hit(1e6, 0);
+    expect(t.of("boss.defeated")).toHaveLength(1);
+    expect(t.ctx.state.getFlag(OUTCOME_FLAG)).toBe("defeated");
+    t.run(secs(PRESENTATION.deathSeconds + PRESENTATION.deathFadeSeconds) + 5);
+    expect(t.boss()).toBeNull();
+    expect(t.of("boss.ended")).toHaveLength(1);
+    expect(t.interiors.log.at(-1)).toBe(`blocker:${ARENA.gate}:false`);
+    expect(t.ctx.scene.getObjectByName("slagmaw-gate-veil")!.visible).toBe(false);
     t.teardown();
   });
 });

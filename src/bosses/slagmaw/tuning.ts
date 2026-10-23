@@ -13,7 +13,10 @@ export const SLAGMAW_NAME_KEY = 'boss.the-slagmaw.name';
 /** A13's D04 sets this when the arena objective becomes current; the arena arms on it. */
 export const D04_STARTED_FLAG = 'story.d04.started';
 
-/** Anchors, trigger and blocker proposed to A4 PR 2 (Deepdelve). The arena floor is about 30 x 30 m and flat. */
+/**
+ * Anchors, trigger and blocker of A4's Deepdelve (src/oldsmoke/mines/deepdelve.ts). The arena floor is 30 x 30 m and flat
+ * (local x 150..180, z -35..-5, centre 165,-20); the gate is a 1.5 x 4 m blocker in the approach corridor's east end.
+ */
 export const ARENA = {
   interiorId: 'mine-deepdelve',
   arenaTrigger: 'trg.deepdelve.slagmaw.arena',
@@ -22,11 +25,16 @@ export const ARENA = {
   gate: 'deepdelve.slagmaw.arena.gate',
   /** The valve anchors, one per break. */
   valves: ['deepdelve.slagmaw.valve.1', 'deepdelve.slagmaw.valve.2', 'deepdelve.slagmaw.valve.3'] as readonly string[],
-  /** Eruptions and the worm stay inside this half-extent around the centre. */
+  /** Eruptions and the worm stay inside this half-extent around the centre: 2 m off the walls, clear of the 1 m lava rims. */
   arenaHalfExtent: 13,
+  /** The arena rectangle exactly (walls at 15 m); the gate rect and the approach lie outside it. */
   reloadHalfExtent: 15,
   gateClearance: 3.5,
+  /** Fallback only: the veil is placed on A4's gate rect (`gateVeil`). */
   veilOffset: 2,
+  /** The veil spans the 4 m gate with a little overlap into the corridor walls. */
+  veilWidth: 4.5,
+  veilHeight: 3,
 } as const;
 
 export const SLAGMAW = {
