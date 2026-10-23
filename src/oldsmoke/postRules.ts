@@ -23,12 +23,13 @@ export const OLDSMOKE_POST_RULES: PostRule[] = [
   // Pike tends the Weeping Bellows once M18 starts.
   { npcId: 'pike', home: 'npc-post.pike.shaft', posts: [{ when: { quest: 'm18', state: ['active', 'completed'] }, anchorId: 'npc-post.pike.bellows' }] },
   { npcId: 'aldous', home: 'npc-post.aldous.court', posts: [{ when: m16Done, anchorId: 'oldsmoke.hall.aldous' }] },
-  // A13 takes Wenna over from M19 (she walks the player to the Lower Galleries), so the director leaves her alone then.
+  // A13 takes Wenna over while M19 or M20 is active (she walks the player to the Lower Galleries), so the director leaves her alone then.
   {
     npcId: 'wenna',
     home: 'npc-post.wenna.court',
     posts: [{ when: m16Done, anchorId: 'oldsmoke.hall.wenna' }],
-    leaveWhen: { quest: 'm19', state: ['active', 'completed'] },
+    // M19 and M20 are A13's (the nursery, then the galleries); once both are done she is back at the hall for M21.
+    leaveWhen: { any: [{ quest: 'm19', state: 'active' }, { quest: 'm20', state: 'active' }] },
   },
   ...range(4).map((n) => ({
     npcId: `steward-hall-${n}`,

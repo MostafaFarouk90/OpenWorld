@@ -10,15 +10,14 @@ import { heightAt } from '../../terrain/heightfield';
 import { showToast } from '../../waystones/toast';
 import { buildLiftCage } from '../oldsmokeArt';
 import { SHAFT } from '../sites';
-import { MINE_DOOR_IDS, MINE_LANDINGS, type MineId } from './kit';
+import { MINE_LANDINGS, type MineId } from './kit';
 import { openLiftMenu, type LiftMenuRow } from './liftMenu';
 import { availableStops, LIFT_ARMED_FLAG, LIFT_STOPS, stopOfInterior, type LiftStop } from './liftStops';
 
 export const SURFACE_LIFT_ANCHOR = 'oldsmoke.shaft.lift.top';
 const MINES = Object.keys(MINE_LANDINGS) as MineId[];
 
-/** Every mine door opens only while the lift is mended; the integration step merges this into the interiors door locks. */
-export const MINE_DOOR_LOCKS: Readonly<Record<string, string>> = Object.fromEntries(MINES.map((m) => [MINE_DOOR_IDS[m], LIFT_ARMED_FLAG]));
+export { MINE_DOOR_LOCKS } from './kit';
 
 export const LIFT_STRINGS_EN: Record<string, string> = {
   'oldsmoke.lift.use': '{key} Use the lift',
@@ -68,7 +67,7 @@ const refusedKey = (err: unknown): string => {
  * exit leaves them in the mine, a refused enter after the exit leaves them on the surface at the shaft door.
  */
 export async function rideTo(
-  interiors: Pick<InteriorsService, 'enter' | 'exit' | 'current' | 'transitioning'>,
+  interiors: Pick<InteriorsService, 'enter' | 'exit' | 'current' | 'transitioning'> & Partial<Pick<InteriorsService, 'hostileAggro'>>,
   to: LiftStop,
   onRefused: (err: unknown) => void,
 ): Promise<boolean> {
@@ -78,6 +77,11 @@ export async function rideTo(
   }
   const from = stopOfInterior(interiors.current);
   if (from.id === to.id) return false;
+  // An exit never checks aggro but an enter does: refuse up front so the player is not left on the surface with enemies on them.
+  if (interiors.hostileAggro?.()) {
+    onRefused(new InteriorError('aggro'));
+    return false;
+  }
   try {
     if (interiors.current !== null) await interiors.exit(from.doorId ?? undefined);
     if (to.interiorId !== null && to.doorId !== null) await interiors.enter(to.interiorId, to.doorId);
@@ -127,10 +131,12 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
     riding = true;
     try {
       const down = stop.id !== 'surface';
-      toast(down ? 'oldsmoke.lift.ride.down' : 'oldsmoke.lift.ride.up');
-      // A small rumble if the vfx service is there; the ride works without it.
-      (ctx.services.get('vfx') as { shake?: (a: number, s: number) => void } | undefined)?.shake?.(0.12, 1.2);
-      await rideTo(svc, stop, (err) => toast(refusedKey(err)));
+      const went = await rideTo(svc, stop, (err) => toast(refusedKey(err)));
+      if (went) {
+        toast(down ? 'oldsmoke.lift.ride.down' : 'oldsmoke.lift.ride.up');
+        // A small rumble if the vfx service is there; the ride works without it.
+        (ctx.services.get('vfx') as { shake?: (a: number, s: number) => void } | undefined)?.shake?.(0.12, 1.2);
+      }
     } finally {
       riding = false;
     }

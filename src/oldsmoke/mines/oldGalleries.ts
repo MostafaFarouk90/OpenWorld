@@ -66,6 +66,10 @@ export const OLD_GALLERIES_DEF: InteriorDef = mineDef('old', {
     { id: 'oldsmoke.old.task.cart', x: -45, z: -38.5, yaw: 0 },
     { id: 'oldsmoke.old.task.prop', x: 0, z: -68.5, yaw: 0 },
     { id: 'oldsmoke.old.task.bell', x: 0, z: -40, yaw: 0 },
+    // Dedicated posts for A13's R08 cast and Pickett's widow's letter (a free note anchor), clear of the landing and the exit.
+    { id: 'npc-post.pickett.old', x: -3, z: -6, yaw: 0, facing: { x: 0, z: -1 } },
+    { id: 'npc-post.shift-crew.old', x: 3, z: -6, yaw: 0, facing: { x: 0, z: -1 } },
+    { id: 'oldsmoke.old.letter', x: 0, z: -9, yaw: 0 },
     // Relics, one per nook.
     { id: 'oldsmoke.old.relic.1', x: -11, z: -22, yaw: 90 },
     { id: 'oldsmoke.old.relic.2', x: 11, z: -28, yaw: 270 },

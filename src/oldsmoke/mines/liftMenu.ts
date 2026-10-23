@@ -68,6 +68,8 @@ export function openLiftMenu(ctx: MenuCtx, rows: readonly LiftMenuRow[], onChoos
       const sel = i === model.index;
       line.style.cssText = `padding:4px 10px;cursor:pointer;font:15px serif;opacity:${row.locked ? 0.45 : 1};background:${sel ? 'rgba(255,176,112,.25)' : 'transparent'}`;
       line.onmouseenter = () => {
+        // Repainting rebuilds the rows under the pointer, which would swallow a click that is in flight.
+        if (model.index === i) return;
         model.index = i;
         paint();
       };
@@ -98,7 +100,7 @@ export function openLiftMenu(ctx: MenuCtx, rows: readonly LiftMenuRow[], onChoos
     el.style.cssText = 'background:rgba(20,16,12,.92);color:#f3e6c8;padding:14px 18px;border-radius:6px;min-width:280px;border:1px solid #6b4a2a';
     paint();
   }
-  const widget = { id: LIFT_MENU_MODAL_ID, element: el as unknown as HTMLElement };
+  const widget = { id: LIFT_MENU_MODAL_ID, element: el as unknown as HTMLElement, dispose: () => close() };
   closeModal = ctx.hud.openModal(widget);
   if (!closeModal) return null;
   if (hasDom) document.addEventListener('keydown', onKey, true);

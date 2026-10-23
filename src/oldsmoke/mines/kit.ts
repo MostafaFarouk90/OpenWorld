@@ -1,5 +1,6 @@
 // Shared helpers for the Deepgate mines (A4 PR 2): where each mine interior floats, the greybox room and corridor builders and the
 // mine lighting. Every mine def is hand-authored in local metres from its lift landing (yaw 0 faces -Z, the rooms run toward -Z).
+import { LIFT_RESTORED_FLAG } from '../flags';
 import type { InteriorDef, InteriorEnvironment, LocalRect, RoomDef } from '../../interiors/types';
 
 export type MineId = 'shaft' | 'old' | 'lower' | 'bellows' | 'deepdelve';
@@ -45,6 +46,9 @@ export const MINE_LANDINGS: Readonly<Record<MineId, string>> = {
   bellows: 'oldsmoke.bellows.lift',
   deepdelve: 'oldsmoke.deepdelve.lift',
 };
+
+/** Every mine door opens only while the lift is mended (A13 writes the flag); exits never lock. `act2/index.ts` merges this into the door locks. */
+export const MINE_DOOR_LOCKS: Readonly<Record<string, string>> = Object.fromEntries(Object.values(MINE_DOOR_IDS).map((d) => [d, LIFT_RESTORED_FLAG]));
 
 export const rect = (x0: number, z0: number, x1: number, z1: number): LocalRect => ({ x0, z0, x1, z1 });
 

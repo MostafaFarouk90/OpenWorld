@@ -80,12 +80,15 @@ describe('Deepgate NPC posts', () => {
     expect(evalCondition(OLDSMOKE_POST_RULES.find((r) => r.npcId === 'steward-hall-1')!.leaveWhen, env({}, { [HALL_HOSTILE_FLAG]: true }))).toBe(true);
     for (const n of [1, 2, 3, 4]) expect(at(`steward-hall-${n}`, env()).anchorId).toBe(`oldsmoke.hall.steward.${n}`);
     expect(at('wenna', env({ m16: 'completed' })).anchorId).toBe('oldsmoke.hall.wenna');
-    // From M19 the director does not place her at all (`leaveWhen`): A13's route owns her.
+    // While M19 or M20 is active the director does not place her at all (`leaveWhen`): A13 owns her.
     const leave = OLDSMOKE_POST_RULES.find((r) => r.npcId === 'wenna')!.leaveWhen;
     expect(evalCondition(leave, env())).toBe(false);
     expect(evalCondition(leave, env({ m18: 'completed' }))).toBe(false);
     expect(evalCondition(leave, env({ m19: 'active' }))).toBe(true);
-    expect(evalCondition(leave, env({ m19: 'completed' }))).toBe(true);
+    expect(evalCondition(leave, env({ m19: 'completed' }))).toBe(false);
+    expect(evalCondition(leave, env({ m20: 'active' }))).toBe(true);
+    // Once M19 and M20 are done she is back at her hall post for M21.
+    expect(at('wenna', env({ m16: 'completed', m19: 'completed', m20: 'completed' })).anchorId).toBe('oldsmoke.hall.wenna');
   });
 
   it('shows the market\'s guards by R10 and the hall stewards unless M21 turned hostile', () => {

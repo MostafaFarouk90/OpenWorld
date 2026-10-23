@@ -67,7 +67,9 @@ export function createOldsmokePlugin(opts: OldsmokePluginOptions = {}): GamePlug
 
         // The mines: the lift, the Lower Galleries' gates and Orsk's roof. Best effort like the cast: a failure costs the mines only.
         try {
-          cleanups.push(registerLift(ctx), registerLowerGalleries(ctx), registerOrskRoof(ctx));
+          cleanups.push(registerLift(ctx));
+          cleanups.push(registerLowerGalleries(ctx));
+          cleanups.push(registerOrskRoof(ctx));
         } catch (err) {
           console.warn('oldsmoke: could not set up the mines', err);
         }

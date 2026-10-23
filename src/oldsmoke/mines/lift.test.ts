@@ -95,6 +95,13 @@ describe('rideTo sequencing', () => {
     expect(svc.current).toBeNull();
     expect((refused.mock.calls[0][0] as InteriorError).reason).toBe('locked');
   });
+  it('refuses a mine-to-mine ride under aggro before it exits, so nobody is left on the surface', async () => {
+    const { svc, calls } = fakeInteriors(MINE_IDS.old);
+    const refused = vi.fn();
+    expect(await rideTo({ ...svc, hostileAggro: () => true } as never, stopById('lower'), refused)).toBe(false);
+    expect(calls).toEqual([]);
+    expect((refused.mock.calls[0][0] as InteriorError).reason).toBe('aggro');
+  });
   it('refuses while a transition runs, and to the stop it is at', async () => {
     const { svc, calls } = fakeInteriors(MINE_IDS.old);
     const refused = vi.fn();

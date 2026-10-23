@@ -47,6 +47,9 @@ Door `mine-old-galleries`: arrives at `oldsmoke.old.lift`, leaves by `oldsmoke.o
 | oldsmoke.old.task.cart | -45 | -38.5 |
 | oldsmoke.old.task.prop | 0 | -68.5 |
 | oldsmoke.old.task.bell | 0 | -40 |
+| npc-post.pickett.old | -3 | -6 |
+| npc-post.shift-crew.old | 3 | -6 |
+| oldsmoke.old.letter | 0 | -9 |
 | oldsmoke.old.relic.1 | -11 | -22 |
 | oldsmoke.old.relic.2 | 11 | -28 |
 | oldsmoke.old.relic.3 | -55 | -51 |

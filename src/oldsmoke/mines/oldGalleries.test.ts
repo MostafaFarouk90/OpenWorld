@@ -83,6 +83,16 @@ describe('the Old Galleries', () => {
     }
   });
 
+  it('keeps the dedicated R08 posts and the letter on floor, apart from the landing and each other', () => {
+    const ids = ['npc-post.pickett.old', 'npc-post.shift-crew.old', 'oldsmoke.old.letter'];
+    const landing = local(MINE_LANDINGS.old);
+    for (const id of ids) {
+      const p = local(id);
+      expect(def.rooms.some((r) => inRect(r, p.x, p.z, 0.5)), id).toBe(true);
+      expect(Math.hypot(p.x - landing.x, p.z - landing.z), id).toBeGreaterThanOrEqual(4);
+    }
+  });
+
   it('has the exit prompt string', () => {
     expect(OLD_GALLERIES_STRINGS_EN['interior.exit.mine-old-galleries']).toBeTruthy();
     expect(def.id).toBe('mine-old-galleries');

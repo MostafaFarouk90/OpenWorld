@@ -8,6 +8,8 @@ export interface InteriorsService {
   /** Interior id, null outdoors; already set when `save.loaded` handlers run after a load into an interior. */
   readonly current: string | null;
   readonly transitioning: boolean;
+  /** True while hostile enemies are on the player (an enter would be refused with 'aggro'); lets a caller refuse before it exits. */
+  hostileAggro(): boolean;
   /** The interior whose 3D bounds contain `at`, or null. */
   interiorAt(at: Vec3): string | null;
   /** Live lock predicate for a door, read on every prompt and enter; returns the undo. */

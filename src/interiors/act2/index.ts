@@ -3,7 +3,7 @@
 import { SCORCHHOLD_KEEP_DEF, SCORCHHOLD_KEEP_DOOR_ID } from '../../cinderreach/scorchholdKeep';
 import { GRISEL_HALL_DEF, GRISEL_HALL_DOOR_ID, GRISEL_HALL_LOCK_FLAG } from '../../oldsmoke/griselHall';
 import { MINE_DEFS } from '../../oldsmoke/mines';
-import { MINE_DOOR_LOCKS } from '../../oldsmoke/mines/lift';
+import { MINE_DOOR_LOCKS } from '../../oldsmoke/mines/kit';
 import type { InteriorDef } from '../types';
 
 export const ACT2_INTERIORS: readonly InteriorDef[] = [SCORCHHOLD_KEEP_DEF, GRISEL_HALL_DEF, ...MINE_DEFS];

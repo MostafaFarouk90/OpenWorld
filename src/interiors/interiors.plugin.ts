@@ -285,6 +285,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
       return controller.transitioning;
     },
     interiorAt: (at) => controller.interiorAt(at),
+    hostileAggro: () => waystones()?.hostileAggro ?? aggro.size > 0,
     setDoorLock: (door, locked) => controller.setDoorLock(door, locked),
     setBlocker,
   };
