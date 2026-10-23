@@ -1,3 +1,6 @@
+import { BELLOWS } from '../../shrine/weepingBellows.tuning';
+import { WAYSTONE_LOCKS } from '../../waystones/tuning';
+import { BELLOWS_SOLVED_FLAG } from '../flags';
 import { describe, expect, it } from 'vitest';
 import { layoutInterior, standsIn } from '../../interiors/layout';
 import { NavGrid } from '../../nav/NavGrid';
@@ -94,6 +97,12 @@ describe('the Weeping Bellows cavern', () => {
     expect(t.x1 - t.x0).toBeLessThanOrEqual(4);
     expect(t.z1 - t.z0).toBeGreaterThanOrEqual(25);
     expect(t.z1 - t.z0).toBeLessThanOrEqual(32);
+  });
+
+  it('unlocks the Bellows waystone path: the cavern defines the anchor the puzzle waits for, and the stone locks on the flag the puzzle sets', () => {
+    expect(BELLOWS_CAVERN_DEF.anchors.some((a) => a.id === BELLOWS.centerAnchor)).toBe(true);
+    expect(WAYSTONE_LOCKS['weeping-bellows']).toBe(BELLOWS.solvedFlag);
+    expect(BELLOWS_SOLVED_FLAG).toBe(BELLOWS.solvedFlag);
   });
 });
 
