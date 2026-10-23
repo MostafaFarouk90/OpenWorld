@@ -179,6 +179,15 @@ describe('SlagmawBrain', () => {
     expect(count(t.log, 'spit')).toBe(1);
   });
 
+  it('stepping out after a long stay close fires one spit, not a burst of the missed ones', () => {
+    const t = make();
+    t.brain.start();
+    t.run(CYCLE.burrowedSeconds[0] + CYCLE.tremorSeconds + 0.05);
+    t.run(3.5, sense(1));
+    t.run(0.1, sense(8));
+    expect(count(t.log, 'spit')).toBe(1);
+  });
+
   it('a break in the tremor cancels it, staggers, and no eruption follows', () => {
     const t = make();
     t.brain.start();

@@ -107,6 +107,8 @@ export const SPIT_MOVE: MoveDef = {
   recover: 0.4,
   weight: 0,
   ranged: { shape: 'glob', speed: 13, maxRange: 24, radius: 0.55, originHeight: 2.4 },
+  /** A parry would stagger the shooter and empty his poise; only a valve cool may do that. */
+  parryable: false,
 };
 
 /** Presentation timings (sim seconds). */
@@ -125,11 +127,18 @@ export const LOOK = {
   headRadius: 1.5,
   tailRadius: 0.7,
   segmentSpacing: 1.6,
-  crustColor: 0x2a1812,
+  crustColor: 0x4a3830,
+  /** Base emissive lift so the shaded side never goes black: ember hot, a faint slate lift cooled. */
+  crustEmber: 0x3a1408,
+  crustEmberCooled: 0x22262b,
+  plateColor: 0x5a4a42,
+  plateEmber: 0x8a2a0a,
+  plateCooled: 0x80878f,
+  seamCooled: 0x5a2a1a,
   lavaColor: 0xff5a1f,
   lavaHot: 0xffc23a,
   /** The cooled crust: dark and dull (the valve douse). */
-  cooledColor: 0x3b3f46,
+  cooledColor: 0x7a838e,
   crackColor: 0xff7a2a,
   veilColor: 0x2a1812,
 } as const;

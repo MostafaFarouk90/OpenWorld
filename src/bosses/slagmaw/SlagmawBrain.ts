@@ -96,9 +96,10 @@ export class SlagmawBrain {
         }
         this.spitClock += dt;
         const every = this.pick(CYCLE.spitEverySeconds);
-        const due = this.spitsDone === 0 ? CYCLE.spitFirstSeconds : CYCLE.spitFirstSeconds + this.spitsDone * every;
+        const due = this.spitsDone === 0 ? CYCLE.spitFirstSeconds : every;
         if (this.spitClock >= due && sense.dist >= 3) {
           this.spitsDone++;
+          this.spitClock = 0;
           this.hooks.spit();
         }
         if (this.t >= this.pick(CYCLE.surfacedSeconds)) {

@@ -127,6 +127,7 @@ export class SlagmawEncounter implements SlagmawHooks {
   private tremorT = 0;
   private tremorLead: number = CYCLE.tremorSeconds;
   private tremorOn = false;
+  private tremorSwing = 0;
   private cooled = false;
   private coolT = 0;
   /** The valve whose douse is spraying (index), or -1. */
@@ -202,8 +203,15 @@ export class SlagmawEncounter implements SlagmawHooks {
     this.offs.push(
       ctx.events.on("boss.break", (p) => {
         if (!mine(p)) return;
-        if (p.last) this.floorLifted = true;
-        const valve = this.valves[p.phase - 1];
+        // Only a valve cool makes a break: a stagger that other systems force on a hot crust (a parried spit, Second Wind, a
+        // howl) must not spend a valve or lift the floor.
+        if (!this.cooled) {
+          this.actor.restorePoise();
+          return;
+        }
+        // The break belongs to the valve that cooled him, even when the same hit crossed a phase threshold.
+        const valve = this.valves[this.douseValve];
+        if (p.last && this.douseValve === this.valves.length - 1) this.floorLifted = true;
         if (valve) {
           valve.spent = true;
           valve.wheel.locked = true;
@@ -214,7 +222,6 @@ export class SlagmawEncounter implements SlagmawHooks {
       }),
       ctx.events.on("boss.phase", (p) => {
         if (!mine(p)) return;
-        this.endCooling(true);
         this.projectiles.cancelFor(this.actor.id);
         this.brain.onPhase(p.phase);
       }),
@@ -300,7 +307,13 @@ export class SlagmawEncounter implements SlagmawHooks {
       return false;
     }
     this.registered = true;
-    this.mountValves();
+    try {
+      this.mountValves();
+    } catch (err) {
+      this.warn(`could not mount the coolant valves: ${err instanceof Error ? err.message : String(err)}`);
+      this.finish("reset");
+      return false;
+    }
     this.sync();
     this.brain.start();
     return true;
@@ -363,6 +376,7 @@ export class SlagmawEncounter implements SlagmawHooks {
       leadSeconds,
     });
     this.tremorOn = true;
+    this.tremorSwing = swingId;
     this.tremorT = 0;
     this.tremorLead = Math.max(0.05, leadSeconds);
     this.lockSpot(this.ctx.player.feet);
@@ -744,6 +758,7 @@ export class SlagmawEncounter implements SlagmawHooks {
     // As Redmane: the registry drops the registration on `actor.despawned` (exactly one `boss.ended`); only a teardown
     // unregisters first.
     this.unregister = null;
+    if (this.tremorOn) this.tremorCancelled(this.tremorSwing);
     this.projectiles.cancelFor(this.actor.id);
     this.projectiles.dispose();
     this.removeValves();

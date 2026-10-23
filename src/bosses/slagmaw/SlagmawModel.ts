@@ -5,14 +5,17 @@ import { LOOK } from './tuning';
 
 /** Live uniforms of the lava shader, kept on `material.userData.slagmawUniforms` (tests and debug read them; no recompile needed). */
 export interface SlagmawUniforms {
-  uTime: { value: number };
+  uLavaTime: { value: number };
   /** 0..1 how much lava shows through the crust (cooled dims it). */
   uGlow: { value: number };
   /** 0..1 added glow for the tremor build-up and spit wind-up. */
-  uTelegraph: { value: number };
+  uLavaTelegraph: { value: number };
   uLava: { value: THREE.Color };
   uLavaHot: { value: THREE.Color };
   uScale: { value: number };
+  /** 0 hot .. 1 cooled: blends the crust colour to the cooled one in the shader (the actor FX clones the material, so material.color cannot). */
+  uCooled: { value: number };
+  uCooledColor: { value: THREE.Color };
 }
 
 export interface SlagmawModel {
@@ -52,12 +55,14 @@ const VERTEX_DECL = 'varying vec3 vLavaPos;';
 const VERTEX_BODY = '\nvLavaPos = transformed;';
 const FRAGMENT_DECL = `
 varying vec3 vLavaPos;
-uniform float uTime;
+uniform float uLavaTime;
 uniform float uGlow;
-uniform float uTelegraph;
+uniform float uLavaTelegraph;
 uniform vec3 uLava;
 uniform vec3 uLavaHot;
 uniform float uScale;
+uniform float uCooled;
+uniform vec3 uCooledColor;
 float lavaHash( vec3 p ) { return fract( sin( dot( p, vec3( 127.1, 311.7, 74.7 ) ) ) * 43758.5453 ); }
 float lavaNoise( vec3 p ) {
   vec3 i = floor( p ); vec3 f = fract( p ); f = f * f * ( 3.0 - 2.0 * f );
@@ -68,13 +73,14 @@ float lavaNoise( vec3 p ) {
   return mix( a, b, f.z );
 }`;
 const FRAGMENT_BODY = `
-vec3 lavaP = vLavaPos * uScale + vec3( 0.0, uTime * 0.35, uTime * 0.2 );
+diffuseColor.rgb = mix( diffuseColor.rgb, uCooledColor, uCooled );
+vec3 lavaP = vLavaPos * uScale + vec3( 0.0, uLavaTime * 0.35, uLavaTime * 0.2 );
 float lavaA = lavaNoise( lavaP );
-float lavaVein = 1.0 - smoothstep( 0.0, 0.12, abs( lavaA - 0.5 ) );
-float lavaB = lavaNoise( lavaP * 2.1 - uTime * 0.15 );
-lavaVein = max( lavaVein, ( 1.0 - smoothstep( 0.0, 0.08, abs( lavaB - 0.5 ) ) ) * 0.6 );
+float lavaVein = 1.0 - smoothstep( 0.0, 0.07, abs( lavaA - 0.5 ) );
+float lavaB = lavaNoise( lavaP * 2.1 - uLavaTime * 0.15 );
+lavaVein = max( lavaVein, ( 1.0 - smoothstep( 0.0, 0.05, abs( lavaB - 0.5 ) ) ) * 0.5 );
 vec3 lavaCol = mix( uLava, uLavaHot, lavaB );
-totalEmissiveRadiance += lavaCol * lavaVein * ( uGlow + uTelegraph * 1.5 );`;
+totalEmissiveRadiance += lavaCol * lavaVein * ( uGlow + uLavaTelegraph * 1.5 );`;
 
 interface Patchable {
   uniforms: Record<string, { value: unknown }>;
@@ -93,12 +99,12 @@ export function patchLavaShader(shader: Patchable, u: SlagmawUniforms): void {
     .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>${FRAGMENT_BODY}`);
 }
 
-const GLOW_HOT = 1.2;
-const GLOW_COOLED = 0.12;
+const GLOW_HOT = 0.8;
+const GLOW_COOLED = 0.1;
 /** How far below the floor a fully buried segment sits (m). */
 const BURY_DEPTH = LOOK.headRadius * 2.4;
 /** How high the middle of the arc rises over the floor line (m). */
-const ARC_HEIGHT = 1.4;
+const ARC_HEIGHT = 1.8;
 
 /**
  * Builds the Slagmaw: a segmented lava worm made of spheres (head plus LOOK.segments - 1 body segments tapering to the tail),
@@ -112,34 +118,101 @@ export function buildSlagmawModel(): SlagmawModel {
   root.add(body);
 
   const uniforms: SlagmawUniforms = {
-    uTime: { value: 0 },
+    uLavaTime: { value: 0 },
     uGlow: { value: GLOW_HOT },
-    uTelegraph: { value: 0 },
+    uLavaTelegraph: { value: 0 },
     uLava: { value: new THREE.Color(LOOK.lavaColor) },
     uLavaHot: { value: new THREE.Color(LOOK.lavaHot) },
     uScale: { value: 1.6 },
+    uCooled: { value: 0 },
+    uCooledColor: { value: new THREE.Color(LOOK.cooledColor) },
   };
-  const material = new THREE.MeshStandardMaterial({ color: LOOK.crustColor, roughness: 0.9, metalness: 0.05, emissive: 0x000000 });
+  const material = new THREE.MeshStandardMaterial({ color: LOOK.crustColor, roughness: 0.9, metalness: 0.05, emissive: LOOK.crustEmber });
   material.name = 'slagmaw-crust';
   material.userData.slagmawUniforms = uniforms;
   material.onBeforeCompile = (shader) => patchLavaShader(shader as unknown as Patchable, uniforms);
   material.customProgramCacheKey = () => 'slagmaw-lava';
 
-  const geometry = new THREE.SphereGeometry(1, 16, 12);
+  const geometry = new THREE.SphereGeometry(1, 20, 14);
+  const JAW_GEO = new THREE.ConeGeometry(0.2 * LOOK.headRadius, 1.9 * LOOK.headRadius, 7);
+  JAW_GEO.translate(0, 0.95 * LOOK.headRadius, 0); // pivot at the base so the tip swings
+  const FIN_GEO = new THREE.ConeGeometry(0.5, 1, 4);
+  FIN_GEO.rotateY(Math.PI / 4);
+  const EYE_GEO = new THREE.SphereGeometry(0.15 * LOOK.headRadius, 10, 8);
+  const plateMaterial = new THREE.MeshStandardMaterial({ color: LOOK.plateColor, roughness: 0.8, metalness: 0.15, emissive: LOOK.plateEmber, emissiveIntensity: 0.35 });
+  plateMaterial.name = 'slagmaw-plate';
+  const eyeMaterial = new THREE.MeshBasicMaterial({ color: LOOK.lavaHot });
+  eyeMaterial.name = 'slagmaw-eye';
+  // The lava seam between two segments and the glowing mouth: unlit, so they read as molten from any angle.
+  const seamMaterial = new THREE.MeshBasicMaterial({ color: LOOK.lavaColor });
+  seamMaterial.name = 'slagmaw-seam';
+  const extras = [plateMaterial, eyeMaterial, seamMaterial];
   const n = Math.max(2, LOOK.segments);
   const parts: { node: THREE.Group; radius: number; index: number }[] = [];
+  const up = new THREE.Vector3(0, 1, 0);
   for (let i = 0; i < n; i++) {
     const k = i / (n - 1);
     const radius = THREE.MathUtils.lerp(LOOK.headRadius, LOOK.tailRadius, k);
     const node = new THREE.Group();
     node.name = i === 0 ? HEAD_BONE : segmentBone(i);
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.scale.setScalar(radius);
+    // Each segment is a flattened drum: short along the body so the joints pinch hard.
+    const half = LOOK.segmentSpacing * 0.56;
+    mesh.scale.set(radius, radius * 0.95, Math.min(half, radius));
+    if (i === 1) mesh.scale.x *= 0.85; // the neck is slimmer than the skull and the first body drum
     mesh.castShadow = true;
     mesh.name = `${node.name}-mesh`;
     node.add(mesh);
+    if (i === 0) {
+      // A heavy skull: long, with a brow ridge, two big mandibles and a glowing maw on the face (-Z).
+      mesh.scale.set(radius * 1.12, radius * 1.0, radius * 1.35);
+      const brow = new THREE.Mesh(geometry, plateMaterial);
+      brow.scale.set(radius * 0.95, radius * 0.22, radius * 0.5);
+      brow.position.set(0, radius * 0.52, -radius * 0.72);
+      brow.rotation.x = 0.5;
+      brow.castShadow = true;
+      const mouth = new THREE.Mesh(geometry, eyeMaterial);
+      mouth.scale.set(radius * 0.6, radius * 0.3, radius * 0.4);
+      mouth.position.set(0, -radius * 0.32, -radius * 1.25);
+      node.add(brow, mouth);
+      for (const side of [-1, 1]) {
+        const jaw = new THREE.Mesh(JAW_GEO, plateMaterial);
+        jaw.position.set(side * radius * 0.6, -radius * 0.3, -radius * 1.15);
+        jaw.quaternion.setFromUnitVectors(up, new THREE.Vector3(-side * 0.5, 0.08, -1).normalize());
+        jaw.castShadow = true;
+        const eye = new THREE.Mesh(EYE_GEO, eyeMaterial);
+        eye.position.set(side * radius * 0.5, radius * 0.28, -radius * 1.1);
+        node.add(jaw, eye);
+      }
+    } else {
+      // A tall dorsal blade on every body segment plus flank spines on the front ones, so the line reads as an armoured worm.
+      const fin = new THREE.Mesh(FIN_GEO, plateMaterial);
+      fin.scale.set(radius * 0.45, radius * 1.05, radius * 1.5);
+      fin.position.y = radius * 0.95;
+      fin.castShadow = true;
+      node.add(fin);
+      if (i <= 6) {
+        for (const side of [-1, 1]) {
+          const spine = new THREE.Mesh(FIN_GEO, plateMaterial);
+          spine.scale.set(radius * 0.3, radius * 0.75, radius * 0.9);
+          spine.position.set(side * radius * 0.78, radius * 0.5, 0);
+          spine.rotation.z = -side * 1.0;
+          spine.castShadow = true;
+          node.add(spine);
+        }
+      }
+    }
     body.add(node);
     parts.push({ node, radius, index: i });
+  }
+  // A glowing seam sphere in each joint, between segment i-1 and i (positioned in layout()).
+  const seams: THREE.Mesh[] = [];
+  for (let i = 1; i < n; i++) {
+    const s = new THREE.Mesh(geometry, seamMaterial);
+    s.name = `slagmaw-seam-${i}`;
+    s.scale.setScalar(parts[i].radius * 0.7);
+    body.add(s);
+    seams.push(s);
   }
 
   // Hurtboxes: head and the first three body segments, a capsule across each sphere along the body axis.
@@ -156,8 +229,6 @@ export function buildSlagmawModel(): SlagmawModel {
   let cooled = false;
   let opacity = 1;
   let disposed = false;
-  const crust = new THREE.Color(LOOK.crustColor);
-  const cooledCol = new THREE.Color(LOOK.cooledColor);
 
   const layout = (): void => {
     for (const p of parts) {
@@ -173,6 +244,11 @@ export function buildSlagmawModel(): SlagmawModel {
       p.node.position.set(sway, y, z);
       p.node.rotation.x = -Math.cos(Math.PI * k) * 0.25 * local;
     }
+    for (let i = 1; i < n; i++) {
+      const a = parts[i - 1].node.position;
+      const b = parts[i].node.position;
+      seams[i - 1].position.set((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+    }
   };
 
   layout();
@@ -180,10 +256,15 @@ export function buildSlagmawModel(): SlagmawModel {
   const hurtboxes = new HurtboxSet(root, defs, body);
 
   const applyCooled = (): void => {
-    material.color.copy(cooled ? cooledCol : crust);
+    uniforms.uCooled.value = cooled ? 1 : 0;
     uniforms.uLava.value.set(cooled ? LOOK.cooledColor : LOOK.lavaColor);
     uniforms.uLavaHot.value.set(cooled ? LOOK.cooledColor : LOOK.lavaHot);
     uniforms.uGlow.value = cooled ? GLOW_COOLED : GLOW_HOT;
+    material.emissive.set(cooled ? LOOK.crustEmberCooled : LOOK.crustEmber);
+    plateMaterial.color.set(cooled ? LOOK.plateCooled : LOOK.plateColor);
+    plateMaterial.emissiveIntensity = cooled ? 0.0 : 0.35;
+    seamMaterial.color.set(cooled ? LOOK.seamCooled : LOOK.lavaColor);
+    eyeMaterial.color.set(cooled ? LOOK.seamCooled : LOOK.lavaHot);
   };
   const headPos = new THREE.Vector3();
 
@@ -201,14 +282,16 @@ export function buildSlagmawModel(): SlagmawModel {
       applyCooled();
     },
     setTelegraph(t) {
-      uniforms.uTelegraph.value = THREE.MathUtils.clamp(Number.isFinite(t) ? t : 0, 0, 1);
+      uniforms.uLavaTelegraph.value = THREE.MathUtils.clamp(Number.isFinite(t) ? t : 0, 0, 1);
     },
     setOpacity(o) {
       opacity = THREE.MathUtils.clamp(Number.isFinite(o) ? o : 1, 0, 1);
       const transparent = opacity < 1;
-      if (material.transparent !== transparent) material.needsUpdate = true;
-      material.transparent = transparent;
-      material.opacity = opacity;
+      for (const m of [material, ...extras]) {
+        if (m.transparent !== transparent) m.needsUpdate = true;
+        m.transparent = transparent;
+        m.opacity = opacity;
+      }
     },
     faceToward(x, z) {
       const dx = x - root.position.x;
@@ -219,7 +302,7 @@ export function buildSlagmawModel(): SlagmawModel {
     },
     update(dt) {
       if (!(dt > 0) || !Number.isFinite(dt)) return;
-      uniforms.uTime.value += dt;
+      uniforms.uLavaTime.value += dt;
       swayT += dt;
       layout();
     },
@@ -233,6 +316,12 @@ export function buildSlagmawModel(): SlagmawModel {
       disposed = true;
       hurtboxes.dispose();
       geometry.dispose();
+      JAW_GEO.dispose();
+      FIN_GEO.dispose();
+      seamMaterial.dispose();
+      EYE_GEO.dispose();
+      plateMaterial.dispose();
+      eyeMaterial.dispose();
       material.dispose();
       root.removeFromParent();
     },

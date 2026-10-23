@@ -624,17 +624,41 @@ describe("The Slagmaw on the real core", () => {
     t.teardown();
   });
 
-  it("a phase change in the middle of a cool re-heats him and refills poise", async () => {
+  it("a phase change in the middle of a cool keeps the crust cooled; the break that follows belongs to the valve that cooled him", async () => {
     const t = await setup();
     t.startFight();
     t.toSurfaced();
     t.turn(1);
-    t.hit(1, SLAGMAW.maxPoise / 3);
     t.toFraction(0.65);
-    expect(t.enc().crustCooled).toBe(false);
-    expect(t.enc().dousing).toBe(false);
-    expect(t.boss()!.poise).toBe(SLAGMAW.maxPoise);
+    expect(t.state()!.phase).toBe(2);
+    expect(t.enc().crustCooled).toBe(true);
+    const r = t.breakPoise();
+    expect(r?.outcome).toBe("hit");
+    expect(t.of("boss.break").map((b) => b.last)).toEqual([false]);
+    t.settle();
+    t.toSurfaced();
+    // Valve 1 produced the break; valve 2 is still unspent and live in phase 2.
+    expect(t.valve(2).enabled()).toBe(true);
+    expect(t.valve(1).enabled()).toBe(false);
     t.teardown();
+  });
+
+  it("a stagger forced on a hot crust (a parried spit, Second Wind) neither breaks him, spends a valve nor lifts the floor", async () => {
+    const t = await setup();
+    t.startFight();
+    t.toSurfaced();
+    expect(t.enc().crustCooled).toBe(false);
+    t.ctx.damage.stagger(t.enc().actor.id, t.ctx.player.actor.id, 999);
+    t.run(2);
+    expect(t.boss()!.poise).toBe(SLAGMAW.maxPoise);
+    expect(t.valve(1).enabled()).toBe(true);
+    t.toFraction(0.0);
+    expect(t.state()!.health).toBeGreaterThan(0);
+    t.teardown();
+  });
+
+  it("the lava spit cannot be parried", () => {
+    expect(SPIT_MOVE.parryable).toBe(false);
   });
 
   it("three valve breaks, one per phase: the third is the last; no Spare or release window ever opens, and the floor holds until then", async () => {

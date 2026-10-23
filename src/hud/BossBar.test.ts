@@ -60,11 +60,17 @@ describe('BossBar', () => {
     expect(display(bar)).toBe('none');
   });
 
+  it('a boss with no mercy row never shows the Release flag', () => {
+    const { bar } = make([view({ bossId: 'the-slagmaw', releaseOpen: true })]);
+    expect(bar.element.className).not.toContain('release');
+    expect(textOf(bar.element)).not.toContain('hud.boss.release');
+  });
+
   it('shield and release glow follow state', () => {
-    const { bar, states } = make([view({ shield: true })]);
+    const { bar, states } = make([view({ bossId: 'ashen-prior', shield: true })]);
     expect(bar.element.className).toContain('shielded');
     expect(textOf(bar.element)).toContain('hud.boss.shield');
-    states.set('prior', view({ shield: false, releaseOpen: true }));
+    states.set('ashen-prior', view({ bossId: 'ashen-prior', shield: false, releaseOpen: true }));
     bar.update();
     expect(bar.element.className).not.toContain('shielded');
     expect(bar.element.className).toContain('release');

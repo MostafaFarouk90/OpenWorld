@@ -25,7 +25,7 @@ describe('SlagmawModel (procedural)', () => {
     const m = buildSlagmawModel();
     let meshes = 0;
     m.root.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh) meshes++;
+      if ((o as THREE.Mesh).isMesh && o.name.endsWith('-mesh')) meshes++;
     });
     expect(meshes).toBe(LOOK.segments);
     expect(m.root.getObjectByName(HEAD_BONE)).toBeTruthy();
@@ -68,16 +68,15 @@ describe('SlagmawModel (procedural)', () => {
   it('cooled swaps the crust and lava colours and dims the glow, and back', () => {
     const m = buildSlagmawModel();
     const u = uniformsOf(m);
-    const crust = crustOf(m);
     const hotGlow = u.uGlow.value;
-    expect(crust.color.getHex()).toBe(LOOK.crustColor);
+    expect(u.uCooled.value).toBe(0);
     expect(u.uLava.value.getHex()).toBe(LOOK.lavaColor);
     m.setCooled(true);
-    expect(crust.color.getHex()).toBe(LOOK.cooledColor);
+    expect(u.uCooled.value).toBe(1);
     expect(u.uLava.value.getHex()).toBe(LOOK.cooledColor);
     expect(u.uGlow.value).toBeLessThan(hotGlow);
     m.setCooled(false);
-    expect(crust.color.getHex()).toBe(LOOK.crustColor);
+    expect(u.uCooled.value).toBe(0);
     expect(u.uLava.value.getHex()).toBe(LOOK.lavaColor);
     expect(u.uGlow.value).toBe(hotGlow);
     m.dispose();
@@ -87,12 +86,12 @@ describe('SlagmawModel (procedural)', () => {
     const m = buildSlagmawModel();
     const u = uniformsOf(m);
     m.setTelegraph(2);
-    expect(u.uTelegraph.value).toBe(1);
+    expect(u.uLavaTelegraph.value).toBe(1);
     m.setTelegraph(Number.NaN);
-    expect(u.uTelegraph.value).toBe(0);
+    expect(u.uLavaTelegraph.value).toBe(0);
     m.update(0.5);
     m.update(Number.NaN);
-    expect(u.uTime.value).toBeCloseTo(0.5);
+    expect(u.uLavaTime.value).toBeCloseTo(0.5);
     m.dispose();
   });
 
@@ -130,7 +129,7 @@ describe('SlagmawModel (procedural)', () => {
     patchLavaShader(shader, uniformsOf(buildSlagmawModel()));
     expect(shader.vertexShader).toContain('vLavaPos = transformed');
     expect(shader.vertexShader + shader.fragmentShader).not.toMatch(/modelMatrix|worldPosition/);
-    expect(shader.uniforms.uTime).toBeTruthy();
+    expect(shader.uniforms.uLavaTime).toBeTruthy();
   });
 
   it('disposes cleanly twice and leaves the scene', () => {
