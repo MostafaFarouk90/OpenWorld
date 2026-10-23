@@ -112,6 +112,269 @@
    "trisBefore": 49992,
    "trisAfter": 4500,
    "mb": 0.23
+  },
+  "barn-a": {
+   "id": "barn-a",
+   "scale": 10.023,
+   "stretch": [
+    1.115,
+    1.15
+   ],
+   "capped": [
+    "depth 10.16 m, want 12 m, factor still needed 1.18"
+   ],
+   "trisBefore": 50070,
+   "trisAfter": 4478,
+   "mb": 0.27
+  },
+  "beehive-skep": {
+   "id": "beehive-skep",
+   "scale": 0.894,
+   "stretch": [
+    1.15,
+    1.077
+   ],
+   "capped": [
+    "width 0.63 m, want 0.7 m, factor still needed 1.11"
+   ],
+   "trisBefore": 49956,
+   "trisAfter": 4500,
+   "mb": 0.22
+  },
+  "cottage-thatch-a": {
+   "id": "cottage-thatch-a",
+   "scale": 6.346,
+   "stretch": [
+    0.916,
+    1.032
+   ],
+   "trisBefore": 50042,
+   "trisAfter": 4494,
+   "mb": 0.3
+  },
+  "garden-bed-a": {
+   "id": "garden-bed-a",
+   "scale": 1.18,
+   "stretch": [
+    1.15,
+    1.15
+   ],
+   "capped": [
+    "width 0.88 m, want 2 m, factor still needed 2.27",
+    "depth 1.35 m, want 1.4 m, factor still needed 1.04"
+   ],
+   "trisBefore": 49988,
+   "trisAfter": 4456,
+   "mb": 0.25
+  },
+  "haybale-a": {
+   "id": "haybale-a",
+   "scale": 1.318,
+   "stretch": [
+    0.898,
+    0.951
+   ],
+   "trisBefore": 50010,
+   "trisAfter": 4818,
+   "mb": 0.28
+  },
+  "haycart-a": {
+   "id": "haycart-a",
+   "scale": 2.406,
+   "stretch": [
+    1.15,
+    1.15
+   ],
+   "capped": [
+    "width 2.75 m, want 3.2 m, factor still needed 1.16",
+    "depth 1.51 m, want 1.6 m, factor still needed 1.06"
+   ],
+   "trisBefore": 50000,
+   "trisAfter": 5358,
+   "mb": 0.32
+  },
+  "haystack-round": {
+   "id": "haystack-round",
+   "scale": 3.373,
+   "stretch": [
+    0.85,
+    0.85
+   ],
+   "capped": [
+    "width 2.48 m, want 2.4 m, factor still needed 0.97",
+    "depth 2.63 m, want 2.4 m, factor still needed 0.91"
+   ],
+   "trisBefore": 50000,
+   "trisAfter": 5422,
+   "mb": 0.31
+  },
+  "market-stall-a": {
+   "id": "market-stall-a",
+   "scale": 3.664,
+   "stretch": [
+    0.974,
+    1.15
+   ],
+   "capped": [
+    "depth 2.14 m, want 2.4 m, factor still needed 1.12"
+   ],
+   "trisBefore": 49864,
+   "trisAfter": 4768,
+   "mb": 0.28
+  },
+  "market-stall-b": {
+   "id": "market-stall-b",
+   "scale": 3.817,
+   "stretch": [
+    0.99,
+    0.96
+   ],
+   "trisBefore": 49956,
+   "trisAfter": 5090,
+   "mb": 0.29
+  },
+  "milestone-a": {
+   "id": "milestone-a",
+   "scale": 1.027,
+   "stretch": [
+    1.15,
+    0.85
+   ],
+   "capped": [
+    "width 0.56 m, want 0.6 m, factor still needed 1.08",
+    "depth 0.43 m, want 0.4 m, factor still needed 0.92"
+   ],
+   "trisBefore": 49968,
+   "trisAfter": 4500,
+   "mb": 0.25
+  },
+  "picket-fence": {
+   "id": "picket-fence",
+   "scale": 1.942,
+   "stretch": [
+    1.15,
+    0.85
+   ],
+   "capped": [
+    "width 2.40 m, want 3.4 m, factor still needed 1.42",
+    "depth 0.28 m, want 0.2 m, factor still needed 0.72"
+   ],
+   "trisBefore": 50000,
+   "trisAfter": 4500,
+   "mb": 0.18
+  },
+  "signpost-a": {
+   "id": "signpost-a",
+   "scale": 2.15,
+   "stretch": [
+    1.079,
+    0.85
+   ],
+   "capped": [
+    "depth 1.16 m, want 0.4 m, factor still needed 0.34"
+   ],
+   "trisBefore": 50000,
+   "trisAfter": 4500,
+   "mb": 0.21
+  },
+  "stable-a": {
+   "id": "stable-a",
+   "scale": 6.641,
+   "stretch": [
+    1.084,
+    1.15
+   ],
+   "capped": [
+    "depth 4.30 m, want 5 m, factor still needed 1.16"
+   ],
+   "trisBefore": 49600,
+   "trisAfter": 4482,
+   "mb": 0.26
+  },
+  "stonewall-low": {
+   "id": "stonewall-low",
+   "scale": 1.708,
+   "stretch": [
+    1.15,
+    0.95
+   ],
+   "capped": [
+    "width 2.00 m, want 3.4 m, factor still needed 1.70"
+   ],
+   "trisBefore": 49496,
+   "trisAfter": 4714,
+   "mb": 0.29
+  },
+  "trough-a": {
+   "id": "trough-a",
+   "scale": 1.523,
+   "stretch": [
+    1.15,
+    0.964
+   ],
+   "capped": [
+    "width 1.84 m, want 2 m, factor still needed 1.09"
+   ],
+   "trisBefore": 50000,
+   "trisAfter": 4500,
+   "mb": 0.22
+  },
+  "washing-line": {
+   "id": "washing-line",
+   "scale": 3.06,
+   "stretch": [
+    1.15,
+    0.85
+   ],
+   "capped": [
+    "width 3.68 m, want 4 m, factor still needed 1.09",
+    "depth 0.62 m, want 0.3 m, factor still needed 0.48"
+   ],
+   "trisBefore": 49994,
+   "trisAfter": 4498,
+   "mb": 0.23
+  },
+  "wattle-fence": {
+   "id": "wattle-fence",
+   "scale": 1.843,
+   "stretch": [
+    1.15,
+    0.925
+   ],
+   "capped": [
+    "width 2.33 m, want 3.4 m, factor still needed 1.46"
+   ],
+   "trisBefore": 50008,
+   "trisAfter": 5364,
+   "mb": 0.31
+  },
+  "well-bucket-rope": {
+   "id": "well-bucket-rope",
+   "scale": 0.531,
+   "stretch": [
+    0.95,
+    1.15
+   ],
+   "capped": [
+    "depth 0.38 m, want 0.4 m, factor still needed 1.06"
+   ],
+   "trisBefore": 49654,
+   "trisAfter": 4486,
+   "mb": 0.22
+  },
+  "woodpile-chop": {
+   "id": "woodpile-chop",
+   "scale": 1.855,
+   "stretch": [
+    1.15,
+    0.936
+   ],
+   "capped": [
+    "width 1.81 m, want 2 m, factor still needed 1.11"
+   ],
+   "trisBefore": 49926,
+   "trisAfter": 4498,
+   "mb": 0.24
   }
  }
 }
