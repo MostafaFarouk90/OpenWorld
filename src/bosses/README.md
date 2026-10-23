@@ -22,6 +22,11 @@ Slice 2 thread 3b; plans in plans/slice-2-ashen-prior.md and plans/slice-2-grimt
 | `redmane/RedmaneEncounter.ts` | One Redmane: registration (two phases, three breaks each, `mercyVerb` from `BOSS_MERCY`), the brain's hooks (lance charge sweep, thrust, the net on A6b's `EnemyProjectiles`, harpoon traps), the dodge counter (x2, 1 s) and the 8% floor, the Spare (unhittable, lance dropped, kneel, fade) and the death. |
 | `redmane/RedmaneBrain.ts` | Pure state machine: approach, thrust, couch and charge (phase 2 may chain a second charge after a feint), net, trap, break stagger, the Spare-window lie-low. |
 | `redmane/RedmaneModel.ts`, `redmane/redmaneFx.ts`, `redmane/tuning.ts` | KayKit Barbarian at 1.15 with a red tabard and a procedural lance; the charge lane and the trap field; every number. |
+| `slagmaw/slagmaw.plugin.ts` | Plugin `the-slagmaw` (Act 2, A8; depends on `interiors` and `enemies`): strings, the `bosses.slagmaw` system (intent, -138), the procedural model. |
+| `slagmaw/SlagmawDirector.ts` | The D04 arena config on A4's Deepdelve: `trg.deepdelve.slagmaw.arena`, armed by `story.d04.started`, the intro and rumble, the gate and veil, reload rule inside the arena rectangle only; does not start (warns once) until A4's anchors exist. |
+| `slagmaw/SlagmawEncounter.ts` | One Slagmaw: registration (three phases, one break each, no mercy and no `BOSS_MERCY` row), the tremor (cracks, 0.1 m shake) before every dodge-only eruption, the lava spit on A6b's `EnemyProjectiles`, the hot crust (poise damage zeroed until a valve cools him), the three `valve:slagmaw-N` wheels and their spray, the 8% floor and the death. |
+| `slagmaw/SlagmawBrain.ts` | Pure state machine: burrowed, tremor, eruption, surfaced and spitting, submerge; phase 3 chains a second tremor; break stagger. |
+| `slagmaw/SlagmawModel.ts`, `slagmaw/slagmawFx.ts`, `slagmaw/tuning.ts` | Procedural segmented worm with a scrolling lava shader; the tremor cracks, douse disc and eruption burst; every number. |
 
 Not here, by ruling: the hold-T Release and Calm on the bosses and the pack scatter (thread 1 calls `ctx.bosses.release`, charges Burn and favour), the boss
 music (thread 9 follows `boss.*`), the D01 quest and reward (thread 6), the boss bar (thread 8).

@@ -153,7 +153,9 @@ export class BossBar implements HudWidgetView {
     setShown(this.element, true, 'flex');
     this.setVisible(true);
     this.element.style.opacity = left === undefined ? '1' : String(Math.round(barFraction(left, BOSS_FADE_SECONDS) * 100) / 100);
-    this.element.className = `owg-boss${s.shield ? ' owg-boss-shielded' : ''}${s.releaseOpen ? ' owg-boss-release' : ''}`;
+    // A boss with no mercy row (the Slagmaw) never shows the Release flag, even on the registry's one-tick window.
+    const open = s.releaseOpen && !!BOSS_MERCY[s.bossId];
+    this.element.className = `owg-boss${s.shield ? ' owg-boss-shielded' : ''}${open ? ' owg-boss-release' : ''}`;
     this.name.textContent = this.t(s.nameKey);
     this.fill.style.width = pct(barFraction(s.health, s.maxHealth));
 
@@ -174,7 +176,7 @@ export class BossBar implements HudWidgetView {
       this.pips.replaceChildren();
       for (let i = 0; i < per; i++) makeEl(this.doc, 'div', i < on ? 'owg-boss-pip owg-boss-pip-on' : 'owg-boss-pip', this.pips);
     }
-    this.flag.textContent = s.releaseOpen ? this.t(BOSS_MERCY[s.bossId]?.verb === 'spare' ? 'hud.boss.spare' : 'hud.boss.release') : s.shield ? this.t('hud.boss.shield') : null;
+    this.flag.textContent = open ? this.t(BOSS_MERCY[s.bossId]?.verb === 'spare' ? 'hud.boss.spare' : 'hud.boss.release') : s.shield ? this.t('hud.boss.shield') : null;
   }
 
   private setVisible(v: boolean): void {
