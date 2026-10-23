@@ -19,6 +19,7 @@ describe('resolveModel', () => {
     const r = resolveModel('barrel');
     expect(r).toMatchObject({ source: 'kaykit', model: 'hex/barrel', scale: 4.3 });
     expect(resolveModel('post_lantern')).toMatchObject({ source: 'kaykit', model: 'hal/post_lantern' });
+    expect(resolveModel('stonewall-high')).toMatchObject({ source: 'kaykit', model: 'hex/fence_stone_straight', fitHeight: 1.5 });
     expect(resolveModel('picket-fence')).toMatchObject({ source: 'kaykit', model: 'hex/fence_wood_straight', fitHeight: 1.1 });
   });
 

@@ -37,6 +37,9 @@ export const DEFAULT_HEIGHT: Record<BuiltInStructureKind, number> = {
 /** Height of a door slab; the wall above the doorway is closed by a lintel. */
 export const DOOR_HEIGHT = 3;
 
+/** Notice and replay boards are drawn at most this tall: about 2 m reads as a board beside a 1.8 m villager. */
+export const BOARD_MAX_HEIGHT = 1.9;
+
 export function structureHeight(spec: StructureSpec): number {
   if (spec.height !== undefined) return spec.height;
   const h = Object.prototype.hasOwnProperty.call(DEFAULT_HEIGHT, spec.kind)
@@ -148,11 +151,15 @@ export function buildGreybox(spec: StructureSpec): THREE.Object3D {
       g.add(m);
       break;
     }
-    case 'board':
-      post(g, -w * 0.4, 0, h);
-      post(g, w * 0.4, 0, h);
-      g.add(box(w, h * 0.5, 0.15, 0, h * 0.45, 0, 0xb08d57, 'panel'));
+    case 'board': {
+      const bh = Math.min(h, BOARD_MAX_HEIGHT);
+      // Slim posts and a panel in the top half: 2 m reads as a notice board next to a 1.8 m villager, not a gate frame.
+      g.add(box(0.2, bh, 0.2, -w * 0.45, 0, 0, WOOD));
+      g.add(box(0.2, bh, 0.2, w * 0.45, 0, 0, WOOD));
+      g.add(box(w * 0.9, bh * 0.4, 0.1, 0, bh * 0.5, 0, 0xb08d57, 'panel'));
+      g.add(box(w, 0.1, 0.2, 0, bh - 0.1, 0, WOOD, 'cap'));
       break;
+    }
     case 'pole':
       g.add(cyl(0.18, 0.22, h, 0, 0, 0, WOOD, 8));
       break;

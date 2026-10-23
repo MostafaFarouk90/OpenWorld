@@ -18,7 +18,14 @@ export interface PlacementRow {
 export type PlacementClass = 'tree' | 'bush' | 'rock' | 'wood' | 'ground' | 'prop' | 'hedge';
 
 /** Hide a class when the player is further than this from its nearest instance sphere edge (metres). */
-export const CLASS_RANGE: Readonly<Record<PlacementClass, number>> = { tree: 700, bush: 260, rock: 420, wood: 160, ground: 120, prop: 260, hedge: 320 };
+export const CLASS_RANGE: Readonly<Record<PlacementClass, number>> = { tree: 700, bush: 260, rock: 420, wood: 160, ground: 48, prop: 260, hedge: 320 };
+/**
+ * Ground cover's base colour is multiplied by this: a clump's texture is a deep green that lit like the vegetation reads near
+ * black against the pale meadow once it is only a pixel or two across, so it is lifted toward the ground it sits on.
+ */
+export const GROUND_LIFT = 1.45;
+/** Emissive colour added to ground cover (a mid meadow green). */
+export const GROUND_GLOW = 0x2c4a16;
 /** Share of each class kept per quality step. */
 export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record<PlacementClass, number>>>> = {
   low: { tree: 0.7, bush: 0.5, rock: 0.7, wood: 0.4, ground: 0.35, prop: 0.7, hedge: 1 },
@@ -64,8 +71,13 @@ interface Entry {
 
 const tintKey = (t?: Tint): string => (t ? `${t.hue ?? 0}/${t.sat ?? 1}/${t.mul ?? 0xffffff}` : '');
 
-function tintedMaterial(base: THREE.Material, tint: Tint): THREE.Material {
+function tintedMaterial(base: THREE.Material, tint: Tint, lift = 1): THREE.Material {
   const m = base.clone() as THREE.MeshStandardMaterial;
+  if (lift !== 1 && m.color) {
+    m.color.multiplyScalar(lift);
+    // A flat glow independent of the light, so a clump keeps a meadow green in shade and at a distance instead of going black.
+    if (m.emissive) m.emissive.setHex(GROUND_GLOW);
+  }
   if (tint.mul !== undefined && m.color) m.color.multiply(new THREE.Color(tint.mul));
   if (tint.hue || (tint.sat !== undefined && tint.sat !== 1)) {
     const k = hueMatrix(tint.hue ?? 0, tint.sat ?? 1);
@@ -119,13 +131,15 @@ export class PlacementField {
       if (!resolved) continue;
       if (resolved.placeholder) this.stats.placeholders += e.rows.length;
       let parts = resolved.parts;
-      const tint = e.ref.source !== 'placeholder' && !resolved.placeholder ? e.ref.tint : undefined;
+      const real = e.ref.source !== 'placeholder' && !resolved.placeholder;
+      const lift = real && e.cls === 'ground' ? GROUND_LIFT : 1;
+      const tint = real ? (e.ref.source !== 'placeholder' ? e.ref.tint : undefined) ?? (lift !== 1 ? {} : undefined) : undefined;
       if (tint) {
         parts = parts.map((p) => {
-          const k = `${p.material.uuid}|${tintKey(tint)}`;
+          const k = `${p.material.uuid}|${tintKey(tint)}|${lift}`;
           let mat = mats.get(k);
           if (!mat) {
-            mats.set(k, (mat = tintedMaterial(p.material, tint)));
+            mats.set(k, (mat = tintedMaterial(p.material, tint, lift)));
             this.owned.push(mat);
           }
           return { geometry: p.geometry, material: mat };

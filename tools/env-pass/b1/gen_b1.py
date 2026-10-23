@@ -72,6 +72,8 @@ for aid, x, z, tags in anchors:
 # the lane and the road: x within 3.5 of 0 from z -2 to 170 (bare track, wider where it meets the gates and square)
 lane = (np.abs(GX) <= 3.6) & (GZ >= -2) & (GZ <= 170)
 chapel_path = (np.abs(GZ - 60) <= 2.2) & (GX >= 0) & (GX <= 46)
+obst = solid.copy()  # structures, fences, anchors only (no lane): the verge strip may sit up to these
+LANE_PAD = 4.1  # lane surface half width 3.6 plus 0.5 m: no grass or flowers inside it
 solid |= lane | chapel_path
 square = (np.abs(GX - 3) <= 30) & (GZ >= 108) & (GZ <= 168)  # Kettlewick green: kept open
 barley = ((np.abs(GX) >= 5) & (np.abs(GX) <= 30) & (GZ >= 2) & (GZ <= 24))  # existing barley slabs (approx; read barley.ts at build time)
@@ -94,11 +96,11 @@ L = {}
 L['trees'] = (0.010 + 0.12 * np.clip(N_LARGE - 0.45, 0, 1) * 1.9 + 0.05 * (verge & (N_MID > 0.55))) * (1 - 0.9 * open_green)
 L['trees'][tall_free | bare] = 0
 L['bushes'] = (0.04 + 0.25 * near_house + 0.12 * np.clip(N_MID - 0.4, 0, 1) + 0.12 * verge) * (1 - 0.6 * open_green); L['bushes'][bare | tall_free] = 0
-L['grass'] = (0.9 + 3.0 * np.clip(N_MID - 0.35, 0, 1) + 1.8 * verge + 0.5 * np.clip(N_SMALL - 0.5, 0, 1)); L['grass'][bare] = 0
+L['grass'] = (0.06 + 1.0 * np.clip(N_MID - 0.45, 0, 1) + 0.3 * verge + 0.08 * np.clip(N_SMALL - 0.6, 0, 1)); L['grass'][bare] = 0
 L['grass'][solid] = 0
-L['flowers'] = (0.05 + 0.9 * np.clip(N_SMALL * N_MID - 0.25, 0, 1) + 0.5 * verge * N_SMALL + 0.8 * (np.hypot(GX - 0, GZ - 130) < 9)); L['flowers'][bare] = 0
-L['rocks'] = (0.02 + 0.10 * np.clip(N_LARGE - 0.55, 0, 1) + 0.04 * np.clip(N_SMALL - 0.7, 0, 1)); L['rocks'][bare | tall_free] = 0
-L['wood'] = (0.015 + 0.05 * np.clip(N_LARGE - 0.5, 0, 1) * (N_SMALL > 0.4)); L['wood'][bare | tall_free] = 0  # stumps, logs, mushrooms, ferns
+L['flowers'] = (0.005 + 0.4 * np.clip(N_SMALL * N_MID - 0.33, 0, 1) + 0.1 * verge * N_SMALL); L['flowers'][bare] = 0
+L['rocks'] = (0.004 + 0.02 * np.clip(N_LARGE - 0.6, 0, 1)); L['rocks'][bare | tall_free] = 0
+L['wood'] = (0.003 + 0.01 * np.clip(N_LARGE - 0.55, 0, 1) * (N_SMALL > 0.4)); L['wood'][bare | tall_free] = 0  # stumps, logs, mushrooms, ferns
 L['wood'] *= 1
 for k in L: L[k] = L[k] * in_tile
 
@@ -160,31 +162,91 @@ def sample(layer, count_per100, min_d, ids, size_jit=0.12, extra_ok=None, existi
         out.append({'id': rng.choice(ids), 'x': round(x, 2), 'z': round(z, 2), 'yaw': round(rng.uniform(0, 360), 1), 'scale': round(1 + rng.uniform(-size_jit, size_jit), 3)})
     return out
 
+TREE_IDS = ['oak-a', 'oak-b', 'oak-c', 'birch-a', 'birch-b', 'elm-or-ash-a', 'autumn-tree-a']
+TALL = set(TREE_IDS)
+GROUND_IDS = ('grass', 'flower')
+FIRE = [(0, 70), (-10.8, 80), (9.2, 76)]  # lane.fire-cart, fire-house-08, fire-house-09: props 3 m clear
+
+def lane_pt(x, z):
+    return abs(x) <= LANE_PAD and -2 <= z <= 170
+
+def chapel_pt(x, z):
+    return abs(z - 60) <= 2.7 and 0 <= x <= 46.5
+
+def cell(x, z):
+    ix, iz = int(x - X0), int(z - Z0)
+    if not (0 <= ix < GX.shape[1] and 0 <= iz < GX.shape[0]): return None
+    return iz, ix
+
+def rr(a, b):
+    return rng.uniform(a, b)
+
+def row(i, x, z, scale, yaw=None, **kw):
+    d = {'id': i, 'x': round(x, 2), 'z': round(z, 2), 'yaw': round(rr(0, 360) if yaw is None else yaw, 1), 'scale': round(scale, 3)}
+    d.update(kw)
+    return d
+
 placed = []
 P = []
-trees = sample('trees', 0.6, 7.0, ['oak-a', 'oak-a', 'oak-b', 'oak-c', 'birch-a', 'birch-b', 'elm-or-ash-a', 'autumn-tree-a'], 0.15, existing=placed); P += trees
-# copses: clusters of 4 to 7 trees around peaks of the large-scale noise, outside the keep-outs, away from the lane
+# scattered single trees: thin (the copses carry the woods); scale 0.8..1.3 and a mix that includes birch and elm
+trees = sample('trees', 0.45, 8.0, TREE_IDS + ['birch-a', 'birch-b', 'elm-or-ash-a', 'elm-or-ash-a'], 0.0, existing=placed)
+for t in trees: t['scale'] = round(rr(0.8, 1.3), 3)
+P += trees
+# copses: 9 clusters of 4 to 7 trees, every one with at least a birch and an elm, a random scale 0.8..1.3 and yaw
 cells = np.argwhere((N_LARGE > 0.58) & ~bare & ~tall_free & (np.abs(GX) > 16) & (in_tile > 0.99))
-rng.shuffle(cells := list(map(tuple, cells)))
+cells = list(map(tuple, cells)); rng.shuffle(cells)
 centres = []
 for iz, ix in cells:
     cx, cz = X0 + ix + 0.5, Z0 + iz + 0.5
     if all((cx - a) ** 2 + (cz - b) ** 2 > 38 ** 2 for a, b in centres): centres.append((cx, cz))
     if len(centres) >= 9: break
 for cx, cz in centres:
-    for _ in range(rng.randint(4, 7)):
-        for _try in range(30):
-            a, r = rng.uniform(0, 6.283), rng.uniform(0, 10)
+    kinds = ['birch-a' if rng.random() < 0.5 else 'birch-b', 'elm-or-ash-a'] + [rng.choice(['oak-a', 'oak-b', 'oak-c', 'autumn-tree-a', 'birch-a', 'elm-or-ash-a']) for _ in range(rng.randint(2, 5))]
+    for kid in kinds:
+        for _try in range(40):
+            a, r = rr(0, 6.283), rr(1, 10)
             x, z = cx + r * math.cos(a), cz + r * math.sin(a)
-            ix2, iz2 = int(x - X0), int(z - Z0)
-            if not (0 <= ix2 < GX.shape[1] and 0 <= iz2 < GX.shape[0]) or bare[iz2, ix2] or tall_free[iz2, ix2]: continue
+            c = cell(x, z)
+            if c is None or bare[c] or tall_free[c]: continue
             if any((x - qx) ** 2 + (z - qz) ** 2 < 4.5 ** 2 for qx, qz in placed): continue
-            placed.append((x, z)); P.append({'id': rng.choice(['oak-a', 'oak-b', 'oak-c', 'birch-a', 'birch-b', 'elm-or-ash-a', 'autumn-tree-a']), 'x': round(x, 2), 'z': round(z, 2), 'yaw': round(rng.uniform(0, 360), 1), 'scale': round(1 + rng.uniform(-0.15, 0.15), 3)}); break
+            placed.append((x, z)); P.append(row(kid, x, z, rr(0.8, 1.3))); break
+    # litter round the copse, spread so nothing reads as one pasted clump: a stump or log, a fern pair, mushrooms apart, one rock
+    for kid, rmin, rmax, sc in [(rng.choice(['stump-a', 'stump-b', 'log-fallen-a']), 5, 9, (1.0, 1.3)), ('fern-a', 4, 8, (1.1, 1.5)), ('fern-a', 6, 11, (1.1, 1.5)), ('mushrooms-a', 7, 12, (1.4, 1.9)), (rng.choice(['rock-cluster-a', 'boulder-large-b']), 8, 13, (0.9, 1.2))][:4 if rng.random() < 0.5 else 5]:
+        for _try in range(40):
+            a, r = rr(0, 6.283), rr(rmin, rmax)
+            x, z = cx + r * math.cos(a), cz + r * math.sin(a)
+            c = cell(x, z)
+            if c is None or bare[c] or tall_free[c]: continue
+            if any((x - qx) ** 2 + (z - qz) ** 2 < 3.2 ** 2 for qx, qz in placed): continue
+            placed.append((x, z)); P.append(row(kid, x, z, rr(*sc))); break
+# the eastern rise (chapel side): boulders and rock clusters grouped loosely, ferns between; nothing under 0.9 x native
+RISE = (88.0, 78.0)
+for k in range(6):
+    for _try in range(60):
+        a, r = rr(0, 6.283), rr(2, 15)
+        x, z = RISE[0] + r * math.cos(a) * 1.3, RISE[1] + r * math.sin(a)
+        c = cell(x, z)
+        if c is None or bare[c] or tall_free[c]: continue
+        if any((x - qx) ** 2 + (z - qz) ** 2 < 4.0 ** 2 for qx, qz in placed): continue
+        placed.append((x, z)); P.append(row(['boulder-large-a', 'boulder-large-b', 'rock-cluster-a', 'rock-cluster-a'][k % 4], x, z, rr(0.9, 1.25))); break
+for k in range(4):
+    for _try in range(60):
+        a, r = rr(0, 6.283), rr(3, 16)
+        x, z = RISE[0] + r * math.cos(a) * 1.3, RISE[1] + r * math.sin(a)
+        c = cell(x, z)
+        if c is None or bare[c] or tall_free[c]: continue
+        if any((x - qx) ** 2 + (z - qz) ** 2 < 2.5 ** 2 for qx, qz in placed): continue
+        placed.append((x, z)); P.append(row('fern-a', x, z, rr(1.1, 1.5))); break
 bushes = sample('bushes', 1.0, 2.2, ['bush-round-a', 'bush-round-b', 'bush-flowering-a', 'bush-flowering-b'], existing=placed); P += bushes
-rocks = sample('rocks', 1.0, 3.0, ['rock-cluster-a', 'boulder-large-a', 'boulder-large-b'], 0.25, existing=placed); P += rocks
-wood = sample('wood', 1.0, 3.0, ['stump-a', 'stump-b', 'log-fallen-a', 'mushrooms-a', 'fern-a', 'fern-a'], existing=placed); P += wood
+# the density-driven rock and wood layers are now very sparse (a few strays, 6 m apart); rocks keep scale >= 0.9
+rocks = sample('rocks', 0.5, 9.0, ['rock-cluster-a', 'boulder-large-a', 'boulder-large-b'], 0.0, existing=placed)
+for r_ in rocks: r_['scale'] = round(rr(0.9, 1.25), 3)
+P += rocks
+wood = sample('wood', 1.0, 6.0, ['stump-a', 'stump-b', 'log-fallen-a', 'fern-a'], 0.0, existing=placed)
+for w_ in wood: w_['scale'] = round(rr(1.0, 1.4), 3)
+P += wood
 flowers = sample('flowers', 1.0, 1.4, ['flower-patch-yellow', 'flower-patch-white', 'flower-patch-purple', 'flower-patch-red'], 0.2, existing=[]); P += flowers
-grass = sample('grass', 1.0, 0.7, ['grass-clump-a', 'grass-clump-b', 'grass-clump-c'], 0.25, existing=[]); P += grass
+grass = sample('grass', 1.0, 0.9, ['grass-clump-a', 'grass-clump-b', 'grass-clump-c'], 0.25, existing=[]); P += grass
 
 # hedges: modules of 3.4 m along both verges of the lane z 32..105, gapped at cart (61..79), lane fence (87..93) and house paths
 HEDGE_X = 6.2
@@ -197,25 +259,163 @@ for sgn in (-1, 1):
             if kind in ('house', 'tavern', 'bakery') and (sgn * x > 0) and abs(zc - zz) < 3.4 and abs(x) < 34: gap = True
         if not gap: P.append({'id': 'hedge-straight', 'x': sgn * HEDGE_X, 'z': round(zc, 2), 'yaw': 90.0, 'scale': 1.0})
         z += 3.4
-# house dressing: 2 to 4 items per house from the clutter set (placeholders until Mostafa's files exist)
-clutter = ['barrel', 'crate_A_small', 'sack', 'bucket_empty', 'wheelbarrow', 'resource_lumber', 'haybale-a', 'woodpile-chop', 'trough-a', 'garden-bed-a']
-for sid, kind, x, z, w, d in structs:
-    if kind != 'house' and kind not in ('tavern', 'bakery'): continue
-    side = -1 if x > 0 else 1  # door faces the lane
-    for i in range(rng.randint(2, 4)):
-        P.append({'id': rng.choice(clutter), 'x': round(x + side * rng.uniform(3.2, 4.6), 2), 'z': round(z + rng.uniform(-4.2, 4.2), 2), 'yaw': round(rng.uniform(0, 360), 1), 'scale': 1.0, 'near': sid})
 # lanterns along the verge every 18 m, alternating sides (taste call, logged by the builder)
+LANTERNS = []
 for z in range(40, 112, 18):
-    P.append({'id': 'post_lantern', 'x': (-5.0 if (z // 18) % 2 else 5.0), 'z': z, 'yaw': 0, 'scale': 1.0})
+    LANTERNS.append((-5.0 if (z // 18) % 2 else 5.0, z))
+    P.append({'id': 'post_lantern', 'x': LANTERNS[-1][0], 'z': z, 'yaw': 0, 'scale': 1.0})
 # landmark oaks (the sheet): two large trees at the lane edge
 P.append({'id': 'oak-a', 'x': -24, 'z': 34, 'yaw': 30, 'scale': 1.25, 'landmark': True})
 P.append({'id': 'oak-c', 'x': 24, 'z': 62, 'yaw': 200, 'scale': 1.3, 'landmark': True})
-# drop anything inside the solid mask (except hedges, lanterns and clutter, which sit deliberately at edges)
+
+# ---- (1) verge strip at the hedge foot: long grass, ferns and flower patches on both sides of the lane -------------
+def free_pt(x, z, pad=0.0):
+    c = cell(x, z)
+    if c is None or obst[c]: return False
+    if lane_pt(x, z) or chapel_pt(x, z): return False
+    if any((x - lx) ** 2 + (z - lz) ** 2 < (0.9 + pad) ** 2 for lx, lz in LANTERNS): return False
+    if any((x - fx) ** 2 + (z - fz) ** 2 < 3.0 ** 2 for fx, fz in FIRE): return False
+    return True
+
+FLOWER_IDS = ['flower-patch-yellow', 'flower-patch-white', 'flower-patch-purple', 'flower-patch-red']
+GRASS_IDS = ['grass-clump-a', 'grass-clump-b', 'grass-clump-c']
+strip = []
+for sgn in (-1, 1):
+    # lane side, between the lane surface (+0.5 m) and the hedge: x 4.45..5.55 (to 6.4 where there is no hedge), z 27..168
+    z = 27.0
+    while z < 168:
+        z += rr(0.7, 1.3)
+        x = sgn * rr(4.45, 5.55 if 32 <= z <= 105 else 6.4)
+        if free_pt(x, z): strip.append(row(rng.choice(GRASS_IDS), x, z, rr(0.9, 1.35)))
+    # outer side of the hedge: x 6.7..8.2, z 32..105
+    z = 31.0
+    while z < 106:
+        z += rr(0.9, 1.6)
+        x = sgn * rr(6.7, 8.2)
+        if free_pt(x, z): strip.append(row(rng.choice(GRASS_IDS), x, z, rr(0.9, 1.4)))
+    # ferns every 5..8 m at the hedge foot
+    z = 30.0
+    while z < 160:
+        z += rr(5, 8)
+        for xs in ((4.6, 5.5), (6.9, 7.9)):
+            if xs[0] > 6 and not (32 <= z <= 105): continue
+            x = sgn * rr(*xs)
+            if free_pt(x, z, 0.3) and rng.random() < 0.6: strip.append(row('fern-a', x, z, rr(1.1, 1.5)))
+    # flower patches in small groups of 2..3 every 6..10 m
+    z = 29.0
+    while z < 165:
+        z += rr(6, 10)
+        col = rng.choice(FLOWER_IDS)
+        for _ in range(rng.randint(2, 3)):
+            hedged = 32 <= z <= 105
+            x = sgn * (rr(4.5, 5.6 if hedged else 6.2) if (rng.random() < 0.7 or not hedged) else rr(6.8, 8.1))
+            zz = z + rr(-1.1, 1.1)
+            if free_pt(x, zz): strip.append(row(col if rng.random() < 0.7 else rng.choice(FLOWER_IDS), x, zz, rr(0.9, 1.3)))
+P += strip
+
+# ---- (1) door dressing: 2..4 props at every house door; the opening in front of each door stays clear ---------------
+# Model A (hashPick 0) has its door centred on the +Z (north) face; model B (porch, stairs on the west) on the -Z (south) face; the lateral axis flips with the facing. Slots are
+# (lateral, out): lateral along +X for a south door, out from the footprint edge plus 0.4 m (the row builder drops anything
+# inside footprint + 0.4). The clear door lane is lateral -3.4..+1.6 (stairs side and 1.4 m past the door axis).
+BIG = ['woodpile-chop', 'wheelbarrow', 'garden-bed-a', 'haybale-a']
+SMALL = ['barrel', 'crate_A_small', 'sack', 'bucket_empty']
+def hashpick(s_, n):  # src/assets/swap/fit.ts hashPick: which Hexagon house model (A or B) a structure gets
+    h = 2166136261
+    for ch in s_:
+        h ^= ord(ch); h = (h * 16777619) & 0xFFFFFFFF
+    return h % n
+DOORS = []  # (sid, x, z on the wall line, outward normal fx, fz)
+for sid, kind, x, z, w, d in structs:
+    if kind == 'house': DOORS.append((sid, x, z + d / 2, 0, 1) if hashpick(sid, 2) == 0 else (sid, x, z - d / 2, 0, -1))  # A faces +Z, B faces -Z
+    elif kind == 'tavern': DOORS.append((sid, x, z - d / 2, 0, -1))  # to be set from the real model (see TAVERN_FACE)
+DOORS.append(('bakery', 19.0, 132.0, -1, 0))  # enterable shell, door on the west wall (x 19)
+def slot_ok(x, z):
+    c = cell(x, z)
+    if c is None or lane_pt(x, z) or any((x - fx) ** 2 + (z - fz) ** 2 < 3.0 ** 2 for fx, fz in FIRE): return False
+    for sid, kind, sx, sz, w, d in structs:
+        m = 0.8 if kind in ('fence', 'gate', 'cart') else 0.6
+        if kind == 'yard-fence': continue
+        if abs(x - sx) <= w / 2 + m and abs(z - sz) <= d / 2 + m: return False
+    if any((x - ax) ** 2 + (z - az) ** 2 < 1.4 ** 2 for _, ax, az, _ in anchors): return False
+    if any((x - lx) ** 2 + (z - lz) ** 2 < 1.0 ** 2 for lx, lz in LANTERNS): return False
+    return True
+door_rows = []
+for sid, dx, dz, fx, fz in DOORS:
+    lx_, lz_ = -fz, fx  # lateral axis (+X for a south door)
+    if sid == 'bakery': slots = [(3.2, 0.9), (-3.2, 0.9), (4.2, 1.8), (-4.2, 1.8)]
+    elif sid == 'tavern': slots = [(4.0, 1.2), (5.6, 2.0), (-7.0, 1.2), (3.6, 3.0)]  # porch and stairs on the west, 12 m wide front
+    elif fz > 0: slots = [(2.8, 1.0), (-2.8, 1.0), (4.0, 1.9), (-4.0, 1.9)]  # model A: door centred, no stairs
+    else: slots = [(2.4, 1.0), (3.7, 1.6), (3.0, 2.8), (-5.4, 1.0), (-4.6, 2.4)]  # model B: stairs to the west of the porch
+    n = rng.randint(2, 4)
+    chosen = []
+    for lat, out in slots:
+        if len(chosen) >= n: break
+        x = dx + lat * lx_ + (out + 0.4) * fx
+        z = dz + lat * lz_ + (out + 0.4) * fz
+        if not slot_ok(x, z): continue
+        if any(math.hypot(x - cx_, z - cz_) < 1.3 for cx_, cz_ in chosen): continue
+        chosen.append((x, z))
+        pid = rng.choice(BIG) if len(chosen) == 1 else (rng.choice(BIG) if (len(chosen) == 3 and rng.random() < 0.5) else rng.choice(SMALL + ['barrel', 'crate_A_small']))
+        door_rows.append(row(pid, x, z, 1.0, yaw=(math.degrees(math.atan2(fx, fz)) + rr(-25, 25)) % 360, near=sid))
+    if len(chosen) < 2: print('WARN door', sid, 'only', len(chosen), 'props')
+P += door_rows
+
+# ---- (5) Kettlewick green: flower ring round the well, edge trees, tufts where the green meets the house plots -------
+WELL = (0.0, 130.0)
+ring = []
+for rad, nflw, jit in ((8.6, 30, 0.5), (5.6, 14, 0.4)):
+    for k in range(nflw):
+        a = 2 * math.pi * (k + rr(-0.25, 0.25)) / nflw
+        rd = rad + rr(-jit, jit)
+        x, z = WELL[0] + rd * math.cos(a), WELL[1] + rd * math.sin(a)
+        if not free_pt(x, z): continue
+        if rad < 6 and k % 3 == 0: ring.append(row('grass-clump-b', x, z, rr(0.9, 1.2)))
+        else: ring.append(row(FLOWER_IDS[(k // 2) % 4], x, z, rr(0.95, 1.35)))
+# big, bright flower beds either side of the lane at the well so the ring reads at eye level (the review: the small patches were lost in the grass)
+for k, (sgn, zz) in enumerate([(s_, z_) for s_ in (-1, 1) for z_ in (125.5, 128.5, 131.5, 134.5)]):
+    x, z = sgn * rr(5.4, 6.6), zz + rr(-0.6, 0.6)
+    if not free_pt(x, z): continue
+    ring.append(row(FLOWER_IDS[k % 4], x, z, rr(2.1, 2.7)))
+P += ring
+# two birches and an elm on the edge of the green, clear of the lane, the houses and the trigger spheres (first free candidate)
+edge_trees = []
+for kid, cands in (('birch-a', [(-15, 112), (-14, 114), (-13, 109), (-12, 116)]), ('birch-b', [(14, 140), (13, 142), (15, 138), (13, 144)]), ('elm-or-ash-a', [(-14, 145), (-13, 143), (-15, 147), (-12, 141)])):
+    for x, z in cands:
+        c = cell(x, z)
+        if c is not None and not bare[c] and not tall_free[c] and all((x - qx) ** 2 + (z - qz) ** 2 > 5.0 ** 2 for qx, qz in placed):
+            placed.append((x, z)); edge_trees.append(row(kid, x, z, rr(0.9, 1.2), edge=True)); break
+    else: print('WARN no spot for edge tree', kid)
+P += edge_trees
+# tufts where the green meets the house plots: a loose ring 1.8..2.4 m outside each Kettlewick footprint, none in front of a door
+tufts = []
+for sid, kind, sx, sz, w, d in structs:
+    if kind not in HOUSE_KINDS or sz < 98: continue
+    hw, hd = w / 2 + 2.1, d / 2 + 2.1
+    n_ = int(2 * (hw + hd) * 2 / 1.7)
+    for k in range(n_):
+        u = k / n_ * 4
+        side, f = int(u), u - int(u)
+        if side == 0: px_, pz_ = -hw + 2 * hw * f, -hd
+        elif side == 1: px_, pz_ = hw, -hd + 2 * hd * f
+        elif side == 2: px_, pz_ = hw - 2 * hw * f, hd
+        else: px_, pz_ = -hw, hd - 2 * hd * f
+        x, z = px_ + sx + rr(-0.3, 0.5), pz_ + sz + rr(-0.3, 0.5)
+        if rng.random() > 0.55: continue
+        if any(math.hypot(x - ddx - fx_ * 2.5, z - ddz - fz_ * 2.5) < 5.5 for s_, ddx, ddz, fx_, fz_ in DOORS if s_ == sid): continue  # door front: props and the clear lane
+        if not free_pt(x, z): continue
+        tufts.append(row(rng.choice(GRASS_IDS + ['grass-clump-c']) if rng.random() < 0.8 else rng.choice(FLOWER_IDS), x, z, rr(0.9, 1.4)))
+P += tufts
+
+# drop anything inside the solid mask (except hedges, lanterns, door props, edge trees and the hand-placed strips)
+HAND = {id(p) for p in strip + ring + tufts}
 def ok(p):
-    if p['id'] in ('hedge-straight', 'post_lantern') or 'near' in p or p.get('landmark'): return True
+    if p['id'] in ('hedge-straight', 'post_lantern') or 'near' in p or p.get('landmark') or p.get('edge') or id(p) in HAND: return True
     ix, iz = int(p['x'] - X0), int(p['z'] - Z0)
-    return not (bare[iz, ix] or (tall_free[iz, ix] and p['id'] in ('oak-a', 'oak-b', 'oak-c', 'birch-a', 'birch-b', 'elm-or-ash-a', 'autumn-tree-a')))
+    if p['id'].startswith(GROUND_IDS) and (lane_pt(p['x'], p['z']) or chapel_pt(p['x'], p['z'])): return False
+    return not (bare[iz, ix] or (tall_free[iz, ix] and p['id'] in TALL))
 P = [p for p in P if ok(p)]
+for p in P:
+    p.pop('edge', None)
 json.dump({'tile': 'b1', 'core': {'x': [-100, 160], 'z': [-30, 230]}, 'overlap': 52, 'structures': [{'id': a, 'kind': b, 'x': c, 'z': d, 'w': e, 'd': f} for a, b, c, d, e, f in structs], 'placements': P}, open(f'{OUT}/b1.placements.json', 'w'))
 counts = {}
 for p in P: counts[p['id']] = counts.get(p['id'], 0) + 1

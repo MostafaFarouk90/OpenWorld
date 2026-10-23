@@ -30,6 +30,8 @@ import { createStructureArt } from './structureArt';
 import { REGION_STRINGS_EN } from './strings.en';
 import { validateLayout } from './validateLayout';
 import { CENTER as CITY_CENTER, MAX_STRUCTURE_RADIUS } from '../harrowmark/city';
+import { envEnabled } from '../env/env.plugin';
+import { envOwnsGround } from '../env/groundCover';
 import { BROOK_COURSE, BROOK_WIDTH, RIVER_COURSE, RIVER_WIDTH } from './water';
 
 export interface RegionPluginOptions {
@@ -199,7 +201,11 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
         // Meadow grass around the player, thinned on the low quality step; `?grass=off` leaves it out.
         if (grassEnabled(typeof location === 'undefined' ? '' : location.search)) {
           const physics = typeof ctx.physics.raycast === 'function' ? ctx.physics : undefined;
-          const grass = new GrassField(height, grassAcceptFor(layouts, height, physics));
+          // Inside a built environment tile the placement rows dress the ground (clumps, flower patches): no meadow blades there.
+          const search = typeof location === 'undefined' ? '' : location.search;
+          const envOwns = envOwnsGround(envEnabled(search));
+          const baseAccept = grassAcceptFor(layouts, height, physics);
+          const grass = new GrassField(height, (x, z) => !envOwns(x, z) && baseAccept(x, z));
           ctx.scene.add(grass.object);
           cleanups.push(() => grass.dispose());
           cleanups.push(
