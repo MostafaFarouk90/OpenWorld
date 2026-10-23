@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { buildSlagmawModel, HEAD_BONE, patchLavaShader, type SlagmawUniforms } from './SlagmawModel';
+import { buildSlagmawModel, HEAD_BONE, patchLavaShader, segmentBone, type SlagmawUniforms } from './SlagmawModel';
 import { LOOK } from './tuning';
 
 const uniformsOf = (m: ReturnType<typeof buildSlagmawModel>): SlagmawUniforms => {
@@ -32,9 +32,10 @@ describe('SlagmawModel (procedural)', () => {
     m.dispose();
   });
 
-  it('has hurtboxes on the head and the first three segments', () => {
+  it('has hurtboxes on the head and the first six segments', () => {
     const m = buildSlagmawModel();
-    expect(m.hurtboxes.count).toBe(4);
+    expect(m.hurtboxes.count).toBe(7);
+    expect(new Set(m.hurtboxes.capsules.map((c) => c.name)).size).toBe(7);
     expect(m.hurtboxes.missing).toEqual([]);
     m.dispose();
   });
@@ -130,6 +131,101 @@ describe('SlagmawModel (procedural)', () => {
     expect(shader.vertexShader).toContain('vLavaPos = transformed');
     expect(shader.vertexShader + shader.fragmentShader).not.toMatch(/modelMatrix|worldPosition/);
     expect(shader.uniforms.uLavaTime).toBeTruthy();
+  });
+
+  it('stays under the mesh budget and shares geometry and materials', () => {
+    const m = buildSlagmawModel();
+    const geos = new Set<THREE.BufferGeometry>();
+    const mats = new Set<THREE.Material>();
+    let meshes = 0;
+    m.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      meshes++;
+      geos.add(mesh.geometry);
+      mats.add(mesh.material as THREE.Material);
+    });
+    expect(meshes).toBeLessThanOrEqual(70);
+    expect(geos.size).toBeLessThanOrEqual(8);
+    expect(mats.size).toBeLessThanOrEqual(10);
+    m.dispose();
+  });
+
+  it('rears up when surfaced: the head 3 to 4.5 m up, the neck arched, the tail low', () => {
+    const m = buildSlagmawModel();
+    m.setEmergence(1);
+    const y = (name: string): number => m.root.getObjectByName(name)!.position.y;
+    expect(y(HEAD_BONE)).toBeGreaterThan(3);
+    expect(y(HEAD_BONE)).toBeLessThan(4.5);
+    expect(y(segmentBone(1))).toBeGreaterThan(3);
+    expect(y(segmentBone(LOOK.segments - 1))).toBeLessThan(0.6);
+    // The head looks down: its forward (-Z) has a downward component.
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(m.root.getObjectByName(HEAD_BONE)!.quaternion);
+    expect(fwd.y).toBeLessThan(0);
+    // Mid-eruption the head is already well up while the tail is still under the floor.
+    m.setEmergence(0.5);
+    expect(y(HEAD_BONE)).toBeGreaterThan(2);
+    expect(y(segmentBone(LOOK.segments - 1))).toBeLessThan(0);
+    m.dispose();
+  });
+
+  it('hurtboxes and headWorld follow the reared head', () => {
+    const m = buildSlagmawModel();
+    m.root.position.set(20000, 0, -5000);
+    m.setEmergence(1);
+    m.update(0.3);
+    m.root.updateMatrixWorld(true);
+    m.hurtboxes.update();
+    const head = m.headWorld(new THREE.Vector3());
+    const cap = m.hurtboxes.capsules.find((c) => c.name === 'head')!;
+    const mid = cap.a.clone().add(cap.b).multiplyScalar(0.5);
+    expect(mid.distanceTo(head)).toBeLessThan(0.05);
+    expect(head.y).toBeGreaterThan(3);
+    m.dispose();
+  });
+
+  it('when fully surfaced, low body capsules lie within blade reach of a 1.8 m knight', () => {
+    const m = buildSlagmawModel();
+    m.setEmergence(1);
+    m.update(0);
+    m.root.updateMatrixWorld(true);
+    m.hurtboxes.update();
+    const low = m.hurtboxes.capsules.filter((c) => (c.a.y + c.b.y) / 2 < 1.9 && c.radius >= 0.5);
+    expect(low.length).toBeGreaterThanOrEqual(2);
+    // A capsule's lowest surface point is well below chest height, so a level sword sweep can touch it.
+    for (const c of low) expect(Math.min(c.a.y, c.b.y) - c.radius).toBeLessThan(1.3);
+    m.dispose();
+  });
+
+  it('the eye, maw and seam glows flare with the telegraph and dim when cooled', () => {
+    const m = buildSlagmawModel();
+    const glow = (name: string): THREE.ShaderMaterial => {
+      let found: THREE.ShaderMaterial | undefined;
+      m.root.traverse((o) => {
+        const mat = (o as THREE.Mesh).material as THREE.ShaderMaterial | undefined;
+        if (mat?.name === name) found = mat;
+      });
+      return found!;
+    };
+    for (const name of ['slagmaw-eye', 'slagmaw-throat', 'slagmaw-maw-halo', 'slagmaw-seam-halo']) {
+      const mat = glow(name);
+      expect(mat).toBeTruthy();
+      const hot = mat.uniforms.uIntensity.value as number;
+      m.setTelegraph(1);
+      expect(mat.uniforms.uIntensity.value).toBeGreaterThan(hot);
+      m.setTelegraph(0);
+      m.setCooled(true);
+      expect(mat.uniforms.uIntensity.value).toBeLessThan(hot);
+      m.setCooled(false);
+      expect(mat.uniforms.uIntensity.value).toBeCloseTo(hot);
+    }
+    const halo = glow('slagmaw-seam-halo');
+    expect(halo.blending).toBe(THREE.AdditiveBlending);
+    expect(halo.depthWrite).toBe(false);
+    expect(halo.vertexShader + halo.fragmentShader).not.toMatch(/modelMatrix|worldPosition/);
+    m.setOpacity(0.5);
+    expect(halo.uniforms.uOpacity.value).toBeCloseTo(0.5);
+    m.dispose();
   });
 
   it('disposes cleanly twice and leaves the scene', () => {
