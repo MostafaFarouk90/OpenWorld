@@ -27,12 +27,12 @@ describe('the Lower Galleries blockers', () => {
     expect(closed.get(LOWER_SEALED_DOOR)).toBe(true);
   });
 
-  it('opens the gate on world.bellows.shortcutOpen and the door on story.m19.started, independently, and closes again', () => {
+  it('opens the gate on world.bellows.shortcutOpen and the door on story.m19.doorOpen, independently, and closes again', () => {
     const { fc, closed } = setup();
     registerLowerGalleries(fc.ctx);
     fc.ctx.state.setFlag('world.bellows.shortcutOpen', true);
     expect([closed.get(LOWER_SHORTCUT_GATE), closed.get(LOWER_SEALED_DOOR)]).toEqual([false, true]);
-    fc.ctx.state.setFlag('story.m19.started', true);
+    fc.ctx.state.setFlag('story.m19.doorOpen', true);
     expect([closed.get(LOWER_SHORTCUT_GATE), closed.get(LOWER_SEALED_DOOR)]).toEqual([false, false]);
     fc.ctx.state.setFlag('world.bellows.shortcutOpen', false);
     expect(closed.get(LOWER_SHORTCUT_GATE)).toBe(true);
@@ -40,7 +40,7 @@ describe('the Lower Galleries blockers', () => {
 
   it('starts open when the flags are already set (a load)', () => {
     const { fc, closed } = setup();
-    fc.flags.set('story.m19.started', true);
+    fc.flags.set('story.m19.doorOpen', true);
     registerLowerGalleries(fc.ctx);
     expect(closed.get(LOWER_SEALED_DOOR)).toBe(false);
     expect(closed.get(LOWER_SHORTCUT_GATE)).toBe(true);
@@ -49,7 +49,7 @@ describe('the Lower Galleries blockers', () => {
   it('re-evaluates on save.loaded, which replaces the flags wholesale', () => {
     const { fc, closed } = setup();
     registerLowerGalleries(fc.ctx);
-    fc.ctx.state.setFlag('story.m19.started', true);
+    fc.ctx.state.setFlag('story.m19.doorOpen', true);
     fc.flags.clear();
     fc.flags.set('world.bellows.shortcutOpen', true);
     fc.fire('save.loaded', { slot: 'a' });
@@ -76,7 +76,7 @@ describe('the Lower Galleries blockers', () => {
     off();
     expect([closed.get(LOWER_SHORTCUT_GATE), closed.get(LOWER_SEALED_DOOR)]).toEqual([false, false]);
     const n = calls.length;
-    fc.ctx.state.setFlag('story.m19.started', true);
+    fc.ctx.state.setFlag('story.m19.doorOpen', true);
     expect(calls.length).toBe(n);
   });
 });
