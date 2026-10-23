@@ -20,12 +20,12 @@ describe('B1 placements', () => {
     expect(unknown).toEqual([]);
   });
 
-  it('lies inside the tile core plus its overlap and never inside a structure footprint', () => {
+  it('lies inside the tile core (band rows belong to the neighbour) and never inside a structure footprint', () => {
     for (const r of rows) {
-      expect(r.x).toBeGreaterThanOrEqual(-160);
-      expect(r.x).toBeLessThanOrEqual(220);
-      expect(r.z).toBeGreaterThanOrEqual(-90);
-      expect(r.z).toBeLessThanOrEqual(290);
+      expect(r.x).toBeGreaterThanOrEqual(-100);
+      expect(r.x).toBeLessThanOrEqual(160);
+      expect(r.z).toBeGreaterThanOrEqual(-30);
+      expect(r.z).toBeLessThanOrEqual(230);
       expect(Number.isFinite(r.x) && Number.isFinite(r.z), r.id).toBe(true);
     }
     for (const s of BRIGHTWATER_LAYOUT.structures) {
