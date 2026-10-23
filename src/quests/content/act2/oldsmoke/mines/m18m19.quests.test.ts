@@ -8,6 +8,7 @@ import { installObjectiveFlags } from '../../../../objectiveFlags';
 import { OLDSMOKE_NPC_DEFS } from '../../../../../oldsmoke/npcDefs';
 import { M18M19, M18M19_NPC_DEFS } from './m18m19.content';
 import { BELLOWS_LIT_FLAG, BELLOWS_PLAQUE, BELLOWS_PLAQUE_FLAG, BELLOWS_SOLVED_FLAG, M18_CRAWLERS_FLAG, M18_PIPES_NOTE, M18_SCENE, m18 } from './m18.quest';
+import { M19_ROUTE } from '../../../../../oldsmoke/mines/lowerGalleries';
 import { M19_DOOR_OPEN_FLAG, M19_DOORS, M19_NURSERY_TRIGGER, M19_ROUTE_TRIGGER, M19_SCENE, M19_SECTION, m19 } from './m19.quest';
 
 type W = ReturnType<typeof makeWorld>;
@@ -258,8 +259,9 @@ describe('M19 What Grisel Hides', () => {
     return w;
   }
   const doors = (w: W) => { for (const d of M19_DOORS) interact(w, d); };
-  const toDoors = (w: W) => {
-    talk(w, 'wenna');
+  /** The locks come first (the door is on the way in); then the lead and the stealth section. */
+  const pastDoors = (w: W) => {
+    doors(w);
     enter(w, M19_ROUTE_TRIGGER);
     section(w, 'entered');
     section(w, 'cleared');
@@ -278,14 +280,14 @@ describe('M19 What Grisel Hides', () => {
     const w = world();
     begin(w, 'm19');
     talk(w, 'wenna'); // the offer\'s own end credits the confession
+    expect(current(w, 'm19')).toBe('doors'); // the sealed door is on the way to the stealth start
+    doors(w);
     expect(current(w, 'm19')).toBe('route');
     enter(w, M19_ROUTE_TRIGGER);
     expect(current(w, 'm19')).toBe('stealth');
     section(w, 'entered');
     expect(done(w, 'm19', 'stealth')).toBe(false);
     section(w, 'cleared');
-    expect(current(w, 'm19')).toBe('doors');
-    doors(w);
     expect(current(w, 'm19')).toBe('reveal');
     scene(w, M19_SCENE);
     expect(current(w, 'm19')).toBe('nursery');
@@ -305,6 +307,7 @@ describe('M19 What Grisel Hides', () => {
     enter(w, M19_ROUTE_TRIGGER); // before the confession ends
     expect(done(w, 'm19', 'route')).toBe(false);
     talk(w, 'wenna');
+    doors(w);
     w.bus.emit('trigger.enter', { triggerId: M19_ROUTE_TRIGGER, actorId: 'wyrm' });
     w.bus.emit('trigger.enter', { triggerId: 'trg.q13.m17.floor', actorId: 'p' });
     expect(done(w, 'm19', 'route')).toBe(false);
@@ -316,6 +319,7 @@ describe('M19 What Grisel Hides', () => {
     const w = world();
     begin(w, 'm19');
     talk(w, 'wenna');
+    doors(w);
     enter(w, M19_ROUTE_TRIGGER);
     section(w, 'entered');
     section(w, 'exited');
@@ -330,6 +334,7 @@ describe('M19 What Grisel Hides', () => {
     const w = world();
     begin(w, 'm19');
     talk(w, 'wenna');
+    doors(w);
     section(w, 'cleared');
     expect(done(w, 'm19', 'stealth')).toBe(false);
     enter(w, M19_ROUTE_TRIGGER);
@@ -340,7 +345,7 @@ describe('M19 What Grisel Hides', () => {
     const w = world();
     installObjectiveFlags(M18M19.flags, w.bus, w.state, w.manager);
     begin(w, 'm19');
-    toDoors(w);
+    talk(w, 'wenna');
     interact(w, M19_DOORS[0]);
     interact(w, M19_DOORS[0]);
     interact(w, M19_DOORS[1]);
@@ -352,13 +357,27 @@ describe('M19 What Grisel Hides', () => {
     expect(w.flags.get(M19_DOOR_OPEN_FLAG)).toBe(true);
   });
 
-  it('the reveal counts when the scene completes, not when it is skipped, another scene ends, or the doors are still shut', () => {
+  it('the locks cannot be worked before the confession, and the stealth section is not live before the locks are done', () => {
     const w = world();
     begin(w, 'm19');
-    toDoors(w);
-    scene(w, M19_SCENE); // doors not done: the objective is not current
-    expect(done(w, 'm19', 'reveal')).toBe(false);
     doors(w);
+    expect(done(w, 'm19', 'doors')).toBe(false);
+    talk(w, 'wenna');
+    enter(w, M19_ROUTE_TRIGGER); // the lead cannot be credited ahead of the door either
+    expect(done(w, 'm19', 'route')).toBe(false);
+    expect(current(w, 'm19')).toBe('doors');
+  });
+
+  it('the reveal counts when the scene completes, not when it is skipped, another scene ends, or the stealth section is not done', () => {
+    const w = world();
+    begin(w, 'm19');
+    talk(w, 'wenna');
+    doors(w);
+    enter(w, M19_ROUTE_TRIGGER);
+    scene(w, M19_SCENE); // stealth not done: the objective is not current
+    expect(done(w, 'm19', 'reveal')).toBe(false);
+    section(w, 'entered');
+    section(w, 'cleared');
     scene(w, M19_SCENE, 'skip');
     scene(w, 'scene-m18-breath');
     expect(done(w, 'm19', 'reveal')).toBe(false);
@@ -369,8 +388,8 @@ describe('M19 What Grisel Hides', () => {
   it('the quest\'s own scene end is not a talk with Wenna: the nursery talk still needs the conversation', () => {
     const w = world();
     begin(w, 'm19');
-    toDoors(w);
-    doors(w);
+    talk(w, 'wenna');
+    pastDoors(w);
     w.bus.emit('dialogue.ended', { dialogueId: M19_SCENE, npcId: 'scene.m19', reason: 'completed' });
     expect(current(w, 'm19')).toBe('nursery');
   });
@@ -378,7 +397,7 @@ describe('M19 What Grisel Hides', () => {
   it('keeps its progress across a save, mid-doors', () => {
     const w = world();
     begin(w, 'm19');
-    toDoors(w);
+    talk(w, 'wenna');
     interact(w, M19_DOORS[0]);
     interact(w, M19_DOORS[1]);
     const data = JSON.parse(JSON.stringify(w.manager.serialize()));
@@ -389,7 +408,23 @@ describe('M19 What Grisel Hides', () => {
     interact(w2, M19_DOORS[1]); // already counted before the save
     expect(progress(w2, 'm19', 'doors')).toBe(2);
     interact(w2, M19_DOORS[2]);
-    expect(current(w2, 'm19')).toBe('reveal');
+    expect(current(w2, 'm19')).toBe('route');
+  });
+});
+
+describe('M19 objective order follows the Lower Galleries geometry', () => {
+  it('the sealed door lies on the way to the stealth start, so its locks are an earlier objective than the lead and the stealth', () => {
+    const ids = m19.objectives.map((o) => o.id);
+    expect(ids.indexOf('doors')).toBeGreaterThan(ids.indexOf('confession'));
+    expect(ids.indexOf('doors')).toBeLessThan(ids.indexOf('route'));
+    expect(ids.indexOf('doors')).toBeLessThan(ids.indexOf('stealth'));
+    const doorZ = -35; // oldsmoke.lower.sealed.2, on the north corridor
+    const startAt = { x: 26, z: -42 }; // oldsmoke.stealth.m19.start
+    const d = (p: { x: number; z: number }) => Math.hypot(p.x - startAt.x, p.z - startAt.z);
+    const startIdx = M19_ROUTE.reduce((best, p, i) => (d(p) < d(M19_ROUTE[best]) ? i : best), 0);
+    const doorIdx = M19_ROUTE.findIndex((p) => p.z <= doorZ);
+    expect(doorIdx).toBeGreaterThan(0);
+    expect(doorIdx).toBeLessThan(startIdx); // the route crosses the door before it reaches the stealth start
   });
 });
 
@@ -411,9 +446,9 @@ describe('the pair', () => {
     expect(w.manager.state('m18')).toBe('completed');
     begin(w, 'm19');
     talk(w, 'wenna');
+    for (const d of M19_DOORS) interact(w, d);
     enter(w, M19_ROUTE_TRIGGER);
     section(w, 'cleared');
-    for (const d of M19_DOORS) interact(w, d);
     scene(w, M19_SCENE);
     talk(w, 'wenna');
     talk(w, 'wenna');

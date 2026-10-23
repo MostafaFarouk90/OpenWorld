@@ -184,11 +184,11 @@ describe('Wenna opens on the right segment', () => {
   const cases: Array<[string, (w: Wd) => void, string]> = [
     ['M18 done, M19 not begun', (w) => w.set('m18', 'completed'), 'a2-m19-offer'],
     ['M19 begun, confession not credited', (w) => w.set('m19', 'active'), 'a2-m19-again'],
-    ['M19 leading', (w) => w.set('m19', 'active', 'confession'), 'a2-m19-wait-lead'],
-    ['M19 in the stealth section', (w) => w.set('m19', 'active', 'confession', 'route'), 'a2-m19-wait-lead'],
-    ['M19 at the door', (w) => w.set('m19', 'active', 'confession', 'route', 'stealth'), 'a2-m19-wait-door'],
-    ['M19 door open', (w) => w.set('m19', 'active', 'confession', 'route', 'stealth', 'doors'), 'a2-m19-wait-reveal'],
-    ['M19 nursery revealed', (w) => w.set('m19', 'active', 'confession', 'route', 'stealth', 'doors', 'reveal'), 'a2-m19-nursery'],
+    ['M19 at the door (confession done)', (w) => w.set('m19', 'active', 'confession'), 'a2-m19-wait-door'],
+    ['M19 door open, lead pending', (w) => w.set('m19', 'active', 'confession', 'doors'), 'a2-m19-wait-lead'],
+    ['M19 in the stealth section', (w) => w.set('m19', 'active', 'confession', 'doors', 'route'), 'a2-m19-wait-lead'],
+    ['M19 stealth done', (w) => w.set('m19', 'active', 'confession', 'doors', 'route', 'stealth'), 'a2-m19-wait-reveal'],
+    ['M19 nursery revealed', (w) => w.set('m19', 'active', 'confession', 'doors', 'route', 'stealth', 'reveal'), 'a2-m19-nursery'],
     ['M19 ready to report', (w) => w.set('m19', 'active', 'reveal', 'nursery'), 'a2-m19-report'],
   ];
   it.each(cases)('%s', (_n, arrange, node) => {

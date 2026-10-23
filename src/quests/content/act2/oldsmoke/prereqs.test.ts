@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ACT2_PREREQS } from '../../../actJump';
 import { ACT2D_PREREQS } from './prereqs';
 import { OLDSMOKE_QUEST_DEFS } from './index';
+import { M22_PREREQUISITES } from './m22.quest';
 
 describe('Phase D jump prerequisites', () => {
   it('each row is transitive: everything the quest\'s own startWhen names is in its row, with its own prerequisites', () => {
@@ -55,5 +56,11 @@ describe('Phase D jump prerequisites', () => {
     const row = ACT2D_PREREQS.m22;
     for (const q of [...ACT2_PREREQS.d03, 'd03', ...OLDSMOKE_QUEST_DEFS.map((x) => x.id).filter((x) => x !== 'm22')]) expect(row, q).toContain(q);
     expect(row.slice(-10)).toEqual(['m16', 'm17', 'r09', 'r08', 'm18', 'r10', 'm19', 'm20', 'm21', 'd04']);
+  });
+  it('M22 row covers every quest of M22_PREREQUISITES (r05, r06, r07, r11 included), each once', () => {
+    const row = ACT2D_PREREQS.m22;
+    for (const q of M22_PREREQUISITES) expect(row, q).toContain(q);
+    for (const q of ['r05', 'r06', 'r07', 'r11']) expect(row).toContain(q);
+    expect(new Set(row).size).toBe(row.length);
   });
 });

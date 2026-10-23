@@ -1,5 +1,5 @@
 import { buildTree, type Line } from '../build';
-import { all, any, flagIs, objDone, objOpen, qActive, qDone, step } from '../cond';
+import { all, any, flagIs, not, objDone, objOpen, qActive, qDone, step } from '../cond';
 
 const A = (t: string, fx?: Line['fx']): Line => (fx ? { s: 'aldous', t, fx } : { s: 'aldous', t });
 const C = (t: string, fx?: Line['fx']): Line => (fx ? { s: 'cael', t, fx } : { s: 'cael', t });
@@ -11,7 +11,14 @@ const evidence2 = any(
 );
 const wellKnown = { favour: 'grisel', atLeast: 15 } as const;
 const canCase = any(evidence2, wellKnown);
-const afterAudience = all(qActive('m21'), objDone('m21', 'letters'), objOpen('m21', 'aftermath'));
+// The aftermath is spoken only once the whole middle is done: the letters AND the stealth section of the spy branch (the confront
+// branch has both done by `doneWhen`), never between the letters and the stealth.
+const afterAudience = all(qActive('m21'), objDone('m21', 'letters'), objDone('m21', 'stealth'), objOpen('m21', 'aftermath'));
+// The audience pays its favour (and gold) once per road: an aborted talk or a re-talk after the fight must not pay it again.
+const paidFlag = (road: string) => `story.m21.paid.${road}`;
+const payOnce = (road: string, pay: NonNullable<Line['fx']>): NonNullable<Line['fx']> => [
+  { if: { not: flagIs(paidFlag(road)) }, then: [...pay, { setFlag: paidFlag(road), value: true }] },
+];
 
 /** Lord Aldous Grisel of Deepgate: M16 in the forecourt, then the hall for M21. */
 export const ALDOUS = buildTree({
@@ -90,7 +97,7 @@ export const ALDOUS = buildTree({
           s: 'aldous', t: 'Take your time. I shall wait. I have waited for the Houses to see sense for ten years.',
           choices: [
             { id: 'confront', t: 'I will say it to your face. Here, now.', go: 'm21-confront', fx: [{ setFlag: 'story.m21.branch', value: 'confront' }] },
-            { id: 'spy', t: 'I will think on it. And wait in your hall.', go: 'm21-spy', fx: [{ setFlag: 'story.m21.branch', value: 'spy' }, { favour: 'grisel', delta: 2 }, { favour: 'oswin', delta: 3 }, { setFlag: 'story.m21.choice', value: 'spy' }] },
+            { id: 'spy', t: 'I will think on it. And wait in your hall.', go: 'm21-spy', fx: [{ setFlag: 'story.m21.branch', value: 'spy' }, ...payOnce('spy', [{ favour: 'grisel', delta: 2 }, { favour: 'oswin', delta: 3 }]), { setFlag: 'story.m21.choice', value: 'spy' }] },
           ],
         },
       ],
@@ -101,9 +108,9 @@ export const ALDOUS = buildTree({
         {
           s: 'aldous', t: 'I am listening, Knight.',
           choices: [
-            { id: 'proof', t: 'I have the orders, the chain, the tally. Your own hand signed them.', go: 'm21-pass', when: canCase, fx: [{ setFlag: 'story.m21.persuaded', value: true }, { setFlag: 'story.m21.choice', value: 'confront' }, { favour: 'halvard', delta: 3 }, { favour: 'grisel', delta: -5 }, { event: 'story.m21.resolved' }] },
-            { id: 'tip', t: '(Press a purse of gold into a steward\'s hand and ask him to speak for you.) Forty gold.', go: 'm21-pass', when: { gold: { atLeast: 40 } }, fx: [{ spendGold: { amount: 40, reason: 'persuasion' } }, { setFlag: 'story.m21.persuaded', value: true }, { setFlag: 'story.m21.choice', value: 'confront' }, { favour: 'halvard', delta: 3 }, { favour: 'grisel', delta: -5 }, { event: 'story.m21.resolved' }] },
-            { id: 'press', t: 'I do not need proof. I know what I saw.', go: 'm21-fail', fx: [{ setFlag: 'story.m21.choice', value: 'confront' }, { setFlag: 'story.m21.loyalistsOut', value: true }, { favour: 'halvard', delta: 3 }, { favour: 'grisel', delta: -5 }, { event: 'story.m21.resolved' }] },
+            { id: 'proof', t: 'I have the orders, the chain, the tally. Your own hand signed them.', go: 'm21-pass', when: canCase, fx: [{ setFlag: 'story.m21.persuaded', value: true }, { setFlag: 'story.m21.choice', value: 'confront' }, ...payOnce('confront', [{ favour: 'halvard', delta: 3 }, { favour: 'grisel', delta: -5 }]), { event: 'story.m21.resolved' }] },
+            { id: 'tip', t: '(Press a purse of gold into a steward\'s hand and ask him to speak for you.) Forty gold.', go: 'm21-pass', when: all({ gold: { atLeast: 40 } }, not(flagIs('story.m21.tipPaid'))), fx: [{ spendGold: { amount: 40, reason: 'persuasion' } }, { setFlag: 'story.m21.tipPaid', value: true }, { setFlag: 'story.m21.persuaded', value: true }, { setFlag: 'story.m21.choice', value: 'confront' }, ...payOnce('confront', [{ favour: 'halvard', delta: 3 }, { favour: 'grisel', delta: -5 }]), { event: 'story.m21.resolved' }] },
+            { id: 'press', t: 'I do not need proof. I know what I saw.', go: 'm21-fail', fx: [{ clearFlag: 'story.m21.persuaded' }, { setFlag: 'story.m21.choice', value: 'confront' }, ...payOnce('confront', [{ favour: 'halvard', delta: 3 }, { favour: 'grisel', delta: -5 }]), { event: 'story.m21.resolved' }] },
           ],
         },
       ],

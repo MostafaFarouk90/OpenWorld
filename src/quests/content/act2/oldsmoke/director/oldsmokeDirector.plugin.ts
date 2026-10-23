@@ -8,7 +8,9 @@ import { M18M19_NPC_DEFS, M18M19_NPCS, M18M19_NPC_STRINGS } from '../mines/m18m1
 import { M20D04_NPC_DEFS, M20D04_NPCS, M20D04_NPC_STRINGS } from '../mines/m20d04.content';
 import { OLDSMOKE_QUEST_IDS } from '../index';
 import { M16_BRAZIER, M16_BRAZIER_ID } from '../m16.quest';
-import { M22_BANNER } from '../m22.quest';
+import { KEEP_HALL_ID } from '../../../../../interiors/harrowmark/keepHall';
+
+const KEEP_HALL_TRIGGER = 'trg.harrowmark.keep-hall';
 
 let offs: Off[] = [];
 
@@ -22,27 +24,31 @@ export function installM16(k: Kit): void {
 
 /**
  * M22: the Council meets when Cael is in the Keep hall with the council objective open; the banner raised starts its
- * two-line scene. Both retry every half second until the dialogue opens (another modal may hold it for a tick), and the
- * council also starts when the objective opens with Cael already standing in the hall.
+ * two-line scene as soon as that objective is current and Cael is in the hall. Both are derived from the quest and the world
+ * on every half second (nothing is held in memory, so a save and load between the banner and its scene loses nothing) and
+ * retry until the dialogue opens (another modal may hold it for a tick). "In the hall" is the Keep hall interior, not the
+ * 3 m strip of the M08 trigger, which a load or a teleport into the hall never enters.
  */
 export function installM22(k: Kit): void {
   const { ctx } = k;
-  let inKeep = false;
-  let bannerPending = false;
   const dialogueFree = (): boolean => !ctx.services.get('dialogue')?.active;
-  k.on('trigger.enter', (e) => { if (e.actorId === 'player' && e.triggerId === 'trg.harrowmark.keep-hall') inKeep = true; });
-  k.on('trigger.exit', (e) => { if (e.actorId === 'player' && e.triggerId === 'trg.harrowmark.keep-hall') inKeep = false; });
-  k.on('interact', (e) => {
-    if (e.action === 'mercy' || e.interactableId !== M22_BANNER || !k.active('m22')) return;
-    bannerPending = true;
-  });
+  const inKeep = (): boolean => ctx.services.get('interiors')?.current === KEEP_HALL_ID || ctx.triggers.isInside?.(KEEP_HALL_TRIGGER, 'player') === true;
   k.every(30, () => {
-    if (!k.active('m22') || !dialogueFree()) return;
-    if (bannerPending && k.objCurrent('m22', 'raised')) {
-      if (ctx.services.get('dialogue')?.start('scene-m22-banner', 'wystan')) bannerPending = false;
-    } else if (inKeep && k.objCurrent('m22', 'council')) {
-      ctx.services.get('dialogue')?.start('scene-m22-council', 'wystan');
-    }
+    if (!k.active('m22') || !dialogueFree() || !inKeep()) return;
+    if (k.objCurrent('m22', 'raised')) ctx.services.get('dialogue')?.start('scene-m22-banner', 'wystan');
+    else if (k.objCurrent('m22', 'council')) ctx.services.get('dialogue')?.start('scene-m22-council', 'wystan');
+  });
+}
+
+/**
+ * M21: the loyalists' fight follows a failed case, but only once the audience is over. The dialogue writes the choice (and
+ * `story.m21.persuaded` before it); this writes `story.m21.loyalistsOut`, which the spawner reads, when the `audience` talk is
+ * credited, not mid-dialogue: an aborted talk cannot start a fight, and a talk that is repeated cannot start it twice.
+ */
+export function installM21(k: Kit): void {
+  k.on('quest.objective', (e) => {
+    if (e.questId !== 'm21' || e.objectiveId !== 'audience' || !e.done) return;
+    if (k.str('story.m21.choice') === 'confront' && !k.flag('story.m21.persuaded')) k.set('story.m21.loyalistsOut');
   });
 }
 
@@ -67,6 +73,7 @@ const plugin: GamePlugin = {
 
     installM16(kit);
     installM22(kit);
+    installM21(kit);
     installM18(kit);
     offs.push(installM19(kit));
     offs.push(...installM20(kit), ...installD04(kit));
@@ -88,6 +95,12 @@ const plugin: GamePlugin = {
       if (OLDSMOKE_QUEST_IDS.includes(e.questId)) kit.set(`story.${e.questId}.complete`);
     });
     kit.on('save.loaded', syncComplete);
+
+    // R09's `clerk` objective is credited by a `doneWhen` flag (the clerk leaves when R10 ends on the miners' side), which only a
+    // recheck reads: credit it at once when `story.r10.choice` is written, not at the next load.
+    kit.on('flag.changed', (e) => {
+      if (e.key === 'story.r10.choice') ctx.services.get('quests')?.recheck?.();
+    });
 
     offs.push(ctx.systems.add({ id: 'oldsmoke-quests.tick', fixedPhase: 'rules', order: 10, fixedUpdate: () => tick() }));
   },

@@ -12,8 +12,7 @@ export const M19_DOOR_OPEN_FLAG = 'story.m19.doorOpen';
 
 /**
  * M19 What Grisel Hides. Wenna confesses what lies below Deepgate and leads Cael into the Lower Galleries (the guide is in
- * the director). Cael passes the stewards' watch alone while she waits in a hide spot, breaks the three locks of the sealed
- * door, and the nursery is revealed: wyrmlings in chains. Wenna's own words are the last two talks. Stealth is a section
+ * the director). Cael breaks the three locks of the sealed door (in the north corridor, on the way in), passes the stewards' watch alone while she waits in a hide spot, and the nursery is revealed: wyrmlings in chains. Wenna's own words are the last two talks. Stealth is a section
  * (`m19.lower-galleries`, live from the stealth objective until it is done); the reveal is a short scene, credited by its
  * end like M22's council. The confession is also the offer: Wenna starts the quest on its last line and that talk's end
  * credits the first objective.
@@ -26,9 +25,10 @@ export const m19: QuestDef = {
   startWhen: { quest: 'm18', state: 'completed' },
   objectives: [
     { id: 'confession', type: 'talk', target: 'wenna', textKey: 'quest.m19.confession' },
+    // The sealed door stands in the north corridor, on the only way to the stealth start, so its locks come first.
+    interacts('doors', 'quest.m19.doors', M19_DOORS),
     { id: 'route', type: 'goTo', target: M19_ROUTE_TRIGGER, textKey: 'quest.m19.route' },
     story('stealth', 'quest.m19.stealth', 'stealth.section', { match: { sectionId: M19_SECTION, phase: 'cleared' } }),
-    interacts('doors', 'quest.m19.doors', M19_DOORS),
     story('reveal', 'quest.m19.reveal', 'dialogue.ended', { match: { dialogueId: M19_SCENE, reason: 'completed' } }),
     { id: 'nursery', type: 'talk', target: 'wenna', textKey: 'quest.m19.nursery' },
     { id: 'report', type: 'talk', target: 'wenna', textKey: 'quest.m19.report' },

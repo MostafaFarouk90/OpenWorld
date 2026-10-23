@@ -118,9 +118,9 @@ export const WENNA_M19: BuiltTree = buildTree({
   start: [
     { when: all(qActive('m19'), objDone('m19', 'nursery'), objOpen('m19', 'report')), seg: 'a2-m19-report' },
     { when: all(qActive('m19'), objDone('m19', 'reveal'), objOpen('m19', 'nursery')), seg: 'a2-m19-nursery' },
-    { when: all(qActive('m19'), objDone('m19', 'doors'), objOpen('m19', 'reveal')), seg: 'a2-m19-wait-reveal' },
-    { when: all(qActive('m19'), objDone('m19', 'stealth'), objOpen('m19', 'doors')), seg: 'a2-m19-wait-door' },
-    { when: all(qActive('m19'), objDone('m19', 'confession'), objOpen('m19', 'stealth')), seg: 'a2-m19-wait-lead' },
+    { when: all(qActive('m19'), objDone('m19', 'stealth'), objOpen('m19', 'reveal')), seg: 'a2-m19-wait-reveal' },
+    { when: all(qActive('m19'), objDone('m19', 'confession'), objOpen('m19', 'doors')), seg: 'a2-m19-wait-door' },
+    { when: all(qActive('m19'), objDone('m19', 'doors'), objOpen('m19', 'stealth')), seg: 'a2-m19-wait-lead' },
     { when: step('m19', null, 'confession'), seg: 'a2-m19-again' },
     { when: all(qDone('m18'), qIdle('m19')), seg: 'a2-m19-offer' },
   ],

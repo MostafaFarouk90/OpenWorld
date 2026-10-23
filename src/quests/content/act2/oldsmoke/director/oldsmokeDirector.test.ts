@@ -25,6 +25,9 @@ function rig(opts: { anchors?: boolean; npcs?: boolean } = {}) {
   const dialogues: Array<[string, string]> = [];
   const triggers: string[] = [];
   const busy = { on: false };
+  const rechecks = { n: 0 };
+  const interiors = { current: null as string | null, setBlocker: () => true };
+  const inside = new Set<string>();
   const rekindled: unknown[] = [];
   const registeredNpcs: string[] = [];
   const registeredStrings: Array<Record<string, string>> = [];
@@ -33,12 +36,13 @@ function rig(opts: { anchors?: boolean; npcs?: boolean } = {}) {
     objectiveDone: () => false,
     isObjectiveCurrent: (q: string, o: string) => current.has(`${q}.${o}`),
     objectives: () => [],
+    recheck: () => void (rechecks.n += 1),
   } as never);
   services.provide('dialogue' as never, { get active() { return busy.on; }, start: (id: string, npc: string) => { if (busy.on) return false; dialogues.push([id, npc]); return true; } } as never);
   // the mine installers (M18/M19/M20/D04) and the cast registration read these services; they are inert stubs here, the installers have their own tests
   services.provide('wyrms' as never, { tether: () => null, unchain: () => false, flyAway: () => false, playOrsk: () => null } as never);
   services.provide('puzzles' as never, { register: () => () => {}, pressure: () => null } as never);
-  services.provide('interiors' as never, { current: null, setBlocker: () => true } as never);
+  services.provide('interiors' as never, interiors as never);
   services.provide('waystones' as never, { hostileAggro: false } as never);
   if (opts.npcs !== false) {
     services.provide('npcs' as never, {
@@ -52,14 +56,14 @@ function rig(opts: { anchors?: boolean; npcs?: boolean } = {}) {
     events, state, services,
     strings: { register: (_lang: string, t: Record<string, string>) => { registeredStrings.push(t); return () => {}; }, t: (k: string) => k },
     anchors: { find: (id: string) => (opts.anchors === false ? undefined : { position: { x: 1, y: 2, z: 3 }, id }) },
-    triggers: { add: (t: { id: string }) => { triggers.push(t.id); return () => {}; } },
+    triggers: { add: (t: { id: string }) => { triggers.push(t.id); return () => {}; }, isInside: (id: string, actor = 'player') => actor === 'player' && inside.has(id) },
     player: { feet: { x: 0, y: 0, z: 0 } },
     systems: { add: (s: { fixedUpdate(dt: number): void }) => { tick = s; return () => {}; } },
   } as unknown as GameContext;
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   plugin.setup(ctx);
   return {
-    events, state, quest, current, busy, dialogues, triggers, rekindled, warn, registeredNpcs, registeredStrings,
+    events, state, quest, current, busy, rechecks, interiors, inside, dialogues, triggers, rekindled, warn, registeredNpcs, registeredStrings,
     step: (n = 1) => { for (let i = 0; i < n; i++) tick!.fixedUpdate(1 / 60); },
     interact: (interactableId: string, action = 'interact') => events.emit('interact', { interactableId, kind: 'use', actorId: 'player', action } as never),
     dispose: () => plugin.dispose?.(),
@@ -143,23 +147,74 @@ describe('oldsmoke director: M16 brazier', () => {
   });
 });
 
-describe('oldsmoke director: M22 scenes', () => {
-  const enter = (r: ReturnType<typeof rig>, triggerId = 'trg.harrowmark.keep-hall', actorId = 'player') => r.events.emit('trigger.enter', { triggerId, actorId } as never);
+describe('oldsmoke director: M21 loyalists', () => {
+  const credit = (r: ReturnType<typeof rig>, done = true, objectiveId = 'audience', questId = 'm21') =>
+    r.events.emit('quest.objective', { questId, objectiveId, progress: 1, required: 1, done } as never);
 
-  it('entering the Keep hall with the council objective open starts the council scene with Wystan, once per entry', () => {
+  it('the fight is released when the audience talk is credited after a failed confront, not while the choice is made', () => {
+    const r = rig();
+    r.state.setFlag('story.m21.choice', 'confront'); // the press choice, mid-dialogue
+    expect(r.state.getBool('story.m21.loyalistsOut')).toBe(false);
+    credit(r, false);
+    credit(r, true, 'evidence');
+    credit(r, true, 'audience', 'm22');
+    expect(r.state.getBool('story.m21.loyalistsOut')).toBe(false);
+    credit(r);
+    expect(r.state.getBool('story.m21.loyalistsOut')).toBe(true);
+    r.dispose();
+  });
+
+  it('a persuaded Aldous or a spy never releases it', () => {
+    const r = rig();
+    r.state.setFlag('story.m21.choice', 'confront');
+    r.state.setFlag('story.m21.persuaded', true);
+    credit(r);
+    expect(r.state.getBool('story.m21.loyalistsOut')).toBe(false);
+    r.dispose();
+    const r2 = rig();
+    r2.state.setFlag('story.m21.choice', 'spy');
+    credit(r2);
+    expect(r2.state.getBool('story.m21.loyalistsOut')).toBe(false);
+    r2.dispose();
+  });
+});
+
+describe('oldsmoke director: M22 scenes', () => {
+  type R = ReturnType<typeof rig>;
+  const intoHall = (r: R) => void (r.interiors.current = 'keep-hall');
+
+  it('being in the Keep hall with the council objective open starts the council scene with Wystan', () => {
     const r = rig();
     r.quest.set('m22', 'active');
     r.current.add('m22.council');
-    enter(r);
+    intoHall(r);
     r.step(30);
     expect(r.dialogues).toEqual([['scene-m22-council', 'wystan']]);
     r.dispose();
   });
 
+  it('the hall is the interior, not the 3 m strip: arriving by a load or a teleport, with no trigger.enter, still counts', () => {
+    const r = rig();
+    r.quest.set('m22', 'active');
+    r.current.add('m22.council');
+    r.inside.add('trg.harrowmark.keep-hall'); // standing in the strip alone (e.g. after a load) also counts
+    r.step(30);
+    expect(r.dialogues).toEqual([['scene-m22-council', 'wystan']]);
+    r.dispose();
+    const r2 = rig();
+    r2.quest.set('m22', 'active');
+    r2.current.add('m22.council');
+    intoHall(r2);
+    r2.events.emit('trigger.exit', { triggerId: 'trg.harrowmark.keep-hall', actorId: 'player' } as never); // walking past the strip's far side changes nothing
+    r2.step(30);
+    expect(r2.dialogues).toEqual([['scene-m22-council', 'wystan']]);
+    r2.dispose();
+  });
+
   it('starts it when the objective opens with Cael already in the hall, and retries while another dialogue holds the floor', () => {
     const r = rig();
     r.quest.set('m22', 'active');
-    enter(r);
+    intoHall(r);
     r.step(30); // the council objective is not open yet
     expect(r.dialogues).toEqual([]);
     r.current.add('m22.council');
@@ -172,54 +227,82 @@ describe('oldsmoke director: M22 scenes', () => {
     r.dispose();
   });
 
-  it('does not start it after Cael has left the hall', () => {
+  it('does not start it outside the hall', () => {
     const r = rig();
     r.quest.set('m22', 'active');
     r.current.add('m22.council');
-    enter(r);
-    r.events.emit('trigger.exit', { triggerId: 'trg.harrowmark.keep-hall', actorId: 'player' } as never);
+    r.step(30);
+    expect(r.dialogues).toEqual([]);
+    intoHall(r);
+    r.interiors.current = null; // left again
     r.step(30);
     expect(r.dialogues).toEqual([]);
     r.dispose();
   });
 
-  it('does not start it for another actor or trigger, before M22, or once the council is done', () => {
+  it('does not start it before M22, or when the council objective is not current', () => {
     const r = rig();
-    enter(r);
+    intoHall(r);
+    r.current.add('m22.council');
+    r.step(30);
+    expect(r.dialogues).toEqual([]);
     r.quest.set('m22', 'active');
-    enter(r, 'trg.harrowmark.keep-hall', 'wyrm');
-    enter(r, 'trg.harrowmark.counting-house');
-    r.step(30);
-    expect(r.dialogues).toEqual([]);
-    enter(r); // M22 active but the council objective is not current
+    r.current.clear(); // M22 active but neither council nor raised is current
     r.step(30);
     expect(r.dialogues).toEqual([]);
     r.dispose();
   });
 
-  it('the banner starts its two-line scene, only during M22', () => {
+  it('the banner scene starts once the raised objective is current in the hall, and retries while a dialogue is open', () => {
     const r = rig();
-    r.interact(M22_BANNER);
+    intoHall(r);
     r.step(30);
     expect(r.dialogues).toEqual([]);
     r.quest.set('m22', 'active');
     r.current.add('m22.raised');
     r.busy.on = true;
-    r.interact(M22_BANNER);
     r.step(30);
     expect(r.dialogues).toEqual([]); // held: it retries
     r.busy.on = false;
     r.step(30);
     expect(r.dialogues).toEqual([['scene-m22-banner', 'wystan']]);
-    r.step(60);
-    expect(r.dialogues).toHaveLength(1);
     r.dispose();
+  });
+
+  it('a save and load between the banner interact and its scene loses nothing: a fresh director with the objective current plays the scene', () => {
+    const r = rig();
+    r.quest.set('m22', 'active');
+    r.current.add('m22.raised');
+    r.interact(M22_BANNER);
+    r.dispose(); // the in-memory side of the old design is gone with the session
+    const r2 = rig();
+    r2.quest.set('m22', 'active');
+    r2.current.add('m22.raised'); // the loaded quest state: banner done, raised current
+    intoHall(r2);
+    r2.events.emit('save.loaded', { slot: 'a' } as never);
+    r2.step(30);
+    expect(r2.dialogues).toEqual([['scene-m22-banner', 'wystan']]);
+    r2.dispose();
+  });
+
+  it('R10 choosing writes the choice flag: the director rechecks the quests at once (R09 clerk), and not for other flags', () => {
+    const r = rig();
+    r.state.setFlag('story.r10.branch', 'miners');
+    expect(r.rechecks.n).toBe(0);
+    r.state.setFlag('story.r10.choice', 'miners');
+    expect(r.rechecks.n).toBe(1);
+    r.dispose();
+    r.state.setFlag('story.r10.choice', 'stewards');
+    expect(r.rechecks.n).toBe(1); // disposed
   });
 
   it('dispose removes the listeners', () => {
     const r = rig();
     r.dispose();
     r.quest.set('m22', 'active');
+    r.interiors.current = 'keep-hall';
+    r.current.add('m22.council');
+    r.step(30);
     r.interact(M22_BANNER);
     r.events.emit('quest.completed', { questId: 'm16' } as never);
     expect(r.dialogues).toEqual([]);

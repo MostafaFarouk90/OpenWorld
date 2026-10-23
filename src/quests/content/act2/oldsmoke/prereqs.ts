@@ -18,7 +18,7 @@ export const ACT2D_PREREQS: Record<string, readonly string[]> = {
   m20: [...THROUGH_D03, 'm16', 'm17', 'm18', 'm19'],
   m21: [...THROUGH_D03, 'm16', 'm17', 'm18', 'm19', 'm20'],
   d04: [...THROUGH_D03, 'm16', 'm17', 'm18', 'm19', 'm20'],
-  m22: [...THROUGH_D03, 'm16', 'm17', 'r09', 'r08', 'm18', 'r10', 'm19', 'm20', 'm21', 'd04'],
+  m22: [...THROUGH_D03, 'r06', 'r05', 'r07', 'r11', 'm16', 'm17', 'r09', 'r08', 'm18', 'r10', 'm19', 'm20', 'm21', 'd04'],
 };
 
 /** The flags a jump to Phase D sets so the region opens (A4 reads both). */

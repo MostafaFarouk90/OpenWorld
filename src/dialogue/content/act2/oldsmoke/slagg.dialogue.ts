@@ -1,5 +1,5 @@
 import { buildTree, type Line } from '../build';
-import { all, any, flagIs, objDone, objOpen, qActive, qDone, qIdle, step } from '../cond';
+import { all, any, flagIs, not, objDone, objOpen, qActive, qDone, qIdle, step } from '../cond';
 
 const S = (t: string, fx?: Line['fx']): Line => (fx ? { s: 'slagg', t, fx } : { s: 'slagg', t });
 const C = (t: string): Line => ({ s: 'cael', t });
@@ -11,13 +11,15 @@ const r10Avail = all(qDone('m17'), qIdle('r10'));
 export const SLAGG = buildTree({
   id: 'npc-slagg',
   start: [
+    // Report and choice entries first, so that no wait entry (or an extension's catch-all) hides one: a Slagg talk credits every
+    // `talk slagg` objective, and the effects of R09/R10 live in these nodes. An active R09 report shows ahead of R10's waits.
     { when: all(qActive('r10'), objDone('r10', 'talks'), objOpen('r10', 'report')), seg: 'r10-report' },
     { when: step('r10', 'read', 'choice'), seg: 'r10-choice' },
+    { when: all(qActive('r09'), objDone('r09', 'choice'), objOpen('r09', 'report')), seg: 'r09-report' },
+    { when: step('r09', 'miners', 'choice'), seg: 'r09-choice' },
     { when: all(qActive('r10'), objDone('r10', 'choice'), objOpen('r10', 'talks')), seg: 'r10-wait-talks' },
     { when: all(qActive('r10'), objDone('r10', 'choice'), objOpen('r10', 'ruling')), seg: 'r10-wait-ruling' },
     { when: qActive('r10'), seg: 'r10-wait' },
-    { when: all(qActive('r09'), objDone('r09', 'choice'), objOpen('r09', 'report')), seg: 'r09-report' },
-    { when: step('r09', 'miners', 'choice'), seg: 'r09-choice' },
     { when: qActive('r09'), seg: 'r09-wait' },
     { when: any(r09Avail, r10Avail), seg: 'offers' },
     { when: all(), seg: 'idle' },
@@ -109,9 +111,11 @@ export const SLAGG = buildTree({
     'r10-report': {
       lines: [
         S('The ruling stands. The market has read it, and read it again, and the shout that followed was not a riot. That is a good day.', [
-          { if: flagIs('story.r10.branch', 'miners'), then: [{ favour: 'grisel', delta: -5 }, { setFlag: 'story.r10.choice', value: 'miners' }] },
-          { if: flagIs('story.r10.branch', 'stewards'), then: [{ favour: 'grisel', delta: 5 }, { setFlag: 'story.r10.choice', value: 'stewards' }] },
-          { if: flagIs('story.r10.branch', 'compromise'), then: [{ favour: 'grisel', delta: 2 }, { favour: 'oswin', delta: 2 }, { setFlag: 'story.r10.choice', value: 'compromise' }] },
+          // The choice is written on every pass; the favour is paid once (`story.r10.paid`), so an aborted or repeated report cannot pay twice.
+          { if: flagIs('story.r10.branch', 'miners'), then: [{ if: not(flagIs('story.r10.paid')), then: [{ favour: 'grisel', delta: -5 }] }, { setFlag: 'story.r10.choice', value: 'miners' }] },
+          { if: flagIs('story.r10.branch', 'stewards'), then: [{ if: not(flagIs('story.r10.paid')), then: [{ favour: 'grisel', delta: 5 }] }, { setFlag: 'story.r10.choice', value: 'stewards' }] },
+          { if: flagIs('story.r10.branch', 'compromise'), then: [{ if: not(flagIs('story.r10.paid')), then: [{ favour: 'grisel', delta: 2 }, { favour: 'oswin', delta: 2 }] }, { setFlag: 'story.r10.choice', value: 'compromise' }] },
+          { setFlag: 'story.r10.paid', value: true },
         ]),
         S('I have been a foreman twenty years and I have won three strikes and lost four. This is the first one that I do not know how to count.'),
         S('Come here, take this badge. It is tin, crossed picks. Miners will nod to whoever wears it. The stewards will look the other way.'),

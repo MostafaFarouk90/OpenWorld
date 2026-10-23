@@ -43,7 +43,22 @@ function withMines(base: BuiltTree): BuiltTree {
     def = merged.def;
     Object.assign(strings, merged.strings);
   }
-  return { def, strings };
+  return { def: reportsFirst(def), strings };
+}
+
+/**
+ * Start entries (by node id) that must outrank every extension entry on the same NPC: a quest's report and choice nodes carry
+ * its effects, and an extension's catch-all (D04's `qActive('d04')`, an offer) must not hide them. Order among them is kept.
+ */
+const START_FIRST: Record<string, readonly string[]> = {
+  'npc-slagg': ['r10-report', 'r10-choice', 'r09-report', 'r09-choice'],
+};
+function reportsFirst(def: DialogueDef): DialogueDef {
+  const first = START_FIRST[def.id];
+  const entries = def.start;
+  if (!first || typeof entries === 'string') return def;
+  const head = first.flatMap((node) => entries.filter((e) => e.node === node));
+  return { ...def, start: [...head, ...entries.filter((e) => !first.includes(e.node))] };
 }
 const MINE_EXTENSIONS = [...M17R08_EXTENSIONS, ...M18M19_EXTENSIONS, ...M20D04_EXTENSIONS];
 

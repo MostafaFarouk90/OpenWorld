@@ -129,6 +129,14 @@ describe('Aldous opens on the right segment', () => {
       expect(opens(w, 'npc-aldous', 'aldous')).toBe(node);
     }
   });
+  it('the spy aftermath waits for the stealth section: letters done alone is not enough', () => {
+    const w = world();
+    w.set('m21', 'active', 'counsel', 'escort', 'evidence', 'audience', 'loyalists', 'letters');
+    w.flags.set('story.m21.branch', 'spy');
+    expect(opens(w, 'npc-aldous', 'aldous')).toBe('m21-wait');
+    w.set('m21', 'active', 'stealth');
+    expect(opens(w, 'npc-aldous', 'aldous')).toBe('m21-aftermath-spy');
+  });
   it('lighting the brazier is the proof node and raises the silence once', () => {
     const w = world();
     w.set('m16', 'active', 'gate', 'court', 'brazier');
@@ -175,10 +183,47 @@ describe('M21 at the audience', () => {
     const w = world();
     const seen = audience(w, 'confront', 'press');
     expect(seen).toContain('m21-fail');
-    expect(w.flags.get('story.m21.loyalistsOut')).toBe(true);
+    // the fight is not started from the dialogue: the director writes loyalistsOut when the audience talk is credited
+    expect(w.flags.get('story.m21.loyalistsOut')).toBeUndefined();
     expect(w.flags.get('story.m21.persuaded')).toBeUndefined();
     expect(w.flags.get('story.m21.choice')).toBe('confront');
     expect(count(w, 'favour grisel -5')).toBe(1);
+  });
+
+  it('an audience aborted after the choice and talked again pays each favour once (press, tip, spy)', () => {
+    for (const pick of ['press', 'tip'] as const) {
+      const w = world(200);
+      w.set('m21', 'active', 'counsel', 'escort', 'evidence');
+      // first pass: choose, then abort before the dialogue ends
+      expect(w.dr.start('npc-aldous', 'aldous')).toBe(true);
+      for (let i = 0; i < 80; i++) {
+        const v = w.dr.view()!;
+        if (v.nodeId.startsWith('m21-confront')) { const idx = v.choices.findIndex((c: any) => c.id === pick); if (idx >= 0) { w.dr.choose(idx + 1); break; } }
+        if (v.choices.length) { w.dr.choose(Math.max(0, v.choices.findIndex((c: any) => c.id === 'confront')) + 1); } else w.dr.advance();
+      }
+      w.dr.close('skip');
+      expect(count(w, 'favour halvard 3')).toBe(1);
+      // second talk: the same road
+      w.set('m21', 'active', 'counsel', 'escort', 'evidence');
+      play(w, 'npc-aldous', 'aldous', (n) => (n === 'm21-audience-16' ? 'confront' : 'press')); // the tip is no longer offered once paid
+      expect(count(w, 'favour halvard 3'), pick).toBe(1);
+      expect(count(w, 'favour grisel -5'), pick).toBe(1);
+      expect(w.purse(), pick).toBe(pick === 'tip' ? 160 : 200);
+    }
+    const s = world();
+    s.set('m21', 'active', 'counsel', 'escort', 'evidence');
+    audience(s, 'spy');
+    audience(s, 'spy');
+    expect(count(s, 'favour grisel 2')).toBe(1);
+    expect(count(s, 'favour oswin 3')).toBe(1);
+  });
+
+  it('pressing after a tip that was aborted clears the persuasion, so the fight is not skipped', () => {
+    const w = world(200);
+    w.flags.set('story.m21.persuaded', true);
+    w.flags.set('story.m21.tipPaid', true);
+    audience(w, 'confront', 'press');
+    expect(w.flags.get('story.m21.persuaded')).toBeUndefined();
   });
 
   it('the forty gold tip is spent once and persuades', () => {
@@ -289,6 +334,70 @@ describe('Slagg', () => {
     expect(count(w, `favour grisel ${grisel}`)).toBe(1);
     expect(count(w, 'favour oswin 2')).toBe(oswin ? 1 : 0);
     expect(w.log.filter((l) => l.startsWith('favour'))).toHaveLength(oswin ? 2 : 1);
+  });
+});
+
+describe('Slagg with overlapping quests (the merged tree, mines included)', () => {
+  const r10Ready = (w: Wd) => {
+    w.flags.set('story.r10.branch', 'miners');
+    w.set('r10', 'active', 'brief', 'miners', 'stewards', 'read', 'choice', 'ruling', 'keys', 'talks');
+  };
+  it('R10 awaiting its report while D04 is offered: the report plays, not the D04 offer', () => {
+    const w = world();
+    w.set('m16', 'completed'); w.set('m17', 'completed'); w.set('m20', 'completed');
+    r10Ready(w);
+    expect(opens(w, 'npc-slagg', 'slagg')).toBe('r10-report');
+    play(w, 'npc-slagg', 'slagg');
+    expect(w.flags.get('story.r10.choice')).toBe('miners');
+    expect(count(w, 'favour grisel -5')).toBe(1);
+  });
+  it('R10 awaiting its report while D04 is active: the report still plays', () => {
+    const w = world();
+    w.set('d04', 'active');
+    r10Ready(w);
+    expect(opens(w, 'npc-slagg', 'slagg')).toBe('r10-report');
+  });
+  it('R10 choice and R09 report are not hidden by an active D04 either', () => {
+    const w = world();
+    w.set('d04', 'active');
+    w.set('r10', 'active', 'brief', 'miners', 'stewards', 'read');
+    expect(opens(w, 'npc-slagg', 'slagg')).toBe('r10-choice');
+    const w2 = world();
+    w2.set('d04', 'active');
+    w2.set('r09', 'active', 'brief', 'nests', 'chests', 'office', 'clerk', 'miners', 'choice');
+    expect(opens(w2, 'npc-slagg', 'slagg')).toBe('r09-report');
+    const w3 = world();
+    w3.set('m20', 'completed');
+    w3.set('r09', 'active', 'brief', 'nests', 'chests', 'office', 'clerk', 'miners');
+    expect(opens(w3, 'npc-slagg', 'slagg')).toBe('r09-choice');
+  });
+  it('R09 report while R10 is active (and not yet reporting): the R09 report shows ahead of the R10 wait', () => {
+    const w = world();
+    w.set('r10', 'active', 'brief');
+    w.set('r09', 'active', 'brief', 'nests', 'chests', 'office', 'clerk', 'miners', 'choice');
+    expect(opens(w, 'npc-slagg', 'slagg')).toBe('r09-report');
+    const w2 = world();
+    w2.set('r10', 'active', 'brief');
+    expect(opens(w2, 'npc-slagg', 'slagg')).toBe('r10-wait');
+  });
+  it('both reports pending: R10 first, and the choice flag is written in that very talk', () => {
+    const w = world();
+    r10Ready(w);
+    w.set('r09', 'active', 'brief', 'nests', 'chests', 'office', 'clerk', 'miners', 'choice');
+    const seen = play(w, 'npc-slagg', 'slagg');
+    expect(seen[0]).toBe('r10-report');
+    expect(w.flags.get('story.r10.choice')).toBe('miners');
+  });
+  it('an aborted report followed by a re-talk pays the R10 favour once, and the choice stays written', () => {
+    const w = world();
+    r10Ready(w);
+    expect(w.dr.start('npc-slagg', 'slagg')).toBe(true);
+    w.dr.close('skip');
+    expect(w.flags.get('story.r10.choice')).toBe('miners');
+    play(w, 'npc-slagg', 'slagg');
+    play(w, 'npc-slagg', 'slagg');
+    expect(count(w, 'favour grisel -5')).toBe(1);
+    expect(w.flags.get('story.r10.choice')).toBe('miners');
   });
 });
 
