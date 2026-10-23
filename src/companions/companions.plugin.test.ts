@@ -154,6 +154,16 @@ describe('companions plugin: joining', () => {
     t.done();
   });
 
+  it('his talk interactable is ambient: a quest prop an objective needs wins F at a similar distance (playtest bug 2)', async () => {
+    const t = await boot();
+    t.ctx.state.setFlag(JOIN, true);
+    t.run(5);
+    const talk = (t.ctx.interaction as unknown as { items: Map<string, { ambient?: boolean }> }).items.get('companion:tobb');
+    expect(talk).toBeDefined();
+    expect(talk!.ambient).toBe(true);
+    t.done();
+  });
+
   it('a runtime flag spawns him once as an untargetable, unhittable ally, emits companion.joined and sets rank 1', async () => {
     const t = await boot();
     t.ctx.state.setFlag(JOIN, true);

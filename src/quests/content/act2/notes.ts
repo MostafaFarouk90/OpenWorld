@@ -98,13 +98,24 @@ export const ACT2_NOTE_LIST: Act2Note[] = [
   ], 'box'),
 ];
 
-/** Notes on the spot an NPC stands on (Ealdred, Wynne, Corwin): the note outranks him while it is current (focus ties go to `npc:`). */
-const NOTES_UNDER_NPCS: ReadonlySet<string> = new Set(['note-m13-shield', 'note-r11-camp-1', 'note-m15-map']);
+/**
+ * Notes on the spot an NPC stands on (Ealdred, Wynne, Corwin; focus ties go to `npc:`). Each outranks its NPC only while
+ * its read objective is current and it has not been read, and never while the NPC has a live talk objective (M13 `kin`
+ * and R11 `widow` come before the reads): QuestNotes drops the priority otherwise (playtest NOTES_UNDER_NPCS).
+ */
+export const NOTES_UNDER_NPCS: ReadonlyMap<string, NonNullable<QuestNoteSpec['outranks']>> = new Map([
+  ['note-m13-shield', { npcId: 'ealdred', quest: 'm13', objective: 'hall' }],
+  ['note-r11-camp-1', { npcId: 'wynne', quest: 'r11', objective: 'camp' }],
+  ['note-m15-map', { npcId: 'corwin', quest: 'm15', objective: 'ledgers' }],
+]);
 
-export const ACT2_QUEST_NOTES: QuestNoteSpec[] = ACT2_NOTE_LIST.map((x) => ({
-  interactableId: `use:${x.id}`, anchorId: x.anchorId, ...(x.codexId ? { codexId: x.codexId } : {}),
-  ...(NOTES_UNDER_NPCS.has(x.id) ? { priority: 1 } : {}),
-}));
+export const ACT2_QUEST_NOTES: QuestNoteSpec[] = ACT2_NOTE_LIST.map((x) => {
+  const under = NOTES_UNDER_NPCS.get(x.id);
+  return {
+    interactableId: `use:${x.id}`, anchorId: x.anchorId, ...(x.codexId ? { codexId: x.codexId } : {}),
+    ...(under ? { priority: 1, outranks: under } : {}),
+  };
+});
 
 export const ACT2_NOTE_LOOKS: Record<string, 'page' | 'grave' | 'box'> = Object.fromEntries(
   ACT2_NOTE_LIST.map((x) => [`use:${x.id}`, x.look ?? 'page']),

@@ -216,3 +216,29 @@ describe('quests and dialogue plugins', () => {
     t.world.dispose();
   });
 });
+
+// Playtest bugs 1 and 2 through the real plugin: the note registered on the interaction system reads its priority and its
+// `live` state on every focus pick, so it gives way to Corwin once read and outranks Aelfreda while the ledgers need it.
+describe('notes standing on NPCs, as registered by the quests plugin', () => {
+  it('note-m15-map: priority 1 and live while the ledgers need it; neither once it is read', async () => {
+    const t = await boot();
+    t.ctx.anchors.define({ id: 'cinderreach.m15.search.3', position: { x: 4, y: 0, z: 4 }, yaw: 0 });
+    for (let i = 0; i < 30; i++) t.game.fixedUpdate();
+    const items = (t.ctx.interaction as unknown as { items: Map<string, { priority?: number; live?(): boolean }> }).items;
+    const map = items.get('use:note-m15-map');
+    expect(map).toBeDefined();
+    const quests = t.ctx.services.require('quests');
+    t.ctx.state.setFlag('story.gate.a2', true);
+    for (const id of ['m11', 'm12', 'm13', 'm14']) expect(quests.complete(id), id).toBe(true);
+    expect(quests.start('m15')).toBe(true);
+    expect(map!.priority ?? 0).toBe(0); // Osgar's brief first
+    for (const o of quests.get('m15')!.objectives) { if (o.id === 'ledgers') break; quests.completeObjective('m15', o.id); }
+    expect(map!.priority).toBe(1);
+    expect(map!.live?.()).toBe(true);
+    t.ctx.events.emit('dialogue.ended', { dialogueId: 'note-m15-map', npcId: 'note-m15-map', reason: 'completed' });
+    expect(map!.priority ?? 0).toBe(0);
+    expect(map!.live?.()).toBe(false);
+    t.game.dispose();
+    t.world.dispose();
+  });
+});
