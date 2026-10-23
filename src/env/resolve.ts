@@ -52,6 +52,8 @@ const KAYKIT: Readonly<Record<string, { model: string; scale?: number; fitHeight
   'picket-fence': { model: 'hex/fence_wood_straight', fitHeight: 1.1 },
   'wattle-fence': { model: 'hex/fence_wood_straight', fitHeight: 1.2 },
   'stonewall-low': { model: 'hex/fence_stone_straight', fitHeight: 1.0 },
+  // Village boundary wall: the same piece fitted to 1.5 m so it reads as a wall at the Knight's scale (1.8 m).
+  'stonewall-high': { model: 'hex/fence_stone_straight', fitHeight: 1.5 },
   'scorched-fence': { model: 'hex/fence_wood_straight', fitHeight: 1.6 },
   'rock-single-a': { model: 'hex/rock_single_A' },
   tent: { model: 'hex/tent' },
