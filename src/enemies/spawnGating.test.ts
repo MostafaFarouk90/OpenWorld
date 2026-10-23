@@ -291,3 +291,40 @@ describe('the Dead Road camps (gate on story.m05.complete)', () => {
     expect(manager.service.alive('deadroad.camp-2')).toHaveLength(3);
   });
 });
+
+describe('a quest group that goes away with its quest (the M21 hall watch)', () => {
+  const WATCH: SpawnerDef = {
+    id: 'watch', enemy: 'ash-wraith', count: 2, anchor: 'spawn.patrol', band: { min: 1, max: 1 },
+    activation: { quest: 'm21' }, respawn: 'never', leash: false, despawnOnQuestEnd: true,
+  };
+  const KEEP: SpawnerDef = { ...WATCH, id: 'keep', despawnOnQuestEnd: undefined };
+
+  it('is live while the quest is, and gone when it completes', () => {
+    const { fake, manager } = setup([WATCH, KEEP]);
+    fake.quests = { active: () => ['m21'] };
+    fake.bus.emit('quest.started', { questId: 'm21' });
+    expect(manager.service.alive('watch')).toHaveLength(2);
+    expect(manager.service.alive('keep')).toHaveLength(2);
+    fake.quests = { active: () => [] };
+    fake.bus.emit('quest.completed', { questId: 'm21' });
+    expect(manager.service.alive('watch')).toHaveLength(0);
+    // Other quest groups are left as they were.
+    expect(manager.service.alive('keep')).toHaveLength(2);
+  });
+
+  it('does not come back on a load once the quest is no longer active', () => {
+    const { fake, manager } = setup([WATCH]);
+    fake.quests = { active: () => ['m21'] };
+    fake.bus.emit('quest.started', { questId: 'm21' });
+    expect(manager.service.alive('watch')).toHaveLength(2);
+    // A load whose save has M21 completed: the guards of the world before the load must not survive it.
+    fake.quests = { active: () => [] };
+    fake.bus.emit('save.loaded', { slot: 'test' } as never);
+    expect(manager.count).toBe(0);
+  });
+
+  it('the shipped M21 watch is marked to go away with its quest', async () => {
+    const { OLDSMOKE_SPAWNERS } = await import('../quests/content/act2/oldsmoke/spawners');
+    expect(OLDSMOKE_SPAWNERS.find((s) => s.id === 'stealth.m21.watch')?.despawnOnQuestEnd).toBe(true);
+  });
+});

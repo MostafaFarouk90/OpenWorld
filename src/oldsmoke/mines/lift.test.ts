@@ -189,6 +189,19 @@ describe('registerLift', () => {
     expect(it.promptKey).toBe('oldsmoke.lift.use');
   });
 
+  it('the lock reason follows the mended flag: the winch text only while the winch is broken', () => {
+    const { fc, menus } = setup();
+    anchor(fc, SURFACE_LIFT_ANCHOR);
+    fc.tick('rules');
+    fc.ctx.state.setFlag(LIFT_ARMED_FLAG, true);
+    // Mended, but no errand takes him down yet: shaft and old stay locked, and neither says the winch needs mending.
+    fc.interactables.get('use:lift')!.onInteract({} as never);
+    const reasons = Object.fromEntries((menus[0].rows as unknown as Array<{ id: string; reason?: string }>).map((r) => [r.id, r.reason]));
+    expect(reasons.old).toBe(LIFT_STRINGS_EN['oldsmoke.lift.locked.old.mended']);
+    expect(reasons.shaft).toBe(LIFT_STRINGS_EN['oldsmoke.lift.locked.shaft.mended']);
+    for (const r of Object.values(reasons)) expect(r).not.toMatch(/winch|dead|mend/);
+  });
+
   it('opens a picker without the current stop, locked stops marked, and rides on a choice', async () => {
     const { fc, menus, calls } = setup();
     fc.ctx.state.setFlag(LIFT_ARMED_FLAG, true);

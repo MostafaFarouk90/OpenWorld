@@ -26,6 +26,8 @@ export const ORSK = {
   launchAt: 4.6,
   /** Hidden this far above the roof (the void over a floating interior never shows). */
   hideAbove: 2,
+  /** The default camera never stands further than this from Orsk (the hall's wall is behind anything further). */
+  cameraReach: 8,
 } as const;
 
 /**
@@ -138,6 +140,11 @@ export interface OrskRequest {
   yaw: number;
   /** The gallery roof's height above `position.y`. */
   roofHeight: number;
+  /**
+   * Where the camera stands (feet; the eye is 1.6 m above): a point inside the hall. Without it the camera stands in front of
+   * Orsk, at most `ORSK.cameraReach` metres out, which keeps it off the far wall of a hall that size.
+   */
+  cameraAt?: { x: number; y: number; z: number };
 }
 
 const SOURCE = 'wyrm.orsk';
@@ -179,7 +186,12 @@ export class OrskScene {
     const fx = -Math.sin(req.yaw);
     const fz = -Math.cos(req.yaw);
     const len = this.rig.spine.length;
-    const position = { x: req.position.x + fx * len * 0.9 + fz * len * 0.35, y: req.position.y + 1.6, z: req.position.z + fz * len * 0.9 - fx * len * 0.35 };
+    const ahead = { x: fx * len * 0.9 + fz * len * 0.35, z: fz * len * 0.9 - fx * len * 0.35 };
+    const reach = Math.hypot(ahead.x, ahead.z);
+    const k = reach > ORSK.cameraReach ? ORSK.cameraReach / reach : 1;
+    const position = req.cameraAt
+      ? { x: req.cameraAt.x, y: req.cameraAt.y + 1.6, z: req.cameraAt.z }
+      : { x: req.position.x + ahead.x * k, y: req.position.y + 1.6, z: req.position.z + ahead.z * k };
     const lookAt = () => ({ x: req.position.x, y: req.position.y + Math.min(req.roofHeight, 2 + this.lastAltitude * 0.8), z: req.position.z });
     this.camera = ports.camera({ position, lookAt, blendIn: 0.5, blendOut: 0.8 });
   }

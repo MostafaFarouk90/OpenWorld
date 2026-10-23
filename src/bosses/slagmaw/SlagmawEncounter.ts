@@ -118,6 +118,8 @@ export class SlagmawEncounter implements SlagmawHooks {
   private ended = false;
   /** The `last` break has happened: the floor is lifted for good. */
   private floorLifted = false;
+  /** A valve break has happened in phase 2 or later: the second phase's break cannot be skipped any more. */
+  private phase2BreakDone = false;
   private poiseIdle = 0;
   /** 0 = under the floor, 1 = fully up; driven toward the brain's state. */
   private emerge = 0;
@@ -211,6 +213,7 @@ export class SlagmawEncounter implements SlagmawHooks {
         // The break belongs to the valve that cooled him (it is spent), even when the same hit crossed a phase threshold. A cooled
         // `last` break lifts the floor whichever valve cooled him: a hit that jumped phases can make valve 1 or 2 the last one.
         const valve = this.valves[this.douseValve];
+        if (p.phase >= 2) this.phase2BreakDone = true;
         if (p.last) this.floorLifted = true;
         if (valve) {
           valve.spent = true;
@@ -677,7 +680,11 @@ export class SlagmawEncounter implements SlagmawHooks {
   private floor(req: { targetId: string; amount: number }): void {
     if (req.targetId !== this.actor.id || this.floorLifted || !this.registered)
       return;
-    const min = Math.ceil(this.actor.maxHealth * SLAGMAW.healthFloor);
+    let min = Math.ceil(this.actor.maxHealth * SLAGMAW.healthFloor);
+    // A burst cannot carry him past phase 2 before its break: health stays above the phase 3 threshold until a valve has
+    // produced a break in phase 2 (a hit may still cross into phase 2 from phase 1).
+    const phase3 = SLAGMAW.phases[1];
+    if (!this.phase2BreakDone && phase3 !== undefined) min = Math.max(min, Math.floor(this.actor.maxHealth * phase3) + 1);
     const room = Math.max(0, this.actor.health - min);
     if (req.amount > room) req.amount = room;
   }

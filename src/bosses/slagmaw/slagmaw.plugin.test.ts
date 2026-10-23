@@ -703,6 +703,10 @@ describe("The Slagmaw on the real core", () => {
       true,
       false,
     ]);
+    // Phase 3 only opens once phase 2 has had its break.
+    t.coolAndBreak(2);
+    t.settle();
+    t.toSurfaced();
     t.toFraction(0.32);
     expect(t.state()!.phase).toBe(3);
     expect([1, 2, 3].map((n) => t.valve(n).enabled())).toEqual([
@@ -756,18 +760,26 @@ describe("The Slagmaw on the real core", () => {
     t.startFight();
     t.coolAndBreak(1);
     t.settle();
-    // Before the last break a huge hit stops at the floor and crosses into phase 2.
+    // Before the last break a huge hit crosses into phase 2 and stops above the phase 3 threshold, short of the floor.
     t.until(() => t.enc().brain.state === "surfaced");
+    t.hit(1e6, 0);
+    expect(t.state()!.health).toBe(Math.floor(SLAGMAW.maxHealth * SLAGMAW.phases[1]!) + 1);
+    expect(t.state()!.phase).toBe(2);
+    t.settle();
+    t.coolAndBreak(2);
+    t.settle();
+    t.toSurfaced();
+    // With phase 2's break taken, a huge hit stops at the floor and crosses into phase 3.
     t.hit(1e6, 0);
     expect(t.state()!.health).toBe(
       Math.ceil(SLAGMAW.maxHealth * SLAGMAW.healthFloor),
     );
     expect(t.state()!.phase).toBe(3);
     t.settle();
-    // Phase 3 only (the phase jumped over 2 on the huge hit): valve 3.
     t.coolAndBreak(3);
     expect(t.of("boss.break").map((b) => [b.phase, b.last])).toEqual([
       [1, false],
+      [2, false],
       [3, true],
     ]);
     t.teardown();
@@ -800,21 +812,30 @@ describe("The Slagmaw on the real core", () => {
     u.teardown();
   });
 
-  it("a cooled last break lifts the floor whichever valve cooled him (a hit that jumps to phase 3 while valve 1 cools him)", async () => {
+  it("a burst cannot skip phase 2's break: one hit from phase 1 stops above the phase 3 threshold, and only a phase-2 break lets him go lower", async () => {
     const t = await setup();
     t.startFight();
     t.toSurfaced();
-    t.turn(1);
-    expect(t.enc().crustCooled).toBe(true);
-    // One hit crosses both thresholds and breaks poise: the break is the last one, cooled by valve 1.
-    t.hit(1e6, SLAGMAW.maxPoise);
-    expect(t.of("boss.break").map((b) => [b.phase, b.last])).toEqual([[3, true]]);
-    expect(t.valve(1).enabled()).toBe(false);
-    t.until(() => t.boss()!.hittable);
     t.hit(1e6, 0);
-    expect(t.of("boss.defeated")).toHaveLength(1);
-    expect(t.ctx.state.getFlag(OUTCOME_FLAG)).toBe("defeated");
+    expect(t.state()!.phase).toBe(2);
+    expect(t.state()!.health).toBeGreaterThan(SLAGMAW.maxHealth * SLAGMAW.phases[1]!);
+    t.hit(1e6, 0);
+    expect(t.state()!.phase).toBe(2);
     t.teardown();
+
+    // The same burst while valve 1 cools him and poise breaks: the break lands in phase 2, and only then can he go lower.
+    const u = await setup();
+    u.startFight();
+    u.toSurfaced();
+    u.turn(1);
+    u.hit(1e6, SLAGMAW.maxPoise);
+    expect(u.of("boss.break").map((b) => [b.phase, b.last])).toEqual([[2, false]]);
+    expect(u.state()!.phase).toBe(2);
+    u.settle();
+    u.toSurfaced();
+    u.hit(1e6, 0);
+    expect(u.state()!.phase).toBe(3);
+    u.teardown();
   });
 
   it("the kill: defeated, the outcome flag, no Spare; he sinks and fades, the valves go, the gate opens", async () => {
@@ -824,6 +845,8 @@ describe("The Slagmaw on the real core", () => {
     expect(t.interiors.log).toContain(`blocker:${ARENA.gate}:true`);
     t.toSurfaced();
     t.toFraction(0.65);
+    t.settle();
+    t.coolAndBreak(2);
     t.settle();
     t.toSurfaced();
     t.toFraction(0.32);

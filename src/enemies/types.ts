@@ -282,6 +282,8 @@ export interface SpawnerDef {
   peaceful?: boolean;
   /** Members ignore taunts (the Iron Familiar): the R10 duel's second must keep fighting Cael. */
   untauntable?: boolean;
+  /** A quest-activated group that goes away when its quest completes (and on a load where that quest is not active): the M21 hall watch. */
+  despawnOnQuestEnd?: boolean;
 }
 
 export interface SpawnOptions {

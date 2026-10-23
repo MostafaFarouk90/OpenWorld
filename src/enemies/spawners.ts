@@ -410,6 +410,22 @@ export class SpawnerRegistry {
     return out;
   }
 
+  /** Groups that go away when `questId` completes. */
+  endedWith(questId: string): string[] {
+    const out: string[] = [];
+    for (const def of this.defs.values()) {
+      const act = def.activation;
+      if (def.despawnOnQuestEnd && typeof act === 'object' && 'quest' in act && act.quest === questId) out.push(def.id);
+    }
+    return out;
+  }
+
+  /** Whether a group is one that goes away with its quest, and the quest it follows. */
+  endsWithQuest(spawnerId: string): string | undefined {
+    const def = this.defs.get(spawnerId);
+    return def?.despawnOnQuestEnd ? this.questOf(spawnerId) : undefined;
+  }
+
   /** Quest ids whose groups wait on `flag`. */
   questsGatedBy(flag: string): string[] {
     const out: string[] = [];

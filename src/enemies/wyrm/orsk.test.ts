@@ -10,6 +10,7 @@ const DT = 1 / 60;
 function ports(opts: { camera?: boolean } = {}) {
   const log: string[] = [];
   const beats: OrskBeat[] = [];
+  const shots: Array<{ position: { x: number; y: number; z: number } }> = [];
   const scene = new THREE.Scene();
   const p: OrskPorts = {
     scene,
@@ -24,6 +25,7 @@ function ports(opts: { camera?: boolean } = {}) {
     camera: (shot) => {
       if (opts.camera === false) return null;
       log.push('camera');
+      shots.push(shot as never);
       // The shot's functions stay callable for the whole sequence.
       expect(Number.isFinite((typeof shot.lookAt === 'function' ? shot.lookAt() : shot.lookAt).y)).toBe(true);
       return { release: () => log.push('release') };
@@ -32,7 +34,7 @@ function ports(opts: { camera?: boolean } = {}) {
     sfx: (k) => log.push(`sfx:${k}`),
     shake: () => log.push('shake'),
   };
-  return { p, log, beats, scene };
+  return { p, log, beats, scene, shots };
 }
 
 const REQ = { position: { x: 4000, y: 30, z: -3500 }, yaw: 0.4, roofHeight: 9 };
@@ -69,6 +71,23 @@ describe('OrskSequence', () => {
     expect(orskPose(5.4, 9).altitude).toBeCloseTo(8, 5);
     expect(orskPose(6.0, 9).altitude).toBeGreaterThan(9 + ORSK.hideAbove);
     expect(orskPose(3.1, 9).pose.mouth).toBeGreaterThan(0.8);
+  });
+});
+
+describe('OrskScene camera', () => {
+  it('stands at the requested point inside the hall, eye 1.6 m up', () => {
+    const { p, shots } = ports();
+    new OrskScene(p, { ...REQ, cameraAt: { x: 3990, y: 30, z: -3510 } });
+    expect(shots[0]!.position).toEqual({ x: 3990, y: 31.6, z: -3510 });
+  });
+
+  it('without a camera point it never stands further than the reach from Orsk, whatever his length', () => {
+    const { p, shots } = ports();
+    for (const yaw of [0, 0.4, 1.5, 3, 4.7]) {
+      new OrskScene(p, { ...REQ, yaw });
+      const c = shots[shots.length - 1]!.position;
+      expect(Math.hypot(c.x - REQ.position.x, c.z - REQ.position.z)).toBeLessThanOrEqual(ORSK.cameraReach + 1e-6);
+    }
   });
 });
 

@@ -848,6 +848,9 @@ export class EnemyManager {
     on('rest', () => this.spawners.onRest());
     on('interior.entered', (p) => this.spawners.onInteriorEntered(p.interiorId));
     on('quest.started', (p) => this.spawners.onQuestStarted(p.questId, (f) => this.host.state.getBool(f, false)));
+    on('quest.completed', (p) => {
+      for (const id of this.spawners.endedWith(p.questId)) this.spawners.despawnGroup(id);
+    });
     on('flag.changed', (p) => {
       if (p.value !== true) return;
       // A flag-gated group spawns when its flag turns true while its quest is active.
@@ -884,6 +887,11 @@ export class EnemyManager {
         const quest = f.spawnerId ? this.spawners.questOf(f.spawnerId) : undefined;
         const questOver = f.kind === 'ash-scarecrow' && quest !== undefined && !active.includes(quest);
         if ((f.spawnerId && this.spawners.isCleared(f.spawnerId)) || spent.has(f.id) || questOver) f.despawn();
+      }
+      // A group that goes away with its quest does not survive a load where the quest is no longer active (completed since).
+      for (const e of [...this.enemies.values()]) {
+        const q = e.spawnerId ? this.spawners.endsWithQuest(e.spawnerId) : undefined;
+        if (q !== undefined && !active.includes(q)) e.despawn();
       }
       for (const questId of active) this.spawners.onQuestStarted(questId, (f) => this.host.state.getBool(f, false));
       const interior = this.host.services.get('interiors')?.current;
