@@ -1,4 +1,5 @@
 // R05 Ketta's Lost Flock: the fox's shortcut (four stops, then a flock of six) or the safe road (a flock of eight).
+import { PASTURE_REDUCED_FLAG } from '../../../../cinderreach/flags';
 import type { Kit, Off } from './kit';
 
 const FOX_SPAWNER = 'cinderreach.fox.r05';
@@ -9,6 +10,9 @@ const HOME = 'cinderreach.r05.home';
 const HOME_RADIUS = 14;
 /** Sheep that must be at the fold: 4 of 6 by the fox's road, 6 of 8 by the safe one (a lost sheep cannot soft-lock the quest). */
 export const R05_NEEDED = { fox: { flock: 6, home: 4 }, safe: { flock: 8, home: 6 } } as const;
+/** The grazing flock left at the pasture once R05 is done: the herd service's id, and its size by A3's derived flag. */
+export const PASTURE_HERD = 'cinderreach.pasture';
+export const PASTURE_FLOCK = { full: 8, reduced: 6 } as const;
 
 export function installR05(k: Kit): Off[] {
   const { ctx } = k;
@@ -72,10 +76,23 @@ export function installR05(k: Kit): Off[] {
     k.emit('story.r05.herdHome');
   });
 
+  // After R05 the pasture keeps a grazing flock (never following): eight, or six when the fox's road cost two
+  // (`world.cinderreach.pasture.reduced`, A3's flag derived from the choice). The herd service saves nothing and a load
+  // clears every herd before `save.loaded`, so it is rebuilt there (review-a #5).
+  const pastureFlock = (): void => {
+    const herd = ctx.services.get('herd');
+    if (!herd || k.qstate('r05') !== 'completed') return;
+    const reduced = k.flag(PASTURE_REDUCED_FLAG) || k.str('story.r05.choice') === 'fox';
+    if (!herd.start(PASTURE_HERD, FLOCK(reduced ? PASTURE_FLOCK.reduced : PASTURE_FLOCK.full))) k.warn('R05: the pasture flock could not be placed');
+  };
   k.on('quest.completed', (e) => {
     if (e.questId !== 'r05') return;
     ctx.services.get('herd')?.stop('r05');
     ctx.services.get('enemies')?.despawnGroup(FOX_SPAWNER);
+    k.later(pastureFlock);
+  });
+  k.on('save.loaded', () => {
+    if (k.qstate('r05') === 'completed') k.later(pastureFlock);
   });
   return [];
 }

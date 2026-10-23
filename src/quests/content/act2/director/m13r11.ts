@@ -3,6 +3,8 @@ import type { Kit, Off } from './kit';
 
 const TRIAL_GROUP = 'q12.m13.trial';
 const R11_WYRM = 'wyrm.r11.den';
+/** The plan's ledger (Part 2.1, row R11): the total dragons favour of each outcome, creature mercy included. */
+export const R11_FAVOUR = { spared: 5, slain: -4 } as const;
 
 export function installM13(k: Kit): Off[] {
   const { ctx } = k;
@@ -39,26 +41,47 @@ export function installR11(k: Kit): Off[] {
   const { ctx } = k;
 
   // The den scene plays once, on the shelf, after both ledges are climbed.
+  const denDue = (): boolean => k.active('r11') && k.objDone('r11', 'ledge2') && !k.objDone('r11', 'den');
+  const denScene = (): boolean => ctx.services.get('dialogue')?.start('scene-r11-den', 'hrolf') ?? false;
   k.on('trigger.enter', (e) => {
-    if (e.actorId !== 'player' || e.triggerId !== 'trg.cinderreach.den') return;
-    if (!k.active('r11') || !k.objDone('r11', 'ledge2') || k.objDone('r11', 'den')) return;
-    k.later(() => void ctx.services.get('dialogue')?.start('scene-r11-den', 'hrolf'));
+    if (e.actorId !== 'player' || e.triggerId !== 'trg.cinderreach.den' || !denDue()) return;
+    k.later(() => void denScene());
   });
+  // `trigger.enter` fires only on a crossing: a player already on the shelf when `ledge2` completes, or who loads there,
+  // gets the scene too (review-a #9). Checked two ticks on (the inside test can be stale in the tick of a load), and
+  // retried while another dialogue holds the screen.
+  const DEN_RETRIES = 20;
+  const denIfInside = (tries = DEN_RETRIES): void => {
+    k.after(2, () => {
+      if (!denDue() || !ctx.triggers.isInside('trg.cinderreach.den')) return;
+      if (!denScene() && tries > 0) denIfInside(tries - 1);
+    });
+  };
+  k.on('quest.objective', (e) => {
+    if (e.questId === 'r11' && e.objectiveId === 'ledge2' && e.done) denIfInside();
+  });
+  k.on('save.loaded', () => denIfInside());
 
   // The choice is the outcome: the flag, then the favour, then the group goes (the resting wyrm is A6a's, keyed on the
   // spared flag). A mercy on the den wyrm is a spare; its death is a slaying.
-  const resolve = (outcome: 'spared' | 'slain'): void => {
+  // The ledger pays dragons +5 for the spare in all. The Calm itself already went through WorldState's creature mercy
+  // (+2 for an elite, less at the cap), so the director pays only the rest (review-a #4). The core's `mercy` listener
+  // (core.plugin, set up before this one) has recorded that credit by the time this listener runs, and the credit is
+  // forgotten when the wyrm despawns, so it is read here and not a tick later.
+  const resolve = (outcome: 'spared' | 'slain', actorId?: string): void => {
     if (!k.active('r11') || k.str('story.r11.choice')) return;
     k.set('story.r11.choice', outcome);
     k.emit('story.r11.resolved');
-    k.favour('dragons', outcome === 'spared' ? 5 : -4);
+    const credited = outcome === 'spared' && actorId ? ctx.state.mercyApplied(actorId) : 0;
+    const rest = R11_FAVOUR[outcome] - credited;
+    if (rest !== 0) k.favour('dragons', rest);
     k.later(() => ctx.services.get('enemies')?.despawnGroup(R11_WYRM));
   };
   k.on('actor.died', (e) => {
     if (e.spawnTag === 'r11.den') resolve('slain');
   });
   k.on('mercy', (e) => {
-    if (e.actorId && ctx.services.get('enemies')?.alive(R11_WYRM).includes(e.actorId)) resolve('spared');
+    if (e.actorId && ctx.services.get('enemies')?.alive(R11_WYRM).includes(e.actorId)) resolve('spared', e.actorId);
   });
 
   // The axe on its cairn: its reactions and its power follow the choice.

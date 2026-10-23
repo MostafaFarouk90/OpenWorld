@@ -32,8 +32,16 @@ export interface Kit {
   after(ticks: number, fn: () => void): void;
   /** Runs `fn` every `everyTicks` fixed ticks. */
   every(everyTicks: number, fn: () => void): Off;
-  /** The spawner group's members still standing: `enemies.alive` keeps a member until its death animation has finished. */
+  /**
+   * The spawner group's members still standing: `enemies.alive` keeps a member until its death animation has finished, and
+   * a released or spared one until it has dissolved or walked off. Neither counts (review-a #3).
+   */
   standing(spawnerId: string): string[];
+  /**
+   * Runs `fn` whenever a member may have left a group without dying where the caller can see it: an accepted mercy, a
+   * despawn, or A2's group-cleared (a dissolve or walk-off that ended). The caller re-checks its group from `later`.
+   */
+  onMemberLeft(fn: () => void): Off;
   warn(message: string): void;
 }
 
@@ -42,6 +50,14 @@ export function makeKit(ctx: GameContext, warn: (m: string) => void, offs: Off[]
   const delayed: { left: number; fn: () => void }[] = [];
   const timers: { every: number; n: number; fn: () => void; live: boolean }[] = [];
   const quests = () => ctx.services.get('quests');
+  // Actors whose mercy was accepted and not revoked: they are leaving, whatever `enemies.alive` says while they go.
+  const mercied = new Set<string>();
+  offs.push(
+    ctx.events.on('mercy', (e) => void (e.actorId && mercied.add(e.actorId))),
+    ctx.events.on('mercy.revoked', (e) => void mercied.delete(e.actorId)),
+    ctx.events.on('actor.despawned', (e) => void mercied.delete(e.actorId)),
+    ctx.events.on('save.loaded', () => mercied.clear()),
+  );
   const kit: Kit = {
     ctx,
     flag: (k) => ctx.state.getBool(k),
@@ -80,7 +96,20 @@ export function makeKit(ctx: GameContext, warn: (m: string) => void, offs: Off[]
       offs.push(off);
       return off;
     },
-    standing: (id) => (ctx.services.get('enemies')?.alive(id) ?? []).filter((a) => !(ctx as { actors?: { get(id: string): { dead?: boolean } | undefined } }).actors?.get(a)?.dead),
+    standing: (id) =>
+      (ctx.services.get('enemies')?.alive(id) ?? []).filter(
+        (a) => !mercied.has(a) && !(ctx as { actors?: { get(id: string): { dead?: boolean } | undefined } }).actors?.get(a)?.dead,
+      ),
+    onMemberLeft(fn) {
+      const own = [
+        ctx.events.on('mercy', () => fn()),
+        ctx.events.on('actor.despawned', () => fn()),
+        ctx.events.on('enemies.groupCleared', () => fn()),
+      ];
+      const off = () => own.forEach((o) => o());
+      offs.push(off);
+      return off;
+    },
     warn,
   };
   const tick = (): void => {
