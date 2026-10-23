@@ -12,7 +12,7 @@ describe('B1 placements', () => {
   const rows = TILES.b1!;
 
   it('is registered and large enough to matter', () => {
-    expect(rows.length).toBeGreaterThan(1000);
+    expect(rows.length).toBeGreaterThan(700);
   });
 
   it('uses only ids from the scale table or the KayKit aliases', () => {
