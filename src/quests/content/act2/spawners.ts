@@ -1,6 +1,7 @@
 import { wyrmlingSpawner } from '../../../enemies/wyrm/spawners';
 import { WATCH_GUARD_BAND } from '../../../enemies/level';
 import type { SpawnerDef } from '../../../enemies/types';
+import { R10_DUEL_SPAWNERS } from './r10duels/r10Duels';
 
 const range = (prefix: string, from: number, to: number): string[] => Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${from + i}`);
 const common = { band: 'cinderreach', respawn: 'never' as const };
@@ -87,4 +88,6 @@ export const ACT2_SPAWNERS_A12: readonly SpawnerDef[] = [
     id: 'q12.d03.perch', tag: 'd03.perch', enemy: 'hunter-harpooner', count: 3, anchor: 'cinderreach.spawn.scorchhold.perch.1',
     memberAnchors: range('cinderreach.spawn.scorchhold.perch.', 1, 3), activation: { quest: 'd03', flag: 'story.d03.perchOut' }, leash: true, ...common,
   },
+  // R10's optional duels (follow-up to A13): the speaker's second, spawned only by the duel module
+  ...R10_DUEL_SPAWNERS,
 ];

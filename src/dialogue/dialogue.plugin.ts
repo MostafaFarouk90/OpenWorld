@@ -8,6 +8,7 @@ import { dialogueStrings } from './strings.en';
 import { createEffectRunner } from '../quests/effects';
 import type { BusPort } from '../quests/ports';
 import '../quests/service';
+import { withR10Duels } from '../quests/content/act2/r10duels/r10Duels.dialogue';
 
 const plugin: GamePlugin = {
   id: 'dialogue',
@@ -43,7 +44,10 @@ const plugin: GamePlugin = {
       },
       warn,
     });
-    for (const def of dialogueDefs) {
+    // R10's optional duels (follow-up to A13): a duel choice beside each persuasion round; a no-op without A13's R10.
+    const r10 = withR10Duels(dialogueDefs);
+    ctx.strings.register('en', r10.strings);
+    for (const def of r10.defs) {
       const { errors } = validateDialogue(def, (k) => ctx.strings.has(k));
       if (errors.length) {
         warn(`dialogue "${def.id}" skipped: ${errors.join('; ')}`);
