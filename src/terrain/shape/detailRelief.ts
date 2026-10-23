@@ -10,6 +10,7 @@ import { ZONE_BOUNDS } from './reliefZonesBuild';
 export const RELIEF_MAX = 1.2;
 /** Metres over which the relief ramps in outside a keep-flat rectangle, and out beyond the B1 tile core. */
 export const RELIEF_BLEND = 10;
+const BLEND_SQ = RELIEF_BLEND * RELIEF_BLEND;
 /** The B1 tile core (x -100..160, z -30..230); the relief fades to nothing over `RELIEF_TILE_BAND` outside it. */
 export const RELIEF_TILE = { x0: -100, x1: 160, z0: -30, z1: 230 } as const;
 export const RELIEF_TILE_BAND = 52;
@@ -22,7 +23,7 @@ function smoothstep(t: number): number {
   return c * c * (3 - 2 * c);
 }
 
-/** 0 inside the tile core, rising to 1 across the band: how far the point is from the tile, as a ramp. */
+/** 1 inside the tile core, falling smoothly to 0 across the band. */
 export function tileWeight(x: number, z: number): number {
   const dx = Math.max(RELIEF_TILE.x0 - x, 0, x - RELIEF_TILE.x1);
   const dz = Math.max(RELIEF_TILE.z0 - z, 0, z - RELIEF_TILE.z1);
@@ -35,8 +36,12 @@ export function reliefOpenness(x: number, z: number): number {
   for (const [x0, z0, x1, z1] of RELIEF_ZONES) {
     const dx = Math.max(x0 - x, 0, x - x1);
     const dz = Math.max(z0 - z, 0, z - z1);
-    const d = Math.hypot(dx, dz);
-    if (d < RELIEF_BLEND) open = Math.min(open, smoothstep(d / RELIEF_BLEND));
+    const d2 = dx * dx + dz * dz;
+    if (d2 === 0) return 0;
+    if (d2 < BLEND_SQ) {
+      const w = smoothstep(Math.sqrt(d2) / RELIEF_BLEND);
+      if (w < open) open = w;
+    }
   }
   return open;
 }
