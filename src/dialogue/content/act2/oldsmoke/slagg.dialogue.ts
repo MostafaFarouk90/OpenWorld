@@ -70,7 +70,7 @@ export const SLAGG = buildTree({
         S('Either way, you came back with chests, and nobody died under the market. Do not underestimate that. I have buried men for less coin.'),
         S('Here: three hundred, from the fund. It is the least I can do, and the most the fund can do.'),
         S('The stewards will remember what you did, and so will my miners. In Deepgate it is the same thing, in the end.'),
-        S('Come and find me when you are ready for the next one. There is always a next one.'),
+        S('Come and find me when you are ready for the next one. There is always a next one.', [{ event: 'story.r09.reported' }]),
       ],
     },
     'r10-brief': {

@@ -1,35 +1,41 @@
-// M19's stealth section: the section data against a fixture of the Lower Galleries' anchors, and a headless sneak of the
-// route past the watch loop. A4's mine interiors are not on this branch, so the anchors below are the fixture (interior-local,
-// inside A4's x [-70,70], z [-130,10] cell): the ids are the ones the section and the spawner name, the coordinates are a
-// sketch. Swap `ANCHORS` for A4's real interior def when it lands; the route and the loop must then be re-walked. The sim has
-// no walls, so it is the worst case: a route that passes in the open passes with the galleries' rock too.
+// M19's stealth section: the section data on A4's real Lower Galleries anchors (interior-local metres) and a headless sneak of
+// the route past the watch, with the room's pillars and crates as sight cover. The guards walk as the runtime spawns them: each
+// from its member post, then the patrol rotated by its slot. The live build (A13 smoke) caught a player standing still at the
+// start checkpoint over and over with A4's first watch (four guards on a perimeter loop, two posts beside the start): the
+// checks below fail on that layout.
 import { describe, expect, it } from 'vitest';
 import { SECTIONS, validateSection } from '../../../../../stealth/sections';
-import { KinematicPatrol, runScript, type ScriptStep } from '../../../../../stealth/testing/patrolSim';
+import { KinematicPatrol, boxLineOfSight, runScript, type ScriptStep, type SolidBox } from '../../../../../stealth/testing/patrolSim';
 import type { P3 } from '../../../../../stealth/perceptionPort';
+import { patrolForSlot } from '../../../../../enemies/spawners';
+import { LOWER_GALLERIES_DEF } from '../../../../../oldsmoke/mines/lowerGalleries';
 import { M18M19_SPAWNERS } from './m18m19.spawners';
 import { M19_SECTION } from './m19.quest';
+import { mineAnchors } from './realAnchors';
 
-const xz = (x: number, z: number): [number, number] => [x, z];
-const FIXTURE: Record<string, [number, number]> = {
-  'oldsmoke.stealth.m19.start': xz(-50, -70),
-  'oldsmoke.stealth.m19.cp.inside': xz(-40, -98),
-  'oldsmoke.stealth.m19.end': xz(30, -106),
-  'oldsmoke.stealth.m19.centre': xz(0, -80),
-  'oldsmoke.hide.m19.1': xz(-60, -84),
-  'oldsmoke.hide.m19.2': xz(-25, -104),
-  'oldsmoke.hide.m19.3': xz(5, -118),
-  'oldsmoke.hide.m19.4': xz(22, -98),
-  'oldsmoke.m19.watch.1': xz(-10, -86), 'oldsmoke.m19.watch.2': xz(10, -86), 'oldsmoke.m19.watch.3': xz(10, -68), 'oldsmoke.m19.watch.4': xz(-10, -68),
-  'oldsmoke.m19.patrol.1': xz(-10, -86), 'oldsmoke.m19.patrol.2': xz(10, -86), 'oldsmoke.m19.patrol.3': xz(10, -68),
-  'oldsmoke.m19.patrol.4': xz(0, -62), 'oldsmoke.m19.patrol.5': xz(-10, -68),
-};
-const local = new Map(Object.entries(FIXTURE).map(([id, [x, z]]) => [id, { id, position: { x, y: 0, z }, yaw: 0 }]));
+const REAL = mineAnchors('mine-lower-galleries');
+const local = new Map(Object.entries(REAL).map(([id, p]) => [id, { id, position: { x: p.x, y: 0, z: p.z }, yaw: 0 }]));
 const find = (id: string) => local.get(id);
 const at = (id: string): P3 => ({ ...local.get(id)!.position });
 const section = SECTIONS.find((s) => s.id === M19_SECTION)!;
-const loop: P3[] = [1, 2, 3, 4, 5].map((n) => at(`oldsmoke.m19.patrol.${n}`));
-const open = () => true;
+const watch = M18M19_SPAWNERS.find((s) => s.id === section.guardGroups[0])!;
+const loop: P3[] = (watch.patrol as string[]).map(at);
+const posts: string[] = [...(watch.memberAnchors ?? [])].slice(0, watch.count);
+/** The galleries' pillars and crates block sight below their tops. */
+const cover = boxLineOfSight([
+  ...LOWER_GALLERIES_DEF.pillars.map((r): SolidBox => ({ minX: r.x0, maxX: r.x1, minZ: r.z0, maxZ: r.z1, top: 4 })),
+  ...(LOWER_GALLERIES_DEF.props ?? []).map((p): SolidBox => ({ minX: p.rect.x0, maxX: p.rect.x1, minZ: p.rect.z0, maxZ: p.rect.z1, top: p.height })),
+]);
+/** The watch `t` seconds after it spawned (at quest start, or after a capture reset). */
+const guardsAt = (t: number, routeIds: readonly string[] = watch.patrol as string[], at0: readonly string[] = posts) => {
+  const pts = routeIds.map(at);
+  return at0.map((post, k) => {
+    const g = new KinematicPatrol([at(post), ...patrolForSlot(pts, k).map((q) => ({ x: q.x, y: 0, z: q.z }))], 1.4, 0);
+    for (let s = 0; s < t; s += 1 / 60) g.step(1 / 60);
+    return g;
+  });
+};
+const PHASES = Array.from({ length: 30 }, (_, i) => i * 2);
 
 describe('M19 stealth section', () => {
   it('is registered for the quest with interior bounds, four hide spots and the watch guard group', () => {
@@ -52,7 +58,7 @@ describe('M19 stealth section', () => {
   });
 
   it('a hide spot on the patrol loop is a problem (the check can fail)', () => {
-    const bad = { ...section, hideSpots: [{ id: 'hide:m19-1', anchor: 'oldsmoke.m19.patrol.2' }] };
+    const bad = { ...section, hideSpots: [{ id: 'hide:m19-1', anchor: 'oldsmoke.m19.patrol.3' }] };
     expect(validateSection(bad, find, [[...loop, loop[0]]]).map((p) => p.problem)).toEqual([expect.stringContaining('within 3 m')]);
   });
 
@@ -64,42 +70,50 @@ describe('M19 stealth section', () => {
   it('its guard group is a spawner of watch-guards on the galleries\' anchors, live with the quest and never respawning', () => {
     const g = M18M19_SPAWNERS.find((s) => s.id === section.guardGroups[0])!;
     expect(g.enemy).toBe('watch-guard');
-    expect(g.count).toBe(4);
+    expect(g.count).toBe(1);
     expect(g.respawn).toBe('never');
     expect(g.activation).toEqual({ quest: 'm19' });
     for (const a of [g.anchor, ...(g.memberAnchors ?? []), ...((g.patrol as string[]) ?? [])]) expect(find(a), a).toBeDefined();
   });
 });
 
-describe('M19 route (headless)', () => {
-  const sneak = (to: P3): ScriptStep => ({ to, sneak: true });
-  /** Start, down the west gallery, east along the south one to the checkpoint and out at the exit. */
-  const route: ScriptStep[] = [
-    { wait: 2, sneak: true },
-    sneak({ x: -50, y: 0, z: -98 }),
-    sneak(at('oldsmoke.stealth.m19.cp.inside')),
-    sneak({ x: -20, y: 0, z: -116 }),
-    sneak({ x: 10, y: 0, z: -116 }),
-    sneak(at('oldsmoke.stealth.m19.end')),
+describe('M19 route (headless, A4\'s real galleries)', () => {
+  const sneak = (x: number, z: number): ScriptStep => ({ to: { x, y: 0, z }, sneak: true });
+  const start = at('oldsmoke.stealth.m19.start');
+  /** In at the west door, up past the crate to hide spot 2 against the north wall, wait there, east to the link and out. */
+  const north = (delay: number, hideWait: number): ScriptStep[] => [
+    { wait: delay, sneak: true }, sneak(30, -40.5), { to: at('oldsmoke.hide.m19.2'), sneak: true },
+    ...(hideWait > 0 ? [{ wait: hideWait, sneak: true, hidden: true }] : []), sneak(41, -34), { to: at('oldsmoke.stealth.m19.end'), sneak: true },
   ];
-  const guards = (phase: number) => [0, 1, 2, 3].map((i) => new KinematicPatrol(loop, 1.4, phase + i * 7));
+  /** The first (delay, wait) a player watching the guard could pick that gets past him unseen, or null. */
+  const timing = (t: number): [number, number] | null => {
+    for (let d = 0; d <= 20; d++) for (const w of [0, 2, 4, 6, 8, 10, 12]) {
+      const r = runScript(start, north(d, w), guardsAt(t), cover);
+      if (!r.noticed && !r.caught) return [d, w];
+    }
+    return null;
+  };
 
-  for (const phase of [-1, 0, 5, 11]) {
-    it(`is never noticed past the watch (patrol phase ${phase} s)`, () => {
-      const r = runScript(at('oldsmoke.stealth.m19.start'), route, guards(phase), open);
-      expect(r.noticed).toBe(0);
-      expect(r.caught).toBe(0);
-    });
-  }
-
-  it('waiting in a hide spot while the watch passes is never noticed either', () => {
-    const wait: ScriptStep[] = [sneak(at('oldsmoke.hide.m19.2')), { wait: 20, sneak: true, hidden: true }, sneak(at('oldsmoke.stealth.m19.end'))];
-    const r = runScript(at('oldsmoke.stealth.m19.cp.inside'), wait, guards(3), open);
-    expect(r.noticed).toBe(0);
+  it('whenever the watch spawned, a player who times the guard gets along the north wall unseen', () => {
+    for (const t of PHASES) expect({ t, ok: timing(t) !== null }).toEqual({ t, ok: true });
   });
 
-  it('walking upright into the middle of the watch is noticed (the test can fail)', () => {
-    const across: ScriptStep[] = [{ to: { x: 0, y: 0, z: -77 }, sneak: false }, { wait: 8, sneak: false }];
-    expect(runScript(at('oldsmoke.stealth.m19.start'), across, guards(0), open).noticed).toBeGreaterThan(0);
+  it('a player holding still and sneaking at the start checkpoint is never noticed (the capture reset lands there)', () => {
+    for (const t of PHASES) expect({ t, noticed: runScript(start, [{ wait: 10, sneak: true }], guardsAt(t), cover).noticed }).toEqual({ t, noticed: 0 });
+  });
+
+  it('A4\'s first watch (four guards on the perimeter loop from the posts) caught a still player at the start: the check can fail', () => {
+    const perimeter = [1, 2, 3, 4, 5].map((n) => `oldsmoke.m19.patrol.${n}`);
+    const oldPosts = [1, 2, 3, 4].map((n) => `oldsmoke.m19.watch.${n}`);
+    const caught = PHASES.filter((t) => runScript(start, [{ wait: 10, sneak: true }], guardsAt(t, perimeter, oldPosts), cover).caught > 0);
+    expect(caught.length).toBeGreaterThan(0);
+    const pts = perimeter.map(at);
+    expect(validateSection(section, find, [[...pts, pts[0]]]).length).toBeGreaterThan(0);
+  });
+
+  it('walking upright into the middle of the room is noticed (the test can fail)', () => {
+    const across: ScriptStep[] = [{ to: { x: 37, y: 0, z: -43 }, sneak: false }, { wait: 8, sneak: false }];
+    const seen = PHASES.filter((t) => runScript(start, across, guardsAt(t), cover).noticed > 0);
+    expect(seen.length).toBeGreaterThan(PHASES.length / 2);
   });
 });

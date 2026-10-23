@@ -3,6 +3,11 @@ import { reads, story } from '../helpers';
 
 export const R09_OFFICE = ['note-r09-ledger', 'note-r09-safe', 'note-r09-seal', 'note-r09-stall', 'note-r09-board'];
 export const R09_OFFICE_TRIGGER = 'trg.q13.r09.office';
+/**
+ * Raised by the last line of Slagg's R09 report. The report cannot be a `talk slagg`: the choice is made in a Slagg talk too,
+ * so that talk's own end credited the report at once and the report scene never played (A13 smoke, live build).
+ */
+export const R09_REPORTED = 'story.r09.reported';
 
 /**
  * R09 Sooty Coin. The payroll chests went down into the market cellars when the crawlers nested there. Clear the nests,
@@ -24,7 +29,7 @@ export const r09: QuestDef = {
     story('clerk', 'quest.r09.clerk', 'dialogue.ended', { match: { npcId: 'steward-market-2', reason: 'completed' }, doneWhen: { flag: 'story.r10.choice', equals: 'miners' } }),
     { id: 'miners', type: 'talk', target: 'miner-2', textKey: 'quest.r09.miners' },
     story('choice', 'quest.r09.choice', 'story.r09.chosen', { doneWhen: { any: [{ flag: 'story.r09.choice', equals: 'stewards' }, { flag: 'story.r09.choice', equals: 'miners' }] } }),
-    { id: 'report', type: 'talk', target: 'slagg', textKey: 'quest.r09.report' },
+    story('report', 'quest.r09.report', R09_REPORTED),
   ],
   rewards: [{ xp: 400 }, { giveGold: 300 }],
 };

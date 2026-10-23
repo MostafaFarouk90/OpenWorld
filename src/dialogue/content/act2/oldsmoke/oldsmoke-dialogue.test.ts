@@ -319,6 +319,12 @@ describe('Slagg', () => {
     expect(w.flags.get('story.r09.choice')).toBe(side);
     expect(count(w, `favour grisel ${delta}`)).toBe(1);
     expect(w.emitted.filter((e) => e.type === 'story.r09.chosen')).toHaveLength(1);
+    // the choice talk does not report: the report is its own scene, which raises the report event once at its end
+    expect(w.emitted.filter((e) => e.type === 'story.r09.reported')).toHaveLength(0);
+    w.set('r09', 'active', 'brief', 'nests', 'chests', 'office', 'clerk', 'miners', 'choice');
+    expect(opens(w, 'npc-slagg', 'slagg')).toBe('r09-report');
+    play(w, 'npc-slagg', 'slagg');
+    expect(w.emitted.filter((e) => e.type === 'story.r09.reported')).toHaveLength(1);
   });
 
   it.each([['miners', -5, 0], ['stewards', 5, 0], ['compromise', 2, 2]] as const)('R10 %s: the branch first, the choice and the favour only at the report', (side, grisel, oswin) => {

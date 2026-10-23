@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { makeWorld } from '../../../testKit';
 import type { QuestDef } from '../../../types';
 import { m16, M16_BRAZIER_ID, M16_SEARCH } from './m16.quest';
-import { r09, R09_OFFICE, R09_OFFICE_TRIGGER } from './r09.quest';
+import { r09, R09_OFFICE, R09_OFFICE_TRIGGER, R09_REPORTED } from './r09.quest';
 import { r10, R10_NOTES } from './r10.quest';
 import { m21, M21_EVIDENCE, M21_LETTERS, M21_SECTION } from './m21.quest';
 import { m22, M22_PREREQUISITES, M22_BANNER } from './m22.quest';
@@ -125,7 +125,11 @@ describe('R09 Sooty Coin', () => {
     expect(current(w, 'r09')).toBe('choice');
     w.flags.set('story.r09.choice', side);
     w.bus.emit('story.r09.chosen');
+    // the choice is made inside a Slagg talk: that talk's end must not stand in for the report (live-build smoke)
     talk(w, 'slagg');
+    expect(w.manager.state('r09')).toBe('active');
+    expect(current(w, 'r09')).toBe('report');
+    w.bus.emit(R09_REPORTED);
     expect(w.manager.state('r09')).toBe('completed');
     expect(w.gold.n).toBe(300);
     expect(w.calls.filter((c) => c === 'xp:400:quest:r09')).toHaveLength(1);
