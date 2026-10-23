@@ -16,7 +16,7 @@ import { PartyScreen } from './PartyScreen';
 import { PressureBar } from './PressureBar';
 import { createTemperingScreen } from './TemperingScreen';
 import { actEnding, cardSeenFlags } from '../integration/actEndings';
-import { ACT2_CONTINUES, ACT2_CONTINUES_STRINGS_EN, act2ContinuesLive } from './act2Continues';
+import { ACT2_CONTINUES, ACT2_CONTINUES_STRINGS_EN, act2ContinuesLive, act2ContinuesOnLoad } from './act2Continues';
 import { StructureBar } from './StructureBar';
 import { createRespecModal, type RespecModalDeps } from './RespecModal';
 import { BuffBar, type BuffInfo } from './BuffBar';
@@ -378,9 +378,15 @@ const hudPlugin: GamePlugin = {
         ending2c.onActEnded({ act: ACT2_CONTINUES.act, endingId: ACT2_CONTINUES.endingId });
       },
     });
+    // A load re-derives the card from the loaded save (review-b L4): a save without D03 done hides a card still waiting or
+    // showing, and a save with D03 done whose card was never shown (it waited behind the closing dialogue) owes it again.
     ctx.events.on('save.loaded', () => {
-      continuesDue = false;
-      ending2c.onLoaded();
+      const d03Done =
+        ctx.services.get('quests')?.state(ACT2_CONTINUES.quest) === 'completed' || ctx.state.getBool(`story.${ACT2_CONTINUES.quest}.complete`);
+      const r = act2ContinuesOnLoad({ live: act2ContinuesLive(), d03Done, seen: ctx.state.getBool(ACT2_CONTINUES.seenFlag) });
+      continuesDue = r.due;
+      if (r.hide) ending2c.onGate(false);
+      else ending2c.onLoaded();
     });
     mount('center', ending2c, 3);
     // One service for the cards: whichever is waiting or showing (Act 1's first when, unusually, several are pending).

@@ -88,6 +88,11 @@ export interface MoveDef {
   leap?: { maxMetres: number };
   /** A flier's moves (the Ember Wyrm): offered only in the air or only on the ground; unset offers it in both. */
   flight?: 'air' | 'ground';
+  /**
+   * The hit is fire (a flame jet, a burning bite, a slag glob): carried into the damage request as `element` so fire
+   * resistance (the Bellows Blessing) reduces the hit itself, not only the ignite ticks after it (review-b M2).
+   */
+  element?: 'fire';
 }
 
 /** What a ranged move fires. `root` (seconds) and `pull` (metres) are applied only on an outcome `hit`. */

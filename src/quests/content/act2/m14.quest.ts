@@ -21,7 +21,9 @@ export const m14: QuestDef = {
     { id: 'ledge3', type: 'goTo', target: 'trg.q12.leap.hushed.3', textKey: 'quest.m14.ledge3' },
     { id: 'golems', type: 'kill', target: 'cinder-golem', required: 2, spawnTag: 'm14.golems', textKey: 'quest.m14.golems' },
     { id: 'hounds', type: 'kill', target: 'ember-hound', required: 3, spawnTag: 'm14.hounds', textKey: 'quest.m14.hounds' },
-    story('rekindle', 'quest.m14.rekindle', 'shrine.rekindled', { match: { shrineId: 'hushed-anvil' } }),
+    // Lit before this is current (the ledges climbed past the golems, or an earlier visit): credited from A9's shrine flag
+    // (`ForgeShrineBinding.flag('hushed-anvil')`) when it becomes current (review-a #2).
+    story('rekindle', 'quest.m14.rekindle', 'shrine.rekindled', { match: { shrineId: 'hushed-anvil' }, doneWhen: { flag: 'shrine.hushed-anvil.lit', equals: true } }),
     {
       id: 'murals', type: 'event', target: 'interact', match: { interactableId: M14_MURALS }, dedupeBy: 'interactableId',
       required: 3, textKey: 'quest.m14.murals',

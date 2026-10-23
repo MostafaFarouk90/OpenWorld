@@ -4,6 +4,8 @@ import { FIXED_TIMESTEP } from '../../config/constants';
 import { CircleRush } from './circleRush';
 import { bodyPitch } from '../quadruped/gait';
 import { BURNING_BITE, HOUND } from './tuning';
+import { BellowsBlessing } from '../../shrine/bellowsBlessing';
+import { BLESSING } from '../../shrine/weepingBellows.tuning';
 import { ENEMY_DEFS, TELEGRAPH_STYLE } from '../defs';
 import type { Enemy } from '../Enemy';
 import { EnemyManager } from '../EnemyManager';
@@ -423,6 +425,31 @@ describe('burning bite', () => {
   }
   const bitesOn = (t: Rig, id: string) =>
     t.fake.bus.of('damage.dealt').filter((r) => r.attackerId === id && r.targetId === 'player');
+
+  // Review B M2: the bite goes through the enemies.moves modifier, which now carries the move's `element`; the real
+  // Bellows Blessing modifier, at its own order, then takes its 15% off the bite itself.
+  it('the bite is a fire hit, and a blessed player takes 15% less from it; the pounce is not fire', () => {
+    const plain = biter(new FakeStatus());
+    plain.t.tick(8, () => {});
+    const blessedRig = biter(new FakeStatus());
+    const blessing = new BellowsBlessing({ emitApplied: () => {}, emitRemoved: () => {} });
+    blessing.apply();
+    blessedRig.t.fake.host.damage.addModifier('shrine.bellows-blessing', (req, target) => {
+      if (target.id === 'player') blessing.modify(req as never);
+    }, BLESSING.modifierOrder);
+    blessedRig.t.tick(8, () => {});
+    const a = bitesOn(plain.t, plain.id)[0];
+    const b = bitesOn(blessedRig.t, blessedRig.id)[0];
+    expect(a.element).toBe('fire');
+    expect(b.element).toBe('fire');
+    expect(b.dealt).toBeCloseTo(a.dealt * BLESSING.fireMultiplier, 5);
+    const p = rig([pack('ember-hound', 1)], { playerZ: -3, seed: 1 });
+    const [pid] = p.m.service.spawnGroup('pack', { aggro: true, leash: false, moves: ['hound.pounce'] });
+    p.tick(8, () => {});
+    const pounces = p.fake.bus.of('damage.dealt').filter((r) => r.attackerId === pid && r.targetId === 'player');
+    expect(pounces.length).toBeGreaterThan(0);
+    expect(pounces[0].element).toBeUndefined();
+  });
 
   it('applies ignite once per bite with the tuned dps and seconds, sourced from the hound', () => {
     const status = new FakeStatus();

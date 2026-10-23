@@ -103,6 +103,11 @@ export class QuestManager implements QuestReader, QuestActions {
     return !!o && this.progress(questId, o) >= required(o);
   }
 
+  /** True once `key` (a `dedupeBy` value, such as a note id) has been counted toward that objective. Saved with the quest. */
+  counted(questId: string, objectiveId: string, key: string): boolean {
+    return this.dedupe.get(this.dkey(questId, objectiveId))?.has(key) ?? false;
+  }
+
   isObjectiveCurrent(questId: string, objectiveId: string): boolean {
     const def = this.defs.get(questId);
     const rt = this.rt.get(questId);

@@ -592,3 +592,62 @@ describe('InteractionSystem cone and score', () => {
     expect(t.sys.focusFor('mercy')).toBe(m);
   });
 });
+
+// Playtest bug 2: Tobb and Aelfreda (companions, `ambient`) took F from the R05 tracks and the M15 ledgers unless the player
+// stood within half a metre of the prop. A quest prop or note an objective needs (`live`) in reach now wins at a similar
+// distance; a companion still wins when nothing live is in reach, or when it is clearly nearer.
+describe('InteractionSystem focus: companions yield to a live quest item (playtest bug 2)', () => {
+  const companion = (t: ReturnType<typeof setup>, z: number) => t.item('companion:tobb', z, { kind: 'talk', radius: 3.6, ambient: true });
+
+  it('a live quest prop a little farther than the companion takes the focus', () => {
+    const t = setup();
+    const tobb = companion(t, -0.6);
+    const tracks = t.item('use:r05-tracks-2', -1.8, { live: () => true });
+    t.sys.register(tobb);
+    t.sys.register(tracks);
+    t.tick();
+    expect(t.sys.focus).toBe(tracks);
+  });
+
+  it('with nothing live in reach the companion keeps the focus (a plain prop or an idle note does not take it)', () => {
+    const t = setup();
+    const tobb = companion(t, -0.6);
+    const plain = t.item('use:barrel', -1.0);
+    const idle = t.item('use:note-old', -1.2, { live: () => false });
+    t.sys.register(tobb);
+    t.sys.register(plain);
+    t.sys.register(idle);
+    t.tick();
+    expect(t.sys.focus).toBe(tobb);
+  });
+
+  it('a companion much nearer than the live item (more than the yield) still wins, and the yield never helps an NPC', () => {
+    const t = setup();
+    const tobb = companion(t, -0.2);
+    const far = t.item('use:far-prop', -1.95, { live: () => true });
+    t.sys.register(tobb);
+    t.sys.register(far);
+    t.tick();
+    expect(t.sys.focus).toBe(tobb); // 0.2 + 1.5 < 1.95
+    const u = setup();
+    const npc = u.item('npc:corwin', -0.6, { kind: 'talk' });
+    const live = u.item('use:note-m15-ledger', -1.8, { live: () => true });
+    u.sys.register(npc);
+    u.sys.register(live);
+    u.tick();
+    expect(u.sys.focus).toBe(npc); // only `ambient` items yield
+  });
+
+  it('a live item out of reach or behind the player does not make the companion yield; a throwing live() is not live', () => {
+    const t = setup();
+    const tobb = companion(t, -0.6);
+    const behind = t.item('use:behind', 1.0, { live: () => true });
+    const broken = t.item('use:broken', -1.0, { live: () => { throw new Error('boom'); } });
+    t.sys.register(tobb);
+    t.sys.register(behind);
+    t.sys.register(broken);
+    t.tick();
+    expect(t.sys.focus).toBe(tobb);
+    expect(t.warn).toHaveBeenCalledWith(expect.stringContaining('live() of "use:broken"'), expect.any(Error));
+  });
+});

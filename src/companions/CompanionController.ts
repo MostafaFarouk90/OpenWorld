@@ -251,6 +251,8 @@ export class CompanionController {
         name: this.ctx.strings.t(this.def.nameKey),
         // He settles about 3.2 m away, so the reach is longer; Cael must face him (the default cone).
         radius: 3.6,
+        // Always at Cael's side: a quest prop or note that an objective needs wins F at a similar distance (playtest bug 2).
+        ambient: true,
         position: (out) => {
           const m = this.model;
           return m ? out.set(m.pos.x, m.pos.y, m.pos.z) : out;

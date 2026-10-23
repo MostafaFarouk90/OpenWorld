@@ -80,6 +80,8 @@ export interface DamageRequestLike {
   direction?: THREE.Vector3;
   /** Requested from thread 0 (requests-round-1 item 4): red, dodge-only attacks. */
   unblockable?: boolean;
+  /** v0.6: a fire hit (MoveDef.element), for fire resistance. */
+  element?: 'fire';
 }
 export interface DamageResultLike extends DamageRequestLike {
   outcome: DamageOutcome;

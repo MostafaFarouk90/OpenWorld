@@ -3,6 +3,14 @@ import { all, flagIs, objDone, objOpen, qActive, qDone, qIdle, step } from './co
 
 const M = (t: string, fx?: Line['fx']): Line => (fx ? { s: 'maud', t, fx } : { s: 'maud', t });
 const C = (t: string): Line => ({ s: 'cael', t });
+/**
+ * Node effects run when the line shows, but the hand-in is credited only on a completed end: a talk cut off after the thanks
+ * replays it. The flag pays the thanks once (review-a #8), as `story.m12.maudGift` guards the flask.
+ */
+export const MAUD_THANKS_FLAG = 'story.r06.maudThanks';
+const thanksOnce = (track: 'oswin' | 'halvard'): Line['fx'] => [
+  { if: { not: { flag: MAUD_THANKS_FLAG, equals: true } }, then: [{ favour: track, delta: 4 }, { setFlag: MAUD_THANKS_FLAG, value: true }] },
+];
 
 export const MAUD = buildTree({
   id: 'npc-maud',
@@ -23,7 +31,7 @@ export const MAUD = buildTree({
         M('Come and taste it, if you do not believe me. I have drawn three buckets and the water runs clear in every one.'),
         C('Then the sleepers will wake?'),
         M('Some already stir. The rest will, or they will not, and I will not lie to you about which. But the well will no longer feed the sickness.'),
-        M('The refuge owes you more than I have the patience to say. Take my thanks, and the town\'s, such as it is.', [{ favour: 'oswin', delta: 4 }]),
+        M('The refuge owes you more than I have the patience to say. Take my thanks, and the town\'s, such as it is.', thanksOnce('oswin')),
       ],
     },
     'r06-sealed': {
@@ -31,7 +39,7 @@ export const MAUD = buildTree({
         M('The boards are up and the well is shut. Half of Cinderford is already on the road with a bundle on its back.'),
         C('And you?'),
         M('I go with them. A healer does not stay behind with an empty well and a full town. Someone must walk beside the old ones.'),
-        M('It was the harder choice, and the sounder. Halvard will hear that you made it with your eyes open.', [{ favour: 'halvard', delta: 4 }]),
+        M('It was the harder choice, and the sounder. Halvard will hear that you made it with your eyes open.', thanksOnce('halvard')),
       ],
     },
     'r06-choice': {

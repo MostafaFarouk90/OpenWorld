@@ -7,7 +7,7 @@ import { valveInteractable } from '../puzzles/ValveWheel';
 import '../waystones/service';
 import { showToast } from '../waystones/toast';
 import { BellowsBlessing } from './bellowsBlessing';
-import { devBellowsCenter, devBellowsRequested } from './bellowsDevHook';
+import { devBellowsCenter, devBellowsRequested, parseBellows } from './bellowsDevHook';
 import { ForgeShrineBinding } from './forgeShrine';
 import { BELLOWS as B, BLESSING, initialRouting } from './weepingBellows.tuning';
 import { BELLOWS_STRINGS_EN } from './weepingBellows.strings.en';
@@ -124,36 +124,41 @@ const weepingBellowsPlugin: GamePlugin = {
     });
 
     // ---- placement from A4's centre anchor -------------------------------------------------------
-    const visuals = new BellowsVisuals();
+    let visuals = new BellowsVisuals();
     ctx.scene.add(visuals.root);
-    const offs: (() => void)[] = [];
-    let placed = false;
-    const devHook = devBellowsRequested((globalThis as { location?: { search?: string } }).location?.search);
-    const place = () => {
-      if (placed) return;
-      let c = ctx.anchors.find(B.centerAnchor);
-      if (!c && devHook) {
-        // ?bellows=1: a stand-in cavern centre, defined once and owned by this plugin.
-        const stone = ctx.anchors.find(`waystone.${B.waystoneId}`)?.position;
-        // Under its own id, so A4's real anchor can still be defined later without a duplicate throw.
-        offs.push(ctx.anchors.define({ id: B.devCenterAnchor, position: devBellowsCenter(stone, ctx.player.feet), yaw: 0 }));
-        c = ctx.anchors.find(B.devCenterAnchor);
-      }
-      if (!c) return;
-      placed = true;
-      const layout = bellowsLayout(c.position);
+    /** What the current site registered (valves, plaque, the stand-in anchor): dropped when the site moves. */
+    const siteOffs: (() => void)[] = [];
+    let site: 'none' | 'dev' | 'real' = 'none';
+    const search = (globalThis as { location?: { search?: string } }).location?.search;
+    // `?bellows=1&new`, dev builds only (review-b M1). The fresh game's saves are held for the session, as `?act1=` does.
+    // The hold is taken on the first tick: the save plugin is not a dependency (it may set up after this one), and saves stay
+    // locked until its boot decision, which comes after a tick.
+    const devHook = devBellowsRequested(search);
+    let saveHeld = !devHook;
+    if (!devHook && import.meta.env.DEV) {
+      const parsed = parseBellows(search);
+      if (parsed && 'error' in parsed) console.warn(`[bellows] dev hook refused: ${parsed.error}`);
+    }
+    const holdSaves = () => {
+      if (saveHeld) return;
+      saveHeld = true;
+      // Never released, as `?act1=` does: the save plugin's dispose clears its holds without saving.
+      ctx.services.get('save')?.suspend('bellows-dev');
+    };
+    const build = (center: { x: number; y: number; z: number }) => {
+      const layout = bellowsLayout(center);
       brazierPos = layout.braziers;
-      visuals.build(c.position, layout);
+      visuals.build(center, layout);
       controller.wheels.forEach((w, i) => {
         const p = layout.valves[i];
-        offs.push(
+        siteOffs.push(
           ctx.interaction.register(
             valveInteractable(w, (out: THREE.Vector3) => out.set(p.x, p.y + 1, p.z), { radius: B.interactRadius, enabled: () => !solved() }),
           ),
         );
       });
       const pl = layout.plaque;
-      offs.push(
+      siteOffs.push(
         ctx.interaction.register({
           id: 'use:bellows-plaque',
           kind: 'use',
@@ -170,6 +175,35 @@ const weepingBellowsPlugin: GamePlugin = {
       );
       rederive();
     };
+    /** Takes the stand-in site down (A4's real anchor appeared): a run in progress there is aborted. */
+    const unplace = () => {
+      for (const off of siteOffs.splice(0)) off();
+      controller.abort();
+      visuals.dispose();
+      visuals = new BellowsVisuals();
+      ctx.scene.add(visuals.root);
+      brazierPos = [];
+      site = 'none';
+    };
+    const place = () => {
+      if (site === 'real') return;
+      const real = ctx.anchors.find(B.centerAnchor);
+      if (real) {
+        // A4's own cavern anchor always wins, also over a stand-in placed before it existed (review-b L3).
+        if (site === 'dev') unplace();
+        build(real.position);
+        site = 'real';
+        return;
+      }
+      if (site === 'dev' || !devHook) return;
+      // The stand-in centre, under its own id so A4's real anchor can still be defined later without a duplicate throw.
+      const stone = ctx.anchors.find(`waystone.${B.waystoneId}`)?.position;
+      siteOffs.push(ctx.anchors.define({ id: B.devCenterAnchor, position: devBellowsCenter(stone, ctx.player.feet), yaw: 0 }));
+      const c = ctx.anchors.find(B.devCenterAnchor);
+      if (!c) return;
+      build(c.position);
+      site = 'dev';
+    };
 
     let first = true;
     ctx.systems.add({
@@ -181,6 +215,7 @@ const weepingBellowsPlugin: GamePlugin = {
         if (first) {
           first = false;
           binding.sync();
+          holdSaves();
         }
         place();
         controller.update(dt);
@@ -192,7 +227,7 @@ const weepingBellowsPlugin: GamePlugin = {
         visuals.update(frameTime);
       },
       dispose() {
-        for (const off of offs.splice(0)) off();
+        for (const off of siteOffs.splice(0)) off();
         offPuzzle();
         offModifier();
         visuals.dispose();

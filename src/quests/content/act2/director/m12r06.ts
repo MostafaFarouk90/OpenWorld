@@ -31,32 +31,46 @@ export function installR06(k: Kit): Off[] {
   k.on('save.loaded', syncClass);
 
   // Pennard's rite: two waves of ash-wraiths from the well, the second after the first is down.
-  const spawnWave = (n: 1 | 2): void => void ctx.services.get('enemies')?.spawnGroup(R06_RITE_GROUPS[n - 1]);
+  // `armed` while a wave this session spawned is out: a load tears the groups down (despawns) before it rebuilds the wave,
+  // and a re-check queued by that teardown must not read the empty group as a cleared wave.
+  let armed = false;
+  const spawnWave = (n: 1 | 2): void => {
+    armed = (ctx.services.get('enemies')?.spawnGroup(R06_RITE_GROUPS[n - 1]) ?? []).length > 0;
+  };
   const riteLive = (): boolean => k.active('r06') && k.flag('story.r06.riteStarted') && !k.flag('story.r06.riteFinished');
   k.onNamed('story.r06.riteStart', () => {
     if (!k.active('r06') || k.num('story.r06.riteWave') > 0) return;
     k.set('story.r06.riteWave', 1);
     k.later(() => spawnWave(1));
   });
+  // The wave is re-checked whenever one of its wraiths may have gone: a death, and also a Release (the wraith dissolves
+  // without dying) or a despawn, so a wave that ends on a mercy still advances (review-a #3).
+  const checkRite = (): void => k.later(() => {
+    if (!riteLive() || !armed) return;
+    const en = ctx.services.get('enemies');
+    if (!en) return;
+    const wave = k.num('story.r06.riteWave');
+    if (wave !== 1 && wave !== 2) return;
+    if (k.standing(R06_RITE_GROUPS[wave - 1]).length > 0) return;
+    if (wave === 1) {
+      k.set('story.r06.riteWave', 2);
+      spawnWave(2);
+    } else {
+      armed = false;
+      k.set('story.r06.riteFinished');
+      k.clear('story.r06.riteStarted');
+      k.emit('story.r06.riteDone');
+    }
+  });
   k.on('actor.died', (e) => {
-    if (e.spawnTag !== 'r06.rite' || !riteLive()) return;
-    k.later(() => {
-      const en = ctx.services.get('enemies');
-      if (!en) return;
-      const wave = k.num('story.r06.riteWave');
-      if (k.standing(R06_RITE_GROUPS[wave - 1] ?? '').length > 0) return;
-      if (wave === 1) {
-        k.set('story.r06.riteWave', 2);
-        spawnWave(2);
-      } else if (wave === 2) {
-        k.set('story.r06.riteFinished');
-        k.clear('story.r06.riteStarted');
-        k.emit('story.r06.riteDone');
-      }
-    });
+    if (e.spawnTag === 'r06.rite' && riteLive()) checkRite();
+  });
+  k.onMemberLeft(() => {
+    if (riteLive()) checkRite();
   });
   // A load rebuilds the rite wave the player was in (the groups are ephemeral and the wave counter is saved).
   k.on('save.loaded', () => {
+    armed = false;
     if (!riteLive()) return;
     const wave = k.num('story.r06.riteWave');
     if (wave === 1 || wave === 2) k.later(() => spawnWave(wave));

@@ -45,6 +45,13 @@ export interface Interactable {
   coneDegrees?: number;
   /** Overrides the default score (distance minus priority); lower wins, ties by id. */
   score?: (feet: THREE.Vector3Like) => number;
+  /**
+   * Always about (a companion that follows the player): while an interactable with a `live` quest objective is in reach,
+   * this one scores AMBIENT_YIELD_METRES worse, so F goes to the quest prop or note at a similar distance (playtest bug 2).
+   */
+  ambient?: boolean;
+  /** A quest prop or readable note that a current objective needs right now. */
+  live?(): boolean;
   enabled?(): boolean;
   onInteract(actor: Actor): void;
 }
@@ -60,6 +67,8 @@ export interface InteractionDeps {
 
 export const DEFAULT_INTERACT_RADIUS = 2;
 export const DEFAULT_CONE_DEGREES = 75;
+/** How much nearer an `ambient` interactable must be than a `live` one in reach to keep the focus. */
+export const AMBIENT_YIELD_METRES = 1.5;
 export const FOCUS_HALF_ANGLE = (DEFAULT_CONE_DEGREES * Math.PI) / 180;
 const EPS = 1e-6;
 
@@ -90,6 +99,8 @@ export class InteractionSystem implements GameSystem {
   private readonly warn: (m: string, e?: unknown) => void;
   private readonly offs: (() => void)[] = [];
   private readonly tmp = new THREE.Vector3();
+  /** The focus pick's candidates in reach, reused every tick. */
+  private readonly cands: { i: Interactable; a: InteractAction; score: number }[] = [];
 
   constructor(private readonly deps: InteractionDeps) {
     this.warn = deps.warn ?? ((m, e) => console.warn(m, e));
@@ -253,6 +264,16 @@ export class InteractionSystem implements GameSystem {
     }
   }
 
+  private isLive(i: Interactable): boolean {
+    if (!i.live) return false;
+    try {
+      return i.live() === true;
+    } catch (e) {
+      this.warn(`InteractionSystem: live() of "${i.id}" failed`, e);
+      return false;
+    }
+  }
+
   private itemScore(i: Interactable, feet: THREE.Vector3Like, dist: number): number {
     if (i.score) {
       try {
@@ -280,6 +301,9 @@ export class InteractionSystem implements GameSystem {
     }
     const best: Record<InteractAction, Interactable | null> = { interact: null, mercy: null };
     const bestScore: Record<InteractAction, number> = { interact: Infinity, mercy: Infinity };
+    const live: Record<InteractAction, boolean> = { interact: false, mercy: false };
+    const cands = this.cands;
+    cands.length = 0;
     for (const i of this.items.values()) {
       if (!this.isEnabled(i)) continue;
       i.position(this.tmp);
@@ -292,13 +316,18 @@ export class InteractionSystem implements GameSystem {
       const hd = Math.hypot(dx, dz);
       if (cone < 360 && hd > 1e-3 && (dx * fx + dz * fz) / hd < Math.cos((cone * Math.PI) / 180)) continue;
       const a = i.action === 'mercy' ? 'mercy' : 'interact';
-      const score = this.itemScore(i, p.feet, dist);
-      const cur = best[a];
-      if (score < bestScore[a] || (score === bestScore[a] && cur && i.id < cur.id)) {
-        best[a] = i;
-        bestScore[a] = score;
+      if (!live[a] && this.isLive(i)) live[a] = true;
+      cands.push({ i, a, score: this.itemScore(i, p.feet, dist) });
+    }
+    for (const c of cands) {
+      const score = c.i.ambient && live[c.a] ? c.score + AMBIENT_YIELD_METRES : c.score;
+      const cur = best[c.a];
+      if (score < bestScore[c.a] || (score === bestScore[c.a] && cur && c.i.id < cur.id)) {
+        best[c.a] = c.i;
+        bestScore[c.a] = score;
       }
     }
+    cands.length = 0;
     return best;
   }
 }

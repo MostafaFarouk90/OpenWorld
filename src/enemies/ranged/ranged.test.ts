@@ -13,6 +13,11 @@ import type { EnemyHost, StatusPort } from '../ports';
 import { FakeHost, loadKnight } from '../testing/fakeHost';
 import type { MoveDef, SpawnerDef } from '../types';
 import { areaHit } from './areaHit';
+import { BellowsBlessing } from '../../shrine/bellowsBlessing';
+import { BLESSING } from '../../shrine/weepingBellows.tuning';
+import { SLAG_CRAWLER } from '../crawler/def';
+import { CINDER_GOLEM } from '../golem/def';
+import { ENEMY_DEFS } from '../defs';
 import { EnemyProjectiles, type Shooter } from './EnemyProjectiles';
 import { GroundAttacks } from './GroundAttacks';
 import { AREA_HEIGHT_TOLERANCE, PROJECTILE_CAPACITY, RANGED_ATTACK_PREFIX } from './tuning';
@@ -534,5 +539,62 @@ describe('telegraph before the bolt', () => {
     expect(lead).toBeGreaterThan(0);
     // The bolt leaves when the window opens: about `lead` seconds after the telegraph, give or take two ticks.
     expect(Math.abs((fireTick - telegraphTick) * DT - lead)).toBeLessThan(DT * 3);
+  });
+});
+
+// Review B M2: the Bellows Blessing's fire resistance reaches real enemy hits. A fire move carries `element: 'fire'` into
+// the request, and the real DamageResolver runs the real Blessing modifier at its order.
+describe('fire hits and the Bellows Blessing (review-b M2)', () => {
+  const blessed = (t: ReturnType<typeof rig>) => {
+    const blessing = new BellowsBlessing({ emitApplied: () => {}, emitRemoved: () => {} });
+    blessing.apply();
+    t.resolver.addModifier('shrine.bellows-blessing', (req, target) => {
+      if (target.id === t.player.id) blessing.modify(req);
+    }, BLESSING.modifierOrder);
+    return blessing;
+  };
+  const glob = SLAG_CRAWLER.moves.find((m) => m.id === 'crawler.spit')!;
+  const stomp = CINDER_GOLEM.moves.find((m) => m.id === 'golem.stomp')!;
+
+  it('the slag glob is a fire hit: tagged, and 15% lighter on a blessed player', () => {
+    const t = rig();
+    blessed(t);
+    const ep = new EnemyProjectiles(t.host);
+    expect(ep.fire(t.shooter, glob, t.feet)).toBe(true);
+    t.run(ep, 2);
+    expect(t.requests).toHaveLength(1);
+    expect(t.requests[0].element).toBe('fire');
+    expect(t.player.maxHealth - t.player.health).toBeCloseTo(glob.damage * BLESSING.fireMultiplier, 5);
+  });
+
+  it('without the Blessing the glob deals its full damage; a non-fire area hit is untouched by the Blessing', () => {
+    const t = rig();
+    const ep = new EnemyProjectiles(t.host);
+    ep.fire(t.shooter, glob, t.feet);
+    t.run(ep, 2);
+    expect(t.player.maxHealth - t.player.health).toBeCloseTo(glob.damage, 5);
+    const u = rig();
+    blessed(u);
+    u.feet.set(1, 0, 0);
+    (u.player.root as THREE.Object3D).position.set(1, 0, 0);
+    expect(areaHit(u.host, u.shooter, stomp)).toBe(true);
+    expect(u.requests[0].element).toBeUndefined();
+    expect(u.player.maxHealth - u.player.health).toBeCloseTo(stomp.damage, 5);
+  });
+
+  it('an area move tagged fire carries the tag', () => {
+    const t = rig();
+    blessed(t);
+    t.feet.set(1, 0, 0);
+    (t.player.root as THREE.Object3D).position.set(1, 0, 0);
+    expect(areaHit(t.host, t.shooter, { ...stomp, element: 'fire' })).toBe(true);
+    expect(t.requests[0].element).toBe('fire');
+    expect(t.player.maxHealth - t.player.health).toBeCloseTo(stomp.damage * BLESSING.fireMultiplier, 5);
+  });
+
+  it('every enemy move that sets the target burning is itself tagged fire (so a new one is not missed)', () => {
+    const burning = Object.values(ENEMY_DEFS).flatMap((d) => d.moves.filter((m) => m.onHit === 'ignite' || m.ranged?.ignite));
+    expect(burning.map((m) => m.id).sort()).toEqual(['crawler.spit', 'hound.bite', 'wyrm.spit', 'wyrmling.puff']);
+    for (const m of burning) expect(m.element, m.id).toBe('fire');
   });
 });

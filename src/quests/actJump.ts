@@ -76,7 +76,8 @@ const THROUGH_ACT1 = ['m01', 'm02', 'm03', 'm04', 'm05', 'r01', 'r02', 'm06', 'm
 
 /**
  * Act 2 prerequisites, transitive and in play order. Phase C (A12): M11 to M15, R05 to R07, R11 and D03. A12 registers no
- * runner of its own: the table is read by whatever runs `?act2=` (A16's harness) and by the Cinderreach chain test.
+ * runner of its own: the table is read by whatever runs `?act2=` (A16's harness, act2Jump.ts) and by its tests. The Phase C
+ * chain runs (src/integration/phaseC.ts) play from a save instead.
  */
 export const ACT2_PREREQS: Record<string, readonly string[]> = {
   m11: [...THROUGH_ACT1],

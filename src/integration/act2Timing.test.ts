@@ -39,18 +39,31 @@ describe('Act 2 estimator constants (plan Part 7)', () => {
   });
 });
 
-describe('Part 7 arithmetic, Phase C (exact against the plan tables)', () => {
-  it.each(Object.entries(PART7))('%s: travel and talk add to the estimate, travel is under the cap, the estimate clears 40%% of design', (_q, r) => {
-    expect(Math.abs(r.travel + r.talk - r.estimate)).toBeLessThanOrEqual(0.15);
-    expect(r.travel).toBeLessThanOrEqual(r.talk * ACT2_TRAVEL_CAP + 1e-9);
-    expect(r.estimate).toBeGreaterThanOrEqual(r.design * 0.4);
+/**
+ * How far the shipped estimate may sit from the plan's Part 7 estimate before the two are said to have drifted apart. The
+ * shipped routes and node counts were measured after the plan (M12's wave and carries added 12 min), so this is a guard
+ * against gross drift (a route anchor renamed to nothing, a beat table emptied), not an exact match.
+ */
+const DRIFT = 0.5;
+
+// Review B L5: this block used to check the PART7 literal against itself. It now ties the plan table to the shipped
+// estimator, so either one changing alone fails here.
+describe('Part 7 against the shipped estimator, Phase C', () => {
+  it('the plan table and the shipped pacing table name the same quests', () => {
+    expect(ACT2_PACE.map((r) => r.quest).sort()).toEqual(Object.keys(PART7).sort());
   });
-  it('the act is 460 design minutes at 51.4% (over the 50% target)', () => {
+  it.each(Object.keys(PART7))('%s: the shipped estimate (paceMinutes) is within 50%% of the plan\'s estimate', (q) => {
+    const row = ACT2_PACE.find((r) => r.quest === q)!;
+    const shipped = paceMinutes(row, pos).minutes;
+    const plan = PART7[q].estimate;
+    expect(Math.abs(shipped - plan) / plan, `${q}: shipped ${shipped.toFixed(1)} min, plan ${plan} min`).toBeLessThanOrEqual(DRIFT);
+  });
+  it('the shipped act sits within 50% of the plan\'s 460 design minutes at 51.4%', () => {
     const design = Object.values(PART7).reduce((s, r) => s + r.design, 0);
-    const est = Object.values(PART7).reduce((s, r) => s + r.estimate, 0);
-    expect(design).toBe(460);
-    expect(est / design).toBeGreaterThanOrEqual(0.5);
-    expect(est / design).toBeCloseTo(0.514, 2);
+    const shipped = ACT2_PACE.reduce((s, r) => s + paceMinutes(r, pos).minutes, 0);
+    const planned = Object.values(PART7).reduce((s, r) => s + r.estimate, 0);
+    expect(Math.abs(shipped - planned) / planned).toBeLessThanOrEqual(DRIFT);
+    expect(shipped / design).toBeGreaterThanOrEqual(0.5);
   });
 });
 
