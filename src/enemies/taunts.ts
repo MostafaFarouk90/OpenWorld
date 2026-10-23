@@ -3,6 +3,9 @@
 // registered `pick` returns null and the enemy code takes exactly the path it always did.
 import type { ActorId } from '../actors/Actor';
 
+/** Extra metres past a taunter's radius within which an enemy already drawn to it stays drawn. */
+export const TAUNT_RELEASE_MARGIN = 2;
+
 export interface TauntFeet {
   x: number;
   y: number;
@@ -59,8 +62,12 @@ export class TauntRegistry implements TauntService {
     }
   }
 
-  /** The nearest live taunter whose radius reaches `from` (horizontal), or null. Allocates only when one is found. */
-  pick(from: { x: number; z: number }): TauntPick | null {
+  /**
+   * The nearest live taunter whose radius reaches `from` (horizontal), or null. Allocates only when one is found. The taunter
+   * the enemy is already drawn to (`holding`) keeps it until it is `TAUNT_RELEASE_MARGIN` beyond its radius, so an enemy at the
+   * edge does not flip between targets every tick.
+   */
+  pick(from: { x: number; z: number }, holding: ActorId | null = null): TauntPick | null {
     if (this.entries.size === 0) return null;
     let best: TauntPick | null = null;
     let bestD = Infinity;
@@ -69,7 +76,7 @@ export class TauntRegistry implements TauntService {
       const at = e.position();
       if (!at) continue;
       const d = Math.hypot(at.x - from.x, at.z - from.z);
-      if (d <= e.radius && d < bestD) {
+      if (d <= e.radius + (e.id === holding ? TAUNT_RELEASE_MARGIN : 0) && d < bestD) {
         bestD = d;
         best = { id: e.id, feet: at };
       }

@@ -28,6 +28,8 @@ export interface BehaviourContext {
   /** Simulated feet this tick. */
   feet(): Readonly<Vec3>;
   yaw(): number;
+  /** Where this enemy aims: the taunter it is drawn to, else the player (absent in test hosts: the player). */
+  aim?(): Readonly<Vec3>;
   /** The enemy's random source (seeded per manager). */
   rng(): number;
   /**

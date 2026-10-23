@@ -354,7 +354,7 @@ export class Enemy {
   private windowEffects(): void {
     const move = this.brain.currentMove;
     if (!move || (!move.ranged && !move.area) || this.phase !== 'alive' || !this.env.attacks) return;
-    this.env.attacks.windowOpened(this.shooter, move);
+    this.env.attacks.windowOpened(this.shooter, move, this.aimFeet ?? undefined);
   }
 
   /** The fastest the def moves: the chase, or a leap's average speed. */
@@ -949,6 +949,9 @@ export class Enemy {
    * taunters never leaves null.
    */
   private tauntedId: ActorId | null = null;
+  /** The feet of the taunter this enemy aims at this tick (projectiles, the leap, the dive); null aims at the player. */
+  private onPlayerBeforeTaunt = false;
+  private aimFeet: { x: number; y: number; z: number } | null = null;
 
   /**
    * Per-tick target choice. Returns the taunter to target (and points the brain at it), or null for the player. When a taunt
@@ -957,22 +960,38 @@ export class Enemy {
   private chooseTaunt(playerId: ActorId): { id: ActorId; feet: { x: number; y: number; z: number } } | null {
     const pick = this.observerOnly || this.peaceful || this.fox ? null : this.env.taunt?.(this) ?? null;
     if (pick) {
+      // Remember, on the first tick of a taunt, whether the enemy was already on the player.
+      if (this.tauntedId === null) this.onPlayerBeforeTaunt = this.brain.target === playerId;
       this.brain.retarget(pick.id);
       this.tauntedId = pick.id;
+      this.aimFeet = pick.feet;
       return pick;
     }
-    if (this.tauntedId !== null) {
-      this.tauntedId = null;
-      this.brain.retarget(playerId);
-    }
+    if (this.tauntedId !== null) this.endTaunt(this.tauntedId, playerId);
     return null;
   }
 
-  /** The player this enemy is chasing died or despawned (or the taunter it was drawn to: then it goes back to the player). */
+  /**
+   * The taunt is over (expired, out of reach or the taunter died). An enemy that was already on the player goes back to it; one
+   * that was drawn out of idle, patrol or a return drops the taunter and goes back to what it was doing, so it does not
+   * aggro a player it never noticed.
+   */
+  private endTaunt(taunterId: ActorId, playerId: ActorId): void {
+    this.tauntedId = null;
+    this.aimFeet = null;
+    if (this.onPlayerBeforeTaunt) this.brain.retarget(playerId);
+    else this.brain.targetGone(taunterId);
+  }
+
+  /** The taunter this enemy is currently drawn to, or null. */
+  get tauntTarget(): ActorId | null {
+    return this.tauntedId;
+  }
+
+  /** The player this enemy is chasing died or despawned (or the taunter it was drawn to: then it goes back to what it was doing). */
   targetGone(targetId: ActorId): void {
     if (this.tauntedId !== null && this.tauntedId === targetId) {
-      this.tauntedId = null;
-      this.brain.retarget(this.host.actors.player.id);
+      this.endTaunt(targetId, this.host.actors.player.id);
       return;
     }
     this.brain.targetGone(targetId);
@@ -1280,6 +1299,7 @@ export class Enemy {
       brain: this.brain,
       feet: () => this.mover.feet,
       yaw: () => this.yaw,
+      aim: () => this.aimFeet ?? this.host.player.feet,
       rng: () => this.env.rng(),
       fly: (on, at) => {
         if (this.mover instanceof SwitchingMover) this.mover.fly(on, at);
@@ -1348,7 +1368,7 @@ export class Enemy {
       this.pushVelocity = len > 1e-6 ? { x: (dx / len) * speed, z: (dz / len) * speed } : { x: 0, z: 0 };
       return;
     }
-    const p = this.host.player.feet;
+    const p = this.aimFeet ?? this.host.player.feet;
     const toTarget = Math.hypot(p.x - self.x, p.z - self.z);
     const metres = Math.max(0, Math.min(move.leap.maxMetres, toTarget - HOUND.leapStopShort));
     const f = forwardOf(this.yaw);
