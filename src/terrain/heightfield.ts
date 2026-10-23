@@ -9,6 +9,7 @@
 import { TERRAIN, WORLD_BOUNDS } from '../config/constants';
 import { createNoise2D } from './noise';
 import { WORLD_SHAPE } from './shape';
+import { detailRelief } from './shape/detailRelief';
 import { buildShaper } from './shaping';
 
 const warpNoise = createNoise2D(TERRAIN.seed);
@@ -102,7 +103,7 @@ const shaper = buildShaper(WORLD_SHAPE, baseHeight, { bounds: WORLD_BOUNDS, heig
 
 /** Terrain height in metres at world position (x, z). Deterministic and thread-safe. */
 export function heightAt(x: number, z: number): number {
-  return shaper.heightAt(x, z);
+  return shaper.heightAt(x, z) + detailRelief(x, z);
 }
 
 /** The world's road profiles (map, tests): centreline height at arc `s` and the road's length. */
