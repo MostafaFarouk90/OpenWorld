@@ -24,7 +24,7 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 await page.goto(`${base}?tutorial=veteran&quality=medium`);
-await page.waitForFunction(() => window.__game?.game?.ctx, null, { timeout: 180000 });
+await page.waitForFunction(() => window.__game?.game?.ctx, null, { timeout: 900000 });
 // HUD off: everything that is neither the game canvas (the largest one; the minimap is a canvas too) nor an ancestor of it.
 await page.evaluate(() => {
   const cs = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height);
@@ -50,10 +50,25 @@ for (const [name, c] of Object.entries(table.cameras)) {
         fov: c.fov,
         blendIn: 0,
       });
+      // The env plugin builds each tile's batches asynchronously (model loads): wait until its drawn count stops growing for 3 s.
+      const env = g.game.ctx.services.get?.('env');
+      if (env) {
+        let last = -1;
+        let since = performance.now();
+        const e0 = performance.now();
+        while (performance.now() - since < 3000 && performance.now() - e0 < 200000) {
+          await new Promise((r) => setTimeout(r, 250));
+          const n = ['b1', 'b3'].reduce((s, t) => s + Object.values(env.drawn(t) ?? {}).reduce((a, b) => a + b, 0), 0);
+          if (n !== last) {
+            last = n;
+            since = performance.now();
+          }
+        }
+      }
       // Settled: no pending terrain chunks, then 30 consecutive animation frames.
       let stable = 0;
       const s0 = performance.now();
-      while (stable < 30 && performance.now() - s0 < 120000) {
+      while (stable < 30 && performance.now() - s0 < 400000) {
         await new Promise((r) => requestAnimationFrame(r));
         stable = g.terrain.stats.pending === 0 ? stable + 1 : 0;
       }
