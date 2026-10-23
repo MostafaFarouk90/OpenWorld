@@ -11,6 +11,7 @@ import { showToast } from '../../waystones/toast';
 import { buildLiftCage } from '../oldsmokeArt';
 import { SHAFT } from '../sites';
 import { MINE_LANDINGS, type MineId } from './kit';
+import { makeLiftRidePlayer, type LiftAudio } from './liftSound';
 import { openLiftMenu, type LiftMenuRow } from './liftMenu';
 import { availableStops, LIFT_ARMED_FLAG, LIFT_STOPS, stopOfInterior, type LiftStop } from './liftStops';
 
@@ -36,8 +37,7 @@ export const LIFT_STRINGS_EN: Record<string, string> = {
   'oldsmoke.lift.locked.lower': 'not yet reached',
   'oldsmoke.lift.locked.bellows': 'not yet reached',
   'oldsmoke.lift.locked.deepdelve': 'the way is not open',
-  'oldsmoke.lift.ride.down': 'The lift groans down',
-  'oldsmoke.lift.ride.up': 'The lift groans up',
+  'oldsmoke.lift.shudder': 'The cage shudders',
   'oldsmoke.lift.refused.aggro': 'You cannot ride while enemies are on you',
   'oldsmoke.lift.refused.busy': 'The lift is still moving',
   'oldsmoke.lift.refused.locked': 'The lift will not go there',
@@ -102,6 +102,7 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
   const armed = (): boolean => ctx.state.getBool(LIFT_ARMED_FLAG);
   const interiors = (): InteriorsService | undefined => ctx.services.get('interiors');
   const toast = (key: string): void => showToast(ctx.hud, t(key));
+  const playRide = makeLiftRidePlayer(ctx.services.get('audio') as LiftAudio | undefined);
 
   // Quest reads go through the quests service; without it every quest condition is "inactive" (locked), never a throw.
   const env = (): ConditionEnv => {
@@ -130,13 +131,14 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
     if (!stop.unlocked) return toast(stop.lockedKey);
     riding = true;
     try {
-      const down = stop.id !== 'surface';
-      const went = await rideTo(svc, stop, (err) => toast(refusedKey(err)));
-      if (went) {
-        toast(down ? 'oldsmoke.lift.ride.down' : 'oldsmoke.lift.ride.up');
-        // A small rumble if the vfx service is there; the ride works without it.
+      // The cage shudders and rumbles over the fade to black, so the exit-then-enter hold reads as a ride, not a load. Only when the
+      // ride can go (a refusal below says why instead).
+      if (!svc.transitioning && !svc.hostileAggro?.()) {
+        toast('oldsmoke.lift.shudder');
+        playRide();
         (ctx.services.get('vfx') as { shake?: (a: number, s: number) => void } | undefined)?.shake?.(0.12, 1.2);
       }
+      await rideTo(svc, stop, (err) => toast(refusedKey(err)));
     } finally {
       riding = false;
     }
