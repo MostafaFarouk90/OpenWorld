@@ -95,6 +95,8 @@ async function gate(lib: ModelLibrary, spec: StructureSpec): Promise<THREE.Objec
 /** Fences below this are jump hurdles (the tutorial's lane rail): drawn as a log on stakes so they never read as a barrier. */
 export const HURDLE_MAX_HEIGHT = 1;
 const LOG_MAT = new THREE.MeshStandardMaterial({ color: 0x7a5232, roughness: 0.95 });
+/** Lighter weathered rails, so the hurdle reads from above as a fence with posts and not a thin line. */
+const RAIL_MAT = new THREE.MeshStandardMaterial({ color: 0xb08a58, roughness: 0.9 });
 
 /** Post spacing of the hurdle rail fence, in metres. */
 export const HURDLE_POST_SPACING = 2.5;
@@ -107,19 +109,19 @@ function hurdleLog(spec: StructureSpec): THREE.Object3D {
   const [w, d] = spec.footprint;
   const alongX = w >= d;
   const len = alongX ? w : d;
-  const thick = Math.min(0.12, d * 0.4, h * 0.25);
-  const mesh = (sx: number, sy: number, sz: number, along: number, y: number): void => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(alongX ? sx : sz, sy, alongX ? sz : sx), LOG_MAT);
+  const thick = Math.min(0.16, d * 0.4, h * 0.27);
+  const mesh = (sx: number, sy: number, sz: number, along: number, y: number, mat: THREE.Material = LOG_MAT): void => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(alongX ? sx : sz, sy, alongX ? sz : sx), mat);
     m.userData.ownGeometry = true;
     m.position.set(alongX ? along : 0, y, alongX ? 0 : along);
     root.add(m);
   };
   const posts = Math.max(2, Math.ceil(len / HURDLE_POST_SPACING) + 1);
   for (let i = 0; i < posts; i++) {
-    mesh(thick * 1.4, h * 1.08, thick * 1.4, -len / 2 + (i * len) / (posts - 1) + (i === 0 ? thick : i === posts - 1 ? -thick : 0), (h * 1.08) / 2);
+    mesh(thick * 1.8, h * 1.09, thick * 1.8, -len / 2 + (i * len) / (posts - 1) + (i === 0 ? thick : i === posts - 1 ? -thick : 0), (h * 1.09) / 2);
   }
-  mesh(len, thick, thick, 0, h - thick / 2);
-  mesh(len, thick, thick, 0, h * 0.55);
+  mesh(len, thick * 1.2, thick * 1.2, 0, h - thick / 2, RAIL_MAT);
+  mesh(len, thick, thick, 0, h * 0.5, RAIL_MAT);
   return root;
 }
 
