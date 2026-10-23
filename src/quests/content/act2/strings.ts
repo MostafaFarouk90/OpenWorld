@@ -1,5 +1,5 @@
 
-import { OLDSMOKE_QUEST_STRINGS } from './oldsmoke/strings';
+import { OLDSMOKE_QUEST_STRINGS } from './oldsmoke/all';
 
 interface QuestText { title: string; summary: string; o: Record<string, string> }
 

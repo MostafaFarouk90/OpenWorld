@@ -10,7 +10,7 @@ import { DENSITY_SPAWNERS_A } from './densitySpawners';
 import { HARROWMARK_SPAWNERS } from './harrowmarkSpawners';
 import { SLICE_SPAWNERS } from './spawnerDefs';
 import { ACT2_SPAWNERS_A12 } from '../quests/content/act2/spawners';
-import { OLDSMOKE_SPAWNERS } from '../quests/content/act2/oldsmoke/spawners';
+import { OLDSMOKE_SPAWNERS } from '../quests/content/act2/oldsmoke/all';
 import { WYRM_SPAWNERS } from './wyrm/spawners';
 import { ENEMY_STRINGS_EN } from './strings.en';
 import { WAVE_SPAWNERS } from '../waves/spawners';

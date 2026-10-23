@@ -8,12 +8,15 @@ import { Services } from '../../../../../core/Services';
 import { WorldState } from '../../../../../state/WorldState';
 import type { QuestState } from '../../../../types';
 import { OLDSMOKE_QUEST_IDS } from '../index';
-import { OLDSMOKE_TRIGGERS } from '../triggers';
+import { OLDSMOKE_TRIGGERS } from '../all';
 import { M16_BRAZIER, M16_BRAZIER_ID } from '../m16.quest';
 import { M22_BANNER } from '../m22.quest';
+import { M17R08_NPC_DEFS } from '../mines/m17r08.content';
+import { M18M19_NPC_DEFS } from '../mines/m18m19.content';
+import { M20D04_NPC_DEFS } from '../mines/m20d04.content';
 import plugin from './oldsmokeDirector.plugin';
 
-function rig(opts: { anchors?: boolean } = {}) {
+function rig(opts: { anchors?: boolean; npcs?: boolean } = {}) {
   const events = new EventBus<GameEventMap>(() => {});
   const state = new WorldState(events, () => {});
   const services = new Services();
@@ -23,6 +26,8 @@ function rig(opts: { anchors?: boolean } = {}) {
   const triggers: string[] = [];
   const busy = { on: false };
   const rekindled: unknown[] = [];
+  const registeredNpcs: string[] = [];
+  const registeredStrings: Array<Record<string, string>> = [];
   services.provide('quests' as never, {
     state: (id: string) => quest.get(id) ?? 'inactive',
     objectiveDone: () => false,
@@ -30,10 +35,22 @@ function rig(opts: { anchors?: boolean } = {}) {
     objectives: () => [],
   } as never);
   services.provide('dialogue' as never, { get active() { return busy.on; }, start: (id: string, npc: string) => { if (busy.on) return false; dialogues.push([id, npc]); return true; } } as never);
+  // the mine installers (M18/M19/M20/D04) and the cast registration read these services; they are inert stubs here, the installers have their own tests
+  services.provide('wyrms' as never, { tether: () => null, unchain: () => false, flyAway: () => false, playOrsk: () => null } as never);
+  services.provide('puzzles' as never, { register: () => () => {}, pressure: () => null } as never);
+  services.provide('interiors' as never, { current: null, setBlocker: () => true } as never);
+  services.provide('waystones' as never, { hostileAggro: false } as never);
+  if (opts.npcs !== false) {
+    services.provide('npcs' as never, {
+      register: (_specs: unknown, defs: Array<{ id: string }>) => { registeredNpcs.push(...defs.map((d) => d.id)); return () => {}; },
+      setHidden: () => {}, place: () => true,
+    } as never);
+  }
   events.on('waystone.rekindled', (p) => void rekindled.push(p));
   let tick: { fixedUpdate(dt: number): void } | null = null;
   const ctx = {
     events, state, services,
+    strings: { register: (_lang: string, t: Record<string, string>) => { registeredStrings.push(t); return () => {}; }, t: (k: string) => k },
     anchors: { find: (id: string) => (opts.anchors === false ? undefined : { position: { x: 1, y: 2, z: 3 }, id }) },
     triggers: { add: (t: { id: string }) => { triggers.push(t.id); return () => {}; } },
     player: { feet: { x: 0, y: 0, z: 0 } },
@@ -42,7 +59,7 @@ function rig(opts: { anchors?: boolean } = {}) {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   plugin.setup(ctx);
   return {
-    events, state, quest, current, busy, dialogues, triggers, rekindled, warn,
+    events, state, quest, current, busy, dialogues, triggers, rekindled, warn, registeredNpcs, registeredStrings,
     step: (n = 1) => { for (let i = 0; i < n; i++) tick!.fixedUpdate(1 / 60); },
     interact: (interactableId: string, action = 'interact') => events.emit('interact', { interactableId, kind: 'use', actorId: 'player', action } as never),
     dispose: () => plugin.dispose?.(),
@@ -58,7 +75,24 @@ describe('oldsmoke director', () => {
     r.dispose();
     const r2 = rig({ anchors: false });
     expect(r2.triggers).toEqual([]);
+    // one warning per trigger anchor, and nothing else: the NPC registration does not depend on anchors
     expect(r2.warn).toHaveBeenCalledTimes(OLDSMOKE_TRIGGERS.length);
+    expect(r2.warn.mock.calls.every(([m]) => /trigger trg\./.test(String(m)))).toBe(true);
+    r2.dispose();
+  });
+
+  it('registers the mine cast and its strings, and warns once (not counted with the triggers) when the npcs service is missing', () => {
+    const r = rig();
+    expect(r.warn).not.toHaveBeenCalled();
+    expect(r.registeredNpcs.sort()).toEqual([...M17R08_NPC_DEFS, ...M18M19_NPC_DEFS, ...M20D04_NPC_DEFS].map((d) => d.id).sort());
+    expect(r.registeredStrings.length).toBeGreaterThan(0);
+    r.dispose();
+    const r2 = rig({ npcs: false });
+    expect(r2.registeredNpcs).toEqual([]);
+    const notes = r2.warn.mock.calls.map(([m]) => String(m)).filter((m) => /mine cast/.test(m));
+    expect(notes).toHaveLength(1);
+    expect(r2.warn).toHaveBeenCalledTimes(1);
+    expect(r2.triggers.sort()).toEqual(OLDSMOKE_TRIGGERS.map((t) => t.id).sort());
     r2.dispose();
   });
 

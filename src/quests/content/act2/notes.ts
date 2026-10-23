@@ -1,5 +1,5 @@
 import type { QuestNoteSpec } from '../../notes';
-import { OLDSMOKE_NOTE_LIST } from './oldsmoke/notes';
+import { OLDSMOKE_NOTE_LIST } from './oldsmoke/all';
 
 /** A readable note: one short dialogue (id = the note id, the talk target) read with F. Speaker 'note' is a written page, 'cael' his own reading. */
 export interface Act2Note {

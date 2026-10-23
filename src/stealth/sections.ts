@@ -95,6 +95,19 @@ export const SECTIONS: readonly StealthSectionDef[] = [
     guardGroups: ['stealth.m21.watch'],
     hideSpots: [1, 2, 3, 4].map((i) => ({ id: `hide:m21-${i}`, anchor: `oldsmoke.hide.m21.${i}` })),
   },
+  // Act 2 Phase D (A13): M19's run past the stewards' watch, in A4's interior `mine-lower-galleries` (live from the stealth objective until it is done).
+  {
+    id: 'm19.lower-galleries',
+    quest: { id: 'm19', liveFrom: 'stealth', liveUntil: 'stealth' },
+    bounds: { interior: 'mine-lower-galleries' },
+    checkpoints: [
+      { id: 'galleries.start', anchor: 'oldsmoke.stealth.m19.start', volume: v('oldsmoke.stealth.m19.start', 2, 3, 2) },
+      { id: 'galleries.inside', anchor: 'oldsmoke.stealth.m19.cp.inside', volume: v('oldsmoke.stealth.m19.cp.inside', 2, 3, 2) },
+    ],
+    exit: v('oldsmoke.stealth.m19.end', 2, 3, 2),
+    guardGroups: ['stealth.m19.watch'],
+    hideSpots: [1, 2, 3, 4].map((i) => ({ id: `hide:m19-${i}`, anchor: `oldsmoke.hide.m19.${i}` })),
+  },
 ];
 
 export const isInteriorBounds = (b: StealthSectionDef['bounds']): b is { interior: string } => 'interior' in b;

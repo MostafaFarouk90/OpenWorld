@@ -1,6 +1,11 @@
 import type { GamePlugin } from '../../../../../core/plugins';
 import { makeKit, type Kit, type Off } from '../../director/kit';
-import { OLDSMOKE_TRIGGERS } from '../triggers';
+import { OLDSMOKE_TRIGGERS } from '../all';
+import { installM18, installM19 } from '../mines/m18m19.content';
+import { installM20, installD04 } from '../mines/m20d04.content';
+import { M17R08_NPC_DEFS, M17R08_NPCS, M17R08_NPC_STRINGS } from '../mines/m17r08.content';
+import { M18M19_NPC_DEFS, M18M19_NPCS, M18M19_NPC_STRINGS } from '../mines/m18m19.content';
+import { M20D04_NPC_DEFS, M20D04_NPCS, M20D04_NPC_STRINGS } from '../mines/m20d04.content';
 import { OLDSMOKE_QUEST_IDS } from '../index';
 import { M16_BRAZIER, M16_BRAZIER_ID } from '../m16.quest';
 import { M22_BANNER } from '../m22.quest';
@@ -48,7 +53,7 @@ export function installM22(k: Kit): void {
  */
 const plugin: GamePlugin = {
   id: 'oldsmoke-quests',
-  dependsOn: ['core', 'quests', 'dialogue', 'enemies', 'oldsmoke'],
+  dependsOn: ['core', 'quests', 'dialogue', 'enemies', 'oldsmoke', 'npcs'],
   setup(ctx) {
     offs = [];
     const warn = (m: string): void => void console.warn(m);
@@ -62,6 +67,19 @@ const plugin: GamePlugin = {
 
     installM16(kit);
     installM22(kit);
+    installM18(kit);
+    offs.push(installM19(kit));
+    offs.push(...installM20(kit), ...installD04(kit));
+
+    // The mine quests' minor cast stands on A4's mine anchors: best effort, like A4's own cast.
+    try {
+      const npcs = ctx.services.get('npcs');
+      if (!npcs) throw new Error('the npcs service is missing');
+      offs.push(ctx.strings.register('en', { ...M17R08_NPC_STRINGS, ...M18M19_NPC_STRINGS, ...M20D04_NPC_STRINGS }));
+      offs.push(npcs.register([...M17R08_NPCS, ...M18M19_NPCS, ...M20D04_NPCS], [...M17R08_NPC_DEFS, ...M18M19_NPC_DEFS, ...M20D04_NPC_DEFS]));
+    } catch (err) {
+      warn(`[oldsmoke-quests] could not register the mine cast: ${String(err)}`);
+    }
 
     const syncComplete = (): void => {
       for (const id of OLDSMOKE_QUEST_IDS) if (kit.qstate(id) === 'completed') kit.set(`story.${id}.complete`);

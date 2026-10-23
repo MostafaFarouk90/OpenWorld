@@ -6,6 +6,9 @@ import { STEWARD_TREES } from './oldsmoke/stewards.dialogue';
 import { SLAGG } from './oldsmoke/slagg.dialogue';
 import { MINER_TREES } from './oldsmoke/miners.dialogue';
 import { SCENE_M22_COUNCIL, SCENE_M22_BANNER, GRISEL_STEWARD, EDRIC_A2, WYSTAN_A2 } from './oldsmoke/m22.dialogue';
+import { M17R08_TREES, M17R08_EXTENSIONS } from './oldsmoke/mines/m17r08.dialogue';
+import { M18M19_TREES, M18M19_EXTENSIONS } from './oldsmoke/mines/m18m19.dialogue';
+import { M20D04_TREES, M20D04_EXTENSIONS } from './oldsmoke/mines/m20d04.dialogue';
 import { npcEdric } from '../npc-edric.dialogue';
 import { npcWystan } from '../npc-wystan.dialogue';
 import { npcGaut } from '../npc-gaut.dialogue';
@@ -30,11 +33,27 @@ import { EALDRED, WYNNE } from './kin.dialogue';
 import { AELFREDA_A2 } from './aelfreda.a2.dialogue';
 import { LANTERN_KEEPER } from './keeper.dialogue';
 
+/** A tree with every mine extension of its id merged in, in order (the strings come along). */
+function withMines(base: BuiltTree): BuiltTree {
+  let def = base.def;
+  const strings = { ...base.strings };
+  for (const { baseId, ext } of MINE_EXTENSIONS) {
+    if (baseId !== def.id) continue;
+    const merged = extendTree(def, ext);
+    def = merged.def;
+    Object.assign(strings, merged.strings);
+  }
+  return { def, strings };
+}
+const MINE_EXTENSIONS = [...M17R08_EXTENSIONS, ...M18M19_EXTENSIONS, ...M20D04_EXTENSIONS];
+
 const NEW_TREES: BuiltTree[] = [
   OSGAR, BRAND, CARTER_BOUND, CORWIN, SCENE_D03_PRISONER, REDMANE, MAUD, HOUSEHOLD_1, HOUSEHOLD_2, HOUSEHOLD_3, HOUSEHOLD_4,
   BEORNWYN, KETTA, PELL, OSRIC, HROLF, SCENE_R11_DEN, SCENE_R11_AXE, EALDRED, WYNNE, LANTERN_KEEPER,
   // Act 2 Phase D (A13): Deepgate and the Council
-  ALDOUS, WENNA, ...STEWARD_TREES, SLAGG, ...MINER_TREES, SCENE_M22_COUNCIL, SCENE_M22_BANNER, GRISEL_STEWARD,
+  ALDOUS, withMines(WENNA), ...STEWARD_TREES, withMines(SLAGG), ...MINER_TREES, SCENE_M22_COUNCIL, SCENE_M22_BANNER, GRISEL_STEWARD,
+  // the mine quests' casts (A13)
+  ...M17R08_TREES, ...M18M19_TREES, ...M20D04_TREES,
 ];
 const EXTENDED = [extendTree(npcGaut, GAUT_A2), extendTree(npcAelfreda, AELFREDA_A2), extendTree(npcPennard, PENNARD_A2), extendTree(npcEdric, EDRIC_A2), extendTree(npcWystan, WYSTAN_A2)];
 

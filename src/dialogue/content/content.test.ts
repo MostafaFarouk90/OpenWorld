@@ -43,7 +43,9 @@ describe('dialogue content', () => {
       // Act 2 (A12)
       'osgar', 'brand', 'carter-bound', 'corwin', 'redmane', 'maud', 'beornwyn', 'ketta', 'pell', 'osric', 'hrolf', 'ealdred', 'wynne', 'lantern-keeper', 'prisoner', 'household-1', 'household-2', 'household-3', 'household-4', 'keeper',
       // Act 2 Oldsmoke (A13)
-      'aldous', 'wenna', 'steward-gate-1', 'steward-hall-1', 'steward-market-1', 'steward-market-2', 'slagg', 'miner-1', 'miner-2', 'grisel-steward']).toContain(n.speaker);
+      'aldous', 'wenna', 'steward-gate-1', 'steward-hall-1', 'steward-market-1', 'steward-market-2', 'slagg', 'miner-1', 'miner-2', 'grisel-steward',
+      // Act 2 Oldsmoke mines (A13)
+      'winch-wright', 'miner-hale', 'miner-brig', 'pickett', 'shift-crew', 'pike', 'pike-apprentice', 'steward-captain', 'wyrmling-keeper']).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {

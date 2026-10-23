@@ -251,6 +251,10 @@ describe('Slagg', () => {
   it('offers R09 after M16 and R10 after M17, and starts what is chosen', () => {
     const w = world();
     w.set('m16', 'completed');
+    // with M16 done and M17 not yet started, Slagg's first word is M17's brief (the mines extension, tested in mines/m17r08.dialogue.test.ts)
+    expect(opens(w, 'npc-slagg', 'slagg')).toBe('a2-m17-brief');
+    // once M17 is under way the older offer applies again
+    w.set('m17', 'active');
     expect(opens(w, 'npc-slagg', 'slagg')).toBe('offers');
     expect(choiceIds(w, 'npc-slagg', 'slagg', 'offers').sort()).toEqual(['coin']);
     play(w, 'npc-slagg', 'slagg', 'coin');
