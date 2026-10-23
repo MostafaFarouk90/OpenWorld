@@ -55,6 +55,8 @@ export interface EnemyEnv {
   packLeaderId(spawnerId: string): ActorId | null;
   /** Combined perception modifiers for this observer vs the target; null with no providers. */
   perceptionModifiers(self: Enemy, targetId: ActorId): CombinedModifiers | null;
+  /** The taunter this enemy should target this tick (nearest in range), or null/absent for the player. Bosses and opted-out kinds get null. */
+  taunt?(self: Enemy): { id: ActorId; feet: { x: number; y: number; z: number } } | null;
   /** Called once the enemy is gone from the world (after despawn). */
   gone(self: Enemy, how: MemberEnd): void;
   /** A6b: ranged and area effects of a move's window (absent in hosts without ground attacks). */
@@ -565,29 +567,33 @@ export class Enemy {
     }
     this.coreArmed = false;
     const player = this.host.actors.player;
-    const pFeet = this.host.player.feet;
     const self = this.mover.feet;
-    const mods = this.env.perceptionModifiers(this, player.id);
+    const taunt = this.chooseTaunt(player.id);
+    // A taunter stands in for the player in every read below; with none, `pFeet` and `tid` are the player's, as ever.
+    const pFeet = taunt ? taunt.feet : this.host.player.feet;
+    const tid = taunt ? taunt.id : player.id;
+    const tAlive = taunt ? true : !player.dead;
+    const mods = taunt ? null : this.env.perceptionModifiers(this, player.id);
     const p = perceive({
       selfFeet: self,
       selfYaw: this.yaw,
       targetFeet: pFeet,
-      targetAlive: !player.dead,
-      targetLoud: this.host.player.loud(),
+      targetAlive: tAlive,
+      targetLoud: taunt ? true : this.host.player.loud(),
       damagedBy: this.damagedThisTick,
       lineOfSight: this.lineOfSight,
       modifiers: mods,
     });
     this.damagedThisTick = false;
-    this.trackAwareness(dt, p, player.id, AI.sightRange * (mods?.sightRangeScale ?? 1), mods != null);
+    if (!taunt) this.trackAwareness(dt, p, player.id, AI.sightRange * (mods?.sightRangeScale ?? 1), mods != null);
     const toTarget = yawTo(self, pFeet);
     const senses: Senses = {
       self: { x: self.x, z: self.z },
-      targetId: player.id,
-      targetAlive: !player.dead,
+      targetId: tid,
+      targetAlive: tAlive,
       targetPos: { x: pFeet.x, z: pFeet.z },
-      // An observer-only guard never acquires a target: the brain stays calm.
-      notices: p.notices && !this.observerOnly && !this.peaceful,
+      // An observer-only guard never acquires a target: the brain stays calm. A taunter in range is always noticed.
+      notices: (taunt ? true : p.notices) && !this.observerOnly && !this.peaceful,
       sees: p.sees,
       distance: p.distance,
       facingErrorDeg: Math.abs(wrap(toTarget - this.yaw)) * (180 / Math.PI),
@@ -938,8 +944,37 @@ export class Enemy {
     return true;
   }
 
-  /** The player this enemy is chasing died or despawned. */
+  /**
+   * The taunter this enemy was last drawn to (null when it targets the player). Set only by `chooseTaunt`, so a game with no
+   * taunters never leaves null.
+   */
+  private tauntedId: ActorId | null = null;
+
+  /**
+   * Per-tick target choice. Returns the taunter to target (and points the brain at it), or null for the player. When a taunt
+   * ends the brain is pointed back at the player here.
+   */
+  private chooseTaunt(playerId: ActorId): { id: ActorId; feet: { x: number; y: number; z: number } } | null {
+    const pick = this.observerOnly || this.peaceful || this.fox ? null : this.env.taunt?.(this) ?? null;
+    if (pick) {
+      this.brain.retarget(pick.id);
+      this.tauntedId = pick.id;
+      return pick;
+    }
+    if (this.tauntedId !== null) {
+      this.tauntedId = null;
+      this.brain.retarget(playerId);
+    }
+    return null;
+  }
+
+  /** The player this enemy is chasing died or despawned (or the taunter it was drawn to: then it goes back to the player). */
   targetGone(targetId: ActorId): void {
+    if (this.tauntedId !== null && this.tauntedId === targetId) {
+      this.tauntedId = null;
+      this.brain.retarget(this.host.actors.player.id);
+      return;
+    }
     this.brain.targetGone(targetId);
   }
 
