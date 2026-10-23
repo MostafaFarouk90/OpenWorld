@@ -66,7 +66,7 @@ function setup(gone = false, current: string | null = 'mine-lower-galleries') {
 }
 
 describe('the roof in the scene', () => {
-  it('hangs the slab off a group at the interior origin, 5 m up, visible only inside the Lower Galleries', () => {
+  it('hangs the slab off a group at the interior origin, 9 m up, visible only inside the Lower Galleries', () => {
     const { fc, interiors, group, slab } = setup();
     expect(slab.visible).toBe(true);
     expect(slab.position.y - 0.4).toBeCloseTo(M20_ROOF_HEIGHT);

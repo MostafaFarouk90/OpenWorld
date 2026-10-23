@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Vec3 } from '../physics/PhysicsWorld';
-import { InteriorController, InteriorError, TRANSITION, type InteriorPorts } from './InteriorController';
+import { InteriorController, InteriorError, settleTimeoutFor, TRANSITION, type InteriorPorts } from './InteriorController';
 
 const DT = 1 / 60;
 const VAULT = 'chapel-vault';
@@ -581,5 +581,123 @@ describe('InteriorController: registry', () => {
     expect(t.state.applied.at(-1)).toBeNull();
     expect(t.log.at(-1)).toBe('env null');
     expect(t.log).toContain('fade 0');
+  });
+});
+
+/** The vault plus a second interior (the box y 240..260 around (0, 250, 0)) and a far one (x > 900), for transfers. */
+function setupTransfer(over: Partial<InteriorPorts> = {}) {
+  const t = setup(over);
+  t.anchors['mine.entry'] = { position: { x: 0, y: 250, z: -1 }, yaw: 0 };
+  t.anchors['mine.exit'] = { position: { x: 0, y: 250, z: 2 }, yaw: 0 };
+  t.anchors['far.entry'] = { position: { x: 1000, y: 50, z: 0 }, yaw: 0 };
+  t.c.add({
+    id: 'mine',
+    doors: [{ doorId: 'mine-door', outside: 'vault.door', inside: 'mine.entry', exit: 'mine.exit' }],
+    contains: (p) => Math.abs(p.x) < 30 && Math.abs(p.z) < 60 && p.y > 240 && p.y < 260,
+  });
+  t.c.add({
+    id: 'far',
+    doors: [{ doorId: 'far-door', outside: 'vault.door', inside: 'far.entry', exit: 'mine.exit' }],
+    contains: (p) => p.x > 900,
+  });
+  return t;
+}
+
+describe('InteriorController: transfer', () => {
+  it('goes from one interior to another in one fade, never showing the surface, and announces exited then entered', async () => {
+    const t = setupTransfer();
+    await t.settle(t.c.enter(VAULT, 'back'));
+    t.events.length = 0;
+    t.log.length = 0;
+    await t.settle(t.c.transfer('mine', 'mine-door'));
+    expect(t.log).toEqual(['freeze', 'fade 1', 'env mine', 'teleport 250', 'fade 0', 'release', 'interior.exited', 'interior.entered']);
+    expect(t.log.filter((l) => l === 'fade 1')).toHaveLength(1);
+    expect(t.log.filter((l) => l === 'fade 0')).toHaveLength(1);
+    expect(t.log).not.toContain('env null');
+    expect(t.c.current).toBe('mine');
+    expect(t.c.currentDoor).toBe('mine-door');
+    expect(t.feet).toMatchObject({ x: 0, y: 250, z: -1 });
+    expect(t.events).toEqual([
+      { type: 'interior.exited', payload: { interiorId: VAULT, doorId: 'back' } },
+      { type: 'interior.entered', payload: { interiorId: 'mine', doorId: 'mine-door' } },
+    ]);
+    expect(t.state.frozen).toBe(0);
+  });
+
+  it('refuses outside, for unknown interiors and doors, to the same interior, and while busy', async () => {
+    const t = setupTransfer();
+    expect(await reason(t.c.transfer('mine', 'mine-door'))).toBe('not-inside');
+    await t.settle(t.c.enter(VAULT, 'vault'));
+    expect(await reason(t.c.transfer('nowhere', 'x'))).toBe('unknown');
+    expect(await reason(t.c.transfer('mine', 'nope'))).toBe('unknown');
+    expect(await reason(t.c.transfer(VAULT, 'back'))).toBe('unknown');
+    const first = t.c.transfer('mine', 'mine-door');
+    expect(await reason(t.c.transfer('far', 'far-door'))).toBe('busy');
+    await t.settle(first);
+    expect(t.c.current).toBe('mine');
+  });
+
+  it('refuses a locked door, aggro and dialogue without changing anything', async () => {
+    const t = setupTransfer();
+    await t.settle(t.c.enter(VAULT, 'vault'));
+    t.events.length = 0;
+    const off = t.c.setDoorLock('mine-door', () => true);
+    expect(await reason(t.c.transfer('mine', 'mine-door'))).toBe('locked');
+    off();
+    t.state.aggro = true;
+    expect(await reason(t.c.transfer('mine', 'mine-door'))).toBe('aggro');
+    t.state.aggro = false;
+    t.state.top = 'dialogue';
+    expect(await reason(t.c.transfer('mine', 'mine-door'))).toBe('dialogue');
+    expect(t.c.current).toBe(VAULT);
+    expect(t.c.transitioning).toBe(false);
+    expect(t.events).toEqual([]);
+  });
+
+  it('rolls back to the old interior when no ground shows up, with no events', async () => {
+    const t = setupTransfer();
+    await t.settle(t.c.enter(VAULT, 'vault'));
+    t.events.length = 0;
+    const from = { ...t.feet };
+    t.state.ground = false;
+    const p = t.c.transfer('mine', 'mine-door');
+    t.run(TRANSITION.fadeOutSeconds + TRANSITION.settleTimeoutSeconds + 0.1);
+    expect(await reason(p)).toBe('not-ready');
+    expect(t.c.current).toBe(VAULT);
+    expect(t.c.currentDoor).toBe('vault');
+    expect(t.state.applied.at(-1)).toBe(VAULT);
+    expect(t.feet).toMatchObject(from);
+    expect(t.state.frozen).toBe(0);
+    expect(t.events).toEqual([]);
+  });
+});
+
+describe('settleTimeoutFor', () => {
+  it('is the base wait for short hops, grows past 300 m, and is capped at the base plus 10 s', () => {
+    const base = TRANSITION.settleTimeoutSeconds;
+    expect(base).toBe(2);
+    expect(settleTimeoutFor({ x: 0, z: 0 }, { x: 0, z: 0 })).toBe(base);
+    expect(settleTimeoutFor({ x: 0, z: 0 }, { x: 300, z: 0 })).toBe(base);
+    expect(settleTimeoutFor({ x: 0, z: 0 }, { x: 600, z: 0 })).toBeCloseTo(base + 4);
+    expect(settleTimeoutFor({ x: 0, z: 0 }, { x: 0, z: 301 })).toBeGreaterThan(base);
+    expect(settleTimeoutFor({ x: 0, z: 0 }, { x: 5000, z: 5000 })).toBe(base + 10);
+  });
+
+  it('an enter whose arrival is 1000 m away does not roll back at 2.1 s but does at its longer timeout', async () => {
+    const t = setupTransfer();
+    t.state.ground = false;
+    const p = t.c.enter('far', 'far-door');
+    let outcome = 'pending';
+    p.then(() => (outcome = 'resolved'), (e: InteriorError) => (outcome = e.reason));
+    const longer = settleTimeoutFor({ x: 0, z: 20 }, { x: 1000, z: 0 });
+    expect(longer).toBeGreaterThan(8);
+    t.run(TRANSITION.fadeOutSeconds + 2.1);
+    await Promise.resolve();
+    expect(outcome).toBe('pending');
+    expect(t.c.transitioning).toBe(true);
+    t.run(longer - 2.1 + 0.2);
+    expect(await reason(p)).toBe('not-ready');
+    expect(outcome).toBe('not-ready');
+    expect(t.c.current).toBeNull();
   });
 });

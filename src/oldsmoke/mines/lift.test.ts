@@ -7,7 +7,7 @@ import { LIFT_STRINGS_EN, MINE_DOOR_LOCKS, registerLift, rideTo, SURFACE_LIFT_AN
 import { LiftMenuModel } from './liftMenu';
 import { LIFT_ARMED_FLAG, LIFT_STOPS, stopById } from './liftStops';
 
-function fakeInteriors(start: string | null = null, fail: Partial<Record<'enter' | 'exit', string>> = {}) {
+function fakeInteriors(start: string | null = null, fail: Partial<Record<'enter' | 'exit' | 'transfer', string>> = {}, withTransfer = false) {
   const calls: string[] = [];
   const svc = {
     current: start as string | null,
@@ -22,6 +22,15 @@ function fakeInteriors(start: string | null = null, fail: Partial<Record<'enter'
       if (fail.enter) throw new InteriorError(fail.enter as never);
       svc.current = id;
     },
+    ...(withTransfer
+      ? {
+          async transfer(id: string, door: string) {
+            calls.push(`transfer:${id}:${door}`);
+            if (fail.transfer) throw new InteriorError(fail.transfer as never);
+            svc.current = id;
+          },
+        }
+      : {}),
   };
   return { svc, calls };
 }
@@ -101,6 +110,44 @@ describe('rideTo sequencing', () => {
     expect(await rideTo({ ...svc, hostileAggro: () => true } as never, stopById('lower'), refused)).toBe(false);
     expect(calls).toEqual([]);
     expect((refused.mock.calls[0][0] as InteriorError).reason).toBe('aggro');
+  });
+  it('mine to mine is a single transfer when the service offers one, never an exit or enter', async () => {
+    const { svc, calls } = fakeInteriors(MINE_IDS.shaft, {}, true);
+    expect(await rideTo(svc, stopById('bellows'), vi.fn())).toBe(true);
+    expect(calls).toEqual([`transfer:${MINE_IDS.bellows}:${MINE_DOOR_IDS.bellows}`]);
+    expect(svc.current).toBe(MINE_IDS.bellows);
+  });
+  it('with transfer available, riding up is still a plain exit and the surface ride down is still an enter', async () => {
+    const up = fakeInteriors(MINE_IDS.lower, {}, true);
+    expect(await rideTo(up.svc, stopById('surface'), vi.fn())).toBe(true);
+    expect(up.calls).toEqual([`exit:${MINE_DOOR_IDS.lower}`]);
+    const down = fakeInteriors(null, {}, true);
+    expect(await rideTo(down.svc, stopById('old'), vi.fn())).toBe(true);
+    expect(down.calls).toEqual([`enter:${MINE_IDS.old}:${MINE_DOOR_IDS.old}`]);
+  });
+  it('a refused transfer is reported and leaves the player in the mine', async () => {
+    const { svc } = fakeInteriors(MINE_IDS.old, { transfer: 'locked' }, true);
+    const refused = vi.fn();
+    expect(await rideTo(svc, stopById('lower'), refused)).toBe(false);
+    expect(svc.current).toBe(MINE_IDS.old);
+    expect((refused.mock.calls[0][0] as InteriorError).reason).toBe('locked');
+  });
+  it('aggro refuses mine-to-mine and surface-to-mine rides but not a ride up the shaft', async () => {
+    const aggro = () => true;
+    const mm = fakeInteriors(MINE_IDS.old, {}, true);
+    const r1 = vi.fn();
+    expect(await rideTo({ ...mm.svc, hostileAggro: aggro } as never, stopById('lower'), r1)).toBe(false);
+    expect((r1.mock.calls[0][0] as InteriorError).reason).toBe('aggro');
+    const sm = fakeInteriors(null, {}, true);
+    const r2 = vi.fn();
+    expect(await rideTo({ ...sm.svc, hostileAggro: aggro } as never, stopById('old'), r2)).toBe(false);
+    expect((r2.mock.calls[0][0] as InteriorError).reason).toBe('aggro');
+    expect([...mm.calls, ...sm.calls]).toEqual([]);
+    const up = fakeInteriors(MINE_IDS.old, {}, true);
+    const r3 = vi.fn();
+    expect(await rideTo({ ...up.svc, hostileAggro: aggro } as never, stopById('surface'), r3)).toBe(true);
+    expect(up.calls).toEqual([`exit:${MINE_DOOR_IDS.old}`]);
+    expect(r3).not.toHaveBeenCalled();
   });
   it('refuses while a transition runs, and to the stop it is at', async () => {
     const { svc, calls } = fakeInteriors(MINE_IDS.old);

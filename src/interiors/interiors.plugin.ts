@@ -278,6 +278,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
   const service: InteriorsService = {
     enter: (id, door) => controller.enter(id, door),
     exit: (door) => controller.exit(door),
+    transfer: (id, door) => controller.transfer(id, door),
     get current() {
       return controller.current;
     },

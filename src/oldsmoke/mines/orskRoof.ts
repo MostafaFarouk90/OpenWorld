@@ -122,6 +122,9 @@ export function registerOrskRoof(ctx: Ctx): () => void {
     id: 'oldsmoke.orskRoof',
     fixedPhase: 'animation',
     fixedUpdate(dt) {
+      // The interior events fire after the reveal; following `current` shows the slab from the first frame and hides it on the way out.
+      const here = inside();
+      if (here !== group.visible && roofDrawn(state)) sync();
       if (state.debris === null) return;
       state = roofStep(state, dt);
       poseChunks();

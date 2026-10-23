@@ -67,8 +67,8 @@ export function openLiftMenu(ctx: MenuCtx, rows: readonly LiftMenuRow[], onChoos
       line.textContent = row.locked && row.reason ? `${row.label}  (${row.reason})` : row.label;
       const sel = i === model.index;
       line.style.cssText = `padding:4px 10px;cursor:pointer;font:15px serif;opacity:${row.locked ? 0.45 : 1};background:${sel ? 'rgba(255,176,112,.25)' : 'transparent'}`;
-      line.onmouseenter = () => {
-        // Repainting rebuilds the rows under the pointer, which would swallow a click that is in flight.
+      line.onmousemove = () => {
+        // Real pointer movement only: a repaint puts a new row under a pointer that has not moved, and mouseenter would take the keyboard's selection.
         if (model.index === i) return;
         model.index = i;
         paint();
@@ -86,6 +86,8 @@ export function openLiftMenu(ctx: MenuCtx, rows: readonly LiftMenuRow[], onChoos
   };
   function onKey(e: KeyboardEvent): void {
     const k = e.code;
+    // A held W or S (pressed before F) must not scroll the cursor on every repeat.
+    if (e.repeat && (k === 'KeyW' || k === 'KeyS')) return;
     if (k === 'Escape') close();
     else if (k === 'ArrowDown' || k === 'KeyS') model.move(1);
     else if (k === 'ArrowUp' || k === 'KeyW') model.move(-1);

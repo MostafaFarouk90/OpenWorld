@@ -3,6 +3,8 @@ import type { Vec3 } from '../physics/PhysicsWorld';
 /** The `interiors` service (contracts/interiors-and-nav.md section 1, thread 3a). Rejections carry an `InteriorError`. */
 export interface InteriorsService {
   enter(interiorId: string, doorId: string): Promise<void>;
+  /** Interior to interior in one fade (the mines' lift): refused outside an interior, under aggro, for a locked door or the interior it is already in. */
+  transfer(interiorId: string, doorId: string): Promise<void>;
   /** Default: the door used to enter (else the interior's first door). */
   exit(doorId?: string): Promise<void>;
   /** Interior id, null outdoors; already set when `save.loaded` handlers run after a load into an interior. */

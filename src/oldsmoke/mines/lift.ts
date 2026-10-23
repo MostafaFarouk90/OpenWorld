@@ -67,7 +67,7 @@ const refusedKey = (err: unknown): string => {
  * exit leaves them in the mine, a refused enter after the exit leaves them on the surface at the shaft door.
  */
 export async function rideTo(
-  interiors: Pick<InteriorsService, 'enter' | 'exit' | 'current' | 'transitioning'> & Partial<Pick<InteriorsService, 'hostileAggro'>>,
+  interiors: Pick<InteriorsService, 'enter' | 'exit' | 'current' | 'transitioning'> & Partial<Pick<InteriorsService, 'hostileAggro' | 'transfer'>>,
   to: LiftStop,
   onRefused: (err: unknown) => void,
 ): Promise<boolean> {
@@ -78,11 +78,16 @@ export async function rideTo(
   const from = stopOfInterior(interiors.current);
   if (from.id === to.id) return false;
   // An exit never checks aggro but an enter does: refuse up front so the player is not left on the surface with enemies on them.
-  if (interiors.hostileAggro?.()) {
+  if (to.interiorId !== null && interiors.hostileAggro?.()) {
     onRefused(new InteriorError('aggro'));
     return false;
   }
   try {
+    if (interiors.current !== null && to.interiorId !== null && to.doorId !== null && interiors.transfer) {
+      // Mine to mine in one fade: the surface is never shown (an exit then an enter would fade twice and fire the shaft head's triggers).
+      await interiors.transfer(to.interiorId, to.doorId);
+      return true;
+    }
     if (interiors.current !== null) await interiors.exit(from.doorId ?? undefined);
     if (to.interiorId !== null && to.doorId !== null) await interiors.enter(to.interiorId, to.doorId);
     return true;

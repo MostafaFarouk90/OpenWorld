@@ -5,7 +5,7 @@ export const LOWER_GALLERIES_ID = MINE_IDS.lower;
 /** The blocker ids the runtime closes (lowerRuntime.ts). */
 export const LOWER_SHORTCUT_GATE = 'oldsmoke.lower.shortcut.gate';
 export const LOWER_SEALED_DOOR = 'oldsmoke.lower.sealed.door';
-/** Orsk's hall is 16 m high so the wyrm fits; the visible low roof (5 m) is the procedural slab in orskRoof.ts. */
+/** Orsk's hall is 16 m high so the wyrm fits; the visible low roof (`M20_ROOF_HEIGHT`, 9 m) is the procedural slab in orskRoof.ts. */
 export const M20_HALL_HEIGHT = 16;
 export const M20_ROOF_HEIGHT = 9;
 /** The M20 hall floor (local metres); the roof slab covers exactly this. */
