@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WYRM_SOUND_KEYS } from '../enemies/wyrm/sounds';
-import { ACT2_SFX_KEYS, ACT2_SFX_VOLUME, act2SfxSamples } from './act2Sfx';
+import { ACT2_SFX_KEYS, ACT2_SFX_VOLUME, SLAGMAW_SFX_KEYS, act2SfxSamples } from './act2Sfx';
 import plugin from './act2Sfx.plugin';
 import { MOVE_SFX } from './act2SfxRouter';
 
@@ -82,6 +82,48 @@ describe('act2 sfx keys', () => {
 
   it('maps every ground-enemy move to a registered key', () => {
     for (const key of Object.values(MOVE_SFX)) expect(ACT2_SFX_KEYS).toContain(key);
+  });
+});
+
+describe('slagmaw sounds', () => {
+  const SIX = ['rumble', 'tremor', 'tremor.chain', 'erupt', 'spit', 'valve'].map((k) => `sfx.slagmaw.${k}`);
+
+  it('keeps the six keys the Slagmaw fight plays', () => {
+    expect([...SLAGMAW_SFX_KEYS].sort()).toEqual([...SIX].sort());
+  });
+
+  it('registers all six with a volume, and each renders a real, finite, deterministic sound of its own', () => {
+    const c = fakeCtx();
+    setup(c);
+    const reg = new Map(c.registered.map((r) => [r.key, r.def.volume]));
+    const renders = SIX.map((key) => {
+      expect(reg.get(key), key).toBe(ACT2_SFX_VOLUME[key as keyof typeof ACT2_SFX_VOLUME]);
+      const a = act2SfxSamples(key as never);
+      expect(a.length, key).toBeGreaterThan(8000);
+      expect(a.every((v) => Number.isFinite(v) && Math.abs(v) <= 1), key).toBe(true);
+      expect(a.reduce((m, v) => Math.max(m, Math.abs(v)), 0), key).toBeGreaterThan(0.1);
+      // Not a click or a flat tone: energy is spread over the sound's length.
+      const rms = (from: number, to: number) => Math.sqrt(a.slice(Math.floor(a.length * from), Math.floor(a.length * to)).reduce((s, v) => s + v * v, 0) / (a.length * (to - from)));
+      expect(rms(0, 0.5), key).toBeGreaterThan(0.01);
+      const again = act2SfxSamples(key as never);
+      expect(a.every((v, i) => v === again[i]), key).toBe(true);
+      return a;
+    });
+    // Six distinct designs, not copies of one another (nor of the placeholder's clone).
+    for (let i = 0; i < renders.length; i++)
+      for (let j = i + 1; j < renders.length; j++) {
+        const n = Math.min(renders[i]!.length, renders[j]!.length);
+        let same = 0;
+        for (let k = 0; k < n; k++) if (renders[i]![k] === renders[j]![k]) same++;
+        expect(same / n, `${SIX[i]} vs ${SIX[j]}`).toBeLessThan(0.5);
+      }
+  });
+
+  it('shapes them for the job: the chained tremor is longer than the tremor, the erupt is the loudest, the rumble the longest', () => {
+    const len = (k: string) => act2SfxSamples(k as never).length;
+    expect(len('sfx.slagmaw.tremor.chain')).toBeGreaterThan(len('sfx.slagmaw.tremor'));
+    expect(len('sfx.slagmaw.rumble')).toBeGreaterThan(Math.max(...SIX.filter((k) => k !== 'sfx.slagmaw.rumble').map(len)));
+    expect(ACT2_SFX_VOLUME['sfx.slagmaw.erupt']).toBe(Math.max(...SIX.map((k) => ACT2_SFX_VOLUME[k as keyof typeof ACT2_SFX_VOLUME])));
   });
 });
 

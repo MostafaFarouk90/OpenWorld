@@ -29,11 +29,10 @@ export const SLAGMAW_FLOOR_MODIFIER_ID = "bosses.slagmaw.floor";
 export const SLAGMAW_CRUST_MODIFIER_ID = "bosses.slagmaw.crust";
 
 /**
- * The registry refuses a zero window, and its `last` break always opens one. The Slagmaw has no mercy (no `BOSS_MERCY` row, so
- * nothing offers a Release), so the window is the smallest the registry allows: it closes on its next tick. The follow-up
- * "BossRegistry: let releaseWindowSeconds 0 mean no window" retires this.
+ * The Slagmaw has no mercy (no `BOSS_MERCY` row, so nothing offers a Release), so he has no release window: the registry
+ * reads 0 as "no window", and no break, the last included, opens one or fires `boss.releaseWindow`.
  */
-export const SLAGMAW_WINDOW_SECONDS = 0.001;
+export const SLAGMAW_WINDOW_SECONDS = 0;
 
 export const SLAGMAW_BOSS_DEF: BossDef = {
   bossId: SLAGMAW_BOSS_ID,

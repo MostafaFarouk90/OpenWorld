@@ -26,7 +26,15 @@ export const ACT2_SFX_KEYS = [
   'sfx.bellows.hiss',
   'sfx.bellows.solved',
   'sfx.bellows.vent',
+  'sfx.slagmaw.rumble',
+  'sfx.slagmaw.tremor',
+  'sfx.slagmaw.tremor.chain',
+  'sfx.slagmaw.erupt',
+  'sfx.slagmaw.spit',
+  'sfx.slagmaw.valve',
 ] as const;
+/** The keys the Slagmaw fight (`src/bosses/slagmaw`) plays; they replace its placeholders under the same names. */
+export const SLAGMAW_SFX_KEYS = ACT2_SFX_KEYS.filter((k) => k.startsWith('sfx.slagmaw.'));
 export type Act2SfxKey = (typeof ACT2_SFX_KEYS)[number];
 
 /** Volume per key (the golem and the barricade fill the space; the chime sits just under the music). */
@@ -51,6 +59,12 @@ export const ACT2_SFX_VOLUME: Readonly<Record<Act2SfxKey, number>> = {
   'sfx.bellows.hiss': 0.45,
   'sfx.bellows.solved': 0.6,
   'sfx.bellows.vent': 0.6,
+  'sfx.slagmaw.rumble': 0.8,
+  'sfx.slagmaw.tremor': 0.85,
+  'sfx.slagmaw.tremor.chain': 0.95,
+  'sfx.slagmaw.erupt': 1,
+  'sfx.slagmaw.spit': 0.6,
+  'sfx.slagmaw.valve': 0.7,
 };
 
 /** A struck partial set (a bell, a metal ring): `partials` are [ratio, gain, decay per second]. */
@@ -289,6 +303,90 @@ export function act2SfxSamples(key: Act2SfxKey): Float32Array<ArrayBuffer> {
       return render(1.0, (t) => {
         const u = t / 1.0;
         return click(rnd()) * 2.5 * hit(t, 40) + ring(t, 300, [[1, 0.5, 8], [2.4, 0.3, 11]]) * 0.5 + gust(rnd(), 1400 - 1100 * u) * 5 * Math.min(1, t / 0.03) * (1 - u) ** 1.5;
+      });
+    }
+    case 'sfx.slagmaw.rumble': {
+      // The intro cue: something vast turning over under the floor. A deep, wobbling drone with slow grinding stones.
+      const rnd = noise(121);
+      const ph = phasor();
+      const rum = lowpass(90);
+      const grind = bandpass(120, 700);
+      return render(2.6, (t) => {
+        const swell = env(t, 2.6, 0.9, 1.3);
+        const drone = Math.sin(ph(34 + 6 * Math.sin(TAU * 0.7 * t))) * (0.7 + 0.3 * Math.sin(TAU * 3.1 * t));
+        const stones = grind(rnd()) * bursts(t, [0.4, 0.95, 1.3, 1.85], 7) * 3;
+        return drive(drone * 0.9 + rum(rnd()) * 6, 1.6) * 0.75 * swell + stones * 0.35 * swell;
+      });
+    }
+    case 'sfx.slagmaw.tremor': {
+      // A single heavy pulse through the floor before the worm moves: a low thump that sags in pitch, and a dull gravel rattle.
+      const rnd = noise(122);
+      const ph = phasor();
+      const rum = lowpass(130);
+      const grit = bandpass(200, 1200);
+      return render(1.1, (t) => {
+        const thump = Math.sin(ph(52 - 24 * Math.min(1, t / 0.35))) * hit(t, 5);
+        return drive(thump * 1.3 + rum(rnd()) * 5 * hit(t, 4.5), 1.5) * 0.8 + grit(rnd()) * bursts(t, [0.05, 0.13, 0.24], 22) * 1.2;
+      });
+    }
+    case 'sfx.slagmaw.tremor.chain': {
+      // The same tremor chained: three hammering pulses, each a little higher and harder, the last left to fall away.
+      const rnd = noise(123);
+      const rum = lowpass(140);
+      const grit = bandpass(250, 1800);
+      const pulses = [0, 0.28, 0.54];
+      return render(1.5, (t) => {
+        let thump = 0;
+        pulses.forEach((at, i) => {
+          if (t >= at) thump += Math.sin(TAU * (50 + 8 * i - 22 * Math.min(1, (t - at) / 0.3)) * (t - at)) * hit(t - at, 6.5) * (0.75 + 0.15 * i);
+        });
+        return drive(thump * 1.4 + rum(rnd()) * 5 * Math.max(hit(t, 3.2), 0), 1.7) * 0.8 + grit(rnd()) * bursts(t, [0.04, 0.32, 0.58], 26) * 1.4;
+      });
+    }
+    case 'sfx.slagmaw.erupt': {
+      // The worm breaks the floor: a crack of rock, a roar that climbs and tears, and a slow fall of molten debris.
+      const rnd = noise(124);
+      const ph = phasor();
+      const crack = bandpass(700, 4200);
+      const rum = lowpass(100);
+      const roar = bandpass(150, 1400);
+      const debris = highpass(1800);
+      const times: number[] = [];
+      const r = noise(224);
+      for (let i = 0; i < 20; i++) times.push(0.25 + ((r() + 1) / 2) ** 1.5 * 1.0);
+      return render(1.9, (t) => {
+        const split = crack(rnd()) * 4 * hit(t, 28);
+        const boom = Math.sin(ph(44 - 14 * Math.min(1, t / 0.6))) * hit(t, 3.2);
+        const growl = saw(TAU * (70 + 90 * Math.min(1, t / 0.5)) * t, 6) * (0.6 + 0.4 * Math.sin(TAU * 31 * t));
+        const body = roar(rnd() * 0.6 + growl * 0.4) * 3.2 * env(t, 1.9, 0.05, 1.6);
+        return drive(boom * 1.2 + rum(rnd()) * 5 * hit(t, 2.6), 1.6) * 0.7 + split * 0.5 + body * 0.5 + debris(rnd()) * bursts(t, times, 16) * 0.5;
+      });
+    }
+    case 'sfx.slagmaw.spit': {
+      // A glob of slag lobbed: a wet gurgle building in the throat, a pop of release, then a hissing arc.
+      const rnd = noise(125);
+      const ph = phasor();
+      const wet = lowpass(500);
+      const hiss = bandpass(2500, 7500);
+      return render(0.9, (t) => {
+        const gurgle = t < 0.3 ? Math.sin(ph(110 + 160 * (t / 0.3) + 60 * Math.sin(TAU * 26 * t))) * Math.min(1, t / 0.05) * (0.6 + 0.4 * Math.sin(TAU * 22 * t)) : 0;
+        const pop = wet(rnd(), 1800) * 4 * hit(t - 0.3, 45) * (t >= 0.3 ? 1 : 0);
+        const arc = t >= 0.3 ? hiss(rnd()) * 3.5 * hit(t - 0.3, 6) : 0;
+        return drive(gurgle, 1.8) * 0.45 + pop * 0.8 + arc * 0.4 + wet(rnd()) * 0.5 * (t < 0.3 ? t / 0.3 : hit(t - 0.3, 12));
+      });
+    }
+    case 'sfx.slagmaw.valve': {
+      // A cooling valve thrown open: a heavy iron clank, a grating turn, then a surge of quenching steam.
+      const rnd = noise(126);
+      const ph = phasor();
+      const steam = bandpass(2200, 9000);
+      const clank = highpass(1200);
+      return render(1.3, (t) => {
+        const iron = ring(t, 190, [[1, 0.6, 7], [2.32, 0.4, 10], [3.9, 0.25, 14]]) * 0.55;
+        const bang = clank(rnd()) * 2.6 * hit(t, 55);
+        const turn = t > 0.08 && t < 0.4 ? Math.sin(ph(260 + 120 * ((t - 0.08) / 0.32))) * 0.1 * Math.sin(Math.PI * ((t - 0.08) / 0.32)) : 0;
+        const surge = t >= 0.3 ? steam(rnd()) * 5 * Math.min(1, (t - 0.3) / 0.12) * (1 - ((t - 0.3) / 1.0) ** 2) * (t < 1.3 ? 1 : 0) : 0;
+        return iron + bang * 0.5 + turn + surge * 0.6;
       });
     }
   }

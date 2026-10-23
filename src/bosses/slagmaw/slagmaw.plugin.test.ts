@@ -362,7 +362,8 @@ describe("The Slagmaw on the real core", () => {
     expect(BOSS_MERCY[SLAGMAW_BOSS_ID]).toBeUndefined();
     expect(SLAGMAW_BOSS_DEF.mercyVerb).toBeUndefined();
     expect(SLAGMAW_BOSS_DEF.releaseWindowSeconds).toBe(SLAGMAW_WINDOW_SECONDS);
-    expect(SLAGMAW_WINDOW_SECONDS).toBeLessThan(TICK);
+    expect(SLAGMAW_WINDOW_SECONDS).toBe(0);
+    expect(SLAGMAW_BOSS_DEF.releaseWindowSeconds).toBe(0);
     expect(killXp(SLAGMAW_BOSS_ID, 15, 15)).toBe(380);
     expect(OUTCOME_FLAG).toBe("boss.the-slagmaw.outcome");
   });
@@ -626,6 +627,9 @@ describe("The Slagmaw on the real core", () => {
     expect(t.of("boss.break")).toEqual([
       { bossId: SLAGMAW_BOSS_ID, phase: 1, breaks: 1, last: false },
     ]);
+    // No mercy, no window: the break opens none, so no `boss.releaseWindow` fires.
+    expect(t.of("boss.releaseWindow")).toEqual([]);
+    expect(t.state()!.releaseOpen).toBe(false);
     expect(t.enc().crustCooled).toBe(false);
     expect(t.enc().dousing).toBe(false);
     expect(t.enc().brain.state).toBe("broken");
@@ -720,6 +724,7 @@ describe("The Slagmaw on the real core", () => {
     const r = t.breakPoise();
     expect(r?.outcome).toBe("hit");
     expect(t.of("boss.break").map((b) => b.last)).toEqual([false]);
+    expect(t.of("boss.releaseWindow")).toEqual([]);
     t.settle();
     t.toSurfaced();
     // Valve 1 produced the break; valve 2 is still unspent and live in phase 2.
@@ -825,6 +830,9 @@ describe("The Slagmaw on the real core", () => {
     t.settle();
     t.coolAndBreak(3);
     expect(t.of("boss.break").at(-1)!.last).toBe(true);
+    // Even the last break opens no release window.
+    expect(t.of("boss.releaseWindow")).toEqual([]);
+    expect(t.state()!.releaseOpen).toBe(false);
     t.until(() => t.boss()!.hittable);
     t.hit(1e6, 0);
     expect(t.of("boss.defeated")).toHaveLength(1);
