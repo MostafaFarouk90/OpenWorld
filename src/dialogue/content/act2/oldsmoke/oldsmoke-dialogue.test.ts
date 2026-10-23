@@ -261,6 +261,14 @@ describe('M21 and M22 are offered by their givers', () => {
     play(w, 'npc-wenna', 'wenna');
     expect(w.log).toContain('start m21');
   });
+  it('Wenna\'s offer runs on into her counsel, since its end credits M21\'s counsel talk', () => {
+    const w = world();
+    w.set('m20', 'completed');
+    const seen = play(w, 'npc-wenna', 'wenna');
+    expect(seen[0]).toBe('m21-offer');
+    expect(seen).toContain('m21-counsel');
+    expect(seen[seen.length - 1]).toMatch(/^m21-counsel/);
+  });
   it('Wystan offers M22 only when all twenty prerequisites are done', () => {
     const ids = ['m11', 'm12', 'm13', 'm14', 'm15', 'm16', 'm17', 'm18', 'm19', 'm20', 'm21', 'r05', 'r06', 'r07', 'r08', 'r09', 'r10', 'r11', 'd03', 'd04'];
     for (const missing of ids) {

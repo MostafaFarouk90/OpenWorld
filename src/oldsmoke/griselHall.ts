@@ -67,7 +67,8 @@ export const GRISEL_HALL_DEF: InteriorDef = {
     { id: 'oldsmoke.hall.guard.3', x: -11, z: -20, facing: { x: 0, z: -10 } },
     { id: 'oldsmoke.hall.guard.4', x: 11, z: -20, facing: { x: 0, z: -10 } },
     // M21's stealth section (A13 owns the section data and the guards): checkpoints, hide spots, the watch guards and their loop.
-    { id: 'oldsmoke.stealth.m21.start', x: 0, z: -5, yaw: 0 },
+    // The start (and a capture's respawn) is in the service passage, where the foyer's east wall hides it from the hall's loop.
+    { id: 'oldsmoke.stealth.m21.start', x: 8, z: -3.5, yaw: -90 },
     { id: 'oldsmoke.stealth.m21.cp.gallery', x: 20, z: -22, yaw: 0 },
     { id: 'oldsmoke.stealth.m21.cp.study', x: -19.5, z: -28.5, yaw: 90 },
     { id: 'oldsmoke.stealth.m21.end', x: 0, z: -3, yaw: 180 },

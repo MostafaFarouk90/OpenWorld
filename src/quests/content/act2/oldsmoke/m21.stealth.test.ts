@@ -7,7 +7,8 @@ import { SECTIONS, validateSection } from '../../../../stealth/sections';
 import { KinematicPatrol, runScript, type ScriptStep } from '../../../../stealth/testing/patrolSim';
 import type { P3 } from '../../../../stealth/perceptionPort';
 import { OLDSMOKE_SPAWNERS } from './spawners';
-import { M21_SECTION } from './m21.quest';
+import { M21_SECTION, M21_WITHDRAW_TRIGGER } from './m21.quest';
+import { OLDSMOKE_TRIGGERS } from './triggers';
 
 const local = new Map(GRISEL_HALL_DEF.anchors.map((a) => [a.id, { id: a.id, position: { x: a.x, y: 0, z: a.z }, yaw: 0 }]));
 const find = (id: string) => local.get(id);
@@ -36,6 +37,28 @@ describe('M21 stealth section', () => {
     expect(g.respawn).toBe('never');
     expect(g.activation).toEqual({ quest: 'm21' });
     for (const a of [g.anchor, ...(g.memberAnchors ?? []), ...((g.patrol as string[]) ?? [])]) expect(find(a), a).toBeDefined();
+  });
+
+  it('goes live, and respawns a capture, inside the service passage, never in the loop\'s sight from the open foyer', () => {
+    // The foyer opens on the audience floor along its whole width; the passage (east of the foyer's wall) does not.
+    const service = GRISEL_HALL_DEF.rooms.find((r) => r.id === 'service')!;
+    const start = at(section.checkpoints[0].anchor);
+    const trg = OLDSMOKE_TRIGGERS.find((t) => t.id === M21_WITHDRAW_TRIGGER)!;
+    expect(trg.anchorId).toBe(section.checkpoints[0].anchor);
+    expect(start.x - trg.radius).toBeGreaterThanOrEqual(service.x0);
+    expect(start.x + trg.radius).toBeLessThanOrEqual(service.x1);
+    expect(start.z - trg.radius).toBeGreaterThanOrEqual(service.z0 - 0.5);
+    expect(start.z + trg.radius).toBeLessThanOrEqual(service.z1 + 0.5);
+  });
+
+  it('spawns each watch guard on the loop node its patrol slot starts from, never behind a wall of the hidden ways', () => {
+    // patrolForSlot starts member k at waypoint k: a member posted in the gallery or the study walks straight at a wall
+    // and stands stuck there (in play: at the gallery checkpoint, catching the player on every respawn).
+    const g = OLDSMOKE_SPAWNERS.find((s) => s.id === section.guardGroups[0])!;
+    const route = g.patrol as string[];
+    expect(g.memberAnchors).toHaveLength(g.count);
+    g.memberAnchors!.forEach((a, k) => expect(a).toBe(route[k % route.length]));
+    expect(g.anchor).toBe(route[0]);
   });
 });
 

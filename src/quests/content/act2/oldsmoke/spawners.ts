@@ -21,9 +21,12 @@ export const OLDSMOKE_SPAWNERS: readonly SpawnerDef[] = [
     id: 'q13.m21.loyalists', tag: 'm21.loyalists', enemy: 'steward-guard', count: 4, anchor: 'oldsmoke.hall.guard.1',
     memberAnchors: range('oldsmoke.hall.guard.', 1, 4), activation: { quest: 'm21', flag: 'story.m21.loyalistsOut' }, leash: true, ...common,
   },
-  // M21: the hall's watch for the spy section: observer-only guards on a loop, live while the quest is
+  // M21: the hall's watch for the spy section: observer-only guards on a loop, live while the quest is. Each member spawns
+  // (and respawns after a capture) on the loop node its slot starts from: A4's watch-3 and watch-4 posts are in the gallery
+  // and the study, walled off from the loop, so a guard sent from there stood stuck at the gallery checkpoint and caught
+  // the player on every respawn there.
   {
-    id: 'stealth.m21.watch', enemy: 'watch-guard', count: 4, anchor: 'spawn.m21.watch-1', memberAnchors: range('spawn.m21.watch-', 1, 4),
+    id: 'stealth.m21.watch', enemy: 'watch-guard', count: 4, anchor: 'patrol.m21.hall.1', memberAnchors: range('patrol.m21.hall.', 1, 4),
     patrol: range('patrol.m21.hall.', 1, 5), band: WATCH_GUARD_BAND, activation: { quest: 'm21' }, respawn: 'never', leash: false,
   },
 ];

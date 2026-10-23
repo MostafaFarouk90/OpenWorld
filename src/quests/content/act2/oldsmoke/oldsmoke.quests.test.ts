@@ -6,7 +6,7 @@ import type { QuestDef } from '../../../types';
 import { m16, M16_BRAZIER_ID, M16_SEARCH } from './m16.quest';
 import { r09, R09_OFFICE, R09_OFFICE_TRIGGER, R09_REPORTED } from './r09.quest';
 import { r10, R10_NOTES } from './r10.quest';
-import { m21, M21_EVIDENCE, M21_LETTERS, M21_SECTION } from './m21.quest';
+import { m21, M21_EVIDENCE, M21_LETTERS, M21_SECTION, M21_WITHDRAW_TRIGGER } from './m21.quest';
 import { m22, M22_PREREQUISITES, M22_BANNER } from './m22.quest';
 
 type W = ReturnType<typeof makeWorld>;
@@ -319,6 +319,11 @@ describe('M21 Parley at Deepgate', () => {
     w.flags.set('story.m21.branch', 'spy');
     toAudience(w);
     expect(done(w, 'm21', 'loyalists')).toBe(true);
+    // The watch is not live at the dais: the spy withdraws to the foyer first (a guard crossing it does not count).
+    expect(current(w, 'm21')).toBe('withdraw');
+    w.bus.emit('trigger.enter', { triggerId: M21_WITHDRAW_TRIGGER, actorId: 'watch-guard#1' });
+    expect(current(w, 'm21')).toBe('withdraw');
+    w.bus.emit('trigger.enter', { triggerId: M21_WITHDRAW_TRIGGER, actorId: 'player' });
     expect(current(w, 'm21')).toBe('letters');
     letters(w);
     expect(current(w, 'm21')).toBe('stealth');

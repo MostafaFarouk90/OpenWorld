@@ -22,6 +22,9 @@ export const WENNA = buildTree({
         W('The galleries are behind us, and my father knows what you found. He will not run from it. He will make an argument of it.'),
         W('Come to the hall. Let the steward bring you in, let my father speak, and then decide how you answer him.', [{ startQuest: 'm21' }]),
       ],
+      // The offer runs on into the counsel: its end is a completed talk with Wenna, which credits M21's `counsel` objective,
+      // so a separate counsel talk would never open. A talk aborted before the end leaves `counsel` open for 'm21-counsel'.
+      then: 'm21-counsel',
     },
     'm16-aside': {
       lines: [

@@ -36,6 +36,7 @@ const QUEST_TEXT: Record<string, QuestText> = {
     o: {
       counsel: "Hear Wenna's counsel", escort: "Follow the steward's escort", evidence: 'Gather the proof of the sale', audience: 'Face Lord Aldous in the hall',
       branched: 'Choose how to meet him', persuade: 'Press your case', loyalists: "Beat the loyalists at the hall door",
+      withdraw: 'Withdraw to the service passage off the foyer',
       stealth: "Slip past the hall's watch", letters: "Read Aldous's letters in the study", aftermath: 'Hear what Aldous has to say', report: 'Report to Wenna',
     },
   },
