@@ -437,3 +437,52 @@ describe('?bellows=1&new dev hook (review-b M1 and L3)', () => {
     expect(valveAt(c, 1).x).toBeCloseTo(bellowsLayout(CENTER).valves[0].x, 5);
   });
 });
+
+describe('visual root visibility', () => {
+  const rootOf = (t: T) => t.ctx.scene.getObjectByName('weeping-bellows')!;
+  const fakeInteriors = (t: T) => {
+    const svc = { current: null as string | null };
+    t.ctx.services.provide('interiors' as never, svc as never);
+    return svc;
+  };
+
+  it('with the real centre anchor the root shows only while inside the Bellows mine, following the interior the player is in', async () => {
+    const t = await boot();
+    const interiors = fakeInteriors(t);
+    t.run(2);
+    expect(rootOf(t)).toBeDefined();
+    expect(rootOf(t).visible).toBe(false);
+    interiors.current = 'mine-weeping-bellows';
+    t.run(1);
+    expect(rootOf(t).visible).toBe(true);
+    interiors.current = null;
+    t.run(1);
+    expect(rootOf(t).visible).toBe(false);
+  });
+
+  it('another interior keeps it hidden, and it re-evaluates every tick (also after a load)', async () => {
+    const t = await boot();
+    const interiors = fakeInteriors(t);
+    t.run(2);
+    interiors.current = 'mine-other';
+    t.run(1);
+    expect(rootOf(t).visible).toBe(false);
+    interiors.current = 'mine-weeping-bellows';
+    t.run(1);
+    expect(rootOf(t).visible).toBe(true);
+    interiors.current = null;
+    t.run(1);
+    expect(rootOf(t).visible).toBe(false);
+  });
+
+  it('the ?bellows=1 stand-in stays visible regardless of the interior', async () => {
+    vi.stubGlobal('location', { search: '?bellows=1&new' });
+    const t = await boot({ center: false });
+    const interiors = fakeInteriors(t);
+    t.run(3);
+    expect(rootOf(t).visible).toBe(true);
+    t.run(1);
+    expect(interiors.current).toBeNull();
+    expect(rootOf(t).visible).toBe(true);
+  });
+});

@@ -71,7 +71,7 @@ export interface InteriorPorts {
 }
 
 interface Transition {
-  kind: 'enter' | 'exit';
+  kind: 'enter' | 'exit' | 'transfer';
   interiorId: string;
   doorId: string;
   phase: 'fading-out' | 'settling' | 'revealing';
@@ -80,9 +80,20 @@ interface Transition {
   target: { feet: Vec3; yaw: number };
   from: { feet: Vec3; yaw: number; current: string | null; door: string | null };
   handle: { ready(): boolean } | null;
+  /** Seconds the settling phase waits for ground; longer when the arrival is far from where the player stands (terrain must stream in). */
+  settleTimeout: number;
   release: () => void;
   resolve: () => void;
   reject: (e: InteriorError) => void;
+}
+
+/**
+ * An arrival hundreds of metres from the player needs its terrain streamed in (the Deepgate mines float far from the shaft head the lift
+ * exits to), so the wait grows with the distance beyond 300 m, to at most 12 s. Ordinary doors keep the base wait.
+ */
+export function settleTimeoutFor(from: { x: number; z: number }, to: { x: number; z: number }): number {
+  const d = Math.hypot(to.x - from.x, to.z - from.z);
+  return d > 300 ? TRANSITION.settleTimeoutSeconds + Math.min(10, d / 150) : TRANSITION.settleTimeoutSeconds;
 }
 
 const FORWARD = (yaw: number) => ({ x: -Math.sin(yaw), z: -Math.cos(yaw) });
@@ -189,6 +200,25 @@ export class InteriorController {
     return this.begin('enter', interiorId, doorId, { feet: { ...inside.position }, yaw: inside.yaw });
   }
 
+  /**
+   * From one interior straight into another (a lift between mines): one fade to black, the look and the teleport change together
+   * at black, and the surface is never shown. Announces `exited` for the old interior then `entered` for the new one at the end.
+   */
+  transfer(interiorId: string, doorId: string): Promise<void> {
+    if (this._current === null) return this.refuse('not-inside');
+    const spec = this.specs.get(interiorId);
+    const door = spec?.doors.find((d) => d.doorId === doorId);
+    const inside = door && this.ports.anchor(door.inside);
+    if (!spec || !door || !inside) return this.refuse('unknown');
+    if (this.transitioning) return this.refuse('busy');
+    if (interiorId === this._current) return this.refuse('unknown');
+    const common = this.commonRefusal();
+    if (common) return this.refuse(common);
+    if (this.ports.hostileAggro()) return this.refuse('aggro');
+    if (this.isDoorLocked(doorId)) return this.refuse('locked');
+    return this.begin('transfer', interiorId, doorId, { feet: { ...inside.position }, yaw: inside.yaw });
+  }
+
   exit(doorId?: string): Promise<void> {
     if (this.transitioning) return this.refuse('busy');
     const id = this._current;
@@ -282,6 +312,7 @@ export class InteriorController {
         target,
         from: { feet: { ...this.ports.feet() }, yaw: this.ports.yaw(), current: this._current, door: this.door },
         handle: null,
+        settleTimeout: settleTimeoutFor(this.ports.feet(), target.feet),
         release,
         resolve,
         reject,
@@ -304,7 +335,7 @@ export class InteriorController {
           t.phase = 'revealing';
           t.time = 0;
           this.ports.fade(0, TRANSITION.fadeInSeconds);
-        } else if (t.time >= TRANSITION.settleTimeoutSeconds) {
+        } else if (t.time >= t.settleTimeout) {
           this.rollback(t);
         }
         break;
@@ -317,7 +348,7 @@ export class InteriorController {
 
   /** At black, in one tick: the look, the state and the teleport change together. */
   private place(t: Transition): void {
-    if (t.kind === 'enter') {
+    if (t.kind === 'enter' || t.kind === 'transfer') {
       this.setApplied(t.interiorId);
       this._current = t.interiorId;
       this.door = t.doorId;
@@ -336,20 +367,23 @@ export class InteriorController {
   /** True when someone else moved the player away after placement (a death respawn, travel). */
   private drifted(t: Transition): boolean {
     const f = this.ports.feet();
-    if (t.kind === 'enter') return !this.specs.get(t.interiorId)?.contains(f);
+    if (t.kind === 'enter' || t.kind === 'transfer') return !this.specs.get(t.interiorId)?.contains(f);
     return this.interiorAt(f) !== null || Math.hypot(f.x - t.target.feet.x, f.z - t.target.feet.z) > TRANSITION.exitDriftMetres;
   }
 
   private finish(t: Transition): void {
     this.transition = null;
     t.release();
-    if (t.kind === 'enter') this.announceEntered(t.interiorId, t.doorId);
+    if (t.kind === 'transfer') {
+      if (t.from.current !== null) this.announceExited(t.from.current, t.from.door ?? this.firstDoor(t.from.current));
+      this.announceEntered(t.interiorId, t.doorId);
+    } else if (t.kind === 'enter') this.announceEntered(t.interiorId, t.doorId);
     else this.announceExited(t.interiorId, t.doorId);
     t.resolve();
   }
 
   private rollback(t: Transition): void {
-    this.ports.warn(`Interiors: ${t.kind} "${t.interiorId}" found no ground in ${TRANSITION.settleTimeoutSeconds} s; rolled back`);
+    this.ports.warn(`Interiors: ${t.kind} "${t.interiorId}" found no ground in ${t.settleTimeout} s; rolled back`);
     this._current = t.from.current;
     this.door = t.from.door;
     this.setApplied(t.from.current);

@@ -57,6 +57,10 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | waystone.weeping-bellows | 20403 | 8072 | 0 | 180 | waystone |
 | npc-post.slagg.shaft | 20377 | 8070 | 0 | 180 | npc-post |
 | npc-post.pike.shaft | 20393 | 8070 | 0 | 180 | npc-post |
+| npc-post.miner-hale.shaft | 20372 | 8066 | 0 | 180 | npc-post |
+| npc-post.miner-brig.shaft | 20398 | 8066 | 0 | 180 | npc-post |
+| oldsmoke.shaft.board | 20381 | 8077 | 0 | 180 | poi |
+| oldsmoke.shaft.tally | 20389 | 8077 | 0 | 180 | poi |
 | npc-post.miner.shaft.1 | 20369 | 8060 | 0 | 180 | npc-post |
 | npc-post.miner.shaft.2 | 20399 | 8054 | 0 | 180 | npc-post |
 | oldsmoke.furnace.1 | 20680 | 8154 | 0 | 0 | poi |

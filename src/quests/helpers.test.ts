@@ -199,6 +199,26 @@ describe('quest posts', () => {
     dir.update();
     expect(w.npcs.placed).toHaveLength(1);
   });
+  it('forgets the applied post while leaveWhen holds, so the row applies again when it stops holding', () => {
+    const w = makeWorld();
+    const rules = [{
+      npcId: 'warden', home: 'npc-post.warden',
+      leaveWhen: { flag: 'walking' } as const,
+      posts: [{ when: { flag: 'hall.open' } as const, anchorId: 'npc-post.warden.hall' }],
+    }];
+    const dir = new PostDirector(rules, () => ({ state: w.state, quests: w.manager }), () => w.npcs);
+    w.flags.set('hall.open', true);
+    dir.update();
+    expect(w.npcs.placed).toEqual([['warden', 'npc-post.warden.hall']]);
+    w.flags.set('walking', true); // another system moves the NPC: the director does not place them
+    dir.markDirty();
+    dir.update();
+    expect(w.npcs.placed).toHaveLength(1);
+    w.flags.delete('walking');
+    dir.markDirty();
+    dir.update();
+    expect(w.npcs.placed).toEqual([['warden', 'npc-post.warden.hall'], ['warden', 'npc-post.warden.hall']]);
+  });
   it('never puts Tobb in a rule', () => {
     expect(POST_RULES.map((r) => r.npcId)).not.toContain('tobb');
     const w = makeWorld();

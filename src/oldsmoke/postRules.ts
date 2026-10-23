@@ -13,16 +13,23 @@ export const OLDSMOKE_POST_RULES: PostRule[] = [
   {
     npcId: 'slagg',
     home: 'npc-post.slagg.shaft',
-    // R09 and R10 are given at the market; M17 and D04 at the shaft.
-    posts: [{ when: { any: [{ quest: 'r09', state: 'active' }, { quest: 'r10', state: 'active' }] }, anchorId: 'npc-post.slagg.market' }],
+    // R09 and R10 are given at the market; M17 at the shaft; D04 at Deepdelve once it is active.
+    posts: [
+      // D04 is given and finished at Deepdelve (the mine interior defines the post).
+      { when: { quest: 'd04', state: 'active' }, anchorId: 'npc-post.slagg.deepdelve' },
+      { when: { any: [{ quest: 'r09', state: 'active' }, { quest: 'r10', state: 'active' }] }, anchorId: 'npc-post.slagg.market' },
+    ],
   },
+  // Pike tends the Weeping Bellows once M18 starts.
+  { npcId: 'pike', home: 'npc-post.pike.shaft', posts: [{ when: { quest: 'm18', state: ['active', 'completed'] }, anchorId: 'npc-post.pike.bellows' }] },
   { npcId: 'aldous', home: 'npc-post.aldous.court', posts: [{ when: m16Done, anchorId: 'oldsmoke.hall.aldous' }] },
-  // A13 takes Wenna over from M19 (she walks the player to the Lower Galleries), so the director leaves her alone then.
+  // A13 takes Wenna over while M19 or M20 is active (she walks the player to the Lower Galleries), so the director leaves her alone then.
   {
     npcId: 'wenna',
     home: 'npc-post.wenna.court',
     posts: [{ when: m16Done, anchorId: 'oldsmoke.hall.wenna' }],
-    leaveWhen: { quest: 'm19', state: ['active', 'completed'] },
+    // M19 and M20 are A13's (the nursery, then the galleries); once both are done she is back at the hall for M21.
+    leaveWhen: { any: [{ quest: 'm19', state: 'active' }, { quest: 'm20', state: 'active' }] },
   },
   ...range(4).map((n) => ({
     npcId: `steward-hall-${n}`,

@@ -218,6 +218,9 @@ const weepingBellowsPlugin: GamePlugin = {
           holdSaves();
         }
         place();
+        // A4's real cavern floats 150 m above the ground: its puzzle must not show in the sky from outdoors or other mines. The
+        // ?bellows=1 stand-in sits on the surface, so it stays visible.
+        visuals.root.visible = site !== 'real' || ctx.services.get('interiors')?.current === 'mine-weeping-bellows';
         controller.update(dt);
         blessing.update(dt);
         const remaining = controller.timer.remaining();

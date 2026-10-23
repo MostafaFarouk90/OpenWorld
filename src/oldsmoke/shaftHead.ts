@@ -22,6 +22,11 @@ export function shaftHeadLayout(): Pick<LayoutData, 'anchors' | 'triggers' | 'st
       a('waystone.weeping-bellows', S.x + 18, S.z + 22, 0, ['waystone']),
       a('npc-post.slagg.shaft', S.x - 8, S.z + 20, 0, ['npc-post']),
       a('npc-post.pike.shaft', S.x + 8, S.z + 20, 0, ['npc-post']),
+      // A13's M17 cast (dedicated posts) and the lift board and tally notes (free anchors).
+      a('npc-post.miner-hale.shaft', S.x - 13, S.z + 16, 0, ['npc-post']),
+      a('npc-post.miner-brig.shaft', S.x + 13, S.z + 16, 0, ['npc-post']),
+      a('oldsmoke.shaft.board', S.x - 4, S.z + 27, 0, ['poi']),
+      a('oldsmoke.shaft.tally', S.x + 4, S.z + 27, 0, ['poi']),
       ...numbered('npc-post.miner.shaft', [[S.x - 16, S.z + 10], [S.x + 14, S.z + 4]], ['npc-post'], 0),
     ],
     triggers: [sphere('trg.oldsmoke.shaft', S.x, S.z + 8, 20), box('trg.oldsmoke.shaft.lift', S.x, S.z + 7, 4, 3, 4)],

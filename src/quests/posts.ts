@@ -177,7 +177,11 @@ export class PostDirector {
     const env = this.env();
     const left = new Set(this.rules.filter((r) => r.leaveWhen && evalCondition(r.leaveWhen, env)).map((r) => r.npcId));
     for (const [npcId, want] of Object.entries(resolvePosts(this.rules, env))) {
-      if (left.has(npcId)) continue;
+      if (left.has(npcId)) {
+        // Someone else places them now; forget our post so the row applies again when they hand the NPC back.
+        this.applied.set(npcId, UNKNOWN);
+        continue;
+      }
       const had = this.applied.get(npcId);
       if (want.home && had === undefined) continue;
       if (had === want.anchorId) continue;
