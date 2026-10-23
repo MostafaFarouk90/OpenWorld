@@ -96,9 +96,9 @@ L = {}
 L['trees'] = (0.010 + 0.12 * np.clip(N_LARGE - 0.45, 0, 1) * 1.9 + 0.05 * (verge & (N_MID > 0.55))) * (1 - 0.9 * open_green)
 L['trees'][tall_free | bare] = 0
 L['bushes'] = (0.04 + 0.25 * near_house + 0.12 * np.clip(N_MID - 0.4, 0, 1) + 0.12 * verge) * (1 - 0.6 * open_green); L['bushes'][bare | tall_free] = 0
-L['grass'] = (0.16 + 1.9 * np.clip(N_MID - 0.4, 0, 1) + 0.6 * verge + 0.15 * np.clip(N_SMALL - 0.6, 0, 1)); L['grass'][bare] = 0
+L['grass'] = (0.06 + 1.0 * np.clip(N_MID - 0.45, 0, 1) + 0.3 * verge + 0.08 * np.clip(N_SMALL - 0.6, 0, 1)); L['grass'][bare] = 0
 L['grass'][solid] = 0
-L['flowers'] = (0.01 + 0.6 * np.clip(N_SMALL * N_MID - 0.3, 0, 1) + 0.2 * verge * N_SMALL); L['flowers'][bare] = 0
+L['flowers'] = (0.005 + 0.4 * np.clip(N_SMALL * N_MID - 0.33, 0, 1) + 0.1 * verge * N_SMALL); L['flowers'][bare] = 0
 L['rocks'] = (0.004 + 0.02 * np.clip(N_LARGE - 0.6, 0, 1)); L['rocks'][bare | tall_free] = 0
 L['wood'] = (0.003 + 0.01 * np.clip(N_LARGE - 0.55, 0, 1) * (N_SMALL > 0.4)); L['wood'][bare | tall_free] = 0  # stumps, logs, mushrooms, ferns
 L['wood'] *= 1
@@ -371,6 +371,11 @@ for rad, nflw, jit in ((8.6, 30, 0.5), (5.6, 14, 0.4)):
         if not free_pt(x, z): continue
         if rad < 6 and k % 3 == 0: ring.append(row('grass-clump-b', x, z, rr(0.9, 1.2)))
         else: ring.append(row(FLOWER_IDS[(k // 2) % 4], x, z, rr(0.95, 1.35)))
+# big, bright flower beds either side of the lane at the well so the ring reads at eye level (the review: the small patches were lost in the grass)
+for k, (sgn, zz) in enumerate([(s_, z_) for s_ in (-1, 1) for z_ in (125.5, 128.5, 131.5, 134.5)]):
+    x, z = sgn * rr(5.4, 6.6), zz + rr(-0.6, 0.6)
+    if not free_pt(x, z): continue
+    ring.append(row(FLOWER_IDS[k % 4], x, z, rr(2.1, 2.7)))
 P += ring
 # two birches and an elm on the edge of the green, clear of the lane, the houses and the trigger spheres (first free candidate)
 edge_trees = []
