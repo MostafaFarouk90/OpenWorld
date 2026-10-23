@@ -9,7 +9,7 @@ import type { PlaceholderShape } from './resolve';
 const objects = targets.objects as Record<string, { w: number; d: number; h: number }>;
 
 export function targetSize(id: string): { w: number; d: number; h: number } {
-  return objects[id] ?? { w: 1, d: 1, h: 1 };
+  return objects[id] ?? objects[id.replace(/-ashen$/, '')] ?? { w: 1, d: 1, h: 1 };
 }
 
 const colored = (g: THREE.BufferGeometry, hex: number): THREE.BufferGeometry => {

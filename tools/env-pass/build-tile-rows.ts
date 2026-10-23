@@ -6,13 +6,24 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { BRIGHTWATER_LAYOUT as L } from '../../src/region/brightwater.layout';
 import { pointInFootprint } from '../../src/region/geometry';
 
-const [inPath, outPath] = process.argv.slice(2);
-if (!inPath || !outPath) throw new Error('usage: build-tile-rows.ts <in.json> <out.json>');
+// Optional extra rectangles the tile owns outside its core (a seam ruled to this tile): `--also x0,x1,z0,z1` (repeatable).
+const args = process.argv.slice(2);
+const also: Array<[number, number, number, number]> = [];
+for (let i = args.length - 1; i >= 0; i--) {
+  if (args[i] === '--also') {
+    also.push(args[i + 1]!.split(',').map(Number) as [number, number, number, number]);
+    args.splice(i, 2);
+  }
+}
+const [inPath, outPath] = args;
+if (!inPath || !outPath) throw new Error('usage: build-tile-rows.ts <in.json> <out.json> [--also x0,x1,z0,z1]');
 const MARGIN = 0.4;
 const ANCHOR_CLEAR = 1.0;
 const file = JSON.parse(readFileSync(inPath, 'utf8')) as { core: { x: [number, number]; z: [number, number] }; placements: Array<{ id: string; x: number; z: number; yaw?: number; scale?: number }> };
 const { core } = file;
-const placements = file.placements.filter((r) => r.x >= core.x[0] && r.x <= core.x[1] && r.z >= core.z[0] && r.z <= core.z[1]);
+const owns = (r: { x: number; z: number }): boolean =>
+  (r.x >= core.x[0] && r.x <= core.x[1] && r.z >= core.z[0] && r.z <= core.z[1]) || also.some(([x0, x1, z0, z1]) => r.x >= x0 && r.x < x1 && r.z > z0 && r.z <= z1);
+const placements = file.placements.filter(owns);
 const ground = (id: string): boolean => /^(grass|flower)/.test(id);
 const solids = L.structures.filter((s) => s.mode !== 'open');
 const dropped: Record<string, number> = {};

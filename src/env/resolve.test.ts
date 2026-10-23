@@ -35,6 +35,27 @@ describe('resolveModel', () => {
       expect(resolveModel(id), id).toEqual({ source: 'env', model: `env/${id}`, scale: 1 });
   });
 
+  it('drains the colour of an -ashen id and keeps the base model and size', () => {
+    const plain = resolveModel('oak-a');
+    const ash = resolveModel('oak-a-ashen');
+    expect(ash).toMatchObject({ source: 'env', model: 'env/oak-a', scale: 1 });
+    expect(ash.source === 'env' && ash.tint?.sat).toBeLessThan(0.5);
+    expect(plain.source === 'env' && plain.tint).toBeUndefined();
+    // A variant keeps its own size and tint under the ash colour.
+    const b = resolveModel('oak-b-ashen');
+    expect(b).toMatchObject({ model: 'env/oak-a', scale: 0.85 });
+    expect(b.source === 'env' && b.tint?.mul).toBeLessThan(0xe0eac8);
+    expect(resolveModel('haystack-round-ashen')).toMatchObject({ source: 'env', model: 'env/haystack-round' });
+  });
+
+  it('builds the slim poplar from the birch and the dead trees from KayKit', () => {
+    const p = resolveModel('poplar-a');
+    expect(p).toMatchObject({ source: 'env', model: 'env/birch-a', scale: 1.75 });
+    expect(p.source === 'env' && p.girth).toBeLessThan(1);
+    expect(resolveModel('ash-tree-dead-a')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_medium', fitHeight: 6.5 });
+    expect(resolveModel('cairn-a')).toMatchObject({ source: 'env', model: 'env/rock-cluster-a', scale: 0.5 });
+  });
+
   it('never leaves a targeted id unresolved', () => {
     for (const id of Object.keys(targets.objects)) expect(() => resolveModel(id), id).not.toThrow();
   });
