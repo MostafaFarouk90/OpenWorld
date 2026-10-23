@@ -18,6 +18,7 @@ const plugin: GamePlugin = {
       quests: () => ctx.services.get('quests'),
       enemies: () => ctx.services.get('enemies'),
       trials: () => ctx.services.get('trials'),
+      keepAlliesOff: (id) => ctx.services.get('allyEngagement')?.exclude?.(id) ?? (() => {}),
       dialogueOpen: () => ctx.services.get('dialogue')?.active ?? false,
       defineAnchor: (a) => ctx.anchors.define(a),
       playerFeet: () => ctx.player.feet,

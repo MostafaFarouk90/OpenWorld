@@ -78,7 +78,7 @@ export class Trials implements TrialsService {
 
   constructor(private readonly p: TrialPorts) {
     this.offs.push(
-      p.addLethalHandler(TRIAL_FLOOR_ID, (target) => this.floor(target), TRIAL_TUNING.floorOrder),
+      p.addLethalHandler(TRIAL_FLOOR_ID, (target, result) => this.floor(target, result), TRIAL_TUNING.floorOrder),
       p.events.on('actor.staggered', ({ actorId, byId }) => {
         const r = this.run;
         if (!r) return;
@@ -185,7 +185,7 @@ export class Trials implements TrialsService {
   }
 
   /** The 1 HP floor for both sides, falls and status ticks included. */
-  private floor(target: Actor): boolean {
+  private floor(target: Actor, result?: Readonly<{ attackerId?: ActorId | null }>): boolean {
     const r = this.run;
     if (!r) return false;
     const playerId = this.p.actors.player.id;
@@ -193,7 +193,9 @@ export class Trials implements TrialsService {
     target.health = Math.min(1, target.maxHealth);
     // Held at the floor: a break for the other side, scored next tick (outside the resolver's hit). Not in the
     // pause: the pause ends with both sides healed again.
-    if (!r.floored && r.pause <= 0) r.floored = target.id === playerId ? 'opponent' : 'player';
+    // Only Cael's own blow breaks the opponent: a companion's or the familiar's does not win the bout for him.
+    const caelHit = target.id === playerId || result?.attackerId === playerId;
+    if (!r.floored && r.pause <= 0 && caelHit) r.floored = target.id === playerId ? 'opponent' : 'player';
     return true;
   }
 

@@ -37,6 +37,8 @@ export const R10_TALK_CHOICE_IDS = ['evidence', 'standing', 'bluff'] as const;
 /** This module's own names (not A13's): the dialogue event the duel choice raises, and the choice id. */
 export const R10_DUEL_START_EVENT = 'story.r10duel.start';
 export const R10_DUEL_CHOICE_ID = 'duel';
+/** True while a duel is asked for, a bout runs, or any other trial runs: the duel choice is hidden then (never saved as true: a load recomputes it). */
+export const R10_DUEL_BUSY_FLAG = 'story.r10duel.busy';
 export const r10DuelTrialId = (n: R10Round): string => `r10.duel.${n}`;
 
 export function isR10Round(v: unknown): v is R10Round {

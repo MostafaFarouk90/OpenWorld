@@ -330,3 +330,18 @@ describe('TauntRegistry hysteresis', () => {
     expect(r.pick({ x: 0, z: 0 }, 'a')).toBeNull();
   });
 });
+
+describe('an untauntable spawner', () => {
+  it('its members ignore taunts', () => {
+    const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: -12 } });
+    fake.defineAnchor('spawn.one', 0, 0);
+    const manager = new EnemyManager(fake.host, FakeHost.factory(gltf), { spawners: [{ ...SPAWNERS[0]!, untauntable: true }], seed: 7 });
+    const [id] = manager.service.spawnGroup('one', { aggro: true });
+    const enemy = manager.get(id)!;
+    for (let i = 0; i < 60; i++) manager.think(DT);
+    const actor = fake.host.actors.spawn({ kind: 'familiar', team: 'ally', maxHealth: 60, untargetable: true } as never);
+    manager.service.taunts.register({ id: actor.id, radius: 10, seconds: 8, position: () => ({ x: 6, y: 0, z: 0 }), alive: () => true });
+    for (let i = 0; i < 30; i++) manager.think(DT);
+    expect(enemy.brain.target).toBe('player');
+  });
+});

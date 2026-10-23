@@ -3,6 +3,7 @@
 // A13's R10 rounds (main before A13 merges) comes back unchanged.
 import type { DialogueChoice, DialogueDef, DialogueNode } from '../../../types';
 import {
+  R10_DUEL_BUSY_FLAG,
   R10_DUEL_CHOICE_ID,
   R10_DUEL_START_EVENT,
   R10_ROUNDS,
@@ -64,6 +65,7 @@ export function withR10Duels(defs: readonly DialogueDef[]): R10DuelPatch {
       const choice: DialogueChoice = {
         id: R10_DUEL_CHOICE_ID,
         textKey: choiceKey,
+        when: { not: { flag: R10_DUEL_BUSY_FLAG, equals: true } },
         next: replyNode(n, 0),
         effects: [{ event: R10_DUEL_START_EVENT, payload: { n: String(n) } }],
       };

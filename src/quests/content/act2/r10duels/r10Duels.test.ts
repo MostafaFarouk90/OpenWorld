@@ -1,6 +1,7 @@
 // R10's optional duels against the real pieces they join: A5's trial service on a real damage resolver, the real
-// dialogue runner and effect runner on the real flag store, and a copy of A13's three round trees (A13's branch is not
-// merged, so the fixture below rebuilds its rounds exactly as `roundChoices` / `roundSegments` build them at 6ab7e35).
+// dialogue runner and effect runner on the real flag store, and A13's real R10 round dialogue (PR #133, merged in this
+// bundle: the defs and strings come from `dialogueDefs` and `dialogueStrings`, not a copy). If A13 renames a dialogue id,
+// segment or flag, these tests fail.
 import { describe, expect, it } from 'vitest';
 import { ActorRegistry } from '../../../../actors/ActorRegistry';
 import { DamageResolver } from '../../../../actors/DamageResolver';
@@ -8,8 +9,6 @@ import { playerInit } from '../../../../actors/teams';
 import { GameEvents, type GameEventMap } from '../../../../core/events';
 import { TRIAL_TUNING, Trials } from '../../../../companions/trials';
 import { DialogueRunner } from '../../../../dialogue/DialogueRunner';
-import { buildTree, type ChoiceSpec, type Line } from '../../../../dialogue/content/act2/build';
-import { all, flagIs, not, objDone, objOpen, qActive } from '../../../../dialogue/content/act2/cond';
 import { dialogueDefs } from '../../../../dialogue/content';
 import { dialogueStrings } from '../../../../dialogue/strings.en';
 import { validateDialogue } from '../../../../dialogue/validate';
@@ -24,34 +23,14 @@ import { R10Duels, R10_DUEL_ANCHOR, R10_DUEL_SPAWNER, R10_DUEL_SPAWNERS } from '
 
 const DT = 1 / 60;
 
-// ---- A13's round trees (fixture: src/dialogue/content/act2/oldsmoke/stewards.dialogue.ts at 6ab7e35) ----
+// ---- A13's real round trees ----
 
-const compromise = flagIs('story.r10.branch', 'compromise');
-function roundChoices(n: R10Round): ChoiceSpec[] {
-  const won = [{ setFlag: `story.r10.p.${n}`, value: true }, { event: 'story.r10.persuaded', payload: { n: String(n) } }] as ChoiceSpec['fx'];
-  return [
-    { id: 'evidence', t: 'Put the ledgers on the table.', go: `r10-round-${n}-won`, when: objDone('r10', 'read'), fx: won },
-    { id: 'standing', t: 'Remind them whose Writ is in your satchel.', go: `r10-round-${n}-won`, when: { favour: 'grisel', atLeast: 10 }, fx: won },
-    { id: 'bluff', t: 'Tell them the Council will order it settled.', go: `r10-round-${n}-hint` },
-  ];
-}
-const roundStart = (n: R10Round) => all(qActive('r10'), compromise, objOpen('r10', 'talks'), not(flagIs(`story.r10.p.${n}`)));
-function a13Tree(n: R10Round) {
-  const { npcId, dialogueId } = R10_TARGETS[n];
-  const S = (t: string): Line => ({ s: npcId, t });
-  return buildTree({
-    id: dialogueId,
-    start: [{ when: roundStart(n), seg: `r10-round-${n}` }, { when: all(), seg: 'idle' }],
-    segments: {
-      [`r10-round-${n}`]: { lines: [S('Opener one.'), S('Opener two.'), S('I will not pretend I am easy to move.'), { s: npcId, t: 'Say your piece.', choices: roundChoices(n) }] },
-      [`r10-round-${n}-won`]: { lines: [S('...All right.'), S('Tell the foreman I will sit.')] },
-      [`r10-round-${n}-hint`]: { lines: [S('A bluff is a bluff.')] },
-      idle: { lines: [S('Idle.')] },
-    },
-  });
-}
-const A13 = ([1, 2, 3] as const).map(a13Tree);
-const A13_STRINGS: Record<string, string> = Object.assign({}, ...A13.map((t) => t.strings));
+const A13 = ([1, 2, 3] as const).map((n) => {
+  const def = dialogueDefs.find((d) => d.id === R10_TARGETS[n].dialogueId);
+  if (!def) throw new Error(`A13's dialogue ${R10_TARGETS[n].dialogueId} is missing`);
+  return { def };
+});
+const A13_STRINGS: Record<string, string> = dialogueStrings;
 
 // ---- the rig ----
 
@@ -198,18 +177,28 @@ const loseBout = (r: Rig): void => {
 // ---- the hook ----
 
 describe('R10 duels: the dialogue hook', () => {
-  it('on the game\'s own defs: only A13\'s three rounds change (none on main before A13 merges), each to a valid tree', () => {
+  it('on the game\'s own defs: A13\'s three rounds (ids npc-miner-1, npc-steward-market-1, npc-steward-market-2) all get the duel, each to a valid tree', () => {
     const targets = new Set(Object.values(R10_TARGETS).map((t) => t.dialogueId));
-    const hasA13 = dialogueDefs.some((d) => targets.has(d.id));
+    expect([...targets].sort()).toEqual(['npc-miner-1', 'npc-steward-market-1', 'npc-steward-market-2']);
+    for (const id of targets) expect(dialogueDefs.some((d) => d.id === id), `A13 dialogue ${id}`).toBe(true);
     const p = withR10Duels(dialogueDefs);
-    expect([...p.rounds].sort()).toEqual(hasA13 ? [1, 2, 3] : []);
-    if (!hasA13) expect(p.strings).toEqual({});
+    expect([...p.rounds].sort()).toEqual([1, 2, 3]);
     const strings: Record<string, string> = { ...dialogueStrings, ...p.strings };
     p.defs.forEach((d, i) => {
       if (!targets.has(d.id)) return void expect(d).toBe(dialogueDefs[i]);
       expect(d.nodes.slice(0, dialogueDefs[i].nodes.length).map((n) => n.id)).toEqual(dialogueDefs[i].nodes.map((n) => n.id));
       expect(validateDialogue(d, (k) => k in strings).errors).toEqual([]);
     });
+  });
+
+  it('A13\'s real won-round effects are the flag and event the duel writes', () => {
+    for (const n of [1, 2, 3] as const) {
+      const node = A13[n - 1].def.nodes.find((x) => x.choices?.some((c) => c.id === 'evidence'))!;
+      const win = node.choices!.find((c) => c.id === 'evidence')!.effects;
+      expect(win).toEqual(
+        expect.arrayContaining([{ setFlag: r10RoundFlag(n), value: true }, { event: R10_PERSUADED_EVENT, payload: { n: String(n) } }]),
+      );
+    }
   });
 
   it('adds one duel choice beside the three talk choices of each round, valid, with its strings, without changing the input', () => {
@@ -388,13 +377,71 @@ describe('R10 duels: the talks still work, and nothing pays twice', () => {
   });
 });
 
+describe('R10 duels: the offer is hidden when it cannot start', () => {
+  it('hides the duel choice while a bout runs, and offers it again when the bout is over', () => {
+    const r = rig();
+    r.duel(1);
+    expect(r.talk(2, null)).toEqual(['evidence', 'standing', 'bluff']);
+    winBout(r);
+    expect(r.talk(2, null)).toEqual(['evidence', 'standing', 'bluff', 'duel']);
+  });
+
+  it('hides the duel choice while any other trial runs, and from the moment a duel is asked for', () => {
+    const r = rig();
+    const other = r.actors.spawn({ kind: 'hrolf', team: 'hostile', maxHealth: 50 });
+    expect(r.trials.start({ id: 'm13.duel', opponentId: other.id })).toBe(true);
+    expect(r.talk(1, null)).toEqual(['evidence', 'standing', 'bluff']);
+    r.trials.stop('m13.duel');
+    expect(r.talk(1, null)).toEqual(['evidence', 'standing', 'bluff', 'duel']);
+    // Asked for but not started yet (the dialogue is still open): a second request is refused and the choice is hidden.
+    expect(r.duels.request(1)).toBe(true);
+    expect(r.duels.request(2)).toBe(false);
+    expect(r.state.getFlag('story.r10duel.busy')).toBe(true);
+  });
+
+  it('refuses a duel request while another trial runs', () => {
+    const r = rig();
+    const other = r.actors.spawn({ kind: 'hrolf', team: 'hostile', maxHealth: 50 });
+    r.trials.start({ id: 'm13.duel', opponentId: other.id });
+    expect(r.duels.request(1)).toBe(false);
+  });
+});
+
+describe('R10 duels: only Cael fights the second', () => {
+  it('keeps allies off the second for the bout and lets them back after it', () => {
+    const r = rig();
+    const kept: string[] = [];
+    const freed: string[] = [];
+    const d = new R10Duels({
+      events: r.events, state: r.state, quests: () => ({ state: () => 'active' as const, objectiveDone: () => false }),
+      enemies: () => ({ spawnGroup: () => [r.actors.spawn({ kind: 'yard-veteran', team: 'hostile', maxHealth: 70 }).id], despawnGroup: () => {} }),
+      trials: () => r.trials, dialogueOpen: () => false, defineAnchor: () => () => {}, playerFeet: () => ({ x: 0, y: 0, z: 0 }),
+      playerYaw: () => 0, warn: () => {},
+      keepAlliesOff: (id) => (kept.push(id), () => void freed.push(id)),
+    });
+    expect(d.request(1)).toBe(true);
+    d.fixedUpdate();
+    expect(kept).toHaveLength(1);
+    expect(freed).toEqual([]);
+    r.trials.stop('r10.duel.1');
+    expect(freed).toEqual(kept);
+    d.dispose();
+  });
+
+  it('the duel\'s spawner makes the second ignore taunts', () => {
+    expect(R10_DUEL_SPAWNERS[0].untauntable).toBe(true);
+  });
+});
+
 describe('R10 duels: save, load and teardown', () => {
   it('a save made mid-bout holds no bout; loading it ends the bout unpaid and the round can be fought again', () => {
     const r = rig();
     r.duel(1);
     r.breakBy('player');
     const saved = JSON.parse(JSON.stringify(r.state.serialize()));
-    expect(JSON.stringify(saved)).not.toMatch(/r10duel|r10\.duel|story\.r10\.p\./);
+    expect(JSON.stringify(saved)).not.toMatch(/r10\.duel|story\.r10\.p\./);
+    // The busy flag the choice reads is the one saved value; the load recomputes it from what is running.
+    expect(saved.flags['story.r10duel.busy']).toBe(true);
     // The load as the game runs it: the companions entry ends the trial first, then the flags, then `save.loaded`.
     r.trials.beginLoad();
     r.state.load(saved);
@@ -406,6 +453,7 @@ describe('R10 duels: save, load and teardown', () => {
     expect(r.alive.has(R10_DUEL_SPAWNER)).toBe(false);
     expect(r.persuaded).toEqual([]);
     expect(r.state.getFlag('story.r10.branch')).toBe('compromise');
+    expect(r.state.getFlag('story.r10duel.busy')).toBe(false);
     r.duel(1);
     expect(r.trials.state()).toMatchObject({ id: 'r10.duel.1', player: 0, opponent: 0 });
     winBout(r);

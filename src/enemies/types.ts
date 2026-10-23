@@ -280,6 +280,8 @@ export interface SpawnerDef {
   guard?: boolean;
   /** Members spawn peaceful (`SpawnOptions.peaceful`) unless the spawn call says otherwise: the resting den wyrm. */
   peaceful?: boolean;
+  /** Members ignore taunts (the Iron Familiar): the R10 duel's second must keep fighting Cael. */
+  untauntable?: boolean;
 }
 
 export interface SpawnOptions {

@@ -21,6 +21,7 @@ import type { QuestState } from '../../../types';
 import {
   R10_BRANCH_FLAG,
   R10_COMPROMISE,
+  R10_DUEL_BUSY_FLAG,
   R10_DUEL_START_EVENT,
   R10_PERSUADED_EVENT,
   R10_QUEST,
@@ -54,7 +55,7 @@ export const R10_DUEL_ANCHOR = 'oldsmoke.r10.duel.ring';
 export const R10_DUEL_SPAWNERS: readonly SpawnerDef[] = [
   {
     id: R10_DUEL_SPAWNER, tag: 'r10.duel', enemy: R10_DUEL_ENEMY, count: 1, anchor: R10_DUEL_ANCHOR,
-    activation: 'manual', ephemeral: true, leash: false, band: 'oldsmoke', respawn: 'never',
+    activation: 'manual', ephemeral: true, untauntable: true, leash: false, band: 'oldsmoke', respawn: 'never',
   },
 ];
 
@@ -64,6 +65,8 @@ export interface R10DuelPorts {
   quests(): { state(id: string): QuestState; objectiveDone(q: string, o: string): boolean } | undefined;
   enemies(): { spawnGroup(id: string, opts?: { aggro?: boolean }): ActorId[]; despawnGroup(id: string): void } | undefined;
   trials(): TrialsService | undefined;
+  /** `allyEngagement.exclude`: keeps companions and the familiar off the second for the bout. Absent: no exclusion. */
+  keepAlliesOff?(opponentId: ActorId): () => void;
   /** True while a dialogue is open: the bout starts once the talk that offered it has closed. */
   dialogueOpen(): boolean;
   defineAnchor(a: Anchor): () => void;
@@ -78,6 +81,7 @@ interface Bout {
   trialId: string;
   opponentId: ActorId;
   offAnchor: () => void;
+  offAllies: () => void;
 }
 
 export interface R10DuelView {
@@ -107,8 +111,10 @@ export class R10Duels {
       ev.on('trial.won', ({ trialId }) => {
         if (this.bout?.trialId === trialId) this.win(this.bout.n);
       }),
+      ev.on('trial.started', () => this.setBusy(true)),
       ev.on('trial.ended', ({ trialId }) => {
         if (this.bout?.trialId === trialId) this.clear();
+        this.refreshBusy(trialId);
       }),
       // The second yields and is Spared: the bout is won (the trial then ends as the second leaves).
       ev.on('mercy', (e) => {
@@ -121,8 +127,20 @@ export class R10Duels {
       ev.on('save.loaded', () => {
         this.pending = null;
         this.stopBout();
+        this.refreshBusy();
       }),
     );
+    this.refreshBusy();
+  }
+
+  /** The flag the duel choice's condition reads; it is recomputed from what is running, so a saved value never sticks. */
+  private setBusy(busy: boolean): void {
+    if (this.p.state.getFlag(R10_DUEL_BUSY_FLAG) !== busy) this.p.state.setFlag(R10_DUEL_BUSY_FLAG, busy);
+  }
+
+  private refreshBusy(endedTrialId?: string): void {
+    const running = this.p.trials()?.state();
+    this.setBusy(this.pending !== null || this.bout !== null || (!!running && running.id !== endedTrialId));
   }
 
   /** The running bout, or null. */
@@ -141,8 +159,9 @@ export class R10Duels {
 
   /** Asks for round `n`'s bout (the dialogue choice's event); it starts on the first tick with no dialogue open. */
   request(n: R10Round): boolean {
-    if (this.disposed || this.bout || !this.canDuel(n)) return false;
+    if (this.disposed || this.bout || this.pending !== null || this.p.trials()?.state() || !this.canDuel(n)) return false;
     this.pending = n;
+    this.setBusy(true);
     return true;
   }
 
@@ -162,12 +181,14 @@ export class R10Duels {
     if (n === null || this.p.dialogueOpen()) return;
     this.pending = null;
     if (!this.bout && this.canDuel(n)) this.begin(n);
+    this.refreshBusy();
   }
 
   dispose(): void {
     if (this.disposed) return;
     this.pending = null;
     this.stopBout();
+    this.setBusy(false);
     if (this.sweep) this.p.enemies()?.despawnGroup(R10_DUEL_SPAWNER);
     this.sweep = false;
     this.disposed = true;
@@ -200,7 +221,7 @@ export class R10Duels {
     }
     const trialId = r10DuelTrialId(n);
     // Set before start: `trial.started` listeners may already ask what is running.
-    this.bout = { n, trialId, opponentId, offAnchor };
+    this.bout = { n, trialId, opponentId, offAnchor, offAllies: this.p.keepAlliesOff?.(opponentId) ?? (() => {}) };
     if (!trials.start({ id: trialId, opponentId, breaksToWin: R10_DUEL_TUNING.breaksToWin, onLoss: 'end' })) {
       this.clear();
       this.p.warn('R10 duels: the trial did not start');
@@ -227,6 +248,7 @@ export class R10Duels {
     if (!b) return;
     this.bout = null;
     b.offAnchor();
+    b.offAllies();
     this.sweep = true;
   }
 }

@@ -73,6 +73,11 @@ export class SpawnerRegistry {
   /** Groups that have members placed and have not been despawned or reset since (a refill needs its group live). */
   private readonly live = new Set<string>();
   private pendingRefills: PendingRefill[] = [];
+  /** The registered def of a spawner, or undefined. */
+  defOf(id: string): SpawnerDef | undefined {
+    return this.defs.get(id);
+  }
+
   /** The actor in `leaderSlot` of a group, or null. */
   leaderOf(id: string): ActorId | null {
     const slot = this.defs.get(id)?.leaderSlot;
