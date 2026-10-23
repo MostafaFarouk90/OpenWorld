@@ -18,7 +18,7 @@ export const M17R08_PACE: readonly M17R08PaceRow[] = [
     // the ride down and up are lift beats (30 s each); the winch parts are interacts, the vents interacts, the swarm 12 crawlers
     quest: 'm17', design: 45, floor: 18, nodes: 32,
     route: [
-      'npc-post.slagg.shaft', 'oldsmoke.shaft.head', 'oldsmoke.shaft.winch.part.1', 'oldsmoke.shaft.winch.part.2', 'oldsmoke.shaft.winch.part.3',
+      'npc-post.slagg.shaft', 'oldsmoke.shaft.head', 'oldsmoke.shaft.board', 'oldsmoke.shaft.tally', 'oldsmoke.shaft.winch.part.1', 'oldsmoke.shaft.winch.part.2', 'oldsmoke.shaft.winch.part.3',
       'oldsmoke.shaft.door', 'oldsmoke.shaft.head', 'oldsmoke.shaft.winch', 'oldsmoke.shaft.lift.top',
       'oldsmoke.shaft.floor', 'oldsmoke.shaft.vent.1', 'oldsmoke.shaft.vent.2', 'oldsmoke.shaft.vent.3', 'oldsmoke.shaft.vent.4',
       'oldsmoke.shaft.miner.1', 'oldsmoke.shaft.floor', 'oldsmoke.shaft.miner.2', 'oldsmoke.shaft.floor',

@@ -80,13 +80,13 @@ const WENNA_EXT = buildTree({
         C('And then?'),
         W('Chains. Five of them, bolted to posts along the far wall, and a wyrmling on each. They are children, Knight. Young as the cubs your hounds would have had.'),
         W('There is something beyond them that the stewards will not name. It is old, it is chained, and it has been awake a long time.'),
-        W('Then go down. I will wait at the lift, and I will not pretend that I am not afraid for you.', [{ startQuest: 'm20' }]),
+        W('Then go down. I will be here in the nursery when you come up, and I will not pretend that I am not afraid for you.', [{ startQuest: 'm20' }]),
       ],
     },
     'a2-m20-wait': { lines: [W('The stewards first, then the chains. Go gently with the young ones. They have never been touched by a hand that was not holding a whip.')] },
     'a2-m20-aftermath': {
       lines: [
-        W('I heard it from the lift. The whole shaft rang like a bell.'),
+        W('I heard it from the nursery. The whole shaft rang like a bell.'),
         C('Orsk went up through the roof. I have never seen anything so large move so quietly.'),
         W('Quiet is the wrong word. He has been waiting a hundred winters to be loud.'),
         W('The wyrmlings?'),
@@ -94,7 +94,7 @@ const WENNA_EXT = buildTree({
         W('Then my father has lost his stock and his guardian in one morning, and he does not yet know it.'),
         W('I should feel something besides relief. I keep waiting for it.'),
         C('You went in with me.'),
-        W('I stood at the lift. That is not going in. Next time I will not stand at the lift.'),
+        W('I stayed in the nursery. That is not going in. Next time I will not stay behind.'),
         W('The Deepdelve is next. Slagg has been talking about it for a month, and I have stopped letting myself hope he is exaggerating. Go and see him.'),
       ],
     },
@@ -116,7 +116,7 @@ const SLAGG_EXT = buildTree({
   segments: {
     'a2-d04-offer': {
       lines: [
-        S('{name}. Sit, if the Deepdelve has left you anything to sit on. It is the third level of the pit and it has run hot ever since the lift stopped.'),
+        S('{name}. Wenna sent you, or the roof did. Either way: the Deepdelve. It is the third level of the pit and it has run hot ever since the lift stopped.'),
         C('What is down there?'),
         S('Everything a shaft could be, and worse. Slag that was cold in my father\'s day is cherry-red now. The crawlers have bred through the old workings like rats. And there is a thing at the bottom that does not like to be looked at.'),
         S('The Slagmaw. I have not seen it. I have heard it, from the second stage, and it is a sound that turns your stomach into a cold cup.'),

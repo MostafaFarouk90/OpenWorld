@@ -78,6 +78,11 @@ describe('content shape', () => {
     for (const n of M17R08.notes) if (n.codexId) expect(M17R08.strings[`codex.${n.codexId}.name`], n.id).toBeTruthy();
   });
 
+  it('no note shares an anchor with a prop or another note, so both stay usable', () => {
+    const anchors = [...M17R08.props.map((p) => p.anchorId), ...M17R08.notes.map((n) => n.anchorId)];
+    expect(new Set(anchors).size).toBe(anchors.length);
+  });
+
   it('reward items are registered with strings, and no string carries a dash or the literal name', () => {
     for (const i of M17R08.items) { expect(M17R08.itemStrings[i.nameKey]).toBeTruthy(); expect(M17R08.itemStrings[i.descKey]).toBeTruthy(); }
     for (const [k, v] of Object.entries({ ...M17R08.strings, ...M17R08.itemStrings })) {

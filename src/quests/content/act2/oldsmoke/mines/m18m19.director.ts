@@ -245,7 +245,9 @@ export function installM19(k: Kit, ports: M19Ports = {}): Off {
     figure?.place(hideTarget ?? at, guide.yaw, mode);
     figure?.update(FIXED_TIMESTEP);
 
-    if (barkQueue.length && reason === null && !dialogueBusy()) {
+    // A bark dialogue takes the controls, so none opens while the stealth objective is live (before, during or between attempts at
+    // the section); the queue waits and plays on the far side. Her wait toasts are unaffected.
+    if (barkQueue.length && reason === null && !dialogueBusy() && !k.objCurrent('m19', 'stealth')) {
       if (dialogue()?.start(`scene-m19-bark-${barkQueue[0]}`, 'scene.m19.bark')) barkQueue.shift();
     }
   };

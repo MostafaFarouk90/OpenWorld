@@ -228,7 +228,7 @@ describe('Slagg: D04', () => {
     w.set('m16', 'completed');
     w.set('m20', 'completed');
     w.set('d04', 'completed');
-    expect(opens(w, 'npc-slagg', 'slagg')).toBe('offers');
+    expect(opens(w, 'npc-slagg', 'slagg')).toBe('offer-r09');
   });
 });
 

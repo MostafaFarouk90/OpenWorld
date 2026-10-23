@@ -293,6 +293,19 @@ describe('the spy letter', () => {
 });
 
 describe('Slagg', () => {
+  it('only says "two jobs" while both R09 and R10 are open', () => {
+    const text = (w: Wd): string => { w.dr.start('npc-slagg', 'slagg'); const t = (w.dr.view() as any).text as string; w.dr.close('skip'); return t; };
+    const both = world(); both.set('m16', 'completed'); both.set('m17', 'completed');
+    expect(opens(both, 'npc-slagg', 'slagg')).toBe('offers');
+    expect(text(both)).toMatch(/two jobs/);
+    const r10Only = world(); r10Only.set('m16', 'completed'); r10Only.set('m17', 'completed'); r10Only.set('r09', 'completed');
+    expect(opens(r10Only, 'npc-slagg', 'slagg')).toBe('offer-r10');
+    expect(text(r10Only)).not.toMatch(/two jobs/);
+    expect(choiceIds(r10Only, 'npc-slagg', 'slagg', 'offer-r10')).toEqual(['strike']);
+    play(r10Only, 'npc-slagg', 'slagg', 'strike');
+    expect(r10Only.log).toContain('start r10');
+  });
+
   it('offers R09 after M16 and R10 after M17, and starts what is chosen', () => {
     const w = world();
     w.set('m16', 'completed');
@@ -300,8 +313,8 @@ describe('Slagg', () => {
     expect(opens(w, 'npc-slagg', 'slagg')).toBe('a2-m17-brief');
     // once M17 is under way the older offer applies again
     w.set('m17', 'active');
-    expect(opens(w, 'npc-slagg', 'slagg')).toBe('offers');
-    expect(choiceIds(w, 'npc-slagg', 'slagg', 'offers').sort()).toEqual(['coin']);
+    expect(opens(w, 'npc-slagg', 'slagg')).toBe('offer-r09');
+    expect(choiceIds(w, 'npc-slagg', 'slagg', 'offer-r09').sort()).toEqual(['coin']);
     play(w, 'npc-slagg', 'slagg', 'coin');
     expect(w.log).toContain('start r09');
     const w2 = world();

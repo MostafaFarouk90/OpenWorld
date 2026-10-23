@@ -1,5 +1,5 @@
 import { buildTree, type Line } from '../build';
-import { all, any, flagIs, not, objDone, objOpen, qActive, qDone, qIdle, step } from '../cond';
+import { all, flagIs, not, objDone, objOpen, qActive, qDone, qIdle, step } from '../cond';
 
 const S = (t: string, fx?: Line['fx']): Line => (fx ? { s: 'slagg', t, fx } : { s: 'slagg', t });
 const C = (t: string): Line => ({ s: 'cael', t });
@@ -21,7 +21,9 @@ export const SLAGG = buildTree({
     { when: all(qActive('r10'), objDone('r10', 'choice'), objOpen('r10', 'ruling')), seg: 'r10-wait-ruling' },
     { when: qActive('r10'), seg: 'r10-wait' },
     { when: qActive('r09'), seg: 'r09-wait' },
-    { when: any(r09Avail, r10Avail), seg: 'offers' },
+    { when: all(r09Avail, r10Avail), seg: 'offers' },
+    { when: r09Avail, seg: 'offer-r09' },
+    { when: r10Avail, seg: 'offer-r10' },
     { when: all(), seg: 'idle' },
   ],
   segments: {
@@ -35,6 +37,13 @@ export const SLAGG = buildTree({
           ],
         },
       ],
+    },
+    // Only one of the two is open (R10 waits for M17; R09 may already be done): no choice to make, and no "two jobs".
+    'offer-r09': {
+      lines: [{ s: 'slagg', t: '{name}. I have a job that needs a Knight\'s name behind it, and only one pair of hands to spare.', choices: [{ id: 'coin', t: 'The payroll chests.', go: 'r09-brief' }] }],
+    },
+    'offer-r10': {
+      lines: [{ s: 'slagg', t: '{name}. The shaft is working again, and now the strike will not wait. I need a Knight\'s name behind this one.', choices: [{ id: 'strike', t: 'The strike.', go: 'r10-brief' }] }],
     },
     'r09-brief': {
       lines: [

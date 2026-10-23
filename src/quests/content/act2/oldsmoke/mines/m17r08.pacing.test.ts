@@ -17,7 +17,7 @@ describe('M17 and R08 pacing', () => {
   it('every route point is in the local table, and the surface ones that the layout publishes exist there too', () => {
     for (const r of M17R08_PACE) for (const a of r.route) expect(M17R08_POS[a], `${r.quest}: ${a}`).toBeDefined();
     const layout = new Set(OLDSMOKE_LAYOUT.anchors.map((a) => a.id));
-    for (const id of ['oldsmoke.shaft.head', 'oldsmoke.shaft.door', 'oldsmoke.shaft.lift.top', 'oldsmoke.shaft.winch', 'oldsmoke.shaft.winch.part.1', 'oldsmoke.shaft.winch.part.2', 'oldsmoke.shaft.winch.part.3', 'npc-post.slagg.shaft']) {
+    for (const id of ['oldsmoke.shaft.head', 'oldsmoke.shaft.door', 'oldsmoke.shaft.lift.top', 'oldsmoke.shaft.winch', 'oldsmoke.shaft.winch.part.1', 'oldsmoke.shaft.winch.part.2', 'oldsmoke.shaft.winch.part.3', 'oldsmoke.shaft.board', 'oldsmoke.shaft.tally', 'npc-post.slagg.shaft']) {
       expect(layout.has(id), id).toBe(true);
     }
   });

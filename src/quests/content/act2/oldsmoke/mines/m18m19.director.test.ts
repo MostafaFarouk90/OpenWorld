@@ -489,6 +489,18 @@ describe('M19 guide: the sealed door, barks, the nursery', () => {
     r.dispose();
   });
 
+  it('opens no bark dialogue while the stealth objective is live, and plays the queued bark once it is done', () => {
+    const r = rig();
+    r.state.setFlag(M19_DOOR_OPEN_FLAG, true);
+    r.current.add('m19.stealth');
+    walkTo(r, 60 * 10);
+    expect(r.dialogues).toEqual([]);
+    r.current.delete('m19.stealth');
+    r.step(60 * 2);
+    expect(r.dialogues[0]).toEqual(['scene-m19-bark-1', 'scene.m19.bark']);
+    r.dispose();
+  });
+
   it('a teleport past some barks skips them, and a teleport back does not replay one', () => {
     const r = rig();
     r.state.setFlag(M19_DOOR_OPEN_FLAG, true);

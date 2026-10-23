@@ -112,7 +112,7 @@ describe('Slagg opens on the right segment', () => {
   const cases: Array<[string, (w: Wd) => void, string]> = [
     ['M16 done, M17 not begun', (w) => w.set('m16', 'completed'), 'a2-m17-brief'],
     ['M17 ready to report', (w) => { w.set('m16', 'completed'); w.set('m17', 'active', 'thanks'); }, 'a2-m17-report'],
-    ['M17 mid-quest falls through to the base tree (R09 offer)', (w) => { w.set('m16', 'completed'); w.set('m17', 'active', 'brief'); }, 'offers'],
+    ['M17 mid-quest falls through to the base tree (R09 offer, R10 not yet open)', (w) => { w.set('m16', 'completed'); w.set('m17', 'active', 'brief'); }, 'offer-r09'],
     ['M17 done offers R09 and R10 as before', (w) => { w.set('m16', 'completed'); w.set('m17', 'completed'); }, 'offers'],
     ['before M16 Slagg only idles', () => {}, 'idle'],
     ['R10 active still has its own segment', (w) => { w.set('m17', 'completed'); w.set('r10', 'active'); }, 'r10-wait'],

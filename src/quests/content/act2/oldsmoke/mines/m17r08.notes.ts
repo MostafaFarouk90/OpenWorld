@@ -7,11 +7,11 @@ const n = (id: string, anchorId: string, speaker: 'note' | 'cael', lines: string
 /** Readable notes of M17 (two search beats at the shaft head) and R08 (six relics and the widow's letter in the Old Galleries). */
 export const M17R08_NOTE_LIST: Act2Note[] = [
   // M17: the shaft head
-  n('note-m17-board', 'oldsmoke.shaft.winch.part.1', 'note', [
+  n('note-m17-board', 'oldsmoke.shaft.board', 'note', [
     'The lift board by the collar door, chalk on slate. "Lift out of service by order. Shaft inspection to follow." The date is the day the strike was voted.',
     'No inspector is named. The chalk has been wiped and rewritten four times, always in the same hand.',
   ]),
-  n('note-m17-tally', 'oldsmoke.shaft.winch.part.2', 'cael', [
+  n('note-m17-tally', 'oldsmoke.shaft.tally', 'cael', [
     'A tally of the last men down before the lift stopped, scratched into the headframe post. Eleven strokes. Two have a small cross beside them.',
     'Nobody has scratched the strokes of those who came up. It was never meant to be a tally of the living.',
   ], 'grave'),
