@@ -263,7 +263,7 @@ describe('a taunted enemy aims at its target, not the player', () => {
       aim: () => bait,
     };
     const overlay = makeFlightOverlay(ctx as never, { diveLocked: (_id: string, at: { x: number; z: number }) => void (hubAt = at) } as never);
-    overlay.telegraphed?.({ id: 'wyrm.dive', windup: 1, activeStart: 0, activeEnd: 1, clip: 'd' } as never);
+    overlay.telegraphed?.({ id: 'wyrm.dive', windup: 1, activeStart: 0, activeEnd: 1, clip: 'd' } as never, 1);
     expect(hubAt).toMatchObject({ x: 5, z: 3 });
   });
 });
@@ -338,10 +338,17 @@ describe('an untauntable spawner', () => {
     const manager = new EnemyManager(fake.host, FakeHost.factory(gltf), { spawners: [{ ...SPAWNERS[0]!, untauntable: true }], seed: 7 });
     const [id] = manager.service.spawnGroup('one', { aggro: true });
     const enemy = manager.get(id)!;
-    for (let i = 0; i < 60; i++) manager.think(DT);
+    const step = () => {
+      manager.think(DT);
+      manager.animate(DT);
+      fake.combatStep(DT);
+      manager.react(DT);
+    };
+    for (let i = 0; i < Math.round((AI.riseSeconds + 0.5) / DT); i++) step();
+    expect(enemy.brain.target).toBe('player');
     const actor = fake.host.actors.spawn({ kind: 'familiar', team: 'ally', maxHealth: 60, untargetable: true } as never);
     manager.service.taunts.register({ id: actor.id, radius: 10, seconds: 8, position: () => ({ x: 6, y: 0, z: 0 }), alive: () => true });
-    for (let i = 0; i < 30; i++) manager.think(DT);
+    for (let i = 0; i < 30; i++) step();
     expect(enemy.brain.target).toBe('player');
   });
 });
