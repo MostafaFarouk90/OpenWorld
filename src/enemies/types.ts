@@ -186,6 +186,11 @@ export interface EnemyDef {
   walkSpeed: number;
   chaseSpeed: number;
   moves: readonly MoveDef[];
+  /**
+   * Whether a registered taunter (the Iron Familiar) can draw this kind. Default: true for plain enemies, false for a registered
+   * boss; a boss def sets `true` to opt in, any def sets `false` to opt out.
+   */
+  tauntable?: boolean;
   /** Flee below this health fraction (design: pack animals at 0.15); undefined never flees. */
   fleeAtHealth?: number;
   /** None for kinds that cannot be spared, released or calmed (the watch guard). */

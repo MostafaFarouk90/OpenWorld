@@ -112,7 +112,13 @@ const plugin: GamePlugin = {
         ctx.scene.add(root);
         try {
           const actor = ctx.actors.spawn({ id, kind: IRON_FAMILIAR.kind, team: 'ally', maxHealth: IRON_FAMILIAR.health, hittable: false, untargetable: true, root });
-          return { actor: actor as never, place: (x, y, z) => root.position.set(x, y, z), dispose: () => { ctx.actors.despawn(id); free(); } };
+          // A taunter while it lives: nearby enemies target it for `tauntSeconds` (enemies/taunts.ts).
+          const untaunt = svc<{ taunts?: { register(s: unknown): () => void } }>('enemies')?.taunts?.register({
+            id, radius: IRON_FAMILIAR.tauntRadius, seconds: IRON_FAMILIAR.tauntSeconds,
+            position: () => (root.parent ? { x: root.position.x, y: root.position.y, z: root.position.z } : null),
+            alive: () => !actor.dead,
+          });
+          return { actor: actor as never, place: (x, y, z) => root.position.set(x, y, z), dispose: () => { untaunt?.(); ctx.actors.despawn(id); free(); } };
         } catch (err) {
           free();
           console.warn('[emberwright] familiar spawn failed', err);

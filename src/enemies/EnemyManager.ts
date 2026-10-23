@@ -29,6 +29,7 @@ import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } fro
 import { ASH_GRAB, BOSS_MERCY, GUARD, MERCY, PAIR, WARM_HAND_BURN, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions, UnlockVerb } from './types';
 import { makeLineOfSight } from './ai/perception';
+import { TauntRegistry, type TauntService } from './taunts';
 import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
 
 
@@ -68,6 +69,8 @@ export interface EnemiesService {
     /** A thrown offering landed: Calm like a held one's. False when the beast is not open to it. */
     calmByThrow(actorId: ActorId): boolean;
   };
+  /** Target choice: a taunter (the Iron Familiar) registers here and nearby enemies target it for its duration. */
+  taunts: TauntService;
   /** Perception hook for stealth and skills (thread 18, 15). */
   perception: {
     register(provider: PerceptionProvider): Unregister;
@@ -189,6 +192,7 @@ export class EnemyManager {
       all: () => this.all(),
       calmByThrow: (id) => this.calmByThrow(id),
     },
+    taunts: { register: (s) => this.tauntRegistry.register(s) },
     perception: {
       register: (p) => this.perceptionHub.register(p),
       state: (id) => this.enemies.get(id)?.perceptionState() ?? null,
@@ -208,6 +212,15 @@ export class EnemyManager {
     this.applyMercy(mercyEvents([subject]));
     this.calmFx(enemy.feet, { kind: 'free' });
     return true;
+  }
+
+  readonly tauntRegistry = new TauntRegistry();
+
+  /** True for a registered boss actor (the core registry knows them). */
+  private isBoss(actorId: ActorId): boolean {
+    const bosses = this.host.bosses;
+    if (bosses?.active) for (const b of bosses.active()) if (bosses.state(b)?.actorId === actorId) return true;
+    return false;
   }
 
   readonly perceptionHub = new PerceptionHub((m) => this.host.warn(m));
@@ -235,6 +248,7 @@ export class EnemyManager {
 
   think(dt: number): void {
     this.clock += dt;
+    this.tauntRegistry.update(dt);
     this.pathBudget.reset();
     this.updateDormancy();
     for (const e of this.enemies.values()) e.think(dt);
@@ -703,6 +717,12 @@ export class EnemyManager {
       this.tokenOf.delete(self);
       this.tokenAt.delete(self);
       this.tokens.get(t)?.delete(self);
+    },
+    taunt: (self: Enemy) => {
+      if (this.tauntRegistry.size === 0) return null;
+      const opt = self.def.tauntable;
+      if (opt === false || (opt !== true && this.isBoss(self.id))) return null;
+      return this.tauntRegistry.pick(self.feet);
     },
     perceptionModifiers: (self: Enemy, targetId: ActorId) => this.perceptionHub.combined(targetId, () => self.pose()),
     partnerOf: (self: Enemy) => {
