@@ -85,6 +85,15 @@ for (const [name, c] of Object.entries(table.cameras)) {
         stable = g.terrain.stats.pending === 0 ? stable + 1 : 0;
       }
       { const f = g.game.ctx.player.feet; console.log("env at shot", JSON.stringify(env?.drawn("b3")), "ph", env?.placeholders("b3"), "feet", f.x.toFixed(0), f.z.toFixed(0)); }
+      // Terrain heights can still change while chunks stream in: re-aim the camera on the settled ground, then let 20 frames pass.
+      g.__ov?.release(0);
+      g.__ov = g.camera.override({
+        position: { x: px, y: ground(px, pz) + py, z: pz },
+        lookAt: { x: lx, y: ground(lx, lz) + ly, z: lz },
+        fov: c.fov,
+        blendIn: 0,
+      });
+      for (let i = 0; i < 20; i++) await new Promise((r) => requestAnimationFrame(r));
       return stable >= 30;
     },
     { c },

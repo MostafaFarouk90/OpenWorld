@@ -36,7 +36,7 @@ const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Ti
   'flower-patch-purple': { base: 'flower-patch-yellow', scale: 1, tint: { hue: 235 } },
   'flower-patch-red': { base: 'flower-patch-yellow', scale: 1, tint: { hue: -48 } },
   // B3 (Hollin Ford): holly on the brook banks and weeping willows, until Mostafa's files exist (plans/env-pass/b3/missing-objects.md).
-  'bush-holly-a': { base: 'bush-round-a', scale: 1.05, tint: { hue: -20, sat: 0.9, mul: 0x7fa070 } },
+  'bush-holly-a': { base: 'bush-round-a', scale: 1.05, tint: { hue: 14, sat: 0.95, mul: 0x6f9a6a } },
   // A squat, pale elm: 6.9 m wide and 8 m tall like the willow target. The drooping silhouette is a visual gap until a file arrives.
   'willow-a': { base: 'elm-or-ash-a', scale: 1.15, stretchY: 0.7, tint: { hue: 24, sat: 0.9, mul: 0xc8dcaa } },
   // Reed clumps: the grass clump stretched to 1.75 m and drained toward olive (was the green cone placeholder).
