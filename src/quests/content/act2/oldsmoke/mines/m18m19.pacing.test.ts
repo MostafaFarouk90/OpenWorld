@@ -1,5 +1,5 @@
-// Pacing of M18 and M19 (plans/act2-A13.md section 5). A4's mine anchors are not on this branch, so the routes are measured on
-// the local position table `M18M19_POS` (documented in m18m19.pacing.ts); the test also checks that every route point is in
+// Pacing of M18 and M19 (plans/act2-A13.md section 5). the routes are measured on A4's real mine anchors
+// (`M18M19_POS`, built in realAnchors.ts); the test also checks that every route point is in
 // that table and that the guide's walking pace is what the timing table counts.
 import { describe, expect, it } from 'vitest';
 import { ROUTE_FOLLOW_MPS } from '../../../../../integration/timing';

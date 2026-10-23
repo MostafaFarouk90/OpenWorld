@@ -14,10 +14,6 @@ export const M18_INTERIOR = 'mine-weeping-bellows';
 export const M19_INTERIOR = 'mine-lower-galleries';
 export const M19_ROUTE_PREFIX = 'oldsmoke.m19.route';
 export const M19_NURSERY_ANCHOR = 'oldsmoke.m19.nursery';
-export const M19_DOOR_BLOCKER = 'oldsmoke.lower.sealed.door';
-export const M19_GATE_BLOCKER = 'oldsmoke.lower.shortcut.gate';
-/** A9's flag, read only: the Bellows puzzle is solved and the shortcut is open. */
-export const SHORTCUT_FLAG = 'world.bellows.shortcutOpen';
 export const M19_ARRIVED_FLAG = 'story.m19.guideArrived';
 /** The guide's saved node and barks are two number flags (world state is saved with the game; no persistable, so no new save fixture). */
 export const M19_GUIDE_NODE_FLAG = 'story.m19.guideNode';
@@ -68,7 +64,7 @@ const parseSave = (d: unknown): GuideSave | null => {
 };
 
 /**
- * M19: the nursery reveal, the sealed door and the shortcut gate, and Wenna's route guide.
+ * M19: the nursery reveal, and Wenna's route guide (A4 owns the sealed door and the shortcut gate).
  *
  * The guide walks `oldsmoke.m19.route.0..n` between the confession and the reveal, only while the player is in the Lower
  * Galleries. The NPC `wenna` is hidden and a stand-in figure walks: she advances while the player is within 8 m, waits (a
@@ -93,24 +89,8 @@ export function installM19(k: Kit, ports: M19Ports = {}): Off {
   k.on('trigger.exit', (e) => { if (e.actorId === 'player' && e.triggerId === M19_NURSERY_TRIGGER) inNursery = false; });
   scenePoll(k, () => k.active('m19') && k.objCurrent('m19', 'reveal') && inNursery, () => dialogue()?.start(M19_SCENE, 'scene.m19') === true);
 
-  // ---- the sealed door and the shortcut gate (blockers in A4's Lower Galleries) ---------------------
-  const applied = new Map<string, boolean>();
-  let blockerWarned = false;
-  const syncBlockers = (force: boolean): void => {
-    const service = interiors();
-    if (!service) return;
-    const want: [string, boolean][] = [[M19_DOOR_BLOCKER, !k.flag(M19_DOOR_OPEN_FLAG)], [M19_GATE_BLOCKER, !k.flag(SHORTCUT_FLAG)]];
-    for (const [id, closed] of want) {
-      if (!force && applied.get(id) === closed) continue;
-      if (service.setBlocker(id, closed)) applied.set(id, closed);
-      else {
-        applied.delete(id);
-        if (!blockerWarned) { blockerWarned = true; k.warn(`m19: no blocker ${id} yet`); }
-      }
-    }
-  };
-  k.every(30, () => syncBlockers(false));
-  k.on('interior.entered', (e) => { if (e.interiorId === M19_INTERIOR) syncBlockers(true); });
+  // The sealed door and the shortcut gate are A4's (src/oldsmoke/mines/lowerRuntime.ts): it closes both until `story.m19.doorOpen` (our
+  // `doors` objective) and `world.bellows.shortcutOpen` (A9) are set. This director does not touch the blockers.
 
   // ---- the guide ------------------------------------------------------------------------------
   let guide: WennaGuide | null = null;
@@ -218,7 +198,6 @@ export function installM19(k: Kit, ports: M19Ports = {}): Off {
     justLoaded = interiors()?.current === M19_INTERIOR;
     saved = readSaved();
     if (guide && saved) { guide.restore({ node: saved.node }); nextBark = Math.min(saved.barks, M19_BARKS); }
-    syncBlockers(true);
     if (k.flag(M19_ARRIVED_FLAG) && k.active('m19')) placeAtNursery();
   });
 
@@ -229,10 +208,7 @@ export function installM19(k: Kit, ports: M19Ports = {}): Off {
     return null;
   };
 
-  let blockersSet = false;
   const tick = (): void => {
-    // the door and the gate are world state, not quest state: they are right from the first tick
-    if (!blockersSet) { blockersSet = true; syncBlockers(true); }
     if (grace > 0) grace--;
     if (!k.active('m19')) { stop(); return; }
     if (k.flag(M19_ARRIVED_FLAG)) return;

@@ -12,7 +12,7 @@ import { makeKit, type Off } from '../../director/kit';
 import { GUIDE, WennaGuide, guidePoints, type P3 } from './m19Route';
 import type { FigureMode, GuideFigure } from './m19Figure';
 import {
-  installM18, installM19, M18_INTERIOR, M19_ARRIVED_FLAG, M19_DOOR_BLOCKER, M19_GATE_BLOCKER, M19_GUIDE_BARKS_FLAG, M19_GUIDE_NODE_FLAG, M19_INTERIOR, SHORTCUT_FLAG,
+  installM18, installM19, M18_INTERIOR, M19_ARRIVED_FLAG, M19_GUIDE_BARKS_FLAG, M19_GUIDE_NODE_FLAG, M19_INTERIOR,
 } from './m18m19.director';
 import { M18_SCENE } from './m18.quest';
 import { M19_DOOR_OPEN_FLAG, M19_NURSERY_TRIGGER, M19_SCENE, M19_SECTION } from './m19.quest';
@@ -642,58 +642,13 @@ describe('M19 guide: saves', () => {
 });
 
 describe('M19: the sealed door and the shortcut gate', () => {
-  it('closes the door and the gate on the first tick, and opens each on its own flag', () => {
-    const r = rig();
-    r.step(2);
-    expect(r.blockers).toContainEqual([M19_DOOR_BLOCKER, true]);
-    expect(r.blockers).toContainEqual([M19_GATE_BLOCKER, true]);
-    r.blockers.length = 0;
-    r.state.setFlag(SHORTCUT_FLAG, true);
-    r.step(30);
-    expect(r.blockers).toEqual([[M19_GATE_BLOCKER, false]]);
-    r.blockers.length = 0;
-    r.state.setFlag(M19_DOOR_OPEN_FLAG, true);
-    r.step(30);
-    expect(r.blockers).toEqual([[M19_DOOR_BLOCKER, false]]);
-    r.blockers.length = 0;
-    r.step(120);
-    expect(r.blockers).toEqual([]); // applied once
-    r.dispose();
-  });
-
-  it('the gate follows A9\'s flag alone: M18 is not involved', () => {
-    const r = rig();
-    r.quest.set('m18', 'completed');
-    r.step(2);
-    expect(r.blockers).toContainEqual([M19_GATE_BLOCKER, true]);
-    r.dispose();
-  });
-
-  it('re-applies both on entering the Lower Galleries and after a load', () => {
+  it('are A4\'s (lowerRuntime): the director never writes a blocker', () => {
     const r = rig();
     r.state.setFlag(M19_DOOR_OPEN_FLAG, true);
-    r.step(30);
-    r.blockers.length = 0;
-    r.events.emit('interior.entered', { interiorId: M19_INTERIOR, doorId: 'd' });
-    expect(r.blockers).toContainEqual([M19_DOOR_BLOCKER, false]);
-    expect(r.blockers).toContainEqual([M19_GATE_BLOCKER, true]);
-    r.blockers.length = 0;
-    r.events.emit('interior.entered', { interiorId: 'grisel-hall', doorId: 'd' });
-    expect(r.blockers).toEqual([]);
-    r.events.emit('save.loaded', { slot: 'a' } as never);
-    expect(r.blockers).toHaveLength(2);
-    r.dispose();
-  });
-
-  it('an unknown blocker warns once and is retried on the next entry, not every poll', () => {
-    const r = rig();
-    r.blockerKnown.ok = false;
     r.step(300);
-    expect(r.warn).toHaveBeenCalledTimes(1);
-    const calls = r.blockers.length;
-    r.blockerKnown.ok = true;
     r.events.emit('interior.entered', { interiorId: M19_INTERIOR, doorId: 'd' });
-    expect(r.blockers.length).toBe(calls + 2);
+    r.events.emit('save.loaded', { slot: 'a' } as never);
+    expect(r.blockers).toEqual([]);
     r.dispose();
   });
 });

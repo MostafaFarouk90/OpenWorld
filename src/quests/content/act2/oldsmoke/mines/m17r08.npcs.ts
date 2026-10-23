@@ -34,8 +34,8 @@ export const M17R08_NPC_STRINGS: Record<string, string> = {
  */
 export const M17R08_NPCS: NpcSpec[] = [
   { id: 'winch-wright', post: 'oldsmoke.shaft.head' },
-  { id: 'miner-hale', post: 'oldsmoke.shaft.winch.part.3', presentWhen: 'story.m17.miner1.delivered' },
-  { id: 'miner-brig', post: 'oldsmoke.shaft.winch', presentWhen: 'story.m17.miner2.delivered' },
-  { id: 'pickett', post: 'oldsmoke.old.spawn.2', absentWhen: R08_LAID_FLAG },
-  { id: 'shift-crew', post: 'oldsmoke.old.spawn.3', absentWhen: R08_LAID_FLAG },
+  { id: 'miner-hale', post: 'npc-post.miner-hale.shaft', presentWhen: 'story.m17.miner1.delivered' },
+  { id: 'miner-brig', post: 'npc-post.miner-brig.shaft', presentWhen: 'story.m17.miner2.delivered' },
+  { id: 'pickett', post: 'npc-post.pickett.old', absentWhen: R08_LAID_FLAG },
+  { id: 'shift-crew', post: 'npc-post.shift-crew.old', absentWhen: R08_LAID_FLAG },
 ];

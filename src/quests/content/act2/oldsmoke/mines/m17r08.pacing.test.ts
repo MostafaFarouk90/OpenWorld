@@ -1,6 +1,5 @@
-// Pacing of M17 and R08 (plans/act2-A13.md section 5). A4's mine anchors are not on this branch, so the routes are measured
-// on the local position table `M17R08_POS` (documented in m17r08.pacing.ts); the test also checks that every route point
-// is in that table and, when the real layout does have a point, that the table's name is not stale.
+// Pacing of M17 and R08 (plans/act2-A13.md section 5). the routes are measured on A4's real anchors (`M17R08_POS`, built in realAnchors.ts from the mine
+// defs and the surface layout); the test also checks that every route point is in that table.
 import { describe, expect, it } from 'vitest';
 import { OLDSMOKE_LAYOUT } from '../../../../../oldsmoke/oldsmoke.layout';
 import { paceMinutes } from '../../pacing';

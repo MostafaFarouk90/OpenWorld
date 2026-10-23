@@ -14,6 +14,7 @@ import { HARROWMARK_SPAWNERS } from '../../../enemies/harrowmarkSpawners';
 import { ACT2_SPAWNERS } from '../../../enemies/act2Spawners';
 import { WYRM_SPAWNERS } from '../../../enemies/wyrm/spawners';
 import { WAVE_SPAWNERS } from '../../../waves/spawners';
+import { MINE_DEFS } from '../../../oldsmoke/mines';
 import { OLDSMOKE_LAYOUT } from '../../../oldsmoke/oldsmoke.layout';
 import { OLDSMOKE_NPC_DEFS } from '../../../oldsmoke/npcDefs';
 import { OLDSMOKE_SPAWNERS, OLDSMOKE_TRIGGERS } from './index';
@@ -26,32 +27,6 @@ import { SECTIONS } from '../../../stealth/sections';
 import { ACT2_QUEST_DEFS, ACT2_PROPS, ACT2_CARRY, ACT2_QUEST_NOTES, ACT2_SPAWNERS_A12, ACT2_TRIGGERS, ACT2_NOTE_LIST } from './index';
 import type { ObjectiveDef } from '../../types';
 
-const range = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => `${prefix}${i + 1}`);
-
-/**
- * PENDING, DELETE WHEN A4's MINES LAND (PR 2). The mine interiors and their anchors are A4's separate work and are not on this branch
- * yet, so the anchors the six mine quests (M17, R08, M18, M19, M20, D04) stand on cannot be read from a real layout. These are exactly
- * the ids of A4's plan (plans/act2-A4.md section 11) that the quests' props, notes, carry, triggers and spawners use. Once the layout
- * exists this constant goes and the real interior defs join `anchors` below, which is what the todo at the end of the file is for.
- */
-const MINES_PENDING_ANCHORS: readonly string[] = [
-  // mine-deepgate-shaft (M17)
-  ...range('oldsmoke.shaft.vent.', 4), ...range('oldsmoke.shaft.drop.', 12), ...range('oldsmoke.shaft.miner.', 2), 'oldsmoke.shaft.floor',
-  // mine-old-galleries (R08)
-  'oldsmoke.old.lift', ...['pump', 'cart', 'prop', 'bell'].map((t) => `oldsmoke.old.task.${t}`), ...range('oldsmoke.old.relic.', 6), ...range('oldsmoke.old.spawn.', 3),
-  // mine-weeping-bellows (M18)
-  'oldsmoke.bellows.pipes', ...range('oldsmoke.bellows.crawler.', 6),
-  // mine-lower-galleries (M19, M20)
-  ...range('oldsmoke.lower.sealed.', 3), 'oldsmoke.stealth.m19.start', 'oldsmoke.m19.nursery', ...range('oldsmoke.m20.chain.', 5), ...range('oldsmoke.m20.post.', 5),
-  'oldsmoke.m20.roof', 'oldsmoke.lower.spawn.1',
-  // mine-deepdelve (D04)
-  ...range('oldsmoke.deepdelve.stage.', 2), ...range('oldsmoke.deepdelve.valve.room.', 2), ...range('oldsmoke.deepdelve.pool.', 2),
-  // NOT in A4's section 11 table: M19's own guard posts and patrol, which the quest's spawner names. A4 must add them (or the spawner
-  // is repointed at the table's `oldsmoke.lower.*` anchors) when the layout lands.
-  ...range('oldsmoke.m19.watch.', 4), ...range('oldsmoke.m19.patrol.', 5),
-  // Anchors A4 confirmed or that our NPC specs stand on: Pike's apprentice, the keeper at the end of the stealth section, the captain.
-  'npc-post.pike-apprentice.bellows', 'oldsmoke.stealth.m19.end', 'oldsmoke.m20.captain',
-];
 
 const anchors = new Set<string>([
   ...CINDERREACH_LAYOUT.anchors.map((a) => a.id),
@@ -60,7 +35,7 @@ const anchors = new Set<string>([
   ...OLDSMOKE_LAYOUT.anchors.map((a) => a.id),
   ...GRISEL_HALL_DEF.anchors.map((a) => a.id),
   ...KEEP_HALL_DEF.anchors.map((a) => a.id),
-  ...MINES_PENDING_ANCHORS,
+  ...MINE_DEFS.flatMap((d) => d.anchors.map((a) => a.id)),
 ]);
 const triggers = new Set<string>([
   ...CINDERREACH_LAYOUT.triggers.map((t) => t.id),
@@ -152,14 +127,19 @@ describe('Cinderreach quest consumers', () => {
     }
   });
 
-  it('the surface anchors the Oldsmoke quests use resolve from the real layouts, not from the pending mine list', () => {
+  it('the surface anchors the Oldsmoke quests use resolve from the real layouts, not from the mine interiors', () => {
     const real = new Set<string>([...OLDSMOKE_LAYOUT.anchors, ...GRISEL_HALL_DEF.anchors].map((a) => a.id));
-    const pending = new Set(MINES_PENDING_ANCHORS);
-    const surface = OLDSMOKE_TRIGGERS.map((t) => t.anchorId).filter((a) => !pending.has(a));
+    const mine = new Set(MINE_DEFS.flatMap((d) => d.anchors.map((a) => a.id)));
+    const surface = OLDSMOKE_TRIGGERS.map((t) => t.anchorId).filter((a) => !mine.has(a));
     expect(surface.length).toBeGreaterThan(0);
     for (const a of surface) expect(anchors.has(a), a).toBe(true);
     for (const a of ['oldsmoke.shaft.door', 'oldsmoke.shaft.lift.top']) expect(real.has(a), a).toBe(true);
   });
 
-  it.todo("resolve the mine anchors against A4's layout once PR 2 lands: delete MINES_PENDING_ANCHORS");
+  it('every mine anchor the Oldsmoke quests use resolves against A4\'s mine layout', () => {
+    const mine = new Set(MINE_DEFS.flatMap((d) => d.anchors.map((a) => a.id)));
+    const used = [...OLDSMOKE_TRIGGERS.map((t) => t.anchorId), ...OLDSMOKE_SPAWNERS.flatMap((x) => [x.anchor, ...(x.memberAnchors ?? []), ...patrolOf(x)])];
+    expect(used.filter((a) => mine.has(a)).length).toBeGreaterThan(10);
+    for (const a of used.filter((x) => x.startsWith('oldsmoke.') || x.startsWith('npc-post.'))) expect(anchors.has(a), a).toBe(true);
+  });
 });

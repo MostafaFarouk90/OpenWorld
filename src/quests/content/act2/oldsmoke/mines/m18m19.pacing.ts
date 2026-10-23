@@ -1,41 +1,16 @@
-// Pacing rows for M18 and M19 (plans/act2-A13.md section 5), in the shape of ../pacing.ts. A4's mine anchors are not on this
-// branch, so the routes are measured on a local position table (`M18M19_POS`): each mine is sketched inside x [-70,70],
-// z [-130,10] of its own frame (A4's plan, section 11), in one shared frame so a lift ride costs its `lift` beat and no walk.
-// Re-measure against A4's real anchors when the mines land. Wenna leads M19's walk at ROUTE_FOLLOW_MPS, not the walking
+// Pacing rows for M18 and M19 (plans/act2-A13.md section 5), in the shape of ../pacing.ts, measured on A4's real anchors
+// (`realAnchors.ts`: each mine in its own local metres). Wenna leads M19's walk at ROUTE_FOLLOW_MPS, not the walking
 // pace: the `follow` count says how many legs from the route start are walked at her pace (`paceMinutesFollow`).
 import { ROUTE_FOLLOW_MPS, TALK_NODE_S, WALK_MPS, ACT2_BEAT_S, cappedTravelS } from '../../../../../integration/timing';
 import type { Act2Beat, AnchorPos, PaceResult, PaceRow } from '../../pacing';
+import { mineAnchors } from './realAnchors';
 
 export interface M18M19PaceRow extends PaceRow {
   /** legs, counted from the route start, walked behind Wenna at the route-follow pace */
   follow?: number;
 }
 
-export const M18M19_POS: AnchorPos = {
-  // mine-weeping-bellows
-  'oldsmoke.bellows.lift': { x: 0, z: -8 },
-  'npc-post.pike.bellows': { x: 8, z: -26 },
-  'npc-post.pike-apprentice.bellows': { x: -8, z: -26 },
-  'mines.weeping-bellows.center': { x: 0, z: -60 },
-  'oldsmoke.bellows.plaque': { x: 0, z: -73 },
-  'oldsmoke.bellows.pipes': { x: -20, z: -50 },
-  'oldsmoke.bellows.crawler.1': { x: 18, z: -60 },
-  'oldsmoke.bellows.crawler.2': { x: 9, z: -76 },
-  'oldsmoke.bellows.crawler.3': { x: -9, z: -76 },
-  'oldsmoke.bellows.crawler.4': { x: -18, z: -60 },
-  'oldsmoke.bellows.crawler.5': { x: -9, z: -44 },
-  'oldsmoke.bellows.crawler.6': { x: 9, z: -44 },
-  // mine-lower-galleries
-  'oldsmoke.lower.lift': { x: 0, z: -8 },
-  'oldsmoke.m19.route.3': { x: -40, z: -55 },
-  'oldsmoke.stealth.m19.start': { x: -50, z: -70 },
-  'oldsmoke.stealth.m19.cp.inside': { x: -30, z: -95 },
-  'oldsmoke.stealth.m19.end': { x: 10, z: -105 },
-  'oldsmoke.lower.sealed.1': { x: 20, z: -108 },
-  'oldsmoke.lower.sealed.2': { x: 24, z: -104 },
-  'oldsmoke.lower.sealed.3': { x: 28, z: -108 },
-  'oldsmoke.m19.nursery': { x: 50, z: -115 },
-};
+export const M18M19_POS: AnchorPos = { ...mineAnchors('mine-weeping-bellows'), ...mineAnchors('mine-lower-galleries') };
 
 export const M18M19_PACE: readonly M18M19PaceRow[] = [
   {

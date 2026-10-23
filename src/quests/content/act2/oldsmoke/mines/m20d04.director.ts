@@ -3,13 +3,14 @@
 // Oldsmoke director plugin; each returns the extra unsubscribes it owns (the kit's own listeners dispose with the plugin).
 import type { Kit, Off } from '../../director/kit';
 import { D04_BOSS, D04_OUTCOME_FLAG, D04_STARTED } from './d04.quest';
+import { M20_ROOF_HEIGHT } from '../../../../../oldsmoke/mines/lowerGalleries';
 import { M20_CHAIN_FLAGS, M20_ORSK_GONE } from './m20.quest';
 import { M20_CHAIN_ANCHORS, M20_NURSERY_GROUP } from './m20d04.data';
 import { installPools } from './m20d04.pools';
 
-/** A4's anchor for Orsk's position (and, by its yaw, his heading); the roof height A4 does not publish yet is this constant. */
+/** A4's anchor for Orsk's position (and, by its yaw, his heading); the roof height is A4's `M20_ROOF_HEIGHT`. */
 export const M20_ROOF_ANCHOR = 'oldsmoke.m20.roof';
-export const M20_ROOF_HEIGHT = 9;
+export { M20_ROOF_HEIGHT };
 /** A freed wyrmling walks to the Lower Galleries' lift before it fades (A4's landing inside). */
 export const M20_EXIT_ANCHOR = 'oldsmoke.lower.lift';
 /** Where Wenna stands once M20 is done (A4's hall post; the same anchor the post rules use after M16). */

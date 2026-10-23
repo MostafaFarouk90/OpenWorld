@@ -1,6 +1,5 @@
-// M20 and D04 pacing (plans/act2-A13.md section 5): each quest clears its floor and 40% of its design minutes. A4's mines are
-// not on this branch, so the routes read the LOCAL position constants in m20d04.pacing.ts, not the layout's anchors; when
-// A4's anchors merge, swap that table for the real one and this test keeps its meaning.
+// M20 and D04 pacing (plans/act2-A13.md section 5): each quest clears its floor and 40% of its design minutes. the routes read A4's real
+// mine anchors (realAnchors.ts).
 import { describe, expect, it } from 'vitest';
 import { paceMinutes } from '../../pacing';
 import { M20D04_LOCAL_ANCHORS, M20D04_PACE } from './m20d04.pacing';
