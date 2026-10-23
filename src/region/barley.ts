@@ -181,7 +181,17 @@ export function buildBarley(
   const soil = buildSoil(fields, heightAt, keepOut);
   if (placed.length === 0) {
     if (soil) group.add(soil);
-    return { object: group, instanceCount: 0, dispose: () => void group.removeFromParent() };
+    return {
+      object: group,
+      instanceCount: 0,
+      dispose: () => {
+        group.removeFromParent();
+        if (soil) {
+          soil.geometry.dispose();
+          (soil.material as THREE.Material).dispose();
+        }
+      },
+    };
   }
   const geometry = cardGeometry();
   const material = new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide, flatShading: true });

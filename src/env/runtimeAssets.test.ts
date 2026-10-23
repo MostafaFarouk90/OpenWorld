@@ -43,6 +43,15 @@ describe('runtime environment assets', () => {
     expect(Object.keys(manifest.objects).sort()).toEqual(files.map((f) => f.replace(/\.glb$/, '')).sort());
   });
 
+  it('batch 2 and later fit rule: width and depth stretch within 15%', () => {
+    const manifest = JSON.parse(fs.readFileSync(DIR + 'manifest.json', 'utf8'));
+    for (const [id, o] of Object.entries<any>(manifest.objects))
+      for (const k of o.stretch ?? []) {
+        expect(k, `${id} stretch`).toBeGreaterThanOrEqual(0.85 - 1e-3);
+        expect(k, `${id} stretch`).toBeLessThanOrEqual(1.15 + 1e-3);
+      }
+  });
+
   it('total runtime size stays small', () => {
     const total = files.reduce((s, f) => s + fs.statSync(DIR + f).size, 0) / 1e6;
     expect(total).toBeLessThan(40);
