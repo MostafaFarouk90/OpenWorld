@@ -32,6 +32,12 @@ describe('wyrm params', () => {
     expect(() => wyrmParams({ segments: 3 })).toThrow();
     expect(() => wyrmParams({ segments: 12.5 })).toThrow();
     expect(() => wyrmParams({ wingspan: -1 })).toThrow();
+    for (const k of ['stance', 'legScale', 'legGirth'] as const) {
+      expect(() => wyrmParams({ [k]: 0 })).toThrow(k);
+      expect(() => wyrmParams({ [k]: NaN })).toThrow(k);
+      expect(() => wyrmParams({ [k]: Infinity })).toThrow(k);
+    }
+    expect(wyrmParams()).toMatchObject({ stance: 1, legScale: 1, legGirth: 1 });
     expect(wyrmParams().segments).toBe(28);
   });
 });
