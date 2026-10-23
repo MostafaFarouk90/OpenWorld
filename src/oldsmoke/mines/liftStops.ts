@@ -41,7 +41,8 @@ export const LIFT_STOPS: readonly LiftStop[] = [
   { id: 'surface', labelKey: 'oldsmoke.lift.stop.surface', lockedKey: 'oldsmoke.lift.locked.surface', interiorId: null, doorId: null, when: { all: [] } },
   // The quest flags are A13's (agreed 2026-10-23): each quest writes its `started` flag when it is accepted.
   stop('shaft', { all: [armed, { flag: 'story.m17.started' }] }),
-  stop('old', { all: [armed, { flag: 'story.r08.started' }] }),
+  // Pickett, who offers R08, stands inside: M17's completion opens the stop too, or R08 could never be reached.
+  stop('old', { all: [armed, { any: [{ flag: 'story.r08.started' }, { flag: 'story.m17.complete' }] }] }),
   stop('lower', { all: [armed, { flag: 'story.m19.started' }] }),
   stop('bellows', { all: [armed, { flag: 'story.m18.started' }] }),
   stop('deepdelve', { all: [armed, quest('d04', 'both')] }),

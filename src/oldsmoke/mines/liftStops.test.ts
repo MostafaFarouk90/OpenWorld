@@ -26,6 +26,7 @@ describe('lift stops table', () => {
     ['armed, nothing started: only the surface', true, [], {}, ['surface']],
     ['m17 started opens the shaft', true, [STARTED.shaft], {}, ['surface', 'shaft']],
     ['r08 started opens old only', true, [STARTED.old], {}, ['surface', 'old']],
+    ['m17 complete opens old (Pickett is inside)', true, ['story.m17.complete'], {}, ['surface', 'old']],
     ['m19 started opens lower only', true, [STARTED.lower], {}, ['surface', 'lower']],
     ['m18 started opens bellows only', true, [STARTED.bellows], {}, ['surface', 'bellows']],
     ['quest states do not stand in for started flags', true, [], { m17: 'completed', m18: 'active' }, ['surface']],
