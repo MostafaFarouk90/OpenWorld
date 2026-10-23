@@ -22,6 +22,7 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 const errors = [];
+page.on('console', (m) => { if (m.text().startsWith('env at shot')) console.log(m.text()); });
 page.on('pageerror', (e) => errors.push(String(e)));
 await page.goto(`${base}?tutorial=veteran&quality=medium`);
 await page.waitForFunction(() => window.__game?.game?.ctx, null, { timeout: 900000 });
@@ -44,6 +45,17 @@ for (const [name, c] of Object.entries(table.cameras)) {
       const tp = g.game.ctx.player.teleport({ x: px, y: ground(px, pz) + 0.2, z: pz }, 0);
       const t0 = performance.now();
       while (!tp.ready() && performance.now() - t0 < 90000) await new Promise((r) => setTimeout(r, 200));
+      // The env plugin culls by distance from the Knight, and a teleport right after load can be dropped (the Knight stays at the
+      // spawn), which hid the ground cover and bushes around far shots. Pin the position the env plugin reads to the shot's ground.
+      if (!g.__feetPinned) {
+        const real = g.game.ctx.player.feet;
+        Object.defineProperty(g.game.ctx.player, 'feet', {
+          configurable: true,
+          get: () => (g.__pin ? new Proxy(real, { get: (t, k) => (k === 'x' ? g.__pin[0] : k === 'z' ? g.__pin[1] : Reflect.get(t, k)) }) : real),
+        });
+        g.__feetPinned = true;
+      }
+      g.__pin = [px, pz];
       g.__ov = g.camera.override({
         position: { x: px, y: ground(px, pz) + py, z: pz },
         lookAt: { x: lx, y: ground(lx, lz) + ly, z: lz },
@@ -56,9 +68,9 @@ for (const [name, c] of Object.entries(table.cameras)) {
         let last = -1;
         let since = performance.now();
         const e0 = performance.now();
-        while (performance.now() - since < 3000 && performance.now() - e0 < 200000) {
+        while ((last < 0 || performance.now() - since < 3000) && performance.now() - e0 < 300000) {
           await new Promise((r) => setTimeout(r, 250));
-          const n = ['b1', 'b3'].reduce((s, t) => s + Object.values(env.drawn(t) ?? {}).reduce((a, b) => a + b, 0), 0);
+          const n = !env.drawn('b3')?.ground || !env.drawn('b3')?.wood ? -2 : ['b1', 'b3'].reduce((s, t) => s + Object.values(env.drawn(t) ?? {}).reduce((a, b) => a + b, 0), 0);
           if (n !== last) {
             last = n;
             since = performance.now();
@@ -72,12 +84,13 @@ for (const [name, c] of Object.entries(table.cameras)) {
         await new Promise((r) => requestAnimationFrame(r));
         stable = g.terrain.stats.pending === 0 ? stable + 1 : 0;
       }
+      { const f = g.game.ctx.player.feet; console.log("env at shot", JSON.stringify(env?.drawn("b3")), "ph", env?.placeholders("b3"), "feet", f.x.toFixed(0), f.z.toFixed(0)); }
       return stable >= 30;
     },
     { c },
   );
   if (!result) throw new Error(`shot ${name} never settled`);
-  await page.screenshot({ path: path.join(outDir, `${kind}-${name}.png`) });
+  await page.screenshot({ path: path.join(outDir, `${kind}-${name}.png`), timeout: 600000 });
   console.log('shot', `${kind}-${name}`);
 }
 await browser.close();

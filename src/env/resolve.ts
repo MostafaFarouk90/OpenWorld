@@ -38,7 +38,7 @@ const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Ti
   // B3 (Hollin Ford): holly on the brook banks and weeping willows, until Mostafa's files exist (plans/env-pass/b3/missing-objects.md).
   'bush-holly-a': { base: 'bush-round-a', scale: 1.05, tint: { hue: -20, sat: 0.9, mul: 0x7fa070 } },
   // A squat, pale elm: 6.9 m wide and 8 m tall like the willow target. The drooping silhouette is a visual gap until a file arrives.
-  'willow-a': { base: 'elm-or-ash-a', scale: 1.15, stretchY: 0.7, tint: { hue: -10, mul: 0xc8dcaa } },
+  'willow-a': { base: 'elm-or-ash-a', scale: 1.15, stretchY: 0.7, tint: { hue: 24, sat: 0.9, mul: 0xc8dcaa } },
   // Reed clumps: the grass clump stretched to 1.75 m and drained toward olive (was the green cone placeholder).
   'reeds-a': { base: 'grass-clump-a', scale: 1.4, stretchY: 2.5, tint: { hue: -25, sat: 0.85, mul: 0xe6dcb0 } },
   'reeds-b': { base: 'grass-clump-a', scale: 1.2, stretchY: 3.0, tint: { hue: -35, sat: 0.7, mul: 0xd8d0a8 } },
@@ -73,7 +73,6 @@ const KAYKIT: Readonly<Record<string, { model: string; scale?: number; fitHeight
   'ash-tree-dead-b': { model: 'hal/tree_dead_medium', fitHeight: 7 },
   // B3 road dressing: a candle shrine for the wayside shrine, a rounded headstone shape for the milestones (interim, by id).
   'roadside-shrine-a': { model: 'hal/shrine_candles', fitHeight: 1.6 },
-  'milestone-a': { model: 'hal/gravestone', fitHeight: 1.0 },
 };
 
 const SHAPES: ReadonlyArray<[RegExp, PlaceholderShape]> = [

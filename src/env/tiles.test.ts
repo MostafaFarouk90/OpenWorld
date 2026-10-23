@@ -124,10 +124,10 @@ describe('B3 placements (Hollin Ford, its brook and river meadow, plus the reed-
   });
 
   it('clusters its ground cover instead of an even sprinkle (B1 review: specks)', () => {
-    // Share of 10 m cells holding ground rows: an even sprinkle of this many rows would touch most cells.
+    // Ground cover is dense (the old blade scatter is off inside the tile) but never isolated specks: many rows per occupied 10 m cell.
     const g = rows.filter((r) => isGround(r.id) && r.x < 0);
     const cells = new Set(g.map((r) => `${Math.floor(r.x / 10)},${Math.floor(r.z / 10)}`));
-    expect(cells.size / ((420 * 370) / 100)).toBeLessThan(0.55);
-    expect(g.length / cells.size).toBeGreaterThan(4);
+    expect(cells.size / ((420 * 370) / 100)).toBeLessThan(0.95);
+    expect(g.length / cells.size).toBeGreaterThan(6);
   });
 });

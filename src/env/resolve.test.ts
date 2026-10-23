@@ -37,7 +37,6 @@ describe('resolveModel', () => {
     expect(resolveModel('ash-tree-dead-a')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_large', fitHeight: 8 });
     expect(resolveModel('ash-tree-dead-b')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_medium', fitHeight: 7 });
     expect(resolveModel('roadside-shrine-a')).toMatchObject({ source: 'kaykit', model: 'hal/shrine_candles' });
-    expect(resolveModel('milestone-a')).toMatchObject({ source: 'kaykit', model: 'hal/gravestone' });
     for (const id of ['flag_red', 'rock_single_B', 'rock_single_C', 'tent']) expect(resolveModel(id).source, id).toBe('kaykit');
     // variants without a stretch carry none
     expect('stretchY' in resolveModel('oak-b')).toBe(false);
