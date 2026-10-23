@@ -8,7 +8,8 @@ Owner: thread A6a.
 - `builder/`: the rig. `WyrmRig` builds a wyrm from `WyrmParams` (scale, segments, palette, legs, spikes, crest) as
   one instanced spine, a head with a jaw, two wings (CPU flap, shader billow), legs, breath points, a spit cone decal
   and a chain. `Spine` is the follow-the-leader body; matrices stay local to the root (the far-coordinate rule).
-  Palettes: `ember`, `wyrmling`, `orsk`, `cooled-slag`. Three LODs with hysteresis.
+  Palettes: `ember`, `wyrmling`, `orsk`, `cooled-slag`. Three LODs with hysteresis. `stance`, `legScale` and
+  `legGirth` (default 1) change the body height and the legs for one build; only Orsk (`ORSK_PARAMS`) uses them.
 - `WyrmBody.ts`: the `EnemyBody` (`body: 'wyrm'`). Clips are named poses (`Spit`, `Bite`, `TailWhip`, `Dive`, `Puff`,
   `Rest`, `HeadLower`, the locomotion and hit clips), eight hurtboxes (`head`, `neck`, `torso`, `belly`, `tail`,
   `tailTip`, `wingL`, `wingR`).
@@ -49,4 +50,6 @@ R11: the den group (`wyrm.r11.den`) spawns on the quest's start; the quest despa
 ## Dev
 
 - `?wyrms=1` (dev builds): an Ember Wyrm 18 m ahead, two chained wyrmlings 8 m to the right, Orsk once after 8 s.
-- `tools/wyrm-showcase/` under `npx vite`: all three side by side on their own renderer (`?far=1`, `?pose=`, `?t=`).
+- `tools/wyrm-showcase/` under `npx vite`: all three side by side on their own renderer (`?far=1`, `?pose=`, `?t=`,
+  `?cam=all|ember|wyrmling|orsk|orsk-side`). `node tools/wyrm-showcase/shoot.mjs <outDir> [prefix]` renders every view
+  headless (vite on port 5198).

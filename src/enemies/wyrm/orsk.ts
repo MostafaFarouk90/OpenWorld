@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { CameraShot } from '../../rendering/ThirdPersonCamera';
+import type { WyrmParams } from './builder/params';
 import { restPose, WyrmRig, type RootFrame, type WyrmPose } from './builder/rig';
 
 /**
@@ -26,6 +27,19 @@ export const ORSK = {
   /** Hidden this far above the roof (the void over a floating interior never shows). */
   hideAbove: 2,
 } as const;
+
+/**
+ * Orsk's build. At 3x the Ember Wyrm's stance read as stilts (follow-up to A6a), so he alone rides lower (`stance`)
+ * on shorter, thicker legs that still plant his feet: an old, heavy animal. Every other wyrm keeps the defaults.
+ */
+export const ORSK_PARAMS: Readonly<Partial<WyrmParams>> = {
+  scale: ORSK.scale,
+  palette: 'orsk',
+  seed: 28,
+  stance: 0.62,
+  legScale: 0.75,
+  legGirth: 1.8,
+};
 
 /** The pure timeline: `step` returns the beats crossed this tick, in order; `skip` returns every one left. */
 export class OrskSequence {
@@ -149,7 +163,7 @@ export class OrskScene {
     private readonly req: OrskRequest,
   ) {
     this.done = new Promise((r) => (this.resolve = r));
-    this.rig = new WyrmRig({ scale: ORSK.scale, palette: 'orsk', seed: 28 });
+    this.rig = new WyrmRig(ORSK_PARAMS);
     this.frame = { x: req.position.x, y: req.position.y, z: req.position.z, yaw: req.yaw };
     this.rig.root.position.set(req.position.x, req.position.y, req.position.z);
     this.rig.root.rotation.set(0, req.yaw, 0);

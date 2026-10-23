@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { installFarPrecision } from '../../src/rendering/farPrecision';
 import { WyrmRig, restPose, type RootFrame, type WyrmPose } from '../../src/enemies/wyrm/builder/rig';
+import { ORSK_PARAMS } from '../../src/enemies/wyrm/orsk';
 import { WYRMLING } from '../../src/enemies/wyrm/tuning';
 
 const Q = new URLSearchParams(location.search);
@@ -99,7 +100,7 @@ const wyrmling = exhibit(
   },
 );
 wyrmling.rig.setChain({ x: BASE.x + 10.5, y: BASE.y, z: BASE.z + 1.5 });
-const orsk = exhibit(new WyrmRig({ scale: 3, palette: 'orsk', seed: 28 }), -26, -Math.PI / 2 + 0.3, (t, p) => {
+const orsk = exhibit(new WyrmRig(ORSK_PARAMS), -26, -Math.PI / 2 + 0.3, (t, p) => {
   Object.assign(p, restPose());
   p.headPitch = 0.2;
   p.jaw = 0.25 + 0.15 * Math.sin(t * 2);
@@ -108,12 +109,14 @@ const orsk = exhibit(new WyrmRig({ scale: 3, palette: 'orsk', seed: 28 }), -26, 
 });
 const exhibits = [ember, wyrmling, orsk];
 
-// `?cam=ember|wyrmling|orsk` frames one exhibit; the default frames all three.
+// `?cam=ember|wyrmling|orsk|orsk-side` frames one exhibit; the default frames all three.
 const CAMS: Record<string, [THREE.Vector3, THREE.Vector3]> = {
   all: [new THREE.Vector3(-8, 7, 26), new THREE.Vector3(-8, 2.5, 0)],
   ember: [new THREE.Vector3(2, 3.5, 10), new THREE.Vector3(-1, 1.6, 0)],
   wyrmling: [new THREE.Vector3(10.5, 1.2, 3.2), new THREE.Vector3(9.5, 0.4, 0.5)],
   orsk: [new THREE.Vector3(-18, 8, 26), new THREE.Vector3(-26, 4, 0)],
+  // Low and square to his flank, at a man's eye height: the stance (leg length, belly clearance) reads here.
+  'orsk-side': [new THREE.Vector3(-28, 1.7, 27), new THREE.Vector3(-28, 2.4, 0)],
 };
 const [camAt, camLook] = CAMS[Q.get('cam') ?? 'all'] ?? CAMS.all!;
 // The flying pose is 5 m up: raise the shot with it.

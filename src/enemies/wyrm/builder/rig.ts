@@ -328,7 +328,7 @@ export class WyrmRig {
   headWorld(root: RootFrame, altitude: number, pose: WyrmPose, out: Vec3Like = { x: 0, y: 0, z: 0 }): Vec3Like {
     const s = this.params.scale;
     const fwd = WYRM_SHAPE.headForward * s;
-    const h = WYRM_SHAPE.headHeight * s + altitude + Math.sin(pose.headPitch) * 0.3 * s;
+    const h = WYRM_SHAPE.headHeight * s * this.params.stance + altitude + Math.sin(pose.headPitch) * 0.3 * s;
     const yaw = root.yaw + pose.headYaw * 0.3;
     out.x = root.x - Math.sin(yaw) * fwd;
     out.y = root.y + h;
@@ -635,7 +635,7 @@ export class WyrmRig {
     const legs = this.legMesh!;
     const n = this.params.segments;
     const s = this.params.scale * (this.params.legs === 'small' ? 0.7 : 1);
-    const L = WYRM_SHAPE.legLength * s;
+    const L = WYRM_SHAPE.legLength * s * this.params.legScale;
     const tuck = clamp01(pose.legTuck);
     let k = 0;
     for (const [at, phase] of [[WYRM_SHAPE.shoulderAt + 0.04, 0], [WYRM_SHAPE.hipAt, Math.PI]] as const) {
@@ -654,7 +654,7 @@ export class WyrmRig {
           foot.lerp(tucked, tuck);
         }
         const knee = this.c.copy(hip).lerp(foot, 0.5).addScaledVector(this.z, 0.18 * L).addScaledVector(this.x, -side * 0.1 * L);
-        const rad = 0.09 * s;
+        const rad = 0.09 * s * this.params.legGirth;
         legs.setMatrixAt(k++, segmentMatrix(hip, knee, rad));
         legs.setMatrixAt(k++, segmentMatrix(knee, foot, rad * 0.75));
       }

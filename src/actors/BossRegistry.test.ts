@@ -126,9 +126,11 @@ describe('register and state', () => {
     ['breaks 0', { breaksPerPhase: 0 }],
     ['breaks 1.5', { breaksPerPhase: 1.5 }],
     ['breaks NaN', { breaksPerPhase: NaN }],
-    ['window 0', { releaseWindowSeconds: 0 }],
     ['window NaN', { releaseWindowSeconds: NaN }],
     ['window -1', { releaseWindowSeconds: -1 }],
+    ['window -0.001', { releaseWindowSeconds: -0.001 }],
+    ['window -Infinity', { releaseWindowSeconds: -Infinity }],
+    ['window Infinity', { releaseWindowSeconds: Infinity }],
   ] as [string, Partial<BossDef>][])('rejects invalid def: %s', (_n, patch) => {
     const { bosses, boss } = make();
     expect(() => bosses.register(boss.id, { ...DEF, ...patch })).toThrow(/BossRegistry/);
@@ -406,6 +408,70 @@ describe('release window', () => {
     expect(m.of('boss.releaseWindow').map((e) => e.open)).toEqual([true, false]);
     expect(m.of('boss.ended')).toEqual([{ bossId: 'ashen-prior', actorId: m.boss.id, reason: 'despawned' }]);
     expect(m.bosses.release('ashen-prior')).toBe(false);
+  });
+});
+
+describe('releaseWindowSeconds 0 (no release window)', () => {
+  const noMercy = (phases: number[] = []) => started({ ...DEF, phases, releaseWindowSeconds: 0 });
+
+  it('registers with 0 (and with -0) without throwing', () => {
+    const { bosses, boss } = make();
+    expect(() => bosses.register(boss.id, { ...DEF, releaseWindowSeconds: 0 })).not.toThrow();
+    expect(bosses.active()).toEqual(['ashen-prior']);
+    const m = make();
+    expect(() => m.bosses.register(m.boss.id, { ...DEF, releaseWindowSeconds: -0 })).not.toThrow();
+  });
+
+  it('the last break of a single-phase boss opens no window and emits no boss.releaseWindow', () => {
+    const { bosses, of, stagger } = noMercy();
+    stagger();
+    stagger();
+    stagger();
+    // boss.break still reports the final-phase break count reached.
+    expect(of('boss.break').at(-1)).toEqual({ bossId: 'ashen-prior', phase: 1, breaks: 3, last: true });
+    expect(of('boss.releaseWindow')).toHaveLength(0);
+    expect(bosses.state('ashen-prior')!.releaseOpen).toBe(false);
+    expect(bosses.mercyState('ashen-prior')).toBe('none');
+    expect(bosses.release('ashen-prior')).toBe(false);
+  });
+
+  it('no break in any phase ever opens a window, also past the last break and across ticks', () => {
+    const { bosses, hit, of, stagger, state } = noMercy([0.5]);
+    stagger();
+    stagger();
+    stagger();
+    hit(60);
+    for (let i = 0; i < 6; i++) {
+      stagger();
+      bosses.fixedUpdate(1 / 60);
+      expect(bosses.state('ashen-prior')!.releaseOpen).toBe(false);
+    }
+    expect(of('boss.break')).toHaveLength(9);
+    expect(of('boss.releaseWindow')).toHaveLength(0);
+    expect(bosses.release('ashen-prior')).toBe(false);
+    expect(state.hasFlag('boss.ashen-prior.outcome')).toBe(false);
+  });
+
+  it('the boss can still be defeated, with no window event', () => {
+    const { bosses, hit, of, stagger, state } = noMercy();
+    stagger();
+    stagger();
+    stagger();
+    hit(1000);
+    expect(state.getString('boss.ashen-prior.outcome')).toBe('defeated');
+    expect(of('boss.defeated')).toHaveLength(1);
+    expect(of('boss.releaseWindow')).toHaveLength(0);
+    expect(bosses.state('ashen-prior')!.outcome).toBe('defeated');
+  });
+
+  it('a tiny positive window still opens (only 0 means none)', () => {
+    const m = started({ ...DEF, phases: [], releaseWindowSeconds: 0.001 });
+    m.stagger();
+    m.stagger();
+    m.stagger();
+    expect(m.of('boss.releaseWindow')).toEqual([{ bossId: 'ashen-prior', open: true }]);
+    m.bosses.fixedUpdate(1 / 60);
+    expect(m.of('boss.releaseWindow').map((w) => w.open)).toEqual([true, false]);
   });
 });
 
