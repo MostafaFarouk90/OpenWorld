@@ -133,7 +133,7 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
   const ride = async (stop: LiftStop & { unlocked: boolean }): Promise<void> => {
     const svc = interiors();
     if (!svc || riding) return;
-    if (!stop.unlocked) return toast(stop.lockedKey);
+    if (!stop.unlocked) return toast('oldsmoke.lift.refused.locked');
     riding = true;
     try {
       // The cage shudders and rumbles over the fade to black, so the exit-then-enter hold reads as a ride, not a load. Only when the
@@ -159,7 +159,8 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
     };
     const open = opts.openMenu ?? ((r, c) => openLiftMenu(ctx, r, c));
     const close = open(list, choose);
-    closeMenu = close;
+    // A second open while the menu is up returns null; keep the closer of the one that is showing.
+    if (close) closeMenu = close;
   };
   cleanups.push(ctx.events.on('ui.modal', (e) => {
     if (e.id === 'oldsmoke.lift.menu' && !e.open) closeMenu = null;
