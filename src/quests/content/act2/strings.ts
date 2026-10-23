@@ -1,4 +1,6 @@
 
+import { OLDSMOKE_QUEST_STRINGS } from './oldsmoke/all';
+
 interface QuestText { title: string; summary: string; o: Record<string, string> }
 
 const QUEST_TEXT: Record<string, QuestText> = {
@@ -117,5 +119,6 @@ export const ACT2_QUEST_STRINGS: Record<string, string> = (() => {
   out['codex.lore.cinderford-well-rolls.body'] = "The well-keeper's tally of the sick: forty-four in six days, and a last column of \"sleepers\" that was never counted.";
   out['codex.lore.stonefold-rune.name'] = "The Warden's Rune";
   out['codex.lore.stonefold-rune.body'] = 'Cut into the brothers\' hall at Stonefold: "Who stands in the gap is the wall." A newer line beneath: "And the wall answers."';
+  Object.assign(out, OLDSMOKE_QUEST_STRINGS);
   return out;
 })();

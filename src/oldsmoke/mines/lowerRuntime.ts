@@ -1,7 +1,7 @@
 import type { CoreContext as Ctx } from '../../region/coreTypes';
 import { LOWER_SEALED_DOOR, LOWER_SHORTCUT_GATE } from './lowerGalleries';
 
-/** The shortcut gate stays shut until A9 opens Weeping Bellows' way through; the sealed door until Wenna's quest (M19) starts. */
+/** The shortcut gate stays shut until A9 opens Weeping Bellows' way through; the sealed door until M19's `doors` objective (A13) has opened its locks. */
 export const LOWER_GATE_OPEN_FLAG = 'world.bellows.shortcutOpen';
 /** A13's M19 doors objective writes it (the lift stop for the Lower Galleries opens earlier, on story.m19.started). */
 export const LOWER_DOOR_OPEN_FLAG = 'story.m19.doorOpen';

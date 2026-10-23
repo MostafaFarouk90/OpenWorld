@@ -40,6 +40,8 @@ export const HARROWMARK_NPC_DEFS: NpcDef[] = [
   def('keep-guard', 'knight', { tint: 0x8a7a3a }),
   def('grisel', 'knight', { tint: 0x2f4a2f }),
   def('clerk', 'mage', { scale: 0.95, tint: 0x3a6a68 }),
+  // Act 2 Phase D (A13, additive): House Grisel's steward reads the refusal at the Council (M22).
+  def('grisel-steward', 'knight', { tint: 0x3f6a4a }),
 ];
 
 export const HARROWMARK_NPC_STRINGS_EN: Record<string, string> = {
@@ -51,6 +53,7 @@ export const HARROWMARK_NPC_STRINGS_EN: Record<string, string> = {
   'npc.ashdown.name': 'Archer-Sergeant Cenric Ashdown',
   'npc.dunstan.name': 'Master Smith Dunstan Ironside',
   'npc.wace.name': 'Wace Carter',
+  'npc.grisel-steward.name': 'Steward Orrin of House Grisel',
   'npc.wystan.name': 'Lord Wystan Halvard',
   'npc.merrin.name': 'Lady Merrin Oswin',
   'npc.edric.name': 'King Edric IV',

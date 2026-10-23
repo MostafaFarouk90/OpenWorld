@@ -76,6 +76,8 @@ const npcs: NpcSpec[] = [
   { id: 'armourer', post: 'npc-post.armourer' },
   { id: 'keep-guard', post: 'npc-post.keep-guard' },
   { id: 'grisel', post: 'npc-post.grisel', presentWhen: 'story.m08.started' },
+  // Act 2 Phase D (A13): the steward who reads Lord Grisel's refusal stands in the Keep hall for M22 (a post rule moves him in)
+  { id: 'grisel-steward', post: 'npc-post.grisel', presentWhen: 'story.m22.started', absentWhen: 'story.m22.complete' },
   { id: 'clerk', post: 'npc-post.clerk', presentWhen: 'story.m09.started' },
 ];
 

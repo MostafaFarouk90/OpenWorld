@@ -104,6 +104,7 @@ const plugin: GamePlugin = {
       active: () => manager.active(),
       onChange: (l) => manager.onChange(l),
       torch: () => torch?.position() ?? null,
+      recheck: () => manager.recheck(),
     });
     ctx.persist.register({
       key: 'quests',
