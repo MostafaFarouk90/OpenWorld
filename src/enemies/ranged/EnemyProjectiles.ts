@@ -139,6 +139,7 @@ export class EnemyProjectiles {
       direction,
       unblockable: move.telegraph === 'dodge',
       ...(move.parryable === false ? { parryable: false as const } : {}),
+      ...(move.element ? { element: move.element } : {}),
       point: this.tmp.set(point.x, point.y, point.z).clone(),
       ...(spec.pull ? { pull: { distance: spec.pull } } : {}),
     });

@@ -19,7 +19,7 @@ export const EMBER_WYRM_DEF: EnemyDef = {
   moves: [
     move('wyrm.spit', WYRM_ATTACKS.spit, {
       windup: 0.7, telegraph: 'dodge', weapon: 'right', damage: 22, poise: 25,
-      range: [3, 7], cooldown: 4, recover: 1.0, weight: 2, onHit: 'ignite', flight: 'ground',
+      range: [3, 7], cooldown: 4, recover: 1.0, weight: 2, onHit: 'ignite', flight: 'ground', element: 'fire',
     }),
     move('wyrm.bite', WYRM_ATTACKS.bite, {
       windup: 0.4, telegraph: 'block', weapon: 'right', damage: 18, poise: 20,
@@ -69,7 +69,7 @@ export const WYRMLING_DEF: EnemyDef = {
     }),
     move('wyrmling.puff', WYRM_ATTACKS.puff, {
       windup: 0.3, telegraph: 'block', weapon: 'right', damage: 5, poise: 5,
-      range: [0, 2], cooldown: 3, recover: 0.6, weight: 1, onHit: 'ignite',
+      range: [0, 2], cooldown: 3, recover: 0.6, weight: 1, onHit: 'ignite', element: 'fire',
     }),
   ],
   mercy: {

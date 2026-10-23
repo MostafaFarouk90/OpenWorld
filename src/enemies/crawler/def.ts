@@ -30,7 +30,7 @@ export const SLAG_CRAWLER: EnemyDef = {
     {
       id: 'crawler.spit', ...ATTACKS.spit,
       windup: 0.5, telegraph: 'block', weapon: 'right', damage: 8, poise: 5,
-      range: [3, 11], cooldown: 4, recover: 0.9, weight: 2,
+      range: [3, 11], cooldown: 4, recover: 0.9, weight: 2, element: 'fire',
       ranged: { shape: 'glob', speed: 14, maxRange: 12, radius: 0.3, originHeight: 0.6, ignite: 3 },
     },
   ],

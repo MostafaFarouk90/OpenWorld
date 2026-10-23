@@ -266,6 +266,16 @@ describe('?act2= on the real game', () => {
     expect(fake.peek('autosave')).toEqual(slice1Complete);
   }, 90000);
 
+  it('&class=emberwright reaches the class choice (review-b L1); with no &class the jump plays the Knight', async () => {
+    const t = await jumpTo('?act2=r06&new&class=emberwright');
+    expect(t.jump?.phase).toBe('done');
+    expect(t.ctx.services.require('classes').current()).toBe('emberwright');
+    expect(t.ctx.state.getBool('story.r06.emberwright')).toBe(true);
+    for (const c of cleanups.splice(0)) c();
+    const k = await jumpTo('?act2=r06&new');
+    expect(k.ctx.services.require('classes').current()).toBe('knight');
+  }, 180000);
+
   it('without &new nothing happens', async () => {
     const t = await jumpTo('?act2=m11');
     expect(t.jump).toBeUndefined();

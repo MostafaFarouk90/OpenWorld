@@ -17,6 +17,15 @@ export const ACT2_CONTINUES = {
 /** True while the Phase C hold stands: the card is a Phase C thing and retires with the hold. */
 export const act2ContinuesLive = (): boolean => PHASE_HOLDS.length > 0;
 
+/**
+ * What a load does to the card, from the loaded save (review-b L4). `hide`: D03 is not done there, so a card still waiting
+ * or showing from the session before goes. `due`: D03 is done, the hold stands and the card was never shown (it waited
+ * behind the closing dialogue or a modal when the save was made), so it is owed again.
+ */
+export function act2ContinuesOnLoad(s: { live: boolean; d03Done: boolean; seen: boolean }): { hide: boolean; due: boolean } {
+  return { hide: !s.d03Done, due: s.live && s.d03Done && !s.seen };
+}
+
 export const ACT2_CONTINUES_STRINGS_EN: Record<string, string> = {
   'hud.ending.a2c.title': 'Scorchhold Falls',
   'hud.ending.a2c.line.1': 'Scorchhold is taken, and the hunters\' pens stand open.',

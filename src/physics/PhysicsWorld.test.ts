@@ -37,6 +37,29 @@ describe('PhysicsWorld lifecycle', () => {
     expect(p.world).toBeDefined();
   });
 
+  // Review B M3: tests that build a PhysicsWorld per case free it, so Rapier worlds do not pile up in the WASM heap.
+  it('dispose frees the Rapier world once: not ready afterwards, a second dispose is a no-op, and init makes a new one', async () => {
+    const p = await makeWorld();
+    const w = p.world;
+    const free = vi.spyOn(w, 'free');
+    p.dispose();
+    expect(free).toHaveBeenCalledTimes(1);
+    expect(p.ready).toBe(false);
+    expect(() => p.world).toThrow('init()');
+    p.dispose();
+    expect(free).toHaveBeenCalledTimes(1);
+    await p.init();
+    expect(p.ready).toBe(true);
+    expect(p.world).not.toBe(w);
+    p.dispose();
+  });
+
+  it('dispose before init is a no-op', () => {
+    const p = new PhysicsWorld();
+    expect(() => p.dispose()).not.toThrow();
+    expect(p.ready).toBe(false);
+  });
+
   it('init twice sequentially is a no-op', async () => {
     const p = await makeWorld();
     const w = p.world;

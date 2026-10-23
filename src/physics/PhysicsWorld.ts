@@ -97,6 +97,18 @@ export class PhysicsWorld implements PhysicsQueries {
     return this._world;
   }
 
+  /**
+   * Frees the Rapier world's WASM memory. The world is unusable afterwards (`ready` is false) until `init()` runs again.
+   * Calling it twice, or before `init()` completed, is a no-op.
+   */
+  dispose(): void {
+    const w = this._world;
+    if (!w) return;
+    this._world = null;
+    this.initPromise = null;
+    w.free();
+  }
+
   /** Advances the simulation by exactly one fixed tick (FIXED_TIMESTEP). */
   step(): void {
     this.world.step();

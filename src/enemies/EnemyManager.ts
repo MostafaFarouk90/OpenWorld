@@ -934,6 +934,7 @@ export class EnemyManager {
           req.amount = move.damage * enemy.damageScale * boneMultiplier(req.bone);
           req.poise = move.poise;
           req.attackId = move.clip;
+          if (move.element) req.element = move.element;
           if (move.telegraph === 'dodge') req.unblockable = true;
         },
         -150,
