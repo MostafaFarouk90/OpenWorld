@@ -24,7 +24,7 @@ export type PlaceholderShape = 'tree' | 'bush' | 'grass' | 'flower' | 'rock' | '
 /** Ids that are another id with a different size or colour. */
 const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Tint; girth?: number }>> = {
   // B2: slim windbreak tree from the birch (target 14 m tall, 2.5 m wide) until the poplar glb arrives; cairn from the rock cluster.
-  'poplar-a': { base: 'birch-a', scale: 1.75, girth: 0.46, tint: { mul: 0xd2e89a } },
+  'poplar-a': { base: 'birch-a', scale: 1.75, girth: 0.62, tint: { mul: 0xd2e89a } },
   'cairn-a': { base: 'rock-cluster-a', scale: 0.5 },
   'oak-b': { base: 'oak-a', scale: 0.85, tint: { mul: 0xe0eac8 } },
   'oak-c': { base: 'oak-a', scale: 1.12, tint: { mul: 0xf2e8c4, sat: 0.9 } },

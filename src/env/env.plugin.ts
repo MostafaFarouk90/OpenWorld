@@ -18,6 +18,8 @@ export interface EnvService {
   drawn(tile: string): Record<string, number> | null;
   /** Rows that fell back to a scripted placeholder for a tile. */
   placeholders(tile: string): number | null;
+  /** Measure the distance culling from (x, z) instead of the player (the shot harness frames a far camera without moving the Knight); null returns to the player. */
+  focus(point: { x: number; z: number } | null): void;
 }
 
 declare module '../core/Services' {
@@ -54,6 +56,7 @@ export function createEnvPlugin(opts: EnvPluginOptions = {}): GamePlugin {
           .catch((err) => console.warn(`env: tile ${name} could not be built`, err));
       }
       let step = ctx.services.get('quality')?.step;
+      let focus: { x: number; z: number } | null = null;
       cleanups.push(
         ctx.systems.add({
           id: 'env.update',
@@ -61,7 +64,7 @@ export function createEnvPlugin(opts: EnvPluginOptions = {}): GamePlugin {
           order: 91,
           render: () => {
             const now = ctx.services.get('quality')?.step;
-            const f = ctx.player.feet;
+            const f = focus ?? ctx.player.feet;
             for (const field of fields.values()) {
               if (now && now !== step) field.setDensity(now);
               field.update(f.x, f.z);
@@ -74,6 +77,9 @@ export function createEnvPlugin(opts: EnvPluginOptions = {}): GamePlugin {
         ctx.services.provide('env', {
           drawn: (tile) => fields.get(tile)?.drawn() ?? null,
           placeholders: (tile) => fields.get(tile)?.stats.placeholders ?? null,
+          focus: (point) => {
+            focus = point;
+          },
         }),
       );
     },

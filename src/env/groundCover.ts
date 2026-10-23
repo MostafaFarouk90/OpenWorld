@@ -33,13 +33,20 @@ export function groundCoverRect(rows: readonly PlacementRow[], margin = GROUND_C
 }
 
 /**
+ * Tiles whose clumps sit on top of the game's meadow blades instead of replacing them. B2's wide pastures have no lane or green to
+ * keep clear, and the blades are what makes a standing eye see grass at 1 to 10 m; its clumps read as the patchy long grass among them.
+ */
+export const KEEP_MEADOW_BLADES: ReadonlySet<string> = new Set(['b2']);
+
+/**
  * True where a built tile's placement rows replace the meadow grass. Always false when `envOn` is false (`?env=off`), so the old
  * grass comes back with the dressing out. Rects are computed once from the registered tiles.
  */
 export function envOwnsGround(envOn: boolean, tiles: Readonly<Record<string, readonly PlacementRow[]>> = TILES): (x: number, z: number) => boolean {
   if (!envOn) return () => false;
-  const rects = Object.values(tiles)
-    .map((rows) => groundCoverRect(rows))
+  const rects = Object.entries(tiles)
+    .filter(([name]) => !KEEP_MEADOW_BLADES.has(name))
+    .map(([, rows]) => groundCoverRect(rows))
     .filter((r): r is Rect => r !== null);
   return (x, z) => rects.some((r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ);
 }
