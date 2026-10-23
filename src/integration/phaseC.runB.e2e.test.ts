@@ -9,6 +9,8 @@ import { bootFromSave, type ChapterHarness } from './chapterHarness';
 import { ACT1_FIXTURES, readAct1Fixture } from '../save/__fixtures__/act1';
 import { PHASE_C_ORDER, PHASE_C_RUN_B, playPhaseC } from './phaseC';
 import { expectPhaseCComplete } from './phaseCAssert';
+import { ACT2_PACE } from '../quests/content/act2/pacing';
+import { estimatePaceRow, trailNodes } from './timing';
 
 let h: ChapterHarness | null = null;
 beforeEach(() => {
@@ -26,6 +28,12 @@ describe('Phase C run B', () => {
     h = await bootFromSave(await readAct1Fixture(ACT1_FIXTURES.complete), { models: true, virtualClock: true });
     const trails = await playPhaseC(h, undefined, { choices: PHASE_C_RUN_B });
     expectPhaseCComplete(h, 'B');
+    const pace = ACT2_PACE.map((row) => ({ row, est: estimatePaceRow(row, row.design, (id) => h!.anchor(id), trailNodes(trails[row.quest])) }));
+    const penv = (globalThis as { process?: { env: Record<string, string | undefined>; stdout: { write(s: string): void } } }).process;
+    if (penv?.env.CENSUS === '1') penv.stdout.write(`\nPACE ${pace.map(({ row, est }) => `${row.quest} ${est.estimateMin.toFixed(1)}/${row.floor} (${est.nodes} nodes vs ${row.nodes})`).join('; ')}\n`);
+    // R07 (the recheck of 14.1 against 14) holds its static floor on the nodes this run read; every quest holds 40% of its design minutes.
+    // R11 and M14 read fewer nodes than their rows assume (the axe scene and Aelfreda's talks end the report early): they are reported against their rows in the census, not gated on them.
+    for (const { row, est } of pace) expect(est.estimateMin, row.quest).toBeGreaterThanOrEqual(row.quest === 'r07' ? row.floor : row.design * 0.4);
     // Every quest's objectives were completed in order, and what was raised instead of played is named.
     for (const q of PHASE_C_ORDER) expect(trails[q].order.length, q).toBeGreaterThan(0);
     const scripted = PHASE_C_ORDER.flatMap((q) => trails[q].scripted);

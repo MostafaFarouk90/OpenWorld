@@ -1,0 +1,9 @@
+{
+  "fixture": "act2-d04-complete.json",
+  "what": "Act 2 Phase D: every Phase D quest but M22 completed (D04 last); M22 not yet offered; the act has not ended",
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/fixtures.genD.test.ts",
+  "generatingCommit": "f58b7c9ea822904521483bfde4f08b12a4d457c8",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving",
+  "playtimeSeconds": "rounded to whole seconds",
+  "source": "the real save plugin (saveNow(\"manual\")), read back from the fake IndexedDB slot-0"
+}

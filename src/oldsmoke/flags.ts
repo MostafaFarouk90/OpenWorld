@@ -7,6 +7,8 @@ export const MARKET_COMPROMISE_FLAG = 'world.oldsmoke.market.compromise';
 export const MARKET_MINER_GUARD_FLAG = 'world.oldsmoke.market.minerGuard';
 export const MARKET_STEWARD_GUARD_FLAG = 'world.oldsmoke.market.stewardGuard';
 export const HALL_HOSTILE_FLAG = 'world.oldsmoke.hall.hostile';
+/** Set by the Act 2 camp scene (A16, `scene-act2-camp`): Wenna is at the camp from then on. */
+export const WENNA_AT_CAMP_FLAG = 'story.a2.wennaAtCamp';
 
 /** Written by A13, read by PR 2's lift. */
 export const LIFT_RESTORED_FLAG = 'world.oldsmoke.lift.restored';

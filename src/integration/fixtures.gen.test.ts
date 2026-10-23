@@ -13,18 +13,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootChapter, type ChapterHarness } from './chapterHarness';
 import { ensure, playPhaseA, reachPhaseAStart } from './phaseA';
-import { PHASE_A_FIXTURES, FIXTURE_SAVED_AT, readPhaseAFixture } from '../save/__fixtures__/phaseA';
+import { PHASE_A_FIXTURES, readPhaseAFixture } from '../save/__fixtures__/phaseA';
 import { ACT1_FIXTURES, readAct1Fixture } from '../save/__fixtures__/act1';
 import { bootFromSave } from './chapterHarness';
 import { playPhaseB } from './phaseB';
 import { fightGrimtooth } from './grimtooth';
 import { ACT2_C_FIXTURES } from '../save/__fixtures__/act2c';
 import { playPhaseC, PHASE_C_RUN_B } from './phaseC';
+import { saveFixture, seedFixtureRandom } from './fixtureDeterminism';
 
 const GEN = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.GEN_FIXTURES === '1';
+/**
+ * `CHECK_FIXTURES=1` plays the Phase C generator and compares each fixture with the committed file instead of writing it (the
+ * run takes minutes, so it is gated like the generator; run it after any change that moves XP, spawns or Phase C content):
+ *
+ *   CHECK_FIXTURES=1 npx vitest run src/integration/fixtures.gen.test.ts -t "Phase C fixtures"
+ */
+const CHECK = !GEN && (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.CHECK_FIXTURES === '1';
 
 let h: ChapterHarness | null = null;
 beforeEach(() => {
+  seedFixtureRandom();
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'info').mockImplementation(() => {});
 });
@@ -42,27 +51,16 @@ async function node() {
   return { fs, cp };
 }
 
-/** Saves through the real plugin with a fixed clock and returns the stored `slot-0` value. */
-async function saveFixture(t: ChapterHarness): Promise<Record<string, unknown>> {
-  // Saves are refused in dialogue or cutscene contexts; let the last one close.
-  await t.runAsync(5);
-  const now = vi.spyOn(Date, 'now').mockReturnValue(FIXTURE_SAVED_AT);
-  try {
-    const out = await t.ctx.services.require('save').saveNow('manual');
-    await t.flush();
-    ensure(out.ok, `manual save ok (${JSON.stringify(out)})`);
-  } finally {
-    now.mockRestore();
-  }
-  const raw = JSON.parse(JSON.stringify(t.fake.peek('slot-0'))) as Record<string, unknown>;
-  ensure(raw && raw.savedAt === FIXTURE_SAVED_AT, 'slot-0 holds the save just written');
-  raw.playtimeSeconds = Math.round(raw.playtimeSeconds as number);
-  return raw;
-}
-
 async function write(name: string, file: Record<string, unknown>, what: string) {
   const { fs, cp } = await node();
-  const dir = 'src/save/__fixtures__';
+  if (CHECK) {
+    const fsName = 'node:fs';
+    const rd = (await import(/* @vite-ignore */ fsName)) as { readFileSync(p: string, enc: string): string };
+    const committed = JSON.parse(rd.readFileSync(`src/save/__fixtures__/${name}.json`, 'utf8')) as Record<string, unknown>;
+    expect(file, `${name}.json is stale: regenerate it with GEN_FIXTURES=1`).toEqual(committed);
+    return;
+  }
+  const dir = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.FIXTURES_OUT_DIR ?? 'src/save/__fixtures__';
   fs.writeFileSync(`${dir}/${name}.json`, JSON.stringify(file, null, 2) + '\n');
   const commit = cp.execSync('git rev-parse HEAD').toString().trim();
   const meta = {
@@ -175,7 +173,7 @@ const ACT2_C_FIXTURES_WHAT: Record<keyof typeof ACT2_C_FIXTURES, string> = {
 };
 
 
-describe.skipIf(!GEN)('Act 2 Phase C fixtures (GEN_FIXTURES=1 writes them)', () => {
+describe.skipIf(!GEN && !CHECK)('Act 2 Phase C fixtures (GEN_FIXTURES=1 writes them, CHECK_FIXTURES=1 compares)', () => {
   it('run A: the first branch of every choice, with the checkpoints on the way', async () => {
     const t = await bootFromSave(await readAct1Fixture(ACT1_FIXTURES.complete), { models: true, virtualClock: true });
     h = t;

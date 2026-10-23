@@ -44,8 +44,27 @@ export const KETTA = buildTree({
         },
       ],
     },
-    'r07-choice-spared': { lines: [K('Then they live, and I will keep my flock behind a wall this winter. Go and tell the den it can stop worrying.')] },
-    'r07-choice-culled': { lines: [K('Then you do it yourself, {name}. Put them down quick, and do not look at their faces. I will not ask Osric to do it.')] },
+    'r07-choice-spared': {
+      // Ending this talk is what counts as the report (the quest has already moved on), so the closing words are spoken here.
+      lines: [
+        K('Then they live, and I will keep my flock behind a wall this winter. Go and tell the den it can stop worrying.'),
+        C('They will not stay pups. Keep the wall high, and feed them from your own hand if you must.'),
+        K('A wolf cub I would never trust that way. But I have watched your face, and I will trust that.'),
+        K('Osric will not like it. He lost three dogs. I will tell him myself, and I will tell him you spared them, and that one of them is yours to keep.'),
+        K('I have counted my dogs this morning, the ones that are left. They are watching the hill. They do not like it empty, either.'),
+        K('So it is done, whichever way it goes from here. Quiet is a word a shepherd learns to trust and to fear.'),
+        K('You did what I could not. I will remember that, {name}.'),
+      ],
+    },
+    'r07-choice-culled': {
+      // The pups objective is still open when this talk ends (the report is credited after the cull, and `r07-report` closes it), so the closing words are not spoken here.
+      lines: [
+        K('Then you do it yourself, {name}. Put them down quick, and do not look at their faces. I will not ask Osric to do it.'),
+        C('It will be quick. The den is quiet, and they are blind yet.'),
+        K('Blind and hungry. That is what makes it hard, and what makes it right. A hungry thing finds its teeth by spring.'),
+        K('Go back up, then. Come and tell me when it is finished.'),
+      ],
+    },
     'r07-wait': { lines: [K('The den is up the gully past Osric\'s fold. Mind the dark and mind the wind.')] },
     'r07-brief': {
       lines: [

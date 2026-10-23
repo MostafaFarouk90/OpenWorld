@@ -9,14 +9,19 @@ const PILLAR_ROWS = [-5, -10, -15, -20];
 
 /**
  * The Bastion keep hall (greybox), 14 x 30 m. The door is at +Z; two rows of four 1.2 m columns line the nave; a 10 x 4 m dais
- * (0.4 m, no ramp) stands flush against the far wall where Edric and Vey hold court. The M08 trigger spans the hall 3 m before it.
+ * (0.4 m, no ramp) stands flush against the far wall where Edric and Vey hold court; Aldous Grisel's chair stands empty at its west end. The M08 trigger spans the hall 3 m before it.
  */
 export const KEEP_HALL_DEF: InteriorDef = {
   id: KEEP_HALL_ID,
   site: { ...HARROWMARK_SITES['keep-hall'] },
   rooms: [{ id: 'hall', x0: -7, z0: -28.5, x1: 7, z1: 1.5, height: 8 }],
   pillars: [...PILLAR_ROWS.map((z) => pillar(-3.5, z)), ...PILLAR_ROWS.map((z) => pillar(3.5, z))],
-  props: [{ id: 'dais.1', rect: { x0: -5, z0: -28.5, x1: 5, z1: -24.5 }, height: 0.4, walkable: true }],
+  props: [
+    { id: 'dais.1', rect: { x0: -5, z0: -28.5, x1: 5, z1: -24.5 }, height: 0.4, walkable: true },
+    // Act 2 (A16, additive): Lord Aldous Grisel's chair at the west end of the dais. M22 reads his seat as empty (he refuses the
+    // Council by his steward), so it is furniture only: a solid block that stays put and is never occupied.
+    { id: 'chair.aldous', rect: { x0: -4.6, z0: -28.3, x1: -3.6, z1: -27.3 }, height: 1.1 },
+  ],
   blockers: [],
   torches: [
     ...[-4, -10, -16, -22].flatMap((z) => [
@@ -37,6 +42,8 @@ export const KEEP_HALL_DEF: InteriorDef = {
     { id: 'npc-post.merrin.hall', x: 5, z: -5, facing: { x: 0, z: -5 } },
     { id: 'npc-post.grisel.hall', x: -5, z: -5, facing: { x: 0, z: -5 } },
     { id: 'm08.screen', x: -5.6, z: -12.5, yaw: 90 },
+    // Act 2 (A16, additive): in front of Aldous's empty chair, for the camera and the tests.
+    { id: 'harrowmark.keep-hall.aldous-chair', x: -4.1, z: -26.5, yaw: 180 },
   ],
   triggers: [{ id: 'trg.harrowmark.keep-hall', center: { x: 0, y: 2, z: -21.5 }, half: { x: 7, y: 2, z: 1.5 } }],
   doors: [

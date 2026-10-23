@@ -32,6 +32,7 @@ import { SCENE_R11_DEN, SCENE_R11_AXE } from './scenes.dialogue';
 import { EALDRED, WYNNE } from './kin.dialogue';
 import { AELFREDA_A2 } from './aelfreda.a2.dialogue';
 import { LANTERN_KEEPER } from './keeper.dialogue';
+import { SCENE_ACT2_CAMP } from './campScene.dialogue';
 
 /** A tree with every mine extension of its id merged in, in order (the strings come along). */
 function withMines(base: BuiltTree): BuiltTree {
@@ -69,6 +70,8 @@ const NEW_TREES: BuiltTree[] = [
   ALDOUS, withMines(WENNA), ...STEWARD_TREES, withMines(SLAGG), ...MINER_TREES, SCENE_M22_COUNCIL, SCENE_M22_BANNER, GRISEL_STEWARD,
   // the mine quests' casts (A13)
   ...M17R08_TREES, ...M18M19_TREES, ...M20D04_TREES,
+  // A16: the Act 2 ending's camp scene
+  SCENE_ACT2_CAMP,
 ];
 const EXTENDED = [extendTree(npcGaut, GAUT_A2), extendTree(npcAelfreda, AELFREDA_A2), extendTree(npcPennard, PENNARD_A2), extendTree(npcEdric, EDRIC_A2), extendTree(npcWystan, WYSTAN_A2)];
 

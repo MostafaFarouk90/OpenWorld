@@ -47,3 +47,23 @@ Written by the real save plugin from the headless Phase C runs (`src/integration
 
 Load tests: `src/integration/phaseC.fixtures.e2e.test.ts`, `src/integration/phaseC.containment.e2e.test.ts` and the
 every-fixture audit in `src/save/act2Migration.test.ts`.
+
+## Act 2 Phase D, Oldsmoke and the return (`act2-m17-start` to `act2-act-complete`)
+
+Written by the real save plugin from the Phase C complete save (run A, `act2-phase-c-complete-defeated`) through the deterministic
+generator (`src/integration/fixtures.genD.test.ts`, driver `src/integration/act2dFixtures.ts`: seeded random, fixed clock,
+sorted keys, floats rounded). The quests are driven at service level (each started, its objectives and completion through the
+same calls the effects use, so the Oldsmoke director, the posts and the act ending react as in play). Regenerate:
+`GEN_FIXTURES=1 npx vitest run src/integration/fixtures.genD.test.ts -t writes` (about thirty seconds). The generator is run
+twice by an always-on test that compares the bytes.
+
+| File | State |
+| --- | --- |
+| `act2-m17-start.json` | M16 completed; M17 not yet offered (Slagg) |
+| `act2-mines-mid.json` | M17, R08 to R10 completed; M18 active (brief, plaque and pipes done); the player at the shaft head |
+| `act2-m22-active.json` | Every Phase D quest but M22 completed (D04 too); M22 active, the keep reached and the Council heard |
+| `act2-d04-complete.json` | The same chain one quest short: D04 completed, M22 not yet offered; the act has not ended |
+| `act2-act-complete.json` | M22 completed after D04: gate a3 set once, the card seen, the camp scene run, Wenna at the camp |
+
+Load tests: the every-fixture audit and the Phase D checks in `src/save/act2Migration.test.ts` (every Act 1 and Phase C fixture
+also loads into the Phase D build there) and the boot hygiene test `src/integration/bootWarnings.test.ts`.

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { WAYSTONE_TUNING } from '../waystones/tuning';
 import type { ChapterHarness } from './chapterHarness';
-import { carryTo, describeQuest, ensure, heal, killAsPlayer, readNote, type QuestTrail } from './phaseA';
+import { carryTo, describeQuest, ensure, heal, killAsPlayer, type QuestTrail } from './phaseA';
 import { useAt } from './phaseB';
 import { HEAVY_CHOP_CLIPS } from '../combat/heavyBlow';
 import { WAVE_SETS } from '../waves/defs';
@@ -9,6 +9,7 @@ import { ACT2_PROPS } from '../quests/content/act2/props';
 import { ACT2_CARRY } from '../quests/content/act2/carry';
 import { ACT2_NOTE_LIST } from '../quests/content/act2/notes';
 import { ACT2_SPAWNERS_A12 } from '../quests/content/act2/spawners';
+import { OLDSMOKE_CARRY, OLDSMOKE_NOTE_LIST, OLDSMOKE_PROPS, OLDSMOKE_SPAWNERS } from '../quests/content/act2/oldsmoke';
 import type { ObjectiveDef } from '../quests/types';
 import { HUSHED_ANVIL, muralFlag } from '../shrine/hushedAnvil.tuning';
 import { ARENA, PRESENTATION, REDMANE, REDMANE_BOSS_ID, REDMANE_KIND } from '../bosses/redmane/tuning';
@@ -39,21 +40,21 @@ export interface PhaseCOptions {
   choices?: Record<string, number[]>;
   /** moments the fixture generator saves at (each runs between ticks, with nothing in flight) */
   hooks?: {
-    before?(q: PhaseCQuest): Promise<void>;
-    after?(q: PhaseCQuest): Promise<void>;
-    afterObjective?(q: PhaseCQuest, objective: string): Promise<void>;
+    before?(q: string): Promise<void>;
+    after?(q: string): Promise<void>;
+    afterObjective?(q: string, objective: string): Promise<void>;
     /** once, as the first raiders of a wave set are standing */
-    inWave?(q: PhaseCQuest): Promise<void>;
+    inWave?(q: string): Promise<void>;
   };
 }
 
 /** Run B's choices: the second branch of every choice (R11 and D03 are driver flags: [1] spares, the default slays). */
 export const PHASE_C_RUN_B: Record<string, number[]> = { 'r06.choice': [2], 'r05.choice': [2], 'r07.choice': [2], 'r11.wyrm': [1], 'd03.boss': [1] };
 
-const quests = (h: ChapterHarness) => h.ctx.services.require('quests');
+export const quests = (h: ChapterHarness) => h.ctx.services.require('quests');
 
 /** Where an NPC (or a joined companion) stands now. */
-function whereIs(h: ChapterHarness, npc: string): THREE.Vector3 {
+export function whereIs(h: ChapterHarness, npc: string): THREE.Vector3 {
   const companions = h.ctx.services.get('companions');
   const cid = companions?.actorId?.(npc);
   const actor = cid ? h.ctx.actors.get(cid) : [...h.ctx.actors.all()].find((x) => x.kind === `npc:${npc}`);
@@ -61,7 +62,7 @@ function whereIs(h: ChapterHarness, npc: string): THREE.Vector3 {
   return actor.root.getWorldPosition(new THREE.Vector3());
 }
 
-async function talk(h: ChapterHarness, trail: PhaseCTrail, npc: string, choices: number[] = []): Promise<void> {
+export async function talk(h: ChapterHarness, trail: PhaseCTrail, npc: string, choices: number[] = []): Promise<void> {
   await h.approach(whereIs(h, npc), 1.6);
   const dialogueId = `npc-${npc}`;
   const nodes = h.talk(dialogueId, npc, choices);
@@ -70,8 +71,8 @@ async function talk(h: ChapterHarness, trail: PhaseCTrail, npc: string, choices:
 }
 
 /** Kills the live actors from spawners tagged `tag` (of `kind`, when given) as they rise, until `done()`. Visits the tag's anchors in turn. */
-async function killUntil(h: ChapterHarness, tag: string, kind: string | undefined, done: () => boolean, what: string): Promise<void> {
-  const defs = ACT2_SPAWNERS_A12.filter((s) => s.tag === tag);
+export async function killUntil(h: ChapterHarness, tag: string, kind: string | undefined, done: () => boolean, what: string): Promise<void> {
+  const defs = [...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS].filter((s) => s.tag === tag);
   ensure(defs.length > 0, `a spawner tagged ${tag}`);
   const at = (i: number) => {
     const anchor = h.ctx.anchors.find(defs[i % defs.length].anchor);
@@ -96,7 +97,7 @@ async function killUntil(h: ChapterHarness, tag: string, kind: string | undefine
 }
 
 /** Kills what the tagged spawners raise until the objective has `required`. */
-async function killTag(h: ChapterHarness, q: string, o: string, kind: string | undefined, tag: string, required: number): Promise<void> {
+export async function killTag(h: ChapterHarness, q: string, o: string, kind: string | undefined, tag: string, required: number): Promise<void> {
   const progress = () => quests(h).objectives(q).find((v) => v.def.id === o)?.progress ?? 0;
   await killUntil(h, tag, kind, () => progress() >= required, `${q}.${o}: ${required} ${kind ?? 'enemies'} of ${tag} killed (${progress()})`);
 }
@@ -112,7 +113,7 @@ function chopCart(h: ChapterHarness, cartId: string): void {
 }
 
 /** Holds the barricade: kills every wave enemy and brazier cart as it comes until the objective is done. */
-async function fightWaves(h: ChapterHarness, q: string, o: string, defId: string, opts: PhaseCOptions = {}): Promise<void> {
+export async function fightWaves(h: ChapterHarness, q: string, o: string, defId: string, opts: PhaseCOptions = {}): Promise<void> {
   const set = WAVE_SETS[defId];
   ensure(set, `wave set ${defId}`);
   const centre = set.barricadeAnchors.map((a) => h.anchor(a)).reduce((c, p) => c.add(p), new THREE.Vector3()).divideScalar(set.barricadeAnchors.length);
@@ -124,7 +125,7 @@ async function fightWaves(h: ChapterHarness, q: string, o: string, defId: string
     heal(h);
     if (!announced && [...h.ctx.actors.all()].some((a) => !a.dead && (a as { spawnTag?: string }).spawnTag === set.spawnTag)) {
       announced = true;
-      await opts.hooks?.inWave?.(q as PhaseCQuest);
+      await opts.hooks?.inWave?.(q);
     }
     for (const a of [...h.ctx.actors.all()]) {
       if (a.dead) continue;
@@ -136,12 +137,12 @@ async function fightWaves(h: ChapterHarness, q: string, o: string, defId: string
   ensure(done(), `${q}.${o}: the ${defId} waves cleared`);
 }
 
-type Handler = (h: ChapterHarness, trail: PhaseCTrail, opts: PhaseCOptions) => Promise<void>;
-const pick = (opts: PhaseCOptions, key: string, fallback: number[] = []) => opts.choices?.[key] ?? fallback;
-const flagDone = (h: ChapterHarness, flag: string) => h.ctx.state.getBool(flag);
+export type Handler = (h: ChapterHarness, trail: PhaseCTrail, opts: PhaseCOptions) => Promise<void>;
+export const pick = (opts: PhaseCOptions, key: string, fallback: number[] = []) => opts.choices?.[key] ?? fallback;
+export const flagDone = (h: ChapterHarness, flag: string) => h.ctx.state.getBool(flag);
 
 /** Walks the player toward `target` (6 m steps, one second apart) so followers keep up, until `done()` or arrival. */
-async function leadTo(h: ChapterHarness, target: THREE.Vector3Like, done: () => boolean, seconds = 400, stepM = 6, avoid: { x: number; z: number; r: number }[] = []): Promise<void> {
+export async function leadTo(h: ChapterHarness, target: THREE.Vector3Like, done: () => boolean, seconds = 400, stepM = 6, avoid: { x: number; z: number; r: number }[] = []): Promise<void> {
   for (let i = 0; i < seconds && !done(); i++) {
     const f = h.ctx.player.feet;
     const dx = target.x - f.x;
@@ -209,15 +210,19 @@ export async function fightRedmane(h: ChapterHarness, outcome: 'spared' | 'defea
   await h.runAsync(PRESENTATION.spareKneelSeconds * 60 + 120);
 }
 
+const ALL_PROPS = [...ACT2_PROPS, ...OLDSMOKE_PROPS];
+const ALL_CARRY = [...ACT2_CARRY, ...OLDSMOKE_CARRY];
+const ALL_NOTES = [...ACT2_NOTE_LIST, ...OLDSMOKE_NOTE_LIST];
+
 /** Objectives a dialogue, a service or a fight completes: who to talk to with which choice, what to kill, where to stand. */
-const HANDLERS: Record<string, Handler> = {
+export const HANDLERS: Record<string, Handler> = {
   // R06: the four households, Maud's choice, the bundles, Pennard's rite
   'r06.households': async (h, t) => {
     for (const n of [1, 2, 3, 4]) if (!flagDone(h, `story.r06.heard.${n}`)) await talk(h, t, `household-${n}`);
   },
   'r06.choice': (h, t, o) => talk(h, t, 'maud', pick(o, 'r06.choice', [1])),
   'r06.bundles': async (h) => {
-    const next = ACT2_CARRY.find((c) => c.questId === 'r06' && !h.ctx.state.getBool(c.deliveredFlag));
+    const next = ALL_CARRY.find((c) => c.questId === 'r06' && !h.ctx.state.getBool(c.deliveredFlag));
     ensure(next, 'a bundle left to carry');
     await carryTo(h, next.homeAnchor, next.destination, next.deliveredFlag);
   },
@@ -389,32 +394,53 @@ const HANDLERS: Record<string, Handler> = {
 };
 
 /** Events a system the harness does not run would raise; the pair is recorded as scripted. */
-const SCRIPTED: Record<string, { event: string; payload?: Record<string, unknown> }> = {};
+export type ScriptedEvents = Record<string, { event: string; payload?: Record<string, unknown> }>;
+const SCRIPTED: ScriptedEvents = {};
+
+/** What a phase supplies the shared objective player: its handlers, its raised events and who offers each quest. */
+export interface DriverTables {
+  handlers: Record<string, Handler>;
+  scripted: ScriptedEvents;
+  givers: Record<string, string>;
+}
+const PHASE_C_TABLES: DriverTables = { handlers: HANDLERS, scripted: SCRIPTED, givers: ACT2_GIVERS };
 
 /** Reads through a dialogue the game started by itself (Gaut's road speech, a scene), as the player would. */
-function drainDialogue(h: ChapterHarness): void {
+export function drainDialogue(h: ChapterHarness, trail?: PhaseCTrail): void {
   const dialogue = h.ctx.services.require('dialogue');
-  for (let i = 0; i < 100 && dialogue.active; i++) h.press('KeyF');
+  if (!dialogue.active) return;
+  const started = h.of('dialogue.started').at(-1);
+  let nodes = 0;
+  for (let i = 0; i < 100 && dialogue.active; i++) {
+    h.press('KeyF');
+    nodes++;
+  }
   ensure(!dialogue.active, 'the game-started dialogue closed');
+  // A scene is dialogue the player read like any other: its nodes count toward the quest's talk time.
+  trail?.talks.push({ npc: `scene-${started?.npcId ?? 'unknown'}`, dialogueId: started?.dialogueId ?? 'scene', nodes });
 }
 
 /** One current objective, played. */
-async function play(h: ChapterHarness, trail: PhaseCTrail, q: string, def: ObjectiveDef, opts: PhaseCOptions): Promise<void> {
-  drainDialogue(h);
+export async function play(h: ChapterHarness, trail: PhaseCTrail, q: string, def: ObjectiveDef, opts: PhaseCOptions, tables: DriverTables = PHASE_C_TABLES): Promise<void> {
+  drainDialogue(h, trail);
+  // A set piece the game plays (Orsk's roof, started by a director that polls twice a second) holds the player in a cutscene until it ends.
+  if (tables !== PHASE_C_TABLES) await h.runAsync(32);
+  for (let i = 0; i < 6000 && h.ctx.input.contexts.top() === 'cutscene'; i += 30) await h.runAsync(30);
   const key = `${q}.${def.id}`;
   const choices = opts.choices?.[key] ?? [];
   switch (def.type) {
     case 'talk':
       return talk(h, trail, def.target as string, choices);
     case 'goTo':
+      if (tables.handlers[key]) return tables.handlers[key](h, trail, opts);
       return h.enterTrigger(def.target as string);
     case 'interact': {
-      const prop = ACT2_PROPS.find((p) => p.interactableId === def.target);
+      const prop = ALL_PROPS.find((p) => p.interactableId === def.target);
       ensure(prop, `a prop for ${def.target}`);
       return useAt(h, prop.anchorId, prop.interactableId, 1.1, [1.8, 2.5]);
     }
     case 'carry': {
-      const items = ACT2_CARRY.filter((c) => c.questId === q && c.objectiveId === def.id && !h.ctx.state.getBool(c.deliveredFlag));
+      const items = ALL_CARRY.filter((c) => c.questId === q && c.objectiveId === def.id && !h.ctx.state.getBool(c.deliveredFlag));
       ensure(items.length > 0, `a carry item left for ${key}`);
       return carryTo(h, items[0].homeAnchor, items[0].destination, items[0].deliveredFlag);
     }
@@ -422,19 +448,19 @@ async function play(h: ChapterHarness, trail: PhaseCTrail, q: string, def: Objec
       return killTag(h, q, def.id, def.target as string, def.spawnTag as string, def.required ?? 1);
     case 'event': {
       const m = (def.match ?? {}) as Record<string, unknown>;
-      if (HANDLERS[key]) return HANDLERS[key](h, trail, opts);
+      if (tables.handlers[key]) return tables.handlers[key](h, trail, opts);
       if (def.target === 'interact' && m.interactableId) {
         const ids = (Array.isArray(m.interactableId) ? m.interactableId : [m.interactableId]) as string[];
         const done = quests(h).objectives(q).find((v) => v.def.id === def.id)?.progress ?? 0;
-        const prop = ACT2_PROPS.find((p) => ids.includes(p.interactableId) && !h.ctx.state.getBool(p.usedFlag ?? ''));
+        const prop = ALL_PROPS.find((p) => ids.includes(p.interactableId) && !h.ctx.state.getBool(p.usedFlag ?? ''));
         ensure(prop, `an unused prop of ${key} (done ${done})`);
         return useAt(h, prop.anchorId, prop.interactableId, 1.1, [1.8, 2.5]);
       }
       if (def.target === 'dialogue.ended' && m.npcId && m.reason === 'completed' && typeof m.npcId !== 'string') {
         const ids = m.npcId as string[];
-        const note = ACT2_NOTE_LIST.find((n) => ids.includes(n.id) && !trailRead(trail, n.id));
+        const note = ALL_NOTES.find((n) => ids.includes(n.id) && !trailRead(trail, n.id));
         ensure(note, `an unread note of ${key}`);
-        return readNote(h, trail, note.id, note.anchorId);
+        return readNoteFocused(h, trail, note.id, note.anchorId);
       }
       if ((def.target === 'waystone.rekindled' && m.waystoneId) || (def.target === 'shrine.rekindled' && m.shrineId)) {
         const id = String(m.waystoneId ?? m.shrineId);
@@ -443,7 +469,7 @@ async function play(h: ChapterHarness, trail: PhaseCTrail, q: string, def: Objec
         return;
       }
       if (def.target === 'wave.cleared' && m.defId) return fightWaves(h, q, def.id, String(m.defId), opts);
-      const s = SCRIPTED[key];
+      const s = tables.scripted[key];
       ensure(s, `${key}: a driver (event ${String(def.target)})`);
       trail.scripted.push(key);
       h.ctx.events.emit(s.event as never, (s.payload ?? {}) as never);
@@ -454,21 +480,36 @@ async function play(h: ChapterHarness, trail: PhaseCTrail, q: string, def: Objec
   }
 }
 
+/** A note read with its own interactable in focus (a companion standing close can win the focus of the nearest-thing reading). */
+export async function readNoteFocused(h: ChapterHarness, trail: QuestTrail, noteId: string, anchorId: string): Promise<void> {
+  const dialogue = h.ctx.services.require('dialogue');
+  await useAt(h, anchorId, `use:${noteId}`, 1.1, [1.8, 2.5]);
+  ensure(dialogue.active, `the note ${noteId} opened at ${anchorId}`);
+  let nodes = 0;
+  for (; nodes < 20 && dialogue.active; nodes++) {
+    h.press('KeyF');
+    h.run(1);
+  }
+  ensure(!dialogue.active, `the note ${noteId} closed`);
+  trail.talks.push({ npc: noteId, dialogueId: noteId, nodes });
+  await h.runAsync(2);
+}
+
 const trailRead = (trail: PhaseCTrail, noteId: string) => trail.talks.some((t) => t.npc === noteId);
 
 /** Plays one Phase C quest from the giver's offer to its hand-in. */
-export async function playPhaseCQuest(h: ChapterHarness, trail: PhaseCTrail, q: PhaseCQuest, opts: PhaseCOptions = {}): Promise<void> {
+export async function playPhaseCQuest(h: ChapterHarness, trail: PhaseCTrail, q: string, opts: PhaseCOptions = {}, tables: DriverTables = PHASE_C_TABLES): Promise<void> {
   const qs = quests(h);
   await opts.hooks?.before?.(q);
   if (qs.state(q) === 'inactive') {
-    await talk(h, trail, ACT2_GIVERS[q], opts.choices?.[`${q}.offer`] ?? []);
-    ensure(qs.state(q) === 'active', `${q} offered by ${ACT2_GIVERS[q]} (${describeQuest(h, q)})`);
+    await talk(h, trail, tables.givers[q], opts.choices?.[`${q}.offer`] ?? []);
+    ensure(qs.state(q) === 'active', `${q} offered by ${tables.givers[q]} (${describeQuest(h, q)})`);
   }
   for (let guard = 0; guard < 60 && qs.state(q) === 'active'; guard++) {
     const cur = qs.objectives(q).find((o) => o.current && !o.done);
     ensure(cur, `${q} has a current objective (${describeQuest(h, q)})`);
     const before = describeQuest(h, q);
-    await play(h, trail, q, cur.def, opts);
+    await play(h, trail, q, cur.def, opts, tables);
     await h.runAsync(2);
     trail.order.push(`${q}.${cur.def.id}`);
     await opts.hooks?.afterObjective?.(q, cur.def.id);

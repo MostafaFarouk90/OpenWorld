@@ -2,7 +2,7 @@
 // so first match wins cleanly). The hall's cast stands on the interior's own posts: those anchors are defined by the interiors
 // plugin, so the layout post is only the outside home and a row moves them in (the hall stewards at once, Aldous and Wenna once M16 is done).
 import type { PostRule } from '../quests/posts';
-import { HALL_HOSTILE_FLAG } from './flags';
+import { HALL_HOSTILE_FLAG, WENNA_AT_CAMP_FLAG } from './flags';
 
 const always = { all: [] };
 /** M16 is played at the forecourt (A13: Aldous at the court, the brazier in front of it); the hall is where he sits afterwards. */
@@ -27,7 +27,11 @@ export const OLDSMOKE_POST_RULES: PostRule[] = [
   {
     npcId: 'wenna',
     home: 'npc-post.wenna.court',
-    posts: [{ when: m16Done, anchorId: 'oldsmoke.hall.wenna' }],
+    // Once the act has ended (the camp scene sets the flag) she is at the camp, the Tilted Anvil's hearth, not the hall.
+    posts: [
+      { when: { flag: WENNA_AT_CAMP_FLAG }, anchorId: 'npc-post.wenna.tilted-anvil' },
+      { when: m16Done, anchorId: 'oldsmoke.hall.wenna' },
+    ],
     // M19 and M20 are A13's (the nursery, then the galleries); once both are done she is back at the hall for M21.
     leaveWhen: { any: [{ quest: 'm19', state: 'active' }, { quest: 'm20', state: 'active' }] },
   },

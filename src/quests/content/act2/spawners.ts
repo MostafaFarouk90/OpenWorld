@@ -1,9 +1,11 @@
 import { wyrmlingSpawner } from '../../../enemies/wyrm/spawners';
 import { WATCH_GUARD_BAND } from '../../../enemies/level';
-import type { SpawnerDef } from '../../../enemies/types';
+import type { LevelBand, SpawnerDef } from '../../../enemies/types';
 
 const range = (prefix: string, from: number, to: number): string[] => Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${from + i}`);
 const common = { band: 'cinderreach', respawn: 'never' as const };
+/** R05's fog hounds: levels 9 to 11 (the Knight is 11 when R05 starts on the headless chain). */
+export const R05_FOG_BAND: LevelBand = { min: 9, max: 11 };
 
 /** Quest-scoped ground groups (the ambient ones are A6b's, src/enemies/act2Spawners.ts). Anchors are A3's. */
 export const ACT2_SPAWNERS_A12: readonly SpawnerDef[] = [
@@ -16,10 +18,13 @@ export const ACT2_SPAWNERS_A12: readonly SpawnerDef[] = [
     id: 'q12.m11.wraiths', tag: 'm11.wraith', enemy: 'ash-wraith', count: 5, anchor: 'cinderreach.m11.wraith.1',
     memberAnchors: range('cinderreach.m11.wraith.', 1, 5), activation: { quest: 'm11', flag: 'story.m11.wraithsOut' }, leash: true, ...common,
   },
-  // R05: the hounds in the fog, once the tracks are read
+  // R05: the hounds in the fog, once the tracks are read. The band is the carried-over Knight's level at R05 (11, from the
+  // headless census) and the two below it, not the whole region's 8 to 14: a level-11 Knight dies to three level-14 pounces
+  // (64 damage each on a head hit, of 164 health) before he can kill one hound (src/integration/difficulty.test.ts).
   {
     id: 'q12.r05.fog', tag: 'r05.fog', enemy: 'ember-hound', count: 3, anchor: 'cinderreach.r05.track.1',
-    memberAnchors: range('cinderreach.r05.track.', 1, 3), activation: { quest: 'r05', flag: 'story.r05.tracksFound' }, leash: true, ...common,
+    memberAnchors: range('cinderreach.r05.track.', 1, 3), activation: { quest: 'r05', flag: 'story.r05.tracksFound' }, leash: true,
+    ...common, band: R05_FOG_BAND,
   },
   // R06: Pennard's rite draws two waves of wraiths from the well (manual, the director starts each)
   ...[1, 2].map((n): SpawnerDef => ({

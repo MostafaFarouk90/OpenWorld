@@ -23,7 +23,10 @@ describe('registry', () => {
   it('registers act 1 and act 2 at load', () => {
     expect(getActJump(1)?.prereqs).toBe(ACT1_PREREQS);
     expect(getActJump(2)?.prereqs).toBe(ACT2_PREREQS);
-    expect(Object.keys(ACT2_PREREQS)).toEqual(['m11', 'm12', 'r06', 'r05', 'm13', 'r07', 'r11', 'm14', 'm15', 'd03']);
+    expect(Object.keys(ACT2_PREREQS)).toEqual([
+      'm11', 'm12', 'r06', 'r05', 'm13', 'r07', 'r11', 'm14', 'm15', 'd03',
+      'm16', 'm17', 'r08', 'r09', 'r10', 'm18', 'm19', 'm20', 'm21', 'd04', 'm22', 'ending',
+    ]);
   });
   it('throws on a duplicate act and the undo frees it', () => {
     expect(() => registerActJump(1, { prereqs: {} })).toThrow(/already registered/);
@@ -51,7 +54,7 @@ describe('resolveActJump', () => {
   });
   it('refuses an Act 2 id the table lacks: one warning, no result', () => {
     const warn = vi.fn();
-    expect(resolveActJump('?act2=m16&new', warn)).toBeNull();
+    expect(resolveActJump('?act2=m23&new', warn)).toBeNull();
     expect(warn).toHaveBeenCalledTimes(1);
   });
   it('resolves ?act2=m11&new with all of Act 1 as its prerequisites', () => {

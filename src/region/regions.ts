@@ -42,11 +42,11 @@ export interface RegionDef {
 }
 
 /**
- * Phase holds: flags that nothing writes, held shut until a milestone retires them. `story.phase.oldsmokeOpen`
- * keeps Oldsmoke (and the pass wall) closed through Phase C even after D03; A16's final PR empties this list (a
- * one-line edit allowed to A16), so the pass then opens on D03 alone.
+ * Phase holds: flags that nothing writes, held shut until a milestone retires them. Phase C held Oldsmoke (and the
+ * pass wall) shut with `story.phase.oldsmokeOpen`; the Phase D PR retired it, so the list is empty and the pass opens
+ * on `story.d03.complete` alone. The mechanism stays for a later milestone.
  */
-export const PHASE_HOLDS: readonly string[] = ['story.phase.oldsmokeOpen'];
+export const PHASE_HOLDS: readonly string[] = [];
 
 const NEVER: FlagCondition = { any: ['region.never'] };
 
@@ -83,7 +83,7 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
     openWhen: { all: ['story.gate.a2'] },
     reserved: false,
   },
-  // Engine x 17000..22000, z 7000..12000. Opens when Scorchhold falls (D03), held through Phase C by PHASE_HOLDS.
+  // Engine x 17000..22000, z 7000..12000. Opens when Scorchhold falls (D03).
   oldsmoke: {
     box: { x0: 18000, z0: 8000, x1: 23000, z1: 13000 },
     levelBand: { min: 12, max: 19 },

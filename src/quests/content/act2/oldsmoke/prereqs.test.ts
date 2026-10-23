@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ACT2_PREREQS } from '../../../actJump';
-import { ACT2D_PREREQS } from './prereqs';
+import { ACT2D_JUMP_FLAGS, ACT2D_PREREQS, ACT2D_QUEST_IDS } from './prereqs';
 import { OLDSMOKE_QUEST_DEFS } from './index';
 import { M22_PREREQUISITES } from './m22.quest';
 
@@ -22,8 +22,12 @@ describe('Phase D jump prerequisites', () => {
     }
     expect(ACT2D_PREREQS.r09.indexOf('m16')).toBeGreaterThan(ACT2D_PREREQS.r09.indexOf('d03'));
   });
-  it('leaves the Phase C table alone', () => {
-    expect(Object.keys(ACT2_PREREQS)).toEqual(['m11', 'm12', 'r06', 'r05', 'm13', 'r07', 'r11', 'm14', 'm15', 'd03']);
+  it('is the registered table\'s Phase D slice, and no jump sets the retired Phase C hold', () => {
+    for (const id of Object.keys(ACT2D_PREREQS)) expect(ACT2D_PREREQS[id]).toBe(ACT2_PREREQS[id]);
+    expect(Object.keys(ACT2_PREREQS)).toEqual([
+      'm11', 'm12', 'r06', 'r05', 'm13', 'r07', 'r11', 'm14', 'm15', 'd03', ...ACT2D_QUEST_IDS.filter((q) => q !== 'm22'), 'm22', 'ending',
+    ]);
+    expect(ACT2D_JUMP_FLAGS).not.toContain('story.phase.oldsmokeOpen');
   });
   it('has a row for every Phase D quest', () => {
     expect(Object.keys(ACT2D_PREREQS).sort()).toEqual([...OLDSMOKE_QUEST_DEFS.map((q) => q.id)].sort());

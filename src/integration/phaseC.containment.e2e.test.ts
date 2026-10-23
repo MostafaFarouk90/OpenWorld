@@ -1,7 +1,7 @@
 /**
  * Containment under the Phase C flag state, read from the real saves: Cinderreach and the Cinder Road are open, Oldsmoke
- * stays shut even after D03 (the phase hold), the later acts' faces stay shut, and with the hold flag set (what the Phase D
- * PR will make of an emptied `PHASE_HOLDS`) D03 alone opens the pass. The grid sweep per flag state is region/containment.test.ts.
+ * stays shut until D03 is done, the later acts' faces stay shut. The Phase C hold (`story.phase.oldsmokeOpen`) is retired,
+ * so a Phase C complete save loads into Phase D state: D03 alone opens the pass. The grid sweep per flag state is region/containment.test.ts.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootFromSave, type ChapterHarness } from './chapterHarness';
@@ -21,7 +21,7 @@ afterEach(() => {
 });
 
 const PHASE_C_FIXTURES: Act2CFixture[] = [
-  ACT2_C_FIXTURES.m11Start, ACT2_C_FIXTURES.m14HushedAnvil, ACT2_C_FIXTURES.d03Scorchhold, ACT2_C_FIXTURES.completeDefeated, ACT2_C_FIXTURES.completeSpared,
+  ACT2_C_FIXTURES.m11Start, ACT2_C_FIXTURES.m14HushedAnvil, ACT2_C_FIXTURES.d03Scorchhold,
 ];
 // Engine coordinates: Cinderreach 15500..22500 x -500..5500, Oldsmoke 17000..22000 x 7000..12000, Greyfen far south-west.
 const CINDERREACH = { x: 19000, z: 2500 };
@@ -46,14 +46,28 @@ describe('containment on the Phase C saves', () => {
     }, 60_000);
   }
 
-  it('after D03 the hold keeps Oldsmoke shut; setting the hold flag (the Phase D PR) opens it on D03 alone', async () => {
-    h = await bootFromSave(await readAct2CFixture(ACT2_C_FIXTURES.completeDefeated), { models: false, virtualClock: true });
+  for (const name of [ACT2_C_FIXTURES.completeDefeated, ACT2_C_FIXTURES.completeSpared]) {
+    it(`${name}: loads into Phase D state, Oldsmoke open on D03 alone and no hold flag, the later acts shut, no Act 2 ending`, async () => {
+      h = await bootFromSave(await readAct2CFixture(name), { models: false, virtualClock: true });
+      const c = h.ctx.services.require('containment');
+      expect(h.ctx.state.getBool('story.d03.complete')).toBe(true);
+      expect(h.ctx.state.getFlag('story.phase.oldsmokeOpen')).toBeUndefined();
+      expect(c.openRegions()).toEqual(['brightwater', 'harrowmark', 'cinderreach', 'oldsmoke']);
+      expect(c.isOpen(OLDSMOKE.x, OLDSMOKE.z)).toBe(true);
+      expect(c.isOpen(GREYFEN.x, GREYFEN.z)).toBe(false);
+      expect(c.isOpen(CALDERA.x, CALDERA.z)).toBe(false);
+      // Loading the save ends nothing: the Act 2 gate is unset and no `act.ended` for act 2 was emitted.
+      expect(h.ctx.state.getBool('story.gate.a3')).toBe(false);
+      expect(h.of('act.ended').filter((e) => e.act === 2)).toEqual([]);
+      expect(h.ctx.services.require('actEndingCard').active()).toBe(false);
+    }, 60_000);
+  }
+
+  it('D03 done after a Phase C load opens the pass live, with no hold flag to set', async () => {
+    h = await bootFromSave(await readAct2CFixture(ACT2_C_FIXTURES.d03Scorchhold), { models: false, virtualClock: true });
     const c = h.ctx.services.require('containment');
-    expect(h.ctx.state.getBool('story.d03.complete')).toBe(true);
     expect(c.isOpen(OLDSMOKE.x, OLDSMOKE.z)).toBe(false);
-    h.ctx.state.setFlag('story.phase.oldsmokeOpen', true);
-    expect(c.openRegions()).toContain('oldsmoke');
+    h.ctx.state.setFlag('story.d03.complete', true);
     expect(c.isOpen(OLDSMOKE.x, OLDSMOKE.z)).toBe(true);
-    expect(c.isOpen(GREYFEN.x, GREYFEN.z)).toBe(false);
   }, 60_000);
 });

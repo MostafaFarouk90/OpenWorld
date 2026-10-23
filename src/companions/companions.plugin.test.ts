@@ -590,6 +590,17 @@ describe('companions plugin: with the real plugins it integrates with', () => {
   }, 30_000);
 });
 
+describe('companions plugin: names', () => {
+  it('registers every companion name key, so none is reported missing at boot', async () => {
+    const t = await boot();
+    for (const key of ['companion.tobb.name', 'companion.hrolf.name', 'companion.aelfreda.name']) {
+      expect(t.ctx.strings.has(key), key).toBe(true);
+      expect(t.ctx.strings.t(key), key).not.toBe(key);
+    }
+    t.done();
+  });
+});
+
 describe('companions plugin: review additions', () => {
   it('a disabled plugin leaves no service, persistable, system or actor', async () => {
     const scene = new THREE.Scene();

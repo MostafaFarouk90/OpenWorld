@@ -65,7 +65,7 @@ describe('Harrowmark quest content', () => {
     for (const id of starter) expect(granted.has(id), id).toBe(false);
   });
   it('every flag the new content writes is under thread 6\'s prefixes and has the expected single writer', () => {
-    const OWNED = /^(story\.(m|d|r)\d\d\.[a-zA-Z0-9_.-]+|world\.harrowmark\.inn\.price|world\.brightwater\.barley)$/;
+    const OWNED = /^(story\.(m|d|r)\d\d\.[a-zA-Z0-9_.-]+|story\.a2\.(campSeen|wennaAtCamp)|world\.harrowmark\.inn\.price|world\.brightwater\.barley)$/;
     const keys = [
       ...written,
       ...QUEST_PROPS.filter((p) => p.usedFlag).map((p) => ({ where: p.interactableId, key: p.usedFlag! })),

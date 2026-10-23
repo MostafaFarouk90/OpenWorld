@@ -5,7 +5,9 @@ import { evalCondition } from '../quests/conditions';
 import type { ConditionEnv } from '../quests/ports';
 import { POST_RULES, resolvePosts } from '../quests/posts';
 import type { QuestState } from '../quests/types';
-import { HALL_HOSTILE_FLAG, MARKET_MINER_GUARD_FLAG, MARKET_STEWARD_GUARD_FLAG } from './flags';
+import { HALL_HOSTILE_FLAG, MARKET_MINER_GUARD_FLAG, MARKET_STEWARD_GUARD_FLAG, WENNA_AT_CAMP_FLAG } from './flags';
+import { ACT2_WENNA_CAMP_FLAG } from '../dialogue/content/act2/campScene.dialogue';
+import { TILTED_ANVIL_DEF } from '../interiors/harrowmark';
 import { OLDSMOKE_LAYOUT } from './oldsmoke.layout';
 import { OLDSMOKE_NPC_DEFS, OLDSMOKE_NPC_STRINGS_EN, OLDSMOKE_NPCS } from './npcDefs';
 import { OLDSMOKE_POST_RULES } from './postRules';
@@ -18,7 +20,7 @@ function env(quests: Record<string, QuestState> = {}, flags: Record<string, stri
 }
 const at = (npc: string, e: ConditionEnv) => resolvePosts(POST_RULES, e)[npc];
 const layoutAnchors = new Set(OLDSMOKE_LAYOUT.anchors.map((a) => a.id));
-const hallAnchors = new Set([...GRISEL_HALL_DEF.anchors, ...MINE_DEFS.flatMap((d) => d.anchors)].map((a) => a.id));
+const hallAnchors = new Set([...GRISEL_HALL_DEF.anchors, ...MINE_DEFS.flatMap((d) => d.anchors), ...TILTED_ANVIL_DEF.anchors].map((a) => a.id));
 
 describe('Deepgate NPC posts', () => {
   it('only names anchors that exist (this layout, or an interior: the hall, the mines)', () => {
@@ -89,6 +91,19 @@ describe('Deepgate NPC posts', () => {
     expect(evalCondition(leave, env({ m20: 'active' }))).toBe(true);
     // Once M19 and M20 are done she is back at her hall post for M21.
     expect(at('wenna', env({ m16: 'completed', m19: 'completed', m20: 'completed' })).anchorId).toBe('oldsmoke.hall.wenna');
+  });
+
+  it('Wenna sits at the camp once the camp scene has set story.a2.wennaAtCamp, and not before', () => {
+    const camp = (quests: Record<string, QuestState>, flag: boolean) => at('wenna', env(quests, flag ? { [WENNA_AT_CAMP_FLAG]: true } : {}));
+    const done: Record<string, QuestState> = { m16: 'completed', m19: 'completed', m20: 'completed', m21: 'completed', m22: 'completed' };
+    expect(camp(done, false).anchorId).toBe('oldsmoke.hall.wenna');
+    expect(camp(done, true).anchorId).toBe('npc-post.wenna.tilted-anvil');
+    // The flag alone is enough (a save whose quests lag still puts her at the camp), and a load re-derives it.
+    expect(camp({}, true).anchorId).toBe('npc-post.wenna.tilted-anvil');
+    // While A13 owns her (M19 or M20 active) the director does not place her either way.
+    const leave = OLDSMOKE_POST_RULES.find((r) => r.npcId === 'wenna')!.leaveWhen;
+    expect(evalCondition(leave, env({ m19: 'active' }, { [WENNA_AT_CAMP_FLAG]: true }))).toBe(true);
+    expect(WENNA_AT_CAMP_FLAG).toBe(ACT2_WENNA_CAMP_FLAG);
   });
 
   it('shows the market\'s guards by R10 and the hall stewards unless M21 turned hostile', () => {

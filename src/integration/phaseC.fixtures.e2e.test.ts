@@ -92,30 +92,18 @@ describe('Phase C fixtures load and play on', () => {
     }, 120_000);
   }
 
-  it('D03 done shows the "Act 2 continues" card once while Oldsmoke is held, and a reload does not show it again', async () => {
+  it('D03 done shows no "Act 2 continues" card (retired with the Oldsmoke hold) and opens Oldsmoke', async () => {
     await load(ACT2_C_FIXTURES.d03Scorchhold);
     const card = h!.ctx.services.require('actEndingCard');
-    expect(card.active()).toBe(false);
     await playPhaseCQuest(h!, emptyPhaseCTrail(), 'd03');
     for (let i = 0; i < 10; i++) {
       h!.run(1);
       h!.ctx.hud.update(1 / 60);
     }
-    expect(card.active(), 'the card is up').toBe(true);
-    expect(h!.ctx.state.getBool('codex.actEnding.a2c.seen')).toBe(true);
-    // It is its own card: the real Act 2 ending did not fire.
-    expect(h!.of('act.ended')).toEqual([]);
-    expect(h!.ctx.state.getBool('story.gate.a3')).toBeFalsy();
-    card.dismiss();
     expect(card.active()).toBe(false);
-    // A load never re-derives it (the card answers only D03's completion): a complete save shows nothing.
-    h!.dispose();
-    await load(ACT2_C_FIXTURES.completeDefeated);
-    for (let i = 0; i < 10; i++) {
-      h!.run(1);
-      h!.ctx.hud.update(1 / 60);
-    }
-    expect(h!.ctx.services.require('actEndingCard').active()).toBe(false);
+    expect(h!.ctx.state.getBool('codex.actEnding.a2c.seen')).toBe(false);
+    expect(h!.of('act.ended')).toEqual([]);
+    expect(h!.ctx.services.require('containment').openRegions()).toContain('oldsmoke');
   }, 120_000);
 
   it('the two complete fixtures load with every Phase C quest done and the branches kept', async () => {

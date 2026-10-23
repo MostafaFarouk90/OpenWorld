@@ -23,14 +23,14 @@ const inBox = (b: Box, x: number, z: number) => x >= b.x0 && x < b.x1 && z >= b.
 const STATES = {
   act1: {},
   phaseC: { 'story.gate.a2': true },
-  // D03 done but the Phase C hold not retired: Oldsmoke stays shut (the point of the hold).
+  // D03 done: the Phase C hold is retired, so D03 alone opens Oldsmoke.
   phaseCAfterD03: { 'story.gate.a2': true, 'story.d03.complete': true },
   phaseD: { 'story.gate.a2': true, 'story.d03.complete': true, 'story.phase.oldsmokeOpen': true },
 } as const;
 const OPEN_BOXES: Record<keyof typeof STATES, Box[]> = {
   act1: [BOX.brightwater, BOX.harrowmark],
   phaseC: [BOX.brightwater, BOX.harrowmark, BOX.cinderreach],
-  phaseCAfterD03: [BOX.brightwater, BOX.harrowmark, BOX.cinderreach],
+  phaseCAfterD03: [BOX.brightwater, BOX.harrowmark, BOX.cinderreach, BOX.oldsmoke],
   phaseD: [BOX.brightwater, BOX.harrowmark, BOX.cinderreach, BOX.oldsmoke],
 };
 
@@ -72,10 +72,10 @@ describe('containment: the open area under each flag state', () => {
   it('names the open regions per state; reserved regions are never open', () => {
     expect(new Containment(stateOf(STATES.act1)).openRegions()).toEqual(['brightwater', 'harrowmark']);
     expect(new Containment(stateOf(STATES.phaseC)).openRegions()).toEqual(['brightwater', 'harrowmark', 'cinderreach']);
-    expect(new Containment(stateOf(STATES.phaseCAfterD03)).openRegions()).not.toContain('oldsmoke');
+    expect(new Containment(stateOf(STATES.phaseCAfterD03)).openRegions()).toContain('oldsmoke');
     const all = { ...STATES.phaseD, 'region.never': true, 'story.gate.a3': true };
     expect(new Containment(stateOf(all)).openRegions()).toEqual(['brightwater', 'harrowmark', 'cinderreach', 'oldsmoke']);
-    expect(PHASE_HOLDS).toEqual(['story.phase.oldsmokeOpen']);
+    expect(PHASE_HOLDS).toEqual([]);
   });
 
   it('named points: the spawn, Harrowmark, the null strip on and off the road, Cinderreach, Oldsmoke, the Caldera', () => {
