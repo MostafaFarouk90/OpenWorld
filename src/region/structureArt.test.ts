@@ -61,6 +61,18 @@ describe('structure art (Brightwater and the Dead Road, real geometry)', () => {
     console.info(report.join('\n'));
   });
 
+  it('draws the T07 hurdle fence as posts every 2.5 m with two rails, inside its footprint and at its height', async () => {
+    const lane = BRIGHTWATER_LAYOUT.structures.find((s) => s.id === 'fence-lane')!;
+    const root = (await art(lane))!;
+    const box = aabb(root);
+    const h = structureHeight(lane);
+    expect(box.max.x - box.min.x).toBeGreaterThan(lane.footprint[0] - 0.1);
+    expect(box.max.z).toBeLessThanOrEqual(lane.footprint[1] / 2);
+    expect(box.max.y).toBeLessThanOrEqual(h * 1.1);
+    expect(box.max.y).toBeGreaterThanOrEqual(h);
+    expect(root.children.length).toBeGreaterThanOrEqual(lane.footprint[0] / 2.6 + 2);
+  });
+
   it('rotates the tavern a quarter turn to match its 12 x 10 footprint', async () => {
     const tavern = BRIGHTWATER_LAYOUT.structures.find((s) => s.kind === 'tavern')!;
     const box = aabb((await art(tavern))!);

@@ -96,6 +96,10 @@ async function gate(lib: ModelLibrary, spec: StructureSpec): Promise<THREE.Objec
 export const HURDLE_MAX_HEIGHT = 1;
 const LOG_MAT = new THREE.MeshStandardMaterial({ color: 0x7a5232, roughness: 0.95 });
 
+/** Post spacing of the hurdle rail fence, in metres. */
+export const HURDLE_POST_SPACING = 2.5;
+
+/** A deliberate post-and-rail fence: posts every ~2.5 m, a top rail at the full height and a lower one. Stays inside the footprint. */
 function hurdleLog(spec: StructureSpec): THREE.Object3D {
   const root = new THREE.Group();
   root.name = `fence:${spec.id}`;
@@ -103,18 +107,19 @@ function hurdleLog(spec: StructureSpec): THREE.Object3D {
   const [w, d] = spec.footprint;
   const alongX = w >= d;
   const len = alongX ? w : d;
-  const log = new THREE.Mesh(new THREE.CylinderGeometry(h * 0.42, h * 0.42, len, 10), LOG_MAT);
-  log.userData.ownGeometry = true;
-  log.position.y = h * 0.42;
-  log.rotation.z = alongX ? Math.PI / 2 : 0;
-  if (!alongX) log.rotation.x = 0;
-  root.add(log);
-  for (const end of [-1, 1]) {
-    const stake = new THREE.Mesh(new THREE.BoxGeometry(0.16, h, 0.16), LOG_MAT);
-    stake.userData.ownGeometry = true;
-    stake.position.set(alongX ? end * (len / 2 - 0.4) : 0, h / 2, alongX ? 0.3 : end * (len / 2 - 0.4));
-    root.add(stake);
+  const thick = Math.min(0.12, d * 0.4, h * 0.25);
+  const mesh = (sx: number, sy: number, sz: number, along: number, y: number): void => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(alongX ? sx : sz, sy, alongX ? sz : sx), LOG_MAT);
+    m.userData.ownGeometry = true;
+    m.position.set(alongX ? along : 0, y, alongX ? 0 : along);
+    root.add(m);
+  };
+  const posts = Math.max(2, Math.ceil(len / HURDLE_POST_SPACING) + 1);
+  for (let i = 0; i < posts; i++) {
+    mesh(thick * 1.4, h * 1.08, thick * 1.4, -len / 2 + (i * len) / (posts - 1) + (i === 0 ? thick : i === posts - 1 ? -thick : 0), (h * 1.08) / 2);
   }
+  mesh(len, thick, thick, 0, h - thick / 2);
+  mesh(len, thick, thick, 0, h * 0.55);
   return root;
 }
 

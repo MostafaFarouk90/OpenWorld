@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
-import { MAX_BARLEY_INSTANCES, SCORCHED_KEEP, barleyVariantOf, buildBarley } from './barley';
+import { MAX_BARLEY_INSTANCES, ROW_SPACING, SCORCHED_KEEP, rowCentres, barleyVariantOf, buildBarley } from './barley';
 import { pointInFootprint } from './geometry';
 import type { FieldSpec, StructureSpec } from './layoutTypes';
 
@@ -78,6 +78,20 @@ describe('buildBarley', () => {
     const h = buildBarley(BRIGHTWATER_LAYOUT.fields, flat, 1, BRIGHTWATER_LAYOUT.structures);
     expect(h.instanceCount).toBeGreaterThan(5000);
     expect(h.instanceCount).toBeLessThanOrEqual(MAX_BARLEY_INSTANCES);
+  });
+
+  it('tills the field: a soil mesh after the barley, planted on row ridges inside the border', () => {
+    const f = field({ x0: 0, x1: 20 });
+    const h = buildBarley([f], flat, 1);
+    expect(h.object.children.map((c) => c.name)).toEqual(['barley-instances', 'barley-soil']);
+    const rows = rowCentres(f);
+    const p = positions(h.object);
+    for (let i = 0; i < p.length; i += 3) {
+      const near = Math.min(...rows.map((r) => Math.abs(r - p[i])));
+      expect(near).toBeLessThanOrEqual(0.36);
+    }
+    expect(rows[1] - rows[0]).toBeCloseTo(ROW_SPACING);
+    h.dispose();
   });
 
   it('dispose detaches and is idempotent', () => {

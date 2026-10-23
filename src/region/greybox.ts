@@ -149,9 +149,11 @@ export function buildGreybox(spec: StructureSpec): THREE.Object3D {
       break;
     }
     case 'board':
-      post(g, -w * 0.4, 0, h);
-      post(g, w * 0.4, 0, h);
-      g.add(box(w, h * 0.5, 0.15, 0, h * 0.45, 0, 0xb08d57, 'panel'));
+      // Slim posts and a panel in the top half: 2 m reads as a notice board next to a 1.8 m villager, not a gate frame.
+      g.add(box(0.2, h, 0.2, -w * 0.45, 0, 0, WOOD));
+      g.add(box(0.2, h, 0.2, w * 0.45, 0, 0, WOOD));
+      g.add(box(w * 0.9, h * 0.4, 0.1, 0, h * 0.5, 0, 0xb08d57, 'panel'));
+      g.add(box(w, 0.1, 0.2, 0, h - 0.1, 0, WOOD, 'cap'));
       break;
     case 'pole':
       g.add(cyl(0.18, 0.22, h, 0, 0, 0, WOOD, 8));
