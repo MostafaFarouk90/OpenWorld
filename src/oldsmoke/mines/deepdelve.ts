@@ -78,10 +78,10 @@ export const DEEPDELVE_DEF: InteriorDef = mineDef(
       { id: 'deepdelve.slagmaw.valve.3', x: 155, z: -9, facing: DEEPDELVE_ARENA_CENTRE },
     ],
     triggers: [
-      { id: 'trg.deepdelve.stage.1', center: { x: 32, y: 2, z: -20 }, half: { x: 3, y: 2, z: 3 } },
-      { id: 'trg.deepdelve.stage.2', center: { x: 82, y: 2, z: -20 }, half: { x: 3, y: 2, z: 3 } },
+      { id: 'trg.deepdelve.stage.1', center: { x: 32, y: 1.5, z: -20 }, half: { x: 3, y: 2.5, z: 3 } },
+      { id: 'trg.deepdelve.stage.2', center: { x: 82, y: 1.5, z: -20 }, half: { x: 3, y: 2.5, z: 3 } },
       // The entrance zone just inside the arena; the door anchor is 4 m outside it.
-      { id: DEEPDELVE_ARENA_TRIGGER, center: { x: 154, y: 3, z: -20 }, half: { x: 3.5, y: 3, z: 8 } },
+      { id: DEEPDELVE_ARENA_TRIGGER, center: { x: 154, y: 2.5, z: -20 }, half: { x: 3.5, y: 3.5, z: 8 } },
     ],
   },
   0.6,

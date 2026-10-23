@@ -40,7 +40,7 @@ describe('Deepdelve', () => {
     for (const id of want) expect(ids, id).toContain(id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(DEEPDELVE_DEF.triggers.map((t) => t.id).sort()).toEqual(['trg.deepdelve.slagmaw.arena', 'trg.deepdelve.stage.1', 'trg.deepdelve.stage.2']);
-    for (const n of [1, 2]) expect(DEEPDELVE_DEF.triggers.find((t) => t.id === `trg.deepdelve.stage.${n}`)!.half).toEqual({ x: 3, y: 2, z: 3 });
+    for (const n of [1, 2]) expect(DEEPDELVE_DEF.triggers.find((t) => t.id === `trg.deepdelve.stage.${n}`)!.half).toEqual({ x: 3, y: 2.5, z: 3 });
     expect(DEEPDELVE_DEF.blockers.map((b) => b.id)).toEqual([DEEPDELVE_ARENA_GATE]);
     expect(DEEPDELVE_DEF.id).toBe(MINE_IDS.deepdelve);
     expect(Object.keys(DEEPDELVE_STRINGS_EN)).toEqual([`interior.enter.${MINE_IDS.deepdelve}`, `interior.exit.${MINE_IDS.deepdelve}`]);

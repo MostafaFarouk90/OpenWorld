@@ -204,9 +204,9 @@ Door `mine-deepdelve`: arrives at `oldsmoke.deepdelve.lift`, leaves by `oldsmoke
 
 Triggers (box centre, half size):
 
-- `trg.deepdelve.stage.1` at (32, 2, -20), half (3, 2, 3)
-- `trg.deepdelve.stage.2` at (82, 2, -20), half (3, 2, 3)
-- `trg.deepdelve.slagmaw.arena` at (154, 3, -20), half (3.5, 3, 8)
+- `trg.deepdelve.stage.1` at (32, 1.5, -20), half (3, 2.5, 3)
+- `trg.deepdelve.stage.2` at (82, 1.5, -20), half (3, 2.5, 3)
+- `trg.deepdelve.slagmaw.arena` at (154, 2.5, -20), half (3.5, 3.5, 8)
 
 Blockers (open by default):
 
