@@ -521,6 +521,19 @@ describe('M19 guide: the sealed door, barks, the nursery', () => {
     r.dispose();
   });
 
+  it('a load clears the remembered nursery presence (trigger.enter is not replayed), so the scene needs a fresh entry', () => {
+    const r = rig();
+    r.current.add('m19.reveal');
+    r.events.emit('trigger.enter', { triggerId: M19_NURSERY_TRIGGER, actorId: 'player' });
+    r.events.emit('save.loaded', { slot: 'a' } as never);
+    r.step(30 * 3);
+    expect(r.dialogues.filter((d) => d[0] === M19_SCENE)).toEqual([]);
+    r.events.emit('trigger.enter', { triggerId: M19_NURSERY_TRIGGER, actorId: 'player' });
+    r.step(30);
+    expect(r.dialogues.filter((d) => d[0] === M19_SCENE)).toHaveLength(1);
+    r.dispose();
+  });
+
   it('the reveal scene does not start for another actor, after the player left the ring, or while a dialogue is open', () => {
     const r = rig();
     r.current.add('m19.reveal');

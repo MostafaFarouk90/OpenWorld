@@ -53,7 +53,7 @@ export function installM22(k: Kit): void {
  */
 const plugin: GamePlugin = {
   id: 'oldsmoke-quests',
-  dependsOn: ['core', 'quests', 'dialogue', 'enemies', 'oldsmoke', 'npcs'],
+  dependsOn: ['core', 'quests', 'dialogue', 'enemies', 'oldsmoke', 'npcs', 'wyrms'],
   setup(ctx) {
     offs = [];
     const warn = (m: string): void => void console.warn(m);

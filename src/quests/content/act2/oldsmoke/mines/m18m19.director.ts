@@ -208,6 +208,7 @@ export function installM19(k: Kit, ports: M19Ports = {}): Off {
     if (k.flag(M19_ARRIVED_FLAG) && k.active('m19')) placeAtNursery();
   });
   k.on('save.loaded', () => {
+    inNursery = false; // trigger.enter is not replayed on a load; the player re-enters the volume to arm the scene
     stop();
     sectionOn = false;
     waitN = 0;

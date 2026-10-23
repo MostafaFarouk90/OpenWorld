@@ -62,6 +62,10 @@ describe('M20 and D04 definitions', () => {
     const nursery = M20D04.spawners.find((s) => s.enemy === 'wyrmling')!;
     expect(nursery.count).toBe(5);
     expect(nursery.memberAnchors).toHaveLength(5);
+    // the wyrmlings are chained from M19's start (its reveal plays among them) until M20 is complete, and never respawn
+    expect(nursery.activation).toEqual({ flag: 'story.m19.started', until: 'story.m20.complete' });
+    expect(nursery.respawn).toBe('never');
+    expect(nursery.ephemeral).toBe(true);
   });
 });
 

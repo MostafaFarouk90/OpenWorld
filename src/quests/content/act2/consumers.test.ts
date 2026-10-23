@@ -49,6 +49,8 @@ const MINES_PENDING_ANCHORS: readonly string[] = [
   // NOT in A4's section 11 table: M19's own guard posts and patrol, which the quest's spawner names. A4 must add them (or the spawner
   // is repointed at the table's `oldsmoke.lower.*` anchors) when the layout lands.
   ...range('oldsmoke.m19.watch.', 4), ...range('oldsmoke.m19.patrol.', 5),
+  // Anchors A4 confirmed or that our NPC specs stand on: Pike's apprentice, the keeper at the end of the stealth section, the captain.
+  'npc-post.pike-apprentice.bellows', 'oldsmoke.stealth.m19.end', 'oldsmoke.m20.captain',
 ];
 
 const anchors = new Set<string>([

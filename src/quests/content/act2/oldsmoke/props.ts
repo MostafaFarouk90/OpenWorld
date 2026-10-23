@@ -16,6 +16,7 @@ export const OLDSMOKE_PROPS: QuestPropSpec[] = [
   {
     interactableId: 'use:r10-keys', anchorId: 'oldsmoke.market.guard.4', promptKey: 'quest.prompt.keys',
     objective: ['r10', 'keys'], usedFlag: 'story.r10.keysReturned', look: 'box',
+    priority: 1, // the miner guard of the chosen ruling stands on this anchor; the keys win focus while they are the objective
   },
   // M21: the proof of the sale (evidence) and, on the spy branch, the letters in the study
   ...M21_EVIDENCE.map((id, i): QuestPropSpec => ({

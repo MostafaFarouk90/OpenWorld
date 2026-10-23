@@ -7,11 +7,11 @@ export const M17R08_PROPS: QuestPropSpec[] = [
   // M17: three winch parts around the shaft head, then the winch itself
   ...M17_PARTS.map((id, i): QuestPropSpec => ({
     interactableId: id, anchorId: `oldsmoke.shaft.winch.part.${i + 1}`, promptKey: 'quest.prompt.part',
-    objective: ['m17', 'parts'], usedFlag: `story.m17.part${i + 1}`, look: 'box', hideWhenUsed: true,
+    objective: ['m17', 'parts'], usedFlag: `story.m17.part${i + 1}`, look: 'box', hideWhenUsed: true, priority: 1,
   })),
   {
     interactableId: M17_WINCH, anchorId: 'oldsmoke.shaft.winch', promptKey: 'quest.prompt.winch',
-    objective: ['m17', 'winch'], usedFlag: 'story.m17.winchMended', look: 'chain',
+    objective: ['m17', 'winch'], usedFlag: 'story.m17.winchMended', look: 'chain', priority: 1,
   },
   // M17: the first vent (its own objective) wakes the swarm, the other three follow. A hold-to-clear is the plugin's to add.
   {

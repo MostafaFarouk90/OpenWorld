@@ -7,11 +7,11 @@ const n = (id: string, anchorId: string, speaker: 'note' | 'cael', lines: string
 /** Readable notes of M17 (two search beats at the shaft head) and R08 (six relics and the widow's letter in the Old Galleries). */
 export const M17R08_NOTE_LIST: Act2Note[] = [
   // M17: the shaft head
-  n('note-m17-board', 'oldsmoke.shaft.door', 'note', [
+  n('note-m17-board', 'oldsmoke.shaft.winch.part.1', 'note', [
     'The lift board by the collar door, chalk on slate. "Lift out of service by order. Shaft inspection to follow." The date is the day the strike was voted.',
     'No inspector is named. The chalk has been wiped and rewritten four times, always in the same hand.',
   ]),
-  n('note-m17-tally', 'oldsmoke.shaft.head', 'cael', [
+  n('note-m17-tally', 'oldsmoke.shaft.winch.part.2', 'cael', [
     'A tally of the last men down before the lift stopped, scratched into the headframe post. Eleven strokes. Two have a small cross beside them.',
     'Nobody has scratched the strokes of those who came up. It was never meant to be a tally of the living.',
   ], 'grave'),
@@ -41,7 +41,7 @@ export const M17R08_NOTE_LIST: Act2Note[] = [
     'The inquiry is dated eleven years ago. It has never reported.',
   ], 'page', 'lore.pickett-chit'),
   // R08: the widow's letter, six lines (a reading dialogue)
-  n(R08_LETTER, 'oldsmoke.old.lift', 'note', [
+  n(R08_LETTER, 'oldsmoke.old.spawn.1', 'note', [
     '"Burel, if this reaches the shaft head I will have paid a carter a week of my wages to carry it, so read it slowly."',
     '"The bairn asks every night if the bell has rung. I tell her the bell rings when da is on the stair. She sleeps better for it, and I do not correct her."',
     '"They say the roof fell and the Old Galleries are sealed and the shift is lost. I do not believe the last part. You never lost a shift in your life."',

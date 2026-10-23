@@ -62,7 +62,7 @@ export const WINCH_WRIGHT: BuiltTree = buildTree({
         A('Steward Corvin, with a sack and a cart. He did not do it for love of Grisel. He did it so the cage could not carry a rescue party to the strike\'s heart, and the strike could not carry its dead to the surface.'),
         A('The pawl is behind the coal heap, where the sack was dropped. The brake band is round the wellhead, wound about the post. The drive pin I will not guess; I have not looked.'),
         A('Bring them to the winch and set each home with your own hands. I will talk you through the pawl. Do not force the pin; it is brass and it bends.'),
-        A('And read the board by the door and the tally on the post while you are about it. They tell you what the stewards wanted written, and what the men wanted remembered.'),
+        A('And read the lift board and the tally on the post, both close to where those parts lay, while you are about it. They tell you what the stewards wanted written, and what the men wanted remembered.'),
       ],
     },
     'm17-wait': {

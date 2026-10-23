@@ -12,6 +12,8 @@ export const M20_ROOF_ANCHOR = 'oldsmoke.m20.roof';
 export const M20_ROOF_HEIGHT = 9;
 /** A freed wyrmling walks to the Lower Galleries' lift before it fades (A4's landing inside). */
 export const M20_EXIT_ANCHOR = 'oldsmoke.lower.lift';
+/** Where Wenna stands once M20 is done (A4's hall post; the same anchor the post rules use after M16). */
+export const M20_WENNA_HOME = 'oldsmoke.hall.wenna';
 /** How often the director asks whether Orsk's turn has come (also the retry while another dialogue holds the floor). */
 export const ORSK_CHECK_TICKS = 30;
 
@@ -49,11 +51,23 @@ export function installM20(k: Kit): Off[] {
   k.every(ORSK_CHECK_TICKS, play);
 
   k.on('wyrm.orsk', (e) => {
-    if (e.beat === 'gone') k.set(M20_ORSK_GONE);
+    if (e.beat === 'gone') {
+      k.set(M20_ORSK_GONE);
+      // `chainsBroken` is credited by a `doneWhen` flag, which only a recheck reads: credit it at once, not at the next load
+      ctx.services.get('quests')?.recheck?.();
+    }
+  });
+
+  // Wenna was seated in the nursery for M19's reveal and stays for the M20 talks; once M20 is done she goes back to the hall
+  // (the post rules only move her while M19 is not active or completed). Placed on completion and again on a load.
+  const homeWenna = (): void => void ctx.services.get('npcs')?.place('wenna', M20_WENNA_HOME);
+  k.on('quest.completed', (e) => {
+    if (e.questId === 'm20') homeWenna();
   });
   k.on('save.loaded', () => {
     // a scene that was playing when the game was saved cannot be (saves are refused in cutscenes); a load starts clean
     playing = false;
+    if (k.qstate('m20') === 'completed') homeWenna();
   });
   return offs;
 }

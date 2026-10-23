@@ -18,6 +18,13 @@ export const M20_CHAIN_ANCHORS = range('oldsmoke.m20.chain.', 1, 5);
 /** The steward posts: two groups of four stand here, and the five searches of the gallery lie among them. */
 export const M20_POST_ANCHORS = range('oldsmoke.m20.post.', 1, 5);
 export const M20_NURSERY_GROUP = 'q13.m20.nursery';
+/**
+ * The chained wyrmlings are in the nursery from the day M19 starts (its reveal plays among them) until M20 is done: a flag
+ * gate, not a quest activation, which would drop them when M19 completes. `respawn: 'never'` and `ephemeral` keep a freed
+ * one from coming back, and the gate closes for good on `story.m20.complete`.
+ */
+export const M19_STARTED_FLAG = 'story.m19.started';
+export const M20_COMPLETE_FLAG = 'story.m20.complete';
 
 export const M20D04_PROPS: QuestPropSpec[] = M20_CHAINS.map((id, i): QuestPropSpec => ({
   interactableId: id, anchorId: M20_CHAIN_ANCHORS[i], promptKey: 'quest.prompt.chain',
@@ -96,7 +103,7 @@ export const M20D04_SPAWNERS: readonly SpawnerDef[] = [
     ...(members ? { memberAnchors: members } : {}), activation: { quest: 'm20', flag: M20_STEWARDS_OUT }, leash: true, ...common,
   })),
   wyrmlingSpawner(M20_NURSERY_GROUP, M20_CHAIN_ANCHORS[0], 5, {
-    tag: 'm20.wyrmlings', memberAnchors: M20_CHAIN_ANCHORS, activation: { quest: 'm20' }, ephemeral: true, peaceful: true, band: 'oldsmoke',
+    tag: 'm20.wyrmlings', memberAnchors: M20_CHAIN_ANCHORS, activation: { flag: M19_STARTED_FLAG, until: M20_COMPLETE_FLAG }, ephemeral: true, peaceful: true, band: 'oldsmoke',
   }),
   {
     id: 'q13.d04.crawlers-a', tag: 'd04.crawlers-a', enemy: 'slag-crawler', count: 10, anchor: 'oldsmoke.deepdelve.stage.2',

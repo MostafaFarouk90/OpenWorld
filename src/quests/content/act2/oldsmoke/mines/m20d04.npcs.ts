@@ -18,10 +18,11 @@ export const M20D04_NPC_STRINGS: Record<string, string> = {
 };
 
 /**
- * The captain stands at his own anchor from the quest's start and is led away when it ends; the keeper stays by the
- * nursery until then. Both are A4's anchors (`oldsmoke.m20.captain`, `oldsmoke.m19.nursery`).
+ * The captain stands at his own anchor from the quest's start and is led away when it ends; the keeper stays near the
+ * nursery until then, at the end of the stealth section (the nursery anchor itself is where M19's director seats Wenna, so
+ * it must stay free). Both are A4's anchors (`oldsmoke.m20.captain`, `oldsmoke.stealth.m19.end`).
  */
 export const M20D04_NPCS: NpcSpec[] = [
   { id: 'steward-captain', post: 'oldsmoke.m20.captain', presentWhen: 'story.m20.started', absentWhen: 'story.m20.complete' },
-  { id: 'wyrmling-keeper', post: 'oldsmoke.m19.nursery', presentWhen: 'story.m20.started', absentWhen: 'story.m20.complete' },
+  { id: 'wyrmling-keeper', post: 'oldsmoke.stealth.m19.end', presentWhen: 'story.m20.started', absentWhen: 'story.m20.complete' },
 ];

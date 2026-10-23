@@ -141,6 +141,7 @@ describe('Pike opens on the right segment', () => {
     ['M18 apprentice heard', (w) => w.set('m18', 'active', 'brief', 'plaque', 'pipes', 'apprentice'), 'a2-m18-lore'],
     ['M18 crawlers', (w) => w.set('m18', 'active', 'brief', 'plaque', 'pipes', 'apprentice', 'lore'), 'a2-m18-wait-crawlers'],
     ['M18 valves', (w) => w.set('m18', 'active', 'brief', 'plaque', 'pipes', 'apprentice', 'lore', 'crawlers'), 'a2-m18-wait-valves'],
+    ['M18 puzzle solved, shrine not yet lit', (w) => w.set('m18', 'active', 'brief', 'plaque', 'pipes', 'apprentice', 'lore', 'crawlers', 'solve'), 'a2-m18-wait-valves'],
     ['M18 lit, scene not played', (w) => w.set('m18', 'active', 'brief', 'plaque', 'pipes', 'apprentice', 'lore', 'crawlers', 'solve', 'rekindle'), 'a2-m18-wait-breath'],
     ['M18 breathed', (w) => w.set('m18', 'active', 'solve', 'rekindle', 'breathe'), 'a2-m18-report'],
     ['M18 done', (w) => w.set('m18', 'completed'), 'a2-m18-after'],

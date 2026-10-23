@@ -20,6 +20,8 @@ export interface QuestsService {
   onChange(listener: () => void): () => void;
   /** World position of R01's carried torch, or null when none burns (thread 5's scarecrows test contact). */
   torch(): { x: number; y: number; z: number } | null;
+  /** Credits objectives the world already satisfies (a `doneWhen` flag just written, a goTo inside a trigger). Optional: a stub may omit it. */
+  recheck?(): void;
 }
 
 /** `dialogue` service. */

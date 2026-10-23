@@ -14,7 +14,7 @@ import { installObjectiveFlags } from '../../../../objectiveFlags';
 import { makeKit, type Off } from '../../director/kit';
 import { M20D04, M20_CHAIN_FLAGS, M20_NOTES, M20_ORSK_GONE, D04_NOTES } from './m20d04.content';
 import { M20_NURSERY_GROUP } from './m20d04.data';
-import { M20_EXIT_ANCHOR, M20_ROOF_ANCHOR, M20_ROOF_HEIGHT, ORSK_CHECK_TICKS, installD04, installM20 } from './m20d04.director';
+import { M20_EXIT_ANCHOR, M20_ROOF_ANCHOR, M20_WENNA_HOME, M20_ROOF_HEIGHT, ORSK_CHECK_TICKS, installD04, installM20 } from './m20d04.director';
 import { D04_POOLS, POOL_VENT_TICKS, poolDef, ringPoint } from './m20d04.pools';
 
 const ANCHORS: Record<string, { x: number; y: number; z: number; yaw: number }> = {
@@ -293,6 +293,68 @@ describe('M20: Orsk', () => {
     r.talk('wyrmling-keeper');
     expect(r.manager.isObjectiveCurrent('m20', 'aftermath')).toBe(true);
     r.dispose();
+  });
+});
+
+describe('M20: the aftermath of the scene', () => {
+  const provideNpcs = (r: R) => {
+    const placed: Array<[string, string]> = [];
+    (r.kit.ctx.services as unknown as { provide(k: string, v: unknown): void }).provide('npcs', { place: (id: string, a: string) => { placed.push([id, a]); return true; } });
+    return placed;
+  };
+
+  it('credits chainsBroken at once when the gone beat writes orskGone, not at the next load', () => {
+    const r = rig({ only: 'm20' });
+    startQuest(r, 'm20');
+    r.install20();
+    toChainsObjective(r);
+    for (const n of [1, 2, 3, 4, 5]) { r.interact(`use:m20-chain-${n}`); r.state.setFlag(`story.m20.chain.${n}`, true); }
+    for (const id of M20_NOTES) r.talk(id);
+    r.talk('wyrmling-keeper');
+    expect(r.manager.isObjectiveCurrent('m20', 'chainsBroken')).toBe(true);
+    // only the last beat arrives (the first was missed): the flag alone must credit the current objective
+    r.emit('wyrm.orsk', { beat: 'gone' });
+    expect(r.state.getBool(M20_ORSK_GONE)).toBe(true);
+    expect(r.manager.objectiveDone('m20', 'chainsBroken')).toBe(true);
+    expect(r.manager.isObjectiveCurrent('m20', 'aftermath')).toBe(true);
+    r.dispose();
+  });
+
+  it('survives a quests service without recheck', () => {
+    const r = rig({ only: 'm20' });
+    startQuest(r, 'm20');
+    const quests = r.kit.ctx.services.get('quests') as unknown as { recheck?: () => void };
+    quests.recheck = undefined;
+    r.install20();
+    expect(() => r.emit('wyrm.orsk', { beat: 'gone' })).not.toThrow();
+    expect(r.state.getBool(M20_ORSK_GONE)).toBe(true);
+    r.dispose();
+  });
+
+  it('puts Wenna back in the hall when M20 completes, and again on a load of a finished M20', () => {
+    const r = rig({ only: 'm20' });
+    const placed = provideNpcs(r);
+    startQuest(r, 'm20');
+    r.install20();
+    r.emit('save.loaded', { slot: 'a' });
+    expect(placed).toEqual([]); // not before M20 is done
+    expect(r.manager.complete('m20')).toBe(true);
+    expect(placed).toEqual([['wenna', M20_WENNA_HOME]]);
+    r.emit('save.loaded', { slot: 'a' });
+    expect(placed).toEqual([['wenna', M20_WENNA_HOME], ['wenna', M20_WENNA_HOME]]);
+    r.dispose();
+  });
+
+  it('does not place anyone for another quest, and a missing npcs service is harmless', () => {
+    const r = rig({ only: 'm20' });
+    const placed = provideNpcs(r);
+    r.install20();
+    r.emit('quest.completed', { questId: 'm19' } as never);
+    expect(placed).toEqual([]);
+    const r2 = rig({ only: 'm20' });
+    r2.install20();
+    expect(() => r2.emit('quest.completed', { questId: 'm20' } as never)).not.toThrow();
+    r.dispose(); r2.dispose();
   });
 });
 
