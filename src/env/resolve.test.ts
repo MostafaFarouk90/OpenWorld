@@ -23,6 +23,26 @@ describe('resolveModel', () => {
     expect(resolveModel('picket-fence')).toMatchObject({ source: 'kaykit', model: 'hex/fence_wood_straight', fitHeight: 1.1 });
   });
 
+  it('maps the B3 and B4 ids to tinted variants or KayKit models', () => {
+    expect(resolveModel('bush-holly-a')).toMatchObject({ source: 'env', model: 'env/bush-round-a', scale: 1.05 });
+    expect(resolveModel('willow-a')).toMatchObject({ source: 'env', model: 'env/elm-or-ash-a', stretchY: 0.7 });
+    for (const id of ['reeds-a', 'reeds-b']) {
+      const r = resolveModel(id);
+      expect(r).toMatchObject({ source: 'env', model: 'env/grass-clump-a' });
+      expect(r.source === 'env' && (r.stretchY ?? 1) > 2, id).toBe(true);
+    }
+    expect(resolveModel('oak-ash-a')).toMatchObject({ source: 'env', model: 'env/oak-a', tint: { sat: 0.3 } });
+    expect(resolveModel('bush-round-ash')).toMatchObject({ source: 'env', model: 'env/bush-round-a' });
+    expect(resolveModel('grass-clump-ash')).toMatchObject({ source: 'env', model: 'env/grass-clump-a', scale: 0.95 });
+    expect(resolveModel('ash-tree-dead-a')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_large', fitHeight: 8 });
+    expect(resolveModel('ash-tree-dead-b')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_medium', fitHeight: 7 });
+    expect(resolveModel('roadside-shrine-a')).toMatchObject({ source: 'kaykit', model: 'hal/shrine_candles' });
+    expect(resolveModel('milestone-a')).toMatchObject({ source: 'kaykit', model: 'hal/gravestone' });
+    for (const id of ['flag_red', 'rock_single_B', 'rock_single_C', 'tent']) expect(resolveModel(id).source, id).toBe('kaykit');
+    // variants without a stretch carry none
+    expect('stretchY' in resolveModel('oak-b')).toBe(false);
+  });
+
   it('falls back to a placeholder shape only when nothing matches', () => {
     expect(resolveModel('haystack-round')).toEqual({ source: 'placeholder', shape: 'haystack' });
     expect(resolveModel('signpost-a')).toEqual({ source: 'placeholder', shape: 'post' });

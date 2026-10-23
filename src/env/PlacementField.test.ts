@@ -16,6 +16,8 @@ describe('classOf', () => {
     expect(classOf('grass-clump-c')).toBe('ground');
     expect(classOf('hedge-straight')).toBe('hedge');
     expect(classOf('barrel')).toBe('prop');
+    expect(classOf('willow-a')).toBe('tree');
+    expect(classOf('reeds-b')).toBe('bush');
   });
 });
 
@@ -63,6 +65,22 @@ describe('PlacementField without a model source', () => {
     const p = new (await import('three')).Vector3().setFromMatrixPosition(m);
     expect([p.x, p.y, p.z]).toEqual([3, 7, 4]);
     expect(new (await import('three')).Vector3().setFromMatrixScale(m).x).toBeCloseTo(2);
+    field.dispose();
+  });
+
+  it('stretches a variant in height only (reeds from the grass clump)', async () => {
+    const THREE = await import('three');
+    // A source that serves a 1 m box for every env model, so the variant resolves to a real (non-placeholder) model.
+    const source = { load: async () => undefined, instantiate: () => new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial()) };
+    const field = new PlacementField(new ModelLibrary(source, () => undefined), flat);
+    await field.build([{ id: 'reeds-a', x: 0, z: 0, scale: 1 }]);
+    expect(field.stats.placeholders).toBe(0);
+    const mesh = (field.object.children[0].children[0] as import('three').Group).children[0] as import('three').InstancedMesh;
+    const m = new THREE.Matrix4();
+    mesh.getMatrixAt(0, m);
+    const sc = new THREE.Vector3().setFromMatrixScale(m);
+    expect(sc.y / sc.x).toBeCloseTo(2.5);
+    expect(sc.x).toBeCloseTo(sc.z);
     field.dispose();
   });
 

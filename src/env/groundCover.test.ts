@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { envOwnsGround, groundCoverRect, GROUND_COVER_MARGIN } from './groundCover';
+import { envOwnsGround, envReplacesScenery, groundCoverRect, groundCoverRects, GROUND_COVER_MARGIN } from './groundCover';
 import { CLASS_RANGE, GROUND_LIFT } from './PlacementField';
 import { TILES } from './tiles';
 
@@ -13,6 +13,18 @@ describe('groundCoverRect', () => {
   it('is null for a tile with too few ground rows', () => {
     expect(groundCoverRect(clumps(5, 0, 0))).toBeNull();
     expect(groundCoverRect([])).toBeNull();
+  });
+});
+
+describe('groundCoverRects', () => {
+  it('gives one rectangle per separate dressed area, so a far annex does not claim the meadow between', () => {
+    const rs = groundCoverRects([...clumps(30, 0, 0), ...clumps(30, 400, 0)]);
+    expect(rs).toHaveLength(2);
+    expect(rs.some((r) => r.minX <= 200 && r.maxX >= 200)).toBe(false);
+  });
+  it('joins rows in touching cells into one area and drops areas with too few rows', () => {
+    expect(groundCoverRects(clumps(30, 0, 0))).toHaveLength(1);
+    expect(groundCoverRects([...clumps(30, 0, 0), ...clumps(4, 600, 600)])).toHaveLength(1);
   });
 });
 
@@ -30,6 +42,28 @@ describe('envOwnsGround', () => {
     const owns = envOwnsGround(true, TILES);
     expect(owns(0, 70)).toBe(true);
     expect(owns(0, -2000)).toBe(false);
+  });
+  it('covers B3 (the ford, the fields) and the reed island, not the meadow between B3 and the island', () => {
+    const owns = envOwnsGround(true, TILES);
+    expect(owns(-250, -110)).toBe(true);
+    expect(owns(-430, -140)).toBe(true);
+    expect(owns(55, -300)).toBe(true);
+    expect(owns(-10, -300)).toBe(false);
+  });
+});
+
+describe('envReplacesScenery', () => {
+  it('is true inside B3 and its annex while the pass is on, false elsewhere and with ?env=off', () => {
+    const on = envReplacesScenery(true);
+    expect(on(-300, -300)).toBe(true);
+    expect(on(-300, -146)).toBe(true);
+    expect(on(55, -300)).toBe(true);
+    expect(on(-20, -300)).toBe(false);
+    expect(on(600, -150)).toBe(false);
+    expect(envReplacesScenery(false)(-300, -300)).toBe(false);
+  });
+  it('ignores bounds of a tile that has no rows', () => {
+    expect(envReplacesScenery(true, { x: [{ minX: 0, maxX: 10, minZ: 0, maxZ: 10 }] }, {})(5, 5)).toBe(false);
   });
 });
 

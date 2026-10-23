@@ -16,13 +16,13 @@ export interface Tint {
 }
 
 export type ModelRef =
-  | { source: 'env' | 'kaykit'; model: string; scale: number; tint?: Tint; fitHeight?: number }
+  | { source: 'env' | 'kaykit'; model: string; scale: number; tint?: Tint; fitHeight?: number; stretchY?: number }
   | { source: 'placeholder'; shape: PlaceholderShape };
 
 export type PlaceholderShape = 'tree' | 'bush' | 'grass' | 'flower' | 'rock' | 'box' | 'haystack' | 'post' | 'patch';
 
-/** Ids that are another id with a different size or colour. */
-const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Tint }>> = {
+/** Ids that are another id with a different size or colour. `stretchY` scales the height only (reeds from a grass clump). */
+const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Tint; stretchY?: number }>> = {
   'oak-b': { base: 'oak-a', scale: 0.85, tint: { mul: 0xe0eac8 } },
   'oak-c': { base: 'oak-a', scale: 1.12, tint: { mul: 0xf2e8c4, sat: 0.9 } },
   'birch-b': { base: 'birch-a', scale: 0.88, tint: { mul: 0xeef2dc } },
@@ -35,6 +35,17 @@ const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Ti
   'flower-patch-white': { base: 'flower-patch-yellow', scale: 1, tint: { sat: 0.12, mul: 0xffffff } },
   'flower-patch-purple': { base: 'flower-patch-yellow', scale: 1, tint: { hue: 235 } },
   'flower-patch-red': { base: 'flower-patch-yellow', scale: 1, tint: { hue: -48 } },
+  // B3 (Hollin Ford): holly on the brook banks and weeping willows, until Mostafa's files exist (plans/env-pass/b3/missing-objects.md).
+  'bush-holly-a': { base: 'bush-round-a', scale: 1.05, tint: { hue: -20, sat: 0.9, mul: 0x7fa070 } },
+  // A squat, pale elm: 6.9 m wide and 8 m tall like the willow target. The drooping silhouette is a visual gap until a file arrives.
+  'willow-a': { base: 'elm-or-ash-a', scale: 1.15, stretchY: 0.7, tint: { hue: -10, mul: 0xc8dcaa } },
+  // Reed clumps: the grass clump stretched to 1.75 m and drained toward olive (was the green cone placeholder).
+  'reeds-a': { base: 'grass-clump-a', scale: 1.4, stretchY: 2.5, tint: { hue: -25, sat: 0.85, mul: 0xe6dcb0 } },
+  'reeds-b': { base: 'grass-clump-a', scale: 1.2, stretchY: 3.0, tint: { hue: -35, sat: 0.7, mul: 0xd8d0a8 } },
+  // B4 (the ash reach): the same silhouettes in a drained palette (plans/env-pass/b4/missing-objects.md).
+  'oak-ash-a': { base: 'oak-a', scale: 0.95, tint: { sat: 0.3, mul: 0xc9c2b2 } },
+  'bush-round-ash': { base: 'bush-round-a', scale: 1, tint: { sat: 0.25, mul: 0xb8b0a0 } },
+  'grass-clump-ash': { base: 'grass-clump-a', scale: 0.95, tint: { sat: 0.2, mul: 0xc8c0a8 } },
 };
 
 /** Ids the imported KayKit packs already cover, from the object grids. `fitHeight` sizes the model to a height in metres. */
@@ -57,10 +68,16 @@ const KAYKIT: Readonly<Record<string, { model: string; scale?: number; fitHeight
   'scorched-fence': { model: 'hex/fence_wood_straight', fitHeight: 1.6 },
   'rock-single-a': { model: 'hex/rock_single_A' },
   tent: { model: 'hex/tent' },
+  // The ash reach's dead trees: KayKit's are 3 to 4 m in the grid, fitted to the 8 m and 7 m of the targets.
+  'ash-tree-dead-a': { model: 'hal/tree_dead_large', fitHeight: 8 },
+  'ash-tree-dead-b': { model: 'hal/tree_dead_medium', fitHeight: 7 },
+  // B3 road dressing: a candle shrine for the wayside shrine, a rounded headstone shape for the milestones (interim, by id).
+  'roadside-shrine-a': { model: 'hal/shrine_candles', fitHeight: 1.6 },
+  'milestone-a': { model: 'hal/gravestone', fitHeight: 1.0 },
 };
 
 const SHAPES: ReadonlyArray<[RegExp, PlaceholderShape]> = [
-  [/^(oak|birch|elm|autumn|ash-tree)/, 'tree'],
+  [/^(oak|birch|elm|autumn|ash-tree|willow)/, 'tree'],
   [/^bush|^hedge|^fern|^reeds/, 'bush'],
   [/^grass/, 'grass'],
   [/^flower|^mushroom/, 'flower'],
@@ -75,7 +92,7 @@ const ENV_IDS: ReadonlySet<string> = new Set(Object.keys(manifest.objects));
 export function resolveModel(id: string): ModelRef {
   if (ENV_IDS.has(id)) return { source: 'env', model: `env/${id}`, scale: 1 };
   const v = VARIANTS[id];
-  if (v && ENV_IDS.has(v.base)) return { source: 'env', model: `env/${v.base}`, scale: v.scale, tint: v.tint };
+  if (v && ENV_IDS.has(v.base)) return { source: 'env', model: `env/${v.base}`, scale: v.scale, tint: v.tint, ...(v.stretchY ? { stretchY: v.stretchY } : {}) };
   const k = KAYKIT[id] ?? (SWAP_FIT[`hex/${id}`] ? { model: `hex/${id}` } : SWAP_FIT[`hal/${id}`] ? { model: `hal/${id}` } : undefined);
   if (k) {
     const f = SWAP_FIT[k.model];
