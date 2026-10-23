@@ -437,3 +437,52 @@ describe('?bellows=1&new dev hook (review-b M1 and L3)', () => {
     expect(valveAt(c, 1).x).toBeCloseTo(bellowsLayout(CENTER).valves[0].x, 5);
   });
 });
+
+describe('visual root visibility', () => {
+  const rootOf = (t: T) => t.ctx.scene.getObjectByName('weeping-bellows')!;
+  const fakeInteriors = (t: T) => {
+    const svc = { current: null as string | null };
+    t.ctx.services.provide('interiors' as never, svc as never);
+    return svc;
+  };
+
+  it('with the real centre anchor the root shows only while inside the Bellows mine, following enter/exit', async () => {
+    const t = await boot();
+    const interiors = fakeInteriors(t);
+    t.run(2);
+    expect(rootOf(t)).toBeDefined();
+    expect(rootOf(t).visible).toBe(false);
+    interiors.current = 'mine-weeping-bellows';
+    t.ctx.events.emit('interior.entered', { interiorId: 'mine-weeping-bellows', doorId: 'd' } as never);
+    expect(rootOf(t).visible).toBe(true);
+    interiors.current = null;
+    t.ctx.events.emit('interior.exited', { interiorId: 'mine-weeping-bellows', doorId: 'd' } as never);
+    expect(rootOf(t).visible).toBe(false);
+  });
+
+  it('another interior keeps it hidden, and save.loaded re-evaluates', async () => {
+    const t = await boot();
+    const interiors = fakeInteriors(t);
+    t.run(2);
+    interiors.current = 'mine-other';
+    t.ctx.events.emit('save.loaded', { slot: 'a' });
+    expect(rootOf(t).visible).toBe(false);
+    interiors.current = 'mine-weeping-bellows';
+    t.ctx.events.emit('save.loaded', { slot: 'a' });
+    expect(rootOf(t).visible).toBe(true);
+    interiors.current = null;
+    t.ctx.events.emit('save.loaded', { slot: 'a' });
+    expect(rootOf(t).visible).toBe(false);
+  });
+
+  it('the ?bellows=1 stand-in stays visible regardless of the interior', async () => {
+    vi.stubGlobal('location', { search: '?bellows=1' });
+    const t = await boot({ center: false });
+    const interiors = fakeInteriors(t);
+    t.run(3);
+    expect(rootOf(t).visible).toBe(true);
+    t.ctx.events.emit('save.loaded', { slot: 'a' });
+    expect(interiors.current).toBeNull();
+    expect(rootOf(t).visible).toBe(true);
+  });
+});
