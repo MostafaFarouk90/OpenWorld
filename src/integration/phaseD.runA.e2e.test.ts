@@ -36,7 +36,6 @@ describe('Phase D run A', () => {
     for (const q of PHASE_D_ORDER) expect(trails[q].order.length, q).toBeGreaterThan(0);
     expect(PHASE_D_ORDER.flatMap((q) => trails[q].scripted)).toEqual([
       'm18.solve(the Surge cast raised as spell.released)',
-      'm19.route(entered the lower galleries through the interior service, not the lift)',
     ]);
     // the carried character meets M16's hounds (band 12 to 14) at the top of that band
     expect(census.rows().find((r) => r.quest === 'm16')!.levelStart).toBeGreaterThanOrEqual(M16_AMBUSH_BAND.max);

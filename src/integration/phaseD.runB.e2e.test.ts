@@ -34,7 +34,6 @@ describe('Phase D run B', () => {
     for (const q of PHASE_D_ORDER) expect(trails[q].order.length, q).toBeGreaterThan(0);
     expect(PHASE_D_ORDER.flatMap((q) => trails[q].scripted)).toEqual([
       'm18.solve(the Surge cast raised as spell.released)',
-      'm19.route(entered the lower galleries through the interior service, not the lift)',
       'm21.sneak(teleported checkpoint to checkpoint, the watch loop not played)',
     ]);
     const timing = phaseDTiming(h, trails, 'B');

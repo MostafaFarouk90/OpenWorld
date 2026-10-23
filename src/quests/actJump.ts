@@ -79,7 +79,7 @@ const THROUGH_D03 = [...THROUGH_ACT1, 'm11', 'm12', 'm13', 'm14', 'm15', 'd03'] 
 /** All of Phase C, in play order: M22 and the ending wait on the side quests too. */
 const PHASE_C_ALL = [...THROUGH_ACT1, 'm11', 'm12', 'm13', 'r05', 'r06', 'r07', 'r11', 'm14', 'm15', 'd03'] as const;
 /** Every Phase D quest M22 waits on (its own `startWhen`), in play order. */
-const PHASE_D_BEFORE_M22 = ['m16', 'm17', 'r08', 'r09', 'r10', 'm18', 'm19', 'm20', 'm21', 'd04'] as const;
+const PHASE_D_BEFORE_M22 = ['m16', 'm17', 'r09', 'r08', 'm18', 'r10', 'm19', 'm20', 'm21', 'd04'] as const;
 
 /**
  * Act 2 prerequisites, transitive and in play order. Phase C (A12): M11 to M15, R05 to R07, R11 and D03. Phase D (A13): M16 to

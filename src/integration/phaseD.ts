@@ -16,6 +16,7 @@ import { M16_BRAZIER, M16_BRAZIER_ID } from '../quests/content/act2/oldsmoke/m16
 import { BELLOWS_LIT_FLAG, BELLOWS_PLAQUE, BELLOWS_SHRINE_ID, BELLOWS_SOLVED_FLAG } from '../quests/content/act2/oldsmoke/mines/m18.quest';
 import { M17_MINERS } from '../quests/content/act2/oldsmoke/mines/m17.quest';
 import { D04_OUTCOME_FLAG } from '../quests/content/act2/oldsmoke/mines/d04.quest';
+import { M21_WITHDRAW_TRIGGER } from '../quests/content/act2/oldsmoke/m21.quest';
 import { M19_NURSERY_TRIGGER, M19_ROUTE_TRIGGER } from '../quests/content/act2/oldsmoke/mines/m19.quest';
 import { M19_ROUTE_PREFIX } from '../quests/content/act2/oldsmoke/mines/m18m19.director';
 import { ROUTE_FOLLOW_MPS } from './timing';
@@ -98,6 +99,7 @@ Object.assign(HANDLERS, {
   'r09.chests': carryAll('r09', 'chests'),
   'r09.clerk': (h, t) => talk(h, t, 'steward-market-2'),
   'r09.choice': (h, t, o) => talk(h, t, 'slagg', pick(o, 'r09.choice', [1])),
+  'r09.report': (h, t) => talk(h, t, 'slagg'),
   'r10.choice': (h, t, o) => talk(h, t, 'slagg', pick(o, 'r10.choice', [1])),
   'r10.talks': async (h, t) => {
     for (const npc of ['miner-1', 'steward-market-1', 'steward-market-2']) await talk(h, t, npc, [1]);
@@ -324,6 +326,7 @@ Object.assign(HANDLERS, {
   'd04.pool1': coolPool(1),
   'd04.pool2': coolPool(2),
   'd04.slagmaw': (h, t) => fightSlagmaw(h, t),
+  'm21.withdraw': async (h) => { await h.enterTrigger(M21_WITHDRAW_TRIGGER); },
   'm21.stealth': sneak('m21', ['oldsmoke.stealth.m21.start', 'oldsmoke.stealth.m21.cp.gallery', 'oldsmoke.stealth.m21.cp.study', 'oldsmoke.stealth.m21.end']),
   'm22.council': async (h, t) => {
     await h.enterTrigger('trg.harrowmark.keep-hall');

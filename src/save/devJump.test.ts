@@ -25,10 +25,10 @@ describe('devJumpBoot', () => {
   });
 
   it('a refused one (unknown quest, unknown class, a bad id next to a bad bellows value) is refused', () => {
-    expect(devJumpBoot('?act2=m16&new', true)).toBe('refused');
+    expect(devJumpBoot('?act2=m99&new', true)).toBe('refused');
     expect(devJumpBoot('?act2=m11&new&class=bard', true)).toBe('refused');
     expect(devJumpBoot('?act1=zz&new', true)).toBe('refused');
-    expect(devJumpBoot('?act1=zz&act2=m16&new', true)).toBe('refused');
+    expect(devJumpBoot('?act1=zz&act2=m99&new', true)).toBe('refused');
   });
 
   it('no &new, no jump named, or a production build: the ordinary boot', () => {
@@ -88,8 +88,8 @@ describe('the save plugin\'s boot with a dev jump', () => {
     return { game, save, dispose: () => game.dispose?.() };
   }
 
-  it('a refused ?act2=m16&new boots with saves held: a manual save is deferred, not written', async () => {
-    const t = await bootWith('?act2=m16&new');
+  it('a refused ?act2=m99&new boots with saves held: a manual save is deferred, not written', async () => {
+    const t = await bootWith('?act2=m99&new');
     expect(t.save.loading).toBe(false);
     expect(await t.save.saveNow('manual')).toEqual({ ok: false, reason: 'deferred' });
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('dev jump was refused'));
