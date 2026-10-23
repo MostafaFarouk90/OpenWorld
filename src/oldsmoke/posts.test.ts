@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GRISEL_HALL_DEF } from './griselHall';
+import { MINE_DEFS } from './mines';
 import { evalCondition } from '../quests/conditions';
 import type { ConditionEnv } from '../quests/ports';
 import { POST_RULES, resolvePosts } from '../quests/posts';
@@ -17,10 +18,10 @@ function env(quests: Record<string, QuestState> = {}, flags: Record<string, stri
 }
 const at = (npc: string, e: ConditionEnv) => resolvePosts(POST_RULES, e)[npc];
 const layoutAnchors = new Set(OLDSMOKE_LAYOUT.anchors.map((a) => a.id));
-const hallAnchors = new Set(GRISEL_HALL_DEF.anchors.map((a) => a.id));
+const hallAnchors = new Set([...GRISEL_HALL_DEF.anchors, ...MINE_DEFS.flatMap((d) => d.anchors)].map((a) => a.id));
 
 describe('Deepgate NPC posts', () => {
-  it('only names anchors that exist (this layout, or the hall interior for the always-on rows)', () => {
+  it('only names anchors that exist (this layout, or an interior: the hall, the mines)', () => {
     for (const r of OLDSMOKE_POST_RULES) {
       expect(layoutAnchors.has(r.home), r.home).toBe(true);
       for (const p of r.posts) expect(layoutAnchors.has(p.anchorId) || hallAnchors.has(p.anchorId), p.anchorId).toBe(true);
@@ -58,9 +59,16 @@ describe('Deepgate NPC posts', () => {
     expect(at('slagg', env({ r09: 'completed', r10: 'completed' })).home).toBe(true);
   });
 
-  it('Pike stays at the shaft head (no row moves him in PR 1)', () => {
-    expect(OLDSMOKE_POST_RULES.some((r) => r.npcId === 'pike')).toBe(false);
+  it('Pike tends the shaft head until M18 starts, then the Bellows cavern', () => {
     expect(OLDSMOKE_NPCS.find((n) => n.id === 'pike')!.post).toBe('npc-post.pike.shaft');
+    expect(at('pike', env({ m17: 'active' })).home).toBe(true);
+    expect(at('pike', env({ m18: 'active' })).anchorId).toBe('npc-post.pike.bellows');
+    expect(at('pike', env({ m18: 'completed' })).anchorId).toBe('npc-post.pike.bellows');
+  });
+
+  it('Slagg stands at Deepdelve while D04 is active', () => {
+    expect(at('slagg', env({ d04: 'active' })).anchorId).toBe('npc-post.slagg.deepdelve');
+    expect(at('slagg', env({ d04: 'completed' })).home).toBe(true);
   });
 
   it('Aldous and the hall stewards move onto the hall\'s own posts; Wenna too until M19 hands her to A13', () => {

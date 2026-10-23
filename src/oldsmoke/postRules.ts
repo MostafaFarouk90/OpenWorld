@@ -14,8 +14,14 @@ export const OLDSMOKE_POST_RULES: PostRule[] = [
     npcId: 'slagg',
     home: 'npc-post.slagg.shaft',
     // R09 and R10 are given at the market; M17 and D04 at the shaft.
-    posts: [{ when: { any: [{ quest: 'r09', state: 'active' }, { quest: 'r10', state: 'active' }] }, anchorId: 'npc-post.slagg.market' }],
+    posts: [
+      // D04 is given and finished at Deepdelve (the mine interior defines the post).
+      { when: { quest: 'd04', state: 'active' }, anchorId: 'npc-post.slagg.deepdelve' },
+      { when: { any: [{ quest: 'r09', state: 'active' }, { quest: 'r10', state: 'active' }] }, anchorId: 'npc-post.slagg.market' },
+    ],
   },
+  // Pike tends the Weeping Bellows once M18 starts.
+  { npcId: 'pike', home: 'npc-post.pike.shaft', posts: [{ when: { quest: 'm18', state: ['active', 'completed'] }, anchorId: 'npc-post.pike.bellows' }] },
   { npcId: 'aldous', home: 'npc-post.aldous.court', posts: [{ when: m16Done, anchorId: 'oldsmoke.hall.aldous' }] },
   // A13 takes Wenna over from M19 (she walks the player to the Lower Galleries), so the director leaves her alone then.
   {

@@ -181,6 +181,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
         for (const side of ['outside', 'inside'] as const) {
           const key = `${door.doorId}:${side}`;
           if (doors.has(key)) continue;
+          if (side === 'outside' && door.outsideInteractable === false) continue;
           const anchor = ctx.anchors.find(side === 'outside' ? door.outside : door.exit);
           if (!anchor) continue;
           const id = side === 'outside' ? `door:${door.doorId}` : `door:${door.doorId}-exit`;
