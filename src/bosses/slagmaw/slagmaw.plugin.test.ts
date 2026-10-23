@@ -12,7 +12,7 @@ import { killXp } from "../../progression/tuning";
 import { TerrainColliders } from "../../world/TerrainColliders";
 import { World } from "../../world/World";
 import { OUTCOME_FLAG } from "./SlagmawDirector";
-import { SLAGMAW_BOSS_DEF } from "./SlagmawEncounter";
+import { SLAGMAW_BOSS_DEF, SLAGMAW_WINDOW_SECONDS } from "./SlagmawEncounter";
 import slagmawPlugin, { slagmawDirector } from "./slagmaw.plugin";
 import {
   ARENA,
@@ -308,7 +308,8 @@ describe("The Slagmaw on the real core", () => {
   it("the contract the registry and A12 read: no mercy row, no release window (0), kill XP 380, name key and outcome flag", () => {
     expect(BOSS_MERCY[SLAGMAW_BOSS_ID]).toBeUndefined();
     expect(SLAGMAW_BOSS_DEF.mercyVerb).toBeUndefined();
-    expect(SLAGMAW_BOSS_DEF.releaseWindowSeconds).toBe(0);
+    expect(SLAGMAW_BOSS_DEF.releaseWindowSeconds).toBe(SLAGMAW_WINDOW_SECONDS);
+    expect(SLAGMAW_WINDOW_SECONDS).toBeLessThan(TICK);
     expect(killXp(SLAGMAW_BOSS_ID, 15, 15)).toBe(380);
     expect(OUTCOME_FLAG).toBe("boss.the-slagmaw.outcome");
   });
@@ -728,9 +729,8 @@ describe("The Slagmaw on the real core", () => {
     expect(u.state()!.releaseOpen).toBe(false);
     u.coolAndBreak(3);
     expect(u.of("boss.break").map((b) => b.last)).toEqual([false, false, true]);
-    // The def has no window at all: the event never fires and nothing offers a Release.
+    // The registry needs a window; it is a single tick and nothing offers it.
     u.run(2);
-    expect(u.of("boss.releaseWindow")).toEqual([]);
     expect(u.state()!.releaseOpen).toBe(false);
     expect(u.ctx.bosses.release(SLAGMAW_BOSS_ID)).toBe(false);
     u.runHealed(SLAGMAW.breakSeconds + 5);

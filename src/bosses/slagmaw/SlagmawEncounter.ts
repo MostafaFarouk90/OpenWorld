@@ -28,6 +28,13 @@ import {
 export const SLAGMAW_FLOOR_MODIFIER_ID = "bosses.slagmaw.floor";
 export const SLAGMAW_CRUST_MODIFIER_ID = "bosses.slagmaw.crust";
 
+/**
+ * The registry refuses a zero window, and its `last` break always opens one. The Slagmaw has no mercy (no `BOSS_MERCY` row, so
+ * nothing offers a Release), so the window is the smallest the registry allows: it closes on its next tick. The follow-up
+ * "BossRegistry: let releaseWindowSeconds 0 mean no window" retires this.
+ */
+export const SLAGMAW_WINDOW_SECONDS = 0.001;
+
 export const SLAGMAW_BOSS_DEF: BossDef = {
   bossId: SLAGMAW_BOSS_ID,
   nameKey: SLAGMAW_NAME_KEY,
@@ -35,8 +42,7 @@ export const SLAGMAW_BOSS_DEF: BossDef = {
   breaksPerPhase: SLAGMAW.breaksPerPhase,
   shield: false,
   shieldBreakers: [],
-  // The Slagmaw has no mercy (no `BOSS_MERCY` row): 0 = the registry opens no release window on the `last` break.
-  releaseWindowSeconds: SLAGMAW.releaseWindowSeconds,
+  releaseWindowSeconds: Math.max(SLAGMAW.releaseWindowSeconds, SLAGMAW_WINDOW_SECONDS),
 };
 
 /** How many globs can be in the air at once (one spit every 1.4 s or slower, a 24 m range at 13 m/s). */
