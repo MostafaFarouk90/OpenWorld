@@ -1,0 +1,196 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { WYRM_SOUND_KEYS } from '../enemies/wyrm/sounds';
+import { ACT2_SFX_KEYS, ACT2_SFX_VOLUME, act2SfxSamples } from './act2Sfx';
+import plugin from './act2Sfx.plugin';
+import { MOVE_SFX } from './act2SfxRouter';
+
+type Handler = (payload: never) => void;
+
+/** A fake plugin context: a tiny event bus, a recording audio service, and actor and structure lookups. */
+function fakeCtx(opts: { audio?: boolean } = { audio: true }) {
+  const handlers = new Map<string, Handler[]>();
+  const registered: Array<{ key: string; def: { volume?: number } }> = [];
+  const played: string[] = [];
+  const playedAt: Array<{ key: string; at: { x: number; y: number; z: number } }> = [];
+  const audio = {
+    register: (key: string, def: { volume?: number }) => void registered.push({ key, def }),
+    play: (key: string) => void played.push(key),
+    playAt: (key: string, at: { x: number; y: number; z: number }) => void playedAt.push({ key, at: { x: at.x, y: at.y, z: at.z } }),
+  };
+  const structures: Record<string, { kind: 'cart' | 'barricade'; maxHealth: number }> = {
+    barricade: { kind: 'barricade', maxHealth: 300 },
+    'cart-1': { kind: 'cart', maxHealth: 100 },
+  };
+  const ctx = {
+    services: {
+      get: (name: string) => (name === 'audio' ? (opts.audio ? audio : undefined) : name === 'waves' ? { structure: (id: string) => structures[id] } : undefined),
+    },
+    actors: {
+      get: (id: string) =>
+        id === 'golem#1'
+          ? { kind: 'cinder-golem', root: {}, worldPosition: (v: { set: (x: number, y: number, z: number) => void }) => (v.set(1, 2, 3), v) }
+          : id === 'crawler#1'
+            ? { kind: 'slag-crawler', root: null, worldPosition: (v: unknown) => v }
+            : undefined,
+    },
+    events: {
+      on: (type: string, h: Handler) => {
+        handlers.set(type, [...(handlers.get(type) ?? []), h]);
+        return () => handlers.set(type, (handlers.get(type) ?? []).filter((x) => x !== h));
+      },
+    },
+  };
+  const emit = (type: string, payload: object) => (handlers.get(type) ?? []).forEach((h) => h(payload as never));
+  return { ctx, emit, registered, played, playedAt };
+}
+
+const setup = (c: ReturnType<typeof fakeCtx>) => (plugin.setup as (ctx: unknown) => void)(c.ctx);
+
+beforeEach(() => {
+  vi.stubGlobal('URL', { createObjectURL: () => 'blob:test', revokeObjectURL: () => {} });
+});
+afterEach(() => {
+  plugin.dispose?.();
+  vi.unstubAllGlobals();
+});
+
+describe('act2 sfx keys', () => {
+  it('has no duplicate keys, and none that collide with the wyrm keys', () => {
+    expect(new Set(ACT2_SFX_KEYS).size).toBe(ACT2_SFX_KEYS.length);
+    const all = [...ACT2_SFX_KEYS, ...WYRM_SOUND_KEYS.map((k) => `sfx.wyrm.${k}`)];
+    expect(new Set(all).size).toBe(all.length);
+  });
+
+  it('gives every key a volume and a non-empty, finite, audible, deterministic render', () => {
+    for (const key of ACT2_SFX_KEYS) {
+      expect(ACT2_SFX_VOLUME[key], key).toBeGreaterThan(0);
+      const a = act2SfxSamples(key);
+      expect(a.length, key).toBeGreaterThan(1000);
+      expect(a.every((v) => Number.isFinite(v) && Math.abs(v) <= 1), key).toBe(true);
+      expect(Math.max(...a.map(Math.abs)), key).toBeGreaterThan(0.05);
+      const b = act2SfxSamples(key);
+      expect(a.every((v, i) => v === b[i]), key).toBe(true);
+    }
+  });
+
+  it('registers every key once, with its volume', () => {
+    const c = fakeCtx();
+    setup(c);
+    expect(c.registered.map((r) => r.key).sort()).toEqual([...ACT2_SFX_KEYS].sort());
+    for (const r of c.registered) expect(r.def.volume).toBe(ACT2_SFX_VOLUME[r.key as (typeof ACT2_SFX_KEYS)[number]]);
+  });
+
+  it('maps every ground-enemy move to a registered key', () => {
+    for (const key of Object.values(MOVE_SFX)) expect(ACT2_SFX_KEYS).toContain(key);
+  });
+});
+
+describe('act2 sfx hooks', () => {
+  it('plays each ground-enemy move at the actor, or flat when the actor is unplaced', () => {
+    const c = fakeCtx();
+    setup(c);
+    for (const [moveId, key] of Object.entries(MOVE_SFX)) {
+      c.playedAt.length = 0;
+      c.emit('telegraph', { actorId: 'golem#1', moveId });
+      expect(c.playedAt, moveId).toEqual([{ key, at: { x: 1, y: 2, z: 3 } }]);
+    }
+    c.emit('telegraph', { actorId: 'crawler#1', moveId: 'crawler.bite' });
+    expect(c.played).toEqual(['sfx.crawler.bite']);
+    c.emit('telegraph', { actorId: 'golem#1', moveId: 'wraith.claw' });
+    expect(c.played).toHaveLength(1);
+  });
+
+  it('plays the golem crumble on death and the core break on stagger, but not for other kinds', () => {
+    const c = fakeCtx();
+    setup(c);
+    c.emit('actor.died', { actorId: 'golem#1', kind: 'cinder-golem' });
+    c.emit('actor.staggered', { actorId: 'golem#1', byId: null });
+    expect(c.playedAt.map((p) => p.key)).toEqual(['sfx.golem.crumble', 'sfx.golem.corebreak']);
+    c.emit('actor.died', { actorId: 'x', kind: 'wraith' });
+    c.emit('actor.staggered', { actorId: 'crawler#1', byId: null });
+    expect(c.playedAt).toHaveLength(2);
+    expect(c.played).toEqual([]);
+  });
+
+  it('plays the quench hiss on a cooling hit', () => {
+    const c = fakeCtx();
+    setup(c);
+    c.emit('cooling.hit', { actorId: 'crawler#1', kind: 'draught' });
+    expect(c.played).toEqual(['sfx.crawler.hiss']);
+  });
+
+  it('plays the barricade ram, cart hit (not its spawn event), cart break and barricade fall', () => {
+    const c = fakeCtx();
+    setup(c);
+    c.emit('structure.damaged', { id: 'barricade', health: 250 });
+    c.emit('structure.damaged', { id: 'cart-1', health: 100 });
+    c.emit('structure.damaged', { id: 'cart-1', health: 60 });
+    c.emit('structure.damaged', { id: 'unknown', health: 1 });
+    c.emit('structure.destroyed', { id: 'cart-1' });
+    c.emit('structure.destroyed', { id: 'barricade' });
+    c.emit('structure.destroyed', { id: 'unknown' });
+    expect(c.played).toEqual(['sfx.barricade.ram', 'sfx.cart.hit', 'sfx.cart.break', 'sfx.barricade.fall']);
+  });
+
+  it('plays the Bellows valve, pressure hiss, solved chime and failed vent, only for its puzzle', () => {
+    const c = fakeCtx();
+    setup(c);
+    c.emit('interact', { interactableId: 'valve:bellows-1', kind: 'valve', actorId: 'player', action: 'interact' });
+    c.emit('interact', { interactableId: 'valve:bellows-1', kind: 'valve', actorId: 'player', action: 'mercy' });
+    c.emit('interact', { interactableId: 'chest:1', kind: 'chest', actorId: 'player', action: 'interact' });
+    c.emit('puzzle.state', { id: 'weeping-bellows', phase: 'pressure' });
+    c.emit('puzzle.state', { id: 'weeping-bellows', phase: 'lighting' });
+    c.emit('puzzle.state', { id: 'other', phase: 'pressure' });
+    c.emit('puzzle.solved', { id: 'other' });
+    c.emit('puzzle.solved', { id: 'weeping-bellows' });
+    c.emit('puzzle.failed', { id: 'weeping-bellows' });
+    expect(c.played).toEqual(['sfx.bellows.valve', 'sfx.bellows.hiss', 'sfx.bellows.solved', 'sfx.bellows.vent']);
+  });
+
+  it('only ever plays registered keys', () => {
+    const c = fakeCtx();
+    setup(c);
+    c.emit('telegraph', { actorId: 'golem#1', moveId: 'golem.slam' });
+    c.emit('structure.destroyed', { id: 'cart-1' });
+    c.emit('puzzle.solved', { id: 'weeping-bellows' });
+    const registered = new Set(c.registered.map((r) => r.key));
+    for (const k of [...c.played, ...c.playedAt.map((p) => p.key)]) expect(registered.has(k)).toBe(true);
+  });
+
+  it('is a silent no-op without an audio service', () => {
+    const c = fakeCtx({ audio: false });
+    expect(() => setup(c)).not.toThrow();
+    expect(c.registered).toEqual([]);
+    expect(() => {
+      c.emit('telegraph', { actorId: 'golem#1', moveId: 'golem.stomp' });
+      c.emit('actor.died', { actorId: 'golem#1', kind: 'cinder-golem' });
+      c.emit('structure.damaged', { id: 'barricade', health: 1 });
+      c.emit('structure.destroyed', { id: 'cart-1' });
+      c.emit('interact', { interactableId: 'v', kind: 'valve', actorId: 'p', action: 'interact' });
+      c.emit('puzzle.solved', { id: 'weeping-bellows' });
+    }).not.toThrow();
+    expect(c.played).toEqual([]);
+    expect(c.playedAt).toEqual([]);
+  });
+
+  it('swallows an unregistered key', () => {
+    const c = fakeCtx();
+    setup(c);
+    c.ctx.services.get = ((name: string) =>
+      name === 'audio'
+        ? {
+            register: () => {},
+            play: () => {
+              throw new Error('no such sound');
+            },
+            playAt: () => {
+              throw new Error('no such sound');
+            },
+          }
+        : undefined) as never;
+    expect(() => {
+      c.emit('telegraph', { actorId: 'golem#1', moveId: 'golem.stomp' });
+      c.emit('puzzle.solved', { id: 'weeping-bellows' });
+    }).not.toThrow();
+  });
+});
