@@ -86,7 +86,7 @@ const gapTrough = (id: string, a: readonly [number, number], b: readonly [number
     { x: b[0], z: b[1], floor: WADE_FLOOR },
   ],
   halfWidth: 6,
-  blend: 6,
+  blend: 4,
 });
 
 // ---- causeways (K3 lays plank decks over them): raised ground 4 m wide at the deck height
@@ -105,7 +105,7 @@ const causeway = (id: string, points: RoadPolyline, gaps: readonly { arc: number
 });
 
 export const CAUSEWAY_REEDGATE_MERE_POINTS: RoadPolyline = [
-  [3160, 10265],
+  [3160, 10240],
   [3140, 10800],
   [3060, 11450],
   [3000, 12030],
@@ -113,7 +113,7 @@ export const CAUSEWAY_REEDGATE_MERE_POINTS: RoadPolyline = [
 export const CAUSEWAY_MERE_GREYWATCH_POINTS: RoadPolyline = [
   [2880, 12960],
   [2760, 13600],
-  [2700, 14435],
+  [2700, 14440],
 ];
 export const CAUSEWAY_MERE_MIREWEATHER_POINTS: RoadPolyline = [
   [3470, 12380],
@@ -147,7 +147,7 @@ export const CAUSEWAY_GAPS: readonly { causewayId: 'causeway-reedgate-mere'; arc
 }));
 
 /** The shaped dip under each gap is wider than the bridge, so open water spans at least the 8 m bridge. */
-export const GAP_CUT_HALF_LENGTH = 7;
+export const GAP_CUT_HALF_LENGTH = 5;
 export const CAUSEWAY_REEDGATE_MERE = causeway(
   'causeway-reedgate-mere',
   CAUSEWAY_REEDGATE_MERE_POINTS,
@@ -169,7 +169,16 @@ const GAP_TROUGHS: readonly TroughDef[] = CAUSEWAY_GAPS.map((gp, i) => {
   return gapTrough(`causeway-gap-${i + 1}`, [c[0] - nx * 8, c[1] - nz * 8], [c[0] + nx * 8, c[1] + nz * 8]);
 });
 
-export const GREYFEN_TROUGHS: readonly TroughDef[] = [...FERRY_CHANNELS, ...GAP_TROUGHS];
+/** Each causeway crosses open bog: a band of wading water either side of it (the causeway is laid on top, raised). */
+export const CAUSEWAY_BOG_HALF_WIDTH = 25;
+const bog = (id: string, pts: RoadPolyline): TroughDef => ({ id, points: pts.map(([x, z]) => ({ x, z, floor: WADE_FLOOR })), halfWidth: CAUSEWAY_BOG_HALF_WIDTH, blend: 25 });
+export const CAUSEWAY_BOGS: readonly TroughDef[] = [
+  bog('bog-reedgate-mere', CAUSEWAY_REEDGATE_MERE_POINTS),
+  bog('bog-mere-greywatch', CAUSEWAY_MERE_GREYWATCH_POINTS),
+  bog('bog-mere-mireweather', CAUSEWAY_MERE_MIREWEATHER_POINTS),
+];
+
+export const GREYFEN_TROUGHS: readonly TroughDef[] = [...FERRY_CHANNELS, ...CAUSEWAY_BOGS, ...GAP_TROUGHS];
 
 // ---- plateaus (dry pads; the interior pads are act3Places.ts ACT3_INTERIOR_PADS)
 const pad = (id: string, cx: number, cz: number, w: number, d: number, height: number, blend: number, hollow?: PlateauDef['hollow']): PlateauDef => ({
@@ -182,12 +191,15 @@ const pad = (id: string, cx: number, cz: number, w: number, d: number, height: n
 
 export const REEDGATE_PLATEAU = pad('reedgate', 3200, 10180, 160, 120, 7, 40);
 /** The landing with M24's pit (K7): 12 x 10 m, 6 m deep, 30 m east of the landing point. */
-export const REEDGATE_FERRY_PLATEAU = pad('reedgate-ferry', 3615, 10100, 70, 44, 7, 30, { box: box(3630, 10100, 12, 10), depth: 6 });
+export const REEDGATE_FERRY_PLATEAU = pad('reedgate-ferry', 3615, 10100, 70, 44, 7, 10, { box: box(3630, 10100, 12, 10), depth: 6 });
 export const MERE_SHRINE_PLATEAU = pad('mere-shrine', 3000, 12045, 44, 30, 7, 25);
 export const MIREWEATHER_HUT_PLATEAU = pad('mireweather-hut', 5600, 12300, 80, 60, 8, 40);
 export const GREYWATCH_PLATEAU = pad('greywatch', 2700, 14460, 40, 40, 7, 25);
 export const SUNKEN_CHAPEL_PLATEAU = pad('sunken-chapel', 2600, 14700, 68, 78, 7, 30);
 export const MIREWATER_DEEPS_PLATEAU = pad('mirewater-deeps', 2300, 12000, 98, 118, 7, 30);
+/** Where the Greywatch and Mireweather causeways leave the Mere's shore. */
+export const MERE_NORTH_LANDING_PLATEAU = pad('mere-north-landing', 2880, 12960, 24, 24, 7, 15);
+export const MERE_EAST_LANDING_PLATEAU = pad('mere-east-landing', 3470, 12380, 24, 24, 7, 15);
 
 export const GREYFEN_PLATEAUS: readonly PlateauDef[] = [
   REEDGATE_PLATEAU,
@@ -197,6 +209,8 @@ export const GREYFEN_PLATEAUS: readonly PlateauDef[] = [
   GREYWATCH_PLATEAU,
   SUNKEN_CHAPEL_PLATEAU,
   MIREWATER_DEEPS_PLATEAU,
+  MERE_NORTH_LANDING_PLATEAU,
+  MERE_EAST_LANDING_PLATEAU,
 ];
 
 // ---- roads
@@ -237,7 +251,7 @@ export const FEN_TRACK_POINTS: RoadPolyline = [
   [4600, 9821],
   [5000, 10600],
   [5300, 11500],
-  [5560, 12265],
+  [5610, 12270],
 ];
 export const FEN_TRACK: RoadDef = { ...road('fen-track', FEN_TRACK_POINTS, 3.5, 20, 0.08, 0), minHeight: GREYFEN_WATER_TABLE + 1 };
 

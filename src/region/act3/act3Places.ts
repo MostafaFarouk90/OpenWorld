@@ -2,6 +2,7 @@
 // the ferry and the M24 pool, fitted to the shaped heightfield. Siblings (K2, K3, K4, K7, K9) import these and never
 // hard-code a site. `y` is the ground (a plateau's surface) at the point. Plain data, worker-safe.
 import type { RoadPolyline } from '../../terrain/shape/cinderRoad';
+import { FERRY_MERE_GREYWATCH_POINTS, FERRY_MERE_MIREWEATHER_POINTS, FERRY_REEDGATE_MERE_POINTS, GREYFEN_WATER_TABLE } from '../../terrain/shape/greyfen';
 
 export interface Act3Point {
   x: number;
@@ -77,7 +78,7 @@ export const ACT3_WAYSTONES: Readonly<Record<Act3WaystoneId, Act3Point>> = {
   reedgate: { x: 3200, z: 10200, y: 7 },
   'hathrens-mere': { x: 3000, z: 12050, y: 7 },
   greywatch: { x: 2700, z: 14450, y: 7 },
-  'mireweather-hut': { x: 5550, z: 12250, y: 8 },
+  'mireweather-hut': { x: 5572, z: 12282, y: 8 },
   'wyrmwatch-lodge': { x: 13600, z: 11850, y: 120 },
   'rime-pass': { x: 13000, z: 13300, y: 250 },
   'last-anvil': { x: 14700, z: 13900, y: 380 },
@@ -114,18 +115,31 @@ export interface Act3FerryPath {
   points: RoadPolyline;
 }
 
+/** From the Mere's south jetty out into its deep water, where the other two paths leave. */
+const MERE_OUT: RoadPolyline = FERRY_REEDGATE_MERE_POINTS.slice(3);
+
 /** The fen ferry (K7 builds the ride): stops agreed with K7, the channels K1 carves, one surface for all fen water. */
 export const ACT3_FERRY: {
   surfaceY: number;
   stops: readonly { id: Act3FerryStopId; x: number; z: number }[];
   paths: readonly Act3FerryPath[];
 } = {
-  surfaceY: 6,
+  surfaceY: GREYFEN_WATER_TABLE,
   stops: [
     { id: 'reedgate', x: 3600, z: 10100 },
     { id: 'mere', x: 3150, z: 11900 },
     { id: 'greywatch', x: 2800, z: 14250 },
     { id: 'mireweather', x: 5500, z: 12350 },
   ],
-  paths: [],
+  paths: [
+    { id: 'ferry.reedgate-mere', from: 'reedgate', to: 'mere', points: FERRY_REEDGATE_MERE_POINTS.slice(0, 4) },
+    { id: 'ferry.mere-greywatch', from: 'mere', to: 'greywatch', points: [...MERE_OUT, ...FERRY_MERE_GREYWATCH_POINTS] },
+    { id: 'ferry.mere-mireweather', from: 'mere', to: 'mireweather', points: [...MERE_OUT, ...FERRY_MERE_MIREWEATHER_POINTS] },
+  ],
 };
+
+/**
+ * The camp hearth in Wyrmwatch Lodge's yard (K0's `campAnchorId`, `dragonspine.wyrmwatch.hearth`): K1 defines the anchor
+ * from this point, K4 builds the fire pit around it, the act-ending director moves the party here (contracts v0.7 item 18).
+ */
+export const WYRMWATCH_HEARTH: Act3Point = { x: 13620, z: 11880, y: 120 };
