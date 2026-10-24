@@ -10,6 +10,8 @@ import { installPools } from './m20d04.pools';
 
 /** A4's anchor for Orsk's position (and, by its yaw, his heading); the roof height is A4's `M20_ROOF_HEIGHT`. */
 export const M20_ROOF_ANCHOR = 'oldsmoke.m20.roof';
+/** The set piece's camera stands here, a steward post inside the hall (in front of Orsk it ends up behind the hall wall). */
+export const M20_CAMERA_ANCHOR = 'oldsmoke.m20.post.1';
 export { M20_ROOF_HEIGHT };
 /** A freed wyrmling walks to the Lower Galleries' lift before it fades (A4's landing inside). */
 export const M20_EXIT_ANCHOR = 'oldsmoke.lower.lift';
@@ -44,7 +46,8 @@ export function installM20(k: Kit): Off[] {
       k.set(M20_ORSK_GONE);
       return;
     }
-    const playback = svc.playOrsk({ position: at.position, yaw: at.yaw, roofHeight: M20_ROOF_HEIGHT });
+    const cam = ctx.anchors.find(M20_CAMERA_ANCHOR);
+    const playback = svc.playOrsk({ position: at.position, yaw: at.yaw, roofHeight: M20_ROOF_HEIGHT, cameraAt: cam?.position });
     if (!playback) return; // one is already playing: the next check tries again
     playing = true;
     void playback.done.then(() => void (playing = false));

@@ -34,6 +34,9 @@ export const LIFT_STRINGS_EN: Record<string, string> = {
   'oldsmoke.lift.locked.surface': 'always open',
   'oldsmoke.lift.locked.shaft': 'the lift is dead',
   'oldsmoke.lift.locked.old': 'the winch must be mended first',
+  // Once the winch is mended the lock is about the errand, not the winch.
+  'oldsmoke.lift.locked.shaft.mended': 'not yet reached',
+  'oldsmoke.lift.locked.old.mended': 'not yet reached',
   'oldsmoke.lift.locked.lower': 'not yet reached',
   'oldsmoke.lift.locked.bellows': 'not yet reached',
   'oldsmoke.lift.locked.deepdelve': 'the way is not open',
@@ -118,6 +121,9 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
     };
   };
 
+  /** Why a stop is locked: the winch text only while the winch is still broken. */
+  const lockedReasonKey = (s: LiftStop): string => (armed() && (s.id === 'shaft' || s.id === 'old') ? `${s.lockedKey}.mended` : s.lockedKey);
+
   const rows = (): { rows: LiftMenuRow[]; byId: Map<string, LiftStop & { unlocked: boolean }> } => {
     const here = stopOfInterior(interiors()?.current ?? null, table);
     const byId = new Map<string, LiftStop & { unlocked: boolean }>();
@@ -125,7 +131,7 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
     for (const s of availableStops(env(), table)) {
       if (s.stop.id === here.id) continue;
       byId.set(s.stop.id, { ...s.stop, unlocked: s.unlocked });
-      out.push({ id: s.stop.id, label: t(s.stop.labelKey), locked: !s.unlocked, reason: s.unlocked ? undefined : t(s.stop.lockedKey) });
+      out.push({ id: s.stop.id, label: t(s.stop.labelKey), locked: !s.unlocked, reason: s.unlocked ? undefined : t(lockedReasonKey(s.stop)) });
     }
     return { rows: out, byId };
   };

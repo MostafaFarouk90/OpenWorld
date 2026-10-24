@@ -14,11 +14,12 @@ import { installObjectiveFlags } from '../../../../objectiveFlags';
 import { makeKit, type Off } from '../../director/kit';
 import { M20D04, M20_CHAIN_FLAGS, M20_NOTES, M20_ORSK_GONE, D04_NOTES } from './m20d04.content';
 import { M20_NURSERY_GROUP } from './m20d04.data';
-import { M20_EXIT_ANCHOR, M20_ROOF_ANCHOR, M20_WENNA_HOME, M20_ROOF_HEIGHT, ORSK_CHECK_TICKS, installD04, installM20 } from './m20d04.director';
+import { M20_CAMERA_ANCHOR, M20_EXIT_ANCHOR, M20_ROOF_ANCHOR, M20_WENNA_HOME, M20_ROOF_HEIGHT, ORSK_CHECK_TICKS, installD04, installM20 } from './m20d04.director';
 import { D04_POOLS, POOL_VENT_TICKS, poolDef, ringPoint } from './m20d04.pools';
 
 const ANCHORS: Record<string, { x: number; y: number; z: number; yaw: number }> = {
   [M20_ROOF_ANCHOR]: { x: 4, y: 2, z: -112, yaw: 1.5 },
+  [M20_CAMERA_ANCHOR]: { x: 10, y: 2, z: -104, yaw: 0 },
   'oldsmoke.deepdelve.pool.1': { x: -56, y: 0, z: -96, yaw: 0 },
   'oldsmoke.deepdelve.pool.2': { x: 56, y: 0, z: -96, yaw: 0 },
   ...Object.fromEntries([1, 2, 3, 4, 5].map((n) => [`oldsmoke.m20.chain.${n}`, { x: n * 5, y: 0, z: -90, yaw: 0 }])),
@@ -150,7 +151,7 @@ describe('M20: Orsk', () => {
     expect(r.orskRequests).toHaveLength(0);
     r.state.setFlag('story.m20.chain.5', true);
     r.step(ORSK_CHECK_TICKS);
-    expect(r.orskRequests).toEqual([{ position: { x: 4, y: 2, z: -112 }, yaw: 1.5, roofHeight: M20_ROOF_HEIGHT }]);
+    expect(r.orskRequests).toEqual([{ position: { x: 4, y: 2, z: -112 }, yaw: 1.5, roofHeight: M20_ROOF_HEIGHT, cameraAt: { x: 10, y: 2, z: -104 } }]);
     r.step(ORSK_CHECK_TICKS * 10);
     expect(r.orskRequests).toHaveLength(1); // still playing: never a second scene
     r.emit('wyrm.orsk', { beat: 'chainsBroken' });

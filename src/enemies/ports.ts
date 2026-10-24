@@ -156,6 +156,7 @@ export interface EnemyEvents {
   'interior.entered': { interiorId: string; doorId: string };
   'interior.exited': { interiorId: string; doorId: string };
   'quest.started': { questId: string };
+  'quest.completed': { questId: string };
   'flag.changed': { key: string; value: boolean | number | string | undefined; previous: boolean | number | string | undefined };
   'enemies.groupCleared': { spawnerId: string };
   'enemies.state': { actorId: ActorId; from: string; to: string };

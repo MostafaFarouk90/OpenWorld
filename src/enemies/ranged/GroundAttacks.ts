@@ -15,8 +15,9 @@ export class GroundAttacks {
     this.projectiles = new EnemyProjectiles(host);
   }
 
-  windowOpened(shooter: Shooter, move: MoveDef): void {
-    if (move.ranged) this.projectiles.fire(shooter, move, this.host.player.feet);
+  /** `aim` is where the shooter's target stands (a taunter's feet); absent means the player. */
+  windowOpened(shooter: Shooter, move: MoveDef, aim?: { x: number; y: number; z: number }): void {
+    if (move.ranged) this.projectiles.fire(shooter, move, aim ?? this.host.player.feet);
     if (move.area) areaHit(this.host, shooter, move);
   }
 

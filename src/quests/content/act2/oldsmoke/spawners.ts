@@ -31,6 +31,6 @@ export const OLDSMOKE_SPAWNERS: readonly SpawnerDef[] = [
   // the player on every respawn there.
   {
     id: 'stealth.m21.watch', enemy: 'watch-guard', count: 4, anchor: 'patrol.m21.hall.1', memberAnchors: range('patrol.m21.hall.', 1, 4),
-    patrol: range('patrol.m21.hall.', 1, 5), band: WATCH_GUARD_BAND, activation: { quest: 'm21' }, respawn: 'never', leash: false,
+    patrol: range('patrol.m21.hall.', 1, 5), band: WATCH_GUARD_BAND, activation: { quest: 'm21' }, respawn: 'never', leash: false, despawnOnQuestEnd: true,
   },
 ];

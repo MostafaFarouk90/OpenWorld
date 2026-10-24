@@ -164,7 +164,7 @@ export function makeFlightOverlay(ctx: BehaviourContext, hub: WyrmHub = {}): Beh
     telegraphed(move) {
       if (move.id.endsWith('.dive')) {
         flight.diveStarted();
-        const p = ctx.host.player.feet;
+        const p = ctx.aim?.() ?? ctx.host.player.feet;
         diveAt = { x: p.x, y: ctx.host.heightAt(p.x, p.z), z: p.z };
         hub.diveLocked?.(ctx.actorId, diveAt, move.windup + (move.activeEnd - move.activeStart) * (ctx.body.clipDuration(move.clip) ?? 1.6));
         sfx('screech');

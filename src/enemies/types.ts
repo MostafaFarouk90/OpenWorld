@@ -186,6 +186,11 @@ export interface EnemyDef {
   walkSpeed: number;
   chaseSpeed: number;
   moves: readonly MoveDef[];
+  /**
+   * Whether a registered taunter (the Iron Familiar) can draw this kind. Default: true for plain enemies, false for a registered
+   * boss; a boss def sets `true` to opt in, any def sets `false` to opt out.
+   */
+  tauntable?: boolean;
   /** Flee below this health fraction (design: pack animals at 0.15); undefined never flees. */
   fleeAtHealth?: number;
   /** None for kinds that cannot be spared, released or calmed (the watch guard). */
@@ -275,6 +280,10 @@ export interface SpawnerDef {
   guard?: boolean;
   /** Members spawn peaceful (`SpawnOptions.peaceful`) unless the spawn call says otherwise: the resting den wyrm. */
   peaceful?: boolean;
+  /** Members ignore taunts (the Iron Familiar): the R10 duel's second must keep fighting Cael. */
+  untauntable?: boolean;
+  /** A quest-activated group that goes away when its quest completes (and on a load where that quest is not active): the M21 hall watch. */
+  despawnOnQuestEnd?: boolean;
 }
 
 export interface SpawnOptions {

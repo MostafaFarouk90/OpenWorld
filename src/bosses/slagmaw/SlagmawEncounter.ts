@@ -8,6 +8,7 @@ import {
   type Shooter,
 } from "../../enemies/ranged/EnemyProjectiles";
 import { ValveWheel, valveInteractable } from "../../puzzles/ValveWheel";
+import { ensureAct2Sfx } from "../../audio/act2SfxEnsure";
 import { clampToArena, yawToward } from "../prior/geometry";
 import { SlagmawBrain, type SlagmawHooks } from "./SlagmawBrain";
 import type { SlagmawModel } from "./SlagmawModel";
@@ -29,11 +30,10 @@ export const SLAGMAW_FLOOR_MODIFIER_ID = "bosses.slagmaw.floor";
 export const SLAGMAW_CRUST_MODIFIER_ID = "bosses.slagmaw.crust";
 
 /**
- * The registry refuses a zero window, and its `last` break always opens one. The Slagmaw has no mercy (no `BOSS_MERCY` row, so
- * nothing offers a Release), so the window is the smallest the registry allows: it closes on its next tick. The follow-up
- * "BossRegistry: let releaseWindowSeconds 0 mean no window" retires this.
+ * The Slagmaw has no mercy (no `BOSS_MERCY` row, so nothing offers a Release), so he has no release window: the registry
+ * reads 0 as "no window", and no break, the last included, opens one or fires `boss.releaseWindow`.
  */
-export const SLAGMAW_WINDOW_SECONDS = 0.001;
+export const SLAGMAW_WINDOW_SECONDS = 0;
 
 export const SLAGMAW_BOSS_DEF: BossDef = {
   bossId: SLAGMAW_BOSS_ID,
@@ -119,6 +119,8 @@ export class SlagmawEncounter implements SlagmawHooks {
   private ended = false;
   /** The `last` break has happened: the floor is lifted for good. */
   private floorLifted = false;
+  /** A valve break has happened in phase 2 or later: the second phase's break cannot be skipped any more. */
+  private phase2BreakDone = false;
   private poiseIdle = 0;
   /** 0 = under the floor, 1 = fully up; driven toward the brain's state. */
   private emerge = 0;
@@ -209,9 +211,11 @@ export class SlagmawEncounter implements SlagmawHooks {
           this.actor.restorePoise();
           return;
         }
-        // The break belongs to the valve that cooled him (it is spent), even when the same hit crossed a phase threshold. A cooled
-        // `last` break lifts the floor whichever valve cooled him: a hit that jumped phases can make valve 1 or 2 the last one.
+        // The break belongs to the valve that cooled him (it is spent), even when the same hit crossed a phase threshold (valve 1
+        // can break in phase 2). The `last` break lifts the floor; the phase-2 cap means it always comes after phase 2's break,
+        // so in practice it is valve 3's.
         const valve = this.valves[this.douseValve];
+        if (p.phase >= 2) this.phase2BreakDone = true;
         if (p.last) this.floorLifted = true;
         if (valve) {
           valve.spent = true;
@@ -678,7 +682,11 @@ export class SlagmawEncounter implements SlagmawHooks {
   private floor(req: { targetId: string; amount: number }): void {
     if (req.targetId !== this.actor.id || this.floorLifted || !this.registered)
       return;
-    const min = Math.ceil(this.actor.maxHealth * SLAGMAW.healthFloor);
+    let min = Math.ceil(this.actor.maxHealth * SLAGMAW.healthFloor);
+    // A burst cannot carry him past phase 2 before its break: health stays above the phase 3 threshold until a valve has
+    // produced a break in phase 2 (a hit may still cross into phase 2 from phase 1).
+    const phase3 = SLAGMAW.phases[1];
+    if (!this.phase2BreakDone && phase3 !== undefined) min = Math.max(min, Math.floor(this.actor.maxHealth * phase3) + 1);
     const room = Math.max(0, this.actor.health - min);
     if (req.amount > room) req.amount = room;
   }
@@ -697,6 +705,7 @@ export class SlagmawEncounter implements SlagmawHooks {
     const audio = this.ctx.services.get("audio");
     if (!audio) return;
     try {
+      ensureAct2Sfx(key);
       audio.playAt(key, this.root.position);
     } catch {
       // the audio thread owns the keys; a missing one is silent

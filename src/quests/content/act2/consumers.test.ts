@@ -1,6 +1,7 @@
 // Every id the Cinderreach quests name resolves to something that exists: triggers, props and notes, anchors, NPCs, spawn
 // tags, enemy kinds and carry destinations. (A missing one would leave an objective that nothing can finish.)
 import { describe, expect, it } from 'vitest';
+import { R10_DUEL_ANCHOR } from './r10duels/r10Duels';
 import { CINDERREACH_LAYOUT } from '../../../cinderreach/cinderreach.layout';
 import { CINDERREACH_NPC_DEFS } from '../../../cinderreach/npcDefs';
 import { SCORCHHOLD_KEEP_DEF } from '../../../cinderreach/scorchholdKeep';
@@ -98,6 +99,7 @@ describe('Cinderreach quest consumers', () => {
 
   it('every spawner anchor of A12 exists', () => {
     for (const s of ACT2_SPAWNERS_A12) {
+      if (s.anchor === R10_DUEL_ANCHOR) continue; // R10's duel second: the anchor is defined at runtime where Cael stands
       for (const a of [s.anchor, ...(s.memberAnchors ?? []), ...patrolOf(s)]) expect(anchors.has(a), `${s.id} -> ${a}`).toBe(true);
     }
     expect(spawnerAnchors.length).toBeGreaterThan(0);

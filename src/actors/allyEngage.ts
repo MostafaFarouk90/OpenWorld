@@ -8,11 +8,14 @@ import { mercyStateOf } from './DamageResolver';
 export interface AllyEngagementService {
   /** True only while `targetId` is alive, in no mercy state and aggroed on the player or an ally. */
   mayEngage(targetId: ActorId): boolean;
+  /** Keeps allies off `targetId` (a trial opponent that only Cael may fight) until the returned function is called. */
+  exclude?(targetId: ActorId): () => void;
 }
 
 export class AllyEngagement implements AllyEngagementService {
   /** Enemy actor id to the actor it is aggroed on (the latest `ai.aggro`). */
   private readonly aggro = new Map<ActorId, ActorId>();
+  private readonly excluded = new Map<ActorId, number>();
   private readonly offs: (() => void)[];
 
   constructor(
@@ -28,7 +31,20 @@ export class AllyEngagement implements AllyEngagementService {
     ];
   }
 
+  exclude(targetId: ActorId): () => void {
+    this.excluded.set(targetId, (this.excluded.get(targetId) ?? 0) + 1);
+    let done = false;
+    return () => {
+      if (done) return;
+      done = true;
+      const n = (this.excluded.get(targetId) ?? 1) - 1;
+      if (n <= 0) this.excluded.delete(targetId);
+      else this.excluded.set(targetId, n);
+    };
+  }
+
   mayEngage(targetId: ActorId): boolean {
+    if (this.excluded.has(targetId)) return false;
     const target = this.actors.get(targetId);
     if (!target || target.dead || mercyStateOf(target) !== 'none') return false;
     const on = this.aggro.get(targetId);
@@ -39,5 +55,6 @@ export class AllyEngagement implements AllyEngagementService {
   dispose(): void {
     for (const off of this.offs.splice(0)) off();
     this.aggro.clear();
+    this.excluded.clear();
   }
 }
