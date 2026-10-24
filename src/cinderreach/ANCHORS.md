@@ -153,9 +153,9 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | cinderreach.r05.home | 17242 | 2982 | 0 | 0 | objective |
 | cinderreach.dell.entrance | 17037.84 | 2812.08 | 0 | 180 | poi |
 | cinderreach.dell.bed | 17010 | 2790 | 0 | 180 | poi |
-| cinderreach.spawn.pasture.1 | 17245 | 2977.94 | 0 | 180 | spawn |
-| cinderreach.spawn.pasture.2 | 17245 | 2822.06 | 0 | 180 | spawn |
-| cinderreach.spawn.pasture.3 | 17110 | 2900 | 0 | 180 | spawn |
+| cinderreach.spawn.pasture.1 | 17169.22 | 2815.43 | 0 | 180 | spawn |
+| cinderreach.spawn.pasture.2 | 17122.06 | 2855 | 0 | 180 | spawn |
+| cinderreach.spawn.pasture.3 | 17111.37 | 2915.63 | 0 | 180 | spawn |
 | cinderreach.spawn.hollow.1 | 16996 | 2906 | 0 | 180 | spawn |
 | cinderreach.spawn.hollow.2 | 17326 | 2686 | 0 | 180 | spawn |
 | cinderreach.spawn.hollow.3 | 17126 | 2726 | 0 | 180 | spawn |

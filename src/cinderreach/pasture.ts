@@ -3,7 +3,7 @@
 // hollow in the pasture (design 7.9) that A9 builds on `cinderreach.dell.*`.
 import { roadPoint } from '../terrain/shape/roadPoint';
 import type { LayoutData } from '../region/layoutTypes';
-import { a, numbered, open, ring, sphere } from './helpers';
+import { a, numbered, open, polar, ring, sphere } from './helpers';
 import { PASTURE } from './sites';
 import { SITES_FIT } from './sitesFit';
 
@@ -33,8 +33,9 @@ export function pastureLayout(): Pick<LayoutData, 'anchors' | 'triggers' | 'stru
       // The Kindling Dell (A9 builds the bed, the foxes and the buff on these).
       a('cinderreach.dell.entrance', ...lerp(dell, fold, 0.12), 0, ['poi']),
       a('cinderreach.dell.bed', dell.x, dell.z, 0, ['poi']),
-      // Ambient spawns: hounds round the pasture's rim, wraiths in the hollows, the cache fox by the dell.
-      ...numbered('cinderreach.spawn.pasture', ring(PASTURE.x, PASTURE.z, 90, 3, 30), ['spawn']),
+      // Ambient spawns: hounds on the pasture's south-west rim (compass 200 to 280, well away from Ketta's fold: they stood 11 m
+      // from her talk spot and bit during dialogue), wraiths in the hollows, the cache fox by the dell.
+      ...numbered('cinderreach.spawn.pasture', [0, 1, 2].map((i) => polar(PASTURE.x, PASTURE.z, 200 + 40 * i, 90)), ['spawn']),
       ...numbered('cinderreach.spawn.hollow', hollows.map((h) => [h.x + 6, h.z + 6] as const), ['spawn']),
       a('cinderreach.spawn.fox.1', dell.x + 30, dell.z + 10, 0, ['spawn']),
     ],
