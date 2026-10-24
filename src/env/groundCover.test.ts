@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { envOwnsGround, envReplacesScenery, groundCoverRect, groundCoverRects, GROUND_COVER_MARGIN } from './groundCover';
+import { envOwnsGround, envReplacesScenery, groundCoverRect, groundCoverRects, GROUND_COVER_MARGIN, OWNS_GROUND_COVER } from './groundCover';
 import { CLASS_RANGE, GROUND_LIFT } from './PlacementField';
 import { TILES } from './tiles';
 
@@ -30,27 +30,33 @@ describe('groundCoverRects', () => {
 
 describe('envOwnsGround', () => {
   const tiles = { t: clumps(30, 0, 0) };
-  it('is true inside a dressed tile and false outside it', () => {
-    const owns = envOwnsGround(true, tiles);
+  it('is true inside a tile that owns its ground cover and false outside it', () => {
+    const owns = envOwnsGround(true, tiles, new Set(['t']));
     expect(owns(10, 20)).toBe(true);
     expect(owns(500, 500)).toBe(false);
   });
-  it('leaves the meadow blades in B2 (north pasture and east farmland) but not in B1', () => {
+  it('leaves the meadow blades under a tile that does not opt in, however many ground rows it has', () => {
+    expect(envOwnsGround(true, tiles)(10, 20)).toBe(false);
+  });
+  it('leaves the meadow blades in B2 and B4 but not in B1', () => {
+    expect([...OWNS_GROUND_COVER]).toEqual(['b1']);
     const owns = envOwnsGround(true, TILES);
     expect(owns(80, 280)).toBe(false);
     expect(owns(210, 120)).toBe(false);
+    for (const [x, z] of [[768, -150], [935, -140], [990, -150], [846, -158]]) expect(owns(x, z)).toBe(false);
     expect(owns(0, 70)).toBe(true);
   });
   it('is false everywhere with ?env=off', () => {
-    expect(envOwnsGround(false, tiles)(10, 20)).toBe(false);
+    expect(envOwnsGround(false, tiles, new Set(['t']))(10, 20)).toBe(false);
   });
   it('covers the B1 lane core with the real tile', () => {
     const owns = envOwnsGround(true, TILES);
     expect(owns(0, 70)).toBe(true);
     expect(owns(0, -2000)).toBe(false);
   });
-  it('covers B3 (the ford, the fields) and the reed island, not the meadow between B3 and the island', () => {
-    const owns = envOwnsGround(true, TILES);
+  it('covers B3 (the ford, the fields) and the reed island only when a tile opts in; by default B3 keeps the meadow blades', () => {
+    expect(envOwnsGround(true, TILES)(-250, -110)).toBe(false);
+    const owns = envOwnsGround(true, TILES, new Set(['b3']));
     expect(owns(-250, -110)).toBe(true);
     expect(owns(-430, -140)).toBe(true);
     expect(owns(55, -300)).toBe(true);
