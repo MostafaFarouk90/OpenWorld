@@ -28,8 +28,17 @@ describe('Act 3 reserved prefixes', () => {
     expect(triggerIds.some((id) => id.startsWith('trg.'))).toBe(true);
   });
 
-  it.each(ACT3_ANCHOR_PREFIXES)('no shipped anchor starts with %s', (prefix) => {
-    expect(anchorIds.filter((id) => id.startsWith(prefix))).toEqual([]);
+  /** Act 3 sub-prefixes an Act 3 thread owns and ships (coordinator rulings): K6b's ambient spawn anchors. */
+  const OWNED_SUB_PREFIXES = ['greyfen.fauna.'];
+  it.each(ACT3_ANCHOR_PREFIXES)('no shipped anchor starts with %s outside an owned sub-prefix', (prefix) => {
+    expect(anchorIds.filter((id) => id.startsWith(prefix) && !OWNED_SUB_PREFIXES.some((s) => id.startsWith(s)))).toEqual([]);
+  });
+
+  it('the owned sub-prefixes are in use and sit under a reserved prefix', () => {
+    for (const s of OWNED_SUB_PREFIXES) {
+      expect(ACT3_ANCHOR_PREFIXES.some((p) => s.startsWith(p)), s).toBe(true);
+      expect(anchorIds.some((id) => id.startsWith(s)), s).toBe(true);
+    }
   });
 
   it.each(ACT3_TRIGGER_PREFIXES)('no shipped trigger starts with %s', (prefix) => {

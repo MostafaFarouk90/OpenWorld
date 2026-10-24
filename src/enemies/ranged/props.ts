@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { makePeatMound, PEAT_MOUND_ID } from '../fen/shambler/mound';
 
 /** Ids of the procedural props the ground enemies carry (`ModelProp.id` starting `proc/`; the pack has no spear). */
 export const GROUND_PROP_IDS = ['proc/hunter-spear', 'proc/hunter-harpoon'] as const;
@@ -18,6 +19,8 @@ function mesh(g: THREE.BufferGeometry, color: number, emissive = 0): THREE.Mesh 
  * The spear: a 2.0 m shaft, a leaf head and a red pennon. The harpoon: a 1.4 m shaft with a barbed head and a rope coil.
  */
 export function makeGroundProp(id: string): THREE.Object3D | null {
+  // K6b: the Peat Shambler's mound (fen/shambler/mound.ts).
+  if (id === PEAT_MOUND_ID) return makePeatMound();
   if (id === 'proc/hunter-spear') {
     const g = new THREE.Group();
     const shaft = mesh(new THREE.CylinderGeometry(0.018, 0.022, 2.0, 6), SHAFT);
