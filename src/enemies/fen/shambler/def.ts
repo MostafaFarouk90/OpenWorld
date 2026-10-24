@@ -3,7 +3,7 @@ import type { EnemyDef } from '../../types';
 
 /**
  * Peat Shambler (design 10 row 10, plan 6.1): a bog-mound on the Barbarian rig at 1.8, slow and huge. Smash behind a 1.1 s
- * fists-raised telegraph with peat clods falling (red, a 2.5 m circle in front) and a thrown mud clod (yellow, slows). Poise 150,
+ * fists-raised telegraph with peat clods falling (red, a 2.5 m circle in front) and a thrown mud clod (yellow; the shipped `slow` on-hit slows the attacker, so the clod does not slow). Poise 150,
  * regenerating in peat; fire takes 50 poise at once. Lay to rest (a free Calm, Codex only): pull it out of the bog, then hold T
  * while it slumps; it sinks back into the peat (the `peat` overlay, fen/shambler/peat.ts).
  */

@@ -97,6 +97,13 @@ export function makePeatOverlay(ctx: BehaviourContext): BehaviourOverlay {
     onInteract: drag,
   });
 
+  // The shipped Calm rule (EnemyManager's markStruck): a landed player-team hit closes the window, status ticks included;
+  // a companion's hit and a scripted hit (the fire rule's ignite poise) never do.
+  const offStruck = ctx.host.events.on('damage.dealt', (r) => {
+    if (slumpLeft <= 0 || r.targetId !== ctx.actorId || r.outcome !== 'hit' || r.kind === 'script' || !r.attackerId) return;
+    if (ctx.host.actors.get(r.attackerId)?.team === 'player') struckInSlump = true;
+  });
+
   const view: ShamblerView = {
     patch,
     get slumped() {
@@ -156,9 +163,6 @@ export function makePeatOverlay(ctx: BehaviourContext): BehaviourOverlay {
       return slumped();
     },
 
-    hit() {
-      if (slumpLeft > 0) struckInSlump = true;
-    },
 
     mercyOpen() {
       return slumped() && !struckInSlump && alive();
@@ -178,6 +182,7 @@ export function makePeatOverlay(ctx: BehaviourContext): BehaviourOverlay {
     },
 
     dispose() {
+      offStruck();
       removeDrag();
       VIEWS.delete(ctx.actorId);
     },

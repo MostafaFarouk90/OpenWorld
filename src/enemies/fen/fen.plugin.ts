@@ -110,6 +110,8 @@ const plugin: GamePlugin = {
           const f = ctx.player.feet;
           for (const e of all) {
             if (!(GREYFEN_CODEX_KINDS as readonly string[]).includes(e.def.kind) || !e.active) continue;
+            // A leech lurking under the water is not seen yet.
+            if ((ctx.actors.get(e.id) as { untargetable?: boolean } | undefined)?.untargetable) continue;
             if (Math.hypot(e.feet.x - f.x, e.feet.z - f.z) <= GREYFEN_CODEX_SIGHT) c.unlock(e.def.kind);
           }
         },

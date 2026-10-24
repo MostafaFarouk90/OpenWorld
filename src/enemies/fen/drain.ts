@@ -9,3 +9,13 @@ export function drainStamina(actor: unknown, n: number): number {
   a.stamina = a.stamina - taken;
   return taken;
 }
+
+/**
+ * The drain bite on the player: through the `combatVerbs` service's `drainStamina` (so the regen delay and exhaustion apply,
+ * as a guard break's), else straight off the pool (test hosts without the player plugin).
+ */
+export function drainPlayer(verbs: { drainStamina?(n: number): void } | undefined, player: unknown, n: number): void {
+  if (!(n > 0)) return;
+  if (typeof verbs?.drainStamina === 'function') verbs.drainStamina(n);
+  else drainStamina(player, n);
+}

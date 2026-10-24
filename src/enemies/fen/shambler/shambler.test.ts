@@ -9,7 +9,7 @@ import { WorldState } from '../../../state/WorldState';
 import { ENEMY_DEFS } from '../../defs';
 import { EnemyManager } from '../../EnemyManager';
 import { GroupStanding } from '../../groupStanding';
-import { mercyInteractableId } from '../../mercy';
+import { mercyInteractableId, mercyPromptKey } from '../../mercy';
 import type { SpawnerDef } from '../../types';
 import { FakeHost, loadKnight } from '../../testing/fakeHost';
 import '../overlays';
@@ -333,5 +333,31 @@ describe('Pulled out: Lay to rest', () => {
     expect(r.manager.get(r.id)).toBeDefined();
     expect(gs.isCleared('bog')).toBe(true);
     gs.dispose?.();
+  });
+
+  it("a companion's hit and a scripted hit leave the window open; a status tick from the player closes it", () => {
+    const r = rig();
+    dragOut(r);
+    const ally = r.fake.host.actors.spawn({ kind: 'companion:test', team: 'ally', maxHealth: 50 });
+    r.fake.apply({ attackerId: ally.id, targetId: r.id, amount: 3, poise: 0, kind: 'melee' });
+    r.fake.apply({ attackerId: 'player', targetId: r.id, amount: 0, poise: 5, kind: 'script' });
+    r.frame();
+    expect(r.enemy.mercyOpen).toBe(true);
+    r.fake.apply({ attackerId: 'player', targetId: r.id, amount: 1, poise: 0, kind: 'status' });
+    r.frame();
+    expect(r.enemy.mercyOpen).toBe(false);
+  });
+
+  it('the hit that breaks it on firm ground does not close its own window', () => {
+    const r = rig({ player: { x: 9, z: 2 } });
+    r.place(FEN_TUNING.wallowRadius + 2, 0);
+    r.frame();
+    r.stagger();
+    expect(r.enemy.mercyOpen).toBe(true);
+  });
+
+  it('the prompt reads Lay to rest (mercyPromptKey)', () => {
+    expect(mercyPromptKey(PEAT_SHAMBLER as Parameters<typeof mercyPromptKey>[0])).toBe('enemies.mercy.layToRest');
+    expect(mercyPromptKey(ENEMY_DEFS['ember-hound'] as Parameters<typeof mercyPromptKey>[0])).toBe('enemies.mercy.calm');
   });
 });

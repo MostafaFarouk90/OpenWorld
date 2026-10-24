@@ -29,7 +29,7 @@ import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } fro
 import { ASH_GRAB, BOSS_MERCY, GUARD, MERCY, PAIR, WARM_HAND_BURN, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions, UnlockVerb } from './types';
 import { makeLineOfSight } from './ai/perception';
-import { drainStamina } from './fen/drain';
+import { drainPlayer } from './fen/drain';
 import { makeLeechBody } from './fen/leech/body';
 import { FEN_TUNING } from './fen/tuning';
 import { TauntRegistry, type TauntService } from './taunts';
@@ -825,8 +825,8 @@ export class EnemyManager {
         const move = attacker.brain.currentMove;
         if (move?.onHit === 'slow' && attacker.active) attacker.applySlow(ASH_GRAB.speedScale, ASH_GRAB.seconds);
         if (move?.onHit === 'steal' && attacker.active) attacker.thief?.grabHit();
-        // K6b: the Fen Leech's bite drains the player's stamina (a landed hit only; never below 0).
-        if (move?.onHit === 'drain' && attacker.active) drainStamina(this.host.actors.player, FEN_TUNING.leech.drainStamina);
+        // K6b: the Fen Leech's bite drains the player's stamina (a landed hit only; never below 0; regen delay and exhaustion apply).
+        if (move?.onHit === 'drain' && attacker.active) drainPlayer(this.host.services.get('combatVerbs'), this.host.actors.player, FEN_TUNING.leech.drainStamina);
       }
     });
     on('player.dodged', (p) => {

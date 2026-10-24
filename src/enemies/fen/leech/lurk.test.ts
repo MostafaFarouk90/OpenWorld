@@ -5,7 +5,9 @@ import { ENEMY_DEFS } from '../../defs';
 import { EnemyManager } from '../../EnemyManager';
 import { FakeHost, loadKnight } from '../../testing/fakeHost';
 import type { SpawnerDef } from '../../types';
-import { drainStamina } from '../drain';
+import { drainPlayer, drainStamina } from '../drain';
+import { Stamina } from '../../../player/Stamina';
+import { STAMINA } from '../../../player/tuning';
 import '../overlays';
 import { FEN_TUNING } from '../tuning';
 import { FEN_LEECH } from './def';
@@ -24,7 +26,7 @@ type Kind = 'wade' | 'dive' | 'deep';
  * One Fen Leech at the origin over the fake core. `water` is the K7 water service stand-in (a kind and depth everywhere, or a
  * function); `mode` is the movementMode service's current mode. The player starts `at` metres south.
  */
-function rig(opts: { at?: number; water?: { kind: Kind | null; depth: number } | ((x: number, z: number) => { kind: Kind | null; depth: number }) | null; group?: boolean } = {}) {
+function rig(opts: { stamina?: Stamina; at?: number; water?: { kind: Kind | null; depth: number } | ((x: number, z: number) => { kind: Kind | null; depth: number }) | null; group?: boolean } = {}) {
   const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: opts.at ?? 20 } });
   const mode = { current: 'walk' as string };
   const w = opts.water === undefined ? { kind: 'wade' as Kind, depth: 0.5 } : opts.water;
@@ -44,6 +46,7 @@ function rig(opts: { at?: number; water?: { kind: Kind | null; depth: number } |
       get: ((name: string) => {
         if (name === 'water') return water;
         if (name === 'movementMode') return mode;
+        if (name === 'combatVerbs') return opts.stamina ? { drainStamina: (n: number) => opts.stamina!.forceDrain(n) } : undefined;
         return fake.host.services.get(name as 'vfx');
       }) as typeof fake.host.services.get,
     },
@@ -320,5 +323,38 @@ describe('the drain bite', () => {
     r.fake.apply({ attackerId: r.id, targetId: 'player', amount: 5, poise: 5, kind: 'melee' });
     r.frame();
     expect(stamina(r)).toBe(60);
+  });
+
+  it('with the player plugin the drain goes through Stamina: regen waits and an empty pool exhausts', () => {
+    const pool = { stamina: 30, maxStamina: 100, spendStamina: (n: number) => ((pool.stamina -= n), true), restoreStamina: (n: number) => void (pool.stamina = Math.min(100, pool.stamina + n)) };
+    const st = new Stamina(pool, () => false);
+    const r = rig({ stamina: st });
+    r.surface();
+    withStamina(r, 60);
+    r.brain.move = bite;
+    r.fake.apply({ attackerId: r.id, targetId: 'player', amount: 5, poise: 5, kind: 'melee' });
+    r.frame();
+    expect(pool.stamina).toBe(30 - T.drainStamina);
+    expect(stamina(r)).toBe(60); // the raw pool of the fake player is not touched twice
+    r.fake.apply({ attackerId: r.id, targetId: 'player', amount: 5, poise: 5, kind: 'melee' });
+    r.frame();
+    expect(pool.stamina).toBe(0);
+    expect(st.exhausted).toBe(true);
+    for (let i = 0; i < STAMINA.regenDelayTicks - 1; i++) st.tick({ blocking: false, sprinting: false });
+    expect(pool.stamina).toBe(0);
+  });
+
+  it('drainPlayer falls back to the raw pool without the service and ignores n <= 0', () => {
+    const a = { stamina: 30 };
+    const svc = { n: 0, drainStamina(n: number) { this.n += n; } };
+    drainPlayer(svc, a, 25);
+    expect(svc.n).toBe(25);
+    expect(a.stamina).toBe(30);
+    drainPlayer(undefined, a, 25);
+    expect(a.stamina).toBe(5);
+    drainPlayer({}, a, 5); // an older combatVerbs without the method
+    expect(a.stamina).toBe(0);
+    drainPlayer(svc, a, 0);
+    expect(svc.n).toBe(25);
   });
 });
