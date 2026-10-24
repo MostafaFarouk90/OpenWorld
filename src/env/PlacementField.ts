@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { InstancedModel } from '../assets/instancing';
 import type { ModelLibrary, ModelTemplate } from '../assets/swap/ModelLibrary';
 import { placeholderGeometry, placeholderMaterial } from './placeholders';
+import { expandPatches } from './patches';
 import { hueMatrix, resolveModel, type ModelRef, type Tint } from './resolve';
 
 export interface PlacementRow {
@@ -13,6 +14,10 @@ export interface PlacementRow {
   z: number;
   yaw?: number;
   scale?: number;
+  /** Patch rows only (ids in src/env/patches.ts): the spread radius in metres, default 0.8 x scale. */
+  spread?: number;
+  /** Patch rows only: the number of tufts (1 or more), default 5 + 4 x scale clamped to 6..14. */
+  n?: number;
 }
 
 export type PlacementClass = 'tree' | 'bush' | 'rock' | 'wood' | 'ground' | 'prop' | 'hedge';
@@ -39,7 +44,7 @@ export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record
 const CELL = 64;
 
 export function classOf(id: string): PlacementClass {
-  if (/^(oak|birch|elm|autumn|ash-tree|poplar|tree_dead|willow)/.test(id)) return 'tree';
+  if (/^(oak|birch|elm|autumn|ash-tree|poplar|apple|tree_dead|willow)/.test(id)) return 'tree';
   if (/^(bush|fern|reeds)/.test(id)) return 'bush';
   if (/^(boulder|rock|cairn|basalt|ember-rock|slag)/.test(id)) return 'rock';
   if (/^(stump|log|mushroom|charred)/.test(id)) return 'wood';
@@ -109,7 +114,9 @@ export class PlacementField {
     this.object.name = 'env.placements';
   }
 
-  async build(rows: readonly PlacementRow[]): Promise<void> {
+  async build(source: readonly PlacementRow[]): Promise<void> {
+    // A patch row stands for 6 to 14 ground tufts; the field draws the tufts (they thin with the ground quality step like any ground row).
+    const rows = expandPatches(source);
     const entries = new Map<string, Entry>();
     rows.forEach((row, i) => {
       const ref = resolveModel(row.id);
