@@ -303,7 +303,15 @@ export class SlagmawEncounter implements SlagmawHooks {
     try {
       this.unregister = this.ctx.bosses.register(
         this.actor.id,
-        SLAGMAW_BOSS_DEF,
+        {
+          ...SLAGMAW_BOSS_DEF,
+          // Only a valve cool makes a break: a stagger forced on a hot crust (a parried spit, Second Wind, a howl) is no pip.
+          acceptBreak: () => {
+            if (this.cooled) return true;
+            this.actor.restorePoise();
+            return false;
+          },
+        },
       );
     } catch (err) {
       this.warn(

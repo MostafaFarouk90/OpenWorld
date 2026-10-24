@@ -612,6 +612,20 @@ describe("The Slagmaw on the real core", () => {
     t.teardown();
   });
 
+  it("a forced stagger on a hot crust (damage.stagger) adds no break pip, but a cooled break still does", async () => {
+    const t = await setup();
+    t.startFight();
+    t.toSurfaced();
+    expect(t.ctx.damage.stagger(t.boss()!.id, t.ctx.player.actor.id, SLAGMAW.maxPoise)).toBe(true);
+    expect(t.of("boss.break")).toEqual([]);
+    expect(t.state()!.breaks).toBe(0);
+    expect(t.boss()!.poise).toBe(SLAGMAW.maxPoise);
+    t.coolAndBreak(1);
+    expect(t.state()!.breaks).toBe(1);
+    expect(t.of("boss.break")).toHaveLength(1);
+    t.teardown();
+  });
+
   it("a valve cools him: the cooling hit fires, poise damage now breaks him, once, then the crust re-heats and the valve is spent", async () => {
     const t = await setup();
     t.startFight();
