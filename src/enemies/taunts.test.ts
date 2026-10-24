@@ -297,6 +297,32 @@ describe('when a taunt ends', () => {
     expect(fake.bus.of('ai.aggro').slice(before).filter((a) => a.actorId === id).map((a) => a.targetId)).not.toContain('player');
   });
 
+  it('an unaware enemy the player hits during the taunt aggros the player when it ends, not home', () => {
+    const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: -60 } });
+    fake.defineAnchor('spawn.one', 0, 0);
+    const manager = new EnemyManager(fake.host, FakeHost.factory(gltf), { spawners: SPAWNERS, seed: 7 });
+    const tick = (seconds: number) => {
+      for (let i = 0; i < Math.round(seconds / DT); i++) {
+        manager.think(DT);
+        manager.animate(DT);
+        fake.combatStep(DT);
+        manager.react(DT);
+      }
+    };
+    const [id] = manager.service.spawnGroup('one', { aggro: true });
+    const enemy = manager.get(id)!;
+    tick(AI.riseSeconds + 0.5);
+    enemy.brain.standDown();
+    tick(0.5);
+    const actor = fake.host.actors.spawn({ kind: 'familiar', team: 'ally', maxHealth: 60, untargetable: true } as never);
+    manager.service.taunts.register({ id: actor.id, radius: 10, seconds: 4, position: () => ({ x: 4, y: 0, z: 0 }), alive: () => true });
+    tick(1);
+    expect(enemy.brain.target).toBe(actor.id);
+    enemy.markStruck(fake.host.actors.player.id);
+    tick(5);
+    expect(enemy.brain.target).toBe('player');
+  });
+
   it('an enemy at the radius edge keeps its taunter inside the release margin instead of flipping every tick', () => {
     const { enemy, fake, id, tick, manager } = setup();
     // The taunter keeps a set distance from the enemy, wherever the enemy walks.
