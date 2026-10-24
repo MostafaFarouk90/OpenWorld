@@ -47,7 +47,7 @@ export function validateDialogueEffects(effects: Effect[] | undefined, where: st
       if (e.unlockMercy !== 'release' && e.unlockMercy !== 'spare' && e.unlockMercy !== 'calm') errs.push(`${w}: unlockMercy verb must be release, spare or calm`);
     } else if ('grantAbility' in e) {
       if (!nonEmpty(e.grantAbility)) errs.push(`${w}: grantAbility needs an ability id`);
-    } else if ('giveGold' in e || 'spendGold' in e || 'if' in e || 'placeNpc' in e) {
+    } else if ('giveGold' in e || 'spendGold' in e || 'if' in e || 'placeNpc' in e || 'grantMasterBook' in e) {
       errs.push(...validateEffects([e as any], w));
     } else if (!('mercy' in e)) errs.push(`${w}: unknown effect shape`);
   });

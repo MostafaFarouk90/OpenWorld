@@ -43,6 +43,8 @@ export type Effect =
   | { placeNpc: { npcId: string; anchorId: string } }
   | { unlockMercy: MercyUnlockVerb }
   | { grantAbility: string }
+  /** K11 (Act 3, Q2): gives the class master's book (`trainer.<classId>.masterBook`); idempotent. */
+  | { grantMasterBook: string }
   | { event: string; payload?: unknown };
 
 /** Mercy verbs a quest can unlock (the flags `enemies.mercy.<verb>`). */
