@@ -98,7 +98,7 @@ export type Act3WaystoneId =
 /** Nine waystones (plan 3.5): four in the Greyfen, five in the Dragonspine, each on its plateau. */
 export const ACT3_WAYSTONES: Readonly<Record<Act3WaystoneId, Act3Point>> = {
   reedgate: { x: 3200, z: 10200, y: REEDGATE_PLATEAU.height },
-  'hathrens-mere': { x: 3000, z: 12050, y: MERE_SHRINE_PLATEAU.height },
+  'hathrens-mere': { x: 2986, z: 12050, y: MERE_SHRINE_PLATEAU.height },
   greywatch: { x: 2700, z: 14460, y: GREYWATCH_PLATEAU.height },
   'mireweather-hut': { x: 5572, z: 12282, y: MIREWEATHER_HUT_PLATEAU.height },
   'wyrmwatch-lodge': { x: 13600, z: 11870, y: DS.wyrmwatchLodge.height },
