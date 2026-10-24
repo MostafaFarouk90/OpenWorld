@@ -12,6 +12,9 @@ import { ThirdPersonCamera } from '../rendering/ThirdPersonCamera';
 import type { TutorialDirector } from './TutorialDirector';
 import { tutorialFromQuery } from './tutorial.plugin';
 
+// Every test boots the whole manifest (3 to 5 s alone, more under load): the 5 s default is not a safe limit (review R3-3).
+vi.setConfig({ testTimeout: 30_000 });
+
 let physics: PhysicsWorld;
 const disposers: (() => void)[] = [];
 
@@ -25,6 +28,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   for (const d of disposers.splice(0)) d();
+  physics.dispose();
   vi.restoreAllMocks();
 });
 
