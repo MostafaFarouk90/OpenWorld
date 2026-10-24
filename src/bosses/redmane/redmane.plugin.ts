@@ -1,3 +1,4 @@
+import { ModelLibrary, modelLibraryFor } from '../../assets/swap/ModelLibrary';
 import type { GamePlugin } from '../../core/plugins';
 import { RedmaneDirector } from './RedmaneDirector';
 import { buildRedmaneModel } from './RedmaneModel';
@@ -24,6 +25,13 @@ const plugin: GamePlugin = {
     const warn = (m: string) => console.warn(`[thrandil-redmane] ${m}`);
     const assets = ctx.assets;
     let state: ModelState = assets ? 'loading' : 'none';
+    // The lance is an Adventurers staff once it has loaded; until then (or if it fails) the procedural lance stays.
+    const lib = modelLibraryFor(assets);
+    if (assets) void lib.preload(['wpn/staff']);
+    const staff = () => {
+      const t = lib.peek('wpn/staff');
+      return t ? ModelLibrary.object(t) : null;
+    };
     if (assets) {
       assets.load(BARBARIAN).then(
         () => {
@@ -38,7 +46,7 @@ const plugin: GamePlugin = {
     const d = new RedmaneDirector(ctx, {
       warn,
       modelState: () => state,
-      makeModel: () => (assets ? buildRedmaneModel({ model: assets.instantiate(BARBARIAN), clips: assets.animations(BARBARIAN) }, warn) : null),
+      makeModel: () => (assets ? buildRedmaneModel({ model: assets.instantiate(BARBARIAN), clips: assets.animations(BARBARIAN), staff }, warn) : null),
     });
     director = d;
     ctx.strings.register('en', REDMANE_STRINGS_EN);

@@ -168,6 +168,9 @@ export const LOOK = {
   /** The tabard flash colour and intensity at full telegraph. */
   flash: 0xff2a10,
   lanceScale: 1.35,
+  /** The staff standing in for the lance: size inside the lance group and how far up the grip sits (metres per model unit). */
+  staffScale: 0.85,
+  staffGrip: 0.35,
   soot: 0x4a3028,
   laneColor: 0xff2a10,
   trapColor: 0x9aa0a8,
