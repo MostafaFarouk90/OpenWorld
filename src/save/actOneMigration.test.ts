@@ -13,6 +13,9 @@ import { CLASS_IDS } from '../actors/classes';
 import { MOUNT_TUNING } from '../mount/tuning';
 import { PHASE_A_FIXTURES, readPhaseAFixture } from './__fixtures__/phaseA';
 
+// Booting the real plugins can take several seconds under load; the 5 s default flakes (see testTimeouts.guard.test.ts).
+vi.setConfig({ testTimeout: 60_000 });
+
 const SLICE1 = import.meta.glob<unknown>('./__fixtures__/slice1-*.json', { eager: true, import: 'default' });
 const slice1 = (name: string) => structuredClone(SLICE1[`./__fixtures__/${name}.json`]) as Record<string, unknown>;
 

@@ -159,3 +159,29 @@ describe('the codex backfill', () => {
     }
   }, 60_000);
 });
+
+describe('a silent shrine light on load wakes the quest (review F1)', () => {
+  const m14 = (dropShrineFlag: boolean) => {
+    const f = structuredClone(FIXTURES['./__fixtures__/act2-m14-hushed-anvil.json']) as { entries: Record<string, { data: any }> };
+    delete f.entries.quests.data.quests.m14.objectives.rekindle;
+    if (dropShrineFlag) delete f.entries['world-state'].data.flags['shrine.hushed-anvil.lit'];
+    return f;
+  };
+  const current = (hh: ChapterHarness) => {
+    const q = hh.ctx.services.require('quests');
+    return q.objectives('m14').filter((o) => q.isObjectiveCurrent('m14', o.def.id)).map((o) => o.def.id);
+  };
+
+  it('M14 leaves rekindle when the lit waystone lights the Hushed Anvil shrine with no flag saved', async () => {
+    h = await bootFromSave(m14(true), { models: false, virtualClock: true });
+    h.run(120);
+    expect(h.ctx.state.getBool('shrine.hushed-anvil.lit')).toBe(true);
+    expect(current(h)).toEqual(['murals']);
+  }, 90_000);
+
+  it('control: with the shrine flag saved it was already fine', async () => {
+    h = await bootFromSave(m14(false), { models: false, virtualClock: true });
+    h.run(120);
+    expect(current(h)).toEqual(['murals']);
+  }, 90_000);
+});
