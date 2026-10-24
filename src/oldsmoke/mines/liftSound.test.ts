@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { LIFT_RIDE_SECONDS, LIFT_RIDE_SOUND, liftRideSamples, makeLiftRidePlayer } from './liftSound';
+import { LIFT_ARRIVE_SOUND, LIFT_CALL_SOUND, LIFT_CUE_KEYS, LIFT_REFUSE_SOUND, LIFT_RIDE_SECONDS, LIFT_RIDE_SOUND, liftCueSamples, liftRideSamples, makeLiftCuePlayer, makeLiftRidePlayer } from './liftSound';
 
 describe('the lift ride cue', () => {
   it('is deterministic, finite, within range and fades in and out', () => {
@@ -29,5 +29,40 @@ describe('the lift ride cue', () => {
     expect(() => makeLiftRidePlayer(undefined)()).not.toThrow();
     const broken = { register: vi.fn(() => { throw new Error('x'); }), play: vi.fn() };
     expect(() => makeLiftRidePlayer(broken)()).not.toThrow();
+  });
+});
+
+describe('the lift one-shot cues', () => {
+  it('has three distinct keys, none the ride key, each deterministic and audible', () => {
+    expect(new Set([...LIFT_CUE_KEYS, LIFT_RIDE_SOUND]).size).toBe(4);
+    for (const key of LIFT_CUE_KEYS) {
+      const a = liftCueSamples(key);
+      expect(Array.from(a.slice(0, 300))).toEqual(Array.from(liftCueSamples(key).slice(0, 300)));
+      let peak = 0;
+      for (const v of a) {
+        expect(Number.isFinite(v)).toBe(true);
+        peak = Math.max(peak, Math.abs(v));
+      }
+      expect(peak).toBeGreaterThan(0.05);
+      expect(peak).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('registers each key once and plays only the key asked for', () => {
+    const audio = { register: vi.fn(), play: vi.fn((_key: string) => 1) };
+    const play = makeLiftCuePlayer(audio);
+    play(LIFT_REFUSE_SOUND);
+    play(LIFT_REFUSE_SOUND);
+    play(LIFT_ARRIVE_SOUND);
+    expect(audio.register.mock.calls.map((c) => c[0])).toEqual([LIFT_REFUSE_SOUND, LIFT_ARRIVE_SOUND]);
+    expect(audio.play.mock.calls.map((c) => c[0])).toEqual([LIFT_REFUSE_SOUND, LIFT_REFUSE_SOUND, LIFT_ARRIVE_SOUND]);
+    expect(audio.play.mock.calls.flat()).not.toContain(LIFT_CALL_SOUND);
+  });
+
+  it('never throws without audio or with a broken service', () => {
+    expect(() => makeLiftCuePlayer(undefined)(LIFT_CALL_SOUND)).not.toThrow();
+    const broken = { register: vi.fn(() => { throw new Error('x'); }), play: vi.fn() };
+    expect(() => makeLiftCuePlayer(broken)(LIFT_CALL_SOUND)).not.toThrow();
+    expect(broken.play).not.toHaveBeenCalled();
   });
 });

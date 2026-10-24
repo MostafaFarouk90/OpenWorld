@@ -14,6 +14,8 @@ export const MOVE_SFX: Readonly<Record<string, Act2SfxKey>> = {
   'harpooner.harpoon': 'sfx.hunter.harpoon',
 };
 
+/** The id prefix of the Deepdelve (D04) pool valves (`valve:d04pool<n>-<m>`, `valvePrefix` of m20d04.pools); they get a wetter cue. */
+export const D04_POOL_VALVE_PREFIX = 'valve:d04pool';
 export const GOLEM_KIND = 'cinder-golem';
 export const CRAWLER_KIND = 'slag-crawler';
 /** The id prefix of the Weeping Bellows' valve wheels (`valve:<valvePrefix>-<n>`); the Slagmaw's and the mines' wheels are not these. */
@@ -90,7 +92,9 @@ export class Act2SfxRouter {
 
   /** `interact`: a valve wheel turned. */
   interact(e: { kind: string; action: string; interactableId?: string }): void {
-    if (e.kind === 'valve' && e.action === 'interact' && e.interactableId?.startsWith(BELLOWS_VALVE_PREFIX)) this.flat('sfx.bellows.valve');
+    if (e.kind !== 'valve' || e.action !== 'interact' || !e.interactableId) return;
+    if (e.interactableId.startsWith(BELLOWS_VALVE_PREFIX)) this.flat('sfx.bellows.valve');
+    else if (e.interactableId.startsWith(D04_POOL_VALVE_PREFIX)) this.flat('sfx.d04pool.valve');
   }
 
   /** `puzzle.state`: the Bellows pressure clock starts. */

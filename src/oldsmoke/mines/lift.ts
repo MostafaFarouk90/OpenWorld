@@ -11,7 +11,7 @@ import { showToast } from '../../waystones/toast';
 import { buildLiftCage } from '../oldsmokeArt';
 import { SHAFT } from '../sites';
 import { MINE_LANDINGS, type MineId } from './kit';
-import { makeLiftRidePlayer, type LiftAudio } from './liftSound';
+import { LIFT_ARRIVE_SOUND, LIFT_CALL_SOUND, LIFT_REFUSE_SOUND, makeLiftCuePlayer, makeLiftRidePlayer, type LiftAudio } from './liftSound';
 import { openLiftMenu, type LiftMenuRow } from './liftMenu';
 import { availableStops, LIFT_ARMED_FLAG, LIFT_STOPS, stopOfInterior, type LiftStop } from './liftStops';
 
@@ -111,6 +111,7 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
   const interiors = (): InteriorsService | undefined => ctx.services.get('interiors');
   const toast = (key: string): void => showToast(ctx.hud, t(key));
   const playRide = makeLiftRidePlayer(ctx.services.get('audio') as LiftAudio | undefined);
+  const playCue = makeLiftCuePlayer(ctx.services.get('audio') as LiftAudio | undefined);
 
   // Quest reads go through the quests service; without it every quest condition is "inactive" (locked), never a throw.
   const env = (): ConditionEnv => {
@@ -139,7 +140,10 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
   const ride = async (stop: LiftStop & { unlocked: boolean }): Promise<void> => {
     const svc = interiors();
     if (!svc || riding) return;
-    if (!stop.unlocked) return toast('oldsmoke.lift.refused.locked');
+    if (!stop.unlocked) {
+      playCue(LIFT_REFUSE_SOUND);
+      return toast('oldsmoke.lift.refused.locked');
+    }
     riding = true;
     try {
       // The cage shudders and rumbles over the fade to black, so the exit-then-enter hold reads as a ride, not a load. Only when the
@@ -149,7 +153,12 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
         playRide();
         (ctx.services.get('vfx') as { shake?: (a: number, s: number) => void } | undefined)?.shake?.(0.12, 1.2);
       }
-      await rideTo(svc, stop, (err) => toast(refusedKey(err)));
+      // Arrival only when the ride went; a refusal plays the denied clack instead, never both.
+      const arrived = await rideTo(svc, stop, (err) => {
+        playCue(LIFT_REFUSE_SOUND);
+        toast(refusedKey(err));
+      });
+      if (arrived) playCue(LIFT_ARRIVE_SOUND);
     } finally {
       riding = false;
     }
@@ -158,6 +167,7 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
   const openPicker = (): void => {
     if (riding || !interiors()) return;
     const { rows: list, byId } = rows();
+    playCue(LIFT_CALL_SOUND);
     const choose = (id: string): void => {
       closeMenu = null;
       const stop = byId.get(id);
@@ -192,7 +202,7 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
           },
           enabled: () => !riding && !(interiors()?.transitioning ?? false),
           onInteract: () => {
-            if (surface && !armed()) return;
+            if (surface && !armed()) return playCue(LIFT_REFUSE_SOUND);
             openPicker();
           },
         }),
