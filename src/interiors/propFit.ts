@@ -1,17 +1,17 @@
 // Fits Dungeon models to the mine prop boxes without distorting them: a prop is tiled with repeated instances until every axis
 // scale is within MAX_ASPECT of the others, and a prop no model fits keeps its greybox. Where the visible models would leave
-// much of the collider footprint empty, a low skirt keeps the base visible. Pure maths over template bounds and geometry.
+// much of the collider footprint empty, the caller lays a thin dirt base. Pure maths over template bounds and geometry.
 import * as THREE from 'three';
 import type { ModelTemplate } from '../assets/swap/ModelLibrary';
 import type { SolidBox } from './layout';
 
 /** Largest allowed ratio between a dressed prop's biggest and smallest axis scale. */
-export const MAX_ASPECT = 1.6;
+export const MAX_ASPECT = 1.65;
 /** Smallest share of a prop's collider footprint its visible model must cover (above COVER_HEIGHT of the box height). */
 export const MIN_COVERAGE = 0.8;
 export const COVER_HEIGHT = 0.4;
-/** The skirt's height as a share of the box height (above COVER_HEIGHT, so a skirted footprint counts as covered). */
-export const SKIRT_HEIGHT = 0.45;
+/** Rubble and collapse piles are drawn this much wider than the box in x and z: low, ragged edges that hide the bare footprint. */
+export const RUBBLE_GROW = 1.15;
 const GRID = 16;
 const MAX_ALONG = 8;
 const MAX_INSTANCES = 8;
@@ -32,7 +32,7 @@ export interface PropPlacement {
 
 export interface PropPlan {
   placements: PropPlacement[];
-  /** Share of the box footprint covered by model geometry above COVER_HEIGHT; under MIN_COVERAGE the caller adds a skirt. */
+  /** Share of the box footprint covered by model geometry above COVER_HEIGHT; under MIN_COVERAGE the caller adds a dirt base. */
   coverage: number;
   aspect: number;
 }
@@ -87,7 +87,7 @@ const size = (t: ModelTemplate) => ({ x: t.bounds.max.x - t.bounds.min.x, y: t.b
  * Tiles the best of `models` over `box`: the instance count along each box axis and the quarter turn that keep the three axis
  * scales closest to uniform (fewest instances on a tie). Null when no model gets within MAX_ASPECT, so the box stays.
  */
-export function planProp(box: SolidBox, models: readonly ModelTemplate[]): PropPlan | null {
+export function planProp(box: SolidBox, models: readonly ModelTemplate[], grow = 1): PropPlan | null {
   const sx = box.max.x - box.min.x;
   const sy = box.max.y - box.min.y;
   const sz = box.max.z - box.min.z;
@@ -99,7 +99,7 @@ export function planProp(box: SolidBox, models: readonly ModelTemplate[]): PropP
         for (let m = 1; m <= MAX_ALONG && n * m <= MAX_INSTANCES; m++) {
           const cw = sx / n;
           const cd = sz / m;
-          const scales = [(turn ? cd : cw) / r.x, sy / r.y, (turn ? cw : cd) / r.z];
+          const scales = [((turn ? cd : cw) / r.x) * grow, sy / r.y, ((turn ? cw : cd) / r.z) * grow];
           const aspect = Math.max(...scales) / Math.min(...scales);
           // Within GOOD_ASPECT the fewest instances win; beyond it the closest to uniform does.
           const rank = (a: number, k: number) => (a <= GOOD_ASPECT ? k : 100 + a);
@@ -114,7 +114,7 @@ export function planProp(box: SolidBox, models: readonly ModelTemplate[]): PropP
   const r = size(t);
   const cw = sx / n;
   const cd = sz / m;
-  const scale = { sx: (turn ? cd : cw) / r.x, sy: sy / r.y, sz: (turn ? cw : cd) / r.z };
+  const scale = { sx: ((turn ? cd : cw) / r.x) * grow, sy: sy / r.y, sz: ((turn ? cw : cd) / r.z) * grow };
   const placements: PropPlacement[] = [];
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < m; j++) placements.push({ template: t, x: box.min.x + cw * (i + 0.5), z: box.min.z + cd * (j + 0.5), turn, ...scale });
@@ -123,6 +123,7 @@ export function planProp(box: SolidBox, models: readonly ModelTemplate[]): PropP
   const grid = heightGrid(t);
   let covered = 0;
   for (const h of grid) if (h * scale.sy >= COVER_HEIGHT * sy) covered++;
-  const coverage = (covered / grid.length) * ((cw * cd * n * m) / (sx * sz));
+  // The tiles partition the footprint exactly; growing them past the box covers that much more of it (up to all of it).
+  const coverage = Math.min(1, (covered / grid.length) * grow * grow);
   return { placements, coverage, aspect: best.aspect };
 }

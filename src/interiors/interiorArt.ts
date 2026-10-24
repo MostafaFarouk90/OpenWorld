@@ -7,7 +7,7 @@ import { ModelBatches } from '../assets/swap/ModelBatches';
 import type { ModelLibrary, ModelTemplate } from '../assets/swap/ModelLibrary';
 import type { BuiltInterior } from './build';
 import type { SolidBox } from './layout';
-import { planProp, SKIRT_HEIGHT, MIN_COVERAGE } from './propFit';
+import { planProp, MIN_COVERAGE, RUBBLE_GROW } from './propFit';
 
 const FLOOR_MODEL: Record<string, string> = {
   'tilted-anvil': 'dun/floor_wood_large',
@@ -25,10 +25,11 @@ const FLOOR_LIFT = 0.02;
 const WALL_VARIANTS_UNDERWAYS = ['dun/wall', 'dun/wall', 'dun/wall_broken', 'dun/wall_cracked'];
 /**
  * Mine walls are single boxes with nothing behind them, so `wall_broken` (it has a see-through hole) is never used: the kept shaft
- * head and the Bellows are sound masonry (cracks only), the old, lower and deep workings are cracked more often.
+ * head and the Bellows, and the worn workings, are mostly sound wall with a cracked course in four (a cracked piece is about 2.6 times
+ * the triangles of a plain one, and Deepdelve has to stay under the Underways' total).
  */
 const WALL_VARIANTS_MINE_KEPT = ['dun/wall', 'dun/wall', 'dun/wall', 'dun/wall_cracked'];
-const WALL_VARIANTS_MINE_WORN = ['dun/wall', 'dun/wall', 'dun/wall_cracked', 'dun/wall_cracked'];
+const WALL_VARIANTS_MINE_WORN = ['dun/wall', 'dun/wall', 'dun/wall', 'dun/wall_cracked'];
 const wallVariants = (interiorId: string): readonly string[] | null =>
   interiorId === 'underways' ? WALL_VARIANTS_UNDERWAYS : !isMineInterior(interiorId) ? null : /deepgate-shaft|weeping-bellows/.test(interiorId) ? WALL_VARIANTS_MINE_KEPT : WALL_VARIANTS_MINE_WORN;
 
@@ -62,8 +63,10 @@ const idMatches = (propId: string, pattern: string) => {
 };
 const MINE_PROP_IDS = [...new Set(MINE_PROP_MODELS.flatMap(([, ms]) => ms))];
 
-export function interiorModelIds(): string[] {
-  const ids = new Set<string>([DEFAULT_FLOOR, MINE_FLOOR, TORCH_MODEL, ...MINE_PROP_IDS, ...Object.values(FLOOR_MODEL), 'dun/wall', 'dun/wall_window_open', 'dun/pillar', ...WALL_VARIANTS_UNDERWAYS]);
+/** The models an interior needs (the mine floor, torch and prop models only for a mine); no id: every model, for tests. */
+export function interiorModelIds(interiorId?: string): string[] {
+  const mine = interiorId === undefined || isMineInterior(interiorId);
+  const ids = new Set<string>([DEFAULT_FLOOR, ...(mine ? [MINE_FLOOR, TORCH_MODEL, ...MINE_PROP_IDS] : []), ...Object.values(FLOOR_MODEL), 'dun/wall', 'dun/wall_window_open', 'dun/pillar', ...WALL_VARIANTS_UNDERWAYS]);
   for (const [m] of PROP_MODELS) ids.add(m);
   return [...ids].sort();
 }
@@ -144,20 +147,24 @@ export function planInterior(interiorId: string, boxes: readonly SolidBox[], tpl
     } else if (b.kind === 'prop' && b.propId && isMineInterior(interiorId)) {
       const row = MINE_PROP_MODELS.find(([patterns]) => patterns.some((p) => idMatches(b.propId!, p)));
       const models = row ? row[1].map((id) => tpl(id)).filter((t): t is ModelTemplate => !!t) : [];
-      const plan = models.length > 0 ? planProp(b, models) : null;
+      const grow = /^(rubble|collapse)\b/.test(b.propId) ? RUBBLE_GROW : 1;
+      const plan = models.length > 0 ? planProp(b, models, grow) : null;
       if (!plan) continue;
+      // Decide before pushing anything: where the models leave much of the collider footprint bare, a thin dirt base keeps the
+      // footprint visible. With no base template that is a greybox prop, never models drawn inside a visible box (z-fighting).
+      const skirt = plan.coverage < MIN_COVERAGE ? tpl(MINE_FLOOR) : null;
+      if (plan.coverage < MIN_COVERAGE && !skirt) continue;
       for (const pl of plan.placements) {
         const fit = explicitFit(pl.template.bounds, pl.sx, pl.sy, pl.sz);
         pieces.push({ model: pl.template.id, kind: 'prop', propId: b.propId, matrix: matrixOf(fit, pl.x, b.min.y, pl.z, pl.turn ? Math.PI / 2 : 0) });
       }
-      // Where the models leave much of the collider footprint bare, a low stone skirt (a flat slab stretched to a plinth) keeps the base visible.
-      const skirt = plan.coverage < MIN_COVERAGE ? tpl(DEFAULT_FLOOR) : null;
-      if (plan.coverage < MIN_COVERAGE && skirt) {
+      if (skirt) {
+        // The dirt floor model laid over the footprint at its own thickness (y 0 on the ground, like the mine floor).
         const r = raw(skirt);
-        const fit = explicitFit(skirt.bounds, s.x / r.x, (s.y * SKIRT_HEIGHT) / r.y, s.z / r.z);
-        pieces.push({ model: skirt.id, kind: 'skirt', propId: b.propId, matrix: matrixOf(fit, c.x, b.min.y, c.z) });
+        const fit = explicitFit(skirt.bounds, s.x / r.x, 1, s.z / r.z, 'keep');
+        pieces.push({ model: skirt.id, kind: 'skirt', propId: b.propId, matrix: matrixOf(fit, c.x, b.min.y + FLOOR_LIFT, c.z) });
       }
-      if (plan.coverage >= MIN_COVERAGE || skirt) dressedProps.add(b.propId);
+      dressedProps.add(b.propId);
     } else if (b.kind === 'prop' && b.propId) {
       const entry = PROP_MODELS.find(([, prefixes]) => prefixes.some((p) => b.propId!.startsWith(p)));
       const t = entry ? tpl(entry[0]) : null;
@@ -214,7 +221,7 @@ export function planTorches(interiorId: string, boxes: readonly SolidBox[], torc
  * of instanced meshes added (0 when nothing was dressed).
  */
 export async function dressInterior(lib: ModelLibrary, built: BuiltInterior): Promise<number> {
-  const templates = await lib.preload(interiorModelIds());
+  const templates = await lib.preload(interiorModelIds(built.layout.def.id));
   if (templates.length === 0 || built.disposed) return 0;
   const byId = new Map(templates.map((t) => [t.id, t]));
   const { pieces, dressedProps, covers } = planInterior(built.layout.def.id, built.layout.boxes, (id) => byId.get(id) ?? null);

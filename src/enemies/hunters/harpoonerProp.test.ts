@@ -6,6 +6,8 @@ import { ModelLibrary } from '../../assets/swap/ModelLibrary';
 import { SWAP_ASSETS } from '../../assets/swap/swapModels';
 import { diskSource } from '../../assets/swap/testing/diskSource';
 import { buildEnemyModel } from '../EnemyModel';
+import { EnemyManager } from '../EnemyManager';
+import { FakeHost } from '../testing/fakeHost';
 import { makeGroundProp } from '../ranged/props';
 import { HUNTER_HARPOONER, HUNTER_HARPOON_PROP, HUNTER_SPEARMAN } from './def';
 
@@ -57,5 +59,33 @@ describe('hunter weapons', () => {
     await missing.preload([HUNTER_HARPOON_PROP]);
     const fallback = heldProps(bodyWith(HUNTER_HARPOONER, (id) => (missing.peek(id) ? ModelLibrary.object(missing.peek(id)!) : null)).root);
     expect(fallback.map((c) => c.name)).toEqual(['enemy-prop:proc/hunter-harpoon']);
+  });
+
+  it('through the real EnemyManager body path: a harpooner spawned before the crossbow loads holds the harpoon, and despawning frees it', () => {
+    const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: -30 } });
+    // The model factory has no pack props: prop() finds nothing, as before the crossbow has loaded.
+    const manager = new EnemyManager(fake.host, () => ({ model: SkeletonUtils.clone(gltf.scene), clips: gltf.animations, prop: () => null }), { spawners: [], seed: 3 });
+    const id = manager.spawnLoose('hunter-harpooner', { x: 0, y: 0, z: 0 });
+    expect(id).not.toBeNull();
+    const enemy = manager.get(id!)!;
+    const held = heldProps(enemy.body.root);
+    expect(held.map((c) => c.name)).toEqual(['enemy-prop:proc/hunter-harpoon']);
+    const geometries: THREE.BufferGeometry[] = [];
+    held[0].traverse((n) => {
+      const m = n as THREE.Mesh;
+      if (m.isMesh) geometries.push(m.geometry);
+    });
+    expect(geometries.length).toBeGreaterThan(0);
+    const disposed = new Set<THREE.BufferGeometry>();
+    const spy = vi.spyOn(THREE.BufferGeometry.prototype, 'dispose').mockImplementation(function (this: THREE.BufferGeometry) {
+      disposed.add(this);
+    });
+    try {
+      enemy.despawn();
+    } finally {
+      spy.mockRestore();
+    }
+    for (const g of geometries) expect(disposed.has(g)).toBe(true);
+    expect(held[0].parent).toBeNull();
   });
 });
