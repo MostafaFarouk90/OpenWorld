@@ -6,7 +6,7 @@ import type { StructureSpec } from '../region/layoutTypes';
 import { a, emptyPart, headingTo, numbered, open, solid, sphere, type Part } from './helpers';
 import type { XZ } from './inputs';
 import { Placer } from './placer';
-import { ROAD_CLEAR, ROAD_HALF_WIDTH, type Sites } from './sites';
+import type { Sites } from './sites';
 
 export const WOODPILE_DISTANCE = 150;
 /** Bearings tried, in order, for the woodpile's direction from the fire. */
@@ -57,7 +57,7 @@ export function outsideOfBend(road: Sites['road'], bendS: number, minD: number):
 export function shelterLayout(s: Sites): { part: Part; info: ShelterInfo } {
   const S = s.shelter;
   const roadS = s.road.nearest(S.cx, S.cz).s;
-  const placer = new Placer({ minX: S.minX + 3, maxX: S.maxX - 3, minZ: S.minZ + 3, maxZ: S.maxZ - 3 }, s.road, ROAD_CLEAR);
+  const placer = new Placer({ minX: S.minX + 3, maxX: S.maxX - 3, minZ: S.minZ + 3, maxZ: S.maxZ - 3 }, s.road, s.roadClear);
 
   const hut = placer.place('dragonspine-eadgyth-hut', 'house', { x: S.cx - 16, z: S.cz + 14 }, 10, 8);
   const trophy = placer.place('dragonspine-trophy-wall', 'dragonspine-trophy-wall', { x: hut.x, z: hut.z - hut.footprint[1] / 2 - 4.5 }, 12, 2.2);
@@ -73,7 +73,7 @@ export function shelterLayout(s: Sites): { part: Part; info: ShelterInfo } {
     const rad = (b * Math.PI) / 180;
     const want = { x: pit.x + Math.sin(rad) * WOODPILE_DISTANCE, z: pit.z + Math.cos(rad) * WOODPILE_DISTANCE };
     const got = findFlat(s.h, { prefer: want, radius: 14, size: [6, 4], maxSpread: 0.4, step: 2 });
-    if (got && Math.abs(Math.hypot(got.x - pit.x, got.z - pit.z) - WOODPILE_DISTANCE) <= 20 && s.road.nearest(got.x, got.z).d > ROAD_CLEAR + 4) {
+    if (got && Math.abs(Math.hypot(got.x - pit.x, got.z - pit.z) - WOODPILE_DISTANCE) <= 20 && s.road.nearest(got.x, got.z).d > s.roadClear + 4) {
       woodpile = got;
       break;
     }
@@ -85,17 +85,17 @@ export function shelterLayout(s: Sites): { part: Part; info: ShelterInfo } {
   const bendS = roadBends(s.road.points, roadS - S.d);
   const dressing: StructureSpec[] = [];
   bendS.forEach((bs, i) => {
-    const side = i % 2 === 0 ? ROAD_HALF_WIDTH + 3 : -(ROAD_HALF_WIDTH + 3);
-    const c = outsideOfBend(s.road, bs, ROAD_HALF_WIDTH + 3);
+    const side = i % 2 === 0 ? s.roadHalf + 3 : -(s.roadHalf + 3);
+    const c = outsideOfBend(s.road, bs, s.roadHalf + 3);
     dressing.push(solid(`dragonspine-bend-cairn-${i + 1}`, 'rock', c.x, c.z, 1.4, 1.4, 1.4));
     if (i % 2 === 1) {
       for (const [k, ds] of [[1, -8], [2, 8]] as const) {
-        const p = s.road.point(bs + ds, -side / Math.abs(side) * (ROAD_HALF_WIDTH + 1.5));
+        const p = s.road.point(bs + ds, -side / Math.abs(side) * (s.roadHalf + 1.5));
         dressing.push(open(`dragonspine-rope-post-${i + 1}-${k}`, 'pole', p.x, p.z, 0.4, 0.4, 1.4));
       }
     }
     if (i === 2 || i === 5) {
-      const p = outsideOfBend(s.road, bs, ROAD_HALF_WIDTH + 12);
+      const p = outsideOfBend(s.road, bs, s.roadHalf + 12);
       dressing.push(solid(`dragonspine-hawk-perch-${i === 2 ? 1 : 2}`, 'rock', p.x, p.z, 2.4, 2.4, 2.2));
     }
   });

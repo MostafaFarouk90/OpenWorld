@@ -1,7 +1,7 @@
 // What the Dragonspine places derive from. Every position in this folder comes from these inputs (K1's plateaus, the Rime Pass
 // polyline, the camp hearth and the interior pads) and every y from `heightAt`: move a plateau and the place moves with it.
 import { ACT3_INTERIOR_PADS, WYRMWATCH_HEARTH } from '../region/act3/act3Places';
-import { DRAGONSPINE_PLATEAUS, RIME_PASS_POINTS } from '../terrain/shape/dragonspine';
+import { DRAGONSPINE_PLATEAUS, RIME_PASS, RIME_PASS_POINTS } from '../terrain/shape/dragonspine';
 import type { PlateauDef } from '../terrain/shaping';
 import { heightAt as worldHeightAt } from '../terrain/heightfield';
 
@@ -28,6 +28,8 @@ export interface InteriorPad {
 export interface DragonspineInputs {
   plateaus: readonly PlateauDef[];
   passPoints: readonly (readonly [number, number])[];
+  /** Half width of the pass road's flat cross-section (K1's `RIME_PASS.halfWidth`). */
+  roadHalfWidth: number;
   hearth: XZ;
   pads: readonly InteriorPad[];
   heightAt: HeightFn;
@@ -38,6 +40,7 @@ export function defaultInputs(heightAt: HeightFn = worldHeightAt): DragonspineIn
   return {
     plateaus: DRAGONSPINE_PLATEAUS,
     passPoints: RIME_PASS_POINTS,
+    roadHalfWidth: RIME_PASS.halfWidth,
     hearth: WYRMWATCH_HEARTH,
     pads: ACT3_INTERIOR_PADS,
     heightAt,

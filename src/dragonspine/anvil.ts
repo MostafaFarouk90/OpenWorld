@@ -6,7 +6,7 @@ import type { StructureSpec } from '../region/layoutTypes';
 import { a, emptyPart, headingTo, numbered, open, polar, sphere, type Part } from './helpers';
 import type { XZ } from './inputs';
 import { Placer } from './placer';
-import { ROAD_CLEAR, type Sites } from './sites';
+import type { Sites } from './sites';
 
 /** The carving loop (shrine, six stones, back) is about this long on foot (the plan's 400 m). */
 export const CARVING_LOOP = 400;
@@ -29,7 +29,7 @@ export interface AnvilInfo {
 export function anvilLayout(s: Sites): { part: Part; info: AnvilInfo } {
   const A = s.anvil;
   const roadS = s.road.nearest(A.cx, A.cz).s;
-  const placer = new Placer({ minX: A.minX + 3, maxX: A.maxX - 3, minZ: A.minZ + 3, maxZ: A.maxZ - 3 }, s.road, ROAD_CLEAR);
+  const placer = new Placer({ minX: A.minX + 3, maxX: A.maxX - 3, minZ: A.minZ + 3, maxZ: A.maxZ - 3 }, s.road, s.roadClear);
   const pad = placer.place('dragonspine-shrine-pad', 'dragonspine-pad', { x: A.cx, z: A.cz }, 16, 16, { mode: 'open', margin: 0 });
   placer.reserve(pad.x, pad.z, SHRINE_CLEAR);
   const shrine = { x: pad.x, z: pad.z };

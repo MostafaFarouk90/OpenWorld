@@ -4,7 +4,7 @@
 import type { StructureSpec } from '../region/layoutTypes';
 import { a, emptyPart, solid, type Part } from './helpers';
 import { footprintMax } from './fit';
-import { ROAD_HALF_WIDTH, type Sites } from './sites';
+import type { Sites } from './sites';
 
 export const WAYSIDE_PAD = 8;
 /** The platform's height above the highest ground under it. */
@@ -38,7 +38,7 @@ export function waysideTargets(shelterS: number, anvilS: number, roadEnd: number
 }
 
 export function waysideLayout(s: Sites, shelterS: number, anvilS: number): { part: Part; info: WaysideInfo } {
-  const offset = ROAD_HALF_WIDTH + 0.5 + WAYSIDE_PAD / 2;
+  const offset = s.roadHalf + 0.5 + WAYSIDE_PAD / 2;
   const sites: WaysideSite[] = [];
   const specs: StructureSpec[] = [];
   waysideTargets(shelterS, anvilS, s.road.length).forEach((want, i) => {
@@ -47,7 +47,7 @@ export function waysideLayout(s: Sites, shelterS: number, anvilS: number): { par
       const at = Math.min(Math.max(want + ds, 0), s.road.length);
       for (const side of [1, -1] as const) {
         const c = s.road.point(at, side * offset);
-        const edge = s.road.point(at, side * ROAD_HALF_WIDTH);
+        const edge = s.road.point(at, side * s.roadHalf);
         const rise = footprintMax(s.h, c.x, c.z, WAYSIDE_PAD + 2, WAYSIDE_PAD + 2) - s.h(edge.x, edge.z);
         const score = Math.abs(rise) + Math.abs(ds) * 0.0005;
         if (!best || score < best.score) best = { score, s: at, side };
@@ -61,12 +61,12 @@ export function waysideLayout(s: Sites, shelterS: number, anvilS: number): { par
   });
   const hawk = (id: string, i: number) => {
     const w = sites[i]!;
-    const p = s.road.point(w.s + 20, -w.side * (ROAD_HALF_WIDTH + 14));
+    const p = s.road.point(w.s + 20, -w.side * (s.roadHalf + 14));
     return a(id, p.x, p.z, 0, ['spawn']);
   };
   const post = (n: number, i: number) => {
     const w = sites[i]!;
-    const p = s.road.point(w.s - 6, -w.side * (ROAD_HALF_WIDTH + 1.5));
+    const p = s.road.point(w.s - 6, -w.side * (s.roadHalf + 1.5));
     return a(`npc-post.pilgrim-${n}`, p.x, p.z, 0, ['npc-post']);
   };
   const part: Part = {

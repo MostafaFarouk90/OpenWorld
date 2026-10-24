@@ -14,6 +14,8 @@ export interface Road {
   point(s: number, side?: number): RoadPoint;
   /** Nearest point on the centre line: its arc position and distance. */
   nearest(x: number, z: number): { s: number; d: number };
+  /** Where the centre line first crosses the line `z` going north, or null (the road starts north of it or never reaches it). */
+  crossNorth(z: number): { s: number; x: number } | null;
 }
 
 export function roadFromPoints(points: readonly (readonly [number, number])[]): Road {
@@ -56,5 +58,18 @@ export function roadFromPoints(points: readonly (readonly [number, number])[]): 
     }
     return best;
   };
-  return { points, length, point, nearest };
+  const crossNorth = (z: number): { s: number; x: number } | null => {
+    let arc = 0;
+    for (let i = 1; i < points.length; i++) {
+      const [ax, az] = points[i - 1]!;
+      const [bx, bz] = points[i]!;
+      if (az < z && bz >= z) {
+        const t = (z - az) / (bz - az);
+        return { s: arc + t * lens[i - 1]!, x: ax + (bx - ax) * t };
+      }
+      arc += lens[i - 1]!;
+    }
+    return null;
+  };
+  return { points, length, point, nearest, crossNorth };
 }

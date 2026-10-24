@@ -128,3 +128,39 @@ describe('carry routes', () => {
     for (const c of movedRoad.checkpoints) expect(c.y).toBe(road.heightAt(c.x, c.z));
   });
 });
+
+describe('the pass gate follows the road (wherever the road starts)', () => {
+  const withStart = (start: readonly [number, number]) => {
+    const base = stubInputs();
+    return { ...base, passPoints: [start, ...base.passPoints] as typeof base.passPoints };
+  };
+  const lodge = build.sites.lodge;
+  const northWall = lodge.maxZ - 10;
+  const variants: Array<[string, ReturnType<typeof stubInputs>]> = [
+    ['stub road start', inp],
+    ['road from the lodge centre', withStart([lodge.cx + 20, lodge.cz])],
+    ['road from the north wall', withStart([lodge.cx - 15, northWall])],
+  ];
+  it.each(variants)('%s: no sled checkpoint is inside the yard after the gate, and no solid stands on the road', (_name, vin) => {
+    const b = buildDragonspine(vin);
+    const rs = buildCarryRoutes(vin.heightAt, b);
+    const { edge, gateN } = b.lodge;
+    // On the wall line when the road crosses it; the road's start when it already begins beyond it.
+    const atGate = b.sites.road.point(b.lodge.passGateS);
+    if (b.lodge.passGateS > 0) expect(Math.abs(atGate.z - edge.n)).toBeLessThan(0.5);
+    else expect(atGate.z).toBeGreaterThanOrEqual(edge.n - 0.5);
+    for (const r of rs.filter((x) => x.id.startsWith('sled.'))) {
+      const gate = r.checkpoints.findIndex((c) => Math.hypot(c.x - gateN.x, c.z - gateN.z) <= 8);
+      expect(gate, r.id).toBeGreaterThan(0);
+      for (const c of r.checkpoints.slice(gate + 1)) expect(c.z, `${r.id} after the gate`).toBeGreaterThan(edge.n);
+    }
+    const solids = b.layout.structures.filter((s) => s.mode === 'solid');
+    for (let s = 0; s <= b.lodge.passGateS; s += 2) {
+      const p = b.sites.road.point(s);
+      for (const sp of solids) {
+        const inside = Math.abs(p.x - sp.x) <= sp.footprint[0] / 2 && Math.abs(p.z - sp.z) <= sp.footprint[1] / 2;
+        expect(inside, `${sp.id} on the road at ${s}`).toBe(false);
+      }
+    }
+  });
+});

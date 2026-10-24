@@ -7,9 +7,9 @@ import { a, emptyPart, headingTo, ledge, LEDGE_HEIGHT, numbered, polar, solid, s
 import { fitLedge } from './fit';
 import type { XZ } from './inputs';
 import { pathLength, pathPoint, windingPath } from './paths';
-import { ROAD_HALF_WIDTH, type Sites } from './sites';
+import type { Sites } from './sites';
 
-/** The trailhead is this far up the pass road from the lodge (the plan's 1,200 m ridden). */
+/** The trailhead is this far up the pass road from the lodge's pass gate (the plan's 1,200 m ridden). */
 export const M28_TRAILHEAD_S = 1200;
 /** The climb is about this long on foot (the plan: 1,000 m there and back). */
 export const M28_CLIMB_LENGTH = 500;
@@ -26,10 +26,10 @@ export interface M28Info {
   specs: StructureSpec[];
 }
 
-export function m28Layout(s: Sites): { part: Part; info: M28Info } {
+export function m28Layout(s: Sites, passGateS: number): { part: Part; info: M28Info } {
   const G = s.crag;
-  const trailheadS = Math.min(M28_TRAILHEAD_S, s.road.length);
-  const th = s.road.point(trailheadS, ROAD_HALF_WIDTH + 4);
+  const trailheadS = Math.min(passGateS + M28_TRAILHEAD_S, s.road.length);
+  const th = s.road.point(trailheadS, s.roadHalf + 4);
   const trailhead = { x: th.x, z: th.z };
   const climb = windingPath(trailhead, { x: G.cx, z: G.cz }, M28_CLIMB_LENGTH, 5);
   const climbLength = pathLength(climb);

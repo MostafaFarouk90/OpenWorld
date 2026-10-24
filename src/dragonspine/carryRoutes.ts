@@ -57,7 +57,7 @@ export function sledPath(b: DragonspineBuild, i: number): XZ[] {
   const { lodge, sites } = b;
   const start = lodge.sledStarts[i]!;
   const up: XZ[] = [];
-  for (let s = 0; s < lodge.cacheS; s += 10) {
+  for (let s = lodge.passGateS + 6; s < lodge.cacheS; s += 10) {
     const p = sites.road.point(s);
     up.push({ x: p.x, z: p.z });
   }

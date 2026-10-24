@@ -1,7 +1,7 @@
 // The Dragonspine structure kinds, registered through `registerStructureKind` (v0.6 item 17). Prefixed `dragonspine-` so Act 1 and
 // 2 kinds never collide. Registration is refcounted: every plugin setup takes a reference and only the last release removes the
 // kinds, so a double setup (or a test next to the real plugin) cannot throw.
-import { isBuiltInStructureKind, registerStructureKind, structureRecipe, type StructureRecipe } from '../region/structureKinds';
+import { registerStructureKind, type StructureRecipe } from '../region/structureKinds';
 
 export const DRAGONSPINE_KINDS: Readonly<Record<string, StructureRecipe>> = {
   /** The long hall's shell (the interior floats elsewhere); `hex/building_castle_red`, snow-tinted. */
@@ -59,5 +59,3 @@ export function registerDragonspineKinds(): () => void {
     if (refs === 0) for (const u of undo.splice(0).reverse()) u();
   };
 }
-
-export const dragonspineKindsRegistered = (): boolean => Object.keys(DRAGONSPINE_KINDS).every((k) => !isBuiltInStructureKind(k) && structureRecipe(k) !== undefined);

@@ -6,7 +6,7 @@ import { a, dist, emptyPart, headingTo, ledge, LEDGE_HEIGHT, numbered, solid, sp
 import { fitLedge } from './fit';
 import type { XZ } from './inputs';
 import { pathLength, pathPoint, windingPath } from './paths';
-import { ROAD_HALF_WIDTH, type Sites } from './sites';
+import type { Sites } from './sites';
 
 /** The on-foot approach from the trailhead over the launch point, the Leap and the ledge to the mouth is about this long (R16). */
 export const CAVE_APPROACH_LENGTH = 200;
@@ -39,7 +39,7 @@ export function caveMouthLayout(s: Sites): { part: Part; info: CaveMouthInfo } {
   const tail = dist(fitted.launch, rubble) + dist(rubble, door);
   const budget = Math.max(CAVE_APPROACH_LENGTH - tail, 20);
   const near = s.road.nearest(door.x, door.z);
-  const verge = s.road.point(near.s, ROAD_HALF_WIDTH + 4);
+  const verge = s.road.point(near.s, s.roadHalf + 4);
   const vergeAt = { x: verge.x, z: verge.z };
   const onRoad = dist(vergeAt, fitted.launch) <= budget;
   let trailhead = vergeAt;

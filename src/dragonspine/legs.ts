@@ -27,8 +27,6 @@ const m = (n: number): number => Math.round(n);
 
 export function legLengths(b: DragonspineBuild): Record<string, LegLengths> {
   const road = b.sites.road;
-  const roadStart = road.point(0);
-  const gateToRoad = dist(b.lodge.gateN, roadStart);
   const sled = pathLength(sledPath(b, 1));
   const hawkClimb = b.hawk.climbLength + dist(b.hawk.camp, b.hawk.climbStart);
   let ride = 0;
@@ -42,7 +40,7 @@ export function legLengths(b: DragonspineBuild): Record<string, LegLengths> {
   const at = (id: string) => cave.anchors.find((x) => x.id === id)!;
   const interior = Math.abs(at('dragonspine.cave.axe').z - at('dragonspine.cave.exit').z);
   return {
-    M28: { ridden: m(gateToRoad + b.m28.trailheadS), foot: m(2 * b.m28.climbLength), note: 'lodge pass gate to the trailhead on the road; the climb there and back' },
+    M28: { ridden: m(b.m28.trailheadS - b.lodge.passGateS), foot: m(2 * b.m28.climbLength), note: 'lodge pass gate to the trailhead on the road; the climb there and back' },
     R15: { ridden: m(2 * sled), foot: m(3 * sled), note: 'depot to cache x 3 hauling; cache to depot x 2 riding back' },
     M29: { ridden: 0, foot: m(2 * dist(b.shelter.fire, b.shelter.woodpile)), note: 'ridden n/a: the shelter waystone is the start (lodge to shelter is K1\'s road); fire to woodpile and back' },
     R16: { ridden: m(dist({ x: b.sites.shelter.cx, z: b.sites.shelter.cz }, b.cave.trailhead)), foot: m(2 * b.cave.approachLength + 2 * interior), note: 'shelter centre to the cave trailhead in a straight line; the approach to the mouth (over the Leap) x 2 and the interior entry to the axe x 2' },

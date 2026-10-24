@@ -15,10 +15,10 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.r15.sled-start.1 | 13624 | 11921 | 0 | 180 | objective |
 | dragonspine.r15.sled-start.2 | 13628 | 11921 | 0 | 180 | objective |
 | dragonspine.r15.sled-start.3 | 13632 | 11921 | 0 | 180 | objective |
-| dragonspine.r15.cache | 13549.92 | 12199.53 | 0 | 180 | objective |
-| dragonspine.spawn.r15.stoop-1 | 13607.64 | 12044.99 | 0 | 180 | spawn |
-| dragonspine.spawn.r15.stoop-2 | 13612.98 | 12103.4 | 0 | 180 | spawn |
-| dragonspine.spawn.r15.stoop-3 | 13562.03 | 12151.17 | 0 | 180 | spawn |
+| dragonspine.r15.cache | 13538.98 | 12209.79 | 0 | 180 | objective |
+| dragonspine.spawn.r15.stoop-1 | 13608.88 | 12049.31 | 0 | 180 | spawn |
+| dragonspine.spawn.r15.stoop-2 | 13606.42 | 12109.55 | 0 | 180 | spawn |
+| dragonspine.spawn.r15.stoop-3 | 13552.73 | 12159.89 | 0 | 180 | spawn |
 | dragonspine.lodge.stables | 13638 | 11873.5 | 0 | 0 | poi |
 | dragonspine.lodge.yard | 13600 | 11886 | 0 | 180 | poi |
 | npc-post.thorgar.yard | 13604 | 11895 | 0 | 53.13 | npc-post |

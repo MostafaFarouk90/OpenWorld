@@ -21,6 +21,10 @@ export interface Sites {
   inp: DragonspineInputs;
   h: HeightFn;
   road: Road;
+  /** Half width of the road's flat cross-section, from the inputs (K1's RoadDef). */
+  roadHalf: number;
+  /** Structures keep this far from the centre line. */
+  roadClear: number;
   lodge: Frame;
   shelter: Frame;
   anvil: Frame;
@@ -32,15 +36,13 @@ export interface Sites {
   cavePad: InteriorPad;
 }
 
-/** Half width of the pass road's flat cross-section; structures keep this plus a margin clear of its centre line. */
-export const ROAD_HALF_WIDTH = 6;
-export const ROAD_CLEAR = ROAD_HALF_WIDTH + 2;
-
 export function deriveSites(inp: DragonspineInputs): Sites {
   return {
     inp,
     h: inp.heightAt,
     road: roadFromPoints(inp.passPoints),
+    roadHalf: inp.roadHalfWidth,
+    roadClear: inp.roadHalfWidth + 2,
     lodge: frameOf(plateauById(inp, 'wyrmwatch-lodge')),
     shelter: frameOf(plateauById(inp, 'rime-pass-shelter')),
     anvil: frameOf(plateauById(inp, 'last-anvil')),
@@ -51,13 +53,4 @@ export function deriveSites(inp: DragonspineInputs): Sites {
     hallPad: padById(inp, 'wyrmwatch-hall'),
     cavePad: padById(inp, 'collapsed-cave'),
   };
-}
-
-/** Circles other layouts keep clear of (the Act 3 POI placement): centre and radius per site. */
-export function keepOut(s: Sites): ReadonlyArray<{ id: string; x: number; z: number; r: number }> {
-  return [
-    { id: 'wyrmwatch-lodge', x: s.lodge.cx, z: s.lodge.cz, r: Math.hypot(s.lodge.w, s.lodge.d) / 2 },
-    { id: 'rime-pass-shelter', x: s.shelter.cx, z: s.shelter.cz, r: 60 },
-    { id: 'last-anvil', x: s.anvil.cx, z: s.anvil.cz, r: Math.hypot(s.anvil.w, s.anvil.d) / 2 },
-  ];
 }

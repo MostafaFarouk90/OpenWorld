@@ -10,7 +10,6 @@ import { LEDGE_HEIGHT } from './helpers';
 import { PLATEAU_IDS } from './inputs';
 import { DRAGONSPINE_NPCS } from './npcDefs';
 import { roadFromPoints } from './road';
-import { ROAD_HALF_WIDTH } from './sites';
 import { registerDragonspineKinds } from './structureKinds';
 import { shiftedInputs, shiftedRoad, stubInputs } from './testing/fixture';
 import { WAYSIDE_SPACING } from './wayside';
@@ -131,7 +130,7 @@ describe('the layout on stand-in ground', () => {
   it('keeps blocking structures off the pass road', () => {
     const road = roadFromPoints(inp.passPoints);
     for (const s of [...b.shelter.specs, ...b.anvil.specs, ...b.wayside.specs.map((w) => ({ ...w, mode: 'open' as const }))].filter((x) => x.mode !== 'open')) {
-      for (const [x, z] of footprintCorners(s)) expect(road.nearest(x, z).d, s.id).toBeGreaterThanOrEqual(ROAD_HALF_WIDTH);
+      for (const [x, z] of footprintCorners(s)) expect(road.nearest(x, z).d, s.id).toBeGreaterThanOrEqual(b.sites.roadHalf);
     }
   });
 
@@ -168,9 +167,9 @@ describe('the wayside sites', () => {
     for (const w of b.wayside.sites) {
       const spec = b.wayside.specs[w.index - 1]!;
       const d = road.nearest(spec.x, spec.z).d;
-      expect(d).toBeGreaterThan(ROAD_HALF_WIDTH);
-      expect(d).toBeLessThan(ROAD_HALF_WIDTH + 12);
-      const edge = road.point(w.s, w.side * ROAD_HALF_WIDTH);
+      expect(d).toBeGreaterThan(b.sites.roadHalf);
+      expect(d).toBeLessThan(b.sites.roadHalf + 12);
+      const edge = road.point(w.s, w.side * b.sites.roadHalf);
       const top = inp.heightAt(spec.x, spec.z) + w.dy;
       expect(top - inp.heightAt(edge.x, edge.z), `wayside ${w.index}`).toBeLessThanOrEqual(0.5);
       expect(anchor(`dragonspine.wayside.${w.index}`).onStructure).toBe(spec.id);

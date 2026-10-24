@@ -5,7 +5,7 @@ import type { StructureSpec } from '../region/layoutTypes';
 import { a, box, emptyPart, headingTo, open, solid, sphere, type Part } from './helpers';
 import type { XZ } from './inputs';
 import { Placer } from './placer';
-import { ROAD_CLEAR, type Sites } from './sites';
+import type { Sites } from './sites';
 
 export const WALL_INSET = 10;
 export const WALL_T = 3;
@@ -25,6 +25,8 @@ export interface LodgeInfo {
   hallDoor: XZ;
   depot: XZ;
   sledStarts: XZ[];
+  /** Road arc position of the pass gate (where the road crosses the north wall line). */
+  passGateS: number;
   /** Road arc position of the cache. */
   cacheS: number;
   cache: XZ;
@@ -36,8 +38,10 @@ export interface LodgeInfo {
 export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
   const L = s.lodge;
   const edge = { w: L.minX + WALL_INSET, e: L.maxX - WALL_INSET, s: L.minZ + WALL_INSET, n: L.maxZ - WALL_INSET };
-  const roadStart = s.road.point(0);
-  const passX = Math.min(Math.max(roadStart.x, edge.w + GATE_W * 2), edge.e - GATE_W * 2);
+  // The pass gate is where the road leaves the yard through the north wall line (the road may start inside the yard or beyond it).
+  const cross = s.road.crossNorth(edge.n);
+  const passGateS = cross?.s ?? 0;
+  const passX = Math.min(Math.max(cross?.x ?? s.road.point(0).x, edge.w + GATE_W * 2), edge.e - GATE_W * 2);
   const gateS = { x: L.cx, z: edge.s };
   const gateN = { x: passX, z: edge.n };
   const hz = (edge.n - edge.s) / 2;
@@ -63,7 +67,7 @@ export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
   const hall = { x: door.x, z: door.z + 3 + HALL_SIZE.d / 2, w: HALL_SIZE.w, d: HALL_SIZE.d, h: HALL_SIZE.h };
   const hallSpec = solid('dragonspine-hall', 'dragonspine-hall', hall.x, hall.z, hall.w, hall.d, hall.h);
 
-  const yard: Placer = new Placer({ minX: edge.w + 3, maxX: edge.e - 3, minZ: edge.s + 3, maxZ: edge.n - 3 }, null, ROAD_CLEAR);
+  const yard: Placer = new Placer({ minX: edge.w + 3, maxX: edge.e - 3, minZ: edge.s + 3, maxZ: edge.n - 3 }, s.road, s.roadClear);
   for (const w of [...walls, hallSpec]) yard.add(w);
   yard.reserve(s.hearth.x, s.hearth.z, 7);
   yard.reserve(gateS.x, gateS.z + 10, 12);
@@ -89,9 +93,9 @@ export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
   const shedFront = { x: shed.x, z: shed.z - shed.footprint[1] / 2 - 3 };
   const sledStarts = [-4, 0, 4].map((dx) => ({ x: shedFront.x + dx, z: shedFront.z - 2 }));
   const stableFront = { x: stable.x, z: stable.z - stable.footprint[1] / 2 - 2.5 };
-  const depotToStart = Math.hypot(shedFront.x - gateN.x, shedFront.z - gateN.z) + Math.hypot(gateN.x - roadStart.x, gateN.z - roadStart.z);
-  const cacheS = Math.max(120, R15_LEG - depotToStart);
-  const cacheP = s.road.point(cacheS, -ROAD_CLEAR - 3);
+  const depotToGate = Math.hypot(shedFront.x - gateN.x, shedFront.z - gateN.z);
+  const cacheS = passGateS + Math.max(120, R15_LEG - depotToGate);
+  const cacheP = s.road.point(cacheS, -s.roadClear - 3);
   const cache = { x: cacheP.x, z: cacheP.z };
 
   const wayX = gateS.x - 14;
@@ -106,7 +110,7 @@ export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
     ...sledStarts.map((p, i) => a(`dragonspine.r15.sled-start.${i + 1}`, p.x, p.z, 0, ['objective'])),
     a('dragonspine.r15.cache', cache.x, cache.z, 0, ['objective']),
     ...[0.3, 0.6, 0.85].map((f, i) => {
-      const p = s.road.point(cacheS * f, 16);
+      const p = s.road.point(passGateS + (cacheS - passGateS) * f, 16);
       return a(`dragonspine.spawn.r15.stoop-${i + 1}`, p.x, p.z, 0, ['spawn']);
     }),
     a('dragonspine.lodge.stables', stableFront.x, stableFront.z, 180, ['poi']),
@@ -143,6 +147,6 @@ export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
   };
   return {
     part,
-    info: { edge, gateS, gateN, hall, hallDoor: door, depot: shedFront, sledStarts, cacheS, cache, towers: towerSpecs, waystone: { x: wayX, z: wayZ }, specs: part.structures },
+    info: { edge, gateS, gateN, hall, hallDoor: door, depot: shedFront, sledStarts, passGateS, cacheS, cache, towers: towerSpecs, waystone: { x: wayX, z: wayZ }, specs: part.structures },
   };
 }
