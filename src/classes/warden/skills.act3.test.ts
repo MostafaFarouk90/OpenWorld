@@ -6,6 +6,7 @@ import { playerInit } from '../../actors/teams';
 import { COMBAT } from '../../config/constants';
 import { GameEvents } from '../../core/events';
 import { FakeActor, FakeActors } from '../../spells/testHost';
+import { Progression } from '../../progression/Progression';
 import { Earthroot, FrenziedHearth, Skullsplitter, StaggerWatch } from './skills.act3';
 import { EARTHROOT, FRENZIED_HEARTH, SKILL_IDS, SKULLSPLITTER } from './tuning';
 import '../../hud/events';
@@ -82,7 +83,7 @@ describe('Skullsplitter', () => {
     const player = new FakeActor('player', 'player', 0, 0);
     const actors = new FakeActors(player);
     const applied: any[] = [];
-    const st = { blocked: null as string | null, clip: true, interrupted: false, staggered: new Set<string>(), yaw: 0 };
+    const st = { warden: true, learned: true, blocked: null as string | null, clip: true, interrupted: false, staggered: new Set<string>(), yaw: 0 };
     const clips: string[] = [];
     const triggers: string[] = [];
     const fxCalls: boolean[] = [];
@@ -92,6 +93,8 @@ describe('Skullsplitter', () => {
         damage: { apply: (r) => void applied.push(r) },
         stagger: { isStaggered: (id) => st.staggered.has(id) },
         now: () => 0,
+        isWarden: () => st.warden,
+        learned: () => st.learned,
         feet: () => ({ x: 0, y: 0, z: 0 }),
         facingYaw: () => st.yaw,
         blockedReason: () => st.blocked,
@@ -110,6 +113,19 @@ describe('Skullsplitter', () => {
     };
     return { player, actors, applied, st, clips, triggers, fxCalls, h, foe, run };
   }
+
+  it('refuses the wrong class and an unlearned skill, playing no clip', () => {
+    const r = rig();
+    r.foe('a', 0, -1);
+    r.st.warden = false;
+    expect(r.h.start()).toEqual({ ok: false, reason: 'wrong-class' });
+    r.st.warden = true;
+    r.st.learned = false;
+    expect(r.h.start()).toEqual({ ok: false, reason: 'not-learned' });
+    expect(r.clips).toEqual([]);
+    expect(r.triggers).toEqual([]);
+    expect(r.h.chopping).toBe(false);
+  });
 
   it('plays the chop clip, reports the trigger, and lands nothing before the blade is hot', () => {
     const r = rig();
@@ -252,6 +268,7 @@ describe('Earthroot', () => {
     const applied: any[] = [];
     const st = {
       t: 0,
+      warden: true,
       learned,
       blocked: null as string | null,
       dodging: false,
@@ -268,6 +285,7 @@ describe('Earthroot', () => {
         actors,
         damage: { apply: (q) => void applied.push(q) },
         now: () => st.t,
+        isWarden: () => st.warden,
         learned: () => st.learned,
         feet: () => ({ x: 0, y: 0, z: 0 }),
         blockedReason: () => st.blocked,
@@ -299,6 +317,17 @@ describe('Earthroot', () => {
     r.tick();
     expect(r.active).toBe(false);
     expect(st).toMatchObject({ unlocks: 1, fxStopped: 1 });
+  });
+
+  it('refuses the wrong class (a null class included) and an unlearned skill, planting nothing', () => {
+    const { r, st } = rig();
+    st.warden = false;
+    expect(r.start()).toEqual({ ok: false, reason: 'wrong-class' });
+    st.warden = true;
+    st.learned = false;
+    expect(r.start()).toEqual({ ok: false, reason: 'not-learned' });
+    expect(r.active).toBe(false);
+    expect(st).toMatchObject({ locks: 0, fxStarted: 0, triggers: [] });
   });
 
   it('refuses while blocked, while already rooted, and costs nothing then', () => {
@@ -368,6 +397,7 @@ describe('Earthroot', () => {
         actors: new FakeActors(new FakeActor('player', 'player')),
         damage: { apply: () => {} },
         now: () => 0,
+        isWarden: () => true,
         learned: () => true,
         feet: () => ({ x: 0, y: 0, z: 0 }),
         blockedReason: () => null,
@@ -461,13 +491,14 @@ describe('Earthroot', () => {
 describe('Frenzied Hearth', () => {
   function rig(learned = true) {
     const w = world();
-    const st = { learned, tick: 0, fxStarted: 0, fxStopped: 0 };
+    const st = { warden: true, learned, tick: 0, fxStarted: 0, fxStopped: 0 };
     const heals: Array<{ id: string; amount: number }> = [];
     const f = new FrenziedHearth(
       {
         events: w.e as never,
         actor: () => w.player as never,
         tick: () => st.tick,
+        isWarden: () => st.warden,
         learned: () => st.learned,
         heal: (id, amount) => void heals.push({ id, amount }),
         fx: () => (st.fxStarted++, () => void st.fxStopped++),
@@ -482,6 +513,31 @@ describe('Frenzied Hearth', () => {
       w.e.emit('damage.dealt', { attackerId: w.player.id, targetId: w.foe.id, amount: 5, poise: 5, kind: 'melee', outcome: 'hit', dealt: 5, poiseDealt: 0, healthAfter: 90, killed: false, saved: false, staggered: false, ...extra } as never);
     return { ...w, st, heals, f, hit, dealt };
   }
+
+  it('is never below for another class (a null class included)', () => {
+    const r = rig();
+    r.player.maxHealth = 100;
+    r.player.health = 10;
+    expect(r.f.below).toBe(true);
+    r.st.warden = false;
+    expect(r.f.below).toBe(false);
+    expect(r.hit(1, 40).poise).toBe(40);
+  });
+
+  it('through the real progression max-health chain: a Burn-like modifier lowers the max, and exactly 30% of it is not below', () => {
+    const r = rig();
+    const prog = new Progression({ emit: () => {}, actor: () => r.player });
+    const base = prog.baseMaxHealth();
+    prog.addMaxHealthModifier('test.burn', () => 0.5); // as Burn lowers the maximum
+    const max = r.player.maxHealth;
+    expect(max).toBe(Math.round(base * 0.5));
+    r.player.health = max * 0.3;
+    expect(r.f.below).toBe(false);
+    expect(r.hit(0, 40).poise).toBe(40);
+    r.player.health = max * 0.3 - 0.01;
+    expect(r.f.below).toBe(true);
+    expect(r.hit(0, 40).poise).toBe(0);
+  });
 
   it('is below only strictly under 30%: exactly 30% is not', () => {
     const r = rig();

@@ -239,6 +239,29 @@ describe('Cinder Mark: when it ends', () => {
     }
   });
 
+  it('a mercy-capable foe staggering keeps the mark; calming, releasing and leaving end it', () => {
+    const keep = make();
+    keep.f.mercy = 'staggered';
+    keep.mark.update();
+    expect(keep.mark.target).toBe('f');
+    // The stricter check still holds for picking a target.
+    keep.mark.cast();
+    expect(keep.mark.target).toBe('f');
+    for (const m of ['calming', 'releasing', 'leaving'] as const) {
+      const { mark, f } = make();
+      f.mercy = m;
+      mark.update();
+      expect(mark.target, m).toBeNull();
+    }
+  });
+
+  it('a staggered mercy foe is still not picked as a new target', () => {
+    const { w, base } = world();
+    const mark = new CinderMark({ ...base, lockTarget: () => w.lock, foe: (id) => w.foes.get(id) ?? null, foes: () => w.foes.values() } as CinderMarkPorts);
+    w.add(foe('s', 0, -4, { mercy: 'staggered' }));
+    expect(mark.cast()).toEqual({ ok: false, reason: 'no-target' });
+  });
+
   it('another actor going does not end it', () => {
     const { mark } = make();
     mark.onGone('someone-else');

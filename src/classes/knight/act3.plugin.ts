@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import type { GameContext } from '../../core/Game';
 import type { GamePlugin } from '../../core/plugins';
 import { looseService } from '../../vfx/ports';
@@ -65,7 +66,9 @@ const knightAct3Plugin: GamePlugin = {
         return null;
       };
 
-      // Bastion Wall
+      // Bastion Wall. The guard (-50) emits player.guardBroken synchronously inside its modifier, before the wall (-45) runs.
+      let guardBrokeTick = -1;
+      offs.push(ctx.events.on('player.guardBroken', () => void (guardBrokeTick = ctx.clock.tick)));
       const wall = new BastionWall({
         now: () => ctx.clock.seconds,
         playerId,
@@ -77,10 +80,13 @@ const knightAct3Plugin: GamePlugin = {
         blockHeld: () => ctx.input.actions.down('block'),
         // Raised while block is held, so the guard's own busy state must not refuse it.
         blockedReason: () => blockedNow(false),
+        guardBrokeThisTick: () => guardBrokeTick === ctx.clock.tick,
         cone: () => {
+          // With `attach` the preset adds the root's world position itself (effects/index.ts origin), so the offset is zero.
+          const attach = ctx.player.avatar?.root;
           const h = vfx()?.spawnEffect?.(
             BASTION_WALL.fx,
-            { position: ctx.player.feet, yaw: ctx.player.facingYaw, attach: ctx.player.avatar?.root },
+            { position: attach ? { x: 0, y: 0, z: 0 } : ctx.player.feet, yaw: ctx.player.facingYaw, attach },
             { seconds: BASTION_WALL.seconds },
           );
           return {
@@ -95,7 +101,11 @@ const knightAct3Plugin: GamePlugin = {
       offs.push(
         ctx.damage.addModifier(
           BASTION_WALL.modifierId,
-          (req, target) => wall.cover(req as never, target as never),
+          (req, target, attacker) => {
+            const a = attacker ?? (req.attackerId ? ctx.actors.get(req.attackerId) : null);
+            const pos = a ? a.worldPosition(new THREE.Vector3()) : null;
+            return wall.cover(req as never, target as never, pos);
+          },
           BASTION_WALL.modifierOrder,
         ),
       );
@@ -111,7 +121,10 @@ const knightAct3Plugin: GamePlugin = {
           facingYaw: () => ctx.player.facingYaw,
           blockedReason: () => blockedNow(true),
           playClip: (clip) => controller()?.playOneShot?.(clip, { lockMove: true }) === true,
-          interrupted: () => ctx.actors.player.dead || verbs()?.staggered === true || controller()?.currentAction === 'dodge',
+          interrupted: () => ctx.actors.player.dead || verbs()?.staggered === true || 
+            // currentAction reads null during a playOneShot (AnimationController.currentAction hides the 'oneShot' kind), so any
+            // non-null action (a flinch, stagger, block, dodge) means the chop clip was replaced.
+            (controller()?.currentAction ?? null) !== null,
           reportTrigger: trigger,
           fx: (at, yaw) => {
             vfx()?.spawnEffect?.(EXECUTIONERS_ARC.fx, { position: at, yaw });

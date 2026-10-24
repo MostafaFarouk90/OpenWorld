@@ -140,6 +140,62 @@ describe('knight act3 plugin: Bastion Wall', () => {
     expect(r.spawned.some((s) => s.id === BASTION_WALL.fx && s.p?.flicker === 1)).toBe(true);
   });
 
+  it('the cone is spawned with attach and a zero offset (the preset adds the root position itself); the flicker is not attached', () => {
+    const r = rig();
+    r.playerObj.feet.set(15000, 0, 15000);
+    r.playerObj.avatar.root.position.set(15000, 0, 15000);
+    knightAct3Plugin.setup(r.ctx as never);
+    r.handlers.get(SKILL_IDS.bastionWall)!();
+    const cone = r.spawned.find((s) => s.id === BASTION_WALL.fx && s.p?.seconds === BASTION_WALL.seconds)!;
+    expect(cone.t.attach).toBe(r.playerObj.avatar.root);
+    expect(cone.t.position).toEqual({ x: 0, y: 0, z: 0 });
+    frontHit(r, r.player);
+    const flicker = r.spawned.find((s) => s.p?.flicker === 1)!;
+    expect(flicker.t.attach).toBeUndefined();
+  });
+
+  it('a guard that breaks on the hit (player.guardBroken, outcome stays hit) is not turned into a block; the next hit is', () => {
+    const r = rig();
+    knightAct3Plugin.setup(r.ctx as never);
+    let breakNext = true;
+    r.damage.addModifier(
+      'test.guard',
+      (req, target) => {
+        if (target.id !== r.player.id || !breakNext) return;
+        r.events.emit('player.guardBroken', { attackerId: req.attackerId });
+      },
+      -50,
+    );
+    r.handlers.get(SKILL_IDS.bastionWall)!();
+    const broken = frontHit(r, r.player, 50);
+    expect(broken?.outcome).toBe('hit');
+    expect(broken?.dealt).toBeCloseTo(50);
+    // An ally is still covered on a tick in which the Knight's guard broke.
+    const near = r.spawn('ally', 1, -2);
+    expect(frontHit(r, near)?.outcome).toBe('blocked');
+    breakNext = false;
+    r.tick(1);
+    expect(frontHit(r, r.player, 50)?.outcome).toBe('blocked');
+  });
+
+  it('an ally is covered by where the attacker stands: a foe behind the Knight striking an ally further behind is not, a foe in front beside the ally is', () => {
+    const r = rig();
+    knightAct3Plugin.setup(r.ctx as never);
+    r.handlers.get(SKILL_IDS.bastionWall)!();
+    const behindAlly = r.spawn('ally', 0, 5);
+    const behindFoe = r.spawn('hostile', 0, 3);
+    // The hit travels +z, which read as "from ahead" under the old direction test.
+    const res = r.damage.apply({ attackerId: behindFoe.id, targetId: behindAlly.id, amount: 50, kind: 'melee', direction: new THREE.Vector3(0, 0, 1) } as never);
+    expect(res?.outcome).toBe('hit');
+    const sideAlly = r.spawn('ally', 4, -3);
+    const frontFoe = r.spawn('hostile', 2, -3);
+    const res2 = r.damage.apply({ attackerId: frontFoe.id, targetId: sideAlly.id, amount: 50, kind: 'melee', direction: new THREE.Vector3(1, 0, 0) } as never);
+    expect(res2?.outcome).toBe('blocked');
+    // No attacker at all (no position): the ally is not covered.
+    const res3 = r.damage.apply({ attackerId: null, targetId: sideAlly.id, amount: 50, kind: 'melee', direction: new THREE.Vector3(0, 0, 1) } as never);
+    expect(res3?.outcome).toBe('hit');
+  });
+
   it('does not scale twice a hit the Knight guard (order -50) already blocked, and a parry stays a parry', () => {
     const r = rig();
     knightAct3Plugin.setup(r.ctx as never);
@@ -257,6 +313,17 @@ describe("knight act3 plugin: Executioner's Arc", () => {
     expect(h()).toEqual({ ok: true });
     r.tick(3);
     r.playerObj.avatar.controller.currentAction = 'dodge';
+    r.tick(EXECUTIONERS_ARC.ticks);
+    expect(foe.health).toBe(100);
+  });
+
+  it('a flinch that replaces the chop clip ends the chop with no damage', () => {
+    const r = rig();
+    knightAct3Plugin.setup(r.ctx as never);
+    const foe = r.spawn('hostile', 0, -1);
+    expect(r.handlers.get(SKILL_IDS.executionersArc)!()).toEqual({ ok: true });
+    r.tick(2);
+    r.playerObj.avatar.controller.currentAction = 'flinch';
     r.tick(EXECUTIONERS_ARC.ticks);
     expect(foe.health).toBe(100);
   });

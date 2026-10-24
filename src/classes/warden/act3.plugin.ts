@@ -3,7 +3,7 @@ import type { GamePlugin } from '../../core/plugins';
 import '../../hud/events';
 import { looseService } from '../../vfx/ports';
 import { Earthroot, FrenziedHearth, Skullsplitter, StaggerWatch } from './skills.act3';
-import { EARTHROOT, FRENZIED_HEARTH, SKILL_IDS, SKULLSPLITTER } from './tuning';
+import { EARTHROOT, FRENZIED_HEARTH, SKILL_IDS, SKULLSPLITTER, WARDEN_CLASS_ID } from './tuning';
 
 type Loose = { get(name: string): unknown };
 interface ControllerLike {
@@ -45,6 +45,8 @@ const wardenAct3Plugin: GamePlugin = {
     const svc = <T>(name: string): T | undefined => loose.get(name) as T | undefined;
     const warn = (m: string) => console.warn(m);
     const learned = (id: string): boolean => looseService(ctx.services, 'progression')?.learned(id) === true;
+    /** A null class is not a Warden (unlike the Knight, who plays with a null class before M07). */
+    const isWarden = (): boolean => looseService(ctx.services, 'progression')?.classId === WARDEN_CLASS_ID;
     const verbs = () => svc<VerbsLike>('combatVerbs');
     const controller = () => ctx.player.avatar?.controller as unknown as ControllerLike | undefined;
     const playerId = () => ctx.actors.player.id;
@@ -79,9 +81,13 @@ const wardenAct3Plugin: GamePlugin = {
           now: () => ctx.clock.seconds,
           feet: () => ctx.player.feet,
           facingYaw: () => ctx.player.facingYaw,
+          isWarden,
+          learned: () => learned(SKILL_IDS.skullsplitter),
           blockedReason: blockedNow,
           playClip: (clip) => controller()?.playOneShot?.(clip, { lockMove: true }) === true,
-          interrupted: () => ctx.actors.player.dead || verbs()?.staggered === true || controller()?.currentAction === 'dodge',
+          // currentAction reads null during a playOneShot (AnimationController.currentAction hides the 'oneShot' kind), so any
+          // non-null action (a flinch, stagger, block, dodge) means the chop clip was replaced.
+          interrupted: () => ctx.actors.player.dead || verbs()?.staggered === true || (controller()?.currentAction ?? null) !== null,
           reportTrigger: trigger,
           fx: {
             chop: (at, yaw, staggered) => {
@@ -105,6 +111,7 @@ const wardenAct3Plugin: GamePlugin = {
           actors: ctx.actors as never,
           damage: ctx.damage as never,
           now: () => ctx.clock.seconds,
+          isWarden,
           learned,
           feet: () => ctx.player.feet,
           blockedReason: blockedNow,
@@ -126,10 +133,16 @@ const wardenAct3Plugin: GamePlugin = {
           events: ctx.events,
           actor: () => ctx.actors.player as never,
           tick: () => ctx.clock.tick,
+          isWarden,
           learned,
           heal: (id, amount) => ctx.damage.heal(id, amount),
-          // No continuous screen-fx API exists (ScreenFx.pulse is timed), so the effect is shoulder steam that rides the player.
-          fx: () => stopper(vfx()?.spawnEffect?.(FRENZIED_HEARTH.effect, { position: feetAt(), attach: ctx.player.avatar?.root })),
+          // Not done (design 11.5): the red vignette (no continuous screen-fx API; ScreenFx.pulse is timed) and "hit-stop disabled
+          // for incoming hits" (no hit-stop hook to veto). Only shoulder steam that rides the player is drawn. With `attach` the
+          // preset adds the root's world position itself (effects/index.ts origin), so the offset is zero.
+          fx: () => {
+            const attach = ctx.player.avatar?.root;
+            return stopper(vfx()?.spawnEffect?.(FRENZIED_HEARTH.effect, { position: attach ? { x: 0, y: 0, z: 0 } : feetAt(), attach }));
+          },
           skillId: SKILL_IDS.frenziedHearth,
         },
         playerId,

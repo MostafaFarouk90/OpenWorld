@@ -9,7 +9,7 @@ import { BASTION_WALL, EXECUTIONERS_ARC } from './tuning';
 // ---------------------------------------------------------------------------------------------------------------------
 
 function wallRig(over: { classId?: string | null; learned?: boolean; dead?: boolean; blocked?: string | null; yaw?: number } = {}) {
-  const st = { now: 0, block: true, dead: over.dead ?? false, learned: over.learned ?? true, classId: over.classId === undefined ? null : over.classId, blocked: over.blocked ?? null };
+  const st = { now: 0, broke: false, block: true, dead: over.dead ?? false, learned: over.learned ?? true, classId: over.classId === undefined ? null : over.classId, blocked: over.blocked ?? null };
   const flicker = vi.fn();
   const stop = vi.fn();
   const trig = vi.fn();
@@ -24,6 +24,7 @@ function wallRig(over: { classId?: string | null; learned?: boolean; dead?: bool
     facingYaw: () => over.yaw ?? 0,
     blockHeld: () => st.block,
     blockedReason: () => st.blocked,
+    guardBrokeThisTick: () => st.broke,
     cone: () => (cones.n++, { stop, flicker }),
     reportTrigger: trig,
     skillId: 'knight.bastionWall',
@@ -94,12 +95,12 @@ describe('Bastion Wall: cover', () => {
       [0, 3, true], // behind the Knight but near: the Knight's facing decides the cone, not the ally's position
     ] as const) {
       const q = fromFront();
-      r.wall.cover(q, ally(x, z));
+      r.wall.cover(q, ally(x, z), { x: 0, y: 0, z: -4 });
       expect(q.outcome, `${x},${z}`).toBe(covered ? 'blocked' : 'hit');
     }
     // A hit whose source is behind the Knight is not covered, for the Knight or an ally.
     const behind = fromFront({ direction: { x: 0, z: -1 } });
-    r.wall.cover(behind, ally(0, -2));
+    r.wall.cover(behind, ally(0, -2), { x: 0, y: 0, z: 4 });
     expect(behind.outcome).toBe('hit');
     const behindSelf = fromFront({ direction: { x: 0, z: -1 } });
     r.wall.cover(behindSelf, knightTarget);
@@ -175,9 +176,45 @@ describe('Bastion Wall: cover', () => {
     r.wall.cast();
     for (const t of [ally(0, -2, { dead: true }), ally(0, -2, { team: 'hostile' }), ally(0, -2, { team: 'neutral' })]) {
       const q = fromFront();
-      r.wall.cover(q, t);
+      r.wall.cover(q, t, { x: 0, y: 0, z: -4 });
       expect(q.outcome).toBe('hit');
     }
+  });
+
+  it('an ally hit is judged by where the attacker stands, not by the hit direction', () => {
+    const r = wallRig(); // the Knight faces -z at the origin
+    r.wall.cast();
+    // A foe at (0,0,3) behind the Knight strikes an ally at (0,0,5) further behind: the hit travels +z, which reads as "from ahead".
+    const behind = fromFront({ direction: { x: 0, z: 1 } });
+    r.wall.cover(behind, ally(0, 5, {}), { x: 0, y: 0, z: 3 });
+    expect(behind.outcome).toBe('hit');
+    // A foe in front of the Knight at (2,0,-3) strikes an ally beside it at (4,0,-3) (hit travels +x, "from the side"): covered.
+    const front = fromFront({ direction: { x: 1, z: 0 } });
+    r.wall.cover(front, ally(4, -3), { x: 2, y: 0, z: -3 });
+    expect(front.outcome).toBe('blocked');
+    // Unknown attacker position: the ally is not covered; the Knight himself still is.
+    const unknown = fromFront();
+    r.wall.cover(unknown, ally(0, -2), null);
+    expect(unknown.outcome).toBe('hit');
+    const self = fromFront();
+    r.wall.cover(self, knightTarget, null);
+    expect(self.outcome).toBe('blocked');
+  });
+
+  it('a hit that broke the Knight guard stays a hit for him, while an ally is still covered', () => {
+    const r = wallRig();
+    r.wall.cast();
+    r.st.broke = true;
+    const self = fromFront();
+    r.wall.cover(self, knightTarget);
+    expect(self).toMatchObject({ outcome: 'hit', amount: 100, poise: 50 });
+    const al = fromFront();
+    r.wall.cover(al, ally(0, -2), { x: 0, y: 0, z: -4 });
+    expect(al.outcome).toBe('blocked');
+    r.st.broke = false;
+    const next = fromFront();
+    r.wall.cover(next, knightTarget);
+    expect(next.outcome).toBe('blocked');
   });
 
   it('does nothing before the cast', () => {

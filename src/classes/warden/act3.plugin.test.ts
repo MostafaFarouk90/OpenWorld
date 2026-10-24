@@ -58,10 +58,10 @@ function rig() {
     holdForcedMove: () => {},
   };
   f.services.status = { apply: vi.fn(() => true), list: vi.fn(() => []) };
-  const spawned: Array<{ id: string; params: any; stopped: boolean }> = [];
+  const spawned: Array<{ id: string; t: any; params: any; stopped: boolean }> = [];
   f.services.vfx = {
-    spawnEffect: (id: string, _t: unknown, params: any) => {
-      const h = { id, params, stopped: false, stop() { h.stopped = true; } };
+    spawnEffect: (id: string, t: any, params: any) => {
+      const h = { id, t, params, stopped: false, stop() { h.stopped = true; } };
       spawned.push(h);
       return h;
     },
@@ -186,6 +186,18 @@ describe('Skullsplitter through the abilities service', () => {
     expect(r.f.world.damage.applied[0].amount).toBeCloseTo(COMBAT.baseDamage * 1.6 * 2);
   });
 
+  it('a flinch that replaces the chop clip ends it with no damage', () => {
+    const r = rig();
+    boot(r, 'hewer');
+    r.progression.assign(0, SKILL_IDS.skullsplitter);
+    r.f.world.actors.add(new FakeActor('wolf', 'hostile', 0, -1));
+    r.abilities.use(0);
+    r.f.tick(2);
+    r.controller.currentAction = 'flinch';
+    r.f.tick(SKULLSPLITTER.ticks);
+    expect(r.f.world.damage.applied).toEqual([]);
+  });
+
   it('a dodge or stagger cancels the chop, class change clears it', () => {
     const r = rig();
     boot(r, 'hewer');
@@ -280,6 +292,17 @@ describe('Frenzied Hearth in the plugin', () => {
     r.actor.health = r.actor.maxHealth * 0.5;
     r.f.tick(1);
     expect(r.spawned[0].stopped).toBe(true);
+  });
+
+  it('spawns the steam with attach and a zero offset even when the player stands far from the origin', () => {
+    const r = rig();
+    boot(r, 'howlcaller');
+    (r.f.world.player as any).feet?.set?.(15000, 0, 15000);
+    r.actor.health = r.actor.maxHealth * 0.2;
+    r.f.tick(2);
+    const steam = r.spawned.find((s) => s.id === 'frenzied-hearth')!;
+    expect(steam.t.attach).toBe((r.f.world.player as any).avatar.root);
+    expect(steam.t.position).toEqual({ x: 0, y: 0, z: 0 });
   });
 
   it('exactly 30% of a max lowered as Burn would is not below', () => {

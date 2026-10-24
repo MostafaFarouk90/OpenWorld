@@ -34,6 +34,20 @@ describe('knight tier 4 presets', () => {
     expect(f.scene.children).toHaveLength(0);
   });
 
+  it('bastion-wall with attach lands on the attached root once: position {0,0,0} puts the group at the root, feet + feet doubles it', () => {
+    const root = new THREE.Object3D();
+    root.position.set(15000, 3, 15000);
+    root.updateMatrixWorld(true);
+    const f = fx();
+    const e = (EFFECTS as any)['bastion-wall'](f.ctx, { position: { x: 0, y: 0, z: 0 }, yaw: 0, attach: root }, { seconds: 8 });
+    expect(f.scene.children[0].position.toArray()).toEqual([15000, 3, 15000]);
+    e.stop();
+    // The mistake the plugin used to make: the world feet as the offset on top of the attached root.
+    const g = fx();
+    (EFFECTS as any)['bastion-wall'](g.ctx, { position: { x: 15000, y: 3, z: 15000 }, yaw: 0, attach: root }, { seconds: 8 });
+    expect(g.scene.children[0].position.toArray()).toEqual([30000, 6, 30000]);
+  });
+
   it('bastion-wall flicker is a short flash that ends by itself and emits at most 6 points', () => {
     const f = fx();
     const e = (EFFECTS as any)['bastion-wall'](f.ctx, { position: { x: 0, y: 0, z: 0 } }, { flicker: 1 });

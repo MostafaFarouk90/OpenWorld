@@ -67,6 +67,19 @@ describe('Warden tier 4 presets', () => {
     expect(f.scene.children).toHaveLength(0);
   });
 
+  it('frenzied-hearth with attach puts the steam over the attached root, not at twice its position', () => {
+    const root = new THREE.Object3D();
+    root.position.set(15000, 3, 15000);
+    root.updateMatrixWorld(true);
+    const f = fx();
+    const e = make('frenzied-hearth', f, { position: { x: 0, y: 0, z: 0 }, attach: root }, {});
+    e.update(0);
+    const [, pos] = f.raw.points.emit.mock.calls[0] as unknown as [string, { x: number; y: number; z: number }];
+    expect(pos.x).toBeCloseTo(15000 - 0.35);
+    expect(pos.y).toBeCloseTo(3 + 1.5);
+    expect(pos.z).toBeCloseTo(15000);
+  });
+
   it('frenzied-hearth: steam from both shoulders until stopped, 4 points per 0.3 s', () => {
     const f = fx();
     const e = make('frenzied-hearth', f, at, {});

@@ -52,6 +52,8 @@ export interface BastionWallPorts {
   blockHeld(): boolean;
   /** Why the wall cannot be raised right now (dead, staggered), or null. */
   blockedReason(): string | null;
+  /** The player's guard broke on the hit being resolved right now (`player.guardBroken` fired this fixed tick). */
+  guardBrokeThisTick(): boolean;
   /** Spawns the cone on the player; the returned handle ends it and flickers it on each covered hit. */
   cone(): { stop(): void; flicker(): void } | null;
   reportTrigger(skillId: string): void;
@@ -90,8 +92,11 @@ export class BastionWall {
     return { ok: true };
   }
 
-  /** Damage modifier body, defender band at -45 (after the guard at -50). */
-  cover(req: WallRequest, target: WallTarget): void {
+  /**
+   * Damage modifier body, defender band at -45 (after the guard at -50). `attackerPos` is where the attacker stands (the
+   * modifier's attacker argument, else the actor registry); an ally is covered only when it is known and inside the cone.
+   */
+  cover(req: WallRequest, target: WallTarget, attackerPos?: Vec3 | null): void {
     if (this.until <= 0 || req.outcome !== 'hit' || req.kind === 'status' || req.unblockable) return;
     if (!this.live()) return this.end();
     if (!this.p.blockHeld()) return;
@@ -100,15 +105,26 @@ export class BastionWall {
     const len = Math.hypot(d.x, d.z);
     if (len < 1e-6) return;
     const feet = this.p.feet();
-    if (target.id !== this.p.playerId()) {
+    const yaw = this.p.facingYaw();
+    const fx = -Math.sin(yaw);
+    const fz = -Math.cos(yaw);
+    const minCos = Math.cos((BASTION_WALL.coneDegrees / 2) * (Math.PI / 180)) - 1e-9;
+    if (target.id === this.p.playerId()) {
+      // A guard that broke on this very hit stays broken: the wall does not turn it into a block (allies stay covered).
+      if (this.p.guardBrokeThisTick()) return;
+      // The source lies opposite to the hit's direction; it must be within 60 degrees of where the Knight faces.
+      if (-(d.x / len) * fx + -(d.z / len) * fz < minCos) return;
+    } else {
       if (target.team !== 'ally' || target.dead) return;
       const pos = target.worldPosition(this.scratch);
       if (Math.hypot(pos.x - feet.x, pos.z - feet.z) > BASTION_WALL.allyRadius) return;
+      // For an ally the hit direction is seen from the ally, so the attacker's own position (from the Knight's feet) decides.
+      if (!attackerPos || !Number.isFinite(attackerPos.x) || !Number.isFinite(attackerPos.z)) return;
+      const ax = attackerPos.x - feet.x;
+      const az = attackerPos.z - feet.z;
+      const ad = Math.hypot(ax, az);
+      if (ad > 1e-6 && (ax * fx + az * fz) / ad < minCos) return;
     }
-    // The source lies opposite to the hit's direction; it must be within 60 degrees of where the Knight faces.
-    const yaw = this.p.facingYaw();
-    const cos = (-(d.x / len) * -Math.sin(yaw) + -(d.z / len) * -Math.cos(yaw));
-    if (cos < Math.cos((BASTION_WALL.coneDegrees / 2) * (Math.PI / 180)) - 1e-9) return;
     req.outcome = 'blocked';
     req.amount *= BASTION_WALL.scale;
     req.poise *= BASTION_WALL.scale;

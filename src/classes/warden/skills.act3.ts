@@ -81,6 +81,9 @@ export interface SkullsplitterPorts {
   };
   stagger: Pick<StaggerWatch, 'isStaggered'>;
   now(): number;
+  /** The class is the Warden (a null class is not). */
+  isWarden(): boolean;
+  learned(): boolean;
   feet(): Vec3;
   facingYaw(): number;
   /** Why the chop cannot start right now (dead, staggered, busy), or null. */
@@ -113,6 +116,8 @@ export class Skullsplitter {
 
   /** The ability handler body. Ember and the cooldown belong to the abilities service, which charges them only on ok. */
   start(): Result {
+    if (!this.p.isWarden()) return { ok: false, reason: 'wrong-class' };
+    if (!this.p.learned()) return { ok: false, reason: 'not-learned' };
     if (this.left > 0) return { ok: false, reason: 'chopping' };
     const blocked = this.p.blockedReason();
     if (blocked) return { ok: false, reason: blocked };
@@ -191,6 +196,8 @@ export interface EarthrootPorts {
     }): unknown;
   };
   now(): number;
+  /** The class is the Warden (a null class is not). */
+  isWarden(): boolean;
   learned(skillId: string): boolean;
   feet(): Vec3;
   /** Why the root cannot be planted right now (dead, staggered, busy), or null. */
@@ -241,6 +248,8 @@ export class Earthroot {
 
   /** The ability handler body. Ember and the cooldown belong to the abilities service. */
   start(): Result {
+    if (!this.p.isWarden()) return { ok: false, reason: 'wrong-class' };
+    if (!this.p.learned(this.p.skillId)) return { ok: false, reason: 'not-learned' };
     if (this.active) return { ok: false, reason: 'rooted' };
     const blocked = this.p.blockedReason();
     if (blocked) return { ok: false, reason: blocked };
@@ -313,6 +322,8 @@ export interface FrenziedHearthPorts {
   actor(): { health: number; maxHealth: number } & PoiseLike;
   /** Ticks of the fixed clock (the heal key when a hit has no swing id). */
   tick(): number;
+  /** The class is the Warden (a null class is not). */
+  isWarden(): boolean;
   learned(skillId: string): boolean;
   heal(id: ActorId, amount: number): unknown;
   /** Starts the vignette or steam; returns what stops it. */
@@ -323,7 +334,8 @@ export interface FrenziedHearthPorts {
 /**
  * Frenzied Hearth (Howlcaller 4, passive): strictly below 30% of the live max health the player cannot be staggered (`modify`, a
  * buffs-band modifier, zeroes the poise of incoming hits, and `tick` refills the poise bar through Actor.restorePoise) and each
- * melee hit the player lands heals 2% of the current max health, once per swing. Exactly 30% is not below.
+ * melee hit the player lands heals 2% of the current max health, once per swing. Exactly 30% is not below. Not done from design
+ * 11.5: the red vignette (no continuous screen-fx API) and disabling hit-stop on incoming hits (no hit-stop hook); only steam is drawn.
  */
 export class FrenziedHearth {
   private stopFx: (() => void) | null = null;
@@ -343,7 +355,7 @@ export class FrenziedHearth {
 
   /** Learned, alive-ish and strictly under the threshold of the live max health. */
   get below(): boolean {
-    if (!this.p.learned(this.p.skillId)) return false;
+    if (!this.p.isWarden() || !this.p.learned(this.p.skillId)) return false;
     const a = this.p.actor();
     return a.maxHealth > 0 && a.health / a.maxHealth < FRENZIED_HEARTH.threshold;
   }

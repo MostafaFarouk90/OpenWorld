@@ -26,6 +26,8 @@ export interface FoeView {
 }
 
 const clean = (f: FoeView): boolean => f.live && (f.mercy === undefined || f.mercy === 'none');
+/** Mercy states that end a running mark. 'staggered' is not one: a poise break on a mercy-capable foe leaves the mark up. */
+const MARK_ENDING_MERCY: ReadonlySet<string> = new Set(['yielding', 'calming', 'releasing', 'leaving']);
 
 export interface Act3Ports {
   playerId(): string;
@@ -69,7 +71,7 @@ export interface CinderMarkPorts extends Act3Ports {
  * mercy state is never a target. For 10 s every hit the player lands on it (kind melee or spell, outcome 'hit') deals x1.5,
  * as an attacker-band modifier at order -149: one past Back-Slit (-150), so a back stab on a marked foe is 2 x 1.5 = 3x
  * and Twin Fangs' stored base is untouched. Bosses can be marked. The mark ends on expiry, on the foe dying, despawning,
- * being calmed or entering a mercy state (the per-tick check covers all four), on a class change, a respec, a save load, the
+ * being calmed or yielding, calming, releasing or leaving (not on 'staggered': the player's own hits on it are allowed), on a class change, a respec, a save load, the
  * player's death and dispose. A new cast replaces the mark (the old effect is stopped).
  */
 export class CinderMark {
@@ -111,7 +113,7 @@ export class CinderMark {
       return;
     }
     const f = this.p.foe(this.id);
-    if (!f || !clean(f)) this.end();
+    if (!f || !f.live || (f.mercy !== undefined && MARK_ENDING_MERCY.has(f.mercy))) this.end();
   }
 
   /** `actor.died`, `actor.despawned`, `ai.calm`: the mark's foe is gone for the mark's purposes. */
@@ -177,7 +179,9 @@ const FOOTPRINT_VIEW: Readonly<PerceptionModifiers> = Object.freeze({
  * is silenced (`stealth.addNoiseScale('ashblade.decoyFootprints', 0)`) and an `enemies.perception` provider gives
  * sightRangeScale 0.6 to every observer of the player whose AI state is not yet an aggro one (`AGGROED_STATES`: notice,
  * chase, telegraph, attack, recover, stagger). A foe already alerted or fighting is therefore unaffected, so the skill is no
- * way out of an open fight. Both are released together on expiry, a class change, a respec, a save load, the player's death
+ * way out of an open fight. Caveat: the noise scale of 0 also mutes the Ashblade to foes that are already alerted; that is harmless
+ * today because the chase leash is sight-only (enemies/ai/Brain.ts around lines 628-633), but a later hearing-based leash would
+ * quietly break the "alerted foes are unaffected" promise. Both are released together on expiry, a class change, a respec, a save load, the player's death
  * and dispose. Refused 'no-stealth' when neither service is there, since the cast would do nothing. A recast restarts it.
  */
 export class DecoyFootprints {
