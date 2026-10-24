@@ -6,7 +6,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { heightAt } from '../terrain/heightfield';
 import { LEDGE_MAX_HEIGHT } from '../region/layoutTypes';
 import { ledgeRise } from './fit';
-import { SHELF_MIN_GAIN } from './hawkCliffs';
 import { WAYSIDE_MAX_STEP } from './wayside';
 import { buildDragonspine } from './layout';
 import { registerDragonspineKinds } from './structureKinds';
@@ -22,23 +21,16 @@ const b = buildDragonspine(inp);
 const anchor = (id: string) => b.layout.anchors.find((a) => a.id === id)!;
 
 describe('the places on the shipped ground', () => {
-  it('has M28\'s climb and the cave approach under the controller\'s slope limit', () => {
-    expect(b.m28.walkable).toBe(true);
+  it('has the Hawk Cliffs path, M28\'s climb and the cave approach under the controller\'s slope limit', () => {
+    expect(worstSlope(heightAt, b.hawk.climb)).toBeLessThanOrEqual(TAN_40);
     expect(worstSlope(heightAt, b.m28.climb)).toBeLessThanOrEqual(TAN_40);
     expect(worstSlope(heightAt, b.cave.approach)).toBeLessThanOrEqual(TAN_40);
+    expect(b.m28.walkable).toBe(true);
   });
 
-  // KNOWN GAP (K1's Hawk Cliffs are a 50 m scarp, slope about 2): no walkable line exists, so the climb is only the straight
-  // winding line and needs built ramps or a climbing rule. `it.fails` keeps CI green and turns red the day it is fixed.
-  it('flags the Hawk Cliffs climb as not walkable while K1\'s scarp has no walkable line', () => {
-    expect(b.hawk.walkable ? worstSlope(heightAt, b.hawk.climb) <= TAN_40 : true).toBe(true);
-  });
-  it.fails('KNOWN GAP: the Hawk Cliffs climb is walkable on K1\'s cliff face (needs built ramps)', () => {
-    expect(b.hawk.walkable).toBe(true);
-  });
-
-  it('puts the nest shelf at least SHELF_MIN_GAIN over the climb start', () => {
-    expect(heightAt(b.hawk.shelf.x, b.hawk.shelf.z) - heightAt(b.hawk.climbStart.x, b.hawk.climbStart.z)).toBeGreaterThanOrEqual(SHELF_MIN_GAIN);
+  it('rises to K1\'s nest shelf, which is level under the nests', () => {
+    expect(heightAt(b.hawk.shelf.x, b.hawk.shelf.z) - heightAt(b.hawk.climbStart.x, b.hawk.climbStart.z)).toBeGreaterThan(30);
+    for (const n of b.hawk.nests) expect(Math.abs(heightAt(n.x, n.z) - heightAt(b.hawk.shelf.x, b.hawk.shelf.z))).toBeLessThan(0.6);
   });
 
   it('gives every Leap ledge a 1.5 to 1.8 m rise over its launch point, at its built footprint', () => {

@@ -2,7 +2,7 @@
 // polyline, the camp hearth and the interior pads) and every y from `heightAt`: move a plateau and the place moves with it.
 import { ACT3_INTERIOR_PADS, WYRMWATCH_HEARTH, type Act3InteriorPad } from '../region/act3/act3Places';
 import { ACT3_PLATEAUS } from '../terrain/shape/act3';
-import { RIME_PASS, RIME_PASS_POINTS } from '../terrain/shape/dragonspine';
+import { HAWK_CLIFFS_PATH_POINTS, HAWK_NEST_SHELF, RIME_PASS, RIME_PASS_POINTS } from '../terrain/shape/dragonspine';
 import type { PlateauDef } from '../terrain/shaping';
 import { heightAt as worldHeightAt } from '../terrain/heightfield';
 
@@ -45,6 +45,10 @@ export const padsFromRecords = (records: Readonly<Record<string, Pick<Act3Interi
 export interface DragonspineInputs {
   plateaus: readonly PlateauDef[];
   passPoints: readonly (readonly [number, number])[];
+  /** K1's Hawk Cliffs path (`hawk-cliffs-path`): the climb from the foot plateau up the scarp to the nest shelf. */
+  hawkPathPoints: readonly (readonly [number, number])[];
+  /** The level bench at the path's top (centre, width along x, depth along z). */
+  nestShelf: { x: number; z: number; w: number; d: number };
   /** Half width of the pass road's flat cross-section (K1's `RIME_PASS.halfWidth`). */
   roadHalfWidth: number;
   hearth: XZ;
@@ -58,6 +62,8 @@ export function defaultInputs(heightAt: HeightFn = worldHeightAt): DragonspineIn
     plateaus: ACT3_PLATEAUS,
     passPoints: RIME_PASS_POINTS,
     roadHalfWidth: RIME_PASS.halfWidth,
+    hawkPathPoints: HAWK_CLIFFS_PATH_POINTS,
+    nestShelf: HAWK_NEST_SHELF,
     hearth: WYRMWATCH_HEARTH,
     pads: padsFromRecords(ACT3_INTERIOR_PADS),
     heightAt,

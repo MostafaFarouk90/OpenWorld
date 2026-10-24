@@ -21,6 +21,9 @@ export interface Sites {
   inp: DragonspineInputs;
   h: HeightFn;
   road: Road;
+  /** The Hawk Cliffs path as a road (K1's `hawk-cliffs-path`). */
+  hawkPath: Road;
+  nestShelf: DragonspineInputs['nestShelf'];
   /** Half width of the road's flat cross-section, from the inputs (K1's RoadDef). */
   roadHalf: number;
   /** Structures keep this far from the centre line. */
@@ -46,6 +49,8 @@ export function deriveSites(inp: DragonspineInputs): Sites {
     inp,
     h: inp.heightAt,
     road: roadFromPoints(inp.passPoints),
+    hawkPath: roadFromPoints(inp.hawkPathPoints),
+    nestShelf: inp.nestShelf,
     roadHalf: inp.roadHalfWidth,
     roadClear: inp.roadHalfWidth + 2,
     lodge,

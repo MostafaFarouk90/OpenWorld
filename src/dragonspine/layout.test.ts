@@ -44,7 +44,7 @@ const TABLE: string[] = [
   'dragonspine.hawk.camp', ...range(4).map((n) => `dragonspine.hawk.camp.search.${n}`), ...range(3).map((n) => `dragonspine.hawk.egg.${n}`), 'dragonspine.hawk.companion-hold', 'dragonspine.hawk.climb.1',
   'dragonspine.hawk.nest.r18', 'dragonspine.hawk.nest.2', 'dragonspine.hawk.nest.3', ...range(4).map((n) => `dragonspine.hawk.circle.${n}`),
   'dragonspine.cave.trailhead', 'dragonspine.cave.path.1', 'dragonspine.cave.mouth', 'dragonspine.cave.leap',
-  'dragonspine.m28.trailhead', 'dragonspine.m28.leap.1', 'dragonspine.m28.leap.2', ...range(4).map((n) => `dragonspine.m28.cairn.${n}`), 'dragonspine.m28.crag',
+  'dragonspine.m28.trailhead', 'dragonspine.m28.leap.1', 'dragonspine.m28.leap.2', ...range(4).map((n) => `dragonspine.m28.cairn.${n}`), 'dragonspine.m28.crag', 'dragonspine.m28.crag.view',
   'npc-post.thorgar.yard', 'npc-post.eadgyth.fire', 'npc-post.ansgar.anvil', ...range(6).map((n) => `npc-post.lodge-hunter-${n}`), ...range(2).map((n) => `npc-post.sled-hand-${n}`), 'npc-post.lodge-hunter-cave', 'npc-post.egg-thief', ...range(3).map((n) => `npc-post.pilgrim-${n}`),
   ...range(6).map((n) => `dragonspine.spawn.m28.hawk-${n}`), 'dragonspine.spawn.m28.ogre', 'dragonspine.spawn.m28.scout',
   'dragonspine.spawn.cave.ogre', ...range(4).map((n) => `dragonspine.spawn.cave.hawk-${n}`),
@@ -201,11 +201,17 @@ describe('Leap ledges', () => {
 
 describe('the climbs', () => {
   const walk = (pts: ReadonlyArray<{ x: number; z: number }>) => worstSlope(inp.heightAt, pts);
-  it('the Hawk Cliffs climb has no slope over the controller\'s limit and rises to the shelf', () => {
+  it('the Hawk Cliffs climb is K1\'s hawk-cliffs-path (the same line as roadPoint), within the slope limit, ending at the nest shelf', () => {
     expect(walk(b.hawk.climb)).toBeLessThanOrEqual(TAN_40);
-    const rise = inp.heightAt(b.hawk.shelf.x, b.hawk.shelf.z) - inp.heightAt(b.hawk.climbStart.x, b.hawk.climbStart.z);
-    expect(rise).toBeGreaterThan(10);
-    expect(b.hawk.climbLength).toBeGreaterThan(100);
+    expect(b.hawk.climbLength).toBeCloseTo(roadLength('hawk-cliffs-path'), 3);
+    for (const f of [0, 0.3, 0.7, 1]) {
+      const p = roadPoint('hawk-cliffs-path', b.hawk.climbLength * f, 0);
+      const q = b.sites.hawkPath.point(b.hawk.climbLength * f);
+      expect([q.x, q.z]).toEqual([p.x, p.z]);
+    }
+    const end = b.hawk.climb[b.hawk.climb.length - 1]!;
+    expect(Math.hypot(end.x - b.hawk.shelf.x, end.z - b.hawk.shelf.z)).toBeLessThan(20);
+    for (const n of b.hawk.nests) expect(inBox({ minX: b.hawk.shelf.x - 20, maxX: b.hawk.shelf.x + 20, minZ: b.hawk.shelf.z - 20, maxZ: b.hawk.shelf.z + 20 }, n.x, n.z)).toBe(true);
   });
   it('the cave approach has no slope over the limit, is about 200 m and ends at the mouth', () => {
     expect(walk(b.cave.approach)).toBeLessThanOrEqual(TAN_40);

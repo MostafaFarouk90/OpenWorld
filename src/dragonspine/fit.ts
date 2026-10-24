@@ -1,7 +1,7 @@
 // Fitting against `heightAt`: Leap ledges, flat spots and the nest shelf. Everything takes the ground as an argument.
 import { footprintSpread } from '../cinderreach/siteFit';
 import { LEDGE_HEIGHT } from './helpers';
-import type { HeightFn, Rect, XZ } from './inputs';
+import type { HeightFn, XZ } from './inputs';
 
 export { footprintSpread };
 export const LAUNCH_BACK = 5.5;
@@ -57,30 +57,6 @@ export function footprintMax(h: HeightFn, x: number, z: number, w: number, d: nu
   let hi = -Infinity;
   for (let i = 0; i <= Math.ceil(w); i++) for (let j = 0; j <= Math.ceil(d); j++) hi = Math.max(hi, h(x - w / 2 + (w * i) / Math.ceil(w), z - d / 2 + (d * j) / Math.ceil(d)));
   return hi;
-}
-
-/** The shelf's 20 x 14 m footprint is level to within this (K1's real shelf is meant to be flatter; the nests are fitted on it). */
-const SHELF_MAX_SPREAD = 6;
-
-/**
- * The nest shelf: the nearest flat spot above the cliff foot (20 x 14 m, spread within `SHELF_MAX_SPREAD`) that stands at least `minGain` metres
- * over the foot's centre. Searches north of the foot, where the cliff face rises. Throws when there is none: a layout built on
- * ground without a cliff would otherwise get a nest on the flat.
- */
-export function findShelf(h: HeightFn, foot: Rect, minGain: number): XZ {
-  const base = h((foot.minX + foot.maxX) / 2, (foot.minZ + foot.maxZ) / 2);
-  let best: (XZ & { score: number }) | null = null;
-  for (let z = foot.maxZ + 20; z <= foot.maxZ + 140; z += 6) {
-    for (let x = foot.minX - 20; x <= foot.maxX + 20; x += 6) {
-      if (h(x, z) - base < minGain) continue;
-      const spread = footprintSpread(h, x, z, 20, 14, 4);
-      if (spread > SHELF_MAX_SPREAD) continue;
-      const score = Math.hypot(x - (foot.minX + foot.maxX) / 2, z - foot.maxZ) + spread * 10;
-      if (!best || score < best.score) best = { x, z, score };
-    }
-  }
-  if (!best) throw new Error(`dragonspine: no nest shelf at least ${minGain} m over the Hawk Cliffs foot (a flat 20 x 14 m spot north of it)`);
-  return { x: best.x, z: best.z };
 }
 
 /** The nearest point to `want` (within `radius`) where a player can stand: the ground gradient there is under `maxGrad`. */

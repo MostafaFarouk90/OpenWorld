@@ -14,6 +14,8 @@ import type { Sites } from './sites';
 export const M28_TRAILHEAD_S = 1200;
 /** The trailhead is the road point nearest the crag within this many metres of the plan's 1,200 m (the plan: a 500 m climb there). */
 const TRAILHEAD_WINDOW = 400;
+/** The crag view anchor stands this far over the crag ground. */
+export const CRAG_VIEW_ABOVE = 32;
 const LEDGE_AT = [0.35, 0.72];
 const CAIRN_AT = [0.2, 0.45, 0.65, 0.85];
 
@@ -85,6 +87,8 @@ export function m28Layout(s: Sites, passGateS: number): { part: Part; info: M28I
       ...leaps.map((l, i) => a(`dragonspine.m28.leap.${i + 1}.launch`, l.launch.x, l.launch.z, headingTo(l.launch.x, l.launch.z, l.spec.x, l.spec.z), ['poi'])),
       ...numbered('dragonspine.m28.cairn', cairns.map((c) => { const p = standableNear(s.h, { x: c.x, z: c.z + 2 }); return [p.x, p.z] as const; }), ['objective'], 0),
       a('dragonspine.m28.crag', G.cx, G.cz, 0, ['objective']),
+      // K13's camera override: the eye-level line from the crag to the lodge is blocked, so the shot is taken from above.
+      a('dragonspine.m28.crag.view', G.cx, G.cz, 0, ['poi', 'elevated'], { dy: CRAG_VIEW_ABOVE }),
       ...Array.from({ length: 6 }, (_, i) => {
         const [x, z] = polar(G.cx, G.cz, 20 + 60 * i, 12);
         return a(`dragonspine.spawn.m28.hawk-${i + 1}`, x, z, 0, ['spawn']);

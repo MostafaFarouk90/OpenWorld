@@ -16,9 +16,11 @@ export const CHECKPOINT_MIN = 10;
 export const CHECKPOINT_MAX = 25;
 /** The spacing aimed for: with the 0.25 m sampling the merged last gap stays within 25 m. */
 const TARGET = 14.5;
+/** The egg climb's hairpins put the path's legs about 20 m apart, so its checkpoints are spaced wider to keep legs more than two pass radii (16 m) apart. */
+const EGG_TARGET = 22;
 
 /** Points along `pts` at least TARGET m apart (straight line), ending exactly on the last point with a final gap of 10 m or more. */
-export function densify(pts: readonly XZ[]): XZ[] {
+export function densify(pts: readonly XZ[], target = TARGET): XZ[] {
   const out: XZ[] = [{ x: pts[0]!.x, z: pts[0]!.z }];
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1]!;
@@ -28,7 +30,7 @@ export function densify(pts: readonly XZ[]): XZ[] {
     for (let k = 1; k <= n; k++) {
       const p = { x: a.x + ((b.x - a.x) * k) / n, z: a.z + ((b.z - a.z) * k) / n };
       const last = out[out.length - 1]!;
-      if (Math.hypot(p.x - last.x, p.z - last.z) >= TARGET) out.push(p);
+      if (Math.hypot(p.x - last.x, p.z - last.z) >= target) out.push(p);
     }
   }
   const end = pts[pts.length - 1]!;
@@ -44,9 +46,9 @@ export function densify(pts: readonly XZ[]): XZ[] {
 }
 
 const withY = (h: HeightFn, pts: readonly XZ[]) => pts.map((p) => ({ x: p.x, y: h(p.x, p.z), z: p.z }));
-const route = (h: HeightFn, id: string, pts: readonly XZ[], resetAt?: readonly number[]): DragonspineCarryRoute => ({
+const route = (h: HeightFn, id: string, pts: readonly XZ[], resetAt?: readonly number[], target = TARGET): DragonspineCarryRoute => ({
   id,
-  checkpoints: withY(h, densify(pts)),
+  checkpoints: withY(h, densify(pts, target)),
   corridorHalfWidth: CORRIDOR_HALF_WIDTH,
   maxDrop: MAX_DROP,
   ...(resetAt ? { resetAt } : {}),
@@ -123,7 +125,7 @@ function candleRoute(h: HeightFn, b: DragonspineBuild, leg: CandleLeg): Dragonsp
 export function buildCarryRoutes(heightAt: HeightFn, build: DragonspineBuild = buildDragonspine(defaultInputs(heightAt))): DragonspineCarryRoute[] {
   const routes: DragonspineCarryRoute[] = [];
   for (let i = 0; i < 3; i++) routes.push(route(heightAt, `sled.r15.${i + 1}`, sledPath(build, i)));
-  for (let i = 0; i < 3; i++) routes.push(route(heightAt, `egg.r18.${i + 1}`, eggPath(build, i), [0]));
+  for (let i = 0; i < 3; i++) routes.push(route(heightAt, `egg.r18.${i + 1}`, eggPath(build, i), [0], EGG_TARGET));
   routes.push(candleRoute(heightAt, build, 'down'), candleRoute(heightAt, build, 'up'));
   return routes;
 }

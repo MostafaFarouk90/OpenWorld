@@ -52,8 +52,8 @@ describe('carry routes', () => {
       expect(r.resetAt).toEqual([0]);
       expect(near(r.checkpoints[0]!, build.hawk.eggs[i - 1]!)).toBeLessThan(0.01);
       expect(near(r.checkpoints[r.checkpoints.length - 1]!, build.hawk.nests[0]!)).toBeLessThan(0.01);
-      // The climb is on the route: some checkpoint within 8 m of each of the climb's own anchors.
-      for (const p of build.hawk.climb) expect(r.checkpoints.some((c) => near(c, p) <= 8), `${r.id} climb`).toBe(true);
+      // The climb is on the route: every point of K1's path has a checkpoint within the spacing limit (the hairpins' corners are cut at most that far).
+      for (const p of build.hawk.climb) expect(r.checkpoints.some((c) => near(c, p) <= CHECKPOINT_MAX), `${r.id} climb`).toBe(true);
     }
   });
 

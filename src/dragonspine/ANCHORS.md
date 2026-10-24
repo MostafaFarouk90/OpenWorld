@@ -79,22 +79,29 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.hawk.egg.2 | 11384 | 12988 | 0 | 180 | objective |
 | dragonspine.hawk.egg.3 | 11386.4 | 12988 | 0 | 180 | objective |
 | dragonspine.hawk.companion-hold | 11428 | 12992 | 0 | 90 | poi |
-| dragonspine.hawk.climb.1 | 11397.78 | 13036.82 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.2 | 11393.82 | 13048.56 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.3 | 11404.34 | 13060.12 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.4 | 11414.85 | 13071.68 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.5 | 11401.3 | 13079.45 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.6 | 11387.74 | 13087.22 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.7 | 11387.9 | 13099.61 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.nest.r18 | 11404 | 13145 | 0 | 180 | objective |
-| dragonspine.hawk.nest.2 | 11385 | 13150 | 0 | 180 | poi |
-| dragonspine.hawk.nest.3 | 11405 | 13145 | 0 | 180 | poi |
-| dragonspine.hawk.circle.1 | 11394 | 13144 | 30 | 270 | poi, elevated |
-| dragonspine.hawk.circle.2 | 11416 | 13122 | 30 | 0 | poi, elevated |
-| dragonspine.hawk.circle.3 | 11394 | 13100 | 30 | 90 | poi, elevated |
-| dragonspine.hawk.circle.4 | 11372 | 13122 | 30 | 180 | poi, elevated |
-| dragonspine.spawn.hawk-cliffs.parent-1 | 11389 | 13119 | 0 | 180 | spawn |
-| dragonspine.spawn.hawk-cliffs.parent-2 | 11399 | 13119 | 0 | 180 | spawn |
+| dragonspine.hawk.climb.1 | 11437.78 | 13032.32 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.2 | 11455.56 | 13036.64 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.3 | 11473.34 | 13040.95 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.4 | 11488.87 | 13045.25 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.5 | 11471.01 | 13049.22 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.6 | 11453.15 | 13053.19 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.7 | 11435.29 | 13057.16 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.8 | 11417.43 | 13061.13 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.9 | 11400.43 | 13065.1 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.10 | 11418.29 | 13069.07 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.11 | 11436.15 | 13073.03 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.12 | 11454.01 | 13077 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.13 | 11471.88 | 13080.97 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.14 | 11489.74 | 13084.94 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.nest.r18 | 11512.5 | 13097 | 0 | 180 | objective |
+| dragonspine.hawk.nest.2 | 11504.5 | 13099 | 0 | 180 | poi |
+| dragonspine.hawk.nest.3 | 11520.5 | 13099 | 0 | 180 | poi |
+| dragonspine.hawk.circle.1 | 11512.5 | 13122 | 30 | 270 | poi, elevated |
+| dragonspine.hawk.circle.2 | 11534.5 | 13100 | 30 | 0 | poi, elevated |
+| dragonspine.hawk.circle.3 | 11512.5 | 13078 | 30 | 90 | poi, elevated |
+| dragonspine.hawk.circle.4 | 11490.5 | 13100 | 30 | 180 | poi, elevated |
+| dragonspine.spawn.hawk-cliffs.parent-1 | 11507.5 | 13097 | 0 | 180 | spawn |
+| dragonspine.spawn.hawk-cliffs.parent-2 | 11517.5 | 13097 | 0 | 180 | spawn |
 | npc-post.egg-thief | 11386 | 12990 | 0 | 270 | npc-post |
 | dragonspine.cave.trailhead | 12431.55 | 13616.1 | 0 | 93.72 | objective |
 | dragonspine.cave.path.1 | 12414.63 | 13617.2 | 0 | 180 | objective, elevated |
@@ -117,23 +124,24 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.spawn.cave.hawk-3 | 12313 | 13704 | 0 | 180 | spawn |
 | dragonspine.spawn.cave.hawk-4 | 12312 | 13708 | 0 | 180 | spawn |
 | dragonspine.m28.trailhead | 13261.13 | 12680.07 | 0 | 180 | objective |
-| dragonspine.m28.leap.1 | 13613 | 12632 | 1.8 | 180 | poi, leap-gated |
-| dragonspine.m28.leap.2 | 13906 | 12635 | 1.8 | 180 | poi, leap-gated |
-| dragonspine.m28.leap.1.launch | 13616.89 | 12635.89 | 0 | 45 | poi |
-| dragonspine.m28.leap.2.launch | 13911.5 | 12635 | 0 | 90 | poi |
-| dragonspine.m28.cairn.1 | 13468.11 | 12647.78 | 0 | 180 | objective |
-| dragonspine.m28.cairn.2 | 13736.09 | 12647.77 | 0 | 180 | objective |
-| dragonspine.m28.cairn.3 | 13915.44 | 12664 | 0 | 180 | objective |
-| dragonspine.m28.cairn.4 | 14102.21 | 12749.07 | 0 | 180 | objective |
-| dragonspine.m28.crag | 14250 | 12700 | 0 | 180 | objective |
-| dragonspine.spawn.m28.hawk-1 | 14254.1 | 12711.28 | 0 | 180 | spawn |
-| dragonspine.spawn.m28.hawk-2 | 14261.82 | 12702.08 | 0 | 180 | spawn |
-| dragonspine.spawn.m28.hawk-3 | 14257.71 | 12690.81 | 0 | 180 | spawn |
-| dragonspine.spawn.m28.hawk-4 | 14245.9 | 12688.72 | 0 | 180 | spawn |
-| dragonspine.spawn.m28.hawk-5 | 14238.18 | 12697.92 | 0 | 180 | spawn |
-| dragonspine.spawn.m28.hawk-6 | 14242.29 | 12709.19 | 0 | 180 | spawn |
-| dragonspine.spawn.m28.ogre | 14242 | 12688 | 0 | 180 | spawn |
-| dragonspine.spawn.m28.scout | 13849.7 | 12667.49 | 0 | 180 | spawn |
+| dragonspine.m28.leap.1 | 13446 | 12650 | 1.8 | 180 | poi, leap-gated |
+| dragonspine.m28.leap.2 | 13658 | 12634 | 1.8 | 180 | poi, leap-gated |
+| dragonspine.m28.leap.1.launch | 13440.5 | 12650 | 0 | 270 | poi |
+| dragonspine.m28.leap.2.launch | 13658 | 12628.5 | 0 | 180 | poi |
+| dragonspine.m28.cairn.1 | 13366.26 | 12652.63 | 0 | 180 | objective |
+| dragonspine.m28.cairn.2 | 13501.69 | 12635.88 | 0 | 180 | objective |
+| dragonspine.m28.cairn.3 | 13610.03 | 12622.48 | 0 | 180 | objective |
+| dragonspine.m28.cairn.4 | 13718.38 | 12609.07 | 0 | 180 | objective |
+| dragonspine.m28.crag | 13800 | 12600 | 0 | 180 | objective |
+| dragonspine.m28.crag.view | 13800 | 12600 | 32 | 180 | poi, elevated |
+| dragonspine.spawn.m28.hawk-1 | 13804.1 | 12611.28 | 0 | 180 | spawn |
+| dragonspine.spawn.m28.hawk-2 | 13811.82 | 12602.08 | 0 | 180 | spawn |
+| dragonspine.spawn.m28.hawk-3 | 13807.71 | 12590.81 | 0 | 180 | spawn |
+| dragonspine.spawn.m28.hawk-4 | 13795.9 | 12588.72 | 0 | 180 | spawn |
+| dragonspine.spawn.m28.hawk-5 | 13788.18 | 12597.92 | 0 | 180 | spawn |
+| dragonspine.spawn.m28.hawk-6 | 13792.29 | 12609.19 | 0 | 180 | spawn |
+| dragonspine.spawn.m28.ogre | 13792 | 12588 | 0 | 180 | spawn |
+| dragonspine.spawn.m28.scout | 13557.34 | 12639.09 | 0 | 180 | spawn |
 
 ## Triggers
 
@@ -145,11 +153,11 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | trg.dragonspine.shelter.woodpile | sphere | 12866.57 | 13294.93 | r 9 |
 | trg.dragonspine.anvil | sphere | 14700 | 13900 | r 36 |
 | trg.dragonspine.hawkcliffs.camp | sphere | 11384 | 12992 | r 22 |
-| trg.dragonspine.hawkcliffs.nest | sphere | 11394 | 13122 | r 14 |
+| trg.dragonspine.hawkcliffs.nest | sphere | 11512.5 | 13100 | r 16 |
 | trg.dragonspine.cave.mouth | sphere | 12300 | 13700 | r 14 |
 | trg.dragonspine.cave.trailhead | sphere | 12431.55 | 13616.1 | r 12 |
 | trg.dragonspine.m28.trailhead | sphere | 13261.13 | 12680.07 | r 12 |
-| trg.dragonspine.m28.crag | sphere | 14250 | 12700 | r 20 |
+| trg.dragonspine.m28.crag | sphere | 13800 | 12600 | r 20 |
 
 ## Structures
 
@@ -208,18 +216,15 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-thief-sack | dragonspine-sack | 11388 | 12993 | 1.6 x 1.2 | open |
 | dragonspine-thief-tracks | dragonspine-tracks | 11387 | 12999 | 5 x 1.2 | open |
 | dragonspine-broken-shell | dragonspine-shell | 11380 | 12995 | 0.8 x 0.8 | open |
-| dragonspine-climb-tread-1 | rock | 11390.65 | 13045.07 | 3 x 2.4 | open |
-| dragonspine-climb-tread-2 | rock | 11414.85 | 13071.68 | 3 x 2.4 | open |
-| dragonspine-climb-tread-3 | rock | 11383.65 | 13089.57 | 3 x 2.4 | open |
-| dragonspine-nest-1 | dragonspine-nest | 11404 | 13148 | 2.2 x 2.2 | open |
-| dragonspine-nest-2 | dragonspine-nest | 11385 | 13153 | 2.2 x 2.2 | open |
-| dragonspine-nest-3 | dragonspine-nest | 11405 | 13148 | 2.2 x 2.2 | open |
+| dragonspine-nest-1 | dragonspine-nest | 11512.5 | 13100 | 2.2 x 2.2 | open |
+| dragonspine-nest-2 | dragonspine-nest | 11504.5 | 13102 | 2.2 x 2.2 | open |
+| dragonspine-nest-3 | dragonspine-nest | 11520.5 | 13102 | 2.2 x 2.2 | open |
 | dragonspine-cave-mouth | dragonspine-cave-mouth | 12300 | 13705 | 12 x 4 | solid |
 | dragonspine-cave-ledge | rock | 12300 | 13692 | 34 x 3.2 | solid |
-| dragonspine-m28-ledge-1 | rock | 13613 | 12632 | 6 x 5 | solid |
-| dragonspine-m28-ledge-2 | rock | 13906 | 12635 | 6 x 5 | solid |
-| dragonspine-m28-cairn-1 | rock | 13468.11 | 12645.78 | 1.4 x 1.4 | solid |
-| dragonspine-m28-cairn-2 | rock | 13730.02 | 12633.16 | 1.4 x 1.4 | solid |
-| dragonspine-m28-cairn-3 | rock | 13933.17 | 12658.87 | 1.4 x 1.4 | solid |
-| dragonspine-m28-cairn-4 | rock | 14102.21 | 12747.07 | 1.4 x 1.4 | solid |
-| dragonspine-m28-lookout-cairn | rock | 14254 | 12704 | 2 x 2 | solid |
+| dragonspine-m28-ledge-1 | rock | 13446 | 12650 | 6 x 5 | solid |
+| dragonspine-m28-ledge-2 | rock | 13658 | 12634 | 6 x 5 | solid |
+| dragonspine-m28-cairn-1 | rock | 13366.26 | 12650.63 | 1.4 x 1.4 | solid |
+| dragonspine-m28-cairn-2 | rock | 13501.69 | 12633.88 | 1.4 x 1.4 | solid |
+| dragonspine-m28-cairn-3 | rock | 13610.03 | 12620.48 | 1.4 x 1.4 | solid |
+| dragonspine-m28-cairn-4 | rock | 13718.38 | 12607.07 | 1.4 x 1.4 | solid |
+| dragonspine-m28-lookout-cairn | rock | 13804 | 12604 | 2 x 2 | solid |
