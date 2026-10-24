@@ -148,6 +148,8 @@ export interface ModelProp {
   rotation?: readonly [number, number, number];
   /** Uniform scale in metres per model unit (the bone's own scale is divided out). */
   scale?: number;
+  /** A `proc/` prop shown while `id` is not loaded (or never loads), so a body is never empty-handed. */
+  fallback?: string;
 }
 
 /** The verbs a quest can unlock (flags `enemies.mercy.<verb>`). The Warm Hand rides on Calm. */

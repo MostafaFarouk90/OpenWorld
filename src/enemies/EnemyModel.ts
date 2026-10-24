@@ -141,10 +141,15 @@ export function buildEnemyModel(
     if (obj) obj.visible = true;
   }
   for (const p of def.model.props ?? []) {
-    const obj = source.prop?.(p.id);
+    let shownId = p.id;
+    let obj = source.prop?.(p.id);
+    if (!obj && p.fallback) {
+      shownId = p.fallback;
+      obj = source.prop?.(p.fallback);
+    }
     const parent = model.getObjectByName(p.bone);
     if (!obj || !parent) continue;
-    obj.name = `enemy-prop:${p.id}`;
+    obj.name = `enemy-prop:${shownId}`;
     // The bone chain carries the model's scale (and the recipe's): divide it out so `scale` is metres per model unit.
     parent.updateWorldMatrix(true, false);
     const world = new THREE.Vector3().setFromMatrixScale(parent.matrixWorld).y || 1;
