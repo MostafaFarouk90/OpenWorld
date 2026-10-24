@@ -73,9 +73,9 @@ const KAYKIT: Readonly<Record<string, { model: string; scale?: number; fitHeight
   'scorched-fence': { model: 'hex/fence_wood_straight', fitHeight: 1.6 },
   'rock-single-a': { model: 'hex/rock_single_A' },
   tent: { model: 'hex/tent' },
-  // The ash reach's dead trees: KayKit's are 3 to 4 m in the grid, fitted to the 8 m and 7 m of the targets.
-  'ash-tree-dead-a': { model: 'hal/tree_dead_large', fitHeight: 8 },
-  'ash-tree-dead-b': { model: 'hal/tree_dead_medium', fitHeight: 7 },
+  // The KayKit dead trees stand in for the ash-tree-dead ids (shared with B2: the mid one is a, the taller one b).
+  'ash-tree-dead-a': { model: 'hal/tree_dead_medium', fitHeight: 6.5 },
+  'ash-tree-dead-b': { model: 'hal/tree_dead_large', fitHeight: 7.5 },
   // B3 road dressing: a candle shrine for the wayside shrine, a rounded headstone shape for the milestones (interim, by id).
   'roadside-shrine-a': { model: 'hal/shrine_candles', fitHeight: 1.6 },
   'milestone-a': { model: 'hal/fence_pillar', fitHeight: 1.1 },

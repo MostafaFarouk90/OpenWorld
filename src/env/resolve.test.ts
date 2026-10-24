@@ -35,8 +35,8 @@ describe('resolveModel', () => {
     expect(resolveModel('oak-ash-a')).toMatchObject({ source: 'env', model: 'env/oak-a', tint: { sat: 0.3 } });
     expect(resolveModel('bush-round-ash')).toMatchObject({ source: 'env', model: 'env/bush-round-a' });
     expect(resolveModel('grass-clump-ash')).toMatchObject({ source: 'env', model: 'env/grass-clump-a', scale: 0.95 });
-    expect(resolveModel('ash-tree-dead-a')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_large', fitHeight: 8 });
-    expect(resolveModel('ash-tree-dead-b')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_medium', fitHeight: 7 });
+    expect(resolveModel('ash-tree-dead-a')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_medium', fitHeight: 6.5 });
+    expect(resolveModel('ash-tree-dead-b')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_large', fitHeight: 7.5 });
     expect(resolveModel('roadside-shrine-a')).toMatchObject({ source: 'kaykit', model: 'hal/shrine_candles' });
     for (const id of ['flag_red', 'rock_single_B', 'rock_single_C', 'tent']) expect(resolveModel(id).source, id).toBe('kaykit');
     // variants without a stretch carry none
@@ -67,7 +67,7 @@ describe('resolveModel', () => {
     expect(resolveModel('haystack-round-ashen')).toMatchObject({ source: 'env', model: 'env/haystack-round' });
   });
 
-  it('builds the slim poplar from the birch', () => {
+  it('builds the slim poplar from the birch and the dead trees from KayKit', () => {
     const p = resolveModel('poplar-a');
     expect(p).toMatchObject({ source: 'env', model: 'env/birch-a', scale: 1.75 });
     expect(p.source === 'env' && p.girth).toBeLessThan(1);
