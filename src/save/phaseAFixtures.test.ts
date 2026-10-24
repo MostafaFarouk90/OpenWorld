@@ -10,6 +10,9 @@ import { bootFromSave, type ChapterHarness } from '../integration/chapterHarness
 import { PHASE_A_ORDER } from '../integration/phaseA';
 import { FIXTURE_SAVED_AT, PHASE_A_FIXTURES, readPhaseAFixture } from './__fixtures__/phaseA';
 
+// Booting the real plugins can take several seconds under load; the 5 s default flakes (see testTimeouts.guard.test.ts).
+vi.setConfig({ testTimeout: 60_000 });
+
 let h: (ChapterHarness & { loaded: boolean }) | null = null;
 beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => {});

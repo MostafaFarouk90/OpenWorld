@@ -19,7 +19,7 @@ describe('NPC posts and quest interactables', () => {
   };
   it('the props and notes an NPC stands on carry a priority', () => {
     expect(ACT2_PROPS.filter((p) => p.priority).map((p) => p.interactableId).sort()).toEqual(['use:m15-free-carter', 'use:r05-hollow-2', 'use:r07-sign-1']);
-    expect(ACT2_QUEST_NOTES.filter((n) => n.priority).map((n) => n.interactableId).sort()).toEqual(['use:note-m13-shield', 'use:note-m15-map', 'use:note-r11-camp-1']);
+    expect(ACT2_QUEST_NOTES.filter((n) => n.priority).map((n) => n.interactableId).sort()).toEqual(['use:note-m13-shield', 'use:note-m15-map', 'use:note-m22-stalls', 'use:note-r11-camp-1']);
   });
   it('no NPC post sits within 1.2 m of a prop, note or carry pickup unless the prop outranks the NPC', () => {
     const bad: string[] = [];

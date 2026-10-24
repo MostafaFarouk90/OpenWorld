@@ -16,6 +16,9 @@ import companionsPlugin, { COMPANIONS_PERSIST_VERSION } from './companions.plugi
 import { TOBB } from './tobb';
 import './types';
 
+// Booting the real plugins can take several seconds under load; the 5 s default flakes (see testTimeouts.guard.test.ts).
+vi.setConfig({ testTimeout: 60_000 });
+
 let physics: PhysicsWorld;
 beforeAll(() => {
   (globalThis as any).self ??= globalThis;

@@ -57,7 +57,12 @@ describe('Deepgate NPC posts', () => {
     expect(at('slagg', env()).home).toBe(true);
     expect(at('slagg', env({ r09: 'active' })).anchorId).toBe('npc-post.slagg.market');
     expect(at('slagg', env({ r10: 'active' })).anchorId).toBe('npc-post.slagg.market');
-    expect(at('slagg', env({ m17: 'active' })).home).toBe(true);
+    expect(at('slagg', env({ m17: 'active' })).anchorId).toBe('npc-post.slagg.shaft');
+    // M17 and R09 both open on M16: Slagg stays at the shaft for M17 (R3-1), and goes to the market once it is done
+    expect(at('slagg', env({ m17: 'active', r09: 'active' })).anchorId).toBe('npc-post.slagg.shaft');
+    expect(at('slagg', env({ m17: 'active', r10: 'active' })).anchorId).toBe('npc-post.slagg.shaft');
+    expect(at('slagg', env({ m17: 'completed', r09: 'active' })).anchorId).toBe('npc-post.slagg.market');
+    expect(at('slagg', env({ m17: 'active', d04: 'active' })).anchorId).toBe('npc-post.slagg.deepdelve');
     expect(at('slagg', env({ r09: 'completed', r10: 'completed' })).home).toBe(true);
   });
 

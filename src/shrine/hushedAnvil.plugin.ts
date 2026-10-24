@@ -34,7 +34,11 @@ const hushedAnvilPlugin: GamePlugin = {
       emitRekindled: (shrineId) => emit('shrine.rekindled', { shrineId }),
     });
     ctx.events.on('waystone.rekindled', (e) => binding.onRekindled(e.waystoneId));
-    ctx.events.on('save.loaded', () => binding.sync());
+    // A silent sync that lights the shrine must wake the quests: the quests plugin rechecked before it, and the flag raises no event.
+    const syncAndRecheck = (): void => {
+      if (binding.sync()) ctx.services.get('quests')?.recheck?.();
+    };
+    ctx.events.on('save.loaded', syncAndRecheck);
 
     const codex = ctx.services.get('codex');
     const offCodex = codex?.register([1, 2, 3].map((n) => codexEntry('lore', muralCodexId(n), `hushed-anvil-mural-${n}`)));
@@ -86,7 +90,7 @@ const hushedAnvilPlugin: GamePlugin = {
       const murals = H.muralOffsets.map(at);
       visuals.build(s, stationPos, murals);
       // A load that ran before the anchors existed saw the waystone as unlit.
-      binding.sync();
+      syncAndRecheck();
       offs.push(
         ctx.interaction.register({
           id: 'use:hushed-anvil-station',
@@ -127,7 +131,7 @@ const hushedAnvilPlugin: GamePlugin = {
       fixedUpdate() {
         if (first) {
           first = false;
-          binding.sync();
+          syncAndRecheck();
         }
         place();
         visuals.setLit(lit());

@@ -22,11 +22,13 @@ export class ForgeShrineBinding {
     return `shrine.${id}.lit`;
   }
 
-  private light(announce: boolean): void {
-    if (this.ports.isLit()) return;
-    if (this.ports.canLight && !this.ports.canLight()) return;
+  /** True when this call set the flag. */
+  private light(announce: boolean): boolean {
+    if (this.ports.isLit()) return false;
+    if (this.ports.canLight && !this.ports.canLight()) return false;
     this.ports.setFlag(ForgeShrineBinding.flag(this.id), true);
     if (announce) this.ports.emitRekindled(this.id);
+    return true;
   }
 
   /** Lights the shrine now (a scripted solve whose waystone anchor does not exist yet). Respects `canLight`. */
@@ -40,8 +42,11 @@ export class ForgeShrineBinding {
     this.light(true);
   }
 
-  /** Older saves and scripts: a lit waystone with no shrine flag lights the shrine silently. */
-  sync(): void {
-    if (this.ports.waystoneLit()) this.light(false);
+  /**
+   * Older saves and scripts: a lit waystone with no shrine flag lights the shrine silently. Returns true when it set the
+   * flag, so a caller can have the quests read their `doneWhen` again (a silent flag raises no event).
+   */
+  sync(): boolean {
+    return this.ports.waystoneLit() ? this.light(false) : false;
   }
 }

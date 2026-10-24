@@ -354,6 +354,9 @@ describe("The Slagmaw on the real core", () => {
     const t = await setup();
     expect(t.ctx.strings.has("boss.the-slagmaw.name")).toBe(true);
     expect(t.game.systems.has("bosses.slagmaw")).toBe(true);
+    // the plugin's own cleanup, before any whole-game teardown clears every system (review R1-5)
+    slagmawPlugin.dispose?.();
+    expect(t.game.systems.has("bosses.slagmaw")).toBe(false);
     t.teardown();
     expect(t.game.systems.has("bosses.slagmaw")).toBe(false);
   });
