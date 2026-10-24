@@ -14,8 +14,8 @@ export const TOWER = 7;
 export const TOWER_H = 11;
 export const GATE_W = 12;
 export const HALL_SIZE = { w: 40, d: 22, h: 10 } as const;
-/** R15's haul is about this long on the road from the depot to the cache (the plan's 330 m). */
-export const R15_LEG = 330;
+/** R15's haul is about this long from the depot to the cache before the gate detours (the route comes to about 315 m: 3 x that is the plan's 1,000 m on foot, 2 x the 600 m ridden). */
+export const R15_LEG = 297;
 
 export interface LodgeInfo {
   edge: { w: number; e: number; s: number; n: number };

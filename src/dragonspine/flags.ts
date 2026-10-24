@@ -3,5 +3,5 @@
 export const R16_STARTED_FLAG = 'story.r16.started';
 /** Written by K13 when the rockfall in the cave passage is cleared; the blocker opens on it (and closes again on a load without it). */
 export const R16_ROCKFALL_CLEARED_FLAG = 'story.r16.rockfallCleared';
-/** The region is held until Phase F; tests (and the jump) set it. */
-export const DRAGONSPINE_OPEN_FLAG = 'story.phase.dragonspineOpen';
+/** The region is held until Phase F; tests (and the jump) set it. Defined by the jump (K0). */
+export { DRAGONSPINE_OPEN_FLAG } from '../quests/act3Jump';

@@ -15,10 +15,10 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.r15.sled-start.1 | 13624 | 11921 | 0 | 180 | objective |
 | dragonspine.r15.sled-start.2 | 13628 | 11921 | 0 | 180 | objective |
 | dragonspine.r15.sled-start.3 | 13632 | 11921 | 0 | 180 | objective |
-| dragonspine.r15.cache | 13542.49 | 12206.5 | 0 | 180 | objective |
-| dragonspine.spawn.r15.stoop-1 | 13608.06 | 12044.39 | 0 | 180 | spawn |
-| dragonspine.spawn.r15.stoop-2 | 13609.93 | 12106.26 | 0 | 180 | spawn |
-| dragonspine.spawn.r15.stoop-3 | 13556.24 | 12156.6 | 0 | 180 | spawn |
+| dragonspine.r15.cache | 13566.56 | 12183.93 | 0 | 180 | objective |
+| dragonspine.spawn.r15.stoop-1 | 13605.43 | 12034.85 | 0 | 180 | spawn |
+| dragonspine.spawn.r15.stoop-2 | 13624.37 | 12092.72 | 0 | 180 | spawn |
+| dragonspine.spawn.r15.stoop-3 | 13576.7 | 12137.41 | 0 | 180 | spawn |
 | dragonspine.lodge.stables | 13638 | 11873.5 | 0 | 0 | poi |
 | dragonspine.lodge.yard | 13600 | 11886 | 0 | 180 | poi |
 | npc-post.thorgar.yard | 13604 | 11895 | 0 | 53.13 | npc-post |
@@ -44,12 +44,12 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.spawn.shelter.hawk-2 | 13103.08 | 13203.07 | 0 | 180 | spawn |
 | dragonspine.anvil.shrine | 14716 | 13900 | 0 | 0 | objective |
 | waystone.last-anvil | 14700 | 13884.2 | 0 | 180 | waystone |
-| dragonspine.anvil.carving.1 | 14744.57 | 13949.49 | 0 | 180 | objective |
-| dragonspine.anvil.carving.2 | 14773.14 | 13900 | 0 | 180 | objective |
-| dragonspine.anvil.carving.3 | 14744.57 | 13850.51 | 0 | 180 | objective |
-| dragonspine.anvil.carving.4 | 14687.43 | 13850.51 | 0 | 180 | objective |
-| dragonspine.anvil.carving.5 | 14658.86 | 13900 | 0 | 180 | objective |
-| dragonspine.anvil.carving.6 | 14687.43 | 13949.49 | 0 | 180 | objective |
+| dragonspine.anvil.carving.1 | 14735 | 13936.37 | 0 | 180 | objective |
+| dragonspine.anvil.carving.2 | 14735 | 13863.63 | 0 | 180 | objective |
+| dragonspine.anvil.carving.3 | 14678 | 13900 | 0 | 180 | objective |
+| dragonspine.anvil.carving.4 | 14697 | 13863.63 | 0 | 180 | objective |
+| dragonspine.anvil.carving.5 | 14697 | 13936.37 | 0 | 180 | objective |
+| dragonspine.anvil.carving.6 | 14754 | 13900 | 0 | 180 | objective |
 | dragonspine.anvil.mark.1 | 14741.11 | 13904.73 | 0 | 180 | objective |
 | dragonspine.anvil.mark.2 | 14693.72 | 13883.79 | 0 | 180 | objective |
 | dragonspine.anvil.cell | 14668 | 13915.5 | 0 | 0 | poi |
@@ -207,12 +207,12 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-rest-bench-1 | dragonspine-bench | 14726 | 13868 | 3 x 0.8 | open |
 | dragonspine-rest-bench-2 | dragonspine-bench | 14734 | 13868 | 3 x 0.8 | open |
 | dragonspine-waystone-last-anvil | waystone | 14700 | 13886 | 1.6 x 1.6 | solid |
-| dragonspine-carving-stone-1 | dragonspine-carving | 14744.57 | 13949.49 | 1.6 x 1.2 | open |
-| dragonspine-carving-stone-2 | dragonspine-carving | 14773.14 | 13900 | 1.6 x 1.2 | open |
-| dragonspine-carving-stone-3 | dragonspine-carving | 14744.57 | 13850.51 | 1.6 x 1.2 | open |
-| dragonspine-carving-stone-4 | dragonspine-carving | 14687.43 | 13850.51 | 1.6 x 1.2 | open |
-| dragonspine-carving-stone-5 | dragonspine-carving | 14658.86 | 13900 | 1.6 x 1.2 | open |
-| dragonspine-carving-stone-6 | dragonspine-carving | 14687.43 | 13949.49 | 1.6 x 1.2 | open |
+| dragonspine-carving-stone-1 | dragonspine-carving | 14735 | 13936.37 | 1.6 x 1.2 | open |
+| dragonspine-carving-stone-2 | dragonspine-carving | 14735 | 13863.63 | 1.6 x 1.2 | open |
+| dragonspine-carving-stone-3 | dragonspine-carving | 14678 | 13900 | 1.6 x 1.2 | open |
+| dragonspine-carving-stone-4 | dragonspine-carving | 14697 | 13863.63 | 1.6 x 1.2 | open |
+| dragonspine-carving-stone-5 | dragonspine-carving | 14697 | 13936.37 | 1.6 x 1.2 | open |
+| dragonspine-carving-stone-6 | dragonspine-carving | 14754 | 13900 | 1.6 x 1.2 | open |
 | dragonspine-wayside-pad-1 | rock | 14244.32 | 13618.12 | 8 x 8 | solid |
 | dragonspine-wayside-pad-2 | rock | 14417.25 | 13710.9 | 8 x 8 | solid |
 | dragonspine-wayside-pad-3 | rock | 14516.36 | 13797.6 | 8 x 8 | solid |

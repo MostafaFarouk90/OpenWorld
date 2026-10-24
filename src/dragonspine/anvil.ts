@@ -34,15 +34,45 @@ export function anvilLayout(s: Sites): { part: Part; info: AnvilInfo } {
   placer.reserve(pad.x, pad.z, SHRINE_CLEAR);
   const shrine = { x: pad.x, z: pad.z };
 
-  // The loop: six stones on a ring round the shrine whose radius makes shrine -> 1 -> ... -> 6 -> shrine about 400 m.
+  // The loop: six stones on a ring round the shrine whose radius makes shrine -> 1 -> ... -> 6 -> shrine about 400 m. The ring
+  // is squeezed to stay inside the plateau, and each stone is moved off the road (and out of the shrine's clearing).
+  const inside = (x: number, z: number): boolean => x >= A.minX + 4 && x <= A.maxX - 4 && z >= A.minZ + 4 && z <= A.maxZ - 4;
+  const clear = (x: number, z: number): boolean => inside(x, z) && s.road.nearest(x, z).d >= s.roadClear + 1.5 && Math.hypot(x - shrine.x, z - shrine.z) >= SHRINE_CLEAR + 2;
   const ringR = CARVING_LOOP / 7;
-  const stones: XZ[] = Array.from({ length: 6 }, (_, i) => {
-    const [x, z] = polar(shrine.x, shrine.z, 30 + 60 * i, ringR);
-    return findFlat(s.h, { prefer: { x, z }, radius: 12, size: [1.6, 1.2], maxSpread: 0.4, step: 2 }) ?? { x, z };
+  const ringX = Math.min(ringR, Math.min(shrine.x - A.minX, A.maxX - shrine.x) - 6);
+  const ringZ = Math.min(ringR, Math.min(shrine.z - A.minZ, A.maxZ - shrine.z) - 8);
+  const placed: XZ[] = Array.from({ length: 6 }, (_, i) => {
+    const [ux, uz] = polar(0, 0, 30 + 60 * i, 1);
+    const want = { x: shrine.x + ux * ringX, z: shrine.z + uz * ringZ };
+    const flat = findFlat(s.h, { prefer: want, radius: 12, size: [1.6, 1.2], maxSpread: 0.4, step: 2 });
+    if (flat && clear(flat.x, flat.z)) return flat;
+    for (let r = 0; r <= 60; r += 2) {
+      for (let k = 0; k < Math.max(1, r); k++) {
+        const ang = (k / Math.max(1, r)) * Math.PI * 2;
+        const x = want.x + Math.cos(ang) * r;
+        const z = want.z + Math.sin(ang) * r;
+        if (clear(x, z)) return { x, z };
+      }
+    }
+    throw new Error(`dragonspine: no room for carving stone ${i + 1} off the road on the Last Anvil plateau`);
   });
-  let loopLength = 0;
-  const loop = [shrine, ...stones, shrine];
-  for (let i = 1; i < loop.length; i++) loopLength += Math.hypot(loop[i]!.x - loop[i - 1]!.x, loop[i]!.z - loop[i - 1]!.z);
+  // The squeezed ring is shorter than the target, so the visiting order is the permutation whose loop is closest to it.
+  const lengthOf = (order: readonly XZ[]): number => {
+    const loop = [shrine, ...order, shrine];
+    let len = 0;
+    for (let i = 1; i < loop.length; i++) len += Math.hypot(loop[i]!.x - loop[i - 1]!.x, loop[i]!.z - loop[i - 1]!.z);
+    return len;
+  };
+  const permute = (rest: XZ[], so: XZ[] = []): XZ[][] => (rest.length === 0 ? [so] : rest.flatMap((p, i) => permute([...rest.slice(0, i), ...rest.slice(i + 1)], [...so, p])));
+  let stones = placed;
+  let loopLength = lengthOf(placed);
+  for (const order of permute(placed)) {
+    const len = lengthOf(order);
+    if (Math.abs(len - CARVING_LOOP) < Math.abs(loopLength - CARVING_LOOP) - 1e-9) {
+      stones = order;
+      loopLength = len;
+    }
+  }
 
   const marks = [75, 255].map((b, i) => {
     const [x, z] = polar(shrine.x, shrine.z, b, 26);

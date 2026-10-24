@@ -7,10 +7,14 @@ import { OLDSMOKE_TRIGGERS } from '../content/act2/oldsmoke';
 import { questDefs } from '../content';
 import { ACT3_ANCHOR_PREFIXES, ACT3_FLAG_OWNERS, ACT3_QUEST_FLAG_OWNERS, ACT3_TRIGGER_PREFIXES } from './act3Flags';
 import { ACT3_QUEST_IDS } from './act3Ids';
-import { ALL_LAYOUTS } from './noteLint';
+import { DRAGONSPINE_LAYOUT } from '../../dragonspine/dragonspine.layout';
+import { ALL_LAYOUTS as ALL_LAYOUTS_WITH_ACT3 } from './noteLint';
 
 // The Act 3 interiors are the prefixes' owners (K3, K4): only the ids shipped before them are checked.
 const shippedInteriors = ALL_INTERIORS.filter((d) => !ACT3_INTERIORS.includes(d));
+// Likewise the Dragonspine layout (the note lint covers it; the prefix check is for the others).
+const ALL_LAYOUTS = ALL_LAYOUTS_WITH_ACT3.filter((l) => l !== DRAGONSPINE_LAYOUT);
+
 const anchorIds = [
   ...ALL_LAYOUTS.flatMap((l) => l.anchors.map((a) => a.id)),
   ...TUTORIAL_ANCHORS.map((a) => a.id),

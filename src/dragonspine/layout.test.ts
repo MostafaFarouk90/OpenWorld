@@ -1,3 +1,4 @@
+import { SUMMIT_BOX } from '../region/areas';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { footprintCorners } from '../region/geometry';
 import { LEDGE_MAX_HEIGHT, LEDGE_MIN_HEIGHT } from '../region/layoutTypes';
@@ -135,11 +136,11 @@ describe('the layout on stand-in ground', () => {
     }
   });
 
-  it('puts the Last Anvil, the shrine and every R17 site south of the summit hole (z < 14800), every place south of z 16900', () => {
+  it('puts the Last Anvil, the shrine and every R17 site south of the summit hole (z < SUMMIT_BOX.z0), every place south of z 16900', () => {
     for (const a of b.layout.anchors) expect(a.z, a.id).toBeLessThan(16900);
-    for (const id of ['dragonspine.anvil.shrine', 'waystone.last-anvil', ...range(6).map((n) => `dragonspine.wayside.${n}`)]) expect(anchor(id).z, id).toBeLessThan(14800);
-    for (const a of b.layout.anchors.filter((x) => x.id.startsWith('dragonspine.anvil.') || x.id.startsWith('dragonspine.wayside.'))) expect(a.z, a.id).toBeLessThan(14800);
-    for (const s of b.layout.structures) expect(s.z, s.id).toBeLessThan(14800);
+    for (const id of ['dragonspine.anvil.shrine', 'waystone.last-anvil', ...range(6).map((n) => `dragonspine.wayside.${n}`)]) expect(anchor(id).z, id).toBeLessThan(SUMMIT_BOX.z0);
+    for (const a of b.layout.anchors.filter((x) => x.id.startsWith('dragonspine.anvil.') || x.id.startsWith('dragonspine.wayside.'))) expect(a.z, a.id).toBeLessThan(SUMMIT_BOX.z0);
+    for (const s of b.layout.structures) expect(s.z, s.id).toBeLessThan(SUMMIT_BOX.z0);
   });
 
   it('keeps the shrine anchor and the Last Anvil waystone within 30 m of K0\'s SHRINE_POSITIONS', () => {
@@ -297,5 +298,17 @@ describe('derivation (nothing is a copied coordinate)', () => {
       }
     })();
     expect(errors.length).toBeGreaterThan(0);
+  });
+});
+
+describe('the Last Anvil carving stones', () => {
+  it('stand inside the plateau, off the road, outside the shrine clearing, on a loop of about 400 m', () => {
+    const A = plateau('last-anvil');
+    for (const [i, p] of b.anvil.stones.entries()) {
+      expect(inBox(A, p.x, p.z, -3), `stone ${i + 1} inside`).toBe(true);
+      expect(b.sites.road.nearest(p.x, p.z).d, `stone ${i + 1} road`).toBeGreaterThanOrEqual(b.sites.roadClear);
+      expect(Math.hypot(p.x - b.anvil.shrine.x, p.z - b.anvil.shrine.z), `stone ${i + 1} shrine`).toBeGreaterThan(12);
+    }
+    expect(Math.abs(b.anvil.loopLength - 400)).toBeLessThanOrEqual(60);
   });
 });

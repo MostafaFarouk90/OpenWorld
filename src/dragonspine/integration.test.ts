@@ -129,6 +129,8 @@ describe('the Dragonspine plugin booted with its neighbours', () => {
     expect(await reason(t, t.svc().enter(COLLAPSED_CAVE_ID, COLLAPSED_CAVE_DOOR_ID))).toBe('resolved');
     t.game.ctx.state.setFlag(R16_STARTED_FLAG, false);
     expect(await reason(t, t.svc().exit())).toBe('resolved');
+    // Back outside: at the mouth, not left in the float.
+    expect(near(t.game.ctx.player.feet, t.game.ctx.anchors.get('dragonspine.cave.mouth').position)).toBeLessThan(6);
     t.game.ctx.state.load({ flags: { ...OPEN, [R16_STARTED_FLAG]: true } });
     t.game.ctx.events.emit('save.loaded', { slot: 'test' });
     await t.run(1);
@@ -145,13 +147,21 @@ describe('the Dragonspine plugin booted with its neighbours', () => {
     await t.run(2);
     const gate = rockfall(t.game);
     expect(gate.visible).toBe(true);
+    // The collider is live too: a ray along the passage from the rockfall anchor hits the blocker while it is closed and nothing after.
+    const from = t.game.ctx.anchors.get('dragonspine.cave.rockfall').position;
+    const probe = () => t.game.ctx.physics.raycast({ x: from.x, y: from.y + 1, z: from.z }, { x: 0, y: 0, z: -1 }, 6);
+    expect(probe()?.distance ?? 99).toBeLessThan(3.5);
     t.game.ctx.state.setFlag(R16_ROCKFALL_CLEARED_FLAG, true);
     expect(gate.visible).toBe(false);
+    await t.run(2);
+    expect(probe()).toBeNull();
     // A load without the flag closes it again; a load with it opens it.
     t.game.ctx.state.load({ flags: { ...OPEN } });
     t.game.ctx.events.emit('save.loaded', { slot: 'test' });
     await t.run(1);
     expect(gate.visible).toBe(true);
+    await t.run(2);
+    expect(probe()?.distance ?? 99).toBeLessThan(3.5);
     t.game.ctx.state.load({ flags: { ...OPEN, [R16_ROCKFALL_CLEARED_FLAG]: true } });
     t.game.ctx.events.emit('save.loaded', { slot: 'test' });
     await t.run(1);

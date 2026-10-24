@@ -23,15 +23,27 @@ describe('leg lengths (the plan\'s table, computed from the layout)', () => {
     }
   });
 
-  it('keeps the legs this layout owns within 15% of the plan: M28 climb, R15 haul, M29 woodpile, M30 loop, R18 climb, R16, R17 ridden', () => {
-    expect(within(legs.M28!.foot, LEG_TARGETS.M28!.foot)).toBe(true);
-    expect(within(legs.R15!.foot, LEG_TARGETS.R15!.foot), `R15 foot ${legs.R15!.foot}`).toBe(true);
-    expect(within(legs.M29!.foot, LEG_TARGETS.M29!.foot), `M29 foot ${legs.M29!.foot}`).toBe(true);
-    expect(within(legs.M30!.foot, LEG_TARGETS.M30!.foot), `M30 foot ${legs.M30!.foot}`).toBe(true);
-    expect(within(legs.R18!.foot, LEG_TARGETS.R18!.foot), `R18 foot ${legs.R18!.foot}`).toBe(true);
-    expect(within(legs.R16!.foot, LEG_TARGETS.R16!.foot), `R16 foot ${legs.R16!.foot}`).toBe(true);
-    expect(within(legs.R16!.ridden, LEG_TARGETS.R16!.ridden), `R16 ridden ${legs.R16!.ridden}`).toBe(true);
-    expect(within(legs.R17!.ridden, LEG_TARGETS.R17!.ridden), `R17 ridden ${legs.R17!.ridden}`).toBe(true);
-    expect(within(legs.M28!.ridden, LEG_TARGETS.M28!.ridden), `M28 ridden ${legs.M28!.ridden}`).toBe(true);
+  /** Legs that are not this layout's to fix, reported instead: the reason says whose numbers decide them. */
+  const STRUCTURAL: Record<string, string> = {
+    'M30.ridden': 'the road from the shelter to the Anvil is K1\'s polyline (the plan\'s 1,100 m does not fit K1\'s positions)',
+    'R18.ridden': 'shelter and cliff foot positions are K1\'s; the plan\'s lodge-to-foot 600 m does not fit them',
+    'R17.foot': 'the walk from the road to each pad is the pad offset (about 10 m each way), fixed by the road verge',
+    'M29.ridden': 'n/a: the shelter waystone is the start, nothing is ridden',
+  };
+
+  it('lists every leg with its target: within 15% of the plan, or named in the structural list with a reason', () => {
+    for (const [q, t] of Object.entries(LEG_TARGETS)) {
+      for (const kind of ['ridden', 'foot'] as const) {
+        const key = `${q}.${kind}`;
+        const actual = legs[q]![kind];
+        if (STRUCTURAL[key]) continue;
+        expect(within(actual, t[kind]), `${key}: ${actual} m against ${t[kind]} m (+-15%)`).toBe(true);
+      }
+    }
+    // The exemptions are real: each one is still out of range (a leg that comes back into range leaves the list).
+    for (const key of Object.keys(STRUCTURAL)) {
+      const [q, kind] = key.split('.') as [string, 'ridden' | 'foot'];
+      expect(within(legs[q]![kind], LEG_TARGETS[q]![kind]), `${key} is now within 15%: remove it from STRUCTURAL`).toBe(false);
+    }
   });
 });
