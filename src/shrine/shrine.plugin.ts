@@ -14,6 +14,7 @@ import { ShrineVisuals } from './shrine.visuals';
 import { SHRINE_STRINGS_EN } from './strings.en';
 import { SHRINE_TUNING } from './tuning';
 import { WarmthTracker } from './warmth';
+import { WarmthBlocks, type WarmthBlocksEnemies } from './warmthBlocks';
 import { Wardstones, type StonePos } from './wardstones';
 
 const T = SHRINE_TUNING;
@@ -53,6 +54,25 @@ const shrinePlugin: GamePlugin = {
       emitChanged: (tier, previous) => emit('warmth.changed', { tier, previous }),
       setEnemyTier: (t) => (ctx.services.get('enemies') as { setWarmthTier?(w: number): void } | undefined)?.setWarmthTier?.(t),
     });
+
+    // ---- Act 3 blocks (K9 PR 1): the lock, its flag mirror and the quest reward scale ---------------
+    const blocks = new WarmthBlocks({
+      enemies: () => {
+        const e = ctx.services.get('enemies') as Partial<WarmthBlocksEnemies> | undefined;
+        return e && typeof e.lockBlockLevel === 'function' && typeof e.blockLevel === 'function' && typeof e.blockPreview === 'function'
+          ? (e as WarmthBlocksEnemies)
+          : undefined;
+      },
+      questState: (id) => ctx.services.get('quests')?.state(id),
+      flag: (k) => {
+        const v = ctx.state.getFlag(k);
+        return typeof v === 'number' ? v : undefined;
+      },
+      setFlag: (k, v) => ctx.state.setFlag(k, v),
+    });
+    // The provider answers 1 until the block is locked, so installing it early changes nothing in Acts 1 and 2.
+    const offScale = ctx.services.get('questRewardScale')?.setProvider((id) => blocks.rewardScale(id));
+    ctx.events.on('quest.started', (e) => blocks.onQuestStarted(e.questId));
 
     // ---- Cooled -------------------------------------------------------------------------------
     const cooled = new Cooled({
@@ -257,6 +277,7 @@ const shrinePlugin: GamePlugin = {
       cooledLoaded = false;
       syncLitFromWaystone();
       warmth.recompute('load');
+      blocks.derive(); // the spawners loaded their locks before this event
       progression.refreshMaxHealth();
       if (savedHealth !== null) {
         const a = ctx.actors.player;
@@ -274,7 +295,13 @@ const shrinePlugin: GamePlugin = {
       else respec.dialogClosed();
     });
 
-    ctx.services.provide('warmth', { tier: () => warmth.tier() });
+    ctx.services.provide('warmth', {
+      tier: () => warmth.tier(),
+      lockBlock: (b) => blocks.lockBlock(b),
+      blockLevel: (b) => blocks.blockLevel(b),
+      preview: (b) => blocks.preview(b),
+      rewardScale: (q) => blocks.rewardScale(q),
+    });
     ctx.services.provide('shrine', {
       cooledSeconds: () => cooled.secondsLeft(),
       nextWardstone: () => wardstones.nextIndex(),
@@ -292,6 +319,7 @@ const shrinePlugin: GamePlugin = {
           firstTick = true;
           warmth.recompute('load'); // the enemies service may not have existed at setup
         }
+        blocks.derive(); // retried every tick while a level is unknown; also mirrors the ?act3= jump's lock into the flag
         syncLitFromWaystone();
         syncVisuals();
         syncLectern();
@@ -333,6 +361,7 @@ const shrinePlugin: GamePlugin = {
         visuals.update(frameTime);
       },
       dispose() {
+        offScale?.();
         setPrompt(false);
         respec.close();
         respecOff?.();
