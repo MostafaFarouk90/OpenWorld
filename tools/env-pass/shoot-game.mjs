@@ -42,7 +42,11 @@ for (const [name, c] of Object.entries(table.cameras)) {
       const [px, py, pz] = c.pos;
       const [lx, ly, lz] = c.look;
       // Park the Knight beside the camera so the terrain streams around the shot.
-      const tp = g.game.ctx.player.teleport({ x: px, y: ground(px, pz) + 0.2, z: pz }, 0);
+      // Stand the Knight 4 m ahead of the camera, in frame (a Knight on the camera spot would fill the eye shot).
+      const dl = Math.hypot(lx - px, lz - pz) || 1;
+      const kx = px + ((lx - px) / dl) * 4;
+      const kz = pz + ((lz - pz) / dl) * 4;
+      const tp = g.game.ctx.player.teleport({ x: kx, y: ground(kx, kz) + 0.2, z: kz }, 0);
       const t0 = performance.now();
       while (!tp.ready() && performance.now() - t0 < 90000) await new Promise((r) => setTimeout(r, 200));
       // The env plugin culls by distance from the Knight, and a teleport right after load can be dropped (the Knight stays at the
