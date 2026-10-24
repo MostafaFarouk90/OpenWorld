@@ -961,7 +961,7 @@ export class Enemy {
     const pick = this.observerOnly || this.peaceful || this.fox ? null : this.env.taunt?.(this) ?? null;
     if (pick) {
       // Remember, on the first tick of a taunt, whether the enemy was already on the player.
-      if (this.tauntedId === null) this.onPlayerBeforeTaunt = this.brain.target === playerId;
+      if (this.tauntedId === null) this.onPlayerBeforeTaunt = this.brain.holdsTarget(playerId);
       this.brain.retarget(pick.id);
       this.tauntedId = pick.id;
       this.aimFeet = pick.feet;

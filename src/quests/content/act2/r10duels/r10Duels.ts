@@ -180,8 +180,12 @@ export class R10Duels {
     const n = this.pending;
     if (n === null || this.p.dialogueOpen()) return;
     this.pending = null;
-    if (!this.bout && this.canDuel(n)) this.begin(n);
-    this.refreshBusy();
+    try {
+      if (!this.bout && this.canDuel(n)) this.begin(n);
+    } finally {
+      // A throw out of `begin` must not leave the duel choice hidden.
+      this.refreshBusy();
+    }
   }
 
   dispose(): void {

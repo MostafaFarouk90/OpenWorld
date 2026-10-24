@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WYRM_SOUND_KEYS } from '../enemies/wyrm/sounds';
 import { ACT2_SFX_KEYS, ACT2_SFX_VOLUME, SLAGMAW_SFX_KEYS, act2SfxSamples } from './act2Sfx';
 import plugin from './act2Sfx.plugin';
+import { ensureAct2Sfx } from './act2SfxEnsure';
 import { MOVE_SFX } from './act2SfxRouter';
 
 type Handler = (payload: never) => void;
@@ -95,6 +96,33 @@ describe('act2 sfx keys', () => {
     expect(c.played).toEqual(['sfx.bellows.solved']);
     vi.runAllTimers();
     expect(c.registered.filter((r) => r.key === 'sfx.bellows.solved')).toHaveLength(1);
+  });
+
+  it('ensureAct2Sfx (the Slagmaw\'s direct plays) renders a key before its slice, and is a no-op once the plugin is gone', () => {
+    const c = fakeCtx();
+    setup(c);
+    ensureAct2Sfx('sfx.slagmaw.erupt');
+    expect(c.registered.map((r) => r.key)).toEqual(['sfx.slagmaw.erupt']);
+    ensureAct2Sfx('sfx.slagmaw.erupt');
+    ensureAct2Sfx('not.a.key');
+    expect(c.registered).toHaveLength(1);
+    plugin.dispose?.();
+    ensureAct2Sfx('sfx.slagmaw.valve');
+    expect(c.registered).toHaveLength(1);
+  });
+
+  it('uses requestIdleCallback for its slices where the browser has it', () => {
+    const queue: Array<() => void> = [];
+    vi.stubGlobal('requestIdleCallback', (cb: () => void) => queue.push(cb));
+    vi.stubGlobal('cancelIdleCallback', () => {});
+    const c = fakeCtx();
+    setup(c);
+    expect(queue).toHaveLength(1);
+    vi.runAllTimers();
+    expect(c.registered).toEqual([]);
+    queue.shift()!();
+    expect(c.registered).toHaveLength(1);
+    expect(queue).toHaveLength(1);
   });
 
   it('stops rendering on dispose', () => {

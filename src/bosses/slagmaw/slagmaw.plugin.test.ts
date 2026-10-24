@@ -831,6 +831,8 @@ describe("The Slagmaw on the real core", () => {
     u.hit(1e6, SLAGMAW.maxPoise);
     expect(u.of("boss.break").map((b) => [b.phase, b.last])).toEqual([[2, false]]);
     expect(u.state()!.phase).toBe(2);
+    // The valve that cooled him is spent and locked.
+    expect(u.valve(1).enabled()).toBe(false);
     u.settle();
     u.toSurfaced();
     u.hit(1e6, 0);

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { GamePlugin } from '../core/plugins';
 import { ACT2_SFX_KEYS, ACT2_SFX_VOLUME, act2SfxSamples } from './act2Sfx';
 import { Act2SfxRouter } from './act2SfxRouter';
+import { setAct2SfxEnsure } from './act2SfxEnsure';
 import { samplesToWavUrl } from './proceduralSounds';
 import '../enemies/ground/events';
 
@@ -25,8 +26,9 @@ const plugin: GamePlugin = {
   setup(ctx) {
     const offs: Array<() => void> = [];
     const audio = ctx.services.get('audio');
-    // The sounds render lazily (about a second of synthesis in all): one key per idle slice after setup, and a key the
-    // router is about to play is rendered at once if its slice has not come yet.
+    // The sounds render lazily (about a second of synthesis in all): one key per slice after setup (in browser idle time where
+    // `requestIdleCallback` exists, else on a zero timeout), and a key about to be played, by the router or by the Slagmaw
+    // through `ensureAct2Sfx`, is rendered at once if its slice has not come yet.
     const urls: string[] = [];
     const done = new Set<string>();
     const ensure = (key: (typeof ACT2_SFX_KEYS)[number]) => {
@@ -44,18 +46,33 @@ const plugin: GamePlugin = {
     const canRender = !!audio && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function';
     if (canRender) {
       let i = 0;
-      let timer: ReturnType<typeof setTimeout> | null = null;
+      type G = { requestIdleCallback?: (cb: () => void) => number; cancelIdleCallback?: (id: number) => void };
+      const g = globalThis as unknown as G;
+      let cancel: (() => void) | null = null;
+      const later = (cb: () => void) => {
+        if (typeof g.requestIdleCallback === 'function') {
+          const id = g.requestIdleCallback(cb);
+          cancel = () => g.cancelIdleCallback?.(id);
+        } else {
+          const id = setTimeout(cb, 0);
+          cancel = () => clearTimeout(id);
+        }
+      };
       const slice = () => {
-        timer = null;
+        cancel = null;
         const key = ACT2_SFX_KEYS[i++];
         if (key === undefined) return;
         ensure(key);
-        timer = setTimeout(slice, 0);
+        later(slice);
       };
-      timer = setTimeout(slice, 0);
+      later(slice);
+      setAct2SfxEnsure((k) => {
+        if ((ACT2_SFX_KEYS as readonly string[]).includes(k)) ensure(k as (typeof ACT2_SFX_KEYS)[number]);
+      });
       offs.push(() => {
-        if (timer !== null) clearTimeout(timer);
-        timer = null;
+        setAct2SfxEnsure(null);
+        cancel?.();
+        cancel = null;
         i = ACT2_SFX_KEYS.length;
         for (const u of urls.splice(0)) URL.revokeObjectURL(u);
       });

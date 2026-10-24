@@ -319,6 +319,21 @@ describe('when a taunt ends', () => {
   });
 });
 
+describe('a pack-alerted enemy', () => {
+  it('goes back to the player, not home, when the taunt ends', () => {
+    const { enemy, tick, taunter } = setup();
+    enemy.brain.standDown();
+    tick(0.3);
+    expect(enemy.brain.target).toBeNull();
+    enemy.alert('player');
+    expect(enemy.brain.holdsTarget('player')).toBe(true);
+    taunter(5, 0, 1);
+    tick(0.3);
+    tick(1.5);
+    expect(enemy.brain.target).toBe('player');
+  });
+});
+
 describe('TauntRegistry hysteresis', () => {
   it('keeps the held taunter until radius plus the margin, but only for that holder', () => {
     const r = new TauntRegistry();

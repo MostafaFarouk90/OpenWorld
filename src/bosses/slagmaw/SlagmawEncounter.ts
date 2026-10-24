@@ -8,6 +8,7 @@ import {
   type Shooter,
 } from "../../enemies/ranged/EnemyProjectiles";
 import { ValveWheel, valveInteractable } from "../../puzzles/ValveWheel";
+import { ensureAct2Sfx } from "../../audio/act2SfxEnsure";
 import { clampToArena, yawToward } from "../prior/geometry";
 import { SlagmawBrain, type SlagmawHooks } from "./SlagmawBrain";
 import type { SlagmawModel } from "./SlagmawModel";
@@ -210,8 +211,9 @@ export class SlagmawEncounter implements SlagmawHooks {
           this.actor.restorePoise();
           return;
         }
-        // The break belongs to the valve that cooled him (it is spent), even when the same hit crossed a phase threshold. A cooled
-        // `last` break lifts the floor whichever valve cooled him: a hit that jumped phases can make valve 1 or 2 the last one.
+        // The break belongs to the valve that cooled him (it is spent), even when the same hit crossed a phase threshold (valve 1
+        // can break in phase 2). The `last` break lifts the floor; the phase-2 cap means it always comes after phase 2's break,
+        // so in practice it is valve 3's.
         const valve = this.valves[this.douseValve];
         if (p.phase >= 2) this.phase2BreakDone = true;
         if (p.last) this.floorLifted = true;
@@ -703,6 +705,7 @@ export class SlagmawEncounter implements SlagmawHooks {
     const audio = this.ctx.services.get("audio");
     if (!audio) return;
     try {
+      ensureAct2Sfx(key);
       audio.playAt(key, this.root.position);
     } catch {
       // the audio thread owns the keys; a missing one is silent

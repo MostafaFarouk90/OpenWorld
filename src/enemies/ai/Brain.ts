@@ -157,6 +157,11 @@ export class Brain {
     return this.aggroTarget;
   }
 
+  /** Whether `id` is the target in any form: aggro, a pack alert (forced) or a noticing enemy's pending acquire. */
+  holdsTarget(id: ActorId): boolean {
+    return this.aggroTarget === id || this.forcedTarget === id || this.pendingAcquire === id;
+  }
+
   get currentMove(): MoveDef | null {
     return this.move;
   }

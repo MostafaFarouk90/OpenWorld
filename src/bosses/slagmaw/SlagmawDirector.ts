@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { bossOutcomeFlag } from "../../actors/BossRegistry";
+import { ensureAct2Sfx } from "../../audio/act2SfxEnsure";
 import type { GameContext } from "../../core/Game";
 import { DEEPDELVE_DEF } from "../../oldsmoke/mines/deepdelve";
 import { BossArena, type BossModelState } from "../arena/BossArena";
@@ -78,6 +79,7 @@ export class SlagmawDirector {
         cueAt: PRESENTATION.introRumbleAt,
         cue: () => {
           try {
+            ensureAct2Sfx("sfx.slagmaw.rumble");
             ctx.services.get("audio")?.play("sfx.slagmaw.rumble");
           } catch {
             // the audio thread owns the key

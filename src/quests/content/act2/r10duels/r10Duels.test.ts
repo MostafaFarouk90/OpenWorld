@@ -399,6 +399,21 @@ describe('R10 duels: the offer is hidden when it cannot start', () => {
     expect(r.state.getFlag('story.r10duel.busy')).toBe(true);
   });
 
+  it('clears the busy flag if starting the bout throws', () => {
+    const r = rig();
+    const d = new R10Duels({
+      events: r.events, state: r.state, quests: () => ({ state: () => 'active' as const, objectiveDone: () => false }),
+      enemies: () => ({ spawnGroup: () => { throw new Error('boom'); }, despawnGroup: () => {} }),
+      trials: () => r.trials, dialogueOpen: () => false, defineAnchor: () => () => {}, playerFeet: () => ({ x: 0, y: 0, z: 0 }),
+      playerYaw: () => 0, warn: () => {},
+    });
+    expect(d.request(1)).toBe(true);
+    expect(r.state.getFlag('story.r10duel.busy')).toBe(true);
+    expect(() => d.fixedUpdate()).toThrow('boom');
+    expect(r.state.getFlag('story.r10duel.busy')).toBe(false);
+    d.dispose();
+  });
+
   it('refuses a duel request while another trial runs', () => {
     const r = rig();
     const other = r.actors.spawn({ kind: 'hrolf', team: 'hostile', maxHealth: 50 });
