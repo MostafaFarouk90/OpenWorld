@@ -97,6 +97,49 @@ describe('registration', () => {
   });
 });
 
+describe('npcObjectiveLive', () => {
+  it('is true only for a current talk objective of an active quest that names the NPC', () => {
+    const m = make();
+    m.register(quest('a', [obj('o', 'talk', 'wynne')]));
+    expect(m.npcObjectiveLive('wynne')).toBe(false); // not started
+    m.start('a');
+    expect(m.npcObjectiveLive('wynne')).toBe(true);
+    expect(m.npcObjectiveLive('hrolf')).toBe(false);
+  });
+  it("a sequential quest's later talk objective is not live until the earlier one is done", () => {
+    const m = make();
+    m.register(quest('s', [obj('first', 'kill', 'wraith'), obj('second', 'talk', 'hrolf')], { sequential: true }));
+    m.start('s');
+    expect(m.npcObjectiveLive('hrolf')).toBe(false);
+    died('w1');
+    expect(m.objectiveDone('s', 'first')).toBe(true);
+    expect(m.npcObjectiveLive('hrolf')).toBe(true);
+  });
+  it('an array target is live for each NPC it names', () => {
+    const m = make();
+    m.register(quest('a', [obj('o', 'talk', 'x', { target: ['wynne', 'hrolf'] })]));
+    m.start('a');
+    expect(m.npcObjectiveLive('wynne')).toBe(true);
+    expect(m.npcObjectiveLive('hrolf')).toBe(true);
+    expect(m.npcObjectiveLive('other')).toBe(false);
+  });
+  it('a kill objective naming the NPC is not a talk objective', () => {
+    const m = make();
+    m.register(quest('a', [obj('o', 'kill', 'wynne')]));
+    m.start('a');
+    expect(m.npcObjectiveLive('wynne')).toBe(false);
+  });
+  it('a when-gated objective is live only while its condition holds', () => {
+    const m = make();
+    m.register(quest('a', [obj('o', 'talk', 'wynne', { when: { flag: 'f' } as never })]));
+    m.start('a');
+    condState.value = true;
+    expect(m.npcObjectiveLive('wynne')).toBe(true);
+    condState.value = false;
+    expect(m.npcObjectiveLive('wynne')).toBe(false);
+  });
+});
+
 describe('kill credit and talk credit through the manager', () => {
   it('kill credit uses payload.spawnTag when the actor is already gone from the registry', () => {
     const m = make();

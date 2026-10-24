@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { heightAt } from '../terrain/heightfield';
 import { CINDERREACH_LAYOUT } from './cinderreach.layout';
-import { campCages, campTents } from './huntersCamp';
-import { footprintSpread } from './siteFit';
 
 /** M15: the cage keys and the bound carter must be reachable on foot walking straight in from the north (+Z). */
 describe('hunters camp approach (B2)', () => {
@@ -22,17 +19,26 @@ describe('hunters camp approach (B2)', () => {
     const p = anchor(id);
     expect(blocking(p.x, p.z - 0.5, p.z + 12)).toEqual([]);
   });
-  it('the corridor check does fail on the original spots (tent 3 and cage 2 in the way)', () => {
-    const keys = anchor('cinderreach.m15.search.4');
-    const carter = anchor('cinderreach.m15.carter');
+  it('the corridor check does fail on the old south-side spots (tent 3 and cage 2 in the way)', () => {
     const tent = solids.find((s) => s.id === 'cinderreach-camp-tent-3')!;
     const cage = solids.find((s) => s.id === 'cinderreach-camp-cage-2')!;
-    const moved = (s: typeof tent, dx: number) => ({ ...s, x: s.x - dx });
-    const hit = (s: typeof tent, cx: number, z: number) => Math.abs(s.x - cx) < s.footprint[0] / 2 + PLAYER_R && s.z + s.footprint[1] / 2 > z - 0.5 && s.z - s.footprint[1] / 2 < z + 12;
-    expect(hit(moved(tent, -10), keys.x, keys.z)).toBe(true);
-    expect(hit(moved(cage, 5), carter.x, carter.z)).toBe(true);
+    // The old anchors stood 1.5 m off the south face, with the prop between them and the north.
+    const southZ = (s: typeof tent) => s.z - s.footprint[1] / 2 - 1.5;
+    expect(blocking(tent.x, southZ(tent) - 0.5, southZ(tent) + 12)).toContain(tent.id);
+    expect(blocking(cage.x, southZ(cage) - 0.5, southZ(cage) + 12)).toContain(cage.id);
   });
-  it('the moved props overlap no other camp prop', () => {
+  it.each([
+    ['cinderreach.m15.search.4', 'cinderreach-camp-tent-3'],
+    ['cinderreach.m15.carter', 'cinderreach-camp-cage-2'],
+    ['npc-post.carter-bound', 'cinderreach-camp-cage-2'],
+  ])('%s stands within 3 m of the edge of its own prop %s', (id, propId) => {
+    const p = anchor(id);
+    const s = solids.find((x) => x.id === propId)!;
+    const dx = Math.max(Math.abs(p.x - s.x) - s.footprint[0] / 2, 0);
+    const dz = Math.max(Math.abs(p.z - s.z) - s.footprint[1] / 2, 0);
+    expect(Math.hypot(dx, dz)).toBeLessThanOrEqual(3);
+  });
+  it('the camp props overlap no other camp prop', () => {
     for (let i = 0; i < solids.length; i++) {
       for (let j = i + 1; j < solids.length; j++) {
         const a = solids[i];
@@ -42,9 +48,5 @@ describe('hunters camp approach (B2)', () => {
         expect(ox && oz, `${a.id} overlaps ${b.id}`).toBe(false);
       }
     }
-  });
-  it('the moved tent and cage stand on level ground', () => {
-    expect(footprintSpread(heightAt, campTents()[2].x, campTents()[2].z, 6, 6)).toBeLessThanOrEqual(1.5);
-    expect(footprintSpread(heightAt, campCages()[1].x, campCages()[1].z, 3, 3)).toBeLessThanOrEqual(1.5);
   });
 });

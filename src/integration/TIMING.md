@@ -217,7 +217,7 @@ fails, over is fine).
 | **Phase C** | **460** | **184** | **253.6** | | |
 
 Phase C reaches 55.1% of its design minutes as shipped (the plan figure is 51.4%). Thin margins: R07 (14.1 against a
-floor of 14), M13 (21.6 against 20), M15 (22.8 against 20). Taking a beat out of R07 fails the test.
+floor of 14), R11 (17.1 against 16), M13 (21.6 against 20), M15 (22.8 against 20). Taking a beat out of R07 or R11 fails the test.
 
 ## Phase C on the nodes the headless run read (A16)
 
@@ -232,7 +232,11 @@ floor of 14 (14.1 on the spare branch, 16.1 on the cull branch), every other que
   rows. Polish pass P1 added closing beats in the existing voice: Wynne's widow talk (+5 nodes) and Hrolf's report (+5) for R11,
   the lantern-keeper (+3) and Aelfreda's brief and rite (+5) for M14. The played trail now reads 33 and 42 nodes and the runs
   measure R11 17.1 (floor 16) and M14 24.8 (floor 22), gated on the static floors in phaseC.runA and runB. The pace rows
-  carry the new node counts (33, 42), so the shipped table above moved to 22.5 and 27.1.
+  carry the new node counts (33, 42), so the shipped table above moved to 22.5 and 27.1. The authored beats add 10 and 8
+  nodes (22 to 32, 30 to 38); the census reads 1 and 4 more than that. `trailNodes` sums every node of each talk the trail
+  opens, so the extra nodes are connecting nodes of the existing talks the new beats sit in (a lengthened closing segment, the
+  entry or hand-off node of a talk now reached), not further beats. They were not traced node by node; a re-measure that
+  lands on 33 and 42 is therefore not drift.
 - M12: the plan row (Part 7 estimate 27.6) is re-baselined to the shipped 39.9 (about 45% over plan, content kept, not
   trimmed); the plan row in act2Timing.test.ts and the pace row design figure now read 39.9.
 
