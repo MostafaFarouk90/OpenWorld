@@ -11,6 +11,7 @@ import { Progression } from '../../progression/Progression';
 import { getSkill, resetClassSkills } from '../../progression/skills';
 import { xpForLevel } from '../../progression/tuning';
 import { makeCtx, FakeActor } from '../../spells/testHost';
+import { origin } from '../../vfx/effects';
 import { WARDEN_SKILLS } from './skills';
 import { BLOOD_CHANT, GRIT_TEETH, SKILL_IDS, WHIRLING_HEW } from './tuning';
 import { WhirlingHew } from './tier3';
@@ -53,10 +54,10 @@ function rig() {
     holdForcedMove: () => {},
   };
   f.services.status = status;
-  const spawned: Array<{ id: string; stopped: boolean }> = [];
+  const spawned: Array<{ id: string; stopped: boolean; t?: any }> = [];
   f.services.vfx = {
-    spawnEffect: (id: string) => {
-      const h = { id, stopped: false, stop() { h.stopped = true; } };
+    spawnEffect: (id: string, t?: unknown) => {
+      const h = { id, t, stopped: false, stop() { h.stopped = true; } };
       spawned.push(h);
       return h;
     },
@@ -173,6 +174,29 @@ describe('tier 3 in the plugin', () => {
     expect(r.spawned.map((s) => s.id)).toEqual(['grit-teeth']);
     evs.emit('class.changed' as never, { classId: 'knight', previous: 'warden', free: true, cost: 0 } as never);
     expect(r.spawned[0].stopped).toBe(true);
+  });
+
+  it('Blood Chant (and Grit Teeth, same followFx) attach at a zero offset: the effect lands on a player at (100, 5, -200), not twice that', () => {
+    const r = rig();
+    wardenPlugin.setup(r.f.ctx);
+    const root = (r.f.world.player as any).avatar.root as THREE.Object3D;
+    root.position.set(100, 5, -200);
+    root.updateMatrixWorld(true);
+    (r.f.world.player as any).feet.set(100, 5, -200);
+    learnAll(r, ...T1_2, SKILL_IDS.bloodChant);
+    r.progression.assign(1, SKILL_IDS.bloodChant);
+    expect(r.abilities.use(1)).toEqual({ ok: true });
+    expect(r.spawned[0].t.attach).toBe(root);
+    expect(origin(r.spawned[0].t)).toEqual({ x: 100, y: 5, z: -200 });
+  });
+
+  it('Blood Chant with the player at the origin still attaches at the player', () => {
+    const r = rig();
+    wardenPlugin.setup(r.f.ctx);
+    learnAll(r, ...T1_2, SKILL_IDS.bloodChant);
+    r.progression.assign(1, SKILL_IDS.bloodChant);
+    r.abilities.use(1);
+    expect(origin(r.spawned[0].t)).toEqual({ x: 0, y: 0, z: 0 });
   });
 
   it('Grit Teeth unlearned does nothing', () => {

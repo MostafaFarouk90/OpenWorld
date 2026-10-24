@@ -153,7 +153,7 @@ const wardenPlugin: GamePlugin = {
       };
       /** Spawns a timed effect that rides the player; returns what stops it. */
       const followFx = (id: string, seconds: number): (() => void) | undefined => {
-        const handle = svc<VfxLike>('vfx')?.spawnEffect?.(id, { position: feetAt(), attach: ctx.player.avatar?.root }, { seconds }) as { stop?(): void } | undefined;
+        const handle = svc<VfxLike>('vfx')?.spawnEffect?.(id, { position: ctx.player.avatar?.root ? { x: 0, y: 0, z: 0 } : feetAt(), attach: ctx.player.avatar?.root }, { seconds }) as { stop?(): void } | undefined;
         return handle?.stop ? () => handle.stop!() : undefined;
       };
       const trigger = (id: string) => svc<{ reportTrigger?(id: string): void }>('abilities')?.reportTrigger?.(id);
