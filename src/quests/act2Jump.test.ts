@@ -102,7 +102,7 @@ describe('node effects are read from the dialogue content', () => {
       expect(nodeEffects(r.dialogueId, r.nodeId, dialogueDefs, r.choiceId)?.length, `${r.dialogueId}:${r.nodeId}`).toBeGreaterThan(0);
     }
     expect(nodeEffects('npc-hrolf', 'm13-oath-12')).toContainEqual({ setFlag: 'story.m13.hrolfJoined', value: true });
-    expect(nodeEffects('npc-aelfreda', 'a2-rite-13')).toContainEqual({ setFlag: 'story.m14.aelfredaJoined', value: true });
+    expect(nodeEffects('npc-aelfreda', 'a2-rite-16')).toContainEqual({ setFlag: 'story.m14.aelfredaJoined', value: true });
   });
   it('rekindles only quests that are prerequisites of something', () => {
     for (const q of Object.keys(ACT2_REKINDLE_AFTER)) expect(ACT2_PHASE_C_IDS).toContain(q);

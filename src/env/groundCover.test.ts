@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { envOwnsGround, envReplacesScenery, groundCoverRect, groundCoverRects, GROUND_COVER_MARGIN, OWNS_GROUND_COVER } from './groundCover';
+import { LANE } from '../terrain/shape/detailGround';
 import { CLASS_RANGE, GROUND_LIFT } from './PlacementField';
 import { TILES } from './tiles';
 
@@ -38,21 +39,24 @@ describe('envOwnsGround', () => {
   it('leaves the meadow blades under a tile that does not opt in, however many ground rows it has', () => {
     expect(envOwnsGround(true, tiles)(10, 20)).toBe(false);
   });
-  it('leaves the meadow blades in B2 and B4 but not in B1', () => {
-    expect([...OWNS_GROUND_COVER]).toEqual(['b1']);
+  it('leaves the meadow blades in every tile, B1 included, but keeps them off the B1 lane', () => {
+    expect([...OWNS_GROUND_COVER]).toEqual([]);
     const owns = envOwnsGround(true, TILES);
     expect(owns(80, 280)).toBe(false);
     expect(owns(210, 120)).toBe(false);
     for (const [x, z] of [[768, -150], [935, -140], [990, -150], [846, -158]]) expect(owns(x, z)).toBe(false);
-    expect(owns(0, 70)).toBe(true);
+    expect(owns(0, 70)).toBe(true); // on the lane
+    expect(owns(20, 70)).toBe(false); // B1 meadow beside it
+    expect(owns(0, -30)).toBe(false); // the meadow eye pose
   });
   it('is false everywhere with ?env=off', () => {
     expect(envOwnsGround(false, tiles, new Set(['t']))(10, 20)).toBe(false);
   });
-  it('covers the B1 lane core with the real tile', () => {
+  it('keeps the B1 lane clear along its length and nowhere far from it', () => {
     const owns = envOwnsGround(true, TILES);
-    expect(owns(0, 70)).toBe(true);
+    for (const z of [0, 70, 150]) expect(owns(0, z)).toBe(true);
     expect(owns(0, -2000)).toBe(false);
+    expect(owns(LANE.halfWidth + 3, 70)).toBe(false);
   });
   it('covers B3 (the ford, the fields) and the reed island only when a tile opts in; by default B3 keeps the meadow blades', () => {
     expect(envOwnsGround(true, TILES)(-250, -110)).toBe(false);

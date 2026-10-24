@@ -4,6 +4,7 @@
 // apart at best, so wheel ruts are left to props and decals rather than aliased into colour.
 import { TERRAIN } from '../../config/constants';
 import { createNoise2D } from '../noise';
+import { ashGround } from '../../env/ashGradient';
 import { tileWeight } from './detailRelief';
 
 const patchNoise = createNoise2D(TERRAIN.seed + 21);
@@ -11,6 +12,8 @@ const dryNoise = createNoise2D(TERRAIN.seed + 22);
 
 /** Packed-earth lane colour (linear-ish vertex colour, like the grass base in `surfaceColor`). */
 const DIRT = [0.34, 0.26, 0.16] as const;
+/** Ash-grey ground of the B4 reach (linear-ish vertex colour, a cool beige grey). */
+const ASH_GROUND = [0.4, 0.38, 0.34] as const;
 /** Sun-dried verge grass. */
 const DRY = [0.34, 0.37, 0.15] as const;
 /** The lane runs along x = 0 from just south of the first gate to Kettlewick's north gate. */
@@ -30,6 +33,22 @@ export function laneAmount(x: number, z: number): number {
 
 /** Blends `out[o..o+2]` (a ground colour) towards lane dirt, dry verge and a soft light/dark patching at (x, z). */
 export function tintGround(x: number, z: number, out: Float32Array, o: number): void {
+  tintB1(x, z, out, o);
+  tintAsh(x, z, out, o);
+}
+
+/**
+ * Drains `out[o..o+2]` toward the B4 ash grey by the ash amount at (x, z); the identity where there is no ash. The ground uses it,
+ * and so do the meadow blades (src/region/grass.ts), so the blades on the grey reach are grey too instead of meadow green. Returns the
+ * ash amount (0 where the ground is not grey).
+ */
+export function tintAsh(x: number, z: number, out: Float32Array, o: number): number {
+  const ash = ashGround(x, z);
+  if (ash > 0) for (let k = 0; k < 3; k++) out[o + k] = out[o + k]! + (ASH_GROUND[k]! - out[o + k]!) * ash * 0.92;
+  return ash;
+}
+
+function tintB1(x: number, z: number, out: Float32Array, o: number): void {
   const w = tileWeight(x, z);
   if (w <= 0) return;
   // Soft light/dark patches about 40 m across, plus finer mottling.

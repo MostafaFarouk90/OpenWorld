@@ -14,7 +14,7 @@ export interface TauntFeet {
 
 export interface TauntSource {
   id: ActorId;
-  /** Where the taunter stands; null reads as gone. */
+  /** Where the taunter stands; null reads as gone. May return a reused vector: the registry copies what it keeps. */
   position(): TauntFeet | null;
   alive(): boolean;
   /** Horizontal metres within which an enemy takes the bait. */
@@ -69,7 +69,8 @@ export class TauntRegistry implements TauntService {
    */
   pick(from: { x: number; z: number }, holding: ActorId | null = null): TauntPick | null {
     if (this.entries.size === 0) return null;
-    let best: TauntPick | null = null;
+    let best: TauntSource | null = null;
+    let bestAt: TauntFeet | null = null;
     let bestD = Infinity;
     for (const e of this.entries.values()) {
       if (e.left <= 0 || !e.alive()) continue;
@@ -78,9 +79,11 @@ export class TauntRegistry implements TauntService {
       const d = Math.hypot(at.x - from.x, at.z - from.z);
       if (d <= e.radius + (e.id === holding ? TAUNT_RELEASE_MARGIN : 0) && d < bestD) {
         bestD = d;
-        best = { id: e.id, feet: at };
+        best = e;
+        bestAt = at;
       }
     }
-    return best;
+    // `position()` may hand back a scratch vector, so the result copies it.
+    return best && bestAt ? { id: best.id, feet: { x: bestAt.x, y: bestAt.y, z: bestAt.z } } : null;
   }
 }

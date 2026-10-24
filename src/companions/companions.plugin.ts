@@ -160,6 +160,7 @@ export default {
         heal: (id, n) => ctx.damage.heal(id, n),
         playerFeet: () => ctx.player.feet,
         setNpcHidden: (id, h) => void npcs()?.setHidden?.(id, h),
+        keepAlliesOff: (id) => ctx.services.get('allyEngagement')?.exclude?.(id) ?? (() => {}),
       });
       const tr = trials;
       ctx.services.provide('trials', tr);

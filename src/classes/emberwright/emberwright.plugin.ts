@@ -115,7 +115,7 @@ const plugin: GamePlugin = {
           // A taunter while it lives: nearby enemies target it for `tauntSeconds` (enemies/taunts.ts).
           const untaunt = svc<{ taunts?: { register(s: unknown): () => void } }>('enemies')?.taunts?.register({
             id, radius: IRON_FAMILIAR.tauntRadius, seconds: IRON_FAMILIAR.tauntSeconds,
-            position: () => (root.parent ? { x: root.position.x, y: root.position.y, z: root.position.z } : null),
+            position: () => (root.parent ? root.position : null), // a Vector3 has x, y, z; the registry copies it
             alive: () => !actor.dead,
           });
           return { actor: actor as never, place: (x, y, z) => root.position.set(x, y, z), dispose: () => { untaunt?.(); ctx.actors.despawn(id); free(); } };

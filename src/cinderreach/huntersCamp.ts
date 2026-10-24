@@ -5,16 +5,22 @@ import { a, box, numbered, ring, solid } from './helpers';
 import { SITES_FIT } from './sitesFit';
 
 const C = SITES_FIT.camp;
+/**
+ * The props stay where the committed fit put them. The south tent (3) and the carter's cage (2) have the camp to their north, so
+ * the cage keys and the bound carter are placed on that camp-facing side (`north`): reachable walking straight in from the north
+ * with no collider between, and standing at their own prop. huntersCamp.test.ts checks both the corridor and the distance.
+ */
 const front = (p: { x: number; z: number }, half: number) => [p.x, p.z - half - 1.5] as const;
+const north = (p: { x: number; z: number }, half: number) => [p.x, p.z + half + 1.5] as const;
 
 export function huntersCampLayout(): Pick<LayoutData, 'anchors' | 'triggers' | 'structures'> {
   return {
     anchors: [
       // Two desks, a tally board by a tent and the map tent (cage keys hang by the cage).
-      ...numbered('cinderreach.m15.search', [front(C.desks[0], 1), front(C.desks[1], 1), front(C.tents[0], 2.5), front(C.tents[2], 2.5)], ['objective']),
+      ...numbered('cinderreach.m15.search', [front(C.desks[0], 1), front(C.desks[1], 1), front(C.tents[0], 2.5), north(C.tents[2], 2.5)], ['objective']),
       a('cinderreach.m15.cage', ...front(C.cages[0], 1.5), 0, ['objective']),
-      a('cinderreach.m15.carter', ...front(C.cages[1], 1.5), 0, ['objective']),
-      a('npc-post.carter-bound', ...front(C.cages[1], 1.5), 0, ['npc-post']),
+      a('cinderreach.m15.carter', ...north(C.cages[1], 1.5), 0, ['objective']),
+      a('npc-post.carter-bound', ...north(C.cages[1], 1.5), 0, ['npc-post']),
       // Ambient pack (1 to 4, slot 4 a harpooner) and M15's two packs of four (5 to 8).
       ...numbered('cinderreach.spawn.huntercamp', ring(C.centre.x, C.centre.z, 34, 8, 20), ['spawn']),
       // M15's stealth section (A12; src/stealth/sections.ts `m15.camp`): start on the road side, a checkpoint inside, the exit by

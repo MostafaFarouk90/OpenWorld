@@ -24,9 +24,29 @@ const COLLIDER_HALF_THICKNESS = 1.5;
 const COLLIDER_SAMPLE_STEP = 20;
 const COLLIDER_BELOW = 6;
 const COLLIDER_ABOVE = 30;
-const VISIBLE_HALF_WIDTH = 40;
+const VISIBLE_HALF_WIDTH = 60;
 const WALL_HEIGHT = 30;
-const ASH_COUNT = 400;
+/** Drifting ash specks in a wall (halved from 400 for B4 round 5: the drift filled a quarter of the ash-gate eye shot). */
+export const ASH_COUNT = 200;
+/** Side of the veil's alpha map (texels). */
+const VEIL_MAP = 32;
+
+/**
+ * Alpha of the veil at (u, v) in 0..1 across its width and up its height: full in the middle, fading to nothing at both ends and
+ * toward the top, and a little at the foot so the bottom edge does not show where the ground dips below it. A hard-edged plane
+ * read in shots and in play as a big see-through box standing on the road (B4 round 4 review).
+ */
+export function veilAlpha(u: number, v: number): number {
+  const s = (t: number): number => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+  const across = s(Math.min(u, 1 - u) / 0.4);
+  const up = s((1 - v) / 0.7) * s(v / 0.08);
+  return across * up;
+}
+
+/** Ash speck offset across the wall (-1..1), denser in the middle so the cloud has no straight side. */
+function softSpread(): number {
+  return (Math.random() + Math.random() + Math.random()) / 1.5 - 1;
+}
 /** A player found this far past the wall while it stands is put back (design 5.9's push-back). */
 export const PUSH_BACK_PAST = 2;
 export const PUSH_BACK_TO = 4;
@@ -202,7 +222,16 @@ export function buildFogWallDef(
     group = new THREE.Group();
     group.name = def.id === FOG_HARROWMARK.id ? 'fog-wall' : `fog-wall:${def.id}`;
     group.position.set(wall.x, wall.y, wall.z);
-    const veilMat = new THREE.MeshBasicMaterial({ color: 0x8a8378, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false });
+    const alpha = new Uint8Array(VEIL_MAP * VEIL_MAP * 4);
+    for (let j = 0; j < VEIL_MAP; j++)
+      for (let i = 0; i < VEIL_MAP; i++) {
+        const a = Math.round(255 * veilAlpha(i / (VEIL_MAP - 1), j / (VEIL_MAP - 1)));
+        alpha.set([a, a, a, 255], (j * VEIL_MAP + i) * 4);
+      }
+    const veilMap = new THREE.DataTexture(alpha, VEIL_MAP, VEIL_MAP);
+    veilMap.magFilter = THREE.LinearFilter;
+    veilMap.needsUpdate = true;
+    const veilMat = new THREE.MeshBasicMaterial({ color: 0x8a8378, transparent: true, opacity: 0.55, alphaMap: veilMap, side: THREE.DoubleSide, depthWrite: false });
     const veilGeo = new THREE.PlaneGeometry(VISIBLE_HALF_WIDTH * 2, WALL_HEIGHT);
     const veil = new THREE.Mesh(veilGeo, veilMat);
     veil.rotation.y = def.axis === 'x' ? Math.PI / 2 : 0; // spans the wall's length, faces along its normal
@@ -211,9 +240,9 @@ export function buildFogWallDef(
     group.add(veil);
     const pos = new Float32Array(ASH_COUNT * 3);
     for (let i = 0; i < ASH_COUNT; i++) {
-      const p = toWorld(def.axis, { x: 0, z: 0 }, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * VISIBLE_HALF_WIDTH * 2);
+      const p = toWorld(def.axis, { x: 0, z: 0 }, softSpread() * 3, softSpread() * VISIBLE_HALF_WIDTH * 0.8);
       pos[i * 3] = p.x;
-      pos[i * 3 + 1] = Math.random() * WALL_HEIGHT;
+      pos[i * 3 + 1] = Math.random() ** 2 * WALL_HEIGHT; // thinner with height, so the cloud has no flat top
       pos[i * 3 + 2] = p.z;
     }
     const ashGeo = new THREE.BufferGeometry();
@@ -223,7 +252,7 @@ export function buildFogWallDef(
     ash.frustumCulled = false;
     ash.name = 'ash';
     group.add(ash);
-    disposables.push(veilGeo, veilMat, ashGeo, ashMat);
+    disposables.push(veilGeo, veilMat, veilMap, ashGeo, ashMat);
     deps.scene.add(group);
 
     // One long box across the valley, sunk below the lowest ground along it. Its ends are not cliffs, so the
@@ -262,7 +291,7 @@ export function buildFogWallDef(
           const p = ash.geometry.getAttribute('position') as THREE.BufferAttribute;
           for (let i = 0; i < ASH_COUNT; i++) {
             const y = p.getY(i) + dt * 1.2;
-            p.setY(i, y > WALL_HEIGHT ? 0 : y);
+            p.setY(i, y > WALL_HEIGHT * (0.3 + 0.7 * ((i * 0.618) % 1)) ? 0 : y);
           }
           p.needsUpdate = true;
         }

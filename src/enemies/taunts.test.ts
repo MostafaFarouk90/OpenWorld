@@ -177,6 +177,17 @@ describe('enemy target choice', () => {
     expect(b.enemy.brain.target).toBe(u.actor.id);
   });
 
+  it('a boss registered between two zero-dt thinks is seen as a boss (the cache is per think, not per clock value)', () => {
+    const a = setup();
+    const t = a.taunter(6, 0);
+    a.tick(0.5);
+    expect(a.enemy.brain.target).toBe(t.actor.id);
+    a.manager.think(0);
+    a.fake.bossStates.set('boss', { actorId: a.id, releaseOpen: false, outcome: null });
+    a.manager.think(0);
+    expect(a.enemy.brain.target).toBe('player');
+  });
+
   it('a plain enemy whose def says tauntable false ignores the taunt', () => {
     const { enemy, tick, taunter } = setup({ tauntable: false });
     taunter(6, 0);

@@ -71,14 +71,14 @@ interface Entry {
   rows: Array<{ row: PlacementRow; order: number }>;
 }
 
-const tintKey = (t?: Tint): string => (t ? `${t.hue ?? 0}/${t.sat ?? 1}/${t.mul ?? 0xffffff}` : '');
+const tintKey = (t?: Tint): string => (t ? `${t.hue ?? 0}/${t.sat ?? 1}/${t.mul ?? 0xffffff}/${t.glow ?? ''}` : '');
 
 function tintedMaterial(base: THREE.Material, tint: Tint, lift = 1): THREE.Material {
   const m = base.clone() as THREE.MeshStandardMaterial;
   if (lift !== 1 && m.color) {
     m.color.multiplyScalar(lift);
     // A flat glow independent of the light, so a clump keeps a meadow green in shade and at a distance instead of going black.
-    if (m.emissive) m.emissive.setHex(GROUND_GLOW);
+    if (m.emissive) m.emissive.setHex(tint.glow ?? GROUND_GLOW);
   }
   if (tint.mul !== undefined && m.color) m.color.multiply(new THREE.Color(tint.mul));
   if (tint.hue || (tint.sat !== undefined && tint.sat !== 1)) {

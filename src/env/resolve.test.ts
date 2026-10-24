@@ -24,7 +24,7 @@ describe('resolveModel', () => {
     expect(resolveModel('scorched-fence')).toMatchObject({ source: 'kaykit', model: 'hex/fence_wood_straight', fitHeight: 1.6 });
   });
 
-  it('maps the B3 and B4 ids to tinted variants or KayKit models', () => {
+  it('maps the B3 ids to tinted variants or KayKit models', () => {
     expect(resolveModel('bush-holly-a')).toMatchObject({ source: 'env', model: 'env/bush-round-a', scale: 1.05 });
     expect(resolveModel('willow-a')).toMatchObject({ source: 'env', model: 'env/elm-or-ash-a', stretchY: 0.7 });
     for (const id of ['reeds-a', 'reeds-b']) {
@@ -32,15 +32,26 @@ describe('resolveModel', () => {
       expect(r).toMatchObject({ source: 'env', model: 'env/grass-clump-a' });
       expect(r.source === 'env' && (r.stretchY ?? 1) > 2, id).toBe(true);
     }
-    expect(resolveModel('oak-ash-a')).toMatchObject({ source: 'env', model: 'env/oak-a', tint: { sat: 0.3 } });
-    expect(resolveModel('bush-round-ash')).toMatchObject({ source: 'env', model: 'env/bush-round-a' });
-    expect(resolveModel('grass-clump-ash')).toMatchObject({ source: 'env', model: 'env/grass-clump-a', scale: 0.95 });
-    expect(resolveModel('ash-tree-dead-a')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_medium', fitHeight: 6.5 });
-    expect(resolveModel('ash-tree-dead-b')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_large', fitHeight: 7.5 });
     expect(resolveModel('roadside-shrine-a')).toMatchObject({ source: 'kaykit', model: 'hal/shrine_candles' });
     for (const id of ['flag_red', 'rock_single_B', 'rock_single_C', 'tent']) expect(resolveModel(id).source, id).toBe('kaykit');
     // variants without a stretch carry none
     expect('stretchY' in resolveModel('oak-b')).toBe(false);
+  });
+
+  it('maps the B4 ash-reach ids to variants and stretched dead trees instead of a green placeholder', () => {
+    expect(resolveModel('ash-tree-dead-a')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_medium', fitHeight: 6.5 });
+    expect(resolveModel('ash-tree-dead-b')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_large', fitHeight: 7.5 });
+    expect(resolveModel('oak-ash-a')).toMatchObject({ source: 'env', model: 'env/oak-a', scale: 0.95 });
+    expect(resolveModel('grass-clump-ash')).toMatchObject({ source: 'env', model: 'env/grass-clump-a' });
+    expect(resolveModel('bush-round-ash')).toMatchObject({ source: 'env', model: 'env/bush-round-a' });
+    // Ash scrub keeps almost no green, so it never reads as a green bush on the grey reach.
+    const scrub = resolveModel('bush-round-ash');
+    expect(scrub.source !== 'placeholder' && scrub.tint?.sat).toBeLessThanOrEqual(0.1);
+    expect(resolveModel('charred-stump')).toMatchObject({ source: 'env', model: 'env/stump-a' });
+    expect(resolveModel('basalt-columns-a')).toMatchObject({ source: 'env', model: 'env/boulder-large-a', scale: 1.3, girth: 0.35 });
+    expect(resolveModel('crow-perch-post')).toMatchObject({ source: 'kaykit', model: 'hal/fence_pillar' });
+    expect(resolveModel('milestone-a')).toMatchObject({ source: 'env', model: 'env/milestone-a' });
+    expect(resolveModel('wagon-wreck-a')).toMatchObject({ source: 'env', model: 'env/haycart-a' });
   });
 
   it('falls back to a placeholder shape only when nothing matches', () => {

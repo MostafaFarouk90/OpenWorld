@@ -53,6 +53,8 @@ export interface TrialPorts {
   heal(id: ActorId, amount: number): number;
   playerFeet(): { x: number; y: number; z: number };
   setNpcHidden?(npcId: string, hidden: boolean): void;
+  /** `allyEngagement.exclude`: keeps companions and the familiar off the opponent for the trial (M13: Hrolf pinned at 1 HP by a companion). */
+  keepAlliesOff?(opponentId: ActorId): () => void;
 }
 
 interface Running {
@@ -61,6 +63,8 @@ interface Running {
   breaksToWin: number;
   onLoss: 'restart' | 'end';
   standIn: string | null;
+  /** Releases the ally exclusion on the opponent. */
+  alliesOff: () => void;
   player: number;
   opponent: number;
   /** Seconds left in the pause after a break (breaks are ignored then). */
@@ -123,6 +127,7 @@ export class Trials implements TrialsService {
       breaksToWin: n,
       onLoss: o.onLoss === 'end' ? 'end' : 'restart',
       standIn: o.standInNpcId ?? null,
+      alliesOff: this.p.keepAlliesOff?.(opp.id) ?? (() => {}),
       player: 0,
       opponent: 0,
       pause: 0,
@@ -244,6 +249,7 @@ export class Trials implements TrialsService {
     if (!r) return;
     this.run = null;
     this.last = null;
+    r.alliesOff();
     if (r.standIn) this.p.setNpcHidden?.(r.standIn, false);
     if (emit) this.p.events.emit('trial.ended', { trialId: r.id, reason });
   }

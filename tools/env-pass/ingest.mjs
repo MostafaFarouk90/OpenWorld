@@ -1,4 +1,7 @@
 // Ingest step for environment glb files (G0b). Usage: node tools/env-pass/ingest.mjs <srcDir> <outDir> [--remove]
+// Proportion table: ids listed in targets.json 'proportion' (artist models whose shape is far from the target, e.g. a 1 m fence panel for a 3.4 m module)
+// are fitted EXACTLY instead: uniform scale to the target height, optional repeat of the model n times along x ({"tile": n}, for fences, walls
+// and beds, so the stretch stays modest), then width and depth scaled to the target (no 15% cap). Manifest records 'tile' and the stretch.
 // Fit rule: uniform scale to the target HEIGHT, then width/depth stretched by at most 15% towards the target footprint; larger gaps are
 // reported as CAP lines (and in manifest 'capped') for the artist. For each <id>.glb in srcDir: bake the node transforms (Z-up exports become Y-up), scale uniformly to the size in src/env/targets.json,
 // put the base on y = 0 and the footprint centre on x, z = 0, weld and simplify to the triangle budget, drop everything but the base
@@ -50,6 +53,19 @@ for (const f of readdirSync(src).filter((n) => n.endsWith('.glb'))) {
     const mesh = node.getMesh();
     if (mesh) { transformMesh(mesh, node.getWorldMatrix()); node.setMatrix([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]); }
   }
+  const prop = cfg.proportion?.[id];
+  if (prop?.tile > 1) { // repeat the model along x, abutting copies (meshes are cloned: each copy owns its vertex data)
+    const w0 = (() => { const t = getBounds(scene); return t.max[0] - t.min[0]; })();
+    for (const node of scene.listChildren()) {
+      const mesh = node.getMesh();
+      if (!mesh) continue;
+      for (let k = 1; k < prop.tile; k++) {
+        const copy = mesh.clone();
+        transformMesh(copy, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, k * w0, 0, 0, 1]);
+        scene.addChild(doc.createNode(`${node.getName() || id}-tile${k}`).setMesh(copy));
+      }
+    }
+  }
   let b = getBounds(scene);
   const size = [b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]];
   // Fit rule (coordinator ruling, default for every batch): uniform scale so the HEIGHT meets the target height, then a non-uniform
@@ -58,7 +74,7 @@ for (const f of readdirSync(src).filter((n) => n.endsWith('.glb'))) {
   const s = want.h / size[1];
   const clampStretch = (need) => Math.min(1 + STRETCH_MAX, Math.max(1 - STRETCH_MAX, need));
   const needX = want.w / (size[0] * s), needZ = want.d / (size[2] * s);
-  const sx = clampStretch(needX), sz = clampStretch(needZ);
+  const sx = prop ? needX : clampStretch(needX), sz = prop ? needZ : clampStretch(needZ);
   const capped = [];
   if (Math.abs(sx - needX) > 1e-6) capped.push(`width ${(size[0] * s * sx).toFixed(2)} m, want ${want.w} m, factor still needed ${(needX / sx).toFixed(2)}`);
   if (Math.abs(sz - needZ) > 1e-6) capped.push(`depth ${(size[2] * s * sz).toFixed(2)} m, want ${want.d} m, factor still needed ${(needZ / sz).toFixed(2)}`);
@@ -106,7 +122,7 @@ for (const f of readdirSync(src).filter((n) => n.endsWith('.glb'))) {
   await io.write(dest, doc);
   const mb = statSync(dest).size / 1e6;
   if (mb > cfg.maxFileMB) { console.log(`FAIL ${id}: ${mb.toFixed(2)} MB, budget ${cfg.maxFileMB} MB; source kept`); unlinkSync(dest); failed++; continue; }
-  results.push({ id, scale: +s.toFixed(3), stretch: [+sx.toFixed(3), +sz.toFixed(3)], ...(capped.length ? { capped } : {}), trisBefore: Math.round(tris), trisAfter: Math.round(after), mb: +mb.toFixed(2) });
+  results.push({ id, scale: +s.toFixed(3), stretch: [+sx.toFixed(3), +sz.toFixed(3)], ...(prop ? { proportion: true, ...(prop.tile > 1 ? { tile: prop.tile } : {}) } : {}), ...(capped.length ? { capped } : {}), trisBefore: Math.round(tris), trisAfter: Math.round(after), mb: +mb.toFixed(2) });
   if (capped.length) console.log(`CAP ${id}: ${capped.join('; ')}`);
   console.log(`${id}: scale ${s.toFixed(3)}, ${Math.round(tris)} -> ${Math.round(after)} tris, ${mb.toFixed(2)} MB`);
   if (remove) unlinkSync(path.join(src, f));

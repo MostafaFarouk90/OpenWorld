@@ -1,6 +1,9 @@
 import { ENEMY_ATTACKS } from '../clips';
 import type { EnemyDef, MoveDef } from '../types';
 
+/** The harpooner holds the pack's two-handed crossbow (art only; hitboxes and timings are the moves'); the procedural harpoon shows until it loads. */
+export const HUNTER_HARPOON_PROP = 'wpn/crossbow_2handed';
+
 /**
  * Dragon-Hunter Spearman (design 10 row 30): a hired spear-and-net hunter in a pack of 3 to 4 with one harpooner. Spear thrust
  * (0.5 s drop, yellow), net throw (0.6 s arm swing and a rope hiss, yellow: a blocked net does not root; roots 2 s on a hit).
@@ -52,7 +55,7 @@ export const HUNTER_HARPOONER: EnemyDef = {
     tint: 0xd8806a,
     emissive: 0x2a0a06,
     weapons: 'none',
-    props: [{ id: 'proc/hunter-harpoon', bone: 'handslotr', rotation: [0, 0, 0], scale: 1 }],
+    props: [{ id: HUNTER_HARPOON_PROP, bone: 'handslotr', rotation: [0, 0, 0], scale: 1, fallback: 'proc/hunter-harpoon' }],
   },
   maxHealth: 60,
   maxPoise: 35,

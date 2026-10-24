@@ -46,12 +46,12 @@ const plugin: GamePlugin = {
     const canRender = !!audio && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function';
     if (canRender) {
       let i = 0;
-      type G = { requestIdleCallback?: (cb: () => void) => number; cancelIdleCallback?: (id: number) => void };
+      type G = { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
       const g = globalThis as unknown as G;
       let cancel: (() => void) | null = null;
       const later = (cb: () => void) => {
         if (typeof g.requestIdleCallback === 'function') {
-          const id = g.requestIdleCallback(cb);
+          const id = g.requestIdleCallback(cb, { timeout: 2000 });
           cancel = () => g.cancelIdleCallback?.(id);
         } else {
           const id = setTimeout(cb, 0);

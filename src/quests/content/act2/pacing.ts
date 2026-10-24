@@ -28,7 +28,7 @@ export const ACT2_PACE: readonly PaceRow[] = [
     beats: { killUnit: 11, interact: 4, note: 4, set: 1 },
   },
   {
-    quest: 'm12', design: 27.6, floor: 20, rideLegs: 1, nodes: 22,
+    quest: 'm12', design: 39.9, floor: 20, rideLegs: 1, nodes: 22,
     route: ['npc-post.gaut.cinder-road', 'npc-post.osgar.barricade', 'cinderreach.m12.prep.1', 'cinderreach.m12.prep.3', 'cinderreach.m12.wounded.1', 'cinderreach.m12.refuge.dropoff', 'cinderreach.m12.wounded.2', 'cinderreach.m12.refuge.dropoff', 'cinderreach.m12.wounded.3', 'cinderreach.m12.wounded.4', 'npc-post.osgar.barricade'],
     beats: { waveEnemy: 21, interact: 5, structure: 2, note: 4, carry: 2 },
   },
@@ -53,12 +53,12 @@ export const ACT2_PACE: readonly PaceRow[] = [
     beats: { interact: 7, killUnit: 4 },
   },
   {
-    quest: 'r11', design: 19.0, floor: 16, nodes: 32,
+    quest: 'r11', design: 19.0, floor: 16, nodes: 33,
     route: ['npc-post.hrolf', 'cinderreach.r11.camp.1', 'cinderreach.r11.camp.2', 'cinderreach.r11.camp.3', 'cinderreach.den.ledge.1', 'cinderreach.den.ledge.2', 'cinderreach.den.wyrm.rest', 'cinderreach.r11.axe', 'npc-post.hrolf'],
     beats: { note: 3, leap: 2, killUnit: 5, interact: 1 },
   },
   {
-    quest: 'm14', design: 25.3, floor: 22, nodes: 38,
+    quest: 'm14', design: 25.3, floor: 22, nodes: 42,
     route: ['npc-post.aelfreda.anvil', 'cinderreach.hushed-anvil.ledge.1', 'cinderreach.hushed-anvil.ledge.2', 'cinderreach.hushed-anvil.ledge.3', 'cinderreach.hushed-anvil.site', 'npc-post.lantern-keeper.anvil', 'cinderreach.hushed-anvil.site', 'npc-post.aelfreda.anvil'],
     beats: { leap: 3, killUnit: 5, interact: 4, rhythm: 2, set: 1 },
   },

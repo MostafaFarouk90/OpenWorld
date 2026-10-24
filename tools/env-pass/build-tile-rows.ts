@@ -6,7 +6,7 @@
 // anchor, using the real layout geometry of every Brightwater layout (village, corridor, density); ground cover (grass, flowers)
 // may sit under anchors. Prints what it dropped.
 import { readFileSync, writeFileSync } from 'node:fs';
-import { filterTileRows, type DesignerRow } from './tileRows';
+import { filterTileRows, type DesignerRow, type ReservedPad } from './tileRows';
 
 // Optional extra rectangles the tile owns outside its core (a seam ruled to this tile): `--also x0,x1,z0,z1` (repeatable).
 const args = process.argv.slice(2);
@@ -16,11 +16,11 @@ const annexes: string[] = [];
 for (let i = args.indexOf('--annex'); i >= 0; i = args.indexOf('--annex')) annexes.push(...args.splice(i, 2).slice(1));
 const [inPath, outPath] = args;
 if (!inPath || !outPath) throw new Error('usage: build-tile-rows.ts <in.json> <out.json> [--annex <annex.json>]... [--also x0,x1,z0,z1]...');
-type DesignerFile = { core?: { x: [number, number]; z: [number, number] }; placements: DesignerRow[] };
+type DesignerFile = { core?: { x: [number, number]; z: [number, number] }; placements: DesignerRow[]; meta?: { reserved?: ReservedPad[] } };
 const read = (p: string): DesignerFile => JSON.parse(readFileSync(p, 'utf8')) as DesignerFile;
 const file = read(inPath);
 if (!file.core) throw new Error(`${inPath} has no core`);
-const main = filterTileRows(file.placements, file.core, also);
+const main = filterTileRows(file.placements, file.core, also, file.meta?.reserved ?? []);
 const extra = annexes.map((p) => ({ p, ...filterTileRows(read(p).placements) }));
 const rows = [...main.rows, ...extra.flatMap((a) => a.rows)];
 writeFileSync(outPath, JSON.stringify(rows));

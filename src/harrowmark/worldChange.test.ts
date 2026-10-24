@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from '../region/testing/nodeFs';
 import { createFakeCore } from '../region/testing/fakeCore';
 import { resolveLayout } from '../region/resolveLayout';
 import { BANNER_COUNT, BRAZIER_COUNT, HARROWMARK_LAYOUT } from './harrowmark.layout';
@@ -142,7 +143,20 @@ describe('closed market stalls (A16 final review #5)', () => {
     const { fc } = setup(true);
     const root = closedRoots(fc)[0]!;
     expect(root.children.length).toBe(stallCount);
-    for (const g of root.children) for (const m of g.children) expect(m.position.z).toBeGreaterThanOrEqual(0.7);
+    // The table's centre is at depth * 0.2 and the glb is turned a quarter turn, so its x bound is its half-depth. Measured here
+    // straight from the glb's POSITION accessors (independent of the 1.031 constant in the code): the plane must clear the front edge.
+    const glb: Uint8Array = readFileSync('public/assets/kaykit-dungeon-remastered/table_long_decorated_A.gltf.glb');
+    const view = new DataView(glb.buffer, glb.byteOffset, glb.byteLength);
+    const json = JSON.parse(new TextDecoder().decode(glb.subarray(20, 20 + view.getUint32(12, true))));
+    let halfDepth = 0;
+    for (const mesh of json.meshes) for (const prim of mesh.primitives) {
+      const acc = json.accessors[prim.attributes.POSITION];
+      halfDepth = Math.max(halfDepth, Math.abs(acc.min[0]), Math.abs(acc.max[0]));
+    }
+    expect(halfDepth).toBeCloseTo(1.031, 2);
+    const stalls = HARROWMARK_LAYOUT.structures.filter((st) => st.id.startsWith(STALL_PREFIX));
+    const front = stalls[0]!.footprint[1] * 0.2 + halfDepth;
+    for (const g of root.children) for (const m of g.children) expect(m.position.z).toBeGreaterThan(front);
   });
 
   it('shuts every stall from gate.a2 and opens them (shutters gone, awnings up) on gate.a3', () => {

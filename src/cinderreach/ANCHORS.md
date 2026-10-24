@@ -153,9 +153,9 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | cinderreach.r05.home | 17242 | 2982 | 0 | 0 | objective |
 | cinderreach.dell.entrance | 17037.84 | 2812.08 | 0 | 180 | poi |
 | cinderreach.dell.bed | 17010 | 2790 | 0 | 180 | poi |
-| cinderreach.spawn.pasture.1 | 17245 | 2977.94 | 0 | 180 | spawn |
-| cinderreach.spawn.pasture.2 | 17245 | 2822.06 | 0 | 180 | spawn |
-| cinderreach.spawn.pasture.3 | 17110 | 2900 | 0 | 180 | spawn |
+| cinderreach.spawn.pasture.1 | 17169.22 | 2815.43 | 0 | 180 | spawn |
+| cinderreach.spawn.pasture.2 | 17122.06 | 2855 | 0 | 180 | spawn |
+| cinderreach.spawn.pasture.3 | 17111.37 | 2915.63 | 0 | 180 | spawn |
 | cinderreach.spawn.hollow.1 | 16996 | 2906 | 0 | 180 | spawn |
 | cinderreach.spawn.hollow.2 | 17326 | 2686 | 0 | 180 | spawn |
 | cinderreach.spawn.hollow.3 | 17126 | 2726 | 0 | 180 | spawn |
@@ -176,10 +176,10 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | cinderreach.m15.search.1 | 20367 | 4753.5 | 0 | 180 | objective |
 | cinderreach.m15.search.2 | 20363 | 4741.5 | 0 | 180 | objective |
 | cinderreach.m15.search.3 | 20365 | 4770 | 0 | 180 | objective |
-| cinderreach.m15.search.4 | 20365 | 4722 | 0 | 180 | objective |
+| cinderreach.m15.search.4 | 20365 | 4730 | 0 | 180 | objective |
 | cinderreach.m15.cage | 20374 | 4756 | 0 | 180 | objective |
-| cinderreach.m15.carter | 20368 | 4734 | 0 | 180 | objective |
-| npc-post.carter-bound | 20368 | 4734 | 0 | 180 | npc-post |
+| cinderreach.m15.carter | 20368 | 4740 | 0 | 180 | objective |
+| npc-post.carter-bound | 20368 | 4740 | 0 | 180 | npc-post |
 | cinderreach.spawn.huntercamp.1 | 20376.63 | 4781.95 | 0 | 180 | spawn |
 | cinderreach.spawn.huntercamp.2 | 20395.81 | 4764.37 | 0 | 180 | spawn |
 | cinderreach.spawn.huntercamp.3 | 20396.95 | 4738.37 | 0 | 180 | spawn |

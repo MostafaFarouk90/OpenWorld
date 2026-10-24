@@ -362,7 +362,7 @@ describe('director: M11 Road of Cinders', () => {
       r.dispose();
     });
 
-    it('a speech cut short by death plays again and leaves the report talk to gaut (review F1)', () => {
+    it('a speech cut short by death does not reopen over the body, then plays once after the respawn (review finding 1)', () => {
       r = rig();
       r.active('m11');
       r.done.add('m11.ambush');
@@ -370,8 +370,47 @@ describe('director: M11 Road of Cinders', () => {
       r.step();
       expect(called(r, 'dialogue.start')).toEqual(speech);
       r.emit('dialogue.ended', { dialogueId: 'npc-gaut', npcId: SPEECH_NPC, reason: 'death' });
+      r.step(30);
+      expect(called(r, 'dialogue.start')).toEqual(speech);
+      r.emit('ui.modal', { id: 'journal', open: false }); // other wake-ups stay quiet too
+      r.step(2);
+      expect(called(r, 'dialogue.start')).toEqual(speech);
+      r.emit('player.respawned', { source: 'test' });
+      r.step(3);
+      expect(called(r, 'dialogue.start')).toEqual([...speech, ...speech]);
+      r.emit('player.respawned', { source: 'test' });
+      r.step(3);
+      expect(called(r, 'dialogue.start')).toEqual([...speech, ...speech]);
+      r.dispose();
+    });
+
+    it('a speech closed by a script re-arms at once; a completed one does not replay', () => {
+      r = rig();
+      r.active('m11');
+      r.done.add('m11.ambush');
+      lit();
+      r.step();
+      r.emit('dialogue.ended', { dialogueId: 'npc-gaut', npcId: SPEECH_NPC, reason: 'script' });
       r.step(2);
       expect(called(r, 'dialogue.start')).toEqual([...speech, ...speech]);
+      r.emit('dialogue.ended', { dialogueId: 'npc-gaut', npcId: SPEECH_NPC, reason: 'completed' });
+      r.step(5);
+      expect(called(r, 'dialogue.start')).toEqual([...speech, ...speech]);
+      r.dispose();
+    });
+
+    it('a load close leaves the loaded save alone (review finding 3)', () => {
+      r = rig();
+      r.active('m11');
+      r.done.add('m11.ambush');
+      lit();
+      r.step();
+      r.state.clearFlag('story.m11.speech'); // the loaded save: played to the end, flag cleared by its last line
+      r.emit('save.loaded', { slot: 'a' });
+      r.emit('dialogue.ended', { dialogueId: 'npc-gaut', npcId: SPEECH_NPC, reason: 'load' });
+      r.step(3);
+      expect(r.state.getBool('story.m11.speechDone')).toBe(true);
+      expect(called(r, 'dialogue.start')).toEqual(speech);
       r.dispose();
     });
 

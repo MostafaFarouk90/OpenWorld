@@ -218,10 +218,22 @@ export class EnemyManager {
 
   /** True for a registered boss actor (the core registry knows them). */
   private isBoss(actorId: ActorId): boolean {
-    const bosses = this.host.bosses;
-    if (bosses?.active) for (const b of bosses.active()) if (bosses.state(b)?.actorId === actorId) return true;
-    return false;
+    // Built once per think() while a taunt is live: the taunt path asks once per enemy per tick (post-merge review finding 5).
+    if (this.bossActorsTick !== this.thinkCount) {
+      this.bossActorsTick = this.thinkCount;
+      this.bossActors.clear();
+      const bosses = this.host.bosses;
+      if (bosses?.active) for (const b of bosses.active()) {
+        const id = bosses.state(b)?.actorId;
+        if (id) this.bossActors.add(id);
+      }
+    }
+    return this.bossActors.has(actorId);
   }
+  private readonly bossActors = new Set<ActorId>();
+  private bossActorsTick = -1;
+  /** Integer think() counter: keys the isBoss cache (the float clock does not advance on a zero-dt think). */
+  private thinkCount = 0;
 
   readonly perceptionHub = new PerceptionHub((m) => this.host.warn(m));
 
@@ -248,6 +260,7 @@ export class EnemyManager {
 
   think(dt: number): void {
     this.clock += dt;
+    this.thinkCount++;
     this.tauntRegistry.update(dt);
     this.pathBudget.reset();
     this.updateDormancy();
@@ -991,8 +1004,24 @@ export class EnemyManager {
     ranked.forEach(({ e, d }, i) => {
       // Hysteresis, so an enemy on the edge does not flip between sleep and wake every tick.
       if (d > WORLD_AI.dormantDistance || i >= WORLD_AI.maxAwake) e.sleep();
+      else if (!this.groundReady(e)) e.sleep();
       else if (d < WORLD_AI.dormantDistance - WORLD_AI.wakeMargin && i < WORLD_AI.maxAwake - WORLD_AI.wakeRankMargin) e.wake();
     });
+  }
+
+  /**
+   * False while the terrain collider patch under an enemy standing on the terrain is not built yet (a teleport or a
+   * death respawn near a dormant group: only the patch under the player is built at once, the rest stream in over
+   * later ticks). Waking there put the kinematic body on nothing, it fell, went dormant 100 m down and never woke
+   * (polish B1). Interior enemies, far above the terrain, do not wait. One map lookup per enemy in range.
+   */
+  private groundReady(e: Enemy): boolean {
+    const resident = this.host.groundResident;
+    if (!resident) return true;
+    const f = e.feet;
+    if (resident(f.x, f.z)) return true;
+    const ground = this.host.heightAt(f.x, f.z);
+    return Number.isFinite(ground) && f.y > ground + WORLD_AI.terrainFreeAbove;
   }
 
   dispose(): void {

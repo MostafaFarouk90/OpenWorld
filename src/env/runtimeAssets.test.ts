@@ -45,11 +45,18 @@ describe('runtime environment assets', () => {
 
   it('batch 2 and later fit rule: width and depth stretch within 15%', () => {
     const manifest = JSON.parse(fs.readFileSync(DIR + 'manifest.json', 'utf8'));
-    for (const [id, o] of Object.entries<any>(manifest.objects))
+    for (const [id, o] of Object.entries<any>(manifest.objects)) {
+      if ((targets as any).proportion?.[id]) {
+        // proportion table: exact fit (tiled where listed); the manifest says so and the stretch is only sanity-checked
+        expect(o.proportion, `${id} proportion`).toBe(true);
+        for (const k of o.stretch ?? []) expect(k, `${id} stretch`).toBeGreaterThan(0.2);
+        continue;
+      }
       for (const k of o.stretch ?? []) {
         expect(k, `${id} stretch`).toBeGreaterThanOrEqual(0.85 - 1e-3);
         expect(k, `${id} stretch`).toBeLessThanOrEqual(1.15 + 1e-3);
       }
+    }
   });
 
   it('total runtime size stays small', () => {
