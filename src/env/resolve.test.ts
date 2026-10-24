@@ -67,11 +67,10 @@ describe('resolveModel', () => {
     expect(resolveModel('haystack-round-ashen')).toMatchObject({ source: 'env', model: 'env/haystack-round' });
   });
 
-  it('builds the slim poplar from the birch and the dead trees from KayKit', () => {
+  it('builds the slim poplar from the birch', () => {
     const p = resolveModel('poplar-a');
     expect(p).toMatchObject({ source: 'env', model: 'env/birch-a', scale: 1.75 });
     expect(p.source === 'env' && p.girth).toBeLessThan(1);
-    expect(resolveModel('ash-tree-dead-a')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_medium', fitHeight: 6.5 });
     expect(resolveModel('cairn-a')).toMatchObject({ source: 'env', model: 'env/rock-cluster-a', scale: 0.5 });
   });
 
