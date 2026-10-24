@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { surfaceColor } from '../terrain/chunkGeometry';
 import { grassRule } from '../terrain/ground';
+import { tintAsh } from '../terrain/shape/detailGround';
 
 export const GRASS = {
   /** Side of one scatter cell (m). */
@@ -51,20 +52,27 @@ export interface Tuft {
 
 /** Blades are a little lighter than the ground they grow from, by 1 + this * (0.5 + tone). */
 export const GRASS_LIFT = 0.35;
+/** Share of that lift taken away on fully grey B4 ash ground. */
+export const ASH_LIFT_CUT = 0.7;
 
 /**
  * The colour of a tuft standing on ground of this height and steepness: the terrain's colour, lifted by `tone`. Given
  * (x, z), an Act 2 ground rule there (terrain/ground.ts) swaps in its own grass colour by its weight: Cinderreach's
- * yellow, Oldsmoke's rust. Without (x, z), or where no rule reaches, the colour is Act 1's exactly.
+ * yellow, Oldsmoke's rust; the B4 ash reach drains it grey like its ground. Without (x, z), or where neither reaches, the colour is
+ * Act 1's exactly.
  */
 export function tuftColor(height: number, up: number, tone: number, x?: number, z?: number): [number, number, number] {
   const c = new Float32Array(3);
   surfaceColor(height, up, c, 0);
+  let ash = 0;
   if (x !== undefined && z !== undefined) {
     const rule = grassRule(x, z);
     if (rule.tint) for (let i = 0; i < 3; i++) c[i] += (rule.tint[i] - c[i]) * rule.weight;
+    // The B4 ash reach greys its ground; the blades growing on it follow (identity outside the reach), lifted less so the dry
+    // blades read as grey grass on grey ground instead of pale spikes.
+    ash = tintAsh(x, z, c, 0);
   }
-  const k = 1 + GRASS_LIFT * (0.5 + tone);
+  const k = 1 + GRASS_LIFT * (0.5 + tone) * (1 - ASH_LIFT_CUT * ash);
   return [Math.min(c[0] * k, 1), Math.min(c[1] * k, 1), Math.min(c[2] * k, 1)];
 }
 

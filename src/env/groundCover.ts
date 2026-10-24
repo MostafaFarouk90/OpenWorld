@@ -1,7 +1,8 @@
 // Where the environment pass owns the ground cover. The meadow GrassField (src/region/grass.ts) scatters its own blades everywhere;
-// inside a built tile the placement rows already carry grass clumps and flower patches, so both together read as sparse pale blades
-// doubled up on the clumps. This gives the region plugin one predicate: is (x, z) inside a tile that dresses its own ground?
+// a built tile's grass clumps and flower patches normally sit on top of them. A tile that must keep its ground clear of blades (B1's
+// lane and green) opts in below. This gives the region plugin one predicate: is (x, z) inside a tile that replaces the blades?
 import { TILES } from './tiles';
+import { laneAmount } from '../terrain/shape/detailGround';
 import { classOf, type PlacementRow } from './PlacementField';
 
 export interface Rect {
@@ -33,20 +34,30 @@ export function groundCoverRect(rows: readonly PlacementRow[], margin = GROUND_C
 }
 
 /**
- * Tiles whose clumps sit on top of the game's meadow blades instead of replacing them. B2's wide pastures have no lane or green to
- * keep clear, and the blades are what makes a standing eye see grass at 1 to 10 m; its clumps read as the patchy long grass among them.
+ * Tiles whose placement rows replace the game's meadow blades outright. None does now: B1 was the last, and its meadow eye shot read
+ * bare with the blades off (round 5). Only B1's packed-earth lane stays clear of blades (LANE_CLEAR below), since the blades would
+ * otherwise grow across it. Every tile lays its clumps on top of the blades. The blades are what a standing eye sees as grass at 1 to
+ * 10 m: a grass clump model is about 0.45 m across, so even 600 clumps within 30 m of a camera cover only a few per cent of the ground.
+ * Turning the blades off across a whole tile (B4 round 3: x 700..1100) left lone tufts on bare ground at eye height, however many
+ * rows the tile had. Opt in here only for ground that must stay bare.
  */
-export const KEEP_MEADOW_BLADES: ReadonlySet<string> = new Set(['b2']);
+export const OWNS_GROUND_COVER: ReadonlySet<string> = new Set<string>();
+/** No meadow blades where B1's lane covers at least this much of the ground (terrain/shape/detailGround.ts laneAmount). */
+export const LANE_CLEAR = 0.15;
 
 /**
- * True where a built tile's placement rows replace the meadow grass. Always false when `envOn` is false (`?env=off`), so the old
- * grass comes back with the dressing out. Rects are computed once from the registered tiles.
+ * True where a built tile listed in `owners` replaces the meadow grass with its own rows, and on B1's lane. Always false when `envOn` is false
+ * (`?env=off`), so the old grass comes back with the dressing out. Rects are computed once from the registered tiles.
  */
-export function envOwnsGround(envOn: boolean, tiles: Readonly<Record<string, readonly PlacementRow[]>> = TILES): (x: number, z: number) => boolean {
+export function envOwnsGround(
+  envOn: boolean,
+  tiles: Readonly<Record<string, readonly PlacementRow[]>> = TILES,
+  owners: ReadonlySet<string> = OWNS_GROUND_COVER,
+): (x: number, z: number) => boolean {
   if (!envOn) return () => false;
   const rects = Object.entries(tiles)
-    .filter(([name]) => !KEEP_MEADOW_BLADES.has(name))
+    .filter(([name]) => owners.has(name))
     .map(([, rows]) => groundCoverRect(rows))
     .filter((r): r is Rect => r !== null);
-  return (x, z) => rects.some((r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ);
+  return (x, z) => laneAmount(x, z) >= LANE_CLEAR || rects.some((r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ);
 }

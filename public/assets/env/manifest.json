@@ -118,13 +118,11 @@
    "scale": 10.023,
    "stretch": [
     1.115,
-    1.15
+    1.358
    ],
-   "capped": [
-    "depth 10.16 m, want 12 m, factor still needed 1.18"
-   ],
+   "proportion": true,
    "trisBefore": 50070,
-   "trisAfter": 4478,
+   "trisAfter": 4486,
    "mb": 0.27
   },
   "beehive-skep": {
@@ -156,16 +154,14 @@
    "id": "garden-bed-a",
    "scale": 1.18,
    "stretch": [
-    1.15,
-    1.15
+    1.305,
+    1.191
    ],
-   "capped": [
-    "width 0.88 m, want 2 m, factor still needed 2.27",
-    "depth 1.35 m, want 1.4 m, factor still needed 1.04"
-   ],
-   "trisBefore": 49988,
-   "trisAfter": 4456,
-   "mb": 0.25
+   "proportion": true,
+   "tile": 2,
+   "trisBefore": 99976,
+   "trisAfter": 4340,
+   "mb": 0.23
   },
   "haybale-a": {
    "id": "haybale-a",
@@ -252,30 +248,26 @@
    "id": "picket-fence",
    "scale": 1.942,
    "stretch": [
-    1.15,
-    0.85
+    0.815,
+    0.614
    ],
-   "capped": [
-    "width 2.40 m, want 3.4 m, factor still needed 1.42",
-    "depth 0.28 m, want 0.2 m, factor still needed 0.72"
-   ],
-   "trisBefore": 50000,
+   "proportion": true,
+   "tile": 2,
+   "trisBefore": 100000,
    "trisAfter": 4500,
-   "mb": 0.18
+   "mb": 0.2
   },
   "signpost-a": {
    "id": "signpost-a",
    "scale": 2.15,
    "stretch": [
     1.079,
-    0.85
+    0.292
    ],
-   "capped": [
-    "depth 1.16 m, want 0.4 m, factor still needed 0.34"
-   ],
+   "proportion": true,
    "trisBefore": 50000,
    "trisAfter": 4500,
-   "mb": 0.21
+   "mb": 0.22
   },
   "stable-a": {
    "id": "stable-a",
@@ -295,15 +287,14 @@
    "id": "stonewall-low",
    "scale": 1.708,
    "stretch": [
-    1.15,
+    0.978,
     0.95
    ],
-   "capped": [
-    "width 2.00 m, want 3.4 m, factor still needed 1.70"
-   ],
-   "trisBefore": 49496,
-   "trisAfter": 4714,
-   "mb": 0.29
+   "proportion": true,
+   "tile": 2,
+   "trisBefore": 98992,
+   "trisAfter": 4494,
+   "mb": 0.28
   },
   "trough-a": {
    "id": "trough-a",
@@ -323,13 +314,10 @@
    "id": "washing-line",
    "scale": 3.06,
    "stretch": [
-    1.15,
-    0.85
+    1.251,
+    0.412
    ],
-   "capped": [
-    "width 3.68 m, want 4 m, factor still needed 1.09",
-    "depth 0.62 m, want 0.3 m, factor still needed 0.48"
-   ],
+   "proportion": true,
    "trisBefore": 49994,
    "trisAfter": 4498,
    "mb": 0.23
@@ -338,15 +326,14 @@
    "id": "wattle-fence",
    "scale": 1.843,
    "stretch": [
-    1.15,
+    0.837,
     0.925
    ],
-   "capped": [
-    "width 2.33 m, want 3.4 m, factor still needed 1.46"
-   ],
-   "trisBefore": 50008,
-   "trisAfter": 5364,
-   "mb": 0.31
+   "proportion": true,
+   "tile": 2,
+   "trisBefore": 100016,
+   "trisAfter": 4490,
+   "mb": 0.25
   },
   "well-bucket-rope": {
    "id": "well-bucket-rope",

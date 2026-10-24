@@ -2,7 +2,17 @@
  "$comment": "Target sizes in metres (width x, depth z, height y) for environment objects, from assets/environment-needs-prompts.md. Used by src/env/scaleTable.ts and tools/env-pass/check-glb.mjs.",
  "tolerance": 0.15,
  "knightHeight": 1.8,
- "objects": {
+ "proportion": {
+  "$comment": "Ids ingested with an exact fit to the target size (tools/env-pass/ingest.mjs): uniform scale to the height, optional tile = repeat the model n times along x, then width/depth scaled to the target without the 15% cap. For artist models whose shape is far from the table (batch 2).",
+  "stonewall-low": { "tile": 2 },
+  "wattle-fence": { "tile": 2 },
+  "picket-fence": { "tile": 2 },
+  "garden-bed-a": { "tile": 2 },
+  "signpost-a": {},
+  "washing-line": {},
+  "barn-a": {}
+},
+  "objects": {
   "oak-a": {
    "w": 10.5,
    "d": 10.5,

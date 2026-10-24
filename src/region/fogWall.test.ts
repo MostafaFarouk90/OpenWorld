@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { heightAt } from '../terrain/heightfield';
-import { FOG_OPEN_FLAGS, fogOpen, fogColliderExtent, FOG_TRIGGER_ID, FOG_WALL_HALF_LENGTH, PUSH_BACK_PAST, PUSH_BACK_TO, buildFogWall, needsPushBack } from './fogWall';
+import { FOG_OPEN_FLAGS, fogOpen, fogColliderExtent, FOG_TRIGGER_ID, FOG_WALL_HALF_LENGTH, PUSH_BACK_PAST, PUSH_BACK_TO, buildFogWall, needsPushBack, veilAlpha, ASH_COUNT } from './fogWall';
 import { createFakeCore } from './testing/fakeCore';
 
 let physics: PhysicsWorld;
@@ -190,5 +190,19 @@ describe('needsPushBack', () => {
     [-Infinity, false],
   ])('x %s -> %s', (x, want) => {
     expect(needsPushBack(x, 1100)).toBe(want);
+  });
+});
+
+describe('veilAlpha (no hard-edged box)', () => {
+  it('is opaque in the middle and fades to nothing at both ends and the top', () => {
+    expect(veilAlpha(0.5, 0.3)).toBeGreaterThan(0.9);
+    expect(veilAlpha(0, 0.3)).toBe(0);
+    expect(veilAlpha(1, 0.3)).toBe(0);
+    expect(veilAlpha(0.5, 1)).toBe(0);
+    expect(veilAlpha(0.5, 0)).toBe(0);
+    expect(veilAlpha(0.1, 0.3)).toBeLessThan(veilAlpha(0.3, 0.3));
+  });
+  it('keeps the ash drift light (half the original 400 specks)', () => {
+    expect(ASH_COUNT).toBe(200);
   });
 });

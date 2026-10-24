@@ -364,3 +364,13 @@ describe('tuftColor', () => {
   });
 });
 
+
+describe('tuftColor on the B4 ash reach', () => {
+  it('drains the blades grey where the ground is grey and leaves the green half alone', () => {
+    const sat = ([r, g, b]: [number, number, number]) => Math.max(r, g, b) - Math.min(r, g, b);
+    const green = tuftColor(70, 1, 0.5);
+    expect(tuftColor(70, 1, 0.5, 0, 70)).toEqual(green);
+    const ash = tuftColor(50, 1, 0.5, 1060, -150);
+    expect(sat(ash)).toBeLessThan(sat(tuftColor(50, 1, 0.5)) * 0.4);
+  });
+});
