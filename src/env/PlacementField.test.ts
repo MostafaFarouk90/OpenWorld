@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ModelLibrary } from '../assets/swap/ModelLibrary';
-import { CLASS_RANGE, classOf, DENSITY, PlacementField, priority, type PlacementRow } from './PlacementField';
+import { CLASS_RANGE, classOf, DENSITY, GROUND_RANGE_SCALE, PlacementField, priority, type PlacementRow } from './PlacementField';
 import { placeholderGeometry, targetSize } from './placeholders';
 
 const flat = () => 2;
@@ -110,6 +110,21 @@ describe('PlacementField without a model source', () => {
     expect(field.batchCounts('ground').visible).toBe(0);
     field.update(300, 0);
     expect(field.batchCounts('ground').visible).toBeGreaterThan(0);
+    field.dispose();
+  });
+
+  it('draws ground cover out to 64 m at high, 56 m at medium and 40 m at low quality', async () => {
+    expect(CLASS_RANGE.ground).toBe(64);
+    expect(CLASS_RANGE.ground * GROUND_RANGE_SCALE.medium).toBe(56);
+    expect(CLASS_RANGE.ground * GROUND_RANGE_SCALE.low).toBe(40);
+    const field = new PlacementField(new ModelLibrary(undefined, () => undefined), flat);
+    await field.build([{ id: 'grass-clump-a', x: 60, z: 0 }]);
+    field.setDensity('high');
+    field.update(0, 0);
+    expect(field.batchCounts('ground').visible).toBe(1);
+    field.setDensity('medium');
+    field.update(0, 0);
+    expect(field.batchCounts('ground').visible).toBe(0);
     field.dispose();
   });
 

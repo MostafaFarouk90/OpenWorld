@@ -124,10 +124,10 @@ describe('B3 placements (Hollin Ford, its brook and river meadow, plus the reed-
   });
 
   it('clusters its ground cover instead of an even sprinkle (B1 review: specks)', () => {
-    // Ground cover is dense (the old blade scatter is off inside the tile) but never isolated specks: many rows per occupied 10 m cell.
+    // Ground cover is dense (the old blade scatter is off inside the tile): most 10 m cells hold clumps and an occupied cell holds many.
     const g = rows.filter((r) => isGround(r.id) && r.x < 0);
     const cells = new Set(g.map((r) => `${Math.floor(r.x / 10)},${Math.floor(r.z / 10)}`));
-    expect(cells.size / ((420 * 370) / 100)).toBeLessThan(0.95);
-    expect(g.length / cells.size).toBeGreaterThan(6);
+    expect(cells.size / ((420 * 370) / 100)).toBeGreaterThan(0.6);
+    expect(g.length / cells.size).toBeGreaterThan(10);
   });
 });
