@@ -34,7 +34,8 @@ describe('regionChips', () => {
   });
 
   it('a reserved region is closed even if a bad open list names it', () => {
-    const c = regionChips(['greyfen']).find((x) => x.id === 'greyfen')!;
+    // v0.7: the Greyfen and the Dragonspine are built; the Ashen Waste stays reserved (Act 4).
+    const c = regionChips(['ashen-waste']).find((x) => x.id === 'ashen-waste')!;
     expect(c.closed).toBe(true);
   });
 
@@ -79,5 +80,13 @@ describe('openRegionAt', () => {
     expect(openRegionAt(20000, 3000, [...open, 'cinderreach'])).toBe('cinderreach');
     expect(openRegionAt(NaN, 0, open)).toBeNull();
     expect(openRegionAt(12000, 8000, ['caldera' as RegionId])).toBeNull();
+  });
+});
+
+describe('region names (v0.7)', () => {
+  it('every region that is not reserved has a map name string', () => {
+    for (const id of REGION_IDS.filter((r) => !REGION_INFO[r].reserved)) {
+      expect(MAP_STRINGS_EN[`map.region.${id}` as keyof typeof MAP_STRINGS_EN], id).toBeTruthy();
+    }
   });
 });

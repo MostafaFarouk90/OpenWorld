@@ -20,14 +20,14 @@ describe('Ashblade tier 3 skill rows', () => {
     const tier2 = [SKILL.bleedingEmber, SKILL.ashCloud, SKILL.sparkDodge];
     for (const [id, req] of [[SKILL.twinFangs, tier2[0]], [SKILL.sootCloak, tier2[1]], [SKILL.wallSkitter, tier2[2]]] as const) {
       const row = ASHBLADE_SKILLS.find((s) => s.id === id)!;
-      expect([row.tier, row.cost, row.kind, row.available, row.requires]).toEqual([3, 2, 'passive', true, req]);
+      expect([row.tier, row.cost, row.kind, row.availableWhen, row.requires]).toEqual([3, 2, 'passive', true, req]);
     }
     registerClassSkills('ashblade', ASHBLADE_SKILLS);
     const { p } = makeProgression();
     p.setClass('ashblade');
     p.grantSkillPoint(20, 'test');
     for (const id of ['ashblade.cinderMark', 'ashblade.decoyFootprints', 'ashblade.phoenixRoll']) {
-      expect(p.learn(id)).toEqual({ ok: false, reason: 'unavailable' });
+      expect(p.learn(id)).toEqual({ ok: false, reason: 'master', textKey: 'hud.skills.act3' });
     }
     expect(p.learn(SKILL.twinFangs)).toEqual({ ok: false, reason: 'missing-prereq' });
     for (const id of [SKILL.backSlit, SKILL.bleedingEmber, SKILL.twinFangs]) expect(p.learn(id)).toEqual({ ok: true });

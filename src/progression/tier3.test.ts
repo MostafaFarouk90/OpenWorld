@@ -10,7 +10,7 @@ describe('Knight tier 3 (Act 2)', () => {
     const requires = { 'knight.oathward': 'knight.ironStance', 'knight.chargeOfTheHalvard': 'knight.flowingCuts', 'knight.squiresResolve': 'knight.bannerPlant' };
     for (const id of KNIGHT_TIER3) {
       const s = getSkill(id)!;
-      expect([s.tier, s.cost, s.available, s.requires]).toEqual([3, 2, true, requires[id as keyof typeof requires]]);
+      expect([s.tier, s.cost, s.availableWhen, s.requires]).toEqual([3, 2, true, requires[id as keyof typeof requires]]);
     }
   });
   it('the two actives carry their cooldown and Ember cost, the passive none', () => {
@@ -27,7 +27,7 @@ describe('Knight tier 3 (Act 2)', () => {
     const before = p.skillPoints;
     expect(p.learn('knight.oathward')).toMatchObject({ ok: true });
     expect(p.skillPoints).toBe(before - 2);
-    expect(p.learn('knight.bastionWall')).toEqual({ ok: false, reason: 'unavailable' });
+    expect(p.learn('knight.bastionWall')).toEqual({ ok: false, reason: 'master', textKey: 'hud.skills.act3' });
   });
   it('a respec refunds tier 3 in full', () => {
     const { p } = makeProgression();
@@ -41,6 +41,6 @@ describe('Knight tier 3 (Act 2)', () => {
     expect(p.skillPoints).toBe(start);
   });
   it('every tier 4 and 5 skill of every registered class is still unavailable', () => {
-    expect(SKILLS.filter((s) => s.tier >= 4).every((s) => !s.available)).toBe(true);
+    expect(SKILLS.filter((s) => s.tier >= 4).every((s) => s.availableWhen !== true)).toBe(true);
   });
 });

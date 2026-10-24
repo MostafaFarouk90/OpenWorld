@@ -13,7 +13,9 @@ export type TravelFailure =
   | 'dialogue'
   | 'dead'
   | 'busy'
-  | 'terrain-not-ready';
+  | 'terrain-not-ready'
+  /** v0.7: gliding, seated on the ferry or diving (MOVEMENT_MODE_RULES). */
+  | 'movement';
 
 export type TravelResult = { ok: true } | { ok: false; reason: TravelFailure };
 

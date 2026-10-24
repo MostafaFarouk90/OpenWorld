@@ -3,7 +3,8 @@ import { CUTPURSE } from './cutpurse/tuning';
 import { ENEMY_DEFS } from './defs';
 import { FOE_DEFS, isFoeKind } from './foes/defs';
 import type { FoeDef } from './foes/types';
-import { DEFAULT_BAND, bandForRegion, enemyLevel } from './level';
+import { areaAt, AREA_BANDS, type AreaId } from '../region/areas';
+import { ACT3_BLOCKS, DEFAULT_BAND, bandForRegion, blockBaseLevel, enemyLevel, summitLevel, type Act3BlockId } from './level';
 import type { ActorId, AnchorLike, AnchorsPort, GatesPort } from './ports';
 import { LEVEL, WORLD_AI } from './tuning';
 import type { EnemyDef, LevelBand, SpawnOptions, SpawnerDef } from './types';
@@ -35,6 +36,8 @@ export interface SpawnerRegistryDeps {
   /** Flag gates for `{ flag, until }` groups; absent (headless) means every gate counts as open. */
   gates?: GatesPort;
   rng?: () => number;
+  /** v0.7: the live player level, read at spawn time by Act 3 block and summit spawners (EnemyManager wires progression). */
+  playerLevel?: () => number | undefined;
 }
 
 /**
@@ -141,7 +144,7 @@ export class SpawnerRegistry {
       if (slots[slot] !== null || (onlySlot !== undefined && slot !== onlySlot)) continue;
       const spentKey = `${id}#${slot}`;
       if (this.spent.has(spentKey) || this.dead.has(spentKey)) continue;
-      const level = this.levelFor(band);
+      const level = this.levelFor(def, band, anchor.position);
       const own = def.memberAnchors?.[slot] ? this.deps.anchors.find(def.memberAnchors[slot]) : undefined;
       if (def.memberAnchors?.[slot] && !own) {
         this.warnOnce(`member:${id}#${slot}`, `spawners: spawner '${id}' member ${slot} has no anchor '${def.memberAnchors[slot]}'; using a ring slot`);
@@ -533,12 +536,29 @@ export class SpawnerRegistry {
     this.warmthTier = clampTier(w);
   }
 
-  lockBlockLevel(blockId: string, level: number): void {
+  /**
+   * Locks a block's base level L (design 5.9; Q5: fixed for good). The first lock is kept: a second lock returns the kept
+   * level, with a warning when it names a different value. A load restores locks through `load`, never through here.
+   * Returns the level in force, or undefined for a non-finite first lock.
+   */
+  lockBlockLevel(blockId: string, level: number): number | undefined {
+    const kept = this.lockedBlockLevels[blockId];
+    if (kept !== undefined) {
+      if (level !== kept) this.deps.warn(`spawners: block '${blockId}' is already locked at ${kept}; ignoring ${String(level)}`);
+      return kept;
+    }
     if (typeof level !== 'number' || !Number.isFinite(level)) {
       this.deps.warn(`spawners: ignoring non-finite locked level for '${blockId}'`);
-      return;
+      return undefined;
     }
     this.lockedBlockLevels[blockId] = Math.min(LEVEL.cap, Math.max(1, Math.round(level)));
+    return this.lockedBlockLevels[blockId];
+  }
+
+  /** v0.7: the top of a block's levels, L + span (D05's boss spawns at the Greyfen's L + 5); undefined before the lock. */
+  blockTopLevel(block: Act3BlockId): number | undefined {
+    const L = this.lockedBlockLevels[block];
+    return L === undefined ? undefined : Math.min(LEVEL.cap, L + ACT3_BLOCKS[block].span);
   }
 
   getWarmthTier(): number {
@@ -585,13 +605,67 @@ export class SpawnerRegistry {
     return { min: Math.max(1, band.min + off), max: Math.max(1, band.max + off) };
   }
 
-  private levelFor(band: LevelBand): number {
+  /**
+   * A member's level, fixed at spawn (nothing re-levels a live enemy). v0.7: an Act 3 block spawner rolls the block span
+   * on its saved lock, or before the lock on the live preview; a summit spawner rolls the design's band and caps it at
+   * the live player level + SUMMIT_CAP_ABOVE_PLAYER (Q9). Everything else rolls its band as before.
+   */
+  private levelFor(def: SpawnerDef, band: LevelBand, at?: { x: number; z: number }): number {
     try {
-      return enemyLevel(band, { roll: this.rng() }, (m) => this.deps.warn(m));
+      const roll = this.rng();
+      const block = def.block;
+      if (block) {
+        const span = ACT3_BLOCKS[block]?.span;
+        if (span === undefined) {
+          this.warnOnce(`block:${def.id}`, `spawners: spawner '${def.id}' names unknown block '${String(block)}'; using its band`);
+        } else {
+          const L = this.lockedBlockLevels[block] ?? this.blockPreview(block);
+          if (L !== undefined) return enemyLevel(band, { lockedLevel: L, span: this.spanOf(def, span), roll }, (m) => this.deps.warn(m));
+          this.warnOnce(`preview:${def.id}`, `spawners: no player level for block spawner '${def.id}'; using its band`);
+        }
+      }
+      const area = this.areaOf(def, at);
+      if (area === 'dragonspine-summit') {
+        const p = this.livePlayerLevel();
+        if (p === undefined) this.warnOnce(`summit-p:${def.id}`, `spawners: no player level for summit spawner '${def.id}'; the summit cap is off`);
+        return summitLevel(AREA_BANDS[area].band, roll, p);
+      }
+      if (area) return enemyLevel(AREA_BANDS[area].band, { roll }, (m) => this.deps.warn(m));
+      return enemyLevel(band, { roll }, (m) => this.deps.warn(m));
     } catch (e) {
       this.warnOnce(`band:${JSON.stringify(band)}`, `spawners: invalid band ${JSON.stringify(band)}; using default (${String(e)})`);
       return enemyLevel(DEFAULT_BAND);
     }
+  }
+
+  /** The area a spawner rolls in: its own `area`, else (for a band naming a region with areas) the area of its anchor. */
+  private areaOf(def: SpawnerDef, at?: { x: number; z: number }): AreaId | null {
+    const found = at && typeof def.band === 'string' && (def.band === 'greyfen' || def.band === 'dragonspine') ? areaAt(at.x, at.z) : null;
+    if (def.area) {
+      if (found && found !== def.area) this.warnOnce(`area:${def.id}`, `spawners: '${def.id}' names area '${def.area}' but its anchor is in '${found}'; using '${def.area}'`);
+      return def.area;
+    }
+    return found;
+  }
+
+  private livePlayerLevel(): number | undefined {
+    const p = this.deps.playerLevel?.();
+    return typeof p === 'number' && Number.isFinite(p) && p >= 1 ? p : undefined;
+  }
+
+  /** v0.7: a block spawner's own span (`blockSpan`, a whole number 0..the block span), else the block span. */
+  private spanOf(def: SpawnerDef, span: number): number {
+    const own = def.blockSpan;
+    if (own === undefined) return span;
+    if (Number.isInteger(own) && own >= 0 && own <= span) return own;
+    this.warnOnce(`blockSpan:${def.id}`, `spawners: spawner '${def.id}' blockSpan ${String(own)} is not a whole number 0..${span}; using ${span}`);
+    return span;
+  }
+
+  /** `warmth.preview(block)`: the block's L if it were locked now; undefined without a player level. */
+  blockPreview(block: Act3BlockId): number | undefined {
+    const p = this.livePlayerLevel();
+    return p === undefined ? undefined : blockBaseLevel(block, this.warmthTier, p);
   }
 
   private resolvePatrol(def: SpawnerDef): AnchorLike[] {

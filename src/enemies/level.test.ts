@@ -22,9 +22,10 @@ describe('enemyLevel', () => {
     expect(() => enemyLevel({ min: 1, max: Infinity })).toThrow(RangeError);
     expect(() => enemyLevel({ min: 0, max: 2 })).toThrow(RangeError);
   });
-  it('lockedLevel wins and is clamped to 1..cap', () => {
+  it('lockedLevel is the base (v0.7: span 0 unless given, so exactly L) and is clamped to 1..cap', () => {
     const block = { id: 'a', offset: 3 };
     expect(enemyLevel(B, { lockedLevel: 12, block, warmthTier: 3, playerLevel: 10, roll: 1 })).toBe(12);
+    expect(enemyLevel(B, { lockedLevel: 12, block, warmthTier: 3, playerLevel: 10, roll: 1, span: 5 })).toBe(17);
     expect(enemyLevel(B, { lockedLevel: 99 })).toBe(40);
     expect(enemyLevel(B, { lockedLevel: -4 })).toBe(1);
   });

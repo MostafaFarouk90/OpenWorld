@@ -1,13 +1,14 @@
 // Act 2 world data (thread A1, contracts v0.6 item 4): the road corridors that join Harrowmark, Cinderreach and Oldsmoke
 // to the open area, the fog wall faces where roads cross closed edges, their toast strings and the road strips grass
-// keeps off. Plain data: the act2-world plugin registers it. Every condition is a region's own `openWhen`, so the Phase C
-// hold (`PHASE_HOLDS`) and A16's retirement of it apply to the corridors and walls with no edit here.
+// keeps off. Plain data: the act2-world plugin registers it. Every condition is a region's own `openWhen`, so a region's
+// phase hold (`PHASE_HOLDS`, per region since v0.7; Oldsmoke's was retired in Phase D) applies with no edit here.
 import type { FlagCondition } from '../../core/flagCondition';
 import { CINDERREACH_ROADS, CINDER_ROAD_POINTS, type RoadPolyline } from '../../terrain/shape/cinderRoad';
 import { OLDSMOKE_PASS_POINTS, OLDSMOKE_ROADS } from '../../terrain/shape/oldsmokePass';
 import { roadPoint } from '../../terrain/shape/roadPoint';
 import type { CorridorDef } from '../containment';
 import type { FogWallDef } from '../fogWall';
+import { ACT3_FOG_STRINGS_EN, ACT3_SHIPPED_FACE_RULES } from '../act3Fog';
 import { REGION_INFO } from '../regions';
 
 /** Never open: the faces toward the regions of later acts (the same never-set key the registry uses). */
@@ -72,6 +73,8 @@ export const ACT2_WORLD_STRINGS_EN: Record<string, string> = {
   [FOG_TOAST_CINDER_ROAD]: 'The ash-fall over the Cinder Road is too thick to cross. It will not lift while Harrowmark still needs you.',
   [FOG_TOAST_OLDSMOKE_PASS]: "Ash pours down the pass from Oldsmoke. Scorchhold's hunters hold this road, and nobody passes while the fort stands.",
   [FOG_TOAST_SHUT]: 'The ash-fall here is a wall. Whatever lies beyond will have to wait.',
+  // v0.7: the Act 3 fog toasts ride with the Act 2 world strings so the two shipped faces have their text.
+  ...ACT3_FOG_STRINGS_EN,
 };
 
 /**
@@ -84,9 +87,10 @@ export const ACT2_FOG_WALLS: readonly FogWallDef[] = [
   // Across the pass road at Cinderreach's north edge (z 5500): Oldsmoke's own condition, with the Phase C hold.
   { id: 'fog.oldsmoke-pass', anchorId: 'cinderroad.fog.oldsmoke-pass', axis: 'z', halfLength: 150, blockedSide: 1, openWhen: REGION_INFO.oldsmoke.openWhen, toastKey: FOG_TOAST_OLDSMOKE_PASS, pushBackTo: 1, cullBeyond: WALL_CULL },
   // Shut faces where later acts' roads will cross.
-  { id: 'fog.greyfen', anchorId: 'cinderroad.fog.greyfen', axis: 'z', halfLength: 150, blockedSide: 1, openWhen: NEVER, toastKey: FOG_TOAST_SHUT, pushBackTo: 1, cullBeyond: WALL_CULL },
+  // v0.7: the Greyfen and Dragonspine faces take Act 3's conditions and toasts (act3Fog.ts).
+  { id: 'fog.greyfen', anchorId: 'cinderroad.fog.greyfen', axis: 'z', halfLength: 150, blockedSide: 1, ...ACT3_SHIPPED_FACE_RULES['fog.greyfen'], pushBackTo: 1, cullBeyond: WALL_CULL },
   { id: 'fog.ashen-waste', anchorId: 'cinderroad.fog.ashen-waste', axis: 'z', halfLength: 150, blockedSide: 1, openWhen: NEVER, toastKey: FOG_TOAST_SHUT, pushBackTo: 1, cullBeyond: WALL_CULL },
-  { id: 'fog.dragonspine', anchorId: 'cinderroad.fog.dragonspine', axis: 'x', halfLength: 500, blockedSide: -1, openWhen: NEVER, toastKey: FOG_TOAST_SHUT, pushBackTo: 1, cullBeyond: WALL_CULL },
+  { id: 'fog.dragonspine', anchorId: 'cinderroad.fog.dragonspine', axis: 'x', halfLength: 500, blockedSide: -1, ...ACT3_SHIPPED_FACE_RULES['fog.dragonspine'], pushBackTo: 1, cullBeyond: WALL_CULL },
   { id: 'fog.caldera', anchorId: 'cinderroad.fog.caldera', axis: 'x', halfLength: 150, blockedSide: -1, openWhen: NEVER, toastKey: FOG_TOAST_SHUT, pushBackTo: 1, cullBeyond: WALL_CULL },
 ];
 

@@ -161,6 +161,8 @@ export default {
         playerFeet: () => ctx.player.feet,
         setNpcHidden: (id, h) => void npcs()?.setHidden?.(id, h),
         keepAlliesOff: (id) => ctx.services.get('allyEngagement')?.exclude?.(id) ?? (() => {}),
+        // v0.7 trial v2: the shared stun on a yield.
+        status: () => ctx.services.get('status'),
       });
       const tr = trials;
       ctx.services.provide('trials', tr);

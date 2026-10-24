@@ -8,7 +8,7 @@ import {
   type ProgressionService,
 } from '../hud/ports';
 import { classStats, type ClassBaseStats } from './classStats';
-import { DEFAULT_CLASS_ID, getSkill, SKILLS, type SkillDef } from './skills';
+import { DEFAULT_CLASS_ID, getSkill, SKILLS, skillLearnable, type SkillDef } from './skills';
 import {
   BAR_SLOTS,
   LEVEL_CAP,
@@ -45,6 +45,8 @@ export interface ProgressionDeps {
   gold?: () => GoldPort | undefined;
   /** Told the active class row whenever it is (re)applied; the plugin forwards the Ember maximum to the spells. */
   onClassStats?: (row: Readonly<ClassBaseStats>) => void;
+  /** The `killXpRegionFactor` service (v0.7 item 27); without it every kill pays the base value. */
+  killXpRegionFactor?: () => { factor(regionId: string | null): number } | undefined;
 }
 
 export type RespecQuote = { free: boolean; gold: number; canAfford: boolean };
@@ -60,12 +62,16 @@ export interface KillInfo {
   team: string;
   level: number;
   killerId: string | null | undefined;
+  /** v0.7 item 27: the region of the killed actor's position (`regionAt(x, z)?.id`), null or absent for none. */
+  regionId?: string | null;
 }
 
 export interface MercyInfo {
   actorId: string;
   kind: string;
   level: number;
+  /** v0.7 item 27: the region of the creature's position, null or absent for none. */
+  regionId?: string | null;
 }
 
 export interface ProgressionSave {
@@ -285,15 +291,25 @@ export class Progression implements ProgressionService {
     if (info.killerId !== 'player' || info.team !== 'hostile') return 0;
     if (this.killXpPaused || this.killed.has(info.actorId)) return 0;
     this.killed.add(info.actorId);
-    const value = killXp(info.kind, info.level, this.level);
+    const value = killXp(info.kind, info.level, this.level, this.regionFactor(info.regionId));
     const paid = this.mercy.get(info.actorId)?.paid ?? 0;
     return this.grantXp(Math.max(0, value - paid), `kill.${info.kind}`);
+  }
+
+  /** The region factor of a kill (1 without the port, without a region, or when the port throws). */
+  private regionFactor(regionId: string | null | undefined): number {
+    try {
+      return this.deps.killXpRegionFactor?.()?.factor(regionId ?? null) ?? 1;
+    } catch (e) {
+      this.logger.warn(`progression: killXpRegionFactor threw (${String(e)}); using 1`);
+      return 1;
+    }
   }
 
   /** Pays 60% (floor) of the kill value, once per creature. */
   onMercy(info: MercyInfo): number {
     if (this.killXpPaused || this.mercy.has(info.actorId) || this.killed.has(info.actorId)) return 0;
-    const value = killXp(info.kind, info.level, this.level);
+    const value = killXp(info.kind, info.level, this.level, this.regionFactor(info.regionId));
     const pay = Math.floor(value * MERCY_XP_FRACTION);
     this.mercy.set(info.actorId, { paid: pay, revoked: false });
     return this.grantXp(pay, `mercy.${info.kind}`);
@@ -305,11 +321,23 @@ export class Progression implements ProgressionService {
     if (entry) entry.revoked = true;
   }
 
+  /** The world-state flags the learn conditions read (the plugin's flag store); null in bare tests. */
+  private flagReader(): { getFlag(key: string): unknown } | null {
+    const f = this.deps.flags;
+    return f ? { getFlag: (k) => f.get(k) } : null;
+  }
+
   canLearn(id: string): LearnCheck {
     const skill = getSkill(id);
     if (!skill) return { ok: false, reason: 'unknown-skill' };
     if (this.learnedIds.includes(id)) return { ok: false, reason: 'already-learned' };
-    if (!skill.available || skill.classId !== (this.chosenClass ?? DEFAULT_CLASS_ID)) return { ok: false, reason: 'unavailable' };
+    if (skill.classId !== (this.chosenClass ?? DEFAULT_CLASS_ID)) return { ok: false, reason: 'unavailable' };
+    if (!skillLearnable(skill, this.flagReader())) {
+      // v0.7: tiers 4 and 5 wait for Act 3 and the class master's book; the refusal names the master once Act 3 is open.
+      if (skill.tier < 4) return { ok: false, reason: 'unavailable' };
+      const act3 = Boolean(this.flagReader()?.getFlag('story.gate.a3'));
+      return { ok: false, reason: 'master', textKey: act3 ? `hud.skills.master.${skill.classId}` : 'hud.skills.act3' };
+    }
     if (skill.requires && !this.learnedIds.includes(skill.requires)) return { ok: false, reason: 'missing-prereq' };
     if (this.excluded(skill)) return { ok: false, reason: 'excluded' };
     if (this.skillPoints < skill.cost) return { ok: false, reason: 'no-points' };
@@ -402,7 +430,7 @@ export class Progression implements ProgressionService {
     const points = this.skillPoints;
     let cheapest: SkillDef | null = null;
     for (const s of SKILLS) {
-      if (!s.available || s.classId !== (this.chosenClass ?? DEFAULT_CLASS_ID) || this.learnedIds.includes(s.id)) continue;
+      if (s.classId !== (this.chosenClass ?? DEFAULT_CLASS_ID) || this.learnedIds.includes(s.id) || !skillLearnable(s, this.flagReader())) continue;
       if (s.requires && !this.learnedIds.includes(s.requires)) continue;
       if (this.excluded(s)) continue;
       if (!cheapest || s.cost < cheapest.cost) cheapest = s;
@@ -453,7 +481,9 @@ export class Progression implements ProgressionService {
       for (const id of d.learned) {
         if (typeof id !== 'string' || this.learnedIds.includes(id)) continue;
         const skill = getSkill(id);
-        if (!skill || !skill.available) continue;
+        // v0.7 (item 10): the learn condition is never read here, so a tier 4 or 5 skill loads even when its flags are
+        // missing or load after progression; `requires`, exclusivity and the point cap below still hold.
+        if (!skill) continue;
         if (skill.requires && !this.learnedIds.includes(skill.requires)) continue;
         if (this.excluded(skill)) continue;
         this.learnedIds.push(id);

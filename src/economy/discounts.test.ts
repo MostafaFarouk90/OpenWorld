@@ -86,3 +86,24 @@ describe('Act 2 vendors', () => {
     expect(checked).toBeGreaterThan(0);
   });
 });
+
+describe('Act 3 vendors (v0.7 item 16)', () => {
+  it('are in the total record with empty stock for now', () => {
+    for (const id of ['leofa', 'dudda', 'gytha', 'thorgar', 'eadgyth', 'ansgar', 'ysmeryth'] as const) {
+      expect(VENDORS[id]).toMatchObject({ id, lines: [] });
+      expect(VENDOR_IDS).toContain(id);
+    }
+  });
+
+  it('a story.r15.choice row applies to thorgar only when the value matches', () => {
+    const table: VendorDiscount[] = [{ flag: 'story.r15.choice', value: 'hut', vendors: ['thorgar'], percent: 10 }];
+    expect(discountPercent('thorgar', (k) => ({ 'story.r15.choice': 'hut' })[k as 'story.r15.choice'], table)).toBe(10);
+    expect(discountPercent('thorgar', () => 'mere', table)).toBe(0);
+    expect(discountPercent('thorgar', () => undefined, table)).toBe(0);
+    expect(discountPercent('leofa', () => 'hut', table)).toBe(0);
+  });
+
+  it('ships no Act 3 discount rows yet', () => {
+    expect(VENDOR_DISCOUNTS.some((d) => d.flag === 'story.r15.choice')).toBe(false);
+  });
+});

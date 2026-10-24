@@ -16,6 +16,10 @@ export type ShrineId = (typeof SHRINE_IDS)[number];
 /** Known shrine positions for map markers (world layout section 4); the rest arrive with their regions. */
 export const SHRINE_POSITIONS: Readonly<Partial<Record<ShrineId, { x: number; z: number }>>> = {
   quenchstone: { x: 900, z: -170 },
+  // Act 3 (v0.7 item 17; engine metres, plan 3.5). K1 owns the final places and may move them here.
+  'hathrens-mere': { x: 3000, z: 12050 },
+  'last-anvil': { x: 14700, z: 13900 },
+  'wyrms-hearth': { x: 13600, z: 15600 },
 };
 
 export interface ForgeMark {

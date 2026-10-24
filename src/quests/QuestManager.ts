@@ -21,6 +21,8 @@ export interface QuestManagerOpts {
   inventory?: () => InventoryPort | undefined;
   npcs?: () => NpcPort | undefined;
   enemies?: () => EnemiesPort | undefined;
+  /** v0.7 item 9: the `questRewardScale` service; quest `rewards` XP and gold are multiplied by `scale(questId)`. */
+  rewardScale?: () => { scale(questId: string): number } | undefined;
   warn?(m: string): void;
 }
 
@@ -168,7 +170,7 @@ export class QuestManager implements QuestReader, QuestActions {
     rt.state = 'completed'; // before effects: a re-entrant complete is a no-op
     this.removeActive(id);
     this.runEffects(def.onComplete, id);
-    this.runEffects(def.rewards, id);
+    this.runEffects(def.rewards, id, true);
     this.emit('quest.completed', { questId: id });
     this.notify();
     return true;
@@ -426,7 +428,7 @@ export class QuestManager implements QuestReader, QuestActions {
     }
   }
 
-  private runEffects(effects: Effect[] | undefined, questId: string): void {
+  private runEffects(effects: Effect[] | undefined, questId: string, scaleRewards = false): void {
     if (!effects || effects.length === 0) return;
     try {
       const runner = createEffectRunner({
@@ -439,10 +441,21 @@ export class QuestManager implements QuestReader, QuestActions {
         enemies: this.opts.enemies,
         sourceId: `quest:${questId}`,
         warn: this.opts.warn,
+        rewardScale: scaleRewards ? () => this.rewardScaleFor(questId) : undefined,
       });
       runner.run(effects);
     } catch (e) {
       this.warn(`quests: effects threw: ${String(e)}`);
+    }
+  }
+
+  private rewardScaleFor(questId: string): number {
+    try {
+      const k = this.opts.rewardScale?.()?.scale(questId) ?? 1;
+      return typeof k === 'number' && Number.isFinite(k) && k >= 0 ? k : 1;
+    } catch (e) {
+      this.warn(`quests: reward scale for "${questId}" threw: ${String(e)}`);
+      return 1;
     }
   }
 

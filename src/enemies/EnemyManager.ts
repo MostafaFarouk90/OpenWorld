@@ -18,7 +18,7 @@ import { isFoeKind } from './foes/defs';
 import type { Foe } from './foes/Foe';
 import { FoeManager } from './foes/FoeManager';
 import type { FoeDef, FoeEnd, RaiseWraithRequest } from './foes/types';
-import { scaleStats } from './level';
+import { scaleStats, type Act3BlockId } from './level';
 import { CalmCycle, calmOptionLabel, calmOptions, calmPayable, type CalmOption } from './calm';
 import { bossMercyInteractableId, makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyInteractableId, mercyTargets, nextPulseId, type BossMercySubject, type MercyEnemyDef, type MercySubject } from './mercy';
 import { MercyTally, type TallyRow } from './mercyTally';
@@ -51,7 +51,14 @@ export interface EnemiesService {
   setMercyUnlocked(verb: UnlockVerb, on: boolean): void;
   mercyUnlocked(verb: UnlockVerb): boolean;
   setWarmthTier(w: number): void;
-  lockBlockLevel(blockId: string, level: number): void;
+  /** v0.7: the first lock is kept (Q5); returns the level in force. */
+  lockBlockLevel(blockId: string, level: number): number | undefined;
+  /** v0.7: a block's saved base level L, or undefined before the lock. */
+  blockLevel(block: Act3BlockId): number | undefined;
+  /** v0.7: L if the block were locked now (live Warmth Tier and player level); undefined without a player level. */
+  blockPreview(block: Act3BlockId): number | undefined;
+  /** v0.7: L + span (D05's boss at the Greyfen's L + 5); undefined before the lock. */
+  blockTopLevel(block: Act3BlockId): number | undefined;
   /** Mercies and kills per creature kind, for the codex (thread 8). */
   mercyTally(): Record<string, TallyRow>;
   /** The living member in a spawner's `leaderSlot`, or null. */
@@ -136,6 +143,7 @@ export class EnemyManager {
       despawn: (id) => (this.enemies.get(id) ?? this.foes.get(id))?.despawn(),
       gates: host.gates,
       rng: this.rng,
+      playerLevel: () => host.services.get('progression')?.level,
     });
     this.foes = new FoeManager({
       host,
@@ -184,6 +192,9 @@ export class EnemyManager {
     mercyUnlocked: (verb) => this.mercyUnlocked(verb),
     setWarmthTier: (w) => this.spawners.setWarmthTier(w),
     lockBlockLevel: (b, l) => this.spawners.lockBlockLevel(b, l),
+    blockLevel: (b) => this.spawners.getLockedBlockLevel(b),
+    blockPreview: (b) => this.spawners.blockPreview(b),
+    blockTopLevel: (b) => this.spawners.blockTopLevel(b),
     mercyTally: () => this.tally.snapshot(),
     packLeader: (id) => this.packLeaderId(id),
     push: (id, p) => this.pushEnemy(id, p),

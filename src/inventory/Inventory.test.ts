@@ -232,7 +232,7 @@ describe('reset', () => {
 describe('persistence', () => {
   it('has a key and version', () => {
     expect(Inventory.key).toBe('inventory');
-    expect(Inventory.version).toBe(2);
+    expect(Inventory.version).toBe(3);
   });
 
   it('round trips', () => {
@@ -320,7 +320,7 @@ describe('persistence', () => {
   });
 
   it('falls back to defaults for an unsupported version', () => {
-    inv.load({ items: { 'healing-flask': 1 }, equipped: {} }, 3);
+    inv.load({ items: { 'healing-flask': 1 }, equipped: {} }, 4);
     expect(inv.serialize().items).toEqual(NEW_GAME_KIT.items);
     expect(warn).toHaveBeenCalled();
   });
@@ -463,5 +463,78 @@ describe('gear (v2)', () => {
       checked++;
     }
     expect(checked).toBeGreaterThan(3);
+  });
+});
+
+describe('v3 sockets (v0.7 item 11)', () => {
+  const mk = () => new Inventory({ emit: () => {}, logger: { warn } });
+  const gem = (slot: number, name = 'ember') => ({ slot, shardId: `shard-gem.${name}` });
+
+  it('writes sockets only when non-empty and round trips them at version 3', () => {
+    inv.add('practice-sword', 1);
+    expect(inv.serialize().sockets).toBeUndefined();
+    expect(inv.setSockets('practice-sword', [gem(1, 'frost'), gem(0)])).toBe(true);
+    const saved = JSON.parse(JSON.stringify(inv.serialize()));
+    expect(saved.sockets).toEqual({ 'practice-sword': [gem(0), gem(1, 'frost')] });
+    const b = mk();
+    b.load(saved, 3);
+    expect(b.socketsOf('practice-sword')).toEqual([gem(0), gem(1, 'frost')]);
+    expect(b.setSockets('practice-sword', [])).toBe(true);
+    expect(b.serialize().sockets).toBeUndefined();
+  });
+
+  it('v1 and v2 fixtures load exactly as before, ignoring a stray sockets field', () => {
+    const v1 = { items: { 'practice-sword': 1 }, equipped: {}, unknown: {}, gold: 3, sockets: { 'practice-sword': [gem(0)] } };
+    const a = mk();
+    a.load(v1, 1);
+    expect(a.socketsOf('practice-sword')).toEqual([]);
+    expect(a.serialize()).toEqual({ items: { 'practice-sword': 1 }, equipped: {}, unknown: {}, gold: 3 });
+    const b = mk();
+    b.load({ ...v1, gear: { 'practice-sword': { temper: 2 } } }, 2);
+    expect(b.gear('practice-sword').temper).toBe(2);
+    expect(b.socketsOf('practice-sword')).toEqual([]);
+    expect(b.serialize().sockets).toBeUndefined();
+  });
+
+  it('drops bad v3 records without failing the load', () => {
+    inv.load({
+      items: { 'practice-sword': 1, 'healing-flask': 1 }, equipped: {},
+      sockets: {
+        'practice-sword': [gem(0), { slot: 2, shardId: 'shard-gem.x' }],
+        'healing-flask': 'bad', nope: [gem(0)],
+      },
+    }, 3);
+    expect(inv.serialize().sockets).toBeUndefined();
+    expect(warn).toHaveBeenCalled();
+    inv.load({ items: { 'practice-sword': 1 }, equipped: {}, sockets: { 'practice-sword': [gem(0), gem(0, 'b')] } }, 3);
+    expect(inv.socketsOf('practice-sword')).toEqual([]);
+    inv.load({ items: { 'practice-sword': 1 }, equipped: {}, sockets: { 'practice-sword': [{ slot: 0, shardId: 'ember-shard' }] } }, 3);
+    expect(inv.socketsOf('practice-sword')).toEqual([]);
+    inv.load({ items: { 'practice-sword': 1 }, equipped: {}, sockets: 'bad' }, 3);
+    expect(inv.serialize().sockets).toBeUndefined();
+  });
+
+  it('setSockets refuses an unowned item or a bad entry', () => {
+    inv.add('practice-sword', 1);
+    expect(inv.setSockets('stonefold-greataxe', [gem(0)])).toBe(false);
+    expect(inv.setSockets('practice-sword', [gem(0), gem(0)])).toBe(false);
+    expect(inv.setSockets('practice-sword', [{ slot: 0, shardId: 'ember-shard' }])).toBe(false);
+    expect(inv.socketsOf('practice-sword')).toEqual([]);
+  });
+
+  it('removing the last copy drops its sockets; a copy bought again starts empty (no duplicated shard-gems)', () => {
+    inv.add('practice-sword', 1);
+    expect(inv.setSockets('practice-sword', [gem(0)])).toBe(true);
+    expect(inv.remove('practice-sword', 1)).toBe(true);
+    expect(inv.serialize().sockets).toBeUndefined();
+    inv.add('practice-sword', 1);
+    expect(inv.socketsOf('practice-sword')).toEqual([]);
+  });
+
+  it('reset clears sockets', () => {
+    inv.add('practice-sword', 1);
+    inv.setSockets('practice-sword', [gem(0)]);
+    inv.reset(STARTER_KIT);
+    expect(inv.socketsOf('practice-sword')).toEqual([]);
   });
 });

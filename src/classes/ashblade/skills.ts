@@ -1,5 +1,5 @@
 import type { SkillDef } from '../../progression/skills';
-import { TIER_COST } from '../../progression/skills';
+import { TIER_COST, masterBookGate } from '../../progression/skills';
 import { ASH_CLOUD, CLASS_ID, SKILL } from './tuning';
 
 export type AshbladeBranch = 'duskedge' | 'smokecloak' | 'flicker';
@@ -49,7 +49,7 @@ function build(): SkillDef[] {
         kind,
         nameKey: `skill.${id}.name`,
         descKey: `skill.${id}.desc`,
-        available: live,
+        availableWhen: tier <= 3 ? live : masterBookGate(CLASS_ID),
       };
       if (i > 0) def.requires = `${CLASS_ID}.${TREE[branch][i - 1][0]}`;
       if (tier === 5) {

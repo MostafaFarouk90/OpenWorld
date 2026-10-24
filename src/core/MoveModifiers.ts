@@ -8,6 +8,8 @@ export interface MoveModifier {
   lockFacing?: boolean;
   /** No gravity and no move at all (kneeling, cutscenes, the fast-travel wait). */
   freeze?: boolean;
+  /** v0.7: no sprint while active (wading water, a hauled sled); walking speed and the dodge are kept. */
+  noSprint?: boolean;
   /** These actions report nothing while the modifier is active. */
   lockActions?: readonly Action[];
 }
@@ -41,6 +43,7 @@ export class MoveModifiers {
     let lockMove = false;
     let lockFacing = false;
     let freeze = false;
+    let noSprint = false;
     for (const m of this.active.values()) {
       if (m.speedScale !== undefined) {
         speedScale *= Number.isFinite(m.speedScale) ? Math.min(MAX_SPEED_SCALE, Math.max(0, m.speedScale)) : 1;
@@ -48,8 +51,12 @@ export class MoveModifiers {
       lockMove ||= m.lockMove === true;
       lockFacing ||= m.lockFacing === true;
       freeze ||= m.freeze === true;
+      noSprint ||= m.noSprint === true;
     }
-    return { speedScale: Math.min(MAX_SPEED_SCALE, speedScale), lockMove, lockFacing, freeze };
+    const out: MoveModifierState = { speedScale: Math.min(MAX_SPEED_SCALE, speedScale), lockMove, lockFacing, freeze };
+    // Only set while true, so the shipped state shape is unchanged when nothing blocks the sprint.
+    if (noSprint) out.noSprint = true;
+    return out;
   }
 
   isActionLocked(action: Action): boolean {

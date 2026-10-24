@@ -1,5 +1,6 @@
 import '../physics/platforms';
 import type { GamePlugin } from '../core/plugins';
+import type { MovementModeService } from '../movement/types';
 import { heightAt } from '../terrain/heightfield';
 import { groundDistance } from '../waystones/ground';
 import '../waystones/service';
@@ -59,6 +60,16 @@ export function sanitizePosition(data: unknown): Grounded | null {
   return { x: nx, y: Math.max(y as number, ground) + 0.05, z: nz, yaw: yaw as number };
 }
 
+/** The position a save stores: the mode's safe point in a safePoint mode, else the last grounded position (never a refusal). */
+export function saveSafePoint(
+  mode: Pick<MovementModeService, 'rule' | 'safePoint'> | undefined,
+  grounded: Grounded | null,
+): Grounded | undefined {
+  const safe = mode?.rule().save === 'safePoint' ? mode.safePoint : null;
+  if (safe) return { x: safe.position.x, y: safe.position.y, z: safe.position.z, yaw: safe.yaw };
+  return grounded ? { ...grounded } : undefined;
+}
+
 let cleanup: (() => void) | null = null;
 let clearSuspensions: (() => void) | null = null;
 
@@ -86,7 +97,11 @@ const save: GamePlugin = {
         if (suspensions.active) return { safe: false, reason: `suspended:${suspensions.reason}` };
         return { safe: true };
       },
-      groundedPlayerState: () => (grounded ? { ...grounded } : undefined),
+      // v0.7 (item 25): a glide, a ferry ride or a dive saves its safe point (the ledge, the stop, the last air pocket);
+      // without one the last grounded position stands, so a save is never refused for its position.
+      groundedPlayerState: () => {
+        return saveSafePoint(ctx.services.get('movementMode'), grounded);
+      },
       toast: (key) => showToast(ctx.hud, ctx.strings.t(key)),
     };
 
@@ -232,7 +247,9 @@ const save: GamePlugin = {
         }
         handleBoot();
         manager.addPlaytime(dt);
-        if (!waystones()?.travelling && !loading) {
+        // v0.7: in a safe-point mode (a diver on the pool floor) the grounded position is not refreshed.
+        const inSafePointMode = ctx.services.get('movementMode')?.rule().save === 'safePoint';
+        if (!waystones()?.travelling && !loading && !inSafePointMode) {
           const f = ctx.player.feet;
           if (groundDistance(ctx, GROUND_RAY) !== null) {
             grounded = { x: f.x, y: f.y, z: f.z, yaw: ctx.player.facingYaw };

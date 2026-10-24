@@ -19,7 +19,7 @@ describe('spells plugin', () => {
     expect(s.maxEmber).toBe(100);
     expect(s.def('heartshard-surge')?.id).toBe('heartshard-surge');
     expect(f.systems.map((x) => `${x.id}:${x.fixedPhase}:${x.order}`).sort()).toEqual(['spells-input:intent:100', 'spells-update:afterCombat:100']);
-    expect([...f.persisted.keys()].sort()).toEqual(['burn', 'ember']);
+    expect([...f.persisted.keys()].sort()).toEqual(['burn', 'ember', 'spells.surge']);
     plugin.dispose!();
     expect(f.services.spells).toBeUndefined();
     expect(f.systems).toHaveLength(0);
@@ -462,6 +462,90 @@ describe('shard use, Scars and the Leap (slice 2)', () => {
       { count: 1, total: 0, reason: 'hearth-rite' },
     ]);
     plugin.dispose!();
+  });
+
+  it('removeScars accepts the hathren-scale reason and carries it on scar.removed', () => {
+    const f = makeCtx({ progression: progression().svc });
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    s.addBurn(100, 't');
+    s.useShard(0, 'test');
+    expect(s.removeScars!(1, 'hathren-scale')).toBe(1);
+    expect(f.world.events.log.filter((l) => l.type === 'scar.removed').map((l) => l.payload)).toEqual([
+      { count: 1, total: 0, reason: 'hathren-scale' },
+    ]);
+    plugin.dispose!();
+  });
+
+  describe('addSurgeCharges (v0.7 item 26)', () => {
+    const castAndFinish = (f: ReturnType<typeof makeCtx>) => {
+      const r = f.services.spells!.cast('heartshard-surge');
+      f.tick(60 * 3); // past the 2.1 s clip
+      return r;
+    };
+
+    it('without a charge the Surge refuses while on cooldown; a charge lets one cast through and is spent', () => {
+      const f = makeCtx();
+      plugin.setup(f.ctx);
+      const s = f.services.spells!;
+      expect(castAndFinish(f).ok).toBe(true);
+      expect(s.cooldown('heartshard-surge')).toBeGreaterThan(0);
+      s.restoreEmber(100);
+      expect(s.cast('heartshard-surge')).toEqual({ ok: false, reason: 'cooldown' });
+      expect(s.addSurgeCharges(2, 'dragons-respect')).toBe(2);
+      expect(s.addSurgeCharges(1, 'dragons-respect')).toBe(3);
+      const cd = s.cooldown('heartshard-surge');
+      expect(castAndFinish(f).ok).toBe(true);
+      // Not restarted: the cast's own ticks ran the old cooldown down further (a restart would read the full cooldown again).
+      expect(s.cooldown('heartshard-surge')).toBeCloseTo(Math.max(0, cd - 3), 1);
+      expect(f.persisted.get('spells.surge')!.serialize()).toEqual({ charges: 2 });
+      plugin.dispose!();
+    });
+
+    it('a charge is not spent by a cast made off cooldown, and a charge cast at 0 left is refused again', () => {
+      const f = makeCtx();
+      plugin.setup(f.ctx);
+      const s = f.services.spells!;
+      s.addSurgeCharges(1, 't');
+      expect(castAndFinish(f).ok).toBe(true);
+      expect(f.persisted.get('spells.surge')!.serialize()).toEqual({ charges: 1 });
+      s.restoreEmber(100);
+      expect(castAndFinish(f).ok).toBe(true);
+      expect(f.persisted.get('spells.surge')!.serialize()).toEqual({ charges: 0 });
+      s.restoreEmber(100);
+      expect(s.cast('heartshard-surge')).toEqual({ ok: false, reason: 'cooldown' });
+      plugin.dispose!();
+    });
+
+    it('ignores non-finite, zero, negative and sub-1 amounts with a warning and returns the current total', () => {
+      const f = makeCtx();
+      plugin.setup(f.ctx);
+      const s = f.services.spells!;
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      expect(s.addSurgeCharges(1, 't')).toBe(1);
+      for (const bad of [0, -2, Number.NaN, Number.POSITIVE_INFINITY, 0.5]) expect(s.addSurgeCharges(bad, 't')).toBe(1);
+      expect(warn).toHaveBeenCalledTimes(5);
+      expect(s.addSurgeCharges(1.9, 't')).toBe(2); // whole charges only
+      warn.mockRestore();
+      plugin.dispose!();
+    });
+
+    it('persists, and an old save with no spells.surge entry (or a bad one) loads with 0', () => {
+      const f = makeCtx();
+      plugin.setup(f.ctx);
+      const s = f.services.spells!;
+      s.addSurgeCharges(3, 't');
+      const saved = f.persisted.get('spells.surge')!.serialize();
+      f.persisted.get('spells.surge')!.load({ charges: 0 }, 1);
+      expect(f.persisted.get('spells.surge')!.serialize()).toEqual({ charges: 0 });
+      f.persisted.get('spells.surge')!.load(JSON.parse(JSON.stringify(saved)), 1);
+      expect(f.persisted.get('spells.surge')!.serialize()).toEqual({ charges: 3 });
+      for (const bad of [undefined, null, 'x', { charges: -4 }, { charges: 'many' }, { charges: Number.NaN }]) {
+        f.persisted.get('spells.surge')!.load(bad, 1);
+        expect(f.persisted.get('spells.surge')!.serialize()).toEqual({ charges: 0 });
+      }
+      plugin.dispose!();
+    });
   });
 
   it('a Scar at Burn 100 (no burn.changed) still refreshes max health', () => {

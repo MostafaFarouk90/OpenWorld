@@ -25,7 +25,7 @@ declare module '../core/events' {
     /** Dialogue `event` effect (the accepted `story.*` namespace): raise a companion's bond rank. */
     'story.companion.rank': { companionId: string; rank: number };
     /** `spells.removeScars` (the Hearth Rite): `count` Scars went, `total` remain. */
-    'scar.removed': { count: number; total: number; reason: string };
+    'scar.removed': { count: number; total: number; reason: 'hearth-rite' | 'hathren-scale' };
     /** Dialogue `event` effect from Aelfreda's talk tree: perform the Hearth Rite (the `rite` service decides). */
     'npc.aelfreda.hearthRite': Record<string, never> | undefined;
     /** The rite ran: the act it was spent for and the Scars removed. */

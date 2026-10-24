@@ -155,7 +155,7 @@ describe('pathfinder tier 3 SkillDefs on the real progression', () => {
     ];
     for (const [id, req] of want) {
       const def = getSkill(`pathfinder.${id}`)!;
-      expect(def).toMatchObject({ tier: 3, cost: 2, requires: `pathfinder.${req}`, available: true });
+      expect(def).toMatchObject({ tier: 3, cost: 2, requires: `pathfinder.${req}`, availableWhen: true });
     }
     expect(p.learn(PF.skillIds.emberQuarrel).ok).toBe(false); // the tier 2 skill is not learned yet
     for (const id of TIER2) expect(p.learn(`pathfinder.${id}`).ok).toBe(true);
@@ -163,7 +163,7 @@ describe('pathfinder tier 3 SkillDefs on the real progression', () => {
     for (const [id] of want) expect(p.learn(`pathfinder.${id}`).ok, id).toBe(true);
     expect(before - p.skillPoints).toBe(6);
     for (const id of ['tripleShot', 'caltropField', 'sureFoot']) {
-      expect(getSkill(`pathfinder.${id}`)).toMatchObject({ tier: 4, available: false });
+      expect(getSkill(`pathfinder.${id}`)).toMatchObject({ tier: 4, availableWhen: { all: ['story.gate.a3', 'trainer.pathfinder.masterBook'] } });
       expect(p.learn(`pathfinder.${id}`).ok, id).toBe(false);
     }
   });

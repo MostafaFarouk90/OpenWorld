@@ -11,6 +11,8 @@ import { renderAnchorsDoc } from '../anchorsDoc';
 import { Containment } from '../containment';
 import { distanceToWall, fogWallForTrigger, fogWalls, needsPushBackDef, PUSH_BACK_PAST } from '../fogWall';
 import { PHASE_HOLDS, REGION_INFO, engineBox } from '../regions';
+
+const cond0 = (): FlagCondition => REGION_INFO.oldsmoke.openWhen;
 import { readFileSync } from '../testing/nodeFs';
 import { createFakeCore } from '../testing/fakeCore';
 import { drawnWidth, pieces } from './act2Roads';
@@ -106,8 +108,10 @@ describe('the Act 2 corridors', () => {
     for (const p of inGap) expect(d.isOpen(p.x, p.z)).toBe(true);
   });
 
-  it('the Phase C hold is retired (the list is empty), so D03 alone opens the pass', () => {
-    expect(PHASE_HOLDS).toEqual([]);
+  it('the Phase C hold is retired, so D03 alone opens the pass; no hold names an Oldsmoke or Cinderreach flag', () => {
+    expect(PHASE_HOLDS.oldsmoke).toBeUndefined();
+    expect(PHASE_HOLDS.cinderreach).toBeUndefined();
+    expect(cond0()).toEqual({ all: ['story.d03.complete'] });
     const cond: FlagCondition = REGION_INFO.oldsmoke.openWhen;
     expect(cond.all).toEqual(['story.d03.complete']);
     expect(flagConditionHolds(cond, reader(D03_HOLD_UNSET))).toBe(true);
@@ -173,9 +177,13 @@ describe('the Act 2 fog walls', () => {
     const open = (id: string, flags: Flags) => flagConditionHolds(ACT2_FOG_WALLS.find((w) => w.id === id)!.openWhen, reader(flags));
     expect([ACT1, PHASE_C, D03_HOLD_UNSET, PHASE_D].map((f) => open('fog.cinder-road', f))).toEqual([false, true, true, true]);
     expect([ACT1, PHASE_C, D03_HOLD_UNSET, PHASE_D].map((f) => open('fog.oldsmoke-pass', f))).toEqual([false, false, true, true]);
-    for (const id of ['fog.greyfen', 'fog.ashen-waste', 'fog.dragonspine', 'fog.caldera']) {
-      expect(open(id, { ...PHASE_D, 'story.gate.a3': true })).toBe(false);
+    for (const id of ['fog.ashen-waste', 'fog.caldera']) {
+      expect(open(id, { ...PHASE_D, 'story.gate.a3': true, 'story.phase.dragonspineOpen': true })).toBe(false);
     }
+    // v0.7: the Greyfen face opens with Act 3; the Dragonspine face waits on its Phase E hold too.
+    expect([PHASE_D, { ...PHASE_D, 'story.gate.a3': true }].map((f) => open('fog.greyfen', f))).toEqual([false, true]);
+    const spine = [PHASE_D, { ...PHASE_D, 'story.gate.a3': true }, { ...PHASE_D, 'story.gate.a3': true, 'story.phase.dragonspineOpen': true }];
+    expect(spine.map((f) => open('fog.dragonspine', f))).toEqual([false, false, true]);
   });
 
   it('each wall stands at least 30 m inside the open area of the first state in which it stands', () => {

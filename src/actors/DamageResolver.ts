@@ -5,6 +5,9 @@ import type { ActorRegistry } from './ActorRegistry';
 import type { StatusKind } from './status';
 import { canDamage } from './teams';
 
+/** v0.7 item 13: a tag the attack carries; `dragonkin` marks a hit on or by a dragonkin target (R16's +15% reads the target's tag). */
+export type DamageTag = 'dragonkin';
+
 export interface DamageRequest {
   attackerId: ActorId | null;
   targetId: ActorId;
@@ -17,6 +20,8 @@ export interface DamageRequest {
   /** `kind: 'status'` only: the status entry's id and kind. */
   statusId?: string;
   statusKind?: StatusKind;
+  /** v0.7: tags the hit carries (a dragonkin target's `EnemyDef.tags`, copied in by whoever builds the request). */
+  tags?: readonly DamageTag[];
   bone?: string;
   point?: THREE.Vector3;
   normal?: THREE.Vector3;

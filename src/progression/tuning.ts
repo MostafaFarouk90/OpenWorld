@@ -82,10 +82,15 @@ export function levelScale(enemyLevel: number, playerLevel: number): number {
   return Math.min(2, Math.max(0.25, 1 + 0.15 * diff));
 }
 
-export function killXp(kind: string, enemyLevel: number, playerLevel: number): number {
+/**
+ * `regionFactor` (v0.7 item 27, the `killXpRegionFactor` port) multiplies before the one rounding; a value that is not a
+ * finite positive number reads as 1, so the default changes nothing.
+ */
+export function killXp(kind: string, enemyLevel: number, playerLevel: number, regionFactor = 1): number {
   const base = killXpBase(kind);
   if (base <= 0) return 0;
-  return Math.round(base * levelScale(enemyLevel, playerLevel));
+  const f = Number.isFinite(regionFactor) && regionFactor > 0 ? regionFactor : 1;
+  return Math.round(base * levelScale(enemyLevel, playerLevel) * f);
 }
 
 export function baseMaxHealthForLevel(level: number, classId?: string | null): number {

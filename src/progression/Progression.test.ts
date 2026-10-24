@@ -179,8 +179,8 @@ describe('skills', () => {
     p.grantXp(xpForLevel(5), 'x');
     expect(p.learn('knight.ironStance')).toEqual({ ok: false, reason: 'missing-prereq' });
     expect(p.learn('knight.oathward')).toEqual({ ok: false, reason: 'missing-prereq' });
-    expect(p.learn('knight.bastionWall')).toEqual({ ok: false, reason: 'unavailable' });
-    expect(p.learn('knight.unbrokenOath')).toEqual({ ok: false, reason: 'unavailable' });
+    expect(p.learn('knight.bastionWall')).toEqual({ ok: false, reason: 'master', textKey: 'hud.skills.act3' });
+    expect(p.learn('knight.unbrokenOath')).toEqual({ ok: false, reason: 'master', textKey: 'hud.skills.act3' });
     p.learn('knight.rimBash');
     expect(p.learn('knight.rimBash')).toEqual({ ok: false, reason: 'already-learned' });
     expect(p.skillPoints).toBe(3);

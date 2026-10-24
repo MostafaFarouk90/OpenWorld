@@ -1,4 +1,4 @@
-import { TIER_COST, type SkillDef } from '../../progression/skills';
+import { TIER_COST, masterBookGate, type SkillDef } from '../../progression/skills';
 import { BLOOD_CHANT, BOULDER, WARDEN_CLASS_ID, WHIRLING_HEW } from './tuning';
 
 type Branch = 'hewer' | 'stonehide' | 'howlcaller';
@@ -50,7 +50,7 @@ function build(): SkillDef[] {
         kind,
         nameKey: `skill.${WARDEN_CLASS_ID}.${name}.name`,
         descKey: `skill.${WARDEN_CLASS_ID}.${name}.desc`,
-        available: tier <= 3,
+        availableWhen: tier <= 3 ? true : masterBookGate(WARDEN_CLASS_ID),
       };
       if (i > 0) def.requires = `${WARDEN_CLASS_ID}.${TREE[branch][i - 1][0]}`;
       if (tier === 5) {

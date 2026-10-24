@@ -50,7 +50,7 @@ describe('tier 3 and saves', () => {
     const p = prog(t);
     expect(p.classId).toBe('warden');
     for (const id of ['warden.whirlingHew', 'warden.gritTeeth', 'warden.bloodChant']) expect(p.learned(id)).toBe(false);
-    expect(getSkill('warden.whirlingHew')!.available).toBe(true);
+    expect(getSkill('warden.whirlingHew')!.availableWhen).toBe(true);
   }, 120_000);
 
   it.skipIf(!GEN)('writes the tier 3 fixture', async () => {

@@ -1,4 +1,4 @@
-import { TIER_COST, type SkillDef } from '../../progression/skills';
+import { TIER_COST, masterBookGate, type SkillDef } from '../../progression/skills';
 import { PF } from './tuning';
 
 type Row = [name: string, kind: 'active' | 'passive'];
@@ -43,7 +43,7 @@ export function buildPathfinderSkills(): SkillDef[] {
         kind,
         nameKey: `skill.${PF.classId}.${name}.name`,
         descKey: `skill.${PF.classId}.${name}.desc`,
-        available: tier <= 3,
+        availableWhen: tier <= 3 ? true : masterBookGate(PF.classId),
       };
       if (i > 0) def.requires = `${PF.classId}.${rows[i - 1][0]}`;
       if (tier === 5) {

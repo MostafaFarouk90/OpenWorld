@@ -31,6 +31,8 @@ export interface BossDef {
    * Asked on each stagger of the boss that is not shield-blocked. False: it is a forced stagger (a parry, a howl, Second Wind
    * on a boss that only breaks another way), not a poise break, so it is not counted: no `boss.break`, no pip, no release
    * window. The callback may restore the boss's poise itself. Default: every stagger counts.
+   * This is THE forced-break hook (v0.7 item 13): the Slagmaw's cooled-core break and Skarl's drake-chain break both
+   * use it, so there is no second hook. Tests: BossRegistry.test.ts ("acceptBreak false ...") and bosses/act3Bosses.test.ts.
    */
   acceptBreak?: () => boolean;
 }
