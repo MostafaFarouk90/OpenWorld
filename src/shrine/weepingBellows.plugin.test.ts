@@ -217,12 +217,23 @@ describe('Weeping Bellows plugin', () => {
     expect(t.ctx.state.getBool('shrine.weeping-bellows.lit')).toBe(true);
   });
 
-  it('the shaft-head stone refuses a rekindle by hand until solved (lock), and no early shrine flag from a script', async () => {
+  it('a script rekindle is not gated by the lock (it guards hold-F only): it lights the stone, but the shrine waits for the solve (R2-3)', async () => {
     const t = await boot();
     t.run(2);
-    t.ctx.services.require('waystones').rekindle('weeping-bellows', 'script');
-    expect(t.ctx.state.getBool('shrine.weeping-bellows.lit')).toBe(false);
     expect(WAYSTONE_LOCKS['weeping-bellows']).toBe('world.bellows.solved');
+    const r = t.ctx.services.require('waystones').rekindle('weeping-bellows', 'script');
+    // what really happens: the lock does not apply to scripts, so the stone is lit ...
+    expect(r.ok).toBe(true);
+    expect(t.ctx.services.require('waystones').isLit('weeping-bellows')).toBe(true);
+    // ... and it is canLight, not the lock, that keeps the shrine dark until the solve
+    expect(t.ctx.state.getBool('shrine.weeping-bellows.lit')).toBe(false);
+    solveRouting(t);
+    for (const b of BELLOWS.order) {
+      surgeAt(t, b);
+      t.ctx.events.emit('spell.released', { casterId: 'player', spellId: 'heartshard-surge' });
+    }
+    // the stone was already lit, so the solve's own rekindle is a no-op: the shrine still lights
+    expect(t.ctx.state.getBool('shrine.weeping-bellows.lit')).toBe(true);
   });
 
   it('a load that lights the shrine silently has the quests read their doneWhen again, after the flag is set (R2-2)', async () => {
