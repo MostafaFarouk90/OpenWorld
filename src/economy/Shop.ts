@@ -37,6 +37,10 @@ export interface ShopPorts {
   flag?(key: string): unknown;
   /** A gear piece's temper and affix; a piece with either cannot be sold (removing it would drop the record). */
   gearRecord?(itemId: string): { temper: number; affix?: string };
+  /** K10: whether the piece holds shard-gems; a socketed piece cannot be sold until a smith takes them out. */
+  socketed?(itemId: string): boolean;
+  /** K10: an item's stack cap now (the Ashmare saddlebags); absent means `stackMax`. */
+  capOf?(itemId: string): number;
   /** Test seam: the discount table (default `VENDOR_DISCOUNTS`). */
   discounts?: readonly VendorDiscount[];
 }
@@ -55,7 +59,8 @@ export type ShopFailure =
   | 'not-owned'
   | 'no-such-entry'
   | 'price-rose'
-  | 'tempered';
+  | 'tempered'
+  | 'socketed';
 
 export type ShopResult = { ok: true; total: number } | { ok: false; reason: ShopFailure };
 
@@ -129,6 +134,7 @@ export class Shop {
     for (const l of def.lines) {
       if (def.track && band && !bandAtLeast(band, l.from)) continue;
       if (!stockWhenHolds(l.when, this.ports.flag)) continue;
+      if (l.unlessHeld && this.ports.count(l.itemId) > 0) continue;
       if (!this.ports.getItem(l.itemId)) {
         this.warnOnce(`economy: ${vendorId} stocks unregistered item "${l.itemId}"; skipped`);
         continue;
@@ -158,7 +164,7 @@ export class Shop {
     if (!def) return { ok: false, reason: 'unknown-item' };
     if (seenPrice !== undefined && offer.price > seenPrice) return { ok: false, reason: 'price-rose' };
     if (offer.remaining !== null && offer.remaining < count) return { ok: false, reason: 'out-of-stock' };
-    if (this.ports.count(itemId) + count > def.stackMax) return { ok: false, reason: 'no-room' };
+    if (this.ports.count(itemId) + count > this.capOf(def)) return { ok: false, reason: 'no-room' };
     const total = offer.price * count;
     if (this.ports.gold() < total) return { ok: false, reason: 'no-gold' };
     this.complete(vendorId, itemId, count, offer.price, total, offer.remaining !== null);
@@ -191,6 +197,7 @@ export class Shop {
     if (have - count < 1 && this.ports.isEquipped(itemId)) return { ok: false, reason: 'equipped' };
     const rec = this.ports.gearRecord?.(itemId);
     if (rec && (rec.temper > 0 || rec.affix)) return { ok: false, reason: 'tempered' };
+    if (this.ports.socketed?.(itemId)) return { ok: false, reason: 'socketed' };
     if (!this.ports.remove(itemId, count)) return { ok: false, reason: 'not-owned' };
     const total = unit * count;
     this.ports.addGold(total);
@@ -205,6 +212,11 @@ export class Shop {
     this.buyBackList.set(vendorId, list);
     this.ports.emit('vendor.sold', { vendorId, itemId, count, price: unit });
     return { ok: true, total };
+  }
+
+  /** K10: the inventory's live cap (the saddlebags raise material caps) when the port has it, else the def's. */
+  private capOf(def: ItemDef): number {
+    return this.ports.capOf?.(def.id) ?? def.stackMax;
   }
 
   private sellUnit(itemId: string): number | undefined {
@@ -223,7 +235,7 @@ export class Shop {
     if (!e) return { ok: false, reason: 'no-such-entry' };
     const def = this.ports.getItem(e.itemId);
     if (!def) return { ok: false, reason: 'unknown-item' };
-    if (this.ports.count(e.itemId) + e.count > def.stackMax) return { ok: false, reason: 'no-room' };
+    if (this.ports.count(e.itemId) + e.count > this.capOf(def)) return { ok: false, reason: 'no-room' };
     const total = e.price * e.count;
     if (this.ports.gold() < total) return { ok: false, reason: 'no-gold' };
     list.splice(index, 1);
