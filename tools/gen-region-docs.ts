@@ -2,6 +2,7 @@
 import { writeFileSync } from 'node:fs';
 import { cinderreachAnchorsDoc } from '../src/cinderreach/anchorsDoc';
 import { greyfenAnchorsDoc } from '../src/greyfen/anchorsDoc';
+import { dragonspineAnchorsDoc } from '../src/dragonspine/anchorsDoc';
 import { harrowmarkAnchorsDoc } from '../src/harrowmark/anchorsDoc';
 import { oldsmokeAnchorsDoc } from '../src/oldsmoke/anchorsDoc';
 import { minesAnchorsDoc } from '../src/oldsmoke/mines/anchorsDoc';
@@ -21,3 +22,4 @@ writeFileSync(new URL('../src/oldsmoke/ANCHORS.md', import.meta.url), oldsmokeAn
 writeFileSync(new URL('../src/oldsmoke/mines/ANCHORS.md', import.meta.url), minesAnchorsDoc());
 writeFileSync(new URL('../src/enemies/fen/GREYFEN_FAUNA_ANCHORS.md', import.meta.url), renderAnchorsDoc(GREYFEN_FAUNA_LAYOUT, GREYFEN_FAUNA_DOC));
 writeFileSync(new URL('../src/greyfen/ANCHORS.md', import.meta.url), greyfenAnchorsDoc());
+writeFileSync(new URL('../src/dragonspine/ANCHORS.md', import.meta.url), dragonspineAnchorsDoc());

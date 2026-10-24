@@ -1,0 +1,115 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { buildCarryRoutes, candleStops, CHECKPOINT_MAX, CHECKPOINT_MIN, CORRIDOR_HALF_WIDTH, densify, MAX_DROP } from './carryRoutes';
+import { buildDragonspine } from './layout';
+import { registerDragonspineKinds } from './structureKinds';
+import { shiftedInputs, shiftedRoad, stubInputs } from './testing/fixture';
+
+let release: () => void;
+beforeAll(() => (release = registerDragonspineKinds()));
+afterAll(() => release());
+
+const inp = stubInputs();
+const build = buildDragonspine(inp);
+const routes = buildCarryRoutes(inp.heightAt, build);
+const route = (id: string) => routes.find((r) => r.id === id)!;
+const near = (cp: { x: number; z: number }, p: { x: number; z: number }) => Math.hypot(cp.x - p.x, cp.z - p.z);
+
+describe('carry routes', () => {
+  it('has the seven routes with the agreed corridor and drop', () => {
+    expect(routes.map((r) => r.id)).toEqual(['sled.r15.1', 'sled.r15.2', 'sled.r15.3', 'egg.r18.1', 'egg.r18.2', 'egg.r18.3', 'candle.r17']);
+    for (const r of routes) {
+      expect(r.corridorHalfWidth).toBe(CORRIDOR_HALF_WIDTH);
+      expect(r.corridorHalfWidth).toBe(30);
+      expect(r.maxDrop).toBe(MAX_DROP);
+      expect(r.maxDrop).toBe(10);
+    }
+  });
+
+  it('spaces consecutive checkpoints 10 to 25 m apart', () => {
+    for (const r of routes) {
+      expect(r.checkpoints.length, r.id).toBeGreaterThan(3);
+      for (let i = 1; i < r.checkpoints.length; i++) {
+        const d = Math.hypot(r.checkpoints[i]!.x - r.checkpoints[i - 1]!.x, r.checkpoints[i]!.z - r.checkpoints[i - 1]!.z);
+        expect(d, `${r.id} ${i}`).toBeGreaterThanOrEqual(CHECKPOINT_MIN);
+        expect(d, `${r.id} ${i}`).toBeLessThanOrEqual(CHECKPOINT_MAX);
+      }
+    }
+  });
+
+  it('never drops more than 10 m between consecutive checkpoints on the ground, and takes every y from heightAt', () => {
+    for (const r of routes) {
+      for (let i = 0; i < r.checkpoints.length; i++) {
+        const c = r.checkpoints[i]!;
+        expect(c.y, `${r.id} ${i}`).toBe(inp.heightAt(c.x, c.z));
+        if (i > 0) expect(r.checkpoints[i - 1]!.y - c.y, `${r.id} ${i}`).toBeLessThanOrEqual(MAX_DROP);
+      }
+    }
+  });
+
+  it('eggs reset to the pick-up (resetAt [0]) and start at their egg anchor and end at R18\'s nest', () => {
+    for (let i = 1; i <= 3; i++) {
+      const r = route(`egg.r18.${i}`);
+      expect(r.resetAt).toEqual([0]);
+      expect(near(r.checkpoints[0]!, build.hawk.eggs[i - 1]!)).toBeLessThan(0.01);
+      expect(near(r.checkpoints[r.checkpoints.length - 1]!, build.hawk.nests[0]!)).toBeLessThan(0.01);
+      // The climb is on the route: some checkpoint within 8 m of each of the climb's own anchors.
+      for (const p of build.hawk.climb) expect(r.checkpoints.some((c) => near(c, p) <= 8), `${r.id} climb`).toBe(true);
+    }
+  });
+
+  it('puts a checkpoint on every R15 leg: at the sled start (depot) and at the hawk-line cache', () => {
+    for (let i = 1; i <= 3; i++) {
+      const r = route(`sled.r15.${i}`);
+      expect(near(r.checkpoints[0]!, build.lodge.sledStarts[i - 1]!)).toBeLessThan(0.01);
+      expect(near(r.checkpoints[r.checkpoints.length - 1]!, build.lodge.cache)).toBeLessThan(0.01);
+      expect(r.resetAt).toBeUndefined();
+      // Through the pass gate and up the road.
+      expect(r.checkpoints.some((c) => near(c, build.lodge.gateN) <= 8)).toBe(true);
+    }
+  });
+
+  it('follows the road for sleds: every checkpoint after the gate is within half the corridor of the centre line', () => {
+    const r = route('sled.r15.2');
+    const gate = r.checkpoints.findIndex((c) => near(c, build.lodge.gateN) <= 8);
+    for (const c of r.checkpoints.slice(gate + 3)) expect(build.sites.road.nearest(c.x, c.z).d).toBeLessThan(CORRIDOR_HALF_WIDTH / 2);
+  });
+
+  it('resets the candle at the Anvil and at each of the six shrines, in road order', () => {
+    const r = route('candle.r17');
+    const stops = candleStops(build);
+    expect(r.resetAt).toHaveLength(7);
+    r.resetAt!.forEach((idx, k) => expect(near(r.checkpoints[idx]!, stops[k]!.at), `stop ${k}`).toBeLessThan(0.01));
+    expect([...r.resetAt!].sort((a, b) => a - b)).toEqual([...r.resetAt!]);
+    expect(near(r.checkpoints[r.resetAt![0]!]!, build.anvil.shrine)).toBeLessThan(0.01);
+  });
+
+  it('densify keeps the end exactly and never leaves a last gap under 10 m', () => {
+    for (const len of [9, 10, 14.4, 14.6, 24, 29, 31, 100.3]) {
+      const out = densify([{ x: 0, z: 0 }, { x: len, z: 0 }]);
+      expect(out[out.length - 1]).toEqual({ x: len, z: 0 });
+      for (let i = 1; i < out.length; i++) {
+        const d = out[i]!.x - out[i - 1]!.x;
+        if (len >= CHECKPOINT_MIN) {
+          expect(d, `${len}`).toBeGreaterThanOrEqual(CHECKPOINT_MIN);
+          expect(d, `${len}`).toBeLessThanOrEqual(CHECKPOINT_MAX);
+        }
+      }
+    }
+  });
+
+  it('moves the checkpoints with the plateaus and the road (shifted-plateau test)', () => {
+    const lodge = shiftedInputs(['wyrmwatch-lodge'], 20, 10);
+    const moved = buildCarryRoutes(lodge.heightAt, buildDragonspine(lodge));
+    expect(near(moved[0]!.checkpoints[0]!, route('sled.r15.1').checkpoints[0]!)).toBeGreaterThan(8);
+    const foot = shiftedInputs(['hawk-cliffs-foot'], 12, 6);
+    const movedEgg = buildCarryRoutes(foot.heightAt, buildDragonspine(foot)).find((r) => r.id === 'egg.r18.1')!;
+    expect(near(movedEgg.checkpoints[0]!, route('egg.r18.1').checkpoints[0]!)).toBeGreaterThan(10);
+    const road = shiftedRoad(25, -15);
+    const movedRoad = buildCarryRoutes(road.heightAt, buildDragonspine(road)).find((r) => r.id === 'candle.r17')!;
+    const was = route('candle.r17');
+    expect(movedRoad.checkpoints.length).toBeGreaterThan(0);
+    expect(near(movedRoad.checkpoints[10]!, was.checkpoints[10]!)).toBeGreaterThan(10);
+    // y follows the ground it moved to.
+    for (const c of movedRoad.checkpoints) expect(c.y).toBe(road.heightAt(c.x, c.z));
+  });
+});

@@ -4,6 +4,7 @@ import type { Condition } from './types';
 import type { ConditionEnv, NpcPort } from './ports';
 import { evalCondition } from './conditions';
 import { GREYFEN_POST_RULES } from '../greyfen/postRules';
+import { DRAGONSPINE_POST_RULES } from '../dragonspine/postRules';
 import { OLDSMOKE_POST_RULES } from '../oldsmoke/postRules';
 
 export interface PostRule {
@@ -30,6 +31,8 @@ export const POST_RULES: PostRule[] = [
   ...OLDSMOKE_POST_RULES,
   // Act 3 (K3, additive): the Greyfen's movers; none of them has an earlier row.
   ...GREYFEN_POST_RULES,
+  // Act 3 (K4, additive): the Wyrmwatch hunters who stand in the hall.
+  ...DRAGONSPINE_POST_RULES,
   {
     npcId: 'gaut', home: 'npc-post.gaut',
     posts: [
