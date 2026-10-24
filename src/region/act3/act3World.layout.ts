@@ -1,7 +1,7 @@
 // The Act 3 world's anchors (thread K1, prefixes `fenroad.`, `spineroad.`, `greyfen.`, `dragonspine.`): the roads' ends
 // and junctions, the fog wall faces and the camp hearth. Places, waystones and glide ledges are constants in
 // act3Places.ts, so K3, K4 and K7 define their own anchors from them with no duplicate ids. `greyfen.fauna.*` and
-// `dragonspine.fauna.*` are K6b's. Plain data; ACT3_WORLD_ANCHORS.md is generated from it by tools/gen-region-docs.ts.
+// `dragonspine.fauna.*` are K6b's. Plain data; ACT3_WORLD_ANCHORS.md is generated from it by tools/gen-region-docs.ts (drift-tested).
 import { DEEPGATE_TRACK_POINTS, RIME_PASS_POINTS, SKYHOLD_SPUR_POINTS, SPINE_ROAD_POINTS } from '../../terrain/shape/dragonspine';
 import { FEN_ROAD_POINTS, FEN_TRACK_POINTS } from '../../terrain/shape/greyfen';
 import type { AnchorSpec, LayoutData } from '../layoutTypes';

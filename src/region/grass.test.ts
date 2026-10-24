@@ -10,6 +10,8 @@ import { CENTER } from '../harrowmark/city';
 import { HARROWMARK_LAYOUT } from '../harrowmark/harrowmark.layout';
 import { surfaceColor } from '../terrain/chunkGeometry';
 import { RIVER_WIDTH } from './water';
+import { ACT3_CAUSEWAY_STRIPS, ACT3_ROAD_STRIPS } from './act3/act3World';
+import { GREYFEN_WATER_TABLE, HATHRENS_MERE } from '../terrain/shape/greyfen';
 
 const flat = () => 0;
 const all = () => true;
@@ -372,5 +374,37 @@ describe('tuftColor on the B4 ash reach', () => {
     expect(tuftColor(70, 1, 0.5, 0, 70)).toEqual(green);
     const ash = tuftColor(50, 1, 0.5, 1060, -150);
     expect(sat(ash)).toBeLessThan(sat(tuftColor(50, 1, 0.5)) * 0.4);
+  });
+});
+
+describe('grass in the Act 3 regions (K1)', () => {
+  const accept = grassAcceptFor([BRIGHTWATER_LAYOUT, DEADROAD_LAYOUT], heightAt);
+
+  it('keeps off every Act 3 road and causeway, and grows just beside them', () => {
+    for (const r of [...ACT3_ROAD_STRIPS, ...ACT3_CAUSEWAY_STRIPS]) {
+      const [ax, az] = r.points[1];
+      const [bx, bz] = r.points[2] ?? r.points[0];
+      const mx = (ax + bx) / 2;
+      const mz = (az + bz) / 2;
+      expect(accept(mx, mz), r.id).toBe(false);
+    }
+  });
+
+  it('grows on dry fen ground and never under the fen water', () => {
+    let wet = 0;
+    let dryGrown = 0;
+    for (let x = 0; x <= 6000; x += 97) {
+      for (let z = 10000; z <= 15000; z += 101) {
+        const h = heightAt(x, z);
+        if (h < GREYFEN_WATER_TABLE) {
+          wet++;
+          expect(accept(x, z), `(${x}, ${z})`).toBe(false);
+        } else if (accept(x, z)) dryGrown++;
+      }
+    }
+    expect(wet).toBeGreaterThan(20);
+    expect(dryGrown).toBeGreaterThan(500);
+    // The Mere's centre is deep water.
+    expect(accept(HATHRENS_MERE.x, HATHRENS_MERE.z)).toBe(false);
   });
 });
