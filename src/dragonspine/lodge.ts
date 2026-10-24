@@ -63,7 +63,7 @@ export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
   ];
 
   // The hall stands north of its door (the pad's outside door), south face to the door.
-  const door = s.hallPad.door;
+  const door = s.hallDoor;
   const hall = { x: door.x, z: door.z + 3 + HALL_SIZE.d / 2, w: HALL_SIZE.w, d: HALL_SIZE.d, h: HALL_SIZE.h };
   const hallSpec = solid('dragonspine-hall', 'dragonspine-hall', hall.x, hall.z, hall.w, hall.d, hall.h);
 

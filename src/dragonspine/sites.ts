@@ -34,23 +34,30 @@ export interface Sites {
   hearth: XZ;
   hallPad: InteriorPad;
   cavePad: InteriorPad;
+  /** The doors, from the place layouts: the hall's on the lodge plateau, the cave's at the mouth plateau's centre. */
+  hallDoor: XZ;
+  caveDoor: XZ;
 }
 
 export function deriveSites(inp: DragonspineInputs): Sites {
+  const lodge = frameOf(plateauById(inp, 'wyrmwatch-lodge'));
+  const cave = frameOf(plateauById(inp, 'collapsed-cave'));
   return {
     inp,
     h: inp.heightAt,
     road: roadFromPoints(inp.passPoints),
     roadHalf: inp.roadHalfWidth,
     roadClear: inp.roadHalfWidth + 2,
-    lodge: frameOf(plateauById(inp, 'wyrmwatch-lodge')),
+    lodge,
     shelter: frameOf(plateauById(inp, 'rime-pass-shelter')),
     anvil: frameOf(plateauById(inp, 'last-anvil')),
     hawkFoot: frameOf(plateauById(inp, 'hawk-cliffs-foot')),
-    cave: frameOf(plateauById(inp, 'collapsed-cave')),
+    cave,
     crag: frameOf(plateauById(inp, 'm28-crag')),
     hearth: inp.hearth,
     hallPad: padById(inp, 'wyrmwatch-hall'),
     cavePad: padById(inp, 'collapsed-cave'),
+    hallDoor: { x: lodge.cx - 30, z: lodge.cz + 1 },
+    caveDoor: { x: cave.cx, z: cave.cz },
   };
 }

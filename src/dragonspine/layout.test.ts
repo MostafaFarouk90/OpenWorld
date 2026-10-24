@@ -115,7 +115,7 @@ describe('the layout on stand-in ground', () => {
       for (const [x, z] of footprintCorners(s)) expect(inBox({ minX: e.w, maxX: e.e, minZ: e.s, maxZ: e.n }, x, z), s.id).toBe(true);
     }
     const door = anchor('dragonspine.lodge.hall.door');
-    expect([door.x, door.z]).toEqual([inp.pads.find((p) => p.id === 'wyrmwatch-hall')!.door.x, inp.pads.find((p) => p.id === 'wyrmwatch-hall')!.door.z].map((n) => Math.round(n * 100) / 100));
+    expect([door.x, door.z]).toEqual([b.sites.hallDoor.x, b.sites.hallDoor.z].map((n) => Math.round(n * 100) / 100));
     expect(b.lodge.hall.z - b.lodge.hall.d / 2).toBeGreaterThan(door.z);
   });
 

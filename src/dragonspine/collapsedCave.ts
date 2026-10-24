@@ -4,17 +4,20 @@
 // Local metres from the door, yaw 0 faces -Z.
 import type { AreaId } from '../region/areas';
 import type { InteriorDef, LocalRect } from '../interiors/types';
-import type { InteriorPad } from './inputs';
+import { INTERIOR_EDGE, INTERIOR_ENTRY, type InteriorPad } from './inputs';
 
 export const COLLAPSED_CAVE_ID = 'collapsed-cave';
 export const COLLAPSED_CAVE_DOOR_ID = 'collapsed-cave';
 /** Any spawner K13 puts in the cave passes this as `SpawnerDef.area` (the float is not under the mouth). */
 export const CAVE_AREA: AreaId = 'dragonspine-lower';
-/** The blocker's id in the interior (the flag blockers map it to `story.r16.rockfallCleared`). */
-export const ROCKFALL_BLOCKER_ID = 'dragonspine.cave.rockfall';
+/** The blocker's id in the interior (not the `dragonspine.cave.rockfall` anchor's; the flag blockers map it to `story.r16.rockfallCleared`). */
+export const ROCKFALL_BLOCKER_ID = 'cave-rockfall';
 
 const rect = (x0: number, z0: number, x1: number, z1: number): LocalRect => ({ x0, z0, x1, z1 });
-const EDGE = 2;
+const EDGE = INTERIOR_EDGE;
+/** The chamber must be at least this deep and wide, or the pad is too small for the cave. */
+const MIN_CHAMBER_DEPTH = 12;
+const MIN_CHAMBER_WIDTH = 12;
 const PASSAGE_END = -24;
 /** The chamber's far wall, at most this far from the door: the walk from the entry to the axe is about 45 m. */
 const CHAMBER_END = -50;
@@ -34,7 +37,11 @@ export function buildCaveDef(pad: InteriorPad): InteriorDef {
   const cz0 = Math.max(lz0, CHAMBER_END);
   const mid = (cz0 + PASSAGE_END) / 2;
   const dig = cz0 + 2.5;
-  const north = Math.min(lz1, 1.5);
+  const north = Math.min(lz1, INTERIOR_ENTRY);
+  if (north < INTERIOR_ENTRY) throw new Error(`dragonspine: the collapsed-cave pad is too small: its entry reaches only ${north} m past the origin`);
+  if (cx1 - cx0 < MIN_CHAMBER_WIDTH || cz0 > PASSAGE_END - MIN_CHAMBER_DEPTH) {
+    throw new Error(`dragonspine: the collapsed-cave pad is too small for the chamber (${cx1 - cx0} m wide, ${PASSAGE_END - cz0} m deep; needs ${MIN_CHAMBER_WIDTH} x ${MIN_CHAMBER_DEPTH})`);
+  }
   return {
     id: COLLAPSED_CAVE_ID,
     site: { x: pad.site.x, z: pad.site.z },

@@ -31,7 +31,7 @@ export interface CaveMouthInfo {
 
 export function caveMouthLayout(s: Sites): { part: Part; info: CaveMouthInfo } {
   const C = s.cave;
-  const door = s.cavePad.door;
+  const door = s.caveDoor;
   const mouth = solid('dragonspine-cave-mouth', 'dragonspine-cave-mouth', door.x, door.z + 5, 12, 4, 6);
   // The ledge is fitted at the size it is built (the whole width of the mouth shelf), so its real top is what the launch point sees.
   const size: LedgeSize = [Math.max(6, C.w - 6), 3.2];

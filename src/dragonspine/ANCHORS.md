@@ -15,10 +15,10 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.r15.sled-start.1 | 13624 | 11921 | 0 | 180 | objective |
 | dragonspine.r15.sled-start.2 | 13628 | 11921 | 0 | 180 | objective |
 | dragonspine.r15.sled-start.3 | 13632 | 11921 | 0 | 180 | objective |
-| dragonspine.r15.cache | 13538.98 | 12209.79 | 0 | 180 | objective |
-| dragonspine.spawn.r15.stoop-1 | 13608.88 | 12049.31 | 0 | 180 | spawn |
-| dragonspine.spawn.r15.stoop-2 | 13606.42 | 12109.55 | 0 | 180 | spawn |
-| dragonspine.spawn.r15.stoop-3 | 13552.73 | 12159.89 | 0 | 180 | spawn |
+| dragonspine.r15.cache | 13542.49 | 12206.5 | 0 | 180 | objective |
+| dragonspine.spawn.r15.stoop-1 | 13608.06 | 12044.39 | 0 | 180 | spawn |
+| dragonspine.spawn.r15.stoop-2 | 13609.93 | 12106.26 | 0 | 180 | spawn |
+| dragonspine.spawn.r15.stoop-3 | 13556.24 | 12156.6 | 0 | 180 | spawn |
 | dragonspine.lodge.stables | 13638 | 11873.5 | 0 | 0 | poi |
 | dragonspine.lodge.yard | 13600 | 11886 | 0 | 180 | poi |
 | npc-post.thorgar.yard | 13604 | 11895 | 0 | 53.13 | npc-post |
@@ -116,15 +116,15 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.spawn.cave.hawk-2 | 12287 | 13704 | 0 | 180 | spawn |
 | dragonspine.spawn.cave.hawk-3 | 12313 | 13704 | 0 | 180 | spawn |
 | dragonspine.spawn.cave.hawk-4 | 12312 | 13708 | 0 | 180 | spawn |
-| dragonspine.m28.trailhead | 13552.57 | 12821.19 | 0 | 180 | objective |
-| dragonspine.m28.leap.1 | 13660 | 12703 | 1.8 | 180 | poi, leap-gated |
-| dragonspine.m28.leap.2 | 13787 | 12576 | 1.8 | 180 | poi, leap-gated |
-| dragonspine.m28.leap.1.launch | 13656.11 | 12706.89 | 0 | 315 | poi |
-| dragonspine.m28.leap.2.launch | 13787 | 12570.5 | 0 | 180 | poi |
-| dragonspine.m28.cairn.1 | 13626.86 | 12762.14 | 0 | 180 | objective |
-| dragonspine.m28.cairn.2 | 13712.48 | 12680.28 | 0 | 180 | objective |
-| dragonspine.m28.cairn.3 | 13766.65 | 12605.15 | 0 | 180 | objective |
-| dragonspine.m28.cairn.4 | 13853.43 | 12560.87 | 0 | 180 | objective |
+| dragonspine.m28.trailhead | 13556.24 | 12818.07 | 0 | 180 | objective |
+| dragonspine.m28.leap.1 | 13660 | 12700 | 1.8 | 180 | poi, leap-gated |
+| dragonspine.m28.leap.2 | 13787 | 12575 | 1.8 | 180 | poi, leap-gated |
+| dragonspine.m28.leap.1.launch | 13656.11 | 12703.89 | 0 | 315 | poi |
+| dragonspine.m28.leap.2.launch | 13787 | 12569.5 | 0 | 180 | poi |
+| dragonspine.m28.cairn.1 | 13630.4 | 12759.84 | 0 | 180 | objective |
+| dragonspine.m28.cairn.2 | 13715.02 | 12678.9 | 0 | 180 | objective |
+| dragonspine.m28.cairn.3 | 13767.12 | 12603.61 | 0 | 180 | objective |
+| dragonspine.m28.cairn.4 | 13854.52 | 12561.72 | 0 | 180 | objective |
 | dragonspine.m28.crag | 13900 | 12500 | 0 | 180 | objective |
 | dragonspine.spawn.m28.hawk-1 | 13904.1 | 12511.28 | 0 | 180 | spawn |
 | dragonspine.spawn.m28.hawk-2 | 13911.82 | 12502.08 | 0 | 180 | spawn |
@@ -133,7 +133,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.spawn.m28.hawk-5 | 13888.18 | 12497.92 | 0 | 180 | spawn |
 | dragonspine.spawn.m28.hawk-6 | 13892.29 | 12509.19 | 0 | 180 | spawn |
 | dragonspine.spawn.m28.ogre | 13892 | 12488 | 0 | 180 | spawn |
-| dragonspine.spawn.m28.scout | 13755.81 | 12653.41 | 0 | 180 | spawn |
+| dragonspine.spawn.m28.scout | 13757.93 | 12652.2 | 0 | 180 | spawn |
 
 ## Triggers
 
@@ -148,7 +148,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | trg.dragonspine.hawkcliffs.nest | sphere | 11394 | 13152 | r 14 |
 | trg.dragonspine.cave.mouth | sphere | 12300 | 13700 | r 14 |
 | trg.dragonspine.cave.trailhead | sphere | 12429.71 | 13612.77 | r 12 |
-| trg.dragonspine.m28.trailhead | sphere | 13552.57 | 12821.19 | r 12 |
+| trg.dragonspine.m28.trailhead | sphere | 13556.24 | 12818.07 | r 12 |
 | trg.dragonspine.m28.crag | sphere | 13900 | 12500 | r 20 |
 
 ## Structures
@@ -184,7 +184,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-shelter-leanto | dragonspine-leanto | 13010 | 13284.14 | 6 x 4 | solid |
 | dragonspine-waystone-rime-pass | waystone | 13017.01 | 13283.35 | 1.6 x 1.6 | solid |
 | dragonspine-woodpile | dragonspine-woodpile | 13091.08 | 13195.07 | 4 x 2 | solid |
-| dragonspine-bend-cairn-1 | rock | 13649.64 | 12102.65 | 1.4 x 1.4 | solid |
+| dragonspine-bend-cairn-1 | rock | 13649.62 | 12102.7 | 1.4 x 1.4 | solid |
 | dragonspine-bend-cairn-2 | rock | 13470.01 | 12249.83 | 1.4 x 1.4 | solid |
 | dragonspine-rope-post-2-1 | pole | 13480.71 | 12239.06 | 0.4 x 0.4 | open |
 | dragonspine-rope-post-2-2 | pole | 13480.35 | 12260.96 | 0.4 x 0.4 | open |
@@ -231,10 +231,10 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-nest-3 | dragonspine-nest | 11396 | 13157 | 2.2 x 2.2 | open |
 | dragonspine-cave-mouth | dragonspine-cave-mouth | 12300 | 13705 | 12 x 4 | solid |
 | dragonspine-cave-ledge | rock | 12300 | 13692 | 34 x 3.2 | solid |
-| dragonspine-m28-ledge-1 | rock | 13660 | 12703 | 6 x 5 | solid |
-| dragonspine-m28-ledge-2 | rock | 13787 | 12576 | 6 x 5 | solid |
-| dragonspine-m28-cairn-1 | rock | 13626.86 | 12760.14 | 1.4 x 1.4 | solid |
-| dragonspine-m28-cairn-2 | rock | 13712.48 | 12678.28 | 1.4 x 1.4 | solid |
-| dragonspine-m28-cairn-3 | rock | 13766.65 | 12603.15 | 1.4 x 1.4 | solid |
-| dragonspine-m28-cairn-4 | rock | 13853.43 | 12558.87 | 1.4 x 1.4 | solid |
+| dragonspine-m28-ledge-1 | rock | 13660 | 12700 | 6 x 5 | solid |
+| dragonspine-m28-ledge-2 | rock | 13787 | 12575 | 6 x 5 | solid |
+| dragonspine-m28-cairn-1 | rock | 13630.4 | 12757.84 | 1.4 x 1.4 | solid |
+| dragonspine-m28-cairn-2 | rock | 13715.02 | 12676.9 | 1.4 x 1.4 | solid |
+| dragonspine-m28-cairn-3 | rock | 13767.12 | 12601.61 | 1.4 x 1.4 | solid |
+| dragonspine-m28-cairn-4 | rock | 13854.52 | 12559.72 | 1.4 x 1.4 | solid |
 | dragonspine-m28-lookout-cairn | rock | 13904 | 12504 | 2 x 2 | solid |

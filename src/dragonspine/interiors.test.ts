@@ -7,6 +7,7 @@ import { ACT3_CORRIDORS, ACT3_HOLES } from '../region/act3Containment';
 import { SUMMIT_BOX, areaAt } from '../region/areas';
 import { heightAt } from '../terrain/heightfield';
 import { CAVE_AREA, COLLAPSED_CAVE_ID, DRAGONSPINE_DOOR_LOCKS, DRAGONSPINE_FLAG_BLOCKERS, DRAGONSPINE_INTERIORS, ROCKFALL_BLOCKER_ID, WYRMWATCH_HALL_ID } from './interiors';
+import { padFromRecord } from './inputs';
 import { buildDragonspine } from './layout';
 import { buildDragonspineInteriors } from './interiors';
 import { R16_ROCKFALL_CLEARED_FLAG, R16_STARTED_FLAG } from './flags';
@@ -70,27 +71,52 @@ describe('the Dragonspine interiors', () => {
     }
   });
 
-  it('keeps the cave\'s float in the lower slopes: inside the area, outside the summit box and hole in every flag state, areaAt = CAVE_AREA', () => {
+  it('keeps both floats in the lower slopes: every room corner is inside the area, outside the summit box and hole, and open in every flag state', () => {
     expect(CAVE_AREA).toBe('dragonspine-lower');
-    const corners = [
-      [cave.site.x, cave.site.z],
-      ...cave.rooms.flatMap((r) => [
-        [cave.site.x + r.x0, cave.site.z + r.z0],
-        [cave.site.x + r.x1, cave.site.z + r.z1],
-      ]),
-    ] as const;
-    for (const [x, z] of corners) {
-      expect(areaAt(x, z)).toBe(CAVE_AREA);
-      expect(x >= SUMMIT_BOX.x0 && x < SUMMIT_BOX.x1 && z >= SUMMIT_BOX.z0 && z < SUMMIT_BOX.z1).toBe(false);
-      expect(z).toBeLessThan(14800);
-    }
-    // In every flag state the float is open ground (the hole never reaches it) once the region is open.
     const open: Record<string, boolean> = { 'story.gate.a3': true, 'story.phase.dragonspineOpen': true };
     const summit = Object.fromEntries((ACT3_HOLES[0]!.openWhen as { all: string[] }).all.map((k) => [k, true]));
-    for (const flags of [open, { ...open, ...summit }]) {
-      const c = new Containment({ getFlag: (k: string) => flags[k] }, ACT3_CORRIDORS, ACT3_HOLES);
-      expect(c.isOpen(cave.site.x, cave.site.z)).toBe(true);
+    for (const d of [hall, cave]) {
+      const corners = [
+        [d.site.x, d.site.z],
+        ...d.rooms.flatMap((r) => [
+          [d.site.x + r.x0, d.site.z + r.z0],
+          [d.site.x + r.x1, d.site.z + r.z0],
+          [d.site.x + r.x0, d.site.z + r.z1],
+          [d.site.x + r.x1, d.site.z + r.z1],
+        ]),
+      ] as const;
+      for (const [x, z] of corners) {
+        expect(areaAt(x, z), d.id).toBe(CAVE_AREA);
+        expect(x >= SUMMIT_BOX.x0 && x < SUMMIT_BOX.x1 && z >= SUMMIT_BOX.z0 && z < SUMMIT_BOX.z1, d.id).toBe(false);
+        expect(z, d.id).toBeLessThan(SUMMIT_BOX.z0);
+        for (const flags of [open, { ...open, ...summit }]) {
+          const c = new Containment({ getFlag: (k: string) => flags[k] }, ACT3_CORRIDORS, ACT3_HOLES);
+          expect(c.isOpen(x, z), `${d.id} ${x},${z}`).toBe(true);
+        }
+      }
     }
+  });
+
+  it('puts every anchor and every exit at least 1.5 m inside a room, and every door anchor in a room', () => {
+    for (const d of DRAGONSPINE_INTERIORS) {
+      for (const a of d.anchors) {
+        const inside = d.rooms.some((r) => a.x > r.x0 && a.x < r.x1 && a.z > r.z0 && a.z < r.z1);
+        expect(inside, `${d.id} ${a.id}`).toBe(true);
+        if (a.id.endsWith('.exit') || a.id.endsWith('.inside')) {
+          const room = d.rooms.find((r) => a.x >= r.x0 && a.x <= r.x1 && a.z >= r.z0 && a.z <= r.z1)!;
+          expect(Math.min(a.x - room.x0, room.x1 - a.x, a.z - room.z0, room.z1 - a.z), `${d.id} ${a.id} margin`).toBeGreaterThanOrEqual(1.5);
+        }
+      }
+    }
+  });
+
+  it('throws on a pad too small for its rooms', () => {
+    const inp = stubInputs();
+    const shrink = (id: string, w: number, d: number) => inp.pads.map((p) => (p.id === id ? padFromRecord(id, { x: (p.footprint.minX + p.footprint.maxX) / 2, z: (p.footprint.minZ + p.footprint.maxZ) / 2, w, d }) : p));
+    expect(() => buildDragonspineInteriors({ pads: shrink('wyrmwatch-hall', 30, 10) })).toThrow(/too small/);
+    expect(() => buildDragonspineInteriors({ pads: shrink('wyrmwatch-hall', 10, 20) })).toThrow(/too small/);
+    expect(() => buildDragonspineInteriors({ pads: shrink('collapsed-cave', 50, 20) })).toThrow(/too small/);
+    expect(() => buildDragonspineInteriors({ pads: shrink('collapsed-cave', 8, 60) })).toThrow(/too small/);
   });
 
   it('stands at least 130 m from every other interior (Act 1 and 2 included)', () => {
@@ -123,7 +149,9 @@ describe('the Dragonspine interiors', () => {
   it('rebuilds from a pad: the same def for the same pad, a different site for a moved pad', () => {
     const inp = stubInputs();
     expect(buildDragonspineInteriors(inp)).toEqual(DRAGONSPINE_INTERIORS);
-    const moved = buildDragonspineInteriors({ pads: inp.pads.map((p) => ({ ...p, site: { x: p.site.x + 5, z: p.site.z } })) });
+    const moved = buildDragonspineInteriors({
+      pads: inp.pads.map((p) => ({ ...p, site: { x: p.site.x + 5, z: p.site.z }, footprint: { ...p.footprint, minX: p.footprint.minX + 5, maxX: p.footprint.maxX + 5 } })),
+    });
     expect(moved[0]!.site.x).toBe(inp.pads[0]!.site.x + 5);
   });
 });
