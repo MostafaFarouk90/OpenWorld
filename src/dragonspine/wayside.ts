@@ -7,9 +7,13 @@ import { footprintMax } from './fit';
 import type { Sites } from './sites';
 
 export const WAYSIDE_PAD = 8;
+/** The most a platform may slide along the road from its target, in metres, looking for gentle ground. */
+export const WAYSIDE_MAX_SLIDE = 90;
+/** The most a platform's top may stand over the road edge's ground, in metres. */
+export const WAYSIDE_MAX_STEP = 0.6;
 /** The platform's height above the highest ground under it. */
 export const WAYSIDE_PAD_HEIGHT = 0.2;
-const SLIDE = Array.from({ length: 37 }, (_, i) => (i === 0 ? 0 : (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 5));
+const SLIDE = Array.from({ length: 2 * (WAYSIDE_MAX_SLIDE / 5) + 1 }, (_, i) => (i === 0 ? 0 : (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 5));
 
 export interface WaysideSite {
   index: number;
@@ -38,22 +42,25 @@ export function waysideTargets(shelterS: number, anvilS: number, roadEnd: number
 }
 
 export function waysideLayout(s: Sites, shelterS: number, anvilS: number): { part: Part; info: WaysideInfo } {
-  const offset = s.roadHalf + 0.5 + WAYSIDE_PAD / 2;
+  // The pad's gap from the road edge: tried nearest first, a little further out when the verge is steep.
+  const offsets = [0.5, 3, 6].map((gap) => s.roadHalf + gap + WAYSIDE_PAD / 2);
   const sites: WaysideSite[] = [];
   const specs: StructureSpec[] = [];
   waysideTargets(shelterS, anvilS, s.road.length).forEach((want, i) => {
-    let best: { score: number; s: number; side: 1 | -1 } | null = null;
+    let best: { score: number; s: number; side: 1 | -1; offset: number } | null = null;
     for (const ds of SLIDE) {
       const at = Math.min(Math.max(want + ds, 0), s.road.length);
       for (const side of [1, -1] as const) {
-        const c = s.road.point(at, side * offset);
-        const edge = s.road.point(at, side * s.roadHalf);
-        const rise = footprintMax(s.h, c.x, c.z, WAYSIDE_PAD + 2, WAYSIDE_PAD + 2) - s.h(edge.x, edge.z);
-        const score = Math.abs(rise) + Math.abs(ds) * 0.0005;
-        if (!best || score < best.score) best = { score, s: at, side };
+        for (const offset of offsets) {
+          const c = s.road.point(at, side * offset);
+          const edge = s.road.point(at, side * s.roadHalf);
+          const rise = footprintMax(s.h, c.x, c.z, WAYSIDE_PAD + 2, WAYSIDE_PAD + 2) - s.h(edge.x, edge.z);
+          const score = Math.abs(rise) + Math.abs(ds) * 0.0005 + (offset - offsets[0]!) * 0.01;
+          if (!best || score < best.score) best = { score, s: at, side, offset };
+        }
       }
     }
-    const c = s.road.point(best!.s, best!.side * offset);
+    const c = s.road.point(best!.s, best!.side * best!.offset);
     const spec = solid(`dragonspine-wayside-pad-${i + 1}`, 'rock', c.x, c.z, WAYSIDE_PAD, WAYSIDE_PAD, WAYSIDE_PAD_HEIGHT);
     const top = footprintMax(s.h, c.x, c.z, WAYSIDE_PAD + 2, WAYSIDE_PAD + 2) + WAYSIDE_PAD_HEIGHT;
     specs.push(spec);

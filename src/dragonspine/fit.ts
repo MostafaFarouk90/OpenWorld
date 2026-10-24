@@ -82,3 +82,18 @@ export function findShelf(h: HeightFn, foot: Rect, minGain: number): XZ {
   if (!best) throw new Error(`dragonspine: no nest shelf at least ${minGain} m over the Hawk Cliffs foot (a flat 20 x 14 m spot north of it)`);
   return { x: best.x, z: best.z };
 }
+
+/** The nearest point to `want` (within `radius`) where a player can stand: the ground gradient there is under `maxGrad`. */
+export function standableNear(h: HeightFn, want: XZ, radius = 40, maxGrad = 0.35): XZ {
+  const grad = (x: number, z: number): number => Math.hypot((h(x + 1, z) - h(x - 1, z)) / 2, (h(x, z + 1) - h(x, z - 1)) / 2);
+  if (grad(want.x, want.z) <= maxGrad) return { x: want.x, z: want.z };
+  for (let r = 2; r <= radius; r += 2) {
+    for (let k = 0; k < Math.max(8, r * 2); k++) {
+      const ang = (k / Math.max(8, r * 2)) * Math.PI * 2;
+      const x = want.x + Math.cos(ang) * r;
+      const z = want.z + Math.sin(ang) * r;
+      if (grad(x, z) <= maxGrad) return { x, z };
+    }
+  }
+  return { x: want.x, z: want.z };
+}

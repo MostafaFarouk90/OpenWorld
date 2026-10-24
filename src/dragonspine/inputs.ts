@@ -1,6 +1,6 @@
 // What the Dragonspine places derive from. Every position in this folder comes from these inputs (K1's plateaus, the Rime Pass
 // polyline, the camp hearth and the interior pads) and every y from `heightAt`: move a plateau and the place moves with it.
-import { ACT3_INTERIOR_PADS, WYRMWATCH_HEARTH, type InteriorPadRecord } from '../region/act3/act3Places';
+import { ACT3_INTERIOR_PADS, WYRMWATCH_HEARTH, type Act3InteriorPad } from '../region/act3/act3Places';
 import { ACT3_PLATEAUS } from '../terrain/shape/act3';
 import { RIME_PASS, RIME_PASS_POINTS } from '../terrain/shape/dragonspine';
 import type { PlateauDef } from '../terrain/shaping';
@@ -35,12 +35,12 @@ export interface InteriorPad {
  * the entry rooms (which reach `INTERIOR_ENTRY` past it) keep the edge margin; the rooms run south from there (yaw 0 faces -Z).
  * The builders throw when the rooms do not fit the box.
  */
-export function padFromRecord(id: string, r: Pick<InteriorPadRecord, 'x' | 'z' | 'w' | 'd'>): InteriorPad {
+export function padFromRecord(id: string, r: Pick<Act3InteriorPad, 'x' | 'z' | 'w' | 'd'>): InteriorPad {
   const footprint = { minX: r.x - r.w / 2, maxX: r.x + r.w / 2, minZ: r.z - r.d / 2, maxZ: r.z + r.d / 2 };
   return { id, footprint, site: { x: r.x, z: footprint.maxZ - INTERIOR_EDGE - INTERIOR_ENTRY } };
 }
 
-export const padsFromRecords = (records: Readonly<Record<string, Pick<InteriorPadRecord, 'x' | 'z' | 'w' | 'd'>>>): InteriorPad[] => Object.entries(records).map(([id, r]) => padFromRecord(id, r));
+export const padsFromRecords = (records: Readonly<Record<string, Pick<Act3InteriorPad, 'x' | 'z' | 'w' | 'd'>>>): InteriorPad[] => Object.entries(records).map(([id, r]) => padFromRecord(id, r));
 
 export interface DragonspineInputs {
   plateaus: readonly PlateauDef[];

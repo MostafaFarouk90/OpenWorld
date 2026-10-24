@@ -152,6 +152,7 @@ describe('the Dragonspine interiors', () => {
     const moved = buildDragonspineInteriors({
       pads: inp.pads.map((p) => ({ ...p, site: { x: p.site.x + 5, z: p.site.z }, footprint: { ...p.footprint, minX: p.footprint.minX + 5, maxX: p.footprint.maxX + 5 } })),
     });
-    expect(moved[0]!.site.x).toBe(inp.pads[0]!.site.x + 5);
+    const hallPad = inp.pads.find((p) => p.id === 'wyrmwatch-hall')!;
+    expect(moved[0]!.site.x).toBe(hallPad.site.x + 5);
   });
 });

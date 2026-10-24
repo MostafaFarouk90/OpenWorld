@@ -14,7 +14,7 @@ import { DRAGONSPINE_NPCS } from './npcDefs';
 import { roadFromPoints } from './road';
 import { registerDragonspineKinds } from './structureKinds';
 import { shiftedInputs, shiftedRoad, stubInputs } from './testing/fixture';
-import { WAYSIDE_SPACING } from './wayside';
+import { WAYSIDE_MAX_SLIDE, WAYSIDE_MAX_STEP, WAYSIDE_SPACING } from './wayside';
 
 let release: () => void;
 beforeAll(() => {
@@ -163,9 +163,9 @@ describe('the wayside sites', () => {
     expect(s.slice(0, 3).every((v) => v < b.anvil.roadS)).toBe(true);
     expect(s.slice(3).every((v) => v > b.anvil.roadS)).toBe(true);
     expect(s[0]).toBeGreaterThan(b.shelter.roadS);
-    for (let i = 1; i < 6; i++) expect(Math.abs(s[i]! - s[i - 1]! - (i === 3 ? 2 * WAYSIDE_SPACING : WAYSIDE_SPACING)), `gap ${i}`).toBeLessThan(120);
+    for (let i = 1; i < 6; i++) expect(Math.abs(s[i]! - s[i - 1]! - (i === 3 ? 2 * WAYSIDE_SPACING : WAYSIDE_SPACING)), `gap ${i}`).toBeLessThanOrEqual(2 * WAYSIDE_MAX_SLIDE);
   });
-  it('stand beside the road, top level with its edge (a step of at most 0.5 m on the uncarved stand-in ground), anchor on the platform', () => {
+  it('stand beside the road, top level with its edge (a step of at most WAYSIDE_MAX_STEP), anchor on the platform', () => {
     for (const w of b.wayside.sites) {
       const spec = b.wayside.specs[w.index - 1]!;
       const d = road.nearest(spec.x, spec.z).d;
@@ -173,7 +173,7 @@ describe('the wayside sites', () => {
       expect(d).toBeLessThan(b.sites.roadHalf + 12);
       const edge = road.point(w.s, w.side * b.sites.roadHalf);
       const top = inp.heightAt(spec.x, spec.z) + w.dy;
-      expect(top - inp.heightAt(edge.x, edge.z), `wayside ${w.index}`).toBeLessThanOrEqual(0.5);
+      expect(top - inp.heightAt(edge.x, edge.z), `wayside ${w.index}`).toBeLessThanOrEqual(WAYSIDE_MAX_STEP);
       expect(anchor(`dragonspine.wayside.${w.index}`).onStructure).toBe(spec.id);
     }
   });

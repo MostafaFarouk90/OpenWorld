@@ -7,11 +7,12 @@ import { a, emptyPart, numbered, open, polar, sphere, type Part } from './helper
 import { findShelf } from './fit';
 import type { XZ } from './inputs';
 import { pathLength, pathPoint, windingPath } from './paths';
+import { routeOver } from './route';
 import { Placer } from './placer';
 import type { Sites } from './sites';
 
-/** The climb proper is about this long; with the walk from the camp to its foot, five trips make the plan's 800 m on foot. */
-export const CLIMB_LENGTH = 125;
+/** The climb's length when no walkable route exists (a winding line up the face; with the walk from the camp, five trips make about 800 m). */
+const FALLBACK_CLIMB_LENGTH = 125;
 /** The nest shelf stands at least this far over the foot to count as a climb (a lower bound; K1's cliff is meant to give about 30 m). */
 export const SHELF_MIN_GAIN = 8;
 /** The parents circle this far over the shelf. */
@@ -24,6 +25,8 @@ export interface HawkInfo {
   climbStart: XZ;
   climb: XZ[];
   climbLength: number;
+  /** False when K1's face has no walkable line and the climb is only the straight line. */
+  walkable: boolean;
   shelf: XZ;
   nests: XZ[];
   companionHold: XZ;
@@ -43,14 +46,18 @@ export function hawkCliffsLayout(s: Sites): { part: Part; info: HawkInfo } {
   const climbStart = { x: F.cx + 8, z: F.maxZ - 5 };
   const shelf = findShelf(s.h, F, SHELF_MIN_GAIN);
   const shelfEntry = { x: shelf.x, z: shelf.z - 8 };
-  const climb = windingPath(climbStart, shelfEntry, CLIMB_LENGTH, 3);
+  // The climb follows the ground: a walkable route (slope under the limit) from the foot to the shelf, wherever K1's cliff puts its walls.
+  // Where K1's cliff face has no walkable line (null) the climb is the straight winding line, flagged `walkable: false`: the face
+  // needs built ramps or a climbing rule, which this PR does not build (the shipped-ground test says so).
+  const routed = routeOver(s.h, climbStart, shelfEntry);
+  const climb = routed ?? windingPath(climbStart, shelfEntry, FALLBACK_CLIMB_LENGTH, 3);
   const climbLength = pathLength(climb);
   const steps = Math.max(2, Math.ceil(climbLength / 20));
   const climbPts = Array.from({ length: steps }, (_, i) => pathPoint(climb, (climbLength * (i + 1)) / (steps + 1 - 0)));
 
   const treads = climb.slice(1, -1).map((p, i) => open(`dragonspine-climb-tread-${i + 1}`, 'rock', p.x, p.z, 3, 2.4, 0.3));
   const nestWant = [shelf, { x: shelf.x - 9, z: shelf.z + 5 }, { x: shelf.x + 9, z: shelf.z + 6 }];
-  const nests = nestWant.map((w) => findFlat(s.h, { prefer: w, radius: 14, size: [2.2, 2.2], maxSpread: 0.45, step: 1 }) ?? w);
+  const nests = nestWant.map((w) => findFlat(s.h, { prefer: w, radius: 14, size: [2.2, 2.2], maxSpread: 0.45, step: 1 }) ?? findFlat(s.h, { prefer: w, radius: 60, size: [2.2, 2.2], maxSpread: 0.45, step: 2 }) ?? w);
   const nestSpecs = nests.map((p, i) => open(`dragonspine-nest-${i + 1}`, 'dragonspine-nest', p.x, p.z, 2.2, 2.2));
   const hold = { x: F.maxX - 12, z: F.cz - 8 };
 
@@ -77,5 +84,5 @@ export function hawkCliffsLayout(s: Sites): { part: Part; info: HawkInfo } {
     triggers: [sphere('trg.dragonspine.hawkcliffs.camp', camp.x, camp.z, 22), sphere('trg.dragonspine.hawkcliffs.nest', shelf.x, shelf.z, 14)],
     structures: [straw, sack, tracks, shell, ...treads, ...nestSpecs],
   };
-  return { part, info: { camp, eggs, climbStart, climb, climbLength, shelf, nests, companionHold: hold, specs: part.structures } };
+  return { part, info: { camp, eggs, climbStart, climb, climbLength, walkable: routed !== null, shelf, nests, companionHold: hold, specs: part.structures } };
 }
