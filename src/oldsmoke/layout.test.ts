@@ -137,16 +137,16 @@ describe('A1\'s smoke stacks stay A1\'s', () => {
 });
 
 describe('Deepgate containment', () => {
-  const state = (hold: boolean) => ({ getFlag: (k: string) => (k === 'story.d03.complete' || k === 'story.gate.a2' || (hold && k === 'story.phase.oldsmokeOpen') ? true : undefined) }) as never;
+  const state = (d03: boolean) => ({ getFlag: (k: string) => (k === 'story.gate.a2' || (d03 && k === 'story.d03.complete') ? true : undefined) }) as never;
   const open = new Containment(state(true), [DEAD_ROAD_CORRIDOR, ...ACT2_CORRIDORS]);
 
-  it('has every anchor, trigger and structure centre in the open area once D03 is done and the phase hold is retired', () => {
+  it('has every anchor, trigger and structure centre in the open area once D03 is done', () => {
     for (const a of OLDSMOKE_LAYOUT.anchors) expect(open.isOpen(a.x, a.z), a.id).toBe(true);
     for (const t of OLDSMOKE_LAYOUT.triggers) expect(open.isOpen(t.x, t.z), t.id).toBe(true);
     for (const k of OLDSMOKE_KEEP_OUT) expect(open.isOpen(k.x, k.z), k.id).toBe(true);
   });
 
-  it('keeps Deepgate shut during Phase C (the hold is not retired)', () => {
+  it('keeps Deepgate shut before D03 is done', () => {
     const shut = new Containment(state(false), [DEAD_ROAD_CORRIDOR, ...ACT2_CORRIDORS]);
     expect(shut.isOpen(GATE.x, GATE.z + 20)).toBe(false);
     expect(shut.isOpen(SHAFT.x, SHAFT.z)).toBe(false);

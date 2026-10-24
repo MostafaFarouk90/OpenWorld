@@ -96,6 +96,20 @@ describe('the Tilted Anvil', () => {
   });
 });
 
+describe('the Tilted Anvil camp posts', () => {
+  const l = L(TILTED_ANVIL_DEF);
+  const grid = new NavGrid(l.nav);
+  it('every party and guest post is on walkable floor and reachable from the door, apart from each other', () => {
+    const posts = ['npc-post.tobb.tilted-anvil', 'npc-post.hrolf.tilted-anvil', 'npc-post.aelfreda.tilted-anvil', 'npc-post.wenna.tilted-anvil'].map((id) => anchorOf(l, id).position);
+    const entry = anchorOf(l, 'harrowmark.tilted-anvil.entry').position;
+    for (const p of posts) {
+      expect(grid.isWalkable(grid.cellIndex(p.x, p.z))).toBe(true);
+      expect(reaches(grid, entry, p)).toBe(true);
+    }
+    for (let i = 0; i < posts.length; i++) for (let j = i + 1; j < posts.length; j++) expect(dist(posts[i], posts[j])).toBeGreaterThan(1.5);
+  });
+});
+
 describe('the keep hall', () => {
   const l = L(KEEP_HALL_DEF);
   it('stands Edric on a walkable 0.4 m dais', () => {
@@ -113,6 +127,28 @@ describe('the keep hall', () => {
     expect(Math.abs(p.x - t.center.x)).toBeLessThanOrEqual(t.half.x);
     expect(Math.abs(p.y - t.center.y)).toBeLessThanOrEqual(t.half.y);
     expect(Math.abs(p.z - t.center.z)).toBeLessThanOrEqual(t.half.z);
+  });
+  it('stands Aldous Grisel\'s empty chair on the dais, solid and clear of the court\'s posts and the nav path', () => {
+    const chair = KEEP_HALL_DEF.props!.find((p) => p.id === 'chair.aldous')!;
+    const dais = KEEP_HALL_DEF.props!.find((p) => p.id === 'dais.1')!;
+    expect(chair.walkable).toBeFalsy();
+    expect(chair.rect.x0).toBeGreaterThanOrEqual(dais.rect.x0);
+    expect(chair.rect.x1).toBeLessThanOrEqual(dais.rect.x1);
+    expect(chair.rect.z0).toBeGreaterThanOrEqual(dais.rect.z0);
+    expect(chair.rect.z1).toBeLessThanOrEqual(dais.rect.z1);
+    for (const post of ['npc-post.edric.hall', 'npc-post.vey.hall']) {
+      const p = anchorOf(l, post).position;
+      const local = { x: p.x - l.origin.x, z: p.z - l.origin.z };
+      expect(local.x < chair.rect.x0 || local.x > chair.rect.x1 || local.z < chair.rect.z0 || local.z > chair.rect.z1, post).toBe(true);
+    }
+    // The chair is a solid block: it blocks the nav grid and is built as a layout box.
+    const grid = new NavGrid(l.nav);
+    const c = anchorOf(l, 'harrowmark.keep-hall.aldous-chair').position;
+    expect(grid.isWalkable(grid.cellIndex(l.origin.x + (chair.rect.x0 + chair.rect.x1) / 2, l.origin.z + (chair.rect.z0 + chair.rect.z1) / 2))).toBe(false);
+    expect(grid.isWalkable(grid.cellIndex(c.x, c.z))).toBe(true);
+    expect(reaches(grid, anchorOf(l, 'harrowmark.keep-hall.entry').position, c)).toBe(true);
+    // Nothing of the court is displaced: the dais, Edric and Vey stand where they did.
+    expect(anchorOf(l, 'npc-post.edric.hall').position.y - l.floorY).toBeCloseTo(0.4, 6);
   });
   it('has eight columns that are not walkable', () => {
     expect(KEEP_HALL_DEF.pillars).toHaveLength(8);

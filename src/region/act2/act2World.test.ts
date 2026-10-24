@@ -98,7 +98,7 @@ describe('the Act 2 corridors', () => {
   it('the pass is closed in Phase C and with D03 done but the hold unset; open in Phase D', () => {
     const inGap = along('oldsmoke-pass').filter((p) => p.z > engineBox('cinderreach').z1 + 5 && p.z < engineBox('oldsmoke').z0 - 5);
     expect(inGap.length).toBeGreaterThan(50);
-    for (const flags of [ACT1, PHASE_C, D03_HOLD_UNSET]) {
+    for (const flags of [ACT1, PHASE_C]) {
       const c = containment(flags);
       for (const p of inGap) expect(c.isOpen(p.x, p.z)).toBe(false);
     }
@@ -106,11 +106,12 @@ describe('the Act 2 corridors', () => {
     for (const p of inGap) expect(d.isOpen(p.x, p.z)).toBe(true);
   });
 
-  it('with the Phase C hold retired (the list emptied), D03 alone opens the pass', () => {
-    const retired: FlagCondition = { all: (REGION_INFO.oldsmoke.openWhen.all ?? []).filter((k) => !PHASE_HOLDS.includes(k)) };
-    expect(retired.all).toEqual(['story.d03.complete']);
-    expect(flagConditionHolds(retired, reader(D03_HOLD_UNSET))).toBe(true);
-    expect(flagConditionHolds(retired, reader(PHASE_C))).toBe(false);
+  it('the Phase C hold is retired (the list is empty), so D03 alone opens the pass', () => {
+    expect(PHASE_HOLDS).toEqual([]);
+    const cond: FlagCondition = REGION_INFO.oldsmoke.openWhen;
+    expect(cond.all).toEqual(['story.d03.complete']);
+    expect(flagConditionHolds(cond, reader(D03_HOLD_UNSET))).toBe(true);
+    expect(flagConditionHolds(cond, reader(PHASE_C))).toBe(false);
   });
 
   it('a step 200 m off the road toward the Ashen Waste is pushed back onto the corridor', () => {
@@ -171,7 +172,7 @@ describe('the Act 2 fog walls', () => {
   it('opens on the right states: the Cinder Road on story.gate.a2, the pass only in Phase D, the faces never', () => {
     const open = (id: string, flags: Flags) => flagConditionHolds(ACT2_FOG_WALLS.find((w) => w.id === id)!.openWhen, reader(flags));
     expect([ACT1, PHASE_C, D03_HOLD_UNSET, PHASE_D].map((f) => open('fog.cinder-road', f))).toEqual([false, true, true, true]);
-    expect([ACT1, PHASE_C, D03_HOLD_UNSET, PHASE_D].map((f) => open('fog.oldsmoke-pass', f))).toEqual([false, false, false, true]);
+    expect([ACT1, PHASE_C, D03_HOLD_UNSET, PHASE_D].map((f) => open('fog.oldsmoke-pass', f))).toEqual([false, false, true, true]);
     for (const id of ['fog.greyfen', 'fog.ashen-waste', 'fog.dragonspine', 'fog.caldera']) {
       expect(open(id, { ...PHASE_D, 'story.gate.a3': true })).toBe(false);
     }

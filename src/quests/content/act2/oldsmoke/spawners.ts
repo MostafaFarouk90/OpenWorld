@@ -1,15 +1,19 @@
 import { WATCH_GUARD_BAND } from '../../../../enemies/level';
-import type { SpawnerDef } from '../../../../enemies/types';
+import type { LevelBand, SpawnerDef } from '../../../../enemies/types';
 
 const range = (prefix: string, from: number, to: number): string[] => Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${from + i}`);
 const common = { band: 'oldsmoke', respawn: 'never' as const };
+/** M16's pass hounds: levels 12 to 14. */
+export const M16_AMBUSH_BAND: LevelBand = { min: 12, max: 14 };
 
 /** Quest-scoped groups of the Oldsmoke quests built so far. Anchors are A4's. */
 export const OLDSMOKE_SPAWNERS: readonly SpawnerDef[] = [
-  // M16: the pass hounds, once the road has been read
+  // M16: the pass hounds, once the road has been read. Levels 12 to 14 (the Knight is 14 when M16 starts on the headless chain),
+  // not the region's 12 to 19: a level-19 pounce is 78 damage on a head hit (src/integration/difficulty.test.ts).
   {
     id: 'q13.m16.ambush', tag: 'm16.ambush', enemy: 'ember-hound', count: 4, anchor: 'oldsmoke.pass.ambush.1',
-    memberAnchors: range('oldsmoke.pass.ambush.', 1, 4), activation: { quest: 'm16', flag: 'story.m16.houndsOut' }, leash: true, ...common,
+    memberAnchors: range('oldsmoke.pass.ambush.', 1, 4), activation: { quest: 'm16', flag: 'story.m16.houndsOut' }, leash: true,
+    ...common, band: M16_AMBUSH_BAND,
   },
   // R09: three crawler nests under the market, woken by the foreman's briefing
   ...[1, 2, 3].map((n): SpawnerDef => ({

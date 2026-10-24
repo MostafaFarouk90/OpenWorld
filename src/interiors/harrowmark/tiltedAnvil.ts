@@ -53,6 +53,8 @@ export const TILTED_ANVIL_DEF: InteriorDef = {
     // Act 2 (A5): where an inactive companion waits by the hearth.
     { id: 'npc-post.hrolf.tilted-anvil', x: 8.2, z: -4, facing: { x: 11, z: -2 } },
     { id: 'npc-post.aelfreda.tilted-anvil', x: 8.2, z: 0, facing: { x: 11, z: -2 } },
+    // Act 2 (A16, additive): Wenna Grisel at the camp once the act has ended (the oldsmoke post rules move her here).
+    { id: 'npc-post.wenna.tilted-anvil', x: 5.5, z: -3, facing: { x: 11, z: -2 } },
   ],
   triggers: [],
   doors: [

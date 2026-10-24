@@ -470,6 +470,15 @@ describe('the R10 compromise rounds', () => {
 });
 
 describe('Wenna', () => {
+  it('speaks the M21 counsel once in the offer and keeps one copy for an aborted offer (a death or load earns no talk credit)', () => {
+    const d = dialogueDefs.find((x) => x.id === 'npc-wenna')!;
+    const texts = (id: string) => d.nodes.filter((n) => n.id.startsWith(id)).map((n) => all[n.textKey] ?? '');
+    const offer = texts('m21-offer').join('\n');
+    const counsel = texts('m21-counsel').join('\n');
+    expect(counsel.length).toBeGreaterThan(0);
+    expect(offer).toContain(counsel);
+    expect(dialogueDefs.filter((x) => x.nodes.some((n) => (all[n.textKey] ?? '').includes('You have been below. You have seen the nursery'))).length).toBe(1);
+  });
   it('counsels at the start of M21 and reports at its end', () => {
     const w = world();
     w.set('m21', 'active');

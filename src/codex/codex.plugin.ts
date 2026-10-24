@@ -5,7 +5,7 @@ import { CODEX_MODAL_ID, createCodexModal, type CodexModalWidget } from './Codex
 import { SHRINE_IDS } from '../map/ForgeMarks';
 import { BESTIARY_IDS, CodexRegistry, HOWTO_IDS } from './entries';
 import { CODEX_STRINGS_EN } from './strings.en';
-import { ACT2_CODEX_ENTRIES, ACT2_CODEX_IDS, ACT2_CODEX_STRINGS_EN, ACT2_DISCOVER_UNLOCKS, ACT2_FLAG_UNLOCKS, ACT2_QUEST_UNLOCKS } from './act2';
+import { ACT2_CODEX_ENTRIES, ACT2_CODEX_IDS, ACT2_CODEX_STRINGS_EN, ACT2_DISCOVER_UNLOCKS, ACT2_FLAG_UNLOCKS, ACT2_OUTCOME_UNLOCKS, ACT2_QUEST_UNLOCKS } from './act2';
 import type { CodexService, MercyCounts } from './service';
 import './service';
 
@@ -188,6 +188,11 @@ const codex: GamePlugin = {
         } catch (e) {
           warn(`codex: quests.state() failed: ${String(e)}`);
         }
+      }
+      // Boss outcomes (Redmane, the Slagmaw): the registry's one-time outcome flag says the fight was had, and how it ended.
+      for (const u of ACT2_OUTCOME_UNLOCKS) {
+        const v = (ctx.state as { getFlag?(key: string): unknown }).getFlag?.(u.flag);
+        if (v !== undefined && v !== false && (u.outcome === undefined || v === u.outcome)) model.unlock(u.entry);
       }
       // Tempered gear in the pack is the forge used, whichever quest it was for.
       const inv = (ctx.services as unknown as Loose).get('inventory') as { items?: () => { id: string }[]; gear?: (id: string) => { temper: number } } | undefined;
