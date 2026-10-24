@@ -142,6 +142,9 @@ const plugin: GamePlugin = {
       () => svc('dialogue')?.active === true,
     );
     manager.onChange(() => posts.markDirty());
+    // A post row keyed on a flag alone (Wenna at the camp, the hall stewards' hostile flag) must apply when the flag changes,
+    // also when no quest changes after it (review R3-2). `update()` returns at once when nothing is dirty.
+    offs.push(ctx.events.on('flag.changed', () => posts.markDirty()));
     // R02's blocking dummies stand in the yard only while R02 is active (the Bastion yard from M06 on).
     const yard = new R02Yard({
       active: () => manager.state('r02') === 'active',
