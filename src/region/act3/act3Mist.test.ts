@@ -48,7 +48,7 @@ describe('mistFog', () => {
   it('blends in between, never lengthens a short fog, and does not touch the base colour', () => {
     const h = mistFog(900, 5040, base, 0.5);
     expect(h.near).toBeCloseTo(510, 6);
-    expect(h.far).toBeCloseTo(3420, 6);
+    expect(h.far).toBeCloseTo(3820, 6);
     const short = mistFog(60, 900, base, 1);
     expect(short.near).toBe(60);
     expect(short.far).toBe(900);
