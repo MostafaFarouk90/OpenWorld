@@ -7,6 +7,8 @@ import { CINDER_GOLEM } from './golem/def';
 import { HUNTER_HARPOONER, HUNTER_SPEARMAN } from './hunters/def';
 import { EMBER_HOUND } from './hound/def';
 import { EMBER_WYRM_DEF, WYRMLING_DEF } from './wyrm/defs';
+import { FEN_LEECH } from './fen/leech/def';
+import { PEAT_SHAMBLER } from './fen/shambler/def';
 import type { EnemyDef, EnemyKind, MoveDef } from './types';
 
 /**
@@ -235,6 +237,9 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'hunter-spearman': HUNTER_SPEARMAN,
   'hunter-harpooner': HUNTER_HARPOONER,
   'steward-guard': STEWARD_GUARD,
+  // Act 3 (K6b PR 1): the Greyfen's creatures.
+  'fen-leech': FEN_LEECH,
+  'peat-shambler': PEAT_SHAMBLER,
 };
 
 /**
@@ -262,6 +267,9 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   'hunter-spearman': { part: 'weapon', color: 0xd04030 },
   'hunter-harpooner': { part: 'weapon', color: 0xd04030 },
   'steward-guard': { part: 'weapon', color: 0xd04030 },
+  // K6b, design 11.6 "rear-up and drip" for water enemies (a cold wet blue-grey) and "fists and clods" (peat brown).
+  'fen-leech': { part: 'maw', color: 0x8fb0b8 },
+  'peat-shambler': { part: 'hand', color: 0x8a5a2a },
 };
 
 function move(

@@ -74,6 +74,8 @@ export interface CombatVerbsService {
    * Ash-drift). The same source extends, never stacks. Cleared on death, on a load and on dispose. Returns the early release.
    */
   addInvulnerability(source: string, seconds: number): () => void;
+  /** K6b: takes up to `n` stamina as a guard break does (regen delay, exhaustion at 0): the Fen Leech's drain bite. */
+  drainStamina(n: number): void;
 }
 
 declare module '../core/Services' {
@@ -275,6 +277,7 @@ export class CombatVerbs {
       },
       addDodgeDistanceMultiplier: (id, mult) => self.dodgeDistance.add(id, mult),
       addInvulnerability: (source, seconds) => self.addTimedInvulnerability(source, seconds),
+      drainStamina: (n) => self.stamina.forceDrain(n),
     });
     const rig = ctx.cameraRig;
     if (rig) {

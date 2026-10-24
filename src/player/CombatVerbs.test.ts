@@ -984,6 +984,24 @@ describe('class kit: attack sets and speed', () => {
   });
 });
 
+describe('drainStamina (K6b, the Fen Leech bite)', () => {
+  it('takes stamina like a guard break: never below 0, exhausts at 0, regen waits', () => {
+    const t = setup();
+    const svc = t.ctx.services.get('combatVerbs')!;
+    t.actor.stamina = 40;
+    svc.drainStamina(25);
+    expect(t.actor.stamina).toBe(15);
+    t.run(1);
+    expect(t.actor.stamina).toBe(15); // the regen delay holds it
+    svc.drainStamina(25);
+    expect(t.actor.stamina).toBe(0);
+    expect(t.verbs.stamina.exhausted).toBe(true);
+    svc.drainStamina(-5);
+    svc.drainStamina(Number.NaN);
+    expect(t.actor.stamina).toBe(0);
+  });
+});
+
 describe('plugin', () => {
   it('sets up with the core plugin, registers its services and tears down cleanly', async () => {
     const scene = new THREE.Scene();

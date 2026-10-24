@@ -331,6 +331,8 @@ export interface ServicesPort {
   get(name: 'status'): StatusPort | undefined;
   /** v0.7: the player's level, read at spawn time by Act 3 block and summit spawners. */
   get(name: 'progression'): { readonly level: number } | undefined;
+  /** K6b: the combat verbs' stamina drain (regen delay and exhaustion at 0, as a guard break). */
+  get(name: 'combatVerbs'): { drainStamina?(n: number): void } | undefined;
 }
 
 /** The part of core's `StatusService` (src/actors/status.ts) the enemies call. */

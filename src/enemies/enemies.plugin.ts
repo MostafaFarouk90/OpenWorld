@@ -5,6 +5,7 @@ import { ENEMY_DEFS } from './defs';
 import { EnemyManager, type ModelFactory } from './EnemyManager';
 import { hostFromContext } from './host';
 import { ACT2_SPAWNERS } from './act2Spawners';
+import { ACT3_SPAWNERS } from './act3Spawners';
 import { BRIGHTWATER_SPAWNERS } from './brightwaterSpawners';
 import { DENSITY_SPAWNERS_A } from './densitySpawners';
 import { HARROWMARK_SPAWNERS } from './harrowmarkSpawners';
@@ -52,7 +53,7 @@ const plugin: GamePlugin = {
       }
       return { model: assets.instantiate(KNIGHT), clips: assets.animations(KNIGHT), prop };
     };
-    const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS, ...ACT2_SPAWNERS, ...WAVE_SPAWNERS, ...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS] });
+    const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS, ...ACT2_SPAWNERS, ...WAVE_SPAWNERS, ...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS, ...ACT3_SPAWNERS] });
     manager = m;
 
     ctx.strings.register('en', ENEMY_STRINGS_EN);

@@ -11,6 +11,7 @@ import { WYRM_SPAWNERS } from './wyrm/spawners';
 import { WAVE_SPAWNERS } from '../waves/spawners';
 import { ACT2_SPAWNERS_A12 } from '../quests/content/act2/spawners';
 import { OLDSMOKE_SPAWNERS } from '../quests/content/act2/oldsmoke';
+import { ACT3_SPAWNERS } from './act3Spawners';
 import { ALL_INTERIORS } from '../interiors/interiors.plugin';
 import { ALL_LAYOUTS, resolveAnchors } from '../quests/lint/noteLint';
 import { MAP_TO_ENGINE_OFFSET, REGION_BOXES_MAP } from '../region/regionMask';
@@ -22,7 +23,7 @@ const ACT3_REGIONS = ['greyfen', 'dragonspine'] as const;
 
 export const ALL_SPAWNER_DEFS: readonly SpawnerDef[] = [
   ...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS, ...ACT2_SPAWNERS,
-  ...WAVE_SPAWNERS, ...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS,
+  ...WAVE_SPAWNERS, ...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS, ...ACT3_SPAWNERS,
 ];
 
 const anchors = resolveAnchors(ALL_LAYOUTS, ALL_INTERIORS);
@@ -56,14 +57,23 @@ export function act3SpawnersMissingBlockOrArea(defs: readonly SpawnerDef[], look
 describe('Act 3 spawner lint', () => {
   it('sees the shipped spawner tables and resolves their anchors', () => {
     expect(ALL_SPAWNER_DEFS.length).toBeGreaterThan(100);
+    for (const d of ACT3_SPAWNERS) expect(ALL_SPAWNER_DEFS).toContain(d);
+    for (const d of ACT3_SPAWNERS) expect(anchors.has(d.anchor), d.id).toBe(true);
     const resolved = ALL_SPAWNER_DEFS.filter((s) => anchors.has(s.anchor));
     expect(resolved.length).toBeGreaterThan(ALL_SPAWNER_DEFS.length / 2);
   });
 
-  it('no shipped spawner lies in the Greyfen or Dragonspine boxes without a block or an area (today none lie there at all)', () => {
+  it('every shipped spawner in the Greyfen or Dragonspine boxes names a block or an area (K6b PR 1: the Greyfen ambient groups)', () => {
     expect(act3SpawnersMissingBlockOrArea(ALL_SPAWNER_DEFS)).toEqual([]);
     const inside = ALL_SPAWNER_DEFS.filter((s) => (anchors.get(s.anchor) ?? []).some((p) => act3RegionAt(p.x, p.z) !== null));
-    expect(inside.map((s) => s.id)).toEqual([]);
+    expect(inside.map((s) => s.id).sort()).toEqual(ACT3_SPAWNERS.map((s) => s.id).sort());
+    for (const s of inside) expect(s.block ?? s.area, s.id).toBeTruthy();
+  });
+
+  it('would report a shipped-table def inside the Greyfen that names neither (the failure path, on a real anchor)', () => {
+    const real = ACT3_SPAWNERS[0]!;
+    const { block: _b, blockSpan: _s, ...bare } = real;
+    expect(act3SpawnersMissingBlockOrArea([...ALL_SPAWNER_DEFS, { ...bare, id: 'bare.copy' }])).toEqual(['bare.copy']);
   });
 
   it('knows the Greyfen and Dragonspine boxes', () => {
