@@ -26,6 +26,17 @@ describe('env plugin', () => {
     expect(fc.ctx.scene.children.some((c) => c.name === 'env.placements')).toBe(false);
   });
 
+  it('offers a focus point for the shot harness and takes it back with null', async () => {
+    const fc = createFakeCore();
+    const plugin = createEnvPlugin({ tiles: { t: [{ id: 'grass-clump-a', x: 500, z: 500 }] }, heightAt: () => 0 });
+    plugin.setup(fc.ctx);
+    await tick();
+    const env = fc.ctx.services.get('env')!;
+    expect(() => env.focus({ x: 500, z: 500 })).not.toThrow();
+    expect(() => env.focus(null)).not.toThrow();
+    plugin.dispose?.();
+  });
+
   it('is switched off by ?env=off', () => {
     expect(envEnabled('')).toBe(true);
     expect(envEnabled('?env=off')).toBe(false);

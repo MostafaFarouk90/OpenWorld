@@ -25,6 +25,8 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 await page.goto(`${base}?tutorial=veteran&quality=medium`);
 await page.waitForFunction(() => window.__game?.game?.ctx, null, { timeout: 180000 });
+// SETTLE_MS=600000 lengthens the settle wait on a loaded machine (default 120 s).
+await page.evaluate((ms) => { window.__settleMs = ms; }, Number(process.env.SETTLE_MS) || 0);
 // HUD off: everything that is neither the game canvas (the largest one; the minimap is a canvas too) nor an ancestor of it.
 await page.evaluate(() => {
   const cs = [...document.querySelectorAll('canvas')].sort((a, b) => b.width * b.height - a.width * a.height);
@@ -34,16 +36,46 @@ await page.addStyleTag({ content: 'body *:not([data-env-main]):not(:has([data-en
 
 for (const [name, c] of Object.entries(table.cameras)) {
   const result = await page.evaluate(
-    async ({ c }) => {
+    async ({ c, base }) => {
       const g = window.__game;
       const ground = (x, z) => g.terrain.heightAt(x, z);
       g.__ov?.release(0);
       const [px, py, pz] = c.pos;
       const [lx, ly, lz] = c.look;
-      // Park the Knight beside the camera so the terrain streams around the shot.
-      const tp = g.game.ctx.player.teleport({ x: px, y: ground(px, pz) + 0.2, z: pz }, 0);
+      // The Knight stays where it is (on a loaded machine a far teleport falls out of the world); the env plugin measures its culling
+      // from the camera instead. Meadow blades follow the Knight, so shots far from the spawn show the tile's own rows only.
       const t0 = performance.now();
-      while (!tp.ready() && performance.now() - t0 < 90000) await new Promise((r) => setTimeout(r, 200));
+      const env0 = g.game.ctx.services.get('env');
+      env0?.focus({ x: px, z: pz });
+      // Stand the Knight in frame: eye shots put him 4 m ahead of the camera (scale reference, and the meadow blades follow him);
+      // other shots put him under the camera. Teleport the way the game does and wait for the colliders under him.
+      const ahead = c.pos[1] < 5 ? 4 : 0;
+      const dl = Math.hypot(lx - px, lz - pz) || 1;
+      const kx = px + ((lx - px) / dl) * ahead;
+      const kz = pz + ((lz - pz) / dl) * ahead;
+      // The game loop starts ticking only after loading ends (minutes on a loaded machine): teleporting before that never completes.
+      const tl = performance.now();
+      while (g.game.ctx.clock.tick < 30 && performance.now() - tl < 600000) await new Promise((r) => setTimeout(r, 500));
+      const tp = g.game.ctx.player.teleport({ x: kx, y: ground(kx, kz) + 0.3, z: kz }, Math.atan2(-(lx - px), -(lz - pz)));
+      const tw = performance.now();
+      while (!tp.ready() && performance.now() - tw < 240000) await new Promise((r) => setTimeout(r, 250));
+      const f0 = g.game.ctx.player.feet;
+      const stood = tp.ready() && Math.hypot(f0.x - kx, f0.z - kz) < 3;
+      if (stood) {
+        env0?.focus(null);
+        for (let i = 0; i < 120; i++) await new Promise((r) => requestAnimationFrame(r)); // let the blades grow in around him
+      }
+      // The env plugin builds its models one id at a time; wait until the tile's instance count has stopped growing (and exists).
+      const env = g.game.ctx.services.get('env');
+      let last = -1;
+      let same = 0;
+      while (same < 180 && performance.now() - t0 < 600000) {
+        await new Promise((r) => requestAnimationFrame(r));
+        const d = env?.drawn(base);
+        const total = d ? Object.values(d).reduce((a, b) => a + b, 0) : -1;
+        same = total === last && total >= 0 && d.ground > 0 ? same + 1 : 0;
+        last = total;
+      }
       g.__ov = g.camera.override({
         position: { x: px, y: ground(px, pz) + py, z: pz },
         lookAt: { x: lx, y: ground(lx, lz) + ly, z: lz },
@@ -53,16 +85,17 @@ for (const [name, c] of Object.entries(table.cameras)) {
       // Settled: no pending terrain chunks, then 30 consecutive animation frames.
       let stable = 0;
       const s0 = performance.now();
-      while (stable < 30 && performance.now() - s0 < 120000) {
+      while (stable < 30 && performance.now() - s0 < (Number(window.__settleMs) || 120000)) {
         await new Promise((r) => requestAnimationFrame(r));
         stable = g.terrain.stats.pending === 0 ? stable + 1 : 0;
       }
-      return stable >= 30;
+      return stable >= 30 ? (stood ? 'stood' : 'focus') : false;
     },
-    { c },
+    { c, base: tile.split('-')[0] },
   );
   if (!result) throw new Error(`shot ${name} never settled`);
-  await page.screenshot({ path: path.join(outDir, `${kind}-${name}.png`) });
+  if (result === 'focus') console.log(`warning: ${name}: the Knight could not stand at the camera; culling follows the camera and the meadow blades are missing`);
+  await page.screenshot({ path: path.join(outDir, `${kind}-${name}.png`), timeout: 300000 });
   console.log('shot', `${kind}-${name}`);
 }
 await browser.close();
