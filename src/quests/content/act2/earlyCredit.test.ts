@@ -114,3 +114,40 @@ describe('M11 and M14: the stone or shrine lit before its objective (review-a #2
     expect(done(w, 'm14', 'rekindle')).toBe(true);
   });
 });
+
+describe('M14: tempers done before `temper` is current (K0 precheck)', () => {
+  it('two tempers recorded as story.m14.tempered credit `temper` as soon as it opens', () => {
+    const w = begin(m14);
+    upTo(w, m14, 'golems');
+    // the director counted the tempers the Anvil allowed while M14 was active (the live events were dropped: not current)
+    w.bus.emit('gear.tempered', { itemId: 'sword', level: 1 });
+    w.bus.emit('gear.tempered', { itemId: 'sword', level: 2 });
+    w.flags.set('story.m14.tempered', true);
+    for (const id of ['golems', 'hounds', 'rekindle', 'murals', 'keeper']) {
+      expect(done(w, 'm14', 'temper')).toBe(false);
+      w.manager.completeObjective('m14', id);
+    }
+    expect(done(w, 'm14', 'temper')).toBe(true);
+    expect(w.manager.isObjectiveCurrent('m14', 'sings')).toBe(true);
+  });
+
+  it('one temper before and one while current: the flag plus a recheck credits it; a load re-checks it too', () => {
+    const w = begin(m14);
+    upTo(w, m14, 'temper');
+    w.bus.emit('gear.tempered', { itemId: 'sword', level: 1 }); // live: progress 1
+    expect(done(w, 'm14', 'temper')).toBe(false);
+    w.flags.set('story.m14.tempered', true); // the director's count reached two (one earlier, one now)
+    w.manager.recheck();
+    expect(done(w, 'm14', 'temper')).toBe(true);
+  });
+
+  it('without the flag the objective still needs two live tempers', () => {
+    const w = begin(m14);
+    upTo(w, m14, 'temper');
+    w.manager.recheck();
+    expect(done(w, 'm14', 'temper')).toBe(false);
+    w.bus.emit('gear.tempered', { itemId: 'sword', level: 1 });
+    w.bus.emit('gear.tempered', { itemId: 'sword', level: 2 });
+    expect(done(w, 'm14', 'temper')).toBe(true);
+  });
+});

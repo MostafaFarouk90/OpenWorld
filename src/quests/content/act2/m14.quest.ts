@@ -29,7 +29,8 @@ export const m14: QuestDef = {
       required: 3, textKey: 'quest.m14.murals',
     },
     { id: 'keeper', type: 'talk', target: 'lantern-keeper', textKey: 'quest.m14.keeper' },
-    story('temper', 'quest.m14.temper', 'gear.tempered', { required: 2 }),
+    // Tempers done while an earlier objective was current count too: the director saves them as story.m14.tempered.
+    story('temper', 'quest.m14.temper', 'gear.tempered', { required: 2, doneWhen: { flag: 'story.m14.tempered', equals: true } }),
     story('sings', 'quest.m14.sings', 'story.m14.set'),
     { id: 'rite', type: 'talk', target: 'aelfreda', textKey: 'quest.m14.rite' },
   ],

@@ -798,6 +798,30 @@ describe('director: M14 Hushed Anvil Rites', () => {
     r.dispose();
   });
 
+  it('counts tempers from the quest start into story.m14.tempers, sets story.m14.tempered at two and asks the quests to recheck (K0-2)', () => {
+    r = rig();
+    const recheck = vi.fn();
+    r.stubs.quests.recheck = recheck;
+    r.emit('gear.tempered', { itemId: 'sword', level: 1 }); // M14 not active: not counted
+    expect(r.state.getNumber('story.m14.tempers')).toBe(0);
+    r.active('m14');
+    r.emit('gear.tempered', { itemId: 'sword', level: 1 });
+    r.step();
+    expect(r.state.getNumber('story.m14.tempers')).toBe(1);
+    expect(r.state.getBool('story.m14.tempered')).toBe(false);
+    expect(recheck).not.toHaveBeenCalled();
+    r.emit('gear.tempered', { itemId: 'sword', level: 2 });
+    expect(r.state.getBool('story.m14.tempered')).toBe(true);
+    expect(recheck).not.toHaveBeenCalled(); // not from inside the event
+    r.step();
+    expect(recheck).toHaveBeenCalledTimes(1);
+    r.emit('gear.tempered', { itemId: 'sword', level: 3 }); // done: no further counting
+    r.step();
+    expect(r.state.getNumber('story.m14.tempers')).toBe(2);
+    expect(recheck).toHaveBeenCalledTimes(1);
+    r.dispose();
+  });
+
   it('the Anvil sings after the second tempering: the keeper speaks, and the beat is set when the hold clears', () => {
     r = rig();
     r.active('m14');
