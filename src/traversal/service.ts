@@ -1,0 +1,56 @@
+// K7's services and events, added by module augmentation (core files stay K0's). `water` is K0's port type
+// (src/water/types.ts); `ferry` is for K15's stop menu; `carry` is for K13's sleds, eggs and candle bundles.
+import type { BoardRefusal } from './ferry/FerryRides';
+import type { CarryResetReason, TrackedCarry } from './carry/CarryResets';
+import type { SledDef } from './carry/Sleds';
+
+export interface FerryService {
+  /** Every stop id. */
+  stops(): string[];
+  /** The stops one leg from `stop` (K15's menu lists them). */
+  destinations(stop: string): string[];
+  /** Why boarding at `from` for `to` is refused now, or null. */
+  refusal(from: string, to: string): BoardRefusal | null;
+  /** Boards and rides; returns the refusal (toasted) or null. */
+  ride(from: string, to: string): BoardRefusal | null;
+  /** Skips to the destination with a fade. */
+  skip(): void;
+  readonly riding: boolean;
+}
+
+export interface CarryService {
+  /** Places a sled on its route (K13 for R15, on K4's routes); returns the undo. */
+  addSled(def: SledDef): () => void;
+  /** Tracks a held carry for the reset (K13's eggs and bundles); returns the undo. */
+  track(t: TrackedCarry): () => void;
+  /** "Reset haul" (Thorgar's dialogue): back to the last reset point. False for an unknown id or a reset running. */
+  reset(id: string): boolean;
+  /** Where the object returns to now. */
+  checkpoint(id: string): { x: number; y: number; z: number } | null;
+  /** The sled the player holds, or null. */
+  readonly heldSled: string | null;
+}
+
+declare module '../core/Services' {
+  interface GameServices {
+    /** K7 PR 1. */
+    ferry: FerryService;
+    /** K7 PR 1. */
+    carry: CarryService;
+  }
+}
+
+declare module '../core/events' {
+  interface GameEventMap {
+    /** K7: the player boarded the ferry at `from` for `to`, or arrived (by the ride or a skip). */
+    'ferry.boarded': { routeId: string; from: string; to: string };
+    'ferry.arrived': { routeId: string; stop: string; skipped: boolean };
+    /** K7: a carried object went back to its last reset point. */
+    'carry.reset': { id: string; reason: CarryResetReason };
+    /** K7: the player took the traces of a sled, or let go of it. */
+    'sled.taken': { id: string };
+    'sled.dropped': { id: string };
+    /** Thorgar's "reset haul" (a dialogue `event` effect, `npc.` namespace): K7 resets the named carry. */
+    'npc.carry.resetHaul': { id: string };
+  }
+}

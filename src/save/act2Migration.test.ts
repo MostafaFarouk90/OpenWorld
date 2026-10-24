@@ -67,8 +67,9 @@ describe('the persistables', () => {
     // Every key is carried by some fixture (a loader test exists for it) except those the build registers but no save has
     // written yet; there must be none, so a new persistable ships with a fixture that carries it.
     // v0.7 keys whose loader tests live with their owner until K16's Act 3 fixtures carry them (K16 removes each entry):
-    // `spells.surge` (item 26, spells.plugin.test.ts covers the no-key load and the round trip).
-    const AWAITING_ACT3_FIXTURES = ['spells.surge'];
+    // `spells.surge` (item 26, spells.plugin.test.ts covers the no-key load and the round trip); `traversal.carry` (K7,
+    // src/traversal/carry/carry.test.ts covers the round trip, the no-key load and a load before the sled is added).
+    const AWAITING_ACT3_FIXTURES = ['spells.surge', 'traversal.carry'];
     const orphans = keys.filter((k) => !inAny.has(k) && !AWAITING_ACT3_FIXTURES.includes(k));
     expect(orphans, 'persistables no fixture carries').toEqual([]);
     for (const k of AWAITING_ACT3_FIXTURES) expect(inAny.has(k), `${k}: a fixture carries it now, drop the entry`).toBe(false);
