@@ -53,20 +53,6 @@ describe('RedmaneModel (KayKit Barbarian)', () => {
     model.dispose();
   });
 
-  it('carries an Adventurers staff as the lance when one is supplied, at the same hand scale, and leaves its shared geometry alone', () => {
-    const geo = new THREE.BoxGeometry(0.1, 2, 0.1);
-    const spy = vi.spyOn(geo, 'dispose');
-    const staff = () => new THREE.Group().add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial()));
-    const model = buildRedmaneModel({ model: cloneSkinned(gltf.scene), clips: gltf.animations, staff }, vi.fn());
-    expect(model.lance.parent?.name).toBe(LANCE_BONE);
-    model.root.updateMatrixWorld(true);
-    expect(new THREE.Vector3().setFromMatrixScale(model.lance.matrixWorld).y).toBeCloseTo(LOOK.lanceScale, 3);
-    model.dropLance();
-    expect(model.lance.parent).toBe(model.root);
-    model.dispose();
-    expect(spy).not.toHaveBeenCalled();
-  });
-
   it('tints its own material clones red, and the telegraph flash moves the emissive and back', () => {
     const { model } = build();
     const source = new Set<THREE.Material>();

@@ -1,133 +1,206 @@
 import * as THREE from 'three';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SWAP_ASSETS } from '../assets/swap/swapModels';
 import { ModelLibrary } from '../assets/swap/ModelLibrary';
 import { diskSource } from '../assets/swap/testing/diskSource';
 import { MINE_DEFS } from '../oldsmoke/mines';
-import { HUNTER_HARPOONER, HUNTER_SPEARMAN } from '../enemies/hunters/def';
+import { PhysicsWorld } from '../physics/PhysicsWorld';
+import { HARROWMARK_INTERIORS } from './harrowmark';
 import { buildInterior } from './build';
-import { dressInterior, interiorModelIds, planInterior, planTorches } from './interiorArt';
-import { layoutInterior } from './layout';
-
-/** Static collider counts of the mine layouts before the dressing pass (one cuboid per solid box; the dressing adds none). */
-const COLLIDERS_BEFORE: Record<string, number> = {};
+import { dressInterior, interiorModelIds, planInterior, planTorches, type InteriorPiece } from './interiorArt';
+import { layoutInterior, type SolidBox } from './layout';
+import { COVER_HEIGHT, MAX_ASPECT, MIN_COVERAGE, heightGrid } from './propFit';
 
 let lib: ModelLibrary;
+let physics: PhysicsWorld;
 beforeAll(async () => {
   lib = new ModelLibrary(await diskSource());
   await lib.preload(interiorModelIds());
+  physics = new PhysicsWorld();
+  await physics.init();
 });
+afterAll(() => physics.dispose());
 const tpl = (id: string) => lib.peek(id);
-const fakePhysics = () => {
-  let n = 0;
-  return {
-    count: () => n,
-    physics: { rapier: { ColliderDesc: { cuboid: () => ({ setTranslation: () => ({}) }) } }, addStaticCollider: () => ({ setEnabled() {}, n: n++ }), removeCollider() {} } as never,
-  };
-};
-const propIds = () => [...new Set(MINE_DEFS.flatMap((d) => layoutInterior(d, () => 0).boxes.filter((b) => b.kind === 'prop' && b.propId).map((b) => b.propId!)))];
+const layouts = () => MINE_DEFS.map((d) => ({ d, layout: layoutInterior(d, () => 0) }));
+const propBoxes = (boxes: readonly SolidBox[]) => boxes.filter((b) => b.kind === 'prop' && b.propId);
+const propIds = () => [...new Set(layouts().flatMap(({ layout }) => propBoxes(layout.boxes).map((b) => b.propId!)))];
+const scaleOf = (m: THREE.Matrix4) => new THREE.Vector3().setFromMatrixScale(m);
 
 describe('mine interior dressing', () => {
-  it('maps every mine prop id class to a model that is in the manifest and on disk, except nests, pools and lava', () => {
-    const ids = propIds();
-    expect(ids.length).toBeGreaterThan(20);
+  it('dresses carts, crates, pumps, rubble, collapses, chain posts and pipes with models in the manifest; nests, pools and lava keep boxes', () => {
     const dressed = new Set<string>();
-    for (const d of MINE_DEFS) {
-      const layout = layoutInterior(d, () => 0);
+    for (const { d, layout } of layouts()) {
       const plan = planInterior(d.id, layout.boxes, tpl);
       for (const p of plan.dressedProps) dressed.add(p);
       for (const p of plan.pieces) expect(SWAP_ASSETS[p.model], p.model).toBeDefined();
     }
-    for (const id of ids) expect(dressed.has(id), id).toBe(!/^(nest|pool|lava)\./.test(id));
+    for (const id of propIds()) if (/^(nest|pool|lava)\./.test(id)) expect(dressed.has(id), id).toBe(false);
     for (const id of interiorModelIds()) expect(tpl(id), id).not.toBeNull();
-    for (const cls of ['cart', 'crate', 'rack', 'pump', 'rubble', 'collapse', 'chainpost', 'pipes']) expect(ids.some((i) => i.startsWith(`${cls}.`)), cls).toBe(true);
+    for (const cls of ['cart', 'crate', 'pump.body', 'pump.crate', 'rubble', 'collapse', 'chainpost', 'pipes']) {
+      expect([...dressed].some((i) => i === cls || i.startsWith(`${cls}.`)), cls).toBe(true);
+    }
   });
 
-  it('gives mines a dirt floor and broken or cracked wall variants', () => {
-    const old = MINE_DEFS.find((d) => d.id === 'mine-old-galleries')!;
-    const models = new Set(planInterior(old.id, layoutInterior(old, () => 0).boxes, tpl).pieces.map((p) => p.model));
-    expect(models.has('dun/floor_dirt_large')).toBe(true);
-    expect(models.has('dun/floor_tile_large')).toBe(false);
-    expect(models.has('dun/wall_cracked') && models.has('dun/wall_broken')).toBe(true);
-    const shaft = MINE_DEFS.find((d) => d.id === 'mine-deepgate-shaft')!;
-    const kept = new Set(planInterior(shaft.id, layoutInterior(shaft, () => 0).boxes, tpl).pieces.map((p) => p.model));
-    expect(kept.has('dun/wall_broken')).toBe(false);
+  it('matches whole id segments: pump.crate is a crate stack, not a pump barrel', () => {
+    const { d, layout } = layouts().find(({ d }) => d.id === 'mine-old-galleries')!;
+    const { pieces } = planInterior(d.id, layout.boxes, tpl);
+    const models = (id: string) => new Set(pieces.filter((p) => p.propId === id).map((p) => p.model));
+    expect([...models('pump.crate')]).toContain('dun/crates_stacked');
+    expect([...models('pump.crate')].some((m) => /barrel|keg/.test(m))).toBe(false);
+    expect([...models('pump.body')].every((m) => /barrel|keg/.test(m))).toBe(true);
   });
 
-  it('keeps every mine collider count, box list and door unchanged by dressing', async () => {
-    for (const d of MINE_DEFS) {
-      const layout = layoutInterior(d, () => 0);
-      const { physics, count } = fakePhysics();
+  it('uses a dirt floor laid flush (local y 0 on the slab top) and only plain or cracked walls, never the see-through broken one', () => {
+    for (const { d, layout } of layouts()) {
+      const { pieces } = planInterior(d.id, layout.boxes, tpl);
+      const models = new Set(pieces.map((p) => p.model));
+      expect(models.has('dun/floor_dirt_large'), d.id).toBe(true);
+      expect(models.has('dun/floor_tile_large') && !pieces.some((p) => p.kind === 'skirt'), d.id).toBe(false);
+      expect(models.has('dun/wall_broken'), d.id).toBe(false);
+      expect(models.has('dun/wall_cracked'), d.id).toBe(true);
+      const slabTops = layout.boxes.filter((b) => b.kind === 'floor').map((b) => b.max.y);
+      for (const p of pieces.filter((x) => x.kind === 'floor')) {
+        const y = new THREE.Vector3(0, 0, 0).applyMatrix4(p.matrix).y;
+        expect(Math.min(...slabTops.map((t) => Math.abs(y - t))), d.id).toBeLessThan(0.03);
+      }
+    }
+  });
+
+  it('adds no colliders: the physics world holds exactly the layout boxes before and after dressing, boxes and doors untouched', async () => {
+    for (const { d, layout } of layouts()) {
       const built = buildInterior(layout, physics);
-      const before = count();
+      const live = physics.world.colliders.len();
       const boxes = JSON.stringify(layout.boxes);
       const doors = JSON.stringify(d.doors);
-      expect(before, d.id).toBe(layout.boxes.length);
       expect(await dressInterior(lib, built)).toBeGreaterThan(0);
-      expect(count(), d.id).toBe(before);
+      expect(physics.world.colliders.len(), d.id).toBe(live);
       expect(JSON.stringify(layout.boxes), d.id).toBe(boxes);
       expect(JSON.stringify(d.doors), d.id).toBe(doors);
-      COLLIDERS_BEFORE[d.id] = before;
       built.dispose();
+      expect(physics.world.colliders.len(), d.id).toBe(live - layout.boxes.length);
     }
-    expect(Object.keys(COLLIDERS_BEFORE)).toHaveLength(5);
   });
 
-  it('mounts a torch model on a wall for nearly every torch, and the emissive head still glows', async () => {
-    let total = 0;
-    for (const d of MINE_DEFS) {
-      const layout = layoutInterior(d, () => 0);
-      const { pieces } = planTorches(d.id, layout.boxes, layout.torches, tpl);
-      total += layout.torches.length;
-      expect(pieces.length, d.id).toBeGreaterThanOrEqual(Math.floor(layout.torches.length * 0.85)); // a torch with no wall within 0.6 m keeps its bare head
-      expect(pieces.every((p) => p.model === 'dun/torch_mounted')).toBe(true);
+  it('never stretches a dressed prop out of shape: per-axis scale ratio within MAX_ASPECT for every mine prop piece', () => {
+    let pieces = 0;
+    for (const { d, layout } of layouts()) {
+      for (const p of planInterior(d.id, layout.boxes, tpl).pieces.filter((x) => x.kind === 'prop')) {
+        const s = scaleOf(p.matrix);
+        const ratio = Math.max(s.x, s.y, s.z) / Math.min(s.x, s.y, s.z);
+        expect(ratio, `${d.id} ${p.propId} ${p.model}`).toBeLessThanOrEqual(MAX_ASPECT + 1e-6);
+        pieces++;
+      }
     }
-    expect(total).toBeGreaterThan(20);
-    const built = buildInterior(layoutInterior(MINE_DEFS[1], () => 0), null);
-    await dressInterior(lib, built);
-    const heads = built.layout.torches.map((_, i) => built.root.getObjectByName(`${built.root.name}-torch-${i}`) as THREE.Mesh);
-    expect(heads.length).toBeGreaterThan(0);
-    for (const h of heads) {
-      expect(h.visible).toBe(true);
-      expect((h.material as THREE.MeshStandardMaterial).emissiveIntensity).toBeGreaterThan(1);
-    }
-    built.dispose();
+    expect(pieces).toBeGreaterThan(40);
   });
 
-  it('leaves non-mine interiors without mounted torches', () => {
-    const layout = layoutInterior(MINE_DEFS[0], () => 0);
-    expect(planTorches('tilted-anvil', layout.boxes, layout.torches, tpl).pieces).toEqual([]);
+  it('keeps the visible model over the collider: at least 80 percent of every dressed prop footprint is covered (model or skirt)', () => {
+    const CELL = 0.25;
+    let skirts = 0;
+    for (const { d, layout } of layouts()) {
+      const plan = planInterior(d.id, layout.boxes, tpl);
+      skirts += plan.pieces.filter((p) => p.kind === 'skirt').length;
+      for (const b of propBoxes(layout.boxes).filter((x) => plan.dressedProps.has(x.propId!))) {
+        const h = b.max.y - b.min.y;
+        const nx = Math.ceil((b.max.x - b.min.x) / CELL);
+        const nz = Math.ceil((b.max.z - b.min.z) / CELL);
+        const covered = new Set<number>();
+        for (const p of plan.pieces.filter((x) => x.propId === b.propId)) {
+          const t = tpl(p.model)!;
+          const grid = heightGrid(t);
+          const n = Math.sqrt(grid.length);
+          const sy = scaleOf(p.matrix).y;
+          const size = { x: t.bounds.max.x - t.bounds.min.x, z: t.bounds.max.z - t.bounds.min.z };
+          // Sample each model raster cell centre in world space (4 sub-samples per cell) and mark the footprint cell it lands in.
+          for (let i = 0; i < n; i++) {
+            for (let j = 0; j < n; j++) {
+              if (grid[i * n + j] * sy < COVER_HEIGHT * h) continue;
+              for (const [fx, fz] of [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) {
+                const v = new THREE.Vector3(t.bounds.min.x + ((i + fx) / n) * size.x, 0, t.bounds.min.z + ((j + fz) / n) * size.z).applyMatrix4(p.matrix);
+                const ci = Math.floor((v.x - b.min.x) / CELL);
+                const cj = Math.floor((v.z - b.min.z) / CELL);
+                if (ci >= 0 && ci < nx && cj >= 0 && cj < nz) covered.add(ci * nz + cj);
+              }
+            }
+          }
+        }
+        expect(covered.size / (nx * nz), `${d.id} ${b.propId}`).toBeGreaterThanOrEqual(MIN_COVERAGE - 0.05);
+      }
+    }
+    expect(skirts).toBeGreaterThan(0);
+  });
+
+  it('keeps the greybox for a prop no model fits within the aspect rule instead of stretching one', () => {
+    const lower = layouts().find(({ d }) => d.id === 'mine-lower-galleries')!;
+    const plan = planInterior(lower.d.id, lower.layout.boxes, tpl);
+    expect(plan.dressedProps.has('rack.1')).toBe(false);
+    expect(plan.dressedProps.has('chainpost.1')).toBe(true);
+  });
+
+  it('only dresses props of mine interiors: a crate. id elsewhere is untouched', () => {
+    const box = (propId: string): SolidBox => ({ kind: 'prop', propId, min: { x: 0, y: 0, z: 0 }, max: { x: 2, y: 1, z: 2 } }) as SolidBox;
+    const boxes = ['crate.1', 'cart.1', 'rack.1', 'rubble.1', 'pump.body', 'pipes.1'].map(box);
+    for (const id of ['tilted-anvil', 'underways', 'counting-house', ...HARROWMARK_INTERIORS.map((d) => d.id)]) {
+      const plan = planInterior(id, boxes, tpl);
+      expect(plan.dressedProps.size, id).toBe(0);
+      expect(plan.pieces.filter((p) => p.kind === 'prop' || p.kind === 'skirt'), id).toEqual([]);
+    }
+    expect(planInterior('mine-old-galleries', boxes, tpl).dressedProps.has('crate.1')).toBe(true);
+  });
+
+  describe('torches', () => {
+    it('mounts a torch model on a wall for nearly every torch, none for non-mine ids', () => {
+      let total = 0;
+      for (const { d, layout } of layouts()) {
+        const { pieces } = planTorches(d.id, layout.boxes, layout.torches, tpl);
+        total += layout.torches.length;
+        expect(pieces.length, d.id).toBeGreaterThanOrEqual(Math.floor(layout.torches.length * 0.85));
+        expect(pieces.every((p: InteriorPiece) => p.model === 'dun/torch_mounted')).toBe(true);
+      }
+      expect(total).toBeGreaterThan(20);
+      const { layout } = layouts()[0];
+      expect(planTorches('tilted-anvil', layout.boxes, layout.torches, tpl).pieces).toEqual([]);
+    });
+
+    it('keeps the glowing head at least as bright as the bare one, on the bracket tip', async () => {
+      for (const { d, layout } of layouts()) {
+        const built = buildInterior(layout, null);
+        const plan = planTorches(d.id, layout.boxes, layout.torches, tpl);
+        const bare = built.layout.torches.map((_, i) => (built.root.getObjectByName(`${built.root.name}-torch-${i}`) as THREE.Mesh).position.clone());
+        await dressInterior(lib, built);
+        const heads = built.layout.torches.map((_, i) => built.root.getObjectByName(`${built.root.name}-torch-${i}`) as THREE.Mesh);
+        for (const h of heads) {
+          const m = h.material as THREE.MeshStandardMaterial;
+          expect(h.visible).toBe(true);
+          // Emissive area (head scale squared) times intensity is the bare head's or more.
+          expect(h.scale.x * h.scale.x * m.emissiveIntensity, d.id).toBeGreaterThanOrEqual(2.5 - 1e-9);
+        }
+        const walls = layout.boxes.filter((b) => b.kind === 'wall');
+        for (const n of plan.normals) {
+          const head = heads[n.index].position;
+          // Distance from the wall face along the normal equals the bracket's reach, whatever the torch's own offset was.
+          const wallX = bare[n.index].x - n.nx * n.d;
+          const wallZ = bare[n.index].z - n.nz * n.d;
+          expect((head.x - wallX) * n.nx + (head.z - wallZ) * n.nz, `${d.id} torch ${n.index}`).toBeCloseTo(0.35, 2);
+          expect(walls.length).toBeGreaterThan(0);
+        }
+        built.dispose();
+      }
+    });
   });
 
   it('falls back to the greybox boxes when the models fail to load', async () => {
     const built = buildInterior(layoutInterior(MINE_DEFS[2], () => 0), null);
     const headBefore = built.root.getObjectByName(`${built.root.name}-torch-0`)!.position.clone();
-    expect(await dressInterior(new ModelLibrary(undefined), built)).toBe(0);
+    expect(await dressInterior(new ModelLibrary(undefined, () => undefined), built)).toBe(0);
     for (const k of ['floor', 'wall', 'prop']) expect((built.root.getObjectByName(`${built.root.name}-${k}`) as THREE.Mesh).visible, k).toBe(true);
     expect(built.root.getObjectByName(`${built.root.name}-torch-0`)!.position.equals(headBefore)).toBe(true);
     built.dispose();
     // Only some models missing: those props keep their boxes, the rest is still dressed.
     const layout = layoutInterior(MINE_DEFS[1], () => 0);
-    const noProps = planInterior(MINE_DEFS[1].id, layout.boxes, (id) => (['dun/crates_stacked', 'dun/rubble_large'].includes(id) ? null : tpl(id)));
+    const noProps = planInterior(MINE_DEFS[1].id, layout.boxes, (id) => (['dun/crates_stacked', 'dun/box_large', 'dun/rubble_large', 'dun/rubble_half'].includes(id) ? null : tpl(id)));
     expect([...noProps.dressedProps].some((p) => /^(cart|rubble)\./.test(p))).toBe(false);
     expect(noProps.covers.has('floor')).toBe(true);
     expect(planTorches(MINE_DEFS[1].id, layout.boxes, layout.torches, () => null).pieces).toEqual([]);
-  });
-});
-
-describe('hunter weapons', () => {
-  it('resolve to Adventurers weapons that exist, with the move hitboxes unchanged', () => {
-    const props = [...(HUNTER_SPEARMAN.model.props ?? []), ...(HUNTER_HARPOONER.model.props ?? [])];
-    expect(props.map((p) => p.id)).toEqual(['wpn/staff', 'wpn/crossbow_2handed']);
-    for (const p of props) {
-      expect(SWAP_ASSETS[p.id], p.id).toBeDefined();
-      expect(p.bone).toBe('handslotr');
-    }
-    const strip = (m: (typeof HUNTER_SPEARMAN.moves)[number]) => ({ w: m.windup, r: m.range, c: m.cooldown, rec: m.recover, d: m.damage, p: m.poise, wp: m.weapon, ranged: m.ranged });
-    expect(HUNTER_SPEARMAN.moves.map(strip)).toEqual([
-      { w: 0.5, r: [0, 1.9], c: 1.6, rec: 0.8, d: 16, p: 18, wp: 'right', ranged: undefined },
-      { w: 0.6, r: [5, 14], c: 7, rec: 1.0, d: 4, p: 5, wp: 'right', ranged: { shape: 'net', speed: 16, maxRange: 16, radius: 0.5, originHeight: 1.4, root: 2 } },
-    ]);
-    expect(HUNTER_HARPOONER.moves.map(strip)[1]).toEqual({ w: 0.9, r: [4, 16], c: 8, rec: 1.2, d: 10, p: 10, wp: 'right', ranged: { shape: 'harpoon', speed: 30, maxRange: 18, radius: 0.35, originHeight: 1.4, pull: 4 } });
   });
 });

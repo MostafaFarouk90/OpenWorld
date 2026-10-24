@@ -29,8 +29,6 @@ export interface RedmaneModelSource {
   /** An already-cloned Barbarian scene (AssetLoader.instantiate). */
   model: THREE.Object3D;
   clips: readonly THREE.AnimationClip[];
-  /** A fresh Adventurers `staff` (shared geometry) for the lance, or null/absent while it has not loaded: the procedural lance then stays. */
-  staff?: () => THREE.Object3D | null;
 }
 
 export interface RedmaneModel {
@@ -58,8 +56,8 @@ type Tintable = THREE.Material & { color?: THREE.Color; emissive?: THREE.Color; 
 
 /**
  * Builds Hunt-Captain Thrandil Redmane from a cloned KayKit Barbarian (design 10 row 19, 14): scaled 1.15, a red tabard tint,
- * every built-in held item hidden (axe, shield) and a lance in the right hand (the pack has no spear: an Adventurers staff stands in when loaded,
- * else the procedural Dragon-Hunters' spear). The model carries hurtboxes so a real blade sweep reaches him.
+ * every built-in held item hidden (axe, shield) and a procedural lance in the right hand (the pack has no spear; the prop is
+ * the Dragon-Hunters' spear, longer). The model carries hurtboxes so a real blade sweep reaches him.
  *
  * @throws Error when the model has no skinned mesh or no `handslot.r` bone.
  */
@@ -106,16 +104,7 @@ export function buildRedmaneModel(source: RedmaneModelSource, warn: (m: string) 
     mesh.material = Array.isArray(mesh.material) ? mesh.material.map(cloneOf) : cloneOf(mesh.material);
   });
 
-  const staff = source.staff?.() ?? null;
-  let lance: THREE.Object3D;
-  if (staff) {
-    // The pack has no spear: a staff stands in. The group keeps the lance's metre scale; the staff sits grip-low inside it.
-    lance = new THREE.Group();
-    staff.scale.setScalar(LOOK.staffScale);
-    staff.position.y = LOOK.staffGrip;
-    lance.add(staff);
-    lance.userData.sharedGeometry = true;
-  } else lance = makeGroundProp('proc/hunter-spear')!;
+  const lance = makeGroundProp('proc/hunter-spear')!;
   lance.name = 'redmane-lance';
   // Undo the bone's world scale so the lance keeps its metre size on the 1.15 rig.
   root.updateMatrixWorld(true);
@@ -188,8 +177,7 @@ export function buildRedmaneModel(source: RedmaneModelSource, warn: (m: string) 
       disposed = true;
       mixer.stopAllAction();
       for (const m of clones.values()) m.dispose();
-      if (lance.userData.sharedGeometry) lance.removeFromParent();
-      else disposeGroundProp(lance);
+      disposeGroundProp(lance);
       hurtboxes.dispose();
       root.removeFromParent();
     },

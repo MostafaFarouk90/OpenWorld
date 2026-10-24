@@ -1,15 +1,14 @@
 import { ENEMY_ATTACKS } from '../clips';
 import type { EnemyDef, MoveDef } from '../types';
 
-/** Pack weapons the hunters carry (art only; hitboxes and timings are the moves'). The pack has no spear: the staff stands in; the harpooner holds the crossbow. */
-export const HUNTER_SPEAR_PROP = 'wpn/staff';
+/** The harpooner holds the pack's two-handed crossbow (art only; hitboxes and timings are the moves'); the procedural harpoon shows until it loads. */
 export const HUNTER_HARPOON_PROP = 'wpn/crossbow_2handed';
 
 /**
  * Dragon-Hunter Spearman (design 10 row 30): a hired spear-and-net hunter in a pack of 3 to 4 with one harpooner. Spear thrust
  * (0.5 s drop, yellow), net throw (0.6 s arm swing and a rope hiss, yellow: a blocked net does not root; roots 2 s on a hit).
  * Poise 35. Spare when rooted or staggered under half health (Oswin +1). There is no flee: hunters are paid to stay.
- * The Rogue body in a red tabard tint, an Adventurers `staff` standing in for the missing spear.
+ * The Barbarian body in a red tabard tint, a procedural spear.
  */
 export const HUNTER_SPEARMAN: EnemyDef = {
   kind: 'hunter-spearman',
@@ -19,7 +18,7 @@ export const HUNTER_SPEARMAN: EnemyDef = {
     tint: 0xd8806a,
     emissive: 0x2a0a06,
     weapons: 'none',
-    props: [{ id: HUNTER_SPEAR_PROP, bone: 'handslotr', position: [0, 0.5, 0], rotation: [0, 0, 0], scale: 1 }],
+    props: [{ id: 'proc/hunter-spear', bone: 'handslotr', rotation: [0, 0, 0], scale: 1 }],
   },
   maxHealth: 70,
   maxPoise: 35,
@@ -56,7 +55,7 @@ export const HUNTER_HARPOONER: EnemyDef = {
     tint: 0xd8806a,
     emissive: 0x2a0a06,
     weapons: 'none',
-    props: [{ id: HUNTER_HARPOON_PROP, bone: 'handslotr', rotation: [0, 0, 0], scale: 1 }],
+    props: [{ id: HUNTER_HARPOON_PROP, bone: 'handslotr', rotation: [0, 0, 0], scale: 1, fallback: 'proc/hunter-harpoon' }],
   },
   maxHealth: 60,
   maxPoise: 35,

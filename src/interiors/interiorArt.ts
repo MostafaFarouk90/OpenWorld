@@ -7,6 +7,7 @@ import { ModelBatches } from '../assets/swap/ModelBatches';
 import type { ModelLibrary, ModelTemplate } from '../assets/swap/ModelLibrary';
 import type { BuiltInterior } from './build';
 import type { SolidBox } from './layout';
+import { planProp, SKIRT_HEIGHT, MIN_COVERAGE } from './propFit';
 
 const FLOOR_MODEL: Record<string, string> = {
   'tilted-anvil': 'dun/floor_wood_large',
@@ -22,10 +23,14 @@ export const isMineInterior = (interiorId: string) => interiorId.startsWith('min
 const COURSE = 4;
 const FLOOR_LIFT = 0.02;
 const WALL_VARIANTS_UNDERWAYS = ['dun/wall', 'dun/wall', 'dun/wall_broken', 'dun/wall_cracked'];
-/** The kept shaft head and the Bellows are sound masonry (cracks only); the old, lower and deep workings are broken too. */
+/**
+ * Mine walls are single boxes with nothing behind them, so `wall_broken` (it has a see-through hole) is never used: the kept shaft
+ * head and the Bellows are sound masonry (cracks only), the old, lower and deep workings are cracked more often.
+ */
 const WALL_VARIANTS_MINE_KEPT = ['dun/wall', 'dun/wall', 'dun/wall', 'dun/wall_cracked'];
+const WALL_VARIANTS_MINE_WORN = ['dun/wall', 'dun/wall', 'dun/wall_cracked', 'dun/wall_cracked'];
 const wallVariants = (interiorId: string): readonly string[] | null =>
-  interiorId === 'underways' ? WALL_VARIANTS_UNDERWAYS : !isMineInterior(interiorId) ? null : /deepgate-shaft|weeping-bellows/.test(interiorId) ? WALL_VARIANTS_MINE_KEPT : WALL_VARIANTS_UNDERWAYS;
+  interiorId === 'underways' ? WALL_VARIANTS_UNDERWAYS : !isMineInterior(interiorId) ? null : /deepgate-shaft|weeping-bellows/.test(interiorId) ? WALL_VARIANTS_MINE_KEPT : WALL_VARIANTS_MINE_WORN;
 
 /** [model, prefix of the prop ids it dresses] (a prop whose id matches no prefix keeps its greybox box). */
 const PROP_MODELS: Array<[string, string[]]> = [
@@ -36,18 +41,29 @@ const PROP_MODELS: Array<[string, string[]]> = [
   ['fur/cabinet_medium', ['cabinet.']],
   ['fur/bed_single_A', ['bed.']],
   ['fur/table_small', ['lectern.']],
-  // Mine props (Oldsmoke): carts and crates are stacked crates, the pump and rack are casks and a shelf, rubble is rubble.
-  // Lava pools and nests keep their boxes.
-  ['dun/crates_stacked', ['cart.', 'crate.']],
-  ['dun/barrel_large', ['pump.']],
-  ['dun/shelves', ['rack.']],
-  ['dun/rubble_large', ['rubble.', 'collapse.']],
-  ['dun/pillar', ['chainpost.']],
-  ['dun/column', ['pipes.']],
 ];
 
+/**
+ * Mine props (Oldsmoke, `mine-*` only): candidate models per prop-id pattern, matched on whole dot-separated segments (`pump.crate`
+ * is not `pump.body`). `propFit.planProp` tiles the best candidate or leaves the box; nests, pools and lava stay boxes.
+ */
+const MINE_PROP_MODELS: Array<[string[], string[]]> = [
+  [['pump.body'], ['dun/barrel_large', 'dun/keg', 'dun/barrel_small']],
+  [['pump.crate', 'cart', 'crate'], ['dun/crates_stacked', 'dun/box_large']],
+  [['rack'], ['dun/shelves']],
+  [['rubble', 'collapse'], ['dun/rubble_large', 'dun/rubble_half']],
+  [['chainpost'], ['dun/pillar', 'dun/column']],
+  [['pipes'], ['dun/column', 'dun/pillar']],
+];
+const idMatches = (propId: string, pattern: string) => {
+  const a = propId.split('.');
+  const b = pattern.split('.');
+  return b.every((seg, i) => a[i] === seg);
+};
+const MINE_PROP_IDS = [...new Set(MINE_PROP_MODELS.flatMap(([, ms]) => ms))];
+
 export function interiorModelIds(): string[] {
-  const ids = new Set<string>([DEFAULT_FLOOR, MINE_FLOOR, TORCH_MODEL, ...Object.values(FLOOR_MODEL), 'dun/wall', 'dun/wall_window_open', 'dun/pillar', ...WALL_VARIANTS_UNDERWAYS]);
+  const ids = new Set<string>([DEFAULT_FLOOR, MINE_FLOOR, TORCH_MODEL, ...MINE_PROP_IDS, ...Object.values(FLOOR_MODEL), 'dun/wall', 'dun/wall_window_open', 'dun/pillar', ...WALL_VARIANTS_UNDERWAYS]);
   for (const [m] of PROP_MODELS) ids.add(m);
   return [...ids].sort();
 }
@@ -58,7 +74,9 @@ const centre = (b: SolidBox) => ({ x: (b.min.x + b.max.x) / 2, z: (b.min.z + b.m
 export interface InteriorPiece {
   model: string;
   matrix: THREE.Matrix4;
-  kind: 'floor' | 'wall' | 'pillar' | 'prop' | 'torch';
+  kind: 'floor' | 'wall' | 'pillar' | 'prop' | 'skirt' | 'torch';
+  /** The prop box a 'prop' or 'skirt' piece dresses. */
+  propId?: string;
 }
 
 function matrixOf(fit: Fit, x: number, y: number, z: number, rot = 0): THREE.Matrix4 {
@@ -95,7 +113,9 @@ export function planInterior(interiorId: string, boxes: readonly SolidBox[], tpl
         for (let j = 0; j < rows; j++) {
           // Tile top lies a hair above the slab top; the model's own top is at its bounds' max y.
           const fit = explicitFit(floor.bounds, w / r.x, 1, d / r.z, 'keep');
-          pieces.push({ model: floor.id, kind: 'floor', matrix: matrixOf(fit, b.min.x + w * (i + 0.5), b.max.y + FLOOR_LIFT - floor.bounds.max.y, b.min.z + d * (j + 0.5)) });
+          // Dirt is lumpy (y -0.1 to 0.11 about a level surface): its y = 0 plane sits on the slab. Tile and wood sit by their top.
+          const y = floor.id === MINE_FLOOR ? b.max.y + FLOOR_LIFT : b.max.y + FLOOR_LIFT - floor.bounds.max.y;
+          pieces.push({ model: floor.id, kind: 'floor', matrix: matrixOf(fit, b.min.x + w * (i + 0.5), y, b.min.z + d * (j + 0.5)) });
         }
       }
     } else if (b.kind === 'wall' && wall) {
@@ -121,6 +141,23 @@ export function planInterior(interiorId: string, boxes: readonly SolidBox[], tpl
       covers.add('pillar');
       const r = raw(pillar);
       pieces.push({ model: pillar.id, kind: 'pillar', matrix: matrixOf(explicitFit(pillar.bounds, s.x / r.x, s.y / r.y, s.z / r.z), c.x, b.min.y, c.z) });
+    } else if (b.kind === 'prop' && b.propId && isMineInterior(interiorId)) {
+      const row = MINE_PROP_MODELS.find(([patterns]) => patterns.some((p) => idMatches(b.propId!, p)));
+      const models = row ? row[1].map((id) => tpl(id)).filter((t): t is ModelTemplate => !!t) : [];
+      const plan = models.length > 0 ? planProp(b, models) : null;
+      if (!plan) continue;
+      for (const pl of plan.placements) {
+        const fit = explicitFit(pl.template.bounds, pl.sx, pl.sy, pl.sz);
+        pieces.push({ model: pl.template.id, kind: 'prop', propId: b.propId, matrix: matrixOf(fit, pl.x, b.min.y, pl.z, pl.turn ? Math.PI / 2 : 0) });
+      }
+      // Where the models leave much of the collider footprint bare, a low stone skirt (a flat slab stretched to a plinth) keeps the base visible.
+      const skirt = plan.coverage < MIN_COVERAGE ? tpl(DEFAULT_FLOOR) : null;
+      if (plan.coverage < MIN_COVERAGE && skirt) {
+        const r = raw(skirt);
+        const fit = explicitFit(skirt.bounds, s.x / r.x, (s.y * SKIRT_HEIGHT) / r.y, s.z / r.z);
+        pieces.push({ model: skirt.id, kind: 'skirt', propId: b.propId, matrix: matrixOf(fit, c.x, b.min.y, c.z) });
+      }
+      if (plan.coverage >= MIN_COVERAGE || skirt) dressedProps.add(b.propId);
     } else if (b.kind === 'prop' && b.propId) {
       const entry = PROP_MODELS.find(([, prefixes]) => prefixes.some((p) => b.propId!.startsWith(p)));
       const t = entry ? tpl(entry[0]) : null;
@@ -143,12 +180,12 @@ const TORCH_FLAME = { y: 0.45, out: 0.35 };
  * Mounted torches for a mine: one `dun/torch_mounted` per torch head, its back on the nearest wall box and its bracket turned into
  * the room. Returns each torch's index with the outward unit normal so the emissive head can move to the flame. Other interiors: none.
  */
-export function planTorches(interiorId: string, boxes: readonly SolidBox[], torches: readonly { x: number; y: number; z: number }[], tpl: (id: string) => ModelTemplate | null): { pieces: InteriorPiece[]; normals: Array<{ index: number; nx: number; nz: number }> } {
+export function planTorches(interiorId: string, boxes: readonly SolidBox[], torches: readonly { x: number; y: number; z: number }[], tpl: (id: string) => ModelTemplate | null): { pieces: InteriorPiece[]; normals: Array<{ index: number; nx: number; nz: number; d: number }> } {
   const t = isMineInterior(interiorId) ? tpl(TORCH_MODEL) : null;
   if (!t) return { pieces: [], normals: [] };
   const walls = boxes.filter((b) => b.kind === 'wall');
   const pieces: InteriorPiece[] = [];
-  const normals: Array<{ index: number; nx: number; nz: number }> = [];
+  const normals: Array<{ index: number; nx: number; nz: number; d: number }> = [];
   for (const [index, p] of torches.entries()) {
     let best: { d: number; nx: number; nz: number } | null = null;
     for (const w of walls) {
@@ -167,7 +204,7 @@ export function planTorches(interiorId: string, boxes: readonly SolidBox[], torc
     const x = p.x - best.nx * best.d;
     const z = p.z - best.nz * best.d;
     pieces.push({ model: t.id, kind: 'torch', matrix: matrixOf(fit, x, p.y - TORCH_FLAME.y, z, Math.atan2(best.nx, best.nz)) });
-    normals.push({ index, nx: best.nx, nz: best.nz });
+    normals.push({ index, nx: best.nx, nz: best.nz, d: best.d });
   }
   return { pieces, normals };
 }
@@ -193,13 +230,13 @@ export async function dressInterior(lib: ModelLibrary, built: BuiltInterior): Pr
   }
   for (const kind of covers) built.setKindVisible(kind, false);
   if (dressedProps.size > 0) built.hidePropBoxes(dressedProps);
-  // The emissive head stays (bloom) and moves to the flame of the bracket that now holds it; it is the torch's light.
+  // The emissive head stays at full size (it is the torch's only light, mines are dark) and moves to the tip of the bracket that holds it.
   for (const n of torch.normals) {
     const head = built.root.getObjectByName(`${built.root.name}-torch-${n.index}`);
     if (!head) continue;
-    head.position.x += n.nx * TORCH_FLAME.out;
-    head.position.z += n.nz * TORCH_FLAME.out;
-    head.scale.setScalar(0.7);
+    // On the bracket tip: the same distance from the wall face whatever the torch's own offset from the wall was.
+    head.position.x += n.nx * (TORCH_FLAME.out - n.d);
+    head.position.z += n.nz * (TORCH_FLAME.out - n.d);
   }
   return stats.batches;
 }
