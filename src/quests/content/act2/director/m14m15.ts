@@ -79,6 +79,8 @@ export function installM15(k: Kit): Off[] {
   k.on('wyrm.unchained', (e) => {
     if (!k.active('m15') || k.flag('story.m15.flown')) return;
     k.after(240, () => {
+      // Re-check: the world may have changed under the countdown (review R1-1).
+      if (!k.active('m15') || k.flag('story.m15.flown')) return;
       ctx.services.get('wyrms')?.flyAway(e.actorId);
       flight();
     });

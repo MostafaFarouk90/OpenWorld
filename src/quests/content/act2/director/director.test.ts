@@ -905,6 +905,57 @@ describe('director: M15 The Hunters\' Pens', () => {
   });
 });
 
+describe('director: M15 flight timer across a load (review R1-1)', () => {
+  it('a load inside the four seconds drops the timer, and the cage works again in the loaded world', () => {
+    r = rig();
+    r.active('m15');
+    r.alive.set('q12.m15.cage', ['wyrmling#1']);
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    r.emit('wyrm.unchained', { actorId: 'wyrmling#1' });
+    r.step(100);
+    // the older save: no cage open, no flight
+    r.state.clearFlag('story.m15.cageOpen');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(300);
+    expect(r.state.getBool('story.m15.flown')).toBe(false);
+    expect(called(r, 'wyrms.flyAway')).toHaveLength(0);
+    expect(raised).not.toContain('story.m15.set');
+    // the cage is opened again in the loaded world
+    r.state.setFlag('story.m15.cageOpen', true);
+    r.emit('wyrm.unchained', { actorId: 'wyrmling#1' });
+    r.step(300);
+    expect(raised.filter((t) => t === 'story.m15.set')).toHaveLength(1);
+    expect(r.state.getBool('story.m15.flown')).toBe(true);
+    r.dispose();
+  });
+
+  it('a save made during the four seconds (cage open, no flight) still flies on its load', () => {
+    r = rig();
+    r.active('m15');
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    r.emit('wyrm.unchained', { actorId: 'w' });
+    r.step(100);
+    r.state.setFlag('story.m15.cageOpen', true);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(300);
+    expect(raised.filter((t) => t === 'story.m15.set')).toHaveLength(1);
+    r.dispose();
+  });
+
+  it('the timer does not fire once the quest is no longer active', () => {
+    r = rig();
+    r.active('m15');
+    r.emit('wyrm.unchained', { actorId: 'w' });
+    r.step(100);
+    r.quest.set('m15', 'inactive');
+    r.step(300);
+    expect(r.state.getBool('story.m15.flown')).toBe(false);
+    r.dispose();
+  });
+});
+
 describe('director: D03 The Fall of Scorchhold', () => {
   it('records a defeat without Redmane standing by Osgar', () => {
     r = rig();
