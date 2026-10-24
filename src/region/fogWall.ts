@@ -50,6 +50,12 @@ function softSpread(): number {
 /** A player found this far past the wall while it stands is put back (design 5.9's push-back). */
 export const PUSH_BACK_PAST = 2;
 export const PUSH_BACK_TO = 4;
+/**
+ * v0.7: a held face pushes back only within this depth behind it (metres along its normal). Containment holds the far
+ * side; without a depth a shut face's band ran on for kilometres and caught Act 3 places (Hathren's Mere behind the
+ * Dragonspine face, the Spine Road behind the Ashen Waste face).
+ */
+export const PUSH_BACK_MAX_DEPTH = 200;
 
 /**
  * A fog wall as data (v0.6). `axis` is the wall's normal: 'x' means the wall spans z and pushes on x. The blocked side
@@ -188,7 +194,8 @@ export function needsPushBackDef(def: FogWallDef, feet: { x: number; z: number }
   if (!Number.isFinite(feet.x) || !Number.isFinite(feet.z)) return false;
   const n = def.axis === 'x' ? feet.x - wall.x : feet.z - wall.z;
   const t = def.axis === 'x' ? feet.z - wall.z : feet.x - wall.x;
-  return n * def.blockedSide > PUSH_BACK_PAST && Math.abs(t) <= def.halfLength;
+  const depth = n * def.blockedSide;
+  return depth > PUSH_BACK_PAST && depth <= PUSH_BACK_MAX_DEPTH && Math.abs(t) <= def.halfLength;
 }
 
 /** The slice wall at `wall` (v0.5 API); `openFlags` replaces its open flags (tests). */

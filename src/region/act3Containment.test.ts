@@ -9,7 +9,8 @@ import { ACT3_FOG_FACES, ACT3_FOG_STRINGS_EN, act3FogFace } from './act3Fog';
 import { AREA_BANDS, SUMMIT_BOX, areaAt } from './areas';
 import { CORRIDOR_HALF_WIDTH, Containment, DEAD_ROAD_CORRIDOR, type CorridorDef } from './containment';
 import { installContainment } from './containmentSystem';
-import { fogOpenById, fogToastKey, fogWallForTrigger } from './fogWall';
+import { PUSH_BACK_MAX_DEPTH, fogOpenById, fogToastKey, fogWallForTrigger, needsPushBackDef } from './fogWall';
+import { ACT2_WORLD_LAYOUT } from './act2/act2World.layout';
 import { regionAt } from './regionMask';
 import { PHASE_HOLDS, REGION_IDS, REGION_INFO, engineBox } from './regions';
 import { createFakeCore } from './testing/fakeCore';
@@ -285,5 +286,50 @@ describe('Act 3 fog faces (rules only; K1 places and registers them)', () => {
     expect(fogToastKey(greyfen, stateOf(PHASE_D))).toBe('region.fog.greyfen.toast');
     const shut = ACT2_FOG_WALLS.find((w) => w.id === 'fog.caldera')!;
     expect(fogToastKey(shut, stateOf(STATES.actComplete))).toBe('region.fog.shut.toast');
+  });
+});
+
+describe('held Act 2 fog faces never push an open Act 3 point (K7 found the Mere pushed 14 km)', () => {
+  const anchorAt = (id: string) => {
+    const a = ACT2_WORLD_LAYOUT.anchors.find((x) => x.id === id)!;
+    return { x: a.x, z: a.z };
+  };
+
+  it('in every Act 3 state, every open point of the Greyfen, the Dragonspine and the Act 3 corridors is left alone', () => {
+    const points: { x: number; z: number }[] = [];
+    for (const b of [BOX.greyfen, BOX.dragonspine]) for (let x = b.x0 + 10; x < b.x1; x += 50) for (let z = b.z0 + 10; z < b.z1; z += 50) points.push({ x, z });
+    for (const c of ACT3_CORRIDORS) {
+      for (let i = 1; i < c.points.length; i++) {
+        const [ax, az] = c.points[i - 1];
+        const [bx, bz] = c.points[i];
+        const n = Math.ceil(Math.hypot(bx - ax, bz - az) / 20);
+        for (let k = 0; k <= n; k++) points.push({ x: ax + ((bx - ax) * k) / n, z: az + ((bz - az) * k) / n });
+      }
+    }
+    points.push({ x: 3150, z: 11900 }, { x: 3000, z: 12050 }); // the Mere ferry landing, the Mere shrine
+    let checked = 0;
+    for (const name of Object.keys(STATES) as StateName[]) {
+      const flags = STATES[name];
+      const c = new Containment(stateOf(flags), [DEAD_ROAD_CORRIDOR, ...ACT2_CORRIDORS, ...ACT3_CORRIDORS], ACT3_HOLES);
+      for (const w of ACT2_FOG_WALLS) {
+        if (flagConditionHolds(w.openWhen, stateOf(flags))) continue;
+        const a = anchorAt(w.anchorId);
+        for (const p of points) {
+          if (!c.isOpen(p.x, p.z)) continue;
+          checked++;
+          expect(needsPushBackDef(w, p, a), `${name}: ${w.id} pushes (${p.x.toFixed(0)}, ${p.z.toFixed(0)})`).toBe(false);
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(10_000);
+  });
+
+  it('a held face still pushes just behind it, and not beyond PUSH_BACK_MAX_DEPTH', () => {
+    const w = ACT2_FOG_WALLS.find((f) => f.id === 'fog.dragonspine')!;
+    const a = anchorAt(w.anchorId);
+    expect(needsPushBackDef(w, { x: a.x - 5, z: a.z }, a)).toBe(true);
+    expect(needsPushBackDef(w, { x: a.x - PUSH_BACK_MAX_DEPTH, z: a.z }, a)).toBe(true);
+    expect(needsPushBackDef(w, { x: a.x - PUSH_BACK_MAX_DEPTH - 1, z: a.z }, a)).toBe(false);
+    expect(needsPushBackDef(w, { x: 3150, z: 11900 }, a)).toBe(false);
   });
 });

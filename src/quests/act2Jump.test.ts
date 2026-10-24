@@ -16,7 +16,7 @@ import { ACT2_QUEST_DEFS } from './content/act2';
 import { GIVER_STAND_OFF, nodeEffects } from './act1Jump';
 import { ACT2_PREREQS } from './actJump';
 import {
-  ACT2_D_GIVERS, ACT2_GIVERS, ACT2_NODE_EFFECTS, ACT2_PHASE_C_IDS, ACT2_PHASE_D_IDS, ACT2_REKINDLE_AFTER, Act2Jump,
+  ACT2_D_GIVERS, ACT2_GIVERS, ACT2_NODE_EFFECTS, ACT2_PHASE_C_IDS, ACT2_PHASE_D_IDS, ACT2_REKINDLE_AFTER, ACT2_FLAGS_AFTER, Act2Jump,
   type Act2AnyJumpId, giverOf, parseAct2,
 } from './act2Jump';
 import type { Condition } from './types';
@@ -105,7 +105,12 @@ describe('node effects are read from the dialogue content', () => {
     expect(nodeEffects('npc-aelfreda', 'a2-rite-16')).toContainEqual({ setFlag: 'story.m14.aelfredaJoined', value: true });
   });
   it('rekindles only quests that are prerequisites of something', () => {
-    for (const q of Object.keys(ACT2_REKINDLE_AFTER)) expect(ACT2_PHASE_C_IDS).toContain(q);
+    const before = new Set(Object.values(ACT2_PREREQS).flat());
+    for (const q of Object.keys(ACT2_REKINDLE_AFTER)) expect(before.has(q), q).toBe(true);
+  });
+  it('M18 solves the Weeping Bellows before its rekindle, so the shrine lights (W + 1)', () => {
+    expect(ACT2_FLAGS_AFTER.m18).toEqual(['world.bellows.solved', 'world.bellows.shortcutOpen']);
+    expect(ACT2_REKINDLE_AFTER.m18).toEqual(['weeping-bellows']);
   });
 });
 
