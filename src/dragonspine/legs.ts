@@ -31,9 +31,11 @@ export function legLengths(b: DragonspineBuild): Record<string, LegLengths> {
   const gateToRoad = dist(b.lodge.gateN, roadStart);
   const sled = pathLength(sledPath(b, 1));
   const hawkClimb = b.hawk.climbLength + dist(b.hawk.camp, b.hawk.climbStart);
-  const stops = candleStops(b).map((c) => c.s);
   let ride = 0;
-  for (let i = 1; i < stops.length; i++) ride += Math.abs(stops[i]! - stops[i - 1]!);
+  for (const leg of ['down', 'up'] as const) {
+    const stops = candleStops(b, leg).map((c) => c.s);
+    for (let i = 1; i < stops.length; i++) ride += Math.abs(stops[i]! - stops[i - 1]!);
+  }
   const padWalk = b.wayside.sites.reduce((n, w) => n + 2 * Math.hypot(w.x - road.point(w.s).x, w.z - road.point(w.s).z), 0);
   // The cave interior, entry to the axe, along its passage and chamber (a straight run).
   const cave = buildCaveDef(b.sites.cavePad);

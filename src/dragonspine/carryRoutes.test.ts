@@ -15,8 +15,8 @@ const route = (id: string) => routes.find((r) => r.id === id)!;
 const near = (cp: { x: number; z: number }, p: { x: number; z: number }) => Math.hypot(cp.x - p.x, cp.z - p.z);
 
 describe('carry routes', () => {
-  it('has the seven routes with the agreed corridor and drop', () => {
-    expect(routes.map((r) => r.id)).toEqual(['sled.r15.1', 'sled.r15.2', 'sled.r15.3', 'egg.r18.1', 'egg.r18.2', 'egg.r18.3', 'candle.r17']);
+  it('has the eight routes with the agreed corridor and drop', () => {
+    expect(routes.map((r) => r.id)).toEqual(['sled.r15.1', 'sled.r15.2', 'sled.r15.3', 'egg.r18.1', 'egg.r18.2', 'egg.r18.3', 'candle.r17.down', 'candle.r17.up']);
     for (const r of routes) {
       expect(r.corridorHalfWidth).toBe(CORRIDOR_HALF_WIDTH);
       expect(r.corridorHalfWidth).toBe(30);
@@ -74,14 +74,28 @@ describe('carry routes', () => {
     for (const c of r.checkpoints.slice(gate + 3)) expect(build.sites.road.nearest(c.x, c.z).d).toBeLessThan(CORRIDOR_HALF_WIDTH / 2);
   });
 
-  it('resets the candle at the Anvil and at each of the six shrines, in the order Anvil, 3, 2, 1, 4, 5, 6', () => {
-    const r = route('candle.r17');
-    const stops = candleStops(build);
-    expect(r.resetAt).toHaveLength(7);
-    r.resetAt!.forEach((idx, k) => expect(near(r.checkpoints[idx]!, stops[k]!.at), `stop ${k}`).toBeLessThan(0.01));
-    expect([...r.resetAt!].sort((a, b) => a - b)).toEqual([...r.resetAt!]);
-    expect(stops.map((c) => build.wayside.sites.findIndex((w) => w.x === c.at.x && w.z === c.at.z) + 1)).toEqual([0, 3, 2, 1, 4, 5, 6]);
-    expect(near(r.checkpoints[r.resetAt![0]!]!, build.anvil.shrine)).toBeLessThan(0.01);
+  it('splits the candle in two: down from the Anvil to 3, 2, 1, up from 1 to 4, 5, 6, each reset at its start and every stop', () => {
+    const shrineOf = (c: { at: { x: number; z: number } }) => build.wayside.sites.findIndex((w) => w.x === c.at.x && w.z === c.at.z) + 1;
+    for (const [leg, order] of [['down', [0, 3, 2, 1]], ['up', [1, 4, 5, 6]]] as const) {
+      const r = route(`candle.r17.${leg}`);
+      const stops = candleStops(build, leg);
+      expect(stops.map(shrineOf)).toEqual(order);
+      expect(r.resetAt).toHaveLength(stops.length);
+      r.resetAt!.forEach((idx, k) => expect(near(r.checkpoints[idx]!, stops[k]!.at), `${leg} stop ${k}`).toBeLessThan(0.01));
+      expect([...r.resetAt!].sort((a, b) => a - b)).toEqual([...r.resetAt!]);
+    }
+    expect(near(route('candle.r17.down').checkpoints[0]!, build.anvil.shrine)).toBeLessThan(0.01);
+    expect(candleStops(build, 'up')[0]).toEqual(candleStops(build, 'down')[3]);
+  });
+
+  it('never doubles back: on every route no checkpoint is within 16 m (two pass radii) of one more than 2 indices away', () => {
+    for (const r of routes) {
+      for (let i = 0; i < r.checkpoints.length; i++) {
+        for (let j = i + 3; j < r.checkpoints.length; j++) {
+          expect(near(r.checkpoints[i]!, r.checkpoints[j]!), `${r.id} ${i} vs ${j}`).toBeGreaterThan(16);
+        }
+      }
+    }
   });
 
   it('densify keeps the end exactly and never leaves a last gap under 10 m', () => {
@@ -106,8 +120,8 @@ describe('carry routes', () => {
     const movedEgg = buildCarryRoutes(foot.heightAt, buildDragonspine(foot)).find((r) => r.id === 'egg.r18.1')!;
     expect(near(movedEgg.checkpoints[0]!, route('egg.r18.1').checkpoints[0]!)).toBeGreaterThan(10);
     const road = shiftedRoad(25, -15);
-    const movedRoad = buildCarryRoutes(road.heightAt, buildDragonspine(road)).find((r) => r.id === 'candle.r17')!;
-    const was = route('candle.r17');
+    const movedRoad = buildCarryRoutes(road.heightAt, buildDragonspine(road)).find((r) => r.id === 'candle.r17.down')!;
+    const was = route('candle.r17.down');
     expect(movedRoad.checkpoints.length).toBeGreaterThan(0);
     expect(near(movedRoad.checkpoints[10]!, was.checkpoints[10]!)).toBeGreaterThan(10);
     // y follows the ground it moved to.

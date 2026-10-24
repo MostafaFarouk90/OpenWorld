@@ -24,7 +24,7 @@ moves with it (shifted-plateau tests).
   `story.r16.rockfallCleared` (K13 writes both), re-derived by the interiors plugin's gates after every load. `CAVE_AREA` is
   `dragonspine-lower`: K13's cave spawners pass it as `SpawnerDef.area`.
 - **Carry routes** (`carryRoutes.ts`, for K7): `buildCarryRoutes(heightAt)` returns `sled.r15.1..3`, `egg.r18.1..3` (`resetAt [0]`) and
-  `candle.r17` (`resetAt`: the Anvil and each shrine). Checkpoints are the route's polyline, 10 to 25 m apart, corridor 30, max drop 10.
+  `candle.r17.down` (Anvil, 3, 2, 1) and `candle.r17.up` (1, 4, 5, 6), so neither doubles back (`resetAt`: the start and each shrine). Checkpoints are the route's polyline, 10 to 25 m apart, corridor 30, max drop 10.
 - **Leg lengths** (`legs.ts`): the plan's table computed from the layout; `legs.test.ts` prints it.
 - **Waystones**: `waystone.wyrmwatch-lodge`, `waystone.rime-pass`, `waystone.last-anvil`.
 - **NPCs** (`npcDefs.ts`): Thorgar, Eadgyth, Ansgar, six lodge hunters (two stand in the hall through `postRules.ts`), two sled-hands,

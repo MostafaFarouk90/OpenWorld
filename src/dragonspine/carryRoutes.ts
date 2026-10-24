@@ -69,15 +69,30 @@ export function eggPath(b: DragonspineBuild, i: number): XZ[] {
   return [b.hawk.eggs[i]!, ...b.hawk.climb, b.hawk.nests[0]!];
 }
 
-/** Candle stops in order: the Anvil, then down the road to shrines 3, 2, 1, then back up past the Anvil to 4, 5, 6. Pieces follow the road between consecutive stops. */
-export const CANDLE_ORDER = [3, 2, 1, 4, 5, 6] as const;
-export function candleStops(b: DragonspineBuild): Array<{ at: XZ; s: number }> {
+/**
+ * The candle is two routes, so neither runs back over itself (K7's progress rule is the furthest checkpoint within 8 m):
+ * `candle.r17.down` goes Anvil, shrines 3, 2, 1 down the road; `candle.r17.up` starts at shrine 1 and climbs past the Anvil
+ * to 4, 5, 6. K13 tracks down, then up.
+ */
+export const CANDLE_DOWN = [3, 2, 1] as const;
+export const CANDLE_UP = [1, 4, 5, 6] as const;
+export type CandleLeg = 'down' | 'up';
+export const CANDLE_ROUTE_IDS = ['candle.r17.down', 'candle.r17.up'] as const;
+
+type Stop = { at: XZ; s: number };
+/** The stops of one leg in order, the first being the start (the Anvil for down, shrine 1 for up). */
+export function candleStops(b: DragonspineBuild, leg: CandleLeg): Stop[] {
   const { anvil, wayside } = b;
-  return [{ at: anvil.shrine, s: anvil.roadS }, ...CANDLE_ORDER.map((n) => wayside.sites[n - 1]!).map((w) => ({ at: { x: w.x, z: w.z }, s: w.s }))];
+  const shrine = (n: number): Stop => {
+    const w = wayside.sites[n - 1]!;
+    return { at: { x: w.x, z: w.z }, s: w.s };
+  };
+  return leg === 'down' ? [{ at: anvil.shrine, s: anvil.roadS }, ...CANDLE_DOWN.map(shrine)] : CANDLE_UP.map(shrine);
 }
 
-export function candlePieces(b: DragonspineBuild): XZ[][] {
-  const stops = candleStops(b);
+/** The road between consecutive stops of a leg (one piece per stop after the first). */
+export function candlePieces(b: DragonspineBuild, leg: CandleLeg): XZ[][] {
+  const stops = candleStops(b, leg);
   const road = b.sites.road;
   return stops.slice(1).map((to, k) => {
     const from = stops[k]!;
@@ -92,20 +107,24 @@ export function candlePieces(b: DragonspineBuild): XZ[][] {
   });
 }
 
+function candleRoute(h: HeightFn, b: DragonspineBuild, leg: CandleLeg): DragonspineCarryRoute {
+  // Densify each piece on its own so every stop is a checkpoint; resetAt is the start and each stop.
+  const start = candleStops(b, leg)[0]!.at;
+  const resetAt: number[] = [0];
+  const pts: XZ[] = [start];
+  for (const piece of candlePieces(b, leg)) {
+    pts.push(...densify(piece).slice(1));
+    resetAt.push(pts.length - 1);
+  }
+  return { id: `candle.r17.${leg}`, checkpoints: withY(h, pts), corridorHalfWidth: CORRIDOR_HALF_WIDTH, maxDrop: MAX_DROP, resetAt };
+}
+
 /** The routes for a build; every y comes from `heightAt`. */
 export function buildCarryRoutes(heightAt: HeightFn, build: DragonspineBuild = buildDragonspine(defaultInputs(heightAt))): DragonspineCarryRoute[] {
   const routes: DragonspineCarryRoute[] = [];
   for (let i = 0; i < 3; i++) routes.push(route(heightAt, `sled.r15.${i + 1}`, sledPath(build, i)));
   for (let i = 0; i < 3; i++) routes.push(route(heightAt, `egg.r18.${i + 1}`, eggPath(build, i), [0]));
-  // The candle: densify each piece on its own so every stop is a checkpoint.
-  const resetAt: number[] = [0];
-  const pts: XZ[] = [build.anvil.shrine];
-  for (const piece of candlePieces(build)) {
-    const dense = densify(piece);
-    pts.push(...dense.slice(1));
-    resetAt.push(pts.length - 1);
-  }
-  routes.push({ id: 'candle.r17', checkpoints: withY(heightAt, pts), corridorHalfWidth: CORRIDOR_HALF_WIDTH, maxDrop: MAX_DROP, resetAt });
+  routes.push(candleRoute(heightAt, build, 'down'), candleRoute(heightAt, build, 'up'));
   return routes;
 }
 
