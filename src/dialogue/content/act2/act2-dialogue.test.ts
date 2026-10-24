@@ -11,6 +11,10 @@ import { evalCondition } from '../../../quests/conditions';
 import type { BusPort, QuestReader, StatePort, StringsPort } from '../../../quests/ports';
 import type { Condition, DialogueDef, FavourBand, FlagValue } from '../../../quests/types';
 import { ACT2_EXTENDED_DIALOGUES } from './index';
+import { WYNNE } from './kin.dialogue';
+import { HROLF } from './hrolf.dialogue';
+import { LANTERN_KEEPER } from './keeper.dialogue';
+import { AELFREDA_A2 } from './aelfreda.a2.dialogue';
 import { npcGaut } from '../npc-gaut.dialogue';
 import { npcAelfreda } from '../npc-aelfreda.dialogue';
 import { npcPennard } from '../npc-pennard.dialogue';
@@ -330,5 +334,24 @@ describe('Maud pays her R06 thanks once (review-a #8)', () => {
     play(w, 'npc-maud', 'maud');
     expect(w.log).toContain('favour oswin 4');
     expect(w.flags.get('story.r06.maudThanks')).toBe(true);
+  });
+});
+
+// Polish pass P1: the played trail reads these segments end to end; their lengths carry the R11 and M14 pacing (act2Timing.test.ts).
+describe('R11 and M14 pacing beats', () => {
+  const len = (tree: { def: DialogueDef }, seg: string) => tree.def.nodes.filter((n) => n.id === seg || n.id.startsWith(`${seg}-`)).length;
+  it('R11 widow talk is nine nodes, Hrolf\'s report eleven (two of them are the conditional slain/spared lines)', () => {
+    expect(len(WYNNE, 'r11-widow')).toBe(9);
+    expect(len(HROLF, 'r11-report')).toBe(11);
+  });
+  it('M14 keeper talk is seven nodes, Aelfreda\'s brief eighteen and her rite sixteen', () => {
+    expect(len(LANTERN_KEEPER, 'm14-keeper')).toBe(7);
+    expect(len(AELFREDA_A2, 'a2-brief')).toBe(18);
+    expect(len(AELFREDA_A2, 'a2-rite')).toBe(16);
+  });
+  it('every new line has a string and the closing lines still write their flags', () => {
+    for (const t of [WYNNE, HROLF, LANTERN_KEEPER, AELFREDA_A2]) for (const n of t.def.nodes) expect(t.strings[n.textKey], n.id).toBeTruthy();
+    const last = AELFREDA_A2.def.nodes.find((n) => n.id === 'a2-rite-16')!;
+    expect(JSON.stringify(last.effects)).toContain('story.m14.complete');
   });
 });

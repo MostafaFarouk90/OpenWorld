@@ -27,6 +27,12 @@ export interface BossDef {
    * outcome: 'release' to 'released', 'spare' to 'spared'.
    */
   mercyVerb?: 'release' | 'spare';
+  /**
+   * Asked on each stagger of the boss that is not shield-blocked. False: it is a forced stagger (a parry, a howl, Second Wind
+   * on a boss that only breaks another way), not a poise break, so it is not counted: no `boss.break`, no pip, no release
+   * window. The callback may restore the boss's poise itself. Default: every stagger counts.
+   */
+  acceptBreak?: () => boolean;
 }
 
 /** v0.6 adds `'spared'` (a `spare` mercy row, Redmane). Saves holding only the two older outcomes load unchanged. */
@@ -340,6 +346,7 @@ export class BossRegistry {
     // A shielded boss's poise can still empty (a parry's `damage.stagger`), but that is no break: only the
     // shield breaker opens the way (design 10 row 17, "Surge breaks his shield").
     if (boss.shield) return;
+    if (boss.def.acceptBreak && !boss.def.acceptBreak()) return;
     boss.breaks++;
     const last = boss.phase === boss.thresholds.length + 1 && boss.breaks >= boss.def.breaksPerPhase;
     this.events.emit('boss.break', { bossId: boss.def.bossId, phase: boss.phase, breaks: boss.breaks, last });
