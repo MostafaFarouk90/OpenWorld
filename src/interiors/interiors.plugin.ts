@@ -108,6 +108,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     anchor: (id) => ctx.anchors.find(id),
     freeze: () => ctx.player.addMoveModifier('interiors.transition', { freeze: true }),
     fade: (o, s) => void ctx.hud.fade(o, s),
+    fadeOpacity: () => ctx.hud.fadeOpacity,
     teleport: (feet, yaw) => ctx.player.teleport(feet, yaw),
     groundBelow: (d) => groundDistance(ctx, d) !== null,
     onFloor,
