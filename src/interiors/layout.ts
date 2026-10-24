@@ -1,6 +1,6 @@
 import type { Vec3 } from '../physics/PhysicsWorld';
 import type { NavGridDef } from '../nav/NavGrid';
-import type { InteriorDef, LocalRect } from './types';
+import type { InteriorDef, LocalRect, SunkenDef } from './types';
 
 /** Interiors float this far above the highest terrain under them (plans/slice-2-interiors-nav.md section 2). */
 export const FLOAT_HEIGHT = 150;
@@ -53,14 +53,20 @@ export interface InteriorLayout {
  * True when `at` could be someone standing in the interior: over a room, not inside a pillar or a solid prop, and between the floor
  * and 1.5 m above whatever is under it (the floor, a bed, a shelf top). A load checks a saved spot with it.
  */
+/** v0.7: a blocker built from below the floor up to exactly the floor: a bridge deck over a pit, floor while closed. */
+export const isFloorBlocker = (b: InteriorDef['blockers'][number]): boolean => (b.base ?? 0) < 0 && Math.abs((b.base ?? 0) + b.height) <= 1e-6;
+
 export function standsIn(layout: InteriorLayout, at: Vec3): boolean {
   const x = at.x - layout.origin.x;
   const z = at.z - layout.origin.z;
   const y = at.y - layout.floorY;
   const def = layout.def;
-  if (y < -0.5 || !def.rooms.some((r) => inRect(r, x, z))) return false;
+  const floor = -sunkenDepthAt(def, x, z);
+  if (y < floor - 0.5 || !def.rooms.some((r) => inRect(r, x, z))) return false;
   if (def.pillars.some((p) => inRect(p, x, z))) return false;
-  let top = 0;
+  let top = floor;
+  // A bridge deck over a pit counts as floor (open or closed: a load onto a dropped one falls into the water below).
+  for (const b of def.blockers) if (isFloorBlocker(b) && inRect(b.rect, x, z)) top = Math.max(top, (b.base ?? 0) + b.height);
   for (const p of def.props ?? []) {
     if (!inRect(p.rect, x, z)) continue;
     // Inside a solid prop (more than its top 0.25 m) is not standing; on top of one is.
@@ -93,6 +99,16 @@ function roomsBox(def: InteriorDef): LocalRect {
 }
 
 const inRect = (r: LocalRect, x: number, z: number) => x >= r.x0 && x < r.x1 && z >= r.z0 && z < r.z1;
+
+/** The sunken entry over local (x, z), or undefined (v0.7). */
+function sunkenAt(def: InteriorDef, x: number, z: number): SunkenDef | undefined {
+  return def.sunken?.find((s) => inRect(s.rect, x, z));
+}
+
+/** How far the floor at local (x, z) sits below the room floor: 0 unless a sunken entry covers it. */
+export function sunkenDepthAt(def: InteriorDef, x: number, z: number): number {
+  return sunkenAt(def, x, z)?.depth ?? 0;
+}
 
 /** The lowest and highest terrain over the footprint, sampled every 2 m and at the corners. */
 export function groundRange(def: InteriorDef, heightAt: (x: number, z: number) => number): { min: number; max: number } {
@@ -130,6 +146,10 @@ export function layoutInterior(def: InteriorDef, heightAt: (x: number, z: number
       throw new Error(`Interior "${def.id}": walkable prop ${p.id ?? ''} is ${p.height} m tall (at most ${MAX_WALKABLE_PROP})`);
     }
   }
+  for (const sk of def.sunken ?? []) {
+    if (!(sk.depth > 0)) throw new Error(`Interior "${def.id}": sunken ${sk.id} needs a positive depth`);
+    if (sk.roof !== undefined && !(sk.roof > -sk.depth)) throw new Error(`Interior "${def.id}": sunken ${sk.id} has its roof under its floor`);
+  }
   const ground = groundRange(def, heightAt);
   if (ground.max - ground.min > MAX_GROUND_RANGE) {
     throw new Error(
@@ -160,25 +180,48 @@ export function layoutInterior(def: InteriorDef, heightAt: (x: number, z: number
     const i = roomOf[r * cols + c];
     return i < 0 ? -1 : def.rooms[i].height;
   };
+  // v0.7: per room cell, its floor (0, or minus a sunken depth) and the bottom of its ceiling (the room height, or a roof).
+  const floorAt = new Float64Array(cols * rows);
+  const ceilAt = new Float64Array(cols * rows).fill(-1);
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const i = r * cols + c;
+      const own = heightOf(c, r);
+      if (own < 0) continue;
+      const sk = def.sunken?.length ? sunkenAt(def, gx0 + (c + 0.5) * CELL, gz0 + (r + 0.5) * CELL) : undefined;
+      floorAt[i] = sk ? -sk.depth : 0;
+      ceilAt[i] = sk?.roof ?? own;
+    }
+  }
+  const inGrid = (c: number, r: number) => c >= 0 && r >= 0 && c < cols && r < rows;
+  const floorOf = (c: number, r: number): number => (inGrid(c, r) && roomOf[r * cols + c] >= 0 ? floorAt[r * cols + c] : 0);
 
-  // Per cell: a key naming its solid intervals (y relative to the floor), so equal cells merge.
-  const intervals: [number, number][][] = [];
+  // Per cell: a key naming its solid intervals (y relative to the floor) and their kinds, so equal cells merge.
+  const intervals: [number, number, BoxKind][][] = [];
   const keys: string[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       let around = -1;
-      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) if (dr || dc) around = Math.max(around, heightOf(c + dc, r + dr));
+      let low = 0;
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr || dc) around = Math.max(around, heightOf(c + dc, r + dr));
+          low = Math.min(low, floorOf(c + dc, r + dr));
+        }
+      }
       const own = heightOf(c, r);
-      let iv: [number, number][] = [];
+      let iv: [number, number, BoxKind][] = [];
       if (own >= 0) {
+        const i = r * cols + c;
         let top = own;
         for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) top = Math.max(top, heightOf(c + dc, r + dr));
+        // The floor reaches down to the lowest neighbouring floor, so a sunken neighbour's pit has a solid side.
         iv = [
-          [-SLAB, 0],
-          [own, top + SLAB],
+          [low - SLAB, floorAt[i], 'floor'],
+          [ceilAt[i], top + SLAB, 'ceiling'],
         ];
       } else if (around >= 0) {
-        iv = [[-SLAB, around + SLAB]];
+        iv = [[low - SLAB, around + SLAB, 'wall']];
       }
       intervals.push(iv);
       keys.push(iv.map((p) => p.join(':')).join('|'));
@@ -208,10 +251,7 @@ export function layoutInterior(def: InteriorDef, heightAt: (x: number, z: number
       const z0 = gz0 + r * CELL;
       const x1 = x0 + cw * CELL;
       const z1 = z0 + rh * CELL;
-      for (const [y0, y1] of intervals[i]) {
-        const kind: BoxKind = y1 <= 0 ? 'floor' : y0 <= -SLAB ? 'wall' : 'ceiling';
-        boxes.push({ kind, min: w(x0, y0, z0), max: w(x1, y1, z1) });
-      }
+      for (const [y0, y1, kind] of intervals[i]) boxes.push({ kind, min: w(x0, y0, z0), max: w(x1, y1, z1) });
     }
   }
   const roomHeightAt = (x: number, z: number): number => {
@@ -220,24 +260,27 @@ export function layoutInterior(def: InteriorDef, heightAt: (x: number, z: number
   };
   for (const p of def.pillars) {
     const h = roomHeightAt((p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2);
-    boxes.push({ kind: 'pillar', min: w(p.x0, 0, p.z0), max: w(p.x1, h, p.z1) });
+    const foot = -sunkenDepthAt(def, (p.x0 + p.x1) / 2, (p.z0 + p.z1) / 2);
+    boxes.push({ kind: 'pillar', min: w(p.x0, foot, p.z0), max: w(p.x1, h, p.z1) });
   }
   for (const p of props) {
     boxes.push({ kind: 'prop', min: w(p.rect.x0, 0, p.rect.z0), max: w(p.rect.x1, p.height, p.rect.z1), ...(p.id ? { propId: p.id } : {}) });
   }
   for (const b of def.blockers) {
-    boxes.push({ kind: 'blocker', blockerId: b.id, min: w(b.rect.x0, 0, b.rect.z0), max: w(b.rect.x1, b.height, b.rect.z1) });
+    const base = b.base ?? 0;
+    boxes.push({ kind: 'blocker', blockerId: b.id, min: w(b.rect.x0, base, b.rect.z0), max: w(b.rect.x1, base + b.height, b.rect.z1) });
   }
 
   const tallest = Math.max(...def.rooms.map((rm) => rm.height));
+  const deepest = Math.max(0, ...(def.sunken ?? []).map((sk) => sk.depth));
   const bounds: Bounds = {
-    min: w(box.x0 - BOUNDS_MARGIN, -BOUNDS_MARGIN, box.z0 - BOUNDS_MARGIN),
+    min: w(box.x0 - BOUNDS_MARGIN, -BOUNDS_MARGIN - deepest, box.z0 - BOUNDS_MARGIN),
     max: w(box.x1 + BOUNDS_MARGIN, tallest + BOUNDS_MARGIN, box.z1 + BOUNDS_MARGIN),
   };
 
   // An anchor over a walkable prop (the dais) stands on its top.
   const standOn = (x: number, z: number): number => {
-    let y = 0;
+    let y = -sunkenDepthAt(def, x, z);
     for (const p of props) if (p.walkable && inRect(p.rect, x, z)) y = Math.max(y, p.height);
     return y;
   };
@@ -267,8 +310,15 @@ export function layoutInterior(def: InteriorDef, heightAt: (x: number, z: number
       floorY,
       cellSize: CELL,
       walkable: def.rooms.map(toWorldRect),
-      blocked: [...def.pillars, ...props.filter((p) => !p.walkable).map((p) => p.rect)].map(toWorldRect),
-      blockers: Object.fromEntries(def.blockers.map((b) => [b.id, [toWorldRect(b.rect)]])),
+      // v0.7: a sunken cell deeper than one step (a pool, a channel, a tunnel) is off the grid.
+      blocked: [
+        ...def.pillars,
+        ...props.filter((p) => !p.walkable).map((p) => p.rect),
+        ...(def.sunken ?? []).filter((sk) => sk.depth > MAX_WALKABLE_PROP).map((sk) => sk.rect),
+      ].map(toWorldRect),
+      blockers: Object.fromEntries(def.blockers.filter((b) => !isFloorBlocker(b)).map((b) => [b.id, [toWorldRect(b.rect)]])),
+      // v0.7: a closed blocker that tops out at the floor from below is floor (a bridge over a pit), walkable while closed.
+      ...(def.blockers.some(isFloorBlocker) ? { bridges: Object.fromEntries(def.blockers.filter(isFloorBlocker).map((b) => [b.id, [toWorldRect(b.rect)]])) } : {}),
     },
   };
 }

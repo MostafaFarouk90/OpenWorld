@@ -3,6 +3,7 @@
 import type { Condition } from './types';
 import type { ConditionEnv, NpcPort } from './ports';
 import { evalCondition } from './conditions';
+import { GREYFEN_POST_RULES } from '../greyfen/postRules';
 import { OLDSMOKE_POST_RULES } from '../oldsmoke/postRules';
 
 export interface PostRule {
@@ -27,6 +28,8 @@ const live = (q: string): Condition => ({ quest: q, state: ['active', 'completed
 export const POST_RULES: PostRule[] = [
   // Act 2 (A4, additive): Deepgate's cast. First, so a row here wins; none of these NPCs has an Act 1 row.
   ...OLDSMOKE_POST_RULES,
+  // Act 3 (K3, additive): the Greyfen's movers; none of them has an earlier row.
+  ...GREYFEN_POST_RULES,
   {
     npcId: 'gaut', home: 'npc-post.gaut',
     posts: [

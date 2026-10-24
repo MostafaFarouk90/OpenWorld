@@ -110,10 +110,11 @@ export function buildInterior(layout: InteriorLayout, physics: PhysicsWorld | nu
     const mesh = new THREE.Mesh(geo, blockerMat);
     mesh.name = `${root.name}-${b.blockerId}`;
     mesh.castShadow = false;
-    mesh.visible = false;
+    // Blockers start open, unless the def builds one closed (v0.7 `startClosed`: a bridge that drops later).
+    const closed = layout.def.blockers.find((d) => d.id === b.blockerId)?.startClosed === true;
+    mesh.visible = closed;
     root.add(mesh);
-    // Blockers start open.
-    collider?.setEnabled(false);
+    collider?.setEnabled(closed);
     blockers.set(b.blockerId, { mesh, collider });
   }
 
