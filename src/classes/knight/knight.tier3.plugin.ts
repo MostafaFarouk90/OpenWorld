@@ -60,7 +60,7 @@ const knightTier3Plugin: GamePlugin = {
         dead: () => ctx.actors.player.dead,
         feet: () => ctx.player.feet,
         bubble: () => {
-          const h = vfx()?.spawnEffect?.(OATHWARD.bubbleFx, { position: ctx.player.feet, attach: ctx.player.avatar?.root }, { seconds: OATHWARD.seconds });
+          const h = vfx()?.spawnEffect?.(OATHWARD.bubbleFx, { position: ctx.player.avatar?.root ? { x: 0, y: 0, z: 0 } : ctx.player.feet, attach: ctx.player.avatar?.root }, { seconds: OATHWARD.seconds });
           return h ? () => h.stop() : null;
         },
         burst: (at) => void vfx()?.spawnEffect?.(OATHWARD.burstFx, { position: { x: at.x, y: at.y + 1, z: at.z } }),

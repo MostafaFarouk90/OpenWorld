@@ -18,6 +18,7 @@ import spellsPlugin from '../../spells/spells.plugin';
 import { TerrainColliders } from '../../world/TerrainColliders';
 import { World } from '../../world/World';
 import classesPlugin from '../classes.plugin';
+import { origin } from '../../vfx/effects';
 import ashbladePlugin from './ashblade.plugin';
 import { SKILL, TWIN_FANGS } from './tuning';
 
@@ -200,6 +201,27 @@ describe('ashblade tier 3 plugin: Soot Cloak with the real stealth hooks', () =>
     const e = t.enemy(-3, 0);
     hit(t, e.id);
     expect(fx.blockers()).toEqual([]);
+  });
+
+  it('the cloak effect attaches at a zero offset: at the player, not twice the player position', async () => {
+    const t = await boot();
+    const seen: Array<{ id: string; t: any }> = [];
+    t.ctx.services.provide('vfx' as never, { spawnEffect: (id: string, tr: unknown) => (seen.push({ id, t: tr }), { stop: () => {} }) } as never);
+    t.ctx.services.provide('stealth' as never, new StealthEffects() as never);
+    learnTier3(t, SKILL.sootCloak);
+    t.run(2);
+    t.world.avatar!.root.position.set(100, 5, -200);
+    t.world.avatar!.root.updateMatrixWorld(true);
+    t.press('KeyN');
+    t.run(2);
+    const cloak = seen.find((s) => s.id === 'soot-cloak')!;
+    expect(cloak.t.attach).toBe(t.world.avatar!.root);
+    const o = origin(cloak.t);
+    const at = new THREE.Vector3();
+    t.world.avatar!.root.getWorldPosition(at);
+    expect([o.x, o.y, o.z]).toEqual(at.toArray());
+    expect(Math.abs(o.x - 100)).toBeLessThan(1);
+    expect(Math.abs(o.z + 200)).toBeLessThan(1);
   });
 
   it('does nothing in another class', async () => {
