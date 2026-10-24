@@ -322,6 +322,44 @@ describe('InteriorController: aborts', () => {
     expect(t.events.map((e) => e.type)).toEqual(['interior.entered', 'interior.exited', 'interior.entered']);
   });
 
+  describe('waiting for the fade to reach black', () => {
+    it('holds the placement while a slow fade is still short of black, then places when it reports 1', async () => {
+      let opacity = 0.4;
+      const t = setup({ fadeOpacity: () => opacity });
+      const p = t.c.enter(VAULT, 'vault');
+      t.run(TRANSITION.fadeOutSeconds + 0.3);
+      expect(t.log).not.toContain('teleport 150');
+      expect(t.state.applied).toEqual([]);
+      opacity = 1;
+      t.run(0.1);
+      expect(t.log).toContain('teleport 150');
+      t.run(TRANSITION.fadeInSeconds + 0.2);
+      await p;
+    });
+    it('places at the fade-out time when the fade is already instant (opacity 1)', async () => {
+      const t = setup({ fadeOpacity: () => 1 });
+      const p = t.c.enter(VAULT, 'vault');
+      t.run(TRANSITION.fadeOutSeconds - 0.05);
+      expect(t.log).not.toContain('teleport 150');
+      t.run(0.1);
+      expect(t.log).toContain('teleport 150');
+      t.run(TRANSITION.fadeInSeconds + 0.2);
+      await p;
+    });
+    it('gives up after the wait and places anyway, with a warning, when the fade never reaches black', async () => {
+      const warnings: string[] = [];
+      const t = setup({ fadeOpacity: () => 0.2, warn: (m) => warnings.push(m) });
+      const p = t.c.enter(VAULT, 'vault');
+      t.run(TRANSITION.fadeOutSeconds + TRANSITION.fadeWaitSeconds - 0.1);
+      expect(t.log).not.toContain('teleport 150');
+      t.run(0.3);
+      expect(t.log).toContain('teleport 150');
+      expect(warnings).toHaveLength(1);
+      t.run(TRANSITION.fadeInSeconds + 0.2);
+      await p;
+    });
+  });
+
   it('refuses an exit requested during the enter fade, and an enter during the exit fade', async () => {
     const t = setup();
     const p = t.c.enter(VAULT, 'vault');

@@ -47,11 +47,18 @@ describe('Act 2 estimator constants (plan Part 7)', () => {
 });
 
 /**
- * How far the shipped estimate may sit from the plan's Part 7 estimate before the two are said to have drifted apart. The
- * shipped routes and node counts were measured after the plan (M12's wave and carries added 12 min), so this is a guard
- * against gross drift (a route anchor renamed to nothing, a beat table emptied), not an exact match.
+ * Baseline: the shipped estimate (paceMinutes) for each Phase C quest, in minutes, measured from the content as it stands
+ * (review F4). The shipped estimate must stay within SHIPPED_TOL of this, so a change to a quest's route or beats is caught.
+ * When content changes on purpose, re-measure and update the table.
  */
-const DRIFT = 0.5;
+const SHIPPED: Record<string, number> = {
+  m11: 32.3, m12: 39.9, r06: 20.8, r05: 22.5, m13: 21.6, r07: 14.1, r11: 22.2, m14: 25.8, m15: 22.8, d03: 30.0,
+};
+const SHIPPED_TOL = 0.1;
+/** Against the plan the shipped content may differ (it was measured after the plan); only a gross gap above this fails. */
+const PLAN_FAIL = 0.5;
+/** Past this the gap to the plan is reported (console.info) without failing. */
+const PLAN_REPORT = 0.1;
 
 // Review B L5: this block used to check the PART7 literal against itself. It now ties the plan table to the shipped
 // estimator, so either one changing alone fails here.
@@ -59,17 +66,28 @@ describe('Part 7 against the shipped estimator, Phase C', () => {
   it('the plan table and the shipped pacing table name the same quests', () => {
     expect(ACT2_PACE.map((r) => r.quest).sort()).toEqual(Object.keys(PART7).sort());
   });
-  it.each(Object.keys(PART7))('%s: the shipped estimate (paceMinutes) is within 50%% of the plan\'s estimate', (q) => {
+  it('the SHIPPED baseline names the same quests', () => {
+    expect(Object.keys(SHIPPED).sort()).toEqual(Object.keys(PART7).sort());
+  });
+  it.each(Object.keys(PART7))('%s: the shipped estimate (paceMinutes) is within 10%% of the SHIPPED baseline', (q) => {
+    const row = ACT2_PACE.find((r) => r.quest === q)!;
+    const shipped = paceMinutes(row, pos).minutes;
+    expect(Math.abs(shipped - SHIPPED[q]) / SHIPPED[q], `${q}: shipped ${shipped.toFixed(1)} min, baseline ${SHIPPED[q]} min`).toBeLessThanOrEqual(SHIPPED_TOL);
+  });
+  it.each(Object.keys(PART7))('%s: against the plan estimate the gap is reported, and fails only above 50%%', (q) => {
     const row = ACT2_PACE.find((r) => r.quest === q)!;
     const shipped = paceMinutes(row, pos).minutes;
     const plan = PART7[q].estimate;
-    expect(Math.abs(shipped - plan) / plan, `${q}: shipped ${shipped.toFixed(1)} min, plan ${plan} min`).toBeLessThanOrEqual(DRIFT);
+    const gap = (shipped - plan) / plan;
+    if (Math.abs(gap) > PLAN_REPORT) console.info(`[act2 timing] ${q}: shipped ${shipped.toFixed(1)} min vs plan ${plan} min (${(gap * 100).toFixed(0)}%)`);
+    expect(Math.abs(gap), `${q}: shipped ${shipped.toFixed(1)} min, plan ${plan} min`).toBeLessThanOrEqual(PLAN_FAIL);
   });
   it('the shipped act sits within 50% of the plan\'s 460 design minutes at 51.4%', () => {
     const design = Object.values(PART7).reduce((s, r) => s + r.design, 0);
     const shipped = ACT2_PACE.reduce((s, r) => s + paceMinutes(r, pos).minutes, 0);
     const planned = Object.values(PART7).reduce((s, r) => s + r.estimate, 0);
-    expect(Math.abs(shipped - planned) / planned).toBeLessThanOrEqual(DRIFT);
+    expect(Math.abs(shipped - planned) / planned).toBeLessThanOrEqual(PLAN_FAIL);
+    expect(Math.abs(shipped - Object.values(SHIPPED).reduce((a, b) => a + b, 0)) / shipped).toBeLessThanOrEqual(SHIPPED_TOL);
     expect(shipped / design).toBeGreaterThanOrEqual(0.5);
   });
 });
