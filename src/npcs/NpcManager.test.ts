@@ -370,3 +370,43 @@ describe('dispose', () => {
     expect(() => m.spawnAll()).toThrow();
   });
 });
+
+describe('talk interactables are live while a talk objective names them', () => {
+  const fakeQuests = (views: Record<string, Array<{ current: boolean; def: { type: string; target?: string | string[] } }>>) => ({
+    active: () => Object.keys(views),
+    objectives: (id: string) => views[id] ?? [],
+  });
+  const live = (fc: ReturnType<typeof createFakeCore>, id: string) => fc.interactables.get(`npc:${id}`)!.live?.();
+
+  it('is not live with no quests service, and not live with no talk objective', () => {
+    const { fc, m } = setup();
+    m.spawnAll();
+    expect(live(fc, 'tobb')).toBe(false);
+    fc.services.set('quests', fakeQuests({ q: [{ current: true, def: { type: 'goTo', target: 'tobb' } }] }));
+    expect(live(fc, 'tobb')).toBe(false);
+    m.dispose();
+  });
+
+  it('is live for the named npc only, and only while the objective is current', () => {
+    const { fc, m } = setup();
+    m.spawnAll();
+    const views = { q: [{ current: true, def: { type: 'talk', target: 'tobb' } }] };
+    fc.services.set('quests', fakeQuests(views));
+    expect(live(fc, 'tobb')).toBe(true);
+    const other = BRIGHTWATER_LAYOUT.npcs.find((n) => n.id !== 'tobb')!.id;
+    expect(live(fc, other)).toBe(false);
+    views.q[0].current = false;
+    expect(live(fc, 'tobb')).toBe(false);
+    m.dispose();
+  });
+
+  it('a list of targets makes each named npc live', () => {
+    const { fc, m } = setup();
+    m.spawnAll();
+    const [a, b] = BRIGHTWATER_LAYOUT.npcs.map((n) => n.id);
+    fc.services.set('quests', fakeQuests({ q: [{ current: true, def: { type: 'talk', target: [a, b] } }] }));
+    expect(live(fc, a)).toBe(true);
+    expect(live(fc, b)).toBe(true);
+    m.dispose();
+  });
+});

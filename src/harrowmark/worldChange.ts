@@ -14,6 +14,8 @@ export interface WorldChange {
   counts(): { banners: number; braziers: number };
   /** The Act 2 change (`story.gate.a3`): the Silver Fountain runs, the closed market stalls stand open. */
   readonly act2: { readonly active: boolean; counts(): { fountainJets: number; stalls: number } };
+  /** The stalls shut up (shutters down) from Act 2's start (`story.gate.a2`) until the ending (`story.gate.a3`) opens them (A16 final review #5). */
+  readonly closedStalls: { readonly active: boolean; counts(): { stalls: number } };
   dispose(): void;
 }
 
@@ -23,12 +25,15 @@ export const STALL_PREFIX = 'guild.stall-';
 
 const WATER = new THREE.MeshBasicMaterial({ color: 0x9fd6ee, transparent: true, opacity: 0.55 });
 const AWNING = new THREE.MeshLambertMaterial({ color: 0xc8553a, side: THREE.DoubleSide });
+const SHUTTER = new THREE.MeshLambertMaterial({ color: 0x4a3a2c, side: THREE.DoubleSide });
 const GOODS = new THREE.MeshLambertMaterial({ color: 0xd9a441 });
 
 const CLOTH = new THREE.MeshLambertMaterial({ color: 0xb8892b, side: THREE.DoubleSide });
 const POLE = new THREE.MeshLambertMaterial({ color: 0x5a4632 });
 const BOWL = new THREE.MeshLambertMaterial({ color: 0x3a3532 });
 const FLAME = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
+
+const SHUTTER_Z = 0.75;
 
 export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'gates'>): WorldChange {
   const root = new THREE.Group();
@@ -155,8 +160,52 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
     active2 = true;
   };
 
-  const off = ctx.gates.flag(A2_FLAG, (on) => (on ? build() : clear()));
-  const off2 = ctx.gates.flag(A3_FLAG, (on) => (on ? build2() : clear2()));
+  // ---- The closed stalls: between the two gates every stall is boarded up, a shutter over the table and no goods.
+  const root3 = new THREE.Group();
+  root3.name = 'harrowmark-closed-stalls';
+  const geometries3: THREE.BufferGeometry[] = [];
+  let closed = 0;
+  const clear3 = (): void => {
+    root3.removeFromParent();
+    root3.clear();
+    for (const g of geometries3.splice(0)) g.dispose();
+    closed = 0;
+  };
+  const build3 = (): void => {
+    clear3();
+    const y = ctx.anchors.find(FOUNTAIN.anchor)?.position.y ?? 0;
+    const shutterGeo = new THREE.PlaneGeometry(3.6, 1.8);
+    geometries3.push(shutterGeo);
+    for (const s of HARROWMARK_LAYOUT.structures) {
+      if (!s.id.startsWith(STALL_PREFIX)) continue;
+      const g = new THREE.Group();
+      g.position.set(s.x, y, s.z);
+      g.rotation.y = (s.yawDeg * Math.PI) / 180;
+      const shutter = new THREE.Mesh(shutterGeo, SHUTTER);
+      // In front of the decorated table (cityArt puts it at local z +0.6), so the stall reads as shut from the front (review F5).
+      shutter.position.set(0, 1.1, SHUTTER_Z);
+      g.add(shutter);
+      root3.add(g);
+      closed++;
+    }
+    ctx.scene.add(root3);
+  };
+  let gateA2 = false;
+  let gateA3 = false;
+  const syncClosed = (): void => (gateA2 && !gateA3 ? build3() : clear3());
+
+  const off = ctx.gates.flag(A2_FLAG, (on) => {
+    gateA2 = on;
+    syncClosed();
+    if (on) build();
+    else clear();
+  });
+  const off2 = ctx.gates.flag(A3_FLAG, (on) => {
+    gateA3 = on;
+    syncClosed();
+    if (on) build2();
+    else clear2();
+  });
   return {
     get active() {
       return active;
@@ -168,11 +217,18 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
       },
       counts: () => ({ fountainJets: jets, stalls }),
     },
+    closedStalls: {
+      get active() {
+        return closed > 0;
+      },
+      counts: () => ({ stalls: closed }),
+    },
     dispose() {
       off();
       off2();
       clear();
       clear2();
+      clear3();
     },
   };
 }

@@ -9,6 +9,20 @@ import { ASH_ON_THE_PASTURE as ASH, BARLEY_AND_BRAZIER as BARLEY, HAMMERS_BELOW 
 
 const SR = 8000;
 
+// Explicit, generous budget: the file is quick alone but shares CPU with the whole suite in CI (F7).
+vi.setConfig({ testTimeout: 30_000 });
+
+/**
+ * The handover logic needs buffers of the right length, not the sound: synthesising every stem of every track for every test
+ * took about a second per test (F7). The synth has its own tests (stemSynth.*.test.ts, act2.tracks.test.ts).
+ */
+// The placeholder SFX are registered at setup (about 100 synthesised sounds); the handover tests never play one.
+vi.mock('./sfxSynth', async (orig) => ({ ...(await orig<typeof import('./sfxSynth')>()), synthSfx: () => new Float32Array(1) }));
+vi.mock('./stemSynth', async () => {
+  const { loopSamples } = await import('./tracks');
+  return { synthStem: (track: Parameters<typeof loopSamples>[0], _stem: string, sampleRate: number) => new Float32Array(loopSamples(track, sampleRate)) };
+});
+
 vi.mock('../audio/proceduralSounds', () => ({ PLACEHOLDER_SAMPLE_RATE: 44100, samplesToWavUrl: () => 'blob:fake' }));
 
 const flush = async (): Promise<void> => {

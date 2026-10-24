@@ -349,8 +349,9 @@ export class SlagmawEncounter implements SlagmawHooks {
     this.tickEmergence(dt);
     this.sync();
     if (this.brain.exposed && dist > 1e-3) this.face(player);
-    // Poise refills after 4 s without a landed hit, outside the stagger.
-    if (this.brain.state !== "broken") {
+    // Poise refills after 4 s of surfaced time without a landed hit, outside the stagger. The clock is paused while he is under
+    // the floor (A8/A16 tuning): a cooled break carries across a submerge instead of draining while he cannot be hit.
+    if (this.brain.state === "surfaced") {
       this.poiseIdle += dt;
       if (
         this.poiseIdle >= SLAGMAW.poiseRegenDelay &&

@@ -7,6 +7,7 @@ import type { GameEventMap } from '../../../../core/events';
 import { Services } from '../../../../core/Services';
 import { WorldState } from '../../../../state/WorldState';
 import type { QuestState } from '../../../types';
+import { SPEECH_NPC } from './m11';
 import plugin, { ACT2_QUEST_IDS } from './cinderreachDirector.plugin';
 import { MURAL_NPC } from './m14m15';
 
@@ -278,18 +279,135 @@ describe('director: M11 Road of Cinders', () => {
     r.dispose();
   });
 
-  it('the first bloom wakes the wraiths, the stone raises the speech, and the end of the quest stops the escort', () => {
+  it('the first bloom wakes the wraiths, and the end of the quest stops the escort', () => {
     r = rig();
     r.active('m11');
     r.emit('interact', { interactableId: 'use:m11-bloom-2', kind: 'prop', actorId: 'player', action: 'interact' });
     expect(r.state.getBool('story.m11.bloomHit')).toBe(true);
-    r.emit('waystone.rekindled', { waystoneId: 'cinder-road', cause: 'player' });
-    r.step();
-    expect(r.state.getBool('story.m11.speech')).toBe(true);
-    expect(called(r, 'dialogue.start')).toEqual([['npc-gaut', 'gaut']]);
     r.emit('quest.completed', { questId: 'm11' });
     expect(called(r, 'escort.stop')).toHaveLength(1);
     r.dispose();
+  });
+
+  describe('the stone speech (review-fixes-review F1, F5)', () => {
+    const speech = [['npc-gaut', SPEECH_NPC]];
+    const lit = (): void => {
+      r.state.setFlag('waystone.cinder-road.lit', true);
+      r.emit('waystone.rekindled', { waystoneId: 'cinder-road', cause: 'player' });
+    };
+
+    it('lit after the ambush: plays at once, under its own npc id, not as gaut', () => {
+      r = rig();
+      r.active('m11');
+      r.done.add('m11.ambush');
+      lit();
+      r.step();
+      expect(r.state.getBool('story.m11.speech')).toBe(true);
+      expect(called(r, 'dialogue.start')).toEqual(speech);
+      expect(SPEECH_NPC).not.toBe('gaut');
+      r.dispose();
+    });
+
+    it('lit during the ambush: silent mid-fight, plays when the ambush is done', () => {
+      r = rig();
+      r.active('m11');
+      lit();
+      r.step(3);
+      expect(called(r, 'dialogue.start')).toHaveLength(0);
+      expect(r.state.getFlag('story.m11.speech')).toBeUndefined();
+      r.done.add('m11.ambush');
+      r.emit('quest.objective', objective('m11', 'ambush'));
+      r.step();
+      expect(called(r, 'dialogue.start')).toEqual(speech);
+      r.dispose();
+    });
+
+    it('lit before M11 started: plays once the ambush is done', () => {
+      r = rig();
+      r.state.setFlag('waystone.cinder-road.lit', true);
+      r.active('m11');
+      r.step(3);
+      expect(called(r, 'dialogue.start')).toHaveLength(0);
+      r.done.add('m11.ambush');
+      r.emit('quest.objective', objective('m11', 'ambush'));
+      r.step();
+      expect(called(r, 'dialogue.start')).toEqual(speech);
+      r.dispose();
+    });
+
+    it('plays once only, also across a load, and leaves the report talk to gaut', () => {
+      r = rig();
+      r.active('m11');
+      r.done.add('m11.ambush');
+      lit();
+      r.step();
+      r.state.clearFlag('story.m11.speech'); // the last line's effect
+      r.emit('save.loaded', { slot: 'a' });
+      lit();
+      r.emit('quest.objective', objective('m11', 'ambush'));
+      r.step(3);
+      expect(called(r, 'dialogue.start')).toEqual(speech);
+      r.dispose();
+    });
+
+    it('a load in the middle of the speech plays it again', () => {
+      r = rig();
+      r.active('m11');
+      r.done.add('m11.ambush');
+      lit();
+      r.step();
+      r.emit('save.loaded', { slot: 'a' }); // flag still set: the speech never finished
+      r.step(2);
+      expect(called(r, 'dialogue.start')).toEqual([...speech, ...speech]);
+      r.dispose();
+    });
+
+    it('a speech cut short by death plays again and leaves the report talk to gaut (review F1)', () => {
+      r = rig();
+      r.active('m11');
+      r.done.add('m11.ambush');
+      lit();
+      r.step();
+      expect(called(r, 'dialogue.start')).toEqual(speech);
+      r.emit('dialogue.ended', { dialogueId: 'npc-gaut', npcId: SPEECH_NPC, reason: 'death' });
+      r.step(2);
+      expect(called(r, 'dialogue.start')).toEqual([...speech, ...speech]);
+      r.dispose();
+    });
+
+    it('a start refused by a menu retries when the menu closes (review F2)', () => {
+      const o = { dialogueOpen: true };
+      r = rig(o);
+      r.active('m11');
+      r.done.add('m11.ambush');
+      lit();
+      r.step(30);
+      expect(called(r, 'dialogue.start')).toHaveLength(1);
+      o.dialogueOpen = false;
+      r.emit('ui.modal', { id: 'journal', open: true });
+      r.step(2);
+      expect(called(r, 'dialogue.start')).toHaveLength(1);
+      r.emit('ui.modal', { id: 'journal', open: false });
+      r.step(2);
+      expect(called(r, 'dialogue.start')).toEqual([...speech, ...speech]);
+      r.dispose();
+    });
+
+    it('waits for another dialogue to end, then plays', () => {
+      const o = { dialogueOpen: true };
+      r = rig(o);
+      r.active('m11');
+      r.done.add('m11.ambush');
+      lit();
+      r.step(30);
+      expect(called(r, 'dialogue.start')).toHaveLength(1); // refused, and not hammered every tick
+      expect(r.state.getFlag('story.m11.speech')).toBeFalsy();
+      o.dialogueOpen = false;
+      r.emit('dialogue.ended', { dialogueId: 'x', npcId: 'y' });
+      r.step();
+      expect(called(r, 'dialogue.start')).toEqual([...speech, ...speech]);
+      r.dispose();
+    });
   });
 
   it('a different waystone, a mercy on a bloom or an inactive quest does nothing', () => {
@@ -1095,7 +1213,7 @@ describe('director: R11 den scene when the player is already on the shelf (revie
     r.dispose();
   });
 
-  it('retries while another dialogue holds the screen, and stops once the scene has started', () => {
+  it('retries on dialogue.ended while another dialogue holds the screen, and stops once the scene has started', () => {
     const o = { dialogueOpen: true };
     r = rig(o);
     r.active('r11');
@@ -1105,10 +1223,62 @@ describe('director: R11 den scene when the player is already on the shelf (revie
     r.step(3);
     expect(called(r, 'dialogue.start')).toHaveLength(1); // refused
     o.dialogueOpen = false;
+    r.emit('dialogue.ended', { dialogueId: 'x', npcId: 'y' });
     r.step(3);
     expect(called(r, 'dialogue.start')).toHaveLength(2); // started
     r.step(20);
     expect(called(r, 'dialogue.start')).toHaveLength(2);
+    r.dispose();
+  });
+
+  it('a dialogue that stays open far longer than the old retry window cannot block the scene: it starts on dialogue.ended', () => {
+    const o = { dialogueOpen: true };
+    r = rig(o);
+    r.active('r11');
+    r.inside.add('trg.cinderreach.den');
+    r.done.add('r11.ledge2');
+    r.emit('quest.objective', ledge2);
+    r.step(600); // ten seconds
+    expect(called(r, 'dialogue.start')).toHaveLength(1); // refused once, no polling
+    o.dialogueOpen = false;
+    r.emit('dialogue.ended', { dialogueId: 'x', npcId: 'y' });
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toEqual([['scene-r11-den', 'hrolf'], ['scene-r11-den', 'hrolf']]);
+    r.emit('dialogue.ended', { dialogueId: 'x', npcId: 'y' });
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toHaveLength(2);
+    r.dispose();
+  });
+
+  it('a start refused by a menu retries when the menu closes (review F2)', () => {
+    const o = { dialogueOpen: true };
+    r = rig(o);
+    r.active('r11');
+    r.inside.add('trg.cinderreach.den');
+    r.done.add('r11.ledge2');
+    r.emit('quest.objective', ledge2);
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toHaveLength(1);
+    o.dialogueOpen = false;
+    r.emit('ui.modal', { id: 'journal', open: false });
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toHaveLength(2);
+    r.dispose();
+  });
+
+  it('after a dialogue ends the scene is dropped if the player left the shelf meanwhile', () => {
+    const o = { dialogueOpen: true };
+    r = rig(o);
+    r.active('r11');
+    r.inside.add('trg.cinderreach.den');
+    r.done.add('r11.ledge2');
+    r.emit('quest.objective', ledge2);
+    r.step(3);
+    r.inside.delete('trg.cinderreach.den');
+    o.dialogueOpen = false;
+    r.emit('dialogue.ended', { dialogueId: 'x', npcId: 'y' });
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toHaveLength(1);
     r.dispose();
   });
 });

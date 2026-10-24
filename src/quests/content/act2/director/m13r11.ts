@@ -48,19 +48,39 @@ export function installR11(k: Kit): Off[] {
     k.later(() => void denScene());
   });
   // `trigger.enter` fires only on a crossing: a player already on the shelf when `ledge2` completes, or who loads there,
-  // gets the scene too (review-a #9). Checked two ticks on (the inside test can be stale in the tick of a load), and
-  // retried while another dialogue holds the screen.
-  const DEN_RETRIES = 20;
-  const denIfInside = (tries = DEN_RETRIES): void => {
+  // gets the scene too (review-a #9). Checked two ticks on (the inside test can be stale in the tick of a load). While
+  // another dialogue holds the screen the scene waits for `dialogue.ended` and tries again, however long that dialogue
+  // runs (a fixed count of tries gave up after about 0.7 s; review-fixes-review F2).
+  let denWaiting = false;
+  const denIfInside = (): void => {
     k.after(2, () => {
-      if (!denDue() || !ctx.triggers.isInside('trg.cinderreach.den')) return;
-      if (!denScene() && tries > 0) denIfInside(tries - 1);
+      if (!denDue() || !ctx.triggers.isInside('trg.cinderreach.den')) {
+        denWaiting = false;
+        return;
+      }
+      denWaiting = !denScene();
     });
   };
+  k.on('dialogue.ended', () => {
+    if (denWaiting) {
+      denWaiting = false;
+      denIfInside();
+    }
+  });
+  // A menu can refuse the start too, and no `dialogue.ended` follows that (review F2).
+  k.on('ui.modal', (e) => {
+    if (!e.open && denWaiting) {
+      denWaiting = false;
+      denIfInside();
+    }
+  });
   k.on('quest.objective', (e) => {
     if (e.questId === 'r11' && e.objectiveId === 'ledge2' && e.done) denIfInside();
   });
-  k.on('save.loaded', () => denIfInside());
+  k.on('save.loaded', () => {
+    denWaiting = false;
+    denIfInside();
+  });
 
   // The choice is the outcome: the flag, then the favour, then the group goes (the resting wyrm is A6a's, keyed on the
   // spared flag). A mercy on the den wyrm is a spare; its death is a slaying.

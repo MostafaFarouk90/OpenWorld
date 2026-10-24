@@ -687,6 +687,24 @@ describe("The Slagmaw on the real core", () => {
     t.teardown();
   });
 
+  it("poise does not regenerate while he is under the floor: a graze taken late in a surfacing survives the submerge", async () => {
+    const t = await setup();
+    t.startFight();
+    t.toSurfaced();
+    t.turn(1);
+    t.runHealed(3.5);
+    expect(t.enc().brain.state).toBe("surfaced");
+    t.hit(1, SLAGMAW.maxPoise / 3);
+    const grazed = t.boss()!.poise;
+    expect(grazed).toBeLessThan(SLAGMAW.maxPoise);
+    expect(t.until(() => t.enc().brain.state !== "surfaced")).toBe(true);
+    t.runHealed(2.5);
+    expect(t.enc().crustCooled).toBe(true);
+    expect(t.enc().brain.exposed).toBe(false);
+    expect(t.boss()!.poise).toBe(grazed);
+    t.teardown();
+  });
+
   it("valve N works only in phase N, and only while he lives", async () => {
     const t = await setup();
     t.startFight();
