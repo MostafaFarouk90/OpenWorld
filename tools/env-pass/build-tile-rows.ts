@@ -19,16 +19,21 @@ const [inPath, outPath] = args;
 if (!inPath || !outPath) throw new Error('usage: build-tile-rows.ts <in.json> <out.json> [--also x0,x1,z0,z1]');
 const MARGIN = 0.4;
 const ANCHOR_CLEAR = 1.0;
-const file = JSON.parse(readFileSync(inPath, 'utf8')) as { core: { x: [number, number]; z: [number, number] }; placements: Array<{ id: string; x: number; z: number; yaw?: number; scale?: number }> };
+const file = JSON.parse(readFileSync(inPath, 'utf8')) as { core: { x: [number, number]; z: [number, number] }; placements: Array<{ id: string; x: number; z: number; yaw?: number; scale?: number }>; meta?: { reserved?: Array<{ id: string; x: number; z: number; halfW: number; halfD: number }> } };
 const { core } = file;
 const owns = (r: { x: number; z: number }): boolean =>
   (r.x >= core.x[0] && r.x <= core.x[1] && r.z >= core.z[0] && r.z <= core.z[1]) || also.some(([x0, x1, z0, z1]) => r.x >= x0 && r.x < x1 && r.z > z0 && r.z <= z1);
 const placements = file.placements.filter(owns);
+// Reserved pads (meta.reserved) stay empty flat ground: no row of any class within PAD_CLEAR of the box.
+const PAD_CLEAR = 2;
+const pads = file.meta?.reserved ?? [];
 const ground = (id: string): boolean => /^(grass|flower)/.test(id);
 const solids = L.structures.filter((s) => s.mode !== 'open');
 const dropped: Record<string, number> = {};
 const rows = placements
   .filter((r) => {
+    const pad = pads.find((p) => Math.abs(r.x - p.x) <= p.halfW + PAD_CLEAR && Math.abs(r.z - p.z) <= p.halfD + PAD_CLEAR);
+    if (pad) return void (dropped[`in ${pad.id}`] = (dropped[`in ${pad.id}`] ?? 0) + 1);
     const s = solids.find((st) => pointInFootprint(st, r.x, r.z, MARGIN));
     if (s) return void (dropped[`in ${s.id}`] = (dropped[`in ${s.id}`] ?? 0) + 1);
     const a = ground(r.id) ? undefined : L.anchors.find((an) => Math.hypot(r.x - an.x, r.z - an.z) < ANCHOR_CLEAR);
