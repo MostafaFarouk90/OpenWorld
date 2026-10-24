@@ -98,7 +98,9 @@ const weepingBellowsPlugin: GamePlugin = {
       if (!blessingLoaded) blessing.load(null);
       blessingLoaded = false;
       rederive();
-      binding.sync();
+      // The quests' own save.loaded recheck ran before this handler, and the flag is set without an event: read the
+      // `doneWhen` again (M18's rekindle) or the objective stays open for good (review R2-2).
+      if (binding.sync()) ctx.services.get('quests')?.recheck?.();
       blessing.announce();
     });
 
@@ -214,7 +216,7 @@ const weepingBellowsPlugin: GamePlugin = {
       fixedUpdate(dt) {
         if (first) {
           first = false;
-          binding.sync();
+          if (binding.sync()) ctx.services.get('quests')?.recheck?.();
           holdSaves();
         }
         place();

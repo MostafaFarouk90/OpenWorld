@@ -225,6 +225,25 @@ describe('Weeping Bellows plugin', () => {
     expect(WAYSTONE_LOCKS['weeping-bellows']).toBe('world.bellows.solved');
   });
 
+  it('a load that lights the shrine silently has the quests read their doneWhen again, after the flag is set (R2-2)', async () => {
+    const t = await boot();
+    t.run(2);
+    const seen: boolean[] = [];
+    t.ctx.services.provide('quests' as never, { recheck: () => void seen.push(t.ctx.state.getBool('shrine.weeping-bellows.lit')) } as never);
+    // An older save: solved, the stone lit, the shrine flag missing.
+    t.ctx.state.setFlag('world.bellows.solved', true);
+    t.ctx.services.require('waystones').rekindle('weeping-bellows', 'script');
+    t.ctx.state.clearFlag('shrine.weeping-bellows.lit');
+    seen.length = 0;
+    t.ctx.events.emit('save.loaded', { slot: 'a' } as never);
+    expect(t.ctx.state.getBool('shrine.weeping-bellows.lit')).toBe(true);
+    expect(seen).toEqual([true]);
+    // Nothing to light: no recheck.
+    seen.length = 0;
+    t.ctx.events.emit('save.loaded', { slot: 'a' } as never);
+    expect(seen).toEqual([]);
+  });
+
   it('hold-F on the locked shaft-head stone refuses and lights nothing; after the solve it is usable', async () => {
     const t = await boot();
     t.run(3);
