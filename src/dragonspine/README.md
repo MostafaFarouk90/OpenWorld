@@ -11,7 +11,7 @@ moves with it (shifted-plateau tests).
 - **Places**: `lodge.ts` (Wyrmwatch Lodge: walls, two towers, south and pass gates, the long hall's shell at the hall pad's door,
   bunkhouse, stables, the R15 sled shed and depot, racks, the yard fire pit round K1's hearth, a waystone), `shelter.ts` (Eadgyth's
   hut, her trophy wall, the fire, the woodpile about 150 m off, the switchback bend dressing, a waystone), `hawkCliffs.ts` (the egg
-  thief's camp, the climb, three nests, the parents' circling points), `caveMouth.ts` (the mouth, the collapsed ledge), `anvil.ts`
+  thief's camp, the climb, three nests, the parents' circling points), `caveMouth.ts` (the mouth, the collapsed ledge, the trailhead and a 200 m approach over the Leap), `anvil.ts`
   (the shrine pad and anchor, six carving stones, two keeper-marks, Ansgar's cell, the pilgrims' rest, a waystone),
   `wayside.ts` (R17's six stone platforms on the verge), `m28.ts` (M28's trailhead, climb, two Leap ledges, four cairns, the crag).
   `layout.ts` concatenates them (`buildDragonspine(inputs)`); `dragonspine.layout.ts` is the shipped constant.

@@ -74,12 +74,13 @@ describe('carry routes', () => {
     for (const c of r.checkpoints.slice(gate + 3)) expect(build.sites.road.nearest(c.x, c.z).d).toBeLessThan(CORRIDOR_HALF_WIDTH / 2);
   });
 
-  it('resets the candle at the Anvil and at each of the six shrines, in road order', () => {
+  it('resets the candle at the Anvil and at each of the six shrines, in the order Anvil, 3, 2, 1, 4, 5, 6', () => {
     const r = route('candle.r17');
     const stops = candleStops(build);
     expect(r.resetAt).toHaveLength(7);
     r.resetAt!.forEach((idx, k) => expect(near(r.checkpoints[idx]!, stops[k]!.at), `stop ${k}`).toBeLessThan(0.01));
     expect([...r.resetAt!].sort((a, b) => a - b)).toEqual([...r.resetAt!]);
+    expect(stops.map((c) => build.wayside.sites.findIndex((w) => w.x === c.at.x && w.z === c.at.z) + 1)).toEqual([0, 3, 2, 1, 4, 5, 6]);
     expect(near(r.checkpoints[r.resetAt![0]!]!, build.anvil.shrine)).toBeLessThan(0.01);
   });
 

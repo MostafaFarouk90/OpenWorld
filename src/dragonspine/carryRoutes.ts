@@ -69,10 +69,11 @@ export function eggPath(b: DragonspineBuild, i: number): XZ[] {
   return [b.hawk.eggs[i]!, ...b.hawk.climb, b.hawk.nests[0]!];
 }
 
-/** Candle stops in order: the Anvil, then wayside 1 to 6. Pieces follow the road between consecutive stops. */
+/** Candle stops in order: the Anvil, then down the road to shrines 3, 2, 1, then back up past the Anvil to 4, 5, 6. Pieces follow the road between consecutive stops. */
+export const CANDLE_ORDER = [3, 2, 1, 4, 5, 6] as const;
 export function candleStops(b: DragonspineBuild): Array<{ at: XZ; s: number }> {
   const { anvil, wayside } = b;
-  return [{ at: anvil.shrine, s: anvil.roadS }, ...wayside.sites.map((w) => ({ at: { x: w.x, z: w.z }, s: w.s }))];
+  return [{ at: anvil.shrine, s: anvil.roadS }, ...CANDLE_ORDER.map((n) => wayside.sites[n - 1]!).map((w) => ({ at: { x: w.x, z: w.z }, s: w.s }))];
 }
 
 export function candlePieces(b: DragonspineBuild): XZ[][] {

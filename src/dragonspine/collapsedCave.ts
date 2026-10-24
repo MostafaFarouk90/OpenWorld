@@ -15,7 +15,9 @@ export const ROCKFALL_BLOCKER_ID = 'dragonspine.cave.rockfall';
 
 const rect = (x0: number, z0: number, x1: number, z1: number): LocalRect => ({ x0, z0, x1, z1 });
 const EDGE = 2;
-const PASSAGE_END = -16;
+const PASSAGE_END = -24;
+/** The chamber's far wall, at most this far from the door: the walk from the entry to the axe is about 45 m. */
+const CHAMBER_END = -50;
 /** Heights inside the interior, metres above its own floor (local, not terrain). */
 const PASSAGE_TORCH_H = 2.4;
 const CHAMBER_TORCH_H = 2.8;
@@ -29,8 +31,9 @@ export function buildCaveDef(pad: InteriorPad): InteriorDef {
   const lz1 = pad.footprint.maxZ - pad.site.z - EDGE;
   const cx0 = Math.max(lx0, -10);
   const cx1 = Math.min(lx1, 10);
-  const cz0 = Math.max(lz0, -34);
+  const cz0 = Math.max(lz0, CHAMBER_END);
   const mid = (cz0 + PASSAGE_END) / 2;
+  const dig = cz0 + 2.5;
   const north = Math.min(lz1, 1.5);
   return {
     id: COLLAPSED_CAVE_ID,
@@ -43,21 +46,23 @@ export function buildCaveDef(pad: InteriorPad): InteriorDef {
     props: [
       { id: 'rock.1', rect: rect(cx0 + 0.5, cz0 + 0.5, cx0 + 3, cz0 + 3), height: 1.2 },
       { id: 'rock.2', rect: rect(cx1 - 3.5, mid - 1, cx1 - 1, mid + 2), height: 1.4 },
-      { id: 'dig.1', rect: rect(-1.5, mid - 1.5, 1.5, mid + 1.5), height: 0.3, walkable: true },
+      { id: 'dig.1', rect: rect(-1.5, dig - 1.5, 1.5, dig + 1.5), height: 0.3, walkable: true },
     ],
     // Closed at setup; the flag blocker (interiors plugin) opens it when the rockfall is cleared.
-    blockers: [{ id: ROCKFALL_BLOCKER_ID, rect: rect(-2.5, -13, 2.5, -11.5), height: 3.5, startClosed: true }],
+    blockers: [{ id: ROCKFALL_BLOCKER_ID, rect: rect(-2.5, -17, 2.5, -15.5), height: 3.5, startClosed: true }],
     torches: [
       { x: -2.4, y: PASSAGE_TORCH_H, z: -4 },
       { x: 2.4, y: PASSAGE_TORCH_H, z: -4 },
+      { x: -2.4, y: PASSAGE_TORCH_H, z: -12 },
+      { x: 2.4, y: PASSAGE_TORCH_H, z: -20 },
       { x: cx0 + 0.1, y: CHAMBER_TORCH_H, z: mid },
       { x: cx1 - 0.1, y: CHAMBER_TORCH_H, z: mid },
     ],
     anchors: [
       { id: 'dragonspine.cave.inside', x: 0, z: -1, yaw: 0 },
       { id: 'dragonspine.cave.exit', x: 0, z: 0.5, yaw: 180 },
-      { id: 'dragonspine.cave.rockfall', x: 0, z: -9.5, facing: { x: 0, z: -12 } },
-      { id: 'dragonspine.cave.axe', x: 0, z: mid - 2.5, facing: { x: 0, z: mid } },
+      { id: 'dragonspine.cave.rockfall', x: 0, z: -13.5, facing: { x: 0, z: -16 } },
+      { id: 'dragonspine.cave.axe', x: 0, z: dig + 2.5, facing: { x: 0, z: dig } },
       // Six searches: cave-in markers and a hunter's bones in the passage, then the chamber's scabbard, dragon scratch, old campfire and Eadgyth's initials.
       { id: 'dragonspine.cave.search.1', x: -1.6, z: -4.5, facing: { x: -2.5, z: -4.5 } },
       { id: 'dragonspine.cave.search.2', x: 1.5, z: -7, facing: { x: 2.5, z: -7 } },

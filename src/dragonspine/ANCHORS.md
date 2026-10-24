@@ -60,16 +60,16 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.spawn.anvil.hawk-2 | 14721 | 13863.63 | 0 | 180 | spawn |
 | dragonspine.spawn.anvil.hawk-3 | 14658 | 13900 | 0 | 180 | spawn |
 | dragonspine.spawn.anvil.ogre | 14745.82 | 13895.99 | 0 | 180 | spawn |
-| dragonspine.wayside.1 | 13935.06 | 13509.5 | 0.3 | 180 | objective |
-| dragonspine.wayside.2 | 14192.76 | 13598.97 | 0.72 | 180 | objective |
-| dragonspine.wayside.3 | 14417.25 | 13710.9 | 0.71 | 180 | objective |
-| dragonspine.wayside.4 | 14582.43 | 14091.61 | 0.47 | 180 | objective |
-| dragonspine.wayside.5 | 14199.9 | 14166.93 | 0.9 | 180 | objective |
-| dragonspine.wayside.6 | 14062.47 | 14338.72 | 0.52 | 180 | objective |
-| dragonspine.spawn.wayside.hawk-a | 14200.89 | 13634.52 | 0 | 180 | spawn |
-| dragonspine.spawn.wayside.hawk-b | 14163.59 | 14163.49 | 0 | 180 | spawn |
-| npc-post.pilgrim-1 | 14180.87 | 13613.75 | 0 | 180 | npc-post |
-| npc-post.pilgrim-2 | 14189.6 | 14151 | 0 | 180 | npc-post |
+| dragonspine.wayside.1 | 14244.32 | 13618.12 | 0.6 | 180 | objective |
+| dragonspine.wayside.2 | 14417.25 | 13710.9 | 0.71 | 180 | objective |
+| dragonspine.wayside.3 | 14516.36 | 13797.6 | 0.39 | 180 | objective |
+| dragonspine.wayside.4 | 14641.42 | 13993.69 | 0.31 | 180 | objective |
+| dragonspine.wayside.5 | 14369.09 | 14118.28 | 0.3 | 180 | objective |
+| dragonspine.wayside.6 | 14203.03 | 14163.03 | 0.74 | 180 | objective |
+| dragonspine.spawn.wayside.hawk-a | 14418.04 | 13747.36 | 0 | 180 | spawn |
+| dragonspine.spawn.wayside.hawk-b | 14353.03 | 14151.03 | 0 | 180 | spawn |
+| npc-post.pilgrim-1 | 14402.62 | 13722.98 | 0 | 180 | npc-post |
+| npc-post.pilgrim-2 | 14377.28 | 14135.4 | 0 | 180 | npc-post |
 | dragonspine.hawk.camp | 11384 | 12990 | 0 | 180 | objective |
 | dragonspine.hawk.camp.search.1 | 11381 | 12991 | 0 | 180 | objective |
 | dragonspine.hawk.camp.search.2 | 11388 | 12990 | 0 | 180 | objective |
@@ -96,6 +96,17 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.spawn.hawk-cliffs.parent-1 | 11389 | 13155 | 0 | 180 | spawn |
 | dragonspine.spawn.hawk-cliffs.parent-2 | 11399 | 13155 | 0 | 180 | spawn |
 | npc-post.egg-thief | 11386 | 12990 | 0 | 270 | npc-post |
+| dragonspine.cave.trailhead | 12429.71 | 13612.77 | 0 | 95.18 | objective |
+| dragonspine.cave.path.1 | 12412.82 | 13614.3 | 0 | 180 | objective, elevated |
+| dragonspine.cave.path.2 | 12396.72 | 13616.81 | 0 | 180 | objective, elevated |
+| dragonspine.cave.path.3 | 12391.44 | 13632.92 | 0 | 180 | objective, elevated |
+| dragonspine.cave.path.4 | 12386.17 | 13649.04 | 0 | 180 | objective, elevated |
+| dragonspine.cave.path.5 | 12373.13 | 13651.49 | 0 | 180 | objective, elevated |
+| dragonspine.cave.path.6 | 12356.58 | 13647.78 | 0 | 180 | objective, elevated |
+| dragonspine.cave.path.7 | 12343.54 | 13650.23 | 0 | 180 | objective, elevated |
+| dragonspine.cave.path.8 | 12338.27 | 13666.35 | 0 | 180 | objective, elevated |
+| dragonspine.cave.path.9 | 12332.99 | 13682.46 | 0 | 180 | objective, elevated |
+| dragonspine.cave.path.10 | 12316.89 | 13684.97 | 0 | 180 | objective, elevated |
 | dragonspine.cave.mouth | 12300 | 13700 | 0 | 0 | poi |
 | dragonspine.cave.leap | 12300 | 13692 | 1.8 | 180 | poi, leap-gated |
 | dragonspine.cave.leap.launch | 12300 | 13686.5 | 0 | 180 | poi |
@@ -136,6 +147,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | trg.dragonspine.hawkcliffs.camp | sphere | 11384 | 12992 | r 22 |
 | trg.dragonspine.hawkcliffs.nest | sphere | 11394 | 13158 | r 14 |
 | trg.dragonspine.cave.mouth | sphere | 12300 | 13700 | r 14 |
+| trg.dragonspine.cave.trailhead | sphere | 12429.71 | 13612.77 | r 12 |
 | trg.dragonspine.m28.trailhead | sphere | 13552.57 | 12821.19 | r 12 |
 | trg.dragonspine.m28.crag | sphere | 13900 | 12500 | r 20 |
 
@@ -201,12 +213,12 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-carving-stone-4 | dragonspine-carving | 14687.43 | 13850.51 | 1.6 x 1.2 | open |
 | dragonspine-carving-stone-5 | dragonspine-carving | 14658.86 | 13900 | 1.6 x 1.2 | open |
 | dragonspine-carving-stone-6 | dragonspine-carving | 14687.43 | 13949.49 | 1.6 x 1.2 | open |
-| dragonspine-wayside-pad-1 | rock | 13935.06 | 13509.5 | 8 x 8 | solid |
-| dragonspine-wayside-pad-2 | rock | 14192.76 | 13598.97 | 8 x 8 | solid |
-| dragonspine-wayside-pad-3 | rock | 14417.25 | 13710.9 | 8 x 8 | solid |
-| dragonspine-wayside-pad-4 | rock | 14582.43 | 14091.61 | 8 x 8 | solid |
-| dragonspine-wayside-pad-5 | rock | 14199.9 | 14166.93 | 8 x 8 | solid |
-| dragonspine-wayside-pad-6 | rock | 14062.47 | 14338.72 | 8 x 8 | solid |
+| dragonspine-wayside-pad-1 | rock | 14244.32 | 13618.12 | 8 x 8 | solid |
+| dragonspine-wayside-pad-2 | rock | 14417.25 | 13710.9 | 8 x 8 | solid |
+| dragonspine-wayside-pad-3 | rock | 14516.36 | 13797.6 | 8 x 8 | solid |
+| dragonspine-wayside-pad-4 | rock | 14641.42 | 13993.69 | 8 x 8 | solid |
+| dragonspine-wayside-pad-5 | rock | 14369.09 | 14118.28 | 8 x 8 | solid |
+| dragonspine-wayside-pad-6 | rock | 14203.03 | 14163.03 | 8 x 8 | solid |
 | dragonspine-thief-straw | dragonspine-straw | 11384 | 12992 | 3 x 2.4 | open |
 | dragonspine-thief-sack | dragonspine-sack | 11388 | 12993 | 1.6 x 1.2 | open |
 | dragonspine-thief-tracks | dragonspine-tracks | 11387 | 12999 | 5 x 1.2 | open |

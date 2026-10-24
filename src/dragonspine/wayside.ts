@@ -1,5 +1,5 @@
 // R17's six wayside shrine sites along the Rime Pass: three between the shelter and the Last Anvil, three between the Anvil and
-// the summit gate, about 300 m of road apart. Each is a built stone platform on the road verge (no terrain edits: K1 owns the
+// the summit gate, about 200 m of road apart, numbered in road order (1 lowest, 6 nearest the summit gate). Each is a built stone platform on the road verge (no terrain edits: K1 owns the
 // ground), its top level with the road edge, and an anchor on it. K9 builds the shrines.
 import type { StructureSpec } from '../region/layoutTypes';
 import { a, emptyPart, solid, type Part } from './helpers';
@@ -9,7 +9,7 @@ import { ROAD_HALF_WIDTH, type Sites } from './sites';
 export const WAYSIDE_PAD = 8;
 /** The platform's height above the highest ground under it. */
 export const WAYSIDE_PAD_HEIGHT = 0.2;
-const SLIDE = [0, 10, -10, 20, -20, 30, -30, 40, -40, 50, -50, 60, -60];
+const SLIDE = Array.from({ length: 37 }, (_, i) => (i === 0 ? 0 : (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 5));
 
 export interface WaysideSite {
   index: number;
@@ -28,8 +28,8 @@ export interface WaysideInfo {
   specs: StructureSpec[];
 }
 
-/** The sites are about this far apart on the road (the plan's 300 m); closer when the stretch is short. */
-export const WAYSIDE_SPACING = 300;
+/** The sites are about this far apart on the road (200 m of road between shrines); closer when the stretch is short. */
+export const WAYSIDE_SPACING = 200;
 
 /** Where the six sites want to be on the road: three each side of the Anvil, `WAYSIDE_SPACING` apart (squeezed to fit the stretch). */
 export function waysideTargets(shelterS: number, anvilS: number, roadEnd: number): number[] {
@@ -49,7 +49,7 @@ export function waysideLayout(s: Sites, shelterS: number, anvilS: number): { par
         const c = s.road.point(at, side * offset);
         const edge = s.road.point(at, side * ROAD_HALF_WIDTH);
         const rise = footprintMax(s.h, c.x, c.z, WAYSIDE_PAD + 2, WAYSIDE_PAD + 2) - s.h(edge.x, edge.z);
-        const score = Math.abs(rise) + Math.abs(ds) * 0.002;
+        const score = Math.abs(rise) + Math.abs(ds) * 0.0005;
         if (!best || score < best.score) best = { score, s: at, side };
       }
     }

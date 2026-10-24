@@ -42,7 +42,7 @@ const TABLE: string[] = [
   'dragonspine.shelter.fire', 'dragonspine.shelter.woodpile', ...range(5).map((n) => `dragonspine.shelter.trophy.${n}`), 'dragonspine.shelter.m31-offer',
   'dragonspine.hawk.camp', ...range(4).map((n) => `dragonspine.hawk.camp.search.${n}`), ...range(3).map((n) => `dragonspine.hawk.egg.${n}`), 'dragonspine.hawk.companion-hold', 'dragonspine.hawk.climb.1',
   'dragonspine.hawk.nest.r18', 'dragonspine.hawk.nest.2', 'dragonspine.hawk.nest.3', ...range(4).map((n) => `dragonspine.hawk.circle.${n}`),
-  'dragonspine.cave.mouth', 'dragonspine.cave.leap',
+  'dragonspine.cave.trailhead', 'dragonspine.cave.path.1', 'dragonspine.cave.mouth', 'dragonspine.cave.leap',
   'dragonspine.m28.trailhead', 'dragonspine.m28.leap.1', 'dragonspine.m28.leap.2', ...range(4).map((n) => `dragonspine.m28.cairn.${n}`), 'dragonspine.m28.crag',
   'npc-post.thorgar.yard', 'npc-post.eadgyth.fire', 'npc-post.ansgar.anvil', ...range(6).map((n) => `npc-post.lodge-hunter-${n}`), ...range(2).map((n) => `npc-post.sled-hand-${n}`), 'npc-post.lodge-hunter-cave', 'npc-post.egg-thief', ...range(3).map((n) => `npc-post.pilgrim-${n}`),
   ...range(6).map((n) => `dragonspine.spawn.m28.hawk-${n}`), 'dragonspine.spawn.m28.ogre', 'dragonspine.spawn.m28.scout',
@@ -98,7 +98,7 @@ describe('the layout on stand-in ground', () => {
     for (const k of ['fire', 'trophy', 'm31-offer']) on(`dragonspine.shelter.${k}`, 'rime-pass-shelter');
     on('dragonspine.hawk.camp', 'hawk-cliffs-foot');
     on('dragonspine.hawk.egg', 'hawk-cliffs-foot');
-    on('dragonspine.cave.', 'collapsed-cave');
+    for (const k of ['mouth', 'leap', 'leap.launch']) on(`dragonspine.cave.${k}`, 'collapsed-cave');
     on('dragonspine.m28.crag', 'm28-crag');
     on('dragonspine.anvil.shrine', 'last-anvil');
     on('dragonspine.anvil.cell', 'last-anvil');
@@ -155,7 +155,7 @@ describe('the layout on stand-in ground', () => {
 
 describe('the wayside sites', () => {
   const road = roadFromPoints(inp.passPoints);
-  it('are six platforms in road order, about 300 m apart, three each side of the Anvil', () => {
+  it('are six platforms in road order, about 200 m of road apart, three each side of the Anvil', () => {
     const s = b.wayside.sites.map((w) => w.s);
     expect(s).toHaveLength(6);
     expect([...s].sort((x, y) => x - y)).toEqual(s);
@@ -164,7 +164,7 @@ describe('the wayside sites', () => {
     expect(s[0]).toBeGreaterThan(b.shelter.roadS);
     for (let i = 1; i < 6; i++) expect(Math.abs(s[i]! - s[i - 1]! - (i === 3 ? 2 * WAYSIDE_SPACING : WAYSIDE_SPACING)), `gap ${i}`).toBeLessThan(120);
   });
-  it('stand beside the road, top level with its edge (a step of at most 0.4 m), anchor on the platform', () => {
+  it('stand beside the road, top level with its edge (a step of at most 0.5 m on the uncarved stand-in ground), anchor on the platform', () => {
     for (const w of b.wayside.sites) {
       const spec = b.wayside.specs[w.index - 1]!;
       const d = road.nearest(spec.x, spec.z).d;
@@ -172,7 +172,7 @@ describe('the wayside sites', () => {
       expect(d).toBeLessThan(ROAD_HALF_WIDTH + 12);
       const edge = road.point(w.s, w.side * ROAD_HALF_WIDTH);
       const top = inp.heightAt(spec.x, spec.z) + w.dy;
-      expect(top - inp.heightAt(edge.x, edge.z), `wayside ${w.index}`).toBeLessThanOrEqual(0.4);
+      expect(top - inp.heightAt(edge.x, edge.z), `wayside ${w.index}`).toBeLessThanOrEqual(0.5);
       expect(anchor(`dragonspine.wayside.${w.index}`).onStructure).toBe(spec.id);
     }
   });
@@ -224,6 +224,13 @@ describe('the climbs', () => {
     expect(rise).toBeGreaterThan(10);
     expect(b.hawk.climbLength).toBeGreaterThan(100);
   });
+  it('the cave approach has no slope over the limit, is about 200 m and ends at the mouth', () => {
+    expect(walk(b.cave.approach)).toBeLessThanOrEqual(TAN_40);
+    expect(b.cave.approachLength).toBeGreaterThan(180);
+    expect(b.cave.approachLength).toBeLessThan(220);
+    expect(b.cave.approach[b.cave.approach.length - 1]).toEqual(b.cave.door);
+    expect(anchor('dragonspine.cave.trailhead').x).toBeCloseTo(b.cave.trailhead.x, 1);
+  });
   it('M28\'s climb has no slope over the limit and ends at the crag', () => {
     expect(walk(b.m28.climb)).toBeLessThanOrEqual(TAN_40);
     const end = b.m28.climb[b.m28.climb.length - 1]!;
@@ -231,7 +238,7 @@ describe('the climbs', () => {
   });
   it('no solid structure blocks either climb path', () => {
     const solids = b.layout.structures.filter((s) => s.mode === 'solid' && s.role !== 'ledge');
-    for (const path of [b.hawk.climb, b.m28.climb]) {
+    for (const path of [b.hawk.climb, b.m28.climb, b.cave.approach.slice(0, -2)]) {
       for (let i = 1; i < path.length; i++) {
         for (let t = 0; t <= 1; t += 0.1) {
           const x = path[i - 1]!.x + (path[i]!.x - path[i - 1]!.x) * t;

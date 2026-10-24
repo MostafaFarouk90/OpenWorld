@@ -23,12 +23,15 @@ describe('leg lengths (the plan\'s table, computed from the layout)', () => {
     }
   });
 
-  it('keeps the legs this layout owns within 15% of the plan: M28 climb, R15 haul, M29 woodpile, M30 loop, R18 climb', () => {
+  it('keeps the legs this layout owns within 15% of the plan: M28 climb, R15 haul, M29 woodpile, M30 loop, R18 climb, R16, R17 ridden', () => {
     expect(within(legs.M28!.foot, LEG_TARGETS.M28!.foot)).toBe(true);
     expect(within(legs.R15!.foot, LEG_TARGETS.R15!.foot), `R15 foot ${legs.R15!.foot}`).toBe(true);
     expect(within(legs.M29!.foot, LEG_TARGETS.M29!.foot), `M29 foot ${legs.M29!.foot}`).toBe(true);
     expect(within(legs.M30!.foot, LEG_TARGETS.M30!.foot), `M30 foot ${legs.M30!.foot}`).toBe(true);
     expect(within(legs.R18!.foot, LEG_TARGETS.R18!.foot), `R18 foot ${legs.R18!.foot}`).toBe(true);
+    expect(within(legs.R16!.foot, LEG_TARGETS.R16!.foot), `R16 foot ${legs.R16!.foot}`).toBe(true);
+    expect(within(legs.R16!.ridden, LEG_TARGETS.R16!.ridden), `R16 ridden ${legs.R16!.ridden}`).toBe(true);
+    expect(within(legs.R17!.ridden, LEG_TARGETS.R17!.ridden), `R17 ridden ${legs.R17!.ridden}`).toBe(true);
     expect(within(legs.M28!.ridden, LEG_TARGETS.M28!.ridden), `M28 ridden ${legs.M28!.ridden}`).toBe(true);
   });
 });
