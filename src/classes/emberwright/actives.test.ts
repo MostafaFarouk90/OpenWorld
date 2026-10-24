@@ -251,7 +251,7 @@ describe('skills', () => {
     expect(registerEmberwrightSkills()).toMatchObject({ ok: true, count: 0 }); // a restart that skipped dispose counts as success
     const mine = SKILLS.filter((s) => s.classId === 'emberwright');
     expect(mine).toHaveLength(15);
-    expect(mine.filter((s) => s.available).map((s) => s.id).sort()).toEqual(
+    expect(mine.filter((s) => s.availableWhen === true).map((s) => s.id).sort()).toEqual(
       ['anvilDrop', 'emberBolt', 'fireWall', 'flameLash', 'forgeSpark', 'gustStep', 'ironFamiliar', 'smokeScreen', 'warmBreath'].map((n) => `emberwright.${n}`).sort(),
     );
     for (const s of mine.filter((x) => x.tier === 1)) expect(s.kind).toBe('passive');

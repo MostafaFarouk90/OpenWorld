@@ -42,11 +42,19 @@ export interface RegionDef {
 }
 
 /**
- * Phase holds: flags that nothing writes, held shut until a milestone retires them. Phase C held Oldsmoke (and the
- * pass wall) shut with `story.phase.oldsmokeOpen`; the Phase D PR retired it, so the list is empty and the pass opens
- * on `story.d03.complete` alone. The mechanism stays for a later milestone.
+ * Phase holds, per region: flags that nothing writes, held shut until a milestone retires them. Phase C held Oldsmoke
+ * shut with `story.phase.oldsmokeOpen`; the Phase D PR retired it, so Oldsmoke opens on `story.d03.complete` alone.
+ * v0.7: Act 3's Phase E holds the Dragonspine (and the Spine Road) with `story.phase.dragonspineOpen`; Phase F's PR
+ * empties that entry. A region's hold is spread into its own `openWhen` only, so a hold never touches another region.
  */
-export const PHASE_HOLDS: readonly string[] = [];
+export const PHASE_HOLDS: Readonly<Partial<Record<RegionId, readonly string[]>>> = {
+  dragonspine: ['story.phase.dragonspineOpen'],
+};
+
+/** The hold flags of one region (empty when it has none). */
+export function phaseHolds(id: RegionId): readonly string[] {
+  return PHASE_HOLDS[id] ?? [];
+}
 
 const NEVER: FlagCondition = { any: ['region.never'] };
 
@@ -90,28 +98,32 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
     track: 'hammers-below',
     bed: 'oldsmoke',
     ground: 'oldsmoke',
-    openWhen: { all: ['story.d03.complete', ...PHASE_HOLDS] },
+    openWhen: { all: ['story.d03.complete'] },
     reserved: false,
   },
-  // Reserved (later acts): band and track are placeholders until the act that builds the region sets them.
+  // v0.7 (Act 3): engine x -500..6500, z 9500..15500. Opens when Act 2 ends. The band is a fallback only (the union of
+  // both orders' block levels, invented in CHANGES-v0.7): every Act 3 spawner names a block or an area (lint).
   greyfen: {
     box: { x0: 500, z0: 10500, x1: 7500, z1: 16500 },
-    levelBand: { min: 18, max: 23 },
-    track: 'greyfen',
+    levelBand: { min: 18, max: 26 },
+    track: 'peat-and-pitch',
+    // The Act 3 beds ('greyfen', 'dragonspine') are the sound thread's: it widens RegionBedId and sets them here.
     bed: null,
-    ground: null,
-    openWhen: NEVER,
-    reserved: true,
+    ground: 'greyfen',
+    openWhen: { all: ['story.gate.a3'] },
+    reserved: false,
   },
+  // v0.7: engine x 10000..17000, z 11000..17000; the summit is an area inside it (areas.ts). Held in Phase E.
   dragonspine: {
     box: { x0: 11000, z0: 12000, x1: 18000, z1: 18000 },
     levelBand: { min: 20, max: 28 },
-    track: 'dragonspine',
+    track: 'wing-over-rime',
     bed: null,
-    ground: null,
-    openWhen: NEVER,
-    reserved: true,
+    ground: 'dragonspine',
+    openWhen: { all: ['story.gate.a3', ...phaseHolds('dragonspine')] },
+    reserved: false,
   },
+  // Reserved (later acts): band and track are placeholders until the act that builds the region sets them.
   // A ring around the Caldera; the box includes the Caldera, which is listed (and reserved) on its own.
   'ashen-waste': {
     box: { x0: 8000, z0: 5500, x1: 16000, z1: 12000 },

@@ -4,7 +4,9 @@ import type { FavourBand, FavourTrack } from '../state/favour';
 export type VendorId =
   | 'wystan' | 'merrin' | 'edda' | 'wynn' | 'dunstan' | 'gerta' | 'ashdown'
   // Act 2 (v0.6 item 15). 'wenna' is reserved for Act 4.
-  | 'aldous' | 'wenna' | 'slagg' | 'pike' | 'ketta' | 'maud' | 'osgar';
+  | 'aldous' | 'wenna' | 'slagg' | 'pike' | 'ketta' | 'maud' | 'osgar'
+  // Act 3 (v0.7 item 16). Stock rows arrive with K10 and K13; 'ysmeryth' is band-stocked by the dragons' trust from `story.m32.complete`.
+  | 'leofa' | 'dudda' | 'gytha' | 'thorgar' | 'eadgyth' | 'ansgar' | 'ysmeryth';
 
 export interface StockLine {
   itemId: string;
@@ -66,6 +68,14 @@ const GERTA_TIER2: readonly StockLine[] = [
 ];
 
 export const VENDORS: Readonly<Record<VendorId, VendorDef>> = {
+  // Act 3 (v0.7 item 16): empty until K10 / K13 stock them (the record must stay total).
+  leofa: { id: 'leofa', buys: false, lines: [] },
+  dudda: { id: 'dudda', buys: false, lines: [] },
+  gytha: { id: 'gytha', buys: false, lines: [] },
+  thorgar: { id: 'thorgar', buys: false, lines: [] },
+  eadgyth: { id: 'eadgyth', buys: false, lines: [] },
+  ansgar: { id: 'ansgar', buys: false, lines: [] },
+  ysmeryth: { id: 'ysmeryth', buys: false, lines: [] },
   wystan: {
     id: 'wystan',
     track: 'halvard',
@@ -194,7 +204,7 @@ export interface VendorDiscount {
 
 const UNION_VENDORS: readonly VendorId[] = ['aldous', 'slagg', 'pike'];
 
-/** Flag-keyed buy discounts; the best single match applies, then the band multiplier (R09/R10 never add). */
+/** Flag-keyed buy discounts (Act 3 rows keyed by `story.r15.choice` are K10 / K13's to add); the best single match applies, then the band multiplier (R09/R10 never add). */
 export const VENDOR_DISCOUNTS: readonly VendorDiscount[] = [
   { flag: 'story.r09.choice', value: 'miners', vendors: UNION_VENDORS, percent: 15 },
   { flag: 'story.r10.choice', value: 'compromise', vendors: UNION_VENDORS, percent: 10 },

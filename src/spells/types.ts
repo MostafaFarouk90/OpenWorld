@@ -4,6 +4,9 @@ import type { SpellDef } from './spellDefs';
 import type { BurnZone } from './Burn';
 import type { RegisterFormResult, SurgeFormImpl } from './SurgeAndRally';
 
+/** Why Scars were removed: Aelfreda's Hearth Rite, or a Hathren's scale (v0.7 item 17). */
+export type ScarRemovalReason = 'hearth-rite' | 'hathren-scale';
+
 /** The 'spells' service (design 9.7 Burn, Ember, casting). */
 export interface SpellsService {
   readonly burn: number;
@@ -12,7 +15,13 @@ export interface SpellsService {
    * Optional (v0.6 item 16): A5 implements it. Removes up to `n` Scars for the Hearth rite (flag `aelfreda.rite.a<act>`)
    * and returns how many were removed. `scars` stays a number.
    */
-  removeScars?(n: number, reason: 'hearth-rite'): number;
+  removeScars?(n: number, reason: ScarRemovalReason): number;
+  /**
+   * v0.7 item 26: adds `n` extra Surge charges (a whole number >= 1) and returns the new total. A charge lets the Surge be cast
+   * while it is on cooldown and is spent by the cast (one per cast); the cooldown is not restarted by a charge cast. Persisted.
+   * Non-finite or non-positive `n` is ignored with a warning (K13 calls it with `source: 'dragons-respect'`).
+   */
+  addSurgeCharges(n: number, source: string): number;
   readonly ember: number;
   readonly maxEmber: number;
   spendEmber(n: number): boolean;

@@ -9,6 +9,8 @@ import { Progression, type GoldPort } from './Progression';
 import { SkillMenu } from './SkillMenu';
 import { SKILL_STRINGS_EN } from './strings.en';
 import { BAR_SLOTS } from './tuning';
+import { Vector3 } from 'three';
+import { regionAt } from '../region/regionMask';
 
 declare module '../core/events' {
   interface GameEventMap {
@@ -31,6 +33,8 @@ const progressionPlugin: GamePlugin = {
       actor: player,
       flags: { get: (k) => ctx.state.getFlag(k), set: (k, v) => ctx.state.setFlag(k, v) },
       gold: () => (ctx.services as unknown as { get(n: string): unknown }).get('inventory') as GoldPort | undefined,
+      // v0.7 item 27: a per-region kill XP factor (1 until a K-thread sets one).
+      killXpRegionFactor: () => ctx.services.get('killXpRegionFactor'),
       // The class row's Ember maximum; the spells apply it too when they set up after us (see spells.plugin).
       onClassStats: (row) => {
         const spells = (ctx.services as unknown as { get(n: string): unknown }).get('spells') as { setMaxEmber?(n: number): boolean } | undefined;
@@ -75,12 +79,20 @@ const progressionPlugin: GamePlugin = {
     // Burn and Scar penalties are read from their modifiers, so re-read when Burn moves.
     ctx.events.on('burn.changed', () => progression.refreshMaxHealth());
 
+    // actor.died carries no position; the handler runs before despawn, so the actor is still there to read.
+    const at = new Vector3();
+    const regionOf = (actorId: string): string | null => {
+      const a = ctx.actors.get(actorId) as { worldPosition?(out: Vector3): Vector3 } | undefined;
+      if (!a?.worldPosition) return null;
+      a.worldPosition(at.set(NaN, NaN, NaN));
+      return regionAt(at.x, at.z)?.id ?? null;
+    };
     ctx.events.on('actor.died', (e) => {
-      progression.onKill({ actorId: e.actorId, kind: e.kind, team: e.team, level: e.level, killerId: e.killerId });
+      progression.onKill({ actorId: e.actorId, kind: e.kind, team: e.team, level: e.level, killerId: e.killerId, regionId: regionOf(e.actorId) });
     });
     ctx.events.on('mercy', (e) => {
       if (!e.actorId) return;
-      progression.onMercy({ actorId: e.actorId, kind: e.creature, level: ctx.actors.get(e.actorId)?.level ?? 1 });
+      progression.onMercy({ actorId: e.actorId, kind: e.creature, level: ctx.actors.get(e.actorId)?.level ?? 1, regionId: regionOf(e.actorId) });
     });
     ctx.events.on('mercy.revoked', (e) => progression.onMercyRevoked(e.actorId));
     ctx.events.on('xp.grant', (e) => {

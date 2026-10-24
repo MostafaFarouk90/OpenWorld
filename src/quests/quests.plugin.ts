@@ -62,6 +62,8 @@ const plugin: GamePlugin = {
       inventory: () => (ctx.services as unknown as { get(n: string): any }).get('inventory'),
       npcs: () => (ctx.services as unknown as { get(n: string): any }).get('npcs'),
       enemies: () => (ctx.services as unknown as { get(n: string): any }).get('enemies'),
+      // v0.7 item 9: Act 3 reward scaling (1 for every quest until a K-thread sets a provider).
+      rewardScale: () => ctx.services.get('questRewardScale'),
       warn,
     });
 

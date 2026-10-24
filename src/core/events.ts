@@ -4,6 +4,8 @@ import type { FavourBand, FavourSource, FavourTrack, MercyEvent } from '../state
 import type { FlagValue } from '../state/WorldState';
 import type { ClassId } from '../actors/classes';
 import type { StatusKind } from '../actors/status';
+import type { GlideEndReason, MovementMode } from '../movement/types';
+import type { WaterKind } from '../water/types';
 import { EventBus } from './EventBus';
 
 /** A plain position in event payloads (copied, never a live vector). */
@@ -181,6 +183,27 @@ export interface GameEventMap {
   'puzzle.failed': { id: string };
   /** A10: an item was tempered to `level` (1..5). */
   'gear.tempered': { itemId: string; level: number; affix?: string };
+
+  // ---- v0.7 (Act 3, thread K0; contracts/CHANGES-v0.7.md) ----
+  /** Core containment: the player was put back inside the open area (a glide ends on it, K7). */
+  'containment.pushed': { from: Vec3Like; to: Vec3Like };
+  /** Core `movementMode`: the player's movement mode changed (K7 sets it: glide, ferry, dive, haul, walk). */
+  'movement.mode': { mode: MovementMode; previous: MovementMode };
+  /** K7's water service: the player entered or left a volume (item 4). */
+  'water.entered': { kind: WaterKind; volumeId: string };
+  'water.left': { kind: WaterKind; volumeId: string };
+  /** K7: a dive began in a `dive` volume, or ended at the surface or an air pocket. */
+  'dive.started': { volumeId: string };
+  'dive.surfaced': { volumeId: string; pocketId: string | null };
+  /** K7: seconds of breath left while diving (whole-second steps, and on every refill). */
+  'breath.changed': { value: number };
+  /** K7 PR 2: the glide (item 5). `glide.landed` comes before `glide.ended { reason: 'landed' }`. */
+  'glide.started': { ledgeId: string };
+  'glide.landed': { at: Vec3Like };
+  'glide.ended': { reason: GlideEndReason };
+  /** K10: a shard-gem was set in or taken out of a gear socket (item 11). */
+  'gear.socketed': { itemId: string; slot: number; shardId: string };
+  'gear.unsocketed': { itemId: string; slot: number; shardId: string };
 }
 
 /** Why gold left the pouch (`inventory.takeGold(n, reason)`, v0.5). */

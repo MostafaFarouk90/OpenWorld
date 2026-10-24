@@ -50,6 +50,7 @@ export function makeKit(ctx: GameContext, warn: (m: string) => void, offs: Off[]
   const delayed: { left: number; fn: () => void }[] = [];
   const timers: { every: number; n: number; fn: () => void; live: boolean }[] = [];
   const quests = () => ctx.services.get('quests');
+  // Fallback for tests that boot without core (the shared `groupStanding` service is used when present).
   // Actors whose mercy was accepted and not revoked: they are leaving, whatever `enemies.alive` says while they go.
   const mercied = new Set<string>();
   offs.push(
@@ -96,11 +97,20 @@ export function makeKit(ctx: GameContext, warn: (m: string) => void, offs: Off[]
       offs.push(off);
       return off;
     },
-    standing: (id) =>
-      (ctx.services.get('enemies')?.alive(id) ?? []).filter(
+    standing: (id) => {
+      const shared = ctx.services.get('groupStanding');
+      if (shared) return shared.standing(id);
+      return (ctx.services.get('enemies')?.alive(id) ?? []).filter(
         (a) => !mercied.has(a) && !(ctx as { actors?: { get(id: string): { dead?: boolean } | undefined } }).actors?.get(a)?.dead,
-      ),
+      );
+    },
     onMemberLeft(fn) {
+      const shared = ctx.services.get('groupStanding');
+      if (shared) {
+        const off = shared.onMemberLeft(fn);
+        offs.push(off);
+        return off;
+      }
       const own = [
         ctx.events.on('mercy', () => fn()),
         ctx.events.on('actor.despawned', () => fn()),

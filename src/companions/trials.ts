@@ -6,7 +6,15 @@ import type { Actor, ActorId } from '../actors/Actor';
 import type { LethalHandler } from '../actors/DamageResolver';
 import type { GameEvents } from '../core/events';
 import './events';
+import type { StatusService } from '../actors/status';
 import type { TrialEndReason, TrialSide } from './events';
+
+export type TrialOutcome = 'won' | 'yielded' | 'lost';
+
+/** The outcome a trial's end reason stands for; null when the trial was cut short (stopped, teleport, despawned, distance, loaded). */
+export function trialOutcome(reason: TrialEndReason): TrialOutcome | null {
+  return reason === 'won' || reason === 'yielded' || reason === 'lost' ? reason : null;
+}
 
 export const TRIAL_TUNING = {
   /** Before Second Wind (-100), so a duel never spends it. */
@@ -28,6 +36,12 @@ export interface TrialStart {
   onLoss?: 'restart' | 'end';
   /** An NPC to hide while the duel runs (Hrolf's NPC while `hrolf-trial` fights). */
   standInNpcId?: string;
+  /** Cael may yield once this many breaks have been scored by both sides in all (M31 uses 2). Without it, `yield` always works. */
+  allowYield?: { afterBreaks: number };
+  /** Replaces TRIAL_TUNING.leaveDistance for this trial. */
+  leaveDistance?: number;
+  /** When set, the distance rule measures the player's distance to this point instead of to the opponent. */
+  arenaCentre?: { x: number; z: number };
 }
 
 export interface TrialState {
@@ -43,6 +57,12 @@ export interface TrialsService {
   stop(id: string): boolean;
   /** Cael yields first (M31's F2 choice): `trial.ended { reason: 'yielded' }`. */
   yield(id: string): boolean;
+  /** True while a trial with `allowYield` runs and enough breaks have been scored. */
+  canYield(): boolean;
+  /** While on, the opponent-distance rule is suspended (the arena-centre rule still applies). Cleared when the trial ends. */
+  setOpponentAirborne(on: boolean): void;
+  /** The keeper's call: stuns Cael and the opponent. False without a running trial or with bad seconds. */
+  stunBoth(seconds: number): boolean;
   state(): TrialState | null;
 }
 
@@ -55,6 +75,8 @@ export interface TrialPorts {
   setNpcHidden?(npcId: string, hidden: boolean): void;
   /** `allyEngagement.exclude`: keeps companions and the familiar off the opponent for the trial (M13: Hrolf pinned at 1 HP by a companion). */
   keepAlliesOff?(opponentId: ActorId): () => void;
+  /** The status service (resolved late), for `stunBoth`. */
+  status?(): StatusService | undefined;
 }
 
 interface Running {
@@ -63,6 +85,10 @@ interface Running {
   breaksToWin: number;
   onLoss: 'restart' | 'end';
   standIn: string | null;
+  allowYield: number | null;
+  leaveDistance: number;
+  arenaCentre: { x: number; z: number } | null;
+  airborne: boolean;
   /** Releases the ally exclusion on the opponent. */
   alliesOff: () => void;
   player: number;
@@ -127,6 +153,16 @@ export class Trials implements TrialsService {
       breaksToWin: n,
       onLoss: o.onLoss === 'end' ? 'end' : 'restart',
       standIn: o.standInNpcId ?? null,
+      allowYield: o.allowYield && Number.isFinite(o.allowYield.afterBreaks) ? Math.max(0, o.allowYield.afterBreaks) : null,
+      leaveDistance:
+        typeof o.leaveDistance === 'number' && Number.isFinite(o.leaveDistance) && o.leaveDistance > 0
+          ? o.leaveDistance
+          : TRIAL_TUNING.leaveDistance,
+      arenaCentre:
+        o.arenaCentre && Number.isFinite(o.arenaCentre.x) && Number.isFinite(o.arenaCentre.z)
+          ? { x: o.arenaCentre.x, z: o.arenaCentre.z }
+          : null,
+      airborne: false,
       alliesOff: this.p.keepAlliesOff?.(opp.id) ?? (() => {}),
       player: 0,
       opponent: 0,
@@ -149,8 +185,27 @@ export class Trials implements TrialsService {
 
   yield(id: string): boolean {
     if (!this.run || this.run.id !== id) return false;
+    if (this.run.allowYield !== null && !this.canYield()) return false;
     this.end('yielded');
     return true;
+  }
+
+  canYield(): boolean {
+    const r = this.run;
+    return !!r && r.allowYield !== null && r.player + r.opponent >= r.allowYield;
+  }
+
+  setOpponentAirborne(on: boolean): void {
+    if (this.run) this.run.airborne = !!on;
+  }
+
+  stunBoth(seconds: number): boolean {
+    if (!this.run || typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) return false;
+    const status = this.p.status?.();
+    if (!status) return false;
+    const a = status.apply(this.p.actors.player.id, { id: 'trial.keeper-call', kind: 'stun', seconds, sourceId: null });
+    const b = status.apply(this.run.opponentId, { id: 'trial.keeper-call', kind: 'stun', seconds, sourceId: null });
+    return a || b;
   }
 
   fixedUpdate(dt: number): void {
@@ -163,12 +218,19 @@ export class Trials implements TrialsService {
       this.end('teleport');
       return;
     }
-    const opp = this.p.actors.get(r.opponentId);
-    if (opp) {
-      const at = opp.worldPosition(PROBE);
-      if (Math.hypot(at.x - f.x, at.z - f.z) > TRIAL_TUNING.leaveDistance) {
+    if (r.arenaCentre) {
+      if (Math.hypot(r.arenaCentre.x - f.x, r.arenaCentre.z - f.z) > r.leaveDistance) {
         this.end('distance');
         return;
+      }
+    } else if (!r.airborne) {
+      const opp = this.p.actors.get(r.opponentId);
+      if (opp) {
+        const at = opp.worldPosition(PROBE);
+        if (Math.hypot(at.x - f.x, at.z - f.z) > r.leaveDistance) {
+          this.end('distance');
+          return;
+        }
       }
     }
     if (r.floored) {

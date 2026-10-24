@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { AllyEngagement } from '../actors/allyEngage';
+import { GroupStanding } from '../enemies/groupStanding';
+import { MovementModes } from '../movement/MovementModes';
+import { KillXpRegionFactor, QuestRewardScale } from './scalePorts';
 import { PlayerPull } from '../actors/pull';
 import { FIXED_TIMESTEP } from '../config/constants';
 import { heightAt } from '../terrain/heightfield';
@@ -44,6 +47,21 @@ const core: GamePlugin = {
     });
     ctx.events.on('actor.despawned', (e) => ctx.state.forgetMercy(e.actorId));
     ctx.services.provide('allyEngagement', new AllyEngagement(ctx.events, ctx.actors));
+
+    // v0.7 (Act 3): the movement mode (K7 sets it; a load starts on foot), the shared group-cleared helper and the two
+    // multiplier ports with identity defaults (K9 sets the reward scale, K6b the kill XP region factors).
+    const warn = (m: string) => console.warn(m);
+    const modes = new MovementModes({ emit: (mode, previous) => ctx.events.emit('movement.mode', { mode, previous }), warn });
+    ctx.services.provide('movementMode', modes);
+    ctx.events.on('save.loaded', () => modes.set('walk'));
+    const standing = new GroupStanding({
+      alive: (id) => ctx.services.get('enemies')?.alive(id) ?? [],
+      isDead: (id) => ctx.actors.get(id)?.dead === true,
+      on: (type, fn) => ctx.events.on(type, fn),
+    });
+    ctx.services.provide('groupStanding', standing);
+    ctx.services.provide('questRewardScale', new QuestRewardScale(warn));
+    ctx.services.provide('killXpRegionFactor', new KillXpRegionFactor(warn));
 
     // v0.6 pull on the player: held through the combat verbs' forced move (walls stop it), before they apply it.
     const at = new THREE.Vector3();

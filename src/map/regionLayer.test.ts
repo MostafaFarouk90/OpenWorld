@@ -34,7 +34,8 @@ describe('regionChips', () => {
   });
 
   it('a reserved region is closed even if a bad open list names it', () => {
-    const c = regionChips(['greyfen']).find((x) => x.id === 'greyfen')!;
+    // v0.7: the Greyfen and the Dragonspine are built; the Ashen Waste stays reserved (Act 4).
+    const c = regionChips(['ashen-waste']).find((x) => x.id === 'ashen-waste')!;
     expect(c.closed).toBe(true);
   });
 

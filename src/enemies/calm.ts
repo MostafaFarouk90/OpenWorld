@@ -11,6 +11,10 @@ export type CalmOption = { kind: 'item'; itemId: string; count: number } | { kin
 export interface CalmContext {
   /** A cooling hit has it staggered (the crawler's free Calm). */
   cooled?: boolean;
+  /** v0.7: the Peat Shambler has been pulled out of the peat (`MercyDef.precondition: 'pulledOut'`). */
+  pulledOut?: boolean;
+  /** v0.7: a flyer is down, after a bolt hit or on its nest (`precondition: 'grounded'`). */
+  grounded?: boolean;
 }
 
 /** Owner name of the wheel claim (`input.claimWheel`). */
@@ -22,10 +26,12 @@ export const CALM_WHEEL_OWNER = 'enemies.calm';
  * no prompt (design section 2: no offering, no Calm).
  */
 export function calmOptions(
-  mercy: Pick<MercyDef, 'offerings' | 'warmHand' | 'delivery' | 'freeCalm'>,
+  mercy: Pick<MercyDef, 'offerings' | 'warmHand' | 'delivery' | 'freeCalm' | 'precondition'>,
   inventory: CalmInventory | undefined,
   context: CalmContext = {},
 ): CalmOption[] {
+  // v0.7: a set precondition needs its context flag to be exactly true, or there is no prompt at all.
+  if (mercy.precondition && context[mercy.precondition] !== true) return [];
   const out: CalmOption[] = [];
   if (mercy.freeCalm === 'always' || (mercy.freeCalm === 'cooled' && context.cooled)) out.push({ kind: 'free' });
   // A thrown offering (the Cooling Draught) is never a hold-T item: it has its own throw prompt (ground/throw.ts).

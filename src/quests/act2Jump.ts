@@ -135,15 +135,19 @@ export class Act2Jump {
   }
 
   private completeQuest(q: string): void {
-    const p = this.ports;
-    if (p.quests.state(q) === 'completed') return;
-    if (p.quests.state(q) === 'inactive') p.quests.start(q);
-    for (const ref of ACT2_NODE_EFFECTS[q] ?? []) {
-      const effects = nodeEffects(ref.dialogueId, ref.nodeId, dialogueDefs, ref.choiceId);
-      if (effects) p.runEffects(effects);
-      else p.warn(`act2: dialogue node ${ref.dialogueId}:${ref.nodeId} is missing`);
-    }
-    for (const id of ACT2_REKINDLE_AFTER[q] ?? []) p.rekindle(id);
-    if (!p.quests.complete(q)) p.warn(`act2: could not complete ${q}`);
+    completeAct2Quest(this.ports, q);
   }
+}
+
+/** Completes one Act 2 quest as real play does (its dialogue-node effects and rekindles first); `?act3=` replays Act 2 through it. */
+export function completeAct2Quest(p: Act1JumpPorts, q: string): void {
+  if (p.quests.state(q) === 'completed') return;
+  if (p.quests.state(q) === 'inactive') p.quests.start(q);
+  for (const ref of ACT2_NODE_EFFECTS[q] ?? []) {
+    const effects = nodeEffects(ref.dialogueId, ref.nodeId, dialogueDefs, ref.choiceId);
+    if (effects) p.runEffects(effects);
+    else p.warn(`act2: dialogue node ${ref.dialogueId}:${ref.nodeId} is missing`);
+  }
+  for (const id of ACT2_REKINDLE_AFTER[q] ?? []) p.rekindle(id);
+  if (!p.quests.complete(q)) p.warn(`act2: could not complete ${q}`);
 }

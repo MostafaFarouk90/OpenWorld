@@ -63,6 +63,8 @@ const waystones: GamePlugin = {
       contain: (x, z) => ctx.services.get('containment')?.nearestOpen(x, z) ?? { x, z },
     });
 
+    // v0.7 (item 25): a glide, a ferry ride or a dive refuses fast travel (the map shows `movement.refused.<mode>`).
+    const movementRefuses = (): boolean => ctx.services.get('movementMode')?.rule().fastTravel === 'refused';
     let pendingSave: 'waystone' | 'rest' | null = null;
     let pendingDelay = 0;
     const prompts = () => ctx.services.get('prompts');
@@ -77,6 +79,7 @@ const waystones: GamePlugin = {
         hostileAggro: hostileNow(),
         heartshard: debug || ctx.state.getBool('tutorial.heartshard-awakened'),
         allowRestInCombat: ctx.state.getBool('waystone.allowRestInCombat'),
+        movementRefuses: movementRefuses(),
       }),
       restoreVitals: (opts) => {
         const a = ctx.player.actor;
@@ -168,6 +171,7 @@ const waystones: GamePlugin = {
       if (c === 'cutscene') return 'cutscene';
       if (c === 'dialogue') return 'dialogue';
       if (hostileNow()) return 'in-combat';
+      if (movementRefuses()) return 'movement';
       return null;
     };
 

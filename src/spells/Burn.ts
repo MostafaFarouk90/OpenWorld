@@ -25,9 +25,24 @@ export class Burn {
     return this._scars;
   }
 
+  private gainScale: (() => number) | null = null;
+
+  /**
+   * v0.7 item 17: a multiplier on Burn gains (the `quenched` aura, 0.75). Only positive adds are scaled; a scale that is not
+   * a finite number >= 0 reads as 1. Returns the undo (a later setter is not undone by an earlier undo).
+   */
+  setGainScale(fn: () => number): () => void {
+    this.gainScale = fn;
+    return () => { if (this.gainScale === fn) this.gainScale = null; };
+  }
+
   /** Adds (or with a negative n removes) Burn; returns the actual change. NaN is ignored. */
   add(n: number, _source: string): number {
     if (!Number.isFinite(n)) return 0;
+    if (n > 0 && this.gainScale) {
+      const k = this.gainScale();
+      if (typeof k === 'number' && Number.isFinite(k) && k >= 0) n *= k;
+    }
     return this.set(this._value + n);
   }
 

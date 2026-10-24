@@ -77,7 +77,7 @@ describe('SkillMenu', () => {
 describe('class-aware skill menu', () => {
   const def = (cls: string, name: string, branch: string, tier: SkillDef['tier'] = 1): SkillDef => ({
     id: `${cls}.${name}`, classId: cls, branch, tier, cost: 1, kind: 'passive',
-    nameKey: `skill.${cls}.${name}`, descKey: `skill.${cls}.${name}.d`, available: true,
+    nameKey: `skill.${cls}.${name}`, descKey: `skill.${cls}.${name}.d`, availableWhen: true,
   });
   const mk = (classId?: () => string | null | undefined, tt = t) => {
     const actor = fakeActor();

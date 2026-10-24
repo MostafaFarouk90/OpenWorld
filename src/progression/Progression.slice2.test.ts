@@ -238,7 +238,7 @@ describe('classes', () => {
 describe('class skills', () => {
   const def = (name: string, tier: SkillDef['tier'], requires?: string): SkillDef => ({
     id: `warden.${name}`, classId: 'warden', branch: 'hewer', tier, cost: TIER_COST[tier - 1], requires,
-    kind: 'passive', nameKey: `skill.warden.${name}.name`, descKey: `skill.warden.${name}.desc`, available: true,
+    kind: 'passive', nameKey: `skill.warden.${name}.name`, descKey: `skill.warden.${name}.desc`, availableWhen: true,
   });
   it('registers all or nothing and then resolves by id', () => {
     const n = SKILLS.length;
@@ -292,7 +292,7 @@ describe('class skills', () => {
 describe('class gating', () => {
   it('a Knight cannot learn another class\'s skill, and next-unlock never points at it', () => {
     const { p } = make();
-    registerClassSkills('ranger', [{ id: 'ranger.a', classId: 'ranger', branch: 'trail', tier: 1, cost: 1, kind: 'passive', nameKey: 'k', descKey: 'k', available: true }]);
+    registerClassSkills('ranger', [{ id: 'ranger.a', classId: 'ranger', branch: 'trail', tier: 1, cost: 1, kind: 'passive', nameKey: 'k', descKey: 'k', availableWhen: true }]);
     p.grantXp(xpForLevel(2), 'x');
     expect(p.learn('ranger.a')).toEqual({ ok: false, reason: 'unavailable' });
     expect(p.nextUnlock()).not.toMatchObject({ skillId: 'ranger.a' });
@@ -300,7 +300,7 @@ describe('class gating', () => {
   });
   it('after setClass the class skills are learnable and Knight ones are not', () => {
     const { p } = make();
-    registerClassSkills('ranger', [{ id: 'ranger.a', classId: 'ranger', branch: 'trail', tier: 1, cost: 1, kind: 'passive', nameKey: 'k', descKey: 'k', available: true }]);
+    registerClassSkills('ranger', [{ id: 'ranger.a', classId: 'ranger', branch: 'trail', tier: 1, cost: 1, kind: 'passive', nameKey: 'k', descKey: 'k', availableWhen: true }]);
     p.grantXp(xpForLevel(2), 'x');
     p.setClass('ranger');
     expect(p.learn('ranger.a')).toEqual({ ok: true });

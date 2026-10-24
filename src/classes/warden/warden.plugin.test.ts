@@ -182,7 +182,7 @@ describe('warden plugin: skills in play', () => {
     expect(r.progression.canLearn(SKILL_IDS.boulderShoulder)).toEqual({ ok: false, reason: 'missing-prereq' });
     expect(r.progression.learn(SKILL_IDS.thickSkin)).toEqual({ ok: true });
     expect(r.progression.canLearn(SKILL_IDS.boulderShoulder)).toEqual({ ok: true });
-    expect(getSkill('warden.gritTeeth')?.available).toBe(true);
+    expect(getSkill('warden.gritTeeth')?.availableWhen).toBe(true);
     r.progression.learn(SKILL_IDS.boulderShoulder);
     expect(r.progression.canLearn('warden.gritTeeth')).toEqual({ ok: true });
   });

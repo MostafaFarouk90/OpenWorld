@@ -1,5 +1,8 @@
+import type { DamageTag } from '../actors/DamageResolver';
 import type { FoeKind } from './foes/types';
 import type { ActorId, FavourTrack } from './ports';
+import type { Act3BlockId } from './level';
+import type { AreaId } from '../region/areas';
 
 export type AiState =
   | 'spawn'
@@ -47,6 +50,13 @@ export type EnemyKind =
  */
 export type Act2EnemyKind = 'ember-wyrm' | 'wyrmling';
 export const ACT2_ENEMY_KINDS: readonly Act2EnemyKind[] = ['ember-wyrm', 'wyrmling'];
+
+/**
+ * Act 3 kind ids (v0.7 item 13), reserved the same way: K6a and K6b move each id into `EnemyKind` in the same change
+ * that adds its `ENEMY_DEFS` and `TELEGRAPH_STYLE` rows.
+ */
+export type Act3EnemyKind = 'fen-leech' | 'peat-shambler' | 'rime-hawk' | 'crag-ogre' | 'skarl-drake';
+export const ACT3_ENEMY_KINDS: readonly Act3EnemyKind[] = ['fen-leech', 'peat-shambler', 'rime-hawk', 'crag-ogre', 'skarl-drake'];
 
 /** The impact-sound materials of `actor.data.audio.material` ('straw' and 'wood' are the foes'). */
 export type EnemyMaterial = 'ash' | 'metal' | 'straw' | 'wood';
@@ -172,6 +182,13 @@ export interface MercyDef {
    * only while a cooling hit has it staggered (the crawler). It shows as its own option in the prompt.
    */
   freeCalm?: 'always' | 'cooled';
+  /** v0.7 item 14: which Calm the prompt reads: 'calm' (default) or 'layToRest' (the Peat Shambler; its strings key differs). */
+  calmForm?: 'calm' | 'layToRest';
+  /**
+   * v0.7 item 14: Calm offers nothing until the context says so: `pulledOut` (the Shambler is out of the peat) or `grounded`
+   * (a flyer is down). See `CalmContext` in calm.ts.
+   */
+  precondition?: 'pulledOut' | 'grounded';
 }
 
 /** The offering delivery of a mercy def; `held` when unset. */
@@ -182,6 +199,8 @@ export function offeringDelivery(def: Pick<MercyDef, 'delivery'>): 'held' | 'thr
 export interface EnemyDef {
   kind: EnemyKind;
   nameKey: string;
+  /** v0.7: damage tags of this kind as a target (`dragonkin`); a hit builder copies them onto `DamageRequest.tags`. */
+  tags?: readonly DamageTag[];
   model: ModelRecipe;
   maxHealth: number;
   maxPoise: number;
@@ -258,6 +277,16 @@ export interface SpawnerDef {
   /** A band, or a region id from REGION_BANDS. */
   band: LevelBand | string;
   /**
+   * v0.7: an Act 3 approach block. Members roll L + round(roll x span) (ACT3_BLOCKS), where L is the block's saved lock,
+   * or before the lock the live preview (design 5.9 at the current Warmth Tier and player level). The band is unused.
+   */
+  block?: Act3BlockId;
+  /**
+   * v0.7: the sub-area band (areas.ts). `dragonspine-summit` rolls 26 to 28 and is capped at the player's level + 3
+   * (Q9). A spawner whose band is a region with areas and that names no area takes the area of its anchor.
+   */
+  area?: AreaId;
+  /**
    * auto: at setup and after `rest`; manual: the enemies service; quest: on `quest.started` with this id,
    * and with `flag` only while that quest is active and the flag is true (checked on start, flag change and save load).
    * gate: like auto, but present only while `flag` is on (when given) and `until` is off (when given); re-derived
@@ -325,4 +354,6 @@ export interface EnemyView {
    * A dead leader is not replaced: nobody reads true afterwards. Foes and groups without a leader slot read false.
    */
   readonly packLeader: boolean;
+  /** v0.7: a flyer is grounded after a bolt hit or on its nest; undefined means grounded (every walker). */
+  readonly grounded?: boolean;
 }

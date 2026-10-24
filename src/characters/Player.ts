@@ -61,6 +61,8 @@ export interface MoveModifierState {
   lockFacing: boolean;
   /** No gravity and no controller move at all this tick. */
   freeze?: boolean;
+  /** v0.7: the sprint input is ignored this tick (wading water, a hauled sled). */
+  noSprint?: boolean;
 }
 
 /** A scripted horizontal move (dodge, knockback): unit direction (x, z) in world space and speed in m/s. */
@@ -313,6 +315,7 @@ export class Player {
       let jump: boolean;
       ({ moveX, moveZ, jump } = gateMovement(locked, { moveX, moveZ, jump: input.jump }));
       let speedOverride: number | undefined;
+      const sprint = input.sprint && !mod?.noSprint;
       if (mod && mod.speedScale < 1) {
         const len = Math.hypot(moveX, moveZ);
         const scale = Math.max(0, mod.speedScale) / Math.max(1, len);
@@ -320,9 +323,9 @@ export class Player {
         moveZ *= scale;
       } else if (mod && mod.speedScale > 1) {
         // A boost raises the speed itself; the move vector keeps its unit-length clamp.
-        speedOverride = (input.sprint ? PLAYER.sprintSpeed : PLAYER.walkSpeed) * mod.speedScale;
+        speedOverride = (sprint ? PLAYER.sprintSpeed : PLAYER.walkSpeed) * mod.speedScale;
       }
-      this.controller.fixedUpdate({ moveX, moveZ, sprint: input.sprint, jump, speedOverride });
+      this.controller.fixedUpdate({ moveX, moveZ, sprint, jump, speedOverride });
     }
     if (this.facingOverride !== null) {
       this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, this.facingOverride);

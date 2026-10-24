@@ -37,6 +37,12 @@ export const SKILL_STRINGS_EN: Record<string, string> = {
   'hud.skills.learned': 'Learned',
   'hud.skills.locked': 'Not available yet',
   'hud.skills.act3': 'Opens in Act 3',
+  // v0.7 (item 10, Q2): an Act 3 tier 4 or 5 skill before its master's book (invented text, CHANGES-v0.7).
+  'hud.skills.master.knight': 'See Sir Gaut at the Halvard Bastion',
+  'hud.skills.master.warden': 'See Hrolf Ironbrow',
+  'hud.skills.master.emberwright': 'See Magister Pennard at the Oswin Archive',
+  'hud.skills.master.ashblade': 'See Gerta in the Guild Quarter',
+  'hud.skills.master.pathfinder': 'See Cenric in Harrowmark or Leofa at Greywatch',
   'hud.skills.needPrereq': 'Needs {skill}',
   'hud.skills.branch.bulwark': 'Bulwark',
   'hud.skills.branch.vanguard': 'Vanguard',

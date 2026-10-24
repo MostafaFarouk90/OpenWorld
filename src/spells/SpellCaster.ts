@@ -39,6 +39,8 @@ interface Active {
   duration: number;
   released: boolean;
   removeModifier: (() => void) | null;
+  /** The cast began while the spell was on cooldown and holds an extra charge; it is spent at release. */
+  onCharge?: boolean;
 }
 
 const EPS = 1e-9;
@@ -46,6 +48,8 @@ const EPS = 1e-9;
 export class SpellCaster {
   private readonly defs = new Map<string, { def: SpellDef; onRelease: (ctx: ReleaseContext) => void }>();
   private readonly cooldownUntil = new Map<string, number>();
+  /** v0.7 item 26: extra charges per spell; one lets a cast through while the spell is on cooldown. */
+  private readonly charges = new Map<string, number>();
   private active: Active | null = null;
   private time = 0;
   private readonly offs: Array<() => void>;
@@ -80,6 +84,19 @@ export class SpellCaster {
     return until === undefined ? 0 : Math.max(0, until - this.time);
   }
 
+  /** Extra cooldown-bypass charges held for a spell. */
+  extraCharges(spellId: string): number {
+    return this.charges.get(spellId) ?? 0;
+  }
+
+  /** Sets the extra charges of a spell (a whole number >= 0; anything else becomes 0); returns the new total. */
+  setExtraCharges(spellId: string, n: number): number {
+    const v = Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    if (v === 0) this.charges.delete(spellId);
+    else this.charges.set(spellId, v);
+    return v;
+  }
+
   canCast(casterId: ActorId, spellId: string): CastResult {
     const entry = this.defs.get(spellId);
     if (!entry) return { ok: false, reason: 'unknown' };
@@ -88,7 +105,7 @@ export class SpellCaster {
     if (this.host.isStaggered(casterId)) return { ok: false, reason: 'staggered' };
     if (this.active || this.host.isBusy(casterId)) return { ok: false, reason: 'busy' };
     if (this.host.inputBlocked()) return { ok: false, reason: 'blocked' };
-    if (this.cooldown(spellId) > 0) return { ok: false, reason: 'cooldown' };
+    if (this.cooldown(spellId) > 0 && this.extraCharges(spellId) < 1) return { ok: false, reason: 'cooldown' };
     if (!(this.host.ember.value >= entry.def.emberCost)) return { ok: false, reason: 'ember' };
     return { ok: true };
   }
@@ -103,6 +120,7 @@ export class SpellCaster {
 
     const a: Active = {
       casterId, def, elapsed: 0, duration: clip.duration, releaseTime: clip.duration * def.releaseAt, released: false, removeModifier: null,
+      onCharge: this.cooldown(spellId) > 0,
     };
     // Everything that can throw or fail runs before spell.cast and the charge sound, so a refusal leaves no trace.
     const abort = (): CastResult => {
@@ -167,7 +185,12 @@ export class SpellCaster {
 
   private release(a: Active): void {
     a.released = true;
-    this.cooldownUntil.set(a.def.id, this.time + a.def.cooldown);
+    if (a.onCharge && this.extraCharges(a.def.id) > 0) {
+      // A charge cast: one charge goes, the running cooldown is neither restarted nor extended.
+      this.setExtraCharges(a.def.id, this.extraCharges(a.def.id) - 1);
+    } else {
+      this.cooldownUntil.set(a.def.id, this.time + a.def.cooldown);
+    }
     try {
       this.defs.get(a.def.id)?.onRelease({ casterId: a.casterId, spellId: a.def.id, def: a.def });
     } finally {

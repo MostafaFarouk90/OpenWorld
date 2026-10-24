@@ -112,13 +112,13 @@ describe('knight tier 3: skill rows', () => {
     ['knight.chargeOfTheHalvard', 'knight.flowingCuts', 'active'],
     ['knight.squiresResolve', 'knight.bannerPlant', 'passive'],
   ])('%s costs 2, requires %s and is available', (id, requires, kind) => {
-    expect(getSkill(id)).toMatchObject({ tier: 3, cost: 2, requires, kind, available: true });
+    expect(getSkill(id)).toMatchObject({ tier: 3, cost: 2, requires, kind, availableWhen: true });
   });
 
   it.each(['knight.bastionWall', 'knight.executionersArc', 'knight.hearthfireWard'])('tier 4 %s is still refused as unavailable', (id) => {
     const r = rig();
     r.progression.grantXp(xpForLevel(30), 'test');
-    expect(r.progression.learn(id)).toEqual({ ok: false, reason: 'unavailable' });
+    expect(r.progression.learn(id)).toEqual({ ok: false, reason: 'master', textKey: 'hud.skills.act3' });
   });
 
   it('tier 3 needs tier 2 of its branch', () => {

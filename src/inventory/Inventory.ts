@@ -9,6 +9,7 @@ import {
   type Logger,
 } from '../hud/ports';
 import { NEW_GAME_KIT, getItem } from './items';
+import { isShardGemId, type SocketedShard } from '../gear/shardGems';
 
 export interface InventoryDeps {
   emit: EmitterPort['emit'];
@@ -23,6 +24,8 @@ export interface InventorySave {
   gold: number;
   /** v2: per-item gear instance data, only for items with a temper or an affix. Absent in v1 saves. */
   gear?: Record<string, GearRecord>;
+  /** v3: shard-gems set into gear sockets, per item id; written only when non-empty. Absent in v1 and v2 saves. */
+  sockets?: Record<string, SocketedShard[]>;
 }
 
 /** Per-item instance data (one record per item id). `temper` is 0..5. */
@@ -37,6 +40,17 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
+/** Sockets sorted by slot, or null when an entry is malformed, a slot is not 0 or 1, a slot repeats, or an id is not a shard-gem. */
+function cleanSockets(raw: readonly unknown[]): SocketedShard[] | null {
+  const out: SocketedShard[] = [];
+  for (const e of raw) {
+    if (!isRecord(e) || (e.slot !== 0 && e.slot !== 1) || !isShardGemId(e.shardId)) return null;
+    if (out.some((o) => o.slot === e.slot)) return null;
+    out.push({ slot: e.slot, shardId: e.shardId });
+  }
+  return out.sort((a, b) => a.slot - b.slot);
+}
+
 function wholeCount(n: number): number {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 }
@@ -44,14 +58,15 @@ function wholeCount(n: number): number {
 /** Owned items and equipment slots. Pure state: no world access. */
 export class Inventory implements Omit<InventoryService, 'use'> {
   static readonly key = 'inventory';
-  /** v2 adds gear instance data (temper, affix). v1 saves load with temper 0 everywhere. */
-  static readonly version = 2;
+  /** v2 adds gear instance data (temper, affix); v3 adds shard-gem sockets. v1 and v2 saves load as before, with no sockets. */
+  static readonly version = 3;
 
   private readonly counts = new Map<string, number>();
   private readonly slots = new Map<EquipSlot, string>();
   private unknown: Record<string, unknown> = {};
   private goldAmount = 0;
   private readonly gearData = new Map<string, GearRecord>();
+  private readonly socketData = new Map<string, SocketedShard[]>();
   private readonly emit: EmitterPort['emit'];
   private readonly logger: Logger;
 
@@ -167,8 +182,24 @@ export class Inventory implements Omit<InventoryService, 'use'> {
     return taken;
   }
 
+  /** The shard-gems set into `itemId` (a copy, sorted by slot). */
+  socketsOf(itemId: string): SocketedShard[] {
+    return (this.socketData.get(itemId) ?? []).map((s) => ({ ...s }));
+  }
+
+  /** Replaces the sockets of an owned item; an empty list clears them. Returns false (and changes nothing) for an unowned item or a bad entry. Events are the caller's. */
+  setSockets(itemId: string, shards: readonly SocketedShard[]): boolean {
+    if (!this.has(itemId)) return false;
+    const clean = cleanSockets(shards);
+    if (!clean) return false;
+    if (clean.length === 0) this.socketData.delete(itemId);
+    else this.socketData.set(itemId, clean);
+    return true;
+  }
+
   reset(kit: InventoryKit): void {
     this.gearData.clear();
+    this.socketData.clear();
     this.apply(kit.items, kit.equipped, {});
   }
 
@@ -179,11 +210,12 @@ export class Inventory implements Omit<InventoryService, 'use'> {
     for (const [id, g] of this.gearData) gear[id] = { ...g };
     const save: InventorySave = { items: Object.fromEntries(this.counts), equipped, unknown: { ...this.unknown }, gold: this.goldAmount };
     if (this.gearData.size > 0) save.gear = gear;
+    if (this.socketData.size > 0) save.sockets = Object.fromEntries([...this.socketData].map(([id, l]) => [id, l.map((s) => ({ ...s }))]));
     return save;
   }
 
   load(data: unknown, version: number): void {
-    if (version !== 1 && version !== Inventory.version) {
+    if (version !== 1 && version !== 2 && version !== Inventory.version) {
       this.logger.warn(`inventory: unsupported save version ${version}, using defaults`);
       this.goldAmount = 0;
       return this.reset(NEW_GAME_KIT);
@@ -217,6 +249,15 @@ export class Inventory implements Omit<InventoryService, 'use'> {
         const rec: GearRecord = { temper };
         if (typeof raw.affix === 'string' && raw.affix) rec.affix = raw.affix;
         if (temper > 0 || rec.affix) this.gearData.set(id, rec);
+      }
+    }
+    // v1 and v2 have no sockets; a malformed v3 entry is dropped, not fatal.
+    this.socketData.clear();
+    if (version >= 3 && isRecord(data.sockets)) {
+      for (const [id, raw] of Object.entries(data.sockets)) {
+        const clean = this.has(id) && Array.isArray(raw) ? cleanSockets(raw) : null;
+        if (!clean) { this.logger.warn(`inventory: dropped bad socket record "${id}"`); continue; }
+        if (clean.length > 0) this.socketData.set(id, clean);
       }
     }
   }

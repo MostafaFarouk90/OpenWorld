@@ -12,7 +12,16 @@ export interface MoveIntent {
   speedOverride?: number;
   /** Launch vertical speed (m/s) for a grounded jump this tick; defaults to PLAYER.jumpSpeed. */
   jumpSpeed?: number;
+  /** v0.7: swim mode only (K7's dive): vertical speed in m/s, up positive; gravity is off. */
+  verticalSpeed?: number;
 }
+
+/**
+ * v0.7 movement-mode hook (K0 Step 0 spike; K7 drives it). 'walk' is the shipped controller. 'swim' turns gravity, jumping and the ground snap off and
+ * takes the vertical speed from the intent. 'glide' keeps gravity but clamps the fall to `sinkRate`, with no jump and no
+ * ground snap. Collision, sliding and stepping are Rapier's in every mode.
+ */
+export type MoveMode = 'walk' | 'swim' | 'glide';
 
 /**
  * Capsule character driven by Rapier's KinematicCharacterController rather than a dynamic rigid
@@ -48,6 +57,8 @@ export class CharacterController {
   private groundCollider_: RAPIER_API.Collider | null = null;
   private wallNormal: Vec3 | null = null;
   private wallSlideMax: number | null = null;
+  private mode_: MoveMode = 'walk';
+  private sinkRate = Infinity;
   private readonly prev = { x: 0, y: 0, z: 0 };
   private readonly curr = { x: 0, y: 0, z: 0 };
 
@@ -77,6 +88,24 @@ export class CharacterController {
 
     this.readFeet(this.curr);
     Object.assign(this.prev, this.curr);
+  }
+
+  get moveMode(): MoveMode {
+    return this.mode_;
+  }
+
+  /** Vertical speed (m/s, up positive) the next tick starts from. */
+  get verticalSpeed(): number {
+    return this.verticalVelocity;
+  }
+
+  /** v0.7: switches the movement mode; `sinkRate` (m/s, positive) is the glide's fall clamp. */
+  setMoveMode(mode: MoveMode, opts: { sinkRate?: number } = {}): void {
+    this.mode_ = mode;
+    this.sinkRate = mode === 'glide' && opts.sinkRate !== undefined && opts.sinkRate > 0 ? opts.sinkRate : Infinity;
+    if (mode === 'walk') this.controller.enableSnapToGround(CHARACTER_CONTROLLER.snapToGround);
+    else this.controller.disableSnapToGround();
+    if (mode === 'swim') this.verticalVelocity = 0;
   }
 
   get grounded(): boolean {
@@ -133,22 +162,29 @@ export class CharacterController {
 
     const jumpEdge = intent.jump && !this.prevJump;
     this.prevJump = intent.jump;
-    if (this._grounded) this.airJumpsLeft = this.airJumps;
-    else if (this.airJumpsLeft > this.airJumps) this.airJumpsLeft = Math.max(0, this.airJumps);
-    if (this._grounded && intent.jump) {
-      this.verticalVelocity = intent.jumpSpeed ?? PLAYER.jumpSpeed;
-    } else if (!this._grounded && jumpEdge && this.airJumpsLeft > 0) {
-      this.airJumpsLeft--;
-      this.verticalVelocity = this.airJumpSpeed ?? intent.jumpSpeed ?? PLAYER.jumpSpeed;
-    } else if (this._grounded && this.verticalVelocity < 0) {
-      // Keep a small downward push while grounded so ground detection and snapping stay engaged.
-      this.verticalVelocity = -1;
-    }
-    this.verticalVelocity = Math.max(this.verticalVelocity - PLAYER.gravity * dt, -PLAYER.maxFallSpeed);
-    const slideMax = this.wallSlideMax;
-    this.wallSlideMax = null;
-    if (slideMax !== null && this.wallNormal && !this._grounded && this.verticalVelocity < -slideMax) {
-      this.verticalVelocity = -slideMax;
+    if (this.mode_ === 'swim') {
+      const v = intent.verticalSpeed;
+      this.verticalVelocity = v !== undefined && Number.isFinite(v) ? v : 0;
+    } else if (this.mode_ === 'glide') {
+      this.verticalVelocity = Math.max(this.verticalVelocity - PLAYER.gravity * dt, -this.sinkRate, -PLAYER.maxFallSpeed);
+    } else {
+      if (this._grounded) this.airJumpsLeft = this.airJumps;
+      else if (this.airJumpsLeft > this.airJumps) this.airJumpsLeft = Math.max(0, this.airJumps);
+      if (this._grounded && intent.jump) {
+        this.verticalVelocity = intent.jumpSpeed ?? PLAYER.jumpSpeed;
+      } else if (!this._grounded && jumpEdge && this.airJumpsLeft > 0) {
+        this.airJumpsLeft--;
+        this.verticalVelocity = this.airJumpSpeed ?? intent.jumpSpeed ?? PLAYER.jumpSpeed;
+      } else if (this._grounded && this.verticalVelocity < 0) {
+        // Keep a small downward push while grounded so ground detection and snapping stay engaged.
+        this.verticalVelocity = -1;
+      }
+      this.verticalVelocity = Math.max(this.verticalVelocity - PLAYER.gravity * dt, -PLAYER.maxFallSpeed);
+      const slideMax = this.wallSlideMax;
+      this.wallSlideMax = null;
+      if (slideMax !== null && this.wallNormal && !this._grounded && this.verticalVelocity < -slideMax) {
+        this.verticalVelocity = -slideMax;
+      }
     }
 
     const desired = { x: mx * speed * dt, y: this.verticalVelocity * dt, z: mz * speed * dt };

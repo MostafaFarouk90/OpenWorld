@@ -22,6 +22,8 @@ export interface ItemDef {
   use?: { healFraction?: number; healFlat?: number; drinkSeconds?: number; noHeal?: boolean };
   /** v0.6 (A10): gear tier 1..5; absent for non-gear. */
   gearTier?: 1 | 2 | 3 | 4 | 5;
+  /** v0.7 item 11: how many shard-gems the piece takes; absent means 0. */
+  sockets?: 0 | 1 | 2;
 }
 
 export type EquipResult =
@@ -71,7 +73,10 @@ export type LearnCheck =
         | 'already-learned'
         | 'missing-prereq'
         | 'excluded'
-        | 'unavailable';
+        | 'unavailable'
+        | 'master';
+      /** v0.7: for `master` (a tier 4 or 5 skill whose condition fails), the strings key of the "see your master" text. */
+      textKey?: string;
     };
 
 export type NextUnlock =

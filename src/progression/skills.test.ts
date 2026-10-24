@@ -7,7 +7,7 @@ describe('skills data', () => {
     for (const s of SKILLS) {
       expect(s.cost).toBe([1, 1, 2, 3, 5][s.tier - 1]);
       expect(s.nameKey).toBe(`skill.${s.id}.name`);
-      expect(s.available).toBe(s.tier <= 3);
+      expect(s.availableWhen === true).toBe(s.tier <= 3);
       if (s.tier > 1) {
         const prev = getSkill(s.requires!)!;
         expect(prev.branch).toBe(s.branch);
@@ -35,14 +35,14 @@ describe('tier 2 (slice 2)', () => {
   it('Iron Stance, Flowing Cuts and Banner Plant are live and chained to tier 1', () => {
     for (const [id, req] of [['knight.ironStance', 'knight.rimBash'], ['knight.flowingCuts', 'knight.riposteEdge'], ['knight.bannerPlant', 'knight.rallyCry']] as const) {
       const s = getSkill(id)!;
-      expect([s.available, s.tier, s.cost, s.requires, s.classId]).toEqual([true, 2, 1, req, 'knight']);
+      expect([s.availableWhen, s.tier, s.cost, s.requires, s.classId]).toEqual([true, 2, 1, req, 'knight']);
     }
     expect(getSkill('knight.ironStance')!.kind).toBe('passive');
     expect(getSkill('knight.flowingCuts')!.kind).toBe('passive');
   });
   it('tier 3 is live (Act 2); tiers 4 and 5 stay locked until Act 3', () => {
-    expect(SKILLS.filter((s) => s.tier === 3).every((s) => s.available)).toBe(true);
-    expect(SKILLS.filter((s) => s.tier >= 4).every((s) => !s.available)).toBe(true);
+    expect(SKILLS.filter((s) => s.tier === 3).every((s) => s.availableWhen === true)).toBe(true);
+    expect(SKILLS.filter((s) => s.tier >= 4).every((s) => s.availableWhen !== true)).toBe(true);
   });
   it('Banner Plant is an active that costs 20 Ember with a 45 s cooldown (on the SkillDef)', () => {
     const b = getSkill('knight.bannerPlant')!;

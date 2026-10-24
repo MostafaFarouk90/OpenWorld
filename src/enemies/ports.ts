@@ -329,6 +329,8 @@ export interface ServicesPort {
   get(name: 'inventory'): InventoryPort | undefined;
   /** Thread 2's status service (`apply` only): the hound's burning bite. Absent until it lands; callers no-op. */
   get(name: 'status'): StatusPort | undefined;
+  /** v0.7: the player's level, read at spawn time by Act 3 block and summit spawners. */
+  get(name: 'progression'): { readonly level: number } | undefined;
 }
 
 /** The part of core's `StatusService` (src/actors/status.ts) the enemies call. */

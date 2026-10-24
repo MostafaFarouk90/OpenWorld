@@ -90,7 +90,7 @@ describe('tier 3 skill defs', () => {
       [SKILL_IDS.bloodChant, SKILL_IDS.emberRage, 'active'],
     ];
     for (const [id, requires, kind] of want) {
-      expect(getSkill(id), id).toMatchObject({ tier: 3, cost: 2, requires, kind, available: true });
+      expect(getSkill(id), id).toMatchObject({ tier: 3, cost: 2, requires, kind, availableWhen: true });
     }
     expect(WARDEN_SKILLS.find((s) => s.id === SKILL_IDS.whirlingHew)).toMatchObject({ cooldown: 14, emberCost: 20 });
     expect(WARDEN_SKILLS.find((s) => s.id === SKILL_IDS.bloodChant)).toMatchObject({ cooldown: 45, emberCost: 25 });
@@ -105,7 +105,7 @@ describe('tier 3 skill defs', () => {
     for (const id of T1_2) expect(r.progression.learn(id)).toEqual({ ok: true });
     for (const id of [SKILL_IDS.whirlingHew, SKILL_IDS.gritTeeth, SKILL_IDS.bloodChant]) expect(r.progression.learn(id), id).toEqual({ ok: true });
     for (const id of ['warden.skullsplitter', 'warden.earthroot', 'warden.frenziedHearth']) {
-      expect(r.progression.canLearn(id), id).toEqual({ ok: false, reason: 'unavailable' });
+      expect(r.progression.canLearn(id), id).toEqual({ ok: false, reason: 'master', textKey: 'hud.skills.act3' });
     }
   });
 });

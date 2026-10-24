@@ -241,10 +241,13 @@ describe('SpawnerRegistry', () => {
     expect(warn).toHaveBeenCalled();
     reg.load({ warmthTier: 50 });
     expect(reg.getWarmthTier()).toBe(8);
-    reg.lockBlockLevel('b1', 22);
-    reg.lockBlockLevel('b2', NaN);
+    expect(reg.lockBlockLevel('b1', 22)).toBe(22);
+    expect(reg.lockBlockLevel('b2', NaN)).toBeUndefined();
     expect(reg.getLockedBlockLevel('b1')).toBe(22);
     expect(reg.getLockedBlockLevel('b2')).toBeUndefined();
+    // v0.7 (Q5): the first lock is kept.
+    expect(reg.lockBlockLevel('b1', 25)).toBe(22);
+    expect(reg.getLockedBlockLevel('b1')).toBe(22);
   });
   it('slice table is well-formed', () => {
     expect(SLICE_SPAWNERS).toHaveLength(13);

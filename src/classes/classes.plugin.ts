@@ -73,7 +73,7 @@ const classesPlugin: GamePlugin = {
       enemies: () => svc('enemies'),
       pauseKillXp: (source) => progression()?.pauseKillXp(source),
       wornClass: () => ctx.player.avatar?.classId ?? null,
-      hasSkills: (id) => SKILLS.some((s) => s.classId === id && s.available),
+      hasSkills: (id) => SKILLS.some((s) => s.classId === id && s.availableWhen === true),
       canBuySkill: () => progression()?.nextUnlock().kind === 'skill',
       hasBarAbility: () => (progression()?.bar() ?? []).some((s) => s !== null),
       distanceFromYard: yardDistance,

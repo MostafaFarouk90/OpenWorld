@@ -67,6 +67,11 @@ export interface FogWallDef {
   /** HUD toast on walking into the wall while it stands. */
   toastKey: string;
   /**
+   * v0.7: state-dependent toasts. The first entry whose condition holds picks the toast; none holding uses `toastKey`
+   * (`fog.dragonspine` reads its Phase E text once `story.gate.a3` is set and the hold still stands).
+   */
+  toastWhen?: readonly { when: FlagCondition; key: string }[];
+  /**
    * Metres before the wall a pushed-back player lands (default PUSH_BACK_TO). A1's Act 2 faces use 1, so the whole
    * move stays under the mount's 5 m ride break and a rider stays mounted.
    */
@@ -128,6 +133,12 @@ export function fogWallForTrigger(triggerId: string): FogWallDef | undefined {
 export function fogOpenById(id: string, state: FlagReader): boolean {
   const def = walls.get(id);
   return def ? flagConditionHolds(def.openWhen, state) : false;
+}
+
+/** v0.7: the toast a standing wall shows for this state (`toastWhen`, else `toastKey`). */
+export function fogToastKey(def: Pick<FogWallDef, 'toastKey' | 'toastWhen'>, state: FlagReader): string {
+  for (const t of def.toastWhen ?? []) if (flagConditionHolds(t.when, state)) return t.key;
+  return def.toastKey;
 }
 
 export type FogWallDeps = Pick<CoreContext, 'scene' | 'physics' | 'gates' | 'triggers' | 'systems' | 'player'> & {

@@ -10,11 +10,15 @@ import { flatGround } from './flatGround';
 const IDLE: MoveIntent = { moveX: 0, moveZ: 0, sprint: false, jump: false };
 const intent = (patch: Partial<MoveIntent>): MoveIntent => ({ ...IDLE, ...patch });
 
-const BASES: [string, number, number][] = [
-  ['origin', 0, 0],
-  ['harrowmark', 8000, 2000],
-  ['cinderreach far edge', 22000, 3000],
-  ['far corner of the map', 23000, 17000],
+// [name, x, z, y]: Act 3 Step 0 added the Dragonspine far corner at 600 m (the summit's height) and the Greyfen's west edge.
+const BASES: [string, number, number, number][] = [
+  ['origin', 0, 0, 0],
+  ['harrowmark', 8000, 2000, 0],
+  ['cinderreach far edge', 22000, 3000, 0],
+  ['far corner of the map', 23000, 17000, 0],
+  ['dragonspine far corner at 600 m', 16500, 16500, 600],
+  ['dragonspine far corner at 790 m (interior float)', 16500, 16500, 790],
+  ['greyfen west edge', -400, 15400, 10],
 ];
 
 let physics: PhysicsWorld;
@@ -24,11 +28,11 @@ beforeEach(async () => {
   await physics.init();
 });
 
-describe.each(BASES)('character controller at %s', (_name, bx, bz) => {
-  const at = (x: number, y: number, z: number): Vec3 => ({ x: bx + x, y, z: bz + z });
+describe.each(BASES)('character controller at %s', (_name, bx, bz, by) => {
+  const at = (x: number, y: number, z: number): Vec3 => ({ x: bx + x, y: by + y, z: bz + z });
   const local = (c: CharacterController): Vec3 => {
     const f = c.interpolatedFeet(1, { x: 0, y: 0, z: 0 });
-    return { x: f.x - bx, y: f.y, z: f.z - bz };
+    return { x: f.x - bx, y: f.y - by, z: f.z - bz };
   };
   const tick = (c: CharacterController, i: MoveIntent = IDLE) => {
     c.fixedUpdate(i);
@@ -37,9 +41,9 @@ describe.each(BASES)('character controller at %s', (_name, bx, bz) => {
   const ticks = (c: CharacterController, n: number, i: MoveIntent = IDLE) => {
     for (let k = 0; k < n; k++) tick(c, i);
   };
-  const ground = () => physics.addHeightfield(flatGround(200, 32, 0, bx, bz));
+  const ground = () => physics.addHeightfield(flatGround(200, 32, by, bx, bz));
   const box = (c: Vec3, h: Vec3) =>
-    physics.addStaticCollider(physics.rapier.ColliderDesc.cuboid(h.x, h.y, h.z).setTranslation(bx + c.x, c.y, bz + c.z));
+    physics.addStaticCollider(physics.rapier.ColliderDesc.cuboid(h.x, h.y, h.z).setTranslation(bx + c.x, by + c.y, bz + c.z));
   const ramp = (deg: number) => {
     const a = (deg * Math.PI) / 180;
     const half = { x: 1.5, y: 0.1, z: 4 };
@@ -47,7 +51,7 @@ describe.each(BASES)('character controller at %s', (_name, bx, bz) => {
     const lowZ = half.y * Math.sin(a) + half.z * Math.cos(a);
     physics.addStaticCollider(
       physics.rapier.ColliderDesc.cuboid(half.x, half.y, half.z)
-        .setTranslation(bx, -lowY, bz - lowZ)
+        .setTranslation(bx, by - lowY, bz - lowZ)
         .setRotation({ x: Math.sin(a / 2), y: 0, z: 0, w: Math.cos(a / 2) }),
     );
   };
