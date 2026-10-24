@@ -12,7 +12,7 @@ export const GREYFEN_MIST_BOX = { minX: -500, maxX: 6500, minZ: 9500, maxZ: 1550
 export const GREYFEN_MIST_BLEND = 600;
 /** Fog at full weight: near and far distances (metres) and the haze colour. */
 export const MIST_FOG_NEAR = 120;
-export const MIST_FOG_FAR = 1800;
+export const MIST_FOG_FAR = 2600;
 export const MIST_HAZE = new THREE.Color(0x9db0a4);
 /** Sheet heights above the water table (metres): 1 to 5 m. */
 export const MIST_SHEET_HEIGHTS: readonly number[] = [1.4, 2.9, 4.6];
