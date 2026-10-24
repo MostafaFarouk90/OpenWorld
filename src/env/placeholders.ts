@@ -56,6 +56,11 @@ export function placeholderGeometry(id: string, shape: PlaceholderShape): THREE.
       break;
     case 'post':
       parts.push(colored(lift(new THREE.BoxGeometry(Math.min(w, d) * 0.4, h, Math.min(w, d) * 0.4), h / 2), 0x6b4a2b));
+      if (/^crow-perch/.test(id)) {
+        // A perch, not a stick: crossbar near the top and a dark crow sitting on it.
+        parts.push(colored(lift(new THREE.BoxGeometry(h * 0.55, 0.08, 0.08), h * 0.9), 0x6b4a2b));
+        parts.push(colored(lift(new THREE.IcosahedronGeometry(0.16, 0).scale(1, 0.8, 1.6), h * 0.9 + 0.17).translate(h * 0.12, 0, 0), 0x1b1b20));
+      }
       break;
     case 'patch':
       parts.push(colored(lift(new THREE.CylinderGeometry(0.5, 0.5, 1, 8).scale(w, h, d), h / 2), 0x7a5a38));

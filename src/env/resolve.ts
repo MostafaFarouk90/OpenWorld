@@ -82,7 +82,7 @@ const SHAPES: ReadonlyArray<[RegExp, PlaceholderShape]> = [
 const ENV_IDS: ReadonlySet<string> = new Set(Object.keys(manifest.objects));
 
 /** Colour of a tree, bush or clump on the grey east edge: drained toward ash, a little darker. Applies to ids with the suffix `-ashen`. */
-export const ASHEN: Tint = { sat: 0.3, mul: 0xcbc6be };
+export const ASHEN: Tint = { sat: 0.15, mul: 0x8f8b85 };
 
 export function resolveModel(id: string): ModelRef {
   if (id.endsWith('-ashen')) {
