@@ -39,7 +39,7 @@ export const giverOf = (id: string): string => (ACT2_GIVERS as Record<string, st
 /** Dialogue nodes whose effects real play runs inside a prerequisite quest (looked up from the content, not copied). */
 export const ACT2_NODE_EFFECTS: Record<string, ReadonlyArray<NodeRef>> = {
   m13: [{ dialogueId: 'npc-hrolf', nodeId: 'm13-oath-12' }],
-  m14: [{ dialogueId: 'npc-aelfreda', nodeId: 'a2-rite-13' }],
+  m14: [{ dialogueId: 'npc-aelfreda', nodeId: 'a2-rite-16' }],
 };
 /** Waystones real play rekindles inside a quest (the Hushed Anvil rekindles through its waystone). */
 export const ACT2_REKINDLE_AFTER: Record<string, readonly string[]> = { m11: ['cinder-road'], m14: ['hushed-anvil'] };
