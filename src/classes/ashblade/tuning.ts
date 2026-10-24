@@ -2,6 +2,7 @@
  * Ashblade numbers (design 9.4). Values the design states are marked; the rest are provisional and live here only so
  * a balance pass is one file (plans/slice-2-class-ashblade.md section 4).
  */
+import { COMBAT } from '../../config/constants';
 import { SURGE } from '../../vfx/tuning';
 
 export const CLASS_ID = 'ashblade';
@@ -16,6 +17,10 @@ export const SKILL = {
   twinFangs: 'ashblade.twinFangs',
   sootCloak: 'ashblade.sootCloak',
   wallSkitter: 'ashblade.wallSkitter',
+  // Tier 4 (Act 3, K11 PR 1).
+  cinderMark: 'ashblade.cinderMark',
+  decoyFootprints: 'ashblade.decoyFootprints',
+  phoenixRoll: 'ashblade.phoenixRoll',
 } as const;
 
 export const BACK_SLIT = {
@@ -126,4 +131,58 @@ export const WALL_SKITTER = {
   leanRadians: 0.3,
   leanEase: 0.25,
   effectId: 'wall-skitter',
+} as const;
+
+// ---- Tier 4 (Act 3, K11 PR 1; plans/act3-K11.md section 2). Numbers the plan states are marked; the rest are provisional. ----
+
+export const CINDER_MARK = {
+  skillId: SKILL.cinderMark,
+  /** Plan: 15 s cooldown, 15 Ember (skill data; the abilities bar spends and cools). */
+  cooldown: 15,
+  emberCost: 15,
+  /** Plan: the mark lasts 10 s. */
+  seconds: 10,
+  /** Plan: every hit on the marked foe is a critical hit, x1.5. */
+  multiplier: 1.5,
+  /** Attacker band, one after Back-Slit (-150), so a back stab on a marked foe is 2 x 1.5 = 3x. */
+  order: -149,
+  modifierId: 'ashblade-cinder-mark',
+  /** Plan: no lock-on, the nearest live hostile within 12 m in a 60 degree front cone (30 degrees either side of the facing). */
+  range: 12,
+  coneDegrees: 60,
+  effectId: 'cinder-mark',
+} as const;
+
+export const DECOY_FOOTPRINTS = {
+  skillId: SKILL.decoyFootprints,
+  cooldown: 20,
+  emberCost: 15,
+  seconds: 6,
+  /** The `stealth.addNoiseScale` source id; scale 0 is silence. */
+  noiseSource: 'ashblade.decoyFootprints',
+  noiseScale: 0,
+  /** Watchers that are not yet alerted see the player at 60% range (a perception provider). */
+  sightRangeScale: 0.6,
+  effectId: 'decoy-footprints',
+} as const;
+
+export const PHOENIX_ROLL = {
+  skillId: SKILL.phoenixRoll,
+  /** The skill's own ignite status id on the foes in the patch. */
+  igniteId: 'ashblade.phoenixRoll',
+  /** Plan: a 4 m diameter patch for 4 s, ticking every 0.5 s. */
+  radius: 2,
+  /** Vertical reach either side of the dodge start (a foe on another floor is not in the fire). */
+  halfHeight: 2,
+  seconds: 4,
+  tickSeconds: 0.5,
+  /** Plan: 0.25x the Ashblade base damage (`COMBAT.baseDamage`) per tick. */
+  damage: COMBAT.baseDamage * 0.25,
+  attackId: 'ashblade.phoenixRoll',
+  /** Spark Dodge's ignite shape (2 a second for 3 s), refreshed by each tick, never stacked. */
+  igniteDps: 2,
+  igniteSeconds: 3,
+  /** At most one roll effect (clear and patch) per 4 s, counted from the patch. */
+  cooldownSeconds: 4,
+  effectId: 'phoenix-patch',
 } as const;
