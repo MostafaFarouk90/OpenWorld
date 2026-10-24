@@ -25,7 +25,7 @@ const STATES = {
   phaseC: { 'story.gate.a2': true },
   // D03 done: the Phase C hold is retired, so D03 alone opens Oldsmoke.
   phaseCAfterD03: { 'story.gate.a2': true, 'story.d03.complete': true },
-  phaseD: { 'story.gate.a2': true, 'story.d03.complete': true, 'story.phase.oldsmokeOpen': true },
+  phaseD: { 'story.gate.a2': true, 'story.d03.complete': true },
 } as const;
 const OPEN_BOXES: Record<keyof typeof STATES, Box[]> = {
   act1: [BOX.brightwater, BOX.harrowmark],

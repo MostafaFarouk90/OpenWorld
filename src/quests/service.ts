@@ -17,6 +17,8 @@ export interface QuestsService {
   isObjectiveCurrent(questId: string, objectiveId: string): boolean;
   objectives(id: string): ObjectiveView[];
   active(): string[];
+  /** A current `talk` objective names this NPC (the NPC's interactable is then live). Optional: a stub may omit it. */
+  npcObjectiveLive?(npcId: string): boolean;
   onChange(listener: () => void): () => void;
   /** World position of R01's carried torch, or null when none burns (thread 5's scarecrows test contact). */
   torch(): { x: number; y: number; z: number } | null;

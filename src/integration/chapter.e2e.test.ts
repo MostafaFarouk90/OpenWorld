@@ -261,7 +261,9 @@ describe('Act 1: Harrowmark through "Smoke Over Harrowmark" (all real plugins)',
   }, ACT_TIMEOUT);
 
   // The next two tests start from the same save (Phase A complete, Prior released) and need Harrowmark unplayed: one boot
-  // serves both. The reachability test only walks and opens Rook's talk, which is closed before the next test.
+  // serves both. The reachability test only walks and opens Rook's talk, which is closed before the next test. Left coupled on
+  // purpose (post-merge review B10/F6): a boot with every real plugin and models costs more than either test, so splitting
+  // would roughly double this block's time on a shared machine; the second test closes the dialogue it inherits.
   describe('M06 from the released Phase A save (one shared boot)', () => {
     beforeAll(async () => {
       h = await bootFromSave(await readPhaseAFixture(PHASE_A_FIXTURES.releasedSaved), { models: true, virtualClock: true });

@@ -20,7 +20,13 @@ vi.setConfig({ testTimeout: 30_000 });
 vi.mock('./sfxSynth', async (orig) => ({ ...(await orig<typeof import('./sfxSynth')>()), synthSfx: () => new Float32Array(1) }));
 vi.mock('./stemSynth', async () => {
   const { loopSamples } = await import('./tracks');
-  return { synthStem: (track: Parameters<typeof loopSamples>[0], _stem: string, sampleRate: number) => new Float32Array(loopSamples(track, sampleRate)) };
+  return {
+    // Keeps the real synth's unknown-stem throw (small-batch review F4): a stem the track does not list is a bug, not silence.
+    synthStem: (track: Parameters<typeof loopSamples>[0] & { stems: readonly string[] }, stem: string, sampleRate: number) => {
+      if (!track.stems.includes(stem)) throw new Error(`No placeholder synth for stem "${stem}"`);
+      return new Float32Array(loopSamples(track, sampleRate));
+    },
+  };
 });
 
 vi.mock('../audio/proceduralSounds', () => ({ PLACEHOLDER_SAMPLE_RATE: 44100, samplesToWavUrl: () => 'blob:fake' }));

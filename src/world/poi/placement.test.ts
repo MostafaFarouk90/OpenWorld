@@ -13,7 +13,7 @@ import { POI_TEMPLATES } from './types';
 type Flags = Record<string, boolean>;
 const ACT1: Flags = {};
 const PHASE_C: Flags = { 'story.gate.a2': true };
-const PHASE_D: Flags = { 'story.gate.a2': true, 'story.d03.complete': true, 'story.phase.oldsmokeOpen': true };
+const PHASE_D: Flags = { 'story.gate.a2': true, 'story.d03.complete': true };
 
 function containment(flags: Flags, withSpurs = true): Containment {
   const c = new Containment({ getFlag: (k: string) => flags[k] });

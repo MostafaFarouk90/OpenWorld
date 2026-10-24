@@ -33,7 +33,16 @@ const POLE = new THREE.MeshLambertMaterial({ color: 0x5a4632 });
 const BOWL = new THREE.MeshLambertMaterial({ color: 0x3a3532 });
 const FLAME = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
 
-const SHUTTER_Z = 0.75;
+/**
+ * The closed-stall shutter plane. cityArt centres `dun/table_long_decorated_A` at local z = depth * 0.2 and turns it a quarter
+ * turn, so its glb x half-width (1.031 m, read from the model's bounds; the fit.json 0.78 scale only makes it smaller) becomes
+ * its half-depth along z. The shutter stands a little past that front edge, not through the table (post-merge review finding 2).
+ */
+export const STALL_TABLE_HALF_DEPTH = 1.031;
+export const SHUTTER_CLEARANCE = 0.07;
+/** The front edge of the table in a stall of the given depth (local z). */
+export const stallTableFrontZ = (depth: number): number => depth * 0.2 + STALL_TABLE_HALF_DEPTH;
+export const shutterZ = (depth: number): number => stallTableFrontZ(depth) + SHUTTER_CLEARANCE;
 
 export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'gates'>): WorldChange {
   const root = new THREE.Group();
@@ -182,8 +191,8 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
       g.position.set(s.x, y, s.z);
       g.rotation.y = (s.yawDeg * Math.PI) / 180;
       const shutter = new THREE.Mesh(shutterGeo, SHUTTER);
-      // In front of the decorated table (cityArt puts it at local z +0.6), so the stall reads as shut from the front (review F5).
-      shutter.position.set(0, 1.1, SHUTTER_Z);
+      // Past the decorated table's front edge (see `shutterZ`), so the stall reads as shut from the front (review F5).
+      shutter.position.set(0, 1.1, shutterZ(s.footprint[1]));
       g.add(shutter);
       root3.add(g);
       closed++;

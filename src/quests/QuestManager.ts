@@ -8,6 +8,7 @@ import type {
 } from './ports';
 import { evalCondition } from './conditions';
 import { createEffectRunner } from './effects';
+import { targets } from './notes';
 import { creditFor, eventNames, OBJECTIVE_EVENTS } from './objectives';
 
 export interface QuestManagerOpts {
@@ -86,6 +87,16 @@ export class QuestManager implements QuestReader, QuestActions {
   }
 
   active(): string[] { return [...this.order]; }
+
+  /** A current `talk` objective of an active quest names this NPC. Allocation-free (read per interaction pick). */
+  npcObjectiveLive(npcId: string): boolean {
+    for (const id of this.order) {
+      const def = this.defs.get(id);
+      if (!def) continue;
+      for (const o of def.objectives) if (o.type === 'talk' && targets(o.target, npcId) && this.isObjectiveCurrent(id, o.id)) return true;
+    }
+    return false;
+  }
 
   objectives(id: string): ObjectiveView[] {
     const def = this.defs.get(id);

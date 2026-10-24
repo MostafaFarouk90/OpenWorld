@@ -142,7 +142,12 @@ describe('closed market stalls (A16 final review #5)', () => {
     const { fc } = setup(true);
     const root = closedRoots(fc)[0]!;
     expect(root.children.length).toBe(stallCount);
-    for (const g of root.children) for (const m of g.children) expect(m.position.z).toBeGreaterThanOrEqual(0.7);
+    // The table's centre is at depth * 0.2 and its half-depth is 1.031 m (the glb's x bound, turned a quarter turn): the plane
+    // must clear the front edge, not just the centre.
+    const stalls = HARROWMARK_LAYOUT.structures.filter((st) => st.id.startsWith(STALL_PREFIX));
+    const front = stalls[0]!.footprint[1] * 0.2 + 1.031;
+    expect(front).toBeCloseTo(1.631, 2);
+    for (const g of root.children) for (const m of g.children) expect(m.position.z).toBeGreaterThan(front);
   });
 
   it('shuts every stall from gate.a2 and opens them (shutters gone, awnings up) on gate.a3', () => {
