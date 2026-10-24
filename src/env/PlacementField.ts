@@ -18,7 +18,7 @@ export interface PlacementRow {
 export type PlacementClass = 'tree' | 'bush' | 'rock' | 'wood' | 'ground' | 'prop' | 'hedge';
 
 /** Hide a class when the player is further than this from its nearest instance sphere edge (metres). */
-export const CLASS_RANGE: Readonly<Record<PlacementClass, number>> = { tree: 700, bush: 260, rock: 420, wood: 160, ground: 64, prop: 260, hedge: 320 };
+export const CLASS_RANGE: Readonly<Record<PlacementClass, number>> = { tree: 700, bush: 260, rock: 420, wood: 160, ground: 56, prop: 260, hedge: 320 };
 /**
  * Ground cover's base colour is multiplied by this: a clump's texture is a deep green that lit like the vegetation reads near
  * black against the pale meadow once it is only a pixel or two across, so it is lifted toward the ground it sits on.
@@ -26,8 +26,8 @@ export const CLASS_RANGE: Readonly<Record<PlacementClass, number>> = { tree: 700
 export const GROUND_LIFT = 1.45;
 /** Emissive colour added to ground cover (a mid meadow green). */
 export const GROUND_GLOW = 0x2c4a16;
-/** Ground cover draws out to this share of CLASS_RANGE.ground per quality step (64 m at high, 56 m at medium, 40 m at low). */
-export const GROUND_RANGE_SCALE: Readonly<Record<'low' | 'medium' | 'high', number>> = { low: 0.625, medium: 0.875, high: 1 };
+/** Ground cover draws out to this share of CLASS_RANGE.ground per quality step (56 m at high, 48 m at medium, 36 m at low; 64/56/40 is the target once the integrated-GPU check passes, a one-line change to CLASS_RANGE.ground). */
+export const GROUND_RANGE_SCALE: Readonly<Record<'low' | 'medium' | 'high', number>> = { low: 9 / 14, medium: 6 / 7, high: 1 };
 /** Share of each class kept per quality step. */
 export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record<PlacementClass, number>>>> = {
   low: { tree: 0.7, bush: 0.5, rock: 0.7, wood: 0.4, ground: 0.35, prop: 0.7, hedge: 1 },

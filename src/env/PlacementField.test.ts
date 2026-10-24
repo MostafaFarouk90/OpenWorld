@@ -113,12 +113,12 @@ describe('PlacementField without a model source', () => {
     field.dispose();
   });
 
-  it('draws ground cover out to 64 m at high, 56 m at medium and 40 m at low quality', async () => {
-    expect(CLASS_RANGE.ground).toBe(64);
-    expect(CLASS_RANGE.ground * GROUND_RANGE_SCALE.medium).toBe(56);
-    expect(CLASS_RANGE.ground * GROUND_RANGE_SCALE.low).toBe(40);
+  it('draws ground cover out to 56 m at high, 48 m at medium and 36 m at low quality', async () => {
+    expect(CLASS_RANGE.ground).toBe(56);
+    expect(CLASS_RANGE.ground * GROUND_RANGE_SCALE.medium).toBeCloseTo(48, 9);
+    expect(CLASS_RANGE.ground * GROUND_RANGE_SCALE.low).toBeCloseTo(36, 9);
     const field = new PlacementField(new ModelLibrary(undefined, () => undefined), flat);
-    await field.build([{ id: 'grass-clump-a', x: 60, z: 0 }]);
+    await field.build([{ id: 'grass-clump-a', x: 52, z: 0 }]);
     field.setDensity('high');
     field.update(0, 0);
     expect(field.batchCounts('ground').visible).toBe(1);
