@@ -4,6 +4,8 @@ import type { NpcSpec } from '../region/layoutTypes';
 import { createNpcState, stepNpc, wrapAngle, type NpcState } from './NpcBehavior';
 import { buildPlaceholder, disposePlaceholder, pickIdleClip, prepareNpcModel } from './npcModels';
 import { NPC_TUNING } from './tuning';
+import { targets } from '../quests/notes';
+import type { QuestsService } from '../quests/service';
 import type { NpcDef, NpcHandle, NpcModelId, NpcModelLoader, NpcsService } from './types';
 
 export type NpcManagerCore = Pick<
@@ -197,6 +199,7 @@ export class NpcManager implements NpcsService {
         radius: NPC_TUNING.talkRadius,
         position: (out) => out.set(pos.x, pos.y, pos.z),
         enabled: () => !this.hiddenIds.has(def.id),
+        live: () => this.talkObjectiveLive(def.id),
         onInteract: () => this.talkTo(def),
       });
       this.entries.set(def.id, {
@@ -233,6 +236,16 @@ export class NpcManager implements NpcsService {
       disposePlaceholder(figure);
       throw err;
     }
+  }
+
+  /**
+   * A current `talk` objective names this NPC: the interactable is live, so an ambient companion in reach yields the F prompt
+   * to it. Read at pick time through the `quests` service; with no quests plugin (or a throwing one) it is simply not live.
+   */
+  private talkObjectiveLive(npcId: string): boolean {
+    const q = (this.core.services as unknown as { get(name: string): unknown }).get('quests') as QuestsService | undefined;
+    if (!q) return false;
+    return q.active().some((id) => q.objectives(id).some((v) => v.current && v.def.type === 'talk' && targets(v.def.target, npcId)));
   }
 
   /** Removes a live NPC for a handover; its last position stays readable through `position()`. */
