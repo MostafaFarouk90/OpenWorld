@@ -52,6 +52,14 @@ const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Ti
   // Ash scrub: nearly no green left (at sat 0.3 it still read as a dark-green bush beside the gate, round-5 review).
   'bush-round-ash': { base: 'bush-round-a', scale: 1, tint: { sat: 0.08, mul: 0xccc4b6 } },
   'grass-clump-ash': { base: 'grass-clump-a', scale: 0.95, tint: { sat: 0, mul: 0xc4bcaa, glow: 0x3a3832 } },
+  // D1 to D3 (the Dead Road corridor): the ghost-field hedge, bracken gone grey, straw grass, heath and gorse, orchard, holly.
+  'hedge-dead-a': { base: 'hedge-straight', scale: 0.85, girth: 0.7, tint: { sat: 0.15, mul: 0xa89c8a } },
+  'fern-ash': { base: 'fern-a', scale: 1, tint: { sat: 0.12, mul: 0xd8ccb2 } },
+  // Straw: the step between ash grey and meadow green. Its glow is a warm brown so a dry clump does not light up green.
+  'grass-clump-dry': { base: 'grass-clump-a', scale: 1.05, tint: { hue: 18, sat: 0.45, mul: 0xe6d2a0, glow: 0x4a4020 } },
+  'bush-gorse': { base: 'bush-flowering-a', scale: 0.8, tint: { hue: 35, sat: 0.9, mul: 0xd8d070 } },
+  'bush-heather': { base: 'bush-round-a', scale: 0.55, girth: 1.4, tint: { hue: 250, sat: 0.55, mul: 0xb090a0 } },
+  'apple-tree-a': { base: 'oak-a', scale: 0.5, tint: { hue: 12, mul: 0xe8f0c8 } },
   'wagon-wreck-a': { base: 'haycart-a', scale: 1, tint: { sat: 0.5, mul: 0x8a7a68 } },
   'wagon-burnt': { base: 'haycart-a', scale: 1, tint: { sat: 0.2, mul: 0x3a342e } },
   'charred-stump': { base: 'stump-a', scale: 1, tint: { sat: 0.3, mul: 0x4a423a } },
@@ -88,6 +96,8 @@ const KAYKIT: Readonly<Record<string, { model: string; scale?: number; fitHeight
   // B3 road dressing: a candle shrine for the wayside shrine, a rounded headstone shape for the milestones (interim, by id).
   'roadside-shrine-a': { model: 'hal/shrine_candles', fitHeight: 1.6 },
   'milestone-a': { model: 'hal/fence_pillar', fitHeight: 1.1 },
+  // D1 to D3 placeholders under their agreed ids: the empty gibbet on the D1 crest (a tall post, the arm is a fence_broken row) and the wayside shrines.
+  'gibbet-post': { model: 'hal/fence_pillar', fitHeight: 3.6 },
 };
 
 const SHAPES: ReadonlyArray<[RegExp, PlaceholderShape]> = [

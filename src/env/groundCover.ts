@@ -1,7 +1,7 @@
 // Where the environment pass owns the ground cover. The meadow GrassField (src/region/grass.ts) scatters its own blades everywhere;
 // a built tile's grass clumps and flower patches normally sit on top of them. A tile that must keep its ground clear of blades (B1's
 // lane and green) opts in below. This gives the region plugin one predicate: is (x, z) inside a tile that replaces the blades?
-import { TILE_BOUNDS, TILES, type TileRect } from './tiles';
+import { LAZY_TILES, TILE_BOUNDS, TILES, type TileRect } from './tiles';
 import { laneAmount } from '../terrain/shape/detailGround';
 import { classOf, type PlacementRow } from './PlacementField';
 
@@ -113,6 +113,6 @@ export function envReplacesScenery(
   tiles: Readonly<Record<string, readonly PlacementRow[]>> = TILES,
 ): (x: number, z: number) => boolean {
   if (!envOn) return () => false;
-  const rects = Object.entries(bounds).flatMap(([name, rs]) => ((tiles[name]?.length ?? 0) > 0 ? rs : []));
+  const rects = Object.entries(bounds).flatMap(([name, rs]) => ((tiles[name]?.length ?? 0) > 0 || (tiles === TILES && name in LAZY_TILES) ? rs : []));
   return (x, z) => rects.some((r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ);
 }

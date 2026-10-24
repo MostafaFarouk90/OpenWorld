@@ -42,6 +42,8 @@ export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record
 
 /** Side of a draw cell (m): batches are split by cell so distance hiding works while the player stands inside a tile. */
 const CELL = 64;
+/** A build of more instances than this yields to the browser between ids. */
+const BIG_TILE = 20000;
 
 export function classOf(id: string): PlacementClass {
   if (/^(oak|birch|elm|autumn|ash-tree|poplar|apple|tree_dead|willow)/.test(id)) return 'tree';
@@ -182,6 +184,8 @@ export class PlacementField {
         this.stats.batches += batch.meshes.length;
         this.stats.triangles += resolved.triangles * cellRows.length;
       }
+      // A big tile (the Dead Road's 80k instances each) builds one id at a time with a pause between them, so the game keeps drawing frames.
+      if (rows.length > BIG_TILE) await new Promise<void>((r) => setTimeout(r, 0));
     }
     this.setDensity(this.density);
   }

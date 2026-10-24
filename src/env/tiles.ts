@@ -16,6 +16,18 @@ export const TILES: Record<string, readonly PlacementRow[]> = {
   b4: b4 as PlacementRow[],
 };
 
+/**
+ * Tiles loaded on demand: their rows are separate chunks (dynamic import), not part of the main bundle. D1 to D3 are the Dead Road
+ * corridor, x 1100..8000, 2 MB of JSON that no player needs at the start. D1 x 1100..3600 (the grey reach and the thaw), D2 x 3600..6000
+ * (the heath, the Footman camps and the marches), D3 x 6000..8000 (the farm-ring; east of x 7760 only south of z 1120, where H1
+ * starts). Rows with a grass-patch-* id are clumps: PlacementField expands each into 6 to 14 tufts (src/env/patches.ts).
+ */
+export const LAZY_TILES: Record<string, () => Promise<readonly PlacementRow[]>> = {
+  d1: () => import('./d1.placements.json').then((m) => m.default as PlacementRow[]),
+  d2: () => import('./d2.placements.json').then((m) => m.default as PlacementRow[]),
+  d3: () => import('./d3.placements.json').then((m) => m.default as PlacementRow[]),
+};
+
 export interface TileRect {
   minX: number;
   maxX: number;
@@ -32,5 +44,9 @@ export const TILE_BOUNDS: Record<string, readonly TileRect[]> = {
     { minX: -480, maxX: -60, minZ: -310, maxZ: 60 },
     { minX: 25, maxX: 85, minZ: -335, maxZ: -265 },
   ],
+  // D1 to D3: the 600 m strip round the Dead Road; the old verge posts east of the fog wall go (the tiles carry milestones and verges).
+  d1: [{ minX: 1100, maxX: 3600, minZ: -449, maxZ: 947 }],
+  d2: [{ minX: 3600, maxX: 6000, minZ: 352, maxZ: 1179 }],
+  d3: [{ minX: 6000, maxX: 8000, minZ: 466, maxZ: 1209 }],
 };
 export type { PlacementRow };
