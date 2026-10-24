@@ -35,6 +35,12 @@ describe('envOwnsGround', () => {
     expect(owns(10, 20)).toBe(true);
     expect(owns(500, 500)).toBe(false);
   });
+  it('leaves the meadow blades in B2 (north pasture and east farmland) but not in B1', () => {
+    const owns = envOwnsGround(true, TILES);
+    expect(owns(80, 280)).toBe(false);
+    expect(owns(210, 120)).toBe(false);
+    expect(owns(0, 70)).toBe(true);
+  });
   it('is false everywhere with ?env=off', () => {
     expect(envOwnsGround(false, tiles)(10, 20)).toBe(false);
   });

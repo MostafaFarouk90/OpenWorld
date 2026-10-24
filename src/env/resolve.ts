@@ -16,13 +16,16 @@ export interface Tint {
 }
 
 export type ModelRef =
-  | { source: 'env' | 'kaykit'; model: string; scale: number; tint?: Tint; fitHeight?: number; stretchY?: number }
+  | { source: 'env' | 'kaykit'; model: string; scale: number; tint?: Tint; fitHeight?: number; stretchY?: number; /** Width factor on x and z only (a slim poplar from a birch). */ girth?: number }
   | { source: 'placeholder'; shape: PlaceholderShape };
 
 export type PlaceholderShape = 'tree' | 'bush' | 'grass' | 'flower' | 'rock' | 'box' | 'haystack' | 'post' | 'patch';
 
-/** Ids that are another id with a different size or colour. `stretchY` scales the height only (reeds from a grass clump). */
-const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Tint; stretchY?: number }>> = {
+/** Ids that are another id with a different size or colour. `stretchY` scales the height only (reeds from a grass clump); `girth` x and z only. */
+const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Tint; stretchY?: number; girth?: number }>> = {
+  // B2: slim windbreak tree from the birch (target 14 m tall, 2.5 m wide) until the poplar glb arrives; cairn from the rock cluster.
+  'poplar-a': { base: 'birch-a', scale: 1.75, girth: 0.62, tint: { mul: 0xd2e89a } },
+  'cairn-a': { base: 'rock-cluster-a', scale: 0.5 },
   'oak-b': { base: 'oak-a', scale: 0.85, tint: { mul: 0xe0eac8 } },
   'oak-c': { base: 'oak-a', scale: 1.12, tint: { mul: 0xf2e8c4, sat: 0.9 } },
   'birch-b': { base: 'birch-a', scale: 0.88, tint: { mul: 0xeef2dc } },
@@ -75,6 +78,7 @@ const KAYKIT: Readonly<Record<string, { model: string; scale?: number; fitHeight
   'ash-tree-dead-b': { model: 'hal/tree_dead_medium', fitHeight: 7 },
   // B3 road dressing: a candle shrine for the wayside shrine, a rounded headstone shape for the milestones (interim, by id).
   'roadside-shrine-a': { model: 'hal/shrine_candles', fitHeight: 1.6 },
+  'milestone-a': { model: 'hal/fence_pillar', fitHeight: 1.1 },
 };
 
 const SHAPES: ReadonlyArray<[RegExp, PlaceholderShape]> = [
@@ -90,10 +94,21 @@ const SHAPES: ReadonlyArray<[RegExp, PlaceholderShape]> = [
 
 const ENV_IDS: ReadonlySet<string> = new Set(Object.keys(manifest.objects));
 
+/** Colour of a tree, bush or clump on the grey east edge: drained toward ash, a little darker. Applies to ids with the suffix `-ashen`. */
+export const ASHEN: Tint = { sat: 0.15, mul: 0x8f8b85 };
+
 export function resolveModel(id: string): ModelRef {
+  if (id.endsWith('-ashen')) {
+    const base = resolveModel(id.slice(0, -'-ashen'.length));
+    if (base.source === 'placeholder') return base;
+    const t = base.tint;
+    // Combine with the base's own tint: multiply the colours, keep the base's hue shift, take the lower saturation.
+    const mul = t?.mul !== undefined ? mulColour(t.mul, ASHEN.mul!) : ASHEN.mul;
+    return { ...base, tint: { hue: t?.hue, sat: Math.min(t?.sat ?? 1, ASHEN.sat!), mul } };
+  }
   if (ENV_IDS.has(id)) return { source: 'env', model: `env/${id}`, scale: 1 };
   const v = VARIANTS[id];
-  if (v && ENV_IDS.has(v.base)) return { source: 'env', model: `env/${v.base}`, scale: v.scale, tint: v.tint, ...(v.stretchY ? { stretchY: v.stretchY } : {}) };
+  if (v && ENV_IDS.has(v.base)) return { source: 'env', model: `env/${v.base}`, scale: v.scale, tint: v.tint, ...(v.stretchY ? { stretchY: v.stretchY } : {}), girth: v.girth };
   const k = KAYKIT[id] ?? (SWAP_FIT[`hex/${id}`] ? { model: `hex/${id}` } : SWAP_FIT[`hal/${id}`] ? { model: `hal/${id}` } : undefined);
   if (k) {
     const f = SWAP_FIT[k.model];
@@ -118,4 +133,9 @@ export function hueMatrix(degrees: number, sat = 1): number[] {
   const out: number[] = [];
   for (let r = 0; r < 3; r++) for (let col = 0; col < 3; col++) out.push(luma[col] * (1 - sat) + h[r * 3 + col] * sat);
   return out;
+}
+
+function mulColour(a: number, b: number): number {
+  const ch = (sh: number): number => Math.round((((a >> sh) & 255) * ((b >> sh) & 255)) / 255);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
 }

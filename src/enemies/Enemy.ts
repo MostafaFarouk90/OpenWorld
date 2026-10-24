@@ -905,8 +905,10 @@ export class Enemy {
   }
 
   /** The player or an ally struck this enemy (damage.dealt, outcome hit, not a script): Calm closes unless it staggers. */
-  markStruck(): void {
+  markStruck(attackerId?: ActorId | null): void {
     this.brain.markStruck();
+    // The player hit it while a taunt held it: it has noticed the player now, so the taunt's end sends it at them, not home.
+    if (this.tauntedId !== null && attackerId !== undefined && attackerId === this.host.actors.player.id) this.onPlayerBeforeTaunt = true;
   }
 
   /** A thief gets away with the pouch (flee window over, blinked out, or gone dormant while fleeing): the spawner may refill its slot. */

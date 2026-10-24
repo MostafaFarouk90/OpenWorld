@@ -28,6 +28,8 @@ export const TRANSITION = {
   fadeOutSeconds: 0.3,
   fadeInSeconds: 0.4,
   settleTimeoutSeconds: 2,
+  /** Past the fade-out's own length, how long the placement waits for the HUD to report full black before it goes ahead anyway. */
+  fadeWaitSeconds: 1,
   groundRay: 0.5,
   /** Ticks the feet must stay outside `current`'s bounds before the bounds rule takes the player out. */
   outsideTicks: 2,
@@ -58,6 +60,8 @@ export interface InteriorPorts {
   anchor(id: string): { position: Vec3; yaw: number } | undefined;
   freeze(): () => void;
   fade(opacity: number, seconds: number): void;
+  /** Current opacity (0..1) of the black fade as drawn. Optional: without it the placement trusts the fade-out time alone. */
+  fadeOpacity?(): number;
   teleport(feet: Vec3, yaw: number): { ready(): boolean };
   groundBelow(maxDistance: number): boolean;
   /** True when `at` stands on that interior's floor: near a walkable nav cell, at floor height (a load checks a saved spot). */
@@ -95,6 +99,9 @@ export function settleTimeoutFor(from: { x: number; z: number }, to: { x: number
   const d = Math.hypot(to.x - from.x, to.z - from.z);
   return d > 300 ? TRANSITION.settleTimeoutSeconds + Math.min(10, d / 150) : TRANSITION.settleTimeoutSeconds;
 }
+
+/** The fade counts as full black from this opacity. */
+const FULL_BLACK = 0.99;
 
 const FORWARD = (yaw: number) => ({ x: -Math.sin(yaw), z: -Math.cos(yaw) });
 
@@ -327,7 +334,15 @@ export class InteriorController {
     t.time += dt;
     switch (t.phase) {
       case 'fading-out':
-        if (t.time >= TRANSITION.fadeOutSeconds) this.place(t);
+        if (t.time >= TRANSITION.fadeOutSeconds) {
+          // On a slow frame the HUD fade can trail the clock: place only once it reports black, or after the wait runs out.
+          const opacity = this.ports.fadeOpacity?.();
+          if (opacity === undefined || !(opacity < FULL_BLACK)) this.place(t);
+          else if (t.time >= TRANSITION.fadeOutSeconds + TRANSITION.fadeWaitSeconds) {
+            this.ports.warn(`Interiors: the fade reached ${opacity.toFixed(2)} in ${t.time.toFixed(1)} s; placing anyway`);
+            this.place(t);
+          }
+        }
         break;
       case 'settling':
         t.ticksSincePlace++;

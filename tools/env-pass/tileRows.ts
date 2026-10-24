@@ -23,8 +23,10 @@ const ground = (id: string): boolean => /^(grass|flower)/.test(id);
 export function filterTileRows(
   placements: readonly DesignerRow[],
   core?: { x: readonly [number, number]; z: readonly [number, number] },
+  also: ReadonlyArray<readonly [number, number, number, number]> = [],
 ): { rows: PlacementRow[]; inCore: number; dropped: Record<string, number> } {
-  const inside = core ? placements.filter((r) => r.x >= core.x[0] && r.x <= core.x[1] && r.z >= core.z[0] && r.z <= core.z[1]) : [...placements];
+  const inCore = (r: DesignerRow): boolean => !core || (r.x >= core.x[0] && r.x <= core.x[1] && r.z >= core.z[0] && r.z <= core.z[1]);
+  const inside = placements.filter((r) => inCore(r) || also.some(([x0, x1, z0, z1]) => r.x >= x0 && r.x < x1 && r.z > z0 && r.z <= z1));
   const dropped: Record<string, number> = {};
   const rows = inside
     .filter((r) => {

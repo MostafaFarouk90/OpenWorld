@@ -39,12 +39,12 @@ export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record
 const CELL = 64;
 
 export function classOf(id: string): PlacementClass {
-  if (/^(oak|birch|elm|autumn|ash-tree|willow)/.test(id)) return 'tree';
+  if (/^(oak|birch|elm|autumn|ash-tree|poplar|tree_dead|willow)/.test(id)) return 'tree';
   if (/^(bush|fern|reeds)/.test(id)) return 'bush';
-  if (/^(boulder|rock|basalt|ember-rock|slag)/.test(id)) return 'rock';
+  if (/^(boulder|rock|cairn|basalt|ember-rock|slag)/.test(id)) return 'rock';
   if (/^(stump|log|mushroom|charred)/.test(id)) return 'wood';
   if (/^(grass|flower)/.test(id)) return 'ground';
-  if (/^(hedge|picket|wattle|stonewall|scorched-fence)/.test(id)) return 'hedge';
+  if (/^(hedge|picket|wattle|stonewall|fence_stone|scorched-fence)/.test(id)) return 'hedge';
   return 'prop';
 }
 
@@ -149,6 +149,7 @@ export class PlacementField {
       }
       // A variant may stretch its base model in height only (reeds from a grass clump, a squat willow from an elm).
       const sy = real && e.ref.source !== 'placeholder' ? (e.ref.stretchY ?? 1) : 1;
+      const girth = e.ref.source !== 'placeholder' ? (e.ref.girth ?? 1) : 1;
       const sorted = [...e.rows].sort((a, b) => a.order - b.order);
       // One batch per grid cell, so the distance test can hide the far cells of a large tile while the player stands inside it.
       const cells = new Map<string, PlacementRow[]>();
@@ -162,7 +163,7 @@ export class PlacementField {
         for (const row of cellRows) {
           const s = (row.scale ?? 1) * resolved.scale;
           q.setFromAxisAngle(up, ((row.yaw ?? 0) * Math.PI) / 180);
-          m.compose(new THREE.Vector3(row.x, this.heightAt(row.x, row.z), row.z), q, new THREE.Vector3(s, s * sy, s));
+          m.compose(new THREE.Vector3(row.x, this.heightAt(row.x, row.z), row.z), q, new THREE.Vector3(s * girth, s * sy, s * girth));
           batch.addInstance(m);
         }
         for (const mesh of batch.meshes) mesh.computeBoundingSphere();
