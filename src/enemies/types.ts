@@ -282,6 +282,11 @@ export interface SpawnerDef {
    */
   block?: Act3BlockId;
   /**
+   * v0.7 (K6b): this spawner's own roll on top of L, a whole number from 0 to the block's span (first-arrival Greyfen
+   * groups roll at most L + 1, design 6.1). Out of range warns once and uses the block span. Read only with `block`.
+   */
+  blockSpan?: number;
+  /**
    * v0.7: the sub-area band (areas.ts). `dragonspine-summit` rolls 26 to 28 and is capped at the player's level + 3
    * (Q9). A spawner whose band is a region with areas and that names no area takes the area of its anchor.
    */

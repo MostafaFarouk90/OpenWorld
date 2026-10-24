@@ -82,3 +82,11 @@ describe('openRegionAt', () => {
     expect(openRegionAt(12000, 8000, ['caldera' as RegionId])).toBeNull();
   });
 });
+
+describe('region names (v0.7)', () => {
+  it('every region that is not reserved has a map name string', () => {
+    for (const id of REGION_IDS.filter((r) => !REGION_INFO[r].reserved)) {
+      expect(MAP_STRINGS_EN[`map.region.${id}` as keyof typeof MAP_STRINGS_EN], id).toBeTruthy();
+    }
+  });
+});

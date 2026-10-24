@@ -109,6 +109,8 @@ export class Inventory implements Omit<InventoryService, 'use'> {
       this.counts.delete(id);
       for (const slot of EQUIP_SLOTS) if (this.slots.get(slot) === id) this.setSlot(slot, null);
       this.gearData.delete(id);
+      // v0.7: an item no longer owned keeps no sockets (a bought copy starts empty, never with the old shard-gems).
+      this.socketData.delete(id);
     }
     this.emit('inventory.changed', { itemId: id, count: left });
     return true;

@@ -37,7 +37,8 @@ export function skillViewModel(p: ProgressionService, classId?: string | null): 
           if (p.learned(skill.id)) return { skill, state: 'learned' as const };
           const check = p.canLearn(skill.id);
           if (check.ok) return { skill, state: 'learnable' as const };
-          if (check.reason === 'unavailable') return { skill, state: 'unavailable' as const };
+          // As before v0.7: only a skill that is not learnable at all shows as unavailable; another class's skill is blocked.
+          if (check.reason === 'unavailable' && skill.availableWhen !== true) return { skill, state: 'unavailable' as const };
           if (check.reason === 'master') return { skill, state: 'unavailable' as const, ...(check.textKey ? { textKey: check.textKey } : {}) };
           return { skill, state: check.reason === 'no-points' ? ('no-points' as const) : ('blocked' as const) };
         }),

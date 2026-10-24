@@ -496,7 +496,8 @@ describe('shard use, Scars and the Leap (slice 2)', () => {
       expect(s.addSurgeCharges(1, 'dragons-respect')).toBe(3);
       const cd = s.cooldown('heartshard-surge');
       expect(castAndFinish(f).ok).toBe(true);
-      expect(s.cooldown('heartshard-surge')).toBeLessThanOrEqual(cd); // not restarted
+      // Not restarted: the cast's own ticks ran the old cooldown down further (a restart would read the full cooldown again).
+      expect(s.cooldown('heartshard-surge')).toBeCloseTo(Math.max(0, cd - 3), 1);
       expect(f.persisted.get('spells.surge')!.serialize()).toEqual({ charges: 2 });
       plugin.dispose!();
     });

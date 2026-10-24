@@ -522,6 +522,15 @@ describe('v3 sockets (v0.7 item 11)', () => {
     expect(inv.socketsOf('practice-sword')).toEqual([]);
   });
 
+  it('removing the last copy drops its sockets; a copy bought again starts empty (no duplicated shard-gems)', () => {
+    inv.add('practice-sword', 1);
+    expect(inv.setSockets('practice-sword', [gem(0)])).toBe(true);
+    expect(inv.remove('practice-sword', 1)).toBe(true);
+    expect(inv.serialize().sockets).toBeUndefined();
+    inv.add('practice-sword', 1);
+    expect(inv.socketsOf('practice-sword')).toEqual([]);
+  });
+
   it('reset clears sockets', () => {
     inv.add('practice-sword', 1);
     inv.setSockets('practice-sword', [gem(0)]);

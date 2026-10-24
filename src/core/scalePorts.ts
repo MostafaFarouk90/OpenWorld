@@ -1,8 +1,8 @@
 // v0.7 items 9 and 27: two multiplier ports the core provides with identity defaults, so Act 1 and Act 2 rewards never
 // change. K9 sets the quest reward scale for the two approach blocks (L / L_rec); K6b sets the kill XP region factors
-// (the Greyfen in PR 1, the Dragonspine in PR 2). A provider or factor that is not a finite positive number reads as 1.
+// (the Greyfen in PR 1, the Dragonspine in PR 2). A provider or factor that is not a finite number of 0 or more reads as 1 (0 pays nothing, as QuestManager reads it).
 
-const valid = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0;
+const valid = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
 
 /** `questRewardScale`: quest XP and gold are multiplied by `scale(questId)` once, then rounded. */
 export interface QuestRewardScaleService {

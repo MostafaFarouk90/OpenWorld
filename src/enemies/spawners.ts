@@ -620,7 +620,7 @@ export class SpawnerRegistry {
           this.warnOnce(`block:${def.id}`, `spawners: spawner '${def.id}' names unknown block '${String(block)}'; using its band`);
         } else {
           const L = this.lockedBlockLevels[block] ?? this.blockPreview(block);
-          if (L !== undefined) return enemyLevel(band, { lockedLevel: L, span, roll }, (m) => this.deps.warn(m));
+          if (L !== undefined) return enemyLevel(band, { lockedLevel: L, span: this.spanOf(def, span), roll }, (m) => this.deps.warn(m));
           this.warnOnce(`preview:${def.id}`, `spawners: no player level for block spawner '${def.id}'; using its band`);
         }
       }
@@ -651,6 +651,15 @@ export class SpawnerRegistry {
   private livePlayerLevel(): number | undefined {
     const p = this.deps.playerLevel?.();
     return typeof p === 'number' && Number.isFinite(p) && p >= 1 ? p : undefined;
+  }
+
+  /** v0.7: a block spawner's own span (`blockSpan`, a whole number 0..the block span), else the block span. */
+  private spanOf(def: SpawnerDef, span: number): number {
+    const own = def.blockSpan;
+    if (own === undefined) return span;
+    if (Number.isInteger(own) && own >= 0 && own <= span) return own;
+    this.warnOnce(`blockSpan:${def.id}`, `spawners: spawner '${def.id}' blockSpan ${String(own)} is not a whole number 0..${span}; using ${span}`);
+    return span;
   }
 
   /** `warmth.preview(block)`: the block's L if it were locked now; undefined without a player level. */

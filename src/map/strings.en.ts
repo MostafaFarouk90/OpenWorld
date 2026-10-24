@@ -35,6 +35,9 @@ export const MAP_STRINGS_EN: Record<string, string> = {
   'map.region.harrowmark': 'Harrowmark',
   'map.region.cinderreach': 'Cinderreach',
   'map.region.oldsmoke': 'Oldsmoke',
+  // v0.7: the two Act 3 regions stop being reserved, so the map names them once they open.
+  'map.region.greyfen': 'The Greyfen',
+  'map.region.dragonspine': 'The Dragonspine',
   'map.region.unknown': 'Unknown lands',
   'map.poi.emptied': '{name} (emptied)',
   'map.poi.camp': 'Roadside camp',

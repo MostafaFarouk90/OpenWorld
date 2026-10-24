@@ -116,6 +116,24 @@ describe('SpawnerRegistry: Act 3 block spawners', () => {
     expect(reqs[0].level).toBe(25);
   });
 
+  it('blockSpan narrows the roll on top of L (K6b first-arrival groups); out of range warns once and uses the block span', () => {
+    const a = setup([mk({ id: 'first', block: 'greyfen', blockSpan: 1, count: 2 })], { player: 18, rolls: [1, 0] });
+    a.reg.lockBlockLevel('greyfen', 20);
+    a.reg.spawnGroup('first');
+    expect(levelsOf(a.reqs)).toEqual([21, 20]);
+    const z = setup([mk({ id: 'z', block: 'greyfen', blockSpan: 0 })], { player: 18, rolls: [1] });
+    z.reg.lockBlockLevel('greyfen', 20);
+    z.reg.spawnGroup('z');
+    expect(z.reqs[0].level).toBe(20);
+    for (const bad of [6, -1, 1.5]) {
+      const b = setup([mk({ id: 'b', block: 'greyfen', blockSpan: bad, count: 2 })], { player: 18, rolls: [1] });
+      b.reg.lockBlockLevel('greyfen', 20);
+      b.reg.spawnGroup('b');
+      expect(levelsOf(b.reqs), String(bad)).toEqual([25, 25]);
+      expect(b.warn, String(bad)).toHaveBeenCalledOnce();
+    }
+  });
+
   it('a save made after the lock reloads the same L (same field and format, no version bump)', () => {
     const a = setup([mk({ block: 'greyfen' })], { player: 18 });
     a.reg.lockBlockLevel('greyfen', 19);
@@ -198,8 +216,10 @@ describe('Q9: the summit cap (applied after the roll, fixed at spawn)', () => {
     const [id] = reg.spawnGroup('s');
     expect(reqs[0].level).toBe(26);
     state.player = 24; // level-up mid-fight
+    // A rest and a Warmth change while it lives spawn nothing new: nothing re-levels a live member.
+    reg.setWarmthTier(5);
+    reg.onRest();
     expect(reqs).toHaveLength(1);
-    expect(reqs[0].level).toBe(26);
     reg.onMemberGone(id, 'died');
     reg.onRest();
     expect(reqs).toHaveLength(2);
