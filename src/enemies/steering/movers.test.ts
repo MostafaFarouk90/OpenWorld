@@ -173,4 +173,59 @@ describe('SwitchingMover', () => {
     expect(m.asleep).toBe(false);
     expect(m.feet.x).toBeCloseTo(1);
   });
+
+  it('a body more than fallRecoverDepth under the terrain is put back on it (polish B1)', () => {
+    physics.addHeightfield(flatGround(200));
+    physics.step();
+    const m = new SwitchingMover(physics, () => 0, { x: 0, y: 0, z: 0 });
+    tick(m, { x: 0, z: 0 }, 30);
+    // Under the kill plane, as after a fall through a missing patch.
+    m.teleport({ x: 3, y: -80, z: 2 });
+    tick(m, { x: 0, z: 0 }, 1);
+    expect(m.recoveries).toBe(1);
+    expect(m.feet.y).toBeGreaterThan(-0.1);
+    expect(m.feet.x).toBeCloseTo(3);
+    tick(m, { x: 2, z: 0 }, 60);
+    expect(Math.abs(m.feet.y)).toBeLessThan(0.1);
+    expect(m.feet.x).toBeGreaterThan(4);
+    expect(m.recoveries).toBe(1);
+    m.dispose();
+  });
+
+  it('with no terrain collider at all it never drops more than fallRecoverDepth under the terrain', () => {
+    const m = new SwitchingMover(physics, () => 9, { x: 0, y: 9, z: 0 });
+    let lowest = Infinity;
+    for (let i = 0; i < 240; i++) {
+      tick(m, { x: 0, z: 0 }, 1);
+      lowest = Math.min(lowest, m.feet.y);
+    }
+    expect(lowest).toBeGreaterThan(9 - WORLD_AI.fallRecoverDepth - 1);
+    expect(m.recoveries).toBeGreaterThan(0);
+    m.dispose();
+  });
+
+  it('sleep and wake put feet that fell under the terrain back on it', () => {
+    physics.addHeightfield(flatGround(200));
+    physics.step();
+    const m = new SwitchingMover(physics, () => 0, { x: 0, y: 0, z: 0 });
+    m.teleport({ x: 1, y: -110, z: 1 });
+    m.sleep();
+    expect(m.feet.y).toBeCloseTo(0);
+    m.wake();
+    expect(m.feet.y).toBeGreaterThanOrEqual(0);
+    tick(m, { x: 0, z: 0 }, 30);
+    expect(Math.abs(m.feet.y)).toBeLessThan(0.1);
+    m.dispose();
+  });
+
+  it('a body high above the terrain (an interior floor 150 m up) is never snapped down', () => {
+    physics.addStaticCollider(physics.rapier.ColliderDesc.cuboid(20, 0.5, 20).setTranslation(0, 149.5, 0));
+    physics.step();
+    const m = new SwitchingMover(physics, () => 0, { x: 0, y: 150, z: 0 });
+    tick(m, { x: 0, z: 0 }, 30);
+    tick(m, { x: 2, z: 0 }, 60);
+    expect(Math.abs(m.feet.y - 150)).toBeLessThan(0.1);
+    expect(m.recoveries).toBe(0);
+    m.dispose();
+  });
 });

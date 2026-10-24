@@ -991,8 +991,24 @@ export class EnemyManager {
     ranked.forEach(({ e, d }, i) => {
       // Hysteresis, so an enemy on the edge does not flip between sleep and wake every tick.
       if (d > WORLD_AI.dormantDistance || i >= WORLD_AI.maxAwake) e.sleep();
+      else if (!this.groundReady(e)) e.sleep();
       else if (d < WORLD_AI.dormantDistance - WORLD_AI.wakeMargin && i < WORLD_AI.maxAwake - WORLD_AI.wakeRankMargin) e.wake();
     });
+  }
+
+  /**
+   * False while the terrain collider patch under an enemy standing on the terrain is not built yet (a teleport or a
+   * death respawn near a dormant group: only the patch under the player is built at once, the rest stream in over
+   * later ticks). Waking there put the kinematic body on nothing, it fell, went dormant 100 m down and never woke
+   * (polish B1). Interior enemies, far above the terrain, do not wait. One map lookup per enemy in range.
+   */
+  private groundReady(e: Enemy): boolean {
+    const resident = this.host.groundResident;
+    if (!resident) return true;
+    const f = e.feet;
+    if (resident(f.x, f.z)) return true;
+    const ground = this.host.heightAt(f.x, f.z);
+    return Number.isFinite(ground) && f.y > ground + WORLD_AI.terrainFreeAbove;
   }
 
   dispose(): void {

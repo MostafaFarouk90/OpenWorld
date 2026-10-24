@@ -96,6 +96,7 @@ export function hostFromContext(ctx: GameContext, warn: (m: string) => void): En
       carried: () => torchFromQuests((ctx.services as unknown as ServicesPort).get('quests')),
     },
     heightAt: terrainHeightAt,
+    groundResident: (x, z) => ctx.terrain.isResident(x, z),
     warn,
   };
 }

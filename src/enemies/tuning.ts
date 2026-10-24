@@ -179,6 +179,17 @@ export const WORLD_AI = {
   wakeRankMargin: 2,
   /** Lift on wake, as the player controller does after a teleport. */
   wakeLift: 0.02,
+  /**
+   * An awake kinematic enemy this far below the terrain height under it has fallen through a missing collider patch
+   * (it woke before the patch streamed in): it is put back on the terrain at the same x, z. Covers the physics
+   * heightfield's sampling error on ridges; interiors float 150 m above the terrain and are never below it.
+   */
+  fallRecoverDepth: 4,
+  /**
+   * Higher than this above the terrain, an enemy does not need a terrain collider patch to wake (interiors sit 150 m up
+   * on their own colliders).
+   */
+  terrainFreeAbove: 60,
   /** Spawn ring radius when several enemies share one anchor, and patrol slot ring. */
   ringRadius: 1.5,
 } as const;
