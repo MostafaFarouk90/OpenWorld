@@ -67,6 +67,13 @@ export function installR11(k: Kit): Off[] {
       denIfInside();
     }
   });
+  // A menu can refuse the start too, and no `dialogue.ended` follows that (review F2).
+  k.on('ui.modal', (e) => {
+    if (!e.open && denWaiting) {
+      denWaiting = false;
+      denIfInside();
+    }
+  });
   k.on('quest.objective', (e) => {
     if (e.questId === 'r11' && e.objectiveId === 'ledge2' && e.done) denIfInside();
   });

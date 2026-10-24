@@ -130,8 +130,20 @@ export function installM11(k: Kit): Off[] {
   k.on('waystone.rekindled', (e) => {
     if (e.waystoneId === 'cinder-road') speechSoon();
   });
-  k.on('dialogue.ended', () => {
+  k.on('dialogue.ended', (e) => {
+    // The speech cut short (death, a script close): both flags would stay set and talking to Gaut would then play it under
+    // `gaut`, eating the report credit. Re-arm it (review F1).
+    if (e.npcId === SPEECH_NPC && e.reason !== 'completed') {
+      k.clear('story.m11.speech');
+      k.clear(SPEECH_DONE);
+      speechSoon();
+      return;
+    }
     if (speechWaiting) speechSoon();
+  });
+  // A refused start may have been a menu, not a dialogue: no `dialogue.ended` follows that (review F2).
+  k.on('ui.modal', (e) => {
+    if (!e.open && speechWaiting) speechSoon();
   });
   // A load re-derives it: the speech is owed again unless it has played (a load mid-speech replays it from the start).
   k.on('save.loaded', () => {

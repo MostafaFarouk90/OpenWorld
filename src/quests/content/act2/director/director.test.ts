@@ -362,6 +362,37 @@ describe('director: M11 Road of Cinders', () => {
       r.dispose();
     });
 
+    it('a speech cut short by death plays again and leaves the report talk to gaut (review F1)', () => {
+      r = rig();
+      r.active('m11');
+      r.done.add('m11.ambush');
+      lit();
+      r.step();
+      expect(called(r, 'dialogue.start')).toEqual(speech);
+      r.emit('dialogue.ended', { dialogueId: 'npc-gaut', npcId: SPEECH_NPC, reason: 'death' });
+      r.step(2);
+      expect(called(r, 'dialogue.start')).toEqual([...speech, ...speech]);
+      r.dispose();
+    });
+
+    it('a start refused by a menu retries when the menu closes (review F2)', () => {
+      const o = { dialogueOpen: true };
+      r = rig(o);
+      r.active('m11');
+      r.done.add('m11.ambush');
+      lit();
+      r.step(30);
+      expect(called(r, 'dialogue.start')).toHaveLength(1);
+      o.dialogueOpen = false;
+      r.emit('ui.modal', { id: 'journal', open: true });
+      r.step(2);
+      expect(called(r, 'dialogue.start')).toHaveLength(1);
+      r.emit('ui.modal', { id: 'journal', open: false });
+      r.step(2);
+      expect(called(r, 'dialogue.start')).toEqual([...speech, ...speech]);
+      r.dispose();
+    });
+
     it('waits for another dialogue to end, then plays', () => {
       const o = { dialogueOpen: true };
       r = rig(o);
@@ -1214,6 +1245,22 @@ describe('director: R11 den scene when the player is already on the shelf (revie
     r.step(3);
     expect(called(r, 'dialogue.start')).toEqual([['scene-r11-den', 'hrolf'], ['scene-r11-den', 'hrolf']]);
     r.emit('dialogue.ended', { dialogueId: 'x', npcId: 'y' });
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toHaveLength(2);
+    r.dispose();
+  });
+
+  it('a start refused by a menu retries when the menu closes (review F2)', () => {
+    const o = { dialogueOpen: true };
+    r = rig(o);
+    r.active('r11');
+    r.inside.add('trg.cinderreach.den');
+    r.done.add('r11.ledge2');
+    r.emit('quest.objective', ledge2);
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toHaveLength(1);
+    o.dialogueOpen = false;
+    r.emit('ui.modal', { id: 'journal', open: false });
     r.step(3);
     expect(called(r, 'dialogue.start')).toHaveLength(2);
     r.dispose();

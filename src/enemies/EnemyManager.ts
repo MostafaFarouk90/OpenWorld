@@ -787,7 +787,7 @@ export class EnemyManager {
       const target = this.enemies.get(r.targetId);
       // The core revokes a mercy on this same test (core.plugin.ts); Calm closes on it too, status ticks included.
       // v0.6: the player only; an ally's hit never closes Calm (actors-and-damage.md section 11).
-      if (target && r.outcome === 'hit' && r.kind !== 'script' && this.playerTeam(r.attackerId)) target.markStruck(r.attackerId);
+      if (target && r.outcome === 'hit' && r.kind !== 'script' && r.kind !== 'status' && this.playerTeam(r.attackerId)) target.markStruck(r.attackerId);
       // A status tick (bleed, ignite) never flinches, alerts or provokes (actors-and-damage.md section 10).
       if (r.kind === 'status') return;
       if (target) target.damaged(r.attackerId, r.outcome, r.poiseDealt, r.staggered, r.killed, r.kind);

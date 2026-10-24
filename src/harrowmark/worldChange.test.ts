@@ -138,6 +138,13 @@ describe('closed market stalls (A16 final review #5)', () => {
     expect(closedRoots(fc)).toHaveLength(0);
   });
 
+  it('puts each shutter in front of the stall table art (review F5)', () => {
+    const { fc } = setup(true);
+    const root = closedRoots(fc)[0]!;
+    expect(root.children.length).toBe(stallCount);
+    for (const g of root.children) for (const m of g.children) expect(m.position.z).toBeGreaterThanOrEqual(0.7);
+  });
+
   it('shuts every stall from gate.a2 and opens them (shutters gone, awnings up) on gate.a3', () => {
     const { fc, change } = setup(true);
     expect(change.closedStalls.counts().stalls).toBe(stallCount);

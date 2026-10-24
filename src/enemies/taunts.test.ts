@@ -323,6 +323,32 @@ describe('when a taunt ends', () => {
     expect(enemy.brain.target).toBe('player');
   });
 
+  it('a player-owned status tick during the taunt does not provoke: the enemy still goes home when it ends (review F3)', () => {
+    const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: -60 } });
+    fake.defineAnchor('spawn.one', 0, 0);
+    const manager = new EnemyManager(fake.host, FakeHost.factory(gltf), { spawners: SPAWNERS, seed: 7 });
+    const tick = (seconds: number) => {
+      for (let i = 0; i < Math.round(seconds / DT); i++) {
+        manager.think(DT);
+        manager.animate(DT);
+        fake.combatStep(DT);
+        manager.react(DT);
+      }
+    };
+    const [id] = manager.service.spawnGroup('one', { aggro: true });
+    const enemy = manager.get(id)!;
+    tick(AI.riseSeconds + 0.5);
+    enemy.brain.standDown();
+    tick(0.5);
+    const actor = fake.host.actors.spawn({ kind: 'familiar', team: 'ally', maxHealth: 60, untargetable: true } as never);
+    manager.service.taunts.register({ id: actor.id, radius: 10, seconds: 4, position: () => ({ x: 4, y: 0, z: 0 }), alive: () => true });
+    tick(1);
+    expect(enemy.brain.target).toBe(actor.id);
+    fake.bus.emit('damage.dealt', { attackerId: fake.host.actors.player.id, targetId: id, outcome: 'hit', kind: 'status', amount: 1, poiseDealt: 0, staggered: false, killed: false } as never);
+    tick(5);
+    expect(enemy.brain.target).not.toBe('player');
+  });
+
   it('an enemy at the radius edge keeps its taunter inside the release margin instead of flipping every tick', () => {
     const { enemy, fake, id, tick, manager } = setup();
     // The taunter keeps a set distance from the enemy, wherever the enemy walks.

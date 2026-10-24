@@ -33,6 +33,8 @@ const POLE = new THREE.MeshLambertMaterial({ color: 0x5a4632 });
 const BOWL = new THREE.MeshLambertMaterial({ color: 0x3a3532 });
 const FLAME = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
 
+const SHUTTER_Z = 0.75;
+
 export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'gates'>): WorldChange {
   const root = new THREE.Group();
   root.name = 'harrowmark-world-change';
@@ -180,7 +182,8 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
       g.position.set(s.x, y, s.z);
       g.rotation.y = (s.yawDeg * Math.PI) / 180;
       const shutter = new THREE.Mesh(shutterGeo, SHUTTER);
-      shutter.position.set(0, 1.1, 0);
+      // In front of the decorated table (cityArt puts it at local z +0.6), so the stall reads as shut from the front (review F5).
+      shutter.position.set(0, 1.1, SHUTTER_Z);
       g.add(shutter);
       root3.add(g);
       closed++;
