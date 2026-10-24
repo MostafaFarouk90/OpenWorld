@@ -21,15 +21,14 @@ describe('objective lint over the shipped quests', () => {
     expect(keys.sort()).toEqual(hits.map(key).sort());
   });
 
-  it('holds the 36 entries of the pre-check, each with a reason and an owner', () => {
-    expect(OBJECTIVE_LINT_ALLOW).toHaveLength(36);
+  it('holds the 35 entries (the pre-check 36, less M14 temper fixed in #144), each with a reason and an owner', () => {
+    expect(OBJECTIVE_LINT_ALLOW).toHaveLength(35);
     for (const a of OBJECTIVE_LINT_ALLOW) {
       expect(a.reason.length, key(a)).toBeGreaterThan(10);
       expect(a.owner.length, key(a)).toBeGreaterThan(2);
     }
-    expect(OBJECTIVE_LINT_ALLOW.find((a) => key(a) === 'm14/temper')).toMatchObject({
-      reason: 'repeatable, resource-limited; polish batch to add a counter', owner: 'polish batch',
-    });
+    // #144 gave M14's temper a persisted counter, so it is no longer a hit and no longer listed.
+    expect(OBJECTIVE_LINT_ALLOW.find((a) => key(a) === 'm14/temper')).toBeUndefined();
   });
 
   it('names no Act 3 quest', () => {

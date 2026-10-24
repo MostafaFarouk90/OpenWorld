@@ -42,7 +42,6 @@ export const OBJECTIVE_LINT_ALLOW: readonly ObjectiveLintAllow[] = [
   ...row('bridge sets the flag only while the objective is current', SHIPPED, 'm09/o3'),
   ...row('repeatable: the player can simply do it again', SHIPPED,
     'm04/carters', 'm06/queue', 'm07/ask', 'm08/wait', 'm17/thanks', 'd01/o1', 'm09/o2', 'd02/o2', 'r02/o2', 'r02/o3', 'r02/o4', 'm10/ride', 'm14/murals'),
-  ...row('repeatable, resource-limited; polish batch to add a counter', 'polish batch', 'm14/temper'),
 ];
 
 export interface ObjectiveHit { quest: string; objective: string; why: string }

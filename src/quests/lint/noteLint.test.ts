@@ -33,11 +33,12 @@ describe('note lint over the shipped content', () => {
       expect(isAct3Id(a.other), a.other).toBe(false);
     }
     const m22 = NOTE_LINT_ALLOW.find((a) => a.noteId === 'note-m22-stalls')!;
-    expect(m22).toMatchObject({ other: 'npc:gerta', reason: 'possible M22 stall, polish batch', owner: 'polish batch' });
+    expect(m22).toMatchObject({ other: 'npc:gerta', owner: 'K0 (shipped Act 1 and 2)' });
+    expect(m22.reason).toMatch(/outranks/);
   });
 
-  it('NOTES_UNDER_NPCS holds the three Act 2 notes and no Act 3 note', () => {
-    expect([...NOTES_UNDER_NPCS.keys()].sort()).toEqual(['note-m13-shield', 'note-m15-map', 'note-r11-camp-1']);
+  it('NOTES_UNDER_NPCS holds the four Act 2 notes and no Act 3 note', () => {
+    expect([...NOTES_UNDER_NPCS.keys()].sort()).toEqual(['note-m13-shield', 'note-m15-map', 'note-m22-stalls', 'note-r11-camp-1']);
     for (const id of NOTES_UNDER_NPCS.keys()) expect(isAct3Id(id), id).toBe(false);
     for (const n of NOTES_UNDER_NPCS.values()) expect(isAct3Id(n.quest)).toBe(false);
   });

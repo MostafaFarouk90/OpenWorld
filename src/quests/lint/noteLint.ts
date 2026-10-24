@@ -40,8 +40,8 @@ export const NOTE_LINT_ALLOW: readonly NoteLintAllow[] = [
   { noteId: 'note-m13-shield', other: 'npc:ealdred', reason: 'handled by outranks (NOTES_UNDER_NPCS, tested in notesUnderNpcs.test.ts)', owner: 'K0 (shipped Act 1 and 2)' },
   { noteId: 'note-r11-camp-1', other: 'npc:wynne', reason: 'handled by outranks (NOTES_UNDER_NPCS, tested in notesUnderNpcs.test.ts)', owner: 'K0 (shipped Act 1 and 2)' },
   { noteId: 'note-m15-map', other: 'npc:corwin', reason: 'handled by outranks (NOTES_UNDER_NPCS, tested in notesUnderNpcs.test.ts)', owner: 'K0 (shipped Act 1 and 2)' },
+  { noteId: 'note-m22-stalls', other: 'npc:gerta', reason: 'handled by outranks since polish pass 3 (#144; NOTES_UNDER_NPCS, tested in notesUnderNpcs.test.ts)', owner: 'K0 (shipped Act 1 and 2)' },
   { noteId: 'note-m03-ember', other: 'use:d01-altar', reason: 'time-disjoint: the note reads only during M03, the altar is enabled only while D01 altar is current', owner: 'K0 (shipped Act 1 and 2)' },
-  { noteId: 'note-m22-stalls', other: 'npc:gerta', reason: 'possible M22 stall, polish batch', owner: 'polish batch' },
 ];
 
 /** A position in a space: 'world' for layouts, the interior id for an interior's local coordinates. */

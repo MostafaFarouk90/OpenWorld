@@ -87,6 +87,11 @@ export interface FogWallDef {
    * at every distance (the slice wall). The Act 2 faces stand far from the play area for most of the game.
    */
   cullBeyond?: number;
+  /**
+   * v0.7 (K1): metres past the face beyond which nobody is pushed back; unset uses PUSH_BACK_MAX_DEPTH. A face beside
+   * open ground it must not reach across sets less; containment holds everything farther behind any face.
+   */
+  pushDepth?: number;
 }
 
 /** Horizontal distance from `feet` to the wall's segment (its line, clamped to its length). Pure. */
@@ -195,7 +200,7 @@ export function needsPushBackDef(def: FogWallDef, feet: { x: number; z: number }
   const n = def.axis === 'x' ? feet.x - wall.x : feet.z - wall.z;
   const t = def.axis === 'x' ? feet.z - wall.z : feet.x - wall.x;
   const depth = n * def.blockedSide;
-  return depth > PUSH_BACK_PAST && depth <= PUSH_BACK_MAX_DEPTH && Math.abs(t) <= def.halfLength;
+  return depth > PUSH_BACK_PAST && depth <= (def.pushDepth ?? PUSH_BACK_MAX_DEPTH) && Math.abs(t) <= def.halfLength;
 }
 
 /** The slice wall at `wall` (v0.5 API); `openFlags` replaces its open flags (tests). */

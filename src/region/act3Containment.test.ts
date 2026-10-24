@@ -331,5 +331,8 @@ describe('held Act 2 fog faces never push an open Act 3 point (K7 found the Mere
     expect(needsPushBackDef(w, { x: a.x - PUSH_BACK_MAX_DEPTH, z: a.z }, a)).toBe(true);
     expect(needsPushBackDef(w, { x: a.x - PUSH_BACK_MAX_DEPTH - 1, z: a.z }, a)).toBe(false);
     expect(needsPushBackDef(w, { x: 3150, z: 11900 }, a)).toBe(false);
+    // A face's own pushDepth replaces the default.
+    expect(needsPushBackDef({ ...w, pushDepth: 100 }, { x: a.x - 150, z: a.z }, a)).toBe(false);
+    expect(needsPushBackDef({ ...w, pushDepth: 100 }, { x: a.x - 90, z: a.z }, a)).toBe(true);
   });
 });
