@@ -5,6 +5,9 @@ import { roadPoint } from '../../../../terrain/shape/roadPoint';
 import type { Kit, Off } from './kit';
 
 const ROUTE_STEP = 120;
+/** The npc id the stone speech runs under (not `gaut`, whose `report` talk credit it must not take), and its played flag. */
+export const SPEECH_NPC = 'gaut-stone-speech';
+const SPEECH_DONE = 'story.m11.speechDone';
 
 /** The column's route: the Cinder Road from the River Gate to a little short of the stone's station. */
 export function m11Route(y: number): { x: number; y: number; z: number }[] {
@@ -98,11 +101,46 @@ export function installM11(k: Kit): Off[] {
     if (e.action !== 'mercy' && e.interactableId.startsWith('use:m11-bloom-') && k.active('m11')) k.set('story.m11.bloomHit');
   });
 
-  // The stone lit: Gaut's speech. The ride is over when the quest is.
-  k.on('waystone.rekindled', (e) => {
-    if (e.waystoneId !== 'cinder-road' || !k.active('m11')) return;
+  // The stone lit: Gaut's speech, once, after the ambush. The stone fires its event once, so it may have been lit on an
+  // earlier ride, during the ambush (the speech then waits for the last Footman) or after it. The speech runs under its own
+  // npc id: under `gaut` its completed `dialogue.ended` would take M11's `report` talk credit and his report lines would
+  // never play (review-fixes-review F1, F5).
+  const stoneLit = (): boolean => k.flag('waystone.cinder-road.lit');
+  const speechDue = (): boolean => k.active('m11') && k.objDone('m11', 'ambush') && stoneLit() && !k.flag(SPEECH_DONE);
+  let speechWaiting = false;
+  const speak = (): void => {
+    if (!speechDue()) {
+      speechWaiting = false;
+      return;
+    }
     k.set('story.m11.speech');
-    k.later(gautSpeaks);
+    if (ctx.services.get('dialogue')?.start('npc-gaut', SPEECH_NPC)) {
+      k.set(SPEECH_DONE);
+      speechWaiting = false;
+    } else {
+      // Another dialogue holds the screen: the flag stays off the tree until the speech can really start.
+      k.clear('story.m11.speech');
+      speechWaiting = true;
+    }
+  };
+  const speechSoon = (): void => k.later(speak);
+  k.on('quest.objective', (e) => {
+    if (e.questId === 'm11' && e.objectiveId === 'ambush' && e.done) speechSoon();
+  });
+  k.on('waystone.rekindled', (e) => {
+    if (e.waystoneId === 'cinder-road') speechSoon();
+  });
+  k.on('dialogue.ended', () => {
+    if (speechWaiting) speechSoon();
+  });
+  // A load re-derives it: the speech is owed again unless it has played (a load mid-speech replays it from the start).
+  k.on('save.loaded', () => {
+    speechWaiting = false;
+    if (k.flag('story.m11.speech')) {
+      k.clear('story.m11.speech');
+      k.clear(SPEECH_DONE);
+    }
+    speechSoon();
   });
   k.on('quest.completed', (e) => {
     if (e.questId === 'm11') ctx.services.get('escort')?.stop();
