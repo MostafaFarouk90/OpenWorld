@@ -31,6 +31,7 @@ describe('resolveModel', () => {
       const r = resolveModel(id);
       expect(r).toMatchObject({ source: 'env', model: 'env/grass-clump-a' });
       expect(r.source === 'env' && (r.stretchY ?? 1) > 2, id).toBe(true);
+      expect(r.source === 'env' && (r.girth ?? 1) > 1.5, `${id} is wide enough to read as a bed`).toBe(true);
     }
     expect(resolveModel('roadside-shrine-a')).toMatchObject({ source: 'kaykit', model: 'hal/shrine_candles' });
     for (const id of ['flag_red', 'rock_single_B', 'rock_single_C', 'tent']) expect(resolveModel(id).source, id).toBe('kaykit');

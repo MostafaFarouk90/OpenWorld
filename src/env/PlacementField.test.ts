@@ -68,7 +68,7 @@ describe('PlacementField without a model source', () => {
     field.dispose();
   });
 
-  it('stretches a variant in height only (reeds from the grass clump)', async () => {
+  it('stretches a variant in height and widens it by its girth (reeds from the grass clump)', async () => {
     const THREE = await import('three');
     // A source that serves a 1 m box for every env model, so the variant resolves to a real (non-placeholder) model.
     const source = { load: async () => undefined, instantiate: () => new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial()) };
@@ -79,7 +79,7 @@ describe('PlacementField without a model source', () => {
     const m = new THREE.Matrix4();
     mesh.getMatrixAt(0, m);
     const sc = new THREE.Vector3().setFromMatrixScale(m);
-    expect(sc.y / sc.x).toBeCloseTo(2.5);
+    expect(sc.y / sc.x).toBeCloseTo(2.5 / 1.9);
     expect(sc.x).toBeCloseTo(sc.z);
     field.dispose();
   });

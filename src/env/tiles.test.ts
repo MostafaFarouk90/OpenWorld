@@ -140,6 +140,22 @@ describe('B3 placements (Hollin Ford, its brook and river meadow, plus the reed-
     expect(rows.some((r) => r.id === 'tent')).toBe(false);
   });
 
+  it('has a reed bed and a fern, tussock and flower drift in frame at the river-eye pose (camera -146,-283, Knight 4 m ahead)', () => {
+    const cx = -146, cz = -283, lx = -170, lz = -293.5;
+    const d = Math.hypot(lx - cx, lz - cz);
+    const ux = (lx - cx) / d, uz = (lz - cz) / d;
+    const inFrame = (r: { x: number; z: number }, range: number) => {
+      const f = (r.x - cx) * ux + (r.z - cz) * uz;
+      const s = -(r.x - cx) * uz + (r.z - cz) * ux;
+      return f > 0 && f < range && Math.abs(s) < f * 0.58;
+    };
+    expect(rows.filter((r) => r.id.startsWith('reeds') && inFrame(r, 20)).length).toBeGreaterThanOrEqual(30);
+    expect(rows.filter((r) => r.id === 'reeds-b' && inFrame(r, 20)).length).toBeGreaterThanOrEqual(3);
+    expect(rows.filter((r) => r.id === 'fern-a' && inFrame(r, 12)).length).toBeGreaterThanOrEqual(8);
+    expect(rows.filter((r) => r.id.startsWith('grass') && inFrame(r, 12)).length).toBeGreaterThanOrEqual(15);
+    expect(rows.filter((r) => r.id.startsWith('flower') && inFrame(r, 12)).length).toBeGreaterThanOrEqual(5);
+  });
+
   it('clusters its ground cover instead of an even sprinkle (B1 review: specks)', () => {
     // Ground cover is dense (the old blade scatter is off inside the tile): most 10 m cells hold clumps and an occupied cell holds many.
     const g = rows.filter((r) => isGround(r.id) && r.x < 0);
