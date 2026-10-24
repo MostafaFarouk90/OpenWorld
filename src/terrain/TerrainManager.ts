@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { TERRAIN } from '../config/constants';
 import { buildChunkIndices, type ChunkData, type ChunkRequest } from './chunkGeometry';
+import { groundOriginFor, type GroundOriginKey } from './ground';
 import { createGroundMaterial, wrapGroundTime, type GroundUniforms } from './groundShader';
 import { heightAt } from './heightfield';
 import { buildPhysicsHeightfield, type PhysicsHeightfield } from './physicsHeightfield';
@@ -32,9 +33,12 @@ export function skirtDepthFor(size: number): number {
 export class TerrainManager {
   readonly group = new THREE.Group();
   private readonly material: THREE.MeshStandardMaterial;
-  /** Act 2 chunks (those with a `ground` attribute) draw with this one; Act 1 chunks keep `material`. */
-  private readonly groundMaterial: THREE.MeshStandardMaterial;
-  private readonly groundUniforms: GroundUniforms;
+  /**
+   * Act 2 and Act 3 chunks (those with a `ground` attribute) draw with one of these; Act 1 chunks keep `material`.
+   * One clone per ground origin (Act 2, Greyfen, Dragonspine), each with its own `uGroundOrigin`, so every shader
+   * pattern samples a coordinate local to its region. The origin is picked per chunk by groundOriginFor.
+   */
+  private readonly groundMaterials: Record<GroundOriginKey, { material: THREE.MeshStandardMaterial; uniforms: GroundUniforms }>;
   private readonly clock = new THREE.Clock();
   private readonly indices: Uint16Array | Uint32Array;
   private readonly pool: WorkerPool;
@@ -48,9 +52,11 @@ export class TerrainManager {
     scene.add(this.group);
     const params: THREE.MeshStandardMaterialParameters = { vertexColors: true, roughness: 0.95, metalness: 0 };
     this.material = new THREE.MeshStandardMaterial(params);
-    const ground = createGroundMaterial(params);
-    this.groundMaterial = ground.material;
-    this.groundUniforms = ground.uniforms;
+    this.groundMaterials = {
+      act2: createGroundMaterial(params, 'act2'),
+      greyfen: createGroundMaterial(params, 'greyfen'),
+      dragonspine: createGroundMaterial(params, 'dragonspine'),
+    };
     this.indices = buildChunkIndices(TERRAIN.chunkSegments);
     this.pool = new WorkerPool(TERRAIN.workerCount, workerFactory);
 
@@ -87,7 +93,8 @@ export class TerrainManager {
   /** Streams and selects chunks for the given viewpoint. Call once per rendered frame. */
   update(cameraPosition: THREE.Vector3): void {
     if (this.disposed) return;
-    this.groundUniforms.uGroundTime.value = wrapGroundTime(this.clock.getElapsedTime());
+    const time = wrapGroundTime(this.clock.getElapsedTime());
+    for (const g of Object.values(this.groundMaterials)) g.uniforms.uGroundTime.value = time;
     // Dispatch after the whole frame's requests are queued, so the nearest chunks go first.
     this.pool.batch(() => this.tree.update(cameraPosition));
   }
@@ -101,7 +108,7 @@ export class TerrainManager {
     this.tree.dispose();
     this.jobs.clear();
     this.material.dispose();
-    this.groundMaterial.dispose();
+    for (const g of Object.values(this.groundMaterials)) g.material.dispose();
     this.group.removeFromParent();
   }
 
@@ -149,7 +156,8 @@ export class TerrainManager {
     );
     geometry.boundingSphere = geometry.boundingBox.getBoundingSphere(new THREE.Sphere());
 
-    const mesh = new THREE.Mesh(geometry, data.ground ? this.groundMaterial : this.material);
+    const origin = data.ground ? groundOriginFor(node.centerX, node.centerZ, node.size) : null;
+    const mesh = new THREE.Mesh(geometry, origin ? this.groundMaterials[origin].material : this.material);
     mesh.name = `terrain-chunk-${node.size}@${node.centerX},${node.centerZ}`;
     mesh.position.set(node.centerX, 0, node.centerZ);
     mesh.receiveShadow = true;
