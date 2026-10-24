@@ -40,6 +40,11 @@ export const WYNNE = buildTree({
       lines: [
         { s: 'wynne', t: 'You are the one Hrolf trusts. I can tell by the way you stand, as if the ground might need holding down.' },
         { s: 'wynne', t: 'Hjalti went up in the spring and did not come down. I kept the fire lit for him a full season. Then I let it go out, and I have not forgiven myself for that either.' },
+        { s: 'cael', t: 'What was he like, Hjalti?' },
+        { s: 'wynne', t: 'Loud in a quiet house, and quiet in a loud one. He whistled the same four notes every morning until the hens learned them.' },
+        { s: 'cael', t: 'Did he say anything before he went up?' },
+        { s: 'wynne', t: 'That he would be back for the evening milking. He took the axe, a heel of bread and my second-best scarf. I have been angry about the scarf ever since, because it is easier than the rest.' },
+        { s: 'wynne', t: 'Hrolf thinks I blame him for the gate. I do not. Tell him so if I am not by, and watch his face when you do.' },
         { s: 'wynne', t: 'If you find the axe, bring it to Hrolf. If you find anything of Hjalti, tell me only what is true. I can bear true, and I cannot bear kind.' },
         { s: 'wynne', t: 'Mind the hounds on the ledges. They were the wyrm\'s before they were anyone\'s, and they have not forgotten how to guard.' },
       ],

@@ -161,6 +161,26 @@ describe('breaks', () => {
     expect(bosses.state('ashen-prior')!.breaks).toBe(2);
   });
 
+  it('acceptBreak false: a forced stagger adds no pip, no event and no window; a real break still does', () => {
+    let real = false;
+    const { bosses, boss, hit, of, stagger } = started({ ...DEF, phases: [], acceptBreak: () => real });
+    stagger();
+    expect(bosses.state('ashen-prior')!.breaks).toBe(0);
+    expect(of('boss.break')).toEqual([]);
+    boss.restorePoise();
+    real = true;
+    hit(1, { poise: 10 });
+    expect(bosses.state('ashen-prior')!.breaks).toBe(1);
+    expect(of('boss.break')).toHaveLength(1);
+  });
+
+  it('acceptBreak false on the last break opens no release window', () => {
+    const { bosses, of, stagger } = started({ ...DEF, phases: [], breaksPerPhase: 1, acceptBreak: () => false });
+    stagger();
+    expect(of('boss.releaseWindow')).toEqual([]);
+    expect(bosses.state('ashen-prior')!.releaseOpen).toBe(false);
+  });
+
   it('staggers of other actors are ignored', () => {
     const { bosses, actors, dr, player, of } = started();
     const other = actors.spawn({ kind: 'x', team: 'hostile', maxHealth: 10, maxPoise: 5 });

@@ -4,7 +4,6 @@ import type { NpcSpec } from '../region/layoutTypes';
 import { createNpcState, stepNpc, wrapAngle, type NpcState } from './NpcBehavior';
 import { buildPlaceholder, disposePlaceholder, pickIdleClip, prepareNpcModel } from './npcModels';
 import { NPC_TUNING } from './tuning';
-import { targets } from '../quests/notes';
 import type { QuestsService } from '../quests/service';
 import type { NpcDef, NpcHandle, NpcModelId, NpcModelLoader, NpcsService } from './types';
 
@@ -245,7 +244,7 @@ export class NpcManager implements NpcsService {
   private talkObjectiveLive(npcId: string): boolean {
     const q = (this.core.services as unknown as { get(name: string): unknown }).get('quests') as QuestsService | undefined;
     if (!q) return false;
-    return q.active().some((id) => q.objectives(id).some((v) => v.current && v.def.type === 'talk' && targets(v.def.target, npcId)));
+    return q.npcObjectiveLive?.(npcId) ?? false;
   }
 
   /** Removes a live NPC for a handover; its last position stays readable through `position()`. */

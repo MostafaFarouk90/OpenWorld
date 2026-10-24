@@ -3,10 +3,11 @@
 // Plays once: the last line sets `story.a2.campSeen`, the director's record that it ran to its end.
 import { buildTree } from './build';
 import { all } from './cond';
+import { WENNA_AT_CAMP_FLAG } from '../../../oldsmoke/flags';
 
 export const ACT2_CAMP_SEEN_FLAG = 'story.a2.campSeen';
 /** Set by the scene's last line: Wenna is at the camp from here on (readers: presence rules, banter). */
-export const ACT2_WENNA_CAMP_FLAG = 'story.a2.wennaAtCamp';
+export const ACT2_WENNA_CAMP_FLAG = WENNA_AT_CAMP_FLAG; // one constant: the post rule (oldsmoke/postRules) reads the same flag
 
 export const SCENE_ACT2_CAMP = buildTree({
   id: 'scene-act2-camp',
@@ -26,7 +27,7 @@ export const SCENE_ACT2_CAMP = buildTree({
         {
           s: 'cael',
           t: 'Then the fire is a little bigger, and the road ahead is long. Let it come.',
-          fx: [{ setFlag: ACT2_CAMP_SEEN_FLAG, value: true }, { setFlag: ACT2_WENNA_CAMP_FLAG, value: true }, { event: 'story.act2.camp.end' }],
+          fx: [{ setFlag: ACT2_CAMP_SEEN_FLAG, value: true }, { setFlag: ACT2_WENNA_CAMP_FLAG, value: true }],
         },
       ],
     },

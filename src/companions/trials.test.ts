@@ -3,11 +3,12 @@ import { ActorRegistry } from '../actors/ActorRegistry';
 import { DamageResolver, type DamageRequest } from '../actors/DamageResolver';
 import { playerInit } from '../actors/teams';
 import { GameEvents, type GameEventMap } from '../core/events';
+import { AllyEngagement } from '../actors/allyEngage';
 import { TRIAL_FLOOR_ID, TRIAL_TUNING, Trials } from './trials';
 
 const DT = 1 / 60;
 
-function make() {
+function make(withAllyEngagement = false) {
   const events = new GameEvents(() => {});
   const actors = new ActorRegistry(events);
   const dr = new DamageResolver(actors, events, () => {});
@@ -15,7 +16,9 @@ function make() {
   const opp = actors.spawn({ kind: 'hrolf-trial', team: 'hostile', maxHealth: 120, maxPoise: 45 });
   const feet = { x: 0, y: 0, z: 0 };
   const hidden: [string, boolean][] = [];
+  const engage = withAllyEngagement ? new AllyEngagement(events, actors) : null;
   const trials = new Trials({
+    keepAlliesOff: engage ? (id) => engage.exclude(id) : undefined,
     events,
     actors,
     addLethalHandler: (id, fn, order) => dr.addLethalHandler(id, fn, order),
@@ -36,7 +39,7 @@ function make() {
     dr.stagger(targetId, byId, 1000);
     tick(TRIAL_TUNING.pauseSeconds + 0.1);
   };
-  return { events, actors, dr, player, opp, feet, trials, hidden, of, hit, tick, breakBy };
+  return { engage, events, actors, dr, player, opp, feet, trials, hidden, of, hit, tick, breakBy };
 }
 
 describe('the non-lethal trial service', () => {
@@ -199,5 +202,61 @@ describe('the non-lethal trial service', () => {
     expect(t.trials.start({ id: 'x', opponentId: t.opp.id })).toBe(true);
     expect(t.trials.start({ id: 'y', opponentId: t.opp.id })).toBe(false);
     expect(t.of('trial.started')).toEqual([{ trialId: 'x', opponentId: t.opp.id, breaksToWin: 3 }]);
+  });
+
+  describe('allies are kept off the opponent (M13, like R10 duels)', () => {
+    it('a companion may not engage Hrolf during the trial, and may again after it ends', () => {
+      const t = make(true);
+      t.events.emit('ai.aggro', { actorId: t.opp.id, targetId: t.player.id } as never);
+      expect(t.engage!.mayEngage(t.opp.id)).toBe(true);
+      t.trials.start({ id: 'm13.trial', opponentId: t.opp.id, standInNpcId: 'hrolf' });
+      expect(t.engage!.mayEngage(t.opp.id)).toBe(false);
+      t.trials.stop('m13.trial');
+      expect(t.engage!.mayEngage(t.opp.id)).toBe(true);
+    });
+    it('Hrolf\'s own trial still completes with the exclusion applied, and releases it on the win', () => {
+      const t = make(true);
+      t.events.emit('ai.aggro', { actorId: t.opp.id, targetId: t.player.id } as never);
+      t.trials.start({ id: 'm13.trial', opponentId: t.opp.id, standInNpcId: 'hrolf' });
+      t.breakBy(t.player.id, t.opp.id);
+      t.breakBy(t.player.id, t.opp.id);
+      t.breakBy(t.player.id, t.opp.id);
+      expect(t.of('trial.won')).toEqual([{ trialId: 'm13.trial' }]);
+      expect(t.engage!.mayEngage(t.opp.id)).toBe(true);
+    });
+    it('is released on every way out (load, yield, loss, distance) and a second hold survives the trial end', () => {
+      type T = ReturnType<typeof make>;
+      const ends: [string, (t: T) => void, object?][] = [
+        ['load', (t) => t.trials.beginLoad()],
+        ['yield', (t) => void t.trials.yield('x')],
+        ['loss', (t) => t.breakBy(t.opp.id, t.player.id), { onLoss: 'end', breaksToWin: 1 }],
+        ['distance', (t) => {
+          for (let i = 0; i < 40; i++) {
+            t.feet.z -= 1;
+            t.tick(DT);
+          }
+        }],
+      ];
+      for (const [name, end, extra] of ends) {
+        const t = make(true);
+        t.events.emit('ai.aggro', { actorId: t.opp.id, targetId: t.player.id } as never);
+        t.trials.start({ id: 'x', opponentId: t.opp.id, ...extra });
+        expect(t.engage!.mayEngage(t.opp.id), name).toBe(false);
+        // An R10-style duel exclusion held across the trial end.
+        const release = t.engage!.exclude!(t.opp.id);
+        end(t);
+        expect(t.trials.state(), name).toBeNull();
+        expect(t.engage!.mayEngage(t.opp.id), `${name}: the other hold still stands`).toBe(false);
+        release();
+        release(); // idempotent: a double release must not eat the count
+        expect(t.engage!.mayEngage(t.opp.id), name).toBe(true);
+      }
+    });
+    it('without the service the trial behaves as before', () => {
+      const t = make(false);
+      expect(t.trials.start({ id: 'm13.trial', opponentId: t.opp.id })).toBe(true);
+      t.breakBy(t.player.id, t.opp.id);
+      expect(t.trials.state()).toMatchObject({ player: 1 });
+    });
   });
 });

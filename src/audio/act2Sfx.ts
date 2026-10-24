@@ -2,7 +2,8 @@ import { bandpass, drive, env, hit, highpass, lowpass, noise, phasor, render, sa
 
 /**
  * Synthesized placeholder sounds for the Act 2 sound pass: the A6b ground enemies (golem, slag crawler, hunters), the
- * A7 raid carts and barricade, and the A9 Weeping Bellows. Registered by `act2Sfx.plugin` under these stable keys; a real
+ * A7 raid carts and barricade, the A9 Weeping Bellows, the D04 pool valves and the Grimtooth and Redmane fights (their
+ * encounters play these keys straight on the audio service). Registered by `act2Sfx.plugin` under these stable keys; a real
  * recording registered under the same key replaces one. Deterministic, mono, CC0 (built on `sfxKit`).
  */
 export const ACT2_SFX_KEYS = [
@@ -32,6 +33,12 @@ export const ACT2_SFX_KEYS = [
   'sfx.slagmaw.erupt',
   'sfx.slagmaw.spit',
   'sfx.slagmaw.valve',
+  'sfx.d04pool.valve',
+  'sfx.grimtooth.growl',
+  'sfx.grimtooth.pounce',
+  'sfx.grimtooth.howl',
+  'sfx.redmane.horn',
+  'sfx.redmane.net',
 ] as const;
 /** The keys the Slagmaw fight (`src/bosses/slagmaw`) plays; they replace its placeholders under the same names. */
 export const SLAGMAW_SFX_KEYS = ACT2_SFX_KEYS.filter((k) => k.startsWith('sfx.slagmaw.'));
@@ -65,6 +72,12 @@ export const ACT2_SFX_VOLUME: Readonly<Record<Act2SfxKey, number>> = {
   'sfx.slagmaw.erupt': 1,
   'sfx.slagmaw.spit': 0.6,
   'sfx.slagmaw.valve': 0.7,
+  'sfx.d04pool.valve': 0.55,
+  'sfx.grimtooth.growl': 0.7,
+  'sfx.grimtooth.pounce': 0.75,
+  'sfx.grimtooth.howl': 0.85,
+  'sfx.redmane.horn': 0.8,
+  'sfx.redmane.net': 0.55,
 };
 
 /** A struck partial set (a bell, a metal ring): `partials` are [ratio, gain, decay per second]. */
@@ -387,6 +400,80 @@ export function act2SfxSamples(key: Act2SfxKey): Float32Array<ArrayBuffer> {
         const turn = t > 0.08 && t < 0.4 ? Math.sin(ph(260 + 120 * ((t - 0.08) / 0.32))) * 0.1 * Math.sin(Math.PI * ((t - 0.08) / 0.32)) : 0;
         const surge = t >= 0.3 ? steam(rnd()) * 5 * Math.min(1, (t - 0.3) / 0.12) * (1 - ((t - 0.3) / 1.0) ** 2) * (t < 1.3 ? 1 : 0) : 0;
         return iron + bang * 0.5 + turn + surge * 0.6;
+      });
+    }
+    case 'sfx.d04pool.valve': {
+      // A flooded valve wheel: a wetter, lower creak than the Bellows' dry squeal, a dull knock and a water gurgle.
+      const rnd = noise(127);
+      const ph = phasor();
+      const gph = phasor();
+      const wet = lowpass(700);
+      return render(1.0, (t) => {
+        const creak = t < 0.7 ? saw(ph(150 + 50 * (t / 0.7) + 25 * Math.sin(TAU * 7 * t)), 5) * 0.16 * Math.sin(Math.PI * (t / 0.7)) * (0.6 + 0.4 * Math.sin(TAU * 23 * t)) : 0;
+        const knock = ring(t - 0.68, 140, [[1, 0.5, 14], [2.3, 0.25, 18]]) * (t > 0.68 ? 1 : 0);
+        const gurgle = t > 0.15 ? Math.sin(gph(300 + 260 * ((t * 9) % 1))) * 0.14 * (0.5 + 0.5 * Math.sin(TAU * 9 * t)) ** 2 * (1 - (t - 0.15) / 0.85) : 0;
+        return drive(creak, 1.4) + knock * 0.7 + gurgle + wet(rnd()) * 0.9 * Math.min(1, t / 0.1) * (1 - t) ** 2;
+      });
+    }
+    case 'sfx.grimtooth.growl': {
+      // A low growl: filtered noise under two detuned saws, with a rough throat flutter.
+      const rnd = noise(128);
+      const a = phasor();
+      const b = phasor();
+      const throat = bandpass(120, 900);
+      return render(1.1, (t) => {
+        const f = 62 + 14 * Math.sin(TAU * 0.9 * t);
+        const flutter = 0.6 + 0.4 * Math.sin(TAU * 27 * t);
+        const saws = saw(a(f), 9) * 0.5 + saw(b(f * 1.035), 9) * 0.5;
+        return drive(saws * flutter * 0.55 + throat(rnd()) * 2.4 * flutter, 1.8) * 0.65 * env(t, 1.1, 0.12, 1.5);
+      });
+    }
+    case 'sfx.grimtooth.pounce': {
+      // A leap: a short rising whoosh, then the thud of the landing.
+      const rnd = noise(129);
+      const air = bandpass(400, 2200);
+      const rum = lowpass(160);
+      const ph = phasor();
+      return render(0.6, (t) => {
+        const whoosh = air(rnd(), 500 + 1500 * Math.min(1, t / 0.2)) * 4 * Math.sin(Math.PI * Math.min(1, t / 0.2)) * (t < 0.2 ? 1 : 0);
+        const thud = t >= 0.2 ? Math.sin(ph(80 - 35 * Math.min(1, (t - 0.2) / 0.1))) * hit(t - 0.2, 12) + rum(rnd()) * 3 * hit(t - 0.2, 14) : 0;
+        return whoosh * 0.6 + drive(thud * 1.2, 1.4) * 0.8;
+      });
+    }
+    case 'sfx.grimtooth.howl': {
+      // A howl: a tone that rises then falls, with vibrato and a breathy edge.
+      const rnd = noise(130);
+      const ph = phasor();
+      const breath = bandpass(500, 2500);
+      return render(2.4, (t) => {
+        const u = t / 2.4;
+        const f = 230 + 260 * Math.sin(Math.PI * Math.min(1, u * 1.15)) ** 1.4;
+        const vib = 1 + 0.025 * Math.sin(TAU * 5.5 * t) * Math.min(1, t / 0.6);
+        const p1 = ph(f * vib);
+        const tone = Math.sin(p1) + 0.35 * Math.sin(2 * p1);
+        return (tone * 0.5 + breath(rnd()) * 0.5) * env(t, 2.4, 0.35, 1.4);
+      });
+    }
+    case 'sfx.redmane.horn': {
+      // A war horn: a brassy low saw that swells in and holds, a fifth sounding under it.
+      const a = phasor();
+      const b = phasor();
+      const lip = lowpass(1800);
+      return render(1.8, (t) => {
+        const f = 110 * (1 + 0.012 * Math.sin(TAU * 5 * t)) * (t < 0.15 ? 0.94 + 0.06 * (t / 0.15) : 1);
+        const body = saw(a(f), 12) * 0.6 + saw(b(f * 1.5), 8) * 0.25;
+        return lip(drive(body, 1.6)) * 0.6 * env(t, 1.8, 0.3, 1.3);
+      });
+    }
+    case 'sfx.redmane.net': {
+      // A thrown weighted net: a rope whip, then a rustle of cord that fades as it spreads.
+      const rnd = noise(131);
+      const whip = highpass(2500);
+      const cord = bandpass(900, 4200);
+      return render(0.6, (t) => {
+        const crack = whip(rnd()) * 3 * hit(t, 60);
+        const rustle = cord(rnd()) * 3.5 * (0.5 + 0.5 * rnd()) * Math.min(1, t / 0.04) * hit(t, 5) * (0.6 + 0.4 * Math.sin(TAU * 31 * t));
+        return crack * 0.6 + rustle * 0.6;
       });
     }
   }

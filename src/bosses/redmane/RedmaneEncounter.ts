@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { playEnsured } from '../../audio/act2SfxEnsure';
 import type { Actor } from '../../actors/Actor';
 import type { BossDef } from '../../actors/BossRegistry';
 import type { GameContext } from '../../core/Game';
@@ -590,7 +591,7 @@ export class RedmaneEncounter implements RedmaneHooks {
     const audio = this.ctx.services.get('audio');
     if (!audio) return;
     try {
-      audio.playAt(key, this.root.position);
+      playEnsured(audio, key, this.root.position);
     } catch {
       // the audio thread owns the keys; a missing one is silent
     }

@@ -141,9 +141,20 @@ export class SwitchingMover implements EnemyMover {
     this.kinematic.maxSpeed = v;
   }
 
-  constructor(physics: PhysicsWorld, heightAt: (x: number, z: number) => number, feet: Vec3) {
+  private _recoveries = 0;
+
+  constructor(
+    physics: PhysicsWorld,
+    private readonly heightAt: (x: number, z: number) => number,
+    feet: Vec3,
+  ) {
     this.kinematic = new KinematicMover(physics, feet);
     this.flat = new HeightfieldMover(heightAt, feet);
+  }
+
+  /** How many times the kinematic body was put back on the terrain after falling through it (diagnostics, tests). */
+  get recoveries(): number {
+    return this._recoveries;
   }
 
   get asleep(): boolean {
@@ -167,8 +178,36 @@ export class SwitchingMover implements EnemyMover {
   }
 
   move(velocity: { x: number; z: number }, dt: number): void {
-    if (this.onFlat) this.flat.move(velocity, dt);
-    else this.kinematic.move(velocity, dt);
+    if (this.onFlat) return this.flat.move(velocity, dt);
+    this.kinematic.move(velocity, dt);
+    // Only an airborne body pays for the height sample.
+    if (!this.kinematic.grounded) this.recoverIfUnderground();
+  }
+
+  /**
+   * Fell through the terrain (woke or spawned over a collider patch that had not streamed in yet): put the body back on
+   * the terrain at the same x, z instead of letting it fall to the kill plane and beyond (polish B1). If the patch is
+   * still missing it drops at most `fallRecoverDepth` before the next snap.
+   */
+  private recoverIfUnderground(): void {
+    const f = this.kinematic.feet;
+    const ground = this.groundUnder(f);
+    if (ground === null) return;
+    this.kinematic.teleport({ x: f.x, y: ground + WORLD_AI.wakeLift, z: f.z });
+    this._recoveries++;
+  }
+
+  /** The terrain height at `f` when `f` is more than `fallRecoverDepth` below it, else null. */
+  private groundUnder(f: Vec3): number | null {
+    const ground = this.heightAt(f.x, f.z);
+    if (!Number.isFinite(ground)) return null;
+    return f.y < ground - WORLD_AI.fallRecoverDepth ? ground : null;
+  }
+
+  /** `f`, or `f` on the terrain when it is below it (a body that fell before it was parked). */
+  private onGround(f: THREE.Vector3): Vec3 {
+    const ground = this.groundUnder(f);
+    return ground === null ? f : { x: f.x, y: ground, z: f.z };
   }
 
   teleport(feet: Vec3): void {
@@ -180,23 +219,28 @@ export class SwitchingMover implements EnemyMover {
     return this.onFlat ? this.flat.interpolatedFeet(alpha, out) : this.kinematic.interpolatedFeet(alpha, out);
   }
 
-  /** Switch to the heightfield mover at the current feet and park the kinematic body there. */
+  /** Switch to the heightfield mover at the current feet (on the terrain if it fell under it) and park the kinematic body there. */
   sleep(): void {
     if (this._asleep) return;
     if (!this._flying) {
-      const f = this.kinematic.feet;
+      const f = this.onGround(this.kinematic.feet);
       this.flat.teleport(f);
       this.kinematic.teleport(f);
     }
     this._asleep = true;
   }
 
-  /** Switch back: teleport the kinematic body to the current feet lifted by WORLD_AI.wakeLift (not while flying). */
+  /**
+   * Switch back: teleport the kinematic body to the current feet lifted by WORLD_AI.wakeLift (not while flying). Feet
+   * more than `fallRecoverDepth` under the terrain are lifted onto it first. The owner wakes it only once the terrain
+   * collider patch under it exists (EnemyManager `groundReady`).
+   */
   wake(): void {
     if (!this._asleep) return;
     this._asleep = false;
     if (this._flying) return;
-    const f = this.flat.feet;
+    const f = this.onGround(this.flat.feet);
+    this.flat.teleport(f);
     this.kinematic.teleport({ x: f.x, y: f.y + WORLD_AI.wakeLift, z: f.z });
   }
 

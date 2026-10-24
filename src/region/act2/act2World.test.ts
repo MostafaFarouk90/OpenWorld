@@ -34,7 +34,7 @@ type Flags = Record<string, boolean>;
 const ACT1: Flags = {};
 const PHASE_C: Flags = { 'story.gate.a2': true };
 const D03_HOLD_UNSET: Flags = { 'story.gate.a2': true, 'story.d03.complete': true };
-const PHASE_D: Flags = { 'story.gate.a2': true, 'story.d03.complete': true, 'story.phase.oldsmokeOpen': true };
+const PHASE_D: Flags = { 'story.gate.a2': true, 'story.d03.complete': true };
 
 const reader = (flags: Flags) => ({ getFlag: (k: string) => flags[k] });
 function containment(flags: Flags): Containment {
