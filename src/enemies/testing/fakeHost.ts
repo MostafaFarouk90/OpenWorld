@@ -256,6 +256,8 @@ export class FakeHost {
   spells: { useShard?(g: number, s: string): void; addBurn?(n: number, s: string): void } | undefined = undefined;
   /** The Calm prompt's inputs, when a test provides `provideCalmUi`. */
   calmUi: CalmUiPort | undefined;
+  /** The terrain collider residency check, when a test provides `provideGroundResident`. */
+  groundResident: ((x: number, z: number) => boolean) | undefined;
   /** The core boss registry fake: tests set `bossOpen` and read `bossReleases`. */
   bossStates = new Map<string, { actorId: ActorId; releaseOpen: boolean; outcome: 'defeated' | 'released' | 'spared' | null }>();
   bossReleaseResult = true;
@@ -384,6 +386,11 @@ export class FakeHost {
     this.inventory ??= new FakeInventory(0);
     for (const [id, n] of Object.entries(items)) this.inventory.items.set(id, n);
     return this.inventory.items;
+  }
+
+  /** The host's `groundResident` (normally `ctx.terrain.isResident`), e.g. a real TerrainColliders' `isResident`. */
+  provideGroundResident(fn: (x: number, z: number) => boolean): void {
+    this.groundResident = fn;
   }
 
   /** The Calm prompt's inputs as a controllable object: set `focus`, `holding`, `modal` and `wheel`; read `active` and `claims`. */
@@ -606,6 +613,9 @@ export class FakeHost {
     },
     get calmUi() {
       return self.calmUi;
+    },
+    get groundResident() {
+      return self.groundResident;
     },
     bosses: {
       active: () => [...self.bossStates.keys()],

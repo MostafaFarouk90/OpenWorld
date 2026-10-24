@@ -404,5 +404,11 @@ export interface EnemyHost {
   /** The carried torch (read through the quests service); absent in hosts that have none. */
   torch?: TorchPort;
   heightAt(x: number, z: number): number;
+  /**
+   * True when the terrain collider patch under (x, z) is registered (`ctx.terrain.isResident`). A dormant enemy on
+   * terrain wakes only over a resident patch, and an awake one over a missing patch goes dormant, so a kinematic body
+   * never falls through the world after a teleport or respawn. Absent (tests): always resident.
+   */
+  groundResident?(x: number, z: number): boolean;
   warn(message: string): void;
 }
