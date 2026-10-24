@@ -38,7 +38,7 @@ describe('mistFog', () => {
     expect(f.color.getHex()).toBe(base.getHex());
   });
 
-  it('reaches near 120 m, far 1800 m and the haze colour at weight 1', () => {
+  it('reaches near 120 m, far 2600 m and the haze colour at weight 1', () => {
     const f = mistFog(900, 5040, base, 1);
     expect(f.near).toBe(MIST_FOG_NEAR);
     expect(f.far).toBe(MIST_FOG_FAR);
