@@ -7,7 +7,7 @@ import { renderAnchorsDoc } from '../anchorsDoc';
 import { ACT2_CORRIDORS } from '../act2/act2World';
 import { ACT3_CORRIDORS, ACT3_HOLES, SUMMIT_OPEN_WHEN } from '../act3Containment';
 import { Containment, DEAD_ROAD_CORRIDOR } from '../containment';
-import { fogWallForTrigger, fogWalls, needsPushBackDef } from '../fogWall';
+import { PUSH_BACK_MAX_DEPTH, fogWallForTrigger, fogWalls, needsPushBackDef } from '../fogWall';
 import { createFakeCore } from '../testing/fakeCore';
 import { readFileSync } from '../testing/nodeFs';
 import { ACT3_FACE_PUSH_DEPTH, ACT3_FOG_WALLS, FOG_FACE_ANCHORS, FOG_FACE_POINTS } from './act3World';
@@ -67,9 +67,10 @@ describe('the Act 3 fog faces against containment', () => {
     // Inside the band they still push; just past it they do not.
     expect(needsPushBackDef(fen, { x: 6990 + 99, z: 4700 }, FOG_FACE_POINTS['fog.fen-waste'])).toBe(true);
     expect(needsPushBackDef(fen, { x: 6990 + 101, z: 4700 }, FOG_FACE_POINTS['fog.fen-waste'])).toBe(false);
-    // A face without a depth (every shipped one) still holds its whole half-plane.
-    const { pushDepth: _d, ...unbounded } = fen;
-    expect(needsPushBackDef(unbounded, { x: 20365, z: 4704 }, FOG_FACE_POINTS['fog.fen-waste'])).toBe(true);
+    // A face without a depth (every shipped one) holds K0's PUSH_BACK_MAX_DEPTH band.
+    const { pushDepth: _d, ...unset } = fen;
+    expect(needsPushBackDef(unset, { x: 6990 + PUSH_BACK_MAX_DEPTH - 1, z: 4700 }, FOG_FACE_POINTS['fog.fen-waste'])).toBe(true);
+    expect(needsPushBackDef(unset, { x: 20365, z: 4704 }, FOG_FACE_POINTS['fog.fen-waste'])).toBe(false);
   });
 
   it('fog.fen-waste is the plan\'s face: x 6990, z 4500 to 4900, facing the Waste', () => {
