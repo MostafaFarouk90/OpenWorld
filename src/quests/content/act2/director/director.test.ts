@@ -78,7 +78,7 @@ function rig(opts: { classId?: string; dialogueOpen?: boolean; coreMercy?: boole
     herd: { start: rec('herd.start'), follow: rec('herd.follow'), stop: rec('herd.stop'), count: vi.fn(() => 0) },
     foxes: { guide: rec('foxes.guide') },
     trials: { start: rec('trials.start') },
-    wyrms: { tether: rec('wyrms.tether', () => () => {}), unchain: rec('wyrms.unchain'), flyAway: rec('wyrms.flyAway') },
+    wyrms: { tether: rec('wyrms.tether', (id: string) => () => void calls.push(['wyrms.untether', id])), unchain: rec('wyrms.unchain'), flyAway: rec('wyrms.flyAway') },
     foxFire: { apply: rec('foxFire.apply') },
     inventory: { add: rec('inventory.add', 1) },
   };
@@ -901,6 +901,64 @@ describe('director: M15 The Hunters\' Pens', () => {
     r.emit('save.loaded', { slot: 'a' });
     r.step();
     expect(raised.filter((t) => t === 'story.m15.set')).toHaveLength(1);
+    r.dispose();
+  });
+});
+
+describe('director: M15 witnesses, the tether and the caged wyrmling (review R1-2, R1-3, R1-4)', () => {
+  it('a revoked spare takes its witness back, and a hunter spared again counts again (R1-2)', () => {
+    r = rig();
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' });
+    r.emit('hunter.spared', { actorId: 'h2', kind: 'hunter-spearman' });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(2);
+    r.emit('mercy.revoked', { actorId: 'h1', track: null, removed: 0 });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(1);
+    r.emit('mercy.revoked', { actorId: 'h1', track: null, removed: 0 }); // twice: no double take-back
+    r.emit('mercy.revoked', { actorId: 'stranger', track: null, removed: 0 });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(1);
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(2);
+    r.dispose();
+  });
+
+  it('a revoke after a load (the dedupe restarted, the count restored) does not take a witness off', () => {
+    r = rig();
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' });
+    r.emit('save.loaded', { slot: 'a' });
+    r.emit('mercy.revoked', { actorId: 'h1', track: null, removed: 0 });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(1);
+    r.dispose();
+  });
+
+  it('dispose frees the cage tether and leaves nothing listening (R1-4)', () => {
+    r = rig();
+    expect(called(r, 'wyrms.untether')).toHaveLength(0);
+    r.dispose();
+    expect(called(r, 'wyrms.untether')).toEqual([['q12.m15.cage']]);
+    const before = r.calls.length;
+    r.active('m15');
+    r.emit('wyrm.unchained', { actorId: 'w' });
+    r.emit('interact', { interactableId: 'use:m15-cage', kind: 'prop', actorId: 'player', action: 'interact' });
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' });
+    r.emit('mercy.revoked', { actorId: 'h1', track: null, removed: 0 });
+    r.state.setFlag('story.m15.flown', true);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(300);
+    expect(r.calls.length).toBe(before);
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(0);
+  });
+
+  it('a load after the first flight sends the caged wyrmling away again; before the flight it leaves it be (R1-3)', () => {
+    r = rig();
+    r.active('m15');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(2);
+    expect(called(r, 'enemies.despawnGroup')).toHaveLength(0);
+    r.state.setFlag('story.m15.flown', true);
+    r.emit('save.loaded', { slot: 'a' });
+    expect(called(r, 'enemies.despawnGroup')).toHaveLength(0); // not from inside the load: the quest's respawn comes first
+    r.step(2);
+    expect(called(r, 'enemies.despawnGroup')).toEqual([['q12.m15.cage']]);
     r.dispose();
   });
 });

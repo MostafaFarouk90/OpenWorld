@@ -56,9 +56,15 @@ export function installM15(k: Kit): Off[] {
     seen.add(e.actorId);
     k.set('story.a2.witnesses', k.num('story.a2.witnesses') + 1);
   });
+  // A spare the player took back (struck the hunter before he walked off) is no witness, and the hunter may be spared again.
+  k.on('mercy.revoked', (e) => {
+    if (!seen.delete(e.actorId)) return;
+    k.set('story.a2.witnesses', Math.max(0, k.num('story.a2.witnesses') - 1));
+  });
 
   // The caged wyrmling is chained at the pen from the quest's start.
-  ctx.services.get('wyrms')?.tether(CAGE_GROUP, [{ anchor: 'cinderreach.m15.cage' }]);
+  // The remover is returned so a dispose takes the chain down with the director (review R1-4).
+  const untether = ctx.services.get('wyrms')?.tether(CAGE_GROUP, [{ anchor: 'cinderreach.m15.cage' }]);
 
   // The cage opened: the chain falls, the wyrmling stretches, then it flies and the first flight is set.
   const flight = (): void => {
@@ -87,6 +93,9 @@ export function installM15(k: Kit): Off[] {
   });
   k.on('save.loaded', () => {
     if (k.active('m15') && k.flag('story.m15.cageOpen') && !k.flag('story.m15.flown')) k.later(flight);
+    // The wyrmling flew in the saved world: the quest's start on this load must not stand it at the pen again (review R1-3).
+    // Next tick, after the enemies plugin's own load handling has respawned the quest's groups.
+    if (k.flag('story.m15.flown')) k.later(() => void ctx.services.get('enemies')?.despawnGroup(CAGE_GROUP));
   });
-  return [];
+  return untether ? [untether] : [];
 }
