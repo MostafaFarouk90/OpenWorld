@@ -25,19 +25,25 @@ const cams = (JSON.parse(readFileSync(new URL('./cameras.json', import.meta.url)
 const eyes = Object.entries(cams)
   .filter(([k]) => /^d[123]-/.test(k) && cams[k]!.cameras.eye)
   .map(([, v]) => v.cameras.eye!);
-const nearEye = (x: number, z: number): boolean =>
+const nearEye = (x: number, z: number, clear = EYE_CLEAR): boolean =>
   eyes.some((e) => {
     const [px, , pz] = e.pos as [number, number, number];
     const dx = e.look[0]! - px;
     const dz = e.look[2]! - pz;
     const len = Math.hypot(dx, dz) || 1;
     const t = Math.min(EYE_AHEAD, Math.max(0, ((x - px) * dx + (z - pz) * dz) / len));
-    return Math.hypot(x - (px + (dx / len) * t), z - (pz + (dz / len) * t)) < EYE_CLEAR;
+    return Math.hypot(x - (px + (dx / len) * t), z - (pz + (dz / len) * t)) < clear;
   });
 const bigThing = (id: string): boolean => classOf(id) === 'tree' || classOf(id) === 'rock' || classOf(id) === 'wood';
+/** A hedge run this close to the line of an eye camera (the verge shots stand between road and hedge) fills the frame. */
+const HEDGE_CLEAR = 3;
+/** A bush (not a fern) this close to an eye camera's line stands in the Knight's lap (d1-gate: a grey bush ball 1 m ahead of him). */
+const BUSH_CLEAR = 4;
 const rows = file.placements
   .filter((r) => r.tile === file.tile)
   .filter((r) => !(bigThing(r.id) && nearEye(r.x, r.z)))
+  .filter((r) => !(classOf(r.id) === 'hedge' && nearEye(r.x, r.z, HEDGE_CLEAR)))
+  .filter((r) => !(classOf(r.id) === 'bush' && !r.id.startsWith('fern') && nearEye(r.x, r.z, BUSH_CLEAR)))
   .map((r) => {
     const out: { id: string; x: number; z: number; yaw?: number; scale?: number } = { id: r.id, x: Math.round(r.x * 100) / 100, z: Math.round(r.z * 100) / 100 };
     if (r.yaw) out.yaw = Math.round(r.yaw);

@@ -53,7 +53,7 @@ const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Ti
   'bush-round-ash': { base: 'bush-round-a', scale: 1, tint: { sat: 0.08, mul: 0xccc4b6 } },
   'grass-clump-ash': { base: 'grass-clump-a', scale: 0.95, tint: { sat: 0, mul: 0xc4bcaa, glow: 0x3a3832 } },
   // D1 to D3 (the Dead Road corridor): the ghost-field hedge, bracken gone grey, straw grass, heath and gorse, orchard, holly.
-  'hedge-dead-a': { base: 'hedge-straight', scale: 0.85, girth: 0.7, tint: { sat: 0.15, mul: 0xa89c8a } },
+  'hedge-dead-a': { base: 'hedge-straight', scale: 0.85, girth: 0.7, tint: { sat: 0.2, mul: 0xd0c4b0 } },
   'fern-ash': { base: 'fern-a', scale: 1, tint: { sat: 0.12, mul: 0xd8ccb2 } },
   // Straw: the step between ash grey and meadow green. Its glow is a warm brown so a dry clump does not light up green.
   'grass-clump-dry': { base: 'grass-clump-a', scale: 1.05, tint: { hue: 18, sat: 0.45, mul: 0xe6d2a0, glow: 0x4a4020 } },

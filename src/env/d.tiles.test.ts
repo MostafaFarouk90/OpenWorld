@@ -115,7 +115,7 @@ describe('D1 to D3 rows', () => {
     }
   });
 
-  it('leave every eye camera s line clear of trunks and boulders (8 m from the camera, the Knight 4 m ahead and 10 m beyond)', () => {
+  it('leave every eye camera s line clear of trunks and boulders (8 m for trunks and boulders, 3 m for hedge runs, 4 m for bushes; the line runs from the camera past the Knight 4 m ahead)', () => {
     const eyes = Object.entries((cameras as { tiles: Record<string, { cameras: Record<string, { pos: number[]; look: number[] }> }> }).tiles)
       .filter(([k, v]) => /^d[123]-/.test(k) && v.cameras.eye)
       .map(([, v]) => v.cameras.eye!);
@@ -126,10 +126,10 @@ describe('D1 to D3 rows', () => {
       const len = Math.hypot(dx, dz);
       for (const r of all) {
         const cls = classOf(r.id);
-        if (cls !== 'tree' && cls !== 'rock' && cls !== 'wood') continue;
+        if (cls !== 'tree' && cls !== 'rock' && cls !== 'wood' && cls !== 'hedge' && !(cls === 'bush' && !r.id.startsWith('fern'))) continue;
         const t = Math.min(14, Math.max(0, ((r.x - e.pos[0]!) * dx + (r.z - e.pos[2]!) * dz) / len));
         const d = Math.hypot(r.x - (e.pos[0]! + (dx / len) * t), r.z - (e.pos[2]! + (dz / len) * t));
-        expect(d, `${r.id} at ${r.x},${r.z} fills the eye shot at ${e.pos[0]}`).toBeGreaterThanOrEqual(8);
+        expect(d, `${r.id} at ${r.x},${r.z} fills the eye shot at ${e.pos[0]}`).toBeGreaterThanOrEqual(cls === 'hedge' ? 3 : cls === 'bush' ? 4 : 8);
       }
     }
   });
