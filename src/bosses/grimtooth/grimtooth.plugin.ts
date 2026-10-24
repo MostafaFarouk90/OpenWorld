@@ -4,6 +4,7 @@ import { buildGrimtoothModel } from './GrimtoothModel';
 import { GRIMTOOTH_STRINGS_EN } from './strings.en';
 
 let director: GrimtoothDirector | null = null;
+let offSystem: (() => void) | null = null;
 
 /**
  * Gaffer Grimtooth, the D02 boss (plans/slice-2-grimtooth.md). Waits in 3a's Underways arena; the fight runs on the core
@@ -18,9 +19,11 @@ const plugin: GamePlugin = {
     const d = new GrimtoothDirector(ctx, { warn, modelState: () => 'ready', makeModel: () => buildGrimtoothModel(warn) });
     director = d;
     ctx.strings.register('en', GRIMTOOTH_STRINGS_EN);
-    ctx.systems.add({ id: 'bosses.grimtooth', fixedPhase: 'intent', order: -140, fixedUpdate: (dt) => d.fixedUpdate(dt) });
+    offSystem = ctx.systems.add({ id: 'bosses.grimtooth', fixedPhase: 'intent', order: -140, fixedUpdate: (dt) => d.fixedUpdate(dt) });
   },
   dispose() {
+    offSystem?.();
+    offSystem = null;
     director?.dispose();
     director = null;
   },

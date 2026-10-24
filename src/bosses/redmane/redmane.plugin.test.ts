@@ -204,6 +204,9 @@ describe('Thrandil Redmane on the real core', () => {
     const t = await setup();
     expect(t.ctx.strings.has('boss.thrandil-redmane.name')).toBe(true);
     expect(t.game.systems.has('bosses.redmane')).toBe(true);
+    // the plugin's own cleanup, before any whole-game teardown clears every system (review R1-5)
+    redmanePlugin.dispose?.();
+    expect(t.game.systems.has('bosses.redmane')).toBe(false);
     t.teardown();
     expect(t.game.systems.has('bosses.redmane')).toBe(false);
   });

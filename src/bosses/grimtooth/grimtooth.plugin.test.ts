@@ -216,6 +216,9 @@ describe('Gaffer Grimtooth on the real core', () => {
     const t = await setup();
     expect(t.ctx.strings.has('boss.gaffer-grimtooth.name')).toBe(true);
     expect(t.game.systems.has('bosses.grimtooth')).toBe(true);
+    // the plugin's own cleanup, before any whole-game teardown clears every system (review R1-5)
+    grimtoothPlugin.dispose?.();
+    expect(t.game.systems.has('bosses.grimtooth')).toBe(false);
     t.teardown();
     expect(t.game.systems.has('bosses.grimtooth')).toBe(false);
   });

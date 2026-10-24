@@ -170,6 +170,8 @@ const plugin: GamePlugin = {
       }),
     );
     offs.push(ctx.events.on('save.loaded', () => sparedSeen.clear()));
+    // A struck hunter is hostile again; sparing him afterwards counts again.
+    offs.push(ctx.events.on('mercy.revoked', (ev) => void sparedSeen.delete(ev.actorId)));
 
     // ---- the Cooling Draught
     let flask: THREE.Mesh | null = null;

@@ -5,6 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootChapter, type ChapterHarness } from '../../../../integration/chapterHarness';
 import { ACT2_TRIGGERS } from '../triggers';
 
+// Each test boots the whole manifest: the 5 s default is not a safe limit (review R3-3).
+vi.setConfig({ testTimeout: 60_000 });
+
 let h: ChapterHarness;
 beforeEach(async () => {
   vi.spyOn(console, 'warn').mockImplementation(() => {});

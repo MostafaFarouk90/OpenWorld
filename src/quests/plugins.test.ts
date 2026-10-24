@@ -107,6 +107,20 @@ describe('quests and dialogue plugins', () => {
     t.world.dispose();
   });
 
+  it('a post row keyed on a flag applies when the flag changes, with no quest change after it (R3-2)', async () => {
+    const t = await boot();
+    const placed: [string, string][] = [];
+    t.ctx.services.provide('npcs' as never, { place: (id: string, anchor: string) => (placed.push([id, anchor]), true) } as never);
+    t.game.fixedUpdate();
+    t.game.fixedUpdate();
+    const before = placed.length;
+    t.ctx.state.setFlag('story.a2.wennaAtCamp', true);
+    t.game.fixedUpdate();
+    expect(placed.slice(before)).toEqual([['wenna', 'npc-post.wenna.tilted-anvil']]);
+    t.game.dispose();
+    t.world.dispose();
+  });
+
   it('disabling quests skips dialogue as a dependant', async () => {
     const scene = new THREE.Scene();
     const moveModifiers = new MoveModifiers();

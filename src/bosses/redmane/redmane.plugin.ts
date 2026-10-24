@@ -6,6 +6,7 @@ import { REDMANE_STRINGS_EN } from './strings.en';
 const BARBARIAN = 'barbarian';
 
 let director: RedmaneDirector | null = null;
+let offSystem: (() => void) | null = null;
 
 /** Where Redmane's model stands: 'none' (headless), 'loading', 'ready' or 'failed' (the fight cannot start without hurtboxes). */
 type ModelState = 'none' | 'loading' | 'ready' | 'failed';
@@ -42,9 +43,11 @@ const plugin: GamePlugin = {
     });
     director = d;
     ctx.strings.register('en', REDMANE_STRINGS_EN);
-    ctx.systems.add({ id: 'bosses.redmane', fixedPhase: 'intent', order: -139, fixedUpdate: (dt) => d.fixedUpdate(dt) });
+    offSystem = ctx.systems.add({ id: 'bosses.redmane', fixedPhase: 'intent', order: -139, fixedUpdate: (dt) => d.fixedUpdate(dt) });
   },
   dispose() {
+    offSystem?.();
+    offSystem = null;
     director?.dispose();
     director = null;
   },

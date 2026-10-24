@@ -13,10 +13,12 @@ export const OLDSMOKE_POST_RULES: PostRule[] = [
   {
     npcId: 'slagg',
     home: 'npc-post.slagg.shaft',
-    // R09 and R10 are given at the market; M17 at the shaft; D04 at Deepdelve once it is active.
+    // M17 is given and reported at the shaft, whatever R09 or R10 are doing (review R3-1); R09 and R10 are played at the market;
+    // D04 at Deepdelve once it is active.
     posts: [
       // D04 is given and finished at Deepdelve (the mine interior defines the post).
       { when: { quest: 'd04', state: 'active' }, anchorId: 'npc-post.slagg.deepdelve' },
+      { when: { quest: 'm17', state: 'active' }, anchorId: 'npc-post.slagg.shaft' },
       { when: { any: [{ quest: 'r09', state: 'active' }, { quest: 'r10', state: 'active' }] }, anchorId: 'npc-post.slagg.market' },
     ],
   },

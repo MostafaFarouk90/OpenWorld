@@ -20,6 +20,9 @@ import inventoryPlugin from '../inventory/inventory.plugin';
 
 const SLICE = '1H_Melee_Attack_Slice_Horizontal';
 let gltf: { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
+// 'every real plugin' boots the whole manifest (3 to 5 s alone, more under load): the 5 s default is not a safe limit (review R3-3).
+vi.setConfig({ testTimeout: 30_000 });
+
 let physics: PhysicsWorld;
 
 beforeAll(async () => {
@@ -37,7 +40,10 @@ beforeEach(async () => {
   vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  physics.dispose();
+  vi.restoreAllMocks();
+});
 
 function key(win: EventTarget, type: 'keydown' | 'keyup', code: string): void {
   win.dispatchEvent(Object.assign(new Event(type), { code, repeat: false, preventDefault: () => {} }));

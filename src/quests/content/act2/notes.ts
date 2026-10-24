@@ -101,7 +101,7 @@ export const ACT2_NOTE_LIST: Act2Note[] = [
 ];
 
 /**
- * Notes on the spot an NPC stands on (Ealdred, Wynne, Corwin; focus ties go to `npc:`). Each outranks its NPC only while
+ * Notes on the spot an NPC stands on (Ealdred, Wynne, Corwin, Gerta; focus ties go to `npc:`). Each outranks its NPC only while
  * its read objective is current and it has not been read, and never while the NPC has a live talk objective (M13 `kin`
  * and R11 `widow` come before the reads): QuestNotes drops the priority otherwise (playtest NOTES_UNDER_NPCS).
  */
@@ -109,6 +109,8 @@ export const NOTES_UNDER_NPCS: ReadonlyMap<string, NonNullable<QuestNoteSpec['ou
   ['note-m13-shield', { npcId: 'ealdred', quest: 'm13', objective: 'hall' }],
   ['note-r11-camp-1', { npcId: 'wynne', quest: 'r11', objective: 'camp' }],
   ['note-m15-map', { npcId: 'corwin', quest: 'm15', objective: 'ledgers' }],
+  // Gerta stands on the market square's anchor, where M22's required `stalls` read lies (npc-post.gerta.guild = harrowmark.square.market).
+  ['note-m22-stalls', { npcId: 'gerta', quest: 'm22', objective: 'stalls' }],
 ]);
 
 export const ACT2_QUEST_NOTES: QuestNoteSpec[] = ACT2_NOTE_LIST.map((x) => {

@@ -57,7 +57,13 @@ export function makeKit(ctx: GameContext, warn: (m: string) => void, offs: Off[]
     ctx.events.on('mercy', (e) => void (e.actorId && mercied.add(e.actorId))),
     ctx.events.on('mercy.revoked', (e) => void mercied.delete(e.actorId)),
     ctx.events.on('actor.despawned', (e) => void mercied.delete(e.actorId)),
-    ctx.events.on('save.loaded', () => mercied.clear()),
+    ctx.events.on('save.loaded', () => {
+      mercied.clear();
+      // A load replaces the world: a queued callback was written for the world that is gone (review R1-1). The installers'
+      // own save.loaded listeners run after this one and queue what the loaded world needs.
+      pending.length = 0;
+      delayed.length = 0;
+    }),
   );
   const kit: Kit = {
     ctx,

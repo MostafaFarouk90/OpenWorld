@@ -446,6 +446,19 @@ describe('ground plugin (fake ctx)', () => {
     expect(t.of('hunter.spared')).toHaveLength(3);
   });
 
+  it('counts a hunter spared again after a strike revoked the mercy (review F2)', () => {
+    const t = boot();
+    const ev = { verb: 'spare', tier: 'normal', track: null, creature: 'hunter-spearman', actorId: 'h1' };
+    t.ctx.events.emit('mercy', ev);
+    t.ctx.events.emit('mercy.revoked', { actorId: 'h1', track: 'hunters', removed: 1 });
+    t.ctx.events.emit('mercy', ev);
+    expect(t.of('hunter.spared')).toHaveLength(2);
+    // a revoke of someone else changes nothing
+    t.ctx.events.emit('mercy.revoked', { actorId: 'other', track: 'hunters', removed: 1 });
+    t.ctx.events.emit('mercy', ev);
+    expect(t.of('hunter.spared')).toHaveLength(2);
+  });
+
   it('adds a settled form on a calm mercy event of a known cinder-golem, and persists it', () => {
     const t = boot();
     t.actors.set('g1', { id: 'g1', feet: new THREE.Vector3(3, 4, 5), facing: 1.25, def: { kind: 'cinder-golem' }, active: true });

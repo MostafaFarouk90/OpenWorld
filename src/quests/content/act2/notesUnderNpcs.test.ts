@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { QuestNotes, noteNeeded } from '../../notes';
-import { ACT2_QUEST_NOTES } from './notes';
+import { ACT2_NOTE_LIST, ACT2_QUEST_NOTES } from './notes';
+import { HARROWMARK_LAYOUT } from '../../../harrowmark/harrowmark.layout';
 import { ACT2_QUEST_DEFS } from './index';
 import { makeWorld } from '../../testKit';
 
@@ -12,7 +13,7 @@ describe('notes that stand on an NPC (A12 NOTES_UNDER_NPCS)', () => {
   const under = ACT2_QUEST_NOTES.filter((s) => (s.priority ?? 0) > 0);
 
   it('there are such notes (the guard below is not vacuous)', () => {
-    expect(under.map((s) => s.interactableId).sort()).toEqual(['use:note-m13-shield', 'use:note-m15-map', 'use:note-r11-camp-1']);
+    expect(under.map((s) => s.interactableId).sort()).toEqual(['use:note-m13-shield', 'use:note-m15-map', 'use:note-m22-stalls', 'use:note-r11-camp-1']);
   });
 
   it.each(under.map((s) => [s.interactableId, s] as const))('%s stops outranking its NPC once it has been read', (_id, spec) => {
@@ -37,7 +38,7 @@ describe('notes that stand on an NPC (A12 NOTES_UNDER_NPCS)', () => {
 // tie goes to, as the quest moves on.
 describe('a note on an NPC gives way when it should (real QuestManager)', () => {
   type Reg = { priority?: number; enabled(): boolean; onInteract(): void };
-  function setup(questId: 'm13' | 'm15' | 'r11') {
+  function setup(questId: 'm13' | 'm15' | 'm22' | 'r11') {
     const def = ACT2_QUEST_DEFS.find((q) => q.id === questId)!;
     const w = makeWorld([{ ...def, startWhen: undefined }]);
     expect(w.manager.start(questId)).toBe(true);
@@ -119,6 +120,25 @@ describe('a note on an NPC gives way when it should (real QuestManager)', () => 
       expect(prio(t.registered.get(note))).toBe(1);
     },
   );
+
+  it('M22: note-m22-stalls (on Gerta\'s market spot) outranks her while the stalls read is current and unread, then gives way', () => {
+    const t = setup('m22');
+    const stalls = t.registered.get('use:note-m22-stalls')!;
+    expect(prio(stalls)).toBe(0); // the read is not current yet
+    t.upTo('stalls');
+    expect(t.m.isObjectiveCurrent('m22', 'stalls')).toBe(true);
+    expect(prio(stalls)).toBe(1);
+    stalls.onInteract();
+    t.read('note-m22-stalls');
+    expect(t.m.counted('m22', 'stalls', 'note-m22-stalls')).toBe(true);
+    expect(prio(stalls)).toBe(0);
+  });
+
+  it('the stalls note and Gerta\'s post share an anchor, which is why the note needs the priority', () => {
+    const post = HARROWMARK_LAYOUT.anchors.find((a) => a.id === 'npc-post.gerta.guild')!;
+    const note = HARROWMARK_LAYOUT.anchors.find((a) => a.id === ACT2_NOTE_LIST.find((x) => x.id === 'note-m22-stalls')!.anchorId)!;
+    expect([note.x, note.z]).toEqual([post.x, post.z]);
+  });
 
   it('a refused open (another dialogue up) does not count as opened', () => {
     const def = ACT2_QUEST_DEFS.find((q) => q.id === 'm15')!;

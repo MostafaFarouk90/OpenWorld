@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ModelLibrary } from '../assets/swap/ModelLibrary';
-import { CLASS_RANGE, classOf, DENSITY, PlacementField, priority, type PlacementRow } from './PlacementField';
+import { CLASS_RANGE, classOf, DENSITY, GROUND_RANGE_SCALE, PlacementField, priority, type PlacementRow } from './PlacementField';
 import { placeholderGeometry, targetSize } from './placeholders';
 
 const flat = () => 2;
@@ -16,6 +16,8 @@ describe('classOf', () => {
     expect(classOf('grass-clump-c')).toBe('ground');
     expect(classOf('hedge-straight')).toBe('hedge');
     expect(classOf('barrel')).toBe('prop');
+    expect(classOf('willow-a')).toBe('tree');
+    expect(classOf('reeds-b')).toBe('bush');
   });
 });
 
@@ -66,6 +68,22 @@ describe('PlacementField without a model source', () => {
     field.dispose();
   });
 
+  it('stretches a variant in height and widens it by its girth (reeds from the grass clump)', async () => {
+    const THREE = await import('three');
+    // A source that serves a 1 m box for every env model, so the variant resolves to a real (non-placeholder) model.
+    const source = { load: async () => undefined, instantiate: () => new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial()) };
+    const field = new PlacementField(new ModelLibrary(source, () => undefined), flat);
+    await field.build([{ id: 'reeds-a', x: 0, z: 0, scale: 1 }]);
+    expect(field.stats.placeholders).toBe(0);
+    const mesh = (field.object.children[0].children[0] as import('three').Group).children[0] as import('three').InstancedMesh;
+    const m = new THREE.Matrix4();
+    mesh.getMatrixAt(0, m);
+    const sc = new THREE.Vector3().setFromMatrixScale(m);
+    expect(sc.y / sc.x).toBeCloseTo(2.6 / 1.9);
+    expect(sc.x).toBeCloseTo(sc.z);
+    field.dispose();
+  });
+
   it('thins by quality step, always dropping the same instances', async () => {
     const field = new PlacementField(new ModelLibrary(undefined, () => undefined), flat);
     await field.build(rows(100, 'grass-clump-a'));
@@ -92,6 +110,21 @@ describe('PlacementField without a model source', () => {
     expect(field.batchCounts('ground').visible).toBe(0);
     field.update(300, 0);
     expect(field.batchCounts('ground').visible).toBeGreaterThan(0);
+    field.dispose();
+  });
+
+  it('draws ground cover out to 56 m at high, 48 m at medium and 36 m at low quality', async () => {
+    expect(CLASS_RANGE.ground).toBe(56);
+    expect(CLASS_RANGE.ground * GROUND_RANGE_SCALE.medium).toBeCloseTo(48, 9);
+    expect(CLASS_RANGE.ground * GROUND_RANGE_SCALE.low).toBeCloseTo(36, 9);
+    const field = new PlacementField(new ModelLibrary(undefined, () => undefined), flat);
+    await field.build([{ id: 'grass-clump-a', x: 52, z: 0 }]);
+    field.setDensity('high');
+    field.update(0, 0);
+    expect(field.batchCounts('ground').visible).toBe(1);
+    field.setDensity('medium');
+    field.update(0, 0);
+    expect(field.batchCounts('ground').visible).toBe(0);
     field.dispose();
   });
 

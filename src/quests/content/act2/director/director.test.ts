@@ -78,7 +78,7 @@ function rig(opts: { classId?: string; dialogueOpen?: boolean; coreMercy?: boole
     herd: { start: rec('herd.start'), follow: rec('herd.follow'), stop: rec('herd.stop'), count: vi.fn(() => 0) },
     foxes: { guide: rec('foxes.guide') },
     trials: { start: rec('trials.start') },
-    wyrms: { tether: rec('wyrms.tether', () => () => {}), unchain: rec('wyrms.unchain'), flyAway: rec('wyrms.flyAway') },
+    wyrms: { tether: rec('wyrms.tether', (id: string) => () => void calls.push(['wyrms.untether', id])), unchain: rec('wyrms.unchain'), flyAway: rec('wyrms.flyAway') },
     foxFire: { apply: rec('foxFire.apply') },
     inventory: { add: rec('inventory.add', 1) },
   };
@@ -798,6 +798,30 @@ describe('director: M14 Hushed Anvil Rites', () => {
     r.dispose();
   });
 
+  it('counts tempers from the quest start into story.m14.tempers, sets story.m14.tempered at two and asks the quests to recheck (K0-2)', () => {
+    r = rig();
+    const recheck = vi.fn();
+    r.stubs.quests.recheck = recheck;
+    r.emit('gear.tempered', { itemId: 'sword', level: 1 }); // M14 not active: not counted
+    expect(r.state.getNumber('story.m14.tempers')).toBe(0);
+    r.active('m14');
+    r.emit('gear.tempered', { itemId: 'sword', level: 1 });
+    r.step();
+    expect(r.state.getNumber('story.m14.tempers')).toBe(1);
+    expect(r.state.getBool('story.m14.tempered')).toBe(false);
+    expect(recheck).not.toHaveBeenCalled();
+    r.emit('gear.tempered', { itemId: 'sword', level: 2 });
+    expect(r.state.getBool('story.m14.tempered')).toBe(true);
+    expect(recheck).not.toHaveBeenCalled(); // not from inside the event
+    r.step();
+    expect(recheck).toHaveBeenCalledTimes(1);
+    r.emit('gear.tempered', { itemId: 'sword', level: 3 }); // done: no further counting
+    r.step();
+    expect(r.state.getNumber('story.m14.tempers')).toBe(2);
+    expect(recheck).toHaveBeenCalledTimes(1);
+    r.dispose();
+  });
+
   it('the Anvil sings after the second tempering: the keeper speaks, and the beat is set when the hold clears', () => {
     r = rig();
     r.active('m14');
@@ -901,6 +925,115 @@ describe('director: M15 The Hunters\' Pens', () => {
     r.emit('save.loaded', { slot: 'a' });
     r.step();
     expect(raised.filter((t) => t === 'story.m15.set')).toHaveLength(1);
+    r.dispose();
+  });
+});
+
+describe('director: M15 witnesses, the tether and the caged wyrmling (review R1-2, R1-3, R1-4)', () => {
+  it('a revoked spare takes its witness back, and a hunter spared again counts again (R1-2)', () => {
+    r = rig();
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' });
+    r.emit('hunter.spared', { actorId: 'h2', kind: 'hunter-spearman' });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(2);
+    r.emit('mercy.revoked', { actorId: 'h1', track: null, removed: 0 });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(1);
+    r.emit('mercy.revoked', { actorId: 'h1', track: null, removed: 0 }); // twice: no double take-back
+    r.emit('mercy.revoked', { actorId: 'stranger', track: null, removed: 0 });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(1);
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(2);
+    r.dispose();
+  });
+
+  it('a revoke after a load (the dedupe restarted, the count restored) does not take a witness off', () => {
+    r = rig();
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' });
+    r.emit('save.loaded', { slot: 'a' });
+    r.emit('mercy.revoked', { actorId: 'h1', track: null, removed: 0 });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(1);
+    r.dispose();
+  });
+
+  it('dispose frees the cage tether and leaves nothing listening (R1-4)', () => {
+    r = rig();
+    expect(called(r, 'wyrms.untether')).toHaveLength(0);
+    r.dispose();
+    expect(called(r, 'wyrms.untether')).toEqual([['q12.m15.cage']]);
+    const before = r.calls.length;
+    r.active('m15');
+    r.emit('wyrm.unchained', { actorId: 'w' });
+    r.emit('interact', { interactableId: 'use:m15-cage', kind: 'prop', actorId: 'player', action: 'interact' });
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' });
+    r.emit('mercy.revoked', { actorId: 'h1', track: null, removed: 0 });
+    r.state.setFlag('story.m15.flown', true);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(300);
+    expect(r.calls.length).toBe(before);
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(0);
+  });
+
+  it('a load after the first flight sends the caged wyrmling away again; before the flight it leaves it be (R1-3)', () => {
+    r = rig();
+    r.active('m15');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(2);
+    expect(called(r, 'enemies.despawnGroup')).toHaveLength(0);
+    r.state.setFlag('story.m15.flown', true);
+    r.emit('save.loaded', { slot: 'a' });
+    expect(called(r, 'enemies.despawnGroup')).toHaveLength(0); // not from inside the load: the quest's respawn comes first
+    r.step(2);
+    expect(called(r, 'enemies.despawnGroup')).toEqual([['q12.m15.cage']]);
+    r.dispose();
+  });
+});
+
+describe('director: M15 flight timer across a load (review R1-1)', () => {
+  it('a load inside the four seconds drops the timer, and the cage works again in the loaded world', () => {
+    r = rig();
+    r.active('m15');
+    r.alive.set('q12.m15.cage', ['wyrmling#1']);
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    r.emit('wyrm.unchained', { actorId: 'wyrmling#1' });
+    r.step(100);
+    // the older save: no cage open, no flight
+    r.state.clearFlag('story.m15.cageOpen');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(300);
+    expect(r.state.getBool('story.m15.flown')).toBe(false);
+    expect(called(r, 'wyrms.flyAway')).toHaveLength(0);
+    expect(raised).not.toContain('story.m15.set');
+    // the cage is opened again in the loaded world
+    r.state.setFlag('story.m15.cageOpen', true);
+    r.emit('wyrm.unchained', { actorId: 'wyrmling#1' });
+    r.step(300);
+    expect(raised.filter((t) => t === 'story.m15.set')).toHaveLength(1);
+    expect(r.state.getBool('story.m15.flown')).toBe(true);
+    r.dispose();
+  });
+
+  it('a save made during the four seconds (cage open, no flight) still flies on its load', () => {
+    r = rig();
+    r.active('m15');
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    r.emit('wyrm.unchained', { actorId: 'w' });
+    r.step(100);
+    r.state.setFlag('story.m15.cageOpen', true);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(300);
+    expect(raised.filter((t) => t === 'story.m15.set')).toHaveLength(1);
+    r.dispose();
+  });
+
+  it('the timer does not fire once the quest is no longer active', () => {
+    r = rig();
+    r.active('m15');
+    r.emit('wyrm.unchained', { actorId: 'w' });
+    r.step(100);
+    r.quest.set('m15', 'inactive');
+    r.step(300);
+    expect(r.state.getBool('story.m15.flown')).toBe(false);
     r.dispose();
   });
 });
