@@ -5,6 +5,7 @@ import { createFakeCore } from '../../region/testing/fakeCore';
 import { MINE_DOOR_IDS, MINE_IDS, MINE_LANDINGS } from './kit';
 import { LIFT_STRINGS_EN, MINE_DOOR_LOCKS, registerLift, rideTo, SURFACE_LIFT_ANCHOR, type LiftCtx } from './lift';
 import { LiftMenuModel } from './liftMenu';
+import { LIFT_ARRIVE_SOUND, LIFT_CALL_SOUND, LIFT_REFUSE_SOUND, LIFT_RIDE_SOUND } from './liftSound';
 import { LIFT_ARMED_FLAG, LIFT_STOPS, stopById } from './liftStops';
 
 function fakeInteriors(start: string | null = null, fail: Partial<Record<'enter' | 'exit' | 'transfer', string>> = {}, withTransfer = false) {
@@ -35,10 +36,11 @@ function fakeInteriors(start: string | null = null, fail: Partial<Record<'enter'
   return { svc, calls };
 }
 
-function setup(opts: { current?: string | null; fail?: Partial<Record<'enter' | 'exit', string>>; quests?: Record<string, string> } = {}) {
+function setup(opts: { current?: string | null; fail?: Partial<Record<'enter' | 'exit', string>>; quests?: Record<string, string>; audio?: { register: unknown; play: unknown } } = {}) {
   const fc = createFakeCore();
   const { svc, calls } = fakeInteriors(opts.current ?? null, opts.fail);
   fc.services.set('interiors', svc);
+  if (opts.audio) fc.services.set('audio', opts.audio);
   fc.services.set('quests', { state: (id: string) => opts.quests?.[id] ?? 'inactive', objectiveDone: () => false });
   fc.ctx.strings.register('en', LIFT_STRINGS_EN);
   const ctx = { ...fc.ctx, hud: { openModal: () => () => {}, mount: () => () => {} }, input: {} } as unknown as LiftCtx;
@@ -158,6 +160,76 @@ describe('rideTo sequencing', () => {
     expect(await rideTo(svc, stopById('old'), refused)).toBe(false);
     expect(calls).toEqual([]);
     expect(refused).toHaveBeenCalledOnce();
+  });
+});
+
+describe('lift cues', () => {
+  const rig = (opts: Parameters<typeof setup>[0] = {}) => {
+    const audio = { register: vi.fn(), play: vi.fn(() => 1) };
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
+    const r = setup({ ...opts, audio });
+    r.fc.ctx.state.setFlag(LIFT_ARMED_FLAG, true);
+    r.fc.ctx.state.setFlag('story.m17.started', true);
+    r.fc.ctx.state.setFlag('story.r08.started', true);
+    anchor(r.fc, SURFACE_LIFT_ANCHOR);
+    r.fc.tick('rules');
+    return { ...r, audio, played: () => audio.play.mock.calls.map((c) => String((c as unknown[])[0])) };
+  };
+
+  it('plays the call cue on opening the picker, then ride and arrival when a ride completes', async () => {
+    const { fc, menus, played } = rig();
+    fc.interactables.get('use:lift')!.onInteract({} as never);
+    expect(played()).toEqual([LIFT_CALL_SOUND]);
+    menus[0].choose('old');
+    await flush();
+    expect(played()).toEqual([LIFT_CALL_SOUND, LIFT_RIDE_SOUND, LIFT_ARRIVE_SOUND]);
+  });
+
+  it('a refused ride plays the denied clack and not the arrival', async () => {
+    const { fc, menus, played } = rig({ fail: { enter: 'locked' } });
+    fc.interactables.get('use:lift')!.onInteract({} as never);
+    menus[0].choose('old');
+    await flush();
+    expect(played()).toContain(LIFT_REFUSE_SOUND);
+    expect(played()).not.toContain(LIFT_ARRIVE_SOUND);
+    expect(played().filter((k) => k === LIFT_REFUSE_SOUND)).toHaveLength(1);
+  });
+
+  it('a locked choice and a dead lift both refuse once, with no ride or arrival', async () => {
+    const { fc, menus, played } = rig();
+    fc.interactables.get('use:lift')!.onInteract({} as never);
+    menus[0].choose('deepdelve');
+    await flush();
+    expect(played()).toEqual([LIFT_CALL_SOUND, LIFT_REFUSE_SOUND]);
+
+    const dead = setup({ audio: { register: vi.fn(), play: vi.fn() } });
+    anchor(dead.fc, SURFACE_LIFT_ANCHOR);
+    dead.fc.tick('rules');
+    dead.fc.interactables.get('use:lift')!.onInteract({} as never);
+    const play = (dead.fc.services.get('audio') as { play: ReturnType<typeof vi.fn> }).play;
+    expect(play.mock.calls.map((c) => c[0])).toEqual([LIFT_REFUSE_SOUND]);
+    expect(dead.menus).toHaveLength(0);
+  });
+
+  it('riding to the stop it is at plays nothing beyond the call', async () => {
+    const { fc, menus, played } = rig();
+    fc.interactables.get('use:lift')!.onInteract({} as never);
+    menus[0].choose('surface');
+    await flush();
+    expect(played()).toEqual([LIFT_CALL_SOUND]);
+  });
+
+  it('works without an audio service', async () => {
+    const { fc, menus, calls } = setup();
+    fc.ctx.state.setFlag(LIFT_ARMED_FLAG, true);
+    fc.ctx.state.setFlag('story.m17.started', true);
+    fc.ctx.state.setFlag('story.r08.started', true);
+    anchor(fc, SURFACE_LIFT_ANCHOR);
+    fc.tick('rules');
+    fc.interactables.get('use:lift')!.onInteract({} as never);
+    menus[0].choose('shaft');
+    await flush();
+    expect(calls).toHaveLength(1);
   });
 });
 

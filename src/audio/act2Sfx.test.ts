@@ -318,3 +318,53 @@ describe('act2 sfx hooks', () => {
     }).not.toThrow();
   });
 });
+
+describe('boss and D04 pool cues', () => {
+  const NEW = ['sfx.d04pool.valve', 'sfx.grimtooth.growl', 'sfx.grimtooth.pounce', 'sfx.grimtooth.howl', 'sfx.redmane.horn', 'sfx.redmane.net'] as const;
+  const interactValve = (c: ReturnType<typeof fakeCtx>, interactableId: string | undefined, action = 'interact', kind = 'valve') =>
+    c.emit('interact', { kind, action, interactableId, actorId: 'player' });
+
+  it('registers the five boss cues and the pool valve, each with samples', () => {
+    for (const key of NEW) {
+      expect(ACT2_SFX_KEYS).toContain(key);
+      const s = act2SfxSamples(key);
+      expect(s.length).toBeGreaterThan(1000);
+      expect(s.every(Number.isFinite)).toBe(true);
+      expect(s.reduce((m, v) => Math.max(m, Math.abs(v)), 0)).toBeGreaterThan(0.05);
+      expect(ACT2_SFX_VOLUME[key]).toBeGreaterThan(0);
+    }
+    const c = fakeCtx();
+    setup(c);
+    vi.runAllTimers();
+    for (const key of NEW) expect(c.registered.filter((r) => r.key === key)).toHaveLength(1);
+  });
+
+  it('plays the pool cue (not the Bellows clank) for a d04pool valve, once per turn', () => {
+    const c = fakeCtx();
+    setup(c);
+    interactValve(c, 'valve:d04pool1-2');
+    interactValve(c, 'valve:d04pool2-1');
+    expect(c.played).toEqual(['sfx.d04pool.valve', 'sfx.d04pool.valve']);
+  });
+
+  it('keeps the Bellows valve on its own cue and other valves silent', () => {
+    const c = fakeCtx();
+    setup(c);
+    interactValve(c, 'valve:bellows-1');
+    expect(c.played).toEqual(['sfx.bellows.valve']);
+    interactValve(c, 'valve:slagmaw-1');
+    interactValve(c, 'valve:d04-1');
+    interactValve(c, 'valve:mine-3');
+    interactValve(c, undefined);
+    interactValve(c, 'valve:d04pool1-1', 'mercy');
+    interactValve(c, 'valve:d04pool1-1', 'interact', 'use');
+    expect(c.played).toEqual(['sfx.bellows.valve']);
+  });
+
+  it('is silent without an audio service', () => {
+    const c = fakeCtx({ audio: false });
+    setup(c);
+    expect(() => interactValve(c, 'valve:d04pool1-1')).not.toThrow();
+    expect(c.played).toEqual([]);
+  });
+});
