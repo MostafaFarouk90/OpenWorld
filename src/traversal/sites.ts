@@ -1,8 +1,9 @@
 // Where K7's water content sits: the M24 dive pool and the Greyfen ferry. K1 is the master of positions
-// (plans/act3-K1.md): `M24_POOL` and `ACT3_FERRY` from `src/region/act3/act3Places.ts`. Until K1's branch lands these
-// are copies of K1's work-in-progress values (branch claude/project-thread-gh7upo at 031e731), in K1's shapes, so
-// swapping to the import is one line each. K1's paths were still empty there: the three below are K7's provisional
-// channel lines, landing to landing. K3 places the fence and the anchors (`greyfen.m24.pool*`, `greyfen.ferry.<stop>`).
+// (plans/act3-K1.md): `M24_POOL` and `ACT3_FERRY` from `src/region/act3/act3Places.ts` (the stops are K1's
+// `FERRY_STOP_POINTS`, on dry quays). Until K1's branch lands these are copies of K1's values (branch
+// claude/project-thread-gh7upo at 1c2b80b), in K1's shapes; sites.test.ts fails if they drift. The paths below are
+// K7's provisional lines, used only when K1's module is absent (fenWater.ts `ferryNetwork` prefers K1's channels).
+// K3 places the fence and the anchors (`greyfen.m24.pool*`, `greyfen.ferry.<stop>`).
 import type { Vec3Like } from '../core/events';
 import type { FerryRouteDef } from '../movement/types';
 import type { WaterVolumeDef } from '../water/types';
@@ -32,9 +33,9 @@ export const ACT3_FERRY: FerryNetworkData = {
   surfaceY: 6.0,
   stops: [
     { id: 'reedgate', x: 3600, z: 10100 },
-    { id: 'mere', x: 3150, z: 11900 },
-    { id: 'greywatch', x: 2800, z: 14250 },
-    { id: 'mireweather', x: 5500, z: 12350 },
+    { id: 'mere', x: 3168, z: 11907 },
+    { id: 'greywatch', x: 2786, z: 14260 },
+    { id: 'mireweather', x: 5516, z: 12344 },
   ],
   paths: [
     { from: 'reedgate', to: 'mere', points: [{ x: 3585, z: 10130 }, { x: 3450, z: 10900 }, { x: 3170, z: 11870 }] },

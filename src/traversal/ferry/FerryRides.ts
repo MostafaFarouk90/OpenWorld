@@ -50,7 +50,10 @@ export class FerryLeg {
   }
 }
 
-export type BoardRefusal = 'noToken' | 'notRunning' | 'combat' | 'busy' | 'noRoute';
+export type BoardRefusal = 'noToken' | 'notRunning' | 'combat' | 'hauling' | 'busy' | 'noRoute';
+
+/** What the waystones' safe teleport resolves with (`busy` means it did not move the player). */
+export type SafeTeleportOutcome = { ok: true } | { ok: false; reason: string };
 
 export interface FerryPorts {
   feet(): Vec3Like;
@@ -69,7 +72,7 @@ export interface FerryPorts {
   /** A K7 teleport (the water system is told, so it never reads as a jump). */
   teleport(p: Vec3Like, yaw: number): void;
   /** The waystones' fade, freeze and terrain wait; null when the service is absent (the place is then direct). */
-  safeTeleport(p: Vec3Like, yaw: number): Promise<unknown> | null;
+  safeTeleport(p: Vec3Like, yaw: number): Promise<SafeTeleportOutcome> | null;
   /** The stop's landing: where the player boards and arrives (a dry standing point), or null when not placed. */
   landing(stopId: string): Vec3Like | null;
   showBoat(p: { x: number; y: number; z: number; yaw: number }): void;
@@ -145,6 +148,8 @@ export class FerryRides {
     if (!this.ports.running()) return 'notRunning';
     if (!this.ports.hasToken()) return 'noToken';
     if (this.ports.inCombat()) return 'combat';
+    // A sled or a carried load stays ashore (said, unlike the silent busy: the player may not see why).
+    if (this.ports.movementMode() === 'haul') return 'hauling';
     if (this.ports.busy()) return 'busy';
     return null;
   }
@@ -192,8 +197,9 @@ export class FerryRides {
       return;
     }
     void job.then(
-      () => {
-        if (this.ride === r) this.arrive(true, false);
+      (o) => {
+        // `busy` (another safe teleport in flight) left the player on the boat: place them at the landing directly.
+        if (this.ride === r) this.arrive(true, o?.ok === false && o.reason === 'busy');
       },
       () => {
         if (this.ride === r) this.arrive(true);

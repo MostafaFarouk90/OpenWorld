@@ -129,6 +129,15 @@ describe('traversal plugin', () => {
     expect(carry.heldSled).toBe('sled.test');
     ctx.damage.apply({ attackerId: 'hawk', targetId: PLAYER_ID, amount: 3, kind: 'melee' });
     expect(carry.heldSled).toBeNull();
+    // Fast travel by a waystone while hauling sends it back; a payload-less "reset haul" warns and never throws.
+    sled!.onInteract(ctx.player.actor);
+    expect(carry.heldSled).toBe('sled.test');
+    ctx.events.emit('fastTravel', { fromId: 'a', toId: 'b' });
+    expect(carry.heldSled).toBeNull();
+    expect(() => (ctx.events.emit as (t: string, p?: unknown) => void)('npc.carry.resetHaul')).not.toThrow();
+    // Never from the saddle.
+    ctx.services.provide('mount', { mounted: () => true } as never);
+    expect(sled!.enabled?.()).toBe(false);
   }, PLUGIN_TEST_TIMEOUT);
 
   it('seated on the ferry the player is immune; a save stores the departure stop; fast travel and the mount are refused', async () => {

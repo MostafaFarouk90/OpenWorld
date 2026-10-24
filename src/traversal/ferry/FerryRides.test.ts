@@ -3,11 +3,11 @@ import type { MoveModifier } from '../../core/MoveModifiers';
 import type { Vec3Like } from '../../core/events';
 import type { MovementMode } from '../../movement/types';
 import { ACT3_FERRY, ferryRoutes } from '../sites';
-import { DECK_HEIGHT, FERRY_SOURCE, FERRY_SPEED, FerryLeg, FerryRides } from './FerryRides';
+import { DECK_HEIGHT, FERRY_SOURCE, FERRY_SPEED, FerryLeg, FerryRides, type SafeTeleportOutcome } from './FerryRides';
 
 const DT = 1 / 60;
 
-function harness(o: { token?: boolean; running?: boolean; combat?: boolean; mounted?: boolean; safe?: 'resolve' | 'reject' | 'none' } = {}) {
+function harness(o: { token?: boolean; running?: boolean; combat?: boolean; mounted?: boolean; safe?: 'resolve' | 'reject' | 'busy' | 'none' } = {}) {
   const s = {
     feet: { x: 3600, y: 6.5, z: 10100 } as Vec3Like,
     token: o.token ?? true,
@@ -43,11 +43,13 @@ function harness(o: { token?: boolean; running?: boolean; combat?: boolean; moun
     teleport: vi.fn((p: Vec3Like) => (s.feet = { ...p })),
     safeTeleport: vi.fn((p: Vec3Like) => {
       if (o.safe === 'none') return null;
-      return new Promise<void>((res, rej) => {
+      return new Promise<SafeTeleportOutcome>((res, rej) => {
         resolveJob = () => {
+          // `busy`: the waystones' teleport did not run, so the player is not moved.
+          if (o.safe === 'busy') return res({ ok: false, reason: 'busy' });
           s.feet = { ...p };
           if (o.safe === 'reject') rej(new Error('stuck'));
-          else res();
+          else res({ ok: true });
         };
       });
     }),
@@ -126,7 +128,7 @@ describe('the Greyfen ferry', () => {
     const legLen = new FerryLeg(ferryRoutes(ACT3_FERRY)[0]).length;
     for (let i = 0; i < Math.ceil((legLen / FERRY_SPEED) * 60) + 2; i++) h.f.fixedUpdate(DT, false);
     expect(h.f.riding).toBe(false);
-    expect(h.s.feet).toEqual({ x: 3150, y: 6.5, z: 11900 });
+    expect(h.s.feet).toEqual({ x: 3168, y: 6.5, z: 11907 });
     expect(h.s.mode).toBe('walk');
     expect(h.s.mods.size).toBe(0);
     expect(h.s.boat).toBeNull();
@@ -135,7 +137,7 @@ describe('the Greyfen ferry', () => {
 
   it('rides a leg backwards (Mere to Reedgate)', () => {
     const h = harness();
-    h.s.feet = { x: 3150, y: 6.5, z: 11900 };
+    h.s.feet = { x: 3168, y: 6.5, z: 11907 };
     expect(h.f.board('mere', 'reedgate')).toBeNull();
     for (let i = 0; i < 60 * 600; i++) h.f.fixedUpdate(DT, false);
     expect(h.s.feet).toEqual({ x: 3600, y: 6.5, z: 10100 });
@@ -147,7 +149,7 @@ describe('the Greyfen ferry', () => {
     h.f.fixedUpdate(DT, true); // the boarding press
     expect(h.ports.safeTeleport).not.toHaveBeenCalled();
     h.f.fixedUpdate(DT, true);
-    expect(h.ports.safeTeleport).toHaveBeenCalledWith({ x: 3150, y: 6.5, z: 11900 }, expect.any(Number));
+    expect(h.ports.safeTeleport).toHaveBeenCalledWith({ x: 3168, y: 6.5, z: 11907 }, expect.any(Number));
     expect(h.f.riding).toBe(true);
     h.finishJob();
     await Promise.resolve();
@@ -162,7 +164,7 @@ describe('the Greyfen ferry', () => {
     a.f.board('reedgate', 'mere');
     a.f.skip();
     expect(a.f.riding).toBe(false);
-    expect(a.s.feet).toEqual({ x: 3150, y: 6.5, z: 11900 });
+    expect(a.s.feet).toEqual({ x: 3168, y: 6.5, z: 11907 });
     const b = harness({ safe: 'reject' });
     b.f.board('reedgate', 'mere');
     b.f.skip();
@@ -170,7 +172,27 @@ describe('the Greyfen ferry', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(b.f.riding).toBe(false);
-    expect(b.s.feet).toEqual({ x: 3150, y: 6.5, z: 11900 });
+    expect(b.s.feet).toEqual({ x: 3168, y: 6.5, z: 11907 });
+  });
+
+  it('a skip whose safe teleport is refused as busy still lands the player at the stop, never mid-river', async () => {
+    const h = harness({ safe: 'busy' });
+    h.f.board('reedgate', 'mere');
+    for (let i = 0; i < 60; i++) h.f.fixedUpdate(DT, false);
+    h.f.skip();
+    h.finishJob();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(h.f.riding).toBe(false);
+    expect(h.s.feet).toEqual({ x: 3168, y: 6.5, z: 11907 });
+    expect(h.s.mode).toBe('walk');
+  });
+
+  it('hauling a sled or a load is refused with a toast', () => {
+    const h = harness();
+    h.s.mode = 'haul';
+    expect(h.f.board('reedgate', 'mere')).toBe('hauling');
+    expect(h.ports.toast).toHaveBeenCalledWith('ferry.refused.hauling');
   });
 
   it('save.loaded ends the ride without moving the player (the loader put them at the departure stop)', () => {

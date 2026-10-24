@@ -119,7 +119,8 @@ export class CarryResets {
     return () => {
       if (this.tracked.get(id) !== t) return;
       this.tracked.delete(id);
-      this.pending.delete(id);
+      // A reset cut off in its fade still lifts the black (nothing else would).
+      if (this.pending.delete(id)) this.ports.fade(0, CARRY_RULES.fadeInSeconds);
       this.syncMode();
     };
   }
@@ -169,7 +170,7 @@ export class CarryResets {
   }
 
   fixedUpdate(dt: number): void {
-    for (const [id, p] of [...this.pending]) {
+    if (this.pending.size > 0) for (const [id, p] of [...this.pending]) {
       p.t += dt;
       if (p.t < CARRY_RULES.fadeOutSeconds) continue;
       const t = this.tracked.get(id);
@@ -202,6 +203,7 @@ export class CarryResets {
 
   load(data: unknown): void {
     this.progress.clear();
+    if (this.pending.size > 0) this.ports.fade(0, CARRY_RULES.fadeInSeconds);
     this.pending.clear();
     const prog = (data as Partial<CarrySave> | null)?.progress;
     if (!prog || typeof prog !== 'object') return;

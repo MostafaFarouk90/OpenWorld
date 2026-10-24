@@ -137,6 +137,11 @@ export class WaterVolumes {
     return Math.max(0, v.surfaceY - this.ports.groundAt(x, z, v.surfaceY + 0.5));
   }
 
+  /** The ground height under (x, z), probed down from `fromY`. */
+  groundAt(x: number, z: number, fromY: number): number {
+    return this.ports.groundAt(x, z, fromY);
+  }
+
   /** Routes whose volume is registered and active now. */
   activeRoutes(): DiveRouteStandsDef[] {
     const out: DiveRouteStandsDef[] = [];

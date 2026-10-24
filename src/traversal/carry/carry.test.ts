@@ -259,3 +259,16 @@ describe('a held quest carry (K13: R18 eggs, R17 bundles)', () => {
     expect(h.events.some((e) => e[0] === 'carry.reset')).toBe(true);
   });
 });
+
+describe('a reset cut off in its fade', () => {
+  it.each(['untracked', 'loaded'] as const)('when %s, the fade still lifts', (how) => {
+    const h = harness();
+    const off = h.sleds.add({ id: 'sled.r15.1', route: ROUTE });
+    h.sleds.take('sled.r15.1');
+    expect(h.resets.reset('sled.r15.1', 'asked')).toBe(true);
+    expect(h.ports.fade).toHaveBeenLastCalledWith(1, CARRY_RULES.fadeOutSeconds);
+    if (how === 'untracked') off();
+    else h.resets.load(null);
+    expect(h.ports.fade).toHaveBeenLastCalledWith(0, CARRY_RULES.fadeInSeconds);
+  });
+});

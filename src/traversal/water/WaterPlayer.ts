@@ -161,14 +161,15 @@ export class WaterPlayer {
         this.startDive(v);
         return;
       }
-      this.setWade(depth >= WADE_TUNING.minDepth ? wadeScale(this.ports.fenBoots()) : null);
+      this.setWade(depth >= WADE_TUNING.minDepth && !this.ports.mounted() ? wadeScale(this.ports.fenBoots()) : null);
       return;
     }
     if (v.kind === 'deep' || depth > WADE_TUNING.maxDepth) {
       this.pushBack(f);
       return;
     }
-    if (depth >= WADE_TUNING.minDepth) {
+    // A rider is slowed by the mount's speed cap (the Ashmare walks); the wade scale would multiply on top of it.
+    if (depth >= WADE_TUNING.minDepth && !this.ports.mounted()) {
       this.setWade(wadeScale(this.ports.fenBoots()));
     } else {
       this.setWade(null);
@@ -337,7 +338,9 @@ export class WaterPlayer {
     d.placed = true;
     // Read now, not when the drowning began: a sluice may have remapped the pocket during the fade.
     const stand = this.safeStand;
-    if (stand) this.ownTeleport(stand);
+    // On the probed ground, never inside it (the stand's height may come from a provisional copy of K1's numbers). The
+    // probe starts 1 m up, under any ceiling a player fits beneath (K3's interior ledges), so it never lands on a roof.
+    if (stand) this.ownTeleport({ x: stand.x, y: Math.max(stand.y, this.volumes.groundAt(stand.x, stand.z, stand.y + 1) + 0.05), z: stand.z });
     else this.warnOnce('water: a drowning found no stand point; the player stays where they are');
     this.exitDive(null);
     this.ports.fade(0, 0.4);
@@ -346,15 +349,19 @@ export class WaterPlayer {
   private exitDive(pocketId: string | null): void {
     if (!this.diving) return;
     const volumeId = this.diveVolume ?? '';
+    // A head-out already sent `dive.surfaced` for this surfacing (a stand or ledge exit): one event, not two.
+    const surfacedSent = !this.headWasUnder;
     this.endDiveState();
     if (this.ports.movementMode() === 'dive') this.ports.setMovementMode('walk');
     this.ports.emit('breath.changed', { value: DIVE_TUNING.breathSeconds });
-    this.ports.emit('dive.surfaced', { volumeId, pocketId });
+    if (!surfacedSent) this.ports.emit('dive.surfaced', { volumeId, pocketId });
     this.guard = 2;
   }
 
   /** Drops every piece of dive state on the player (controller mode, vertical intent, modifiers). */
   private endDiveState(): void {
+    // A drowning cut short (a load, another system's teleport) never sent its fade back in: send it, or the screen stays black.
+    if (this.drowning && !this.drowning.placed) this.ports.fade(0, 0.4);
     if (this.diving || this.diveOff || this.freezeOff) {
       this.ports.setControllerMode('walk');
       this.ports.setVerticalIntent(null);

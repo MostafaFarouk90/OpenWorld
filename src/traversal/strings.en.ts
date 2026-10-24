@@ -6,6 +6,7 @@ export const TRAVERSAL_STRINGS_EN: Record<string, string> = {
   'ferry.refused.noToken': 'Dudda keeps the ferry for those who carry his token.',
   'ferry.refused.notRunning': 'The ferry is moored. Dudda will not run it without his horn.',
   'ferry.refused.combat': 'Not while foes are near.',
+  'ferry.refused.hauling': 'Dudda will not take a sled or a load on the punt.',
   'ferry.refused.noRoute': 'No ferry runs from here.',
   'ferry.stop.reedgate': 'Reedgate',
   'ferry.stop.mere': "Hathren's Mere",

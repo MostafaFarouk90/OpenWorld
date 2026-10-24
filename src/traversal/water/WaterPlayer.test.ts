@@ -310,7 +310,7 @@ describe('diving', () => {
     const h = harness();
     dive(h);
     h.tick(30 * 60 + 40);
-    expect(h.s.feet).toEqual({ x: 48, y: 0.5, z: 0 });
+    expect(h.s.feet).toEqual({ x: 48, y: 0.55, z: 0 });
   });
 
   it('a sluice flipped during the drowning fade sends the player to the remapped pocket', () => {
@@ -431,5 +431,46 @@ describe('diving', () => {
     dive(h);
     expect(h.ports.warn).toHaveBeenCalledTimes(1);
     expect(h.s.safe?.position).toEqual({ x: 48, y: 0.5, z: 0 });
+  });
+});
+
+describe('review fixes', () => {
+  it('a rider in wading water gets no wade modifier (the mount cap does the slowing)', () => {
+    const h = harness();
+    h.s.mounted = true;
+    h.at(5, -0.8);
+    h.tick();
+    expect(h.s.mods.has(WADE_SOURCE)).toBe(false);
+    h.s.mounted = false;
+    h.tick();
+    expect(h.s.mods.has(WADE_SOURCE)).toBe(true);
+  });
+
+  it('a drowning cut short by a load lifts its fade', () => {
+    const h = harness();
+    dive(h);
+    h.tick(30 * 60 + 2);
+    expect(h.ports.fade).toHaveBeenLastCalledWith(1, DIVE_RULES.drownFadeSeconds);
+    h.w.reset();
+    expect(h.ports.fade).toHaveBeenLastCalledWith(0, 0.4);
+  });
+
+  it("a drowning cut short by another system's teleport lifts its fade", () => {
+    const h = harness();
+    dive(h);
+    h.tick(30 * 60 + 2);
+    h.at(-200, 0.5);
+    h.tick();
+    expect(h.w.state).toBe('dry');
+    expect(h.ports.fade).toHaveBeenLastCalledWith(0, 0.4);
+  });
+
+  it('a stand exit sends dive.surfaced once, not once for the head-out and again for the end', () => {
+    const h = harness();
+    dive(h);
+    h.at(55, -1);
+    h.tick();
+    expect(h.w.state).not.toBe('diving');
+    expect(h.named('dive.surfaced')).toHaveLength(1);
   });
 });

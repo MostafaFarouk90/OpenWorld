@@ -12,8 +12,9 @@ import { WADE_TUNING } from '../water/types';
 import type { WaterService } from '../water/types';
 import { CarryResets } from './carry/CarryResets';
 import { Sleds } from './carry/Sleds';
+import { fenVolumes, ferryNetwork, k1FenSurfaces } from './fenWater';
 import { FerryRides } from './ferry/FerryRides';
-import { ACT3_FERRY, ferryInteractId, ferryRoutes, ferryStopAnchor, m24Route, m24Volume, M24_POOL } from './sites';
+import { ferryInteractId, ferryRoutes, ferryStopAnchor, m24Route, m24Volume, M24_POOL } from './sites';
 import { TRAVERSAL_STRINGS_EN } from './strings.en';
 import { boatMesh, sledMesh } from './visuals';
 import { WaterPlayer, mountCapAt } from './water/WaterPlayer';
@@ -33,9 +34,25 @@ export const FERRY_TOKEN_ID = 'key.ferry-token';
 export const FERRY_RUNNING_FLAG = 'story.m24.complete';
 const DROWN_ATTACK_ID = 'traversal.drown';
 
+/** What the plugin put outside its scoped context (the meshes in the scene, the mount's speed cap). */
+const disposers: (() => void)[] = [];
+
+function disposeMesh(o: THREE.Object3D): void {
+  o.removeFromParent();
+  o.traverse((m) => {
+    if (m instanceof THREE.Mesh) {
+      m.geometry.dispose();
+      (m.material as THREE.Material).dispose();
+    }
+  });
+}
+
 const traversal: GamePlugin = {
   id: 'traversal',
   dependsOn: ['core'],
+  dispose() {
+    for (const d of disposers.splice(0)) d();
+  },
   setup(ctx) {
     ctx.strings.register('en', TRAVERSAL_STRINGS_EN);
     const warn = (m: string) => console.warn(m);
@@ -109,20 +126,27 @@ const traversal: GamePlugin = {
     // The M24 dive point (K1's hollow, K3's fence and anchors).
     volumes.register(m24Volume(M24_POOL));
     volumes.registerRoute(m24Route(M24_POOL));
+    // The fen's wade and deep water (K1's surfaces): wading, the Fen Boots, the deep push-back.
+    for (const v of fenVolumes(k1FenSurfaces(), warn)) volumes.register(v);
 
     // The Ashmare walks in any water and is pushed back from deep and dive water with the rider.
     let capOff: (() => void) | null = null;
     const mountCap = (x: number, z: number) => mountCapAt(volumes, x, z, MOUNT_TUNING.walkSpeed);
 
-    // ---- the ferry
+    // ---- the ferry (K1's channels when K1's module is in the build)
+    const network = ferryNetwork();
     /** A stop's landing: K3's anchor when placed, else K1's point on the terrain. */
     const landing = (stopId: string): Vec3Like | null => {
       const a = ctx.anchors.find(ferryStopAnchor(stopId));
       if (a) return { ...a.position };
-      const s = ACT3_FERRY.stops.find((q) => q.id === stopId);
+      const s = network.stops.find((q) => q.id === stopId);
       return s ? { x: s.x, y: heightAt(s.x, s.z) + 0.05, z: s.z } : null;
     };
     let boat: THREE.Object3D | null = null;
+    disposers.push(() => {
+      if (boat) disposeMesh(boat);
+      boat = null;
+    });
     const ferry = new FerryRides({
       feet: () => ctx.player.feet,
       yaw: () => ctx.player.facingYaw,
@@ -159,7 +183,7 @@ const traversal: GamePlugin = {
       toast,
       warn,
     });
-    for (const r of ferryRoutes(ACT3_FERRY)) ferry.register(r);
+    for (const r of ferryRoutes(network)) ferry.register(r);
     // Seated, the player takes no damage: a ride never ends in a death on the boat.
     ctx.damage.addModifier('traversal.ferry.seated', (req, target) => {
       if (ferry.riding && target.id === PLAYER_ID) req.outcome = 'immune';
@@ -184,6 +208,21 @@ const traversal: GamePlugin = {
         },
       });
     }
+    // Seated: the skip prompt rides with the player (and, nearest of all, it takes the interact focus).
+    const seatTmp = new THREE.Vector3();
+    ctx.interaction.register({
+      id: 'ferry:seated',
+      kind: 'use',
+      position: (out) => {
+        const f = ctx.player.feet;
+        return out.copy(seatTmp.set(f.x, f.y + 1, f.z));
+      },
+      radius: 3,
+      coneDegrees: 360,
+      promptKey: 'ferry.seated',
+      enabled: () => ferry.riding,
+      onInteract: () => ferry.skip(),
+    });
     const ferryService: FerryService = {
       stops: () => ferry.stops(),
       destinations: (s) => ferry.destinations(s),
@@ -212,6 +251,10 @@ const traversal: GamePlugin = {
       warn,
     });
     const sledMeshes = new Map<string, THREE.Object3D>();
+    disposers.push(() => {
+      for (const m of sledMeshes.values()) disposeMesh(m);
+      sledMeshes.clear();
+    });
     const sleds = new Sleds(
       {
         feet: () => ctx.player.feet,
@@ -232,7 +275,7 @@ const traversal: GamePlugin = {
         hide: (id) => {
           const m = sledMeshes.get(id);
           if (m) {
-            m.removeFromParent();
+            disposeMesh(m);
             sledMeshes.delete(id);
           }
         },
@@ -256,7 +299,9 @@ const traversal: GamePlugin = {
           get promptKey() {
             return sleds.held === def.id ? 'carry.sled.drop' : 'carry.sled.take';
           },
-          enabled: () => (sleds.held === null || sleds.held === def.id) && (mode() === 'walk' || mode() === 'haul'),
+          // Never from the saddle: the haul refuses the mount (item 25), and riders keep the interact key.
+          enabled: () =>
+            (sleds.held === null || sleds.held === def.id) && (mode() === 'walk' || mode() === 'haul') && !(ctx.services.get('mount')?.mounted() ?? false),
           onInteract: () => {
             if (sleds.held === def.id) sleds.drop();
             else sleds.take(def.id);
@@ -275,8 +320,10 @@ const traversal: GamePlugin = {
       },
     };
     ctx.services.provide('carry', carryService);
+    // A dialogue `event` effect may carry no payload.
     ctx.events.on('npc.carry.resetHaul', (e) => {
-      if (!carryService.reset(e.id)) warn(`carry: "reset haul" for unknown or busy "${e.id}"`);
+      const id = (e as { id?: unknown } | undefined)?.id;
+      if (typeof id !== 'string' || !carryService.reset(id)) warn(`carry: "reset haul" for unknown or busy "${String(id)}"`);
     });
     ctx.events.on('carry.reset', () => toast('carry.reset.toast'));
     // A direct hit drops the sled; cold ticks, Burn and scripted damage never do (review B3).
@@ -308,16 +355,21 @@ const traversal: GamePlugin = {
       loadedThisRound = false;
     });
     ctx.events.on('flag.changed', () => water.onFlagsChanged());
+    // Fast travel by a waystone only (not a load, a respawn, a capture or a skip): held carries go back (item 25).
+    ctx.events.on('fastTravel', () => resets.onTravel());
 
-    let wasTravelling = false;
     ctx.systems.add({
       id: 'traversal.water',
       fixedPhase: 'intent',
       order: 50,
       fixedUpdate(dt) {
         const mount = ctx.services.get('mount');
-        if (mount && !capOff) capOff = mount.addSpeedCap(mountCap);
-        ferry.fixedUpdate(dt, ctx.input.actions.pressed('interact'));
+        if (mount && !capOff) {
+          capOff = mount.addSpeedCap(mountCap);
+          disposers.push(() => capOff?.());
+        }
+        // The skip comes through the seated interactable below, so F never also reaches something by the landing.
+        ferry.fixedUpdate(dt, false);
         water.fixedUpdate(dt);
       },
     });
@@ -326,9 +378,6 @@ const traversal: GamePlugin = {
       fixedPhase: 'rules',
       order: 60,
       fixedUpdate(dt) {
-        const travelling = ctx.services.get('waystones')?.travelling ?? false;
-        if (travelling && !wasTravelling) resets.onTravel();
-        wasTravelling = travelling;
         sleds.fixedUpdate();
         resets.fixedUpdate(dt);
       },
