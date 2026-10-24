@@ -71,6 +71,19 @@ export interface RiverGate {
 
 /** Derives the River Gate's shutter from the Act 1 flag through ctx.gates, so a loaded Act 1 save closes it again. `apply` runs once at the start and then only on change. */
 export function watchRiverGate(gates: Pick<FlagGates, 'flag'>, apply: (open: boolean) => void): RiverGate {
+  return watchShutter(gates, RIVER_GATE_FLAG, apply);
+}
+
+/** Set when Act 3 opens (K0): the North-west Gate's shutter opens onto the Fen Road (Act 3 thread K1). */
+export const NORTHWEST_GATE_FLAG = 'story.gate.a3';
+
+/** The North-west Gate's shutter, derived like the River Gate's, so a loaded Act 2 save closes it again. */
+export function watchNorthwestGate(gates: Pick<FlagGates, 'flag'>, apply: (open: boolean) => void): RiverGate {
+  return watchShutter(gates, NORTHWEST_GATE_FLAG, apply);
+}
+
+/** A shutter open while one flag holds. `apply` runs once at the start and then only on change. */
+function watchShutter(gates: Pick<FlagGates, 'flag'>, flag: string, apply: (open: boolean) => void): RiverGate {
   let open = false;
   let last: boolean | null = null;
   const push = (): void => {
@@ -78,7 +91,7 @@ export function watchRiverGate(gates: Pick<FlagGates, 'flag'>, apply: (open: boo
     last = open;
     apply(open);
   };
-  const off = gates.flag(RIVER_GATE_FLAG, (on) => {
+  const off = gates.flag(flag, (on) => {
     open = !!on;
     push();
   });

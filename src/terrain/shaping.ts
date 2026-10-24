@@ -19,6 +19,8 @@ export interface PlateauDef {
   box: ShapeBox;
   height: number;
   blend: number;
+  /** v0.7: a pit cut into the finished plateau (straight walls with a 1 m soft edge), e.g. a dive pool. */
+  hollow?: { box: ShapeBox; depth: number };
 }
 
 /** Scales the ridged-mountain term by `1 - strength` inside `box`, blended over `blend` metres. */
@@ -51,6 +53,12 @@ export interface RoadDef {
   maxSideSlope?: number;
   /** v0.7: a lower cap on the blend than MAX_ROAD_BLEND (mountain switchbacks with rock-cut sides). */
   maxBlend?: number;
+  /** v0.7: the profile never dips under this (a raised causeway over a marsh); the ends must be at or above it. */
+  minHeight?: number;
+  /** v0.7: the arc from which `minHeight` holds (default 0, the whole road). */
+  minHeightFrom?: number;
+  /** v0.7: arcs where `minHeight` does not hold, so the road dips to the ground (gaps in a causeway). */
+  gaps?: readonly { arc: number; halfLength: number }[];
 }
 
 /** A bog pool mask inside a flat: low-frequency patches pressed down to `floor`. */
@@ -518,6 +526,15 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
     if (range && (p.height < range.min || p.height > range.max)) throw new Error(`${where}: height outside the terrain range`);
     const reach = expand(p.box, p.blend);
     if (protectedBox && overlaps(reach, protectedBox)) throw new Error(`${where}: reaches into the Phase A protected box`);
+    if (p.hollow) {
+      const hb = p.hollow.box;
+      checkBox(`${where} hollow`, hb, bounds);
+      if (hb.minX < p.box.minX + 1 || hb.maxX > p.box.maxX - 1 || hb.minZ < p.box.minZ + 1 || hb.maxZ > p.box.maxZ - 1) {
+        throw new Error(`${where}: hollow must lie 1 m inside the plateau box`);
+      }
+      if (!(Number.isFinite(p.hollow.depth) && p.hollow.depth > 0)) throw new Error(`${where}: hollow depth must be > 0`);
+      checkFloor(`${where} hollow`, p.height - p.hollow.depth);
+    }
     return { def: p, reach };
   });
 
@@ -526,6 +543,11 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
       if (!inBox(p.reach, x, z)) continue;
       const w = 1 - smoothstep(0, p.def.blend, boxDistance(p.def.box, x, z));
       if (w > 0) h += (p.def.height - h) * w;
+      const hollow = p.def.hollow;
+      if (hollow && inBox(hollow.box, x, z)) {
+        const inside = Math.min(x - hollow.box.minX, hollow.box.maxX - x, z - hollow.box.minZ, hollow.box.maxZ - z);
+        h -= hollow.depth * smoothstep(0, 1, inside);
+      }
     }
     return h;
   };
@@ -666,6 +688,24 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
       const sg = segments[seg];
       const t = Math.min(Math.max(s - sg.s0, 0), sg.len);
       g[i] = roadGround(sg.ax + sg.dx * t, sg.az + sg.dz * t);
+    }
+    if (r.minHeight !== undefined) {
+      if (!Number.isFinite(r.minHeight)) throw new Error(`${where}: minHeight must be finite`);
+      const from = r.minHeightFrom ?? 0;
+      if (!Number.isFinite(from) || from < 0 || from >= length) throw new Error(`${where}: minHeightFrom must lie inside the road`);
+      if ((from === 0 && g[0] < r.minHeight - 1e-9) || g[n - 1] < r.minHeight - 1e-9) throw new Error(`${where}: an end lies under minHeight`);
+      const gaps = r.gaps ?? [];
+      for (const gp of gaps) {
+        if (!finite(gp.arc, gp.halfLength) || gp.halfLength <= 0 || gp.arc - gp.halfLength <= 0 || gp.arc + gp.halfLength >= length) {
+          throw new Error(`${where}: a gap must lie inside the road`);
+        }
+      }
+      for (let i = 0; i < n; i++) {
+        const s = i * step;
+        if (s >= from && !gaps.some((gp) => Math.abs(s - gp.arc) <= gp.halfLength)) g[i] = Math.max(g[i], r.minHeight);
+      }
+    } else if ((r.gaps && r.gaps.length) || r.minHeightFrom !== undefined) {
+      throw new Error(`${where}: gaps and minHeightFrom need minHeight`);
     }
     const start = g[0];
     const end = g[n - 1];

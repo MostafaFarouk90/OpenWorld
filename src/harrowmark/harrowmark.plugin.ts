@@ -8,8 +8,8 @@ import { resolveLayout } from '../region/resolveLayout';
 import { modelLibraryFor } from '../assets/swap/ModelLibrary';
 import { buildCityModels, type CityModels } from './cityArt';
 import { buildCity } from './cityBuild';
-import { watchRiverGate, watchSouthGate } from './gate';
-import { RIVER_PORTCULLIS_ID } from './city';
+import { watchNorthwestGate, watchRiverGate, watchSouthGate } from './gate';
+import { NORTHWEST_PORTCULLIS_ID, RIVER_PORTCULLIS_ID } from './city';
 import { DOORS, HARROWMARK_LAYOUT } from './harrowmark.layout';
 import { HARROWMARK_NPC_DEFS, HARROWMARK_NPC_STRINGS_EN } from './npcDefs';
 import './types';
@@ -94,6 +94,8 @@ export function createHarrowmarkPlugin(opts: HarrowmarkPluginOptions = {}): Game
         cleanups.push(() => gate.dispose());
         const river = watchRiverGate(ctx.gates, (open) => city.setShutter(RIVER_PORTCULLIS_ID, !open));
         cleanups.push(() => river.dispose());
+        const northwest = watchNorthwestGate(ctx.gates, (open) => city.setShutter(NORTHWEST_PORTCULLIS_ID, !open));
+        cleanups.push(() => northwest.dispose());
 
         const change = buildWorldChange(ctx);
         cleanups.push(() => change.dispose());
@@ -111,6 +113,7 @@ export function createHarrowmarkPlugin(opts: HarrowmarkPluginOptions = {}): Game
           ctx.services.provide('harrowmark', {
             southGate: { state: gate.state, override: gate.override },
             riverGate: { open: river.open },
+            northwestGate: { open: northwest.open },
             drawCalls: () => city.drawCalls,
             modelBatches: () => {
               const m = models;

@@ -89,7 +89,8 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 
 | id | kind | x | z | footprint | mode |
 | --- | --- | --- | --- | --- | --- |
-| oldsmoke-wall-n | wall | 20550 | 8242 | 475.4 x 3.5 | solid |
+| oldsmoke-wall-n1 | wall | 20482.65 | 8242 | 340.7 x 3.5 | solid |
+| oldsmoke-wall-n2 | wall | 20727.35 | 8242 | 120.7 x 3.5 | solid |
 | oldsmoke-wall-s1 | wall | 20435.45 | 7758 | 246.3 x 3.5 | solid |
 | oldsmoke-wall-s2 | wall | 20680.15 | 7758 | 215.1 x 3.5 | solid |
 | oldsmoke-wall-w | wall | 20308 | 8000 | 3.5 x 475.4 | solid |
@@ -99,6 +100,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | oldsmoke-tower-3 | tower | 20308 | 8242 | 8 x 8 | solid |
 | oldsmoke-tower-4 | tower | 20792 | 8242 | 8 x 8 | solid |
 | oldsmoke-gate | gate | 20565.6 | 7758 | 14 x 1.5 | open |
+| oldsmoke-gate-north | gate | 20660 | 8242 | 14 x 1.5 | open |
 | oldsmoke-miner-house-1 | house | 20350 | 7800 | 8 x 8 | solid |
 | oldsmoke-miner-house-2 | house | 20350 | 7835 | 8 x 8 | solid |
 | oldsmoke-miner-house-3 | house | 20350 | 7870 | 8 x 8 | solid |

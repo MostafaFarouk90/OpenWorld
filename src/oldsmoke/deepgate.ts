@@ -4,7 +4,7 @@
 // (griselHall.ts). The shaft head is shaftHead.ts, the furnace houses furnaces.ts.
 import type { LayoutData, StructureSpec } from '../region/layoutTypes';
 import { a, box, numbered, open, solid, sphere } from './helpers';
-import { BOX, EDGE, GATE, GATE_W, HALL, HALL_DOOR, MARKET as M, TOWER, WALL_H, WALL_T } from './sites';
+import { BOX, EDGE, GATE, GATE_W, HALL, HALL_DOOR, MARKET as M, NORTH_GATE, TOWER, WALL_H, WALL_T } from './sites';
 
 const HX = (EDGE.e - EDGE.w) / 2;
 const HZ = (EDGE.n - EDGE.s) / 2;
@@ -16,6 +16,16 @@ export const MINERS_HALL = { x: BOX.minX + 140, z: BOX.minZ + 85, w: 12, d: 9 };
 export const STEWARDS_OFFICE = { x: BOX.minX + 395, z: BOX.minZ + 95, w: 10, d: 8 };
 export const PAYMASTER = { x: M.x + 75, z: M.z + 35, w: 10, d: 8 };
 
+/** The north wall from x `from` to `to`, in two pieces either side of the north gate. */
+function northWall(from: number, to: number): StructureSpec[] {
+  const w = { from, to: NORTH_GATE.x - GATE_W / 2 };
+  const e = { from: NORTH_GATE.x + GATE_W / 2, to };
+  return [
+    solid('oldsmoke-wall-n1', 'wall', (w.from + w.to) / 2, EDGE.n, w.to - w.from, WALL_T, WALL_H),
+    solid('oldsmoke-wall-n2', 'wall', (e.from + e.to) / 2, EDGE.n, e.to - e.from, WALL_T, WALL_H),
+  ];
+}
+
 export function deepgateLayout(): Pick<LayoutData, 'anchors' | 'triggers' | 'structures'> {
   const inset = TOWER / 2 + 0.3;
   const west = { from: EDGE.w + inset, to: GATE.x - GATE_W / 2 };
@@ -23,7 +33,8 @@ export function deepgateLayout(): Pick<LayoutData, 'anchors' | 'triggers' | 'str
   const northLen = 2 * (HX - inset);
   const sideLen = 2 * (HZ - inset);
   const walls: StructureSpec[] = [
-    solid('oldsmoke-wall-n', 'wall', MID.x, EDGE.n, northLen, WALL_T, WALL_H),
+    // Act 3 (K1): the north wall opens on the Deepgate Track's gate (NORTH_GATE).
+    ...northWall(EDGE.w + inset, EDGE.w + inset + northLen),
     solid('oldsmoke-wall-s1', 'wall', (west.from + west.to) / 2, EDGE.s, west.to - west.from, WALL_T, WALL_H),
     solid('oldsmoke-wall-s2', 'wall', (east.from + east.to) / 2, EDGE.s, east.to - east.from, WALL_T, WALL_H),
     solid('oldsmoke-wall-w', 'wall', EDGE.w, MID.z, WALL_T, sideLen, WALL_H),
@@ -37,6 +48,7 @@ export function deepgateLayout(): Pick<LayoutData, 'anchors' | 'triggers' | 'str
       ] as const
     ).map(([x, z], i) => solid(`oldsmoke-tower-${i + 1}`, 'tower', x, z, TOWER, TOWER, TOWER_H)),
     open('oldsmoke-gate', 'gate', GATE.x, GATE.z, GATE_W, 1.5),
+    open('oldsmoke-gate-north', 'gate', NORTH_GATE.x, NORTH_GATE.z, GATE_W, 1.5),
   ];
 
   // Market stalls: three each side of the lane, the well in the lane's head.
