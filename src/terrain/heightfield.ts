@@ -9,6 +9,7 @@
 import { TERRAIN, WORLD_BOUNDS } from '../config/constants';
 import { createNoise2D } from './noise';
 import { WORLD_SHAPE } from './shape';
+import { ACT3_MIN_FLOOR, ACT3_PROTECTED_BOXES } from './shape/act3';
 import { detailRelief } from './shape/detailRelief';
 import { buildShaper } from './shaping';
 
@@ -99,7 +100,10 @@ export function naturalHeightAt(x: number, z: number): number {
   return baseHeight(x, z, 1);
 }
 
-const shaper = buildShaper(WORLD_SHAPE, baseHeight, { bounds: WORLD_BOUNDS, heightRange: HEIGHT_RANGE });
+/** The shaper's options for the world (tests rebuild variants of the world shape with them). */
+export const WORLD_SHAPER_OPTIONS = { bounds: WORLD_BOUNDS, heightRange: HEIGHT_RANGE, protectedBoxes: ACT3_PROTECTED_BOXES, minFloor: ACT3_MIN_FLOOR };
+
+const shaper = buildShaper(WORLD_SHAPE, baseHeight, WORLD_SHAPER_OPTIONS);
 
 /** Terrain height in metres at world position (x, z). Deterministic and thread-safe. */
 export function heightAt(x: number, z: number): number {

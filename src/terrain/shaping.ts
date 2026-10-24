@@ -1,6 +1,9 @@
 // Terrain shaping on top of the procedural heightfield (contracts/heightfield.md "Terrain shaping", v0.5):
 // ridge suppression, flat plateaus and graded road corridors. Plain TypeScript with no Three.js imports, so it
 // runs unchanged on the main thread and inside the terrain workers. `heightfield.ts` applies it inside `heightAt`.
+// v0.7 (Act 3, K1): flats, uplifts and troughs, applied after suppression and before plateaus, so plateaus and roads
+// are fitted on the ground they make. Every new feature keeps out of the protected boxes (Acts 1 and 2).
+import { createNoise2D } from './noise';
 
 /** Axis-aligned box in engine metres (+Z north). */
 export interface ShapeBox {
@@ -46,12 +49,97 @@ export interface RoadDef {
    * edges and the blend edges), capped at MAX_ROAD_BLEND.
    */
   maxSideSlope?: number;
+  /** v0.7: a lower cap on the blend than MAX_ROAD_BLEND (mountain switchbacks with rock-cut sides). */
+  maxBlend?: number;
+}
+
+/** A bog pool mask inside a flat: low-frequency patches pressed down to `floor`. */
+export interface FlatPoolsDef {
+  floor: number;
+  /** Noise wavelength in metres. */
+  scale: number;
+  /** 0..1: the share of the flat the pools cover (roughly). */
+  cover: number;
+  /** Noise seed offset (default 0). */
+  seed?: number;
+}
+
+/** A round hollow inside a flat (a lake): `floor` inside `radius`, a shelf at `shelfFloor` out to `radius + shelfWidth`. */
+export interface FlatBowlDef {
+  x: number;
+  z: number;
+  radius: number;
+  floor: number;
+  shelfWidth: number;
+  shelfFloor: number;
+  /** Blend from the shelf's outer edge back to the flat. */
+  blend: number;
+}
+
+/**
+ * Presses the ground toward `level` inside `box` (blended over `blend`): `level + (h - level) * relief`, then a soft
+ * ceiling `level + maxRise` when given, then pools and bowls. Marsh and lowland flats (Act 3).
+ */
+export interface FlatDef {
+  id: string;
+  box: ShapeBox;
+  blend: number;
+  level: number;
+  /** 0..1: how much of the ground's relief around `level` is kept. */
+  relief: number;
+  /** Soft cap on what is left above `level` (metres). */
+  maxRise?: number;
+  pools?: FlatPoolsDef;
+  bowls?: readonly FlatBowlDef[];
+}
+
+/** A point of an uplift's spine: the crest height there. */
+export interface SpinePoint {
+  x: number;
+  z: number;
+  height: number;
+}
+
+/**
+ * A massif raised along a spine (Act 3's Dragonspine): the crest height interpolated along the spine, falling off to 0
+ * at `radius` from it (`(1 - smoothstep(0, 1, d / radius)) ^ profile`), with ridged crags of up to `crags` metres on
+ * the flanks; the ground becomes the smooth max of itself and the massif, under a soft ceiling. One point is a peak.
+ */
+export interface UpliftDef {
+  id: string;
+  spine: readonly SpinePoint[];
+  radius: number;
+  /** Crag amplitude in metres (0 for a smooth massif). */
+  crags: number;
+  /** Flank exponent: above 1 peaked, below 1 shoulders with steep edges. Default 1. */
+  profile?: number;
+  /** Soft ceiling (metres): nothing this uplift makes reaches it. At most the height range's max. */
+  ceiling: number;
+}
+
+/** A point of a trough's floor line. */
+export interface TroughPoint {
+  x: number;
+  z: number;
+  floor: number;
+}
+
+/** Cuts the ground down to the floor along a polyline (a chasm, a river channel): it only ever lowers. */
+export interface TroughDef {
+  id: string;
+  points: readonly TroughPoint[];
+  halfWidth: number;
+  blend: number;
 }
 
 export interface TerrainShape {
   plateaus: readonly PlateauDef[];
   suppressions: readonly RidgeSuppressionDef[];
   roads: readonly RoadDef[];
+  /** v0.7, applied in this order after suppression and before plateaus. */
+  flats?: readonly FlatDef[];
+  uplifts?: readonly UpliftDef[];
+  troughs?: readonly TroughDef[];
 }
 
 export const DEFAULT_MAX_SIDE_SLOPE = 0.6;
@@ -79,6 +167,10 @@ export interface ShaperOptions {
   /** Plateau heights must lie inside this range. */
   heightRange?: { min: number; max: number };
   protectedBox?: ShapeBox | null;
+  /** v0.7: boxes no flat, uplift or trough may reach (the shipped Act 1 and 2 ground). */
+  protectedBoxes?: readonly ShapeBox[];
+  /** v0.7: no trough, pool or bowl floor may be at or under this (the kill plane plus a margin). */
+  minFloor?: number;
 }
 
 export interface Shaper {
@@ -116,6 +208,64 @@ function overlaps(a: ShapeBox, b: ShapeBox): boolean {
 }
 
 const finite = (...v: number[]) => v.every(Number.isFinite);
+
+/** Smooth max of a and b with a blend width k (k <= 0 is the plain max). */
+function smoothMax(a: number, b: number, k: number): number {
+  if (k <= 0) return Math.max(a, b);
+  const h = Math.min(Math.max(0.5 + (0.5 * (b - a)) / k, 0), 1);
+  return a + (b - a) * h + k * h * (1 - h);
+}
+
+/** Leaves v alone below `ceiling - knee`, then eases it toward `ceiling` without reaching it. */
+function softCeiling(v: number, ceiling: number, knee: number): number {
+  const start = ceiling - knee;
+  return v <= start ? v : ceiling - knee * Math.exp(-(v - start) / knee);
+}
+
+/** Width of an uplift's smooth max with the ground, and of the soft ceilings' knee (metres). */
+const UPLIFT_SMOOTH = 40;
+const CEILING_KNEE = 40;
+
+const cragNoise = createNoise2D(7331);
+const poolNoise = createNoise2D(7332);
+
+/** Ridged crags in 0..1, 3 octaves at a 700 m base wavelength. Plain world metres: CPU doubles keep the precision. */
+function crag(x: number, z: number): number {
+  let sum = 0;
+  let amp = 0.55;
+  let freq = 1 / 700;
+  let weight = 1;
+  for (let o = 0; o < 3; o++) {
+    let r = 1 - Math.abs(cragNoise(x * freq, z * freq));
+    r *= r * weight;
+    weight = Math.min(r * 1.5, 1);
+    sum += r * amp;
+    amp *= 0.5;
+    freq *= 2.2;
+  }
+  return Math.min(sum, 1);
+}
+
+/** Nearest point of a polyline of n points (xs, zs): its distance and the interpolated value of `vals` there. */
+function nearestOnLine(xs: Float64Array, zs: Float64Array, vals: Float64Array, x: number, z: number): { d: number; v: number } {
+  if (xs.length === 1) return { d: Math.hypot(x - xs[0], z - zs[0]), v: vals[0] };
+  let best = Infinity;
+  let v = vals[0];
+  for (let i = 0; i < xs.length - 1; i++) {
+    const ax = xs[i];
+    const az = zs[i];
+    const dx = xs[i + 1] - ax;
+    const dz = zs[i + 1] - az;
+    const len2 = dx * dx + dz * dz;
+    const t = Math.min(Math.max(((x - ax) * dx + (z - az) * dz) / len2, 0), 1);
+    const d = Math.hypot(x - (ax + dx * t), z - (az + dz * t));
+    if (d < best) {
+      best = d;
+      v = vals[i] + (vals[i + 1] - vals[i]) * t;
+    }
+  }
+  return { d: best, v };
+}
 
 function checkBox(where: string, b: ShapeBox, bounds: ShapeBox | undefined): void {
   if (!b || !finite(b.minX, b.maxX, b.minZ, b.maxZ)) throw new Error(`${where}: box must be finite numbers`);
@@ -213,6 +363,152 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
 
   const suppressed = (x: number, z: number): number => base(x, z, ridgeScale(x, z));
 
+  // ---- v0.7: flats, uplifts, troughs (in that order), kept out of every protected box
+  const guarded = [...(protectedBox ? [protectedBox] : []), ...(opts.protectedBoxes ?? [])];
+  const minFloor = opts.minFloor;
+  const guard = (where: string, reach: ShapeBox) => {
+    for (const g of guarded) if (overlaps(reach, g)) throw new Error(`${where}: reaches into a protected box`);
+  };
+  const checkFloor = (where: string, floor: number) => {
+    if (!Number.isFinite(floor)) throw new Error(`${where}: floor must be finite`);
+    if (minFloor !== undefined && floor <= minFloor) throw new Error(`${where}: floor ${floor} is at or under the minimum floor ${minFloor}`);
+  };
+
+  const flats = (shape.flats ?? []).map((f) => {
+    const where = `terrain shape: flat "${f.id}"`;
+    claimId('flat', f.id);
+    checkBox(where, f.box, bounds);
+    if (!finite(f.blend, f.level, f.relief) || f.blend <= 0) throw new Error(`${where}: level, relief and blend must be finite, blend > 0`);
+    if (f.relief < 0 || f.relief > 1) throw new Error(`${where}: relief must be in 0..1`);
+    if (range && (f.level < range.min || f.level > range.max)) throw new Error(`${where}: level outside the terrain range`);
+    if (f.maxRise !== undefined && !(Number.isFinite(f.maxRise) && f.maxRise > 0)) throw new Error(`${where}: maxRise must be > 0`);
+    if (f.pools) {
+      const p = f.pools;
+      if (!finite(p.scale, p.cover) || p.scale <= 0 || p.cover < 0 || p.cover > 1) throw new Error(`${where}: pools need scale > 0 and cover in 0..1`);
+      checkFloor(`${where} pools`, p.floor);
+    }
+    for (const b of f.bowls ?? []) {
+      if (!finite(b.x, b.z, b.radius, b.shelfWidth, b.blend) || b.radius <= 0 || b.shelfWidth < 0 || b.blend <= 0) throw new Error(`${where}: bowl needs radius > 0, shelfWidth >= 0, blend > 0`);
+      if (!inBox(f.box, b.x, b.z)) throw new Error(`${where}: bowl centre lies outside the flat's box`);
+      checkFloor(`${where} bowl`, b.floor);
+      checkFloor(`${where} bowl shelf`, b.shelfFloor);
+    }
+    const reach = expand(f.box, f.blend);
+    guard(where, reach);
+    // Pools cover about `cover` of the box: noise in [-1, 1] above a threshold, with a soft 0.12 edge.
+    const threshold = f.pools ? 1 - 2 * f.pools.cover : 0;
+    return { def: f, reach, threshold };
+  });
+
+  const flatten = (x: number, z: number, h: number): number => {
+    for (const f of flats) {
+      if (!inBox(f.reach, x, z)) continue;
+      const w = 1 - smoothstep(0, f.def.blend, boxDistance(f.def.box, x, z));
+      if (w <= 0) continue;
+      const d = f.def;
+      let t = d.level + (h - d.level) * d.relief;
+      if (d.maxRise !== undefined) t = softCeiling(t, d.level + d.maxRise, Math.min(CEILING_KNEE, d.maxRise / 2));
+      if (d.pools) {
+        const p = d.pools;
+        const n = poolNoise(x / p.scale + (p.seed ?? 0) * 17.31, z / p.scale - (p.seed ?? 0) * 9.77);
+        const m = smoothstep(f.threshold - 0.12, f.threshold + 0.12, n);
+        if (m > 0 && p.floor < t) t += (p.floor - t) * m;
+      }
+      for (const b of d.bowls ?? []) {
+        const r = Math.hypot(x - b.x, z - b.z);
+        const outer = b.radius + b.shelfWidth;
+        if (r >= outer + b.blend) continue;
+        const target = b.floor + (b.shelfFloor - b.floor) * smoothstep(b.radius - 15, b.radius + 15, r);
+        const bw = 1 - smoothstep(outer, outer + b.blend, r);
+        t += (target - t) * bw;
+      }
+      h += (t - h) * w;
+    }
+    return h;
+  };
+
+  const uplifts = (shape.uplifts ?? []).map((u) => {
+    const where = `terrain shape: uplift "${u.id}"`;
+    claimId('uplift', u.id);
+    if (!Array.isArray(u.spine) || u.spine.length < 1) throw new Error(`${where}: needs at least 1 spine point`);
+    if (!finite(u.radius, u.crags, u.ceiling) || u.radius <= 0 || u.crags < 0) throw new Error(`${where}: radius must be > 0 and crags >= 0`);
+    const profile = u.profile ?? 1;
+    if (!Number.isFinite(profile) || profile <= 0) throw new Error(`${where}: profile must be > 0`);
+    if (range && u.ceiling > range.max) throw new Error(`${where}: ceiling ${u.ceiling} is above the terrain range (${range.max})`);
+    const xs = new Float64Array(u.spine.length);
+    const zs = new Float64Array(u.spine.length);
+    const hs = new Float64Array(u.spine.length);
+    u.spine.forEach((p, i) => {
+      if (!p || !finite(p.x, p.z, p.height)) throw new Error(`${where}: spine points must be finite`);
+      if (bounds && !inBox(bounds, p.x, p.z)) throw new Error(`${where}: spine point (${p.x}, ${p.z}) outside the world bounds`);
+      if (p.height > u.ceiling) throw new Error(`${where}: spine height ${p.height} is above its ceiling`);
+      if (i > 0 && Math.hypot(p.x - xs[i - 1], p.z - zs[i - 1]) < 1e-6) throw new Error(`${where}: spine segment ${i - 1} has zero length`);
+      xs[i] = p.x;
+      zs[i] = p.z;
+      hs[i] = p.height;
+    });
+    const reach = expand({ minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) }, u.radius);
+    if (bounds) checkBox(where, { ...reach, minX: Math.max(reach.minX, bounds.minX), maxX: Math.min(reach.maxX, bounds.maxX), minZ: Math.max(reach.minZ, bounds.minZ), maxZ: Math.min(reach.maxZ, bounds.maxZ) }, bounds);
+    guard(where, reach);
+    return { def: u, xs, zs, hs, profile, reach };
+  });
+
+  const uplift = (x: number, z: number, h: number): number => {
+    for (const u of uplifts) {
+      if (!inBox(u.reach, x, z)) continue;
+      const { d, v } = nearestOnLine(u.xs, u.zs, u.hs, x, z);
+      if (d >= u.def.radius) continue;
+      let f = 1 - smoothstep(0, 1, d / u.def.radius);
+      if (u.profile !== 1) f = Math.pow(f, u.profile);
+      // Crags grow up the flanks and fade toward the crest line, so a crest keeps its authored height.
+      const flank = 4 * f * (1 - f);
+      const massif = v * f + u.def.crags * flank * crag(x, z);
+      // Faded in over the outer foot so the edge of the reach is seamless, even on ground under 0.
+      const raised = softCeiling(smoothMax(h, massif, UPLIFT_SMOOTH * f), u.def.ceiling, CEILING_KNEE);
+      h += (raised - h) * smoothstep(0, 0.15, f);
+    }
+    return h;
+  };
+
+  const troughs = (shape.troughs ?? []).map((t) => {
+    const where = `terrain shape: trough "${t.id}"`;
+    claimId('trough', t.id);
+    if (!Array.isArray(t.points) || t.points.length < 2) throw new Error(`${where}: needs at least 2 points`);
+    if (!finite(t.halfWidth, t.blend) || t.halfWidth <= 0 || t.blend <= 0) throw new Error(`${where}: halfWidth and blend must be > 0`);
+    const xs = new Float64Array(t.points.length);
+    const zs = new Float64Array(t.points.length);
+    const fs = new Float64Array(t.points.length);
+    t.points.forEach((p, i) => {
+      if (!p || !finite(p.x, p.z)) throw new Error(`${where}: points must be finite`);
+      if (bounds && !inBox(bounds, p.x, p.z)) throw new Error(`${where}: point (${p.x}, ${p.z}) outside the world bounds`);
+      checkFloor(where, p.floor);
+      if (i > 0 && Math.hypot(p.x - xs[i - 1], p.z - zs[i - 1]) < 1e-6) throw new Error(`${where}: segment ${i - 1} has zero length`);
+      xs[i] = p.x;
+      zs[i] = p.z;
+      fs[i] = p.floor;
+    });
+    const reach = expand({ minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) }, t.halfWidth + t.blend);
+    guard(where, reach);
+    return { def: t, xs, zs, fs, reach };
+  });
+
+  const trough = (x: number, z: number, h: number): number => {
+    for (const t of troughs) {
+      if (!inBox(t.reach, x, z)) continue;
+      const { d, v } = nearestOnLine(t.xs, t.zs, t.fs, x, z);
+      const hw = t.def.halfWidth;
+      const w = d <= hw ? 1 : 1 - smoothstep(hw, hw + t.def.blend, d);
+      if (w > 0 && v < h) h += (v - h) * w;
+    }
+    return h;
+  };
+
+  /** The ground before plateaus and roads: suppression, flats, uplifts, troughs. */
+  const shaped =
+    flats.length + uplifts.length + troughs.length === 0
+      ? suppressed
+      : (x: number, z: number): number => trough(x, z, uplift(x, z, flatten(x, z, suppressed(x, z))));
+
   // ---- plateaus
   const plateaus = shape.plateaus.map((p) => {
     const where = `terrain shape: plateau "${p.id}"`;
@@ -234,14 +530,14 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
     return h;
   };
 
-  const ground = (x: number, z: number): number => plateaued(x, z, suppressed(x, z));
+  const ground = (x: number, z: number): number => plateaued(x, z, shaped(x, z));
 
   // Blend slope of every plateau, measured against the ground on the ring at the blend's outer edge.
   for (const p of plateaus) {
     const ring = p.reach;
     let worst = 0;
     const visit = (x: number, z: number) => {
-      worst = Math.max(worst, Math.abs(p.def.height - suppressed(x, z)) / p.def.blend);
+      worst = Math.max(worst, Math.abs(p.def.height - shaped(x, z)) / p.def.blend);
     };
     for (let x = ring.minX; x <= ring.maxX; x += 25) {
       visit(x, ring.minZ);
@@ -332,6 +628,8 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
     if (r.startTaper < 0) throw new Error(`${where}: startTaper must be >= 0`);
     const sideSlope = r.maxSideSlope ?? DEFAULT_MAX_SIDE_SLOPE;
     if (!Number.isFinite(sideSlope) || sideSlope <= 0) throw new Error(`${where}: maxSideSlope must be > 0`);
+    const blendCap = r.maxBlend ?? MAX_ROAD_BLEND;
+    if (!Number.isFinite(blendCap) || blendCap < r.blend || blendCap > MAX_ROAD_BLEND) throw new Error(`${where}: maxBlend must be in blend..${MAX_ROAD_BLEND}`);
     for (const p of r.points) {
       if (!p || !finite(p.x, p.z)) throw new Error(`${where}: points must be finite`);
       if (bounds && !inBox(bounds, p.x, p.z)) throw new Error(`${where}: point (${p.x}, ${p.z}) outside the world bounds`);
@@ -402,12 +700,12 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
       const cz = sg.az + sg.dz * t;
       let cut = Math.abs(heights[i] - g[i]);
       for (const off of [r.halfWidth, -r.halfWidth]) cut = Math.max(cut, Math.abs(heights[i] - roadGround(cx + sg.dz * off, cz - sg.dx * off)));
-      let b = Math.min(MAX_ROAD_BLEND, Math.max(r.blend, (1.5 * cut) / sideSlope));
+      let b = Math.min(blendCap, Math.max(r.blend, (1.5 * cut) / sideSlope));
       for (let pass = 0; pass < 2; pass++) {
         const reachOut = r.halfWidth + b;
         let edgeCut = cut;
         for (const off of [reachOut, -reachOut]) edgeCut = Math.max(edgeCut, Math.abs(heights[i] - roadGround(cx + sg.dz * off, cz - sg.dx * off)));
-        b = Math.min(MAX_ROAD_BLEND, Math.max(b, (1.5 * edgeCut) / sideSlope));
+        b = Math.min(blendCap, Math.max(b, (1.5 * edgeCut) / sideSlope));
       }
       blends[i] = b;
     }
@@ -472,7 +770,7 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
   return {
     ridgeScale,
     heightAt(x, z) {
-      return applyRoads(builtRoads, x, z, plateaued(x, z, suppressed(x, z)));
+      return applyRoads(builtRoads, x, z, plateaued(x, z, shaped(x, z)));
     },
     roadProfile(id, s) {
       const road = roads.get(id);
