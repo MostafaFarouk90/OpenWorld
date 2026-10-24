@@ -218,10 +218,20 @@ export class EnemyManager {
 
   /** True for a registered boss actor (the core registry knows them). */
   private isBoss(actorId: ActorId): boolean {
-    const bosses = this.host.bosses;
-    if (bosses?.active) for (const b of bosses.active()) if (bosses.state(b)?.actorId === actorId) return true;
-    return false;
+    // Built once per think() while a taunt is live: the taunt path asks once per enemy per tick (post-merge review finding 5).
+    if (this.bossActorsClock !== this.clock) {
+      this.bossActorsClock = this.clock;
+      this.bossActors.clear();
+      const bosses = this.host.bosses;
+      if (bosses?.active) for (const b of bosses.active()) {
+        const id = bosses.state(b)?.actorId;
+        if (id) this.bossActors.add(id);
+      }
+    }
+    return this.bossActors.has(actorId);
   }
+  private readonly bossActors = new Set<ActorId>();
+  private bossActorsClock = -1;
 
   readonly perceptionHub = new PerceptionHub((m) => this.host.warn(m));
 

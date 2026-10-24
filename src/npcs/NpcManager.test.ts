@@ -375,6 +375,8 @@ describe('talk interactables are live while a talk objective names them', () => 
   const fakeQuests = (views: Record<string, Array<{ current: boolean; def: { type: string; target?: string | string[] } }>>) => ({
     active: () => Object.keys(views),
     objectives: (id: string) => views[id] ?? [],
+    npcObjectiveLive: (npc: string) =>
+      Object.values(views).some((vs) => vs.some((v) => v.current && v.def.type === 'talk' && (Array.isArray(v.def.target) ? v.def.target.includes(npc) : v.def.target === npc))),
   });
   const live = (fc: ReturnType<typeof createFakeCore>, id: string) => fc.interactables.get(`npc:${id}`)!.live?.();
 

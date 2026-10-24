@@ -23,7 +23,7 @@ import { R02_AT_BASTION } from './content/r02.quest';
 import { QuestProps } from './props';
 import { QUEST_PROPS, INTERACT_FLAGS } from './content/props';
 import { CARRY_ITEMS } from './content/carry';
-import { QuestNotes, noteNeeded, targets } from './notes';
+import { QuestNotes, noteNeeded } from './notes';
 import { QUEST_NOTES, NOTE_LOOKS, NOTE_CODEX } from './content/notes';
 import { installObjectiveFlags } from './objectiveFlags';
 import { OBJECTIVE_FLAGS } from './content/objectiveFlags';
@@ -102,6 +102,7 @@ const plugin: GamePlugin = {
       isObjectiveCurrent: (q, o) => manager.isObjectiveCurrent(q, o),
       objectives: (id) => manager.objectives(id),
       active: () => manager.active(),
+      npcObjectiveLive: (npcId) => manager.npcObjectiveLive(npcId),
       onChange: (l) => manager.onChange(l),
       torch: () => torch?.position() ?? null,
       recheck: () => manager.recheck(),
@@ -351,8 +352,7 @@ const plugin: GamePlugin = {
       quests: {
         isObjectiveCurrent: (q, o) => manager.isObjectiveCurrent(q, o),
         counted: (q, o, key) => manager.counted(q, o, key),
-        npcObjectiveLive: (npcId) =>
-          manager.active().some((q) => manager.objectives(q).some((v) => v.current && v.def.type === 'talk' && targets(v.def.target, npcId))),
+        npcObjectiveLive: (npcId) => manager.npcObjectiveLive(npcId),
         noteNeeded: (noteId) => noteNeeded(manager, noteId),
       },
       warn,

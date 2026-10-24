@@ -106,7 +106,10 @@ export function installM11(k: Kit): Off[] {
   // npc id: under `gaut` its completed `dialogue.ended` would take M11's `report` talk credit and his report lines would
   // never play (review-fixes-review F1, F5).
   const stoneLit = (): boolean => k.flag('waystone.cinder-road.lit');
-  const speechDue = (): boolean => k.active('m11') && k.objDone('m11', 'ambush') && stoneLit() && !k.flag(SPEECH_DONE);
+  // A death closes the speech; it is owed again only once the player has respawned (review finding 1: it reopened over the body).
+  let awaitingRespawn = false;
+  const speechDue = (): boolean =>
+    !awaitingRespawn && k.active('m11') && k.objDone('m11', 'ambush') && stoneLit() && !k.flag(SPEECH_DONE);
   let speechWaiting = false;
   const speak = (): void => {
     if (!speechDue()) {
@@ -133,13 +136,20 @@ export function installM11(k: Kit): Off[] {
   k.on('dialogue.ended', (e) => {
     // The speech cut short (death, a script close): both flags would stay set and talking to Gaut would then play it under
     // `gaut`, eating the report credit. Re-arm it (review F1).
-    if (e.npcId === SPEECH_NPC && e.reason !== 'completed') {
+    // A load re-derives it in `save.loaded` below, so it is skipped here (review finding 3); a death waits for the respawn.
+    if (e.npcId === SPEECH_NPC && e.reason !== 'completed' && e.reason !== 'load' && e.reason !== 'dispose') {
       k.clear('story.m11.speech');
       k.clear(SPEECH_DONE);
-      speechSoon();
+      if (e.reason === 'death') awaitingRespawn = true;
+      else speechSoon();
       return;
     }
     if (speechWaiting) speechSoon();
+  });
+  k.on('player.respawned', () => {
+    if (!awaitingRespawn) return;
+    awaitingRespawn = false;
+    speechSoon();
   });
   // A refused start may have been a menu, not a dialogue: no `dialogue.ended` follows that (review F2).
   k.on('ui.modal', (e) => {
@@ -148,6 +158,7 @@ export function installM11(k: Kit): Off[] {
   // A load re-derives it: the speech is owed again unless it has played (a load mid-speech replays it from the start).
   k.on('save.loaded', () => {
     speechWaiting = false;
+    awaitingRespawn = false;
     if (k.flag('story.m11.speech')) {
       k.clear('story.m11.speech');
       k.clear(SPEECH_DONE);
