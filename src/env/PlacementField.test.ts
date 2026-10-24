@@ -79,7 +79,7 @@ describe('PlacementField without a model source', () => {
     const m = new THREE.Matrix4();
     mesh.getMatrixAt(0, m);
     const sc = new THREE.Vector3().setFromMatrixScale(m);
-    expect(sc.y / sc.x).toBeCloseTo(2.5 / 1.9);
+    expect(sc.y / sc.x).toBeCloseTo(2.6 / 1.9);
     expect(sc.x).toBeCloseTo(sc.z);
     field.dispose();
   });

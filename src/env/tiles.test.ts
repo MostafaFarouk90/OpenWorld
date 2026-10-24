@@ -149,8 +149,12 @@ describe('B3 placements (Hollin Ford, its brook and river meadow, plus the reed-
       const s = -(r.x - cx) * uz + (r.z - cz) * ux;
       return f > 0 && f < range && Math.abs(s) < f * 0.58;
     };
-    expect(rows.filter((r) => r.id.startsWith('reeds') && inFrame(r, 20)).length).toBeGreaterThanOrEqual(30);
-    expect(rows.filter((r) => r.id === 'reeds-b' && inFrame(r, 20)).length).toBeGreaterThanOrEqual(3);
+    expect(rows.filter((r) => r.id.startsWith('reeds') && inFrame(r, 35)).length).toBeGreaterThanOrEqual(50);
+    expect(rows.filter((r) => r.id === 'reeds-b' && inFrame(r, 35)).length).toBeGreaterThanOrEqual(10);
+    // beds, not stalks: most in-frame reed clumps touch a neighbour (within 1.2 m)
+    const reedsIn = rows.filter((r) => r.id.startsWith('reeds') && inFrame(r, 35));
+    const touching = reedsIn.filter((a) => reedsIn.some((b) => b !== a && Math.hypot(a.x - b.x, a.z - b.z) < 1.2));
+    expect(touching.length / reedsIn.length).toBeGreaterThan(0.8);
     expect(rows.filter((r) => r.id === 'fern-a' && inFrame(r, 12)).length).toBeGreaterThanOrEqual(8);
     expect(rows.filter((r) => r.id.startsWith('grass') && inFrame(r, 12)).length).toBeGreaterThanOrEqual(15);
     expect(rows.filter((r) => r.id.startsWith('flower') && inFrame(r, 12)).length).toBeGreaterThanOrEqual(5);

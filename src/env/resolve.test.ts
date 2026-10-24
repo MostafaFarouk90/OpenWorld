@@ -32,6 +32,13 @@ describe('resolveModel', () => {
       expect(r).toMatchObject({ source: 'env', model: 'env/grass-clump-a' });
       expect(r.source === 'env' && (r.stretchY ?? 1) > 2, id).toBe(true);
       expect(r.source === 'env' && (r.girth ?? 1) > 1.5, `${id} is wide enough to read as a bed`).toBe(true);
+      // Rendered size of the 0.454 x 0.5 m glb clump: 1.2 to 1.5 m tall, 0.8 to 1.0 m wide.
+      if (r.source === 'env') {
+        expect(0.5 * r.scale * (r.stretchY ?? 1), `${id} height`).toBeGreaterThanOrEqual(1.2);
+        expect(0.5 * r.scale * (r.stretchY ?? 1), `${id} height`).toBeLessThanOrEqual(1.5);
+        expect(0.454 * r.scale * (r.girth ?? 1), `${id} width`).toBeGreaterThanOrEqual(0.8);
+        expect(0.454 * r.scale * (r.girth ?? 1), `${id} width`).toBeLessThanOrEqual(1.0);
+      }
     }
     expect(resolveModel('roadside-shrine-a')).toMatchObject({ source: 'kaykit', model: 'hal/shrine_candles' });
     for (const id of ['flag_red', 'rock_single_B', 'rock_single_C', 'tent']) expect(resolveModel(id).source, id).toBe('kaykit');
