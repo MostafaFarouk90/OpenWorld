@@ -124,6 +124,17 @@ function build(): SkillDef[] {
     charge.cooldown = 12;
     charge.emberCost = 15;
   }
+  // Tier 4 actives (Act 3, K11): Bastion Wall 20 s and 20 Ember; Executioner's Arc 10 s and 20 Ember.
+  const bastion = out.find((s) => s.id === 'knight.bastionWall');
+  if (bastion) {
+    bastion.cooldown = 20;
+    bastion.emberCost = 20;
+  }
+  const arc = out.find((s) => s.id === 'knight.executionersArc');
+  if (arc) {
+    arc.cooldown = 10;
+    arc.emberCost = 20;
+  }
   return out;
 }
 

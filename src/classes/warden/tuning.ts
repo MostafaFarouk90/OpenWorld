@@ -24,6 +24,9 @@ export const SKILL_IDS = {
   whirlingHew: 'warden.whirlingHew',
   gritTeeth: 'warden.gritTeeth',
   bloodChant: 'warden.bloodChant',
+  skullsplitter: 'warden.skullsplitter',
+  earthroot: 'warden.earthroot',
+  frenziedHearth: 'warden.frenziedHearth',
 } as const;
 
 /** Cleaving Swing: attack 1 hits every hostile in the front arc (design 11.3: arc 120 degrees; the 3 m range is own). */
@@ -104,4 +107,66 @@ export const BLOOD_CHANT = {
   nameKey: 'buff.warden.bloodChant',
   effect: 'blood-rune',
   bleed: { id: 'warden.bloodChant.bleed', seconds: DEEP_WOUND.seconds, dps: DEEP_WOUND.dps },
+} as const;
+
+/**
+ * Tier 4 (Act 3, K11 PR 1, design 9.2 and 11.5; numbers are own, scaled from tier 3).
+ * Skullsplitter: the 2H chop (1.633 s, about 98 ticks), its blade hot from about 35% to 55% of the clip. The nearest hostile within
+ * 2.6 m in a 90 degree front arc takes 1.6x the weapon base (the base Whirling Hew scales) with poise 40; double damage on a staggered
+ * target. "Staggered" is an `actor.staggered` within the last 1.2 s, poise at 0, or the AI state `stagger` (see StaggerWatch).
+ */
+export const SKULLSPLITTER = {
+  reach: 2.6,
+  halfAngle: Math.PI / 4,
+  damageFactor: 1.6,
+  staggeredFactor: 2,
+  poise: 40,
+  cooldown: 10,
+  emberCost: 20,
+  clip: WARDEN_CLIPS.chop,
+  attackId: 'warden.skullsplitter',
+  ticks: 98,
+  hitFromTick: 34,
+  hitToTick: 54,
+  effect: 'skullsplitter',
+  /** Design 11.5: a 0.2 s camera shake on the chop. */
+  shakeAmplitude: 0.3,
+  shakeSeconds: 0.2,
+} as const;
+
+/** How long an `actor.staggered` keeps a target "staggered" for the Warden's tier 4 skills (break stagger lasts about this long). */
+export const STAGGER_WINDOW_SECONDS = 1.2;
+
+/**
+ * Earthroot: rooted for 5 s (move modifier lockMove, which does NOT block the dodge, so the dodge ends it early). While rooted the
+ * poise of every hit on the player is zeroed by a defender-band modifier at order -30 (guard -50 and Oathward -40 have run; the
+ * buffs band starts at 0). Each hostile hit taken releases a shockwave (0.5x base, poise 20, 3 m), at most once per 0.75 s.
+ */
+export const EARTHROOT = {
+  seconds: 5,
+  cooldown: 20,
+  emberCost: 20,
+  modifierId: 'warden.earthroot',
+  order: -30,
+  moveSource: 'warden.earthroot',
+  shockRadius: 3,
+  shockDamageFactor: 0.5,
+  shockPoise: 20,
+  shockIntervalSeconds: 0.75,
+  attackId: 'warden.earthroot',
+  effect: 'earthroot',
+  shockEffect: 'earthroot-shock',
+} as const;
+
+/**
+ * Frenzied Hearth: strictly below 30% of the live max health (Burn and Scars already lower it; exactly 30% is not below). Incoming
+ * poise is zeroed by a buffs-band modifier at order 10 (before Grit Teeth's 50) and the poise bar is refilled each fixed tick.
+ * Each melee hit landed while below 30% heals 2% of the current max health, once per swing.
+ */
+export const FRENZIED_HEARTH = {
+  threshold: 0.3,
+  healFraction: 0.02,
+  modifierId: 'warden.frenziedHearth',
+  order: 10,
+  effect: 'frenzied-hearth',
 } as const;

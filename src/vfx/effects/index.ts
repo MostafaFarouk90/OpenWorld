@@ -7,6 +7,7 @@ import type { DecalPool } from '../DecalPool';
 import type { LightFlashPool } from '../LightFlashPool';
 import type { Dissolver } from '../Dissolver';
 import { tier3Effects } from './tier3';
+import { act3SkillEffects } from '../act3Skills/index';
 import { createFresnelShell, createShockRing, disposeFx, setRingProgress, setShellProgress } from '../shaders/fresnelShell';
 
 export interface FxContext {
@@ -258,4 +259,5 @@ export const EFFECTS: Record<EffectId, EffectFactory> = {
     return ring(ctx, { position: hand }, 1.8, GOLD, 0.8);
   },
   ...tier3Effects({ ring, timedMesh, origin, num }),
+  ...act3SkillEffects({ ring, timedMesh, origin, num }),
 };

@@ -176,7 +176,14 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
     }));
 
     // ---- Banner Plant
-    const banner = createBanner({ events: ctx.events, scene: ctx.scene, services: ctx.services, player: ctx.player });
+    const banner = createBanner({
+      events: ctx.events,
+      scene: ctx.scene,
+      services: ctx.services,
+      player: ctx.player,
+      // K11: Hearthfire Ward heals on this pulse (`banner.pulse`, declared in classes/knight/act3.plugin.ts).
+      onPulse: (position, radius) => (ctx.events as unknown as { emit(t: string, p: unknown): void }).emit('banner.pulse', { position, radius }),
+    });
     offs.push(() => banner.dispose());
     const damageHost = ctx.damage as unknown as { addModifier?(id: string, fn: (req: never, target: never) => void, order?: number): () => void };
     const offBannerMod = damageHost.addModifier?.('banner-plant', (req, target) => banner.modify(req as never, target as never), 50);

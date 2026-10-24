@@ -2,6 +2,7 @@ import type { Effect, FavourTrack } from './types';
 import { EFFECT_EVENT_PATTERN, MAX_IF_DEPTH } from './types';
 import { evalCondition } from './conditions';
 import type { EffectEnv, EffectResult } from './ports';
+import { grantMasterBook } from '../progression/masterBooks';
 
 export interface EffectRunner { run(effects: Effect[] | undefined): EffectResult[] }
 
@@ -119,6 +120,9 @@ export function createEffectRunner(env: ScaledEffectEnv): EffectRunner {
       const p = env.progression?.();
       if (!p?.grantAbility) { warnOnce('grantAbility: progression service absent'); throw new Silent('grantAbility service absent'); }
       p.grantAbility(c.grantAbility, env.sourceId);
+    } else if ('grantMasterBook' in c) {
+      const r = grantMasterBook(env.state as never, c.grantMasterBook, env.bus);
+      if (!r.ok) throw new Error(`grantMasterBook ${String(c.grantMasterBook)}: ${r.reason}`);
     } else if ('event' in c) {
       if (typeof c.event !== 'string' || !EFFECT_EVENT_PATTERN.test(c.event)) {
         throw new Error(`event name rejected: ${String(c.event)}`);

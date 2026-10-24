@@ -124,3 +124,29 @@ describe('createBanner', () => {
     expect(b.state.active).toBe(false);
   });
 });
+
+describe('createBanner onPulse (K11, Hearthfire Ward)', () => {
+  it('calls onPulse on each 3 s pulse with the banner position and radius, and not before', () => {
+    const events = new FakeEvents();
+    const pulses: Array<{ position: { x: number; y: number; z: number }; radius: number }> = [];
+    const services = { get: () => undefined } as never;
+    const b = createBanner({
+      events,
+      scene: new THREE.Group(),
+      services,
+      player: { feet: new THREE.Vector3(0, 0, 0), facingYaw: 0 },
+      onPulse: (position, radius) => pulses.push({ position, radius }),
+    });
+    b.plant(0);
+    b.update(2.9, true);
+    expect(pulses).toHaveLength(0);
+    b.update(3, true);
+    expect(pulses).toHaveLength(1);
+    expect(pulses[0].position).toEqual({ x: 0, y: 0, z: -2 });
+    expect(pulses[0].radius).toBe(BANNER.radius);
+    b.update(5.9, true);
+    expect(pulses).toHaveLength(1);
+    b.update(6, true);
+    expect(pulses).toHaveLength(2);
+  });
+});
