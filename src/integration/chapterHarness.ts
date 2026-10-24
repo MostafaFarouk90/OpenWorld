@@ -289,6 +289,7 @@ export async function bootChapter(opts: ChapterBootOptions = {}): Promise<Chapte
       disposed = true;
       game.dispose();
       world.dispose();
+      physics.dispose();
       if (opts.virtualClock) performance.now = originalNow;
       if ((globalThis as { indexedDB?: unknown }).indexedDB === fake.factory) delete (globalThis as { indexedDB?: unknown }).indexedDB;
     },

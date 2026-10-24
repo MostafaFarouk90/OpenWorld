@@ -35,7 +35,7 @@
  *   the defeated branch ends him with one lethal hit after the window opened.
  * The player is healed between beats (enemies keep swinging at someone who stands still).
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootChapter, type ChapterHarness } from './chapterHarness';
 import {
   enterVaultForD01, finishD01, objectiveDone, PHASE_A_ORDER, playM03, playM04, playM05, playR01, playR02,
@@ -43,14 +43,26 @@ import {
 } from './phaseA';
 import { estimateTiming, estimateTimingFor, OPENING_PLAN, PHASE_B_PLAN, timingMarkdown } from './timing';
 
+/**
+ * Explicit budgets (F7). These tests boot every plugin and play a chain headless: alone a chain takes 25 to 55 s, and under
+ * the whole suite's load it can take twice that, so each budget is about 3x the slowest measured run and never the 5 s default.
+ */
+const CHAIN_TIMEOUT = 180_000;
+const ACT_TIMEOUT = 300_000;
+const SHORT_TIMEOUT = 90_000;
+
 let h: ChapterHarness | null = null;
 beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'info').mockImplementation(() => {});
 });
+/** True while a describe block shares one booted game across its tests (afterAll disposes it). */
+let shareBoot = false;
 afterEach(() => {
-  h?.dispose();
-  h = null;
+  if (!shareBoot) {
+    h?.dispose();
+    h = null;
+  }
   vi.restoreAllMocks();
 });
 
@@ -128,11 +140,11 @@ describe('Phase A chapter chain (all real plugins)', () => {
     console.log(timingMarkdown(rows));
     expect(openingRows.map((r) => r.quest)).toEqual(['m01', 'm02']);
     expect(rows.map((r) => r.quest)).toEqual([...PHASE_A_ORDER]);
-  }, 120_000);
+  }, CHAIN_TIMEOUT);
 
   it('Prior defeated, field scorched', async () => {
     await chain('scorched', 'defeated');
-  }, 120_000);
+  }, CHAIN_TIMEOUT);
 });
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -233,7 +245,7 @@ describe('Act 1: Harrowmark through "Smoke Over Harrowmark" (all real plugins)',
     expect(flag('story.gate.a2')).toBe(true);
     const wc = (r.ctx.services.require('harrowmark') as unknown as { worldChange(): { active: boolean; banners: number; braziers: number } }).worldChange();
     expect(wc).toEqual({ active: true, banners: 10, braziers: 21 });
-  }, 300_000);
+  }, ACT_TIMEOUT);
 
   it('run B (stealth, Warden, collected, shield, bold, Grimtooth defeated)', async () => {
     const { gateStates } = await act1('B');
@@ -246,43 +258,58 @@ describe('Act 1: Harrowmark through "Smoke Over Harrowmark" (all real plugins)',
     const dialogue = h!.ctx.services.require('dialogue');
     for (const n of CAMP_LINES.B) expect(dialogue.hasSeen(n), n).toBe(true);
     for (const n of CAMP_NOT.B) expect(dialogue.hasSeen(n), n).toBe(false);
-  }, 300_000);
+  }, ACT_TIMEOUT);
+
+  // The next two tests start from the same save (Phase A complete, Prior released) and need Harrowmark unplayed: one boot
+  // serves both. The reachability test only walks and opens Rook's talk, which is closed before the next test.
+  describe('M06 from the released Phase A save (one shared boot)', () => {
+    beforeAll(async () => {
+      h = await bootFromSave(await readPhaseAFixture(PHASE_A_FIXTURES.releasedSaved), { models: true, virtualClock: true });
+      shareBoot = true;
+    }, ACT_TIMEOUT);
+    afterAll(() => {
+      shareBoot = false;
+      h?.dispose();
+      h = null;
+    });
 
   it('M06 reachability: walking up the road (held move key), Rook is talkable outside the shut portcullis and F opens his offer', async () => {
-    h = await bootFromSave(await readPhaseAFixture(PHASE_A_FIXTURES.releasedSaved), { models: true, virtualClock: true });
-    const ctx = h.ctx;
+    const g = h!;
+    const ctx = g.ctx;
     expect(ctx.services.require('harrowmark').southGate.state()).toBe('closed');
     expect(qstate('m06')).toBe('inactive');
-    const rookPost = h.anchor('npc-post.rook.gate');
-    await h.runAsync(30);
+    const rookPost = g.anchor('npc-post.rook.gate');
+    await g.runAsync(30);
     const rook = ctx.services.require('npcs').position('rook')!;
     expect(Math.hypot(rook.x - rookPost.x, rook.z - rookPost.z)).toBeLessThan(1);
     expect(rook.z).toBeLessThan(1250); // the road side of the portcullis
     // From 40 m down the road, walk north (+Z) until he is in focus. Headless there is no camera rig, so movement is in
     // the world frame (forward is -Z): back walks north; the facing follows the movement.
-    await h.teleport({ x: rook.x, z: rook.z - 40 }, 10, Math.PI);
+    await g.teleport({ x: rook.x, z: rook.z - 40 }, 10, Math.PI);
     const focus = () => (ctx.interaction as unknown as { focusFor(a: string): { id: string } | null }).focusFor('interact')?.id;
-    h.key('keydown', 'KeyS');
+    g.key('keydown', 'KeyS');
     let seen: string | undefined;
     for (let i = 0; i < 60 * 15 && seen !== 'npc:rook'; i++) {
-      h.run(1);
+      g.run(1);
       seen = focus();
     }
-    h.key('keyup', 'KeyS');
+    g.key('keyup', 'KeyS');
     expect(seen, JSON.stringify({ feet: ctx.player.feet, rook, yaw: (ctx.player as unknown as { yaw?: number }).yaw })).toBe('npc:rook');
     expect(ctx.player.feet.z).toBeLessThan(1250);
-    h.run(10);
-    if (focus() === 'npc:rook') h.press('KeyF');
+    g.run(10);
+    if (focus() === 'npc:rook') g.press('KeyF');
     expect(ctx.services.require('dialogue').active).toBe(true);
-    expect(h.of('dialogue.started').at(-1)).toEqual({ dialogueId: 'npc-rook', npcId: 'rook' });
-  }, 60_000);
+    expect(g.of('dialogue.started').at(-1)).toEqual({ dialogueId: 'npc-rook', npcId: 'rook' });
+  }, SHORT_TIMEOUT);
 
   it('M06 by persuasion: the tipped argument at Halvard Banked with 25 gold, the gate closed then open', async () => {
-    h = await bootFromSave(await readPhaseAFixture(PHASE_A_FIXTURES.releasedSaved), { models: true, virtualClock: true });
-    await reachSouthGate(h);
-    await playM06(h, { talks: [] }, 'persuasion');
+    const g = h!;
+    g.ctx.services.require('dialogue').close('script'); // Rook's offer from the test above
+    await reachSouthGate(g);
+    await playM06(g, { talks: [] }, 'persuasion');
     expect(flag('story.m06.route')).toBe('persuasion');
-    expect(h.ctx.services.require('inventory').gold).toBe(0);
-    expect(h.of('gold.spent').at(-1)).toMatchObject({ amount: HARNESS_TIP_GOLD, reason: 'persuasion' });
-  }, 120_000);
+    expect(g.ctx.services.require('inventory').gold).toBe(0);
+    expect(g.of('gold.spent').at(-1)).toMatchObject({ amount: HARNESS_TIP_GOLD, reason: 'persuasion' });
+  }, SHORT_TIMEOUT);
+  });
 });
