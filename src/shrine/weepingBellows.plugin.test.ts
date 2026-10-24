@@ -50,7 +50,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function boot(opts: { center?: boolean; stone?: boolean; save?: { suspend(reason: string): () => void } } = {}) {
+async function boot(opts: { center?: boolean; stone?: boolean; save?: { suspend(reason: string): () => void; saveNow?: (reason: string) => unknown } } = {}) {
   (globalThis as any).self ??= globalThis;
   const scene = new THREE.Scene();
   const moveModifiers = new MoveModifiers();
@@ -242,6 +242,35 @@ describe('Weeping Bellows plugin', () => {
     seen.length = 0;
     t.ctx.events.emit('save.loaded', { slot: 'a' } as never);
     expect(seen).toEqual([]);
+  });
+
+  it('the save the solve requests already carries the Blessing, the solved flag and the lit shrine (R2-1)', async () => {
+    const snaps: { reason: string; blessing: boolean; solved: boolean; shrine: boolean; stone: boolean }[] = [];
+    const ref: { t?: T } = {};
+    const t = await boot({
+      save: {
+        suspend: () => () => {},
+        saveNow: (reason) =>
+          void snaps.push({
+            reason,
+            blessing: ref.t!.ctx.services.require('bellowsBlessing').active(),
+            solved: ref.t!.ctx.state.getBool('world.bellows.solved'),
+            shrine: ref.t!.ctx.state.getBool('shrine.weeping-bellows.lit'),
+            stone: ref.t!.ctx.state.getBool('waystone.weeping-bellows.lit'),
+          }),
+      },
+    });
+    ref.t = t;
+    t.run(2);
+    solveRouting(t);
+    for (const b of BELLOWS.order) {
+      surgeAt(t, b);
+      t.ctx.events.emit('spell.released', { casterId: 'player', spellId: 'heartshard-surge' });
+    }
+    expect(snaps).toEqual([{ reason: 'waystone', blessing: true, solved: true, shrine: true, stone: true }]);
+    // announced once
+    expect(t.emitted.filter((e) => e.type === 'shrine.rekindled')).toHaveLength(1);
+    expect(t.emitted.filter((e) => e.type === 'buff.applied')).toHaveLength(1);
   });
 
   it('hold-F on the locked shaft-head stone refuses and lights nothing; after the solve it is usable', async () => {

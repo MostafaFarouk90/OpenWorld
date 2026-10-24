@@ -85,9 +85,12 @@ const weepingBellowsPlugin: GamePlugin = {
     const onSolved = () => {
       ctx.state.setFlag(B.solvedFlag, true);
       ctx.state.setFlag(B.shortcutFlag, true);
-      // The stone is A4's; if its anchor is not there yet the shrine still lights.
-      if (!waystones()?.rekindle(B.waystoneId, 'script').ok) binding.lightNow();
+      // Everything the solve sets is written before the rekindle: it requests a save, and that file must carry the Blessing and
+      // the shrine flag (a one-time grant lost to a closed tab; review R2-1). The rekindle's event then finds the shrine lit.
       blessing.apply();
+      binding.lightNow();
+      // The stone is A4's; if its anchor is not there yet the shrine is lit all the same.
+      waystones()?.rekindle(B.waystoneId, 'script');
       toast('bellows.solved');
     };
     const rederive = () => {
