@@ -6,6 +6,7 @@ import { SHRINE_POSITIONS } from '../map/ForgeMarks';
 import { roadLength, roadPoint } from '../terrain/shape/roadPoint';
 import { buildDragonspine, type DragonspineBuild } from './layout';
 import { ledgeRise } from './fit';
+import { TAN_40, worstSlope } from './testing/walk';
 import { LEDGE_HEIGHT } from './helpers';
 import { PLATEAU_IDS } from './inputs';
 import { DRAGONSPINE_NPCS } from './npcDefs';
@@ -190,7 +191,7 @@ describe('Leap ledges', () => {
       expect(s.height).toBeGreaterThanOrEqual(LEDGE_MIN_HEIGHT);
       expect(s.height).toBeLessThanOrEqual(LEDGE_MAX_HEIGHT);
       const l = anchor(launches[s.id]!);
-      const rise = ledgeRise(inp.heightAt, s.x, s.z, { x: l.x, z: l.z });
+      const rise = ledgeRise(inp.heightAt, s.x, s.z, { x: l.x, z: l.z }, [s.footprint[0], s.footprint[1]]);
       expect(rise, s.id).toBeGreaterThanOrEqual(1.5);
       expect(rise, s.id).toBeLessThanOrEqual(LEDGE_HEIGHT + 0.001);
     }
@@ -198,25 +199,7 @@ describe('Leap ledges', () => {
 });
 
 describe('the climbs', () => {
-  const TAN_40 = Math.tan((40 * Math.PI) / 180);
-  const walk = (pts: ReadonlyArray<{ x: number; z: number }>) => {
-    let worst = 0;
-    let prev: { x: number; z: number; h: number } | null = null;
-    for (let i = 1; i < pts.length; i++) {
-      const a = pts[i - 1]!;
-      const c = pts[i]!;
-      const len = Math.hypot(c.x - a.x, c.z - a.z);
-      const n = Math.max(1, Math.ceil(len));
-      for (let k = 0; k <= n; k++) {
-        const x = a.x + ((c.x - a.x) * k) / n;
-        const z = a.z + ((c.z - a.z) * k) / n;
-        const h = inp.heightAt(x, z);
-        if (prev && Math.hypot(x - prev.x, z - prev.z) > 1e-6) worst = Math.max(worst, Math.abs(h - prev.h) / Math.hypot(x - prev.x, z - prev.z));
-        prev = { x, z, h };
-      }
-    }
-    return worst;
-  };
+  const walk = (pts: ReadonlyArray<{ x: number; z: number }>) => worstSlope(inp.heightAt, pts);
   it('the Hawk Cliffs climb has no slope over the controller\'s limit and rises to the shelf', () => {
     expect(walk(b.hawk.climb)).toBeLessThanOrEqual(TAN_40);
     const rise = inp.heightAt(b.hawk.shelf.x, b.hawk.shelf.z) - inp.heightAt(b.hawk.climbStart.x, b.hawk.climbStart.z);

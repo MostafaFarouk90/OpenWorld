@@ -3,7 +3,7 @@
 // The interior is `collapsedCave.ts`.
 import type { StructureSpec } from '../region/layoutTypes';
 import { a, dist, emptyPart, headingTo, ledge, LEDGE_HEIGHT, numbered, solid, sphere, type Part } from './helpers';
-import { fitLedge } from './fit';
+import { fitLedge, type LedgeSize } from './fit';
 import type { XZ } from './inputs';
 import { pathLength, pathPoint, windingPath } from './paths';
 import type { Sites } from './sites';
@@ -33,9 +33,11 @@ export function caveMouthLayout(s: Sites): { part: Part; info: CaveMouthInfo } {
   const C = s.cave;
   const door = s.cavePad.door;
   const mouth = solid('dragonspine-cave-mouth', 'dragonspine-cave-mouth', door.x, door.z + 5, 12, 4, 6);
-  const fitted = fitLedge(s.h, { x: door.x, z: door.z - 8 }, [6, 2]);
+  // The ledge is fitted at the size it is built (the whole width of the mouth shelf), so its real top is what the launch point sees.
+  const size: LedgeSize = [Math.max(6, C.w - 6), 3.2];
+  const fitted = fitLedge(s.h, { x: door.x, z: door.z - 8 }, [6, 2], size);
   if (!fitted) throw new Error('dragonspine: no climbable ground for the collapsed ledge before the cave mouth');
-  const rubble = ledge('dragonspine-cave-ledge', fitted.x, fitted.z, 0, Math.max(6, C.w - 6), 3.2);
+  const rubble = ledge('dragonspine-cave-ledge', fitted.x, fitted.z, 0, size[0], size[1]);
   const tail = dist(fitted.launch, rubble) + dist(rubble, door);
   const budget = Math.max(CAVE_APPROACH_LENGTH - tail, 20);
   const near = s.road.nearest(door.x, door.z);

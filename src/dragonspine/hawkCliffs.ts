@@ -1,6 +1,6 @@
 // The Hawk Cliffs (R18): the egg thief's camp on K1's cliff-foot plateau (sack, straw, tracks, a broken shell, three egg
 // pick-ups), a companion hold point, the climb to the nest shelf as a winding path of about 160 m with built treads at its
-// bends, three nests (one is R18's), the parents' circling anchors and the rime-hawk spawn anchors.
+// bends (decoration only: no collider, the climb is walked on K1's terrain and a test checks its slope), three nests (one is R18's), the parents' circling anchors and the rime-hawk spawn anchors.
 import { findFlat } from '../cinderreach/siteFit';
 import type { StructureSpec } from '../region/layoutTypes';
 import { a, emptyPart, numbered, open, polar, sphere, type Part } from './helpers';
@@ -12,8 +12,8 @@ import type { Sites } from './sites';
 
 /** The climb proper is about this long; with the walk from the camp to its foot, five trips make the plan's 800 m on foot. */
 export const CLIMB_LENGTH = 125;
-/** The nest shelf stands at least this far over the foot to count as a climb. */
-export const SHELF_MIN_GAIN = 15;
+/** The nest shelf stands at least this far over the foot to count as a climb (a lower bound; K1's cliff is meant to give about 30 m). */
+export const SHELF_MIN_GAIN = 8;
 /** The parents circle this far over the shelf. */
 export const ORBIT_ABOVE = 30;
 const ORBIT_RADIUS = 22;
