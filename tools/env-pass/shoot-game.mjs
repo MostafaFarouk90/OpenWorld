@@ -55,11 +55,11 @@ for (const [name, c] of Object.entries(table.cameras)) {
         const real = g.game.ctx.player.feet;
         Object.defineProperty(g.game.ctx.player, 'feet', {
           configurable: true,
-          get: () => (g.__pin ? new Proxy(real, { get: (t, k) => (k === 'x' ? g.__pin[0] : k === 'z' ? g.__pin[1] : Reflect.get(t, k)) }) : real),
+          get: () => (g.__pin ? new Proxy(real, { get: (t, k) => (k === 'x' ? g.__pin[0] : k === 'z' ? g.__pin[1] : k === 'y' ? g.__pin[2] : Reflect.get(t, k)) }) : real),
         });
         g.__feetPinned = true;
       }
-      g.__pin = [px, pz];
+      g.__pin = [kx, kz, ground(kx, kz)];
       g.__ov = g.camera.override({
         position: { x: px, y: ground(px, pz) + py, z: pz },
         lookAt: { x: lx, y: ground(lx, lz) + ly, z: lz },
