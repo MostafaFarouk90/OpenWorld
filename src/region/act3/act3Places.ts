@@ -134,8 +134,16 @@ export const ACT3_INTERIOR_PADS: Readonly<Record<Act3InteriorPadId, Act3Interior
   },
 };
 
-/** M24's dive pool (K7): a 12 x 10 m pit, 6 m deep, with a flat rim, 30 m east of the Reedgate Ferry landing. */
-export const M24_POOL = { x: 3630, z: 10100, w: 12, d: 10, rimY: 7, floorY: 1 } as const;
+/** M24's dive pool (K7): the ferry pad's hollow, a 12 x 10 m pit 6 m deep under a flat rim, 30 m east of the landing. */
+const M24_HOLLOW = REEDGATE_FERRY_PLATEAU.hollow!;
+export const M24_POOL = {
+  x: (M24_HOLLOW.box.minX + M24_HOLLOW.box.maxX) / 2,
+  z: (M24_HOLLOW.box.minZ + M24_HOLLOW.box.maxZ) / 2,
+  w: M24_HOLLOW.box.maxX - M24_HOLLOW.box.minX,
+  d: M24_HOLLOW.box.maxZ - M24_HOLLOW.box.minZ,
+  rimY: REEDGATE_FERRY_PLATEAU.height,
+  floorY: REEDGATE_FERRY_PLATEAU.height - M24_HOLLOW.depth,
+} as const;
 
 export type Act3FerryStopId = 'reedgate' | 'mere' | 'greywatch' | 'mireweather';
 

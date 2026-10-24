@@ -191,7 +191,8 @@ export const RIME_PASS_SHELTER_PLATEAU = pad('rime-pass-shelter', 13000, 13300, 
 export const LAST_ANVIL_PLATEAU = pad('last-anvil', 14700, 13900, 120, 100, 380, 50);
 export const HAWK_CLIFFS_FOOT_PLATEAU = pad('hawk-cliffs-foot', 11400, 13000, 80, 60, 27, 40);
 export const COLLAPSED_CAVE_PLATEAU = pad('collapsed-cave', 12300, 13700, 40, 30, 53, 40);
-export const M28_CRAG_PLATEAU = pad('m28-crag', 14250, 12700, 30, 30, 282, 60);
+/** M28's crag, about 450 m east of the Rime Pass (K4: a climb of about 1 km on foot). */
+export const M28_CRAG_PLATEAU = pad('m28-crag', 13800, 12600, 30, 30, 167, 100);
 export const SUMMIT_GATE_PLATEAU = pad('summit-gate', 13600, 14750, 60, 50, 575, 60);
 export const WYRMS_HEARTH_PLATEAU = pad('wyrms-hearth', 13600, 15600, 300, 250, 600, 150);
 export const SKYHOLD_TOP_PLATEAU = pad('skyhold-top', 12230, 15200, 100, 80, 585, 50);
@@ -302,5 +303,31 @@ export const SKYHOLD_SPUR_POINTS: RoadPolyline = [
 ];
 export const SKYHOLD_SPUR = road('skyhold-spur', SKYHOLD_SPUR_POINTS, 3.5, 20, 0.1, { maxBlend: 60, maxSideSlope: 1.1 });
 
+/**
+ * R18's egg route (K4): a 2 m footpath cut in switchbacks up the Hawk Cliffs' scarp from the foot plateau's north edge
+ * (27 m) to the nest shelf about 50 m up, at 25% or less. Foot only: no horse takes it.
+ */
+export const HAWK_CLIFFS_PATH_POINTS: RoadPolyline = [
+  [11420, 13028],
+  [11490, 13045],
+  [11400, 13065],
+  [11490, 13085],
+  [11500, 13100],
+];
+export const HAWK_CLIFFS_PATH = road('hawk-cliffs-path', HAWK_CLIFFS_PATH_POINTS, 2, 4, 0.25, { maxBlend: 12, maxSideSlope: 1.1 });
+/** The nest shelf (25 x 15 m) at the path's top, cut level into the face as a short wide bench. */
+export const HAWK_NEST_SHELF = { x: 11512.5, z: 13100, w: 25, d: 15 } as const;
+export const HAWK_NEST_SHELF_ROAD = road(
+  'hawk-nest-shelf',
+  [
+    [HAWK_NEST_SHELF.x - HAWK_NEST_SHELF.w / 2, HAWK_NEST_SHELF.z],
+    [HAWK_NEST_SHELF.x + HAWK_NEST_SHELF.w / 2, HAWK_NEST_SHELF.z],
+  ],
+  HAWK_NEST_SHELF.d / 2,
+  4,
+  0.1,
+  { maxBlend: 12, maxSideSlope: 1.1 },
+);
+
 /** In world-shape order (each road is fitted on the roads before it). */
-export const DRAGONSPINE_ROADS: readonly RoadDef[] = [SPINE_ROAD, DEEPGATE_TRACK, RIME_PASS, SKYHOLD_SPUR];
+export const DRAGONSPINE_ROADS: readonly RoadDef[] = [SPINE_ROAD, DEEPGATE_TRACK, RIME_PASS, SKYHOLD_SPUR, HAWK_CLIFFS_PATH, HAWK_NEST_SHELF_ROAD];

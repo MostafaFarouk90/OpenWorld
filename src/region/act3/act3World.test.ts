@@ -1,5 +1,6 @@
 // Act 3 thread K1: the act3-world plugin (anchors, the four fog faces under the Act 3 flag states, the roads), the
 // faces' placement against containment, and the anchors doc.
+import * as THREE from 'three';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { PhysicsWorld } from '../../physics/PhysicsWorld';
 import { renderAnchorsDoc } from '../anchorsDoc';
@@ -11,7 +12,7 @@ import { createFakeCore } from '../testing/fakeCore';
 import { readFileSync } from '../testing/nodeFs';
 import { ACT3_FACE_PUSH_DEPTH, ACT3_FOG_WALLS, FOG_FACE_ANCHORS, FOG_FACE_POINTS } from './act3World';
 import { ACT3_WORLD_DOC, ACT3_WORLD_LAYOUT } from './act3World.layout';
-import { createAct3WorldPlugin } from './act3World.plugin';
+import { createAct3WorldPlugin, createFogBlender } from './act3World.plugin';
 
 type Flags = Record<string, boolean>;
 const PHASE_D: Flags = { 'story.gate.a2': true, 'story.d03.complete': true };
@@ -165,5 +166,58 @@ describe('the act3-world plugin', () => {
     expect(() => plugin.setup(fc.ctx)).toThrow(/physics/);
     expect(fc.anchors.size).toBe(0);
     expect(fogWalls().some((w) => w.id === 'fog.summit')).toBe(false);
+  });
+});
+
+describe('createFogBlender (the fen haze over the graphics service fog)', () => {
+  const fogOf = () => new THREE.Fog(0x9fb4c8, 900, 5040);
+  const hex = (f: THREE.Fog) => f.color.getHex();
+
+  it('hazes in the fen and gives back exactly the base on leaving', () => {
+    const f = fogOf();
+    const b = createFogBlender();
+    b.apply(f, 1);
+    expect(hex(f)).not.toBe(0x9fb4c8);
+    expect(f.far).toBeLessThan(5040);
+    b.apply(f, 0);
+    expect([hex(f), f.near, f.far]).toEqual([0x9fb4c8, 900, 5040]);
+  });
+
+  it('a view-distance step in the fen (near and far only) keeps the base colour, so leaving restores it', () => {
+    const f = fogOf();
+    const b = createFogBlender();
+    b.apply(f, 1);
+    f.near = 600;
+    f.far = 3360;
+    b.apply(f, 1);
+    b.apply(f, 0);
+    expect([hex(f), f.near, f.far]).toEqual([0x9fb4c8, 600, 3360]);
+  });
+
+  it('an interior that saves the hazed fog and puts it back (blender skipped indoors) leaves the base intact', () => {
+    const f = fogOf();
+    const b = createFogBlender();
+    b.apply(f, 0.8);
+    const saved = { near: f.near, far: f.far, color: f.color.clone() };
+    // Indoors: the interior sets its own fog; the plugin does not call the blender.
+    f.color.set(0x101010);
+    f.near = 5;
+    f.far = 60;
+    // Back out: the interior restores what it saved.
+    Object.assign(f, { near: saved.near, far: saved.far });
+    f.color.copy(saved.color);
+    b.apply(f, 0.8);
+    b.apply(f, 0);
+    expect([hex(f), f.near, f.far]).toEqual([0x9fb4c8, 900, 5040]);
+  });
+
+  it('a colour the graphics service sets in the fen becomes the new base', () => {
+    const f = fogOf();
+    const b = createFogBlender();
+    b.apply(f, 1);
+    f.color.set(0x334455);
+    b.apply(f, 1);
+    b.apply(f, 0);
+    expect(hex(f)).toBe(0x334455);
   });
 });

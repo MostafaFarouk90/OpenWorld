@@ -15,7 +15,9 @@ export type Act3RoadId =
   | 'spine-road'
   | 'deepgate-track'
   | 'rime-pass'
-  | 'skyhold-spur';
+  | 'skyhold-spur'
+  | 'hawk-cliffs-path'
+  | 'hawk-nest-shelf';
 export type RoadId = Act2RoadId | Act3RoadId;
 
 const POLYLINES: ReadonlyMap<string, RoadPolyline> = new Map(

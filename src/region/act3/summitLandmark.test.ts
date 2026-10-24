@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { heightAt as realHeightAt } from '../../terrain/heightfield';
-import { SUMMIT_AREA, SUMMIT_CENTRE, SUMMIT_LANDMARK_ID, buildSummitLandmark, summitPlacement } from './summitLandmark';
+import { SUMMIT_AREA, SUMMIT_CENTRE, SUMMIT_LANDMARK_ID, buildSummitLandmark, distanceToSummitArea, summitPlacement } from './summitLandmark';
 
 /** A cheap fake summit: a cone of 600 m about (14000, 15800) on 100 m ground. */
 const fake = (x: number, z: number) => 100 + Math.max(0, 500 - Math.hypot(x - 14000, z - 15800) * 0.2);
@@ -39,9 +39,21 @@ describe('summit landmark', () => {
     l.update(cam(13600, 130, 11900), FAR, fog, false);
     expect(Math.hypot(14000 - 13600, 15800 - 11900)).toBeLessThan(0.9 * FAR);
     expect(l.object.visible).toBe(false);
-    // Just outside 0.9 x far it appears.
-    l.update(cam(14000, 130, 15800 - 0.9 * FAR - 10), FAR, fog, false);
+    // Just outside 0.9 x far of the summit area's near edge it appears.
+    l.update(cam(14000, 130, SUMMIT_AREA.minZ - 0.9 * FAR - 10), FAR, fog, false);
     expect(l.object.visible).toBe(true);
+    l.update(cam(14000, 130, SUMMIT_AREA.minZ - 0.9 * FAR + 10), FAR, fog, false);
+    expect(l.object.visible).toBe(false);
+  });
+
+  it('stays hidden wherever the real summit ground is inside view distance (the Spine Road, the Deepgate Track)', () => {
+    const l = buildSummitLandmark(fake);
+    for (const c of [cam(10500, 60, 12500), cam(15400, 80, 11250)]) {
+      expect(distanceToSummitArea(c.x, c.z)).toBeLessThan(0.9 * FAR);
+      l.update(c, FAR, fog, false);
+      expect(l.object.visible, `(${c.x}, ${c.z})`).toBe(false);
+    }
+    expect(distanceToSummitArea(14000, 15800)).toBe(0);
   });
 
   it('is shown far: from the Fen Road and the Cinder Road, along the line of sight and inside the far plane', () => {

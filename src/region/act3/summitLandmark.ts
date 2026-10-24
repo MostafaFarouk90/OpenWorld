@@ -2,7 +2,7 @@
 // stacks' method (act2/oldsmokeStacks.ts) for the Act 3 peaks. The camera sees about 5 km; the summit is 12 km from the
 // Fen Road and the Cinder Road, so past 0.9 x the far plane a low silhouette of the real peaks is drawn instead: on the
 // true line of sight, scaled by the same factor (same bearing, same angular size), fog-tinted by real distance. Hidden
-// indoors, and hidden once the camera is within 0.9 x far of the summit (the real peaks are in view distance then).
+// indoors, and hidden once any of the summit area is within 0.9 x far (the real peaks are in view distance then).
 //
 // Built once from the shaped heightfield: a coarse grid over the summit area (24 x 12 cells), each vertex the highest of
 // 2 x 2 samples inside its cell, so the skyline from any side is the real crest. The mesh is built about its own centre
@@ -19,10 +19,16 @@ export const SUMMIT_CENTRE = { x: 14000, z: 15800 } as const;
 export const SUMMIT_COLUMNS = 24;
 export const SUMMIT_ROWS = 12;
 export const CELL_SAMPLES = 2;
-/** The stand-in is hidden within this fraction of the far plane of the summit centre. */
+/** The stand-in is hidden once any of the summit area is within this fraction of the far plane. */
 export const HIDE_FAR_FRACTION = 0.9;
 /** Mesh and skirt bottom (metres): the silhouette stands on this level. */
 const SKIRT_Y = 0;
+
+/** Horizontal distance from (x, z) to the summit area's box (0 inside it). Pure. */
+export function distanceToSummitArea(x: number, z: number): number {
+  const { minX, maxX, minZ, maxZ } = SUMMIT_AREA;
+  return Math.hypot(Math.max(minX - x, 0, x - maxX), Math.max(minZ - z, 0, z - maxZ));
+}
 
 export interface SummitPlacement {
   x: number;
@@ -148,14 +154,14 @@ export function buildSummitLandmark(heightAt: (x: number, z: number) => number, 
   group.visible = false;
 
   const colors = geo.getAttribute('color') as THREE.BufferAttribute;
-  let lastKey = '';
+  let lastKey = -1;
   const tmp = new THREE.Color();
   return {
     object: group,
     update(cam, far, fog, indoors) {
-      const dx = SUMMIT_CENTRE.x - cam.x;
-      const dz = SUMMIT_CENTRE.z - cam.z;
-      const near = Math.hypot(dx, dz) < HIDE_FAR_FRACTION * far;
+      // The nearest point of the summit area, not its centre: the mesh spans about 5 km, so by the time the centre is
+      // inside view distance the real peaks on its near side have long been drawn, and the stand-in would cover them.
+      const near = distanceToSummitArea(cam.x, cam.z) < HIDE_FAR_FRACTION * far;
       group.visible = !indoors && !near && far > 0;
       if (!group.visible) return;
       const p = summitPlacement(cam, far, radius);
@@ -163,7 +169,7 @@ export function buildSummitLandmark(heightAt: (x: number, z: number) => number, 
       group.scale.setScalar(p.scale);
       const haze = fog ? hazeFor(p.distance) : 0;
       // Recolour only when the haze (to 0.5%) or the fog colour changes.
-      const key = fog ? `${Math.round(haze * 200)}:${fog.getHex()}` : '';
+      const key = fog ? Math.round(haze * 200) * 0x1000000 + fog.getHex() : -1;
       if (fog && key !== lastKey) {
         lastKey = key;
         for (let v = 0; v < colors.count; v++) {

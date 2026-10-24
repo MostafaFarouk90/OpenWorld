@@ -23,42 +23,51 @@ export interface Act3WorldPluginOptions {
 }
 
 export const ACT3_WORLD_SYSTEM_ID = 'act3-world.render';
+const NO_FOG_COLOR = new THREE.Color(0x888888);
 
 /**
- * Blends the scene fog toward the fen's haze by the player's Greyfen weight without fighting the graphics service:
- * whatever the fog holds when it differs from what this last wrote is taken as the new base (a quality step or an
- * interior changes it), and weight 0 restores the base exactly.
+ * Blends the scene fog toward the fen's haze by the player's Greyfen weight without fighting the graphics service. Each
+ * field (near, far, colour) is tracked on its own: a field that no longer holds what this last wrote was changed by
+ * someone else (a view-distance step changes near and far only), so its current value becomes that field's base, and
+ * the other fields keep theirs. Weight 0 puts every field this still owns back to its base. The caller skips the
+ * blender while indoors, so an interior that saves and restores the hazed fog hands back exactly what was written.
  */
 export function createFogBlender(): { apply(fog: THREE.Fog, weight: number): void; restore(fog: THREE.Fog): void } {
-  let base: { near: number; far: number; color: THREE.Color } | null = null;
-  let written: { near: number; far: number; color: THREE.Color } | null = null;
-  const capture = (fog: THREE.Fog) => {
-    if (!written || fog.near !== written.near || fog.far !== written.far || !fog.color.equals(written.color)) {
-      base = { near: fog.near, far: fog.far, color: fog.color.clone() };
-    }
-  };
-  const restore = (fog: THREE.Fog) => {
-    if (base && written && fog.near === written.near && fog.far === written.far && fog.color.equals(written.color)) {
-      fog.near = base.near;
-      fog.far = base.far;
-      fog.color.copy(base.color);
-    }
-    base = null;
-    written = null;
+  const base = { near: 0, far: 0, color: new THREE.Color() };
+  const written = { near: 0, far: 0, color: new THREE.Color() };
+  let active = false;
+  const scratch = new THREE.Color();
+  const sameColor = (a: THREE.Color, b: THREE.Color): boolean => Math.abs(a.r - b.r) <= 1 / 255 && Math.abs(a.g - b.g) <= 1 / 255 && Math.abs(a.b - b.b) <= 1 / 255;
+  const restore = (fog: THREE.Fog): void => {
+    if (!active) return;
+    if (fog.near === written.near) fog.near = base.near;
+    if (fog.far === written.far) fog.far = base.far;
+    if (sameColor(fog.color, written.color)) fog.color.copy(base.color);
+    active = false;
   };
   return {
     apply(fog, weight) {
       if (weight <= 0) {
-        if (written) restore(fog);
+        restore(fog);
         return;
       }
-      capture(fog);
-      const b = base!;
-      const m = mistFog(b.near, b.far, b.color, weight);
+      if (!active) {
+        base.near = fog.near;
+        base.far = fog.far;
+        base.color.copy(fog.color);
+      } else {
+        if (fog.near !== written.near) base.near = fog.near;
+        if (fog.far !== written.far) base.far = fog.far;
+        if (!sameColor(fog.color, written.color)) base.color.copy(fog.color);
+      }
+      const m = mistFog(base.near, base.far, base.color, weight, scratch);
       fog.near = m.near;
       fog.far = m.far;
       fog.color.copy(m.color);
-      written = { near: fog.near, far: fog.far, color: fog.color.clone() };
+      written.near = fog.near;
+      written.far = fog.far;
+      written.color.copy(fog.color);
+      active = true;
     },
     restore,
   };
@@ -128,10 +137,11 @@ export function createAct3WorldPlugin(opts: Act3WorldPluginOptions = {}): GamePl
               const indoors = Boolean(ctx.services.get('interiors')?.current);
               const fog = ctx.scene.fog instanceof THREE.Fog ? ctx.scene.fog : null;
               const weight = indoors ? 0 : greyfenWeight(cam.position.x, cam.position.z);
-              if (fog) blender.apply(fog, weight);
+              // Indoors the interior owns the fog: leave it and the blender's base alone until the player is back out.
+              if (fog && !indoors) blender.apply(fog, weight);
               water.update(cam.position, seconds);
               water.object.visible = !indoors;
-              mist.update(cam.position, weight, seconds, fog?.color ?? new THREE.Color(0x888888));
+              mist.update(cam.position, weight, seconds, fog?.color ?? NO_FOG_COLOR);
               summit.update(cam.position, cam.far, fog?.color ?? null, indoors);
             },
           }),

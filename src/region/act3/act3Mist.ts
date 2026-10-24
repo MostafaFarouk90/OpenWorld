@@ -41,12 +41,13 @@ export interface MistFog {
 }
 
 /** The scene fog blended toward the silver-green haze by `weight` (0 gives the base back exactly). Pure. */
-export function mistFog(baseNear: number, baseFar: number, baseColor: THREE.Color, weight: number): MistFog {
+export function mistFog(baseNear: number, baseFar: number, baseColor: THREE.Color, weight: number, out?: THREE.Color): MistFog {
   const w = Math.min(Math.max(Number.isFinite(weight) ? weight : 0, 0), 1);
   // Never push the fog out past the base: a darker, shorter fog only.
   const near = baseNear + (Math.min(baseNear, MIST_FOG_NEAR) - baseNear) * w;
   const far = baseFar + (Math.min(baseFar, MIST_FOG_FAR) - baseFar) * w;
-  return { near, far: Math.max(far, near + 1), color: baseColor.clone().lerp(MIST_HAZE, w) };
+  // `out` (optional) receives the colour, so a per-frame caller allocates nothing.
+  return { near, far: Math.max(far, near + 1), color: (out ?? new THREE.Color()).copy(baseColor).lerp(MIST_HAZE, w) };
 }
 
 const MIST_VERTEX = /* glsl */ `

@@ -19,6 +19,7 @@ import {
   FROSTFANG_KEEP_PLATEAU,
   FROSTFANG_WAYSTONE,
   HAWK_CLIFFS_FOOT_PLATEAU,
+  HAWK_NEST_SHELF,
   RIME_PASS,
   RIME_PASS_POINTS,
   SKYHOLD_SPUR,
@@ -54,13 +55,14 @@ function lineGap(points: readonly { x: number; z: number }[], x: number, z: numb
 const nearRoad = (x: number, z: number, m: number) => DRAGONSPINE_ROADS.some((r) => lineGap(r.points, x, z) <= m);
 
 describe('the Dragonspine shape is registered in the world shape', () => {
-  it('lists every uplift, the chasm, every plateau and the roads in order (Spine Road, Deepgate Track, Rime Pass, Skyhold spur)', () => {
+  it('lists every uplift, the chasm, every plateau and the roads in order (Spine Road, Deepgate Track, Rime Pass, Skyhold spur, the Hawk Cliffs path and shelf)', () => {
     expect(WORLD_SHAPE.uplifts).toEqual(DRAGONSPINE_UPLIFTS);
     expect(WORLD_SHAPE.troughs).toEqual(expect.arrayContaining([...DRAGONSPINE_TROUGHS]));
     expect(WORLD_SHAPE.plateaus).toEqual(expect.arrayContaining([...DRAGONSPINE_PLATEAUS]));
-    expect(DRAGONSPINE_ROADS.map((r) => r.id)).toEqual(['spine-road', 'deepgate-track', 'rime-pass', 'skyhold-spur']);
+    const order = ['spine-road', 'deepgate-track', 'rime-pass', 'skyhold-spur', 'hawk-cliffs-path', 'hawk-nest-shelf'];
+    expect(DRAGONSPINE_ROADS.map((r) => r.id)).toEqual(order);
     const ids = WORLD_SHAPE.roads.map((r) => r.id);
-    expect(ids.slice(-4)).toEqual(['spine-road', 'deepgate-track', 'rime-pass', 'skyhold-spur']);
+    expect(ids.slice(-order.length)).toEqual(order);
   });
 
   it('keeps the uplifts few (they run for every terrain vertex) and the spines short', () => {
@@ -106,8 +108,17 @@ describe('plateaus', () => {
     expect(Math.abs(s.wyrmwatchLodge.height - 120)).toBeLessThanOrEqual(10);
     expect(Math.abs(s.rimePassShelter.height - 250)).toBeLessThanOrEqual(15);
     expect(Math.abs(s.lastAnvil.height - 380)).toBeLessThanOrEqual(15);
-    expect(s.m28Crag.height).toBeGreaterThanOrEqual(200);
-    expect(s.m28Crag.height).toBeLessThanOrEqual(300);
+    // M28's crag stands above the lodge, 430 to 520 m off the Rime Pass (K4's 1 km climb).
+    expect(s.m28Crag.height).toBeGreaterThan(s.wyrmwatchLodge.height + 30);
+    const off = Math.min(...RIME_PASS_POINTS.slice(1).map((b, i) => {
+      const a = RIME_PASS_POINTS[i];
+      const dx = b[0] - a[0];
+      const dz = b[1] - a[1];
+      const t = Math.max(0, Math.min(1, ((s.m28Crag.x - a[0]) * dx + (s.m28Crag.z - a[1]) * dz) / (dx * dx + dz * dz)));
+      return Math.hypot(s.m28Crag.x - a[0] - dx * t, s.m28Crag.z - a[1] - dz * t);
+    }));
+    expect(off).toBeGreaterThan(430);
+    expect(off).toBeLessThan(520);
     expect(s.summitGate.height).toBeGreaterThanOrEqual(560);
     expect(s.summitGate.height).toBeLessThanOrEqual(580);
     expect(s.skyholdTop.height).toBeGreaterThanOrEqual(560);
@@ -241,7 +252,7 @@ describe('the Frostfang chasm', () => {
 
 describe('roads', () => {
   // The Spine Road: plan 3.3's 7.2 km from the Greyfen's edge, plus about 1 km from Mireweather Hut to the edge.
-  const TARGET: Record<string, number> = { 'spine-road': 8200, 'deepgate-track': 8600, 'rime-pass': 6000, 'skyhold-spur': 1500 };
+  const TARGET: Record<string, number> = { 'spine-road': 8200, 'deepgate-track': 8600, 'rime-pass': 6000, 'skyhold-spur': 1500, 'hawk-cliffs-path': 270, 'hawk-nest-shelf': 25 };
 
   for (const r of DRAGONSPINE_ROADS) {
     it(`${r.id} never climbs more than ${r.maxGrade} over a 5 m step`, () => {
@@ -380,5 +391,33 @@ describe('shipped ground', () => {
         }
       }
     }
+  });
+});
+
+describe('the Hawk Cliffs footpath and nest shelf (K4, R18)', () => {
+  it('climbs from the foot plateau to the shelf at 25% or less, about 270 m of path', () => {
+    const len = worldRoads.length('hawk-cliffs-path');
+    expect(len).toBeGreaterThan(240);
+    expect(len).toBeLessThan(320);
+    let worst = 0;
+    for (let s = 0; s + 2 <= len; s += 2) worst = Math.max(worst, Math.abs(worldRoads.profile('hawk-cliffs-path', s + 2) - worldRoads.profile('hawk-cliffs-path', s)) / 2);
+    expect(worst).toBeLessThanOrEqual(0.25 + 1e-6);
+    expect(worldRoads.profile('hawk-cliffs-path', 0)).toBeCloseTo(DRAGONSPINE_SITES.hawkCliffsFoot.height, 0);
+  });
+
+  it('the shelf is a level 25 x 15 m bench 40 to 60 m over the foot', () => {
+    const foot = DRAGONSPINE_SITES.hawkCliffsFoot.height;
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let x = HAWK_NEST_SHELF.x - HAWK_NEST_SHELF.w / 2 + 1; x <= HAWK_NEST_SHELF.x + HAWK_NEST_SHELF.w / 2 - 1; x += 1) {
+      for (let z = HAWK_NEST_SHELF.z - HAWK_NEST_SHELF.d / 2 + 1; z <= HAWK_NEST_SHELF.z + HAWK_NEST_SHELF.d / 2 - 1; z += 1) {
+        const h = heightAt(x, z);
+        lo = Math.min(lo, h);
+        hi = Math.max(hi, h);
+      }
+    }
+    expect(hi - lo).toBeLessThan(2.5);
+    expect(lo - foot).toBeGreaterThan(40);
+    expect(hi - foot).toBeLessThan(60);
   });
 });
