@@ -31,7 +31,8 @@ const modules: Record<string, PluginModule> = {
 };
 
 import { BELLOWS, initialRouting } from './weepingBellows.tuning';
-import { devBellowsCenter, devBellowsRequested } from './bellowsDevHook';
+import { devBellowsCenter, devBellowsRequested, parseBellows } from './bellowsDevHook';
+import { bellowsLayout } from './weepingBellows.visuals';
 import { WAYSTONE_LOCKS } from '../waystones/tuning';
 
 const CENTER = { x: 20200, y: 150, z: 9500 };
@@ -49,7 +50,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function boot(opts: { center?: boolean; stone?: boolean } = {}) {
+async function boot(opts: { center?: boolean; stone?: boolean; save?: { suspend(reason: string): () => void } } = {}) {
   (globalThis as any).self ??= globalThis;
   const scene = new THREE.Scene();
   const moveModifiers = new MoveModifiers();
@@ -69,6 +70,7 @@ async function boot(opts: { center?: boolean; stone?: boolean } = {}) {
   if (opts.stone !== false) ctx.anchors.define({ id: 'waystone.weeping-bellows', position: { x: 9000, y: 0, z: 9000 }, yaw: 0, tags: ['waystone'] });
   if (opts.center !== false) ctx.anchors.define({ id: 'mines.weeping-bellows.center', position: CENTER, yaw: 0 });
   ctx.services.provide('enemies' as never, { setWarmthTier: () => {} } as never);
+  if (opts.save) ctx.services.provide('save' as never, opts.save as never);
   const interactables = new Map<string, Interactable>();
   const register = ctx.interaction.register.bind(ctx.interaction);
   ctx.interaction.register = (i: Interactable) => {
@@ -333,12 +335,29 @@ const solveBlessing = (t: T) => {
   }
 };
 
-describe('?bellows=1 dev hook', () => {
-  afterEach(() => vi.unstubAllGlobals());
+describe('?bellows=1&new dev hook (review-b M1 and L3)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+  const fakeSave = () => ({ suspend: vi.fn((_reason: string) => () => {}) });
+  const valveAt = (t: T, n: number) => {
+    const out = new THREE.Vector3();
+    wheel(t, n).position(out);
+    return out;
+  };
 
-  it('is off without the URL flag, and for other values', () => {
-    for (const q of [undefined, '', '?debug', '?bellows=0', '?bellows=', '?bellow=1']) expect(devBellowsRequested(q)).toBe(false);
-    expect(devBellowsRequested('?debug&bellows=1')).toBe(true);
+  it('parses like ?act1=: off without the flag or for other values, refused without &new, on with it', () => {
+    for (const q of [undefined, '', '?debug', '?bellows=0', '?bellows=', '?bellow=1', '?new']) expect(parseBellows(q)).toBeNull();
+    expect(parseBellows('?bellows=1')).toEqual({ error: expect.stringContaining('&new') });
+    expect(parseBellows('?debug&bellows=1&new')).toEqual({ fresh: true });
+  });
+
+  it('runs only in a dev build with &new', () => {
+    expect(devBellowsRequested('?bellows=1&new', true)).toBe(true);
+    expect(devBellowsRequested('?bellows=1', true)).toBe(false);
+    expect(devBellowsRequested('?bellows=1&new', false)).toBe(false);
+    expect(devBellowsRequested(undefined, true)).toBe(false);
   });
 
   it('places the stand-in centre 20 m north of the stone, else ahead of the player', () => {
@@ -346,24 +365,124 @@ describe('?bellows=1 dev hook', () => {
     expect(devBellowsCenter(undefined, { x: 1, y: 2, z: 3 })).toEqual({ x: 1, y: 2, z: -11 });
   });
 
-  it('without the URL flag and without A4\'s anchor the plugin defines no centre anchor', async () => {
-    const t = await boot({ center: false });
+  it('without the URL flag and without A4\'s anchor the plugin defines no centre anchor and holds no save', async () => {
+    const save = fakeSave();
+    const t = await boot({ center: false, save });
     t.run(5);
     expect(t.ctx.anchors.find('mines.weeping-bellows.center')).toBeUndefined();
     expect(t.interactables.has('valve:bellows-1')).toBe(false);
+    expect(save.suspend).not.toHaveBeenCalled();
   });
 
-  it('with the flag the real puzzle appears at the stand-in spot and works; A4\'s anchor, once real, is not replaced', async () => {
-    vi.stubGlobal('location', { search: '?bellows=1' });
-    const t = await boot({ center: false });
+  it('a dev build with &new: the real puzzle works at the stand-in spot, and saves are held for the session', async () => {
+    vi.stubGlobal('location', { search: '?bellows=1&new' });
+    const save = fakeSave();
+    const t = await boot({ center: false, save });
     t.run(3);
-    expect(t.ctx.anchors.find('mines.weeping-bellows.dev-center')).toBeDefined();
-    // A4's real anchor can still be defined afterwards.
-    expect(() => t.ctx.anchors.define({ id: 'mines.weeping-bellows.center', position: CENTER, yaw: 0 })).not.toThrow();
+    const dev = t.ctx.anchors.find('mines.weeping-bellows.dev-center');
+    expect(dev).toBeDefined();
+    expect(valveAt(t, 1).x).toBeCloseTo(bellowsLayout(dev!.position).valves[0].x, 5);
+    expect(save.suspend).toHaveBeenCalledWith('bellows-dev');
     wheel(t, 1).onInteract(player(t));
     expect(t.ctx.services.require('puzzles').pressure('weeping-bellows')).not.toBeNull();
+  });
+
+  it('a dev build without &new is refused with a warning: nothing placed, no save hold', async () => {
+    vi.stubGlobal('location', { search: '?bellows=1' });
+    const save = fakeSave();
+    const t = await boot({ center: false, save });
+    t.run(3);
+    expect(t.ctx.anchors.find('mines.weeping-bellows.dev-center')).toBeUndefined();
+    expect(t.interactables.has('valve:bellows-1')).toBe(false);
+    expect(save.suspend).not.toHaveBeenCalled();
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('dev hook refused'));
+  });
+
+  it('a production build ignores ?bellows=1&new entirely', async () => {
+    vi.stubGlobal('location', { search: '?bellows=1&new' });
+    vi.stubEnv('DEV', false);
+    const save = fakeSave();
+    const t = await boot({ center: false, save });
+    t.run(3);
+    expect(t.ctx.anchors.find('mines.weeping-bellows.dev-center')).toBeUndefined();
+    expect(t.interactables.has('valve:bellows-1')).toBe(false);
+    expect(save.suspend).not.toHaveBeenCalled();
+  });
+
+  it('A4\'s anchor defined after the stand-in moves the puzzle there: valves at the real centre, the stand-in gone', async () => {
+    vi.stubGlobal('location', { search: '?bellows=1&new' });
+    const t = await boot({ center: false });
+    t.run(3);
+    const dev = t.ctx.anchors.find('mines.weeping-bellows.dev-center')!.position;
+    wheel(t, 1).onInteract(player(t)); // a run in progress at the stand-in
+    expect(t.ctx.services.require('puzzles').pressure('weeping-bellows')).not.toBeNull();
+    expect(() => t.ctx.anchors.define({ id: 'mines.weeping-bellows.center', position: CENTER, yaw: 0 })).not.toThrow();
+    t.run(1);
+    const real = bellowsLayout(CENTER);
+    for (let n = 1; n <= 6; n++) {
+      const v = valveAt(t, n);
+      expect([v.x, v.z]).toEqual([real.valves[n - 1].x, real.valves[n - 1].z]);
+    }
+    expect(Math.hypot(valveAt(t, 1).x - dev.x, valveAt(t, 1).z - dev.z)).toBeGreaterThan(100);
+    expect(t.ctx.anchors.find('mines.weeping-bellows.dev-center')).toBeUndefined();
+    expect(t.ctx.services.require('puzzles').pressure('weeping-bellows')).toBeNull(); // the stand-in run was aborted
+    expect(t.ctx.scene.children.filter((o) => o.name === 'weeping-bellows')).toHaveLength(1);
+  });
+
+  it('with A4\'s anchor already there, the flag places nothing of its own', async () => {
+    vi.stubGlobal('location', { search: '?bellows=1&new' });
     const c = await boot({ center: true });
     c.run(3);
     expect(c.ctx.anchors.find('mines.weeping-bellows.dev-center')).toBeUndefined();
+    expect(valveAt(c, 1).x).toBeCloseTo(bellowsLayout(CENTER).valves[0].x, 5);
+  });
+});
+
+describe('visual root visibility', () => {
+  const rootOf = (t: T) => t.ctx.scene.getObjectByName('weeping-bellows')!;
+  const fakeInteriors = (t: T) => {
+    const svc = { current: null as string | null };
+    t.ctx.services.provide('interiors' as never, svc as never);
+    return svc;
+  };
+
+  it('with the real centre anchor the root shows only while inside the Bellows mine, following the interior the player is in', async () => {
+    const t = await boot();
+    const interiors = fakeInteriors(t);
+    t.run(2);
+    expect(rootOf(t)).toBeDefined();
+    expect(rootOf(t).visible).toBe(false);
+    interiors.current = 'mine-weeping-bellows';
+    t.run(1);
+    expect(rootOf(t).visible).toBe(true);
+    interiors.current = null;
+    t.run(1);
+    expect(rootOf(t).visible).toBe(false);
+  });
+
+  it('another interior keeps it hidden, and it re-evaluates every tick (also after a load)', async () => {
+    const t = await boot();
+    const interiors = fakeInteriors(t);
+    t.run(2);
+    interiors.current = 'mine-other';
+    t.run(1);
+    expect(rootOf(t).visible).toBe(false);
+    interiors.current = 'mine-weeping-bellows';
+    t.run(1);
+    expect(rootOf(t).visible).toBe(true);
+    interiors.current = null;
+    t.run(1);
+    expect(rootOf(t).visible).toBe(false);
+  });
+
+  it('the ?bellows=1 stand-in stays visible regardless of the interior', async () => {
+    vi.stubGlobal('location', { search: '?bellows=1&new' });
+    const t = await boot({ center: false });
+    const interiors = fakeInteriors(t);
+    t.run(3);
+    expect(rootOf(t).visible).toBe(true);
+    t.run(1);
+    expect(interiors.current).toBeNull();
+    expect(rootOf(t).visible).toBe(true);
   });
 });

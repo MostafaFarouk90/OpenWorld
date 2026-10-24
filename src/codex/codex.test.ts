@@ -654,6 +654,15 @@ describe('Act 2 codex (A15)', () => {
     expect(r.codex.has('lore.place.oldsmoke-mines')).toBe(true);
   });
 
+  it('a load backfills the Cinderford place entry from its lit waystone flag, and not without it', async () => {
+    const r = await rig();
+    r.events.emit('save.loaded', { slot: 't' });
+    expect(r.codex.has('lore.place.cinderford')).toBe(false);
+    r.flags.set('waystone.cinderford.lit', true);
+    r.events.emit('save.loaded', { slot: 't' });
+    expect(r.codex.has('lore.place.cinderford')).toBe(true);
+  });
+
   it('a throwing quests service does not break the load', async () => {
     const r = await rig();
     r.services.provide('quests' as any, { state: () => { throw new Error('x'); } } as any);

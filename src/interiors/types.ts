@@ -43,6 +43,8 @@ export interface DoorDef {
   outside: string;
   inside: string;
   exit: string;
+  /** False: no enter interactable at the outside anchor (the door is entered by script; Deepgate's mines use the lift). Default true. */
+  outsideInteractable?: boolean;
 }
 
 /**

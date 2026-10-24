@@ -1,6 +1,7 @@
 import type { ChapterHarness } from './chapterHarness';
 import type { OpeningQuest, PhaseAQuest, QuestTrail, Trails } from './phaseA';
 import type { PhaseBQuest } from './phaseB';
+import type { PaceRow } from '../quests/content/act2/pacing';
 
 /**
  * Phase A play-time estimate (formula and table in src/integration/TIMING.md):
@@ -360,3 +361,43 @@ export function timingMarkdown(rows: TimingRow[]): string {
   lines.push(`| **total** | | | | | | **${f(est)}** | **${design}** | **${d >= 0 ? '+' : ''}${f(d, 0)}** | ${Math.abs(d) > 25 ? '**>25% off**' : ''} |`);
   return lines.join('\n');
 }
+
+
+/**
+ * Phase D (plan Part 7): design minutes of the eleven Oldsmoke and Deepgate quests. Their routes and beats are the pacing
+ * tables the quests ship with (src/quests/content/act2/oldsmoke/**\/*.pacing.ts); `estimatePaceRow` reads them on the real
+ * anchors with the nodes a headless run actually read, so the floor is checked against what was played.
+ */
+export const PHASE_D_DESIGN: Record<string, number> = {
+  m16: 45, m17: 45, r09: 35, r08: 40, m18: 50, r10: 45, m19: 50, m20: 45, m21: 40, d04: 65, m22: 45,
+};
+/**
+ * A leg longer than this is a lift, a door or a ride between two frames (the mines float apart from the surface), not a
+ * walk: it counts no travel, and the lift or ride beat in the row prices it. Every walk inside one place is far shorter.
+ */
+export const DOOR_LEG_M = 400;
+
+/** A pacing row of the quests (the shape of `PaceRow`, plus the legs walked behind Wenna). */
+export type PaceRowLike = Pick<PaceRow, 'quest' | 'route' | 'rideLegs' | 'beats'> & { follow?: number };
+
+/** One pacing row's estimate on real anchors with `nodes` dialogue nodes read; travel is capped at 3/7 of talk-and-beats. */
+export function estimatePaceRow(row: PaceRowLike, design: number, at: (anchor: string) => { x: number; z: number }, nodes: number): TimingRow {
+  let travelM = 0;
+  let travelS = 0;
+  for (let i = 1; i < row.route.length; i++) {
+    const a = at(row.route[i - 1]);
+    const b = at(row.route[i]);
+    const m = Math.hypot(b.x - a.x, b.z - a.z);
+    if (m > DOOR_LEG_M) continue;
+    travelM += m;
+    travelS += m / (i <= (row.rideLegs ?? 0) ? RIDE_MPS : i <= (row.follow ?? 0) ? ROUTE_FOLLOW_MPS : WALK_MPS);
+  }
+  const talkS = nodes * TALK_NODE_S;
+  const beatS = Object.entries(row.beats).reduce((s, [k, n]) => s + ACT2_BEAT_S[k as keyof typeof ACT2_BEAT_S] * (n ?? 0), 0);
+  const estimateMin = (cappedTravelS(travelS, talkS + beatS) + talkS + beatS) / 60;
+  const deltaPct = ((estimateMin - design) / design) * 100;
+  return { quest: row.quest, travelM, travelS, nodes, talkS, beatS, estimateMin, designMin: design, deltaPct, flagged: Math.abs(deltaPct) > 25, note: '' };
+}
+
+/** The dialogue nodes a trail read (a readable note is one `note` beat in the row, not its nodes). */
+export const trailNodes = (trail: QuestTrail): number => trail.talks.filter((t) => !t.npc.startsWith('note-')).reduce((n, t) => n + t.nodes, 0);

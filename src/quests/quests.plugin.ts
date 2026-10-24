@@ -23,7 +23,7 @@ import { R02_AT_BASTION } from './content/r02.quest';
 import { QuestProps } from './props';
 import { QUEST_PROPS, INTERACT_FLAGS } from './content/props';
 import { CARRY_ITEMS } from './content/carry';
-import { QuestNotes } from './notes';
+import { QuestNotes, noteNeeded, targets } from './notes';
 import { QUEST_NOTES, NOTE_LOOKS, NOTE_CODEX } from './content/notes';
 import { installObjectiveFlags } from './objectiveFlags';
 import { OBJECTIVE_FLAGS } from './content/objectiveFlags';
@@ -104,6 +104,7 @@ const plugin: GamePlugin = {
       active: () => manager.active(),
       onChange: (l) => manager.onChange(l),
       torch: () => torch?.position() ?? null,
+      recheck: () => manager.recheck(),
     });
     ctx.persist.register({
       key: 'quests',
@@ -321,6 +322,8 @@ const plugin: GamePlugin = {
       register: (i) =>
         ctx.interaction.register({
           id: i.id, kind: i.kind as 'use' | 'pickup', name: i.name, radius: i.radius, promptKey: i.promptKey, enabled: i.enabled, priority: i.priority,
+          // enabled only while its objective is current, so an enabled prop is always one an objective needs (playtest bug 2)
+          live: () => true,
           position: (out) => { i.position(out); return out; },
           onInteract: () => i.onInteract(),
         }),
@@ -336,12 +339,22 @@ const plugin: GamePlugin = {
       },
       register: (i) =>
         ctx.interaction.register({
-          id: i.id, kind: 'use', name: i.id.replace(/^use:/, ''), radius: i.radius, promptKey: i.promptKey, enabled: i.enabled, priority: i.priority,
+          id: i.id, kind: 'use', name: i.id.replace(/^use:/, ''), radius: i.radius, promptKey: i.promptKey, enabled: i.enabled,
+          // read live: a note standing on an NPC gives way once read (QuestNotes.priorityOf)
+          get priority() { return i.priority; },
+          live: () => i.live(),
           position: (out) => { i.position(out); return out; },
           onInteract: () => i.onInteract(),
         }),
       startDialogue: (d, n) => svc('dialogue')?.start?.(d, n) === true,
       codexUnlock: (id) => svc('codex')?.unlock?.(id),
+      quests: {
+        isObjectiveCurrent: (q, o) => manager.isObjectiveCurrent(q, o),
+        counted: (q, o, key) => manager.counted(q, o, key),
+        npcObjectiveLive: (npcId) =>
+          manager.active().some((q) => manager.objectives(q).some((v) => v.current && v.def.type === 'talk' && targets(v.def.target, npcId))),
+        noteNeeded: (noteId) => noteNeeded(manager, noteId),
+      },
       warn,
     });
     const looks = new QuestLooks(lookSpecs([...QUEST_PROPS, ...ACT2_PROPS], [...QUEST_NOTES, ...ACT2_QUEST_NOTES], { ...NOTE_LOOKS, ...ACT2_NOTE_LOOKS }), {

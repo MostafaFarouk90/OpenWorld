@@ -5,6 +5,7 @@ import { groundDistance } from '../waystones/ground';
 import '../waystones/service';
 import { showToast } from '../waystones/toast';
 import { createContinueModal } from './ContinueModal';
+import { devJumpBoot } from './devJump';
 import { SaveManager, type ApplyReport } from './SaveManager';
 import type { SaveService } from './service';
 import './service';
@@ -163,8 +164,15 @@ const save: GamePlugin = {
     const handleBoot = () => {
       if (bootHandled || !boot) return;
       bootHandled = true;
-      // A dev `?act1=` or `?act2=` jump holds saves for the whole session, so it starts fresh without clearing the real save.
-      if (params.has('new') && import.meta.env.DEV && (params.has('act1') || params.has('act2'))) {
+      // A dev `?act1=`, `?act2=` or `?bellows=1` jump holds saves for the whole session, so it starts fresh without clearing
+      // the real save. A refused one (a bad id, a bad class) holds them here instead: the jump plugin returned before its
+      // own hold, and this fresh game must not autosave over the real slot either.
+      const jump = devJumpBoot(params.toString());
+      if (jump) {
+        if (jump === 'refused') {
+          console.warn('save: the dev jump was refused; saves are held for this session');
+          suspensions.suspend('dev-jump-refused');
+        }
         unlock();
         return;
       }

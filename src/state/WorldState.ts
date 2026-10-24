@@ -186,6 +186,11 @@ export class WorldState implements Persistable {
     return this.credits.has(actorId);
   }
 
+  /** The favour that actor's live mercy credit applied: 0 when it has none, is codex-only or hit the cap. */
+  mercyApplied(actorId: ActorId): number {
+    return this.credits.get(actorId)?.applied ?? 0;
+  }
+
   /** Removes the favour that actor's mercy applied and frees the cap room. Returns the favour removed. */
   revokeMercy(actorId: ActorId): number {
     const credit = this.credits.get(actorId);

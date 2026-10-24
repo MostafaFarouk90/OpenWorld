@@ -74,9 +74,16 @@ export function clampJumpDestination(ports: { clamp?(at: ActPoint): ActPoint }, 
 /** All of Act 1, in play order (Act 2 opens on its end: `story.gate.a2`). */
 const THROUGH_ACT1 = ['m01', 'm02', 'm03', 'm04', 'm05', 'r01', 'r02', 'm06', 'm07', 'm08', 'm09', 'm10', 'r03', 'r04', 'd02'] as const;
 
+/** The quests on the way to D03 (what Phase D opens on); the side quests R05 to R07 and R11 are optional until M22. */
+const THROUGH_D03 = [...THROUGH_ACT1, 'm11', 'm12', 'm13', 'm14', 'm15', 'd03'] as const;
+/** All of Phase C, in play order: M22 and the ending wait on the side quests too. */
+const PHASE_C_ALL = [...THROUGH_ACT1, 'm11', 'm12', 'm13', 'r05', 'r06', 'r07', 'r11', 'm14', 'm15', 'd03'] as const;
+/** Every Phase D quest M22 waits on (its own `startWhen`), in play order. */
+const PHASE_D_BEFORE_M22 = ['m16', 'm17', 'r09', 'r08', 'm18', 'r10', 'm19', 'm20', 'm21', 'd04'] as const;
+
 /**
- * Act 2 prerequisites, transitive and in play order. Phase C (A12): M11 to M15, R05 to R07, R11 and D03. A12 registers no
- * runner of its own: the table is read by whatever runs `?act2=` (A16's harness) and by the Cinderreach chain test.
+ * Act 2 prerequisites, transitive and in play order. Phase C (A12): M11 to M15, R05 to R07, R11 and D03. Phase D (A13): M16 to
+ * M22, R08 to R10 and D04, plus `ending` (everything but M22). Read by `?act2=` (act2Jump.ts) and the chain tests.
  */
 export const ACT2_PREREQS: Record<string, readonly string[]> = {
   m11: [...THROUGH_ACT1],
@@ -90,5 +97,19 @@ export const ACT2_PREREQS: Record<string, readonly string[]> = {
   m14: [...THROUGH_ACT1, 'm11', 'm12', 'm13'],
   m15: [...THROUGH_ACT1, 'm11', 'm12', 'm13', 'm14'],
   d03: [...THROUGH_ACT1, 'm11', 'm12', 'm13', 'm14', 'm15'],
+  // Phase D (A13's Oldsmoke quests). The Phase C side quests are optional until M22, so only M22 and the ending list them.
+  m16: [...THROUGH_D03],
+  m17: [...THROUGH_D03, 'm16'],
+  r08: [...THROUGH_D03, 'm16', 'm17'],
+  r09: [...THROUGH_D03, 'm16'],
+  r10: [...THROUGH_D03, 'm16', 'm17'],
+  m18: [...THROUGH_D03, 'm16', 'm17'],
+  m19: [...THROUGH_D03, 'm16', 'm17', 'm18'],
+  m20: [...THROUGH_D03, 'm16', 'm17', 'm18', 'm19'],
+  m21: [...THROUGH_D03, 'm16', 'm17', 'm18', 'm19', 'm20'],
+  d04: [...THROUGH_D03, 'm16', 'm17', 'm18', 'm19', 'm20'],
+  m22: [...PHASE_C_ALL, ...PHASE_D_BEFORE_M22],
+  // The ending: everything but M22 done, then the jump completes M22 so the act's ending plays over the player.
+  ending: [...PHASE_C_ALL, ...PHASE_D_BEFORE_M22],
 };
 registerActJump(2, { prereqs: ACT2_PREREQS });

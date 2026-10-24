@@ -26,7 +26,11 @@ beforeEach(async () => {
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'info').mockImplementation(() => {});
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  // Each test's Rapier world is freed: 30-odd live worlds per worker were GC and WASM-heap pressure under the full run.
+  physics.dispose();
+  vi.restoreAllMocks();
+});
 
 const modules = (...plugins: GamePlugin[]): Record<string, PluginModule> =>
   Object.fromEntries(plugins.map((p) => [`/src/test/${p.id}.plugin.ts`, { default: p }]));
@@ -147,6 +151,16 @@ describe('companions plugin: joining', () => {
     expect(t.svc().rank('tobb')).toBe(0);
     expect(t.svc().actorId('tobb')).toBeNull();
     expect([...t.ctx.actors.all()].some((a) => a.kind === 'companion:tobb')).toBe(false);
+    t.done();
+  });
+
+  it('his talk interactable is ambient: a quest prop an objective needs wins F at a similar distance (playtest bug 2)', async () => {
+    const t = await boot();
+    t.ctx.state.setFlag(JOIN, true);
+    t.run(5);
+    const talk = (t.ctx.interaction as unknown as { items: Map<string, { ambient?: boolean }> }).items.get('companion:tobb');
+    expect(talk).toBeDefined();
+    expect(talk!.ambient).toBe(true);
     t.done();
   });
 
@@ -524,11 +538,40 @@ describe('companions plugin: saves', () => {
   });
 });
 
-describe('companions plugin: with every real plugin', () => {
+/**
+ * The real plugins this check reads (npcs, nav, combat-verbs, interiors, harrowmark) and everything they depend on. Booting
+ * the whole manifest (60 plugins) sat just under vitest's 5 s default and timed out under the full suite (review-b M3).
+ */
+function withDependencies(ids: readonly string[], all: readonly GamePlugin[]): GamePlugin[] {
+  const by = new Map(all.map((p) => [p.id, p]));
+  const want = new Set<string>();
+  const add = (id: string): void => {
+    if (want.has(id)) return;
+    const p = by.get(id);
+    if (!p) throw new Error(`no plugin "${id}" in the manifest`);
+    want.add(id);
+    for (const d of p.dependsOn ?? []) add(d);
+  };
+  for (const id of ids) add(id);
+  return all.filter((p) => want.has(p.id));
+}
+const INTEGRATIONS = ['companions', 'npcs', 'nav', 'combat-verbs', 'interiors', 'harrowmark'] as const;
+
+describe('companions plugin: with the real plugins it integrates with', () => {
+  it('boots only the integrations and their dependencies, never the whole manifest', () => {
+    const all = Object.values(PLUGIN_MODULES).map((m) => m.default as GamePlugin);
+    const picked = withDependencies(INTEGRATIONS, all).map((p) => p.id);
+    for (const id of INTEGRATIONS) expect(picked).toContain(id);
+    for (const p of withDependencies(INTEGRATIONS, all)) for (const d of p.dependsOn ?? []) expect(picked, `${p.id} -> ${d}`).toContain(d);
+    expect(picked.length).toBeLessThan(all.length / 2);
+    expect(() => withDependencies(['no-such-plugin'], all)).toThrow(/no plugin/);
+  });
+
   it('sets up and reports which integrations resolved; the hook must resolve once thread 2 ships it', async () => {
-    const t = await boot(Object.values(PLUGIN_MODULES).map((m) => m.default as GamePlugin));
+    const all = Object.values(PLUGIN_MODULES).map((m) => m.default as GamePlugin);
+    const t = await boot(withDependencies(INTEGRATIONS, all));
     const ok = (id: string) => t.statuses.find((s) => s.id === id)?.state === 'ok';
-    expect(ok('companions')).toBe(true);
+    for (const id of INTEGRATIONS) expect(ok(id), id).toBe(true);
     const i = t.svc().integration();
     expect(i.npcs).toBe(ok('npcs'));
     expect(i.nav).toBe(ok('nav'));
@@ -537,9 +580,22 @@ describe('companions plugin: with every real plugin', () => {
     const verbsSource: string = readFileSync('src/player/CombatVerbs.ts', 'utf8');
     if (verbsSource.includes('addAttackSpeedMultiplier') && ok('combat-verbs')) expect(i.attackSpeedHook).toBe(true);
     // Thread 3a's inn: once the inn's interior anchors exist, Tobb's hearth post must too; likewise each entry fallback.
+    // The reduced boot still builds them (interiors is booted), so the checks below are not vacuous.
+    expect(t.ctx.anchors.find('harrowmark.tilted-anvil.entry')).toBeDefined();
     if (t.ctx.anchors.find('harrowmark.tilted-anvil.entry')) expect(t.ctx.anchors.find('npc-post.tobb.tilted-anvil')).toBeDefined();
     for (const [interior, anchorId] of Object.entries(TOBB.interiorEntry)) {
       if (t.ctx.anchors.find(`harrowmark.${interior}.exit`)) expect(t.ctx.anchors.find(anchorId), anchorId).toBeDefined();
+    }
+    t.done();
+  }, 30_000);
+});
+
+describe('companions plugin: names', () => {
+  it('registers every companion name key, so none is reported missing at boot', async () => {
+    const t = await boot();
+    for (const key of ['companion.tobb.name', 'companion.hrolf.name', 'companion.aelfreda.name']) {
+      expect(t.ctx.strings.has(key), key).toBe(true);
+      expect(t.ctx.strings.t(key), key).not.toBe(key);
     }
     t.done();
   });

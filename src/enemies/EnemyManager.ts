@@ -29,6 +29,7 @@ import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } fro
 import { ASH_GRAB, BOSS_MERCY, GUARD, MERCY, PAIR, WARM_HAND_BURN, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions, UnlockVerb } from './types';
 import { makeLineOfSight } from './ai/perception';
+import { TauntRegistry, type TauntService } from './taunts';
 import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
 
 
@@ -68,6 +69,8 @@ export interface EnemiesService {
     /** A thrown offering landed: Calm like a held one's. False when the beast is not open to it. */
     calmByThrow(actorId: ActorId): boolean;
   };
+  /** Target choice: a taunter (the Iron Familiar) registers here and nearby enemies target it for its duration. */
+  taunts: TauntService;
   /** Perception hook for stealth and skills (thread 18, 15). */
   perception: {
     register(provider: PerceptionProvider): Unregister;
@@ -189,6 +192,7 @@ export class EnemyManager {
       all: () => this.all(),
       calmByThrow: (id) => this.calmByThrow(id),
     },
+    taunts: { register: (s) => this.tauntRegistry.register(s) },
     perception: {
       register: (p) => this.perceptionHub.register(p),
       state: (id) => this.enemies.get(id)?.perceptionState() ?? null,
@@ -208,6 +212,15 @@ export class EnemyManager {
     this.applyMercy(mercyEvents([subject]));
     this.calmFx(enemy.feet, { kind: 'free' });
     return true;
+  }
+
+  readonly tauntRegistry = new TauntRegistry();
+
+  /** True for a registered boss actor (the core registry knows them). */
+  private isBoss(actorId: ActorId): boolean {
+    const bosses = this.host.bosses;
+    if (bosses?.active) for (const b of bosses.active()) if (bosses.state(b)?.actorId === actorId) return true;
+    return false;
   }
 
   readonly perceptionHub = new PerceptionHub((m) => this.host.warn(m));
@@ -235,6 +248,7 @@ export class EnemyManager {
 
   think(dt: number): void {
     this.clock += dt;
+    this.tauntRegistry.update(dt);
     this.pathBudget.reset();
     this.updateDormancy();
     for (const e of this.enemies.values()) e.think(dt);
@@ -704,6 +718,13 @@ export class EnemyManager {
       this.tokenAt.delete(self);
       this.tokens.get(t)?.delete(self);
     },
+    taunt: (self: Enemy) => {
+      if (this.tauntRegistry.size === 0) return null;
+      const opt = self.def.tauntable;
+      if (opt === false || (opt !== true && this.isBoss(self.id))) return null;
+      if (self.spawnerId && this.spawners.defOf(self.spawnerId)?.untauntable) return null;
+      return this.tauntRegistry.pick(self.feet, self.tauntTarget);
+    },
     perceptionModifiers: (self: Enemy, targetId: ActorId) => this.perceptionHub.combined(targetId, () => self.pose()),
     partnerOf: (self: Enemy) => {
       if (!self.spawnerId) return null;
@@ -827,6 +848,9 @@ export class EnemyManager {
     on('rest', () => this.spawners.onRest());
     on('interior.entered', (p) => this.spawners.onInteriorEntered(p.interiorId));
     on('quest.started', (p) => this.spawners.onQuestStarted(p.questId, (f) => this.host.state.getBool(f, false)));
+    on('quest.completed', (p) => {
+      for (const id of this.spawners.endedWith(p.questId)) this.spawners.despawnGroup(id);
+    });
     on('flag.changed', (p) => {
       if (p.value !== true) return;
       // A flag-gated group spawns when its flag turns true while its quest is active.
@@ -863,6 +887,11 @@ export class EnemyManager {
         const quest = f.spawnerId ? this.spawners.questOf(f.spawnerId) : undefined;
         const questOver = f.kind === 'ash-scarecrow' && quest !== undefined && !active.includes(quest);
         if ((f.spawnerId && this.spawners.isCleared(f.spawnerId)) || spent.has(f.id) || questOver) f.despawn();
+      }
+      // A group that goes away with its quest does not survive a load where the quest is no longer active (completed since).
+      for (const e of [...this.enemies.values()]) {
+        const q = e.spawnerId ? this.spawners.endsWithQuest(e.spawnerId) : undefined;
+        if (q !== undefined && !active.includes(q)) e.despawn();
       }
       for (const questId of active) this.spawners.onQuestStarted(questId, (f) => this.host.state.getBool(f, false));
       const interior = this.host.services.get('interiors')?.current;
@@ -934,6 +963,7 @@ export class EnemyManager {
           req.amount = move.damage * enemy.damageScale * boneMultiplier(req.bone);
           req.poise = move.poise;
           req.attackId = move.clip;
+          if (move.element) req.element = move.element;
           if (move.telegraph === 'dodge') req.unblockable = true;
         },
         -150,

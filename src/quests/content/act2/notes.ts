@@ -1,4 +1,5 @@
 import type { QuestNoteSpec } from '../../notes';
+import { OLDSMOKE_NOTE_LIST } from './oldsmoke/all';
 
 /** A readable note: one short dialogue (id = the note id, the talk target) read with F. Speaker 'note' is a written page, 'cael' his own reading. */
 export interface Act2Note {
@@ -14,6 +15,7 @@ const n = (id: string, anchorId: string, speaker: 'note' | 'cael', lines: string
   ({ id, anchorId, speaker, lines, look, ...(codexId ? { codexId } : {}) });
 
 export const ACT2_NOTE_LIST: Act2Note[] = [
+  ...OLDSMOKE_NOTE_LIST,
   // M11: what happened on the road
   n('note-m11-waypost', 'cinderreach.m11.search.1', 'cael', [
     'The way-post is scorched black on the Harrowmark side. Someone chiselled "STILL 11 MILES" below the old mark, then ran out of time.',
@@ -98,13 +100,24 @@ export const ACT2_NOTE_LIST: Act2Note[] = [
   ], 'box'),
 ];
 
-/** Notes on the spot an NPC stands on (Ealdred, Wynne, Corwin): the note outranks him while it is current (focus ties go to `npc:`). */
-const NOTES_UNDER_NPCS: ReadonlySet<string> = new Set(['note-m13-shield', 'note-r11-camp-1', 'note-m15-map']);
+/**
+ * Notes on the spot an NPC stands on (Ealdred, Wynne, Corwin; focus ties go to `npc:`). Each outranks its NPC only while
+ * its read objective is current and it has not been read, and never while the NPC has a live talk objective (M13 `kin`
+ * and R11 `widow` come before the reads): QuestNotes drops the priority otherwise (playtest NOTES_UNDER_NPCS).
+ */
+export const NOTES_UNDER_NPCS: ReadonlyMap<string, NonNullable<QuestNoteSpec['outranks']>> = new Map([
+  ['note-m13-shield', { npcId: 'ealdred', quest: 'm13', objective: 'hall' }],
+  ['note-r11-camp-1', { npcId: 'wynne', quest: 'r11', objective: 'camp' }],
+  ['note-m15-map', { npcId: 'corwin', quest: 'm15', objective: 'ledgers' }],
+]);
 
-export const ACT2_QUEST_NOTES: QuestNoteSpec[] = ACT2_NOTE_LIST.map((x) => ({
-  interactableId: `use:${x.id}`, anchorId: x.anchorId, ...(x.codexId ? { codexId: x.codexId } : {}),
-  ...(NOTES_UNDER_NPCS.has(x.id) ? { priority: 1 } : {}),
-}));
+export const ACT2_QUEST_NOTES: QuestNoteSpec[] = ACT2_NOTE_LIST.map((x) => {
+  const under = NOTES_UNDER_NPCS.get(x.id);
+  return {
+    interactableId: `use:${x.id}`, anchorId: x.anchorId, ...(x.codexId ? { codexId: x.codexId } : {}),
+    ...(under ? { priority: 1, outranks: under } : {}),
+  };
+});
 
 export const ACT2_NOTE_LOOKS: Record<string, 'page' | 'grave' | 'box'> = Object.fromEntries(
   ACT2_NOTE_LIST.map((x) => [`use:${x.id}`, x.look ?? 'page']),

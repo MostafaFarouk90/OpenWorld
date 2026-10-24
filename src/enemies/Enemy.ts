@@ -55,6 +55,8 @@ export interface EnemyEnv {
   packLeaderId(spawnerId: string): ActorId | null;
   /** Combined perception modifiers for this observer vs the target; null with no providers. */
   perceptionModifiers(self: Enemy, targetId: ActorId): CombinedModifiers | null;
+  /** The taunter this enemy should target this tick (nearest in range), or null/absent for the player. Bosses and opted-out kinds get null. */
+  taunt?(self: Enemy): { id: ActorId; feet: { x: number; y: number; z: number } } | null;
   /** Called once the enemy is gone from the world (after despawn). */
   gone(self: Enemy, how: MemberEnd): void;
   /** A6b: ranged and area effects of a move's window (absent in hosts without ground attacks). */
@@ -352,7 +354,7 @@ export class Enemy {
   private windowEffects(): void {
     const move = this.brain.currentMove;
     if (!move || (!move.ranged && !move.area) || this.phase !== 'alive' || !this.env.attacks) return;
-    this.env.attacks.windowOpened(this.shooter, move);
+    this.env.attacks.windowOpened(this.shooter, move, this.aimFeet ?? undefined);
   }
 
   /** The fastest the def moves: the chase, or a leap's average speed. */
@@ -565,29 +567,33 @@ export class Enemy {
     }
     this.coreArmed = false;
     const player = this.host.actors.player;
-    const pFeet = this.host.player.feet;
     const self = this.mover.feet;
-    const mods = this.env.perceptionModifiers(this, player.id);
+    const taunt = this.chooseTaunt(player.id);
+    // A taunter stands in for the player in every read below; with none, `pFeet` and `tid` are the player's, as ever.
+    const pFeet = taunt ? taunt.feet : this.host.player.feet;
+    const tid = taunt ? taunt.id : player.id;
+    const tAlive = taunt ? true : !player.dead;
+    const mods = taunt ? null : this.env.perceptionModifiers(this, player.id);
     const p = perceive({
       selfFeet: self,
       selfYaw: this.yaw,
       targetFeet: pFeet,
-      targetAlive: !player.dead,
-      targetLoud: this.host.player.loud(),
+      targetAlive: tAlive,
+      targetLoud: taunt ? true : this.host.player.loud(),
       damagedBy: this.damagedThisTick,
       lineOfSight: this.lineOfSight,
       modifiers: mods,
     });
     this.damagedThisTick = false;
-    this.trackAwareness(dt, p, player.id, AI.sightRange * (mods?.sightRangeScale ?? 1), mods != null);
+    if (!taunt) this.trackAwareness(dt, p, player.id, AI.sightRange * (mods?.sightRangeScale ?? 1), mods != null);
     const toTarget = yawTo(self, pFeet);
     const senses: Senses = {
       self: { x: self.x, z: self.z },
-      targetId: player.id,
-      targetAlive: !player.dead,
+      targetId: tid,
+      targetAlive: tAlive,
       targetPos: { x: pFeet.x, z: pFeet.z },
-      // An observer-only guard never acquires a target: the brain stays calm.
-      notices: p.notices && !this.observerOnly && !this.peaceful,
+      // An observer-only guard never acquires a target: the brain stays calm. A taunter in range is always noticed.
+      notices: (taunt ? true : p.notices) && !this.observerOnly && !this.peaceful,
       sees: p.sees,
       distance: p.distance,
       facingErrorDeg: Math.abs(wrap(toTarget - this.yaw)) * (180 / Math.PI),
@@ -938,8 +944,56 @@ export class Enemy {
     return true;
   }
 
-  /** The player this enemy is chasing died or despawned. */
+  /**
+   * The taunter this enemy was last drawn to (null when it targets the player). Set only by `chooseTaunt`, so a game with no
+   * taunters never leaves null.
+   */
+  private tauntedId: ActorId | null = null;
+  /** The feet of the taunter this enemy aims at this tick (projectiles, the leap, the dive); null aims at the player. */
+  private onPlayerBeforeTaunt = false;
+  private aimFeet: { x: number; y: number; z: number } | null = null;
+
+  /**
+   * Per-tick target choice. Returns the taunter to target (and points the brain at it), or null for the player. When a taunt
+   * ends the brain is pointed back at the player here.
+   */
+  private chooseTaunt(playerId: ActorId): { id: ActorId; feet: { x: number; y: number; z: number } } | null {
+    const pick = this.observerOnly || this.peaceful || this.fox ? null : this.env.taunt?.(this) ?? null;
+    if (pick) {
+      // Remember, on the first tick of a taunt, whether the enemy was already on the player.
+      if (this.tauntedId === null) this.onPlayerBeforeTaunt = this.brain.holdsTarget(playerId);
+      this.brain.retarget(pick.id);
+      this.tauntedId = pick.id;
+      this.aimFeet = pick.feet;
+      return pick;
+    }
+    if (this.tauntedId !== null) this.endTaunt(this.tauntedId, playerId);
+    return null;
+  }
+
+  /**
+   * The taunt is over (expired, out of reach or the taunter died). An enemy that was already on the player goes back to it; one
+   * that was drawn out of idle, patrol or a return drops the taunter and goes back to what it was doing, so it does not
+   * aggro a player it never noticed.
+   */
+  private endTaunt(taunterId: ActorId, playerId: ActorId): void {
+    this.tauntedId = null;
+    this.aimFeet = null;
+    if (this.onPlayerBeforeTaunt) this.brain.retarget(playerId);
+    else this.brain.targetGone(taunterId);
+  }
+
+  /** The taunter this enemy is currently drawn to, or null. */
+  get tauntTarget(): ActorId | null {
+    return this.tauntedId;
+  }
+
+  /** The player this enemy is chasing died or despawned (or the taunter it was drawn to: then it goes back to what it was doing). */
   targetGone(targetId: ActorId): void {
+    if (this.tauntedId !== null && this.tauntedId === targetId) {
+      this.endTaunt(targetId, this.host.actors.player.id);
+      return;
+    }
     this.brain.targetGone(targetId);
   }
 
@@ -1245,6 +1299,7 @@ export class Enemy {
       brain: this.brain,
       feet: () => this.mover.feet,
       yaw: () => this.yaw,
+      aim: () => this.aimFeet ?? this.host.player.feet,
       rng: () => this.env.rng(),
       fly: (on, at) => {
         if (this.mover instanceof SwitchingMover) this.mover.fly(on, at);
@@ -1313,7 +1368,7 @@ export class Enemy {
       this.pushVelocity = len > 1e-6 ? { x: (dx / len) * speed, z: (dz / len) * speed } : { x: 0, z: 0 };
       return;
     }
-    const p = this.host.player.feet;
+    const p = this.aimFeet ?? this.host.player.feet;
     const toTarget = Math.hypot(p.x - self.x, p.z - self.z);
     const metres = Math.max(0, Math.min(move.leap.maxMetres, toTarget - HOUND.leapStopShort));
     const f = forwardOf(this.yaw);

@@ -1,5 +1,6 @@
 // Ingest step for environment glb files (G0b). Usage: node tools/env-pass/ingest.mjs <srcDir> <outDir> [--remove]
-// For each <id>.glb in srcDir: bake the node transforms (Z-up exports become Y-up), scale uniformly to the size in src/env/targets.json,
+// Fit rule: uniform scale to the target HEIGHT, then width/depth stretched by at most 15% towards the target footprint; larger gaps are
+// reported as CAP lines (and in manifest 'capped') for the artist. For each <id>.glb in srcDir: bake the node transforms (Z-up exports become Y-up), scale uniformly to the size in src/env/targets.json,
 // put the base on y = 0 and the footprint centre on x, z = 0, weld and simplify to the triangle budget, drop everything but the base
 // colour texture, resize it to 512 px WebP, and write <outDir>/<id>.glb. With --remove the source file is deleted after a verified write
 // (the staging-folder flow: drop files in, ingest, they are removed, only the light copies stay). Originals are never edited in place.
@@ -20,6 +21,8 @@ mkdirSync(out, { recursive: true });
 await MeshoptSimplifier.ready;
 const io = new NodeIO();
 const TRI_TARGET = 4500;
+const STRETCH_MAX = 0.15;
+const permissive = Object.assign(Object.create(MeshoptSimplifier), { simplify: (i, p, st, t, e, f = []) => MeshoptSimplifier.simplify(i, p, st, t, e, [...f, 'Permissive', 'Prune']) });
 // keep the entries of earlier batches: the manifest lists every runtime file, not just this run's
 const manifestPath = path.join(out, 'manifest.json');
 const previous = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')).objects : {};
@@ -49,12 +52,19 @@ for (const f of readdirSync(src).filter((n) => n.endsWith('.glb'))) {
   }
   let b = getBounds(scene);
   const size = [b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]];
-  // driver axis: height for upright things, the longest horizontal for wide things (hedges, logs)
-  const wide = Math.max(want.w, want.d) > 1.8 * want.h;
-  const s = wide ? Math.max(want.w, want.d) / Math.max(size[0], size[2]) : want.h / size[1];
+  // Fit rule (coordinator ruling, default for every batch): uniform scale so the HEIGHT meets the target height, then a non-uniform
+  // stretch of width (x) and depth (z) of at most STRETCH_MAX either way towards the target footprint. Beyond the cap the model stays
+  // at the cap and is listed ("CAP") with its measured size, the target and the factor still needed, for the artist to fix.
+  const s = want.h / size[1];
+  const clampStretch = (need) => Math.min(1 + STRETCH_MAX, Math.max(1 - STRETCH_MAX, need));
+  const needX = want.w / (size[0] * s), needZ = want.d / (size[2] * s);
+  const sx = clampStretch(needX), sz = clampStretch(needZ);
+  const capped = [];
+  if (Math.abs(sx - needX) > 1e-6) capped.push(`width ${(size[0] * s * sx).toFixed(2)} m, want ${want.w} m, factor still needed ${(needX / sx).toFixed(2)}`);
+  if (Math.abs(sz - needZ) > 1e-6) capped.push(`depth ${(size[2] * s * sz).toFixed(2)} m, want ${want.d} m, factor still needed ${(needZ / sz).toFixed(2)}`);
   for (const node of scene.listChildren()) {
     const mesh = node.getMesh();
-    if (mesh) transformMesh(mesh, [s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, 0, 0, 0, 1]);
+    if (mesh) transformMesh(mesh, [s * sx, 0, 0, 0, 0, s, 0, 0, 0, 0, s * sz, 0, 0, 0, 0, 1]);
   }
   b = getBounds(scene);
   const cx = (b.min[0] + b.max[0]) / 2, cz = (b.min[2] + b.max[2]) / 2;
@@ -67,11 +77,20 @@ for (const f of readdirSync(src).filter((n) => n.endsWith('.glb'))) {
   for (const m of root.listMeshes()) for (const p of m.listPrimitives()) tris += (p.getIndices()?.getCount() ?? 0) / 3;
   await doc.transform(weld({ tolerance: 0.0001 }));
   // the simplifier stops at an error bound, so step the bound up until the budget is met
-  for (const error of [0.02, 0.05, 0.1, 0.2, 0.4]) {
+  for (const error of [0.02, 0.05, 0.1, 0.2, 0.4, 0.8, 1.5]) {
     await doc.transform(simplify({ simplifier: MeshoptSimplifier, ratio: Math.min(1, TRI_TARGET / tris), error }));
     let now = 0;
     for (const m of root.listMeshes()) for (const p of m.listPrimitives()) now += (p.getIndices()?.getCount() ?? 0) / 3;
-    if (now <= cfg.maxTriangles) break;
+    if (now <= TRI_TARGET * 1.3) break; // about 5k; thin or detailed models need the larger bounds
+  }
+  // UV seams and loose parts can pin the simplifier: if still far over the aim, let it collapse across seams and drop tiny islands
+  let cur = 0;
+  for (const m of root.listMeshes()) for (const p of m.listPrimitives()) cur += (p.getIndices()?.getCount() ?? 0) / 3;
+  for (const error of cur > TRI_TARGET * 1.3 ? [0.05, 0.1, 0.2, 0.4] : []) {
+    await doc.transform(simplify({ simplifier: permissive, ratio: Math.min(1, TRI_TARGET / cur), error }));
+    cur = 0;
+    for (const m of root.listMeshes()) for (const p of m.listPrimitives()) cur += (p.getIndices()?.getCount() ?? 0) / 3;
+    if (cur <= TRI_TARGET * 1.3) break;
   }
   await doc.transform(dedup(), prune());
   // keep the base colour only; flat roughness so the look stays KayKit-like
@@ -87,7 +106,8 @@ for (const f of readdirSync(src).filter((n) => n.endsWith('.glb'))) {
   await io.write(dest, doc);
   const mb = statSync(dest).size / 1e6;
   if (mb > cfg.maxFileMB) { console.log(`FAIL ${id}: ${mb.toFixed(2)} MB, budget ${cfg.maxFileMB} MB; source kept`); unlinkSync(dest); failed++; continue; }
-  results.push({ id, scale: +s.toFixed(3), trisBefore: Math.round(tris), trisAfter: Math.round(after), mb: +mb.toFixed(2) });
+  results.push({ id, scale: +s.toFixed(3), stretch: [+sx.toFixed(3), +sz.toFixed(3)], ...(capped.length ? { capped } : {}), trisBefore: Math.round(tris), trisAfter: Math.round(after), mb: +mb.toFixed(2) });
+  if (capped.length) console.log(`CAP ${id}: ${capped.join('; ')}`);
   console.log(`${id}: scale ${s.toFixed(3)}, ${Math.round(tris)} -> ${Math.round(after)} tris, ${mb.toFixed(2)} MB`);
   if (remove) unlinkSync(path.join(src, f));
 }

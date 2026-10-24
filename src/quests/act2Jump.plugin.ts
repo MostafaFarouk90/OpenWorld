@@ -117,7 +117,7 @@ const plugin: GamePlugin = {
       },
       ready: () => !save || !save.loading,
       warn: (m) => console.warn(`[act2] ${m}`),
-    });
+    }, parsed.classId); // `&class=<id>` (review-b L1: it was parsed and then dropped, so every jump played the Knight)
     (globalThis as { __act2?: Act2Jump }).__act2 = jump;
     ctx.systems.add({
       id: 'act2-jump',

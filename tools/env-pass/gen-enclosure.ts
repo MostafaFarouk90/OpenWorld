@@ -5,12 +5,12 @@ import { writeFileSync } from 'node:fs';
 import { BRIGHTWATER_LAYOUT as L } from '../../src/region/brightwater.layout';
 import { pointInFootprint } from '../../src/region/geometry';
 
-/** KayKit fence_stone_straight is 6.35 m long (local z) at 1.48 m high; stonewall-low fits it to 1.0 m, stonewall-high to 1.5 m. */
-const MODULE = { 'stonewall-low': 6.35 / 1.48, 'stonewall-high': (6.35 / 1.48) * 1.5 } as const;
+/** KayKit fence_stone_straight is 6.35 m long (local z) at 1.48 m high; stonewall-wing fits it to 1.0 m, stonewall-high to 1.5 m. */
+const MODULE = { 'stonewall-wing': 6.35 / 1.48, 'stonewall-high': (6.35 / 1.48) * 1.5 } as const;
 type P = [number, number];
 type Run = { id: keyof typeof MODULE; pts: P[] };
 const village = (...pts: P[]): Run => ({ id: 'stonewall-high', pts });
-const wing = (...pts: P[]): Run => ({ id: 'stonewall-low', pts });
+const wing = (...pts: P[]): Run => ({ id: 'stonewall-wing', pts });
 const RUNS: Run[] = [
   village([-64, 165], [-51, 165]), // north-west, up to the mill (its footprint is the wall)
   village([-39, 165], [-26.5, 165]), // mill to house-06

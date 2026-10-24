@@ -73,6 +73,11 @@ export class SpawnerRegistry {
   /** Groups that have members placed and have not been despawned or reset since (a refill needs its group live). */
   private readonly live = new Set<string>();
   private pendingRefills: PendingRefill[] = [];
+  /** The registered def of a spawner, or undefined. */
+  defOf(id: string): SpawnerDef | undefined {
+    return this.defs.get(id);
+  }
+
   /** The actor in `leaderSlot` of a group, or null. */
   leaderOf(id: string): ActorId | null {
     const slot = this.defs.get(id)?.leaderSlot;
@@ -403,6 +408,22 @@ export class SpawnerRegistry {
       out.push(...this.spawnGroup(def.id));
     }
     return out;
+  }
+
+  /** Groups that go away when `questId` completes. */
+  endedWith(questId: string): string[] {
+    const out: string[] = [];
+    for (const def of this.defs.values()) {
+      const act = def.activation;
+      if (def.despawnOnQuestEnd && typeof act === 'object' && 'quest' in act && act.quest === questId) out.push(def.id);
+    }
+    return out;
+  }
+
+  /** Whether a group is one that goes away with its quest, and the quest it follows. */
+  endsWithQuest(spawnerId: string): string | undefined {
+    const def = this.defs.get(spawnerId);
+    return def?.despawnOnQuestEnd ? this.questOf(spawnerId) : undefined;
   }
 
   /** Quest ids whose groups wait on `flag`. */

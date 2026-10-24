@@ -21,7 +21,8 @@ export const CINDERREACH_NPC_DEFS: NpcDef[] = [
   def('ketta', 'rogueHooded', { tint: 0x7a8a5a }),
   def('maud', 'mage', { tint: 0x8a8a90 }),
   def('beornwyn', 'rogue', { tint: 0x7a4a6a }),
-  HROLF_NPC_DEF,
+  // Named from this table: the companions plugin's `companion.hrolf.name` is not registered yet when the town's NPCs spawn.
+  { ...HROLF_NPC_DEF, nameKey: 'npc.hrolf.name' },
   def('lantern-keeper', 'mage', { scale: 0.95, tint: 0x6a5a3a }),
   // R06's four households, hidden when the well is sealed and the town evacuated.
   def('household-1', 'barbarian', { scale: 0.95, tint: 0x8a6a4a }),

@@ -2,6 +2,11 @@
 import type { Kit, Off } from './kit';
 
 const KEEPER = 'npc-lantern-keeper';
+/**
+ * The npc id the mural reflections run under: they are Cael's own lines from the keeper's tree, and run as the keeper they
+ * would end with a completed `dialogue.ended` for `lantern-keeper` and take the `keeper` talk credit (review-a #6).
+ */
+export const MURAL_NPC = 'hushed-anvil-mural';
 const CAGE_GROUP = 'q12.m15.cage';
 
 export function installM14(k: Kit): Off[] {
@@ -13,7 +18,7 @@ export function installM14(k: Kit): Off[] {
     const m = /^use:hushed-anvil-mural-(\d)$/.exec(e.interactableId);
     if (!m || e.action === 'mercy' || !k.active('m14')) return;
     k.set('story.m14.mural', Number(m[1]));
-    k.later(keeperSpeaks);
+    k.later(() => void ctx.services.get('dialogue')?.start(KEEPER, MURAL_NPC));
   });
 
   // The second tempering lit, the Anvil sings: a hold the keeper speaks through, then the beat is set.
@@ -43,7 +48,9 @@ export function installM15(k: Kit): Off[] {
   const { ctx } = k;
   const seen = new Set<string>();
 
-  // Hunters left alive and unhurt carry the story south: one witness per distinct hunter.
+  // Hunters left alive and unhurt carry the story south: one witness per distinct hunter. The dedupe lives only in this
+  // session: a load restores the count and brings the hunters back under the same ids, so it starts over (review-a #7).
+  k.on('save.loaded', () => seen.clear());
   k.on('hunter.spared', (e) => {
     if (seen.has(e.actorId)) return;
     seen.add(e.actorId);

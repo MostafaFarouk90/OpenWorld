@@ -13,6 +13,10 @@ import { OLDSMOKE_NPC_DEFS, OLDSMOKE_NPC_STRINGS_EN } from './npcDefs';
 import { createOldsmokeArt } from './oldsmokeArt';
 import { OLDSMOKE_LAYOUT } from './oldsmoke.layout';
 import { watchChoices } from './readers';
+import { MINE_STRINGS_EN } from './mines';
+import { LIFT_STRINGS_EN, registerLift } from './mines/lift';
+import { registerLowerGalleries } from './mines/lowerRuntime';
+import { registerOrskRoof } from './mines/orskRoof';
 import { registerOldsmokeKinds } from './structureKinds';
 
 export interface OldsmokePluginOptions {
@@ -45,7 +49,7 @@ export function createOldsmokePlugin(opts: OldsmokePluginOptions = {}): GamePlug
           const errors = validateLayout(layout, height, { spawnId: null });
           if (errors.length) throw new Error(`oldsmoke: invalid layout:\n${errors.slice(0, 20).join('\n')}`);
         }
-        cleanups.push(ctx.strings.register('en', { ...OLDSMOKE_NPC_STRINGS_EN, ...GRISEL_HALL_STRINGS_EN }));
+        cleanups.push(ctx.strings.register('en', { ...OLDSMOKE_NPC_STRINGS_EN, ...GRISEL_HALL_STRINGS_EN, ...MINE_STRINGS_EN, ...LIFT_STRINGS_EN }));
 
         const resolved = resolveLayout(layout, height);
         for (const a of resolved.anchors) cleanups.push(ctx.anchors.define({ id: a.id, position: a.position, yaw: a.yaw, tags: a.tags }));
@@ -60,6 +64,15 @@ export function createOldsmokePlugin(opts: OldsmokePluginOptions = {}): GamePlug
         void structures.upgrade();
 
         cleanups.push(watchChoices(ctx));
+
+        // The mines: the lift, the Lower Galleries' gates and Orsk's roof. Best effort like the cast: a failure costs the mines only.
+        try {
+          cleanups.push(registerLift(ctx));
+          cleanups.push(registerLowerGalleries(ctx));
+          cleanups.push(registerOrskRoof(ctx));
+        } catch (err) {
+          console.warn('oldsmoke: could not set up the mines', err);
+        }
 
         // The cast is best effort: a failure here costs the NPCs, not the places.
         try {

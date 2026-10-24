@@ -51,7 +51,20 @@ export const ACT2_FLAG_UNLOCKS: readonly { flag: string; entry: string }[] = [
   // the party (either companion joined), the Hearth Rite (A5's per-act spent flag, `riteFlag(act)`).
   { flag: 'story.m13.hrolfJoined', entry: ACT2_CODEX_IDS.party },
   { flag: 'story.m14.aelfredaJoined', entry: ACT2_CODEX_IDS.party },
+  // Phase D: the waystone discovery (the place entry) and the pass's discovery flag are both flags a save already holds.
+  { flag: 'waystone.cinderford.lit', entry: ACT2_CODEX_IDS.cinderford },
   ...[1, 2, 3, 4].map((a) => ({ flag: `aelfreda.rite.a${a}`, entry: ACT2_CODEX_IDS.hearthRite })),
+];
+
+/**
+ * Entries a boss outcome flag (`boss.<id>.outcome`, written once by the boss registry) unlocks on load: the boss's own
+ * bestiary entry for any outcome, and the how-to for a mercy outcome. A save from before the codex knew these still has the
+ * flag; the live path is `boss.started` and `boss.spared`. `outcome` omitted means any value.
+ */
+export const ACT2_OUTCOME_UNLOCKS: readonly { flag: string; outcome?: string; entry: string }[] = [
+  { flag: 'boss.thrandil-redmane.outcome', entry: ACT2_CODEX_IDS.redmane },
+  { flag: 'boss.thrandil-redmane.outcome', outcome: 'spared', entry: ACT2_CODEX_IDS.spareRedmane },
+  { flag: 'boss.the-slagmaw.outcome', entry: ACT2_CODEX_IDS.slagmaw },
 ];
 
 /** Event-driven unlocks: `discover` place ids, and plain events. */

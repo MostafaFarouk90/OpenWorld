@@ -20,7 +20,8 @@ describe('resolveModel', () => {
     expect(r).toMatchObject({ source: 'kaykit', model: 'hex/barrel', scale: 4.3 });
     expect(resolveModel('post_lantern')).toMatchObject({ source: 'kaykit', model: 'hal/post_lantern' });
     expect(resolveModel('stonewall-high')).toMatchObject({ source: 'kaykit', model: 'hex/fence_stone_straight', fitHeight: 1.5 });
-    expect(resolveModel('picket-fence')).toMatchObject({ source: 'kaykit', model: 'hex/fence_wood_straight', fitHeight: 1.1 });
+    expect(resolveModel('stonewall-wing')).toMatchObject({ source: 'kaykit', model: 'hex/fence_stone_straight', fitHeight: 1.0 });
+    expect(resolveModel('scorched-fence')).toMatchObject({ source: 'kaykit', model: 'hex/fence_wood_straight', fitHeight: 1.6 });
   });
 
   it('maps the B3 and B4 ids to tinted variants or KayKit models', () => {
@@ -43,9 +44,14 @@ describe('resolveModel', () => {
   });
 
   it('falls back to a placeholder shape only when nothing matches', () => {
-    expect(resolveModel('haystack-round')).toEqual({ source: 'placeholder', shape: 'haystack' });
-    expect(resolveModel('signpost-a')).toEqual({ source: 'placeholder', shape: 'post' });
+    expect(resolveModel('haybale-b')).toEqual({ source: 'placeholder', shape: 'haystack' });
+    expect(resolveModel('signpost-b')).toEqual({ source: 'placeholder', shape: 'post' });
     expect(resolveModel('no-such-thing')).toEqual({ source: 'placeholder', shape: 'box' });
+  });
+
+  it('batch 2 glbs replace their stand-ins under the same id', () => {
+    for (const id of ['haystack-round', 'signpost-a', 'picket-fence', 'woodpile-chop', 'garden-bed-a', 'barn-a', 'stable-a', 'market-stall-b'])
+      expect(resolveModel(id), id).toEqual({ source: 'env', model: `env/${id}`, scale: 1 });
   });
 
   it('never leaves a targeted id unresolved', () => {

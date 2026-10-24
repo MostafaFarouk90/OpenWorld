@@ -80,6 +80,8 @@ export interface DamageRequestLike {
   direction?: THREE.Vector3;
   /** Requested from thread 0 (requests-round-1 item 4): red, dodge-only attacks. */
   unblockable?: boolean;
+  /** v0.6: a fire hit (MoveDef.element), for fire resistance. */
+  element?: 'fire';
 }
 export interface DamageResultLike extends DamageRequestLike {
   outcome: DamageOutcome;
@@ -154,6 +156,7 @@ export interface EnemyEvents {
   'interior.entered': { interiorId: string; doorId: string };
   'interior.exited': { interiorId: string; doorId: string };
   'quest.started': { questId: string };
+  'quest.completed': { questId: string };
   'flag.changed': { key: string; value: boolean | number | string | undefined; previous: boolean | number | string | undefined };
   'enemies.groupCleared': { spawnerId: string };
   'enemies.state': { actorId: ActorId; from: string; to: string };

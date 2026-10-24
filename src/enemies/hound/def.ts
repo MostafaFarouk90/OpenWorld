@@ -26,7 +26,7 @@ export const EMBER_HOUND: EnemyDef = {
     }),
     move('hound.bite', QUADRUPED_ATTACKS.bite, {
       windup: 0.3, telegraph: 'block', weapon: 'right', damage: 8, poise: 5,
-      range: [0, 1.5], cooldown: 1.2, recover: 0.6, weight: 2, onHit: 'ignite',
+      range: [0, 1.5], cooldown: 1.2, recover: 0.6, weight: 2, onHit: 'ignite', element: 'fire',
     }),
   ],
   mercy: {

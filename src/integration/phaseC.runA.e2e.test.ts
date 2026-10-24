@@ -9,7 +9,10 @@ import { bootFromSave, type ChapterHarness } from './chapterHarness';
 import { ACT1_FIXTURES, readAct1Fixture } from '../save/__fixtures__/act1';
 import { PHASE_C_ORDER, playPhaseC } from './phaseC';
 import { startCensus } from './act2Xp';
+import { CARRIED_KNIGHT } from './carriedKnight';
 import { expectPhaseCComplete } from './phaseCAssert';
+import { ACT2_PACE } from '../quests/content/act2/pacing';
+import { estimatePaceRow, trailNodes } from './timing';
 
 
 let h: ChapterHarness | null = null;
@@ -29,6 +32,12 @@ describe('Phase C run A', () => {
     const census = startCensus(h);
     const trails = await playPhaseC(h, undefined, { hooks: census.hooks });
     expectPhaseCComplete(h, 'A');
+    const pace = ACT2_PACE.map((row) => ({ row, est: estimatePaceRow(row, row.design, (id) => h!.anchor(id), trailNodes(trails[row.quest])) }));
+    const penv = (globalThis as { process?: { env: Record<string, string | undefined>; stdout: { write(s: string): void } } }).process;
+    if (penv?.env.CENSUS === '1') penv.stdout.write(`\nPACE ${pace.map(({ row, est }) => `${row.quest} ${est.estimateMin.toFixed(1)}/${row.floor} (${est.nodes} nodes vs ${row.nodes})`).join('; ')}\n`);
+    // R07 (the recheck of 14.1 against 14) holds its static floor on the nodes this run read; every quest holds 40% of its design minutes.
+    // R11 and M14 read fewer nodes than their rows assume (the axe scene and Aelfreda's talks end the report early): they are reported against their rows in the census, not gated on them.
+    for (const { row, est } of pace) expect(est.estimateMin, row.quest).toBeGreaterThanOrEqual(row.quest === 'r07' ? row.floor : row.design * 0.4);
     // Every quest's objectives were completed in order, and what was raised instead of played is named.
     for (const q of PHASE_C_ORDER) expect(trails[q].order.length, q).toBeGreaterThan(0);
     const scripted = PHASE_C_ORDER.flatMap((q) => trails[q].scripted);
@@ -37,7 +46,9 @@ describe('Phase C run A', () => {
     const rows = census.rows();
     expect(rows.map((r) => r.quest)).toEqual([...PHASE_C_ORDER]);
     for (const r of rows) expect(r.killXp + r.otherXp, r.quest).toBeGreaterThan(0);
+    // The character the hound packs are tuned against (difficulty.test.ts reads the same table).
+    expect(rows.find((r) => r.quest === 'r05'), 'r05').toMatchObject({ levelStart: CARRIED_KNIGHT.r05.level, maxHealth: CARRIED_KNIGHT.r05.maxHealth });
     const env = (globalThis as { process?: { env: Record<string, string | undefined>; stdout: { write(s: string): void } } }).process;
-    if (env?.env.CENSUS === '1') env.stdout.write(`\n${census.markdown()}\n`);
+    if (env?.env.CENSUS === '1') env.stdout.write(`\n${census.markdown()}\n\n${pace.map(({ row, est }) => `${row.quest} ${est.estimateMin.toFixed(1)} vs floor ${row.floor} (${est.nodes} nodes)`).join('\n')}\n`);
   }, 240_000);
 });

@@ -301,3 +301,34 @@ describe('every Act 2 tree is wired', () => {
     }
   });
 });
+
+describe('Maud pays her R06 thanks once (review-a #8)', () => {
+  const branches = [
+    ['cleanse', 'r06-cleansed', 'oswin', (w: ReturnType<typeof world>) => w.set('r06', 'active', 'fire', 'rite')],
+    ['seal', 'r06-sealed', 'halvard', (w: ReturnType<typeof world>) => w.set('r06', 'active', 'board')],
+  ] as const;
+
+  it.each(branches)('%s: a talk cut off after the thanks line, then replayed to the end, pays +4 once', (branch, seg, track, setup) => {
+    const w = world();
+    w.flags.set('story.r06.branch', branch);
+    setup(w);
+    expect(w.dr.start('npc-maud', 'maud')).toBe(true);
+    expect(w.dr.view()!.nodeId).toBe(seg);
+    for (let i = 0; i < 3; i++) w.dr.advance();
+    expect(w.dr.view()!.nodeId).toBe(`${seg}-4`); // the thanks line has shown: its effects ran
+    w.dr.close('death');
+    expect(w.log.filter((l) => l === `favour ${track} 4`)).toHaveLength(1);
+    // the hand-in was not credited, so the next talk replays the segment
+    expect(play(w, 'npc-maud', 'maud')[0]).toBe(seg);
+    expect(w.log.filter((l) => l === `favour ${track} 4`)).toHaveLength(1);
+  });
+
+  it('a first talk played straight through pays the thanks and marks it paid', () => {
+    const w = world();
+    w.flags.set('story.r06.branch', 'cleanse');
+    w.set('r06', 'active', 'fire', 'rite');
+    play(w, 'npc-maud', 'maud');
+    expect(w.log).toContain('favour oswin 4');
+    expect(w.flags.get('story.r06.maudThanks')).toBe(true);
+  });
+});

@@ -218,3 +218,44 @@ fails, over is fine).
 
 Phase C reaches 54.8% of its design minutes as shipped (the plan figure is 51.4%). Thin margins: R07 (14.1 against a
 floor of 14), M13 (21.6 against 20), M15 (22.8 against 20). Taking a beat out of R07 fails the test.
+
+## Phase C on the nodes the headless run read (A16)
+
+The estimator can also take the node count a driver actually read (`estimatePaceRow` with `trailNodes`), which catches
+a row that assumes dialogue a player never reaches. Run A and run B of the Phase C chain now assert this: R07 holds its
+floor of 14 (14.1 on the spare branch, 16.1 on the cull branch), every other quest holds 40% of its design minutes.
+
+- R07: the choice talk with Ketta used to end the quest (its end completes the later `report` talk), so the report
+  dialogue was never heard and the real run was 12.1 minutes. Ketta's two choice outcomes now carry the closing words
+  (six more nodes each): 24 nodes read, 14.1 / 16.1.
+- R11 (13.4 against a static floor of 16, 22 of 32 nodes) and M14 (20.8 against 22, 30 of 38) read fewer nodes than their
+  rows. They stay above 40% of design (7.6 and 22) and are reported, not gated on the row.
+
+## Phase D (Oldsmoke and Deepgate)
+
+Estimator additions: `PHASE_D_DESIGN` (505 design minutes: M16 45, M17 45, R09 35, R08 40, M18 50, R10 45, M19 50, M20 45,
+M21 40, D04 65, M22 45), `DOOR_LEG_M` (a route leg over 400 m is a lift or door hop and counts no travel), and
+`estimatePaceRow` (rows with ride and follow legs, capped travel). The chain tests (phaseD.runA / runB) play the real
+objectives from the Phase C complete saves and assert 40% of design on the branch each run took.
+
+| quest | run A min | run B min | 40% floor |
+| --- | ---: | ---: | ---: |
+| M16 | 20.7 | 20.7 | 18 |
+| M17 | 25.5 | 25.5 | 18 |
+| R09 | 21.2 | 21.2 | 14 |
+| R08 | 18.9 | 18.9 | 16 |
+| M18 | 24.0 | 24.0 | 20 |
+| R10 | 21.1 | 27.1 | 18 |
+| M19 | 22.2 | 22.2 | 20 |
+| M20 | 22.1 | 22.1 | 18 |
+| M21 | 18.5 | 21.3 | 16 |
+| D04 | 31.8 | 31.8 | 26 |
+| M22 | 26.1 | 26.1 | 18 |
+| **Phase D** | **252.2** | **261.0** | **202** |
+
+About 50% of design on both runs. Two corrections came out of driving it honestly:
+
+- M19: Wenna's six route barks play as she advances, so the driver walks the route (before the doors, then to the
+  nursery); the real run is 22.2 against 20.
+- M21: the offer talk ended the quest's first objective, so Wenna's counsel was never heard (39 of 46 nodes). The
+  counsel now follows the offer in the same talk: 47 / 45 nodes, 18.5 / 21.3.

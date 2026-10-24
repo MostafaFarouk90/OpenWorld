@@ -1,3 +1,6 @@
+// Wiring checks with every real plugin booted: the trigger volumes exist and the real quest manager chains M11 into M12.
+// This is NOT the headless chain test through Phase C that A12's brief asked for: that run is #122's
+// src/integration/phaseC.ts, driven by phaseC.runA.e2e.test.ts and phaseC.runB.e2e.test.ts (review-a #10).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootChapter, type ChapterHarness } from '../../../../integration/chapterHarness';
 import { ACT2_TRIGGERS } from '../triggers';
@@ -13,7 +16,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('Cinderreach quests with every real plugin', () => {
+describe('Cinderreach quest wiring with every real plugin (the Phase C chain itself: integration/phaseC.run*.e2e)', () => {
   it('registers every trg.q12 volume the quests name', async () => {
     for (const t of ACT2_TRIGGERS) expect(h.triggerCentre(t.id), t.id).not.toBeNull();
   });

@@ -8,6 +8,7 @@ import { Services } from '../../../../core/Services';
 import { WorldState } from '../../../../state/WorldState';
 import type { QuestState } from '../../../types';
 import plugin, { ACT2_QUEST_IDS } from './cinderreachDirector.plugin';
+import { MURAL_NPC } from './m14m15';
 
 type Fn = (...a: any[]) => any;
 
@@ -20,6 +21,8 @@ interface Rig {
   current: Set<string>;
   progress: Map<string, number>;
   alive: Map<string, string[]>;
+  /** Triggers the player stands inside (`ctx.triggers.isInside`). */
+  inside: Set<string>;
   stubs: Record<string, any>;
   step(n?: number): void;
   emit<K extends keyof GameEventMap>(type: K, payload: GameEventMap[K]): void;
@@ -29,9 +32,15 @@ interface Rig {
   dispose(): void;
 }
 
-function rig(opts: { classId?: string; dialogueOpen?: boolean } = {}): Rig {
+function rig(opts: { classId?: string; dialogueOpen?: boolean; coreMercy?: boolean } = {}): Rig {
   const events = new EventBus<GameEventMap>(() => {});
   const state = new WorldState(events, () => {});
+  // core.plugin's own listeners, set up before every other plugin: the creature-mercy credit and its release on despawn.
+  if (opts.coreMercy) {
+    events.on('mercy', (e) => void state.recordMercy(e));
+    events.on('actor.despawned', (e) => state.forgetMercy(e.actorId));
+  }
+  const inside = new Set<string>();
   const services = new Services();
   const calls: Rig['calls'] = [];
   const rec = (name: string, ret: unknown = true): Fn => (...a) => {
@@ -77,14 +86,14 @@ function rig(opts: { classId?: string; dialogueOpen?: boolean } = {}): Rig {
   const ctx = {
     events, state, services,
     anchors: { find: () => undefined },
-    triggers: { add: () => () => {} },
-    player: { feet: { x: 0, y: 7, z: 0 } },
+    triggers: { add: () => () => {}, isInside: (id: string) => inside.has(id) },
+    player: { feet: { x: 0, y: 7, z: 0 }, actor: { id: 'player' } },
     systems: { add: (s: { fixedUpdate(dt: number): void }) => { tickSystem = s; return () => {}; } },
   } as unknown as GameContext;
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   plugin.setup(ctx);
   return {
-    events, state, calls, quest, done, current, progress, alive, stubs, warn,
+    events, state, calls, quest, done, current, progress, alive, inside, stubs, warn,
     step: (n = 1) => { for (let i = 0; i < n; i++) tickSystem!.fixedUpdate(1 / 60); },
     emit: (type, payload) => events.emit(type, payload),
     named: (name) => events.emit(name as keyof GameEventMap, {} as never),
@@ -622,13 +631,13 @@ describe('director: R11 Hrolf\'s Brother\'s Axe', () => {
 });
 
 describe('director: M14 Hushed Anvil Rites', () => {
-  it('each mural raises its own reflection through the keeper', () => {
+  it('each mural raises its own reflection through the keeper\'s tree, not as the keeper (review-a #6)', () => {
     r = rig();
     r.active('m14');
     r.emit('interact', { interactableId: 'use:hushed-anvil-mural-2', kind: 'prop', actorId: 'player', action: 'interact' });
     r.step();
     expect(r.state.getFlag('story.m14.mural')).toBe(2);
-    expect(called(r, 'dialogue.start')).toEqual([['npc-lantern-keeper', 'lantern-keeper']]);
+    expect(called(r, 'dialogue.start')).toEqual([['npc-lantern-keeper', MURAL_NPC]]);
     r.dispose();
   });
 
@@ -786,6 +795,341 @@ describe('director: D03 The Fall of Scorchhold', () => {
     r.emit('interact', { interactableId: 'use:d03-prisoner-2', kind: 'prop', actorId: 'player', action: 'interact' });
     r.step();
     expect(called(r, 'dialogue.start')).toEqual([['scene-d03-prisoner', 'prisoner']]);
+    r.dispose();
+  });
+});
+
+// ---- review-a follow-ups (plans/act2-followups/review-a.md) ------------------------------------------------------------
+
+const wraithMercy = (actorId: string) => ({ verb: 'release' as const, tier: 'normal' as const, track: 'ashwalkers' as const, creature: 'ash-wraith', actorId });
+const footmanMercy = (actorId: string) => ({ verb: 'spare' as const, tier: 'normal' as const, track: 'oswin' as const, creature: 'blighted-soldier', actorId });
+
+describe('director: a wave that ends on a mercy still advances (review-a #3)', () => {
+  const riteRig = (): Rig => {
+    const x = rig();
+    x.active('r06');
+    x.state.setFlag('story.r06.riteStarted', true);
+    x.named('story.r06.riteStart');
+    x.step();
+    expect(called(x, 'enemies.spawnGroup')).toEqual([['q12.r06.rite-1']]);
+    return x;
+  };
+
+  it('R06: the last wraith of wave 1 released (still dissolving) brings wave 2; released last of wave 2 ends the rite', () => {
+    r = riteRig();
+    const raised: string[] = [];
+    r.events.onAny((t) => void raised.push(t as string));
+    // two die, one is released first and is still in `alive` while it dissolves, the last is released too
+    r.alive.set('q12.r06.rite-1', ['q12.r06.rite-1#2', 'q12.r06.rite-1#3']);
+    r.emit('mercy', wraithMercy('q12.r06.rite-1#2'));
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toHaveLength(1); // #3 still stands
+    r.emit('mercy', wraithMercy('q12.r06.rite-1#3'));
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')[1]).toEqual(['q12.r06.rite-2']);
+    expect(r.state.getNumber('story.r06.riteWave')).toBe(2);
+    for (const id of ['q12.r06.rite-2#1', 'q12.r06.rite-2#2', 'q12.r06.rite-2#3']) r.emit('mercy', wraithMercy(id));
+    r.step();
+    expect(raised).toContain('story.r06.riteDone');
+    expect(r.state.getBool('story.r06.riteFinished')).toBe(true);
+    r.dispose();
+  });
+
+  it('R06: the last wraith killed while a released one is still dissolving advances the wave', () => {
+    r = riteRig();
+    r.emit('mercy', wraithMercy('q12.r06.rite-1#1'));
+    r.alive.set('q12.r06.rite-1', ['q12.r06.rite-1#1']); // #2 and #3 died; #1 is still dissolving
+    r.emit('actor.died', { actorId: 'q12.r06.rite-1#3', spawnTag: 'r06.rite' } as never);
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')[1]).toEqual(['q12.r06.rite-2']);
+    r.dispose();
+  });
+
+  it('R06: the dissolve finishing (a despawn, the group cleared) re-checks the wave even with no mercy event seen', () => {
+    r = riteRig();
+    r.alive.set('q12.r06.rite-1', []);
+    r.emit('actor.despawned', { actorId: 'q12.r06.rite-1#1' });
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')[1]).toEqual(['q12.r06.rite-2']);
+    r.dispose();
+    r = riteRig();
+    r.alive.set('q12.r06.rite-1', []);
+    r.emit('enemies.groupCleared', { spawnerId: 'q12.r06.rite-1' });
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')[1]).toEqual(['q12.r06.rite-2']);
+    r.dispose();
+  });
+
+  it('R06: a revoked mercy counts the wraith as standing again; a mercy elsewhere does not advance the wave', () => {
+    r = riteRig();
+    r.emit('mercy', wraithMercy('some-other-wraith'));
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toHaveLength(1);
+    for (const id of ['q12.r06.rite-1#1', 'q12.r06.rite-1#2']) r.emit('mercy', wraithMercy(id));
+    r.emit('mercy.revoked', { actorId: 'q12.r06.rite-1#1', track: 'ashwalkers', removed: 1 });
+    r.emit('mercy', wraithMercy('q12.r06.rite-1#3'));
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toHaveLength(1); // #1 is hostile again
+    r.emit('mercy', wraithMercy('q12.r06.rite-1#1'));
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toHaveLength(2);
+    r.dispose();
+  });
+
+  it('R06: a load tears the wave down (despawns) without advancing it, and rebuilds the same wave once', () => {
+    r = riteRig();
+    r.emit('mercy', wraithMercy('q12.r06.rite-1#1'));
+    r.step();
+    // the load: the ephemeral group goes first, then save.loaded
+    r.alive.delete('q12.r06.rite-1');
+    for (const id of ['q12.r06.rite-1#1', 'q12.r06.rite-1#2', 'q12.r06.rite-1#3']) r.emit('actor.despawned', { actorId: id });
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toEqual([['q12.r06.rite-1'], ['q12.r06.rite-1']]);
+    expect(r.state.getNumber('story.r06.riteWave')).toBe(1);
+    // and the rebuilt wave still advances when it ends on mercies (the load forgot the old ones)
+    for (const id of ['q12.r06.rite-1#1', 'q12.r06.rite-1#2', 'q12.r06.rite-1#3']) r.emit('mercy', wraithMercy(id));
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')[2]).toEqual(['q12.r06.rite-2']);
+    r.dispose();
+  });
+
+  const ambushRig = (): Rig => {
+    const x = rig();
+    x.active('m11');
+    x.done.add('m11.ring');
+    x.emit('escort.dismounted', { escortId: 'm11' });
+    x.step();
+    expect(called(x, 'enemies.spawnGroup')).toEqual([['q12.m11.ambush-1']]);
+    return x;
+  };
+
+  it('M11: the third Footman spared (walking off, still in `alive`) brings the second ambush', () => {
+    r = ambushRig();
+    r.progress.set('m11.ambush', 3); // two kills, and the mercy credits the third
+    r.alive.set('q12.m11.ambush-1', ['q12.m11.ambush-1#3']);
+    r.emit('mercy', footmanMercy('q12.m11.ambush-1#3'));
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')[1]).toEqual(['q12.m11.ambush-2']);
+    r.dispose();
+  });
+
+  it('M11: a spare that leaves fewer than three down, or a spare after the ambush is done, brings nothing', () => {
+    r = ambushRig();
+    r.progress.set('m11.ambush', 2);
+    r.alive.set('q12.m11.ambush-1', ['q12.m11.ambush-1#3']);
+    r.emit('mercy', footmanMercy('q12.m11.ambush-1#2'));
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toHaveLength(1);
+    r.emit('mercy', footmanMercy('q12.m11.ambush-1#3'));
+    r.progress.set('m11.ambush', 3);
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toHaveLength(2); // the walk-off itself is the third
+    r.done.add('m11.ambush');
+    r.alive.clear();
+    r.progress.set('m11.ambush', 3);
+    r.emit('actor.despawned', { actorId: 'q12.m11.ambush-2#1' });
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toHaveLength(2);
+    r.dispose();
+  });
+
+  it('M11: a load mid-ambush despawns the group and refills it once, without reading the teardown as a cleared group', () => {
+    r = ambushRig();
+    r.progress.set('m11.ambush', 4);
+    r.alive.delete('q12.m11.ambush-1');
+    r.emit('quest.objective', { questId: 'm11', objectiveId: 'ambush', progress: 4, required: 6, done: false });
+    // the save was at 4 kills with group 2 out: the load tears down, then refills group 2
+    for (const id of ['q12.m11.ambush-1#1']) r.emit('actor.despawned', { actorId: id });
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'enemies.spawnGroup')).toEqual([['q12.m11.ambush-1'], ['q12.m11.ambush-2']]);
+    r.dispose();
+  });
+});
+
+describe('director: R11 Calm pays dragons +5 in total (review-a #4)', () => {
+  const wyrmMercy = { verb: 'calm' as const, tier: 'elite' as const, track: 'dragons' as const, creature: 'ember-wyrm', actorId: 'wyrm.r11.den#1' };
+
+  it('the Calm\'s creature credit (+2 elite) plus the director\'s share is +5, through the real WorldState', () => {
+    r = rig({ coreMercy: true });
+    r.active('r11');
+    r.alive.set('wyrm.r11.den', ['wyrm.r11.den#1']);
+    const before = r.state.favour('dragons');
+    r.emit('mercy', wyrmMercy);
+    expect(r.state.getFlag('story.r11.choice')).toBe('spared');
+    expect(r.state.creatureMercyFavour('dragons')).toBe(2);
+    r.step();
+    expect(r.state.favour('dragons') - before).toBe(5);
+    expect(called(r, 'enemies.despawnGroup')).toEqual([['wyrm.r11.den']]);
+    // a second mercy event for the same wyrm (Calm then Spare) pays nothing more
+    r.emit('mercy', { ...wyrmMercy, verb: 'spare' });
+    r.step();
+    expect(r.state.favour('dragons') - before).toBe(5);
+    r.dispose();
+  });
+
+  it('at the creature-mercy cap the Calm pays nothing and the director pays all five', () => {
+    r = rig({ coreMercy: true });
+    r.active('r11');
+    r.alive.set('wyrm.r11.den', ['wyrm.r11.den#1']);
+    // fill the dragons creature-mercy cap with other elites
+    for (let i = 0; r.state.creatureMercyFavour('dragons') < 10 && i < 20; i++) {
+      r.emit('mercy', { ...wyrmMercy, actorId: `nest#${i}` });
+    }
+    const capped = r.state.creatureMercyFavour('dragons');
+    const before = r.state.favour('dragons');
+    r.emit('mercy', wyrmMercy);
+    expect(r.state.creatureMercyFavour('dragons')).toBe(capped);
+    expect(r.state.favour('dragons') - before).toBe(5);
+    r.dispose();
+  });
+
+  it('a slaying stays -4, with no mercy credit to subtract', () => {
+    r = rig({ coreMercy: true });
+    r.active('r11');
+    const before = r.state.favour('dragons');
+    r.emit('actor.died', { actorId: 'wyrm.r11.den#1', spawnTag: 'r11.den' } as never);
+    expect(r.state.favour('dragons') - before).toBe(-4);
+    r.dispose();
+  });
+});
+
+describe('director: the pasture flock after R05 (review-a #5)', () => {
+  const finish = (choice: 'fox' | 'safe', derived: boolean) => {
+    r = rig();
+    r.state.setFlag('story.r05.choice', choice);
+    if (derived) r.state.setFlag('world.cinderreach.pasture.reduced', true);
+    r.quest.set('r05', 'completed');
+    r.emit('quest.completed', { questId: 'r05' });
+    r.step();
+  };
+  const pasture = () => called(r, 'herd.start').filter((c) => c[0] === 'cinderreach.pasture');
+
+  it('the safe road leaves eight grazing at the pasture, never following', () => {
+    finish('safe', false);
+    expect(pasture()).toHaveLength(1);
+    expect(pasture()[0][1]).toEqual(Array.from({ length: 8 }, (_, i) => `cinderreach.pasture.flock.${i + 1}`));
+    expect(called(r, 'herd.follow').filter((c) => c[0] === 'cinderreach.pasture')).toHaveLength(0);
+    r.dispose();
+  });
+
+  it('the fox\'s road (world.cinderreach.pasture.reduced) leaves six', () => {
+    finish('fox', true);
+    expect((pasture()[0][1] as string[])).toHaveLength(6);
+    r.dispose();
+  });
+
+  it('a load rebuilds the flock from the flag (the herd service saves nothing); before R05 is done, no flock', () => {
+    r = rig();
+    r.active('r05');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(pasture()).toHaveLength(0);
+    r.dispose();
+    r = rig();
+    r.quest.set('r05', 'completed');
+    r.state.setFlag('world.cinderreach.pasture.reduced', true);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect((pasture()[0][1] as string[])).toHaveLength(6);
+    r.dispose();
+  });
+
+  it('a pasture with no anchors warns instead of throwing', () => {
+    r = rig();
+    r.stubs.herd.start = vi.fn(() => false);
+    r.quest.set('r05', 'completed');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(r.warn).toHaveBeenCalledWith(expect.stringContaining('pasture flock'));
+    r.dispose();
+  });
+});
+
+describe('director: M15 witnesses after a reload (review-a #7)', () => {
+  it('a hunter spared again after a load (same actor id, count restored) is a witness again', () => {
+    r = rig();
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(1);
+    // the load restores the pre-spare count and brings h1 back
+    r.state.setFlag('story.a2.witnesses', 0);
+    r.emit('save.loaded', { slot: 'a' });
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' });
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(1);
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' }); // still once per hunter within a session
+    expect(r.state.getNumber('story.a2.witnesses')).toBe(1);
+    r.dispose();
+  });
+});
+
+describe('director: R11 den scene when the player is already on the shelf (review-a #9)', () => {
+  const ledge2 = { questId: 'r11', objectiveId: 'ledge2', progress: 1, required: 1, done: true };
+
+  it('ledge2 completing with the player inside the den trigger starts the scene', () => {
+    r = rig();
+    r.active('r11');
+    r.inside.add('trg.cinderreach.den');
+    r.done.add('r11.ledge2');
+    r.emit('quest.objective', ledge2);
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toEqual([['scene-r11-den', 'hrolf']]);
+    r.dispose();
+  });
+
+  it('a load inside the trigger starts it; outside, or with the den done, it does not', () => {
+    r = rig();
+    r.active('r11');
+    r.done.add('r11.ledge2');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toHaveLength(0);
+    r.inside.add('trg.cinderreach.den');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toEqual([['scene-r11-den', 'hrolf']]);
+    r.done.add('r11.den');
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toHaveLength(1);
+    r.dispose();
+  });
+
+  it('retries while another dialogue holds the screen, and stops once the scene has started', () => {
+    const o = { dialogueOpen: true };
+    r = rig(o);
+    r.active('r11');
+    r.inside.add('trg.cinderreach.den');
+    r.done.add('r11.ledge2');
+    r.emit('quest.objective', ledge2);
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toHaveLength(1); // refused
+    o.dialogueOpen = false;
+    r.step(3);
+    expect(called(r, 'dialogue.start')).toHaveLength(2); // started
+    r.step(20);
+    expect(called(r, 'dialogue.start')).toHaveLength(2);
+    r.dispose();
+  });
+});
+
+describe('director: D03 adds nothing to the Spare\'s Oswin +3 (review-a #10)', () => {
+  it('the BOSS_MERCY credit, the outcome, a load and the quest\'s end leave Oswin at exactly +3, through the real WorldState', () => {
+    r = rig({ coreMercy: true });
+    r.active('d03');
+    const before = r.state.favour('oswin');
+    // A8's Spare: the boss mercy (ledger D03, amount 3), the outcome flag, then the events
+    r.emit('mercy', { verb: 'spare', tier: 'boss', track: 'oswin', creature: 'thrandil-redmane', actorId: 'redmane#1', amount: 3, ledgerId: 'D03' } as never);
+    r.state.setFlag('boss.thrandil-redmane.outcome', 'spared');
+    r.emit('boss.released', { bossId: 'thrandil-redmane', actorId: 'redmane#1' } as never);
+    r.emit('boss.spared', { bossId: 'thrandil-redmane', actorId: 'redmane#1' });
+    r.step(5);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(5);
+    r.emit('quest.completed', { questId: 'd03' });
+    r.step(5);
+    expect(r.state.getFlag('story.d03.outcome')).toBe('spared');
+    expect(r.state.favour('oswin') - before).toBe(3);
     r.dispose();
   });
 });

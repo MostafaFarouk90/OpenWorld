@@ -16,20 +16,21 @@ import { ACT2_QUEST_DEFS } from './content/act2';
 import { GIVER_STAND_OFF, nodeEffects } from './act1Jump';
 import { ACT2_PREREQS } from './actJump';
 import {
-  ACT2_GIVERS, ACT2_NODE_EFFECTS, ACT2_PHASE_C_IDS, ACT2_REKINDLE_AFTER, Act2Jump, type Act2JumpId, parseAct2,
+  ACT2_D_GIVERS, ACT2_GIVERS, ACT2_NODE_EFFECTS, ACT2_PHASE_C_IDS, ACT2_PHASE_D_IDS, ACT2_REKINDLE_AFTER, Act2Jump,
+  type Act2AnyJumpId, giverOf, parseAct2,
 } from './act2Jump';
 import type { Condition } from './types';
 import { POST_RULES, resolvePosts } from './posts';
 import { ACT1_PREREQS } from './act1Jump';
 
 describe('parseAct2', () => {
-  it('accepts every Phase C quest with &new and an optional class', () => {
-    for (const id of ACT2_PHASE_C_IDS) expect(parseAct2(`?act2=${id}&new`)).toEqual({ id, classId: 'knight', fresh: true });
+  it('accepts every Phase C and Phase D quest, and the ending, with &new and an optional class', () => {
+    for (const id of [...ACT2_PHASE_C_IDS, ...ACT2_PHASE_D_IDS]) expect(parseAct2(`?act2=${id}&new`)).toEqual({ id, classId: 'knight', fresh: true });
     expect(parseAct2('?act2=r06&new&class=emberwright')).toMatchObject({ classId: 'emberwright' });
   });
   it('is null without the parameter and refuses unknown ids, classes or a missing &new', () => {
     expect(parseAct2('?act1=m03&new')).toBeNull();
-    expect(parseAct2('?act2=m16&new')).toMatchObject({ error: expect.stringContaining('unknown quest') });
+    expect(parseAct2('?act2=m23&new')).toMatchObject({ error: expect.stringContaining('unknown quest') });
     expect(parseAct2('?act2=m11')).toMatchObject({ error: expect.stringContaining('&new') });
     expect(parseAct2('?act2=m11&new&class=bard')).toMatchObject({ error: expect.stringContaining('unknown class') });
   });
@@ -59,18 +60,39 @@ describe('the prerequisite table follows the quest definitions', () => {
   };
   // Beyond startWhen: Ketta offers R05 before R07 and stands at Stonefold only once R05 is done, so R07 is only offerable after R05.
   const EXTRA: Record<string, string[]> = { r07: ['r05'] };
-  it.each(ACT2_PHASE_C_IDS)('%s: the table equals the transitive startWhen closure plus the giver gates', (id) => {
+  it.each([...ACT2_PHASE_C_IDS, ...ACT2_PHASE_D_IDS.filter((q) => q !== 'ending')])('%s: the giver is the NPC whose dialogue carries its startQuest', (id) => {
+    // Derived from the dialogue content, not from the giver tables, so a drifted table fails here.
+    const owners = new Set<string>();
+    for (const d of dialogueDefs) {
+      for (const n of d.nodes) {
+        for (const e of [...(n.effects ?? []), ...(n.choices ?? []).flatMap((c) => c.effects ?? [])]) {
+          if ('startQuest' in e && e.startQuest === id) owners.add(d.id.replace(/^npc-/, ''));
+        }
+      }
+    }
+    expect([...owners], id).toContain(giverOf(id));
+  });
+
+  it.each([...ACT2_PHASE_C_IDS, ...ACT2_PHASE_D_IDS.filter((q) => q !== 'ending')])('%s: the table equals the transitive startWhen closure plus the giver gates', (id) => {
     const want = new Set([...closure(id), ...(EXTRA[id] ?? []).flatMap((q) => [q, ...closure(q)])]);
     expect([...ACT2_PREREQS[id]].sort()).toEqual([...want].sort());
   });
-  it('lists exactly the Phase C quests, in play order (no quest after a later one)', () => {
-    expect(Object.keys(ACT2_PREREQS).sort()).toEqual([...ACT2_PHASE_C_IDS].sort());
-    for (const id of ACT2_PHASE_C_IDS) for (const p of ACT2_PREREQS[id]) {
-      if (ACT2_PHASE_C_IDS.includes(p as Act2JumpId)) expect(Object.keys(ACT2_PREREQS).indexOf(p), `${id} after ${p}`).toBeLessThan(Object.keys(ACT2_PREREQS).indexOf(id));
+  it('the ending needs everything M22 does, and M22 itself is the jump\'s last step', () => {
+    expect(ACT2_PREREQS.ending).toEqual(ACT2_PREREQS.m22);
+    expect(ACT2_PREREQS.ending).not.toContain('m22');
+    expect(ACT2_PREREQS.ending).toContain('d04');
+  });
+  it('lists exactly the Phase C and Phase D quests, in play order (no quest after a later one)', () => {
+    const ids = [...ACT2_PHASE_C_IDS, ...ACT2_PHASE_D_IDS] as string[];
+    expect(Object.keys(ACT2_PREREQS).sort()).toEqual(ids.sort());
+    for (const id of ids) for (const p of ACT2_PREREQS[id]) {
+      if (ids.includes(p)) expect(Object.keys(ACT2_PREREQS).indexOf(p), `${id} after ${p}`).toBeLessThan(Object.keys(ACT2_PREREQS).indexOf(id));
     }
   });
   it('every quest has a giver', () => {
-    for (const id of ACT2_PHASE_C_IDS) expect(ACT2_GIVERS[id], id).toBeTruthy();
+    for (const id of [...ACT2_PHASE_C_IDS, ...ACT2_PHASE_D_IDS]) expect(giverOf(id), id).toBeTruthy();
+    expect(Object.keys(ACT2_D_GIVERS)).toEqual([...ACT2_PHASE_D_IDS]);
+    expect(Object.keys(ACT2_GIVERS)).toEqual([...ACT2_PHASE_C_IDS]);
   });
 });
 
@@ -88,7 +110,7 @@ describe('node effects are read from the dialogue content', () => {
 });
 
 describe('Act2Jump (fakes)', () => {
-  function rig(id: Act2JumpId, opts: { missing?: boolean; teleportRefusals?: number; classRefused?: boolean } = {}) {
+  function rig(id: Act2AnyJumpId, opts: { missing?: boolean; teleportRefusals?: number; classRefused?: boolean } = {}) {
     let refusals = opts.teleportRefusals ?? 0;
     const states = new Map<string, string>();
     const log: string[] = [];
@@ -159,6 +181,35 @@ describe('Act2Jump (fakes)', () => {
     expect(r.log).toContain('rekindle:hushed-anvil');
     expect(r.log.some((l) => l.includes('story.m14.aelfredaJoined'))).toBe(true);
   });
+  it('Phase D: completes the Oldsmoke chain in play order and stands by the quest\'s giver', () => {
+    const r = rig('m19');
+    r.setReady();
+    r.run(60);
+    const done = r.log.filter((l) => l.startsWith('complete:')).map((l) => l.slice(9));
+    expect(done.slice(-5)).toEqual(['m15', 'd03', 'm16', 'm17', 'm18']);
+    expect(r.states.get('m19')).toBeUndefined();
+    expect(r.log).toContain('by:wenna');
+    expect(r.log).not.toContain('flag:story.phase.oldsmokeOpen');
+    expect(r.jump.phase).toBe('done');
+  });
+  it('the ending completes M22 last, after placing the player beside Wystan', () => {
+    const r = rig('ending');
+    r.setReady();
+    r.run(60);
+    expect(r.jump.phase).toBe('done');
+    const done = r.log.filter((l) => l.startsWith('complete:')).map((l) => l.slice(9));
+    expect(done.at(-1)).toBe('m22');
+    expect(done).toContain('d04');
+    expect(r.log.indexOf('by:wystan')).toBeLessThan(r.log.indexOf('complete:m22'));
+    expect(r.log.filter((l) => l === 'complete:m22')).toHaveLength(1);
+  });
+  it('the ending fails cleanly when M22 is not registered', () => {
+    const r = rig('ending', { missing: true });
+    r.setReady();
+    r.run(60);
+    expect(r.jump.phase).toBe('failed');
+    expect(r.warn).toHaveBeenCalledWith(expect.stringContaining('quest m22 is not registered'));
+  });
   it('keeps standing by while the teleport is refused', () => {
     const r = rig('m11', { teleportRefusals: 2 });
     r.setReady();
@@ -228,7 +279,7 @@ async function jumpTo(search: string) {
 
 
 describe('?act2= on the real game', () => {
-  it.each(ACT2_PHASE_C_IDS)('%s: Act 1 done, prerequisites done, the quest offerable, the player beside the giver, nothing saved', async (id) => {
+  it.each([...ACT2_PHASE_C_IDS, ...ACT2_PHASE_D_IDS.filter((x) => x !== 'ending')] as const)('%s: Act 1 done, prerequisites done, the quest offerable, the player beside the giver, nothing saved', async (id) => {
     const t = await jumpTo(`?act2=${id}&new`);
     expect(t.jump?.phase).toBe('done');
     for (const q of ACT2_PREREQS[id]) expect(t.quests.state(q), q).toBe('completed');
@@ -239,16 +290,32 @@ describe('?act2= on the real game', () => {
     const feet = t.ctx.player.feet;
     // The giver's post now (quest post rules, else where the layout put the NPC; the NPC itself walks there on later ticks).
     const posts = resolvePosts(POST_RULES, { state: t.ctx.state, quests: t.quests as never });
-    const post = t.ctx.anchors.find(posts[ACT2_GIVERS[id]]?.anchorId ?? '');
-    const at = post?.position ?? t.ctx.services.require('npcs').position(ACT2_GIVERS[id]);
-    expect(at, ACT2_GIVERS[id]).toBeDefined();
+    const post = t.ctx.anchors.find(posts[giverOf(id)]?.anchorId ?? '');
+    const at = post?.position ?? t.ctx.services.require('npcs').position(giverOf(id));
+    expect(at, giverOf(id)).toBeDefined();
     expect(Math.hypot(at!.x - feet.x, at!.z - feet.z), JSON.stringify({ id, feet, at })).toBeLessThan(GIVER_STAND_OFF + 1);
     const done = (q: string) => ACT2_PREREQS[id].includes(q);
     expect(s.getBool('story.m13.hrolfJoined')).toBe(done('m13'));
     expect(s.getBool('story.m14.aelfredaJoined')).toBe(done('m14'));
     if (done('m14')) expect(s.getBool('shrine.hushed-anvil.lit')).toBe(true);
+    // Phase D: the pass is open on D03 alone (no hold flag exists to set) and the act has not ended.
+    expect(t.ctx.services.require('containment').isOpen(19500, 9500)).toBe(done('d03'));
+    expect(s.getFlag('story.phase.oldsmokeOpen')).toBeUndefined();
+    expect(s.getBool('story.gate.a3')).toBe(false);
     const r = await t.ctx.services.require('save').saveNow('manual');
     expect(r.ok).toBe(false);
+  }, 90000);
+
+  it('?act2=ending completes every quest, ends the act once and leaves the card and camp scene to play', async () => {
+    const t = await jumpTo('?act2=ending&new');
+    expect(t.jump?.phase).toBe('done');
+    for (const q of [...ACT2_PREREQS.ending, 'm22']) expect(t.quests.state(q), q).toBe('completed');
+    const s = t.ctx.state;
+    expect(s.getBool('story.gate.a3')).toBe(true);
+    // The Act 1 ending was silenced; the Act 2 one was not (its camp scene is the player's to see).
+    expect(s.getBool('story.d02.campSeen')).toBe(true);
+    expect(s.getBool('story.a2.campSeen')).toBe(false);
+    expect(t.ctx.services.require('companions').maxActive()).toBe(2);
   }, 90000);
 
   it('seats the active companion: Hrolf after M13, Aelfreda after M14 (the party holds one until the act ends)', async () => {
@@ -265,6 +332,16 @@ describe('?act2= on the real game', () => {
     expect(fake.peek('slot-0')).toEqual(slice1Complete);
     expect(fake.peek('autosave')).toEqual(slice1Complete);
   }, 90000);
+
+  it('&class=emberwright reaches the class choice (review-b L1); with no &class the jump plays the Knight', async () => {
+    const t = await jumpTo('?act2=r06&new&class=emberwright');
+    expect(t.jump?.phase).toBe('done');
+    expect(t.ctx.services.require('classes').current()).toBe('emberwright');
+    expect(t.ctx.state.getBool('story.r06.emberwright')).toBe(true);
+    for (const c of cleanups.splice(0)) c();
+    const k = await jumpTo('?act2=r06&new');
+    expect(k.ctx.services.require('classes').current()).toBe('knight');
+  }, 180000);
 
   it('without &new nothing happens', async () => {
     const t = await jumpTo('?act2=m11');

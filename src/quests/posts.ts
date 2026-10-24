@@ -74,7 +74,9 @@ export const POST_RULES: PostRule[] = [
     ],
   },
   // the audience: the Regent's court stands in the Keep hall while M08 runs (inside posts are thread 3a's anchors)
-  { npcId: 'edric', home: 'npc-post.edric', posts: [{ when: { quest: 'm08', state: 'active' }, anchorId: 'npc-post.edric.hall' }] },
+  // Act 2 (A13, additive): he is in the hall again for the M22 Council, and speaks to Cael after it
+  { npcId: 'edric', home: 'npc-post.edric', posts: [{ when: { any: [{ quest: 'm08', state: 'active' }, { quest: 'm22', state: 'active' }] }, anchorId: 'npc-post.edric.hall' }] },
+  { npcId: 'grisel-steward', home: 'npc-post.grisel', posts: [{ when: { quest: 'm22', state: 'active' }, anchorId: 'npc-post.grisel.hall' }] },
   { npcId: 'vey', home: 'npc-post.vey.keep', posts: [{ when: { quest: 'm08', state: 'active' }, anchorId: 'npc-post.vey.hall' }] },
   // Merrin waits her turn in the Keep hall during the audience (density pass), then inside the Counting-House once
   // Cael has the side-door key (the clerk's, density pass)
@@ -177,7 +179,11 @@ export class PostDirector {
     const env = this.env();
     const left = new Set(this.rules.filter((r) => r.leaveWhen && evalCondition(r.leaveWhen, env)).map((r) => r.npcId));
     for (const [npcId, want] of Object.entries(resolvePosts(this.rules, env))) {
-      if (left.has(npcId)) continue;
+      if (left.has(npcId)) {
+        // Someone else places them now; forget our post so the row applies again when they hand the NPC back.
+        this.applied.set(npcId, UNKNOWN);
+        continue;
+      }
       const had = this.applied.get(npcId);
       if (want.home && had === undefined) continue;
       if (had === want.anchorId) continue;

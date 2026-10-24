@@ -157,6 +157,11 @@ export class Brain {
     return this.aggroTarget;
   }
 
+  /** Whether `id` is the target in any form: aggro, a pack alert (forced) or a noticing enemy's pending acquire. */
+  holdsTarget(id: ActorId): boolean {
+    return this.aggroTarget === id || this.forcedTarget === id || this.pendingAcquire === id;
+  }
+
   get currentMove(): MoveDef | null {
     return this.move;
   }
@@ -411,6 +416,21 @@ export class Brain {
       return;
     }
     this.loseTarget();
+  }
+
+  /**
+   * Swap whichever target the brain holds (aggro, pending acquire or forced) for `targetId` without leaving the current state. No-op
+   * when it holds none or already has this one. Used by the taunt choice; a plain game never calls it.
+   */
+  retarget(targetId: ActorId): void {
+    if (this.finished) return;
+    if (this.aggroTarget && this.aggroTarget !== targetId) {
+      this.aggroTarget = targetId;
+      this.unseen = 0;
+      this.hooks.aggro(targetId);
+    }
+    if (this.pendingAcquire && this.pendingAcquire !== targetId) this.pendingAcquire = targetId;
+    if (this.forcedTarget && this.forcedTarget !== targetId) this.forcedTarget = targetId;
   }
 
   /** Out of combat now (going dormant): drops the target, cancelling any swing, token and aggro through `enter`. */

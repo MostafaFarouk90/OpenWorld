@@ -40,6 +40,7 @@ export function areaHit(host: EnemyHost, shooter: Shooter, move: MoveDef): boole
     attackId: RANGED_ATTACK_PREFIX + move.id,
     direction,
     unblockable: move.telegraph === 'dodge',
+    ...(move.element ? { element: move.element } : {}),
     point: tmp.set(feet.x, feet.y + 0.2, feet.z).clone(),
   });
   return result?.outcome === 'hit';

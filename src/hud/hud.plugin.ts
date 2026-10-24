@@ -16,7 +16,6 @@ import { PartyScreen } from './PartyScreen';
 import { PressureBar } from './PressureBar';
 import { createTemperingScreen } from './TemperingScreen';
 import { actEnding, cardSeenFlags } from '../integration/actEndings';
-import { ACT2_CONTINUES, ACT2_CONTINUES_STRINGS_EN, act2ContinuesLive } from './act2Continues';
 import { StructureBar } from './StructureBar';
 import { createRespecModal, type RespecModalDeps } from './RespecModal';
 import { BuffBar, type BuffInfo } from './BuffBar';
@@ -46,7 +45,6 @@ const hudPlugin: GamePlugin = {
   dependsOn: ['core'],
   setup(ctx: GameContext) {
     ctx.strings.register('en', HUD_STRINGS_EN);
-    ctx.strings.register('en', ACT2_CONTINUES_STRINGS_EN);
     injectCss(HUD_CSS);
     const doc = hudDocument();
     const t = (key: string, params?: Record<string, string | number>): string => ctx.strings.t(key, params);
@@ -350,43 +348,10 @@ const hudPlugin: GamePlugin = {
     ctx.events.on('save.loaded', () => ending2.onLoaded());
     ctx.gates.flag(row2.gateFlag, (open) => ending2.onGate(open));
     mount('center', ending2, 2);
-    // Phase C only (deleted with the hold in the Phase D PR): D03 done while Oldsmoke is held shut. Its own widget and
-    // once-flag; it never answers `act.ended`, so the real Act 2 ending card is untouched. Shown once the dialogue that
-    // completed the quest has closed.
-    const ending2c = new ActEndingCard(doc, {
-      widgetId: ACT2_CONTINUES.widgetId,
-      ending: { act: ACT2_CONTINUES.act, endingId: ACT2_CONTINUES.endingId, titleKey: ACT2_CONTINUES.titleKey },
-      t,
-      keys: keyTarget,
-      modalOpen: () => ctx.hud.modalOpen !== null,
-      seen: () => ctx.state.getBool(ACT2_CONTINUES.seenFlag),
-      markSeen: () => ctx.state.setFlag(ACT2_CONTINUES.seenFlag, true),
-      closed: (endingId) => ctx.events.emit('hud.actEnding.closed', { endingId }),
-      recap: () => ACT2_CONTINUES.lines.map((k) => t(k)),
-    });
-    let continuesDue = false;
-    ctx.events.on('quest.completed', (e) => {
-      if (e.questId === ACT2_CONTINUES.quest && act2ContinuesLive()) continuesDue = true;
-    });
-    ctx.systems.add({
-      id: 'hud.act2continues',
-      fixedPhase: 'rules',
-      order: 462,
-      fixedUpdate() {
-        if (!continuesDue || ctx.services.get('dialogue')?.active || ctx.hud.modalOpen !== null) return;
-        continuesDue = false;
-        ending2c.onActEnded({ act: ACT2_CONTINUES.act, endingId: ACT2_CONTINUES.endingId });
-      },
-    });
-    ctx.events.on('save.loaded', () => {
-      continuesDue = false;
-      ending2c.onLoaded();
-    });
-    mount('center', ending2c, 3);
-    // One service for the cards: whichever is waiting or showing (Act 1's first when, unusually, several are pending).
+    // One service for the cards: whichever is waiting or showing (Act 1's first when, unusually, both are pending).
     ctx.services.provide('actEndingCard', {
-      active: () => ending.active || ending2.active || ending2c.active,
-      dismiss: () => (ending.active ? ending.dismiss() : ending2.active ? ending2.dismiss() : ending2c.dismiss()),
+      active: () => ending.active || ending2.active,
+      dismiss: () => (ending.active ? ending.dismiss() : ending2.dismiss()),
     });
 
     // The Weeping Bellows' pressure countdown (A9's sim-time clock).

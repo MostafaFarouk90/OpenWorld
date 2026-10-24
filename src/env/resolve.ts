@@ -63,6 +63,8 @@ const KAYKIT: Readonly<Record<string, { model: string; scale?: number; fitHeight
   'picket-fence': { model: 'hex/fence_wood_straight', fitHeight: 1.1 },
   'wattle-fence': { model: 'hex/fence_wood_straight', fitHeight: 1.2 },
   'stonewall-low': { model: 'hex/fence_stone_straight', fitHeight: 1.0 },
+  // The enclosure's low lane-gate wings: KayKit only, so a manifest model with the id 'stonewall-low' never changes their module length.
+  'stonewall-wing': { model: 'hex/fence_stone_straight', fitHeight: 1.0 },
   // Village boundary wall: the same piece fitted to 1.5 m so it reads as a wall at the Knight's scale (1.8 m).
   'stonewall-high': { model: 'hex/fence_stone_straight', fitHeight: 1.5 },
   'scorched-fence': { model: 'hex/fence_wood_straight', fitHeight: 1.6 },

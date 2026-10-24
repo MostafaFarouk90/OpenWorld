@@ -181,6 +181,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
         for (const side of ['outside', 'inside'] as const) {
           const key = `${door.doorId}:${side}`;
           if (doors.has(key)) continue;
+          if (side === 'outside' && door.outsideInteractable === false) continue;
           const anchor = ctx.anchors.find(side === 'outside' ? door.outside : door.exit);
           if (!anchor) continue;
           const id = side === 'outside' ? `door:${door.doorId}` : `door:${door.doorId}-exit`;
@@ -277,6 +278,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
   const service: InteriorsService = {
     enter: (id, door) => controller.enter(id, door),
     exit: (door) => controller.exit(door),
+    transfer: (id, door) => controller.transfer(id, door),
     get current() {
       return controller.current;
     },
@@ -284,6 +286,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
       return controller.transitioning;
     },
     interiorAt: (at) => controller.interiorAt(at),
+    hostileAggro: () => waystones()?.hostileAggro ?? aggro.size > 0,
     setDoorLock: (door, locked) => controller.setDoorLock(door, locked),
     setBlocker,
   };

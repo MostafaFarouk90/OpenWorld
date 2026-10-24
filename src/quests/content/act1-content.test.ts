@@ -5,7 +5,7 @@ import { POI_REWARDS } from './poi';
 import { ITEMS } from '../../inventory/items';
 import type { Effect } from '../types';
 
-const OWNED = /^(story\.(m|d|r)\d\d\.|story\.r01\.|world\.brightwater\.barley$|world\.harrowmark\.inn\.|quest\.|tutorial\.|player\.)/;
+const OWNED = /^(story\.(m|d|r)\d\d\.|story\.r01\.|story\.a2\.(campSeen|wennaAtCamp)$|world\.brightwater\.barley$|world\.harrowmark\.inn\.|quest\.|tutorial\.|player\.)/;
 
 function walk(effects: Effect[] | undefined, out: Effect[] = []): Effect[] {
   for (const e of effects ?? []) {

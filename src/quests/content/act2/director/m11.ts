@@ -65,21 +65,30 @@ export function installM11(k: Kit): Off[] {
     const esc = ctx.services.get('escort');
     if (esc?.active()?.phase === 'riding') void esc.dismount();
   });
-  const ambush = (n: 1 | 2): void => void ctx.services.get('enemies')?.spawnGroup(`q12.m11.ambush-${n}`);
+  // `armed` once this session spawned an ambush group: a load despawns the groups before it refills one, and a re-check
+  // queued by that teardown must not read the empty groups as a cleared first ambush.
+  let armed = false;
+  const ambush = (n: 1 | 2): void => {
+    if ((ctx.services.get('enemies')?.spawnGroup(`q12.m11.ambush-${n}`) ?? []).length > 0) armed = true;
+  };
   k.on('escort.dismounted', (e) => {
     if (e.escortId === 'm11' && k.active('m11') && !k.objDone('m11', 'ambush')) k.later(() => ambush(1));
   });
   // The second group once the first three are down; a load mid-fight refills whichever group the count says.
   const ambushKills = (): number => k.progress('m11', 'ambush');
+  // Re-checked on a death and also on a mercy or a despawn: a spared Footman leaves without dying (review-a #3).
+  const checkAmbush = (): void => k.later(() => {
+    if (!armed || !k.active('m11') || !ctx.services.get('enemies')) return;
+    if (k.standing('q12.m11.ambush-1').length === 0 && k.standing('q12.m11.ambush-2').length === 0 && ambushKills() >= 3 && ambushKills() < 6) ambush(2);
+  });
   k.on('actor.died', (e) => {
-    if (e.spawnTag !== 'm11.ambush' || !k.active('m11')) return;
-    k.later(() => {
-      const en = ctx.services.get('enemies');
-      if (!en) return;
-      if (k.standing('q12.m11.ambush-1').length === 0 && k.standing('q12.m11.ambush-2').length === 0 && ambushKills() >= 3 && ambushKills() < 6) ambush(2);
-    });
+    if (e.spawnTag === 'm11.ambush' && k.active('m11')) checkAmbush();
+  });
+  k.onMemberLeft(() => {
+    if (k.active('m11') && k.objDone('m11', 'ring') && !k.objDone('m11', 'ambush')) checkAmbush();
   });
   k.on('save.loaded', () => {
+    armed = false;
     if (!k.active('m11') || !k.objDone('m11', 'ring') || k.objDone('m11', 'ambush')) return;
     k.later(() => ambush(ambushKills() < 3 ? 1 : 2));
   });

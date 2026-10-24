@@ -17,6 +17,15 @@ export interface WyrmParams {
   wingspan: number;
   /** Seeds the small per-build variation (horn sweep, spike lengths). */
   seed: number;
+  /**
+   * Body height multiplier (1 = `headHeight`, the Ember Wyrm's stance): the standing head, and the body that
+   * follows it, ride this much lower or higher. Orsk sits heavy at 0.62.
+   */
+  stance: number;
+  /** Leg length multiplier on `legLength` (after the `legs: 'small'` cut). */
+  legScale: number;
+  /** Leg thickness multiplier on the bone radius. */
+  legGirth: number;
 }
 
 /** Shape constants at scale 1. */
@@ -48,6 +57,9 @@ export const DEFAULT_WYRM_PARAMS: Readonly<WyrmParams> = {
   crest: false,
   wingspan: 1,
   seed: 1,
+  stance: 1,
+  legScale: 1,
+  legGirth: 1,
 };
 
 export function wyrmParams(over: Partial<WyrmParams> = {}): WyrmParams {
@@ -55,6 +67,9 @@ export function wyrmParams(over: Partial<WyrmParams> = {}): WyrmParams {
   if (!(p.scale > 0) || !Number.isFinite(p.scale)) throw new Error(`wyrm: bad scale ${p.scale}`);
   if (!Number.isInteger(p.segments) || p.segments < 4 || p.segments > 64) throw new Error(`wyrm: bad segment count ${p.segments}`);
   if (!(p.wingspan > 0)) throw new Error(`wyrm: bad wingspan ${p.wingspan}`);
+  for (const k of ['stance', 'legScale', 'legGirth'] as const) {
+    if (!(p[k] > 0) || !Number.isFinite(p[k])) throw new Error(`wyrm: bad ${k} ${p[k]}`);
+  }
   return p;
 }
 

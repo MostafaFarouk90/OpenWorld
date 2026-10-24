@@ -85,6 +85,22 @@ describe('the non-lethal trial service', () => {
     expect(t.player.health).toBe(t.player.maxHealth);
   });
 
+  it('a lethal blow from a companion holds the opponent at its floor but is not a break for Cael', () => {
+    const t = make();
+    const ally = t.actors.spawn({ kind: 'companion', team: 'ally', maxHealth: 50 });
+    t.trials.start({ id: 'tr', opponentId: t.opp.id });
+    t.hit(ally.id, t.opp.id, 9999);
+    t.tick(DT * 2);
+    expect(t.opp.health).toBe(1);
+    expect(t.of('trial.break')).toEqual([]);
+    expect(t.trials.state()).toMatchObject({ player: 0, opponent: 0 });
+    // Cael's own blow still breaks.
+    t.opp.health = t.opp.maxHealth;
+    t.hit(t.player.id, t.opp.id, 9999);
+    t.tick(DT * 2);
+    expect(t.of('trial.break')).toEqual([{ trialId: 'tr', by: 'player', player: 1, opponent: 0 }]);
+  });
+
   it('a loss restarts with the score reset (default); onLoss end finishes it', () => {
     const t = make();
     t.trials.start({ id: 'tr', opponentId: t.opp.id });

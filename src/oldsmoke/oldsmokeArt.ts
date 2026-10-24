@@ -21,6 +21,7 @@ const MATS = {
   rope: mat(0x8a7a58),
   stone: mat(0x6e6a64),
   hatch: mat(0x3a3836),
+  pit: new THREE.MeshBasicMaterial({ color: 0x050403 }),
   spoil: mat(0x4a4038),
   coal: new THREE.MeshBasicMaterial({ color: 0xff7a2a }),
 };
@@ -131,6 +132,34 @@ function collar(spec: StructureSpec): THREE.Object3D {
   g.add(mesh(new THREE.BoxGeometry(w, h, d), MATS.stone, 0, h / 2, 0));
   g.add(mesh(new THREE.BoxGeometry(w - 1.4, 0.12, d - 1.4), MATS.hatch, 0, h + 0.06, 0));
   for (const sx of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.3, 0.2, d - 1.4), MATS.iron, sx * (w / 2 - 1.4), h + 0.2, 0));
+  return own(g);
+}
+
+/**
+ * The mended lift: a black pit over the hatch plate and an iron cage frame standing in it, sized to the collar's footprint.
+ * The lift plugin overlays it on the collar while `world.oldsmoke.lift.restored` is set (the collar structure itself is fixed
+ * data, so the closed plate cannot be swapped in place). Origin at the collar's centre on the ground, like the structures.
+ */
+export function buildLiftCage(footprint: readonly [number, number] = [10, 10], collarHeight = 0.8): THREE.Object3D {
+  const [w, d] = footprint;
+  const g = new THREE.Group();
+  g.name = 'lift-cage';
+  const top = collarHeight + 0.2;
+  // The pit hides the hatch plate; the cage stands inside the ring.
+  const pit = mesh(new THREE.BoxGeometry(w - 1.4, 0.2, d - 1.4), MATS.pit, 0, collarHeight + 0.12, 0);
+  g.add(pit);
+  const cw = Math.min(w, d) * 0.4;
+  const ch = 3;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.16, ch, 0.16), MATS.iron, sx * cw / 2, top + ch / 2, sz * cw / 2));
+  for (const y of [top + 0.1, top + ch]) {
+    for (const s of [-1, 1]) {
+      g.add(mesh(new THREE.BoxGeometry(cw, 0.12, 0.12), MATS.iron, 0, y, s * cw / 2));
+      g.add(mesh(new THREE.BoxGeometry(0.12, 0.12, cw), MATS.iron, s * cw / 2, y, 0));
+    }
+  }
+  // A mid rail and the hoist rope up to the sheave.
+  for (const s of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(cw, 0.08, 0.08), MATS.iron, 0, top + ch / 2, s * cw / 2));
+  g.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 6, 5), MATS.rope, 0, top + ch + 3, 0));
   return own(g);
 }
 

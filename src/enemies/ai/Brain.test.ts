@@ -537,3 +537,13 @@ describe('Brain: robustness', () => {
     expect(brain.state).toBe('chase');
   });
 });
+
+describe('Brain.retarget', () => {
+  it('is a no-op while the brain holds no target', () => {
+    const spy = new Spy();
+    const b = new Brain(ASH_WRAITH, spy, { aggroOnSpawn: null } as BrainOptions);
+    b.retarget('familiar:1');
+    expect(b.target).toBeNull();
+    expect(spy.log).toEqual([]);
+  });
+});

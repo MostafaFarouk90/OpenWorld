@@ -25,7 +25,9 @@ export const m11: QuestDef = {
     reads('search', 'quest.m11.search', M11_SEARCH),
     interacts('blooms', 'quest.m11.blooms', M11_BLOOMS),
     { id: 'wraiths', type: 'kill', target: 'ash-wraith', required: 5, spawnTag: 'm11.wraith', textKey: 'quest.m11.wraiths' },
-    story('stone', 'quest.m11.stone', 'waystone.rekindled', { match: { waystoneId: 'cinder-road' } }),
+    // The stone fires its event once and has no lock: lit early (during the ambush, or on an earlier ride) it is credited
+    // from its lit flag when this objective becomes current (review-a #2).
+    story('stone', 'quest.m11.stone', 'waystone.rekindled', { match: { waystoneId: 'cinder-road' }, doneWhen: { flag: 'waystone.cinder-road.lit', equals: true } }),
     { id: 'report', type: 'talk', target: 'gaut', textKey: 'quest.m11.report' },
   ],
   rewards: [{ xp: 450 }, { give: [{ itemId: 'ashmare-saddle', count: 1 }] }],

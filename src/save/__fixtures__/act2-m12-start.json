@@ -1,391 +1,55 @@
 {
-  "format": 1,
-  "savedAt": 1767225600000,
-  "reason": "manual",
-  "playtimeSeconds": 183,
   "entries": {
-    "world-state": {
-      "version": 1,
+    "burn": {
       "data": {
-        "flags": {
-          "quest.t03.eddaGift": true,
-          "tutorial.t04.begin": true,
-          "tutorial.t04.vow1": "earnest",
-          "tutorial.t04.vow2": "earnest",
-          "tutorial.t04.vow3": "earnest",
-          "tutorial.t04.tone": "earnest",
-          "tutorial.heartshard-awakened": true,
-          "tutorial.t12.kit": true,
-          "waystone.chapel.lit": true,
-          "place.brightwater.discovered": true,
-          "waystone.kettlewick.lit": true,
-          "tutorial.skipped": true,
-          "tutorial.complete": true,
-          "ability.surge-leap.learned": true,
-          "enemies.mercy.release": true,
-          "enemies.mercy.spare": true,
-          "prompt.attack3.count": 16,
-          "world.brightwater.tollPost": true,
-          "story.m04.cartersFreed": true,
-          "story.m05.tobbJoined": true,
-          "companion.tobb.rank": 1,
-          "prompt.attack1.count": 17,
-          "world.deadroad.wardstone.1": true,
-          "world.deadroad.wardstone.2": true,
-          "world.deadroad.wardstone.3": true,
-          "world.deadroad.wardstone.4": true,
-          "world.deadroad.wardstone.5": true,
-          "world.deadroad.wardstones.done": true,
-          "waystone.quenchstone.lit": true,
-          "shrine.quenchstone.lit": true,
-          "story.m05.complete": true,
-          "story.f10.scars": 1,
-          "prompt.rest.count": 1,
-          "world.brightwater.barley": "saved",
-          "prompt.block.count": 3,
-          "boss.ashen-prior.outcome": "released",
-          "prompt.move.count": 0,
-          "prompt.look.count": 0,
-          "prompt.attack2.count": 0,
-          "prompt.attack4.count": 0,
-          "prompt.interact.count": 0,
-          "prompt.sprint.count": 0,
-          "prompt.jump.count": 0,
-          "prompt.dodge.count": 0,
-          "prompt.lockOn.count": 0,
-          "prompt.inventory.count": 0,
-          "prompt.journal.count": 0,
-          "prompt.skills.count": 0,
-          "prompt.ability.count": 0,
-          "prompt.map.count": 0,
-          "prompt.fastTravel.count": 0,
-          "prompt.surge.count": 0,
-          "prompt.wardstone-strike.count": 0,
-          "place.harrowmark.discovered": true,
-          "story.m06.started": true,
-          "story.m06.route": "bribe",
-          "story.m06.gateOpen": true,
-          "story.m07.started": true,
-          "story.m07.classOpen": true,
-          "classes.available.knight": true,
-          "classes.available.warden": true,
-          "classes.available.emberwright": true,
-          "classes.available.ashblade": true,
-          "classes.available.pathfinder": true,
-          "world.harrowmark.inn.room": true,
-          "classes.chosen": true,
-          "classes.drill.knight": "skipped",
-          "world.harrowmark.inn.price": "forgiven",
-          "story.r04.page.1": true,
-          "story.r04.page.2": true,
-          "story.r04.page.3": true,
-          "story.r04.choice": "expose",
-          "story.m08.started": true,
-          "story.m08.keepOpen": true,
-          "story.m08.favourTab": true,
-          "story.m08.audience.q1": true,
-          "story.m08.audience.q2": true,
-          "story.m08.stance": "steady",
-          "story.m08.audience.q3": true,
-          "story.m09.houseOpen": true,
-          "story.m09.invoice.1": true,
-          "story.m09.invoice.2": true,
-          "story.m10.ashmare": true,
-          "story.d02.breadGiven": true,
-          "enemies.mercy.calm": true,
-          "story.d02.underwaysOpen": true,
-          "boss.gaffer-grimtooth.outcome": "released",
-          "story.gate.a2": true,
-          "codex.actEndingSeen": true,
-          "story.d02.campSeen": true,
-          "codex.actEnding.a1.seen": true,
-          "prompt.lockSwap.count": 0,
-          "story.m01.tavernDoused": true,
-          "story.m02.doorDoused": true,
-          "story.m03.releaseTaught": true,
-          "story.m04.spareTaught": true,
-          "story.m02.rubbleCleared": true,
-          "story.m04.sergeantCalled": true,
-          "story.r01.shawlRead": true,
-          "story.m05.stonesStruck": true,
-          "story.m05.shrineHeld": true,
-          "story.d01.vaultOpen": true,
-          "story.d01.braziersLit": true,
-          "story.d01.antechamberClear": true,
-          "story.r01.rootWoke": true,
-          "story.m06.queueHeard": true,
-          "story.m06.queueTested": true,
-          "story.m07.trailFollowed": true,
-          "story.r03.doormanTalked": true,
-          "story.r03.thugsBeaten": true,
-          "story.r03.copperTaken": true,
-          "story.r03.snatchBeaten": true,
-          "story.r04.stacksOpen": true,
-          "story.r04.pagesFound": true,
-          "story.m09.started": true,
-          "story.m09.keyRoute": "lifted",
-          "story.m10.ordersTaken": true,
-          "story.m10.ambushBeaten": true,
-          "story.d02.strayDealt": true,
-          "story.d02.valvesOpen": true,
-          "story.d02.sluiceClear": true,
-          "story.r06.emberwright": false,
-          "aelfreda.rite.ready": false,
-          "story.m11.started": true,
-          "story.m11.bannerRaised": true,
-          "story.m11.bloom.1": true,
-          "story.m11.bloomHit": true,
-          "story.m11.bloom.2": true,
-          "story.m11.bloom.3": true,
-          "story.m11.wraithsOut": true,
-          "waystone.cinder-road.lit": true,
-          "story.m11.complete": true,
-          "place.cinderreach.discovered": true
-        },
-        "favour": {
-          "halvard": 35,
-          "oswin": 15,
-          "grisel": 20,
-          "dragons": 13,
-          "ashwalkers": 19
-        },
-        "creatureMercy": {
-          "halvard": 0,
-          "oswin": 0,
-          "grisel": 0,
-          "dragons": 0,
-          "ashwalkers": 0
-        },
-        "mercyCount": 0
-      }
+        "burn": 70.3767,
+        "scars": 1
+      },
+      "version": 1
     },
-    "platforms": {
-      "version": 1,
-      "data": {}
-    },
-    "quests": {
-      "version": 2,
+    "classes": {
       "data": {
-        "quests": {
-          "t03": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t12": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "m01": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "m02": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "m03": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 1,
-              "o3": 1,
-              "o4": 1,
-              "o5": 1,
-              "o6": 4,
-              "o7": 1
-            }
-          },
-          "m04": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 1,
-              "o3": 4,
-              "o4": 1,
-              "o5": 1,
-              "o6": 1
-            }
-          },
-          "m05": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 1,
-              "o3": 1
-            }
-          },
-          "d01": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 1,
-              "o3": 1,
-              "o4": 1
-            }
-          },
-          "r01": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 6,
-              "o3": 1
-            }
-          },
-          "r02": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 3,
-              "o3": 3,
-              "o4": 2,
-              "o5": 1
-            }
-          },
-          "m06": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 1
-            }
-          },
-          "m07": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 3,
-              "o3": 1,
-              "o4": 1,
-              "o5": 1,
-              "o6": 1,
-              "o7": 1
-            }
-          },
-          "m08": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 1,
-              "o3": 1,
-              "o4": 1
-            }
-          },
-          "m09": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 1,
-              "o3": 3,
-              "o4": 1,
-              "o5": 1
-            }
-          },
-          "m10": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 1,
-              "o3": 1,
-              "o4": 1
-            }
-          },
-          "r03": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 3,
-              "o3": 1,
-              "o4": 1
-            }
-          },
-          "r04": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 3,
-              "o3": 1
-            }
-          },
-          "d02": {
-            "state": "completed",
-            "objectives": {
-              "o1": 1,
-              "o2": 1,
-              "o3": 4,
-              "o4": 1,
-              "o5": 1
-            }
-          },
-          "m11": {
-            "state": "completed",
-            "objectives": {
-              "brief": 1,
-              "banner": 1,
-              "ring": 1,
-              "ambush": 6,
-              "search": 4,
-              "blooms": 3,
-              "wraiths": 5,
-              "stone": 1,
-              "report": 1
-            }
-          },
-          "t01": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t02": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t04": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t05": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t06": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t07": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t08": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t09": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t10": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t11": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t13": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t14": {
-            "state": "completed",
-            "objectives": {}
-          },
-          "t15": {
-            "state": "completed",
-            "objectives": {}
+        "drills": {
+          "knight": "skipped"
+        },
+        "starterGranted": [
+          "knight"
+        ]
+      },
+      "version": 1
+    },
+    "codex": {
+      "data": {
+        "read": [],
+        "unlocked": [
+          "howto.surge-leap",
+          "blighted-soldier",
+          "ash-wraith",
+          "howto.warmth-tier",
+          "howto.burn-scars",
+          "ashen-prior",
+          "howto.release",
+          "howto.calm",
+          "lore.cinder-courier"
+        ]
+      },
+      "version": 1
+    },
+    "companions": {
+      "data": {
+        "active": null,
+        "positions": {
+          "tobb": {
+            "x": 21054.3008,
+            "y": 21,
+            "yaw": 0,
+            "z": 2644.2875
           }
         }
-      }
+      },
+      "version": 2
     },
     "dialogue": {
-      "version": 1,
       "data": {
         "seen": [
           "m03-offer",
@@ -528,84 +192,18 @@
           "a2-after",
           "a2-after-2"
         ]
-      }
-    },
-    "waystones": {
-      "version": 1,
-      "data": {
-        "lit": [
-          "chapel",
-          "cinder-road",
-          "kettlewick",
-          "quenchstone"
-        ],
-        "lastRest": "chapel",
-        "respawn": "cinder-road"
-      }
-    },
-    "progression": {
-      "version": 2,
-      "data": {
-        "xp": 7092,
-        "storyPoints": 1,
-        "learned": [],
-        "bar": [
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-        ],
-        "classId": "knight",
-        "respecUsed": false
-      }
-    },
-    "classes": {
-      "version": 1,
-      "data": {
-        "drills": {
-          "knight": "skipped"
-        },
-        "starterGranted": [
-          "knight"
-        ]
-      }
-    },
-    "player": {
-      "version": 1,
-      "data": {
-        "health": 147,
-        "stamina": 100,
-        "lastRestedWaystoneId": "chapel",
-        "goldPouch": null
-      }
-    },
-    "burn": {
-      "version": 1,
-      "data": {
-        "burn": 70.40333333334206,
-        "scars": 1
-      }
+      },
+      "version": 1
     },
     "ember": {
-      "version": 1,
       "data": {
         "ember": 100,
         "max": 100
-      }
+      },
+      "version": 1
     },
     "enemies": {
-      "version": 1,
       "data": {
-        "spent": [
-          "r01.scarecrows#0",
-          "r01.scarecrows#1",
-          "r01.scarecrows#5",
-          "r01.scarecrows#2",
-          "r01.scarecrows#3",
-          "r01.scarecrows#4"
-        ],
         "cleared": [
           "brightwater.ford.pair-1",
           "brightwater.ford.toll-post",
@@ -630,262 +228,440 @@
           "underways.kennel-1#2",
           "underways.kennel-2#0"
         ],
-        "warmthTier": 1,
-        "lockedBlockLevels": {}
-      }
+        "lockedBlockLevels": {},
+        "spent": [
+          "r01.scarecrows#0",
+          "r01.scarecrows#1",
+          "r01.scarecrows#5",
+          "r01.scarecrows#2",
+          "r01.scarecrows#3",
+          "r01.scarecrows#4"
+        ],
+        "warmthTier": 1
+      },
+      "version": 1
+    },
+    "enemies.ground": {
+      "data": [],
+      "version": 1
     },
     "enemies.mercy.tally": {
-      "version": 1,
       "data": {
         "rows": {
-          "ash-wraith": {
-            "release": 0,
-            "spare": 0,
+          "alley-cutpurse": {
             "calm": 0,
-            "killed": 6
+            "killed": 3,
+            "release": 0,
+            "spare": 0
           },
-          "blighted-soldier": {
-            "release": 0,
-            "spare": 0,
+          "ash-wraith": {
             "calm": 0,
-            "killed": 8
+            "killed": 6,
+            "release": 0,
+            "spare": 0
           },
           "ashen-prior": {
+            "calm": 0,
+            "killed": 0,
             "release": 1,
-            "spare": 0,
-            "calm": 0,
-            "killed": 0
+            "spare": 0
           },
-          "alley-cutpurse": {
-            "release": 0,
-            "spare": 0,
+          "blighted-soldier": {
             "calm": 0,
-            "killed": 3
-          },
-          "guildhall-thug": {
+            "killed": 8,
             "release": 0,
-            "spare": 0,
-            "calm": 0,
-            "killed": 3
+            "spare": 0
           },
           "ember-hound": {
-            "release": 0,
-            "spare": 0,
             "calm": 0,
-            "killed": 4
+            "killed": 4,
+            "release": 0,
+            "spare": 0
           },
           "gaffer-grimtooth": {
-            "release": 0,
-            "spare": 0,
             "calm": 1,
-            "killed": 0
+            "killed": 0,
+            "release": 0,
+            "spare": 0
+          },
+          "guildhall-thug": {
+            "calm": 0,
+            "killed": 3,
+            "release": 0,
+            "spare": 0
           }
         }
-      }
-    },
-    "inventory": {
-      "version": 2,
-      "data": {
-        "items": {
-          "squires-arming-sword": 1,
-          "gauts-spare-tabard": 1,
-          "wooden-round-shield": 1,
-          "healing-flask": 3,
-          "hearth-bread": 4,
-          "hearth-token": 1,
-          "gauts-spare-blade": 1,
-          "hearth-stone-charm": 1,
-          "ford-guard-shield": 1,
-          "tobbs-lucky-whistle": 1,
-          "barley-cake": 5,
-          "training-weights": 1,
-          "priors-censer": 1,
-          "watch-pass": 1,
-          "aldiths-stout": 1,
-          "lore-tome-1": 1,
-          "halvard-signet": 1,
-          "oswin-lockpicks": 5,
-          "couriers-cloak": 1,
-          "sewer-master-key": 1,
-          "ashmare-saddle": 1
-        },
-        "equipped": {
-          "weapon": "squires-arming-sword",
-          "offhand": "wooden-round-shield",
-          "armour": "gauts-spare-tabard"
-        },
-        "unknown": {},
-        "gold": 30
-      }
-    },
-    "waves": {
-      "version": 1,
-      "data": {
-        "defId": null,
-        "index": 0,
-        "phase": "idle"
-      }
-    },
-    "wyrms": {
-      "version": 1,
-      "data": {
-        "freed": []
-      }
-    },
-    "codex": {
-      "version": 1,
-      "data": {
-        "unlocked": [
-          "howto.surge-leap",
-          "blighted-soldier",
-          "ash-wraith",
-          "howto.warmth-tier",
-          "howto.burn-scars",
-          "ashen-prior",
-          "howto.release",
-          "howto.calm",
-          "lore.cinder-courier"
-        ],
-        "read": []
-      }
-    },
-    "companions": {
-      "version": 2,
-      "data": {
-        "positions": {
-          "tobb": {
-            "x": 21054.300781320137,
-            "y": 21.000000288616867,
-            "z": 2644.2875000000017,
-            "yaw": -1.2516722814454763e-7
-          }
-        },
-        "active": null
-      }
-    },
-    "shrine.cooled": {
-      "version": 1,
-      "data": null
-    },
-    "vendors": {
-      "version": 1,
-      "data": {
-        "stock": {
-          "wystan": {
-            "marshals-longsword": 1,
-            "marshals-kite-shield": 1,
-            "halvard-oath-sash": 1,
-            "marshals-mantle": 1
-          },
-          "merrin": {
-            "oswin-ledger-dagger": 1,
-            "merchants-coat": 1,
-            "oswin-oath-sash": 1,
-            "ledger-lens": 1
-          },
-          "edda": {},
-          "wynn": {},
-          "dunstan": {},
-          "gerta": {},
-          "ashdown": {},
-          "aldous": {
-            "grisel-oath-sash": 1,
-            "deepcore-pick": 1
-          },
-          "wenna": {},
-          "slagg": {},
-          "pike": {},
-          "ketta": {},
-          "maud": {},
-          "osgar": {}
-        },
-        "buyBack": {
-          "wystan": [],
-          "merrin": [],
-          "edda": [],
-          "wynn": [],
-          "dunstan": [],
-          "gerta": [],
-          "ashdown": [],
-          "aldous": [],
-          "wenna": [],
-          "slagg": [],
-          "pike": [],
-          "ketta": [],
-          "maud": [],
-          "osgar": []
-        }
-      }
-    },
-    "inn": {
-      "version": 1,
-      "data": null
-    },
-    "interior": {
-      "version": 1,
-      "data": {
-        "interiorId": null,
-        "doorId": null
-      }
+      },
+      "version": 1
     },
     "gear": {
-      "version": 1,
       "data": {
         "anvilTiers": [],
         "lessonRuns": 0
-      }
+      },
+      "version": 1
     },
-    "enemies.ground": {
-      "version": 1,
-      "data": []
+    "inn": {
+      "data": null,
+      "version": 1
     },
-    "shrine.foxFire": {
-      "version": 1,
-      "data": null
+    "interior": {
+      "data": {
+        "doorId": null,
+        "interiorId": null
+      },
+      "version": 1
+    },
+    "inventory": {
+      "data": {
+        "equipped": {
+          "armour": "gauts-spare-tabard",
+          "offhand": "wooden-round-shield",
+          "weapon": "squires-arming-sword"
+        },
+        "gold": 30,
+        "items": {
+          "aldiths-stout": 1,
+          "ashmare-saddle": 1,
+          "barley-cake": 5,
+          "couriers-cloak": 1,
+          "ford-guard-shield": 1,
+          "gauts-spare-blade": 1,
+          "gauts-spare-tabard": 1,
+          "halvard-signet": 1,
+          "healing-flask": 3,
+          "hearth-bread": 4,
+          "hearth-stone-charm": 1,
+          "hearth-token": 1,
+          "lore-tome-1": 1,
+          "oswin-lockpicks": 5,
+          "priors-censer": 1,
+          "sewer-master-key": 1,
+          "squires-arming-sword": 1,
+          "tobbs-lucky-whistle": 1,
+          "training-weights": 1,
+          "watch-pass": 1,
+          "wooden-round-shield": 1
+        },
+        "unknown": {}
+      },
+      "version": 2
     },
     "map": {
-      "version": 2,
       "data": {
-        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAfQAAAF8ANAQwAPg/x8AOn6A//8DADngB/j/PwA6frz//wMAOeDj//8/ADoc///fAQA68A8APf8APfAPAD3/AD3gBwA9PAD8B2AAPYAfAD38AQA84B8APf8BADzwDwA9PoYAO+Dh8T4AO36A/wMAOvAP+H8AO/+A/wMAOuAf8D8AO/wD+AEAOoA/AAEPADvwB2AAPH+AADzgAzwAPBjgBwA9fgA94AcAPT4APcABAAueAwA88H0APID/DwA8/P8APODfBwA8/jgAMAYAC8AHADDwAAw8ADCAHwA9+AEAPIAfAD34AQA9BgC4iwE="
-      }
+        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAfQAAAF8ANAQwAPg/x8AOn6A//8DADngB/j/PwA6frz//wMAOeDj//8/ADoc///fAQA68A8APf8APfAPAD3/AD3gBwA9PAD8B2AAPYAfAD38AQA84B8APf8BADzwDwA9PoYAO+Dh8T4AO36A/wMAOvAP+H8AO/+A/wMAOuAf8D8AO/wD+AEAOoA/AAEPADvwB2AAPH+AADzgAzwAPBjgBwA9fgA94AcAPT4APcABAAseAD3wAQA8gD8APfwDADzgHwA9/gAxBgAL+AcAMPAAC4A/ADCAHwAL/AAx+AEACoAPADCAHwAL+AAx+AEACwIAMQYAuIsB"
+      },
+      "version": 2
     },
     "mount": {
-      "version": 1,
       "data": {
         "placed": {
           "x": 8640,
           "y": 20,
-          "z": 1375,
-          "yaw": 3.141592653589793
+          "yaw": 3.1416,
+          "z": 1375
         },
         "stamina": 130
-      }
+      },
+      "version": 1
+    },
+    "platforms": {
+      "data": {},
+      "version": 1
+    },
+    "player": {
+      "data": {
+        "goldPouch": null,
+        "health": 147,
+        "lastRestedWaystoneId": "chapel",
+        "stamina": 100
+      },
+      "version": 1
+    },
+    "player-position": {
+      "data": {
+        "x": 21051.3008,
+        "y": 21.0101,
+        "yaw": 1.5708,
+        "z": 2645
+      },
+      "version": 1
+    },
+    "progression": {
+      "data": {
+        "bar": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "classId": "knight",
+        "learned": [],
+        "respecUsed": false,
+        "storyPoints": 1,
+        "xp": 7139
+      },
+      "version": 2
     },
     "prompts": {
-      "version": 1,
       "data": {
         "counts": {
-          "attack3": 16,
           "attack1": 17,
-          "rest": 1,
-          "block": 3
+          "attack3": 16,
+          "block": 3,
+          "rest": 1
         },
         "rebindOfferShown": false
-      }
+      },
+      "version": 1
+    },
+    "quests": {
+      "data": {
+        "quests": {
+          "d01": {
+            "objectives": {
+              "o1": 1,
+              "o2": 1,
+              "o3": 1,
+              "o4": 1
+            },
+            "state": "completed"
+          },
+          "d02": {
+            "objectives": {
+              "o1": 1,
+              "o2": 1,
+              "o3": 4,
+              "o4": 1,
+              "o5": 1
+            },
+            "state": "completed"
+          },
+          "m01": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m02": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m03": {
+            "objectives": {
+              "o1": 1,
+              "o2": 1,
+              "o3": 1,
+              "o4": 1,
+              "o5": 1,
+              "o6": 4,
+              "o7": 1
+            },
+            "state": "completed"
+          },
+          "m04": {
+            "objectives": {
+              "o1": 1,
+              "o2": 1,
+              "o3": 4,
+              "o4": 1,
+              "o5": 1,
+              "o6": 1
+            },
+            "state": "completed"
+          },
+          "m05": {
+            "objectives": {
+              "o1": 1,
+              "o2": 1,
+              "o3": 1
+            },
+            "state": "completed"
+          },
+          "m06": {
+            "objectives": {
+              "o1": 1,
+              "o2": 1
+            },
+            "state": "completed"
+          },
+          "m07": {
+            "objectives": {
+              "o1": 1,
+              "o2": 3,
+              "o3": 1,
+              "o4": 1,
+              "o5": 1,
+              "o6": 1,
+              "o7": 1
+            },
+            "state": "completed"
+          },
+          "m08": {
+            "objectives": {
+              "o1": 1,
+              "o2": 1,
+              "o3": 1,
+              "o4": 1
+            },
+            "state": "completed"
+          },
+          "m09": {
+            "objectives": {
+              "o1": 1,
+              "o2": 1,
+              "o3": 3,
+              "o4": 1,
+              "o5": 1
+            },
+            "state": "completed"
+          },
+          "m10": {
+            "objectives": {
+              "o1": 1,
+              "o2": 1,
+              "o3": 1,
+              "o4": 1
+            },
+            "state": "completed"
+          },
+          "m11": {
+            "objectives": {
+              "ambush": 6,
+              "banner": 1,
+              "blooms": 3,
+              "brief": 1,
+              "report": 1,
+              "ring": 1,
+              "search": 4,
+              "stone": 1,
+              "wraiths": 5
+            },
+            "state": "completed"
+          },
+          "r01": {
+            "objectives": {
+              "o1": 1,
+              "o2": 6,
+              "o3": 1
+            },
+            "state": "completed"
+          },
+          "r02": {
+            "objectives": {
+              "o1": 1,
+              "o2": 3,
+              "o3": 3,
+              "o4": 2,
+              "o5": 1
+            },
+            "state": "completed"
+          },
+          "r03": {
+            "objectives": {
+              "o1": 1,
+              "o2": 3,
+              "o3": 1,
+              "o4": 1
+            },
+            "state": "completed"
+          },
+          "r04": {
+            "objectives": {
+              "o1": 1,
+              "o2": 3,
+              "o3": 1
+            },
+            "state": "completed"
+          },
+          "t01": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t02": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t03": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t04": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t05": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t06": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t07": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t08": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t09": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t10": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t11": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t12": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t13": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t14": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "t15": {
+            "objectives": {},
+            "state": "completed"
+          }
+        }
+      },
+      "version": 2
+    },
+    "shrine.bellowsBlessing": {
+      "data": null,
+      "version": 1
+    },
+    "shrine.cooled": {
+      "data": null,
+      "version": 1
+    },
+    "shrine.foxFire": {
+      "data": null,
+      "version": 1
     },
     "stealth": {
-      "version": 1,
       "data": {
         "checkpoints": {
           "m09.counting-house": "ch.office"
         }
-      }
+      },
+      "version": 1
     },
     "tutorial": {
-      "version": 1,
       "data": {
-        "mode": "kettlewick",
         "beat": null,
+        "complete": true,
         "finished": [
           "t01",
           "t02",
@@ -903,27 +679,252 @@
           "t14",
           "t15"
         ],
+        "kitGranted": true,
+        "mode": "kettlewick",
+        "progress": {},
         "skipped": [
           "t15"
         ],
-        "progress": {},
-        "t13PendingPassive": null,
-        "kitGranted": true,
-        "complete": true
-      }
+        "t13PendingPassive": null
+      },
+      "version": 1
     },
-    "shrine.bellowsBlessing": {
-      "version": 1,
-      "data": null
-    },
-    "player-position": {
-      "version": 1,
+    "vendors": {
       "data": {
-        "x": 21051.300781381156,
-        "y": 21.010099847213134,
-        "z": 2644.999999868844,
-        "yaw": 1.5707963267948966
-      }
+        "buyBack": {
+          "aldous": [],
+          "ashdown": [],
+          "dunstan": [],
+          "edda": [],
+          "gerta": [],
+          "ketta": [],
+          "maud": [],
+          "merrin": [],
+          "osgar": [],
+          "pike": [],
+          "slagg": [],
+          "wenna": [],
+          "wynn": [],
+          "wystan": []
+        },
+        "stock": {
+          "aldous": {
+            "deepcore-pick": 1,
+            "grisel-oath-sash": 1
+          },
+          "ashdown": {},
+          "dunstan": {},
+          "edda": {},
+          "gerta": {},
+          "ketta": {},
+          "maud": {},
+          "merrin": {
+            "ledger-lens": 1,
+            "merchants-coat": 1,
+            "oswin-ledger-dagger": 1,
+            "oswin-oath-sash": 1
+          },
+          "osgar": {},
+          "pike": {},
+          "slagg": {},
+          "wenna": {},
+          "wynn": {},
+          "wystan": {
+            "halvard-oath-sash": 1,
+            "marshals-kite-shield": 1,
+            "marshals-longsword": 1,
+            "marshals-mantle": 1
+          }
+        }
+      },
+      "version": 1
+    },
+    "waves": {
+      "data": {
+        "defId": null,
+        "index": 0,
+        "phase": "idle"
+      },
+      "version": 1
+    },
+    "waystones": {
+      "data": {
+        "lastRest": "chapel",
+        "lit": [
+          "chapel",
+          "cinder-road",
+          "kettlewick",
+          "quenchstone"
+        ],
+        "respawn": "cinder-road"
+      },
+      "version": 1
+    },
+    "world-state": {
+      "data": {
+        "creatureMercy": {
+          "ashwalkers": 0,
+          "dragons": 0,
+          "grisel": 0,
+          "halvard": 0,
+          "oswin": 0
+        },
+        "favour": {
+          "ashwalkers": 19,
+          "dragons": 13,
+          "grisel": 20,
+          "halvard": 35,
+          "oswin": 15
+        },
+        "flags": {
+          "ability.surge-leap.learned": true,
+          "aelfreda.rite.ready": false,
+          "boss.ashen-prior.outcome": "released",
+          "boss.gaffer-grimtooth.outcome": "released",
+          "classes.available.ashblade": true,
+          "classes.available.emberwright": true,
+          "classes.available.knight": true,
+          "classes.available.pathfinder": true,
+          "classes.available.warden": true,
+          "classes.chosen": true,
+          "classes.drill.knight": "skipped",
+          "codex.actEnding.a1.seen": true,
+          "codex.actEndingSeen": true,
+          "companion.tobb.rank": 1,
+          "enemies.mercy.calm": true,
+          "enemies.mercy.release": true,
+          "enemies.mercy.spare": true,
+          "place.brightwater.discovered": true,
+          "place.cinderreach.discovered": true,
+          "place.harrowmark.discovered": true,
+          "prompt.ability.count": 0,
+          "prompt.attack1.count": 17,
+          "prompt.attack2.count": 0,
+          "prompt.attack3.count": 16,
+          "prompt.attack4.count": 0,
+          "prompt.block.count": 3,
+          "prompt.dodge.count": 0,
+          "prompt.fastTravel.count": 0,
+          "prompt.interact.count": 0,
+          "prompt.inventory.count": 0,
+          "prompt.journal.count": 0,
+          "prompt.jump.count": 0,
+          "prompt.lockOn.count": 0,
+          "prompt.lockSwap.count": 0,
+          "prompt.look.count": 0,
+          "prompt.map.count": 0,
+          "prompt.move.count": 0,
+          "prompt.rest.count": 1,
+          "prompt.skills.count": 0,
+          "prompt.sprint.count": 0,
+          "prompt.surge.count": 0,
+          "prompt.wardstone-strike.count": 0,
+          "quest.t03.eddaGift": true,
+          "shrine.quenchstone.lit": true,
+          "story.d01.antechamberClear": true,
+          "story.d01.braziersLit": true,
+          "story.d01.vaultOpen": true,
+          "story.d02.breadGiven": true,
+          "story.d02.campSeen": true,
+          "story.d02.sluiceClear": true,
+          "story.d02.strayDealt": true,
+          "story.d02.underwaysOpen": true,
+          "story.d02.valvesOpen": true,
+          "story.f10.scars": 1,
+          "story.gate.a2": true,
+          "story.m01.tavernDoused": true,
+          "story.m02.doorDoused": true,
+          "story.m02.rubbleCleared": true,
+          "story.m03.releaseTaught": true,
+          "story.m04.cartersFreed": true,
+          "story.m04.sergeantCalled": true,
+          "story.m04.spareTaught": true,
+          "story.m05.complete": true,
+          "story.m05.shrineHeld": true,
+          "story.m05.stonesStruck": true,
+          "story.m05.tobbJoined": true,
+          "story.m06.gateOpen": true,
+          "story.m06.queueHeard": true,
+          "story.m06.queueTested": true,
+          "story.m06.route": "bribe",
+          "story.m06.started": true,
+          "story.m07.classOpen": true,
+          "story.m07.started": true,
+          "story.m07.trailFollowed": true,
+          "story.m08.audience.q1": true,
+          "story.m08.audience.q2": true,
+          "story.m08.audience.q3": true,
+          "story.m08.favourTab": true,
+          "story.m08.keepOpen": true,
+          "story.m08.stance": "steady",
+          "story.m08.started": true,
+          "story.m09.houseOpen": true,
+          "story.m09.invoice.1": true,
+          "story.m09.invoice.2": true,
+          "story.m09.keyRoute": "lifted",
+          "story.m09.started": true,
+          "story.m10.ambushBeaten": true,
+          "story.m10.ashmare": true,
+          "story.m10.ordersTaken": true,
+          "story.m11.bannerRaised": true,
+          "story.m11.bloom.1": true,
+          "story.m11.bloom.2": true,
+          "story.m11.bloom.3": true,
+          "story.m11.bloomHit": true,
+          "story.m11.complete": true,
+          "story.m11.started": true,
+          "story.m11.wraithsOut": true,
+          "story.r01.rootWoke": true,
+          "story.r01.shawlRead": true,
+          "story.r03.copperTaken": true,
+          "story.r03.doormanTalked": true,
+          "story.r03.snatchBeaten": true,
+          "story.r03.thugsBeaten": true,
+          "story.r04.choice": "expose",
+          "story.r04.page.1": true,
+          "story.r04.page.2": true,
+          "story.r04.page.3": true,
+          "story.r04.pagesFound": true,
+          "story.r04.stacksOpen": true,
+          "story.r06.emberwright": false,
+          "tutorial.complete": true,
+          "tutorial.heartshard-awakened": true,
+          "tutorial.skipped": true,
+          "tutorial.t04.begin": true,
+          "tutorial.t04.tone": "earnest",
+          "tutorial.t04.vow1": "earnest",
+          "tutorial.t04.vow2": "earnest",
+          "tutorial.t04.vow3": "earnest",
+          "tutorial.t12.kit": true,
+          "waystone.chapel.lit": true,
+          "waystone.cinder-road.lit": true,
+          "waystone.kettlewick.lit": true,
+          "waystone.quenchstone.lit": true,
+          "world.brightwater.barley": "saved",
+          "world.brightwater.tollPost": true,
+          "world.deadroad.wardstone.1": true,
+          "world.deadroad.wardstone.2": true,
+          "world.deadroad.wardstone.3": true,
+          "world.deadroad.wardstone.4": true,
+          "world.deadroad.wardstone.5": true,
+          "world.deadroad.wardstones.done": true,
+          "world.harrowmark.inn.price": "forgiven",
+          "world.harrowmark.inn.room": true,
+          "world.oldsmoke.market.stewardGuard": true
+        },
+        "mercyCount": 0
+      },
+      "version": 1
+    },
+    "wyrms": {
+      "data": {
+        "freed": []
+      },
+      "version": 1
     }
-  }
+  },
+  "format": 1,
+  "playtimeSeconds": 184,
+  "reason": "manual",
+  "savedAt": 1767225600000
 }
