@@ -343,3 +343,50 @@ describe('registerLift', () => {
     expect(fc.scene.getObjectByName('lift-cage')).toBeUndefined();
   });
 });
+
+describe('lift sound warm-up', () => {
+  it('pre-builds the ride and cues in idle time, then revokes every url on teardown', async () => {
+    vi.useFakeTimers();
+    let n = 0;
+    const created: string[] = [];
+    const revoked: string[] = [];
+    vi.stubGlobal('requestIdleCallback', undefined);
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(() => {
+      created.push(`blob:${n++}`);
+      return created[created.length - 1];
+    });
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation((u) => void revoked.push(u));
+    try {
+      const audio = { register: vi.fn(), play: vi.fn(() => 1) };
+      const { off } = setup({ audio });
+      expect(audio.register).not.toHaveBeenCalled();
+      await vi.runAllTimersAsync();
+      expect(audio.register.mock.calls.map((c) => (c as unknown[])[0]).sort()).toEqual([LIFT_ARRIVE_SOUND, LIFT_CALL_SOUND, LIFT_REFUSE_SOUND, LIFT_RIDE_SOUND].sort());
+      expect(audio.play).not.toHaveBeenCalled();
+      expect(created).toHaveLength(4);
+      off();
+      expect([...revoked].sort()).toEqual([...created].sort());
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    }
+  });
+
+  it('teardown before the warm-up runs cancels it', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('requestIdleCallback', undefined);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:x');
+    try {
+      const audio = { register: vi.fn(), play: vi.fn(() => 1) };
+      const { off } = setup({ audio });
+      off();
+      await vi.runAllTimersAsync();
+      expect(audio.register).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    }
+  });
+});

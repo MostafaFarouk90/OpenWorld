@@ -84,41 +84,62 @@ export interface LiftAudio {
   play(key: string): number | null;
 }
 
-/** Registers the cue once (a no-op without Web Audio object URLs) and plays it; never throws, the ride works without sound. */
-export function makeLiftRidePlayer(audio: LiftAudio | undefined): () => void {
-  let registered = false;
-  return () => {
+export interface LiftPlayer<K = void> {
+  (key: K): void;
+  /** Renders and registers without playing (idle warm-up), so the first play does not synthesize. Never throws. */
+  prime(key: K): void;
+  /** Revokes every object URL this player created. Later plays register again. */
+  dispose(): void;
+}
+
+const canMakeUrls = (): boolean => typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function';
+
+function makeCuePlayer<K extends string>(audio: LiftAudio | undefined, build: (key: K) => { samples: Float32Array<ArrayBuffer>; volume: number }, label: string): LiftPlayer<K> {
+  const registered = new Set<K>();
+  const urls: string[] = [];
+  const ensure = (key: K): boolean => {
+    if (registered.has(key)) return true;
+    if (!audio || !canMakeUrls()) return false;
+    const { samples, volume } = build(key);
+    const url = samplesToWavUrl(samples);
+    urls.push(url);
+    audio.register(key, { src: [url], format: ['wav'], volume });
+    registered.add(key);
+    return true;
+  };
+  const play = (key: K): void => {
     if (!audio) return;
     try {
-      if (!registered) {
-        if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') return;
-        audio.register(LIFT_RIDE_SOUND, { src: [samplesToWavUrl(liftRideSamples())], format: ['wav'], volume: 0.7 });
-        registered = true;
-      }
-      audio.play(LIFT_RIDE_SOUND);
+      if (ensure(key)) audio.play(key);
     } catch (err) {
-      console.warn('oldsmoke: lift ride sound failed', err);
+      console.warn(`oldsmoke: lift ${label} failed`, err);
     }
   };
+  const prime = (key: K): void => {
+    try {
+      ensure(key);
+    } catch (err) {
+      console.warn(`oldsmoke: lift ${label} warm-up failed`, err);
+    }
+  };
+  const dispose = (): void => {
+    registered.clear();
+    if (canMakeUrls() && typeof URL.revokeObjectURL === 'function') for (const u of urls) URL.revokeObjectURL(u);
+    urls.length = 0;
+  };
+  return Object.assign(play, { prime, dispose });
+}
+
+/** Registers the cue once (a no-op without Web Audio object URLs) and plays it; never throws, the ride works without sound. */
+export function makeLiftRidePlayer(audio: LiftAudio | undefined): (() => void) & { prime(): void; dispose(): void } {
+  const p = makeCuePlayer<typeof LIFT_RIDE_SOUND>(audio, () => ({ samples: liftRideSamples(), volume: 0.7 }), 'ride sound');
+  return Object.assign((): void => p(LIFT_RIDE_SOUND), { prime: (): void => p.prime(LIFT_RIDE_SOUND), dispose: p.dispose });
 }
 
 /**
- * The one-shot lift cues. Each key is rendered and registered on its first play (a no-op without Web Audio object URLs) and
- * then played; never throws, the lift works without sound.
+ * The one-shot lift cues. Each key is rendered and registered on its first play or earlier by `prime` (a no-op without Web Audio
+ * object URLs) and then played; never throws, the lift works without sound.
  */
-export function makeLiftCuePlayer(audio: LiftAudio | undefined): (key: LiftCueKey) => void {
-  const registered = new Set<LiftCueKey>();
-  return (key) => {
-    if (!audio) return;
-    try {
-      if (!registered.has(key)) {
-        if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') return;
-        audio.register(key, { src: [samplesToWavUrl(liftCueSamples(key))], format: ['wav'], volume: LIFT_CUE_VOLUME[key] });
-        registered.add(key);
-      }
-      audio.play(key);
-    } catch (err) {
-      console.warn('oldsmoke: lift cue failed', err);
-    }
-  };
+export function makeLiftCuePlayer(audio: LiftAudio | undefined): LiftPlayer<LiftCueKey> {
+  return makeCuePlayer<LiftCueKey>(audio, (key) => ({ samples: liftCueSamples(key), volume: LIFT_CUE_VOLUME[key] }), 'cue');
 }

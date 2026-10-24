@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WYRM_SOUND_KEYS } from '../enemies/wyrm/sounds';
 import { ACT2_SFX_KEYS, ACT2_SFX_VOLUME, SLAGMAW_SFX_KEYS, act2SfxSamples } from './act2Sfx';
 import plugin from './act2Sfx.plugin';
-import { ensureAct2Sfx } from './act2SfxEnsure';
+import { ensureAct2Sfx, playEnsured } from './act2SfxEnsure';
 import { MOVE_SFX } from './act2SfxRouter';
 
 type Handler = (payload: never) => void;
@@ -366,5 +366,32 @@ describe('boss and D04 pool cues', () => {
     setup(c);
     expect(() => interactValve(c, 'valve:d04pool1-1')).not.toThrow();
     expect(c.played).toEqual([]);
+  });
+});
+
+describe('boss cues with a starved idle queue', () => {
+  it('playEnsured registers the cue before it plays even when the idle callback never fires', () => {
+    vi.stubGlobal('requestIdleCallback', () => 1);
+    vi.stubGlobal('cancelIdleCallback', () => {});
+    const c = fakeCtx();
+    const order: string[] = [];
+    const audio = {
+      play: (k: string) => void order.push(`play:${k}:${c.registered.some((r) => r.key === k)}`),
+      playAt: (k: string) => void order.push(`playAt:${k}:${c.registered.some((r) => r.key === k)}`),
+    };
+    setup(c);
+    expect(c.registered).toEqual([]);
+    playEnsured(audio, 'sfx.grimtooth.pounce', { x: 0, y: 0, z: 0 });
+    playEnsured(audio, 'sfx.redmane.horn');
+    expect(c.registered.map((r) => r.key)).toEqual(['sfx.grimtooth.pounce', 'sfx.redmane.horn']);
+    expect(order).toEqual(['playAt:sfx.grimtooth.pounce:true', 'play:sfx.redmane.horn:true']);
+  });
+
+  it('asks requestIdleCallback for a timeout so the slices cannot starve', () => {
+    const opts: unknown[] = [];
+    vi.stubGlobal('requestIdleCallback', (_cb: () => void, o?: unknown) => (opts.push(o), 1));
+    vi.stubGlobal('cancelIdleCallback', () => {});
+    setup(fakeCtx());
+    expect(opts).toEqual([{ timeout: 2000 }]);
   });
 });

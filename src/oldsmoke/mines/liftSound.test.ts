@@ -66,3 +66,56 @@ describe('the lift one-shot cues', () => {
     expect(broken.play).not.toHaveBeenCalled();
   });
 });
+
+describe('lift sound warm-up and disposal', () => {
+  const stubUrls = () => {
+    let n = 0;
+    const created: string[] = [];
+    const revoked: string[] = [];
+    vi.stubGlobal('URL', {
+      createObjectURL: () => {
+        const u = `blob:${n++}`;
+        created.push(u);
+        return u;
+      },
+      revokeObjectURL: (u: string) => void revoked.push(u),
+    });
+    return { created, revoked };
+  };
+
+  it('after prime, play does not synthesize again', () => {
+    const { created } = stubUrls();
+    try {
+      const audio = { register: vi.fn(), play: vi.fn((_k: string) => 1) };
+      const play = makeLiftCuePlayer(audio);
+      for (const k of LIFT_CUE_KEYS) play.prime(k);
+      expect(audio.play).not.toHaveBeenCalled();
+      expect(created).toHaveLength(LIFT_CUE_KEYS.length);
+      for (const k of LIFT_CUE_KEYS) play(k);
+      expect(created).toHaveLength(LIFT_CUE_KEYS.length);
+      expect(audio.register).toHaveBeenCalledTimes(LIFT_CUE_KEYS.length);
+      expect(audio.play).toHaveBeenCalledTimes(LIFT_CUE_KEYS.length);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('dispose revokes every url the cue and ride players created', () => {
+    const { created, revoked } = stubUrls();
+    try {
+      const audio = { register: vi.fn(), play: vi.fn(() => 1) };
+      const cue = makeLiftCuePlayer(audio);
+      const ride = makeLiftRidePlayer(audio);
+      ride.prime();
+      for (const k of LIFT_CUE_KEYS) cue(k);
+      expect(created).toHaveLength(4);
+      cue.dispose();
+      ride.dispose();
+      expect([...revoked].sort()).toEqual([...created].sort());
+      cue.dispose();
+      expect(revoked).toHaveLength(4);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

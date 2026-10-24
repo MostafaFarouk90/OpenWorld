@@ -132,4 +132,4 @@ export function registerPlaceholderSfx(audio: SfxRegistrar, volume = 0.8): strin
   return keys;
 }
 
-const BARE_ALIASES: readonly SfxId[] = [SFX.releasePulse, SFX.yieldKneel, SFX.leap, SFX.companionBark];
+export const BARE_ALIASES: readonly SfxId[] = [SFX.releasePulse, SFX.yieldKneel, SFX.leap, SFX.companionBark];

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { playEnsured } from '../../audio/act2SfxEnsure';
 import { bossOutcomeFlag } from '../../actors/BossRegistry';
 import { SCORCHHOLD_KEEP_DEF } from '../../cinderreach/scorchholdKeep';
 import type { GameContext } from '../../core/Game';
@@ -52,7 +53,8 @@ export class RedmaneDirector {
         begin: (model) => model?.play('idle', { loop: true }),
         cue: () => {
           try {
-            ctx.services.get('audio')?.play('sfx.redmane.horn');
+            const audio = ctx.services.get('audio');
+            if (audio) playEnsured(audio, 'sfx.redmane.horn');
           } catch {
             // the audio thread owns the key
           }

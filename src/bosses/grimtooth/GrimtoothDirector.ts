@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { playEnsured } from '../../audio/act2SfxEnsure';
 import { bossOutcomeFlag } from '../../actors/BossRegistry';
 import type { GameContext } from '../../core/Game';
 import { UNDERWAYS_DEF } from '../../interiors/underways/generate';
@@ -53,7 +54,8 @@ export class GrimtoothDirector {
         cue: (model) => {
           model?.play('howl');
           try {
-            ctx.services.get('audio')?.play('sfx.grimtooth.howl');
+            const audio = ctx.services.get('audio');
+            if (audio) playEnsured(audio, 'sfx.grimtooth.howl');
           } catch {
             // thread 9 owns the key
           }

@@ -11,7 +11,7 @@ import { showToast } from '../../waystones/toast';
 import { buildLiftCage } from '../oldsmokeArt';
 import { SHAFT } from '../sites';
 import { MINE_LANDINGS, type MineId } from './kit';
-import { LIFT_ARRIVE_SOUND, LIFT_CALL_SOUND, LIFT_REFUSE_SOUND, makeLiftCuePlayer, makeLiftRidePlayer, type LiftAudio } from './liftSound';
+import { LIFT_ARRIVE_SOUND, LIFT_CALL_SOUND, LIFT_CUE_KEYS, LIFT_REFUSE_SOUND, makeLiftCuePlayer, makeLiftRidePlayer, type LiftAudio } from './liftSound';
 import { openLiftMenu, type LiftMenuRow } from './liftMenu';
 import { availableStops, LIFT_ARMED_FLAG, LIFT_STOPS, stopOfInterior, type LiftStop } from './liftStops';
 
@@ -112,6 +112,36 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
   const toast = (key: string): void => showToast(ctx.hud, t(key));
   const playRide = makeLiftRidePlayer(ctx.services.get('audio') as LiftAudio | undefined);
   const playCue = makeLiftCuePlayer(ctx.services.get('audio') as LiftAudio | undefined);
+  // Warm-up: render the ride and the three cues one per idle slice after registration, so the first use (a keypress, then the
+  // arrival after the fade-in) does not synthesize on a visible frame. A cue needed sooner renders on its first play as before.
+  {
+    const steps: Array<() => void> = [() => playRide.prime(), ...LIFT_CUE_KEYS.map((k) => () => playCue.prime(k))];
+    type G = { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
+    const g = globalThis as unknown as G;
+    let cancel: (() => void) | null = null;
+    const later = (cb: () => void): void => {
+      if (typeof g.requestIdleCallback === 'function') {
+        const id = g.requestIdleCallback(cb, { timeout: 2000 });
+        cancel = () => g.cancelIdleCallback?.(id);
+      } else {
+        const id = setTimeout(cb, 0);
+        cancel = () => clearTimeout(id);
+      }
+    };
+    const slice = (): void => {
+      cancel = null;
+      steps.shift()?.();
+      if (steps.length) later(slice);
+    };
+    if (ctx.services.get('audio')) later(slice);
+    cleanups.push(() => {
+      cancel?.();
+      cancel = null;
+      steps.length = 0;
+      playRide.dispose();
+      playCue.dispose();
+    });
+  }
 
   // Quest reads go through the quests service; without it every quest condition is "inactive" (locked), never a throw.
   const env = (): ConditionEnv => {
