@@ -3,6 +3,7 @@ import type { ActorPort } from '../hud/ports';
 import { ConsumableUser } from './consumables';
 import { Inventory } from './Inventory';
 import '../quests/content/act2/items';
+import '../economy/items.act3';
 
 let events: { type: string; payload: unknown }[];
 let actor: ActorPort & { dead: boolean };
@@ -259,5 +260,44 @@ describe('a consumable with no health effect (the Fox-Fire Ember, A12)', () => {
   it('still refuses a healing flask at full health (the exception is the item\'s own)', () => {
     actor.health = actor.maxHealth;
     expect(user.begin('healing-flask')).toEqual({ ok: false, reason: 'full-health' });
+  });
+});
+
+describe('burnRelief (Fen Salve)', () => {
+  const salveUser = (relieveBurn?: (n: number) => boolean, warn: (m: string) => void = () => {}) =>
+    new ConsumableUser({ inventory: inv, env: { actor: () => actor, heal, emit: (t, p) => events.push({ type: t, payload: p }), relieveBurn, warn } });
+
+  it('removes 20 Burn through the spells service, does not heal, and works at full health', () => {
+    actor.health = actor.maxHealth;
+    inv.add('fen-salve', 2);
+    const relieve = vi.fn(() => true);
+    const u = salveUser(relieve);
+    expect(u.begin('fen-salve').ok).toBe(true);
+    u.update(5);
+    expect(relieve).toHaveBeenCalledWith(20);
+    expect(heal).not.toHaveBeenCalled();
+    expect(inv.count('fen-salve')).toBe(1);
+    expect(used()).toHaveLength(1);
+  });
+
+  it('without a spells service the use still succeeds and warns once', () => {
+    inv.add('fen-salve', 3);
+    const warn = vi.fn();
+    const u = salveUser(undefined, warn);
+    for (let i = 0; i < 2; i++) {
+      expect(u.begin('fen-salve').ok).toBe(true);
+      u.update(5);
+    }
+    expect(inv.count('fen-salve')).toBe(1);
+    expect(used()).toHaveLength(2);
+    expect(warn).toHaveBeenCalledTimes(1);
+  });
+
+  it('a flask (no burnRelief) never touches Burn', () => {
+    const relieve = vi.fn(() => true);
+    const u = salveUser(relieve);
+    u.begin('healing-flask');
+    u.update(5);
+    expect(relieve).not.toHaveBeenCalled();
   });
 });

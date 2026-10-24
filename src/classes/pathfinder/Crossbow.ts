@@ -105,7 +105,7 @@ export class Crossbow {
     const dir = new THREE.Vector3().copy(this.p.aim(origin)).normalize();
     if (this.index === 2) dir.applyAxisAngle(UP, THREE.MathUtils.degToRad((k - 1) * PF.rapidSpreadDegrees));
     const steady = this.index === 0 && this.p.learned(PF.skillIds.steadyShot) && this.p.attackHeld();
-    const amount = PF.baseDamage * spec.damage * (steady ? PF.steadyShotScale : 1);
+    const amount = PF.baseDamage * spec.damage * (steady ? PF.steadyShotScale : 1) * (this.p.ammo.lastWasMaster ? PF.masterBoltScale : 1);
     const attackId = `pathfinder.bolt.${this.index + 1}`;
     const horizontal = new THREE.Vector3(dir.x, 0, dir.z).normalize();
     let passes = 0;

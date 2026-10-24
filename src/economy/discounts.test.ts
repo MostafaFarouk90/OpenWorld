@@ -33,7 +33,7 @@ const TABLE: VendorDiscount[] = [
 
 describe('vendor discounts', () => {
   it('ships the Act 2 union table and changes no Act 1 vendor', () => {
-    for (const d of VENDOR_DISCOUNTS) expect(d.vendors.every((v) => ['aldous', 'slagg', 'pike'].includes(v))).toBe(true);
+    for (const d of VENDOR_DISCOUNTS) expect(d.vendors.every((v) => ['aldous', 'slagg', 'pike', 'thorgar'].includes(v))).toBe(true);
     const { shop } = shopWith({ 'story.r10.choice': 'miners', 'story.r09.choice': 'miners' });
     expect(shop.quote('edda', 'barley-cake')).toBe(6);
   });
@@ -88,9 +88,9 @@ describe('Act 2 vendors', () => {
 });
 
 describe('Act 3 vendors (v0.7 item 16)', () => {
-  it('are in the total record with empty stock for now', () => {
+  it('are in the total record (stock lives in stock.act3.ts)', () => {
     for (const id of ['leofa', 'dudda', 'gytha', 'thorgar', 'eadgyth', 'ansgar', 'ysmeryth'] as const) {
-      expect(VENDORS[id]).toMatchObject({ id, lines: [] });
+      expect(VENDORS[id]).toMatchObject({ id });
       expect(VENDOR_IDS).toContain(id);
     }
   });
@@ -103,7 +103,7 @@ describe('Act 3 vendors (v0.7 item 16)', () => {
     expect(discountPercent('leofa', () => 'hut', table)).toBe(0);
   });
 
-  it('ships no Act 3 discount rows yet', () => {
-    expect(VENDOR_DISCOUNTS.some((d) => d.flag === 'story.r15.choice')).toBe(false);
+  it('ships one Act 3 row: thorgar on the r15 lodge choice', () => {
+    expect(VENDOR_DISCOUNTS.filter((d) => d.flag === 'story.r15.choice')).toEqual([{ flag: 'story.r15.choice', value: 'lodge', vendors: ['thorgar'], percent: 15 }]);
   });
 });

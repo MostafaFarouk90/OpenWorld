@@ -70,6 +70,7 @@ describe('Act 3 flag owners', () => {
       'trainer.<classId>.masterBook': 'K11',
       'boss.<id>.outcome': 'core boss registry',
       'story.phase.dragonspineOpen': 'Phase F PR',
+      'gear.shardgem.granted.<id>': 'K10',
     });
   });
 

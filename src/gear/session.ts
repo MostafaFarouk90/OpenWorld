@@ -1,9 +1,9 @@
 import { getItem } from '../inventory/items';
 import type { BeatClock } from '../shrine/beat';
 import { pickAffix } from './affixes';
-import { FORGE_RECIPES, forgeCost, forgeItem, type ForgeRefusal } from './forge';
+import { ALL_FORGE_RECIPES, forgeCost, forgeItem, isTier4Recipe, type ForgeRefusal } from './forge';
 import { type Judgement, RhythmRun } from './rhythm';
-import { checkTemper, firstTemperOfTier, type GearInventory, isTemperable, MATERIALS, temperCost, temperItem, tierOf, type MaterialCost, type TemperRefusal } from './tempering';
+import { checkTemper, firstTemperOfTier, type GearInventory, isTemperable, MATERIALS, temperCostFor, temperItem, tierOf, type MaterialCost, type TemperRefusal } from './tempering';
 import { GEAR_TUNING } from './tuning';
 
 export type SessionState = 'idle' | 'picking' | 'rhythm' | 'result' | 'affix-reveal';
@@ -27,8 +27,8 @@ export interface ItemRow {
   canAfford: boolean;
   /** Why start() would be refused now, or null. */
   blockedBy: TemperRefusal | null;
-  /** Anvil only: the tier 3 piece and its cost when a recipe exists. */
-  forge: { to: string; gold: number; ingots: number; canAfford: boolean } | null;
+  /** The next tier's piece and its cost when a recipe exists: tier 3 at the Anvil, tier 4 (K10) at the Anvil or a smith. */
+  forge: { to: string; gold: number; ingots: number; materials?: MaterialCost[]; canAfford: boolean } | null;
 }
 
 export interface SessionResult {
@@ -167,8 +167,9 @@ export function createTemperingSession(ports: SessionPorts): TemperingSession {
           const def = getItem(id);
           if (!isTemperable(def)) continue;
           const g = inv.gear(id);
-          const cost = temperCost(tierOf(def), g.temper + 1);
-          const fc = mode === 'anvil' ? forgeCost(id) : null;
+          const cost = temperCostFor(id, g.temper + 1);
+          // K10: tier 4 forging ("any smith") shows at the smith too; tier 3 forging stays at the Anvil.
+          const fc = mode === 'anvil' || isTier4Recipe(id) ? forgeCost(id) : null;
           const why = blocked(id);
           rows.push({
             id,
@@ -179,7 +180,15 @@ export function createTemperingSession(ports: SessionPorts): TemperingSession {
             nextCost: cost,
             canAfford: why !== 'no-gold' && why !== 'no-materials',
             blockedBy: why,
-            forge: fc ? { to: FORGE_RECIPES[id], gold: fc.gold, ingots: fc.ingots, canAfford: inv.gold >= fc.gold && inv.count(MATERIALS.ingot) >= fc.ingots } : null,
+            forge: fc
+              ? {
+                  to: ALL_FORGE_RECIPES[id],
+                  gold: fc.gold,
+                  ingots: fc.ingots,
+                  ...(fc.materials ? { materials: fc.materials } : {}),
+                  canAfford: inv.gold >= fc.gold && inv.count(MATERIALS.ingot) >= fc.ingots && !(fc.materials ?? []).some((m) => inv.count(m.itemId) < m.count),
+                }
+              : null,
           });
         }
       }
@@ -248,8 +257,9 @@ export function createTemperingSession(ports: SessionPorts): TemperingSession {
       apply(selected, a);
     },
     forge(id) {
-      if (mode !== 'anvil' || (state !== 'picking' && state !== 'result')) return;
-      const r = ports.anvilUsable() ? forgeItem(inv, id) : ({ ok: false, reason: 'locked' } as const);
+      if ((mode !== 'anvil' && !(mode === 'smith' && isTier4Recipe(id))) || (state !== 'picking' && state !== 'result')) return;
+      const usable = mode === 'anvil' ? ports.anvilUsable() : ports.smithUsable();
+      const r = usable ? forgeItem(inv, id) : ({ ok: false, reason: 'locked' } as const);
       lastResult = r.ok ? { ok: true, perfect: false, forged: r.to } : { ok: false, perfect: false, reason: r.reason };
       selected = null;
       go('picking');

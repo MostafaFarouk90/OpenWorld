@@ -17,6 +17,7 @@ export const ACT3_FLAG_OWNERS: readonly Act3FlagOwner[] = [
   { pattern: 'trainer.<classId>.masterBook', owner: 'K11', note: 'written through grantMasterBook' },
   { pattern: 'boss.<id>.outcome', owner: 'core boss registry', note: 'written by the core boss registry for every boss' },
   { pattern: 'story.phase.dragonspineOpen', owner: 'Phase F PR', note: 'nothing writes it in Phase E' },
+  { pattern: 'gear.shardgem.granted.<id>', owner: 'K10', note: 'one shard-gem paid per boss (live drop or the D01 to D04 retro-grant)' },
 ];
 
 /** The quest flag namespace: every Act 3 quest owns `story.<id>.*`, owned by that quest's thread. */

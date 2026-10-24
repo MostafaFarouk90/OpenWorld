@@ -14,6 +14,7 @@ export const ECONOMY_STRINGS_EN: Record<string, string> = {
   'economy.shop.title.aldous': "Aldous's Grisel stores",
   'economy.shop.otherClass': 'Another class',
   'economy.shop.fail.tempered': 'Tempered gear cannot be sold.',
+  'economy.shop.fail.socketed': 'Have a smith take out its shard-gems first.',
   'economy.shop.prompt': 'Press {key} to trade with {name}',
   'economy.shop.gold': 'Gold: {gold}',
   'economy.shop.tab.buy': 'Buy',

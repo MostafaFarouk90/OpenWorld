@@ -4,6 +4,9 @@ import type { AttackClipDef } from '../../characters/knightClips';
 export const PF = {
   classId: 'pathfinder',
   ammoItem: 'crossbow-bolts',
+  /** Act 3: a master bolt is spent before a plain one and the shot it leaves hits 10% harder. */
+  masterAmmoItem: 'master-bolts',
+  masterBoltScale: 1.1,
   /** Design 9 stat row: ranged 14 against the Knight's melee 10 (`COMBAT.baseDamage`). */
   baseDamage: 14,
   bolt: { speed: 55, radius: 0.12, range: 38, tracerSeconds: 0.12 },

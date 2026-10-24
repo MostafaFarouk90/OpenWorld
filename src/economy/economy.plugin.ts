@@ -13,12 +13,15 @@ import { showToast } from '../waystones/toast';
 import { CHEST_GOLD } from './goldTable';
 import { Inn, INN } from './Inn';
 import { openInnModal } from './InnModal';
+import { brewFenSalve } from './brewing';
 import './items';
+import './items.act3';
 import { PurseTracker } from './Purse';
 import './service';
 import { Shop } from './Shop';
 import { isVendorId, VENDOR_IDS, type VendorId } from './stock';
 import { ECONOMY_STRINGS_EN } from './strings.en';
+import { ECONOMY_ACT3_STRINGS_EN } from './strings.act3.en';
 import { VendorMenu } from './VendorMenu';
 
 const LOCKPICKS = 'oswin-lockpicks';
@@ -40,6 +43,7 @@ const economyPlugin: GamePlugin = {
   dependsOn: ['core', 'inventory', 'waystones', 'shrine', 'progression'],
   setup(ctx: GameContext) {
     ctx.strings.register('en', ECONOMY_STRINGS_EN);
+    ctx.strings.register('en', ECONOMY_ACT3_STRINGS_EN);
     const emit = emitLoose(ctx);
     const inventory = ctx.services.require('inventory');
     const progression = ctx.services.require('progression');
@@ -72,6 +76,21 @@ const economyPlugin: GamePlugin = {
         case 'pike':
         case 'aldous':
           return questState('m16') !== 'inactive';
+        // Act 3 (K10): each opens once its quest has started; Ysmeryth after M32 (the quest state or K13's flag).
+        case 'leofa':
+          return questState('m23') !== 'inactive';
+        case 'dudda':
+          return questState('m24') !== 'inactive';
+        case 'gytha':
+          return questState('m25') !== 'inactive';
+        case 'thorgar':
+          return questState('m28') !== 'inactive';
+        case 'eadgyth':
+          return questState('m29') !== 'inactive';
+        case 'ansgar':
+          return questState('m30') !== 'inactive';
+        case 'ysmeryth':
+          return questState('m32') === 'completed' || Boolean(ctx.state.getFlag('story.m32.complete'));
         default:
           return ctx.state.getBool('tutorial.complete');
       }
@@ -91,11 +110,13 @@ const economyPlugin: GamePlugin = {
       getItem,
       grant: (sourceId, itemId, count) => ctx.events.emit('loot.granted', { sourceId, items: [{ itemId, count }] }),
       band: (v) => {
-        const track = ({ wystan: 'halvard', merrin: 'oswin', aldous: 'grisel' } as Partial<Record<VendorId, 'halvard' | 'oswin' | 'grisel'>>)[v];
+        const track = ({ wystan: 'halvard', merrin: 'oswin', aldous: 'grisel', ysmeryth: 'dragons' } as Partial<Record<VendorId, 'halvard' | 'oswin' | 'grisel' | 'dragons'>>)[v];
         return track ? ctx.state.favourBand(track) : null;
       },
       isOpen,
       gearRecord: (id) => inventory.gear(id),
+      socketed: (id) => (inventory.socketsOf?.(id).length ?? 0) > 0,
+      capOf: (id) => inventory.capOf?.(id) ?? getItem(id)?.stackMax ?? 0,
       flag: (key) => ctx.state.getFlag(key),
       emit: (type, payload) => emit(type, payload),
       warn,
@@ -156,6 +177,18 @@ const economyPlugin: GamePlugin = {
       if (typeof p?.vendorId !== 'string') return;
       if (ctx.input.contexts.top() === 'dialogue') pendingVendor = p.vendorId;
       else openVendor(p.vendorId);
+    });
+    // K12's Gytha tree raises `npc.gytha.brew` (an `{ event }` effect: the `npc.` prefix passes EFFECT_EVENT_PATTERN) from its "Brew a salve" choice; nothing else brews.
+    (ctx.events as unknown as { on(t: string, f: () => void): void }).on('npc.gytha.brew', () => {
+      const r = brewFenSalve({
+        count: (id) => inventory.count(id),
+        stackMax: (id) => getItem(id)?.stackMax ?? 0,
+        gold: () => inventory.gold,
+        takeGold: (n) => inventory.takeGold(n, 'vendor'),
+        remove: (id, n) => inventory.remove(id, n),
+        grant: (id, n) => ctx.events.emit('loot.granted', { sourceId: 'brew:gytha', items: [{ itemId: id, count: n }] }),
+      });
+      toast(t(r.ok ? 'economy.brew.ok' : `economy.brew.fail.${r.reason}`));
     });
     // `dialogue.ended` fires before the dialogue modal closes, so wait for the modal itself to go.
     ctx.events.on('ui.modal', (e) => {
