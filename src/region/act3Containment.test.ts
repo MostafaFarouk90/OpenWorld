@@ -215,10 +215,10 @@ describe('Act 3 corridors: the 80 m rule', () => {
   });
 
   it('the Fen Road opens with Act 3 and the Spine Road with the Dragonspine hold', () => {
-    const fen = (f: Record<string, boolean>) => containment(f).isOpen(6450, 7000);
+    const fen = (f: Record<string, boolean>) => containment(f).isOpen(6530, 6600);
     expect(fen(PHASE_D)).toBe(false);
     expect(fen(STATES.phaseE)).toBe(true);
-    const spine = (f: Record<string, boolean>) => containment(f).isOpen(8300, 12650);
+    const spine = (f: Record<string, boolean>) => containment(f).isOpen(8200, 12700);
     expect(spine(STATES.phaseE)).toBe(false);
     expect(spine(STATES.phaseF)).toBe(true);
   });

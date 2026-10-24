@@ -2,7 +2,22 @@
 // the ferry and the M24 pool, fitted to the shaped heightfield. Siblings (K2, K3, K4, K7, K9) import these and never
 // hard-code a site. `y` is the ground (a plateau's surface) at the point. Plain data, worker-safe.
 import type { RoadPolyline } from '../../terrain/shape/cinderRoad';
-import { FERRY_MERE_GREYWATCH_POINTS, FERRY_MERE_MIREWEATHER_POINTS, FERRY_REEDGATE_MERE_POINTS, GREYFEN_WATER_TABLE } from '../../terrain/shape/greyfen';
+import { DRAGONSPINE_SITES as DS, WYRMWATCH_HALL_PAD, WYRMWATCH_LODGE_PLATEAU } from '../../terrain/shape/dragonspine';
+import {
+  FERRY_MERE_GREYWATCH_POINTS,
+  FERRY_MERE_MIREWEATHER_POINTS,
+  FERRY_REEDGATE_MERE_POINTS,
+  GREYFEN_WATER_TABLE,
+  GREYWATCH_PLATEAU,
+  HATHRENS_MERE,
+  MERE_SHRINE_PLATEAU,
+  MIREWATER_DEEPS_PLATEAU,
+  MIREWEATHER_HUT_PLATEAU,
+  REEDGATE_FERRY_PLATEAU,
+  REEDGATE_PLATEAU,
+  SUNKEN_CHAPEL_PLATEAU,
+} from '../../terrain/shape/greyfen';
+import type { PlateauDef } from '../../terrain/shaping';
 
 export interface Act3Point {
   x: number;
@@ -37,29 +52,35 @@ export interface Act3Place extends Act3Point {
 }
 
 const g = (x: number, z: number, y: number): Act3Place => ({ x, z, y, region: 'greyfen' });
-const d = (x: number, z: number, y: number): Act3Place => ({ x, z, y, region: 'dragonspine' });
+const d = (site: { x: number; z: number; height: number }): Act3Place => ({ x: site.x, z: site.z, y: site.height, region: 'dragonspine' });
+const mid = (p: PlateauDef): Act3Point => ({ x: (p.box.minX + p.box.maxX) / 2, z: (p.box.minZ + p.box.maxZ) / 2, y: p.height });
+const gp = (p: PlateauDef): Act3Place => ({ ...mid(p), region: 'greyfen' });
 
-// PLACEHOLDER heights until the fit lands (plans/act3-K1.md); the x and z are the plan's Part 3.5 positions.
+/**
+ * Every Act 3 place (plan 3.5) at its fitted plateau. The Greywatch posts are stilt posts: y is the bog ground under
+ * them (post 4 stands in a wading pool, under the 6 m water sheet); the Mere's y is its surface. Dragonspine places
+ * are the plateau centres in DRAGONSPINE_SITES.
+ */
 export const ACT3_PLACES: Readonly<Record<Act3PlaceId, Act3Place>> = {
-  reedgate: g(3200, 10200, 7),
-  'reedgate-ferry': g(3600, 10100, 7),
-  'hathrens-mere': g(3000, 12500, 6),
-  'mere-shrine': g(3000, 12050, 7),
-  'mireweather-hut': g(5600, 12300, 8),
-  'greywatch-post-1': g(1200, 13900, 8),
-  'greywatch-post-2': g(2300, 14300, 8),
-  'greywatch-post-3': g(3500, 14500, 8),
-  'greywatch-post-4': g(4400, 14100, 8),
-  'sunken-chapel': g(2600, 14700, 7),
-  'mirewater-deeps': g(2300, 12000, 7),
-  'wyrmwatch-lodge': d(13600, 11900, 120),
-  'hawk-cliffs': d(11400, 13000, 150),
-  'rime-pass-shelter': d(13000, 13300, 250),
-  'collapsed-cave': d(12300, 13700, 280),
-  'last-anvil': d(14700, 13900, 380),
-  'wyrms-hearth': d(13600, 15600, 600),
-  'skyhold-cliffs': d(12200, 15200, 575),
-  'frostfang-aerie': d(15600, 16100, 540),
+  reedgate: gp(REEDGATE_PLATEAU),
+  'reedgate-ferry': g(3600, 10100, REEDGATE_FERRY_PLATEAU.height),
+  'hathrens-mere': g(HATHRENS_MERE.x, HATHRENS_MERE.z, GREYFEN_WATER_TABLE),
+  'mere-shrine': gp(MERE_SHRINE_PLATEAU),
+  'mireweather-hut': gp(MIREWEATHER_HUT_PLATEAU),
+  'greywatch-post-1': g(1200, 13900, 10.5),
+  'greywatch-post-2': g(2300, 14300, 7.9),
+  'greywatch-post-3': g(3500, 14500, 7.2),
+  'greywatch-post-4': g(4400, 14100, 5.2),
+  'sunken-chapel': gp(SUNKEN_CHAPEL_PLATEAU),
+  'mirewater-deeps': gp(MIREWATER_DEEPS_PLATEAU),
+  'wyrmwatch-lodge': d(DS.wyrmwatchLodge),
+  'hawk-cliffs': d(DS.hawkCliffsFoot),
+  'rime-pass-shelter': d(DS.rimePassShelter),
+  'collapsed-cave': d(DS.collapsedCave),
+  'last-anvil': d(DS.lastAnvil),
+  'wyrms-hearth': d(DS.wyrmsHearth),
+  'skyhold-cliffs': d(DS.skyholdTop),
+  'frostfang-aerie': d(DS.frostfangAerie),
 };
 
 export type Act3WaystoneId =
@@ -73,17 +94,17 @@ export type Act3WaystoneId =
   | 'wyrms-hearth'
   | 'frostfang-aerie';
 
-/** Nine waystones (plan 3.5): four in the Greyfen, five in the Dragonspine. */
+/** Nine waystones (plan 3.5): four in the Greyfen, five in the Dragonspine, each on its plateau. */
 export const ACT3_WAYSTONES: Readonly<Record<Act3WaystoneId, Act3Point>> = {
-  reedgate: { x: 3200, z: 10200, y: 7 },
-  'hathrens-mere': { x: 3000, z: 12050, y: 7 },
-  greywatch: { x: 2700, z: 14450, y: 7 },
-  'mireweather-hut': { x: 5572, z: 12282, y: 8 },
-  'wyrmwatch-lodge': { x: 13600, z: 11850, y: 120 },
-  'rime-pass': { x: 13000, z: 13300, y: 250 },
-  'last-anvil': { x: 14700, z: 13900, y: 380 },
-  'wyrms-hearth': { x: 13600, z: 15600, y: 600 },
-  'frostfang-aerie': { x: 15600, z: 15950, y: 540 },
+  reedgate: { x: 3200, z: 10200, y: REEDGATE_PLATEAU.height },
+  'hathrens-mere': { x: 3000, z: 12050, y: MERE_SHRINE_PLATEAU.height },
+  greywatch: { x: 2700, z: 14460, y: GREYWATCH_PLATEAU.height },
+  'mireweather-hut': { x: 5572, z: 12282, y: MIREWEATHER_HUT_PLATEAU.height },
+  'wyrmwatch-lodge': { x: 13600, z: 11870, y: DS.wyrmwatchLodge.height },
+  'rime-pass': { x: 12985, z: 13300, y: DS.rimePassShelter.height },
+  'last-anvil': { x: 14720, z: 13900, y: DS.lastAnvil.height },
+  'wyrms-hearth': { x: 13600, z: 15600, y: DS.wyrmsHearth.height },
+  'frostfang-aerie': { x: 15600, z: 15950, y: DS.frostfangAerie.height },
 };
 
 export type Act3InteriorPadId = 'sunken-chapel' | 'mirewater-deeps' | 'mireweather-hut' | 'frostfang-keep' | 'wyrmwatch-hall';
@@ -94,12 +115,21 @@ export interface Act3InteriorPad extends Act3Point {
   d: number;
 }
 
+const padOf = (p: PlateauDef): Act3InteriorPad => ({ ...mid(p), w: p.box.maxX - p.box.minX, d: p.box.maxZ - p.box.minZ });
+
+/** The interior pads (K3, K4): flat under the shaped heightfield, so the 40 m float rule holds. */
 export const ACT3_INTERIOR_PADS: Readonly<Record<Act3InteriorPadId, Act3InteriorPad>> = {
-  'sunken-chapel': { x: 2600, z: 14700, y: 7, w: 68, d: 78 },
-  'mirewater-deeps': { x: 2300, z: 12000, y: 7, w: 98, d: 118 },
-  'mireweather-hut': { x: 5600, z: 12300, y: 8, w: 20, d: 17 },
-  'frostfang-keep': { x: 15600, z: 16100, y: 540, w: 40, d: 50 },
-  'wyrmwatch-hall': { x: 13600, z: 11900, y: 120, w: 30, d: 20 },
+  'sunken-chapel': padOf(SUNKEN_CHAPEL_PLATEAU),
+  'mirewater-deeps': padOf(MIREWATER_DEEPS_PLATEAU),
+  'mireweather-hut': { x: 5600, z: 12300, y: MIREWEATHER_HUT_PLATEAU.height, w: 20, d: 17 },
+  'frostfang-keep': { x: DS.frostfangKeep.x, z: DS.frostfangKeep.z, y: DS.frostfangKeep.height, w: 40, d: 50 },
+  'wyrmwatch-hall': {
+    x: (WYRMWATCH_HALL_PAD.minX + WYRMWATCH_HALL_PAD.maxX) / 2,
+    z: (WYRMWATCH_HALL_PAD.minZ + WYRMWATCH_HALL_PAD.maxZ) / 2,
+    y: WYRMWATCH_LODGE_PLATEAU.height,
+    w: WYRMWATCH_HALL_PAD.maxX - WYRMWATCH_HALL_PAD.minX,
+    d: WYRMWATCH_HALL_PAD.maxZ - WYRMWATCH_HALL_PAD.minZ,
+  },
 };
 
 /** M24's dive pool (K7): a 12 x 10 m pit, 6 m deep, with a flat rim, 30 m east of the Reedgate Ferry landing. */
@@ -142,4 +172,4 @@ export const ACT3_FERRY: {
  * The camp hearth in Wyrmwatch Lodge's yard (K0's `campAnchorId`, `dragonspine.wyrmwatch.hearth`): K1 defines the anchor
  * from this point, K4 builds the fire pit around it, the act-ending director moves the party here (contracts v0.7 item 18).
  */
-export const WYRMWATCH_HEARTH: Act3Point = { x: 13620, z: 11880, y: 120 };
+export const WYRMWATCH_HEARTH: Act3Point = { x: 13620, z: 11880, y: WYRMWATCH_LODGE_PLATEAU.height };

@@ -246,7 +246,12 @@ export const SPINE_ROAD_EAST_POINTS: RoadPolyline = [
   [12700, 12000],
   [13530, 11900],
 ];
-export const SPINE_ROAD_EAST = road('spine-road', SPINE_ROAD_EAST_POINTS, 5, 25, 0.08);
+/**
+ * The whole Spine Road: from Mireweather Hut's pad (its east edge, greyfen.ts MIREWEATHER_HUT_PLATEAU, 8 m) to the
+ * Greyfen's east edge, then the east part. A metre above the fen's water table the whole way, so it never wades.
+ */
+export const SPINE_ROAD_POINTS: RoadPolyline = [[5640, 12320], [6100, 12580], ...SPINE_ROAD_EAST_POINTS];
+export const SPINE_ROAD = road('spine-road', SPINE_ROAD_POINTS, 5, 25, 0.08, { minHeight: 7 });
 
 /** From Deepgate's north edge up the low ground east of the ridges, west over the saddle and the seam to the lodge. */
 export const DEEPGATE_TRACK_POINTS: RoadPolyline = [
@@ -294,4 +299,4 @@ export const SKYHOLD_SPUR_POINTS: RoadPolyline = [
 export const SKYHOLD_SPUR = road('skyhold-spur', SKYHOLD_SPUR_POINTS, 3.5, 20, 0.1, { maxBlend: 60, maxSideSlope: 1.1 });
 
 /** In world-shape order (each road is fitted on the roads before it). */
-export const DRAGONSPINE_ROADS: readonly RoadDef[] = [SPINE_ROAD_EAST, DEEPGATE_TRACK, RIME_PASS, SKYHOLD_SPUR];
+export const DRAGONSPINE_ROADS: readonly RoadDef[] = [SPINE_ROAD, DEEPGATE_TRACK, RIME_PASS, SKYHOLD_SPUR];

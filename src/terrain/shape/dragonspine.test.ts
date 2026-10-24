@@ -23,8 +23,9 @@ import {
   RIME_PASS_POINTS,
   SKYHOLD_SPUR,
   SKYHOLD_SPUR_POINTS,
-  SPINE_ROAD_EAST,
+  SPINE_ROAD,
   SPINE_ROAD_EAST_POINTS,
+  SPINE_ROAD_POINTS,
   WYRMS_HEARTH_PLATEAU,
   WYRMWATCH_HALL_PAD,
   WYRMWATCH_LODGE_PLATEAU,
@@ -69,7 +70,7 @@ describe('the Dragonspine shape is registered in the world shape', () => {
 
   it('every polyline export matches its road def', () => {
     const pairs: [RoadDef, readonly (readonly [number, number])[]][] = [
-      [SPINE_ROAD_EAST, SPINE_ROAD_EAST_POINTS],
+      [SPINE_ROAD, SPINE_ROAD_POINTS],
       [DEEPGATE_TRACK, DEEPGATE_TRACK_POINTS],
       [RIME_PASS, RIME_PASS_POINTS],
       [SKYHOLD_SPUR, SKYHOLD_SPUR_POINTS],
@@ -239,7 +240,8 @@ describe('the Frostfang chasm', () => {
 });
 
 describe('roads', () => {
-  const TARGET: Record<string, number> = { 'spine-road': 7200, 'deepgate-track': 8600, 'rime-pass': 6000, 'skyhold-spur': 1500 };
+  // The Spine Road: plan 3.3's 7.2 km from the Greyfen's edge, plus about 1 km from Mireweather Hut to the edge.
+  const TARGET: Record<string, number> = { 'spine-road': 8200, 'deepgate-track': 8600, 'rime-pass': 6000, 'skyhold-spur': 1500 };
 
   for (const r of DRAGONSPINE_ROADS) {
     it(`${r.id} never climbs more than ${r.maxGrade} over a 5 m step`, () => {
@@ -271,11 +273,13 @@ describe('roads', () => {
     });
   }
 
-  it('the Spine Road starts exactly on the Greyfen east edge (6500, 12800), ends on the lodge plateau, and stays 80 m clear of the Waste', () => {
-    expect(SPINE_ROAD_EAST.points[0]).toEqual({ x: 6500, z: 12800 });
-    const end = SPINE_ROAD_EAST.points[SPINE_ROAD_EAST.points.length - 1];
+  it('the Spine Road starts on Mireweather Hut, crosses the Greyfen east edge at (6500, 12800), ends on the lodge plateau, and stays 80 m clear of the Waste', () => {
+    expect(SPINE_ROAD.points).toContainEqual({ x: 6500, z: 12800 });
+    expect(SPINE_ROAD_POINTS.slice(-SPINE_ROAD_EAST_POINTS.length)).toEqual(SPINE_ROAD_EAST_POINTS);
+    expect(SPINE_ROAD.points[0]).toEqual({ x: 5640, z: 12320 });
+    const end = SPINE_ROAD.points[SPINE_ROAD.points.length - 1];
     expect(inBox(WYRMWATCH_LODGE_PLATEAU.box, end.x, end.z)).toBe(true);
-    const pts = SPINE_ROAD_EAST.points;
+    const pts = SPINE_ROAD.points;
     for (let i = 1; i < pts.length; i++) {
       for (let t = 0; t <= 1; t += 0.01) {
         const x = pts[i - 1].x + (pts[i].x - pts[i - 1].x) * t;
