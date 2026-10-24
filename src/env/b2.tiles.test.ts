@@ -60,8 +60,16 @@ describe('B2 placements', () => {
     }
   });
 
+  it('keeps the lane north of the Kettlewick gate itself free of hedges and road furniture: they stand on the east verge, x >= 4', () => {
+    for (const r of rows) {
+      if (classOf(r.id) !== 'hedge' && classOf(r.id) !== 'prop') continue;
+      if (r.x < -4 || r.x > 8 || r.z < 232 || r.z > 300) continue;
+      expect(r.x, `${r.id} at ${r.x},${r.z}`).toBeGreaterThanOrEqual(4);
+    }
+  });
+
   it('puts the grey edge on the east: ashen variants only at x >= 100, almost no flowers at the far edge', () => {
-    for (const r of rows) if (r.id.endsWith('-ashen')) expect(r.x, r.id).toBeGreaterThanOrEqual(60);
+    for (const r of rows) if (r.id.endsWith('-ashen')) expect(r.x, r.id).toBeGreaterThanOrEqual(100);
     expect(rows.some((r) => r.id.endsWith('-ashen') && r.x > 190)).toBe(true);
     expect(rows.filter((r) => r.id.startsWith('flower') && r.x > 250)).toHaveLength(0);
   });

@@ -18,7 +18,7 @@ export interface PlacementRow {
 export type PlacementClass = 'tree' | 'bush' | 'rock' | 'wood' | 'ground' | 'prop' | 'hedge';
 
 /** Hide a class when the player is further than this from its nearest instance sphere edge (metres). */
-export const CLASS_RANGE: Readonly<Record<PlacementClass, number>> = { tree: 700, bush: 260, rock: 420, wood: 160, ground: 48, prop: 260, hedge: 320 };
+export const CLASS_RANGE: Readonly<Record<PlacementClass, number>> = { tree: 700, bush: 260, rock: 420, wood: 160, ground: 56, prop: 260, hedge: 320 };
 /**
  * Ground cover's base colour is multiplied by this: a clump's texture is a deep green that lit like the vegetation reads near
  * black against the pale meadow once it is only a pixel or two across, so it is lifted toward the ground it sits on.
@@ -26,6 +26,8 @@ export const CLASS_RANGE: Readonly<Record<PlacementClass, number>> = { tree: 700
 export const GROUND_LIFT = 1.45;
 /** Emissive colour added to ground cover (a mid meadow green). */
 export const GROUND_GLOW = 0x2c4a16;
+/** Ground cover draws out to this share of CLASS_RANGE.ground per quality step (56 m at high, 48 m at medium, 36 m at low; 64/56/40 is the target once the integrated-GPU check passes, a one-line change to CLASS_RANGE.ground). */
+export const GROUND_RANGE_SCALE: Readonly<Record<'low' | 'medium' | 'high', number>> = { low: 9 / 14, medium: 6 / 7, high: 1 };
 /** Share of each class kept per quality step. */
 export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record<PlacementClass, number>>>> = {
   low: { tree: 0.7, bush: 0.5, rock: 0.7, wood: 0.4, ground: 0.35, prop: 0.7, hedge: 1 },
@@ -37,7 +39,7 @@ export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record
 const CELL = 64;
 
 export function classOf(id: string): PlacementClass {
-  if (/^(oak|birch|elm|autumn|ash-tree|poplar|tree_dead)/.test(id)) return 'tree';
+  if (/^(oak|birch|elm|autumn|ash-tree|poplar|tree_dead|willow)/.test(id)) return 'tree';
   if (/^(bush|fern|reeds)/.test(id)) return 'bush';
   if (/^(boulder|rock|cairn|basalt|ember-rock|slag)/.test(id)) return 'rock';
   if (/^(stump|log|mushroom|charred)/.test(id)) return 'wood';
@@ -145,6 +147,8 @@ export class PlacementField {
           return { geometry: p.geometry, material: mat };
         });
       }
+      // A variant may stretch its base model in height only (reeds from a grass clump, a squat willow from an elm).
+      const sy = real && e.ref.source !== 'placeholder' ? (e.ref.stretchY ?? 1) : 1;
       const girth = e.ref.source !== 'placeholder' ? (e.ref.girth ?? 1) : 1;
       const sorted = [...e.rows].sort((a, b) => a.order - b.order);
       // One batch per grid cell, so the distance test can hide the far cells of a large tile while the player stands inside it.
@@ -159,7 +163,7 @@ export class PlacementField {
         for (const row of cellRows) {
           const s = (row.scale ?? 1) * resolved.scale;
           q.setFromAxisAngle(up, ((row.yaw ?? 0) * Math.PI) / 180);
-          m.compose(new THREE.Vector3(row.x, this.heightAt(row.x, row.z), row.z), q, new THREE.Vector3(s * girth, s, s * girth));
+          m.compose(new THREE.Vector3(row.x, this.heightAt(row.x, row.z), row.z), q, new THREE.Vector3(s * girth, s * sy, s * girth));
           batch.addInstance(m);
         }
         for (const mesh of batch.meshes) mesh.computeBoundingSphere();
@@ -222,7 +226,7 @@ export class PlacementField {
     for (const [cls, slot] of this.byClass) {
       for (const b of slot.batches) {
         const d = Math.hypot(px - b.sphere.center.x, pz - b.sphere.center.z) - b.sphere.radius;
-        b.model.visible = d <= CLASS_RANGE[cls];
+        b.model.visible = d <= (cls === 'ground' ? CLASS_RANGE.ground * GROUND_RANGE_SCALE[this.density] : CLASS_RANGE[cls]);
       }
     }
   }

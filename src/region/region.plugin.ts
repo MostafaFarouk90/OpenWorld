@@ -31,7 +31,7 @@ import { REGION_STRINGS_EN } from './strings.en';
 import { validateLayout } from './validateLayout';
 import { CENTER as CITY_CENTER, MAX_STRUCTURE_RADIUS } from '../harrowmark/city';
 import { envEnabled } from '../env/env.plugin';
-import { envOwnsGround } from '../env/groundCover';
+import { envOwnsGround, envReplacesScenery } from '../env/groundCover';
 import { BROOK_COURSE, BROOK_WIDTH, RIVER_COURSE, RIVER_WIDTH } from './water';
 
 export interface RegionPluginOptions {
@@ -183,7 +183,8 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
         swapBarley();
 
         // The corridor beyond Kettlewick: road, water, reeds; the Leap POIs; the toll-post flag (the actor is the enemies module's); the slice fog wall.
-        const scenery = buildCorridorScenery(height);
+        // Inside a built environment tile (B3) its rows replace the old verge posts and reed cards; `?env=off` brings them back.
+        const scenery = buildCorridorScenery(height, { hide: envReplacesScenery(envEnabled(typeof location === 'undefined' ? '' : location.search)) });
         ctx.scene.add(scenery.object);
         cleanups.push(() => scenery.dispose());
         const poi = buildPoiProps(ctx, ctx.anchors);
