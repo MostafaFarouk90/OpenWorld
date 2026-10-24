@@ -34,8 +34,18 @@ export function laneAmount(x: number, z: number): number {
 /** Blends `out[o..o+2]` (a ground colour) towards lane dirt, dry verge and a soft light/dark patching at (x, z). */
 export function tintGround(x: number, z: number, out: Float32Array, o: number): void {
   tintB1(x, z, out, o);
+  tintAsh(x, z, out, o);
+}
+
+/**
+ * Drains `out[o..o+2]` toward the B4 ash grey by the ash amount at (x, z); the identity where there is no ash. The ground uses it,
+ * and so do the meadow blades (src/region/grass.ts), so the blades on the grey reach are grey too instead of meadow green. Returns the
+ * ash amount (0 where the ground is not grey).
+ */
+export function tintAsh(x: number, z: number, out: Float32Array, o: number): number {
   const ash = ashGround(x, z);
   if (ash > 0) for (let k = 0; k < 3; k++) out[o + k] = out[o + k]! + (ASH_GROUND[k]! - out[o + k]!) * ash * 0.92;
+  return ash;
 }
 
 function tintB1(x: number, z: number, out: Float32Array, o: number): void {

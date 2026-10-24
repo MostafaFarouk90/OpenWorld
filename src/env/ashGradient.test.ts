@@ -26,11 +26,11 @@ describe('ashAt', () => {
 
 describe('ash ground colour', () => {
   it('is zero on the Brightwater side and well outside the box and the base grass is untouched there', () => {
-    expect(ashGround(900, -500)).toBe(0);
-    expect(ashGround(1000, 400)).toBe(0);
+    expect(ashGround(900, -800)).toBe(0);
+    expect(ashGround(1000, 800)).toBe(0);
     expect(ashGround(750, -150)).toBe(0);
     expect(ashGround(1300, -150)).toBeCloseTo(1, 5); // holds full strength east of the tile
-    expect(tint(1200, 400)).toEqual([...new Float32Array(GRASS)]);
+    expect(tint(1200, 900)).toEqual([...new Float32Array(GRASS)]);
   });
 
   it('drains the grass to grey towards the fog wall', () => {

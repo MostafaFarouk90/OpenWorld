@@ -13,6 +13,8 @@ export interface Tint {
   sat?: number;
   /** Per-channel multiply as 0xRRGGBB, white = unchanged. */
   mul?: number;
+  /** Emissive colour of ground cover (default a meadow green); the ash tufts use a grey so they do not glow green. */
+  glow?: number;
 }
 
 export type ModelRef =
@@ -40,12 +42,13 @@ const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Ti
   'flower-patch-red': { base: 'flower-patch-yellow', scale: 1, tint: { hue: -48 } },
   // B4: the ash reach (design 5.1), the same silhouettes in a drained palette.
   'oak-ash-a': { base: 'oak-a', scale: 0.95, tint: { sat: 0.35, mul: 0xf4efe4 } },
-  'bush-round-ash': { base: 'bush-round-a', scale: 1, tint: { sat: 0.3, mul: 0xe0d8c8 } },
-  'grass-clump-ash': { base: 'grass-clump-a', scale: 0.95, tint: { sat: 0, mul: 0xc4bcaa } },
+  // Ash scrub: nearly no green left (at sat 0.3 it still read as a dark-green bush beside the gate, round-5 review).
+  'bush-round-ash': { base: 'bush-round-a', scale: 1, tint: { sat: 0.08, mul: 0xccc4b6 } },
+  'grass-clump-ash': { base: 'grass-clump-a', scale: 0.95, tint: { sat: 0, mul: 0xc4bcaa, glow: 0x3a3832 } },
   'wagon-wreck-a': { base: 'haycart-a', scale: 1, tint: { sat: 0.5, mul: 0x8a7a68 } },
   'wagon-burnt': { base: 'haycart-a', scale: 1, tint: { sat: 0.2, mul: 0x3a342e } },
   'charred-stump': { base: 'stump-a', scale: 1, tint: { sat: 0.3, mul: 0x4a423a } },
-  'basalt-columns-a': { base: 'boulder-large-a', scale: 1.15, girth: 0.55, tint: { sat: 0.4, mul: 0xb8b8c4 } },
+  'basalt-columns-a': { base: 'boulder-large-a', scale: 1.3, girth: 0.35, tint: { sat: 0.4, mul: 0xb8b8c4 } },
 };
 
 /** Ids the imported KayKit packs already cover, from the object grids. `fitHeight` sizes the model to a height in metres. */

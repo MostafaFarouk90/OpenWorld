@@ -58,8 +58,8 @@ def wchoice(r, items):
     w = np.array([i[1] for i in items], float); w /= w.sum(); i = items[int(r.choice(len(items), p=w))]; return i[0], i[2], i[3], i[4]
 def tree_pick(a, r):
     if a < 0.28: return wchoice(r, [('oak-a', .22, 3.4, .8, 1), ('oak-b', .16, 3.2, .8, 1), ('oak-c', .14, 3.6, .9, 1), ('birch-a', .18, 1.8, .3, 1), ('birch-b', .14, 1.8, .3, 1), ('elm-or-ash-a', .16, 2.4, .5, 1)])
-    if a < 0.6: return wchoice(r, [('autumn-tree-a', .30, 2.6, .6, 1), ('oak-ash-a', .22, 3.2, .8, 1), ('birch-b', .12, 1.8, .3, 1), ('ash-tree-dead-a', .2, 1.5, .4, 1), ('ash-tree-dead-b', .16, 1.5, .4, 1)])
-    return wchoice(r, [('ash-tree-dead-a', .38, 1.5, .4, 1), ('ash-tree-dead-b', .34, 1.5, .4, 1), ('oak-ash-a', .22, 3.2, .8, 1), ('autumn-tree-a', .06, 2.6, .6, 1)])
+    if a < 0.6: return wchoice(r, [('autumn-tree-a', .30, 2.6, .6, 1), ('oak-ash-a', .10, 3.2, .8, 1), ('birch-b', .12, 1.8, .3, 1), ('ash-tree-dead-a', .2, 1.5, .4, 1), ('ash-tree-dead-b', .16, 1.5, .4, 1)])
+    return wchoice(r, [('ash-tree-dead-a', .38, 1.5, .4, 1), ('ash-tree-dead-b', .34, 1.5, .4, 1), ('oak-ash-a', .06, 3.2, .8, 1), ('autumn-tree-a', .04, 2.6, .6, 1)])
 def bush_pick(a, r):
     if a < 0.4: return wchoice(r, [('bush-round-a', .27, 1.1, .7, 1), ('bush-round-b', .21, 1.1, .7, 1), ('bush-flowering-a', .17, 1.1, .7, 1), ('bush-flowering-b', .13, 1.1, .7, 1), ('fern-a', .22, .8, .4, 1)])
     return wchoice(r, [('bush-round-ash', .75, 1.1, .7, 1), ('fern-a', .05, .8, .4, 1), ('bush-round-b', .2, 1.1, .7, 1)])
@@ -69,7 +69,9 @@ def wood_pick(a, r):
     return wchoice(r, [('charred-stump', .45, 1.4, .5, 1), ('log-fallen-a', .2, 2.2, .6, 1), ('stump-b', .2, 1.6, .5, 1), ('charred-stump', .15, 1.4, .5, 1)])
 def flower_pick(a, r): return wchoice(r, [('flower-patch-yellow', .3, .9, .3, 1), ('flower-patch-white', .3, .9, .3, 1), ('flower-patch-purple', .22, .9, .3, 1), ('flower-patch-red', .18, .9, .3, 1)])
 def grass_pick(a, r):
-    if a > 0.42: return wchoice(r, [('grass-clump-ash', .8, .8, .3, 1), ('grass-clump-b', .2, .8, .3, 1)])
+    # Round 5: single scattered ash tufts only well into the grey (a > 0.6); on the green side of the ramp the lone grey tufts read
+    # as specks on the meadow (road-eye review). The clumps below still carry ash tufts from 0.42.
+    if a > 0.6: return wchoice(r, [('grass-clump-ash', .8, .8, .3, 1), ('grass-clump-b', .2, .8, .3, 1)])
     return wchoice(r, [('grass-clump-a', .36, .8, .3, 1), ('grass-clump-b', .34, .8, .3, 1), ('grass-clump-c', .3, .8, .3, 1)])
 
 region_g_pre = lambda x, z: math.hypot(x - SHRINE[0], z - SHRINE[1]) >= 6.5 and not (abs(x - SHRINE[0]) < 1.6 and SHRINE[1] + 5 < z < -152.5) and not (abs(x - PAD[0]) <= PAD[2] + 2 and abs(z - PAD[1]) <= PAD[3] + 2)
@@ -91,7 +93,8 @@ for k, x in enumerate(np.arange(890, 1095, 29)): C.put('crow-perch-post', x + rn
 for k, x in enumerate((905, 933, 1000, 1030, 1048)): C.put('fence_broken', x, -150 + (9.5 if k % 2 else -9.5), 0 if k % 2 else 180, 1.0, 'small', 1.6, .8, note='collapsed field fence, ash side')
 C.put('wagon-wreck-a', 1018, -158.5, 20, 1.0, 'small', 2.4, 1.5, note='a convoy that did not reach Harrowmark'); C.put('wagon-wreck-a', 1056, -141.5, 160, 1.0, 'small', 2.4, 1.5)
 C.put('wagon-burnt', 1081, -157.0, 100, 1.0, 'small', 2.4, 1.5)
-for z in (-156.0, -144.0): C.put('pillar', 1072, z, 0, 1.0, 'small', .8, .5, note='broken gateposts framing the road into the fog wall')
+for z in (-156.0, -144.0): C.put('pillar', 1072, z, 0, 1.7, 'small', .8, .5, note='broken gateposts framing the road into the fog wall')
+for zs, ze in ((-156.5, -182.0), (-143.5, -118.0)): C.line('fence_broken', 1072, zs, 1072, ze, 2.6, 90, 'small', gaps=((0.45, 0.58),), r=1.2, b=.3, scale=1.6)  # round 4: taller so the gate line reads at eye height
 
 
 # 2b. Road verges (B1 review lesson): a continuous 0.7 to 2.9 m strip of long grass, ferns and flowers either side of the road, going
@@ -123,7 +126,7 @@ for n in ('rock-cluster-a', 'rock-cluster-a', 'fern-a', 'fern-a', 'fern-a'): C.p
 for a in (200, 300): C.put('birch-a', 700 + 9 * math.cos(math.radians(a)), -168 + 9 * math.sin(math.radians(a)), None, 1.0, 'tree', 1.8, .4)
 
 # 4. The barrow (860, -126): a stone ring, graves, dead trees behind, no mound (terrain keeps the anchors flat)
-for a in np.arange(0, 360, 36): C.put('rock_single_C', 860 + rng.uniform(7, 8.6) * math.cos(math.radians(a)), -126 + rng.uniform(7, 8.6) * math.sin(math.radians(a)), None, 1.15, 'small', 1.0, .7, note='barrow ring')
+for a in np.arange(0, 360, 36): C.put('basalt-columns-a', 860 + 8.0 * math.cos(math.radians(a)), -126 + 8.0 * math.sin(math.radians(a)), None, 0.75, 'small', 1.0, .7, note='barrow ring: upright standing stones')
 for a in (60, 140, 250): C.put('boulder-large-a', 860 + 11.5 * math.cos(math.radians(a)), -126 + 11.5 * math.sin(math.radians(a)), None, 0.9, 'small', 2.2, 1.3)
 for n in ('grave_A', 'grave_A', 'gravemarker_A', 'gravemarker_A', 'gravemarker_A', 'gravemarker_A'): C.put_near(n, 860, -126, 4.5, 6.5, 'small', .8, .5)
 for x, z in ((851, -111), (871, -113), (858, -105)): C.put('ash-tree-dead-b' if x > 855 else 'ash-tree-dead-a', x, z, None, 1.0, 'tree', 1.5, .4)
@@ -157,21 +160,42 @@ C.scatter(L['grass'], 'ground', mk(grass_pick), 0.25, region_ok=region_g)
 # ---- coordinator review lessons (B2 shot review) ---------------------------------------------------------------------------------
 # a. Near-field density around each eye camera: ground tufts and 2 to 4 m patches within 25 m (grass, ferns, flowers or ash tufts).
 def patch_pick(a, r):
-    if a > 0.42: return ('grass-clump-ash' if r.random() < .85 else 'grass-clump-b'), .9
+    # Round 4: clump tufts at 1.25 (B2's eye-level clumps average 1.26; the model is only 0.45 m across, so at 0.95 a clump of
+    # tufts read as a few specks from the Knight's eye). Ferns and flowers keep the 0.7 foreground rule applied below.
+    if a > 0.42: return ('grass-clump-ash' if r.random() < .85 else 'grass-clump-b'), 1.25
     u = r.random()
     if u < .22: return 'fern-a', .9
-    if u < .34 and a < .3: return ['flower-patch-yellow', 'flower-patch-white', 'flower-patch-purple', 'flower-patch-red'][int(r.integers(4))], .9
-    return ['grass-clump-a', 'grass-clump-b', 'grass-clump-c'][int(r.integers(3))], .95
-# Tile-wide (coordinator standing rule: the density map drives placement, not the camera list): 2 to 4 m patches of 4 to 7 tufts
-# across every open stretch of the core, accepted in proportion to the grass density map.
-for _ in range(3600):
-    cx, cz = rng.uniform(CORE[0], CORE[1]), rng.uniform(CORE[2], CORE[3])
-    if rng.random() > min(1.0, float(C.at(L["grass"], cx, cz)) / 1.1): continue
-    for _k in range(int(rng.integers(4, 8))):
-        x, z = cx + rng.uniform(-2, 2), cz + rng.uniform(-2, 2)
+    if u < .36 and a < .35: return ['flower-patch-yellow', 'flower-patch-white', 'flower-patch-purple', 'flower-patch-red'][int(r.integers(4))], .9
+    return ['grass-clump-a', 'grass-clump-b', 'grass-clump-c'][int(r.integers(3))], 1.25
+# Tile-wide (coordinator standing rule: the density map drives placement, not the camera list): patches of tufts, ferns and
+# flowers across every open stretch of the core, accepted in proportion to the grass density map and twice as dense in the green half.
+# Round 4: a clump is a tight disc (8 to 15 tufts within about 1.4 m, spacing 0.3 m), so it reads as one patch at 10 to 30 m; the
+# old 4 x 4 m box at 0.4 m spacing spread the same tufts out into lone specks.
+def clump(cx, cz, n, rad):
+    for _k in range(n):
+        th, d = rng.uniform(0, 6.283), rad * math.sqrt(rng.random())
+        x, z = cx + d * math.cos(th), cz + d * math.sin(th)
         if region_g_pre(x, z) and math.hypot(x - SHRINE[0], z - SHRINE[1]) >= 11:
             i, sc = patch_pick(float(ash_at(x, z)), rng)
-            C.put(i, x, z, None, sc, 'ground', .45, .15, jitter=.3)
+            C.put(i, x, z, None, sc, 'ground', .3, .1, jitter=.3)
+for _ in range(4200):
+    cx, cz = rng.uniform(CORE[0], CORE[1]), rng.uniform(CORE[2], CORE[3])
+    a_ = float(ash_at(cx, cz))
+    pr = min(1.0, float(C.at(L["grass"], cx, cz)) / 1.1) * (1.0 + (1.0 - min(1.0, a_ / 0.4)))
+    if rng.random() > min(1.0, pr / 2.0): continue
+    clump(cx, cz, int(rng.integers(8, 16)), 1.4)  # round 4: 8 to 15 tufts per clump (coordinator fix list)
+# Road verge clumps: every 4 to 7 m each side of the road, 8 to 14 tufts, ferns and flowers in the green half.
+for side in (-1, 1):
+    x = 702.0
+    while x < 1098:
+        clump(x, -150 + side * rng.uniform(4.6, 7.0), int(rng.integers(8, 16)), 1.4)
+        x += rng.uniform(4.0, 7.0)
+# Eye poses: layered foreground within 8 to 30 m of each camera, on top of the tile-wide clumps (round 4 camera table).
+EYES = ((955, -156), (884, -160), (1052, -175), (846, -158))
+for ex, ez in EYES:
+    for _ in range(34):
+        r_, th = rng.uniform(8, 30), rng.uniform(0, 6.283)
+        clump(ex + r_ * math.cos(th), ez + r_ * math.sin(th), int(rng.integers(8, 16)), 1.4)
 # b. Cairns and extra dead ground in the ash reach
 for cx, cz in ((1030, -135), (1052, -168), (1066, -128), (1020, -122), (1090, -170), (1000, -214), (1045, -200)):
     for n in ('rock_single_A', 'rock_single_B', 'rock_single_C', 'rock_single_A'): C.put_near(n, cx, cz, 0.3, 1.3, 'small', .5, .3, scale=1.0)
@@ -186,7 +210,47 @@ for r_ in C.rows:
 for r_ in C.rows:
     if re.match(r'oak-(a|b|c|ash-a)$', r_['id']):
         r_['scale'] = round(r_['scale'] * 0.55 * float(rng.uniform(0.8, 1.2)), 3)
+C.rows[:] = [r_ for r_ in C.rows if not (r_['id'] == 'fern-a' and math.hypot(r_['x'] - SHRINE[0], r_['z'] - SHRINE[1]) < 10.5)]
 C.rows[:] = [r_ for r_ in C.rows if not (r_['id'].startswith('flower') and float(ash_at(r_['x'], r_['z'])) > 0.5)]
+# Round 5: the shrine's warm halo gets a green carpet all round the basin (11 to 24 m, outside the apron and fern ring): clumps of
+# green tufts with ferns and flowers, so the shrine reads as the last green ground before the fog wall.
+for a_deg in np.arange(0, 360, 10):
+    for _ in range(3):
+        d = rng.uniform(11.5, 24); th = math.radians(a_deg + rng.uniform(-7, 7))
+        cx, cz = SHRINE[0] + d * math.cos(th), SHRINE[1] + d * math.sin(th)
+        for _k in range(int(rng.integers(8, 16))):
+            t2, d2 = rng.uniform(0, 6.283), 1.4 * math.sqrt(rng.random())
+            x, z = cx + d2 * math.cos(t2), cz + d2 * math.sin(t2)
+            if not region_g_pre(x, z) or math.hypot(x - SHRINE[0], z - SHRINE[1]) < 11: continue
+            u = rng.random()
+            i, sc = ('fern-a', .63) if u < .18 else ((['flower-patch-yellow', 'flower-patch-white', 'flower-patch-purple', 'flower-patch-red'][int(rng.integers(4))], .63) if u < .5 else (['grass-clump-a', 'grass-clump-b', 'grass-clump-c'][int(rng.integers(3))], 1.25))
+            C.put(i, x, z, None, sc, 'ground', .3, .1, jitter=.3)
+# Final: the game's ground colour uses src/env/ashGradient.ts (x0 760, smootherstep), not this generator's ramp. Where that ground is
+# still more green than grey (ash < 0.7), lone grey ash tufts read as dark specks on the meadow (road-eye review, rounds 4 and 5):
+# drop them there and let the grey blades and the green clumps carry the ground.
+def _smoother(a, b, v):
+    t = min(max((v - a) / (b - a), 0.0), 1.0); return t * t * t * (t * (t * 6 - 15) + 10)
+def ash_ground(x, z):
+    v = max(_smoother(760, 1040, x), 0.8 * _smoother(215, 330, -z))
+    return v * (1 - 0.9 * math.exp(-((math.hypot(x - 965, z + 165) / 26) ** 2)))
+C.rows[:] = [r_ for r_ in C.rows if not (r_['id'] == 'grass-clump-ash' and ash_ground(r_['x'], r_['z']) < 0.7)]
+# Round 5: no bright green tuft where the ground is fully grey (ash > 0.75); they read as lime specks in ash-eye.
+for r_ in C.rows:
+    if r_['id'] in ('grass-clump-a', 'grass-clump-b', 'grass-clump-c') and float(ash_at(r_['x'], r_['z'])) > 0.75: r_['id'] = 'grass-clump-ash'
+# Round 5: no green bush where the ground is grey (a lime bush stood in ash-eye): swap to the ash scrub.
+for r_ in C.rows:
+    if r_['id'] in ('bush-round-a', 'bush-round-b', 'bush-flowering-a', 'bush-flowering-b', 'oak-ash-a') and r_['id'].startswith('bush') and max(float(ash_at(r_['x'], r_['z'])), ash_ground(r_['x'], r_['z'])) > 0.5: r_['id'] = 'bush-round-ash'
+# Round 4: nothing taller than ground cover or ferns within 9 m of an eye camera (a verge bush filled barrow-eye's left foreground,
+# a crow post stood beside the Knight in road-eye).
+# Only rows in front of the camera (within 70 degrees of its look direction) are cleared; landmarks behind it stay.
+EYE_LOOK = ((970, -185), (1072, -150), (1062, -130), (860, -124))
+def _blocks(r_):
+    for (ex, ez), (lx, lz) in zip(EYES, EYE_LOOK):
+        dx, dz = r_['x'] - ex, r_['z'] - ez; d = math.hypot(dx, dz)
+        if d < 3: return True
+        if d < 9 and (dx * (lx - ex) + dz * (lz - ez)) / (max(d, 1e-6) * math.hypot(lx - ex, lz - ez)) > math.cos(math.radians(70)): return True
+    return False
+C.rows[:] = [r_ for r_ in C.rows if r_['id'].startswith(('grass', 'flower', 'fern')) or not _blocks(r_)]
 by_id, by_cls = C.write(OUT, 'b4', extra={'meta': {'ash': ASH, 'reserved': [{'id': 'rekindled-hearth-pad', 'x': PAD[0], 'z': PAD[1], 'halfW': PAD[2], 'halfD': PAD[3]}]}})
 C.save_plan(OUT)
 print(len(C.rows), 'rows', by_cls, 'dropped', C.dropped, 'violations', C.verify())

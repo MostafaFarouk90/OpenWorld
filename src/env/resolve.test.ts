@@ -30,8 +30,11 @@ describe('resolveModel', () => {
     expect(resolveModel('oak-ash-a')).toMatchObject({ source: 'env', model: 'env/oak-a', scale: 0.95 });
     expect(resolveModel('grass-clump-ash')).toMatchObject({ source: 'env', model: 'env/grass-clump-a' });
     expect(resolveModel('bush-round-ash')).toMatchObject({ source: 'env', model: 'env/bush-round-a' });
+    // Ash scrub keeps almost no green, so it never reads as a green bush on the grey reach.
+    const scrub = resolveModel('bush-round-ash');
+    expect(scrub.source !== 'placeholder' && scrub.tint?.sat).toBeLessThanOrEqual(0.1);
     expect(resolveModel('charred-stump')).toMatchObject({ source: 'env', model: 'env/stump-a' });
-    expect(resolveModel('basalt-columns-a')).toMatchObject({ source: 'env', model: 'env/boulder-large-a', scale: 1.15, girth: 0.55 });
+    expect(resolveModel('basalt-columns-a')).toMatchObject({ source: 'env', model: 'env/boulder-large-a', scale: 1.3, girth: 0.35 });
     expect(resolveModel('crow-perch-post')).toMatchObject({ source: 'kaykit', model: 'hal/fence_pillar' });
     expect(resolveModel('milestone-a')).toMatchObject({ source: 'env', model: 'env/milestone-a' });
     expect(resolveModel('wagon-wreck-a')).toMatchObject({ source: 'env', model: 'env/haycart-a' });

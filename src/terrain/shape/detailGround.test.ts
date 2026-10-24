@@ -13,7 +13,7 @@ const tint = (x: number, z: number): number[] => {
 
 describe('tintGround', () => {
   it('leaves the colour exactly as it was beyond the B1 blend band and in the far world', () => {
-    for (const [x, z] of [[RELIEF_TILE.x1 + RELIEF_TILE_BAND, 50], [-300, -200], [5000, 5000], [1200, 400], [0, RELIEF_TILE.z1 + RELIEF_TILE_BAND]] as const) {
+    for (const [x, z] of [[RELIEF_TILE.x1 + RELIEF_TILE_BAND, 50], [-300, -200], [5000, 5000], [1200, 900], [0, RELIEF_TILE.z1 + RELIEF_TILE_BAND]] as const) {
       expect(tint(x, z)).toEqual([...new Float32Array(GRASS)]);
     }
   });
