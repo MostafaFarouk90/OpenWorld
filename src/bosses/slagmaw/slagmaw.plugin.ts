@@ -4,6 +4,7 @@ import { buildSlagmawModel } from "./SlagmawModel";
 import { SLAGMAW_STRINGS_EN } from "./strings.en";
 
 let director: SlagmawDirector | null = null;
+let offSystem: (() => void) | null = null;
 
 /**
  * The Slagmaw, the D04 boss (plans/act2-A8.md, "PR 2"). Waits for the Deepdelve arena trigger once `story.d04.started` is set;
@@ -25,7 +26,7 @@ const plugin: GamePlugin = {
     });
     director = d;
     ctx.strings.register("en", SLAGMAW_STRINGS_EN);
-    ctx.systems.add({
+    offSystem = ctx.systems.add({
       id: "bosses.slagmaw",
       fixedPhase: "intent",
       order: -138,
@@ -33,6 +34,8 @@ const plugin: GamePlugin = {
     });
   },
   dispose() {
+    offSystem?.();
+    offSystem = null;
     director?.dispose();
     director = null;
   },
