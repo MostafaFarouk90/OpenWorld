@@ -123,6 +123,23 @@ describe('B3 placements (Hollin Ford, its brook and river meadow, plus the reed-
     expect(dressed.length / hedges.length).toBeGreaterThan(0.9);
   });
 
+  it('puts a corner post either side of every hedge gap (gates need walls or fences)', () => {
+    const posts = rows.filter((r) => r.id === 'hedge-corner');
+    expect(posts.length).toBeGreaterThanOrEqual(36);
+    const hedges = rows.filter((r) => r.id === 'hedge-straight');
+    // a gate post is at the end of a hedge run: a hedge module lies within 4 m on one side only along the line
+    const gatePosts = posts.filter((p) => hedges.filter((h) => Math.hypot(h.x - p.x, h.z - p.z) < 4).length >= 1);
+    expect(gatePosts.length).toBeGreaterThanOrEqual(24);
+  });
+
+  it('has reed beds on both banks of the river (about 180 reed rows) and none on the road', () => {
+    const reeds = rows.filter((r) => r.id.startsWith('reeds') && r.x > -350 && r.x < -60 && Math.abs(r.z + 300) < 20);
+    expect(reeds.length).toBeGreaterThanOrEqual(140);
+    expect(reeds.filter((r) => r.z > -300).length).toBeGreaterThan(40);
+    expect(reeds.filter((r) => r.z < -300).length).toBeGreaterThan(40);
+    expect(rows.some((r) => r.id === 'tent')).toBe(false);
+  });
+
   it('clusters its ground cover instead of an even sprinkle (B1 review: specks)', () => {
     // Ground cover is dense (the old blade scatter is off inside the tile): most 10 m cells hold clumps and an occupied cell holds many.
     const g = rows.filter((r) => isGround(r.id) && r.x < 0);
