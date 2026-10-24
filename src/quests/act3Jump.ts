@@ -4,7 +4,8 @@
 // (and `story.phase.dragonspineOpen` for any jump that needs the Dragonspine, since Phase E holds it). The Act 3 prerequisites
 // are then completed by flag injection in the chosen block order: every prerequisite gets `story.<id>.complete`, and a quest
 // the quests service knows is also started and completed there (so its own effects run once the quest threads land). The
-// player is placed at the target block's waystone point (plan Part 3.5) until K1's giver anchors exist.
+// player's XP is topped up to the plan's Act 3 start (ACT3_START_XP, level 17) before any block locks, and the player is
+// placed at the target block's waystone point (plan Part 3.5) until K1's giver anchors exist.
 //
 // Order semantics (read by K16's fixtures): `order` names the block the player did FIRST. A target in the first block needs
 // only its own prerequisites inside that block. A target in the second block needs the whole first block, then its own. A
@@ -94,6 +95,8 @@ const LOCK_OF: Readonly<Record<string, Act3BlockId>> = Object.fromEntries(
 );
 
 export const ACT3_GATE_FLAG = 'story.gate.a3';
+/** Plan 7.2: Act 3 starts at about 23,500 XP (level 17, where A16's census ended Act 2). The replays pay quest XP only. */
+export const ACT3_START_XP = 23_500;
 export const DRAGONSPINE_OPEN_FLAG = 'story.phase.dragonspineOpen';
 
 /** Plan 3.5 engine positions: the Reedgate and Wyrmwatch Lodge waystone points. */
@@ -130,6 +133,8 @@ export interface Act3JumpPorts extends Act1JumpPorts {
   lockBlock?(block: Act3BlockId): void;
   /** Places the player at an engine x, z on the ground; false while it cannot yet (retry). */
   placeAt(at: { x: number; z: number }): boolean;
+  /** Raises the player's XP to `total` when below it (never lowers it); absent when no progression service. */
+  topUpXp?(total: number): void;
   closeDialogue?(): boolean;
 }
 
@@ -187,6 +192,8 @@ export class Act3Jump {
       }
       for (const q of ACT2_ALL.filter((x) => !ACT1_ALL.includes(x))) completeAct2Quest(p, q);
       p.setFlag(ACT3_GATE_FLAG, true);
+      // Before any block locks, so the previews read the plan's Act 3 starting level (17), not the replays' quest-only XP.
+      p.topUpXp?.(ACT3_START_XP);
       if (needsDragonspine(this.id, this.order)) p.setFlag(DRAGONSPINE_OPEN_FLAG, true);
       this.phase = 'act3';
     }

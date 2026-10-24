@@ -5,7 +5,7 @@ import { devJumpBoot } from '../save/devJump';
 import { ACT1_PREREQS } from './act1Jump';
 import { ACT2_PREREQS, getActJump } from './actJump';
 import {
-  ACT3_ARRIVAL, ACT3_DIRECT, ACT3_GREYFEN, ACT3_JUMP_IDS, ACT3_ORDERS, ACT3_PREREQS, ACT3_SPINE, ACT3_SUMMIT, Act3Jump,
+  ACT3_ARRIVAL, ACT3_DIRECT, ACT3_START_XP, ACT3_GREYFEN, ACT3_JUMP_IDS, ACT3_ORDERS, ACT3_PREREQS, ACT3_SPINE, ACT3_SUMMIT, Act3Jump,
   type Act3JumpPorts, type Act3Order, act3Prereqs, blockOf, needsDragonspine, parseAct3,
 } from './act3Jump';
 
@@ -92,6 +92,7 @@ function harness(known: readonly string[] = []) {
   const log: string[] = [];
   const locks: string[] = [];
   const placed: { x: number; z: number }[] = [];
+  const xp = { total: 9000, atLock: [] as number[] };
   const warn = vi.fn();
   const tutorial = { begun: true, complete: true, beat: null, restartInFlight: false, begin() {}, skipCurrent() {} };
   const ports: Act3JumpPorts = {
@@ -115,12 +116,14 @@ function harness(known: readonly string[] = []) {
     ready: () => true,
     warn,
     hasQuest: (id) => state.has(id) || !/^(m2[3-9]|m3[0-4]|d0[56]|r1[2-8])$/.test(id),
+    topUpXp: (t) => void (xp.total = Math.max(xp.total, t)),
     lockBlock: (b) => {
+      xp.atLock.push(xp.total);
       locks.push(`${b}@${[...flags.keys()].filter((k) => k.startsWith('shrine.') && k.endsWith('.lit')).length}`);
     },
     placeAt: (at) => (placed.push(at), true),
   };
-  return { ports, flags, log, locks, placed, warn, state };
+  return { ports, flags, log, locks, placed, warn, state, xp };
 }
 
 function run(id: string, order: Act3Order, known: readonly string[] = []) {
@@ -163,6 +166,16 @@ describe('Act3Jump', () => {
     // The Greyfen locks after the Last Anvil (M30) is lit in the spine-first order.
     expect(run('m31', 'spine').locks).toEqual(['dragonspine-lower@0', 'greyfen@1']);
     expect(run('m34', 'greyfen').flags.get('shrine.hathrens-mere.lit')).toBe(true);
+  });
+
+  it('tops the XP up to the Act 3 start (level 17) before any block locks, and never lowers it', () => {
+    const r = run('m31', 'greyfen');
+    expect(r.xp.total).toBe(ACT3_START_XP);
+    expect(r.xp.atLock).toEqual([ACT3_START_XP, ACT3_START_XP]);
+    const h = harness();
+    h.xp.total = 30_000;
+    h.ports.topUpXp!(ACT3_START_XP);
+    expect(h.xp.total).toBe(30_000);
   });
 
   it('waits for the saves and the tutorial before it starts', () => {

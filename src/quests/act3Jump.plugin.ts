@@ -97,6 +97,10 @@ const plugin: GamePlugin = {
         }
         e?.lockBlockLevel?.(block, level);
       },
+      topUpXp: (total) => {
+        const prog = ctx.services.get('progression');
+        if (prog && prog.xp < total) prog.grantXp(total - prog.xp, 'act3-jump');
+      },
       hasQuest: (id) => quests.objectives(id).length > 0,
       closeDialogue: () => {
         const d = ctx.services.get('dialogue');
