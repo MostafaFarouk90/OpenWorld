@@ -15,7 +15,7 @@ describe('pasture hounds and Ketta', () => {
   };
 
   it('every hound member anchor exists', () => {
-    expect(spawner.memberAnchors.length).toBe(3);
+    expect(spawner.memberAnchors?.length).toBe(3);
     for (const id of spawner.memberAnchors ?? []) expect(pos.has(id), id).toBe(true);
   });
   it('Ketta spots lie outside every hound aggro radius', () => {
