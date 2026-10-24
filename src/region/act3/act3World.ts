@@ -53,6 +53,9 @@ export const FOG_FACE_ANCHORS = {
   'fog.fen-waste': 'fenroad.fog.fen-waste',
 } as const;
 
+/** How far behind an Act 3 face the push-back reaches: past it, containment's closed boxes hold. */
+export const ACT3_FACE_PUSH_DEPTH = 100;
+
 const face = (id: keyof typeof FOG_FACE_ANCHORS, axis: 'x' | 'z', halfLength: number, blockedSide: 1 | -1): FogWallDef => ({
   ...act3FogFace(id),
   anchorId: FOG_FACE_ANCHORS[id],
@@ -61,6 +64,7 @@ const face = (id: keyof typeof FOG_FACE_ANCHORS, axis: 'x' | 'z', halfLength: nu
   blockedSide,
   pushBackTo: 1,
   cullBeyond: WALL_CULL,
+  pushDepth: ACT3_FACE_PUSH_DEPTH,
 });
 
 /** The four new faces (plan 3.4). The two shipped faces keep their Act 2 placement with K0's conditions. */

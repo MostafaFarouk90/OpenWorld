@@ -2,11 +2,12 @@
 // the ferry and the M24 pool, fitted to the shaped heightfield. Siblings (K2, K3, K4, K7, K9) import these and never
 // hard-code a site. `y` is the ground (a plateau's surface) at the point. Plain data, worker-safe.
 import type { RoadPolyline } from '../../terrain/shape/cinderRoad';
-import { DRAGONSPINE_SITES as DS, WYRMWATCH_HALL_PAD, WYRMWATCH_LODGE_PLATEAU } from '../../terrain/shape/dragonspine';
+import { COLLAPSED_CAVE_FLOAT_PLATEAU, DRAGONSPINE_SITES as DS, WYRMWATCH_HALL_PAD, WYRMWATCH_LODGE_PLATEAU } from '../../terrain/shape/dragonspine';
 import {
   FERRY_MERE_GREYWATCH_POINTS,
   FERRY_MERE_MIREWEATHER_POINTS,
   FERRY_REEDGATE_MERE_POINTS,
+  FERRY_STOP_POINTS,
   GREYFEN_WATER_TABLE,
   GREYWATCH_PLATEAU,
   HATHRENS_MERE,
@@ -107,7 +108,7 @@ export const ACT3_WAYSTONES: Readonly<Record<Act3WaystoneId, Act3Point>> = {
   'frostfang-aerie': { x: 15600, z: 15950, y: DS.frostfangAerie.height },
 };
 
-export type Act3InteriorPadId = 'sunken-chapel' | 'mirewater-deeps' | 'mireweather-hut' | 'frostfang-keep' | 'wyrmwatch-hall';
+export type Act3InteriorPadId = 'sunken-chapel' | 'mirewater-deeps' | 'mireweather-hut' | 'frostfang-keep' | 'wyrmwatch-hall' | 'collapsed-cave';
 
 /** An exactly flat pad under an interior's footprint: centre, width along x, depth along z, surface height. */
 export interface Act3InteriorPad extends Act3Point {
@@ -122,6 +123,7 @@ export const ACT3_INTERIOR_PADS: Readonly<Record<Act3InteriorPadId, Act3Interior
   'sunken-chapel': padOf(SUNKEN_CHAPEL_PLATEAU),
   'mirewater-deeps': padOf(MIREWATER_DEEPS_PLATEAU),
   'mireweather-hut': { x: 5600, z: 12300, y: MIREWEATHER_HUT_PLATEAU.height, w: 20, d: 17 },
+  'collapsed-cave': padOf(COLLAPSED_CAVE_FLOAT_PLATEAU),
   'frostfang-keep': { x: DS.frostfangKeep.x, z: DS.frostfangKeep.z, y: DS.frostfangKeep.height, w: 40, d: 50 },
   'wyrmwatch-hall': {
     x: (WYRMWATCH_HALL_PAD.minX + WYRMWATCH_HALL_PAD.maxX) / 2,
@@ -156,10 +158,10 @@ export const ACT3_FERRY: {
 } = {
   surfaceY: GREYFEN_WATER_TABLE,
   stops: [
-    { id: 'reedgate', x: 3600, z: 10100 },
-    { id: 'mere', x: 3150, z: 11900 },
-    { id: 'greywatch', x: 2800, z: 14250 },
-    { id: 'mireweather', x: 5500, z: 12350 },
+    { id: 'reedgate', ...FERRY_STOP_POINTS.reedgate },
+    { id: 'mere', ...FERRY_STOP_POINTS.mere },
+    { id: 'greywatch', ...FERRY_STOP_POINTS.greywatch },
+    { id: 'mireweather', ...FERRY_STOP_POINTS.mireweather },
   ],
   paths: [
     { id: 'ferry.reedgate-mere', from: 'reedgate', to: 'mere', points: FERRY_REEDGATE_MERE_POINTS.slice(0, 4) },

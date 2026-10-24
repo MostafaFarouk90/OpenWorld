@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { heightAt } from '../../terrain/heightfield';
 import { MAX_GROUND_RANGE } from '../../interiors/layout';
 import { engineBox } from '../regions';
-import { ACT3_INTERIOR_PADS, ACT3_PLACES, ACT3_WAYSTONES, WYRMWATCH_HEARTH } from './act3Places';
+import { ACT3_FERRY, ACT3_INTERIOR_PADS, ACT3_PLACES, ACT3_WAYSTONES, WYRMWATCH_HEARTH } from './act3Places';
 
 describe('Act 3 master positions (K1)', () => {
   it('every dry place stands on the ground at its y, inside its region', () => {
@@ -26,7 +26,7 @@ describe('Act 3 master positions (K1)', () => {
   });
 
   it('the Dragonspine interior pads are flat inside the 40 m float rule', () => {
-    for (const id of ['frostfang-keep', 'wyrmwatch-hall'] as const) {
+    for (const id of ['frostfang-keep', 'wyrmwatch-hall', 'collapsed-cave'] as const) {
       const p = ACT3_INTERIOR_PADS[id];
       let lo = Infinity;
       let hi = -Infinity;
@@ -40,6 +40,28 @@ describe('Act 3 master positions (K1)', () => {
       expect(hi - lo, id).toBeLessThan(1);
       expect(hi - lo).toBeLessThan(MAX_GROUND_RANGE);
       expect(lo, id).toBeCloseTo(p.y, 1);
+    }
+  });
+
+  it('the collapsed cave\'s pad keeps 130 m from the hall pad and out of the summit box (K4)', () => {
+    const cave = ACT3_INTERIOR_PADS['collapsed-cave'];
+    const hall = ACT3_INTERIOR_PADS['wyrmwatch-hall'];
+    expect(Math.hypot(cave.x - hall.x, cave.z - hall.z)).toBeGreaterThan(130);
+    expect(cave.z + cave.d / 2).toBeLessThan(14800);
+    expect([cave.w, cave.d]).toEqual([50, 60]);
+  });
+
+  it('every ferry stop stands on a dry quay: ground at least 6.3 m within 3 m, the channel beside it', () => {
+    for (const s of ACT3_FERRY.stops) {
+      for (let dx = -3; dx <= 3; dx += 1) {
+        for (let dz = -3; dz <= 3; dz += 1) {
+          if (Math.hypot(dx, dz) > 3) continue;
+          expect(heightAt(s.x + dx, s.z + dz), `${s.id} (${s.x + dx}, ${s.z + dz})`).toBeGreaterThanOrEqual(6.3);
+        }
+      }
+      // A path ends or bends within 25 m, in water at least 1.3 m deep.
+      const near = ACT3_FERRY.paths.flatMap((p) => p.points).filter(([x, z]) => Math.hypot(x - s.x, z - s.z) < 25 && heightAt(x, z) <= ACT3_FERRY.surfaceY - 1.3);
+      if (s.id !== 'reedgate') expect(near.length, s.id).toBeGreaterThan(0);
     }
   });
 

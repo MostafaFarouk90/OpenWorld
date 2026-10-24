@@ -200,6 +200,20 @@ export const MIREWATER_DEEPS_PLATEAU = pad('mirewater-deeps', 2300, 12000, 98, 1
 /** Where the Greywatch and Mireweather causeways leave the Mere's shore. */
 export const MERE_NORTH_LANDING_PLATEAU = pad('mere-north-landing', 2880, 12960, 24, 24, 7, 15);
 export const MERE_EAST_LANDING_PLATEAU = pad('mere-east-landing', 3470, 12380, 24, 24, 7, 15);
+/**
+ * The ferry quays (K7): a 14 x 14 m dry pad beside each channel's stop, the boat moored in the channel at the path's
+ * end or bend and the stop point on the quay (ground 7 m, a metre over the water). Reedgate's quay is its ferry pad.
+ */
+export const MERE_FERRY_QUAY_PLATEAU = pad('mere-ferry-quay', 3172, 11909, 14, 14, 7, 8);
+export const GREYWATCH_FERRY_QUAY_PLATEAU = pad('greywatch-ferry-quay', 2782, 14263, 14, 14, 7, 8);
+export const MIREWEATHER_FERRY_QUAY_PLATEAU = pad('mireweather-ferry-quay', 5521, 12342, 14, 14, 7, 8);
+/** Where a passenger boards and leaves at each stop (on its quay). */
+export const FERRY_STOP_POINTS = {
+  reedgate: { x: 3600, z: 10100 },
+  mere: { x: 3168, z: 11907 },
+  greywatch: { x: 2786, z: 14260 },
+  mireweather: { x: 5516, z: 12344 },
+} as const;
 
 export const GREYFEN_PLATEAUS: readonly PlateauDef[] = [
   REEDGATE_PLATEAU,
@@ -211,6 +225,9 @@ export const GREYFEN_PLATEAUS: readonly PlateauDef[] = [
   MIREWATER_DEEPS_PLATEAU,
   MERE_NORTH_LANDING_PLATEAU,
   MERE_EAST_LANDING_PLATEAU,
+  MERE_FERRY_QUAY_PLATEAU,
+  GREYWATCH_FERRY_QUAY_PLATEAU,
+  MIREWEATHER_FERRY_QUAY_PLATEAU,
 ];
 
 // ---- roads

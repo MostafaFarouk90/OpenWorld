@@ -198,6 +198,8 @@ export const SKYHOLD_TOP_PLATEAU = pad('skyhold-top', 12230, 15200, 100, 80, 585
 export const FROSTFANG_AERIE_PLATEAU = pad('frostfang-aerie', 15600, 16040, 220, 240, 555, 80);
 /** The Frostfang keep's interior pad (40 x 50 m), exactly flat, on the Aerie shelf. */
 export const FROSTFANG_KEEP_PLATEAU = pad('frostfang-keep', 15600, 16120, 40, 50, 555, 40);
+/** The collapsed cave's interior pad (K4's off-site float, 50 x 60 m) on the lower slopes west of the lodge. */
+export const COLLAPSED_CAVE_FLOAT_PLATEAU = pad('collapsed-cave-float', 13000, 11600, 50, 60, 41, 30);
 
 /** The Wyrmwatch hall's 30 x 20 m interior pad, inside the lodge plateau (which keeps it flat). */
 export const WYRMWATCH_HALL_PAD: ShapeBox = { minX: 13585, maxX: 13615, minZ: 11910, maxZ: 11930 };
@@ -216,6 +218,7 @@ export const DRAGONSPINE_PLATEAUS: readonly PlateauDef[] = [
   SKYHOLD_TOP_PLATEAU,
   FROSTFANG_AERIE_PLATEAU,
   FROSTFANG_KEEP_PLATEAU,
+  COLLAPSED_CAVE_FLOAT_PLATEAU,
 ];
 
 const centre = (p: PlateauDef) => ({ x: (p.box.minX + p.box.maxX) / 2, z: (p.box.minZ + p.box.maxZ) / 2, height: p.height });
@@ -233,6 +236,7 @@ export const DRAGONSPINE_SITES = {
   skyholdTop: centre(SKYHOLD_TOP_PLATEAU),
   frostfangAerie: centre(FROSTFANG_AERIE_PLATEAU),
   frostfangKeep: centre(FROSTFANG_KEEP_PLATEAU),
+  collapsedCaveFloat: centre(COLLAPSED_CAVE_FLOAT_PLATEAU),
 } as const;
 
 // ---- roads (in world-shape order: each is fitted on the ground with the roads before it laid)

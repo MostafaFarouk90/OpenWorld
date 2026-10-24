@@ -9,7 +9,7 @@ import { Containment, DEAD_ROAD_CORRIDOR } from '../containment';
 import { fogWallForTrigger, fogWalls, needsPushBackDef } from '../fogWall';
 import { createFakeCore } from '../testing/fakeCore';
 import { readFileSync } from '../testing/nodeFs';
-import { ACT3_FOG_WALLS, FOG_FACE_ANCHORS, FOG_FACE_POINTS } from './act3World';
+import { ACT3_FACE_PUSH_DEPTH, ACT3_FOG_WALLS, FOG_FACE_ANCHORS, FOG_FACE_POINTS } from './act3World';
 import { ACT3_WORLD_DOC, ACT3_WORLD_LAYOUT } from './act3World.layout';
 import { createAct3WorldPlugin } from './act3World.plugin';
 
@@ -54,6 +54,21 @@ describe('the Act 3 fog faces against containment', () => {
       expect(needsPushBackDef(w, blocked, at), w.id).toBe(true);
       expect(needsPushBackDef(w, open, at), w.id).toBe(false);
     }
+  });
+
+  it('each face pushes only a 100 m band behind it, never the Cinder Road or Cinderreach across the map', () => {
+    for (const w of ACT3_FOG_WALLS) expect(w.pushDepth, w.id).toBe(ACT3_FACE_PUSH_DEPTH);
+    const fen = ACT3_FOG_WALLS.find((d) => d.id === 'fog.fen-waste')!;
+    const waste = ACT3_FOG_WALLS.find((d) => d.id === 'fog.wyrmwatch-waste')!;
+    // Cinderreach at the fen face's z, and the Cinder Road under the Waste face's span.
+    expect(needsPushBackDef(fen, { x: 20365, z: 4704 }, FOG_FACE_POINTS['fog.fen-waste'])).toBe(false);
+    expect(needsPushBackDef(waste, { x: 13000, z: 3000 }, FOG_FACE_POINTS['fog.wyrmwatch-waste'])).toBe(false);
+    // Inside the band they still push; just past it they do not.
+    expect(needsPushBackDef(fen, { x: 6990 + 99, z: 4700 }, FOG_FACE_POINTS['fog.fen-waste'])).toBe(true);
+    expect(needsPushBackDef(fen, { x: 6990 + 101, z: 4700 }, FOG_FACE_POINTS['fog.fen-waste'])).toBe(false);
+    // A face without a depth (every shipped one) still holds its whole half-plane.
+    const { pushDepth: _d, ...unbounded } = fen;
+    expect(needsPushBackDef(unbounded, { x: 20365, z: 4704 }, FOG_FACE_POINTS['fog.fen-waste'])).toBe(true);
   });
 
   it('fog.fen-waste is the plan\'s face: x 6990, z 4500 to 4900, facing the Waste', () => {
