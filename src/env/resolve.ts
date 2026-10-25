@@ -21,7 +21,7 @@ export type ModelRef =
   | { source: 'env' | 'kaykit'; model: string; scale: number; tint?: Tint; fitHeight?: number; stretchY?: number; /** Width factor on x and z only (a slim poplar from a birch). */ girth?: number }
   | { source: 'placeholder'; shape: PlaceholderShape };
 
-export type PlaceholderShape = 'tree' | 'bush' | 'grass' | 'flower' | 'rock' | 'box' | 'haystack' | 'post' | 'patch';
+export type PlaceholderShape = 'horse' | 'tent' | 'tree' | 'bush' | 'grass' | 'flower' | 'rock' | 'box' | 'haystack' | 'post' | 'patch';
 
 /** Ids that are another id with a different size or colour. `stretchY` scales the height only (reeds from a grass clump); `girth` x and z only. */
 const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Tint; stretchY?: number; girth?: number }>> = {
@@ -64,6 +64,15 @@ const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Ti
   'wagon-burnt': { base: 'haycart-a', scale: 1, tint: { sat: 0.2, mul: 0x3a342e } },
   'charred-stump': { base: 'stump-a', scale: 1, tint: { sat: 0.3, mul: 0x4a423a } },
   'basalt-columns-a': { base: 'boulder-large-a', scale: 1.3, girth: 0.35, tint: { sat: 0.4, mul: 0xb8b8c4 } },
+  // H1: South Gate and outer ward. Stand-ins until the glbs arrive (plans/env-pass/h1/missing-objects.md): the fruit trees are small oaks
+  // (blossom pink for -b), the cart is the hay cart at goods-wagon size, the camp fire ring is a low rock cluster.
+  'fruit-tree-a': { base: 'oak-a', scale: 0.42, tint: { mul: 0xd8f0b0 } },
+  // Blossom: the paler birch crown turned pink (the oak's dark leaves went maroon at hue 300).
+  'fruit-tree-b': { base: 'birch-a', scale: 0.78, girth: 1.8, tint: { hue: 228, sat: 0.7, mul: 0xffffff } },
+  'cart-goods-a': { base: 'haycart-a', scale: 1.2, tint: { sat: 0.8, mul: 0xe8dcc8 } },
+  // H1 yard litter: straw-coloured tufts for the packed-earth yards (a yellow-brown glow so they do not read meadow green on tan ground).
+  'grass-clump-straw': { base: 'grass-clump-a', scale: 0.9, tint: { hue: -32, sat: 0.6, mul: 0xe8dcae, glow: 0x4a4426 } },
+  'campfire-ring': { base: 'rock-cluster-a', scale: 0.6, tint: { sat: 0.5, mul: 0x9a9690 } },
 };
 
 /** Ids the imported KayKit packs already cover, from the object grids. `fitHeight` sizes the model to a height in metres. */
@@ -101,10 +110,20 @@ const KAYKIT: Readonly<Record<string, { model: string; scale?: number; fitHeight
   'gatepost-a': { model: 'hal/fence_pillar', fitHeight: 1.6 },
   'field-gate-a': { model: 'hex/fence_wood_straight', fitHeight: 1.2 },
   'gibbet-post': { model: 'hal/fence_pillar', fitHeight: 3.6 },
+  // H1: the repair yard's rubble, the dungeon pack's half pile.
+  rubble_half: { model: 'dun/rubble_half' },
+  // H1 stand-ins: a refugee's handcart is the wheelbarrow made bigger, the notice board a tall post, the goods basket a sack, the stable
+  // horse stays a scripted placeholder (the Quaternius horse is skinned and the instancer takes static meshes only).
+  'handcart-a': { model: 'hex/wheelbarrow', scale: 1.6 },
+  'notice-board-a': { model: 'hal/fence_pillar', fitHeight: 2.2 },
+  'basket-goods-a': { model: 'hex/sack', scale: 0.8 },
 };
 
 const SHAPES: ReadonlyArray<[RegExp, PlaceholderShape]> = [
-  [/^(oak|birch|elm|autumn|ash-tree|willow)/, 'tree'],
+  // The KayKit tent is a canopy on four legs (B3 review), so H1's refugee tent is a scripted A-frame under its agreed id.
+  [/^refugee-tent/, 'tent'],
+  [/^horse/, 'horse'],
+  [/^(oak|birch|elm|autumn|ash-tree|willow|fruit-tree)/, 'tree'],
   [/^bush|^hedge|^fern|^reeds/, 'bush'],
   [/^grass/, 'grass'],
   [/^flower|^mushroom/, 'flower'],

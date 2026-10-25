@@ -52,7 +52,7 @@ export const CELL_SIZE: Readonly<Record<PlacementClass, number>> = { tree: 256, 
 const BIG_TILE = 20000;
 
 export function classOf(id: string): PlacementClass {
-  if (/^(oak|birch|elm|autumn|ash-tree|poplar|apple|tree_dead|willow)/.test(id)) return 'tree';
+  if (/^(oak|birch|elm|autumn|ash-tree|poplar|apple|tree_dead|willow|fruit-tree)/.test(id)) return 'tree';
   if (/^(bush|fern|reeds)/.test(id)) return 'bush';
   if (/^(boulder|rock|cairn|basalt|ember-rock|slag)/.test(id)) return 'rock';
   if (/^(stump|log|mushroom|charred)/.test(id)) return 'wood';

@@ -20,7 +20,8 @@ const [vw, vh] = (process.env.VIEW ?? '1280x720').split('x').map(Number);
 const here = path.dirname(fileURLToPath(import.meta.url));
 // `tile` may name several camera tiles, comma separated (d1-gate,d1-crest): they share one page, so the game loads once.
 const allTables = JSON.parse(readFileSync(path.join(here, 'cameras.json'), 'utf8')).tiles;
-for (const t of tile.split(',')) if (!allTables[t]) throw new Error(`unknown tile ${t}`);
+// An entry may name one camera: `h1-m06square@eye` shoots only that pose of the tile.
+for (const t of tile.split(',')) if (!allTables[t.split('@')[0]]) throw new Error(`unknown tile ${t}`);
 
 const browser = await chromium.launch({
   executablePath: '/opt/pw-browsers/chromium',
@@ -42,12 +43,14 @@ await page.evaluate(() => {
 });
 await page.addStyleTag({ content: 'body *:not([data-env-main]):not(:has([data-env-main])){visibility:hidden !important}' });
 
-for (const tileName of tile.split(',')) {
+for (const spec of tile.split(',')) {
+const [tileName, onlyCam] = spec.split('@');
 const table = allTables[tileName];
 const outDir = path.join(outRoot, tileName);
 mkdirSync(outDir, { recursive: true });
 for (const [name, c] of Object.entries(table.cameras)) {
   if (only && !only.includes(name)) continue;
+  if (onlyCam && name !== onlyCam) continue;
   const result = await page.evaluate(
     async ({ c, base, FRAMES, flags }) => {
       const g = window.__game;
