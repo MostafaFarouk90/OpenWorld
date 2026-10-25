@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { InstancedModel } from '../assets/instancing';
 import type { ModelLibrary, ModelTemplate } from '../assets/swap/ModelLibrary';
 import { placeholderGeometry, placeholderMaterial } from './placeholders';
+import { expandPatches } from './patches';
 import { hueMatrix, resolveModel, type ModelRef, type Tint } from './resolve';
 
 export interface PlacementRow {
@@ -13,6 +14,10 @@ export interface PlacementRow {
   z: number;
   yaw?: number;
   scale?: number;
+  /** Patch rows only (ids in src/env/patches.ts): the spread radius in metres, default 0.8 x scale. */
+  spread?: number;
+  /** Patch rows only: the number of tufts (1 or more), default 5 + 4 x scale clamped to 6..14. */
+  n?: number;
 }
 
 export type PlacementClass = 'tree' | 'bush' | 'rock' | 'wood' | 'ground' | 'prop' | 'hedge';
@@ -37,9 +42,17 @@ export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record
 
 /** Side of a draw cell (m): batches are split by cell so distance hiding works while the player stands inside a tile. */
 const CELL = 64;
+/**
+ * Trees are seen to 700 m, so a 64 m cell split a tile's trees into hundreds of batches (45% of the visible batches along the Dead Road).
+ * Their cells are 256 m. A cell is shown whole while any part of its bounding sphere is within range, so a cell that straddles the
+ * range edge shows a few trees up to about one cell past 700 m (conservative: nothing inside the range is ever hidden).
+ */
+export const CELL_SIZE: Readonly<Record<PlacementClass, number>> = { tree: 256, bush: CELL, rock: CELL, wood: CELL, ground: CELL, prop: CELL, hedge: CELL };
+/** A build of more instances than this yields to the browser between ids. */
+const BIG_TILE = 20000;
 
 export function classOf(id: string): PlacementClass {
-  if (/^(oak|birch|elm|autumn|ash-tree|poplar|tree_dead|willow)/.test(id)) return 'tree';
+  if (/^(oak|birch|elm|autumn|ash-tree|poplar|apple|tree_dead|willow)/.test(id)) return 'tree';
   if (/^(bush|fern|reeds)/.test(id)) return 'bush';
   if (/^(boulder|rock|cairn|basalt|ember-rock|slag)/.test(id)) return 'rock';
   if (/^(stump|log|mushroom|charred)/.test(id)) return 'wood';
@@ -109,7 +122,9 @@ export class PlacementField {
     this.object.name = 'env.placements';
   }
 
-  async build(rows: readonly PlacementRow[]): Promise<void> {
+  async build(source: readonly PlacementRow[]): Promise<void> {
+    // A patch row stands for 6 to 14 ground tufts; the field draws the tufts (they thin with the ground quality step like any ground row).
+    const rows = expandPatches(source);
     const entries = new Map<string, Entry>();
     rows.forEach((row, i) => {
       const ref = resolveModel(row.id);
@@ -154,7 +169,8 @@ export class PlacementField {
       // One batch per grid cell, so the distance test can hide the far cells of a large tile while the player stands inside it.
       const cells = new Map<string, PlacementRow[]>();
       for (const { row } of sorted) {
-        const k = `${Math.floor(row.x / CELL)},${Math.floor(row.z / CELL)}`;
+        const cell = CELL_SIZE[e.cls];
+        const k = `${Math.floor(row.x / cell)},${Math.floor(row.z / cell)}`;
         (cells.get(k) ?? cells.set(k, []).get(k)!).push(row);
       }
       for (const cellRows of cells.values()) {
@@ -175,6 +191,8 @@ export class PlacementField {
         this.stats.batches += batch.meshes.length;
         this.stats.triangles += resolved.triangles * cellRows.length;
       }
+      // A big tile (the Dead Road's 80k instances each) builds one id at a time with a pause between them, so the game keeps drawing frames.
+      if (rows.length > BIG_TILE) await new Promise<void>((r) => setTimeout(r, 0));
     }
     this.setDensity(this.density);
   }

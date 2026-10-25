@@ -6,10 +6,12 @@ import type { CoreContext, GamePlugin } from '../region/coreTypes';
 import { heightAt } from '../terrain/heightfield';
 import { EnvModelSource } from './envSource';
 import { PlacementField, type PlacementRow } from './PlacementField';
-import { TILES } from './tiles';
+import { LAZY_TILES, TILES } from './tiles';
 
 export interface EnvPluginOptions {
   tiles?: Readonly<Record<string, readonly PlacementRow[]>>;
+  /** Tiles whose rows load on demand (default: the Dead Road tiles, unless `tiles` is given). */
+  lazyTiles?: Readonly<Record<string, () => Promise<readonly PlacementRow[]>>>;
   heightAt?: (x: number, z: number) => number;
 }
 
@@ -35,6 +37,7 @@ export function envEnabled(search: string): boolean {
 
 export function createEnvPlugin(opts: EnvPluginOptions = {}): GamePlugin {
   const tiles = opts.tiles ?? TILES;
+  const lazyTiles = opts.lazyTiles ?? (opts.tiles ? {} : LAZY_TILES);
   const height = opts.heightAt ?? heightAt;
   const cleanups: Array<() => void> = [];
   return {
@@ -53,6 +56,22 @@ export function createEnvPlugin(opts: EnvPluginOptions = {}): GamePlugin {
         void field
           .build(rows)
           .then(() => field.setDensity(ctx.services.get('quality')?.step ?? 'medium'))
+          .catch((err) => console.warn(`env: tile ${name} could not be built`, err));
+      }
+      // Lazy tiles: their rows arrive as a separate chunk, then the tile builds like any other.
+      let gone = false;
+      cleanups.push(() => void (gone = true));
+      for (const [name, load] of Object.entries(lazyTiles)) {
+        void load()
+          .then(async (rows) => {
+            if (gone) return;
+            const field = new PlacementField(lib, height);
+            fields.set(name, field);
+            ctx.scene.add(field.object);
+            cleanups.push(() => field.dispose());
+            await field.build(rows);
+            field.setDensity(ctx.services.get('quality')?.step ?? 'medium');
+          })
           .catch((err) => console.warn(`env: tile ${name} could not be built`, err));
       }
       let step = ctx.services.get('quality')?.step;

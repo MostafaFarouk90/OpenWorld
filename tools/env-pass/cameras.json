@@ -1,773 +1,1270 @@
 {
- "$comment": "One camera table for the environment pass: the design mock (design-mock.html) and the in-game harness (shoot-game.mjs) both read it, so before, design and after shots share poses. Metres, +Z north. pos y and look y are heights above the ground at that x,z; eyeAbsolute true means pos y is already absolute. fov in degrees.",
- "tiles": {
-  "b1-lane": {
-   "spec": "lane.spec.json",
-   "cameras": {
-    "eye": {
-     "pos": [
-      0,
-      1.7,
-      34
-     ],
-     "look": [
-      0,
-      2.5,
-      108
-     ],
-     "fov": 60
+  "$comment": "One camera table for the environment pass: the design mock (design-mock.html) and the in-game harness (shoot-game.mjs) both read it, so before, design and after shots share poses. Metres, +Z north. pos y and look y are heights above the ground at that x,z; eyeAbsolute true means pos y is already absolute. fov in degrees.",
+  "tiles": {
+    "b1-lane": {
+      "spec": "lane.spec.json",
+      "cameras": {
+        "eye": {
+          "pos": [
+            0,
+            1.7,
+            34
+          ],
+          "look": [
+            0,
+            2.5,
+            108
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -45,
+            35,
+            28
+          ],
+          "look": [
+            0,
+            0,
+            80
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            0,
+            170,
+            74.99
+          ],
+          "look": [
+            0,
+            0,
+            75
+          ],
+          "fov": 60
+        }
+      },
+      "states": {
+        "calm": {},
+        "fire": {
+          "flags": [],
+          "note": "lane burning, T05 to T08; flag name to be confirmed against src/tutorial before the B1 pilot"
+        }
+      },
+      "placements": "b1/b1.placements.json"
     },
-    "drone": {
-     "pos": [
-      -45,
-      35,
-      28
-     ],
-     "look": [
-      0,
-      0,
-      80
-     ],
-     "fov": 60
+    "b1-meadow": {
+      "cameras": {
+        "eye": {
+          "pos": [
+            0,
+            1.7,
+            -30
+          ],
+          "look": [
+            0,
+            2,
+            40
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -70,
+            45,
+            -60
+          ],
+          "look": [
+            0,
+            0,
+            10
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            0,
+            170,
+            19.99
+          ],
+          "look": [
+            0,
+            0,
+            25
+          ],
+          "fov": 60
+        }
+      }
     },
-    "bird": {
-     "pos": [
-      0,
-      170,
-      74.99
-     ],
-     "look": [
-      0,
-      0,
-      75
-     ],
-     "fov": 60
+    "b1-kettlewick": {
+      "placements": "b1/b1.placements.json",
+      "cameras": {
+        "eye": {
+          "pos": [
+            0,
+            1.7,
+            112
+          ],
+          "look": [
+            3,
+            3,
+            150
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -60,
+            40,
+            95
+          ],
+          "look": [
+            3,
+            0,
+            140
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            3,
+            170,
+            139.99
+          ],
+          "look": [
+            3,
+            0,
+            140
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b2-north": {
+      "placements": "../../src/env/b2.placements.json",
+      "cameras": {
+        "eye": {
+          "pos": [
+            0.5,
+            1.7,
+            238
+          ],
+          "look": [
+            6,
+            2.8,
+            312
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -45,
+            38,
+            262
+          ],
+          "look": [
+            20,
+            0,
+            305
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            30,
+            170,
+            289.99
+          ],
+          "look": [
+            30,
+            0,
+            290
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b2-east": {
+      "placements": "../../src/env/b2.placements.json",
+      "cameras": {
+        "eye": {
+          "pos": [
+            198,
+            1.7,
+            222
+          ],
+          "look": [
+            226,
+            2.5,
+            128
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            150,
+            40,
+            200
+          ],
+          "look": [
+            225,
+            0,
+            140
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            215,
+            170,
+            119.99
+          ],
+          "look": [
+            215,
+            0,
+            120
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b2-tile": {
+      "placements": "../../src/env/b2.placements.json",
+      "cameras": {
+        "eye": {
+          "pos": [
+            60,
+            1.7,
+            236
+          ],
+          "look": [
+            125,
+            4,
+            300
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -40,
+            70,
+            190
+          ],
+          "look": [
+            110,
+            0,
+            270
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            130,
+            420,
+            154.99
+          ],
+          "look": [
+            130,
+            0,
+            155
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b4-shrine": {
+      "knight": [
+        957,
+        -159.5
+      ],
+      "cameras": {
+        "eye": {
+          "pos": [
+            955,
+            1.7,
+            -156
+          ],
+          "look": [
+            970,
+            1.2,
+            -185
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            925,
+            38,
+            -198
+          ],
+          "look": [
+            965,
+            0,
+            -160
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            965,
+            170,
+            -160.01
+          ],
+          "look": [
+            965,
+            0,
+            -160
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b4-road": {
+      "knight": [
+        888,
+        -160
+      ],
+      "cameras": {
+        "eye": {
+          "pos": [
+            884,
+            1.7,
+            -160
+          ],
+          "look": [
+            1072,
+            4,
+            -150
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            690,
+            45,
+            -195
+          ],
+          "look": [
+            790,
+            0,
+            -150
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            790,
+            170,
+            -150.01
+          ],
+          "look": [
+            790,
+            0,
+            -150
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b4-barrow": {
+      "knight": [
+        852,
+        -136
+      ],
+      "cameras": {
+        "eye": {
+          "pos": [
+            846,
+            2.0,
+            -158
+          ],
+          "look": [
+            860,
+            1.5,
+            -124
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            838,
+            24,
+            -158
+          ],
+          "look": [
+            860,
+            0,
+            -126
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            860,
+            95,
+            -175
+          ],
+          "look": [
+            860,
+            0,
+            -126
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b4-ash": {
+      "knight": [
+        1053,
+        -171
+      ],
+      "cameras": {
+        "eye": {
+          "pos": [
+            1052,
+            1.7,
+            -175
+          ],
+          "look": [
+            1062,
+            3,
+            -130
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            1005,
+            40,
+            -200
+          ],
+          "look": [
+            1070,
+            0,
+            -150
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            1060,
+            170,
+            -150.01
+          ],
+          "look": [
+            1060,
+            0,
+            -150
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b4-overview": {
+      "cameras": {
+        "bird": {
+          "pos": [
+            900,
+            440,
+            -50.01
+          ],
+          "look": [
+            900,
+            0,
+            -50
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b3-ford": {
+      "cameras": {
+        "eye": {
+          "pos": [
+            -368,
+            1.7,
+            -150.8
+          ],
+          "look": [
+            -426,
+            2.8,
+            -148
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -360,
+            36,
+            -198
+          ],
+          "look": [
+            -425,
+            0,
+            -150
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            -420,
+            170,
+            -150.01
+          ],
+          "look": [
+            -420,
+            0,
+            -150
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b3-carters": {
+      "cameras": {
+        "eye": {
+          "pos": [
+            -481,
+            1.7,
+            -153.5
+          ],
+          "look": [
+            -425,
+            2.6,
+            -142
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -495,
+            34,
+            -175
+          ],
+          "look": [
+            -445,
+            0,
+            -137
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            -450,
+            170,
+            -140.01
+          ],
+          "look": [
+            -450,
+            0,
+            -140
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b3-brook": {
+      "cameras": {
+        "eye": {
+          "pos": [
+            -420,
+            1.7,
+            -224
+          ],
+          "look": [
+            -420,
+            2.6,
+            -160
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -380,
+            32,
+            -240
+          ],
+          "look": [
+            -420,
+            0,
+            -170
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            -420,
+            200,
+            -155.01
+          ],
+          "look": [
+            -420,
+            0,
+            -155
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b3-road": {
+      "cameras": {
+        "eye": {
+          "pos": [
+            -120,
+            1.7,
+            -150
+          ],
+          "look": [
+            -300,
+            3,
+            -150
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -210,
+            40,
+            -215
+          ],
+          "look": [
+            -250,
+            0,
+            -130
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            -250,
+            170,
+            -110.01
+          ],
+          "look": [
+            -250,
+            0,
+            -110
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b3-river": {
+      "cameras": {
+        "eye": {
+          "pos": [
+            -146,
+            1.7,
+            -283
+          ],
+          "look": [
+            -170,
+            1.6,
+            -293.5
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -140,
+            35,
+            -255
+          ],
+          "look": [
+            -230,
+            0,
+            -300
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            -230,
+            170,
+            -285.01
+          ],
+          "look": [
+            -230,
+            0,
+            -285
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b3-overview": {
+      "cameras": {
+        "bird": {
+          "pos": [
+            -270,
+            340,
+            -125.01
+          ],
+          "look": [
+            -270,
+            0,
+            -125
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b3-carters-alt": {
+      "cameras": {
+        "eye": {
+          "pos": [
+            -468,
+            1.7,
+            -153
+          ],
+          "look": [
+            -440,
+            2.4,
+            -140
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            -495,
+            34,
+            -175
+          ],
+          "look": [
+            -445,
+            0,
+            -137
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            -450,
+            170,
+            -140.01
+          ],
+          "look": [
+            -450,
+            0,
+            -140
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "b3-brook-eye": {
+      "cameras": {
+        "eye": {
+          "pos": [
+            -420,
+            1.7,
+            -224
+          ],
+          "look": [
+            -420,
+            2.6,
+            -160
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "d1-gate": {
+      "why": "first steps past the slice fog wall: the grey reach, crow posts carried over from B4, milestone rhythm",
+      "cameras": {
+        "eye": {
+          "pos": [
+            1118.0,
+            1.7,
+            -157.0
+          ],
+          "look": [
+            1238.0,
+            1.6,
+            -155.0
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            1068.0,
+            40.0,
+            -198.0
+          ],
+          "look": [
+            1143.0,
+            0.0,
+            -150.0
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            1143.0,
+            170.0,
+            -150.01
+          ],
+          "look": [
+            1143.0,
+            0.0,
+            -150.0
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "d1-crest": {
+      "why": "from the crest (highest point of D1, beside the empty gibbet) down into the grey reach: ghost fields, burnt woods, wrecks",
+      "cameras": {
+        "eye": {
+          "pos": [
+            1736.0,
+            1.7,
+            26.0
+          ],
+          "look": [
+            1766.0,
+            2.0,
+            31.0
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            1698.87,
+            40.0,
+            70.03
+          ],
+          "look": [
+            1786.62,
+            0.0,
+            54.89
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            1786.62,
+            170.0,
+            54.88
+          ],
+          "look": [
+            1786.62,
+            0.0,
+            54.89
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "d1-thaw": {
+      "why": "the thaw: dying oaks, burnt field fences, the ash lifting below the big south hill",
+      "cameras": {
+        "eye": {
+          "pos": [
+            2962.58,
+            1.7,
+            542.44
+          ],
+          "look": [
+            3082.01,
+            1.6,
+            593.81
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            2932.41,
+            40.0,
+            485.25
+          ],
+          "look": [
+            2982.91,
+            0.0,
+            558.59
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            2982.91,
+            170.0,
+            558.58
+          ],
+          "look": [
+            2982.91,
+            0.0,
+            558.59
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "d2-camp1": {
+      "why": "M05-M06 walk: the Regent's Footman camp 1 (deadroad.camp-1) seen from the road, banners at the turn-off",
+      "cameras": {
+        "eye": {
+          "pos": [
+            3631.0,
+            1.7,
+            660.0
+          ],
+          "look": [
+            3650.0,
+            3.0,
+            696.0
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            3596.45,
+            42.0,
+            620.0
+          ],
+          "look": [
+            3650.0,
+            0.0,
+            692.0
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            3650.0,
+            170.0,
+            691.99
+          ],
+          "look": [
+            3650.0,
+            0.0,
+            692.0
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "d2-heath": {
+      "why": "the grey heath: patchy ash, heather and gorse, birch groves, boulders, old walls",
+      "cameras": {
+        "eye": {
+          "pos": [
+            4378.93,
+            1.7,
+            725.68
+          ],
+          "look": [
+            4496.61,
+            1.6,
+            749.17
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            4321.62,
+            40.0,
+            755.62
+          ],
+          "look": [
+            4404.83,
+            0.0,
+            723.92
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            4404.83,
+            170.0,
+            723.91
+          ],
+          "look": [
+            4404.83,
+            0.0,
+            723.92
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "d2-camp2": {
+      "why": "Footman camp 2 (deadroad.camp-2), from its trodden track",
+      "cameras": {
+        "eye": {
+          "pos": [
+            4766.0,
+            1.7,
+            848.0
+          ],
+          "look": [
+            4800.0,
+            2.5,
+            858.0
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            4747.72,
+            42.0,
+            764.71
+          ],
+          "look": [
+            4800.0,
+            0.0,
+            848.0
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            4800.0,
+            170.0,
+            847.99
+          ],
+          "look": [
+            4800.0,
+            0.0,
+            848.0
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "d2-march": {
+      "why": "the marches: the only walkable ground is 40 m round the road; tree belts and walls make that edge natural; the shire wall and cairns at x 5500",
+      "cameras": {
+        "eye": {
+          "pos": [
+            5640.78,
+            1.7,
+            872.55
+          ],
+          "look": [
+            5760.23,
+            1.6,
+            861.0
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            5594.58,
+            40.0,
+            917.78
+          ],
+          "look": [
+            5665.07,
+            0.0,
+            863.38
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            5665.07,
+            170.0,
+            863.37
+          ],
+          "look": [
+            5665.07,
+            0.0,
+            863.38
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "d3-farmring": {
+      "why": "the farm-ring: waystone.farm-ring with its lamps, the two farmhouses, orchard and yard",
+      "cameras": {
+        "eye": {
+          "pos": [
+            6903.0,
+            1.7,
+            820.0
+          ],
+          "look": [
+            6884.0,
+            2.4,
+            849.0
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            6767.14,
+            42.0,
+            736.02
+          ],
+          "look": [
+            6845.0,
+            0.0,
+            815.0
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            6845.0,
+            170.0,
+            814.99
+          ],
+          "look": [
+            6845.0,
+            0.0,
+            815.0
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "d3-fields": {
+      "why": "the hedged fields of the farm-ring, poplar windbreaks, haystacks, the road toward the South Gate (eye on the verge between road and hedge)",
+      "cameras": {
+        "eye": {
+          "pos": [
+            7300.59,
+            1.7,
+            792.1
+          ],
+          "look": [
+            7429.32,
+            1.6,
+            810.28
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            7256.76,
+            40.0,
+            742.48
+          ],
+          "look": [
+            7324.76,
+            0.0,
+            799.97
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            7324.76,
+            170.0,
+            799.96
+          ],
+          "look": [
+            7324.76,
+            0.0,
+            799.97
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "d3-seam": {
+      "why": "the bend where the road turns north for the South Gate: D3 hands over to H1 at x 8000 (ash 0.32 on both sides of the seam)",
+      "cameras": {
+        "eye": {
+          "pos": [
+            7721.99,
+            1.7,
+            863.6
+          ],
+          "look": [
+            7825.38,
+            1.6,
+            958.0
+          ],
+          "fov": 60
+        },
+        "drone": {
+          "pos": [
+            7682.0,
+            40.0,
+            799.18
+          ],
+          "look": [
+            7737.49,
+            0.0,
+            883.74
+          ],
+          "fov": 60
+        },
+        "bird": {
+          "pos": [
+            7737.49,
+            170.0,
+            883.73
+          ],
+          "look": [
+            7737.49,
+            0.0,
+            883.74
+          ],
+          "fov": 60
+        }
+      }
+    },
+    "d1-overview": {
+      "why": "d1 as a whole (layout only)",
+      "cameras": {
+        "bird": {
+          "pos": [
+            2349.74,
+            700.0,
+            291.99
+          ],
+          "look": [
+            2349.74,
+            0.0,
+            292.0
+          ],
+          "fov": 60,
+          "mockNoCull": true
+        }
+      }
+    },
+    "d2-overview": {
+      "why": "d2 as a whole (layout only)",
+      "cameras": {
+        "bird": {
+          "pos": [
+            4800.34,
+            700.0,
+            806.31
+          ],
+          "look": [
+            4800.34,
+            0.0,
+            806.32
+          ],
+          "fov": 60,
+          "mockNoCull": true
+        }
+      }
+    },
+    "d3-overview": {
+      "why": "d3 as a whole (layout only)",
+      "cameras": {
+        "bird": {
+          "pos": [
+            6999.64,
+            700.0,
+            756.61
+          ],
+          "look": [
+            6999.64,
+            0.0,
+            756.62
+          ],
+          "fov": 60,
+          "mockNoCull": true
+        }
+      }
     }
-   },
-   "states": {
-    "calm": {},
-    "fire": {
-     "flags": [],
-     "note": "lane burning, T05 to T08; flag name to be confirmed against src/tutorial before the B1 pilot"
-    }
-   },
-   "placements": "b1/b1.placements.json"
-  },
-  "b1-meadow": {
-   "cameras": {
-    "eye": {
-     "pos": [
-      0,
-      1.7,
-      -30
-     ],
-     "look": [
-      0,
-      2,
-      40
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      -70,
-      45,
-      -60
-     ],
-     "look": [
-      0,
-      0,
-      10
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      0,
-      170,
-      19.99
-     ],
-     "look": [
-      0,
-      0,
-      25
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b1-kettlewick": {
-   "placements": "b1/b1.placements.json",
-   "cameras": {
-    "eye": {
-     "pos": [
-      0,
-      1.7,
-      112
-     ],
-     "look": [
-      3,
-      3,
-      150
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      -60,
-      40,
-      95
-     ],
-     "look": [
-      3,
-      0,
-      140
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      3,
-      170,
-      139.99
-     ],
-     "look": [
-      3,
-      0,
-      140
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b2-north": {
-   "placements": "../../src/env/b2.placements.json",
-   "cameras": {
-    "eye": {
-     "pos": [
-      0.5,
-      1.7,
-      238
-     ],
-     "look": [
-      6,
-      2.8,
-      312
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      -45,
-      38,
-      262
-     ],
-     "look": [
-      20,
-      0,
-      305
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      30,
-      170,
-      289.99
-     ],
-     "look": [
-      30,
-      0,
-      290
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b2-east": {
-   "placements": "../../src/env/b2.placements.json",
-   "cameras": {
-    "eye": {
-     "pos": [
-      198,
-      1.7,
-      222
-     ],
-     "look": [
-      226,
-      2.5,
-      128
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      150,
-      40,
-      200
-     ],
-     "look": [
-      225,
-      0,
-      140
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      215,
-      170,
-      119.99
-     ],
-     "look": [
-      215,
-      0,
-      120
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b2-tile": {
-   "placements": "../../src/env/b2.placements.json",
-   "cameras": {
-    "eye": {
-     "pos": [
-      60,
-      1.7,
-      236
-     ],
-     "look": [
-      125,
-      4,
-      300
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      -40,
-      70,
-      190
-     ],
-     "look": [
-      110,
-      0,
-      270
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      130,
-      420,
-      154.99
-     ],
-     "look": [
-      130,
-      0,
-      155
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b4-shrine": {
-   "knight": [
-    957,
-    -159.5
-   ],
-   "cameras": {
-    "eye": {
-     "pos": [
-      955,
-      1.7,
-      -156
-     ],
-     "look": [
-      970,
-      1.2,
-      -185
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      925,
-      38,
-      -198
-     ],
-     "look": [
-      965,
-      0,
-      -160
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      965,
-      170,
-      -160.01
-     ],
-     "look": [
-      965,
-      0,
-      -160
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b4-road": {
-   "knight": [
-    888,
-    -160
-   ],
-   "cameras": {
-    "eye": {
-     "pos": [
-      884,
-      1.7,
-      -160
-     ],
-     "look": [
-      1072,
-      4,
-      -150
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      690,
-      45,
-      -195
-     ],
-     "look": [
-      790,
-      0,
-      -150
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      790,
-      170,
-      -150.01
-     ],
-     "look": [
-      790,
-      0,
-      -150
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b4-barrow": {
-   "knight": [
-    852,
-    -136
-   ],
-   "cameras": {
-    "eye": {
-     "pos": [
-      846,
-      2.0,
-      -158
-     ],
-     "look": [
-      860,
-      1.5,
-      -124
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      838,
-      24,
-      -158
-     ],
-     "look": [
-      860,
-      0,
-      -126
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      860,
-      95,
-      -175
-     ],
-     "look": [
-      860,
-      0,
-      -126
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b4-ash": {
-   "knight": [
-    1053,
-    -171
-   ],
-   "cameras": {
-    "eye": {
-     "pos": [
-      1052,
-      1.7,
-      -175
-     ],
-     "look": [
-      1062,
-      3,
-      -130
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      1005,
-      40,
-      -200
-     ],
-     "look": [
-      1070,
-      0,
-      -150
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      1060,
-      170,
-      -150.01
-     ],
-     "look": [
-      1060,
-      0,
-      -150
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b4-overview": {
-   "cameras": {
-    "bird": {
-     "pos": [
-      900,
-      440,
-      -50.01
-     ],
-     "look": [
-      900,
-      0,
-      -50
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b3-ford": {
-   "cameras": {
-    "eye": {
-     "pos": [
-      -368,
-      1.7,
-      -150.8
-     ],
-     "look": [
-      -426,
-      2.8,
-      -148
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      -360,
-      36,
-      -198
-     ],
-     "look": [
-      -425,
-      0,
-      -150
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      -420,
-      170,
-      -150.01
-     ],
-     "look": [
-      -420,
-      0,
-      -150
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b3-carters": {
-   "cameras": {
-    "eye": {
-     "pos": [
-      -481,
-      1.7,
-      -153.5
-     ],
-     "look": [
-      -425,
-      2.6,
-      -142
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      -495,
-      34,
-      -175
-     ],
-     "look": [
-      -445,
-      0,
-      -137
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      -450,
-      170,
-      -140.01
-     ],
-     "look": [
-      -450,
-      0,
-      -140
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b3-brook": {
-   "cameras": {
-    "eye": {
-     "pos": [
-      -420,
-      1.7,
-      -224
-     ],
-     "look": [
-      -420,
-      2.6,
-      -160
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      -380,
-      32,
-      -240
-     ],
-     "look": [
-      -420,
-      0,
-      -170
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      -420,
-      200,
-      -155.01
-     ],
-     "look": [
-      -420,
-      0,
-      -155
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b3-road": {
-   "cameras": {
-    "eye": {
-     "pos": [
-      -120,
-      1.7,
-      -150
-     ],
-     "look": [
-      -300,
-      3,
-      -150
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      -210,
-      40,
-      -215
-     ],
-     "look": [
-      -250,
-      0,
-      -130
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      -250,
-      170,
-      -110.01
-     ],
-     "look": [
-      -250,
-      0,
-      -110
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b3-river": {
-   "cameras": {
-    "eye": {
-     "pos": [
-      -146,
-      1.7,
-      -283
-     ],
-     "look": [
-      -170,
-      1.6,
-      -293.5
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      -140,
-      35,
-      -255
-     ],
-     "look": [
-      -230,
-      0,
-      -300
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      -230,
-      170,
-      -285.01
-     ],
-     "look": [
-      -230,
-      0,
-      -285
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b3-overview": {
-   "cameras": {
-    "bird": {
-     "pos": [
-      -270,
-      340,
-      -125.01
-     ],
-     "look": [
-      -270,
-      0,
-      -125
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b3-carters-alt": {
-   "cameras": {
-    "eye": {
-     "pos": [
-      -468,
-      1.7,
-      -153
-     ],
-     "look": [
-      -440,
-      2.4,
-      -140
-     ],
-     "fov": 60
-    },
-    "drone": {
-     "pos": [
-      -495,
-      34,
-      -175
-     ],
-     "look": [
-      -445,
-      0,
-      -137
-     ],
-     "fov": 60
-    },
-    "bird": {
-     "pos": [
-      -450,
-      170,
-      -140.01
-     ],
-     "look": [
-      -450,
-      0,
-      -140
-     ],
-     "fov": 60
-    }
-   }
-  },
-  "b3-brook-eye": {
-   "cameras": {
-    "eye": {
-     "pos": [
-      -420,
-      1.7,
-      -224
-     ],
-     "look": [
-      -420,
-      2.6,
-      -160
-     ],
-     "fov": 60
-    }
-   }
   }
- }
 }

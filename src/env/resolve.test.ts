@@ -98,6 +98,23 @@ describe('resolveModel', () => {
   });
 });
 
+describe('Dead Road ids (D1 to D3)', () => {
+  it('make the corridor variants from existing models, none a placeholder', () => {
+    for (const id of ['hedge-dead-a', 'fern-ash', 'grass-clump-dry', 'bush-gorse', 'bush-heather', 'apple-tree-a']) {
+      const r = resolveModel(id);
+      expect(r.source, id).toBe('env');
+      expect(r.source === 'env' && r.tint, id).toBeTruthy();
+    }
+    expect(resolveModel('hedge-dead-a')).toMatchObject({ model: 'env/hedge-straight', girth: 0.7 });
+    expect(resolveModel('bush-heather')).toMatchObject({ model: 'env/bush-round-a', scale: 0.55 });
+  });
+  it('keep the gibbet and the wayside shrine on KayKit pieces under their agreed ids', () => {
+    for (const id of ['gatepost-a', 'field-gate-a']) expect(resolveModel(id).source, id).toBe('kaykit');
+    expect(resolveModel('gibbet-post')).toMatchObject({ source: 'kaykit', model: 'hal/fence_pillar', fitHeight: 3.6 });
+    expect(resolveModel('roadside-shrine-a').source).toBe('kaykit');
+  });
+});
+
 describe('hueMatrix', () => {
   const apply = (m: number[], c: number[]) => [0, 1, 2].map((r) => m[r * 3] * c[0] + m[r * 3 + 1] * c[1] + m[r * 3 + 2] * c[2]);
 
