@@ -13,6 +13,9 @@ import { pointInFootprint } from './geometry';
 import { distanceToPolyline, GrassField, type GrassAccept } from './grass';
 import { drawnWidth } from './act2/act2Roads';
 import { ACT2_ROAD_STRIPS } from './act2/act2World';
+import { ACT3_CAUSEWAY_STRIPS, ACT3_ROAD_STRIPS } from './act3/act3World';
+import { GREYFEN_SHEET } from './act3/act3Water';
+import { GREYFEN_WATER_TABLE } from '../terrain/shape/greyfen';
 import { buildPoiProps } from './poiProps';
 import { watchTollPost } from './tollPost';
 import { BRIGHTWATER_LAYOUT } from './brightwater.layout';
@@ -84,8 +87,9 @@ export const CITY_NO_GRASS_RADIUS = MAX_STRUCTURE_RADIUS + 4;
 
 /**
  * Where grass may grow: everywhere outside Harrowmark's walls (Brightwater, the Dead Road corridor and the farms around
- * the city), never in the water, on the Dead Road or the lane, inside a structure's footprint (a tuft would poke
- * through a floor) or under any static collider. (Every Harrowmark structure stands inside the wall's radius.)
+ * the city), never in the water (the Greyfen's too), on the Dead Road, the lane or an Act 2 or 3 road, inside a
+ * structure's footprint (a tuft would poke through a floor) or under any static collider. (Every Harrowmark structure
+ * stands inside the wall's radius.)
  */
 export function grassAcceptFor(layouts: readonly LayoutData[], heightAt: (x: number, z: number) => number, physics?: RayQuery): GrassAccept {
   // A bounding radius per structure skips the rotated-footprint test for all but the few nearby.
@@ -97,7 +101,13 @@ export function grassAcceptFor(layouts: readonly LayoutData[], heightAt: (x: num
     [LANE_TRACK_DRAWN, LANE_WIDTH / 2 + 0.3],
     // The Act 2 roads' gravel ribbons (thread A1), as wide as drawn.
     ...ACT2_ROAD_STRIPS.map((r) => [r.points, drawnWidth(r.halfWidth) / 2 + 0.3] as [readonly (readonly [number, number])[], number]),
+    // The Act 3 roads (thread K1) as drawn, and the causeways' decks (K3 draws them) with their 1 m kerb.
+    ...ACT3_ROAD_STRIPS.map((r) => [r.points, drawnWidth(r.halfWidth) / 2 + 0.3] as [readonly (readonly [number, number])[], number]),
+    ...ACT3_CAUSEWAY_STRIPS.map((r) => [r.points, r.halfWidth + 1] as [readonly (readonly [number, number])[], number]),
   ];
+  // Every Greyfen water surface lies at the water table (act3Water.ts): no tuft where the ground is under it.
+  const underFenWater = (x: number, z: number): boolean =>
+    x >= GREYFEN_SHEET.minX && x <= GREYFEN_SHEET.maxX && z >= GREYFEN_SHEET.minZ && z <= GREYFEN_SHEET.maxZ && heightAt(x, z) < GREYFEN_WATER_TABLE + 0.1;
   // A padded box per strip skips the polyline walk for every strip far from the tuft.
   const boxed = strips.map(([pts, half]) => ({
     pts,
@@ -110,6 +120,7 @@ export function grassAcceptFor(layouts: readonly LayoutData[], heightAt: (x: num
   return (x, z) =>
     Math.hypot(x - CITY_CENTER.x, z - CITY_CENTER.z) > CITY_NO_GRASS_RADIUS &&
     !boxed.some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ && distanceToPolyline(b.pts, x, z) < b.half) &&
+    !underFenWater(x, z) &&
     !structures.some(({ st, reach }) => Math.abs(x - st.x) <= reach && Math.abs(z - st.z) <= reach && pointInFootprint(st, x, z, 0.4)) &&
     !(physics && staticColliderAt(physics, x, heightAt(x, z), z));
 }

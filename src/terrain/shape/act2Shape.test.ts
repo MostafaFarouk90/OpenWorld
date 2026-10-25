@@ -26,6 +26,7 @@ import {
 import { DEEPGATE_PLATEAU, OLDSMOKE_PASS_ROAD, OLDSMOKE_PLATEAUS, OLDSMOKE_ROADS, OLDSMOKE_STACKS } from './oldsmokePass';
 import { detailRelief } from './detailRelief';
 import { WORLD_SHAPE } from './index';
+import { FEN_ROAD } from './greyfen';
 import { roadLength, roadPoint } from './roadPoint';
 import { DEAD_ROAD, DEAD_ROAD_PLATEAUS } from './deadRoad';
 import { HARROWMARK_PLATEAU, HARROWMARK_RIDGES } from './harrowmark';
@@ -335,11 +336,18 @@ describe('Act 1 ground is unchanged outside the Cinder Road reach', () => {
     return { minX: Math.min(...pts.map((p) => p.x)) - m, maxX: Infinity, minZ: Math.min(...pts.map((p) => p.z)) - m, maxZ: Math.max(...pts.map((p) => p.z)) + m };
   })();
 
+  /** v0.7 (Act 3, K1): the Fen Road leaves the North-west Gate (its points plus its widest blend), also intended. */
+  const fenReach = (() => {
+    const pts = FEN_ROAD.points;
+    const m = FEN_ROAD.halfWidth + 300;
+    return { minX: Math.min(...pts.map((p) => p.x)) - m, maxX: Math.max(...pts.map((p) => p.x)) + m, minZ: Math.min(...pts.map((p) => p.z)) - m, maxZ: Infinity };
+  })();
+
   it('a 50 m grid over Brightwater, the Dead Road and Harrowmark matches the Act 1 shape exactly', () => {
     let compared = 0;
     for (let x = -1500; x <= 10500; x += 50) {
       for (let z = -1500; z <= 4000; z += 50) {
-        if (inBox(reach, x, z)) continue;
+        if (inBox(reach, x, z) || inBox(fenReach, x, z)) continue;
         compared++;
         if (heightAt(x, z) !== act1.heightAt(x, z) + detailRelief(x, z)) throw new Error(`Act 1 ground moved at (${x}, ${z})`);
       }

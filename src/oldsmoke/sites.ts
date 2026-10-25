@@ -18,6 +18,12 @@ export const EDGE = { w: BOX.minX + WALL_INSET, e: BOX.maxX - WALL_INSET, s: BOX
 const PASS_END = OLDSMOKE_PASS_POINTS[OLDSMOKE_PASS_POINTS.length - 1];
 export const GATE = { x: PASS_END[0], z: EDGE.s };
 
+/**
+ * Act 3 (K1): the north gate onto the Deepgate Track, between the spoil heaps (x 20350..20590) and furnace 3. Always open:
+ * the track stays inside Oldsmoke's box up to the shipped `fog.dragonspine` face, which holds the way north.
+ */
+export const NORTH_GATE = { x: BOX.minX + 360, z: EDGE.n };
+
 /** The market square's centre, 77 m inside the gate on the road's line. */
 export const MARKET = { x: GATE.x, z: EDGE.s + 77 };
 /** Grisel Hall's footprint centre, north-centre of the town; its door stands 3 m in front of the south face. */

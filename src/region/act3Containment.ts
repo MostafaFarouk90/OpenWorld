@@ -3,6 +3,8 @@
 // they hold from the first tick of every save; each opens on its own condition. K1 lays the real roads and may move the
 // points here (the corridor rule test pins the 80 m clearance from every reserved box).
 import type { FlagCondition } from '../core/flagCondition';
+import { SPINE_ROAD_POINTS as SPINE_ROAD_FITTED } from '../terrain/shape/dragonspine';
+import { FEN_ROAD_POINTS as FEN_ROAD_FITTED } from '../terrain/shape/greyfen';
 import { SUMMIT_BOX } from './areas';
 import type { ContainmentHoleDef, CorridorDef } from './containment';
 import { REGION_INFO } from './regions';
@@ -14,22 +16,12 @@ export const CORRIDOR_RESERVED_CLEARANCE = 80;
  * Harrowmark's north face (the shipped `fog.greyfen` at (7800, 3970)), bending west at once to clear the Ashen Waste's
  * corner (7000, 4500), north along x 6300 to 6800 to the Greyfen corner, then west to Reedgate (plan 3.3).
  */
-export const FEN_ROAD_POINTS: readonly (readonly [number, number])[] = [
-  [7800, 3970],
-  [6600, 4600],
-  [6500, 6000],
-  [6450, 8000],
-  [6300, 9400],
-  [3200, 10200],
-];
+// v0.7 (K1): the fitted roads (src/terrain/shape), from 600 m inside Harrowmark's box (the North-west Gate's road is
+// inside it already) and from Mireweather Hut inside the Greyfen.
+export const FEN_ROAD_POINTS: readonly (readonly [number, number])[] = FEN_ROAD_FITTED.slice(1);
 
 /** The Greyfen's east edge to the Dragonspine's west edge, 1.5 km north of the Waste (z 11000), on to Wyrmwatch Lodge. */
-export const SPINE_ROAD_POINTS: readonly (readonly [number, number])[] = [
-  [6500, 12800],
-  [8300, 12650],
-  [10000, 12500],
-  [13600, 11900],
-];
+export const SPINE_ROAD_POINTS: readonly (readonly [number, number])[] = SPINE_ROAD_FITTED;
 
 export const FEN_ROAD_CORRIDOR: CorridorDef = {
   id: 'corridor.fen-road',

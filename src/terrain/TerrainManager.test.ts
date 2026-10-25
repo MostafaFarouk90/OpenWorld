@@ -297,15 +297,18 @@ describe('TerrainManager', () => {
       expect(manager.group.children).toHaveLength(0);
     });
 
-    it('disposes both shared materials (Act 1 and the Act 2 ground)', () => {
+    it('disposes every shared material (Act 1 and the three ground origins)', () => {
       const { manager, camera, answerAll } = setup();
       manager.update(camera);
       answerAll();
       const spy = vi.spyOn(THREE.Material.prototype, 'dispose');
       manager.dispose();
       const materials = spy.mock.contexts.filter((c) => c instanceof THREE.MeshStandardMaterial);
-      expect(materials).toHaveLength(2);
-      expect(materials.map((m) => (m as THREE.Material).name)).toContain('terrain-act2-ground');
+      expect(materials).toHaveLength(4);
+      const names = materials.map((m) => (m as THREE.Material).name);
+      expect(names).toContain('terrain-act2-ground');
+      expect(names).toContain('terrain-greyfen-ground');
+      expect(names).toContain('terrain-dragonspine-ground');
     });
 
     it('disposes the geometry of every resident chunk', () => {
