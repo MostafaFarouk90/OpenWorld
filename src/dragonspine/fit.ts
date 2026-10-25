@@ -52,10 +52,12 @@ export function fitLedge(h: HeightFn, want: XZ, dirs: readonly number[] = [0, 1,
   return null;
 }
 
-/** Highest ground under a w x d footprint, sampled every 1 m. */
-export function footprintMax(h: HeightFn, x: number, z: number, w: number, d: number): number {
+/** Highest ground under a w x d footprint, sampled every 1 m (or on a `cells` x `cells` grid when given). */
+export function footprintMax(h: HeightFn, x: number, z: number, w: number, d: number, cells = 0): number {
   let hi = -Infinity;
-  for (let i = 0; i <= Math.ceil(w); i++) for (let j = 0; j <= Math.ceil(d); j++) hi = Math.max(hi, h(x - w / 2 + (w * i) / Math.ceil(w), z - d / 2 + (d * j) / Math.ceil(d)));
+  const nx = cells || Math.ceil(w);
+  const nz = cells || Math.ceil(d);
+  for (let i = 0; i <= nx; i++) for (let j = 0; j <= nz; j++) hi = Math.max(hi, h(x - w / 2 + (w * i) / nx, z - d / 2 + (d * j) / nz));
   return hi;
 }
 

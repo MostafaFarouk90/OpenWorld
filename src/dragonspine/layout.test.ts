@@ -14,7 +14,7 @@ import { DRAGONSPINE_NPCS } from './npcDefs';
 import { roadFromPoints } from './road';
 import { registerDragonspineKinds } from './structureKinds';
 import { shiftedInputs, shiftedRoad, stubInputs } from './testing/fixture';
-import { WAYSIDE_MAX_SLIDE, WAYSIDE_MAX_STEP, WAYSIDE_SPACING } from './wayside';
+import { WAYSIDE_MIN_GAP, WAYSIDE_MAX_SLIDE, WAYSIDE_MAX_STEP, WAYSIDE_SPACING } from './wayside';
 
 let release: () => void;
 beforeAll(() => {
@@ -163,7 +163,10 @@ describe('the wayside sites', () => {
     expect(s.slice(0, 3).every((v) => v < b.anvil.roadS)).toBe(true);
     expect(s.slice(3).every((v) => v > b.anvil.roadS)).toBe(true);
     expect(s[0]).toBeGreaterThan(b.shelter.roadS);
-    for (let i = 1; i < 6; i++) expect(Math.abs(s[i]! - s[i - 1]! - (i === 3 ? 2 * WAYSIDE_SPACING : WAYSIDE_SPACING)), `gap ${i}`).toBeLessThanOrEqual(2 * WAYSIDE_MAX_SLIDE);
+    for (let i = 1; i < 6; i++) {
+      expect(s[i]! - s[i - 1]!, `gap ${i}`).toBeGreaterThanOrEqual(WAYSIDE_MIN_GAP);
+      expect(Math.abs(s[i]! - s[i - 1]! - (i === 3 ? 2 * WAYSIDE_SPACING : WAYSIDE_SPACING)), `gap ${i}`).toBeLessThanOrEqual(2 * WAYSIDE_MAX_SLIDE);
+    }
   });
   it('stand beside the road, top level with its edge (a step of at most WAYSIDE_MAX_STEP), anchor on the platform', () => {
     for (const w of b.wayside.sites) {
@@ -316,5 +319,21 @@ describe('the Last Anvil carving stones', () => {
       expect(Math.hypot(p.x - b.anvil.shrine.x, p.z - b.anvil.shrine.z), `stone ${i + 1} shrine`).toBeGreaterThan(12);
     }
     expect(Math.abs(b.anvil.loopLength - 400)).toBeLessThanOrEqual(60);
+  });
+});
+
+describe('the lodge gates for K1\'s other roads', () => {
+  it.each([['spine-road', 'west'], ['deepgate-track', 'east']] as const)('%s ends at the %s wall and enters through a gate gap', (id, side) => {
+    const end = id === 'spine-road' ? b.sites.spineEnd : b.sites.deepgateEnd;
+    const gate = side === 'west' ? b.lodge.gateW : b.lodge.gateE;
+    expect(Math.abs(gate.z - end.z)).toBeLessThan(1);
+    const inside = { x: gate.x + (side === 'west' ? 8 : -8), z: gate.z };
+    const solids = b.layout.structures.filter((x) => x.mode === 'solid' && /wall|tower|dragonspine-hall|house|shed|stable/.test(x.id) || x.kind === 'wall');
+    for (let t = 0; t <= 1; t += 0.02) {
+      const x = end.x + (inside.x - end.x) * t;
+      const z = end.z + (inside.z - end.z) * t;
+      for (const sp of solids) expect(inBox({ minX: sp.x - sp.footprint[0] / 2, maxX: sp.x + sp.footprint[0] / 2, minZ: sp.z - sp.footprint[1] / 2, maxZ: sp.z + sp.footprint[1] / 2 }, x, z), `${id} through ${sp.id}`).toBe(false);
+    }
+    expect(b.layout.anchors.some((a) => a.id === `dragonspine.lodge.gate.${side}`)).toBe(true);
   });
 });

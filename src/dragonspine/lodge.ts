@@ -21,6 +21,8 @@ export interface LodgeInfo {
   edge: { w: number; e: number; s: number; n: number };
   gateS: XZ;
   gateN: XZ;
+  gateW: XZ;
+  gateE: XZ;
   hall: { x: number; z: number; w: number; d: number; h: number };
   hallDoor: XZ;
   depot: XZ;
@@ -44,9 +46,19 @@ export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
   const passX = Math.min(Math.max(cross?.x ?? s.road.point(0).x, edge.w + GATE_W * 2), edge.e - GATE_W * 2);
   const gateS = { x: L.cx, z: edge.s };
   const gateN = { x: passX, z: edge.n };
-  const hz = (edge.n - edge.s) / 2;
-  const mid = { x: (edge.e + edge.w) / 2, z: (edge.n + edge.s) / 2 };
   const inset = TOWER / 2 + 0.3;
+  // The Spine Road (from the Greyfen) and the Deepgate Track end at the west and east walls: a gate where each arrives.
+  const gateZ = (road: XZ): number => Math.min(Math.max(road.z, edge.s + inset + GATE_W), edge.n - GATE_W);
+  const gateW = { x: edge.w, z: gateZ(s.spineEnd) };
+  const gateE = { x: edge.e, z: gateZ(s.deepgateEnd) };
+  const sideWall = (side: 'w' | 'e', x: number): StructureSpec[] => {
+    const g = side === 'w' ? gateW.z : gateE.z;
+    const lo = edge.s + inset;
+    return [
+      solid(`dragonspine-lodge-wall-${side}1`, 'wall', x, (lo + g - GATE_W / 2) / 2, WALL_T, g - GATE_W / 2 - lo, WALL_H),
+      solid(`dragonspine-lodge-wall-${side}2`, 'wall', x, (g + GATE_W / 2 + edge.n) / 2, WALL_T, edge.n - (g + GATE_W / 2), WALL_H),
+    ];
+  };
   const wall = (id: string, x0: number, x1: number, z: number): StructureSpec => solid(id, 'wall', (x0 + x1) / 2, z, x1 - x0, WALL_T, WALL_H);
 
   const towerSpecs = [edge.w, edge.e].map((x, i) => solid(`dragonspine-lodge-tower-${i + 1}`, 'tower', x, edge.s, TOWER, TOWER, TOWER_H));
@@ -55,11 +67,13 @@ export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
     wall('dragonspine-lodge-wall-n2', gateN.x + GATE_W / 2, edge.e - inset, edge.n),
     wall('dragonspine-lodge-wall-s1', edge.w + inset, gateS.x - GATE_W / 2, edge.s),
     wall('dragonspine-lodge-wall-s2', gateS.x + GATE_W / 2, edge.e - inset, edge.s),
-    solid('dragonspine-lodge-wall-w', 'wall', edge.w, mid.z + inset / 2, WALL_T, 2 * hz - inset, WALL_H),
-    solid('dragonspine-lodge-wall-e', 'wall', edge.e, mid.z + inset / 2, WALL_T, 2 * hz - inset, WALL_H),
+    ...sideWall('w', edge.w),
+    ...sideWall('e', edge.e),
     ...towerSpecs,
     open('dragonspine-lodge-gate-south', 'gate', gateS.x, gateS.z, GATE_W, 1.5),
     open('dragonspine-lodge-gate-pass', 'gate', gateN.x, gateN.z, GATE_W, 1.5),
+    open('dragonspine-lodge-gate-west', 'gate', edge.w, gateW.z, 1.5, GATE_W),
+    open('dragonspine-lodge-gate-east', 'gate', edge.e, gateE.z, 1.5, GATE_W),
   ];
 
   // The hall stands north of its door (the pad's outside door), south face to the door.
@@ -72,6 +86,8 @@ export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
   yard.reserve(s.hearth.x, s.hearth.z, 7);
   yard.reserve(gateS.x, gateS.z + 10, 12);
   yard.reserve(gateN.x, gateN.z - 10, 12);
+  yard.reserve(gateW.x + 10, gateW.z, 11);
+  yard.reserve(gateE.x - 10, gateE.z, 11);
   yard.reserve(door.x, door.z - 4, 5);
 
   const shed = yard.place('dragonspine-sled-shed', 'dragonspine-shed', { x: gateN.x + 28, z: edge.n - 14 }, 18, 10);
@@ -105,6 +121,8 @@ export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
     a('waystone.wyrmwatch-lodge', wayX, wayZ, 0, ['waystone']),
     a('dragonspine.lodge.gate.south', gateS.x, edge.s - 4, 0, ['poi']),
     a('dragonspine.lodge.gate.pass', gateN.x, edge.n + 4, 0, ['poi']),
+    a('dragonspine.lodge.gate.west', gateW.x - 4, gateW.z, 270, ['poi']),
+    a('dragonspine.lodge.gate.east', gateE.x + 4, gateE.z, 90, ['poi']),
     a('dragonspine.lodge.hall.door', door.x, door.z, 180, ['poi']),
     a('dragonspine.lodge.sled-shed', shedFront.x, shedFront.z, 180, ['objective']),
     ...sledStarts.map((p, i) => a(`dragonspine.r15.sled-start.${i + 1}`, p.x, p.z, 0, ['objective'])),
@@ -147,6 +165,6 @@ export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
   };
   return {
     part,
-    info: { edge, gateS, gateN, hall, hallDoor: door, depot: shedFront, sledStarts, passGateS, cacheS, cache, towers: towerSpecs, waystone: { x: wayX, z: wayZ }, specs: part.structures },
+    info: { edge, gateS, gateN, gateW, gateE, hall, hallDoor: door, depot: shedFront, sledStarts, passGateS, cacheS, cache, towers: towerSpecs, waystone: { x: wayX, z: wayZ }, specs: part.structures },
   };
 }

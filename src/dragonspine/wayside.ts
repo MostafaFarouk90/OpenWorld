@@ -13,7 +13,18 @@ export const WAYSIDE_MAX_SLIDE = 90;
 export const WAYSIDE_MAX_STEP = 0.6;
 /** The platform's height above the highest ground under it. */
 export const WAYSIDE_PAD_HEIGHT = 0.2;
-const SLIDE = Array.from({ length: 2 * (WAYSIDE_MAX_SLIDE / 5) + 1 }, (_, i) => (i === 0 ? 0 : (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 5));
+/** Consecutive pads are at least this far apart on the road (two never end up side by side). */
+export const WAYSIDE_MIN_GAP = 120;
+/** The first pad is this far past the shelter's road position, the pads either side of the Anvil this far from it. */
+const SHELTER_CLEAR = 60;
+const ANVIL_CLEAR = 40;
+/** Slide candidates, nearest the target first: coarse (10 m) for the search, fine (2.5 m) around the winner. */
+const slides = (step: number, reach: number): number[] => {
+  const out = [0];
+  for (let d = step; d <= reach; d += step) out.push(d, -d);
+  return out;
+};
+const COARSE = slides(10, WAYSIDE_MAX_SLIDE);
 
 export interface WaysideSite {
   index: number;
@@ -46,25 +57,38 @@ export function waysideLayout(s: Sites, shelterS: number, anvilS: number): { par
   const offsets = [0.5, 3, 6].map((gap) => s.roadHalf + gap + WAYSIDE_PAD / 2);
   const sites: WaysideSite[] = [];
   const specs: StructureSpec[] = [];
+  /** The rise of a platform's footprint over the road edge, sampled on a `n` x `n` grid (coarse for the search, 1 m for the result). */
+  const rise = (at: number, side: 1 | -1, offset: number, n: number): number => {
+    const c = s.road.point(at, side * offset);
+    const edge = s.road.point(at, side * s.roadHalf);
+    return footprintMax(s.h, c.x, c.z, WAYSIDE_PAD + 2, WAYSIDE_PAD + 2, n) - s.h(edge.x, edge.z);
+  };
   waysideTargets(shelterS, anvilS, s.road.length).forEach((want, i) => {
-    let best: { score: number; s: number; side: 1 | -1; offset: number } | null = null;
-    for (const ds of SLIDE) {
-      const at = Math.min(Math.max(want + ds, 0), s.road.length);
-      for (const side of [1, -1] as const) {
-        for (const offset of offsets) {
-          const c = s.road.point(at, side * offset);
-          const edge = s.road.point(at, side * s.roadHalf);
-          const rise = footprintMax(s.h, c.x, c.z, WAYSIDE_PAD + 2, WAYSIDE_PAD + 2) - s.h(edge.x, edge.z);
-          const score = Math.abs(rise) + Math.abs(ds) * 0.0005 + (offset - offsets[0]!) * 0.01;
-          if (!best || score < best.score) best = { score, s: at, side, offset };
+    // Pads are chosen in order, each at least WAYSIDE_MIN_GAP of road past the one before and on its side of the Anvil.
+    const lo = Math.max(sites.length ? sites[sites.length - 1]!.s + WAYSIDE_MIN_GAP : shelterS + SHELTER_CLEAR, i < 3 ? 0 : anvilS + ANVIL_CLEAR);
+    const hi = i < 3 ? anvilS - ANVIL_CLEAR : s.road.length;
+    const search = (ds: readonly number[], centre: number, n: number) => {
+      let best: { score: number; s: number; side: 1 | -1; offset: number } | null = null;
+      for (const d of ds) {
+        const at = centre + d;
+        if (at < lo || at > hi) continue;
+        for (const side of [1, -1] as const) {
+          for (const offset of offsets) {
+            const score = Math.abs(rise(at, side, offset, n)) + Math.abs(at - want) * 0.0005 + (offset - offsets[0]!) * 0.01;
+            if (!best || score < best.score) best = { score, s: at, side, offset };
+          }
         }
       }
-    }
-    const c = s.road.point(best!.s, best!.side * best!.offset);
+      return best;
+    };
+    const coarse = search(COARSE, want, 4);
+    if (!coarse) throw new Error(`dragonspine: no room for wayside pad ${i + 1} (needs road between ${Math.round(lo)} and ${Math.round(hi)})`);
+    const best = search(slides(2.5, 10), coarse.s, 0)!;
+    const c = s.road.point(best.s, best.side * best.offset);
     const spec = solid(`dragonspine-wayside-pad-${i + 1}`, 'rock', c.x, c.z, WAYSIDE_PAD, WAYSIDE_PAD, WAYSIDE_PAD_HEIGHT);
     const top = footprintMax(s.h, c.x, c.z, WAYSIDE_PAD + 2, WAYSIDE_PAD + 2) + WAYSIDE_PAD_HEIGHT;
     specs.push(spec);
-    sites.push({ index: i + 1, s: best!.s, x: spec.x, z: spec.z, side: best!.side, dy: top - s.h(spec.x, spec.z) });
+    sites.push({ index: i + 1, s: best.s, x: spec.x, z: spec.z, side: best.side, dy: top - s.h(spec.x, spec.z) });
   });
   const hawk = (id: string, i: number) => {
     const w = sites[i]!;

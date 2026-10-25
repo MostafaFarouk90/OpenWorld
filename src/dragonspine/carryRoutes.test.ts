@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildCarryRoutes, candleStops, CHECKPOINT_MAX, CHECKPOINT_MIN, CORRIDOR_HALF_WIDTH, densify, MAX_DROP } from './carryRoutes';
+import { heightAt } from '../terrain/heightfield';
+import { defaultInputs } from './inputs';
 import { buildDragonspine } from './layout';
 import { registerDragonspineKinds } from './structureKinds';
 import { shiftedInputs, shiftedRoad, stubInputs } from './testing/fixture';
@@ -8,13 +10,17 @@ let release: () => void;
 beforeAll(() => (release = registerDragonspineKinds()));
 afterAll(() => release());
 
-const inp = stubInputs();
+const stub = stubInputs();
+const shipped = defaultInputs(heightAt);
+const inp = stub;
 const build = buildDragonspine(inp);
-const routes = buildCarryRoutes(inp.heightAt, build);
-const route = (id: string) => routes.find((r) => r.id === id)!;
 const near = (cp: { x: number; z: number }, p: { x: number; z: number }) => Math.hypot(cp.x - p.x, cp.z - p.z);
 
-describe('carry routes', () => {
+describe.each([['stub', stub], ['shipped', shipped]] as const)('carry routes on the %s ground', (_ground, inp) => {
+  const build = buildDragonspine(inp);
+  const routes = buildCarryRoutes(inp.heightAt, build);
+  const route = (id: string) => routes.find((r) => r.id === id)!;
+
   it('has the eight routes with the agreed corridor and drop', () => {
     expect(routes.map((r) => r.id)).toEqual(['sled.r15.1', 'sled.r15.2', 'sled.r15.3', 'egg.r18.1', 'egg.r18.2', 'egg.r18.3', 'candle.r17.down', 'candle.r17.up']);
     for (const r of routes) {

@@ -10,6 +10,8 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | waystone.wyrmwatch-lodge | 13586 | 11849 | 0 | 180 | waystone |
 | dragonspine.lodge.gate.south | 13600 | 11851 | 0 | 180 | poi |
 | dragonspine.lodge.gate.pass | 13600 | 11949 | 0 | 180 | poi |
+| dragonspine.lodge.gate.west | 13536 | 11900 | 0 | 90 | poi |
+| dragonspine.lodge.gate.east | 13664 | 11900 | 0 | 270 | poi |
 | dragonspine.lodge.hall.door | 13570 | 11901 | 0 | 0 | poi |
 | dragonspine.lodge.sled-shed | 13628 | 11923 | 0 | 0 | objective |
 | dragonspine.r15.sled-start.1 | 13624 | 11921 | 0 | 180 | objective |
@@ -60,16 +62,16 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.spawn.anvil.hawk-2 | 14721 | 13863.63 | 0 | 180 | spawn |
 | dragonspine.spawn.anvil.hawk-3 | 14658 | 13900 | 0 | 180 | spawn |
 | dragonspine.spawn.anvil.ogre | 14745.82 | 13895.99 | 0 | 180 | spawn |
-| dragonspine.wayside.1 | 14185.75 | 13658.53 | 0.59 | 180 | objective |
-| dragonspine.wayside.2 | 14359.21 | 13756.56 | 0.59 | 180 | objective |
+| dragonspine.wayside.1 | 14187.98 | 13659.64 | 0.56 | 180 | objective |
+| dragonspine.wayside.2 | 14372.25 | 13763.97 | 0.6 | 180 | objective |
 | dragonspine.wayside.3 | 14480.93 | 13825.72 | 0.61 | 180 | objective |
 | dragonspine.wayside.4 | 14418.54 | 14079.93 | 1.1 | 180 | objective |
-| dragonspine.wayside.5 | 14399.93 | 14096.63 | 0.92 | 180 | objective |
+| dragonspine.wayside.5 | 14329.23 | 14160.08 | 0.7 | 180 | objective |
 | dragonspine.wayside.6 | 14256.13 | 14240.81 | 0.51 | 180 | objective |
-| dragonspine.spawn.wayside.hawk-a | 14392.4 | 13738.62 | 0 | 180 | spawn |
-| dragonspine.spawn.wayside.hawk-b | 14406.42 | 14133.81 | 0 | 180 | spawn |
-| npc-post.pilgrim-1 | 14363.62 | 13736.64 | 0 | 180 | npc-post |
-| npc-post.pilgrim-2 | 14417.42 | 14107.14 | 0 | 180 | npc-post |
+| dragonspine.spawn.wayside.hawk-a | 14405.44 | 13746.03 | 0 | 180 | spawn |
+| dragonspine.spawn.wayside.hawk-b | 14335.72 | 14197.26 | 0 | 180 | spawn |
+| npc-post.pilgrim-1 | 14376.66 | 13744.05 | 0 | 180 | npc-post |
+| npc-post.pilgrim-2 | 14346.72 | 14170.59 | 0 | 180 | npc-post |
 | dragonspine.hawk.camp | 11384 | 12990 | 0 | 180 | objective |
 | dragonspine.hawk.camp.search.1 | 11381 | 12991 | 0 | 180 | objective |
 | dragonspine.hawk.camp.search.2 | 11388 | 12990 | 0 | 180 | objective |
@@ -167,18 +169,22 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-lodge-wall-n2 | wall | 13631.1 | 11945 | 50.2 x 3 | solid |
 | dragonspine-lodge-wall-s1 | wall | 13568.9 | 11855 | 50.2 x 3 | solid |
 | dragonspine-lodge-wall-s2 | wall | 13631.1 | 11855 | 50.2 x 3 | solid |
-| dragonspine-lodge-wall-w | wall | 13540 | 11901.9 | 3 x 86.2 | solid |
-| dragonspine-lodge-wall-e | wall | 13660 | 11901.9 | 3 x 86.2 | solid |
+| dragonspine-lodge-wall-w1 | wall | 13540 | 11876.4 | 3 x 35.2 | solid |
+| dragonspine-lodge-wall-w2 | wall | 13540 | 11925.5 | 3 x 39 | solid |
+| dragonspine-lodge-wall-e1 | wall | 13660 | 11876.4 | 3 x 35.2 | solid |
+| dragonspine-lodge-wall-e2 | wall | 13660 | 11925.5 | 3 x 39 | solid |
 | dragonspine-lodge-tower-1 | tower | 13540 | 11855 | 7 x 7 | solid |
 | dragonspine-lodge-tower-2 | tower | 13660 | 11855 | 7 x 7 | solid |
 | dragonspine-lodge-gate-south | gate | 13600 | 11855 | 12 x 1.5 | open |
 | dragonspine-lodge-gate-pass | gate | 13600 | 11945 | 12 x 1.5 | open |
+| dragonspine-lodge-gate-west | gate | 13540 | 11900 | 1.5 x 12 | open |
+| dragonspine-lodge-gate-east | gate | 13660 | 11900 | 1.5 x 12 | open |
 | dragonspine-hall | dragonspine-hall | 13570 | 11915 | 40 x 22 | solid |
-| dragonspine-bunkhouse | house | 13643.13 | 11903.91 | 24 x 9 | solid |
+| dragonspine-bunkhouse | house | 13607.65 | 11910.71 | 24 x 9 | solid |
 | dragonspine-stable | dragonspine-stable | 13638 | 11880 | 20 x 8 | solid |
 | dragonspine-sled-shed | dragonspine-shed | 13628 | 11931 | 18 x 10 | solid |
 | dragonspine-stores-1 | house | 13568 | 11874 | 12 x 8 | solid |
-| dragonspine-stores-2 | house | 13550 | 11892 | 10 x 8 | solid |
+| dragonspine-stores-2 | house | 13548.05 | 11882.19 | 10 x 8 | solid |
 | dragonspine-skinning-rack | dragonspine-rack | 13582 | 11870 | 5 x 2 | open |
 | dragonspine-trophy-rack-1 | dragonspine-rack | 13614 | 11896 | 5 x 2 | open |
 | dragonspine-trophy-rack-2 | dragonspine-rack | 13620 | 11896 | 5 x 2 | open |
@@ -206,11 +212,11 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-carving-stone-4 | dragonspine-carving | 14754 | 13900 | 1.6 x 1.2 | open |
 | dragonspine-carving-stone-5 | dragonspine-carving | 14727 | 13863.63 | 1.6 x 1.2 | open |
 | dragonspine-carving-stone-6 | dragonspine-carving | 14648 | 13900 | 1.6 x 1.2 | open |
-| dragonspine-wayside-pad-1 | rock | 14185.75 | 13658.53 | 8 x 8 | solid |
-| dragonspine-wayside-pad-2 | rock | 14359.21 | 13756.56 | 8 x 8 | solid |
+| dragonspine-wayside-pad-1 | rock | 14187.98 | 13659.64 | 8 x 8 | solid |
+| dragonspine-wayside-pad-2 | rock | 14372.25 | 13763.97 | 8 x 8 | solid |
 | dragonspine-wayside-pad-3 | rock | 14480.93 | 13825.72 | 8 x 8 | solid |
 | dragonspine-wayside-pad-4 | rock | 14418.54 | 14079.93 | 8 x 8 | solid |
-| dragonspine-wayside-pad-5 | rock | 14399.93 | 14096.63 | 8 x 8 | solid |
+| dragonspine-wayside-pad-5 | rock | 14329.23 | 14160.08 | 8 x 8 | solid |
 | dragonspine-wayside-pad-6 | rock | 14256.13 | 14240.81 | 8 x 8 | solid |
 | dragonspine-thief-straw | dragonspine-straw | 11384 | 12992 | 3 x 2.4 | open |
 | dragonspine-thief-sack | dragonspine-sack | 11388 | 12993 | 1.6 x 1.2 | open |

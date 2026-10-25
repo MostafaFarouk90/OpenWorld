@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { heightAt } from '../terrain/heightfield';
 import { LEDGE_MAX_HEIGHT } from '../region/layoutTypes';
 import { ledgeRise } from './fit';
-import { WAYSIDE_MAX_STEP } from './wayside';
+import { WAYSIDE_MAX_SLIDE, WAYSIDE_MAX_STEP, WAYSIDE_MIN_GAP, WAYSIDE_SPACING } from './wayside';
 import { buildDragonspine } from './layout';
 import { registerDragonspineKinds } from './structureKinds';
 import { defaultInputs } from './inputs';
@@ -53,5 +53,17 @@ describe('the places on the shipped ground', () => {
       const edge = b.sites.road.point(w.s, w.side * b.sites.roadHalf);
       expect(heightAt(spec.x, spec.z) + w.dy - heightAt(edge.x, edge.z), `wayside ${w.index}`).toBeLessThanOrEqual(WAYSIDE_MAX_STEP);
     }
+  });
+
+  it('spaces the wayside pads in road order, at least WAYSIDE_MIN_GAP apart, three each side of the Anvil', () => {
+    const at = b.wayside.sites.map((w) => w.s);
+    expect(at).toHaveLength(6);
+    for (let i = 1; i < 6; i++) {
+      expect(at[i]! - at[i - 1]!, `gap ${i}`).toBeGreaterThanOrEqual(WAYSIDE_MIN_GAP);
+      expect(Math.abs(at[i]! - at[i - 1]! - (i === 3 ? 2 * WAYSIDE_SPACING : WAYSIDE_SPACING)), `gap ${i}`).toBeLessThanOrEqual(2 * WAYSIDE_MAX_SLIDE);
+    }
+    expect(at.slice(0, 3).every((v) => v < b.anvil.roadS)).toBe(true);
+    expect(at.slice(3).every((v) => v > b.anvil.roadS)).toBe(true);
+    expect(at[0]).toBeGreaterThan(b.shelter.roadS);
   });
 });

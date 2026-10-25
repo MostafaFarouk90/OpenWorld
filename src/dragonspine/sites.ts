@@ -23,6 +23,9 @@ export interface Sites {
   road: Road;
   /** The Hawk Cliffs path as a road (K1's `hawk-cliffs-path`). */
   hawkPath: Road;
+  /** The last points of the roads that arrive at the lodge's west and east walls. */
+  spineEnd: XZ;
+  deepgateEnd: XZ;
   nestShelf: DragonspineInputs['nestShelf'];
   /** Half width of the road's flat cross-section, from the inputs (K1's RoadDef). */
   roadHalf: number;
@@ -42,6 +45,8 @@ export interface Sites {
   caveDoor: XZ;
 }
 
+const lastOf = (pts: readonly (readonly [number, number])[]): XZ => ({ x: pts[pts.length - 1]![0], z: pts[pts.length - 1]![1] });
+
 export function deriveSites(inp: DragonspineInputs): Sites {
   const lodge = frameOf(plateauById(inp, 'wyrmwatch-lodge'));
   const cave = frameOf(plateauById(inp, 'collapsed-cave'));
@@ -50,6 +55,8 @@ export function deriveSites(inp: DragonspineInputs): Sites {
     h: inp.heightAt,
     road: roadFromPoints(inp.passPoints),
     hawkPath: roadFromPoints(inp.hawkPathPoints),
+    spineEnd: lastOf(inp.spinePoints),
+    deepgateEnd: lastOf(inp.deepgatePoints),
     nestShelf: inp.nestShelf,
     roadHalf: inp.roadHalfWidth,
     roadClear: inp.roadHalfWidth + 2,
