@@ -1,4 +1,4 @@
-// Ingest step for environment glb files (G0b). Usage: node tools/env-pass/ingest.mjs <srcDir> <outDir> [--remove]
+// Ingest step for environment glb files (G0b). Usage: node tools/env-pass/ingest.mjs <srcDir> <outDir> [--remove] [--replace]
 // Proportion table: ids listed in targets.json 'proportion' (artist models whose shape is far from the target, e.g. a 1 m fence panel for a 3.4 m module)
 // are fitted EXACTLY instead: uniform scale to the target height, optional repeat of the model n times along x ({"tile": n}, for fences, walls
 // and beds, so the stretch stays modest), then width and depth scaled to the target (no 15% cap). Manifest records 'tile' and the stretch.
@@ -7,7 +7,11 @@
 // put the base on y = 0 and the footprint centre on x, z = 0, weld and simplify to the triangle budget, drop everything but the base
 // colour texture, resize it to 512 px WebP, and write <outDir>/<id>.glb. With --remove the source file is deleted after a verified write
 // (the staging-folder flow: drop files in, ingest, they are removed, only the light copies stay). Originals are never edited in place.
+// An id that outDir already ships (in its manifest.json or as a file) is refused unless --replace is given, so a generated file
+// (GLB-Viewer generators export the same ids) never silently replaces an artist's model. Khronos extensions are read and written,
+// so a glow's KHR_materials_emissive_strength survives. <id>.lodN.glb files are ignored (the game loads no LODs yet).
 import { NodeIO } from '@gltf-transform/core';
+import { KHRONOS_EXTENSIONS } from '@gltf-transform/extensions';
 import { weld, simplify, prune, dedup, textureCompress, getBounds, flatten, transformMesh } from '@gltf-transform/functions';
 import { MeshoptSimplifier } from 'meshoptimizer';
 import sharp from 'sharp';
@@ -16,26 +20,29 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const [src, out] = process.argv.slice(2);
-if (!src || !out) throw new Error('usage: ingest.mjs <srcDir> <outDir> [--remove]');
+if (!src || !out) throw new Error('usage: ingest.mjs <srcDir> <outDir> [--remove] [--replace]');
 if (path.resolve(src) === path.resolve(out)) throw new Error('srcDir and outDir must differ (an ingested file would be simplified again and removed)');
 const remove = process.argv.includes('--remove');
+const replace = process.argv.includes('--replace');
 const cfg = JSON.parse(readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../../src/env/targets.json'), 'utf8'));
 mkdirSync(out, { recursive: true });
 await MeshoptSimplifier.ready;
-const io = new NodeIO();
+const io = new NodeIO().registerExtensions(KHRONOS_EXTENSIONS);
 const TRI_TARGET = 4500;
+const KEEP_EXTENSIONS = new Set(['KHR_materials_emissive_strength', 'KHR_texture_transform', 'KHR_mesh_quantization']);
 const STRETCH_MAX = 0.15;
 const permissive = Object.assign(Object.create(MeshoptSimplifier), { simplify: (i, p, st, t, e, f = []) => MeshoptSimplifier.simplify(i, p, st, t, e, [...f, 'Permissive', 'Prune']) });
 // keep the entries of earlier batches: the manifest lists every runtime file, not just this run's
 const manifestPath = path.join(out, 'manifest.json');
-const previous = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')).objects : {};
+const previous = existsSync(manifestPath) ? (JSON.parse(readFileSync(manifestPath, 'utf8')).objects ?? {}) : {};
 const results = [];
 let failed = 0;
 
-for (const f of readdirSync(src).filter((n) => n.endsWith('.glb'))) {
+for (const f of readdirSync(src).filter((n) => n.endsWith('.glb') && !/\.lod\d+\.glb$/.test(n))) {
   const id = f.replace(/\.glb$/, '');
   const want = cfg.objects[id];
   if (!want) { console.log(`skip ${id}: no target in targets.json`); continue; }
+  if (!replace && (previous[id] || existsSync(path.join(out, f)))) { console.log(`FAIL ${id}: already shipped in ${out}; source kept, pass --replace to overwrite it`); failed++; continue; }
   const doc = await io.read(path.join(src, f));
   const root = doc.getRoot();
   if (root.listSkins().length || root.listAnimations().length) { console.log(`FAIL ${id}: skinned or animated files are not supported (static scenery only)`); failed++; continue; }
@@ -68,6 +75,7 @@ for (const f of readdirSync(src).filter((n) => n.endsWith('.glb'))) {
   }
   let b = getBounds(scene);
   const size = [b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]];
+  if (!(size[1] > 1e-4)) { console.log(`FAIL ${id}: the model has no height (a flat quad cannot be scaled to a target height); source kept`); failed++; continue; }
   // Fit rule (coordinator ruling, default for every batch): uniform scale so the HEIGHT meets the target height, then a non-uniform
   // stretch of width (x) and depth (z) of at most STRETCH_MAX either way towards the target footprint. Beyond the cap the model stays
   // at the cap and is listed ("CAP") with its measured size, the target and the factor still needed, for the artist to fix.
@@ -114,6 +122,8 @@ for (const f of readdirSync(src).filter((n) => n.endsWith('.glb'))) {
     mat.setNormalTexture(null).setOcclusionTexture(null).setMetallicRoughnessTexture(null).setEmissiveTexture(null);
     mat.setMetallicFactor(0).setRoughnessFactor(1);
   }
+  // only these extensions survive: glass, clearcoat, sheen and the like are not the KayKit look and would carry extra textures
+  for (const ext of root.listExtensionsUsed()) if (!KEEP_EXTENSIONS.has(ext.extensionName)) ext.dispose();
   await doc.transform(textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [512, 512], quality: 80 }), prune());
   let after = 0;
   for (const m of doc.getRoot().listMeshes()) for (const p of m.listPrimitives()) after += (p.getIndices()?.getCount() ?? 0) / 3;
