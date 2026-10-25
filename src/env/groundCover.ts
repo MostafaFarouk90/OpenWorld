@@ -3,7 +3,10 @@
 // lane and green) opts in below. This gives the region plugin one predicate: is (x, z) inside a tile that replaces the blades?
 import { LAZY_TILES, TILE_BOUNDS, TILES, type TileRect } from './tiles';
 import { laneAmount } from '../terrain/shape/detailGround';
+import { SPLAT_CLEAR, splatClearAmount } from '../terrain/shape/groundSplat';
 import { classOf, type PlacementRow } from './PlacementField';
+import { CROWD_LANES, HARROWMARK_LAYOUT } from '../harrowmark/harrowmark.layout';
+import { pointInFootprint } from '../region/geometry';
 
 export interface Rect {
   minX: number;
@@ -87,7 +90,7 @@ export const OWNS_GROUND_COVER: ReadonlySet<string> = new Set<string>();
 export const LANE_CLEAR = 0.15;
 
 /**
- * True where a built tile listed in `owners` replaces the meadow grass with its own rows, and on B1's lane. Always false when `envOn` is false
+ * True where a built tile listed in `owners` replaces the meadow grass with its own rows, on B1's lane and on the Harrowmark trodden streets and packed yards (groundSplat.ts SPLAT_CLEAR). Always false when `envOn` is false
  * (`?env=off`), so the old grass comes back with the dressing out. Rects are computed once from the registered tiles.
  */
 export function envOwnsGround(
@@ -99,7 +102,72 @@ export function envOwnsGround(
   const rects = Object.entries(tiles)
     .filter(([name]) => owners.has(name))
     .flatMap(([, rows]) => groundCoverRects(rows));
-  return (x, z) => laneAmount(x, z) >= LANE_CLEAR || rects.some((r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ);
+  return (x, z) => laneAmount(x, z) >= LANE_CLEAR || splatClearAmount(x, z) >= SPLAT_CLEAR || rects.some((r) => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ);
+}
+
+/**
+ * Lawn inside Harrowmark's walls where the meadow blades grow again, by tile. The city is blade-free as a whole (region.plugin
+ * CITY_NO_GRASS_RADIUS: the streets, yards and plazas are not meadow), but the wards' lawns are, and without blades they read as bare
+ * green felt at eye height. A Harrowmark tile adopts the lawn by adding its core here when its builder dresses it (H1 now; H2, H3 and
+ * H4 add a line). Kept off, whatever the table says: crowd lanes (CROWD_LANES half widths), Harrowmark footprints, the M06 gate square
+ * (CITY_LAWN_KEEP_OUT), the trodden streets and packed yards (envOwnsGround), static colliders (grassAcceptFor's physics probe) and
+ * everything with `?env=off`.
+ */
+export const CITY_LAWN: Readonly<Record<string, readonly Rect[]>> = {
+  h1: [{ minX: 7760, maxX: 9240, minZ: 1120, maxZ: 1440 }],
+};
+/** Rectangles inside a lawn tile that stay bare: the M06 gate square (patrol box plus 8 m) and the gate passage. */
+export const CITY_LAWN_KEEP_OUT: readonly Rect[] = [
+  { minX: 8462, maxX: 8538, minZ: 1262, maxZ: 1328 },
+  { minX: 8494, maxX: 8506, minZ: 1180, maxZ: 1262 },
+];
+
+/**
+ * The lawn's mix: sparser (35% of the meadow's tufts) and drier (65% of the way to straw) than the meadow outside, so the wards read as
+ * trodden ground with blades through it, not a fresh meadow (sheet section 5: inside the wall, clumps and dry tufts on the trodden remainder).
+ */
+export const CITY_LAWN_MIX = { keep: 0.35, dry: 0.65 } as const;
+
+/** The mix at (x, z): CITY_LAWN_MIX where the lawn grows inside the city radius, else null (the meadow's own tufts). */
+export function cityLawnMixFor(lawn: (x: number, z: number) => boolean, inCity: (x: number, z: number) => boolean): (x: number, z: number) => { keep: number; dry: number } | null {
+  return (x, z) => (inCity(x, z) && lawn(x, z) ? CITY_LAWN_MIX : null);
+}
+
+/** True where blades may grow inside the city radius (see CITY_LAWN). Always false with `?env=off`. */
+export function cityLawnFor(
+  envOn: boolean,
+  lawn: Readonly<Record<string, readonly Rect[]>> = CITY_LAWN,
+  keepOut: readonly Rect[] = CITY_LAWN_KEEP_OUT,
+): (x: number, z: number) => boolean {
+  if (!envOn) return () => false;
+  const rects = Object.values(lawn).flat();
+  const solids = HARROWMARK_LAYOUT.structures.filter((s) => s.mode !== 'open').map((st) => ({ st, reach: Math.hypot(st.footprint[0], st.footprint[1]) / 2 + 0.4 }));
+  const at = (id: string): readonly [number, number] => {
+    const an = HARROWMARK_LAYOUT.anchors.find((a) => a.id === id)!;
+    return [an.x, an.z];
+  };
+  const lanes = CROWD_LANES.map((l) => ({ hw: l.halfWidth, loop: l.loop, pts: l.points.map(at) }));
+  const inRect = (r: Rect, x: number, z: number): boolean => x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ;
+  return (x, z) =>
+    rects.some((r) => inRect(r, x, z)) &&
+    !keepOut.some((r) => inRect(r, x, z)) &&
+    !solids.some(({ st, reach }) => Math.abs(x - st.x) <= reach && Math.abs(z - st.z) <= reach && pointInFootprint(st, x, z, 0.6)) &&
+    !lanes.some((l) => polyDist(l.pts, l.loop, x, z) < l.hw);
+}
+
+function polyDist(pts: ReadonlyArray<readonly [number, number]>, loop: boolean, x: number, z: number): number {
+  let best = Infinity;
+  const n = loop ? pts.length : pts.length - 1;
+  for (let i = 0; i < n; i++) {
+    const [ax, az] = pts[i]!;
+    const [bx, bz] = pts[(i + 1) % pts.length]!;
+    const dx = bx - ax;
+    const dz = bz - az;
+    const len2 = dx * dx + dz * dz;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / len2)) : 0;
+    best = Math.min(best, Math.hypot(x - (ax + t * dx), z - (az + t * dz)));
+  }
+  return best;
 }
 
 /**

@@ -34,7 +34,7 @@ import { REGION_STRINGS_EN } from './strings.en';
 import { validateLayout } from './validateLayout';
 import { CENTER as CITY_CENTER, MAX_STRUCTURE_RADIUS } from '../harrowmark/city';
 import { envEnabled } from '../env/env.plugin';
-import { envOwnsGround, envReplacesScenery } from '../env/groundCover';
+import { cityLawnFor, cityLawnMixFor, envOwnsGround, envReplacesScenery } from '../env/groundCover';
 import { BROOK_COURSE, BROOK_WIDTH, RIVER_COURSE, RIVER_WIDTH } from './water';
 
 export interface RegionPluginOptions {
@@ -91,7 +91,13 @@ export const CITY_NO_GRASS_RADIUS = MAX_STRUCTURE_RADIUS + 4;
  * structure's footprint (a tuft would poke through a floor) or under any static collider. (Every Harrowmark structure
  * stands inside the wall's radius.)
  */
-export function grassAcceptFor(layouts: readonly LayoutData[], heightAt: (x: number, z: number) => number, physics?: RayQuery): GrassAccept {
+export function grassAcceptFor(
+  layouts: readonly LayoutData[],
+  heightAt: (x: number, z: number) => number,
+  physics?: RayQuery,
+  /** Lawn inside the city radius where blades may grow (the environment pass's outer-ward lawns, env/groundCover.ts CITY_LAWN). */
+  cityLawn: (x: number, z: number) => boolean = () => false,
+): GrassAccept {
   // A bounding radius per structure skips the rotated-footprint test for all but the few nearby.
   const structures = layouts.flatMap((l) => l.structures).map((st) => ({ st, reach: Math.hypot(st.footprint[0], st.footprint[1]) / 2 + 0.4 }));
   const strips: Array<[readonly (readonly [number, number])[], number]> = [
@@ -118,7 +124,7 @@ export function grassAcceptFor(layouts: readonly LayoutData[], heightAt: (x: num
     maxZ: Math.max(...pts.map((p) => p[1])) + half,
   }));
   return (x, z) =>
-    Math.hypot(x - CITY_CENTER.x, z - CITY_CENTER.z) > CITY_NO_GRASS_RADIUS &&
+    (Math.hypot(x - CITY_CENTER.x, z - CITY_CENTER.z) > CITY_NO_GRASS_RADIUS || cityLawn(x, z)) &&
     !boxed.some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ && distanceToPolyline(b.pts, x, z) < b.half) &&
     !underFenWater(x, z) &&
     !structures.some(({ st, reach }) => Math.abs(x - st.x) <= reach && Math.abs(z - st.z) <= reach && pointInFootprint(st, x, z, 0.4)) &&
@@ -216,8 +222,11 @@ export function createRegionPlugin(opts: RegionPluginOptions = {}): GamePlugin {
           // Inside a built environment tile the placement rows dress the ground (clumps, flower patches): no meadow blades there.
           const search = typeof location === 'undefined' ? '' : location.search;
           const envOwns = envOwnsGround(envEnabled(search));
-          const baseAccept = grassAcceptFor(layouts, height, physics);
-          const grass = new GrassField(height, (x, z) => !envOwns(x, z) && baseAccept(x, z));
+          const lawn = cityLawnFor(envEnabled(search));
+          const baseAccept = grassAcceptFor(layouts, height, physics, lawn);
+          // The wards' lawns grow a sparser, drier mix than the meadow outside the walls.
+          const mix = cityLawnMixFor(lawn, (x, z) => Math.hypot(x - CITY_CENTER.x, z - CITY_CENTER.z) <= CITY_NO_GRASS_RADIUS);
+          const grass = new GrassField(height, (x, z) => !envOwns(x, z) && baseAccept(x, z), 1, undefined, mix);
           ctx.scene.add(grass.object);
           cleanups.push(() => grass.dispose());
           cleanups.push(

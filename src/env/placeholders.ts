@@ -62,6 +62,27 @@ export function placeholderGeometry(id: string, shape: PlaceholderShape): THREE.
         parts.push(colored(lift(new THREE.IcosahedronGeometry(0.16, 0).scale(1, 0.8, 1.6), h * 0.9 + 0.17).translate(h * 0.12, 0, 0), 0x1b1b20));
       }
       break;
+    case 'horse': {
+      // A standing horse in boxes, long axis along z: barrel, neck and head, four legs, a tail; chestnut coat with a dark mane.
+      const coat = 0x7a4a2a;
+      const dark = 0x2e2018;
+      parts.push(colored(lift(new THREE.BoxGeometry(0.62, 0.7, 1.35).translate(0, 0, -0.1), 0.78), coat));
+      parts.push(colored(lift(new THREE.BoxGeometry(0.28, 0.75, 0.3).translate(0, 0, 0.68).rotateX(-0.45), 1.2), coat));
+      parts.push(colored(lift(new THREE.BoxGeometry(0.24, 0.28, 0.55).translate(0, 0, 1.02), 1.55), coat));
+      parts.push(colored(lift(new THREE.BoxGeometry(0.1, 0.5, 0.2).translate(0, 0, 0.55), 1.62), dark));
+      for (const [lx, lz] of [[-0.2, 0.45], [0.2, 0.45], [-0.2, -0.65], [0.2, -0.65]]) parts.push(colored(lift(new THREE.BoxGeometry(0.14, 0.78, 0.14).translate(lx, 0, lz), 0.39), dark));
+      parts.push(colored(lift(new THREE.BoxGeometry(0.1, 0.65, 0.12).translate(0, 0, -0.85).rotateX(0.35), 0.85), dark));
+      break;
+    }
+    case 'tent': {
+      // A low A-frame of canvas on a ridge along z (a three-sided prism, base on the ground), a bedroll and a bundle at the open end.
+      const r = h / 1.5;
+      const prism = new THREE.CylinderGeometry(r, r, d, 3, 1, false).rotateX(-Math.PI / 2).scale(w / (r * Math.sqrt(3)), 1, 1);
+      parts.push(colored(lift(prism, r / 2), 0xe6dcc0));
+      parts.push(colored(lift(new THREE.CylinderGeometry(0.17, 0.17, 0.85, 8).rotateZ(Math.PI / 2).translate(-0.35, 0, d / 2 + 0.45), 0.17), 0x6b5238));
+      parts.push(colored(lift(new THREE.BoxGeometry(0.45, 0.35, 0.4).translate(0.5, 0, d / 2 + 0.4), 0.175), 0x8a7452));
+      break;
+    }
     case 'patch':
       parts.push(colored(lift(new THREE.CylinderGeometry(0.5, 0.5, 1, 8).scale(w, h, d), h / 2), 0x7a5a38));
       break;

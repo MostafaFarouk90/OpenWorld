@@ -5,6 +5,9 @@ import b1Enclosure from './b1.enclosure.json';
 import b2 from './b2.placements.json';
 import b3 from './b3.placements.json';
 import b4 from './b4.placements.json';
+import h1 from './h1.placements.json';
+import h1Litter from './h1.litter.json';
+import h1Dressing from './h1.dressing.json';
 import type { PlacementRow } from './PlacementField';
 
 export const TILES: Record<string, readonly PlacementRow[]> = {
@@ -14,6 +17,9 @@ export const TILES: Record<string, readonly PlacementRow[]> = {
   b3: b3 as PlacementRow[],
   // B4: the Quenchstone Shrine and the east road (x 700..1100, z -300..200); the 28 x 28 m hearth pad at (995,-168) stays empty.
   b4: b4 as PlacementRow[],
+  // H1: Harrowmark's south gate and outer ward (x 7760..9240, z 1120..1440), a 1,480 m wide one-off for the city (ruling 2026-10-24).
+  // Plus the builder's rim, camp and paddock dressing (gen-dressing.ts) and the M06 yard litter (tools/env-pass/h1/gen-yard-litter.ts): weeds, dry tufts and pebbles on the packed yards.
+  h1: [...(h1 as PlacementRow[]), ...(h1Litter as PlacementRow[]), ...(h1Dressing as PlacementRow[])],
 };
 
 /**

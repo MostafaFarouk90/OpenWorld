@@ -3,6 +3,9 @@ import { BRIGHTWATER_LAYOUT } from '../../src/region/brightwater.layout';
 import { CORRIDOR_LAYOUT } from '../../src/region/corridor.layout';
 import { DENSITY_LAYOUT_A } from '../../src/region/density.layout';
 import { pointInFootprint } from '../../src/region/geometry';
+import { HARROWMARK_LAYOUT } from '../../src/harrowmark/harrowmark.layout';
+import { DEADROAD_LAYOUT } from '../../src/region/deadroad.layout';
+import type { LayoutData } from '../../src/region/layoutTypes';
 import type { PlacementRow } from '../../src/env/PlacementField';
 
 export interface DesignerRow extends PlacementRow {
@@ -18,9 +21,11 @@ export const MARGIN = 0.4;
 /** Nothing but ground cover within this distance (m) of an anchor. */
 export const ANCHOR_CLEAR = 1.0;
 
-const LAYOUTS = [BRIGHTWATER_LAYOUT, CORRIDOR_LAYOUT, DENSITY_LAYOUT_A];
-const solids = LAYOUTS.flatMap((l) => l.structures).filter((s) => s.mode !== 'open');
-const anchors = LAYOUTS.flatMap((l) => l.anchors);
+/** The frozen layouts a tile is checked against: Brightwater's by default, or Harrowmark's city plus the Dead Road (`--layout harrowmark`). */
+export const LAYOUT_SETS: Readonly<Record<string, readonly LayoutData[]>> = {
+  brightwater: [BRIGHTWATER_LAYOUT, CORRIDOR_LAYOUT, DENSITY_LAYOUT_A],
+  harrowmark: [HARROWMARK_LAYOUT, DEADROAD_LAYOUT],
+};
 const ground = (id: string): boolean => /^(grass|flower)/.test(id);
 
 /** Runtime rows (id, x, z, yaw, scale) of a designer file: rows inside `core` (all rows when none) that clear the keep-outs. */
@@ -29,9 +34,12 @@ export function filterTileRows(
   core?: { x: readonly [number, number]; z: readonly [number, number] },
   also: ReadonlyArray<readonly [number, number, number, number]> = [],
   pads: ReadonlyArray<ReservedPad> = [],
+  layouts: readonly LayoutData[] = LAYOUT_SETS.brightwater!,
 ): { rows: PlacementRow[]; inCore: number; dropped: Record<string, number> } {
   const inCore = (r: DesignerRow): boolean => !core || (r.x >= core.x[0] && r.x <= core.x[1] && r.z >= core.z[0] && r.z <= core.z[1]);
   const inside = placements.filter((r) => inCore(r) || also.some(([x0, x1, z0, z1]) => r.x >= x0 && r.x < x1 && r.z > z0 && r.z <= z1));
+  const solids = layouts.flatMap((l) => l.structures).filter((s) => s.mode !== 'open');
+  const anchors = layouts.flatMap((l) => l.anchors);
   const dropped: Record<string, number> = {};
   const rows = inside
     .filter((r) => {

@@ -6,6 +6,7 @@ import { TERRAIN } from '../../config/constants';
 import { createNoise2D } from '../noise';
 import { ashGround } from '../../env/ashGradient';
 import { tileWeight } from './detailRelief';
+import { tintSplat } from './groundSplat';
 
 const patchNoise = createNoise2D(TERRAIN.seed + 21);
 const dryNoise = createNoise2D(TERRAIN.seed + 22);
@@ -35,6 +36,7 @@ export function laneAmount(x: number, z: number): number {
 export function tintGround(x: number, z: number, out: Float32Array, o: number): void {
   tintB1(x, z, out, o);
   tintAsh(x, z, out, o);
+  tintSplat(x, z, out, o);
 }
 
 /**
