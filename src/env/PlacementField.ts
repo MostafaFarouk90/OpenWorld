@@ -42,6 +42,12 @@ export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record
 
 /** Side of a draw cell (m): batches are split by cell so distance hiding works while the player stands inside a tile. */
 const CELL = 64;
+/**
+ * Trees are seen to 700 m, so a 64 m cell split a tile's trees into hundreds of batches (45% of the visible batches along the Dead Road).
+ * Their cells are 256 m. A cell is shown whole while any part of its bounding sphere is within range, so a cell that straddles the
+ * range edge shows a few trees up to about one cell past 700 m (conservative: nothing inside the range is ever hidden).
+ */
+export const CELL_SIZE: Readonly<Record<PlacementClass, number>> = { tree: 256, bush: CELL, rock: CELL, wood: CELL, ground: CELL, prop: CELL, hedge: CELL };
 /** A build of more instances than this yields to the browser between ids. */
 const BIG_TILE = 20000;
 
@@ -163,7 +169,8 @@ export class PlacementField {
       // One batch per grid cell, so the distance test can hide the far cells of a large tile while the player stands inside it.
       const cells = new Map<string, PlacementRow[]>();
       for (const { row } of sorted) {
-        const k = `${Math.floor(row.x / CELL)},${Math.floor(row.z / CELL)}`;
+        const cell = CELL_SIZE[e.cls];
+        const k = `${Math.floor(row.x / cell)},${Math.floor(row.z / cell)}`;
         (cells.get(k) ?? cells.set(k, []).get(k)!).push(row);
       }
       for (const cellRows of cells.values()) {

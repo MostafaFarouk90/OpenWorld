@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ModelLibrary } from '../assets/swap/ModelLibrary';
-import { CLASS_RANGE, classOf, DENSITY, GROUND_RANGE_SCALE, PlacementField, priority, type PlacementRow } from './PlacementField';
+import { CELL_SIZE, CLASS_RANGE, classOf, DENSITY, GROUND_RANGE_SCALE, PlacementField, priority, type PlacementRow } from './PlacementField';
 import { placeholderGeometry, targetSize } from './placeholders';
 
 const flat = () => 2;
@@ -156,5 +156,46 @@ describe('PlacementField without a model source', () => {
     expect(field.classes()).toEqual([]);
     field.dispose();
     await expect(field.build(rows(3, 'barrel'))).resolves.toBeUndefined();
+  });
+});
+
+describe('tree cells (256 m)', () => {
+  const treeRows = (): PlacementRow[] => Array.from({ length: 400 }, (_, i) => ({ id: 'oak-a', x: (i % 40) * 30, z: Math.floor(i / 40) * 30, yaw: i }));
+  const bushRows = (): PlacementRow[] => treeRows().map((r) => ({ ...r, id: 'bush-round-a' }));
+
+  it('groups trees in 256 m cells and every other class in 64 m cells', () => {
+    expect(CELL_SIZE.tree).toBe(256);
+    for (const c of ['bush', 'rock', 'wood', 'ground', 'prop', 'hedge'] as const) expect(CELL_SIZE[c]).toBe(64);
+  });
+
+  it('builds far fewer tree batches with the same instances, and does not touch other classes', async () => {
+    const field = new PlacementField(new ModelLibrary(undefined, () => undefined), flat);
+    await field.build([...treeRows(), ...bushRows()]);
+    field.setDensity('high');
+    // trees span x 0..1170, z 0..270: 5 x 2 cells of 256 m; bushes the same rows in 64 m cells: 19 x 5
+    expect(field.batchCounts('tree').total).toBe(10);
+    expect(field.batchCounts('bush').total).toBe(19 * 5);
+    expect(field.drawn().tree).toBe(400);
+    expect(field.drawn().bush).toBe(400);
+    field.dispose();
+  });
+
+  it('culls by cell, conservatively: a cell beyond range stays hidden, one within shows whole, a straddling one shows', async () => {
+    const field = new PlacementField(new ModelLibrary(undefined, () => undefined), flat);
+    await field.build(treeRows());
+    field.setDensity('high');
+    field.update(0, 0);
+    const near = field.drawn(true).tree!;
+    expect(near).toBeGreaterThan(0);
+    expect(near).toBeLessThan(400); // the cells past 700 m (x > 700 + a cell) are hidden
+    field.update(5000, 0);
+    expect(field.batchCounts('tree').visible).toBe(0);
+    field.update(600, 100);
+    expect(field.drawn(true).tree).toBe(400); // everything is within 700 m of a cell sphere
+    // nothing inside the range is ever hidden: every tree within 700 m of the player belongs to a visible cell
+    field.update(0, 0);
+    const within = treeRows().filter((r) => Math.hypot(r.x, r.z) <= CLASS_RANGE.tree).length;
+    expect(field.drawn(true).tree!).toBeGreaterThanOrEqual(within);
+    field.dispose();
   });
 });
