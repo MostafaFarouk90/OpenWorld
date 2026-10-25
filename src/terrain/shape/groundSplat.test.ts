@@ -138,3 +138,45 @@ describe('the H1 zone table', () => {
     }
   });
 });
+
+describe('H3 zones: courts and soot', () => {
+  const court: SplatZone = { kind: 'court', id: 't.court', x0: 0, x1: 20, z0: 0, z1: 20, edge: 3 };
+  const soot: SplatZone = { kind: 'soot', id: 't.soot', cx: 100, cz: 100, rx: 50, rz: 20, inner: 0.5, strength: 0.8 };
+  const field = createSplatField([court, soot]);
+  it('a court is full inside, gone beyond its edge, and keeps the blades off; soot does not', () => {
+    expect(field.court(10, 10)).toBe(1);
+    expect(field.court(40, 10)).toBe(0);
+    expect(field.clear(10, 10)).toBe(1);
+    expect(field.amount(10, 10)).toBe(1);
+    expect(field.clear(100, 100)).toBe(0);
+    expect(field.amount(100, 100)).toBe(0);
+  });
+  it('soot is full strength at the centre, fades along each semi-axis and is zero outside the ellipse', () => {
+    expect(field.soot(100, 100)).toBeCloseTo(0.8, 6);
+    expect(field.soot(100 + 25, 100)).toBeCloseTo(0.8, 6);
+    expect(field.soot(100 + 40, 100)).toBeGreaterThan(0);
+    expect(field.soot(100 + 40, 100)).toBeLessThan(0.8);
+    expect(field.soot(100, 100 + 20)).toBe(0);
+    expect(field.soot(100 + 51, 100)).toBe(0);
+  });
+  it('tints toward stone grey on a court and dark grey in soot, and is the identity outside both', () => {
+    const c = new Float32Array([0.12, 0.3, 0.1]);
+    tintSplat(10, 10, c, 0, field);
+    expect(Math.abs(c[0]! - c[1]!)).toBeLessThan(0.08);
+    const s = new Float32Array([0.12, 0.3, 0.1]);
+    tintSplat(100, 100, s, 0, field);
+    expect(s[1]!).toBeLessThan(0.25);
+    const o = new Float32Array([0.12, 0.3, 0.1]);
+    tintSplat(300, 300, o, 0, field);
+    expect(Array.from(o)).toEqual([expect.closeTo(0.12, 6), expect.closeTo(0.3, 6), expect.closeTo(0.1, 6)]);
+  });
+  it('the real H3 table puts the keep road, the keep court and Forge Row soot where the sheet says', () => {
+    expect(streetAmount(8490, 2200)).toBe(1);
+    expect(splatAmount(8500, 2570)).toBe(1);
+    const real = createSplatField(SPLAT_ZONES);
+    expect(real.court(8500, 2570)).toBe(1);
+    expect(real.court(8778, 1990)).toBe(1);
+    expect(real.soot(8180, 1522)).toBeGreaterThan(0.5);
+    expect(real.soot(8700, 2300)).toBe(0);
+  });
+});

@@ -14,6 +14,10 @@ const also: Array<[number, number, number, number]> = [];
 for (let i = args.indexOf('--also'); i >= 0; i = args.indexOf('--also')) also.push(args.splice(i, 2)[1]!.split(',').map(Number) as [number, number, number, number]);
 const annexes: string[] = [];
 for (let i = args.indexOf('--annex'); i >= 0; i = args.indexOf('--annex')) annexes.push(...args.splice(i, 2).slice(1));
+// `--deck <file>`: a roof-deck annex (rows with `dy` standing on top of buildings, e.g. H3's Rooftop Ward). All its non-band rows are kept with
+// their dy; the footprint and anchor drops are skipped (they would remove every roof row; the generator keeps them off the chase line).
+const decks: string[] = [];
+for (let i = args.indexOf('--deck'); i >= 0; i = args.indexOf('--deck')) decks.push(...args.splice(i, 2).slice(1));
 // `--layout harrowmark` checks footprints and anchors against Harrowmark plus the Dead Road (default: Brightwater's layouts).
 let layoutName = 'brightwater';
 for (let i = args.indexOf('--layout'); i >= 0; i = args.indexOf('--layout')) layoutName = args.splice(i, 2)[1]!;
@@ -27,7 +31,9 @@ const file = read(inPath);
 if (!file.core) throw new Error(`${inPath} has no core`);
 const main = filterTileRows(file.placements, file.core, also, file.meta?.reserved ?? [], layouts);
 const extra = annexes.map((p) => ({ p, ...filterTileRows(read(p).placements) }));
-const rows = [...main.rows, ...extra.flatMap((a) => a.rows)];
+const deckRows = decks.flatMap((p) => read(p).placements.filter((r) => !r.band).map(({ id, x, z, yaw, scale, dy }) => ({ id, x, z, yaw, scale, dy })));
+const rows = [...main.rows, ...extra.flatMap((a) => a.rows), ...deckRows];
 writeFileSync(outPath, JSON.stringify(rows));
 console.log(`${main.rows.length} of ${file.placements.length} rows kept (${main.inCore} in the core)`, main.dropped);
+if (deckRows.length) console.log(`deck: ${deckRows.length} rows with dy kept`);
 for (const a of extra) console.log(`annex ${a.p}: ${a.rows.length} of ${a.inCore} rows kept`, a.dropped);

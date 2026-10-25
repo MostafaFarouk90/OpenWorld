@@ -18,6 +18,17 @@ export interface PlacementRow {
   spread?: number;
   /** Patch rows only: the number of tufts (1 or more), default 5 + 4 x scale clamped to 6..14. */
   n?: number;
+  /** Height above the ground at (x, z) in metres: roof-deck rows of the Rooftop Ward stand on top of buildings. See `rowLift`. */
+  dy?: number;
+}
+
+/**
+ * How far a row stands above the ground. Positive `dy` lifts the instance (a prop on a roof deck), zero or none leaves it on the ground.
+ * A negative `dy` is clamped to 0: no row is ever sunk below the terrain (a sunk prop would be hidden or poke out of a slope by chance).
+ * Non-finite values count as 0.
+ */
+export function rowLift(dy: number | undefined): number {
+  return dy !== undefined && Number.isFinite(dy) && dy > 0 ? dy : 0;
 }
 
 export type PlacementClass = 'tree' | 'bush' | 'rock' | 'wood' | 'ground' | 'prop' | 'hedge';
@@ -179,7 +190,7 @@ export class PlacementField {
         for (const row of cellRows) {
           const s = (row.scale ?? 1) * resolved.scale;
           q.setFromAxisAngle(up, ((row.yaw ?? 0) * Math.PI) / 180);
-          m.compose(new THREE.Vector3(row.x, this.heightAt(row.x, row.z), row.z), q, new THREE.Vector3(s * girth, s * sy, s * girth));
+          m.compose(new THREE.Vector3(row.x, this.heightAt(row.x, row.z) + rowLift(row.dy), row.z), q, new THREE.Vector3(s * girth, s * sy, s * girth));
           batch.addInstance(m);
         }
         for (const mesh of batch.meshes) mesh.computeBoundingSphere();

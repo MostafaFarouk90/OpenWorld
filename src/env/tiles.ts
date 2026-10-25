@@ -8,6 +8,8 @@ import b4 from './b4.placements.json';
 import h1 from './h1.placements.json';
 import h1Litter from './h1.litter.json';
 import h1Dressing from './h1.dressing.json';
+import h3 from './h3.placements.json';
+import h3Dressing from './h3.dressing.json';
 import type { PlacementRow } from './PlacementField';
 
 export const TILES: Record<string, readonly PlacementRow[]> = {
@@ -20,6 +22,11 @@ export const TILES: Record<string, readonly PlacementRow[]> = {
   // H1: Harrowmark's south gate and outer ward (x 7760..9240, z 1120..1440), a 1,480 m wide one-off for the city (ruling 2026-10-24).
   // Plus the builder's rim, camp and paddock dressing (gen-dressing.ts) and the M06 yard litter (tools/env-pass/h1/gen-yard-litter.ts): weeds, dry tufts and pebbles on the packed yards.
   h1: [...(h1 as PlacementRow[]), ...(h1Litter as PlacementRow[]), ...(h1Dressing as PlacementRow[])],
+  // H3: the keep and the Rooftop Ward (L shape x 7720..9240, z 1960..2760 minus H4; 1,520 m wide, a ruled exemption). The core rows are on the
+  // ground; the ward-deck annex (the designer's separate h3.ward-deck file, built with --deck) is appended and its rows carry `dy`
+  // (they stand on the Rooftop Ward roofs and chimneys).
+  // Plus the round-2 rim dressing of the trimmed courts and the middle-ground groups (tools/env-pass/h3/round2.ts).
+  h3: [...(h3 as PlacementRow[]), ...(h3Dressing as PlacementRow[])],
 };
 
 /**

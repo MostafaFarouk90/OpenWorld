@@ -105,8 +105,8 @@ describe('envOwnsGround on the Harrowmark splats', () => {
 describe('cityLawnFor (blades inside the Harrowmark walls)', () => {
   const lawn = cityLawnFor(true);
   const hit = (h: number) => ({ raycast: () => ({ collider: { isSensor: () => false, parent: () => ({ isFixed: () => true }) }, point: { y: h } }) }) as never;
-  it('is a table of tiles: H1 now, and a tile adopts the lawn by adding its core', () => {
-    expect(Object.keys(CITY_LAWN)).toEqual(['h1']);
+  it('is a table of tiles: H1 and H3 now, and a tile adopts the lawn by adding its core', () => {
+    expect(Object.keys(CITY_LAWN)).toEqual(['h1', 'h3']);
     expect(cityLawnFor(true, { h1: [], h2: [{ minX: 8440, maxX: 8480, minZ: 1500, maxZ: 1520 }] })(8445, 1510)).toBe(true);
   });
   it('lets the meadow blades grow on the outer-ward lawn', () => {

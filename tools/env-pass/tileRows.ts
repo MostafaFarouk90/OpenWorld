@@ -10,6 +10,8 @@ import type { PlacementRow } from '../../src/env/PlacementField';
 
 export interface DesignerRow extends PlacementRow {
   note?: string;
+  /** Blend-preview row of a neighbour tile: never loaded. */
+  band?: boolean;
 }
 
 /** A reserved pad (designer meta.reserved): empty flat ground, no row of any class within PAD_CLEAR of the box. */
@@ -37,7 +39,7 @@ export function filterTileRows(
   layouts: readonly LayoutData[] = LAYOUT_SETS.brightwater!,
 ): { rows: PlacementRow[]; inCore: number; dropped: Record<string, number> } {
   const inCore = (r: DesignerRow): boolean => !core || (r.x >= core.x[0] && r.x <= core.x[1] && r.z >= core.z[0] && r.z <= core.z[1]);
-  const inside = placements.filter((r) => inCore(r) || also.some(([x0, x1, z0, z1]) => r.x >= x0 && r.x < x1 && r.z > z0 && r.z <= z1));
+  const inside = placements.filter((r) => !r.band && (inCore(r) || also.some(([x0, x1, z0, z1]) => r.x >= x0 && r.x < x1 && r.z > z0 && r.z <= z1)));
   const solids = layouts.flatMap((l) => l.structures).filter((s) => s.mode !== 'open');
   const anchors = layouts.flatMap((l) => l.anchors);
   const dropped: Record<string, number> = {};
