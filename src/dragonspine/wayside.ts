@@ -74,6 +74,9 @@ export function waysideLayout(s: Sites, shelterS: number, anvilS: number): { par
         if (at < lo || at > hi) continue;
         for (const side of only ? [only.side] : ([1, -1] as const)) {
           for (const offset of only ? [only.offset] : offsets) {
+            // On the inside of a bend the pad would crowd another stretch of the road: keep its centre clear of every stretch.
+            const c = s.road.point(at, side * offset);
+            if (s.road.nearest(c.x, c.z).d < offset - 0.5) continue;
             const score = Math.abs(rise(at, side, offset, n)) + Math.abs(at - want) * 0.0005 + (offset - offsets[0]!) * 0.01;
             if (!best || score < best.score) best = { score, s: at, side, offset };
           }
@@ -83,7 +86,7 @@ export function waysideLayout(s: Sites, shelterS: number, anvilS: number): { par
     };
     const coarse = search(COARSE, want, 3);
     if (!coarse) throw new Error(`dragonspine: no room for wayside pad ${i + 1} (needs road between ${Math.round(lo)} and ${Math.round(hi)})`);
-    const best = search(slides(2.5, 15), coarse.s, 5, coarse)!;
+    const best = search(slides(2.5, 15), coarse.s, 0, coarse)!;
     const c = s.road.point(best.s, best.side * best.offset);
     const spec = solid(`dragonspine-wayside-pad-${i + 1}`, 'rock', c.x, c.z, WAYSIDE_PAD, WAYSIDE_PAD, WAYSIDE_PAD_HEIGHT);
     const top = footprintMax(s.h, c.x, c.z, WAYSIDE_PAD + 2, WAYSIDE_PAD + 2) + WAYSIDE_PAD_HEIGHT;

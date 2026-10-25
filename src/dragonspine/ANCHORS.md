@@ -63,14 +63,14 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.spawn.anvil.hawk-3 | 14658 | 13900 | 0 | 180 | spawn |
 | dragonspine.spawn.anvil.ogre | 14745.82 | 13895.99 | 0 | 180 | spawn |
 | dragonspine.wayside.1 | 14187.98 | 13659.64 | 0.56 | 180 | objective |
-| dragonspine.wayside.2 | 14352.68 | 13752.85 | 0.59 | 180 | objective |
-| dragonspine.wayside.3 | 14485.28 | 13828.19 | 0.62 | 180 | objective |
+| dragonspine.wayside.2 | 14359.21 | 13756.56 | 0.59 | 180 | objective |
+| dragonspine.wayside.3 | 14480.93 | 13825.72 | 0.61 | 180 | objective |
 | dragonspine.wayside.4 | 14418.54 | 14079.93 | 1.1 | 180 | objective |
 | dragonspine.wayside.5 | 14329.23 | 14160.08 | 0.7 | 180 | objective |
-| dragonspine.wayside.6 | 14256.13 | 14240.81 | 0.51 | 180 | objective |
-| dragonspine.spawn.wayside.hawk-a | 14385.88 | 13734.91 | 0 | 180 | spawn |
+| dragonspine.wayside.6 | 14244.15 | 14262.76 | 0.58 | 180 | objective |
+| dragonspine.spawn.wayside.hawk-a | 14392.4 | 13738.62 | 0 | 180 | spawn |
 | dragonspine.spawn.wayside.hawk-b | 14335.72 | 14197.26 | 0 | 180 | spawn |
-| npc-post.pilgrim-1 | 14357.1 | 13732.94 | 0 | 180 | npc-post |
+| npc-post.pilgrim-1 | 14363.62 | 13736.64 | 0 | 180 | npc-post |
 | npc-post.pilgrim-2 | 14346.72 | 14170.59 | 0 | 180 | npc-post |
 | dragonspine.hawk.camp | 11384 | 12990 | 0 | 180 | objective |
 | dragonspine.hawk.camp.search.1 | 11381 | 12991 | 0 | 180 | objective |
@@ -213,11 +213,11 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-carving-stone-5 | dragonspine-carving | 14727 | 13863.63 | 1.6 x 1.2 | open |
 | dragonspine-carving-stone-6 | dragonspine-carving | 14648 | 13900 | 1.6 x 1.2 | open |
 | dragonspine-wayside-pad-1 | rock | 14187.98 | 13659.64 | 8 x 8 | solid |
-| dragonspine-wayside-pad-2 | rock | 14352.68 | 13752.85 | 8 x 8 | solid |
-| dragonspine-wayside-pad-3 | rock | 14485.28 | 13828.19 | 8 x 8 | solid |
+| dragonspine-wayside-pad-2 | rock | 14359.21 | 13756.56 | 8 x 8 | solid |
+| dragonspine-wayside-pad-3 | rock | 14480.93 | 13825.72 | 8 x 8 | solid |
 | dragonspine-wayside-pad-4 | rock | 14418.54 | 14079.93 | 8 x 8 | solid |
 | dragonspine-wayside-pad-5 | rock | 14329.23 | 14160.08 | 8 x 8 | solid |
-| dragonspine-wayside-pad-6 | rock | 14256.13 | 14240.81 | 8 x 8 | solid |
+| dragonspine-wayside-pad-6 | rock | 14244.15 | 14262.76 | 8 x 8 | solid |
 | dragonspine-thief-straw | dragonspine-straw | 11384 | 12992 | 3 x 2.4 | open |
 | dragonspine-thief-sack | dragonspine-sack | 11388 | 12993 | 1.6 x 1.2 | open |
 | dragonspine-thief-tracks | dragonspine-tracks | 11387 | 12999 | 5 x 1.2 | open |
