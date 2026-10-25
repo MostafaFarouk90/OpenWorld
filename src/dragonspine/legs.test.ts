@@ -28,7 +28,7 @@ describe('leg lengths (the plan\'s table, computed from the layout)', () => {
     'M28.ridden': 'K1\'s crag stands about 453 m off the road and the routed climb is about 546 m, so the trailhead (the road point nearest the crag, within 400 m of the plan\'s 1,200 m) falls at about 800 m',
     'M30.ridden': 'the road from the shelter to the Anvil is K1\'s polyline, about 1.7 km (the plan\'s 1,100 m does not fit K1\'s positions)',
     'R17.foot': 'the walk from the road to each pad is the pad offset from the road verge (about 10 m each way), fixed by the road width',
-    'R18.foot': 'K1\'s hawk-cliffs-path is 274 m and the camp is a walk from its foot, so five trips are about 325 m each against the plan\'s 160 m',
+    'R18.foot': 'K1\'s hawk-cliffs-path is about 296 m and the camp is a walk from its foot, so five trips are about 347 m each against the plan\'s 160 m',
     'R18.ridden': 'the plan\'s lodge-to-foot 600 m does not fit K1\'s positions: the cliff foot is about 2.3 km along the Spine Road from the lodge, plus the walkable route (about 760 m) to the path start',
     'M29.ridden': 'n/a: the shelter waystone is the start, nothing is ridden',
   };
