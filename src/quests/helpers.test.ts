@@ -1,3 +1,4 @@
+import { GREYFEN_POST_RULES } from '../greyfen/postRules';
 import { OLDSMOKE_POST_RULES } from '../oldsmoke/postRules';
 import { describe, it, expect, vi } from 'vitest';
 import { makeWorld, FakeBus, fakeState } from './testKit';
@@ -97,8 +98,9 @@ describe('POI rewards', () => {
 });
 
 // These worlds hold Brightwater quests only; Rook's gate post (until M06 is done) would be placed in every one of them.
-// Deepgate's always-on hall rows (Act 2, A4) would place their cast in every world too.
-const DEEPGATE_NPCS = new Set(OLDSMOKE_POST_RULES.map((r) => r.npcId));
+// Deepgate's always-on hall rows (Act 2, A4) and the Greyfen's (Act 3, K3: the bell keeper's porch) would place their cast in
+// every world too.
+const DEEPGATE_NPCS = new Set([...OLDSMOKE_POST_RULES, ...GREYFEN_POST_RULES].map((r) => r.npcId));
 const BRIGHTWATER_RULES = POST_RULES.filter((r) => r.npcId !== 'rook' && !DEEPGATE_NPCS.has(r.npcId));
 
 describe('quest posts', () => {
