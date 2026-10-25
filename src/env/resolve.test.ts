@@ -109,6 +109,7 @@ describe('Dead Road ids (D1 to D3)', () => {
     expect(resolveModel('bush-heather')).toMatchObject({ model: 'env/bush-round-a', scale: 0.55 });
   });
   it('keep the gibbet and the wayside shrine on KayKit pieces under their agreed ids', () => {
+    for (const id of ['gatepost-a', 'field-gate-a']) expect(resolveModel(id).source, id).toBe('kaykit');
     expect(resolveModel('gibbet-post')).toMatchObject({ source: 'kaykit', model: 'hal/fence_pillar', fitHeight: 3.6 });
     expect(resolveModel('roadside-shrine-a').source).toBe('kaykit');
   });

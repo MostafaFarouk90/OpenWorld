@@ -97,6 +97,9 @@ const KAYKIT: Readonly<Record<string, { model: string; scale?: number; fitHeight
   'roadside-shrine-a': { model: 'hal/shrine_candles', fitHeight: 1.6 },
   'milestone-a': { model: 'hal/fence_pillar', fitHeight: 1.1 },
   // D1 to D3 placeholders under their agreed ids: the empty gibbet on the D1 crest (a tall post, the arm is a fence_broken row) and the wayside shrines.
+  // D3 field gates (the hedge gaps): two gateposts and a closed leaf.
+  'gatepost-a': { model: 'hal/fence_pillar', fitHeight: 1.6 },
+  'field-gate-a': { model: 'hex/fence_wood_straight', fitHeight: 1.2 },
   'gibbet-post': { model: 'hal/fence_pillar', fitHeight: 3.6 },
 };
 

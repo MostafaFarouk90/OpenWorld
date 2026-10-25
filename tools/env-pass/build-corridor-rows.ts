@@ -35,13 +35,15 @@ const nearEye = (x: number, z: number, clear = EYE_CLEAR): boolean =>
     return Math.hypot(x - (px + (dx / len) * t), z - (pz + (dz / len) * t)) < clear;
   });
 const bigThing = (id: string): boolean => classOf(id) === 'tree' || classOf(id) === 'rock' || classOf(id) === 'wood';
+/** Trees are cleared by canopy radius (an oak crown is up to 7 m across from its trunk), not by trunk. */
+const TREE_CLEAR = 15;
 /** A hedge run this close to the line of an eye camera (the verge shots stand between road and hedge) fills the frame. */
 const HEDGE_CLEAR = 3;
 /** A bush (not a fern) this close to an eye camera's line stands in the Knight's lap (d1-gate: a grey bush ball 1 m ahead of him). */
 const BUSH_CLEAR = 4;
 const rows = file.placements
   .filter((r) => r.tile === file.tile)
-  .filter((r) => !(bigThing(r.id) && nearEye(r.x, r.z)))
+  .filter((r) => !(bigThing(r.id) && nearEye(r.x, r.z, classOf(r.id) === 'tree' ? TREE_CLEAR : EYE_CLEAR)))
   .filter((r) => !(classOf(r.id) === 'hedge' && nearEye(r.x, r.z, HEDGE_CLEAR)))
   .filter((r) => !(classOf(r.id) === 'bush' && !r.id.startsWith('fern') && nearEye(r.x, r.z, BUSH_CLEAR)))
   .map((r) => {

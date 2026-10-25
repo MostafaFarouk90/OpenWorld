@@ -26,7 +26,7 @@ const structures = [...CORRIDOR_LAYOUT.structures, ...DEADROAD_LAYOUT.structures
 describe('D1 to D3 rows', () => {
   it('are registered, rich (29k core rows) and the patch rows expand to a far larger tuft count', () => {
     for (const n of names) expect(ROWS[n].length, n).toBeGreaterThan(8000);
-    expect(all.length).toBeGreaterThan(29000);
+    expect(all.length).toBeGreaterThan(28500);
     expect(all.length).toBeLessThan(31000);
     const tufts = expandPatches(all);
     expect(tufts.length).toBeGreaterThan(190000);
@@ -115,7 +115,7 @@ describe('D1 to D3 rows', () => {
     }
   });
 
-  it('leave every eye camera s line clear of trunks and boulders (8 m for trunks and boulders, 3 m for hedge runs, 4 m for bushes; the line runs from the camera past the Knight 4 m ahead)', () => {
+  it('leave every eye camera s line clear of trunks and boulders (15 m for trees by canopy, 8 m for boulders and logs, 3 m for hedge runs, 4 m for bushes; the line runs from the camera past the Knight 4 m ahead)', () => {
     const eyes = Object.entries((cameras as { tiles: Record<string, { cameras: Record<string, { pos: number[]; look: number[] }> }> }).tiles)
       .filter(([k, v]) => /^d[123]-/.test(k) && v.cameras.eye)
       .map(([, v]) => v.cameras.eye!);
@@ -129,7 +129,7 @@ describe('D1 to D3 rows', () => {
         if (cls !== 'tree' && cls !== 'rock' && cls !== 'wood' && cls !== 'hedge' && !(cls === 'bush' && !r.id.startsWith('fern'))) continue;
         const t = Math.min(14, Math.max(0, ((r.x - e.pos[0]!) * dx + (r.z - e.pos[2]!) * dz) / len));
         const d = Math.hypot(r.x - (e.pos[0]! + (dx / len) * t), r.z - (e.pos[2]! + (dz / len) * t));
-        expect(d, `${r.id} at ${r.x},${r.z} fills the eye shot at ${e.pos[0]}`).toBeGreaterThanOrEqual(cls === 'hedge' ? 3 : cls === 'bush' ? 4 : 8);
+        expect(d, `${r.id} at ${r.x},${r.z} fills the eye shot at ${e.pos[0]}`).toBeGreaterThanOrEqual(cls === 'hedge' ? 3 : cls === 'bush' ? 4 : cls === 'tree' ? 15 : 8);
       }
     }
   });
@@ -143,5 +143,31 @@ describe('D1 to D3 rows', () => {
     expect(hide(7000, 750)).toBe(true);
     expect(hide(1000, -150)).toBe(false); // B4 and the Phase A road keep theirs
     expect(envReplacesScenery(false)(2000, 200)).toBe(false);
+  });
+
+  it('has dead trees only (no green canopy) in the full-grey reach west of x 2300, and no black dead-hedge blocks anywhere', () => {
+    const live = all.filter((r) => r.x < 2300 && classOf(r.id) === 'tree' && !r.id.startsWith('ash-tree-dead'));
+    expect(live.map((r) => `${r.id} ${r.x}`).slice(0, 5)).toEqual([]);
+    expect(all.filter((r) => r.id === 'hedge-dead-a')).toHaveLength(0);
+  });
+
+  it('hangs a field gate between two gateposts at the D3 hedge gaps', () => {
+    const leaves = all.filter((r) => r.id === 'field-gate-a');
+    const posts = all.filter((r) => r.id === 'gatepost-a');
+    expect(leaves.length).toBeGreaterThan(8);
+    const near = (g: PlacementRow) => posts.filter((p) => Math.hypot(p.x - g.x, p.z - g.z) < 3).length;
+    for (const g of leaves) expect(near(g), `gate at ${g.x},${g.z}`).toBeGreaterThanOrEqual(1); // a post can fall to a keep-out
+    expect(leaves.filter((g) => near(g) >= 2).length).toBeGreaterThanOrEqual(leaves.length * 0.6);
+  });
+
+  it('puts clutter on both camps edges (r 18 to 21), the gibbet on the crest, bank oaks at the seam, and the farmyard set pieces', () => {
+    for (const c of [{ x: 3650, z: 692 }, { x: 4800, z: 848 }]) {
+      const edge = all.filter((r) => classOf(r.id) !== 'ground' && classOf(r.id) !== 'tree' && Math.hypot(r.x - c.x, r.z - c.z) >= 17.5 && Math.hypot(r.x - c.x, r.z - c.z) <= 21.5);
+      expect(edge.length, `camp at ${c.x}`).toBeGreaterThanOrEqual(8);
+    }
+    expect(all.filter((r) => r.id === 'gibbet-post').map((r) => r.x)[0]).toBeGreaterThan(1700);
+    const seamOaks = all.filter((r) => r.id === 'oak-a' && r.x > 7740 && r.x < 7870);
+    expect(seamOaks.length).toBeGreaterThanOrEqual(2);
+    for (const id of ['beehive-skep', 'woodpile-chop', 'washing-line', 'barrel', 'sack']) expect(all.filter((r) => r.id === id && r.x > 6700 && r.x < 6960).length, id).toBeGreaterThan(0);
   });
 });
