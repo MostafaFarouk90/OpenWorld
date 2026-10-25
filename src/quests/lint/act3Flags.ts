@@ -12,6 +12,7 @@ export interface Act3FlagOwner {
 
 export const ACT3_FLAG_OWNERS: readonly Act3FlagOwner[] = [
   { pattern: 'warmth.block.<id>.level', owner: 'K9', note: 'the Warmth level of each Act 3 block' },
+  { pattern: 'story.m26.netsCut', owner: 'K12', note: 'M26 nets all cut; K9 reads it for the Mere stone' },
   { pattern: 'story.a3.campSeen', owner: 'K16', note: 'the Act 3 camp scene has played' },
   { pattern: 'story.gate.a4', owner: 'K16', note: 'the Act 4 gate' },
   { pattern: 'trainer.<classId>.masterBook', owner: 'K11', note: 'written through grantMasterBook' },

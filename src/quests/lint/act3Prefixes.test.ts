@@ -82,6 +82,7 @@ describe('Act 3 flag owners', () => {
   it('names every non-quest flag owner', () => {
     expect(Object.fromEntries(byPattern)).toEqual({
       'warmth.block.<id>.level': 'K9',
+      'story.m26.netsCut': 'K12',
       'story.a3.campSeen': 'K16',
       'story.gate.a4': 'K16',
       'trainer.<classId>.masterBook': 'K11',
@@ -108,8 +109,14 @@ describe('Act 3 flag owners', () => {
     expect(ACT3_QUEST_IDS).not.toContain('r11');
   });
 
-  it('no non-quest row collides with a quest flag row', () => {
+  it('no non-quest row collides with a quest flag row (except a named cross-read, owned by the quest thread)', () => {
+    // story.m26.netsCut is K12's (M26's thread) and read by K9's Mere stone; its row exists so the owner is on record (K9 review B2).
+    const namedQuestFlags = new Set(['story.m26.netsCut']);
     for (const o of ACT3_FLAG_OWNERS) {
+      if (namedQuestFlags.has(o.pattern)) {
+        expect(o.owner, o.pattern).toBe('K12');
+        continue;
+      }
       const m = /^story\.([a-z0-9]+)\./.exec(o.pattern);
       if (m) expect(ACT3_QUEST_IDS, o.pattern).not.toContain(m[1]);
     }

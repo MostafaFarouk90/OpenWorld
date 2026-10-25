@@ -25,4 +25,8 @@ export const WAYSTONE_LOCKS: Readonly<Record<string, string>> = {
   'harrowmark-gate': 'story.m06.route',
   // Act 2 (A9): the Deepgate Shaft head stone is the Weeping Bellows' waystone; it stays dark until the puzzle is solved.
   'weeping-bellows': 'world.bellows.solved',
+  // Act 3 (K9): both flags are derived by K9's plugins. The Mere opens on story.m26.netsCut, M26 active or completed, or an
+  // already lit shrine; the Last Anvil's stone stays dark until the anvil has sounded (M30's third step) or the shrine is lit.
+  'hathrens-mere': 'shrine.hathrens-mere.open',
+  'last-anvil': 'shrine.last-anvil.open',
 };
