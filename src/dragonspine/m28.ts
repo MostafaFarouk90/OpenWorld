@@ -5,7 +5,7 @@
 import type { StructureSpec } from '../region/layoutTypes';
 import { a, emptyPart, headingTo, ledge, LEDGE_HEIGHT, numbered, polar, solid, sphere, type Part } from './helpers';
 import { fitLedge, standableNear } from './fit';
-import type { XZ } from './inputs';
+import type { HeightFn, XZ } from './inputs';
 import { pathLength, pathPoint, windingPath } from './paths';
 import { routeOver } from './route';
 import type { Sites } from './sites';
@@ -14,8 +14,36 @@ import type { Sites } from './sites';
 export const M28_TRAILHEAD_S = 1200;
 /** The trailhead is the road point nearest the crag within this many metres of the plan's 1,200 m (the plan: a 500 m climb there). */
 const TRAILHEAD_WINDOW = 400;
-/** The crag view anchor stands this far over the crag ground. */
+/** The crag view anchor stands at least this far over the crag ground, and at most CRAG_VIEW_MAX (it rises until the line to the lodge yard clears the hillside). */
 export const CRAG_VIEW_ABOVE = 32;
+export const CRAG_VIEW_MAX = 80;
+/** Height of the lodge yard point the view looks at, over its ground (a person's eye line). */
+const YARD_EYE = 5;
+/** The terrain must stay this far under the sightline. */
+const SIGHT_MARGIN = 1;
+
+/** True when the straight line from (x, z) at height `y` to the target clears the ground by SIGHT_MARGIN all the way. */
+export function sightClear(h: HeightFn, from: XZ, y: number, to: XZ, toY: number): boolean {
+  const len = Math.hypot(to.x - from.x, to.z - from.z);
+  const n = Math.max(2, Math.ceil(len / 4));
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    if (h(from.x + (to.x - from.x) * t, from.z + (to.z - from.z) * t) + SIGHT_MARGIN > y + (toY - y) * t) return false;
+  }
+  return true;
+}
+
+/** The view point over the crag: rises from CRAG_VIEW_ABOVE until the line to the lodge yard clears the hillside; throws past CRAG_VIEW_MAX. */
+export function cragView(s: Sites): { dy: number } {
+  const G = s.crag;
+  const ground = s.h(G.cx, G.cz);
+  const target = { x: s.hearth.x, z: s.hearth.z };
+  const toY = s.h(target.x, target.z) + YARD_EYE;
+  for (let dy = CRAG_VIEW_ABOVE; dy <= CRAG_VIEW_MAX; dy += 2) {
+    if (sightClear(s.h, { x: G.cx, z: G.cz }, ground + dy, target, toY)) return { dy };
+  }
+  throw new Error(`dragonspine: no clear sightline from the m28 crag to the lodge yard within ${CRAG_VIEW_MAX} m above the crag`);
+}
 const LEDGE_AT = [0.35, 0.72];
 const CAIRN_AT = [0.2, 0.45, 0.65, 0.85];
 
@@ -88,7 +116,7 @@ export function m28Layout(s: Sites, passGateS: number): { part: Part; info: M28I
       ...numbered('dragonspine.m28.cairn', cairns.map((c) => { const p = standableNear(s.h, { x: c.x, z: c.z + 2 }); return [p.x, p.z] as const; }), ['objective'], 0),
       a('dragonspine.m28.crag', G.cx, G.cz, 0, ['objective']),
       // K13's camera override: the eye-level line from the crag to the lodge is blocked, so the shot is taken from above.
-      a('dragonspine.m28.crag.view', G.cx, G.cz, 0, ['poi', 'elevated'], { dy: CRAG_VIEW_ABOVE }),
+      a('dragonspine.m28.crag.view', G.cx, G.cz, 0, ['poi', 'elevated'], { dy: cragView(s).dy }),
       ...Array.from({ length: 6 }, (_, i) => {
         const [x, z] = polar(G.cx, G.cz, 20 + 60 * i, 12);
         return a(`dragonspine.spawn.m28.hawk-${i + 1}`, x, z, 0, ['spawn']);

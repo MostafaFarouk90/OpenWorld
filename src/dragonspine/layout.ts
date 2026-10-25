@@ -27,8 +27,18 @@ export interface DragonspineBuild {
   m28: M28Info;
 }
 
-/** Derives every place from the inputs and resolves it against `inputs.heightAt`. Throws when a place has no room. */
+const memo = new WeakMap<DragonspineInputs, DragonspineBuild>();
+
+/** Derives every place from the inputs and resolves it against `inputs.heightAt`. Throws when a place has no room. Memoized per inputs object (the same object builds once). */
 export function buildDragonspine(inp: DragonspineInputs = defaultInputs()): DragonspineBuild {
+  const known = memo.get(inp);
+  if (known) return known;
+  const built = buildUncached(inp);
+  memo.set(inp, built);
+  return built;
+}
+
+function buildUncached(inp: DragonspineInputs): DragonspineBuild {
   const sites = deriveSites(inp);
   const lodge = lodgeLayout(sites);
   const shelter = shelterLayout(sites);
@@ -52,7 +62,7 @@ export function buildDragonspine(inp: DragonspineInputs = defaultInputs()): Drag
 let cached: DragonspineBuild | null = null;
 /** The shipped build (K1's exports on the real ground), made on first use so importing this file cannot throw. */
 export function dragonspineBuild(): DragonspineBuild {
-  return (cached ??= buildDragonspine());
+  return (cached ??= buildDragonspine(defaultInputs()));
 }
 
 export const DRAGONSPINE_DOC = { title: 'Dragonspine anchors, triggers and structures (lower slopes)', source: 'dragonspine.layout.ts' } as const;

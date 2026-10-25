@@ -110,6 +110,21 @@ describe('the Dragonspine interiors', () => {
     }
   });
 
+  it('keeps every anchor off the props it cannot stand on (walkable props, such as the dais, are fine)', () => {
+    for (const d of DRAGONSPINE_INTERIORS) {
+      for (const a of d.anchors) {
+        for (const p of d.props ?? []) {
+          if (p.walkable) continue;
+          const inside = a.x >= p.rect.x0 && a.x <= p.rect.x1 && a.z >= p.rect.z0 && a.z <= p.rect.z1;
+          expect(inside, `${d.id} ${a.id} inside ${p.id}`).toBe(false);
+        }
+      }
+    }
+    const dais = hall.props!.find((p) => p.id === 'dais.1')!;
+    const at = hall.anchors.find((a) => a.id === 'dragonspine.hall.dais')!;
+    expect(at.x >= dais.rect.x0 && at.x <= dais.rect.x1 && at.z >= dais.rect.z0 && at.z <= dais.rect.z1).toBe(true);
+  });
+
   it('throws on a pad too small for its rooms', () => {
     const inp = stubInputs();
     const shrink = (id: string, w: number, d: number) => inp.pads.map((p) => (p.id === id ? padFromRecord(id, { x: (p.footprint.minX + p.footprint.maxX) / 2, z: (p.footprint.minZ + p.footprint.maxZ) / 2, w, d }) : p));

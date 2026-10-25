@@ -12,7 +12,7 @@ import { validateLayout } from '../region/validateLayout';
 import { createDragonspineArt } from './dragonspineArt';
 import { defaultInputs, type DragonspineInputs, type HeightFn } from './inputs';
 import { DRAGONSPINE_INTERIOR_STRINGS_EN } from './interiors';
-import { buildDragonspine } from './layout';
+import { buildDragonspine, dragonspineBuild } from './layout';
 import { DRAGONSPINE_NPC_DEFS, DRAGONSPINE_NPC_STRINGS_EN } from './npcDefs';
 import { registerDragonspineKinds } from './structureKinds';
 
@@ -44,9 +44,12 @@ export function createDragonspinePlugin(opts: DragonspinePluginOptions = {}): Ga
     dependsOn: ['core', 'region', 'npcs'],
     setup(ctx: CoreContext) {
       try {
-        const inputs = opts.inputs ?? defaultInputs(opts.heightAt);
-        const height = opts.heightAt ?? inputs.heightAt;
-        const layout = opts.layout ?? buildDragonspine({ ...inputs, heightAt: height }).layout;
+        // The shipped case (no options) takes the cached default build: setup costs nothing after the first build of the session.
+        const shipped = !opts.inputs && !opts.heightAt;
+        const height = opts.heightAt ?? opts.inputs?.heightAt ?? defaultInputs().heightAt;
+        const layout =
+          opts.layout ??
+          (shipped ? dragonspineBuild() : buildDragonspine(opts.inputs && !opts.heightAt ? opts.inputs : { ...(opts.inputs ?? defaultInputs(opts.heightAt)), heightAt: height })).layout;
         cleanups.push(registerDragonspineKinds());
         if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
           const errors = validateLayout(layout, height, { spawnId: null });

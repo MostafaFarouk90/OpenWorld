@@ -63,7 +63,7 @@ export function buildHallDef(pad: InteriorPad): InteriorDef {
     anchors: [
       { id: 'dragonspine.hall.inside', x: 0, z: -1, yaw: 0 },
       { id: 'dragonspine.hall.exit', x: 0, z: 0.5, yaw: 180 },
-      { id: 'dragonspine.hall.dais', x: 0, z: z0 + 4.8, yaw: 180 },
+      { id: 'dragonspine.hall.dais', x: 0, z: z0 + 1.5, yaw: 180 },
       { id: 'dragonspine.hall.hearth', x: 0, z: hallZ1 + 0.4, facing: { x: 0, z: hearthZ0 + 1 } },
       { id: 'dragonspine.hall.hunter.1', x: x0 + 3, z: mid + 2, facing: { x: 0, z: mid } },
       { id: 'dragonspine.hall.hunter.2', x: x1 - 3, z: mid + 2, facing: { x: 0, z: mid } },

@@ -18,13 +18,13 @@ export const WAYSIDE_MIN_GAP = 120;
 /** The first pad is this far past the shelter's road position, the pads either side of the Anvil this far from it. */
 const SHELTER_CLEAR = 60;
 const ANVIL_CLEAR = 40;
-/** Slide candidates, nearest the target first: coarse (10 m) for the search, fine (2.5 m) around the winner. */
+/** Slide candidates, nearest the target first: coarse (15 m) for the search, fine (2.5 m) around the winner. */
 const slides = (step: number, reach: number): number[] => {
   const out = [0];
   for (let d = step; d <= reach; d += step) out.push(d, -d);
   return out;
 };
-const COARSE = slides(10, WAYSIDE_MAX_SLIDE);
+const COARSE = slides(15, WAYSIDE_MAX_SLIDE);
 
 export interface WaysideSite {
   index: number;
@@ -67,13 +67,13 @@ export function waysideLayout(s: Sites, shelterS: number, anvilS: number): { par
     // Pads are chosen in order, each at least WAYSIDE_MIN_GAP of road past the one before and on its side of the Anvil.
     const lo = Math.max(sites.length ? sites[sites.length - 1]!.s + WAYSIDE_MIN_GAP : shelterS + SHELTER_CLEAR, i < 3 ? 0 : anvilS + ANVIL_CLEAR);
     const hi = i < 3 ? anvilS - ANVIL_CLEAR : s.road.length;
-    const search = (ds: readonly number[], centre: number, n: number) => {
+    const search = (ds: readonly number[], centre: number, n: number, only?: { side: 1 | -1; offset: number }) => {
       let best: { score: number; s: number; side: 1 | -1; offset: number } | null = null;
       for (const d of ds) {
         const at = centre + d;
         if (at < lo || at > hi) continue;
-        for (const side of [1, -1] as const) {
-          for (const offset of offsets) {
+        for (const side of only ? [only.side] : ([1, -1] as const)) {
+          for (const offset of only ? [only.offset] : offsets) {
             const score = Math.abs(rise(at, side, offset, n)) + Math.abs(at - want) * 0.0005 + (offset - offsets[0]!) * 0.01;
             if (!best || score < best.score) best = { score, s: at, side, offset };
           }
@@ -81,9 +81,9 @@ export function waysideLayout(s: Sites, shelterS: number, anvilS: number): { par
       }
       return best;
     };
-    const coarse = search(COARSE, want, 4);
+    const coarse = search(COARSE, want, 3);
     if (!coarse) throw new Error(`dragonspine: no room for wayside pad ${i + 1} (needs road between ${Math.round(lo)} and ${Math.round(hi)})`);
-    const best = search(slides(2.5, 10), coarse.s, 0)!;
+    const best = search(slides(2.5, 15), coarse.s, 5, coarse)!;
     const c = s.road.point(best.s, best.side * best.offset);
     const spec = solid(`dragonspine-wayside-pad-${i + 1}`, 'rock', c.x, c.z, WAYSIDE_PAD, WAYSIDE_PAD, WAYSIDE_PAD_HEIGHT);
     const top = footprintMax(s.h, c.x, c.z, WAYSIDE_PAD + 2, WAYSIDE_PAD + 2) + WAYSIDE_PAD_HEIGHT;

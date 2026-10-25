@@ -12,11 +12,15 @@ export interface RouteOpts {
 }
 
 export const ROUTE_MAX_SLOPE = 0.6;
+/** The smoothing looks this many grid nodes ahead for a straight walkable run. */
+const LOOKAHEAD = 12;
+/** Weighted A*: a slightly greedy search (the path is within a few percent of the shortest) that visits far fewer nodes. */
+const HEURISTIC_WEIGHT = 1.5;
 
 /** The steepest 1 m step along a straight run (the walk test samples every metre, so the route is judged the same way). */
-function worstStep(h: HeightFn, a: XZ, b: XZ): number {
+function worstStep(h: HeightFn, a: XZ, b: XZ, every = 1): number {
   const len = Math.hypot(b.x - a.x, b.z - a.z);
-  const n = Math.max(1, Math.ceil(len));
+  const n = Math.max(1, Math.ceil(len / every));
   let worst = 0;
   let prev = h(a.x, a.z);
   for (let i = 1; i <= n; i++) {
@@ -32,8 +36,10 @@ function worstStep(h: HeightFn, a: XZ, b: XZ): number {
 /** A path from `from` to `to` whose every 1 m step is within `maxSlope`; null when the window holds none (a cliff in the way). */
 export function routeOver(h: HeightFn, from: XZ, to: XZ, o: RouteOpts = {}): XZ[] | null {
   const maxSlope = o.maxSlope ?? ROUTE_MAX_SLOPE;
-  const cell = o.cell ?? 6;
-  const margin = o.margin ?? 350;
+  const cell = o.cell ?? 10;
+  const margin = o.margin ?? 150;
+  // The search judges each grid edge on a 3 m sample with a little headroom; the smoothing below checks the result every metre.
+  const searchSlope = maxSlope * 0.85;
   const minX = Math.min(from.x, to.x) - margin;
   const minZ = Math.min(from.z, to.z) - margin;
   const nx = Math.ceil((Math.max(from.x, to.x) + margin - minX) / cell) + 1;
@@ -81,7 +87,7 @@ export function routeOver(h: HeightFn, from: XZ, to: XZ, o: RouteOpts = {}): XZ[
   };
   const heur = (i: number, j: number): number => Math.hypot((i - ei) * cell, (j - ej) * cell);
   g[idx(si, sj)] = 0;
-  push(heur(si, sj), idx(si, sj));
+  push(HEURISTIC_WEIGHT * heur(si, sj), idx(si, sj));
   const steps: Array<[number, number]> = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1], [2, 1], [2, -1], [-2, 1], [-2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2]];
   let found = false;
   while (heap.length) {
@@ -102,14 +108,14 @@ export function routeOver(h: HeightFn, from: XZ, to: XZ, o: RouteOpts = {}): XZ[
       const nk = idx(ni, nj);
       if (closed[nk]) continue;
       const b = at(ni, nj);
-      const slope = worstStep(h, a, b);
-      if (slope > maxSlope) continue;
+      const slope = worstStep(h, a, b, 4);
+      if (slope > searchSlope) continue;
       const d = Math.hypot(di * cell, dj * cell);
       const cost = g[k]! + d * (1 + slope);
       if (cost < g[nk]!) {
         g[nk] = cost;
         from_[nk] = k;
-        push(cost + heur(ni, nj), nk);
+        push(cost + HEURISTIC_WEIGHT * heur(ni, nj), nk);
       }
     }
   }
@@ -122,7 +128,7 @@ export function routeOver(h: HeightFn, from: XZ, to: XZ, o: RouteOpts = {}): XZ[
   const out: XZ[] = [pts[0]!];
   let i = 0;
   while (i < pts.length - 1) {
-    let j = pts.length - 1;
+    let j = Math.min(pts.length - 1, i + LOOKAHEAD);
     while (j > i + 1 && worstStep(h, pts[i]!, pts[j]!) > maxSlope) j--;
     out.push(pts[j]!);
     i = j;

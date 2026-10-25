@@ -7,6 +7,7 @@ import { heightAt } from '../terrain/heightfield';
 import { LEDGE_MAX_HEIGHT } from '../region/layoutTypes';
 import { ledgeRise } from './fit';
 import { WAYSIDE_MAX_SLIDE, WAYSIDE_MAX_STEP, WAYSIDE_MIN_GAP, WAYSIDE_SPACING } from './wayside';
+import { CRAG_VIEW_ABOVE, CRAG_VIEW_MAX, sightClear } from './m28';
 import { buildDragonspine } from './layout';
 import { registerDragonspineKinds } from './structureKinds';
 import { defaultInputs } from './inputs';
@@ -65,5 +66,15 @@ describe('the places on the shipped ground', () => {
     expect(at.slice(0, 3).every((v) => v < b.anvil.roadS)).toBe(true);
     expect(at.slice(3).every((v) => v > b.anvil.roadS)).toBe(true);
     expect(at[0]).toBeGreaterThan(b.shelter.roadS);
+  });
+
+  it('gives dragonspine.m28.crag.view a clear sightline to the lodge yard, between 32 and 80 m over the crag', () => {
+    const v = anchor('dragonspine.m28.crag.view');
+    expect(v.dy).toBeGreaterThanOrEqual(CRAG_VIEW_ABOVE);
+    expect(v.dy).toBeLessThanOrEqual(CRAG_VIEW_MAX);
+    const hearth = inp.hearth;
+    expect(sightClear(heightAt, { x: v.x, z: v.z }, heightAt(v.x, v.z) + v.dy!, hearth, heightAt(hearth.x, hearth.z) + 5)).toBe(true);
+    // And it is the lowest such point on the 2 m ladder: two metres lower is blocked or below the floor.
+    if (v.dy! > CRAG_VIEW_ABOVE) expect(sightClear(heightAt, { x: v.x, z: v.z }, heightAt(v.x, v.z) + v.dy! - 2, hearth, heightAt(hearth.x, hearth.z) + 5)).toBe(false);
   });
 });
