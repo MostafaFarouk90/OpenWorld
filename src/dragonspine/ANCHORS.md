@@ -81,20 +81,21 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.hawk.egg.2 | 11384 | 12988 | 0 | 180 | objective |
 | dragonspine.hawk.egg.3 | 11386.4 | 12988 | 0 | 180 | objective |
 | dragonspine.hawk.companion-hold | 11428 | 12992 | 0 | 90 | poi |
-| dragonspine.hawk.climb.1 | 11437.78 | 13032.32 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.2 | 11455.56 | 13036.64 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.3 | 11473.34 | 13040.95 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.4 | 11488.87 | 13045.25 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.5 | 11471.01 | 13049.22 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.6 | 11453.15 | 13053.19 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.7 | 11435.29 | 13057.16 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.8 | 11417.43 | 13061.13 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.9 | 11400.43 | 13065.1 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.10 | 11418.29 | 13069.07 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.11 | 11436.15 | 13073.03 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.12 | 11454.01 | 13077 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.13 | 11471.88 | 13080.97 | 0 | 180 | objective, elevated |
-| dragonspine.hawk.climb.14 | 11489.74 | 13084.94 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.1 | 11437.83 | 13032.95 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.2 | 11455.66 | 13037.91 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.3 | 11473.49 | 13042.86 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.4 | 11491.33 | 13047.81 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.5 | 11488.22 | 13062.49 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.6 | 11469.87 | 13064.89 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.7 | 11451.52 | 13067.28 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.8 | 11433.17 | 13069.67 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.9 | 11414.82 | 13072.07 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.10 | 11400 | 13077.56 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.11 | 11408.02 | 13088.88 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.12 | 11426.42 | 13090.91 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.13 | 11444.81 | 13092.93 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.14 | 11463.21 | 13094.95 | 0 | 180 | objective, elevated |
+| dragonspine.hawk.climb.15 | 11481.6 | 13096.98 | 0 | 180 | objective, elevated |
 | dragonspine.hawk.nest.r18 | 11512.5 | 13097 | 0 | 180 | objective |
 | dragonspine.hawk.nest.2 | 11504.5 | 13099 | 0 | 180 | poi |
 | dragonspine.hawk.nest.3 | 11520.5 | 13099 | 0 | 180 | poi |
@@ -225,6 +226,76 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-nest-1 | dragonspine-nest | 11512.5 | 13100 | 2.2 x 2.2 | open |
 | dragonspine-nest-2 | dragonspine-nest | 11504.5 | 13102 | 2.2 x 2.2 | open |
 | dragonspine-nest-3 | dragonspine-nest | 11520.5 | 13102 | 2.2 x 2.2 | open |
+| dragonspine-hawk-parapet-1 | rock | 11422.86 | 13024.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-2 | rock | 11426.46 | 13025.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-3 | rock | 11430.06 | 13026.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-4 | rock | 11433.66 | 13027.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-5 | rock | 11437.26 | 13028.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-6 | rock | 11440.86 | 13029.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-7 | rock | 11444.46 | 13030.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-8 | rock | 11448.06 | 13031.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-9 | rock | 11451.66 | 13032.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-10 | rock | 11455.26 | 13033.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-11 | rock | 11458.86 | 13034.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-12 | rock | 11462.46 | 13035.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-13 | rock | 11466.06 | 13036.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-14 | rock | 11469.66 | 13037.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-15 | rock | 11473.26 | 13038.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-16 | rock | 11476.86 | 13039.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-17 | rock | 11480.46 | 13040.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-18 | rock | 11484.06 | 13041.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-19 | rock | 11487.66 | 13042.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-20 | rock | 11491.26 | 13043.69 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-21 | rock | 11490.67 | 13066.16 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-22 | rock | 11486.99 | 13066.64 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-23 | rock | 11483.31 | 13067.12 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-24 | rock | 11479.63 | 13067.6 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-25 | rock | 11475.95 | 13068.08 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-26 | rock | 11472.27 | 13068.56 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-27 | rock | 11468.59 | 13069.04 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-28 | rock | 11464.91 | 13069.52 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-29 | rock | 11461.23 | 13070 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-30 | rock | 11457.55 | 13070.48 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-31 | rock | 11453.87 | 13070.96 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-32 | rock | 11450.19 | 13071.44 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-33 | rock | 11446.51 | 13071.92 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-34 | rock | 11442.83 | 13072.4 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-35 | rock | 11439.15 | 13072.88 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-36 | rock | 11435.47 | 13073.36 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-37 | rock | 11431.79 | 13073.84 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-38 | rock | 11428.11 | 13074.32 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-39 | rock | 11424.43 | 13074.8 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-40 | rock | 11420.75 | 13075.28 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-41 | rock | 11417.07 | 13075.76 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-42 | rock | 11413.39 | 13076.24 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-43 | rock | 11409.71 | 13076.72 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-44 | rock | 11406.03 | 13077.2 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-45 | rock | 11405.99 | 13084.68 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-46 | rock | 11409.69 | 13085.09 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-47 | rock | 11413.39 | 13085.5 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-48 | rock | 11417.1 | 13085.91 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-49 | rock | 11420.8 | 13086.31 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-50 | rock | 11424.51 | 13086.72 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-51 | rock | 11428.21 | 13087.13 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-52 | rock | 11431.91 | 13087.54 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-53 | rock | 11435.62 | 13087.94 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-54 | rock | 11439.32 | 13088.35 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-55 | rock | 11443.02 | 13088.76 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-56 | rock | 11446.73 | 13089.17 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-57 | rock | 11450.43 | 13089.57 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-58 | rock | 11454.14 | 13089.98 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-59 | rock | 11457.84 | 13090.39 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-60 | rock | 11461.54 | 13090.8 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-61 | rock | 11465.25 | 13091.2 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-62 | rock | 11468.95 | 13091.61 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-63 | rock | 11472.65 | 13092.02 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-64 | rock | 11476.36 | 13092.43 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-65 | rock | 11480.06 | 13092.83 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-66 | rock | 11483.77 | 13093.24 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-67 | rock | 11487.47 | 13093.65 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-68 | rock | 11491.17 | 13094.06 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-69 | rock | 11494.88 | 13094.46 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-70 | rock | 11498.58 | 13094.87 | 3.4 x 0.7 | solid |
 | dragonspine-cave-mouth | dragonspine-cave-mouth | 12300 | 13705 | 12 x 4 | solid |
 | dragonspine-cave-ledge | rock | 12300 | 13692 | 34 x 3.2 | solid |
 | dragonspine-m28-ledge-1 | rock | 13446 | 12623 | 6 x 5 | solid |

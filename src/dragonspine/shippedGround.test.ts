@@ -12,6 +12,8 @@ import { registerDragonspineKinds } from './structureKinds';
 import { defaultInputs } from './inputs';
 import { TAN_40, worstSlope } from './testing/walk';
 import { routeOver } from './route';
+import { PARAPET_GAP, PARAPET_HEIGHT } from './hawkCliffs';
+import { footprintCorners } from '../region/geometry';
 import { roadFromPoints } from './road';
 
 let release: () => void;
@@ -89,5 +91,33 @@ describe('the places on the shipped ground', () => {
     expect(sightClear(heightAt, { x: v.x, z: v.z }, heightAt(v.x, v.z) + v.dy!, hearth, heightAt(hearth.x, hearth.z) + 5)).toBe(true);
     // And it is the lowest such point on the 2 m ladder: two metres lower is blocked or below the floor.
     if (v.dy! > CRAG_VIEW_ABOVE) expect(sightClear(heightAt, { x: v.x, z: v.z }, heightAt(v.x, v.z) + v.dy! - 2, hearth, heightAt(hearth.x, hearth.z) + 5)).toBe(false);
+  });
+});
+
+describe('the Hawk Cliffs parapet', () => {
+  const stones = b.layout.structures.filter((x) => x.id.startsWith('dragonspine-hawk-parapet-'));
+  const hw = inp.hawkPathHalfWidth;
+
+  it('is a line of low solid rocks on the downhill edge of the three legs, out of the path\'s half-width', () => {
+    expect(hw).toBe(3);
+    expect(stones.length).toBeGreaterThan(60);
+    for (const x of stones) {
+      expect(x.mode, x.id).toBe('solid');
+      expect(x.kind, x.id).toBe('rock');
+      expect(x.height, x.id).toBeCloseTo(PARAPET_HEIGHT, 5);
+      for (const [cx, cz] of footprintCorners(x)) expect(b.sites.hawkPath.nearest(cx, cz).d, x.id).toBeGreaterThanOrEqual(hw + PARAPET_GAP - 0.1);
+    }
+  });
+
+  it('stands on the lower side of its leg, and keeps the path walkable', () => {
+    for (const x of stones) {
+      const n = b.sites.hawkPath.nearest(x.x, x.z);
+      const p = b.sites.hawkPath.point(n.s);
+      const sx = Math.sign((x.x - p.x) * -p.dirZ + (x.z - p.z) * p.dirX);
+      const out = heightAt(x.x, x.z);
+      const inn = heightAt(p.x, p.z);
+      expect(out, `${x.id} (side ${sx})`).toBeLessThan(inn + 1);
+    }
+    expect(worstSlope(heightAt, b.hawk.climb)).toBeLessThanOrEqual(TAN_40);
   });
 });

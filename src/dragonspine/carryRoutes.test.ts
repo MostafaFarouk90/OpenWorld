@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildCarryRoutes, candleStops, CHECKPOINT_MAX, CHECKPOINT_MIN, CORRIDOR_HALF_WIDTH, densify, MAX_DROP } from './carryRoutes';
 import { heightAt } from '../terrain/heightfield';
 import { defaultInputs } from './inputs';
+import { CarryResets, carryProblem, resetPoints } from '../traversal/carry/CarryResets';
 import { buildDragonspine } from './layout';
 import { registerDragonspineKinds } from './structureKinds';
 import { shiftedInputs, shiftedRoad, stubInputs } from './testing/fixture';
@@ -168,5 +169,22 @@ describe('the pass gate follows the road (wherever the road starts)', () => {
         expect(inside, `${sp.id} on the road at ${s}`).toBe(false);
       }
     }
+  });
+});
+
+describe("K7's carry code accepts our routes", () => {
+  const routes = buildCarryRoutes(shipped.heightAt, buildDragonspine(shipped));
+  const ports = { deepAt: () => false, isOpen: () => true, playerFeet: () => ({ x: 0, y: 0, z: 0 }), fade: () => {}, emit: () => {}, movementMode: () => 'walk' as const, setMovementMode: () => {}, warn: () => {} };
+
+  it('tracks every route, starts at its first reset point and finds no problem standing on any checkpoint', () => {
+    const resets = new CarryResets(ports);
+    for (const r of routes) {
+      resets.track({ route: r, position: () => null, held: () => false, place: () => {} });
+      const first = resetPoints(r)[0]!;
+      expect(resets.checkpointIndex(r.id), r.id).toBe(first);
+      expect(resets.checkpoint(r.id), r.id).toEqual(r.checkpoints[first]);
+      for (const c of r.checkpoints) expect(carryProblem(r, c, ports), r.id).toBeNull();
+    }
+    expect(routes.map((r) => resetPoints(r).length)).toEqual([...routes.map((r) => r.resetAt?.length ?? r.checkpoints.length)]);
   });
 });

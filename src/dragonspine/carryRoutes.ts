@@ -2,12 +2,13 @@
 // route's polyline (K7 confirmed): dense, 10 to 25 m apart (so the 8 m pass radius never skips one), each y read from `heightAt`
 // when the routes are built, never a table. `resetAt` lists the indices a reset returns to (default all): eggs [0], candles the
 // Anvil and each shrine.
-import type { CarryRouteDef } from '../movement/types';
+import type { CarryRoute } from '../traversal/carry/CarryResets';
 import { buildDragonspine, type DragonspineBuild } from './layout';
 import { defaultInputs, type HeightFn, type XZ } from './inputs';
 import { pathLength } from './paths';
 
-export type DragonspineCarryRoute = CarryRouteDef & { resetAt?: readonly number[] };
+/** K7's route type (`CarryRouteDef` plus `resetAt`). */
+export type DragonspineCarryRoute = CarryRoute;
 
 export const CORRIDOR_HALF_WIDTH = 30;
 export const MAX_DROP = 10;
@@ -34,10 +35,12 @@ export function densify(pts: readonly XZ[], target = TARGET): XZ[] {
     }
   }
   const end = pts[pts.length - 1]!;
-  const last = out[out.length - 1]!;
-  const gap = Math.hypot(end.x - last.x, end.z - last.z);
+  const gap = Math.hypot(end.x - out[out.length - 1]!.x, end.z - out[out.length - 1]!.z);
   if (gap > 1e-6) {
     if (gap < CHECKPOINT_MIN && out.length > 1) out.pop();
+    // Dropping a short stub can leave the last gap wider than a checkpoint may be: split it.
+    const prev = out[out.length - 1]!;
+    if (Math.hypot(end.x - prev.x, end.z - prev.z) > CHECKPOINT_MAX) out.push({ x: (prev.x + end.x) / 2, z: (prev.z + end.z) / 2 });
     out.push({ x: end.x, z: end.z });
   } else if (out.length > 1) {
     out[out.length - 1] = { x: end.x, z: end.z };

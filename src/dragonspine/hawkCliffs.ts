@@ -1,9 +1,9 @@
 // The Hawk Cliffs (R18): the egg thief's camp on K1's cliff-foot plateau (sack, straw, tracks, a broken shell, three egg
-// pick-ups), a companion hold point, the climb along K1's `hawk-cliffs-path` (a carved road, about 270 m with three switchbacks) to K1's
+// pick-ups), a companion hold point, the climb along K1's `hawk-cliffs-path` (a carved road, about 296 m with three switchbacks) to K1's
 // level nest shelf, three nests (one is R18's), the parents' circling anchors and the rime-hawk spawn anchors.
 import { findFlat } from '../cinderreach/siteFit';
 import type { StructureSpec } from '../region/layoutTypes';
-import { a, emptyPart, numbered, open, polar, sphere, type Part } from './helpers';
+import { a, emptyPart, numbered, open, polar, solid, sphere, type Part } from './helpers';
 import type { XZ } from './inputs';
 import { Placer } from './placer';
 import type { Sites } from './sites';
@@ -27,6 +27,57 @@ export interface HawkInfo {
 const fail = (msg: string): never => {
   throw new Error(`dragonspine: ${msg}`);
 };
+
+/** A stone of the parapet: 0.6 m high, 3.4 m long along the path, 0.7 m through. */
+export const PARAPET_HEIGHT = 0.6;
+export const PARAPET_LENGTH = 3.4;
+export const PARAPET_THICKNESS = 0.7;
+/** The stones' inner edge keeps this far off the path's flat half-width. */
+export const PARAPET_GAP = 0.6;
+/** Only the long runs of the path (its legs) get a parapet; the hairpin turns between them are 14 m. */
+const LEG_MIN = 30;
+
+/**
+ * A low rock line (greybox stones with colliders) along the downhill edge of each leg of K1's path, kept out of its flat
+ * half-width. The downhill side is read from the ground; a stone that would stand near another stretch of the path (at a
+ * hairpin) is left out, so the turns stay open.
+ */
+export function parapetStones(s: Sites): StructureSpec[] {
+  const pts = s.inp.hawkPathPoints;
+  const hw = s.inp.hawkPathHalfWidth;
+  const off = hw + PARAPET_GAP + PARAPET_THICKNESS / 2;
+  const out: StructureSpec[] = [];
+  let n = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, az] = pts[i - 1]!;
+    const [bx, bz] = pts[i]!;
+    const len = Math.hypot(bx - ax, bz - az);
+    if (len < LEG_MIN) continue;
+    const dx = (bx - ax) / len;
+    const dz = (bz - az) / len;
+    const nx = -dz;
+    const nz = dx;
+    // Which side is downhill, from the ground at the middle of the leg.
+    const mx = (ax + bx) / 2;
+    const mz = (az + bz) / 2;
+    const side = s.h(mx + nx * off, mz + nz * off) <= s.h(mx - nx * off, mz - nz * off) ? 1 : -1;
+    const count = Math.floor(len / (PARAPET_LENGTH + 0.2));
+    for (let k = 0; k < count; k++) {
+      const t = ((k + 0.5) / count) * len;
+      const x = ax + dx * t + side * nx * off;
+      const z = az + dz * t + side * nz * off;
+      // Both ends and the middle of the stone stay clear of every stretch of the path.
+      const clear = [-1, 0, 1].every((e) => {
+        const p = s.hawkPath.nearest(x + dx * e * (PARAPET_LENGTH / 2), z + dz * e * (PARAPET_LENGTH / 2));
+        return p.d >= hw + PARAPET_GAP - 0.05;
+      });
+      if (!clear) continue;
+      const yaw = (Math.atan2(-dz, dx) * 180) / Math.PI;
+      out.push(solid(`dragonspine-hawk-parapet-${++n}`, 'rock', x, z, PARAPET_LENGTH, PARAPET_THICKNESS, PARAPET_HEIGHT, yaw));
+    }
+  }
+  return out;
+}
 
 /** The path's vertices (its hairpins) plus a point at least every `step` m, in order. */
 function pathVertexAndSamples(points: readonly (readonly [number, number])[], length: number, step: number): XZ[] {
@@ -65,6 +116,7 @@ export function hawkCliffsLayout(s: Sites): { part: Part; info: HawkInfo } {
   const nestWant = [shelf, { x: shelf.x - 8, z: shelf.z + 2 }, { x: shelf.x + 8, z: shelf.z + 2 }];
   const nests = nestWant.map((w) => findFlat(s.h, { prefer: w, radius: 10, size: [2.2, 2.2], maxSpread: 0.45, step: 1, within }) ?? findFlat(s.h, { prefer: w, radius: 40, size: [2.2, 2.2], maxSpread: 0.45, step: 2 }) ?? fail(`no level spot for a nest near ${w.x.toFixed(0)},${w.z.toFixed(0)} on the nest shelf`));
   const nestSpecs = nests.map((p, i) => open(`dragonspine-nest-${i + 1}`, 'dragonspine-nest', p.x, p.z, 2.2, 2.2));
+  const parapet = parapetStones(s);
   const hold = { x: F.maxX - 12, z: F.cz - 8 };
 
   const part: Part = {
@@ -88,7 +140,7 @@ export function hawkCliffsLayout(s: Sites): { part: Part; info: HawkInfo } {
       a('npc-post.egg-thief', camp.x + 2, camp.z - 2, 90, ['npc-post']),
     ],
     triggers: [sphere('trg.dragonspine.hawkcliffs.camp', camp.x, camp.z, 22), sphere('trg.dragonspine.hawkcliffs.nest', shelf.x, shelf.z, 16)],
-    structures: [straw, sack, tracks, shell, ...nestSpecs],
+    structures: [straw, sack, tracks, shell, ...nestSpecs, ...parapet],
   };
   return { part, info: { camp, eggs, climbStart, climb, climbLength, shelf, nests, companionHold: hold, specs: part.structures } };
 }
