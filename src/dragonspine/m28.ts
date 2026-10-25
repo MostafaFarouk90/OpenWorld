@@ -1,5 +1,5 @@
-// M28's climb (the lower spine above the lodge): a trailhead beside the pass road about 1,200 m up from the lodge, an off-road
-// climb of about 500 m to the Wyrmwatch crag lookout (K1's `m28-crag` plateau), two Leap ledges, four cairns (a frozen climber, a
+// M28's climb (the lower spine above the lodge): a trailhead on the pass road (the road point nearest K1's crag, within 400 m of
+// 1,200 m up from the lodge), a routed off-road climb to the Wyrmwatch crag lookout (K1's `m28-crag` plateau; about 550 m on the shipped ground), two Leap ledges, four cairns (a frozen climber, a
 // rope anchor, a hawk-pecked pack, a rime marker) and the spawn anchors for six hawks, the crag ogre and a hunter scout.
 // Structures and anchors only; K13 owns the interactables and the quest.
 import type { StructureSpec } from '../region/layoutTypes';

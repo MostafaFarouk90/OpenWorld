@@ -5,6 +5,7 @@ import { LEDGE_MAX_HEIGHT, LEDGE_MIN_HEIGHT } from '../region/layoutTypes';
 import { validateLayout } from '../region/validateLayout';
 import { SHRINE_POSITIONS } from '../map/ForgeMarks';
 import { roadLength, roadPoint } from '../terrain/shape/roadPoint';
+import { ACT3_WORLD_LAYOUT } from '../region/act3/act3World.layout';
 import { buildDragonspine, type DragonspineBuild } from './layout';
 import { ledgeRise } from './fit';
 import { TAN_40, worstSlope } from './testing/walk';
@@ -82,6 +83,12 @@ describe('the layout on stand-in ground', () => {
       expect(a.id).not.toBe('dragonspine.wyrmwatch.hearth');
       expect(/^dragonspine\.(wyrmwatch|pass|track|fog)\./.test(a.id), a.id).toBe(false);
     }
+  });
+
+  it('shares no id with K1\'s real ACT3_WORLD_LAYOUT', () => {
+    const k1 = new Set([...ACT3_WORLD_LAYOUT.anchors, ...ACT3_WORLD_LAYOUT.triggers, ...ACT3_WORLD_LAYOUT.structures, ...ACT3_WORLD_LAYOUT.npcs].map((x) => x.id));
+    expect([...k1].some((id) => id.startsWith('dragonspine.spur.'))).toBe(true);
+    for (const x of [...b.layout.anchors, ...b.layout.triggers, ...b.layout.structures, ...b.layout.npcs]) expect(k1.has(x.id), x.id).toBe(false);
   });
 
   it('gives every NPC a post that is one of its anchors', () => {

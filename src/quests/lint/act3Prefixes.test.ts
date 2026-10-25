@@ -12,8 +12,9 @@ import { ALL_LAYOUTS as ALL_LAYOUTS_WITH_ACT3 } from './noteLint';
 
 // The Act 3 interiors are the prefixes' owners (K3, K4): only the ids shipped before them are checked.
 const shippedInteriors = ALL_INTERIORS.filter((d) => !ACT3_INTERIORS.includes(d));
-// Likewise the Dragonspine layout (the note lint covers it; the prefix check is for the others).
+// The Dragonspine layout is held to the prefixes it owns instead (the last test of this file); the others must stay clear of them.
 const ALL_LAYOUTS = ALL_LAYOUTS_WITH_ACT3.filter((l) => l !== DRAGONSPINE_LAYOUT);
+const DRAGONSPINE_OWNED = ['dragonspine.', 'trg.dragonspine.', 'npc-post.', 'waystone.'];
 
 const anchorIds = [
   ...ALL_LAYOUTS.flatMap((l) => l.anchors.map((a) => a.id)),
@@ -63,6 +64,15 @@ describe('Act 3 reserved prefixes', () => {
     expect(ACT2_QUEST_DEFS.length).toBeGreaterThan(0);
     const json = JSON.stringify(questDefs);
     for (const id of ACT3_QUEST_IDS) expect(json.includes(`story.${id}.`), id).toBe(false);
+  });
+});
+
+describe('the Dragonspine layout\'s own ids', () => {
+  it('stay in the prefixes K4 owns', () => {
+    const ids = [...DRAGONSPINE_LAYOUT.anchors, ...DRAGONSPINE_LAYOUT.triggers].map((x) => x.id);
+    expect(ids.length).toBeGreaterThan(100);
+    expect(ids.filter((id) => !DRAGONSPINE_OWNED.some((p) => id.startsWith(p)))).toEqual([]);
+    expect(DRAGONSPINE_LAYOUT.triggers.filter((t) => !t.id.startsWith('trg.dragonspine.')).map((t) => t.id)).toEqual([]);
   });
 });
 

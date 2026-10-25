@@ -1,7 +1,6 @@
-// The checks that matter once K1's real ground lands, run on the shipped heightAt (the stub plateaus are wired into WORLD_SHAPE
-// today): climbs and the cave approach stay under the slope limit, the nest shelf is a real climb, every Leap ledge is reachable
+// The checks that matter on K1's real ground, run on the shipped heightAt (`ACT3_PLATEAUS` in the world shape): climbs and the cave approach stay under the slope limit, the nest shelf is a real climb, every Leap ledge is reachable
 // from its launch point at its built size, and the wayside platforms sit level with the road edge. They fail loudly when K1's
-// numbers break a place; they pass on the stand-in ground.
+// numbers break a place.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { heightAt } from '../terrain/heightfield';
 import { LEDGE_MAX_HEIGHT } from '../region/layoutTypes';
@@ -12,6 +11,8 @@ import { buildDragonspine } from './layout';
 import { registerDragonspineKinds } from './structureKinds';
 import { defaultInputs } from './inputs';
 import { TAN_40, worstSlope } from './testing/walk';
+import { routeOver } from './route';
+import { roadFromPoints } from './road';
 
 let release: () => void;
 beforeAll(() => (release = registerDragonspineKinds()));
@@ -22,6 +23,18 @@ const b = buildDragonspine(inp);
 const anchor = (id: string) => b.layout.anchors.find((a) => a.id === id)!;
 
 describe('the places on the shipped ground', () => {
+  it('has a walkable route from the road to the cave trailhead and to the Hawk Cliffs path start', () => {
+    for (const [name, to] of [['cave trailhead', b.cave.trailhead], ['Hawk Cliffs path start', b.hawk.climbStart]] as const) {
+      const n = b.sites.road.nearest(to.x, to.z);
+      const spine = roadFromPoints(inp.spinePoints);
+      const sn = spine.nearest(to.x, to.z);
+      // From the Rime Pass or from the Spine Road, whichever the rider takes.
+      const routes = [b.sites.road.point(n.s), spine.point(sn.s)].map((p) => routeOver(heightAt, { x: p.x, z: p.z }, to));
+      expect(routes.some((r) => r !== null), name).toBe(true);
+    }
+  });
+
+
   it('has the Hawk Cliffs path, M28\'s climb and the cave approach under the controller\'s slope limit', () => {
     expect(worstSlope(heightAt, b.hawk.climb)).toBeLessThanOrEqual(TAN_40);
     expect(worstSlope(heightAt, b.m28.climb)).toBeLessThanOrEqual(TAN_40);

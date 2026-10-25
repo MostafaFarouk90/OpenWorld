@@ -24,6 +24,10 @@ export interface HawkInfo {
   specs: StructureSpec[];
 }
 
+const fail = (msg: string): never => {
+  throw new Error(`dragonspine: ${msg}`);
+};
+
 /** The path's vertices (its hairpins) plus a point at least every `step` m, in order. */
 function pathVertexAndSamples(points: readonly (readonly [number, number])[], length: number, step: number): XZ[] {
   const out: XZ[] = [{ x: points[0]![0], z: points[0]![1] }];
@@ -59,7 +63,7 @@ export function hawkCliffsLayout(s: Sites): { part: Part; info: HawkInfo } {
   const sh = { w: s.nestShelf.w, d: s.nestShelf.d };
   const within = { minX: shelf.x - sh.w / 2 + 1.5, maxX: shelf.x + sh.w / 2 - 1.5, minZ: shelf.z - sh.d / 2 + 1.5, maxZ: shelf.z + sh.d / 2 - 1.5 };
   const nestWant = [shelf, { x: shelf.x - 8, z: shelf.z + 2 }, { x: shelf.x + 8, z: shelf.z + 2 }];
-  const nests = nestWant.map((w) => findFlat(s.h, { prefer: w, radius: 10, size: [2.2, 2.2], maxSpread: 0.45, step: 1, within }) ?? findFlat(s.h, { prefer: w, radius: 40, size: [2.2, 2.2], maxSpread: 0.45, step: 2 }) ?? w);
+  const nests = nestWant.map((w) => findFlat(s.h, { prefer: w, radius: 10, size: [2.2, 2.2], maxSpread: 0.45, step: 1, within }) ?? findFlat(s.h, { prefer: w, radius: 40, size: [2.2, 2.2], maxSpread: 0.45, step: 2 }) ?? fail(`no level spot for a nest near ${w.x.toFixed(0)},${w.z.toFixed(0)} on the nest shelf`));
   const nestSpecs = nests.map((p, i) => open(`dragonspine-nest-${i + 1}`, 'dragonspine-nest', p.x, p.z, 2.2, 2.2));
   const hold = { x: F.maxX - 12, z: F.cz - 8 };
 

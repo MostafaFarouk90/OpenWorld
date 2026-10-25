@@ -23,7 +23,7 @@ function cliff(plateaus: readonly PlateauDef[], x: number, z: number): number {
 }
 
 export function stubGround(plateaus: readonly PlateauDef[]): HeightFn {
-  const level = new Map(plateaus.map((p) => [p.id, planeHeight((p.box.minX + p.box.maxX) / 2, (p.box.minZ + p.box.maxZ) / 2) + (p.id === 'collapsed-cave-pad' ? 0 : 0)]));
+  const level = new Map(plateaus.map((p) => [p.id, planeHeight((p.box.minX + p.box.maxX) / 2, (p.box.minZ + p.box.maxZ) / 2)]));
   return (x, z) => {
     let h = planeHeight(x, z) + cliff(plateaus, x, z);
     for (const p of plateaus) {

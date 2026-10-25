@@ -39,8 +39,8 @@ export function createDragonspinePlugin(opts: DragonspinePluginOptions = {}): Ga
 
   return {
     id: 'dragonspine',
-    // No 'act3World': there is no such plugin on this branch (K1's ground is static, in WORLD_SHAPE, so `heightAt` is final at load).
-    // Add it here if K1 ships one that sets the shape at runtime.
+    // K1's ground is static (`ACT3_PLATEAUS` in the world shape, so `heightAt` is final at load) and its anchors are plain layout data
+    // (`ACT3_WORLD_LAYOUT`, no plugin), so there is nothing to wait for beyond these.
     dependsOn: ['core', 'region', 'npcs'],
     setup(ctx: CoreContext) {
       try {

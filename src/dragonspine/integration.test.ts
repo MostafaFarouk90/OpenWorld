@@ -1,5 +1,5 @@
-// Boots a reduced manifest (core, region, npcs, nav, interiors, waystones and this plugin) on the real ground, which carries the
-// stand-in K1 plateaus until K1's shape lands. 30 s timeout (contracts v0.7 item 24).
+// Boots a reduced manifest (core, region, npcs, nav, interiors, waystones and this plugin) on the real ground, which carries K1's
+// plateaus (`ACT3_PLATEAUS`). 30 s timeout (contracts v0.7 item 24).
 import * as THREE from 'three';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import corePlugin from '../core/core.plugin';
