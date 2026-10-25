@@ -19,12 +19,14 @@ const cave = DRAGONSPINE_INTERIORS.find((d) => d.id === COLLAPSED_CAVE_ID)!;
 
 describe('the Dragonspine interiors', () => {
   it('are registered through the Act 3 index and the interiors plugin\'s list', () => {
-    expect(ACT3_INTERIORS.map((d) => d.id)).toEqual([WYRMWATCH_HALL_ID, COLLAPSED_CAVE_ID]);
+    // K3's interiors share the index: ours are in it, whatever else is.
+    expect(DRAGONSPINE_INTERIORS.map((d) => d.id)).toEqual([WYRMWATCH_HALL_ID, COLLAPSED_CAVE_ID]);
+    for (const d of DRAGONSPINE_INTERIORS) expect(ACT3_INTERIORS).toContain(d);
     for (const d of ACT3_INTERIORS) expect(ALL_INTERIORS).toContain(d);
-    expect(ACT3_DOOR_LOCKS).toEqual({ 'collapsed-cave': 'story.r16.started' });
+    expect(ACT3_DOOR_LOCKS).toMatchObject({ 'collapsed-cave': 'story.r16.started' });
     expect(DRAGONSPINE_DOOR_LOCKS['wyrmwatch-hall']).toBeUndefined();
-    expect(ACT3_FLAG_BLOCKERS).toEqual({ [ROCKFALL_BLOCKER_ID]: 'story.r16.rockfallCleared' });
-    expect(DRAGONSPINE_FLAG_BLOCKERS).toEqual(ACT3_FLAG_BLOCKERS);
+    expect(DRAGONSPINE_FLAG_BLOCKERS).toEqual({ [ROCKFALL_BLOCKER_ID]: 'story.r16.rockfallCleared' });
+    expect(ACT3_FLAG_BLOCKERS).toMatchObject(DRAGONSPINE_FLAG_BLOCKERS);
     expect(R16_STARTED_FLAG).toBe('story.r16.started');
     expect(R16_ROCKFALL_CLEARED_FLAG).toBe('story.r16.rockfallCleared');
   });
