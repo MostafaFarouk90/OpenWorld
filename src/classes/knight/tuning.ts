@@ -65,3 +65,51 @@ export const SQUIRE = {
   handlerOrder: 0,
   fx: 'squire-resolve',
 } as const;
+
+/**
+ * Bastion Wall (Bulwark 4, Act 3): 8 s, 20 s cooldown, 20 Ember (design 9.1). While block is held, a hit whose source lies in the
+ * 120 degree front cone and that is aimed at the Knight or an ally within 6 m of the Knight is blocked (amount and poise x0.2).
+ * The modifier sits at -45 in the defender band, after the player's guard (-50): it acts on outcome 'hit' only, so a hit the guard
+ * already blocked or parried is never scaled twice.
+ */
+export const BASTION_WALL = {
+  seconds: 8,
+  cooldown: 20,
+  emberCost: 20,
+  /** Full cone angle in degrees; a source within half of it of the facing is covered (inclusive). */
+  coneDegrees: 120,
+  allyRadius: 6,
+  scale: 0.2,
+  modifierId: 'knight.bastionWall.cover',
+  modifierOrder: -45,
+  fx: 'bastion-wall',
+} as const;
+
+/**
+ * Executioner's Arc (Vanguard 4, Act 3): the heavy chop, 10 s cooldown and 20 Ember. In the clip's hit window (the chop is 1.067 s,
+ * 64 ticks, its blade is hot from 0.45 s to 0.62 s) every hostile within 3 m in the 180 degree front arc takes 1.8x the base hit
+ * (COMBAT.baseDamage, the base the Charge of the Halvard doubles) with poise 30, once per cast.
+ */
+export const EXECUTIONERS_ARC = {
+  clip: '1H_Melee_Attack_Chop',
+  ticks: 64,
+  hitFromTick: 27,
+  hitToTick: 38,
+  reach: 3,
+  arcDegrees: 180,
+  damageFactor: 1.8,
+  damage: COMBAT.baseDamage * 1.8,
+  poise: 30,
+  cooldown: 10,
+  emberCost: 20,
+  attackId: 'knight.executionersArc',
+  fx: 'executioners-arc',
+  shakeAmplitude: 0.25,
+  shakeSeconds: 0.15,
+} as const;
+
+/** Hearthfire Ward (Standard 4, Act 3): each banner pulse (every 3 s) heals the Knight and live allies within the banner's 8 m by 3% of max health. */
+export const HEARTHFIRE_WARD = {
+  fraction: 0.03,
+  fx: 'hearthfire-motes',
+} as const;

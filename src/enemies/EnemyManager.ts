@@ -29,6 +29,9 @@ import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } fro
 import { ASH_GRAB, BOSS_MERCY, GUARD, MERCY, PAIR, WARM_HAND_BURN, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions, UnlockVerb } from './types';
 import { makeLineOfSight } from './ai/perception';
+import { drainPlayer } from './fen/drain';
+import { makeLeechBody } from './fen/leech/body';
+import { FEN_TUNING } from './fen/tuning';
 import { TauntRegistry, type TauntService } from './taunts';
 import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
 
@@ -355,7 +358,7 @@ export class EnemyManager {
     const removeCalm =
       mercyDef.mercy.verb === 'calm'
         ? this.calm.register(holdId, () =>
-            enemy.mercyOpen && this.mercyUnlocked('calm') ? calmOptions(mercyDef.mercy, this.host.services.get('inventory'), { cooled: enemy.isCooled }) : [],
+            enemy.mercyOpen && this.mercyUnlocked('calm') ? calmOptions(mercyDef.mercy, this.host.services.get('inventory'), { cooled: enemy.isCooled, ...enemy.calmContext() }) : [],
           )
         : null;
     const removeHold = this.host.interaction.register(
@@ -384,6 +387,7 @@ export class EnemyManager {
     if (def.body === 'golem') return makeGolemBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'crawler') return makeCrawlerBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'quadruped') return makeQuadrupedBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
+    if (def.body === 'leech') return makeLeechBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'wyrm') {
       const lowQuality = this.host.services.get('vfx')?.quality === 'low';
       return makeWyrmBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m), lowQuality });
@@ -821,6 +825,8 @@ export class EnemyManager {
         const move = attacker.brain.currentMove;
         if (move?.onHit === 'slow' && attacker.active) attacker.applySlow(ASH_GRAB.speedScale, ASH_GRAB.seconds);
         if (move?.onHit === 'steal' && attacker.active) attacker.thief?.grabHit();
+        // K6b: the Fen Leech's bite drains the player's stamina (a landed hit only; never below 0; regen delay and exhaustion apply).
+        if (move?.onHit === 'drain' && attacker.active) drainPlayer(this.host.services.get('combatVerbs'), this.host.actors.player, FEN_TUNING.leech.drainStamina);
       }
     });
     on('player.dodged', (p) => {

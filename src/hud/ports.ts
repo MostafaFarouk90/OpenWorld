@@ -19,7 +19,9 @@ export interface ItemDef {
   stackMax: number;
   stats?: { attack?: number; defense?: number };
   /** `noHeal`: a consumable with no health effect (A12's Fox-Fire Ember): usable at full health, `item.used` carries the effect. */
-  use?: { healFraction?: number; healFlat?: number; drinkSeconds?: number; noHeal?: boolean };
+  use?: { healFraction?: number; healFlat?: number; drinkSeconds?: number; noHeal?: boolean;
+    /** Burn removed on use through the spells service (the Fen Salve); the use still succeeds without one. */
+    burnRelief?: number };
   /** v0.6 (A10): gear tier 1..5; absent for non-gear. */
   gearTier?: 1 | 2 | 3 | 4 | 5;
   /** v0.7 item 11: how many shard-gems the piece takes; absent means 0. */
@@ -60,6 +62,13 @@ export interface InventoryService {
   gear(itemId: string): { temper: number; affix?: string };
   /** v0.6: sets temper 0..5 (clamped) on a held item; false when unknown or not held. Does not emit (A10 emits `gear.tempered`). */
   setTemper(itemId: string, level: number, affix?: string): boolean;
+  /** v0.7 item 11 (K10): shard-gems in an item's sockets (optional so older fakes still type-check). */
+  socketsOf?(itemId: string): { slot: number; shardId: string }[];
+  setSockets?(itemId: string, shards: readonly { slot: number; shardId: string }[]): boolean;
+  /** K10: an item's stack cap now (the Ashmare saddlebags raise material caps). */
+  capOf?(itemId: string): number;
+  /** K10: whether the item's shard-gems would fit back in the bag. */
+  gemRoomFor?(itemId: string): boolean;
 }
 
 export type LearnCheck =

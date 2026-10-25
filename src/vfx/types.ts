@@ -2,6 +2,7 @@ import type * as THREE from 'three';
 import type { ActorId, Vec3 } from './ports';
 import type { QualityStep } from './tuning';
 import { TIER3_EFFECT_IDS, type Tier3EffectId } from './effects/tier3';
+import { ACT3_SKILL_EFFECT_IDS, type Act3SkillEffectId } from './act3Skills/index';
 
 export type EffectId =
   | 'hit-spark'
@@ -24,7 +25,8 @@ export type EffectId =
   | 'ash-cloud'
   | 'calm-offering'
   | 'warm-hand'
-  | Tier3EffectId;
+  | Tier3EffectId
+  | Act3SkillEffectId;
 
 export const EFFECT_IDS: readonly EffectId[] = [
   'hit-spark',
@@ -48,6 +50,7 @@ export const EFFECT_IDS: readonly EffectId[] = [
   'calm-offering',
   'warm-hand',
   ...TIER3_EFFECT_IDS,
+  ...ACT3_SKILL_EFFECT_IDS,
 ];
 
 export interface EffectTransform {

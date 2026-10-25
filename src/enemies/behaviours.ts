@@ -3,6 +3,7 @@ import type { Vec3 } from '../physics/PhysicsWorld';
 import type { Brain, BrainIntent, Senses } from './ai/Brain';
 import type { EnemyBody } from './body';
 import type { ActorId, EnemyHost } from './ports';
+import type { CalmContext } from './calm';
 import type { EnemyDef, MoveDef, SpawnOptions } from './types';
 
 /**
@@ -18,6 +19,8 @@ import type { EnemyDef, MoveDef, SpawnOptions } from './types';
 export interface BehaviourContext {
   readonly def: EnemyDef;
   readonly actorId: ActorId;
+  /** K6b: the enemy's slug (`<kind>-<n>`), for interactable ids (`drag:<slug>`). */
+  readonly slug: string;
   readonly spawnerId: string | null;
   /** The spawner slot (null for a loose spawn). */
   readonly slot: number | null;
@@ -69,6 +72,8 @@ export interface BehaviourOverlay {
   mercyOpen?(brainOpen: boolean): boolean;
   calmOpen?(brainOpen: boolean): boolean;
   warmHandOpen?(brainOpen: boolean): boolean;
+  /** K6b: what the Calm prompt knows from the overlay (the shambler's `pulledOut`, a flyer's `grounded`), merged over the manager's. */
+  calmContext?(): Partial<CalmContext>;
   /** `actor.staggered` on this enemy: true when the overlay handled it (the brain is not told). */
   staggered?(byId: ActorId | null): boolean;
   /** A status stun: true when the overlay handled it. */

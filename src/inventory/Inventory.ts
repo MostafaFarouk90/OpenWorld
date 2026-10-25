@@ -36,6 +36,15 @@ export interface GearRecord {
 
 export const MAX_TEMPER = 5;
 
+/** Act 3 (K10, the R15 "Pack Mule Upgrade"): while held, quest-kind stacks of 10 or more hold this many more. */
+export const SADDLEBAGS_ID = 'ashmare-saddlebags';
+export const SADDLEBAG_BONUS = 10;
+
+/** The stack cap of `def`, with the saddlebags' bonus when `bags` is true. */
+export function stackCap(def: { kind: string; stackMax: number }, bags: boolean): number {
+  return bags && def.kind === 'quest' && def.stackMax >= 10 ? def.stackMax + SADDLEBAG_BONUS : def.stackMax;
+}
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
@@ -92,7 +101,7 @@ export class Inventory implements Omit<InventoryService, 'use'> {
     }
     const want = wholeCount(n);
     const have = this.count(id);
-    const added = Math.min(want, Math.max(0, def.stackMax - have));
+    const added = Math.min(want, Math.max(0, this.capOf(id) - have));
     if (added <= 0) return 0;
     this.counts.set(id, have + added);
     this.emit('inventory.changed', { itemId: id, count: have + added });
@@ -109,10 +118,35 @@ export class Inventory implements Omit<InventoryService, 'use'> {
       this.counts.delete(id);
       for (const slot of EQUIP_SLOTS) if (this.slots.get(slot) === id) this.setSlot(slot, null);
       this.gearData.delete(id);
-      // v0.7: an item no longer owned keeps no sockets (a bought copy starts empty, never with the old shard-gems).
-      this.socketData.delete(id);
+      // v0.7: an item no longer owned keeps no sockets (a bought copy starts empty). K10: its shard-gems go back to the
+      // bag rather than vanish (callers check room first; `gemRoomFor`).
+      const gems = this.socketData.get(id);
+      if (gems) {
+        this.socketData.delete(id);
+        for (const g of gems) {
+          if (this.add(g.shardId, 1) >= 1) continue;
+          // No room: keep it aside with the unknown ids; the next load adds it back to the stack (what fits; the rest stays aside).
+          const prev = this.unknown[g.shardId];
+          this.unknown[g.shardId] = (typeof prev === 'number' ? prev : 0) + 1;
+          this.logger.warn(`inventory: no room to return ${g.shardId} from ${id}; kept for the next load`);
+        }
+      }
     }
     this.emit('inventory.changed', { itemId: id, count: left });
+    return true;
+  }
+
+  /** The stack cap of an item now (the saddlebags raise material caps while held); 0 for an unknown id. */
+  capOf(id: string): number {
+    const def = getItem(id);
+    return def ? stackCap(def, this.has(SADDLEBAGS_ID)) : 0;
+  }
+
+  /** Whether every gem socketed in `itemId` would fit back in the bag if the piece left. */
+  gemRoomFor(itemId: string): boolean {
+    const need = new Map<string, number>();
+    for (const g of this.socketData.get(itemId) ?? []) need.set(g.shardId, (need.get(g.shardId) ?? 0) + 1);
+    for (const [gem, n] of need) if (this.count(gem) + n > this.capOf(gem)) return false;
     return true;
   }
 
@@ -229,16 +263,26 @@ export class Inventory implements Omit<InventoryService, 'use'> {
     }
     const items: Record<string, number> = {};
     const unknown: Record<string, unknown> = {};
-    // Ids a previous build kept aside may be known now: they rejoin the items, which win on a clash.
+    // Ids a previous build kept aside may be known now: they rejoin the items, which win on a clash. K10: a shard-gem
+    // kept aside (no room when its piece left, `remove`) adds to the stack instead, and what still does not fit stays aside.
+    const asideGems: Record<string, number> = {};
     for (const src of [isRecord(data.unknown) ? data.unknown : {}, data.items]) {
       for (const [id, raw] of Object.entries(src)) {
         if (!getItem(id)) unknown[id] = raw;
-        else if (typeof raw === 'number') items[id] = raw;
+        else if (typeof raw === 'number') {
+          if (src === data.unknown && isShardGemId(id)) asideGems[id] = wholeCount(raw);
+          else items[id] = raw + (asideGems[id] ?? 0);
+        }
       }
     }
+    for (const [id, n] of Object.entries(asideGems)) if (items[id] === undefined) items[id] = n;
     const equipped = (data.equipped ?? {}) as Record<string, unknown>;
     this.goldAmount = typeof data.gold === 'number' && Number.isFinite(data.gold) && data.gold > 0 ? Math.floor(data.gold) : 0;
     this.apply(items, equipped, unknown);
+    for (const id of Object.keys(asideGems)) {
+      const over = wholeCount(items[id]) - this.count(id);
+      if (over > 0) this.unknown[id] = over;
+    }
     // v1 has no gear records; a malformed v2 record is dropped, not fatal.
     this.gearData.clear();
     if (version >= 2 && isRecord(data.gear)) {
@@ -271,13 +315,15 @@ export class Inventory implements Omit<InventoryService, 'use'> {
     this.counts.clear();
     this.slots.clear();
     this.unknown = unknown;
+    // Bag-aware clamp: a save made with the saddlebags keeps every material it held.
+    const bags = wholeCount(rawItems[SADDLEBAGS_ID] ?? 0) > 0 && !!getItem(SADDLEBAGS_ID);
     for (const [id, raw] of Object.entries(rawItems)) {
       const def = getItem(id);
       if (!def) {
         this.unknown[id] = raw;
         continue;
       }
-      const n = Math.min(wholeCount(raw), def.stackMax);
+      const n = Math.min(wholeCount(raw), stackCap(def, bags));
       if (n > 0) this.counts.set(id, n);
     }
     for (const slot of EQUIP_SLOTS) {

@@ -1,5 +1,6 @@
 import type { ClassId } from '../actors/classes';
 import type { FavourBand, FavourTrack } from '../state/favour';
+import { ACT3_DISCOUNTS, ACT3_SELL_FLAT, ACT3_SHOP_LIST_PRICES, ACT3_VENDORS } from './stock.act3';
 
 export type VendorId =
   | 'wystan' | 'merrin' | 'edda' | 'wynn' | 'dunstan' | 'gerta' | 'ashdown'
@@ -18,6 +19,8 @@ export interface StockLine {
   when?: StockWhen;
   /** Classes the piece is meant for; the shop dims it for others. It never blocks the sale. */
   classes?: readonly ClassId[];
+  /** The line is hidden while the player holds any of the item (a single key item, such as the ferry token). */
+  unlessHeld?: boolean;
 }
 
 export interface StockWhen {
@@ -68,14 +71,8 @@ const GERTA_TIER2: readonly StockLine[] = [
 ];
 
 export const VENDORS: Readonly<Record<VendorId, VendorDef>> = {
-  // Act 3 (v0.7 item 16): empty until K10 / K13 stock them (the record must stay total).
-  leofa: { id: 'leofa', buys: false, lines: [] },
-  dudda: { id: 'dudda', buys: false, lines: [] },
-  gytha: { id: 'gytha', buys: false, lines: [] },
-  thorgar: { id: 'thorgar', buys: false, lines: [] },
-  eadgyth: { id: 'eadgyth', buys: false, lines: [] },
-  ansgar: { id: 'ansgar', buys: false, lines: [] },
-  ysmeryth: { id: 'ysmeryth', buys: false, lines: [] },
+  // Act 3 (v0.7 item 16): K10's stock lives in stock.act3.ts.
+  ...ACT3_VENDORS,
   wystan: {
     id: 'wystan',
     track: 'halvard',
@@ -180,6 +177,7 @@ export const SHOP_LIST_PRICES: Readonly<Record<string, number>> = {
   'maud-poultice': 40,
   'grisel-oath-sash': 90,
   'deepcore-pick': 400,
+  ...ACT3_SHOP_LIST_PRICES,
 };
 
 /** Flat sell prices that bypass the 40% rule and may apply to quest-kind items (materials sold at Slagg). */
@@ -188,6 +186,7 @@ export const SELL_FLAT: Readonly<Record<string, number>> = {
   // 5, not the spec's 6: Aldous at Hearthbound with the 15% union discount sells coal for 5, so 6 would be arbitrage.
   coal: 5,
   'cinder-steel-ingot': 40,
+  ...ACT3_SELL_FLAT,
 };
 
 export const VENDOR_IDS = Object.keys(VENDORS) as VendorId[];
@@ -210,6 +209,7 @@ export const VENDOR_DISCOUNTS: readonly VendorDiscount[] = [
   { flag: 'story.r10.choice', value: 'compromise', vendors: UNION_VENDORS, percent: 10 },
   { flag: 'story.r10.choice', value: 'miners', vendors: UNION_VENDORS, percent: 15 },
   { flag: 'story.r10.choice', value: 'stewards', vendors: UNION_VENDORS, percent: 0 },
+  ...ACT3_DISCOUNTS,
 ];
 
 /** The best matching discount percent for a vendor (0 when none); the buy price only, never sell or buy-back. */

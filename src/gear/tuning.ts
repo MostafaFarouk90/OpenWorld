@@ -4,10 +4,12 @@ export const GEAR_TUNING = {
   saddleStaminaBonus: 30,
   maxTemper: 5,
   /** Gold per level by gear tier (tier 1 is gold only). */
-  goldPerLevel: { 1: 15, 2: 40, 3: 90 } as Readonly<Record<number, number>>,
+  goldPerLevel: { 1: 15, 2: 40, 3: 90, 4: 160 } as Readonly<Record<number, number>>,
   /** Tempering the first two pieces at the Anvil while M14 is active costs nothing. */
   lessonRuns: 2,
   forge: { ingots: 1, goldWeapon: 150, goldArmour: 120 },
+  /** K10: tier 3 to tier 4 (rime-iron plus shed scales or sloughed hide, by class). */
+  forgeTier4: { rimeIron: 2, scales: 3, goldWeapon: 300, goldArmour: 240 },
   rhythm: {
     bpm: 94,
     /** The 16-step bar: four steps to a beat. */

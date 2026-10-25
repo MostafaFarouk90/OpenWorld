@@ -42,7 +42,10 @@ export type EnemyKind =
   | 'hunter-spearman'
   | 'hunter-harpooner'
   // Act 2 (A4): House Grisel's steward guard (Deepgate's hall, M20's stewards).
-  | 'steward-guard';
+  | 'steward-guard'
+  // Act 3 (K6b PR 1): the Greyfen's own kinds.
+  | 'fen-leech'
+  | 'peat-shambler';
 
 /**
  * Act 2 kind ids (v0.6 item 14), reserved here so no other thread takes them. A6a and A6b move each id into
@@ -87,7 +90,8 @@ export interface MoveDef {
   recover: number;
   /** Selection weight; 0 means only when a spawn's move filter names it (the T10 red sweep). */
   weight: number;
-  onHit?: 'slow' | 'steal' | 'ignite';
+  /** K6b: `drain` takes `FEN_TUNING.leech.drainStamina` stamina from the player on a landed hit (the Fen Leech's bite). */
+  onHit?: 'slow' | 'steal' | 'ignite' | 'drain';
   /** A6b: fires a projectile when the window opens (rock, slag glob, net, harpoon); see ranged/. */
   ranged?: RangedSpec;
   /** A8: a blockable ranged hit sent with `parryable: false` (a script boss's net: a timed block is a plain block, never a free break). */
@@ -226,12 +230,12 @@ export interface EnemyDef {
   /** Alley Cutpurse behaviour (cutpurse/): steals on a grab, flees with the gold, can be caught and spared. */
   thief?: boolean;
   /** Which body the enemy gets: the Knight rig (default), the procedural quadruped, the wyrm (wyrm/), or A6b's golem and crawler. */
-  body?: 'humanoid' | 'quadruped' | 'wyrm' | 'golem' | 'crawler';
+  body?: 'humanoid' | 'quadruped' | 'wyrm' | 'golem' | 'crawler' | 'leech';
   /**
    * `circle-rush`: circle the target while a packmate is near, then rush (ai/Brain, hound/circleRush.ts). `wyrm-flight` (the Ember Wyrm) and
    * `skittish` (the wyrmling) are behaviour overlays (behaviours.ts). A6b: `ceiling` (crawler drop), `back-core` (golem), `guide` (fox, sheep: harmless).
    */
-  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide';
+  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide' | 'lurk' | 'peat';
   /** Seconds a poise break holds the stagger (and its mercy window); default `AI.breakStaggerSeconds` (1.2). */
   breakStaggerSeconds?: number;
   /** Hurtboxes on which a player-team or ally hit breaks poise at once (the Ember Wyrm's wings). */

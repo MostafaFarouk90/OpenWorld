@@ -9,14 +9,21 @@ import { PF, SHOTS } from './tuning';
 
 const DT = 1 / 60;
 
-function rig(opts: { bolts?: number; limited?: boolean; learned?: string[]; held?: boolean } = {}) {
+function rig(opts: { bolts?: number; limited?: boolean; learned?: string[]; held?: boolean; master?: number } = {}) {
   const player = new FakeActor('player', 'player');
   const actors = new FakeActors(player);
   const damage = new FakeDamage(actors);
   const projectiles = new ProjectileSystem({ actors });
   let bolts = opts.bolts ?? 20;
   const limited = opts.limited ?? true;
-  const ammo = new Ammo({ itemKnown: () => limited, count: () => bolts, remove: (n) => (bolts >= n ? ((bolts -= n), true) : false) });
+  let master = opts.master ?? 0;
+  const ammo = new Ammo({
+    itemKnown: () => limited,
+    count: () => bolts,
+    remove: (n) => (bolts >= n ? ((bolts -= n), true) : false),
+    masterCount: () => master,
+    masterRemove: (n) => (master >= n ? ((master -= n), true) : false),
+  });
   let now = 0;
   const marks = new Marks({ actors, now: () => now, added: () => {}, removed: () => {} });
   const fx = { tracer: vi.fn(), shot: vi.fn(), hit: vi.fn() };
@@ -53,7 +60,7 @@ function rig(opts: { bolts?: number; limited?: boolean; learned?: string[]; held
     for (let t = 0; t < 1; t += DT) projectiles.update(DT);
   };
   const hostile = (id: string, z: number, x = 0) => actors.add(new FakeActor(id, 'hostile', x, z));
-  return { cb, actors, damage, projectiles, swing, hostile, fx, toast, marks, learned, held, bolts: () => bolts, setBolts: (n: number) => (bolts = n), advance: (s: number) => (now += s) };
+  return { cb, actors, damage, projectiles, swing, hostile, fx, toast, marks, learned, held, bolts: () => bolts, masters: () => master, setBolts: (n: number) => (bolts = n), advance: (s: number) => (now += s) };
 }
 
 const melee = (attackId: string): ModifiableRequest =>
@@ -306,5 +313,38 @@ describe('release timing', () => {
     r.cb.dispose();
     for (let i = 0; i < 90; i++) r.projectiles.update(DT);
     expect(r.damage.applied).toHaveLength(0);
+  });
+});
+
+describe('Crossbow master bolts', () => {
+  it('a shot that spends a master bolt hits 10% harder, and the plain stock is untouched', () => {
+    const r = rig({ master: 2, bolts: 5 });
+    r.hostile('e', 8);
+    r.swing(0);
+    expect(r.damage.applied[0].amount).toBeCloseTo(PF.baseDamage * 1.1);
+    expect(r.masters()).toBe(1);
+    expect(r.bolts()).toBe(5);
+  });
+
+  it('plain bolts deal base damage once the master bolts run out, and with none held nothing changes', () => {
+    const r = rig({ master: 1, bolts: 5 });
+    r.hostile('e', 8);
+    r.swing(0);
+    r.swing(0);
+    expect(r.damage.applied[0].amount).toBeCloseTo(PF.baseDamage * 1.1);
+    expect(r.damage.applied[1].amount).toBe(PF.baseDamage);
+    expect(r.bolts()).toBe(4);
+    const none = rig({ bolts: 5 });
+    none.hostile('e', 8);
+    none.swing(0);
+    expect(none.damage.applied[0].amount).toBe(PF.baseDamage);
+  });
+
+  it('a master-only quiver still arms the swing (no dry strike)', () => {
+    const r = rig({ master: 1, bolts: 0 });
+    r.hostile('e', 8);
+    r.swing(0);
+    expect(r.toast).not.toHaveBeenCalled();
+    expect(r.damage.applied[0].amount).toBeCloseTo(PF.baseDamage * 1.1);
   });
 });

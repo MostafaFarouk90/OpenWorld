@@ -43,6 +43,10 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'steward-guard': 30,
   'slag-crawler': 60,
   'cinder-golem': 180,
+  // Act 3 (K6b): stored divided by the Greyfen's kill XP region factor (1.8, set by the fen plugin), so a Greyfen kill pays
+  // plan 6.1's 70 and 220 after the one rounding (39 x 1.8 = 70.2, 122 x 1.8 = 219.6). Coordinator ruling A.
+  'fen-leech': 39,
+  'peat-shambler': 122,
   dummy: 0,
   scarecrow: 0,
 };

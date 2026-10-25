@@ -30,7 +30,8 @@ export function mercyInteractableId(slug: string): string {
 /** String key of the prompt: "Hold {key}: Release ({cost} Burn)", "Hold {key}: Calm ({offering})" or "Hold {key}: Spare". */
 export function mercyPromptKey(def: MercyEnemyDef): string {
   if (def.mercy.verb === 'release') return 'enemies.mercy.release';
-  return def.mercy.verb === 'calm' ? 'enemies.mercy.calm' : 'enemies.mercy.spare';
+  if (def.mercy.verb === 'calm') return def.mercy.calmForm === 'layToRest' ? 'enemies.mercy.layToRest' : 'enemies.mercy.calm';
+  return 'enemies.mercy.spare';
 }
 
 /** The verbs whose completion `completeMercy` handles by the shared pulse path (Calm has its own, `completeCalm`). */

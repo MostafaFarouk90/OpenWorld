@@ -8,6 +8,8 @@ export const ENEMY_STRINGS_EN: Record<string, string> = {
   'enemies.calm.warmHand': 'Warm Hand, 10 Burn',
   'enemies.calm.free': 'Stay your hand',
   'enemies.mercy.spare': 'Hold {key}: Spare',
+  // K6b: the Peat Shambler's form of Calm (design 10 row 10).
+  'enemies.mercy.layToRest': 'Hold {key}: Lay to rest',
   'enemies.name.ash-wraith': 'Ash Wraith',
   'enemies.name.alley-cutpurse': 'Alley Cutpurse',
   'enemies.name.blighted-soldier': 'Blighted Soldier',
@@ -28,5 +30,7 @@ export const ENEMY_STRINGS_EN: Record<string, string> = {
   'enemies.name.kindling-fox': 'Kindling Fox',
   'enemies.name.hunter-spearman': 'Dragon-Hunter Spearman',
   'enemies.name.hunter-harpooner': 'Dragon-Hunter Harpooner',
+  'enemies.name.fen-leech': 'Fen Leech',
+  'enemies.name.peat-shambler': 'Peat Shambler',
   'enemies.name.steward-guard': 'Steward Guard',
 };

@@ -144,13 +144,16 @@ const pathfinderPlugin: GamePlugin = {
       },
       count: () => inventory()?.count(PF.ammoItem) ?? 0,
       remove: (n) => inventory()?.remove(PF.ammoItem, n) ?? false,
+      masterCount: () => (getItem(PF.masterAmmoItem) ? (inventory()?.count(PF.masterAmmoItem) ?? 0) : 0),
+      masterRemove: (n) => inventory()?.remove(PF.masterAmmoItem, n) ?? false,
     });
     offs.push(
       ctx.services.provide('pathfinder', {
         ammo: () => {
           const def = getItem(PF.ammoItem);
           if (!isPathfinder() || !def || !inventory()) return null;
-          return { count: Math.max(0, inventory()!.count(PF.ammoItem)), max: def.stackMax };
+          // K10: master bolts are spent first and count as ammo.
+          return { count: Math.max(0, inventory()!.count(PF.ammoItem)) + Math.max(0, inventory()!.count(PF.masterAmmoItem)), max: def.stackMax };
         },
       }),
     );
