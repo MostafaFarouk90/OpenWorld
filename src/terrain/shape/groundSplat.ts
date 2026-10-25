@@ -5,6 +5,7 @@
 import { createNoise2D } from '../noise';
 import { TERRAIN } from '../../config/constants';
 import { H1_SPLAT_ZONES } from './splatZones.h1';
+import { H3_SPLAT_ZONES } from './splatZones.h3';
 
 /** A trodden street: a polyline with a half width and a soft outer edge (rounded ends). */
 export interface SplatStreet {
@@ -28,10 +29,33 @@ export interface SplatYard {
   /** The meadow blades keep growing here (a trampled camp, not a packed floor). */
   keepBlades?: boolean;
 }
-export type SplatZone = SplatStreet | SplatYard;
+/** A stone court (H3: the keep court, the counting yard, the Archive steps, the ward square): a paved rectangle, grey, no meadow blades. */
+export interface SplatCourt {
+  kind: 'court';
+  id: string;
+  x0: number;
+  x1: number;
+  z0: number;
+  z1: number;
+  edge: number;
+}
+/** Sooted ground (Forge Row, the old smelter yard, the charcoal yard): an ellipse that darkens the ground to a grey; the blades stay and take the grey. */
+export interface SplatSoot {
+  kind: 'soot';
+  id: string;
+  cx: number;
+  cz: number;
+  /** Semi-axes (m): full strength inside `inner` x the axis, fading out to the axis. */
+  rx: number;
+  rz: number;
+  inner: number;
+  /** Colour strength 0..1 at the centre. */
+  strength: number;
+}
+export type SplatZone = SplatStreet | SplatYard | SplatCourt | SplatSoot;
 
 /** Every tile's zones. H2, H3 and H4 append their tables here. */
-export const SPLAT_ZONES: readonly SplatZone[] = [...H1_SPLAT_ZONES];
+export const SPLAT_ZONES: readonly SplatZone[] = [...H1_SPLAT_ZONES, ...H3_SPLAT_ZONES];
 
 /** Trodden earth: a pale, dry brown (linear-ish vertex colour, like detailGround's DIRT). */
 const STREET_COLOUR = [0.3, 0.245, 0.165] as const;
@@ -39,6 +63,10 @@ const STREET_COLOUR = [0.3, 0.245, 0.165] as const;
 const YARD_COLOUR = [0.32, 0.25, 0.15] as const;
 /** Share of the way to the splat colour at full strength: a little of the ground's own variation shows through. */
 const STRENGTH = 0.9;
+/** Paving: a pale, cool grey (linear-ish, like the yard colours). */
+const COURT_COLOUR = [0.31, 0.3, 0.285] as const;
+/** Soot: a dark warm grey. */
+const SOOT_COLOUR = [0.15, 0.145, 0.14] as const;
 /** No meadow blades where a street or yard is at least this strong (the blades would grow across a packed floor). */
 export const SPLAT_CLEAR = 0.15;
 
@@ -58,7 +86,8 @@ interface Bounds {
 }
 
 function boundsOf(zone: SplatZone): Bounds {
-  if (zone.kind === 'yard') {
+  if (zone.kind === 'soot') return { zone, minX: zone.cx - zone.rx, maxX: zone.cx + zone.rx, minZ: zone.cz - zone.rz, maxZ: zone.cz + zone.rz };
+  if (zone.kind === 'yard' || zone.kind === 'court') {
     const m = zone.edge / 2;
     return { zone, minX: zone.x0 - m, maxX: zone.x1 + m, minZ: zone.z0 - m, maxZ: zone.z1 + m };
   }
@@ -89,6 +118,10 @@ export function zoneAmount(zone: SplatZone, x: number, z: number): number {
     const d = distToPolyline(zone.pts, x, z) - zone.halfWidth;
     return 1 - smoothstep(d / zone.edge);
   }
+  if (zone.kind === 'soot') {
+    const r = Math.hypot((x - zone.cx) / zone.rx, (z - zone.cz) / zone.rz);
+    return (1 - smoothstep((r - zone.inner) / (1 - zone.inner))) * zone.strength;
+  }
   // Signed distance outside the rectangle (negative inside), blended over `edge` centred on the side.
   const dx = Math.max(zone.x0 - x, 0, x - zone.x1);
   const dz = Math.max(zone.z0 - z, 0, z - zone.z1);
@@ -103,7 +136,11 @@ export interface SplatField {
   street(x: number, z: number): number;
   /** Strongest packed-yard coverage at (x, z), 0..1. */
   yard(x: number, z: number): number;
-  /** Strongest of both, 0..1. */
+  /** Strongest stone-court coverage at (x, z), 0..1. */
+  court(x: number, z: number): number;
+  /** Strongest soot coverage at (x, z), 0..1. */
+  soot(x: number, z: number): number;
+  /** Strongest of streets, yards and courts, 0..1. */
   amount(x: number, z: number): number;
   /** Strongest coverage 0..1 of the zones that keep the meadow blades off (every street, the yards that do not set `keepBlades`). */
   clear(x: number, z: number): number;
@@ -120,7 +157,8 @@ export function createSplatField(zones: readonly SplatZone[]): SplatField {
     let a = 0;
     for (const b of bounds) {
       if ((kind !== 'any' && b.zone.kind !== kind) || x < b.minX || x > b.maxX || z < b.minZ || z > b.maxZ) continue;
-      if (clearOnly && b.zone.kind === 'yard' && b.zone.keepBlades) continue;
+      if (clearOnly && (b.zone.kind === 'soot' || (b.zone.kind === 'yard' && b.zone.keepBlades))) continue;
+      if (kind === 'any' && b.zone.kind === 'soot') continue;
       const v = zoneAmount(b.zone, x, z) * (b.zone.kind === 'yard' ? (b.zone.strength ?? 1) : 1);
       if (v > a) a = v;
     }
@@ -129,6 +167,8 @@ export function createSplatField(zones: readonly SplatZone[]): SplatField {
   return {
     street: (x, z) => strongest('street', x, z),
     yard: (x, z) => strongest('yard', x, z),
+    court: (x, z) => strongest('court', x, z),
+    soot: (x, z) => strongest('soot', x, z),
     amount: (x, z) => strongest('any', x, z),
     clear: (x, z) => strongest('any', x, z, true),
   };
@@ -148,15 +188,19 @@ export const splatClearAmount = splat.clear;
 export function tintSplat(x: number, z: number, out: Float32Array, o: number, field: SplatField = splat): void {
   const street = field.street(x, z);
   const yard = field.yard(x, z);
-  if (street <= 0 && yard <= 0) return;
+  const court = field.court(x, z);
+  const soot = field.soot(x, z);
+  if (street <= 0 && yard <= 0 && court <= 0 && soot <= 0) return;
   // Mottling at three scales (a patch of dust, damp dark earth, a pale worn track), so a yard is not one flat colour at eye height.
   const m = 1 + mottle(x / 2.3, z / 2.3) * 0.08 + mottle(x / 7.5 + 40, z / 7.5) * 0.1 + mottle(x / 31 + 90, z / 31) * 0.1;
   // The warm/cool drift: damp patches go darker and redder, dust paler and greyer.
   const warm = mottle(x / 11 + 200, z / 11 - 60) * 0.1;
-  const w = Math.max(street, yard);
+  const w = Math.max(street, yard, court, soot);
   for (let k = 0; k < 3; k++) {
     let c = out[o + k]!;
+    c += (SOOT_COLOUR[k]! - c) * soot * STRENGTH;
     c += (YARD_COLOUR[k]! - c) * yard * STRENGTH;
+    c += (COURT_COLOUR[k]! - c) * court * STRENGTH;
     c += (STREET_COLOUR[k]! - c) * street * STRENGTH;
     const tone = k === 0 ? 1 + warm * 0.6 : k === 2 ? 1 - warm * 0.8 : 1;
     out[o + k] = c * (1 + (m * tone - 1) * w);

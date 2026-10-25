@@ -114,9 +114,15 @@ const KAYKIT: Readonly<Record<string, { model: string; scale?: number; fitHeight
   rubble_half: { model: 'dun/rubble_half' },
   // H1 stand-ins: a refugee's handcart is the wheelbarrow made bigger, the notice board a tall post, the goods basket a sack, the stable
   // horse stays a scripted placeholder (the Quaternius horse is skinned and the instancer takes static meshes only).
-  'handcart-a': { model: 'hex/wheelbarrow', scale: 1.6 },
+  'handcart-a': { model: 'hex/wheelbarrow', fitHeight: 1.0 },
   'notice-board-a': { model: 'hal/fence_pillar', fitHeight: 2.2 },
   'basket-goods-a': { model: 'hex/sack', scale: 0.8 },
+  // H3 stand-ins (plans/env-pass/h3/missing-objects.md): planter box = open crate, ale keg = big barrel, stacked crates = big crate,
+  // Rooftop Ward chimney stack = the Halloween pillar fitted to 2.2 m.
+  'planter-box-a': { model: 'hex/crate_open', scale: 0.8 },
+  'keg-a': { model: 'hex/barrel', scale: 1.5 },
+  'crates-stacked-a': { model: 'hex/crate_A_big', scale: 1.2 },
+  'chimney-stack-a': { model: 'hal/pillar', fitHeight: 2.2 },
 };
 
 const SHAPES: ReadonlyArray<[RegExp, PlaceholderShape]> = [
