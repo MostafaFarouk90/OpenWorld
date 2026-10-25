@@ -304,17 +304,20 @@ export const SKYHOLD_SPUR_POINTS: RoadPolyline = [
 export const SKYHOLD_SPUR = road('skyhold-spur', SKYHOLD_SPUR_POINTS, 3.5, 20, 0.1, { maxBlend: 60, maxSideSlope: 1.1 });
 
 /**
- * R18's egg route (K4): a 2 m footpath cut in switchbacks up the Hawk Cliffs' scarp from the foot plateau's north edge
- * (27 m) to the nest shelf about 50 m up, at 25% or less. Foot only: no horse takes it.
+ * R18's egg route (K4): a 6 m footpath cut in switchbacks up the Hawk Cliffs' scarp from the foot plateau's north edge
+ * (27 m) to the nest shelf about 50 m up, at 25% or less. Each hairpin is a 14 m turn straight up the slope (a landing
+ * 6 m wide), so the legs leave a turn 14 m apart and no point of the path tilts more than about 30 degrees across;
+ * the sides are rock-cut (blend at most 4 m: a wall on the uphill edge, a drop on the downhill one). Foot only.
  */
 export const HAWK_CLIFFS_PATH_POINTS: RoadPolyline = [
   [11420, 13028],
-  [11490, 13045],
-  [11400, 13065],
-  [11490, 13085],
-  [11500, 13100],
+  [11492, 13048],
+  [11492, 13062],
+  [11400, 13074],
+  [11400, 13088],
+  [11500, 13099],
 ];
-export const HAWK_CLIFFS_PATH = road('hawk-cliffs-path', HAWK_CLIFFS_PATH_POINTS, 2, 4, 0.25, { maxBlend: 12, maxSideSlope: 1.1 });
+export const HAWK_CLIFFS_PATH = road('hawk-cliffs-path', HAWK_CLIFFS_PATH_POINTS, 3, 2, 0.25, { maxBlend: 4, maxSideSlope: 1.1 });
 /** The nest shelf (25 x 15 m) at the path's top, cut level into the face as a short wide bench. */
 export const HAWK_NEST_SHELF = { x: 11512.5, z: 13100, w: 25, d: 15 } as const;
 export const HAWK_NEST_SHELF_ROAD = road(
@@ -328,6 +331,21 @@ export const HAWK_NEST_SHELF_ROAD = road(
   0.1,
   { maxBlend: 12, maxSideSlope: 1.1 },
 );
+
+/**
+ * Where the roads meet Wyrmwatch Lodge's pad (K4's wall gates): the Spine Road at its west edge, the Deepgate Track at
+ * its east edge and the Rime Pass at its north edge, each the road's own end point (yaw faces out along the road).
+ */
+const lodgeEnd = (pts: RoadPolyline, atStart: boolean): { x: number; z: number; yaw: number } => {
+  const [x, z] = atStart ? pts[0] : pts[pts.length - 1];
+  const [nx, nz] = atStart ? pts[1] : pts[pts.length - 2];
+  return { x, z, yaw: Math.atan2(-(nx - x), -(nz - z)) };
+};
+export const WYRMWATCH_LODGE_GATES = {
+  west: lodgeEnd(SPINE_ROAD_POINTS, false),
+  east: lodgeEnd(DEEPGATE_TRACK_POINTS, false),
+  north: lodgeEnd(RIME_PASS_POINTS, true),
+} as const;
 
 /** In world-shape order (each road is fitted on the roads before it). */
 export const DRAGONSPINE_ROADS: readonly RoadDef[] = [SPINE_ROAD, DEEPGATE_TRACK, RIME_PASS, SKYHOLD_SPUR, HAWK_CLIFFS_PATH, HAWK_NEST_SHELF_ROAD];

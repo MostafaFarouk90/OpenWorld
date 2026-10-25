@@ -19,6 +19,7 @@ import {
   FROSTFANG_KEEP_PLATEAU,
   FROSTFANG_WAYSTONE,
   HAWK_CLIFFS_FOOT_PLATEAU,
+  HAWK_CLIFFS_PATH,
   HAWK_NEST_SHELF,
   RIME_PASS,
   RIME_PASS_POINTS,
@@ -29,6 +30,7 @@ import {
   SPINE_ROAD_POINTS,
   WYRMS_HEARTH_PLATEAU,
   WYRMWATCH_HALL_PAD,
+  WYRMWATCH_LODGE_GATES,
   WYRMWATCH_LODGE_PLATEAU,
 } from './dragonspine';
 import { WORLD_SHAPE } from './index';
@@ -164,11 +166,14 @@ describe('plateaus', () => {
 
   it('a 40 to 60 m cliff face rises directly north of the Hawk Cliffs foot', () => {
     const p = HAWK_CLIFFS_FOOT_PLATEAU;
+    // The face: at least 35 m of rise inside 25 m, starting within 70 m of the pad's north edge, on the columns
+    // 20 m either side of the pad's centre (the footpath's hairpin turn cuts up the face on the centre column).
     const x = (p.box.minX + p.box.maxX) / 2;
-    // The face: at least 35 m of rise inside 25 m, starting within 70 m of the pad's north edge.
-    let face = 0;
-    for (let z = p.box.maxZ; z <= p.box.maxZ + 70; z += 5) face = Math.max(face, heightAt(x, z + 25) - heightAt(x, z));
-    expect(face).toBeGreaterThanOrEqual(35);
+    for (const col of [x - 20, x + 20]) {
+      let face = 0;
+      for (let z = p.box.maxZ; z <= p.box.maxZ + 70; z += 5) face = Math.max(face, heightAt(col, z + 25) - heightAt(col, z));
+      expect(face, `x ${col}`).toBeGreaterThanOrEqual(35);
+    }
     const top = heightAt(x, p.box.maxZ + 70) - p.height;
     expect(top).toBeGreaterThanOrEqual(40);
     expect(top).toBeLessThanOrEqual(65);
@@ -252,7 +257,7 @@ describe('the Frostfang chasm', () => {
 
 describe('roads', () => {
   // The Spine Road: plan 3.3's 7.2 km from the Greyfen's edge, plus about 1 km from Mireweather Hut to the edge.
-  const TARGET: Record<string, number> = { 'spine-road': 8200, 'deepgate-track': 8600, 'rime-pass': 6000, 'skyhold-spur': 1500, 'hawk-cliffs-path': 270, 'hawk-nest-shelf': 25 };
+  const TARGET: Record<string, number> = { 'spine-road': 8200, 'deepgate-track': 8600, 'rime-pass': 6000, 'skyhold-spur': 1500, 'hawk-cliffs-path': 290, 'hawk-nest-shelf': 25 };
 
   for (const r of DRAGONSPINE_ROADS) {
     it(`${r.id} never climbs more than ${r.maxGrade} over a 5 m step`, () => {
@@ -395,7 +400,7 @@ describe('shipped ground', () => {
 });
 
 describe('the Hawk Cliffs footpath and nest shelf (K4, R18)', () => {
-  it('climbs from the foot plateau to the shelf at 25% or less, about 270 m of path', () => {
+  it('climbs from the foot plateau to the shelf at 25% or less, about 290 m of path', () => {
     const len = worldRoads.length('hawk-cliffs-path');
     expect(len).toBeGreaterThan(240);
     expect(len).toBeLessThan(320);
@@ -403,6 +408,56 @@ describe('the Hawk Cliffs footpath and nest shelf (K4, R18)', () => {
     for (let s = 0; s + 2 <= len; s += 2) worst = Math.max(worst, Math.abs(worldRoads.profile('hawk-cliffs-path', s + 2) - worldRoads.profile('hawk-cliffs-path', s)) / 2);
     expect(worst).toBeLessThanOrEqual(0.25 + 1e-6);
     expect(worldRoads.profile('hawk-cliffs-path', 0)).toBeCloseTo(DRAGONSPINE_SITES.hawkCliffsFoot.height, 0);
+  });
+
+  it('no point within the path\'s width (or its hairpin turns) tilts more than 0.7 (35 degrees), so a player steering straight never sticks', () => {
+    const pts = HAWK_CLIFFS_PATH.points;
+    const hw = HAWK_CLIFFS_PATH.halfWidth;
+    const near = (x: number, z: number): number => {
+      let best = Infinity;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i];
+        const b = pts[i + 1];
+        const dx = b.x - a.x;
+        const dz = b.z - a.z;
+        const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz)));
+        best = Math.min(best, Math.hypot(x - a.x - dx * t, z - a.z - dz * t));
+      }
+      return best;
+    };
+    let worst = 0;
+    let at = '';
+    for (let x = 11390; x <= 11505; x += 0.5) {
+      for (let z = 13020; z <= 13105; z += 0.5) {
+        if (near(x, z) > hw - 0.3) continue;
+        const s = Math.hypot(heightAt(x + 0.5, z) - heightAt(x - 0.5, z), heightAt(x, z + 0.5) - heightAt(x, z - 0.5));
+        if (s > worst) {
+          worst = s;
+          at = `(${x}, ${z})`;
+        }
+      }
+    }
+    expect(worst, at).toBeLessThanOrEqual(0.7);
+  });
+
+  it('the hairpin turns run straight up the slope, at least twice the path\'s reach long (the legs leave them apart)', () => {
+    const p = HAWK_CLIFFS_PATH.points;
+    const reach = HAWK_CLIFFS_PATH.halfWidth + (HAWK_CLIFFS_PATH.maxBlend ?? 0);
+    for (const i of [1, 3]) {
+      expect(p[i + 1].x).toBe(p[i].x);
+      expect(p[i + 1].z - p[i].z).toBeGreaterThanOrEqual(2 * reach);
+    }
+  });
+
+  it('the lodge gates are the Spine Road, Deepgate Track and Rime Pass ends, on the lodge pad\'s west, east and north edges', () => {
+    const b = WYRMWATCH_LODGE_PLATEAU.box;
+    expect(WYRMWATCH_LODGE_GATES.west).toMatchObject({ x: b.minX, z: 11900 });
+    expect(WYRMWATCH_LODGE_GATES.east).toMatchObject({ x: b.maxX, z: 11900 });
+    expect(WYRMWATCH_LODGE_GATES.north).toMatchObject({ x: 13600, z: b.maxZ });
+    // Each yaw faces out along its road (yaw 0 faces -Z).
+    expect(Math.sin(WYRMWATCH_LODGE_GATES.west.yaw)).toBeGreaterThan(0.9);
+    expect(Math.sin(WYRMWATCH_LODGE_GATES.east.yaw)).toBeLessThan(-0.9);
+    expect(Math.cos(WYRMWATCH_LODGE_GATES.north.yaw)).toBeLessThan(0);
   });
 
   it('the shelf is a level 25 x 15 m bench 40 to 60 m over the foot', () => {
