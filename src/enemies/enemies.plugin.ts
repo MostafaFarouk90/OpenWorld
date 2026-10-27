@@ -27,6 +27,7 @@ const KNIGHT = 'knight';
  * that pass their own model factory, and spawning warns instead of throwing.
  */
 let manager: EnemyManager | null = null;
+let disposeEnvLib: (() => void) | null = null;
 
 const plugin: GamePlugin = {
   id: 'enemies',
@@ -40,6 +41,7 @@ const plugin: GamePlugin = {
     void lib.preload([...new Set(Object.values(ENEMY_DEFS).flatMap((d) => (d.model.props ?? []).map((p) => p.id)).filter((id) => !id.startsWith('proc/') && !id.startsWith('env/')))]);
     // `env/` props (the hunter's spear) load from public/assets/env through their own source; a missing glb keeps the fallback.
     const envLib = envPropLibrary(assets);
+    disposeEnvLib = () => envLib.dispose();
     void envLib.preload([...new Set(Object.values(ENEMY_DEFS).flatMap((d) => (d.model.props ?? []).map((p) => p.id)).filter((id) => id.startsWith('env/')))]);
     const prop = (id: string) => {
       const t = id.startsWith('env/') ? envLib.peek(id) : lib.peek(id);
@@ -90,6 +92,8 @@ const plugin: GamePlugin = {
     }
   },
   dispose() {
+    disposeEnvLib?.();
+    disposeEnvLib = null;
     manager?.dispose();
     manager = null;
   },

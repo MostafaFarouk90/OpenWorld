@@ -1,6 +1,6 @@
 import { wyrmlingSpawner } from '../../../enemies/wyrm/spawners';
 import { WATCH_GUARD_BAND } from '../../../enemies/level';
-import { M15_WATCH_LOOP } from '../../../cinderreach/huntersCamp';
+import { M15_WATCH_LOOP, M15_WATCH_STRIDE } from '../../../cinderreach/huntersCamp';
 import type { LevelBand, SpawnerDef } from '../../../enemies/types';
 import { R10_DUEL_SPAWNERS } from './r10duels/r10Duels';
 
@@ -75,10 +75,10 @@ export const ACT2_SPAWNERS_A12: readonly SpawnerDef[] = [
     activation: { quest: 'm15', flag: 'story.m15.harpsOut' }, leash: true, ...common,
   },
   // M15 stealth section: three observer-only watch guards on the octagon round the camp (huntersCamp.ts M15_WATCH_LOOP), each
-  // spawning on the node its slot starts from, live while the scout objective is open
+  // spawning on the node its slot starts from (a third of the loop apart: patrolStride), live while the scout objective is open
   {
     id: 'stealth.m15.watch', enemy: 'watch-guard', count: 3, anchor: 'cinderreach.spawn.m15.watch.1', memberAnchors: range('cinderreach.spawn.m15.watch.', 1, 3),
-    patrol: M15_WATCH_LOOP.map((n) => `cinderreach.patrol.m15.camp.${n}`), band: WATCH_GUARD_BAND, activation: { quest: 'm15' }, respawn: 'never', leash: false,
+    patrol: M15_WATCH_LOOP.map((n) => `cinderreach.patrol.m15.camp.${n}`), patrolStride: M15_WATCH_STRIDE, band: WATCH_GUARD_BAND, activation: { quest: 'm15' }, respawn: 'never', leash: false,
   },
   // M15: the caged wyrmling at the pen (tethered by the director; unchained and sent flying when the cage is opened)
   wyrmlingSpawner('q12.m15.cage', 'cinderreach.m15.cage', 1, { tag: 'm15.cage', activation: { quest: 'm15' }, ephemeral: true, peaceful: true }),

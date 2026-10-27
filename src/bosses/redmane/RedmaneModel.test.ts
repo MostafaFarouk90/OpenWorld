@@ -77,6 +77,16 @@ describe('RedmaneModel (KayKit Barbarian)', () => {
     model.dispose();
   });
 
+  it('the env lance keeps casting shadows after load', () => {
+    const fake = new THREE.Group();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 3.2), new THREE.MeshBasicMaterial());
+    mesh.castShadow = false;
+    fake.add(mesh);
+    const model = buildRedmaneModel({ model: cloneSkinned(gltf.scene), clips: gltf.animations, lance: fake });
+    expect(mesh.castShadow).toBe(true);
+    model.dispose();
+  });
+
   it('falls back to the procedural lance when the glb is missing (no lance given, or null)', () => {
     for (const lance of [undefined, null]) {
       const model = buildRedmaneModel({ model: cloneSkinned(gltf.scene), clips: gltf.animations, lance });

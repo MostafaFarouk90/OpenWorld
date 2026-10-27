@@ -9,6 +9,7 @@ const BARBARIAN = 'barbarian';
 
 let director: RedmaneDirector | null = null;
 let offSystem: (() => void) | null = null;
+let disposeLances: (() => void) | null = null;
 
 /** Where Redmane's model stands: 'none' (headless), 'loading', 'ready' or 'failed' (the fight cannot start without hurtboxes). */
 type ModelState = 'none' | 'loading' | 'ready' | 'failed';
@@ -28,6 +29,7 @@ const plugin: GamePlugin = {
     const assets = ctx.assets;
     // The env-pass lance; a missing glb leaves the procedural one in his hand.
     const lances = envPropLibrary(assets);
+    disposeLances = () => lances.dispose();
     void lances.preload([REDMANE_LANCE_PROP]);
     const heldLance = () => {
       const t = lances.peek(REDMANE_LANCE_PROP);
@@ -55,6 +57,8 @@ const plugin: GamePlugin = {
     offSystem = ctx.systems.add({ id: 'bosses.redmane', fixedPhase: 'intent', order: -139, fixedUpdate: (dt) => d.fixedUpdate(dt) });
   },
   dispose() {
+    disposeLances?.();
+    disposeLances = null;
     offSystem?.();
     offSystem = null;
     director?.dispose();

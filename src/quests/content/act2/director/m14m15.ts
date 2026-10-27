@@ -112,6 +112,10 @@ export function installM15(k: Kit): Off[] {
         const id = ctx.services.get('enemies')?.alive(CAGE_GROUP)[0];
         if (id && !ctx.services.get('wyrms')?.flyAway(id)) void ctx.services.get('enemies')?.despawnGroup(CAGE_GROUP);
         flight();
+        // The enemies plugin may respawn the quest group later than this tick: whatever stands at the pen a moment on goes too.
+        k.after(120, () => {
+          if (ctx.services.get('enemies')?.alive(CAGE_GROUP).length) void ctx.services.get('enemies')?.despawnGroup(CAGE_GROUP);
+        });
       });
     }
     // The wyrmling flew in the saved world: the quest's start on this load must not stand it at the pen again (review R1-3).

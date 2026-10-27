@@ -62,7 +62,9 @@ export class KinematicPatrol {
   ) {
     this.feet = { ...(from ?? route[0]) };
     this.target = from ? 0 : 1 % route.length;
-    const n = route[this.target];
+    let n = route[this.target];
+    // Spawned on its first waypoint: it waits there facing the way it will leave, not along a zero-length vector.
+    if (Math.hypot(n.x - this.feet.x, n.z - this.feet.z) <= AI.waypointRadius) n = route[(this.target + 1) % route.length];
     this.yaw = Math.atan2(-(n.x - this.feet.x), -(n.z - this.feet.z));
     if (phase < 0) {
       // Negative phase: start that long into the first wait (the guard leaves later).

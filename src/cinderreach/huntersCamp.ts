@@ -7,6 +7,8 @@ import { SITES_FIT } from './sitesFit';
 const C = SITES_FIT.camp;
 /** M15's watch loop in walking order: `cinderreach.patrol.m15.camp.<n>`, compass 20, 65, 110, ... 335 degrees, 36 m out. */
 export const M15_WATCH_LOOP = [1, 5, 2, 6, 3, 7, 4, 8] as const;
+/** Loop positions between the three watch guards' start nodes (slot k starts at k * 3: nodes 1, 6 and 4, gaps of 3, 3 and 2 of 8 legs). */
+export const M15_WATCH_STRIDE = 3;
 /** Node n of the loop: 1 to 4 at compass 20 + 90 (n - 1), 5 to 8 halfway after each. */
 const m15LoopNode = (n: number) => polar(C.centre.x, C.centre.z, n <= 4 ? 20 + 90 * (n - 1) : 65 + 90 * (n - 5), 36);
 /**
@@ -40,7 +42,7 @@ export function huntersCampLayout(): Pick<LayoutData, 'anchors' | 'triggers' | '
       a('cinderreach.stealth.m15.end', ...front(C.cages[0], 1.5), 0, ['stealth']),
       a('cinderreach.stealth.m15.centre', C.centre.x, C.centre.z, 0, ['stealth']),
       ...[0, 1, 2, 3].map((i) => a(`cinderreach.hide.m15.${i + 1}`, C.centre.x + 20 * Math.cos((i * Math.PI) / 2 + 0.6), C.centre.z + 20 * Math.sin((i * Math.PI) / 2 + 0.6), 0, ['hide'])),
-      ...M15_WATCH_LOOP.slice(0, 3).map((n, i) => a(`cinderreach.spawn.m15.watch.${i + 1}`, ...m15LoopNode(n), 0, ['spawn'])),
+      ...[0, 1, 2].map((i) => M15_WATCH_LOOP[i * M15_WATCH_STRIDE]).map((n, i) => a(`cinderreach.spawn.m15.watch.${i + 1}`, ...m15LoopNode(n), 0, ['spawn'])),
       ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => a(`cinderreach.patrol.m15.camp.${n}`, ...m15LoopNode(n), 0, ['patrol'])),
       a('npc-post.osgar.camp', C.centre.x, C.centre.z - 46, 0, ['npc-post']),
       ...numbered('cinderreach.post.camp', [[C.centre.x - 6, C.centre.z - 46], [C.centre.x + 6, C.centre.z - 46]], ['npc-post'], 0),

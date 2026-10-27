@@ -111,6 +111,8 @@ export function buildRedmaneModel(source: RedmaneModelSource, warn: (m: string) 
   const modelLance = source.lance ?? null;
   const lance = modelLance ?? makeGroundProp('proc/hunter-spear')!;
   lance.name = 'redmane-lance';
+  // ModelLibrary.object turns shadows off; the procedural lance casts them, so the model's does too.
+  if (modelLance) modelLance.traverse((o) => void ((o as THREE.Mesh).isMesh && ((o as THREE.Mesh).castShadow = true)));
   // Undo the bone's world scale so the lance keeps its metre size on the 1.15 rig.
   root.updateMatrixWorld(true);
   const s = new THREE.Vector3().setFromMatrixScale(hand.matrixWorld).y || 1;

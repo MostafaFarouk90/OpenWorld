@@ -197,8 +197,8 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | cinderreach.hide.m15.3 | 20348.49 | 4738.71 | 0 | 180 | hide |
 | cinderreach.hide.m15.4 | 20376.29 | 4733.49 | 0 | 180 | hide |
 | cinderreach.spawn.m15.watch.1 | 20377.31 | 4783.83 | 0 | 180 | spawn |
-| cinderreach.spawn.m15.watch.2 | 20397.63 | 4765.21 | 0 | 180 | spawn |
-| cinderreach.spawn.m15.watch.3 | 20398.83 | 4737.69 | 0 | 180 | spawn |
+| cinderreach.spawn.m15.watch.2 | 20380.21 | 4717.37 | 0 | 180 | spawn |
+| cinderreach.spawn.m15.watch.3 | 20331.17 | 4762.31 | 0 | 180 | spawn |
 | cinderreach.patrol.m15.camp.1 | 20377.31 | 4783.83 | 0 | 180 | patrol |
 | cinderreach.patrol.m15.camp.2 | 20398.83 | 4737.69 | 0 | 180 | patrol |
 | cinderreach.patrol.m15.camp.3 | 20352.69 | 4716.17 | 0 | 180 | patrol |
