@@ -45,21 +45,24 @@ export function boxLineOfSight(boxes: readonly SolidBox[]): (from: P3, to: P3) =
 /**
  * A guard on a closed patrol loop, as the runtime walks it (Enemy.think: walk speed, arrive within AI.waypointRadius,
  * wait AI.waypointWaitSeconds). Facing follows travel; while waiting it keeps the last heading. `phase` shifts the
- * start along the loop in seconds (the sweep that keeps the scripted route from being tick-perfect).
+ * start along the loop in seconds (the sweep that keeps the scripted route from being tick-perfect). `from` is the spawn point
+ * when the guard does not spawn on the loop: it walks from there to `route[0]` first, as Enemy.think walks a spawner slot.
  */
 export class KinematicPatrol {
   feet: P3;
   yaw: number;
-  private target = 1;
+  private target: number;
   private wait = 0;
 
   constructor(
     readonly route: readonly P3[],
     readonly speed: number,
     phase = 0,
+    from?: P3,
   ) {
-    this.feet = { ...route[0] };
-    const n = route[1 % route.length];
+    this.feet = { ...(from ?? route[0]) };
+    this.target = from ? 0 : 1 % route.length;
+    const n = route[this.target];
     this.yaw = Math.atan2(-(n.x - this.feet.x), -(n.z - this.feet.z));
     if (phase < 0) {
       // Negative phase: start that long into the first wait (the guard leaves later).
@@ -88,14 +91,22 @@ export class KinematicPatrol {
   }
 }
 
-/** One step of the player's script: walk (or sneak) to a point, or wait in place (optionally hidden). */
-export type ScriptStep = { to: P3; sneak: boolean } | { wait: number; sneak: boolean; hidden?: boolean };
+/**
+ * One step of the player's script: walk (or sneak) to a point, wait in place (optionally hidden), or watch: stand still
+ * until `until` holds (what a careful player sees from where they stand), at most `max` seconds.
+ */
+export type ScriptStep =
+  | { to: P3; sneak: boolean }
+  | { wait: number; sneak: boolean; hidden?: boolean }
+  | { until: (feet: P3, guards: readonly KinematicPatrol[]) => boolean; max: number; sneak: boolean };
 
 export interface RouteRun {
   noticed: number;
   caught: number;
   maxAwareness: number;
   seconds: number;
+  /** Seconds spent in `until` steps. */
+  watched: number;
 }
 
 const SNEAK_SPEED = 4.5 * STEALTH.sneakSpeedScale;
@@ -110,6 +121,7 @@ export function runScript(start: P3, script: readonly ScriptStep[], guards: Kine
   let caught = 0;
   let maxAwareness = 0;
   let t = 0;
+  let watched = 0;
   const tick = (player: PlayerStealthState) => {
     guards.forEach((g, i) => {
       g.step(dt);
@@ -137,10 +149,15 @@ export function runScript(start: P3, script: readonly ScriptStep[], guards: Kine
         feet.z += (dz / d) * s;
         tick({ ...IDLE_PLAYER, sneaking: sneak, moving: true });
       }
+    } else if ('until' in step) {
+      for (let i = 0; i < Math.round(step.max / dt) && !step.until(feet, guards); i++) {
+        tick({ ...IDLE_PLAYER, sneaking: sneak, moving: false });
+        watched += dt;
+      }
     } else {
       const n = Math.round(step.wait / dt);
       for (let i = 0; i < n; i++) tick({ ...IDLE_PLAYER, sneaking: sneak || !!step.hidden, hidden: !!step.hidden && !upright, moving: false });
     }
   }
-  return { noticed, caught, maxAwareness, seconds: t };
+  return { noticed, caught, maxAwareness, seconds: t, watched };
 }
