@@ -7,6 +7,8 @@ import { layoutInterior } from '../interiors/layout';
 import { resolveLayout } from '../region/resolveLayout';
 import { buildStructures, coreFactories } from '../region/StructureBuilder';
 import { BuildingLookup } from '../region/buildingLookup';
+import { envModelLibraryFor } from '../env/envStructureArt';
+import type * as THREE from 'three';
 import { validateLayout } from '../region/validateLayout';
 import { heightAt } from '../terrain/heightfield';
 import { ToggleStructure } from '../cinderreach/toggleStructure';
@@ -15,6 +17,7 @@ import { BRIDGE_STRINGS_EN, registerBridges } from './bridges';
 import { channelCatch } from './channelCatch';
 import { CHAPEL_STRINGS_EN } from './chapelInterior';
 import { DEEPS_DEF, DEEPS_STRINGS_EN } from './deepsInterior';
+import { createGreyfenArt } from './greyfenArt';
 import { GREYFEN_LAYOUT } from './greyfen.layout';
 import { HUT_STRINGS_EN } from './hutInterior';
 import { GREYFEN_NPC_DEFS, GREYFEN_NPC_STRINGS_EN } from './npcDefs';
@@ -43,7 +46,8 @@ export function setupGreyfen(ctx: CoreContext, layout: LayoutData, cleanups: Arr
 
   if (!ctx.physics.rapier) throw new Error('greyfen: physics is not ready');
   const deps = { ...ctx, rapier: ctx.physics.rapier };
-  const structures = buildStructures({ ...deps, ...coreFactories(ctx) }, layout, height, new BuildingLookup());
+  const art = createGreyfenArt(envModelLibraryFor(ctx.assets));
+  const structures = buildStructures({ ...deps, ...coreFactories(ctx) }, layout, height, new BuildingLookup(undefined, undefined, art));
   cleanups.push(() => structures.dispose());
   void structures.upgrade();
 
@@ -51,6 +55,10 @@ export function setupGreyfen(ctx: CoreContext, layout: LayoutData, cleanups: Arr
   const toggles = GREYFEN_TOGGLES.map((def) => {
     const toggle = new ToggleStructure(deps, def.spec, height);
     cleanups.push(() => toggle.dispose());
+    void art(def.spec).then(
+      (obj: THREE.Object3D | null) => toggle.setArt(obj),
+      () => undefined,
+    );
     cleanups.push(ctx.gates.flag(def.flag, (on) => toggle.setVisible(on === def.show)));
     return { def, toggle };
   });

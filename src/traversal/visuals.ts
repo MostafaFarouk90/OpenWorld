@@ -1,6 +1,50 @@
-// Scripted placeholders under agreed ids until Mostafa's models exist (listed in assets/environment-needs-prompts.md):
-// `prop.greyfen.ferry-punt` (Dudda's flat ferry punt) and `prop.dragonspine.supply-sled` (a loaded supply sled).
+// The ferry punt (`prop.greyfen.ferry-punt`, Dudda's flat ferry punt) and the supply sled (`prop.dragonspine.supply-sled`). Both start
+// as scripted stand-ins so there is something to draw at once; `useEnvModel` swaps in the generated model of the same id
+// (public/assets/env) once it loads, and the stand-in stays when the manifest lacks the id or the file fails.
 import * as THREE from 'three';
+import { ENV_PREFIX } from '../env/envSource';
+import { hasEnvModel } from '../env/envStructureArt';
+import { explicitFit } from '../assets/swap/fit';
+import { ModelLibrary } from '../assets/swap/ModelLibrary';
+import { DECK_HEIGHT } from './ferry/FerryRides';
+
+/** The punt model's floor planking tops out this high above its keel (measured on the glb: 0.04 m). */
+export const PUNT_FLOOR_Y = 0.04;
+/**
+ * Model lift so the punt's floor stays DECK_HEIGHT (0.35 m) above the waterline, where the seated player's feet ride (the ferry puts
+ * them at the waterline plus DECK_HEIGHT), as the stand-in's deck did.
+ */
+export const PUNT_LIFT = DECK_HEIGHT - PUNT_FLOOR_Y;
+
+/**
+ * Replaces `root`'s scripted children with the env model `id` at its authored size (the models are sized in metres, base at y 0, front
+ * +Z), `lift` m above the root. The root, its position and its rotation are untouched, so whatever moves the root still moves the model.
+ * Resolves false and leaves the stand-in when the manifest lacks `id`, the model fails to load, or the root was disposed first
+ * (`root.userData.gone`). The model's meshes share the library's geometry and materials and are tagged `sharedModel`.
+ */
+export async function useEnvModel(root: THREE.Object3D, id: string, lib: ModelLibrary, lift = 0): Promise<boolean> {
+  if (!hasEnvModel(id)) return false;
+  const t = await lib.template(`${ENV_PREFIX}${id}`);
+  if (!t || root.userData.gone) return false;
+  for (const child of [...root.children]) {
+    root.remove(child);
+    child.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      o.geometry.dispose();
+      (o.material as THREE.Material).dispose();
+    });
+  }
+  const model = ModelLibrary.object(t, explicitFit(t.bounds, 1, 1, 1));
+  model.position.y += lift;
+  model.traverse((o) => {
+    if (o instanceof THREE.Mesh) {
+      o.castShadow = true;
+      o.userData.sharedModel = true;
+    }
+  });
+  root.add(model);
+  return true;
+}
 
 const wood = (color: number) => new THREE.MeshStandardMaterial({ color, roughness: 0.9 });
 

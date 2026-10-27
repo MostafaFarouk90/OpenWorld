@@ -8,6 +8,7 @@ import { structureHeight } from '../region/greybox';
 import type { StructureSpec } from '../region/layoutTypes';
 import { createStructureArt, type StructureArt } from '../region/structureArt';
 import { tintObject } from '../oldsmoke/oldsmokeArt';
+import { createEnvStructureArt, type EnvEntry } from '../env/envStructureArt';
 
 /** Multiplies a Hexagon model's colours: cold and pale, as if snow lay on it. */
 export const SNOW_TINT = new THREE.Color(0.9, 0.96, 1.05);
@@ -111,9 +112,28 @@ async function wallRun(lib: ModelLibrary, spec: StructureSpec): Promise<THREE.Ob
 /** Kinds the art layer draws itself; everything else goes to the Act 1 art (and then to the greybox). */
 export const DRAGONSPINE_ART_KINDS: readonly string[] = [...Object.keys(PROCEDURAL), 'dragonspine-hall', 'wall', 'tower'];
 
-export function createDragonspineArt(lib: ModelLibrary): StructureArt {
+/**
+ * Kinds drawn by a generated model (public/assets/env) when the manifest has it; the primitives are the fallback. The kind names differ
+ * from the model ids for five of them. The trophy wall (12 m) is the 4 m model repeated three times; the carving stone keeps its
+ * proportions at the spec height; the sled shed (18 x 10) is the 8 x 5 model stretched within the 15% rule, a little over the box.
+ * Not drawn by models: the m28 and bend cairns and hawk perches (built-in `rock` columns that follow the slope), the rockfall (an
+ * interior blocker).
+ */
+export const DRAGONSPINE_ENV_KINDS: Readonly<Record<string, EnvEntry>> = {
+  'dragonspine-trophy-wall': { mode: 'tile', crossUniform: true },
+  'dragonspine-leanto': { id: 'dragonspine-lean-to' },
+  'dragonspine-nest': { id: 'dragonspine-hawk-nest' },
+  'dragonspine-carving': { id: 'dragonspine-carving-stone', mode: 'height' },
+  'dragonspine-shed': { id: 'dragonspine-sled-shed' },
+};
+
+/** `envLib` loads the `env/<id>` models (see envModelLibraryFor); it defaults to `lib`, whose loader lacks them, so the primitives stay. */
+export function createDragonspineArt(lib: ModelLibrary, envLib: ModelLibrary = lib): StructureArt {
   const base = createStructureArt(lib);
+  const env = createEnvStructureArt(envLib, DRAGONSPINE_ENV_KINDS);
   return async (spec) => {
+    const real = await env(spec);
+    if (real) return real;
     const make = PROCEDURAL[spec.kind];
     if (make) {
       const g = build(make(spec.footprint[0], spec.footprint[1], structureHeight(spec)));

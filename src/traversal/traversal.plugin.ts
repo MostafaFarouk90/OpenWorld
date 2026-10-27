@@ -16,7 +16,8 @@ import { fenVolumes, ferryNetwork, k1FenSurfaces } from './fenWater';
 import { FerryRides } from './ferry/FerryRides';
 import { ferryInteractId, ferryRoutes, ferryStopAnchor, m24Route, m24Volume, M24_POOL } from './sites';
 import { TRAVERSAL_STRINGS_EN } from './strings.en';
-import { boatMesh, sledMesh } from './visuals';
+import { envModelLibraryFor } from '../env/envStructureArt';
+import { PUNT_LIFT, boatMesh, sledMesh, useEnvModel } from './visuals';
 import { WaterPlayer, mountCapAt } from './water/WaterPlayer';
 import { WaterVolumes } from './water/WaterVolumes';
 import { ledgeProbe } from './water/ledge';
@@ -39,8 +40,10 @@ const disposers: (() => void)[] = [];
 
 function disposeMesh(o: THREE.Object3D): void {
   o.removeFromParent();
+  o.userData.gone = true;
   o.traverse((m) => {
-    if (m instanceof THREE.Mesh) {
+    // A generated model's geometry and materials belong to the model library (see useEnvModel).
+    if (m instanceof THREE.Mesh && !m.userData.sharedModel) {
       m.geometry.dispose();
       (m.material as THREE.Material).dispose();
     }
@@ -171,6 +174,7 @@ const traversal: GamePlugin = {
         if (!boat) {
           boat = boatMesh();
           ctx.scene.add(boat);
+          void useEnvModel(boat, 'prop.greyfen.ferry-punt', envModelLibraryFor(ctx.assets), PUNT_LIFT).catch(() => false);
         }
         boat.position.set(p.x, p.y, p.z);
         boat.rotation.set(0, p.yaw, 0);
@@ -267,6 +271,7 @@ const traversal: GamePlugin = {
             m = sledMesh();
             sledMeshes.set(id, m);
             ctx.scene.add(m);
+            void useEnvModel(m, 'prop.dragonspine.supply-sled', envModelLibraryFor(ctx.assets)).catch(() => false);
           }
           m.position.set(p.x, p.y, p.z);
           m.rotation.set(0, yaw, 0);
