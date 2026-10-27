@@ -32,8 +32,8 @@ const heldProps = (root: THREE.Object3D) => {
 };
 
 describe('hunter weapons', () => {
-  it('the spearman keeps its procedural spear and the harpooner holds the pack crossbow', () => {
-    expect(HUNTER_SPEARMAN.model.props?.map((p) => p.id)).toEqual(['proc/hunter-spear']);
+  it('the spearman holds the env spear (procedural fallback) and the harpooner holds the pack crossbow', () => {
+    expect(HUNTER_SPEARMAN.model.props?.map((p) => p.id)).toEqual(['env/spear-hunter']);
     expect(HUNTER_HARPOONER.model.props?.[0]).toMatchObject({ id: 'wpn/crossbow_2handed', bone: 'handslotr', fallback: 'proc/hunter-harpoon' });
     expect(SWAP_ASSETS[HUNTER_HARPOON_PROP]).toBeDefined();
   });
