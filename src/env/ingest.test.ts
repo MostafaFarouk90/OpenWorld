@@ -14,12 +14,12 @@ let path: any;
 let cp: any;
 let tmp = '';
 
-/** A box w x h x d on y 0 with one glowing material (emissive strength 3, plus a clearcoat ingest must drop), written as <dir>/<name>. */
-async function box(dir: string, name: string, w: number, h: number, d: number): Promise<void> {
+/** A box w x h x d on y 0 (moved by `at`) with one glowing material (emissive strength 3, plus a clearcoat ingest must drop), written as <dir>/<name>. */
+async function box(dir: string, name: string, w: number, h: number, d: number, at: [number, number, number] = [0, 0, 0]): Promise<void> {
   const doc = new Document();
   const buffer = doc.createBuffer();
   const p: number[] = [];
-  for (const x of [-w / 2, w / 2]) for (const y of [0, h]) for (const z of [-d / 2, d / 2]) p.push(x, y, z);
+  for (const x of [-w / 2, w / 2]) for (const y of [0, h]) for (const z of [-d / 2, d / 2]) p.push(x + at[0], y + at[1], z + at[2]);
   const idx = [0, 1, 3, 0, 3, 2, 4, 6, 7, 4, 7, 5, 0, 4, 5, 0, 5, 1, 2, 3, 7, 2, 7, 6, 0, 2, 6, 0, 6, 4, 1, 5, 7, 1, 7, 3];
   const strength = doc.createExtension(KHRMaterialsEmissiveStrength).createEmissiveStrength().setEmissiveStrength(3);
   const clearcoat = doc.createExtension(KHRMaterialsClearcoat).createClearcoat().setClearcoatFactor(1);
@@ -125,6 +125,23 @@ describe('env-pass ingest', () => {
     expect(pos.max[0] - pos.min[0]).toBeCloseTo(3, 2);
     expect(pos.max[1] - pos.min[1]).toBeCloseTo(0.02, 3);
     expect(pos.max[2] - pos.min[2]).toBeCloseTo(3, 2);
+  }, 60_000);
+
+  it('keeps a hand-held prop\'s origin at the grip and scales it to its length (targets grip list)', async () => {
+    const src = path.join(tmp, 'f-src');
+    const out = path.join(tmp, 'f-out');
+    fs.mkdirSync(src);
+    // half the spear's 2.2 m, the grip 0.1 m behind the middle and the shaft centred on the hand height
+    await box(src, 'spear-hunter.glb', 0.1, 0.1, 1.1, [0, -0.05, 0.1]);
+    const r = ingest(src, out);
+    expect(r.code, r.log).toBe(0);
+    const pos = glbJson(path.join(out, 'spear-hunter.glb')).accessors.find((a: any) => a.type === 'VEC3' && a.max);
+    expect(pos.min[2]).toBeCloseTo(-0.9, 2);
+    expect(pos.max[2]).toBeCloseTo(1.3, 2);
+    expect(pos.min[1]).toBeCloseTo(-0.1, 2);
+    expect(pos.max[1]).toBeCloseTo(0.1, 2);
+    const entry = JSON.parse(fs.readFileSync(path.join(out, 'manifest.json'), 'utf8')).objects['spear-hunter'];
+    expect(entry).toMatchObject({ grip: true, scale: 2, stretch: [1, 1] });
   }, 60_000);
 
   it('ignores .lodN.glb files and refuses a flat file with no height', async () => {
