@@ -1,5 +1,6 @@
 import { ENEMY_ATTACKS } from '../clips';
 import type { EnemyDef, MoveDef } from '../types';
+import { HELD_PROP_ROTATION, HUNTER_SPEAR_PROP } from '../envProp';
 
 /** The harpooner holds the pack's two-handed crossbow (art only; hitboxes and timings are the moves'); the procedural harpoon shows until it loads. */
 export const HUNTER_HARPOON_PROP = 'wpn/crossbow_2handed';
@@ -8,7 +9,7 @@ export const HUNTER_HARPOON_PROP = 'wpn/crossbow_2handed';
  * Dragon-Hunter Spearman (design 10 row 30): a hired spear-and-net hunter in a pack of 3 to 4 with one harpooner. Spear thrust
  * (0.5 s drop, yellow), net throw (0.6 s arm swing and a rope hiss, yellow: a blocked net does not root; roots 2 s on a hit).
  * Poise 35. Spare when rooted or staggered under half health (Oswin +1). There is no flee: hunters are paid to stay.
- * The Barbarian body in a red tabard tint, a procedural spear.
+ * The Barbarian body in a red tabard tint, Mostafa's hand-held spear (env/spear-hunter, 2.2 m), the procedural spear until it loads.
  */
 export const HUNTER_SPEARMAN: EnemyDef = {
   kind: 'hunter-spearman',
@@ -18,7 +19,7 @@ export const HUNTER_SPEARMAN: EnemyDef = {
     tint: 0xd8806a,
     emissive: 0x2a0a06,
     weapons: 'none',
-    props: [{ id: 'proc/hunter-spear', bone: 'handslotr', rotation: [0, 0, 0], scale: 1 }],
+    props: [{ id: HUNTER_SPEAR_PROP, bone: 'handslotr', position: [0, 0, 0], rotation: HELD_PROP_ROTATION, scale: 1, fallback: 'proc/hunter-spear' }],
   },
   maxHealth: 70,
   maxPoise: 35,
