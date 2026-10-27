@@ -28,6 +28,8 @@ export interface EnvEntry {
   mode?: EnvFitMode;
   /** tile only: tile along the long side only and scale the other axes uniformly to the spec height (a wall, not a deck). */
   crossUniform?: boolean;
+  /** tile only: height of the model's walking surface (model units); it is scaled to the spec height instead of the model's top. */
+  deckY?: number;
 }
 
 /** How far x and z may differ from the uniform scale in 'fit' mode (the env ingest's 15% tolerance). */
@@ -71,7 +73,7 @@ function tiled(t: ModelTemplate, spec: StructureSpec, entry: EnvEntry, h: number
   const rows = entry.crossUniform ? 1 : Math.max(1, Math.round(d / md));
   const cw = w / cols;
   const cd = entry.crossUniform ? md * plane : d / rows;
-  const sy = entry.crossUniform ? up : h / m.y;
+  const sy = entry.crossUniform ? up : h / (entry.deckY ?? m.y);
   const root = new THREE.Group();
   for (let i = 0; i < cols; i++) {
     for (let j = 0; j < rows; j++) {

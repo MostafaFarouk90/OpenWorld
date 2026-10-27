@@ -6,7 +6,7 @@ import { InstancedModel } from '../assets/instancing';
 import type { ModelLibrary, ModelTemplate } from '../assets/swap/ModelLibrary';
 import { placeholderGeometry, placeholderMaterial } from './placeholders';
 import { expandPatches } from './patches';
-import { hueMatrix, resolveModel, type ModelRef, type Tint } from './resolve';
+import { hueMatrix, resolveModel, resolveStandIn, type ModelRef, type Tint } from './resolve';
 
 export interface PlacementRow {
   id: string;
@@ -159,9 +159,12 @@ export class PlacementField {
       if (!resolved) continue;
       if (resolved.placeholder) this.stats.placeholders += e.rows.length;
       let parts = resolved.parts;
-      const real = e.ref.source !== 'placeholder' && !resolved.placeholder;
+      // The model actually drawn: the id's own, or its stand-in when the own glb failed to load (tint and stretch follow it).
+      const ref = resolved.ref;
+      const real = ref.source !== 'placeholder' && !resolved.placeholder;
+      const model = ref.source !== 'placeholder' ? ref : undefined;
       const lift = real && e.cls === 'ground' ? GROUND_LIFT : 1;
-      const tint = real ? (e.ref.source !== 'placeholder' ? e.ref.tint : undefined) ?? (lift !== 1 ? {} : undefined) : undefined;
+      const tint = real ? model?.tint ?? (lift !== 1 ? {} : undefined) : undefined;
       if (tint) {
         parts = parts.map((p) => {
           const k = `${p.material.uuid}|${tintKey(tint)}|${lift}`;
@@ -174,8 +177,8 @@ export class PlacementField {
         });
       }
       // A variant may stretch its base model in height only (reeds from a grass clump, a squat willow from an elm).
-      const sy = real && e.ref.source !== 'placeholder' ? (e.ref.stretchY ?? 1) : 1;
-      const girth = e.ref.source !== 'placeholder' ? (e.ref.girth ?? 1) : 1;
+      const sy = real ? (model?.stretchY ?? 1) : 1;
+      const girth = model?.girth ?? 1;
       const sorted = [...e.rows].sort((a, b) => a.order - b.order);
       // One batch per grid cell, so the distance test can hide the far cells of a large tile while the player stands inside it.
       const cells = new Map<string, PlacementRow[]>();
@@ -220,19 +223,21 @@ export class PlacementField {
     return s;
   }
 
-  private async partsFor(id: string, ref: ModelRef): Promise<{ parts: ModelTemplate['parts']; scale: number; triangles: number; placeholder: boolean } | null> {
+  private async partsFor(id: string, ref: ModelRef): Promise<{ parts: ModelTemplate['parts']; scale: number; triangles: number; placeholder: boolean; ref: ModelRef } | null> {
     if (ref.source === 'placeholder') {
       const geometry = placeholderGeometry(id, ref.shape);
       const tris = (geometry.index?.count ?? geometry.getAttribute('position').count) / 3;
-      return { parts: [{ geometry, material: placeholderMaterial() }], scale: 1, triangles: tris, placeholder: true };
+      return { parts: [{ geometry, material: placeholderMaterial() }], scale: 1, triangles: tris, placeholder: true, ref };
     }
     const t = await this.lib.template(ref.model);
     if (t) {
       let scale = ref.scale;
       if (ref.fitHeight) scale = ref.fitHeight / (t.bounds.max.y - t.bounds.min.y);
-      return { parts: t.parts, scale, triangles: t.triangles, placeholder: false };
+      return { parts: t.parts, scale, triangles: t.triangles, placeholder: false, ref };
     }
-    // The model did not load (offline, headless): fall back to the placeholder for this id.
+    // The model did not load (offline, headless): fall back to the id's old stand-in (a variant or KayKit model), else its placeholder.
+    const stand = resolveStandIn(id);
+    if (stand.source !== 'placeholder' && stand.model !== ref.model) return this.partsFor(id, stand);
     return this.partsFor(id, { source: 'placeholder', shape: classShape(id) });
   }
 

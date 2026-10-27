@@ -9,7 +9,7 @@ import { ModelLibrary } from '../assets/swap/ModelLibrary';
 import { DECK_HEIGHT } from './ferry/FerryRides';
 
 /** The punt model's floor planking tops out this high above its keel (measured on the glb: 0.04 m). */
-export const PUNT_FLOOR_Y = 0.04;
+export const PUNT_FLOOR_Y = 0.25;
 /**
  * Model lift so the punt's floor stays DECK_HEIGHT (0.35 m) above the waterline, where the seated player's feet ride (the ferry puts
  * them at the waterline plus DECK_HEIGHT), as the stand-in's deck did.

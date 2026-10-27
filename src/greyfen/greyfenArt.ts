@@ -6,11 +6,13 @@ import { createEnvStructureArt, type EnvEntry } from '../env/envStructureArt';
 import type { StructureSpec } from '../region/layoutTypes';
 import type { StructureArt } from '../region/structureArt';
 
-/** Kinds drawn by the model of the same id; they fill their footprint within the 15% rule. */
+/**
+ * Kinds drawn by the model of the same id; they fill their footprint within the 15% rule. The ranger platform stays greybox: the
+ * layout's 4 m is the deck the player stands on, and the generated model's deck is at 2.74 m under 3.65 m railings.
+ */
 const FILL = [
   'greyfen-stilt-house',
   'greyfen-boathouse',
-  'greyfen-ranger-platform',
   'greyfen-reed-bed',
   'greyfen-reed-bed-charred',
   'greyfen-stocks',
@@ -31,7 +33,8 @@ export const JETTY_ID = /^greyfen-jetty-/;
  */
 export function greyfenEnvEntry(spec: StructureSpec): EnvEntry | undefined {
   if (spec.kind === 'greyfen-plank-walk') return { mode: 'tile' };
-  if (spec.kind === 'bridge' && JETTY_ID.test(spec.id)) return { id: 'greyfen-jetty', mode: 'tile' };
+  // The jetty spec's height is the deck top (stops and the ferryman stand on it); the model's planks are at 0.52 of its 1 m height.
+  if (spec.kind === 'bridge' && JETTY_ID.test(spec.id)) return { id: 'greyfen-jetty', mode: 'tile', deckY: 0.52 };
   return (FILL as readonly string[]).includes(spec.kind) ? {} : undefined;
 }
 

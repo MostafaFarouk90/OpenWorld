@@ -42,12 +42,16 @@ jobs:
         with:
           path: dist
 
-  # One-time: Settings > Pages > Source must be "GitHub Actions". PRs never deploy.
+  # Settings > Pages > Source is "GitHub Actions" (set 2026-10-27). PRs never deploy.
   deploy:
     needs: build-and-test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # Its own group, never cancelled: a second quick merge must not cut a deploy off half way.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write

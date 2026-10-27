@@ -22,7 +22,8 @@ describe('Greyfen art with the generated models', () => {
     for (const kind of Object.keys(GREYFEN_KINDS)) {
       const s = specs.find((x) => x.kind === kind);
       if (!s) continue;
-      expect(greyfenEnvEntry(s) !== undefined, kind).toBe(hasEnvModel(kind));
+      // the ranger platform keeps its greybox: the model's deck is 1.26 m below the layout's 4 m deck
+      expect(greyfenEnvEntry(s) !== undefined, kind).toBe(hasEnvModel(kind) && kind !== 'greyfen-ranger-platform');
     }
     expect(hasEnvModel('greyfen-jetty')).toBe(true);
   });
@@ -40,7 +41,7 @@ describe('Greyfen art with the generated models', () => {
       expect(drawsEnv((await art(s))!, id), s.id).toBe(true);
       seen.add(id);
     }
-    for (const id of ['greyfen-stilt-house', 'greyfen-plank-walk', 'greyfen-jetty', 'greyfen-boathouse', 'greyfen-ranger-platform', 'greyfen-reed-bed', 'greyfen-reed-bed-charred', 'greyfen-stocks', 'greyfen-stilt-hut', 'greyfen-herb-bed', 'greyfen-chapel-ruin', 'greyfen-bell-tower', 'greyfen-monastery-ruin', 'greyfen-marker']) {
+    for (const id of ['greyfen-stilt-house', 'greyfen-plank-walk', 'greyfen-jetty', 'greyfen-boathouse', 'greyfen-reed-bed', 'greyfen-reed-bed-charred', 'greyfen-stocks', 'greyfen-stilt-hut', 'greyfen-herb-bed', 'greyfen-chapel-ruin', 'greyfen-bell-tower', 'greyfen-monastery-ruin', 'greyfen-marker']) {
       expect(seen.has(id), id).toBe(true);
     }
   });
@@ -53,7 +54,8 @@ describe('Greyfen art with the generated models', () => {
     const b = boxOf(obj);
     expect(b.max.x - b.min.x).toBeCloseTo(jetty.footprint[0], 1);
     expect(b.max.z - b.min.z).toBeCloseTo(jetty.footprint[1], 1);
-    expect(b.max.y).toBeCloseTo(jetty.height!, 1);
+    // the planks (0.52 of the model) meet the deck height; posts and the mooring post stand above it
+    expect(b.max.y).toBeCloseTo(jetty.height! / 0.52, 1);
     const bridge = GREYFEN_TOGGLES.find((t) => t.spec.kind === 'bridge')!.spec;
     expect(await art(bridge)).toBeNull();
   });

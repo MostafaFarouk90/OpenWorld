@@ -23,8 +23,8 @@ describe('traversal visuals with the generated models', () => {
     expect(drawsEnv(boat, 'prop.greyfen.ferry-punt')).toBe(true);
     boat.position.set(0, 0, 0);
     const b = boxOf(boat);
-    // The floor planking is 0.04 m thick on the keel; lifted, its top is the seated player's feet.
-    expect(PUNT_LIFT + 0.04).toBeCloseTo(DECK_HEIGHT, 5);
+    // The floor planks' top is 0.25 m above the keel (0 to 0.04 is the bottom slab); lifted, it is the seated player's feet.
+    expect(PUNT_LIFT + 0.25).toBeCloseTo(DECK_HEIGHT, 5);
     expect(b.min.y).toBeCloseTo(PUNT_LIFT, 3);
     expect(b.max.z - b.min.z).toBeCloseTo(5, 1);
     expect(b.max.x - b.min.x).toBeCloseTo(1.8, 1);
