@@ -78,4 +78,43 @@ describe('hunter spear (env/spear-hunter)', () => {
     await lib.preload([HUNTER_SPEAR_PROP]);
     expect(held(bodyWith((id) => (lib.peek(id) ? ModelLibrary.object(lib.peek(id)!) : null)).root).map((c) => c.name)).toEqual(['enemy-prop:proc/hunter-spear']);
   });
+
+  it('the procedural fallback is not turned by the model\'s rotation: its +Y lies along the bone, not sideways', () => {
+    const model = bodyWith(() => null);
+    const [spear] = held(model.root);
+    expect(spear.name).toBe('enemy-prop:proc/hunter-spear');
+    model.root.updateMatrixWorld(true);
+    const along = new THREE.Vector3(0, 1, 0).transformDirection(spear.matrixWorld);
+    const boneY = new THREE.Vector3(0, 1, 0).transformDirection(spear.parent!.matrixWorld);
+    expect(along.dot(boneY)).toBeCloseTo(1, 4);
+  });
+
+  it('a fallbackRotation / fallbackPosition on the prop apply to the fallback only', () => {
+    const def: EnemyDef = {
+      ...HUNTER_SPEARMAN,
+      model: { ...HUNTER_SPEARMAN.model, props: [{ ...HUNTER_SPEARMAN.model.props![0], fallbackRotation: [0, 1, 0], fallbackPosition: [0, 0.1, 0] }] },
+    };
+    const [fb] = held(bodyWith(() => null, def).root);
+    expect(fb.rotation.y).toBeCloseTo(1, 6);
+    expect(fb.rotation.x).toBe(0);
+    expect(fb.position.y).toBeGreaterThan(0);
+    const [real] = held(bodyWith((id) => (id === HUNTER_SPEAR_PROP ? fakeWeapon(-0.89, 1.31) : null), def).root);
+    expect(real.rotation.x).toBeCloseTo(-Math.PI / 2, 6);
+    expect(real.position.y).toBe(0);
+  });
+
+  it('the loaded glb spear keeps casting shadows (ModelLibrary.object turns them off)', () => {
+    const glb = () => {
+      const g = new THREE.Group();
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 2), new THREE.MeshBasicMaterial());
+      m.castShadow = false;
+      g.add(m);
+      return g;
+    };
+    const [spear] = held(bodyWith((id) => (id === HUNTER_SPEAR_PROP ? glb() : null)).root);
+    const meshes: THREE.Mesh[] = [];
+    spear.traverse((o) => void ((o as THREE.Mesh).isMesh && meshes.push(o as THREE.Mesh)));
+    expect(meshes.length).toBeGreaterThan(0);
+    expect(meshes.every((m) => m.castShadow)).toBe(true);
+  });
 });

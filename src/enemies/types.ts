@@ -164,6 +164,9 @@ export interface ModelProp {
   scale?: number;
   /** A `proc/` prop shown while `id` is not loaded (or never loads), so a body is never empty-handed. */
   fallback?: string;
+  /** Offset and Euler rotation of the `fallback` prop (its own frame, not `id`'s): none by default, so a fallback built along the bone is not turned by the model's rotation. */
+  fallbackPosition?: readonly [number, number, number];
+  fallbackRotation?: readonly [number, number, number];
 }
 
 /** The verbs a quest can unlock (flags `enemies.mercy.<verb>`). The Warm Hand rides on Calm. */
@@ -276,6 +279,8 @@ export interface SpawnerDef {
   memberAnchors?: readonly string[];
   /** Waypoint anchor ids, or every anchor carrying a tag. */
   patrol?: readonly string[] | { tag: string };
+  /** Waypoints between the start nodes of consecutive patrol slots (default 1): slot k starts at waypoint k * stride, so a loop's guards spread out instead of walking as a convoy. */
+  patrolStride?: number;
   /** Ash-pile anchor ids a Blightbloom raises wraiths from. */
   piles?: readonly string[];
   /** A band, or a region id from REGION_BANDS. */

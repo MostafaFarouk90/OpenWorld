@@ -27,7 +27,7 @@ beforeEach(async () => {
   vi.spyOn(console, 'info').mockImplementation(() => {});
 });
 afterEach(() => {
-  physics.dispose();
+  physics?.dispose();
   vi.restoreAllMocks();
 });
 

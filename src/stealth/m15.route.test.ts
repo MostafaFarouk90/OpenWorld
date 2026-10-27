@@ -34,7 +34,7 @@ const tent = campSolids.find((s) => s.id === 'cinderreach-camp-tent-3')!; // the
 /** Each watch guard as the runtime walks it: from its member anchor to its slot's first waypoint, then round the loop. */
 const guards = (phase: number) =>
   Array.from({ length: watch.count }, (_, k) => {
-    const route = patrolForSlot(loop, k).map((p) => ({ x: p.x, y: 0, z: p.z }));
+    const route = patrolForSlot(loop, k, watch.patrolStride).map((p) => ({ x: p.x, y: 0, z: p.z }));
     return new KinematicPatrol(route, 1.4, phase, at(watch.memberAnchors![k]));
   });
 
@@ -61,7 +61,24 @@ describe('M15 hunters\' camp stealth (real layout)', () => {
     expect(validateSection(section, find, [[...loop, loop[0]]])).toEqual([]);
     expect(watch.enemy).toBe('watch-guard');
     // patrolForSlot starts member k at waypoint k: spawned anywhere else the guard first walks across the camp to it.
-    watch.memberAnchors!.forEach((a, k) => expect(at(a)).toEqual(loop[k % loop.length]));
+    watch.memberAnchors!.forEach((a, k) => expect(at(a)).toEqual(loop[(k * (watch.patrolStride ?? 1)) % loop.length]));
+  });
+
+  it('the three guards start spread round the loop: the largest gap between neighbours is at most 45% of it', () => {
+    const legs = loop.map((p, i) => Math.hypot(loop[(i + 1) % loop.length].x - p.x, loop[(i + 1) % loop.length].z - p.z));
+    const total = legs.reduce((s, l) => s + l, 0);
+    const starts = Array.from({ length: watch.count }, (_, k) => (k * (watch.patrolStride ?? 1)) % loop.length).sort((a, b) => a - b);
+    const along = (i: number) => legs.slice(0, i).reduce((s, l) => s + l, 0);
+    const gaps = starts.map((s, i) => (i + 1 < starts.length ? along(starts[i + 1]) : total + along(starts[0])) - along(s));
+    expect(Math.max(...gaps) / total).toBeLessThanOrEqual(0.45);
+    // And the routes the runtime walks really start there (patrolForSlot rotates the list).
+    starts.forEach((s, i) => expect(patrolForSlot(loop, i, watch.patrolStride)[0]).toEqual({ x: loop[s].x, z: loop[s].z }));
+  });
+
+  it('a guard spawned on its first waypoint faces the next one, not the zero vector (sim yaw)', () => {
+    const route = patrolForSlot(loop, 0, watch.patrolStride).map((p) => ({ x: p.x, y: 0, z: p.z }));
+    const g = new KinematicPatrol(route, 1.4, 0, at(watch.memberAnchors![0]));
+    expect(g.yaw).toBeCloseTo(Math.atan2(-(route[1].x - route[0].x), -(route[1].z - route[0].z)), 6);
   });
 
   it('the watch loop goes round the camp, at least 3 m clear of every prop (no leg grazes a tent)', () => {

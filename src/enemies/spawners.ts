@@ -23,6 +23,8 @@ export interface SpawnRequest {
   yaw: number;
   level: number;
   patrol: AnchorLike[];
+  /** `def.patrolStride`: see `patrolForSlot`. */
+  patrolStride?: number;
   options: SpawnOptions & { leash: boolean };
   /** `${spawnerId}#${slot}`: the ash pile this member rises from. */
   spentKey: string;
@@ -161,6 +163,7 @@ export class SpawnerRegistry {
         piles: def.piles,
         level,
         patrol,
+        patrolStride: def.patrolStride,
         options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard, ...(def.peaceful && opts.peaceful === undefined ? { peaceful: true } : {}) },
         spentKey,
       });
@@ -717,10 +720,10 @@ function isRecord(v: unknown): v is Record<string, unknown> {
  * The waypoints for pack member `slot`: each member starts at a different waypoint, and members past
  * the waypoint count walk a ring offset of the route, so a pack spreads out instead of bunching.
  */
-export function patrolForSlot(points: readonly { x: number; z: number }[], slot: number): { x: number; z: number }[] {
+export function patrolForSlot(points: readonly { x: number; z: number }[], slot: number, stride = 1): { x: number; z: number }[] {
   const n = points.length;
   if (n === 0) return [];
-  const k = slot % n;
+  const k = ((slot % n) * stride) % n;
   const lap = Math.floor(slot / n);
   const angle = ((lap - 1) % 8) * (Math.PI / 4);
   const dx = lap > 0 ? Math.cos(angle) * WORLD_AI.ringRadius : 0;

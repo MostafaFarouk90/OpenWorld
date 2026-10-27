@@ -334,7 +334,7 @@ export class EnemyManager {
         level: req.level,
         maxHealth: stats.maxHealth,
         damageScale: stats.damageScale,
-        patrol: patrolForSlot(req.patrol.map((a) => a.position), req.slot),
+        patrol: patrolForSlot(req.patrol.map((a) => a.position), req.slot, req.patrolStride),
         options: req.options,
         slot: req.slot,
       };
