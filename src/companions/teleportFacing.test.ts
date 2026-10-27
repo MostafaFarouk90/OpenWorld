@@ -26,7 +26,10 @@ beforeEach(async () => {
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.spyOn(console, 'info').mockImplementation(() => {});
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  physics.dispose();
+  vi.restoreAllMocks();
+});
 
 async function boot() {
   const scene = new THREE.Scene();
