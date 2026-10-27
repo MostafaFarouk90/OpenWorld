@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { hueMatrix, resolveModel } from './resolve';
+import manifest from '../../public/assets/env/manifest.json';
+import { hueMatrix, resolveModel, resolveStandIn } from './resolve';
 import targets from './targets.json';
 
 describe('resolveModel', () => {
@@ -21,14 +22,14 @@ describe('resolveModel', () => {
     expect(resolveModel('post_lantern')).toMatchObject({ source: 'kaykit', model: 'hal/post_lantern' });
     expect(resolveModel('stonewall-high')).toMatchObject({ source: 'kaykit', model: 'hex/fence_stone_straight', fitHeight: 1.5 });
     expect(resolveModel('stonewall-wing')).toMatchObject({ source: 'kaykit', model: 'hex/fence_stone_straight', fitHeight: 1.0 });
-    expect(resolveModel('scorched-fence')).toMatchObject({ source: 'kaykit', model: 'hex/fence_wood_straight', fitHeight: 1.6 });
+    expect(resolveStandIn('scorched-fence')).toMatchObject({ source: 'kaykit', model: 'hex/fence_wood_straight', fitHeight: 1.6 });
   });
 
   it('maps the B3 ids to tinted variants or KayKit models', () => {
-    expect(resolveModel('bush-holly-a')).toMatchObject({ source: 'env', model: 'env/bush-round-a', scale: 1.05 });
-    expect(resolveModel('willow-a')).toMatchObject({ source: 'env', model: 'env/elm-or-ash-a', stretchY: 0.7 });
+    expect(resolveStandIn('bush-holly-a')).toMatchObject({ source: 'env', model: 'env/bush-round-a', scale: 1.05 });
+    expect(resolveStandIn('willow-a')).toMatchObject({ source: 'env', model: 'env/elm-or-ash-a', stretchY: 0.7 });
     for (const id of ['reeds-a', 'reeds-b']) {
-      const r = resolveModel(id);
+      const r = resolveStandIn(id);
       expect(r).toMatchObject({ source: 'env', model: 'env/grass-clump-a' });
       expect(r.source === 'env' && (r.stretchY ?? 1) > 2, id).toBe(true);
       expect(r.source === 'env' && (r.girth ?? 1) > 1.5, `${id} is wide enough to read as a bed`).toBe(true);
@@ -40,26 +41,35 @@ describe('resolveModel', () => {
         expect(0.454 * r.scale * (r.girth ?? 1), `${id} width`).toBeLessThanOrEqual(1.0);
       }
     }
-    expect(resolveModel('roadside-shrine-a')).toMatchObject({ source: 'kaykit', model: 'hal/shrine_candles' });
-    for (const id of ['flag_red', 'rock_single_B', 'rock_single_C', 'tent']) expect(resolveModel(id).source, id).toBe('kaykit');
+    expect(resolveStandIn('roadside-shrine-a')).toMatchObject({ source: 'kaykit', model: 'hal/shrine_candles' });
+    for (const id of ['flag_red', 'rock_single_B', 'rock_single_C', 'tent']) expect(resolveStandIn(id).source, id).toBe('kaykit');
     // variants without a stretch carry none
     expect('stretchY' in resolveModel('oak-b')).toBe(false);
   });
 
   it('maps the B4 ash-reach ids to variants and stretched dead trees instead of a green placeholder', () => {
-    expect(resolveModel('ash-tree-dead-a')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_medium', fitHeight: 6.5 });
-    expect(resolveModel('ash-tree-dead-b')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_large', fitHeight: 7.5 });
-    expect(resolveModel('oak-ash-a')).toMatchObject({ source: 'env', model: 'env/oak-a', scale: 0.95 });
-    expect(resolveModel('grass-clump-ash')).toMatchObject({ source: 'env', model: 'env/grass-clump-a' });
-    expect(resolveModel('bush-round-ash')).toMatchObject({ source: 'env', model: 'env/bush-round-a' });
+    expect(resolveStandIn('ash-tree-dead-a')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_medium', fitHeight: 6.5 });
+    expect(resolveStandIn('ash-tree-dead-b')).toMatchObject({ source: 'kaykit', model: 'hal/tree_dead_large', fitHeight: 7.5 });
+    expect(resolveStandIn('oak-ash-a')).toMatchObject({ source: 'env', model: 'env/oak-a', scale: 0.95 });
+    expect(resolveStandIn('grass-clump-ash')).toMatchObject({ source: 'env', model: 'env/grass-clump-a' });
+    expect(resolveStandIn('bush-round-ash')).toMatchObject({ source: 'env', model: 'env/bush-round-a' });
     // Ash scrub keeps almost no green, so it never reads as a green bush on the grey reach.
-    const scrub = resolveModel('bush-round-ash');
+    const scrub = resolveStandIn('bush-round-ash');
     expect(scrub.source !== 'placeholder' && scrub.tint?.sat).toBeLessThanOrEqual(0.1);
-    expect(resolveModel('charred-stump')).toMatchObject({ source: 'env', model: 'env/stump-a' });
-    expect(resolveModel('basalt-columns-a')).toMatchObject({ source: 'env', model: 'env/boulder-large-a', scale: 1.3, girth: 0.35 });
-    expect(resolveModel('crow-perch-post')).toMatchObject({ source: 'kaykit', model: 'hal/fence_pillar' });
+    expect(resolveStandIn('charred-stump')).toMatchObject({ source: 'env', model: 'env/stump-a' });
+    expect(resolveStandIn('basalt-columns-a')).toMatchObject({ source: 'env', model: 'env/boulder-large-a', scale: 1.3, girth: 0.35 });
+    expect(resolveStandIn('crow-perch-post')).toMatchObject({ source: 'kaykit', model: 'hal/fence_pillar' });
     expect(resolveModel('milestone-a')).toMatchObject({ source: 'env', model: 'env/milestone-a' });
-    expect(resolveModel('wagon-wreck-a')).toMatchObject({ source: 'env', model: 'env/haycart-a' });
+    expect(resolveStandIn('wagon-wreck-a')).toMatchObject({ source: 'env', model: 'env/haycart-a' });
+  });
+
+  it('generated glbs replace the stand-ins under the same id, and the stand-in stays as the fallback', () => {
+    for (const id of ['tent', 'refugee-tent-a', 'willow-a', 'reeds-a', 'gibbet-post', 'ash-tree-dead-a', 'cairn-a', 'keg-a', 'greyfen-stilt-house']) {
+      expect(Object.keys(manifest.objects), id).toContain(id);
+      expect(resolveModel(id), id).toEqual({ source: 'env', model: `env/${id}`, scale: 1 });
+    }
+    expect(resolveStandIn('refugee-tent-a')).toEqual({ source: 'placeholder', shape: 'tent' });
+    expect(resolveStandIn('oak-b')).toEqual(resolveModel('oak-b'));
   });
 
   it('falls back to a placeholder shape only when nothing matches', () => {
@@ -87,10 +97,10 @@ describe('resolveModel', () => {
   });
 
   it('builds the slim poplar from the birch and the dead trees from KayKit', () => {
-    const p = resolveModel('poplar-a');
+    const p = resolveStandIn('poplar-a');
     expect(p).toMatchObject({ source: 'env', model: 'env/birch-a', scale: 1.75 });
     expect(p.source === 'env' && p.girth).toBeLessThan(1);
-    expect(resolveModel('cairn-a')).toMatchObject({ source: 'env', model: 'env/rock-cluster-a', scale: 0.5 });
+    expect(resolveStandIn('cairn-a')).toMatchObject({ source: 'env', model: 'env/rock-cluster-a', scale: 0.5 });
   });
 
   it('never leaves a targeted id unresolved', () => {
@@ -109,9 +119,9 @@ describe('Dead Road ids (D1 to D3)', () => {
     expect(resolveModel('bush-heather')).toMatchObject({ model: 'env/bush-round-a', scale: 0.55 });
   });
   it('keep the gibbet and the wayside shrine on KayKit pieces under their agreed ids', () => {
-    for (const id of ['gatepost-a', 'field-gate-a']) expect(resolveModel(id).source, id).toBe('kaykit');
-    expect(resolveModel('gibbet-post')).toMatchObject({ source: 'kaykit', model: 'hal/fence_pillar', fitHeight: 3.6 });
-    expect(resolveModel('roadside-shrine-a').source).toBe('kaykit');
+    for (const id of ['gatepost-a', 'field-gate-a']) expect(resolveStandIn(id).source, id).toBe('kaykit');
+    expect(resolveStandIn('gibbet-post')).toMatchObject({ source: 'kaykit', model: 'hal/fence_pillar', fitHeight: 3.6 });
+    expect(resolveStandIn('roadside-shrine-a').source).toBe('kaykit');
   });
 });
 

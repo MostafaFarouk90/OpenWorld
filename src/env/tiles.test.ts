@@ -11,7 +11,7 @@ import { CROWD_LANES, HARROWMARK_LAYOUT } from '../harrowmark/harrowmark.layout'
 import { DEADROAD_LAYOUT } from '../region/deadroad.layout';
 import { DEAD_ROAD } from '../terrain/shape/deadRoad';
 import { streetAmount, yardAmount } from '../terrain/shape/groundSplat';
-import { resolveModel } from './resolve';
+import { resolveModel, resolveStandIn } from './resolve';
 import targets from './targets.json';
 import { TILE_BOUNDS, TILES } from './tiles';
 
@@ -188,7 +188,11 @@ describe('B4 placements', () => {
   it('resolves every id to a model (no placeholders), dead trees included', () => {
     const placeholders = [...new Set(rows.map((r) => r.id))].filter((id) => resolveModel(id).source === 'placeholder');
     expect(placeholders).toEqual([]);
-    for (const id of ['ash-tree-dead-a', 'ash-tree-dead-b']) expect(resolveModel(id).source).toBe('kaykit');
+    // the generated dead trees replace the KayKit stand-ins, which stay as the fallback
+    for (const id of ['ash-tree-dead-a', 'ash-tree-dead-b']) {
+      expect(resolveModel(id).source).toBe('env');
+      expect(resolveStandIn(id).source).toBe('kaykit');
+    }
   });
 
   it('lies inside the tile core', () => {
@@ -273,8 +277,8 @@ describe('H1 placements', () => {
 
   it('resolves every id to a model except the few agreed scripted placeholders', () => {
     const placeholders = [...new Set(rows.map((r) => r.id))].filter((id) => resolveModel(id).source === 'placeholder');
-    // The refugee tent and the stable horse are the agreed scripted placeholders (the KayKit tent reads as a table); every other id has a model.
-    expect(placeholders.sort()).toEqual(['horse-standing', 'refugee-tent-a']);
+    // The stable horse is the agreed scripted placeholder (the generated refugee tent replaced the scripted A-frame); every other id has a model.
+    expect(placeholders.sort()).toEqual(['horse-standing']);
   });
 
   it('lies inside the tile core and is finite', () => {
@@ -342,8 +346,12 @@ describe('H1 placements', () => {
 
   it('gives the rows the agreed resolve entries (stand-ins) and the KayKit rubble line', () => {
     for (const id of ['fruit-tree-a', 'fruit-tree-b', 'cart-goods-a', 'campfire-ring']) expect(resolveModel(id).source).toBe('env');
-    expect(resolveModel('refugee-tent-a')).toEqual({ source: 'placeholder', shape: 'tent' });
+    expect(resolveStandIn('refugee-tent-a')).toEqual({ source: 'placeholder', shape: 'tent' });
     expect(resolveModel('horse-standing')).toEqual({ source: 'placeholder', shape: 'horse' });
-    for (const id of ['handcart-a', 'notice-board-a', 'basket-goods-a', 'rubble_half']) expect(resolveModel(id).source).toBe('kaykit');
+    for (const id of ['handcart-a', 'notice-board-a', 'basket-goods-a']) {
+      expect(resolveModel(id).source, id).toBe('env');
+      expect(resolveStandIn(id).source, id).toBe('kaykit');
+    }
+    expect(resolveModel('rubble_half').source).toBe('kaykit');
   });
 });
