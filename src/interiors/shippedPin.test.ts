@@ -16,7 +16,7 @@ const PINNED: Record<string, string> = {
   'grisel-hall': '4c0e390c5b4a33cc',
   'mine-deepgate-shaft': 'eece4ded5d36573d',
   'mine-old-galleries': 'fbf8461da5a425b5',
-  'mine-lower-galleries': 'a651cc2146a41d43',
+  'mine-lower-galleries': '83ed0ad0db2dee9c', // re-pinned: polish pass added the oldsmoke.m20.camera.orsk anchor
   'mine-weeping-bellows': 'd35a9f217d4e9ddd',
   'mine-deepdelve': 'bc3d501542978ab7',
 };

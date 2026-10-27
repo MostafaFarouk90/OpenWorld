@@ -138,6 +138,7 @@ Door `mine-lower-galleries`: arrives at `oldsmoke.lower.lift`, leaves by `oldsmo
 | oldsmoke.m20.post.5 | -28 | -16 |
 | oldsmoke.m20.captain | -55 | -22.5 |
 | oldsmoke.m20.roof | -42 | -21 |
+| oldsmoke.m20.camera.orsk | -40 | -31.5 |
 | oldsmoke.lower.spawn.1 | -36 | -14 |
 | oldsmoke.lower.spawn.2 | 29 | -36 |
 | oldsmoke.lower.spawn.3 | 40 | -14 |
