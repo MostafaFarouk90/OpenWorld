@@ -77,6 +77,18 @@ describe('envStructure', () => {
     expect(b.max.z - b.min.z).toBeLessThan(0.6);
   });
 
+  it('turns a model half round when the layout puts the front at -z, keeping its footprint', async () => {
+    const plain = (await envStructure(lib, spec('dragonspine-shed', 18, 10, { height: 5 }), { id: 'dragonspine-sled-shed' }))!;
+    const turned = (await envStructure(lib, spec('dragonspine-shed', 18, 10, { height: 5 }), { id: 'dragonspine-sled-shed', frontNegZ: true }))!;
+    expect(turned.rotation.y).toBeCloseTo(Math.PI);
+    expect(plain.rotation.y).toBe(0);
+    expect(drawsEnv(turned, 'dragonspine-sled-shed')).toBe(true);
+    const a = boxOf(plain);
+    const b = boxOf(turned);
+    expect(b.max.x - b.min.x).toBeCloseTo(a.max.x - a.min.x, 3);
+    expect(b.max.z - b.min.z).toBeCloseTo(a.max.z - a.min.z, 3);
+  });
+
   it('returns undefined for a kind the manifest lacks, without asking the library', async () => {
     const template = vi.spyOn(lib, 'template');
     expect(await envStructure(lib, spec('cinder-shield', 1, 1))).toBeUndefined();

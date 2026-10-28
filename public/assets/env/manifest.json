@@ -408,17 +408,6 @@
    "trisAfter": 3234,
    "mb": 0.24
   },
-  "basalt-columns-a": {
-   "id": "basalt-columns-a",
-   "scale": 1,
-   "stretch": [
-    1,
-    1
-   ],
-   "trisBefore": 792,
-   "trisAfter": 792,
-   "mb": 0.05
-  },
   "basket-goods-a": {
    "id": "basket-goods-a",
    "scale": 1,

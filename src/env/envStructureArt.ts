@@ -28,6 +28,8 @@ export interface EnvEntry {
   mode?: EnvFitMode;
   /** tile only: tile along the long side only and scale the other axes uniformly to the spec height (a wall, not a deck). */
   crossUniform?: boolean;
+  /** The layout puts this kind's front at -z (models face +z): turn the model half round about its base centre. */
+  frontNegZ?: boolean;
 }
 
 /** How far x and z may differ from the uniform scale in 'fit' mode (the env ingest's 15% tolerance). */
@@ -107,6 +109,12 @@ export async function envStructure(lib: ModelLibrary, spec: StructureSpec, entry
       const s = h / dims(t).y;
       obj = ModelLibrary.object(t, explicitFit(t.bounds, s, s, s));
     } else obj = ModelLibrary.object(t, fitToBox(t.bounds, { width: w, depth: d, height: h }, { maxStretch: ENV_STRETCH, maxHeightStretch: ENV_STRETCH }));
+    if (entry.frontNegZ) {
+      const turned = new THREE.Group();
+      turned.rotation.y = Math.PI;
+      turned.add(obj);
+      obj = turned;
+    }
     obj.userData.envModel = id;
     if (mode === 'tile') obj.name = `tile:${id}:${spec.id}`;
     return obj;
