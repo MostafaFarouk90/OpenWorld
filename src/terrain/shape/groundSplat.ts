@@ -5,6 +5,7 @@
 import { createNoise2D } from '../noise';
 import { TERRAIN } from '../../config/constants';
 import { H1_SPLAT_ZONES } from './splatZones.h1';
+import { H2_SPLAT_ZONES } from './splatZones.h2';
 import { H3_SPLAT_ZONES } from './splatZones.h3';
 
 /** A trodden street: a polyline with a half width and a soft outer edge (rounded ends). */
@@ -55,7 +56,7 @@ export interface SplatSoot {
 export type SplatZone = SplatStreet | SplatYard | SplatCourt | SplatSoot;
 
 /** Every tile's zones. H2, H3 and H4 append their tables here. */
-export const SPLAT_ZONES: readonly SplatZone[] = [...H1_SPLAT_ZONES, ...H3_SPLAT_ZONES];
+export const SPLAT_ZONES: readonly SplatZone[] = [...H1_SPLAT_ZONES, ...H2_SPLAT_ZONES, ...H3_SPLAT_ZONES];
 
 /** Trodden earth: a pale, dry brown (linear-ish vertex colour, like detailGround's DIRT). */
 const STREET_COLOUR = [0.3, 0.245, 0.165] as const;

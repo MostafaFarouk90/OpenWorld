@@ -115,6 +115,8 @@ export function envOwnsGround(
  */
 export const CITY_LAWN: Readonly<Record<string, readonly Rect[]>> = {
   h1: [{ minX: 7760, maxX: 9240, minZ: 1120, maxZ: 1440 }],
+  // H2: main street and market (x 8440..9240, z 1440..1960).
+  h2: [{ minX: 8440, maxX: 9240, minZ: 1440, maxZ: 1960 }],
   // H3: the keep and the Rooftop Ward, the L shape x 7720..9240, z 1960..2760 minus H4 (x 7720..8440, z 1960..2240).
   h3: [
     { minX: 7720, maxX: 9240, minZ: 2240, maxZ: 2760 },
