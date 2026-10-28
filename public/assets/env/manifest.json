@@ -408,17 +408,6 @@
    "trisAfter": 3234,
    "mb": 0.24
   },
-  "basalt-columns-a": {
-   "id": "basalt-columns-a",
-   "scale": 1,
-   "stretch": [
-    1,
-    1
-   ],
-   "trisBefore": 792,
-   "trisAfter": 792,
-   "mb": 0.05
-  },
   "basket-goods-a": {
    "id": "basket-goods-a",
    "scale": 1,
@@ -679,9 +668,9 @@
     1,
     1
    ],
-   "trisBefore": 1116,
-   "trisAfter": 1116,
-   "mb": 0.06
+   "trisBefore": 822,
+   "trisAfter": 822,
+   "mb": 0.05
   },
   "dragonspine-prayer-cairn": {
    "id": "dragonspine-prayer-cairn",
@@ -712,8 +701,8 @@
     1,
     1
    ],
-   "trisBefore": 3546,
-   "trisAfter": 3546,
+   "trisBefore": 3568,
+   "trisAfter": 3568,
    "mb": 0.2
   },
   "dragonspine-trophy-wall": {
@@ -910,8 +899,8 @@
     1,
     1
    ],
-   "trisBefore": 2684,
-   "trisAfter": 2684,
+   "trisBefore": 2788,
+   "trisAfter": 2788,
    "mb": 0.18
   },
   "greyfen-reed-bed-charred": {
@@ -1120,8 +1109,8 @@
     1,
     1
    ],
-   "trisBefore": 448,
-   "trisAfter": 448,
+   "trisBefore": 496,
+   "trisAfter": 496,
    "mb": 0.03
   },
   "reeds-a": {

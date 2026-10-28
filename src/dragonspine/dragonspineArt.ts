@@ -124,7 +124,8 @@ export const DRAGONSPINE_ENV_KINDS: Readonly<Record<string, EnvEntry>> = {
   'dragonspine-leanto': { id: 'dragonspine-lean-to' },
   'dragonspine-nest': { id: 'dragonspine-hawk-nest' },
   'dragonspine-carving': { id: 'dragonspine-carving-stone', mode: 'height' },
-  'dragonspine-shed': { id: 'dragonspine-sled-shed' },
+  // The lodge puts the shed's open front (the sled depot) at -z.
+  'dragonspine-shed': { id: 'dragonspine-sled-shed', frontNegZ: true },
 };
 
 /** `envLib` loads the `env/<id>` models (see envModelLibraryFor); it defaults to `lib`, whose loader lacks them, so the primitives stay. */

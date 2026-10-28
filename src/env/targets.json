@@ -863,7 +863,7 @@
   "greyfen-ranger-platform": {
    "w": 6,
    "d": 6,
-   "h": 4
+   "h": 5
   },
   "greyfen-stilt-house": {
    "w": 7,
@@ -901,9 +901,9 @@
    "h": 1.8
   },
   "dragonspine-sled-shed": {
-   "w": 8,
-   "d": 5,
-   "h": 3.5
+   "w": 16,
+   "d": 9,
+   "h": 5
   },
   "dragonspine-rockfall": {
    "w": 4,
