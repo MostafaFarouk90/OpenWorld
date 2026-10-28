@@ -12,6 +12,8 @@ import h2 from './h2.placements.json';
 import h2Dressing from './h2.dressing.json';
 import h3 from './h3.placements.json';
 import h3Dressing from './h3.dressing.json';
+import h4 from './h4.placements.json';
+import h4Dressing from './h4.dressing.json';
 import type { PlacementRow } from './PlacementField';
 
 export const TILES: Record<string, readonly PlacementRow[]> = {
@@ -32,6 +34,9 @@ export const TILES: Record<string, readonly PlacementRow[]> = {
   // (they stand on the Rooftop Ward roofs and chimneys).
   // Plus the round-2 rim dressing of the trimmed courts and the middle-ground groups (tools/env-pass/h3/round2.ts).
   h3: [...(h3 as PlacementRow[]), ...(h3Dressing as PlacementRow[])],
+  // H4: Forge Row and the chapel (core x 7720..8440, z 1440..2240; H1 wins the z 1440 edge, H2 and H3 the x 8440 edge). The soot ground is in H3's splat file.
+  // Plus the builder's middle-ground dressing at the designer's eye cameras and the enclosure gate closing (tools/env-pass/h4/round2.ts).
+  h4: [...(h4 as PlacementRow[]), ...(h4Dressing as PlacementRow[])],
 };
 
 /**

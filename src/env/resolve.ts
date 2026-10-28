@@ -73,6 +73,11 @@ const VARIANTS: Readonly<Record<string, { base: string; scale: number; tint?: Ti
   // H1 yard litter: straw-coloured tufts for the packed-earth yards (a yellow-brown glow so they do not read meadow green on tan ground).
   'grass-clump-straw': { base: 'grass-clump-a', scale: 0.9, tint: { hue: -32, sat: 0.6, mul: 0xe8dcae, glow: 0x4a4426 } },
   'campfire-ring': { base: 'rock-cluster-a', scale: 0.6, tint: { sat: 0.5, mul: 0x9a9690 } },
+  // H4 (Forge Row, the old smelter yard): the Act 2 industry ids borrowed inside the wall, tinted stand-ins until the files exist
+  // (plans/env-pass/h4/builder-notes.md risk 3). Sizes: slag heap 5 x 4 x 2, ore pile ~2 m, mine cart 1.8 m.
+  'slag-heap': { base: 'rock-cluster-a', scale: 2.0, tint: { sat: 0.1, mul: 0x48423c } },
+  'ore-pile': { base: 'rock-cluster-a', scale: 0.8, tint: { sat: 0.5, mul: 0x7a6450 } },
+  'mine-cart': { base: 'haycart-a', scale: 0.56, tint: { sat: 0.3, mul: 0x5a5048 } },
 };
 
 /** Ids the imported KayKit packs already cover, from the object grids. `fitHeight` sizes the model to a height in metres. */
@@ -95,6 +100,8 @@ const KAYKIT: Readonly<Record<string, { model: string; scale?: number; fitHeight
   // Village boundary wall: the same piece fitted to 1.5 m so it reads as a wall at the Knight's scale (1.8 m).
   'stonewall-high': { model: 'hex/fence_stone_straight', fitHeight: 1.5 },
   'scorched-fence': { model: 'hex/fence_wood_straight', fitHeight: 1.6 },
+  // H4: the forge stacks and the cold smelter stack (2 x 2 x 9 m target; the five forge stacks are placed at 0.8): a tall pillar until the glb exists.
+  'smelter-chimney': { model: 'hal/fence_pillar', fitHeight: 9 },
   'rock-single-a': { model: 'hex/rock_single_A' },
   // B4: roadside crow post (a plain pillar; the rail beside it is a fence_broken row).
   'crow-perch-post': { model: 'hal/fence_pillar' },

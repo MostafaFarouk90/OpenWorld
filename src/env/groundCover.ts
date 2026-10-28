@@ -122,6 +122,8 @@ export const CITY_LAWN: Readonly<Record<string, readonly Rect[]>> = {
     { minX: 7720, maxX: 9240, minZ: 2240, maxZ: 2760 },
     { minX: 8440, maxX: 9240, minZ: 1960, maxZ: 2240 },
   ],
+  // H4: Forge Row and the chapel (x 7720..8440, z 1440..2240).
+  h4: [{ minX: 7720, maxX: 8440, minZ: 1440, maxZ: 2240 }],
 };
 /** Rectangles inside a lawn tile that stay bare: the M06 gate square (patrol box plus 8 m) and the gate passage. */
 export const CITY_LAWN_KEEP_OUT: readonly Rect[] = [

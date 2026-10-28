@@ -91,7 +91,7 @@ describe('H3 lawn and ground colour', () => {
     const lawn = cityLawnFor(true);
     expect(lawn(8620, 2440)).toBe(true); // open lawn north of the keep road
     expect(lawn(8490, 2200)).toBe(false); // the keep road lane
-    expect(lawn(8100, 2100)).toBe(false); // H4's core
+    expect(lawn(7600, 2100)).toBe(false); // west of every core
   });
 });
 

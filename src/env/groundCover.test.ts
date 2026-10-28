@@ -106,7 +106,7 @@ describe('cityLawnFor (blades inside the Harrowmark walls)', () => {
   const lawn = cityLawnFor(true);
   const hit = (h: number) => ({ raycast: () => ({ collider: { isSensor: () => false, parent: () => ({ isFixed: () => true }) }, point: { y: h } }) }) as never;
   it('is a table of tiles: H1 and H3 now, and a tile adopts the lawn by adding its core', () => {
-    expect(Object.keys(CITY_LAWN)).toEqual(['h1', 'h2', 'h3']);
+    expect(Object.keys(CITY_LAWN)).toEqual(['h1', 'h2', 'h3', 'h4']);
     expect(cityLawnFor(true, { h1: [], h2: [{ minX: 8440, maxX: 8480, minZ: 1500, maxZ: 1520 }] })(8445, 1510)).toBe(true);
   });
   it('lets the meadow blades grow on the outer-ward lawn', () => {
@@ -132,13 +132,13 @@ describe('cityLawnFor (blades inside the Harrowmark walls)', () => {
   });
   it('is off under ?env=off, and never opens ground outside a lawn tile', () => {
     expect(cityLawnFor(false)(8420, 1300)).toBe(false);
-    expect(lawn(8200, 1600)).toBe(false);
+    expect(lawn(7600, 1600)).toBe(false);
     expect(lawn(100, 100)).toBe(false);
     const closed = grassAcceptFor([BRIGHTWATER_LAYOUT], () => 0);
     const open = grassAcceptFor([BRIGHTWATER_LAYOUT], () => 0, undefined, lawn);
     expect(closed(8420, 1300)).toBe(false);
     expect(open(8420, 1300)).toBe(true);
-    expect(open(8200, 1600)).toBe(false);
+    // (every ward of the city is a lawn tile now; the table is the only thing that opens ground, see the lawn(7600, 1600) check above)
   });
   it('still keeps the blades off the packed streets and yards inside the lawn', () => {
     const owns = envOwnsGround(true, TILES);
