@@ -115,7 +115,7 @@ describe('H2 lawn and ground colour', () => {
     const lawn = cityLawnFor(true);
     expect(lawn(8640, 1640)).toBe(true); // open ground in the gardens
     expect(lawn(8490, 1500)).toBe(false); // main street (crowd lane)
-    expect(lawn(8200, 1500)).toBe(false); // H4's core
+    expect(lawn(7600, 1500)).toBe(false); // west of every core
   });
 
   it('puts the street zones on the crowd lanes, narrower than the lane', () => {
