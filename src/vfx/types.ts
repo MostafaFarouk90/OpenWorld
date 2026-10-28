@@ -58,6 +58,7 @@ export interface EffectTransform {
   normal?: Vec3;
   yaw?: number;
   scale?: number;
+  /** When set, `position` is an OFFSET from this object's world position (callers pass zero to sit on it), not a world position. */
   attach?: THREE.Object3D;
 }
 export type EffectParams = Record<string, number | string | boolean>;

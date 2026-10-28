@@ -9,6 +9,7 @@ import type { LayoutData } from '../region/layoutTypes';
 import { resolveLayout } from '../region/resolveLayout';
 import { buildStructures, coreFactories } from '../region/StructureBuilder';
 import { validateLayout } from '../region/validateLayout';
+import { envModelLibraryFor } from '../env/envStructureArt';
 import { createDragonspineArt } from './dragonspineArt';
 import { defaultInputs, type DragonspineInputs, type HeightFn } from './inputs';
 import { DRAGONSPINE_INTERIOR_STRINGS_EN } from './interiors';
@@ -63,7 +64,7 @@ export function createDragonspinePlugin(opts: DragonspinePluginOptions = {}): Ga
 
         if (!ctx.physics.rapier) throw new Error('dragonspine: physics is not ready');
         const deps = { ...ctx, rapier: ctx.physics.rapier };
-        const art = createDragonspineArt(modelLibraryFor(ctx.assets));
+        const art = createDragonspineArt(modelLibraryFor(ctx.assets), envModelLibraryFor(ctx.assets));
         const lookup = new BuildingLookup(undefined, undefined, art);
         const structures = buildStructures({ ...deps, ...coreFactories(ctx) }, layout, height, lookup);
         cleanups.push(() => structures.dispose());

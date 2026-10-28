@@ -154,8 +154,15 @@ export function buildEnemyModel(
     parent.updateWorldMatrix(true, false);
     const world = new THREE.Vector3().setFromMatrixScale(parent.matrixWorld).y || 1;
     obj.scale.setScalar((p.scale ?? 1) / world);
-    if (p.position) obj.position.set(p.position[0] / world, p.position[1] / world, p.position[2] / world);
-    if (p.rotation) obj.rotation.set(p.rotation[0], p.rotation[1], p.rotation[2]);
+    // `position`/`rotation` are in the primary model's frame; a shown fallback takes its own (`fallbackPosition`/`fallbackRotation`).
+    const pos = shownId === p.id ? p.position : p.fallbackPosition;
+    const rot = shownId === p.id ? p.rotation : p.fallbackRotation;
+    if (pos) obj.position.set(pos[0] / world, pos[1] / world, pos[2] / world);
+    if (rot) obj.rotation.set(rot[0], rot[1], rot[2]);
+    // Held props are lit and cast shadows like the procedural ones (ModelLibrary.object turns them off).
+    obj.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true;
+    });
     parent.add(obj);
   }
   const need = (name: string): THREE.Object3D => {

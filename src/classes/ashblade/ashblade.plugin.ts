@@ -205,7 +205,7 @@ const ashbladePlugin: GamePlugin = {
       dodging: () => ctx.world.avatar?.controller.currentAction === 'dodge',
       playerId,
       effect: () => {
-        const h = vfx()?.spawnEffect(SOOT_CLOAK.effectId, { position: { ...ctx.player.feet }, attach: ctx.world.avatar?.root }, { seconds: SOOT_CLOAK.seconds });
+        const h = vfx()?.spawnEffect(SOOT_CLOAK.effectId, { position: ctx.world.avatar?.root ? { x: 0, y: 0, z: 0 } : { ...ctx.player.feet }, attach: ctx.world.avatar?.root }, { seconds: SOOT_CLOAK.seconds });
         return h ? () => h.stop() : null;
       },
       warn,

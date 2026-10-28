@@ -9,6 +9,7 @@ import { resolveLayout } from '../region/resolveLayout';
 import { buildStructures, coreFactories } from '../region/StructureBuilder';
 import { validateLayout } from '../region/validateLayout';
 import { heightAt } from '../terrain/heightfield';
+import { envModelLibraryFor } from '../env/envStructureArt';
 import { createCinderreachArt } from './cinderreachArt';
 import { CINDERREACH_LAYOUT } from './cinderreach.layout';
 import { CINDERREACH_NPC_DEFS, CINDERREACH_NPC_STRINGS_EN } from './npcDefs';
@@ -68,7 +69,7 @@ export function createCinderreachPlugin(opts: CinderreachPluginOptions = {}): Ga
 
         if (!ctx.physics.rapier) throw new Error('cinderreach: physics is not ready');
         const deps = { ...ctx, rapier: ctx.physics.rapier };
-        const art = createCinderreachArt(modelLibraryFor(ctx.assets));
+        const art = createCinderreachArt(modelLibraryFor(ctx.assets), envModelLibraryFor(ctx.assets));
         const lookup = new BuildingLookup(undefined, undefined, art);
         const structures = buildStructures({ ...deps, ...coreFactories(ctx) }, layout, height, lookup);
         cleanups.push(() => structures.dispose());

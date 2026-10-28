@@ -21,6 +21,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   for (const c of cleanups.splice(0)) c();
+  physics?.dispose();
   vi.restoreAllMocks();
 });
 

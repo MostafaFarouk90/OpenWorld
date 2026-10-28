@@ -2,6 +2,7 @@ import type { AssetId } from '../assets/AssetManifest';
 import { ModelLibrary, modelLibraryFor } from '../assets/swap/ModelLibrary';
 import type { GamePlugin } from '../core/plugins';
 import { ENEMY_DEFS } from './defs';
+import { envPropLibrary } from './envProp';
 import { EnemyManager, type ModelFactory } from './EnemyManager';
 import { hostFromContext } from './host';
 import { ACT2_SPAWNERS } from './act2Spawners';
@@ -26,6 +27,7 @@ const KNIGHT = 'knight';
  * that pass their own model factory, and spawning warns instead of throwing.
  */
 let manager: EnemyManager | null = null;
+let disposeEnvLib: (() => void) | null = null;
 
 const plugin: GamePlugin = {
   id: 'enemies',
@@ -36,9 +38,13 @@ const plugin: GamePlugin = {
     // Pack props worn by recipes (the watch guard's pot helm): preloaded here, skipped by the model builder until loaded.
     // `proc/` ids are procedural (the hunters' spear and harpoon, ranged/props.ts), never loaded.
     const lib = modelLibraryFor(assets);
-    void lib.preload([...new Set(Object.values(ENEMY_DEFS).flatMap((d) => (d.model.props ?? []).map((p) => p.id)).filter((id) => !id.startsWith('proc/')))]);
+    void lib.preload([...new Set(Object.values(ENEMY_DEFS).flatMap((d) => (d.model.props ?? []).map((p) => p.id)).filter((id) => !id.startsWith('proc/') && !id.startsWith('env/')))]);
+    // `env/` props (the hunter's spear) load from public/assets/env through their own source; a missing glb keeps the fallback.
+    const envLib = envPropLibrary(assets);
+    disposeEnvLib = () => envLib.dispose();
+    void envLib.preload([...new Set(Object.values(ENEMY_DEFS).flatMap((d) => (d.model.props ?? []).map((p) => p.id)).filter((id) => id.startsWith('env/')))]);
     const prop = (id: string) => {
-      const t = lib.peek(id);
+      const t = id.startsWith('env/') ? envLib.peek(id) : lib.peek(id);
       return t ? ModelLibrary.object(t) : null;
     };
     const makeModel: ModelFactory = (def) => {
@@ -86,6 +92,8 @@ const plugin: GamePlugin = {
     }
   },
   dispose() {
+    disposeEnvLib?.();
+    disposeEnvLib = null;
     manager?.dispose();
     manager = null;
   },

@@ -145,15 +145,24 @@ const ENV_IDS: ReadonlySet<string> = new Set(Object.keys(manifest.objects));
 export const ASHEN: Tint = { sat: 0.15, mul: 0x8f8b85 };
 
 export function resolveModel(id: string): ModelRef {
+  return resolve(id, true);
+}
+
+/** What draws `id` when it has no runtime copy of its own: the variant, KayKit model or placeholder it fell back to before its glb arrived. */
+export function resolveStandIn(id: string): ModelRef {
+  return resolve(id, false);
+}
+
+function resolve(id: string, own: boolean): ModelRef {
   if (id.endsWith('-ashen')) {
-    const base = resolveModel(id.slice(0, -'-ashen'.length));
+    const base = resolve(id.slice(0, -'-ashen'.length), own);
     if (base.source === 'placeholder') return base;
     const t = base.tint;
     // Combine with the base's own tint: multiply the colours, keep the base's hue shift, take the lower saturation.
     const mul = t?.mul !== undefined ? mulColour(t.mul, ASHEN.mul!) : ASHEN.mul;
     return { ...base, tint: { hue: t?.hue, sat: Math.min(t?.sat ?? 1, ASHEN.sat!), mul } };
   }
-  if (ENV_IDS.has(id)) return { source: 'env', model: `env/${id}`, scale: 1 };
+  if (own && ENV_IDS.has(id)) return { source: 'env', model: `env/${id}`, scale: 1 };
   const v = VARIANTS[id];
   if (v && ENV_IDS.has(v.base)) return { source: 'env', model: `env/${v.base}`, scale: v.scale, tint: v.tint, ...(v.stretchY ? { stretchY: v.stretchY } : {}), girth: v.girth };
   const k = KAYKIT[id] ?? (SWAP_FIT[`hex/${id}`] ? { model: `hex/${id}` } : SWAP_FIT[`hal/${id}`] ? { model: `hal/${id}` } : undefined);

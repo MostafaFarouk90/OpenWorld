@@ -106,7 +106,18 @@ export function installM15(k: Kit): Off[] {
     });
   });
   k.on('save.loaded', () => {
-    if (k.active('m15') && k.flag('story.m15.cageOpen') && !k.flag('story.m15.flown')) k.later(flight);
+    if (k.active('m15') && k.flag('story.m15.cageOpen') && !k.flag('story.m15.flown')) {
+      k.later(() => {
+        // Recovery releases the caged wyrmling the way the normal path does, or it would stay visible at the pen.
+        const id = ctx.services.get('enemies')?.alive(CAGE_GROUP)[0];
+        if (id && !ctx.services.get('wyrms')?.flyAway(id)) void ctx.services.get('enemies')?.despawnGroup(CAGE_GROUP);
+        flight();
+        // The enemies plugin may respawn the quest group later than this tick: whatever stands at the pen a moment on goes too.
+        k.after(120, () => {
+          if (ctx.services.get('enemies')?.alive(CAGE_GROUP).length) void ctx.services.get('enemies')?.despawnGroup(CAGE_GROUP);
+        });
+      });
+    }
     // The wyrmling flew in the saved world: the quest's start on this load must not stand it at the pen again (review R1-3).
     // Next tick, after the enemies plugin's own load handling has respawned the quest's groups.
     if (k.flag('story.m15.flown')) k.later(() => void ctx.services.get('enemies')?.despawnGroup(CAGE_GROUP));

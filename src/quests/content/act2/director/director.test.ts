@@ -911,6 +911,45 @@ describe('director: M15 The Hunters\' Pens', () => {
     r.dispose();
   });
 
+  it('the cage-load recovery path flies the caged wyrmling away instead of leaving it at the pen', () => {
+    r = rig();
+    r.active('m15');
+    r.alive.set('q12.m15.cage', ['wyrmling#1']);
+    r.state.setFlag('story.m15.cageOpen', true);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'wyrms.flyAway')).toEqual([['wyrmling#1']]);
+    r.dispose();
+  });
+
+  it('the cage-load recovery despawns the caged wyrmling when the flyAway finds no actor to free', () => {
+    r = rig();
+    r.active('m15');
+    r.alive.set('q12.m15.cage', ['wyrmling#1']);
+    r.stubs.wyrms.flyAway = (...a: unknown[]) => (r.calls.push(['wyrms.flyAway', ...a]), false);
+    r.state.setFlag('story.m15.cageOpen', true);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step();
+    expect(called(r, 'wyrms.flyAway')).toEqual([['wyrmling#1']]);
+    expect(called(r, 'enemies.despawnGroup')).toEqual([['q12.m15.cage']]);
+    r.dispose();
+  });
+
+  it('the cage-load recovery also clears a wyrmling the enemies plugin respawns after the recovery tick', () => {
+    r = rig();
+    r.active('m15');
+    r.state.setFlag('story.m15.cageOpen', true);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(); // nothing alive yet: only the flight is set
+    expect(called(r, 'wyrms.flyAway')).toHaveLength(0);
+    expect(called(r, 'enemies.despawnGroup')).toHaveLength(0);
+    r.alive.set('q12.m15.cage', ['wyrmling#2']); // respawned late
+    r.step(130);
+    expect(called(r, 'enemies.despawnGroup')).toEqual([['q12.m15.cage']]);
+    expect(r.alive.has('q12.m15.cage')).toBe(false);
+    r.dispose();
+  });
+
   it('the flight is set only once, and a load with the cage open but no flight sets it', () => {
     r = rig();
     r.active('m15');

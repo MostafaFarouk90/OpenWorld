@@ -8,6 +8,7 @@ import { ModelLibrary } from '../assets/swap/ModelLibrary';
 import { structureHeight } from '../region/greybox';
 import type { StructureSpec } from '../region/layoutTypes';
 import { createStructureArt, type StructureArt } from '../region/structureArt';
+import { createEnvStructureArt, envStructure } from '../env/envStructureArt';
 
 /** Multiplies a Hexagon model's colours so Deepgate reads sooted. */
 export const SOOT_TINT = 0.62;
@@ -140,6 +141,29 @@ function collar(spec: StructureSpec): THREE.Object3D {
  * The lift plugin overlays it on the collar while `world.oldsmoke.lift.restored` is set (the collar structure itself is fixed
  * data, so the closed plate cannot be swapped in place). Origin at the collar's centre on the ground, like the structures.
  */
+/**
+ * Replaces the lift overlay's iron frame, rails and rope with the generated `lift-cage` model (a static piece; the black pit over the
+ * hatch plate stays). Keeps the scripted frame when the manifest lacks the model or it fails to load, or when `cage` is gone first.
+ * The model's meshes share the library's geometry and are tagged `sharedGeometry` so a teardown must not dispose them.
+ */
+export async function upgradeLiftCage(cage: THREE.Object3D, envLib: ModelLibrary, collarHeight = 0.8): Promise<boolean> {
+  const spec = { id: 'oldsmoke-lift-cage', kind: 'lift-cage', x: 0, z: 0, yawDeg: 0, footprint: [2.8, 2] as [number, number], mode: 'open', height: 4.6 } as unknown as StructureSpec;
+  const model = await envStructure(envLib, spec, { id: 'lift-cage', mode: 'natural' });
+  if (!model) return false;
+  if (cage.userData.disposed) return false;
+  for (const child of [...cage.children]) {
+    if (child.name === 'lift-pit') continue;
+    cage.remove(child);
+    child.traverse((o) => (o as THREE.Mesh).isMesh && (o as THREE.Mesh).geometry.dispose());
+  }
+  model.position.y = collarHeight + 0.2;
+  model.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh) o.userData.sharedGeometry = true;
+  });
+  cage.add(model);
+  return true;
+}
+
 export function buildLiftCage(footprint: readonly [number, number] = [10, 10], collarHeight = 0.8): THREE.Object3D {
   const [w, d] = footprint;
   const g = new THREE.Group();
@@ -147,6 +171,7 @@ export function buildLiftCage(footprint: readonly [number, number] = [10, 10], c
   const top = collarHeight + 0.2;
   // The pit hides the hatch plate; the cage stands inside the ring.
   const pit = mesh(new THREE.BoxGeometry(w - 1.4, 0.2, d - 1.4), MATS.pit, 0, collarHeight + 0.12, 0);
+  pit.name = 'lift-pit';
   g.add(pit);
   const cw = Math.min(w, d) * 0.4;
   const ch = 3;
@@ -211,9 +236,16 @@ const PROCEDURAL: Record<string, (spec: StructureSpec) => THREE.Object3D> = {
 /** Kinds the art layer draws itself; everything else goes to the Act 1 art (and then to the greybox). */
 export const OLDSMOKE_ART_KINDS: readonly string[] = [...Object.keys(PROCEDURAL), 'deepgate-barracks', 'deepgate-hall', 'deepgate-furnace', 'wall', 'tower'];
 
-export function createOldsmokeArt(lib: ModelLibrary): StructureArt {
+/** Kinds drawn by the generated model of the same id (public/assets/env) when the manifest has it; the scripted piece is the fallback. */
+export const OLDSMOKE_ENV_KINDS: Readonly<Record<string, { id?: string }>> = { 'deepgate-headframe': {} };
+
+/** `envLib` loads the `env/<id>` models (see envModelLibraryFor); it defaults to `lib`, whose loader lacks them, so the scripted art stays. */
+export function createOldsmokeArt(lib: ModelLibrary, envLib: ModelLibrary = lib): StructureArt {
   const base = createStructureArt(lib);
+  const env = createEnvStructureArt(envLib, OLDSMOKE_ENV_KINDS);
   return async (spec) => {
+    const real = await env(spec);
+    if (real) return real;
     const make = PROCEDURAL[spec.kind];
     if (make) return make(spec);
     switch (spec.kind) {

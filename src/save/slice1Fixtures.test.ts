@@ -31,6 +31,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   for (const c of cleanups.splice(0)) c();
+  physics?.dispose();
   delete (globalThis as { indexedDB?: unknown }).indexedDB;
   vi.restoreAllMocks();
 });

@@ -1,4 +1,6 @@
 import type { GamePlugin } from '../../core/plugins';
+import { envPropLibrary, REDMANE_LANCE_PROP } from '../../enemies/envProp';
+import { ModelLibrary } from '../../assets/swap/ModelLibrary';
 import { RedmaneDirector } from './RedmaneDirector';
 import { buildRedmaneModel } from './RedmaneModel';
 import { REDMANE_STRINGS_EN } from './strings.en';
@@ -7,6 +9,7 @@ const BARBARIAN = 'barbarian';
 
 let director: RedmaneDirector | null = null;
 let offSystem: (() => void) | null = null;
+let disposeLances: (() => void) | null = null;
 
 /** Where Redmane's model stands: 'none' (headless), 'loading', 'ready' or 'failed' (the fight cannot start without hurtboxes). */
 type ModelState = 'none' | 'loading' | 'ready' | 'failed';
@@ -24,6 +27,14 @@ const plugin: GamePlugin = {
   setup(ctx) {
     const warn = (m: string) => console.warn(`[thrandil-redmane] ${m}`);
     const assets = ctx.assets;
+    // The env-pass lance; a missing glb leaves the procedural one in his hand.
+    const lances = envPropLibrary(assets);
+    disposeLances = () => lances.dispose();
+    void lances.preload([REDMANE_LANCE_PROP]);
+    const heldLance = () => {
+      const t = lances.peek(REDMANE_LANCE_PROP);
+      return t ? ModelLibrary.object(t) : null;
+    };
     let state: ModelState = assets ? 'loading' : 'none';
     if (assets) {
       assets.load(BARBARIAN).then(
@@ -39,13 +50,15 @@ const plugin: GamePlugin = {
     const d = new RedmaneDirector(ctx, {
       warn,
       modelState: () => state,
-      makeModel: () => (assets ? buildRedmaneModel({ model: assets.instantiate(BARBARIAN), clips: assets.animations(BARBARIAN) }, warn) : null),
+      makeModel: () => (assets ? buildRedmaneModel({ model: assets.instantiate(BARBARIAN), clips: assets.animations(BARBARIAN), lance: heldLance() }, warn) : null),
     });
     director = d;
     ctx.strings.register('en', REDMANE_STRINGS_EN);
     offSystem = ctx.systems.add({ id: 'bosses.redmane', fixedPhase: 'intent', order: -139, fixedUpdate: (dt) => d.fixedUpdate(dt) });
   },
   dispose() {
+    disposeLances?.();
+    disposeLances = null;
     offSystem?.();
     offSystem = null;
     director?.dispose();

@@ -3,8 +3,7 @@
 // Compiled out of production builds (import.meta.env.DEV).
 import type { GamePlugin } from '../core/plugins';
 import { createEffectRunner } from './effects';
-import { GIVER_STAND_OFF } from './act1Jump';
-import { Act2Jump, parseAct2 } from './act2Jump';
+import { ACT2_GIVER_STAND_OFF, Act2Jump, parseAct2 } from './act2Jump';
 import { POST_RULES, resolvePosts } from './posts';
 import type { BusPort } from './ports';
 import type { TutorialDirector } from '../tutorial/TutorialDirector';
@@ -100,12 +99,12 @@ const plugin: GamePlugin = {
             console.warn(`[act2] giver ${npcId} has no post and no position; staying put`);
             return true;
           }
-          return place({ x: at.x, y: at.y, z: at.z + GIVER_STAND_OFF }, 0);
+          return place({ x: at.x, y: at.y, z: at.z + ACT2_GIVER_STAND_OFF }, 0);
         }
         // Yaw 0 faces -Z (NpcBehavior): stand in front of the giver, turned to face them.
         const fx = -Math.sin(a.yaw);
         const fz = -Math.cos(a.yaw);
-        const pos = { x: a.position.x + fx * GIVER_STAND_OFF, y: a.position.y, z: a.position.z + fz * GIVER_STAND_OFF };
+        const pos = { x: a.position.x + fx * ACT2_GIVER_STAND_OFF, y: a.position.y, z: a.position.z + fz * ACT2_GIVER_STAND_OFF };
         return place(pos, a.yaw + Math.PI);
       },
       hasQuest: (id) => quests.objectives(id).length > 0,

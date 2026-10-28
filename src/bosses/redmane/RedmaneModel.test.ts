@@ -53,6 +53,50 @@ describe('RedmaneModel (KayKit Barbarian)', () => {
     model.dispose();
   });
 
+  it('holds the env lance when it has loaded: bone handslotr, zero offset, 3.2 m in the world on the 1.15 rig, point along the bone', () => {
+    const fake = new THREE.Group();
+    const butt = new THREE.Object3D();
+    butt.position.z = -0.66;
+    const tip = new THREE.Object3D();
+    tip.position.z = 2.54;
+    fake.add(butt, tip);
+    const model = buildRedmaneModel({ model: cloneSkinned(gltf.scene), clips: gltf.animations, lance: fake });
+    expect(model.lance).toBe(fake);
+    expect(model.lance.parent?.name).toBe(LANCE_BONE);
+    expect(model.lance.position.toArray()).toEqual([0, 0, 0]);
+    model.root.updateMatrixWorld(true);
+    const b = butt.getWorldPosition(new THREE.Vector3());
+    const t = tip.getWorldPosition(new THREE.Vector3());
+    expect(t.distanceTo(b)).toBeCloseTo(3.2, 3);
+    const boneY = new THREE.Vector3(0, 1, 0).transformDirection(model.lance.parent!.matrixWorld);
+    expect(t.clone().sub(b).normalize().dot(boneY)).toBeCloseTo(1, 4);
+    model.dropLance();
+    expect(model.lance.parent).toBe(model.root);
+    model.root.updateMatrixWorld(true);
+    expect(tip.getWorldPosition(new THREE.Vector3()).distanceTo(butt.getWorldPosition(new THREE.Vector3()))).toBeCloseTo(3.2, 3);
+    model.dispose();
+  });
+
+  it('the env lance keeps casting shadows after load', () => {
+    const fake = new THREE.Group();
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 3.2), new THREE.MeshBasicMaterial());
+    mesh.castShadow = false;
+    fake.add(mesh);
+    const model = buildRedmaneModel({ model: cloneSkinned(gltf.scene), clips: gltf.animations, lance: fake });
+    expect(mesh.castShadow).toBe(true);
+    model.dispose();
+  });
+
+  it('falls back to the procedural lance when the glb is missing (no lance given, or null)', () => {
+    for (const lance of [undefined, null]) {
+      const model = buildRedmaneModel({ model: cloneSkinned(gltf.scene), clips: gltf.animations, lance });
+      expect(model.lance.name).toBe('redmane-lance');
+      expect(model.lance.children.length).toBeGreaterThan(0);
+      expect(model.lance.parent?.name).toBe(LANCE_BONE);
+      model.dispose();
+    }
+  });
+
   it('tints its own material clones red, and the telegraph flash moves the emissive and back', () => {
     const { model } = build();
     const source = new Set<THREE.Material>();

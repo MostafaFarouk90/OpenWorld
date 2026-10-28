@@ -10,6 +10,7 @@ import { validateLayout } from '../region/validateLayout';
 import { heightAt } from '../terrain/heightfield';
 import { GRISEL_HALL_STRINGS_EN } from './griselHall';
 import { OLDSMOKE_NPC_DEFS, OLDSMOKE_NPC_STRINGS_EN } from './npcDefs';
+import { envModelLibraryFor } from '../env/envStructureArt';
 import { createOldsmokeArt } from './oldsmokeArt';
 import { OLDSMOKE_LAYOUT } from './oldsmoke.layout';
 import { watchChoices } from './readers';
@@ -57,7 +58,7 @@ export function createOldsmokePlugin(opts: OldsmokePluginOptions = {}): GamePlug
 
         if (!ctx.physics.rapier) throw new Error('oldsmoke: physics is not ready');
         const deps = { ...ctx, rapier: ctx.physics.rapier };
-        const art = createOldsmokeArt(modelLibraryFor(ctx.assets));
+        const art = createOldsmokeArt(modelLibraryFor(ctx.assets), envModelLibraryFor(ctx.assets));
         const lookup = new BuildingLookup(undefined, undefined, art);
         const structures = buildStructures({ ...deps, ...coreFactories(ctx) }, layout, height, lookup);
         cleanups.push(() => structures.dispose());
@@ -67,7 +68,7 @@ export function createOldsmokePlugin(opts: OldsmokePluginOptions = {}): GamePlug
 
         // The mines: the lift, the Lower Galleries' gates and Orsk's roof. Best effort like the cast: a failure costs the mines only.
         try {
-          cleanups.push(registerLift(ctx));
+          cleanups.push(registerLift(ctx, { envLib: envModelLibraryFor(ctx.assets) }));
           cleanups.push(registerLowerGalleries(ctx));
           cleanups.push(registerOrskRoof(ctx));
         } catch (err) {

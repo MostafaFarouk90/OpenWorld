@@ -68,19 +68,39 @@ describe('PlacementField without a model source', () => {
     field.dispose();
   });
 
-  it('stretches a variant in height and widens it by its girth (reeds from the grass clump)', async () => {
+  it('widens a variant by its girth on x and z only (heather from the round bush)', async () => {
     const THREE = await import('three');
     // A source that serves a 1 m box for every env model, so the variant resolves to a real (non-placeholder) model.
     const source = { load: async () => undefined, instantiate: () => new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial()) };
     const field = new PlacementField(new ModelLibrary(source, () => undefined), flat);
-    await field.build([{ id: 'reeds-a', x: 0, z: 0, scale: 1 }]);
+    await field.build([{ id: 'bush-heather', x: 0, z: 0, scale: 1 }]);
     expect(field.stats.placeholders).toBe(0);
     const mesh = (field.object.children[0].children[0] as import('three').Group).children[0] as import('three').InstancedMesh;
     const m = new THREE.Matrix4();
     mesh.getMatrixAt(0, m);
     const sc = new THREE.Vector3().setFromMatrixScale(m);
-    expect(sc.y / sc.x).toBeCloseTo(2.6 / 1.9);
+    expect(sc.y / sc.x).toBeCloseTo(1 / 1.4);
     expect(sc.x).toBeCloseTo(sc.z);
+    field.dispose();
+  });
+
+  it('falls back to the old stand-in, not a placeholder, when a generated model fails to load', async () => {
+    const THREE = await import('three');
+    // Every env model loads except the generated willow, so willow-a must draw its stand-in (the elm, stretched) instead.
+    const source = {
+      load: async (key: string) => {
+        if (key === 'env/willow-a') throw new Error('missing');
+      },
+      instantiate: () => new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial()),
+    };
+    const field = new PlacementField(new ModelLibrary(source, () => undefined), flat);
+    await field.build([{ id: 'willow-a', x: 0, z: 0, scale: 1 }]);
+    expect(field.stats.placeholders).toBe(0);
+    const mesh = (field.object.children[0].children[0] as import('three').Group).children[0] as import('three').InstancedMesh;
+    const m = new THREE.Matrix4();
+    mesh.getMatrixAt(0, m);
+    const sc = new THREE.Vector3().setFromMatrixScale(m);
+    expect(sc.y / sc.x).toBeCloseTo(0.7);
     field.dispose();
   });
 

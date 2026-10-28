@@ -1,7 +1,10 @@
 import { defineConfig } from 'vite';
 import wasm from 'vite-plugin-wasm';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // The built site is served from https://mostafafarouk90.github.io/OpenWorld/; dev keeps serving from /.
+  // Runtime asset URLs go through import.meta.env.BASE_URL, which Vite sets from this.
+  base: command === 'build' ? '/OpenWorld/' : '/',
   // Rapier ships its WASM as an ES module import, which plain Vite rejects.
   plugins: [wasm()],
   build: {
@@ -16,4 +19,4 @@ export default defineConfig({
     // Terrain worker pool modules are bundled as ES modules.
     format: 'es',
   },
-});
+}));
