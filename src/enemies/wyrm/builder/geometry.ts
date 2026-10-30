@@ -49,6 +49,11 @@ export function boneGeometry(part: number = PART.frame): THREE.BufferGeometry {
 }
 
 /** A chain link: a thin torus (instanced). */
+/** K6a: an iron collar ring (unit radius, in the XY plane, so it wraps a spine segment whose tangent is +Z). */
+export function collarGeometry(): THREE.BufferGeometry {
+  return tag(new THREE.TorusGeometry(1, 0.16, 6, 14), PART.metal);
+}
+
 export function linkGeometry(): THREE.BufferGeometry {
   const g = new THREE.TorusGeometry(0.5, 0.14, 4, 8);
   const n = g.getAttribute('position').count;

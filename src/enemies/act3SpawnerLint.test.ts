@@ -12,6 +12,7 @@ import { WAVE_SPAWNERS } from '../waves/spawners';
 import { ACT2_SPAWNERS_A12 } from '../quests/content/act2/spawners';
 import { OLDSMOKE_SPAWNERS } from '../quests/content/act2/oldsmoke';
 import { ACT3_SPAWNERS } from './act3Spawners';
+import { ACT3_DRAGON_SPAWNERS } from './wyrm/large/lodgeWyrms';
 import { ALL_INTERIORS } from '../interiors/interiors.plugin';
 import { ALL_LAYOUTS, resolveAnchors } from '../quests/lint/noteLint';
 import { MAP_TO_ENGINE_OFFSET, REGION_BOXES_MAP } from '../region/regionMask';
@@ -23,7 +24,7 @@ const ACT3_REGIONS = ['greyfen', 'dragonspine'] as const;
 
 export const ALL_SPAWNER_DEFS: readonly SpawnerDef[] = [
   ...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS, ...ACT2_SPAWNERS,
-  ...WAVE_SPAWNERS, ...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS, ...ACT3_SPAWNERS,
+  ...WAVE_SPAWNERS, ...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS, ...ACT3_SPAWNERS, ...ACT3_DRAGON_SPAWNERS,
 ];
 
 const anchors = resolveAnchors(ALL_LAYOUTS, ALL_INTERIORS);
