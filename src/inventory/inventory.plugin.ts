@@ -33,7 +33,17 @@ const inventoryPlugin: GamePlugin = {
     const player = (): ActorPort => ctx.actors.player;
     const user = new ConsumableUser({
       inventory: inv,
-      env: { actor: player, heal: (n) => ctx.damage.heal('player', n), emit },
+      env: {
+        actor: player,
+        heal: (n) => ctx.damage.heal('player', n),
+        emit,
+        relieveBurn: (n) => {
+          const spells = (ctx.services as unknown as { get(n: string): { addBurn?(n: number, source: string): void } | undefined }).get('spells');
+          if (!spells?.addBurn) return false;
+          spells.addBurn(-n, 'item');
+          return true;
+        },
+      },
     });
 
     let unlock: (() => void) | null = null;
@@ -72,6 +82,10 @@ const inventoryPlugin: GamePlugin = {
       addGold: (n) => inv.addGold(n),
       gear: (itemId) => inv.gear(itemId),
       setTemper: (itemId, level, affix) => inv.setTemper(itemId, level, affix),
+      socketsOf: (itemId) => inv.socketsOf(itemId),
+      setSockets: (itemId, shards) => inv.setSockets(itemId, shards),
+      capOf: (itemId) => inv.capOf(itemId),
+      gemRoomFor: (itemId) => inv.gemRoomFor(itemId),
       takeGold: (n, reason = 'script') => {
         const taken = inv.takeGold(n);
         if (taken > 0) ctx.events.emit('gold.spent', { amount: taken, reason, total: inv.gold });

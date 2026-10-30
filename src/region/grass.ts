@@ -77,6 +77,14 @@ export function tuftColor(height: number, up: number, tone: number, x?: number, 
 }
 
 export type GrassAccept = (x: number, z: number) => boolean;
+/** A sparser, drier blade mix for trodden lawn (the Harrowmark wards' CITY_LAWN): `keep` of the tufts grow, tinted `dry` of the way to DRY_BLADE. */
+export interface GrassMix {
+  keep: number;
+  dry: number;
+}
+export type GrassMixFn = (x: number, z: number) => GrassMix | null;
+/** Linear RGB of a dry, trodden-down blade (straw). */
+export const DRY_BLADE: readonly [number, number, number] = [0.42, 0.36, 0.14];
 export type HeightFn = (x: number, z: number) => number;
 
 /** A seed per cell: the same cell always gives the same random stream. */
@@ -103,7 +111,7 @@ export function groundUp(heightAt: HeightFn, x: number, z: number): number {
  * The tufts of one cell. Every candidate is drawn whatever the outcome so a rejected tuft never shifts the rest;
  * `density` keeps the first `round(perCell * density)` candidates. Pure and deterministic.
  */
-export function cellTufts(cx: number, cz: number, heightAt: HeightFn, accept: GrassAccept, density = 1, seed = 5): Tuft[] {
+export function cellTufts(cx: number, cz: number, heightAt: HeightFn, accept: GrassAccept, density = 1, seed = 5, mix?: GrassMixFn): Tuft[] {
   const rand = cellRandom(cx, cz, seed);
   const n = Math.round(GRASS.perCell * Math.min(Math.max(density, 0), 1));
   const out: Tuft[] = [];
@@ -122,7 +130,11 @@ export function cellTufts(cx: number, cz: number, heightAt: HeightFn, accept: Gr
     const up = groundUp(heightAt, x, z);
     if (up < GRASS.minUp) continue;
     if (!accept(x, z)) continue;
-    out.push({ x, y, z, rot, scale, tone, color: tuftColor(y, up, tone, x, z) });
+    const m = mix?.(x, z) ?? null;
+    if (m && i >= GRASS.perCell * m.keep) continue;
+    const color = tuftColor(y, up, tone, x, z);
+    if (m) for (let k = 0; k < 3; k++) color[k] += (DRY_BLADE[k]! * (0.8 + 0.4 * tone) - color[k]) * m.dry;
+    out.push({ x, y, z, rot, scale: m ? scale * 0.8 : scale, tone, color });
   }
   return out;
 }
@@ -174,6 +186,7 @@ export class GrassField {
     private readonly accept: GrassAccept,
     density = 1,
     private readonly cellsPerFrame: number = GRASS.cellsPerFrame,
+    private readonly mix?: GrassMixFn,
   ) {
     this.density = clampDensity(density);
     this.mesh = new THREE.InstancedMesh(this.geometry, this.material, GRASS_MAX_INSTANCES);
@@ -208,7 +221,7 @@ export class GrassField {
       if (budget <= 0) break;
       const key = `${cx + dx},${cz + dz}`;
       if (this.cache.has(key)) continue;
-      this.cache.set(key, cellTufts(cx + dx, cz + dz, this.heightAt, this.accept, this.density));
+      this.cache.set(key, cellTufts(cx + dx, cz + dz, this.heightAt, this.accept, this.density, 5, this.mix));
       budget--;
       this.dirty = true;
     }

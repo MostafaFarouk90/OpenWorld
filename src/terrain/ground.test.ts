@@ -9,7 +9,19 @@ import {
   ACT2_GROUND_ORIGIN,
     DIP_LATTICE,
   DIP_MAX_CHUNK,
+  DRAGONSPINE_GROUND_ORIGIN,
+  GREYFEN_GROUND_ORIGIN,
   GROUND_BLEND,
+  GROUND_RULES,
+  GROUND_ORIGINS,
+  SNOW_FULL,
+  SNOW_LINE,
+  WET_BAND,
+  groundOriginFor,
+  peatMask,
+  snowWeight,
+  veinWeight,
+  wetWeight,
   ashFogWeight,
   buildDipField,
   chunkGround,
@@ -28,6 +40,7 @@ import {
   GROUND_VERTEX_DECL,
   GROUND_VERTEX_MAIN,
   GROUND_TIME_WRAP,
+  veinAt,
   createGroundMaterial,
   injectGround,
   seamAt,
@@ -45,15 +58,15 @@ const ROADS: Act2RoadId[] = ['cinder-road', 'stonefold-road', 'fellwalker-track'
 
 describe('ground weights', () => {
   it('are 1 inside each Act 2 region and 0 for the other rule', () => {
-    expect(groundWeights(19000, 1500)).toEqual({ cinderreach: 1, oldsmoke: 0 });
-    expect(groundWeights(19500, 9500)).toEqual({ cinderreach: 0, oldsmoke: 1 });
+    expect(groundWeights(19000, 1500)).toEqual({ cinderreach: 1, oldsmoke: 0, greyfen: 0, dragonspine: 0 });
+    expect(groundWeights(19500, 9500)).toEqual({ cinderreach: 0, oldsmoke: 1, greyfen: 0, dragonspine: 0 });
   });
 
   it('are 0 everywhere in Brightwater and Harrowmark', () => {
     for (const id of ['brightwater', 'harrowmark'] as const) {
       const b = engineBox(id);
       for (let x = b.x0; x <= b.x1; x += 250) {
-        for (let z = b.z0; z <= b.z1; z += 250) expect(groundWeights(x, z)).toEqual({ cinderreach: 0, oldsmoke: 0 });
+        for (let z = b.z0; z <= b.z1; z += 250) expect(groundWeights(x, z)).toEqual({ cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 0 });
       }
     }
   });
@@ -330,6 +343,9 @@ describe('ground shader', () => {
     const src = [GROUND_VERTEX_DECL, GROUND_VERTEX_MAIN, GROUND_FRAGMENT_DECL, GROUND_FRAGMENT_COLOR, GROUND_FRAGMENT_EMISSIVE].join('\n');
     const declared = [...src.matchAll(/\b(?:float|vec2|vec3|vec4)\s+([A-Za-z_]\w*)/g)].map((m) => m[1]);
     expect(declared.length).toBeGreaterThan(5);
+    // The Act 3 vein snippet is in the scanned source, so a reserved name in it fails here, not under SwiftShader.
+    expect(declared).toContain('groundVeinStreak');
+    expect(declared).toContain('veinPatch');
     for (const name of declared) expect(reserved, name).not.toContain(name);
   });
 
@@ -384,10 +400,187 @@ describe('ground shader', () => {
     }
   });
 
-  it('has a ground key for each Act 2 region and none for the rest', () => {
+  it('has a ground key for each Act 2 and Act 3 region and none for the rest', () => {
     for (const id of REGION_IDS) {
       const touches = chunkTouchesGround((engineBox(id).x0 + engineBox(id).x1) / 2, (engineBox(id).z0 + engineBox(id).z1) / 2, 100);
-      expect(touches).toBe(id === 'cinderreach' || id === 'oldsmoke');
+      expect(touches).toBe(['cinderreach', 'oldsmoke', 'greyfen', 'dragonspine'].includes(id));
     }
+  });
+});
+
+describe('Act 3 ground weights', () => {
+  it('are 1 inside Greyfen and Dragonspine, 0 far away, and blend between', () => {
+    expect(groundWeights(3000, 12500)).toEqual({ cinderreach: 0, oldsmoke: 0, greyfen: 1, dragonspine: 0 });
+    expect(groundWeights(14000, 15000)).toEqual({ cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 1 });
+    expect(groundWeights(9000, 8000)).toEqual({ cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 0 });
+    const gb = engineBox('greyfen');
+    expect(groundWeights(gb.x1 + GROUND_BLEND / 2, 12500).greyfen).toBeCloseTo(0.5, 5);
+    expect(groundWeights(gb.x1 + GROUND_BLEND + 1, 12500).greyfen).toBe(0);
+    const db = engineBox('dragonspine');
+    expect(groundWeights(db.x0 - GROUND_BLEND / 2, 15000).dragonspine).toBeCloseTo(0.5, 5);
+    expect(groundWeights(db.x0 - GROUND_BLEND - 1, 15000).dragonspine).toBe(0);
+  });
+
+  it('leave Act 1 and Act 2 colours and weights unchanged at sample points', () => {
+    for (const [x, z] of [[3000, 2000], [19000, 1500], [19500, 9500], [20500, 6200], [8200, 5000]] as const) {
+      const w = groundWeights(x, z);
+      expect(w.greyfen).toBe(0);
+      expect(w.dragonspine).toBe(0);
+      const a = new Float32Array([0.2, 0.4, 0.1]);
+      const b = new Float32Array(a);
+      groundColor(x, z, 0.9, a, 0);
+      groundColor(x, z, 0.9, b, 0, 300);
+      expect(Array.from(b)).toEqual(Array.from(a));
+    }
+    expect(grassRule(3000, 2000).tint).toBeNull();
+    expect(grassRule(19000, 1500).tint).toEqual(GROUND_RULES.cinderreach.grass);
+    expect(grassRule(19500, 9500).tint).toEqual(GROUND_RULES.oldsmoke.grass);
+  });
+
+  it('give each region its own grass: silver-green dense in the fen, sparse and pale on the peaks', () => {
+    const fen = grassRule(3000, 12500);
+    expect(fen.tint).toEqual(GROUND_RULES.greyfen.grass);
+    expect(fen.density).toBe(GROUND_RULES.greyfen.grassDensity);
+    const peak = grassRule(14000, 15000);
+    expect(peak.tint).toEqual(GROUND_RULES.dragonspine.grass);
+    expect(peak.density).toBeCloseTo(GROUND_RULES.dragonspine.grassDensity, 9);
+    expect(GROUND_RULES.dragonspine.grassDensity).toBeLessThan(0.3);
+    const [r, g, b] = GROUND_RULES.greyfen.grass;
+    expect(g).toBeGreaterThan(r);
+    expect(g).toBeGreaterThan(b);
+  });
+});
+
+describe('region-local origins', () => {
+  it('keep the local coordinate small at the far corners of both regions', () => {
+    const dx = 16500 - DRAGONSPINE_GROUND_ORIGIN.x;
+    const dz = 16500 - DRAGONSPINE_GROUND_ORIGIN.z;
+    expect(Math.hypot(dx, dz)).toBeLessThan(4000);
+    // The Greyfen's west edge, 3.5 km west of its origin: each axis under 4 km (about 4.6 km diagonally, float32 keeps 0.5 mm).
+    const gx = -500 - GREYFEN_GROUND_ORIGIN.x;
+    const gz = 15500 - GREYFEN_GROUND_ORIGIN.z;
+    expect(Math.abs(gx)).toBeLessThan(4000);
+    expect(Math.abs(gz)).toBeLessThan(4000);
+    expect(Math.hypot(gx, gz)).toBeLessThan(5000);
+    // And the float32 form the shader builds keeps sub-millimetre steps there.
+    expect(shaderLocal(16500 - 1600, DRAGONSPINE_GROUND_ORIGIN.x, 1599.95) - shaderLocal(16500 - 1600, DRAGONSPINE_GROUND_ORIGIN.x, 1599.9)).toBeGreaterThan(0.04);
+  });
+
+  it('are neither Act 2 raw world coordinates nor the Act 2 origin', () => {
+    expect(GROUND_ORIGINS.greyfen).not.toEqual(ACT2_GROUND_ORIGIN);
+    expect(GROUND_ORIGINS.dragonspine).not.toEqual(ACT2_GROUND_ORIGIN);
+    expect(Math.hypot(-500 - ACT2_GROUND_ORIGIN.x, 15500 - ACT2_GROUND_ORIGIN.z)).toBeGreaterThan(10000);
+  });
+
+  it('picks each chunk its region origin, and none for Act 1', () => {
+    expect(groundOriginFor(3000, 2000, 400)).toBeNull();
+    expect(groundOriginFor(3000, 12500, 400)).toBe('greyfen');
+    expect(groundOriginFor(1600, 12500, 3200)).toBe('greyfen');
+    expect(groundOriginFor(14000, 15000, 400)).toBe('dragonspine');
+    expect(groundOriginFor(16400, 16400, 3200)).toBe('dragonspine');
+    expect(groundOriginFor(19000, 1500, 400)).toBe('act2');
+    expect(groundOriginFor(19500, 9500, 1600)).toBe('act2');
+  });
+
+  it('builds one material per origin, each with its own uGroundOrigin', () => {
+    const d = createGroundMaterial({ vertexColors: true }, 'dragonspine');
+    const g = createGroundMaterial({ vertexColors: true }, 'greyfen');
+    expect(d.uniforms.uGroundOrigin.value.toArray()).toEqual([DRAGONSPINE_GROUND_ORIGIN.x, DRAGONSPINE_GROUND_ORIGIN.z]);
+    expect(g.uniforms.uGroundOrigin.value.toArray()).toEqual([GREYFEN_GROUND_ORIGIN.x, GREYFEN_GROUND_ORIGIN.z]);
+    expect(d.uniforms.uGroundVein.value).toBe(1);
+    expect(g.uniforms.uGroundVein.value).toBe(0);
+    expect(d.material.customProgramCacheKey()).not.toBe(g.material.customProgramCacheKey());
+    d.material.dispose();
+    g.material.dispose();
+  });
+});
+
+describe('Greyfen marsh colour', () => {
+  const soil = GROUND_RULES.greyfen.soil;
+  it('is silver-green on dry flat ground and darker where the ground sits at the water table', () => {
+    // Find a spot with no peat so only the wet darkening differs.
+    let spot: [number, number] | null = null;
+    for (let x = 1000; x < 2000 && !spot; x += 13) if (peatMask(x, 12000) === 0) spot = [x, 12000];
+    expect(spot).not.toBeNull();
+    const [x, z] = spot!;
+    const dry = new Float32Array([0.3, 0.5, 0.2]);
+    const wet = new Float32Array([0.3, 0.5, 0.2]);
+    groundColor(x, z, 0.99, dry, 0, 12);
+    groundColor(x, z, 0.99, wet, 0, 6);
+    expect(dry[0]).toBeCloseTo(soil[0], 5);
+    expect(dry[1]).toBeCloseTo(soil[1], 5);
+    expect(dry[1]).toBeGreaterThan(dry[0]);
+    expect(wet[1]).toBeLessThan(dry[1] * 0.6);
+    expect(wetWeight(6)).toBe(1);
+    expect(wetWeight(6 + WET_BAND)).toBe(0);
+    expect(wetWeight(10)).toBe(0);
+  });
+
+  it('has dark peat patches from a low-frequency mask, covering only part of the fen', () => {
+    let peat = 0;
+    let n = 0;
+    for (let x = 0; x < 6000; x += 60) for (let z = 10000; z < 15000; z += 60, n++) if (peatMask(x, z) > 0.5) peat++;
+    expect(peat / n).toBeGreaterThan(0.05);
+    expect(peat / n).toBeLessThan(0.6);
+    let spot: [number, number] | null = null;
+    for (let x = 0; x < 6000 && !spot; x += 7) if (peatMask(x, 12000) === 1) spot = [x, 12000];
+    const out = new Float32Array([0.3, 0.5, 0.2]);
+    groundColor(spot![0], spot![1], 0.99, out, 0, 12);
+    expect(out[1]).toBeLessThan(soil[1] * 0.5);
+  });
+});
+
+describe('Dragonspine snow and veins', () => {
+  it('has no snow at 300 m, full snow at 500 m on flat ground, none on a cliff', () => {
+    expect(snowWeight(300, 1)).toBe(0);
+    expect(snowWeight(SNOW_LINE, 1)).toBe(0);
+    expect(snowWeight(500, 1)).toBe(1);
+    expect(snowWeight(SNOW_FULL, 1)).toBe(1);
+    expect(snowWeight(440, 1)).toBeGreaterThan(0);
+    expect(snowWeight(440, 1)).toBeLessThan(1);
+    expect(snowWeight(600, Math.cos((41 * Math.PI) / 180))).toBe(0);
+    expect(snowWeight(600, 0.2)).toBe(0);
+    expect(snowWeight(600, Math.cos((30 * Math.PI) / 180))).toBeGreaterThan(0.9);
+  });
+
+  it('paints black rock low, white high, and dark cliffs', () => {
+    const low = new Float32Array([0.3, 0.5, 0.2]);
+    const high = new Float32Array([0.3, 0.5, 0.2]);
+    const cliff = new Float32Array([0.3, 0.5, 0.2]);
+    groundColor(14000, 15000, 0.99, low, 0, 300);
+    groundColor(14000, 15000, 0.99, high, 0, 520);
+    groundColor(14000, 15000, 0.3, cliff, 0, 520);
+    expect(Math.max(...low)).toBeLessThan(0.08);
+    expect(Math.min(...high)).toBeGreaterThan(0.7);
+    expect(Math.max(...cliff)).toBeLessThan(0.08);
+  });
+
+  it('weights veins on bare rock only, and writes them to ground.x of a Dragonspine chunk', () => {
+    expect(veinWeight(14000, 15000, 300, 0.99)).toBe(1);
+    expect(veinWeight(14000, 15000, 520, 0.99)).toBe(0);
+    expect(veinWeight(3000, 12500, 300, 0.99)).toBe(0);
+    const cg = chunkGround(14000, 15000, 400, heightAt)!;
+    const col = new Float32Array(3);
+    const g = new Float32Array(2);
+    cg.vertex(14000, 15000, 300, 0.99, col, 0, g, 0);
+    expect(g[0]).toBe(1);
+    expect(g[1]).toBe(0);
+    cg.vertex(14000, 15000, 520, 0.99, col, 0, g, 0);
+    expect(g[0]).toBe(0);
+    // A Greyfen chunk carries no vein or ember weight.
+    const fen = chunkGround(3000, 12500, 400, heightAt)!;
+    fen.vertex(3000, 12500, 8, 0.99, col, 0, g, 0);
+    expect(Array.from(g)).toEqual([0, 0]);
+  });
+
+  it('draws veins rarely and thinly, from region-local coordinates', () => {
+    let lit = 0;
+    let n = 0;
+    for (let lx = -2000; lx < 2000; lx += 5) for (let lz = -2000; lz < 2000; lz += 5, n++) if (veinAt(lx, lz) > 0.3) lit++;
+    expect(lit / n).toBeGreaterThan(0);
+    expect(lit / n).toBeLessThan(0.02);
+    const lib = THREE.ShaderLib.standard;
+    const { fragment } = injectGround(lib.vertexShader, lib.fragmentShader);
+    expect(fragment).toContain('groundVeinStreak(vGroundLocal)');
   });
 });

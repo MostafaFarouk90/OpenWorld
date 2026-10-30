@@ -19,6 +19,8 @@ export interface WaystoneContext {
   heartshard: boolean;
   /** Flag `waystone.allowRestInCombat`. */
   allowRestInCombat: boolean;
+  /** v0.7: the movement mode refuses fast travel (gliding, the ferry, a dive); absent reads false. */
+  movementRefuses?: boolean;
 }
 
 export interface NetworkPorts {
@@ -191,6 +193,7 @@ export class WaystoneNetwork {
     if (ctx.cutscene) return { ok: false, reason: 'cutscene' };
     if (ctx.dialogue) return { ok: false, reason: 'dialogue' };
     if (ctx.hostileAggro) return { ok: false, reason: 'in-combat' };
+    if (ctx.movementRefuses) return { ok: false, reason: 'movement' };
     const from = this.nearestId(this.ports.playerFeet());
     if (from === toId && this.dist2(this.ports.playerFeet(), dest.position) < 4) return { ok: false, reason: 'same' };
 

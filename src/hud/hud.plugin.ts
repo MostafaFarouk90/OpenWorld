@@ -30,7 +30,7 @@ import { asHtml, hudDocument, injectCss, projectToScreen, soft } from './soft';
 import type { HudSlot } from '../ui/HudLayer';
 import type { HudWidgetView } from './widget';
 import type { ProgressionService } from './ports';
-import { FOG_TRIGGER_ID, fogOpen, fogOpenById, fogWallForTrigger } from '../region/fogWall';
+import { FOG_TRIGGER_ID, fogOpen, fogOpenById, fogToastKey, fogWallForTrigger } from '../region/fogWall';
 import { getSkill } from '../progression/skills';
 import { LEVEL_CAP, xpForLevel } from '../progression/tuning';
 
@@ -307,7 +307,7 @@ const hudPlugin: GamePlugin = {
       const wall = e.triggerId === FOG_TRIGGER_ID ? undefined : fogWallForTrigger(e.triggerId);
       if (!wall || fogToastedIds.has(wall.id) || fogOpenById(wall.id, ctx.state)) return;
       fogToastedIds.add(wall.id);
-      ctx.events.emit('hud.toast', { textKey: wall.toastKey });
+      ctx.events.emit('hud.toast', { textKey: fogToastKey(wall, ctx.state) });
     });
 
     // Act 1 mini-ending card: live on act.ended, re-derived on load only while neither once-flag is set.

@@ -620,9 +620,9 @@ describe('Act 2 tracks (registered by A14; the old reserved-track block asserted
   const ASH_REGION = { id: 'cinderreach', track: ASH.id };
   const HAMMERS_REGION = { id: 'oldsmoke', track: HAMMERS.id };
 
-  it('the reserved lists are empty and both tracks are registered', () => {
-    expect(RESERVED_TRACK_IDS).toEqual([]);
-    expect(RESERVED_TRACKS).toEqual([]);
+  it('the reserved lists hold only the Act 3 slots (v0.7 item 23) and both Act 2 tracks are registered', () => {
+    expect(RESERVED_TRACK_IDS).toEqual(['peat-and-pitch', 'wing-over-rime']);
+    expect(RESERVED_TRACKS).toEqual([{ id: 'peat-and-pitch', bpm: 90 }, { id: 'wing-over-rime', bpm: 100 }]);
     expect(TRACKS_BY_ID[ASH.id]).toBe(ASH);
     expect(TRACKS_BY_ID[HAMMERS.id]).toBe(HAMMERS);
   });

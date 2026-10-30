@@ -44,6 +44,11 @@ export interface NavGridDef {
   openEdges?: boolean;
   /** Named dynamic obstacles (doors); initially open, so they do not block. */
   blockers?: Record<string, NavRect[]>;
+  /**
+   * v0.7 (K3): named dynamic floors (a walkway over a pit that can drop away). Opened and closed like blockers, the other
+   * way round: a closed one is floor, so its cells are walkable over the base; initially open (not floor).
+   */
+  bridges?: Record<string, NavRect[]>;
 }
 
 /**
@@ -73,7 +78,7 @@ export class NavGrid {
   private readonly walk: Uint8Array;
   private readonly clear: Float32Array;
   private readonly comp: Int32Array;
-  private readonly blockers = new Map<string, { rects: NavRect[]; closed: boolean }>();
+  private readonly blockers = new Map<string, { rects: NavRect[]; closed: boolean; bridge?: boolean }>();
   private readonly stack: Int32Array;
   private readonly edtF: Float64Array;
   private readonly edtD: Float64Array;
@@ -111,6 +116,7 @@ export class NavGrid {
     for (const r of def.blocked ?? []) this.paint(r, this.base, 0);
     for (const r of def.blockedOriented ?? []) this.paintOriented(r, this.base, 0);
     for (const [id, rects] of Object.entries(def.blockers ?? {})) this.blockers.set(id, { rects, closed: false });
+    for (const [id, rects] of Object.entries(def.bridges ?? {})) this.blockers.set(id, { rects, closed: false, bridge: true });
     this.rebuild();
   }
 
@@ -211,7 +217,8 @@ export class NavGrid {
   private rebuild(): void {
     this.revision++;
     this.walk.set(this.base);
-    for (const b of this.blockers.values()) if (b.closed) for (const r of b.rects) this.paint(r, this.walk, 0);
+    for (const b of this.blockers.values()) if (b.closed && b.bridge) for (const r of b.rects) this.paint(r, this.walk, 1);
+    for (const b of this.blockers.values()) if (b.closed && !b.bridge) for (const r of b.rects) this.paint(r, this.walk, 0);
     this.computeClearance();
     this.computeComponents();
   }

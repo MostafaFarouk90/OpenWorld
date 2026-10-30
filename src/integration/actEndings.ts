@@ -29,6 +29,8 @@ export interface ActEndingDef {
   campSeenFlag: string;
   /** Defaults to `gateFlag`. */
   worldChangeFlag?: string;
+  /** When set, the director fades and moves the party to this anchor before the camp scene. */
+  campAnchorId?: string;
 }
 
 /** The v0.5 seen flag: a save that has it also reads as `codex.actEnding.a1.seen` (WorldState.load). */
@@ -56,6 +58,17 @@ export const ACT_ENDINGS: readonly ActEndingDef[] = [
     cardSeenFlag: 'codex.actEnding.a2.seen',
     campDialogueId: 'scene-act2-camp',
     campSeenFlag: 'story.a2.campSeen',
+  },
+  {
+    act: 3,
+    endingId: 'the-coal-mothers-oath',
+    requires: ['m34', 'd06'],
+    gateFlag: 'story.gate.a4',
+    cardKey: 'hud.ending.a3.title',
+    cardSeenFlag: 'codex.actEnding.a3.seen',
+    campDialogueId: 'scene-act3-camp',
+    campSeenFlag: 'story.a3.campSeen',
+    campAnchorId: 'dragonspine.wyrmwatch.hearth',
   },
 ];
 
@@ -87,5 +100,6 @@ export function directorDef(def: ActEndingDef): ActEndingDirectorDef {
     cardSeenFlags: cardSeenFlags(def),
     campDialogueId: def.campDialogueId,
     campSeenFlag: def.campSeenFlag,
+    ...(def.campAnchorId ? { campAnchorId: def.campAnchorId } : {}),
   };
 }

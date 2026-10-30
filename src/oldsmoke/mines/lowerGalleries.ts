@@ -135,6 +135,8 @@ export const LOWER_GALLERIES_DEF: InteriorDef = mineDef('lower', {
     { id: 'oldsmoke.m20.post.5', x: -28, z: -16, facing: { x: -42, z: -21 } },
     { id: 'oldsmoke.m20.captain', x: -55, z: -22.5, facing: { x: -30, z: -22.5 } },
     { id: 'oldsmoke.m20.roof', x: -42, z: -21, yaw: 0 },
+    // The Orsk set piece's camera: 10.7 m off his front quarter, between the first two posts so it sits in no steward, note or chain.
+    { id: 'oldsmoke.m20.camera.orsk', x: -40, z: -31.5, facing: { x: -42, z: -21 } },
 
     // Crawlers: spawn points and ceiling drops (floor points, 2 m from walls).
     { id: 'oldsmoke.lower.spawn.1', x: -36, z: -14, yaw: 0 },

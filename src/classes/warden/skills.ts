@@ -1,5 +1,5 @@
-import { TIER_COST, type SkillDef } from '../../progression/skills';
-import { BLOOD_CHANT, BOULDER, WARDEN_CLASS_ID, WHIRLING_HEW } from './tuning';
+import { TIER_COST, masterBookGate, type SkillDef } from '../../progression/skills';
+import { BLOOD_CHANT, BOULDER, EARTHROOT, SKULLSPLITTER, WARDEN_CLASS_ID, WHIRLING_HEW } from './tuning';
 
 type Branch = 'hewer' | 'stonehide' | 'howlcaller';
 type Row = [name: string, kind: 'active' | 'passive'];
@@ -34,6 +34,8 @@ const ACTIVE_COSTS: Record<string, { cooldown: number; emberCost: number }> = {
   [`${WARDEN_CLASS_ID}.boulderShoulder`]: BOULDER,
   [`${WARDEN_CLASS_ID}.whirlingHew`]: WHIRLING_HEW,
   [`${WARDEN_CLASS_ID}.bloodChant`]: BLOOD_CHANT,
+  [`${WARDEN_CLASS_ID}.skullsplitter`]: SKULLSPLITTER,
+  [`${WARDEN_CLASS_ID}.earthroot`]: EARTHROOT,
 };
 
 function build(): SkillDef[] {
@@ -50,7 +52,7 @@ function build(): SkillDef[] {
         kind,
         nameKey: `skill.${WARDEN_CLASS_ID}.${name}.name`,
         descKey: `skill.${WARDEN_CLASS_ID}.${name}.desc`,
-        available: tier <= 3,
+        availableWhen: tier <= 3 ? true : masterBookGate(WARDEN_CLASS_ID),
       };
       if (i > 0) def.requires = `${WARDEN_CLASS_ID}.${TREE[branch][i - 1][0]}`;
       if (tier === 5) {

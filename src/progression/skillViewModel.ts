@@ -6,6 +6,8 @@ export type SkillNodeState = 'learned' | 'learnable' | 'no-points' | 'blocked' |
 export interface SkillNode {
   skill: SkillDef;
   state: SkillNodeState;
+  /** v0.7: an unavailable tier 4 or 5 node's text key ("Act 3", then "see your master"). */
+  textKey?: string;
 }
 
 export interface SkillViewModel {
@@ -33,9 +35,11 @@ export function skillViewModel(p: ProgressionService, classId?: string | null): 
         .sort((a, b) => a.tier - b.tier)
         .map((skill) => {
           if (p.learned(skill.id)) return { skill, state: 'learned' as const };
-          if (!skill.available) return { skill, state: 'unavailable' as const };
           const check = p.canLearn(skill.id);
           if (check.ok) return { skill, state: 'learnable' as const };
+          // As before v0.7: only a skill that is not learnable at all shows as unavailable; another class's skill is blocked.
+          if (check.reason === 'unavailable' && skill.availableWhen !== true) return { skill, state: 'unavailable' as const };
+          if (check.reason === 'master') return { skill, state: 'unavailable' as const, ...(check.textKey ? { textKey: check.textKey } : {}) };
           return { skill, state: check.reason === 'no-points' ? ('no-points' as const) : ('blocked' as const) };
         }),
     })),

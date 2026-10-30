@@ -43,6 +43,10 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'steward-guard': 30,
   'slag-crawler': 60,
   'cinder-golem': 180,
+  // Act 3 (K6b): stored divided by the Greyfen's kill XP region factor (1.8, set by the fen plugin), so a Greyfen kill pays
+  // plan 6.1's 70 and 220 after the one rounding (39 x 1.8 = 70.2, 122 x 1.8 = 219.6). Coordinator ruling A.
+  'fen-leech': 39,
+  'peat-shambler': 122,
   dummy: 0,
   scarecrow: 0,
 };
@@ -82,10 +86,15 @@ export function levelScale(enemyLevel: number, playerLevel: number): number {
   return Math.min(2, Math.max(0.25, 1 + 0.15 * diff));
 }
 
-export function killXp(kind: string, enemyLevel: number, playerLevel: number): number {
+/**
+ * `regionFactor` (v0.7 item 27, the `killXpRegionFactor` port) multiplies before the one rounding; a value that is not a
+ * finite positive number reads as 1, so the default changes nothing.
+ */
+export function killXp(kind: string, enemyLevel: number, playerLevel: number, regionFactor = 1): number {
   const base = killXpBase(kind);
   if (base <= 0) return 0;
-  return Math.round(base * levelScale(enemyLevel, playerLevel));
+  const f = Number.isFinite(regionFactor) && regionFactor > 0 ? regionFactor : 1;
+  return Math.round(base * levelScale(enemyLevel, playerLevel) * f);
 }
 
 export function baseMaxHealthForLevel(level: number, classId?: string | null): number {

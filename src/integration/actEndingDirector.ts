@@ -11,6 +11,8 @@ export interface ActEndingDirectorDef {
   cardSeenFlags: readonly string[];
   campDialogueId: string;
   campSeenFlag: string;
+  /** Fade and move the party here before the camp (needs the `moveTo` port). */
+  campAnchorId?: string;
 }
 
 export interface ActEndingPorts {
@@ -24,6 +26,8 @@ export interface ActEndingPorts {
   inCombat(): boolean;
   /** Starts the camp dialogue; false when refused (try again later). */
   startCamp(): boolean;
+  /** Fades and moves the party to the anchor; resolves false when it could not. */
+  moveTo?(anchorId: string): Promise<boolean> | boolean;
 }
 
 export class ActEndingDirector {
@@ -31,6 +35,10 @@ export class ActEndingDirector {
   private campPending = false;
   /** The camp dialogue is open (started by us, not yet ended). */
   private campRunning = false;
+  /** The move to the camp anchor is in flight, or done for this camp. */
+  private moving = false;
+  private moved = false;
+  private warned = false;
 
   constructor(
     private readonly def: ActEndingDirectorDef,
@@ -71,6 +79,8 @@ export class ActEndingDirector {
   onLoaded(): void {
     this.campRunning = false;
     this.campPending = false;
+    this.moving = false;
+    this.moved = false;
     if (!this.ended) {
       // Saved between the completion and the gate (or by an older build): the act did end. The HUD's gate watcher shows
       // the card; no `act.ended` (that event is the live moment only).
@@ -100,9 +110,37 @@ export class ActEndingDirector {
       return;
     }
     const p = this.ports;
+    if (this.moving) return;
     if (p.busy() || p.inCombat()) return;
+    if (this.def.campAnchorId && !this.moved) {
+      this.moveThenStart(this.def.campAnchorId);
+      return;
+    }
     if (!p.startCamp()) return;
     this.campPending = false;
     this.campRunning = true;
+  }
+
+  private moveThenStart(anchorId: string): void {
+    const p = this.ports;
+    this.moving = true;
+    const done = (ok: boolean): void => {
+      if (!this.moving) return; // a load cancelled the move
+      this.moving = false;
+      this.moved = true;
+      if (!ok && !this.warned) {
+        this.warned = true;
+        console.warn(`act ending ${this.def.endingId}: could not move to ${anchorId}; the camp starts where the player stands`);
+      }
+    };
+    if (!p.moveTo) return done(false);
+    let r: Promise<boolean> | boolean;
+    try {
+      r = p.moveTo(anchorId);
+    } catch {
+      return done(false);
+    }
+    if (r instanceof Promise) r.then((ok) => done(ok === true), () => done(false));
+    else done(r === true);
   }
 }

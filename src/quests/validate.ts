@@ -1,5 +1,6 @@
 import type { Condition, Effect, QuestDef } from './types';
 import { EFFECT_EVENT_PATTERN, MAX_IF_DEPTH } from './types';
+import { isMasterBookClass } from '../progression/masterBooks';
 
 const TYPES = ['goTo', 'interact', 'kill', 'collect', 'carry', 'talk', 'event'];
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.trim() !== '';
@@ -85,6 +86,8 @@ export function validateEffects(effects: Effect[] | undefined, where = 'effects'
       if (c.unlockMercy !== 'release' && c.unlockMercy !== 'spare' && c.unlockMercy !== 'calm') errs.push(`${w}: unlockMercy verb must be release, spare or calm`);
     } else if ('grantAbility' in c) {
       if (!isStr(c.grantAbility)) errs.push(`${w}: grantAbility needs an ability id`);
+    } else if ('grantMasterBook' in c) {
+      if (!isMasterBookClass(c.grantMasterBook)) errs.push(`${w}: grantMasterBook needs a class id (knight, warden, emberwright, ashblade or pathfinder)`);
     } else if ('event' in c) {
       if (typeof c.event !== 'string' || !EFFECT_EVENT_PATTERN.test(c.event)) errs.push(`${w}: event name not allowed`);
     } else {

@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { InstancedModel } from '../assets/instancing';
 import type { ModelLibrary, ModelTemplate } from '../assets/swap/ModelLibrary';
 import { placeholderGeometry, placeholderMaterial } from './placeholders';
-import { hueMatrix, resolveModel, type ModelRef, type Tint } from './resolve';
+import { expandPatches } from './patches';
+import { hueMatrix, resolveModel, resolveStandIn, type ModelRef, type Tint } from './resolve';
 
 export interface PlacementRow {
   id: string;
@@ -13,12 +14,27 @@ export interface PlacementRow {
   z: number;
   yaw?: number;
   scale?: number;
+  /** Patch rows only (ids in src/env/patches.ts): the spread radius in metres, default 0.8 x scale. */
+  spread?: number;
+  /** Patch rows only: the number of tufts (1 or more), default 5 + 4 x scale clamped to 6..14. */
+  n?: number;
+  /** Height above the ground at (x, z) in metres: roof-deck rows of the Rooftop Ward stand on top of buildings. See `rowLift`. */
+  dy?: number;
+}
+
+/**
+ * How far a row stands above the ground. Positive `dy` lifts the instance (a prop on a roof deck), zero or none leaves it on the ground.
+ * A negative `dy` is clamped to 0: no row is ever sunk below the terrain (a sunk prop would be hidden or poke out of a slope by chance).
+ * Non-finite values count as 0.
+ */
+export function rowLift(dy: number | undefined): number {
+  return dy !== undefined && Number.isFinite(dy) && dy > 0 ? dy : 0;
 }
 
 export type PlacementClass = 'tree' | 'bush' | 'rock' | 'wood' | 'ground' | 'prop' | 'hedge';
 
 /** Hide a class when the player is further than this from its nearest instance sphere edge (metres). */
-export const CLASS_RANGE: Readonly<Record<PlacementClass, number>> = { tree: 700, bush: 260, rock: 420, wood: 160, ground: 48, prop: 260, hedge: 320 };
+export const CLASS_RANGE: Readonly<Record<PlacementClass, number>> = { tree: 700, bush: 260, rock: 420, wood: 160, ground: 56, prop: 260, hedge: 320 };
 /**
  * Ground cover's base colour is multiplied by this: a clump's texture is a deep green that lit like the vegetation reads near
  * black against the pale meadow once it is only a pixel or two across, so it is lifted toward the ground it sits on.
@@ -26,6 +42,8 @@ export const CLASS_RANGE: Readonly<Record<PlacementClass, number>> = { tree: 700
 export const GROUND_LIFT = 1.45;
 /** Emissive colour added to ground cover (a mid meadow green). */
 export const GROUND_GLOW = 0x2c4a16;
+/** Ground cover draws out to this share of CLASS_RANGE.ground per quality step (56 m at high, 48 m at medium, 36 m at low; 64/56/40 is the target once the integrated-GPU check passes, a one-line change to CLASS_RANGE.ground). */
+export const GROUND_RANGE_SCALE: Readonly<Record<'low' | 'medium' | 'high', number>> = { low: 9 / 14, medium: 6 / 7, high: 1 };
 /** Share of each class kept per quality step. */
 export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record<PlacementClass, number>>>> = {
   low: { tree: 0.7, bush: 0.5, rock: 0.7, wood: 0.4, ground: 0.35, prop: 0.7, hedge: 1 },
@@ -35,9 +53,17 @@ export const DENSITY: Readonly<Record<'low' | 'medium' | 'high', Readonly<Record
 
 /** Side of a draw cell (m): batches are split by cell so distance hiding works while the player stands inside a tile. */
 const CELL = 64;
+/**
+ * Trees are seen to 700 m, so a 64 m cell split a tile's trees into hundreds of batches (45% of the visible batches along the Dead Road).
+ * Their cells are 256 m. A cell is shown whole while any part of its bounding sphere is within range, so a cell that straddles the
+ * range edge shows a few trees up to about one cell past 700 m (conservative: nothing inside the range is ever hidden).
+ */
+export const CELL_SIZE: Readonly<Record<PlacementClass, number>> = { tree: 256, bush: CELL, rock: CELL, wood: CELL, ground: CELL, prop: CELL, hedge: CELL };
+/** A build of more instances than this yields to the browser between ids. */
+const BIG_TILE = 20000;
 
 export function classOf(id: string): PlacementClass {
-  if (/^(oak|birch|elm|autumn|ash-tree|poplar|tree_dead)/.test(id)) return 'tree';
+  if (/^(oak|birch|elm|autumn|ash-tree|poplar|apple|tree_dead|willow|fruit-tree)/.test(id)) return 'tree';
   if (/^(bush|fern|reeds)/.test(id)) return 'bush';
   if (/^(boulder|rock|cairn|basalt|ember-rock|slag)/.test(id)) return 'rock';
   if (/^(stump|log|mushroom|charred)/.test(id)) return 'wood';
@@ -107,7 +133,9 @@ export class PlacementField {
     this.object.name = 'env.placements';
   }
 
-  async build(rows: readonly PlacementRow[]): Promise<void> {
+  async build(source: readonly PlacementRow[]): Promise<void> {
+    // A patch row stands for 6 to 14 ground tufts; the field draws the tufts (they thin with the ground quality step like any ground row).
+    const rows = expandPatches(source);
     const entries = new Map<string, Entry>();
     rows.forEach((row, i) => {
       const ref = resolveModel(row.id);
@@ -131,9 +159,12 @@ export class PlacementField {
       if (!resolved) continue;
       if (resolved.placeholder) this.stats.placeholders += e.rows.length;
       let parts = resolved.parts;
-      const real = e.ref.source !== 'placeholder' && !resolved.placeholder;
+      // The model actually drawn: the id's own, or its stand-in when the own glb failed to load (tint and stretch follow it).
+      const ref = resolved.ref;
+      const real = ref.source !== 'placeholder' && !resolved.placeholder;
+      const model = ref.source !== 'placeholder' ? ref : undefined;
       const lift = real && e.cls === 'ground' ? GROUND_LIFT : 1;
-      const tint = real ? (e.ref.source !== 'placeholder' ? e.ref.tint : undefined) ?? (lift !== 1 ? {} : undefined) : undefined;
+      const tint = real ? model?.tint ?? (lift !== 1 ? {} : undefined) : undefined;
       if (tint) {
         parts = parts.map((p) => {
           const k = `${p.material.uuid}|${tintKey(tint)}|${lift}`;
@@ -145,12 +176,15 @@ export class PlacementField {
           return { geometry: p.geometry, material: mat };
         });
       }
-      const girth = e.ref.source !== 'placeholder' ? (e.ref.girth ?? 1) : 1;
+      // A variant may stretch its base model in height only (reeds from a grass clump, a squat willow from an elm).
+      const sy = real ? (model?.stretchY ?? 1) : 1;
+      const girth = model?.girth ?? 1;
       const sorted = [...e.rows].sort((a, b) => a.order - b.order);
       // One batch per grid cell, so the distance test can hide the far cells of a large tile while the player stands inside it.
       const cells = new Map<string, PlacementRow[]>();
       for (const { row } of sorted) {
-        const k = `${Math.floor(row.x / CELL)},${Math.floor(row.z / CELL)}`;
+        const cell = CELL_SIZE[e.cls];
+        const k = `${Math.floor(row.x / cell)},${Math.floor(row.z / cell)}`;
         (cells.get(k) ?? cells.set(k, []).get(k)!).push(row);
       }
       for (const cellRows of cells.values()) {
@@ -159,7 +193,7 @@ export class PlacementField {
         for (const row of cellRows) {
           const s = (row.scale ?? 1) * resolved.scale;
           q.setFromAxisAngle(up, ((row.yaw ?? 0) * Math.PI) / 180);
-          m.compose(new THREE.Vector3(row.x, this.heightAt(row.x, row.z), row.z), q, new THREE.Vector3(s * girth, s, s * girth));
+          m.compose(new THREE.Vector3(row.x, this.heightAt(row.x, row.z) + rowLift(row.dy), row.z), q, new THREE.Vector3(s * girth, s * sy, s * girth));
           batch.addInstance(m);
         }
         for (const mesh of batch.meshes) mesh.computeBoundingSphere();
@@ -171,6 +205,8 @@ export class PlacementField {
         this.stats.batches += batch.meshes.length;
         this.stats.triangles += resolved.triangles * cellRows.length;
       }
+      // A big tile (the Dead Road's 80k instances each) builds one id at a time with a pause between them, so the game keeps drawing frames.
+      if (rows.length > BIG_TILE) await new Promise<void>((r) => setTimeout(r, 0));
     }
     this.setDensity(this.density);
   }
@@ -187,19 +223,21 @@ export class PlacementField {
     return s;
   }
 
-  private async partsFor(id: string, ref: ModelRef): Promise<{ parts: ModelTemplate['parts']; scale: number; triangles: number; placeholder: boolean } | null> {
+  private async partsFor(id: string, ref: ModelRef): Promise<{ parts: ModelTemplate['parts']; scale: number; triangles: number; placeholder: boolean; ref: ModelRef } | null> {
     if (ref.source === 'placeholder') {
       const geometry = placeholderGeometry(id, ref.shape);
       const tris = (geometry.index?.count ?? geometry.getAttribute('position').count) / 3;
-      return { parts: [{ geometry, material: placeholderMaterial() }], scale: 1, triangles: tris, placeholder: true };
+      return { parts: [{ geometry, material: placeholderMaterial() }], scale: 1, triangles: tris, placeholder: true, ref };
     }
     const t = await this.lib.template(ref.model);
     if (t) {
       let scale = ref.scale;
       if (ref.fitHeight) scale = ref.fitHeight / (t.bounds.max.y - t.bounds.min.y);
-      return { parts: t.parts, scale, triangles: t.triangles, placeholder: false };
+      return { parts: t.parts, scale, triangles: t.triangles, placeholder: false, ref };
     }
-    // The model did not load (offline, headless): fall back to the placeholder for this id.
+    // The model did not load (offline, headless): fall back to the id's old stand-in (a variant or KayKit model), else its placeholder.
+    const stand = resolveStandIn(id);
+    if (stand.source !== 'placeholder' && stand.model !== ref.model) return this.partsFor(id, stand);
     return this.partsFor(id, { source: 'placeholder', shape: classShape(id) });
   }
 
@@ -222,7 +260,7 @@ export class PlacementField {
     for (const [cls, slot] of this.byClass) {
       for (const b of slot.batches) {
         const d = Math.hypot(px - b.sphere.center.x, pz - b.sphere.center.z) - b.sphere.radius;
-        b.model.visible = d <= CLASS_RANGE[cls];
+        b.model.visible = d <= (cls === 'ground' ? CLASS_RANGE.ground * GROUND_RANGE_SCALE[this.density] : CLASS_RANGE[cls]);
       }
     }
   }

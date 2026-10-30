@@ -9,6 +9,8 @@ export interface HarrowmarkService {
   };
   /** The River Gate's shutter: open once Act 1 is done (`story.gate.a2`). */
   riverGate: { open(): boolean };
+  /** Act 3 (K1): the North-west Gate's shutter onto the Fen Road, open while `story.gate.a3` holds. */
+  northwestGate: { open(): boolean };
   /** Merged draw calls of the static city greybox. */
   drawCalls(): number;
   /** The asset swap's instanced model tier: meshes built, chunks and meshes in the shown chunks, triangles of the shown chunks. Zeros until the models load or when they cannot. */

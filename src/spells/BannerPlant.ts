@@ -52,6 +52,8 @@ export interface BannerHost {
   scene: THREE.Object3D;
   services: ServicesLike;
   player: { readonly feet: THREE.Vector3; readonly facingYaw: number };
+  /** K11 (Hearthfire Ward): called on each 3 s pulse of a planted banner with its position and radius. */
+  onPulse?(position: Vec3, radius: number): void;
 }
 
 /** The placeholder banner: a pole and a cloth strip (the wave shader and the real mesh come with the art swap). */
@@ -136,6 +138,7 @@ export function createBanner(host: BannerHost): BannerRegistration {
         lastPulse = now;
         const p = state.position!;
         host.services.get('vfx')?.spawnEffect('skill-q', { position: p, scale: 1 }, { radius: BANNER.radius, color: RALLY_FX.color });
+        host.onPulse?.({ x: p.x, y: p.y, z: p.z }, BANNER.radius);
       }
     },
     modify(req, target) {

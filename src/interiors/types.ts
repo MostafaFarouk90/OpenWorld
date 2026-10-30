@@ -37,6 +37,19 @@ export interface PropDef {
   walkable?: boolean;
 }
 
+/**
+ * v0.7 (K3): floor cells lowered below the room floor (pools, channels, submerged tunnels). Cells of a room inside `rect`
+ * have their floor at `-depth`; the floor of every neighbouring cell reaches down to it, so the pit has solid sides. `roof`
+ * (local y above the room floor, may be negative) lowers the ceiling over these cells, which makes a tunnel under a pool's
+ * water line. The first entry that contains a cell wins.
+ */
+export interface SunkenDef {
+  id: string;
+  rect: LocalRect;
+  depth: number;
+  roof?: number;
+}
+
 /** A door: the outside anchor is the layout thread's; the inside anchor and the exit interactable's anchor are the interior's. */
 export interface DoorDef {
   doorId: string;
@@ -63,8 +76,14 @@ export interface InteriorDef {
    * anchor over it stands on its top. Optional so older defs need no change.
    */
   props?: PropDef[];
-  /** Named obstacles, open by default (collider, mesh and nav cells together). */
-  blockers: { id: string; rect: LocalRect; height: number }[];
+  /**
+   * Named obstacles, open by default (collider, mesh and nav cells together). v0.7: `base` is the local y of the blocker's
+   * bottom (default 0; negative reaches below the floor, so a closed blocker can bridge a sunken channel) and `startClosed`
+   * builds it closed (default false).
+   */
+  blockers: { id: string; rect: LocalRect; height: number; base?: number; startClosed?: boolean }[];
+  /** v0.7: sunken floor cells (pools, channels, tunnels). Optional so older defs need no change. */
+  sunken?: SunkenDef[];
   /** Wall-mounted torch heads: local x, height above the floor, local z. */
   torches: { x: number; y: number; z: number }[];
   /** Yaw in degrees (0 faces -Z, 90 faces -X). `facing` overrides yaw with the direction toward that local point. */

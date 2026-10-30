@@ -18,7 +18,7 @@ import { isFoeKind } from './foes/defs';
 import type { Foe } from './foes/Foe';
 import { FoeManager } from './foes/FoeManager';
 import type { FoeDef, FoeEnd, RaiseWraithRequest } from './foes/types';
-import { scaleStats } from './level';
+import { scaleStats, type Act3BlockId } from './level';
 import { CalmCycle, calmOptionLabel, calmOptions, calmPayable, type CalmOption } from './calm';
 import { bossMercyInteractableId, makeBossMercyInteractable, makeMercyInteractable, mercyEvents, mercyInteractableId, mercyTargets, nextPulseId, type BossMercySubject, type MercyEnemyDef, type MercySubject } from './mercy';
 import { MercyTally, type TallyRow } from './mercyTally';
@@ -29,6 +29,9 @@ import { SpawnerRegistry, patrolForSlot, type MemberEnd, type SpawnRequest } fro
 import { ASH_GRAB, BOSS_MERCY, GUARD, MERCY, PAIR, WARM_HAND_BURN, WORLD_AI, AI } from './tuning';
 import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions, UnlockVerb } from './types';
 import { makeLineOfSight } from './ai/perception';
+import { drainPlayer } from './fen/drain';
+import { makeLeechBody } from './fen/leech/body';
+import { FEN_TUNING } from './fen/tuning';
 import { TauntRegistry, type TauntService } from './taunts';
 import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
 
@@ -51,7 +54,14 @@ export interface EnemiesService {
   setMercyUnlocked(verb: UnlockVerb, on: boolean): void;
   mercyUnlocked(verb: UnlockVerb): boolean;
   setWarmthTier(w: number): void;
-  lockBlockLevel(blockId: string, level: number): void;
+  /** v0.7: the first lock is kept (Q5); returns the level in force. */
+  lockBlockLevel(blockId: string, level: number): number | undefined;
+  /** v0.7: a block's saved base level L, or undefined before the lock. */
+  blockLevel(block: Act3BlockId): number | undefined;
+  /** v0.7: L if the block were locked now (live Warmth Tier and player level); undefined without a player level. */
+  blockPreview(block: Act3BlockId): number | undefined;
+  /** v0.7: L + span (D05's boss at the Greyfen's L + 5); undefined before the lock. */
+  blockTopLevel(block: Act3BlockId): number | undefined;
   /** Mercies and kills per creature kind, for the codex (thread 8). */
   mercyTally(): Record<string, TallyRow>;
   /** The living member in a spawner's `leaderSlot`, or null. */
@@ -136,6 +146,7 @@ export class EnemyManager {
       despawn: (id) => (this.enemies.get(id) ?? this.foes.get(id))?.despawn(),
       gates: host.gates,
       rng: this.rng,
+      playerLevel: () => host.services.get('progression')?.level,
     });
     this.foes = new FoeManager({
       host,
@@ -184,6 +195,9 @@ export class EnemyManager {
     mercyUnlocked: (verb) => this.mercyUnlocked(verb),
     setWarmthTier: (w) => this.spawners.setWarmthTier(w),
     lockBlockLevel: (b, l) => this.spawners.lockBlockLevel(b, l),
+    blockLevel: (b) => this.spawners.getLockedBlockLevel(b),
+    blockPreview: (b) => this.spawners.blockPreview(b),
+    blockTopLevel: (b) => this.spawners.blockTopLevel(b),
     mercyTally: () => this.tally.snapshot(),
     packLeader: (id) => this.packLeaderId(id),
     push: (id, p) => this.pushEnemy(id, p),
@@ -320,7 +334,7 @@ export class EnemyManager {
         level: req.level,
         maxHealth: stats.maxHealth,
         damageScale: stats.damageScale,
-        patrol: patrolForSlot(req.patrol.map((a) => a.position), req.slot),
+        patrol: patrolForSlot(req.patrol.map((a) => a.position), req.slot, req.patrolStride),
         options: req.options,
         slot: req.slot,
       };
@@ -344,7 +358,7 @@ export class EnemyManager {
     const removeCalm =
       mercyDef.mercy.verb === 'calm'
         ? this.calm.register(holdId, () =>
-            enemy.mercyOpen && this.mercyUnlocked('calm') ? calmOptions(mercyDef.mercy, this.host.services.get('inventory'), { cooled: enemy.isCooled }) : [],
+            enemy.mercyOpen && this.mercyUnlocked('calm') ? calmOptions(mercyDef.mercy, this.host.services.get('inventory'), { cooled: enemy.isCooled, ...enemy.calmContext() }) : [],
           )
         : null;
     const removeHold = this.host.interaction.register(
@@ -373,6 +387,7 @@ export class EnemyManager {
     if (def.body === 'golem') return makeGolemBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'crawler') return makeCrawlerBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'quadruped') return makeQuadrupedBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
+    if (def.body === 'leech') return makeLeechBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'wyrm') {
       const lowQuality = this.host.services.get('vfx')?.quality === 'low';
       return makeWyrmBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m), lowQuality });
@@ -810,6 +825,8 @@ export class EnemyManager {
         const move = attacker.brain.currentMove;
         if (move?.onHit === 'slow' && attacker.active) attacker.applySlow(ASH_GRAB.speedScale, ASH_GRAB.seconds);
         if (move?.onHit === 'steal' && attacker.active) attacker.thief?.grabHit();
+        // K6b: the Fen Leech's bite drains the player's stamina (a landed hit only; never below 0; regen delay and exhaustion apply).
+        if (move?.onHit === 'drain' && attacker.active) drainPlayer(this.host.services.get('combatVerbs'), this.host.actors.player, FEN_TUNING.leech.drainStamina);
       }
     });
     on('player.dodged', (p) => {

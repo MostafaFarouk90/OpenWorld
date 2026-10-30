@@ -1,7 +1,7 @@
 // When the Ashmare may be mounted or called (plans/slice-2-ashmare.md section 1). Pure: the plugin builds the
 // state from the game context and the services, tests from plain objects.
 
-export type MountRefusal = 'unavailable' | 'interior' | 'travel' | 'stealth' | 'chase' | 'combat' | 'busy';
+export type MountRefusal = 'unavailable' | 'interior' | 'travel' | 'stealth' | 'chase' | 'combat' | 'busy' | 'movement';
 
 export interface MountState {
   /** `story.m10.ashmare` (through ctx.gates). */
@@ -17,6 +17,8 @@ export interface MountState {
   aggro: boolean;
   /** Dead, mid-leap, a combat verb running, or a menu or dialogue on top of gameplay. */
   busy: boolean;
+  /** v0.7: the movement mode refuses the Ashmare (gliding, the ferry, diving, hauling); absent reads false. */
+  movement?: boolean;
 }
 
 /** The first reason the player may not mount or whistle, in this order; null when allowed. */
@@ -28,6 +30,7 @@ export function mountRefusal(s: Readonly<MountState>): MountRefusal | null {
   if (s.chase) return 'chase';
   if (s.aggro) return 'combat';
   if (s.busy) return 'busy';
+  if (s.movement) return 'movement';
   return null;
 }
 

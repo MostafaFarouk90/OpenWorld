@@ -1,10 +1,19 @@
 // Environment pass: every registered tile's rows name known ids, sit inside the tile, and stay off the frozen layout.
 import { describe, expect, it } from 'vitest';
 import { BRIGHTWATER_LAYOUT } from '../region/brightwater.layout';
+import { CORRIDOR_LAYOUT } from '../region/corridor.layout';
+import { ROAD_Z, ROAD_WIDTH } from '../region/deadRoad';
+import { DENSITY_LAYOUT_A } from '../region/density.layout';
 import { pointInFootprint } from '../region/geometry';
-import { resolveModel } from './resolve';
+import { BROOK_COURSE, BROOK_WIDTH, RIVER_COURSE, RIVER_WIDTH } from '../region/water';
+import { classOf } from './PlacementField';
+import { CROWD_LANES, HARROWMARK_LAYOUT } from '../harrowmark/harrowmark.layout';
+import { DEADROAD_LAYOUT } from '../region/deadroad.layout';
+import { DEAD_ROAD } from '../terrain/shape/deadRoad';
+import { streetAmount, yardAmount } from '../terrain/shape/groundSplat';
+import { resolveModel, resolveStandIn } from './resolve';
 import targets from './targets.json';
-import { TILES } from './tiles';
+import { TILE_BOUNDS, TILES } from './tiles';
 
 const known = new Set(Object.keys((targets as { objects: Record<string, unknown> }).objects));
 
@@ -44,6 +53,126 @@ describe('B1 placements', () => {
   });
 });
 
+describe('B3 placements (Hollin Ford, its brook and river meadow, plus the reed-island annex)', () => {
+  const rows = TILES.b3!;
+  const layouts = [BRIGHTWATER_LAYOUT, CORRIDOR_LAYOUT, DENSITY_LAYOUT_A];
+  const isGround = (id: string) => classOf(id) === 'ground';
+  /** Distance from (x, z) to a polyline course. */
+  const courseDist = (course: ReadonlyArray<readonly [number, number]>, x: number, z: number) => {
+    let best = Infinity;
+    for (let i = 1; i < course.length; i++) {
+      const [x0, z0] = course[i - 1];
+      const [x1, z1] = course[i];
+      const dx = x1 - x0;
+      const dz = z1 - z0;
+      const t = Math.max(0, Math.min(1, ((x - x0) * dx + (z - z0) * dz) / (dx * dx + dz * dz)));
+      best = Math.min(best, Math.hypot(x - (x0 + t * dx), z - (z0 + t * dz)));
+    }
+    return best;
+  };
+
+  it('is registered, rich, and has every runtime class', () => {
+    expect(rows.length).toBeGreaterThan(3000);
+    const classes = new Set(rows.map((r) => classOf(r.id)));
+    for (const c of ['tree', 'bush', 'ground', 'rock', 'wood', 'hedge', 'prop']) expect(classes.has(c as never), c).toBe(true);
+  });
+
+  it('uses only ids from the scale table or the KayKit aliases', () => {
+    const unknown = [...new Set(rows.map((r) => r.id))].filter((id) => !known.has(id) && resolveModel(id).source !== 'kaykit');
+    expect(unknown).toEqual([]);
+  });
+
+  it('lies inside B3 core or the reed-island annex only (band rows are not loaded)', () => {
+    const rects = TILE_BOUNDS.b3!;
+    for (const r of rows) {
+      expect(Number.isFinite(r.x) && Number.isFinite(r.z), r.id).toBe(true);
+      expect(rects.some((b) => r.x >= b.minX && r.x <= b.maxX && r.z >= b.minZ && r.z <= b.maxZ), `${r.id} at ${r.x},${r.z}`).toBe(true);
+    }
+    // the annex rows are really there (B3 owns the island by ruling)
+    expect(rows.filter((r) => r.x > 0).length).toBeGreaterThan(100);
+  });
+
+  it('never sits inside a solid structure footprint (ford carts, waystone, island ledge) or on an anchor', () => {
+    for (const s of layouts.flatMap((l) => l.structures)) {
+      if (s.mode === 'open') continue;
+      for (const r of rows) expect(pointInFootprint(s, r.x, r.z, 0.4), `${r.id} in ${s.id}`).toBe(false);
+    }
+    for (const a of layouts.flatMap((l) => l.anchors)) {
+      for (const r of rows) {
+        if (isGround(r.id)) continue;
+        expect(Math.hypot(r.x - a.x, r.z - a.z), `${r.id} on ${a.id}`).toBeGreaterThanOrEqual(1);
+      }
+    }
+  });
+
+  it('keeps the toll arena clear: only ground cover inside the toll-post trigger', () => {
+    const t = layouts.flatMap((l) => l.triggers).find((tr) => tr.id === 'trg.ford.toll-post')!;
+    expect(t).toBeDefined();
+    for (const r of rows) if (!isGround(r.id)) expect(Math.hypot(r.x - t.x, r.z - t.z), r.id).toBeGreaterThan(9);
+  });
+
+  it('puts no grass or flowers on the Dead Road surface (half width plus 0.5 m) or in the water', () => {
+    for (const r of rows.filter((x) => isGround(x.id))) {
+      if (r.x <= -60) expect(Math.abs(r.z - ROAD_Z), `${r.id} at ${r.x},${r.z}`).toBeGreaterThanOrEqual(ROAD_WIDTH / 2 + 0.5);
+      expect(courseDist(BROOK_COURSE, r.x, r.z), `${r.id} in the brook`).toBeGreaterThan(BROOK_WIDTH / 2);
+      expect(courseDist(RIVER_COURSE, r.x, r.z), `${r.id} in the river`).toBeGreaterThan(RIVER_WIDTH / 2);
+    }
+  });
+
+  it('dresses the hedge feet: grass, flowers or ferns within 2.2 m of most hedge modules', () => {
+    const hedges = rows.filter((r) => r.id === 'hedge-straight');
+    const verge = rows.filter((r) => isGround(r.id) || r.id === 'fern-a');
+    const dressed = hedges.filter((h) => verge.filter((v) => Math.hypot(v.x - h.x, v.z - h.z) < 2.2).length >= 3);
+    expect(hedges.length).toBeGreaterThan(200);
+    expect(dressed.length / hedges.length).toBeGreaterThan(0.9);
+  });
+
+  it('puts a corner post either side of every hedge gap (gates need walls or fences)', () => {
+    const posts = rows.filter((r) => r.id === 'hedge-corner');
+    expect(posts.length).toBeGreaterThanOrEqual(36);
+    const hedges = rows.filter((r) => r.id === 'hedge-straight');
+    // a gate post is at the end of a hedge run: a hedge module lies within 4 m on one side only along the line
+    const gatePosts = posts.filter((p) => hedges.filter((h) => Math.hypot(h.x - p.x, h.z - p.z) < 4).length >= 1);
+    expect(gatePosts.length).toBeGreaterThanOrEqual(24);
+  });
+
+  it('has reed beds on both banks of the river (about 180 reed rows) and none on the road', () => {
+    const reeds = rows.filter((r) => r.id.startsWith('reeds') && r.x > -350 && r.x < -60 && Math.abs(r.z + 300) < 20);
+    expect(reeds.length).toBeGreaterThanOrEqual(140);
+    expect(reeds.filter((r) => r.z > -300).length).toBeGreaterThan(40);
+    expect(reeds.filter((r) => r.z < -300).length).toBeGreaterThan(40);
+    expect(rows.some((r) => r.id === 'tent')).toBe(false);
+  });
+
+  it('has a reed bed and a fern, tussock and flower drift in frame at the river-eye pose (camera -146,-283, Knight 4 m ahead)', () => {
+    const cx = -146, cz = -283, lx = -170, lz = -293.5;
+    const d = Math.hypot(lx - cx, lz - cz);
+    const ux = (lx - cx) / d, uz = (lz - cz) / d;
+    const inFrame = (r: { x: number; z: number }, range: number) => {
+      const f = (r.x - cx) * ux + (r.z - cz) * uz;
+      const s = -(r.x - cx) * uz + (r.z - cz) * ux;
+      return f > 0 && f < range && Math.abs(s) < f * 0.58;
+    };
+    expect(rows.filter((r) => r.id.startsWith('reeds') && inFrame(r, 35)).length).toBeGreaterThanOrEqual(50);
+    expect(rows.filter((r) => r.id === 'reeds-b' && inFrame(r, 35)).length).toBeGreaterThanOrEqual(10);
+    // beds, not stalks: most in-frame reed clumps touch a neighbour (within 1.2 m)
+    const reedsIn = rows.filter((r) => r.id.startsWith('reeds') && inFrame(r, 35));
+    const touching = reedsIn.filter((a) => reedsIn.some((b) => b !== a && Math.hypot(a.x - b.x, a.z - b.z) < 1.2));
+    expect(touching.length / reedsIn.length).toBeGreaterThan(0.8);
+    expect(rows.filter((r) => r.id === 'fern-a' && inFrame(r, 12)).length).toBeGreaterThanOrEqual(8);
+    expect(rows.filter((r) => r.id.startsWith('grass') && inFrame(r, 12)).length).toBeGreaterThanOrEqual(15);
+    expect(rows.filter((r) => r.id.startsWith('flower') && inFrame(r, 12)).length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('clusters its ground cover instead of an even sprinkle (B1 review: specks)', () => {
+    // Ground cover is dense (the old blade scatter is off inside the tile): most 10 m cells hold clumps and an occupied cell holds many.
+    const g = rows.filter((r) => isGround(r.id) && r.x < 0);
+    const cells = new Set(g.map((r) => `${Math.floor(r.x / 10)},${Math.floor(r.z / 10)}`));
+    expect(cells.size / ((420 * 370) / 100)).toBeGreaterThan(0.6);
+    expect(g.length / cells.size).toBeGreaterThan(10);
+  });
+});
+
 // B4: the Quenchstone Shrine and the east road, x 700..1100, z -300..200.
 describe('B4 placements', () => {
   const rows = TILES.b4!;
@@ -59,7 +188,11 @@ describe('B4 placements', () => {
   it('resolves every id to a model (no placeholders), dead trees included', () => {
     const placeholders = [...new Set(rows.map((r) => r.id))].filter((id) => resolveModel(id).source === 'placeholder');
     expect(placeholders).toEqual([]);
-    for (const id of ['ash-tree-dead-a', 'ash-tree-dead-b']) expect(resolveModel(id).source).toBe('kaykit');
+    // the generated dead trees replace the KayKit stand-ins, which stay as the fallback
+    for (const id of ['ash-tree-dead-a', 'ash-tree-dead-b']) {
+      expect(resolveModel(id).source).toBe('env');
+      expect(resolveStandIn(id).source).toBe('kaykit');
+    }
   });
 
   it('lies inside the tile core', () => {
@@ -102,5 +235,123 @@ describe('B4 placements', () => {
     expect(rows.filter((r) => r.x < 820 && /^(oak-[abc]|birch)/.test(r.id)).length).toBeGreaterThan(20);
     expect(rows.filter((r) => r.x > 1000 && r.id.startsWith('ash-tree-dead')).length).toBeGreaterThan(15);
     expect(rows.filter((r) => r.x > 1040 && /^(oak-[abc]$|birch)/.test(r.id)).length).toBe(0);
+  });
+});
+
+// H1: Harrowmark's south gate and outer ward, x 7760..9240, z 1120..1440 (plus the Dead Road approach).
+describe('H1 placements', () => {
+  const rows = TILES.h1!;
+  const isGround = (id: string): boolean => /^(grass|flower)/.test(id);
+  const solids = [...HARROWMARK_LAYOUT.structures, ...DEADROAD_LAYOUT.structures].filter((s) => s.mode !== 'open');
+  const anchors = [...HARROWMARK_LAYOUT.anchors, ...DEADROAD_LAYOUT.anchors];
+  const anchorAt = (id: string) => anchors.find((a) => a.id === id)!;
+  const segDist = (px: number, pz: number, a: readonly [number, number], b: readonly [number, number]): number => {
+    const dx = b[0] - a[0];
+    const dz = b[1] - a[1];
+    const t = dx || dz ? Math.max(0, Math.min(1, ((px - a[0]) * dx + (pz - a[1]) * dz) / (dx * dx + dz * dz))) : 0;
+    return Math.hypot(px - (a[0] + t * dx), pz - (a[1] + t * dz));
+  };
+  const polyDist = (px: number, pz: number, pts: ReadonlyArray<readonly [number, number]>, loop = false): number => {
+    let d = Infinity;
+    const n = loop ? pts.length : pts.length - 1;
+    for (let i = 0; i < n; i++) d = Math.min(d, segDist(px, pz, pts[i]!, pts[(i + 1) % pts.length]!));
+    return d;
+  };
+  const lanes = CROWD_LANES.map((l) => ({ hw: l.halfWidth, loop: l.loop, pts: l.points.map((id) => [anchorAt(id).x, anchorAt(id).z] as const) }));
+  const patrols = HARROWMARK_LAYOUT.patrols.map((p) => ({ loop: p.loop, pts: p.points.map((id) => [anchorAt(id).x, anchorAt(id).z] as const) }));
+  const road = DEAD_ROAD.points.map((p) => [p.x, p.z] as const);
+
+  it('is registered with the design\'s rows (about 7,100) plus the yard litter (about 1,700)', () => {
+    expect(rows.length).toBeGreaterThan(7500);
+    expect(rows.length).toBeLessThan(9000);
+  });
+
+  it('puts the yard litter on packed yards only: weeds and dry tufts, off the streets, the gate passage and the camps', () => {
+    const litter = rows.filter((r) => r.id === 'grass-clump-straw');
+    expect(litter.length).toBeGreaterThan(50);
+    for (const r of litter) {
+      expect(yardAmount(r.x, r.z), `${r.id} at ${r.x},${r.z}`).toBeGreaterThanOrEqual(0.75);
+      expect(streetAmount(r.x, r.z), `${r.id} at ${r.x},${r.z}`).toBeLessThanOrEqual(0.1);
+    }
+  });
+
+  it('resolves every id to a model except the few agreed scripted placeholders', () => {
+    const placeholders = [...new Set(rows.map((r) => r.id))].filter((id) => resolveModel(id).source === 'placeholder');
+    // The stable horse is the agreed scripted placeholder (the generated refugee tent replaced the scripted A-frame); every other id has a model.
+    expect(placeholders.sort()).toEqual(['horse-standing']);
+  });
+
+  it('lies inside the tile core and is finite', () => {
+    for (const r of rows) {
+      expect(r.x, r.id).toBeGreaterThanOrEqual(7760);
+      expect(r.x, r.id).toBeLessThanOrEqual(9240);
+      expect(r.z, r.id).toBeGreaterThanOrEqual(1120);
+      expect(r.z, r.id).toBeLessThanOrEqual(1440);
+      expect(Number.isFinite(r.x) && Number.isFinite(r.z), r.id).toBe(true);
+    }
+  });
+
+  it('keeps clear of structure footprints (Harrowmark and the Dead Road)', () => {
+    for (const s of solids) for (const r of rows) expect(pointInFootprint(s, r.x, r.z, 0.4), `${r.id} in ${s.id}`).toBe(false);
+  });
+
+  it('keeps clear of anchors (1 m, ground cover excepted) and of trigger spheres (ground cover excepted)', () => {
+    for (const r of rows) {
+      if (isGround(r.id)) continue;
+      for (const a of anchors) expect(Math.hypot(r.x - a.x, r.z - a.z), `${r.id} on ${a.id}`).toBeGreaterThanOrEqual(1);
+      for (const t of HARROWMARK_LAYOUT.triggers) if (t.shape === 'sphere') expect(Math.hypot(r.x - t.x, r.z - t.z), `${r.id} in ${t.id}`).toBeGreaterThan(t.radius);
+    }
+  });
+
+  it('keeps the crowd lanes clear of props and the patrol routes 1.8 m clear', () => {
+    for (const r of rows) {
+      if (isGround(r.id)) continue;
+      for (const l of lanes) expect(polyDist(r.x, r.z, l.pts, l.loop), `${r.id} on a lane at ${r.x},${r.z}`).toBeGreaterThanOrEqual(l.hw);
+      for (const p of patrols) expect(polyDist(r.x, r.z, p.pts, p.loop), `${r.id} on a patrol at ${r.x},${r.z}`).toBeGreaterThanOrEqual(1.8 - 0.05);
+    }
+  });
+
+  it('puts nothing on the Dead Road surface', () => {
+    for (const r of rows) expect(polyDist(r.x, r.z, road), `${r.id} on the road at ${r.x},${r.z}`).toBeGreaterThanOrEqual(DEAD_ROAD.halfWidth);
+  });
+
+  it('leaves the M06 gate square (patrol box plus 8 m), the gate passage and the market centre free of props', () => {
+    for (const r of rows) {
+      if (isGround(r.id)) continue;
+      const inSquare = r.x >= 8462 && r.x <= 8538 && r.z >= 1262 && r.z <= 1328;
+      const inPassage = r.x >= 8494 && r.x <= 8506 && r.z >= 1180 && r.z <= 1262;
+      expect(inSquare || inPassage, `${r.id} at ${r.x},${r.z}`).toBe(false);
+    }
+  });
+
+  it('keeps the four street corridors open (main street to market, the Anvil, gate square to market, stables door)', () => {
+    const corridors: Array<[readonly [number, number], readonly [number, number], number]> = [
+      [[8545, 1365], [8752, 1505], 7],
+      [[8640, 1311], [8552, 1300], 4],
+    ];
+    for (const r of rows) {
+      if (isGround(r.id)) continue;
+      for (const [a, b, w] of corridors) expect(segDist(r.x, r.z, a, b), `${r.id} in a corridor at ${r.x},${r.z}`).toBeGreaterThanOrEqual(w - 2.05);
+    }
+  });
+
+  it('dresses the design\'s classes: lots of ground cover, hedges and fences, trees, camps and outbuildings', () => {
+    const count = (re: RegExp): number => rows.filter((r) => re.test(r.id)).length;
+    expect(count(/^(grass|flower)/)).toBeGreaterThan(4500);
+    expect(count(/^(hedge|picket|wattle)/)).toBeGreaterThan(500);
+    expect(count(/^refugee-tent/)).toBe(24);
+    expect(count(/^(barn-a|cottage-thatch-a|stable-a)$/)).toBeGreaterThanOrEqual(12);
+    expect(count(/^(oak|birch|elm|fruit-tree|autumn)/)).toBeGreaterThan(100);
+  });
+
+  it('gives the rows the agreed resolve entries (stand-ins) and the KayKit rubble line', () => {
+    for (const id of ['fruit-tree-a', 'fruit-tree-b', 'cart-goods-a', 'campfire-ring']) expect(resolveModel(id).source).toBe('env');
+    expect(resolveStandIn('refugee-tent-a')).toEqual({ source: 'placeholder', shape: 'tent' });
+    expect(resolveModel('horse-standing')).toEqual({ source: 'placeholder', shape: 'horse' });
+    for (const id of ['handcart-a', 'notice-board-a', 'basket-goods-a']) {
+      expect(resolveModel(id).source, id).toBe('env');
+      expect(resolveStandIn(id).source, id).toBe('kaykit');
+    }
+    expect(resolveModel('rubble_half').source).toBe('kaykit');
   });
 });

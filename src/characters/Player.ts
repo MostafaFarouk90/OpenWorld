@@ -61,6 +61,8 @@ export interface MoveModifierState {
   lockFacing: boolean;
   /** No gravity and no controller move at all this tick. */
   freeze?: boolean;
+  /** v0.7: the sprint input is ignored this tick (wading water, a hauled sled). */
+  noSprint?: boolean;
 }
 
 /** A scripted horizontal move (dodge, knockback): unit direction (x, z) in world space and speed in m/s. */
@@ -102,6 +104,7 @@ export class Player {
   private facingOverride: number | null = null;
   private forcedMove: ForcedMove | null = null;
   private ride: RideMove | null = null;
+  private verticalIntent: number | null = null;
   /** Leap start, land and cancel; the game core maps it to the `player.leap` event. Defaults to `options.onLeap`. */
   onLeap: PlayerOptions['onLeap'] | null = null;
   private leapState: ActiveLeap | null = null;
@@ -172,6 +175,15 @@ export class Player {
    */
   setRide(m: RideMove | null): void {
     this.ride = m && [m.x, m.z, m.speed, m.yaw].every(Number.isFinite) ? { ...m } : null;
+  }
+
+  /**
+   * v0.7 (K7's dive): the vertical speed, m/s with up positive, passed to the controller while it is in swim mode; read
+   * only by the input branch and only in swim mode, and 0 while movement is locked. `null` (or a non-finite value)
+   * clears it. Walk and glide never read it.
+   */
+  setVerticalIntent(v: number | null): void {
+    this.verticalIntent = v !== null && Number.isFinite(v) ? v : null;
   }
 
   /** True while a ride is set (the player is seated). */
@@ -313,6 +325,7 @@ export class Player {
       let jump: boolean;
       ({ moveX, moveZ, jump } = gateMovement(locked, { moveX, moveZ, jump: input.jump }));
       let speedOverride: number | undefined;
+      const sprint = input.sprint && !mod?.noSprint;
       if (mod && mod.speedScale < 1) {
         const len = Math.hypot(moveX, moveZ);
         const scale = Math.max(0, mod.speedScale) / Math.max(1, len);
@@ -320,9 +333,11 @@ export class Player {
         moveZ *= scale;
       } else if (mod && mod.speedScale > 1) {
         // A boost raises the speed itself; the move vector keeps its unit-length clamp.
-        speedOverride = (input.sprint ? PLAYER.sprintSpeed : PLAYER.walkSpeed) * mod.speedScale;
+        speedOverride = (sprint ? PLAYER.sprintSpeed : PLAYER.walkSpeed) * mod.speedScale;
       }
-      this.controller.fixedUpdate({ moveX, moveZ, sprint: input.sprint, jump, speedOverride });
+      const swim = this.controller.moveMode === 'swim';
+      const verticalSpeed = swim && this.verticalIntent !== null ? (locked ? 0 : this.verticalIntent) : undefined;
+      this.controller.fixedUpdate({ moveX, moveZ, sprint, jump, speedOverride, ...(verticalSpeed !== undefined ? { verticalSpeed } : {}) });
     }
     if (this.facingOverride !== null) {
       this.facing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, this.facingOverride);

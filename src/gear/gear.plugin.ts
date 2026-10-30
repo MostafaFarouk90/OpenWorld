@@ -7,6 +7,7 @@ import { getItem } from '../inventory/items';
 import { AdaptiveBeatClock } from '../shrine/beat';
 import { showToast } from '../waystones/toast';
 import './catalog';
+import './tier4/catalog';
 import { registerGearModifiers } from './combat';
 import { type ForgeResult } from './forge';
 import { createTemperingSession, type GearState, type ScreenHost, type SessionMode, type TemperingScreen, type TemperingScreenFactory, type TemperingSession } from './session';
@@ -164,7 +165,8 @@ const gearPlugin: GamePlugin = {
     // ---- Weapon tint (tier 3 weapons glow) -----------------------------------------------------
     const refreshTint = (): void => {
       const id = inventory.equipped('weapon');
-      setWeaponTint(ctx.player.avatar?.weapon, !!id && tierOf(getItem(id)) >= 3);
+      const tier = id ? tierOf(getItem(id)) : 1;
+      setWeaponTint(ctx.player.avatar?.weapon, tier >= 3, tier);
     };
     offs.push(ctx.events.on('player.avatar', refreshTint), ctx.events.on('inventory.equipped', (e) => e.slot === 'weapon' && refreshTint()));
 

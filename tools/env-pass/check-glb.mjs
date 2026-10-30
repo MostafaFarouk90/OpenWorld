@@ -89,7 +89,7 @@ for (const f of files) {
     else {
       // Driver axis (height, or the longest side for wide things) must match the target; the other axes are the artist's proportions
       // and only fail beyond a generous band (the targets' proportions are guesses for generated objects).
-      const wide = Math.max(want.w, want.d) > 1.8 * want.h;
+      const wide = Math.max(want.w, want.d) > 1.8 * want.h || cfg.grip?.ids?.includes(id);
       if (wide) {
         const got = Math.max(size.w, size.d), tgt = Math.max(want.w, want.d), dev = (got - tgt) / tgt;
         if (Math.abs(dev) > cfg.tolerance) problems.push(`longest side ${got.toFixed(2)} m, want ${tgt} m (${Math.round(dev * 100)}%)`);
@@ -100,10 +100,11 @@ for (const f of files) {
         if (Math.abs(dev) > (driver ? cfg.tolerance : cfg.proportionTolerance)) problems.push(`${name} ${size[k].toFixed(2)} m, want ${want[k]} m (${Math.round(dev * 100)}%)`);
       }
     }
-    if (Math.abs(lo[1]) > 0.05) problems.push(`pivot: base at y ${lo[1].toFixed(2)}, want 0`);
+    const grip = cfg.grip?.ids?.includes(id); // hand-held: origin at the grip, so no base or footprint-centre rule
+    if (!grip && Math.abs(lo[1]) > 0.05) problems.push(`pivot: base at y ${lo[1].toFixed(2)}, want 0`);
     const cx = (lo[0] + hi[0]) / 2;
     const cz = (lo[2] + hi[2]) / 2;
-    if (Math.hypot(cx, cz) > 0.1 * Math.max(size.w, size.d)) problems.push(`pivot: footprint centre at (${cx.toFixed(2)}, ${cz.toFixed(2)}), want about 0, 0`);
+    if (!grip && Math.hypot(cx, cz) > 0.1 * Math.max(size.w, size.d)) problems.push(`pivot: footprint centre at (${cx.toFixed(2)}, ${cz.toFixed(2)}), want about 0, 0`);
     console.log(`${problems.length ? 'FAIL' : 'ok  '} ${id}  ${size.w.toFixed(2)} x ${size.d.toFixed(2)} x ${size.h.toFixed(2)} m${problems.length ? '  ' + problems.join('; ') : ''}`);
     if (problems.length) bad++;
   } catch (e) {

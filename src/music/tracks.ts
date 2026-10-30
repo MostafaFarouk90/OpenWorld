@@ -1,4 +1,5 @@
 import { ASH_ON_THE_PASTURE, HAMMERS_BELOW } from './act2Tracks';
+import { ACT3_TRACK_SLOTS } from './act3Tracks';
 
 export { ASH_ON_THE_PASTURE, HAMMERS_BELOW };
 
@@ -197,9 +198,12 @@ export const SEVEN_GATES_ONE_DRUM: TrackDef = {
   },
 };
 
-/** Reserved track ids (v0.6 item 20). Empty since A14 registered the two Act 2 tracks; kept so imports stay valid. */
-export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [];
-export const RESERVED_TRACK_IDS: readonly string[] = [];
+/**
+ * Reserved track ids: known but not yet built, so the music plugin does not warn about them. Empty from A14 (the Act 2
+ * tracks) until v0.7 item 23 reserved the two Act 3 slots (data in act3Tracks.ts).
+ */
+export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [...ACT3_TRACK_SLOTS];
+export const RESERVED_TRACK_IDS: readonly string[] = RESERVED_TRACKS.map((t) => t.id);
 
 export const TRACKS_BY_ID: Readonly<Record<string, TrackDef>> = {
   [BARLEY_AND_BRAZIER.id]: BARLEY_AND_BRAZIER,

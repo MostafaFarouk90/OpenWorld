@@ -8,7 +8,8 @@ import type { ConditionEnv } from '../../quests/ports';
 import type { CoreContext } from '../../region/coreTypes';
 import { heightAt } from '../../terrain/heightfield';
 import { showToast } from '../../waystones/toast';
-import { buildLiftCage } from '../oldsmokeArt';
+import type { ModelLibrary } from '../../assets/swap/ModelLibrary';
+import { buildLiftCage, upgradeLiftCage } from '../oldsmokeArt';
 import { SHAFT } from '../sites';
 import { MINE_LANDINGS, type MineId } from './kit';
 import { LIFT_ARRIVE_SOUND, LIFT_CALL_SOUND, LIFT_CUE_KEYS, LIFT_REFUSE_SOUND, makeLiftCuePlayer, makeLiftRidePlayer, type LiftAudio } from './liftSound';
@@ -54,6 +55,8 @@ export interface LiftOptions {
   /** Replaces the HUD picker (tests). Return a closer or null. */
   openMenu?: (rows: readonly LiftMenuRow[], choose: (id: string) => void) => (() => void) | null;
   table?: readonly LiftStop[];
+  /** Loads the generated `lift-cage` model over the scripted frame (see envModelLibraryFor). Omitted in tests: the frame stays. */
+  envLib?: ModelLibrary;
 }
 
 const refusedKey = (err: unknown): string => {
@@ -254,14 +257,17 @@ export function registerLift(ctx: LiftCtx, opts: LiftOptions = {}): () => void {
   cage.position.set(SHAFT.x, ground(SHAFT.x, SHAFT.z), SHAFT.z);
   cage.visible = armed();
   ctx.scene.add(cage);
+  // The generated cage model replaces the scripted frame when it loads (the scripted one stays otherwise).
+  if (opts.envLib) void upgradeLiftCage(cage, opts.envLib).catch(() => undefined);
   const syncCage = (): void => {
     cage.visible = armed();
   };
   cleanups.push(ctx.events.on('flag.changed', ({ key }) => key === LIFT_ARMED_FLAG && syncCage()));
   cleanups.push(ctx.events.on('save.loaded', syncCage));
   cleanups.push(() => {
+    cage.userData.disposed = true;
     ctx.scene.remove(cage);
-    cage.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
+    cage.traverse((o) => !o.userData.sharedGeometry && (o as THREE.Mesh).geometry?.dispose());
   });
 
   return () => {

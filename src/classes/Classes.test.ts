@@ -79,7 +79,7 @@ function make(opts: { gold?: number; level?: number; flags?: Record<string, bool
     runner,
   );
   const learnFirst = (): string => {
-    const s = SKILLS.find((k) => k.classId === 'knight' && k.available && k.tier === 1)!;
+    const s = SKILLS.find((k) => k.classId === 'knight' && k.availableWhen === true && k.tier === 1)!;
     expect(p.learn(s.id).ok).toBe(true);
     return s.id;
   };

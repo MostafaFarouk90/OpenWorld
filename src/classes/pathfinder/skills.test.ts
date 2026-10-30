@@ -19,7 +19,7 @@ describe('Pathfinder skills', () => {
   it('only tiers 1 to 3 can be learned; each tier costs TIER_COST and requires the one below', () => {
     const defs = buildPathfinderSkills();
     for (const d of defs) {
-      expect(d.available).toBe(d.tier <= 3);
+      expect(d.availableWhen === true).toBe(d.tier <= 3);
       expect(d.cost).toBe(TIER_COST[d.tier - 1]);
       if (d.tier > 1) expect(defs.find((s) => s.id === d.requires)).toMatchObject({ branch: d.branch, tier: d.tier - 1 });
       else expect(d.requires).toBeUndefined();

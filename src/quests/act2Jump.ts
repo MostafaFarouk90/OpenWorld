@@ -11,6 +11,11 @@ import { dialogueDefs } from '../dialogue/content';
 import { ACT1_CAMP_SEEN_FLAG, ACT1_CARD_SEEN_FLAG, ACT1_CARD_SEEN_FLAG_V06, ACT1_GATE_FLAG } from '../integration/act1Ending';
 import { ACT1_PREREQS, completeAct1Quest, nodeEffects, type Act1JumpPorts, type NodeRef } from './act1Jump';
 import { ACT2_PREREQS } from './actJump';
+import { NPC_TUNING } from '../npcs/tuning';
+import { BELLOWS } from '../shrine/weepingBellows.tuning';
+
+/** How far in front of the giver an Act 2 jump lands: inside the NPC talk radius, so the player can talk on arrival. */
+export const ACT2_GIVER_STAND_OFF = NPC_TUNING.talkRadius - 0.7;
 
 export const ACT2_PHASE_C_IDS = ['m11', 'm12', 'r06', 'r05', 'm13', 'r07', 'r11', 'm14', 'm15', 'd03'] as const;
 export type Act2JumpId = (typeof ACT2_PHASE_C_IDS)[number];
@@ -42,7 +47,16 @@ export const ACT2_NODE_EFFECTS: Record<string, ReadonlyArray<NodeRef>> = {
   m14: [{ dialogueId: 'npc-aelfreda', nodeId: 'a2-rite-16' }],
 };
 /** Waystones real play rekindles inside a quest (the Hushed Anvil rekindles through its waystone). */
-export const ACT2_REKINDLE_AFTER: Record<string, readonly string[]> = { m11: ['cinder-road'], m14: ['hushed-anvil'] };
+export const ACT2_REKINDLE_AFTER: Record<string, readonly string[]> = {
+  m11: ['cinder-road'],
+  m14: ['hushed-anvil'],
+  // The Weeping Bellows: solving its puzzle unlocks the waystone, and the rekindle lights the shrine (W + 1).
+  m18: ['weeping-bellows'],
+};
+/** World flags real play writes inside a quest outside any dialogue node (a solved puzzle), set before its rekindles. */
+export const ACT2_FLAGS_AFTER: Record<string, readonly string[]> = {
+  m18: [BELLOWS.solvedFlag, BELLOWS.shortcutFlag],
+};
 
 export const ACT2_JUMP_CLASSES = ['knight', 'warden', 'emberwright', 'pathfinder', 'ashblade'] as const;
 
@@ -135,15 +149,20 @@ export class Act2Jump {
   }
 
   private completeQuest(q: string): void {
-    const p = this.ports;
-    if (p.quests.state(q) === 'completed') return;
-    if (p.quests.state(q) === 'inactive') p.quests.start(q);
-    for (const ref of ACT2_NODE_EFFECTS[q] ?? []) {
-      const effects = nodeEffects(ref.dialogueId, ref.nodeId, dialogueDefs, ref.choiceId);
-      if (effects) p.runEffects(effects);
-      else p.warn(`act2: dialogue node ${ref.dialogueId}:${ref.nodeId} is missing`);
-    }
-    for (const id of ACT2_REKINDLE_AFTER[q] ?? []) p.rekindle(id);
-    if (!p.quests.complete(q)) p.warn(`act2: could not complete ${q}`);
+    completeAct2Quest(this.ports, q);
   }
+}
+
+/** Completes one Act 2 quest as real play does (its dialogue-node effects and rekindles first); `?act3=` replays Act 2 through it. */
+export function completeAct2Quest(p: Act1JumpPorts, q: string): void {
+  if (p.quests.state(q) === 'completed') return;
+  if (p.quests.state(q) === 'inactive') p.quests.start(q);
+  for (const ref of ACT2_NODE_EFFECTS[q] ?? []) {
+    const effects = nodeEffects(ref.dialogueId, ref.nodeId, dialogueDefs, ref.choiceId);
+    if (effects) p.runEffects(effects);
+    else p.warn(`act2: dialogue node ${ref.dialogueId}:${ref.nodeId} is missing`);
+  }
+  for (const f of ACT2_FLAGS_AFTER[q] ?? []) p.setFlag(f, true);
+  for (const id of ACT2_REKINDLE_AFTER[q] ?? []) p.rekindle(id);
+  if (!p.quests.complete(q)) p.warn(`act2: could not complete ${q}`);
 }

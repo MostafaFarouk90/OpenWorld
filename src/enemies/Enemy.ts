@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { COMBAT, FIXED_TIMESTEP } from '../config/constants';
 import { Brain, type BrainHooks, type Senses } from './ai/Brain';
 import { makeBehaviour, type BehaviourOverlay } from './behaviours';
+import type { CalmContext } from './calm';
 import { Guard, type GuardHit } from './ai/guard';
 import { MoveSelector } from './ai/moveSelect';
 import { pairGoal } from './ai/pair';
@@ -520,6 +521,11 @@ export class Enemy {
     if (this.brain.state === 'yield') return 'yielding';
     if (this.brain.state === 'stagger' && this.mercyOpen) return 'staggered';
     return 'none';
+  }
+
+  /** K6b: the overlay's part of the Calm context (`pulledOut`, `grounded`); empty for a kind without one. */
+  calmContext(): Partial<CalmContext> {
+    return this.overlay?.calmContext?.() ?? {};
   }
 
   /** The Warm Hand is possible: a staggered (knocked down) calm-type beast. */
@@ -1293,6 +1299,7 @@ export class Enemy {
     return makeBehaviour({
       def: this.def,
       actorId: this.actor.id,
+      slug: this.slug,
       spawnerId: this.spawnerId,
       slot: spawn.slot ?? null,
       options: spawn.options,

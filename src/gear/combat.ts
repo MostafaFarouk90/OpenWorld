@@ -32,10 +32,11 @@ export function weaponFactor(ports: CombatPorts): number {
   return base * temperK(ports.gear(id).temper);
 }
 
-/** D: twice the summed armour and shield stats; Act 1 pieces count only for what tempering added. */
+/** D: twice the summed armour, shield and (K10) tier 2+ trinket stats; Act 1 pieces count only for what tempering added. */
 export function defenceRating(ports: CombatPorts): number {
   let sum = 0;
-  for (const slot of ['armour', 'offhand'] as const) {
+  // K10: the trinket slot counts too; only tier 2+ trinkets (the Act 3 Rime Cloak, Cliff Crampons) carry a stat that counts.
+  for (const slot of ['armour', 'offhand', 'trinket'] as const) {
     const id = ports.equipped(slot);
     const def = id ? getItem(id) : undefined;
     if (!id || !def) continue;

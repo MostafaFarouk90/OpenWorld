@@ -1,4 +1,4 @@
-import { TIER_COST, registerClassSkills, type RegisterSkillsResult, type SkillDef } from '../../progression/skills';
+import { TIER_COST, masterBookGate, registerClassSkills, type RegisterSkillsResult, type SkillDef } from '../../progression/skills';
 import { ANVIL_DROP, CLASS_ID, FIRE_WALL, FLAME_LASH, IRON_FAMILIAR, SMOKE_SCREEN, WARM_BREATH } from './tuning';
 
 export const EMBERWRIGHT_BRANCHES = ['pyre', 'anvilcraft', 'bellowsbreath'] as const;
@@ -49,7 +49,7 @@ export function buildEmberwrightSkills(): SkillDef[] {
         kind,
         nameKey: `skill.${skillId(name)}.name`,
         descKey: `skill.${skillId(name)}.desc`,
-        available: tier <= 3,
+        availableWhen: tier <= 3 ? true : masterBookGate(CLASS_ID),
       };
       if (i > 0) def.requires = skillId(TREE[branch][i - 1][0]);
       if (tier === 5) {

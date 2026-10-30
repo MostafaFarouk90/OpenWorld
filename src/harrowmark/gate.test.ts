@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createFakeCore } from '../region/testing/fakeCore';
-import { M06_ROUTE_FLAG, M06_GUARDED_FLAG, RIVER_GATE_FLAG, watchRiverGate, M06_STARTED_FLAG, gateStateFor, watchSouthGate, type GateState } from './gate';
+import { NORTHWEST_GATE_FLAG, watchNorthwestGate, M06_ROUTE_FLAG, M06_GUARDED_FLAG, RIVER_GATE_FLAG, watchRiverGate, M06_STARTED_FLAG, gateStateFor, watchSouthGate, type GateState } from './gate';
 
 function setup(flags: Record<string, boolean | string> = {}) {
   const fc = createFakeCore();
@@ -103,5 +103,25 @@ describe('River Gate', () => {
     const seen: boolean[] = [];
     expect(watchRiverGate(fc.ctx.gates, (o) => seen.push(o)).open()).toBe(true);
     expect(seen).toEqual([true]);
+  });
+});
+
+describe('North-west Gate shutter (Act 3, K1)', () => {
+  it('opens on story.gate.a3 only, re-derives on load and stops after dispose', () => {
+    const fc = createFakeCore();
+    const seen: boolean[] = [];
+    const gate = watchNorthwestGate(fc.ctx.gates, (open) => seen.push(open));
+    expect(NORTHWEST_GATE_FLAG).toBe('story.gate.a3');
+    expect(gate.open()).toBe(false);
+    fc.ctx.state.setFlag('story.gate.a2', true);
+    expect(gate.open()).toBe(false);
+    fc.ctx.state.setFlag(NORTHWEST_GATE_FLAG, true);
+    expect(gate.open()).toBe(true);
+    fc.flags.clear();
+    fc.fire('save.loaded');
+    expect(gate.open()).toBe(false);
+    gate.dispose();
+    fc.ctx.state.setFlag(NORTHWEST_GATE_FLAG, true);
+    expect(seen).toEqual([false, true, false]);
   });
 });

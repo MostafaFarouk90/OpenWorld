@@ -74,8 +74,11 @@ describe('containment: the open area under each flag state', () => {
     expect(new Containment(stateOf(STATES.phaseC)).openRegions()).toEqual(['brightwater', 'harrowmark', 'cinderreach']);
     expect(new Containment(stateOf(STATES.phaseCAfterD03)).openRegions()).toContain('oldsmoke');
     const all = { ...STATES.phaseD, 'region.never': true, 'story.gate.a3': true };
-    expect(new Containment(stateOf(all)).openRegions()).toEqual(['brightwater', 'harrowmark', 'cinderreach', 'oldsmoke']);
-    expect(PHASE_HOLDS).toEqual([]);
+    // v0.7: Act 3 opens the Greyfen; the Dragonspine waits on its Phase E hold; the Waste and the Caldera never open.
+    expect(new Containment(stateOf(all)).openRegions()).toEqual(['brightwater', 'harrowmark', 'cinderreach', 'oldsmoke', 'greyfen']);
+    const phaseF = { ...all, 'story.phase.dragonspineOpen': true };
+    expect(new Containment(stateOf(phaseF)).openRegions()).toEqual(['brightwater', 'harrowmark', 'cinderreach', 'oldsmoke', 'greyfen', 'dragonspine']);
+    expect(PHASE_HOLDS).toEqual({ dragonspine: ['story.phase.dragonspineOpen'] });
   });
 
   it('named points: the spawn, Harrowmark, the null strip on and off the road, Cinderreach, Oldsmoke, the Caldera', () => {

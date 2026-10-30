@@ -1,4 +1,4 @@
-import { ASH_CLOUD, ASH_DRIFT, BLEEDING_EMBER, SPARK_DODGE } from './tuning';
+import { ASH_CLOUD, ASH_DRIFT, BLEEDING_EMBER, CINDER_MARK, DECOY_FOOTPRINTS, PHOENIX_ROLL, SPARK_DODGE } from './tuning';
 
 /** Ashblade strings: skills, K-menu branches, the drill and the how-to entry (`ctx.strings.register('en', …)`). */
 export const ASHBLADE_STRINGS_EN: Record<string, string> = {
@@ -13,7 +13,7 @@ export const ASHBLADE_STRINGS_EN: Record<string, string> = {
   'skill.ashblade.twinFangs.name': 'Twin Fangs',
   'skill.ashblade.twinFangs.desc': 'Attack 1 becomes a rapid dual strike: two hits of 60% damage, 0.12 seconds apart. The second hit only follows a first that landed.',
   'skill.ashblade.cinderMark.name': 'Cinder Mark',
-  'skill.ashblade.cinderMark.desc': 'Mark an enemy so every attack crits.',
+  'skill.ashblade.cinderMark.desc': `Mark a foe for ${CINDER_MARK.seconds} seconds: your hits on it deal x${CINDER_MARK.multiplier} damage, on top of Back-Slit. Targets your lock-on, else the nearest foe ahead. ${CINDER_MARK.cooldown} second cooldown, ${CINDER_MARK.emberCost} Ember.`,
   'skill.ashblade.deathByAThousandSparks.name': 'Death by a Thousand Sparks',
   'skill.ashblade.deathByAThousandSparks.desc': 'A three second flurry of teleporting strikes.',
 
@@ -24,7 +24,7 @@ export const ASHBLADE_STRINGS_EN: Record<string, string> = {
   'skill.ashblade.sootCloak.name': 'Soot Cloak',
   'skill.ashblade.sootCloak.desc': 'A dodge makes you unseen by foes that have not noticed you for 5 seconds, and halves your footstep noise. Attacking ends it. 12 second cooldown.',
   'skill.ashblade.decoyFootprints.name': 'Decoy Footprints',
-  'skill.ashblade.decoyFootprints.desc': 'Leave a decoy footprint.',
+  'skill.ashblade.decoyFootprints.desc': `Leave a false trail of footprints for ${DECOY_FOOTPRINTS.seconds} seconds: you make no noise and foes that have not noticed you see you at 60% range. Foes already after you are not fooled. ${DECOY_FOOTPRINTS.cooldown} second cooldown, ${DECOY_FOOTPRINTS.emberCost} Ember.`,
   'skill.ashblade.ghostOfTheHearth.name': 'Ghost of the Hearth',
   'skill.ashblade.ghostOfTheHearth.desc': 'Vanish for 12 seconds.',
 
@@ -35,7 +35,7 @@ export const ASHBLADE_STRINGS_EN: Record<string, string> = {
   'skill.ashblade.wallSkitter.name': 'Wall Skitter',
   'skill.ashblade.wallSkitter.desc': 'In the air against a wall you slide down it slowly for up to 1.2 seconds. Jump while sliding to kick off the wall.',
   'skill.ashblade.phoenixRoll.name': 'Phoenix Roll',
-  'skill.ashblade.phoenixRoll.desc': 'Dodging through fire clears Burn.',
+  'skill.ashblade.phoenixRoll.desc': `Dodging while you are on fire puts it out and leaves a fire patch behind for ${PHOENIX_ROLL.seconds} seconds that burns foes standing in it. It never clears your Heartshard Burn.`,
   'skill.ashblade.flickerStrike.name': 'Flicker Strike',
   'skill.ashblade.flickerStrike.desc': 'Dash through enemies.',
 

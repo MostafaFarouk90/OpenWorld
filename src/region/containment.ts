@@ -20,6 +20,16 @@ export interface CorridorDef {
   openWhen: FlagCondition;
 }
 
+/**
+ * v0.7: a closed sub-area inside an open region (the Dragonspine summit): while `openWhen` fails, the box is cut out of
+ * the open area. Engine box, min inclusive, max exclusive. A hole never opens land outside the open regions.
+ */
+export interface ContainmentHoleDef {
+  id: string;
+  box: { x0: number; z0: number; x1: number; z1: number };
+  openWhen: FlagCondition;
+}
+
 export interface XZ {
   x: number;
   z: number;
@@ -34,6 +44,10 @@ export interface ContainmentService {
   clamp<T extends XZ>(at: T): T;
   /** Adds a road corridor. Throws on a duplicate id or fewer than two points; returns the undo. */
   addCorridor(def: CorridorDef): () => void;
+  /** v0.7: adds a closed hole. Throws on a duplicate id or an empty box; returns the undo. */
+  addHole(def: ContainmentHoleDef): () => void;
+  /** v0.7: the ids of the holes closed right now, registration order. */
+  closedHoles(): string[];
   /** The regions open right now, registry order. */
   openRegions(): RegionId[];
   /** Distance (m) from an open point to the nearest closed one, capped at `limit` (the mount's soft cap). */
@@ -65,12 +79,38 @@ function closestOnSegment(px: number, pz: number, ax: number, az: number, bx: nu
 
 export class Containment implements ContainmentService {
   private readonly corridors = new Map<string, CorridorDef>();
+  private readonly holes = new Map<string, ContainmentHoleDef>();
 
   constructor(
     private readonly state: FlagReader,
     corridors: readonly CorridorDef[] = [DEAD_ROAD_CORRIDOR],
+    holes: readonly ContainmentHoleDef[] = [],
   ) {
     for (const c of corridors) this.addCorridor(c);
+    for (const h of holes) this.addHole(h);
+  }
+
+  addHole(def: ContainmentHoleDef): () => void {
+    if (this.holes.has(def.id)) throw new Error(`containment: hole "${def.id}" is already registered`);
+    const b = def.box;
+    if (!(b.x1 > b.x0 && b.z1 > b.z0)) throw new Error(`containment: hole "${def.id}" has an empty box`);
+    this.holes.set(def.id, def);
+    return () => {
+      if (this.holes.get(def.id) === def) this.holes.delete(def.id);
+    };
+  }
+
+  closedHoles(): string[] {
+    return this.closedHoleDefs().map((h) => h.id);
+  }
+
+  private closedHoleDefs(): ContainmentHoleDef[] {
+    return [...this.holes.values()].filter((h) => !flagConditionHolds(h.openWhen, this.state));
+  }
+
+  private inClosedHole(x: number, z: number, closed: readonly ContainmentHoleDef[]): ContainmentHoleDef | null {
+    for (const h of closed) if (x >= h.box.x0 && x < h.box.x1 && z >= h.box.z0 && z < h.box.z1) return h;
+    return null;
   }
 
   addCorridor(def: CorridorDef): () => void {
@@ -92,6 +132,12 @@ export class Containment implements ContainmentService {
 
   isOpen(x: number, z: number): boolean {
     if (!Number.isFinite(x) || !Number.isFinite(z) || !inBounds(x, z)) return false;
+    if (this.inClosedHole(x, z, this.closedHoleDefs())) return false;
+    return this.inOpenArea(x, z);
+  }
+
+  /** In an open region box or corridor, holes aside. */
+  private inOpenArea(x: number, z: number): boolean {
     for (const id of this.openRegions()) {
       const b = engineBox(id);
       if (x >= b.x0 && x < b.x1 && z >= b.z0 && z < b.z1) return true;
@@ -122,9 +168,27 @@ export class Containment implements ContainmentService {
       }
     };
     const k = CONTAINMENT_INSET;
+    const closed = this.closedHoleDefs();
+    // v0.7: a candidate inside a closed hole moves to that hole's nearest edge, just outside it, when that point is open.
+    const considerOutsideHoles = (q: XZ) => {
+      const h = this.inClosedHole(q.x, q.z, closed);
+      if (!h) {
+        consider(q);
+        return;
+      }
+      const b = h.box;
+      for (const e of [
+        { x: b.x0 - k, z: q.z },
+        { x: b.x1 + k, z: q.z },
+        { x: q.x, z: b.z0 - k },
+        { x: q.x, z: b.z1 + k },
+      ]) {
+        if (this.isOpen(e.x, e.z)) consider(e);
+      }
+    };
     for (const id of this.openRegions()) {
       const b = engineBox(id);
-      consider({ x: Math.min(Math.max(px, b.x0 + k), b.x1 - k), z: Math.min(Math.max(pz, b.z0 + k), b.z1 - k) });
+      considerOutsideHoles({ x: Math.min(Math.max(px, b.x0 + k), b.x1 - k), z: Math.min(Math.max(pz, b.z0 + k), b.z1 - k) });
     }
     for (const c of this.openCorridors()) {
       const hw = Math.max(0, (c.halfWidth ?? CORRIDOR_HALF_WIDTH) - k);
@@ -133,7 +197,7 @@ export class Containment implements ContainmentService {
         const [bx, bz] = c.points[i];
         const q = closestOnSegment(px, pz, ax, az, bx, bz);
         const d = Math.hypot(px - q.x, pz - q.z);
-        consider(d <= hw ? { x: px, z: pz } : { x: q.x + ((px - q.x) / d) * hw, z: q.z + ((pz - q.z) / d) * hw });
+        considerOutsideHoles(d <= hw ? { x: px, z: pz } : { x: q.x + ((px - q.x) / d) * hw, z: q.z + ((pz - q.z) / d) * hw });
       }
     }
     // Brightwater is always open, so there is always a candidate; the spawn is the last resort.

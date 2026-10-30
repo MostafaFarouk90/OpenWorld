@@ -7,6 +7,9 @@ export interface ConsumableEnv {
   /** Heals the player and returns the health actually added (clamped to max). */
   heal(amount: number): number;
   emit: EmitterPort['emit'];
+  /** Removes Burn through the spells service; absent or false when there is no service. Used by `use.burnRelief`. */
+  relieveBurn?(amount: number): boolean;
+  warn?(message: string): void;
 }
 
 export interface ConsumableDeps {
@@ -19,6 +22,7 @@ const DEFAULT_DRINK_SECONDS = 1;
 /** Timed use of healing consumables: the charge is spent when the drink finishes, not when it starts. */
 export class ConsumableUser {
   private current: { itemId: string; remaining: number } | null = null;
+  private warnedBurn = false;
 
   constructor(private readonly deps: ConsumableDeps) {}
 
@@ -59,6 +63,10 @@ export class ConsumableUser {
     if (!use || !inventory.remove(cur.itemId, 1)) return;
     const amount = (use.healFlat ?? 0) + (use.healFraction ?? 0) * actor.maxHealth;
     if (amount > 0) env.heal(amount);
+    if (use.burnRelief && use.burnRelief > 0 && !env.relieveBurn?.(use.burnRelief) && !this.warnedBurn) {
+      this.warnedBurn = true;
+      (env.warn ?? ((m) => console.warn(m)))(`consumables: "${cur.itemId}" burn relief skipped, no spells service`);
+    }
     env.emit('item.used', { itemId: cur.itemId });
   }
 

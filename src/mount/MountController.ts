@@ -281,6 +281,7 @@ export class MountController implements MountService {
       stealth: anyService<{ active(): boolean }>(ctx, 'stealth')?.active() === true,
       chase: anyService<{ active(): boolean }>(ctx, 'chase')?.active() === true,
       aggro: way?.hostileAggro === true,
+      movement: anyService<{ rule(): { mount: string } }>(ctx, 'movementMode')?.rule().mount === 'refused',
       busy:
         ctx.player.actor.dead ||
         this.leaping ||

@@ -61,6 +61,7 @@ export const HUD_STRINGS_EN: Readonly<Record<string, string>> = {
   'hud.bolts.label': 'Crossbow bolts',
   'hud.gold.label': 'Gold',
   'hud.ending.title': 'Smoke Over Harrowmark',
+  'hud.ending.a3.title': "The Coal-Mother's Oath",
   'hud.ending.a2.title': 'The Houses Stand',
   'hud.ending.a2.line.1': 'Houses Halvard and Oswin have pledged themselves to the Council.',
   'hud.ending.a2.line.2': 'The Silver Fountain in Harrowmark runs again.',

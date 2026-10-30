@@ -384,7 +384,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | wall.24b | wall | 8199.87 | 2687.9 | 28.12 x 4 | solid |
 | tower.northwest-l | tower | 8165.58 | 2671.39 | 8 x 7 | solid |
 | tower.northwest-r | tower | 8183.6 | 2680.07 | 8 x 7 | solid |
-| plug.northwest | wall | 8174.59 | 2675.73 | 12 x 2.4 | solid |
+| portcullis.northwest | gate | 8174.59 | 2675.73 | 12 x 2.4 | solid |
 | wall.25 | wall | 8252.29 | 2707.91 | 84.24 x 4 | solid |
 | wall.26 | wall | 8333.11 | 2731.2 | 84.24 x 4 | solid |
 | wall.27 | wall | 8416.03 | 2745.28 | 84.24 x 4 | solid |

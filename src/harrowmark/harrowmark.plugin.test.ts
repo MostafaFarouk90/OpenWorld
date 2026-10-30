@@ -128,6 +128,24 @@ describe('harrowmark plugin', () => {
     plugin.dispose?.();
   });
 
+  it('opens the North-west Gate onto the Fen Road with story.gate.a3, and shuts it again on loading an Act 2 save', () => {
+    const { fc, plugin } = setup();
+    fc.flags.set('story.gate.a2', true);
+    plugin.setup(fc.ctx);
+    const svc = fc.services.get('harrowmark') as HarrowmarkService;
+    expect(svc.northwestGate.open()).toBe(false);
+    fc.ctx.state.setFlag('story.gate.a3', true);
+    expect(svc.northwestGate.open()).toBe(true);
+    expect(svc.riverGate.open()).toBe(true);
+    // An Act 2 save: the River Gate stays open, the North-west Gate shuts.
+    fc.flags.clear();
+    fc.flags.set('story.gate.a2', true);
+    fc.fire('save.loaded');
+    expect(svc.northwestGate.open()).toBe(false);
+    expect(svc.riverGate.open()).toBe(true);
+    plugin.dispose?.();
+  });
+
   it('lets the story gate override the South Gate', () => {
     const { fc, plugin } = setup();
     plugin.setup(fc.ctx);

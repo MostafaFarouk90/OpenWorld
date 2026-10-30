@@ -4,6 +4,7 @@ import { CORRIDOR_LAYOUT } from '../../region/corridor.layout';
 import { regionAt } from '../../region/regionMask';
 import { heightAt } from '../../terrain/heightfield';
 import { ACT2_INTERIORS } from '../act2';
+import { ACT3_INTERIORS } from '../act3';
 import { ALL_INTERIORS } from '../interiors.plugin';
 import { groundRange, layoutInterior, MAX_GROUND_RANGE } from '../layout';
 import { HARROWMARK_DOORS, HARROWMARK_SITE_ANCHORS, HARROWMARK_SITES } from './sites';
@@ -11,8 +12,8 @@ import { HARROWMARK_DOORS, HARROWMARK_SITE_ANCHORS, HARROWMARK_SITES } from './s
 const layouts = ALL_INTERIORS.map((d) => layoutInterior(d, heightAt));
 
 describe('interior sites', () => {
-  it('ships the six Act 1 interiors with the v0.5 ids, then the Act 2 ones', () => {
-    expect(ALL_INTERIORS.map((d) => d.id)).toEqual(['chapel-vault', 'tilted-anvil', 'keep-hall', 'counting-house', 'archive', 'underways', ...ACT2_INTERIORS.map((d) => d.id)]);
+  it('ships the six Act 1 interiors with the v0.5 ids, then the Act 2 and Act 3 ones', () => {
+    expect(ALL_INTERIORS.map((d) => d.id)).toEqual(['chapel-vault', 'tilted-anvil', 'keep-hall', 'counting-house', 'archive', 'underways', ...ACT2_INTERIORS.map((d) => d.id), ...ACT3_INTERIORS.map((d) => d.id)]);
   });
 
   it('floats each Harrowmark interior over its door site', () => {

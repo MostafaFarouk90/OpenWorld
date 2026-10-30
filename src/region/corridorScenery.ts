@@ -47,7 +47,34 @@ export function vergePlacements(stations: readonly Station[], offset: number, se
   return out;
 }
 
-export function buildCorridorScenery(heightAt: HeightFn): SceneryHandle {
+export interface CorridorSceneryOptions {
+  /**
+   * True where a built environment tile replaces the old verge posts and reed cards (src/env/tiles.ts TILE_BOUNDS; always false with
+   * ?env=off, so the old scenery returns with the pass off). Road, lane and water are drawn everywhere regardless.
+   */
+  hide?: (x: number, z: number) => boolean;
+}
+
+/** Reed card positions on both river banks (REED_COUNT of them, seeded), before any hiding. Pure. */
+export function reedPlacements(): Array<{ x: number; z: number; yaw: number; scale: number }> {
+  const rand = mulberry32(11);
+  const stations = sampleStations(RIVER_COURSE, 3);
+  const out: Array<{ x: number; z: number; yaw: number; scale: number }> = [];
+  for (let i = 0; i < REED_COUNT; i++) {
+    const s = stations[Math.floor(rand() * stations.length)];
+    const side = rand() < 0.5 ? -1 : 1;
+    const off = RIVER_WIDTH / 2 + rand() * 4 - 1;
+    const x = s.x + s.nx * off * side;
+    const z = s.z + s.nz * off * side;
+    const yaw = rand() * Math.PI;
+    const scale = 0.8 + rand() * 0.7;
+    out.push({ x, z, yaw, scale });
+  }
+  return out;
+}
+
+export function buildCorridorScenery(heightAt: HeightFn, opts: CorridorSceneryOptions = {}): SceneryHandle {
+  const hide = opts.hide ?? (() => false);
   const group = new THREE.Group();
   group.name = 'corridor-scenery';
   const geoms: THREE.BufferGeometry[] = [];
@@ -76,7 +103,7 @@ export function buildCorridorScenery(heightAt: HeightFn): SceneryHandle {
   group.add(road, lane, river, brook);
 
   // Verge posts and stones.
-  const verge = vergePlacements(roadStations, ROAD_WIDTH / 2 + 1.6);
+  const verge = vergePlacements(roadStations, ROAD_WIDTH / 2 + 1.6).filter((v) => !hide(v.x, v.z));
   if (verge.length > 0) {
     const post = track(new THREE.BoxGeometry(0.2, 1, 0.2));
     post.translate(0, 0.5, 0);
@@ -101,27 +128,20 @@ export function buildCorridorScenery(heightAt: HeightFn): SceneryHandle {
   }
 
   // Reeds on both banks of the river: crossed cards like the barley, standing at the water's edge.
-  {
-    const rand = mulberry32(11);
-    const stations = sampleStations(RIVER_COURSE, 3);
+  const reedSpots = reedPlacements().filter((r) => !hide(r.x, r.z));
+  if (reedSpots.length > 0) {
     const card = track(new THREE.PlaneGeometry(0.35, 1.6));
     card.translate(0, 0.8, 0);
     const reedMat = mat(new THREE.MeshLambertMaterial({ color: 0x6f8a4a, side: THREE.DoubleSide, flatShading: true }));
-    const reeds = new THREE.InstancedMesh(card, reedMat, REED_COUNT);
+    const reeds = new THREE.InstancedMesh(card, reedMat, reedSpots.length);
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const up = new THREE.Vector3(0, 1, 0);
-    for (let i = 0; i < REED_COUNT; i++) {
-      const s = stations[Math.floor(rand() * stations.length)];
-      const side = rand() < 0.5 ? -1 : 1;
-      const off = RIVER_WIDTH / 2 + rand() * 4 - 1;
-      const x = s.x + s.nx * off * side;
-      const z = s.z + s.nz * off * side;
-      q.setFromAxisAngle(up, rand() * Math.PI);
-      const sc = 0.8 + rand() * 0.7;
-      m.compose(new THREE.Vector3(x, heightAt(x, z), z), q, new THREE.Vector3(sc, sc, sc));
+    reedSpots.forEach((r, i) => {
+      q.setFromAxisAngle(up, r.yaw);
+      m.compose(new THREE.Vector3(r.x, heightAt(r.x, r.z), r.z), q, new THREE.Vector3(r.scale, r.scale, r.scale));
       reeds.setMatrixAt(i, m);
-    }
+    });
     reeds.instanceMatrix.needsUpdate = true;
     reeds.frustumCulled = false;
     reeds.name = 'reeds';

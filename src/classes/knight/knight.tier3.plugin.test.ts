@@ -10,6 +10,7 @@ import { Abilities } from '../../progression/abilities';
 import { Progression } from '../../progression/Progression';
 import { getSkill, resetClassSkills } from '../../progression/skills';
 import { xpForLevel } from '../../progression/tuning';
+import { origin } from '../../vfx/effects';
 import knightTier3Plugin from './knight.tier3.plugin';
 import { HALVARD, OATHWARD, SKILL_IDS, SQUIRE } from './tuning';
 
@@ -112,13 +113,13 @@ describe('knight tier 3: skill rows', () => {
     ['knight.chargeOfTheHalvard', 'knight.flowingCuts', 'active'],
     ['knight.squiresResolve', 'knight.bannerPlant', 'passive'],
   ])('%s costs 2, requires %s and is available', (id, requires, kind) => {
-    expect(getSkill(id)).toMatchObject({ tier: 3, cost: 2, requires, kind, available: true });
+    expect(getSkill(id)).toMatchObject({ tier: 3, cost: 2, requires, kind, availableWhen: true });
   });
 
   it.each(['knight.bastionWall', 'knight.executionersArc', 'knight.hearthfireWard'])('tier 4 %s is still refused as unavailable', (id) => {
     const r = rig();
     r.progression.grantXp(xpForLevel(30), 'test');
-    expect(r.progression.learn(id)).toEqual({ ok: false, reason: 'unavailable' });
+    expect(r.progression.learn(id)).toEqual({ ok: false, reason: 'master', textKey: 'hud.skills.act3' });
   });
 
   it('tier 3 needs tier 2 of its branch', () => {
@@ -170,6 +171,18 @@ describe('Oathward in play', () => {
     r.progression.assign(0, SKILL_IDS.oathward);
     return r;
   };
+
+  it('the bubble attaches at a zero offset: a player at (100, 5, -200) gets it there, not at twice that; origin too', () => {
+    const r = setup();
+    r.playerObj.avatar.root.position.set(100, 5, -200);
+    r.playerObj.avatar.root.updateMatrixWorld(true);
+    r.playerObj.feet.set(100, 5, -200);
+    expect(r.abilities.use(0)).toEqual({ ok: true });
+    expect(origin(r.spawned[0].t as never)).toEqual({ x: 100, y: 5, z: -200 });
+    const o = setup();
+    expect(o.abilities.use(0)).toEqual({ ok: true });
+    expect(origin(o.spawned[0].t as never)).toEqual({ x: 0, y: 0, z: 0 });
+  });
 
   it('absorbs 100, lets the overflow through, bursts when empty and ends the bubble effect', () => {
     const r = setup();

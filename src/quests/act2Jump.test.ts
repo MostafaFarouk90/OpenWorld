@@ -13,10 +13,11 @@ import slice1Complete from '../save/__fixtures__/slice1-complete.json';
 import { tutorialFromQuery } from '../tutorial/tutorial.plugin';
 import { dialogueDefs } from '../dialogue/content';
 import { ACT2_QUEST_DEFS } from './content/act2';
-import { GIVER_STAND_OFF, nodeEffects } from './act1Jump';
+import { nodeEffects } from './act1Jump';
+import { NPC_TUNING } from '../npcs/tuning';
 import { ACT2_PREREQS } from './actJump';
 import {
-  ACT2_D_GIVERS, ACT2_GIVERS, ACT2_NODE_EFFECTS, ACT2_PHASE_C_IDS, ACT2_PHASE_D_IDS, ACT2_REKINDLE_AFTER, Act2Jump,
+  ACT2_D_GIVERS, ACT2_GIVERS, ACT2_NODE_EFFECTS, ACT2_PHASE_C_IDS, ACT2_PHASE_D_IDS, ACT2_REKINDLE_AFTER, ACT2_FLAGS_AFTER, Act2Jump,
   type Act2AnyJumpId, giverOf, parseAct2,
 } from './act2Jump';
 import type { Condition } from './types';
@@ -105,7 +106,12 @@ describe('node effects are read from the dialogue content', () => {
     expect(nodeEffects('npc-aelfreda', 'a2-rite-16')).toContainEqual({ setFlag: 'story.m14.aelfredaJoined', value: true });
   });
   it('rekindles only quests that are prerequisites of something', () => {
-    for (const q of Object.keys(ACT2_REKINDLE_AFTER)) expect(ACT2_PHASE_C_IDS).toContain(q);
+    const before = new Set(Object.values(ACT2_PREREQS).flat());
+    for (const q of Object.keys(ACT2_REKINDLE_AFTER)) expect(before.has(q), q).toBe(true);
+  });
+  it('M18 solves the Weeping Bellows before its rekindle, so the shrine lights (W + 1)', () => {
+    expect(ACT2_FLAGS_AFTER.m18).toEqual(['world.bellows.solved', 'world.bellows.shortcutOpen']);
+    expect(ACT2_REKINDLE_AFTER.m18).toEqual(['weeping-bellows']);
   });
 });
 
@@ -249,6 +255,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   for (const c of cleanups.splice(0)) c();
+  physics?.dispose();
   delete (globalThis as { indexedDB?: unknown }).indexedDB;
   delete (globalThis as { location?: unknown }).location;
   delete (globalThis as { window?: unknown }).window;
@@ -293,7 +300,7 @@ describe('?act2= on the real game', () => {
     const post = t.ctx.anchors.find(posts[giverOf(id)]?.anchorId ?? '');
     const at = post?.position ?? t.ctx.services.require('npcs').position(giverOf(id));
     expect(at, giverOf(id)).toBeDefined();
-    expect(Math.hypot(at!.x - feet.x, at!.z - feet.z), JSON.stringify({ id, feet, at })).toBeLessThan(GIVER_STAND_OFF + 1);
+    expect(Math.hypot(at!.x - feet.x, at!.z - feet.z), JSON.stringify({ id, feet, at })).toBeLessThanOrEqual(NPC_TUNING.talkRadius);
     const done = (q: string) => ACT2_PREREQS[id].includes(q);
     expect(s.getBool('story.m13.hrolfJoined')).toBe(done('m13'));
     expect(s.getBool('story.m14.aelfredaJoined')).toBe(done('m14'));

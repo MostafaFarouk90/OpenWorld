@@ -5,7 +5,8 @@
 // soft speed cap slows the horse instead of letting it hit the edge at a gallop.
 import { MOUNT_TUNING } from '../mount/tuning';
 import { heightAt as terrainHeight } from '../terrain/heightfield';
-import { Containment, type ContainmentService } from './containment';
+import { ACT3_CORRIDORS, ACT3_HOLES } from './act3Containment';
+import { Containment, DEAD_ROAD_CORRIDOR, type ContainmentService } from './containment';
 import type { CoreContext } from './coreTypes';
 
 export const CONTAINMENT_SYSTEM_ID = 'region.containment';
@@ -33,7 +34,8 @@ export function installContainment(
   ctx: Pick<CoreContext, 'state' | 'services' | 'systems' | 'player' | 'events'>,
   heightAt: (x: number, z: number) => number = terrainHeight,
 ): InstalledContainment {
-  const containment = new Containment(ctx.state);
+  // v0.7: the Act 3 corridors and the summit hole are registered here, closed until their conditions hold.
+  const containment = new Containment(ctx.state, [DEAD_ROAD_CORRIDOR, ...ACT3_CORRIDORS], ACT3_HOLES);
   const offs: (() => void)[] = [];
   offs.push(ctx.services.provide('containment', containment));
   let sinceToast = Infinity;
@@ -57,7 +59,11 @@ export function installContainment(
         const feet = ctx.player.feet;
         if (containment.isOpen(feet.x, feet.z)) return;
         const q = containment.nearestOpen(feet.x, feet.z);
-        ctx.player.teleport({ x: q.x, y: Math.max(feet.y, heightAt(q.x, q.z)) + 0.1, z: q.z });
+        const from = { x: feet.x, y: feet.y, z: feet.z };
+        const to = { x: q.x, y: Math.max(feet.y, heightAt(q.x, q.z)) + 0.1, z: q.z };
+        ctx.player.teleport(to);
+        // v0.7: K7's glide ends on it (`glide.ended { reason: 'contained' }`).
+        ctx.events.emit('containment.pushed', { from, to });
         if (sinceToast >= CONTAINMENT_TOAST_SECONDS) {
           sinceToast = 0;
           ctx.events.emit('hud.toast', { textKey: CONTAINMENT_TOAST_KEY });

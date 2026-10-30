@@ -8,6 +8,7 @@ import { ModelLibrary } from '../assets/swap/ModelLibrary';
 import { structureHeight } from '../region/greybox';
 import type { StructureSpec } from '../region/layoutTypes';
 import { createStructureArt, type StructureArt } from '../region/structureArt';
+import { createEnvStructureArt, type EnvEntry } from '../env/envStructureArt';
 
 /** Multiplies a Hexagon model's colours by this to read as burnt, ash-dusted foothill buildings. */
 export const CINDER_TINT = 0.72;
@@ -232,9 +233,26 @@ const PROCEDURAL: Record<string, (spec: StructureSpec) => THREE.Object3D> = {
 /** Kinds the art layer draws itself; everything else goes to the Act 1 art (and then to the greybox). */
 export const CINDERREACH_ART_KINDS: readonly string[] = [...Object.keys(PROCEDURAL), 'cinder-tent', 'wall', 'tower', 'mill', 'bridge'];
 
-export function createCinderreachArt(lib: ModelLibrary): StructureArt {
+/**
+ * Kinds drawn by the generated model of the same id (public/assets/env) when the manifest has it; the scripted piece is the fallback.
+ * The marker is a small stone in a loose 4 x 4 box, so it keeps the model's own size; the rest fill their footprint.
+ */
+export const CINDERREACH_ENV_KINDS: Readonly<Record<string, EnvEntry>> = {
+  'cinder-cage': {},
+  'cinder-cairn': {},
+  'cinder-rune-stone': {},
+  'cinder-trial-ring': {},
+  'cinder-boarded-well': {},
+  'cinder-marker': { mode: 'natural' },
+};
+
+/** `envLib` loads the `env/<id>` models (see envModelLibraryFor); it defaults to `lib`, whose loader lacks them, so the scripted art stays. */
+export function createCinderreachArt(lib: ModelLibrary, envLib: ModelLibrary = lib): StructureArt {
   const base = createStructureArt(lib);
+  const env = createEnvStructureArt(envLib, CINDERREACH_ENV_KINDS);
   return async (spec) => {
+    const real = await env(spec);
+    if (real) return real;
     const make = PROCEDURAL[spec.kind];
     if (make) return make(spec);
     switch (spec.kind) {

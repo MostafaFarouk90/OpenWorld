@@ -2,6 +2,7 @@ import type { Effect, FavourTrack } from './types';
 import { EFFECT_EVENT_PATTERN, MAX_IF_DEPTH } from './types';
 import { evalCondition } from './conditions';
 import type { EffectEnv, EffectResult } from './ports';
+import { grantMasterBook } from '../progression/masterBooks';
 
 export interface EffectRunner { run(effects: Effect[] | undefined): EffectResult[] }
 
@@ -12,7 +13,20 @@ class Silent extends Error {}
 /** A failed spendGold: stops the whole run, including the lists around a nested `if`. */
 class Halt extends Error {}
 
-export function createEffectRunner(env: EffectEnv): EffectRunner {
+/** v0.7 item 9: an env that may carry a multiplier for the XP and gold effects (the quest rewards path only). */
+export interface ScaledEffectEnv extends EffectEnv {
+  /** Read at each xp / giveGold effect; absent, or exactly 1, leaves amounts alone. A non-finite or negative value reads as 1. */
+  rewardScale?: () => number;
+}
+
+export function createEffectRunner(env: ScaledEffectEnv): EffectRunner {
+  /** The amount times the reward scale, rounded once, never below 0. */
+  const scaled = (amount: number): number => {
+    const k = env.rewardScale?.() ?? 1;
+    if (k === 1) return amount;
+    const s = typeof k === 'number' && Number.isFinite(k) && k >= 0 ? k : 1;
+    return Math.max(0, Math.round(amount * s));
+  };
   const warned = new Set<string>();
   const warn = (msg: string): void => env.warn?.(msg);
   const warnOnce = (msg: string): void => { if (!warned.has(msg)) { warned.add(msg); warn(msg); } };
@@ -63,7 +77,8 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
       if (typeof c.xp !== 'number' || !Number.isFinite(c.xp) || c.xp <= 0) return;
       const p = env.progression?.();
       if (!p) { warnOnce('xp: progression service absent'); throw new Silent('progression service absent'); }
-      p.grantXp(c.xp, env.sourceId);
+      const xp = scaled(c.xp);
+      if (xp > 0) p.grantXp(xp, env.sourceId);
     } else if ('skillPoints' in c) {
       if (typeof c.skillPoints !== 'number' || !Number.isFinite(c.skillPoints) || c.skillPoints <= 0) return;
       const p = env.progression?.();
@@ -73,7 +88,8 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
       if (typeof c.giveGold !== 'number' || !Number.isFinite(c.giveGold) || c.giveGold <= 0) throw new Error('giveGold must be a positive number');
       const inv = env.inventory?.();
       if (!inv?.addGold) { warnOnce('giveGold: inventory service absent'); throw new Silent('inventory service absent'); }
-      inv.addGold(c.giveGold);
+      const gold = scaled(c.giveGold);
+      if (gold > 0) inv.addGold(gold);
     } else if ('if' in c) {
       if (depth >= MAX_IF_DEPTH) throw new Error(`if effects nest at most ${MAX_IF_DEPTH} deep`);
       const holds = evalCondition(c.if, { state: env.state, quests: env.quests, gold: () => env.inventory?.()?.gold, warn: env.warn });
@@ -104,6 +120,9 @@ export function createEffectRunner(env: EffectEnv): EffectRunner {
       const p = env.progression?.();
       if (!p?.grantAbility) { warnOnce('grantAbility: progression service absent'); throw new Silent('grantAbility service absent'); }
       p.grantAbility(c.grantAbility, env.sourceId);
+    } else if ('grantMasterBook' in c) {
+      const r = grantMasterBook(env.state as never, c.grantMasterBook, env.bus);
+      if (!r.ok) throw new Error(`grantMasterBook ${String(c.grantMasterBook)}: ${r.reason}`);
     } else if ('event' in c) {
       if (typeof c.event !== 'string' || !EFFECT_EVENT_PATTERN.test(c.event)) {
         throw new Error(`event name rejected: ${String(c.event)}`);

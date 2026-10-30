@@ -362,6 +362,890 @@
    "trisBefore": 49926,
    "trisAfter": 4498,
    "mb": 0.24
+  },
+  "anvil-a": {
+   "id": "anvil-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 312,
+   "trisAfter": 312,
+   "mb": 0.02
+  },
+  "ash-patch-decal": {
+   "id": "ash-patch-decal",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "proportion": true,
+   "trisBefore": 280,
+   "trisAfter": 280,
+   "mb": 0.02
+  },
+  "ash-tree-dead-a": {
+   "id": "ash-tree-dead-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 2910,
+   "trisAfter": 2910,
+   "mb": 0.22
+  },
+  "ash-tree-dead-b": {
+   "id": "ash-tree-dead-b",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 3234,
+   "trisAfter": 3234,
+   "mb": 0.24
+  },
+  "basket-goods-a": {
+   "id": "basket-goods-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 716,
+   "trisAfter": 716,
+   "mb": 0.04
+  },
+  "brazier-cart": {
+   "id": "brazier-cart",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 3824,
+   "trisAfter": 3824,
+   "mb": 0.24
+  },
+  "brazier-standing-a": {
+   "id": "brazier-standing-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 966,
+   "trisAfter": 966,
+   "mb": 0.07
+  },
+  "bush-holly-a": {
+   "id": "bush-holly-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1180,
+   "trisAfter": 1180,
+   "mb": 0.09
+  },
+  "bush-round-ash": {
+   "id": "bush-round-ash",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 720,
+   "trisAfter": 720,
+   "mb": 0.06
+  },
+  "cairn-a": {
+   "id": "cairn-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1008,
+   "trisAfter": 1008,
+   "mb": 0.08
+  },
+  "campfire-ring": {
+   "id": "campfire-ring",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 628,
+   "trisAfter": 628,
+   "mb": 0.05
+  },
+  "cart-goods-a": {
+   "id": "cart-goods-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 2312,
+   "trisAfter": 2312,
+   "mb": 0.13
+  },
+  "charcoal-clamp-a": {
+   "id": "charcoal-clamp-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 2741,
+   "trisAfter": 2741,
+   "mb": 0.18
+  },
+  "charred-stump": {
+   "id": "charred-stump",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 616,
+   "trisAfter": 616,
+   "mb": 0.04
+  },
+  "chimney-stack-a": {
+   "id": "chimney-stack-a",
+   "scale": 1,
+   "stretch": [
+    1.015,
+    1
+   ],
+   "trisBefore": 208,
+   "trisAfter": 208,
+   "mb": 0.01
+  },
+  "cinder-boarded-well": {
+   "id": "cinder-boarded-well",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 612,
+   "trisAfter": 612,
+   "mb": 0.04
+  },
+  "cinder-cage": {
+   "id": "cinder-cage",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 4134,
+   "trisAfter": 4134,
+   "mb": 0.24
+  },
+  "cinder-cairn": {
+   "id": "cinder-cairn",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 3420,
+   "trisAfter": 3420,
+   "mb": 0.27
+  },
+  "cinder-marker": {
+   "id": "cinder-marker",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 364,
+   "trisAfter": 364,
+   "mb": 0.03
+  },
+  "cinder-rune-stone": {
+   "id": "cinder-rune-stone",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 2320,
+   "trisAfter": 2320,
+   "mb": 0.15
+  },
+  "cinder-trial-ring": {
+   "id": "cinder-trial-ring",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 5796,
+   "trisAfter": 5792,
+   "mb": 0.31
+  },
+  "coal-heap-a": {
+   "id": "coal-heap-a",
+   "scale": 0.871,
+   "stretch": [
+    1.149,
+    1.149
+   ],
+   "trisBefore": 414,
+   "trisAfter": 414,
+   "mb": 0.03
+  },
+  "crates-stacked-a": {
+   "id": "crates-stacked-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1224,
+   "trisAfter": 1224,
+   "mb": 0.07
+  },
+  "crow-perch-post": {
+   "id": "crow-perch-post",
+   "scale": 1,
+   "stretch": [
+    1.125,
+    1
+   ],
+   "trisBefore": 592,
+   "trisAfter": 592,
+   "mb": 0.04
+  },
+  "deepgate-headframe": {
+   "id": "deepgate-headframe",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1996,
+   "trisAfter": 1996,
+   "mb": 0.11
+  },
+  "dragonspine-carving-stone": {
+   "id": "dragonspine-carving-stone",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 908,
+   "trisAfter": 908,
+   "mb": 0.07
+  },
+  "dragonspine-hawk-nest": {
+   "id": "dragonspine-hawk-nest",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1996,
+   "trisAfter": 1996,
+   "mb": 0.12
+  },
+  "dragonspine-lean-to": {
+   "id": "dragonspine-lean-to",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 822,
+   "trisAfter": 822,
+   "mb": 0.05
+  },
+  "dragonspine-prayer-cairn": {
+   "id": "dragonspine-prayer-cairn",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1436,
+   "trisAfter": 1436,
+   "mb": 0.11
+  },
+  "dragonspine-rockfall": {
+   "id": "dragonspine-rockfall",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 3780,
+   "trisAfter": 3780,
+   "mb": 0.24
+  },
+  "dragonspine-sled-shed": {
+   "id": "dragonspine-sled-shed",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 3568,
+   "trisAfter": 3568,
+   "mb": 0.2
+  },
+  "dragonspine-trophy-wall": {
+   "id": "dragonspine-trophy-wall",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1480,
+   "trisAfter": 1480,
+   "mb": 0.1
+  },
+  "dye-vat-a": {
+   "id": "dye-vat-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 714,
+   "trisAfter": 714,
+   "mb": 0.05
+  },
+  "field-gate-a": {
+   "id": "field-gate-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 204,
+   "trisAfter": 204,
+   "mb": 0.01
+  },
+  "forge-hearth-a": {
+   "id": "forge-hearth-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1.126
+   ],
+   "trisBefore": 1756,
+   "trisAfter": 1756,
+   "mb": 0.13
+  },
+  "fruit-tree-a": {
+   "id": "fruit-tree-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 5436,
+   "trisAfter": 5428,
+   "mb": 0.41
+  },
+  "fruit-tree-b": {
+   "id": "fruit-tree-b",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 5836,
+   "trisAfter": 5826,
+   "mb": 0.45
+  },
+  "garden-bed-b": {
+   "id": "garden-bed-b",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1128,
+   "trisAfter": 1128,
+   "mb": 0.07
+  },
+  "gibbet-post": {
+   "id": "gibbet-post",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 2532,
+   "trisAfter": 2532,
+   "mb": 0.15
+  },
+  "grass-clump-ash": {
+   "id": "grass-clump-ash",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 758,
+   "trisAfter": 758,
+   "mb": 0.06
+  },
+  "greyfen-bell-tower": {
+   "id": "greyfen-bell-tower",
+   "scale": 1,
+   "stretch": [
+    1,
+    0.943
+   ],
+   "trisBefore": 3722,
+   "trisAfter": 3722,
+   "mb": 0.22
+  },
+  "greyfen-boathouse": {
+   "id": "greyfen-boathouse",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 2092,
+   "trisAfter": 2092,
+   "mb": 0.11
+  },
+  "greyfen-chapel-ruin": {
+   "id": "greyfen-chapel-ruin",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 3730,
+   "trisAfter": 3730,
+   "mb": 0.21
+  },
+  "greyfen-herb-bed": {
+   "id": "greyfen-herb-bed",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1872,
+   "trisAfter": 1872,
+   "mb": 0.11
+  },
+  "greyfen-jetty": {
+   "id": "greyfen-jetty",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 2080,
+   "trisAfter": 2080,
+   "mb": 0.11
+  },
+  "greyfen-marker": {
+   "id": "greyfen-marker",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 488,
+   "trisAfter": 488,
+   "mb": 0.04
+  },
+  "greyfen-monastery-ruin": {
+   "id": "greyfen-monastery-ruin",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 5265,
+   "trisAfter": 5265,
+   "mb": 0.32
+  },
+  "greyfen-plank-walk": {
+   "id": "greyfen-plank-walk",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 228,
+   "trisAfter": 228,
+   "mb": 0.01
+  },
+  "greyfen-ranger-platform": {
+   "id": "greyfen-ranger-platform",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 2788,
+   "trisAfter": 2788,
+   "mb": 0.18
+  },
+  "greyfen-reed-bed-charred": {
+   "id": "greyfen-reed-bed-charred",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 4380,
+   "trisAfter": 4380,
+   "mb": 0.25
+  },
+  "greyfen-reed-bed": {
+   "id": "greyfen-reed-bed",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 3248,
+   "trisAfter": 3248,
+   "mb": 0.18
+  },
+  "greyfen-stilt-house": {
+   "id": "greyfen-stilt-house",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 3428,
+   "trisAfter": 3428,
+   "mb": 0.19
+  },
+  "greyfen-stilt-hut": {
+   "id": "greyfen-stilt-hut",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 4906,
+   "trisAfter": 4792,
+   "mb": 0.27
+  },
+  "greyfen-stocks": {
+   "id": "greyfen-stocks",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 360,
+   "trisAfter": 360,
+   "mb": 0.02
+  },
+  "grindstone-a": {
+   "id": "grindstone-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 356,
+   "trisAfter": 356,
+   "mb": 0.02
+  },
+  "handcart-a": {
+   "id": "handcart-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 3380,
+   "trisAfter": 3380,
+   "mb": 0.19
+  },
+  "iron-stock-a": {
+   "id": "iron-stock-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 836,
+   "trisAfter": 836,
+   "mb": 0.04
+  },
+  "keg-a": {
+   "id": "keg-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 930,
+   "trisAfter": 930,
+   "mb": 0.06
+  },
+  "lance-redmane": {
+   "id": "lance-redmane",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "grip": true,
+   "trisBefore": 626,
+   "trisAfter": 626,
+   "mb": 0.04
+  },
+  "lift-cage": {
+   "id": "lift-cage",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1924,
+   "trisAfter": 1924,
+   "mb": 0.11
+  },
+  "notice-board-a": {
+   "id": "notice-board-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 156,
+   "trisAfter": 156,
+   "mb": 0.01
+  },
+  "oak-ash-a": {
+   "id": "oak-ash-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 3012,
+   "trisAfter": 3012,
+   "mb": 0.22
+  },
+  "planter-box-a": {
+   "id": "planter-box-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 620,
+   "trisAfter": 620,
+   "mb": 0.04
+  },
+  "poi-cave-mouth": {
+   "id": "poi-cave-mouth",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 3760,
+   "trisAfter": 3760,
+   "mb": 0.22
+  },
+  "poi-lore-stone": {
+   "id": "poi-lore-stone",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 2320,
+   "trisAfter": 2320,
+   "mb": 0.15
+  },
+  "poplar-a": {
+   "id": "poplar-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 4128,
+   "trisAfter": 4128,
+   "mb": 0.32
+  },
+  "prop.dragonspine.supply-sled": {
+   "id": "prop.dragonspine.supply-sled",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 844,
+   "trisAfter": 844,
+   "mb": 0.05
+  },
+  "prop.greyfen.ferry-punt": {
+   "id": "prop.greyfen.ferry-punt",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 496,
+   "trisAfter": 496,
+   "mb": 0.03
+  },
+  "reeds-a": {
+   "id": "reeds-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 915,
+   "trisAfter": 915,
+   "mb": 0.06
+  },
+  "reeds-b": {
+   "id": "reeds-b",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 663,
+   "trisAfter": 663,
+   "mb": 0.05
+  },
+  "refugee-tent-a": {
+   "id": "refugee-tent-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1380,
+   "trisAfter": 1380,
+   "mb": 0.08
+  },
+  "roadside-shrine-a": {
+   "id": "roadside-shrine-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1736,
+   "trisAfter": 1736,
+   "mb": 0.1
+  },
+  "scorched-fence": {
+   "id": "scorched-fence",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 1152,
+   "trisAfter": 1152,
+   "mb": 0.09
+  },
+  "spear-hunter": {
+   "id": "spear-hunter",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "grip": true,
+   "trisBefore": 392,
+   "trisAfter": 392,
+   "mb": 0.02
+  },
+  "tent": {
+   "id": "tent",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 548,
+   "trisAfter": 548,
+   "mb": 0.04
+  },
+  "toll-post": {
+   "id": "toll-post",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 608,
+   "trisAfter": 608,
+   "mb": 0.04
+  },
+  "wagon-burnt": {
+   "id": "wagon-burnt",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 4244,
+   "trisAfter": 4244,
+   "mb": 0.23
+  },
+  "wagon-wreck-a": {
+   "id": "wagon-wreck-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 2324,
+   "trisAfter": 2324,
+   "mb": 0.13
+  },
+  "waystone-flagstones": {
+   "id": "waystone-flagstones",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "proportion": true,
+   "trisBefore": 4864,
+   "trisAfter": 4859,
+   "mb": 0.25
+  },
+  "willow-a": {
+   "id": "willow-a",
+   "scale": 1,
+   "stretch": [
+    1,
+    1
+   ],
+   "trisBefore": 4156,
+   "trisAfter": 4156,
+   "mb": 0.31
   }
  }
 }

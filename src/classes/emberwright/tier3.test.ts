@@ -24,7 +24,7 @@ describe('Emberwright tier 3 skill rows', () => {
     const rows = buildEmberwrightSkills();
     for (const [id, req] of [[SKILL.fireWall, SKILL.flameLash], [SKILL.ironFamiliar, SKILL.anvilDrop], [SKILL.smokeScreen, SKILL.warmBreath]] as const) {
       const row = rows.find((s) => s.id === id)!;
-      expect([row.tier, row.cost, row.kind, row.available, row.requires]).toEqual([3, 2, 'active', true, req]);
+      expect([row.tier, row.cost, row.kind, row.availableWhen, row.requires]).toEqual([3, 2, 'active', true, req]);
     }
     expect(rows.find((s) => s.id === SKILL.fireWall)).toMatchObject({ emberCost: 25, cooldown: 20 });
     expect(rows.find((s) => s.id === SKILL.ironFamiliar)).toMatchObject({ emberCost: 30, cooldown: 40 });
@@ -33,7 +33,7 @@ describe('Emberwright tier 3 skill rows', () => {
     const { p } = makeProgression();
     p.setClass('emberwright');
     p.grantSkillPoint(30, 'test');
-    for (const id of ['cinderRain', 'temperWeapon', 'updraft']) expect(p.learn(`emberwright.${id}`)).toEqual({ ok: false, reason: 'unavailable' });
+    for (const id of ['cinderRain', 'temperWeapon', 'updraft']) expect(p.learn(`emberwright.${id}`)).toEqual({ ok: false, reason: 'master', textKey: 'hud.skills.act3' });
     expect(p.learn(SKILL.fireWall)).toEqual({ ok: false, reason: 'missing-prereq' });
     for (const id of [SKILL.emberBolt, SKILL.flameLash, SKILL.fireWall]) expect(p.learn(id)).toEqual({ ok: true });
     expect(getSkill(SKILL.fireWall)?.cost).toBe(2);

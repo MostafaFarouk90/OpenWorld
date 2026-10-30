@@ -92,8 +92,9 @@ export function wallStructures(): StructureSpec[] {
         height: TOWER_HEIGHT,
       });
     }
-    // The South Gate's passage is the portcullis (gate.ts) and the River Gate's the second shutter (opens at the end of Act 1); the other five are plugged for good.
-    const shutter = gate === 'south' ? PORTCULLIS_ID : gate === 'river' ? RIVER_PORTCULLIS_ID : null;
+    // The South Gate's passage is the portcullis (gate.ts) and the River Gate's the second shutter (opens at the end of Act 1);
+    // Act 3 (K1) gives the North-west Gate a shutter onto the Fen Road (opens with Act 3); the other four are plugged for good.
+    const shutter = gate === 'south' ? PORTCULLIS_ID : gate === 'river' ? RIVER_PORTCULLIS_ID : gate === 'northwest' ? NORTHWEST_PORTCULLIS_ID : null;
     out.push({
       id: shutter ?? `plug.${gate}`,
       kind: shutter ? 'gate' : 'wall',
@@ -110,5 +111,7 @@ export function wallStructures(): StructureSpec[] {
 
 export const PORTCULLIS_ID = 'portcullis.south';
 export const RIVER_PORTCULLIS_ID = 'portcullis.river';
+/** Act 3 (K1): the Fen Road's gate. */
+export const NORTHWEST_PORTCULLIS_ID = 'portcullis.northwest';
 /** The gate pieces with a switch (cityBuild's setShutter). */
-export const SHUTTER_IDS: readonly string[] = [PORTCULLIS_ID, RIVER_PORTCULLIS_ID];
+export const SHUTTER_IDS: readonly string[] = [PORTCULLIS_ID, RIVER_PORTCULLIS_ID, NORTHWEST_PORTCULLIS_ID];

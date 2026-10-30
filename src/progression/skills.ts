@@ -1,4 +1,5 @@
 /** Knight skill data (design 9.1). Tiers 1 and 2 are live; tiers 3 to 5 are listed so the tree draws its full shape. */
+import { flagConditionHolds, type FlagCondition, type FlagReader } from '../core/flagCondition';
 
 export type SkillBranch = 'bulwark' | 'vanguard' | 'standard';
 
@@ -17,13 +18,36 @@ export interface SkillDef {
   kind: 'active' | 'passive';
   nameKey: string;
   descKey: string;
-  available: boolean;
+  /**
+   * v0.7 (item 10): when the skill can be LEARNED. `true` or `false` are the shorthands every shipped tier 1 to 3 skill
+   * uses; tiers 4 and 5 learn once `story.gate.a3` and the class master's book `trainer.<classId>.masterBook` are set
+   * (`masterBookGate`). The condition gates learning only: `Progression.load` never reads it, so a learned skill always
+   * loads.
+   */
+  availableWhen: FlagCondition | boolean;
   /** Seconds. */
   cooldown?: number;
   emberCost?: number;
   capstone?: true;
   exclusiveGroup?: 'capstone';
 }
+
+/** The class master's book flag (K11's `grantMasterBook(classId)` writes it; design 9, Q2). */
+export const masterBookFlag = (classId: string): string => `trainer.${classId}.masterBook`;
+
+/** v0.7: tiers 4 and 5 are learned once Act 3 has begun and the class master's book has been given (Q2). */
+export function masterBookGate(classId: string): FlagCondition {
+  return { all: ['story.gate.a3', masterBookFlag(classId)] };
+}
+
+/** Whether a skill can be learned for this state (its `availableWhen`). A missing reader reads every flag as unset. */
+export function skillLearnable(skill: Pick<SkillDef, 'availableWhen'>, state?: FlagReader | null): boolean {
+  const w = skill.availableWhen;
+  if (typeof w === 'boolean') return w;
+  return flagConditionHolds(w, state ?? NO_FLAGS);
+}
+
+const NO_FLAGS: FlagReader = { getFlag: () => undefined };
 
 export const TIER_COST: readonly number[] = [1, 1, 2, 3, 5];
 
@@ -68,7 +92,7 @@ function build(): SkillDef[] {
         kind,
         nameKey: `skill.${id}.name`,
         descKey: `skill.${id}.desc`,
-        available: tier <= 3,
+        availableWhen: tier <= 3 ? true : masterBookGate(DEFAULT_CLASS_ID),
       };
       if (i > 0) def.requires = `knight.${TREE[branch][i - 1][0]}`;
       if (tier === 5) {
@@ -99,6 +123,17 @@ function build(): SkillDef[] {
   if (charge) {
     charge.cooldown = 12;
     charge.emberCost = 15;
+  }
+  // Tier 4 actives (Act 3, K11): Bastion Wall 20 s and 20 Ember; Executioner's Arc 10 s and 20 Ember.
+  const bastion = out.find((s) => s.id === 'knight.bastionWall');
+  if (bastion) {
+    bastion.cooldown = 20;
+    bastion.emberCost = 20;
+  }
+  const arc = out.find((s) => s.id === 'knight.executionersArc');
+  if (arc) {
+    arc.cooldown = 10;
+    arc.emberCost = 20;
   }
   return out;
 }

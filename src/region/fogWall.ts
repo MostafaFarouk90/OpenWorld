@@ -50,6 +50,12 @@ function softSpread(): number {
 /** A player found this far past the wall while it stands is put back (design 5.9's push-back). */
 export const PUSH_BACK_PAST = 2;
 export const PUSH_BACK_TO = 4;
+/**
+ * v0.7: a held face pushes back only within this depth behind it (metres along its normal). Containment holds the far
+ * side; without a depth a shut face's band ran on for kilometres and caught Act 3 places (Hathren's Mere behind the
+ * Dragonspine face, the Spine Road behind the Ashen Waste face).
+ */
+export const PUSH_BACK_MAX_DEPTH = 200;
 
 /**
  * A fog wall as data (v0.6). `axis` is the wall's normal: 'x' means the wall spans z and pushes on x. The blocked side
@@ -67,6 +73,11 @@ export interface FogWallDef {
   /** HUD toast on walking into the wall while it stands. */
   toastKey: string;
   /**
+   * v0.7: state-dependent toasts. The first entry whose condition holds picks the toast; none holding uses `toastKey`
+   * (`fog.dragonspine` reads its Phase E text once `story.gate.a3` is set and the hold still stands).
+   */
+  toastWhen?: readonly { when: FlagCondition; key: string }[];
+  /**
    * Metres before the wall a pushed-back player lands (default PUSH_BACK_TO). A1's Act 2 faces use 1, so the whole
    * move stays under the mount's 5 m ride break and a rider stays mounted.
    */
@@ -76,6 +87,11 @@ export interface FogWallDef {
    * at every distance (the slice wall). The Act 2 faces stand far from the play area for most of the game.
    */
   cullBeyond?: number;
+  /**
+   * v0.7 (K1): metres past the face beyond which nobody is pushed back; unset uses PUSH_BACK_MAX_DEPTH. A face beside
+   * open ground it must not reach across sets less; containment holds everything farther behind any face.
+   */
+  pushDepth?: number;
 }
 
 /** Horizontal distance from `feet` to the wall's segment (its line, clamped to its length). Pure. */
@@ -130,6 +146,12 @@ export function fogOpenById(id: string, state: FlagReader): boolean {
   return def ? flagConditionHolds(def.openWhen, state) : false;
 }
 
+/** v0.7: the toast a standing wall shows for this state (`toastWhen`, else `toastKey`). */
+export function fogToastKey(def: Pick<FogWallDef, 'toastKey' | 'toastWhen'>, state: FlagReader): string {
+  for (const t of def.toastWhen ?? []) if (flagConditionHolds(t.when, state)) return t.key;
+  return def.toastKey;
+}
+
 export type FogWallDeps = Pick<CoreContext, 'scene' | 'physics' | 'gates' | 'triggers' | 'systems' | 'player'> & {
   rapier: Pick<typeof RAPIER, 'ColliderDesc'>;
 };
@@ -177,7 +199,8 @@ export function needsPushBackDef(def: FogWallDef, feet: { x: number; z: number }
   if (!Number.isFinite(feet.x) || !Number.isFinite(feet.z)) return false;
   const n = def.axis === 'x' ? feet.x - wall.x : feet.z - wall.z;
   const t = def.axis === 'x' ? feet.z - wall.z : feet.x - wall.x;
-  return n * def.blockedSide > PUSH_BACK_PAST && Math.abs(t) <= def.halfLength;
+  const depth = n * def.blockedSide;
+  return depth > PUSH_BACK_PAST && depth <= (def.pushDepth ?? PUSH_BACK_MAX_DEPTH) && Math.abs(t) <= def.halfLength;
 }
 
 /** The slice wall at `wall` (v0.5 API); `openFlags` replaces its open flags (tests). */

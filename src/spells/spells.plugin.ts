@@ -176,7 +176,14 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
     }));
 
     // ---- Banner Plant
-    const banner = createBanner({ events: ctx.events, scene: ctx.scene, services: ctx.services, player: ctx.player });
+    const banner = createBanner({
+      events: ctx.events,
+      scene: ctx.scene,
+      services: ctx.services,
+      player: ctx.player,
+      // K11: Hearthfire Ward heals on this pulse (`banner.pulse`, declared in classes/knight/act3.plugin.ts).
+      onPulse: (position, radius) => (ctx.events as unknown as { emit(t: string, p: unknown): void }).emit('banner.pulse', { position, radius }),
+    });
     offs.push(() => banner.dispose());
     const damageHost = ctx.damage as unknown as { addModifier?(id: string, fn: (req: never, target: never) => void, order?: number): () => void };
     const offBannerMod = damageHost.addModifier?.('banner-plant', (req, target) => banner.modify(req as never, target as never), 50);
@@ -199,6 +206,13 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       addBurn: (n, source) => void burn.add(n, source),
       useShard: (gain, source) => useShard(gain, source),
       // A5's Hearth Rite (v0.6 item 16): the flag, max health and `scar.removed` (typed in src/companions/events.ts).
+      addSurgeCharges: (n, source) => {
+        if (!Number.isFinite(n) || Math.floor(n) < 1) {
+          console.warn(`[spells] addSurgeCharges ignored ${String(n)} from "${source}"`);
+          return caster.extraCharges(SURGE_DEF.id);
+        }
+        return caster.setExtraCharges(SURGE_DEF.id, caster.extraCharges(SURGE_DEF.id) + Math.floor(n));
+      },
       removeScars: (n, reason) => {
         const removed = burn.removeScars(n);
         if (removed === 0) return 0;
@@ -223,6 +237,16 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
     // ---- persistables (closures, so the registry can call them detached)
     offs.push(ctx.persist.register({ key: burn.key, version: burn.version, serialize: () => burn.serialize(), load: (d, v) => burn.load(d, v) }));
     offs.push(ctx.persist.register({ key: ember.key, version: ember.version, serialize: () => ember.serialize(), load: (d, v) => ember.load(d, v) }));
+    // v0.7 item 26: the extra Surge charges. A save from before it has no entry, so the charges stay 0.
+    offs.push(ctx.persist.register({
+      key: 'spells.surge',
+      version: 1,
+      serialize: () => ({ charges: caster.extraCharges(SURGE_DEF.id) }),
+      load: (d, v) => {
+        const c = v === 1 && typeof d === 'object' && d !== null ? (d as { charges?: unknown }).charges : 0;
+        caster.setExtraCharges(SURGE_DEF.id, typeof c === 'number' ? c : 0);
+      },
+    }));
 
     // ---- events
     const touchCombat = (): void => { lastCombat = simTime; };
