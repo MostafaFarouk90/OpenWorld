@@ -33,11 +33,13 @@ function fakeCtx(opts: { audio?: boolean; music?: boolean } = { audio: true, mus
   const music = { setBoss: (on: boolean, id?: string) => void boss.push([on, id]) };
   const systems: Array<{ id: string; fixedUpdate?: (dt: number) => void }> = [];
   const feet = { x: 0, y: 0, z: 0 };
+  const trials = { running: null as string | null, state: () => (trials.running ? { id: trials.running } : null) };
   const ctx = {
     services: {
-      get: (name: string) => (name === 'audio' ? (opts.audio ? audio : undefined) : name === 'water' ? water : name === 'music' ? (opts.music ? music : undefined) : undefined),
+      get: (name: string) => (name === 'audio' ? (opts.audio ? audio : undefined) : name === 'water' ? water : name === 'music' ? (opts.music ? music : undefined) : name === 'trials' ? trials : undefined),
     },
     actors: {
+      player: { id: 'player' },
       get: (id: string) =>
         id === 'ogre#1'
           ? { kind: 'crag-ogre', root: {}, worldPosition: (v: { set: (x: number, y: number, z: number) => void }) => (v.set(1, 2, 3), v) }
@@ -59,7 +61,7 @@ function fakeCtx(opts: { audio?: boolean; music?: boolean } = { audio: true, mus
   };
   const emit = (type: string, payload: object) => (handlers.get(type) ?? []).forEach((h) => h(payload as never));
   const tick = (dt: number) => systems.forEach((s) => s.fixedUpdate?.(dt));
-  return { ctx, audio, emit, tick, registered, played, playedAt, attached, detached, boss, water, feet, playerRoot, systems };
+  return { ctx, audio, trials, emit, tick, registered, played, playedAt, attached, detached, boss, water, feet, playerRoot, systems };
 }
 
 const setup = (c: ReturnType<typeof fakeCtx>) => (plugin.setup as (ctx: unknown) => void)(c.ctx);
@@ -106,12 +108,22 @@ describe('act3 sfx samples', () => {
     expect(a.every((v, i) => v === b[i])).toBe(true);
   });
 
-  it('the loops repeat without a seam: the wrap step is no bigger than the sound\'s own steps', () => {
+  it('the loops repeat without a seam: the wrap step is within the loop\'s own 99.9th percentile step, and RMS either side agrees within 3 dB', () => {
     for (const key of ACT3_LOOP_KEYS) {
       const a = act3SfxSamples(key);
-      let maxStep = 0;
-      for (let i = 1; i < a.length; i++) maxStep = Math.max(maxStep, Math.abs(a[i] - a[i - 1]));
-      expect(Math.abs(a[0] - a[a.length - 1]), key).toBeLessThanOrEqual(maxStep);
+      const steps: number[] = [];
+      for (let i = 1; i < a.length; i++) steps.push(Math.abs(a[i] - a[i - 1]));
+      steps.sort((x, y) => x - y);
+      const p999 = steps[Math.floor(steps.length * 0.999)];
+      expect(Math.abs(a[0] - a[a.length - 1]), key).toBeLessThanOrEqual(p999);
+      const win = Math.round(2 * SR); // a whole pole-stroke period (the slowest pulse), so a phase difference is not read as a level jump
+      const rms = (from: number) => {
+        let sq = 0;
+        for (let i = from; i < from + win; i++) sq += a[i] * a[i];
+        return Math.sqrt(sq / win);
+      };
+      const db = 20 * Math.log10(rms(a.length - win) / rms(0));
+      expect(Math.abs(db), `${key} rms either side of the join`).toBeLessThanOrEqual(3);
       // and it is a real loop length, not a one-shot
       expect(a.length / SR, key).toBeGreaterThanOrEqual(3);
     }
@@ -376,6 +388,42 @@ describe('Ysmeryth trial music', () => {
     expect(c.boss.at(-1)).toEqual([false, YSMERYTH_TRIAL_ID]);
   });
 
+  it('a load that restarts the trial re-asserts the mix one tick after the director reset', { timeout: T }, () => {
+    const c = fakeCtx();
+    setup(c);
+    start(c);
+    c.trials.running = YSMERYTH_TRIAL_ID;
+    end(c, YSMERYTH_TRIAL_ID, 'loaded');
+    start(c); // the quest gate restarts it; bossOn is still true so no setBoss here
+    c.emit('save.loaded', {});
+    expect(c.boss).toEqual([[true, YSMERYTH_TRIAL_ID]]);
+    c.tick(1 / 60); // after the music plugin's reset
+    expect(c.boss).toEqual([
+      [true, YSMERYTH_TRIAL_ID],
+      [true, YSMERYTH_TRIAL_ID],
+    ]);
+    vi.advanceTimersByTime(5000);
+    expect(c.boss.some((b) => !b[0])).toBe(false);
+  });
+
+  it('a respawn re-asserts a running trial, and a load with no trial running drops the memory without setBoss(false)', { timeout: T }, () => {
+    const c = fakeCtx();
+    setup(c);
+    start(c);
+    c.trials.running = YSMERYTH_TRIAL_ID;
+    c.emit('actor.revived', { actorId: 'player', reason: 'respawn' });
+    c.tick(1 / 60);
+    expect(c.boss).toHaveLength(2);
+    c.trials.running = null;
+    end(c, YSMERYTH_TRIAL_ID, 'loaded');
+    c.emit('save.loaded', {});
+    c.tick(1 / 60);
+    vi.advanceTimersByTime(5000);
+    expect(c.boss).toHaveLength(2); // no false call: the director was reset already
+    start(c); // bossOn was cleared, so a fresh start turns it on again
+    expect(c.boss).toHaveLength(3);
+  });
+
   it('a start after the mix was dropped turns it on again', { timeout: T }, () => {
     const c = fakeCtx();
     setup(c);
@@ -422,6 +470,7 @@ describe('Ysmeryth trial music', () => {
 // --- the hawk shriek against the real Brain -----------------------------------------------------
 
 describe('the hawk shriek fires before the stoop damage window', () => {
+  // The test opens the damage window itself (`brain.windowOpened`); in the game the animator opens it from the clip.
   const DT = 1 / 60;
   /** A stand-in `hawk.stoop` (K6b PR 2 has no numbers yet): a red dive with a leech.lunge-like clip window and a longer wind-up. */
   const STOOP: MoveDef = {

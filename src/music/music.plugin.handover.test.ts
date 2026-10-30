@@ -5,7 +5,7 @@ import type { GameEventMap } from '../core/events';
 import type { GameContext } from '../core/Game';
 import { Services } from '../core/Services';
 import { setupMusic } from './music.plugin';
-import { ASH_ON_THE_PASTURE as ASH, BARLEY_AND_BRAZIER as BARLEY, HAMMERS_BELOW as HAMMERS, RESERVED_TRACKS, RESERVED_TRACK_IDS, SEVEN_GATES_ONE_DRUM as SEVEN, TRACKS_BY_ID } from './tracks';
+import { ASH_ON_THE_PASTURE as ASH, BARLEY_AND_BRAZIER as BARLEY, HAMMERS_BELOW as HAMMERS, RESERVED_TRACKS, RESERVED_TRACK_IDS, SEVEN_GATES_ONE_DRUM as SEVEN, TRACKS_BY_ID, PEAT_AND_PITCH as PEAT, WING_OVER_RIME as WING } from './tracks';
 
 const SR = 8000;
 
@@ -704,5 +704,58 @@ describe('Act 2 tracks (registered by A14; the old reserved-track block asserted
     e.tick(0.1);
     e.tick(e.mixers[1].startedAt! - clockRef.t + 0.05);
     expect(e.services.get('music')!.beat()!.bpm).toBe(98);
+  });
+});
+
+// The synth and the SFX are mocked above (a reduced manifest: right-length silent buffers); these tests boot the plugin and
+// need the generous timeout set at the top of the file (30 s).
+describe('Act 3 region handover (peat-and-pitch and wing-over-rime)', () => {
+  const GREYFEN = { id: 'greyfen', track: PEAT.id };
+  const DRAGONSPINE = { id: 'dragonspine', track: WING.id };
+
+  it.each([
+    ['Greyfen', GREYFEN, PEAT, 90, 7],
+    ['Dragonspine', DRAGONSPINE, WING, 100, 8],
+  ])('Harrowmark to %s commits the new track on a bar line, and back again', { timeout: 30_000 }, async (_n, region, track, bpm, stems) => {
+    const e = makeEnv({ regionAt: (x) => (x < 1000 ? HARROWMARK : x < 2000 ? region : HARROWMARK) });
+    setupMusic(e.ctx);
+    await e.start();
+    expect(e.services.get('music')!.beat()!.bpm).toBe(96);
+    const cross = async (x: number, id: string, previous: string): Promise<number> => {
+      e.feet.x = x;
+      e.events.emit('region.entered', { regionId: id, previous });
+      await flush();
+      e.tick(0.1);
+      return (e.active() === 0 ? e.mixers[1] : e.mixers[0]).startedAt!;
+    };
+    const at = await cross(1500, region.id, 'harrowmark');
+    expect(e.audio.swapMusic).not.toHaveBeenCalled();
+    expect(e.services.get('music')!.beat()!.bpm).toBe(96); // old track until the line
+    expect(e.mixers[1].stemCount).toBe(stems); // every stem of the new track went through the idle mixer
+    expect([...e.mixers[1].stems].sort()).toEqual([...track.stems].sort());
+    e.tick(at - clockRef.t + 0.05);
+    expect(e.audio.swapMusic).toHaveBeenCalledTimes(1);
+    expect(e.services.get('music')!.beat()!.bpm).toBe(bpm);
+    const back = await cross(2500, 'harrowmark', region.id);
+    e.tick(back - clockRef.t + 0.05);
+    expect(e.audio.swapMusic).toHaveBeenCalledTimes(2);
+    expect(e.services.get('music')!.beat()!.bpm).toBe(96);
+  });
+});
+
+describe('Act 3 boss and trial keys through the plugin', () => {
+  it('a trial key via music.setBoss gives the chant mix, and ending it returns to explore through the ending', { timeout: 30_000 }, async () => {
+    const e = makeEnv({ regionAt: () => ({ id: 'dragonspine', track: WING.id }) });
+    setupMusic(e.ctx);
+    await e.start();
+    const music = e.services.get('music')!;
+    music.setBoss(true, 'ysmeryth-trial');
+    e.tick(0.5);
+    expect(e.mixers[0].setMix.mock.calls.at(-1)![0]).toBe(WING.bossMixes!['ysmeryth-trial'].phases[0]);
+    music.setBoss(false, 'ysmeryth-trial');
+    e.tick(0.5);
+    expect(e.mixers[0].setMix.mock.calls.at(-1)![0]).toBe(WING.mixes.ending);
+    e.tick(8);
+    expect(e.mixers[0].setMix.mock.calls.at(-1)![0]).toBe(WING.mixes.explore);
   });
 });

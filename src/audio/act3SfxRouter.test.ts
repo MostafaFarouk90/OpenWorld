@@ -370,7 +370,6 @@ describe('Act3SfxRouter loops', () => {
     const b = {};
     const r = rig({ objects: { 'a#1': a, 'b#2': b } });
     r.router.dragonFlight({ actorId: 'a#1', on: true });
-    r.router.dragonFlight({ actorId: 'a#1', on: true });
     r.router.dragonFlight({ actorId: 'b#2', on: true });
     expect(r.attached.map((x) => [x.key, x.object])).toEqual([
       ['sfx.dragon.wingbeat', a],
@@ -403,5 +402,31 @@ describe('Act3SfxRouter loops', () => {
     r.router.stopAll();
     expect(r.router.activeLoops).toEqual([]);
     expect([...r.detached].sort()).toEqual([1, 2, 3]);
+  });
+});
+
+describe('loops that end without their end event', () => {
+  it('a ferry ride cut short (movement.mode leaves ferry) detaches the pole, and glide likewise', () => {
+    const r = rig();
+    r.router.ferryBoarded();
+    r.router.glideStarted();
+    expect(r.attached.map((a) => a.key)).toEqual([LOOP_SFX_ACT3.ferry, LOOP_SFX_ACT3.glide]);
+    r.router.movementMode({ mode: 'walk', previous: 'ferry' });
+    expect(r.detached).toEqual([1]);
+    r.router.movementMode({ mode: 'walk', previous: 'glide' });
+    expect(r.detached).toEqual([1, 2]);
+    r.router.movementMode({ mode: 'ferry', previous: 'walk' }); // entering does nothing
+    expect(r.detached).toEqual([1, 2]);
+  });
+
+  it('a wing-beat loop the audio manager auto-detached is re-attached on the next flight start', () => {
+    const obj = {};
+    const r = rig({ objects: { ysmeryth: obj } });
+    r.router.dragonFlight({ actorId: 'ysmeryth', on: true });
+    r.router.dragonFlight({ actorId: 'ysmeryth', on: true }); // stale record: detach then attach
+    expect(r.attached).toHaveLength(2);
+    expect(r.detached).toEqual([1]);
+    r.router.dragonFlight({ actorId: 'ysmeryth', on: false });
+    expect(r.detached).toEqual([1, 2]);
   });
 });

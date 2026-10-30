@@ -95,21 +95,28 @@ describe.each(TRACKS)('$id stems', (track) => {
 });
 
 describe('synth cost at 48 kHz', () => {
-  it('every stem is the canonical length and renders inside a generous budget (measured and printed)', () => {
-    const rows: string[] = [];
+  it('every stem is the canonical length and costs no more than a small multiple of the slowest Act 1/2 stem (timings printed)', () => {
+    const time = (track: TrackDef, id: string) => {
+      const t0 = performance.now();
+      const x = synthRaw(track, id, 48000);
+      return { x, secs: (performance.now() - t0) / 1000 };
+    };
+    // The reference is measured in this same run, so a slow or loaded machine scales both sides; there is no absolute wall-clock assertion.
+    let slowest = 0;
+    for (const track of [BARLEY_AND_BRAZIER, HAMMERS_BELOW]) for (const id of track.stems) slowest = Math.max(slowest, time(track, id).secs);
+    const rows: string[] = [`slowest Act 1/2 stem: ${slowest.toFixed(3)} s`];
+    const over: string[] = [];
     for (const track of TRACKS) {
       for (const id of track.stems) {
-        const t0 = performance.now();
-        const x = synthRaw(track, id, 48000);
-        const secs = (performance.now() - t0) / 1000;
+        const { x, secs } = time(track, id);
         rows.push(`${track.id} ${id}: ${secs.toFixed(3)} s`);
         expect(x.length).toBe(loopSamples(track, 48000));
-        // Target is about 0.6 s per stem (measured 0.04 to 0.55 s); the 2 s ceiling is wide on purpose so a slow CI machine does not flake.
-        expect(secs, `${track.id} ${id}`).toBeLessThan(2);
+        if (secs > 2.5 * slowest) over.push(`${track.id} ${id} ${secs.toFixed(3)} s`);
       }
     }
     console.info(`Act 3 synth cost per stem at 48 kHz\n${rows.join('\n')}`);
-  }, 60000);
+    expect(over, `stems over 2.5x the slowest Act 1/2 stem (${slowest.toFixed(3)} s)`).toEqual([]);
+  }, 120000);
 });
 
 describe('Wing over Rime chant seam (a 3-minute run has no audible join)', () => {
