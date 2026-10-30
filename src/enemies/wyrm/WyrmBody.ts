@@ -8,7 +8,7 @@ import type { EnemyBody } from '../body';
 import type { PlayOptions, WindowPhase } from '../EnemyAnimator';
 import type { MoveDef, WeaponChannel } from '../types';
 import type { WyrmParams } from './builder/params';
-import { LOD_DISTANCES, restPose, WYRM_JOINTS, WyrmRig, type RootFrame, type WyrmPose } from './builder/rig';
+import { lodDistances, restPose, WYRM_JOINTS, WyrmRig, type RootFrame, type WyrmPose } from './builder/rig';
 
 /** Canonical wyrm clips (procedural poses). */
 export const WYRM_CLIPS = {
@@ -82,8 +82,8 @@ const BASE_EASE = 8;
 /** Metres a camera must come back inside an LOD band before the finer level returns. */
 const LOD_HYSTERESIS = 3;
 
-function lodFor(distance: number, current: number): number {
-  const [near, far] = LOD_DISTANCES;
+export function lodFor(distance: number, current: number, scale = 1): number {
+  const [near, far] = lodDistances(scale);
   const raw = distance > far ? 2 : distance > near ? 1 : 0;
   if (raw >= current) return raw;
   // Coming closer: only once inside the band by the margin.
@@ -345,7 +345,7 @@ export class WyrmBody implements EnemyBody {
     this.evaluate(a, attackTime, dt);
 
     // LOD from the last rendered camera distance (0 when nothing renders: full detail), with 3 m of hysteresis.
-    this.rig.lod = lodFor(this.cameraDistance, this.rig.lod);
+    this.rig.lod = lodFor(this.cameraDistance, this.rig.lod, this.rig.params.scale);
     const frame = this.rootFrame();
     if (!this.spineSet) {
       // First tick at the real spawn: the body laid out behind the head along the root's facing.

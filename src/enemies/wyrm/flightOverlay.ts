@@ -3,11 +3,12 @@ import type { BehaviourContext, BehaviourOverlay } from '../behaviours';
 import type { ActorId } from '../ports';
 import type { MoveDef } from '../types';
 import { WyrmFlight } from './flight';
+import { makeFlightExtras, type FlightExtrasHub } from './large/flightExtras';
 import { findLandingSpot } from './landing';
 import type { WyrmBody } from './WyrmBody';
 
-/** What the wyrm overlays tell the rest of the wyrm module (the plugin: decals, sounds, events). All optional. */
-export interface WyrmHub {
+/** What the wyrm overlays tell the rest of the wyrm module (the plugin: decals, sounds, events). All optional. K6a adds the chain, perch and release hooks (FlightExtrasHub). */
+export interface WyrmHub extends FlightExtrasHub {
   /** The dive telegraphed: it will land exactly at `at` when its window ends. */
   diveLocked?(actorId: ActorId, at: { x: number; y: number; z: number }, seconds: number): void;
   /** The dive ended or was cancelled. */
@@ -34,6 +35,8 @@ export function makeFlightOverlay(ctx: BehaviourContext, hub: WyrmHub = {}): Beh
   let diveAt: { x: number; y: number; z: number } | null = null;
   let resting = !!ctx.options.peaceful;
   let lastBeat = 0;
+  // K6a: a chained drake, a perched lodge wyrm, a scripted release.
+  const extras = makeFlightExtras(ctx, hub, () => flight.airborne);
   const target = { x: 0, z: 0 };
   const self = { x: 0, z: 0 };
   const ports = {
@@ -66,6 +69,7 @@ export function makeFlightOverlay(ctx: BehaviourContext, hub: WyrmHub = {}): Beh
       ctx.fly(false, at);
       // A landing spot away from the trail: lay the body out there instead of streaming it across the gap.
       if (moved > 1) (ctx.body as Partial<Pick<WyrmBody, 'resetSpine'>>).resetSpine?.();
+      extras.touchedDown();
       if (r.touchdown.reason === 'dive') {
         diveAt = null;
         hub.diveEnded?.(ctx.actorId);
@@ -89,6 +93,12 @@ export function makeFlightOverlay(ctx: BehaviourContext, hub: WyrmHub = {}): Beh
     },
 
     intent(dt, intent, senses) {
+      extras.refresh();
+      if (extras.perched) {
+        intent.goal = null;
+        intent.speed = 0;
+        return;
+      }
       if (senses.targetPos) {
         target.x = senses.targetPos.x;
         target.z = senses.targetPos.z;
@@ -109,6 +119,7 @@ export function makeFlightOverlay(ctx: BehaviourContext, hub: WyrmHub = {}): Beh
       // In the air the flight steers; the brain's own swing states (the dive's telegraph and window) are left alone.
       if (state === 'telegraph' || state === 'attack') return;
       intent.goal = steer.goal ? { x: steer.goal.x, z: steer.goal.z } : null;
+      extras.clampGoal(intent.goal);
       intent.speed = steer.speed;
       intent.face = steer.face ? { x: steer.face.x, z: steer.face.z } : null;
       intent.stopDistance = 0.3;
@@ -118,8 +129,12 @@ export function makeFlightOverlay(ctx: BehaviourContext, hub: WyrmHub = {}): Beh
       return flight.allows(move.flight);
     },
 
+    clampVelocity(velocity, dt) {
+      extras.clampVelocity(velocity, dt);
+    },
+
     animate() {
-      body.setAltitude?.(flight.altitude);
+      body.setAltitude?.(flight.altitude + extras.perchAltitude);
       // A wingbeat at each flap peak while flying (every 0.8 s), the Grimtooth-style positional sound.
       if (flight.flying) {
         lastBeat += 1 / 60;
@@ -147,6 +162,7 @@ export function makeFlightOverlay(ctx: BehaviourContext, hub: WyrmHub = {}): Beh
 
     staggered(byId) {
       resting = false;
+      extras.unperch();
       if (!flight.fall('wing')) return false;
       // Falling: a status stun holds it (no mercy window) until touchdown; the swing in progress is cancelled.
       fallBy = byId;
@@ -176,7 +192,7 @@ export function makeFlightOverlay(ctx: BehaviourContext, hub: WyrmHub = {}): Beh
     },
 
     actorPosition(out: THREE.Vector3) {
-      out.y += flight.altitude;
+      out.y += flight.altitude + extras.perchAltitude;
     },
 
     refusesPull() {
@@ -185,6 +201,11 @@ export function makeFlightOverlay(ctx: BehaviourContext, hub: WyrmHub = {}): Beh
 
     hit() {
       resting = false;
+      extras.unperch();
+    },
+
+    leave(dt, how) {
+      return extras.leave(dt, how);
     },
 
     stateChanged(from, to) {
@@ -204,6 +225,7 @@ export function makeFlightOverlay(ctx: BehaviourContext, hub: WyrmHub = {}): Beh
     },
 
     dispose() {
+      extras.dispose();
       if (diveAt) hub.diveEnded?.(ctx.actorId);
       diveAt = null;
     },
