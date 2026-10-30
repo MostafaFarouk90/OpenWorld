@@ -29,7 +29,7 @@ const site = (id: string, template: A3Template, params?: A3Params): A3Site => ({
  * (review fixes: the frozen camp is off M28's trailhead, the vista off the sixth wayside).
  */
 export const ACT3_POI_PLACEMENTS: readonly A3Placement[] = [
-  { site: site('drowned-church', 'drowned-church', { ledge: true }), region: 'greyfen', where: { road: 'fen-track', s: 1560, side: -92, facingDeg: 210 }, cluster: 'fen-track' },
+  { site: site('drowned-church', 'drowned-church', { ledge: true }), region: 'greyfen', where: { road: 'fen-track', s: 1560, side: -90, facingDeg: 0 }, cluster: 'fen-track' },
   { site: site('stilt-camp', 'stilt-camp', { ledge: true }), region: 'greyfen', where: { road: 'fen-road', s: 8100, side: -70, facingDeg: 0 }, cluster: 'fen-road-west' },
   { site: site('peat-cutting', 'peat-cutting'), region: 'greyfen', where: { road: 'fen-road', s: 9000, side: 70, facingDeg: 0 }, cluster: 'fen-road-west' },
   { site: site('reed-island', 'reed-island'), region: 'greyfen', where: { mere: 54, radius: 364, facingDeg: 0 }, cluster: 'mere' },

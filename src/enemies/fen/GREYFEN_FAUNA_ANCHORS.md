@@ -58,10 +58,10 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | greyfen.fauna.hunters.south-west-reeds.2 | 900 | 10304 | 0 | 0 | fauna, hunters |
 | greyfen.fauna.hunters.south-west-reeds.3 | 896 | 10300 | 0 | 0 | fauna, hunters |
 | greyfen.fauna.hunters.south-west-reeds.4 | 900 | 10296 | 0 | 0 | fauna, hunters |
-| greyfen.fauna.wraiths.drowned-church.1 | 5315.5 | 11232.38 | 0 | 0 | fauna, wraiths |
-| greyfen.fauna.wraiths.drowned-church.2 | 5311.5 | 11236.38 | 0 | 0 | fauna, wraiths |
-| greyfen.fauna.wraiths.drowned-church.3 | 5307.5 | 11232.38 | 0 | 0 | fauna, wraiths |
-| greyfen.fauna.wraiths.drowned-church.4 | 5311.5 | 11228.38 | 0 | 0 | fauna, wraiths |
+| greyfen.fauna.wraiths.drowned-church.1 | 5301.03 | 11234.96 | 0 | 0 | fauna, wraiths |
+| greyfen.fauna.wraiths.drowned-church.2 | 5297.03 | 11238.96 | 0 | 0 | fauna, wraiths |
+| greyfen.fauna.wraiths.drowned-church.3 | 5293.03 | 11234.96 | 0 | 0 | fauna, wraiths |
+| greyfen.fauna.wraiths.drowned-church.4 | 5297.03 | 11230.96 | 0 | 0 | fauna, wraiths |
 
 ## Triggers
 

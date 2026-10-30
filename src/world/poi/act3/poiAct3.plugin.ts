@@ -334,19 +334,27 @@ export function createPoiAct3Plugin(opts: PoiAct3Options = {}): GamePlugin {
             const tmp = new THREE.Matrix4();
             const q = new THREE.Quaternion();
             const up = new THREE.Vector3(0, 1, 0);
+            // Every model of the cluster loads at once (one fetch each); the batches go in when all have settled.
+            const ids = [...new Set(parts.map((p) => p.part.asset).filter((a) => !a.startsWith('proc:')))];
+            const loaded = new Map(
+              await Promise.all(
+                ids.map(async (id) => {
+                  try {
+                    return [id, await lib.template(id)] as const;
+                  } catch (err) {
+                    console.warn(`poi-act3: ${id} failed to load`, err);
+                    return [id, null] as const;
+                  }
+                }),
+              ),
+            );
+            if (disposed) return;
             for (const { owner, part: pt, y } of parts) {
-              if (pt.asset.startsWith('proc:') || disposed) continue;
-              let t = null;
-              try {
-                t = await lib.template(pt.asset);
-              } catch (err) {
-                console.warn(`poi-act3: ${pt.asset} failed to load`, err);
-              }
-              if (!t || disposed) continue;
+              const t = loaded.get(pt.asset);
+              if (!t) continue;
               tmp.compose(new THREE.Vector3(pt.x, y, pt.z), q.setFromAxisAngle(up, (pt.yawDeg * Math.PI) / 180), new THREE.Vector3(pt.scale, pt.scale, pt.scale));
               batches.add(owner, t, tmp);
             }
-            if (disposed) return;
             const { groups } = batches.build();
             for (const g of groups.values()) root.add(g);
           })();

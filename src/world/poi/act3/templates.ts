@@ -82,8 +82,9 @@ function drownedChurch(id: string, p: A3Params): A3Piece {
   a.parts.push(part('dun/candle_triple', 6.5, 7, 0, 1), part('env/greyfen-marker', 3, -9, 0, 1));
   a.structures.push({ id: `poi-a3-${id}-nave`, kind: A3_COLLIDER_KIND, x: 0, z: 8, yawDeg: 0, footprint: [14, 1.2], mode: 'solid', height: 3 });
   addChest(a, id, 5, 5, 180);
-  addFauna(a, -4, 14);
-  if (p.ledge) addLedge(a, id, -9, -15);
+  addFauna(a, 9, -12);
+  // The Leap ledge stands behind the nave, so the road side sees the tower and the ruin first.
+  if (p.ledge) addLedge(a, id, -13, 17);
   return finish(id, 'drowned-church', 19, a, !!p.ledge);
 }
 

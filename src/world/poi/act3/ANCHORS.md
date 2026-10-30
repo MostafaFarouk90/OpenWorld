@@ -7,11 +7,11 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 
 | id | x | z | dy | yaw | tags |
 | --- | --- | --- | --- | --- | --- |
-| greyfen.poi.drowned-church.main | 5303.68 | 11220.1 | 0 | 48.43 | poi |
-| greyfen.poi.drowned-church.chest | 5310.73 | 11219.67 | 0 | 228.43 | poi |
-| greyfen.poi.drowned-church.fauna | 5311.5 | 11232.38 | 0 | 48.43 | spawn |
-| greyfen.poi.drowned-church.ledge | 5286.48 | 11216.88 | 1.8 | 48.43 | poi, leap-gated |
-| greyfen.poi.drowned-church.ledge.launch | 5282.37 | 11213.23 | 0 | 48.43 | poi |
+| greyfen.poi.drowned-church.main | 5301.78 | 11220.73 | 0 | 198.43 | poi |
+| greyfen.poi.drowned-church.chest | 5295.45 | 11217.57 | 0 | 18.43 | poi |
+| greyfen.poi.drowned-church.fauna | 5297.03 | 11234.96 | 0 | 198.43 | spawn |
+| greyfen.poi.drowned-church.ledge | 5308.73 | 11200.49 | 1.8 | 198.43 | poi, leap-gated |
+| greyfen.poi.drowned-church.ledge.launch | 5310.47 | 11205.71 | 0 | 198.43 | poi |
 | greyfen.poi.stilt-camp.main | 5708.11 | 9633.98 | 0 | 105.26 | poi |
 | greyfen.poi.stilt-camp.chest | 5711.58 | 9631.48 | 0 | 285.26 | poi |
 | greyfen.poi.stilt-camp.fauna | 5698.47 | 9636.61 | 0 | 105.26 | spawn |
@@ -62,7 +62,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 
 | id | shape | x | z | size |
 | --- | --- | --- | --- | --- |
-| trg.greyfen.poi.drowned-church.discover | sphere | 5303.68 | 11220.1 | r 23 |
+| trg.greyfen.poi.drowned-church.discover | sphere | 5301.78 | 11220.73 | r 23 |
 | trg.greyfen.poi.stilt-camp.discover | sphere | 5708.11 | 9633.98 | r 22 |
 | trg.greyfen.poi.peat-cutting.discover | sphere | 4801.47 | 9708.32 | r 20 |
 | trg.greyfen.poi.reed-island.discover | sphere | 3213.95 | 12794.48 | r 15 |
@@ -80,11 +80,11 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 
 | id | kind | x | z | footprint | mode |
 | --- | --- | --- | --- | --- | --- |
-| poi-a3-drowned-church-nave | poi-a3-collider | 5309.66 | 11225.4 | 14 x 1.2 | solid |
-| poi-a3-drowned-church-ledge | rock | 5286.48 | 11216.88 | 6 x 5 | solid |
-| poi-a3-drowned-church-wall-n | rock | 5289.47 | 11219.53 | 12 x 3 | solid |
-| poi-a3-drowned-church-wall-w | rock | 5283.5 | 11220.24 | 3 x 5 | solid |
-| poi-a3-drowned-church-wall-e | rock | 5289.47 | 11213.51 | 3 x 5 | solid |
+| poi-a3-drowned-church-nave | poi-a3-collider | 5299.25 | 11213.14 | 14 x 1.2 | solid |
+| poi-a3-drowned-church-ledge | rock | 5308.73 | 11200.49 | 6 x 5 | solid |
+| poi-a3-drowned-church-wall-n | rock | 5307.47 | 11196.7 | 12 x 3 | solid |
+| poi-a3-drowned-church-wall-w | rock | 5313 | 11199.07 | 3 x 5 | solid |
+| poi-a3-drowned-church-wall-e | rock | 5304.47 | 11201.91 | 3 x 5 | solid |
 | poi-a3-stilt-camp-hut | poi-a3-collider | 5713.55 | 9638.72 | 9 x 7 | solid |
 | poi-a3-stilt-camp-house | poi-a3-collider | 5711.1 | 9625.91 | 6 x 6 | solid |
 | poi-a3-stilt-camp-ledge | rock | 5695.31 | 9625.03 | 6 x 5 | solid |
