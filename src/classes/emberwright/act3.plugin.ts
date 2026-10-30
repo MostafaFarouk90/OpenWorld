@@ -73,7 +73,22 @@ const emberwrightAct3Plugin: GamePlugin = {
       }
     }
     const isFamiliar = (a: { id: string; kind: string }): boolean => a.kind === IRON_FAMILIAR.kind || a.id.startsWith(IRON_FAMILIAR.idPrefix);
+    /**
+     * The active party's live actors (`companions.active()` mapped through `actorId`), never a wave defender or another ally-team
+     * actor. Only when the companions service is absent does it fall back to the ally-team scan.
+     */
     function* companions(): Iterable<CompanionView> {
+      const c = svc<CompanionsLike>('companions');
+      if (c) {
+        for (const cid of c.active()) {
+          const aid = c.actorId(cid);
+          const a = aid ? ctx.actors.get(aid) : undefined;
+          if (!a || a.team !== 'ally' || a.dead || a.id === playerId() || !a.root) continue;
+          a.worldPosition(scratch);
+          yield { id: a.id, x: scratch.x, y: scratch.y, z: scratch.z };
+        }
+        return;
+      }
       for (const a of ctx.actors.all()) {
         if (a.team !== 'ally' || a.dead || a.id === playerId() || isFamiliar(a) || !a.root) continue;
         a.worldPosition(scratch);
@@ -141,6 +156,7 @@ const emberwrightAct3Plugin: GamePlugin = {
     const updraft = new Updraft({
       ...base,
       foes,
+      foe: foeView,
       apply: (req) => ctx.damage.apply(req),
       stun: (id, spec) => status()?.apply(id, spec) ?? false,
       isBoss,
@@ -162,6 +178,11 @@ const emberwrightAct3Plugin: GamePlugin = {
       }),
       ctx.events.on('actor.despawned', (e) => temper.onGone(e.actorId)),
       ctx.events.on('companion.left', (e) => temper.onGone(e.actorId)),
+      // Companions are immortal, so `actor.died` never fires for them: a downed (kneeling) companion ends the temper.
+      ctx.events.on('companion.downed', (e) => {
+        const aid = svc<CompanionsLike>('companions')?.actorId(e.companionId);
+        if (aid) temper.onGone(aid);
+      }),
       ctx.events.on('party.changed', () => temper.update()),
     );
 

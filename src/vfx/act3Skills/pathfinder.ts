@@ -8,7 +8,7 @@ import type { Tier3Helpers } from '../effects/tier3';
  *
  * Particle use per cast against the 11.1 cap of 4,000 live points (`PATHFINDER_T4_PARTICLES` is the peak live table, measured
  * by a test against a real `VfxServiceImpl`):
- * - triple-shot: one muzzle flare of 8 embers (0.25 s life) and three 0.18 s tracer meshes. Peak 8.
+ * - triple-shot: the two side tracer meshes (0.18 s) only; no points (the crossbow draws the centre tracer and the flare). Peak 0.
  * - caltrop-field: the field is one InstancedMesh of 60 spikes and a ground ring, with one pale glint ember every 0.25 s (0.5 s
  *   life, measured peak 3) for the 10 s. A foe newly slowed spawns the same id with `dust: 1`: 10 ash points (0.8 s life) and no mesh. The
  *   table counts the field plus six foes puffing at once (3 + 60 = 63), more than a field of 4 m ever holds.
@@ -20,13 +20,12 @@ export type PathfinderT4EffectId = (typeof PATHFINDER_T4_EFFECT_IDS)[number];
 
 /** Peak live points per cast (checked by budget.test.ts and pathfinder.test.ts). */
 export const PATHFINDER_T4_PARTICLES: Record<PathfinderT4EffectId, number> = {
-  'triple-shot': 8,
+  'triple-shot': 0,
   'caltrop-field': 63,
   'sure-foot': 6,
 };
 
 const GOLD = 0xffc040;
-const EMBER = 0xffa040;
 const SPIKE = 0x8a8c80;
 const GLINT = 0xfff0c0;
 const DUST = 0xa89878;
@@ -79,8 +78,9 @@ export function pathfinderT4Effects(h: Tier3Helpers): Record<PathfinderT4EffectI
   const { ring, origin, num } = h;
 
   return {
-    // Triple Shot: three thin tracers from the muzzle (centre and plus or minus `degrees`, default 7.5) along the aim (`yaw` and
-    // `pitch`), 14 m long, fading over 0.18 s, and one shared flare: a small warm disc and 8 embers.
+    // Triple Shot: the two SIDE tracers only (the crossbow draws the centre tracer and the muzzle flare), from the muzzle at plus and
+    // minus `degrees` (default 7.5) off the aim (`yaw` and `pitch`), `length` long (the launch range, default 14), fading over
+    // 0.18 s. `plus` and `minus` (default 1) say which side bolts actually launched. No points, no light.
     'triple-shot': (ctx, t, p) => {
       const o = origin(t);
       const yaw = t.yaw ?? 0;
@@ -89,26 +89,19 @@ export function pathfinderT4Effects(h: Tier3Helpers): Record<PathfinderT4EffectI
       const length = Math.max(1, num(p, 'length', 14));
       const group = new THREE.Group();
       const tracers: THREE.Mesh[] = [];
-      for (const off of [-spread, 0, spread]) {
+      for (const [flag, off] of [['minus', -spread], ['plus', spread]] as const) {
+        if (num(p, flag, 1) <= 0) continue;
         const a = yaw + off;
         // Forward is (-sin yaw, -cos yaw) on the ground, tilted by the pitch.
         const dir = new THREE.Vector3(-Math.sin(a) * Math.cos(pitch), Math.sin(pitch), -Math.cos(a) * Math.cos(pitch));
-        const tracer = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, length), additive(off === 0 ? 0xfff0c0 : GOLD, 0.9));
+        const tracer = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, length), additive(GOLD, 0.9));
         tracer.position.set(o.x + dir.x * (length / 2), o.y + dir.y * (length / 2), o.z + dir.z * (length / 2));
         tracer.lookAt(o.x + dir.x * length, o.y + dir.y * length, o.z + dir.z * length);
         group.add(tracer);
         tracers.push(tracer);
       }
-      const flare = new THREE.Mesh(new THREE.CircleGeometry(0.16, 10), additive(EMBER, 0.9));
-      flare.position.set(o.x, o.y, o.z);
-      group.add(flare);
-      ctx.points.emit('ember', { x: o.x, y: o.y, z: o.z }, 8, { color: EMBER, spread: 0.7, rise: 0.2, life: 0.25 }, ctx.now());
-      ctx.lights.flash({ x: o.x, y: o.y, z: o.z }, EMBER, 4, 0.02, 0.12, ctx.now());
       return timedGroup(ctx, group, 0.18, (prog) => {
         for (const m of tracers) (m.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - prog);
-        (flare.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - prog);
-        flare.scale.setScalar(1 + prog);
-        flare.lookAt(flare.position.x - Math.sin(yaw), flare.position.y, flare.position.z - Math.cos(yaw));
       });
     },
 

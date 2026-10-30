@@ -47,7 +47,11 @@ export interface PathfinderService {
    * K11 PR 2 (Triple Shot): registers a provider of extra side bolts for a shot (see `CrossbowPorts.spread`); the first
    * non-empty answer wins. Returns the remover. With none registered the crossbow fires as shipped.
    */
-  addSpread(id: string, fn: (shotIndex: number, origin: Vec3, direction: Vec3) => readonly { yawDeg: number; scale: number }[] | null): () => void;
+  addSpread(
+    id: string,
+    fn: (shotIndex: number, origin: Vec3, direction: Vec3) => readonly { yawDeg: number; scale: number }[] | null,
+    launched?: (shotIndex: number, origin: Vec3, direction: Vec3, yawDegs: readonly number[], range: number) => void,
+  ): () => void;
 }
 declare module '../../core/Services' {
   interface GameServices {
@@ -152,6 +156,7 @@ const pathfinderPlugin: GamePlugin = {
       masterCount: () => (getItem(PF.masterAmmoItem) ? (inventory()?.count(PF.masterAmmoItem) ?? 0) : 0),
       masterRemove: (n) => inventory()?.remove(PF.masterAmmoItem, n) ?? false,
     });
+    const launchedFns = new Map<string, (shotIndex: number, origin: Vec3, direction: Vec3, yawDegs: readonly number[], range: number) => void>();
     const spreads = new Map<string, (shotIndex: number, origin: Vec3, direction: Vec3) => readonly { yawDeg: number; scale: number }[] | null>();
     offs.push(
       ctx.services.provide('pathfinder', {
@@ -161,9 +166,14 @@ const pathfinderPlugin: GamePlugin = {
           // K10: master bolts are spent first and count as ammo.
           return { count: Math.max(0, inventory()!.count(PF.ammoItem)) + Math.max(0, inventory()!.count(PF.masterAmmoItem)), max: def.stackMax };
         },
-        addSpread: (id, fn) => {
+        addSpread: (id, fn, launched) => {
           spreads.set(id, fn);
-          return () => void (spreads.get(id) === fn && spreads.delete(id));
+          if (launched) launchedFns.set(id, launched);
+          return () => {
+            if (spreads.get(id) !== fn) return;
+            spreads.delete(id);
+            launchedFns.delete(id);
+          };
         },
       }),
     );
@@ -208,8 +218,14 @@ const pathfinderPlugin: GamePlugin = {
         }
         return null;
       },
+      sidesLaunched: (i, o, d, yaws, range) => {
+        for (const fn of launchedFns.values()) fn(i, o, d, yaws, range);
+      },
     });
-    offs.push(() => spreads.clear());
+    offs.push(() => {
+      spreads.clear();
+      launchedFns.clear();
+    });
     offs.push(ctx.damage.addModifier('pathfinder.crossbow', (req) => crossbow.cancelMelee(req), -190));
 
     const verbs = svc<{ registerAttackSet(classId: string, set: unknown): { ok: boolean; dispose?: () => void; reason?: string } }>('combatVerbs');

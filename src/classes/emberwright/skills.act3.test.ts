@@ -681,11 +681,13 @@ function updraftRig(over: Parameters<typeof world>[0] = {}) {
     stuns: [] as Array<{ id: string; spec: StatusSpec }>,
     bosses: new Set<string>(),
     outcome: 'hit' as DamageResult['outcome'],
+    afterHit: undefined as ((id: string) => void) | undefined,
   };
   const up = new Updraft({
     ...base,
     foes: () => w.foes.values(),
-    apply: (req) => (s.applied.push(req), result({ outcome: s.outcome, dealt: 0 })),
+    foe: (id) => w.foes.get(id) ?? null,
+    apply: (req) => (s.applied.push(req), s.afterHit?.(req.targetId), result({ outcome: s.outcome, dealt: 0 })),
     stun: (id, spec) => (s.stuns.push({ id, spec }), true),
     isBoss: (id) => s.bosses.has(id),
   } as UpdraftPorts);
@@ -728,6 +730,18 @@ describe('Updraft', () => {
     r.up.cast();
     expect(r.s.applied.map((q) => q.targetId)).toEqual(['ok']);
     expect(r.s.stuns.map((q) => q.id)).toEqual(['ok']);
+  });
+
+  it('re-reads the foe after the poise hit: one the hit put into a mercy state is not stunned', () => {
+    const r = updraftRig();
+    r.w.add(foe('flips', 1, 0));
+    r.w.add(foe('plain', -1, 0));
+    r.s.afterHit = (id) => {
+      if (id === 'flips') r.w.foes.set(id, foe(id, 1, 0, { mercy: 'staggered' }));
+    };
+    r.up.cast();
+    expect(r.s.applied.map((q) => q.targetId).sort()).toEqual(['flips', 'plain']);
+    expect(r.s.stuns.map((q) => q.id)).toEqual(['plain']);
   });
 
   it('no stun when the hit did not land (immune, blocked, parried)', () => {

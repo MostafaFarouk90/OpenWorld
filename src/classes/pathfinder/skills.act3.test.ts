@@ -16,7 +16,7 @@ const DT = 1 / 60;
 
 type Spread = ((i: number, o: { x: number; y: number; z: number }, d: { x: number; y: number; z: number }) => readonly SideBolt[] | null) | undefined;
 
-function rig(opts: { spread?: Spread; learned?: string[]; held?: boolean; master?: number; bolts?: number } = {}) {
+function rig(opts: { spread?: Spread; learned?: string[]; held?: boolean; master?: number; bolts?: number; sides?: NonNullable<ConstructorParameters<typeof Crossbow>[0]['sidesLaunched']> } = {}) {
   const player = new FakeActor('player', 'player');
   const actors = new FakeActors(player);
   const damage = new FakeDamage(actors);
@@ -49,6 +49,7 @@ function rig(opts: { spread?: Spread; learned?: string[]; held?: boolean; master
     toast: vi.fn(),
     now: () => now,
     ...(opts.spread ? { spread: opts.spread } : {}),
+    ...(opts.sides ? { sidesLaunched: opts.sides } : {}),
   });
   const swing = (index: number, seconds = 1.1): void => {
     cb.swingStarted(index);
@@ -149,7 +150,7 @@ describe('Triple Shot', () => {
   const make = (extra: { learned?: string[]; held?: boolean; master?: number; wOver?: Parameters<typeof world>[0] } = {}) => {
     w = world(extra.wOver);
     const triple = new TripleShot(w.base);
-    r = rig({ spread: triple.spread, learned: extra.learned ?? [], held: extra.held, master: extra.master });
+    r = rig({ spread: triple.spread, sides: triple.sidesLaunched, learned: extra.learned ?? [], held: extra.held, master: extra.master });
   };
   beforeEach(() => make());
 
@@ -163,11 +164,36 @@ describe('Triple Shot', () => {
     expect(by('mid')[0]).toMatchObject({ amount: PF.baseDamage, poise: 10, kind: 'melee', attackId: 'pathfinder.bolt.1' });
     for (const id of ['left', 'right']) {
       expect(by(id)).toHaveLength(1);
-      expect(by(id)[0]).toMatchObject({ amount: PF.baseDamage * 0.6, poise: 10, kind: 'melee', attackId: 'pathfinder.bolt.1' });
+      expect(by(id)[0]).toMatchObject({ amount: PF.baseDamage * 0.6, poise: 10 * 0.6, kind: 'melee', attackId: 'pathfinder.bolt.1' });
     }
     expect(r.bolts()).toBe(19);
     expect(r.fx.shot).toHaveBeenCalledTimes(1);
     expect(r.fx.tracer).toHaveBeenCalledTimes(3);
+  });
+
+  it('side bolts skip a foe in a mercy state (the bolt stops without a hit); a yielding foe on the centre line is still hit as shipped', () => {
+    const kneeling = r.polar('kneeling', 8, 7.5);
+    (kneeling as unknown as { mercyState: () => string }).mercyState = () => 'yielding';
+    r.polar('other', 8, -7.5);
+    r.swing(0);
+    expect(r.damage.applied.map((q) => q.targetId)).toEqual(['other']);
+    expect(r.damage.applied).toHaveLength(1);
+    const centre = r.hostile('centre', 20);
+    (centre as unknown as { mercyState: () => string }).mercyState = () => 'yielding';
+    r.damage.applied.length = 0;
+    r.swing(0);
+    expect(r.damage.applied.some((q) => q.targetId === 'centre' && q.amount === PF.baseDamage)).toBe(true);
+  });
+
+  it('side poise is scaled like damage: a wide body at 2 m takes at most 10 + 6 + 6 poise, never 30', () => {
+    r.hostile('wide', 2);
+    r.polar('wide2', 2, 7.5);
+    r.polar('wide3', 2, -7.5);
+    r.swing(0);
+    const sides = r.damage.applied.filter((q) => q.targetId !== 'wide');
+    expect(sides.length).toBeGreaterThan(0);
+    for (const h of sides) expect(h.poise).toBeCloseTo(6);
+    expect(r.damage.applied.find((q) => q.targetId === 'wide')!.poise).toBe(10);
   });
 
   it('the cone is 7.5 degrees: a foe at 12 degrees is hit by none of the three', () => {
@@ -198,7 +224,7 @@ describe('Triple Shot', () => {
     expect(r.marks.isMarked('mid') && r.marks.isMarked('side')).toBe(true);
     r.swing(0);
     expect(r.damage.applied.find((q) => q.targetId === 'mid')!.poise).toBe(10 + PF.falconEye.weakPoise);
-    expect(r.damage.applied.find((q) => q.targetId === 'side')!.poise).toBe(10);
+    expect(r.damage.applied.find((q) => q.targetId === 'side')!.poise).toBe(6);
     expect(r.marks.isMarked('mid')).toBe(false);
     expect(r.marks.isMarked('side')).toBe(true);
   });
@@ -270,20 +296,36 @@ describe('Triple Shot', () => {
     }
   });
 
-  it('spawns one effect per volley, at the muzzle, turned to the aim with its pitch, and reports the trigger', () => {
+  it('spread() itself spawns nothing; sidesLaunched spawns one effect with the aim, the actual launch range and the sides that launched', () => {
     const ww = world();
     const t = new TripleShot(ww.base);
     t.spread(0, { x: 1, y: 1.3, z: 2 }, { x: -1, y: 0, z: 0 });
+    expect(ww.w.effects).toEqual([]);
+    expect(ww.w.triggers).toEqual([PF.skillIds.tripleShot]);
+    t.sidesLaunched(0, { x: 1, y: 1.3, z: 2 }, { x: -1, y: 0, z: 0 }, [-7.5, 7.5], PF.bolt.range);
     expect(ww.w.effects).toHaveLength(1);
     const e = ww.w.effects[0];
     expect(e).toMatchObject({ id: 'triple-shot', at: { x: 1, y: 1.3, z: 2 } });
     // Facing -X means a yaw of +90 degrees (forward is (-sin yaw, -cos yaw)).
     expect(e.yaw).toBeCloseTo(Math.PI / 2);
+    expect(e.params).toMatchObject({ degrees: 7.5, length: PF.bolt.range, plus: 1, minus: 1 });
     expect(e.params.pitch).toBeCloseTo(0);
-    expect(e.params.degrees).toBe(7.5);
-    expect(ww.w.triggers).toEqual([PF.skillIds.tripleShot]);
-    t.spread(0, { x: 0, y: 0, z: 0 }, { x: 0, y: 0.5, z: -Math.sqrt(0.75) });
+    t.sidesLaunched(0, { x: 0, y: 0, z: 0 }, { x: 0, y: 0.5, z: -Math.sqrt(0.75) }, [7.5], 30);
     expect(ww.w.effects[1].params.pitch).toBeCloseTo(Math.asin(0.5));
+    expect(ww.w.effects[1].params).toMatchObject({ plus: 1, minus: 0 });
+    t.sidesLaunched(0, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: -1 }, [], 30);
+    expect(ww.w.effects).toHaveLength(2);
+  });
+
+  it('through the real crossbow: one effect per volley, only when side bolts launched (none when the volley has no ammo)', () => {
+    const effects = w.w.effects;
+    r.hostile('mid', 8);
+    r.swing(0);
+    expect(effects).toHaveLength(1);
+    expect(effects[0].params).toMatchObject({ plus: 1, minus: 1, length: PF.bolt.range });
+    const rr = rig({ bolts: 0, spread: new TripleShot(w.base).spread, sides: new TripleShot(w.base).sidesLaunched });
+    rr.swing(0);
+    expect(effects).toHaveLength(1);
   });
 
   it('an out-of-ammo single shot fires nothing: the port is not asked', () => {

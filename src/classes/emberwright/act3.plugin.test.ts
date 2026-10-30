@@ -329,6 +329,37 @@ describe('emberwright act 3 plugin: Temper Weapon on the real damage pipeline', 
     expect(foe2.health).toBeCloseTo(foe2.maxHealth - 13);
   });
 
+  it('picks from the active party, never a wave defender nearer than the companion', async () => {
+    const t = await boot();
+    t.asMaster();
+    ally(t, 'defender-1', 3, 0, 'defender');
+    ally(t, 'comp-a', 7, 0);
+    t.ctx.services.provide('companions' as never, { active: () => ['hrolf'], actorId: (id: string) => (id === 'hrolf' ? 'comp-a' : null) } as never);
+    const foe = t.enemy(-6);
+    expect(t.use(SKILL.temperWeapon)).toEqual({ ok: true });
+    t.run(5);
+    chop(t, 'comp-a', foe.id);
+    expect(foe.health).toBeCloseTo(foe.maxHealth - 13);
+    const h = foe.health;
+    chop(t, 'defender-1', foe.id, { attackId: 'defender.shot' });
+    expect(foe.health).toBeCloseTo(h - 10);
+  });
+
+  it('ends early when the tempered companion is downed (companions are immortal, so no actor.died)', async () => {
+    const t = await boot();
+    t.asMaster();
+    ally(t, 'comp-a', 3, 0);
+    t.ctx.services.provide('companions' as never, { active: () => ['hrolf'], actorId: () => 'comp-a' } as never);
+    const foe = t.enemy(-6);
+    t.use(SKILL.temperWeapon);
+    chop(t, 'comp-a', foe.id);
+    expect(foe.health).toBeCloseTo(foe.maxHealth - 13);
+    t.ctx.events.emit('companion.downed', { companionId: 'hrolf' });
+    const h = foe.health;
+    chop(t, 'comp-a', foe.id);
+    expect(foe.health).toBeCloseTo(h - 10);
+  });
+
   it('ends early when the companion dies, despawns or leaves the party; the staff then is not tempered either', async () => {
     for (const how of ['dies', 'despawns', 'leaves'] as const) {
       const t = await boot();

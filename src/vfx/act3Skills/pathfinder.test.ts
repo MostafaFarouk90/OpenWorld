@@ -39,7 +39,7 @@ describe('Pathfinder tier 4 presets (design 11.5)', () => {
       const base = scene.children.length;
       const h = vfx.spawnEffect(id, { position: { x: 0, y: 0, z: 0 }, yaw: 0 }, id === 'caltrop-field' ? { seconds: 10 } : {});
       const p = Math.max(vfx.points.liveCount, peak(vfx, LIFE[id] - 0.05));
-      expect(p, id).toBeGreaterThan(0);
+      if (PATHFINDER_T4_PARTICLES[id] > 0) expect(p, id).toBeGreaterThan(0);
       expect(p, id).toBeLessThanOrEqual(PATHFINDER_T4_PARTICLES[id]);
       expect(h.alive, id).toBe(true);
       frames(vfx, 0.3);
@@ -66,18 +66,28 @@ describe('Pathfinder tier 4 presets (design 11.5)', () => {
     frames(vfx, 1);
   });
 
-  it('triple-shot draws three tracers along the aim, the side ones turned by the cone angle', () => {
+  it('triple-shot draws only the two side tracers, turned by the cone angle, as long as the launch range', () => {
     const { vfx, scene } = make();
-    vfx.spawnEffect('triple-shot', { position: { x: 0, y: 1, z: 0 }, yaw: 0 }, { degrees: 7.5 });
+    vfx.spawnEffect('triple-shot', { position: { x: 0, y: 1, z: 0 }, yaw: 0 }, { degrees: 7.5, length: 38 });
     const group = scene.children.find((c) => c.type === 'Group') as THREE.Group;
-    const tracers = group.children.filter((c) => (c as THREE.Mesh).geometry?.type === 'BoxGeometry');
-    expect(tracers).toHaveLength(3);
+    const parts = group.children as THREE.Mesh[];
+    const tracers = parts.filter((c) => c.geometry?.type === 'BoxGeometry');
+    expect(tracers).toHaveLength(2);
+    expect(parts).toHaveLength(2);
+    expect(vfx.points.liveCount).toBe(0);
     const ends = tracers.map((m) => m.position.clone().multiplyScalar(2).sub(new THREE.Vector3(0, 1, 0)));
-    // Yaw 0 faces -Z: the centre tracer runs straight, the others are +-7.5 degrees to either side.
+    // Yaw 0 faces -Z: the two tracers are +-7.5 degrees to either side, and 38 m long.
     const angles = ends.map((e) => (Math.atan2(e.x, -e.z) * 180) / Math.PI).sort((a, b) => a - b);
     expect(angles[0]).toBeCloseTo(-7.5, 1);
-    expect(angles[1]).toBeCloseTo(0, 1);
-    expect(angles[2]).toBeCloseTo(7.5, 1);
+    expect(angles[1]).toBeCloseTo(7.5, 1);
+    for (const e of ends) expect(e.length()).toBeCloseTo(38, 1);
+  });
+
+  it('triple-shot draws a side only when that bolt launched', () => {
+    const { vfx, scene } = make();
+    vfx.spawnEffect('triple-shot', { position: { x: 0, y: 1, z: 0 }, yaw: 0 }, { plus: 1, minus: 0 });
+    const group = scene.children.find((c) => c.type === 'Group') as THREE.Group;
+    expect(group.children).toHaveLength(1);
   });
 
   it('stop removes the meshes at once and the effect emits nothing afterwards', () => {

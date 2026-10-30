@@ -37,6 +37,11 @@ export interface CrossbowPorts {
    * null (or empty): the shipped behaviour exactly.
    */
   spread?(shotIndex: number, origin: Vec3, direction: Vec3): readonly { yawDeg: number; scale: number }[] | null;
+  /**
+   * K11 PR 2, optional. Called once per release, after the launches, with the yaw offsets (degrees) of the side bolts that actually
+   * launched (never called with none) and the launch range in metres, so a visual can draw exactly those. The centre bolt's tracer and the muzzle flare are the crossbow's own.
+   */
+  sidesLaunched?(shotIndex: number, origin: Vec3, direction: Vec3, yawDegs: readonly number[], range: number): void;
 }
 
 const CLIPS = new Set(PATHFINDER_ATTACKS.map((a) => a.clip));
@@ -116,17 +121,26 @@ export class Crossbow {
     const amount = PF.baseDamage * spec.damage * (steady ? PF.steadyShotScale : 1) * (this.p.ammo.lastWasMaster ? PF.masterBoltScale : 1);
     const attackId = `pathfinder.bolt.${this.index + 1}`;
     const extras = this.spreadOf(origin, dir);
-    /** The centre bolt (`side` null) is the shipped bolt; a side bolt is plain: scaled damage, no pierce, no blast, no mark. */
-    const fire = (aim: THREE.Vector3, side: number | null): void => {
+    const launchedSides: number[] = [];
+    /**
+     * The centre bolt (`side` null) is the shipped bolt; a side bolt is plain: damage and poise both scaled by `side`, no pierce,
+     * no blast, no mark, and it hits nothing in a mercy state (it stops on such a foe without a hit). Two bolts of one volley may
+     * hit the same body (damage and poise each at their own scale).
+     */
+    const fire = (aim: THREE.Vector3, side: number | null, yawDeg = 0): void => {
       const horizontal = new THREE.Vector3(aim.x, 0, aim.z).normalize();
       let passes = 0;
       const pierced = new Set<string>();
       const strike = (targetId: string, at: Vec3, scale: number): void => {
+        if (side !== null) {
+          const mercy = (this.p.actors.get(targetId) as { mercyState?: () => string } | undefined)?.mercyState?.();
+          if (mercy !== undefined && mercy !== 'none') return;
+        }
         this.p.damage.apply({
           attackerId: this.p.playerId(),
           targetId,
           amount: amount * scale * (side ?? 1),
-          poise: spec.poise + (side === null ? this.p.marks.consume(targetId) : 0),
+          poise: side === null ? spec.poise + this.p.marks.consume(targetId) : spec.poise * side,
           kind: 'melee',
           attackId,
           point: new THREE.Vector3(at.x, at.y, at.z),
@@ -156,9 +170,11 @@ export class Crossbow {
         },
       });
       if (launched && side === null) this.p.fx.shot(origin);
+      if (launched && side !== null) launchedSides.push(yawDeg);
     };
     fire(dir, null);
-    for (const e of extras) fire(dir.clone().applyAxisAngle(UP, THREE.MathUtils.degToRad(e.yawDeg)), e.scale);
+    for (const e of extras) fire(dir.clone().applyAxisAngle(UP, THREE.MathUtils.degToRad(e.yawDeg)), e.scale, e.yawDeg);
+    if (launchedSides.length > 0) this.p.sidesLaunched?.(this.index, origin, dir, launchedSides, PF.bolt.range);
   }
 
   /** The port's side bolts, cleaned: finite angles and positive scales only, at most four. */

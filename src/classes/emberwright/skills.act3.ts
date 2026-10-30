@@ -192,7 +192,7 @@ export interface TemperWeaponPorts extends Act3Ports {
  * kill and left the foe in no mercy state, the foe is ignited (`emberwright.temperWeapon.ignite`, 2 a second for 3 s), unless it
  * already burns from any `emberwright.*` ignite (Ember Bolt, Fire Wall, Cinder Rain, this skill's own). The check runs on the
  * next tick, not inside the damage event, because Ember Bolt applies its own ignite just after its hit resolves. One at a time;
- * a recast moves it. Ends on expiry, on the companion dying, despawning or leaving the party, a class change, a respec, a load,
+ * a recast moves it. Candidates are the active party only (never a wave defender). Ends on expiry, on the companion dying, despawning, being downed (companions are immortal, so `companion.downed` is the signal) or leaving the party, a class change, a respec, a load,
  * the player's death and dispose.
  */
 export class TemperWeapon {
@@ -299,6 +299,8 @@ export class TemperWeapon {
 
 export interface UpdraftPorts extends Act3Ports {
   foes(): Iterable<FoeView>;
+  /** The foe as it is now (re-read after the poise hit, as Cinder Rain does). */
+  foe(id: string): FoeView | null;
   apply(req: DamageRequest): DamageResult | null;
   /** `status.apply`. */
   stun(targetId: string, spec: StatusSpec): boolean;
@@ -309,8 +311,8 @@ export interface UpdraftPorts extends Act3Ports {
 /**
  * Updraft. Every live hostile within 4 m (horizontal distance <= 4, inclusive, and within 3 m vertically) is hit for 0 damage
  * and 30 poise (a `spell` request, attack id `emberwright.updraft`, so a foe with 30 poise or less staggers) and, when that
- * hit landed, is stunned for 1.5 s under `emberwright.updraft.stun`, unless it is a boss (poise only). A foe in any mercy state
- * is skipped. The player is never touched and no movement mode is set; the lift is drawn by the VFX column (open point A).
+ * hit landed, is stunned for 1.5 s under `emberwright.updraft.stun`, unless it is a boss (poise only) or the poise hit itself put it
+ * into a mercy state (re-read after the hit). A foe in any mercy state before the hit is skipped. The player is never touched and no movement mode is set; the lift is drawn by the VFX column (open point A).
  * Nothing it owns starts with 'updraft.', which is the glide thermals' prefix.
  */
 export class Updraft {
@@ -328,7 +330,9 @@ export class Updraft {
       const dz = foe.z - f.z;
       if (dx * dx + dz * dz > r2 + EPS || Math.abs(foe.y - f.y) > UPDRAFT.halfHeight) continue;
       const r = this.p.apply({ attackerId: me, targetId: foe.id, amount: 0, poise: UPDRAFT.poise, kind: 'spell', attackId: UPDRAFT.attackId });
-      if (r && r.outcome === 'hit' && !this.p.isBoss(foe.id)) {
+      // Re-read the foe: the poise hit may have put a mercy-on-stagger foe into a mercy state, and a yielding foe is never controlled.
+      const after = r && r.outcome === 'hit' && !this.p.isBoss(foe.id) ? this.p.foe(foe.id) : null;
+      if (after && clean(after)) {
         this.p.stun(foe.id, { id: UPDRAFT.stunId, kind: 'stun', seconds: UPDRAFT.stunSeconds, sourceId: me });
       }
     }

@@ -22,7 +22,11 @@ interface VfxLike {
   ): { stop(): void } | undefined;
 }
 interface PathfinderLike {
-  addSpread?(id: string, fn: (i: number, o: { x: number; y: number; z: number }, d: { x: number; y: number; z: number }) => readonly { yawDeg: number; scale: number }[] | null): () => void;
+  addSpread?(
+    id: string,
+    fn: (i: number, o: { x: number; y: number; z: number }, d: { x: number; y: number; z: number }) => readonly { yawDeg: number; scale: number }[] | null,
+    launched?: (i: number, o: { x: number; y: number; z: number }, d: { x: number; y: number; z: number }, yawDegs: readonly number[], range: number) => void,
+  ): () => void;
 }
 
 let cleanup: (() => void) | null = null;
@@ -33,6 +37,11 @@ const scratch = new THREE.Vector3();
  * second registration); this wires their behaviour. Triple Shot rides the Crossbow's `spread` port (through the `pathfinder`
  * service's `addSpread`) and Sure Foot the `combatVerbs` knockback filter; both are added when the services are there and
  * removed on dispose. Other threads' services are read loosely and at use.
+ *
+ * Edge cases, all harmless: Caltrop Field's last slow (up to 1 s) stays on a foe that yields or is released inside the field; Sure
+ * Foot reads `ctx.player.moving`, which is move input, so pressing into a wall or being rooted still counts as moving; and after
+ * this plugin is set up again, the `pathfinder` and `combatVerbs` bindings are re-attached by a retry every 0.5 s, so Triple Shot
+ * and Sure Foot are off for up to 0.5 s.
  */
 const pathfinderAct3Plugin: GamePlugin = {
   id: 'pathfinder-act3',
@@ -124,7 +133,7 @@ const pathfinderAct3Plugin: GamePlugin = {
         offSpread?.();
         offSpread = null;
         spreadHost = pf;
-        if (pf?.addSpread) offSpread = pf.addSpread(PF.skillIds.tripleShot, triple.spread);
+        if (pf?.addSpread) offSpread = pf.addSpread(PF.skillIds.tripleShot, triple.spread, triple.sidesLaunched);
       }
       const v = verbs();
       if (v !== filterHost) {

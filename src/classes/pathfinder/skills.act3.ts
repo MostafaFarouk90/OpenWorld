@@ -43,20 +43,34 @@ const TRIPLE: readonly SideBolt[] = Object.freeze([
  * bolts at plus and minus 7.5 degrees and x0.6 damage; every other shot, class or state answers null so the crossbow fires as
  * shipped. The crossbow takes one bolt of ammo for the volley, keeps attack id `pathfinder.bolt.1` for all three, applies
  * Steady Shot and the master-bolt scale to all three, spends a Falcon Eye mark on the centre bolt only and lets the side
- * bolts neither pierce nor blast. The volley's visual (three tracers, one muzzle flare) is spawned once from here.
+ * bolts neither pierce nor blast, and both their damage and their poise are x0.6 (so a point-blank volley on one wide body deals
+ * up to 2.2x damage and 2.2x poise, not 3x). A side bolt never hits a foe in a mercy state. The volley's visual is the two SIDE
+ * tracers only (the crossbow draws the centre tracer and the flare), spawned by `sidesLaunched` for the side bolts that actually
+ * launched, as long as the launch range.
  */
 export class TripleShot {
   constructor(private readonly p: Act3Ports) {}
 
   /** `CrossbowPorts.spread`. */
-  spread = (shotIndex: number, origin: Vec3, direction: Vec3): readonly SideBolt[] | null => {
+  spread = (shotIndex: number, _origin: Vec3, _direction: Vec3): readonly SideBolt[] | null => {
     if (shotIndex !== 0 || !this.p.isPathfinder() || !this.p.learned(PF.skillIds.tripleShot)) return null;
+    this.p.reportTrigger?.(PF.skillIds.tripleShot);
+    return TRIPLE;
+  };
+
+  /** `CrossbowPorts.sidesLaunched`: draws a tracer for each side bolt that launched. */
+  sidesLaunched = (shotIndex: number, origin: Vec3, direction: Vec3, yawDegs: readonly number[], range: number): void => {
+    if (shotIndex !== 0 || yawDegs.length === 0) return;
     // yaw 0 faces -Z, so forward is (-sin yaw, -cos yaw).
     const yaw = Math.atan2(-direction.x, -direction.z);
     const pitch = Math.asin(Math.max(-1, Math.min(1, direction.y)));
-    this.p.effect?.(PF.tripleShot.effectId, origin, yaw, { pitch, degrees: PF.tripleShot.yawDeg });
-    this.p.reportTrigger?.(PF.skillIds.tripleShot);
-    return TRIPLE;
+    this.p.effect?.(PF.tripleShot.effectId, origin, yaw, {
+      pitch,
+      degrees: PF.tripleShot.yawDeg,
+      length: range,
+      plus: yawDegs.some((d) => d > 0) ? 1 : 0,
+      minus: yawDegs.some((d) => d < 0) ? 1 : 0,
+    });
   };
 }
 
