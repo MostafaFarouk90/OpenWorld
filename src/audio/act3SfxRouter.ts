@@ -201,6 +201,12 @@ export class Act3SfxRouter {
     this.flat(EVENT_SFX_ACT3.ferryBell);
   }
 
+  /** `movement.mode`: a ride or glide that ends without its own end event (a teleport cut it short) still stops its loop. */
+  movementMode(e: { mode: string; previous: string }): void {
+    if (e.previous === 'ferry' && e.mode !== 'ferry') this.stopLoop('ferry');
+    if (e.previous === 'glide' && e.mode !== 'glide') this.stopLoop('glide');
+  }
+
   hathren(e: { beat: string }): void {
     const key = own(HATHREN_BEAT_SFX, e.beat);
     if (key) this.flat(key);
@@ -213,7 +219,9 @@ export class Act3SfxRouter {
       this.stopLoop(name);
       return;
     }
-    if (this.loops.has(name)) return;
+    // The audio manager may have auto-detached the recorded emitter (object left the scene) and has no liveness query:
+    // detach-then-attach is idempotent (detach of an unknown id is ignored).
+    this.stopLoop(name);
     const obj = this.ports.object(e.actorId);
     if (obj) this.startLoop(name, LOOP_SFX_ACT3.flight, obj);
     else this.flat(LOOP_SFX_ACT3.flight);

@@ -111,6 +111,7 @@ const plugin: GamePlugin = {
       ev.on('glide.ended', () => router.glideEnded()),
       ev.on('ferry.boarded', () => router.ferryBoarded()),
       ev.on('ferry.arrived', () => router.ferryArrived()),
+      ev.on('movement.mode', (e) => router.movementMode(e)),
       ev.on('wyrm.hathren', (e) => router.hathren(e)),
       ev.on('dragon.flight', (e) => router.dragonFlight(e)),
       ev.on('wyrm.drake.chainStruck', () => router.drakeChainStruck()),
@@ -119,6 +120,8 @@ const plugin: GamePlugin = {
       () => router.stopAll(),
     );
 
+    // Set by a load or a respawn (the music director resets its bosses on both): the next tick re-asserts the trial mix.
+    let recheckTrial = false;
     // The wade slosh follows the player's speed: polled each tick from the feet (water service state says whether wading).
     let lastX = NaN;
     let lastZ = NaN;
@@ -133,6 +136,10 @@ const plugin: GamePlugin = {
           lastX = f.x;
           lastZ = f.z;
           router.wadeStep(dt, speed, ctx.services.get('water')?.state === 'wading');
+          if (recheckTrial) {
+            recheckTrial = false;
+            reassertTrial();
+          }
         },
       }),
     );
@@ -144,7 +151,28 @@ const plugin: GamePlugin = {
       if (release !== null) clearTimeout(release);
       release = null;
     };
+    /** After the director's reset: the trials service, not this plugin's memory, says whether the trial still runs. */
+    const reassertTrial = () => {
+      let running = false;
+      try {
+        running = ctx.services.get('trials')?.state()?.id === YSMERYTH_TRIAL_ID;
+      } catch {
+        // no trials service: nothing to restore
+      }
+      clearRelease();
+      bossOn = running;
+      if (!running) return; // the director was reset already, so no setBoss(false) is needed
+      try {
+        ctx.services.get('music')?.setBoss(true, YSMERYTH_TRIAL_ID); // idempotent for an id already held
+      } catch {
+        // as above
+      }
+    };
     offs.push(
+      ev.on('save.loaded', () => void (recheckTrial = true)),
+      ev.on('actor.revived', (e) => {
+        if (e.actorId === ctx.actors.player.id && e.reason === 'respawn') recheckTrial = true;
+      }),
       ev.on('trial.started', (e) => {
         if (e.trialId !== YSMERYTH_TRIAL_ID) return;
         clearRelease();
