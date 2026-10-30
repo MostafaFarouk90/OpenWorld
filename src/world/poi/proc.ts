@@ -101,6 +101,42 @@ export function buildProc(kind: ProcKind, scale = 1): THREE.Group {
       g.add(rune);
       break;
     }
+    case 'peat-stack': {
+      // Temporary stand-in for the generated `greyfen-peat-stack` (prompt list, Act 3 POIs): cut blocks drying in a stack.
+      const m = mat(0x3b2a1c);
+      for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3 - i; j++) {
+          const block = box(0.5, 0.3, 0.9, m, i * 0.3);
+          block.position.x = -0.55 + j * 0.55 + i * 0.27;
+          g.add(block);
+        }
+      }
+      break;
+    }
+    case 'glass-vein': {
+      // Temporary stand-in for the generated `dragonspine-glass-vein`: black rock split by a glowing forge-glass seam.
+      const rock = mat(0x1d1b1a);
+      g.add(box(3.2, 1.4, 1.6, rock));
+      const seam = mat(0xffa040, 0xff7010, 1.3);
+      for (let i = 0; i < 5; i++) {
+        const c = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.9, 5), seam);
+        c.position.set(-1.2 + i * 0.6, 1.5, (i % 2 ? 0.2 : -0.2));
+        c.rotation.z = (i - 2) * 0.18;
+        g.add(c);
+      }
+      g.add(box(2.8, 0.08, 0.2, seam, 1.35));
+      break;
+    }
+    case 'egg-shells': {
+      const m = mat(0xe6e2d4);
+      for (let i = 0; i < 4; i++) {
+        const e = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), m);
+        e.position.set(Math.cos(i * 1.7) * 0.3, 0.05, Math.sin(i * 1.7) * 0.3);
+        e.rotation.x = i % 2 ? Math.PI : 0.4;
+        g.add(e);
+      }
+      break;
+    }
     case 'ember-glow': {
       const m = mat(0xff8a30, 0xff6a10, 1.2);
       m.transparent = true;

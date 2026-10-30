@@ -6,7 +6,11 @@ export const POI_TEMPLATES = ['camp', 'cave', 'ruin', 'lore-stone', 'wyrm-nest',
 export type PoiTemplate = (typeof POI_TEMPLATES)[number];
 
 /** Asset ids use the ModelLibrary prefixes (`hex/`, `dun/`, `hal/`). `proc:` parts are built from primitives. */
-export type ProcKind = 'bones' | 'eggs' | 'bedroll' | 'brazier' | 'cage' | 'net' | 'fire-ring' | 'cave-mouth' | 'ember-glow' | 'cache' | 'lore-stone';
+export type ProcKind = 'bones' | 'eggs' | 'bedroll' | 'brazier' | 'cage' | 'net' | 'fire-ring' | 'cave-mouth' | 'ember-glow' | 'cache' | 'lore-stone'
+  /** Act 3 (K2), temporary stand-ins until the generated `greyfen-peat-stack` and `dragonspine-glass-vein` land. */
+  | 'peat-stack'
+  | 'glass-vein'
+  | 'egg-shells';
 
 export interface PoiPart {
   /** `hex/…`, `dun/…`, `hal/…` or `proc:<ProcKind>`. */
@@ -17,6 +21,8 @@ export interface PoiPart {
   scale: number;
   /** Metres above the ground at (x, z). */
   dy?: number;
+  /** Act 3 (K2): `dy` counts from the ground under the site's ledge at its highest, so the part stands on the ledge's built top. */
+  onLedge?: boolean;
 }
 
 export type PoiTint = 'traveller' | 'hunter' | 'ash-cultist';

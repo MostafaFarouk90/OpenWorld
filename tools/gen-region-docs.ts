@@ -11,6 +11,7 @@ import { DEADROAD_DOC, DEADROAD_LAYOUT } from '../src/region/deadroad.layout';
 import { ACT2_WORLD_DOC, ACT2_WORLD_LAYOUT } from '../src/region/act2/act2World.layout';
 import { ACT3_WORLD_DOC, ACT3_WORLD_LAYOUT } from '../src/region/act3/act3World.layout';
 import { GREYFEN_FAUNA_DOC, GREYFEN_FAUNA_LAYOUT } from '../src/enemies/fen/greyfenFauna.layout';
+import { ACT3_POI_DOC, ACT3_POI_LAYOUT } from '../src/world/poi/act3/place';
 
 writeFileSync(new URL('../src/region/ANCHORS.md', import.meta.url), renderAnchorsDoc());
 writeFileSync(new URL('../src/harrowmark/ANCHORS.md', import.meta.url), harrowmarkAnchorsDoc());
@@ -23,3 +24,4 @@ writeFileSync(new URL('../src/oldsmoke/mines/ANCHORS.md', import.meta.url), mine
 writeFileSync(new URL('../src/enemies/fen/GREYFEN_FAUNA_ANCHORS.md', import.meta.url), renderAnchorsDoc(GREYFEN_FAUNA_LAYOUT, GREYFEN_FAUNA_DOC));
 writeFileSync(new URL('../src/greyfen/ANCHORS.md', import.meta.url), greyfenAnchorsDoc());
 writeFileSync(new URL('../src/dragonspine/ANCHORS.md', import.meta.url), dragonspineAnchorsDoc());
+writeFileSync(new URL('../src/world/poi/act3/ANCHORS.md', import.meta.url), renderAnchorsDoc(ACT3_POI_LAYOUT, ACT3_POI_DOC));
