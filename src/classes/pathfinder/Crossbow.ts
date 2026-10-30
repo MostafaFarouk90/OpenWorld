@@ -30,11 +30,19 @@ export interface CrossbowPorts {
   fx: CrossbowFx;
   toast(textKey: string): void;
   now(): number;
+  /**
+   * K11 PR 2 (Triple Shot), optional. Asked once per release with the shot index (0 = the single shot), the muzzle and the unit aim direction: extra side bolts to fire
+   * for the same ammo, each a yaw offset in degrees from the aim and a damage scale. Side bolts neither pierce nor blast and
+   * never consume a Falcon Eye mark; the attack id, the steady and the master-bolt scaling are the centre bolt's. Absent or
+   * null (or empty): the shipped behaviour exactly.
+   */
+  spread?(shotIndex: number, origin: Vec3, direction: Vec3): readonly { yawDeg: number; scale: number }[] | null;
 }
 
 const CLIPS = new Set(PATHFINDER_ATTACKS.map((a) => a.clip));
 const HINT_GAP_SECONDS = 6;
 const UP = new THREE.Vector3(0, 1, 0);
+const NONE: readonly { yawDeg: number; scale: number }[] = [];
 
 /**
  * The Pathfinder's four crossbow shots. The attack set is a melee-window model, so a swing is a ranged clip whose window
@@ -107,44 +115,57 @@ export class Crossbow {
     const steady = this.index === 0 && this.p.learned(PF.skillIds.steadyShot) && this.p.attackHeld();
     const amount = PF.baseDamage * spec.damage * (steady ? PF.steadyShotScale : 1) * (this.p.ammo.lastWasMaster ? PF.masterBoltScale : 1);
     const attackId = `pathfinder.bolt.${this.index + 1}`;
-    const horizontal = new THREE.Vector3(dir.x, 0, dir.z).normalize();
-    let passes = 0;
-    const pierced = new Set<string>();
-    const strike = (targetId: string, at: Vec3, scale: number): void => {
-      this.p.damage.apply({
-        attackerId: this.p.playerId(),
-        targetId,
-        amount: amount * scale,
-        poise: spec.poise + this.p.marks.consume(targetId),
-        kind: 'melee',
-        attackId,
-        point: new THREE.Vector3(at.x, at.y, at.z),
-        direction: horizontal.clone(),
+    const extras = this.spreadOf(origin, dir);
+    /** The centre bolt (`side` null) is the shipped bolt; a side bolt is plain: scaled damage, no pierce, no blast, no mark. */
+    const fire = (aim: THREE.Vector3, side: number | null): void => {
+      const horizontal = new THREE.Vector3(aim.x, 0, aim.z).normalize();
+      let passes = 0;
+      const pierced = new Set<string>();
+      const strike = (targetId: string, at: Vec3, scale: number): void => {
+        this.p.damage.apply({
+          attackerId: this.p.playerId(),
+          targetId,
+          amount: amount * scale * (side ?? 1),
+          poise: spec.poise + (side === null ? this.p.marks.consume(targetId) : 0),
+          kind: 'melee',
+          attackId,
+          point: new THREE.Vector3(at.x, at.y, at.z),
+          direction: horizontal.clone(),
+        });
+        this.p.fx.hit(at);
+      };
+      const launched = this.p.projectiles.launch({
+        casterId: this.p.playerId(),
+        origin,
+        direction: aim,
+        speed: PF.bolt.speed,
+        lifetime: PF.bolt.range / PF.bolt.speed,
+        radius: PF.bolt.radius,
+        pierce: side === null && this.p.learned(PF.skillIds.piercingBolt) ? PF.pierce.extra : 0,
+        onPass: (h) => {
+          if (this.disposed) return;
+          passes++;
+          pierced.add(h.actorId);
+          strike(h.actorId, h.point, 1);
+        },
+        onHit: (r: ProjectileHit) => {
+          if (this.disposed) return;
+          this.p.fx.tracer(origin, r.point);
+          if (r.kind === 'actor') strike(r.actorId, r.point, passes > 0 ? PF.pierce.secondScale : 1);
+          if (spec.blast && side === null) this.blast(r, amount, spec.poise, attackId, pierced);
+        },
       });
-      this.p.fx.hit(at);
+      if (launched && side === null) this.p.fx.shot(origin);
     };
-    const launched = this.p.projectiles.launch({
-      casterId: this.p.playerId(),
-      origin,
-      direction: dir,
-      speed: PF.bolt.speed,
-      lifetime: PF.bolt.range / PF.bolt.speed,
-      radius: PF.bolt.radius,
-      pierce: this.p.learned(PF.skillIds.piercingBolt) ? PF.pierce.extra : 0,
-      onPass: (h) => {
-        if (this.disposed) return;
-        passes++;
-        pierced.add(h.actorId);
-        strike(h.actorId, h.point, 1);
-      },
-      onHit: (r: ProjectileHit) => {
-        if (this.disposed) return;
-        this.p.fx.tracer(origin, r.point);
-        if (r.kind === 'actor') strike(r.actorId, r.point, passes > 0 ? PF.pierce.secondScale : 1);
-        if (spec.blast) this.blast(r, amount, spec.poise, attackId, pierced);
-      },
-    });
-    if (launched) this.p.fx.shot(origin);
+    fire(dir, null);
+    for (const e of extras) fire(dir.clone().applyAxisAngle(UP, THREE.MathUtils.degToRad(e.yawDeg)), e.scale);
+  }
+
+  /** The port's side bolts, cleaned: finite angles and positive scales only, at most four. */
+  private spreadOf(origin: Vec3, dir: Vec3): readonly { yawDeg: number; scale: number }[] {
+    const raw = this.p.spread?.(this.index, origin, dir);
+    if (!raw || raw.length === 0) return NONE;
+    return raw.filter((e) => Number.isFinite(e.yawDeg) && Number.isFinite(e.scale) && e.scale > 0).slice(0, 4);
   }
 
   private blast(r: ProjectileHit, amount: number, poise: number, attackId: string, skip: ReadonlySet<string>): void {

@@ -20,7 +20,7 @@ const DT = 1 / 60;
 afterEach(() => resetClassSkills());
 
 describe('Emberwright tier 3 skill rows', () => {
-  it('cost 2, require their tier 2 skill, are active and available; tier 4 is refused', () => {
+  it('cost 2, require their tier 2 skill, are active and available; tier 4 now has its costs but stays behind the master\'s book', () => {
     const rows = buildEmberwrightSkills();
     for (const [id, req] of [[SKILL.fireWall, SKILL.flameLash], [SKILL.ironFamiliar, SKILL.anvilDrop], [SKILL.smokeScreen, SKILL.warmBreath]] as const) {
       const row = rows.find((s) => s.id === id)!;
@@ -29,11 +29,17 @@ describe('Emberwright tier 3 skill rows', () => {
     expect(rows.find((s) => s.id === SKILL.fireWall)).toMatchObject({ emberCost: 25, cooldown: 20 });
     expect(rows.find((s) => s.id === SKILL.ironFamiliar)).toMatchObject({ emberCost: 30, cooldown: 40 });
     expect(rows.find((s) => s.id === SKILL.smokeScreen)).toMatchObject({ emberCost: 20, cooldown: 25 });
+    // Tier 4 (K11 PR 2): costs and cooldowns on the rows, still gated by the master's book (K0).
+    for (const [id, ember, cooldown, req] of [[SKILL.cinderRain, 30, 22, SKILL.fireWall], [SKILL.temperWeapon, 20, 30, SKILL.ironFamiliar], [SKILL.updraft, 20, 18, SKILL.smokeScreen]] as const) {
+      const row = rows.find((s) => s.id === id)!;
+      expect([row.tier, row.kind, row.emberCost, row.cooldown, row.requires]).toEqual([4, 'active', ember, cooldown, req]);
+      expect(row.availableWhen).not.toBe(true);
+    }
     registerClassSkills('emberwright', rows);
     const { p } = makeProgression();
     p.setClass('emberwright');
     p.grantSkillPoint(30, 'test');
-    for (const id of ['cinderRain', 'temperWeapon', 'updraft']) expect(p.learn(`emberwright.${id}`)).toEqual({ ok: false, reason: 'master', textKey: 'hud.skills.act3' });
+    for (const id of ['cinderRain', 'temperWeapon', 'updraft']) expect(p.learn(`emberwright.${id}`), id).toEqual({ ok: false, reason: 'master', textKey: 'hud.skills.act3' });
     expect(p.learn(SKILL.fireWall)).toEqual({ ok: false, reason: 'missing-prereq' });
     for (const id of [SKILL.emberBolt, SKILL.flameLash, SKILL.fireWall]) expect(p.learn(id)).toEqual({ ok: true });
     expect(getSkill(SKILL.fireWall)?.cost).toBe(2);
