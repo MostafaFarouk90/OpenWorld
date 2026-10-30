@@ -15,6 +15,9 @@ import './types';
 
 let teardown: (() => void) | null = null;
 
+/** How long a ferry-stop bark waits for a companion to be placed again. */
+export const PENDING_BARK_SECONDS = 5;
+
 export default {
   id: 'companions-act3',
   dependsOn: ['core', 'companions'],
@@ -32,21 +35,40 @@ export default {
     try {
       ctx.strings.register('en', COMPANION_ACT3_STRINGS_EN);
       // ---- movement modes (v0.7 item 25): hidden while the rule says so, back behind the player when it ends.
+      // Applied on the event and re-applied each tick (idempotent), so a join or spawn during a mode follows it too.
       const hideForMode = (mode: keyof typeof MOVEMENT_MODE_RULES) => {
         const hide = MOVEMENT_MODE_RULES[mode]?.companions === 'hidden';
         for (const c of companionControllers()) c.hideForMode(hide);
       };
+      const currentMode = () => ctx.services.get('movementMode')?.current ?? 'walk';
       offs.push(ctx.events.on('movement.mode', ({ mode }) => hideForMode(mode)));
 
-      // ---- event barks: the trial, the reveal, a ferry stop.
+      // ---- event barks: the trial, the reveal, a ferry stop. The ferry stop arrives in the same call that ends the
+      // ferry mode, before the companions are placed again, so its bark waits (up to PENDING_BARK_SECONDS) until one of
+      // them is visible.
+      const sayNow = (place: string) => {
+        for (const c of companionControllers()) c.sayAt(place);
+      };
+      let pending: { place: string; left: number } | null = null;
       offs.push(
         listenEventBarks({
           on: (type, fn) => ctx.events.on(type, fn),
           say: (place) => {
-            for (const c of companionControllers()) c.sayAt(place);
+            if (place === 'ferry') pending = { place, left: PENDING_BARK_SECONDS };
+            else sayNow(place);
           },
         }),
+        ctx.events.on('save.loaded', () => void (pending = null)),
       );
+      const tickPending = (dt: number) => {
+        if (!pending) return;
+        pending.left -= dt;
+        if (companionControllers().some((c) => c.joined && !c.isHidden)) {
+          const place = pending.place;
+          pending = null;
+          sayNow(place);
+        } else if (pending.left <= 0) pending = null;
+      };
 
       // ---- the Quenched aura (Q13): K5 is the sole owner of the Burn gain slot.
       const aura = new QuenchedAura({
@@ -101,6 +123,8 @@ export default {
           fixedPhase: 'rules',
           order: 10,
           fixedUpdate: (dt) => {
+            hideForMode(currentMode());
+            tickPending(dt);
             aura.ensureRegistered();
             deserter.fixedUpdate(dt);
           },

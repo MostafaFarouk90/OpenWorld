@@ -98,9 +98,17 @@ describe("Hrolf's master-book talk", () => {
   });
 
   it('a book already given (by another route) is never given again: the Act 2 start holds', () => {
-    for (const flags of [{ ...gate, [BOOK]: true }, {}, { 'story.gate.a3': false }]) {
+    const cases: Record<string, FlagValue>[] = [{ ...gate, [BOOK]: true }, {}, { 'story.gate.a3': false }];
+    for (const flags of cases) {
       const w = world(flags);
       expect(firstStart(extended(HROLF_DIALOGUE_ID), w), JSON.stringify(flags)).toBe(firstStart(BASE, w));
+    }
+  });
+
+  it('his open R11 or R07 speaks before the book (the book waits for the next talk)', () => {
+    for (const q of ['r11', 'r07']) {
+      const w = world(gate, { [q]: 'active' });
+      expect(firstStart(extended(HROLF_DIALOGUE_ID), w), q).toBe(firstStart(BASE, w));
     }
   });
 

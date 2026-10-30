@@ -16,8 +16,14 @@ const A = (t: string): Line => ({ s: 'aelfreda', t });
 const W = (t: string): Line => ({ s: 'deserter', t });
 const C = (t: string): Line => ({ s: 'cael', t });
 
+/** Open from Act 3 until the book is given; his open Act 2 quests (R11, R07) speak first. */
 export const hrolfBookOpen: Condition = {
-  all: [{ flag: 'story.gate.a3', equals: true }, { not: { flag: 'trainer.warden.masterBook', equals: true } }],
+  all: [
+    { flag: 'story.gate.a3', equals: true },
+    { not: { flag: 'trainer.warden.masterBook', equals: true } },
+    { not: { quest: 'r11', state: 'active' } },
+    { not: { quest: 'r07', state: 'active' } },
+  ],
 };
 
 const HROLF_BOOK = buildTree({

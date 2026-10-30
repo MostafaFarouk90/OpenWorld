@@ -292,5 +292,5 @@ export function act3BarkStrings(id: string): Record<string, string> {
 
 /** Strings the `companions-act3` plugin registers itself. */
 export const COMPANION_ACT3_STRINGS_EN: Record<string, string> = {
-  'hud.aura.quenched.on': "Hathren's Quenched aura: Burn builds a quarter slower.",
+  'companion.a3.quenched.toast': "Hathren's Quenched aura: Burn builds a quarter slower.",
 };

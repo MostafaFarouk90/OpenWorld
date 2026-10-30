@@ -9,7 +9,7 @@ export const QUENCHED_GREYFEN_FLAG = 'story.m26.complete';
 export const QUENCHED_EVERYWHERE_FLAG = 'story.m34.complete';
 /** Set the first time the aura is on; the toast is shown once ever, never on a load. */
 export const QUENCHED_SEEN_FLAG = 'companions.a3.quenchedSeen';
-export const QUENCHED_TOAST_KEY = 'hud.aura.quenched.on';
+export const QUENCHED_TOAST_KEY = 'companion.a3.quenched.toast';
 
 /** Whether the aura holds for a player standing in `regionId`. */
 export function quenchedOn(flag: (key: string) => unknown, regionId: string | null): boolean {

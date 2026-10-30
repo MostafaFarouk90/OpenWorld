@@ -536,13 +536,15 @@ export class CompanionController {
    * player (landing, stop or surfacing point). Idempotent both ways; a companion waiting at a post stays there.
    */
   hideForMode(on: boolean): void {
-    if (on === this.modeHidden) return;
-    this.modeHidden = on;
     if (on) {
-      this.teleportPending = false;
-      if (!this.wait) this.setHidden(true);
+      // Re-applied every tick: a companion spawned or joined during the mode is hidden too.
+      if (!this.modeHidden) this.teleportPending = false;
+      this.modeHidden = true;
+      if (!this.wait && !this.hidden) this.setHidden(true);
       return;
     }
+    if (!this.modeHidden) return;
+    this.modeHidden = false;
     if (!this.model || this.wait) return;
     // The trail from before the mode is far behind by now.
     this.model.trail.clear();

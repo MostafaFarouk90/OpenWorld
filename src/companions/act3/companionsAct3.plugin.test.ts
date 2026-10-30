@@ -97,7 +97,7 @@ describe('companions-act3: boot', () => {
   it('provides act3Allies and registers its strings', async () => {
     const t = await boot();
     expect(t.ctx.services.get('act3Allies')).toBeTruthy();
-    expect(t.ctx.strings.t('hud.aura.quenched.on')).toMatch(/Quenched/);
+    expect(t.ctx.strings.t('companion.a3.quenched.toast')).toMatch(/Quenched/);
     t.done();
   }, TIMEOUT);
 });
@@ -113,10 +113,10 @@ describe('companions-act3: the Quenched aura through the real spells service', (
     t.ctx.state.setFlag(QUENCHED_EVERYWHERE_FLAG, true);
     spells.addBurn(10, 'test');
     expect(spells.burn).toBeCloseTo(7.5);
-    expect(t.of('hud.toast').filter((e) => e.textKey === 'hud.aura.quenched.on')).toHaveLength(1);
+    expect(t.of('hud.toast').filter((e) => e.textKey === 'companion.a3.quenched.toast')).toHaveLength(1);
     expect(t.ctx.state.getFlag(QUENCHED_SEEN_FLAG)).toBe(true);
     t.ctx.events.emit('region.entered', { regionId: 'greyfen', previous: null });
-    expect(t.of('hud.toast').filter((e) => e.textKey === 'hud.aura.quenched.on')).toHaveLength(1);
+    expect(t.of('hud.toast').filter((e) => e.textKey === 'companion.a3.quenched.toast')).toHaveLength(1);
     t.done();
   }, TIMEOUT);
 });
@@ -158,8 +158,9 @@ describe('companions-act3: movement modes (item 25)', () => {
     expect(t.root().visible).toBe(true);
     c.hideForMode(true);
     c.hideForMode(true);
-    t.run(2);
+    // Checked before a tick: the plugin re-applies the live mode (walk) every tick.
     expect(t.root().visible).toBe(false);
+    expect(c.isModeHidden).toBe(true);
     c.hideForMode(false);
     c.hideForMode(false);
     t.run(3);
@@ -183,7 +184,7 @@ describe('companions-act3: movement modes (item 25)', () => {
     t.done();
   }, TIMEOUT);
 
-  it('a load where the mode event comes before the load handler (the other order) also brings him back', async () => {
+  it('walk set explicitly just before a load also brings him back (no double placement)', async () => {
     const t = await joined();
     t.mode('ferry', { ...t.ctx.player.feet });
     t.run(2);
@@ -197,7 +198,47 @@ describe('companions-act3: movement modes (item 25)', () => {
   }, TIMEOUT);
 });
 
+describe('companions-act3: joins during a mode', () => {
+  it('a companion who joins while the player dives stays hidden until the dive ends', async () => {
+    const t = await boot();
+    t.mode('dive', { ...t.ctx.player.feet });
+    t.ctx.state.setFlag(TOBB.joinFlag, true);
+    t.run(60);
+    expect(t.root().visible).toBe(false);
+    t.mode('walk');
+    t.run(3);
+    expect(t.root().visible).toBe(true);
+    expect(t.distToPlayer()).toBeLessThan(5);
+    t.done();
+  }, TIMEOUT);
+});
+
 describe('companions-act3: event barks and the reveal variant', () => {
+  it('a ferry stop is said once the companion is back (walk and ferry.arrived in the same call)', async () => {
+    const t = await joined();
+    t.mode('ferry', { ...t.ctx.player.feet });
+    t.run(2);
+    t.mode('walk');
+    t.ctx.events.emit('ferry.arrived', { routeId: 'ferry.reedgate-mere', stop: 'mere', skipped: false });
+    t.run(10);
+    expect(t.of('companion.banter').map((b) => b.lineKey)).toEqual([expect.stringMatching(/\.area\.ferry\.\d$/)]);
+    t.run(10 * 60);
+    expect(t.of('companion.banter')).toHaveLength(1);
+    t.done();
+  }, TIMEOUT);
+
+  it('a ferry stop bark is dropped when nobody comes back within the wait', async () => {
+    const t = await joined();
+    t.mode('ferry', { ...t.ctx.player.feet });
+    t.run(2);
+    t.ctx.events.emit('ferry.arrived', { routeId: 'ferry.reedgate-mere', stop: 'mere', skipped: false });
+    t.run(6 * 60);
+    t.mode('walk');
+    t.run(60);
+    expect(t.of('companion.banter')).toEqual([]);
+    t.done();
+  }, TIMEOUT);
+
   const banter = (t: Awaited<ReturnType<typeof boot>>) => t.of('companion.banter');
 
   it("Ysmeryth's trial start is cheered; another trial id is not", async () => {
