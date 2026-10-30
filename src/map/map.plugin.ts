@@ -16,6 +16,8 @@ import { renderLocalTile, renderTerrainBitmap, minimapTilePlan, type TerrainBitm
 import { DEFAULT_WORLD_BOUNDS, MAP_TUNING } from './tuning';
 import type { MapViewModel } from './viewTypes';
 import { openRegionAt, regionChips, type RegionChip } from './regionLayer';
+import { blockChips, blockChipsKey, type BlockChip } from './act3/blockChips';
+import { MAP_ACT3_STRINGS_EN } from './act3/strings.en';
 import '../region/containment';
 
 
@@ -24,6 +26,7 @@ const map: GamePlugin = {
   dependsOn: ['core', 'waystones'],
   setup(ctx) {
     ctx.strings.register('en', MAP_STRINGS_EN);
+    ctx.strings.register('en', MAP_ACT3_STRINGS_EN);
     const bounds = { ...DEFAULT_WORLD_BOUNDS };
     let fog = FogGrid.forBounds(bounds);
     const waystones = () => ctx.services.get('waystones');
@@ -155,6 +158,27 @@ const map: GamePlugin = {
       return chips;
     };
 
+    // Act 3 block chips (K15): read live from the warmth, progression and quests services (all optional), so a lock, a level up,
+    // a finished quest or a load shows at once. The array is reused while the signature is unchanged.
+    let blocks: BlockChip[] = [];
+    let blocksSig = '';
+    const currentBlocks = (): BlockChip[] => {
+      const quests = ctx.services.get('quests');
+      const fresh = blockChips({
+        open: openNow(),
+        warmth: ctx.services.get('warmth'),
+        playerLevel: ctx.services.get('progression')?.level,
+        questState: (id) => quests?.state(id),
+        player: { x: ctx.player.feet.x, z: ctx.player.feet.z },
+      });
+      const sig = blockChipsKey(fresh);
+      if (sig !== blocksSig) {
+        blocksSig = sig;
+        blocks = fresh;
+      }
+      return blocks;
+    };
+
     const model: MapViewModel = {
       bounds,
       fullBitmap: () => full,
@@ -174,6 +198,7 @@ const map: GamePlugin = {
           quest: withTutorialLead([...currentLeads(), ...objectiveLeads()], ctx.services.get('tutorial')),
         }),
       regions: currentChips,
+      blocks: currentBlocks,
       regionCaption: () => {
         const id = openRegionAt(ctx.player.feet.x, ctx.player.feet.z, openNow());
         return id ? ctx.strings.t(`map.region.${id}`) : null;

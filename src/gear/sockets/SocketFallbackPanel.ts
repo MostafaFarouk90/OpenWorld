@@ -11,6 +11,8 @@ export interface SocketPanelModel {
   remove(itemId: string, slot: number): SocketResult;
   recut(fromId: string, toId: string): SocketResult;
   gold(): number;
+  /** Whether the piece is worn (K15's screen lists worn pieces first); the fallback panel ignores it. */
+  equipped?(itemId: string): boolean;
 }
 
 export interface SocketPanelHost {

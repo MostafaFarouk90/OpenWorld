@@ -193,6 +193,8 @@ const traversal: GamePlugin = {
       if (ferry.riding && target.id === PLAYER_ID) req.outcome = 'immune';
     });
     const stopName = (id: string) => ctx.strings.t(`ferry.stop.${id}`);
+    /** K15's stop menu, when its plugin set one; a menu that does not open (or a throw) leaves the default boarding. */
+    let stopMenu: ((stop: string) => boolean) | null = null;
     for (const stop of ferry.stops()) {
       ctx.interaction.register({
         id: ferryInteractId(stop),
@@ -207,6 +209,13 @@ const traversal: GamePlugin = {
         promptParams: () => ({ dest: stopName(ferry.defaultDestination(stop) ?? stop) }),
         enabled: () => !ferry.riding,
         onInteract: () => {
+          if (stopMenu && !ferry.riding) {
+            try {
+              if (stopMenu(stop)) return;
+            } catch (e) {
+              warn(`ferry: the stop menu failed: ${String(e)}`);
+            }
+          }
           const to = ferry.defaultDestination(stop);
           if (to) ferry.board(stop, to);
         },
@@ -235,6 +244,9 @@ const traversal: GamePlugin = {
       skip: () => ferry.skip(),
       get riding() {
         return ferry.riding;
+      },
+      setMenu: (open) => {
+        stopMenu = open;
       },
     };
     ctx.services.provide('ferry', ferryService);

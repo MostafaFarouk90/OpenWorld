@@ -4,6 +4,7 @@ import type { ForgeState } from './ForgeMarks';
 import type { TerrainBitmap } from './TerrainBitmap';
 import type { WorldBounds } from './tuning';
 import type { RegionChip } from './regionLayer';
+import type { BlockChip } from './act3/blockChips';
 
 /** What the DOM views read from the map plugin. Views never touch the game directly. */
 export interface MapViewModel {
@@ -22,6 +23,8 @@ export interface MapViewModel {
   legend?(): { min: number; max: number } | null;
   /** Region chips (labels and closed fog); omitted when the view has no region data. */
   regions?(): RegionChip[];
+  /** Act 3 block level chips (drawn under the region labels, and the legend warning); omitted when the view has no block data. */
+  blocks?(): BlockChip[];
   /** Caption for the minimap: the open region the player stands in, or null between regions. */
   regionCaption?(): string | null;
   travelBlockedReason(): string | null;
