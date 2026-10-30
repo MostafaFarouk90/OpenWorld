@@ -161,4 +161,46 @@ describe('traversal plugin', () => {
     expect(ctx.services.require('ferry').riding).toBe(false);
     expect(ctx.damage.apply({ attackerId: 'leech', targetId: PLAYER_ID, amount: 1, kind: 'melee' })?.outcome).toBe('hit');
   }, PLUGIN_TEST_TIMEOUT);
+
+  it("K15's setMenu hook: a menu that opens takes the stop interact; none, null, a closed menu or a throwing one leave the default boarding", async () => {
+    const registered: Interactable[] = [];
+    const reg = InteractionSystem.prototype.register;
+    vi.spyOn(InteractionSystem.prototype, 'register').mockImplementation(function (this: InteractionSystem, i) {
+      registered.push(i);
+      return reg.call(this, i);
+    });
+    // Each boot registers its own; the newest is the one under test.
+    const stopAt = (id: string) => registered.filter((i) => i.id === `ferry:${id}`).at(-1)!;
+    const fresh = async () => {
+      const b = await boot();
+      b.ctx.services.provide('inventory', { has: () => true, count: () => 1 } as never);
+      b.ctx.state.setFlag(FERRY_RUNNING_FLAG, true);
+      return b;
+    };
+    // No menu set: the default destination boards.
+    const a = await fresh();
+    stopAt('reedgate').onInteract(a.ctx.player.actor);
+    expect(a.ctx.services.require('ferry').riding).toBe(true);
+    // A menu that opens: nothing boards, and it was asked for this stop.
+    const b = await fresh();
+    const asked: string[] = [];
+    b.ctx.services.require('ferry').setMenu((s) => (asked.push(s), true));
+    stopAt('reedgate').onInteract(b.ctx.player.actor);
+    expect(asked).toEqual(['reedgate']);
+    // The prompt is neutral while a menu is set, and names the destination otherwise.
+    expect(stopAt('reedgate').promptKey).toBe('ferry.prompt.menu');
+    b.ctx.services.require('ferry').setMenu(null);
+    expect(stopAt('reedgate').promptKey).toBe('ferry.prompt');
+    b.ctx.services.require('ferry').setMenu((s) => (asked.push(s), true));
+    expect(b.ctx.services.require('ferry').riding).toBe(false);
+    // The menu rides a chosen leg with `ride`; the default is untouched (the next default still starts at the first leg).
+    expect(b.ctx.services.require('ferry').ride('reedgate', 'mere')).toBeNull();
+    // A closed menu, a removed menu and a throwing one fall back.
+    for (const set of [(f: ReturnType<typeof b.ctx.services.require<'ferry'>>) => f.setMenu(() => false), (f: ReturnType<typeof b.ctx.services.require<'ferry'>>) => (f.setMenu(() => true), f.setMenu(null)), (f: ReturnType<typeof b.ctx.services.require<'ferry'>>) => f.setMenu(() => { throw new Error('x'); })]) {
+      const c = await fresh();
+      set(c.ctx.services.require('ferry'));
+      stopAt('reedgate').onInteract(c.ctx.player.actor);
+      expect(c.ctx.services.require('ferry').riding).toBe(true);
+    }
+  }, PLUGIN_TEST_TIMEOUT);
 });

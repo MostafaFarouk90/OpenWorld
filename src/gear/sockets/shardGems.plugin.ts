@@ -14,10 +14,13 @@ import { ACT3_TRINKETS } from '../tier4/catalog';
 import { registerAct3Bonuses } from './bonuses';
 import { grantBossGem, retroGrant, type GrantOutcome, type GrantPorts } from './grants';
 import { fitGem, recutGem, recutTargetFor, removeGem, socketView, type SocketInventory, type SocketResult, type SocketView } from './sockets';
-import { openSocketPanel } from './SocketFallbackPanel';
+import { openSocketPanel, type SocketPanelHost, type SocketPanelModel } from './SocketFallbackPanel';
 import { K10_STRINGS_EN } from './strings.en';
 import { SHARD_GEMS } from './table';
 import { GEM_BOSSES, grantedFlag } from './tuning';
+
+/** Draws the socket screen over the panel's model; returns the closer, or null when no modal could open. K15 supplies one. */
+export type SocketScreenOpener = (host: SocketPanelHost, model: SocketPanelModel) => (() => void) | null;
 
 export interface ShardGemService {
   fit(itemId: string, slot: number, gemId: string): SocketResult;
@@ -26,8 +29,10 @@ export interface ShardGemService {
   /** Every held piece that takes a gem, with its slots. */
   pieces(): SocketView[];
   view(itemId: string): SocketView;
-  /** Opens the fallback panel (a smith's "shard-gems" choice); false when another modal is open. */
+  /** Opens the screen (a smith's "shard-gems" choice, the socket point): K15's when set, else the fallback panel; false when another modal is open. */
   openScreen(): boolean;
+  /** Swaps the drawing of the screen (K15). Null restores the fallback panel. The model stays this plugin's. */
+  setScreen(open: SocketScreenOpener | null): void;
 }
 
 declare module '../../core/Services' {
@@ -44,6 +49,8 @@ declare module '../../core/events' {
     'npc.smith.open': Record<string, never>;
   }
 }
+
+const EQUIP_SLOTS = ['weapon', 'offhand', 'armour', 'trinket'] as const;
 
 interface SoftClasses {
   chosen?(): boolean;
@@ -92,7 +99,12 @@ const shardGemsPlugin: GamePlugin = {
         .filter(({ id }) => (getItem(id)?.sockets ?? 0) > 0)
         .map(({ id }) => socketView(inv, id, wearerClass()));
 
+    let screen: SocketScreenOpener = openSocketPanel;
+
     const service: ShardGemService = {
+      setScreen(open) {
+        screen = open ?? openSocketPanel;
+      },
       fit(itemId, slot, gemId) {
         const r = fitGem(inv, itemId, slot, gemId);
         if (r.ok) emitSocket('gear.socketed', itemId, slot, gemId);
@@ -107,7 +119,7 @@ const shardGemsPlugin: GamePlugin = {
       pieces,
       view: (itemId) => socketView(inv, itemId, wearerClass()),
       openScreen() {
-        const closer = openSocketPanel(
+        const closer = screen(
           {
             doc: hudDocument(),
             t,
@@ -126,6 +138,7 @@ const shardGemsPlugin: GamePlugin = {
             remove: (a, b) => service.remove(a, b),
             recut: (a, b) => service.recut(a, b),
             gold: () => inventory.gold,
+            equipped: (id) => EQUIP_SLOTS.some((slot) => inventory.equipped(slot) === id),
           },
         );
         return !!closer;
