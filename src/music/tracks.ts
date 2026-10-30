@@ -1,7 +1,7 @@
 import { ASH_ON_THE_PASTURE, HAMMERS_BELOW } from './act2Tracks';
-import { ACT3_TRACK_SLOTS } from './act3Tracks';
+import { PEAT_AND_PITCH, WING_OVER_RIME } from './act3Tracks';
 
-export { ASH_ON_THE_PASTURE, HAMMERS_BELOW };
+export { ASH_ON_THE_PASTURE, HAMMERS_BELOW, PEAT_AND_PITCH, WING_OVER_RIME };
 
 export type MixState = 'explore' | 'discover' | 'silence' | 'combat' | 'boss' | 'ending' | 'talk' | 'stealth' | 'chase';
 
@@ -53,14 +53,16 @@ export interface TrackSynth {
   /** Peak timing looseness in seconds on off-beat hits (downbeats stay put); default 0.005. */
   jitter?: number;
   voices: {
-    snare: 'snap' | 'rimshot' | 'thigh-slap' | 'metal-rim';
-    vocal: 'hum' | 'throat-chant' | 'lip-buzz' | 'anvil-clang';
-    melody: 'flute' | 'trumpet' | 'whistle-click' | 'cave-howl';
-    boss: 'tolling-gong' | 'steam-anvil' | 'gallop-hey' | 'pound-clang';
-    /** Optional per-stem voices (Act 2); absent means the Act 1 voice. */
-    kick?: 'boxy';
-    hat?: 'steam';
-    bass?: 'dum';
+    snare: 'snap' | 'rimshot' | 'thigh-slap' | 'metal-rim' | 'plip' | 'room-clap';
+    vocal: 'hum' | 'throat-chant' | 'lip-buzz' | 'anvil-clang' | 'bog-chant' | 'falsetto-choir';
+    melody: 'flute' | 'trumpet' | 'whistle-click' | 'cave-howl' | 'reed-whistle' | 'soar-whistle';
+    boss: 'tolling-gong' | 'steam-anvil' | 'gallop-hey' | 'pound-clang' | 'gurgle-chant' | 'harsh-chant';
+    /** Optional per-stem voices (Acts 2 and 3); absent means the Act 1 voice. */
+    kick?: 'boxy' | 'wet' | 'airy';
+    hat?: 'steam' | 'bubble' | 'tick';
+    bass?: 'dum' | 'peat-hum' | 'chest-bass';
+    /** A stem with no Act 1 voice at all (Wing over Rime's trial chant). */
+    chant?: 'cathedral-chant';
   };
 }
 
@@ -200,9 +202,9 @@ export const SEVEN_GATES_ONE_DRUM: TrackDef = {
 
 /**
  * Reserved track ids: known but not yet built, so the music plugin does not warn about them. Empty from A14 (the Act 2
- * tracks) until v0.7 item 23 reserved the two Act 3 slots (data in act3Tracks.ts).
+ * tracks); v0.7 item 23 reserved the two Act 3 slots (ACT3_TRACK_SLOTS), and the Act 3 sound pass built them, so it is empty again.
  */
-export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [...ACT3_TRACK_SLOTS];
+export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [];
 export const RESERVED_TRACK_IDS: readonly string[] = RESERVED_TRACKS.map((t) => t.id);
 
 export const TRACKS_BY_ID: Readonly<Record<string, TrackDef>> = {
@@ -210,6 +212,8 @@ export const TRACKS_BY_ID: Readonly<Record<string, TrackDef>> = {
   [SEVEN_GATES_ONE_DRUM.id]: SEVEN_GATES_ONE_DRUM,
   [ASH_ON_THE_PASTURE.id]: ASH_ON_THE_PASTURE,
   [HAMMERS_BELOW.id]: HAMMERS_BELOW,
+  [PEAT_AND_PITCH.id]: PEAT_AND_PITCH,
+  [WING_OVER_RIME.id]: WING_OVER_RIME,
 };
 
 /** The one canonical sample length of every stem: round(bars * 240 / bpm * sampleRate). */
