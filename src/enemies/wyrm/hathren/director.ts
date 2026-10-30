@@ -1,6 +1,6 @@
 import { HATHRENS_MERE, GREYFEN_WATER_TABLE } from '../../../terrain/shape/greyfen';
 import type { PathPoint } from '../large/flightPath';
-import type { HathrenPlayback } from './events';
+import type { HathrenCalmOutcome, HathrenPlayback } from './events';
 import { HathrenScene, type HathrenPlace, type HathrenScenePorts } from './scene';
 import { HATHREN, HathrenSequence, type HathrenBeat, type HathrenState } from './sequence';
 
@@ -10,6 +10,8 @@ export const HATHREN_IDS = {
   completeFlag: 'story.m26.complete',
   /** K12 writes it true when net n (1..4) is cut. */
   netFlag: (n: number) => `story.m26.net.${n}`,
+  /** K12 writes it true once the warmth rite is paid: a load restarts the calm, never the rite. */
+  riteFlag: 'story.m26.riteDone',
   shoreAnchor: 'greyfen.mere.shore',
   netAnchor: (n: number) => `greyfen.mere.net.${n}`,
   scaleBedAnchor: 'greyfen.m26.scale-bed',
@@ -19,6 +21,9 @@ export const HATHREN_IDS = {
 
 /** Her loop centre: at least this far out from the shore point, toward the Mere's centre, and in water this deep. */
 export const HATHREN_PLACE = { offshore: 55, minDepth: 2.2, searchStep: 10, searchMax: 200 } as const;
+
+/** While she waits unwoken in the nets and the player is further than this from the shore, her rig is not stepped. */
+export const HATHREN_IDLE_RADIUS = 400;
 
 export interface HathrenDirectorPorts extends HathrenScenePorts {
   questState(id: string): string | undefined;
@@ -44,8 +49,9 @@ export class HathrenDirector {
   private scene: HathrenScene | null = null;
   private place: HathrenPlace | null = null;
   private glint: HathrenScene['glint'] | null = null;
-  private playback: { done: Promise<void>; resolve: () => void } | null = null;
+  private playback: { handle: HathrenPlayback; resolve: (o: HathrenCalmOutcome) => void } | null = null;
   private warned = false;
+  private posed = false;
 
   constructor(private readonly ports: HathrenDirectorPorts) {}
 
@@ -86,12 +92,23 @@ export class HathrenDirector {
       // A flag written by K12 without the live call still drops its net.
       for (const n of this.savedCuts()) this.seq.netCut(n);
     }
+    // The rite is paid (K12's flag): the calm plays, also after a load, without K12 charging it again.
+    if (this.seq.state === 'nets' && this.ports.getBool(HATHREN_IDS.riteFlag)) this.startCalm();
   }
 
-  /** `save.loaded`: drop whatever was playing (no beats) and re-derive from the saved quest and flags. */
+  /**
+   * `save.loaded`: drop whatever was playing (no beats) and re-derive from the saved quest and flags. A calm K12 is
+   * awaiting keeps its promise when the re-derive restarts the calm (rite paid); otherwise it settles 'cancelled'.
+   */
   onLoaded(): void {
+    const held = this.playback;
+    this.playback = null;
     this.clear();
+    this.glint?.dispose();
+    this.glint = null;
+    this.playback = held;
     this.derive();
+    if (this.seq.state !== 'calming') this.settle('cancelled');
   }
 
   netCut(n: number): boolean {
@@ -100,18 +117,35 @@ export class HathrenDirector {
   }
 
   calm(): HathrenPlayback | null {
-    if (this.seq.state === 'calming' || this.seq.state === 'gone') return null;
-    if (!this.scene && !this.build()) return null;
-    if (!this.seq.calm()) return null;
-    let resolve!: () => void;
-    const done = new Promise<void>((r) => (resolve = r));
-    this.playback = { done, resolve };
-    return { done, skip: () => this.skip() };
+    if (this.seq.state === 'gone') return null;
+    return this.startCalm();
   }
 
   dismiss(): void {
     this.seq.dismiss();
     this.teardownScene();
+    this.settle('cancelled');
+  }
+
+  /** Starts the calm (or returns the running one's playback). */
+  private startCalm(): HathrenPlayback | null {
+    if (this.seq.state !== 'calming') {
+      if (this.seq.state === 'gone') return null;
+      if (!this.scene && !this.build()) return null;
+      if (!this.seq.calm()) return null;
+    }
+    if (!this.playback) {
+      let resolve!: (o: HathrenCalmOutcome) => void;
+      const done = new Promise<HathrenCalmOutcome>((r) => (resolve = r));
+      this.playback = { handle: { done, skip: () => this.skip() }, resolve };
+    }
+    return this.playback.handle;
+  }
+
+  private settle(outcome: HathrenCalmOutcome): void {
+    const p = this.playback;
+    this.playback = null;
+    p?.resolve(outcome);
   }
 
   /** One fixed tick. */
@@ -123,8 +157,19 @@ export class HathrenDirector {
     }
     const beats = this.seq.step(dt);
     this.fire(beats);
-    if (this.scene && !this.scene.disposedYet) this.scene.update(dt, this.seq);
+    // Always the first step after a build, so the rig is posed (under the water) before it idles.
+    if (this.scene && !this.scene.disposedYet && (!this.posed || !this.idle())) {
+      this.scene.update(dt, this.seq);
+      this.posed = true;
+    }
     this.updateGlint(dt);
+  }
+
+  /** Unwoken in the nets with the player far from the shore: nothing to see, the rig is not stepped. */
+  private idle(): boolean {
+    if (this.seq.state !== 'nets' || this.seq.phase !== 'waiting' || !this.place) return false;
+    const f = this.ports.playerFeet();
+    return Math.hypot(f.x - this.place.shore.x, f.z - this.place.shore.z) > HATHREN_IDLE_RADIUS;
   }
 
   /** Teardown (plugin dispose). */
@@ -154,16 +199,14 @@ export class HathrenDirector {
 
   private finishCalm(): void {
     this.teardownScene();
-    this.playback?.resolve();
-    this.playback = null;
+    this.settle('finished');
   }
 
   /** Back to absent without beats (a load, the quest left). */
   private clear(): void {
     this.teardownScene();
     this.seq.reset();
-    this.playback?.resolve();
-    this.playback = null;
+    this.settle('cancelled');
   }
 
   private teardownScene(): void {
@@ -195,6 +238,7 @@ export class HathrenDirector {
     if (!place) return false;
     this.place = place;
     this.scene = new HathrenScene(this.ports, place);
+    this.posed = false;
     return true;
   }
 

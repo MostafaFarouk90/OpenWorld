@@ -115,7 +115,7 @@ describe("Hathren's director (K6a, M26)", () => {
     w.tick(0.1);
     const play = w.d.calm()!;
     expect(play).not.toBeNull();
-    expect(w.d.calm()).toBeNull();
+    expect(w.d.calm()).toBe(play); // already calming: the running playback
     w.tick(1);
     expect(w.frozen).toBe(1);
     expect(w.cutscene).toBe(1);
@@ -127,7 +127,8 @@ describe("Hathren's director (K6a, M26)", () => {
     expect(w.frozen).toBe(0);
     expect(w.cutscene).toBe(0);
     expect(w.cameras).toBe(0);
-    await play.done;
+    await expect(play.done).resolves.toBe('finished');
+    expect(w.d.calm()).toBeNull(); // gone
     expect(w.scene.getObjectByName('hathren')).toBeUndefined();
     const glint = w.scene.getObjectByName('hathren-scale-glint')!;
     expect(glint.visible).toBe(true);
@@ -150,23 +151,79 @@ describe("Hathren's director (K6a, M26)", () => {
     expect(w.frozen + w.cutscene + w.cameras).toBe(0);
   });
 
-  it("a reload mid-calm restarts from the nets with no beats; K12's re-call (riteDone) plays the calm again in full", () => {
+  it('a reload mid-calm without the rite paid goes back to the nets with no beats and cancels the playback', async () => {
     const w = world();
     w.accept();
     for (let n = 1; n <= 4; n++) w.flags.set(HATHREN_IDS.netFlag(n), true);
     w.tick(0.1);
-    w.d.calm();
+    const play = w.d.calm()!;
     w.tick(14);
-    w.flags.set('story.m26.riteDone', true); // K12's flag: it re-calls calm() after the load, no second Burn charge
     const before = w.beats.length;
     w.d.onLoaded();
     expect(w.beats.length).toBe(before);
     expect(w.d.state).toBe('nets');
     expect(w.frozen + w.cutscene + w.cameras).toBe(0);
+    await expect(play.done).resolves.toBe('cancelled');
+  });
+
+  it.each([
+    ['K12 re-calls calm() before her own re-derive', true],
+    ['K12 re-calls calm() after her own re-derive', false],
+    ['K12 makes no call (she restarts by herself)', null],
+  ])('a reload mid-calm with the rite paid (story.m26.riteDone) replays the calm in full: %s', async (_name, first) => {
+    const w = world();
+    w.accept();
+    for (let n = 1; n <= 4; n++) w.flags.set(HATHREN_IDS.netFlag(n), true);
+    w.tick(0.1);
+    w.flags.set(HATHREN_IDS.riteFlag, true);
+    w.d.calm();
+    w.tick(14);
     w.beats.length = 0;
-    expect(w.d.calm()).not.toBeNull();
+    // The load: save.loaded listeners run in plugin order, so K12's call can land on either side of onLoaded().
+    let play = first === true ? w.d.calm() : null;
+    w.d.onLoaded();
+    if (first === false) play = w.d.calm();
+    expect(w.d.state).toBe('calming');
+    expect(w.beats).toEqual([]);
     w.tick(CALM_SECONDS + 0.5);
     expect(w.beats).toEqual(CALM_BEATS.map((b) => b.beat));
+    if (play) await expect(play.done).resolves.toBe('finished');
+  });
+
+  it('the rite flag alone (no live call) starts the calm in play too', () => {
+    const w = world();
+    w.accept();
+    w.tick(0.1);
+    w.flags.set(HATHREN_IDS.riteFlag, true);
+    w.tick(DT);
+    expect(w.d.state).toBe('calming');
+  });
+
+  it('a glint left by a finished calm goes on load (an older save); the rig idles while the player is far off', () => {
+    const w = world();
+    w.accept();
+    w.tick(0.1);
+    w.d.calm();
+    w.tick(CALM_SECONDS + 0.5);
+    expect(w.scene.getObjectByName('hathren-scale-glint')).toBeDefined();
+    w.d.onLoaded();
+    const glints = () => w.scene.children.filter((o) => o.name === 'hathren-scale-glint' && o.visible);
+    expect(glints()).toHaveLength(0); // the new scene's own glint waits hidden for its scale beat
+    expect(w.d.state).toBe('nets');
+    // The player 500 m from the shore: posed once, then left still until they come within the idle radius.
+    w.player.z = SHORE.z - 500;
+    const update = (w.d.current as unknown as { update: (...a: unknown[]) => void });
+    let steps = 0;
+    const orig = update.update.bind(update);
+    update.update = (...a: unknown[]) => {
+      steps++;
+      orig(...a);
+    };
+    w.tick(1);
+    expect(steps).toBe(1); // the pose after the build
+    w.player.z = SHORE.z - 100;
+    w.tick(0.1);
+    expect(steps).toBeGreaterThan(0);
   });
 
   it('abandoned M26 leaves her absent (also after a reload); re-accepting puts her back in the nets', () => {
@@ -210,13 +267,21 @@ describe("Hathren's director (K6a, M26)", () => {
     expect(w.warnings).toHaveLength(1);
   });
 
-  it('dismiss removes her silently; a listener that throws never breaks the sequence', () => {
+  it('dismiss removes her silently (a calm in play settles cancelled); a listener that throws never breaks the sequence', async () => {
     const w = world();
     w.accept();
     w.tick(0.1);
     w.d.dismiss();
     expect(w.d.state).toBe('gone');
     expect(w.scene.getObjectByName('hathren')).toBeUndefined();
+    const u = world();
+    u.accept();
+    u.tick(0.1);
+    const play = u.d.calm()!;
+    u.tick(3);
+    u.d.dismiss();
+    await expect(play.done).resolves.toBe('cancelled');
+    expect(u.frozen + u.cutscene + u.cameras).toBe(0);
     const v = world();
     v.accept();
     v.tick(0.1);

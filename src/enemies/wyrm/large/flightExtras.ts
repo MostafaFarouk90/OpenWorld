@@ -7,13 +7,15 @@ import type { WyrmBody } from '../WyrmBody';
  *
  * - **Chain** (Skarl's drake): a slot chained through `wyrms.tether` draws the rig's collar chain to its post, never moves
  *   further than the chain from the post, and reports each touchdown (`landed`).
- * - **Perch** (the lodge wyrms): a resting slot with a perch is pinned there at the perch's height (the hall roof ridge)
+ * - **Perch** (the lodge wyrms): a resting slot with a perch is pinned there at the perch's height (a lodge tower top)
  *   while it rests: lifted onto the kinematic path, no walking. Struck, it drops to the ground below and fights as usual.
  * - **Release**: a tracked flier released by a script retires (slot spent, no credit) and flies up and away, fading out.
  */
 export interface Perch {
   /** Height of the perch above the ground under it (the facing is the spawn anchor's yaw). */
   altitude: number;
+  /** Where it lands when struck off the perch (engine x, z); under the perch when absent. */
+  drop?: { x: number; z: number };
 }
 
 export interface FlierHandle {
@@ -65,6 +67,8 @@ export interface FlightExtras {
   unperch(): void;
   /** `leave` for `retired` after a release; false otherwise. */
   leave(dt: number, how: string): boolean;
+  /** True while flying off after a release (the overlay leaves the altitude to `leave`). */
+  readonly leaving: boolean;
   dispose(): void;
 }
 
@@ -79,7 +83,9 @@ export function makeFlightExtras(ctx: BehaviourContext, hub: FlightExtrasHub, ai
   let off: { t: number; alt: number; dir: { x: number; z: number }; from: { x: number; z: number } } | null = null;
 
   const refreshChain = () => {
-    chain = released ? null : (hub.chainFor?.(ctx.spawnerId, ctx.slot) ?? null);
+    // `WyrmTethers.chainFor` hands out one shared object: keep a copy, `chainLow` reads it later.
+    const c = released ? null : (hub.chainFor?.(ctx.spawnerId, ctx.slot) ?? null);
+    chain = c ? { ...c, post: { ...c.post } } : null;
     const post = chain?.post ?? null;
     if (post !== shown && (!post || !shown || post.x !== shown.x || post.z !== shown.z)) {
       shown = post ? { ...post } : null;
@@ -167,11 +173,14 @@ export function makeFlightExtras(ctx: BehaviourContext, hub: FlightExtrasHub, ai
       if (!perched) return;
       perched = false;
       if (lifted) {
-        const f = ctx.feet();
+        const f = perch?.drop ?? ctx.feet();
         ctx.fly(false, { x: f.x, y: ctx.host.heightAt(f.x, f.z), z: f.z });
         body.setAltitude?.(0);
         body.resetSpine?.();
       }
+    },
+    get leaving() {
+      return off !== null;
     },
     leave(dt, how) {
       if (!released || how !== 'retired') return false;

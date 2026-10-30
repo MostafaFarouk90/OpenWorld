@@ -86,9 +86,9 @@ describe('large-dragons plugin (K6a)', () => {
     expect(h.registered).toEqual(expect.arrayContaining(['hathren', 'skarl-drake']));
     expect(h.ctx.strings.t('codex.lore.hathren.name')).toBe('Hathren Quench-Tongue');
     expect(h.ctx.strings.t('codex.bestiary.skarl-drake.name')).toBe("Skarl's Drake");
-    const ps = lodgePerches(dragonspineBuild().lodge.hall);
+    const ps = lodgePerches(dragonspineBuild().lodge.towers);
     for (const p of ps) expect(h.ctx.anchors.find(p.id)?.position.x).toBeCloseTo(p.x, 6);
-    expect(WYRM_HUB.perchFor!(LODGE_WYRMS.spawnerId, 1)).toEqual({ altitude: ps[1]!.altitude });
+    expect(WYRM_HUB.perchFor!(LODGE_WYRMS.spawnerId, 1)).toEqual({ altitude: ps[1]!.altitude, drop: ps[1]!.drop });
     expect(WYRM_HUB.perchFor!('other', 0)).toBeNull();
     h.game.dispose();
     expect(WYRM_HUB.perchFor).toBeUndefined();

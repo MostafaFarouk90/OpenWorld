@@ -134,7 +134,7 @@ export function makeFlightOverlay(ctx: BehaviourContext, hub: WyrmHub = {}): Beh
     },
 
     animate() {
-      body.setAltitude?.(flight.altitude + extras.perchAltitude);
+      if (!extras.leaving) body.setAltitude?.(flight.altitude + extras.perchAltitude);
       // A wingbeat at each flap peak while flying (every 0.8 s), the Grimtooth-style positional sound.
       if (flight.flying) {
         lastBeat += 1 / 60;

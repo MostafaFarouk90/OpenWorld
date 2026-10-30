@@ -68,8 +68,9 @@ R11: the den group (`wyrm.r11.den`) spawns on the quest's start; the quest despa
   `story.m26.net.<n>`, never saved: a load restarts from the nets). Events `wyrm.hathren { beat }`; codex lore `hathren`.
 - `drake/`: `skarl-drake` (the Ember Wyrm at 0.8, collar, `dragonkin`, own `drake.*` move ids, no mercy) and the `drakes`
   service (`chain`, `chainLow`, `strike`, `release`; events `wyrm.drake.landed`, `.chainStruck`, `.freed`).
-- `large/lodgeWyrms.ts`: `wyrm.lodge.resting`, two peaceful Ember Wyrms on `story.m34.complete`, perched on the Wyrmwatch
-  hall roof ridge (anchors `dragonspine.lodge.wyrm.rest.1/2`, defined at runtime from K4's hall box).
+- `large/lodgeWyrms.ts`: `wyrm.lodge.resting`, two peaceful Ember Wyrms on `story.m34.complete`, perched on the two
+  south towers of Wyrmwatch Lodge (anchors `dragonspine.lodge.wyrm.rest.1/2`, defined at runtime from K4's
+  `lodge.towers`; the hall's castle art is too tall for a roof perch). Struck, one lands in the yard and fights.
 - `large/largeDragons.plugin.ts` (`large-dragons`) provides `hathren` and `drakes`, the hub hooks, the lodge anchors, the
   codex entries. Dev: `?hathren=1` (`window.__hathren`; `&calm=<s>` calms her that long after she is in the nets),
   `?drake=1` (a chained drake 20 m ahead).

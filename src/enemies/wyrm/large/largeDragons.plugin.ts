@@ -86,12 +86,11 @@ const plugin: GamePlugin = {
     offs.push(ctx.events.on('save.loaded', () => director.onLoaded()));
     offs.push(() => director.dispose());
 
-    // ---- the lodge perches and anchors (K4's hall box; the dragonspine build is cached)
+    // ---- the lodge perches and anchors (K4's south towers; the dragonspine build is cached)
     const perches = new Map<number, Perch>();
     try {
-      const hall = dragonspineBuild().lodge.hall;
-      lodgePerches(hall).forEach((p, slot) => {
-        perches.set(slot, { altitude: p.altitude });
+      lodgePerches(dragonspineBuild().lodge.towers).forEach((p, slot) => {
+        perches.set(slot, { altitude: p.altitude, drop: p.drop });
         if (!ctx.anchors.find(p.id)) offs.push(ctx.anchors.define({ id: p.id, position: { x: p.x, y: heightAt(p.x, p.z), z: p.z }, yaw: p.yaw, tags: ['spawn'] }));
       });
     } catch (err) {

@@ -9,6 +9,7 @@ import { WYRM_HUB } from '../overlays';
 import { WyrmTethers } from '../tethers';
 import type { WyrmBody } from '../WyrmBody';
 import { wyrmParamsFor } from '../body';
+import { EMBER_WYRM_DEF } from '../defs';
 import type { FlierHandle } from './flightExtras';
 import { LODGE_WYRM_SPAWNERS, LODGE_WYRMS, lodgePerches } from './lodgeWyrms';
 
@@ -21,13 +22,13 @@ afterEach(() => {
   for (const k of Object.keys(WYRM_HUB)) delete (WYRM_HUB as Record<string, unknown>)[k];
 });
 
-const HALL = { x: 0, z: 0, w: 40, d: 22, h: 10 };
+const TOWERS = [{ x: -60, z: -45, footprint: [7, 7] as [number, number] }, { x: 60, z: -45, footprint: [7, 7] as [number, number] }];
 const LODGE: SpawnerDef = { ...LODGE_WYRM_SPAWNERS[0]!, band: { min: 20, max: 20 }, block: undefined, activation: 'manual' };
 const DRAKE: SpawnerDef = { ...skarlDrakeSpawner('drake', 'drake.spawn'), band: { min: 27, max: 27 }, area: undefined };
 
 function rig(spawners: SpawnerDef[], playerZ = -30) {
   const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: playerZ } });
-  const perches = lodgePerches(HALL);
+  const perches = lodgePerches(TOWERS);
   for (const p of perches) fake.defineAnchor(p.id, p.x, p.z, [], p.yaw);
   fake.defineAnchor('drake.spawn', 0, 0);
   fake.defineAnchor('drake.post', 5, 0);
@@ -44,24 +45,28 @@ function rig(spawners: SpawnerDef[], playerZ = -30) {
 }
 
 describe('lodge wyrms (K6a)', () => {
-  it('the perches sit on the hall roof ridge, inside its footprint, a third and two thirds along', () => {
-    const ps = lodgePerches(HALL);
+  it('the perches sit on the two south towers, one each, facing south; each drops into the yard, clear of its tower', () => {
+    const ps = lodgePerches(TOWERS);
     expect(ps.map((p) => p.id)).toEqual([LODGE_WYRMS.anchor(1), LODGE_WYRMS.anchor(2)]);
-    for (const p of ps) {
-      expect(Math.abs(p.x - HALL.x)).toBeLessThan(HALL.w / 2);
-      expect(Math.abs(p.z - HALL.z)).toBeLessThan(HALL.d / 2);
-      expect(p.altitude).toBeGreaterThanOrEqual(HALL.h);
-    }
-    expect(ps[1]!.x - ps[0]!.x).toBeCloseTo(HALL.w / 3, 6);
+    ps.forEach((p, i) => {
+      const t = TOWERS[i]!;
+      expect([p.x, p.z]).toEqual([t.x, t.z]);
+      expect(p.altitude).toBeGreaterThanOrEqual(LODGE_WYRMS.towerTop);
+      expect(p.yaw).toBe(0);
+      // Inward (toward the other tower) and north of the tower's yard-side faces.
+      expect(Math.abs(p.drop.x - t.x)).toBeGreaterThan(t.footprint[0] / 2 + 2);
+      expect(Math.sign(p.drop.x - t.x)).toBe(Math.sign(-t.x));
+      expect(p.drop.z).toBeGreaterThan(t.z + t.footprint[1] / 2 + 2);
+    });
   });
 
   it('the group: two peaceful Ember Wyrms on the M34 flag, on the dragonspine-lower block, refilled on rest', () => {
     const g = LODGE_WYRM_SPAWNERS[0]!;
-    expect(g).toMatchObject({ enemy: 'ember-wyrm', count: 2, peaceful: true, activation: { flag: 'story.m34.complete' }, block: 'dragonspine-lower', respawn: 'onRest' });
+    expect(g).toMatchObject({ enemy: 'ember-wyrm', count: 2, peaceful: true, activation: { flag: 'story.m34.complete' }, block: 'dragonspine-lower', respawn: 'onRest', leash: false });
     expect(g.memberAnchors).toEqual([LODGE_WYRMS.anchor(1), LODGE_WYRMS.anchor(2)]);
   });
 
-  it('a perched resting wyrm stays within 0.5 m of its anchor at the roof height for 600 ticks, and Rests', () => {
+  it('a perched resting wyrm stays within 0.5 m of its anchor at the tower-top height for 600 ticks, and Rests', () => {
     const t = rig([LODGE], -6);
     WYRM_HUB.perchFor = (sid, slot) => (sid === LODGE_WYRMS.spawnerId && slot !== null ? { altitude: t.perches[slot]!.altitude } : null);
     const ids = t.m.service.spawnGroup(LODGE_WYRMS.spawnerId, { peaceful: true });
@@ -78,15 +83,18 @@ describe('lodge wyrms (K6a)', () => {
     });
   });
 
-  it('struck on the perch, it drops to the ground below and wakes; an unperched (non-peaceful) spawn never perches', () => {
+  it('struck on the perch, it drops into the yard (out of the tower) and wakes; an unperched (non-peaceful) spawn never perches', () => {
     const t = rig([LODGE], -6);
-    WYRM_HUB.perchFor = (_sid, slot) => (slot !== null ? { altitude: t.perches[slot]!.altitude } : null);
+    WYRM_HUB.perchFor = (_sid, slot) => (slot !== null ? { altitude: t.perches[slot]!.altitude, drop: t.perches[slot]!.drop } : null);
     const [id] = t.m.service.spawnGroup(LODGE_WYRMS.spawnerId, { peaceful: true });
     t.tick(0.5);
     t.fake.apply({ attackerId: 'player', targetId: id!, amount: 2, poise: 1, kind: 'melee', bone: 'torso' });
     t.tick(0.5);
     const e = t.m.get(id!)!;
     expect((e.body as WyrmBody).altitude).toBeLessThan(0.5);
+    // Landed at its drop point in the yard (it may have taken a step or two toward the player since).
+    const drop = t.perches[0]!.drop;
+    expect(Math.hypot(e.feet.x - drop.x, e.feet.z - drop.z)).toBeLessThan(5);
     expect(['notice', 'chase', 'telegraph', 'attack']).toContain(e.state);
     const u = rig([{ ...LODGE, peaceful: false }]);
     WYRM_HUB.perchFor = () => ({ altitude: 10 });
@@ -100,14 +108,15 @@ describe("Skarl's drake (K6a)", () => {
   it('is the Ember Wyrm build at 0.8 with a collar, tagged dragonkin, its own move ids, no mercy', () => {
     expect(SKARL_DRAKE_DEF.kind).toBe('skarl-drake');
     expect(SKARL_DRAKE_DEF.tags).toEqual(['dragonkin']);
+    expect(EMBER_WYRM_DEF.tags ?? []).not.toContain('dragonkin'); // the Act 2 wyrm is untouched
     expect(SKARL_DRAKE_DEF.mercy).toBeUndefined();
     expect(SKARL_DRAKE_DEF.behaviour).toBe('wyrm-flight');
     expect(SKARL_DRAKE_DEF.moves.map((m) => m.id)).toEqual(['drake.spit', 'drake.bite', 'drake.tailWhip', 'drake.dive']);
     expect(wyrmParamsFor(SKARL_DRAKE_DEF)).toMatchObject({ scale: SKARL_DRAKE.scale, collar: true });
   });
 
-  function chained() {
-    const t = rig([DRAKE], -10);
+  function chained(playerZ = -10) {
+    const t = rig([DRAKE], playerZ);
     const tethers = new WyrmTethers({ anchor: (id) => t.fake.host.anchors?.find?.(id)?.position ?? (id === 'drake.post' ? { x: 5, y: 0, z: 0 } : undefined), flag: () => false, warn: () => {} });
     tethers.tether('drake', [{ anchor: 'drake.post' }], { length: SKARL_DRAKE.chainLength });
     const handles = new Map<string, FlierHandle>();
@@ -150,6 +159,33 @@ describe("Skarl's drake (K6a)", () => {
     expect(sawGround).toBe(true);
     expect(t.landed.length).toBeGreaterThan(0);
     expect(new Set(t.landed)).toEqual(new Set([t.id]));
+  });
+
+  it('chained with the player far beyond the chain: it strains toward them but stays inside the circle', () => {
+    const t = chained(-24);
+    const e = t.m.get(t.id)!;
+    let maxR = 0;
+    for (let i = 0; i < 60 * 20; i++) {
+      t.tick();
+      maxR = Math.max(maxR, Math.hypot(e.feet.x - 5, e.feet.z - 0));
+    }
+    expect(maxR).toBeLessThan(SKARL_DRAKE.chainLength + 1);
+    expect(maxR).toBeGreaterThan(SKARL_DRAKE.chainLength * 0.6);
+  });
+
+  it('released on the ground: it climbs well clear (the overlay leaves the altitude to the fly-off) while it fades', () => {
+    const t = chained();
+    const h = t.handles.get(t.id)!;
+    for (let i = 0; i < 60 * 30 && !h.landed(); i++) t.tick();
+    expect(h.landed()).toBe(true);
+    const body = t.m.get(t.id)!.body as WyrmBody;
+    expect(h.release()).toBe(true);
+    let maxAlt = 0;
+    for (let i = 0; i < 60 * 15 && t.m.get(t.id); i++) {
+      t.tick();
+      maxAlt = Math.max(maxAlt, body.altitude);
+    }
+    expect(maxAlt).toBeGreaterThan(10);
   });
 
   it('released: the chain drops, it retires and flies off, then despawns; a second release is refused', () => {
