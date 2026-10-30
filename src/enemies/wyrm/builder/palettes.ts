@@ -23,7 +23,7 @@ export interface WyrmPalette {
   readonly rimStrength: number;
 }
 
-export type WyrmPaletteId = 'ember' | 'wyrmling' | 'orsk' | 'cooled-slag';
+export type WyrmPaletteId = 'ember' | 'wyrmling' | 'orsk' | 'cooled-slag' | 'hathren';
 
 export const WYRM_PALETTES: Readonly<Record<WyrmPaletteId, WyrmPalette>> = {
   // Ember Wyrm (row 6): soot-black scales, orange rim and cracks, a dull red membrane.
@@ -45,6 +45,11 @@ export const WYRM_PALETTES: Readonly<Record<WyrmPaletteId, WyrmPalette>> = {
   'cooled-slag': {
     id: 'cooled-slag', scale: 0x2e2a28, belly: 0x4a403a, rim: 0xff7a3a, crack: 0xffb060, horn: 0x161412, eye: 0xffe0a0,
     mouth: 0xffc070, membrane: 0x3e3430, frame: 0x221e1c, rimStrength: 0.4,
+  },
+  // Hathren Quench-Tongue (Act 3, row 29): the shared build in a teal water form; cold aqua rim, pale jade belly.
+  hathren: {
+    id: 'hathren', scale: 0x1f4a4e, belly: 0x8fb8a8, rim: 0x7fe8e0, crack: 0x9ff0e8, horn: 0x16302f, eye: 0xd8fff0,
+    mouth: 0xbff8f0, membrane: 0x2f6a6a, frame: 0x183a3a, rimStrength: 0.4,
   },
 };
 

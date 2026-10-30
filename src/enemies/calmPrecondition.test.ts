@@ -34,9 +34,9 @@ describe('calm precondition and layToRest (v0.7 item 14)', () => {
 });
 
 describe('Act 3 reserved kinds and tags', () => {
-  it('are reserved; each becomes a def in the PR that adds it (K6b PR 1: the leech and the shambler)', () => {
+  it('are reserved; each becomes a def in the PR that adds it (K6b PR 1: the leech and the shambler; K6a PR 1: the drake)', () => {
     expect(ACT3_ENEMY_KINDS).toEqual(['fen-leech', 'peat-shambler', 'rime-hawk', 'crag-ogre', 'skarl-drake']);
-    const shipped = ['fen-leech', 'peat-shambler'];
+    const shipped = ['fen-leech', 'peat-shambler', 'skarl-drake'];
     for (const k of ACT3_ENEMY_KINDS) {
       if (shipped.includes(k)) expect(Object.keys(ENEMY_DEFS)).toContain(k);
       else expect(Object.keys(ENEMY_DEFS)).not.toContain(k);
