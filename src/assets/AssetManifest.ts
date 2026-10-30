@@ -1,4 +1,5 @@
 // Central registry of the CC0 asset packs and the individual files the game loads.
+import { TOWN_BODY_IDS, type TownBodyId } from '../npcs/types';
 
 /** Identifier of a third-party asset pack (also its folder name under public/assets/). */
 export type AssetPackId =
@@ -10,7 +11,8 @@ export type AssetPackId =
   | 'kaykit-dungeon-remastered'
   | 'kaykit-halloween'
   | 'kaykit-furniture'
-  | 'quaternius-farm-animals';
+  | 'quaternius-farm-animals'
+  | 'embers-townsfolk';
 
 /** Broad category of an asset, used by gameplay code to decide how to spawn it. */
 export type AssetKind = 'character' | 'weapon' | 'prop' | 'structure';
@@ -25,10 +27,10 @@ export interface AssetEntry {
   draco?: boolean;
 }
 
-/** Metadata and provenance for each pack. All packs are CC0 1.0. */
+/** Metadata and provenance for each pack: CC0 1.0 third-party packs, plus the project's own generated art ('project'). */
 export const ASSET_PACKS: Record<
   AssetPackId,
-  { name: string; author: string; license: 'CC0-1.0'; source: string; folder: string }
+  { name: string; author: string; license: 'CC0-1.0' | 'project'; source: string; folder: string }
 > = {
   'kaykit-adventurers': {
     name: 'KayKit Adventurers',
@@ -94,9 +96,24 @@ export const ASSET_PACKS: Record<
     source: 'https://quaternius.com',
     folder: 'assets/quaternius-farm-animals/',
   },
+  'embers-townsfolk': {
+    name: 'Embers generated townsfolk',
+    author: 'Mostafa (GLB-Viewer character generator, townsfolk game set)',
+    license: 'project',
+    // Archetype and seed per file: tools/townsfolk/bodies.mjs; re-export with tools/townsfolk/export.mjs.
+    source: 'https://github.com/MostafaFarouk90/GLB-Viewer',
+    folder: 'assets/embers-townsfolk/',
+  },
 };
 
 const BASE = import.meta.env.BASE_URL;
+
+/** One character entry per generated townsfolk body, at assets/embers-townsfolk/<id>.glb. */
+function townBodyAssets(): Record<TownBodyId, AssetEntry> {
+  return Object.fromEntries(
+    TOWN_BODY_IDS.map((id) => [id, { id, url: `${BASE}assets/embers-townsfolk/${id}.glb`, pack: 'embers-townsfolk', kind: 'character' }]),
+  ) as Record<TownBodyId, AssetEntry>;
+}
 
 /** Every asset the game can load. Add new entries here after dropping files under public/assets/. */
 export const ASSETS = {
@@ -130,6 +147,7 @@ export const ASSETS = {
     pack: 'kaykit-adventurers',
     kind: 'character',
   },
+  ...townBodyAssets(),
   sword: {
     id: 'sword',
     url: `${BASE}assets/kaykit-adventurers/weapons/sword_1handed.gltf`,

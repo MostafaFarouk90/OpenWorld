@@ -158,7 +158,10 @@ describe('models', () => {
     m.spawnAll();
     const before = fc.actors.get('npc:gaut#1')!.root!.children[0];
     await m.loadModels();
-    expect(spy.mock.calls.map((c) => c[0]).sort()).toEqual(['barbarian', 'knight', 'mage', 'rogue', 'rogueHooded']);
+    // the carters wear generated townsfolk bodies (townsfolkBodies.ts), which load with Knight.glb for their clips
+    expect([...new Set(spy.mock.calls.map((c) => c[0]))].sort()).toEqual(
+      ['barbarian', 'knight', 'mage', 'rogueHooded', 'town-farmer-a', 'town-farmer-b', 'town-villager-b'], // carter-2 was the only rogue
+    );
     expect(m.get('gaut')!.hasModel).toBe(true);
     const after = m.get('gaut')!.root.children;
     expect(after.length).toBe(1);
@@ -187,7 +190,9 @@ describe('models', () => {
     await expect(m.loadModels()).resolves.toBeUndefined();
     expect(m.get('gaut')!.hasModel).toBe(false);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('404'));
-    expect(warn).toHaveBeenCalledTimes(5);
+    // five KayKit GLBs and the carters' three generated bodies (whose KayKit fallbacks are among the five)
+    expect(warn).toHaveBeenCalledTimes(8);
+    expect(m.get('carter-1')!.hasModel).toBe(false);
   });
   it('an instantiate failure keeps the placeholder and does not reject', async () => {
     const l = fakeLoader();

@@ -3,7 +3,8 @@
 // supplied, else/failing that the NPC placeholder figure). The crowds plugin is deliberately not used: its
 // cluster groups are a closed union tied to Harrowmark.
 import * as THREE from 'three';
-import { buildPlaceholder, disposePlaceholder, pickIdleClip, prepareNpcModel } from '../npcs/npcModels';
+import { buildPlaceholder, disposePlaceholder, loadNpcModel, pickIdleClip } from '../npcs/npcModels';
+import { withTownsfolkBody } from '../npcs/townsfolkBodies';
 import type { NpcDef, NpcModelId, NpcModelLoader } from '../npcs/types';
 
 export interface TownsfolkSpot {
@@ -84,7 +85,8 @@ export class Townsfolk {
   }
 
   private spawn(s: TownsfolkSpot, x: number, z: number): void {
-    const def: NpcDef = { id: `townsfolk.${s.id}`, nameKey: '', model: s.model, scale: s.scale, tint: s.tint, dialogueId: '', idleClip: 'Idle' };
+    // The spot's KayKit model is the fallback; townsfolkBodies.ts says which generated body the figure wears.
+    const def = withTownsfolkBody({ id: `townsfolk.${s.id}`, nameKey: '', model: s.model, scale: s.scale, tint: s.tint, dialogueId: '', idleClip: 'Idle' });
     const root = new THREE.Group();
     root.name = def.id;
     const y = this.deps.heightAt?.(x, z) ?? 0;
@@ -105,25 +107,24 @@ export class Townsfolk {
     const loader = this.deps.loader;
     if (!loader) return;
     const warn = this.deps.warn ?? ((m: string) => console.warn(m));
-    loader.load(fig.def.model).then(
-      () => {
-        if (this.disposed) return;
-        try {
-          const { model, clips } = prepareNpcModel(loader, fig.def);
-          fig.root.remove(fig.body);
-          disposePlaceholder(fig.body);
-          fig.body = model;
-          fig.placeholder = false;
-          fig.root.add(model);
-          const clip = pickIdleClip(clips, fig.def.idleClip);
-          if (clip) {
-            fig.mixer = new THREE.AnimationMixer(model);
-            const act = fig.mixer.clipAction(clip);
-            act.time = fig.phase % Math.max(clip.duration, 0.01);
-            act.play();
-          }
-        } catch (err) {
-          warn(`Townsfolk: could not build model for ${fig.def.id}: ${err instanceof Error ? err.message : String(err)}`);
+    loadNpcModel(loader, fig.def).then(
+      ({ model, clips, def }) => {
+        if (this.disposed) {
+          disposeModel(model);
+          return;
+        }
+        fig.def = def;
+        fig.root.remove(fig.body);
+        disposePlaceholder(fig.body);
+        fig.body = model;
+        fig.placeholder = false;
+        fig.root.add(model);
+        const clip = pickIdleClip(clips, def.idleClip);
+        if (clip) {
+          fig.mixer = new THREE.AnimationMixer(model);
+          const act = fig.mixer.clipAction(clip);
+          act.time = fig.phase % Math.max(clip.duration, 0.01);
+          act.play();
         }
       },
       (err) => {

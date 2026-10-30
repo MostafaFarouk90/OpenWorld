@@ -2,7 +2,22 @@ import type * as THREE from 'three';
 import type { ActorLike, Vec3 } from '../region/coreTypes';
 import type { NpcSpec } from '../region/layoutTypes';
 
-export type NpcModelId = 'knight' | 'barbarian' | 'mage' | 'rogue' | 'rogueHooded';
+/** The KayKit Adventurers bodies. */
+export type KayKitBodyId = 'knight' | 'barbarian' | 'mage' | 'rogue' | 'rogueHooded';
+
+/**
+ * Generated townsfolk bodies (GLB-Viewer character generator, townsfolk game set: chibi look, KayKit size and skeleton).
+ * They carry no clips; the NPC loaders take Knight.glb's (see withTownsfolkClips). Which NPC wears which is the single
+ * table in townsfolkBodies.ts.
+ */
+export const TOWN_BODY_IDS = [
+  'town-villager-a', 'town-villager-b', 'town-villager-c', 'town-farmer-a', 'town-farmer-b', 'town-merchant-a',
+  'town-merchant-b', 'town-blacksmith-a', 'town-guard-a', 'town-priest-a', 'town-miner-a', 'town-miner-b',
+  'town-survivor-a',
+] as const;
+export type TownBodyId = (typeof TOWN_BODY_IDS)[number];
+
+export type NpcModelId = KayKitBodyId | TownBodyId;
 
 export interface NpcDef {
   id: string;
@@ -11,6 +26,10 @@ export interface NpcDef {
   scale: number;
   /** Colour the materials are pulled toward; null leaves the model's own colours. */
   tint: number | null;
+  /** How far (0..1) the tint pulls; defaults to NPC_TUNING.tintStrength. */
+  tintStrength?: number;
+  /** The def to use when this def's GLB fails to load (a generated townsfolk body's KayKit original). */
+  fallback?: NpcDef;
   dialogueId: string;
   idleClip: string;
   /** Props that belong to the NPC (a cloak, a lute); built once per spawn, facing -Z like yaw 0, and kept across the GLB swap. */

@@ -19,9 +19,9 @@ describe('shipped manifest', () => {
     }
   });
 
-  it('describes every pack with a CC0 license, https source and matching folder', () => {
+  it('describes every pack with a CC0 license (or the project own generated art), https source and matching folder', () => {
     for (const [packId, pack] of Object.entries(ASSET_PACKS)) {
-      expect(pack.license, packId).toBe('CC0-1.0');
+      expect(pack.license, packId).toBe(packId === 'embers-townsfolk' ? 'project' : 'CC0-1.0');
       expect(pack.source, packId).toMatch(/^https:\/\//);
       expect(pack.folder, packId).toBe(`assets/${packId}/`);
     }

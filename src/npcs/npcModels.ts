@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { NPC_TUNING } from './tuning';
-import type { NpcDef, NpcModelId, NpcModelLoader } from './types';
+import { TOWN_BODY_IDS, type NpcDef, type NpcModelId, type NpcModelLoader, type TownBodyId } from './types';
 
 const PLACEHOLDER_COLOURS: Record<NpcModelId, number> = {
   knight: 0x8d96a3,
@@ -8,7 +8,32 @@ const PLACEHOLDER_COLOURS: Record<NpcModelId, number> = {
   mage: 0x5b5fa8,
   rogue: 0x4f6b4a,
   rogueHooded: 0x4a5a3d,
+  ...(Object.fromEntries(TOWN_BODY_IDS.map((id) => [id, 0x8a7a62])) as Record<TownBodyId, number>),
 };
+
+export function isTownBody(id: NpcModelId): id is TownBodyId {
+  return (TOWN_BODY_IDS as readonly string[]).includes(id);
+}
+
+/** Where the generated townsfolk bodies take their clips from: Knight.glb, whose 41 bones they share by name. */
+export const TOWN_CLIP_SOURCE: NpcModelId = 'knight';
+
+const WRAPPED = Symbol('withTownsfolkClips');
+
+/**
+ * Wraps an NPC loader so the generated townsfolk bodies (which carry no clips) load together with Knight.glb and
+ * animate with its clips. Every other id passes through. Wrapping twice returns the same wrapper.
+ */
+export function withTownsfolkClips(loader: NpcModelLoader): NpcModelLoader {
+  if ((loader as { [WRAPPED]?: true })[WRAPPED]) return loader;
+  const wrapped: NpcModelLoader & { [WRAPPED]: true } = {
+    [WRAPPED]: true,
+    load: (id) => (isTownBody(id) ? Promise.all([loader.load(id), loader.load(TOWN_CLIP_SOURCE)]) : loader.load(id)),
+    instantiate: (id) => loader.instantiate(id),
+    animations: (id) => loader.animations(isTownBody(id) ? TOWN_CLIP_SOURCE : id),
+  };
+  return wrapped;
+}
 
 /** Held items modelled into the GLBs (swords, shields, staffs, books, mugs); NPCs stand empty-handed. */
 /** Every held item built into the KayKit character glbs (the class avatars hide the same list). */
@@ -50,11 +75,19 @@ export interface LoadedNpcModel {
 /**
  * Loads the def's GLB and returns a private clone: scaled, tinted, empty-handed, turned to face -Z (the
  * KayKit rig faces +Z natively; yaw 0 in the engine faces -Z, like the Knight avatar). Materials are cloned before the
- * tint so the loader's shared source materials are never touched. Rejects if the load fails.
+ * tint so the loader's shared source materials are never touched. A generated townsfolk body animates with Knight.glb's
+ * clips; if its GLB fails, the def's fallback (its KayKit original) is loaded instead. `def` is the def that was built.
+ * Rejects if every load fails.
  */
-export async function loadNpcModel(loader: NpcModelLoader, def: NpcDef): Promise<LoadedNpcModel> {
-  await loader.load(def.model);
-  return prepareNpcModel(loader, def);
+export async function loadNpcModel(loader: NpcModelLoader, def: NpcDef): Promise<LoadedNpcModel & { def: NpcDef }> {
+  const l = withTownsfolkClips(loader);
+  try {
+    await l.load(def.model);
+  } catch (err) {
+    if (!def.fallback) throw err;
+    return loadNpcModel(l, def.fallback);
+  }
+  return { ...prepareNpcModel(l, def), def };
 }
 
 /** Like loadNpcModel for a GLB the loader has already loaded. Synchronous; throws on failure. */
@@ -72,7 +105,7 @@ export function prepareNpcModel(loader: NpcModelLoader, def: NpcDef): LoadedNpcM
     const clone = (m: THREE.Material): THREE.Material => {
       const c = m.clone();
       const col = (c as THREE.MeshStandardMaterial).color;
-      if (tint && col) col.lerp(tint, NPC_TUNING.tintStrength);
+      if (tint && col) col.lerp(tint, def.tintStrength ?? NPC_TUNING.tintStrength);
       return c;
     };
     mesh.material = Array.isArray(mesh.material) ? mesh.material.map(clone) : clone(mesh.material);
