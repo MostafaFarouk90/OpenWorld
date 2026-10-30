@@ -21,6 +21,8 @@ export interface PoiPart {
   scale: number;
   /** Metres above the ground at (x, z). */
   dy?: number;
+  /** Act 3 (K2): `dy` counts from the ground under the site's ledge at its highest, so the part stands on the ledge's built top. */
+  onLedge?: boolean;
 }
 
 export type PoiTint = 'traveller' | 'hunter' | 'ash-cultist';

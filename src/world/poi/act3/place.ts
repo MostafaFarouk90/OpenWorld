@@ -38,7 +38,7 @@ export const ACT3_POI_PLACEMENTS: readonly A3Placement[] = [
   { site: site('hunter-cairn', 'hunter-cairn', { rubbing: 'spine-2' }), region: 'dragonspine', where: { road: 'deepgate-track', s: 7200, side: -70, facingDeg: 0 }, cluster: 'deepgate-west' },
   { site: site('frozen-camp', 'frozen-camp', { ledge: true, rubbing: 'spine-3' }), region: 'dragonspine', where: { road: 'rime-pass', s: 600, side: -110, facingDeg: 0 }, cluster: 'rime-low' },
   { site: site('glass-vein', 'glass-vein', { ledge: true, rubbing: 'spine-4' }), region: 'dragonspine', where: { road: 'rime-pass', s: 2400, side: -40, facingDeg: 0 }, cluster: 'rime-mid' },
-  { site: site('spine-vista', 'vista', { rubbing: 'spine-5' }), region: 'dragonspine', where: { road: 'rime-pass', s: 3500, side: -55, facingDeg: 0 }, cluster: 'rime-high' },
+  { site: site('spine-vista', 'vista', { rubbing: 'spine-5' }), region: 'dragonspine', where: { road: 'rime-pass', s: 3600, side: -40, facingDeg: 0 }, cluster: 'rime-high' },
   { site: site('fen-boundary-stone', 'leap-cache'), region: 'fenroad', where: { road: 'fen-road', s: 5400, side: 40, facingDeg: 0 }, cluster: 'fen-road-mid' },
   { site: site('spine-crag', 'leap-cache'), region: 'spineroad', where: { road: 'spine-road', s: 1800, side: 40, facingDeg: 270 }, cluster: 'spine-west' },
   { site: site('spine-ledge', 'leap-cache', { rubbing: 'spine-6' }), region: 'dragonspine', where: { road: 'deepgate-track', s: 6310, side: -40, facingDeg: 180 }, cluster: 'deepgate-west' },

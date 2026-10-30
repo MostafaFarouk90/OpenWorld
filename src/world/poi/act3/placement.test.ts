@@ -14,7 +14,11 @@ import { siteProblems } from './fit';
 import { A3_NEIGHBOUR_LAYOUTS } from './neighbours';
 import { ACT3_POI_DOC, ACT3_POI_LAYOUT, ACT3_POI_PLACED, ACT3_POI_PLACEMENTS } from './place';
 import { a3SpurCorridorFor } from './poiAct3.plugin';
-import { ISLET_TIERS } from './templates';
+import { A3_COLLIDER_KIND, ISLET_TIERS } from './templates';
+import { registerA3Kinds } from './kinds';
+import { registerPoiKinds } from '../kinds';
+import { validateLayout } from '../../../region/validateLayout';
+import { footprintCorners } from '../../../region/geometry';
 import { A3_POI_TEMPLATES } from './types';
 
 type Flags = Record<string, boolean>;
@@ -34,6 +38,10 @@ function containment(flags: Flags, spurs = true): Containment {
   }
   return c;
 }
+
+
+/** Every non-test source file, raw (the song stone's words must be its own). */
+const ALL_SOURCES = import.meta.glob<string>(['../../../**/*.ts', '!../../../**/*.test.ts'], { query: '?raw', import: 'default', eager: true });
 
 describe('Act 3 POI counts and ids', () => {
   it('ten points of interest, five in each region, every template once; eight Leap spots; six rubbings', () => {
@@ -83,6 +91,39 @@ describe('Act 3 sites on the real ground', () => {
     for (const a of GREYFEN_LAYOUT.anchors.filter((x) => x.id.startsWith('greyfen.m23.'))) expect(Math.hypot(a.x - p.pose.x, a.z - p.pose.z), a.id).toBeGreaterThan(40);
     const texts = Object.values(A3_RUBBING_TEXTS).map((t) => t.body);
     expect(texts).not.toContain(A3_SONG_STONE_TEXT.body);
+  });
+
+  it('the song stone\'s name and text appear in no other source (M23\'s shore search, K9\'s shrine, any quest text when it lands)', () => {
+    const hits = (needle: string) => Object.entries(ALL_SOURCES).filter(([, src]) => src.includes(needle)).map(([f]) => f);
+    // The text is matched on its opening clause: a quest writer reusing the stone's words would start there.
+    for (const needle of [A3_SONG_STONE_TEXT.name, A3_SONG_STONE_TEXT.body.slice(0, 40)]) expect(hits(needle), needle).toEqual(['./content.ts']);
+    expect(Object.keys(ALL_SOURCES).some((f) => f.includes('greyfen/mere.ts'))).toBe(true);
+  });
+
+  it('the layout passes the region validator on the real ground, bar the expected and checked exceptions', () => {
+    const releases = [registerPoiKinds(), registerA3Kinds()];
+    try {
+      const leapGated = new Set(ACT3_POI_LAYOUT.anchors.filter((a) => a.tags?.includes('leap-gated')).map((a) => a.id));
+      const colliders = new Set(ACT3_POI_LAYOUT.structures.filter((s) => s.kind === A3_COLLIDER_KIND).map((s) => s.id));
+      const expected = (e: string): boolean => {
+        // Leap-gated anchors sit on their ledge's top by design (the plugin lifts them; leap.test.ts proves the reach).
+        const floats = /^anchor "([^"]+)": floats above the terrain/.exec(e);
+        if (floats && leapGated.has(floats[1])) return true;
+        // The reed islet is two stacked rock tiers.
+        if (/^structures "poi-a3-reed-island-tier-1" and "poi-a3-reed-island-tier-2" overlap$/.test(e)) return true;
+        // K2's invisible colliders (the generated model is the visual) are checked below for a gap a player could enter.
+        const flat = /^structure "([^"]+)": terrain under the footprint is not flat enough$/.exec(e);
+        return !!flat && colliders.has(flat[1]);
+      };
+      expect(validateLayout(ACT3_POI_LAYOUT, heightAt, { spawnId: null }).filter((e) => !expected(e))).toEqual([]);
+      // An invisible collider stands at its centre's ground: under its low edge the gap stays well under the 1.8 m capsule.
+      for (const s of ACT3_POI_LAYOUT.structures.filter((x) => colliders.has(x.id))) {
+        const low = Math.min(...footprintCorners(s).map(([x, z]) => heightAt(x, z)));
+        expect(heightAt(s.x, s.z) - low, s.id).toBeLessThan(1);
+      }
+    } finally {
+      for (const r of releases) r();
+    }
   });
 
   it('every Dragonspine site is outside the summit hole and inside the lower slopes box', () => {

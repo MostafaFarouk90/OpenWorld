@@ -1,11 +1,11 @@
 // The site checks (thread K2): what a placed Act 3 piece must satisfy on the real ground. The fit helper (tools/k2-fit.ts) and
 // placement.test.ts both call `siteProblems`, so the frozen arcs and the test can never disagree. Pure: heights come in.
 import type { LayoutData, StructureSpec } from '../../../region/layoutTypes';
-import { groundRange } from '../../../region/geometry';
+import { footprintCorners, groundRange } from '../../../region/geometry';
 import { engineBox } from '../../../region/regions';
 import { ACT3_PLATEAUS, ACT3_ROADS } from '../../../terrain/shape/act3';
 import { GREYFEN_TROUGHS, GREYFEN_WATER_TABLE, HATHRENS_MERE, WADE_FLOOR_MIN } from '../../../terrain/shape/greyfen';
-import { LEDGE_HEIGHT } from './templates';
+import { A3_COLLIDER_KIND, LEDGE_HEIGHT } from './templates';
 import type { PlacedA3 } from './place';
 
 export type HeightFn = (x: number, z: number) => number;
@@ -96,6 +96,11 @@ export function siteProblems(p: PlacedA3, h: HeightFn, n: Neighbours): string[] 
     if (s.kind === 'rock') continue;
     const r = groundRange(s, h);
     if (r.max - r.min > 1.6) out.push(`${s.id} range ${(r.max - r.min).toFixed(1)}`);
+    // A drawn, non-foundation structure stands at its centre's ground: the validator's flatness (corners and centre, 0.5 m)
+    // keeps one end from floating. K2's own colliders draw nothing (the model is the visual), so they only need the range above.
+    if (s.kind === A3_COLLIDER_KIND) continue;
+    const hs = [...footprintCorners(s), [s.x, s.z] as [number, number]].map(([cx, cz]) => h(cx, cz));
+    if (Math.max(...hs) - Math.min(...hs) > 0.5) out.push(`${s.id} not flat (${(Math.max(...hs) - Math.min(...hs)).toFixed(2)})`);
   }
   for (const s of p.layout.structures.filter((st) => st.role === 'ledge')) {
     const r = groundRange(s, h);

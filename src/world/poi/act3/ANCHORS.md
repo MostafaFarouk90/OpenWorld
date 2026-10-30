@@ -20,7 +20,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | greyfen.poi.peat-cutting.main | 4801.47 | 9708.32 | 0 | 101.31 | poi |
 | greyfen.poi.peat-cutting.chest | 4806.38 | 9707.34 | 0 | 281.31 | poi |
 | greyfen.poi.peat-cutting.fauna | 4785.78 | 9711.46 | 0 | 101.31 | spawn |
-| greyfen.poi.reed-island.main | 3213.95 | 12794.48 | 0 | 0 | poi |
+| greyfen.poi.reed-island.main | 3213.95 | 12786.48 | 0 | 0 | poi |
 | greyfen.poi.reed-island.chest | 3215.45 | 12793.48 | 1 | 180 | poi |
 | greyfen.poi.reed-island.fauna | 3213.95 | 12780.48 | 0 | 0 | spawn |
 | greyfen.poi.greyfen-song-stone.main | 2856.35 | 12894.67 | 0 | 0 | poi |
@@ -30,7 +30,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.poi.hawk-nest.fauna | 11196.25 | 12335.09 | 0 | 9.46 | spawn |
 | dragonspine.poi.hawk-nest.ledge | 11192.8 | 12350.88 | 1.8 | 9.46 | poi, leap-gated |
 | dragonspine.poi.hawk-nest.ledge.launch | 11191.89 | 12345.45 | 0 | 9.46 | poi |
-| dragonspine.poi.hunter-cairn.main | 15708.19 | 11279.53 | 0 | 97.59 | poi |
+| dragonspine.poi.hunter-cairn.main | 15702.24 | 11280.32 | 0 | 97.59 | poi |
 | dragonspine.poi.hunter-cairn.rubbing | 15704.72 | 11279.99 | 0 | 97.59 | poi, rubbing |
 | dragonspine.poi.hunter-cairn.chest | 15713.97 | 11281.28 | 0 | 277.59 | poi |
 | dragonspine.poi.hunter-cairn.fauna | 15720.09 | 11277.94 | 0 | 97.59 | spawn |
@@ -44,16 +44,16 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.poi.glass-vein.rubbing | 13954.6 | 13479.22 | 0 | 243.43 | poi, rubbing |
 | dragonspine.poi.glass-vein.ledge | 13940.29 | 13481.01 | 1.8 | 243.43 | poi, leap-gated |
 | dragonspine.poi.glass-vein.ledge.launch | 13945.21 | 13483.47 | 0 | 243.43 | poi |
-| dragonspine.poi.spine-vista.main | 14456.39 | 14138.68 | 0 | 131.91 | poi, vista |
-| dragonspine.poi.spine-vista.view | 14456.39 | 14138.68 | 1.8 | 131.91 | vista |
-| dragonspine.poi.spine-vista.rubbing | 14451.44 | 14138.42 | 0 | 131.91 | poi, rubbing |
-| fenroad.poi.fen-boundary-stone.main | 6442.65 | 7336.33 | 0 | 172.87 | poi |
+| dragonspine.poi.spine-vista.main | 14368.59 | 14197.32 | 0 | 131.91 | poi, vista |
+| dragonspine.poi.spine-vista.view | 14371.94 | 14194.31 | 1.8 | 131.91 | vista |
+| dragonspine.poi.spine-vista.rubbing | 14367 | 14194.04 | 0 | 131.91 | poi, rubbing |
+| fenroad.poi.fen-boundary-stone.main | 6441.66 | 7344.26 | 0 | 172.87 | poi |
 | fenroad.poi.fen-boundary-stone.ledge | 6442.65 | 7336.33 | 1.8 | 172.87 | poi, leap-gated |
 | fenroad.poi.fen-boundary-stone.ledge.launch | 6441.97 | 7341.78 | 0 | 172.87 | poi |
-| spineroad.poi.spine-crag.main | 7316.04 | 12792.07 | 0 | 183.37 | poi |
+| spineroad.poi.spine-crag.main | 7316.51 | 12800.05 | 0 | 183.37 | poi |
 | spineroad.poi.spine-crag.ledge | 7316.04 | 12792.07 | 1.8 | 183.37 | poi, leap-gated |
 | spineroad.poi.spine-crag.ledge.launch | 7316.36 | 12797.56 | 0 | 183.37 | poi |
-| dragonspine.poi.spine-ledge.main | 16572.78 | 11217.35 | 0 | 260.27 | poi |
+| dragonspine.poi.spine-ledge.main | 16580.67 | 11218.7 | 0 | 260.27 | poi |
 | dragonspine.poi.spine-ledge.ledge | 16572.78 | 11217.35 | 1.8 | 260.27 | poi, leap-gated |
 | dragonspine.poi.spine-ledge.ledge.launch | 16578.21 | 11218.28 | 0 | 260.27 | poi |
 | dragonspine.poi.spine-ledge.rubbing | 16572.02 | 11218.84 | 1.8 | 260.27 | poi, rubbing, leap-gated |
@@ -71,7 +71,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | trg.dragonspine.poi.hunter-cairn.discover | sphere | 15708.19 | 11279.53 | r 15 |
 | trg.dragonspine.poi.frozen-camp.discover | sphere | 13446.7 | 12545.42 | r 18 |
 | trg.dragonspine.poi.glass-vein.discover | sphere | 13951.47 | 13481.01 | r 18 |
-| trg.dragonspine.poi.spine-vista.discover | sphere | 14456.39 | 14138.68 | r 15 |
+| trg.dragonspine.poi.spine-vista.discover | sphere | 14371.94 | 14194.31 | r 15 |
 | trg.poi.a3.fen-boundary-stone.discover | sphere | 6442.65 | 7336.33 | r 15 |
 | trg.poi.a3.spine-crag.discover | sphere | 7316.04 | 12792.07 | r 15 |
 | trg.dragonspine.poi.spine-ledge.discover | sphere | 16572.78 | 11217.35 | r 15 |
@@ -108,7 +108,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | poi-a3-glass-vein-wall-n | rock | 13936.71 | 13479.22 | 12 x 3 | solid |
 | poi-a3-glass-vein-wall-w | rock | 13942.3 | 13476.99 | 3 x 5 | solid |
 | poi-a3-glass-vein-wall-e | rock | 13938.28 | 13485.04 | 3 x 5 | solid |
-| poi-a3-spine-vista-lookout | poi-lookout | 14456.39 | 14138.68 | 5 x 4 | solid |
+| poi-a3-spine-vista-lookout | poi-lookout | 14371.94 | 14194.31 | 5 x 4 | solid |
 | poi-a3-fen-boundary-stone-ledge | rock | 6442.65 | 7336.33 | 6 x 5 | solid |
 | poi-a3-fen-boundary-stone-wall-n | rock | 6443.14 | 7332.36 | 12 x 3 | solid |
 | poi-a3-fen-boundary-stone-wall-w | rock | 6447.11 | 7336.88 | 3 x 5 | solid |

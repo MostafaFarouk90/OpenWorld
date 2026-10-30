@@ -14,7 +14,9 @@ export const A3_COLLIDER_KIND = 'poi-a3-collider';
 /** Rubbing ids are `spine-1` .. `spine-6`. */
 export const A3_RUBBING_ID = /^spine-[1-6]$/;
 
-const anchor = (id: string, x: number, z: number, yawDeg: number, tags: string[], dy?: number): AnchorSpec => ({ id, x, z, yawDeg, tags, ...(dy ? { dy } : {}) });
+const anchor = (id: string, x: number, z: number, yawDeg: number, tags: string[], dy?: number, onStructure?: string): AnchorSpec => ({
+  id, x, z, yawDeg, tags, ...(dy ? { dy } : {}), ...(onStructure ? { onStructure } : {}),
+});
 const part = (asset: string, x: number, z: number, yawDeg: number, scale: number, dy?: number): PoiPart => ({ asset, x, z, yawDeg, scale, ...(dy ? { dy } : {}) });
 
 interface Acc {
@@ -124,12 +126,13 @@ export const ISLET_TIERS = [
 function reedIsland(id: string, _p: A3Params): A3Piece {
   const rng = makeRng(`${id}:islet`);
   const a = acc();
-  a.anchors.push(anchor('main', 0, 0, 0, ['poi']));
+  // `main` stands on the shelf in front of the islet (the islet is solid rock); the chest stands on the islet's top.
+  a.anchors.push(anchor('main', 0, -8, 0, ['poi']));
   ISLET_TIERS.forEach((t, i) => a.structures.push({ id: `poi-a3-${id}-tier-${i + 1}`, kind: 'rock', x: 0, z: 0, yawDeg: 0, footprint: t.footprint, mode: 'solid', height: t.height }));
   const top = ISLET_TIERS[1].height;
   a.parts.push(part('env/willow-a', -1.5, 1.5, rng.range(0, 360), 0.8, top), part('env/prop.greyfen.ferry-punt', 7.5, -2, 120, 1, -0.3));
   for (const t of ring(rng, 10, 4.5, 6.5)) a.parts.push(part(rng.pick(['env/reeds-a', 'env/reeds-b']), t.x, t.z, t.yaw, rng.range(1, 1.4), ISLET_TIERS[0].height));
-  a.anchors.push(anchor('chest', 1.5, -1, 180, ['poi'], top));
+  a.anchors.push(anchor('chest', 1.5, -1, 180, ['poi'], top, `poi-a3-${id}-tier-2`));
   a.parts.push(part('dun/chest', 1.5, -1, 180, 1, top));
   a.interactables.push({ id: `chest:poi-a3-${id}`, kind: 'chest', anchor: 'chest' });
   addFauna(a, 0, -14);
@@ -160,7 +163,7 @@ function hawkNest(id: string, p: A3Params): A3Piece {
   addFauna(a, 6, -6);
   if (p.ledge) {
     addLedge(a, id, 0, 9);
-    a.parts.push(part('env/dragonspine-hawk-nest', 0, 9.6, 0, 1, LEDGE_HEIGHT));
+    a.parts.push({ ...part('env/dragonspine-hawk-nest', 0, 9.6, 0, 1, LEDGE_HEIGHT), onLedge: true });
   } else {
     a.parts.push(part('env/dragonspine-hawk-nest', 0, 0, 0, 1));
   }
@@ -170,7 +173,7 @@ function hawkNest(id: string, p: A3Params): A3Piece {
 function hunterCairn(id: string, p: A3Params): A3Piece {
   const rng = makeRng(`${id}:cairn`);
   const a = acc();
-  a.anchors.push(anchor('main', 0, 0, 0, ['poi']));
+  a.anchors.push(anchor('main', 0, -6, 0, ['poi']));
   a.parts.push(part('env/cinder-cairn', 0, 0, 0, 1.2), part('env/dragonspine-trophy-wall', 0, 4, 180, 1), part('env/dragonspine-prayer-cairn', -3, -2, 30, 1));
   a.parts.push(part('env/dragonspine-prayer-cairn', 3.2, -1.5, 300, 1), part('env/spear-hunter', 1.5, 3, 40, 1), part('env/spear-hunter', -1.6, 3.2, 130, 1));
   for (const t of ring(rng, 4, 5, 7)) a.parts.push(part('env/cairn-a', t.x, t.z, t.yaw, rng.range(0.8, 1.2)));
@@ -211,7 +214,8 @@ function vista(id: string, p: A3Params): A3Piece {
   const rng = makeRng(`${id}:vista`);
   const a = acc();
   const h = 1.8;
-  a.anchors.push(anchor('main', 0, 0, 0, ['poi', 'vista']), anchor('view', 0, 0, 0, ['vista'], h));
+  // `main` stands in front of the lookout; `view` is on its top.
+  a.anchors.push(anchor('main', 0, -4.5, 0, ['poi', 'vista']), anchor('view', 0, 0, 0, ['vista'], h, `poi-a3-${id}-lookout`));
   a.structures.push({ id: `poi-a3-${id}-lookout`, kind: 'poi-lookout', x: 0, z: 0, yawDeg: 0, footprint: [5, 4], mode: 'solid', height: h });
   a.parts.push(part('env/cairn-a', 1.8, 1.2, 0, 1, h), part('hal/bench', -0.5, -0.5, 0, 1, h), part('env/signpost-a', -3.5, 2, 20, 1));
   for (const t of ring(rng, 3, 3.5, 5)) a.parts.push(part('env/rock-cluster-a', t.x, t.z, t.yaw, rng.range(0.8, 1.2)));
@@ -222,14 +226,14 @@ function vista(id: string, p: A3Params): A3Piece {
 function leapCache(id: string, p: A3Params): A3Piece {
   const rng = makeRng(`${id}:cache`);
   const a = acc();
-  a.anchors.push(anchor('main', 0, 0, 0, ['poi']));
+  a.anchors.push(anchor('main', 0, -8, 0, ['poi']));
   addLedge(a, id, 0, 0);
   a.parts.push(part('env/boulder-large-a', -6.5, 1, rng.range(0, 360), 0.7), part('env/milestone-a', 2.5, -6, 15, 1), part('env/stump-a', -3, -6, 0, 1));
   // The sixth rubbing sits on the ledge itself, beside the cache.
   if (p.rubbing) {
     if (!A3_RUBBING_ID.test(p.rubbing)) throw new Error(`poi a3: bad rubbing id "${p.rubbing}"`);
     a.anchors.push(anchor('rubbing', 1.6, 0.5, 0, ['poi', 'rubbing', 'leap-gated'], LEDGE_HEIGHT));
-    a.parts.push(part('env/dragonspine-carving-stone', 1.6, 1.3, 0, 0.8, LEDGE_HEIGHT));
+    a.parts.push({ ...part('env/dragonspine-carving-stone', 1.6, 1.3, 0, 0.8, LEDGE_HEIGHT), onLedge: true });
     a.interactables.push({ id: `use:poi-a3-rubbing-${p.rubbing}`, kind: 'rubbing', anchor: 'rubbing' });
   }
   return finish(id, 'leap-cache', 9, a, true);

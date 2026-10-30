@@ -7,6 +7,9 @@ import { LAST_ANVIL, rubbingCodexId, rubbingFlag, RUBBINGS_COLLECTION_ID } from 
 import { codexEntry } from '../../../codex/entries';
 import { A3_RUBBING_IDS, ACT3_POI_GOLD, LEAP_CACHE_XP, SONG_STONE_XP, a3DiscoveredFlag, a3TakenFlag } from './content';
 import { a3Placed } from './place';
+import { ledgeTop } from './fit';
+import { REGION_INFO } from '../../../region/regions';
+import { ACT3_POI_GOLD_CAP } from './content';
 import { createPoiAct3Plugin } from './poiAct3.plugin';
 
 let physics: PhysicsWorld;
@@ -15,10 +18,16 @@ beforeAll(async () => {
   await physics.init();
 });
 
-function rig(opts: { flags?: Record<string, boolean>; rubbings?: boolean } = {}) {
+/** Greyfen and the Dragonspine open (Act 3 under way): the flags their `openWhen` reads. */
+const ACT3_OPEN = Object.fromEntries([...(REGION_INFO.greyfen.openWhen.all ?? []), ...(REGION_INFO.dragonspine.openWhen.all ?? [])].map((k) => [k, true]));
+/** Act 2 done, Act 3 not begun: the Deepgate Track and the first Fen Road miles are walkable. */
+const ACT2_ONLY = { 'story.gate.a2': true, 'story.d03.complete': true };
+const sloped = (x: number, z: number) => 10 + 0.05 * x + 0.03 * z;
+
+function rig(opts: { flags?: Record<string, boolean>; rubbings?: boolean | 'late'; heightAt?: (x: number, z: number) => number } = {}) {
   const fc = createFakeCore();
   fc.useRapier(physics.rapier);
-  for (const [k, v] of Object.entries(opts.flags ?? {})) fc.flags.set(k, v);
+  for (const [k, v] of Object.entries(opts.flags ?? ACT3_OPEN)) fc.flags.set(k, v);
   fc.services.set('containment', new Containment(fc.ctx.state));
   const gold: number[] = [];
   const xp: number[] = [];
@@ -49,9 +58,9 @@ function rig(opts: { flags?: Record<string, boolean>; rubbings?: boolean } = {})
     });
     // K9's own six, as the Last Anvil registers them.
     rubbings.register(LAST_ANVIL.rubbingIds.map((id) => ({ id })));
-    fc.services.set('anvilRubbings', rubbings);
+    if (opts.rubbings !== 'late') fc.services.set('anvilRubbings', rubbings);
   }
-  const plugin = createPoiAct3Plugin({ heightAt: () => 10, toast: (t) => toasts.push(t) });
+  const plugin = createPoiAct3Plugin({ heightAt: opts.heightAt ?? (() => 10), toast: (t) => toasts.push(t) });
   plugin.setup(fc.ctx);
   return { fc, plugin, gold, xp, unlocked, registered, toasts, rubbings };
 }
@@ -77,12 +86,18 @@ describe('poi-act3: start-up away from Act 3', () => {
     expect(fc.triggers.size).toBe(0);
   });
 
-  it('puts ledge anchors on the built ledge top, not on the ground', () => {
-    const { fc } = rig();
-    const top = fc.anchors.get('greyfen.poi.stilt-camp.ledge')!.position.y;
-    const launch = fc.anchors.get('greyfen.poi.stilt-camp.ledge.launch')!.position.y;
-    expect(top - launch).toBeCloseTo(1.8, 5);
-    expect(fc.anchors.get('dragonspine.poi.spine-ledge.rubbing')!.position.y).toBeCloseTo(top, 5);
+  it('puts every leap-gated anchor on its ledge\'s built top on sloped ground (not ground + 1.8 at the anchor)', () => {
+    const { fc } = rig({ heightAt: sloped });
+    for (const id of ['greyfen.poi.stilt-camp', 'dragonspine.poi.spine-ledge', 'spineroad.poi.spine-crag']) {
+      const site = a3Placed(id.split('.')[2]);
+      const ledge = site.layout.structures.find((s) => s.role === 'ledge')!;
+      const top = ledgeTop(ledge, sloped);
+      const a = fc.anchors.get(`${id}.ledge`)!.position;
+      expect(a.y, id).toBeCloseTo(top, 5);
+      expect(Math.abs(a.y - (sloped(a.x, a.z) + 1.8)), id).toBeGreaterThan(0.01);
+    }
+    const ledge = a3Placed('spine-ledge').layout.structures.find((s) => s.role === 'ledge')!;
+    expect(fc.anchors.get('dragonspine.poi.spine-ledge.rubbing')!.position.y).toBeCloseTo(ledgeTop(ledge, sloped), 5);
   });
 
   it('adds the two null-land spurs and removes them on dispose', () => {
@@ -131,7 +146,7 @@ describe('poi-act3: clusters, rewards and chests', () => {
     expect(r.fc.colliders.size).toBe(0);
   });
 
-  it('a Leap cache pays XP and gold once, and stays taken across a load', () => {
+  it('a Leap cache pays XP and gold once, and stays taken across a load into a fresh game', () => {
     const r = rig();
     goTo(r, 'spine-crag');
     const id = 'use:poi-a3-spine-crag-ledge';
@@ -140,8 +155,34 @@ describe('poi-act3: clusters, rewards and chests', () => {
     expect(r.xp).toEqual([LEAP_CACHE_XP]);
     expect(r.gold).toEqual([ACT3_POI_GOLD[id]]);
     expect(r.fc.flags.get(a3TakenFlag('spine-crag'))).toBe(true);
-    r.fc.fire('save.loaded');
-    expect(r.fc.interactables.get(id)?.enabled?.()).toBe(false);
+    const saved = Object.fromEntries(r.fc.flags);
+    r.plugin.dispose?.();
+    const again = rig({ flags: saved as Record<string, boolean> });
+    again.fc.fire('save.loaded');
+    goTo(again, 'spine-crag');
+    expect(again.fc.interactables.get(id)?.enabled?.()).toBe(false);
+    again.fc.fire('interact', { interactableId: id, kind: 'use' });
+    expect(again.xp).toEqual([]);
+    expect(again.gold).toEqual([]);
+  });
+
+  it('the Act 3 gold stays under its cap', () => {
+    expect(Object.values(ACT3_POI_GOLD).reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(ACT3_POI_GOLD_CAP);
+  });
+
+  it('in Act 2 (Deepgate Track and the first Fen Road miles walkable) no cluster builds, dressing included', () => {
+    const r = rig({ flags: ACT2_ONLY });
+    for (const at of [{ x: 20300, z: 9900 }, { x: 17900, z: 11200 }, { x: 7800, z: 3800 }, { x: 5700, z: 9600 }, { x: 13900, z: 13480 }]) {
+      Object.assign(r.fc.playerFeet, { ...at, y: 10 });
+      r.fc.tick('rules', 1.1);
+      expect(r.fc.colliders.size, JSON.stringify(at)).toBe(0);
+      expect([...r.fc.interactables.keys()].filter((k) => k.includes('poi-a3')), JSON.stringify(at)).toEqual([]);
+    }
+    // The gate opens: the Fen Road cluster under the player builds on the next sync, the Dragonspine ones still wait.
+    r.fc.ctx.state.setFlag('story.gate.a3', true);
+    Object.assign(r.fc.playerFeet, { x: 5700, z: 9600 });
+    r.fc.tick('rules', 1.1);
+    expect(r.fc.interactables.has('chest:poi-a3-stilt-camp')).toBe(true);
   });
 
   it('a failing reward (no progression service) leaves the cache untaken', () => {
@@ -188,7 +229,7 @@ describe('poi-act3: the six Dragonspine rubbings', () => {
   });
 
   it('after M32 a take unlocks its lore at once, with the titled toast', () => {
-    const r = rig({ flags: { [READABLE_FLAG]: true } });
+    const r = rig({ flags: { ...ACT3_OPEN, [READABLE_FLAG]: true } });
     goTo(r, 'glass-vein');
     r.fc.interactables.get('use:poi-a3-rubbing-spine-4')!.onInteract(undefined as never);
     expect(r.unlocked).toContain(rubbingCodexId('spine-4'));
@@ -203,6 +244,18 @@ describe('poi-act3: the six Dragonspine rubbings', () => {
     r.fc.flags.set(READABLE_FLAG, true);
     r.rubbings!.derive();
     expect(r.unlocked).toContain(rubbingCodexId('spine-3'));
+  });
+
+  it('registers the rubbings once K9\'s service appears after setup (no hard dependency on its plugin)', () => {
+    const r = rig({ rubbings: 'late' });
+    expect(r.rubbings!.readable).toBeDefined();
+    r.fc.services.set('anvilRubbings', r.rubbings!);
+    goTo(r, 'hawk-nest');
+    const it = r.fc.interactables.get('use:poi-a3-rubbing-spine-1')!;
+    expect(it.enabled?.()).toBe(true);
+    it.onInteract(undefined as never);
+    expect(r.rubbings!.taken('spine-1')).toBe(true);
+    r.fc.tick('rules', 1.1); // a second sync registers nothing twice (register refuses duplicates by throwing)
   });
 
   it('without the anvilRubbings service: a warning, the stones have no prompt, nothing throws', () => {

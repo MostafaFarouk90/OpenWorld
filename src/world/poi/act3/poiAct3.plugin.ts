@@ -1,7 +1,8 @@
 // Plugin `poi-act3` (thread K2): the Act 3 points of interest, Leap spots, the six Dragonspine rubbings and the road dressing.
 // Anchors, triggers and spur corridors are defined eagerly (other threads look them up); structures, props, chests and the
 // interactables are built per cluster while the player is within CLUSTER_BUILD_RADIUS and torn down past CLUSTER_KEEP_RADIUS,
-// so start-up anywhere outside Act 3 builds nothing. A2's plugin (`poi`) is untouched; this one reuses its pieces.
+// and only once the cluster's region is open (Greyfen or the Dragonspine), so nothing builds before Act 3: the Deepgate Track and
+// the first Fen Road miles are walkable in Act 2, and their dressing stays unbuilt there (coordinator ruling: visual only). A2's plugin (`poi`) is untouched; this one reuses its pieces.
 import * as THREE from 'three';
 import { Chest } from '../../../interaction/Chest';
 import { createEffectRunner } from '../../../quests/effects';
@@ -18,6 +19,7 @@ import { groundRange } from '../../../region/geometry';
 import { buildStructures, coreFactories } from '../../../region/StructureBuilder';
 import { createStructureArt, type StructureArt } from '../../../region/structureArt';
 import { REGION_INFO } from '../../../region/regions';
+import { flagConditionHolds, type FlagCondition } from '../../../core/flagCondition';
 import { resolveLayout } from '../../../region/resolveLayout';
 import type { StructureSpec } from '../../../region/layoutTypes';
 import type { GamePlugin } from '../../../core/plugins';
@@ -56,6 +58,13 @@ export interface PoiAct3Options {
 }
 
 /** A null-land Leap cache hangs off its road on a spur that opens with the region the road leads to (A2's pattern). */
+/** The region whose opening lets a POI or a dressed road's cluster build. */
+export function a3OpenWhen(regionOrRoad: string): FlagCondition {
+  return regionOrRoad === 'greyfen' || regionOrRoad === 'fenroad' || regionOrRoad === 'fen-road'
+    ? REGION_INFO.greyfen.openWhen
+    : REGION_INFO.dragonspine.openWhen;
+}
+
 export function a3SpurCorridorFor(p: A3Placement, placed: PlacedA3) {
   if (p.region !== 'fenroad' && p.region !== 'spineroad') return null;
   if (!('road' in p.where)) return null;
@@ -85,6 +94,7 @@ interface Cluster {
   dressing: PlacedDressing[];
   cx: number;
   cz: number;
+  openWhen: FlagCondition;
   built: { dispose(): void } | null;
 }
 
@@ -106,7 +116,8 @@ export function createPoiAct3Plugin(opts: PoiAct3Options = {}): GamePlugin {
 
   return {
     id: 'poi-act3',
-    dependsOn: ['core', 'region', 'codex', 'anvil-rubbings'],
+    // Not on `anvil-rubbings`: a failing K9 plugin must not take every Act 3 POI (and the anchors others read) with it.
+    dependsOn: ['core', 'region', 'codex'],
     setup(ctx) {
       try {
         cleanups.push(ctx.strings.register('en', POI_A3_STRINGS_EN));
@@ -143,11 +154,22 @@ export function createPoiAct3Plugin(opts: PoiAct3Options = {}): GamePlugin {
           if (typeof off === 'function') cleanups.push(off);
         }
 
-        // ---- rubbings: registered with K9's service; taken with a hold at the stone ------------------
+        // ---- rubbings: registered with K9's service once it exists (setup, then each sync); taken with a hold ----
         const rubbings = rubbingSites(placedAll);
-        const rubbingSvc = ctx.services.get('anvilRubbings');
-        if (rubbingSvc) cleanups.push(rubbingSvc.register(rubbings.map((r) => ({ id: r.rubbing }))));
-        else if (rubbings.length) console.warn('poi-act3: no anvilRubbings service, the Dragonspine rubbings are off');
+        let rubbingsRegistered = !rubbings.length;
+        let warnedNoRubbings = false;
+        const ensureRubbings = (): void => {
+          if (rubbingsRegistered) return;
+          const s = ctx.services.get('anvilRubbings');
+          if (!s) {
+            if (!warnedNoRubbings) console.warn('poi-act3: no anvilRubbings service yet, the Dragonspine rubbings wait for it');
+            warnedNoRubbings = true;
+            return;
+          }
+          rubbingsRegistered = true;
+          cleanups.push(s.register(rubbings.map((r) => ({ id: r.rubbing }))));
+        };
+        ensureRubbings();
         const takeRubbing = (id: string): void => {
           const s = ctx.services.get('anvilRubbings');
           if (!s || !s.take(id)) return;
@@ -216,7 +238,7 @@ export function createPoiAct3Plugin(opts: PoiAct3Options = {}): GamePlugin {
         const clusters = new Map<string, Cluster>();
         const clusterOf = (key: string): Cluster => {
           let c = clusters.get(key);
-          if (!c) clusters.set(key, (c = { pois: [], dressing: [], cx: 0, cz: 0, built: null }));
+          if (!c) clusters.set(key, (c = { pois: [], dressing: [], cx: 0, cz: 0, openWhen: {}, built: null }));
           return c;
         };
         for (const p of placedAll) clusterOf(p.cluster).pois.push(p);
@@ -225,6 +247,7 @@ export function createPoiAct3Plugin(opts: PoiAct3Options = {}): GamePlugin {
           const pts = [...c.pois.map((p) => p.pose), ...c.dressing.map((d) => d.pose)];
           c.cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
           c.cz = pts.reduce((s, p) => s + p.z, 0) / pts.length;
+          c.openWhen = a3OpenWhen(c.pois[0]?.region ?? c.dressing[0]!.site.road);
         }
         const lookup = new BuildingLookup(undefined, undefined, a3Art(createStructureArt(modelLibraryFor(ctx.assets))));
         const anchorPos = (p: PlacedA3, local: string) => ctx.anchors.get(`${a3AnchorPrefix(p.region, p.id)}${local}`).position;
@@ -296,8 +319,8 @@ export function createPoiAct3Plugin(opts: PoiAct3Options = {}): GamePlugin {
             const ledge = m.layout.structures.find((s) => s.role === 'ledge');
             const ledgeY = ledge ? groundRange(ledge, height, 1).max : null;
             for (const pt of m.parts) {
-              // A part lifted by the ledge height stands on the ledge's built top, not on the ground under it.
-              const base = ledgeY !== null && pt.dy === LEDGE_HEIGHT ? ledgeY : height(pt.x, pt.z);
+              // A ledge part stands on the ledge's built top, not on the ground under it.
+              const base = ledgeY !== null && pt.onLedge ? ledgeY : height(pt.x, pt.z);
               parts.push({ owner: m.id, part: pt, y: base + (pt.dy ?? 0) });
             }
           }
@@ -342,11 +365,13 @@ export function createPoiAct3Plugin(opts: PoiAct3Options = {}): GamePlugin {
           };
         };
         const syncClusters = (): void => {
+          ensureRubbings();
           const feet = ctx.player.feet;
           for (const c of clusters.values()) {
             const d = Math.hypot(feet.x - c.cx, feet.z - c.cz);
-            if (!c.built && d <= A3_CLUSTER_BUILD_RADIUS) buildCluster(c);
-            else if (c.built && d > A3_CLUSTER_KEEP_RADIUS) {
+            const open = flagConditionHolds(c.openWhen, ctx.state);
+            if (!c.built && open && d <= A3_CLUSTER_BUILD_RADIUS) buildCluster(c);
+            else if (c.built && (!open || d > A3_CLUSTER_KEEP_RADIUS)) {
               c.built.dispose();
               c.built = null;
             }
