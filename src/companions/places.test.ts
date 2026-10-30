@@ -14,7 +14,10 @@ const ids = (l: LayoutData | undefined, kind: 'triggers' | 'anchors') => new Set
 // all must, so a rename fails here instead of silently skipping.
 const defined = ids(BRIGHTWATER_LAYOUT, 'triggers');
 // Act 2 triggers (trg.cinderreach.*) live in A3's layout, not Brightwater's.
-const brightwaterTriggers = Object.keys(TOBB.places.triggers).filter((id) => !isCity(id) && !id.startsWith('trg.cinderreach.'));
+// Act 3 triggers (trg.greyfen.*, trg.dragonspine.*) live in K3's and K4's layouts.
+const brightwaterTriggers = Object.keys(TOBB.places.triggers).filter(
+  (id) => !isCity(id) && !id.startsWith('trg.cinderreach.') && !id.startsWith('trg.greyfen.') && !id.startsWith('trg.dragonspine.'),
+);
 const deadRoadIn = brightwaterTriggers.some((id) => defined.has(id));
 
 describe("Tobb's area-bark places", () => {

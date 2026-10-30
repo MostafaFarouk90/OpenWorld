@@ -1,3 +1,4 @@
+import { isAct3IndirectPool } from './act3/banter';
 import { describe, expect, it } from 'vitest';
 import { COMPANION_STRINGS_EN } from './strings.en';
 import { TOBB } from './tobb';
@@ -71,7 +72,8 @@ describe('TOBB definition', () => {
   it('every banter place is reachable from a trigger, interior or region', () => {
     const { triggers, interiors, regions } = TOBB.places;
     const reachable = new Set([...Object.values(triggers), ...Object.values(interiors), ...Object.values(regions)]);
-    for (const place of Object.keys(TOBB.banter.area)) expect(reachable.has(place), place).toBe(true);
+    // Act 3 (K5): event pools (trial, reveal, ferry) and post-reveal variants are reached through `sayAt` and `areaVariant`.
+    for (const place of Object.keys(TOBB.banter.area)) expect(reachable.has(place) || isAct3IndirectPool(place), place).toBe(true);
   });
   it('interior entry anchors exist for the interiors he comments on', () => {
     for (const id of Object.keys(TOBB.places.interiors)) expect(TOBB.interiorEntry[id], id).toBeTruthy();

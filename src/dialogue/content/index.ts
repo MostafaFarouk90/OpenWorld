@@ -26,9 +26,11 @@ import { npcArmourer, npcClerk, npcGrisel, npcKeepGuard, npcWace } from './npc-c
 import { ACT2_DIALOGUES, ACT2_EXTENDED_DIALOGUES } from './act2';
 import { npcAelfredaCompanion } from '../../companions/dialogue/npcAelfredaCompanion.dialogue';
 import { withAct3Trainers } from './act3/trainers';
+import { withAct3Companions } from './act3/companions';
 
-// Act 3 (K10): the four Harrowmark trainers get their master-book lines in front.
-export const dialogueDefs: DialogueDef[] = withAct3Trainers([
+// Act 3 (K10): the four Harrowmark trainers get their master-book lines in front. Act 3 (K5): Hrolf's master book and
+// the companions' M27, M32 and M34 scene trees.
+export const dialogueDefs: DialogueDef[] = withAct3Companions(withAct3Trainers([
   npcStane, npcEdda, npcHob, npcWynn, npcTobb, npcCarter1, npcCarter2, t04Vow,
   npcRook, npcAldith, npcMerrin, npcGerta, npcWhitlock, npcAshdown, sceneAct1Camp,
   npcCarter3, npcAldwin, npcGarrick, ...NOTE_DIALOGUES,
@@ -40,4 +42,4 @@ export const dialogueDefs: DialogueDef[] = withAct3Trainers([
   npcAelfredaCompanion,
   // Act 2 (A12): Cinderreach quest trees, and Gaut, Aelfreda and Pennard with their Act 2 rules in front
   ...ACT2_EXTENDED_DIALOGUES, ...ACT2_DIALOGUES,
-]);
+]));
