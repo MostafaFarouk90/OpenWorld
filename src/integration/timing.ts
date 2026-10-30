@@ -401,3 +401,23 @@ export function estimatePaceRow(row: PaceRowLike, design: number, at: (anchor: s
 
 /** The dialogue nodes a trail read (a readable note is one `note` beat in the row, not its nodes). */
 export const trailNodes = (trail: QuestTrail): number => trail.talks.filter((t) => !t.npc.startsWith('note-')).reduce((n, t) => n + t.nodes, 0);
+
+/**
+ * Act 3 additions (plan Part 1.3), fixed before anything is measured. Seconds per beat unit for the beats Act 3 adds; the
+ * Act 1 and Act 2 tables above are unchanged. An anvil rubbing counts as a `search`.
+ */
+export const ACT3_BEAT_S = {
+  ...ACT2_BEAT_S,
+  /** one dive segment, air pocket to air pocket (at most 40 m): about 20 s swimming plus a 10 s look-around */
+  dive: 30,
+  /** one sled hauled up one leg of the pass */
+  sled: 90,
+} as const;
+/** Wading (water 0.4 to 1.2 m deep) before the Fen Boots, M23's reward. */
+export const WADE_MPS = 2.5;
+/** Wading with the Fen Boots (they halve the 2 m/s slowdown). */
+export const WADE_BOOTS_MPS = 3.5;
+/** Dragonspine Glide travel. */
+export const GLIDE_MPS = 10;
+/** A fen ferry ride. */
+export const FERRY_MPS = 5;
