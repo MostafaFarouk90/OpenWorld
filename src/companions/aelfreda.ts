@@ -3,6 +3,7 @@ import type { NpcDef } from '../npcs/types';
 import { AELFREDA_STRINGS_EN } from './strings.aelfreda.en';
 import { ACT2_TRIGGERS, AELFREDA_TUNING, COMPANION_DOWNED_SECONDS } from './tuning';
 import type { CompanionDef, CompanionLook } from './types';
+import { ACT3_INTERIOR_ENTRY, ACT3_PLACES, act3Pools, act3Variant } from './act3/banter';
 
 const pool = (prefix: string): string[] =>
   Object.keys(AELFREDA_STRINGS_EN).filter((k) => k.startsWith(`companion.aelfreda.bark.${prefix}.`));
@@ -46,22 +47,27 @@ export const AELFREDA: CompanionDef = {
       cinderreach: pool('area.cinderreach'),
       oldsmoke: pool('area.oldsmoke'),
       dell: pool('area.dell'),
+      // Act 3 (K5): the Greyfen, the Dragonspine, the trial, the reveal and the ferry.
+      ...act3Pools('aelfreda'),
     },
     combatStart: pool('combatStart'),
     combatEnd: pool('combatEnd'),
     elapsed: pool('elapsed'),
   },
   places: {
-    triggers: { [ACT2_TRIGGERS.dell]: 'dell' },
-    interiors: { 'tilted-anvil': 'tiltedAnvil' },
-    regions: { harrowmark: 'harrowmark', cinderreach: 'cinderreach', oldsmoke: 'oldsmoke' },
+    triggers: { [ACT2_TRIGGERS.dell]: 'dell', ...ACT3_PLACES.triggers },
+    interiors: { 'tilted-anvil': 'tiltedAnvil', ...ACT3_PLACES.interiors },
+    regions: { harrowmark: 'harrowmark', cinderreach: 'cinderreach', oldsmoke: 'oldsmoke', ...ACT3_PLACES.regions },
   },
+  // Act 3: Dragonspine places speak differently after the reveal (M32).
+  areaVariant: act3Variant,
   interiorEntry: {
     'tilted-anvil': 'harrowmark.tilted-anvil.entry',
     'counting-house': 'harrowmark.counting-house.entry',
     archive: 'harrowmark.archive.entry',
     'keep-hall': 'harrowmark.keep-hall.entry',
     underways: 'harrowmark.underways.entry',
+    ...ACT3_INTERIOR_ENTRY,
   },
   waits: [],
 };
