@@ -20,6 +20,7 @@ import { QUEST_PROPS } from '../content/props';
 import { CARRY_ITEMS } from '../content/carry';
 import { ACT2_QUEST_NOTES, ACT2_PROPS, ACT2_CARRY } from '../content/act2';
 import type { QuestNoteSpec } from '../notes';
+import { ACT3_POI_LAYOUT } from '../../world/poi/act3/place';
 
 /** The NPC talk radius in metres (src/npcs/tuning.ts `talkRadius`). */
 export const NOTE_LINT_RADIUS = 2.5;
@@ -27,7 +28,7 @@ export const NOTE_LINT_RADIUS = 2.5;
 /** Every world layout the game ships (Brightwater already folds in the corridor and the density pass A). */
 export const ALL_LAYOUTS: readonly LayoutData[] = [
   BRIGHTWATER_LAYOUT, DEADROAD_LAYOUT, HARROWMARK_LAYOUT, DENSITY_LAYOUT_HM, CINDERREACH_LAYOUT, OLDSMOKE_LAYOUT, ACT2_WORLD_LAYOUT,
-  GREYFEN_FAUNA_LAYOUT, DRAGONSPINE_LAYOUT,
+  GREYFEN_FAUNA_LAYOUT, DRAGONSPINE_LAYOUT, ACT3_POI_LAYOUT,
 ];
 
 export interface NoteLintAllow {
