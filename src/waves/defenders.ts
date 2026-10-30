@@ -62,8 +62,8 @@ function placeholderBody(): DefenderBody {
   return self;
 }
 
-function knightBody(loader: NpcModelLoader): DefenderBody {
-  const { model, clips } = prepareNpcModel(loader, MILITIA_NPC);
+function knightBody(loader: NpcModelLoader, npcDef: NpcDef = MILITIA_NPC): DefenderBody {
+  const { model, clips } = prepareNpcModel(loader, npcDef);
   const root = new THREE.Group();
   root.name = 'militia';
   root.add(model);
@@ -102,10 +102,15 @@ function knightBody(loader: NpcModelLoader): DefenderBody {
 
 /** The real factory: the Knight rig when the loader has it, else the placeholder. */
 export function defenderBodyFactory(loader: NpcModelLoader | null): DefenderBodyFactory {
+  return npcDefenderBodyFactory(loader, MILITIA_NPC);
+}
+
+/** Act 3 (K5): the same body from another NPC def (the M27 deserter); the placeholder when the model is not loaded. */
+export function npcDefenderBodyFactory(loader: NpcModelLoader | null, npcDef: NpcDef): DefenderBodyFactory {
   return () => {
     if (loader) {
       try {
-        return knightBody(loader);
+        return knightBody(loader, npcDef);
       } catch {
         // not loaded (yet), or the clips are missing: stand in
       }
@@ -133,6 +138,7 @@ export class Defender {
     makeBody: DefenderBodyFactory,
     readonly post: Vec3,
     readonly yaw: number,
+    kind: string = DEFENDER.kind,
   ) {
     this.body = makeBody();
     const root = this.body.root;
@@ -145,7 +151,7 @@ export class Defender {
     try {
       hurtboxes = new HurtboxSet(root, this.body.hurtboxDefs, root);
       // Untargetable for AI and lock-on picks; a tracer that overlaps him still hits him.
-      actor = host.actors.spawn({ kind: DEFENDER.kind, team: 'ally', maxHealth: DEFENDER.maxHealth, maxPoise: 0, root, owner: root, untargetable: true });
+      actor = host.actors.spawn({ kind, team: 'ally', maxHealth: DEFENDER.maxHealth, maxPoise: 0, root, owner: root, untargetable: true });
       actor.data['audio'] = { material: 'metal' };
       this.removers.push(host.combat.addTarget(hurtboxes, actor.id));
     } catch (err) {
@@ -253,6 +259,13 @@ export class Defender {
   }
 }
 
+/** Act 3 (K5): handler ids and actor kind of a set other than the militia, so two sets never share an id. */
+export interface DefendersOptions {
+  lethalHandlerId: string;
+  noKillHandlerId: string;
+  kind: string;
+}
+
 /** The militia of one set. The lethal handler exists only while they do. */
 export class Defenders {
   private readonly list = new Map<ActorId, Defender>();
@@ -262,6 +275,7 @@ export class Defenders {
   constructor(
     private readonly host: DefenderHost,
     private readonly makeBody: DefenderBodyFactory,
+    private readonly opts: DefendersOptions = { lethalHandlerId: DEFENDER.lethalHandlerId, noKillHandlerId: DEFENDER.noKillHandlerId, kind: DEFENDER.kind },
   ) {}
 
   get all(): readonly Defender[] {
@@ -276,7 +290,7 @@ export class Defenders {
     this.despawnAll();
     for (const post of posts) {
       try {
-        const d = new Defender(this.host, this.makeBody, post, yaw);
+        const d = new Defender(this.host, this.makeBody, post, yaw, this.opts.kind);
         this.list.set(d.id, d);
       } catch (err) {
         console.warn(`[waves] could not build a militiaman: ${String(err)}`);
@@ -284,7 +298,7 @@ export class Defenders {
     }
     if (this.list.size === 0) return;
     // Lethal damage never kills a militiaman: 1 HP, down for a while (`actor.saved` carries the handler id).
-    this.unhandle = this.host.damage.addLethalHandler(DEFENDER.lethalHandlerId, (target) => {
+    this.unhandle = this.host.damage.addLethalHandler(this.opts.lethalHandlerId, (target) => {
       const d = this.list.get(target.id);
       if (!d) return false;
       target.health = Math.min(1, target.maxHealth);
@@ -294,7 +308,7 @@ export class Defenders {
     // A modifier after the swing (a back-hit multiplier) can lift it past the cap, so the rule is enforced on resolve:
     // a militiaman's hit never kills, credit, XP and mercy stay with the player.
     this.unhandleNoKill = this.host.damage.addLethalHandler(
-      DEFENDER.noKillHandlerId,
+      this.opts.noKillHandlerId,
       (target, r) => {
         if (!r.attackerId || !this.list.has(r.attackerId) || this.list.has(target.id)) return false;
         target.health = Math.min(1, target.maxHealth);
