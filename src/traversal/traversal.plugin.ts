@@ -205,7 +205,10 @@ const traversal: GamePlugin = {
         },
         radius: 2.5,
         coneDegrees: 360,
-        promptKey: 'ferry.prompt',
+        // With K15's menu set, the press opens a chooser, so the prompt must not name one destination.
+        get promptKey() {
+          return stopMenu ? 'ferry.prompt.menu' : 'ferry.prompt';
+        },
         promptParams: () => ({ dest: stopName(ferry.defaultDestination(stop) ?? stop) }),
         enabled: () => !ferry.riding,
         onInteract: () => {

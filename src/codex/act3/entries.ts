@@ -1,6 +1,6 @@
 // Act 3 codex entries that K15 owns (PR 1): the Greyfen and its four places, and four how-tos for the new traversal and gear
 // rules. The creature rows (leech, shambler: K6b; skarl-drake and Hathren: K6a; Murkjaw: K8; the rubbings: K9 and K2) are
-// registered by their own threads. Ids here are checked against the other registrations by entries.test.ts.
+// registered by their own threads. Ids here are checked against the other registrations by codexAct3.test.ts.
 import { codexEntry, type CodexEntryDef } from '../entries';
 
 export const ACT3_CODEX_IDS = {

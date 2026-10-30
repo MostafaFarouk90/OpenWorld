@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ACT3_BLOCKS, blockBaseLevel, type Act3BlockId } from '../../enemies/level';
 import { WarmthBlocks, blockLevelFlag, type WarmthBlocksEnemies } from '../../shrine/warmthBlocks';
+import { areaAt, SUMMIT_BOX } from '../../region/areas';
 import { BLOCK_LOCKED_KEY, BLOCK_PREVIEW_KEY, BLOCK_REGIONS, blockChips, blockChipsKey, blockTone, type BlockChipPorts } from './blockChips';
 import { MAP_ACT3_STRINGS_EN } from './strings.en';
 
@@ -178,6 +179,16 @@ describe('blockChips', () => {
     w.warmth.lockBlock('greyfen');
     expect(w.chips({ player: { x: centre.x, z: centre.z } }).find((c) => c.block === 'greyfen')!.here).toBe(false);
     expect(w.chips({ player: { x: NaN, z: 0 } }).some((c) => c.here)).toBe(false);
+  });
+
+  it('the lower-slopes warning is off on the summit, which is its own area', () => {
+    const w = world();
+    const summit = { x: (SUMMIT_BOX.x0 + SUMMIT_BOX.x1) / 2, z: (SUMMIT_BOX.z0 + SUMMIT_BOX.z1) / 2 };
+    expect(areaAt(summit.x, summit.z)).toBe('dragonspine-summit');
+    expect(w.chips({ player: summit }).some((c) => c.here)).toBe(false);
+    const lower = { x: SUMMIT_BOX.x0 - 100, z: SUMMIT_BOX.z0 + 100 };
+    expect(areaAt(lower.x, lower.z)).toBe('dragonspine-lower');
+    expect(w.chips({ player: lower }).find((c) => c.block === 'dragonspine-lower')!.here).toBe(true);
   });
 
   it('chips sit on the region centres', () => {

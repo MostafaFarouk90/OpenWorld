@@ -29,6 +29,7 @@ export class BreathMeter implements HudWidgetView {
   readonly id = 'breath-meter';
   readonly element;
   private readonly fill;
+  private readonly label;
   private shown = false;
   private lastPct = -1;
   private low = false;
@@ -37,6 +38,9 @@ export class BreathMeter implements HudWidgetView {
     const t = source.t ?? defaultT;
     this.element = makeEl(doc, 'div', 'owg-breath');
     this.element.setAttribute('aria-label', t('act3.hud.breath'));
+    // The label shares the row with the bar (a small caption to its left), so the thin bar is not a mystery.
+    this.label = makeEl(doc, 'span', 'owg-breath-label', this.element);
+    this.label.textContent = t('act3.hud.breath');
     const bar = makeEl(doc, 'div', 'owg-bar owg-bar-breath', this.element);
     this.fill = makeEl(doc, 'div', 'owg-bar-fill', bar);
     setShown(this.element, false);

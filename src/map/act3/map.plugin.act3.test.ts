@@ -8,6 +8,8 @@ import type { GamePlugin } from '../../core/plugins';
 import { InputManager } from '../../input/InputManager';
 import { PhysicsWorld } from '../../physics/PhysicsWorld';
 import waystonesPlugin from '../../waystones/waystones.plugin';
+import { SUMMIT_BOX } from '../../region/areas';
+import { engineBox } from '../../region/regions';
 import mapPlugin from '../map.plugin';
 import type { MapViewModel } from '../viewTypes';
 
@@ -113,6 +115,23 @@ describe('map plugin block chips', () => {
     expect(model.blocks!().map((c) => c.block)).toEqual(['greyfen']);
     fakes.level = undefined;
     expect(model.blocks!()).toEqual([]);
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it("the legend shows the chip's range while the player stands in a block area, and the old band elsewhere", async () => {
+    const { ctx, fakes, model } = await boot();
+    const g = engineBox('greyfen');
+    ctx.player.teleport({ x: (g.x0 + g.x1) / 2, y: 0, z: (g.z0 + g.z1) / 2 });
+    expect(model.legend!()).toEqual({ min: 22, max: 27 });
+    // Locked: the locked level and its span.
+    fakes.locked.greyfen = 23;
+    expect(model.legend!()).toEqual({ min: 23, max: 28 });
+    // The summit is not the lower slopes: no chip applies there, so the old band (none in this reduced boot) is the answer.
+    ctx.player.teleport({ x: (SUMMIT_BOX.x0 + SUMMIT_BOX.x1) / 2, y: 0, z: (SUMMIT_BOX.z0 + SUMMIT_BOX.z1) / 2 });
+    expect(model.legend!()).toBeNull();
+    // Chip hidden (block finished): fall back too.
+    ctx.player.teleport({ x: (g.x0 + g.x1) / 2, y: 0, z: (g.z0 + g.z1) / 2 });
+    for (const q of ['m23', 'm24', 'm25', 'm26', 'm27', 'd05', 'r12', 'r13', 'r14']) fakes.done.add(q);
+    expect(model.legend!()).toBeNull();
   }, PLUGIN_TEST_TIMEOUT);
 
   it('without the services the model gives no chips and the map still works', async () => {

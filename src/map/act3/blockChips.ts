@@ -2,6 +2,7 @@
 // the Warmth block surface, the player level, quest state); the view draws what this returns. A block's chip shows the live
 // preview until the lock, then the locked level and its span, and stays until every quest of the block is completed.
 import { ACT3_BLOCKS, type Act3BlockId } from '../../enemies/level';
+import { areaAt } from '../../region/areas';
 import { engineBox, type RegionId } from '../../region/regions';
 
 export type BlockTone = 'gold' | 'orange' | 'red';
@@ -26,7 +27,7 @@ export interface BlockChip {
   /** `map.block.preview` ("Tuned for level L. You are level P.") or `map.block.locked` ("Level L to top"). */
   textKey: string;
   params: Record<string, number>;
-  /** The player stands in the block's region while the block is not locked: the legend repeats the warning. */
+  /** The player stands in the block's own area while the block is not locked: the legend repeats the warning. */
   here: boolean;
 }
 
@@ -91,7 +92,8 @@ export function blockChips(ports: BlockChipPorts): BlockChip[] {
     const b = engineBox(region);
     const top = level + (finite(def.span) ? def.span : 0);
     const p = ports.player;
-    const here = !locked && !!p && finite(p.x) && finite(p.z) && p.x >= b.x0 && p.x < b.x1 && p.z >= b.z0 && p.z < b.z1;
+    // The block's own area (the lower slopes exclude the summit box), not the whole region box.
+    const here = !locked && !!p && finite(p.x) && finite(p.z) && areaAt(p.x, p.z) === block;
     out.push({
       block,
       x: (b.x0 + b.x1) / 2,
@@ -111,4 +113,11 @@ export function blockChips(ports: BlockChipPorts): BlockChip[] {
 /** Stable signature, so the map plugin hands the view the same array until a chip changes. */
 export function blockChipsKey(chips: readonly BlockChip[]): string {
   return chips.map((c) => `${c.block}:${c.locked ? 'L' : 'P'}${c.level}-${c.top}${c.tone}${c.textKey === BLOCK_PREVIEW_KEY ? c.params.player : ''}${c.here ? 'h' : ''}`).join('|');
+}
+
+/** The legend band of the chip whose block area holds the point (L to L + span, the chip's own numbers), or null when none does. */
+export function blockBandAt(chips: readonly BlockChip[], x: number, z: number): { min: number; max: number } | null {
+  const area = areaAt(x, z);
+  const c = area ? chips.find((k) => k.block === area) : undefined;
+  return c ? { min: c.level, max: c.top } : null;
 }

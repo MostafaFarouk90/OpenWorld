@@ -2,6 +2,7 @@
 export const TRAVERSAL_STRINGS_EN: Record<string, string> = {
   'water.deep.toast': 'The water runs too deep here. Keep to the shallows and the causeways.',
   'ferry.prompt': 'Press {key} to take the ferry to {dest}',
+  'ferry.prompt.menu': 'Press {key} for the ferry',
   'ferry.seated': 'Press {key} to skip to the landing',
   'ferry.refused.noToken': 'Dudda keeps the ferry for those who carry his token.',
   'ferry.refused.notRunning': 'The ferry is moored. Dudda will not run it without his horn.',

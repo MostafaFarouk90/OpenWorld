@@ -16,7 +16,7 @@ import { renderLocalTile, renderTerrainBitmap, minimapTilePlan, type TerrainBitm
 import { DEFAULT_WORLD_BOUNDS, MAP_TUNING } from './tuning';
 import type { MapViewModel } from './viewTypes';
 import { openRegionAt, regionChips, type RegionChip } from './regionLayer';
-import { blockChips, blockChipsKey, type BlockChip } from './act3/blockChips';
+import { blockBandAt, blockChips, blockChipsKey, type BlockChip } from './act3/blockChips';
 import { MAP_ACT3_STRINGS_EN } from './act3/strings.en';
 import '../region/containment';
 
@@ -204,7 +204,8 @@ const map: GamePlugin = {
         return id ? ctx.strings.t(`map.region.${id}`) : null;
       },
       forge: () => sources.forge(),
-      legend: () => sources.legend(ctx.player.feet.x, ctx.player.feet.z),
+      // Inside a block area with a chip the legend shows the chip's range (L to L + span), not the wider region band.
+      legend: () => blockBandAt(currentBlocks(), ctx.player.feet.x, ctx.player.feet.z) ?? sources.legend(ctx.player.feet.x, ctx.player.feet.z),
       player: () => ({ x: ctx.player.feet.x, z: ctx.player.feet.z, yaw: ctx.player.facingYaw }),
       travelBlockedReason: () => waystones()?.travelBlockedReason() ?? 'busy',
       travel: (id) => void waystones()?.travel(id),

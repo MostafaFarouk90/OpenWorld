@@ -20,7 +20,7 @@ export const ACT3_CODEX_STRINGS_EN: Record<string, string> = {
     'Shallow fen water, up to chest height, can be waded. It slows you to about half speed and you cannot sprint, but you can still dodge. The Fen Boots halve what wading costs you. Water deeper than that pushes you back.',
   'codex.howto.diving.name': 'Diving',
   'codex.howto.diving.body':
-    'At a dive point you can swim under water, in any direction. You hold thirty seconds of breath, shown in the bar under your stamina. Air pockets along the route refill it. If it runs out you are carried back to the last pocket, hurt but never killed.',
+    'At a dive point you can swim under water, in any direction. Your breath is limited, and the Breath bar under your stamina shows what is left. Air pockets along the route refill it. If it runs out you are carried back to the last pocket, hurt but never killed.',
   'codex.howto.ferry.name': 'The ferry',
   'codex.howto.ferry.body':
     "Dudda's token is shown, never spent: with it the ferry runs between Reedgate, the Mere, the Greywatch posts and Mireweather Hut. Interact at a stop to choose where to ride, or stay ashore. Once under way, interact again to skip to the landing. The ferry will not take a sled or a load, and does not run in combat.",
@@ -29,5 +29,5 @@ export const ACT3_CODEX_STRINGS_EN: Record<string, string> = {
     'The Greyfen and the lower Dragonspine are tuned to the forge marks you have lit and to how strong you are, and the level is fixed when you take the first quest there. The map shows each block with its level: gold if it is at or below yours, orange if it is up to three above, red beyond that.',
   'codex.howto.shard-gems.name': 'Shard-gems',
   'codex.howto.shard-gems.body':
-    'Tier 4 gear has a socket for a shard-gem, and a second once tempered to +5. At a smith or a socket point you can fit a gem (50 gold), take it out again (25 gold) or recut it to another gem of the same class (40 gold). A gem only works while a matching class wears the piece.',
+    'Tier 4 gear has a socket for a shard-gem, and a second once tempered to +5. At a smith or a socket point you can fit a gem, take it out again or recut it to another gem of the same class, each for a price in gold. A gem only works while a matching class wears the piece.',
 };

@@ -4,10 +4,18 @@ import { StubDocument, type ElementLike } from '../dom';
 import { BREATH_LOW_SECONDS, BreathMeter, type BreathReading } from './BreathMeter';
 
 const shown = (e: ElementLike) => e.style.display !== 'none';
-const fillOf = (m: BreathMeter): ElementLike => m.element.children[0]!.children[0]!;
+const fillOf = (m: BreathMeter): ElementLike => m.element.children[1]!.children[0]!;
 const make = (read?: () => BreathReading | null | undefined) => new BreathMeter(new StubDocument(), { water: read });
 
 describe('BreathMeter', () => {
+  it('carries a small "Breath" label in the same row as the bar', () => {
+    const m = make();
+    const label = m.element.children[0]!;
+    expect(label.className).toBe('owg-breath-label');
+    expect(label.textContent).toBe('Breath');
+    expect(m.element.children[1]!.className).toContain('owg-bar-breath');
+  });
+
   it('is hidden on land, wading and with no water service', () => {
     for (const state of ['dry', 'wading']) {
       const m = make(() => ({ state, breath: DIVE_TUNING.breathSeconds }));

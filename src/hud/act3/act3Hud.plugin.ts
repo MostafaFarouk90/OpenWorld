@@ -14,8 +14,9 @@ import '../../water/types';
 
 /** The Act 3 HUD's own styles (the shared `owg-` sheet is injected once by the hud plugin, so these ride in a second one). */
 export const ACT3_HUD_CSS = `
-.owg-breath{width:260px;pointer-events:none;margin-top:4px}
-.owg-bar-breath{height:6px}
+.owg-breath{width:260px;pointer-events:none;margin-top:4px;display:flex;align-items:center;gap:6px}
+.owg-breath-label{font-size:10px;line-height:1;text-shadow:0 1px 2px #000;min-width:38px}
+.owg-bar-breath{height:6px;flex:1}
 .owg-bar-breath .owg-bar-fill{background:#5aa0d0}
 .owg-breath-low .owg-bar-fill{background:#d0603a}
 .owg-ferry-menu .owg-row,.owg-sockets .owg-row{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px}

@@ -287,10 +287,19 @@ describe('act3-hud with the shard-gems plugin', () => {
     expect(t.svc.openScreen()).toBe(false);
   }, PLUGIN_TEST_TIMEOUT);
 
-  it('setScreen(null) and dispose restore the fallback panel', async () => {
+  it('setScreen(null) restores the fallback panel', async () => {
     const t = await boot(true);
     t.svc.setScreen(null);
     t.svc.openScreen();
     expect(t.modals.at(-1)!.element.className).toBe('owg-respec');
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('dispose restores the fallback panel', async () => {
+    const t = await boot(true);
+    act3Hud.dispose?.();
+    expect(t.svc.openScreen()).toBe(true);
+    const w = t.modals.at(-1)!;
+    expect(w.element.className).toBe('owg-respec');
+    expect(w.element.className).not.toContain('owg-sockets');
   }, PLUGIN_TEST_TIMEOUT);
 });

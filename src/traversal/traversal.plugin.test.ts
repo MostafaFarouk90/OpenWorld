@@ -187,6 +187,11 @@ describe('traversal plugin', () => {
     b.ctx.services.require('ferry').setMenu((s) => (asked.push(s), true));
     stopAt('reedgate').onInteract(b.ctx.player.actor);
     expect(asked).toEqual(['reedgate']);
+    // The prompt is neutral while a menu is set, and names the destination otherwise.
+    expect(stopAt('reedgate').promptKey).toBe('ferry.prompt.menu');
+    b.ctx.services.require('ferry').setMenu(null);
+    expect(stopAt('reedgate').promptKey).toBe('ferry.prompt');
+    b.ctx.services.require('ferry').setMenu((s) => (asked.push(s), true));
     expect(b.ctx.services.require('ferry').riding).toBe(false);
     // The menu rides a chosen leg with `ride`; the default is untouched (the next default still starts at the first leg).
     expect(b.ctx.services.require('ferry').ride('reedgate', 'mere')).toBeNull();
