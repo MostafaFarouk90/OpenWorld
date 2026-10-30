@@ -6,13 +6,21 @@ import { ACT3_SKILL_EFFECT_IDS } from './index';
 import { ASHBLADE_T4_PARTICLES } from './ashblade';
 import { KNIGHT_T4_PARTICLES } from './knight';
 import { WARDEN_T4_PARTICLES } from './warden';
+import { EMBERWRIGHT_T4_PARTICLES } from './emberwright';
+import { PATHFINDER_T4_PARTICLES } from './pathfinder';
 import { EFFECT_IDS } from '../types';
 
 describe('act3 skill VFX budget', () => {
-  it('every preset has a peak entry and all nine skills together use under a tenth of the cap', () => {
-    const table: Record<string, number> = { ...KNIGHT_T4_PARTICLES, ...WARDEN_T4_PARTICLES, ...ASHBLADE_T4_PARTICLES };
+  it('every preset has a peak entry and all fifteen tier 4 skills together use under a sixth of the cap', () => {
+    const table: Record<string, number> = {
+      ...KNIGHT_T4_PARTICLES,
+      ...WARDEN_T4_PARTICLES,
+      ...ASHBLADE_T4_PARTICLES,
+      ...EMBERWRIGHT_T4_PARTICLES,
+      ...PATHFINDER_T4_PARTICLES,
+    };
     for (const id of ACT3_SKILL_EFFECT_IDS) expect(table[id], id).toBeGreaterThanOrEqual(0);
-    expect(Object.values(table).reduce((a, b) => a + b, 0)).toBeLessThan(400);
+    expect(Object.values(table).reduce((a, b) => a + b, 0)).toBeLessThan(650);
   });
 
   it('the ids are registered and unique', () => {

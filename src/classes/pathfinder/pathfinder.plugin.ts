@@ -43,6 +43,15 @@ export const CROSSBOW_TIP = { x: 0, y: 0.07, z: 1.16 } as const;
 export interface PathfinderService {
   /** Bolts in the pouch and the stack size; null when the class is not the Pathfinder or the bolt item is not defined yet. */
   ammo(): { count: number; max: number } | null;
+  /**
+   * K11 PR 2 (Triple Shot): registers a provider of extra side bolts for a shot (see `CrossbowPorts.spread`); the first
+   * non-empty answer wins. Returns the remover. With none registered the crossbow fires as shipped.
+   */
+  addSpread(
+    id: string,
+    fn: (shotIndex: number, origin: Vec3, direction: Vec3) => readonly { yawDeg: number; scale: number }[] | null,
+    launched?: (shotIndex: number, origin: Vec3, direction: Vec3, yawDegs: readonly number[], range: number) => void,
+  ): () => void;
 }
 declare module '../../core/Services' {
   interface GameServices {
@@ -147,6 +156,8 @@ const pathfinderPlugin: GamePlugin = {
       masterCount: () => (getItem(PF.masterAmmoItem) ? (inventory()?.count(PF.masterAmmoItem) ?? 0) : 0),
       masterRemove: (n) => inventory()?.remove(PF.masterAmmoItem, n) ?? false,
     });
+    const launchedFns = new Map<string, (shotIndex: number, origin: Vec3, direction: Vec3, yawDegs: readonly number[], range: number) => void>();
+    const spreads = new Map<string, (shotIndex: number, origin: Vec3, direction: Vec3) => readonly { yawDeg: number; scale: number }[] | null>();
     offs.push(
       ctx.services.provide('pathfinder', {
         ammo: () => {
@@ -154,6 +165,15 @@ const pathfinderPlugin: GamePlugin = {
           if (!isPathfinder() || !def || !inventory()) return null;
           // K10: master bolts are spent first and count as ammo.
           return { count: Math.max(0, inventory()!.count(PF.ammoItem)) + Math.max(0, inventory()!.count(PF.masterAmmoItem)), max: def.stackMax };
+        },
+        addSpread: (id, fn, launched) => {
+          spreads.set(id, fn);
+          if (launched) launchedFns.set(id, launched);
+          return () => {
+            if (spreads.get(id) !== fn) return;
+            spreads.delete(id);
+            launchedFns.delete(id);
+          };
         },
       }),
     );
@@ -191,6 +211,20 @@ const pathfinderPlugin: GamePlugin = {
       },
       toast,
       now: () => simTime,
+      spread: (i, o, d) => {
+        for (const fn of spreads.values()) {
+          const r = fn(i, o, d);
+          if (r && r.length > 0) return r;
+        }
+        return null;
+      },
+      sidesLaunched: (i, o, d, yaws, range) => {
+        for (const fn of launchedFns.values()) fn(i, o, d, yaws, range);
+      },
+    });
+    offs.push(() => {
+      spreads.clear();
+      launchedFns.clear();
     });
     offs.push(ctx.damage.addModifier('pathfinder.crossbow', (req) => crossbow.cancelMelee(req), -190));
 
