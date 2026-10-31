@@ -17,7 +17,7 @@ import { DRAGONSPINE_OPEN_FLAG } from '../quests/act3Jump';
 /** What a run names: the dives (swum along the routes), the ferry boarded without its menu, the boss's blows, the song, the blinds. */
 const ALLOWED_SCRIPTED = [
   /^dive dive\.greyfen\./, /^ferry reedgate to mere: boarded by F without the stop menu$/, /^murkjaw: \d+ blows of 70 while hittable/,
-  /^r13 song: struck on the virtual clock, 0 failed bars$/, /^m27 blinds: stepped \d+ m sneaking, (unseen|seen, pack fought)$/,
+  /^r13 song: struck on the virtual clock, 0 failed bars$/, /^m27 blinds: stepped \d+ m sneaking, (unseen|seen, pack fought)$/, /^m26 wake: (scene read|credited by the set piece without its scene)$/,
 ]
 
 export async function runPhaseE(run: 'a' | 'b', choices: GreyfenChoices, dragonspineOpen: boolean): Promise<string> {

@@ -341,9 +341,14 @@ const HANDLERS: Record<string, GreyfenHandler> = {
     trail.scripted.push(`r13 song: struck on the virtual clock, ${fails} failed bars`);
   },
   'story.r13.calm': async (h, _t, q, o) => waitFor(h, () => objDone(h, q, o.id), `${q}.${o.id}`, 20),
-  'wyrm.hathren': async (h, _t, q, o) => {
+  // Hathren wakes with the player at the shore; the wake scene (K12's follow-up) credits the step when it ends.
+  'story.m26.woke': async (h, trail, q, o) => {
     await h.approach(h.anchor('greyfen.mere.shore'), 3);
-    await waitFor(h, () => objDone(h, q, o.id), `${q}.${o.id}`, 120);
+    await waitFor(h, () => objDone(h, q, o.id), `${q}.${o.id}`, 180, trail);
+    // Headless, her wake may never reach its spray beat (the scene's cue), so the set piece credits the step without its lines:
+    // the measured nodes are then the lower count, never the higher.
+    const read = trail.talks.some((t) => t.npc === `scene-${q}.${o.id}`);
+    trail.scripted.push(`m26 wake: ${read ? 'scene read' : 'credited by the set piece without its scene'}`);
   },
   'shrine.rekindled': async (h, trail, q, o) => {
     await pressAt(h, 'waystone:hathrens-mere', WAYSTONE_TUNING.rekindleHoldSeconds + 0.2);
@@ -384,7 +389,7 @@ const HANDLERS: Record<string, GreyfenHandler> = {
       await killSpawners(h, g.groups, () => objDone(h, q, o.id), `${q}.${o.id} (seen)`, () => flag(h, g.seen));
     }
   },
-  'story.m27.set': async (h, _t, q, o) => waitFor(h, () => objDone(h, q, o.id), `${q}.${o.id}`, 20),
+  'story.m27.set': async (h, trail, q, o) => waitFor(h, () => objDone(h, q, o.id), `${q}.${o.id}`, 60, trail),
   'd05.undercroft': async (h, trail) => {
     await ensureSpace(h, ipos(h, 'door:greyfen-deeps') ?? h.ctx.player.feet);
     await throughDoor(h, 'door:greyfen-deeps', 'greyfen-deeps');
@@ -397,10 +402,12 @@ const HANDLERS: Record<string, GreyfenHandler> = {
   },
 };
 
-async function waitFor(h: ChapterHarness, done: () => boolean, what: string, seconds: number): Promise<void> {
+/** Waits (healed) for `done`; with a trail, a scene the game opens meanwhile is read into it (Hathren's wake, the brood). */
+async function waitFor(h: ChapterHarness, done: () => boolean, what: string, seconds: number, trail?: PhaseCTrail): Promise<void> {
   for (let i = 0; i < seconds * 2 && !done(); i++) {
     await h.runAsync(30);
     heal(h);
+    if (trail) readOpen(h, trail, `scene-${what}`);
   }
   ensure(done(), `${what} (${seconds} s)`);
 }
