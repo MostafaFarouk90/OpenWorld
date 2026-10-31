@@ -1,8 +1,9 @@
-// Boot cost guard: the layout is built once per inputs object and the shipped plugin takes the cached build, so a game boot
-// pays for at most one build (about 100 ms in node on the real ground) and a re-setup pays nothing.
+// Boot cost guard: the layout is built once per inputs object and the shipped plugin takes the cached build, so a game boot pays
+// for at most one build and a re-setup pays nothing. The guard is a call count (no wall clock on the cached path, which was the
+// flake on loaded runners, K9 #154) plus a loose 1,000 ms ceiling on the one real build (about 300 ms in node with the summit).
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { defaultInputs } from './inputs';
-import { buildDragonspine, dragonspineBuild } from './layout';
+import { buildCount, buildDragonspine, dragonspineBuild } from './layout';
 import { registerDragonspineKinds } from './structureKinds';
 
 let release: () => void;
@@ -10,22 +11,27 @@ beforeAll(() => (release = registerDragonspineKinds()));
 afterAll(() => release());
 
 describe('the cost of building the Dragonspine layout', () => {
-  // The ceiling is wall-clock on shared CI runners (319 ms and 301 ms were measured there under load, 2026-10-25), and a loaded local run
-  // measured 1105 ms, so it only catches a build that has become an order of magnitude slower; the memoization test below is what keeps a boot to one build.
-  it('builds the real ground in well under 5000 ms (about 100 ms is typical in node)', () => {
+  it('builds each inputs object once: repeated calls and the shipped build add no build', () => {
     const inp = defaultInputs();
-    const t = performance.now();
-    buildDragonspine(inp);
-    expect(performance.now() - t).toBeLessThan(5000);
+    const before = buildCount();
+    const first = buildDragonspine(inp);
+    expect(buildCount()).toBe(before + 1);
+    for (let i = 0; i < 5; i++) expect(buildDragonspine(inp)).toBe(first);
+    expect(buildCount()).toBe(before + 1);
+    const shipped = dragonspineBuild();
+    const afterShipped = buildCount();
+    expect(afterShipped - before).toBeLessThanOrEqual(2);
+    for (let i = 0; i < 5; i++) expect(dragonspineBuild()).toBe(shipped);
+    expect(buildCount()).toBe(afterShipped);
+    // A new inputs object is a new build (the memo is per object, not global).
+    buildDragonspine(defaultInputs());
+    expect(buildCount()).toBe(afterShipped + 1);
   });
 
-  it('memoizes per inputs object, and the shipped build is one cached object', () => {
+  it('builds the real ground under a 1,000 ms ceiling', () => {
     const inp = defaultInputs();
-    expect(buildDragonspine(inp)).toBe(buildDragonspine(inp));
-    expect(dragonspineBuild()).toBe(dragonspineBuild());
     const t = performance.now();
     buildDragonspine(inp);
-    dragonspineBuild();
-    expect(performance.now() - t).toBeLessThan(5);
+    expect(performance.now() - t).toBeLessThan(1000);
   });
 });

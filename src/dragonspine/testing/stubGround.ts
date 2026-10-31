@@ -26,7 +26,9 @@ function cliff(plateaus: readonly PlateauDef[], x: number, z: number): number {
 export function stubGround(plateaus: readonly PlateauDef[], shelf: { x: number; z: number; w: number; d: number } = HAWK_NEST_SHELF): HeightFn {
   // The nest shelf is a level bench cut into the cliff, as K1's is.
   const shelfLevel = planeHeight(shelf.x, shelf.z) + cliff(plateaus, shelf.x, shelf.z);
-  const level = new Map(plateaus.map((p) => [p.id, planeHeight((p.box.minX + p.box.maxX) / 2, (p.box.minZ + p.box.maxZ) / 2)]));
+  // A plateau inside another (the keep pad on the Aerie shelf) is level with it, as K1's are.
+  const host = (p: PlateauDef): PlateauDef => plateaus.find((q) => q !== p && q.box.minX <= p.box.minX && q.box.maxX >= p.box.maxX && q.box.minZ <= p.box.minZ && q.box.maxZ >= p.box.maxZ) ?? p;
+  const level = new Map(plateaus.map((p) => [p.id, planeHeight((host(p).box.minX + host(p).box.maxX) / 2, (host(p).box.minZ + host(p).box.maxZ) / 2)]));
   return (x, z) => {
     let h = planeHeight(x, z) + cliff(plateaus, x, z);
     for (const p of plateaus) {

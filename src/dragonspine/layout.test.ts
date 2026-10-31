@@ -147,7 +147,8 @@ describe('the layout on stand-in ground', () => {
     for (const a of b.layout.anchors) expect(a.z, a.id).toBeLessThan(16900);
     for (const id of ['dragonspine.anvil.shrine', 'waystone.last-anvil', ...range(6).map((n) => `dragonspine.wayside.${n}`)]) expect(anchor(id).z, id).toBeLessThan(SUMMIT_BOX.z0);
     for (const a of b.layout.anchors.filter((x) => x.id.startsWith('dragonspine.anvil.') || x.id.startsWith('dragonspine.wayside.'))) expect(a.z, a.id).toBeLessThan(SUMMIT_BOX.z0);
-    for (const s of b.layout.structures) expect(s.z, s.id).toBeLessThan(SUMMIT_BOX.z0);
+    const summit = new Set([...b.gate.specs, ...b.hearth.specs, ...b.roost.specs, ...b.skyhold.specs, ...b.aerie.specs, ...b.glide.specs].map((x) => x.id));
+    for (const s of b.layout.structures.filter((x) => !summit.has(x.id))) expect(s.z, s.id).toBeLessThan(SUMMIT_BOX.z0);
   });
 
   it('keeps the shrine anchor and the Last Anvil waystone within 30 m of K0\'s SHRINE_POSITIONS', () => {
@@ -191,12 +192,15 @@ describe('the wayside sites', () => {
 
 describe('Leap ledges', () => {
   const ledges = b.layout.structures.filter((s) => s.role === 'ledge');
-  it('are the cave\'s and M28\'s two, 1.7 to 1.9 m high, with a launch anchor giving a 1.5 to 1.8 m rise', () => {
-    expect(ledges.map((s) => s.id).sort()).toEqual(['dragonspine-cave-ledge', 'dragonspine-m28-ledge-1', 'dragonspine-m28-ledge-2']);
+  it('are the cave\'s, M28\'s two and the roost climb\'s three, 1.7 to 1.9 m high, with a launch anchor giving a 1.5 to 1.8 m rise', () => {
+    expect(ledges.map((s) => s.id).sort()).toEqual(['dragonspine-cave-ledge', 'dragonspine-m28-ledge-1', 'dragonspine-m28-ledge-2', 'dragonspine-roost-ledge-1', 'dragonspine-roost-ledge-2', 'dragonspine-roost-ledge-3']);
     const launches: Record<string, string> = {
       'dragonspine-cave-ledge': 'dragonspine.cave.leap.launch',
       'dragonspine-m28-ledge-1': 'dragonspine.m28.leap.1.launch',
       'dragonspine-m28-ledge-2': 'dragonspine.m28.leap.2.launch',
+      'dragonspine-roost-ledge-1': 'dragonspine.roost.leap.1.launch',
+      'dragonspine-roost-ledge-2': 'dragonspine.roost.leap.2.launch',
+      'dragonspine-roost-ledge-3': 'dragonspine.roost.leap.3.launch',
     };
     for (const s of ledges) {
       expect(s.height).toBeGreaterThanOrEqual(LEDGE_MIN_HEIGHT);

@@ -16,7 +16,12 @@ import waystonesPlugin from '../waystones/waystones.plugin';
 import { DRAGONSPINE_NPCS } from './npcDefs';
 import dragonspinePlugin from './dragonspine.plugin';
 import { COLLAPSED_CAVE_DOOR_ID, COLLAPSED_CAVE_ID, ROCKFALL_BLOCKER_ID, WYRMWATCH_HALL_DOOR_ID, WYRMWATCH_HALL_ID } from './interiors';
-import { DRAGONSPINE_OPEN_FLAG, R16_ROCKFALL_CLEARED_FLAG, R16_STARTED_FLAG } from './flags';
+import { D06_GATE_OPEN_FLAG, D06_STARTED_FLAG, DRAGONSPINE_OPEN_FLAG, M34_COMPLETE_FLAG, R16_ROCKFALL_CLEARED_FLAG, R16_STARTED_FLAG } from './flags';
+import { SUMMIT_OPEN_WHEN } from '../region/act3Containment';
+import { CATCH_LIP_ANCHOR } from './chasmCatch';
+import { FROSTFANG_KEEP_DOOR_ID, FROSTFANG_KEEP_ID } from './interiors';
+import { dragonspineBuild } from './layout';
+import { heightAt } from '../terrain/heightfield';
 import { DRAGONSPINE_LAYOUT } from './dragonspine.layout';
 
 /** A load replaces every flag, so the loads below keep the region open. */
@@ -168,5 +173,98 @@ describe('the Dragonspine plugin booted with its neighbours', () => {
     expect(gate.visible).toBe(false);
     expect(t.svc().setBlocker(ROCKFALL_BLOCKER_ID, true)).toBe(true);
     expect(gate.visible).toBe(true);
+  }, PLUGIN_TEST_TIMEOUT);
+});
+
+/** The summit's flags (SUMMIT_OPEN_WHEN) on top of OPEN, so the containment leaves a player on the summit. */
+const SUMMIT = { ...OPEN, ...Object.fromEntries((SUMMIT_OPEN_WHEN as { all: string[] }).all.map((k) => [k, true])) };
+
+describe('the summit booted with its neighbours', () => {
+  async function bootSummit() {
+    const t = await boot();
+    for (const [k, v] of Object.entries(SUMMIT)) t.game.ctx.state.setFlag(k, v);
+    await t.run(2);
+    return t;
+  }
+  /** A teleport that waits for the ground to stream in (as the chapter harness does). */
+  const arrive = async (t: Booted, p: { x: number; y: number; z: number }, yaw: number) => {
+    const h = t.game.ctx.player.teleport(p, yaw);
+    for (let i = 0; i < 600 && !h.ready(); i++) {
+      t.game.fixedUpdate();
+      if (i % 30 === 29) for (let k = 0; k < 10; k++) await new Promise((r) => setTimeout(r, 0));
+    }
+    await t.run(2);
+  };
+  const load = async (t: Booted, flags: Record<string, unknown>) => {
+    t.game.ctx.state.load({ flags: { ...SUMMIT, ...flags } });
+    t.game.ctx.events.emit('save.loaded', { slot: 'test' });
+    await t.run(1);
+  };
+
+  it('keeps the keep door locked until story.d06.started, across a load either way, and round-trips onto a real floor', async () => {
+    const t = await bootSummit();
+    expect(await reason(t, t.svc().enter(FROSTFANG_KEEP_ID, FROSTFANG_KEEP_DOOR_ID))).toBe('locked');
+    t.game.ctx.state.setFlag(D06_STARTED_FLAG, true);
+    expect(await reason(t, t.svc().enter(FROSTFANG_KEEP_ID, FROSTFANG_KEEP_DOOR_ID))).toBe('resolved');
+    const inside = t.game.ctx.anchors.get('dragonspine.keep.inside').position;
+    expect(near(t.game.ctx.player.feet, inside)).toBeLessThan(0.5);
+    await t.run(60);
+    expect(t.game.ctx.player.feet.y).toBeGreaterThan(inside.y - 0.2);
+    expect(await reason(t, t.svc().exit())).toBe('resolved');
+    expect(near(t.game.ctx.player.feet, t.game.ctx.anchors.get('dragonspine.aerie.keep.door').position)).toBeLessThan(6);
+    await load(t, {});
+    expect(await reason(t, t.svc().enter(FROSTFANG_KEEP_ID, FROSTFANG_KEEP_DOOR_ID))).toBe('locked');
+    await load(t, { [D06_STARTED_FLAG]: true });
+    expect(await reason(t, t.svc().enter(FROSTFANG_KEEP_ID, FROSTFANG_KEEP_DOOR_ID))).toBe('resolved');
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('lights the Aerie waystone on arrival, and again after a load that dropped it while standing there', async () => {
+    const t = await bootSummit();
+    const ws = t.game.ctx.services.get('waystones')!;
+    expect(ws.isLit('frostfang-aerie')).toBe(false);
+    const at = t.game.ctx.anchors.get('dragonspine.aerie.landing');
+    await arrive(t, { x: at.position.x, y: at.position.y + 0.2, z: at.position.z }, at.yaw);
+    await t.run(10);
+    expect(ws.isLit('frostfang-aerie')).toBe(true);
+    await load(t, {});
+    await t.run(5);
+    expect(ws.isLit('frostfang-aerie')).toBe(true);
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('returns a walker from the chasm floor to the summit-aerie lip, and stands down while gliding', async () => {
+    const t = await bootSummit();
+    const dragon = () => t.game.ctx.services.get('dragonspine')!;
+    const lip = t.game.ctx.anchors.get(CATCH_LIP_ANCHOR).position;
+    const chasm = dragonspineBuild().catchVolumes.find((v) => v.trough === 'frostfang-chasm')!;
+    const drop = async () => {
+      const x = chasm.centre.x;
+      const z = chasm.centre.z;
+      await arrive(t, { x, y: heightAt(x, z) + 0.3, z }, 0);
+    };
+    // Gliding: no catch.
+    t.game.ctx.services.get('movementMode')!.set('glide', { position: lip, yaw: 0 });
+    await drop();
+    await t.run(90);
+    expect(dragon().catchState().catches).toBe(0);
+    // Walking: caught and returned to the lip.
+    t.game.ctx.services.get('movementMode')!.set('walk');
+    await drop();
+    await t.run(120);
+    expect(dragon().catchState().catches).toBe(1);
+    expect(dragon().catchState().lastTarget).toBe(CATCH_LIP_ANCHOR);
+    expect(near(t.game.ctx.player.feet, lip)).toBeLessThan(3);
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('re-derives the readers on save.loaded both ways: the aerie gate, the lodge fire', async () => {
+    const t = await bootSummit();
+    const shown = () => new Set(t.game.ctx.services.get('dragonspine')!.shownToggles());
+    expect(shown().has('aerie-gate')).toBe(true);
+    expect(shown().has('lodge-fire')).toBe(false);
+    await load(t, { [D06_GATE_OPEN_FLAG]: true, [M34_COMPLETE_FLAG]: true });
+    expect(shown().has('aerie-gate')).toBe(false);
+    expect(shown().has('lodge-fire')).toBe(true);
+    await load(t, {});
+    expect(shown().has('aerie-gate')).toBe(true);
+    expect(shown().has('lodge-fire')).toBe(false);
   }, PLUGIN_TEST_TIMEOUT);
 });

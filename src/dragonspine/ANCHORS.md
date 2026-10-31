@@ -1,4 +1,4 @@
-# Dragonspine anchors, triggers and structures (lower slopes)
+# Dragonspine anchors, triggers and structures (lower slopes and summit)
 
 Generated from `dragonspine.layout.ts` by `npx vite-node tools/gen-region-docs.ts`; a test fails when this file drifts.
 Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is absolute and computed from the terrain at runtime.
@@ -145,6 +145,124 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.spawn.m28.hawk-6 | 13792.29 | 12609.19 | 0 | 180 | spawn |
 | dragonspine.spawn.m28.ogre | 13792 | 12588 | 0 | 180 | spawn |
 | dragonspine.spawn.m28.scout | 13551.66 | 12609 | 0 | 180 | spawn |
+| dragonspine.summit-gate | 13600 | 14756 | 0 | 180 | poi |
+| dragonspine.summit-gate.eadgyth | 13612 | 14759 | 0 | 90 | npc-post |
+| dragonspine.hearth.shrine | 13600 | 15600 | 0 | 0 | objective |
+| waystone.wyrms-hearth | 13624 | 15578.2 | 0 | 180 | waystone |
+| dragonspine.hearth.entry | 13600 | 15481 | 0 | 180 | poi |
+| dragonspine.hearth.keeper-stone | 13572 | 15625.6 | 0 | 180 | objective |
+| dragonspine.hearth.hoard | 13630 | 15631 | 0 | 180 | objective |
+| dragonspine.hearth.axe | 13631.5 | 15632 | 0 | 180 | objective |
+| dragonspine.hearth.hoard.search.1 | 13624 | 15636 | 0 | 270 | objective |
+| dragonspine.hearth.hoard.search.2 | 13630 | 15641 | 0 | 0 | objective |
+| dragonspine.hearth.hoard.search.3 | 13636 | 15636 | 0 | 90 | objective |
+| dragonspine.hearth.carving.1 | 13562.89 | 15498.04 | 0 | 20 | objective |
+| dragonspine.hearth.carving.2 | 13498.04 | 15562.89 | 0 | 70 | objective |
+| dragonspine.hearth.carving.3 | 13498.04 | 15637.11 | 0 | 110 | objective |
+| dragonspine.hearth.carving.4 | 13554.15 | 15698.33 | 0 | 155 | objective |
+| dragonspine.hearth.glide-marker.1 | 13461.22 | 15550.92 | 0 | 70.52 | objective |
+| dragonspine.hearth.glide-marker.2 | 13609.42 | 15718.32 | 0 | 184.55 | objective |
+| dragonspine.hearth.ysmeryth.perch | 13734 | 15711 | 5 | 45 | poi, elevated |
+| dragonspine.hearth.ysmeryth.land | 13600 | 15650 | 0 | 0 | poi |
+| dragonspine.hearth.ysmeryth.reveal | 13618 | 15618 | 0 | 45 | poi |
+| dragonspine.hearth.ysmeryth.oath | 13600 | 15622 | 0 | 0 | poi |
+| dragonspine.hearth.eadgyth | 13586 | 15493 | 0 | 180 | npc-post |
+| dragonspine.hearth.companion.1 | 13574 | 15490 | 0 | 180 | poi |
+| dragonspine.hearth.companion.2 | 13578 | 15490 | 0 | 180 | poi |
+| dragonspine.hearth.companion.3 | 13582 | 15490 | 0 | 180 | poi |
+| dragonspine.roost.trailhead | 13650 | 15721 | 0 | 180 | objective |
+| dragonspine.roost.leap.1 | 13540 | 15909 | 1.8 | 180 | poi, leap-gated |
+| dragonspine.roost.leap.2 | 13699 | 16019 | 1.8 | 180 | poi, leap-gated |
+| dragonspine.roost.leap.3 | 13714 | 16097 | 1.8 | 180 | poi, leap-gated |
+| dragonspine.roost.leap.1.launch | 13536.11 | 15905.11 | 0 | 225 | poi |
+| dragonspine.roost.leap.2.launch | 13702.89 | 16015.11 | 0 | 135 | poi |
+| dragonspine.roost.leap.3.launch | 13719.5 | 16097 | 0 | 90 | poi |
+| dragonspine.roost.claw-ledge | 13599.82 | 15935.86 | 0 | 90 | objective |
+| dragonspine.roost.horn | 13787.56 | 16055.56 | 0 | 180 | objective |
+| dragonspine.roost.scale | 13667.5 | 16265.7 | 0 | 180 | objective |
+| dragonspine.roost.entry | 13650 | 16221 | 0 | 180 | poi |
+| dragonspine.roost.arena.centre | 13650 | 16250 | 0 | 180 | objective, arena-centre |
+| dragonspine.roost.ysmeryth.land | 13650 | 16271 | 0 | 0 | poi |
+| dragonspine.spawn.roost.hawk-1 | 13512.57 | 15872.7 | 0 | 180 | spawn |
+| dragonspine.spawn.roost.hawk-2 | 13624.19 | 15967.57 | 0 | 180 | spawn |
+| dragonspine.spawn.roost.hawk-3 | 13743.9 | 16030.62 | 0 | 180 | spawn |
+| dragonspine.spawn.roost.hawk-4 | 13695.13 | 16133.85 | 0 | 180 | spawn |
+| dragonspine.skyhold.camp | 12242 | 15200 | 0 | 90 | objective |
+| dragonspine.skyhold.search.1 | 12242 | 15206.2 | 0 | 180 | objective |
+| dragonspine.skyhold.search.2 | 12242 | 15209.8 | 0 | 0 | objective |
+| dragonspine.skyhold.search.3 | 12250 | 15216.4 | 0 | 180 | objective |
+| dragonspine.skyhold.search.4 | 12250 | 15194 | 0 | 270 | objective |
+| dragonspine.skyhold.search.5 | 12238 | 15182.2 | 0 | 180 | objective |
+| dragonspine.skyhold.net-anchor.1 | 12225 | 15020 | 0 | 90 | objective |
+| dragonspine.skyhold.net-anchor.2 | 12144 | 15072 | 0 | 90 | objective |
+| dragonspine.skyhold.net-anchor.3 | 12163 | 15124 | 0 | 90 | objective |
+| dragonspine.skyhold.net-anchor.4 | 12147 | 15176 | 0 | 90 | objective |
+| dragonspine.skyhold.net-anchor.5 | 12147 | 15228 | 0 | 90 | objective |
+| dragonspine.skyhold.net-anchor.6 | 12180 | 15280 | 0 | 90 | objective |
+| dragonspine.spawn.skyhold.pack-a-1 | 12229.44 | 15024.31 | 0 | 90 | spawn |
+| dragonspine.spawn.skyhold.pack-a-2 | 12154 | 15076 | 0 | 90 | spawn |
+| dragonspine.spawn.skyhold.pack-a-3 | 12177 | 15120 | 0 | 90 | spawn |
+| dragonspine.spawn.skyhold.pack-a-4 | 12239.48 | 15027.97 | 0 | 90 | spawn |
+| dragonspine.spawn.skyhold.pack-b-1 | 12157 | 15172 | 0 | 90 | spawn |
+| dragonspine.spawn.skyhold.pack-b-2 | 12157 | 15232 | 0 | 90 | spawn |
+| dragonspine.spawn.skyhold.pack-b-3 | 12194 | 15276 | 0 | 90 | spawn |
+| dragonspine.spawn.skyhold.pack-b-4 | 12161 | 15180 | 0 | 90 | spawn |
+| dragonspine.skyhold.thorgar | 12246 | 15202 | 0 | 90 | npc-post |
+| dragonspine.skyhold.rigger | 12236 | 15204 | 0 | 236.31 | npc-post |
+| dragonspine.skyhold.handler | 12153 | 15176 | 0 | 90 | npc-post |
+| dragonspine.skyhold.flight.escape | 12095 | 15150 | 40 | 90 | poi, elevated |
+| waystone.frostfang-aerie | 15600 | 15950 | 0 | 180 | waystone |
+| dragonspine.aerie.landing | 15500 | 15980 | 0 | 270 | poi |
+| dragonspine.aerie.gate | 15531 | 16040.5 | 0 | 270 | poi |
+| dragonspine.aerie.gate.winch | 15530 | 16047.7 | 0 | 180 | objective |
+| dragonspine.aerie.courtyard | 15545 | 16040.5 | 0 | 270 | poi |
+| dragonspine.aerie.keep.door | 15600 | 16106 | 0 | 0 | poi |
+| dragonspine.aerie.arena.centre | 15618.5 | 16040.5 | 0 | 180 | objective, arena-centre |
+| dragonspine.aerie.arena.edge.1 | 15618.5 | 16066.5 | 0 | 0 | poi |
+| dragonspine.aerie.arena.edge.2 | 15644.5 | 16040.5 | 0 | 90 | poi |
+| dragonspine.aerie.arena.edge.3 | 15618.5 | 16014.5 | 0 | 180 | poi |
+| dragonspine.aerie.arena.edge.4 | 15592.5 | 16040.5 | 0 | 270 | poi |
+| dragonspine.aerie.arena.skarl | 15618.5 | 16050.5 | 0 | 0 | poi |
+| dragonspine.aerie.arena.drake | 15630 | 16052.5 | 0 | 270 | poi |
+| dragonspine.aerie.arena.wall.1 | 15594.5 | 15972 | 6 | 199.31 | poi, elevated |
+| dragonspine.aerie.arena.wall.2 | 15642.5 | 15972 | 6 | 160.69 | poi, elevated |
+| dragonspine.aerie.arena.wall.3 | 15702 | 16020.5 | 6 | 103.47 | poi, elevated |
+| dragonspine.aerie.arena.wall.4 | 15702 | 16060.5 | 6 | 76.53 | poi, elevated |
+| dragonspine.aerie.hawk-cage | 15680 | 15992 | 0 | 180 | objective |
+| dragonspine.aerie.chain-post | 15632.5 | 16050.7 | 0 | 180 | objective |
+| dragonspine.aerie.search.1 | 15553 | 16128.2 | 0 | 180 | objective |
+| dragonspine.aerie.search.2 | 15639.5 | 16054.9 | 0 | 180 | objective |
+| dragonspine.spawn.aerie.hunter-1 | 15625.39 | 16057.13 | 0 | 79.58 | spawn |
+| dragonspine.spawn.aerie.hunter-2 | 15635.13 | 16047.39 | 0 | 86.06 | spawn |
+| dragonspine.spawn.aerie.hunter-3 | 15635.13 | 16033.61 | 0 | 93.94 | spawn |
+| dragonspine.spawn.aerie.hunter-4 | 15625.39 | 16023.87 | 0 | 100.42 | spawn |
+| dragonspine.spawn.aerie.hunter-5 | 15611.61 | 16023.87 | 0 | 102.25 | spawn |
+| dragonspine.spawn.aerie.hunter-6 | 15601.87 | 16033.61 | 0 | 95.88 | spawn |
+| dragonspine.spawn.aerie.hunter-7 | 15601.87 | 16047.39 | 0 | 84.12 | spawn |
+| dragonspine.spawn.aerie.hunter-8 | 15611.61 | 16057.13 | 0 | 77.75 | spawn |
+| dragonspine.spawn.aerie.harpooner-1 | 15582.5 | 15972 | 6 | 207.72 | spawn, elevated |
+| dragonspine.spawn.aerie.harpooner-2 | 15654.5 | 15972 | 6 | 152.28 | spawn, elevated |
+| dragonspine.spawn.aerie.harpooner-3 | 15702 | 16010.5 | 6 | 109.76 | spawn, elevated |
+| dragonspine.spawn.aerie.harpooner-4 | 15702 | 16070.5 | 6 | 70.24 | spawn, elevated |
+| dragonspine.glide.summit-aerie.launch | 14450 | 15900 | 4.44 | 265.64 | objective, glide-launch, elevated |
+| dragonspine.glide.summit-aerie.landing | 15500 | 15980 | 0 | 265.64 | poi |
+| dragonspine.glide.summit-skyhold.launch | 13450 | 15560 | 0.3 | 73.56 | objective, glide-launch, elevated |
+| dragonspine.glide.summit-skyhold.landing | 12230 | 15200 | 0 | 73.56 | poi |
+| dragonspine.glide.skyhold-hawk-cliffs.launch | 12150 | 15050 | 2.45 | 20.33 | objective, glide-launch, elevated |
+| dragonspine.glide.skyhold-hawk-cliffs.landing | 11411 | 13064.41 | 0 | 20.33 | poi |
+| dragonspine.glide.anvil-rime-pass.launch | 14640 | 13860 | 0.35 | 71.15 | objective, glide-launch, elevated |
+| dragonspine.glide.anvil-rime-pass.landing | 13000 | 13300 | 0 | 71.15 | poi |
+| dragonspine.glide.rime-pass-lodge.launch | 13020 | 13270 | 0.3 | 336.28 | objective, glide-launch, elevated |
+| dragonspine.glide.rime-pass-lodge.landing | 13600 | 11950 | 0 | 336.28 | poi |
+| dragonspine.glide.hearth-updraft.launch | 13600 | 15720 | 0.3 | 0 | objective, glide-launch, elevated |
+| dragonspine.glide.hearth-updraft.landing | 13600 | 15600 | 0 | 0 | poi |
+| npc-post.lodge-hunter-1.out | 13595 | 11858 | 0 | 0 | npc-post |
+| npc-post.lodge-hunter-2.out | 13605 | 11858 | 0 | 0 | npc-post |
+| npc-post.lodge-hunter-3.out | 13540 | 11855 | 11 | 0 | npc-post, elevated |
+| npc-post.lodge-hunter-4.out | 13605 | 11942 | 0 | 180 | npc-post |
+| npc-post.lodge-hunter-5.out | 13543 | 11904 | 0 | 90 | npc-post |
+| npc-post.lodge-hunter-6.out | 13657 | 11904 | 0 | 270 | npc-post |
+| dragonspine.lodge.banner | 13610 | 11876 | 0 | 180 | poi |
 
 ## Triggers
 
@@ -161,6 +279,16 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | trg.dragonspine.cave.trailhead | sphere | 12431.55 | 13616.1 | r 12 |
 | trg.dragonspine.m28.trailhead | sphere | 13261.13 | 12680.07 | r 12 |
 | trg.dragonspine.m28.crag | sphere | 13800 | 12600 | r 20 |
+| trg.dragonspine.summit-gate | sphere | 13600 | 14760 | r 25 |
+| trg.dragonspine.hearth | sphere | 13600 | 15600 | r 125 |
+| trg.dragonspine.hearth.hoard | sphere | 13630 | 15636 | r 12 |
+| trg.dragonspine.roost | sphere | 13650 | 16250 | r 35 |
+| trg.dragonspine.roost.trailhead | sphere | 13650 | 15721 | r 12 |
+| trg.dragonspine.skyhold | sphere | 12230 | 15200 | r 60 |
+| trg.dragonspine.skyhold.cliff | sphere | 12155 | 15150 | r 150 |
+| trg.dragonspine.aerie.arrival | box | 15600 | 16040 | half 110 x 30 x 120 |
+| trg.dragonspine.aerie.courtyard | box | 15618.5 | 16062 | half 83.5 x 10 x 90 |
+| trg.dragonspine.aerie.keep.door | box | 15600 | 16106 | half 6 x 4 x 4 |
 
 ## Structures
 
@@ -305,3 +433,112 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-m28-cairn-3 | rock | 13606.84 | 12597 | 1.4 x 1.4 | solid |
 | dragonspine-m28-cairn-4 | rock | 13717.22 | 12597 | 1.4 x 1.4 | solid |
 | dragonspine-m28-lookout-cairn | rock | 13804 | 12604 | 2 x 2 | solid |
+| dragonspine-summit-gate-pillar-1 | dragonspine-gate-pillar | 13592 | 14766 | 3 x 3 | solid |
+| dragonspine-summit-gate-pillar-2 | dragonspine-gate-pillar | 13608 | 14766 | 3 x 3 | solid |
+| dragonspine-summit-gate-arch | dragonspine-gate-arch | 13600 | 14766 | 19 x 3 | open |
+| dragonspine-summit-gate-wall-w | wall | 13581.25 | 14766 | 18.5 x 3 | solid |
+| dragonspine-summit-gate-wall-e | wall | 13618.75 | 14766 | 18.5 x 3 | solid |
+| dragonspine-hearth-basin | dragonspine-hearth-basin | 13600 | 15600 | 18 x 18 | open |
+| dragonspine-hearth-tier-1-46 | dragonspine-glass-tier | 13649.45 | 15647.76 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-58 | dragonspine-glass-tier | 13658.3 | 15636.43 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-70 | dragonspine-glass-tier | 13664.6 | 15623.51 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-82 | dragonspine-glass-tier | 13668.08 | 15609.57 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-94 | dragonspine-glass-tier | 13668.58 | 15595.2 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-106 | dragonspine-glass-tier | 13666.09 | 15581.05 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-118 | dragonspine-glass-tier | 13660.7 | 15567.72 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-130 | dragonspine-glass-tier | 13652.67 | 15555.81 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-226 | dragonspine-glass-tier | 13550.55 | 15552.24 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-238 | dragonspine-glass-tier | 13541.7 | 15563.57 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-250 | dragonspine-glass-tier | 13535.4 | 15576.49 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-262 | dragonspine-glass-tier | 13531.92 | 15590.43 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-274 | dragonspine-glass-tier | 13531.42 | 15604.8 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-286 | dragonspine-glass-tier | 13533.91 | 15618.95 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-298 | dragonspine-glass-tier | 13539.3 | 15632.28 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-1-310 | dragonspine-glass-tier | 13547.33 | 15644.19 | 13.18 x 2.8 | solid |
+| dragonspine-hearth-tier-2-46 | dragonspine-glass-tier | 13651.9 | 15650.12 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-58 | dragonspine-glass-tier | 13661.19 | 15638.23 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-70 | dragonspine-glass-tier | 13667.8 | 15624.68 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-82 | dragonspine-glass-tier | 13671.45 | 15610.04 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-94 | dragonspine-glass-tier | 13671.97 | 15594.97 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-106 | dragonspine-glass-tier | 13669.36 | 15580.11 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-118 | dragonspine-glass-tier | 13663.7 | 15566.13 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-130 | dragonspine-glass-tier | 13655.27 | 15553.62 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-226 | dragonspine-glass-tier | 13548.1 | 15549.88 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-238 | dragonspine-glass-tier | 13538.81 | 15561.77 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-250 | dragonspine-glass-tier | 13532.2 | 15575.32 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-262 | dragonspine-glass-tier | 13528.55 | 15589.96 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-274 | dragonspine-glass-tier | 13528.03 | 15605.03 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-286 | dragonspine-glass-tier | 13530.64 | 15619.89 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-298 | dragonspine-glass-tier | 13536.3 | 15633.87 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-2-310 | dragonspine-glass-tier | 13544.73 | 15646.38 | 13.83 x 2.8 | solid |
+| dragonspine-hearth-tier-3-46 | dragonspine-glass-tier | 13654.35 | 15652.48 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-58 | dragonspine-glass-tier | 13664.07 | 15640.04 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-70 | dragonspine-glass-tier | 13670.99 | 15625.84 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-82 | dragonspine-glass-tier | 13674.81 | 15610.51 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-94 | dragonspine-glass-tier | 13675.37 | 15594.73 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-106 | dragonspine-glass-tier | 13672.62 | 15579.18 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-118 | dragonspine-glass-tier | 13666.71 | 15564.53 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-130 | dragonspine-glass-tier | 13657.87 | 15551.44 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-226 | dragonspine-glass-tier | 13545.65 | 15547.52 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-238 | dragonspine-glass-tier | 13535.93 | 15559.96 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-250 | dragonspine-glass-tier | 13529.01 | 15574.16 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-262 | dragonspine-glass-tier | 13525.19 | 15589.49 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-274 | dragonspine-glass-tier | 13524.63 | 15605.27 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-286 | dragonspine-glass-tier | 13527.38 | 15620.82 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-298 | dragonspine-glass-tier | 13533.29 | 15635.47 | 14.48 x 2.8 | solid |
+| dragonspine-hearth-tier-3-310 | dragonspine-glass-tier | 13542.13 | 15648.56 | 14.48 x 2.8 | solid |
+| dragonspine-waystone-wyrms-hearth | waystone | 13624 | 15580 | 1.6 x 1.6 | solid |
+| dragonspine-hearth-keeper-stone | dragonspine-keeper-stone | 13572 | 15628 | 1.6 x 1.2 | solid |
+| dragonspine-hearth-hoard | dragonspine-hoard | 13630 | 15636 | 8 x 6 | open |
+| dragonspine-hearth-carving-1 | dragonspine-carving | 13562.04 | 15495.69 | 1.4 x 0.6 | solid |
+| dragonspine-hearth-carving-2 | dragonspine-carving | 13495.69 | 15562.04 | 1.4 x 0.6 | solid |
+| dragonspine-hearth-carving-3 | dragonspine-carving | 13495.69 | 15637.96 | 1.4 x 0.6 | solid |
+| dragonspine-hearth-carving-4 | dragonspine-carving | 13553.09 | 15700.6 | 1.4 x 0.6 | solid |
+| dragonspine-hearth-glide-marker-1 | dragonspine-glide-marker | 13459.15 | 15550.19 | 1.2 x 1.2 | open |
+| dragonspine-hearth-glide-marker-2 | dragonspine-glide-marker | 13609.59 | 15720.51 | 1.2 x 1.2 | open |
+| dragonspine-hearth-perch | rock | 13734 | 15711 | 12 x 10 | solid |
+| dragonspine-roost-ledge-1 | rock | 13540 | 15909 | 6 x 5 | solid |
+| dragonspine-roost-ledge-2 | rock | 13699 | 16019 | 6 x 5 | solid |
+| dragonspine-roost-ledge-3 | rock | 13714 | 16097 | 6 x 5 | solid |
+| dragonspine-roost-claw-ledge | rock | 13594.32 | 15935.86 | 4 x 3 | solid |
+| dragonspine-roost-horn | dragonspine-horn | 13787.56 | 16057.06 | 1.2 x 0.6 | open |
+| dragonspine-roost-scale | dragonspine-scale | 13667.5 | 16267.5 | 1.6 x 1.2 | open |
+| dragonspine-skyhold-tent | dragonspine-rig-tent | 12250 | 15220 | 5 x 4 | solid |
+| dragonspine-skyhold-table | dragonspine-rig-table | 12242 | 15208 | 2.4 x 1.2 | open |
+| dragonspine-skyhold-rope-coil | dragonspine-rope-coil | 12252 | 15194 | 1.6 x 1.6 | open |
+| dragonspine-skyhold-net-rack | dragonspine-net-rack | 12238 | 15184 | 4 x 1 | open |
+| dragonspine-aerie-wall-s | wall | 15618.5 | 15972 | 159.4 x 3 | solid |
+| dragonspine-aerie-wall-n | wall | 15618.5 | 16152 | 159.4 x 3 | solid |
+| dragonspine-aerie-wall-e | wall | 15702 | 16062 | 3 x 172.4 | solid |
+| dragonspine-aerie-wall-w1 | wall | 15535 | 16005.15 | 3 x 58.7 | solid |
+| dragonspine-aerie-wall-w2 | wall | 15535 | 16097.35 | 3 x 101.7 | solid |
+| dragonspine-aerie-tower-1 | tower | 15535 | 15972 | 7 x 7 | solid |
+| dragonspine-aerie-tower-2 | tower | 15702 | 15972 | 7 x 7 | solid |
+| dragonspine-aerie-tower-3 | tower | 15535 | 16152 | 7 x 7 | solid |
+| dragonspine-aerie-tower-4 | tower | 15702 | 16152 | 7 x 7 | solid |
+| dragonspine-aerie-gate-frame | gate | 15535 | 16040.5 | 1.5 x 12 | open |
+| dragonspine-aerie-keep | dragonspine-keep | 15600 | 16120 | 28 x 22 | solid |
+| dragonspine-aerie-winch | dragonspine-winch | 15530 | 16049.5 | 1.6 x 1.2 | solid |
+| dragonspine-waystone-frostfang-aerie | waystone | 15600 | 15951.8 | 1.6 x 1.6 | solid |
+| dragonspine-aerie-hawk-cage | dragonspine-hawk-cage | 15680 | 15994 | 1.6 x 1.6 | solid |
+| dragonspine-aerie-chain-post | dragonspine-chain-post | 15632.5 | 16052.5 | 0.8 x 0.8 | solid |
+| dragonspine-aerie-table | dragonspine-rig-table | 15553 | 16130 | 2.4 x 1.2 | open |
+| dragonspine-aerie-feed-trough | dragonspine-feed-trough | 15639.5 | 16056.5 | 2.4 x 1 | open |
+| dragonspine-glide-summit-aerie-deck | rock | 14448.5 | 15899.89 | 6 x 4 | solid |
+| dragonspine-glide-summit-aerie-banner | dragonspine-wind-banner | 14433.12 | 15909.7 | 0.4 x 0.4 | open |
+| dragonspine-glide-summit-aerie-landing | dragonspine-landing-marker | 15500 | 15980 | 2 x 2 | open |
+| dragonspine-glide-summit-skyhold-deck | rock | 13451.44 | 15560.42 | 6 x 4 | solid |
+| dragonspine-glide-summit-skyhold-banner | dragonspine-wind-banner | 13454.58 | 15555.09 | 0.4 x 0.4 | open |
+| dragonspine-glide-summit-skyhold-landing | dragonspine-landing-marker | 12230 | 15200 | 2 x 2 | open |
+| dragonspine-glide-skyhold-hawk-cliffs-deck | rock | 12150.52 | 15051.41 | 6 x 4 | solid |
+| dragonspine-glide-skyhold-hawk-cliffs-banner | dragonspine-wind-banner | 12156.67 | 15050.73 | 0.4 x 0.4 | open |
+| dragonspine-glide-skyhold-hawk-cliffs-landing | dragonspine-landing-marker | 11411 | 13064.41 | 2 x 2 | open |
+| dragonspine-glide-anvil-rime-pass-deck | rock | 14641.42 | 13860.48 | 6 x 4 | solid |
+| dragonspine-glide-anvil-rime-pass-banner | dragonspine-wind-banner | 14644.78 | 13855.29 | 0.4 x 0.4 | open |
+| dragonspine-glide-anvil-rime-pass-landing | dragonspine-landing-marker | 13000 | 13300 | 2 x 2 | open |
+| dragonspine-glide-rime-pass-lodge-deck | rock | 13019.4 | 13271.37 | 6 x 4 | solid |
+| dragonspine-glide-rime-pass-lodge-banner | dragonspine-wind-banner | 13024.29 | 13275.16 | 0.4 x 0.4 | open |
+| dragonspine-glide-rime-pass-lodge-landing | dragonspine-landing-marker | 13600 | 11950 | 2 x 2 | open |
+| dragonspine-glide-hearth-updraft-deck | rock | 13600 | 15721.5 | 6 x 4 | solid |
+| dragonspine-glide-hearth-updraft-banner | dragonspine-wind-banner | 13606 | 15723 | 0.4 x 0.4 | open |
+| dragonspine-glide-hearth-updraft-landing | dragonspine-landing-marker | 13600 | 15600 | 2 x 2 | open |
