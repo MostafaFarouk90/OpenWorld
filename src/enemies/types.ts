@@ -45,7 +45,9 @@ export type EnemyKind =
   | 'steward-guard'
   // Act 3 (K6b PR 1): the Greyfen's own kinds.
   | 'fen-leech'
-  | 'peat-shambler';
+  | 'peat-shambler'
+  // Act 3 (K6a PR 1): Skarl's chained drake (D06 is K8's).
+  | 'skarl-drake';
 
 /**
  * Act 2 kind ids (v0.6 item 14), reserved here so no other thread takes them. A6a and A6b move each id into
