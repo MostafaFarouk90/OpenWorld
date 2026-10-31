@@ -8,6 +8,11 @@ import { ACT3_CODEX_IDS as ID } from './entries';
 export const GREYFEN_GATE_FLAG = 'story.gate.a3';
 export const GREYFEN_DISCOVERED_FLAG = 'place.greyfen.discovered';
 /** K12 writes it when M24 (the dive) is done; K7 reads it for the ferry. */
+/** Phase F opens the Dragonspine (`story.phase.dragonspineOpen`, K16 and the act3 jump); the region's discover flag is set on the first step in. */
+export const DRAGONSPINE_OPEN_FLAG = 'story.phase.dragonspineOpen';
+export const DRAGONSPINE_DISCOVERED_FLAG = 'place.dragonspine.discovered';
+/** The summit area (src/region/areas.ts); entering it unlocks the how-to. */
+export const SUMMIT_AREA = 'dragonspine-summit';
 export const DIVE_DONE_FLAG = 'story.m24.complete';
 export const FEN_BOOTS_ITEM = 'gear.fen-boots';
 export const FERRY_TOKEN_ITEM = 'key.ferry-token';
@@ -25,6 +30,12 @@ export const ACT3_FLAG_UNLOCKS: readonly { flag: string; entry: string }[] = [
   { flag: 'waystone.mireweather-hut.lit', entry: ID.mireweather },
   { flag: 'waystone.hathrens-mere.lit', entry: ID.mere },
   { flag: DIVE_DONE_FLAG, entry: ID.diving },
+  { flag: DRAGONSPINE_OPEN_FLAG, entry: ID.dragonspine },
+  { flag: DRAGONSPINE_DISCOVERED_FLAG, entry: ID.dragonspine },
+  { flag: 'waystone.wyrmwatch-lodge.lit', entry: ID.wyrmwatchLodge },
+  { flag: 'waystone.rime-pass.lit', entry: ID.rimePass },
+  { flag: 'waystone.last-anvil.lit', entry: ID.lastAnvil },
+  { flag: 'waystone.frostfang-aerie.lit', entry: ID.frostfangAerie },
   // The block levels are explained from the gate on: the map warns before the lock.
   { flag: GREYFEN_GATE_FLAG, entry: ID.blockLevels },
   ...(Object.keys(ACT3_BLOCKS) as Act3BlockId[]).map((b) => ({ flag: blockLevelFlagOf(b), entry: ID.blockLevels })),
@@ -37,6 +48,11 @@ export const ACT3_DISCOVER_UNLOCKS: Readonly<Record<string, string>> = {
   'waystone.greywatch': ID.greywatch,
   'waystone.mireweather-hut': ID.mireweather,
   'waystone.hathrens-mere': ID.mere,
+  dragonspine: ID.dragonspine,
+  'waystone.wyrmwatch-lodge': ID.wyrmwatchLodge,
+  'waystone.rime-pass': ID.rimePass,
+  'waystone.last-anvil': ID.lastAnvil,
+  'waystone.frostfang-aerie': ID.frostfangAerie,
 };
 
 /** Items held (count above zero) that unlock an entry on load: the boots mean the wading, the token the ferry. */

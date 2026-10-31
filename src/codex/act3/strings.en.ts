@@ -30,4 +30,26 @@ export const ACT3_CODEX_STRINGS_EN: Record<string, string> = {
   'codex.howto.shard-gems.name': 'Shard-gems',
   'codex.howto.shard-gems.body':
     'Tier 4 gear has a socket for a shard-gem, and a second once tempered to +5. At a smith or a socket point you can fit a gem, take it out again or recut it to another gem of the same class, each for a price in gold. A gem only works while a matching class wears the piece.',
+  // PR 2: the Dragonspine and its summit.
+  'codex.lore.place-dragonspine.name': 'The Dragonspine',
+  'codex.lore.place-dragonspine.body':
+    'The long mountain wall at the north edge of the known world, where the Coal-Mother\'s kin are said to nest. The lower slopes are cold scree and thin pine; above them the road gives way to ledges, fog and wind. Few climb past the Rime Pass and fewer come back the same way.',
+  'codex.lore.place-wyrmwatch-lodge.name': 'Wyrmwatch Lodge',
+  'codex.lore.place-wyrmwatch-lodge.body':
+    'A walled lodge of stone and black timber at the foot of the climb, built by those who watched the dragons from a safe distance. Its hearth is kept lit, its hall is open to anyone who comes up the spine road, and its depot hands out sleds to those who mean to haul.',
+  'codex.lore.place-rime-pass.name': 'The Rime Pass',
+  'codex.lore.place-rime-pass.body':
+    'A narrow saddle where frost never leaves the stones. A shelter with drying racks and a woodpile stands below the worst of the wind. Beyond it the slopes belong to the hawks and the ogres, and to whatever the cold has not yet buried.',
+  'codex.lore.place-last-anvil.name': 'The Last Anvil',
+  'codex.lore.place-last-anvil.body':
+    'A cold forge-site on a shoulder of the mountain, the last place on the spine where iron was worked. The anvil has not rung in generations. A waystone marks it for those who still come to remember what was made here.',
+  'codex.lore.place-frostfang-aerie.name': 'Frostfang Aerie',
+  'codex.lore.place-frostfang-aerie.body':
+    'A high plateau under the summit, reached by a long climb or a longer glide. Its stones are scored by claws, and the wind off the chasm below never settles. Whoever stands here is closer to the dragons than any road has taken them.',
+  'codex.howto.gliding.name': 'Gliding',
+  'codex.howto.gliding.body':
+    'At certain ledges on the Dragonspine you can launch into a glide along a fixed lane to a landing far below. You cannot turn far from the lane. Warm air rising from thermals and slopes lifts you, and still air lets you sink. The glide indicator shows where you sit in the lane, whether you rise or sink, and your height in metres. Interact lets you go early, and a hit or a wall ends the glide.',
+  'codex.howto.summit.name': 'The summit',
+  'codex.howto.summit.body':
+    'Above the Dragonspine\'s lower slopes the summit is a harsher country: the enemies there are never more than three levels above you, but they hit harder than the slopes below. Carry warmth and supplies, light the waystones as you go, and plan your way down. The glide is the quickest.',
 };

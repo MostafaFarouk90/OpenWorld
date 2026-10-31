@@ -2,6 +2,14 @@
 // results are K7's and K10's own (`ferry.refused.*`, `gear.sockets.*`); only the keys they never had are here.
 export const ACT3_HUD_STRINGS_EN: Record<string, string> = {
   'act3.hud.breath': 'Breath',
+  // PR 2: the glide indicator and the Yield prompt.
+  'act3.hud.glide': 'Glide',
+  'act3.hud.glide.rising': 'Rising',
+  'act3.hud.glide.level': 'Level',
+  'act3.hud.glide.sinking': 'Sinking',
+  'act3.hud.glide.height': '{m} m',
+  'act3.hud.glide.letGo': '{key} to let go',
+  'act3.hud.yield': 'Hold {key} to yield',
   'act3.ferry.menu.title': 'Ferry from {stop}',
   'act3.ferry.menu.go': 'Ride to {dest}',
   'act3.ferry.menu.cancel': 'Stay ashore',

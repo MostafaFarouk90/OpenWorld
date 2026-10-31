@@ -20,15 +20,22 @@ import codexPlugin from '../codex.plugin';
 import { createCodexModal } from '../CodexView';
 import { CODEX_ENTRIES, CodexRegistry } from '../entries';
 import { CODEX_STRINGS_EN } from '../strings.en';
+import { HUD_JOURNAL_ACT3_STRINGS_EN } from '../../hud-journal/act3/strings.en';
+import { HUD_JOURNAL_STRINGS_EN } from '../../hud-journal/strings.en';
 import { ACT3_HUD_STRINGS_EN } from '../../hud/act3/strings.en';
 import codexAct3 from './codexAct3.plugin';
 import { ACT3_CODEX_ENTRIES, ACT3_CODEX_IDS as ID } from './entries';
 import { ACT3_CODEX_STRINGS_EN } from './strings.en';
-import { ACT3_DISCOVER_UNLOCKS, ACT3_FLAG_UNLOCKS, ACT3_ITEM_UNLOCKS, GREYFEN_DISCOVERED_FLAG, GREYFEN_GATE_FLAG, act3Backfill, blockLevelFlagOf } from './unlocks';
+import { DRAGONSPINE_OPEN_FLAG as DRAGONSPINE_OPEN_FLAG_OWNER } from '../../quests/act3Jump';
+import { areaAt, SUMMIT_BOX } from '../../region/areas';
+import { GLIDE_LANES } from '../../traversal/glide/lanes';
+import { DRAGONSPINE_DISCOVERED_FLAG, DRAGONSPINE_OPEN_FLAG, SUMMIT_AREA, ACT3_DISCOVER_UNLOCKS, ACT3_FLAG_UNLOCKS, ACT3_ITEM_UNLOCKS, GREYFEN_DISCOVERED_FLAG, GREYFEN_GATE_FLAG, act3Backfill, blockLevelFlagOf } from './unlocks';
 
 describe('entries and strings', () => {
-  it('has ten entries: five lore places and five how-tos, with unique ids that no other table uses', () => {
-    expect(ACT3_CODEX_ENTRIES.map((e) => e.tab)).toEqual(['lore', 'lore', 'lore', 'lore', 'lore', 'howto', 'howto', 'howto', 'howto', 'howto']);
+  it('has seventeen entries: ten lore places and seven how-tos, with unique ids that no other table uses', () => {
+    const tabs = ACT3_CODEX_ENTRIES.map((e) => e.tab);
+    expect(tabs.filter((x) => x === 'lore')).toHaveLength(10);
+    expect(tabs.filter((x) => x === 'howto')).toHaveLength(7);
     const others = new Set([...CODEX_ENTRIES, ...ACT2_CODEX_ENTRIES, ...GREYFEN_CODEX].map((e) => e.id));
     const ids = ACT3_CODEX_ENTRIES.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -55,13 +62,13 @@ describe('entries and strings', () => {
     r.register(GREYFEN_CODEX);
     r.register(ACT3_CODEX_ENTRIES);
     expect(warn).not.toHaveBeenCalled();
-    expect(r.of('lore').map((e) => e.id)).toEqual(expect.arrayContaining([ID.greyfen, ID.reedgate, ID.greywatch, ID.mireweather, ID.mere]));
-    expect(r.of('howto').map((e) => e.id)).toEqual(expect.arrayContaining([ID.wading, ID.diving, ID.ferry, ID.blockLevels, ID.shardGems]));
+    expect(r.of('lore').map((e) => e.id)).toEqual(expect.arrayContaining([ID.greyfen, ID.reedgate, ID.greywatch, ID.mireweather, ID.mere, ID.dragonspine, ID.wyrmwatchLodge, ID.rimePass, ID.lastAnvil, ID.frostfangAerie]));
+    expect(r.of('howto').map((e) => e.id)).toEqual(expect.arrayContaining([ID.wading, ID.diving, ID.ferry, ID.blockLevels, ID.shardGems, ID.gliding, ID.summit]));
   });
 
   it('no string key is used by any other shipped table that this PR touches or sits beside', () => {
-    const mine = Object.keys({ ...ACT3_CODEX_STRINGS_EN, ...MAP_ACT3_STRINGS_EN, ...ACT3_HUD_STRINGS_EN });
-    const others = [CODEX_STRINGS_EN, ACT2_CODEX_STRINGS_EN, FEN_STRINGS_EN, K10_STRINGS_EN, TRAVERSAL_STRINGS_EN, MAP_STRINGS_EN, HUD_STRINGS_EN];
+    const mine = Object.keys({ ...ACT3_CODEX_STRINGS_EN, ...MAP_ACT3_STRINGS_EN, ...ACT3_HUD_STRINGS_EN, ...HUD_JOURNAL_ACT3_STRINGS_EN });
+    const others = [HUD_JOURNAL_STRINGS_EN, CODEX_STRINGS_EN, ACT2_CODEX_STRINGS_EN, FEN_STRINGS_EN, K10_STRINGS_EN, TRAVERSAL_STRINGS_EN, MAP_STRINGS_EN, HUD_STRINGS_EN];
     for (const k of mine) for (const t of others) expect(Object.prototype.hasOwnProperty.call(t, k), k).toBe(false);
     expect(new Set(mine).size).toBe(mine.length);
   });
@@ -93,6 +100,20 @@ describe('unlock tables name real signals', () => {
       expect(ACT3_FLAG_UNLOCKS.some((u) => u.flag === `waystone.${id}.lit`)).toBe(true);
       expect(ACT3_DISCOVER_UNLOCKS[`waystone.${id}`]).toBeTruthy();
     }
+  });
+
+  it("the Dragonspine waystones, region and phase flag are K1's, K0's and K16's", () => {
+    for (const id of ['wyrmwatch-lodge', 'rime-pass', 'last-anvil', 'frostfang-aerie']) {
+      expect(ACT3_WAYSTONES).toHaveProperty(id);
+      expect(ACT3_FLAG_UNLOCKS.some((u) => u.flag === `waystone.${id}.lit`)).toBe(true);
+      expect(ACT3_DISCOVER_UNLOCKS[`waystone.${id}`]).toBeTruthy();
+    }
+    expect(discoveredFlag('dragonspine')).toBe(DRAGONSPINE_DISCOVERED_FLAG);
+    expect(REGION_INFO).toHaveProperty('dragonspine');
+    expect(DRAGONSPINE_OPEN_FLAG).toBe(DRAGONSPINE_OPEN_FLAG_OWNER);
+    expect(areaAt(SUMMIT_BOX.x0 + 10, SUMMIT_BOX.z0 + 10)).toBe(SUMMIT_AREA);
+    expect(areaAt(12000, 12000)).toBe('dragonspine-lower');
+    expect(GLIDE_LANES.some((l) => l.def.id.includes('summit'))).toBe(true);
   });
 
   it("the region id, its discovered flag and its opening gate are the region plugin's and K0's", () => {
@@ -176,6 +197,13 @@ describe('codex-act3 plugin on a reduced manifest', () => {
     await fresh((x) => x.emit('water.entered', { kind: 'wade', volumeId: 'water.greyfen.x' }), ID.wading);
     await fresh((x) => x.emit('dive.started', { volumeId: 'water.greyfen.m24-pool' }), ID.diving);
     await fresh((x) => x.emit('ferry.boarded', { routeId: 'r', from: 'reedgate', to: 'mere' }), ID.ferry);
+    await fresh((x) => x.emit('region.entered', { regionId: 'dragonspine', previous: null }), ID.dragonspine);
+    await fresh((x) => x.emit('discover', { placeId: 'dragonspine', kind: 'region' }), ID.dragonspine);
+    await fresh((x) => x.emit('discover', { placeId: 'waystone.wyrmwatch-lodge', kind: 'waystone' }), ID.wyrmwatchLodge);
+    await fresh((x) => x.emit('discover', { placeId: 'waystone.rime-pass', kind: 'waystone' }), ID.rimePass);
+    await fresh((x) => x.emit('discover', { placeId: 'waystone.last-anvil', kind: 'waystone' }), ID.lastAnvil);
+    await fresh((x) => x.emit('discover', { placeId: 'waystone.frostfang-aerie', kind: 'waystone' }), ID.frostfangAerie);
+    await fresh((x) => x.emit('glide.started', { ledgeId: 'glide.summit-aerie' }), ID.gliding);
     await fresh((x) => x.emit('gear.socketed', { itemId: 'wyrm-tempered-oathblade', slot: 0, shardId: 'shard-gem.bulwark' }), ID.shardGems);
   }, PLUGIN_TEST_TIMEOUT);
 
@@ -191,6 +219,31 @@ describe('codex-act3 plugin on a reduced manifest', () => {
     emit('inventory.changed', { itemId: 'key.ferry-token', count: 0 });
     emit('flag.changed', { key: 'story.m05.complete', value: true, previous: undefined });
     for (const id of Object.values(ID)) expect(has(id), id).toBe(false);
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('the Dragonspine flags unlock their entries live and on load, and the summit how-to follows the area', async () => {
+    const a = await boot();
+    a.ctx.state.setFlag('story.phase.dragonspineOpen', true);
+    expect(a.has(ID.dragonspine)).toBe(true);
+    const b = await boot();
+    b.ctx.state.setFlag('waystone.rime-pass.lit', true);
+    b.ctx.state.setFlag('waystone.last-anvil.lit', true);
+    expect(b.has(ID.rimePass) && b.has(ID.lastAnvil)).toBe(true);
+    expect(b.has(ID.wyrmwatchLodge) || b.has(ID.frostfangAerie)).toBe(false);
+    const c = await boot();
+    c.ctx.state.load({ flags: { 'waystone.frostfang-aerie.lit': true, 'waystone.wyrmwatch-lodge.lit': true, 'place.dragonspine.discovered': true } });
+    c.emit('save.loaded', { slot: 'test' });
+    for (const id of [ID.frostfangAerie, ID.wyrmwatchLodge, ID.dragonspine]) expect(c.has(id), id).toBe(true);
+    // The summit: the lower slopes unlock nothing, the summit box unlocks the how-to once.
+    const d = await boot();
+    const mid = { x: (SUMMIT_BOX.x0 + SUMMIT_BOX.x1) / 2, z: (SUMMIT_BOX.z0 + SUMMIT_BOX.z1) / 2 };
+    d.ctx.player.teleport({ x: 12000, y: 300, z: 12000 });
+    for (let i = 0; i < 3; i++) d.game.fixedUpdate();
+    expect(d.has(ID.summit)).toBe(false);
+    d.ctx.player.teleport({ x: mid.x, y: 500, z: mid.z });
+    for (let i = 0; i < 3; i++) d.game.fixedUpdate();
+    expect(d.has(ID.summit)).toBe(true);
+    expect(d.has(ID.gliding)).toBe(false);
   }, PLUGIN_TEST_TIMEOUT);
 
   it('holding a shard-gem or the Ferry Token unlocks its how-to', async () => {
@@ -270,7 +323,7 @@ describe('codex-act3 plugin on a reduced manifest', () => {
     expect(registered).toHaveLength(0);
     for (let i = 0; i < 4; i++) game.fixedUpdate();
     expect(registered).toHaveLength(1);
-    expect(registered[0]).toHaveLength(10);
+    expect(registered[0]).toHaveLength(ACT3_CODEX_ENTRIES.length);
     expect(unlocked).toContain(ID.greywatch);
   }, PLUGIN_TEST_TIMEOUT);
 
