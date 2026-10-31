@@ -94,6 +94,7 @@ describe('Act 3 flag owners', () => {
       'story.m26.netsCut': 'K12',
       'story.a3.campSeen': 'K16',
       'story.gate.a4': 'K16',
+      'story.a3.peaksCardSeen': 'K16',
       'trainer.<classId>.masterBook': 'K11',
       'boss.<id>.outcome': 'core boss registry',
       'story.phase.dragonspineOpen': 'Phase F PR',

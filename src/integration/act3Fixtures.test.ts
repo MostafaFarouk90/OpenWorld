@@ -6,7 +6,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACT3_ARRIVAL, ACT3_JUMP_IDS, ACT3_ORDERS, ACT3_PREREQS, ACT3_SHRINE_AFTER, blockOf, needsDragonspine } from '../quests/act3Jump';
-import { act3FixtureName, type Act3FixtureMeta } from './act3FixtureKey';
+import { act3FixtureFresh, act3FixtureName, fixtureDefIds, knownQuestDefs, type Act3FixtureMeta } from './act3FixtureKey';
+import { questDefs } from '../quests/content';
 import { generateAct3Fixture } from './act3Fixtures';
 import { seedFixtureRandom } from './fixtureDeterminism';
 import { PEAKS_CARD_SEEN_FLAG } from './phaseECard';
@@ -50,6 +51,15 @@ describe('the committed Act 3 fixtures', () => {
     expect({ x: pos.x, z: pos.z }).toEqual(ACT3_ARRIVAL[blockOf(id)!]);
     const prog = (save.entries as Record<string, { data: { xp: number } }>).progression.data;
     expect(prog.xp).toBeGreaterThanOrEqual(23_500);
+  });
+
+  // Review M2: a fixture the build would refuse (a quest thread's defs landed, the prerequisites moved) fails here, so the
+  // chain and the containment test never run on a save `?act3=` itself would not load. Fix: regenerate (act3FixturesGen.ts).
+  it.each(CASES)('%s %s: is fresh for this build (its quest defs and injected list match)', (order, id) => {
+    const meta = file(`${act3FixtureName(order, id)}.meta.json`) as unknown as Act3FixtureMeta;
+    const has = (q: string) => questDefs.some((d) => d.id === q && d.objectives.length > 0);
+    const known = knownQuestDefs(has, fixtureDefIds(id, order));
+    expect(act3FixtureFresh(meta, known), `stale: generated with [${meta.questDefs}], this build knows [${known}]; regenerate`).toBe(true);
   });
 
   it('lock the second block above the first (it sees the first block\'s Warmth and the player\'s growth)', () => {

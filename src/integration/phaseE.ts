@@ -17,7 +17,8 @@ import type { PhaseCTrail } from './phaseC';
 import { trailNodes } from './timing';
 import { act3PacingReport, estimateAct3Row, phaseEGate, type Act3PacingReport, type Act3PaceRow } from './act3Timing';
 import { ACT3_GREYFEN, type Act3Order } from '../quests/act3Jump';
-import { readAct3Fixture } from '../save/__fixtures__/act3';
+import { readAct3Fixture, readAct3FixtureMeta } from '../save/__fixtures__/act3';
+import { act3FixtureFresh, fixtureDefIds, knownQuestDefs } from './act3FixtureKey';
 type Vec3Like = { x: number; y: number; z: number };
 
 export type PhaseEQuest = (typeof ACT3_GREYFEN)[number];
@@ -40,6 +41,11 @@ export async function bootPhaseE(run: 'a' | 'b'): Promise<ChapterHarness & { loa
   const { order, id } = PHASE_E_START[run];
   const h = await bootFromSave(await readAct3Fixture(order, id), { models: false, virtualClock: true });
   ensure(h.loaded, `Phase E run ${run}: the fixture act3-${order}-${id} loaded`);
+  // The chain never runs on a fixture `?act3=` would refuse as stale (review M2).
+  const meta = await readAct3FixtureMeta(order, id);
+  const qs = h.ctx.services.require('quests');
+  const known = knownQuestDefs((q) => qs.objectives(q).length > 0, fixtureDefIds(id, order));
+  ensure(act3FixtureFresh(meta, known), `Phase E run ${run}: act3-${order}-${id} is stale for this build; regenerate the fixtures`);
   return h;
 }
 
@@ -61,15 +67,21 @@ export async function wadeAlong(h: ChapterHarness, points: readonly { x: number;
     if (log.states.at(-1) !== s) log.states.push(s);
   };
   for (const p of points) {
-    for (let guard = 0; guard < 10_000; guard++) {
+    let arrived = false;
+    for (let guard = 0; guard < 10_000 && !arrived; guard++) {
       const f = h.ctx.player.feet;
       const d = Math.hypot(p.x - f.x, p.z - f.z);
-      if (d < 0.5) break;
+      if (d < 0.5) { arrived = true; break; }
       const step = Math.min(d, stepM);
       await h.teleport({ x: f.x + ((p.x - f.x) / d) * step, z: f.z + ((p.z - f.z) / d) * step }, 1);
-      log.metres += step;
+      const g = h.ctx.player.feet;
+      const moved = Math.hypot(g.x - f.x, g.z - f.z);
+      // A step refused (containment, a wall) would loop on the spot; fail it instead of counting metres never walked.
+      ensure(moved > step * 0.5, `wade: stuck at (${f.x.toFixed(1)}, ${f.z.toFixed(1)}) heading for (${p.x}, ${p.z})`);
+      log.metres += moved;
       note();
     }
+    ensure(arrived, `wade: never reached (${p.x}, ${p.z})`);
   }
   heal(h);
   return log;
@@ -97,8 +109,11 @@ export async function diveAlong(
     const len = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
     for (let s = Math.min(stepM, len); ; s = Math.min(s + stepM, len)) {
       const t = len > 0 ? s / len : 1;
-      h.ctx.player.teleport({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t }, h.ctx.cameraRig?.yaw ?? 0);
+      const to = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t };
+      h.ctx.player.teleport(to, h.ctx.cameraRig?.yaw ?? 0);
       await h.runAsync(ticksPerStep);
+      const f = h.ctx.player.feet;
+      ensure(Math.hypot(f.x - to.x, f.z - to.z) < 1, `dive: did not reach (${to.x.toFixed(1)}, ${to.z.toFixed(1)}) on leg ${i}`);
       if (log.states.at(-1) !== water.state) log.states.push(water.state);
       log.minBreath = Math.min(log.minBreath, water.breath);
       ensure(water.breath > 0, `dive: breath ran out ${s.toFixed(1)} m into leg ${i}`);

@@ -124,7 +124,7 @@ describe('act3PacingReport and the Phase E gate', () => {
     const under = ACT3_GREYFEN.map((q) => act3Estimate(q, 60, 0, 0, 0, { set: 0.519 * 60 }));
     const g = phaseEGate(act3PacingReport(under), ACT3_GREYFEN);
     expect(g.ok).toBe(false);
-    expect(g.reasons.join()).toMatch(/Greyfen block at 51\.9% \(gate 52%\)/);
+    expect(g.reasons.join()).toMatch(/Greyfen block at 51\.90% \(gate 52%\)/);
     expect(PHASE_E_GREYFEN_GATE).toBe(0.52);
   });
 
@@ -133,6 +133,23 @@ describe('act3PacingReport and the Phase E gate', () => {
     expect(phaseEGate(act3PacingReport(rows), ACT3_GREYFEN).reasons).toEqual(['Greyfen quests not measured: d05']);
     const low = [...ACT3_GREYFEN.map((q) => fake(q, q === 'r12' ? 39 : 70))];
     expect(phaseEGate(act3PacingReport(low), ACT3_GREYFEN).reasons).toEqual(['under the 40% floor: r12']);
+  });
+
+  it('refuses a row whose design, travel, nodes or a beat count is missing, zero or not finite', () => {
+    expect(() => act3Estimate('m23', 0, 0, 0, 10, {})).toThrow(/m23 has design minutes 0/);
+    expect(() => act3Estimate('m23', undefined as never, 0, 0, 10, {})).toThrow(/design minutes undefined/);
+    expect(() => act3Estimate('m23', 45, 0, 0, undefined as never, {})).toThrow(/nodes undefined/);
+    expect(() => act3Estimate('m23', 45, NaN, 0, 10, {})).toThrow(/travel metres NaN/);
+    expect(() => act3Estimate('m23', 45, 0, Infinity, 10, {})).toThrow(/travel seconds Infinity/);
+    expect(() => act3Estimate('m23', 45, 0, 0, 10, { set: NaN })).toThrow(/beat "set" has count NaN/);
+  });
+
+  it('a row computed at exactly 40% or 45% sits at its line, not under it; a NaN share fails', () => {
+    const at = (share: number) => act3Estimate('m23', 60, 0, 0, 0, { set: share * 60 });
+    expect(act3PacingReport([at(0.4)]).rows[0].status).toBe('report');
+    expect(act3PacingReport([at(0.45)]).rows[0].status).toBe('ok');
+    const nan = { ...at(0.5), share: NaN };
+    expect(act3PacingReport([nan]).failures).toEqual(['m23']);
   });
 
   it('fails the gate with no Greyfen rows at all', () => {

@@ -24,11 +24,27 @@ export const fixtureDefIds = (id: string, order: Act3Order): string[] => [...(AC
 /** The quest defs among `ids` that a build knows, sorted (the freshness key). */
 export const knownQuestDefs = (has: (id: string) => boolean, ids: readonly string[]): string[] => ids.filter(has).sort();
 
-/** Fresh when the build knows exactly the quest defs the generator knew among the ids that shape the fixture. */
-export function act3FixtureFresh(meta: Pick<Act3FixtureMeta, 'questDefs'>, known: readonly string[]): boolean {
-  const a = [...meta.questDefs].sort();
-  const b = [...known].sort();
-  return a.length === b.length && a.every((x, i) => x === b[i]);
+const sameSet = (x: readonly string[], y: readonly string[]): boolean => {
+  const a = [...x].sort();
+  const b = [...y].sort();
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+};
+
+/** What freshness reads from a meta (`id`, `order` and `injected` are compared when present). */
+export type Act3FreshnessMeta = Pick<Act3FixtureMeta, 'questDefs'> & Partial<Pick<Act3FixtureMeta, 'id' | 'order' | 'injected'>>;
+
+/**
+ * Fresh when the build knows exactly the quest defs the generator knew among the ids that shape the fixture, and (when
+ * the meta carries them) the jump still injects the same quests in the same order. A def whose content changed without a
+ * new def appearing is not caught here: regenerate whenever a quest thread lands (the drift check is CHECK_FIXTURES=1).
+ */
+export function act3FixtureFresh(meta: Act3FreshnessMeta, known: readonly string[]): boolean {
+  if (!sameSet(meta.questDefs, known)) return false;
+  if (meta.injected && meta.id && meta.order) {
+    const now = ACT3_PREREQS[meta.order][meta.id] ?? [];
+    if (now.length !== meta.injected.length || now.some((q, i) => q !== meta.injected![i])) return false;
+  }
+  return true;
 }
 
 export type Act3StartChoice = { use: 'fixture' } | { use: 'inject'; reason: string };
@@ -38,7 +54,7 @@ export type Act3StartChoice = { use: 'fixture' } | { use: 'inject'; reason: stri
  * reason, logged so the stale fixture gets regenerated). `&fixture=0` always injects.
  */
 export function chooseAct3Start(
-  name: string, wantFixture: boolean, meta: Pick<Act3FixtureMeta, 'questDefs'> | null, known: readonly string[],
+  name: string, wantFixture: boolean, meta: Act3FreshnessMeta | null, known: readonly string[],
 ): Act3StartChoice {
   if (!wantFixture) return { use: 'inject', reason: '&fixture=0' };
   if (!meta) return { use: 'inject', reason: `no fixture ${name}` };

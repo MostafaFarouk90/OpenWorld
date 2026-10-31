@@ -25,6 +25,12 @@ describe('the fixture key', () => {
     expect(act3FixtureFresh({ questDefs: ['m23'] }, ['m24'])).toBe(false);
   });
 
+  it('is stale when the jump would now inject other quests than the meta records', () => {
+    expect(act3FixtureFresh({ questDefs: [], id: 'm24', order: 'greyfen', injected: ['m23'] }, [])).toBe(true);
+    expect(act3FixtureFresh({ questDefs: [], id: 'm24', order: 'greyfen', injected: [] }, [])).toBe(false);
+    expect(act3FixtureFresh({ questDefs: [], id: 'm24', order: 'greyfen', injected: ['m23', 'r14'] }, [])).toBe(false);
+  });
+
   it('chooses the fixture when present and fresh, injection otherwise, with the reason', () => {
     expect(chooseAct3Start('n', true, { questDefs: [] }, [])).toEqual({ use: 'fixture' });
     expect(chooseAct3Start('n', false, { questDefs: [] }, [])).toEqual({ use: 'inject', reason: '&fixture=0' });

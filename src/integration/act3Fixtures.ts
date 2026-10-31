@@ -2,7 +2,7 @@
  * The Act 3 `?act3=` fixtures (brief K16, contracts v0.7 item 22): one save per Act 3 quest id and block order, written
  * right after K0's jump settles on a fresh game, so a fixture is exactly the jump's order semantics frozen. Each is
  * generated on its own fresh boot with the seeded random and the fixed clock of `fixtureDeterminism.ts`, so two runs
- * write identical bytes. Regenerate with `GEN_FIXTURES=1 npx vitest run src/integration/act3Fixtures.gen.test.ts`
+ * write identical bytes. Regenerate with `GEN_FIXTURES=1 npx vitest run src/integration/act3Fixtures.gen`
  * whenever a quest thread's defs land (they change what the injection writes; `?act3=` then sees the fixture as stale).
  */
 import { bootChapter, type ChapterHarness } from './chapterHarness';
@@ -44,7 +44,7 @@ export async function generateAct3Fixture(id: string, order: Act3Order, track?: 
       injected: [...(ACT3_PREREQS[order][id] ?? [])],
       questDefs: knownQuestDefs(ports.hasQuest, fixtureDefIds(id, order)),
       lockedBlocks: blocks,
-      generatedBy: 'GEN_FIXTURES=1 npx vitest run src/integration/act3Fixtures.gen.test.ts',
+      generatedBy: 'GEN_FIXTURES=1 npx vitest run src/integration/act3Fixtures.gen',
       savedAt: 'fixed: Date.now() held at FIXTURE_SAVED_AT while saving',
     };
     return { save, meta };

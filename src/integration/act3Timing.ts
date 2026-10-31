@@ -41,6 +41,9 @@ export const ACT3_ACT_TARGET = 0.5;
 /** Coordinator review, change 5: the Phase E PR fails if the Greyfen block measures under this share (planned 53%). */
 export const PHASE_E_GREYFEN_GATE = 0.52;
 
+/** Float slack on the share lines (a share computed at exactly the line passes it). */
+export const SHARE_EPSILON = 1e-9;
+
 /** The only quest played before the Fen Boots exist (M23 grants them), in either block order. */
 export const PRE_BOOTS_QUESTS: readonly string[] = ['m23'];
 
@@ -77,6 +80,7 @@ export const beatSeconds = (beats: Partial<Record<Act3Beat, number>>): number =>
   Object.entries(beats).reduce((s, [k, n]) => {
     const per = ACT3_BEAT_S[k as Act3Beat];
     if (per === undefined) throw new Error(`act3 timing: unknown beat "${k}"`);
+    if (!Number.isFinite(n ?? 0) || (n ?? 0) < 0) throw new Error(`act3 timing: beat "${k}" has count ${n}`);
     return s + per * (n ?? 0);
   }, 0);
 
@@ -84,6 +88,11 @@ export const beatSeconds = (beats: Partial<Record<Act3Beat, number>>): number =>
 export function act3Estimate(
   quest: string, design: number, travelM: number, travelS: number, nodes: number, beats: Partial<Record<Act3Beat, number>>,
 ): Act3TimingRow {
+  // A missing or broken input would make the share NaN, which no `<` comparison catches: refuse it here.
+  if (!(design > 0) || !Number.isFinite(design)) throw new Error(`act3 timing: ${quest} has design minutes ${design}`);
+  for (const [k, v] of [['travel metres', travelM], ['travel seconds', travelS], ['nodes', nodes]] as const) {
+    if (!Number.isFinite(v) || v < 0) throw new Error(`act3 timing: ${quest} has ${k} ${v}`);
+  }
   const talkS = nodes * TALK_NODE_S;
   const beatS = beatSeconds(beats);
   const countedTravelS = Math.min(travelS, ACT2_TRAVEL_CAP * (talkS + beatS));
@@ -141,8 +150,9 @@ export function act3PacingReport(rows: readonly Act3TimingRow[]): Act3PacingRepo
     if (seen.has(r.quest)) throw new Error(`act3 timing: ${r.quest} measured twice`);
     seen.add(r.quest);
   }
+  // A hair of float slack on every line, so a row at exactly 40% or 45% counts as at it; a non-finite share fails.
   const status = (r: Act3TimingRow): Act3RowStatus =>
-    r.share < ACT3_QUEST_FLOOR ? 'fail' : r.share < ACT3_REPORT_UNDER ? 'report' : 'ok';
+    !Number.isFinite(r.share) || r.share < ACT3_QUEST_FLOOR - SHARE_EPSILON ? 'fail' : r.share < ACT3_REPORT_UNDER - SHARE_EPSILON ? 'report' : 'ok';
   const out = rows.map((r) => ({ ...r, status: status(r) }));
   const blocks: Partial<Record<Act3BlockOf, Act3Share>> = {};
   for (const b of ['greyfen', 'spine', 'summit'] as const) {
@@ -166,9 +176,8 @@ export function phaseEGate(report: Act3PacingReport, greyfen: readonly string[])
   if (missing.length) reasons.push(`Greyfen quests not measured: ${missing.join(', ')}`);
   if (report.failures.length) reasons.push(`under the 40% floor: ${report.failures.join(', ')}`);
   const g = report.blocks.greyfen;
-  // a hair of float slack, so a block at exactly 52% passes
-  if (!g || g.share < PHASE_E_GREYFEN_GATE - 1e-9) {
-    reasons.push(`Greyfen block at ${g ? (g.share * 100).toFixed(1) : '0'}% (gate ${PHASE_E_GREYFEN_GATE * 100}%)`);
+  if (!g || !Number.isFinite(g.share) || g.share < PHASE_E_GREYFEN_GATE - SHARE_EPSILON) {
+    reasons.push(`Greyfen block at ${g ? (g.share * 100).toFixed(2) : '0'}% (gate ${PHASE_E_GREYFEN_GATE * 100}%)`);
   }
   return { ok: reasons.length === 0, reasons };
 }

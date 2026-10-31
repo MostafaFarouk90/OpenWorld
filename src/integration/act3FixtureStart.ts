@@ -1,13 +1,13 @@
 // How a `?act3=` boot starts (K16): load the committed fixture when it is fresh, else run K0's flag injection. Ticked by
 // the jump plugin each rules step before the jump itself; the jump runs only once this says `inject`.
-import type { Act3FixtureMeta } from './act3FixtureKey';
+import type { Act3FreshnessMeta } from './act3FixtureKey';
 import { chooseAct3Start } from './act3FixtureKey';
 
 export type Act3StartState = 'finding' | 'deciding' | 'loading' | 'loaded' | 'inject';
 
 export interface Act3FixtureStartPorts {
   /** The committed fixture, or null (a rejected promise counts as none). */
-  find(): Promise<{ name: string; save: Record<string, unknown>; meta: Pick<Act3FixtureMeta, 'questDefs'> } | null>;
+  find(): Promise<{ name: string; save: Record<string, unknown>; meta: Act3FreshnessMeta } | null>;
   /** Saves have settled at boot and the quests are registered. */
   ready(): boolean;
   /** The quest defs this build knows among the ids that shape the fixture. */

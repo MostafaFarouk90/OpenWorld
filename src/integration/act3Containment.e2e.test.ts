@@ -89,17 +89,19 @@ describe('Act 3 containment on the fixtures (Phase E)', () => {
     expect(c.isOpen(CALDERA.x, CALDERA.z)).toBe(false);
   }, 60_000);
 
+  // The glide's own end on the push (`glide.ended { reason: 'contained' }`) is K7 PR 2's, asserted once that branch is stacked.
   it('a player gliding into the held Dragonspine is pushed back into the open area, once, with containment.pushed', async () => {
     const { c } = await boot('greyfen', 'd05');
-    const mm = h!.ctx.services.get('movementMode');
-    mm?.set('glide', { position: { x: REEDGATE.x, y: 10, z: REEDGATE.z }, yaw: 0 });
+    const mm = h!.ctx.services.require('movementMode');
+    mm.set('glide', { position: { x: REEDGATE.x, y: 10, z: REEDGATE.z }, yaw: 0 });
     const pushed = h!.of('containment.pushed').length;
     h!.ctx.player.teleport({ x: LODGE.x, y: 400, z: LODGE.z });
     await h!.runAsync(5);
     const feet = h!.ctx.player.feet;
     expect(c.isOpen(feet.x, feet.z), JSON.stringify(feet)).toBe(true);
     const events = h!.of('containment.pushed').slice(pushed);
-    expect(events.length).toBeGreaterThanOrEqual(1);
+    expect(mm.current).toBe('glide');
+    expect(events).toHaveLength(1);
     expect(Math.hypot(events[0].from.x - LODGE.x, events[0].from.z - LODGE.z)).toBeLessThan(1);
   }, 60_000);
 });
