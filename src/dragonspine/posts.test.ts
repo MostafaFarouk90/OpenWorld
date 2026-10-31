@@ -20,12 +20,31 @@ describe('Dragonspine NPC posts', () => {
   it('name anchors that exist: the layout\'s homes and the hall\'s own posts', () => {
     for (const r of DRAGONSPINE_POST_RULES) {
       expect(layoutAnchors.has(r.home), r.home).toBe(true);
-      for (const p of r.posts) expect(hallAnchors.has(p.anchorId), p.anchorId).toBe(true);
+      for (const p of r.posts) expect(hallAnchors.has(p.anchorId) || layoutAnchors.has(p.anchorId), p.anchorId).toBe(true);
     }
   });
 
-  it('are in POST_RULES, move only the two hall hunters, and no Act 1 or 2 row names a Dragonspine NPC', () => {
-    expect(DRAGONSPINE_POST_RULES.map((r) => r.npcId)).toEqual(['lodge-hunter-5', 'lodge-hunter-6']);
+  it('turns all six lodge hunters out after story.m34.complete, facing away from the yard, and back in on a state without it', () => {
+    const m34: ConditionEnv = { ...env, state: { getFlag: (k: string) => (k === 'story.m34.complete' ? true : undefined), getBool: (k: string) => k === 'story.m34.complete' } as never };
+    const at = resolvePosts(POST_RULES, m34);
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      expect(at[`lodge-hunter-${n}`]?.anchorId).toBe(`npc-post.lodge-hunter-${n}.out`);
+      const out = layout.anchors.find((a) => a.id === `npc-post.lodge-hunter-${n}.out`)!;
+      const home = layout.anchors.find((a) => a.id === `npc-post.lodge-hunter-${n}`)!;
+      // The outward post faces away from the yard's centre (its forward vector points away from it).
+      const yaw = (out.yawDeg * Math.PI) / 180;
+      const fwd = { x: -Math.sin(yaw), z: -Math.cos(yaw) };
+      const L = inp.plateaus.find((p) => p.id === 'wyrmwatch-lodge')!.box;
+      const away = { x: out.x - (L.minX + L.maxX) / 2, z: out.z - (L.minZ + L.maxZ) / 2 };
+      expect(fwd.x * away.x + fwd.z * away.z, `hunter ${n}`).toBeGreaterThan(0);
+      expect(home).toBeTruthy();
+    }
+    const before = resolvePosts(POST_RULES, env);
+    for (const n of [1, 2, 3, 4]) expect(before[`lodge-hunter-${n}`]?.anchorId ?? `npc-post.lodge-hunter-${n}`).toBe(`npc-post.lodge-hunter-${n}`);
+  });
+
+  it('are in POST_RULES, move only the six lodge hunters, and no Act 1 or 2 row names a Dragonspine NPC', () => {
+    expect(DRAGONSPINE_POST_RULES.map((r) => r.npcId)).toEqual([1, 2, 3, 4, 5, 6].map((n) => `lodge-hunter-${n}`));
     const ours = new Set(DRAGONSPINE_NPCS.map((n) => n.id));
     for (const r of POST_RULES.filter((x) => !DRAGONSPINE_POST_RULES.includes(x))) expect(ours.has(r.npcId), r.npcId).toBe(false);
     const at = resolvePosts(POST_RULES, env);

@@ -54,7 +54,11 @@ describe('the places on the shipped ground', () => {
       'dragonspine-cave-ledge': 'dragonspine.cave.leap.launch',
       'dragonspine-m28-ledge-1': 'dragonspine.m28.leap.1.launch',
       'dragonspine-m28-ledge-2': 'dragonspine.m28.leap.2.launch',
+      'dragonspine-roost-ledge-1': 'dragonspine.roost.leap.1.launch',
+      'dragonspine-roost-ledge-2': 'dragonspine.roost.leap.2.launch',
+      'dragonspine-roost-ledge-3': 'dragonspine.roost.leap.3.launch',
     };
+    expect(b.layout.structures.filter((x) => x.role === 'ledge')).toHaveLength(6);
     for (const s of b.layout.structures.filter((x) => x.role === 'ledge')) {
       const l = anchor(launches[s.id]!);
       const rise = ledgeRise(heightAt, s.x, s.z, { x: l.x, z: l.z }, [s.footprint[0], s.footprint[1]]);
