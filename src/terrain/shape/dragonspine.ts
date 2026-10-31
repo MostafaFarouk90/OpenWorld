@@ -196,6 +196,11 @@ export const M28_CRAG_PLATEAU = pad('m28-crag', 13800, 12600, 30, 30, 167, 100);
 export const SUMMIT_GATE_PLATEAU = pad('summit-gate', 13600, 14750, 60, 50, 575, 60);
 export const WYRMS_HEARTH_PLATEAU = pad('wyrms-hearth', 13600, 15600, 300, 250, 600, 150);
 export const SKYHOLD_TOP_PLATEAU = pad('skyhold-top', 12230, 15200, 100, 80, 585, 50);
+/**
+ * Ysmeryth's roost (M31's trial, K4): a level 70 x 70 m shelf in the hollow under the crown's crest, north of the
+ * Wyrm's Hearth. The crest stands about 60 m over it to the north; nothing within 80 m of its centre tilts past 0.7.
+ */
+export const ROOST_PLATEAU = pad('dragon-roost', 13650, 16250, 70, 70, 540, 150);
 export const FROSTFANG_AERIE_PLATEAU = pad('frostfang-aerie', 15600, 16040, 220, 240, 555, 80);
 /** The Frostfang keep's interior pad (40 x 50 m), exactly flat, on the Aerie shelf. */
 export const FROSTFANG_KEEP_PLATEAU = pad('frostfang-keep', 15600, 16120, 40, 50, 555, 40);
@@ -220,6 +225,7 @@ export const DRAGONSPINE_PLATEAUS: readonly PlateauDef[] = [
   FROSTFANG_AERIE_PLATEAU,
   FROSTFANG_KEEP_PLATEAU,
   COLLAPSED_CAVE_FLOAT_PLATEAU,
+  ROOST_PLATEAU,
 ];
 
 const centre = (p: PlateauDef) => ({ x: (p.box.minX + p.box.maxX) / 2, z: (p.box.minZ + p.box.maxZ) / 2, height: p.height });
@@ -238,6 +244,7 @@ export const DRAGONSPINE_SITES = {
   frostfangAerie: centre(FROSTFANG_AERIE_PLATEAU),
   frostfangKeep: centre(FROSTFANG_KEEP_PLATEAU),
   collapsedCaveFloat: centre(COLLAPSED_CAVE_FLOAT_PLATEAU),
+  roost: centre(ROOST_PLATEAU),
 } as const;
 
 // ---- roads (in world-shape order: each is fitted on the ground with the roads before it laid)
