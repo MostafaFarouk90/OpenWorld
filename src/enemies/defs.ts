@@ -10,6 +10,8 @@ import { EMBER_WYRM_DEF, WYRMLING_DEF } from './wyrm/defs';
 import { FEN_LEECH } from './fen/leech/def';
 import { PEAT_SHAMBLER } from './fen/shambler/def';
 import { SKARL_DRAKE_DEF } from './wyrm/drake/def';
+import { RIME_HAWK } from './peak/hawk/def';
+import { CRAG_OGRE } from './peak/ogre/def';
 import type { EnemyDef, EnemyKind, MoveDef } from './types';
 
 /**
@@ -243,6 +245,9 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'peat-shambler': PEAT_SHAMBLER,
   // Act 3 (K6a PR 1): Skarl's drake.
   'skarl-drake': SKARL_DRAKE_DEF,
+  // Act 3 (K6b PR 2): the Dragonspine's creatures.
+  'rime-hawk': RIME_HAWK,
+  'crag-ogre': CRAG_OGRE,
 };
 
 /**
@@ -274,6 +279,9 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   'fen-leech': { part: 'maw', color: 0x8fb0b8 },
   'peat-shambler': { part: 'hand', color: 0x8a5a2a },
   'skarl-drake': { part: 'mouth', color: 0xff7a2a },
+  // K6b PR 2, design 13: the hawk's white wing flash (drawn by its body too), the ogre's red eye flash.
+  'rime-hawk': { part: 'wing', color: 0xffffff },
+  'crag-ogre': { part: 'mouth', color: 0xff3020 },
 };
 
 function move(
