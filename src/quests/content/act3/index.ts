@@ -4,11 +4,14 @@ import type { QuestNoteSpec } from '../../notes';
 import type { Act2Note } from '../act2/notes';
 import type { CarryItemSpec } from '../carry';
 import './dragonspine/items';
+import './summit/items';
 import { DRAGONSPINE_LOWER } from './dragonspine/dragonspine.content';
+import { SUMMIT } from './summit/summit.content';
 
 export { DRAGONSPINE_LOWER, DRAGONSPINE_QUEST_IDS } from './dragonspine/dragonspine.content';
+export { SUMMIT, SUMMIT_QUEST_IDS } from './summit/summit.content';
 
-const BLOCKS = [DRAGONSPINE_LOWER] as const;
+const BLOCKS = [DRAGONSPINE_LOWER, SUMMIT] as const;
 
 export const ACT3_QUEST_DEFS: QuestDef[] = BLOCKS.flatMap((b) => b.quests);
 export const ACT3_PROPS = BLOCKS.flatMap((b) => b.props);

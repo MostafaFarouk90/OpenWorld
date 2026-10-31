@@ -27,7 +27,9 @@ describe('quest content', () => {
       // Act 2 Oldsmoke surface (A13)
       'm16', 'm17', 'r09', 'r08', 'm18', 'r10', 'm19', 'm20', 'm21', 'd04', 'm22',
       // Act 3 lower Dragonspine (K13)
-      'm28', 'r15', 'm29', 'r16', 'm30', 'r17', 'r18']);
+      'm28', 'r15', 'm29', 'r16', 'm30', 'r17', 'r18',
+      // Act 3 summit (K13 PR 2)
+      'm31', 'm32', 'm33', 'm34', 'd06']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
