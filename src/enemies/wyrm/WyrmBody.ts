@@ -25,6 +25,9 @@ export const WYRM_CLIPS = {
   headLower: 'HeadLower',
   roar: 'Roar',
   rest: 'Rest',
+  // Act 3 (K6a PR 2, Ysmeryth's trial): the wing sweep and the keeper's call.
+  sweep: 'Sweep',
+  call: 'Call',
 } as const;
 
 type Canonical = (typeof WYRM_CLIPS)[keyof typeof WYRM_CLIPS];
@@ -44,6 +47,8 @@ export const WYRM_CLIP_DURATIONS: Readonly<Record<Canonical, number>> = {
   HeadLower: 1,
   Roar: 1.6,
   Rest: 3,
+  Sweep: 1.4,
+  Call: 1.6,
 };
 
 /** The names `Enemy.ts` asks for, mapped onto wyrm clips (`currentClip` reports the name requested). */
@@ -511,6 +516,24 @@ export class WyrmBody implements EnemyBody {
         p.headPitch = -0.6;
         p.fold = 1;
         p.flap = -0.25;
+        break;
+      case 'Sweep':
+        // Ysmeryth's wing sweep: the wings spread and rise through the windup (with the wing flash), then beat down
+        // and forward through the window.
+        p.fold = u < ws ? 1 - pre : inWindow ? 0 : post;
+        p.flap = u < ws ? -0.2 + 0.9 * pre : inWindow ? 0.7 - 1.4 * ((u - ws) / Math.max(1e-6, we - ws)) : -0.7 * (1 - post);
+        p.flash = u < ws ? pre : inWindow ? 1 - (u - ws) / Math.max(1e-6, we - ws) : 0;
+        p.headPitch += u < ws ? 0.2 * pre : -0.1;
+        p.billow = inWindow ? 1 : 0;
+        break;
+      case 'Call':
+        // The keeper's call: she rears, wings wide, crest and eyes blazing (the flash), jaw open in the window.
+        p.headPitch = u < ws ? 0.8 * pre : inWindow ? 0.8 : 0.8 * (1 - post);
+        p.fold = u < ws ? 1 - pre : inWindow ? 0 : post;
+        p.flap = u < ws ? 0.6 * pre : inWindow ? 0.6 : 0.6 * (1 - post);
+        p.flash = u < ws ? pre : inWindow ? 1 : 1 - post;
+        p.jaw = inWindow ? 1 : 0.2;
+        p.mouth = u < ws ? 0.5 * pre : inWindow ? 0.9 : 0.5 * (1 - post);
         break;
     }
     // A telegraph flash on top lifts the rim (setTelegraph); the mouth never dims below the clip's own value.

@@ -1,5 +1,6 @@
 import type { SpawnerDef } from '../../types';
 import { DRAKE_DEV_SPAWNERS } from '../drake/def';
+import { YSMERYTH_SPAWNERS } from '../ysmeryth/def';
 
 /**
  * The midpoint's two resting wyrms at Wyrmwatch Lodge (K6a PR 1, plan 2.7 "Thorgar's hunters stand watch with the
@@ -64,5 +65,5 @@ export const LODGE_WYRM_SPAWNERS: readonly SpawnerDef[] = [
   },
 ];
 
-/** K6a's spawner table (the enemies plugin adds it): the lodge wyrms and the dev drake. Their anchors are defined at runtime. */
-export const ACT3_DRAGON_SPAWNERS: readonly SpawnerDef[] = [...LODGE_WYRM_SPAWNERS, ...DRAKE_DEV_SPAWNERS];
+/** K6a's spawner table (the enemies plugin adds it): the lodge wyrms, the dev drake and Ysmeryth's trial group. Their anchors are defined at runtime. */
+export const ACT3_DRAGON_SPAWNERS: readonly SpawnerDef[] = [...LODGE_WYRM_SPAWNERS, ...DRAKE_DEV_SPAWNERS, ...YSMERYTH_SPAWNERS];

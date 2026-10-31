@@ -10,6 +10,7 @@ import { EMBER_WYRM_DEF, WYRMLING_DEF } from './wyrm/defs';
 import { FEN_LEECH } from './fen/leech/def';
 import { PEAT_SHAMBLER } from './fen/shambler/def';
 import { SKARL_DRAKE_DEF } from './wyrm/drake/def';
+import { YSMERYTH_DEF } from './wyrm/ysmeryth/def';
 import type { EnemyDef, EnemyKind, MoveDef } from './types';
 
 /**
@@ -243,6 +244,7 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'peat-shambler': PEAT_SHAMBLER,
   // Act 3 (K6a PR 1): Skarl's drake.
   'skarl-drake': SKARL_DRAKE_DEF,
+  ysmeryth: YSMERYTH_DEF,
 };
 
 /**
@@ -274,6 +276,7 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   'fen-leech': { part: 'maw', color: 0x8fb0b8 },
   'peat-shambler': { part: 'hand', color: 0x8a5a2a },
   'skarl-drake': { part: 'mouth', color: 0xff7a2a },
+  ysmeryth: { part: 'mouth', color: 0xffb46a },
 };
 
 function move(

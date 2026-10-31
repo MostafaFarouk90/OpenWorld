@@ -1,6 +1,7 @@
 // Act 3 spawner lint (contracts v0.7, coordinator ruling 2): every spawner whose anchor lies in the Greyfen or Dragonspine
 // box (or whose band names one of those regions) names a `block` or an `area`, so the level fallback (Greyfen 18 to 26)
 // is never what a shipped spawner relies on. Today no spawner is there, so the list is empty.
+import { YSMERYTH_SPAWNERS } from './wyrm/ysmeryth/def';
 import { describe, expect, it } from 'vitest';
 import { SLICE_SPAWNERS } from './spawnerDefs';
 import { BRIGHTWATER_SPAWNERS } from './brightwaterSpawners';
@@ -67,7 +68,8 @@ describe('Act 3 spawner lint', () => {
   it('every shipped spawner in the Greyfen or Dragonspine boxes names a block or an area (K6b PR 1: the Greyfen ambient groups)', () => {
     expect(act3SpawnersMissingBlockOrArea(ALL_SPAWNER_DEFS)).toEqual([]);
     const inside = ALL_SPAWNER_DEFS.filter((s) => (anchors.get(s.anchor) ?? []).some((p) => act3RegionAt(p.x, p.z) !== null));
-    expect(inside.map((s) => s.id).sort()).toEqual(ACT3_SPAWNERS.map((s) => s.id).sort());
+    // K6a PR 2: Ysmeryth's trial spawner sits on K4's roost landing mark (the other dragon spawners use runtime anchors).
+    expect(inside.map((s) => s.id).sort()).toEqual([...ACT3_SPAWNERS, ...YSMERYTH_SPAWNERS].map((s) => s.id).sort());
     for (const s of inside) expect(s.block ?? s.area, s.id).toBeTruthy();
   });
 
