@@ -28,10 +28,11 @@ import { npcAelfredaCompanion } from '../../companions/dialogue/npcAelfredaCompa
 import { withAct3Trainers } from './act3/trainers';
 import { withAct3Companions } from './act3/companions';
 import { DRAGONSPINE_DIALOGUES } from './act3/dragonspine';
+import { withSummit } from './act3/summit';
 
 // Act 3 (K10): the four Harrowmark trainers get their master-book lines in front. Act 3 (K5): Hrolf's master book and
 // the companions' M27, M32 and M34 scene trees.
-export const dialogueDefs: DialogueDef[] = withAct3Companions(withAct3Trainers([
+export const dialogueDefs: DialogueDef[] = withSummit(withAct3Companions(withAct3Trainers([
   npcStane, npcEdda, npcHob, npcWynn, npcTobb, npcCarter1, npcCarter2, t04Vow,
   npcRook, npcAldith, npcMerrin, npcGerta, npcWhitlock, npcAshdown, sceneAct1Camp,
   npcCarter3, npcAldwin, npcGarrick, ...NOTE_DIALOGUES,
@@ -45,4 +46,4 @@ export const dialogueDefs: DialogueDef[] = withAct3Companions(withAct3Trainers([
   ...ACT2_EXTENDED_DIALOGUES, ...ACT2_DIALOGUES,
   // Act 3 (K13): the lower Dragonspine quests
   ...DRAGONSPINE_DIALOGUES,
-]));
+])));
