@@ -1,6 +1,6 @@
 // R14, R13, M26, M27 and D05 rules (K12): the choices' favour, the water-song, Hathren's rite, the reed blinds and the Deeps.
 import type { Kit, Off } from './shared';
-import { distanceTo, offerScene, recheck, toast } from './shared';
+import { offerScene, recheck, toast } from './shared';
 import { canStage, SetPiece } from './scenes';
 import { BroodFlight, type BroodPlace } from './broodScene';
 import type { CameraShot } from '../../../../../rendering/ThirdPersonCamera';
@@ -172,6 +172,25 @@ export function installM26(k: Kit): Off {
     };
   };
 
+  // a sphere test (feet to the shore point, height included)
+  const nearShore = (): boolean => {
+    const a = k.ctx.anchors.find(SHORE_ANCHOR);
+    if (!a) return false;
+    const f = k.ctx.player.feet;
+    return Math.hypot(f.x - a.position.x, f.y - a.position.y, f.z - a.position.z) <= M26_WAKE_RADIUS;
+  };
+  // no scene on top of a fight: any living hostile actor within 15 m holds it back
+  const hostileNear = (): boolean => {
+    const reg = (k.ctx as unknown as { actors?: { all(): Iterable<{ team?: string; dead?: boolean; position?: { x: number; y: number; z: number } }> } }).actors;
+    if (!reg) return false;
+    const f = k.ctx.player.feet;
+    for (const a of reg.all()) {
+      if (a.team !== 'hostile' || a.dead || !a.position) continue;
+      if (Math.hypot(a.position.x - f.x, a.position.y - f.y, a.position.z - f.z) <= 15) return true;
+    }
+    return false;
+  };
+
   const beginWake = (): void => {
     const h = hathren();
     if (!h || !piece.begin(shoreShot())) return;
@@ -191,11 +210,12 @@ export function installM26(k: Kit): Off {
 
   k.every(10, () => {
     if (piece.active || !staged()) return;
-    if (!k.active('m26') || !k.objCurrent('m26', 'wake') || k.flag(M26_WOKE) || k.flag(M26_WAKE_SEEN)) return;
+    if (!k.active('m26') || !k.objCurrent('m26', 'wake') || k.flag(M26_WOKE)) return;
     if (hathren()?.state !== 'nets') return;
     const d = dialogue();
     if (!d || d.active || k.ctx.hud?.modalOpen) return;
-    if (distanceTo(k, SHORE_ANCHOR) > M26_WAKE_RADIUS) return;
+    if (k.ctx.services.get('water')?.state === 'diving') return;
+    if (!nearShore() || hostileNear()) return;
     beginWake();
   });
   k.every(1, () => {
@@ -211,6 +231,8 @@ export function installM26(k: Kit): Off {
   });
   k.on('dialogue.ended', (e) => {
     if (e.dialogueId !== M26_WAKE_SCENE || !piece.active) return;
+    // a load closes the open dialogue before K12's own save.loaded handler: that handler decides (credit only if the loaded world has the step current)
+    if (e.reason === 'load' || e.reason === 'dispose') return;
     wakeDialogue = 'done';
     if (e.reason !== 'completed') piece.end('skipped'); // closed early: the scene is over, the wake is credited at once
   });
@@ -397,7 +419,7 @@ export function installM27(k: Kit): Off {
     return { position: { x: p.shore.x - p.toWater.x * 6 - p.toWater.z * 7, y: Math.max(p.shore.y, p.surface) + 2.4, z: p.shore.z - p.toWater.z * 6 + p.toWater.x * 7 }, lookAt: look, blendIn: 1.2, blendOut: 1 };
   };
   let secondShot = false;
-  const beginBrood = (): void => {
+  const beginBrood = (framed: boolean): void => {
     const p = place();
     if (!p || !k.ctx.scene) return home();
     let f: BroodFlight;
@@ -410,7 +432,7 @@ export function installM27(k: Kit): Off {
     flight = f;
     broodDialogue = 'idle';
     secondShot = false;
-    if (!broodPiece.begin(broodShot(p, f, false))) { dispose(); home(); }
+    if (!broodPiece.begin(framed ? broodShot(p, f, false) : null)) { dispose(); home(); }
   };
   const due = (): void => {
     waiting = 0;
@@ -424,11 +446,13 @@ export function installM27(k: Kit): Off {
     waiting += 10;
     const state = k.ctx.services.get('water')?.state ?? 'dry';
     if (state === 'diving') return;
+    // never a camera hold or a freeze while he is in water: wait for dry land; when the patience runs out with him still wading, the
+    // flight plays in the world with no override, and he watches from where he stands
     if (state === 'wading' && waiting < M27_BROOD_WADE_PATIENCE) return;
     const d = dialogue();
     if (!d || d.active || k.ctx.hud?.modalOpen) return;
     waiting = -1;
-    beginBrood();
+    beginBrood(state === 'dry');
   });
   k.every(1, () => {
     if (!broodPiece.active || !flight) return;
@@ -445,6 +469,7 @@ export function installM27(k: Kit): Off {
   });
   k.on('dialogue.ended', (e) => {
     if (e.dialogueId !== M27_BROOD_SCENE || !broodPiece.active) return;
+    if (e.reason === 'load' || e.reason === 'dispose') return; // save.loaded decides, from the loaded flags
     broodDialogue = 'done';
     broodPiece.end(e.reason === 'completed' ? 'finished' : 'skipped');
   });

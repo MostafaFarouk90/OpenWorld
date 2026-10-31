@@ -23,7 +23,7 @@ export const M26_WAKE_SCENE = 'scene-m26-wake';
 export const M26_WAKE_SEEN = 'story.m26.wakeSeen';
 /** Story event raised after `story.m26.woke` is written: the wake step's credit (not Hathren's own beat, which opens the scene). */
 export const M26_WOKE_EVENT = 'story.m26.woke';
-export const M26_WAKE_RADIUS = 12;
+export const M26_WAKE_RADIUS = 30;
 
 /**
  * M26 Quench-Tongue Wakes. Gytha takes Cael to Hathren's Mere, where hunters have netted the Quench-Tongue. Hathren wakes

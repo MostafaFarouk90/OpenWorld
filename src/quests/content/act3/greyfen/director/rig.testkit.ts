@@ -81,6 +81,8 @@ export function makeRig(opts: RigOpts = {}) {
     },
   };
   services.provide('dialogue' as never, dialogue as never);
+  // as the real dialogue plugin does: a load closes the open dialogue (reason 'load') before any later listener sees save.loaded
+  events.on('save.loaded' as never, (() => dialogue.close('load')) as never);
 
   const inv = new Map<string, number>();
   const inventory = { has: (id: string) => (inv.get(id) ?? 0) > 0, count: (id: string) => inv.get(id) ?? 0, add: (id: string, n: number) => { inv.set(id, (inv.get(id) ?? 0) + n); return n; }, remove: (id: string, n: number) => { inv.set(id, Math.max(0, (inv.get(id) ?? 0) - n)); return true; } };
@@ -92,10 +94,11 @@ export function makeRig(opts: RigOpts = {}) {
   const stage: Stage = { freezes: 0, cutscenes: 0, cameras: 0, shots: [], menuDown: false, menuPressed: false };
   /** A wake-capable Hathren: `wake()` emits her wake beat at once and settles on `finishWake()`; her hold is the caller's. */
   const hath = {
-    state: 'nets' as 'nets' | 'calming' | 'gone', held: false, wakes: 0, skips: 0, awake: false, canWake: true,
+    state: 'nets' as 'nets' | 'calming' | 'gone', held: false, selfRelease: true, wakes: 0, skips: 0, awake: false, canWake: true,
     resolve: null as null | (() => void),
     holdWake(on: boolean) { this.held = on; },
-    get wakeHeld() { return this.held; },
+    /** Like the real director's derive(): the hold lets go by itself once M26 is no longer active (`selfRelease` off isolates K12's own release). */
+    get wakeHeld() { if (this.selfRelease && this.held && manager.state('m26') !== 'active') this.held = false; return this.held; },
     headPoint: () => ({ x: 4, y: 6, z: -40 }),
     wake() {
       if (!this.canWake || this.awake) return null;
@@ -103,7 +106,7 @@ export function makeRig(opts: RigOpts = {}) {
       this.wakes++;
       const done = new Promise<'finished'>((res) => { this.resolve = () => res('finished'); });
       events.emit('wyrm.hathren' as never, { beat: 'wake' } as never);
-      return { done, skip: () => { this.skips++; this.resolve?.(); } };
+      return { done, skip: () => { this.skips++; events.emit('wyrm.hathren' as never, { beat: 'spray' } as never); events.emit('wyrm.hathren' as never, { beat: 'thrash' } as never); this.resolve?.(); } };
     },
     finishWake() { this.resolve?.(); },
     netCut: (n: number) => { hathrenCalls.push(`net${n}`); return true; }, calm: () => { hathrenCalls.push('calm'); return null; }, dismiss: () => hathrenCalls.push('dismiss'),

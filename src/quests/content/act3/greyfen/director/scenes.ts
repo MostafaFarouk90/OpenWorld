@@ -39,24 +39,27 @@ export class SetPiece {
   }
 
   /** Takes the player and the camera. False (nothing taken) when the scene cannot be staged or one is already running. */
-  begin(shot: CameraShot): boolean {
+  /** `shot` null stages nothing on the player: no freeze, no cutscene context, no camera (the scene plays in the world, he watches from where he stands). */
+  begin(shot: CameraShot | null): boolean {
     if (this.live || !canStage(this.k)) return false;
     const c = this.k.ctx;
     this.live = true;
     this.ticks = 0;
     this.skip = new SkipHold(1.2);
-    const freeze = c.player.addMoveModifier(this.source, { freeze: true });
-    if (freeze) this.undo.push(freeze);
-    const cut = c.input?.contexts?.push('cutscene', this.source);
-    if (cut) this.undo.push(cut);
-    this.camera = c.cameraRig?.override(shot) ?? null;
+    if (shot) {
+      const freeze = c.player.addMoveModifier(this.source, { freeze: true });
+      if (freeze) this.undo.push(freeze);
+      const cut = c.input?.contexts?.push('cutscene', this.source);
+      if (cut) this.undo.push(cut);
+      this.camera = c.cameraRig?.override(shot) ?? null;
+    }
     this.mountSkip();
     return true;
   }
 
   /** Swaps the camera hold for another shot (the old one is released with a short blend). */
   reshoot(shot: CameraShot): void {
-    if (!this.live) return;
+    if (!this.live || !this.camera) return;
     const old = this.camera;
     this.camera = this.k.ctx.cameraRig?.override(shot) ?? null;
     old?.release(0.2);
@@ -96,7 +99,11 @@ export class SetPiece {
         // a torn-down service
       }
     }
-    this.unmount?.();
+    try {
+      this.unmount?.();
+    } catch {
+      // a torn-down HUD: the scene's end must still run
+    }
     this.unmount = null;
     this.ui = null;
     this.onEnd(reason);

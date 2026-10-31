@@ -24,6 +24,7 @@ function atWakeStep(opts: { stage?: boolean } = {}): Rig {
   autoplay(r, 'm26', { stopAt: ['m26', 'wake'] });
   expect(r.current('m26', 'wake')).toBe(true);
   r.dialogue.hold = true;
+  r.hath.selfRelease = false; // K12's own release is what these tests isolate
   r.step(2);
   return r;
 }
@@ -173,6 +174,80 @@ describe('M26: the framed wake', () => {
     nothingHeld(r);
     expect(r.done('m26', 'wake')).toBe(true);
     expect(r.hath.held).toBe(false);
+  });
+
+  it('reviewer repro: a load into an earlier save with the wake dialogue open leaves nothing locked; at the shore again the scene plays and the step credits', () => {
+    const r = fresh({ stage: true });
+    gate(r);
+    autoplayAll(r, ['m23', 'm24', 'm25']);
+    const snap = JSON.parse(JSON.stringify(r.manager.serialize()));
+    expect(r.manager.start('m26')).toBe(true);
+    autoplay(r, 'm26', { stopAt: ['m26', 'wake'] });
+    r.dialogue.hold = true;
+    r.hath.selfRelease = false;
+    r.step(2);
+    toShore(r, 3);
+    r.step(30);
+    r.emit('wyrm.hathren', { beat: 'spray' });
+    r.step(2);
+    expect(r.dialogue.active).toBe(true);
+    r.manager.load(JSON.parse(JSON.stringify(snap))); // the earlier save: M26 not started
+    r.state.clearFlag(M26_WOKE);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(5);
+    nothingHeld(r);
+    expect(r.flag(M26_WOKE)).toBe(false);
+    expect(r.hath.held).toBe(false); // M26 is not active in the loaded world
+    // play on to the wake step again
+    r.hath.awake = false;
+    r.player.feet.x += 200;
+    r.dialogue.hold = false;
+    expect(r.manager.start('m26')).toBe(true);
+    autoplay(r, 'm26', { stopAt: ['m26', 'wake'] });
+    r.dialogue.hold = true;
+    r.step(40);
+    expect(r.hath.held).toBe(true);
+    const wakes = r.hath.wakes;
+    toShore(r, 3);
+    r.step(40);
+    expect(r.hath.wakes).toBe(wakes + 1);
+    expect(r.stage.cameras).toBe(1);
+    r.emit('wyrm.hathren', { beat: 'spray' });
+    r.step(2);
+    r.dialogue.close('skip');
+    r.step(3);
+    expect(r.done('m26', 'wake')).toBe(true);
+    nothingHeld(r);
+  });
+
+  it('plays from 30 m, not from further away; not while diving; not with a living hostile within 15 m', () => {
+    const r = atWakeStep();
+    toShore(r, 45);
+    r.step(60);
+    expect(r.hath.wakes).toBe(0);
+    toShore(r, 25);
+    r.water.state = 'diving';
+    r.step(60);
+    expect(r.hath.wakes).toBe(0);
+    r.water.state = 'dry';
+    (r.kit.ctx as unknown as { actors: unknown }).actors = { all: () => [{ team: 'hostile', dead: false, position: { x: r.player.feet.x + 5, y: 0, z: r.player.feet.z } }] };
+    r.step(60);
+    expect(r.hath.wakes).toBe(0);
+    (r.kit.ctx as unknown as { actors: unknown }).actors = { all: () => [{ team: 'hostile', dead: true, position: { x: r.player.feet.x + 5, y: 0, z: r.player.feet.z } }] };
+    r.step(40);
+    expect(r.hath.wakes).toBe(1);
+  });
+
+  it('a skip fires her remaining beats (spray, thrash) re-entering the beat handler without harm, and her own self-release is no problem', () => {
+    const r = atWakeStep();
+    r.hath.selfRelease = true;
+    toShore(r, 3);
+    r.step(30);
+    hold(r, 80);
+    r.step(3);
+    expect(r.done('m26', 'wake')).toBe(true);
+    expect(r.started(M26_WAKE_SCENE)).toBe(false);
+    nothingHeld(r);
   });
 
   it('releases Hathren and the stage when M26 fails mid-scene', () => {
@@ -327,6 +402,30 @@ describe('M27: the brood flight home', () => {
     expect(r.started(M27_BROOD_SCENE)).toBe(false);
   });
 
+  it('a load with Leofa\'s lines open (the dialogue closes with reason load first) does not credit a world whose cages are not all open', () => {
+    const r = atCages();
+    openCages(r);
+    r.step(M27_BROOD_TICKS + 30);
+    flightEnds(r);
+    expect(r.dialogue.active).toBe(true);
+    for (const f of ['story.m27.freed.1', 'story.m27.freed.2', 'story.m27.freed.3']) r.state.clearFlag(f); // the loaded save: no cage opened yet
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(5);
+    expect(r.flag(M27_BROOD_BACK)).toBe(false);
+    nothingHeld(r);
+  });
+
+  it('a load with the lines open and all three cages freed in the loaded world completes the step once, no replay', () => {
+    const r = atCages();
+    openCages(r);
+    r.step(M27_BROOD_TICKS + 30);
+    flightEnds(r);
+    r.emit('save.loaded', { slot: 'a' });
+    r.step(5);
+    expect(r.flag(M27_BROOD_BACK)).toBe(true);
+    nothingHeld(r);
+  });
+
   it('a load in the wait (before the scene) replays the wait and then the scene', () => {
     const r = atCages();
     openCages(r);
@@ -385,7 +484,17 @@ describe('M27: the brood flight home', () => {
     openCages(b);
     b.water.state = 'wading';
     b.step(M27_BROOD_TICKS + M27_BROOD_WADE_PATIENCE + 60);
-    expect(b.stage.cameras).toBe(1);
+    // patience out, still wading: the flight plays in the world with no camera override and no freeze
+    expect(b.stage).toMatchObject({ freezes: 0, cutscenes: 0, cameras: 0 });
+    expect(b.sceneGraph.children.some((c) => c.name.startsWith('brood-hatchling'))).toBe(true);
+    flightEnds(b);
+    expect(b.started(M27_BROOD_SCENE)).toBe(true);
+    expect(b.stage).toMatchObject({ freezes: 0, cutscenes: 0, cameras: 0 });
+    expect(b.flag(M27_BROOD_BACK)).toBe(false);
+    b.dialogue.finish();
+    b.step(3);
+    expect(b.flag(M27_BROOD_BACK)).toBe(true);
+    expect(b.sceneGraph.children.some((c) => c.name.startsWith('brood-hatchling'))).toBe(false);
   });
 
   it('not while a dialogue is open', () => {
@@ -422,5 +531,24 @@ describe('M27: the brood flight home', () => {
     autoplay(r, 'm27', { stopAt: ['m27', 'brood'], r14: 'released' });
     r.step(M27_BROOD_TICKS + 30);
     expect(r.flag(M27_BROOD_BACK)).toBe(true);
+  });
+});
+
+describe('the scene frame', () => {
+  it('ends even when the skip widget cannot be unmounted', async () => {
+    const { SetPiece } = await import('./director/scenes');
+    const r = fresh({ stage: true });
+    (r.kit.ctx as unknown as { hud: unknown }).hud = { modalOpen: null, mount: () => () => { throw new Error('torn down'); } };
+    (globalThis as { document?: unknown }).document = { createElement: () => ({ style: {}, appendChild() {}, remove() {} }) };
+    try {
+      let ended = '';
+      const p = new SetPiece(r.kit, 'test', (why) => { ended = why; });
+      expect(p.begin({ position: { x: 0, y: 0, z: 0 }, lookAt: { x: 0, y: 0, z: 1 } })).toBe(true);
+      p.end('teardown');
+      expect(ended).toBe('teardown');
+      nothingHeld(r);
+    } finally {
+      delete (globalThis as { document?: unknown }).document;
+    }
   });
 });
