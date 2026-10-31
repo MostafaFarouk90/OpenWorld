@@ -26,9 +26,10 @@ import { npcArmourer, npcClerk, npcGrisel, npcKeepGuard, npcWace } from './npc-c
 import { ACT2_DIALOGUES, ACT2_EXTENDED_DIALOGUES } from './act2';
 import { npcAelfredaCompanion } from '../../companions/dialogue/npcAelfredaCompanion.dialogue';
 import { withAct3Trainers } from './act3/trainers';
+import { SIDE_DIALOGUES, withSideJobs } from '../../quests/content/side/dialogues';
 
 // Act 3 (K10): the four Harrowmark trainers get their master-book lines in front.
-export const dialogueDefs: DialogueDef[] = withAct3Trainers([
+export const dialogueDefs: DialogueDef[] = withAct3Trainers(withSideJobs([
   npcStane, npcEdda, npcHob, npcWynn, npcTobb, npcCarter1, npcCarter2, t04Vow,
   npcRook, npcAldith, npcMerrin, npcGerta, npcWhitlock, npcAshdown, sceneAct1Camp,
   npcCarter3, npcAldwin, npcGarrick, ...NOTE_DIALOGUES,
@@ -40,4 +41,6 @@ export const dialogueDefs: DialogueDef[] = withAct3Trainers([
   npcAelfredaCompanion,
   // Act 2 (A12): Cinderreach quest trees, and Gaut, Aelfreda and Pennard with their Act 2 rules in front
   ...ACT2_EXTENDED_DIALOGUES, ...ACT2_DIALOGUES,
-]);
+  // Act 1 side jobs (j01 to j04): the widow, the sexton and the Dead Road stones; the givers' offers are merged in by withSideJobs
+  ...SIDE_DIALOGUES,
+]));

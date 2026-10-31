@@ -145,6 +145,12 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | patrol.deadroad.2.2 | 620 | -150 | 0 | 270 | patrol |
 | patrol.deadroad.2.3 | 640 | -150 | 0 | 270 | patrol |
 | patrol.deadroad.2.4 | 620 | -138 | 0 | 270 | patrol |
+| j03.bluff | 130 | -112 | 2 | 0 | poi, leap-gated |
+| j03.bluff.launch | 130 | -117.5 | 0 | 180 | poi |
+| j03.barrow-tablet | 560 | -100 | 0 | 0 | poi |
+| spawn.j03.barrow-1 | 554 | -104 | 0 | 0 | spawn |
+| spawn.j03.barrow-2 | 563 | -103.5 | 0 | 0 | spawn |
+| j04.fire-ring | 931 | -136 | 0 | 270 | interact |
 | pile.churchyard.1 | 28 | 54 | 0 | 180 | pile |
 | pile.churchyard.2 | 34 | 58 | 0 | 180 | pile |
 | pile.churchyard.3 | 30 | 64 | 0 | 180 | pile |
@@ -214,6 +220,13 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | spawn.r02.yard-bout | -45 | 115 | 0 | 180 | spawn |
 | spawn.r02.yard-pair-1 | -48 | 114 | 0 | 180 | spawn |
 | spawn.r02.yard-pair-2 | -42 | 114 | 0 | 180 | spawn |
+| j01.fold | 52 | 30 | 0 | 90 | poi |
+| j01.lamb-1 | 31 | 41 | 0 | 270 | carry |
+| j01.lamb-2 | 22 | 26 | 0 | 270 | carry |
+| j01.lamb-3 | 81 | 110 | 0 | 270 | carry |
+| j02.basket | 15 | 137 | 0 | 270 | interact |
+| npc-post.orla | 20.5 | 114.5 | 0 | 0 | npc-post |
+| npc-post.osmund | -10 | 48 | 0 | 270 | npc-post |
 
 ## Triggers
 
@@ -245,6 +258,10 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | m02.bakery-door | sphere | 17.6 | 132.2 | r 3 |
 | m02.granary | sphere | -35.5 | 145 | r 5.5 |
 | r01.stubble | sphere | 30 | 38 | r 5 |
+| j01.fold | sphere | 52 | 30 | r 4 |
+| j01.scar | sphere | 31 | 41 | r 6 |
+| j01.scarecrows | sphere | 22 | 26 | r 7 |
+| j01.ford | sphere | 81 | 110 | r 6 |
 
 ## Structures
 
@@ -296,6 +313,12 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | reed-island-wall-e | rock | 59.5 | -300 | 3 x 5 | solid |
 | waystone-hollin-ford | waystone | -398 | -138.2 | 1.6 x 1.6 | solid |
 | waystone-quenchstone | waystone | 965 | -160.2 | 1.6 x 1.6 | solid |
+| j03-bluff-ledge | rock | 130 | -112 | 6 x 5 | solid |
+| j03-bluff-wall-n | rock | 130 | -108 | 12 x 3 | solid |
+| j03-bluff-wall-w | rock | 125.5 | -112 | 3 x 5 | solid |
+| j03-bluff-wall-e | rock | 134.5 | -112 | 3 x 5 | solid |
+| j03-barrow-mound | rock | 560 | -94 | 7 x 4 | solid |
 | granary | house | -42 | 145 | 8 x 8 | solid |
 | ford-cart-2 | cart | -447 | -133 | 2.6 x 1.2 | solid |
 | ford-cart-3 | cart | -435 | -131 | 2.6 x 1.2 | solid |
+| j01-fold-pen | yard-fence | 52 | 30 | 9 x 7 | open |

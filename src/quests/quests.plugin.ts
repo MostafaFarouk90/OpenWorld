@@ -28,6 +28,8 @@ import { QUEST_NOTES, NOTE_LOOKS, NOTE_CODEX } from './content/notes';
 import { installObjectiveFlags } from './objectiveFlags';
 import { OBJECTIVE_FLAGS } from './content/objectiveFlags';
 import { ACT2_PROPS, ACT2_CARRY, ACT2_OBJECTIVE_FLAGS, ACT2_QUEST_NOTES, ACT2_NOTE_LOOKS, ACT2_NOTE_CODEX, ACT2_QUEST_ITEM_STRINGS } from './content/act2';
+import { installSideCodex } from './content/side/codex';
+import { SIDE_PROPS, SIDE_CARRY, SIDE_QUEST_NOTES, SIDE_NOTE_LOOKS, SIDE_NOTE_CODEX, SIDE_OBJECTIVE_FLAGS, SIDE_QUEST_CODEX, SIDE_POST_RULES } from './content/side';
 import { QuestLooks, lookSpecs } from './looks';
 import { buildPropLook, disposePropLook } from './propLooks';
 import { codexEntry } from '../codex/entries';
@@ -137,8 +139,9 @@ const plugin: GamePlugin = {
       bus, state: ctx.state, run: (e) => poiEffects.run(e), warn,
       codexUnlock: (id) => svc('codex')?.unlock?.(id),
     }));
+    offs.push(installSideCodex(bus, SIDE_QUEST_CODEX, (id) => svc('codex')?.unlock?.(id), warn));
     const posts = new PostDirector(
-      POST_RULES,
+      [...POST_RULES, ...SIDE_POST_RULES],
       () => ({ state: ctx.state, quests: manager, gold: () => svc('inventory')?.gold, warn }),
       () => svc('npcs'),
       () => svc('dialogue')?.active === true,
@@ -161,7 +164,7 @@ const plugin: GamePlugin = {
     manager.onChange(() => yard.markDirty());
     offs.push(() => yard.dispose());
     // Story flags set as objectives finish (fires, spawners, walk-offs read them).
-    const objectiveFlags = installObjectiveFlags([...OBJECTIVE_FLAGS, ...ACT2_OBJECTIVE_FLAGS], bus, ctx.state, manager, warn);
+    const objectiveFlags = installObjectiveFlags([...OBJECTIVE_FLAGS, ...SIDE_OBJECTIVE_FLAGS, ...ACT2_OBJECTIVE_FLAGS], bus, ctx.state, manager, warn);
     offs.push(objectiveFlags.dispose);
     objectiveFlags.sync();
     offs.push(ctx.events.on('save.loaded', () => { posts.reset(); yard.markDirty(); manager.recheck(); objectiveFlags.sync(); }));
@@ -197,7 +200,7 @@ const plugin: GamePlugin = {
     const buildCarry = (): CarrySystem => {
       const carryables: Carryable[] = [];
       let villagers = 0;
-      for (const item of [...CARRY_ITEMS, ...ACT2_CARRY]) {
+      for (const item of [...CARRY_ITEMS, ...SIDE_CARRY, ...ACT2_CARRY]) {
         // villagers are KayKit figures (a capsule until the model loads), cradled across the Knight's arms; buckets are the greybox bucket held low
         const villager = item.look === 'villager' || item.look === 'wounded';
         const body = villager
@@ -316,7 +319,7 @@ const plugin: GamePlugin = {
     // Built once, after M01 has started (or was loaded as started), when every plugin and thread 4's
     // anchors exist. A build failure is logged once and never retried (no leaked meshes).
     const propEnv = () => ({ state: ctx.state, quests: manager, gold: () => svc('inventory')?.gold, warn });
-    const props = new QuestProps([...QUEST_PROPS, ...ACT2_PROPS], {
+    const props = new QuestProps([...QUEST_PROPS, ...SIDE_PROPS, ...ACT2_PROPS], {
       bus,
       env: propEnv,
       state: ctx.state,
@@ -336,7 +339,7 @@ const plugin: GamePlugin = {
       warn,
     });
     // Readable notes: F opens a short dialogue under the note's own id; the first full read unlocks its codex entry.
-    const notes = new QuestNotes([...QUEST_NOTES, ...ACT2_QUEST_NOTES], {
+    const notes = new QuestNotes([...QUEST_NOTES, ...SIDE_QUEST_NOTES, ...ACT2_QUEST_NOTES], {
       bus,
       env: propEnv,
       anchor: (id) => {
@@ -362,7 +365,7 @@ const plugin: GamePlugin = {
       },
       warn,
     });
-    const looks = new QuestLooks(lookSpecs([...QUEST_PROPS, ...ACT2_PROPS], [...QUEST_NOTES, ...ACT2_QUEST_NOTES], { ...NOTE_LOOKS, ...ACT2_NOTE_LOOKS }), {
+    const looks = new QuestLooks(lookSpecs([...QUEST_PROPS, ...SIDE_PROPS, ...ACT2_PROPS], [...QUEST_NOTES, ...SIDE_QUEST_NOTES, ...ACT2_QUEST_NOTES], { ...NOTE_LOOKS, ...SIDE_NOTE_LOOKS, ...ACT2_NOTE_LOOKS }), {
       state: ctx.state,
       quests: manager,
       anchor: (id) => {
@@ -384,7 +387,7 @@ const plugin: GamePlugin = {
       const codex = svc('codex');
       if (codexOff || !codex?.register) return;
       const slug = (id: string) => id.replace(/^lore\./, '');
-      codexOff = codex.register([...Object.values(NOTE_CODEX), ...ACT2_NOTE_CODEX].map((id) => codexEntry('lore', id, slug(id))));
+      codexOff = codex.register([...Object.values(NOTE_CODEX), ...SIDE_NOTE_CODEX, ...ACT2_NOTE_CODEX].map((id) => codexEntry('lore', id, slug(id))));
     };
     const killFailsafe = new KillFailsafe({
       // the groups are gated on the tutorial's end (M01 is already active during T13 to T15)

@@ -22,6 +22,8 @@ describe('quest content', () => {
   it('has the expected quest ids, unique', () => {
     const ids = questDefs.map((q) => q.id);
     expect(ids).toEqual(['t03', 't12', 'm01', 'm02', 'm03', 'm04', 'm05', 'd01', 'r01', 'r02', 'm06', 'm07', 'm08', 'm09', 'm10', 'r03', 'r04', 'd02',
+      // Act 1 side jobs (j01 to j04 so far)
+      'j01', 'j02', 'j03', 'j04',
       // Act 2 (A12)
       'm11', 'm12', 'r06', 'r05', 'm13', 'r07', 'r11', 'm14', 'm15', 'd03',
       // Act 2 Oldsmoke surface (A13)
@@ -303,7 +305,8 @@ describe('M01 and M02 walk-through with the real QuestManager', () => {
     expect(w.given.some((g) => g.itemId === 'hearth-stone-charm')).toBe(true);
     expect(w.xp()).toBe(550);
     expect(play(w, 'npc-edda', 'edda')[0]).toBe('farewell');
-    expect(play(w, 'npc-edda', 'edda')[0]).toBe('idle');
+    // with the farewell heard, Edda offers the side job j02 (src/quests/content/side)
+    expect(play(w, 'npc-edda', 'edda')[0]).toBe('j02-offer');
   });
 
   it('m02 hands in the hearth-stone on completion', () => {

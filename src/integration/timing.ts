@@ -1,6 +1,7 @@
 import type { ChapterHarness } from './chapterHarness';
 import type { OpeningQuest, PhaseAQuest, QuestTrail, Trails } from './phaseA';
 import type { PhaseBQuest } from './phaseB';
+import type { SideJob } from './side';
 import type { PaceRow } from '../quests/content/act2/pacing';
 
 /**
@@ -284,6 +285,49 @@ export const PHASE_B_PLAN: Record<PhaseBQuest, QuestPlan> = {
     ],
     beats: { interact: 4, killUnit: 9, boss: 1, note: 2 },
     note: 'two strays and Rook\'s word, kennels (4 of 6 hounds), the tally, two valves and three sluice hounds, Grimtooth, his den; doors in and out',
+  },
+};
+
+/**
+ * The Act 1 side jobs ("jobs", plans/act1-side-content.md), played headless by src/integration/side.ts on the Phase A end save.
+ * Same formula and constants as the main chain; `design` is the plan's minutes for the job (they have no design-doc budget), so the
+ * delta column reads against the plan. The jobs are optional: they count toward the Act 1 total in TIMING.md, and the three
+ * batch 2 Dead Road points of interest stay uncounted. A job without a giver (j03) starts from where its approach begins.
+ * Later rounds add j05 to j11 here with their `SideJob` ids.
+ */
+export const SIDE_PLAN: Record<SideJob, QuestPlan> = {
+  j01: {
+    design: 4.5,
+    route: [
+      A('npc-post.hob'), A('j01.lamb-1'), T('j01.fold'), A('j01.lamb-2'), T('j01.fold'), A('j01.lamb-3'), T('j01.fold'), A('npc-post.hob'),
+    ],
+    // each lamb is picked up where it was found (goTo plus the pickup) and set down in the fold
+    beats: { carry: 3 },
+    note: 'Hob\'s offer (two ask-abouts), the stubble scar, the scarecrow field and the lane drain, three carries to the fold, the report',
+  },
+  j02: {
+    design: 3.5,
+    route: [
+      A('npc-post.edda'), A('j02.basket'), A('npc-post.orla'), A('m01.miller.walk-off'), A('npc-post.osmund'), A('npc-post.edda'),
+    ],
+    beats: { interact: 1 },
+    note: 'the basket on the step, the widow at the lane end (the loaf choice), the miller at the chapel, the sexton, Edda\'s remark',
+  },
+  j03: {
+    design: 6.0,
+    // the approach from the chapel waystone: the bluff above the road's western end, then the barrow far to the east
+    from: A('waystone.chapel'),
+    route: [A('j03.bluff.launch'), A('j03.bluff'), A('spawn.j03.barrow-1'), A('j03.barrow-tablet')],
+    beats: { leap: 1, killUnit: 2, note: 2 },
+    note: 'a Surge Leap onto the bluff and its stone, the barrow pair (2 wraiths), the grave tablet; the quest starts at the first stone',
+  },
+  j04: {
+    design: 2.5,
+    // M05 ends at the Quenchstone, where the bond scene is told: the fire ring is the next stop up the road
+    from: A('waystone.quenchstone'),
+    route: [A('j04.fire-ring')],
+    beats: { interact: 1 },
+    note: 'Tobb\'s offer, the fire ring, his question about the knighting and his answer',
   },
 };
 

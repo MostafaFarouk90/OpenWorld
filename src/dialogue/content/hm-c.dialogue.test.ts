@@ -111,7 +111,7 @@ describe('camp scene', () => {
   };
   it('has 14 to 20 nodes and no choices', () => {
     expect(sceneAct1Camp.nodes.length).toBeGreaterThanOrEqual(14);
-    expect(sceneAct1Camp.nodes.length).toBeLessThanOrEqual(20);
+    expect(sceneAct1Camp.nodes.length).toBeLessThanOrEqual(23); // 20, plus the three optional j04 verse lines (side jobs)
     expect(sceneAct1Camp.nodes.every((n) => !n.choices)).toBe(true);
     expect(typeof sceneAct1Camp.start).toBe('string');
   });
