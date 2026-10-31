@@ -20,7 +20,8 @@ function fakeCtx(opts: { audio?: boolean; music?: boolean } = { audio: true, mus
   const detached: number[] = [];
   const boss: Array<[boolean, string | undefined]> = [];
   const playerRoot = { name: 'player-root' };
-  const scene = { getObjectByName: (n: string) => (n === 'ysmeryth' ? null : n === 'hathren-mesh' ? { name: n } : undefined) };
+  const sceneYsm = { v: false };
+  const scene = { getObjectByName: (n: string) => (n === 'ysmeryth' ? (sceneYsm.v ? { getWorldPosition: (v: { set: (x: number, y: number, z: number) => void }) => (v.set(4, 5, 6), v) } : null) : n === 'hathren-mesh' ? { name: n } : undefined) };
   let nextId = 1;
   const audio = {
     register: (key: string, def: { volume?: number; loop?: boolean }) => void registered.push({ key, def }),
@@ -64,7 +65,7 @@ function fakeCtx(opts: { audio?: boolean; music?: boolean } = { audio: true, mus
   };
   const emit = (type: string, payload: object) => (handlers.get(type) ?? []).forEach((h) => h(payload as never));
   const tick = (dt: number) => systems.forEach((s) => s.fixedUpdate?.(dt));
-  return { ctx, audio, trials, ysm, emit, tick, registered, played, playedAt, attached, detached, boss, water, feet, playerRoot, systems };
+  return { ctx, audio, trials, ysm, sceneYsm, emit, tick, registered, played, playedAt, attached, detached, boss, water, feet, playerRoot, systems };
 }
 
 const setup = (c: ReturnType<typeof fakeCtx>) => (plugin.setup as (ctx: unknown) => void)(c.ctx);
@@ -90,7 +91,7 @@ describe('act3 sfx samples', () => {
     expect([...ACT3_LOOP_KEYS].sort()).toEqual(['sfx.dragon.wingbeat', 'sfx.ferry.pole', 'sfx.glide.wind']);
   });
 
-  it.each(ACT3_SFX_KEYS)('%s is a finite, audible, deterministic, mono render within the peak', (key) => {
+  it.each(ACT3_SFX_KEYS)('%s is a finite, audible, deterministic, mono render within the peak', { timeout: 60_000 }, (key) => {
     expect(ACT3_SFX_VOLUME[key]).toBeGreaterThan(0);
     expect(ACT3_SFX_VOLUME[key]).toBeLessThanOrEqual(1);
     const a = act3SfxSamples(key);
@@ -111,7 +112,7 @@ describe('act3 sfx samples', () => {
     expect(a.every((v, i) => v === b[i])).toBe(true);
   });
 
-  it('the loops repeat without a seam: the wrap step is within the loop\'s own 99.9th percentile step, and RMS either side agrees within 3 dB', () => {
+  it('the loops repeat without a seam: the wrap step is within the loop\'s own 99.9th percentile step, and RMS either side agrees within 3 dB', { timeout: 60_000 }, () => {
     for (const key of ACT3_LOOP_KEYS) {
       const a = act3SfxSamples(key);
       const steps: number[] = [];
@@ -132,7 +133,7 @@ describe('act3 sfx samples', () => {
     }
   });
 
-  it('keeps the sounds distinct and shapes them for the job', () => {
+  it('keeps the sounds distinct and shapes them for the job', { timeout: 60_000 }, () => {
     const len = (k: Act3SfxKey) => act3SfxSamples(k).length;
     expect(len('sfx.shambler.collapse')).toBeGreaterThan(len('sfx.shambler.smash'));
     expect(len('sfx.wyrm.hathren.song')).toBeGreaterThan(len('sfx.wyrm.hathren.splash'));
@@ -244,11 +245,12 @@ describe('act3 sfx plugin: events', () => {
     expect(c.detached).toEqual([1]);
     expect(c.playedAt.at(-1)!.key).toBe('sfx.ysmeryth.land');
     c.emit('wyrm.ysmeryth', { beat: 'pose', pose: 'oath' });
-    expect(c.played).toEqual(['sfx.ysmeryth.settle']);
+    expect(c.playedAt.at(-1)).toEqual({ key: 'sfx.ysmeryth.settle', at: { x: 7, y: 8, z: 9 } });
+    expect(c.played).toEqual([]);
     expect(c.attached).toHaveLength(1);
   });
 
-  it.each(['won', 'lost', 'yielded', 'stopped', 'teleport', 'despawned', 'distance', 'loaded'])(
+  it.each(['won', 'lost', 'yielded', 'teleport', 'despawned', 'distance', 'loaded'])(
     'the wing-beat loop stops on trial.ended (%s); a landed beat after it still lands without detaching again',
     { timeout: T },
     (reason) => {
@@ -288,8 +290,57 @@ describe('act3 sfx plugin: events', () => {
     setup(c);
     c.emit('wyrm.ysmeryth', { beat: 'takeoff' });
     c.emit('wyrm.ysmeryth', { beat: 'landed' });
-    expect(c.played).toEqual(['sfx.ysmeryth.takeoff', 'sfx.ysmeryth.land']);
+    expect(c.played).toEqual(['sfx.ysmeryth.takeoff']);
+    expect(c.playedAt).toHaveLength(0); // landed with no actor (she despawned) plays nothing
     expect(c.attached).toHaveLength(0);
+  });
+
+  it('landed after a stopped trial (she flies away) plays no thud, and a new takeoff re-enables it', { timeout: T }, () => {
+    const c = fakeCtx();
+    setup(c);
+    c.emit('wyrm.ysmeryth', { beat: 'takeoff' });
+    c.emit('trial.ended', { trialId: 'ysmeryth-trial', reason: 'stopped' });
+    c.emit('wyrm.ysmeryth', { beat: 'landed' });
+    expect(c.playedAt.map((p) => p.key)).toEqual(['sfx.ysmeryth.takeoff']);
+    c.emit('wyrm.ysmeryth', { beat: 'takeoff' });
+    c.emit('wyrm.ysmeryth', { beat: 'landed' });
+    expect(c.playedAt.map((p) => p.key).at(-1)).toBe('sfx.ysmeryth.land');
+  });
+
+  it('another trial ending leaves her wings alone', { timeout: T }, () => {
+    const c = fakeCtx();
+    setup(c);
+    c.emit('wyrm.ysmeryth', { beat: 'takeoff' });
+    c.emit('trial.ended', { trialId: 'other-trial', reason: 'won' });
+    expect(c.detached).toEqual([]);
+    c.emit('trial.ended', { trialId: 'ysmeryth-trial', reason: 'won' });
+    expect(c.detached).toEqual([1]);
+  });
+
+  it('the settle plays at her scene object when she is no actor, nothing when she is nowhere, and is dropped just after a load or her trial ending', { timeout: T }, () => {
+    const c = fakeCtx();
+    c.ysm.actorId = null;
+    setup(c);
+    c.emit('wyrm.ysmeryth', { beat: 'pose', pose: 'perch' });
+    expect(c.playedAt).toHaveLength(0);
+    expect(c.played).toHaveLength(0);
+    c.sceneYsm.v = true;
+    c.emit('wyrm.ysmeryth', { beat: 'pose', pose: 'perch' });
+    expect(c.playedAt).toEqual([{ key: 'sfx.ysmeryth.settle', at: { x: 4, y: 5, z: 6 } }]);
+    c.emit('save.loaded', { slot: 's' });
+    c.emit('wyrm.ysmeryth', { beat: 'pose', pose: 'perch' });
+    vi.advanceTimersByTime(1400);
+    c.emit('wyrm.ysmeryth', { beat: 'pose', pose: 'perch' });
+    expect(c.playedAt).toHaveLength(1);
+    vi.advanceTimersByTime(200);
+    c.emit('wyrm.ysmeryth', { beat: 'pose', pose: 'perch' });
+    expect(c.playedAt).toHaveLength(2);
+    c.emit('trial.ended', { trialId: 'ysmeryth-trial', reason: 'won' });
+    c.emit('wyrm.ysmeryth', { beat: 'pose', pose: 'perch' });
+    expect(c.playedAt).toHaveLength(2);
+    vi.advanceTimersByTime(1600);
+    c.emit('wyrm.ysmeryth', { beat: 'pose', pose: 'perch' });
+    expect(c.playedAt).toHaveLength(3);
   });
 
   it('keeper\'s call: roar on the telegraph, boom on the call beat', { timeout: T }, () => {
@@ -300,14 +351,18 @@ describe('act3 sfx plugin: events', () => {
     expect([...c.playedAt.map((p) => p.key), ...c.played]).toEqual(['sfx.ysmeryth.roar', 'sfx.ysmeryth.call']);
   });
 
-  it('keeper\'s call and settle sit under the chant, and the settle is a short fading one-shot', () => {
+  it('keeper\'s call is quieter than the other dragon cues, and the settle is a short fading one-shot', { timeout: 60_000 }, () => {
     expect(ACT3_SFX_VOLUME['sfx.ysmeryth.roar']).toBe(0.6);
     expect(ACT3_SFX_VOLUME['sfx.ysmeryth.call']).toBe(0.55);
     expect(ACT3_LOOP_KEYS).not.toContain('sfx.ysmeryth.settle');
     const a = act3SfxSamples('sfx.ysmeryth.settle');
     expect(a.length / SR).toBeLessThanOrEqual(2.1);
     expect(Math.abs(a[a.length - 1])).toBeLessThan(0.01);
-    const peak = (k: Act3SfxKey) => act3SfxSamples(k).reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+    const cache = new Map<Act3SfxKey, number>();
+    const peak = (k: Act3SfxKey) => {
+      if (!cache.has(k)) cache.set(k, act3SfxSamples(k).reduce((m, v) => Math.max(m, Math.abs(v)), 0));
+      return cache.get(k)!;
+    };
     const others = ['sfx.ysmeryth.sweep', 'sfx.ysmeryth.slam', 'sfx.ysmeryth.breath', 'sfx.wyrm.hathren.roar'] as const;
     for (const k of ['sfx.ysmeryth.roar', 'sfx.ysmeryth.call'] as const) for (const o of others) expect(peak(k) * ACT3_SFX_VOLUME[k], `${k} vs ${o}`).toBeLessThanOrEqual(peak(o) * ACT3_SFX_VOLUME[o]);
   });

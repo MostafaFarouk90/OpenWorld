@@ -8,7 +8,7 @@ import { EnemyManager } from '../enemies/EnemyManager';
 import { FakeHost, loadKnight } from '../enemies/testing/fakeHost';
 import type { SpawnerDef } from '../enemies/types';
 import { YSMERYTH_HUB } from '../enemies/wyrm/overlays';
-import { YSMERYTH, YSMERYTH_IDS, YSMERYTH_SPAWNERS } from '../enemies/wyrm/ysmeryth/def';
+import { YSMERYTH_DEF, YSMERYTH_IDS, YSMERYTH_SPAWNERS } from '../enemies/wyrm/ysmeryth/def';
 import '../enemies/wyrm/ysmeryth/events';
 import { Act3SfxRouter } from './act3SfxRouter';
 
@@ -62,6 +62,7 @@ describe('keeper\'s call ordering (real overlay)', () => {
     while (!log.includes('flat:sfx.ysmeryth.call') && t < 60 + 5) step();
     expect(log).toContain('flat:sfx.ysmeryth.call');
     expect(log.indexOf('at:sfx.ysmeryth.roar')).toBeLessThan(log.indexOf('flat:sfx.ysmeryth.call'));
-    expect(t - roarAt).toBeGreaterThan(YSMERYTH.callStun > 0 ? 0.5 : 0);
+    const windup = YSMERYTH_DEF.moves.find((m) => m.id === 'ysmeryth.call')!.windup;
+    expect(Math.abs(t - roarAt - windup)).toBeLessThan(0.25);
   });
 });

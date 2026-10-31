@@ -23,6 +23,7 @@ interface Rig {
   throwing: { v: boolean };
   returnNull: { v: boolean };
   ensured: string[];
+  clock: { v: number };
 }
 
 function rig(opts: { objects?: Record<string, object>; player?: object | undefined } = { player: {} }): Rig {
@@ -34,6 +35,7 @@ function rig(opts: { objects?: Record<string, object>; player?: object | undefin
   const audioOn = { v: true };
   const throwing = { v: false };
   const returnNull = { v: false };
+  const clock = { v: 10_000 };
   let nextId = 1;
   const guard = () => {
     if (throwing.v) throw new Error('no such sound');
@@ -50,8 +52,10 @@ function rig(opts: { objects?: Record<string, object>; player?: object | undefin
     object: (id) => opts.objects?.[id],
     playerObject: () => ('player' in opts ? opts.player : {}),
     ensure: (k) => void ensured.push(k),
+    ysmerythAt: (id) => (id === 'a#1' ? { x: 1, y: 2, z: 3 } : undefined),
+    now: () => clock.v,
   };
-  return { router: new Act3SfxRouter(ports), played, playedAt, attached, detached, audioOn, throwing, returnNull, ensured };
+  return { router: new Act3SfxRouter(ports), played, playedAt, attached, detached, audioOn, throwing, returnNull, ensured, clock };
 }
 
 describe('route tables', () => {
@@ -475,7 +479,8 @@ describe('Act3SfxRouter Ysmeryth beats', () => {
     const r = rig({ objects: objs });
     r.router.ysmeryth({ beat: 'pose' }, 'a#1');
     r.router.ysmeryth({ beat: 'toString' }, 'a#1');
-    expect(r.played).toEqual(['sfx.ysmeryth.settle']);
+    expect(r.playedAt).toEqual([{ key: 'sfx.ysmeryth.settle', at: { x: 1, y: 2, z: 3 } }]);
+    expect(r.played).toEqual([]);
     expect(r.attached).toEqual([]);
   });
 
@@ -485,6 +490,8 @@ describe('Act3SfxRouter Ysmeryth beats', () => {
     r.router.ysmeryth({ beat: 'takeoff' }, null);
     expect(r.played).toEqual(['sfx.ysmeryth.takeoff', 'sfx.ysmeryth.takeoff']);
     expect(r.attached).toEqual([]);
+    r.router.ysmeryth({ beat: 'pose' }, 'gone'); // nowhere to place the settle: silent, never flat
+    expect(r.played).toHaveLength(2);
     r.audioOn.v = false;
     expect(() => r.router.ysmeryth({ beat: 'takeoff' }, 'a#1')).not.toThrow();
     r.audioOn.v = true;
@@ -514,5 +521,40 @@ describe('Act3SfxRouter Ysmeryth beats', () => {
       end(r);
       expect(r.detached).toEqual([1]);
     }
+  });
+
+  it('landed with no actor (despawned) plays nothing but still stops the loop', () => {
+    const r = rig({ objects: objs });
+    r.router.ysmeryth({ beat: 'takeoff' }, 'a#1');
+    r.router.ysmeryth({ beat: 'landed' }, null);
+    expect(r.detached).toEqual([1]);
+    expect(r.playedAt.map((p) => p.key)).toEqual(['sfx.ysmeryth.takeoff']);
+    expect(r.played).toEqual([]);
+  });
+
+  it('landed after a stopped end plays no thud until the next takeoff; other ends still thud', () => {
+    const r = rig({ objects: objs });
+    r.router.ysmeryth({ beat: 'takeoff' }, 'a#1');
+    r.router.trialEnded('stopped');
+    r.router.ysmeryth({ beat: 'landed' }, 'a#1');
+    expect(r.playedAt.map((p) => p.key)).toEqual(['sfx.ysmeryth.takeoff']);
+    r.router.ysmeryth({ beat: 'takeoff' }, 'a#1');
+    r.router.trialEnded('distance');
+    r.router.ysmeryth({ beat: 'landed' }, 'a#1');
+    expect(r.playedAt.map((p) => p.key).at(-1)).toBe('sfx.ysmeryth.land');
+  });
+
+  it('a pose within 1.5 s of a load or a trial end is dropped', () => {
+    const r = rig({ objects: objs });
+    r.router.saveLoaded();
+    r.clock.v += 1499;
+    r.router.ysmeryth({ beat: 'pose' }, 'a#1');
+    expect(r.playedAt).toHaveLength(0);
+    r.clock.v += 2;
+    r.router.ysmeryth({ beat: 'pose' }, 'a#1');
+    expect(r.playedAt).toHaveLength(1);
+    r.router.trialEnded('won');
+    r.router.ysmeryth({ beat: 'pose' }, 'a#1');
+    expect(r.playedAt).toHaveLength(1);
   });
 });
