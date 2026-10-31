@@ -31,7 +31,7 @@ export const RUBBING_STRINGS_EN = {
   'rubbing.locked': 'You take the rubbing. The old tongue, unreadable for now.',
   'rubbing.taken': 'Rubbing taken: {title}',
   'codex.lore.anvil-rubbings.name': 'The anvil rubbings',
-  'codex.lore.anvil-rubbings.body': 'Twelve carvings in the old tongue of the smiths, copied onto cloth: six on the Last Anvil\'s ridge and six across the Dragonspine, at the hawk nest crags, the hunter cairn, the frozen camp, the glass vein, the vista above the Last Anvil and a ledge you reached by a Leap. You cannot read them yet; each one will open here once you can.',
+  'codex.lore.anvil-rubbings.body': 'Twelve carvings are said to survive in the old tongue of the smiths: six on the Last Anvil\'s ridge and six across the Dragonspine, at the hawk nest crags, the hunter cairn, the frozen camp, the glass vein, the vista above the Last Anvil and a ledge reached only by a Leap. Each rubbing you take waits here until the old tongue can be read.',
 } as const;
 
 export const WAYSIDE_STRINGS_EN = {

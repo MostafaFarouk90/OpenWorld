@@ -10,10 +10,10 @@ import waystonesPlugin from '../../waystones/waystones.plugin';
 import type { World } from '../../world/World';
 import shrinePlugin from '../shrine.plugin';
 import hathrensMerePlugin from './hathrensMere.plugin';
-import wyrmsHearthPlugin from './wyrmsHearth.plugin';
 import lastAnvilPlugin from './lastAnvil.plugin';
 import rubbingsPlugin from './rubbings.plugin';
 import waysidePlugin from './wayside.plugin';
+import wyrmsHearthPlugin from './wyrmsHearth.plugin';
 
 const T = PLUGIN_TEST_TIMEOUT;
 const MERE_SITE = { x: 3000, y: 20, z: 12050 };
@@ -63,29 +63,18 @@ async function boot(opts: BootOpts = {}) {
   ctx.services.provide('enemies' as never, { setWarmthTier: () => {} } as never);
 
   // A quests stub: states by id, and the change feed the Mere listens to.
+  const recheckCalls: number[] = [];
   const states = new Map<string, string>();
   const listeners = new Set<() => void>();
   if (opts.quests !== false) ctx.services.provide('quests' as never, {
     state: (id: string) => states.get(id) ?? 'inactive',
     onChange: (l: () => void) => (listeners.add(l), () => listeners.delete(l)),
+    recheck: () => void recheckCalls.push(1),
   } as never);
   const setQuest = (id: string, state: string) => {
     states.set(id, state);
     for (const l of [...listeners]) l();
   };
-  // The inventory and status stubs: the real ones know no hathrens-scale item and no applied ignite yet.
-  const held = { scale: 0 };
-  ctx.services.provide('inventory' as never, { count: (id: string) => (id === 'hathrens-scale' ? held.scale : 0) } as never);
-  const ignites = new Set(['ignite.a', 'ignite.b']);
-  const cleared: string[] = [];
-  ctx.services.provide(
-    'status' as never,
-    {
-      list: () => [...ignites].map((id) => ({ id, kind: 'ignite', remaining: 3, sourceId: null })).concat([{ id: 'bleed.x', kind: 'bleed', remaining: 3, sourceId: null }]),
-      clear: (_actor: string, id: string) => (cleared.push(id), ignites.delete(id)),
-    } as never,
-  );
-
   const interactables = new Map<string, Interactable>();
   const register = ctx.interaction.register.bind(ctx.interaction);
   ctx.interaction.register = (i: Interactable) => {
@@ -109,7 +98,7 @@ async function boot(opts: BootOpts = {}) {
     for (let i = 0; i < ticks; i++) game.fixedUpdate();
   };
   const emitted: { type: string; payload: any }[] = [];
-  for (const type of ['shrine.rekindled', 'warmth.changed', 'rubbing.taken', 'wayside.lit', 'scar.removed']) {
+  for (const type of ['shrine.rekindled', 'warmth.changed', 'rubbing.taken', 'wayside.lit', 'scar.removed', 'waystone.rekindled']) {
     (ctx.events as any).on(type, (payload: unknown) => emitted.push({ type, payload }));
   }
   ctx.state.setFlag('tutorial.heartshard-awakened', true);
@@ -117,7 +106,7 @@ async function boot(opts: BootOpts = {}) {
   const use = (id: string) => interactables.get(id)!.onInteract(player);
   const enabled = (id: string) => interactables.get(id)?.enabled?.() ?? true;
   const load = () => ctx.events.emit('save.loaded', {} as never);
-  return { game, ctx, statuses, run, interactables, emitted, setQuest, held, cleared, use, enabled, load };
+  return { game, ctx, statuses, run, interactables, emitted, setQuest, use, enabled, load, recheckCalls };
 }
 type T = Awaited<ReturnType<typeof boot>>;
 const tier = (t: T) => t.ctx.services.require('warmth').tier();
@@ -196,13 +185,16 @@ describe("the Wyrm's Hearth", () => {
     t.use('waystone:wyrms-hearth');
     expect(t.ctx.state.getBool(LIT)).toBe(true);
     expect(tier(t)).toBe(before + 1);
-    expect(spells(t).burn - burn).toBe(10);
+    expect(spells(t).burn - burn).toBe(10); // right after the lighting press
+    t.run(3);
+    expect(spells(t).burn - burn).toBeLessThanOrEqual(10);
+    expect(t.emitted.filter((e) => e.type === 'waystone.rekindled' && e.payload.waystoneId === ID && e.payload.cause === 'player')).toHaveLength(1);
     const rests: unknown[] = [];
     (t.ctx.events as any).on('rest', (p: unknown) => rests.push(p));
     t.use('waystone:wyrms-hearth');
     expect(rests).toEqual([{ waystoneId: ID }]);
     t.run(3);
-    expect(spells(t).burn - burn).toBeLessThanOrEqual(10);
+    expect(t.emitted.filter((e) => e.type === 'waystone.rekindled' && e.payload.waystoneId === ID && e.payload.cause === 'player')).toHaveLength(1);
     expect(t.emitted.filter((e) => e.type === 'shrine.rekindled').map((e) => e.payload.shrineId)).toEqual([ID]);
   }, T);
 
@@ -221,18 +213,56 @@ describe("the Wyrm's Hearth", () => {
     expect(rests).toEqual([{ waystoneId: ID }]);
   }, T);
 
-  it('W reaches 6 with the six Act 1 to 3 shrines and stays 6 across repeated rekindles and a load', async () => {
+  it.each([
+    ['greyfen first', ['hathrens-mere', 'last-anvil', ID]],
+    ['spine first', ['last-anvil', 'hathrens-mere', ID]],
+  ])('W reaches 6 through the real presses, %s, and stays 6 across repeats and a load', async (_name, order) => {
     const t = await boot();
     t.run(2);
     for (const id of ['quenchstone', 'hushed-anvil', 'weeping-bellows']) t.ctx.state.setFlag(`shrine.${id}.lit`, true);
     expect(tier(t)).toBe(3);
+    t.emitted.length = 0;
+    t.setQuest('m26', 'active');
     t.setQuest('m34', 'active');
-    for (const id of ['hathrens-mere', 'last-anvil', ID, 'hathrens-mere', ID, 'last-anvil']) rekindle(t, id);
+    t.ctx.state.setFlag('world.last-anvil.sounded', true);
+    for (const id of [...order, ...order]) t.use(`waystone:${id}`);
     t.run(3);
     expect(tier(t)).toBe(6);
+    expect(t.emitted.filter((e) => e.type === 'warmth.changed').map((e) => e.payload.tier)).toEqual([4, 5, 6]);
     t.load();
     t.run(2);
     expect(tier(t)).toBe(6);
+  }, T);
+
+  it('a silent light (waystone lit, shrine flag clear) makes the quests recheck', async () => {
+    const t = await boot();
+    t.run(2);
+    rekindle(t, ID, 'script');
+    t.ctx.state.setFlag(LIT, false);
+    t.recheckCalls.length = 0;
+    t.load();
+    expect(t.ctx.state.getBool(LIT)).toBe(true);
+    expect(t.recheckCalls.length).toBeGreaterThan(0);
+  }, T);
+
+  it('survives a real saveAll and loadAll: lit, open and W = 6 in a fresh game', async () => {
+    const a = await boot();
+    a.run(2);
+    for (const id of ['quenchstone', 'hushed-anvil', 'weeping-bellows', 'hathrens-mere', 'last-anvil']) a.ctx.state.setFlag(`shrine.${id}.lit`, true);
+    a.setQuest('m34', 'active');
+    a.use('waystone:wyrms-hearth');
+    a.run(2);
+    expect(tier(a)).toBe(6);
+    const entries = a.ctx.persist.saveAll();
+    const b = await boot();
+    b.run(2);
+    expect(b.ctx.state.getBool(LIT)).toBe(false);
+    b.ctx.persist.loadAll(entries, b.ctx.events, 'test');
+    b.run(2);
+    expect(b.ctx.state.getBool(LIT)).toBe(true);
+    expect(b.ctx.state.getBool(OPEN)).toBe(true);
+    expect(b.ctx.services.require('waystones').isLit(ID)).toBe(true);
+    expect(tier(b)).toBe(6);
   }, T);
 
   it('without the site anchor it builds nothing, logs once and does not throw', async () => {

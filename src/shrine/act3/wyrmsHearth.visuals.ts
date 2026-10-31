@@ -53,6 +53,7 @@ export class WyrmsHearthVisuals {
     for (let i = 0; i < 4; i++) {
       const puff = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 6), this.steamMat);
       puff.name = `wyrms-hearth-steam-${i + 1}`;
+      puff.visible = false;
       puff.userData.phase = i / 4;
       puff.userData.dx = Math.cos(i * 1.6) * 1.4;
       puff.userData.dz = Math.sin(i * 1.6) * 1.4;
@@ -72,6 +73,7 @@ export class WyrmsHearthVisuals {
     this.light.intensity += (target + wobble - this.light.intensity) * Math.min(1, frameTime * 3);
     this.glowMat.emissiveIntensity = this.lit ? 1.1 + wobble : 0.05;
     this.steamMat.opacity = this.lit ? 0.22 : 0;
+    for (const p of this.steam) p.visible = this.lit;
     if (!this.lit) return;
     for (const p of this.steam) {
       const k = (this.t * 0.25 + (p.userData.phase as number)) % 1;

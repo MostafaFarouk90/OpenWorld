@@ -1,5 +1,6 @@
 // The Wyrm's Hearth rules (K9 PR 2): the open gate for M34's stone. The shrine is the waystone `wyrms-hearth`; lighting goes
 // through ForgeShrineBinding like the other forge-shrines. Plain class over ports.
+import { ForgeShrineBinding } from '../forgeShrine';
 import { WYRMS_HEARTH as H } from './tuning';
 
 export interface HearthPorts {
@@ -13,7 +14,7 @@ export class WyrmsHearth {
   constructor(private readonly ports: HearthPorts) {}
 
   lit(): boolean {
-    return this.ports.getBool(`shrine.${H.id}.lit`);
+    return this.ports.getBool(ForgeShrineBinding.flag(H.id));
   }
 
   /**

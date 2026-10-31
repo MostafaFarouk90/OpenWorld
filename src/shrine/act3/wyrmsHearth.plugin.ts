@@ -31,12 +31,16 @@ const wyrmsHearthPlugin: GamePlugin = {
       setFlag: (k, v) => ctx.state.setFlag(k, v),
       emitRekindled: (shrineId) => emit('shrine.rekindled', { shrineId }),
     });
+    // A silent sync lights the shrine with no event: the quests must read their doneWhen again (as the Act 2 shrines do).
+    const syncBinding = () => {
+      if (binding.sync()) ctx.services.get('quests')?.recheck?.();
+    };
     ctx.events.on('waystone.rekindled', (e) => binding.onRekindled(e.waystoneId));
     ctx.events.on('flag.changed', ({ key }) => {
       if (key === H.completeFlag || key === ForgeShrineBinding.flag(H.id)) hearth.deriveOpen();
     });
     ctx.events.on('save.loaded', () => {
-      binding.sync();
+      syncBinding();
       hearth.deriveOpen();
     });
 
@@ -74,7 +78,7 @@ const wyrmsHearthPlugin: GamePlugin = {
         );
       }
       visuals.build(s);
-      binding.sync(); // a load that ran before the anchors existed saw the waystone as unlit
+      syncBinding(); // a load that ran before the anchors existed saw the waystone as unlit
     };
 
     let first = true;
@@ -86,7 +90,7 @@ const wyrmsHearthPlugin: GamePlugin = {
       fixedUpdate() {
         if (first) {
           first = false;
-          binding.sync();
+          syncBinding();
         }
         if (!offQuests) offQuests = ctx.services.get('quests')?.onChange(() => hearth.deriveOpen()) ?? null;
         hearth.deriveOpen();
