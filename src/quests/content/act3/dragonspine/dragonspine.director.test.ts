@@ -6,9 +6,8 @@ import { autoplay, autoplayAll, clearGroups, haulSled } from './director/autopla
 import { M28_VIEW_TICKS, R15_HAUL_OUT, R15_STOOP_GROUPS, routeById } from './director/climb';
 import { R18_PARENTS_GROUP } from './director/eggs';
 import { R17_LEG_ROUTES, nextShrine } from './director/candles';
-import { groupKindsMissing } from './director/generic';
 import { DRAGONSPINE_QUEST_STRINGS } from './strings';
-import { M28_CRAG_DOWN, M28_VIEW } from './m28.quest';
+import { M28_CRAG_DOWN, M28_SCOUT_DOWN, M28_VIEW, M28_VIEW_NPC, M28_VIEW_SCENE } from './m28.quest';
 import { R15_HAULING, R15_HAUL_ID, R15_SLEDS, R15_SLED_FLAGS } from './r15.quest';
 import { R16_ROCKFALL_CLEARED_FLAG, R16_STARTED_FLAG } from './r16.quest';
 import { R17_BUNDLE_ITEM, R17_BUNDLE_LYING, R17_HELD, R17_TAKEN, r17LitFlag } from './r17.quest';
@@ -89,9 +88,52 @@ describe('R16: the cave door and its rockfall are re-derived on a load', () => {
   });
 });
 
+describe('M28: the scout is a group-cleared step (any killer)', () => {
+  const toScout = (): Rig => {
+    const r = fresh();
+    r.manager.start('m28');
+    autoplay(r, 'm28', { stopAt: ['m28', 'scout'] });
+    r.step(40);
+    return r;
+  };
+  const SCOUT = 'dragonspine.q.m28.scout';
+
+  it('is armed when the step is current and finished when his group is gone, whoever killed him (a companion, the world)', () => {
+    const r = toScout();
+    expect(r.flag('story.m28.scoutOut')).toBe(true);
+    r.standing.set(SCOUT, ['hunter-scout']);
+    r.step(40);
+    expect(r.current('m28', 'scout')).toBe(true);
+    // a companion's blow: the death event names someone else, and the group empties
+    r.emit('actor.died', { actorId: 'hunter-scout', killerId: 'tobb', kind: 'hunter-spearman', team: 'hostile', level: 1, spawnTag: 'm28.scout' });
+    r.standing.set(SCOUT, []);
+    r.step(40);
+    expect(r.flag(M28_SCOUT_DOWN)).toBe(true);
+    expect(r.done('m28', 'scout')).toBe(true);
+    autoplay(r, 'm28');
+    expect(r.qs('m28')).toBe('completed');
+  });
+
+  it('a kill event by the player alone does not finish it while his group still stands, and the step survives a load', () => {
+    const r = toScout();
+    r.standing.set(SCOUT, ['hunter-scout']);
+    r.step(40);
+    r.kill('hunter-spearman', 'm28.scout');
+    r.step(40);
+    expect(r.done('m28', 'scout')).toBe(false);
+    r.saveLoad();
+    r.standing.set(SCOUT, ['hunter-scout']); // the spawner puts him back
+    r.step(300);
+    expect(r.done('m28', 'scout')).toBe(false);
+    r.standing.set(SCOUT, []);
+    r.step(40);
+    expect(r.done('m28', 'scout')).toBe(true);
+  });
+});
+
 describe('M28: the crag view comes only after the group is cleared', () => {
   const toView = (): Rig => {
-    const r = fresh({ kindsDefined: true });
+    const r = fresh();
     r.manager.start('m28');
     autoplay(r, 'm28', { stopAt: ['m28', 'crag'] });
     r.at('dragonspine.m28.crag');
@@ -148,34 +190,54 @@ describe('M28: the crag view comes only after the group is cleared', () => {
     r.saveLoad();
     expect(r.camera.released).toBe(1);
     expect(r.flag(M28_VIEW)).toBe(false);
-    r.step(M28_VIEW_TICKS + 10);
-    expect(r.camera.shots.length).toBeGreaterThanOrEqual(1);
+    // the timer of the hold the load cut off must not credit the step: only the new hold's own end does
+    // (the old hold would have ended at its 540th tick; the new one starts at the next poll, up to 30 ticks later)
+    r.step(M28_VIEW_TICKS + 12);
+    expect(r.flag(M28_VIEW)).toBe(false);
+    expect(r.camera.shots.length).toBeGreaterThanOrEqual(2);
     r.step(M28_VIEW_TICKS + 10);
     expect(r.flag(M28_VIEW)).toBe(true);
+    expect(r.camera.released).toBe(2);
+  });
+
+  it('a hold timer that outlives a load (the kit drops its delayed calls on a load; this one keeps them) is ignored by the token', () => {
+    const r = toView();
+    // Replace the kit's delayed call with one that survives a load: only the hold's own token can then tell the old timer from the new
+    r.kit.after = (ticks, fn) => {
+      let n = 0;
+      const off = r.kit.every(1, () => { if (++n >= ticks) { off(); fn(); } });
+    };
+    clearGroups(r, ['dragonspine.q.m28.crag']);
+    r.at('dragonspine.m28.crag');
+    r.step(40);
+    expect(r.camera.shots).toHaveLength(1);
+    r.saveLoad();
+    r.step(M28_VIEW_TICKS + 12);
+    expect(r.flag(M28_VIEW)).toBe(false);
+    expect(r.camera.shots.length).toBeGreaterThanOrEqual(2);
+    r.step(M28_VIEW_TICKS + 40);
+    expect(r.flag(M28_VIEW)).toBe(true);
+  });
+
+  it('the hold is a real beat (about nine seconds) with Cael\'s lines over it', () => {
+    expect(M28_VIEW_TICKS / 60).toBeGreaterThanOrEqual(8);
+    expect(M28_VIEW_TICKS / 60).toBeLessThanOrEqual(10);
+    const r = toView();
+    clearGroups(r, ['dragonspine.q.m28.crag']);
+    r.at('dragonspine.m28.crag');
+    r.step(40);
+    expect(r.dialogue.started).toContainEqual([M28_VIEW_SCENE, M28_VIEW_NPC]);
+    expect(r.camera.shots).toHaveLength(1);
   });
 });
 
-describe('missing enemy kinds (K6b PR 2 not merged): a group is read as seen and gone, so the quests finish', () => {
-  it('kinds missing for every group of the four rows; defined kinds are not', () => {
-    expect(groupKindsMissing(['dragonspine.q.m28.crag'])).toBe(true);
-    expect(groupKindsMissing(['dragonspine.q.m28.crag'], { 'rime-hawk': {}, 'crag-ogre': {} })).toBe(false);
-    expect(groupKindsMissing(['dragonspine.q.m28.scout'], { 'hunter-spearman': {} })).toBe(false); // the shipped spearman is defined
-    expect(groupKindsMissing(['nope'])).toBe(false);
-  });
-
-  it('with the kinds defined, nothing is credited until a member has been seen standing and is gone', () => {
-    const r = fresh({ kindsDefined: true });
+describe('group objectives wait for a member to be seen standing', () => {
+  it('nothing is credited until a member has been seen standing and is gone (and not at the arm alone)', () => {
+    const r = fresh();
     upTo(r, ['m28', 'r15'], 'm29', 'hawks');
     r.step(200);
     expect(r.flag('story.m29.hawksDown')).toBe(false);
     clearGroups(r, ['dragonspine.q.m29.hawks']);
-    expect(r.flag('story.m29.hawksDown')).toBe(true);
-  });
-
-  it('with the kinds missing it is credited a moment after the arm', () => {
-    const r = fresh();
-    upTo(r, ['m28', 'r15'], 'm29', 'hawks');
-    r.step(80);
     expect(r.flag('story.m29.hawksDown')).toBe(true);
   });
 });
@@ -286,7 +348,7 @@ describe('R15: sled hauls, the stoops and every carry reset', () => {
     expect(r.flag(R15_SLED_FLAGS[2])).toBe(true);
   });
 
-  it('a load mid-haul puts nothing in hand: the hawks stand down and the haul id clears; the sleds stand where they lay', () => {
+  it('a load mid-haul puts nothing in hand: the hawks stand down, the sleds stand where they lay, and the sled left out is still the haul ("reset haul" stays on offer)', () => {
     const r = toHauls();
     const route = routeById(R15_SLEDS[0])!;
     r.player.feet = { ...route.checkpoints[0]! };
@@ -295,10 +357,43 @@ describe('R15: sled hauls, the stoops and every carry reset', () => {
     r.carrySeconds(1);
     r.saveLoad();
     expect(r.flag(R15_HAULING)).toBe(false);
-    expect(r.str(R15_HAUL_ID)).toBe('');
+    expect(r.flag(R15_HAUL_OUT)).toBe(true);
+    expect(r.str(R15_HAUL_ID)).toBe(R15_SLEDS[0]);
     expect(r.sleds.ids().sort()).toEqual([...R15_SLEDS]);
+    // Thorgar's "reset haul" works on it after the load
+    r.emit('npc.carry.resetHaul', { id: r.str(R15_HAUL_ID) });
+    r.carrySeconds(1);
+    const at = r.sleds.position(R15_SLEDS[0])!;
+    const back = r.carry.checkpoint(R15_SLEDS[0])!;
+    expect(Math.hypot(at.x - back.x, at.z - back.z)).toBeLessThan(0.01);
     [1, 2, 3].forEach((n) => haulSled(r, n));
     expect(r.done('r15', 'hauls')).toBe(true);
+    expect(r.str(R15_HAUL_ID)).toBe('');
+  });
+
+  it('a load restores the haul id from a sled K7 has moved off its start even when the saved id is gone; a sled that never moved, or was delivered, is not the haul', () => {
+    const r = toHauls();
+    const route = routeById(R15_SLEDS[1])!;
+    r.player.feet = { ...route.checkpoints[0]! };
+    r.sleds.take(R15_SLEDS[1]);
+    r.player.feet = { ...route.checkpoints[3]! };
+    r.carrySeconds(1);
+    r.sleds.drop();
+    r.step(2);
+    r.state.clearFlag(R15_HAUL_ID); // the flag is not in the save
+    r.saveLoad();
+    expect(r.str(R15_HAUL_ID)).toBe(R15_SLEDS[1]);
+    haulSled(r, 2);
+    expect(r.str(R15_HAUL_ID)).toBe('');
+    r.saveLoad();
+    expect(r.str(R15_HAUL_ID)).toBe('');
+  });
+
+  it('a load with every sled still at its shed leaves no haul', () => {
+    const r = toHauls();
+    r.saveLoad();
+    expect(r.str(R15_HAUL_ID)).toBe('');
+    expect(r.flag(R15_HAUL_OUT)).toBe(false);
   });
 });
 
@@ -413,6 +508,8 @@ describe('R18: the eggs, the parents, the failure and the load', () => {
     const r = toNest();
     expect(r.enemyCalls).toContain(`spawn ${R18_PARENTS_GROUP}`);
     expect(r.enemyCalls.filter((c) => c === `spawn ${R18_PARENTS_GROUP}`)).toHaveLength(1);
+    // K6b's own parents group is never driven: one parent group at a time
+    expect(r.enemyCalls.filter((c) => c.endsWith(' dragonspine.r18.parents'))).toEqual([]);
     [0, 1, 2].forEach((i) => setEgg(r, i, i));
     r.step(40);
     expect(r.flag(R18_NESTED)).toBe(true);
@@ -447,7 +544,7 @@ describe('R18: the eggs, the parents, the failure and the load', () => {
     r.kill('rime-hawk', R18_PARENTS_TAG);
     r.step(5);
     expect(r.toasts).toContain(R18_FAIL_TOAST);
-    expect(DRAGONSPINE_QUEST_STRINGS[R18_FAIL_TOAST === 'r18.failed' ? 'dragonspine.q.r18.failed' : R18_FAIL_TOAST]).toBe('The parents took the eggs back to the camp.');
+    expect(DRAGONSPINE_QUEST_STRINGS[R18_FAIL_TOAST]).toBe('The parents took the eggs back to the camp.');
     expect(r.num(R18_EGGS_SET)).toBe(0);
     expect(R18_NEST_FLAGS.some((f) => r.flag(f))).toBe(false);
     expect(R18_EGG_TAKEN.some((f) => r.flag(f))).toBe(false);
@@ -466,7 +563,8 @@ describe('R18: the eggs, the parents, the failure and the load', () => {
   });
 
   it('the toast key resolves to the exact text', () => {
-    expect(DRAGONSPINE_QUEST_STRINGS['dragonspine.q.r18.failed']).toBe('The parents took the eggs back to the camp.');
+    expect(R18_FAIL_TOAST).toBe('dragonspine.q.r18.failed');
+    expect(DRAGONSPINE_QUEST_STRINGS[R18_FAIL_TOAST]).toBe('The parents took the eggs back to the camp.');
   });
 
   it('out of order: a parent dying before the step is current, or after it is done, changes nothing', () => {

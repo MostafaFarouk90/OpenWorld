@@ -11,6 +11,7 @@
 import { ACT2_BEAT_S, ROUTE_FOLLOW_MPS, TALK_NODE_S, WALK_MPS, cappedTravelS } from '../../../../integration/timing';
 import { dragonspineBuild } from '../../../../dragonspine/layout';
 import { DRAGONSPINE_INTERIORS } from '../../../../dragonspine/interiors';
+import { SECTIONS } from '../../../../stealth/sections';
 
 /** 'door' = an interior frame change, 0 distance. */
 export type Act3Leg = 'ride' | 'foot' | 'wade' | 'glide' | 'ferry' | 'follow' | 'door' | 'sled';
@@ -89,12 +90,12 @@ const WAY = (k: number): string => `dragonspine.wayside.${k}`;
 const CARVING = (k: number): string => `dragonspine.anvil.carving.${k}`;
 
 export const DRAGONSPINE_PACE: readonly Act3PaceRow[] = [
-  // M28: Thorgar and the four hunters at the lodge, the trail up (trailhead, scout, four cairns, two ledges) to the crag and its view
+  // M28: Thorgar and the four hunters at the lodge, the trail up (trailhead, scout, four cairns, two ledges) to the crag and its view (the nine-second camera hold is covered by Cael's three view lines, counted as nodes, not as a set piece)
   build('m28', 50, 'waystone.wyrmwatch-lodge', [
     F('npc-post.thorgar.yard'), ...feet(n('npc-post.lodge-hunter-', 1, 4)), F('dragonspine.m28.trailhead'), F('dragonspine.spawn.m28.scout'),
     F(CAIRN(1)), F('dragonspine.m28.leap.1.launch'), F('dragonspine.m28.leap.1'), F(CAIRN(2)), F(CAIRN(3)), F('dragonspine.m28.leap.2.launch'), F('dragonspine.m28.leap.2'),
     F(CAIRN(4)), F('dragonspine.m28.crag'), F('dragonspine.m28.crag.view'),
-  ], 32, { killUnit: 8, search: 4, leap: 2, set: 1 }),
+  ], 35, { killUnit: 8, search: 4, leap: 2 }),
   // R15: three sleds from the shed to the cache and the walk back for the next, the unload and the choice at the cache, Thorgar
   build('r15', 40, 'waystone.wyrmwatch-lodge', [
     F('npc-post.thorgar.yard'), F('npc-post.sled-hand-1'), F('npc-post.sled-hand-2'),
@@ -131,7 +132,7 @@ export const DRAGONSPINE_PACE: readonly Act3PaceRow[] = [
     ...feet(n('dragonspine.hawk.climb.', 1, 15).reverse()), F('dragonspine.hawk.egg.2'), ...feet(n('dragonspine.hawk.climb.', 1, 15)), F('dragonspine.hawk.nest.2'),
     ...feet(n('dragonspine.hawk.climb.', 1, 15).reverse()), F('dragonspine.hawk.egg.3'), ...feet(n('dragonspine.hawk.climb.', 1, 15)), F('dragonspine.hawk.nest.3'),
     F('npc-post.thorgar.yard'),
-  ], 27, { search: 4, carry: 3, stealthSection: 1, interact: 3 }),
+  ], 27, { search: 4, carry: 3, stealthSection: SECTIONS.filter((x) => x.quest.id === 'r18').length, interact: 3 }),
 ];
 
 export interface Act3PaceResult { quest: string; minutes: number; travelS: number; cappedTravelS: number; talkAndBeatsS: number; share: number }

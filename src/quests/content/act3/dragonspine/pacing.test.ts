@@ -8,6 +8,7 @@ import { DRAGONSPINE_TALKS } from '../../../../dialogue/content/act3/dragonspine
 import { DRAGONSPINE_QUEST_DEFS } from './dragonspine.content';
 import { DRAGONSPINE_SPAWNERS } from './spawners';
 import { DRAGONSPINE_GROUP_OBJECTIVES } from './groups';
+import { SECTIONS } from '../../../../stealth/sections';
 import { DRAGONSPINE_PACE, ACT3_BEAT_S, ROW_GATE, paceAt, paceBlock, paceLegs, paceRow } from './pacing';
 
 const trees = new Map<string, DialogueDef>(DRAGONSPINE_TREES.map((t) => [t.def.id, t.def]));
@@ -44,13 +45,16 @@ function derived(quest: string): Record<string, number> {
     else if (o.id.startsWith('ledge')) add('leap', 1);
   }
   for (const g of DRAGONSPINE_GROUP_OBJECTIVES.filter((x) => x.quest === quest)) add('killUnit', g.groups.reduce((n, id) => n + (DRAGONSPINE_SPAWNERS.find((s) => s.id === id)?.count ?? 0), 0));
+  // a stealth section is a beat for every section the registry holds for the quest (src/stealth/sections.ts)
+  const sections = SECTIONS.filter((x) => x.quest.id === quest).length;
+  if (sections > 0) add('stealthSection', sections);
   if (quest === 'r15') add('killUnit', spawned('r15.stoop'));
   if (quest === 'r17') add('killUnit', spawned('r17.hawks.a') + spawned('r17.hawks.b'));
   return c;
 }
-/** Set pieces the build really has: the crag view's camera hold (M28), Eadgyth's confession by the fire (M29), the mouth's Leap ledge (R16), the eggs' carries, the cliffs' stealth climb and the three nest places (R18). */
+/** Set pieces the build really has: Eadgyth's confession by the fire (M29), the mouth's Leap ledge (R16), the eggs' carries, and the three nest places (R18; its stealth section is derived from src/stealth/sections.ts). */
 const SPECIAL: Record<string, Record<string, number>> = {
-  m28: { set: 1 }, m29: { set: 1 }, r16: { leap: 1 }, r18: { carry: 3, stealthSection: 1, interact: 3 },
+  m29: { set: 1 }, r16: { leap: 1 }, r18: { carry: 3, interact: 3 },
 };
 
 describe('lower Dragonspine pacing', () => {

@@ -25,6 +25,7 @@ import { installArms, installComplete, installGroupObjectives } from './generic'
 import { installM28, installM29, installM30, installR15, installR16 } from './climb';
 import { installR17 } from './candles';
 import { installR18 } from './eggs';
+import { M28_OPEN_FLAG } from '../m28.quest';
 
 const ANCHORS = new Map(dragonspineBuild().layout.anchors.map((a) => [a.id, a]));
 export const anchorPos = (id: string): { x: number; y: number; z: number } => {
@@ -34,10 +35,10 @@ export const anchorPos = (id: string): { x: number; y: number; z: number } => {
 };
 
 export interface RigOpts {
+  /** `story.phase.dragonspineOpen` (M28 waits for it as well as the Act 3 gate): default true. */
+  dragonspineOpen?: boolean;
   /** Flags set before anything runs (a loaded world). */
   flags?: Record<string, boolean | number | string>;
-  /** Treat every Dragonspine enemy kind as defined (the group objectives wait for real kills). Default: kinds missing. */
-  kindsDefined?: boolean;
   /** Leave the carry service out. */
   noCarry?: boolean;
 }
@@ -51,6 +52,7 @@ export function makeRig(opts: RigOpts = {}) {
   const flagsOff = installObjectiveFlags(DRAGONSPINE_OBJECTIVE_FLAGS, events as never, state as never, manager);
   services.provide('quests' as never, manager as never);
   for (const [k, v] of Object.entries(opts.flags ?? {})) state.setFlag(k, v);
+  if (opts.dragonspineOpen !== false) state.setFlag(M28_OPEN_FLAG, true);
 
   const dialogue = { active: false, started: [] as Array<[string, string]>, start(id: string, npc: string) { this.started.push([id, npc]); return true; } };
   services.provide('dialogue' as never, dialogue as never);
@@ -136,7 +138,7 @@ export function makeRig(opts: RigOpts = {}) {
 
   installArms(kit);
   installComplete(kit);
-  installGroupObjectives(kit, opts.kindsDefined ? () => false : undefined);
+  installGroupObjectives(kit);
   installM28(kit);
   installR15(kit);
   installM29(kit);

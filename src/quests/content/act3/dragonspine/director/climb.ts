@@ -5,7 +5,7 @@ import { dragonspineBuild } from '../../../../../dragonspine/layout';
 import type { CarryRoute } from '../../../../../traversal/carry/CarryResets';
 import type { Kit, Off } from './shared';
 import { distanceTo, offerScene, recheck, toast } from './shared';
-import { M28_CLIMB_NPC, M28_CLIMB_SCENE, M28_CRAG_DOWN, M28_LEDGE_FLAGS, M28_TRAILHEAD, M28_VIEW } from '../m28.quest';
+import { M28_CLIMB_NPC, M28_CLIMB_SCENE, M28_CRAG_DOWN, M28_LEDGE_FLAGS, M28_TRAILHEAD, M28_VIEW, M28_VIEW_NPC, M28_VIEW_SCENE } from '../m28.quest';
 import { R15_HAULING, R15_HAUL_ID, R15_SCENE, R15_SCENE_NPC, R15_SLEDS, R15_SLED_EVENT, R15_SLED_FLAGS } from '../r15.quest';
 import { M29_CONFESSION_NPC, M29_CONFESSION_SCENE, M29_FIRE } from '../m29.quest';
 import { R16_AXE_FLAG, R16_CAVE_NPC, R16_CAVE_SCENE, R16_MOUTH, R16_ROCKFALL } from '../r16.quest';
@@ -14,8 +14,8 @@ export const M28_CRAG_GROUP = 'dragonspine.q.m28.crag';
 export const R15_STOOP_GROUPS = [1, 2, 3].map((n) => `dragonspine.q.r15.stoop.${n}`);
 /** The sled counts as delivered when it is dropped this close (x, z) to its route's last checkpoint. */
 export const R15_DELIVER_RADIUS = 8;
-/** Fixed ticks the crag view holds (60 a second). */
-export const M28_VIEW_TICKS = 360;
+/** Fixed ticks the crag view holds (60 a second): nine seconds, Cael's three lines played over it. */
+export const M28_VIEW_TICKS = 540;
 export const R15_HAUL_OUT = 'story.r15.haulOut';
 /** Metres within which the trailhead, the mouth and a ledge top count. */
 export const REACH = { trailhead: 12, mouth: 14, ledge: 3.5 };
@@ -49,10 +49,12 @@ export function installM28(k: Kit): void {
   });
   offerScene(k, { quest: 'm28', objective: 'climb', scene: M28_CLIMB_SCENE, npc: M28_CLIMB_NPC });
 
-  // The view: only when the crag group is down and nothing stands (never mid-fight); the camera holds, then the step is credited.
+  // The view: only when the crag group is down and nothing stands (never mid-fight); the camera holds for M28_VIEW_TICKS with
+  // Cael's three lines over it, then the step is credited. A load ends the hold: a timer from before it is ignored (the token).
   let shot: { release(blendOut?: number): void } | null = null;
+  let token = 0;
   const release = (): void => { shot?.release(); shot = null; };
-  k.on('save.loaded', release);
+  k.on('save.loaded', () => { token++; release(); });
   k.every(30, () => {
     if (!k.active('m28') || !k.objCurrent('m28', 'view') || k.flag(M28_VIEW) || shot) return;
     if (!k.flag(M28_CRAG_DOWN) || k.standing(M28_CRAG_GROUP).length > 0) return;
@@ -61,7 +63,11 @@ export function installM28(k: Kit): void {
     const p = view.position;
     const look = { x: p.x - Math.sin(view.yaw) * 120, y: p.y - 6, z: p.z - Math.cos(view.yaw) * 120 };
     shot = ctx.cameraRig?.override({ position: { x: p.x, y: p.y + 2, z: p.z }, lookAt: look, blendIn: 1, blendOut: 1 }) ?? { release: () => {} };
+    const mine = ++token;
+    const d = ctx.services.get('dialogue');
+    if (d && !d.active) d.start(M28_VIEW_SCENE, M28_VIEW_NPC);
     k.after(M28_VIEW_TICKS, () => {
+      if (mine !== token) return;
       release();
       if (!k.active('m28') || k.flag(M28_VIEW)) return;
       k.set(M28_VIEW);
@@ -95,12 +101,33 @@ export function installR15(k: Kit): void {
 
   k.on('quest.started', (e) => { if (e.questId === 'r15') k.later(sync); });
   k.on('quest.completed', (e) => { if (e.questId === 'r15') k.later(sync); });
+  /** The sled the player has out and has not delivered: the saved id if it still names one, else the first undelivered sled K7 has moved off its start. */
+  const outSled = (saved: string): string => {
+    const open = R15_SLEDS.filter((id, i) => !k.flag(R15_SLED_FLAGS[i]!) && sleds.has(id));
+    if (saved && open.includes(saved)) return saved;
+    for (const id of open) {
+      const route = routeById(id);
+      const at = carry()?.checkpoint(id);
+      const start = route?.checkpoints[0];
+      if (at && start && Math.hypot(at.x - start.x, at.z - start.z) > 0.5) return id;
+    }
+    return '';
+  };
   k.on('save.loaded', () => {
-    // Nothing is held after a load (K7 puts the sleds where they lay): the hawks stand down and the haul id clears.
+    // Nothing is held after a load (K7 puts the sleds where they lay): the hawks stand down. The sled left out on the road is
+    // still out ("reset haul" must stay on offer), so its id is restored once the sleds are back on their routes.
+    const saved = k.str(R15_HAUL_ID);
     k.clear(R15_HAULING);
     k.clear(R15_HAUL_ID);
     out();
-    k.later(() => { sync(); stoopsOff(); });
+    k.later(() => {
+      sync();
+      stoopsOff();
+      if (!k.active('r15')) return;
+      const id = outSled(saved);
+      if (id) k.set(R15_HAUL_ID, id);
+      out();
+    });
   });
   k.on('sled.taken', (e) => {
     if (!R15_SLEDS.includes(e.id) || !k.active('r15')) return;

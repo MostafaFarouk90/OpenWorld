@@ -1,7 +1,7 @@
 import { buildTree } from '../../act2/build';
 import { all, flagIs, not } from '../../act2/cond';
 import { C, voice } from './common';
-import { M28_CLIMB_SCENE } from '../../../../quests/content/act3/dragonspine/m28.quest';
+import { M28_CLIMB_SCENE, M28_VIEW_SCENE } from '../../../../quests/content/act3/dragonspine/m28.quest';
 import { R15_CHOICE, R15_SCENE } from '../../../../quests/content/act3/dragonspine/r15.quest';
 import { M29_CONFESSION_SCENE } from '../../../../quests/content/act3/dragonspine/m29.quest';
 import { R16_CAVE_SCENE } from '../../../../quests/content/act3/dragonspine/r16.quest';
@@ -21,6 +21,12 @@ export const SCENE_M28_CLIMB = scene(M28_CLIMB_SCENE, [
   C('Another answers it from the summit. Then the glow above the clouds flickers, once.'),
   C('Whatever lives up there knows I am on the slope.'),
   C('No sense waiting for it to come down. The crag first.'),
+]);
+
+export const SCENE_M28_VIEW = scene(M28_VIEW_SCENE, [
+  C('The whole range lies open from here: the lodge, the pass, the Anvil, the grey wall of the summit.'),
+  C('Behind the cloud a glow rises and falls, slow, like a coal being breathed on.'),
+  C('Whatever sleeps up there has not looked down yet.'),
 ]);
 
 export const SCENE_R15_CACHE = buildTree({
@@ -67,7 +73,7 @@ export const SCENE_R16_CAVE = scene(R16_CAVE_SCENE, [
   C('I will carry it out. What becomes of it after is hers to say.'),
 ]);
 
-export const SCENE_TREES = [SCENE_M28_CLIMB, SCENE_R15_CACHE, SCENE_M29_CONFESSION, SCENE_R16_CAVE];
+export const SCENE_TREES = [SCENE_M28_CLIMB, SCENE_M28_VIEW, SCENE_R15_CACHE, SCENE_M29_CONFESSION, SCENE_R16_CAVE];
 
 /** Names the dialogue speakers fall back to (the NPC defs' names are K4's). */
 export const SPEAKER_NAMES: Record<string, string> = {};

@@ -9,7 +9,7 @@ import type { FlagValue, QuestState } from '../../../../quests/types';
 import { dialogueDefs } from '../../index';
 import { dialogueStrings, npcNameFallbackStrings } from '../../../strings.en';
 import { questStrings } from '../../../../quests/strings.en';
-import { ACT3_DIRECT } from '../../../../quests/act3Jump';
+import { ACT3_DIRECT, DRAGONSPINE_OPEN_FLAG } from '../../../../quests/act3Jump';
 import { DRAGONSPINE_QUEST_DEFS } from '../../../../quests/content/act3/dragonspine/dragonspine.content';
 import { DRAGONSPINE_TALKS } from './talks';
 import { DRAGONSPINE_DIALOGUES, DRAGONSPINE_DIALOGUE_STRINGS } from './index';
@@ -20,6 +20,7 @@ import { HAUL_OUT } from './thorgar.dialogue';
 const all: Record<string, string> = { ...questStrings, ...dialogueStrings, ...npcNameFallbackStrings };
 const hasKey = (k: string) => k in all;
 const GATE = 'story.gate.a3';
+const OPEN = DRAGONSPINE_OPEN_FLAG;
 
 interface World { states?: Record<string, QuestState>; done?: Record<string, string[]>; flags?: Record<string, FlagValue> }
 
@@ -68,9 +69,9 @@ function worldAt(quest: string, objective: string): World {
     for (const p of ACT3_DIRECT[quest] ?? []) states[p] = 'completed';
     // Thorgar offers R15 first; R18 is his next job once R15 is done (or from the R15 wait menu, tested below)
     if (quest === 'r18') states.r15 = 'completed';
-    return { states, flags: { [GATE]: true } };
+    return { states, flags: { [GATE]: true, [OPEN]: true } };
   }
-  return { states: { [quest]: 'active' }, done: { [quest]: def.objectives.slice(0, i).map((o) => o.id) }, flags: { [GATE]: true } };
+  return { states: { [quest]: 'active' }, done: { [quest]: def.objectives.slice(0, i).map((o) => o.id) }, flags: { [GATE]: true, [OPEN]: true } };
 }
 
 describe('every talk objective opens its own segment', () => {
@@ -91,6 +92,18 @@ describe('every talk objective opens its own segment', () => {
         expect(DRAGONSPINE_TALKS.some((t) => t.quest === q.id && t.objective === o.id), `${q.id}.${o.id}`).toBe(true);
       }
     }
+  });
+});
+
+describe('M28 is offered only with the Dragonspine open', () => {
+  it('Thorgar does not open the brief on the Act 3 gate alone, and does with the phase flag too', () => {
+    const w = worldAt('m28', 'brief');
+    const shut = setup({ ...w, flags: { [GATE]: true } });
+    shut.dr.start('npc-thorgar', 'thorgar');
+    expect(shut.dr.view()?.nodeId).not.toBe('m28-brief');
+    const open = setup(w);
+    open.dr.start('npc-thorgar', 'thorgar');
+    expect(open.dr.view()!.nodeId).toBe('m28-brief');
   });
 });
 

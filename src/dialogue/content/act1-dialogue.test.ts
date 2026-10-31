@@ -106,6 +106,8 @@ describe('every start branch is reachable', () => {
         // flag choices: enumerate by combination index over the first flag only plus the rest unset
         const flagSets: Map<string, FlagValue>[] = [new Map()];
         for (const [k, vals] of fl) for (const v of vals) if (v !== undefined) flagSets.push(new Map([[k, v]]));
+        // K13: a start rule may need several flags at once (the Act 3 gate and the Dragonspine phase flag): one set with each flag's first value
+        flagSets.push(new Map(fl.flatMap(([k, vals]) => [...vals].filter((v) => v !== undefined).slice(0, 1).map((v): [string, FlagValue] => [k, v!]))));
         for (const fs of flagSets) for (const band of bands) {
           const env = {
             state: { getFlag: (k: string) => fs.get(k), favourBand: () => band, favour: () => 30 } as any,

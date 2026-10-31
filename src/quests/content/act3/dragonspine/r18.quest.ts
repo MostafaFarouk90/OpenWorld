@@ -19,7 +19,7 @@ export const R18_EGG_EVENT = 'story.r18.eggSet';
 export const R18_FAILED_EVENT = 'story.r18.failed';
 export const R18_PARENTS_TAG = 'r18.parents';
 export const R18_NEST_TRIGGER = 'trg.dragonspine.hawkcliffs.nest';
-export const R18_FAIL_TOAST = 'r18.failed';
+export const R18_FAIL_TOAST = 'dragonspine.q.r18.failed';
 
 /**
  * R18 Rime Hawk Eggs. Thorgar wants the hawks' nest on the cliffs let alone; an egg thief has been robbing it. Cael talks the thief

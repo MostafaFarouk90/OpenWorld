@@ -32,7 +32,7 @@ export const r15: QuestDef = {
     { id: 'brief', type: 'talk', target: 'thorgar', textKey: 'quest.r15.brief' },
     ...R15_HANDS.map((id, i) => ({ id: `hand${i + 1}`, type: 'talk' as const, target: id, textKey: `quest.r15.hand${i + 1}` })),
     story('hauls', 'quest.r15.hauls', R15_SLED_EVENT, { required: 3, doneWhen: flagsAll(R15_SLED_FLAGS) }),
-    { id: 'unload', type: 'event', target: 'interact', match: { interactableId: R15_UNLOAD }, textKey: 'quest.r15.unload' },
+    { id: 'unload', type: 'event', target: 'interact', match: { interactableId: R15_UNLOAD }, textKey: 'quest.r15.unload', doneWhen: { flag: R15_UNLOADED, equals: true } },
     { id: 'choice', type: 'talk', target: R15_SCENE_NPC, textKey: 'quest.r15.choice' },
     { id: 'report', type: 'talk', target: 'thorgar', textKey: 'quest.r15.report' },
   ],

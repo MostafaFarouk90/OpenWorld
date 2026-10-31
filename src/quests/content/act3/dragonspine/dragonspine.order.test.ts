@@ -10,7 +10,7 @@ import { DRAGONSPINE_GROUP_OBJECTIVES } from './groups';
 import { DRAGONSPINE_SPAWNERS } from './spawners';
 
 let rig: Rig | null = null;
-const fresh = (): Rig => (rig = makeRig({ flags: { 'story.gate.a3': true }, kindsDefined: true }));
+const fresh = (): Rig => (rig = makeRig({ flags: { 'story.gate.a3': true } }));
 afterEach(() => { rig?.dispose(); rig = null; });
 
 const PREREQ: Record<string, string[]> = {
@@ -18,24 +18,18 @@ const PREREQ: Record<string, string[]> = {
 };
 const actFlag = (s: { activation?: unknown }): string | undefined => (s.activation as { flag?: string } | undefined)?.flag;
 
-describe('kill objectives are structurally order-proof', () => {
-  for (const q of DRAGONSPINE_QUEST_DEFS) {
-    for (const o of q.objectives.filter((x) => x.type === 'kill')) {
-      it(`${q.id}.${o.id}: its group is armed by this step alone, holds one kind, and no other kill step shares the tag`, () => {
-        const spawners = DRAGONSPINE_SPAWNERS.filter((s) => s.tag === o.spawnTag);
-        expect(spawners.length, 'a spawner owns the tag').toBeGreaterThan(0);
-        const arms = DRAGONSPINE_ARMS.filter((a) => a.quest === q.id && a.objective === o.id);
-        expect(arms, 'armed by this objective').toHaveLength(1);
-        for (const s of spawners) {
-          expect(actFlag(s)).toBe(arms[0]!.flag);
-          expect(new Set(s.memberKinds ?? [s.enemy]).size, `${s.id} mixes kinds`).toBe(1);
-          expect(s.enemy).toBe(o.target);
-        }
-        expect(spawners.reduce((n, s) => n + s.count, 0)).toBe(o.required ?? 1);
-        expect(q.objectives.filter((x) => x.type === 'kill' && x.spawnTag === o.spawnTag)).toHaveLength(1);
-      });
+describe('no combat step counts only the player\'s kills', () => {
+  it('the block has no kill objective: every fight is a group objective (cleared by anyone), so a companion\'s kill never soft-locks a quest', () => {
+    for (const q of DRAGONSPINE_QUEST_DEFS) expect(q.objectives.filter((x) => x.type === 'kill').map((x) => `${q.id}.${x.id}`)).toEqual([]);
+    expect(DRAGONSPINE_GROUP_OBJECTIVES.map((g) => `${g.quest}.${g.objective}`)).toContain('m28.scout');
+  });
+
+  it('every armed group is on a group row or is armed by its step alone', () => {
+    for (const a of DRAGONSPINE_ARMS.filter((x) => x.quest === 'm28')) {
+      const s = DRAGONSPINE_SPAWNERS.filter((x) => actFlag(x) === a.flag);
+      expect(s.length, a.flag).toBeGreaterThan(0);
     }
-  }
+  });
 });
 
 describe('group objectives (one step per spawner group)', () => {

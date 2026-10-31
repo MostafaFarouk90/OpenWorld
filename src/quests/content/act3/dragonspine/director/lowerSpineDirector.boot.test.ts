@@ -19,7 +19,11 @@ import waystonesPlugin from '../../../../../waystones/waystones.plugin';
 import questsPlugin from '../../../../quests.plugin';
 import directorPlugin from './lowerSpineDirector.plugin';
 import { DRAGONSPINE_QUEST_IDS } from '../dragonspine.content';
+import { DRAGONSPINE_OPEN_FLAG } from '../../../../act3Jump';
 import { R17_BUNDLE_ITEM } from '../r17.quest';
+import { R16_STARTED_FLAG } from '../r16.quest';
+import { ACT3_DOOR_LOCKS } from '../../../../../interiors/act3';
+import { COLLAPSED_CAVE_DOOR_ID, COLLAPSED_CAVE_ID, DRAGONSPINE_DOOR_LOCKS } from '../../../../../dragonspine/interiors';
 
 let physics: PhysicsWorld;
 let game: Game | null = null;
@@ -64,6 +68,9 @@ describe('the lower Dragonspine director plugin on a reduced real manifest', () 
     const quests = t.ctx.services.get('quests')!;
     expect(quests.start('m28')).toBe(false);
     t.ctx.state.setFlag('story.gate.a3', true);
+    // the phase hold: the Act 3 gate alone does not open the Dragonspine's first quest
+    expect(quests.start('m28')).toBe(false);
+    t.ctx.state.setFlag(DRAGONSPINE_OPEN_FLAG, true);
     expect(quests.start('m28')).toBe(true);
     t.run(4);
     expect(t.ctx.state.getBool('story.m28.started')).toBe(true);
@@ -73,6 +80,7 @@ describe('the lower Dragonspine director plugin on a reduced real manifest', () 
   it("R15 puts the three sleds on K4's routes through the real carry service, and completion removes them", async () => {
     const t = await boot();
     t.ctx.state.setFlag('story.gate.a3', true);
+    t.ctx.state.setFlag(DRAGONSPINE_OPEN_FLAG, true);
     const quests = t.ctx.services.get('quests')!;
     const carry = t.ctx.services.get('carry')!;
     quests.start('m28');
@@ -87,6 +95,38 @@ describe('the lower Dragonspine director plugin on a reduced real manifest', () 
     t.run(4);
     expect(carry.checkpoint('sled.r15.1')).toBeNull();
     expect(t.ctx.state.getBool('story.r15.complete')).toBe(true);
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it("K4's real cave door lock opens with story.r16.started, written by the director on accept and again after a load", async () => {
+    const t = await boot();
+    expect(DRAGONSPINE_DOOR_LOCKS[COLLAPSED_CAVE_DOOR_ID]).toBe(R16_STARTED_FLAG);
+    expect(ACT3_DOOR_LOCKS[COLLAPSED_CAVE_DOOR_ID]).toBe(R16_STARTED_FLAG);
+    const flag = DRAGONSPINE_DOOR_LOCKS[COLLAPSED_CAVE_DOOR_ID]!;
+    t.ctx.state.setFlag('story.gate.a3', true);
+    t.ctx.state.setFlag(DRAGONSPINE_OPEN_FLAG, true);
+    const quests = t.ctx.services.get('quests')!;
+    const interiors = t.ctx.services.get('interiors')!;
+    // What the real door does when asked: a locked door refuses with 'locked'; an open one is refused for nothing the lock decides.
+    const probe = async (): Promise<string> => {
+      let reason = 'not refused';
+      interiors.enter(COLLAPSED_CAVE_ID, COLLAPSED_CAVE_DOOR_ID).catch((e: { reason?: string }) => { reason = e?.reason ?? 'refused'; });
+      await new Promise((r) => setTimeout(r, 0));
+      return reason;
+    };
+    quests.start('m28'); quests.complete('m28'); quests.start('m29'); quests.complete('m29');
+    t.run(4);
+    expect(t.ctx.state.getBool(flag)).toBe(false);
+    expect(await probe()).toBe('locked');
+    quests.start('r16');
+    t.run(4);
+    expect(t.ctx.state.getBool(flag)).toBe(true);
+    // the door's flag is lost from the save, the quest is still active: the lock closes, and a load opens it again
+    t.ctx.state.clearFlag(flag);
+    expect(await probe()).toBe('locked');
+    t.ctx.events.emit('save.loaded', { slot: 'test' });
+    t.run(4);
+    expect(t.ctx.state.getBool(flag)).toBe(true);
+    expect(await probe()).not.toBe('locked');
   }, PLUGIN_TEST_TIMEOUT);
 
   it('the R17 light gate is installed on the real wayside service and refuses without the bundle', async () => {

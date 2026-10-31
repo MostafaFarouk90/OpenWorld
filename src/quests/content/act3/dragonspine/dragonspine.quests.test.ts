@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { makeRig, type Rig } from './director/rig.testkit';
 import { autoplay, autoplayAll, playObjective } from './director/autoplay.testkit';
 import { DRAGONSPINE_QUEST_DEFS, DRAGONSPINE_QUEST_IDS } from './dragonspine.content';
+import { DRAGONSPINE_PROPS } from './props';
 
 let rig: Rig | null = null;
 afterEach(() => { rig?.dispose(); rig = null; });
@@ -81,5 +82,30 @@ describe('save and load at every step', () => {
     expect(a.current(q, o)).toBe(true);
     autoplay(a, q);
     expect(a.qs(q)).toBe('completed');
+  });
+});
+
+describe('prop steps are also read from their used flag (a recheck after a load credits them)', () => {
+  const CASES = [['m29', 'wood'], ['m29', 'fire'], ['r15', 'unload'], ['r16', 'rockfall'], ['r16', 'axe']] as const;
+
+  it.each(CASES)('%s.%s: the prop\'s used flag is the objective\'s doneWhen', (q, o) => {
+    const def = DRAGONSPINE_QUEST_DEFS.find((d) => d.id === q)!.objectives.find((x) => x.id === o)!;
+    const prop = DRAGONSPINE_PROPS.find((p) => p.objective?.[0] === q && p.objective?.[1] === o)!;
+    expect(prop.usedFlag).toBeTruthy();
+    expect(def.doneWhen).toEqual({ flag: prop.usedFlag, equals: true });
+  });
+
+  it.each(CASES)('%s.%s: with the flag set and no interact event heard, a recheck finishes the step', (q, o) => {
+    const r = fresh();
+    autoplayAll(r, ORDER.slice(0, ORDER.indexOf(q)));
+    r.manager.start(q);
+    autoplay(r, q, { stopAt: [q, o] });
+    expect(r.current(q, o)).toBe(true);
+    const prop = DRAGONSPINE_PROPS.find((p) => p.objective?.[0] === q && p.objective?.[1] === o)!;
+    r.state.setFlag(prop.usedFlag!, true);
+    r.manager.recheck();
+    expect(r.done(q, o)).toBe(true);
+    autoplay(r, q);
+    expect(r.qs(q)).toBe('completed');
   });
 });

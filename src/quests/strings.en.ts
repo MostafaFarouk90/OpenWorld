@@ -89,6 +89,6 @@ export const questStrings: Record<string, string> = {
   ...questStringsDensityC,
   // Act 2 Cinderreach quests (A12)
   ...ACT2_QUEST_STRINGS,
-  // Act 3 Greyfen quests (K12)
+  // Act 3 quests (K12 Greyfen, K13 lower Dragonspine)
   ...ACT3_QUEST_STRINGS,
 };

@@ -7,7 +7,7 @@ const t = (quest: string, objective: string, tree: string, seg: string): TalkRow
 export const DRAGONSPINE_TALKS: readonly TalkRow[] = [
   t('m28', 'brief', 'npc-thorgar', 'm28-brief'),
   ...[1, 2, 3, 4].map((n) => t('m28', `hunter${n}`, `npc-lodge-hunter-${n}`, 'm28-talk')),
-  t('m28', 'climb', 'scene-m28-climb', 'scene'), t('m28', 'report', 'npc-thorgar', 'm28-report'),
+  t('m28', 'climb', 'scene-m28-climb', 'scene'), t('m28', 'view', 'scene-m28-view', 'scene'), t('m28', 'report', 'npc-thorgar', 'm28-report'),
   t('r15', 'brief', 'npc-thorgar', 'r15-brief'), t('r15', 'hand1', 'npc-sled-hand-1', 'r15-talk'), t('r15', 'hand2', 'npc-sled-hand-2', 'r15-talk'),
   t('r15', 'choice', 'scene-r15-cache', 'scene'), t('r15', 'report', 'npc-thorgar', 'r15-report'),
   t('m29', 'greet', 'npc-eadgyth', 'm29-greet'), t('m29', 'firetalk', 'npc-eadgyth', 'm29-firetalk'),

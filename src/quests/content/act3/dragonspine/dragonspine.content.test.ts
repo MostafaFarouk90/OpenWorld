@@ -2,7 +2,7 @@
 // the shipped registries (K4's layout, the item table, the Act 3 jump table) rather than against themselves.
 import { describe, expect, it } from 'vitest';
 import { questDefs } from '../../index';
-import { ACT3_DIRECT } from '../../../act3Jump';
+import { ACT3_DIRECT, DRAGONSPINE_OPEN_FLAG, needsDragonspine } from '../../../act3Jump';
 import { DRAGONSPINE_LOWER } from './dragonspine.content';
 import { DRAGONSPINE_ARMS } from './arms';
 import { DRAGONSPINE_GROUP_OBJECTIVES } from './groups';
@@ -20,6 +20,7 @@ import { heightAt } from '../../../../terrain/heightfield';
 import { validateQuest } from '../../../validate';
 import { R16_ROCKFALL_CLEARED_FLAG, R16_STARTED_FLAG } from './r16.quest';
 import { R15_SLEDS } from './r15.quest';
+import { M28_OPEN_FLAG } from './m28.quest';
 import { R17_HAWK_FLAGS } from './r17.quest';
 import { R18_PARENTS_TAG } from './r18.quest';
 import type { Condition, Effect } from '../../../types';
@@ -52,8 +53,8 @@ describe('the lower Dragonspine quests as data', () => {
       const need = [...questRefs(q.startWhen)].sort();
       expect(need, q.id).toEqual([...ACT3_DIRECT[q.id]!].sort());
     }
-    // M28 opens on the Act 3 gate alone, and so does nothing else of this block
-    expect(DEFS.find((q) => q.id === 'm28')!.startWhen).toEqual({ flag: 'story.gate.a3', equals: true });
+    // M28 opens on the Act 3 gate and the Dragonspine phase flag (Phase E holds the region), and nothing else of this block does
+    expect(DEFS.find((q) => q.id === 'm28')!.startWhen).toEqual({ all: [{ flag: 'story.gate.a3', equals: true }, { flag: DRAGONSPINE_OPEN_FLAG, equals: true }] });
     for (const q of DEFS.filter((x) => x.id !== 'm28')) expect(JSON.stringify(q.startWhen), q.id).not.toContain('story.gate.a3');
     // the side quests wait for their main-line parent, never for a sibling side quest
     for (const [side, main] of [['r15', 'm28'], ['r18', 'm28'], ['r16', 'm29'], ['r17', 'm30']] as const) expect([...questRefs(DEFS.find((q) => q.id === side)!.startWhen)]).toEqual([main]);
@@ -139,7 +140,7 @@ describe('the lower Dragonspine quests as data', () => {
     const own = new RegExp(`^story\\.(${ids.join('|')})\\.`);
     const json = JSON.stringify(DEFS);
     const keys = [...json.matchAll(/"(story\.[a-z0-9.]+)"/gi)].map((m) => m[1]!);
-    for (const k of keys) if (k !== 'story.gate.a3') expect(k, k).toMatch(own);
+    for (const k of keys) if (k !== 'story.gate.a3' && k !== M28_OPEN_FLAG) expect(k, k).toMatch(own);
   });
 
   it('every kill objective names a tag some spawner carries; every group row names real spawner ids', () => {
@@ -157,5 +158,16 @@ describe('the lower Dragonspine quests as data', () => {
     expect(K4.R16_CHOICE_FLAG).toBe('story.r16.choice');
     const routes = buildCarryRoutes(heightAt, build).map((r) => r.id);
     for (const id of [...R15_SLEDS, 'egg.r18.1', 'egg.r18.2', 'egg.r18.3', 'candle.r17.down', 'candle.r17.up']) expect(routes, id).toContain(id);
+  });
+});
+
+describe('M28 phase hold', () => {
+  it('the local flag string is the one Phase E writes', () => {
+    expect(M28_OPEN_FLAG).toBe(DRAGONSPINE_OPEN_FLAG);
+  });
+
+  it('?act3=m28 still starts: the jump writes the open flag for M28 in either order', () => {
+    expect(needsDragonspine('m28', 'spine')).toBe(true);
+    expect(needsDragonspine('m28', 'greyfen')).toBe(true);
   });
 });

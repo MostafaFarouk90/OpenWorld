@@ -108,6 +108,23 @@ export const SECTIONS: readonly StealthSectionDef[] = [
     guardGroups: ['stealth.m19.watch'],
     hideSpots: [1, 2, 3, 4].map((i) => ({ id: `hide:m19-${i}`, anchor: `oldsmoke.hide.m19.${i}` })),
   },
+  // Act 3 (K13): R18's egg climb to the Hawk Cliffs nest, on K4's anchors in dragonspine/hawkCliffs.ts. The box covers the
+  // `trg.dragonspine.hawkcliffs.nest` sphere (16 m round the shelf) and the top of the climb. There are no watch guards: the
+  // rime-hawk parents are K6b's (they stoop on whoever is seen near the nest), so being seen is never a capture and no group is
+  // reset here; the section holds saves and sends a load back to the climb's top. The exit is armed only after `nested`, which
+  // is also when the section stops being live, so it ends by liveness (the egg step), not by walking out.
+  {
+    id: 'r18.nest-ledge',
+    quest: { id: 'r18', liveFrom: 'nested', liveUntil: 'nested', exitArmedAfter: ['nested'] },
+    bounds: v('dragonspine.hawk.nest.r18', 36, 14, 22),
+    checkpoints: [
+      { id: 'nest.approach', anchor: 'dragonspine.hawk.climb.15', volume: v('dragonspine.hawk.climb.15', 4, 6, 4) },
+      { id: 'nest.ledge', anchor: 'dragonspine.hawk.nest.r18', volume: v('dragonspine.hawk.nest.r18', 4, 6, 4) },
+    ],
+    exit: v('dragonspine.hawk.nest.3', 2, 4, 2),
+    guardGroups: [],
+    hideSpots: [],
+  },
 ];
 
 export const isInteriorBounds = (b: StealthSectionDef['bounds']): b is { interior: string } => 'interior' in b;
