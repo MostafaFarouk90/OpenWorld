@@ -98,7 +98,7 @@ export const npcDunstan: DialogueDef = {
   nodes: [
     du('j06-brief', 'j06-brief-2'), du('j06-brief-2'), du('j06-remind'),
     du('j06-back', 'j06-back-2'), du('j06-back-2'),
-    du('j08-bark'),
+    du('j08-bark', null, { effects: [{ setFlag: 'story.j08.bark1', value: true }, { completeObjective: ['j08', 'bark1'] }] }),
     du('idle'),
   ],
 };
@@ -125,6 +125,11 @@ const classOpen: Condition = { flag: 'story.m07.classOpen', equals: true };
 const callBout = (n: 1 | 2 | 3): Effect => ({ setFlag: `story.j09.b${n}`, value: true });
 const trainChoice = { id: 'train', textKey: ST + 'trainer-open-2.train', when: classOpen, next: 'trainer-open-2' };
 
+/** Stane's job nodes sit above the class trainer in his start list, so each keeps the trainer one choice away. */
+const withTrain = (n: DialogueNode): DialogueNode => ({
+  ...n, next: undefined, choices: [{ id: 'ok', textKey: ST + 'j09-ok', next: null }, trainChoice],
+});
+
 export const HM_ADDITIONS: Record<string, Addition> = {
   // j05: Godric's brief and his thanks; the notice (above) is the offer
   'npc-stallholder-1': {
@@ -150,7 +155,7 @@ export const HM_ADDITIONS: Record<string, Addition> = {
   },
   'npc-aldith': {
     rules: [{ when: { all: [q('j08', 'active'), done('j08', 'lane3'), notDone('j08', 'bark2')] }, node: 'j08-bark' }],
-    nodes: [{ id: 'j08-bark', speaker: 'aldith', textKey: AL + 'j08-bark', next: null }],
+    nodes: [{ id: 'j08-bark', speaker: 'aldith', textKey: AL + 'j08-bark', next: null, effects: [{ completeObjective: ['j08', 'bark2'] }] }],
   },
   // j09: offered by Stane in the Bastion yard once R02 is done; the trainer stays reachable from the offer
   'npc-stane': {
@@ -172,10 +177,10 @@ export const HM_ADDITIONS: Record<string, Addition> = {
         ],
       },
       stn('j09-yes'), stn('j09-later'),
-      stn('j09-remind', null, { effects: [{ if: { all: [q('j09', 'active'), notDone('j09', 'bout1')] }, then: [callBout(1)] }] }),
-      stn('j09-word1', null, { effects: [callBout(2)] }),
-      stn('j09-word2', null, { effects: [callBout(3)] }),
-      stn('j09-close'),
+      withTrain(stn('j09-remind', null, { effects: [{ if: { all: [q('j09', 'active'), notDone('j09', 'bout1')] }, then: [callBout(1)] }] })),
+      withTrain(stn('j09-word1', null, { effects: [callBout(2)] })),
+      withTrain(stn('j09-word2', null, { effects: [callBout(3)] })),
+      withTrain(stn('j09-close')),
       {
         id: 'j09-again', speaker: 'stane', textKey: ST + 'j09-again',
         choices: [

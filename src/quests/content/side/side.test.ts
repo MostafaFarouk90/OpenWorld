@@ -23,6 +23,9 @@ import {
   SIDE_POST_RULES, boardNotice, startingNote,
 } from './index';
 import { D02_PREREQUISITES } from '../d02.quest';
+import { SIDE_ADDITIONS, changesWorld } from './dialogues';
+import { evalCondition } from '../../conditions';
+import type { Condition, QuestDef } from '../../types';
 import { J05_NOTICE } from './dialogues.hm';
 import { resolvePosts } from '../../posts';
 import purseSource from '../../../economy/Purse.ts?raw';
@@ -961,7 +964,7 @@ describe('j09: repeat bouts pay no xp and no gold, and a yard veteran yielding p
   });
 });
 
-describe('the xp and gold guard: all eleven jobs leave Act 2 entry within half a level of baseline', () => {
+describe('the xp and gold guard: after Act 1 with all eleven jobs (j11 comes after the ending) the level is within half a level of baseline', () => {
   it('level delta under 0.5 and gold within the 250 margin', async () => {
     const fx = await readAct1Fixture(ACT1_FIXTURES.complete) as { entries: { progression: { data: { xp: number } }; inventory: { data: { gold: number } } } };
     const base = fx.entries.progression.data.xp;
@@ -978,11 +981,170 @@ describe('the xp and gold guard: all eleven jobs leave Act 2 entry within half a
     const delta = level(base + rewards + kills) - level(base);
     expect(delta, `+${rewards} reward xp, +${kills} kill xp at base ${base}`).toBeLessThan(0.5);
     expect(gold).toBeLessThanOrEqual(250);
-    expect(fx.entries.inventory.data.gold + gold).toBeLessThanOrEqual(fx.entries.inventory.data.gold + 250);
+    expect(fx.entries.inventory.data.gold).toBe(30);
+    expect(gold).toBe(176);
+    expect(fx.entries.inventory.data.gold + gold, 'baseline gold plus every job').toBeLessThanOrEqual(250);
   });
 
   it('no side spawner tag feeds the purse economy', () => {
     const tags = SIDE_SPAWNERS.map((s) => s.tag);
     for (const t of tags) expect(purseSource.includes(`'${t}'`), t).toBe(false);
+  });
+});
+
+describe('side rules never shadow a main-chain talk step', () => {
+  const sideIds = new Set(SIDE_QUEST_IDS as readonly string[]);
+  const mains = questDefs.filter((q) => !sideIds.has(q.id));
+  type St = { quests: Record<string, string>; done: Set<string>; flags: Record<string, FlagValue> };
+  const envOf = (st: St) => ({
+    state: { getFlag: (k: string) => st.flags[k], setFlag() {}, clearFlag() {}, favour: () => 0, favourBand: () => 'neutral', addFavour: () => 0 },
+    quests: { state: (id: string) => st.quests[id] ?? 'inactive', objectiveDone: (q: string, o: string) => st.done.has(`${q}/${o}`) },
+  }) as never;
+  const startNode = (d: { start: unknown }, st: St): string | undefined => {
+    const rules = d.start as { when: Condition; node: string }[];
+    return rules.find((r) => evalCondition(r.when, envOf(st)))?.node;
+  };
+  /** Quest q active with objective index i the one the player is on (earlier ones done). */
+  const stepState = (base: St, q: QuestDef, i: number) => {
+    base.quests[q.id] = 'active';
+    q.objectives.forEach((o, k) => { if (k !== i && (q.sequential ? k < i : true)) base.done.add(`${q.id}/${o.id}`); });
+  };
+
+  const npcs = Object.keys(SIDE_ADDITIONS);
+  it('covers every giver that received side rules', () => {
+    expect(npcs).toEqual(expect.arrayContaining(['npc-aldith', 'npc-sexton', 'npc-stane', 'npc-stallholder-1', 'npc-rook', 'npc-tobb']));
+  });
+
+  for (const npc of npcs) {
+    it(`${npc}: with a main talk step current and any job at any step, the start node is never a job node`, () => {
+      const d = dialogueDefs.find((x) => x.id === npc)!;
+      const target = npc.replace(/^npc-/, '');
+      const jobNodes = new Set(SIDE_ADDITIONS[npc]!.nodes.map((n) => n.id));
+      const jobs = SIDE_QUEST_DEFS;
+      let checked = 0;
+      for (const q of mains) {
+        q.objectives.forEach((o, i) => {
+          if (o.type !== 'talk' || o.target !== target) return;
+          // every job: inactive with all the main quests it could wait on completed, and active at each of its steps
+          const variants: ((st: St) => void)[] = [];
+          for (const j of jobs) {
+            variants.push((st) => { for (const m of mains) if (m.id !== q.id) st.quests[m.id] = 'completed'; for (const sj of jobs) if (sj.id !== j.id) st.quests[sj.id] = 'completed'; });
+            j.objectives.forEach((_, k) => variants.push((st) => { for (const m of mains) if (m.id !== q.id) st.quests[m.id] = 'completed'; stepState(st, j, k); }));
+          }
+          for (const v of variants) {
+            const st: St = { quests: {}, done: new Set(), flags: { 'story.m06.started': true, 'story.m05.tobbBond': true } };
+            v(st);
+            stepState(st, q, i);
+            const node = startNode(d, st);
+            expect(jobNodes.has(node ?? ''), `${npc}: ${q.id}.${o.id} current, but "${node}" (a job node) wins`).toBe(false);
+            checked++;
+          }
+        });
+      }
+      void checked;
+    });
+  }
+
+  const consequential = (d: never, id: string) => changesWorld(d, id);
+
+  it('for every giver, any state in which its own rules reach a node that changes the world, the job rules leave that node alone', () => {
+    const originals = dialogueDefs; // merged; the originals are the merged list minus the job rules (their nodes)
+    let seed = 12345;
+    const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+    for (const npc of npcs) {
+      const merged = originals.find((x) => x.id === npc)!;
+      const jobNodes = new Set(SIDE_ADDITIONS[npc]!.nodes.map((n) => n.id));
+      const rules = merged.start as { when: Condition; node: string }[];
+      const own = rules.filter((r) => !jobNodes.has(r.node));
+      const text = JSON.stringify(rules);
+      const qids = new Set<string>([...text.matchAll(/"quest":"(\w+)"/g)].map((m) => m[1]!));
+      for (const m of text.matchAll(/"objective":\["(\w+)"/g)) qids.add(m[1]!);
+      for (const j of SIDE_QUEST_IDS) qids.add(j);
+      const flags = new Map<string, FlagValue[]>();
+      for (const m of text.matchAll(/"flag":"([\w.-]+)"(?:,"equals":("[^"]*"|true|false|\d+))?/g)) {
+        flags.set(m[1]!, [...(flags.get(m[1]!) ?? []), m[2] === undefined ? true : (JSON.parse(m[2]) as FlagValue)]);
+      }
+      let hits = 0;
+      for (let n = 0; n < 40000; n++) {
+        const st: St = { quests: {}, done: new Set(), flags: {} };
+        for (const id of qids) {
+          const q = questDefs.find((x) => x.id === id);
+          if (!q) continue;
+          const r = rnd();
+          if (r < 0.34) continue;
+          if (r < 0.67) {
+            st.quests[id] = 'active';
+            const k = Math.floor(rnd() * (q.objectives.length + 1));
+            q.objectives.forEach((o, i) => { if (q.sequential ? i < k : rnd() < 0.5) st.done.add(`${id}/${o.id}`); });
+          } else {
+            st.quests[id] = 'completed';
+            for (const o of q.objectives) st.done.add(`${id}/${o.id}`);
+          }
+        }
+        // the jobs whose offer is a dialogue that sets a flag first: no job runs without it
+        if (st.quests.j02 && st.quests.j02 !== 'inactive') st.flags['quest.m02.farewellSeen'] = true;
+        if (st.quests.j04 && st.quests.j04 !== 'inactive') st.flags['story.m05.tobbBond'] = true;
+        for (const [f, vals] of flags) if (rnd() < 0.5) st.flags[f] = vals[Math.floor(rnd() * vals.length)]!;
+        const env = envOf(st);
+        const orig = own.find((r) => evalCondition(r.when, env))?.node;
+        const got = rules.find((r) => evalCondition(r.when, env))?.node;
+        if (orig && got !== orig && consequential(merged as never, orig)) {
+          expect.fail(`${npc}: its own "${orig}" is shadowed by "${got}" in ${JSON.stringify({ q: st.quests, f: st.flags })}`);
+        }
+        hits++;
+      }
+      expect(hits).toBe(40000);
+    }
+  });
+
+  it('j08 bark at Aldith while M07 waits on her: the bark waits for her own M07 steps and follows once they are done', () => {
+    const w = world();
+    afterM06(w);
+    play(w, 'npc-aldith', 'aldith'); // M07 offer
+    expect(w.manager.state('m07')).toBe('active');
+    for (const o of ['ask', 'coins', 'o2', 'o3']) w.manager.completeObjective('m07', o);
+    play(w, 'npc-sergeant', 'sergeant', [1]);
+    for (const l of ['j08.lane-1', 'j08.lane-2']) enter(w, l);
+    play(w, 'npc-dunstan', 'dunstan');
+    expect(w.manager.objectiveDone('j08', 'bark1')).toBe(true);
+    enter(w, 'j08.lane-3');
+    const seen = play(w, 'npc-aldith', 'aldith');
+    expect(seen).not.toContain('j08-bark');
+    expect(seen).toContain('m07-return');
+    expect(w.manager.objectiveDone('j08', 'bark2')).toBe(false);
+    w.manager.complete('m07');
+    w.settle();
+    const again = play(w, 'npc-aldith', 'aldith');
+    expect(w.manager.objectiveDone('j08', 'bark2'), again.join()).toBe(true);
+  });
+
+  it('a bark is credited only by its own node (another conversation with the NPC does not count)', () => {
+    const w = world();
+    afterM06(w);
+    play(w, 'npc-sergeant', 'sergeant', [1]);
+    for (const l of ['j08.lane-1', 'j08.lane-2']) enter(w, l);
+    w.bus.emit('dialogue.ended', { npcId: 'dunstan', reason: 'completed' });
+    expect(w.manager.objectiveDone('j08', 'bark1')).toBe(false);
+    play(w, 'npc-dunstan', 'dunstan');
+    expect(w.manager.objectiveDone('j08', 'bark1')).toBe(true);
+  });
+
+  it('j07 active: the sexton still hands over the R04 page (the job waits)', () => {
+    const w = world();
+    afterM07(w);
+    play(w, 'note-j07-notice', 'note-j07-notice');
+    expect(w.manager.state('j07')).toBe('active');
+    expect(w.manager.start('r04')).toBe(true);
+    const seen = play(w, 'npc-sexton', 'sexton');
+    expect(seen).toContain('page');
+    expect(w.flags.get('story.r04.page.2')).toBe(true);
+  });
+
+  it('j09 active: the class trainer stays one choice away on every job node', () => {
+    const d = dialogueDefs.find((x) => x.id === 'npc-stane')!;
+    for (const id of ['j09-remind', 'j09-word1', 'j09-word2', 'j09-close']) {
+      const n = d.nodes.find((x) => x.id === id)!;
+      expect(n.choices?.some((c) => c.next === 'trainer-open-2'), id).toBe(true);
+    }
   });
 });

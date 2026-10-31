@@ -15,7 +15,7 @@ export const questStringsSide: Record<string, string> = {
 
   // ---- j02 Edda's Bread Round ----
   'quest.j02.title': "Edda's Bread Round",
-  'quest.j02.summary': "Edda has baked three loaves for the doors that went hungry in the ash: the miller, the widow at the lane's end and the chapel sexton. She asks you to carry them round.",
+  'quest.j02.summary': "Edda has baked three loaves for the doors that went hungry in the ash: the widow at the lane's end, the miller at the chapel and the chapel sexton. She asks you to carry them round.",
   'quest.j02.basket': "Take the basket from the bakery step",
   'quest.j02.aldwin': 'Take a loaf to Aldwin the miller',
   'quest.j02.orla': "Take a loaf to Orla Pike at the lane's end",
@@ -88,7 +88,7 @@ export const questStringsSide: Record<string, string> = {
 
   // ---- j09 Stane's Open Board ----
   'quest.j09.title': "Stane's Open Board",
-  'quest.j09.summary': 'Marshal Stane keeps an open board in the Halvard Bastion yard: three bouts against yard veterans, no purse, and a word between each. The yard is the pay.',
+  'quest.j09.summary': 'Marshal Stane keeps an open board in the Halvard Bastion yard: three bouts against yard veterans, a word between each, and a small purse from the house when the third is done.',
   'quest.j09.bout1': 'Spar with the first yard veteran (Spare him when he yields)',
   'quest.j09.word1': 'Hear Stane out',
   'quest.j09.bout2': 'Spar with the second yard veteran',
@@ -96,7 +96,7 @@ export const questStringsSide: Record<string, string> = {
   'quest.j09.bout3': 'Spar with the third yard veteran',
   'quest.j09.close': "Hear Stane's closing word",
   'codex.lore.halvard-open-board.name': "The Bastion's Open Board",
-  'codex.lore.halvard-open-board.body': "Marshal Stane keeps an open board in the Halvard Bastion yard: three bouts, no purse, no crowd. The house's old teaching is that a yielded man is a student and a spared one remembers it. A veteran beaten fairly goes home to tell the barracks which of the new knights can be taught.",
+  'codex.lore.halvard-open-board.body': "Marshal Stane keeps an open board in the Halvard Bastion yard: three bouts, no crowd. The house's old teaching is that a yielded man is a student and a spared one remembers it. A veteran beaten fairly goes home to tell the barracks which of the new knights can be taught.",
 
   // ---- j10 Tobb's Second Verse ----
   'quest.j10.title': "Tobb's Second Verse",
@@ -106,16 +106,16 @@ export const questStringsSide: Record<string, string> = {
 
   // ---- j11 The Crates' Cart Tracks ----
   'quest.j11.title': "The Crates' Cart Tracks",
-  'quest.j11.summary': "Rook remembers a spur off the Underways, east of the first kennel, where the carts once turned aside. The Sewer Master Key opens the grate; the tracks lead on.",
+  'quest.j11.summary': "Rook remembers a spur off the Underways, west of the first kennel, where the carts once turned aside. The Sewer Master Key opens the grate; the tracks lead on.",
   'quest.j11.listen': "Hear Rook's memory of the cart spur",
-  'quest.j11.grate': 'Unlock the grate east of the first kennel with the Sewer Master Key',
+  'quest.j11.grate': 'Unlock the grate west of the first kennel with the Sewer Master Key',
   'quest.j11.track1': 'Follow the cart tracks to the first mark',
   'quest.j11.track2': 'Follow the cart tracks to the second mark',
   'quest.j11.hounds': 'Put down the hounds at the end of the tracks (a Spare counts)',
   'quest.j11.waybill': 'Read the waybill nailed to the last post',
   'quest.j11.report': 'Tell Rook what the tracks led to',
   'codex.lore.cart-tracks.name': 'The Cart Tracks',
-  'codex.lore.cart-tracks.body': "A spur of the Underways keeps a pair of rusted cart tracks that run to a bricked-up door. A waybill nailed to the last post names the Crucible as the consignee, to be signed for in the Lord-Regent's hand and no other.",
+  'codex.lore.cart-tracks.body': "A spur of the Underways keeps a pair of rusted cart tracks that run to a bricked-up door. A waybill nailed to the last post names the Crucible as the consignee, with a count of nine carts and no signature on the receipt.",
 };
 
 const P = (id: string, k: string) => `dialogue.${id}.${k}`;
@@ -237,16 +237,17 @@ export const dialogueStringsSide: Record<string, string> = {
   [P('npc-aldith', 'j08-bark')]: 'Cutpurses? I serve them ale; I do not ask their trade. But I counted two sets of boots in the alley this morning, and neither pair paid.',
 
   // ---- j09: Stane's open board ----
-  [P('npc-stane', 'j09-offer')]: '{name}. The yard has been quiet since the drill. I keep an open board for whoever has the stomach: three bouts against my veterans, no purse, no crowd. The yard is the pay. They fight to yield, not to bury. Beat each fairly and I will tell you what the board is for. Well?',
+  [P('npc-stane', 'j09-offer')]: '{name}. The yard has been quiet since the drill. I keep an open board for whoever has the stomach: three bouts against my veterans, no crowd, and a little house coin when the third is done. They fight to yield, not to bury. Beat each fairly and I will tell you what the board is for. Well?',
   [P('npc-stane', 'j09-offer.accept')]: 'I will take the board.',
   [P('npc-stane', 'j09-offer.later')]: 'Not today.',
   [P('npc-stane', 'j09-yes')]: 'The first is in the yard. Spare him when he yields; those are my friends, and I would like them walking home.',
   [P('npc-stane', 'j09-later')]: 'The board is open as long as I am. Come when your arm is.',
+  [P('npc-stane', 'j09-ok')]: 'Understood.',
   [P('npc-stane', 'j09-remind')]: 'Your veteran is in the yard, {name}. Spare him when he yields.',
   [P('npc-stane', 'j09-word1')]: 'One down. He will tell the others you fight clean. Take a breath; the next is shorter in temper and longer in reach.',
   [P('npc-stane', 'j09-word2')]: 'Two. The last of them used to teach the others. Do not mistake patience for weakness.',
-  [P('npc-stane', 'j09-close')]: 'Three. That is the board, {name}, and there is no purse because the bouts were the pay. Halvard\'s yard was never about winning: a soldier who cannot yield cannot be taught. There is a little coin in it, from the house, because even a yard has to eat.',
-  [P('npc-stane', 'j09-again')]: 'The board is open if you want it again. One more veteran, no purse and no coin; nobody will remember who won.',
+  [P('npc-stane', 'j09-close')]: 'Three. That is the board, {name}, and the bouts themselves paid nothing: it is only the house that adds a coin at the end. Halvard\'s yard was never about winning: a soldier who cannot yield cannot be taught. There is a little coin in it, from the house, because even a yard has to eat.',
+  [P('npc-stane', 'j09-again')]: 'If you want one more, there is a veteran in the yard. No purse and no coin; nobody will remember who won.',
   [P('npc-stane', 'j09-again.again')]: 'One more bout.',
   [P('npc-stane', 'j09-again.later')]: 'Not now.',
   [P('npc-stane', 'j09-again-yes')]: 'He is in the yard. Same terms: spare him when he yields.',
@@ -286,12 +287,12 @@ export const dialogueStringsSide: Record<string, string> = {
   [P('npc-rook', 'j11-offer-2.later')]: 'Not now, Captain.',
   [P('npc-rook', 'j11-yes')]: 'Mind the hounds past the grate. Somebody has been feeding them, and it was not me.',
   [P('npc-rook', 'j11-later')]: 'The spur is not going anywhere. Neither, I think, are the tracks.',
-  [P('npc-rook', 'j11-remind')]: 'The grate is east of the first kennel. The key does the rest. Two marks on the tracks, then whatever waits at the end.',
+  [P('npc-rook', 'j11-remind')]: 'The grate is west of the first kennel. The key does the rest. Two marks on the tracks, then whatever waits at the end.',
   [P('npc-rook', 'j11-back')]: 'A post at the end of the tracks, with the Crucible\'s name on it again. Under my city, and nobody on my Watch told me.',
   [P('npc-rook', 'j11-back-2')]: 'I will keep it with the other things I do not say aloud. Take this, {name}, and thank you for the look.',
 
   // ---- j11 waybill ----
   [P('note-j11-waybill', '1')]: 'A waybill, nailed to the last post of the tracks, the nail rusted into the wood. Cart numbers run down one side, with tally strokes in a smelter hand.',
-  [P('note-j11-waybill', '2')]: "CONSIGNEE: THE CRUCIBLE. BY THE OLD WAY AT THE NEW MOON. RECEIPT TO BE SIGNED IN THE LORD-REGENT'S HAND AND IN NO OTHER.",
+  [P('note-j11-waybill', '2')]: "CONSIGNEE: THE CRUCIBLE. BY THE OLD WAY AT THE NEW MOON. RECEIPT UNSIGNED. CARTS COUNTED AT THE GATE: NINE.",
   [P('note-j11-waybill', '3')]: 'The tracks end at a wall that was a door once. Whatever the carts carried, it went a long way to be signed for.',
 };

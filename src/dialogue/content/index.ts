@@ -27,6 +27,7 @@ import { ACT2_DIALOGUES, ACT2_EXTENDED_DIALOGUES } from './act2';
 import { npcAelfredaCompanion } from '../../companions/dialogue/npcAelfredaCompanion.dialogue';
 import { withAct3Trainers } from './act3/trainers';
 import { SIDE_DIALOGUES, withSideJobs } from '../../quests/content/side/dialogues';
+import { questDefs } from '../../quests/content';
 
 // Act 3 (K10): the four Harrowmark trainers get their master-book lines in front.
 export const dialogueDefs: DialogueDef[] = withAct3Trainers(withSideJobs([
@@ -43,4 +44,4 @@ export const dialogueDefs: DialogueDef[] = withAct3Trainers(withSideJobs([
   ...ACT2_EXTENDED_DIALOGUES, ...ACT2_DIALOGUES,
   // Act 1 side jobs (j01 to j04): the widow, the sexton and the Dead Road stones; the givers' offers are merged in by withSideJobs
   ...SIDE_DIALOGUES,
-]));
+], questDefs));

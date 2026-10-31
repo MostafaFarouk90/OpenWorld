@@ -180,7 +180,7 @@ dialogue (38 nodes).
 | Phase B (M06 to M10, R03, R04, D02) | 163.3 | 375 |
 | **Act 1 (the quest chain)** | **303.4** | **695** |
 | Side content (j01 to j11, below) | 56.1 | 52 |
-| **Act 1 with side content** | **359.5** | **695** |
+| **Act 1 with side content (j11 counted; 352.3, 50.7% before the ending)** | **359.5** | **695** |
 
 The tutorial itself (Knighting Day) sits outside these tables; it has its own smoke timing in
 plans/knighting-day-smoke.md. Before the density pass the act measured 136 formula minutes without the opening.
@@ -204,10 +204,10 @@ points of interest stay uncounted. Pay is in the quest files; the guard test kee
 | j08 Watch Patrol | 1133 | 5 | 7.4 | 6.0 | +23 |
 | j09 Stane's Open Board | 157 | 7 | 7.4 | 6.0 | +24 |
 | j10 Tobb's Second Verse | 86 | 7 | 2.8 | 2.5 | +13 |
-| j11 The Crates' Cart Tracks | 951 | 5 | 7.2 | 6.0 | +20 |
+| j11 The Crates' Cart Tracks (after the ending: Underways, post-D02) | 951 | 5 | 7.2 | 6.0 | +20 |
 | **Side content** | | | **56.1** | **52.0** | **+8** |
 
-Act 1 with the side content: 303.4 + 56.1 = **359.5 of 695 formula minutes (51.7%)**, over the 50% act target.
+Act 1 with the side content: 303.4 + 56.1 = **359.5 of 695 formula minutes (51.7%)** with j11 counted. j11 is offered only after D02, which fires the Act 1 ending, so before the ending the act stands at 303.4 + 48.9 = **352.3 (50.7%)**, still over the 50% act target.
 
 # Act 2 play-time estimate (Phase C)
 

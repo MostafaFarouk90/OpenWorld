@@ -1,7 +1,7 @@
 // Dialogue for the Act 1 side jobs: the new NPCs' own trees, the readable notes, and the start rules and nodes the jobs add to
 // existing givers (Hob, Edda, Aldwin, Tobb). `withSideJobs` puts the rules in front of a giver's own, each gated so it matches only
 // while its job is on offer or running, and appends the nodes. A giver whose job is not on offer behaves exactly as before.
-import type { Condition, DialogueDef } from '../../types';
+import type { Condition, DialogueDef, QuestDef } from '../../types';
 import { startingNote } from './boards';
 import { HM_ADDITIONS, HM_DIALOGUES, HM_STARTING_NOTES, type Addition } from './dialogues.hm';
 
@@ -155,18 +155,73 @@ const BRIGHTWATER_ADDITIONS: Record<string, Addition> = {
 };
 
 /** Both rounds' additions, keyed by the giver's dialogue id (a giver in both gets the Harrowmark rules first). */
-const ADDITIONS: Record<string, Addition> = { ...BRIGHTWATER_ADDITIONS };
+export const SIDE_ADDITIONS: Record<string, Addition> = { ...BRIGHTWATER_ADDITIONS };
 for (const [id, add] of Object.entries(HM_ADDITIONS)) {
-  const old = ADDITIONS[id];
-  ADDITIONS[id] = old ? { rules: [...add.rules, ...old.rules], nodes: [...old.nodes, ...add.nodes] } : add;
+  const old = SIDE_ADDITIONS[id];
+  SIDE_ADDITIONS[id] = old ? { rules: [...add.rules, ...old.rules], nodes: [...old.nodes, ...add.nodes] } : add;
 }
 
-/** Adds the side jobs' start rules (in front) and nodes (behind) to the givers' own dialogues. */
-export function withSideJobs(defs: DialogueDef[]): DialogueDef[] {
+/** The condition under which a quest's talk objective is the one the player is on now (its quest active, earlier steps done). */
+function currentTalk(q: QuestDef, i: number): Condition {
+  const o = q.objectives[i]!;
+  const all: Condition[] = [{ quest: q.id, state: 'active' }, { objective: [q.id, o.id], done: false }];
+  if (q.sequential) for (const prev of q.objectives.slice(0, i)) all.push({ objective: [q.id, prev.id], done: true });
+  if (o.when) all.push(o.when);
+  return { all };
+}
+
+/**
+ * `talk` objectives are credited by any conversation that ends with their NPC, so a side node that wins the start list while a
+ * main quest (or another job) is waiting on the same NPC would swallow that quest's own node and still credit its talk step.
+ * Every side rule is therefore held back while some other quest's talk objective for the NPC is current; the giver's own
+ * rules answer instead, and the job's rule returns the moment that step is done.
+ */
+function guardRules(npcId: string, rules: Addition['rules'], defs: readonly QuestDef[]): Addition['rules'] {
+  const target = npcId.replace(/^npc-/, '');
+  return rules.map((r) => {
+    const own = [...JSON.stringify(r.when).matchAll(/"quest":"(j\d\d)"/g)].map((m) => m[1]).pop();
+    const busy: Condition[] = [];
+    for (const q of defs) {
+      if (q.id === own) continue;
+      q.objectives.forEach((o, i) => { if (o.type === 'talk' && o.target === target) busy.push(currentTalk(q, i)); });
+    }
+    return busy.length === 0 ? r : { ...r, when: { all: [{ not: { any: busy } }, r.when] } };
+  });
+}
+
+/** Adds the side jobs' start rules (in front, held back while another quest waits on the same NPC) and nodes (behind) to the givers' own dialogues. */
+export function withSideJobs(defs: DialogueDef[], quests: readonly QuestDef[] = []): DialogueDef[] {
   return defs.map((d) => {
-    const add = ADDITIONS[d.id];
+    const add = SIDE_ADDITIONS[d.id];
     if (!add) return d;
-    const start = Array.isArray(d.start) ? [...add.rules, ...d.start] : d.start;
+    let start = d.start;
+    if (Array.isArray(d.start)) {
+      // A job rule also steps aside whenever one of the giver's own rules that leads to a node changing the world (a hand-in, a
+      // page, a class unlock) matches: those can never be shadowed. Greetings, reminders and offers it does shadow.
+      const main = d.start.filter((r) => changesWorld(d, r.node)).map((r) => r.when);
+      const rules = guardRules(d.id, add.rules, quests).map((r) => (main.length ? { ...r, when: { all: [{ not: { any: main } }, r.when] } as Condition } : r));
+      start = [...rules, ...d.start];
+    }
     return { ...d, start, nodes: [...d.nodes, ...add.nodes] };
   });
+}
+
+/** Whether playing from `id` can change the world: a flag, a quest, an objective or a reward on the way. */
+export function changesWorld(d: DialogueDef, id: string): boolean {
+  // Starting a quest (an offer, with its first objective) and opening a trainer only delay when shadowed; a flag, an objective or a reward is lost.
+  const lasting = (es: readonly unknown[] | undefined) => {
+    const list = (es ?? []) as Record<string, unknown>[];
+    const started = list.flatMap((e) => ('startQuest' in e ? [e.startQuest as string] : []));
+    return list.some((e) => !('startQuest' in e || 'event' in e || ('completeObjective' in e && started.includes((e.completeObjective as string[])[0]!))));
+  };
+  const seen = new Set<string>();
+  const walk = (n: string | null | undefined): boolean => {
+    if (!n || seen.has(n)) return false;
+    seen.add(n);
+    const node = d.nodes.find((x) => x.id === n);
+    if (!node) return false;
+    if (lasting(node.effects)) return true;
+    return walk(node.next) || (node.choices ?? []).some((c) => lasting(c.effects) || walk(c.next));
+  };
+  return walk(id);
 }

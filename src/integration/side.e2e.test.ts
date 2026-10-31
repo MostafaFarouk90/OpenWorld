@@ -52,7 +52,7 @@ describe('Act 1 side jobs j01 to j04 (all real plugins)', () => {
     await boot();
     for (const j of SIDE_BRIGHTWATER) expect(qstate(j), j).toBe('inactive');
     expect(h!.ctx.state.flagsWith('story.j0')).toEqual([]);
-    h!.ctx.state.setFlag('story.m05.tobbBond', true);
+    h!.ctx.state.setFlag('story.m05.tobbBond', true); // the saved fixture predates the bond scene's flag
     const trails = emptySideTrails();
     await playSideJobs(h!, trails);
     for (const j of SIDE_BRIGHTWATER) expect(qstate(j), j).toBe('completed');
@@ -71,7 +71,7 @@ describe('Act 1 side jobs j01 to j04 (all real plugins)', () => {
 
   it('j03 started from the tablet first, j02 with the loaf kept, j04 with another verse', async () => {
     await boot();
-    h!.ctx.state.setFlag('story.m05.tobbBond', true);
+    h!.ctx.state.setFlag('story.m05.tobbBond', true); // the saved fixture predates the bond scene's flag
     const t = emptySideTrails();
     await playJ03(h!, t.j03, 'tablet');
     expect(qstate('j03')).toBe('completed');
@@ -84,7 +84,7 @@ describe('Act 1 side jobs j01 to j04 (all real plugins)', () => {
 
   it('saves and reloads in the middle of a job (j01 with one lamb home, j04 with the fire lit)', async () => {
     await boot();
-    h!.ctx.state.setFlag('story.m05.tobbBond', true);
+    h!.ctx.state.setFlag('story.m05.tobbBond', true); // the saved fixture predates the bond scene's flag
     const t = emptySideTrails();
     // j01: accept, find and carry the first lamb home, save
     const { talkTo, carryTo } = await import('./phaseA');
@@ -151,7 +151,7 @@ describe('Act 1 side jobs j05 to j11 (all real plugins)', () => {
   it('j10 is refused until j04 is done, then plays', async () => {
     await boot(await act1(ACT1_FIXTURES.m07ClassChosen));
     expect(h!.ctx.services.require('quests').start('j10')).toBe(false);
-    h!.ctx.state.setFlag('story.m05.tobbBond', true);
+    h!.ctx.state.setFlag('story.m05.tobbBond', true); // the saved fixture predates the bond scene's flag
     const t = emptySideTrails();
     await playJ04(h!, t.j04);
     await playJ10(h!, t.j10, 'window');

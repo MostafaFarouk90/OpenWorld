@@ -40,7 +40,7 @@ describe('the Underways generator', () => {
     expect(hashDef(generateUnderways(UNDERWAYS_SEED))).toBe(hashDef(generateUnderways(UNDERWAYS_SEED)));
     // Update deliberately when the layout is meant to change (old saves inside land at the entry, see InteriorController).
     // bbcbf1f0: the density pass (batch 4) added the D02 valve, tally, sluice-hound and crate anchors; no room moved.
-    // 41104a5a: the Act 1 side job j11 added the cart-track spur off a dead-end branch (four rooms, a grate, six anchors, two
+    // 298a8f16: the Act 1 side job j11 added the cart-track spur off a dead-end branch (four rooms, a grate, six anchors, two
     // triggers); no earlier room moved.
     expect(hashDef(UNDERWAYS_DEF)).toBe('298a8f16');
   });
