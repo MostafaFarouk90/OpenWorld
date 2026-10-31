@@ -19,6 +19,8 @@ export const ACT3_FLAG_OWNERS: readonly Act3FlagOwner[] = [
   { pattern: 'boss.<id>.outcome', owner: 'core boss registry', note: 'written by the core boss registry for every boss' },
   { pattern: 'story.phase.dragonspineOpen', owner: 'Phase F PR', note: 'nothing writes it in Phase E' },
   { pattern: 'gear.shardgem.granted.<id>', owner: 'K10', note: 'one shard-gem paid per boss (live drop or the D01 to D04 retro-grant)' },
+  { pattern: 'place.poi.a3.<id>.discovered', owner: 'K2', note: 'an Act 3 point of interest or Leap spot found' },
+  { pattern: 'poi.a3.<id>.taken', owner: 'K2', note: 'an Act 3 Leap cache or the song stone taken (once)' },
 ];
 
 /** The quest flag namespace: every Act 3 quest owns `story.<id>.*`, owned by that quest's thread. */
