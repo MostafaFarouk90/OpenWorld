@@ -76,7 +76,8 @@ describe('M26: the framed wake', () => {
     expect(r.hath.wakes).toBe(1);
     expect(r.stage).toMatchObject({ freezes: 1, cutscenes: 1, cameras: 1 });
     const look = r.stage.shots[0]!.lookAt as () => { x: number; y: number; z: number };
-    expect(look()).toEqual(r.hath.headPoint());
+    const head = r.hath.headPoint();
+    expect(look()).toEqual({ x: head.x, y: head.y - 10, z: head.z }); // aimed under her head: she rides high in the frame, clear of the dialogue
     expect(r.flag(M26_WOKE)).toBe(false); // her own wake beat has fired inside wake(); only the scene's end credits
     expect(r.done('m26', 'wake')).toBe(false);
     expect(r.flag('story.m26.guardOut')).toBe(false);

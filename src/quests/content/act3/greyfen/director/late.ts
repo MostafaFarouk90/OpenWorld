@@ -30,12 +30,14 @@ export const R13_FAILS = 'story.r13.songFails';
 export const R13_CALM_TICKS = 360;
 export const M27_BROOD_TICKS = 240;
 /** How long a wading player holds the brood scene back before it plays anyway (a diving player holds it for good), in fixed ticks. */
-export const M27_BROOD_WADE_PATIENCE = 900;
+export const M27_BROOD_WADE_PATIENCE = 600;
 /** The wake scene's own caps: the dialogue is given up on this long after the scene begins, and nothing outlasts the hard cap unless a dialogue is open. */
 export const M26_WAKE_DIALOGUE_GIVEUP = 1200;
 export const M26_WAKE_HARD_CAP = 3600;
 export const M27_BROOD_HARD_CAP = 3000;
 const SHORE_ANCHOR = 'greyfen.mere.shore';
+/** How far under her head the wake shot aims (m), so she is framed above the scene's dialogue panel. */
+const WAKE_AIM_DROP = 10;
 export const DEEPS_INTERIOR = 'greyfen-deeps';
 export const M27_PACK1_GROUP = 'greyfen.q.m27.pack1';
 export const M27_PACK2_GROUP = 'greyfen.q.m27.pack2';
@@ -160,7 +162,11 @@ export function installM26(k: Kit): Off {
     return {
       // behind and a little to the side of Cael, looking out over his shoulder at her head
       position: { x: f.x - fw.x * 6 + fw.z * 2.5, y: f.y + 3.6, z: f.z - fw.z * 6 - fw.x * 2.5 },
-      lookAt: () => hathren()?.headPoint() ?? { x: f.x + fw.x * 55, y: f.y + 8, z: f.z + fw.z * 55 },
+      // aimed a little below her head so the head rides in the upper third, clear of the dialogue panel
+      lookAt: () => {
+        const h = hathren()?.headPoint();
+        return h ? { x: h.x, y: h.y - WAKE_AIM_DROP, z: h.z } : { x: f.x + fw.x * 55, y: f.y - 1, z: f.z + fw.z * 55 };
+      },
       blendIn: 0.8,
       blendOut: 1,
     };
