@@ -191,6 +191,16 @@ export class BossArena<M, P extends { centre: THREE.Vector3 }, E extends ArenaEn
     this.cfg.veil.update(dt);
   }
 
+  /**
+   * Ends the fight as a player death does (no outcome; the encounter resets and the gate opens), for an arena the player can
+   * leave another way than its door (K8: the Mirewater Deeps' far exit works under aggro). No-op with no fight or intro.
+   */
+  abandon(): void {
+    if (this.disposed) return;
+    this.inTrigger = false;
+    this.teardownFight();
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.endIntro();

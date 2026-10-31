@@ -22,6 +22,7 @@ import {
   HAWK_CLIFFS_PATH,
   HAWK_NEST_SHELF,
   RIME_PASS,
+  ROOST_PLATEAU,
   RIME_PASS_POINTS,
   SKYHOLD_SPUR,
   SKYHOLD_SPUR_POINTS,
@@ -474,5 +475,39 @@ describe('the Hawk Cliffs footpath and nest shelf (K4, R18)', () => {
     expect(hi - lo).toBeLessThan(2.5);
     expect(lo - foot).toBeGreaterThan(40);
     expect(hi - foot).toBeLessThan(60);
+  });
+});
+
+describe("Ysmeryth's roost (K4, M31)", () => {
+  const p = ROOST_PLATEAU;
+  const c = DRAGONSPINE_SITES.roost;
+
+  it('is a level 70 x 70 m shelf north of the Wyrm\'s Hearth and south of z 16900', () => {
+    expect(p.box.maxX - p.box.minX).toBe(70);
+    expect(p.box.maxZ - p.box.minZ).toBe(70);
+    expect(c.z).toBeGreaterThan(WYRMS_HEARTH_PLATEAU.box.maxZ);
+    expect(p.box.maxZ).toBeLessThan(16900);
+    for (let x = p.box.minX + 1; x <= p.box.maxX - 1; x += 2) {
+      for (let z = p.box.minZ + 1; z <= p.box.maxZ - 1; z += 2) expect(Math.abs(heightAt(x, z) - p.height), `(${x}, ${z})`).toBeLessThanOrEqual(0.5);
+    }
+  });
+
+  it('nothing within the trial\'s 80 m leave distance tilts more than 0.7, so a fight never spills onto a cliff', () => {
+    let worst = 0;
+    for (let r = 35; r <= 80; r += 2) {
+      for (let t = 0; t < 360; t += 5) {
+        const x = c.x + r * Math.cos((t * Math.PI) / 180);
+        const z = c.z + r * Math.sin((t * Math.PI) / 180);
+        worst = Math.max(worst, Math.hypot(heightAt(x + 0.5, z) - heightAt(x - 0.5, z), heightAt(x, z + 0.5) - heightAt(x, z - 0.5)));
+      }
+    }
+    expect(worst).toBeLessThanOrEqual(0.7);
+  });
+
+  it('the crown\'s crest stands 40 m or more over it to the north, and the Hearth\'s rim 40 m or more to the south', () => {
+    let crest = -Infinity;
+    for (let z = p.box.maxZ; z <= p.box.maxZ + 200; z += 5) crest = Math.max(crest, heightAt(c.x, z));
+    expect(crest - p.height).toBeGreaterThanOrEqual(40);
+    expect(heightAt(c.x, WYRMS_HEARTH_PLATEAU.box.maxZ) - p.height).toBeGreaterThanOrEqual(40);
   });
 });
