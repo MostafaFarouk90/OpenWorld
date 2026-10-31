@@ -29,6 +29,15 @@ export interface SpellsService {
   setMaxEmber(n: number): boolean;
   /** Adds Ember (clamped to the maximum) and returns how much was added; n <= 0 or not finite adds 0. */
   restoreEmber(n: number): number;
+  /**
+   * K11 (Banner of the Sunforge): plants the Knight's banner in front of the player now, replacing any planted banner.
+   * `opts.radius` sizes this banner only (default 8 m); the next normal Banner Plant is 8 m again.
+   */
+  plantBanner(opts?: { radius?: number }): void;
+  /** K11: the planted banner's position and aura radius, or null when none is planted. */
+  bannerInfo(): { position: { x: number; y: number; z: number }; radius: number } | null;
+  /** K11: multiplies Ember regeneration while registered (see Ember.addRegenMultiplier). Returns the disposer. */
+  addEmberRegenMultiplier(id: string, fn: () => number): () => void;
   /** Raw Burn change (boss attacks that add Burn directly): never scars. */
   addBurn(n: number, source: string): void;
   /**

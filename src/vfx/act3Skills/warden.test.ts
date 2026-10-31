@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { EFFECTS } from '../effects/index';
-import { WARDEN_T4_EFFECT_IDS, WARDEN_T4_PARTICLES } from './warden';
+import { VfxServiceImpl } from '../VfxServiceImpl';
+import { WARDEN_T4_EFFECT_IDS, WARDEN_T4_PARTICLES, WARDEN_T5_EFFECT_IDS, WARDEN_T5_PARTICLES } from './warden';
 
 function fx() {
   const scene = new THREE.Scene();
@@ -93,3 +94,151 @@ describe('Warden tier 4 presets', () => {
     expect(e.update(20)).toBe(false);
   });
 });
+
+describe('Warden tier 5 presets (design 11.5)', () => {
+  const make = () => {
+    const warn = vi.fn();
+    const scene = new THREE.Scene();
+    const vfx = new VfxServiceImpl({ scene, actorRoot: () => null }, null, warn);
+    return { vfx, warn, scene };
+  };
+  const frames = (vfx: VfxServiceImpl, seconds: number, each?: () => void) => {
+    for (let i = 0; i < Math.round(seconds * 60); i++) {
+      vfx.update(1 / 60, false);
+      each?.();
+    }
+  };
+  const peak = (vfx: VfxServiceImpl, seconds: number) => {
+    let max = 0;
+    frames(vfx, seconds, () => (max = Math.max(max, vfx.points.liveCount)));
+    return max;
+  };
+  /** Scene children that are the effect's own meshes: the decal pool's quads are pooled and fade on their own clock. */
+  const meshes = (scene: THREE.Scene) => scene.children.filter((c) => c.name !== 'decal').length;
+  /** Seconds each preset is asked to run for (the ones with a `seconds` param). */
+  const SECONDS: Record<string, number> = { 'wyrmbreaker-charge': 0.8, wyrmbreaker: 1.4, 'mountain-unmoved': 10, 'voice-of-the-mountain': 0.7, 'voice-stun': 3 };
+
+  it('are known ids that spawn without a warning, and the table covers exactly the ids', () => {
+    expect(Object.keys(WARDEN_T5_PARTICLES).sort()).toEqual([...WARDEN_T5_EFFECT_IDS].sort());
+    for (const id of WARDEN_T5_EFFECT_IDS) {
+      const { vfx, warn } = make();
+      const h = vfx.spawnEffect(id, { position: { x: 1, y: 0, z: 1 } });
+      frames(vfx, 0.1);
+      expect(warn, id).not.toHaveBeenCalled();
+      expect(h.alive, id).toBe(true);
+    }
+  });
+
+  it('run for their seconds, leave no mesh in the scene, and the measured peak of live points is within the declared one and under 220', () => {
+    // The pool jitters a point's life by x0.75..x1.25 with Math.random: pin it to the maximum so the measured peak is the deterministic worst case.
+    const rnd = vi.spyOn(Math, 'random').mockReturnValue(0.999999);
+    for (const id of WARDEN_T5_EFFECT_IDS) {
+      const { vfx, scene } = make();
+      const base = meshes(scene);
+      const seconds = SECONDS[id];
+      const h = vfx.spawnEffect(id, { position: { x: 0, y: 0, z: 0 }, yaw: 0 }, { seconds });
+      expect(meshes(scene), id).toBeGreaterThan(base);
+      const p = peak(vfx, seconds - 0.1);
+      expect(p, id).toBeLessThanOrEqual(WARDEN_T5_PARTICLES[id]);
+      expect(p, id).toBeLessThan(220);
+      if (WARDEN_T5_PARTICLES[id] > 0) expect(p, id).toBeGreaterThan(0);
+      expect(h.alive, id).toBe(true);
+      frames(vfx, 0.3);
+      expect(h.alive, id).toBe(false);
+      frames(vfx, 3);
+      expect(meshes(scene), id).toBe(base);
+      expect(vfx.points.liveCount, id).toBe(0);
+    }
+    rnd.mockRestore();
+  });
+
+  it('the measured peaks are tight (the declared numbers are not slack by more than a third)', () => {
+    // The pool jitters a point's life by x0.75..x1.25 with Math.random: pin it to the maximum so the measured peak is the deterministic worst case.
+    const rnd = vi.spyOn(Math, 'random').mockReturnValue(0.999999);
+    for (const id of WARDEN_T5_EFFECT_IDS) {
+      if (WARDEN_T5_PARTICLES[id] === 0) continue;
+      const { vfx } = make();
+      vfx.spawnEffect(id, { position: { x: 0, y: 0, z: 0 } }, { seconds: SECONDS[id] });
+      const p = peak(vfx, SECONDS[id] - 0.1);
+      expect(p, id).toBeGreaterThanOrEqual(WARDEN_T5_PARTICLES[id] * 0.67);
+    }
+    rnd.mockRestore();
+  });
+
+  it('stop removes the meshes at once and the effect emits nothing afterwards', () => {
+    for (const id of WARDEN_T5_EFFECT_IDS) {
+      const { vfx, scene } = make();
+      const base = meshes(scene);
+      const h = vfx.spawnEffect(id, { position: { x: 0, y: 0, z: 0 } }, { seconds: SECONDS[id] });
+      frames(vfx, 0.5);
+      h.stop();
+      frames(vfx, 0.1);
+      expect(meshes(scene), id).toBe(base);
+      frames(vfx, 3);
+      expect(vfx.points.liveCount, id).toBe(0);
+    }
+  });
+
+  it('wyrmbreaker: 10 crack cards race out along the facing, one ring, a scorch decal', () => {
+    const f = fx();
+    const e = make5('wyrmbreaker', f, { position: { x: 0, y: 0, z: 0 }, yaw: 0 }, { length: 12 });
+    const group = f.scene.children[0] as THREE.Group;
+    // 10 cards and the ring.
+    expect(group.children).toHaveLength(11);
+    expect(f.emitted).toEqual([36, 30, 12]);
+    expect(f.raw.decals.place).toHaveBeenCalledTimes(1);
+    // Facing yaw 0 is -z: every card lies on the negative z axis, within 12 m (+ half a card of overlap).
+    const cards = group.children.slice(0, 10) as THREE.Mesh[];
+    for (const c of cards) expect(c.position.z).toBeLessThan(0);
+    expect(Math.min(...cards.map((c) => c.position.z))).toBeGreaterThan(-12.5);
+    expect(cards.every((c) => !c.visible)).toBe(true);
+    e.update(0.1);
+    expect(cards.filter((c) => c.visible).length).toBeGreaterThan(0);
+    e.update(0.4);
+    expect(cards.every((c) => c.visible)).toBe(true);
+    expect(e.update(2)).toBe(false);
+    expect(f.scene.children).toHaveLength(0);
+  });
+
+  it('wyrmbreaker-charge and mountain-unmoved with attach follow the attached root at its world position, not twice', () => {
+    for (const id of ['wyrmbreaker-charge', 'mountain-unmoved'] as const) {
+      const root = new THREE.Object3D();
+      root.position.set(15000, 3, 15000);
+      root.updateMatrixWorld(true);
+      const f = fx();
+      const e = make5(id, f, { position: { x: 0, y: 0, z: 0 }, attach: root }, { seconds: 5 });
+      const group = f.scene.children[0] as THREE.Group;
+      expect(group.position.x, id).toBeCloseTo(15000);
+      expect(group.position.z, id).toBeCloseTo(15000);
+      expect(group.position.y, id).toBeGreaterThan(3);
+      expect(group.position.y, id).toBeLessThan(6);
+      root.position.set(15010, 3, 15000);
+      root.updateMatrixWorld(true);
+      e.update(0.1);
+      expect(group.position.x, id).toBeCloseTo(15010);
+      e.stop();
+    }
+  });
+
+  it('voice-stun with attach circles over the foe head, and bad params never throw', () => {
+    const root = new THREE.Object3D();
+    root.position.set(500, 0, 500);
+    root.updateMatrixWorld(true);
+    const f = fx();
+    const e = make5('voice-stun', f, { position: { x: 0, y: 0, z: 0 }, attach: root }, { seconds: 3 });
+    const group = f.scene.children[0] as THREE.Group;
+    expect(group.position.x).toBeCloseTo(500);
+    expect(group.position.y).toBeCloseTo(2.1);
+    expect(group.children).toHaveLength(3);
+    e.stop();
+    const { vfx } = make();
+    for (const id of WARDEN_T5_EFFECT_IDS) {
+      expect(() => vfx.spawnEffect(id, { position: { x: 0, y: 0, z: 0 } }, { seconds: 'long' as never, radius: NaN, length: NaN })).not.toThrow();
+    }
+    frames(vfx, 1);
+  });
+});
+
+function make5(id: string, f: ReturnType<typeof fx>, t: object, p: object) {
+  return (EFFECTS as any)[id](f.ctx, t, p);
+}

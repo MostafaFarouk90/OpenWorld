@@ -8,7 +8,7 @@ export const WARDEN_STRINGS_EN: Record<string, string> = {
   'skill.warden.skullsplitter.name': 'Skullsplitter',
   'skill.warden.skullsplitter.desc': 'A heavy overhead chop that does double damage to staggered targets.',
   'skill.warden.wyrmbreaker.name': 'Wyrmbreaker',
-  'skill.warden.wyrmbreaker.desc': 'A charged chop that cracks armour and splits the ground.',
+  'skill.warden.wyrmbreaker.desc': 'Charge the axe for 0.8 seconds, then split the ground in a fissure 12 metres long: 2.5x damage and 60 poise to every enemy in it, and they take 25% more damage from every source for 8 seconds. Costs 30 Ember, 30 second cooldown.',
 
   'skill.warden.thickSkin.name': 'Thick Skin',
   'skill.warden.thickSkin.desc': 'Your maximum health is 10% higher. Passive.',
@@ -19,7 +19,7 @@ export const WARDEN_STRINGS_EN: Record<string, string> = {
   'skill.warden.earthroot.name': 'Earthroot',
   'skill.warden.earthroot.desc': 'Plant the axe to become immovable and return a shockwave when struck.',
   'skill.warden.mountainUnmoved.name': 'Mountain Unmoved',
-  'skill.warden.mountainUnmoved.desc': 'For 10 seconds you cannot be knocked back or staggered.',
+  'skill.warden.mountainUnmoved.desc': 'For 10 seconds you cannot be knocked back or staggered. You still flinch and can be pulled. Costs 25 Ember, 45 second cooldown.',
 
   'skill.warden.warHowl.name': 'War Howl',
   'skill.warden.warHowl.desc':
@@ -31,7 +31,7 @@ export const WARDEN_STRINGS_EN: Record<string, string> = {
   'skill.warden.frenziedHearth.name': 'Frenzied Hearth',
   'skill.warden.frenziedHearth.desc': 'Below 30% health you cannot be staggered and each hit restores a sliver of health.',
   'skill.warden.voiceOfTheMountain.name': 'Voice of the Mountain',
-  'skill.warden.voiceOfTheMountain.desc': 'A huge howl that stuns every enemy within 12 metres.',
+  'skill.warden.voiceOfTheMountain.desc': 'A huge howl: every enemy within 12 metres takes 40 poise and is stunned for 3 seconds (bosses take the poise only). Costs 30 Ember, 45 second cooldown.',
 
   'buff.warden.axeIgnite': 'Burning axe',
   'buff.warden.gritTeeth': 'Grit Teeth',

@@ -21,6 +21,10 @@ export const SKILL = {
   cinderMark: 'ashblade.cinderMark',
   decoyFootprints: 'ashblade.decoyFootprints',
   phoenixRoll: 'ashblade.phoenixRoll',
+  // Tier 5 capstones (Act 3, K11 PR 3).
+  deathByAThousandSparks: 'ashblade.deathByAThousandSparks',
+  ghostOfTheHearth: 'ashblade.ghostOfTheHearth',
+  flickerStrike: 'ashblade.flickerStrike',
 } as const;
 
 export const BACK_SLIT = {
@@ -185,4 +189,99 @@ export const PHOENIX_ROLL = {
   /** At most one roll effect (clear and patch) per 4 s, counted from the patch. */
   cooldownSeconds: 4,
   effectId: 'phoenix-patch',
+} as const;
+
+// ---- Tier 5 capstones (Act 3, K11 PR 3; plans/act3-K11-capstones.md). Numbers the plan states are marked; the rest are provisional. ----
+
+export const THOUSAND_SPARKS = {
+  /** The line-of-sight ray ends this far short of the foe, so its own collider is not a wall. */
+  losMargin: 0.6,
+  skillId: SKILL.deathByAThousandSparks,
+  /** Plan: 40 s cooldown, 35 Ember. */
+  cooldown: 40,
+  emberCost: 35,
+  /** Plan: 12 hops every 0.25 s over 3 s. */
+  hops: 12,
+  hopSeconds: 0.25,
+  seconds: 3,
+  /** Plan: each hop goes to the next hostile within 10 m of where the Ashblade stands. */
+  range: 10,
+  /** Plan: a strike of 0.6x the base hit, poise 5. */
+  damage: COMBAT.baseDamage * 0.6,
+  poise: 5,
+  attackId: 'ashblade.thousandSparks',
+  /** The `addInvulnerability` source; the release is idempotent. */
+  invulnSource: 'ashblade.thousandSparks',
+  hopEffectId: 'sparks-hop',
+  /** Strength and length of the screen stand-in (no desaturation helper exists; the vignette pulse is used). */
+  screenStrength: 0.35,
+  screenColor: 0x6a5a80,
+} as const;
+
+export const GHOST_OF_THE_HEARTH = {
+  skillId: SKILL.ghostOfTheHearth,
+  /** Plan: 60 s cooldown, 30 Ember, lasts 12 s. */
+  cooldown: 60,
+  emberCost: 30,
+  seconds: 12,
+  /** `stealth.addNoiseScale` source id; scale 0 is silence. */
+  noiseSource: 'ashblade.ghostOfTheHearth',
+  noiseScale: 0,
+  /**
+   * After the first attack begins the Ghost is seen again at once, but the swing keeps its strike this long (a dagger swing
+   * lands inside 0.5 s, the heavy chop inside 1 s). A swing that hits nothing wastes it.
+   */
+  strikeGraceSeconds: 1.5,
+  /** Attacker band, after every damage multiplier in use (Back-Slit -150, Cinder Mark -149, Temper -148), so the health read is the last word. */
+  order: -102,
+  modifierId: 'ashblade-ghost-strike',
+  /** Runs after every band so a yield-capable foe's 1 HP strike stays 1 HP (Wyrmbreaker's crack is at -55). */
+  clampOrder: 99,
+  clampModifierId: 'ashblade-ghost-yield-clamp',
+  attackId: 'ashblade.ghostOfTheHearth',
+  effectId: 'ghost-hearth',
+  flashEffectId: 'ghost-flash',
+} as const;
+
+/**
+ * Flicker Strike. Back stab: the dash is a 'melee' request whose direction is the dash direction, so passing through a foe's back
+ * counts as a back stab and Back-Slit doubles it (a real from-behind test, 2.4x with the 1.2x), unlike Death by a Thousand Sparks,
+ * which is a 'spell' request and never does.
+ */
+export const FLICKER_STRIKE = {
+  skillId: SKILL.flickerStrike,
+  /** Plan: 25 s cooldown, 25 Ember. */
+  cooldown: 25,
+  emberCost: 25,
+  /** Plan: a 6 m dash in 0.25 s (15 fixed ticks), invulnerable. */
+  distance: 6,
+  ticks: 15,
+  /** Plan: 1.2x the base hit on every hostile passed, once per dash. */
+  damage: COMBAT.baseDamage * 1.2,
+  attackId: 'ashblade.flickerStrike',
+  /** A foe within this horizontal distance of the dasher's feet, ahead of it, is passed. */
+  hitRadius: 1.4,
+  halfHeight: 2,
+  /** Plan: a dodge press within 1.5 s of a dash that hit something dashes again; 5 dashes in all. */
+  refreshSeconds: 1.5,
+  maxDashes: 5,
+  /** A queued re-dash waits this long past the window for the dodge to end before it is dropped. */
+  queueGraceSeconds: 1,
+  /** Containment and interior probes along the path, metres apart. */
+  probeStep: 0.5,
+  /** A dash shorter than this (a wall or the edge in the way) is refused. */
+  minDistance: 1,
+  /**
+   * The ground probe along the path (like Charge of the Halvard's HALVARD.maxDrop): at each sample the ground is read from
+   * `groundProbeUp` above the last ground down `groundProbeUp + groundProbeDown`; the dash stops before a sample with no ground or
+   * with ground more than `maxDrop` below the last one.
+   */
+  maxDrop: 1,
+  groundProbeUp: 1.5,
+  groundProbeDown: 3,
+  holdOwner: 'ashblade.flickerStrike',
+  invulnSource: 'ashblade.flickerStrike',
+  dashEffectId: 'flicker-dash',
+  hitEffectId: 'flicker-hit',
+  pingEffectId: 'flicker-ping',
 } as const;

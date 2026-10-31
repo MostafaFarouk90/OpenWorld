@@ -203,6 +203,9 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
         return ember.value - before;
       },
       spendEmber: (n) => ember.spend(n),
+      plantBanner: (opts) => banner.plant(simTime, opts),
+      bannerInfo: () => (banner.state.active ? { position: banner.state.position!, radius: banner.state.radius } : null),
+      addEmberRegenMultiplier: (id, fn) => ember.addRegenMultiplier(id, fn),
       addBurn: (n, source) => void burn.add(n, source),
       useShard: (gain, source) => useShard(gain, source),
       // A5's Hearth Rite (v0.6 item 16): the flag, max health and `scar.removed` (typed in src/companions/events.ts).
@@ -344,7 +347,9 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
           ember.regen(dt);
           caster.update(dt);
           leap.update(simTime);
-          banner.update(simTime, looseService(ctx.services, 'progression')?.learned(BANNER.skillId) ?? false);
+          // Banner of the Sunforge (K11) also keeps a planted banner alive when Banner Plant itself is not learned.
+          const prog = looseService(ctx.services, 'progression');
+          banner.update(simTime, (prog?.learned(BANNER.skillId) ?? false) || (prog?.learned('knight.bannerOfTheSunforge') ?? false));
           projectiles.update(dt);
           retryTimer += dt;
           if (retryTimer >= LATE_BIND_RETRY_SECONDS) {

@@ -1,6 +1,6 @@
 import type { SkillDef } from '../../progression/skills';
 import { TIER_COST, masterBookGate } from '../../progression/skills';
-import { ASH_CLOUD, CINDER_MARK, CLASS_ID, DECOY_FOOTPRINTS, SKILL } from './tuning';
+import { ASH_CLOUD, CINDER_MARK, CLASS_ID, DECOY_FOOTPRINTS, FLICKER_STRIKE, GHOST_OF_THE_HEARTH, SKILL, THOUSAND_SPARKS } from './tuning';
 
 export type AshbladeBranch = 'duskedge' | 'smokecloak' | 'flicker';
 
@@ -67,6 +67,18 @@ function build(): SkillDef[] {
       if (id === SKILL.decoyFootprints) {
         def.cooldown = DECOY_FOOTPRINTS.cooldown;
         def.emberCost = DECOY_FOOTPRINTS.emberCost;
+      }
+      if (id === SKILL.deathByAThousandSparks) {
+        def.cooldown = THOUSAND_SPARKS.cooldown;
+        def.emberCost = THOUSAND_SPARKS.emberCost;
+      }
+      if (id === SKILL.ghostOfTheHearth) {
+        def.cooldown = GHOST_OF_THE_HEARTH.cooldown;
+        def.emberCost = GHOST_OF_THE_HEARTH.emberCost;
+      }
+      if (id === SKILL.flickerStrike) {
+        def.cooldown = FLICKER_STRIKE.cooldown;
+        def.emberCost = FLICKER_STRIKE.emberCost;
       }
       out.push(def);
     });

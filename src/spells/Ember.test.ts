@@ -44,6 +44,44 @@ describe('Ember', () => {
     e.regen(1);
     expect(e.value).toBeCloseTo(50 + EMBER.regenPerSecond * 2);
   });
+  it('regen multipliers (K11) scale regeneration, multiply together, and are inert when unused or disposed', () => {
+    const e = new Ember();
+    e.spend(80);
+    e.regen(10); // past the delay, no multiplier: the baseline
+    const base = e.value - 20;
+    expect(base).toBeGreaterThan(0);
+    const off = e.addRegenMultiplier('a', () => 2);
+    const before = e.value;
+    e.regen(1);
+    expect(e.value - before).toBeCloseTo(EMBER.regenPerSecond * 2);
+    const off2 = e.addRegenMultiplier('b', () => 0.5);
+    const mid = e.value;
+    e.regen(1);
+    expect(e.value - mid).toBeCloseTo(EMBER.regenPerSecond);
+    off2();
+    off();
+    const after = e.value;
+    e.regen(1);
+    expect(e.value - after).toBeCloseTo(EMBER.regenPerSecond);
+  });
+  it('a regen multiplier that throws, is NaN or is negative counts as 1; the same id replaces; a stale disposer does not remove the new one', () => {
+    const e = new Ember();
+    e.spend(90);
+    e.regen(EMBER.regenDelayAfterSpendSeconds + 0.01);
+    for (const fn of [() => { throw new Error('x'); }, () => Number.NaN, () => -3]) {
+      const off = e.addRegenMultiplier('bad', fn);
+      const v = e.value;
+      e.regen(1);
+      expect(e.value - v).toBeCloseTo(EMBER.regenPerSecond);
+      off();
+    }
+    const first = e.addRegenMultiplier('x', () => 3);
+    e.addRegenMultiplier('x', () => 2);
+    first();
+    const v = e.value;
+    e.regen(1);
+    expect(e.value - v).toBeCloseTo(EMBER.regenPerSecond * 2);
+  });
   it('a new spend restarts the delay and onChange fires only on change', () => {
     const e = new Ember();
     const cb = vi.fn();

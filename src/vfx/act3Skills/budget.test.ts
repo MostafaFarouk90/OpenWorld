@@ -1,26 +1,36 @@
-// K11: the tier 4 presets together stay well inside the 11.1 cap of 4,000 live points.
+// K11: the tier 4 presets together (and each capstone class's presets) stay well inside the 11.1 cap of 4,000 live points.
 import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { EFFECTS } from '../effects/index';
 import { ACT3_SKILL_EFFECT_IDS } from './index';
-import { ASHBLADE_T4_PARTICLES } from './ashblade';
-import { KNIGHT_T4_PARTICLES } from './knight';
-import { WARDEN_T4_PARTICLES } from './warden';
+import { ASHBLADE_T4_PARTICLES, ASHBLADE_T5_PARTICLES } from './ashblade';
+import { KNIGHT_T4_PARTICLES, KNIGHT_T5_PARTICLES } from './knight';
+import { WARDEN_T4_PARTICLES, WARDEN_T5_PARTICLES } from './warden';
 import { EMBERWRIGHT_T4_PARTICLES } from './emberwright';
 import { PATHFINDER_T4_PARTICLES } from './pathfinder';
 import { EFFECT_IDS } from '../types';
 
+const T5: Record<string, number> = { ...KNIGHT_T5_PARTICLES, ...WARDEN_T5_PARTICLES, ...ASHBLADE_T5_PARTICLES };
+
 describe('act3 skill VFX budget', () => {
   it('every preset has a peak entry and all fifteen tier 4 skills together use under a sixth of the cap', () => {
-    const table: Record<string, number> = {
+    const t4: Record<string, number> = {
       ...KNIGHT_T4_PARTICLES,
       ...WARDEN_T4_PARTICLES,
       ...ASHBLADE_T4_PARTICLES,
       ...EMBERWRIGHT_T4_PARTICLES,
       ...PATHFINDER_T4_PARTICLES,
     };
+    const table: Record<string, number> = { ...t4, ...T5 };
     for (const id of ACT3_SKILL_EFFECT_IDS) expect(table[id], id).toBeGreaterThanOrEqual(0);
-    expect(Object.values(table).reduce((a, b) => a + b, 0)).toBeLessThan(650);
+    expect(Object.values(t4).reduce((a, b) => a + b, 0)).toBeLessThan(650);
+  });
+
+  it('capstones are exclusive, so one class at a time: every capstone preset stays under 220 live points and each class under 400', () => {
+    for (const [id, n] of Object.entries(T5)) expect(n, id).toBeLessThanOrEqual(220);
+    for (const cls of [KNIGHT_T5_PARTICLES, WARDEN_T5_PARTICLES, ASHBLADE_T5_PARTICLES]) {
+      expect(Object.values(cls).reduce((a, b) => a + b, 0)).toBeLessThan(400);
+    }
   });
 
   it('the ids are registered and unique', () => {

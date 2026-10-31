@@ -1,4 +1,5 @@
 import { COMBAT } from '../../config/constants';
+import { BANNER } from '../../spells/tuning';
 
 /** Knight tier 3 numbers (design 9.1). Entries marked "own" are this thread's choices where the design gives none. */
 
@@ -14,6 +15,9 @@ export const SKILL_IDS = {
   bastionWall: 'knight.bastionWall',
   executionersArc: 'knight.executionersArc',
   hearthfireWard: 'knight.hearthfireWard',
+  unbrokenOath: 'knight.unbrokenOath',
+  heartshardSmite: 'knight.heartshardSmite',
+  bannerOfTheSunforge: 'knight.bannerOfTheSunforge',
 } as const;
 
 /**
@@ -112,4 +116,60 @@ export const EXECUTIONERS_ARC = {
 export const HEARTHFIRE_WARD = {
   fraction: 0.03,
   fx: 'hearthfire-motes',
+} as const;
+
+/**
+ * Unbroken Oath (Bulwark 5, Act 3 capstone): for 8 s no hit that is not a script kill reduces the Knight below 1 health. The lethal
+ * handler sits at -140: after the trial duel's floor (-150, companions/trials.ts, so a trial still scores its yield breaks during the
+ * Oath) and before Second Wind (-100, player/tuning.ts), so the Oath never spends the Second Wind. Counterattacks are free:
+ * the riposte stab that lands within `counterWindowTicks` of a parry (the verbs' own window, 120 ticks) hands back the stamina spent
+ * since the parry. 60 s cooldown and 30 Ember.
+ */
+export const UNBROKEN_OATH = {
+  seconds: 8,
+  cooldown: 60,
+  emberCost: 30,
+  handlerId: 'knight.unbrokenOath.hold',
+  handlerOrder: -140,
+  /** The Riposte thrust's clip, which is its attack id (CombatVerbs STAB_CLIP). */
+  stabAttackId: '1H_Melee_Attack_Stab',
+  counterWindowTicks: 120,
+  fx: 'unbroken-oath',
+  /** The heartbeat vignette: one gold pulse a second. */
+  heartbeatSeconds: 1,
+  vignetteStrength: 0.25,
+  vignetteSeconds: 0.5,
+  vignetteColor: 0xffc040,
+} as const;
+
+/**
+ * Heartshard Smite (Vanguard 5, a passive: open point A). For 8 s after the Knight releases a Surge the sword's blade is scaled
+ * along its long axis (+Y) to `reach` metres, so the weapon tracer sweeps 5 m; melee hits deal x1.5 and are fire (attacker band, -180),
+ * and ignite for 2 a second for 3 s.
+ */
+export const HEARTSHARD_SMITE = {
+  seconds: 8,
+  reach: 5,
+  fireFactor: 1.5,
+  surgeSpellId: 'heartshard-surge',
+  modifierId: 'knight.heartshardSmite.fire',
+  modifierOrder: -180,
+  igniteId: 'knight.heartshardSmite.ignite',
+  igniteDps: 2,
+  igniteSeconds: 3,
+  fx: 'heartshard-blade',
+} as const;
+
+/**
+ * Banner of the Sunforge (Standard 5): plants a 20 m banner for its normal 20 s life, replacing any banner; Ember regeneration is
+ * doubled while the Knight's feet are within 20 m of it. 60 s cooldown and 30 Ember.
+ */
+export const SUNFORGE = {
+  radius: 20,
+  seconds: BANNER.lifetimeSeconds,
+  regenFactor: 2,
+  cooldown: 60,
+  emberCost: 30,
+  multiplierId: 'knight.bannerOfTheSunforge.regen',
+  fx: 'sunforge-banner',
 } as const;

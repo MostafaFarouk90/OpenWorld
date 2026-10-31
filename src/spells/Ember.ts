@@ -14,6 +14,7 @@ export class Ember {
   private lastNotified: number = EMBER.start;
   private sinceSpend = Infinity;
   private _max: number = EMBER.max;
+  private readonly regenMultipliers = new Map<string, () => number>();
 
   get value(): number {
     return this._value;
@@ -45,6 +46,30 @@ export class Ember {
     this.set(this._value + n);
   }
 
+  /**
+   * K11 (Banner of the Sunforge): multiplies the regeneration rate while registered (several multiply together; the same id replaces).
+   * `fn` is read on every regen step; a throw, NaN or negative value counts as 1. Inert when nothing is registered. Returns the disposer.
+   */
+  addRegenMultiplier(id: string, fn: () => number): () => void {
+    this.regenMultipliers.set(id, fn);
+    return () => {
+      if (this.regenMultipliers.get(id) === fn) this.regenMultipliers.delete(id);
+    };
+  }
+
+  private regenScale(): number {
+    let k = 1;
+    for (const fn of this.regenMultipliers.values()) {
+      try {
+        const v = fn();
+        if (typeof v === 'number' && Number.isFinite(v) && v >= 0) k *= v;
+      } catch {
+        // a broken multiplier counts as 1
+      }
+    }
+    return k;
+  }
+
   regen(dt: number): void {
     if (!(dt > 0) || !Number.isFinite(dt)) return;
     const before = this.sinceSpend;
@@ -53,7 +78,7 @@ export class Ember {
     // Only the part of dt that lies after the delay regenerates.
     const delay = EMBER.regenDelayAfterSpendSeconds;
     const active = before >= delay ? dt : Math.max(0, this.sinceSpend - delay);
-    if (active > 0) this.set(this._value + EMBER.regenPerSecond * active, false);
+    if (active > 0) this.set(this._value + EMBER.regenPerSecond * active * (this.regenMultipliers.size > 0 ? this.regenScale() : 1), false);
   }
 
   serialize(): EmberSaveData {

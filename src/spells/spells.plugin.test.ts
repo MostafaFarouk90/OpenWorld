@@ -27,6 +27,44 @@ describe('spells plugin', () => {
     expect(f.world.events.count()).toBe(0);
   });
 
+  it('exposes plantBanner / bannerInfo and addEmberRegenMultiplier (K11), inert until used', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    expect(s.bannerInfo()).toBeNull();
+    s.plantBanner({ radius: 20 });
+    expect(s.bannerInfo()?.radius).toBe(20);
+    s.plantBanner();
+    expect(s.bannerInfo()?.radius).toBe(8);
+    // regeneration: spend, wait out the delay, then compare with and without a x2 multiplier
+    s.spendEmber(80);
+    f.tick(60 * 2);
+    const plain = s.ember;
+    const off = s.addEmberRegenMultiplier('t', () => 2);
+    f.tick(60);
+    const doubled = s.ember - plain;
+    off();
+    const before = s.ember;
+    f.tick(60);
+    expect(doubled).toBeGreaterThan((s.ember - before) * 1.9);
+    plugin.dispose!();
+  });
+
+  it('a planted banner survives when only Banner of the Sunforge is learned, and goes when neither is', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    const learned = new Set(['knight.bannerOfTheSunforge']);
+    f.services.progression = { addMaxHealthModifier: () => () => {}, learned: (id: string) => learned.has(id), classId: 'knight' };
+    const s = f.services.spells!;
+    s.plantBanner({ radius: 20 });
+    f.tick(30);
+    expect(s.bannerInfo()?.radius).toBe(20);
+    learned.clear();
+    f.tick(2);
+    expect(s.bannerInfo()).toBeNull();
+    plugin.dispose!();
+  });
+
   it('setMaxEmber changes maxEmber and refuses bad numbers', () => {
     const f = makeCtx();
     plugin.setup(f.ctx);

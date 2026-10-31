@@ -150,3 +150,68 @@ describe('createBanner onPulse (K11, Hearthfire Ward)', () => {
     expect(pulses).toHaveLength(2);
   });
 });
+
+describe('per-plant radius (K11, Banner of the Sunforge)', () => {
+  function make() {
+    const events = new FakeEvents();
+    const spawned: Array<{ id: string; params: any }> = [];
+    const pulses: number[] = [];
+    const services = { get: (n: string) => (n === 'vfx' ? { spawnEffect: (id: string, _t: unknown, params: unknown) => spawned.push({ id, params }) } : undefined) } as never;
+    const b = createBanner({
+      events,
+      scene: new THREE.Group(),
+      services,
+      player: { feet: new THREE.Vector3(0, 0, 0), facingYaw: 0 },
+      onPulse: (_p, r) => pulses.push(r),
+    });
+    return { b, spawned, pulses };
+  }
+
+  it('BannerState: a radius is for that banner only; the default is 8 m', () => {
+    const s = new BannerState();
+    expect(s.radius).toBe(BANNER.radius);
+    s.plant({ x: 0, y: 0, z: 0 }, 0, 20);
+    expect(s.radius).toBe(20);
+    expect(s.scaleFor({ x: 20, y: 0, z: 0 })).toBe(0.9);
+    expect(s.scaleFor({ x: 20.1, y: 0, z: 0 })).toBe(1);
+    s.plant({ x: 0, y: 0, z: 0 }, 1);
+    expect(s.radius).toBe(8);
+    expect(s.scaleFor({ x: 9, y: 0, z: 0 })).toBe(1);
+  });
+
+  it('a bad radius falls back to 8 m', () => {
+    for (const bad of [0, -5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const s = new BannerState();
+      s.plant({ x: 0, y: 0, z: 0 }, 0, bad);
+      expect(s.radius, String(bad)).toBe(8);
+    }
+  });
+
+  it('plant(now, { radius: 20 }) sizes the damage cut, the plant effect and the pulse; the next plain plant is 8 m again', () => {
+    const { b, spawned, pulses } = make();
+    b.plant(0, { radius: 20 });
+    expect(spawned[0].params.radius).toBe(20);
+    const near = new FakeActor('a', 'player', 19, -2);
+    const r1 = req(100);
+    b.modify(r1, near as never);
+    expect(r1.amount).toBe(90);
+    b.update(3, true);
+    expect(pulses).toEqual([20]);
+    expect(spawned[1].params.radius).toBe(20);
+    // a normal Banner Plant afterwards
+    b.plant(4);
+    expect(spawned[2].params.radius).toBe(8);
+    const r2 = req(100);
+    b.modify(r2, near as never);
+    expect(r2.amount).toBe(100);
+    b.update(7, true);
+    expect(pulses).toEqual([20, 8]);
+  });
+
+  it('plant without options is unchanged (8 m)', () => {
+    const { b, spawned } = make();
+    b.plant(0);
+    expect(b.state.radius).toBe(8);
+    expect(spawned[0].params.radius).toBe(8);
+  });
+});
