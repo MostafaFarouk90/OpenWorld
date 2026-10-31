@@ -23,6 +23,9 @@ export const M27_ALONE_SCENE = 'scene-m27-leofa';
 export const M27_AFTER_NPC = 'scene.m27.aftermath';
 export const M27_AFTER_SCENE = 'scene-m27-aftermath';
 export const M27_BROOD_BACK = 'story.m27.broodBack';
+/** The brood-return set piece (K12 follow-up): three hatchlings fly from the cages to the Mere; Leofa speaks. */
+export const M27_BROOD_NPC = 'scene.m27.brood';
+export const M27_BROOD_SCENE = 'scene-m27-brood';
 export const M27_KEEPER = 'brood-keeper';
 const released: Condition = { flag: 'story.r14.choice', equals: 'released' };
 

@@ -47,8 +47,8 @@ function derived(quest: string): Record<string, number> {
   if (quest in LEECHES) add('killUnit', LEECHES[quest as 'r12']);
   return c;
 }
-/** Set pieces and special beats the build really has (M23's first-sight scene, K6a's two Hathren sequences, the song's two bars, the blinds, Murkjaw). */
-const SPECIAL: Record<string, Record<string, number>> = { m23: { set: 1 }, m26: { set: 2 }, r13: { rhythm: 2 }, m27: { stealthSection: 1 }, d05: { boss: 1 } };
+/** Set pieces and special beats the build really has (M23's first-sight scene, M26's framed wake and K6a's two Hathren sequences, the song's two bars, the blinds, the brood's flight home, Murkjaw). */
+const SPECIAL: Record<string, Record<string, number>> = { m23: { set: 1 }, m26: { set: 3 }, r13: { rhythm: 2 }, m27: { stealthSection: 1, set: 1 }, d05: { boss: 1 } };
 
 describe('Greyfen pacing', () => {
   it.each(GREYFEN_PACE.map((r) => [r.quest, r] as const))('%s: the beats are what its definition holds, nothing invented', (q, row) => {

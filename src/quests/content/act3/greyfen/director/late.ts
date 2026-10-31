@@ -1,6 +1,11 @@
 // R14, R13, M26, M27 and D05 rules (K12): the choices' favour, the water-song, Hathren's rite, the reed blinds and the Deeps.
-import type { Kit } from './shared';
+import type { Kit, Off } from './shared';
 import { offerScene, recheck, toast } from './shared';
+import { canStage, SetPiece } from './scenes';
+import { BroodFlight, type BroodPlace } from './broodScene';
+import type { CameraShot } from '../../../../../rendering/ThirdPersonCamera';
+import { heightAt } from '../../../../../terrain/heightfield';
+import { GREYFEN_WATER_TABLE } from '../../../../../terrain/shape/greyfen';
 import { WaterSong } from './song';
 import { createSongBar } from './songBar';
 import { R14_CHOICE, R14_FAVOURED } from '../r14.quest';
@@ -8,11 +13,12 @@ import {
   R13_ALTAR, R13_CALMED, R13_LESSON, R13_POCKETS, R13_POCKET_FLAG, R13_SONG_NPC, R13_SONG_SCENE, R13_SUNG,
 } from '../r13.quest';
 import {
-  M26_LIT, M26_NETS_CUT, M26_NET_FLAGS, M26_RITE_DONE, M26_SHRINE, M26_VOICE_NPC, M26_VOICE_SCENE, M26_WOKE,
+  M26_LIT, M26_NETS_CUT, M26_NET_FLAGS, M26_RITE_DONE, M26_SHRINE, M26_VOICE_NPC, M26_VOICE_SCENE, M26_WAKE_NPC, M26_WAKE_RADIUS, M26_WAKE_SCENE,
+  M26_WAKE_SEEN, M26_WOKE, M26_WOKE_EVENT,
 } from '../m26.quest';
 import {
   M27_ALLY_ANCHORS, M27_ALLY_SCENE, M27_ALONE_SCENE, M27_AFTER_NPC, M27_AFTER_SCENE, M27_BLINDS, M27_BLINDS_END, M27_BROOD_BACK, M27_FREE_FLAGS,
-  M27_PACK1_DOWN, M27_SEEN, M27_WITNESSES,
+  M27_BROOD_NPC, M27_BROOD_SCENE, M27_PACK1_DOWN, M27_SEEN, M27_WITNESSES,
 } from '../m27.quest';
 import {
   D05_BOSS, D05_OUTCOME_FLAG, D05_OUTCOME_NPC, D05_OUTCOME_SCENE, D05_POCKETS, D05_POCKET_FLAG, D05_UNDERCROFT_NPC, D05_UNDERCROFT_SCENE,
@@ -23,6 +29,15 @@ export const R13_FAILS = 'story.r13.songFails';
 /** Fixed ticks (60 a second) between the song and the calm, and between the last cage and the brood's return. */
 export const R13_CALM_TICKS = 360;
 export const M27_BROOD_TICKS = 240;
+/** How long a wading player holds the brood scene back before it plays anyway (a diving player holds it for good), in fixed ticks. */
+export const M27_BROOD_WADE_PATIENCE = 600;
+/** The wake scene's own caps: the dialogue is given up on this long after the scene begins, and nothing outlasts the hard cap unless a dialogue is open. */
+export const M26_WAKE_DIALOGUE_GIVEUP = 1200;
+export const M26_WAKE_HARD_CAP = 3600;
+export const M27_BROOD_HARD_CAP = 3000;
+const SHORE_ANCHOR = 'greyfen.mere.shore';
+/** How far under her head the wake shot aims (m), so she is framed above the scene's dialogue panel. */
+const WAKE_AIM_DROP = 10;
 export const DEEPS_INTERIOR = 'greyfen-deeps';
 export const M27_PACK1_GROUP = 'greyfen.q.m27.pack1';
 export const M27_PACK2_GROUP = 'greyfen.q.m27.pack2';
@@ -93,17 +108,148 @@ export function installR13(k: Kit, now: () => number = () => performance.now()):
   return unmount;
 }
 
-export function installM26(k: Kit): void {
+/** The forward unit vector (x, z) of an anchor's yaw (yaw 0 faces -Z, the game's rule). */
+const facing = (yaw: number): { x: number; z: number } => ({ x: -Math.sin(yaw), z: -Math.cos(yaw) });
+
+export function installM26(k: Kit): Off {
   const hathren = () => k.ctx.services.get('hathren');
+  const dialogue = () => k.ctx.services.get('dialogue');
   let quietSeen = false;
 
+  // The wake step's credit: the flag, the story event (the step's trigger) and a recheck. Idempotent.
+  const credit = (): void => {
+    if (!k.active('m26') || k.flag(M26_WOKE)) return;
+    k.set(M26_WOKE);
+    k.emit(M26_WOKE_EVENT);
+    k.later(() => recheck(k));
+    syncHold();
+  };
+
+  // ---- the wake scene: Cael at the shore sees her wake. Staged only where there is a camera rig and a wake hook; elsewhere K6a's
+  // own beat (below) credits the step, so a reduced boot never waits on a scene.
+  const staged = (): boolean => canStage(k) && typeof hathren()?.wake === 'function';
+  let wakeDone = false; // the playback of the scene's wake has settled (or the scene is not running)
+  let wakeDialogue: 'idle' | 'open' | 'done' = 'idle';
+  let sprayed = false;
+  let playback: { skip(): void } | null = null;
+
+  // Hathren is held silent from M26's start (so the 60 m approach cannot start the wake out of frame) and let go the moment the
+  // step is credited or M26 is no longer active; K6a also lets go by herself when the quest leaves.
+  function syncHold(): void {
+    const h = hathren();
+    if (!h || typeof h.holdWake !== 'function') return;
+    const want = staged() && k.active('m26') && !k.flag(M26_WOKE);
+    if (want !== h.wakeHeld) h.holdWake(want);
+  }
+
+  const piece = new SetPiece(k, 'greyfen.m26.wake', (reason) => {
+    const d = dialogue();
+    if (reason === 'skipped') playback?.skip();
+    if (wakeDialogue === 'open') d?.close('skip');
+    playback = null;
+    wakeDialogue = 'done';
+    if (reason === 'finished' || reason === 'skipped') k.set(M26_WAKE_SEEN);
+    // A finished or skipped scene credits at once; a load credits too when the loaded world has the step current (the wake is not
+    // saved, so it would otherwise ask the player to wake her twice).
+    if (reason === 'finished' || reason === 'skipped' || (reason === 'load' && k.objCurrent('m26', 'wake'))) credit();
+    syncHold();
+  });
+
+  const shoreShot = (): CameraShot => {
+    const a = k.ctx.anchors.find(SHORE_ANCHOR);
+    const f = { ...k.ctx.player.feet };
+    const fw = facing(a?.yaw ?? 0);
+    return {
+      // behind and a little to the side of Cael, looking out over his shoulder at her head
+      position: { x: f.x - fw.x * 6 + fw.z * 2.5, y: f.y + 3.6, z: f.z - fw.z * 6 - fw.x * 2.5 },
+      // aimed a little below her head so the head rides in the upper third, clear of the dialogue panel
+      lookAt: () => {
+        const h = hathren()?.headPoint();
+        return h ? { x: h.x, y: h.y - WAKE_AIM_DROP, z: h.z } : { x: f.x + fw.x * 55, y: f.y - 1, z: f.z + fw.z * 55 };
+      },
+      blendIn: 0.8,
+      blendOut: 1,
+    };
+  };
+
+  // a sphere test (feet to the shore point, height included)
+  const nearShore = (): boolean => {
+    const a = k.ctx.anchors.find(SHORE_ANCHOR);
+    if (!a) return false;
+    const f = k.ctx.player.feet;
+    return Math.hypot(f.x - a.position.x, f.y - a.position.y, f.z - a.position.z) <= M26_WAKE_RADIUS;
+  };
+  // no scene on top of a fight: any living hostile actor within 15 m holds it back
+  const hostileNear = (): boolean => {
+    const reg = (k.ctx as unknown as { actors?: { all(): Iterable<{ team?: string; dead?: boolean; position?: { x: number; y: number; z: number } }> } }).actors;
+    if (!reg) return false;
+    const f = k.ctx.player.feet;
+    for (const a of reg.all()) {
+      if (a.team !== 'hostile' || a.dead || !a.position) continue;
+      if (Math.hypot(a.position.x - f.x, a.position.y - f.y, a.position.z - f.z) <= 15) return true;
+    }
+    return false;
+  };
+
+  const beginWake = (): void => {
+    const h = hathren();
+    if (!h || !piece.begin(shoreShot())) return;
+    wakeDone = false;
+    wakeDialogue = 'idle';
+    sprayed = false;
+    const pb = h.wake();
+    if (!pb) {
+      // she cannot wake in frame (no place, or already awake): credit the step and let go
+      piece.end('cancelled');
+      credit();
+      return;
+    }
+    playback = pb;
+    void pb.done.then(() => { wakeDone = true; });
+  };
+
+  k.every(10, () => {
+    if (piece.active || !staged()) return;
+    if (!k.active('m26') || !k.objCurrent('m26', 'wake') || k.flag(M26_WOKE)) return;
+    if (hathren()?.state !== 'nets') return;
+    const d = dialogue();
+    if (!d || d.active || k.ctx.hud?.modalOpen) return;
+    if (k.ctx.services.get('water')?.state === 'diving') return;
+    if (!nearShore() || hostileNear()) return;
+    beginWake();
+  });
+  k.every(1, () => {
+    if (!piece.active) return;
+    if (!k.active('m26')) return void piece.end('cancelled'); // abandoned, failed or completed under it
+    const d = dialogue();
+    piece.tick(!!d?.active);
+    if (!piece.active) return;
+    if (sprayed && wakeDialogue === 'idle' && d && !d.active && d.start(M26_WAKE_SCENE, M26_WAKE_NPC)) wakeDialogue = 'open';
+    const given = wakeDialogue === 'idle' && piece.age > M26_WAKE_DIALOGUE_GIVEUP; // the scene never opened (another modal held the floor)
+    if (wakeDone && (wakeDialogue === 'done' || given)) return void piece.end('finished');
+    if (piece.age > M26_WAKE_HARD_CAP && !d?.active) piece.end('finished');
+  });
+  k.on('dialogue.ended', (e) => {
+    if (e.dialogueId !== M26_WAKE_SCENE || !piece.active) return;
+    // a load closes the open dialogue before K12's own save.loaded handler: that handler decides (credit only if the loaded world has the step current)
+    if (e.reason === 'load' || e.reason === 'dispose') return;
+    wakeDialogue = 'done';
+    if (e.reason !== 'completed') piece.end('skipped'); // closed early: the scene is over, the wake is credited at once
+  });
+  k.on('quest.failed', (e) => { if (e.questId === 'm26') { piece.end('cancelled'); syncHold(); } });
+  k.on('quest.completed', (e) => { if (e.questId === 'm26') { piece.end('cancelled'); syncHold(); } });
+  k.on('quest.started', (e) => { if (e.questId === 'm26') syncHold(); });
+  k.every(30, syncHold);
+
   k.on('wyrm.hathren', (e) => {
-    if (e.beat === 'wake' && k.active('m26')) { k.set(M26_WOKE); k.later(() => recheck(k)); }
+    if (e.beat === 'spray' && piece.active) sprayed = true;
+    // her own wake beat: inside the scene it only opens it; anywhere else (no camera rig, a dev start) it credits the step
+    if (e.beat === 'wake' && !piece.active && k.active('m26')) credit();
     if (e.beat === 'quiet') quietSeen = true;
   });
   // without Hathren (a reduced boot) the wake is credited once the step is current, so the quest never waits on a missing service
   k.every(60, () => {
-    if (k.active('m26') && !k.flag(M26_WOKE) && !hathren() && k.objCurrent('m26', 'wake')) { k.set(M26_WOKE); recheck(k); }
+    if (k.active('m26') && !k.flag(M26_WOKE) && !hathren() && k.objCurrent('m26', 'wake')) credit();
   });
 
   // Each net cut drops one of her lines; the fourth writes `story.m26.netsCut`.
@@ -126,7 +272,9 @@ export function installM26(k: Kit): void {
   });
   k.on('save.loaded', () => {
     quietSeen = false;
+    piece.end('load');
     k.later(rite);
+    k.later(syncHold);
   });
   k.on('quest.objective', (e) => { if (e.questId === 'm26') k.later(rite); });
 
@@ -141,9 +289,15 @@ export function installM26(k: Kit): void {
       return riteAt >= 6;
     },
   });
+  // the plugin goes down mid-scene: the camera, the freeze and the cutscene context are released, and Hathren is let go
+  return () => {
+    piece.end('teardown');
+    const h = hathren();
+    if (h?.wakeHeld) h.holdWake(false);
+  };
 }
 
-export function installM27(k: Kit): void {
+export function installM27(k: Kit): Off {
   const act3 = () => k.ctx.services.get('act3Allies');
   const released = (): boolean => k.str('story.r14.choice') === 'released';
 
@@ -207,21 +361,134 @@ export function installM27(k: Kit): void {
     if (k.flag(M27_PACK1_DOWN)) credit(); // pack 1 was on the field and is gone (persisted by the group rule, so a load cannot strand it)
   });
 
-  // The cages: three opened, then the brood goes home (a short wait, then the step's flag and a line on screen).
-  const home = (): void => {
+  // The cages: three opened, then (after a short wait) the brood goes home. Where the scene can be staged it plays: three hatchlings fly
+  // to the Mere and dive, Leofa speaks, and the flag is written at its end. Elsewhere (a reduced boot) the flag and a toast stand in.
+  const allFreed = (): boolean => M27_FREE_FLAGS.every((f) => k.flag(f));
+  const broodBack = (): void => {
     if (!k.active('m27') || k.flag(M27_BROOD_BACK)) return;
     k.set(M27_BROOD_BACK);
-    toast(k, 'greyfen.q.m27.home');
     k.emit('story.m27.set');
     k.later(() => recheck(k));
   };
+  const home = (): void => {
+    if (!k.active('m27') || k.flag(M27_BROOD_BACK)) return;
+    toast(k, 'greyfen.q.m27.home');
+    broodBack();
+  };
+
+  const dialogue = () => k.ctx.services.get('dialogue');
+  let flight: BroodFlight | null = null;
+  let broodDialogue: 'idle' | 'open' | 'done' = 'idle';
+  let waiting = -1; // ticks the scene has been ready and held back by the water, or -1 when it is not due
+  const place = (): BroodPlace | null => {
+    const cages = [1, 2, 3].map((n) => k.ctx.anchors.find(`greyfen.m27.brood.${n}`));
+    const shore = k.ctx.anchors.find(SHORE_ANCHOR);
+    const scene = k.ctx.scene;
+    if (!shore || !scene || cages.some((c) => !c)) return null;
+    const fw = facing(shore.yaw);
+    return {
+      cages: cages.map((c) => ({ x: c!.position.x, y: c!.position.y, z: c!.position.z })),
+      shore: { x: shore.position.x, y: shore.position.y, z: shore.position.z },
+      toWater: fw, surface: GREYFEN_WATER_TABLE, heightAt,
+    };
+  };
+  const dispose = (): void => { flight?.dispose(); flight = null; };
+  const broodPiece = new SetPiece(k, 'greyfen.m27.brood', (reason) => {
+    if (broodDialogue === 'open') dialogue()?.close('skip');
+    dispose();
+    broodDialogue = 'done';
+    waiting = -1;
+    if (reason === 'finished' || reason === 'skipped') broodBack();
+    // a load: the loaded world's three flags decide; the step completes without a replay
+    else if (reason === 'load' && allFreed()) broodBack();
+  });
+  const broodShot = (p: BroodPlace, f: BroodFlight, second: boolean): CameraShot => {
+    const mx = p.cages.reduce((a, c) => a + c.x, 0) / p.cages.length;
+    const mz = p.cages.reduce((a, c) => a + c.z, 0) / p.cages.length;
+    const dx = p.shore.x - mx;
+    const dz = p.shore.z - mz;
+    const len = Math.hypot(dx, dz) || 1;
+    const ux = dx / len;
+    const uz = dz / len;
+    const look = () => f.focus();
+    if (!second) {
+      // behind the cages, a little high and to the side, so the three leave past the lens
+      return { position: { x: mx - ux * 9 - uz * 3, y: Math.max(p.cages[0]!.y, p.surface) + 4.2, z: mz - uz * 9 + ux * 3 }, lookAt: look, blendIn: 1, blendOut: 1 };
+    }
+    // from the shore, low, as they come in and go under
+    return { position: { x: p.shore.x - p.toWater.x * 6 - p.toWater.z * 7, y: Math.max(p.shore.y, p.surface) + 2.4, z: p.shore.z - p.toWater.z * 6 + p.toWater.x * 7 }, lookAt: look, blendIn: 1.2, blendOut: 1 };
+  };
+  let secondShot = false;
+  const beginBrood = (framed: boolean): void => {
+    const p = place();
+    if (!p || !k.ctx.scene) return home();
+    let f: BroodFlight;
+    try {
+      f = new BroodFlight(k.ctx.scene, p);
+    } catch (err) {
+      k.warn(`the brood scene could not be built (${String(err)})`);
+      return home();
+    }
+    flight = f;
+    broodDialogue = 'idle';
+    secondShot = false;
+    if (!broodPiece.begin(framed ? broodShot(p, f, false) : null)) { dispose(); home(); }
+  };
+  const due = (): void => {
+    waiting = 0;
+  };
+  // After the wait: not while Cael is diving, and not while he is wading until he has stood in the shallows a while (so a cage in the
+  // water cannot hold it back for good); no dialogue open.
+  k.every(10, () => {
+    if (waiting < 0 || broodPiece.active) return;
+    if (!k.active('m27') || k.flag(M27_BROOD_BACK)) { waiting = -1; return; }
+    if (!canStage(k) || !k.ctx.scene) { waiting = -1; return home(); }
+    waiting += 10;
+    const state = k.ctx.services.get('water')?.state ?? 'dry';
+    if (state === 'diving') return;
+    // never a camera hold or a freeze while he is in water: wait for dry land; when the patience runs out with him still wading, the
+    // flight plays in the world with no override, and he watches from where he stands
+    if (state === 'wading' && waiting < M27_BROOD_WADE_PATIENCE) return;
+    const d = dialogue();
+    if (!d || d.active || k.ctx.hud?.modalOpen) return;
+    waiting = -1;
+    beginBrood(state === 'dry');
+  });
+  k.every(1, () => {
+    if (!broodPiece.active || !flight) return;
+    if (!k.active('m27')) return void broodPiece.end('cancelled');
+    flight.update(1 / 60);
+    const d = dialogue();
+    broodPiece.tick(!!d?.active);
+    if (!broodPiece.active || !flight) return;
+    const p = place();
+    if (!secondShot && p && flight.seconds > 5.5) { secondShot = true; broodPiece.reshoot(broodShot(p, flight, true)); }
+    if (flight.done && broodDialogue === 'idle' && d && !d.active && d.start(M27_BROOD_SCENE, M27_BROOD_NPC)) broodDialogue = 'open';
+    if (flight.done && broodDialogue === 'idle' && flight.seconds > 40) broodPiece.end('finished'); // the line never opened (another modal held the floor)
+    if (broodPiece.age > M27_BROOD_HARD_CAP && !d?.active) broodPiece.end('finished');
+  });
+  k.on('dialogue.ended', (e) => {
+    if (e.dialogueId !== M27_BROOD_SCENE || !broodPiece.active) return;
+    if (e.reason === 'load' || e.reason === 'dispose') return; // save.loaded decides, from the loaded flags
+    broodDialogue = 'done';
+    broodPiece.end(e.reason === 'completed' ? 'finished' : 'skipped');
+  });
+  k.on('quest.failed', (e) => { if (e.questId === 'm27') broodPiece.end('cancelled'); });
+  k.on('quest.completed', (e) => { if (e.questId === 'm27') broodPiece.end('cancelled'); });
   k.on('flag.changed', (e) => {
-    if (M27_FREE_FLAGS.includes(e.key) && e.value === true && M27_FREE_FLAGS.every((f) => k.flag(f))) k.after(M27_BROOD_TICKS, home);
+    if (M27_FREE_FLAGS.includes(e.key) && e.value === true && allFreed()) k.after(M27_BROOD_TICKS, due);
   });
   k.on('save.loaded', () => {
-    if (k.active('m27') && !k.flag(M27_BROOD_BACK) && M27_FREE_FLAGS.every((f) => k.flag(f))) k.after(M27_BROOD_TICKS, home);
+    const was = broodPiece.active;
+    waiting = -1;
+    broodPiece.end('load'); // the loaded flags decide: all three freed completes the step, anything less leaves it to the cages
+    if (!was && k.active('m27') && !k.flag(M27_BROOD_BACK) && allFreed()) k.after(M27_BROOD_TICKS, due);
   });
   offerScene(k, { quest: 'm27', objective: 'aftermath', scene: M27_AFTER_SCENE, npc: M27_AFTER_NPC });
+  return () => {
+    broodPiece.end('teardown');
+    dispose();
+  };
 }
 
 export function installD05(k: Kit): void {

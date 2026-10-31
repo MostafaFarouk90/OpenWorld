@@ -145,12 +145,12 @@ export const GREYFEN_PACE: readonly Act3PaceRow[] = [
     F('greyfen.m26.gytha'), F('npc-post.leofa.mere'), W('greyfen.mere.shore'), W('greyfen.spawn.m26.nets.1'), W('greyfen.spawn.m26.nets.5'), W('greyfen.spawn.m26.nets.7'),
     W('greyfen.m26.search.1'), W('greyfen.m26.search.2'), W('greyfen.m26.search.3'), W('greyfen.m26.search.4'), W('greyfen.m26.search.5'),
     W('greyfen.mere.net.1'), W('greyfen.mere.net.2'), W('greyfen.mere.net.3'), W('greyfen.mere.net.4'), F('greyfen.mere.shrine'), W('greyfen.m26.scale-bed'), F('greyfen.m26.gytha'),
-  ], 41, { killUnit: 8, search: 5, interact: 5, set: 2 }),
+  ], 41, { killUnit: 8, search: 5, interact: 5, set: 3 }),
   // M27 (the stealth branch, pack 1 unfought): the blinds crept through, pack 2 fought at the cages, the brood freed
   build('m27', 45, 'npc-post.leofa.mere', [
     F('greyfen.m27.keeper'), W('greyfen.m27.search.1'), W('greyfen.m27.blind.1'), W('greyfen.m27.blind.4'), W('greyfen.m27.search.2'), W('greyfen.m27.search.3'),
     W('greyfen.spawn.m27.pack.2.1'), W('greyfen.m27.search.4'), W('greyfen.m27.brood.1'), W('greyfen.m27.brood.2'), W('greyfen.m27.brood.3'), F('npc-post.leofa.mere'),
-  ], 33, { stealthSection: 1, killUnit: 4, search: 4, interact: 3 }),
+  ], 33, { stealthSection: 1, killUnit: 4, search: 4, interact: 3, set: 1 }),
   // D05: Gytha at the Deeps door, four dives through the Deeps (door legs), the sluices, the arena
   build('d05', 60, 'waystone.hathrens-mere', [
     R('greyfen.d05.gytha'), F('greyfen.deeps.door'), D('greyfen.deeps.entry'), D('greyfen.d05.pocket.1'), F('greyfen.d05.search.1'), F('greyfen.spawn.d05.cell-1.1'),

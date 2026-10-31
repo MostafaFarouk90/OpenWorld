@@ -1,6 +1,7 @@
 // A rig for the Greyfen installers: the real event bus, flag store and quest manager (all nine quests registered), with stub
 // services for what a headless boot lacks (dialogue, Hathren, the deserter, the inventory). `Play` drives each quest the way
 // the game does: talks and notes end dialogues, props set their used flag and give their item, spawner kills die with a tag.
+import * as THREE from 'three';
 import { vi } from 'vitest';
 import { EventBus } from '../../../../../core/EventBus';
 import type { GameContext } from '../../../../../core/Game';
@@ -30,6 +31,18 @@ export interface RigOpts {
   hathren?: boolean;
   /** The deserter service present (default). */
   allies?: boolean;
+  /** The set-piece stage present: a camera rig, a move modifier, the input contexts, a scene graph, a water service, a wake-capable Hathren and a dialogue that holds the floor. */
+  stage?: boolean;
+}
+
+/** What the stage fakes are holding right now: all of these are zero when a scene has released everything. */
+export interface Stage {
+  freezes: number;
+  cutscenes: number;
+  cameras: number;
+  shots: Array<{ position: unknown; lookAt: unknown }>;
+  menuDown: boolean;
+  menuPressed: boolean;
 }
 
 export function makeRig(opts: RigOpts = {}) {
@@ -42,8 +55,34 @@ export function makeRig(opts: RigOpts = {}) {
   services.provide('quests' as never, manager as never);
   for (const [k, v] of Object.entries(opts.flags ?? {})) state.setFlag(k, v);
 
-  const dialogue = { active: false, started: [] as Array<[string, string]>, start(id: string, npc: string) { this.started.push([id, npc]); return true; } };
+  const dialogue = {
+    active: false, hold: false, current: '' as string, closes: [] as string[], started: [] as Array<[string, string]>,
+    start(id: string, npc: string) {
+      if (this.hold && this.active) return false;
+      this.started.push([id, npc]);
+      if (this.hold) { this.active = true; this.current = id; }
+      return true;
+    },
+    /** The player reads the open scene to its end. */
+    finish() {
+      if (!this.active) return;
+      const id = this.current;
+      this.active = false;
+      this.current = '';
+      events.emit('dialogue.ended' as never, { dialogueId: id, npcId: '', reason: 'completed' } as never);
+    },
+    close(reason?: string) {
+      if (!this.active) return;
+      this.closes.push(reason ?? '');
+      const id = this.current;
+      this.active = false;
+      this.current = '';
+      events.emit('dialogue.ended' as never, { dialogueId: id, npcId: '', reason: reason ?? 'skip' } as never);
+    },
+  };
   services.provide('dialogue' as never, dialogue as never);
+  // as the real dialogue plugin does: a load closes the open dialogue (reason 'load') before any later listener sees save.loaded
+  events.on('save.loaded' as never, (() => dialogue.close('load')) as never);
 
   const inv = new Map<string, number>();
   const inventory = { has: (id: string) => (inv.get(id) ?? 0) > 0, count: (id: string) => inv.get(id) ?? 0, add: (id: string, n: number) => { inv.set(id, (inv.get(id) ?? 0) + n); return n; }, remove: (id: string, n: number) => { inv.set(id, Math.max(0, (inv.get(id) ?? 0) - n)); return true; } };
@@ -52,7 +91,30 @@ export function makeRig(opts: RigOpts = {}) {
   services.provide('spells' as never, { addBurn: (n: number, s: string) => void burn.push([n, s]) } as never);
 
   const hathrenCalls: string[] = [];
-  if (opts.hathren !== false) services.provide('hathren' as never, { state: 'nets', netCut: (n: number) => { hathrenCalls.push(`net${n}`); return true; }, calm: () => { hathrenCalls.push('calm'); return null; }, dismiss: () => hathrenCalls.push('dismiss') } as never);
+  const stage: Stage = { freezes: 0, cutscenes: 0, cameras: 0, shots: [], menuDown: false, menuPressed: false };
+  /** A wake-capable Hathren: `wake()` emits her wake beat at once and settles on `finishWake()`; her hold is the caller's. */
+  const hath = {
+    state: 'nets' as 'nets' | 'calming' | 'gone', held: false, selfRelease: true, wakes: 0, skips: 0, awake: false, canWake: true,
+    resolve: null as null | (() => void),
+    holdWake(on: boolean) { this.held = on; },
+    /** Like the real director's derive(): the hold lets go by itself once M26 is no longer active (`selfRelease` off isolates K12's own release). */
+    get wakeHeld() { if (this.selfRelease && this.held && manager.state('m26') !== 'active') this.held = false; return this.held; },
+    headPoint: () => ({ x: 4, y: 6, z: -40 }),
+    wake() {
+      if (!this.canWake || this.awake) return null;
+      this.awake = true;
+      this.wakes++;
+      const done = new Promise<'finished'>((res) => { this.resolve = () => res('finished'); });
+      events.emit('wyrm.hathren' as never, { beat: 'wake' } as never);
+      return { done, skip: () => { this.skips++; events.emit('wyrm.hathren' as never, { beat: 'spray' } as never); events.emit('wyrm.hathren' as never, { beat: 'thrash' } as never); this.resolve?.(); } };
+    },
+    finishWake() { this.resolve?.(); },
+    netCut: (n: number) => { hathrenCalls.push(`net${n}`); return true; }, calm: () => { hathrenCalls.push('calm'); return null; }, dismiss: () => hathrenCalls.push('dismiss'),
+  };
+  if (opts.hathren !== false) services.provide('hathren' as never, (opts.stage ? hath : { state: 'nets', netCut: hath.netCut, calm: hath.calm, dismiss: hath.dismiss }) as never);
+  const water = { state: 'dry' as 'dry' | 'wading' | 'diving' };
+  if (opts.stage) services.provide('water' as never, water as never);
+  const sceneGraph = new THREE.Group();
   const allies = { at: null as string | null, calls: [] as string[] };
   if (opts.allies !== false) {
     services.provide('act3Allies' as never, {
@@ -78,7 +140,27 @@ export function makeRig(opts: RigOpts = {}) {
     },
     triggers: { add: () => () => {}, isInside: (id: string) => inside.has(id) },
     player,
+    ...(opts.stage
+      ? {
+          scene: sceneGraph,
+          strings: { t: (k: string) => k },
+          hud: { modalOpen: null, mount: () => () => {} },
+          input: {
+            contexts: { push: () => { stage.cutscenes++; let on = true; return () => { if (on) { on = false; stage.cutscenes--; } }; } },
+            actions: { down: (a: string) => a === 'menu' && stage.menuDown, pressed: (a: string) => a === 'menu' && stage.menuPressed },
+          },
+          cameraRig: {
+            override: (shot: { position: unknown; lookAt: unknown }) => {
+              stage.cameras++;
+              stage.shots.push(shot);
+              let on = true;
+              return { get active() { return on; }, release: () => { if (on) { on = false; stage.cameras--; } } };
+            },
+          },
+        }
+      : {}),
   } as unknown as GameContext;
+  if (opts.stage) (player as Record<string, unknown>).addMoveModifier = () => { stage.freezes++; let on = true; return () => { if (on) { on = false; stage.freezes--; } }; };
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   const offs: Off[] = [];
   const { kit, tick } = makeKit(ctx, (m) => console.warn(m), offs);
@@ -93,8 +175,8 @@ export function makeRig(opts: RigOpts = {}) {
   installM25(kit);
   installR14(kit);
   installR13(kit, () => clock);
-  installM26(kit);
-  installM27(kit);
+  offs.push(installM26(kit));
+  offs.push(installM27(kit));
   installD05(kit);
 
   const emit = (type: string, payload: unknown = {}): void => void events.emit(type as never, payload as never);
@@ -103,7 +185,7 @@ export function makeRig(opts: RigOpts = {}) {
   const env = () => ({ state: { getFlag: (k: string) => state.getFlag(k) }, quests: { state: (q: string) => manager.state(q), objectiveDone: (q: string, o: string) => manager.objectiveDone(q, o) } }) as never;
 
   const r = {
-    events, state, manager, kit, tick, step, emit, dialogue, inv, inventory, burn, hathrenCalls, allies, standing, interiors, inside, player, warn, defined,
+    events, state, manager, kit, tick, step, emit, dialogue, stage, hath, water, sceneGraph, inv, inventory, burn, hathrenCalls, allies, standing, interiors, inside, player, warn, defined,
     get clock() { return clock; },
     advance: (ms: number) => void (clock += ms),
     dispose: () => { for (const o of offs.splice(0)) o(); flagsOff.dispose(); },

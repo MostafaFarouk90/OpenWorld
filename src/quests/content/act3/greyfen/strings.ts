@@ -120,7 +120,9 @@ export const DIRECTOR_TEXT: Record<string, string> = {
   'greyfen.q.r13.bar.wide': 'The water forgives you now. Press near the gold cells.',
   'greyfen.q.r13.lessonDone': 'You have the tune. Sing it for real.',
   'greyfen.q.r13.calm': 'The fen grows calm. The mist begins to lift.',
+  // headless fallback only: the brood-return scene replaces this toast where the camera rig exists
   'greyfen.q.m27.home': 'The wyrmlings slip into the reeds and are gone.',
+  'greyfen.scene.skip': 'Hold Esc to skip this scene',
 };
 
 export const GREYFEN_QUEST_STRINGS: Record<string, string> = (() => {

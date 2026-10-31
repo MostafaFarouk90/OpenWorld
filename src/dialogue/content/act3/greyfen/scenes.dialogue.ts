@@ -3,8 +3,8 @@ import { all } from '../../act2/cond';
 import { C, voice } from './common';
 import { M23_SIGHT_SCENE } from '../../../../quests/content/act3/greyfen/m23.quest';
 import { R13_SONG_SCENE } from '../../../../quests/content/act3/greyfen/r13.quest';
-import { M26_VOICE_SCENE } from '../../../../quests/content/act3/greyfen/m26.quest';
-import { M27_ALONE_SCENE, M27_AFTER_SCENE } from '../../../../quests/content/act3/greyfen/m27.quest';
+import { M26_VOICE_SCENE, M26_WAKE_SCENE } from '../../../../quests/content/act3/greyfen/m26.quest';
+import { M27_ALONE_SCENE, M27_AFTER_SCENE, M27_BROOD_SCENE } from '../../../../quests/content/act3/greyfen/m27.quest';
 import { D05_OUTCOME_SCENE, D05_UNDERCROFT_SCENE } from '../../../../quests/content/act3/greyfen/d05.quest';
 
 /** The Greyfen set pieces as one-way scene trees: the director starts each (no start rule beyond "always"), the talk objective is credited at its end. */
@@ -37,6 +37,15 @@ export const SCENE_R13_SONG = scene(R13_SONG_SCENE, [
   B('Then sing it for real. For her, and for us.'),
 ]);
 
+/** The wake, framed (K12 follow-up): played from Hathren's spray beat while she thrashes in the nets. Taste calls, logged in design/changes-applied.md. */
+export const SCENE_M26_WAKE = scene(M26_WAKE_SCENE, [
+  G('Stand on the stones, {name}, and go no nearer the water. Whatever is in the nets has felt you come.'),
+  H('Ember-blood on my shore. Have you come to take my skin as well?'),
+  C('I have come to cut the nets. I am no hunter.'),
+  H('They all say so. Nets, hooks, a song to keep me down. Cut them, if you can bear my anger.'),
+  G('She will thrash as the lines go slack. Mind the shallows, and mind the hunters on the bank.'),
+]);
+
 export const SCENE_M26_VOICE = scene(M26_VOICE_SCENE, [
   H('Little ember. You have cut my nets.'),
   C('I have. Are you free?'),
@@ -57,6 +66,12 @@ export const SCENE_M27_LEOFA = scene(M27_ALONE_SCENE, [
   C('Thank you.'),
   L('Do not thank me. Come out alive, and bring the young. That is thanks enough.'),
   L('Go quiet. Go slow. The blinds are thick; use them.'),
+]);
+
+/** The brood goes home (K12 follow-up): Leofa, on the ridge with the long bow, watched them in. */
+export const SCENE_M27_BROOD = scene(M27_BROOD_SCENE, [
+  L('Three, {name}. I counted them in from the ridge, and not one looked back at the cages.'),
+  L('The Mere has its young again. Whoever sold them will count the loss in coin and in other things. Come to the post when you are ready.'),
 ]);
 
 export const SCENE_M27_AFTERMATH = scene(M27_AFTER_SCENE, [
@@ -88,7 +103,7 @@ export const SCENE_D05_OUTCOME = scene(D05_OUTCOME_SCENE, [
   M('Ring the bell at the chapel. I always wanted to hear it again. Farewell, knight.'),
 ]);
 
-export const SCENE_TREES = [SCENE_M23_SIGHT, SCENE_R13_SONG, SCENE_M26_VOICE, SCENE_M27_LEOFA, SCENE_M27_AFTERMATH, SCENE_D05_UNDERCROFT, SCENE_D05_OUTCOME];
+export const SCENE_TREES = [SCENE_M23_SIGHT, SCENE_R13_SONG, SCENE_M26_WAKE, SCENE_M26_VOICE, SCENE_M27_LEOFA, SCENE_M27_BROOD, SCENE_M27_AFTERMATH, SCENE_D05_UNDERCROFT, SCENE_D05_OUTCOME];
 
 /** Names of the speakers that are not NPC definitions (the dialogue panel reads `npc.<speaker>.name`). */
 export const SPEAKER_NAMES: Record<string, string> = {

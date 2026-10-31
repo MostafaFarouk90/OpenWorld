@@ -30,8 +30,8 @@ const plugin: GamePlugin = {
     installM25(kit);
     installR14(kit);
     offs.push(installR13(kit));
-    installM26(kit);
-    installM27(kit);
+    offs.push(installM26(kit));
+    offs.push(installM27(kit));
     installD05(kit);
 
     offs.push(ctx.systems.add({ id: 'greyfen-quests.tick', fixedPhase: 'rules', order: 10, fixedUpdate: () => tick() }));

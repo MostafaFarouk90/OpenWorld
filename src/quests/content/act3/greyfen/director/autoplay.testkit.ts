@@ -100,6 +100,7 @@ export function playObjective(r: Rig, q: string, o: ObjectiveDef, opts: PlayOpts
     return;
   }
   if (ev === 'story.r13.calm') return void r.step(R13_CALM_TICKS + 2);
+  if (ev === 'story.m26.woke') return void r.emit('wyrm.hathren', { beat: 'wake' });
   if (ev === 'wyrm.hathren') return void r.emit('wyrm.hathren', { beat: String(match.beat) });
   if (ev === 'shrine.rekindled') { r.state.setFlag('shrine.hathrens-mere.lit', true); r.emit('shrine.rekindled', { shrineId: 'hathrens-mere' }); r.step(2); r.emit('wyrm.hathren', { beat: 'quiet' }); return; }
   if (ev === 'story.r14.chosen') { r.state.setFlag('story.r14.choice', opts.r14 ?? 'returned'); r.emit('story.r14.chosen'); return; }
