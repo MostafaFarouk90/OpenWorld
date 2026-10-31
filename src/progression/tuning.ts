@@ -53,6 +53,8 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'corvin-skarl': 650,
   // K6a: Skarl's drake is freed on either D06 outcome, never a kill reward.
   'skarl-drake': 0,
+  // The trial is non-lethal: Ysmeryth is never a kill.
+  ysmeryth: 0,
   dummy: 0,
   scarecrow: 0,
 };
