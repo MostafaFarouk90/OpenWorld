@@ -16,6 +16,7 @@ import { OLDSMOKE_SPAWNERS } from '../quests/content/act2/oldsmoke/all';
 import { ACT3_SPAWNERS as ACT3_QUEST_SPAWNERS } from '../quests/content/act3';
 import { WYRM_SPAWNERS } from './wyrm/spawners';
 import { ACT3_DRAGON_SPAWNERS } from './wyrm/large/lodgeWyrms';
+import { SKARL_SPAWNERS } from '../bosses/skarl/spawners';
 import { ENEMY_STRINGS_EN } from './strings.en';
 import { WAVE_SPAWNERS } from '../waves/spawners';
 import './events';
@@ -61,7 +62,7 @@ const plugin: GamePlugin = {
       }
       return { model: assets.instantiate(KNIGHT), clips: assets.animations(KNIGHT), prop };
     };
-    const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS, ...ACT2_SPAWNERS, ...WAVE_SPAWNERS, ...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS, ...ACT3_QUEST_SPAWNERS, ...ACT3_SPAWNERS, ...ACT3_DRAGON_SPAWNERS] });
+    const m = new EnemyManager(hostFromContext(ctx, warn), makeModel, { spawners: [...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS, ...ACT2_SPAWNERS, ...WAVE_SPAWNERS, ...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS, ...ACT3_QUEST_SPAWNERS, ...ACT3_SPAWNERS, ...ACT3_DRAGON_SPAWNERS, ...SKARL_SPAWNERS] });
     manager = m;
 
     ctx.strings.register('en', ENEMY_STRINGS_EN);
