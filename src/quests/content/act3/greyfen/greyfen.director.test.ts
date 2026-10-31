@@ -625,6 +625,28 @@ describe('D05: the Deeps', () => {
     expect(r.flag('story.d05.complete')).toBe(true);
   });
 
+  it('an abandoned fight (K8 BossArena.abandon) leaves the boss step open; the arena stays armed and a later defeat completes D05', () => {
+    const r = atDeeps(['d05', 'murkjaw']);
+    expect(r.flag('story.d05.started')).toBe(true); // the arena arms on this flag
+    // The player leaves the Deeps (or stays out of the hall 2 s): the arena abandons, no defeat and no outcome flag.
+    r.emit('interior.exited', { interiorId: 'greyfen-deeps' });
+    r.step(120);
+    expect(r.done('d05', 'murkjaw')).toBe(false);
+    expect(r.qs('d05')).toBe('active');
+    expect(r.started('scene-d05-outcome')).toBe(false);
+    expect(r.flag('story.d05.started')).toBe(true); // still armed for the retry
+    expect(r.flag('boss.murkjaw.outcome')).toBeFalsy();
+    // Retry: a second attempt ends in the defeat.
+    r.emit('boss.defeated', { bossId: 'murkjaw', actorId: 'm' });
+    r.state.setFlag('boss.murkjaw.outcome', 'defeated');
+    r.step(5);
+    expect(r.done('d05', 'murkjaw')).toBe(true);
+    r.step(70);
+    expect(r.started('scene-d05-outcome')).toBe(true);
+    r.scene('scene-d05-outcome', 'scene.d05.outcome');
+    expect(r.qs('d05')).toBe('completed');
+  });
+
   it('a boss defeated before the step is current is credited when it comes (flag, not event)', () => {
     const r = atDeeps(['d05', 'dive1']);
     r.emit('boss.defeated', { bossId: 'murkjaw', actorId: 'm' });
