@@ -8,6 +8,7 @@ import { dialogueStringsDensityB } from './strings.density-b.en';
 import { dialogueStringsDensityC } from './strings.density-c.en';
 import { ACT2_DIALOGUE_STRINGS } from './content/act2';
 import { ACT3_TRAINER_STRINGS } from './content/act3/trainers';
+import { DRAGONSPINE_DIALOGUE_STRINGS } from './content/act3/dragonspine';
 import { ACT3_COMPANION_STRINGS } from './content/act3/companions';
 import { NPC_AELFREDA_COMPANION_STRINGS_EN } from '../companions/dialogue/npcAelfredaCompanion.dialogue';
 
@@ -21,6 +22,7 @@ export const dialogueStrings: Record<string, string> = {
   ...NPC_AELFREDA_COMPANION_STRINGS_EN,
   ...ACT2_DIALOGUE_STRINGS,
   ...ACT3_TRAINER_STRINGS,
+  ...DRAGONSPINE_DIALOGUE_STRINGS,
   ...ACT3_COMPANION_STRINGS,
   // ---- Marshal Stane ----
   'dialogue.npc-stane.wave': 'Ho there, {name}! Good to see you walking Kettlewick lane with your head up.',

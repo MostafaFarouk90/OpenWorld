@@ -47,7 +47,10 @@ describe('dialogue content', () => {
       // Act 2 Oldsmoke mines (A13)
       'winch-wright', 'miner-hale', 'miner-brig', 'pickett', 'shift-crew', 'pike', 'pike-apprentice', 'steward-captain', 'wyrmling-keeper',
       // Act 3 companions (K5): the M27 deserter (K3's NPC def)
-      'deserter']).toContain(n.speaker);
+      'deserter',
+      // Act 3 lower Dragonspine (K13)
+      'thorgar', 'eadgyth', 'ansgar', 'lodge-hunter-1', 'lodge-hunter-2', 'lodge-hunter-3', 'lodge-hunter-4', 'lodge-hunter-5', 'lodge-hunter-6', 'lodge-hunter-cave',
+      'sled-hand-1', 'sled-hand-2', 'egg-thief', 'pilgrim-1', 'pilgrim-2', 'pilgrim-3']).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {

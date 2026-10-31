@@ -11,6 +11,7 @@ import { WYRM_SPAWNERS } from './wyrm/spawners';
 import { WAVE_SPAWNERS } from '../waves/spawners';
 import { ACT2_SPAWNERS_A12 } from '../quests/content/act2/spawners';
 import { OLDSMOKE_SPAWNERS } from '../quests/content/act2/oldsmoke';
+import { ACT3_SPAWNERS as ACT3_QUEST_SPAWNERS } from '../quests/content/act3';
 import { ACT3_SPAWNERS } from './act3Spawners';
 import { ACT3_DRAGON_SPAWNERS } from './wyrm/large/lodgeWyrms';
 import { ALL_INTERIORS } from '../interiors/interiors.plugin';
@@ -24,7 +25,7 @@ const ACT3_REGIONS = ['greyfen', 'dragonspine'] as const;
 
 export const ALL_SPAWNER_DEFS: readonly SpawnerDef[] = [
   ...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS, ...ACT2_SPAWNERS,
-  ...WAVE_SPAWNERS, ...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS, ...ACT3_SPAWNERS, ...ACT3_DRAGON_SPAWNERS,
+  ...WAVE_SPAWNERS, ...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS, ...ACT3_QUEST_SPAWNERS, ...ACT3_SPAWNERS, ...ACT3_DRAGON_SPAWNERS,
 ];
 
 const anchors = resolveAnchors(ALL_LAYOUTS, ALL_INTERIORS);
@@ -67,7 +68,7 @@ describe('Act 3 spawner lint', () => {
   it('every shipped spawner in the Greyfen or Dragonspine boxes names a block or an area (K6b PR 1: the Greyfen ambient groups)', () => {
     expect(act3SpawnersMissingBlockOrArea(ALL_SPAWNER_DEFS)).toEqual([]);
     const inside = ALL_SPAWNER_DEFS.filter((s) => (anchors.get(s.anchor) ?? []).some((p) => act3RegionAt(p.x, p.z) !== null));
-    expect(inside.map((s) => s.id).sort()).toEqual(ACT3_SPAWNERS.map((s) => s.id).sort());
+    expect(inside.map((s) => s.id).sort()).toEqual([...ACT3_SPAWNERS, ...ACT3_QUEST_SPAWNERS].map((s) => s.id).sort());
     for (const s of inside) expect(s.block ?? s.area, s.id).toBeTruthy();
   });
 
