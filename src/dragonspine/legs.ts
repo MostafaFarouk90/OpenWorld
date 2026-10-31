@@ -12,11 +12,13 @@ import { routeOver } from './route';
 export interface LegLengths {
   ridden: number;
   foot: number;
+  /** Metres glided (D06 only). */
+  glide?: number;
   note: string;
 }
 
 /** The plan's targets, ridden and on foot. */
-export const LEG_TARGETS: Readonly<Record<string, { ridden: number; foot: number }>> = {
+export const LEG_TARGETS: Readonly<Record<string, { ridden: number; foot: number; glide?: number }>> = {
   M28: { ridden: 1200, foot: 1000 },
   R15: { ridden: 600, foot: 1000 },
   M29: { ridden: 600, foot: 300 },
@@ -24,6 +26,12 @@ export const LEG_TARGETS: Readonly<Record<string, { ridden: number; foot: number
   M30: { ridden: 1100, foot: 400 },
   R17: { ridden: 1800, foot: 200 },
   R18: { ridden: 600, foot: 800 },
+  // The summit (PR 2).
+  M31: { ridden: 1000, foot: 800 },
+  M32: { ridden: 0, foot: 300 },
+  M33: { ridden: 800, foot: 700 },
+  M34: { ridden: 0, foot: 600 },
+  D06: { ridden: 0, foot: 600, glide: 700 },
 };
 
 const m = (n: number): number => Math.round(n);
@@ -70,5 +78,28 @@ export function legLengths(b: DragonspineBuild): Record<string, LegLengths> {
     M30: { ridden: m(b.anvil.roadS - b.shelter.roadS), foot: m(b.anvil.loopLength), note: 'shelter to the Anvil along the road; shrine -> six carvings -> shrine' },
     R17: { ridden: m(ride), foot: m(padWalk), note: 'road from the Anvil down to shrines 3, 2, 1, then up past the Anvil to 4, 5, 6; the walk from the road to each pad and back' },
     R18: { ridden: m(rideRoute(b.sites.h, spine, spine.length, b.hawk.climbStart)), foot: m(5 * hawkClimb), note: 'the plan\'s lodge-to-foot ride: the Spine Road from the lodge to the point nearest the cliff foot, then the walkable route to the climb start; camp to nest x 3 and down x 2' },
+    ...summitLegs(b),
+  };
+}
+
+/** The summit's rows (PR 2), from the summit layout on the same ground. */
+export function summitLegs(b: DragonspineBuild): Record<string, LegLengths> {
+  const road = b.sites.road;
+  const gateS = road.nearest(b.gate.arch.x, b.gate.arch.z).s;
+  const H = b.hearth;
+  const m32 = routeLength([H.entry, H.keeperStone, H.hoard, ...H.hoardSearches, H.shrine]);
+  const lt = b.summit.ledges['summit-skyhold'];
+  const m34 = routeLength([H.shrine, ...H.carvings, H.glideMarkers[0]!, { x: lt.ledge.x, z: lt.ledge.z }]);
+  const glide = dist(b.glide.launch['summit-aerie'], b.glide.landing['summit-aerie']);
+  return {
+    M31: {
+      ridden: m(road.length - gateS + dist(H.entry, b.roost.trailhead)),
+      foot: m(b.roost.climbLength),
+      note: 'the Rime Pass from the summit gate to its end at the Wyrm\'s Hearth, then across the bowl to the north-rim trailhead (Eadgyth waits at the Hearth); the routed walk down from the rim to the roost',
+    },
+    M32: { ridden: 0, foot: m(m32), note: 'ridden n/a; in the Hearth: the entry to the keeper-stone, the hoard and its three searches, then the shrine' },
+    M33: { ridden: m(b.summit.spur.length), foot: m(b.skyhold.ledgeLength), note: 'K1\'s Skyhold spur from the summit gate to the cliff top; the routed cliff-ledge path from the camp along the six net anchors and back' },
+    M34: { ridden: 0, foot: m(m34), note: 'ridden n/a; the shrine, the four hearth carvings, the glide marker, then the summit-skyhold launch (the first glide)' },
+    D06: { ridden: 0, foot: m(pathLength(b.aerie.route)), glide: m(glide), note: 'the summit-aerie lip to the Aerie landing marker gliding; on foot the landing (the waystone attunes on arrival), the winch, the gate, the courtyard\'s searches, the arena and the keep door' },
   };
 }
