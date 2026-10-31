@@ -1,0 +1,14 @@
+{
+  "fixture": "act3-greyfen-m24.json",
+  "id": "m24",
+  "order": "greyfen",
+  "injected": [
+    "m23"
+  ],
+  "questDefs": [],
+  "lockedBlocks": {
+    "greyfen": 18
+  },
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/act3Fixtures.gen.test.ts",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving"
+}

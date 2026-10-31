@@ -1,0 +1,34 @@
+{
+  "fixture": "act3-spine-d06.json",
+  "id": "d06",
+  "order": "spine",
+  "injected": [
+    "m28",
+    "r15",
+    "m29",
+    "r16",
+    "m30",
+    "r17",
+    "r18",
+    "m23",
+    "m24",
+    "r12",
+    "m25",
+    "r14",
+    "r13",
+    "m26",
+    "m27",
+    "d05",
+    "m31",
+    "m32",
+    "m33",
+    "m34"
+  ],
+  "questDefs": [],
+  "lockedBlocks": {
+    "greyfen": 21,
+    "dragonspine-lower": 20
+  },
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/act3Fixtures.gen.test.ts",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving"
+}

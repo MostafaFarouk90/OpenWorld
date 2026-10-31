@@ -15,6 +15,7 @@ export const ACT3_FLAG_OWNERS: readonly Act3FlagOwner[] = [
   { pattern: 'story.m26.netsCut', owner: 'K12', note: 'M26 nets all cut; K9 reads it for the Mere stone' },
   { pattern: 'story.a3.campSeen', owner: 'K16', note: 'the Act 3 camp scene has played' },
   { pattern: 'story.gate.a4', owner: 'K16', note: 'the Act 4 gate' },
+  { pattern: 'story.a3.peaksCardSeen', owner: 'K16', note: 'the "peaks are next" card after D05 has shown (Phase E)' },
   { pattern: 'trainer.<classId>.masterBook', owner: 'K11', note: 'written through grantMasterBook' },
   { pattern: 'boss.<id>.outcome', owner: 'core boss registry', note: 'written by the core boss registry for every boss' },
   { pattern: 'story.phase.dragonspineOpen', owner: 'Phase F PR', note: 'nothing writes it in Phase E' },

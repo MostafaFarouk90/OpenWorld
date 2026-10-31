@@ -14,6 +14,7 @@
 // it are lit, so the second block's lock sees the first block's Warmth (design 5.9). `order` defaults to `greyfen`.
 import { ACT1_CAMP_SEEN_FLAG, ACT1_CARD_SEEN_FLAG, ACT1_CARD_SEEN_FLAG_V06, ACT1_GATE_FLAG } from '../integration/act1Ending';
 import { actEnding } from '../integration/actEndings';
+import { PEAKS_CARD_SEEN_FLAG } from '../integration/phaseECard';
 import { ACT3_BLOCKS, type Act3BlockId } from '../enemies/level';
 import { ACT1_PREREQS, completeAct1Quest, type Act1JumpPorts } from './act1Jump';
 import { ACT2_JUMP_CLASSES, completeAct2Quest } from './act2Jump';
@@ -198,7 +199,10 @@ export class Act3Jump {
       this.phase = 'act3';
     }
     if (this.phase === 'act3') {
-      for (const q of ACT3_PREREQS[this.order][this.id] ?? []) this.inject(q);
+      const prereqs = ACT3_PREREQS[this.order][this.id] ?? [];
+      // K16: an injected D05 would raise the "peaks are next" card over the arriving player; a real play saw it already.
+      if (prereqs.includes('d05')) p.setFlag(PEAKS_CARD_SEEN_FLAG, true);
+      for (const q of prereqs) this.inject(q);
       // The target's own lock happens when the player accepts it (K9); the jump leaves it offerable.
       this.phase = 'quiet';
     }

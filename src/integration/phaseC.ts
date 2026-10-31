@@ -402,6 +402,10 @@ export interface DriverTables {
   handlers: Record<string, Handler>;
   scripted: ScriptedEvents;
   givers: Record<string, string>;
+  /** K16 (Phase E): a later act's props, carries and notes, searched before the Act 2 lists. */
+  props?: readonly (typeof ALL_PROPS)[number][];
+  carry?: readonly (typeof ALL_CARRY)[number][];
+  notes?: readonly (typeof ALL_NOTES)[number][];
 }
 const PHASE_C_TABLES: DriverTables = { handlers: HANDLERS, scripted: SCRIPTED, givers: ACT2_GIVERS };
 
@@ -435,12 +439,12 @@ export async function play(h: ChapterHarness, trail: PhaseCTrail, q: string, def
       if (tables.handlers[key]) return tables.handlers[key](h, trail, opts);
       return h.enterTrigger(def.target as string);
     case 'interact': {
-      const prop = ALL_PROPS.find((p) => p.interactableId === def.target);
+      const prop = [...(tables.props ?? []), ...ALL_PROPS].find((p) => p.interactableId === def.target);
       ensure(prop, `a prop for ${def.target}`);
       return useAt(h, prop.anchorId, prop.interactableId, 1.1, [1.8, 2.5]);
     }
     case 'carry': {
-      const items = ALL_CARRY.filter((c) => c.questId === q && c.objectiveId === def.id && !h.ctx.state.getBool(c.deliveredFlag));
+      const items = [...(tables.carry ?? []), ...ALL_CARRY].filter((c) => c.questId === q && c.objectiveId === def.id && !h.ctx.state.getBool(c.deliveredFlag));
       ensure(items.length > 0, `a carry item left for ${key}`);
       return carryTo(h, items[0].homeAnchor, items[0].destination, items[0].deliveredFlag);
     }
@@ -452,13 +456,13 @@ export async function play(h: ChapterHarness, trail: PhaseCTrail, q: string, def
       if (def.target === 'interact' && m.interactableId) {
         const ids = (Array.isArray(m.interactableId) ? m.interactableId : [m.interactableId]) as string[];
         const done = quests(h).objectives(q).find((v) => v.def.id === def.id)?.progress ?? 0;
-        const prop = ALL_PROPS.find((p) => ids.includes(p.interactableId) && !h.ctx.state.getBool(p.usedFlag ?? ''));
+        const prop = [...(tables.props ?? []), ...ALL_PROPS].find((p) => ids.includes(p.interactableId) && !h.ctx.state.getBool(p.usedFlag ?? ''));
         ensure(prop, `an unused prop of ${key} (done ${done})`);
         return useAt(h, prop.anchorId, prop.interactableId, 1.1, [1.8, 2.5]);
       }
       if (def.target === 'dialogue.ended' && m.npcId && m.reason === 'completed' && typeof m.npcId !== 'string') {
         const ids = m.npcId as string[];
-        const note = ALL_NOTES.find((n) => ids.includes(n.id) && !trailRead(trail, n.id));
+        const note = [...(tables.notes ?? []), ...ALL_NOTES].find((n) => ids.includes(n.id) && !trailRead(trail, n.id));
         ensure(note, `an unread note of ${key}`);
         return readNoteFocused(h, trail, note.id, note.anchorId);
       }

@@ -1,0 +1,23 @@
+{
+  "fixture": "act3-spine-m25.json",
+  "id": "m25",
+  "order": "spine",
+  "injected": [
+    "m28",
+    "r15",
+    "m29",
+    "r16",
+    "m30",
+    "r17",
+    "r18",
+    "m23",
+    "m24"
+  ],
+  "questDefs": [],
+  "lockedBlocks": {
+    "greyfen": 21,
+    "dragonspine-lower": 20
+  },
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/act3Fixtures.gen.test.ts",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving"
+}

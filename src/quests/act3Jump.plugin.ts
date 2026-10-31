@@ -2,14 +2,107 @@
 // act3Jump.ts); Act 1 and Act 2 are replayed with both endings silenced. Optional `&class=<id>` picks the M07 class.
 // Compiled out of production builds (import.meta.env.DEV). K16's deterministic fixtures build on this plumbing.
 import type { GamePlugin } from '../core/plugins';
+import type { GameContext } from '../core/Game';
 import { createEffectRunner } from './effects';
-import { Act3Jump, parseAct3 } from './act3Jump';
+import { Act3Jump, parseAct3, type Act3JumpPorts } from './act3Jump';
+import { Act3FixtureStart } from '../integration/act3FixtureStart';
+import { act3FixtureName, fixtureDefIds, knownQuestDefs } from '../integration/act3FixtureKey';
 import type { BusPort } from './ports';
 import type { TutorialDirector } from '../tutorial/TutorialDirector';
 import '../region/containment';
 import { heightAt } from '../terrain/heightfield';
 
 const TELEPORT_TRIES = 30;
+
+/**
+ * The ports the jump runs on, built from a live game (K16's fixture generator runs the same jump headless through these).
+ */
+export function act3JumpPorts(ctx: GameContext): Act3JumpPorts {
+  const svc = (n: string) => (ctx.services as unknown as { get(n: string): any }).get(n);
+  const save = ctx.services.get('save');
+  const quests = ctx.services.require('quests');
+  const runner = createEffectRunner({
+    state: ctx.state, quests: quests as never, bus: ctx.events as unknown as BusPort, sourceId: 'act3-jump',
+    progression: () => svc('progression'), inventory: () => svc('inventory'), npcs: () => svc('npcs'), enemies: () => svc('enemies'),
+    warn: (m) => console.warn(`[act3] ${m}`),
+  });
+  let teleport: 'idle' | 'pending' | 'ok' = 'idle';
+  let teleportTries = 0;
+  // One safe teleport in flight at a time; a refused one (busy, terrain loading) is retried on a later tick, and
+  // after TELEPORT_TRIES refusals the player is placed directly, as the tutorial's restart does.
+  const place = (pos: { x: number; y: number; z: number }, yaw: number): boolean => {
+    if (teleport === 'ok') return true;
+    if (teleport === 'pending') return false;
+    const ws = ctx.services.get('waystones');
+    if (!ws || ++teleportTries > TELEPORT_TRIES) {
+      // safeTeleport contains its target itself (v0.6); the direct placement goes through the same clamp.
+      const at = ctx.services.get('containment')?.clamp(pos) ?? pos;
+      ctx.player.teleport(at === pos ? pos : { ...at, y: heightAt(at.x, at.z) + 0.05 }, yaw);
+      if (ctx.cameraRig) ctx.cameraRig.yaw = yaw;
+      return true;
+    }
+    teleport = 'pending';
+    void ws.safeTeleport(pos, yaw).then(
+      (o) => { teleport = o.ok ? 'ok' : 'idle'; },
+      () => { teleport = 'idle'; },
+    );
+    return false;
+  };
+  const enemies = () => svc('enemies') as { blockPreview?(b: string): number | undefined; lockBlockLevel?(b: string, l: number): number | undefined } | undefined;
+  return {
+    tutorial: () => (globalThis as { __tutorial?: TutorialDirector }).__tutorial,
+    quests,
+    runEffects: (effects) => {
+      for (const r of runner.run(effects)) if (!r.ok) console.warn(`[act3] effect failed: ${r.error ?? ''}`);
+    },
+    setFlag: (flag, value) => ctx.state.setFlag(flag, value),
+    rekindle: (id) => void svc('waystones')?.rekindle(id, 'script'),
+    giveGold: (amount) => {
+      for (const r of runner.run([{ giveGold: amount }])) if (!r.ok) console.warn(`[act3] gold grant failed: ${r.error ?? ''}`);
+    },
+    chooseClass: (id) => {
+      const classes = svc('classes');
+      if (!classes) return false;
+      const r = classes.choose(id);
+      if (!r.ok) return false;
+      classes.skipDrill?.();
+      return true;
+    },
+    teleportTo: (anchorId) => {
+      const a = ctx.anchors.find(anchorId);
+      if (!a) {
+        console.warn(`[act3] anchor ${anchorId} missing; staying put`);
+        return true;
+      }
+      return place(a.position, a.yaw);
+    },
+    // Act 1 and Act 2 givers are never stood by in an Act 3 jump; the replay only completes their quests.
+    standBy: () => true,
+    placeAt: ({ x, z }) => place({ x, y: heightAt(x, z) + 0.05, z }, 0),
+    lockBlock: (block) => {
+      const e = enemies();
+      const level = e?.blockPreview?.(block);
+      if (level === undefined) {
+        console.warn(`[act3] block ${block} not locked: no preview yet`);
+        return;
+      }
+      e?.lockBlockLevel?.(block, level);
+    },
+    topUpXp: (total) => {
+      const prog = ctx.services.get('progression');
+      if (prog && prog.xp < total) prog.grantXp(total - prog.xp, 'act3-jump');
+    },
+    hasQuest: (id) => quests.objectives(id).length > 0,
+    closeDialogue: () => {
+      const d = ctx.services.get('dialogue');
+      if (!d?.active) return false;
+      d.close();
+      return true;
+    },
+    ready: () => !save || !save.loading,
+    warn: (m) => console.warn(`[act3] ${m}`),
+  };
+}
 
 const plugin: GamePlugin = {
   id: 'act3-jump',
@@ -23,104 +116,38 @@ const plugin: GamePlugin = {
       console.warn(`[act3] jump refused: ${parsed.error}`);
       return;
     }
-    const svc = (n: string) => (ctx.services as unknown as { get(n: string): any }).get(n);
     const save = ctx.services.get('save');
     // Held for the session: a jumped game is never saved over the player's real save.
     // Never released: releasing would run the save deferred under the hold. The save plugin's dispose clears its
     // holds without saving.
     save?.suspend('act3-jump');
-    const quests = ctx.services.require('quests');
-    const runner = createEffectRunner({
-      state: ctx.state, quests: quests as never, bus: ctx.events as unknown as BusPort, sourceId: 'act3-jump',
-      progression: () => svc('progression'), inventory: () => svc('inventory'), npcs: () => svc('npcs'), enemies: () => svc('enemies'),
+    const ports = act3JumpPorts(ctx);
+    const jump = new Act3Jump(parsed.id, parsed.order, ports, parsed.classId);
+    (globalThis as { __act3?: Act3Jump }).__act3 = jump;
+    // K16: the committed fixture when it is fresh (Knight only, as generated), else the injection above; `&fixture=0`
+    // forces the injection.
+    const name = act3FixtureName(parsed.order, parsed.id);
+    const wantFixture = new URLSearchParams(search).get('fixture') !== '0' && parsed.classId === 'knight';
+    const start = new Act3FixtureStart(name, wantFixture, {
+      find: () => import('../integration/act3FixtureLoader').then((m) => m.findAct3Fixture(parsed.order, parsed.id)),
+      ready: ports.ready,
+      known: () => knownQuestDefs(ports.hasQuest, fixtureDefIds(parsed.id, parsed.order)),
+      loadFile: save?.loadFile ? (file) => save.loadFile!(file) : undefined,
       warn: (m) => console.warn(`[act3] ${m}`),
     });
-    let teleport: 'idle' | 'pending' | 'ok' = 'idle';
-    let teleportTries = 0;
-    // One safe teleport in flight at a time; a refused one (busy, terrain loading) is retried on a later tick, and
-    // after TELEPORT_TRIES refusals the player is placed directly, as the tutorial's restart does.
-    const place = (pos: { x: number; y: number; z: number }, yaw: number): boolean => {
-      if (teleport === 'ok') return true;
-      if (teleport === 'pending') return false;
-      const ws = ctx.services.get('waystones');
-      if (!ws || ++teleportTries > TELEPORT_TRIES) {
-        // safeTeleport contains its target itself (v0.6); the direct placement goes through the same clamp.
-        const at = ctx.services.get('containment')?.clamp(pos) ?? pos;
-        ctx.player.teleport(at === pos ? pos : { ...at, y: heightAt(at.x, at.z) + 0.05 }, yaw);
-        if (ctx.cameraRig) ctx.cameraRig.yaw = yaw;
-        return true;
-      }
-      teleport = 'pending';
-      void ws.safeTeleport(pos, yaw).then(
-        (o) => { teleport = o.ok ? 'ok' : 'idle'; },
-        () => { teleport = 'idle'; },
-      );
-      return false;
-    };
-    const enemies = () => svc('enemies') as { blockPreview?(b: string): number | undefined; lockBlockLevel?(b: string, l: number): number | undefined } | undefined;
-    const jump = new Act3Jump(parsed.id, parsed.order, {
-      tutorial: () => (globalThis as { __tutorial?: TutorialDirector }).__tutorial,
-      quests,
-      runEffects: (effects) => {
-        for (const r of runner.run(effects)) if (!r.ok) console.warn(`[act3] effect failed: ${r.error ?? ''}`);
-      },
-      setFlag: (flag, value) => ctx.state.setFlag(flag, value),
-      rekindle: (id) => void svc('waystones')?.rekindle(id, 'script'),
-      giveGold: (amount) => {
-        for (const r of runner.run([{ giveGold: amount }])) if (!r.ok) console.warn(`[act3] gold grant failed: ${r.error ?? ''}`);
-      },
-      chooseClass: (id) => {
-        const classes = svc('classes');
-        if (!classes) return false;
-        const r = classes.choose(id);
-        if (!r.ok) return false;
-        classes.skipDrill?.();
-        return true;
-      },
-      teleportTo: (anchorId) => {
-        const a = ctx.anchors.find(anchorId);
-        if (!a) {
-          console.warn(`[act3] anchor ${anchorId} missing; staying put`);
-          return true;
-        }
-        return place(a.position, a.yaw);
-      },
-      // Act 1 and Act 2 givers are never stood by in an Act 3 jump; the replay only completes their quests.
-      standBy: () => true,
-      placeAt: ({ x, z }) => place({ x, y: heightAt(x, z) + 0.05, z }, 0),
-      lockBlock: (block) => {
-        const e = enemies();
-        const level = e?.blockPreview?.(block);
-        if (level === undefined) {
-          console.warn(`[act3] block ${block} not locked: no preview yet`);
-          return;
-        }
-        e?.lockBlockLevel?.(block, level);
-      },
-      topUpXp: (total) => {
-        const prog = ctx.services.get('progression');
-        if (prog && prog.xp < total) prog.grantXp(total - prog.xp, 'act3-jump');
-      },
-      hasQuest: (id) => quests.objectives(id).length > 0,
-      closeDialogue: () => {
-        const d = ctx.services.get('dialogue');
-        if (!d?.active) return false;
-        d.close();
-        return true;
-      },
-      ready: () => !save || !save.loading,
-      warn: (m) => console.warn(`[act3] ${m}`),
-    }, parsed.classId);
-    (globalThis as { __act3?: Act3Jump }).__act3 = jump;
+    (globalThis as { __act3Start?: Act3FixtureStart }).__act3Start = start;
     ctx.systems.add({
       id: 'act3-jump',
       fixedPhase: 'rules',
       order: 900,
-      fixedUpdate: () => jump.tick(),
+      fixedUpdate: () => {
+        if (start.tick()) jump.tick();
+      },
     });
   },
   dispose() {
     delete (globalThis as { __act3?: unknown }).__act3;
+    delete (globalThis as { __act3Start?: unknown }).__act3Start;
   },
 };
 

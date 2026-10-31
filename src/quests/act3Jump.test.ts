@@ -160,6 +160,16 @@ describe('Act3Jump', () => {
     expect(r.state.get('m24')).toBe('completed');
   });
 
+  it('K16: marks the "peaks are next" card seen only when D05 is injected, before the injection', () => {
+    expect(run('d05', 'greyfen').flags.has('story.a3.peaksCardSeen')).toBe(false);
+    expect(run('m28', 'greyfen').flags.get('story.a3.peaksCardSeen')).toBe(true);
+    expect(run('m28', 'spine').flags.has('story.a3.peaksCardSeen')).toBe(false);
+    expect(run('m23', 'spine').flags.has('story.a3.peaksCardSeen')).toBe(false);
+    const r = run('m31', 'spine');
+    const keys = [...r.flags.keys()];
+    expect(keys.indexOf('story.a3.peaksCardSeen')).toBeLessThan(keys.indexOf('story.d05.complete'));
+  });
+
   it('locks each block when its lock quest is injected, after the earlier shrines; the target block is left to the accept', () => {
     expect(run('m23', 'greyfen').locks).toEqual([]);
     expect(run('m28', 'greyfen').locks).toEqual(['greyfen@0']);

@@ -17,6 +17,10 @@ import { ACT2_CODEX_IDS } from '../codex/act2';
 
 const FIXTURES = import.meta.glob<Record<string, unknown>>('./__fixtures__/*.json', { eager: true, import: 'default' });
 const NAMES = Object.keys(FIXTURES).filter((k) => !k.endsWith('.meta.json')).sort();
+// K16's Act 3 `?act3=` fixtures (42, loaded on the real save plugin in integration/act3Containment.e2e.test.ts): counted
+// for the persistable coverage below, not booted one by one here.
+const ACT3_FIXTURES = import.meta.glob<Record<string, unknown>>('./__fixtures__/act3/*.json', { eager: true, import: 'default' });
+const ACT3_NAMES = Object.keys(ACT3_FIXTURES).filter((k) => !k.endsWith('.meta.json'));
 type Entries = Record<string, { version: number; data: unknown }>;
 
 let h: (ChapterHarness & { loaded: boolean }) | null = null;
@@ -61,15 +65,16 @@ describe('the persistables', () => {
   it('every registered key is in at least one fixture, or is an Act 2 key an Act 1 save lacks', async () => {
     h = await bootFromSave(await readAct1Fixture(ACT1_FIXTURES.complete), { models: false, virtualClock: true });
     const keys = h.ctx.persist.all().map((p) => p.key);
-    const inAny = new Set(NAMES.flatMap((n) => Object.keys((FIXTURES[n].entries as Entries))));
+    const inAny = new Set([
+      ...NAMES.flatMap((n) => Object.keys((FIXTURES[n].entries as Entries))),
+      ...ACT3_NAMES.flatMap((n) => Object.keys((ACT3_FIXTURES[n].entries as Entries))),
+    ]);
     // The keys an Act 1 save lacks are the ones Act 2 added: the Act 1 loads above are their no-key loads, and the
     // Phase C fixtures carry them.
     // Every key is carried by some fixture (a loader test exists for it) except those the build registers but no save has
     // written yet; there must be none, so a new persistable ships with a fixture that carries it.
-    // v0.7 keys whose loader tests live with their owner until K16's Act 3 fixtures carry them (K16 removes each entry):
-    // `spells.surge` (item 26, spells.plugin.test.ts covers the no-key load and the round trip); `traversal.carry` (K7,
-    // src/traversal/carry/carry.test.ts covers the round trip, the no-key load and a load before the sled is added).
-    const AWAITING_ACT3_FIXTURES = ['spells.surge', 'traversal.carry'];
+    // The v0.7 keys (`spells.surge`, `traversal.carry`) are carried by K16's Act 3 fixtures; none is awaited now.
+    const AWAITING_ACT3_FIXTURES: string[] = [];
     const orphans = keys.filter((k) => !inAny.has(k) && !AWAITING_ACT3_FIXTURES.includes(k));
     expect(orphans, 'persistables no fixture carries').toEqual([]);
     for (const k of AWAITING_ACT3_FIXTURES) expect(inAny.has(k), `${k}: a fixture carries it now, drop the entry`).toBe(false);
