@@ -3,6 +3,28 @@
 import type { BoardRefusal } from './ferry/FerryRides';
 import type { CarryResetReason, TrackedCarry } from './carry/CarryResets';
 import type { SledDef } from './carry/Sleds';
+import type { GlideRefusal, GlideState } from './glide/GlidePlayer';
+
+/** K15's glide indicator and K4's walk catch read it. */
+export interface GlideService {
+  /** Starts a glide from a ledge (`summit-aerie` or `glide.summit-aerie`); returns the refusal (toasted) or null. */
+  launch(site: string): GlideRefusal | null;
+  refusal(site: string): GlideRefusal | null;
+  /** Lets go mid-air (the interact prompt does the same). */
+  letGo(): void;
+  readonly state: GlideState;
+  /** `glide.<site>` while a glide runs, else null. */
+  readonly ledgeId: string | null;
+  /** The glide's yaw (0 faces -Z), and the lane it is clamped to. */
+  readonly yaw: number;
+  readonly heading: number | null;
+  readonly laneHalfAngle: number | null;
+  /** Lift this tick (m/s): thermals plus slope wind. */
+  readonly lift: number;
+  readonly heightAboveGround: number;
+  /** A glide runs, the fall after one can still be caught, or a return plays: K4's walk catch stands down. */
+  readonly catchArmed: boolean;
+}
 
 export interface FerryService {
   /** Every stop id. */
@@ -37,6 +59,8 @@ declare module '../core/Services' {
     ferry: FerryService;
     /** K7 PR 1. */
     carry: CarryService;
+    /** K7 PR 2. */
+    glide: GlideService;
   }
 }
 
