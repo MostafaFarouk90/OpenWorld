@@ -61,7 +61,7 @@ describe('act3-hud PR 2 widgets', () => {
     t.step();
     const el = t.widgets.get('glide-indicator')!;
     expect(shown(el)).toBe(true);
-    expect(textOf(el)).toContain('to let go');
+    expect(textOf(el)).not.toContain('let go');
     expect(textOf(el)).toContain('42 m');
     expect(textOf(el)).toContain('Rising');
     g.state = 'idle';

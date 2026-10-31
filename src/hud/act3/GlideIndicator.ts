@@ -19,8 +19,6 @@ export interface GlideReading {
 export interface GlideIndicatorSource {
   /** K7's `glide` service; undefined when the service is missing. Read every frame. */
   glide?(): GlideReading | null | undefined;
-  /** The interact key's glyph, for the let-go hint. */
-  glyph?(): string;
   t?: Translate;
 }
 
@@ -35,10 +33,13 @@ export function wrapPi(a: number): number {
   return r === -Math.PI ? Math.PI : r;
 }
 
-/** Where the glide's yaw sits in its lane: -1 at the left edge, 0 on the heading, 1 at the right edge, clamped past them. */
+/**
+ * Where the glide's yaw sits in its lane: -1 at the left edge, 0 on the heading, 1 at the right edge, clamped past them.
+ * Yaw grows turning left (K7 steers right by lowering it), so the right side is `heading - yaw`.
+ */
 export function laneOffset(yaw: number, heading: number, halfAngle: number): number | null {
   if (!(halfAngle > 0) || !Number.isFinite(halfAngle)) return null;
-  const d = wrapPi(yaw - heading);
+  const d = wrapPi(heading - yaw);
   if (!Number.isFinite(d)) return null;
   return Math.max(-1, Math.min(1, d / halfAngle));
 }
@@ -55,8 +56,7 @@ const ARROWS: Record<LiftTrend, string> = { rising: '↑', level: '→', sinking
 
 /**
  * Glide indicator (bottom-centre), polled each frame like the breath meter: shown only while the glide state is `gliding`,
- * so it hides on landing, after a let-go or a contained end, and after a load. The let-go hint rides with the same state
- * K7's `glide:let-go` interactable is enabled on. A bad value hides its own part, not the whole widget.
+ * so it hides on landing, after a let-go or a contained end, and after a load. K7's `glide:let-go` prompt owns the let-go hint. A bad value hides its own part, not the whole widget.
  */
 export class GlideIndicator implements HudWidgetView {
   readonly id = 'glide-indicator';
@@ -65,9 +65,16 @@ export class GlideIndicator implements HudWidgetView {
   private readonly marker;
   private readonly lift;
   private readonly height;
-  private readonly hint;
   private readonly t: Translate;
   private shown = false;
+  // Last values written, so a frame that changes nothing touches no DOM.
+  private lastMarker = '';
+  private lastLift = '';
+  private lastLiftCls = '';
+  private lastHeight = '';
+  private laneOn: boolean | null = null;
+  private liftOn: boolean | null = null;
+  private heightOn: boolean | null = null;
 
   constructor(doc: DocumentLike, private readonly source: GlideIndicatorSource = {}) {
     this.t = source.t ?? defaultT;
@@ -81,7 +88,6 @@ export class GlideIndicator implements HudWidgetView {
     const row = makeEl(doc, 'div', 'owg-glide-row', this.element);
     this.lift = makeEl(doc, 'span', 'owg-glide-lift', row);
     this.height = makeEl(doc, 'span', 'owg-glide-height', row);
-    this.hint = makeEl(doc, 'div', 'owg-glide-hint', this.element);
     setShown(this.element, false);
   }
 
@@ -90,19 +96,28 @@ export class GlideIndicator implements HudWidgetView {
     const ok = !!g && typeof g === 'object' && g.state === 'gliding';
     if (ok) {
       const off = typeof g.heading === 'number' && typeof g.laneHalfAngle === 'number' ? laneOffset(g.yaw, g.heading, g.laneHalfAngle) : null;
-      setShown(this.lane, off !== null);
-      if (off !== null) this.marker.style.left = pct((off + 1) / 2);
+      const laneOn = off !== null;
+      if (laneOn !== this.laneOn) { this.laneOn = laneOn; setShown(this.lane, laneOn); }
+      if (off !== null) {
+        const left = pct((off + 1) / 2);
+        if (left !== this.lastMarker) { this.lastMarker = left; this.marker.style.left = left; }
+      }
       const trend = liftTrend(g.lift);
-      setShown(this.lift, trend !== null, 'inline');
+      const liftOn = trend !== null;
+      if (liftOn !== this.liftOn) { this.liftOn = liftOn; setShown(this.lift, liftOn, 'inline'); }
       if (trend) {
-        this.lift.textContent = `${ARROWS[trend]} ${this.t(`act3.hud.glide.${trend}`)}`;
-        this.lift.className = `owg-glide-lift owg-glide-${trend}`;
+        const text = `${ARROWS[trend]} ${this.t(`act3.hud.glide.${trend}`)}`;
+        if (text !== this.lastLift) { this.lastLift = text; this.lift.textContent = text; }
+        const cls = `owg-glide-lift owg-glide-${trend}`;
+        if (cls !== this.lastLiftCls) { this.lastLiftCls = cls; this.lift.className = cls; }
       }
       const h = g.heightAboveGround;
       const hOk = typeof h === 'number' && Number.isFinite(h);
-      setShown(this.height, hOk, 'inline');
-      if (hOk) this.height.textContent = this.t('act3.hud.glide.height', { m: Math.max(0, Math.round(h)) });
-      this.hint.textContent = this.t('act3.hud.glide.letGo', { key: safeRead(this.source.glyph) ?? '?' });
+      if (hOk !== this.heightOn) { this.heightOn = hOk; setShown(this.height, hOk, 'inline'); }
+      if (hOk) {
+        const text = this.t('act3.hud.glide.height', { m: Math.max(0, Math.round(h)) });
+        if (text !== this.lastHeight) { this.lastHeight = text; this.height.textContent = text; }
+      }
     }
     if (ok !== this.shown) {
       this.shown = ok;

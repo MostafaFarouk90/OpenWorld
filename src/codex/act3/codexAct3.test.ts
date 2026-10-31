@@ -223,8 +223,18 @@ describe('codex-act3 plugin on a reduced manifest', () => {
 
   it('the Dragonspine flags unlock their entries live and on load, and the summit how-to follows the area', async () => {
     const a = await boot();
+    // The phase flag alone (a release hold) does not unlock the lore; it counts with the act-3 gate.
     a.ctx.state.setFlag('story.phase.dragonspineOpen', true);
+    expect(a.has(ID.dragonspine)).toBe(false);
+    a.ctx.state.setFlag('story.gate.a3', true);
     expect(a.has(ID.dragonspine)).toBe(true);
+    const a2 = await boot();
+    a2.ctx.state.setFlag('story.gate.a3', true);
+    expect(a2.has(ID.dragonspine)).toBe(false);
+    const a3 = await boot();
+    a3.ctx.state.load({ flags: { 'story.gate.a3': true, 'story.phase.dragonspineOpen': true } });
+    a3.emit('save.loaded', { slot: 'test' });
+    expect(a3.has(ID.dragonspine)).toBe(true);
     const b = await boot();
     b.ctx.state.setFlag('waystone.rime-pass.lit', true);
     b.ctx.state.setFlag('waystone.last-anvil.lit', true);
@@ -245,6 +255,15 @@ describe('codex-act3 plugin on a reduced manifest', () => {
     expect(d.has(ID.summit)).toBe(true);
     expect(d.has(ID.gliding)).toBe(false);
   }, PLUGIN_TEST_TIMEOUT);
+
+  it('the place and summit texts follow the design (cold lodge hearth, sounded anvil, hunters\' keep, no level number)', () => {
+    const S = ACT3_CODEX_STRINGS_EN;
+    expect(S['codex.lore.place-wyrmwatch-lodge.body']).not.toMatch(/hearth is kept lit/);
+    expect(S['codex.lore.place-wyrmwatch-lodge.body']).toContain('cold');
+    expect(S['codex.lore.place-last-anvil.body']).not.toContain('has not rung');
+    expect(S['codex.lore.place-frostfang-aerie.body']).toContain('hunters');
+    expect(S['codex.howto.summit.body']).not.toMatch(/three|\d/);
+  });
 
   it('holding a shard-gem or the Ferry Token unlocks its how-to', async () => {
     const { emit, has } = await boot();

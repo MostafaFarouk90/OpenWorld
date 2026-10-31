@@ -19,6 +19,8 @@ export interface YieldPromptSource {
   /** True on the tick the mercy key went down. */
   mercyPressed?(): boolean;
   glyph?(): string;
+  /** True while a Spare, Release or Calm is in the mercy focus: that press belongs to it, so the yield stands down. */
+  mercyFocused?(): boolean;
   t?: Translate;
 }
 
@@ -27,7 +29,8 @@ const defaultT: Translate = (key, p) => (ACT3_HUD_STRINGS_EN[key] ?? key).replac
 /**
  * "Hold {key} to yield" with a hold ring. The prompt shows only while `trials.canYield()` is true, and that is also the
  * only condition under which the hold can call `trials.yield`, so Cael can never yield before the breaks the trial asked
- * for or outside a trial. K15 owns the hold (K6a owns only `canYield` and `yield`). `tick(dt)` runs on the fixed step;
+ * for or outside a trial. While a mercy interactable has the focus the hold does not run and the prompt hides, so one held
+ * key can never both spare or calm a creature and yield the trial. K15 owns the hold (K6a owns only `canYield` and `yield`). `tick(dt)` runs on the fixed step;
  * `update()` draws. The hold starts on a fresh press, so a key already down when the prompt appears does nothing.
  */
 export class YieldPrompt implements HudWidgetView {
@@ -40,6 +43,8 @@ export class YieldPrompt implements HudWidgetView {
   private held = 0;
   private armed = false;
   private trialId: string | null = null;
+  private lastText = '';
+  private lastDeg = -1;
 
   constructor(doc: DocumentLike, private readonly source: YieldPromptSource = {}) {
     this.t = source.t ?? defaultT;
@@ -53,6 +58,7 @@ export class YieldPrompt implements HudWidgetView {
   private offer(): { trials: YieldTrials; id: string } | null {
     const trials = safeRead(this.source.trials);
     if (!trials) return null;
+    if (safeRead(this.source.mercyFocused) === true) return null;
     try {
       if (!trials.canYield()) return null;
       const id = trials.state()?.id;
@@ -102,9 +108,13 @@ export class YieldPrompt implements HudWidgetView {
   update(): void {
     const ok = this.offer() !== null;
     if (ok) {
-      this.text.textContent = this.t('act3.hud.yield', { key: safeRead(this.source.glyph) ?? '?' });
+      const text = this.t('act3.hud.yield', { key: safeRead(this.source.glyph) ?? '?' });
+      if (text !== this.lastText) { this.lastText = text; this.text.textContent = text; }
       const deg = Math.round(this.progress * 360);
-      this.ring.style.background = `conic-gradient(#f0d890 ${deg}deg, rgba(255,255,255,.15) 0deg)`;
+      if (deg !== this.lastDeg) {
+        this.lastDeg = deg;
+        this.ring.style.background = `conic-gradient(#f0d890 ${deg}deg, rgba(255,255,255,.15) 0deg)`;
+      }
     }
     if (ok !== this.shown) {
       this.shown = ok;

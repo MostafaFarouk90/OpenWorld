@@ -8,7 +8,6 @@ export const ACT3_HUD_STRINGS_EN: Record<string, string> = {
   'act3.hud.glide.level': 'Level',
   'act3.hud.glide.sinking': 'Sinking',
   'act3.hud.glide.height': '{m} m',
-  'act3.hud.glide.letGo': '{key} to let go',
   'act3.hud.yield': 'Hold {key} to yield',
   'act3.ferry.menu.title': 'Ferry from {stop}',
   'act3.ferry.menu.go': 'Ride to {dest}',

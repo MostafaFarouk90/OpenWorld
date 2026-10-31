@@ -45,8 +45,8 @@ function keys() {
     release() { k.down = false; k.pressed = false; },
   };
 }
-const make = (trials: () => YieldTrials | undefined, k = keys()) => {
-  const p = new YieldPrompt(new StubDocument(), { trials, mercyDown: () => k.k.down, mercyPressed: () => k.k.pressed, glyph: () => 'T' });
+const make = (trials: () => YieldTrials | undefined, k = keys(), mercyFocused?: () => boolean) => {
+  const p = new YieldPrompt(new StubDocument(), { trials, mercyDown: () => k.k.down, mercyPressed: () => k.k.pressed, glyph: () => 'T', mercyFocused });
   /** One fixed tick of dt, as the plugin runs it. */
   const tick = (dt = DT) => {
     p.tick(dt);
@@ -118,6 +118,47 @@ describe('YieldPrompt visibility (real Trials)', () => {
     run(5);
     expect(t.ended).toEqual([]);
     expect(t.trials.state()?.id).toBe('ysmeryth-trial');
+  });
+});
+
+describe('YieldPrompt with a mercy interactable in focus', () => {
+  it('does not run the hold and hides the prompt while a Spare or Calm has the focus; with none, the same hold yields', () => {
+    const { f, trials } = fake();
+    const focus = { on: true };
+    const { p, k, tick, run } = make(() => trials, keys(), () => focus.on);
+    p.update();
+    expect(p.visible).toBe(false);
+    k.press();
+    tick();
+    run(YIELD_HOLD_SECONDS + 0.5);
+    expect(f.yielded).toEqual([]);
+    expect(p.progress).toBe(0);
+    // Focus gone while T is still down: the old press does not count, a fresh one does.
+    focus.on = false;
+    p.update();
+    expect(p.visible).toBe(true);
+    run(YIELD_HOLD_SECONDS + 0.5);
+    expect(f.yielded).toEqual([]);
+    k.release();
+    tick();
+    k.press();
+    tick();
+    run(YIELD_HOLD_SECONDS + 0.1);
+    expect(f.yielded).toEqual(['ysmeryth-trial']);
+  });
+
+  it('focus appearing mid-hold resets the hold', () => {
+    const { f, trials } = fake();
+    const focus = { on: false };
+    const { k, tick, run } = make(() => trials, keys(), () => focus.on);
+    k.press();
+    tick();
+    run(0.7);
+    focus.on = true;
+    run(0.5);
+    focus.on = false;
+    run(0.5);
+    expect(f.yielded).toEqual([]);
   });
 });
 

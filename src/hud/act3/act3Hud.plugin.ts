@@ -28,9 +28,20 @@ export const ACT3_HUD_CSS = `
 .owg-glide-row{display:flex;gap:10px}
 .owg-glide-rising{color:#8fd08f}
 .owg-glide-sinking{color:#d0803a}
-.owg-glide-hint{font-size:11px;opacity:.85}
-.owg-yield{display:none;align-items:center;gap:8px;pointer-events:none;font-size:13px;text-shadow:0 1px 2px #000}
-.owg-yield-ring{width:22px;height:22px;border-radius:50%;-webkit-mask:radial-gradient(circle,transparent 6px,#000 7px);mask:radial-gradient(circle,transparent 6px,#000 7px)}
+.owg-yield{display:none;align-items:center;gap:10px;pointer-events:none;padding:6px 14px;border-radius:6px;background:rgba(20,16,12,.84);border:1px solid #6a5a3a;box-shadow:0 2px 10px rgba(0,0,0,.45);color:#f3ead8;font:15px system-ui,sans-serif;white-space:nowrap}
+.owg-yield-text{color:#f3ead8}
+.owg-yield-ring{flex:none;width:22px;height:22px;border-radius:50%;-webkit-mask:radial-gradient(circle,transparent 6px,#000 7px);mask:radial-gradient(circle,transparent 6px,#000 7px)}
+/* The journal's favour tabs (Houses and Dragons' Trust) use unprefixed classes; the shared sheet is owg- only, so their bar rides here. */
+.owg-journal .journal-heading{margin:0 0 10px;font-size:16px;color:#f0d890}
+.owg-journal .favour-row{margin:0 0 14px}
+.owg-journal .favour-head{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+.owg-journal .favour-name{flex:1;font-weight:600}
+.owg-journal .favour-band{opacity:.8;font-size:13px}
+.owg-journal .favour-value{min-width:28px;text-align:right;color:#f0d890;font-weight:700}
+.owg-journal .favour-bar{height:8px;border-radius:4px;background:rgba(255,255,255,.1);border:1px solid #6a5a3a;overflow:hidden}
+.owg-journal .favour-fill{height:100%;width:0;background:linear-gradient(90deg,#a8742a,#e0b040)}
+.owg-journal .favour-tick{top:0;bottom:0;width:1px;background:rgba(255,255,255,.4)}
+.owg-journal .favour-last{margin-top:4px;font-size:12px;opacity:.7}
 .owg-ferry-menu .owg-row,.owg-sockets .owg-row{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:4px}
 .owg-ferry-menu .owg-selected,.owg-sockets .owg-selected{background:rgba(240,216,144,.15)}
 .owg-sockets .owg-focus,.owg-ferry-menu .owg-focus{outline:1px solid #f0d890}
@@ -83,7 +94,6 @@ const act3Hud: GamePlugin = {
     const glideIndicator = new GlideIndicator(doc, {
       t,
       glide: () => svc<GlideService>('glide'),
-      glyph: () => ctx.input.bindings.glyph('interact'),
     });
     ctx.hud.mount('bottom-center', { id: glideIndicator.id, element: asHtml(glideIndicator.element), order: 30, update: () => glideIndicator.update(), dispose: () => glideIndicator.dispose() });
 
@@ -94,6 +104,7 @@ const act3Hud: GamePlugin = {
       mercyDown: () => ctx.input.actions.down('mercy'),
       mercyPressed: () => ctx.input.actions.pressed('mercy'),
       glyph: () => ctx.input.bindings.glyph('mercy'),
+      mercyFocused: () => ctx.interaction.focusFor('mercy') !== null,
     });
     ctx.hud.mount('bottom-center', { id: yieldPrompt.id, element: asHtml(yieldPrompt.element), order: 31, update: () => yieldPrompt.update(), dispose: () => yieldPrompt.dispose() });
     ctx.systems.add({ id: 'act3-hud.yield', fixedPhase: 'input', order: 90, fixedUpdate: (dt) => yieldPrompt.tick(dt) });

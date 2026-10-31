@@ -60,6 +60,13 @@ describe('Act 3 recap lines', () => {
     warn.mockRestore();
   });
 
+  it('the D06 lines put Skarl at Frostfang Aerie, and the oath line swears the dragons to Cael', () => {
+    expect(t('hud.ending.a3.line.d06.defeated')).toContain('Frostfang Aerie');
+    for (const k of ['d06.defeated', 'd06.spared']) expect(t(`hud.ending.a3.line.${k}`)).not.toContain('Hearth');
+    expect(t('hud.ending.a3.line.oath')).toContain("dragons to Cael's cause");
+    expect(t('hud.ending.a3.line.oath')).not.toContain("Coal-Mother's oath");
+  });
+
   it('the card draws the recap with the title and the closing line last', () => {
     const card = new ActEndingCard(new StubDocument(), {
       widgetId: 'act-ending-card-a3',
@@ -159,6 +166,30 @@ describe('Act 3 ending card in the hud plugin', () => {
     c.ctx.hud.update(0.016);
     expect(c.svc().active() || c.ctx.state.getBool('codex.actEnding.a3.seen')).toBe(true);
     c.game.dispose();
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('a card that is showing is hidden by a load whose save has the seen flag', async () => {
+    const x = await boot();
+    x.game.events.emit('act.ended', { act: 3, endingId: 'the-coal-mothers-oath' });
+    expect(x.svc().active()).toBe(true);
+    x.ctx.state.setFlag('codex.actEnding.a3.seen', true);
+    x.game.events.emit('save.loaded', { slot: 'x' });
+    expect(x.svc().active()).toBe(false);
+    x.game.dispose();
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('dismiss() closes Act 2 before Act 3 when both are pending', async () => {
+    const x = await boot();
+    x.game.events.emit('act.ended', { act: 3, endingId: 'the-coal-mothers-oath' });
+    x.game.events.emit('act.ended', { act: 2, endingId: 'the-houses-stand' });
+    expect(x.svc().active()).toBe(true);
+    x.svc().dismiss();
+    expect(x.closed).toEqual(['the-houses-stand']);
+    expect(x.svc().active()).toBe(true);
+    x.svc().dismiss();
+    expect(x.closed).toEqual(['the-houses-stand', 'the-coal-mothers-oath']);
+    expect(x.svc().active()).toBe(false);
+    x.game.dispose();
   }, PLUGIN_TEST_TIMEOUT);
 
   it('the service covers card 3 only when it is the one waiting', async () => {

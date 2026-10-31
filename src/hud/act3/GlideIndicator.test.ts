@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { GLIDE_RULES } from '../../traversal/glide/lanes';
 import { GLIDE_TUNING } from '../../movement/types';
 import { StubDocument, textOf, type ElementLike } from '../dom';
 import { GLIDE_LEVEL_BAND, GlideIndicator, laneOffset, liftTrend, wrapPi, type GlideReading } from './GlideIndicator';
@@ -6,7 +7,7 @@ import { GLIDE_LEVEL_BAND, GlideIndicator, laneOffset, liftTrend, wrapPi, type G
 const shown = (e: ElementLike) => e.style.display !== 'none';
 const HALF = 0.6;
 const base = (over: Partial<GlideReading> = {}): GlideReading => ({ state: 'gliding', yaw: 1, heading: 1, laneHalfAngle: HALF, lift: 0, heightAboveGround: 120.4, ...over });
-const make = (r?: () => GlideReading | null | undefined, glyph = () => 'F') => new GlideIndicator(new StubDocument(), { glide: r, glyph });
+const make = (r?: () => GlideReading | null | undefined) => new GlideIndicator(new StubDocument(), { glide: r });
 const lane = (g: GlideIndicator) => g.element.children[0]!;
 const marker = (g: GlideIndicator) => lane(g).children[1]!;
 const row = (g: GlideIndicator) => g.element.children[1]!;
@@ -52,11 +53,11 @@ describe('GlideIndicator visibility', () => {
 describe('lane marker', () => {
   it.each([
     ['the centre', 1, 1, '50%'],
-    ['the right edge', 1 + HALF, 1, '100%'],
-    ['the left edge', 1 - HALF, 1, '0%'],
-    ['past the right edge (clamped)', 1 + 3 * HALF, 1, '100%'],
-    ['past the left edge (clamped)', 1 - 3 * HALF, 1, '0%'],
-    ['half way right', 1 + HALF / 2, 1, '75%'],
+    ['the right edge (yaw below the heading)', 1 - HALF, 1, '100%'],
+    ['the left edge (yaw above the heading)', 1 + HALF, 1, '0%'],
+    ['past the right edge (clamped)', 1 - 3 * HALF, 1, '100%'],
+    ['past the left edge (clamped)', 1 + 3 * HALF, 1, '0%'],
+    ['half way right', 1 - HALF / 2, 1, '75%'],
   ])('is at %s', (_n, yaw, heading, left) => {
     const g = make(() => base({ yaw, heading }));
     g.update();
@@ -68,7 +69,7 @@ describe('lane marker', () => {
     // Heading just under pi, yaw just over -pi: they are 0.2 apart, not nearly 2 pi.
     const g = make(() => base({ heading: Math.PI - 0.1, yaw: -Math.PI + 0.1, laneHalfAngle: 0.4 }));
     g.update();
-    expect(marker(g).style.left).toBe('75%');
+    expect(marker(g).style.left).toBe('25%');
     expect(wrapPi(3 * Math.PI)).toBeCloseTo(Math.PI);
     expect(wrapPi(-3 * Math.PI)).toBeCloseTo(Math.PI);
     expect(wrapPi(2 * Math.PI + 0.3)).toBeCloseTo(0.3);
@@ -133,16 +134,39 @@ describe('lift and height', () => {
   });
 });
 
-describe('let-go hint', () => {
-  it('names the interact key and is part of the shown widget only', () => {
-    const g = make(() => base(), () => 'E');
-    g.update();
-    expect(textOf(g.element)).toContain('E to let go');
+describe('lane marker and K7 steering', () => {
+  it('steering right (K7 lowers the yaw) moves the marker right of centre, and steering left moves it left', () => {
+    const steer = (dir: 1 | -1) => {
+      // GlidePlayer: yaw = yaw - steer * turnRate * dt, with steer +1 for moveRight.
+      let yaw = 1;
+      for (let i = 0; i < 20; i++) yaw = yaw - dir * GLIDE_RULES.turnRate * (1 / 60);
+      const g = make(() => base({ yaw, heading: 1, laneHalfAngle: GLIDE_RULES.turnRate }));
+      g.update();
+      return parseFloat(marker(g).style.left);
+    };
+    expect(steer(1)).toBeGreaterThan(50);
+    expect(steer(-1)).toBeLessThan(50);
   });
 
-  it('falls back to a question mark when the glyph cannot be read', () => {
-    const g = make(() => base(), () => { throw new Error('no bindings'); });
+  it('writes no DOM while the readings do not change', () => {
+    const r = base({ yaw: 0.8, lift: 6 });
+    const g = make(() => r);
     g.update();
-    expect(textOf(g.element)).toContain('? to let go');
+    const m = marker(g);
+    let writes = 0;
+    let left = m.style.left;
+    Object.defineProperty(m.style, 'left', { get: () => left, set: (v: string) => { writes++; left = v; }, configurable: true });
+    g.update();
+    g.update();
+    expect(writes).toBe(0);
+    r.yaw = 0.9;
+    g.update();
+    expect(writes).toBe(1);
+  });
+
+  it('has no let-go hint of its own (K7 prompts for it)', () => {
+    const g = make(() => base());
+    g.update();
+    expect(textOf(g.element)).not.toContain('let go');
   });
 });

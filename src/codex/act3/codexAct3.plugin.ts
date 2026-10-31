@@ -58,6 +58,8 @@ const codexAct3: GamePlugin = {
       }
     };
 
+    let inSummit = false;
+    let summitDone = false;
     offs.push(
       ctx.events.on('discover', (e) => {
         const entry = typeof e?.placeId === 'string' ? ACT3_DISCOVER_UNLOCKS[e.placeId] : undefined;
@@ -81,23 +83,31 @@ const codexAct3: GamePlugin = {
       ctx.events.on('flag.changed', (e) => {
         if (typeof e?.key === 'string' && ACT3_WATCHED_FLAGS.has(e.key)) backfill();
       }),
-      ctx.events.on('save.loaded', backfill),
+      ctx.events.on('save.loaded', () => {
+        // A load may have taken the summit entry away: poll again until it is unlocked.
+        summitDone = false;
+        inSummit = false;
+        backfill();
+      }),
     );
 
     bind();
     backfill();
     // The summit how-to: no event says the player crossed into the area, so the player's feet are polled (cheap, and the
     // unlock is idempotent; it only asks the codex when the area changes).
-    let inSummit = false;
     offs.push(
       ctx.systems.add({
         id: 'codex-act3.summit',
         fixedPhase: 'rules',
         order: 464,
         fixedUpdate() {
+          if (summitDone) return;
           const f = ctx.player?.feet;
           const now = !!f && areaAt(f.x, f.z) === SUMMIT_AREA;
-          if (now && !inSummit) unlock(ID.summit);
+          if (now && !inSummit) {
+            unlock(ID.summit);
+            summitDone = true;
+          }
           inSummit = now;
         },
       }) as unknown as () => void,

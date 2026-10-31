@@ -36,20 +36,20 @@ export const ACT3_CODEX_STRINGS_EN: Record<string, string> = {
     'The long mountain wall at the north edge of the known world, where the Coal-Mother\'s kin are said to nest. The lower slopes are cold scree and thin pine; above them the road gives way to ledges, fog and wind. Few climb past the Rime Pass and fewer come back the same way.',
   'codex.lore.place-wyrmwatch-lodge.name': 'Wyrmwatch Lodge',
   'codex.lore.place-wyrmwatch-lodge.body':
-    'A walled lodge of stone and black timber at the foot of the climb, built by those who watched the dragons from a safe distance. Its hearth is kept lit, its hall is open to anyone who comes up the spine road, and its depot hands out sleds to those who mean to haul.',
+    'A walled lodge of stone and black timber at the foot of the climb, a hold of the dragon-hunters, built by those who watched the dragons and stood against them. Its hearth is cold and its hall is bare, but it is open to anyone who comes up the spine road, and its depot hands out sleds to those who mean to haul.',
   'codex.lore.place-rime-pass.name': 'The Rime Pass',
   'codex.lore.place-rime-pass.body':
     'A narrow saddle where frost never leaves the stones. A shelter with drying racks and a woodpile stands below the worst of the wind. Beyond it the slopes belong to the hawks and the ogres, and to whatever the cold has not yet buried.',
   'codex.lore.place-last-anvil.name': 'The Last Anvil',
   'codex.lore.place-last-anvil.body':
-    'A cold forge-site on a shoulder of the mountain, the last place on the spine where iron was worked. The anvil has not rung in generations. A waystone marks it for those who still come to remember what was made here.',
+    'A cold forge-site on a shoulder of the mountain, the last place on the spine where iron was worked. Brother Ansgar tends the shrine, the last of the old smith-shrines the first dragon-hunters did not destroy. Once the anvil has sounded, a waystone lights beside it for those who come to remember what was made here.',
   'codex.lore.place-frostfang-aerie.name': 'Frostfang Aerie',
   'codex.lore.place-frostfang-aerie.body':
-    'A high plateau under the summit, reached by a long climb or a longer glide. Its stones are scored by claws, and the wind off the chasm below never settles. Whoever stands here is closer to the dragons than any road has taken them.',
+    'A high plateau under the summit, reached by a long climb or a longer glide. Its stones are scored by claws, and the wind off the chasm below never settles. The dragon-hunters keep a stronghold here, across the chasm from the roost, and hold their drakes in chains.',
   'codex.howto.gliding.name': 'Gliding',
   'codex.howto.gliding.body':
     'At certain ledges on the Dragonspine you can launch into a glide along a fixed lane to a landing far below. You cannot turn far from the lane. Warm air rising from thermals and slopes lifts you, and still air lets you sink. The glide indicator shows where you sit in the lane, whether you rise or sink, and your height in metres. Interact lets you go early, and a hit or a wall ends the glide.',
   'codex.howto.summit.name': 'The summit',
   'codex.howto.summit.body':
-    'Above the Dragonspine\'s lower slopes the summit is a harsher country: the enemies there are never more than three levels above you, but they hit harder than the slopes below. Carry warmth and supplies, light the waystones as you go, and plan your way down. The glide is the quickest.',
+    'Above the Dragonspine\'s lower slopes the summit is a harsher country: the foes there are the hardest you have met so far, though their levels stay close to your own. Carry warmth and supplies, light the waystones as you go, and plan your way down. The glide is the quickest.',
 };
