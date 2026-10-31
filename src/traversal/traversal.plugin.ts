@@ -33,6 +33,8 @@ export const FEN_BOOTS_ID = 'gear.fen-boots';
 export const FERRY_TOKEN_ID = 'key.ferry-token';
 /** K12 writes it when M24 is done; the ferry runs from then on. */
 export const FERRY_RUNNING_FLAG = 'story.m24.complete';
+/** K12: Dudda's horn blown (M24) opens the boat for the first run, before the quest is handed in and the token given. */
+export const FERRY_FIRST_RUN_FLAG = 'story.m24.ferryOpen';
 const DROWN_ATTACK_ID = 'traversal.drown';
 
 /** What the plugin put outside its scoped context (the meshes in the scene, the mount's speed cap). */
@@ -153,8 +155,8 @@ const traversal: GamePlugin = {
     const ferry = new FerryRides({
       feet: () => ctx.player.feet,
       yaw: () => ctx.player.facingYaw,
-      hasToken: () => ctx.services.get('inventory')?.has(FERRY_TOKEN_ID) ?? false,
-      running: () => ctx.state.getBool(FERRY_RUNNING_FLAG),
+      hasToken: () => (ctx.services.get('inventory')?.has(FERRY_TOKEN_ID) ?? false) || (ctx.state.getBool(FERRY_FIRST_RUN_FLAG) && !ctx.state.getBool(FERRY_RUNNING_FLAG)),
+      running: () => ctx.state.getBool(FERRY_RUNNING_FLAG) || ctx.state.getBool(FERRY_FIRST_RUN_FLAG),
       inCombat: () => ctx.services.get('waystones')?.hostileAggro ?? false,
       busy: () => ctx.player.actor.dead || ctx.input.contexts.top() !== 'gameplay' || mode() !== 'walk',
       mounted: () => ctx.services.get('mount')?.mounted() ?? false,

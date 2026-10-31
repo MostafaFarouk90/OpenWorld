@@ -102,6 +102,22 @@ const PROMPTS: Record<string, string> = {
   net: 'Cut the net', scale: 'Take the scale', cage: 'Open the cage', sluice: 'Turn the sluice wheel',
 };
 
+/** The director's toasts. */
+export const DIRECTOR_TEXT: Record<string, string> = {
+  'greyfen.q.m25.brewed': 'The third pot goes in. The salve is brewed.',
+  'greyfen.q.m25.drunk': 'You drink the salve. The Burn eases by 20.',
+  'greyfen.q.r13.lesson': 'Lesson: press at the altar in time with the water.',
+  'greyfen.q.r13.real': 'Now sing it for real.',
+  'greyfen.q.r13.perfect': 'True.',
+  'greyfen.q.r13.good': 'Close.',
+  'greyfen.q.r13.miss': 'Missed.',
+  'greyfen.q.r13.stray': 'Off the beat.',
+  'greyfen.q.r13.falter': 'The song falters. Begin again.',
+  'greyfen.q.r13.lessonDone': 'You have the tune. Sing it for real.',
+  'greyfen.q.r13.calm': 'The fen grows calm. The mist begins to lift.',
+  'greyfen.q.m27.home': 'The wyrmlings slip into the reeds and are gone.',
+};
+
 export const GREYFEN_QUEST_STRINGS: Record<string, string> = (() => {
   const out: Record<string, string> = {};
   for (const [id, q] of Object.entries(QUEST_TEXT)) {
@@ -110,6 +126,7 @@ export const GREYFEN_QUEST_STRINGS: Record<string, string> = (() => {
     for (const [oid, text] of Object.entries(q.o)) out[`quest.${id}.${oid}`] = text;
   }
   for (const [k, v] of Object.entries(PROMPTS)) out[`quest.prompt.${k}`] = `{key} ${v}`;
+  Object.assign(out, DIRECTOR_TEXT);
   out['codex.lore.fen-song-stone.name'] = 'The Song Stone';
   out['codex.lore.fen-song-stone.body'] = 'A polished stone on Hathren\'s shore, cut with a wave. The fen folk say a dragon once sang here and the stone remembers the tune.';
   out['codex.lore.hathren-lullaby.name'] = 'The Water-Song';

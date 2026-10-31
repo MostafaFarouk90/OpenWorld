@@ -47,7 +47,11 @@ describe('dialogue content', () => {
       // Act 2 Oldsmoke mines (A13)
       'winch-wright', 'miner-hale', 'miner-brig', 'pickett', 'shift-crew', 'pike', 'pike-apprentice', 'steward-captain', 'wyrmling-keeper',
       // Act 3 companions (K5): the M27 deserter (K3's NPC def)
-      'deserter']).toContain(n.speaker);
+      'deserter',
+      // Act 3 Greyfen (K12)
+      'leofa', 'dudda', 'hild', 'widow', 'gytha', 'crow', 'reed-cutter-1', 'reed-cutter-2', 'ferry-hand-1', 'ferry-hand-2', 'causeway-ranger',
+      'reedgate-folk-1', 'reedgate-folk-2', 'reedgate-folk-3', 'herb-cutter', 'greywatch-ranger-1', 'greywatch-ranger-2', 'greywatch-ranger-3',
+      'bell-keeper', 'brood-keeper', 'monk-echo', 'fen', 'hathren']).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {

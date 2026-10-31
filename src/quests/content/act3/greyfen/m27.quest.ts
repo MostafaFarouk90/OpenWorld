@@ -17,6 +17,8 @@ export const M27_BLINDS_START = 'trg.greyfen.m27.blinds';
 export const M27_BLINDS_END = 'trg.greyfen.m27.blinds.end';
 export const M27_CAGES = 'trg.greyfen.m27.cages';
 export const M27_ALLY_SCENE = 'scene-m27-deserter';
+/** The ally scene when the deserter was returned to Greywatch (or Wybert is not there): Leofa alone (six lines). */
+export const M27_ALONE_SCENE = 'scene-m27-leofa';
 export const M27_AFTER_NPC = 'scene.m27.aftermath';
 export const M27_AFTER_SCENE = 'scene-m27-aftermath';
 export const M27_BROOD_BACK = 'story.m27.broodBack';
