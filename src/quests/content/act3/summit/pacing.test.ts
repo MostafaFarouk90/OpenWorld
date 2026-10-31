@@ -36,7 +36,7 @@ function derived(quest: string): Record<string, number> {
     if (o.type === 'event' && ev === 'dialogue.ended') add('search', o.required ?? 1);
     else if (o.type === 'event' && ev === 'interact') add('interact', o.required ?? 1);
     else if (o.type === 'event' && ev === 'shrine.rekindled') add('interact', 1);
-    else if (o.id.startsWith('ledge')) add('leap', 1);
+    else if (quest === 'm31' && o.id.startsWith('ledge')) add('leap', 1); // M34's `ledge` is a walk to the updraft, not a Leap
     else if (o.id === 'skarl') add('boss', 1);
     else if (o.id === 'trial') add('duelRound', 2);
   }

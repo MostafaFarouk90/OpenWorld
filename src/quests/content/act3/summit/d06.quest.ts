@@ -7,8 +7,10 @@ export const D06_GATE_OPEN = 'story.d06.gateOpen';
 export const D06_COMPLETE = 'story.d06.complete';
 /** Cael has come down at the Aerie by glide (a landing at the landing area) or is inside its arrival volume. */
 export const D06_LANDED = 'story.d06.landed';
-/** The courtyard's twelve are down; K8's Skarl waits for it (the optional arm flag). */
+/** The courtyard's twelve are down (the group's `down` flag; the lines scene is offered next). */
 export const D06_COURTYARD_CLEAR = 'story.d06.courtyardClear';
+/** The courtyard scene has ended (completed); K8's Skarl arms on this, not on `courtyardClear`, so the scene never opens on top of the boss intro. Re-derived from the objective. */
+export const D06_LINES_DONE = 'story.d06.linesDone';
 export const D06_LED_OFF = 'story.d06.ledOff';
 export const D06_HAWK_FLAG = 'story.d06.hawkFreed';
 export const D06_HAWK_PROP = 'use:aerie-hawk-cage';

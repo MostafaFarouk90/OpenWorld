@@ -2,9 +2,21 @@ import { buildTree } from '../../act2/build';
 import { all, flagIs, not } from '../../act2/cond';
 import { M33_WITNESSES } from '../../../../quests/content/act3/summit/m33.quest';
 import { D06_SKARL_OUTCOME } from '../../../../quests/content/act3/summit/d06.quest';
+import { at as lowerAt } from '../dragonspine/common';
 import { C, at, offer, qActive, voice, witnessesAre } from './common';
 
 const T = voice('thorgar');
+
+/** The lower-slope hand-ins (R15, R18) win over the summit's briefs and waits, which are extension rules in front of the base tree. */
+const noHandIn = all(not(lowerAt('r15', 'report')), not(lowerAt('r18', 'report')));
+/**
+ * The summit briefs and waits end in these two options so the lower tree stays reachable while M33 and D06 are open: "Reset my haul" (the base
+ * `r15-wait` segment, while R15 is active) and the lodge counter (the base `idle` node: shop, smith, sockets).
+ */
+const OTHER = [
+  { id: 'haul', t: 'About my haul.', go: 'r15-wait', when: qActive('r15') },
+  { id: 'other', t: 'Something else.', go: 'idle' },
+];
 const WORDS = ['no one', 'one hunter', 'two hunters', 'three hunters', 'four hunters', 'five hunters', 'six hunters', 'seven hunters', 'eight hunters'];
 
 /** M33's hand-in: Thorgar names how many spared hunters spoke of it (the count is `story.m33.witnesses`, 0 to 8). */
@@ -34,10 +46,10 @@ export const THORGAR_SUMMIT = buildTree({
     ...Array.from({ length: 9 }, (_, n) => ({
       when: all(at('m33', 'report'), n === 0 ? not(witnessesAre(M33_WITNESSES, 1, 8)) : witnessesAre(M33_WITNESSES, n, n)), seg: `s33-report-${n}`,
     })),
-    { when: offer('d06'), seg: 'd06-brief' },
-    { when: qActive('d06'), seg: 'd06-wait' },
-    { when: offer('m33'), seg: 's33-brief' },
-    { when: qActive('m33'), seg: 's33-wait' },
+    { when: all(offer('d06'), noHandIn), seg: 'd06-brief' },
+    { when: all(qActive('d06'), noHandIn), seg: 'd06-wait' },
+    { when: all(offer('m33'), noHandIn), seg: 's33-brief' },
+    { when: all(qActive('m33'), noHandIn), seg: 's33-wait' },
   ],
   segments: {
     's33-brief': {
@@ -56,11 +68,17 @@ export const THORGAR_SUMMIT = buildTree({
           choices: [
             { id: 'accept', t: 'I will cut it.', go: null, fx: [{ startQuest: 'm33' }] },
             { id: 'later', t: 'Not yet.', go: null },
+            ...OTHER,
           ],
         },
       ],
     },
-    's33-wait': { lines: [T('The rigger, the camp, the six anchors, the hunters and the handler. Then come and tell me how it looked from the net.')] },
+    's33-wait': {
+      lines: [
+        T('The rigger, the camp, the six anchors, the hunters and the handler. Then come and tell me how it looked from the net.'),
+        { s: 'thorgar', t: 'Is there anything else, {name}?', choices: [{ id: 'bye', t: 'Nothing yet.', go: null }, ...OTHER] },
+      ],
+    },
     ...Object.fromEntries(Array.from({ length: 9 }, (_, n) => [`s33-report-${n}`, handIn(n)])),
     's34-talk': {
       lines: [
@@ -88,11 +106,17 @@ export const THORGAR_SUMMIT = buildTree({
           choices: [
             { id: 'accept', t: 'I will glide.', go: null, fx: [{ startQuest: 'd06' }] },
             { id: 'later', t: 'Not yet.', go: null },
+            ...OTHER,
           ],
         },
       ],
     },
-    'd06-wait': { lines: [T('The ledge, the keep, the winch, the yard, the Marshal. In that order, or as the wind allows.')] },
+    'd06-wait': {
+      lines: [
+        T('The ledge, the keep, the winch, the yard, the Marshal. In that order, or as the wind allows.'),
+        { s: 'thorgar', t: 'Is there anything else, {name}?', choices: [{ id: 'bye', t: 'Nothing yet.', go: null }, ...OTHER] },
+      ],
+    },
     'd06-report-defeated': {
       lines: [
         T('The horn has stopped. I heard it fail, from the lip, and I did not know what to feel.'),

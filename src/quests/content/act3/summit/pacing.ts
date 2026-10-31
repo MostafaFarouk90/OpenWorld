@@ -31,7 +31,7 @@ export const SUMMIT_PACE: readonly Act3PaceRow[] = [
   build('m34', 45, 'waystone.wyrms-hearth', [
     F('dragonspine.hearth.ysmeryth.oath'), F('dragonspine.hearth.eadgyth'), F(HEARTH_CARVE(1)), F(HEARTH_CARVE(2)), F('dragonspine.hearth.glide-marker.1'),
     F('dragonspine.hearth.glide-marker.2'), F('waystone.wyrms-hearth'), F('dragonspine.glide.hearth-updraft.launch'), F('dragonspine.hearth.ysmeryth.oath'),
-  ], 49, { interact: 1, leap: 1, set: 2, search: 4 }),
+  ], 49, { interact: 1, set: 2, search: 4 }),
   // D06: Thorgar at the chasm ledge, the glide, the captive in the keep, the keep's three searches, the Aerie's lists, the hawk, the winch, the courtyard, Skarl, the feed log, Thorgar at the landing
   build('d06', 65, 'dragonspine.glide.summit-aerie.launch', [
     G('dragonspine.glide.summit-aerie.landing'), F('dragonspine.aerie.keep.door'), D('dragonspine.keep.inside'), F('dragonspine.keep.captive'),

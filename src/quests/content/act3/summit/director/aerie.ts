@@ -1,12 +1,12 @@
 // D06 (K13 PR 2): the glide down and the landing, the keep and the courtyard, K8's Skarl and what follows. K8 owns the fight and its favour (D06 pays no
 // Skarl favour); K10 pays the shard-gem from `boss.spared` / `boss.defeated` and again on a load, so D06 does not. The director gives K8's arm gate the
-// courtyard flag, stages a spared Skarl and his two lodge hunters, and defines Thorgar's two summit posts.
+// lines-scene flag (after the courtyard), stages a spared Skarl and his two lodge hunters, and defines Thorgar's two summit posts.
 import { heightAt } from '../../../../../terrain/heightfield';
 import { setSkarlArmFlag } from '../../../../../bosses/skarl/armGate';
 import type { Kit, Off } from './shared';
 import { distanceTo, offerScene, recheck, toast } from './shared';
 import {
-  D06_COURTYARD_CLEAR, D06_GATE_OPEN, D06_HAWK_FLAG, D06_LANDED, D06_LED_OFF, D06_LINES_NPC, D06_LINES_SCENE, D06_LIP_NPC, D06_LIP_SCENE, D06_OUTCOME_NPC,
+  D06_COURTYARD_CLEAR, D06_GATE_OPEN, D06_HAWK_FLAG, D06_LANDED, D06_LED_OFF, D06_LINES_DONE, D06_LINES_NPC, D06_LINES_SCENE, D06_LIP_NPC, D06_LIP_SCENE, D06_OUTCOME_NPC,
   D06_OUTCOME_SCENE, D06_SKARL_OUTCOME,
 } from '../d06.quest';
 import { D06_SPARED_SCENE } from '../npcs';
@@ -25,8 +25,20 @@ export function installD06(k: Kit): Off {
   const { ctx } = k;
   const offs: Off[] = [];
 
-  // K8's Skarl waits for the courtyard (default off: K8 alone arms on `story.d06.started`).
-  offs.push(setSkarlArmFlag(D06_COURTYARD_CLEAR));
+  // K8's Skarl waits for the courtyard and the lines scene after it (default off: K8 alone arms on `story.d06.started`). The flag is written when the
+  // scene ends, and re-derived from the objective (a load, or a scene finished before this block ran) so a finished scene never leaves him unarmed.
+  offs.push(setSkarlArmFlag(D06_LINES_DONE));
+  const syncLines = (): void => {
+    if (k.flag(D06_LINES_DONE) || !(k.objDone('d06', 'lines') || k.qstate('d06') === 'completed')) return;
+    k.set(D06_LINES_DONE);
+  };
+  k.on('dialogue.ended', (e) => {
+    if (e.dialogueId !== D06_LINES_SCENE || (e.reason !== undefined && e.reason !== 'completed')) return;
+    k.later(() => { syncLines(); recheck(k); });
+  });
+  k.on('save.loaded', () => k.later(syncLines));
+  k.every(30, syncLines);
+  syncLines();
 
   // Thorgar's two summit posts (the post rules name them; K4's layout has no anchor for them).
   const define = (id: string, p: { x: number; y: number; z: number }, yaw: number): void => {
@@ -81,7 +93,8 @@ export function installD06(k: Kit): Off {
     if (++polls >= STAGE_POLLS) k.set(D06_SPARED_SCENE);
   });
   k.on('dialogue.ended', (e) => {
-    if (e.dialogueId === D06_OUTCOME_SCENE && k.flag(D06_SPARED_SCENE) && !k.flag(D06_LED_OFF)) k.set(D06_LED_OFF);
+    // a skipped, dropped or loaded scene is not the scene: only a completed one sends him off (the scene is offered again otherwise)
+    if (e.dialogueId === D06_OUTCOME_SCENE && (e.reason === undefined || e.reason === 'completed') && k.flag(D06_SPARED_SCENE) && !k.flag(D06_LED_OFF)) k.set(D06_LED_OFF);
   });
   return () => { for (const o of offs.splice(0)) o(); };
 }

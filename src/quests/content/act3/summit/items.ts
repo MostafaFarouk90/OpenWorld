@@ -9,7 +9,7 @@ export const SUMMIT_ITEMS: readonly ItemDef[] = [
 ];
 
 export const SUMMIT_ITEM_STRINGS: Record<string, string> = {
-  'item.ysmeryths-ember-scale.name': "Ysmeryth's Ember Scale",
+  'item.ysmeryths-ember-scale.name': 'Scale of the Banked Coal',
   'item.ysmeryths-ember-scale.desc': 'A hand-sized scale the Coal-Mother let fall at the roost, warm in any weather. It has the glow of a banked coal at its heart. A keepsake; it does nothing else.',
 };
 

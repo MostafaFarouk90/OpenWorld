@@ -21,7 +21,7 @@ import directorPlugin from './summitDirector.plugin';
 import { SUMMIT_QUEST_IDS } from '../summit.content';
 import { SUMMIT_NPC_DEFS } from '../npcs';
 import { skarlArmFlag } from '../../../../../bosses/skarl/armGate';
-import { D06_COURTYARD_CLEAR } from '../d06.quest';
+import { D06_LINES_DONE } from '../d06.quest';
 
 let physics: PhysicsWorld;
 let game: Game | null = null;
@@ -73,14 +73,14 @@ describe('the summit director plugin on a reduced real manifest', () => {
     expect(t.ctx.state.getBool('story.m31.started')).toBe(false);
   }, PLUGIN_TEST_TIMEOUT);
 
-  it("K8's Skarl waits for the courtyard flag while the director runs, and not after it is disposed", async () => {
+  it("K8's Skarl waits for the lines-scene flag while the director runs, and not after it is disposed", async () => {
     const t = await boot();
     t.run(2);
-    expect(skarlArmFlag()).toBe(D06_COURTYARD_CLEAR);
+    expect(skarlArmFlag()).toBe(D06_LINES_DONE);
     directorPlugin.dispose?.();
     expect(skarlArmFlag()).toBeNull();
     expect(() => directorPlugin.setup(t.ctx)).not.toThrow();
-    expect(skarlArmFlag()).toBe(D06_COURTYARD_CLEAR);
+    expect(skarlArmFlag()).toBe(D06_LINES_DONE);
     directorPlugin.dispose?.();
   }, PLUGIN_TEST_TIMEOUT);
 });

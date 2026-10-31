@@ -24,9 +24,9 @@ export const RIGGER = tree('skyhold-rigger', [[at('m33', 'rigger'), 'm33-talk']]
 const HA = voice('skyhold-handler');
 export const HANDLER = tree('skyhold-handler', [[at('m33', 'handler'), 'm33-talk']], {
   'm33-talk': { lines: [
-    HA('You cut the fifth. I felt the rope go slack. I could not move my arms for the weight of the net.'),
+    HA('You cut the last one. I felt the rope go slack, and the net fell. I could not move my arms for the weight of it.'),
     C('Are you hurt?'),
-    HA('Bruised. The wyrmlings are not. They are above the sixth anchor, huddled. If you cut it, the net falls and they can fly.'),
+    HA('Bruised. The wyrmlings are not. They are above the spur, huddled. The net is down, so now they can fly.'),
     HA('Cut it, knight. They have been under that rope for a week. They have forgotten what the sky is.'),
   ] },
   idle: { lines: [HA('The little ones will want to fly as soon as the net is down. Let them.')] },

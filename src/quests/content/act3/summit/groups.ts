@@ -8,7 +8,7 @@ export type { GroupObjective };
 const row = (quest: string, objective: string, groups: string[], armFlag: string, down: string): GroupObjective =>
   ({ quest, objective, groups, armFlag, seen: `${down}.seen`, down });
 
-/** The summit's fights as group objectives (cleared by anyone, a spared member counts as gone). `story.d06.courtyardClear` is K8's optional arm flag. */
+/** The summit's fights as group objectives (cleared by anyone, a spared member counts as gone). `story.d06.courtyardClear` is its `down` flag (K8's Skarl arms later, on `story.d06.linesDone`). */
 export const SUMMIT_GROUP_OBJECTIVES: readonly GroupObjective[] = [
   row('m31', 'hawks', ['dragonspine.q.m31.hawks'], M31_HAWKS_FLAG, M31_HAWKS_DOWN),
   row('m33', 'packs', [...M33_PACK_GROUPS], M33_PACKS_FLAG, M33_PACKS_DOWN),

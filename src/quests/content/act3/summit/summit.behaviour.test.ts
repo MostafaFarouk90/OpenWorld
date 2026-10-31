@@ -13,12 +13,13 @@ import { makeRig, anchorPos, type Rig } from './director/rig.testkit';
 import { autoplay, autoplayAll } from './director/autoplay.testkit';
 import { ARENA, ARENA_LEAVE, RESTART_GRACE_POLLS, TRIAL_ID } from './director/trial';
 import { KEEPER_DECAY_SCALE, PERCH_SETTLE_TICKS, TALK_RADIUS } from './director/reveal';
-import { FLIGHT_TICKS, WITNESS_CAP } from './director/net';
+import { FLIGHT_FROM, FLIGHT_TICKS, WITNESS_CAP } from './director/net';
 import { LANDING, STAGE_POLLS } from './director/aerie';
 import { M31_AT_GATE, M31_CHOICE, M31_FAVOURED, M31_RESPECT, M31_TRIAL_BEGUN } from './m31.quest';
 import { M32_COMPLETE, M32_TALK } from './m32.quest';
 import { M33_ANCHOR_FLAGS, M33_FLIGHT, M33_PACK_GROUPS, M33_WITNESSES } from './m33.quest';
-import { D06_COURTYARD_CLEAR, D06_GROUP, D06_LANDED, D06_LED_OFF, D06_SKARL_OUTCOME } from './d06.quest';
+import { D06_COURTYARD_CLEAR, D06_GROUP, D06_LANDED, D06_LED_OFF, D06_LINES_DONE, D06_LINES_NPC, D06_LINES_SCENE, D06_OUTCOME_SCENE, D06_OUTCOME_NPC, D06_SKARL_OUTCOME } from './d06.quest';
+import { flockPorts, FLOCK } from './director/flock';
 import { D06_SPARED_SCENE } from './npcs';
 
 let rig: Rig | null = null;
@@ -261,14 +262,21 @@ describe('M32: Ysmeryth speaks', () => {
     expect(TALK_RADIUS).toBeGreaterThan(5);
   });
 
-  it('M34 poses her for the oath, and again on land after the companions and on the perch at the end', () => {
+  it('M34 poses her for the oath through the real talk (the talk starts the quest), then land after the companions and perch at the end', () => {
     const r = fresh();
     autoplayAll(r, ['m31', 'm32', 'm33']);
-    r.manager.start('m34');
+    expect(r.qs('m34')).toBe('inactive');
     const talk = r.registered.get(M32_TALK)!;
-    talk.onInteract();
+    r.ys.poses.length = 0;
+    talk.onInteract(); // M34 is not active yet: the oath dialogue's last line starts it
     expect(r.ys.poses.at(-1)).toBe('oath');
+    r.ys.poses.length = 0;
+    r.manager.start('m34'); // the dialogue effect
+    r.step(3);
+    expect(r.ys.poses).toContain('oath'); // and the start itself poses her, whatever the prompt did
     r.talk('ysmeryth');
+    r.step(3);
+    expect(r.ys.poses.at(-1)).toBe('oath');
     autoplay(r, 'm34', { stopAt: ['m34', 'companions'] });
     r.step(70);
     r.scene('scene-m34-companions', 'scene.m34.companions');
@@ -277,6 +285,15 @@ describe('M32: Ysmeryth speaks', () => {
     autoplay(r, 'm34');
     expect(r.qs('m34')).toBe('completed');
     expect(r.ys.poses.at(-1)).toBe('perch');
+  });
+
+  it('she is not posed for the oath before M34 can be offered', () => {
+    const r = fresh({ prereqs: [] });
+    autoplayAll(r, ['m31'].filter(() => false));
+    r.manager.complete('m31');
+    r.ys.poses.length = 0;
+    r.registered.get(M32_TALK)!.onInteract();
+    expect(r.ys.poses).not.toContain('oath');
   });
 
   it('the vision holds the camera over the keeper-stone and poses her, and the scene end releases both', () => {
@@ -454,14 +471,14 @@ describe('M33: the spared hunters are counted as witnesses', () => {
     expect(r.num(M33_WITNESSES)).toBe(WITNESS_CAP);
   });
 
-  it('D06\'s courtyard counts into the same flag', () => {
+  it("D06's courtyard mercies are not M33's witnesses (the plan counts the packs only)", () => {
     const r = fresh();
     upTo(r, 'd06', 'courtyard');
     r.standing.set(D06_GROUP, ['h1', 'h2']);
     r.step(40);
     const base = r.num(M33_WITNESSES);
     r.emit('mercy', { actorId: 'h1' });
-    expect(r.num(M33_WITNESSES)).toBe(base + 1);
+    expect(r.num(M33_WITNESSES)).toBe(base);
   });
 
   it('cutting an anchor toasts, and the six flags are what the prop used flags write', () => {
@@ -495,6 +512,61 @@ describe('M33: the spared hunters are counted as witnesses', () => {
     r.step(FLIGHT_TICKS + 80);
     expect(r.flag(M33_FLIGHT)).toBe(true);
   });
+
+  const flockNodes = (r: Rig) => r.world.children.filter((c) => c.name.startsWith('m33-wyrmling') || c.name === 'm33-flock');
+
+  it('three wyrmlings fly from the camp to the escape anchor under the camera hold, then are removed', () => {
+    const r = fresh();
+    upTo(r, 'm33', 'flight');
+    r.at('dragonspine.skyhold.camp');
+    r.step(40);
+    expect(flockNodes(r).map((c) => c.name)).toEqual(['m33-wyrmling-1', 'm33-wyrmling-2', 'm33-wyrmling-3']);
+    r.step(SECOND * 3);
+    const mid = flockNodes(r)[0]!.position;
+    const from = anchorPos(FLIGHT_FROM);
+    expect(Math.hypot(mid.x - from.x, mid.z - from.z)).toBeGreaterThan(5);
+    expect(flockNodes(r).every((c) => c.visible)).toBe(true);
+    r.step(FLOCK.seconds * SECOND);
+    expect(flockNodes(r)).toHaveLength(0);
+    expect(r.flag(M33_FLIGHT)).toBe(true); // the hold credits it once it ends
+  });
+
+  it('a load mid-flight removes the wyrmlings', () => {
+    const r = fresh();
+    upTo(r, 'm33', 'flight');
+    r.at('dragonspine.skyhold.camp');
+    r.step(SECOND * 2);
+    expect(flockNodes(r)).toHaveLength(3);
+    r.saveLoad();
+    expect(flockNodes(r)).toHaveLength(0);
+  });
+
+  it('if a wyrmling cannot be built, a particle flock flies the same line instead', () => {
+    const real = flockPorts.makeRig;
+    flockPorts.makeRig = () => { throw new Error('no wyrmling'); };
+    try {
+      const r = fresh();
+      upTo(r, 'm33', 'flight');
+      r.at('dragonspine.skyhold.camp');
+      r.step(SECOND * 3);
+      expect(flockNodes(r).map((c) => c.name)).toEqual(['m33-flock']);
+      expect(r.warn).toHaveBeenCalledWith(expect.stringContaining('particle flock'));
+      r.step(FLOCK.seconds * SECOND);
+      expect(flockNodes(r)).toHaveLength(0);
+      r.step(FLIGHT_TICKS);
+      expect(r.flag(M33_FLIGHT)).toBe(true);
+    } finally {
+      flockPorts.makeRig = real;
+    }
+  });
+
+  it('with no scene the flight is the camera hold alone', () => {
+    const r = fresh({ noScene: true });
+    upTo(r, 'm33', 'flight');
+    r.at('dragonspine.skyhold.camp');
+    r.step(FLIGHT_TICKS + 80);
+    expect(r.flag(M33_FLIGHT)).toBe(true);
+  });
 });
 
 describe('D06: the Aerie', () => {
@@ -515,6 +587,25 @@ describe('D06: the Aerie', () => {
     r.step(2);
     expect(r.flag(D06_LANDED)).toBe(true);
     expect(r.toasts).toContain('dragonspine.q.d06.landed');
+  });
+
+  it('a dropped glide (contained, hit, cancelled) earns nothing, K7 puts her back on the ledge, and the next glide counts', () => {
+    const r = fresh();
+    upTo(r, 'd06', 'land');
+    for (const reason of ['contained', 'hit', 'cancelled']) {
+      r.emit('glide.started', { ledgeId: 'summit-aerie' });
+      r.emit('glide.landed', { at: anchorPos('dragonspine.hearth.entry') });
+      r.emit('glide.ended', { reason });
+      r.step(40);
+      expect(r.flag(D06_LANDED), reason).toBe(false);
+      expect(r.current('d06', 'land'), reason).toBe(true);
+    }
+    // the return itself is K7's (traversal/glide/GlidePlayer.test.ts: containment and a fall below the catch floor return her to the stand)
+    r.at('dragonspine.glide.summit-aerie.launch');
+    r.emit('glide.started', { ledgeId: 'summit-aerie' });
+    r.emit('glide.landed', { at: anchorPos(LANDING) });
+    r.step(2);
+    expect(r.flag(D06_LANDED)).toBe(true);
   });
 
   it('standing in the arrival volume on foot also counts (a return by the waystone), but not while gliding', () => {
@@ -545,12 +636,52 @@ describe('D06: the Aerie', () => {
     expect(r.qs('d06')).toBe('completed');
   });
 
-  it("gives K8's Skarl the courtyard flag while the director runs, and takes it away on dispose", () => {
+  it("gives K8's Skarl the lines-scene flag (not the courtyard's) while the director runs, and takes it away on dispose", () => {
     const r = fresh();
-    expect(skarlArmFlag()).toBe(D06_COURTYARD_CLEAR);
+    expect(skarlArmFlag()).toBe(D06_LINES_DONE);
     r.dispose();
     expect(skarlArmFlag()).toBeNull();
     rig = null;
+  });
+
+  it('Skarl arms when the lines scene ends, not when the courtyard falls: the scene never opens on the boss intro', () => {
+    const r = fresh();
+    upTo(r, 'd06', 'courtyard');
+    r.standing.set(D06_GROUP, ['h1']);
+    r.step(40);
+    r.standing.set(D06_GROUP, []);
+    r.step(40);
+    expect(r.flag(D06_COURTYARD_CLEAR)).toBe(true);
+    expect(r.flag(D06_LINES_DONE)).toBe(false);
+    expect(r.dialogue.started.at(-1)?.[0]).toBe(D06_LINES_SCENE);
+    r.step(SECOND * 3);
+    expect(r.flag(D06_LINES_DONE)).toBe(false);
+    r.emit('dialogue.ended', { dialogueId: D06_LINES_SCENE, npcId: D06_LINES_NPC, reason: 'skip' });
+    r.step(40);
+    expect(r.flag(D06_LINES_DONE)).toBe(false);
+    r.scene(D06_LINES_SCENE, D06_LINES_NPC);
+    r.step(2);
+    expect(r.flag(D06_LINES_DONE)).toBe(true);
+  });
+
+  it('a load after the lines, or with the scene already seen, still arms him (no soft-lock)', () => {
+    const r = fresh();
+    upTo(r, 'd06', 'courtyard');
+    r.standing.set(D06_GROUP, ['h1']);
+    r.step(40);
+    r.standing.set(D06_GROUP, []);
+    r.step(40);
+    r.scene(D06_LINES_SCENE, D06_LINES_NPC);
+    r.step(2);
+    r.state.clearFlag(D06_LINES_DONE); // as a save written before this flag existed
+    r.saveLoad();
+    r.step(40);
+    expect(r.flag(D06_LINES_DONE)).toBe(true);
+    const late = fresh();
+    upTo(late, 'd06', 'skarl');
+    late.state.clearFlag(D06_LINES_DONE);
+    late.step(40);
+    expect(late.flag(D06_LINES_DONE)).toBe(true);
   });
 
   it('the courtyard flag is the group row\'s down flag, so the fight arms only after the courtyard is clear', () => {
@@ -601,6 +732,11 @@ describe('D06: the Aerie', () => {
     expect(r.flag(D06_SPARED_SCENE)).toBe(true);
     expect(r.flag(D06_LED_OFF)).toBe(false);
     r.step(70);
+    expect(r.dialogue.started.at(-1)?.[0]).toBe('scene-d06-outcome');
+    r.emit('dialogue.ended', { dialogueId: D06_OUTCOME_SCENE, npcId: D06_OUTCOME_NPC, reason: 'skip' });
+    r.step(2);
+    expect(r.flag(D06_LED_OFF)).toBe(false); // a skipped scene is offered again, and he is not led off under it
+    r.step(SECOND * 12);
     expect(r.dialogue.started.at(-1)?.[0]).toBe('scene-d06-outcome');
     r.scene('scene-d06-outcome', 'scene.d06.outcome');
     r.step(2);

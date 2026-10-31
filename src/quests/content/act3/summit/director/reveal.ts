@@ -3,6 +3,7 @@
 import type { Vec3Like } from '../../../../../core/events';
 import type { Kit, Off } from './shared';
 import { offerScene, toast, ysmeryth } from './shared';
+import { m34 } from '../m34.quest';
 import type { YsmerythPose } from '../../../../../enemies/wyrm/ysmeryth/scene';
 import {
   M32_AXE_NPC, M32_AXE_SCENE, M32_COMPANIONS_NPC, M32_COMPANIONS_SCENE, M32_COMPLETE, M32_RUBBING_NPC, M32_RUBBING_SCENE, M32_TALK, M32_TALK_NPC,
@@ -19,8 +20,15 @@ export const PERCH_SETTLE_TICKS = 45;
 /** Burn cools this many times faster while Cael walks on foot with Keeper's Understanding. */
 export const KEEPER_DECAY_SCALE = 2;
 
+/** M34 can be offered now: it has not begun and everything it waits on is done (the oath talk itself starts it, so the pose cannot wait for `active`). */
+export function m34Offerable(k: Kit): boolean {
+  const need = (m34.startWhen as { all: Array<{ quest: string }> }).all;
+  return k.qstate('m34') === 'inactive' && need.every((c) => k.qstate(c.quest) === 'completed');
+}
+
 /** The pose Ysmeryth should hold while Cael talks to her, from the quests' state; null when she keeps whichever she has. */
 export function talkPose(k: Kit): YsmerythPose | null {
+  if (m34Offerable(k)) return 'oath';
   if (k.active('m34') && k.objCurrent('m34', 'oath')) return 'oath';
   if (k.active('m34') && k.objCurrent('m34', 'report')) return 'land';
   if (k.qstate('m31') === 'completed' && k.qstate('m32') !== 'completed') return k.active('m32') && !k.objCurrent('m32', 'speak') ? null : 'land';
@@ -29,6 +37,7 @@ export function talkPose(k: Kit): YsmerythPose | null {
 
 /** The pose she holds between scenes, derived from the quests (a load re-poses her). */
 export function standingPose(k: Kit): YsmerythPose | null {
+  if (k.active('m34') && k.objCurrent('m34', 'oath')) return 'oath';
   if (k.active('m32') && k.objDone('m32', 'speak')) return 'land';
   if (k.active('m34') && k.objDone('m34', 'oath')) return k.objDone('m34', 'companions') ? 'land' : 'oath';
   return null;
@@ -65,6 +74,9 @@ export function installM32(k: Kit): Off {
   const release = (): void => { shot?.release(); shot = null; };
   const settle = (): void => { const p = standingPose(k); if (p) ysmeryth(k)?.pose(p); };
   k.on('save.loaded', () => { token++; release(); k.later(settle); });
+  // M34 is started by the oath talk itself (its last line), so the pose is also applied when the quest becomes active and as its objectives move
+  k.on('quest.started', (e) => { if (e.questId === 'm34') k.later(settle); });
+  k.on('quest.objective', (e) => { if (e.questId === 'm34') k.later(settle); });
   k.on('dialogue.ended', (e) => {
     if (e.dialogueId !== M32_VISION_SCENE) return;
     token++;

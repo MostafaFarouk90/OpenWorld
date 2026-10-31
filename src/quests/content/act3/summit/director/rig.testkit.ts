@@ -1,6 +1,7 @@
 // A rig for the summit installers: the real event bus, flag store and quest manager (the five summit quests plus stubs for the quests they wait on),
 // and stubs for what a headless boot lacks (dialogue, inventory, the enemies and groupStanding services, Ysmeryth, the trials, the spells and the
 // movement services). `autoplay.testkit.ts` drives each quest the way the game does.
+import * as THREE from 'three';
 import { vi } from 'vitest';
 import { EventBus } from '../../../../../core/EventBus';
 import type { GameContext } from '../../../../../core/Game';
@@ -49,6 +50,8 @@ export interface RigOpts {
   noSpells?: boolean;
   /** Use no cameraRig / no interaction registry. */
   noCamera?: boolean;
+  /** No scene (the flight is only a camera hold). */
+  noScene?: boolean;
 }
 
 export function makeRig(opts: RigOpts = {}) {
@@ -110,9 +113,11 @@ export function makeRig(opts: RigOpts = {}) {
   const inside = new Set<string>();
   const registered = new Map<string, { enabled(): boolean; onInteract(): void; position(out: { x: number; y: number; z: number }): unknown }>();
   const camera = { shots: [] as unknown[], released: 0 };
+  const scene = new THREE.Scene();
   const defined = new Map<string, { id: string; position: { x: number; y: number; z: number }; yaw: number }>();
   const ctx = {
     events, state, services,
+    scene: opts.noScene ? undefined : scene,
     anchors: {
       find: (id: string) => { const d = defined.get(id); if (d) return d; const a = ANCHORS.get(id); return a && { id, position: anchorPos(id), yaw: (a.yawDeg * Math.PI) / 180 }; },
       define: (a: { id: string; position: { x: number; y: number; z: number }; yaw: number }) => { defined.set(a.id, a); return () => void defined.delete(a.id); },
@@ -131,7 +136,7 @@ export function makeRig(opts: RigOpts = {}) {
   installSummitComplete(kit);
   installM31(kit);
   offs.push(installM32(kit));
-  installM33(kit);
+  offs.push(installM33(kit));
   installM34(kit);
   offs.push(installD06(kit));
 
@@ -141,7 +146,7 @@ export function makeRig(opts: RigOpts = {}) {
   const env = () => ({ state: { getFlag: (k: string) => state.getFlag(k) }, quests: { state: (q: string) => manager.state(q), objectiveDone: (q: string, o: string) => manager.objectiveDone(q, o) } }) as never;
 
   const r = {
-    events, state, manager, kit, tick, step, emit, dialogue, inv, inventory, standing, player, warn, toasts, inside, registered, camera, ctx, ys, trials, spells, spellCalls, movement, mount, defined,
+    events, state, manager, kit, tick, step, emit, dialogue, inv, inventory, standing, player, warn, toasts, inside, registered, camera, ctx, world: scene, ys, trials, spells, spellCalls, movement, mount, defined,
     dispose: () => { for (const o of offs.splice(0)) o(); flagsOff.dispose(); },
     at: (anchorId: string) => { const p = anchorPos(anchorId); player.feet = { ...p }; return p; },
     // ---- driving the quests -------------------------------------------------------------------------------------

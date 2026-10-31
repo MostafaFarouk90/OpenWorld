@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { makeRig, type Rig } from './director/rig.testkit';
 import { autoplay, autoplayAll, clearGroups, playObjective } from './director/autoplay.testkit';
 import { SUMMIT_QUEST_DEFS } from './summit.content';
+import { ACT3_ORDERS, ACT3_PREREQS, parseAct3 } from '../../../act3Jump';
 
 let rig: Rig | null = null;
 afterEach(() => { rig?.dispose(); rig = null; });
@@ -131,5 +132,21 @@ describe('group objectives', () => {
     expect(r.done('m31', 'hawks')).toBe(false);
     autoplay(r, 'm31');
     expect(r.qs('m31')).toBe('completed');
+  });
+});
+
+describe('?act3=<id>&new&order=<order> reaches each first step', () => {
+  const IDS = ['m31', 'm32', 'm33', 'm34', 'd06'] as const;
+  it.each(ACT3_ORDERS.flatMap((o) => IDS.map((id) => [id, o] as const)))('%s (%s): the jump parses, its prerequisites open the quest, and its first objective is current', (id, order) => {
+    expect(parseAct3(`?act3=${id}&new&order=${order}`)).toEqual({ id, order, classId: 'knight', fresh: true });
+    const r = fresh({ prereqs: [] });
+    // what the jump leaves behind: every listed prerequisite completed through the quests service, in the order it lists them
+    for (const q of ACT3_PREREQS[order][id]) r.manager.complete(q);
+    expect(r.qs(id), 'the target itself is not completed').toBe('inactive');
+    expect(r.manager.start(id), `${id} starts`).toBe(true);
+    const first = SUMMIT_QUEST_DEFS.find((d) => d.id === id)!.objectives[0]!;
+    expect(r.manager.objectives(id).find((v) => v.current)?.def.id).toBe(first.id);
+    r.step(2);
+    expect(r.warn).not.toHaveBeenCalled();
   });
 });

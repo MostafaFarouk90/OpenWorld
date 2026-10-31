@@ -40,7 +40,7 @@ const plugin: GamePlugin = {
     installSummitComplete(kit);
     installM31(kit);
     offs.push(installM32(kit));
-    installM33(kit);
+    offs.push(installM33(kit));
     installM34(kit);
     offs.push(installD06(kit));
 

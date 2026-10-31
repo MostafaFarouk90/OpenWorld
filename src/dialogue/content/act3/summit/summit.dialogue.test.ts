@@ -12,6 +12,9 @@ import { ACT3_DIRECT } from '../../../../quests/act3Jump';
 import { SUMMIT_QUEST_DEFS } from '../../../../quests/content/act3/summit/summit.content';
 import { SUMMIT_TALKS } from './talks';
 import { SUMMIT_TREES, SUMMIT_EXTENSIONS } from './index';
+import { r15, R15_HAUL_ID, R15_SLEDS } from '../../../../quests/content/act3/dragonspine/r15.quest';
+import { r18 } from '../../../../quests/content/act3/dragonspine/r18.quest';
+import { HAUL_OUT } from '../dragonspine/thorgar.dialogue';
 import { R16_CHOICE } from '../../../../quests/content/act3/dragonspine/r16.quest';
 import { M31_AFTER_SCENE, M31_CHOICE, M31_GATE_MET } from '../../../../quests/content/act3/summit/m31.quest';
 import { M32_AXE_FAVOUR, M32_AXE_GIVEN, M32_AXE_SCENE } from '../../../../quests/content/act3/summit/m32.quest';
@@ -58,6 +61,16 @@ function runOut(dr: DialogueRunner, pick: (ids: string[]) => string | undefined 
     } else dr.advance();
   }
   return seen;
+}
+
+/** Advances until a node whose choices satisfy `stop`. */
+function runOutTo(dr: DialogueRunner, stop: (ids: string[]) => boolean): void {
+  for (let i = 0; i < 120 && dr.isOpen; i++) {
+    const v = dr.view()!;
+    if (v.choices.length && stop(v.choices.map((c) => c.id))) return;
+    if (v.choices.length) dr.choose(v.choices[0]!.number);
+    else dr.advance();
+  }
 }
 
 /** Every summit prerequisite done (the first quest's parents) so a brief is offered. */
@@ -178,6 +191,52 @@ describe('M32 reads R16 both ways', () => {
     runOut(t.dr);
     expect(t.dr.isOpen).toBe(false);
     expect(t.favours).toEqual([]);
+  });
+});
+
+describe("Thorgar's summit rules leave his lower-slope tree reachable", () => {
+  const m33Open = parentsDone('m33');
+  const choices = (t: ReturnType<typeof setup>): string[] => t.dr.view()!.choices.map((c) => c.id);
+  it('an R15 or R18 hand-in wins over the M33 brief and wait', () => {
+    for (const [quest, seg] of [['r15', 'r15-report'], ['r18', 'r18-report']] as const) {
+      const def = [r15, r18].find((d) => d.id === quest)!;
+      const done = { [quest]: def.objectives.slice(0, -1).map((o) => o.id) };
+      for (const m33 of ['inactive', 'active'] as const) {
+        const t = setup({ states: { ...m33Open, [quest]: 'active', m33 }, done });
+        t.dr.start('npc-thorgar', 'thorgar');
+        expect(t.dr.view()!.nodeId, `${quest} with m33 ${m33}`).toBe(seg);
+      }
+    }
+  });
+  it('the M33 brief and wait offer the haul reset (R15 active) and the lodge counter', () => {
+    for (const m33 of ['inactive', 'active'] as const) {
+      const t = setup({ states: { ...m33Open, r15: 'active', m33 }, flags: { [HAUL_OUT]: true, [R15_HAUL_ID]: R15_SLEDS[0]! } });
+      t.dr.start('npc-thorgar', 'thorgar');
+      expect(t.dr.view()!.nodeId.startsWith('s33-')).toBe(true);
+      runOutTo(t.dr, (ids) => ids.includes('haul'));
+      expect(choices(t)).toContain('haul');
+      t.dr.choose(t.dr.view()!.choices.find((c) => c.id === 'haul')!.number);
+      expect(t.dr.view()!.nodeId).toBe('r15-wait');
+      runOutTo(t.dr, (ids) => ids.includes('reset'));
+      t.dr.choose(t.dr.view()!.choices.find((c) => c.id === 'reset')!.number);
+      expect(t.events.some((e) => e.type === 'npc.carry.resetHaul')).toBe(true);
+    }
+  });
+  it('the lodge counter (shop, smith, sockets) stays reachable through M33 and D06', () => {
+    const worlds: World[] = [
+      { states: { ...m33Open, m33: 'active' } },
+      { states: { ...m33Open } },
+      { states: { ...parentsDone('d06'), d06: 'active' }, done: { d06: [] } },
+      { states: parentsDone('d06') },
+    ];
+    for (const w of worlds) {
+      const t = setup(w);
+      t.dr.start('npc-thorgar', 'thorgar');
+      runOutTo(t.dr, (ids) => ids.includes('other'));
+      t.dr.choose(t.dr.view()!.choices.find((c) => c.id === 'other')!.number);
+      expect(t.dr.view()!.nodeId).toBe('idle');
+      expect(choices(t)).toContain('trade');
+    }
   });
 });
 

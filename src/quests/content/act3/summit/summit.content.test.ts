@@ -82,7 +82,7 @@ describe('the summit quests as data', () => {
     for (const k of Object.keys(SUMMIT_QUEST_STRINGS).filter((x) => x.startsWith('dragonspine.q.'))) expect(has(k), k).toBe(true);
   });
 
-  it('every item the quests give or take exists (the Ember Scale is new)', () => {
+  it('every item the quests give or take exists (the Scale of the Banked Coal is new)', () => {
     const items = new Set<string>();
     const walk = (e: Effect[] | undefined): void => {
       for (const x of e ?? []) for (const s of (x as { give?: Array<{ itemId: string }> }).give ?? []) items.add(s.itemId);
