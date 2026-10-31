@@ -47,7 +47,7 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   // plan 6.1's 70 and 220 after the one rounding (39 x 1.8 = 70.2, 122 x 1.8 = 219.6). Coordinator ruling A.
   'fen-leech': 39,
   'peat-shambler': 122,
-  // Corvin Skarl, D06 (K8 PR 2): the summit has no region factor, so the base is the 650 paid.
+  // Corvin Skarl, D06 (K8 PR 2): the summit has no region factor; 650 at an even level (the level scale adjusts it as for any kill).
   'corvin-skarl': 650,
   // K6a: Skarl's drake is freed on either D06 outcome, never a kill reward.
   'skarl-drake': 0,

@@ -1,13 +1,10 @@
 // Hunt-Marshal Corvin Skarl's numbers (plans/act3-K8-pr2.md). The design gives the crossbow bolts (block them), the drake's dive
 // with a 1.0 s circling shadow, the chain forced break, the Spare at the last break with a 6 s window, level 27 under the summit
 // cap, about 2,000 health and 650 kill XP (design 10 row 22); everything else is a reading for K16's pacing pass.
-import { BOSS_MERCY } from '../../enemies/tuning';
 
 export const SKARL_BOSS_ID = 'corvin-skarl';
 export const SKARL_KIND = 'corvin-skarl';
 export const SKARL_NAME_KEY = 'boss.corvin-skarl.name';
-/** The mercy verb comes from the one table, so the registry def and the hold cannot drift apart. */
-export const SKARL_MERCY_VERB = BOSS_MERCY[SKARL_BOSS_ID]?.verb === 'spare' ? 'spare' : 'release';
 
 /** K13's flag: D06 is accepted (the keep door opens; the fight arms). */
 export const D06_STARTED_FLAG = 'story.d06.started';

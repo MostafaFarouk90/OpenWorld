@@ -139,6 +139,8 @@ export class SkarlEncounter implements SkarlHooks {
   private drakeFreed = false;
   /** Forced breaks taken (tests and the real-game log). */
   forcedBreaks = 0;
+  /** Metres of the last kick's shove after the ring clamp (tests). */
+  lastShoveMetres = 0;
 
   constructor(ctx: GameContext, opts: SkarlEncounterOptions) {
     this.ctx = ctx;
@@ -199,7 +201,6 @@ export class SkarlEncounter implements SkarlHooks {
           this.endTelegraph();
           this.clearBolts();
           this.stopShove();
-          this.oneShot('kneel');
         }
       }),
       ctx.events.on('boss.spared', (p) => {
@@ -213,6 +214,10 @@ export class SkarlEncounter implements SkarlHooks {
       }),
       ctx.events.on('wyrm.drake.landed', (e) => {
         if (e.actorId === this._drakeId && !this.drakeFreed) this.landedT = CHAIN.landedSeconds;
+      }),
+      // Any player hit on the drake while it is down strikes its chain too, so bows and spells reach it (review S4).
+      ctx.events.on('damage.dealt', (r) => {
+        if (r.targetId === this._drakeId && r.attackerId === ctx.player.actor.id && this.chainOpen) this.strikeChain();
       }),
       ctx.events.on('wyrm.drake.freed', (e) => {
         if (e.actorId === this._drakeId) this.drakeFreed = true;
@@ -314,6 +319,8 @@ export class SkarlEncounter implements SkarlHooks {
     this.leverT = Math.max(0, this.leverT - dt);
     this.tickBolts(dt);
     this.tickShove(dt);
+    // A bolt can kill the player, and the director then ends the fight inside this tick (review S1).
+    if (this.ended || this.outcomeKind) return;
     const p = this.ctx.player.feet;
     const pos = this.root.position;
     const sense: SkarlSense = { dist: Math.hypot(p.x - pos.x, p.z - pos.z), onPostLane: this.onPostLane() };
@@ -371,7 +378,7 @@ export class SkarlEncounter implements SkarlHooks {
 
   /** F at the post: the lever jerks the chain (a forced break), then waits `LEVER.cooldown`. */
   pullLever(): boolean {
-    if (!this.contested || this.leverT > 0 || this.drakeFreed) return false;
+    if (!this.contested || this.leverT > 0 || this.drakeFreed || this.floorLifted) return false;
     if (!this.forceBreak()) return false;
     this.leverT = LEVER.cooldown;
     this.sfx(SFX.lever);
@@ -381,6 +388,7 @@ export class SkarlEncounter implements SkarlHooks {
   // ---- SkarlHooks ----
 
   telegraph(attackId: string, kind: 'block' | 'dodge', swingId: number, leadSeconds: number): void {
+    if (!this.contested) return;
     this.ctx.events.emit('telegraph', { actorId: this.actor.id, kind, attackId, moveId: attackId, swingId, leadSeconds });
     this.telegraphSwing = swingId;
     this.telegraphT = 0;
@@ -394,6 +402,7 @@ export class SkarlEncounter implements SkarlHooks {
   }
 
   loose(swingId: number, index: number, count: number, fan: boolean): void {
+    if (!this.contested) return;
     this.endTelegraph();
     if (index === 0 || !fan) this.oneShot('shoot');
     if (this.bolts.length >= BOLT_CAPACITY) return;
@@ -417,6 +426,7 @@ export class SkarlEncounter implements SkarlHooks {
   }
 
   kick(swingId: number): void {
+    if (!this.contested) return;
     this.endTelegraph();
     this.sfx(SFX.kick);
     const f = this.ctx.player.feet;
@@ -446,6 +456,7 @@ export class SkarlEncounter implements SkarlHooks {
       if (Math.hypot(f.x + dir.x * m - c.x, f.z + dir.z * m - c.z) <= ARENA.ring - 2) break;
       metres = m - 0.25;
     }
+    this.lastShoveMetres = Math.max(0, metres);
     if (metres <= 0) return;
     this.shove = { x: dir.x, z: dir.z, left: KICK.shoveSeconds * (metres / KICK.shoveMetres) };
     this.verbs()?.holdForcedMove?.(KICK_SHOVE_OWNER, { x: dir.x, z: dir.z, speed: KICK.shoveMetres / KICK.shoveSeconds });
@@ -478,7 +489,8 @@ export class SkarlEncounter implements SkarlHooks {
     }
     const drakes = this.drakes();
     try {
-      this.unchain = drakes?.chain(DRAKE_SPAWNER, ARENA.post, { until: { all: [`boss.${SKARL_BOSS_ID}.outcome`] } }) ?? null;
+      // No `until`: the tether reads boolean flags and the outcome is a string; the release and the unchain on every end free it.
+      this.unchain = drakes?.chain(DRAKE_SPAWNER, ARENA.post) ?? null;
     } catch (err) {
       this.warn(`could not chain the drake (${String(err)})`);
     }
@@ -506,7 +518,7 @@ export class SkarlEncounter implements SkarlHooks {
       coneDegrees: 360,
       promptKey: 'skarl.lever',
       priority: 2,
-      enabled: () => this.contested && this.leverT <= 0 && !this.drakeFreed && this.brain.state !== 'broken' && this.brain.state !== 'window',
+      enabled: () => this.contested && this.leverT <= 0 && !this.drakeFreed && !this.floorLifted && this.brain.state !== 'broken' && this.brain.state !== 'window',
       onInteract: () => void this.pullLever(),
     };
     const chain: Interactable = {

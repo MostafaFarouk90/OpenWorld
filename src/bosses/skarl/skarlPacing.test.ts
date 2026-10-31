@@ -38,7 +38,8 @@ function fight(p: Profile): number {
   const max = SKARL.maxHealth;
   let health: number = max;
   let phase = 1;
-  let breaks = 0;
+  // The registry's rule: one break counts per phase (more only kneel him again); the phase 3 break is the last.
+  const broken = [false, false, false];
   let idle = 0;
   let lever = 0;
   let walk = 0;
@@ -53,7 +54,7 @@ function fight(p: Profile): number {
       if (window < SKARL.releaseWindowSeconds) continue;
       if (window - TICK < SKARL.releaseWindowSeconds) brain.onReleaseWindow(false);
     }
-    const breakWanted = breaks < phase && p.leverWalk > 0 && !kneeling && window < 0;
+    const breakWanted = !broken[phase - 1] && p.leverWalk > 0 && !kneeling && window < 0;
     if (breakWanted && lever <= 0) {
       walk += TICK;
       if (walk >= p.leverWalk) {
@@ -65,7 +66,7 @@ function fight(p: Profile): number {
     const walking = walk > 0;
     let dealt = walking ? 0 : p.dps * TICK * (kneeling ? SKARL.brokenScale : p.uptime * (1 - DEFENDING));
     // Phase holds and the floor.
-    const hold = breaks < 1 ? max * SKARL.phases[0] : breaks < 2 ? max * SKARL.phases[1] : breaks < 3 ? max * SKARL.healthFloor : 0;
+    const hold = !broken[0] ? max * SKARL.phases[0] : !broken[1] ? max * SKARL.phases[1] : !broken[2] ? max * SKARL.healthFloor : 0;
     dealt = Math.min(dealt, Math.max(0, health - Math.floor(hold) - (hold > 0 ? 1 : 0)));
     health -= dealt;
     if (dealt > 0 && !kneeling) {
@@ -74,10 +75,11 @@ function fight(p: Profile): number {
     } else idle += TICK;
     if (idle >= SKARL.poiseRegenDelay) poise = SKARL.maxPoise;
     if (poise <= 0 && !kneeling && window < 0) {
-      breaks++;
+      const last = phase === 3 && !broken[2];
+      broken[phase - 1] = true;
       brain.onBreak();
       poise = SKARL.maxPoise;
-      if (breaks >= 3) {
+      if (last) {
         window = 0;
         brain.onReleaseWindow(true);
       }
@@ -108,6 +110,6 @@ describe('Skarl pacing (the 360 s D06 boss beat)', () => {
 
   it('readings for K16', () => {
     const minutes = PROFILES.map((p) => `${p.name}: ${(fight(p) / 60).toFixed(1)} min`);
-    expect(minutes).toEqual(['blade using the lever: 5.2 min', 'ranged using the lever: 4.6 min', 'caster using the lever: 4.7 min']);
+    expect(minutes).toEqual(['blade using the lever: 5.0 min', 'ranged using the lever: 4.7 min', 'caster using the lever: 4.8 min']);
   });
 });

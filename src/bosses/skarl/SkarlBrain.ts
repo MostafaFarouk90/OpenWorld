@@ -37,6 +37,8 @@ export class SkarlBrain {
   private swingId = 0;
   private telegraphed = -1;
   private loosed = 0;
+  /** The volley being loosed, fixed when it starts (a phase change mid-burst does not grow it). */
+  private current: { count: number; fan: boolean } = { count: 1, fan: false };
   private closeT = 0;
   private backstepCooldown = 0;
   private laneT = 0;
@@ -108,12 +110,13 @@ export class SkarlBrain {
         if (this.t >= BOLT.aimSeconds) {
           this.enter('loose');
           this.loosed = 0;
+          this.current = this.volley;
           this.looseNext();
         }
         break;
       case 'loose':
-        if (this.loosed < this.volley.count && this.t >= BOLT.burstGap * this.loosed) this.looseNext();
-        if (this.loosed >= this.volley.count) this.enter('reload');
+        if (this.loosed < this.current.count && this.t >= BOLT.burstGap * this.loosed) this.looseNext();
+        if (this.loosed >= this.current.count) this.enter('reload');
         break;
       case 'kick':
         if (this.t >= KICK.windup && this.telegraphed === this.swingId) {
@@ -173,7 +176,7 @@ export class SkarlBrain {
   }
 
   private looseNext(): void {
-    const { count, fan } = this.volley;
+    const { count, fan } = this.current;
     if (fan) {
       for (let i = 0; i < count; i++) this.hooks.loose(this.swingId, i, count, true);
       this.loosed = count;

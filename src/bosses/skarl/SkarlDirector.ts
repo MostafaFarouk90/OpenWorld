@@ -38,6 +38,7 @@ export class SkarlDirector {
   private warnedPlaces = false;
   private outcomeChanged = false;
   private disposed = false;
+  private modelFailed = false;
 
   constructor(ctx: GameContext, opts: SkarlDirectorOptions = {}) {
     this.ctx = ctx;
@@ -108,7 +109,7 @@ export class SkarlDirector {
     const f = this.ctx.player.feet;
     if (Math.hypot(f.x - c.position.x, f.z - c.position.z) > ARENA.startRadius || Math.abs(f.y - c.position.y) > ARENA.startHeight) return;
     const state = this.opts.modelState?.() ?? 'none';
-    if (state === 'loading' || state === 'failed') return;
+    if (state === 'loading' || state === 'failed' || this.modelFailed) return;
     const places = this.places();
     if (!places) return;
     let model: SkarlModel | null = null;
@@ -116,7 +117,9 @@ export class SkarlDirector {
       try {
         model = this.opts.makeModel();
       } catch (err) {
-        this.warn(`could not build Skarl's model; the fight does not start (${String(err)})`);
+        // Once: a model that cannot build will not build on the next tick either (review N6).
+        if (!this.modelFailed) this.warn(`could not build Skarl's model; the fight does not start (${String(err)})`);
+        this.modelFailed = true;
         return;
       }
     }
