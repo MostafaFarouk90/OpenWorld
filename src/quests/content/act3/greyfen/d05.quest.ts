@@ -24,8 +24,9 @@ const dive = (n: number) =>
 
 /**
  * D05 Into the Mirewater. Gytha opens the Deeps door; the undercroft is entered (a scene), the drowned monk's echo is heard
- * at the first air pocket, and Cael dives through four pockets, clears the leeches and shamblers room by room, reads four
- * things, turns the two sluice wheels (which write `story.d05.sluice1/2`; K3's water sets read them) and fights Murkjaw. The
+ * at the first air pocket, and Cael dives through four pockets, clears the leeches and shamblers room by room, reads three
+ * things, turns the two sluice wheels (which write `story.d05.sluice1/2`; K3's water sets read them), fights Murkjaw and reads his spoil
+ * (the fourth note lies in the arena, whose trigger starts the fight, so it is found once he is dead). The
  * boss step is coded against frozen names: boss id `murkjaw`, `boss.defeated { bossId }`, `boss.murkjaw.outcome = 'defeated'`.
  */
 export const d05: QuestDef = {
@@ -51,8 +52,8 @@ export const d05: QuestDef = {
     dive(4),
     story('room2', 'quest.d05.room2', 'story.d05.room2Down', { doneWhen: { flag: 'story.d05.room2Down', equals: true } }),
     { id: 'sluice2', type: 'interact', target: D05_SLUICES[1], textKey: 'quest.d05.sluice2' },
-    reads('spoil', 'quest.d05.spoil', [D05_SEARCHES[3]]),
     story('murkjaw', 'quest.d05.murkjaw', 'boss.defeated', { match: { bossId: D05_BOSS }, doneWhen: { flag: D05_OUTCOME_FLAG, equals: 'defeated' } }),
+    reads('spoil', 'quest.d05.spoil', [D05_SEARCHES[3]]),
     { id: 'outcome', type: 'talk', target: D05_OUTCOME_NPC, textKey: 'quest.d05.outcome' },
   ],
   rewards: [{ xp: 900 }, { give: [{ itemId: 'murkjaw-tooth', count: 1 }] }],

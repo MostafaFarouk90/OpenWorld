@@ -624,6 +624,20 @@ describe('M27: the reeds', () => {
     expect(r.flag('story.m27.seen')).toBe(false);
   });
 
+  it('a group wiped in the same tick it spawns still credits (seen from the spawn, not only the poll)', () => {
+    const r = atBlinds();
+    r.emit('trigger.enter', { triggerId: 'trg.greyfen.m27.blinds.end', actorId: 'player' });
+    autoplay(r, 'm27', { stopAt: ['m27', 'pack2'], r14: 'released' });
+    r.step(2);
+    expect(r.current('m27', 'pack2')).toBe(true);
+    expect(r.flag('story.m27.pack2Out')).toBe(true);
+    // the spawner's group appears and dies inside one tick: no poll ever sees it standing
+    r.emit('enemies.groupCleared', { spawnerId: 'greyfen.q.m27.pack2' });
+    r.step(40);
+    expect(r.flag('story.m27.pack2Seen')).toBe(true);
+    expect(r.done('m27', 'pack2')).toBe(true);
+  });
+
   it('spared hunters of either pack are witnesses', () => {
     const r = atBlinds();
     r.standing.set('greyfen.q.m27.pack1', ['h1']);
@@ -788,6 +802,7 @@ describe('D05: the Deeps', () => {
     r.state.setFlag('boss.murkjaw.outcome', 'defeated');
     r.step(5);
     expect(r.done('d05', 'murkjaw')).toBe(true);
+    autoplay(r, 'd05', { stopAt: ['d05', 'outcome'] }); // the spoil is read once Murkjaw is dead
     r.step(70);
     r.scene('scene-d05-outcome', 'scene.d05.outcome');
     expect(r.qs('d05')).toBe('completed');
@@ -803,6 +818,7 @@ describe('D05: the Deeps', () => {
     expect(r0.str('story.d05.outcome')).toBe('defeated');
     const r = reload(r0);
     expect(r.done('d05', 'murkjaw')).toBe(true);
+    autoplay(r, 'd05', { stopAt: ['d05', 'outcome'] }); // the spoil is read once Murkjaw is dead
     r.step(70);
     expect(r.started('scene-d05-outcome')).toBe(true);
     r.scene('scene-d05-outcome', 'scene.d05.outcome');
@@ -826,6 +842,7 @@ describe('D05: the Deeps', () => {
     r.state.setFlag('boss.murkjaw.outcome', 'defeated');
     r.step(5);
     expect(r.done('d05', 'murkjaw')).toBe(true);
+    autoplay(r, 'd05', { stopAt: ['d05', 'outcome'] }); // the spoil is read once Murkjaw is dead
     r.step(70);
     expect(r.started('scene-d05-outcome')).toBe(true);
     r.scene('scene-d05-outcome', 'scene.d05.outcome');

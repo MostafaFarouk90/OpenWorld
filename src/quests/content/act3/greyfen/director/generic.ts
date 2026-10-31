@@ -80,6 +80,16 @@ export const GROUP_GRACE_POLLS = 8;
 export function installGroupObjectives(k: Kit): void {
   let grace = 0;
   k.on('save.loaded', () => { grace = GROUP_GRACE_POLLS; });
+  // "seen" also comes from the spawn itself, so a group wiped inside one poll still credits: a member registered in the group right after it
+  // spawns (`enemies.alive` keeps the dead until their animation ends), or the spawner reporting the group cleared while the row is armed.
+  const markSeen = (g: (typeof GREYFEN_GROUP_OBJECTIVES)[number]): void => { if (k.active(g.quest) && !k.flag(g.seen)) k.set(g.seen); };
+  k.on('actor.spawned', () => k.later(() => {
+    const en = k.ctx.services.get('enemies');
+    for (const g of GREYFEN_GROUP_OBJECTIVES) if (k.flag(g.armFlag) && g.groups.some((id) => (en?.alive(id) ?? []).length > 0)) markSeen(g);
+  }));
+  k.on('enemies.groupCleared', (e) => {
+    for (const g of GREYFEN_GROUP_OBJECTIVES) if (k.flag(g.armFlag) && g.groups.includes(e.spawnerId)) markSeen(g);
+  });
   k.every(30, () => {
     if (grace > 0) { grace--; return; }
     for (const g of GREYFEN_GROUP_OBJECTIVES) {

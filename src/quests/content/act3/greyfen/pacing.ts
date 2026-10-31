@@ -156,7 +156,7 @@ export const GREYFEN_PACE: readonly Act3PaceRow[] = [
     R('greyfen.d05.gytha'), F('greyfen.deeps.door'), D('greyfen.deeps.entry'), D('greyfen.d05.pocket.1'), F('greyfen.d05.search.1'), F('greyfen.spawn.d05.cell-1.1'),
     D('greyfen.d05.pocket.2'), F('npc-post.monk-echo.deeps'), F('greyfen.d05.sluice.1'), F('greyfen.spawn.d05.sluice-1.1'), F('greyfen.d05.search.2'),
     D('greyfen.d05.pocket.3'), F('greyfen.spawn.d05.cell-3.1'), F('greyfen.d05.search.3'), D('greyfen.d05.pocket.4'), F('greyfen.spawn.d05.sluice-2.1'),
-    F('greyfen.d05.sluice.2'), F('greyfen.d05.search.4'), F('greyfen.d05.arena.centre'),
+    F('greyfen.d05.sluice.2'), F('greyfen.d05.arena.centre'), F('greyfen.d05.search.4'),
   ], 28, { dive: 4, killUnit: 12, search: 4, interact: 2, boss: 1 }),
 ];
 
