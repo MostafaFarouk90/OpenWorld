@@ -34,8 +34,8 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.fauna.hunters.below-gate.4 | 14000 | 14446 | 0 | 0 | fauna, hunters |
 | dragonspine.fauna.wyrm.west-ridge.1 | 11600 | 14200 | 0 | 0 | fauna, wyrm |
 | dragonspine.fauna.wyrm.east-ridge.1 | 16200 | 13900 | 0 | 0 | fauna, wyrm |
-| dragonspine.fauna.hawks.skyhold.1 | 12234 | 15350 | 0 | 0 | fauna, hawks |
-| dragonspine.fauna.hawks.skyhold.2 | 12226 | 15350 | 0 | 0 | fauna, hawks |
+| dragonspine.fauna.hawks.skyhold.1 | 12234 | 15460 | 0 | 0 | fauna, hawks |
+| dragonspine.fauna.hawks.skyhold.2 | 12226 | 15460 | 0 | 0 | fauna, hawks |
 | dragonspine.fauna.hawks.aerie-west.1 | 15104 | 16040 | 0 | 0 | fauna, hawks |
 | dragonspine.fauna.hawks.aerie-west.2 | 15096 | 16040 | 0 | 0 | fauna, hawks |
 | dragonspine.fauna.ogres.summit-road.1 | 13804 | 15100 | 0 | 0 | fauna, ogres |
