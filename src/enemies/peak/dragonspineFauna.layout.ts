@@ -76,7 +76,7 @@ export const DRAGONSPINE_FAUNA_GROUPS: readonly PeakFaunaGroup[] = [
   { id: 'wyrm.east-ridge', kind: 'wyrm', site: 'anvil', dx: 1500, dz: 0, count: 1 },
   // The summit: hawks over Skyhold and the Aerie's west lip, an ogre pair on the road below the Wyrm's Hearth, and two
   // wyrms by the Aerie (coordinator change E: none on the Hearth's rim; both sent off while Skarl's fight is armed).
-  { id: 'hawks.skyhold', kind: 'hawks', site: 'skyhold', dx: 0, dz: 150, count: 2, summit: true },
+  { id: 'hawks.skyhold', kind: 'hawks', site: 'skyhold', dx: 0, dz: 260, count: 2, summit: true },
   { id: 'hawks.aerie-west', kind: 'hawks', site: 'aerie', dx: -500, dz: 0, count: 2, summit: true },
   { id: 'ogres.summit-road', kind: 'ogres', site: 'summitGate', dx: 200, dz: 350, count: 2, summit: true },
   { id: 'wyrm.aerie-south', kind: 'wyrm', site: 'aerie', dx: 0, dz: -450, count: 1, summit: true },
