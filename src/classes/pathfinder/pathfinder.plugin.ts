@@ -10,7 +10,7 @@ import { getItem } from '../../inventory/items';
 import { sfxKey } from '../../music/sfxSynth';
 import { SFX } from '../../music/sfxLayers';
 import { registerClassSkills } from '../../progression/skills';
-import { ProjectileSystem } from '../../spells/Projectile';
+import { ProjectileSystem, type ProjectileHit } from '../../spells/Projectile';
 import { createProjectileHost } from '../../spells/projectileHost';
 import type { Vec3 } from '../../vfx/ports';
 import type { VfxService } from '../../vfx/types';
@@ -39,6 +39,30 @@ const CODEX_RETRY_SECONDS = 1;
 /** Where the crossbow's muzzle is, relative to the crossbow node (the long axis is +Z, design 9.5). */
 export const CROSSBOW_TIP = { x: 0, y: 0.07, z: 1.16 } as const;
 
+/** K11 PR 4: what a launched bolt's callbacks may use (the plugin's private mark and ammo state). */
+export interface BoltTools {
+  /** The launch spent a master bolt (the shot hits 10% harder: `PF.masterBoltScale`). */
+  master: boolean;
+  /** Spends a Falcon Eye mark on `actorId` and returns the extra poise it gives (0 when unmarked). */
+  markPoise(actorId: string): number;
+}
+
+/** K11 PR 4 (Dragonbane Bolt): one bolt through the plugin's own projectile system. */
+export interface BoltLaunchSpec {
+  origin: Vec3;
+  direction: Vec3;
+  speed: number;
+  lifetime: number;
+  radius: number;
+  /** Foes it may pass through (see `LaunchOptions.pierce`). */
+  pierce?: number;
+  /** Takes one bolt of ammo (master bolts first) before it flies; with none the launch is refused 'no-ammo' and nothing is spent. */
+  ammo?: boolean;
+  onPass?(hit: { actorId: string; point: Vec3 }, tools: BoltTools): void;
+  onHit(result: ProjectileHit, tools: BoltTools): void;
+}
+export type BoltLaunchResult = { ok: true; master: boolean } | { ok: false; reason: 'no-ammo' | 'refused' };
+
 /** The Pathfinder's readers (thread 8's bolt counter). */
 export interface PathfinderService {
   /** Bolts in the pouch and the stack size; null when the class is not the Pathfinder or the bolt item is not defined yet. */
@@ -52,6 +76,12 @@ export interface PathfinderService {
     fn: (shotIndex: number, origin: Vec3, direction: Vec3) => readonly { yawDeg: number; scale: number }[] | null,
     launched?: (shotIndex: number, origin: Vec3, direction: Vec3, yawDegs: readonly number[], range: number) => void,
   ): () => void;
+  /**
+   * K11 PR 4: launches one hostile-only bolt of the player through this plugin's projectile system, with the ammo and Falcon Eye mark
+   * rules of the crossbow. Nothing calls it but a capstone, so with none it changes nothing; a class change, a load and a dispose
+   * drop it in flight without a callback, as every bolt.
+   */
+  launchBolt(spec: BoltLaunchSpec): BoltLaunchResult;
 }
 declare module '../../core/Services' {
   interface GameServices {
@@ -165,6 +195,32 @@ const pathfinderPlugin: GamePlugin = {
           if (!isPathfinder() || !def || !inventory()) return null;
           // K10: master bolts are spent first and count as ammo.
           return { count: Math.max(0, inventory()!.count(PF.ammoItem)) + Math.max(0, inventory()!.count(PF.masterAmmoItem)), max: def.stackMax };
+        },
+        launchBolt: (spec) => {
+          const o = spec.origin;
+          const d = spec.direction;
+          // Refused before any ammo is taken: the projectile system would refuse these.
+          const sound = [o.x, o.y, o.z, d.x, d.y, d.z, spec.speed, spec.lifetime, spec.radius].every(Number.isFinite) && Math.hypot(d.x, d.y, d.z) > 1e-9 && spec.speed > 0 && spec.lifetime > 0 && spec.radius >= 0;
+          if (disposed || !sound || typeof spec.onHit !== 'function') return { ok: false, reason: 'refused' };
+          let master = false;
+          if (spec.ammo === true) {
+            if (!ammo.take()) return { ok: false, reason: 'no-ammo' };
+            master = ammo.lastWasMaster;
+          }
+          const tools: BoltTools = { master, markPoise: (id) => marks.consume(id) };
+          const launched = projectiles.launch({
+            casterId: playerId(),
+            origin: spec.origin,
+            direction: spec.direction,
+            speed: spec.speed,
+            lifetime: spec.lifetime,
+            radius: spec.radius,
+            pierce: spec.pierce,
+            hostileOnly: true,
+            onPass: spec.onPass ? (h) => spec.onPass?.(h, tools) : undefined,
+            onHit: (r) => spec.onHit(r, tools),
+          });
+          return launched ? { ok: true, master } : { ok: false, reason: 'refused' };
         },
         addSpread: (id, fn, launched) => {
           spreads.set(id, fn);

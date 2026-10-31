@@ -1,5 +1,5 @@
 import { TIER_COST, masterBookGate, registerClassSkills, type RegisterSkillsResult, type SkillDef } from '../../progression/skills';
-import { ANVIL_DROP, CINDER_RAIN, CLASS_ID, FIRE_WALL, FLAME_LASH, IRON_FAMILIAR, SMOKE_SCREEN, TEMPER_WEAPON, UPDRAFT, WARM_BREATH } from './tuning';
+import { ANVIL_DROP, CINDER_RAIN, CLASS_ID, COLOSSUS, FIRE_WALL, FLAME_LASH, IRON_FAMILIAR, KEEPERS_BREATH, SMOKE_SCREEN, SUNFIRE_NOVA, TEMPER_WEAPON, UPDRAFT, WARM_BREATH } from './tuning';
 
 export const EMBERWRIGHT_BRANCHES = ['pyre', 'anvilcraft', 'bellowsbreath'] as const;
 export type EmberwrightBranch = (typeof EMBERWRIGHT_BRANCHES)[number];
@@ -39,6 +39,10 @@ const NUMBERS: Record<string, { emberCost: number; cooldown: number }> = {
   cinderRain: { emberCost: CINDER_RAIN.emberCost, cooldown: CINDER_RAIN.cooldown },
   temperWeapon: { emberCost: TEMPER_WEAPON.emberCost, cooldown: TEMPER_WEAPON.cooldown },
   updraft: { emberCost: UPDRAFT.emberCost, cooldown: UPDRAFT.cooldown },
+  // Tier 5 capstones (K11 PR 4); the rows' `cost` stays TIER_COST.
+  sunfireNova: { emberCost: SUNFIRE_NOVA.emberCost, cooldown: SUNFIRE_NOVA.cooldown },
+  colossusOfSlag: { emberCost: COLOSSUS.emberCost, cooldown: COLOSSUS.cooldown },
+  breathOfTheKeepers: { emberCost: KEEPERS_BREATH.emberCost, cooldown: KEEPERS_BREATH.cooldown },
 };
 
 export function buildEmberwrightSkills(): SkillDef[] {

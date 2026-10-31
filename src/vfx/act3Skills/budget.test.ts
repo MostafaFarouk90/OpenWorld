@@ -6,11 +6,17 @@ import { ACT3_SKILL_EFFECT_IDS } from './index';
 import { ASHBLADE_T4_PARTICLES, ASHBLADE_T5_PARTICLES } from './ashblade';
 import { KNIGHT_T4_PARTICLES, KNIGHT_T5_PARTICLES } from './knight';
 import { WARDEN_T4_PARTICLES, WARDEN_T5_PARTICLES } from './warden';
-import { EMBERWRIGHT_T4_PARTICLES } from './emberwright';
-import { PATHFINDER_T4_PARTICLES } from './pathfinder';
+import { EMBERWRIGHT_T4_PARTICLES, EMBERWRIGHT_T5_PARTICLES } from './emberwright';
+import { PATHFINDER_T4_PARTICLES, PATHFINDER_T5_PARTICLES } from './pathfinder';
 import { EFFECT_IDS } from '../types';
 
-const T5: Record<string, number> = { ...KNIGHT_T5_PARTICLES, ...WARDEN_T5_PARTICLES, ...ASHBLADE_T5_PARTICLES };
+const T5: Record<string, number> = {
+  ...KNIGHT_T5_PARTICLES,
+  ...WARDEN_T5_PARTICLES,
+  ...ASHBLADE_T5_PARTICLES,
+  ...EMBERWRIGHT_T5_PARTICLES,
+  ...PATHFINDER_T5_PARTICLES,
+};
 
 describe('act3 skill VFX budget', () => {
   it('every preset has a peak entry and all fifteen tier 4 skills together use under a sixth of the cap', () => {
@@ -26,10 +32,10 @@ describe('act3 skill VFX budget', () => {
     expect(Object.values(t4).reduce((a, b) => a + b, 0)).toBeLessThan(650);
   });
 
-  it('capstones are exclusive, so one class at a time: every capstone preset stays under 220 live points and each class under 400', () => {
+  it('capstones are exclusive, so one class at a time: every capstone preset stays under 220 live points and the presets of each class together under 600 (a sixth of the cap; only one capstone is ever learned)', () => {
     for (const [id, n] of Object.entries(T5)) expect(n, id).toBeLessThanOrEqual(220);
-    for (const cls of [KNIGHT_T5_PARTICLES, WARDEN_T5_PARTICLES, ASHBLADE_T5_PARTICLES]) {
-      expect(Object.values(cls).reduce((a, b) => a + b, 0)).toBeLessThan(400);
+    for (const cls of [KNIGHT_T5_PARTICLES, WARDEN_T5_PARTICLES, ASHBLADE_T5_PARTICLES, EMBERWRIGHT_T5_PARTICLES, PATHFINDER_T5_PARTICLES]) {
+      expect(Object.values(cls).reduce((a, b) => a + b, 0)).toBeLessThan(600);
     }
   });
 

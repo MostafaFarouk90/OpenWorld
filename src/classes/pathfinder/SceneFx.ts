@@ -176,3 +176,67 @@ function dispose(o: THREE.Object3D): void {
     mat?.dispose();
   });
 }
+
+const SWOOP_FADE_SECONDS = 0.25;
+
+/**
+ * Skyhawk Strike's Kestrel (K11 PR 4): a flying mesh of its own (the Falcon Eye hawk circles; this one stoops). It starts `from`
+ * (high above the Pathfinder), flies a straight stoop to `to` over `seconds`, flaps and then fades out over a quarter second.
+ * One at a time; a second `start` replaces the first. Headless (no scene) every call is a no-op.
+ */
+export class KestrelDive {
+  private bird: { group: THREE.Group; wings: THREE.Object3D[]; mats: THREE.Material[]; from: THREE.Vector3; to: THREE.Vector3; age: number; seconds: number } | null = null;
+
+  constructor(private readonly scene: THREE.Object3D | null) {}
+
+  get active(): boolean {
+    return this.bird !== null;
+  }
+
+  /** The bird's position now (a copy), or null when none flies. */
+  get position(): Vec3 | null {
+    return this.bird ? { x: this.bird.group.position.x, y: this.bird.group.position.y, z: this.bird.group.position.z } : null;
+  }
+
+  start(from: Vec3, to: Vec3, seconds: number): void {
+    this.clear();
+    if (!this.scene || !(seconds > 0)) return;
+    const group = new THREE.Group();
+    const mat = new THREE.MeshBasicMaterial({ color: KESTREL_COLOR, transparent: true });
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), mat);
+    body.scale.set(1, 0.8, 1.6);
+    const wings = [-1, 1].map((s) => {
+      const w = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.18), mat);
+      w.position.x = s * 0.28;
+      group.add(w);
+      return w;
+    });
+    group.add(body);
+    group.scale.setScalar(1.4);
+    const a = new THREE.Vector3(from.x, from.y, from.z);
+    const b = new THREE.Vector3(to.x, to.y, to.z);
+    group.position.copy(a);
+    group.lookAt(b);
+    this.scene.add(group);
+    this.bird = { group, wings, mats: [mat], from: a, to: b, age: 0, seconds };
+  }
+
+  update(dt: number): void {
+    const k = this.bird;
+    if (!k || !(dt > 0)) return;
+    k.age += dt;
+    const p = Math.min(1, k.age / k.seconds);
+    // An ease-in: the stoop gathers speed.
+    const e = p * p;
+    k.group.position.lerpVectors(k.from, k.to, e);
+    k.wings.forEach((w, i) => (w.rotation.z = Math.sin(k.age * 22) * 0.4 * (i === 0 ? -1 : 1) * (1 - p)));
+    const fade = k.age - k.seconds;
+    for (const m of k.mats) m.opacity = fade > 0 ? Math.max(0, 1 - fade / SWOOP_FADE_SECONDS) : 1;
+    if (fade >= SWOOP_FADE_SECONDS) this.clear();
+  }
+
+  clear(): void {
+    if (this.bird) dispose(this.bird.group);
+    this.bird = null;
+  }
+}

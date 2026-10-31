@@ -6,14 +6,20 @@ import { SKILLS, getSkill, registerClassSkills } from './skills';
 import { fakeActor } from './testkit';
 import { ASHBLADE_SKILLS } from '../classes/ashblade/skills';
 import { WARDEN_SKILLS } from '../classes/warden/skills';
+import { buildEmberwrightSkills } from '../classes/emberwright/skills';
+import { buildPathfinderSkills } from '../classes/pathfinder/skills';
 
 if (!SKILLS.some((s) => s.classId === 'warden')) registerClassSkills('warden', [...WARDEN_SKILLS]);
 if (!SKILLS.some((s) => s.classId === 'ashblade')) registerClassSkills('ashblade', [...ASHBLADE_SKILLS]);
+if (!SKILLS.some((s) => s.classId === 'emberwright')) registerClassSkills('emberwright', buildEmberwrightSkills());
+if (!SKILLS.some((s) => s.classId === 'pathfinder')) registerClassSkills('pathfinder', buildPathfinderSkills());
 
 const T5: Record<string, { ids: string[]; passive: string[] }> = {
   knight: { ids: ['knight.unbrokenOath', 'knight.heartshardSmite', 'knight.bannerOfTheSunforge'], passive: ['knight.heartshardSmite'] },
   warden: { ids: ['warden.wyrmbreaker', 'warden.mountainUnmoved', 'warden.voiceOfTheMountain'], passive: [] },
   ashblade: { ids: ['ashblade.deathByAThousandSparks', 'ashblade.ghostOfTheHearth', 'ashblade.flickerStrike'], passive: [] },
+  emberwright: { ids: ['emberwright.sunfireNova', 'emberwright.colossusOfSlag', 'emberwright.breathOfTheKeepers'], passive: [] },
+  pathfinder: { ids: ['pathfinder.dragonbaneBolt', 'pathfinder.huntersWeb', 'pathfinder.skyhawkStrike'], passive: [] },
 };
 
 /** The capstone's whole branch, in tier order, so `requires` holds as they load. */

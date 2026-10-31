@@ -43,6 +43,82 @@ export const PF = {
     effectId: 'caltrop-field',
   },
   sureFoot: { filterId: 'pathfinder.sureFoot', effectId: 'sure-foot' },
+  /**
+   * Tier 5 (Act 3, K11 PR 4): the capstones (first values of this thread; the design gives the shapes). One capstone per character.
+   * Dragonbane Bolt: 4x the bolt base, poise 60, 60 m, pierces every foe in its line (`pierce` is a cap far above any crowd).
+   */
+  dragonbane: {
+    cooldown: 40,
+    ember: 40,
+    range: 60,
+    speed: 90,
+    radius: 0.2,
+    pierce: 64,
+    damageScale: 4,
+    poise: 60,
+    attackId: 'pathfinder.dragonbane',
+    effectId: 'dragonbane-bolt',
+    impactEffectId: 'dragonbane-impact',
+    shakeAmplitude: 0.1,
+    shakeSeconds: 0.2,
+    hitStopSeconds: 0.1,
+  },
+  /** Hunter's Web: a 12 m ring armed 1 s, then one pop: 0.8x base, poise 30, root 4 s (a boss a 0.5 slow for 4 s). */
+  huntersWeb: {
+    cooldown: 45,
+    ember: 35,
+    radius: 12,
+    halfHeight: 6,
+    armSeconds: 1,
+    damageScale: 0.8,
+    poise: 30,
+    rootSeconds: 4,
+    bossSlow: 0.5,
+    bossSlowSeconds: 4,
+    rootStatusId: 'pathfinder.huntersWeb.root',
+    slowStatusId: 'pathfinder.huntersWeb.slow',
+    attackId: 'pathfinder.huntersWeb',
+    effectId: 'hunters-web',
+    popEffectId: 'hunters-web-pop',
+    shakeAmplitude: 0.08,
+    shakeSeconds: 0.2,
+  },
+  /**
+   * Skyhawk Strike: the Kestrel dives (0.3 s) on the lock-on target or the nearest foe within 25 m in a 90 degree front cone: 2.5x
+   * base, poise 50, a 1 s stun (not on bosses). The carry is a `player.leap` to 2 m short of it, or up to 20 m ahead when no foe is
+   * there. `maxZ` is the summit box edge (SUMMIT_BOX.z1, pinned by a test); `maxRise` and `maxDrop` bound the landing's ground against the
+   * start (a drop above `maxDrop` is a fall, not a crossing); `gapMin` is the shortest gap crossing worth a leap.
+   */
+  skyhawk: {
+    cooldown: 40,
+    ember: 30,
+    range: 25,
+    coneHalfDeg: 45,
+    damageScale: 2.5,
+    poise: 50,
+    stunSeconds: 1,
+    stunStatusId: 'pathfinder.skyhawk.stun',
+    attackId: 'pathfinder.skyhawk',
+    diveSeconds: 0.3,
+    standOff: 2,
+    minCarry: 1,
+    gapDistance: 20,
+    gapMin: 6,
+    probeStep: 0.5,
+    maxZ: 16900,
+    maxRise: 12,
+    maxDrop: 6,
+    groundProbeAbove: 2,
+    chestHeight: 1.1,
+    apexMin: 2.5,
+    apexMargin: 1.5,
+    landSlackSeconds: 0.75,
+    invulnerableSource: 'pathfinder.skyhawk',
+    diveEffectId: 'skyhawk-dive',
+    impactEffectId: 'skyhawk-impact',
+    carryEffectId: 'skyhawk-carry',
+  },
+  yieldFloor: { modifierId: 'pathfinder.capstones.yieldFloor', order: 98 },
   surge: { range: 30, speed: 45, chainRadius: 8, chainArcs: 3, chainScale: 0.7, pierce: 2, radius: 0.2 },
   skillIds: {
     steadyShot: 'pathfinder.steadyShot',
@@ -57,6 +133,9 @@ export const PF = {
     tripleShot: 'pathfinder.tripleShot',
     caltropField: 'pathfinder.caltropField',
     sureFoot: 'pathfinder.sureFoot',
+    dragonbaneBolt: 'pathfinder.dragonbaneBolt',
+    huntersWeb: 'pathfinder.huntersWeb',
+    skyhawkStrike: 'pathfinder.skyhawkStrike',
   },
   trailblazeScale: 1.1,
 } as const;
