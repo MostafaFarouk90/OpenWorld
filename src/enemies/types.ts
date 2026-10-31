@@ -49,7 +49,10 @@ export type EnemyKind =
   // Act 3 (K6a PR 1): Skarl's chained drake (D06 is K8's).
   | 'skarl-drake'
   // Act 3 (K6a PR 2): Ysmeryth the Coal-Mother in M31's trial.
-  | 'ysmeryth';
+  | 'ysmeryth'
+  // Act 3 (K6b PR 2): the Dragonspine's own kinds.
+  | 'rime-hawk'
+  | 'crag-ogre';
 
 /**
  * Act 2 kind ids (v0.6 item 14), reserved here so no other thread takes them. A6a and A6b move each id into
@@ -237,12 +240,12 @@ export interface EnemyDef {
   /** Alley Cutpurse behaviour (cutpurse/): steals on a grab, flees with the gold, can be caught and spared. */
   thief?: boolean;
   /** Which body the enemy gets: the Knight rig (default), the procedural quadruped, the wyrm (wyrm/), or A6b's golem and crawler. */
-  body?: 'humanoid' | 'quadruped' | 'wyrm' | 'golem' | 'crawler' | 'leech';
+  body?: 'humanoid' | 'quadruped' | 'wyrm' | 'golem' | 'crawler' | 'leech' | 'bird';
   /**
    * `circle-rush`: circle the target while a packmate is near, then rush (ai/Brain, hound/circleRush.ts). `wyrm-flight` (the Ember Wyrm) and
    * `skittish` (the wyrmling) are behaviour overlays (behaviours.ts). A6b: `ceiling` (crawler drop), `back-core` (golem), `guide` (fox, sheep: harmless). K6a: `ysmeryth-trial` (wyrm/ysmeryth/overlay.ts).
    */
-  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide' | 'lurk' | 'peat' | 'ysmeryth-trial';
+  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide' | 'lurk' | 'peat' | 'ysmeryth-trial' | 'hawk' | 'ogre';
   /** Seconds a poise break holds the stagger (and its mercy window); default `AI.breakStaggerSeconds` (1.2). */
   breakStaggerSeconds?: number;
   /** Hurtboxes on which a player-team or ally hit breaks poise at once (the Ember Wyrm's wings). */
@@ -333,6 +336,11 @@ export interface SpawnerDef {
   untauntable?: boolean;
   /** A quest-activated group that goes away when its quest completes (and on a load where that quest is not active): the M21 hall watch. */
   despawnOnQuestEnd?: boolean;
+  /**
+   * K6b PR 2: spawn options every member of this group gets, under the spawn call's own (the call wins field by field). The
+   * R18 parents carry their tuning here (`healthScale`, `nest`, `nestGuard`), so the quest that spawns them needs no numbers.
+   */
+  options?: Readonly<Partial<SpawnOptions>>;
 }
 
 export interface SpawnOptions {
@@ -359,6 +367,10 @@ export interface SpawnOptions {
   peaceful?: boolean;
   /** A `ceiling` kind (the Slag Crawler) spawns hanging (default true); `false` puts it on the floor, awake. */
   hanging?: boolean;
+  /** K6b PR 2, the Rime Hawk: the anchor id of its nest (it perches there, and flies there when calmed). */
+  nest?: string;
+  /** K6b PR 2, the R18 parents: circle the nest, stoop only near it, break off after a stoop once the target backs away. */
+  nestGuard?: boolean;
 }
 
 export interface EnemyView {

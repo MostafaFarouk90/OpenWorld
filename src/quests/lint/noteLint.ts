@@ -11,6 +11,7 @@ import { CINDERREACH_LAYOUT } from '../../cinderreach/cinderreach.layout';
 import { OLDSMOKE_LAYOUT } from '../../oldsmoke/oldsmoke.layout';
 import { ACT2_WORLD_LAYOUT } from '../../region/act2/act2World.layout';
 import { GREYFEN_FAUNA_LAYOUT } from '../../enemies/fen/greyfenFauna.layout';
+import { DRAGONSPINE_FAUNA_LAYOUT } from '../../enemies/peak/dragonspineFauna.layout';
 import { DRAGONSPINE_LAYOUT } from '../../dragonspine/dragonspine.layout';
 import type { LayoutData } from '../../region/layoutTypes';
 import { ALL_INTERIORS } from '../../interiors/interiors.plugin';
@@ -27,7 +28,7 @@ export const NOTE_LINT_RADIUS = 2.5;
 /** Every world layout the game ships (Brightwater already folds in the corridor and the density pass A). */
 export const ALL_LAYOUTS: readonly LayoutData[] = [
   BRIGHTWATER_LAYOUT, DEADROAD_LAYOUT, HARROWMARK_LAYOUT, DENSITY_LAYOUT_HM, CINDERREACH_LAYOUT, OLDSMOKE_LAYOUT, ACT2_WORLD_LAYOUT,
-  GREYFEN_FAUNA_LAYOUT, DRAGONSPINE_LAYOUT,
+  GREYFEN_FAUNA_LAYOUT, DRAGONSPINE_LAYOUT, DRAGONSPINE_FAUNA_LAYOUT,
 ];
 
 export interface NoteLintAllow {

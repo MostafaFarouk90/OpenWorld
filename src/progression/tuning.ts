@@ -51,6 +51,9 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'skarl-drake': 0,
   // The trial is non-lethal: Ysmeryth is never a kill.
   ysmeryth: 0,
+  // K6b PR 2: stored divided by the Dragonspine's factor (1.8, set by the peak plugin): 90 and 240 there (plan 6.1).
+  'rime-hawk': 50,
+  'crag-ogre': 133,
   dummy: 0,
   scarecrow: 0,
 };
