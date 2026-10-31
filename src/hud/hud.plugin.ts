@@ -15,6 +15,7 @@ import { CompanionPortrait } from './CompanionPortrait';
 import { PartyScreen } from './PartyScreen';
 import { PressureBar } from './PressureBar';
 import { createTemperingScreen } from './TemperingScreen';
+import { act3RecapLines } from './act3/actEndingRecap';
 import { actEnding, cardSeenFlags } from '../integration/actEndings';
 import { StructureBar } from './StructureBar';
 import { createRespecModal, type RespecModalDeps } from './RespecModal';
@@ -348,10 +349,30 @@ const hudPlugin: GamePlugin = {
     ctx.events.on('save.loaded', () => ending2.onLoaded());
     ctx.gates.flag(row2.gateFlag, (open) => ending2.onGate(open));
     mount('center', ending2, 2);
-    // One service for the cards: whichever is waiting or showing (Act 1's first when, unusually, both are pending).
+    // Act 3's "The Coal-Mother's Oath" card (K15 PR 2), built the same way. The recap rows are K15's exported list (K13 and
+    // K16 may append); a missing choice flag drops its line, and "The story continues." is always last.
+    const row3 = actEnding(3)!;
+    const seen3 = cardSeenFlags(row3);
+    const ending3 = new ActEndingCard(doc, {
+      widgetId: 'act-ending-card-a3',
+      ending: { act: row3.act, endingId: row3.endingId, titleKey: row3.cardKey },
+      t,
+      keys: keyTarget,
+      modalOpen: () => ctx.hud.modalOpen !== null,
+      seen: () => seen3.some((f) => ctx.state.getBool(f)),
+      campSeen: () => ctx.state.getBool(row3.campSeenFlag),
+      markSeen: () => ctx.state.setFlag(row3.cardSeenFlag, true),
+      closed: (endingId) => ctx.events.emit('hud.actEnding.closed', { endingId }),
+      recap: () => act3RecapLines((f) => ctx.state.getFlag(f), t),
+    });
+    ctx.events.on('act.ended', (e) => ending3.onActEnded(e));
+    ctx.events.on('save.loaded', () => ending3.onLoaded());
+    ctx.gates.flag(row3.gateFlag, (open) => ending3.onGate(open));
+    mount('center', ending3, 3);
+    // One service for the cards: whichever is waiting or showing (Act 1's first when, unusually, several are pending).
     ctx.services.provide('actEndingCard', {
-      active: () => ending.active || ending2.active,
-      dismiss: () => (ending.active ? ending.dismiss() : ending2.dismiss()),
+      active: () => ending.active || ending2.active || ending3.active,
+      dismiss: () => (ending.active ? ending.dismiss() : ending2.active ? ending2.dismiss() : ending3.dismiss()),
     });
 
     // The Weeping Bellows' pressure countdown (A9's sim-time clock).
