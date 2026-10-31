@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { bossOutcomeFlag } from '../../actors/BossRegistry';
+import { LEVEL } from '../../enemies/tuning';
 import type { GameContext } from '../../core/Game';
 import { DEEPS_DEF } from '../../greyfen/deepsInterior';
 import { BossArena, type BossModelState, type InteriorsPort } from '../arena/BossArena';
@@ -13,6 +14,8 @@ export const INTRO_SOURCE = 'bosses.murkjaw.intro';
 export const OUTCOME_FLAG = bossOutcomeFlag(MURKJAW_BOSS_ID);
 /** The capsule half-width plus a margin: the gate closes only when the player stands this far inside its arena side. */
 export const GATE_MARGIN = 0.8;
+/** A live fight ends when the player has been out of the hall this long (they left by another way). */
+export const ABANDON_SECONDS = 2;
 
 interface EnemiesPort {
   blockTopLevel?(block: string): number | undefined;
@@ -36,7 +39,7 @@ export function murkjawLevel(enemies: EnemiesPort | undefined): number {
     const top = enemies?.blockTopLevel?.('greyfen');
     if (ok(top)) return Math.round(top);
     const preview = enemies?.blockPreview?.('greyfen');
-    if (ok(preview)) return Math.round(preview) + 5;
+    if (ok(preview)) return Math.min(LEVEL.cap, Math.round(preview) + 5);
   } catch {
     // fall through to the fallback
   }
@@ -53,6 +56,7 @@ export class MurkjawDirector {
   private readonly arena: BossArena<MurkjawModel, MurkjawPlaces, MurkjawEncounter>;
   private readonly ctx: GameContext;
   private warnedPlaces = false;
+  private outside = 0;
   private readonly offs: (() => void)[] = [];
 
   constructor(ctx: GameContext, opts: MurkjawDirectorOptions = {}) {
@@ -62,7 +66,14 @@ export class MurkjawDirector {
     (veil.mesh.material as THREE.MeshBasicMaterial).color.setHex(LOOK.veil);
     veil.mesh.name = 'murkjaw-gate-veil';
     // Before the arena's own listener, so the arena's teardown (which raises the crossing through the encounter) runs after.
-    this.offs.push(ctx.events.on('save.loaded', () => this.rederive()));
+    this.offs.push(
+      ctx.events.on('save.loaded', () => this.rederive()),
+      // The far exit works under aggro (K3): leaving the Deeps ends the fight as a death does, so the gate never stays shut
+      // behind a player who walks back in through the main door (review B1).
+      ctx.events.on('interior.exited', (e) => {
+        if (e.interiorId === ARENA.interiorId) this.abandon();
+      }),
+    );
     this.arena = new BossArena(ctx, {
       tag: 'murkjaw',
       outcomeFlag: OUTCOME_FLAG,
@@ -124,6 +135,22 @@ export class MurkjawDirector {
 
   fixedUpdate(dt: number): void {
     this.arena.fixedUpdate(dt);
+    // Backstop for B1: a live fight with the player out of the hall (any other way out) for `ABANDON_SECONDS` ends.
+    const e = this.arena.current;
+    if (!e || !e.contested || !(dt > 0)) {
+      this.outside = 0;
+      return;
+    }
+    const c = this.ctx.anchors.find(ARENA.centre);
+    const f = this.ctx.player.feet;
+    const inside = !!c && new ArenaFrame(c.position).inHall(f.x, f.z) && Math.abs(f.y - c.position.y) < 12;
+    this.outside = inside ? 0 : this.outside + dt;
+    if (this.outside >= ABANDON_SECONDS) this.abandon();
+  }
+
+  private abandon(): void {
+    this.outside = 0;
+    if (this.arena.current || this.arena.introRunning) this.arena.abandon();
   }
 
   dispose(): void {
@@ -149,10 +176,11 @@ export class MurkjawDirector {
     const surfaces = ARENA.surfaces.map((id) => a.find(id));
     const beaches = ARENA.beaches.map((id) => a.find(id));
     const racks = ARENA.racks.map((id) => a.find(id));
-    if (!centre || !door || [...surfaces, ...beaches, ...racks].some((x) => !x)) {
+    const walkways = ARENA.walkways.map((id) => a.find(id));
+    if (!centre || !door || [...surfaces, ...beaches, ...racks, ...walkways].some((x) => !x)) {
       if (!this.warnedPlaces) {
         this.warnedPlaces = true;
-        warn(`arena anchors missing (${[ARENA.centre, ARENA.door, ...ARENA.surfaces, ...ARENA.beaches, ...ARENA.racks].join(', ')}); Murkjaw does not start`);
+        warn(`arena anchors missing (${[ARENA.centre, ARENA.door, ...ARENA.surfaces, ...ARENA.beaches, ...ARENA.racks, ...ARENA.walkways].join(', ')}); Murkjaw does not start`);
       }
       return null;
     }
@@ -164,6 +192,7 @@ export class MurkjawDirector {
       surfaces: surfaces.map((s) => v(s!)),
       beaches: beaches.map((s) => v(s!)),
       racks: racks.map((s) => v(s!)),
+      walkways: walkways.map((s) => v(s!)),
     };
   }
 }

@@ -15,9 +15,10 @@ import { heightAt } from '../../terrain/heightfield';
 import { TerrainColliders } from '../../world/TerrainColliders';
 import { World } from '../../world/World';
 import { GATE_MARGIN, gateIsClear, gateVeil, murkjawLevel, OUTCOME_FLAG } from './MurkjawDirector';
+import { ArenaFrame } from './arenaGeometry';
 import { MURKJAW_BOSS_DEF, rackId, SPEAR_THROW_ID, WAVE_PUSH_OWNER } from './MurkjawEncounter';
 import murkjawPlugin, { MURKJAW_CODEX_ID, murkjawDirector } from './murkjaw.plugin';
-import { ARENA, BITE, CYCLE, D05_STARTED_FLAG, LUNGE, MURKJAW, MURKJAW_BOSS_ID, PRESENTATION, SPEARS, WAVE } from './tuning';
+import { ARENA, BITE, CYCLE, D05_STARTED_FLAG, DROP, LUNGE, MURKJAW, MURKJAW_BOSS_ID, PRESENTATION, SPEARS, WAVE } from './tuning';
 
 let physics: PhysicsWorld;
 
@@ -297,7 +298,7 @@ describe('Murkjaw on the real core', () => {
     t.teardown();
   }, T30);
 
-  it('the lunge beaches him: a hit lands only on the beached jaw, and it takes x1.5 there', async () => {
+  it('the lunge beaches him: a hit lands only on the beached jaw, and it takes x1.25 there', async () => {
     const t = await setup();
     t.startFight();
     t.toUp();
@@ -310,8 +311,11 @@ describe('Murkjaw on the real core', () => {
     t.toBeached();
     expect(t.enc().brain.jawOnWalkway).toBe(true);
     const r = t.hit(20, 10)!;
-    expect(r.dealt).toBe(30);
-    expect(r.poiseDealt ?? 15).toBe(15);
+    expect(r.dealt).toBe(20 * MURKJAW.jawScale);
+    expect(r.poiseDealt ?? 10 * MURKJAW.jawScale).toBeCloseTo(10 * MURKJAW.jawScale);
+    // A status tick takes no jaw bonus.
+    const tick = t.hit(8, 0, { kind: 'status' })!;
+    expect(tick.dealt).toBe(8);
     t.teardown();
   }, T30);
 
@@ -378,8 +382,8 @@ describe('Murkjaw on the real core', () => {
     expect(items(t).get(rackId(2)).enabled()).toBe(false);
     t.toUp();
     expect(thrower.enabled()).toBe(true);
-    // A carried spear goes back when the player leaves the arena.
-    t.exit();
+    // A carried spear goes back when the player leaves the hall.
+    t.teleport(4, -56);
     expect(t.enc().racks.carrying).toBe(false);
     expect(t.enc().racks.count(0)).toBe(SPEARS.perRack);
     t.teardown();
@@ -422,41 +426,57 @@ describe('Murkjaw on the real core', () => {
     t.teardown();
   }, T30);
 
-  it('the floor: before the last break he never drops below 8%, and a burst cannot skip phase 2', async () => {
+  it('the floor: each phase holds until its break, and before the last break he never drops below 8%', async () => {
     const t = await setup();
     t.startFight();
     t.toUp();
+    // Phase 1, no break yet: a burst cannot even reach phase 2 (review S1).
     t.hit(99_999, 0);
-    const s = t.state()!;
-    expect(s.health).toBeGreaterThan(s.maxHealth * MURKJAW.phases[1]);
+    let s = t.state()!;
+    expect(s.phase).toBe(1);
+    expect(s.health).toBeGreaterThan(s.maxHealth * MURKJAW.phases[0]);
+    // After the phase 1 break, a burst reaches phase 2 and holds above phase 3.
+    t.spearBreak();
+    t.hit(99_999, 0);
+    s = t.state()!;
     expect(s.phase).toBe(2);
+    expect(s.health).toBeGreaterThan(s.maxHealth * MURKJAW.phases[1]);
+    // After the phase 2 break, phase 3 and the 8% floor until the last break.
+    t.runHealed(MURKJAW.breakSeconds + 1);
+    t.spearBreak();
+    t.hit(99_999, 0);
+    s = t.state()!;
+    expect(s.phase).toBe(3);
+    expect(s.health).toBeGreaterThanOrEqual(Math.ceil(s.maxHealth * MURKJAW.healthFloor));
+    expect(t.of('boss.defeated')).toHaveLength(0);
     t.teardown();
   }, T30);
 
-  it('the wave pushes the player away along the walkway and stops at the edge; a dodge skips it', async () => {
+  it('the wave hits a player on its beach and pushes them away along the walkway, stopping at the edge', async () => {
     const t = await setup();
     t.startFight();
-    // Stand on the west crossing, beside surfacing point 5 over the west channel.
-    t.teleport(-39, -56);
-    let waved = false;
-    for (let i = 0; i < 12 && !waved; i++) {
-      t.until(() => t.enc().brain.attack === 'wave' && t.enc().brain.state === 'strike', 30);
-      waved = t.enc().brain.attack === 'wave';
-      t.runHealed(CYCLE.waveSeconds);
-    }
-    expect(waved).toBe(true);
-    t.runHealed(WAVE.pushSeconds + 0.2);
+    expect(t.until(() => t.enc().brain.attack === 'wave' && t.enc().brain.state === 'bulge', 90)).toBe(true);
+    // Stand on the wave's own beach: inside the ring, on walkway, with the hall wall or a channel behind.
+    const b = t.ctx.anchors.find(ARENA.beaches[t.enc().brain.point])!.position;
+    t.ctx.player.teleport({ x: b.x, y: t.ctx.player.feet.y, z: b.z });
+    t.walk(2);
+    const holdsBefore = t.holds.length;
+    t.runHealed(CYCLE.bulgeSeconds + CYCLE.waveSeconds + WAVE.pushSeconds + 0.2);
     const waves = t.of('damage.dealt').filter((d) => d.attackId === WAVE.attackId);
-    if (waves.length > 0) {
-      const moves = t.holds.filter((h) => h !== null);
-      expect(moves.length).toBeGreaterThan(0);
-      // Released at the end (or at the edge).
-      expect(t.holds.at(-1)).toBeNull();
-    }
+    expect(waves).toHaveLength(1);
+    expect(waves[0].outcome).toBe('hit');
+    const holds = t.holds.slice(holdsBefore);
+    expect(holds.filter((h) => h !== null).length).toBeGreaterThan(0);
+    // Released at the end (or at the edge), and still on a walkway: never shoved into a channel.
+    expect(holds.at(-1)).toBeNull();
+    for (const h of holds) if (h) expect(h.speed).toBeLessThanOrEqual(WAVE.pushSpeed + 1e-6);
+    const c = t.ctx.anchors.find(ARENA.centre)!.position;
+    const f = t.ctx.player.feet;
+    expect(new ArenaFrame(c).walkable(f.x, f.z, true)).toBe(true);
     t.teardown();
   }, T30);
 
-  it('a dodging player (i-frames) takes no wave and no push', async () => {
+  it('a dodging player (i-frames) takes the wave as immune and gets no push', async () => {
     const t = await setup();
     t.startFight();
     expect(t.until(() => t.enc().brain.attack === 'wave' && t.enc().brain.state === 'bulge', 90)).toBe(true);
@@ -468,6 +488,9 @@ describe('Murkjaw on the real core', () => {
     t.ctx.player.actor.invulnerable = true;
     const before = t.holds.length;
     t.runHealed(CYCLE.bulgeSeconds + CYCLE.waveSeconds);
+    const waves = t.of('damage.dealt').filter((d) => d.attackId === WAVE.attackId);
+    expect(waves).toHaveLength(1);
+    expect(waves[0].outcome).toBe('immune');
     expect(t.holds.length).toBe(before);
     t.teardown();
   }, T30);
@@ -475,11 +498,11 @@ describe('Murkjaw on the real core', () => {
   it('phase 2 crumbles the crossing; it waits while the player stands on it and drops once they step off', async () => {
     const t = await setup();
     t.startFight();
-    t.teleport(-17, -56);
-    t.toUp();
+    t.spearBreak();
     t.toFraction(0.6);
     expect(t.state()!.phase).toBe(2);
     expect(t.enc().drop).toBe('crumbling');
+    t.teleport(-17, -56);
     t.runHealed(3);
     expect(t.enc().drop).toBe('crumbling');
     expect(t.blockers).not.toContain(`${ARENA.drop}:false`);
@@ -493,7 +516,7 @@ describe('Murkjaw on the real core', () => {
   it('player death resets: the crossing stands again, one boss.ended, the gate opens; the retry is at full health', async () => {
     const t = await setup();
     t.startFight();
-    t.toUp();
+    t.spearBreak();
     t.toFraction(0.6);
     t.teleport(-28, -56);
     t.runHealed(3);
@@ -504,10 +527,21 @@ describe('Murkjaw on the real core', () => {
     expect(t.blockers).toContain(`${ARENA.drop}:true`);
     expect(t.of('boss.ended')).toHaveLength(1);
     expect(t.boss()).toBeNull();
+    expect(t.blockers.filter((b) => b.startsWith(`${ARENA.gate}:`)).at(-1)).toBe(`${ARENA.gate}:false`);
+    expect(murkjawDirector()!.gateIsClosed).toBe(false);
+    // The retry: revived at the door, he comes back at full health in phase 1.
+    t.ctx.damage.revive(t.ctx.player.actor.id, 1, 'script');
+    t.ctx.player.teleport(t.ctx.anchors.find('greyfen.d05.arena.player')!.position);
+    t.walk(2);
+    t.enter();
+    t.run(secs(PRESENTATION.introSeconds) + 2);
+    expect(t.state()!.health).toBe(t.state()!.maxHealth);
+    expect(t.state()!.phase).toBe(1);
+    expect(t.enc().drop).toBe('standing');
     t.teardown();
   }, T30);
 
-  it('the gate closes once the player is past the clearance and opens on every end', async () => {
+  it('the gate closes once the player is past the clearance and opens on a reset', async () => {
     const t = await setup();
     t.startFight();
     t.runHealed(0.5);
@@ -567,6 +601,147 @@ describe('Murkjaw on the real core', () => {
     expect(g.yaw).toBeCloseTo(Math.PI / 2);
     expect(gateIsClear(t.ctx, t.local(gate.x0 - GATE_MARGIN - 0.1, -68))).toBe(true);
     expect(gateIsClear(t.ctx, t.local(gate.x0 - GATE_MARGIN + 0.3, -68))).toBe(false);
+    t.teardown();
+  }, T30);
+
+  it('leaving the Deeps by the far exit ends the fight like a death: one boss.ended, the gate open, the crossing raised', async () => {
+    const t = await setup();
+    t.startFight();
+    t.spearBreak();
+    t.toFraction(0.6);
+    t.teleport(-28, -60);
+    t.runHealed(DROP.crumbleSeconds + 0.5);
+    expect(t.enc().drop).toBe('dropped');
+    expect(murkjawDirector()!.gateIsClosed).toBe(true);
+    t.game.events.emit('interior.exited', { interiorId: ARENA.interiorId, doorId: 'greyfen-deeps.exit' } as never);
+    t.run(2);
+    expect(t.boss()).toBeNull();
+    expect(t.of('boss.ended')).toHaveLength(1);
+    expect(murkjawDirector()!.gateIsClosed).toBe(false);
+    expect(t.blockers.at(-1)).toBe(`${ARENA.gate}:false`);
+    expect(t.blockers).toContain(`${ARENA.drop}:true`);
+    // Another interior's exit is ignored.
+    t.enter();
+    t.run(secs(PRESENTATION.introSeconds) + 2);
+    expect(t.boss()).not.toBeNull();
+    t.game.events.emit('interior.exited', { interiorId: 'some-other-house', doorId: 'x' } as never);
+    t.run(2);
+    expect(t.boss()).not.toBeNull();
+    t.teardown();
+  }, T30);
+
+  it('out of the hall for 2 s by any other way ends the fight; a shorter step out does not', async () => {
+    const t = await setup();
+    t.startFight();
+    t.runHealed(0.5);
+    const back = t.ctx.anchors.find('greyfen.d05.arena.player')!.position;
+    t.teleport(4, -56);
+    t.runHealed(1);
+    t.ctx.player.teleport(back);
+    t.walk(2);
+    t.runHealed(1.5);
+    expect(t.boss()).not.toBeNull();
+    t.teleport(4, -56);
+    t.runHealed(1.5);
+    expect(t.boss()).not.toBeNull();
+    t.runHealed(0.7);
+    expect(t.boss()).toBeNull();
+    expect(t.of('boss.ended')).toHaveLength(1);
+    expect(murkjawDirector()!.gateIsClosed).toBe(false);
+    t.teardown();
+  }, T30);
+
+  it('the crossing waits while the player is over a channel or in the air, and drops once they stand on walkway', async () => {
+    const t = await setup();
+    t.startFight();
+    t.spearBreak();
+    t.toFraction(0.6);
+    expect(t.enc().drop).toBe('crumbling');
+    // Over the east channel, clear of the crossing (K7 would push them back; until then the drop waits).
+    const f0 = t.local(-17, -61);
+    t.ctx.player.teleport(f0);
+    for (let i = 0; i < secs(3); i++) {
+      t.ctx.player.teleport(f0);
+      t.game.fixedUpdate();
+      t.healPlayer();
+    }
+    expect(t.enc().drop).toBe('crumbling');
+    // In the air above the centre walkway.
+    const air = t.local(-28, -60);
+    air.y += 3;
+    for (let i = 0; i < secs(0.5); i++) {
+      t.ctx.player.teleport(air);
+      t.game.fixedUpdate();
+      t.healPlayer();
+    }
+    expect(t.enc().drop).toBe('crumbling');
+    // Standing on walkway.
+    t.teleport(-28, -60);
+    t.runHealed(0.2);
+    expect(t.enc().drop).toBe('dropped');
+    t.teardown();
+  }, T30);
+
+  it('a break with the player on the east ring flings his jaw to them, not to the island beach', async () => {
+    const t = await setup();
+    t.startFight();
+    t.teleport(-10, -56);
+    t.spearBreak();
+    expect(t.enc().brain.state).toBe('broken');
+    const jaw = t.enc().jawAt!;
+    const f = t.ctx.player.feet;
+    expect(Math.hypot(jaw.x - f.x, jaw.z - f.z)).toBeLessThan(4);
+    // Off the walkway again once the break ends.
+    t.runHealed(MURKJAW.breakSeconds + CYCLE.slideSeconds + 0.1);
+    expect(t.enc().jawAt).toBeNull();
+    t.teardown();
+  }, T30);
+
+  it('a spear carried into a wading pool on the island stays carried', async () => {
+    const t = await setup();
+    t.startFight();
+    expect(t.enc().take(0)).toBe(true);
+    // The pool's basin (below the trigger floor in K3's layout), still inside the hall.
+    t.teleport(-31, -59);
+    t.game.events.emit('trigger.exit', { triggerId: ARENA.trigger, actorId: t.ctx.player.actor.id });
+    t.runHealed(0.5);
+    expect(t.enc().racks.carrying).toBe(true);
+    t.teardown();
+  }, T30);
+
+  // Class modifiers (the classes' own, as the class plugins register them) must not touch the spear: it is a `script` hit.
+  it.each([
+    ['knight', (r: any) => r.kind === 'melee' && ((r.amount *= 1.1), (r.poise *= 1.1))],
+    ['ashblade', (r: any) => r.kind === 'melee' && ((r.amount *= 1.25), (r.poise *= 0.6))],
+    ['warden', (r: any) => r.kind === 'melee' && ((r.amount *= 0.4), (r.poise *= 0.4))],
+    ['pathfinder', (r: any) => r.kind === 'ranged' && ((r.amount *= 1.4), (r.poise *= 0.5))],
+    ['emberwright', (r: any) => (r.kind === 'spell' || r.kind === 'melee') && ((r.amount *= 0.5), (r.poise *= 0.3))],
+  ])('%s: the spear keeps its full poise, and three spears per phase break him through all three phases', async (_cls, mod) => {
+    const t = await setup();
+    t.ctx.damage.addModifier('test.class', mod as never, 10);
+    t.startFight();
+    expect(t.until(() => t.enc().brain.state === 'surfaced', 90)).toBe(true);
+    expect(t.enc().take([0, 1, 2, 3].find((i) => t.enc().racks.canTake(i))!)).toBe(true);
+    expect(t.enc().throwSpear()).toBe(true);
+    t.runHealed(SPEARS.flightSeconds + 0.05);
+    expect(t.enc().lastSpearHit?.poiseDealt).toBeCloseTo(SPEARS.poise);
+    expect(t.enc().lastSpearHit?.dealt).toBeCloseTo(SPEARS.damage);
+    // Three breaks by spears only.
+    t.spearBreak();
+    t.runHealed(MURKJAW.breakSeconds + 1);
+    // The health between breaks by any hit (a script hit here, so the class's own scale does not matter).
+    const toFraction = (f: number) => t.hit(t.state()!.health - t.state()!.maxHealth * f, 0, { kind: 'script' });
+    t.toUp();
+    toFraction(0.6);
+    expect(t.state()!.phase).toBe(2);
+    t.spearBreak();
+    t.runHealed(MURKJAW.breakSeconds + 1);
+    t.toUp();
+    toFraction(0.3);
+    expect(t.state()!.phase).toBe(3);
+    t.spearBreak();
+    expect(t.of('boss.break').at(-1)!.last).toBe(true);
+    expect(t.of('boss.break')).toHaveLength(3);
     t.teardown();
   }, T30);
 });

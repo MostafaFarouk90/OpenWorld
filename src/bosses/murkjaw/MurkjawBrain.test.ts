@@ -167,4 +167,19 @@ describe('MurkjawBrain', () => {
     expect(log.length).toBe(n);
     expect(brain.exposed).toBe(false);
   });
+
+  it('phase 2 brings more lunges: the bag holds two of four', () => {
+    const count = (phase: number) => {
+      const r = rig(() => 0.3);
+      r.brain.start();
+      if (phase > 1) r.brain.onPhase(phase);
+      expect(r.until(() => r.attacks().length >= 24, 600)).toBe(true);
+      return r.attacks().slice(0, 24).filter((a) => a === 'lunge').length;
+    };
+    const p1 = count(1);
+    const p2 = count(2);
+    expect(p1).toBeGreaterThanOrEqual(8);
+    expect(p2).toBeGreaterThanOrEqual(12);
+    expect(p2).toBeGreaterThan(p1);
+  });
 });

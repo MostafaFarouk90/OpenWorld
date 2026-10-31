@@ -29,7 +29,7 @@ const plugin: GamePlugin = {
       makeModel: () => buildMurkjawModel(),
     });
     director = d;
-    offs.push(ctx.strings.register('en', MURKJAW_STRINGS_EN) as unknown as () => void);
+    offs.push(ctx.strings.register('en', MURKJAW_STRINGS_EN));
     // The codex is bound lazily (its plugin may set up after this one): the entry is registered once the service is there, and
     // unlocked whenever the outcome flag is set.
     let offCodex: (() => void) | null = null;

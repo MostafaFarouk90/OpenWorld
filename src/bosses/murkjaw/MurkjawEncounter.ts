@@ -15,6 +15,7 @@ import { SpearRacks } from './SpearRacks';
 import {
   ARENA,
   BITE,
+  BREAK_REACH,
   CYCLE,
   DROP,
   HIT_HEIGHT,
@@ -66,6 +67,8 @@ export interface MurkjawPlaces {
   surfaces: THREE.Vector3[];
   beaches: THREE.Vector3[];
   racks: THREE.Vector3[];
+  /** K3's eight safe walkway points (the drop's backstop). */
+  walkways: THREE.Vector3[];
 }
 
 export type MurkjawEnd = 'defeated' | 'reset';
@@ -124,10 +127,13 @@ export class MurkjawEncounter implements MurkjawHooks {
   private registered = false;
   private ended = false;
   private floorLifted = false;
+  private phase1BreakDone = false;
   private phase2BreakDone = false;
   private poiseIdle = 0;
   private emerge = 0;
   private reachT = 0;
+  /** Where a break threw his jaw (null otherwise). */
+  private brokenAt: { x: number; z: number; length: number } | null = null;
   private telegraphSwing = -1;
   private waveT = -1;
   private waveHit = false;
@@ -177,7 +183,9 @@ export class MurkjawEncounter implements MurkjawHooks {
     this.offs.push(
       ctx.events.on('boss.break', (p) => {
         if (!mine(p)) return;
-        if (p.phase >= 2) this.phase2BreakDone = true;
+        // Each phase's break is held for in turn (the floor), so the break always lands in its own phase (review S1).
+        if (p.phase === 1) this.phase1BreakDone = true;
+        if (p.phase === 2) this.phase2BreakDone = true;
         if (p.last) this.floorLifted = true;
         this.stopPush();
         this.brain.onBreak();
@@ -192,10 +200,6 @@ export class MurkjawEncounter implements MurkjawHooks {
       }),
       ctx.events.on('damage.dealt', (r) => {
         if (r.targetId === this.actor.id && r.outcome === 'hit') this.poiseIdle = 0;
-      }),
-      ctx.events.on('trigger.exit', (e) => {
-        // A spear carried out of the arena goes back on its rack.
-        if (e.triggerId === ARENA.trigger && e.actorId === ctx.player.actor.id) this.dropCarried();
       }),
     );
   }
@@ -290,6 +294,10 @@ export class MurkjawEncounter implements MurkjawHooks {
     this.brain.tick(dt);
     if (this.ended || this.outcomePlayingFlag) return;
     this.racks.tick(dt);
+    // A spear carried out of the hall goes back on its rack (the hall rect, not the trigger: a wading-pool basin dips under the
+    // trigger's floor; review S3). The director ends the fight if they stay out.
+    const f = this.ctx.player.feet;
+    if (this.racks.carrying && !this.places.frame.inHall(f.x, f.z)) this.dropCarried();
     this.tickPose(dt);
     this.tickWave(dt);
     this.tickPush(dt);
@@ -397,8 +405,22 @@ export class MurkjawEncounter implements MurkjawHooks {
   }
 
   broken(): void {
-    // Thrown onto the walkway in front of his spot, stunned: every class can reach the jaw.
-    this.face(this.places.beaches[Math.max(0, this.brain.point)]);
+    // Thrown from the surfacing point nearest the player with his jaw flung at the player, stunned: every class can reach it in
+    // the break (review S2: a fixed beach could lie across a channel from where the player stands, as beach 6 does from the
+    // east ring once the crossing has dropped).
+    const f = this.ctx.player.feet;
+    const near = nearestIndex(this.places.surfaces, f);
+    if (near >= 0) {
+      this.brain.relocate(near);
+      this.placeAt(near);
+      this.reachT = 1;
+      const s = this.places.surfaces[near];
+      const d = Math.hypot(f.x - s.x, f.z - s.z);
+      const length = THREE.MathUtils.clamp(d - BREAK_REACH.short, BREAK_REACH.min, BREAK_REACH.max);
+      const k = d > 1e-6 ? length / d : 0;
+      this.brokenAt = { x: s.x + (f.x - s.x) * k, z: s.z + (f.z - s.z) * k, length };
+      this.face(f);
+    }
     this.splash.show(this.waterAt(this.places.surfaces[Math.max(0, this.brain.point)]), 2.4);
     this.sfx(SFX.splash);
     this.sync();
@@ -413,6 +435,14 @@ export class MurkjawEncounter implements MurkjawHooks {
 
   private waterAt(p: THREE.Vector3Like): THREE.Vector3 {
     return new THREE.Vector3(p.x, this.places.floorY - WATER_BELOW, p.z);
+  }
+
+  /** Where his jaw lies on the walkway while beached or broken (null while he is not on it). */
+  get jawAt(): { x: number; z: number } | null {
+    if (!this.brain.jawOnWalkway) return null;
+    if (this.brokenAt) return { x: this.brokenAt.x, z: this.brokenAt.z };
+    const b = this.places.beaches[Math.max(0, this.brain.point)];
+    return b ? { x: b.x, z: b.z } : null;
   }
 
   private placeAt(point: number): void {
@@ -442,11 +472,12 @@ export class MurkjawEncounter implements MurkjawHooks {
     if (lunging) (wantR = 1), (rate2 = CYCLE.lungeSeconds);
     else if (onDeck) (wantR = 1), (rate2 = 0.2);
     this.reachT = wantR > this.reachT ? Math.min(wantR, this.reachT + dt / rate2) : Math.max(wantR, this.reachT - dt / rate2);
+    if (st !== 'broken' && st !== 'sliding') this.brokenAt = null;
     if (this.model) {
       const i = Math.max(0, this.brain.point);
       const s = this.places.surfaces[i];
       const b = this.places.beaches[i];
-      this.model.setReach(this.reachT, Math.hypot(b.x - s.x, b.z - s.z));
+      this.model.setReach(this.reachT, this.brokenAt?.length ?? Math.hypot(b.x - s.x, b.z - s.z));
     }
     if (st === 'surfaced' && this.model) this.face(this.ctx.player.feet);
   }
@@ -552,18 +583,22 @@ export class MurkjawEncounter implements MurkjawHooks {
   // ---- the jaw, the floor ----
 
   /** x1.5 damage and poise on every hit while his jaw lies on a walkway. */
-  private jaw(req: { targetId: string; amount: number; poise: number }): void {
-    if (req.targetId !== this.actor.id || !this.registered || this.outcomePlayingFlag || !this.brain.jawOnWalkway) return;
+  private jaw(req: { targetId: string; amount: number; poise: number; kind: string }): void {
+    if (req.kind === 'status' || req.targetId !== this.actor.id || !this.registered || this.outcomePlayingFlag || !this.brain.jawOnWalkway) return;
     req.amount *= MURKJAW.jawScale;
     req.poise *= MURKJAW.jawScale;
   }
 
-  /** Keeps health at or above the floor until the `last` break, and above phase 3 until a phase 2 break (the Slagmaw rule). */
+  /**
+   * Keeps health at or above the floor until the `last` break, above the phase 2 threshold until a phase 1 break, and above
+   * phase 3 until a phase 2 break, so no burst skips a break: all three always happen (the Slagmaw rule, one phase further).
+   */
   private floor(req: { targetId: string; amount: number }): void {
     if (req.targetId !== this.actor.id || this.floorLifted || !this.registered) return;
     let min = Math.ceil(this.actor.maxHealth * MURKJAW.healthFloor);
-    const phase3 = MURKJAW.phases[1];
-    if (!this.phase2BreakDone && phase3 !== undefined) min = Math.max(min, Math.floor(this.actor.maxHealth * phase3) + 1);
+    const [phase2, phase3] = MURKJAW.phases;
+    if (!this.phase1BreakDone && phase2 !== undefined) min = Math.max(min, Math.floor(this.actor.maxHealth * phase2) + 1);
+    else if (!this.phase2BreakDone && phase3 !== undefined) min = Math.max(min, Math.floor(this.actor.maxHealth * phase3) + 1);
     const room = Math.max(0, this.actor.health - min);
     if (req.amount > room) req.amount = room;
   }
@@ -602,7 +637,7 @@ export class MurkjawEncounter implements MurkjawHooks {
       position: (out) => this.jawWorld(out),
       radius: SPEARS.range,
       coneDegrees: 360,
-      priority: 5,
+      priority: 1,
       promptKey: 'murkjaw.spear.throw',
       enabled: () => this.contested && this.racks.carrying && this.brain.exposed,
       onInteract: () => this.throwSpear(),
@@ -665,7 +700,9 @@ export class MurkjawEncounter implements MurkjawHooks {
         targetId: this.actor.id,
         amount: SPEARS.damage,
         poise: SPEARS.poise,
-        kind: 'melee',
+        // 'script': a rack spear is class-neutral, so no class's melee modifier (the Emberwright staff's x0.4, a weapon factor,
+        // a back-slit) touches it; the registry, kill credit and XP do not read the kind (review S4).
+        kind: 'script',
         attackId: SPEARS.attackId,
         direction: dir.normalize(),
       });
@@ -709,12 +746,26 @@ export class MurkjawEncounter implements MurkjawHooks {
     if (this._drop !== 'crumbling') return;
     this.crumbleT += dt;
     if (this.crumbleT < DROP.crumbleSeconds) return;
+    // Only while the player stands on walkway that stays after the drop, clear of the crossing and at walkway height: a player
+    // in the air or in a channel never sees it drop (K7's push-back point could be the bridge itself; review B2).
     const f = this.ctx.player.feet;
-    if (this.places.frame.nearDrop(f.x, f.z, DROP.clearMargin) && Math.abs(f.y - this.places.floorY) < HIT_HEIGHT) return;
+    const fr = this.places.frame;
+    if (!fr.walkable(f.x, f.z, false) || fr.nearDrop(f.x, f.z, DROP.clearMargin)) return;
+    if (Math.abs(f.y - this.places.floorY) > DROP.standHeight) return;
     this._drop = 'dropped';
     this.crumble.stop();
     this.setDropBlocker(false);
     this.sfx(SFX.splash);
+  }
+
+  /** A player over the drop rect is put on the nearest walkway first (raising the collider, or a backstop after a drop). */
+  private clearDropRect(): void {
+    const f = this.ctx.player.feet;
+    if (!this.places.frame.nearDrop(f.x, f.z, 0) || !this.places.frame.inHall(f.x, f.z)) return;
+    if (f.y > this.places.floorY + DROP.standHeight) return;
+    const i = nearestIndex(this.places.walkways, f);
+    const w = this.places.walkways[i];
+    if (w) this.ctx.player.teleport({ x: w.x, y: w.y, z: w.z });
   }
 
   private setDropBlocker(closed: boolean): void {
@@ -787,6 +838,7 @@ export class MurkjawEncounter implements MurkjawHooks {
     // The crossing stands again after every end, so a later visit finds the whole arena.
     if (this._drop !== 'standing') {
       this.crumble.stop();
+      if (this._drop === 'dropped') this.clearDropRect();
       this.setDropBlocker(true);
       this._drop = 'standing';
     }
