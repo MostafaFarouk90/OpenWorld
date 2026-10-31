@@ -244,13 +244,13 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.spawn.aerie.harpooner-2 | 15654.5 | 15972 | 6 | 152.28 | spawn, elevated |
 | dragonspine.spawn.aerie.harpooner-3 | 15702 | 16010.5 | 6 | 109.76 | spawn, elevated |
 | dragonspine.spawn.aerie.harpooner-4 | 15702 | 16070.5 | 6 | 70.24 | spawn, elevated |
-| dragonspine.glide.summit-aerie.launch | 14450 | 15900 | 4.44 | 265.64 | objective, glide-launch, elevated |
+| dragonspine.glide.summit-aerie.launch | 14450 | 15900 | 3.58 | 265.64 | objective, glide-launch, elevated |
 | dragonspine.glide.summit-aerie.landing | 15500 | 15980 | 0 | 265.64 | poi |
 | dragonspine.glide.summit-skyhold.launch | 13450 | 15560 | 0.3 | 73.56 | objective, glide-launch, elevated |
 | dragonspine.glide.summit-skyhold.landing | 12230 | 15200 | 0 | 73.56 | poi |
-| dragonspine.glide.skyhold-hawk-cliffs.launch | 12150 | 15050 | 2.45 | 20.33 | objective, glide-launch, elevated |
+| dragonspine.glide.skyhold-hawk-cliffs.launch | 12150 | 15050 | 2.05 | 20.33 | objective, glide-launch, elevated |
 | dragonspine.glide.skyhold-hawk-cliffs.landing | 11411 | 13064.41 | 0 | 20.33 | poi |
-| dragonspine.glide.anvil-rime-pass.launch | 14640 | 13860 | 0.35 | 71.15 | objective, glide-launch, elevated |
+| dragonspine.glide.anvil-rime-pass.launch | 14640 | 13860 | 0.31 | 71.15 | objective, glide-launch, elevated |
 | dragonspine.glide.anvil-rime-pass.landing | 13000 | 13300 | 0 | 71.15 | poi |
 | dragonspine.glide.rime-pass-lodge.launch | 13020 | 13270 | 0.3 | 336.28 | objective, glide-launch, elevated |
 | dragonspine.glide.rime-pass-lodge.landing | 13600 | 11950 | 0 | 336.28 | poi |
@@ -524,13 +524,13 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-aerie-chain-post | dragonspine-chain-post | 15632.5 | 16052.5 | 0.8 x 0.8 | solid |
 | dragonspine-aerie-table | dragonspine-rig-table | 15553 | 16130 | 2.4 x 1.2 | open |
 | dragonspine-aerie-feed-trough | dragonspine-feed-trough | 15639.5 | 16056.5 | 2.4 x 1 | open |
-| dragonspine-glide-summit-aerie-deck | rock | 14448.5 | 15899.89 | 6 x 4 | solid |
+| dragonspine-glide-summit-aerie-deck | rock | 14448.01 | 15899.85 | 6 x 5 | solid |
 | dragonspine-glide-summit-aerie-banner | dragonspine-wind-banner | 14433.12 | 15909.7 | 0.4 x 0.4 | open |
 | dragonspine-glide-summit-aerie-landing | dragonspine-landing-marker | 15500 | 15980 | 2 x 2 | open |
 | dragonspine-glide-summit-skyhold-deck | rock | 13451.44 | 15560.42 | 6 x 4 | solid |
 | dragonspine-glide-summit-skyhold-banner | dragonspine-wind-banner | 13454.58 | 15555.09 | 0.4 x 0.4 | open |
 | dragonspine-glide-summit-skyhold-landing | dragonspine-landing-marker | 12230 | 15200 | 2 x 2 | open |
-| dragonspine-glide-skyhold-hawk-cliffs-deck | rock | 12150.52 | 15051.41 | 6 x 4 | solid |
+| dragonspine-glide-skyhold-hawk-cliffs-deck | rock | 12150.56 | 15051.52 | 6 x 4.25 | solid |
 | dragonspine-glide-skyhold-hawk-cliffs-banner | dragonspine-wind-banner | 12156.67 | 15050.73 | 0.4 x 0.4 | open |
 | dragonspine-glide-skyhold-hawk-cliffs-landing | dragonspine-landing-marker | 11411 | 13064.41 | 2 x 2 | open |
 | dragonspine-glide-anvil-rime-pass-deck | rock | 14641.42 | 13860.48 | 6 x 4 | solid |

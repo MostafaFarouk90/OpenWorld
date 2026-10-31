@@ -49,11 +49,16 @@ m (there is no built-platform fallback). Every structure keeps out of K1's 60 m 
   K1's six ledges; `dragonspine.glide.<ledgeId>.launch` and `.landing`).
 - **Keep interior** (`frostfangKeep.ts`): `frostfang-keep` on K1's pad, area `dragonspine-summit` (`KEEP_AREA`); the door
   (`dragonspine.aerie.keep.door`) opens on `story.d06.started`.
-- **Walker catch** (`chasmCatch.ts`, agreed with K7): one box trigger per stretch of each trough (`trg.dragonspine.catch.<trough>.<n>`).
-  A walker held in one for `CATCH_HOLD` s is faded out and returned to `dragonspine.glide.summit-aerie.launch`, or to
-  `dragonspine.aerie.landing` when last grounded on the Aerie. It stands down while `movementMode` is `glide` or K7's `glide`
-  service has `catchArmed` (a missing service reads false). `trg.dragonspine.aerie.arrival` attunes `waystone.frostfang-aerie`
-  (`rekindle('frostfang-aerie', 'script')`) on entering, every tick there and on `save.loaded`.
+- **Walker catch** (`chasmCatch.ts`, agreed with K7): one box per stretch of each trough, clipped to SUMMIT_BOX (with an unyawed cap
+  so the chasm band reaches z 16900 all the way across), tested directly on the feet (ids `trg.dragonspine.catch.<trough>.<n>`, not
+  registered as triggers). A walker held in one for `CATCH_HOLD` s is faded out and returned `CATCH_BACK` (2.5 m) behind
+  `dragonspine.glide.summit-aerie.launch` (on its deck's flat stand), or behind `dragonspine.aerie.landing` when last grounded on
+  the Aerie or K1's summit-aerie landing area. It stands down while `movementMode` is `glide` or K7's `glide` service has
+  `catchArmed` (a missing service reads false), and, like the containment push, inside an interior, while a save loads, during
+  waystone travel and while dead. A missing return anchor turns it off with one warning. `trg.dragonspine.aerie.arrival` attunes
+  `waystone.frostfang-aerie` (`rekindle('frostfang-aerie', 'script')`) on entering, every tick there and on `save.loaded`.
+- **Launch decks** (`glideLedges.ts`): 0.3 m over the highest ground under the deck, lengthened back up a falling lip until its back
+  edge is within `DECK_STEP` (0.35 m) of the ground, so it is walked onto without a jump.
 - **Readers** (`worldChanges.ts`): toggles (never in the layout) driven through `ctx.gates`, so they re-derive on every flag change
   and on `save.loaded`, both ways: the Aerie gate (closed until `story.d06.gateOpen`), net section n (until `story.m33.anchorN`),
   the R16 axe on the hoard (`story.r16.choice = give` and `story.m32.complete`), the lodge fire lit (`story.m34.complete`), Skarl's

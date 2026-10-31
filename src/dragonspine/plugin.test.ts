@@ -16,8 +16,8 @@ beforeAll(async () => {
 const inputs = stubInputs();
 const build = buildDragonspine(inputs);
 const layout = build.layout;
-/** The layout's triggers plus the walker catch's volumes (registered by the plugin, absolute, not layout data). */
-const triggerCount = layout.triggers.length + build.catchVolumes.length;
+/** The layout's triggers (the walker catch tests its volumes itself and registers none). */
+const triggerCount = layout.triggers.length;
 
 function setup(withNpcs = true) {
   const fc = createFakeCore();
@@ -43,7 +43,7 @@ describe('dragonspine plugin', () => {
     expect(fc.triggers.size).toBe(triggerCount);
     for (const a of layout.anchors) expect(fc.anchors.has(a.id), a.id).toBe(true);
     for (const t of layout.triggers) expect(fc.triggers.has(t.id), t.id).toBe(true);
-    for (const v of build.catchVolumes) expect(fc.triggers.has(v.id), v.id).toBe(true);
+    for (const v of build.catchVolumes) expect(fc.triggers.has(v.id), v.id).toBe(false);
     for (const id of ['waystone.wyrmwatch-lodge', 'waystone.rime-pass', 'waystone.last-anvil', 'waystone.wyrms-hearth', 'waystone.frostfang-aerie']) expect(fc.anchors.get(id)?.tags, id).toContain('waystone');
     expect(registered).toHaveLength(1);
     expect(registered[0]!.specs).toEqual(layout.npcs);

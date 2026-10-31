@@ -3,6 +3,7 @@
 // `dragonspine.pass.*`, `.track.*`, `.fog.*` and `dragonspine.wyrmwatch.hearth`); the `waystone.*` and `npc-post.*` names keep
 // their contract names. Nothing here is a literal map coordinate: `deriveSites` takes every place from K1's plateaus, the Rime
 // Pass polyline, the camp hearth and the interior pads, and every y is resolved against `heightAt`.
+import { SUMMIT_BOX } from '../region/areas';
 import type { LayoutData } from '../region/layoutTypes';
 import { aerieLayout, type AerieInfo } from './aerie';
 import { anvilLayout, type AnvilInfo } from './anvil';
@@ -108,7 +109,7 @@ function buildUncached(inp: DragonspineInputs): DragonspineBuild {
     skyhold: skyhold.info,
     aerie: aerie.info,
     glide: glide.info,
-    catchVolumes: catchVolumes(summit.troughs, inp.heightAt),
+    catchVolumes: catchVolumes(summit.troughs, inp.heightAt, SUMMIT_BOX),
     toggles: world.toggles,
   };
 }

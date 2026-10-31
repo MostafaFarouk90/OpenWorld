@@ -16,7 +16,7 @@ import { envModelLibraryFor } from '../env/envStructureArt';
 import { createDragonspineArt } from './dragonspineArt';
 import { defaultInputs, type DragonspineInputs, type HeightFn } from './inputs';
 import { DRAGONSPINE_INTERIOR_STRINGS_EN } from './interiors';
-import { installWalkerCatch, onShelfOf, watchAerieArrival } from './chasmCatch';
+import { installWalkerCatch, onAerieOf, onShelfOf, watchAerieArrival } from './chasmCatch';
 import { buildDragonspine, dragonspineBuild } from './layout';
 import { watchToggles } from './worldChanges';
 import { DRAGONSPINE_NPC_DEFS, DRAGONSPINE_NPC_STRINGS_EN } from './npcDefs';
@@ -37,7 +37,7 @@ declare module '../core/Services' {
 }
 
 export interface DragonspinePluginOptions {
-  /** A ready layout (tests); otherwise it is built from `inputs` at setup. */
+  /** A ready layout (tests), placed as it is (no flag readers, walker catch or arrival watcher); otherwise it is built from `inputs` at setup. */
   layout?: LayoutData;
   /** K1's exports (plateaus, road, hearth, pads) and the ground; tests pass stand-ins. */
   inputs?: DragonspineInputs;
@@ -67,8 +67,10 @@ export function createDragonspinePlugin(opts: DragonspinePluginOptions = {}): Ga
         // The shipped case (no options) takes the cached default build: setup costs nothing after the first build of the session.
         const shipped = !opts.inputs && !opts.heightAt;
         const height = opts.heightAt ?? opts.inputs?.heightAt ?? defaultInputs().heightAt;
-        const build = shipped ? dragonspineBuild() : buildDragonspine(opts.inputs && !opts.heightAt ? opts.inputs : { ...(opts.inputs ?? defaultInputs(opts.heightAt)), heightAt: height });
-        const layout = opts.layout ?? build.layout;
+        // A ready layout (tests) is static: the summit's runtime pieces (the readers, the walker catch, the arrival watcher) come
+        // from a build, so they are wired only when the layout is the build's own.
+        const build = opts.layout ? null : shipped ? dragonspineBuild() : buildDragonspine(opts.inputs && !opts.heightAt ? opts.inputs : { ...(opts.inputs ?? defaultInputs(opts.heightAt)), heightAt: height });
+        const layout = opts.layout ?? build!.layout;
         cleanups.push(registerDragonspineKinds());
         if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
           const errors = validateLayout(layout, height, { spawnId: null });
@@ -88,20 +90,23 @@ export function createDragonspinePlugin(opts: DragonspinePluginOptions = {}): Ga
         cleanups.push(() => structures.dispose());
         void structures.upgrade();
 
-        // The flag readers (the aerie gate, the net, the axe, the lit hearth, the burned banner, the drake's roost), re-derived through ctx.gates.
-        const toggles = watchToggles(deps, build.toggles, height, art);
-        cleanups.push(() => toggles.dispose());
-        // The walker catch over the chasm and moat (stands down while gliding), and the Aerie waystone attuned on arrival.
-        const walker = installWalkerCatch(ctx, build.catchVolumes, build.summit.aerie, height);
-        cleanups.push(walker.dispose);
-        cleanups.push(watchAerieArrival(ctx, onShelfOf(build.summit.aerie, height)));
-        const w = walker.walker;
-        cleanups.push(
-          ctx.services.provide('dragonspine', {
-            shownToggles: () => toggles.shown(),
-            catchState: () => ({ catches: w.catches, lastTarget: w.lastTarget, lastOnAerie: w.lastOnAerie, busy: w.busy }),
-          }),
-        );
+        if (build) {
+          // The flag readers (the aerie gate, the net, the axe, the lit hearth, the burned banner, the drake's roost), re-derived through ctx.gates.
+          const toggles = watchToggles(deps, build.toggles, height, art);
+          cleanups.push(() => toggles.dispose());
+          // The walker catch over the chasm and moat (stands down while gliding), and the Aerie waystone attuned on arrival.
+          const onAerie = onAerieOf(build.summit.aerie, build.summit.ledges['summit-aerie'].landingAreas);
+          const walker = installWalkerCatch(ctx, build.catchVolumes, onAerie, height);
+          cleanups.push(walker.dispose);
+          cleanups.push(watchAerieArrival(ctx, onShelfOf(build.summit.aerie, height)));
+          const w = walker.walker;
+          cleanups.push(
+            ctx.services.provide('dragonspine', {
+              shownToggles: () => toggles.shown(),
+              catchState: () => ({ catches: w.catches, lastTarget: w.lastTarget, lastOnAerie: w.lastOnAerie, busy: w.busy }),
+            }),
+          );
+        }
 
         // The cast is best effort: a failure here costs the NPCs, not the places.
         try {

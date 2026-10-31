@@ -9,7 +9,7 @@ import { footprintCorners } from '../region/geometry';
 import { validateLayout } from '../region/validateLayout';
 import { isKnownStructureKind } from '../region/structureKinds';
 import { AERIE_GATE_W } from './aerie';
-import { CATCH_ABOVE, CATCH_AERIE_ANCHOR, CATCH_FADE_IN, CATCH_FADE_OUT, CATCH_HOLD, CATCH_LIP_ANCHOR, WalkerCatch, catchTarget, catchVolumes, inAnyVolume, standsDown, type CatchPorts } from './chasmCatch';
+import { CATCH_ABOVE, CATCH_AERIE_ANCHOR, CATCH_BACK, busyElsewhere, onAerieOf, returnPoint, volumeCorners, CATCH_FADE_IN, CATCH_FADE_OUT, CATCH_HOLD, CATCH_LIP_ANCHOR, WalkerCatch, catchTarget, catchVolumes, inAnyVolume, standsDown, type CatchPorts } from './chasmCatch';
 import { buildKeepDef } from './frostfangKeep';
 import { DECK, STAND_BACK } from './glideLedges';
 import { padFromRecord } from './inputs';
@@ -252,7 +252,7 @@ describe('the walker catch', () => {
   const volumes = b.catchVolumes;
   it('has a box over every stretch of both troughs, reaching CATCH_ABOVE over the higher floor', () => {
     const stretches = inp.troughs.reduce((n, t) => n + t.points.length - 1, 0);
-    expect(volumes).toHaveLength(stretches);
+    expect(volumes.filter((v) => !v.id.endsWith('.cap'))).toHaveLength(stretches);
     expect(new Set(volumes.map((v) => v.id)).size).toBe(volumes.length);
     for (const t of inp.troughs) {
       const highest = Math.max(...t.points.map((p) => p.floor));
@@ -263,13 +263,15 @@ describe('the walker catch', () => {
           const x = p.x + (q.x - p.x) * f;
           const z = p.z + (q.z - p.z) * f;
           const floor = p.floor + (q.floor - p.floor) * f;
+          // Past the summit box (K1's chasm runs on to z 17000) the catch is clipped off.
+          if (z > SUMMIT_BOX.z1) continue;
           expect(inAnyVolume(volumes, { x, y: floor + 0.5, z }), `${t.id} ${i} ${f}`).toBe(true);
           expect(inAnyVolume(volumes, { x, y: highest + CATCH_ABOVE + 5, z }), `${t.id} ${i} ${f} high`).toBe(false);
         }
       }
     }
     // A rebuild from the same troughs is the same set.
-    expect(catchVolumes(inp.troughs, inp.heightAt)).toEqual(volumes);
+    expect(catchVolumes(inp.troughs, inp.heightAt, SUMMIT_BOX)).toEqual(volumes);
   });
 
   it('picks the ledge: the summit-aerie lip, or the Aerie landing shelf when last grounded on the Aerie', () => {
@@ -289,13 +291,14 @@ describe('the walker catch', () => {
   });
 
   /** A walker on fake ports: `feet` is moved by the test; the catch teleports it to the named anchor. */
-  function rig(opts: { onAerie?: (p: { x: number; z: number }) => boolean } = {}) {
+  function rig(opts: { onAerie?: (p: { x: number; z: number }) => boolean; missing?: boolean } = {}) {
     const feet = { x: 0, y: 10, z: 0 };
     let mode = 'walk';
     let armed: boolean | undefined;
     const fades: number[] = [];
     const teleports: string[] = [];
     let frozen = 0;
+    let warns = 0;
     const anchors: Record<string, { x: number; y: number; z: number }> = { [CATCH_LIP_ANCHOR]: { x: -100, y: 50, z: 0 }, [CATCH_AERIE_ANCHOR]: { x: 100, y: 50, z: 0 } };
     const ports: CatchPorts = {
       feet: () => feet,
@@ -303,23 +306,24 @@ describe('the walker catch', () => {
       standDown: () => standsDown(mode, armed === undefined ? undefined : { catchArmed: armed }),
       inCatch: (p) => p.y < 5 && Math.abs(p.x) < 20,
       onAerie: opts.onAerie ?? ((p) => p.x > 50),
-      anchor: (id) => (anchors[id] ? { position: anchors[id]!, yaw: 0 } : undefined),
+      anchor: (id) => (!opts.missing && anchors[id] ? { position: anchors[id]!, yaw: 0 } : undefined),
       fade: (o) => fades.push(o),
       teleport: (p) => {
-        teleports.push(Object.keys(anchors).find((k) => anchors[k] === p)!);
+        // Yaw 0 faces -Z, so the return point is CATCH_BACK to +Z of the anchor, level with it.
+        teleports.push(Object.keys(anchors).find((k) => anchors[k]!.x === p.x && anchors[k]!.y === p.y && Math.abs(anchors[k]!.z + CATCH_BACK - p.z) < 1e-9)!);
         Object.assign(feet, p);
       },
       freeze: () => {
         frozen++;
         return () => frozen--;
       },
-      warn: () => {},
+      warn: () => warns++,
     };
     const w = new WalkerCatch(ports);
     const run = (secs: number) => {
       for (let t = 0; t < secs; t += 1 / 60) w.update(1 / 60);
     };
-    return { w, feet, run, fades, teleports, setMode: (m: string) => (mode = m), arm: (v: boolean | undefined) => (armed = v), frozen: () => frozen };
+    return { w, feet, run, fades, teleports, setMode: (m: string) => (mode = m), arm: (v: boolean | undefined) => (armed = v), frozen: () => frozen, warns: () => warns };
   }
 
   it('returns a walker who fell in from the summit side to the lip, with a fade and a freeze that both lift', () => {
@@ -393,6 +397,80 @@ describe('the walker catch', () => {
     r.w.dispose();
     expect(r.frozen()).toBe(0);
     expect(r.fades[r.fades.length - 1]).toBe(0);
+  });
+
+  it('warns once and turns itself off when its return anchor is missing (no fade loop)', () => {
+    const r = rig({ missing: true });
+    Object.assign(r.feet, { x: 0, y: 1, z: 0 });
+    r.run(5);
+    expect(r.w.catches).toBe(1);
+    expect(r.w.broken).toBe(true);
+    expect(r.warns()).toBe(1);
+    expect(r.frozen()).toBe(0);
+    expect(r.fades[r.fades.length - 1]).toBe(0);
+  });
+
+  it('returns the player CATCH_BACK behind the anchor, against its facing, level with it', () => {
+    expect(CATCH_BACK).toBeGreaterThanOrEqual(2);
+    expect(CATCH_BACK).toBeLessThanOrEqual(3);
+    // Facing east (yaw -90 degrees faces +X): behind is west.
+    const p = returnPoint({ x: 10, y: 5, z: 20 }, -Math.PI / 2);
+    expect(p.x).toBeCloseTo(10 - CATCH_BACK, 9);
+    expect(p.z).toBeCloseTo(20, 9);
+    expect(p.y).toBe(5);
+    // On the stand-in summit, the lip's return point is on its deck, inside the flat stand behind the lip.
+    const lip = anchor(CATCH_LIP_ANCHOR);
+    const back = returnPoint({ x: lip.x, y: 0, z: lip.z }, (lip.yawDeg * Math.PI) / 180);
+    const deck = b.layout.structures.find((x) => x.id === lip.onStructure)!;
+    const c = footprintCorners(deck);
+    const inside = (q: { x: number; z: number }) => {
+      // Point in a convex quad: the same side of each edge.
+      const s = c.map(([x0, z0], i) => {
+        const [x1, z1] = c[(i + 1) % 4]!;
+        return Math.sign((x1 - x0) * (q.z - z0) - (z1 - z0) * (q.x - x0));
+      });
+      return s.every((v) => v >= 0) || s.every((v) => v <= 0);
+    };
+    expect(inside(back)).toBe(true);
+    expect(inAnyVolume(volumes, { x: back.x, y: inp.heightAt(back.x, back.z) + 0.5, z: back.z })).toBe(false);
+  });
+
+  it("counts K1's summit-aerie landing area as the Aerie side, as well as the plateau", () => {
+    const aerie = plateau('frostfang-aerie');
+    const areas = inp.glideLedges['summit-aerie']!.landingAreas;
+    const on = onAerieOf(aerie, areas);
+    expect(on({ x: (aerie.minX + aerie.maxX) / 2, z: (aerie.minZ + aerie.maxZ) / 2 })).toBe(true);
+    const a0 = areas[0]!;
+    const west = { x: a0.x0 + 1, z: (a0.z0 + a0.z1) / 2 };
+    expect(on(west)).toBe(true);
+    expect(onAerieOf(aerie)(west), 'the probe point is outside the plateau, so only the landing area counts it').toBe(false);
+    expect(on(anchor(CATCH_LIP_ANCHOR))).toBe(false);
+  });
+
+  it('stands down like the containment push: in an interior, while a save loads, during waystone travel, while dead', () => {
+    const ctx = (svc: Record<string, unknown>, dead = false) => ({ services: { get: (k: string) => svc[k] }, player: { actor: { dead } } }) as unknown as Parameters<typeof busyElsewhere>[0];
+    expect(busyElsewhere(ctx({}))).toBe(false);
+    expect(busyElsewhere(ctx({ interiors: { current: 'frostfang-keep' } }))).toBe(true);
+    expect(busyElsewhere(ctx({ interiors: { current: null } }))).toBe(false);
+    expect(busyElsewhere(ctx({ save: { loading: true } }))).toBe(true);
+    expect(busyElsewhere(ctx({ waystones: { travelling: true } }))).toBe(true);
+    expect(busyElsewhere(ctx({}, true))).toBe(true);
+  });
+
+  it("keeps every volume inside SUMMIT_BOX (south of z 16900), with the chasm band reaching the box's north edge", () => {
+    for (const v of volumes) {
+      for (const c of volumeCorners(v)) {
+        expect(c.x, v.id).toBeGreaterThanOrEqual(SUMMIT_BOX.x0 - 1e-6);
+        expect(c.x, v.id).toBeLessThanOrEqual(SUMMIT_BOX.x1 + 1e-6);
+        expect(c.z, v.id).toBeGreaterThanOrEqual(SUMMIT_BOX.z0 - 1e-6);
+        expect(c.z, v.id).toBeLessThanOrEqual(SUMMIT_BOX.z1 + 1e-6);
+      }
+    }
+    // N6: the band over the chasm's last stretch runs right up to z 16900, so no gap opens between the two lowlands.
+    const north = Math.max(...volumes.filter((v) => v.trough === 'frostfang-chasm').flatMap((v) => volumeCorners(v).map((c) => c.z)));
+    expect(north).toBeCloseTo(SUMMIT_BOX.z1, 6);
+    const last = inp.troughs.find((t) => t.id === 'frostfang-chasm')!.points.at(-2)!;
+    expect(inAnyVolume(volumes, { x: last.x, y: last.floor + 1, z: SUMMIT_BOX.z1 - 0.5 })).toBe(true);
   });
 });
 

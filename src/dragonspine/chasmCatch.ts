@@ -1,11 +1,13 @@
 // The Frostfang chasm and moat's walker catch (PR 2, agreed with K7) and the Aerie's arrival watcher.
 //
-// Walker catch: a box trigger over each stretch of K1's two troughs, from under the lowest ground there up to the stretch's floor
-// plus CATCH_ABOVE (K1's chasm catch floor is 5 m over its floor; the box reaches a little higher so a player standing on any
-// carved floor is inside). A player who walked, fell or was knocked in is returned, with a fade, to the summit-aerie lip anchor,
-// or to the Aerie's landing shelf when last grounded on the Aerie. It stands down while `movementMode` is `glide` or K7's
-// `glide` service reports `catchArmed` (K7 PR 2's lane catch owns those players; a missing service reads false), so the two
-// never double-fire. There is no fall damage, so nothing else is needed.
+// Walker catch: a box over each stretch of K1's two troughs (clipped to SUMMIT_BOX), from under the lowest ground there up to the
+// stretch's floor plus CATCH_ABOVE (K1's chasm catch floor is 5 m over its floor; the box reaches a little higher so a player standing
+// on any carved floor is inside). A player who walked, fell or was knocked in is returned, with a fade, to CATCH_BACK behind the
+// summit-aerie lip anchor (on its deck's flat stand), or behind the Aerie's landing anchor when last grounded on the Aerie or on
+// K1's summit-aerie landing area. It stands down while `movementMode` is `glide` or K7's `glide` service reports `catchArmed` (K7
+// PR 2's lane catch owns those players; a missing service reads false), so the two never double-fire, and, like the containment
+// push, inside an interior, while a save loads, during waystone travel and while the player is dead. A missing return anchor turns
+// it off with one warning. There is no fall damage, so nothing else is needed.
 //
 // Arrival watcher: while the player is inside `trg.dragonspine.aerie.arrival`, `waystone.frostfang-aerie` is attuned with
 // `waystones.rekindle('frostfang-aerie', 'script')`: on entering, every tick after (a waystones plugin that sets up late), and on
@@ -28,6 +30,11 @@ const GROUNDED = 1;
 const AERIE_MARGIN = 20;
 
 export const CATCH_LIP_ANCHOR = 'dragonspine.glide.summit-aerie.launch';
+/**
+ * The catch puts the player this far behind the anchor (against its facing), level with it: on the lip's deck that is on the flat
+ * stand (the deck runs STAND_BACK behind the lip), so a player still holding forward when the freeze lifts does not walk off the edge.
+ */
+export const CATCH_BACK = 2.5;
 export const CATCH_AERIE_ANCHOR = 'dragonspine.aerie.landing';
 export const AERIE_ARRIVAL_TRIGGER = 'trg.dragonspine.aerie.arrival';
 export const AERIE_WAYSTONE_ID = 'frostfang-aerie';
@@ -41,8 +48,21 @@ export interface CatchVolume {
   yaw: number;
 }
 
-/** One box per stretch of each trough: across it the trough's half width plus its blend, along it the stretch plus a half width of overlap. */
-export function catchVolumes(troughs: readonly TroughDef[], h: HeightFn): CatchVolume[] {
+/** The box a catch volume may fill: x and z bounds (the summit box, so the catch never fires in the lower area). */
+export interface ClipBox {
+  x0: number;
+  x1: number;
+  z0: number;
+  z1: number;
+}
+
+/**
+ * One box per stretch of each trough: across it the trough's half width plus its blend, along it the stretch plus a half width of
+ * overlap, then shortened at either end so that every corner stays inside `clip` (SUMMIT_BOX: K1's chasm runs on to the world edge
+ * at z 17000, past the summit's z 16900). The band is kept whole up to the clip's edge, since it is what separates the summit's
+ * north lowland from the Aerie side's.
+ */
+export function catchVolumes(troughs: readonly TroughDef[], h: HeightFn, clip: ClipBox): CatchVolume[] {
   const out: CatchVolume[] = [];
   for (const t of troughs) {
     for (let i = 1; i < t.points.length; i++) {
@@ -52,24 +72,58 @@ export function catchVolumes(troughs: readonly TroughDef[], h: HeightFn): CatchV
       if (len === 0) continue;
       const d = { x: (q.x - p.x) / len, z: (q.z - p.z) / len };
       const across = t.halfWidth + t.blend;
-      const along = len / 2 + t.halfWidth;
-      const mid = { x: (p.x + q.x) / 2, z: (p.z + q.z) / 2 };
+      const mid0 = { x: (p.x + q.x) / 2, z: (p.z + q.z) / 2 };
+      let uMin = -(len / 2 + t.halfWidth);
+      let uMax = len / 2 + t.halfWidth;
+      // Corner x is mid.x + d.x u + |d.z| across at most (and mid.x + d.x u - |d.z| across at least); z alike.
+      const side = (m: number, du: number, reach: number, lo: number, hi: number): void => {
+        for (const [bound, sign] of [[hi, 1], [lo, -1]] as const) {
+          const room = sign * (bound - m) - reach;
+          const k = sign * du;
+          if (Math.abs(k) < 1e-9) {
+            if (room < 0) uMax = uMin - 1;
+          } else if (k > 0) uMax = Math.min(uMax, room / k);
+          else uMin = Math.max(uMin, room / k);
+        }
+      };
+      side(mid0.x, d.x, Math.abs(d.z) * across, clip.x0, clip.x1);
+      side(mid0.z, d.z, Math.abs(d.x) * across, clip.z0, clip.z1);
+      if (uMax <= uMin) continue;
+      const along = (uMax - uMin) / 2;
+      const mid = { x: mid0.x + d.x * (uMin + along), z: mid0.z + d.z * (uMin + along) };
       let low = Infinity;
       for (let u = -along; u <= along; u += 20) {
         for (let v = -across; v <= across; v += 20) low = Math.min(low, h(mid.x + d.x * u - d.z * v, mid.z + d.z * u + d.x * v));
       }
       const top = Math.max(p.floor, q.floor) + CATCH_ABOVE;
       const bottom = Math.min(low, p.floor, q.floor) - CATCH_BELOW;
-      out.push({
+      const v: CatchVolume = {
         id: `trg.dragonspine.catch.${t.id}.${i}`,
         trough: t.id,
         centre: { x: mid.x, y: (top + bottom) / 2, z: mid.z },
         half: { x: across, y: (top - bottom) / 2, z: along },
         yaw: Math.atan2(d.x, d.z),
-      });
+      };
+      out.push(v);
+      // Clipped at the box's north edge on a skewed stretch: the yawed end leaves two thin corners short of z1. An unyawed cap fills
+      // them, so the band reaches z1 all the way across.
+      const cap = 2 * Math.abs(d.x) * across;
+      const corners = volumeCorners(v);
+      if (d.z > 0 && cap > 1e-6 && Math.abs(Math.max(...corners.map((c) => c.z)) - clip.z1) < 1e-6) {
+        const xs = corners.map((c) => c.x);
+        const x0 = Math.max(clip.x0, Math.min(...xs));
+        const x1 = Math.min(clip.x1, Math.max(...xs));
+        out.push({ id: `${v.id}.cap`, trough: t.id, centre: { x: (x0 + x1) / 2, y: v.centre.y, z: clip.z1 - cap / 2 }, half: { x: (x1 - x0) / 2, y: v.half.y, z: cap / 2 }, yaw: 0 });
+      }
     }
   }
   return out;
+}
+
+/** The four ground corners of a catch volume (tests). */
+export function volumeCorners(v: CatchVolume): Array<{ x: number; z: number }> {
+  const d = { x: Math.sin(v.yaw), z: Math.cos(v.yaw) };
+  return [-1, 1].flatMap((su) => [-1, 1].map((sv) => ({ x: v.centre.x + d.x * su * v.half.z - d.z * sv * v.half.x, z: v.centre.z + d.z * su * v.half.z + d.x * sv * v.half.x })));
 }
 
 /** The same test as TriggerVolumes' yawed box. */
@@ -86,9 +140,23 @@ export const inAnyVolume = (vs: readonly CatchVolume[], p: { x: number; y: numbe
 /** Where a caught player goes: the Aerie's landing shelf if they were last grounded on the Aerie, else the summit-aerie lip. */
 export const catchTarget = (lastOnAerie: boolean): string => (lastOnAerie ? CATCH_AERIE_ANCHOR : CATCH_LIP_ANCHOR);
 
+/** Where a caught player lands: CATCH_BACK behind the anchor (yaw 0 faces -Z, so behind is +(sin yaw, cos yaw)). */
+export const returnPoint = (p: { x: number; y: number; z: number }, yaw: number): { x: number; y: number; z: number } => ({
+  x: p.x + Math.sin(yaw) * CATCH_BACK,
+  y: p.y,
+  z: p.z + Math.cos(yaw) * CATCH_BACK,
+});
+
 /** The stand-down rule agreed with K7: gliding, or K7's lane catch armed (a missing service reads false). */
 export function standsDown(mode: string | undefined, glide: { catchArmed?: boolean } | undefined): boolean {
   return mode === 'glide' || glide?.catchArmed === true;
+}
+
+/** The containment push's own stand-downs (containmentSystem.ts): inside an interior, a save loading, waystone travel, dead. */
+export function busyElsewhere(ctx: Pick<CoreContext, 'services' | 'player'>): boolean {
+  if (ctx.services.get('interiors')?.current) return true;
+  if (ctx.services.get('save')?.loading || ctx.services.get('waystones')?.travelling) return true;
+  return Boolean(ctx.player.actor?.dead);
 }
 
 export interface CatchPorts {
@@ -116,6 +184,8 @@ export class WalkerCatch {
   /** Catches fired (tests, the service). */
   catches = 0;
   lastTarget: string | null = null;
+  /** Set when a return anchor was missing: the catch stands down for good (one warning). */
+  broken = false;
 
   constructor(private readonly ports: CatchPorts) {}
 
@@ -129,8 +199,12 @@ export class WalkerCatch {
       ph.t += dt;
       if (ph.t < CATCH_FADE_OUT) return;
       const a = this.ports.anchor(ph.target);
-      if (a) this.ports.teleport(a.position, a.yaw);
-      else this.ports.warn(`dragonspine: the walker catch's anchor "${ph.target}" is missing`);
+      if (a) this.ports.teleport(returnPoint(a.position, a.yaw), a.yaw);
+      else {
+        // Warn once and stop: without its return point the catch would fade the player in place every second.
+        this.ports.warn(`dragonspine: the walker catch's anchor "${ph.target}" is missing; the catch is off`);
+        this.broken = true;
+      }
       this.ports.fade(0, CATCH_FADE_IN);
       this.phase = { kind: 'in', t: 0, release: ph.release };
       return;
@@ -144,7 +218,7 @@ export class WalkerCatch {
       return;
     }
     const p = this.ports.feet();
-    if (this.ports.standDown()) {
+    if (this.broken || this.ports.standDown()) {
       this.held = 0;
       return;
     }
@@ -173,31 +247,34 @@ export class WalkerCatch {
   }
 }
 
-/** Is (x, z) on the Aerie (its plateau box grown by AERIE_MARGIN)? */
+/** Is (x, z) on the Aerie: its plateau box grown by AERIE_MARGIN, or one of K1's summit-aerie landing areas (the shelf west of it)? */
 export const onAerieOf =
-  (aerie: Rect) =>
+  (aerie: Rect, landings: readonly { x0: number; x1: number; z0: number; z1: number }[] = []) =>
   (p: XZ): boolean =>
-    p.x >= aerie.minX - AERIE_MARGIN && p.x <= aerie.maxX + AERIE_MARGIN && p.z >= aerie.minZ - AERIE_MARGIN && p.z <= aerie.maxZ + AERIE_MARGIN;
+    (p.x >= aerie.minX - AERIE_MARGIN && p.x <= aerie.maxX + AERIE_MARGIN && p.z >= aerie.minZ - AERIE_MARGIN && p.z <= aerie.maxZ + AERIE_MARGIN) ||
+    landings.some((l) => p.x >= l.x0 && p.x <= l.x1 && p.z >= l.z0 && p.z <= l.z1);
 
 /** K7's glide service, read without its type (K7 PR 2 provides it; it may be absent). */
 const glideService = (ctx: Pick<CoreContext, 'services'>): { catchArmed?: boolean } | undefined =>
   (ctx.services.get as (name: string) => unknown)('glide') as { catchArmed?: boolean } | undefined;
 
-/** Wires the walker catch and its triggers to a context; returns the catch and the remover. */
+/**
+ * Wires the walker catch to a context; returns the catch and the remover. The volumes are tested directly on the feet each tick
+ * (the same yawed-box test as TriggerVolumes), so they are not registered as triggers.
+ */
 export function installWalkerCatch(
-  ctx: Pick<CoreContext, 'player' | 'anchors' | 'services' | 'systems' | 'triggers' | 'hud'>,
+  ctx: Pick<CoreContext, 'player' | 'anchors' | 'services' | 'systems' | 'hud'>,
   volumes: readonly CatchVolume[],
-  aerie: Rect,
+  onAerie: (p: XZ) => boolean,
   heightAt: HeightFn,
 ): { walker: WalkerCatch; dispose: () => void } {
   const offs: Array<() => void> = [];
-  for (const v of volumes) offs.push(ctx.triggers.add({ id: v.id, shape: { type: 'box', center: v.centre, half: v.half, yaw: v.yaw } }));
   const walker = new WalkerCatch({
     feet: () => ctx.player.feet,
     heightAt,
-    standDown: () => standsDown(ctx.services.get('movementMode')?.current, glideService(ctx)),
+    standDown: () => standsDown(ctx.services.get('movementMode')?.current, glideService(ctx)) || busyElsewhere(ctx),
     inCatch: (p) => inAnyVolume(volumes, p),
-    onAerie: onAerieOf(aerie),
+    onAerie,
     anchor: (id) => {
       const a = ctx.anchors.find(id);
       return a ? { position: a.position, yaw: a.yaw } : undefined;

@@ -1,5 +1,6 @@
-// Glide ledge dressing (PR 2, agreed with K7): at each of K1's six lips a launch deck (a flat stone slab, its top level with the
-// highest ground under it, so there is a flat stand of about 3 m behind the lip), a wind banner beside it and the anchor
+// Glide ledge dressing (PR 2, agreed with K7): at each of K1's six lips a launch deck (a flat stone slab, its top DECK.h over the
+// highest ground under it, lengthened back up a falling lip until its back edge meets the slope, so it is walked onto from behind
+// and there is a flat stand of at least 3 m behind the lip), a wind banner beside it and the anchor
 // `dragonspine.glide.<ledgeId>.launch` at the lip, facing K1's launch heading (K7 PR 2 makes it `GlideLedgeDef.anchorId`). One
 // landing marker and `dragonspine.glide.<ledgeId>.landing` per landing area (for tests). Nothing stands in K1's 60 m launch run.
 import type { Act3GlideLedgeId } from '../region/act3/act3Glide';
@@ -9,11 +10,25 @@ import { a, emptyPart, open, solid, type Part } from './helpers';
 import type { XZ } from './inputs';
 import { clearOfRuns, compassOf, forwardOf, freeStand, GLIDE_LEDGE_IDS, type SummitSites } from './summitSites';
 
-/** The deck: 6 m across the lane, 4 m along it, its front edge 0.5 m past the lip, 0.3 m over the highest ground within 1 m. */
+/** The deck: 6 m across the lane, at least 4 m along it, its front edge 0.5 m past the lip, 0.3 m over the highest ground under its first 4 m. */
 export const DECK = { w: 6, d: 4, h: 0.3, past: 0.5 } as const;
 /** The flat stand reaches this far behind the lip (on the deck). */
 export const STAND_BACK = 3;
 const BANNER_SIDE = 6;
+/** The largest step up from the ground onto the deck's back edge (under the controller's 0.4 m auto-step). */
+export const DECK_STEP = 0.35;
+/** How far the deck may be lengthened back up the slope. */
+const DECK_MAX_EXTRA = 6;
+
+/** The largest rise from the ground to the deck top along the deck's back edge (sampled every 0.5 m). */
+export function backStep(h: (x: number, z: number) => number, deck: StructureSpec, f: XZ, top: number): number {
+  const side = { x: -f.z, z: f.x };
+  const bx = deck.x - (f.x * deck.footprint[1]) / 2;
+  const bz = deck.z - (f.z * deck.footprint[1]) / 2;
+  let worst = -Infinity;
+  for (let v = -deck.footprint[0] / 2; v <= deck.footprint[0] / 2 + 1e-9; v += 0.5) worst = Math.max(worst, top - h(bx + side.x * v, bz + side.z * v));
+  return worst;
+}
 
 export interface GlideLedgeInfo {
   launch: Record<Act3GlideLedgeId, XZ>;
@@ -38,9 +53,19 @@ export function glideLedgesLayout(s: SummitSites, avoid: readonly StructureSpec[
     const l = s.ledges[id];
     const f = forwardOf(l);
     const yaw = Math.round(((((l.heading * 180) / Math.PI) % 360) + 360) % 360 * 100) / 100;
-    const back = DECK.d / 2 - DECK.past;
-    const deck = solid(`dragonspine-glide-${id}-deck`, 'rock', l.ledge.x - f.x * back, l.ledge.z - f.z * back, DECK.w, DECK.d, DECK.h, yaw);
-    const top = groundRange(deck, s.h, 1).max + DECK.h;
+    const at = (depth: number) => {
+      const back = depth / 2 - DECK.past;
+      return solid(`dragonspine-glide-${id}-deck`, 'rock', l.ledge.x - f.x * back, l.ledge.z - f.z * back, DECK.w, depth, DECK.h, yaw);
+    };
+    // The top is DECK.h over the highest ground under the base footprint (margin 0). On a lip that falls toward the drop the ground
+    // behind the deck rises above that, so the deck is lengthened back up the slope (the slope then meets its top) until every point
+    // of its back edge is within DECK_STEP of the ground: a walker steps on from behind with no jump. The structure builder raises a
+    // rock to its height over the highest ground within 1 m, so the spec's height is the difference (it can be below zero).
+    const top = groundRange(at(DECK.d), s.h, 0).max + DECK.h;
+    let depth = DECK.d;
+    while (depth < DECK.d + DECK_MAX_EXTRA && backStep(s.h, at(depth), f, top) > DECK_STEP) depth += 0.25;
+    const slab = at(depth);
+    const deck: StructureSpec = { ...slab, height: Math.round((top - groundRange(slab, s.h, 1).max) * 1000) / 1000 };
     deckTop[id] = top;
     // The banner: beside the deck (left of the lane), on ground level enough for a pole; never in the run.
     const side = { x: -f.z, z: f.x };

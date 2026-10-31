@@ -16,9 +16,9 @@ import waystonesPlugin from '../waystones/waystones.plugin';
 import { DRAGONSPINE_NPCS } from './npcDefs';
 import dragonspinePlugin from './dragonspine.plugin';
 import { COLLAPSED_CAVE_DOOR_ID, COLLAPSED_CAVE_ID, ROCKFALL_BLOCKER_ID, WYRMWATCH_HALL_DOOR_ID, WYRMWATCH_HALL_ID } from './interiors';
-import { D06_GATE_OPEN_FLAG, D06_STARTED_FLAG, DRAGONSPINE_OPEN_FLAG, M34_COMPLETE_FLAG, R16_ROCKFALL_CLEARED_FLAG, R16_STARTED_FLAG } from './flags';
+import { D06_COMPLETE_FLAG, D06_GATE_OPEN_FLAG, D06_STARTED_FLAG, DRAGONSPINE_OPEN_FLAG, M32_COMPLETE_FLAG, M34_COMPLETE_FLAG, R16_CHOICE_FLAG, R16_GIVE, SKARL_DEFEATED, SKARL_OUTCOME_FLAG, m33AnchorFlag, R16_ROCKFALL_CLEARED_FLAG, R16_STARTED_FLAG } from './flags';
 import { SUMMIT_OPEN_WHEN } from '../region/act3Containment';
-import { CATCH_LIP_ANCHOR } from './chasmCatch';
+import { CATCH_LIP_ANCHOR, returnPoint } from './chasmCatch';
 import { FROSTFANG_KEEP_DOOR_ID, FROSTFANG_KEEP_ID } from './interiors';
 import { dragonspineBuild } from './layout';
 import { heightAt } from '../terrain/heightfield';
@@ -226,8 +226,15 @@ describe('the summit booted with its neighbours', () => {
     await arrive(t, { x: at.position.x, y: at.position.y + 0.2, z: at.position.z }, at.yaw);
     await t.run(10);
     expect(ws.isLit('frostfang-aerie')).toBe(true);
-    await load(t, {});
-    await t.run(5);
+    // A waystone save without the stone (made before it was lit), restored while standing on the shelf: the section load alone
+    // drops it (proving the drop), and the watcher's next tick lights it again.
+    const section = (t.game.ctx.persist as unknown as { items: Map<string, { load(d: unknown, v: number): void }> }).items.get('waystones')!;
+    section.load({ lit: [] }, 1);
+    expect(ws.isLit('frostfang-aerie')).toBe(false);
+    await t.run(2);
+    expect(ws.isLit('frostfang-aerie')).toBe(true);
+    // The whole load path (sections, then save.loaded) leaves it lit by the time the load returns.
+    t.game.ctx.persist.loadAll([{ key: 'waystones', version: 1, data: { lit: [] } }], t.game.ctx.events, 'test');
     expect(ws.isLit('frostfang-aerie')).toBe(true);
   }, PLUGIN_TEST_TIMEOUT);
 
@@ -252,7 +259,9 @@ describe('the summit booted with its neighbours', () => {
     await t.run(120);
     expect(dragon().catchState().catches).toBe(1);
     expect(dragon().catchState().lastTarget).toBe(CATCH_LIP_ANCHOR);
-    expect(near(t.game.ctx.player.feet, lip)).toBeLessThan(3);
+    const back = returnPoint(lip, t.game.ctx.anchors.get(CATCH_LIP_ANCHOR).yaw);
+    expect(near(t.game.ctx.player.feet, back)).toBeLessThan(1);
+    expect(near(t.game.ctx.player.feet, lip)).toBeGreaterThan(1.5);
   }, PLUGIN_TEST_TIMEOUT);
 
   it('re-derives the readers on save.loaded both ways: the aerie gate, the lodge fire', async () => {
@@ -267,4 +276,34 @@ describe('the summit booted with its neighbours', () => {
     expect(shown().has('aerie-gate')).toBe(true);
     expect(shown().has('lodge-fire')).toBe(false);
   }, PLUGIN_TEST_TIMEOUT);
+
+  it('re-derives the net, the axe, the banner and the roost on save.loaded both ways, and turns a reader off on a flag change', async () => {
+    const t = await bootSummit();
+    const shown = () => new Set(t.game.ctx.services.get('dragonspine')!.shownToggles());
+    const on = { [m33AnchorFlag(2)]: true, [R16_CHOICE_FLAG]: R16_GIVE, [M32_COMPLETE_FLAG]: true, [SKARL_OUTCOME_FLAG]: SKARL_DEFEATED, [D06_COMPLETE_FLAG]: true };
+    const check = (want: boolean) => {
+      const s = shown();
+      expect(s.has('net-2'), 'net-2 hangs while anchor 2 is uncut').toBe(!want);
+      expect(s.has('net-1')).toBe(true);
+      expect(s.has('hoard-axe')).toBe(want);
+      expect(s.has('skarl-banner-burned')).toBe(want);
+      expect(s.has('drake-roost')).toBe(want);
+    };
+    check(false);
+    await load(t, on);
+    check(true);
+    await load(t, {});
+    check(false);
+    await load(t, { ...on, [SKARL_OUTCOME_FLAG]: 'spared' });
+    expect(shown().has('skarl-banner-burned')).toBe(false);
+    expect(shown().has('drake-roost')).toBe(true);
+    // flag.changed: the axe goes when the choice changes, the gate closes again when gateOpen is cleared.
+    t.game.ctx.state.setFlag(R16_CHOICE_FLAG, 'keep');
+    expect(shown().has('hoard-axe')).toBe(false);
+    t.game.ctx.state.setFlag(D06_GATE_OPEN_FLAG, true);
+    expect(shown().has('aerie-gate')).toBe(false);
+    t.game.ctx.state.setFlag(D06_GATE_OPEN_FLAG, false);
+    expect(shown().has('aerie-gate')).toBe(true);
+  }, PLUGIN_TEST_TIMEOUT);
 });
+
