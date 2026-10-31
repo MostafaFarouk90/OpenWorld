@@ -15,6 +15,7 @@ import { QUEST_PROPS } from '../content/props';
 import { CARRY_ITEMS } from '../content/carry';
 import { QUEST_NOTES } from '../content/notes';
 import { ACT2_PROPS, ACT2_CARRY, ACT2_QUEST_NOTES } from '../content/act2';
+import { ACT3_PROPS, ACT3_CARRY, ACT3_QUEST_NOTES } from '../content/act3';
 
 export interface ObjectiveLintAllow {
   quest: string;
@@ -99,8 +100,8 @@ export function unlistedObjectiveHits(hits: readonly ObjectiveHit[], allow: read
 export function shippedObjectiveInput(): ObjectiveLintInput {
   return {
     quests: questDefs,
-    props: [...QUEST_PROPS, ...ACT2_PROPS],
-    carry: [...CARRY_ITEMS, ...ACT2_CARRY],
-    notes: new Set([...QUEST_NOTES, ...ACT2_QUEST_NOTES].map((n) => n.interactableId.replace(/^use:/, ''))),
+    props: [...QUEST_PROPS, ...ACT2_PROPS, ...ACT3_PROPS],
+    carry: [...CARRY_ITEMS, ...ACT2_CARRY, ...ACT3_CARRY],
+    notes: new Set([...QUEST_NOTES, ...ACT2_QUEST_NOTES, ...ACT3_QUEST_NOTES].map((n) => n.interactableId.replace(/^use:/, ''))),
   };
 }

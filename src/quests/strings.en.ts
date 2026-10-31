@@ -4,6 +4,7 @@ import { questStringsDensityA } from './strings.density.en';
 import { questStringsDensityB } from './strings.density-b.en';
 import { questStringsDensityC } from './strings.density-c.en';
 import { ACT2_QUEST_STRINGS } from './content/act2/strings';
+import { ACT3_QUEST_STRINGS } from './content/act3';
 
 export const questStrings: Record<string, string> = {
   ...questStringsHarrowmark,
@@ -88,4 +89,6 @@ export const questStrings: Record<string, string> = {
   ...questStringsDensityC,
   // Act 2 Cinderreach quests (A12)
   ...ACT2_QUEST_STRINGS,
+  // Act 3 Greyfen quests (K12)
+  ...ACT3_QUEST_STRINGS,
 };

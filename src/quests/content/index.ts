@@ -20,6 +20,7 @@ import { r03 } from './r03.quest';
 import { r04 } from './r04.quest';
 
 import { ACT2_QUEST_DEFS } from './act2';
+import { ACT3_QUEST_DEFS } from './act3';
 
 export const questDefs: QuestDef[] = [t03, t12, m01, m02, m03, m04, m05, d01, r01, r02,
-  m06, m07, m08, m09, m10, r03, r04, d02, ...ACT2_QUEST_DEFS];
+  m06, m07, m08, m09, m10, r03, r04, d02, ...ACT2_QUEST_DEFS, ...ACT3_QUEST_DEFS];

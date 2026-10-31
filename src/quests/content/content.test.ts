@@ -25,7 +25,9 @@ describe('quest content', () => {
       // Act 2 (A12)
       'm11', 'm12', 'r06', 'r05', 'm13', 'r07', 'r11', 'm14', 'm15', 'd03',
       // Act 2 Oldsmoke surface (A13)
-      'm16', 'm17', 'r09', 'r08', 'm18', 'r10', 'm19', 'm20', 'm21', 'd04', 'm22']);
+      'm16', 'm17', 'r09', 'r08', 'm18', 'r10', 'm19', 'm20', 'm21', 'd04', 'm22',
+      // Act 3 Greyfen (K12)
+      'm23', 'm24', 'r12', 'm25', 'r14', 'r13', 'm26', 'm27', 'd05']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
