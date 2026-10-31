@@ -96,6 +96,12 @@ const plugin: GamePlugin = {
       },
       object: (id) => ctx.actors.get(id)?.root ?? ctx.scene.getObjectByName(id) ?? undefined,
       playerObject: () => ctx.player.actor.root ?? undefined,
+      ysmerythAt: (id) => {
+        const a = id === null ? undefined : ctx.actors.get(id);
+        if (a?.root) return a.worldPosition(tmp);
+        const o = ctx.scene.getObjectByName('ysmeryth');
+        return o ? o.getWorldPosition(tmp) : undefined;
+      },
       ensure: (key) => {
         if (canRender) ensure(key);
       },
@@ -118,7 +124,9 @@ const plugin: GamePlugin = {
       ev.on('movement.mode', (e) => router.movementMode(e)),
       ev.on('wyrm.hathren', (e) => router.hathren(e)),
       ev.on('wyrm.ysmeryth', (e) => router.ysmeryth(e, ysmerythId())),
-      ev.on('trial.ended', () => router.trialEnded()),
+      ev.on('trial.ended', (e) => {
+        if (e.trialId === YSMERYTH_TRIAL_ID) router.trialEnded(e.reason);
+      }),
       ev.on('actor.despawned', (e) => router.actorGone(e.actorId, ysmerythId())),
       ev.on('actor.died', (e) => router.actorGone(e.actorId, ysmerythId())),
       ev.on('dragon.flight', (e) => router.dragonFlight(e)),
