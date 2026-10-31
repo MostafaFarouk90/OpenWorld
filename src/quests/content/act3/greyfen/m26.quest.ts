@@ -17,10 +17,17 @@ export const M26_GUARD_DOWN = 'story.m26.guardDown';
 export const M26_WOKE = 'story.m26.woke';
 export const M26_VOICE_NPC = 'scene.m26.voice';
 export const M26_VOICE_SCENE = 'scene-m26-voice';
+/** The wake set piece (K12 follow-up): Cael at the shore sees Hathren wake; `M26_WAKE_SEEN` marks a played scene. */
+export const M26_WAKE_NPC = 'scene.m26.wake';
+export const M26_WAKE_SCENE = 'scene-m26-wake';
+export const M26_WAKE_SEEN = 'story.m26.wakeSeen';
+/** Story event raised after `story.m26.woke` is written: the wake step's credit (not Hathren's own beat, which opens the scene). */
+export const M26_WOKE_EVENT = 'story.m26.woke';
+export const M26_WAKE_RADIUS = 12;
 
 /**
  * M26 Quench-Tongue Wakes. Gytha takes Cael to Hathren's Mere, where hunters have netted the Quench-Tongue. Hathren wakes
- * (K6a's set piece), the net-cutters are beaten (four spearmen, a harpooner, three leeches), five things are read on the shore,
+ * (K6a's set piece, framed by K12's wake scene; the step is credited when the scene ends), the net-cutters are beaten (four spearmen, a harpooner, three leeches), five things are read on the shore,
  * the four nets are cut (each writes `story.m26.net.N`; the fourth `story.m26.netsCut`), and the rite is paid at the shrine
  * (10 Burn: the shipped rekindle, `shrine.hathrens-mere.lit`). Hathren's voice is heard when she quiets, she dives and leaves
  * her scale, which Cael takes. Dragons +5 on completion.
@@ -36,7 +43,7 @@ export const m26: QuestDef = {
     { id: 'brief', type: 'talk', target: 'gytha', textKey: 'quest.m26.brief' },
     { id: 'mere', type: 'talk', target: 'gytha', textKey: 'quest.m26.mere' },
     { id: 'shore', type: 'talk', target: 'leofa', textKey: 'quest.m26.shore' },
-    story('wake', 'quest.m26.wake', 'wyrm.hathren', { match: { beat: 'wake' }, doneWhen: { flag: M26_WOKE, equals: true } }),
+    story('wake', 'quest.m26.wake', M26_WOKE_EVENT, { doneWhen: { flag: M26_WOKE, equals: true } }),
     story('guards', 'quest.m26.guards', 'story.m26.guardDown', { doneWhen: { flag: M26_GUARD_DOWN, equals: true } }),
     reads('search', 'quest.m26.search', M26_SEARCHES),
     interacts('nets', 'quest.m26.nets', M26_NETS),
