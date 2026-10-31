@@ -99,7 +99,7 @@ export const ACT3_GLIDE_UPDRAFTS: readonly UpdraftDef[] = [
 ];
 
 /** The launch run off the lip, where the ledge dressing (K4) and the jump decide clearance, not the terrain. */
-const LIP_RUN = 60;
+export const LIP_RUN = 60;
 
 export interface GlideRun {
   /** True when the glide first touches ground inside a landing area. */
