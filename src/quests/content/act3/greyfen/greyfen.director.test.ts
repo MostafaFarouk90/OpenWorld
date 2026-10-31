@@ -50,6 +50,17 @@ describe('M23: the causeway and the first sight', () => {
     expect(r.flag('story.m23.knotOut.2')).toBe(false);
   });
 
+  it('plays the first-sight scene for a player standing in the sphere even when its once-volume is already spent', async () => {
+    const r = fresh();
+    upTo(r, 'm23', [], ['m23', 'sight']);
+    const { GREYFEN_LAYOUT } = await import('../../../../greyfen/greyfen.layout');
+    const t = GREYFEN_LAYOUT.triggers.find((x) => x.id === 'trg.greyfen.mere.first-sight') as { x: number; z: number };
+    r.player.feet.x = t.x + 12; // inside the 20 m sphere, and on the far side of it from the shrine
+    r.player.feet.z = t.z - 12;
+    r.step(70);
+    expect(r.started('scene-m23-sight')).toBe(true);
+  });
+
   it('plays the first-sight scene when the step is current and Cael is in the trigger, once the floor is free', () => {
     const r = fresh();
     upTo(r, 'm23', [], ['m23', 'sight']);
@@ -90,6 +101,14 @@ describe('M23: the causeway and the first sight', () => {
 });
 
 describe('M24: the horn and the first run', () => {
+  it('takes the horn back at the hand-in, and is silent when it was never held', () => {
+    const r = fresh();
+    gate(r);
+    autoplayAll(r, ['m23', 'm24']);
+    expect(r.inv.get('m24-ferry-horn') ?? 0).toBe(0);
+    expect(r.qs('m24')).toBe('completed');
+  });
+
   it('counts a dive start, but a surfacing only once the horn is in hand', () => {
     const r = fresh();
     upTo(r, 'm24', ['m23'], ['m24', 'dive']);

@@ -29,8 +29,8 @@ export const EXTRA_ANCHORS: readonly ExtraAnchor[] = [
   { id: 'greyfen.m27.keeper', near: 'greyfen.m27.brood.2', dx: 5, dz: 3, heading: 270 },
   // R13: Gytha waits by the chapel door
   { id: 'greyfen.r13.gytha', near: 'greyfen.chapel.door', dx: -6, dz: 4, heading: 90 },
-  // D05: Gytha waits at the Deeps door
-  { id: 'greyfen.d05.gytha', near: 'greyfen.deeps.door', dx: -5, dz: -4, heading: 90 },
+  // D05: Gytha waits at the Deeps door, on the yard side (the ruin's front stands on the other side of the door: z - 13 to z - 1)
+  { id: 'greyfen.d05.gytha', near: 'greyfen.deeps.door', dx: -5, dz: 4, heading: 50 },
 ];
 
 const byId = new Map(GREYFEN_LAYOUT.anchors.map((a) => [a.id, a]));

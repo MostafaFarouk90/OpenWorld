@@ -19,6 +19,9 @@ const SIGHT_CENTRE = (() => {
   return t ?? { x: Infinity, z: Infinity };
 })();
 
+/** K3's first-sight sphere radius (causeway.ts). */
+export const SIGHT_RADIUS = 20;
+
 export const M25_DRINK_TICKS = 180;
 export const M25_BURN_RELIEF = 20;
 export const M25_SALVE = 'fen-salve';
@@ -27,7 +30,13 @@ export function installM23(k: Kit): void {
   // The first sight of the Mere: a set piece (six lines) once the sight step is current and Cael stands in the trigger, or has
   // walked on past it (a gap in the trigger must not strand the quest: the player is as near the shrine as its centre is).
   const trig = k.ctx.anchors.find('greyfen.mere.shrine');
-  const inTrigger = (): boolean => k.ctx.triggers.isInside?.(M23_SIGHT_TRIGGER, 'player') === true;
+  // The layout's trigger is `once`, so the volume is gone after its first enter and `isInside` cannot be trusted later: the sphere
+  // (K3: radius 20 m) is measured here instead, and the volume still counts for the tick it fires.
+  const inTrigger = (): boolean => {
+    if (k.ctx.triggers.isInside?.(M23_SIGHT_TRIGGER, 'player') === true) return true;
+    const f = k.ctx.player.feet;
+    return Math.hypot(f.x - SIGHT_CENTRE.x, f.z - SIGHT_CENTRE.z) <= SIGHT_RADIUS;
+  };
   const past = (): boolean => {
     if (!trig) return false;
     const centre = SIGHT_CENTRE;
@@ -54,6 +63,11 @@ export function installM24(k: Kit): void {
   });
   k.on('save.loaded', () => {
     if (k.flag(M24_BLOWN) && k.active('m24')) k.set(M24_FERRY_OPEN);
+  });
+  // the hand-in takes the horn back (silent when it is not held: a dev jump completes M24 without playing it)
+  k.on('quest.completed', (e) => {
+    const inv = k.ctx.services.get('inventory');
+    if (e.questId === 'm24' && inv?.has('m24-ferry-horn')) inv.remove('m24-ferry-horn', 1);
   });
 }
 
