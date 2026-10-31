@@ -1,8 +1,9 @@
 // Dialogue for the Act 1 side jobs: the new NPCs' own trees, the readable notes, and the start rules and nodes the jobs add to
 // existing givers (Hob, Edda, Aldwin, Tobb). `withSideJobs` puts the rules in front of a giver's own, each gated so it matches only
 // while its job is on offer or running, and appends the nodes. A giver whose job is not on offer behaves exactly as before.
-import type { Condition, DialogueDef, DialogueNode } from '../../types';
+import type { Condition, DialogueDef } from '../../types';
 import { startingNote } from './boards';
+import { HM_ADDITIONS, HM_DIALOGUES, HM_STARTING_NOTES, type Addition } from './dialogues.hm';
 
 const q = (id: string, state: 'inactive' | 'active' | 'completed'): Condition => ({ quest: id, state });
 const done = (quest: string, objective: string): Condition => ({ objective: [quest, objective], done: true });
@@ -17,7 +18,7 @@ export const J03_TABLET = startingNote({
   id: 'note-j03-tablet', anchorId: 'j03.barrow-tablet', quest: 'j03', flag: 'story.j03.tabletRead',
   speakers: ['note', 'note', 'cael'], look: 'grave',
 });
-export const SIDE_STARTING_NOTES = [J03_BLUFF, J03_TABLET];
+export const SIDE_STARTING_NOTES = [J03_BLUFF, J03_TABLET, ...HM_STARTING_NOTES];
 
 // ---- new NPCs ----
 const orlaP = 'dialogue.npc-orla.';
@@ -54,17 +55,16 @@ export const npcOsmund: DialogueDef = {
   ],
 };
 
-export const SIDE_DIALOGUES: DialogueDef[] = [npcOrla, npcOsmund, ...SIDE_STARTING_NOTES.map((n) => n.dialogue)];
+export const SIDE_DIALOGUES: DialogueDef[] = [npcOrla, npcOsmund, ...HM_DIALOGUES, ...SIDE_STARTING_NOTES.map((n) => n.dialogue)];
 
 // ---- additions to existing givers ----
-interface Addition { rules: { when: Condition; node: string }[]; nodes: DialogueNode[] }
 
 const hob = 'dialogue.npc-hob.';
 const edda = 'dialogue.npc-edda.';
 const aldwin = 'dialogue.npc-aldwin.';
 const tobb = 'dialogue.npc-tobb.';
 
-const ADDITIONS: Record<string, Addition> = {
+const BRIGHTWATER_ADDITIONS: Record<string, Addition> = {
   // j01: offered once M02 is done; the report waits for the third lamb
   'npc-hob': {
     rules: [
@@ -153,6 +153,13 @@ const ADDITIONS: Record<string, Addition> = {
     ],
   },
 };
+
+/** Both rounds' additions, keyed by the giver's dialogue id (a giver in both gets the Harrowmark rules first). */
+const ADDITIONS: Record<string, Addition> = { ...BRIGHTWATER_ADDITIONS };
+for (const [id, add] of Object.entries(HM_ADDITIONS)) {
+  const old = ADDITIONS[id];
+  ADDITIONS[id] = old ? { rules: [...add.rules, ...old.rules], nodes: [...old.nodes, ...add.nodes] } : add;
+}
 
 /** Adds the side jobs' start rules (in front) and nodes (behind) to the givers' own dialogues. */
 export function withSideJobs(defs: DialogueDef[]): DialogueDef[] {

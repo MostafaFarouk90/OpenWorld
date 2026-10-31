@@ -18,5 +18,5 @@ export const j02: QuestDef = {
     { id: 'osmund', type: 'talk', target: 'osmund', textKey: 'quest.j02.osmund' },
     { id: 'edda', type: 'talk', target: 'edda', textKey: 'quest.j02.edda' },
   ],
-  rewards: [{ xp: 60 }, { giveGold: 12 }],
+  rewards: [{ xp: 50 }, { giveGold: 12 }],
 };

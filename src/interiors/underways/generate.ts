@@ -3,6 +3,8 @@ import type { InteriorDef, LocalRect, RoomDef } from '../types';
 
 export const UNDERWAYS_ID = 'underways';
 export const UNDERWAYS_ARENA_GATE = 'underways.arena.gate';
+/** Act 1 side job j11: the grate across the cart-track spur (closed until the Sewer Master Key has opened it). */
+export const UNDERWAYS_CARTWAY_GATE = 'underways.cartway.gate';
 /** The shipped layout. Changing it (or the algorithm) moves every corridor: update the pinned hash in generate.test.ts. */
 export const UNDERWAYS_SEED = 0x0d02;
 
@@ -198,6 +200,44 @@ export function planUnderways(seed: number): UnderwaysPlan {
   return { links, kept, mainPath, kennels, arenaHook, loops };
 }
 
+
+/** The cart-track spur of side job j11 (plans/act1-side-content.md): where it branches and which way it runs. */
+export interface CartSpur {
+  /** the dead-end cell it leaves, and the unit step (+/-1 along one axis) away from that cell */
+  from: Cell;
+  dir: { x: number; z: number };
+}
+
+/**
+ * Picks the spur: the first side-branch dead end (not on the main path, not a kennel) that has two free lattice cells in a
+ * straight line beyond it, trying east, north, west, south. The spur is a short corridor behind a grate, two cells long, ending
+ * in a small yard where the carts stopped. Deterministic, so the shipped seed always gives the same spur; a seed with no such
+ * dead end gets none (only the shipped seed is played).
+ */
+export function planCartSpur(plan: UnderwaysPlan): CartSpur | null {
+  const onMain = new Set<Cell>(plan.mainPath);
+  const free = (c: number, r: number) =>
+    c >= 0 && r >= 0 && c < LATTICE.cols && r < LATTICE.rows && !inArenaBlock(c, r) && !plan.kept.has(cellOf(c, r));
+  for (const i of [...plan.kept].sort((a, b) => a - b)) {
+    if (onMain.has(i) || plan.kennels.includes(i) || (plan.links.get(i)?.size ?? 0) !== 1) continue;
+    for (const [dc, dr] of [[1, 0], [0, 1], [-1, 0], [0, -1]] as const) {
+      const c = colOf(i);
+      const r = rowOf(i);
+      // both spur cells free, and no kept cell touching either (a spur must not break into another tunnel)
+      const cells = [[c + dc, r + dr], [c + 2 * dc, r + 2 * dr]] as const;
+      if (!cells.every(([x, y]) => free(x, y))) continue;
+      const touches = cells.some(([x, y]) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([ex, ey]) => {
+        const nx = x + ex!;
+        const ny = y + ey!;
+        return !(nx === c && ny === r) && nx >= 0 && ny >= 0 && nx < LATTICE.cols && ny < LATTICE.rows && plan.kept.has(cellOf(nx, ny)) && !cells.some(([cx, cy]) => cx === nx && cy === ny);
+      }));
+      if (touches) continue;
+      return { from: i, dir: { x: dc, z: dr } };
+    }
+  }
+  return null;
+}
+
 const rect = (x0: number, z0: number, x1: number, z1: number): LocalRect => ({
   x0: Math.min(x0, x1),
   z0: Math.min(z0, z1),
@@ -301,12 +341,50 @@ export function generateUnderways(seed: number = UNDERWAYS_SEED): InteriorDef {
     return spots.map((s, j) => ({ id: `underways.spawn.hound-${n * 3 + j + 1}`, ...s, facing: prev }));
   });
 
+  // Act 1 side job j11 (quests thread; additive): a short spur behind a grate. Corridor, a small chamber, corridor, and a yard
+  // where the carts stopped; the grate stands in the first corridor. Anchors and triggers are named for src/quests/content/side.
+  const spur = planCartSpur(plan);
+  const spurBlockers: InteriorDef['blockers'] = [];
+  const spurAnchors: InteriorDef['anchors'] = [];
+  const spurTriggers: InteriorDef['triggers'] = [];
+  if (spur) {
+    const o = centre(spur.from);
+    const d = spur.dir;
+    const at = (t: number, side = 0) => ({ x: o.x + d.x * t - d.z * side, z: o.z + d.z * t + d.x * side });
+    const box = (t0: number, t1: number, half: number) => {
+      const p0 = at(t0, -half);
+      const p1 = at(t1, half);
+      return rect(p0.x, p0.z, p1.x, p1.z);
+    };
+    rooms.push(
+      { id: 'j11-spur-1', ...box(2, 8, CORRIDOR_HALF), height: CORRIDOR_HEIGHT },
+      { id: 'j11-spur-c1', ...box(6, 10, CHAMBER_HALF), height: CORRIDOR_HEIGHT },
+      { id: 'j11-spur-2', ...box(8, 16, CORRIDOR_HALF), height: CORRIDOR_HEIGHT },
+      { id: 'j11-spur-yard', ...box(12.5, 19.5, KENNEL_HALF), height: KENNEL_HEIGHT },
+    );
+    torches.push({ ...at(5, CORRIDOR_HALF - 0.1), y: TORCH_Y }, { ...at(15.5, -(KENNEL_HALF - 0.1)), y: TORCH_Y }, { ...at(18, KENNEL_HALF - 0.1), y: TORCH_Y });
+    spurBlockers.push({ id: UNDERWAYS_CARTWAY_GATE, rect: box(3.2, 4.6, CORRIDOR_HALF), height: CORRIDOR_HEIGHT, startClosed: true });
+    const face = at(0);
+    spurAnchors.push(
+      { id: 'j11.grate', ...at(2.6), facing: at(10) },
+      { id: 'j11.track-1', ...at(8), facing: at(16) },
+      { id: 'j11.track-2', ...at(13), facing: at(19.5) },
+      { id: 'j11.waybill', ...at(18.6, 0), facing: face },
+      { id: 'j11.spawn.hound-1', ...at(17, 1.6), facing: face },
+      { id: 'j11.spawn.hound-2', ...at(17, -1.6), facing: face },
+    );
+    const trk = (id: string, t: number): InteriorDef['triggers'][number] => ({
+      id, center: { x: at(t).x, y: 2, z: at(t).z }, half: { x: 1.6, y: 2, z: 1.6 },
+    });
+    spurTriggers.push(trk('trg.underways.j11-track-1', 8), trk('trg.underways.j11-track-2', 13));
+  }
+
   return {
     id: UNDERWAYS_ID,
     site: { ...HARROWMARK_SITES.underways },
     rooms,
     pillars: [],
-    blockers: [{ id: UNDERWAYS_ARENA_GATE, rect: gate, height: CORRIDOR_HEIGHT }],
+    blockers: [{ id: UNDERWAYS_ARENA_GATE, rect: gate, height: CORRIDOR_HEIGHT }, ...spurBlockers],
     torches,
     anchors: [
       // The exit stands against the stair wall (-Z), the entry 3.5 m in, facing into the tunnels.
@@ -332,6 +410,7 @@ export function generateUnderways(seed: number = UNDERWAYS_SEED): InteriorDef {
         [-7, 7],
         [7, 7],
       ].map(([dx, dz], j) => ({ id: `underways.summon.${j + 1}`, x: bc.x + dx!, z: bc.z + dz!, facing: arenaCentre })),
+      ...spurAnchors,
     ],
     triggers: [
       {
@@ -339,6 +418,7 @@ export function generateUnderways(seed: number = UNDERWAYS_SEED): InteriorDef {
         center: { x: edge.x + dir.x * 1.5, y: 2, z: edge.z + dir.z * 1.5 },
         half: fromWest ? { x: 1.5, y: 2, z: 3 } : { x: 3, y: 2, z: 1.5 },
       },
+      ...spurTriggers,
     ],
     doors: [{ doorId: 'underways', outside: 'harrowmark.underways.door', inside: 'harrowmark.underways.entry', exit: 'harrowmark.underways.exit' }],
     environment: {

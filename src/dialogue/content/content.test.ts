@@ -41,7 +41,7 @@ describe('dialogue content', () => {
       // batch 4
       'armourer', 'keep-guard', 'grisel', 'clerk', 'wace',
       // Act 1 side jobs
-      'orla', 'osmund',
+      'orla', 'osmund', 'sergeant', 'crumb', 'chandler', 'dunstan',
       // Act 2 (A12)
       'osgar', 'brand', 'carter-bound', 'corwin', 'redmane', 'maud', 'beornwyn', 'ketta', 'pell', 'osric', 'hrolf', 'ealdred', 'wynne', 'lantern-keeper', 'prisoner', 'household-1', 'household-2', 'household-3', 'household-4', 'keeper',
       // Act 2 Oldsmoke (A13)

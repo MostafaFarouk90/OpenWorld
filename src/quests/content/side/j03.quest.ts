@@ -19,5 +19,5 @@ export const j03: QuestDef = {
     { id: 'wake', type: 'kill', target: 'ash-wraith', required: 2, spawnTag: 'j03.barrow', textKey: 'quest.j03.wake' },
     { id: 'tablet', type: 'talk', target: 'note-j03-tablet', textKey: 'quest.j03.tablet' },
   ],
-  rewards: [{ xp: 110 }, { giveGold: 25 }, { give: [{ itemId: 'healing-flask', count: 1 }] }],
+  rewards: [{ xp: 80 }, { giveGold: 25 }, { give: [{ itemId: 'healing-flask', count: 1 }] }],
 };

@@ -19,5 +19,5 @@ export const j01: QuestDef = {
     { id: 'lambs', type: 'carry', target: 'j01.fold', required: 3, textKey: 'quest.j01.lambs' },
     { id: 'report', type: 'talk', target: 'hob', textKey: 'quest.j01.report', when: done('lambs') },
   ],
-  rewards: [{ xp: 70 }, { giveGold: 15 }],
+  rewards: [{ xp: 55 }, { giveGold: 15 }],
 };

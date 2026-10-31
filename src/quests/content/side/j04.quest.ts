@@ -14,5 +14,5 @@ export const j04: QuestDef = {
     { id: 'fire', type: 'interact', target: 'use:j04-fire', textKey: 'quest.j04.fire' },
     { id: 'verse', type: 'talk', target: 'tobb', textKey: 'quest.j04.verse' },
   ],
-  rewards: [{ xp: 55 }, { giveGold: 10 }],
+  rewards: [{ xp: 50 }, { giveGold: 10 }],
 };
