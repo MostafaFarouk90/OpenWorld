@@ -14,7 +14,8 @@ export const MOVE_SFX_ACT3: Readonly<Record<string, Act3SfxKey>> = {
   'ysmeryth.sweep': 'sfx.ysmeryth.sweep',
   'ysmeryth.slam': 'sfx.ysmeryth.slam',
   'ysmeryth.breath': 'sfx.ysmeryth.breath',
-  'ysmeryth.call': 'sfx.ysmeryth.call',
+  // The keeper's call: the rising roar is the wind-up; the boom (`sfx.ysmeryth.call`) plays on the `call` beat.
+  'ysmeryth.call': 'sfx.ysmeryth.roar',
 };
 
 /** `actor.died` kinds and their death cue. */
@@ -34,6 +35,14 @@ export const HATHREN_BEAT_SFX: Readonly<Record<string, Act3SfxKey>> = {
   roar: 'sfx.wyrm.hathren.roar',
   quiet: 'sfx.wyrm.hathren.song',
   dive: 'sfx.wyrm.hathren.dive',
+};
+
+/** `wyrm.ysmeryth { beat }` cues that are one-shots: `takeoff` and `landed` also drive the wing-beat loop (see the router). */
+export const YSMERYTH_BEAT_SFX: Readonly<Record<string, Act3SfxKey>> = {
+  call: 'sfx.ysmeryth.call',
+  takeoff: 'sfx.ysmeryth.takeoff',
+  landed: 'sfx.ysmeryth.land',
+  pose: 'sfx.ysmeryth.settle',
 };
 
 /** One-shot cues with a single trigger each. */
@@ -65,6 +74,9 @@ export const WADE_STEP_METRES = 1.5;
 /** Below this speed (m/s) the player is standing, not stepping; above the cap a position jump (teleport) is not walking. */
 export const WADE_MIN_SPEED = 0.4;
 export const WADE_MAX_SPEED = 14;
+
+/** The loop name of Ysmeryth's trial wing-beats. */
+const YSMERYTH_LOOP = 'ysmeryth-wings';
 
 /** A table lookup that ignores prototype names (`toString`, `__proto__`). */
 const own = (table: Readonly<Record<string, Act3SfxKey>>, id: string): Act3SfxKey | undefined =>
@@ -225,6 +237,38 @@ export class Act3SfxRouter {
     const obj = this.ports.object(e.actorId);
     if (obj) this.startLoop(name, LOOP_SFX_ACT3.flight, obj);
     else this.flat(LOOP_SFX_ACT3.flight);
+  }
+
+  /**
+   * `wyrm.ysmeryth { beat }`. `call` is flat (it hits both sides). `takeoff` plays at her and attaches the wing-beat loop to
+   * her actor (once); `landed` always plays the land cue (it also follows a `trial.ended` that already dropped the loop) and
+   * detaches. `pose` (the Hearth scenes) is a short quiet one-shot, never a loop.
+   */
+  ysmeryth(e: { beat: string }, actorId: string | null): void {
+    const key = own(YSMERYTH_BEAT_SFX, e.beat);
+    if (!key) return;
+    if (e.beat === 'takeoff') {
+      if (actorId === null) return this.flat(key);
+      this.at(key, actorId);
+      const obj = this.ports.object(actorId);
+      this.startLoop(YSMERYTH_LOOP, LOOP_SFX_ACT3.flight, obj);
+    } else if (e.beat === 'landed') {
+      this.stopLoop(YSMERYTH_LOOP);
+      if (actorId === null) this.flat(key);
+      else this.at(key, actorId);
+    } else {
+      this.flat(key);
+    }
+  }
+
+  /** `trial.ended` (any reason, `yielded` included): her wings stop; a later `landed` beat still plays its cue. */
+  trialEnded(): void {
+    this.stopLoop(YSMERYTH_LOOP);
+  }
+
+  /** `actor.despawned` / `actor.died` of an actor: if it is hers, the wings stop. */
+  actorGone(actorId: string, ysmerythId: string | null): void {
+    if (ysmerythId !== null && actorId === ysmerythId) this.stopLoop(YSMERYTH_LOOP);
   }
 
   drakeChainStruck(): void {
