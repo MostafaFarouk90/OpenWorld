@@ -17,6 +17,7 @@ import type { ObjectiveDef } from '../quests/types';
 import { GREYFEN_SPAWNERS } from '../quests/content/act3/greyfen/spawners';
 import { GREYFEN_GROUP_OBJECTIVES } from '../quests/content/act3/greyfen/groups';
 import { GREYFEN_PROPS } from '../quests/content/act3/greyfen/props';
+import { DIVE_TUNING } from '../water/types';
 import { GREYFEN_DIVE_ROUTES as ROUTES, type GreyfenDiveRoute } from '../greyfen/water';
 /** The interiors' routes (K3) and the open M24 pool's (K7). */
 const GREYFEN_DIVE_ROUTES = [...(ROUTES as readonly GreyfenDiveRoute[]), m24Route() as GreyfenDiveRoute];
@@ -92,7 +93,10 @@ async function throughDoor(h: ChapterHarness, doorId: string, expect: string | n
   await h.runAsync(30);
 }
 
-/** Moves the player into whichever space (an interior, or the open) holds `at`, through the doors. */
+/**
+ * Moves the player into whichever space (an interior, or the open) holds `at`, through the doors. The door ids follow the
+ * Greyfen's interiors (chapel, hut, Deeps), whose main door id is the interior id; another interior would need its spec.
+ */
 export async function ensureSpace(h: ChapterHarness, at: Vec3Like): Promise<void> {
   const I = interiors(h);
   if (!I) return;
@@ -255,7 +259,7 @@ async function diveTo(h: ChapterHarness, trail: PhaseCTrail, pocketId: string | 
   const to = pocket ? route.points.findIndex((p) => Math.hypot(p.x - pocket.at.x, p.y - pocket.at.y, p.z - pocket.at.z) < 0.05) : route.points.length - 1;
   ensure(to >= 0, `${route.id}: the pocket ${pocket?.id} is a route point`);
   const pts = from <= to ? route.points.slice(from, to + 1) : route.points.slice(to, from + 1).reverse();
-  const log = await diveAlong(h, [h.ctx.player.feet.clone(), ...pts], 2.0);
+  const log = await diveAlong(h, [h.ctx.player.feet.clone(), ...pts], DIVE_TUNING.swimSpeed);
   trail.scripted.push(`dive ${route.id} to ${pocket?.id ?? 'end'}: ${log.metres.toFixed(0)} m, least breath ${log.minBreath.toFixed(1)} s`);
   // Head out at the pocket: stand on its ledge.
   if (pocket) await h.teleport(pocket.stand, 30);
@@ -263,10 +267,15 @@ async function diveTo(h: ChapterHarness, trail: PhaseCTrail, pocketId: string | 
 }
 
 /** The water-song: a press at the altar starts the bar, then a strike on each step of the pattern, on the virtual clock. */
-async function singBar(h: ChapterHarness, tier: number, started: boolean): Promise<void> {
+async function singBar(h: ChapterHarness, tier: number, startedAt?: number): Promise<void> {
   const stepMs = 60000 / GEAR_TUNING.rhythm.bpm / GEAR_TUNING.rhythm.divisions;
-  if (!started) await pressAt(h, R13_ALTAR);
-  const t0 = h.clock.ms;
+  // A bar the player starts begins on the press's keydown tick (pressAt's press is keydown, a tick, keyup, a tick).
+  let t0 = startedAt;
+  if (t0 === undefined) {
+    const before = h.clock.ms;
+    await pressAt(h, R13_ALTAR);
+    t0 = before + (h.clock.ms - before) - (1000 / 60) * 4;
+  }
   const barStart = GEAR_TUNING.rhythm.countInSteps;
   for (const s of patternForTier(tier)) {
     const at = t0 + (barStart + s) * stepMs;
@@ -309,11 +318,27 @@ const HANDLERS: Record<string, GreyfenHandler> = {
   'story.r13.sung': async (h, trail, q, o) => {
     await pressAt(h, R13_ALTAR); // the first press plays the teaching scene
     await h.runAsync(4);
-    readOpen(h, trail, 'scene-r13.song');
-    await h.runAsync(2);
-    await singBar(h, SONG_TIER.lesson, true); // the scene's end began the lesson bar
-    for (let i = 0; i < 4 && !objDone(h, q, o.id); i++) await singBar(h, SONG_TIER.real, false);
-    ensure(objDone(h, q, o.id), `${q}.${o.id}: sung (fails ${h.ctx.state.getNumber('story.r13.songFails')})`);
+    // The scene's end begins the lesson bar: read it a node at a time and note the tick it closed on.
+    const dialogue = h.ctx.services.require('dialogue');
+    ensure(dialogue.active, `${q}.${o.id}: the song's scene opened at the altar`);
+    let nodes = 0;
+    let closedAt = h.clock.ms;
+    for (; nodes < 40 && dialogue.active; nodes++) {
+      h.key('keydown', 'KeyF');
+      h.run(1);
+      closedAt = h.clock.ms;
+      h.key('keyup', 'KeyF');
+      if (dialogue.active) h.run(1);
+    }
+    ensure(!dialogue.active, `${q}.${o.id}: the song's scene closed`);
+    trail.talks.push({ npc: 'scene-r13.song', dialogueId: 'scene-r13.song', nodes });
+    await singBar(h, SONG_TIER.lesson, closedAt - 1000 / 60);
+    for (let i = 0; i < 4 && !objDone(h, q, o.id); i++) await singBar(h, SONG_TIER.real);
+    const fails = h.ctx.state.getNumber('story.r13.songFails');
+    ensure(objDone(h, q, o.id), `${q}.${o.id}: sung (fails ${fails})`);
+    // Struck on the beat, the song never needs the widened window.
+    ensure(fails === 0, `${q}.${o.id}: sung without a failed bar (fails ${fails})`);
+    trail.scripted.push(`r13 song: struck on the virtual clock, ${fails} failed bars`);
   },
   'story.r13.calm': async (h, _t, q, o) => waitFor(h, () => objDone(h, q, o.id), `${q}.${o.id}`, 20),
   'wyrm.hathren': async (h, _t, q, o) => {
@@ -329,16 +354,31 @@ const HANDLERS: Record<string, GreyfenHandler> = {
   'm26.voice': async (h, trail) => awaitScene(h, trail, 'm26.voice', 180),
   'm27.ally': async (h, trail) => awaitScene(h, trail, 'm27.ally'),
   'm27.aftermath': async (h, trail) => awaitScene(h, trail, 'm27.aftermath'),
-  'story.m27.blinds': async (h, _trail, q, o) => {
+  'story.m27.blinds': async (h, trail, q, o) => {
     // Unseen through the four blinds to the far end (the quiet reading of plan 2.1); a pack that sees the player is fought.
+    // Sneaking, in 1.5 m steps at the sneak pace (a step's ticks at about 2 m/s), so the pack sees every stretch walked.
     h.key('keydown', 'AltLeft');
-    for (const n of [1, 2, 3, 4]) {
-      await h.approach(h.anchor(`greyfen.m27.blind.${n}`), 0.5);
-      await h.runAsync(20);
+    const end = h.triggerCentre(M27_BLINDS_END);
+    ensure(end, 'the blinds end trigger');
+    const points = [1, 2, 3, 4].map((n) => h.anchor(`greyfen.m27.blind.${n}`)).concat([end]);
+    let metres = 0;
+    for (const p of points) {
+      for (let guard = 0; guard < 400; guard++) {
+        const f = h.ctx.player.feet;
+        const d = Math.hypot(p.x - f.x, p.z - f.z);
+        if (d < 0.6) break;
+        const step = Math.min(d, 1.5);
+        h.ctx.player.teleport({ x: f.x + ((p.x - f.x) / d) * step, y: Math.max(f.y, p.y), z: f.z + ((p.z - f.z) / d) * step }, h.ctx.cameraRig?.yaw ?? 0);
+        await h.runAsync(Math.round((step / 2) * 60));
+        metres += step;
+        if (objDone(h, q, o.id) || flag(h, 'story.m27.seen')) break;
+      }
+      if (objDone(h, q, o.id) || flag(h, 'story.m27.seen')) break;
     }
     h.key('keyup', 'AltLeft');
-    await h.enterTrigger(M27_BLINDS_END);
+    if (!objDone(h, q, o.id) && !flag(h, 'story.m27.seen')) await h.enterTrigger(M27_BLINDS_END);
     await h.runAsync(10);
+    trail.scripted.push(`m27 blinds: stepped ${metres.toFixed(0)} m sneaking, ${flag(h, 'story.m27.seen') ? 'seen, pack fought' : 'unseen'}`);
     if (!objDone(h, q, o.id)) {
       const g = GREYFEN_GROUP_OBJECTIVES.find((x) => x.quest === q && x.objective === o.id)!;
       await killSpawners(h, g.groups, () => objDone(h, q, o.id), `${q}.${o.id} (seen)`, () => flag(h, g.seen));
@@ -454,7 +494,11 @@ async function playObjective(h: ChapterHarness, trail: PhaseCTrail, q: string, o
     // M24: back up from the horn to the pool's entry.
     const route = GREYFEN_DIVE_ROUTES.find((r) => r.volumeId === match.volumeId);
     ensure(route, `${key}: a route in ${String(match.volumeId)}`);
-    await diveAlong(h, [h.ctx.player.feet.clone(), ...[...route.points].reverse()], 2.0);
+    const f = h.ctx.player.feet;
+    const near = Math.min(...route.points.map((p) => Math.hypot(p.x - f.x, p.y - f.y, p.z - f.z)));
+    ensure(near < 3, `${key}: in the water by the route (${near.toFixed(1)} m off)`);
+    const log = await diveAlong(h, [f.clone(), ...[...route.points].reverse()], DIVE_TUNING.swimSpeed);
+    trail.scripted.push(`dive ${route.id} back to the entry: ${log.metres.toFixed(0)} m, least breath ${log.minBreath.toFixed(1)} s`);
     await h.teleport(route.entryStand, 30);
     return;
   }
@@ -470,15 +514,13 @@ async function rideFerryFrom(h: ChapterHarness, trail: PhaseCTrail, from: string
   const boarded = h.of('ferry.boarded').length;
   // The stop menu (K15) hears its keys on the browser window, which a headless game has none of: unhook it, so the stop's
   // F boards its default leg (K7's own behaviour without the menu; from Reedgate the only leg is the Mere).
+  // The menu is not put back: the K15 HUD hook takes a function this driver never sees, and the chain rides once.
   (ferry as { setMenu?(m: null): void }).setMenu?.(null);
-  trail.scripted.push(`ferry ${from} to ${to}: boarded by F without the stop menu`);
   await pressAt(h, `ferry:${from}`);
   await h.runAsync(4);
   await h.runAsync(4);
-  if (h.of('ferry.boarded').length === boarded) {
-    const refused = ferry.ride(from, to);
-    ensure(refused === null || refused === undefined, `ferry ${from} to ${to} refused (${JSON.stringify(refused)})`);
-  }
+  ensure(h.of('ferry.boarded').length > boarded, `the F at ferry:${from} boarded`);
+  trail.scripted.push(`ferry ${from} to ${to}: boarded by F without the stop menu`);
   const leg = h.of('ferry.boarded').at(-1);
   ensure(leg?.from === from && leg.to === to, `boarded ${from} to ${to} (${JSON.stringify(leg)})`);
   for (let i = 0; i < 1200 && h.of('ferry.arrived').length === before; i++) await h.runAsync(30);
@@ -529,8 +571,10 @@ export async function playGreyfenChain(
   // The HUD's widgets update on the render frame, which a headless game never draws: call the layer's frame update as the
   // render loop would, half a second at a time.
   const hud = h.ctx.hud as unknown as { update?(frameTime: number): void };
+  // Anything still open after D05's hand-in is read into a trail of its own, never measured.
+  const after: PhaseCTrail = { talks: [], scripted: [], order: [] };
   for (let i = 0; i < 10; i++) {
-    readOpen(h, trails[order.at(-1)!], 'scene-after');
+    readOpen(h, after, 'scene-after');
     await h.runAsync(30);
     hud.update?.(0.5);
   }

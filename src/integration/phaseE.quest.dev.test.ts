@@ -9,6 +9,7 @@ declare const process: { env: Record<string, string | undefined> };
 const Q = process.env.Q;
 it.skipIf(!Q)(`plays ${Q} headless`, async () => {
   const h = await bootFromSave(await readAct3Fixture((process.env.ORDER as 'greyfen') ?? 'greyfen', Q!), { models: true, virtualClock: true });
+  KILLS_FORCED.length = 0;
   const trail = emptyPhaseCTrail();
   try {
     await playGreyfenQuest(h, trail, Q!, process.env.RUN === 'b' ? GREYFEN_RUN_B : GREYFEN_RUN_A);
