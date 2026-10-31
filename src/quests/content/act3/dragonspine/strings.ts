@@ -78,6 +78,7 @@ const PROMPTS: Record<string, string> = {
 /** The director's toasts. */
 export const DIRECTOR_TEXT: Record<string, string> = {
   'dragonspine.q.r18.failed': 'The parents took the eggs back to the camp.',
+  'dragonspine.q.r18.back': 'The egg went back to the camp.',
   'dragonspine.q.r18.set1': 'One egg is back in the nest.',
   'dragonspine.q.r18.set2': 'Two eggs are back in the nest.',
   'dragonspine.q.r18.set3': 'All three eggs are back in the nest.',

@@ -10,7 +10,7 @@ export type WaitReason = 'gate' | 'keep' | 'stealth' | 'chase' | 'party';
  * party rule, applied by the controller ahead of the def's own waits) while the companion is joined but not active.
  */
 export type WaitRule =
-  | { reason: WaitReason; anchorId: string; quest: string; until: string }
+  | { reason: WaitReason; anchorId: string; quest: string; until: string; /** holds only once this objective is done (K13's R18 stealth climb) */ from?: string }
   | { reason: WaitReason; anchorId: string; interior: string }
   | { reason: 'party'; anchorId: string; inactive: true };
 
@@ -33,8 +33,17 @@ export interface Wait {
 export function ruleHolds(rule: WaitRule, view: WaitView): boolean {
   if ('inactive' in rule) return view.inactive === true;
   if ('interior' in rule) return view.interior === rule.interior;
+  if ('from' in rule && rule.from && !view.objectiveDone(rule.quest, rule.from)) return false;
   return view.questState(rule.quest) === 'active' && !view.objectiveDone(rule.quest, rule.until);
 }
+
+/**
+ * Waits every companion obeys after his own (K13): R18's eggs go back up the cliff past the hawks, so whoever travels with Cael
+ * waits at the foot while the `nested` step is current. Derived from the quest alone, so an abandon or a load releases him.
+ */
+export const QUEST_WAITS: readonly WaitRule[] = [
+  { reason: 'stealth', anchorId: 'dragonspine.hawk.companion-hold', quest: 'r18', from: 'camp', until: 'nested' },
+];
 
 /** The first rule (in priority order) that holds and whose anchor exists; null means follow. */
 export function deriveWait(rules: readonly WaitRule[], view: WaitView): Wait | null {
