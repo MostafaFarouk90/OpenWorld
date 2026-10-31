@@ -4,7 +4,11 @@ import { ACT3_INTERIORS } from '../../interiors/act3';
 import { TUTORIAL_ANCHORS } from '../../tutorial/beats';
 import { ACT2_TRIGGERS, ACT2_QUEST_DEFS } from '../content/act2';
 import { OLDSMOKE_TRIGGERS } from '../content/act2/oldsmoke';
-import { questDefs } from '../content';
+import { questDefs as allQuestDefs } from '../content';
+import { ACT3_QUEST_DEFS } from '../content/act3';
+
+// Act 3 quests (K12 onward) legitimately use Act 3 ids: this test guards the quests shipped before them.
+const questDefs = allQuestDefs.filter((q) => !ACT3_QUEST_DEFS.includes(q));
 import { ACT3_ANCHOR_PREFIXES, ACT3_FLAG_OWNERS, ACT3_QUEST_FLAG_OWNERS, ACT3_TRIGGER_PREFIXES } from './act3Flags';
 import { ACT3_QUEST_IDS } from './act3Ids';
 import { DRAGONSPINE_LAYOUT } from '../../dragonspine/dragonspine.layout';
