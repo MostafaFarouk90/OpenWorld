@@ -36,5 +36,6 @@ export const ENEMY_STRINGS_EN: Record<string, string> = {
   'enemies.name.skarl-drake': "Skarl's Drake",
   'enemies.name.rime-hawk': 'Rime Hawk',
   'enemies.name.crag-ogre': 'Crag Ogre',
+  'enemies.name.ysmeryth': 'Ysmeryth the Coal-Mother',
   'enemies.name.steward-guard': 'Steward Guard',
 };

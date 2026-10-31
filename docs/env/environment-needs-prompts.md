@@ -294,3 +294,10 @@ Mostafa's GLB-Viewer generators (props, structures, rocks, texture, creature pag
 | Section E animals and creature stand-ins (static scenery only; enemies keep their procedural rigs) | kindling-fox | 0.2 x 1.22 x 0.55 |
 | Section E animals and creature stand-ins (static scenery only; enemies keep their procedural rigs) | slag-crawler | 1.95 x 1.7 x 0.7 |
 | Section E animals and creature stand-ins (static scenery only; enemies keep their procedural rigs) | wyrmling | 1.55 x 3.5 x 1.1 |
+
+## Q. Act 3 great dragons (added 2026-10-31 by K6a PR 2, the dragons; the game draws procedural wyrm rigs until a rigged model and a loader exist)
+These are rigged creatures, not static props: a model only helps once someone adds a skinned-glb path for wyrms (today `src/enemies/wyrm/body.ts` always builds the procedural rig). Y up, 1 unit = 1 m, pivot at the chest's ground point, head toward -Z (yaw 0 faces -Z like the player).
+| id | what | poses or clips needed | stand-in now | size (w x d x h, wings folded) |
+|---|---|---|---|---|
+| ysmeryth | Ysmeryth the Coal-Mother, the eldest dragon: scales gone to cooled grey-black slag with faint ember cracks, a crest of horn plates that glows orange from within, old and heavy, calm eyes; no armour, no rider | Idle, Walk, Sweep (wing sweep), Slam, Spit (breath), Call (rear up, wings wide, jaw open), Fly loop, Land; scene poses perch, land, reveal (head low to the keeper-stone), oath (reared, crest blazing) | the 6x procedural wyrm, palette cooled-slag, lit crest | 5 x 46 x 7.5, head to tail tip (wingspan about 38) |
+| hathren | Hathren Quench-Tongue, the water dragon of the Mere: legless and serpentine, wet dark-teal scales with spines along the back, river weed and old net rope tangled on the horns, a pale throat, tired and wary | Idle (coiled in the shallows), Swim, Thrash in nets, Rise, Calm (head lowered) | the 4.5x procedural water wyrm (no legs), palette hathren | 4 x 34 x 5.5, head to tail tip, mostly in the water |

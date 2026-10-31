@@ -12,6 +12,7 @@ import { PEAT_SHAMBLER } from './fen/shambler/def';
 import { SKARL_DRAKE_DEF } from './wyrm/drake/def';
 import { RIME_HAWK } from './peak/hawk/def';
 import { CRAG_OGRE } from './peak/ogre/def';
+import { YSMERYTH_DEF } from './wyrm/ysmeryth/def';
 import type { EnemyDef, EnemyKind, MoveDef } from './types';
 
 /**
@@ -248,6 +249,7 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   // Act 3 (K6b PR 2): the Dragonspine's creatures.
   'rime-hawk': RIME_HAWK,
   'crag-ogre': CRAG_OGRE,
+  ysmeryth: YSMERYTH_DEF,
 };
 
 /**
@@ -282,6 +284,7 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   // K6b PR 2, design 13: the hawk's white wing flash (drawn by its body too), the ogre's red eye flash.
   'rime-hawk': { part: 'wing', color: 0xffffff },
   'crag-ogre': { part: 'mouth', color: 0xff3020 },
+  ysmeryth: { part: 'mouth', color: 0xffb46a },
 };
 
 function move(
