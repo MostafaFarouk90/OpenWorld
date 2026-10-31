@@ -33,7 +33,9 @@
           "lore.nursery",
           "lore.place.greyfen",
           "howto.block-levels",
+          "howto.ferry",
           "howto.diving",
+          "howto.wading",
           "lore.place.hathrens-mere"
         ]
       },
@@ -84,7 +86,7 @@
       "data": {
         "cleared": [],
         "lockedBlockLevels": {
-          "dragonspine-lower": 22,
+          "dragonspine-lower": 23,
           "greyfen": 18
         },
         "spent": [],
@@ -134,10 +136,12 @@
           "barley-cake": 5,
           "couriers-cloak": 1,
           "favour-mark": 1,
+          "fen-salve-recipe": 1,
           "ford-guard-shield": 1,
           "fox-fire-ember": 1,
           "gauts-spare-blade": 1,
           "gauts-spare-tabard": 1,
+          "gear.fen-boots": 1,
           "grisel-writ": 1,
           "halvard-signet": 1,
           "healing-flask": 3,
@@ -146,15 +150,21 @@
           "hearth-token": 1,
           "house-pledge-banner": 1,
           "hrolfs-axe-rune": 1,
+          "key.ferry-token": 1,
           "lore-tome-1": 1,
+          "lullaby-reed-pipe": 1,
+          "marsh-bow-bolts": 20,
           "maud-remedy": 1,
           "miners-helm": 1,
+          "murkjaw-tooth": 1,
           "orsks-cinder": 1,
           "oswin-lockpicks": 5,
           "picketts-lantern": 1,
+          "ranger-longbow": 1,
           "redmanes-lance": 1,
+          "reed-armour": 1,
           "sewer-master-key": 1,
-          "shard-gem.bulwark": 1,
+          "shard-gem.bulwark": 2,
           "shard-gem.oathfire": 2,
           "slag-core": 1,
           "squires-arming-sword": 1,
@@ -194,7 +204,7 @@
     "player": {
       "data": {
         "goldPouch": null,
-        "health": 280,
+        "health": 290,
         "lastRestedWaystoneId": null,
         "stamina": 100
       },
@@ -223,7 +233,7 @@
         "learned": [],
         "respecUsed": false,
         "storyPoints": 1,
-        "xp": 23500
+        "xp": 28850
       },
       "version": 2
     },
@@ -246,6 +256,10 @@
             "state": "completed"
           },
           "d04": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "d05": {
             "objectives": {},
             "state": "completed"
           },
@@ -341,6 +355,26 @@
             "objectives": {},
             "state": "completed"
           },
+          "m23": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m24": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m25": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m26": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m27": {
+            "objectives": {},
+            "state": "completed"
+          },
           "r01": {
             "objectives": {},
             "state": "completed"
@@ -386,6 +420,18 @@
             "state": "completed"
           },
           "r11": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r12": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r13": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r14": {
             "objectives": {},
             "state": "completed"
           },
@@ -619,7 +665,7 @@
         },
         "favour": {
           "ashwalkers": 15,
-          "dragons": 10,
+          "dragons": 15,
           "grisel": 20,
           "halvard": 27,
           "oswin": 25
@@ -643,6 +689,7 @@
           "enemies.mercy.release": true,
           "enemies.mercy.spare": true,
           "gear.shardgem.granted.gaffer-grimtooth": true,
+          "gear.shardgem.granted.murkjaw": true,
           "gear.shardgem.granted.the-slagmaw": true,
           "gear.shardgem.granted.thrandil-redmane": true,
           "place.brightwater.discovered": true,
@@ -670,6 +717,7 @@
           "story.d04.crawlersOut": true,
           "story.d04.golemOut": true,
           "story.d05.complete": true,
+          "story.d05.started": true,
           "story.gate.a2": true,
           "story.gate.a3": true,
           "story.m01.tavernDoused": true,
@@ -741,10 +789,15 @@
           "story.m22.complete": true,
           "story.m22.started": true,
           "story.m23.complete": true,
+          "story.m23.started": true,
           "story.m24.complete": true,
+          "story.m24.started": true,
           "story.m25.complete": true,
+          "story.m25.started": true,
           "story.m26.complete": true,
+          "story.m26.started": true,
           "story.m27.complete": true,
+          "story.m27.started": true,
           "story.m28.complete": true,
           "story.m29.complete": true,
           "story.phase.dragonspineOpen": true,
@@ -780,9 +833,13 @@
           "story.r11.complete": true,
           "story.r11.denSeen": true,
           "story.r11.started": true,
+          "story.r12.armourGiven": true,
           "story.r12.complete": true,
+          "story.r12.started": true,
           "story.r13.complete": true,
+          "story.r13.started": true,
           "story.r14.complete": true,
+          "story.r14.started": true,
           "tutorial.complete": true,
           "tutorial.heartshard-awakened": true,
           "tutorial.skipped": true,
@@ -793,7 +850,7 @@
           "tutorial.t04.vow3": "earnest",
           "tutorial.t12.kit": true,
           "tutorial.t12.kitDone": true,
-          "warmth.block.dragonspine-lower.level": 22,
+          "warmth.block.dragonspine-lower.level": 23,
           "warmth.block.greyfen.level": 18,
           "waystone.chapel.lit": true,
           "waystone.cinder-road.lit": true,

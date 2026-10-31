@@ -13,7 +13,11 @@
     "m23",
     "m24"
   ],
-  "questDefs": [],
+  "questDefs": [
+    "m23",
+    "m24",
+    "m25"
+  ],
   "lockedBlocks": {
     "greyfen": 21,
     "dragonspine-lower": 20

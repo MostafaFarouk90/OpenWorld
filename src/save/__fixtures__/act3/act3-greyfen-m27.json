@@ -33,7 +33,9 @@
           "lore.nursery",
           "lore.place.greyfen",
           "howto.block-levels",
+          "howto.ferry",
           "howto.diving",
+          "howto.wading",
           "lore.place.hathrens-mere"
         ]
       },
@@ -133,10 +135,12 @@
           "barley-cake": 5,
           "couriers-cloak": 1,
           "favour-mark": 1,
+          "fen-salve-recipe": 1,
           "ford-guard-shield": 1,
           "fox-fire-ember": 1,
           "gauts-spare-blade": 1,
           "gauts-spare-tabard": 1,
+          "gear.fen-boots": 1,
           "grisel-writ": 1,
           "halvard-signet": 1,
           "healing-flask": 3,
@@ -145,12 +149,14 @@
           "hearth-token": 1,
           "house-pledge-banner": 1,
           "hrolfs-axe-rune": 1,
+          "key.ferry-token": 1,
           "lore-tome-1": 1,
           "maud-remedy": 1,
           "miners-helm": 1,
           "orsks-cinder": 1,
           "oswin-lockpicks": 5,
           "picketts-lantern": 1,
+          "ranger-longbow": 1,
           "redmanes-lance": 1,
           "sewer-master-key": 1,
           "shard-gem.bulwark": 1,
@@ -193,7 +199,7 @@
     "player": {
       "data": {
         "goldPouch": null,
-        "health": 280,
+        "health": 290,
         "lastRestedWaystoneId": null,
         "stamina": 100
       },
@@ -222,7 +228,7 @@
         "learned": [],
         "respecUsed": false,
         "storyPoints": 1,
-        "xp": 23500
+        "xp": 26400
       },
       "version": 2
     },
@@ -340,6 +346,22 @@
             "objectives": {},
             "state": "completed"
           },
+          "m23": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m24": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m25": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m26": {
+            "objectives": {},
+            "state": "completed"
+          },
           "r01": {
             "objectives": {},
             "state": "completed"
@@ -385,6 +407,10 @@
             "state": "completed"
           },
           "r11": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r14": {
             "objectives": {},
             "state": "completed"
           },
@@ -618,7 +644,7 @@
         },
         "favour": {
           "ashwalkers": 15,
-          "dragons": 10,
+          "dragons": 15,
           "grisel": 20,
           "halvard": 27,
           "oswin": 25
@@ -739,9 +765,13 @@
           "story.m22.complete": true,
           "story.m22.started": true,
           "story.m23.complete": true,
+          "story.m23.started": true,
           "story.m24.complete": true,
+          "story.m24.started": true,
           "story.m25.complete": true,
+          "story.m25.started": true,
           "story.m26.complete": true,
+          "story.m26.started": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,
@@ -775,6 +805,7 @@
           "story.r11.denSeen": true,
           "story.r11.started": true,
           "story.r14.complete": true,
+          "story.r14.started": true,
           "tutorial.complete": true,
           "tutorial.heartshard-awakened": true,
           "tutorial.skipped": true,

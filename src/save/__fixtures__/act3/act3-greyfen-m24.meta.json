@@ -5,7 +5,10 @@
   "injected": [
     "m23"
   ],
-  "questDefs": [],
+  "questDefs": [
+    "m23",
+    "m24"
+  ],
   "lockedBlocks": {
     "greyfen": 18
   },

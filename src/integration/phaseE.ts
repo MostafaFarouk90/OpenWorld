@@ -1,18 +1,17 @@
 /**
- * Phase E (the Greyfen block), played on a game booted from an Act 3 fixture with the Phase C driver (`phaseC.ts`):
- * dialogue by key presses, interactables and carries by F at the real anchors, enemies killed as the player through the
- * damage service. Act 3 adds three ways to move, and the chain moves through each for real rather than teleporting
- * across it: wading (short steps on the ground through the water, so the water service slows the player), diving (the
- * route's polyline from air pocket to air pocket, with the breath watched) and the ferry (the ferry service's own ride).
+ * Phase E (the Greyfen block), played on a game booted from an Act 3 fixture. The objective player is phaseEDriver.ts:
+ * dialogue by key presses, props and notes by F at the real interactables (through the interior doors), enemies and quest
+ * groups killed as the player through the damage service, the ferry ridden by its service, the waystone held, the
+ * water-song struck on its beat. Moving between objectives is by teleport (as Phases A to D); the pacing travel comes from
+ * the route anchors, not from the run. Dives are swum along the route polylines with the breath watched (`diveAlong`).
  * What has no cheap headless driver is recorded in `trail.scripted`, so the e2e tests name every shortcut.
  *
  * Run A plays the Greyfen first (from `act3-greyfen-m23`); run B plays it second (from `act3-spine-m23`, the lower
- * Dragonspine injected first, so the Greyfen locks at the higher Warmth). The measured rows come from the Greyfen quest
- * thread's `Act3PaceRow` table with the nodes each run actually read, and the 52% gate runs on them.
+ * Dragonspine injected first, so the Greyfen locks at the higher Warmth). The measured rows are the Greyfen quest thread's
+ * `Act3PaceRow` table with the nodes each run actually read, and the 52% gate runs on them.
  */
-import type * as THREE from 'three';
 import { bootFromSave, type ChapterHarness } from './chapterHarness';
-import { ensure, heal } from './phaseA';
+import { ensure } from './phaseA';
 import type { PhaseCTrail } from './phaseC';
 import { trailNodes } from './timing';
 import { act3PacingReport, estimateAct3Row, phaseEGate, type Act3PacingReport, type Act3PaceRow } from './act3Timing';
@@ -25,7 +24,7 @@ export type PhaseEQuest = (typeof ACT3_GREYFEN)[number];
 /** Plan 2.1's table order: M27 waits for M26 and R14 (Q12), D05 for M27. */
 export const PHASE_E_ORDER: readonly PhaseEQuest[] = ACT3_GREYFEN;
 
-/** Who offers each quest (plan 2.1); checked against the Greyfen quest thread's dialogue when its branch is stacked. */
+/** Who offers each quest (plan 2.1); the headless chain starts each quest by talking to them (K12's dialogue). */
 export const PHASE_E_GIVERS: Record<PhaseEQuest, string> = {
   m23: 'leofa', m24: 'dudda', r12: 'dudda', m25: 'gytha', r14: 'leofa', r13: 'gytha', m26: 'gytha', m27: 'leofa', d05: 'gytha',
 };
@@ -36,10 +35,11 @@ export const PHASE_E_START: Record<'a' | 'b', { order: Act3Order; id: PhaseEQues
   b: { order: 'spine', id: 'm23' },
 };
 
-/** Boots a run's start fixture headless (no models) and lets the load settle. */
+/** Boots a run's start fixture headless (with models, no renderer) and lets the load settle. */
 export async function bootPhaseE(run: 'a' | 'b'): Promise<ChapterHarness & { loaded: boolean }> {
   const { order, id } = PHASE_E_START[run];
-  const h = await bootFromSave(await readAct3Fixture(order, id), { models: false, virtualClock: true });
+  // Models on: the hunter packs (R14, M26, M27) are humanoids, which a game without the asset loader cannot spawn.
+  const h = await bootFromSave(await readAct3Fixture(order, id), { models: true, virtualClock: true });
   ensure(h.loaded, `Phase E run ${run}: the fixture act3-${order}-${id} loaded`);
   // The chain never runs on a fixture `?act3=` would refuse as stale (review M2).
   const meta = await readAct3FixtureMeta(order, id);
@@ -49,42 +49,13 @@ export async function bootPhaseE(run: 'a' | 'b'): Promise<ChapterHarness & { loa
   return h;
 }
 
-/** Metres per step when moving through water: short enough that the water service sees the player in every volume crossed. */
+/** Metres per step when swimming a dive route. */
 export const WATER_STEP_M = 2;
 
-export interface WaterLegLog {
+interface WaterLegLog {
   /** the water states the player was seen in, in order, without repeats */
   states: string[];
   metres: number;
-}
-
-/** Steps the player on the ground through `points` (wading), `stepM` at a time, a tick between steps. */
-export async function wadeAlong(h: ChapterHarness, points: readonly { x: number; z: number }[], stepM = WATER_STEP_M): Promise<WaterLegLog> {
-  const water = h.ctx.services.get('water');
-  const log: WaterLegLog = { states: [], metres: 0 };
-  const note = () => {
-    const s = water?.state ?? 'dry';
-    if (log.states.at(-1) !== s) log.states.push(s);
-  };
-  for (const p of points) {
-    let arrived = false;
-    for (let guard = 0; guard < 10_000 && !arrived; guard++) {
-      const f = h.ctx.player.feet;
-      const d = Math.hypot(p.x - f.x, p.z - f.z);
-      if (d < 0.5) { arrived = true; break; }
-      const step = Math.min(d, stepM);
-      await h.teleport({ x: f.x + ((p.x - f.x) / d) * step, z: f.z + ((p.z - f.z) / d) * step }, 1);
-      const g = h.ctx.player.feet;
-      const moved = Math.hypot(g.x - f.x, g.z - f.z);
-      // A step refused (containment, a wall) would loop on the spot; fail it instead of counting metres never walked.
-      ensure(moved > step * 0.5, `wade: stuck at (${f.x.toFixed(1)}, ${f.z.toFixed(1)}) heading for (${p.x}, ${p.z})`);
-      log.metres += moved;
-      note();
-    }
-    ensure(arrived, `wade: never reached (${p.x}, ${p.z})`);
-  }
-  heal(h);
-  return log;
 }
 
 export interface DiveLog extends WaterLegLog {
@@ -113,7 +84,7 @@ export async function diveAlong(
       h.ctx.player.teleport(to, h.ctx.cameraRig?.yaw ?? 0);
       await h.runAsync(ticksPerStep);
       const f = h.ctx.player.feet;
-      ensure(Math.hypot(f.x - to.x, f.z - to.z) < 1, `dive: did not reach (${to.x.toFixed(1)}, ${to.z.toFixed(1)}) on leg ${i}`);
+      ensure(Math.hypot(f.x - to.x, f.z - to.z) < 1, `dive: did not reach (${to.x.toFixed(1)}, ${to.y.toFixed(1)}, ${to.z.toFixed(1)}) on leg ${i} (feet ${f.x.toFixed(1)}, ${f.y.toFixed(1)}, ${f.z.toFixed(1)}; water ${water.state})`);
       if (log.states.at(-1) !== water.state) log.states.push(water.state);
       log.minBreath = Math.min(log.minBreath, water.breath);
       ensure(water.breath > 0, `dive: breath ran out ${s.toFixed(1)} m into leg ${i}`);
@@ -124,23 +95,14 @@ export async function diveAlong(
   return log;
 }
 
-/** Rides the ferry from the stop the player stands at to `to` through the ferry service, and waits for the arrival. */
-export async function rideFerry(h: ChapterHarness, from: string, to: string, maxSeconds = 600): Promise<void> {
-  const ferry = h.ctx.services.get('ferry');
-  ensure(ferry, 'the ferry service');
-  const before = h.of('ferry.arrived').length;
-  const refused = ferry.ride(from, to);
-  ensure(refused === null, `ferry ${from} to ${to} refused (${JSON.stringify(refused)})`);
-  for (let i = 0; i < maxSeconds && h.of('ferry.arrived').length === before; i++) await h.runAsync(60);
-  const arrived = h.of('ferry.arrived').slice(before);
-  ensure(arrived.some((e) => e.stop === to && !e.skipped), `ferry arrived at ${to} by the ride`);
-}
-
-/** The Phase E pacing report on the rows the Greyfen thread ships, with the nodes each quest's run read. */
+/**
+ * The Phase E pacing report on the rows the Greyfen thread ships, with the nodes each quest's run read. Positions come from
+ * `at`: the Greyfen thread's own resolver (`paceAt`), which knows which interior's frame an anchor is in, so a leg is
+ * measured within one space and door legs cost nothing.
+ */
 export function measurePhaseE(
-  h: ChapterHarness, rows: readonly Act3PaceRow[], trails: Readonly<Record<string, PhaseCTrail>>,
+  rows: readonly Act3PaceRow[], trails: Readonly<Record<string, PhaseCTrail>>, at: (anchor: string) => { x: number; z: number },
 ): { report: Act3PacingReport; gate: ReturnType<typeof phaseEGate> } {
-  const at = (id: string): THREE.Vector3Like => h.anchor(id);
   const measured = rows.map((row) => {
     const trail = trails[row.quest];
     ensure(trail, `a trail for ${row.quest}`);

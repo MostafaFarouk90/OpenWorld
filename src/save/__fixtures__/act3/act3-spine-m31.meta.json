@@ -15,7 +15,15 @@
     "m27",
     "d05"
   ],
-  "questDefs": [],
+  "questDefs": [
+    "d05",
+    "m23",
+    "m24",
+    "m25",
+    "m26",
+    "m27",
+    "r14"
+  ],
   "lockedBlocks": {
     "greyfen": 21,
     "dragonspine-lower": 20

@@ -33,7 +33,9 @@
           "lore.nursery",
           "lore.place.greyfen",
           "howto.block-levels",
-          "howto.diving"
+          "howto.ferry",
+          "howto.diving",
+          "howto.wading"
         ]
       },
       "version": 1
@@ -136,6 +138,7 @@
           "fox-fire-ember": 1,
           "gauts-spare-blade": 1,
           "gauts-spare-tabard": 1,
+          "gear.fen-boots": 1,
           "grisel-writ": 1,
           "halvard-signet": 1,
           "healing-flask": 3,
@@ -144,6 +147,7 @@
           "hearth-token": 1,
           "house-pledge-banner": 1,
           "hrolfs-axe-rune": 1,
+          "key.ferry-token": 1,
           "lore-tome-1": 1,
           "maud-remedy": 1,
           "miners-helm": 1,
@@ -221,7 +225,7 @@
         "learned": [],
         "respecUsed": false,
         "storyPoints": 1,
-        "xp": 23500
+        "xp": 24650
       },
       "version": 2
     },
@@ -336,6 +340,14 @@
             "state": "completed"
           },
           "m22": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m23": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m24": {
             "objectives": {},
             "state": "completed"
           },
@@ -734,7 +746,9 @@
           "story.m22.complete": true,
           "story.m22.started": true,
           "story.m23.complete": true,
+          "story.m23.started": true,
           "story.m24.complete": true,
+          "story.m24.started": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,

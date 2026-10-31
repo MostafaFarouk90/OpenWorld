@@ -9,7 +9,14 @@
     "r14",
     "m26"
   ],
-  "questDefs": [],
+  "questDefs": [
+    "m23",
+    "m24",
+    "m25",
+    "m26",
+    "m27",
+    "r14"
+  ],
   "lockedBlocks": {
     "greyfen": 18
   },
