@@ -26,6 +26,7 @@ export const ARENA = {
   surfaces: [1, 2, 3, 4, 5, 6].map((n) => `greyfen.d05.arena.surface.${n}`) as readonly string[],
   beaches: [1, 2, 3, 4, 5, 6].map((n) => `greyfen.d05.arena.beach.${n}`) as readonly string[],
   racks: [1, 2, 3, 4].map((n) => `greyfen.d05.arena.rack.${n}`) as readonly string[],
+  walkways: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `greyfen.d05.arena.walkway.${n}`) as readonly string[],
   gateClearance: 3.5,
   /** Fallback only: the veil sits on K3's gate rect (`gateVeil`). */
   veilOffset: 2,
@@ -50,9 +51,9 @@ export const MURKJAW = {
   floorModifierOrder: 99,
   jawModifierOrder: 97,
   /** Every hit on him while his jaw lies on a walkway (beached or broken). */
-  jawScale: 1.5,
+  jawScale: 1.25,
   /** A break throws him onto the nearest walkway, stunned. */
-  breakSeconds: 4,
+  breakSeconds: 3,
 } as const;
 
 export type MurkjawAttack = 'bite' | 'wave' | 'lunge';
@@ -114,6 +115,9 @@ export const LUNGE = {
 /** Any hit lands only on a player within this height of the walkway. */
 export const HIT_HEIGHT = 2.5;
 
+/** A break flings his jaw from the surfacing point nearest the player toward them: stopping `short` metres off, `min`..`max` long. */
+export const BREAK_REACH = { short: 1.2, min: 2, max: 9 } as const;
+
 export const SPEARS = {
   perRack: 3,
   refillSeconds: 8,
@@ -132,6 +136,8 @@ export const DROP = {
   crumbleSeconds: 2,
   /** The drop waits while the player stands on the crossing or this close to it. */
   clearMargin: 1,
+  /** ...and only while their feet are within this of the walkway's height (not in the air, not in a channel). */
+  standHeight: 0.6,
 } as const;
 
 export const PRESENTATION = {

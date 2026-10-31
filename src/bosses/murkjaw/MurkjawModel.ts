@@ -30,8 +30,11 @@ export const HEAD_BONE = 'murkjaw-head';
 export const segmentBone = (i: number): string => (i === 0 ? HEAD_BONE : `murkjaw-seg-${i}`);
 /** The walkway stands this far above the channel water (K3: surface 0.3 m below the walkway). */
 export const DECK = 0.3;
-/** How many segments, the head first, carry hurtboxes. */
-export const HURT_SEGMENTS = 5;
+/**
+ * How many segments, the head first, carry hurtboxes: the head and neck down to the water, so a bolt or a lock aimed at the root
+ * on the water still meets the body when he is beached 2 to 7 m away (review S8).
+ */
+export const HURT_SEGMENTS = 9;
 const TEETH = 16;
 
 /** The reared pose: the head high over the spot, the neck curving down into the water and the body trailing under it. */

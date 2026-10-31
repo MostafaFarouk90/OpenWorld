@@ -156,6 +156,11 @@ export class MurkjawBrain {
     return true;
   }
 
+  /** Moves him to another surfacing point (a break throws him onto the walkway nearest the player). Ignored out of range. */
+  relocate(point: number): void {
+    if (Number.isInteger(point) && point >= 0) this._point = point;
+  }
+
   /** `boss.phase`. */
   onPhase(phase: number): void {
     if (phase <= this._phase || this._state === 'dying') return;
