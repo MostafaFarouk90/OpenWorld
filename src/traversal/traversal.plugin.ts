@@ -1,5 +1,5 @@
 // K7 PR 1: water (wading, the deep edge, diving), the Greyfen ferry, the sled and the carry reset (contracts v0.7
-// items 4, 6, 7 and 25). Wires the pure pieces to the game. The shared controller is reached only through K0's hooks:
+// items 4, 6, 7 and 25); PR 2: the Dragonspine Glide (item 5). Wires the pure pieces to the game. The shared controller is reached only through K0's hooks:
 // `controller.setMoveMode` and `Player.setVerticalIntent`.
 import * as THREE from 'three';
 import { PLAYER_ID } from '../actors/teams';
@@ -22,7 +22,11 @@ import { WaterPlayer, mountCapAt } from './water/WaterPlayer';
 import { WaterVolumes } from './water/WaterVolumes';
 import { ledgeProbe } from './water/ledge';
 import { showToast } from '../waystones/toast';
-import type { CarryService, FerryService } from './service';
+import { flagConditionHolds } from '../core/flagCondition';
+import { GlidePlayer } from './glide/GlidePlayer';
+import { GLIDE_LANES, SHIMMER_FLAG, fallbackStand, glideInteractId } from './glide/lanes';
+import { GlideShimmer } from './glide/shimmer';
+import type { CarryService, FerryService, GlideService } from './service';
 import '../mount/MountController';
 import '../waystones/service';
 import '../region/containment';
@@ -34,6 +38,8 @@ export const FERRY_TOKEN_ID = 'key.ferry-token';
 /** K12 writes it when M24 is done; the ferry runs from then on. */
 export const FERRY_RUNNING_FLAG = 'story.m24.complete';
 const DROWN_ATTACK_ID = 'traversal.drown';
+/** How fast the camera swings in behind a glide (1/s). */
+const GLIDE_CAMERA_EASE = 1.5;
 
 /** What the plugin put outside its scoped context (the meshes in the scene, the mount's speed cap). */
 const disposers: (() => void)[] = [];
@@ -74,9 +80,11 @@ const traversal: GamePlugin = {
 
     const volumes = new WaterVolumes({ groundAt, flags: ctx.state });
     let water!: WaterPlayer;
-    /** Every K7 teleport goes through here, so the water system never reads it as someone else's. */
+    let glide: GlidePlayer | undefined;
+    /** Every K7 teleport goes through here, so neither the water nor the glide reads it as someone else's. */
     const ownTeleport = (p: Vec3Like, yaw?: number) => {
       water?.expect(p);
+      glide?.expect(p);
       ctx.player.teleport({ x: p.x, y: p.y, z: p.z }, yaw);
     };
 
@@ -167,6 +175,7 @@ const traversal: GamePlugin = {
         const w = ctx.services.get('waystones');
         if (!w) return null;
         water.expect(p);
+        glide?.expect(p);
         return w.safeTeleport({ x: p.x, y: p.y, z: p.z }, yaw);
       },
       landing,
@@ -349,8 +358,109 @@ const traversal: GamePlugin = {
     // A direct hit drops the sled; cold ticks, Burn and scripted damage never do (review B3).
     ctx.events.on('damage.dealt', (r) => {
       if (r.targetId !== PLAYER_ID || r.outcome !== 'hit' || !(r.dealt > 0) || !r.attackerId) return;
-      if (r.kind === 'melee' || r.kind === 'spell') sleds.onDirectHit();
+      if (r.kind === 'melee' || r.kind === 'spell') {
+        sleds.onDirectHit();
+        glidePlayer.onHit();
+      }
     });
+
+    // ---- the Dragonspine Glide (PR 2)
+    const glideStand = (lane: (typeof GLIDE_LANES)[number]): Vec3Like => {
+      const a = ctx.anchors.find(lane.def.anchorId);
+      return a ? { ...a.position } : fallbackStand(lane.site, heightAt);
+    };
+    const glidePlayer = new GlidePlayer({
+      feet: () => ctx.player.feet,
+      grounded: () => player.controller.grounded,
+      groundAt,
+      launch: (vy) => player.controller.launch(vy),
+      setControllerMode: (m, sinkRate) => player.controller.setMoveMode(m, { sinkRate }),
+      setForcedMove: (m) => player.setForcedMove(m),
+      steer: () => ctx.input.actions.axis('moveLeft', 'moveRight'),
+      addModifier: (source, mod) => ctx.player.addMoveModifier(source, mod),
+      movementMode: mode,
+      setMovementMode: setMode,
+      teleport: (p, yaw) => ownTeleport(p, yaw),
+      fade,
+      isOpen: (lane) => flagConditionHolds(lane.def.openWhen, ctx.state),
+      stand: glideStand,
+      busy: () => ctx.player.actor.dead || ctx.input.contexts.top() !== 'gameplay' || ferry.riding,
+      dead: () => ctx.player.actor.dead,
+      mounted: () => ctx.services.get('mount')?.mounted() ?? false,
+      dismount: () => ctx.services.get('mount')?.dismount('script'),
+      emit: ((type: string, p: unknown) => (ctx.events.emit as (t: string, p: unknown) => void)(type, p)) as never,
+      toast,
+    });
+    glide = glidePlayer;
+    disposers.push(() => glidePlayer.reset());
+    const destName = (id: string) => ctx.strings.t(`glide.dest.${id}`);
+    for (const lane of GLIDE_LANES) {
+      ctx.interaction.register({
+        id: glideInteractId(lane.site.id),
+        kind: 'use',
+        position: (out) => {
+          const p = glideStand(lane);
+          return out.set(p.x, p.y, p.z);
+        },
+        radius: 3,
+        coneDegrees: 360,
+        promptKey: 'glide.prompt',
+        promptParams: () => ({ dest: destName(lane.site.id) }),
+        // Shown once the ledge is open; a launch in another mode (hauling a sled) is refused with a toast.
+        enabled: () =>
+          glidePlayer.state === 'idle' && !glidePlayer.catchArmed && !ctx.player.actor.dead && !ferry.riding && flagConditionHolds(lane.def.openWhen, ctx.state),
+        onInteract: () => void glidePlayer.launch(lane.site.id),
+      });
+    }
+    // In the air the let-go prompt rides with the player (and, nearest of all, it takes the interact focus).
+    const glideTmp = new THREE.Vector3();
+    ctx.interaction.register({
+      id: 'glide:let-go',
+      kind: 'use',
+      position: (out) => {
+        const f = ctx.player.feet;
+        return out.copy(glideTmp.set(f.x, f.y + 1, f.z));
+      },
+      radius: 3,
+      coneDegrees: 360,
+      promptKey: 'glide.letGo',
+      enabled: () => glidePlayer.state === 'gliding',
+      onInteract: () => glidePlayer.letGo(),
+    });
+    const glideService: GlideService = {
+      launch: (site) => glidePlayer.launch(site),
+      refusal: (site) => glidePlayer.refusal(site),
+      letGo: () => glidePlayer.letGo(),
+      get state() {
+        return glidePlayer.state;
+      },
+      get ledgeId() {
+        return glidePlayer.lane?.def.id ?? null;
+      },
+      get yaw() {
+        return glidePlayer.yaw;
+      },
+      get heading() {
+        return glidePlayer.lane?.def.heading ?? null;
+      },
+      get laneHalfAngle() {
+        return glidePlayer.lane?.def.laneHalfAngle ?? null;
+      },
+      get lift() {
+        return glidePlayer.lift;
+      },
+      get heightAboveGround() {
+        return glidePlayer.heightAboveGround;
+      },
+      get catchArmed() {
+        return glidePlayer.catchArmed;
+      },
+    };
+    ctx.services.provide('glide', glideService);
+    ctx.events.on('containment.pushed', () => glidePlayer.onContained());
+    // Heat shimmer over the thermals and streaks along the slope-wind lanes, once the Last Anvil burns (design 7.5).
+    const shimmer = new GlideShimmer(ctx.scene, () => ctx.player.feet);
+    disposers.push(() => shimmer.dispose());
 
     let loadedThisRound = false;
     ctx.persist.register({
@@ -368,6 +478,7 @@ const traversal: GamePlugin = {
     ctx.events.on('save.loaded', () => {
       water.reset();
       ferry.reset();
+      glidePlayer.reset();
       if (!loadedThisRound) {
         resets.load(null);
         sleds.load(null);
@@ -391,7 +502,20 @@ const traversal: GamePlugin = {
         // The skip comes through the seated interactable below, so F never also reaches something by the landing.
         ferry.fixedUpdate(dt, false);
         water.fixedUpdate(dt);
+        glidePlayer.fixedUpdate(dt);
+        // The camera swings in behind the glide (gently, so mouse look still works).
+        const rig = ctx.cameraRig;
+        if (rig && glidePlayer.state === 'gliding') {
+          const d = Math.atan2(Math.sin(glidePlayer.yaw - rig.yaw), Math.cos(glidePlayer.yaw - rig.yaw));
+          rig.yaw += d * Math.min(1, GLIDE_CAMERA_EASE * dt);
+        }
       },
+    });
+    ctx.systems.add({
+      id: 'traversal.glide.shimmer',
+      renderPhase: 'world',
+      order: 72,
+      render: (_alpha, frameTime) => shimmer.update(frameTime, ctx.state.getBool(SHIMMER_FLAG)),
     });
     ctx.systems.add({
       id: 'traversal.carry',
