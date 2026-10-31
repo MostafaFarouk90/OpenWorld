@@ -69,6 +69,7 @@ function worldAt(quest: string, objective: string): World {
     for (const p of ACT3_DIRECT[quest] ?? []) states[p] = 'completed';
     // Thorgar offers R15 first; R18 is his next job once R15 is done (or from the R15 wait menu, tested below)
     if (quest === 'r18') states.r15 = 'completed';
+    if (quest === 'r15') states.r18 = 'completed'; // with R18 offerable too the greeting is the work menu (tested below)
     return { states, flags: { [GATE]: true, [OPEN]: true } };
   }
   return { states: { [quest]: 'active' }, done: { [quest]: def.objectives.slice(0, i).map((o) => o.id) }, flags: { [GATE]: true, [OPEN]: true } };
@@ -176,6 +177,37 @@ describe('R18 can be taken while R15 is under way', () => {
     expect(dr.view()!.nodeId).toBe('r18-brief');
     runOut(dr, (ids) => (ids.includes('accept') ? 'accept' : undefined));
     expect(started).toContain('r18');
+  });
+});
+
+describe('Thorgar offers R15 and R18 side by side', () => {
+  const both = { states: { m28: 'completed' } as Record<string, QuestState>, flags: { [GATE]: true } };
+  const pick = (id: string) => (ids: string[]) => (ids.includes(id) ? id : undefined);
+  it('with both offerable the greeting is a choice and R18 can be taken first', () => {
+    const { dr, started } = setup(both);
+    dr.start('npc-thorgar', 'thorgar');
+    expect(dr.view()!.choices.map((c) => c.id)).toEqual(expect.arrayContaining(['supplies', 'eggs']));
+    runOut(dr, (ids) => (ids.includes('eggs') ? 'eggs' : ids.includes('accept') ? 'accept' : undefined));
+    expect(started).toEqual(['r18']);
+  });
+  it('R15 can still be taken from the same greeting', () => {
+    const { dr, started } = setup(both);
+    dr.start('npc-thorgar', 'thorgar');
+    runOut(dr, pick('supplies'));
+    expect(started).toEqual(['r15']);
+  });
+  it('with R15 done, R18 goes straight to its brief', () => {
+    const { dr, started } = setup({ states: { m28: 'completed', r15: 'completed' }, flags: { [GATE]: true } });
+    dr.start('npc-thorgar', 'thorgar');
+    expect(dr.view()!.nodeId).toBe('r18-brief');
+    runOut(dr);
+    expect(started).toContain('r18');
+  });
+  it('with R18 under way, R15 can still be taken', () => {
+    const { dr, started } = setup({ states: { m28: 'completed', r18: 'active' }, flags: { [GATE]: true } });
+    dr.start('npc-thorgar', 'thorgar');
+    runOut(dr, pick('supplies'));
+    expect(started).toContain('r15');
   });
 });
 

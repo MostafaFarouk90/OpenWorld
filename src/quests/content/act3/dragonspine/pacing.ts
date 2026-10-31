@@ -9,6 +9,7 @@
 // A door costs nothing. Each quest starts where a waystone fast travel leaves the player (the lodge, Rime Pass and the Last Anvil
 // have stones), so no long walk is charged for reaching the first giver; the way back is charged only where no stone is near.
 import { ACT2_BEAT_S, ROUTE_FOLLOW_MPS, TALK_NODE_S, WALK_MPS, cappedTravelS } from '../../../../integration/timing';
+import { M28_HUNTER_POSTS } from './m28.quest';
 import { dragonspineBuild } from '../../../../dragonspine/layout';
 import { DRAGONSPINE_INTERIORS } from '../../../../dragonspine/interiors';
 import { SECTIONS } from '../../../../stealth/sections';
@@ -92,7 +93,7 @@ const CARVING = (k: number): string => `dragonspine.anvil.carving.${k}`;
 export const DRAGONSPINE_PACE: readonly Act3PaceRow[] = [
   // M28: Thorgar and the four hunters at the lodge, the trail up (trailhead, scout, four cairns, two ledges) to the crag and its view (the nine-second camera hold is covered by Cael's three view lines, counted as nodes, not as a set piece)
   build('m28', 50, 'waystone.wyrmwatch-lodge', [
-    F('npc-post.thorgar.yard'), ...feet(n('npc-post.lodge-hunter-', 1, 4)), F('dragonspine.m28.trailhead'), F('dragonspine.spawn.m28.scout'),
+    F('npc-post.thorgar.yard'), ...feet(M28_HUNTER_POSTS.map((p) => `npc-post.lodge-hunter-${p}`)), F('dragonspine.m28.trailhead'), F('dragonspine.spawn.m28.scout'),
     F(CAIRN(1)), F('dragonspine.m28.leap.1.launch'), F('dragonspine.m28.leap.1'), F(CAIRN(2)), F(CAIRN(3)), F('dragonspine.m28.leap.2.launch'), F('dragonspine.m28.leap.2'),
     F(CAIRN(4)), F('dragonspine.m28.crag'), F('dragonspine.m28.crag.view'),
   ], 35, { killUnit: 8, search: 4, leap: 2 }),

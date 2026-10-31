@@ -1,6 +1,6 @@
 import type { SpawnerDef, EnemyKind } from '../../../../enemies/types';
 import { cragOgreSpawner, r18ParentsSpawner, rimeHawkSpawner } from '../../../../enemies/act3Spawners';
-import { R15_HAULING, R15_STOOP_TAG } from './r15.quest';
+import { R15_STOOP_FLAGS, R15_STOOP_TAG } from './r15.quest';
 import { M28_CRAG_FLAG, M28_CRAG_TAG, M28_SCOUT_FLAG, M28_SCOUT_TAG } from './m28.quest';
 import { M29_HAWKS_FLAG, M29_HAWKS_TAG } from './m29.quest';
 import { R16_PACK_FLAG, R16_PACK_TAG } from './r16.quest';
@@ -37,8 +37,8 @@ export const DRAGONSPINE_SPAWNERS: readonly SpawnerDef[] = [
   hawks('dragonspine.q.m28.crag', M28_CRAG_TAG, [...range('dragonspine.spawn.m28.hawk-', 1, 6), 'dragonspine.spawn.m28.ogre'], 'm28', M28_CRAG_FLAG, {
     memberKinds: [HAWK, HAWK, HAWK, HAWK, HAWK, HAWK, OGRE],
   }),
-  // R15: two hawks at each stoop anchor, only while a sled is hauled
-  ...[1, 2, 3].map((n) => hawks(`dragonspine.q.r15.stoop.${n}`, R15_STOOP_TAG, [`dragonspine.spawn.r15.stoop-${n}`], 'r15', R15_HAULING, { count: 2 })),
+  // R15: two hawks at each stoop anchor, armed one group per haul (group N while haul N is out)
+  ...[1, 2, 3].map((n) => hawks(`dragonspine.q.r15.stoop.${n}`, R15_STOOP_TAG, [`dragonspine.spawn.r15.stoop-${n}`], 'r15', R15_STOOP_FLAGS[n - 1]!, { count: 2 })),
   // M29: two hawks at the woodpile
   hawks('dragonspine.q.m29.hawks', M29_HAWKS_TAG, range('dragonspine.spawn.shelter.hawk-', 1, 2), 'm29', M29_HAWKS_FLAG),
   // R16: the mouth pack, an ogre and four hawks

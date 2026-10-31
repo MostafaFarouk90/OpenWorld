@@ -6,7 +6,7 @@ import type { CarryRoute } from '../../../../../traversal/carry/CarryResets';
 import type { Kit, Off } from './shared';
 import { distanceTo, offerScene, recheck, toast } from './shared';
 import { M28_CLIMB_NPC, M28_CLIMB_SCENE, M28_CRAG_DOWN, M28_LEDGE_FLAGS, M28_TRAILHEAD, M28_VIEW, M28_VIEW_NPC, M28_VIEW_SCENE } from '../m28.quest';
-import { R15_HAULING, R15_HAUL_ID, R15_SCENE, R15_SCENE_NPC, R15_SLEDS, R15_SLED_EVENT, R15_SLED_FLAGS } from '../r15.quest';
+import { R15_HAULING, R15_HAUL_ID, R15_STOOP_FLAGS, R15_SCENE, R15_SCENE_NPC, R15_SLEDS, R15_SLED_EVENT, R15_SLED_FLAGS } from '../r15.quest';
 import { M29_CONFESSION_NPC, M29_CONFESSION_SCENE, M29_FIRE } from '../m29.quest';
 import { R16_AXE_FLAG, R16_CAVE_NPC, R16_CAVE_SCENE, R16_MOUTH, R16_ROCKFALL } from '../r16.quest';
 
@@ -97,6 +97,13 @@ export function installR15(k: Kit): void {
   const stoopsOff = (): void => {
     for (const g of R15_STOOP_GROUPS) enemies()?.reset(g);
   };
+  /** Stand every stoop group down (the flags), or arm only the group of the haul about to start: one more than the sleds already delivered. */
+  const armStoop = (on: boolean): void => {
+    R15_STOOP_FLAGS.forEach((f) => k.clear(f));
+    if (!on) return;
+    const delivered = R15_SLED_FLAGS.filter((f) => k.flag(f)).length;
+    k.set(R15_STOOP_FLAGS[Math.min(delivered, R15_STOOP_FLAGS.length - 1)]!);
+  };
   const out = (): void => void k.set(R15_HAUL_OUT, k.str(R15_HAUL_ID) !== '');
 
   k.on('quest.started', (e) => { if (e.questId === 'r15') k.later(sync); });
@@ -118,6 +125,7 @@ export function installR15(k: Kit): void {
     // still out ("reset haul" must stay on offer), so its id is restored once the sleds are back on their routes.
     const saved = k.str(R15_HAUL_ID);
     k.clear(R15_HAULING);
+    armStoop(false);
     k.clear(R15_HAUL_ID);
     out();
     k.later(() => {
@@ -133,12 +141,14 @@ export function installR15(k: Kit): void {
     if (!R15_SLEDS.includes(e.id) || !k.active('r15')) return;
     k.set(R15_HAUL_ID, e.id);
     k.set(R15_HAULING);
+    armStoop(true);
     out();
   });
   k.on('sled.dropped', (e) => {
     const n = R15_SLEDS.indexOf(e.id);
     if (n < 0 || !k.active('r15')) return;
     k.clear(R15_HAULING);
+    armStoop(false);
     const end = routeById(e.id)?.checkpoints.at(-1);
     const f = k.ctx.player.feet;
     if (end && !k.flag(R15_SLED_FLAGS[n]) && Math.hypot(f.x - end.x, f.z - end.z) <= R15_DELIVER_RADIUS) {

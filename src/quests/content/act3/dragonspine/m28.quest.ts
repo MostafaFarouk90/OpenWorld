@@ -1,9 +1,11 @@
 import type { QuestDef } from '../../../types';
-import { flagsAll, nums, reads, story } from '../../act2/helpers';
+import { flagsAll, reads, story } from '../../act2/helpers';
 
 /** Phase E holds the Dragonspine with this flag (src/quests/act3Jump.ts `DRAGONSPINE_OPEN_FLAG`, pinned by a test; not imported: that file pulls in the quest registry). */
 export const M28_OPEN_FLAG = 'story.phase.dragonspineOpen';
-export const M28_HUNTERS = nums('lodge-hunter-', 4);
+/** The four hunters in talk order. The third is lodge-hunter-5 at the door: lodge-hunter-3 stands on K4's 11 m tower with no stairs, so it cannot be reached on foot. */
+export const M28_HUNTER_POSTS = [1, 2, 5, 4] as const;
+export const M28_HUNTERS = M28_HUNTER_POSTS.map((n) => `lodge-hunter-${n}`);
 export const M28_TRAILHEAD = 'story.m28.trailhead';
 /** The hunter scout on the lower trail (the shipped spearman) and the crag group (six rime hawks and an ogre, one group). */
 export const M28_SCOUT_TAG = 'm28.scout';

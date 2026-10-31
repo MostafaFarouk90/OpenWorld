@@ -22,6 +22,7 @@ export const THORGAR = buildTree({
     { when: offer('m28'), seg: 'm28-brief' },
     { when: qActive('m28'), seg: 'm28-wait' },
     { when: qActive('r15'), seg: 'r15-wait' },
+    { when: all(offer('r15'), offer('r18')), seg: 'work' },
     { when: offer('r15'), seg: 'r15-brief' },
     { when: qActive('r18'), seg: 'r18-wait' },
     { when: offer('r18'), seg: 'r18-brief' },
@@ -59,6 +60,19 @@ export const THORGAR = buildTree({
         T('You have shown the mountain you are not afraid of it, and it has shown you it is not afraid of you. That is a fair beginning.'),
         T('Take this cloak. It is rime-wool, spun for the pass. It will keep you warm longer than your armour will.'),
         T('The lodge has work for you when you are rested. Supplies for the heights, and the hawks that have turned on us. Ask.'),
+      ],
+    },
+    // Both jobs are on offer: either can be taken first (the choice routes into the usual briefs, which start the quest).
+    work: {
+      lines: [
+        {
+          s: 'thorgar', t: 'The lodge has two jobs and no one to spare for either, {name}. The heights are short of supplies, and someone is robbing the hawks\' nests. Which will you take?',
+          choices: [
+            { id: 'supplies', t: 'The supplies for the heights.', go: 'r15-brief' },
+            { id: 'eggs', t: 'The stolen hawk eggs.', go: 'r18-brief' },
+            { id: 'later', t: 'Neither yet.', go: null },
+          ],
+        },
       ],
     },
     'r15-brief': {
@@ -108,7 +122,18 @@ export const THORGAR = buildTree({
         T('Your companions will have to wait at the cliff foot. Three people on a nest is a war party.', [{ startQuest: 'r18' }]),
       ],
     },
-    'r18-wait': { lines: [T('The thief first, his camp, then the eggs, one at a time, up the cliff. Quietly.')] },
+    'r18-wait': {
+      lines: [
+        T('The thief first, his camp, then the eggs, one at a time, up the cliff. Quietly.'),
+        {
+          s: 'thorgar', t: 'The sleds still want hauling, if you have a mind to it.', when: offer('r15'),
+          choices: [
+            { id: 'supplies', t: 'Tell me about the supplies.', go: 'r15-brief', when: offer('r15') },
+            { id: 'fine', t: 'Later.', go: null },
+          ],
+        },
+      ],
+    },
     'r18-report': {
       lines: [
         T('The parents are back on the nest, and my hunters tell me they have stopped stooping at the road. You did it.'),

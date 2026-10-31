@@ -19,7 +19,7 @@ import { buildCarryRoutes } from '../../../../dragonspine/carryRoutes';
 import { heightAt } from '../../../../terrain/heightfield';
 import { validateQuest } from '../../../validate';
 import { R16_ROCKFALL_CLEARED_FLAG, R16_STARTED_FLAG } from './r16.quest';
-import { R15_SLEDS } from './r15.quest';
+import { R15_SLEDS, R15_STOOP_FLAGS } from './r15.quest';
 import { M28_OPEN_FLAG } from './m28.quest';
 import { R17_HAWK_FLAGS } from './r17.quest';
 import { R18_PARENTS_TAG } from './r18.quest';
@@ -109,7 +109,7 @@ describe('the lower Dragonspine quests as data', () => {
   it('every spawner sits on the lower block, never respawns and is switched by a flag some arm, prop or rule writes', () => {
     const writers = new Set<string>([
       ...DRAGONSPINE_ARMS.map((a) => a.flag), ...DRAGONSPINE_LOWER.props.flatMap((p) => (p.usedFlag ? [p.usedFlag] : [])),
-      'story.r15.hauling', // the sled rule
+      ...R15_STOOP_FLAGS, // the sled rule: one flag per haul
     ]);
     for (const s of DRAGONSPINE_LOWER.spawners) {
       expect(s.block, s.id).toBe('dragonspine-lower');

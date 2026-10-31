@@ -1,5 +1,6 @@
 import { buildTree, type BuiltTree } from '../../act2/build';
 import { all } from '../../act2/cond';
+import { M28_HUNTER_POSTS } from '../../../../quests/content/act3/dragonspine/m28.quest';
 import { C, at, voice } from './common';
 
 // The lodge hunters (M28, two lines each), the sled-hands (R15, three each), the cave hunter (R16, four), the egg thief (R18, 8 + 3)
@@ -10,8 +11,9 @@ const tree = (npc: string, rules: Array<[ReturnType<typeof at>, string]>, segmen
 
 const hunter = (n: number, lines: [string, string], idle: string): BuiltTree => {
   const H = voice(`lodge-hunter-${n}`);
-  return tree(`lodge-hunter-${n}`, n <= 4 ? [[at('m28', `hunter${n}`), 'm28-talk']] : [], {
-    ...(n <= 4 ? { 'm28-talk': { lines: [H(lines[0]), H(lines[1])] } } : {}),
+  const slot = M28_HUNTER_POSTS.indexOf(n as never) + 1; // 0 when this hunter has no M28 line
+  return tree(`lodge-hunter-${n}`, slot ? [[at('m28', `hunter${slot}`), 'm28-talk']] : [], {
+    ...(slot ? { 'm28-talk': { lines: [H(lines[0]), H(lines[1])] } } : {}),
     idle: { lines: [H(idle)] },
   });
 };
@@ -19,9 +21,9 @@ const hunter = (n: number, lines: [string, string], idle: string): BuiltTree => 
 export const LODGE_HUNTERS: BuiltTree[] = [
   hunter(1, ['North gate, then the trail. Follow the cairns and you will not fall off anything.', 'Anything much, I should say. The two ledges are a jump. The Surge carries you over, or you walk the long way round.'], 'Watch the cairns. They are the only friends the trail has.'),
   hunter(2, ['Hawks work in pairs. One draws the eye and one comes in from behind. Watch the second.', 'Dodge as they land, not as they stoop. They cannot turn in the last ten paces.'], 'A hawk\'s eye never closes. You only think it does.'),
-  hunter(3, ['The scout, Aldwin\'s boy, went up three days ago to look at the crag. His horn blew once and then not again.', 'If he still stands, he has gone strange. The cold does that. Do not trust the face.'], 'I keep my spear dry. The rest of me I give up on.'),
+  hunter(3, ['', ''], 'I keep my spear dry. The rest of me I give up on.'),
   hunter(4, ['The crag is where the old roosts were. An ogre sleeps in the lee of it, big as a barn.', 'It does not wake for walkers. It wakes for fighting, and the hawks wake it.'], 'The ogre is the lodge\'s oldest quarrel.'),
-  hunter(5, ['', ''], 'The gate is mine. No one passes who should not.'),
+  hunter(5, ['The scout, Aldwin\'s boy, went up three days ago to look at the crag. His horn blew once and then not again.', 'If he still stands, he has gone strange. The cold does that. Do not trust the face.'], 'The gate is mine. No one passes who should not.'),
   hunter(6, ['', ''], 'We take the winter in turns. I have the early watch.'),
 ];
 

@@ -10,6 +10,8 @@ export const R15_SLED_EVENT = 'story.r15.sledDelivered';
 export const R15_HAUL_ID = 'story.r15.haulId';
 /** True while a sled is held: the hawks stoop only then. */
 export const R15_HAULING = 'story.r15.hauling';
+/** One flag per stoop group: only the group of the current haul is armed (two hawks per haul, six over the three). */
+export const R15_STOOP_FLAGS = nums('story.r15.stoop.', 3);
 export const R15_STOOP_TAG = 'r15.stoop';
 export const R15_UNLOAD = 'use:r15-unload';
 export const R15_UNLOADED = 'story.r15.unloaded';
