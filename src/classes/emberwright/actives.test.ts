@@ -21,11 +21,11 @@ describe('Flame Lash', () => {
   it('hits hostiles on the 8 m line only, ignites, refuses other classes and while blocked', () => {
     rig = makeRig();
     rig.w.player.facingYaw = 0;
-    rig.hostile('on', 0, 6);
-    rig.hostile('beside', 3, 4);
-    rig.hostile('behind', 0, -3);
-    rig.hostile('long', 0, 9.2);
-    rig.w.actors.add(new FakeActor('npc', 'neutral', 0, 3));
+    rig.hostile('on', 0, -6);
+    rig.hostile('beside', 3, -4);
+    rig.hostile('behind', 0, 3);
+    rig.hostile('long', 0, -9.2);
+    rig.w.actors.add(new FakeActor('npc', 'neutral', 0, -3));
     expect(rig.rt.castAbility(SKILL.flameLash)).toEqual({ ok: true });
     expect(rig.applied()).toHaveLength(0); // lands at the release, not at the key
     rig.step(1.0);
@@ -51,7 +51,7 @@ describe('Flame Lash', () => {
   it('a cancel before the release (stagger, rest, load, modal, class change) hits nothing and refunds the Ember the abilities service spent', () => {
     for (const cancel of ['stagger', 'rest', 'save.loaded', 'ui.modal', 'class.changed', 'death'] as const) {
       rig = makeRig();
-      rig.hostile('on', 0, 6);
+      rig.hostile('on', 0, -6);
       expect(rig.rt.castAbility(SKILL.flameLash).ok).toBe(true);
       rig.ember.value -= FLAME_LASH.ember; // what abilities.use does after the handler
       rig.step(0.3);
@@ -67,7 +67,7 @@ describe('Flame Lash', () => {
 
   it('after the release a cancel refunds nothing', () => {
     rig = makeRig();
-    rig.hostile('on', 0, 6);
+    rig.hostile('on', 0, -6);
     rig.rt.castAbility(SKILL.flameLash);
     rig.ember.value -= FLAME_LASH.ember;
     rig.step(1.5);
@@ -81,11 +81,11 @@ describe('Flame Lash', () => {
 describe('Anvil Drop', () => {
   it('needs a target: lock-on first, else the nearest hostile in front within 12 m', () => {
     rig = makeRig();
-    rig.hostile('behind', 0, -4);
-    rig.hostile('far', 0, 14);
+    rig.hostile('behind', 0, 4);
+    rig.hostile('far', 0, -14);
     expect(rig.rt.castAbility(SKILL.anvilDrop)).toEqual({ ok: false, reason: 'no-target' });
-    rig.hostile('front', 0, 8);
-    rig.hostile('nearer', 1, 3);
+    rig.hostile('front', 0, -8);
+    rig.hostile('nearer', 1, -3);
     expect(rig.rt.castAbility(SKILL.anvilDrop).ok).toBe(true);
     rig.step(1.5);
     expect(rig.applied().find((r) => r.amount === ANVIL_DROP.damage)!.targetId).toBe('nearer');
@@ -93,10 +93,10 @@ describe('Anvil Drop', () => {
 
   it('the impact comes 0.35 s after the release: crush, stun on the primary only, half splash on neighbours, hostile only', () => {
     rig = makeRig();
-    rig.hostile('t', 0, 6);
-    rig.hostile('n', 1.5, 6);
-    rig.hostile('away', 5, 6);
-    rig.w.actors.add(new FakeActor('ally', 'ally', 0.5, 6));
+    rig.hostile('t', 0, -6);
+    rig.hostile('n', 1.5, -6);
+    rig.hostile('away', 5, -6);
+    rig.w.actors.add(new FakeActor('ally', 'ally', 0.5, -6));
     rig.state.lockOn = 't';
     rig.rt.castAbility(SKILL.anvilDrop);
     const release = SKILL_RELEASE();
@@ -115,7 +115,7 @@ describe('Anvil Drop', () => {
 
   it('a pending impact survives a stagger but not a class change', () => {
     rig = makeRig();
-    rig.hostile('t', 0, 6);
+    rig.hostile('t', 0, -6);
     rig.state.lockOn = 't';
     rig.rt.castAbility(SKILL.anvilDrop);
     rig.step(SKILL_RELEASE() + 0.05);
@@ -124,7 +124,7 @@ describe('Anvil Drop', () => {
     expect(rig.applied().some((r) => r.targetId === 't')).toBe(true);
 
     const second = makeRig();
-    second.hostile('t', 0, 6);
+    second.hostile('t', 0, -6);
     second.state.lockOn = 't';
     second.rt.castAbility(SKILL.anvilDrop);
     second.step(SKILL_RELEASE() + 0.05);
@@ -136,8 +136,8 @@ describe('Anvil Drop', () => {
 
   it('a target that dies before the impact still crushes its neighbours', () => {
     rig = makeRig();
-    const t = rig.hostile('t', 0, 6);
-    rig.hostile('n', 1.5, 6);
+    const t = rig.hostile('t', 0, -6);
+    rig.hostile('n', 1.5, -6);
     rig.state.lockOn = 't';
     rig.rt.castAbility(SKILL.anvilDrop);
     rig.step(SKILL_RELEASE() + 0.05);
@@ -155,11 +155,11 @@ describe('Warm Breath', () => {
   it('heals allies in the 6 m cone for 20% of their max health, nothing else', () => {
     rig = makeRig();
     rig.w.player.facingYaw = 0;
-    const tobb = rig.w.actors.add(new FakeActor('tobb', 'ally', 0, 4));
+    const tobb = rig.w.actors.add(new FakeActor('tobb', 'ally', 0, -4));
     tobb.health = 10;
-    const behind = rig.w.actors.add(new FakeActor('behind', 'ally', 0, -3));
+    const behind = rig.w.actors.add(new FakeActor('behind', 'ally', 0, 3));
     behind.health = 10;
-    const hostile = rig.hostile('h', 0, 3);
+    const hostile = rig.hostile('h', 0, -3);
     expect(rig.rt.castAbility(SKILL.warmBreath).ok).toBe(true);
     rig.step(1);
     expect(tobb.health).toBeCloseTo(10 + 100 * WARM_BREATH.healFraction);
