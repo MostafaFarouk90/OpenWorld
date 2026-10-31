@@ -13,11 +13,10 @@ export const M26_SCALE_TAKEN = 'story.m26.scaleTaken';
 export const M26_HUNTERS_TAG = 'm26.hunters';
 export const M26_LEECHES_TAG = 'm26.leeches';
 export const M26_NETGUARD_FLAG = 'story.m26.guardOut';
+export const M26_GUARD_DOWN = 'story.m26.guardDown';
 export const M26_WOKE = 'story.m26.woke';
 export const M26_VOICE_NPC = 'scene.m26.voice';
 export const M26_VOICE_SCENE = 'scene-m26-voice';
-export const M26_WAKE_NPC = 'scene.m26.wake';
-export const M26_WAKE_SCENE = 'scene-m26-wake';
 
 /**
  * M26 Quench-Tongue Wakes. Gytha takes Cael to Hathren's Mere, where hunters have netted the Quench-Tongue. Hathren wakes
@@ -38,9 +37,7 @@ export const m26: QuestDef = {
     { id: 'mere', type: 'talk', target: 'gytha', textKey: 'quest.m26.mere' },
     { id: 'shore', type: 'talk', target: 'leofa', textKey: 'quest.m26.shore' },
     story('wake', 'quest.m26.wake', 'wyrm.hathren', { match: { beat: 'wake' }, doneWhen: { flag: M26_WOKE, equals: true } }),
-    { id: 'spearmen', type: 'kill', target: 'hunter-spearman', required: 4, spawnTag: M26_HUNTERS_TAG, textKey: 'quest.m26.spearmen' },
-    { id: 'harpooner', type: 'kill', target: 'hunter-harpooner', required: 1, spawnTag: M26_HUNTERS_TAG, textKey: 'quest.m26.harpooner' },
-    { id: 'leeches', type: 'kill', target: 'fen-leech', required: 3, spawnTag: M26_LEECHES_TAG, textKey: 'quest.m26.leeches' },
+    story('guards', 'quest.m26.guards', 'story.m26.guardDown', { doneWhen: { flag: M26_GUARD_DOWN, equals: true } }),
     reads('search', 'quest.m26.search', M26_SEARCHES),
     interacts('nets', 'quest.m26.nets', M26_NETS),
     story('rite', 'quest.m26.rite', 'shrine.rekindled', { match: { shrineId: M26_SHRINE }, doneWhen: { flag: M26_LIT, equals: true } }),
@@ -48,5 +45,5 @@ export const m26: QuestDef = {
     { id: 'scale', type: 'interact', target: M26_SCALE, textKey: 'quest.m26.scale' },
     { id: 'report', type: 'talk', target: 'gytha', textKey: 'quest.m26.report' },
   ],
-  rewards: [{ xp: 650 }, { give: [{ itemId: 'hathrens-scale', count: 1 }] }],
+  rewards: [{ xp: 650 }], // the scale itself is the pick-up at the scale bed (the prop gives it once)
 };

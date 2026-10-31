@@ -15,11 +15,11 @@ export const GREYFEN_PROPS: QuestPropSpec[] = [
   { interactableId: M24_BLOW, anchorId: 'greyfen.m24.horn.blow', promptKey: 'quest.prompt.blow', objective: ['m24', 'blow'], usedFlag: M24_BLOWN, look: 'chain', priority: 1 },
   // R12: a torch to each bed (the burn) or two cuts at each (the sickle)
   ...R12_BEDS.map((n): QuestPropSpec => ({
-    interactableId: `use:r12-bed-${n}-torch`, anchorId: `greyfen.r12.bed.${n}.torch`, promptKey: 'quest.prompt.torch', objective: ['r12', 'burn'],
+    interactableId: `use:r12-bed-${n}-torch`, anchorId: `greyfen.r12.bed.${n}.torch`, promptKey: 'quest.prompt.torch', objective: ['r12', 'beds'],
     usedFlag: R12_TORCH_FLAG(n), when: R12_BURNING, look: 'brazier', hideWhenUsed: true, priority: 1,
   })),
   ...R12_BEDS.flatMap((n) => [1, 2].map((c): QuestPropSpec => ({
-    interactableId: `use:r12-bed-${n}-cut-${c}`, anchorId: `greyfen.r12.bed.${n}.cut.${c}`, promptKey: 'quest.prompt.cut', objective: ['r12', 'cut'],
+    interactableId: `use:r12-bed-${n}-cut-${c}`, anchorId: `greyfen.r12.bed.${n}.cut.${c}`, promptKey: 'quest.prompt.cut', objective: ['r12', 'beds'],
     usedFlag: R12_CUT_FLAG(n, c), when: R12_CUTTING, look: 'stake', hideWhenUsed: true, priority: 1,
   }))),
   // M25: three herbs to pick, then the three pots at the cauldron in order

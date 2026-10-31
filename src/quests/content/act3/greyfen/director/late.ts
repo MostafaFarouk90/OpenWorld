@@ -2,6 +2,7 @@
 import type { Kit } from './shared';
 import { offerScene, recheck, toast } from './shared';
 import { WaterSong } from './song';
+import { createSongBar } from './songBar';
 import { R14_CHOICE, R14_FAVOURED } from '../r14.quest';
 import {
   R13_ALTAR, R13_CALMED, R13_LESSON, R13_POCKETS, R13_POCKET_FLAG, R13_SONG_NPC, R13_SONG_SCENE, R13_SUNG,
@@ -11,13 +12,14 @@ import {
 } from '../m26.quest';
 import {
   M27_ALLY_ANCHORS, M27_ALLY_SCENE, M27_ALONE_SCENE, M27_AFTER_NPC, M27_AFTER_SCENE, M27_BLINDS, M27_BLINDS_END, M27_BROOD_BACK, M27_FREE_FLAGS,
-  M27_SEEN, M27_WITNESSES,
+  M27_PACK1_DOWN, M27_SEEN, M27_WITNESSES,
 } from '../m27.quest';
 import {
   D05_BOSS, D05_OUTCOME_FLAG, D05_OUTCOME_NPC, D05_OUTCOME_SCENE, D05_POCKETS, D05_POCKET_FLAG, D05_UNDERCROFT_NPC, D05_UNDERCROFT_SCENE,
 } from '../d05.quest';
 
 export const R13_SCENE_SEEN = 'story.r13.songSeen';
+export const R13_FAILS = 'story.r13.songFails';
 /** Fixed ticks (60 a second) between the song and the calm, and between the last cage and the brood's return. */
 export const R13_CALM_TICKS = 360;
 export const M27_BROOD_TICKS = 240;
@@ -39,7 +41,7 @@ export function installR14(k: Kit): void {
   k.on('save.loaded', favour);
 }
 
-export function installR13(k: Kit, now: () => number = () => performance.now()): void {
+export function installR13(k: Kit, now: () => number = () => performance.now()): () => void {
   k.on('dive.surfaced', (e) => {
     const i = R13_POCKETS.indexOf(e.pocketId ?? '');
     if (i >= 0 && k.active('r13')) { k.set(R13_POCKET_FLAG(i + 1)); k.later(() => recheck(k)); }
@@ -49,6 +51,8 @@ export function installR13(k: Kit, now: () => number = () => performance.now()):
     now,
     toast: (key) => toast(k, key),
     lessonDone: () => k.flag(R13_LESSON),
+    fails: () => k.num(R13_FAILS),
+    failed: () => k.set(R13_FAILS, k.num(R13_FAILS) + 1),
     onLesson: () => { k.set(R13_LESSON); toast(k, 'greyfen.q.r13.lessonDone'); },
     onSung: () => {
       k.set(R13_SUNG);
@@ -78,10 +82,15 @@ export function installR13(k: Kit, now: () => number = () => performance.now()):
     if (e.dialogueId === R13_SONG_SCENE && e.reason === 'completed') { k.set(R13_SCENE_SEEN); k.later(() => live() && song.press()); }
   });
   k.every(6, () => song.update());
+  // the bar on screen (the tempering strip); a reduced boot without a document or HUD draws nothing
+  const hud = (k.ctx as unknown as { hud?: { mount(slot: string, w: unknown): () => void } }).hud;
+  const bar = createSongBar(typeof document === 'undefined' ? null : (document as never), () => song.view(), (key) => k.ctx.strings.t(key));
+  const unmount = bar && hud ? hud.mount('bottom-center', bar) : () => {};
   k.on('save.loaded', () => {
     song.reset();
     if (k.active('r13') && k.flag(R13_SUNG) && !k.flag(R13_CALMED)) k.after(120, calm);
   });
+  return unmount;
 }
 
 export function installM26(k: Kit): void {
@@ -163,11 +172,22 @@ export function installM27(k: Kit): void {
   k.on('save.loaded', () => { at = null; k.later(placeDeserter); });
 
   // Spared hunters are witnesses.
-  k.on('hunter.spared', () => { if (k.active('m27')) k.set(M27_WITNESSES, k.num(M27_WITNESSES) + 1); });
+  // Only M27's own packs count, one witness per distinct hunter; a spare taken back (`mercy.revoked`) is no witness, and he may be spared again.
+  const witnessed = new Set<string>();
+  const packMember = (a: string): boolean =>
+    [M27_PACK1_GROUP, M27_PACK2_GROUP].some((g) => (k.ctx.services.get('enemies')?.alive(g) ?? []).includes(a));
+  k.on('save.loaded', () => witnessed.clear());
+  k.on('hunter.spared', (e) => {
+    if (!k.active('m27') || witnessed.has(e.actorId) || !packMember(e.actorId)) return;
+    witnessed.add(e.actorId);
+    k.set(M27_WITNESSES, k.num(M27_WITNESSES) + 1);
+  });
+  k.on('mercy.revoked', (e) => {
+    if (witnessed.delete(e.actorId)) k.set(M27_WITNESSES, Math.max(0, k.num(M27_WITNESSES) - 1));
+  });
 
   // The reed blinds. Unseen to the far end: pack 1 never knew. Seen by pack 1: it fights, and the step credits when it is gone.
   const pack1 = (): readonly string[] => k.standing(M27_PACK1_GROUP);
-  let pack1Alive = false;
   const credit = (): void => {
     if (k.flag(M27_BLINDS) || !k.active('m27')) return;
     k.set(M27_BLINDS);
@@ -184,11 +204,8 @@ export function installM27(k: Kit): void {
   });
   k.every(30, () => {
     if (!k.active('m27') || !k.objCurrent('m27', 'blinds') || k.flag(M27_BLINDS)) return;
-    const alive = k.standing(M27_PACK1_GROUP).length > 0;
-    if (alive) pack1Alive = true;
-    else if (pack1Alive) credit();
+    if (k.flag(M27_PACK1_DOWN)) credit(); // pack 1 was on the field and is gone (persisted by the group rule, so a load cannot strand it)
   });
-  k.on('save.loaded', () => { pack1Alive = false; });
 
   // The cages: three opened, then the brood goes home (a short wait, then the step's flag and a line on screen).
   const home = (): void => {

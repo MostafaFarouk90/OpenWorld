@@ -9,13 +9,14 @@ export const M27_PACK1_TAG = 'm27.pack1';
 export const M27_PACK2_TAG = 'm27.pack2';
 export const M27_PACK1_FLAG = 'story.m27.pack1Out';
 export const M27_PACK2_FLAG = 'story.m27.pack2Out';
+export const M27_PACK1_DOWN = 'story.m27.pack1Down';
+export const M27_PACK2_DOWN = 'story.m27.pack2Down';
 /** The blinds are credited when the player creeps through unseen, or once pack 1 (which saw them) is cleared. */
 export const M27_BLINDS = 'story.m27.blinds';
 export const M27_SEEN = 'story.m27.seen';
 export const M27_WITNESSES = 'story.m27.witnesses';
 export const M27_BLINDS_START = 'trg.greyfen.m27.blinds';
 export const M27_BLINDS_END = 'trg.greyfen.m27.blinds.end';
-export const M27_CAGES = 'trg.greyfen.m27.cages';
 export const M27_ALLY_SCENE = 'scene-m27-deserter';
 /** The ally scene when the deserter was returned to Greywatch (or Wybert is not there): Leofa alone (six lines). */
 export const M27_ALONE_SCENE = 'scene-m27-leofa';
@@ -46,8 +47,7 @@ export const m27: QuestDef = {
     story('blinds', 'quest.m27.blinds', 'story.m27.blinds', { doneWhen: { flag: M27_BLINDS, equals: true } }),
     reads('seal', 'quest.m27.seal', [M27_SEARCHES[1]]),
     reads('map', 'quest.m27.map', [M27_SEARCHES[2]]),
-    { id: 'spearmen', type: 'kill', target: 'hunter-spearman', required: 3, spawnTag: M27_PACK2_TAG, textKey: 'quest.m27.spearmen' },
-    { id: 'harpooner', type: 'kill', target: 'hunter-harpooner', required: 1, spawnTag: M27_PACK2_TAG, textKey: 'quest.m27.harpooner' },
+    story('pack2', 'quest.m27.pack2', 'story.m27.pack2Down', { doneWhen: { flag: M27_PACK2_DOWN, equals: true } }),
     reads('tally', 'quest.m27.tally', [M27_SEARCHES[3]]),
     { id: 'free', type: 'event', target: 'interact', match: { interactableId: M27_FREE }, dedupeBy: 'interactableId', required: 3, textKey: 'quest.m27.free' },
     story('brood', 'quest.m27.brood', 'story.m27.set', { doneWhen: { flag: M27_BROOD_BACK, equals: true } }),

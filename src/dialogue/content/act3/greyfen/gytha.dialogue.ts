@@ -1,8 +1,16 @@
-import { buildTree } from '../../act2/build';
+import { buildTree, type Line } from '../../act2/build';
 import { all, qActive, qDone } from '../../act2/cond';
 import { C, at, offer, voice } from './common';
 
 const G = voice('gytha');
+/** After M25 (the recipe is in the bag) the line also offers K10's repeatable Fen Salve brew: the economy brews on `npc.gytha.brew`. */
+const BREW = (l: Line): Line => ({
+  ...l,
+  choices: [
+    { id: 'brew', t: 'Brew me a salve.', go: null, when: qDone('m25'), fx: [{ event: 'npc.gytha.brew' }] },
+    { id: 'leave', t: 'Nothing, thank you.', go: null },
+  ],
+});
 const K = voice('crow');
 
 /**
@@ -87,6 +95,12 @@ export const GYTHA = buildTree({
         G('It is quieter. It is not gone. Remember that, {name}, when you call the flame again. Old fires have long memories.'),
         G('The fire in you is older than you are. It remembers what it burned, and it will remember what you burn.'),
         C('I will remember.'),
+        C('How long will it hold?'),
+        G('A day, a week, a month. It depends on how much you ask of the fire. A salve is a loan, not a gift, and the Burn always collects.'),
+        C('Then I will ask little of it.'),
+        G('Say it again when you are standing in front of a hunter pack with your hands full of nothing. We shall see how little.'),
+        G('You will not. Nobody who carries that much fire asks little of it. But you may ask it later, and that is all a loan buys you.'),
+        G('If you come back with more herbs and a little silver, I will brew you another. The recipe is yours now; I have written it down where I cannot forget it.'),
         G('See that you do. Come back to me when your hands stop shaking.'),
       ],
     },
@@ -110,7 +124,7 @@ export const GYTHA = buildTree({
         G('I will meet you at the chapel door. The keeper will speak to you; be kind to him. He is dead, and he is lonely.', [{ startQuest: 'r13' }]),
       ],
     },
-    'r13-wait': { lines: [G('The nave, the pockets, the altar. Sing it right, {name}, or do not sing it at all.')] },
+    'r13-wait': { lines: [BREW(G('The nave, the pockets, the altar. Sing it right, {name}, or do not sing it at all.'))] },
     'r13-report': {
       lines: [
         G('Listen. Do you hear it?'),
@@ -149,7 +163,7 @@ export const GYTHA = buildTree({
         G('Go. Cut. Light. Speak.'),
       ],
     },
-    'm26-wait': { lines: [G('The hunters, the nets, the stone. In that order. I will stay behind the stone.')] },
+    'm26-wait': { lines: [BREW(G('The hunters, the nets, the stone. In that order. I will stay behind the stone.'))] },
     'm26-report': {
       lines: [
         G('She is gone under the water, and the Mere is quiet. I did not think I would live to see it.'),
@@ -175,8 +189,8 @@ export const GYTHA = buildTree({
         G('Go carefully. I will be here when you come back, or I will not, and the fen will be a worse place for it.', [{ startQuest: 'd05' }]),
       ],
     },
-    'd05-wait': { lines: [G('The Deeps, the sluices, the arena. I will be here when you come out.')] },
-    'after-d05': { lines: [G('The Deeps are quiet now. I can hear my own crow think.')] },
-    idle: { lines: [G('The hut, the herbs, the peat. I have enough to do. What do you want?')] },
+    'd05-wait': { lines: [BREW(G('The Deeps, the sluices, the arena. I will be here when you come out.'))] },
+    'after-d05': { lines: [BREW(G('The Deeps are quiet now. I can hear my own crow think.'))] },
+    'idle': { lines: [BREW(G('The hut, the herbs, the peat. I have enough to do. What do you want?'))] },
   },
 });

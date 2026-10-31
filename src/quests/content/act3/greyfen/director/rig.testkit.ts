@@ -16,7 +16,7 @@ import { GREYFEN_QUEST_DEFS } from '../greyfen.content';
 import { GREYFEN_OBJECTIVE_FLAGS } from '../objectiveFlags';
 import { GREYFEN_PROPS } from '../props';
 import { GREYFEN_NOTE_LIST } from '../notes';
-import { installArms, installComplete } from './generic';
+import { installArms, installGroupObjectives, installComplete } from './generic';
 import { installM23, installM24, installM25, installR12 } from './early';
 import { installD05, installM26, installM27, installR13, installR14 } from './late';
 
@@ -63,6 +63,7 @@ export function makeRig(opts: RigOpts = {}) {
   }
   const standing = new Map<string, string[]>();
   services.provide('groupStanding' as never, { standing: (id: string) => standing.get(id) ?? [], onMemberLeft: () => () => {} } as never);
+  services.provide('enemies' as never, { alive: (id: string) => standing.get(id) ?? [] } as never);
   const interiors = { current: null as string | null };
   services.provide('interiors' as never, interiors as never);
 
@@ -72,7 +73,7 @@ export function makeRig(opts: RigOpts = {}) {
   const ctx = {
     events, state, services,
     anchors: {
-      find: (id: string) => { const a = ANCHOR.get(id); return a && { id, position: { x: a.x, y: 0, z: a.z }, yaw: a.yawDeg }; },
+      find: (id: string) => { const a = ANCHOR.get(id); return a && { id, position: { x: a.x, y: 0, z: a.z }, yaw: (a.yawDeg * Math.PI) / 180 }; },
       define: (a: { id: string }) => { defined.push(a.id); return () => {}; },
     },
     triggers: { add: () => () => {}, isInside: (id: string) => inside.has(id) },
@@ -85,6 +86,7 @@ export function makeRig(opts: RigOpts = {}) {
   let clock = 1000;
   installArms(kit);
   installComplete(kit);
+  installGroupObjectives(kit);
   installM23(kit);
   installM24(kit);
   installR12(kit);

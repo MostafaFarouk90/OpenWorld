@@ -114,7 +114,7 @@ export const GREYFEN_PACE: readonly Act3PaceRow[] = [
     W('greyfen.m24.sound.1'), W('greyfen.m24.sound.2'), W('greyfen.m24.sound.3'), W('greyfen.m24.sound.4'), W('greyfen.m24.sound.5'),
     W('greyfen.spawn.m24.wreck.1'), W('greyfen.m24.pool.entry'), D('greyfen.m24.pool.horn'), D('greyfen.m24.pool.entry'), F('greyfen.m24.horn.blow'),
     F('greyfen.ferry.reedgate'), B('greyfen.ferry.mere'), B('greyfen.ferry.reedgate'), F('npc-post.dudda.ferry'),
-  ], 33, { search: 5, dive: 2, killUnit: 4, interact: 2, set: 1 }),
+  ], 33, { search: 5, dive: 2, killUnit: 4, interact: 2 }),
   // R12 (the torch branch, the shorter): the cutters, the three tallies, five beds torched, back to Dudda
   build('r12', 35, 'npc-post.dudda.ferry', [
     R('greyfen.r12.cutter.1'), W(TORCH(1)), F('greyfen.r12.search.1'), R('greyfen.r12.cutter.2'), W(TORCH(4)), W(TORCH(5)), F('greyfen.r12.search.3'),
@@ -125,7 +125,7 @@ export const GREYFEN_PACE: readonly Act3PaceRow[] = [
     F('greyfen.m25.cutter'), F('greyfen.hut.door'), D('greyfen.hut.entry'), F('greyfen.m25.shelf'), F('npc-post.gytha.inside'), D('greyfen.hut.door'),
     F('greyfen.m25.herb.1'), F('greyfen.m25.herb.1.pick'), F('greyfen.m25.herb.2'), F('greyfen.m25.herb.2.pick'), F('greyfen.m25.herb.3'), F('greyfen.m25.herb.3.pick'),
     F('greyfen.spawn.m25.herbs.1'), F('greyfen.hut.door'), D('greyfen.hut.entry'), F('greyfen.m25.cauldron'), F('npc-post.gytha.inside'),
-  ], 41, { search: 7, killUnit: 6, interact: 3, set: 1 }),
+  ], 47, { search: 4, killUnit: 6, interact: 6 }),
   // R14: Greywatch, the four posts in order, the deserter's camp and back
   build('r14', 45, 'npc-post.leofa.greywatch', [
     R('greyfen.r14.sign.1.1'), F('greyfen.r14.sign.1.2'), F('greyfen.r14.ranger.1'),
@@ -139,7 +139,7 @@ export const GREYFEN_PACE: readonly Act3PaceRow[] = [
     F('npc-post.bell-keeper.door'), D('greyfen.chapel.entry'), F('greyfen.r13.search.1'), F('greyfen.r13.search.2'),
     D('greyfen.r13.pocket.1'), D('greyfen.r13.pocket.2'), D('greyfen.r13.pocket.3'), F('greyfen.r13.search.3'), F('greyfen.spawn.r13.nave.4'), D('greyfen.r13.altar'),
     F('greyfen.r13.search.5'), F('greyfen.r13.search.4'), F('greyfen.r13.altar'), D('greyfen.chapel.door'), F('npc-post.bell-keeper.door'), F('greyfen.r13.gytha'),
-  ], 31, { dive: 4, search: 5, killUnit: 5, rhythm: 2, set: 1 }),
+  ], 34, { dive: 4, search: 5, killUnit: 5, rhythm: 2 }),
   // M26: the Mere shore (wading), nets, searches and the rite at the stone
   build('m26', 55, 'waystone.hathrens-mere', [
     F('greyfen.m26.gytha'), F('npc-post.leofa.mere'), W('greyfen.mere.shore'), W('greyfen.spawn.m26.nets.1'), W('greyfen.spawn.m26.nets.5'), W('greyfen.spawn.m26.nets.7'),
@@ -150,7 +150,7 @@ export const GREYFEN_PACE: readonly Act3PaceRow[] = [
   build('m27', 45, 'npc-post.leofa.mere', [
     F('greyfen.m27.keeper'), W('greyfen.m27.search.1'), W('greyfen.m27.blind.1'), W('greyfen.m27.blind.4'), W('greyfen.m27.search.2'), W('greyfen.m27.search.3'),
     W('greyfen.spawn.m27.pack.2.1'), W('greyfen.m27.search.4'), W('greyfen.m27.brood.1'), W('greyfen.m27.brood.2'), W('greyfen.m27.brood.3'), F('npc-post.leofa.mere'),
-  ], 33, { stealthSection: 1, killUnit: 4, search: 4, interact: 3, set: 1 }),
+  ], 33, { stealthSection: 1, killUnit: 4, search: 4, interact: 3 }),
   // D05: Gytha at the Deeps door, four dives through the Deeps (door legs), the sluices, the arena
   build('d05', 60, 'waystone.hathrens-mere', [
     R('greyfen.d05.gytha'), F('greyfen.deeps.door'), D('greyfen.deeps.entry'), D('greyfen.d05.pocket.1'), F('greyfen.d05.search.1'), F('greyfen.spawn.d05.cell-1.1'),

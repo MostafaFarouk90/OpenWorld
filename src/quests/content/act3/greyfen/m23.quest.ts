@@ -18,7 +18,7 @@ export const M23_SIGHT_NPC = 'scene.m23.sight';
 export const M23_BRIDGE_FLAGS = [bridgeFlag(1), bridgeFlag(2)] as const;
 
 const bridge = (n: 1 | 2) => ({
-  id: `bridge${n}`, type: 'event' as const, target: 'flag.changed', match: { key: M23_BRIDGE_FLAGS[n - 1] }, textKey: `quest.m23.bridge${n}`,
+  id: `bridge${n}`, type: 'event' as const, target: 'flag.changed', match: { key: M23_BRIDGE_FLAGS[n - 1], value: true }, textKey: `quest.m23.bridge${n}`,
   doneWhen: { flag: M23_BRIDGE_FLAGS[n - 1], equals: true },
 });
 const knot = (n: number) => ({ id: `knot${n}`, type: 'kill' as const, target: 'fen-leech', required: 3, spawnTag: M23_KNOT_TAGS[n - 1], textKey: `quest.m23.knot${n}` });

@@ -136,6 +136,9 @@ export const BELL_KEEPER = buildTree({
         B('The song you want was sung at the altar, in four verses. The first is on the hymn board, the second in the font, the third on the bell rope, the fourth carved on the altar itself.'),
         C('And the ledger?'),
         B('The ledger tells you when the water rose, and by how much. It is not part of the song. It is the reason we sang.'),
+        C('Why did the water rise?'),
+        B('Because we asked it to, one dry summer, and it was a creature that took requests seriously. We never asked again.'),
+        B('Find the verses, {name}. The fen will listen to the tune long before it listens to a person.'),
       ],
     },
     'r13-farewell': {

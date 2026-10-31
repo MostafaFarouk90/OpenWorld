@@ -25,8 +25,9 @@ export const GREYFEN_POST_RULES: PostRule[] = [
     home: 'npc-post.gytha.hut',
     posts: [
       { when: { quest: 'm25', state: 'active' }, anchorId: 'npc-post.gytha.inside' },
-      { when: { quest: 'r13', state: 'active' }, anchorId: 'greyfen.r13.gytha' },
+      // M26 first: with both open she waits at the Mere, where M26's talks and hand-in are (R13's brief is taken before it)
       { when: { quest: 'm26', state: 'active' }, anchorId: 'greyfen.m26.gytha' },
+      { when: { quest: 'r13', state: 'active' }, anchorId: 'greyfen.r13.gytha' },
       { when: { quest: 'd05', state: 'active' }, anchorId: 'greyfen.d05.gytha' },
       { when: { all: [{ quest: 'm27', state: 'completed' }, { not: { quest: 'd05', state: 'completed' } }] }, anchorId: 'greyfen.d05.gytha' },
     ],

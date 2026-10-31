@@ -3,6 +3,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { makeRig, type Rig } from './director/rig.testkit';
 import { autoplay, autoplayAll, singBar } from './director/autoplay.testkit';
+import { WaterSong } from './director/song';
+import { createSongBar } from './director/songBar';
 import { M25_BURN_RELIEF, M25_DRINK_TICKS } from './director/early';
 import { M27_BROOD_TICKS, R13_CALM_TICKS } from './director/late';
 import { R12_TORCH_FLAG } from './r12.quest';
@@ -134,8 +136,8 @@ describe('R12: torch or sickle', () => {
     gate(r);
     autoplayAll(r, ['m23', 'm24']);
     r.manager.start('r12');
-    // the unused branch credits itself, so the first live step is the torches or the cuts
-    autoplay(r, 'r12', { stopAt: ['r12', opts.r12 === 'cut' ? 'cut' : 'burn'], ...opts });
+    // the work objectives are branch-neutral: the first live step after the choice is the beds
+    autoplay(r, 'r12', { stopAt: ['r12', 'beds'], ...opts });
     return r;
   };
 
@@ -158,8 +160,7 @@ describe('R12: torch or sickle', () => {
   it('the sickle: ten cuts, fifteen leeches, favour +3 once, the armour is the hand-in reward', () => {
     const r = start({ r12: 'cut' });
     const before = r.state.favour('dragons');
-    expect(r.done('r12', 'burn')).toBe(true); // the unused branch credits itself
-    expect(r.done('r12', 'burnKills')).toBe(true);
+    expect(r.current('r12', 'beds')).toBe(true);
     r.use('use:r12-bed-1-cut-1');
     expect(r.str('story.r12.choice')).toBe('cut');
     expect(r.state.favour('dragons')).toBe(before + 3);
@@ -170,8 +171,41 @@ describe('R12: torch or sickle', () => {
     expect(r.flag('story.r12.cutDown')).toBe(false);
     r.kill('fen-leech', 'r12.cut', 1);
     expect(r.flag('story.r12.cutDown')).toBe(true);
+    r.step(3);
+    expect(r.done('r12', 'beds')).toBe(true);
+    expect(r.done('r12', 'leeches')).toBe(true);
     r.talk('dudda');
     expect(r.qs('r12')).toBe('completed');
+  });
+
+  it('pick the sickle, pick the torch, hand-in refused: the beds and leeches are never skipped by a changed mind', () => {
+    const r = start({ r12: 'cut' });
+    r.state.setFlag('story.r12.pick', 'burned');
+    r.emit('story.r12.picked');
+    r.step(5);
+    expect(r.current('r12', 'beds')).toBe(true);
+    r.talk('dudda');
+    expect(r.qs('r12')).toBe('active');
+    expect(r.str('story.r12.choice')).toBe('');
+    // then back again: still nothing done
+    r.state.setFlag('story.r12.pick', 'cut');
+    r.emit('story.r12.picked');
+    r.step(5);
+    r.talk('dudda');
+    expect(r.qs('r12')).toBe('active');
+    // doing the work completes it, and the choice is the first bed's
+    r.use('use:r12-bed-1-cut-1');
+    expect(r.str('story.r12.choice')).toBe('cut');
+    autoplay(r, 'r12');
+    expect(r.qs('r12')).toBe('completed');
+    expect(r.flag('story.r12.favoured')).toBe(true);
+  });
+
+  it('a leech killed by a companion still counts', () => {
+    const r = start();
+    r.use('use:r12-bed-1-torch');
+    r.emit('actor.died', { actorId: 'x', killerId: 'companion', kind: 'fen-leech', team: 'hostile', level: 1, spawnTag: 'r12.burn' });
+    expect(r.state.getNumber('story.r12.burnKills')).toBe(1);
   });
 
   it('the choice changes freely until the first bed, then the last pick stands', () => {
@@ -343,6 +377,56 @@ describe('R13: the water-song', () => {
     expect(r.done('r13', 'calm')).toBe(true);
   });
 
+  it('a failed bar is counted, the window widens after 3 and the bar is sung for the player after 5 (R13 never loops for ever)', () => {
+    const r = atSong();
+    r.use(R13_ALTAR);
+    r.scene(R13_SONG_SCENE, R13_SONG_NPC);
+    r.step(2);
+    // 180 ms late is a miss on the normal window
+    singBar(r, 1, { started: true, offsetMs: 180 });
+    expect(r.flag('story.r13.lesson')).toBe(false);
+    expect(r.state.getNumber('story.r13.songFails')).toBe(1);
+    singBar(r, 1, { offsetMs: 180 });
+    singBar(r, 1, { offsetMs: 180 });
+    expect(r.state.getNumber('story.r13.songFails')).toBe(3);
+    expect(r.flag('story.r13.lesson')).toBe(false);
+    singBar(r, 1, { offsetMs: 180 }); // the window is wide now
+    expect(r.flag('story.r13.lesson')).toBe(true);
+    // two more failures (silent bars), then the real bar passes without a strike
+    singBar(r, 2, { silent: true });
+    singBar(r, 2, { silent: true });
+    expect(r.flag('story.r13.sung')).toBe(false);
+    expect(r.state.getNumber('story.r13.songFails')).toBeGreaterThanOrEqual(5);
+    singBar(r, 2, { silent: true });
+    expect(r.flag('story.r13.sung')).toBe(true);
+    expect(r.done('r13', 'song')).toBe(true);
+  });
+
+  it('draws the bar: the strip shows the strike cells, the playhead and each judgement while a run lasts, and nothing between runs', () => {
+    const song = new WaterSong({ now: () => t, toast: () => {}, onLesson: () => {}, onSung: () => {}, lessonDone: () => false, fails: () => 0, failed: () => {} });
+    let t = 1000;
+    expect(song.view()).toBeNull();
+    song.press();
+    const v0 = song.view()!;
+    expect(v0.kind).toBe('lesson');
+    expect(v0.steps).toEqual([0, 4, 8, 12]);
+    expect(v0.position).toBeLessThan(0); // the count-in
+    t += 60000 / 94 / 4 * 10;
+    expect(song.view()!.position).toBeGreaterThan(0);
+    const els: Array<{ className: string; style: { display: string }; textContent: string | null; appendChild(c: unknown): void }> = [];
+    const doc = { createElement: () => { const e = { className: '', style: { display: '' }, textContent: null as string | null, appendChild() {} }; els.push(e); return e; } };
+    const w = createSongBar(doc as never, () => song.view(), (k) => k)!;
+    w.update(0);
+    const cells = els.filter((e) => e.className.startsWith('owg-tempering-cell'));
+    expect(cells).toHaveLength(16);
+    expect(cells.filter((c) => c.className.includes('owg-tempering-mark'))).toHaveLength(4);
+    expect(cells.filter((c) => c.className.includes('owg-tempering-head'))).toHaveLength(1);
+    expect(els[0]!.style.display).toBe('');
+    song.reset();
+    w.update(0);
+    expect(els[0]!.style.display).toBe('none');
+  });
+
   it('a load between the song and the calm still calms the fen', () => {
     const r0 = atSong();
     r0.use(R13_ALTAR);
@@ -397,6 +481,23 @@ describe('M26: the rite', () => {
     expect(r.started('scene-m26-voice')).toBe(true);
     r.scene('scene-m26-voice', 'scene.m26.voice');
     expect(r.done('m26', 'voice')).toBe(true);
+  });
+
+  it('the rite at Burn 75 or more never blocks the quest (the shrine adds a Scar; the director adds no Burn and asks nothing)', () => {
+    const r = atNets();
+    (r.kit.ctx.services.get('spells') as unknown as { burn: number }).burn = 80;
+    for (const n of [1, 2, 3, 4]) r.use(`use:m26-net-${n}`);
+    r.state.setFlag('shrine.hathrens-mere.lit', true);
+    r.state.setFlag('player.scar.burn', true); // the shipped rekindle's Scar, whatever it writes
+    r.emit('shrine.rekindled', { shrineId: 'hathrens-mere' });
+    r.step(3);
+    r.emit('wyrm.hathren', { beat: 'quiet' });
+    r.step(70);
+    r.scene('scene-m26-voice', 'scene.m26.voice');
+    expect(r.done('m26', 'rite')).toBe(true);
+    expect(r.burn.filter(([n]) => n > 0)).toEqual([]); // (M25's salve took 20 off earlier)
+    autoplay(r, 'm26');
+    expect(r.qs('m26')).toBe('completed');
   });
 
   it('a shrine lit before the nets are cut waits for them (no soft-lock, no early calm)', () => {
@@ -506,9 +607,36 @@ describe('M27: the reeds', () => {
 
   it('spared hunters of either pack are witnesses', () => {
     const r = atBlinds();
+    r.standing.set('greyfen.q.m27.pack1', ['h1']);
+    r.standing.set('greyfen.q.m27.pack2', ['h9']);
     r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' });
     r.emit('hunter.spared', { actorId: 'h9', kind: 'hunter-harpooner' });
     expect(r.state.getNumber('story.m27.witnesses')).toBe(2);
+  });
+
+  it('witnesses dedupe per hunter, drop on a revoked spare, and ignore hunters of other groups', () => {
+    const r = atBlinds();
+    r.standing.set('greyfen.q.m27.pack1', ['h1']);
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' });
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' }); // the same hunter, again
+    expect(r.state.getNumber('story.m27.witnesses')).toBe(1);
+    r.emit('hunter.spared', { actorId: 'ambient', kind: 'hunter-spearman' }); // not a pack member
+    expect(r.state.getNumber('story.m27.witnesses')).toBe(1);
+    r.emit('mercy.revoked', { actorId: 'h1', track: null, removed: 1 });
+    expect(r.state.getNumber('story.m27.witnesses')).toBe(0);
+    r.emit('hunter.spared', { actorId: 'h1', kind: 'hunter-spearman' }); // spared again afterwards: counts again
+    expect(r.state.getNumber('story.m27.witnesses')).toBe(1);
+  });
+
+  it('pack 1 engaged then cleared across a save: the blinds still credit (the engagement is persisted)', () => {
+    const r0 = atBlinds();
+    r0.standing.set('greyfen.q.m27.pack1', ['h1']);
+    r0.step(40);
+    r0.emit('ai.spotted', { actorId: 'h1', targetId: 'player' });
+    expect(r0.flag('story.m27.pack1Seen')).toBe(true);
+    const r = reload(r0); // the last hunter fell before the poll saw it; the load finds pack 1 empty
+    r.step(8 * 30 + 60);
+    expect(r.done('m27', 'blinds')).toBe(true);
   });
 
   it('a pack 1 whose members were all spared (they leave the group) clears the seen reading, and each spare is a witness', () => {
@@ -523,6 +651,27 @@ describe('M27: the reeds', () => {
     r.step(40);
     expect(r.done('m27', 'blinds')).toBe(true);
     expect(r.state.getNumber('story.m27.witnesses')).toBe(2);
+  });
+
+  it('pack 2 cleared by a spare and a calm (a mercy, not a kill) credits the step', () => {
+    const r = atBlinds();
+    r.emit('trigger.enter', { triggerId: 'trg.greyfen.m27.blinds.end', actorId: 'player' });
+    autoplay(r, 'm27', { stopAt: ['m27', 'pack2'], r14: 'released' });
+    r.step(2);
+    expect(r.flag('story.m27.pack2Out')).toBe(true);
+    r.standing.set('greyfen.q.m27.pack2', ['a', 'b', 'c', 'd']);
+    r.step(40);
+    r.emit('mercy', { actorId: 'a' });
+    r.emit('hunter.spared', { actorId: 'a', kind: 'hunter-spearman' });
+    r.standing.set('greyfen.q.m27.pack2', ['b', 'c', 'd']);
+    r.kill('hunter-spearman', 'm27.pack2', 1);
+    r.standing.set('greyfen.q.m27.pack2', ['c', 'd']);
+    r.step(40);
+    expect(r.done('m27', 'pack2')).toBe(false);
+    r.standing.set('greyfen.q.m27.pack2', []);
+    r.step(40);
+    expect(r.done('m27', 'pack2')).toBe(true);
+    expect(r.state.getNumber('story.m27.witnesses')).toBe(1);
   });
 
   it('the ally: Wybert if R14 let him go (K5\'s scene), Leofa alone if he was returned', () => {
@@ -606,6 +755,23 @@ describe('D05: the Deeps', () => {
     expect(r.flag('story.d05.sluice-1Out')).toBe(false);
     autoplay(r, 'd05', { stopAt: ['d05', 'room1'] });
     expect(r.flag('story.d05.sluice1')).toBe(true);
+  });
+
+  it('a load in the middle of the fight, then the win: D05 completes (no fight survives a load, the step is still open)', () => {
+    const r0 = atDeeps(['d05', 'murkjaw']);
+    expect(r0.done('d05', 'murkjaw')).toBe(false);
+    r0.emit('boss.engaged', { bossId: 'murkjaw' });
+    const r = reload(r0);
+    r.step(10);
+    expect(r.current('d05', 'murkjaw')).toBe(true);
+    expect(r.qs('d05')).toBe('active');
+    r.emit('boss.defeated', { bossId: 'murkjaw', actorId: 'murkjaw' });
+    r.state.setFlag('boss.murkjaw.outcome', 'defeated');
+    r.step(5);
+    expect(r.done('d05', 'murkjaw')).toBe(true);
+    r.step(70);
+    r.scene('scene-d05-outcome', 'scene.d05.outcome');
+    expect(r.qs('d05')).toBe('completed');
   });
 
   it('Murkjaw: the defeat is recorded, the outcome scene plays, the quest completes; a load after the boss keeps it', () => {

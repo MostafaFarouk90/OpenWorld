@@ -1,6 +1,6 @@
 import type { GamePlugin } from '../../../../../core/plugins';
 import { makeKit, type Off } from '../../../act2/director/kit';
-import { installArms, installComplete, installExtraAnchors, installTriggersAndCast } from './generic';
+import { installArms, installGroupObjectives, installComplete, installExtraAnchors, installTriggersAndCast } from './generic';
 import { installM23, installM24, installM25, installR12 } from './early';
 import { installD05, installM26, installM27, installR13, installR14 } from './late';
 
@@ -23,12 +23,13 @@ const plugin: GamePlugin = {
     installTriggersAndCast(kit, offs);
     installArms(kit);
     installComplete(kit);
+    installGroupObjectives(kit);
     installM23(kit);
     installM24(kit);
     installR12(kit);
     installM25(kit);
     installR14(kit);
-    installR13(kit);
+    offs.push(installR13(kit));
     installM26(kit);
     installM27(kit);
     installD05(kit);

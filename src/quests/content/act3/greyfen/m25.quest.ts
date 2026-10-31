@@ -9,6 +9,7 @@ export const M25_POTS = ['use:m25-pot-1', 'use:m25-pot-2', 'use:m25-pot-3'];
 export const M25_POT_FLAGS = ['story.m25.pot1', 'story.m25.pot2', 'story.m25.pot3'];
 export const M25_BEDS_TAG = 'm25.beds';
 export const M25_BEDS_FLAG = 'story.m25.bedsOut';
+export const M25_BEDS_DOWN = 'story.m25.bedsDown';
 export const M25_BREWED = 'story.m25.brewed';
 export const M25_DRUNK = 'story.m25.drunk';
 
@@ -33,8 +34,7 @@ export const m25: QuestDef = {
     reads('shelf', 'quest.m25.shelf', [M25_SHELF]),
     { id: 'lore', type: 'talk', target: 'gytha', textKey: 'quest.m25.lore' },
     herb(0), pick(0), herb(1), pick(1), herb(2), pick(2),
-    { id: 'shambler', type: 'kill', target: 'peat-shambler', required: 1, spawnTag: M25_BEDS_TAG, textKey: 'quest.m25.shambler' },
-    { id: 'leeches', type: 'kill', target: 'fen-leech', required: 5, spawnTag: M25_BEDS_TAG, textKey: 'quest.m25.leeches' },
+    story('beds', 'quest.m25.beds', 'story.m25.bedsDown', { doneWhen: { flag: M25_BEDS_DOWN, equals: true } }),
     { id: 'brew', type: 'event', target: 'interact', match: { interactableId: M25_POTS }, dedupeBy: 'interactableId', required: 3, textKey: 'quest.m25.brew' },
     story('drink', 'quest.m25.drink', 'story.m25.drink', { doneWhen: { flag: M25_DRUNK, equals: true } }),
     { id: 'warning', type: 'talk', target: 'gytha', textKey: 'quest.m25.warning' },

@@ -90,7 +90,7 @@ export const LEOFA = buildTree({
         C('The buyers.'),
         L('The buyers. The same black anvil on every crate. I want it stopped, and I want it stopped quietly enough that the buyers do not know how.'),
         L('There are reed blinds east of the Mere, thick as a wall. A pack of hunters guards them. If you creep, they will not see you. If they see you, you will fight them in the open.'),
-        L('Beyond the blinds are the cages. Two packs, a harpooner. Break the cages, free the young, and let them go home.'),
+        L('Two packs, each with a harpooner: one waits under the blinds, one guards the cages beyond. Break the cages, free the young, and let them go home.'),
         L('A man keeps the brood. Ask him what he knows; I could not stomach the conversation.'),
         L('Read what you find. The nets, the seal, the map. Every scrap says who pays, and I want the name.'),
         L('Be careful. These are not the hunters of the road. They have nothing to lose.', [{ startQuest: 'm27' }]),

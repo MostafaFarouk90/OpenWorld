@@ -4,13 +4,14 @@ import { SONG_TIER } from './song';
 import { patternForTier } from '../../../../../gear/rhythm';
 import { GEAR_TUNING } from '../../../../../gear/tuning';
 import type { ObjectiveDef } from '../../../../types';
-import { R12_PICK } from '../r12.quest';
+import { R12_CUTS, R12_PICK, R12_TORCHES } from '../r12.quest';
 import { M24_VOLUME } from '../m24.quest';
 import { M27_BLINDS_END } from '../m27.quest';
 import { D05_BOSS } from '../d05.quest';
 import { R13_ALTAR, R13_SONG_SCENE, R13_SONG_NPC } from '../r13.quest';
 import { M25_DRINK_TICKS } from './early';
 import { M27_BROOD_TICKS, R13_CALM_TICKS } from './late';
+import { GREYFEN_GROUP_OBJECTIVES } from '../groups';
 import type { Rig } from './rig.testkit';
 
 export interface PlayOpts {
@@ -25,7 +26,7 @@ export interface PlayOpts {
 }
 
 /** The bar of the water-song sung on the metronome: a press to start, then a strike on each step of the pattern. */
-export function singBar(r: Rig, tier: number, o: { mistake?: boolean; started?: boolean } = {}): void {
+export function singBar(r: Rig, tier: number, o: { mistake?: boolean; started?: boolean; offsetMs?: number; silent?: boolean } = {}): void {
   const mistake = o.mistake ?? false;
   const stepMs = 60000 / GEAR_TUNING.rhythm.bpm / GEAR_TUNING.rhythm.divisions;
   if (!o.started) r.use(R13_ALTAR); // the first press starts the bar at the current clock
@@ -34,7 +35,8 @@ export function singBar(r: Rig, tier: number, o: { mistake?: boolean; started?: 
   const pattern = patternForTier(tier);
   pattern.forEach((s, i) => {
     if (mistake && i === 1) return; // a missed strike
-    const at = t0 + (barStart + s) * stepMs;
+    if (o.silent) return;
+    const at = t0 + (barStart + s) * stepMs + (o.offsetMs ?? 0);
     r.advance(at - r.clock);
     r.use(R13_ALTAR);
   });
@@ -42,9 +44,17 @@ export function singBar(r: Rig, tier: number, o: { mistake?: boolean; started?: 
   r.step(12);
 }
 
+/** A group's members stand for a poll, then are all gone (killed, spared or calmed). */
+export function clearGroups(r: Rig, groups: readonly string[]): void {
+  for (const g of groups) r.standing.set(g, ['a', 'b']);
+  r.step(40);
+  for (const g of groups) r.standing.set(g, []);
+  r.step(40);
+}
+
 const arr = (v: unknown): string[] => (Array.isArray(v) ? (v as string[]) : v === undefined ? [] : [String(v)]);
 
-function doObjective(r: Rig, q: string, o: ObjectiveDef, opts: PlayOpts): void {
+export function playObjective(r: Rig, q: string, o: ObjectiveDef, opts: PlayOpts): void {
   const target = arr(o.target);
   const match = o.match ?? {};
   switch (o.type) {
@@ -72,8 +82,14 @@ function doObjective(r: Rig, q: string, o: ObjectiveDef, opts: PlayOpts): void {
   if (ev === 'dive.surfaced') return void r.emit('dive.surfaced', { volumeId: String(match.volumeId ?? 'water.greyfen.x'), pocketId: (match.pocketId as string) ?? null });
   if (ev === 'ferry.arrived') return void r.emit('ferry.arrived', { routeId: 'ferry.greyfen.reedgate-mere', stop: 'mere', skipped: false });
   if (ev === 'story.r12.picked') { r.state.setFlag(R12_PICK, opts.r12 ?? 'burned'); r.emit('story.r12.picked'); return; }
-  if (ev === 'story.r12.burnDown') return void r.kill('fen-leech', 'r12.burn', 6);
-  if (ev === 'story.r12.cutDown') return void r.kill('fen-leech', 'r12.cut', 15);
+  const group = GREYFEN_GROUP_OBJECTIVES.find((g) => g.quest === q && g.down === ev);
+  if (group) return void clearGroups(r, group.groups);
+  if (ev === 'story.r12.bedsDone') {
+    const cut = r.str('story.r12.pick') === 'cut';
+    (cut ? R12_CUTS : R12_TORCHES).forEach((id) => r.use(id));
+    return;
+  }
+  if (ev === 'story.r12.leechesDown') return void (r.str('story.r12.choice') === 'cut' ? r.kill('fen-leech', 'r12.cut', 15) : r.kill('fen-leech', 'r12.burn', 6));
   if (ev === 'story.m25.drink') return void r.step(M25_DRINK_TICKS + 2);
   if (ev === 'story.r13.sung') {
     r.use(R13_ALTAR); // the first press plays the teaching scene
@@ -119,7 +135,7 @@ export function autoplay(r: Rig, quest: string, opts: PlayOpts = {}): string[] {
     opts.hook?.(r, quest, o);
     if (o.type === 'collect') {
       if (!doCollect(r, quest, o)) throw new Error(`autoplay: no live prop for ${quest}.${o.id}`);
-    } else doObjective(r, quest, o, opts);
+    } else playObjective(r, quest, o, opts);
     order.push(o.id);
     r.step(3);
     r.manager.recheck();

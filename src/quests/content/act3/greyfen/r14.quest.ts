@@ -15,6 +15,7 @@ export const R14_LEECH_TAG = 'r14.leeches';
 export const R14_PACK_TAG = 'r14.pack';
 export const R14_LEECH_FLAG = 'story.r14.leechesOut';
 export const R14_PACK_FLAG = 'story.r14.packOut';
+export const R14_PACK_DOWN = 'story.r14.packDown';
 export const R14_CHOSEN = 'story.r14.chosen';
 const returned: Condition = { flag: R14_CHOICE, equals: 'returned' };
 const released: Condition = { flag: R14_CHOICE, equals: 'released' };
@@ -43,8 +44,7 @@ export const r14: QuestDef = {
     { id: 'ranger3', type: 'talk', target: R14_RANGERS[2], textKey: 'quest.r14.ranger3' },
     { id: 'leeches', type: 'kill', target: 'fen-leech', required: 3, spawnTag: R14_LEECH_TAG, textKey: 'quest.r14.leeches' },
     reads('signs4', 'quest.r14.signs4', R14_POST_SIGNS(4)),
-    { id: 'pack', type: 'kill', target: 'hunter-spearman', required: 3, spawnTag: R14_PACK_TAG, textKey: 'quest.r14.pack' },
-    { id: 'harpooner', type: 'kill', target: 'hunter-harpooner', required: 1, spawnTag: R14_PACK_TAG, textKey: 'quest.r14.harpooner' },
+    story('pack', 'quest.r14.pack', 'story.r14.packDown', { doneWhen: { flag: R14_PACK_DOWN, equals: true } }),
     { id: 'deserter', type: 'talk', target: 'deserter', textKey: 'quest.r14.deserter' },
     story('choice', 'quest.r14.choice', 'story.r14.chosen', { doneWhen: R14_RESOLVED }),
     { id: 'report', type: 'talk', target: 'leofa', textKey: 'quest.r14.report' },

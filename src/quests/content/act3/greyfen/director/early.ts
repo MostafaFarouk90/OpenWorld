@@ -80,6 +80,8 @@ export function installR12(k: Kit): void {
     if (e.value === true && (isTorch(e.key) || isCut(e.key))) {
       lock();
       armourOnLastTorch();
+      if (torchKeys.every((f) => k.flag(f)) || cutKeys.every((f) => k.flag(f))) k.emit('story.r12.bedsDone');
+      k.later(() => recheck(k));
     }
   });
   k.on('save.loaded', () => { lock(); });
@@ -93,16 +95,17 @@ export function installR12(k: Kit): void {
 
   // Leech deaths are counted from the first bed treated, whatever bed they were fought at (they may be fought out of order).
   k.on('actor.died', (e) => {
-    if (!k.active('r12') || e.killerId !== 'player') return;
-    if (e.spawnTag === R12_BURN_TAG) bump(R12_BURN_KILL_COUNT, R12_BURN_KILLS, R12_BURN_DOWN, 'story.r12.burnDown');
-    else if (e.spawnTag === R12_CUT_TAG) bump(R12_CUT_KILL_COUNT, R12_CUT_KILLS, R12_CUT_DOWN, 'story.r12.cutDown');
+    // any killer counts (a companion's or the fen's own tick), as long as the leech is a bed's own
+    if (!k.active('r12')) return;
+    if (e.spawnTag === R12_BURN_TAG) bump(R12_BURN_KILL_COUNT, R12_BURN_KILLS, R12_BURN_DOWN);
+    else if (e.spawnTag === R12_CUT_TAG) bump(R12_CUT_KILL_COUNT, R12_CUT_KILLS, R12_CUT_DOWN);
   });
-  const bump = (counter: string, need: number, done: string, event: string): void => {
+  const bump = (counter: string, need: number, done: string): void => {
     const n = k.num(counter) + 1;
     k.set(counter, n);
     if (n >= need && !k.flag(done)) {
       k.set(done);
-      k.emit(event);
+      k.emit('story.r12.leechesDown');
       k.later(() => recheck(k));
     }
   };

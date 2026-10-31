@@ -35,6 +35,14 @@ export const FERRY_TOKEN_ID = 'key.ferry-token';
 export const FERRY_RUNNING_FLAG = 'story.m24.complete';
 /** K12: Dudda's horn blown (M24) opens the boat for the first run, before the quest is handed in and the token given. */
 export const FERRY_FIRST_RUN_FLAG = 'story.m24.ferryOpen';
+
+/**
+ * K12's first run of the Greyfen ferry: the boat runs once the horn is blown (`story.m24.ferryOpen`) before M24 completes,
+ * and rides are free until the token is handed over. With the flag unset nothing changes.
+ */
+export function ferryGate(has: { token: boolean; running: boolean; firstRun: boolean }): { hasToken: boolean; running: boolean } {
+  return { hasToken: has.token || (has.firstRun && !has.running), running: has.running || has.firstRun };
+}
 const DROWN_ATTACK_ID = 'traversal.drown';
 
 /** What the plugin put outside its scoped context (the meshes in the scene, the mount's speed cap). */
@@ -152,11 +160,16 @@ const traversal: GamePlugin = {
       if (boat) disposeMesh(boat);
       boat = null;
     });
+    const gateInputs = () => ({
+      token: ctx.services.get('inventory')?.has(FERRY_TOKEN_ID) ?? false,
+      running: ctx.state.getBool(FERRY_RUNNING_FLAG),
+      firstRun: ctx.state.getBool(FERRY_FIRST_RUN_FLAG),
+    });
     const ferry = new FerryRides({
       feet: () => ctx.player.feet,
       yaw: () => ctx.player.facingYaw,
-      hasToken: () => (ctx.services.get('inventory')?.has(FERRY_TOKEN_ID) ?? false) || (ctx.state.getBool(FERRY_FIRST_RUN_FLAG) && !ctx.state.getBool(FERRY_RUNNING_FLAG)),
-      running: () => ctx.state.getBool(FERRY_RUNNING_FLAG) || ctx.state.getBool(FERRY_FIRST_RUN_FLAG),
+      hasToken: () => ferryGate(gateInputs()).hasToken,
+      running: () => ferryGate(gateInputs()).running,
       inCombat: () => ctx.services.get('waystones')?.hostileAggro ?? false,
       busy: () => ctx.player.actor.dead || ctx.input.contexts.top() !== 'gameplay' || mode() !== 'walk',
       mounted: () => ctx.services.get('mount')?.mounted() ?? false,

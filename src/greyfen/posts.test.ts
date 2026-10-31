@@ -63,6 +63,7 @@ describe('Greyfen NPC posts', () => {
     expect(at('gytha', env({ m27: 'completed' }))).toBe('greyfen.d05.gytha');
     expect(at('gytha', env({ m27: 'completed', d05: 'completed' }))).toBe('npc-post.gytha.hut');
     expect(at('gytha', env({ m25: 'active', r13: 'active' }))).toBe('npc-post.gytha.inside');
+    expect(at('gytha', env({ m26: 'active', r13: 'active' }))).toBe('greyfen.m26.gytha'); // both open: the Mere, M26's talks
   });
 
   it('moves Gytha inside for M25, the deserter to the stocks once returned, the bell keeper into the porch', () => {

@@ -46,5 +46,5 @@ export const m24: QuestDef = {
     story('ferry', 'quest.m24.ferry', 'ferry.arrived', { doneWhen: { flag: M24_FERRY_RUN, equals: true } }),
     { id: 'report', type: 'talk', target: 'dudda', textKey: 'quest.m24.report' },
   ],
-  rewards: [{ xp: 550 }, { give: [{ itemId: 'key.ferry-token', count: 1 }] }],
+  rewards: [{ xp: 550 }, { give: [{ itemId: 'key.ferry-token', count: 1 }] }, { take: 'm24-ferry-horn' }],
 };
