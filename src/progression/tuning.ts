@@ -47,6 +47,8 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   // plan 6.1's 70 and 220 after the one rounding (39 x 1.8 = 70.2, 122 x 1.8 = 219.6). Coordinator ruling A.
   'fen-leech': 39,
   'peat-shambler': 122,
+  // Murkjaw, D05 (K8): the same convention, so a Greyfen kill pays plan 6.2's about 600 (333 x 1.8 = 599.4, paid as 599).
+  murkjaw: 333,
   dummy: 0,
   scarecrow: 0,
 };
