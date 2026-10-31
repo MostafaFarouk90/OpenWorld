@@ -47,6 +47,9 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   // plan 6.1's 70 and 220 after the one rounding (39 x 1.8 = 70.2, 122 x 1.8 = 219.6). Coordinator ruling A.
   'fen-leech': 39,
   'peat-shambler': 122,
+  // K6b PR 2: stored divided by the Dragonspine's factor (1.8, set by the peak plugin): 90 and 240 there (plan 6.1).
+  'rime-hawk': 50,
+  'crag-ogre': 133,
   dummy: 0,
   scarecrow: 0,
 };

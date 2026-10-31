@@ -433,6 +433,17 @@ export class Brain {
     if (this.forcedTarget && this.forcedTarget !== targetId) this.forcedTarget = targetId;
   }
 
+  /**
+   * Calls off a telegraph that has not reached its window and goes back to the chase, keeping the target (K6b: a hawk's hover
+   * called off because its target went into water). False when not telegraphing.
+   */
+  abortSwing(): boolean {
+    if (this._state !== 'telegraph') return false;
+    this.cancelSwing();
+    this.enter('chase');
+    return true;
+  }
+
   /** Out of combat now (going dormant): drops the target, cancelling any swing, token and aggro through `enter`. */
   standDown(): void {
     if (this.finished || this._state === 'dead') return;

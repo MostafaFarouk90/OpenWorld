@@ -5,6 +5,7 @@ export const ENEMY_STRINGS_EN: Record<string, string> = {
   'enemies.calm.offering.hearth-bread': 'Hearth Bread',
   'enemies.calm.offering.ember-coal': 'Ember Coal',
   'enemies.calm.offering.barley-cake': 'Barley Cake',
+  'enemies.calm.offering.hawk-jerky': 'Hawk Jerky',
   'enemies.calm.warmHand': 'Warm Hand, 10 Burn',
   'enemies.calm.free': 'Stay your hand',
   'enemies.mercy.spare': 'Hold {key}: Spare',
@@ -32,5 +33,7 @@ export const ENEMY_STRINGS_EN: Record<string, string> = {
   'enemies.name.hunter-harpooner': 'Dragon-Hunter Harpooner',
   'enemies.name.fen-leech': 'Fen Leech',
   'enemies.name.peat-shambler': 'Peat Shambler',
+  'enemies.name.rime-hawk': 'Rime Hawk',
+  'enemies.name.crag-ogre': 'Crag Ogre',
   'enemies.name.steward-guard': 'Steward Guard',
 };

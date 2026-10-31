@@ -46,6 +46,8 @@ export const EMBER_WYRM_DEF: EnemyDef = {
   rises: false,
   body: 'wyrm',
   behaviour: 'wyrm-flight',
+  // v0.7 (K6b PR 2): R16's dragon bonus (gear/sockets/bonuses.ts) reads it.
+  tags: ['dragonkin'],
   breakStaggerSeconds: 3,
   poiseBreakBones: ['wingL', 'wingR'],
 };
@@ -87,6 +89,7 @@ export const WYRMLING_DEF: EnemyDef = {
   rises: false,
   body: 'wyrm',
   behaviour: 'skittish',
+  tags: ['dragonkin'],
 };
 
 function move(

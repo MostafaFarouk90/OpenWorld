@@ -135,7 +135,9 @@ export class SpawnerRegistry {
       this.warnOnce(`count:${id}`, `spawners: spawnGroup('${id}') ignored a bad count ${String(count)}; nothing spawned`);
       return [];
     }
-    opts = memberOpts;
+    // K6b PR 2: the group's own options (the R18 parents' tuning) under the call's, field by field.
+    const { count: _defCount, ...defOpts } = def.options ?? {};
+    opts = { ...defOpts, ...memberOpts };
     if (onlySlot === undefined) this.lastOpts.set(id, opts);
     const band = this.resolveBand(def, opts.tierOffset);
     const patrol = this.resolvePatrol(def);

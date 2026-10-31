@@ -36,7 +36,7 @@ const HOUND: EnemyDef = {
 const PLAIN: EnemyDef = { ...HOUND, kind: 'plain-hound' as EnemyKind, mercy: { ...HOUND.mercy!, warmHand: undefined } };
 const OGRE: EnemyDef = {
   ...HOUND,
-  kind: 'crag-ogre' as EnemyKind,
+  kind: 'fixture-ogre' as EnemyKind,
   mercy: { ...HOUND.mercy!, offerings: [{ itemId: 'barley-cake', count: 2 }], warmHand: undefined },
 };
 
@@ -83,7 +83,7 @@ function rig(opts: RigOptions = {}) {
   fake.vfx = { dissolve: () => Promise.resolve(), spawnEffect: (id) => void played.push(id) };
   if (opts.calmed !== false) fake.flags.set('enemies.mercy.calm', true);
   const m = new EnemyManager(fake.host, FakeHost.factory(gltf), {
-    spawners: opts.spawners ?? [group('kennel', 'fixture-hound', 1), group('plain', 'plain-hound', 1), group('den', 'crag-ogre', 1)],
+    spawners: opts.spawners ?? [group('kennel', 'fixture-hound', 1), group('plain', 'plain-hound', 1), group('den', 'fixture-ogre', 1)],
     seed: 11,
   });
   const tick = (seconds = DT) => {

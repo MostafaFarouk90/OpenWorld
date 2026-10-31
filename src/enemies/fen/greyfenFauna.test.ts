@@ -3,7 +3,7 @@ import { killXp } from '../../progression/tuning';
 import { renderAnchorsDoc } from '../../region/anchorsDoc';
 import { engineBox } from '../../region/regions';
 import { readFileSync } from '../../region/testing/nodeFs';
-import { ACT3_AMBIENT_GATE, ACT3_SPAWNERS } from '../act3Spawners';
+import { ACT3_AMBIENT_GATE, GREYFEN_SPAWNERS } from '../act3Spawners';
 import { ACT3_BLOCKS } from '../level';
 import type { AnchorLike } from '../ports';
 import { SpawnRequest, SpawnerRegistry } from '../spawners';
@@ -34,11 +34,11 @@ function segDist(p: { x: number; z: number }, a: readonly [number, number], b: r
   return Math.hypot(p.x - (ax + t * dx), p.z - (az + t * dz));
 }
 
-describe('Greyfen ambient groups (ACT3_SPAWNERS)', () => {
+describe('Greyfen ambient groups (GREYFEN_SPAWNERS)', () => {
   it('every group is on the greyfen block and band, gated on story.gate.a3, refilled on rest', () => {
-    expect(ACT3_SPAWNERS.length).toBe(GREYFEN_FAUNA_GROUPS.length);
-    expect(new Set(ACT3_SPAWNERS.map((d) => d.id)).size).toBe(ACT3_SPAWNERS.length);
-    for (const d of ACT3_SPAWNERS) {
+    expect(GREYFEN_SPAWNERS.length).toBe(GREYFEN_FAUNA_GROUPS.length);
+    expect(new Set(GREYFEN_SPAWNERS.map((d) => d.id)).size).toBe(GREYFEN_SPAWNERS.length);
+    for (const d of GREYFEN_SPAWNERS) {
       expect(d.id.startsWith('greyfen.')).toBe(true);
       expect(d.block).toBe('greyfen');
       expect(d.band).toBe('greyfen');
@@ -50,7 +50,7 @@ describe('Greyfen ambient groups (ACT3_SPAWNERS)', () => {
   });
 
   it('the plan mix: ten leech knots of three, five shamblers, four hunter camps of four, one wraith group', () => {
-    const by = (enemy: string) => ACT3_SPAWNERS.filter((d) => d.enemy === enemy);
+    const by = (enemy: string) => GREYFEN_SPAWNERS.filter((d) => d.enemy === enemy);
     expect(by('fen-leech').map((d) => d.count)).toEqual(Array(10).fill(3));
     expect(by('peat-shambler').map((d) => d.count)).toEqual(Array(5).fill(1));
     expect(by('hunter-spearman').map((d) => d.count)).toEqual(Array(4).fill(4));
@@ -59,7 +59,7 @@ describe('Greyfen ambient groups (ACT3_SPAWNERS)', () => {
   });
 
   it('only the first-arrival groups narrow their span, to 1', () => {
-    const first = ACT3_SPAWNERS.filter((d) => d.blockSpan !== undefined);
+    const first = GREYFEN_SPAWNERS.filter((d) => d.blockSpan !== undefined);
     expect(first.map((d) => d.id).sort()).toEqual(['greyfen.hunters.east-edge', 'greyfen.leech.reedgate-causeway']);
     for (const d of first) expect(d.blockSpan).toBe(1);
   });
@@ -70,11 +70,11 @@ describe('Greyfen fauna anchors', () => {
   const anchors = GREYFEN_FAUNA_LAYOUT.anchors;
 
   it('one anchor per member, ids under greyfen.fauna., unique', () => {
-    expect(anchors.length).toBe(ACT3_SPAWNERS.reduce((n, d) => n + d.count, 0));
+    expect(anchors.length).toBe(GREYFEN_SPAWNERS.reduce((n, d) => n + d.count, 0));
     expect(new Set(anchors.map((a) => a.id)).size).toBe(anchors.length);
     for (const a of anchors) expect(a.id.startsWith('greyfen.fauna.')).toBe(true);
     const ids = new Set(anchors.map((a) => a.id));
-    for (const d of ACT3_SPAWNERS) for (const m of d.memberAnchors!) expect(ids.has(m)).toBe(true);
+    for (const d of GREYFEN_SPAWNERS) for (const m of d.memberAnchors!) expect(ids.has(m)).toBe(true);
   });
 
   it('every anchor lies inside the Greyfen box', () => {
@@ -198,26 +198,26 @@ describe('Greyfen kill XP (coordinator ruling A)', () => {
 describe('the Greyfen ambient census (plan 7.2; K16 owns the final figure)', () => {
   const L = 18;
   it('parity: at least 5,000 XP in the Greyfen ambient share; rolled is higher; no factor is lower', () => {
-    const parity = act3AmbientCensus(ACT3_SPAWNERS, { level: L, playerLevel: L, regionFactor: GREYFEN_KILL_XP_FACTOR });
-    const rolled = act3AmbientCensus(ACT3_SPAWNERS, { level: L, playerLevel: L, regionFactor: GREYFEN_KILL_XP_FACTOR, mode: 'rolled' });
-    const bare = act3AmbientCensus(ACT3_SPAWNERS, { level: L, playerLevel: L });
+    const parity = act3AmbientCensus(GREYFEN_SPAWNERS, { level: L, playerLevel: L, regionFactor: GREYFEN_KILL_XP_FACTOR });
+    const rolled = act3AmbientCensus(GREYFEN_SPAWNERS, { level: L, playerLevel: L, regionFactor: GREYFEN_KILL_XP_FACTOR, mode: 'rolled' });
+    const bare = act3AmbientCensus(GREYFEN_SPAWNERS, { level: L, playerLevel: L });
     // For K16: the census at the block's L, parity and rolled.
     console.info(`[K6b census] Greyfen ambient at L ${L}: parity ${parity.total} XP, rolled average ${rolled.total} XP, no factor ${bare.total} XP`);
     expect(parity.total).toBeGreaterThanOrEqual(5000);
     expect(rolled.total).toBeGreaterThan(parity.total);
     expect(bare.total).toBeLessThan(parity.total);
-    expect(parity.rows).toHaveLength(ACT3_SPAWNERS.length);
+    expect(parity.rows).toHaveLength(GREYFEN_SPAWNERS.length);
   });
 
   it('a rolled row weighs the span ends half (a first-arrival knot is the mean of L and L + 1)', () => {
-    const knot = ACT3_SPAWNERS.find((d) => d.id === 'greyfen.leech.reedgate-causeway')!;
+    const knot = GREYFEN_SPAWNERS.find((d) => d.id === 'greyfen.leech.reedgate-causeway')!;
     const { rows } = act3AmbientCensus([knot], { level: L, playerLevel: L, regionFactor: GREYFEN_KILL_XP_FACTOR, mode: 'rolled' });
     const expected = 3 * ((killXp('fen-leech', L, L, 1.8) + killXp('fen-leech', L + 1, L, 1.8)) / 2);
     expect(rows[0]!.xp).toBe(Math.round(expected));
   });
 
   it('a kind with no XP row pays 0', () => {
-    const d = { ...ACT3_SPAWNERS[0]!, enemy: 'no-such-kind' as SpawnerDef['enemy'] };
+    const d = { ...GREYFEN_SPAWNERS[0]!, enemy: 'no-such-kind' as SpawnerDef['enemy'] };
     expect(act3AmbientCensus([d], { level: L, playerLevel: L }).total).toBe(0);
   });
 });
