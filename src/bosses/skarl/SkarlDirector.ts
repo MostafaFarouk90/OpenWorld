@@ -4,6 +4,7 @@ import { bossOutcomeFlag } from '../../actors/BossRegistry';
 import type { GameContext } from '../../core/Game';
 import { heightAt as terrainHeightAt } from '../../terrain/heightfield';
 import type { BossModelState } from '../arena/BossArena';
+import { skarlArmFlag } from './armGate';
 import { SkarlEncounter, type SkarlEnd, type SkarlPlaces } from './SkarlEncounter';
 import type { SkarlModel } from './SkarlModel';
 import { ARENA, D06_STARTED_FLAG, PRESENTATION, SFX, SKARL_BOSS_ID, skarlLevel } from './tuning';
@@ -101,6 +102,9 @@ export class SkarlDirector {
   private maybeStart(): void {
     if (!this.ctx.state.hasFlag(D06_STARTED_FLAG) || this.ctx.state.hasFlag(OUTCOME_FLAG)) return;
     if (this.ctx.player.actor.dead) return;
+    // K13 (D06): an optional extra condition, off unless a quest director configures it (armGate.ts).
+    const extra = skarlArmFlag();
+    if (extra && !this.ctx.state.hasFlag(extra)) return;
     const c = this.ctx.anchors.find(ARENA.centre);
     if (!c) {
       this.places(); // warns once

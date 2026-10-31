@@ -27,6 +27,11 @@ export interface SpellsService {
    * Quenched aura (src/companions/act3/quenched.ts) is its sole owner. Returns the undo.
    */
   setBurnGainScale?(fn: () => number): () => void;
+  /**
+   * Act 3 (K13, Keeper's Understanding): sets the Burn decay multiplier (`Burn.setDecayScale`), K5's gain-scale pattern. One slot,
+   * the last setter wins; K13 is its sole owner. Returns the undo.
+   */
+  setBurnDecayScale?(fn: () => number): () => void;
   readonly ember: number;
   readonly maxEmber: number;
   spendEmber(n: number): boolean;

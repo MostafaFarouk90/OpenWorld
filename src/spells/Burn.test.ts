@@ -222,3 +222,34 @@ describe('Burn.healthMultiplier (design 9.7)', () => {
     expect(b.scars).toBe(0);
   });
 });
+
+describe('Burn.setDecayScale (K13, Keeper\'s Understanding)', () => {
+  it('multiplies the out-of-combat decay, not gains, and lifts with the undo', () => {
+    const b = new Burn();
+    b.add(50, 't');
+    const undo = b.setDecayScale(() => 2);
+    b.decay(10, false); // 2 points a decay of 10 s, doubled to 4
+    expect(b.value).toBeCloseTo(46);
+    b.decay(10, true); // in combat: nothing, scale or not
+    expect(b.value).toBeCloseTo(46);
+    expect(b.add(10, 't')).toBe(10);
+    undo();
+    b.decay(10, false);
+    expect(b.value).toBeCloseTo(54);
+  });
+  it('reads a bad scale as 1, and an earlier undo leaves a later setter alone', () => {
+    const b = new Burn();
+    b.add(50, 't');
+    const undoA = b.setDecayScale(() => 2);
+    b.setDecayScale(() => Number.NaN);
+    b.decay(10, false);
+    expect(b.value).toBeCloseTo(48);
+    undoA();
+    b.setDecayScale(() => -3);
+    b.decay(10, false);
+    expect(b.value).toBeCloseTo(46);
+    b.setDecayScale(() => 0);
+    b.decay(10, false);
+    expect(b.value).toBeCloseTo(46);
+  });
+});

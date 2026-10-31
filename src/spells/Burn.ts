@@ -36,6 +36,17 @@ export class Burn {
     return () => { if (this.gainScale === fn) this.gainScale = null; };
   }
 
+  private decayScale: (() => number) | null = null;
+
+  /**
+   * Act 3 (K13, Keeper's Understanding): a multiplier on the out-of-combat decay, K5's `setGainScale` pattern. A scale that is
+   * not a finite number >= 0 reads as 1. One slot, the last setter wins; returns the undo (an earlier undo leaves a later setter alone).
+   */
+  setDecayScale(fn: () => number): () => void {
+    this.decayScale = fn;
+    return () => { if (this.decayScale === fn) this.decayScale = null; };
+  }
+
   /** Adds (or with a negative n removes) Burn; returns the actual change. NaN is ignored. */
   add(n: number, _source: string): number {
     if (!Number.isFinite(n)) return 0;
@@ -53,7 +64,12 @@ export class Burn {
   /** Decays 1 per 5 s, only out of combat. dt <= 0 or NaN is ignored. */
   decay(dt: number, inCombat: boolean): void {
     if (inCombat || !(dt > 0) || !Number.isFinite(dt)) return;
-    this.set(this._value - BURN.decayPerSecond * dt, false);
+    let k = 1;
+    if (this.decayScale) {
+      const v = this.decayScale();
+      if (typeof v === 'number' && Number.isFinite(v) && v >= 0) k = v;
+    }
+    this.set(this._value - BURN.decayPerSecond * dt * k, false);
   }
 
   zone(): BurnZone {

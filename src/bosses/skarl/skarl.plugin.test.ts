@@ -32,6 +32,8 @@ import {
   skarlLevel,
 } from './tuning';
 
+import { setSkarlArmFlag, skarlArmFlag } from './armGate';
+
 let physics: PhysicsWorld;
 
 beforeEach(async () => {
@@ -291,6 +293,29 @@ describe('Corvin Skarl on the real core', () => {
     u.teleport(0, -8);
     u.run(secs(PRESENTATION.introSeconds) + 2);
     expect(u.boss()).toBeNull();
+    u.teardown();
+  }, T30);
+
+  it('the optional arm flag (K13): off by default; when configured the fight waits for it, and removing it restores the default', async () => {
+    const t = await setup();
+    const undo = setSkarlArmFlag('story.d06.courtyardClear');
+    try {
+      t.teleport(0, -8);
+      t.run(secs(PRESENTATION.introSeconds) + 2);
+      expect(t.boss()).toBeNull();
+      expect(skarlDirector()!.introRunning).toBe(false);
+      t.ctx.state.setFlag('story.d06.courtyardClear', true);
+      t.run(2);
+      expect(skarlDirector()!.introRunning).toBe(true);
+    } finally {
+      undo();
+    }
+    expect(skarlArmFlag()).toBeNull();
+    t.teardown();
+    const u = await setup();
+    u.teleport(0, -8);
+    u.run(2);
+    expect(skarlDirector()!.introRunning).toBe(true);
     u.teardown();
   }, T30);
 
