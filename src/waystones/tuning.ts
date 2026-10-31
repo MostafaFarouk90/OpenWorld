@@ -29,4 +29,6 @@ export const WAYSTONE_LOCKS: Readonly<Record<string, string>> = {
   // already lit shrine; the Last Anvil's stone stays dark until the anvil has sounded (M30's third step) or the shrine is lit.
   'hathrens-mere': 'shrine.hathrens-mere.open',
   'last-anvil': 'shrine.last-anvil.open',
+  // Act 3 (K9 PR 2): the Wyrm's Hearth stone opens with M34 (active or completed), `story.m34.complete`, or an already lit shrine.
+  'wyrms-hearth': 'shrine.wyrms-hearth.open',
 };

@@ -50,3 +50,17 @@ export const WAYSIDE = {
 export const rubbingFlag = (id: string): string => `world.rubbing.${id}.taken`;
 export const rubbingCodexId = (id: string): string => `lore.rubbing.${id}`;
 export const RUBBINGS_COLLECTION_ID = 'lore.anvil-rubbings';
+
+export const WYRMS_HEARTH = {
+  id: 'wyrms-hearth',
+  quest: 'm34',
+  /** K4's nest site on the Hearth plateau. Nothing is built until it exists. */
+  siteAnchor: 'dragonspine.hearth.shrine',
+  waystoneAnchor: 'waystone.wyrms-hearth',
+  /** Only used if K4's waystone anchor is missing. */
+  waystoneOffset: { x: 10, z: 0 },
+  /** Derived gate for WAYSTONE_LOCKS: M34 active or completed, `story.m34.complete`, or the shrine already lit. */
+  openFlag: 'shrine.wyrms-hearth.open',
+  completeFlag: 'story.m34.complete',
+  glow: { unlit: 0, lit: 3, distance: 22, color: 0xff7a2a },
+} as const;

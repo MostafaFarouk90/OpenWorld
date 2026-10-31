@@ -15,6 +15,7 @@ describe('Act 3 SHRINE_POSITIONS', () => {
   it.each([
     ['hathrens-mere', GREYFEN_LAYOUT, 'greyfen.mere.shrine'],
     ['last-anvil', DRAGONSPINE_LAYOUT, 'dragonspine.anvil.shrine'],
+    ['wyrms-hearth', DRAGONSPINE_LAYOUT, 'dragonspine.hearth.shrine'],
   ] as const)('%s is within 30 m of its site anchor', (id, layout, anchorId) => {
     const mark = SHRINE_POSITIONS[id]!;
     const a = site(layout, anchorId);
@@ -23,7 +24,7 @@ describe('Act 3 SHRINE_POSITIONS', () => {
 
   it('every site anchor K9 waits for exists in the layouts', () => {
     for (const id of ['greyfen.mere.shrine', 'waystone.hathrens-mere']) expect(() => site(GREYFEN_LAYOUT, id)).not.toThrow();
-    const spine = ['dragonspine.anvil.shrine', 'waystone.last-anvil'];
+    const spine = ['dragonspine.anvil.shrine', 'waystone.last-anvil', 'dragonspine.hearth.shrine', 'waystone.wyrms-hearth'];
     for (let n = 1; n <= 6; n++) spine.push(`dragonspine.anvil.carving.${n}`, `dragonspine.wayside.${n}`);
     for (const id of spine) expect(() => site(DRAGONSPINE_LAYOUT, id)).not.toThrow();
   });
