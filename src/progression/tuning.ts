@@ -49,7 +49,7 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'peat-shambler': 122,
   // Murkjaw, D05 (K8): the same convention, so a Greyfen kill pays plan 6.2's about 600 (333 x 1.8 = 599.4, paid as 599).
   murkjaw: 333,
-  // Corvin Skarl, D06 (K8 PR 2): the summit has no region factor, so the base is the 650 paid.
+  // Corvin Skarl, D06 (K8 PR 2): the summit has no region factor; 650 at an even level (the level scale adjusts it as for any kill).
   'corvin-skarl': 650,
   // K6a: Skarl's drake is freed on either D06 outcome, never a kill reward.
   'skarl-drake': 0,

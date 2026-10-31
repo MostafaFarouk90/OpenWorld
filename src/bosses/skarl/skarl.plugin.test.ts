@@ -317,7 +317,6 @@ describe('Corvin Skarl on the real core', () => {
     expect(t.state()!.breaksPerPhase).toBe(1);
     expect(t.boss()!.hittable).toBe(true);
     expect(t.drake.spawns).toBe(1);
-    expect(t.drakes.chain).toHaveBeenCalledWith(DRAKE_SPAWNER, ARENA.post, { until: { all: [OUTCOME_FLAG] } });
     t.teardown();
   }, T30);
 
@@ -613,10 +612,11 @@ describe('Corvin Skarl on the real core', () => {
         return t.of('damage.dealt').some((d) => d.attackId === KICK.attackId);
       }, 10),
     ).toBe(true);
-    const shoves = t.holds.filter((h) => h !== null);
-    // A shove of at most 0.5 m (or none) toward the ring.
-    if (shoves.length > 0) expect(t.enc().shoving || t.holds.at(-1) === null).toBe(true);
+    // The player stood 2.5 m inside the ring with the shove pointing out: it is cut to 0.5 m, so they stay 2 m inside.
+    expect(t.enc().lastShoveMetres).toBeLessThanOrEqual(0.5 + 1e-9);
+    expect(t.enc().lastShoveMetres).toBeLessThan(KICK.shoveMetres);
     t.runHealed(KICK.shoveSeconds + 0.1);
+    expect(t.holds.at(-1)).toBeNull();
     expect(skarlDirector()!.outsideSeconds).toBe(0);
     t.teardown();
   }, T30);
@@ -641,16 +641,73 @@ describe('Corvin Skarl on the real core', () => {
     t.teardown();
   }, T30);
 
-  it('every class: class-style modifiers do not stop the lever breaks; the Spare window opens', async () => {
-    for (const mod of [
-      (r: any) => r.kind === 'melee' && ((r.amount *= 0.4), (r.poise *= 0.4)),
-      (r: any) => r.kind === 'spell' && ((r.amount *= 1.5), (r.poise *= 0.3)),
-    ]) {
-      const t = await setup();
-      t.ctx.damage.addModifier('test.class', mod as never, 10);
-      t.startFight();
-      toWindow(t);
-      t.teardown();
+  it.each([
+    ['a weak blade (melee x0.4)', 'melee', 0.4],
+    ['a caster (spells x1.5, poise x0.3)', 'spell', 1.5],
+  ])('every class: %s still breaks him three times by the lever and reaches the Spare window', async (_n, kind, scale) => {
+    const t = await setup();
+    const seen = vi.fn();
+    t.ctx.damage.addModifier('test.class', ((r: any) => {
+      if (r.kind !== kind || r.targetId !== t.boss()?.id) return;
+      seen();
+      r.amount *= scale;
+      r.poise *= kind === 'spell' ? 0.3 : scale;
+    }) as never, 10);
+    t.startFight();
+    // The class's own hits are scaled (the modifier runs) ...
+    expect(t.hit(10, 0, { kind })!.dealt).toBeCloseTo(10 * scale);
+    expect(seen).toHaveBeenCalled();
+    // ... and the lever's forced breaks are not, so the breaks come whatever the class.
+    toWindow(t);
+    expect(t.enc().forcedBreaks).toBe(3);
+    t.teardown();
+  }, T30);
+
+  it('the chain: any player hit on the drake while it is down strikes the chain (a bow or a spell reaches it)', async () => {
+    const t = await setup();
+    t.startFight();
+    t.ctx.damage.apply({ attackerId: t.ctx.player.actor.id, targetId: t.drake.id!, amount: 5, poise: 0, kind: 'spell' });
+    expect(t.of('boss.break')).toHaveLength(0);
+    t.land();
+    t.ctx.damage.apply({ attackerId: t.ctx.player.actor.id, targetId: t.drake.id!, amount: 5, poise: 0, kind: 'spell' });
+    expect(t.of('boss.break')).toHaveLength(1);
+    expect(t.enc().forcedBreaks).toBe(1);
+    t.teardown();
+  }, T30);
+
+  it('the ring timer does not count while a kick shove holds the player, and counts again once it ends', async () => {
+    const t = await setup();
+    t.startFight();
+    const e = t.enc() as unknown as { shove: { x: number; z: number; left: number } | null };
+    e.shove = { x: 0, z: -1, left: 1 };
+    t.ctx.player.teleport(t.at(0, -(ARENA.ring + 4)));
+    for (let i = 0; i < secs(ARENA.outsideSeconds + 1); i++) {
+      e.shove = { x: 0, z: -1, left: 1 };
+      t.game.fixedUpdate();
+      t.healPlayer();
     }
+    expect(skarlDirector()!.outsideSeconds).toBe(0);
+    expect(t.boss()).not.toBeNull();
+    e.shove = null;
+    t.runHealed(ARENA.outsideSeconds + 0.2);
+    expect(t.boss()).toBeNull();
+    t.teardown();
+  }, T30);
+
+  it('after the last break the lever is spent (no second Spare window from it, even with no drake)', async () => {
+    const t = await setup({ drake: false });
+    t.startFight();
+    toWindow(t);
+    t.runHealed(SKARL.releaseWindowSeconds + LEVER.cooldown + 0.5);
+    expect(t.enc().pullLever()).toBe(false);
+    expect(items(t).get(SKARL_LEVER_ID).enabled()).toBe(false);
+    t.teardown();
+  }, T30);
+
+  it('the drake chain is attached with no flag condition (released and unchained by the fight itself)', async () => {
+    const t = await setup();
+    t.startFight();
+    expect(t.drakes.chain).toHaveBeenCalledWith(DRAKE_SPAWNER, ARENA.post);
+    t.teardown();
   }, T30);
 });
