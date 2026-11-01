@@ -114,6 +114,23 @@ describe('the summit quests as data', () => {
     expect(build.layout.triggers.map((t) => t.id)).toContain('trg.dragonspine.aerie.arrival');
   });
 
+  it("D06 follows the Aerie's layout: the winch stands outside the west wall, so it comes before the keep, the captive, the hawk and the lists, which are all inside it", () => {
+    const at = (id: string) => build.layout.anchors.find((a: { id: string }) => a.id === id) as { x: number; z: number };
+    const gate = at('dragonspine.aerie.gate');
+    expect(at('dragonspine.aerie.gate.winch').x).toBeLessThan(gate.x);
+    for (const id of ['dragonspine.aerie.keep.door', 'dragonspine.aerie.hawk-cage', 'dragonspine.aerie.search.1', 'dragonspine.aerie.search.2']) {
+      expect(at(id).x, id).toBeGreaterThan(gate.x);
+    }
+    const order = DEFS.find((d) => d.id === 'd06')!.objectives.map((o) => o.id);
+    for (const inside of ['captive', 'keep', 'aerie', 'hawk', 'courtyard']) expect(order.indexOf('winch'), inside).toBeLessThan(order.indexOf(inside));
+    expect(order.indexOf('land')).toBeLessThan(order.indexOf('winch'));
+  });
+
+  it("Eadgyth stands at the Hearth once M31 is complete, with or without the gate flag a jump or an older save lacks", () => {
+    const rule = SUMMIT_POST_RULES.find((r) => r.npcId === 'eadgyth')!;
+    expect(rule.posts.some((p) => p.anchorId === 'dragonspine.hearth.eadgyth' && JSON.stringify(p.when) === JSON.stringify({ quest: 'm31', state: 'completed' }))).toBe(true);
+  });
+
   it('every spawner is on the summit area, never respawns and is switched by a flag an arm writes', () => {
     const writers = new Set(SUMMIT_ARMS.map((a) => a.flag));
     for (const s of SUMMIT.spawners) {

@@ -15,8 +15,10 @@ import { D06_THORGAR_POST, M34_THORGAR_POST } from '../postRules';
 export const LANDING = 'dragonspine.aerie.landing';
 export const LEDGE = 'dragonspine.glide.summit-aerie.launch';
 export const ARRIVAL_TRIGGER = 'trg.dragonspine.aerie.arrival';
-/** Metres (x, z) from the landing mark within which a glide's landing counts. */
-export const LAND_RADIUS = 40;
+/** Metres (x, z) from the landing mark within which a glide's landing counts. The real glide lands on the shelf's west end, about 115 m short of the landing mark (real-game run), so the credit covers the whole shelf. */
+export const LAND_RADIUS = 130;
+/** Thorgar waits this far to the side of the lip's launch point: his talk (2.5 m) and the glide prompt (3 m) must not overlap where Cael stands. */
+export const THORGAR_SIDE = 5;
 export const LIP_NEAR = 40;
 /** Polls (half a second) between Skarl's yield and his escort arriving. */
 export const STAGE_POLLS = 6;
@@ -47,7 +49,7 @@ export function installD06(k: Kit): Off {
   const ledge = ctx.anchors.find(LEDGE);
   if (ledge) {
     const side = { x: Math.cos(ledge.yaw), z: -Math.sin(ledge.yaw) };
-    define(D06_THORGAR_POST, { x: ledge.position.x + side.x * 2.4, y: ledge.position.y, z: ledge.position.z + side.z * 2.4 }, ledge.yaw);
+    define(D06_THORGAR_POST, { x: ledge.position.x + side.x * THORGAR_SIDE, y: ledge.position.y, z: ledge.position.z + side.z * THORGAR_SIDE }, ledge.yaw);
   } else k.warn(`summit director: no ${LEDGE} anchor for Thorgar's post`);
   const eadgyth = ctx.anchors.find('dragonspine.hearth.eadgyth');
   if (eadgyth) {

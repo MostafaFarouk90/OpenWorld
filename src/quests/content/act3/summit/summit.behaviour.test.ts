@@ -13,8 +13,8 @@ import { makeRig, anchorPos, type Rig } from './director/rig.testkit';
 import { autoplay, autoplayAll } from './director/autoplay.testkit';
 import { ARENA, ARENA_LEAVE, RESTART_GRACE_POLLS, TRIAL_ID } from './director/trial';
 import { KEEPER_DECAY_SCALE, PERCH_SETTLE_TICKS, TALK_RADIUS } from './director/reveal';
-import { FLIGHT_FROM, FLIGHT_TICKS, WITNESS_CAP } from './director/net';
-import { LANDING, STAGE_POLLS } from './director/aerie';
+import { FLIGHT_FROM, FLIGHT_NEAR, FLIGHT_TICKS, WITNESS_CAP } from './director/net';
+import { LANDING, LAND_RADIUS, LEDGE, STAGE_POLLS, THORGAR_SIDE } from './director/aerie';
 import { M31_AT_GATE, M31_CHOICE, M31_FAVOURED, M31_RESPECT, M31_TRIAL_BEGUN } from './m31.quest';
 import { M32_COMPLETE, M32_TALK } from './m32.quest';
 import { M33_ANCHOR_FLAGS, M33_FLIGHT, M33_PACK_GROUPS, M33_WITNESSES } from './m33.quest';
@@ -505,6 +505,18 @@ describe('M33: the spared hunters are counted as witnesses', () => {
     expect(r.flag(M33_FLIGHT)).toBe(true);
   });
 
+  it('the flight starts as the handler talk ends: the handler stands about 100 m from the camp, inside the start distance', () => {
+    const handler = anchorPos('dragonspine.skyhold.handler');
+    const camp = anchorPos(FLIGHT_FROM);
+    expect(Math.hypot(handler.x - camp.x, handler.z - camp.z)).toBeLessThan(FLIGHT_NEAR);
+    const r = fresh();
+    upTo(r, 'm33', 'flight');
+    const shots = r.camera.shots.length;
+    r.at('dragonspine.skyhold.handler');
+    r.step(40);
+    expect(r.camera.shots.length).toBe(shots + 1);
+  });
+
   it('the flight still credits with no camera rig', () => {
     const r = fresh({ noCamera: true });
     upTo(r, 'm33', 'flight');
@@ -606,6 +618,35 @@ describe('D06: the Aerie', () => {
     r.emit('glide.landed', { at: anchorPos(LANDING) });
     r.step(2);
     expect(r.flag(D06_LANDED)).toBe(true);
+  });
+
+  it("a glide that comes down on the shelf's west end (about 115 m short of the landing mark, where the real glide lands) counts", () => {
+    const r = fresh();
+    upTo(r, 'd06', 'land');
+    const mark = anchorPos(LANDING);
+    expect(LAND_RADIUS).toBeGreaterThanOrEqual(120);
+    r.at('dragonspine.glide.summit-aerie.launch');
+    r.emit('glide.started', { ledgeId: 'summit-aerie' });
+    r.emit('glide.landed', { at: { x: mark.x - 116, y: mark.y, z: mark.z - 9 } });
+    r.step(2);
+    expect(r.flag(D06_LANDED)).toBe(true);
+  });
+
+  it("a landing far from the Aerie (the Hearth's entry) still earns nothing", () => {
+    const r = fresh();
+    upTo(r, 'd06', 'land');
+    r.emit('glide.started', { ledgeId: 'summit-aerie' });
+    r.emit('glide.landed', { at: anchorPos('dragonspine.hearth.entry') });
+    r.step(40);
+    expect(r.flag(D06_LANDED)).toBe(false);
+  });
+
+  it("Thorgar's D06 post is clear of the glide prompt at the lip (his talk radius 2.5 m and the launch radius 3 m cannot both reach one spot)", () => {
+    const r = fresh();
+    const post = r.defined.get('dragonspine.d06.thorgar')!;
+    const lip = anchorPos(LEDGE);
+    expect(THORGAR_SIDE).toBeGreaterThanOrEqual(5);
+    expect(Math.hypot(post.position.x - lip.x, post.position.z - lip.z)).toBeGreaterThanOrEqual(5);
   });
 
   it('standing in the arrival volume on foot also counts (a return by the waystone), but not while gliding', () => {

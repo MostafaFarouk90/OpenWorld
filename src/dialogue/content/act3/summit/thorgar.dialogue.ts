@@ -98,8 +98,8 @@ export const THORGAR_SUMMIT = buildTree({
         T('He keeps a drake in iron in the courtyard. It is a young one, I am told, and he beats it to keep it docile.'),
         C('You have been watching him.'),
         T('Twenty years. I had no road to him until the Hearth burned. Now the wind is yours, and the ledge is open.'),
-        T('The Aerie has a keep. A hunter is held in its cell, one of his own, who spoke against him. Find him first. He will tell you what he can.'),
-        T('Then the gate. There is a winch on the courtyard side, and a gate behind it that Skarl closes when he is afraid. He is afraid now.'),
+        T('The gate first. There is a winch outside the wall beside it, and a gate that Skarl closes when he is afraid. He is afraid now.'),
+        T('Inside is a keep, and a hunter held in its cell, one of his own, who spoke against him. Find him. He will tell you what he can.'),
         T('Twelve are in the yard, on the ground and on the walls. Spare them or put them down. The Marshal will come out when they are gone.'),
         {
           s: 'thorgar', t: 'Will you glide, {name}?',
@@ -113,7 +113,7 @@ export const THORGAR_SUMMIT = buildTree({
     },
     'd06-wait': {
       lines: [
-        T('The ledge, the keep, the winch, the yard, the Marshal. In that order, or as the wind allows.'),
+        T('The ledge, the winch, the keep, the yard, the Marshal. In that order, or as the wind allows.'),
         { s: 'thorgar', t: 'Is there anything else, {name}?', choices: [{ id: 'bye', t: 'Nothing yet.', go: null }, ...OTHER] },
       ],
     },

@@ -39,7 +39,7 @@ export const CAPTIVE = tree('captive-hunter', [[at('d06', 'captive'), 'd06-talk'
     C('I am a knight. Thorgar sent me. Who are you?'),
     CA('A hunter of the Aerie. I told the Marshal the drake was starving, and he put me in his cell for a week to think on it.'),
     CA('His orders are on the desk in the study. The buyer\'s ledger is on the map table. Vey\'s letter is behind the study, in the far wall. Read them.'),
-    CA('The courtyard has a winch, and a gate behind it. Turn it, and the hunters in the yard will come out with their spears. Mind the walls.'),
+    CA('You turned the winch, so the yard is open to you. When you walk out into it, the hunters will come with their spears. Mind the walls.'),
     CA('When you meet him, do not take his word for anything. He will say he is the last honest man on the mountain, and he will believe it.'),
   ] },
   idle: { lines: [CA('I will wait here. I have waited longer for less.')] },

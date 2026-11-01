@@ -32,11 +32,11 @@ export const SUMMIT_PACE: readonly Act3PaceRow[] = [
     F('dragonspine.hearth.ysmeryth.oath'), F('dragonspine.hearth.eadgyth'), F(HEARTH_CARVE(1)), F(HEARTH_CARVE(2)), F('dragonspine.hearth.glide-marker.1'),
     F('dragonspine.hearth.glide-marker.2'), F('waystone.wyrms-hearth'), F('dragonspine.glide.hearth-updraft.launch'), F('dragonspine.hearth.ysmeryth.oath'),
   ], 49, { interact: 1, set: 2, search: 4 }),
-  // D06: Thorgar at the chasm ledge, the glide, the captive in the keep, the keep's three searches, the Aerie's lists, the hawk, the winch, the courtyard, Skarl, the feed log, Thorgar at the landing
+  // D06: Thorgar at the chasm ledge, the glide, the winch (outside the wall), the captive in the keep, the keep's three searches, the Aerie's lists, the hawk, the courtyard, Skarl, the feed log, Thorgar at the landing
   build('d06', 65, 'dragonspine.glide.summit-aerie.launch', [
-    G('dragonspine.glide.summit-aerie.landing'), F('dragonspine.aerie.keep.door'), D('dragonspine.keep.inside'), F('dragonspine.keep.captive'),
+    G('dragonspine.glide.summit-aerie.landing'), F('dragonspine.aerie.gate.winch'), F('dragonspine.aerie.keep.door'), D('dragonspine.keep.inside'), F('dragonspine.keep.captive'),
     ...feet([1, 2, 3].map(SEARCH_KEEP)), D('dragonspine.keep.exit'), D('dragonspine.aerie.keep.door'), F('dragonspine.aerie.search.1'), F('dragonspine.aerie.hawk-cage'),
-    F('dragonspine.aerie.gate.winch'), F('dragonspine.aerie.arena.centre'), F('dragonspine.aerie.search.2'), F('dragonspine.aerie.chain-post'), F('dragonspine.aerie.landing'),
+    F('dragonspine.aerie.arena.centre'), F('dragonspine.aerie.search.2'), F('dragonspine.aerie.chain-post'), F('dragonspine.aerie.landing'),
   ], 39, { killUnit: 12, search: 6, interact: 2, boss: 1 }),
 ];
 

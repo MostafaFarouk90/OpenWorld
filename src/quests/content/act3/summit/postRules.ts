@@ -14,6 +14,8 @@ export const SUMMIT_POST_RULES: PostRule[] = [
     home: 'npc-post.eadgyth.fire',
     posts: [
       { when: { flag: GATE_MET, equals: true }, anchorId: 'dragonspine.hearth.eadgyth' },
+      // a jump or an older save that finished M31 without the gate flag: she is at the Hearth all the same
+      { when: { quest: 'm31', state: 'completed' }, anchorId: 'dragonspine.hearth.eadgyth' },
       { when: { all: [{ quest: 'm31', state: 'active' }, { objective: ['m31', 'brief'], done: true }] }, anchorId: 'dragonspine.summit-gate.eadgyth' },
     ],
   },

@@ -12,7 +12,8 @@ export const WITNESS_CAP = 8;
 export const FLIGHT_TICKS = 600;
 export const FLIGHT_FROM = 'dragonspine.skyhold.camp';
 export const FLIGHT_TO = 'dragonspine.skyhold.flight.escape';
-export const FLIGHT_NEAR = 70;
+/** The handler lies about 100 m from the camp, so the flight starts as the talk with him ends. */
+export const FLIGHT_NEAR = 110;
 
 export function installM33(k: Kit): Off {
   const { ctx } = k;

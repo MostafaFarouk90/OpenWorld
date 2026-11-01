@@ -31,8 +31,9 @@ export const D06_OUTCOME_NPC = 'scene.d06.outcome';
 export const D06_ITEM = 'skarls-crossbow';
 
 /**
- * D06 Wings of Frostfang. Thorgar sends Cael over the chasm by glide to the Frostfang Aerie. Cael speaks to the captive hunter in the keep, reads
- * the keep's papers and the Aerie's lists, frees the caged hawk, turns the gate winch, clears the courtyard (eight hunters and four wall
+ * D06 Wings of Frostfang. Thorgar sends Cael over the chasm by glide to the Frostfang Aerie. Cael turns the gate winch first (it stands outside the wall, and
+ * the keep, the cage and the lists are all inside it), speaks to the captive hunter in the keep, reads the keep's papers and the Aerie's lists,
+ * frees the caged hawk, clears the courtyard (eight hunters and four wall
  * harpooners, one group) and faces Hunt-Marshal Skarl (K8's fight, K8's favour). The outcome is read from the boss registry's flag.
  */
 export const d06: QuestDef = {
@@ -45,11 +46,11 @@ export const d06: QuestDef = {
     { id: 'brief', type: 'talk', target: 'thorgar', textKey: 'quest.d06.brief' },
     { id: 'lip', type: 'talk', target: D06_LIP_NPC, textKey: 'quest.d06.lip' },
     story('land', 'quest.d06.land', D06_LANDED, { doneWhen: { flag: D06_LANDED, equals: true } }),
+    { id: 'winch', type: 'event', target: 'interact', match: { interactableId: D06_WINCH_PROP }, textKey: 'quest.d06.winch', doneWhen: { flag: D06_GATE_OPEN, equals: true } },
     { id: 'captive', type: 'talk', target: 'captive-hunter', textKey: 'quest.d06.captive' },
     reads('keep', 'quest.d06.keep', D06_KEEP),
     reads('aerie', 'quest.d06.aerie', D06_AERIE),
     { id: 'hawk', type: 'event', target: 'interact', match: { interactableId: D06_HAWK_PROP }, textKey: 'quest.d06.hawk', doneWhen: { flag: D06_HAWK_FLAG, equals: true } },
-    { id: 'winch', type: 'event', target: 'interact', match: { interactableId: D06_WINCH_PROP }, textKey: 'quest.d06.winch', doneWhen: { flag: D06_GATE_OPEN, equals: true } },
     story('courtyard', 'quest.d06.courtyard', D06_COURTYARD_CLEAR, { doneWhen: { flag: D06_COURTYARD_CLEAR, equals: true } }),
     { id: 'lines', type: 'talk', target: D06_LINES_NPC, textKey: 'quest.d06.lines' },
     story('skarl', 'quest.d06.skarl', D06_SKARL_OUTCOME, { doneWhen: { flag: D06_SKARL_OUTCOME } }),
