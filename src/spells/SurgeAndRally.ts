@@ -116,7 +116,8 @@ function horizontalDir(from: Vec3, to: Vec3, fallbackYaw: number): Vec3 {
   const dx = to.x - from.x;
   const dz = to.z - from.z;
   const len = Math.hypot(dx, dz);
-  if (len < 1e-6) return { x: Math.sin(fallbackYaw), y: 0, z: Math.cos(fallbackYaw) };
+  // A foe on her feet is pushed where she faces: yaw 0 faces -Z.
+  if (len < 1e-6) return { x: -Math.sin(fallbackYaw), y: 0, z: -Math.cos(fallbackYaw) };
   return { x: dx / len, y: 0, z: dz / len };
 }
 
