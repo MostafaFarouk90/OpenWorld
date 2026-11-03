@@ -7,7 +7,6 @@ import { BANNER, RALLY_FX } from './tuning';
 export class BannerState {
   private pos: Vec3 | null = null;
   private expiresAt = 0;
-  private _radius: number = BANNER.radius;
 
   get active(): boolean {
     return this.pos !== null;
@@ -16,15 +15,9 @@ export class BannerState {
     return this.pos ? { ...this.pos } : null;
   }
 
-  /** The planted banner's aura radius (BANNER.radius unless planted with another). */
-  get radius(): number {
-    return this._radius;
-  }
-
-  /** Re-planting replaces the old banner. `radius` (K11, Banner of the Sunforge) is for this banner only; a bad one falls back to BANNER.radius. */
-  plant(at: Vec3, now: number, radius: number = BANNER.radius): void {
+  /** Re-planting replaces the old banner. */
+  plant(at: Vec3, now: number): void {
     if (![at.x, at.y, at.z, now].every(Number.isFinite)) return;
-    this._radius = Number.isFinite(radius) && radius > 0 ? radius : BANNER.radius;
     this.pos = { x: at.x, y: at.y, z: at.z };
     this.expiresAt = now + BANNER.lifetimeSeconds;
   }
@@ -50,7 +43,7 @@ export class BannerState {
   scaleFor(at: Vec3): number {
     const p = this.pos;
     if (!p) return 1;
-    return Math.hypot(at.x - p.x, at.z - p.z) <= this._radius ? BANNER.damageScale : 1;
+    return Math.hypot(at.x - p.x, at.z - p.z) <= BANNER.radius ? BANNER.damageScale : 1;
   }
 }
 
@@ -80,8 +73,8 @@ export function buildBannerMesh(): THREE.Group {
 
 export interface BannerRegistration {
   state: BannerState;
-  /** Plants a banner in front of the player. `opts.radius` (K11) sizes this banner only; omitted, it is BANNER.radius (8 m). */
-  plant(now: number, opts?: { radius?: number }): void;
+  /** Plants a banner in front of the player. */
+  plant(now: number): void;
   /** Removes the banner (a loaded save). */
   clear(): void;
   /** Once per fixed tick with the sim time; `learned` false removes the banner (respec). */
@@ -114,19 +107,18 @@ export function createBanner(host: BannerHost): BannerRegistration {
 
   return {
     state,
-    plant(now, opts) {
-      const radius = opts?.radius !== undefined && Number.isFinite(opts.radius) && opts.radius > 0 ? opts.radius : BANNER.radius;
+    plant(now) {
       const f = host.player.feet;
       const yaw = host.player.facingYaw;
       const at = { x: f.x - Math.sin(yaw) * BANNER.placeDistance, y: f.y, z: f.z - Math.cos(yaw) * BANNER.placeDistance };
       dropMesh();
-      state.plant(at, now, radius);
+      state.plant(at, now);
       mesh = buildBannerMesh();
       mesh.position.set(at.x, at.y, at.z);
       host.scene.add(mesh);
       lastPulse = now;
       host.events.emit('buff.applied', { id: BANNER.skillId, nameKey: 'skill.knight.bannerPlant.name', seconds: BANNER.lifetimeSeconds });
-      host.services.get('vfx')?.spawnEffect('skill-q', { position: at, scale: 1 }, { radius, color: RALLY_FX.color });
+      host.services.get('vfx')?.spawnEffect('skill-q', { position: at, scale: 1 }, { radius: BANNER.radius, color: RALLY_FX.color });
     },
     clear() {
       if (state.active) endBuff();
@@ -145,8 +137,8 @@ export function createBanner(host: BannerHost): BannerRegistration {
       if (now - lastPulse >= 3) {
         lastPulse = now;
         const p = state.position!;
-        host.services.get('vfx')?.spawnEffect('skill-q', { position: p, scale: 1 }, { radius: state.radius, color: RALLY_FX.color });
-        host.onPulse?.({ x: p.x, y: p.y, z: p.z }, state.radius);
+        host.services.get('vfx')?.spawnEffect('skill-q', { position: p, scale: 1 }, { radius: BANNER.radius, color: RALLY_FX.color });
+        host.onPulse?.({ x: p.x, y: p.y, z: p.z }, BANNER.radius);
       }
     },
     modify(req, target) {
