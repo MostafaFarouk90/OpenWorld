@@ -47,6 +47,9 @@ export const TOWNSFOLK_BODIES: Readonly<Record<string, TownBodyId>> = {
   'carry:villager-1': 'town-villager-a',
   'carry:villager-2': 'town-villager-c',
   'carry:villager-3': 'town-farmer-b',
+  // Act 1 side jobs: the widow at the lane end (j02) and the Kettlewick sexton (j02)
+  orla: 'town-villager-c',
+  osmund: 'town-priest-a',
   // Harrowmark
   'refugee-1': 'town-survivor-a',
   'refugee-2': 'town-villager-c',
@@ -57,6 +60,9 @@ export const TOWNSFOLK_BODIES: Readonly<Record<string, TownBodyId>> = {
   sexton: 'town-priest-a',
   armourer: 'town-blacksmith-a',
   clerk: 'town-merchant-b',
+  // Act 1 side jobs: Rook's watch-sergeant (j08) and the chandler (j07)
+  sergeant: 'town-guard-a',
+  chandler: 'town-merchant-a',
   // Cinderreach
   'household-1': 'town-villager-a',
   'household-2': 'town-villager-b',
@@ -94,6 +100,8 @@ export const KEEP_KAYKIT: readonly string[] = [
   // Harrowmark
   'rook', 'aldith', 'gerta', 'whitlock', 'pennard', 'ashdown', 'dunstan', 'wace', 'wystan', 'merrin', 'edric', 'vey',
   'pellam', 'fence', 'crabbe', 'grisel', 'grisel-steward',
+  // Crumb the hound (j05) is a small KayKit stand-in until a dog model exists; a townsfolk body would be a person
+  'crumb',
   // Cinderreach
   'osgar', 'ketta', 'maud', 'beornwyn', 'pell', 'osric', 'ealdred', 'wynne', 'corwin', 'brand', 'redmane',
   // Oldsmoke and the mines

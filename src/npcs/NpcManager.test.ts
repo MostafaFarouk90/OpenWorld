@@ -14,6 +14,7 @@ const postYaw = (id: string) => wrapAngle(POSTS[id][3]);
 function setup(over: Partial<NpcManagerOptions> = {}, player: { x: number; z: number } | null = { x: 0, z: 0 }) {
   const fc = createFakeCore();
   fc.flags.set('story.m01.tavernDoused', true); // Tobb stands at the Grey Goose once its door is out (density pass)
+  fc.flags.set('story.side.kettlewickOpen', true); // Orla and the sexton are in the lanes once M02 is done (side jobs)
   fc.ctx.strings.register('en', NPC_STRINGS_EN);
   for (const n of BRIGHTWATER_LAYOUT.npcs) {
     const a = BRIGHTWATER_LAYOUT.anchors.find((x) => x.id === n.post)!;
@@ -160,7 +161,8 @@ describe('models', () => {
     await m.loadModels();
     // the carters wear generated townsfolk bodies (townsfolkBodies.ts), which load with Knight.glb for their clips
     expect([...new Set(spy.mock.calls.map((c) => c[0]))].sort()).toEqual(
-      ['barbarian', 'knight', 'mage', 'rogueHooded', 'town-farmer-a', 'town-farmer-b', 'town-villager-b'], // carter-2 was the only rogue
+      // carter-2 was the only rogue; the side jobs' Orla and Osmund wear town-villager-c and town-priest-a
+      ['barbarian', 'knight', 'mage', 'rogueHooded', 'town-farmer-a', 'town-farmer-b', 'town-priest-a', 'town-villager-b', 'town-villager-c'],
     );
     expect(m.get('gaut')!.hasModel).toBe(true);
     const after = m.get('gaut')!.root.children;
@@ -190,8 +192,8 @@ describe('models', () => {
     await expect(m.loadModels()).resolves.toBeUndefined();
     expect(m.get('gaut')!.hasModel).toBe(false);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('404'));
-    // five KayKit GLBs and the carters' three generated bodies (whose KayKit fallbacks are among the five)
-    expect(warn).toHaveBeenCalledTimes(8);
+    // five KayKit GLBs and five generated bodies (the carters' three, Orla's and Osmund's; their KayKit fallbacks are among the five)
+    expect(warn).toHaveBeenCalledTimes(10);
     expect(m.get('carter-1')!.hasModel).toBe(false);
   });
   it('an instantiate failure keeps the placeholder and does not reject', async () => {
@@ -267,7 +269,9 @@ describe('models', () => {
 describe('proximity loading', () => {
   it('loads only GLBs within the load radius; a far npc stays a placeholder until the player approaches', async () => {
     const l = fakeLoader();
-    const { m, pl } = setup({ loader: l });
+    const { fc, m, pl } = setup({ loader: l });
+    // the side jobs' Orla and Osmund stand near Stane and wear generated bodies, which load Knight.glb for their clips
+    fc.flags.set('story.side.kettlewickOpen', false);
     m.spawnAll();
     pl.player = { x: -40, z: 128 }; // at stane; gaut (knight) is ~110 m away, beyond modelLoadRadius
     m.fixedUpdateBehaviour(1 / 60);

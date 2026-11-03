@@ -88,11 +88,11 @@ const progressionPlugin: GamePlugin = {
       return regionAt(at.x, at.z)?.id ?? null;
     };
     ctx.events.on('actor.died', (e) => {
-      progression.onKill({ actorId: e.actorId, kind: e.kind, team: e.team, level: e.level, killerId: e.killerId, regionId: regionOf(e.actorId) });
+      progression.onKill({ actorId: e.actorId, kind: e.kind, team: e.team, level: e.level, killerId: e.killerId, regionId: regionOf(e.actorId), spawnTag: e.spawnTag });
     });
     ctx.events.on('mercy', (e) => {
       if (!e.actorId) return;
-      progression.onMercy({ actorId: e.actorId, kind: e.creature, level: ctx.actors.get(e.actorId)?.level ?? 1, regionId: regionOf(e.actorId) });
+      progression.onMercy({ actorId: e.actorId, kind: e.creature, level: ctx.actors.get(e.actorId)?.level ?? 1, regionId: regionOf(e.actorId), spawnTag: ctx.actors.get(e.actorId)?.spawnTag });
     });
     ctx.events.on('mercy.revoked', (e) => progression.onMercyRevoked(e.actorId));
     ctx.events.on('xp.grant', (e) => {
