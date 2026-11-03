@@ -198,10 +198,11 @@ const plugin: GamePlugin = {
       const carryables: Carryable[] = [];
       let villagers = 0;
       for (const item of [...CARRY_ITEMS, ...ACT2_CARRY]) {
-        // villagers are KayKit figures (a capsule until the model loads), cradled across the Knight's arms; buckets are the greybox bucket held low
+        // villagers are NPC figures (a capsule until the model loads; the body by item id in townsfolkBodies.ts), cradled across the
+        // Knight's arms; buckets are the greybox bucket held low
         const villager = item.look === 'villager' || item.look === 'wounded';
         const body = villager
-          ? new VillagerBody(villagers++, item.look === 'wounded' ? 0x7a5a4a : 0x8a6d4b, isModelLoader(ctx.assets) ? ctx.assets : null)
+          ? new VillagerBody(villagers++, item.look === 'wounded' ? 0x7a5a4a : 0x8a6d4b, isModelLoader(ctx.assets) ? ctx.assets : null, item.id)
           : null;
         const mesh: THREE.Object3D = body ? body.root : buildPropLook(item.look === 'bundle' ? 'box' : 'bucket');
         mesh.visible = false;
