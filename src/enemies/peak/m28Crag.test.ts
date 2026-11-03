@@ -20,7 +20,7 @@ beforeAll(async () => {
 const HAWK = 'rime-hawk' as EnemyKind;
 const OGRE_KIND = 'crag-ogre' as EnemyKind;
 
-function rig(options: Partial<SpawnOptions> | undefined, kinds: EnemyKind[] = [HAWK, HAWK, HAWK, HAWK, HAWK, HAWK, OGRE_KIND], playerZ = -6) {
+function rig(options: Partial<SpawnOptions> | undefined, kinds: EnemyKind[] = [HAWK, HAWK, HAWK, HAWK, HAWK, HAWK, OGRE_KIND], playerZ = -6, aggro = true, topUp = true) {
   const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: playerZ } });
   const anchors = kinds.map((_, i) => {
     const id = `m${i}`;
@@ -36,7 +36,7 @@ function rig(options: Partial<SpawnOptions> | undefined, kinds: EnemyKind[] = [H
   const p = fake.player as unknown as { health: number; maxHealth: number };
   const tick = (seconds = DT, each?: () => void, until?: () => boolean): boolean => {
     for (let i = 0; i < Math.max(1, Math.round(seconds / DT)); i++) {
-      p.maxHealth = p.health = 1e6; // the fight is measured, not survived
+      if (topUp) p.maxHealth = p.health = 1e6; // the fight is measured, not survived
       m.think(DT);
       m.animate(DT);
       fake.combatStep(DT);
@@ -46,7 +46,7 @@ function rig(options: Partial<SpawnOptions> | undefined, kinds: EnemyKind[] = [H
     }
     return false;
   };
-  const ids = m.service.spawnGroup('crag', { aggro: true });
+  const ids = m.service.spawnGroup('crag', aggro ? { aggro: true } : {});
   const enemy = (id: string) => m.get(id);
   const fighting = () => ids.filter((id) => {
     const e = enemy(id);
@@ -55,12 +55,12 @@ function rig(options: Partial<SpawnOptions> | undefined, kinds: EnemyKind[] = [H
   const ogreId = ids.find((id) => enemy(id)?.def.kind === OGRE_KIND)!;
   const stoops = () => fake.bus.of('telegraph').filter((t) => (t as { moveId?: string }).moveId === 'hawk.stoop');
   const kill = (id: string) => fake.apply({ attackerId: 'player', targetId: id, amount: 1e7, poise: 0, kind: 'script' });
-  return { fake, m, tick, ids, enemy, fighting, ogreId, stoops, kill };
+  return { fake, m, tick, ids, enemy, fighting, ogreId, stoops, kill, p };
 }
 
 describe('M28 crag: the first wave', () => {
   it('the options are the rulings\': two at once, 0.4 health, 0.6 damage, the ogre through two hits, no stoop beside the ogre', () => {
-    expect(M28_CRAG_OPTIONS).toEqual({ waveSize: 2, healthScale: 0.4, damageScale: 0.6, blusterHits: 2, blusterSeconds: 5, stoopClearOfOgre: 5 });
+    expect(M28_CRAG_OPTIONS).toEqual({ waveSize: 2, healthScale: 0.4, damageScale: 0.6, blusterHits: 2, blusterSeconds: 5, stoopClearOfOgre: 5, leash: false });
   });
 
   it('the crag members carry the scales: 0.4 of the health of the same members without the options', () => {
@@ -73,8 +73,8 @@ describe('M28 crag: the first wave', () => {
     }
   });
 
-  it('at most two of the seven fight at once', () => {
-    const t = rig(M28_CRAG_OPTIONS);
+  it('at most two of the seven take Cael up as they notice him; the rest hold off', () => {
+    const t = rig(M28_CRAG_OPTIONS, undefined, -6, false);
     let most = 0;
     t.tick(20, () => {
       most = Math.max(most, t.fighting().length);
@@ -83,7 +83,7 @@ describe('M28 crag: the first wave', () => {
   });
 
   it('a fighter down, a reserve takes up the fight', () => {
-    const t = rig(M28_CRAG_OPTIONS);
+    const t = rig(M28_CRAG_OPTIONS, undefined, -6, false);
     t.tick(3);
     const first = t.fighting();
     expect(first).toHaveLength(2);
@@ -196,5 +196,57 @@ describe('M28 crag: a melee-only attacker reaches every hawk', () => {
     const hawks = t.ids.filter((id) => id !== t.ogreId);
     for (const id of hawks) expect(damaged.has(id), id).toBe(true);
     expect(damaged.has(t.ogreId)).toBe(true);
+  });
+});
+
+describe('M28 crag: a careful melee-only Knight clears the group', () => {
+  it('with sword, blocks and five flasks (no bolt, no spell, no companion) he clears all seven with at most two deaths', () => {
+    const t = rig(M28_CRAG_OPTIONS, undefined, -3, true, false);
+    // An L17 Knight in M28-era kit: 290 health, armour halves what lands, and he blocks every second blow he sees coming.
+    t.p.maxHealth = t.p.health = 290;
+    let blows = 0;
+    let taken = 0;
+    t.fake.host.damage.addModifier('test.knight', (r) => {
+      if (r.targetId !== 'player') return;
+      r.amount *= 0.5;
+      if (++blows % 2 === 0) r.amount = 0;
+      taken += r.amount;
+    });
+    let flasks = 5;
+    let deaths = 0;
+    let clock = 0;
+    let nextSwing = 0;
+    let nextFlask = 0;
+    let swings = 0;
+    const alive = () => t.ids.filter((id) => t.enemy(id) && !t.fake.actorMap.get(id)?.dead);
+    const reach = (id: string): boolean => {
+      const e = t.enemy(id)!;
+      const f = t.fake.host.player.feet;
+      if (Math.hypot(e.feet.x - f.x, e.feet.z - f.z) > 3) return false;
+      const v = hawkView(id);
+      return v === null || v.altitude < 2;
+    };
+    const cleared = t.tick(300, () => {
+      clock += DT;
+      if (t.p.health <= 0) {
+        deaths++;
+        t.p.health = t.p.maxHealth;
+        flasks = 5;
+      }
+      if (t.p.health < t.p.maxHealth * 0.4 && flasks > 0 && clock >= nextFlask) {
+        flasks--;
+        nextFlask = clock + 2;
+        t.p.health = Math.min(t.p.maxHealth, t.p.health + t.p.maxHealth * 0.4);
+      }
+      if (clock < nextSwing) return;
+      const target = alive().filter(reach)[0];
+      if (!target) return;
+      nextSwing = clock + 0.5;
+      const heavy = ++swings % 4 === 0;
+      t.fake.apply({ attackerId: 'player', targetId: target, amount: heavy ? 33 : 22, poise: heavy ? 15 : 5, kind: 'melee' });
+    }, () => alive().length === 0);
+    expect({ cleared, left: alive().length }).toEqual({ cleared: true, left: 0 });
+    expect(deaths).toBeLessThanOrEqual(2);
+    expect(taken).toBeGreaterThan(0); // the group did fight back
   });
 });

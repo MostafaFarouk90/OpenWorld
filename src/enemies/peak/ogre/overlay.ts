@@ -7,8 +7,6 @@ import { OGRE } from '../tuning';
 const WALK_CLIP = ENEMY_CLIPS.walk;
 /** Brain states out of the fight (for the pack's `waveSize`). */
 const LEFT = new Set(['return', 'released', 'spared', 'calmed', 'dead']);
-/** A member past its wave that was hit this recently keeps its target (no stand-down loop with a companion's hits). */
-const WAVE_HIT_HOLD_SECONDS = 6;
 
 /** Where a calmed ogre is in its leave (tests and the plugin read it). */
 export type OgreLeave = 'none' | 'walkHome' | 'sitting' | 'walkOff';
@@ -55,9 +53,10 @@ export function makeOgreOverlay(ctx: BehaviourContext): BehaviourOverlay {
   };
   const leavePack = joinPack(ctx.host, ctx.spawnerId, member);
   const waveSize = ctx.options.waveSize;
-  /** Past its wave and kept in the fight by a recent hit: it does not swing. */
+  /** Past its wave but in the fight: it does not swing. */
   let held = false;
-  let sinceHit = Infinity;
+  /** Struck since it took up its current target (the wave never stands it down then). */
+  let struckInFight = false;
   /** Held back by the wave from this target: it takes it up when a place frees. */
   let reserved: ActorId | null = null;
 
@@ -77,12 +76,13 @@ export function makeOgreOverlay(ctx: BehaviourContext): BehaviourOverlay {
 
     intent(dt, _intent, senses) {
       member.engagedSince();
+      if (ctx.brain.target === null) struckInFight = false;
       const st = ctx.brain.state;
-      sinceHit += dt;
       held = (st === 'notice' || ctx.brain.target !== null) && !inWave(ctx.host, ctx.spawnerId, member, waveSize);
-      if (held && st !== 'telegraph' && st !== 'attack' && (st === 'notice' || sinceHit > WAVE_HIT_HOLD_SECONDS)) {
-        // Past its group's wave: it holds off until a pack-mate is out of the fight. Struck (a companion's or Cael's hit), it
-        // keeps the fight but makes no swing (`allowMove`), so the wave holds without an aggro loop.
+      if (held && st !== 'telegraph' && st !== 'attack' && (st === 'notice' || !struckInFight)) {
+        // Past its group's wave and not yet struck: it lets the target go until a pack-mate is out of the fight. Once struck it is
+        // never stood down for the wave (a stand-down may send it home to heal, K13's crag run): it keeps its target and makes
+        // no swing (`allowMove`) until a place frees.
         reserved = ctx.brain.target ?? ctx.host.actors.player.id;
         ctx.brain.standDown();
         since = null;
@@ -112,7 +112,7 @@ export function makeOgreOverlay(ctx: BehaviourContext): BehaviourOverlay {
     },
 
     hit(attackerId) {
-      sinceHit = 0;
+      if (attackerId && ctx.host.actors.get(attackerId)?.team === 'player') struckInFight = true;
       if (attackerId && ctx.host.actors.get(attackerId)?.team === 'player') hits++;
     },
 

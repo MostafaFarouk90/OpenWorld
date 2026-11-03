@@ -100,9 +100,10 @@ export const R18_NEST_ANCHOR = 'dragonspine.hawk.nest.r18';
  * blocks, dodges the slam and the stoop and drinks flasks: he survives the first wave with a margin, a careless one dies. At
  * most two of the group fight at once (the rest hold off until one is out); the group has 0.4 of its health and deals 0.6 of
  * its damage; the ogre blusters through two hits or five seconds in reach before its first swing; no hawk stoops while the
- * engaged ogre stands within 5 m of the target. K13 passes it as the crag group's `options`.
+ * engaged ogre stands within 5 m of the target; no leash (a quest fight never sends a member home to heal mid-fight, K13's
+ * run: the ogre refilled twice at 29 m). K13 passes it as the crag group's `options`.
  */
-export const M28_CRAG_OPTIONS: Readonly<Partial<SpawnOptions>> = { waveSize: 2, healthScale: 0.4, damageScale: 0.6, blusterHits: 2, blusterSeconds: 5, stoopClearOfOgre: 5 };
+export const M28_CRAG_OPTIONS: Readonly<Partial<SpawnOptions>> = { waveSize: 2, healthScale: 0.4, damageScale: 0.6, blusterHits: 2, blusterSeconds: 5, stoopClearOfOgre: 5, leash: false };
 
 /**
  * The R18 parents (plan 2.7): two hawks circling the R18 nest with 10x health, stooping only near it and breaking off after a

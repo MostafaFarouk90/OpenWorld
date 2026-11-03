@@ -8,8 +8,6 @@ import { HawkFlight, type XZ } from './flight';
 
 /** Brain states out of the fight (for the pack's `waveSize`). */
 const LEFT = new Set(['return', 'released', 'spared', 'calmed', 'dead']);
-/** A member past its wave that was hit this recently keeps its target (no stand-down loop with a companion's hits). */
-const WAVE_HIT_HOLD_SECONDS = 6;
 
 /** Duck-typed extras of the hawk body (HawkBody). */
 interface HawkBodyLike {
@@ -124,9 +122,12 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
 
   const offHit = ctx.host.events.on('damage.dealt', (r) => {
     if (r.attackerId === ctx.actorId && r.outcome !== 'immune' && ctx.brain.currentMove?.id.endsWith('.stoop')) flight.stoopLanded();
-    if (r.targetId !== ctx.actorId || r.killed || !flight.stooping) return;
+    if (r.targetId !== ctx.actorId || r.killed) return;
     if (!r.attackerId || ctx.host.actors.get(r.attackerId)?.team !== 'player') return;
-    if (isGroundingHit(r)) knockDown(r.attackerId);
+    // A projectile in the hover or the dive, or (the M28 crag ruling, for every hawk) a landed blade in the skim, knocks it
+    // down: melee then has the 4 s grounded stagger to finish it.
+    if (flight.stooping && isGroundingHit(r)) knockDown(r.attackerId);
+    else if (flight.mode === 'low' && r.outcome === 'hit' && r.kind === 'melee') knockDown(r.attackerId);
   });
 
   let since: number | null = null;
@@ -142,9 +143,10 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
   };
   const leavePack = joinPack(ctx.host, ctx.spawnerId, member);
   const waveSize = opts.waveSize;
-  /** Past its wave and kept in the fight by a recent hit: it circles but does not swing. */
+  /** Past its wave but in the fight: it circles but does not swing. */
   let held = false;
-  let sinceHit = Infinity;
+  /** Struck since it took up its current target (the wave never stands it down then). */
+  let struckInFight = false;
   /** Held back by the wave from this target: it takes it up when a place frees. */
   let reserved: ActorId | null = null;
   /** The M28 crag rule: an engaged ogre of the group beside the target holds the stoop off. */
@@ -172,12 +174,13 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
       self.x = senses.self.x;
       self.z = senses.self.z;
       member.engagedSince();
+      if (ctx.brain.target === null) struckInFight = false;
       const state = ctx.brain.state;
-      sinceHit += dt;
       held = (state === 'notice' || ctx.brain.target !== null) && !inWave(ctx.host, ctx.spawnerId, member, waveSize);
-      if (held && state !== 'telegraph' && state !== 'attack' && (state === 'notice' || sinceHit > WAVE_HIT_HOLD_SECONDS)) {
-        // Past its group's wave: it holds off until a pack-mate is out of the fight. Struck (a companion's or Cael's hit), it
-        // keeps the fight but makes no swing (`allowMove`), so the wave holds without an aggro loop.
+      if (held && state !== 'telegraph' && state !== 'attack' && (state === 'notice' || !struckInFight)) {
+        // Past its group's wave and not yet struck: it lets the target go until a pack-mate is out of the fight. Once struck it is
+        // never stood down for the wave (a stand-down may send it home to heal, K13's crag run): it keeps its target and makes
+        // no swing (`allowMove`) until a place frees.
         reserved = ctx.brain.target ?? ctx.host.actors.player.id;
         ctx.brain.standDown();
         since = null;
@@ -293,8 +296,8 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
       return true;
     },
 
-    hit() {
-      sinceHit = 0;
+    hit(attackerId) {
+      if (attackerId && ctx.host.actors.get(attackerId)?.team === 'player') struckInFight = true;
     },
 
     stateChanged(from) {
