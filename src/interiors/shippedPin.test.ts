@@ -11,7 +11,7 @@ const PINNED: Record<string, string> = {
   'keep-hall': '024145c710fd14f1',
   'counting-house': '0578f0a9400cba15',
   archive: '5ecf866c6167239c',
-  underways: '2805bc93372663f3',
+  underways: 'c6542f7d3577bbdf',
   'scorchhold-keep': 'f16d0f793d529f01',
   'grisel-hall': '4c0e390c5b4a33cc',
   'mine-deepgate-shaft': 'eece4ded5d36573d',

@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import type { ActorLike, CoreContext, Vec3 } from '../region/coreTypes';
 import type { NpcSpec } from '../region/layoutTypes';
 import { createNpcState, stepNpc, wrapAngle, type NpcState } from './NpcBehavior';
-import { buildPlaceholder, disposePlaceholder, pickIdleClip, prepareNpcModel } from './npcModels';
+import { buildPlaceholder, disposePlaceholder, pickIdleClip, prepareNpcModel, withTownsfolkClips } from './npcModels';
+import { withTownsfolkBody } from './townsfolkBodies';
 import { NPC_TUNING } from './tuning';
 import type { QuestsService } from '../quests/service';
 import type { NpcDef, NpcHandle, NpcModelId, NpcModelLoader, NpcsService } from './types';
@@ -51,6 +52,10 @@ export class NpcManager implements NpcsService {
   /** NPCs hidden by `setHidden` (A5): figure and extras invisible, talk off. */
   private readonly hiddenIds = new Set<string>();
   private readonly loading = new Map<NpcModelId, Promise<void>>();
+  /** GLBs whose load failed; an NPC on one of them moves to its def's fallback (a generated body's KayKit original). */
+  private readonly failedModels = new Set<NpcModelId>();
+  /** The options' loader, wrapped so the generated townsfolk bodies animate with Knight.glb's clips. */
+  private readonly loader: NpcModelLoader | undefined;
   private unsubs: Array<() => void> = [];
   private readonly warn: (m: string) => void;
   private warnedNoDialogue = false;
@@ -62,6 +67,7 @@ export class NpcManager implements NpcsService {
     private readonly opts: NpcManagerOptions,
   ) {
     this.warn = opts.warn ?? ((m) => console.warn(m));
+    this.loader = opts.loader ? withTownsfolkClips(opts.loader) : undefined;
   }
 
   /** Synchronous. Validates everything first, so a failure leaves nothing behind. */
@@ -167,7 +173,9 @@ export class NpcManager implements NpcsService {
     }
   }
 
-  private spawnOne(spec: NpcSpec, def: NpcDef): void {
+  private spawnOne(spec: NpcSpec, givenDef: NpcDef): void {
+    let def = withTownsfolkBody(givenDef);
+    if (def.fallback && this.failedModels.has(def.model)) def = def.fallback;
     const anchor = this.core.anchors.get(spec.post);
     const root = new THREE.Group();
     root.name = `npc:${def.id}`;
@@ -218,7 +226,7 @@ export class NpcManager implements NpcsService {
       this.lastPos.delete(def.id);
       const entry = this.entries.get(def.id)!;
       this.applyHidden(entry);
-      const loader = this.opts.loader;
+      const loader = this.loader;
       if (loader && this.loadedModels.has(def.model)) {
         try {
           const { model, clips } = prepareNpcModel(loader, def);
@@ -324,9 +332,12 @@ export class NpcManager implements NpcsService {
     await Promise.all([...new Set([...this.entries.values()].map((e) => e.def.model))].map((m) => this.loadGlb(m)));
   }
 
-  /** One load per distinct GLB; a failure keeps the placeholders and is not retried. Never rejects. */
+  /**
+   * One load per distinct GLB; a failure is not retried. NPCs whose def has a fallback (a generated townsfolk body) move
+   * to it and load that GLB instead; the rest keep their placeholders. Never rejects.
+   */
   private loadGlb(model: NpcModelId): Promise<void> {
-    const loader = this.opts.loader;
+    const loader = this.loader;
     if (!loader) return Promise.resolve();
     let p = this.loading.get(model);
     if (p) return p;
@@ -334,32 +345,51 @@ export class NpcManager implements NpcsService {
       try {
         await loader.load(model);
       } catch (err) {
-        this.warn(`NpcManager: model "${model}" failed to load, keeping placeholders: ${errMsg(err)}`);
+        this.failedModels.add(model);
+        this.warn(`NpcManager: model "${model}" failed to load; NPCs with a fallback body move to it, the rest keep placeholders: ${errMsg(err)}`);
+        await this.fallBack(model);
         return;
       }
       this.loadedModels.add(model);
       for (const e of this.entries.values()) {
         if (e.def.model !== model || !e.isPlaceholder) continue;
         if (this.disposed) return;
-        try {
-          const { model: obj, clips } = prepareNpcModel(loader, e.def);
-          if (this.disposed) {
-            disposeModel(obj);
-            return;
-          }
-          this.swap(e, obj, clips);
-        } catch (err) {
-          this.warn(`NpcManager: could not build model for npc "${e.def.id}": ${errMsg(err)}`);
-        }
+        this.build(e);
       }
     })();
     this.loading.set(model, p);
     return p;
   }
 
+  /** Moves every placeholder NPC on a failed GLB that has a fallback def onto it, and loads (or builds) that body. */
+  private async fallBack(failed: NpcModelId): Promise<void> {
+    const next = new Set<NpcModelId>();
+    for (const e of this.entries.values()) {
+      if (e.def.model !== failed || !e.isPlaceholder || !e.def.fallback) continue;
+      e.def = e.def.fallback;
+      if (this.loadedModels.has(e.def.model)) this.build(e);
+      else next.add(e.def.model);
+    }
+    await Promise.all([...next].map((m) => this.loadGlb(m)));
+  }
+
+  private build(e: Entry): void {
+    if (this.disposed || !this.loader) return;
+    try {
+      const { model: obj, clips } = prepareNpcModel(this.loader, e.def);
+      if (this.disposed) {
+        disposeModel(obj);
+        return;
+      }
+      this.swap(e, obj, clips);
+    } catch (err) {
+      this.warn(`NpcManager: could not build model for npc "${e.def.id}": ${errMsg(err)}`);
+    }
+  }
+
   /** Starts the GLB of every NPC whose post is within the load radius of the player (download budget). */
   private loadNear(player: { x: number; z: number } | null): void {
-    if (!this.opts.loader || !player) return;
+    if (!this.loader || !player) return;
     for (const e of this.entries.values()) {
       if (!e.isPlaceholder || this.loading.has(e.def.model)) continue;
       if (Math.hypot(player.x - e.pos.x, player.z - e.pos.z) <= NPC_TUNING.modelLoadRadius) void this.loadGlb(e.def.model);

@@ -6,6 +6,7 @@ import { dialogueStringsHmC } from './strings.hm-c.en';
 import { dialogueStringsDensityA } from './strings.density.en';
 import { dialogueStringsDensityB } from './strings.density-b.en';
 import { dialogueStringsDensityC } from './strings.density-c.en';
+import { dialogueStringsSide } from '../quests/content/side/strings.side.en';
 import { ACT2_DIALOGUE_STRINGS } from './content/act2';
 import { ACT3_TRAINER_STRINGS } from './content/act3/trainers';
 import { ACT3_COMPANION_STRINGS } from './content/act3/companions';
@@ -18,6 +19,7 @@ export const dialogueStrings: Record<string, string> = {
   ...dialogueStringsDensityA,
   ...dialogueStringsDensityB,
   ...dialogueStringsDensityC,
+  ...dialogueStringsSide,
   ...NPC_AELFREDA_COMPANION_STRINGS_EN,
   ...ACT2_DIALOGUE_STRINGS,
   ...ACT3_TRAINER_STRINGS,
@@ -270,6 +272,8 @@ export const npcNameFallbackStrings: Record<string, string> = {
   'npc.carter-3.name': 'Stranded Carter',
   'npc.aldwin.name': 'Aldwin the Miller',
   'npc.garrick.name': 'Garrick Thorne',
+  'npc.orla.name': 'Orla Pike',
+  'npc.osmund.name': 'Sexton Osmund',
   'npc.note.name': 'Written page',
   'npc.rook.name': 'Captain Rook',
   'npc.aldith.name': 'Aldith Stonebrewer',
