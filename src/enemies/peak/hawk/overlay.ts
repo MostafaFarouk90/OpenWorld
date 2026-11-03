@@ -8,6 +8,8 @@ import { HawkFlight, type XZ } from './flight';
 
 /** Brain states out of the fight (for the pack's `waveSize`). */
 const LEFT = new Set(['return', 'released', 'spared', 'calmed', 'dead']);
+/** A member past its wave that was hit this recently keeps its target (no stand-down loop with a companion's hits). */
+const WAVE_HIT_HOLD_SECONDS = 6;
 
 /** Duck-typed extras of the hawk body (HawkBody). */
 interface HawkBodyLike {
@@ -140,6 +142,9 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
   };
   const leavePack = joinPack(ctx.host, ctx.spawnerId, member);
   const waveSize = opts.waveSize;
+  /** Past its wave and kept in the fight by a recent hit: it circles but does not swing. */
+  let held = false;
+  let sinceHit = Infinity;
   /** The M28 crag rule: an engaged ogre of the group beside the target holds the stoop off. */
   const ogreBy = (): boolean => ogreNear(ctx.host, ctx.spawnerId, aim(), opts.stoopClearOfOgre);
 
@@ -166,10 +171,14 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
       self.z = senses.self.z;
       member.engagedSince();
       const state = ctx.brain.state;
-      if ((state === 'notice' || ctx.brain.target !== null) && state !== 'telegraph' && state !== 'attack' && !inWave(ctx.host, ctx.spawnerId, member, waveSize)) {
-        // Past its group's wave: it holds off until a pack-mate is out of the fight.
+      sinceHit += dt;
+      held = (state === 'notice' || ctx.brain.target !== null) && !inWave(ctx.host, ctx.spawnerId, member, waveSize);
+      if (held && state !== 'telegraph' && state !== 'attack' && (state === 'notice' || sinceHit > WAVE_HIT_HOLD_SECONDS)) {
+        // Past its group's wave: it holds off until a pack-mate is out of the fight. Struck (a companion's or Cael's hit), it
+        // keeps the fight but makes no swing (`allowMove`), so the wave holds without an aggro loop.
         ctx.brain.standDown();
         since = null;
+        held = false;
       }
       if (state === 'telegraph' && flight.stooping && ogreBy()) {
         // The ogre stepped up beside the target mid-hover: the hover is called off (the target is kept).
@@ -217,6 +226,7 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
     },
 
     allowMove(move: MoveDef) {
+      if (held) return false;
       if (move.id.endsWith('.stoop')) {
         if (!flight.canStoop || shielded() !== null || ogreBy()) return false;
         return !(guard && nest && fromNest(aim()) > HAWK_PARENT.stoopRadius);
@@ -273,6 +283,10 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
       fallBy = null;
       ctx.brain.stunned(Math.max(seconds, HAWK.fallSeconds + 0.1));
       return true;
+    },
+
+    hit() {
+      sinceHit = 0;
     },
 
     stateChanged(from) {

@@ -217,6 +217,20 @@ describe('Rime Hawk in the air', () => {
     expect(t.view(id).altitude).toBe(0);
   });
 
+  it('after a stoop it skims within a blade\'s reach for three seconds: a melee poise break there grounds it', () => {
+    const t = rig({ playerZ: -10 });
+    const { id, enemy } = t.spawn();
+    t.tick(10, () => enemy.state === 'telegraph');
+    expect(t.tick(3, () => t.view(id).mode === 'low')).toBe(true);
+    expect(HAWK.lowSeconds).toBeGreaterThanOrEqual(3);
+    t.tick(2);
+    expect(t.view(id).mode).toBe('low');
+    expect(t.view(id).altitude).toBeLessThan(1.5);
+    t.fake.apply({ attackerId: 'player', targetId: id, amount: 1, poise: 40, kind: 'melee' });
+    t.tick(0.7);
+    expect(t.view(id).mode).toBe('grounded');
+  });
+
   it('a spell in the dive grounds it too', () => {
     const t = rig();
     const { id, enemy } = t.spawn();

@@ -13,7 +13,7 @@ export const HAWK = {
   diveSeconds: 0.22,
   /** The dive's line runs on this far past the target, so the talons pass through it low (not stop at its feet). */
   diveOvershoot: 2.5,
-  lowSeconds: 1.2,
+  lowSeconds: 3,
   climbSeconds: 1.4,
   takeoffSeconds: 0.8,
   fallSeconds: 0.5,

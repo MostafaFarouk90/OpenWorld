@@ -90,6 +90,22 @@ describe('M28 crag: the first wave', () => {
     expect(t.tick(10, undefined, () => t.fighting().length === 2 && !t.fighting().includes(first[0]!))).toBe(true);
   });
 
+  it('reserves struck into the fight (a companion\'s or Cael\'s hits) keep their target but never swing while two fight', () => {
+    const t = rig(M28_CRAG_OPTIONS);
+    t.tick(3);
+    const first = new Set(t.fighting());
+    const reserves = t.ids.filter((id) => !first.has(id));
+    const swings = () => t.fake.bus.of('telegraph').filter((x) => reserves.includes((x as { actorId: string }).actorId)).length;
+    const n = swings();
+    let swingers = 0;
+    t.tick(15, () => {
+      for (const id of reserves) if (t.enemy(id)) t.fake.apply({ attackerId: 'player', targetId: id, amount: 0.01, poise: 0, kind: 'melee' });
+      swingers = Math.max(swingers, t.ids.filter((id) => ['telegraph', 'attack'].includes(t.enemy(id)?.state ?? '')).length);
+    });
+    expect(swings()).toBe(n);
+    expect(swingers).toBeLessThanOrEqual(2);
+  });
+
   it('without the options the whole group comes at once (the ambient packs are unchanged)', () => {
     const t = rig(undefined);
     let most = 0;

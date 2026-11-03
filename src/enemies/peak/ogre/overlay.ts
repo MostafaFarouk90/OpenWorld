@@ -7,6 +7,8 @@ import { OGRE } from '../tuning';
 const WALK_CLIP = ENEMY_CLIPS.walk;
 /** Brain states out of the fight (for the pack's `waveSize`). */
 const LEFT = new Set(['return', 'released', 'spared', 'calmed', 'dead']);
+/** A member past its wave that was hit this recently keeps its target (no stand-down loop with a companion's hits). */
+const WAVE_HIT_HOLD_SECONDS = 6;
 
 /** Where a calmed ogre is in its leave (tests and the plugin read it). */
 export type OgreLeave = 'none' | 'walkHome' | 'sitting' | 'walkOff';
@@ -53,6 +55,9 @@ export function makeOgreOverlay(ctx: BehaviourContext): BehaviourOverlay {
   };
   const leavePack = joinPack(ctx.host, ctx.spawnerId, member);
   const waveSize = ctx.options.waveSize;
+  /** Past its wave and kept in the fight by a recent hit: it does not swing. */
+  let held = false;
+  let sinceHit = Infinity;
 
   const walk = (to: { x: number; z: number }, speed: number, dt: number): number => {
     const f = ctx.feet();
@@ -71,10 +76,14 @@ export function makeOgreOverlay(ctx: BehaviourContext): BehaviourOverlay {
     intent(dt, _intent, senses) {
       member.engagedSince();
       const st = ctx.brain.state;
-      if ((st === 'notice' || ctx.brain.target !== null) && st !== 'telegraph' && st !== 'attack' && !inWave(ctx.host, ctx.spawnerId, member, waveSize)) {
-        // Past its group's wave: it holds off until a pack-mate is out of the fight.
+      sinceHit += dt;
+      held = (st === 'notice' || ctx.brain.target !== null) && !inWave(ctx.host, ctx.spawnerId, member, waveSize);
+      if (held && st !== 'telegraph' && st !== 'attack' && (st === 'notice' || sinceHit > WAVE_HIT_HOLD_SECONDS)) {
+        // Past its group's wave: it holds off until a pack-mate is out of the fight. Struck (a companion's or Cael's hit), it
+        // keeps the fight but makes no swing (`allowMove`), so the wave holds without an aggro loop.
         ctx.brain.standDown();
         since = null;
+        held = false;
       }
       if (ctx.brain.target === null) {
         engaged = 0;
@@ -90,10 +99,12 @@ export function makeOgreOverlay(ctx: BehaviourContext): BehaviourOverlay {
     // The bluster: no swing or throw until the target has stood within reach for `blusterSeconds` (the Calm window, design 10
     // row 12), or it was struck, or a target that hangs back at range has had `blusterMaxSeconds`.
     allowMove() {
+      if (held) return false;
       return hits >= blusterHits || near >= blusterSeconds || engaged >= OGRE.blusterMaxSeconds;
     },
 
     hit(attackerId) {
+      sinceHit = 0;
       if (attackerId && ctx.host.actors.get(attackerId)?.team === 'player') hits++;
     },
 
