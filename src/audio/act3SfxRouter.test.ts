@@ -8,7 +8,6 @@ import {
   HATHREN_BEAT_SFX,
   LOOP_SFX_ACT3,
   MOVE_SFX_ACT3,
-  YSMERYTH_BEAT_SFX,
   WADE_STEP_METRES,
   type Act3SfxPorts,
 } from './act3SfxRouter';
@@ -23,7 +22,6 @@ interface Rig {
   throwing: { v: boolean };
   returnNull: { v: boolean };
   ensured: string[];
-  clock: { v: number };
 }
 
 function rig(opts: { objects?: Record<string, object>; player?: object | undefined } = { player: {} }): Rig {
@@ -35,7 +33,6 @@ function rig(opts: { objects?: Record<string, object>; player?: object | undefin
   const audioOn = { v: true };
   const throwing = { v: false };
   const returnNull = { v: false };
-  const clock = { v: 10_000 };
   let nextId = 1;
   const guard = () => {
     if (throwing.v) throw new Error('no such sound');
@@ -52,10 +49,8 @@ function rig(opts: { objects?: Record<string, object>; player?: object | undefin
     object: (id) => opts.objects?.[id],
     playerObject: () => ('player' in opts ? opts.player : {}),
     ensure: (k) => void ensured.push(k),
-    ysmerythAt: (id) => (id === 'a#1' ? { x: 1, y: 2, z: 3 } : undefined),
-    now: () => clock.v,
   };
-  return { router: new Act3SfxRouter(ports), played, playedAt, attached, detached, audioOn, throwing, returnNull, ensured, clock };
+  return { router: new Act3SfxRouter(ports), played, playedAt, attached, detached, audioOn, throwing, returnNull, ensured };
 }
 
 describe('route tables', () => {
@@ -64,7 +59,6 @@ describe('route tables', () => {
       ...Object.values(MOVE_SFX_ACT3),
       ...Object.values(DIED_SFX_ACT3),
       ...Object.values(HATHREN_BEAT_SFX),
-      ...Object.values(YSMERYTH_BEAT_SFX),
       ...Object.values(EVENT_SFX_ACT3),
       ...Object.values(LOOP_SFX_ACT3),
     ];
@@ -72,16 +66,15 @@ describe('route tables', () => {
     for (const k of all) expect(ACT3_SFX_KEYS as readonly string[], k).toContain(k);
   });
 
-  it('every key has a route to it', () => {
+  it('every key has a route to it, except the ones with no emitter yet (registered and silent)', () => {
     const routed = new Set<string>([
       ...Object.values(MOVE_SFX_ACT3),
       ...Object.values(DIED_SFX_ACT3),
       ...Object.values(HATHREN_BEAT_SFX),
-      ...Object.values(YSMERYTH_BEAT_SFX),
       ...Object.values(EVENT_SFX_ACT3),
       ...Object.values(LOOP_SFX_ACT3),
     ]);
-    expect(ACT3_SFX_KEYS.filter((k) => !routed.has(k))).toEqual([]);
+    expect(ACT3_SFX_KEYS.filter((k) => !routed.has(k))).toEqual(['sfx.ysmeryth.roar']);
   });
 
   it('uses the shipped kind strings and the Hathren spelling', () => {
@@ -435,126 +428,5 @@ describe('loops that end without their end event', () => {
     expect(r.detached).toEqual([1]);
     r.router.dragonFlight({ actorId: 'ysmeryth', on: false });
     expect(r.detached).toEqual([1, 2]);
-  });
-});
-
-describe('Act3SfxRouter Ysmeryth beats', () => {
-  const objs = { 'a#1': { root: true } };
-  it('maps the keeper\'s call: wind-up roar on the telegraph, boom flat on the call beat', () => {
-    const r = rig({ objects: objs });
-    r.router.telegraph({ actorId: 'a#1', moveId: 'ysmeryth.call' });
-    r.router.ysmeryth({ beat: 'call' }, 'a#1');
-    expect(r.playedAt.map((p) => p.key)).toEqual(['sfx.ysmeryth.roar']);
-    expect(r.played).toEqual(['sfx.ysmeryth.call']);
-  });
-
-  it('takeoff plays at her and attaches the wings once; landed detaches and lands', () => {
-    const r = rig({ objects: objs });
-    r.router.ysmeryth({ beat: 'takeoff' }, 'a#1');
-    r.router.ysmeryth({ beat: 'takeoff' }, 'a#1');
-    expect(r.attached).toEqual([{ id: 1, key: 'sfx.dragon.wingbeat', object: objs['a#1'] }]);
-    expect(r.router.activeLoops).toHaveLength(1);
-    r.router.ysmeryth({ beat: 'landed' }, 'a#1');
-    expect(r.detached).toEqual([1]);
-    expect(r.router.activeLoops).toEqual([]);
-    expect(r.playedAt.map((p) => p.key)).toEqual(['sfx.ysmeryth.takeoff', 'sfx.ysmeryth.takeoff', 'sfx.ysmeryth.land']);
-  });
-
-  it('landed without a loop (after trial.ended) still lands and neither detaches nor attaches', () => {
-    const r = rig({ objects: objs });
-    r.router.ysmeryth({ beat: 'takeoff' }, 'a#1');
-    r.router.trialEnded();
-    r.router.ysmeryth({ beat: 'landed' }, 'a#1');
-    r.router.ysmeryth({ beat: 'landed' }, 'a#1');
-    expect(r.detached).toEqual([1]);
-    expect(r.attached).toHaveLength(1);
-    expect(r.playedAt.filter((p) => p.key === 'sfx.ysmeryth.land')).toHaveLength(2);
-    const q = rig();
-    q.router.ysmeryth({ beat: 'landed' }, 'a#1');
-    expect(q.detached).toEqual([]);
-    expect(q.playedAt.map((p) => p.key)).toEqual(['sfx.ysmeryth.land']);
-  });
-
-  it('pose is a flat one-shot with no loop; unknown beats play nothing', () => {
-    const r = rig({ objects: objs });
-    r.router.ysmeryth({ beat: 'pose' }, 'a#1');
-    r.router.ysmeryth({ beat: 'toString' }, 'a#1');
-    expect(r.playedAt).toEqual([{ key: 'sfx.ysmeryth.settle', at: { x: 1, y: 2, z: 3 } }]);
-    expect(r.played).toEqual([]);
-    expect(r.attached).toEqual([]);
-  });
-
-  it('a missing actor or scene object plays flat and attaches nothing; no audio, a throwing play and a null play are silent', () => {
-    const r = rig();
-    r.router.ysmeryth({ beat: 'takeoff' }, 'gone');
-    r.router.ysmeryth({ beat: 'takeoff' }, null);
-    expect(r.played).toEqual(['sfx.ysmeryth.takeoff', 'sfx.ysmeryth.takeoff']);
-    expect(r.attached).toEqual([]);
-    r.router.ysmeryth({ beat: 'pose' }, 'gone'); // nowhere to place the settle: silent, never flat
-    expect(r.played).toHaveLength(2);
-    r.audioOn.v = false;
-    expect(() => r.router.ysmeryth({ beat: 'takeoff' }, 'a#1')).not.toThrow();
-    r.audioOn.v = true;
-    r.throwing.v = true;
-    expect(() => {
-      r.router.ysmeryth({ beat: 'takeoff' }, 'a#1');
-      r.router.ysmeryth({ beat: 'pose' }, 'a#1');
-    }).not.toThrow();
-    r.throwing.v = false;
-    r.returnNull.v = true;
-    expect(() => r.router.ysmeryth({ beat: 'landed' }, 'a#1')).not.toThrow();
-  });
-
-  it('the wings stop on trial.ended, on her actor leaving, on a load and on stopAll, but not for another actor', () => {
-    const ends: Array<(r: Rig) => void> = [
-      (r) => r.router.trialEnded(),
-      (r) => r.router.actorGone('a#1', 'a#1'),
-      (r) => r.router.saveLoaded(),
-      (r) => r.router.stopAll(),
-    ];
-    for (const end of ends) {
-      const r = rig({ objects: objs });
-      r.router.ysmeryth({ beat: 'takeoff' }, 'a#1');
-      r.router.actorGone('other', 'a#1');
-      r.router.actorGone('a#1', null);
-      expect(r.detached).toEqual([]);
-      end(r);
-      expect(r.detached).toEqual([1]);
-    }
-  });
-
-  it('landed with no actor (despawned) plays nothing but still stops the loop', () => {
-    const r = rig({ objects: objs });
-    r.router.ysmeryth({ beat: 'takeoff' }, 'a#1');
-    r.router.ysmeryth({ beat: 'landed' }, null);
-    expect(r.detached).toEqual([1]);
-    expect(r.playedAt.map((p) => p.key)).toEqual(['sfx.ysmeryth.takeoff']);
-    expect(r.played).toEqual([]);
-  });
-
-  it('landed after a stopped end plays no thud until the next takeoff; other ends still thud', () => {
-    const r = rig({ objects: objs });
-    r.router.ysmeryth({ beat: 'takeoff' }, 'a#1');
-    r.router.trialEnded('stopped');
-    r.router.ysmeryth({ beat: 'landed' }, 'a#1');
-    expect(r.playedAt.map((p) => p.key)).toEqual(['sfx.ysmeryth.takeoff']);
-    r.router.ysmeryth({ beat: 'takeoff' }, 'a#1');
-    r.router.trialEnded('distance');
-    r.router.ysmeryth({ beat: 'landed' }, 'a#1');
-    expect(r.playedAt.map((p) => p.key).at(-1)).toBe('sfx.ysmeryth.land');
-  });
-
-  it('a pose within 1.5 s of a load or a trial end is dropped', () => {
-    const r = rig({ objects: objs });
-    r.router.saveLoaded();
-    r.clock.v += 1499;
-    r.router.ysmeryth({ beat: 'pose' }, 'a#1');
-    expect(r.playedAt).toHaveLength(0);
-    r.clock.v += 2;
-    r.router.ysmeryth({ beat: 'pose' }, 'a#1');
-    expect(r.playedAt).toHaveLength(1);
-    r.router.trialEnded('won');
-    r.router.ysmeryth({ beat: 'pose' }, 'a#1');
-    expect(r.playedAt).toHaveLength(1);
   });
 });

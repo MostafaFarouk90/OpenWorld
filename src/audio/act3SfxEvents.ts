@@ -1,5 +1,5 @@
-// `dragon.flight` is declared here (nobody else declares it); K6a's `wyrm.hathren` and `wyrm.drake.*` events are declared
-// in src/enemies/wyrm/ (the plugin imports them). K6a does not emit `dragon.flight`.
+// `dragon.flight` is not declared by any other thread yet, so the K14 sound plugin declares it here by module augmentation.
+// Hathren's and the drake's events are K6a's own declarations (src/enemies/wyrm/hathren/events.ts, drake/events.ts).
 declare module '../core/events' {
   interface GameEventMap {
     /** A dragon's wings start or stop; `actorId` is an actor id, or the dragon's name for a scene object that is not an actor. */

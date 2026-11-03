@@ -6,10 +6,9 @@ import { setAct3SfxEnsure } from './act3SfxEnsure';
 import { Act3SfxRouter } from './act3SfxRouter';
 import { samplesToWavUrl } from './proceduralSounds';
 import '../companions/events';
+import './act3SfxEvents';
 import '../enemies/wyrm/hathren/events';
 import '../enemies/wyrm/drake/events';
-import '../enemies/wyrm/ysmeryth/events';
-import './act3SfxEvents';
 
 /** How long a `trial.ended` waits before the trial mix is dropped, so a restart (M31) that follows at once keeps it. */
 export const TRIAL_RELEASE_MS = 1000;
@@ -96,18 +95,11 @@ const plugin: GamePlugin = {
       },
       object: (id) => ctx.actors.get(id)?.root ?? ctx.scene.getObjectByName(id) ?? undefined,
       playerObject: () => ctx.player.actor.root ?? undefined,
-      ysmerythAt: (id) => {
-        const a = id === null ? undefined : ctx.actors.get(id);
-        if (a?.root) return a.worldPosition(tmp);
-        const o = ctx.scene.getObjectByName('ysmeryth');
-        return o ? o.getWorldPosition(tmp) : undefined;
-      },
       ensure: (key) => {
         if (canRender) ensure(key);
       },
     });
     const ev = ctx.events;
-    const ysmerythId = () => ctx.services.get('ysmeryth')?.actorId ?? null;
     offs.push(
       ev.on('telegraph', (e) => router.telegraph(e)),
       ev.on('actor.died', (e) => router.died(e)),
@@ -123,12 +115,6 @@ const plugin: GamePlugin = {
       ev.on('ferry.arrived', () => router.ferryArrived()),
       ev.on('movement.mode', (e) => router.movementMode(e)),
       ev.on('wyrm.hathren', (e) => router.hathren(e)),
-      ev.on('wyrm.ysmeryth', (e) => router.ysmeryth(e, ysmerythId())),
-      ev.on('trial.ended', (e) => {
-        if (e.trialId === YSMERYTH_TRIAL_ID) router.trialEnded(e.reason);
-      }),
-      ev.on('actor.despawned', (e) => router.actorGone(e.actorId, ysmerythId())),
-      ev.on('actor.died', (e) => router.actorGone(e.actorId, ysmerythId())),
       ev.on('dragon.flight', (e) => router.dragonFlight(e)),
       ev.on('wyrm.drake.chainStruck', () => router.drakeChainStruck()),
       ev.on('wyrm.drake.freed', () => router.drakeFreed()),
