@@ -651,3 +651,66 @@ describe('InteractionSystem focus: companions yield to a live quest item (playte
     expect(t.warn).toHaveBeenCalledWith(expect.stringContaining('live() of "use:broken"'), expect.any(Error));
   });
 });
+
+// Act 3 (K5, November real-game runs): Aelfreda beside the player took F from Gytha at D05's door and from the NPC at the
+// glide launch. A person the player faces in reach (talk, shop, trainer, not ambient) now always wins over a companion.
+describe('InteractionSystem focus: companions never take F from a person in reach (K5)', () => {
+  const companion = (t: ReturnType<typeof setup>, z: number) => t.item('companion:aelfreda', z, { kind: 'talk', radius: 3.6, ambient: true });
+
+  it.each(['talk', 'shop', 'trainer'] as const)('a %s NPC farther than the companion takes the focus', (kind) => {
+    const t = setup();
+    const c = companion(t, -0.3);
+    const npc = t.item('npc:gytha', -1.9, { kind });
+    t.sys.register(c);
+    t.sys.register(npc);
+    t.tick();
+    expect(t.sys.focus).toBe(npc);
+  });
+
+  it('a plain prop does not make the companion yield; with no person in reach the companion is focused', () => {
+    const t = setup();
+    const c = companion(t, -0.3);
+    const prop = t.item('use:barrel', -1.0);
+    t.sys.register(c);
+    t.sys.register(prop);
+    t.tick();
+    expect(t.sys.focus).toBe(c);
+  });
+
+  it('a person out of reach, behind the player or disabled does not make the companion yield', () => {
+    const t = setup();
+    const c = companion(t, -0.3);
+    const far = t.item('npc:far', -2.6, { kind: 'talk' });
+    const behind = t.item('npc:behind', 1.0, { kind: 'talk' });
+    const off = t.item('npc:off', -1.0, { kind: 'talk', enabled: () => false });
+    t.sys.register(c);
+    t.sys.register(far);
+    t.sys.register(behind);
+    t.sys.register(off);
+    t.tick();
+    expect(t.sys.focus).toBe(c);
+  });
+
+  it('two companions together never outrank each other by the person rule; the nearer one keeps the focus', () => {
+    const t = setup();
+    const a = companion(t, -0.3);
+    const b = t.item('companion:hrolf', -0.9, { kind: 'talk', radius: 3.6, ambient: true });
+    t.sys.register(a);
+    t.sys.register(b);
+    t.tick();
+    expect(t.sys.focus).toBe(a);
+  });
+
+  it('the mercy action is untouched by a talk NPC (separate actions)', () => {
+    const t = setup();
+    const c = companion(t, -0.3);
+    const npc = t.item('npc:gytha', -1.0, { kind: 'talk' });
+    const m = t.item('mercy:foe', -1.5, { kind: 'release', action: 'mercy' });
+    t.sys.register(c);
+    t.sys.register(npc);
+    t.sys.register(m);
+    t.tick();
+    expect(t.sys.focus).toBe(npc);
+    expect(t.sys.focusFor('mercy')).toBe(m);
+  });
+});

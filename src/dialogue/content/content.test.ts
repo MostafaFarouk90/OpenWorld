@@ -45,7 +45,9 @@ describe('dialogue content', () => {
       // Act 2 Oldsmoke (A13)
       'aldous', 'wenna', 'steward-gate-1', 'steward-hall-1', 'steward-market-1', 'steward-market-2', 'slagg', 'miner-1', 'miner-2', 'grisel-steward',
       // Act 2 Oldsmoke mines (A13)
-      'winch-wright', 'miner-hale', 'miner-brig', 'pickett', 'shift-crew', 'pike', 'pike-apprentice', 'steward-captain', 'wyrmling-keeper']).toContain(n.speaker);
+      'winch-wright', 'miner-hale', 'miner-brig', 'pickett', 'shift-crew', 'pike', 'pike-apprentice', 'steward-captain', 'wyrmling-keeper',
+      // Act 3 companions (K5): the M27 deserter (K3's NPC def)
+      'deserter']).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {

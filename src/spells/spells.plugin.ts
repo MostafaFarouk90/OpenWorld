@@ -213,6 +213,8 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
         }
         return caster.setExtraCharges(SURGE_DEF.id, caster.extraCharges(SURGE_DEF.id) + Math.floor(n));
       },
+      // K5 (Act 3) is the sole caller: the Quenched aura (v0.7 item 17).
+      setBurnGainScale: (fn) => burn.setGainScale(fn),
       removeScars: (n, reason) => {
         const removed = burn.removeScars(n);
         if (removed === 0) return 0;

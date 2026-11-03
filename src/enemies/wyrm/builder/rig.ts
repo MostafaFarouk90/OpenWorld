@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {
   boneGeometry,
+  collarGeometry,
   coneDecalGeometry,
   headGeometry,
   jawGeometry,
@@ -27,6 +28,12 @@ export const CHAIN_LINKS = 16;
 
 /** Distance levels of detail (plan section 9): 0 full, 1 past 40 m, 2 past 90 m. */
 export const LOD_DISTANCES = [40, 90] as const;
+
+/** The LOD distances of a build: a large dragon keeps its detail as far as it is big (K6a: a 6x dragon goes to LOD 1 at 240 m). */
+export function lodDistances(scale: number): readonly [number, number] {
+  const k = Math.max(1, Number.isFinite(scale) ? scale : 1);
+  return [LOD_DISTANCES[0] * k, LOD_DISTANCES[1] * k];
+}
 
 /** Everything the rig draws this tick, in the body's terms. Angles in radians. */
 export interface WyrmPose {
@@ -123,6 +130,8 @@ export class WyrmRig {
   readonly breathPoints: THREE.Points;
   readonly coneDecal: THREE.Mesh;
   readonly chainMesh: THREE.InstancedMesh;
+  /** K6a: the iron collar (Skarl's drake), or null. */
+  readonly collarMesh: THREE.Mesh | null;
   readonly joints: Record<WyrmJoint, THREE.Object3D>;
   /** Weapon channels: the mouth (bite, spit, puff, dive) and the tail (whip). */
   readonly mouth: { object: THREE.Object3D; hilt: THREE.Object3D; tip: THREE.Object3D };
@@ -264,6 +273,14 @@ export class WyrmRig {
     this.chainMesh.frustumCulled = false;
     this.chainMesh.visible = false;
     this.owner.add(this.chainMesh);
+
+    if (p.collar) {
+      this.collarMesh = new THREE.Mesh(collarGeometry(), this.materials.scales);
+      this.collarMesh.name = 'wyrm-collar';
+      this.collarMesh.frustumCulled = false;
+      this.collarMesh.matrixAutoUpdate = false;
+      this.owner.add(this.collarMesh);
+    } else this.collarMesh = null;
 
     // Hurtbox joints and their capsule sizes.
     const r = WYRM_SHAPE.chestRadius * s;
@@ -483,7 +500,10 @@ export class WyrmRig {
           // Spikes lean back toward the tail.
           TMP_Q.setFromRotationMatrix(TMP_M.makeBasis(this.x, this.y, this.z));
           TMP_Q.multiply(TMP_Q2.setFromAxisAngle(this.c.set(1, 0, 0), SPIKE_LEAN));
-          TMP_M.compose(this.a, TMP_Q, TMP_S.set(r * 0.4, h, r * 0.4));
+          // The water form's frill: thin blades, longer along the body (K6a).
+          if (this.params.form === 'water') TMP_S.set(r * 0.08, h * 1.15, r * 1.1);
+          else TMP_S.set(r * 0.4, h, r * 0.4);
+          TMP_M.compose(this.a, TMP_Q, TMP_S);
           this.spikeMesh.setMatrixAt(j, TMP_M);
         }
         this.spikeMesh.instanceMatrix.needsUpdate = true;
@@ -546,6 +566,7 @@ export class WyrmRig {
     if (visual) {
       this.stepBreath(dt, mouthAt, hd, pose);
       if (this.chainTo) this.writeChain(root);
+      if (this.collarMesh) this.writeCollar(pose);
     }
 
     // Shadows: spine, wing bones and membranes up close; the membranes stop past 40 m, everything past 90 m.
@@ -704,7 +725,7 @@ export class WyrmRig {
             q.y = p.y;
             q.z = p.z;
             q.vx = p.vx * 0.1;
-            q.vy = 0.8 * this.params.scale;
+            q.vy = (this.params.breath === 'water' ? 0.25 : 0.8) * this.params.scale;
             q.vz = p.vz * 0.1;
             q.age = 0;
             q.life = 1.0;
@@ -713,6 +734,7 @@ export class WyrmRig {
         }
       }
     }
+    const water = this.params.breath === 'water';
     const pa = this.posAttr.array as Float32Array;
     const sa = this.sizeAttr.array as Float32Array;
     const ca = this.colorAttr.array as Float32Array;
@@ -725,11 +747,23 @@ export class WyrmRig {
       pa[i * 3 + 1] = p.y;
       pa[i * 3 + 2] = p.z;
       sa[i] = live ? p.size * (i < flameN ? 1 + t : 1 + 2 * t) : 0;
-      if (i < flameN) {
+      if (i < flameN && water) {
+        // Spray: white-green water thinning to clear.
+        ca[i * 4] = 0.75 + 0.2 * t;
+        ca[i * 4 + 1] = 0.95;
+        ca[i * 4 + 2] = 0.92;
+        ca[i * 4 + 3] = live ? 0.75 * (1 - t) : 0;
+      } else if (i < flameN) {
         ca[i * 4] = 1;
         ca[i * 4 + 1] = 0.75 - 0.5 * t;
         ca[i * 4 + 2] = 0.25 - 0.2 * t;
         ca[i * 4 + 3] = live ? 0.9 * (1 - t) : 0;
+      } else if (water) {
+        // Mist hangs pale and lasts.
+        ca[i * 4] = 0.8;
+        ca[i * 4 + 1] = 0.88;
+        ca[i * 4 + 2] = 0.9;
+        ca[i * 4 + 3] = live ? 0.3 * (1 - t) : 0;
       } else {
         ca[i * 4] = 0.18;
         ca[i * 4 + 1] = 0.16;
@@ -756,6 +790,15 @@ export class WyrmRig {
       if (p.age >= p.life) return p;
     }
     return null;
+  }
+
+  /** The collar round the neck where the chain starts (segment 2), facing along the spine. */
+  private writeCollar(pose: WyrmPose): void {
+    const i = Math.min(2, this.lp.length - 1);
+    this.basis(this.lt[i]!, pose.roll);
+    const r = this.segRadius[i]! * 1.08;
+    TMP_M.makeBasis(this.x, this.y, this.z).scale(TMP_S.set(r, r * 0.9, r)).setPosition(this.lp[i]!);
+    this.collarMesh!.matrix.copy(TMP_M);
   }
 
   private writeChain(root: RootFrame): void {
