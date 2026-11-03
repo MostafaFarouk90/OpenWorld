@@ -76,6 +76,19 @@ export interface CombatVerbsService {
   addInvulnerability(source: string, seconds: number): () => void;
   /** K6b: takes up to `n` stamina as a guard break does (regen delay, exhaustion at 0): the Fen Leech's drain bite. */
   drainStamina(n: number): void;
+  /**
+   * K11 PR 2 (Pathfinder Sure Foot): registers a filter asked whenever a stagger or break reaction would push the player back.
+   * Return false to cancel the knockback move only: the stagger animation, its ticks and the poise/damage are unchanged. Any
+   * filter returning false cancels; a throwing filter keeps the knockback. Dodge, forced holds, pulls, water and the sled are
+   * separate paths and never asked. With no filter registered the knockback is the shipped one. Returns the remover.
+   */
+  addKnockbackFilter(id: string, keep: (reaction: KnockbackReaction) => boolean): () => void;
+}
+
+/** What a knockback filter sees: the reaction that would push the player (`knockback` is the shove's strength, > 0). */
+export interface KnockbackReaction {
+  kind: 'stagger' | 'break';
+  knockback: number;
 }
 
 declare module '../core/Services' {
@@ -151,6 +164,7 @@ export class CombatVerbs {
   private respawnWait: { ready(): boolean; since: number; source: string } | null = null;
   private respawnGrace = 0;
   private knockback: { x: number; z: number; speed: number; left: number } | null = null;
+  private readonly knockbackFilters = new Map<string, (reaction: KnockbackReaction) => boolean>();
   private freeDodgeYaw: number | null = null;
   private riposteUntil = -1;
   private bashReadyAt = 0;
@@ -278,6 +292,10 @@ export class CombatVerbs {
       addDodgeDistanceMultiplier: (id, mult) => self.dodgeDistance.add(id, mult),
       addInvulnerability: (source, seconds) => self.addTimedInvulnerability(source, seconds),
       drainStamina: (n) => self.stamina.forceDrain(n),
+      addKnockbackFilter: (id, keep) => {
+        self.knockbackFilters.set(id, keep);
+        return () => void (self.knockbackFilters.get(id) === keep && self.knockbackFilters.delete(id));
+      },
     });
     const rig = ctx.cameraRig;
     if (rig) {
@@ -294,6 +312,7 @@ export class CombatVerbs {
     for (const off of this.offLocks.values()) off();
     this.offLocks.clear();
     this.forcedHolds.clear();
+    this.knockbackFilters.clear();
     this.deadModifier?.();
     this.deadModifier = null;
     this.offIronStance?.();
@@ -617,11 +636,27 @@ export class CombatVerbs {
         this.abortDodge();
         c.enterAction('stagger', { durationTicks: r.ticks });
         const len = Math.hypot(p.dirX, p.dirZ);
-        if (r.knockback > 0 && len > 0) {
+        if (r.knockback > 0 && len > 0 && this.keepsKnockback(r)) {
           this.knockback = { x: p.dirX / len, z: p.dirZ / len, speed: r.knockback / (KNOCKBACK_TICKS / 60), left: KNOCKBACK_TICKS };
         }
       }
     }
+  }
+
+  /** False when a registered filter (Sure Foot) cancels this reaction's knockback; the stagger itself has already been entered. */
+  private keepsKnockback(r: { kind: 'stagger' | 'break'; knockback: number }): boolean {
+    if (this.knockbackFilters.size === 0) return true;
+    const view: KnockbackReaction = { kind: r.kind, knockback: r.knockback };
+    let keep = true;
+    // Every filter is asked (so observers see each reaction); any false cancels.
+    for (const fn of [...this.knockbackFilters.values()]) {
+      try {
+        if (fn(view) === false) keep = false;
+      } catch (e) {
+        console.warn('combatVerbs: a knockback filter threw and was ignored', e);
+      }
+    }
+    return keep;
   }
 
   // ---- tick: death and respawn ----

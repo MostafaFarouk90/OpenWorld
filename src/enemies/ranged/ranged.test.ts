@@ -594,7 +594,7 @@ describe('fire hits and the Bellows Blessing (review-b M2)', () => {
 
   it('every enemy move that sets the target burning is itself tagged fire (so a new one is not missed)', () => {
     const burning = Object.values(ENEMY_DEFS).flatMap((d) => d.moves.filter((m) => m.onHit === 'ignite' || m.ranged?.ignite));
-    expect(burning.map((m) => m.id).sort()).toEqual(['crawler.spit', 'hound.bite', 'wyrm.spit', 'wyrmling.puff']);
+    expect(burning.map((m) => m.id).sort()).toEqual(['crawler.spit', 'drake.spit', 'hound.bite', 'wyrm.spit', 'wyrmling.puff']);
     for (const m of burning) expect(m.element, m.id).toBe('fire');
   });
 });

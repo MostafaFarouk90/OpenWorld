@@ -47,6 +47,8 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   // plan 6.1's 70 and 220 after the one rounding (39 x 1.8 = 70.2, 122 x 1.8 = 219.6). Coordinator ruling A.
   'fen-leech': 39,
   'peat-shambler': 122,
+  // K6a: Skarl's drake is freed on either D06 outcome, never a kill reward.
+  'skarl-drake': 0,
   dummy: 0,
   scarecrow: 0,
 };
