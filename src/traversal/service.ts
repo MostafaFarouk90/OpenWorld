@@ -16,6 +16,11 @@ export interface FerryService {
   /** Skips to the destination with a fade. */
   skip(): void;
   readonly riding: boolean;
+  /**
+   * K15's stop menu: `open(stop)` is asked at a stop's interact and returns true when it opened (the player then chooses
+   * a leg through `ride`). Unset, or false, the interact boards the default destination as before. Null removes it.
+   */
+  setMenu(open: ((stop: string) => boolean) | null): void;
 }
 
 export interface CarryService {
