@@ -1,5 +1,8 @@
+import { act3BarkStrings } from './act3/strings.en';
 /** Sister Aelfreda's companion strings (thread A5; invented lines, logged in design/changes-applied.md). */
 export const AELFREDA_STRINGS_EN: Record<string, string> = {
+  // Act 3 (K5): the Greyfen, the Dragonspine, the trial, the reveal and the ferry (src/companions/act3/strings.en.ts).
+  ...act3BarkStrings('aelfreda'),
   'companion.aelfreda.name': 'Sister Aelfreda',
   'companion.aelfreda.calming-flame.name': 'Calming flame',
 
