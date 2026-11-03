@@ -5,6 +5,7 @@
  * the later acts' land never open. A player pushed back while gliding lands in the open area. The grid sweep per flag
  * state is region/containment.test.ts.
  */
+import { Vector3 } from 'three';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootFromSave, type ChapterHarness } from './chapterHarness';
 import { readAct3Fixture } from '../save/__fixtures__/act3';
@@ -125,4 +126,27 @@ describe('Act 3 containment on the fixtures (Phase E)', () => {
     },
     90_000,
   );
+});
+
+// K13 report (2026-11-03): after the replay's harmless "rank refused" (rank 1 already held) and "Hearth Rite refused
+// (no-scars)" warnings, the era party must still be seated on the live service, beside the arriving player.
+describe('the era kit on a loaded Dragonspine fixture', () => {
+  it.each([['spine', 'm28'], ['greyfen', 'm28'], ['greyfen', 'm31']] as const)('%s %s: Aelfreda and Hrolf are the party, joined, beside the player', async (order, id) => {
+    const { h } = await boot(order, id);
+    await h.runAsync(30);
+    const comp = h.ctx.services.require('companions');
+    expect(comp.maxActive()).toBe(2);
+    expect([...comp.active()].sort()).toEqual(['aelfreda', 'hrolf']);
+    for (const c of ['aelfreda', 'hrolf']) {
+      expect(comp.isActive(c), c).toBe(true);
+      expect(comp.rank(c), c).toBeGreaterThanOrEqual(1);
+      const actor = comp.actorId(c);
+      const a = actor ? h.ctx.actors.get(actor) : undefined;
+      expect(a, `${c} has an actor`).toBeDefined();
+      const pos = a!.worldPosition(new Vector3(Number.NaN, 0, Number.NaN));
+      const feet = h.ctx.player.feet;
+      expect(Math.hypot(pos.x - feet.x, pos.z - feet.z), `${c} beside the player`).toBeLessThan(25);
+    }
+    expect(h.ctx.services.require('inventory').equipped('armour')).toBe('ashplate');
+  }, 60_000);
 });
