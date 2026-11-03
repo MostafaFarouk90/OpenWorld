@@ -33,6 +33,7 @@
           "lore.nursery",
           "lore.place.greyfen",
           "howto.block-levels",
+          "lore.place.reedgate",
           "howto.wading"
         ]
       },
@@ -604,9 +605,10 @@
           "hushed-anvil",
           "kettlewick",
           "quenchstone",
+          "reedgate",
           "weeping-bellows"
         ],
-        "respawn": "weeping-bellows"
+        "respawn": "reedgate"
       },
       "version": 1
     },
@@ -788,6 +790,7 @@
           "waystone.hushed-anvil.lit": true,
           "waystone.kettlewick.lit": true,
           "waystone.quenchstone.lit": true,
+          "waystone.reedgate.lit": true,
           "waystone.weeping-bellows.lit": true,
           "world.bellows.shortcutOpen": true,
           "world.bellows.solved": true,

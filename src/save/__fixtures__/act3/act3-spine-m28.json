@@ -596,9 +596,10 @@
           "hushed-anvil",
           "kettlewick",
           "quenchstone",
-          "weeping-bellows"
+          "weeping-bellows",
+          "wyrmwatch-lodge"
         ],
-        "respawn": "weeping-bellows"
+        "respawn": "wyrmwatch-lodge"
       },
       "version": 1
     },
@@ -779,6 +780,7 @@
           "waystone.kettlewick.lit": true,
           "waystone.quenchstone.lit": true,
           "waystone.weeping-bellows.lit": true,
+          "waystone.wyrmwatch-lodge.lit": true,
           "world.bellows.shortcutOpen": true,
           "world.bellows.solved": true,
           "world.brightwater.barley": "saved",

@@ -36,7 +36,10 @@
           "howto.ferry",
           "howto.diving",
           "howto.wading",
-          "lore.place.hathrens-mere"
+          "lore.place.mireweather",
+          "lore.place.greywatch",
+          "lore.place.hathrens-mere",
+          "lore.place.reedgate"
         ]
       },
       "version": 1
@@ -623,13 +626,16 @@
         "lit": [
           "chapel",
           "cinder-road",
+          "greywatch",
           "hathrens-mere",
           "hushed-anvil",
           "kettlewick",
+          "mireweather-hut",
           "quenchstone",
+          "reedgate",
           "weeping-bellows"
         ],
-        "respawn": "hathrens-mere"
+        "respawn": "reedgate"
       },
       "version": 1
     },
@@ -819,10 +825,13 @@
           "warmth.block.greyfen.level": 18,
           "waystone.chapel.lit": true,
           "waystone.cinder-road.lit": true,
+          "waystone.greywatch.lit": true,
           "waystone.hathrens-mere.lit": true,
           "waystone.hushed-anvil.lit": true,
           "waystone.kettlewick.lit": true,
+          "waystone.mireweather-hut.lit": true,
           "waystone.quenchstone.lit": true,
+          "waystone.reedgate.lit": true,
           "waystone.weeping-bellows.lit": true,
           "world.bellows.shortcutOpen": true,
           "world.bellows.solved": true,

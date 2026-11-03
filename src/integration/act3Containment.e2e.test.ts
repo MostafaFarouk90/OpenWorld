@@ -10,7 +10,7 @@ import { bootFromSave, type ChapterHarness } from './chapterHarness';
 import { readAct3Fixture } from '../save/__fixtures__/act3';
 import { FEN_ROAD_POINTS, SPINE_ROAD_POINTS } from '../region/act3Containment';
 import { fogOpenById } from '../region/fogWall';
-import { ACT3_ARRIVAL, type Act3Order } from '../quests/act3Jump';
+import { ACT3_ARRIVAL, act3JumpWaystones, blockOf, type Act3Order } from '../quests/act3Jump';
 
 let h: (ChapterHarness & { loaded: boolean }) | null = null;
 let warn: ReturnType<typeof vi.spyOn>;
@@ -104,4 +104,25 @@ describe('Act 3 containment on the fixtures (Phase E)', () => {
     expect(events).toHaveLength(1);
     expect(Math.hypot(events[0].from.x - LODGE.x, events[0].from.z - LODGE.z)).toBeLessThan(1);
   }, 60_000);
+
+  // November fix: a jump into the Dragonspine lit no Dragonspine stone, so the first death respawned the player about 7 km away.
+  it.each([['greyfen', 'm28'], ['greyfen', 'm31'], ['spine', 'm29'], ['greyfen', 'm25']] as const)(
+    '%s %s: a death respawns the player at the block\'s arrival stone, and the stones they have are lit for travel',
+    async (order, id) => {
+      await boot(order, id);
+      const ws = h!.ctx.services.require('waystones');
+      const arrival = blockOf(id) === 'greyfen' ? REEDGATE : LODGE;
+      expect(ws.respawnPoint().waystoneId).toBe(blockOf(id) === 'greyfen' ? 'reedgate' : 'wyrmwatch-lodge');
+      // Away from the stone (as after a walk up the road), then the respawn.
+      await h!.teleport({ x: arrival.x + 40, z: arrival.z + 40 }, 4);
+      let done = false;
+      void ws.respawnPlayer().then(() => (done = true));
+      for (let i = 0; i < 40 && !done; i++) await h!.runAsync(15);
+      expect(done, 'the respawn finished').toBe(true);
+      const f = h!.ctx.player.feet;
+      expect(Math.hypot(f.x - arrival.x, f.z - arrival.z), JSON.stringify(f)).toBeLessThan(25);
+      for (const w of act3JumpWaystones(id, order).filter((x) => h!.ctx.anchors.find(`waystone.${x}`))) expect(ws.isLit(w), w).toBe(true);
+    },
+    90_000,
+  );
 });

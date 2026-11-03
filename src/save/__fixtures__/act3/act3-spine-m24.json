@@ -33,6 +33,7 @@
           "lore.nursery",
           "lore.place.greyfen",
           "howto.block-levels",
+          "lore.place.reedgate",
           "howto.wading"
         ]
       },
@@ -606,9 +607,12 @@
           "kettlewick",
           "last-anvil",
           "quenchstone",
-          "weeping-bellows"
+          "reedgate",
+          "rime-pass",
+          "weeping-bellows",
+          "wyrmwatch-lodge"
         ],
-        "respawn": "last-anvil"
+        "respawn": "reedgate"
       },
       "version": 1
     },
@@ -802,7 +806,10 @@
           "waystone.kettlewick.lit": true,
           "waystone.last-anvil.lit": true,
           "waystone.quenchstone.lit": true,
+          "waystone.reedgate.lit": true,
+          "waystone.rime-pass.lit": true,
           "waystone.weeping-bellows.lit": true,
+          "waystone.wyrmwatch-lodge.lit": true,
           "world.bellows.shortcutOpen": true,
           "world.bellows.solved": true,
           "world.brightwater.barley": "saved",

@@ -5,7 +5,10 @@
  * act3Containment.e2e.test.ts.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ACT3_ARRIVAL, ACT3_JUMP_IDS, ACT3_ORDERS, ACT3_PREREQS, ACT3_SHRINE_AFTER, blockOf, needsDragonspine } from '../quests/act3Jump';
+import { ACT3_WAYSTONES } from '../region/act3/act3Places';
+import { GREYFEN_LAYOUT } from '../greyfen/greyfen.layout';
+import { DRAGONSPINE_LAYOUT } from '../dragonspine/dragonspine.layout';
+import { ACT3_ARRIVAL, ACT3_ARRIVAL_WAYSTONE, act3JumpWaystones, ACT3_JUMP_IDS, ACT3_ORDERS, ACT3_PREREQS, ACT3_SHRINE_AFTER, blockOf, needsDragonspine } from '../quests/act3Jump';
 import { act3FixtureFresh, act3FixtureName, fixtureDefIds, knownQuestDefs, type Act3FixtureMeta } from './act3FixtureKey';
 import { questDefs } from '../quests/content';
 import { generateAct3Fixture } from './act3Fixtures';
@@ -20,7 +23,19 @@ type Flags = Record<string, unknown>;
 const flagsOf = (save: Record<string, unknown>): Flags =>
   ((save.entries as Record<string, { data: { flags: Flags } }>)['world-state'].data.flags);
 
+/** The Act 3 stones this build places (a `waystone.<id>` anchor in a block layout); the jump's rekindle skips one not placed. */
+const PLACED = new Set(
+  [...GREYFEN_LAYOUT.anchors, ...DRAGONSPINE_LAYOUT.anchors].map((a) => a.id).filter((a) => a.startsWith('waystone.')).map((a) => a.slice(9)),
+);
+
 describe('the committed Act 3 fixtures', () => {
+  it('place every Act 3 stone but the summit\'s two (the Wyrm\'s Hearth and Frostfang Aerie come with the summit places)', () => {
+    expect(Object.keys(ACT3_WAYSTONES).filter((w) => !PLACED.has(w)).sort()).toEqual(
+      ['frostfang-aerie', 'wyrms-hearth'].filter((w) => !PLACED.has(w)),
+    );
+    for (const w of Object.values(ACT3_ARRIVAL_WAYSTONE)) expect(PLACED.has(w), w).toBe(true);
+  });
+
   it('are exactly one save and one meta per quest id and order', () => {
     const want = CASES.flatMap(([o, id]) => [`${act3FixtureName(o, id)}.json`, `${act3FixtureName(o, id)}.meta.json`]).sort();
     expect(Object.keys(FILES).map((k) => k.split('/').pop()!).sort()).toEqual(want);
@@ -51,6 +66,12 @@ describe('the committed Act 3 fixtures', () => {
     expect({ x: pos.x, z: pos.z }).toEqual(ACT3_ARRIVAL[blockOf(id)!]);
     const prog = (save.entries as Record<string, { data: { xp: number } }>).progression.data;
     expect(prog.xp).toBeGreaterThanOrEqual(23_500);
+    // The Act 3 stones a player at this point has are lit, and no others; the respawn is the arrival stone (a first death
+    // never sends the player back to Harrowmark).
+    const ws = (save.entries as Record<string, { data: { lit: string[]; respawn: string | null } }>).waystones.data;
+    const act3Lit = ws.lit.filter((w) => w in ACT3_WAYSTONES);
+    expect(act3Lit.sort()).toEqual(act3JumpWaystones(id, order).filter((w) => PLACED.has(w)).sort());
+    expect(ws.respawn).toBe(ACT3_ARRIVAL_WAYSTONE[blockOf(id)!]);
   });
 
   // Review M2: a fixture the build would refuse (a quest thread's defs landed, the prerequisites moved) fails here, so the
