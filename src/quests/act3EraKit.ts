@@ -5,9 +5,10 @@
  *
  * The kit, in order (taste call logged in design/changes-applied.md):
  * 1. the class's tier 3 Ashforged set (forged at the Hushed Anvil in Act 2) is given when not held;
- * 2. each gear slot equips the best held piece by stat (so R12's reed armour or a tier 4 reward beats Ashplate);
- * 3. the equipped pieces are tempered to `ERA_TEMPER` for the block (never lowered), and the Anvil records tiers 2 and 3
- *    as tempered there, so Thorgar's smith does not refuse with "temper one at the Anvil first";
+ * 2. that set is tempered to `ERA_TEMPER` for the block (never lowered): it has been at the Anvil since Act 2;
+ * 3. each gear slot wears the best held piece by tempered stat that suits the class (an Act 3 find keeps its own temper,
+ *    so R12's reed armour loses to Ashplate +3 and R16's haft beats the longsword); the Anvil records tiers 2 and 3 as
+ *    tempered there, so Thorgar's smith does not refuse with "temper one at the Anvil first";
  * 4. every skill point the player has is spent, lowest tier first across the branches (tiers 4 and 5 only once the
  *    master's book allows them); learning fills the ability bar;
  * 5. healing flasks are topped up to the bag's cap;
@@ -16,6 +17,7 @@
  */
 import { GEAR_ROWS, type GearRow } from '../gear/catalog';
 import { TIER4_REWARD_ROWS, TIER4_ROWS } from '../gear/tier4/catalog';
+import { GEAR_TUNING } from '../gear/tuning';
 import { SKILLS } from '../progression/skills';
 import type { Act3BlockOf } from './act3Jump';
 
@@ -66,9 +68,14 @@ export interface EraKitReport { given: string[]; equipped: Partial<Record<Slot, 
 export function applyEraKit(p: EraKitPorts, classId: string, block: 'spine' | 'summit'): EraKitReport {
   const inv = p.inventory;
   const given: string[] = [];
-  for (const id of eraGear(classId)) {
+  const set = eraGear(classId);
+  for (const id of set) {
     if (!inv.has(id) && inv.add(id, 1) > 0) given.push(id);
   }
+  // The Ashforged set has been tempered since Act 2; a piece first found in Act 3 (R12's reed armour, R16's haft) keeps
+  // its own temper, so it is worn only when it beats the tempered set (reed armour 15 loses to Ashplate 14 at +3).
+  for (const id of set) if (inv.has(id) && inv.gear(id).temper < ERA_TEMPER[block]) inv.setTemper(id, ERA_TEMPER[block]);
+  const effective = (id: string, stat: number) => stat * (1 + GEAR_TUNING.combat.temperPerLevel * inv.gear(id).temper);
   const equipped: Partial<Record<Slot, string>> = {};
   for (const slot of SLOTS) {
     let best: { id: string; stat: number } | null = null;
@@ -76,12 +83,11 @@ export function applyEraKit(p: EraKitPorts, classId: string, block: 'spine' | 's
     for (const { id } of inv.items()) {
       const info = p.itemInfo(id);
       if (info?.slot !== slot || !suitsClass(id, classId)) continue;
+      const stat = effective(id, info.stat);
       // Strictly better replaces; a tie keeps the worn piece, then the first held.
-      if (!best || info.stat > best.stat || (info.stat === best.stat && id === current)) best = { id, stat: info.stat };
+      if (!best || stat > best.stat || (stat === best.stat && id === current)) best = { id, stat };
     }
     if (best && (current === best.id || inv.equip(best.id).ok)) equipped[slot] = best.id;
-    const worn = inv.equipped(slot);
-    if (worn && inv.gear(worn).temper < ERA_TEMPER[block]) inv.setTemper(worn, ERA_TEMPER[block]);
   }
   for (const t of ERA_ANVIL_TIERS) p.markAnvilTier?.(t);
 

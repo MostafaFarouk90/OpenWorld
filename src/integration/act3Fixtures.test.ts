@@ -93,8 +93,10 @@ describe('the committed Act 3 fixtures', () => {
     expect(weapon.gearTier).toBeGreaterThanOrEqual(3);
     for (const slot of ['weapon', 'offhand', 'armour']) {
       expect(getItem(inv.equipped[slot])?.gearTier ?? 0, slot).toBeGreaterThanOrEqual(3);
-      expect(inv.gear?.[inv.equipped[slot]]?.temper ?? 0, slot).toBeGreaterThanOrEqual(ERA_TEMPER[block]);
+      expect(inv.gear?.[inv.equipped[slot]]?.temper ?? 0, slot).toBeGreaterThanOrEqual(slot === 'weapon' && inv.equipped.weapon === 'rimewood-haft' ? 0 : ERA_TEMPER[block]);
     }
+    // The tempered Ashplate, not a fresh R12 reed armour (K13 review, 2026-11-03).
+    expect(inv.equipped.armour).toBe('ashplate');
     expect(e.progression.data.learned.length).toBeGreaterThanOrEqual(9);
     expect(e.progression.data.bar.filter(Boolean).length).toBeGreaterThan(0);
     expect(inv.items[ERA_FLASK]).toBeGreaterThanOrEqual(getItem(ERA_FLASK)!.stackMax);

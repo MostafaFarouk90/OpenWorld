@@ -133,7 +133,7 @@
     "inventory": {
       "data": {
         "equipped": {
-          "armour": "reed-armour",
+          "armour": "ashplate",
           "offhand": "spike-shield",
           "weapon": "ashforged-longsword"
         },
@@ -141,7 +141,7 @@
           "ashforged-longsword": {
             "temper": 3
           },
-          "reed-armour": {
+          "ashplate": {
             "temper": 3
           },
           "spike-shield": {

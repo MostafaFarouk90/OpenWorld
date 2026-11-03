@@ -75,13 +75,27 @@ describe('K16 era kit', () => {
     expect(h.anvil).toEqual([2, 3]);
   });
 
-  it('wears a better held piece (R12 reed armour) and a class-suited tier 4 reward, never another class\'s weapon', () => {
-    const h = harness({ items: { 'squires-arming-sword': 1, 'reed-armour': 1, 'ranger-longbow': 1, 'rimewood-haft': 1, 'healing-flask': 1 }, equipped: { weapon: 'squires-arming-sword' } });
-    applyEraKit(h.ports, 'knight', 'summit');
+  it('wears Ashplate +3 over a fresh R12 reed armour (15 < 14 x 1.15), the way a real player at m28 would', () => {
+    const h = harness({ items: { 'gauts-spare-tabard': 1, 'reed-armour': 1, 'healing-flask': 1 }, equipped: { armour: 'reed-armour' } });
+    const r = applyEraKit(h.ports, 'knight', 'spine');
+    expect(r.equipped.armour).toBe('ashplate');
+    expect(h.slots.get('armour')).toBe('ashplate');
+    expect(h.temper.get('reed-armour') ?? 0).toBe(0);
+  });
+
+  it('keeps reed armour when the player had already tempered it past the Ashplate', () => {
+    const h = harness({ items: { 'reed-armour': 1 }, equipped: { armour: 'reed-armour' } });
+    h.temper.set('reed-armour', 3);
+    applyEraKit(h.ports, 'knight', 'spine');
     expect(h.slots.get('armour')).toBe('reed-armour');
+  });
+
+  it('wears a class-suited tier 4 reward that beats the tempered set, never another class\'s weapon', () => {
+    const h = harness({ items: { 'squires-arming-sword': 1, 'ranger-longbow': 1, 'rimewood-haft': 1, 'healing-flask': 1 }, equipped: { weapon: 'squires-arming-sword' } });
+    applyEraKit(h.ports, 'knight', 'summit');
     expect(h.slots.get('weapon')).toBe('rimewood-haft');
     expect(suitsClass('ranger-longbow', 'knight')).toBe(false);
-    expect(h.temper.get('rimewood-haft')).toBe(ERA_TEMPER.summit);
+    expect(h.temper.get('ashforged-longsword')).toBe(ERA_TEMPER.summit);
   });
 
   it('never lowers a higher temper', () => {
