@@ -94,6 +94,7 @@ function harness(known: readonly string[] = []) {
   const locks: string[] = [];
   const placed: { x: number; z: number }[] = [];
   const rekindled: string[] = [];
+  const kitAt: number[] = [];
   const xp = { total: 9000, atLock: [] as number[] };
   const warn = vi.fn();
   const tutorial = { begun: true, complete: true, beat: null, restartInFlight: false, begin() {}, skipCurrent() {} };
@@ -124,8 +125,12 @@ function harness(known: readonly string[] = []) {
       locks.push(`${b}@${[...flags.keys()].filter((k) => k.startsWith('shrine.') && k.endsWith('.lit')).length}`);
     },
     placeAt: (at) => (placed.push(at), true),
+    eraKit: () => {
+      kitAt.push(log.length);
+      return undefined;
+    },
   };
-  return { ports, flags, log, locks, placed, warn, state, xp, rekindled };
+  return { ports, flags, log, locks, placed, warn, state, xp, rekindled, kitAt };
 }
 
 function run(id: string, order: Act3Order, known: readonly string[] = []) {
@@ -136,6 +141,12 @@ function run(id: string, order: Act3Order, known: readonly string[] = []) {
 }
 
 describe('Act3Jump', () => {
+  it.each(ACT3_ORDERS.flatMap((o) => ACT3_JUMP_IDS.map((id) => [id, o] as const)))('%s (%s): era kit only for Dragonspine and summit targets, after the injection', (id, order) => {
+    const r = run(id, order, ACT3_JUMP_IDS);
+    if (blockOf(id) === 'greyfen') expect(r.kitAt).toEqual([]);
+    else expect(r.kitAt).toEqual([r.log.length]);
+  });
+
   it.each(ACT3_ORDERS.flatMap((o) => ACT3_JUMP_IDS.map((id) => [id, o] as const)))('%s (%s): reaches the arrival point', (id, order) => {
     const r = run(id, order);
     expect(r.jump.phase).toBe('done');

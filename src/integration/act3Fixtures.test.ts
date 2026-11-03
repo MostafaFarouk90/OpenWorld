@@ -15,6 +15,10 @@ import { generateAct3Fixture } from './act3Fixtures';
 import { seedFixtureRandom } from './fixtureDeterminism';
 import { PEAKS_CARD_SEEN_FLAG } from './phaseECard';
 import { blockLevelFlag } from '../shrine/warmthBlocks';
+import { ERA_FLASK, ERA_PARTY, ERA_TEMPER, wantsEraKit } from '../quests/act3EraKit';
+import { getItem } from '../inventory/items';
+import '../gear/catalog';
+import '../gear/tier4/catalog';
 
 const FILES = import.meta.glob<Record<string, unknown>>('../save/__fixtures__/act3/*.json', { eager: true, import: 'default' });
 const file = (name: string) => FILES[`../save/__fixtures__/act3/${name}`];
@@ -72,6 +76,30 @@ describe('the committed Act 3 fixtures', () => {
     const act3Lit = ws.lit.filter((w) => w in ACT3_WAYSTONES);
     expect(act3Lit.sort()).toEqual(act3JumpWaystones(id, order).filter((w) => PLACED.has(w)).sort());
     expect(ws.respawn).toBe(ACT3_ARRIVAL_WAYSTONE[blockOf(id)!]);
+  });
+
+  // K16 era kit (coordinator ruling 2026-11-03): Dragonspine and summit arrivals carry an L17 to L20 player's kit; the
+  // Greyfen arrivals keep what Act 2 left them.
+  it.each(CASES)('%s %s: carries the era kit when the target is in the Dragonspine or the summit', (order, id) => {
+    const e = file(`${act3FixtureName(order, id)}.json`).entries as Record<string, { data: Record<string, any> }>;
+    const inv = e.inventory.data;
+    const weapon = getItem(inv.equipped.weapon)!;
+    if (!wantsEraKit(blockOf(id))) {
+      expect(inv.equipped.weapon).toBe('squires-arming-sword');
+      expect(e.progression.data.learned).toEqual([]);
+      return;
+    }
+    const block = blockOf(id) as 'spine' | 'summit';
+    expect(weapon.gearTier).toBeGreaterThanOrEqual(3);
+    for (const slot of ['weapon', 'offhand', 'armour']) {
+      expect(getItem(inv.equipped[slot])?.gearTier ?? 0, slot).toBeGreaterThanOrEqual(3);
+      expect(inv.gear?.[inv.equipped[slot]]?.temper ?? 0, slot).toBeGreaterThanOrEqual(ERA_TEMPER[block]);
+    }
+    expect(e.progression.data.learned.length).toBeGreaterThanOrEqual(9);
+    expect(e.progression.data.bar.filter(Boolean).length).toBeGreaterThan(0);
+    expect(inv.items[ERA_FLASK]).toBeGreaterThanOrEqual(getItem(ERA_FLASK)!.stackMax);
+    expect(e.companions.data.active).toEqual(ERA_PARTY);
+    expect(e.gear.data.anvilTiers).toEqual(expect.arrayContaining([2, 3]));
   });
 
   // Review M2: a fixture the build would refuse (a quest thread's defs landed, the prerequisites moved) fails here, so the

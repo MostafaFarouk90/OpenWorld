@@ -11,6 +11,7 @@ import type { BusPort } from './ports';
 import type { TutorialDirector } from '../tutorial/TutorialDirector';
 import '../region/containment';
 import { heightAt } from '../terrain/heightfield';
+import { getItem } from '../inventory/items';
 
 const TELEPORT_TRIES = 30;
 
@@ -101,6 +102,22 @@ export function act3JumpPorts(ctx: GameContext): Act3JumpPorts {
     },
     ready: () => !save || !save.loading,
     warn: (m) => console.warn(`[act3] ${m}`),
+    eraKit: () => {
+      const inventory = svc('inventory');
+      if (!inventory) return undefined;
+      const gear = ctx.services.get('gear');
+      return {
+        inventory,
+        itemInfo: (id) => {
+          const def = getItem(id);
+          if (!def) return undefined;
+          return { slot: def.slot, stat: def.slot === 'weapon' ? (def.stats?.attack ?? 0) : (def.stats?.defense ?? 0) };
+        },
+        progression: ctx.services.get('progression') ?? undefined,
+        companions: svc('companions') ?? undefined,
+        markAnvilTier: gear?.markAnvilTier ? (t) => gear.markAnvilTier!(t) : undefined,
+      };
+    },
   };
 }
 

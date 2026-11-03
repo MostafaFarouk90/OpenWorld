@@ -14,6 +14,7 @@
 // it are lit, so the second block's lock sees the first block's Warmth (design 5.9). `order` defaults to `greyfen`.
 import { ACT1_CAMP_SEEN_FLAG, ACT1_CARD_SEEN_FLAG, ACT1_CARD_SEEN_FLAG_V06, ACT1_GATE_FLAG } from '../integration/act1Ending';
 import { actEnding } from '../integration/actEndings';
+import { applyEraKit, wantsEraKit, type EraKitPorts } from './act3EraKit';
 import { PEAKS_CARD_SEEN_FLAG } from '../integration/phaseECard';
 import { ACT3_BLOCKS, type Act3BlockId } from '../enemies/level';
 import { ACT1_PREREQS, completeAct1Quest, type Act1JumpPorts } from './act1Jump';
@@ -179,6 +180,8 @@ export interface Act3JumpPorts extends Act1JumpPorts {
   /** Raises the player's XP to `total` when below it (never lowers it); absent when no progression service. */
   topUpXp?(total: number): void;
   closeDialogue?(): boolean;
+  /** K16 era kit: the inventory, skills, party and Anvil ports `applyEraKit` runs on; absent in bare tests. */
+  eraKit?(): EraKitPorts | undefined;
 }
 
 export type Act3Phase = 'waiting' | 'tutorial' | 'act1' | 'act2' | 'act3' | 'quiet' | 'place' | 'done';
@@ -248,6 +251,12 @@ export class Act3Jump {
       // The stones a player at this point already has (after the injected shrines, so a shrine's stone is open), the
       // target block's arrival stone last: a first death respawns there, not in the last act's town.
       for (const w of act3JumpWaystones(this.id, this.order)) p.rekindle(w);
+      // K16: Dragonspine and summit targets arrive with the era's kit (after the injection, so quest rewards count).
+      const block = blockOf(this.id);
+      if (wantsEraKit(block)) {
+        const kit = p.eraKit?.();
+        if (kit) applyEraKit(kit, this.classId, block);
+      }
       // The target's own lock happens when the player accepts it (K9); the jump leaves it offerable.
       this.phase = 'quiet';
     }

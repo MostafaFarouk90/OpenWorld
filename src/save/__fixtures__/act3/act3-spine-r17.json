@@ -32,7 +32,8 @@
           "lore.pickett",
           "lore.nursery",
           "lore.place.greyfen",
-          "howto.block-levels"
+          "howto.block-levels",
+          "howto.rally-cry"
         ]
       },
       "version": 1
@@ -40,7 +41,8 @@
     "companions": {
       "data": {
         "active": [
-          "aelfreda"
+          "aelfreda",
+          "hrolf"
         ],
         "positions": {
           "aelfreda": {
@@ -50,10 +52,10 @@
             "z": 11853
           },
           "hrolf": {
-            "x": 8208.2,
-            "y": 170,
-            "yaw": -2.191,
-            "z": 1648
+            "x": 13600.8625,
+            "y": 120,
+            "yaw": 0.2799,
+            "z": 11853
           },
           "tobb": {
             "x": 8208,
@@ -101,7 +103,10 @@
     },
     "gear": {
       "data": {
-        "anvilTiers": [],
+        "anvilTiers": [
+          2,
+          3
+        ],
         "lessonRuns": 0
       },
       "version": 1
@@ -120,14 +125,27 @@
     "inventory": {
       "data": {
         "equipped": {
-          "armour": "gauts-spare-tabard",
-          "offhand": "wooden-round-shield",
-          "weapon": "squires-arming-sword"
+          "armour": "ashplate",
+          "offhand": "spike-shield",
+          "weapon": "ashforged-longsword"
+        },
+        "gear": {
+          "ashforged-longsword": {
+            "temper": 3
+          },
+          "ashplate": {
+            "temper": 3
+          },
+          "spike-shield": {
+            "temper": 3
+          }
         },
         "gold": 650,
         "items": {
           "aldiths-stout": 1,
+          "ashforged-longsword": 1,
           "ashmare-saddle": 1,
+          "ashplate": 1,
           "barley-cake": 5,
           "couriers-cloak": 1,
           "favour-mark": 1,
@@ -137,7 +155,7 @@
           "gauts-spare-tabard": 1,
           "grisel-writ": 1,
           "halvard-signet": 1,
-          "healing-flask": 3,
+          "healing-flask": 5,
           "hearth-bread": 1,
           "hearth-stone-charm": 1,
           "hearth-token": 1,
@@ -154,6 +172,7 @@
           "shard-gem.bulwark": 1,
           "shard-gem.oathfire": 2,
           "slag-core": 1,
+          "spike-shield": 1,
           "squires-arming-sword": 1,
           "tobbs-lucky-whistle": 1,
           "training-weights": 1,
@@ -209,15 +228,25 @@
     "progression": {
       "data": {
         "bar": [
-          null,
-          null,
-          null,
-          null,
+          "knight.rallyCry",
+          "knight.bannerPlant",
+          "knight.oathward",
+          "knight.chargeOfTheHalvard",
           null,
           null
         ],
         "classId": "knight",
-        "learned": [],
+        "learned": [
+          "knight.rimBash",
+          "knight.riposteEdge",
+          "knight.rallyCry",
+          "knight.ironStance",
+          "knight.flowingCuts",
+          "knight.bannerPlant",
+          "knight.oathward",
+          "knight.chargeOfTheHalvard",
+          "knight.squiresResolve"
+        ],
         "respecUsed": false,
         "storyPoints": 1,
         "xp": 23500
