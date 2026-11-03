@@ -58,8 +58,18 @@ function rig(options: Partial<SpawnOptions> | undefined, kinds: EnemyKind[] = [H
 }
 
 describe('M28 crag: the first wave', () => {
-  it('the options are the ruling\'s: two at once, three quarters of the damage, the ogre through two hits, no stoop beside the ogre', () => {
-    expect(M28_CRAG_OPTIONS).toEqual({ waveSize: 2, damageScale: 0.75, blusterHits: 2, blusterSeconds: 5, stoopClearOfOgre: 5 });
+  it('the options are the rulings\': two at once, 0.4 health, 0.6 damage, the ogre through two hits, no stoop beside the ogre', () => {
+    expect(M28_CRAG_OPTIONS).toEqual({ waveSize: 2, healthScale: 0.4, damageScale: 0.6, blusterHits: 2, blusterSeconds: 5, stoopClearOfOgre: 5 });
+  });
+
+  it('the crag members carry the scales: 0.4 of the health of the same members without the options', () => {
+    const a = rig(M28_CRAG_OPTIONS);
+    const b = rig(undefined);
+    for (let i = 0; i < a.ids.length; i++) {
+      const ha = a.fake.actorMap.get(a.ids[i]!)!.maxHealth;
+      const hb = b.fake.actorMap.get(b.ids[i]!)!.maxHealth;
+      expect(ha).toBeCloseTo(hb * 0.4, -1);
+    }
   });
 
   it('at most two of the seven fight at once', () => {
