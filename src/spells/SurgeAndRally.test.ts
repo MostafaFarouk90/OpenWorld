@@ -110,9 +110,20 @@ describe('Surge', () => {
     w.player.facingYaw = Math.PI / 2;
     caster.cast('player', SURGE.spellId);
     finish();
-    expect(w.damage.applied[0].direction!.x).toBeCloseTo(1);
+    // Forward is (-sin yaw, -cos yaw): facing yaw pi/2 looks along -X.
+    expect(w.damage.applied[0].direction!.x).toBeCloseTo(-1);
+    expect(w.damage.applied[0].direction!.z).toBeCloseTo(0);
     off();
     expect(caster.def(SURGE.spellId)).toBeUndefined();
+  });
+  it('a foe on her feet is pushed where she faces: yaw 0 is -Z', () => {
+    registerSurge(w, caster, deps());
+    w.actors.add(new FakeActor('onTop', 'hostile', 0, 0));
+    w.player.facingYaw = 0;
+    caster.cast('player', SURGE.spellId);
+    finish();
+    expect(w.damage.applied[0].direction!.x).toBeCloseTo(0);
+    expect(w.damage.applied[0].direction!.z).toBeCloseTo(-1);
   });
 });
 
