@@ -4,7 +4,7 @@ import './fen/overlays';
 import './peak/overlays';
 import { DRAGONSPINE_FAUNA_GROUPS, peakFaunaAnchorId, type PeakFaunaGroup } from './peak/dragonspineFauna.layout';
 import { HAWK_PARENT } from './peak/tuning';
-import type { EnemyKind, SpawnerDef } from './types';
+import type { EnemyKind, SpawnerDef, SpawnOptions } from './types';
 
 /** The flag every Act 3 ambient group waits on: none stands in the fen before Act 3 opens. */
 export const ACT3_AMBIENT_GATE = 'story.gate.a3';
@@ -93,6 +93,15 @@ export function cragOgreSpawner(id: string, memberAnchors: readonly string[], ex
 /** K4's R18 anchors: the two parents' spawn points and the nest they guard. */
 export const R18_PARENT_ANCHORS = ['dragonspine.spawn.hawk-cliffs.parent-1', 'dragonspine.spawn.hawk-cliffs.parent-2'] as const;
 export const R18_NEST_ANCHOR = 'dragonspine.hawk.nest.r18';
+
+/**
+ * The M28 crag balance (coordinator ruling 2026-10-31; area level stays 20): spawner options for the crag's six hawks and its
+ * ogre, so an ungeared level 17 melee Knight who uses cover and blocks clears it with one or two deaths at most. At most three
+ * of the group fight at once (the rest hold off until one is out); the ogre blusters through two hits and five seconds in
+ * reach before its first swing; no hawk stoops while the engaged ogre stands within 5 m of the target. K13 passes it as the
+ * crag group's `options`.
+ */
+export const M28_CRAG_OPTIONS: Readonly<Partial<SpawnOptions>> = { waveSize: 2, damageScale: 0.75, blusterHits: 2, blusterSeconds: 5, stoopClearOfOgre: 5 };
 
 /**
  * The R18 parents (plan 2.7): two hawks circling the R18 nest with 10x health, stooping only near it and breaking off after a
