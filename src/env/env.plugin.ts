@@ -3,8 +3,10 @@
 // (nothing depends on it). Tiles are added in src/env/tiles.ts as the pass builds them; with none registered the plugin does nothing.
 import { ModelLibrary } from '../assets/swap/ModelLibrary';
 import type { CoreContext, GamePlugin } from '../region/coreTypes';
+import type { FireLightProvider } from '../tutorial/CrisisDressing';
 import { heightAt } from '../terrain/heightfield';
 import { EnvModelSource } from './envSource';
+import { EnvGlow, type GlowCounts } from './glow';
 import { PlacementField, type PlacementRow } from './PlacementField';
 import { LAZY_TILES, TILES } from './tiles';
 
@@ -22,6 +24,10 @@ export interface EnvService {
   placeholders(tile: string): number | null;
   /** Measure the distance culling from (x, z) instead of the player (the shot harness frames a far camera without moving the Knight); null returns to the player. */
   focus(point: { x: number; z: number } | null): void;
+  /** What the glow system holds right now (tests, debug, shot harness): the pooled lights, the fires it knows, the flickering materials. */
+  glow(): GlowCounts;
+  /** The pooled fire light, in the shape the tutorial's CrisisDressing takes (`deps.lights`): one slot of the glow pool at a time, null on Low. */
+  readonly fireLights: FireLightProvider;
 }
 
 declare module '../core/Services' {
@@ -47,6 +53,9 @@ export function createEnvPlugin(opts: EnvPluginOptions = {}): GamePlugin {
       if (!envEnabled(typeof location === 'undefined' ? '' : location.search)) return;
       const lib = new ModelLibrary(new EnvModelSource(ctx.assets ?? undefined), (m) => console.warn(m));
       cleanups.push(() => lib.dispose());
+      // Glow: flicker on the fires' emissive materials and a small fixed pool of point lights (src/env/glow.ts). Created once, here.
+      const glow = new EnvGlow({ scene: ctx.scene, lib, tier: () => ctx.services.get('quality')?.step, heightAt: height });
+      cleanups.push(() => glow.dispose());
       const fields = new Map<string, PlacementField>();
       for (const [name, rows] of Object.entries(tiles)) {
         const field = new PlacementField(lib, height);
@@ -55,7 +64,10 @@ export function createEnvPlugin(opts: EnvPluginOptions = {}): GamePlugin {
         cleanups.push(() => field.dispose());
         void field
           .build(rows)
-          .then(() => field.setDensity(ctx.services.get('quality')?.step ?? 'medium'))
+          .then(() => {
+            field.setDensity(ctx.services.get('quality')?.step ?? 'medium');
+            glow.addTile(name, rows);
+          })
           .catch((err) => console.warn(`env: tile ${name} could not be built`, err));
       }
       // Lazy tiles: their rows arrive as a separate chunk, then the tile builds like any other.
@@ -71,6 +83,7 @@ export function createEnvPlugin(opts: EnvPluginOptions = {}): GamePlugin {
             cleanups.push(() => field.dispose());
             await field.build(rows);
             field.setDensity(ctx.services.get('quality')?.step ?? 'medium');
+            glow.addTile(name, rows);
           })
           .catch((err) => console.warn(`env: tile ${name} could not be built`, err));
       }
@@ -81,9 +94,10 @@ export function createEnvPlugin(opts: EnvPluginOptions = {}): GamePlugin {
           id: 'env.update',
           renderPhase: 'world',
           order: 91,
-          render: () => {
+          render: (_alpha, frameTime) => {
             const now = ctx.services.get('quality')?.step;
             const f = focus ?? ctx.player.feet;
+            glow.update(frameTime, f, now);
             for (const field of fields.values()) {
               if (now && now !== step) field.setDensity(now);
               field.update(f.x, f.z);
@@ -99,6 +113,8 @@ export function createEnvPlugin(opts: EnvPluginOptions = {}): GamePlugin {
           focus: (point) => {
             focus = point;
           },
+          glow: () => glow.counts(),
+          fireLights: glow.fireLights,
         }),
       );
     },
