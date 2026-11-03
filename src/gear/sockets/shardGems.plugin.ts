@@ -146,19 +146,6 @@ const shardGemsPlugin: GamePlugin = {
     };
     ctx.services.provide('shardGems', service);
 
-    // A dialogue choice raises these while the dialogue (itself the one HUD modal) is still up, so an open would be refused
-    // (the smith's session closes again at once). Like the shop, hold the request until the dialogue modal has closed.
-    type Want = 'smith' | 'sockets';
-    let pendingOpen: Want | null = null;
-    const openNow = (w: Want): void => {
-      if (w === 'sockets') void service.openScreen();
-      else void soft<{ openSmith?(): boolean }>('gear')?.openSmith?.();
-    };
-    const request = (w: Want): void => {
-      if (ctx.input.contexts.top() === 'dialogue') pendingOpen = w;
-      else openNow(w);
-    };
-
     // ---- Damage: gems, the knives and the R16 dragonkin bonus ------------------------------
     offs.push(
       registerAct3Bonuses(ctx.damage, {
@@ -215,15 +202,8 @@ const shardGemsPlugin: GamePlugin = {
       ctx.events.on('quest.completed', (e) => GEM_BOSSES.some((b) => b.questId === e.questId) && retro()),
       ctx.events.on('inventory.changed', (e) => e.itemId === ACT3_TRINKETS.knife && knife()),
       ctx.events.on('flag.changed', (e) => e.key === 'story.r15.choice' && knife()),
-      ctx.events.on('npc.sockets.open', () => request('sockets')),
-      ctx.events.on('npc.smith.open', () => request('smith')),
-      // `dialogue.ended` fires before the dialogue modal closes, so wait for the modal itself to go.
-      ctx.events.on('ui.modal', (e) => {
-        if (e.id !== 'dialogue' || e.open) return;
-        const w = pendingOpen;
-        pendingOpen = null;
-        if (w) openNow(w);
-      }),
+      ctx.events.on('npc.sockets.open', () => void service.openScreen()),
+      ctx.events.on('npc.smith.open', () => void soft<{ openSmith?(): boolean }>('gear')?.openSmith?.()),
     );
 
     // ---- A socket point beside Dunstan's smith point -------------------------------------------------

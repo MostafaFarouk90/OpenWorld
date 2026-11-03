@@ -3,8 +3,7 @@ import type { GamePlugin } from '../../core/plugins';
 import type { CodexEntryDef } from '../entries';
 import { ACT3_CODEX_ENTRIES, ACT3_CODEX_IDS as ID } from './entries';
 import { ACT3_CODEX_STRINGS_EN } from './strings.en';
-import { areaAt } from '../../region/areas';
-import { ACT3_DISCOVER_UNLOCKS, SUMMIT_AREA, ACT3_WATCHED_FLAGS, SHARD_GEM_PREFIX, act3Backfill } from './unlocks';
+import { ACT3_DISCOVER_UNLOCKS, ACT3_WATCHED_FLAGS, SHARD_GEM_PREFIX, act3Backfill } from './unlocks';
 import '../service';
 
 type CodexLike = { register?(entries: readonly CodexEntryDef[]): () => void; unlock?(id: string): void };
@@ -58,8 +57,6 @@ const codexAct3: GamePlugin = {
       }
     };
 
-    let inSummit = false;
-    let summitDone = false;
     offs.push(
       ctx.events.on('discover', (e) => {
         const entry = typeof e?.placeId === 'string' ? ACT3_DISCOVER_UNLOCKS[e.placeId] : undefined;
@@ -67,13 +64,11 @@ const codexAct3: GamePlugin = {
       }),
       ctx.events.on('region.entered', (e) => {
         if (e?.regionId === 'greyfen') unlock(ID.greyfen);
-        else if (e?.regionId === 'dragonspine') unlock(ID.dragonspine);
       }),
       ctx.events.on('water.entered', (e) => {
         if (e?.kind === 'wade') unlock(ID.wading);
       }),
       ctx.events.on('dive.started', () => unlock(ID.diving)),
-      ctx.events.on('glide.started', () => unlock(ID.gliding)),
       ctx.events.on('ferry.boarded', () => unlock(ID.ferry)),
       ctx.events.on('gear.socketed', () => unlock(ID.shardGems)),
       ctx.events.on('inventory.changed', (e) => {
@@ -83,35 +78,11 @@ const codexAct3: GamePlugin = {
       ctx.events.on('flag.changed', (e) => {
         if (typeof e?.key === 'string' && ACT3_WATCHED_FLAGS.has(e.key)) backfill();
       }),
-      ctx.events.on('save.loaded', () => {
-        // A load may have taken the summit entry away: poll again until it is unlocked.
-        summitDone = false;
-        inSummit = false;
-        backfill();
-      }),
+      ctx.events.on('save.loaded', backfill),
     );
 
     bind();
     backfill();
-    // The summit how-to: no event says the player crossed into the area, so the player's feet are polled (cheap, and the
-    // unlock is idempotent; it only asks the codex when the area changes).
-    offs.push(
-      ctx.systems.add({
-        id: 'codex-act3.summit',
-        fixedPhase: 'rules',
-        order: 464,
-        fixedUpdate() {
-          if (summitDone) return;
-          const f = ctx.player?.feet;
-          const now = !!f && areaAt(f.x, f.z) === SUMMIT_AREA;
-          if (now && !inSummit) {
-            unlock(ID.summit);
-            summitDone = true;
-          }
-          inSummit = now;
-        },
-      }) as unknown as () => void,
-    );
     // The codex plugin may set up after this one: retry the binding until it has.
     offs.push(
       ctx.systems.add({

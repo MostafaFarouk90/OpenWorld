@@ -1,4 +1,4 @@
-// K11 PR 1, brief's named test: K0's load rule re-run against the real tier 4 melee rows. A learned tier 4 skill is never
+// K11 PRs 1 and 2, brief's named test: K0's load rule re-run against the real tier 4 rows of all five classes. A learned tier 4 skill is never
 // lost on load, with the Act 3 flags absent or loaded after progression.
 import { describe, expect, it } from 'vitest';
 import { Progression } from './Progression';
@@ -6,14 +6,20 @@ import { SKILLS, getSkill, registerClassSkills } from './skills';
 import { fakeActor } from './testkit';
 import { ASHBLADE_SKILLS } from '../classes/ashblade/skills';
 import { WARDEN_SKILLS } from '../classes/warden/skills';
+import { buildEmberwrightSkills } from '../classes/emberwright/skills';
+import { buildPathfinderSkills } from '../classes/pathfinder/skills';
 
 registerClassSkills('warden', [...WARDEN_SKILLS]);
 registerClassSkills('ashblade', [...ASHBLADE_SKILLS]);
+registerClassSkills('emberwright', buildEmberwrightSkills());
+registerClassSkills('pathfinder', buildPathfinderSkills());
 
 const T4 = {
   knight: ['knight.bastionWall', 'knight.executionersArc', 'knight.hearthfireWard'],
   warden: ['warden.skullsplitter', 'warden.earthroot', 'warden.frenziedHearth'],
   ashblade: ['ashblade.cinderMark', 'ashblade.decoyFootprints', 'ashblade.phoenixRoll'],
+  emberwright: ['emberwright.cinderRain', 'emberwright.temperWeapon', 'emberwright.updraft'],
+  pathfinder: ['pathfinder.tripleShot', 'pathfinder.caltropField', 'pathfinder.sureFoot'],
 } as const;
 
 /** Every skill of the class up to tier 4, in tier order (so `requires` holds as they load). */
@@ -30,7 +36,7 @@ function make(withStore: boolean, flags = new Map<string, boolean>()) {
   });
 }
 
-describe('tier 4 melee: learned skills survive a load without the Act 3 flags', () => {
+describe('tier 4: learned skills survive a load without the Act 3 flags', () => {
   for (const [classId, ids] of Object.entries(T4)) {
     const learned = treeTo4(classId);
     const cost = learned.reduce((n, id) => n + getSkill(id)!.cost, 0);

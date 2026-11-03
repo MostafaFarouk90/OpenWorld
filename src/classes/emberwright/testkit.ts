@@ -60,7 +60,11 @@ export function makeRig(opts: { learned?: string[] } = {}): Rig {
     avatarClass: () => state.avatarClass,
     lockOnTarget: () => state.lockOn,
     blocked: () => state.walls,
-    rayCast: (o, d, max) => (state.wallZ !== null && d.z > 0 && o.z < state.wallZ && (state.wallZ - o.z) / d.z <= max ? { point: { x: o.x, y: o.y, z: state.wallZ } } : null),
+    rayCast: (o, d, max) => {
+      if (state.wallZ === null || Math.abs(d.z) < 1e-9) return null;
+      const t = (state.wallZ - o.z) / d.z;
+      return t > 0 && t <= max ? { point: { x: o.x + d.x * t, y: o.y + d.y * t, z: state.wallZ } } : null;
+    },
     fx: (id, at) => { rig.fx.push({ id, at: vec(at) }); },
     fizzle: () => { rig.fizzles++; },
     yielding: (id) => state.yielding.has(id),
