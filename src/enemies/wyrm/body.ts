@@ -2,12 +2,14 @@ import type { DamageBus } from '../../combat/DamageBus';
 import type { EnemyBody } from '../body';
 import type { EnemyDef } from '../types';
 import type { WyrmParams } from './builder/params';
+import { SKARL_DRAKE } from './drake/def';
 import { EMBER_WYRM, WYRMLING } from './tuning';
 import { WyrmBody } from './WyrmBody';
 
 /** Builder params per wyrm kind (the Ember Wyrm is the default build). */
 export function wyrmParamsFor(def: EnemyDef): Partial<WyrmParams> {
   if (def.kind === 'wyrmling') return { scale: WYRMLING.scale, segments: WYRMLING.segments, palette: 'wyrmling', legs: 'small', spikes: false };
+  if (def.kind === 'skarl-drake') return { scale: SKARL_DRAKE.scale, palette: 'ember', seed: 22, collar: true };
   return { palette: 'ember' };
 }
 

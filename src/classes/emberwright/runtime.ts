@@ -15,6 +15,10 @@ import {
 
 const TMP = new THREE.Vector3();
 const DEG = Math.PI / 180;
+/** The player's forward: yaw 0 faces -Z, so forward is (-sin yaw, 0, -cos yaw). */
+const forward = (yaw: number): Vec3 => ({ x: -Math.sin(yaw), y: 0, z: -Math.cos(yaw) });
+/** actorsInCone looks along (sin, cos) of its yaw, so a player facing turns half round to look where she looks. */
+const coneYaw = (facingYaw: number): number => facingYaw + Math.PI;
 const PROP_KINDS: ReadonlySet<string> = new Set(['toll-post', 'dummy', 'blocking-dummy', 'ash-scarecrow']);
 
 export const FLAME_LASH_DEF: SpellDef = {
@@ -34,6 +38,7 @@ export const WARM_BREATH_DEF: SpellDef = {
 interface Aim {
   origin: Vec3;
   dir: Vec3;
+  /** In actorsInCone's convention (atan2(dir.x, dir.z)), not the player's facing. */
   yaw: number;
 }
 
@@ -230,7 +235,7 @@ export class EmberwrightRuntime {
       if (len > 1e-6) return { origin, dir: { x: dx / len, y: dy / len, z: dz / len }, yaw: Math.atan2(dx, dz) };
     }
     const yaw = h.player.facingYaw;
-    return { origin, dir: { x: Math.sin(yaw), y: 0, z: Math.cos(yaw) }, yaw };
+    return { origin, dir: forward(yaw), yaw: coneYaw(yaw) };
   }
 
   private rotated(aim: Aim, deg: number): Vec3 {
@@ -333,7 +338,7 @@ export class EmberwrightRuntime {
     this.host.fx(FX.ring, centre, { scale: CINDER_RING.radius / 4 });
     for (const h of this.targetsIn(centre, CINDER_RING.radius)) {
       if (this.host.blocked({ x: f.x, y: f.y + 1, z: f.z }, h.position)) continue;
-      const dir = this.flatDir(centre, h.position, { x: Math.sin(this.host.player.facingYaw), y: 0, z: Math.cos(this.host.player.facingYaw) });
+      const dir = this.flatDir(centre, h.position, forward(this.host.player.facingYaw));
       if (this.strike(h.actor, { damage: spellDamage(CINDER_RING.damage), poise: CINDER_RING.poise, attackId: 'emberwright.cinderRing', dir, point: h.position, ignite: false })) {
         this.host.push(h.actor.id, dir, CINDER_RING.pushMetres);
       }
@@ -432,7 +437,7 @@ export class EmberwrightRuntime {
       return Math.hypot(TMP.x - f.x, TMP.z - f.z) <= ANVIL_DROP.range && !h.blocked(chest, { x: TMP.x, y: TMP.y + 1, z: TMP.z });
     };
     if (lock && !lock.dead && this.isTarget(lock) && reachable(lock)) return lock.id;
-    const hit = actorsInCone(h.actors, f, h.player.facingYaw, ANVIL_DROP.halfAngleDeg * DEG, ANVIL_DROP.range, { team: ['hostile', 'neutral'], alive: true })
+    const hit = actorsInCone(h.actors, f, coneYaw(h.player.facingYaw), ANVIL_DROP.halfAngleDeg * DEG, ANVIL_DROP.range, { team: ['hostile', 'neutral'], alive: true })
       .filter((x) => this.isTarget(x.actor) && reachable(x.actor))[0];
     return hit ? hit.actor.id : null;
   }
@@ -463,7 +468,7 @@ export class EmberwrightRuntime {
       const k = primary ? 1 : ANVIL_DROP.splash;
       const ok = this.strike(h.actor, {
         damage: spellDamage(ANVIL_DROP.damage) * k, poise: ANVIL_DROP.poise * k, attackId: 'emberwright.anvilDrop',
-        dir: this.flatDir(at, h.position, { x: 0, y: 0, z: 1 }), point: h.position, ignite: false,
+        dir: this.flatDir(at, h.position, forward(this.host.player.facingYaw)), point: h.position, ignite: false,
       });
       if (ok && primary) this.host.status()?.apply(h.actor.id, { id: ANVIL_DROP.stunId, kind: 'stun', seconds: ANVIL_DROP.stunSeconds, sourceId: this.host.player.actor.id });
     }
@@ -471,7 +476,7 @@ export class EmberwrightRuntime {
 
   private alliesInCone(): ReturnType<typeof actorsInCone> {
     const h = this.host;
-    return actorsInCone(h.actors, vec(h.player.feet), h.player.facingYaw, WARM_BREATH.halfAngleDeg * DEG, WARM_BREATH.range, { team: 'ally', alive: true });
+    return actorsInCone(h.actors, vec(h.player.feet), coneYaw(h.player.facingYaw), WARM_BREATH.halfAngleDeg * DEG, WARM_BREATH.range, { team: 'ally', alive: true });
   }
 
   private warmBreath(): void {
@@ -533,7 +538,7 @@ export class EmberwrightRuntime {
     this.host.fx(FX.wind, f, { scale: 0.4 });
     this.host.cool?.(f, GUST_STEP.pushRadius);
     for (const h of actorsInRadius(this.host.actors, f, GUST_STEP.pushRadius, { team: 'hostile', alive: true })) {
-      this.host.push(h.actor.id, this.flatDir(f, h.position, { x: Math.sin(this.host.player.facingYaw), y: 0, z: Math.cos(this.host.player.facingYaw) }), GUST_STEP.pushMetres);
+      this.host.push(h.actor.id, this.flatDir(f, h.position, forward(this.host.player.facingYaw)), GUST_STEP.pushMetres);
     }
   }
 

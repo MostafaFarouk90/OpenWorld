@@ -25,6 +25,24 @@ export const PF = {
   netLauncher: { statusId: 'pathfinder.netLauncher.root', seconds: 4, range: 18, aimRadius: 1.5, chestHeight: 1.1, cooldown: 16, ember: 15 },
   /** The air jump reaches 70% of a ground jump; height scales with the launch speed squared, so the speed is its square root. */
   lightStep: { airJumps: 1, heightScale: 0.7 },
+  /** Tier 4 (Act 3, K11 PR 2): Triple Shot, Caltrop Field, Sure Foot (picks of this thread; the design gives the shapes only). */
+  tripleShot: { yawDeg: 7.5, sideScale: 0.6, effectId: 'triple-shot' },
+  caltropField: {
+    cooldown: 18,
+    ember: 15,
+    radius: 4,
+    ahead: 3,
+    seconds: 10,
+    tickSeconds: 0.5,
+    /** Slow strength and how long each application lasts, so the slow lapses a second after a foe leaves. Bosses take the lesser one. */
+    slow: 0.5,
+    bossSlow: 0.25,
+    slowSeconds: 1,
+    halfHeight: 3,
+    statusId: 'pathfinder.caltropField.slow',
+    effectId: 'caltrop-field',
+  },
+  sureFoot: { filterId: 'pathfinder.sureFoot', effectId: 'sure-foot' },
   surge: { range: 30, speed: 45, chainRadius: 8, chainArcs: 3, chainScale: 0.7, pierce: 2, radius: 0.2 },
   skillIds: {
     steadyShot: 'pathfinder.steadyShot',
@@ -36,6 +54,9 @@ export const PF = {
     emberQuarrel: 'pathfinder.emberQuarrel',
     netLauncher: 'pathfinder.netLauncher',
     lightStep: 'pathfinder.lightStep',
+    tripleShot: 'pathfinder.tripleShot',
+    caltropField: 'pathfinder.caltropField',
+    sureFoot: 'pathfinder.sureFoot',
   },
   trailblazeScale: 1.1,
 } as const;

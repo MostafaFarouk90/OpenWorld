@@ -75,3 +75,41 @@ export const FX = {
 } as const;
 
 export const ACTOR_RADIUS = 0.5;
+
+// ---- Tier 4 (Act 3, K11 PR 2; plans/act3-K11-pr2.md). Cooldowns, costs, radii and times are the plan's; the rest are provisional. ----
+
+/** Attacks 1 to 4 as the damage pipeline sees them: the spell attack ids (runtime.ts), and the staff's melee clips. */
+export const OWN_SPELL_ATTACK_IDS: readonly string[] = ['emberwright.bolt', 'emberwright.sparkBurst', 'emberwright.flameBall', 'emberwright.cinderRing'];
+
+export const CINDER_RAIN = {
+  skillId: 'emberwright.cinderRain', cooldown: 22, emberCost: 30,
+  /** Plan: a 5 m radius field for 3 s, a tick every 0.5 s (6 ticks), each hostile inside takes 0.35x the base spell damage (Ember Bolt's, `BOLT.damage`) as fire. */
+  radius: 5, seconds: 3, tickSeconds: 0.5, damageFraction: 0.35, damage: spellDamage(BOLT.damage) * 0.35,
+  /** Vertical reach either side of the field's ground. */
+  halfHeight: 3,
+  /** Centre: the lock-on target when a live hostile within `lockRange` m, else `ahead` m in front of the player. */
+  lockRange: 20, ahead: 8,
+  igniteId: 'emberwright.cinderRain.ignite', igniteSeconds: 3, igniteDps: 2, attackId: 'emberwright.cinderRain', effectId: 'cinder-rain',
+} as const;
+
+export const TEMPER_WEAPON = {
+  skillId: 'emberwright.temperWeapon', cooldown: 30, emberCost: 20, seconds: 20,
+  /** The nearest live companion within this many metres, else the Emberwright's own staff. */
+  range: 10,
+  /** Attacker band: after the staff's -150 and Cinder Mark's -149 neighbours, before the rest. */
+  order: -148, modifierId: 'emberwright-temper-weapon', multiplier: 1.3,
+  companionAttackPrefix: 'companion.',
+  igniteId: 'emberwright.temperWeapon.ignite', igniteSeconds: 3, igniteDps: 2,
+  /** A foe already burning from an id with this prefix (Ember Bolt, Fire Wall, Cinder Rain) takes no second ignite. */
+  igniteSkipPrefix: 'emberwright.',
+  effectId: 'temper-weapon',
+} as const;
+
+export const UPDRAFT = {
+  skillId: 'emberwright.updraft', cooldown: 18, emberCost: 20,
+  /** Plan: every hostile within 4 m (inclusive); `halfHeight` keeps a foe on another floor out. */
+  radius: 4, halfHeight: 3,
+  poise: 30, stunSeconds: 1.5, stunId: 'emberwright.updraft.stun', attackId: 'emberwright.updraft',
+  /** The lift is drawn by the VFX column (open point A): 1.5 m over 0.8 s. */
+  liftMetres: 1.5, liftSeconds: 0.8, effectId: 'emberwright-updraft',
+} as const;
