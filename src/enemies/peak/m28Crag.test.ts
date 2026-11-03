@@ -8,6 +8,7 @@ import { EnemyManager } from '../EnemyManager';
 import { FakeHost, loadKnight } from '../testing/fakeHost';
 import type { EnemyKind, SpawnerDef, SpawnOptions } from '../types';
 import './overlays';
+import { hawkView } from './hawk/overlay';
 import { OGRE } from './tuning';
 
 const DT = FIXED_TIMESTEP;
@@ -164,5 +165,36 @@ describe('M28 crag: no stoop beside the ogre', () => {
   it('without the option a hawk stoops with the ogre beside the target', () => {
     const t = rig({ waveSize: 3 }, [OGRE_KIND, HAWK, HAWK], -3);
     expect(t.tick(15, undefined, () => t.stoops().length > 0)).toBe(true);
+  });
+});
+
+describe('M28 crag: a melee-only attacker reaches every hawk', () => {
+  it('swinging only at what is low and within 3 m (no bolt, no spell), Cael damages all six hawks and the ogre', () => {
+    const t = rig(M28_CRAG_OPTIONS, undefined, -3);
+    const damaged = new Set<string>();
+    const lastSwing = new Map<string, number>();
+    let clock = 0;
+    const reach = (id: string): boolean => {
+      const e = t.enemy(id);
+      if (!e || t.fake.actorMap.get(id)?.dead) return false;
+      const f = t.fake.host.player.feet;
+      if (Math.hypot(e.feet.x - f.x, e.feet.z - f.z) > 3) return false;
+      const v = hawkView(id);
+      return v === null || v.altitude < 2; // the ogre has no view
+    };
+    t.tick(240, () => {
+      clock += DT;
+      for (const id of t.ids) {
+        if (!reach(id) || clock - (lastSwing.get(id) ?? -1) < 0.5) continue;
+        lastSwing.set(id, clock);
+        const before = t.fake.actorMap.get(id)!.health;
+        // A heavy chop: 13 damage (K13's era-kit hit on the ogre) and 15 poise.
+        t.fake.apply({ attackerId: 'player', targetId: id, amount: 13, poise: 15, kind: 'melee' });
+        if (t.fake.actorMap.get(id)!.health < before) damaged.add(id);
+      }
+    }, () => damaged.size === t.ids.length);
+    const hawks = t.ids.filter((id) => id !== t.ogreId);
+    for (const id of hawks) expect(damaged.has(id), id).toBe(true);
+    expect(damaged.has(t.ogreId)).toBe(true);
   });
 });

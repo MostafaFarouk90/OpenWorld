@@ -58,6 +58,8 @@ export function makeOgreOverlay(ctx: BehaviourContext): BehaviourOverlay {
   /** Past its wave and kept in the fight by a recent hit: it does not swing. */
   let held = false;
   let sinceHit = Infinity;
+  /** Held back by the wave from this target: it takes it up when a place frees. */
+  let reserved: ActorId | null = null;
 
   const walk = (to: { x: number; z: number }, speed: number, dt: number): number => {
     const f = ctx.feet();
@@ -81,9 +83,15 @@ export function makeOgreOverlay(ctx: BehaviourContext): BehaviourOverlay {
       if (held && st !== 'telegraph' && st !== 'attack' && (st === 'notice' || sinceHit > WAVE_HIT_HOLD_SECONDS)) {
         // Past its group's wave: it holds off until a pack-mate is out of the fight. Struck (a companion's or Cael's hit), it
         // keeps the fight but makes no swing (`allowMove`), so the wave holds without an aggro loop.
+        reserved = ctx.brain.target ?? ctx.host.actors.player.id;
         ctx.brain.standDown();
         since = null;
         held = false;
+      } else if (reserved && ctx.brain.target === null && !LEFT.has(ctx.brain.state) && inWave(ctx.host, ctx.spawnerId, member, waveSize)) {
+        // A place in the wave is free: the reserve takes up the fight it was held from.
+        const who = reserved;
+        reserved = null;
+        ctx.brain.alert(who);
       }
       if (ctx.brain.target === null) {
         engaged = 0;
