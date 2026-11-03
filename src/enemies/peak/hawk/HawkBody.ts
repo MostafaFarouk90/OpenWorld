@@ -60,6 +60,10 @@ export const HAWK_ATTACKS = {
   rake: { clip: 'Rake', activeStart: 0.35, activeEnd: 0.7 },
 } as const;
 
+/** The hurtboxes' least radii (m): gameplay volumes, so a blade cannot slip through the slim bird between frames. */
+const HURT_BODY_RADIUS = 0.35;
+const HURT_WING_RADIUS = 0.2;
+
 /** Bone names of the wing hurtboxes (a poise break can name them). */
 export const HAWK_WING_BONES = ['wingL', 'wingR'] as const;
 
@@ -474,9 +478,11 @@ export class HawkBody implements EnemyBody {
     this.hurtboxes = new HurtboxSet(
       rig.visual,
       [
-        { name: 'body', bone: 'body', start: { x: 0, y: 0, z: -d.bodyStraight / 2 }, end: { x: 0, y: 0, z: d.bodyStraight / 2 }, radius: d.bodyRadius * 1.15 },
-        { name: 'wing', bone: 'wingL', start: { x: -0.04, y: 0, z: 0 }, end: { x: -reach, y: 0, z: 0 }, radius: d.chord * 0.3 },
-        { name: 'wing', bone: 'wingR', start: { x: 0.04, y: 0, z: 0 }, end: { x: reach, y: 0, z: 0 }, radius: d.chord * 0.3 },
+        // Gameplay volumes, fuller than the slim bird (K13's era-kit run: a 0.23 m body and 0.1 m wings let a sword pass
+        // between frames, so no melee swing landed on a skimming hawk). About a 0.7 m body and 0.4 m wings.
+        { name: 'body', bone: 'body', start: { x: 0, y: 0, z: -d.bodyStraight / 2 }, end: { x: 0, y: 0, z: d.bodyStraight / 2 }, radius: Math.max(d.bodyRadius * 1.15, HURT_BODY_RADIUS) },
+        { name: 'wing', bone: 'wingL', start: { x: -0.04, y: 0, z: 0 }, end: { x: -reach, y: 0, z: 0 }, radius: Math.max(d.chord * 0.3, HURT_WING_RADIUS) },
+        { name: 'wing', bone: 'wingR', start: { x: 0.04, y: 0, z: 0 }, end: { x: reach, y: 0, z: 0 }, radius: Math.max(d.chord * 0.3, HURT_WING_RADIUS) },
       ],
       rig.visual,
     );

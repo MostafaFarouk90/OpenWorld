@@ -7,8 +7,8 @@ export const HAWK = {
   soarAltitude: 14,
   /** The stoop's hover (its 0.8 s windup) eases down to this height. */
   hoverAltitude: 7,
-  /** After the stoop it skims this low for `lowSeconds` (the rake's moment, in reach of a blade). */
-  lowAltitude: 0.8,
+  /** After the stoop it skims this low for `lowSeconds` (the rake's moment): its body then sits at a chibi Knight's slice height (about 0.5 m; K13 found no swing reached it at 0.8 m). */
+  lowAltitude: 0.3,
   /** The dive from hover height to skimming height: two thirds of the stoop window (Stoop clip 0.6 s x window 0.3 to 0.85). */
   diveSeconds: 0.22,
   /** The dive's line runs on this far past the target, so the talons pass through it low (not stop at its feet). */
