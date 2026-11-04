@@ -235,7 +235,7 @@ describe('act3-hud with the shard-gems plugin', () => {
     const inv = ctx.services.require('inventory');
     inv.add(BLADE, 1);
     inv.addGold(500);
-    return { ctx, inv, svc: ctx.services.require('shardGems'), ...s };
+    return { game, ctx, inv, svc: ctx.services.require('shardGems'), ...s };
   }
 
   it('openScreen draws K15 screen when set, with the fit, take-out and refusal paths on the real inventory', async () => {
@@ -276,6 +276,47 @@ describe('act3-hud with the shard-gems plugin', () => {
     expect(t.svc.openScreen()).toBe(false);
     expect(t.ctx.hud.modalOpen).toBe(SOCKET_SCREEN_ID);
   }, PLUGIN_TEST_TIMEOUT);
+
+  describe.each([
+    ['npc.sockets.open', (id: string | null) => id === SOCKET_SCREEN_ID],
+    ['npc.smith.open', (id: string | null) => id !== null && id !== 'dialogue'],
+  ] as const)('%s raised by a dialogue choice', (event, isScreen) => {
+    const startDialogue = (t: Awaited<ReturnType<typeof boot>>) =>
+      t.ctx.hud.openModal({ id: 'dialogue', element: new StubElement('div') as never }, { context: 'dialogue' })!;
+
+    it('waits for the dialogue modal to close, then leaves the screen open', async () => {
+      const t = await boot(true);
+      const closeDialogue = startDialogue(t);
+      (t.ctx.events as any).emit(event, {});
+      t.ctx.events.emit('dialogue.ended', { dialogueId: 'd', npcId: 'thorgar' });
+      expect(t.ctx.hud.modalOpen).toBe('dialogue'); // nothing opened (or opened and torn down) under the dialogue
+      closeDialogue();
+      expect(isScreen(t.ctx.hud.modalOpen)).toBe(true);
+      t.game.fixedUpdate();
+      expect(isScreen(t.ctx.hud.modalOpen)).toBe(true);
+    }, PLUGIN_TEST_TIMEOUT);
+
+    it('opens at once outside a dialogue, and a second request does not stack or close it', async () => {
+      const t = await boot(true);
+      (t.ctx.events as any).emit(event, {});
+      const id = t.ctx.hud.modalOpen;
+      expect(isScreen(id)).toBe(true);
+      (t.ctx.events as any).emit(event, {});
+      expect(t.ctx.hud.modalOpen).toBe(id);
+    }, PLUGIN_TEST_TIMEOUT);
+
+    it('still closes with its own Close button, and a later dialogue ending does not reopen it', async () => {
+      const t = await boot(true);
+      const closeDialogue = startDialogue(t);
+      (t.ctx.events as any).emit(event, {});
+      closeDialogue();
+      expect(isScreen(t.ctx.hud.modalOpen)).toBe(true);
+      buttons(t.modals.at(-1)!.element).find((b) => b.textContent === t.ctx.strings.t('gear.screen.close'))!.click();
+      expect(t.ctx.hud.modalOpen).toBeNull();
+      startDialogue(t)();
+      expect(t.ctx.hud.modalOpen).toBeNull();
+    }, PLUGIN_TEST_TIMEOUT);
+  });
 
   it('with no screen set the fallback panel opens as before', async () => {
     const t = await boot(false);
