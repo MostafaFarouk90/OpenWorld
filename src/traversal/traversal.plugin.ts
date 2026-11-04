@@ -37,6 +37,16 @@ export const FEN_BOOTS_ID = 'gear.fen-boots';
 export const FERRY_TOKEN_ID = 'key.ferry-token';
 /** K12 writes it when M24 is done; the ferry runs from then on. */
 export const FERRY_RUNNING_FLAG = 'story.m24.complete';
+/** K12: Dudda's horn blown (M24) opens the boat for the first run, before the quest is handed in and the token given. */
+export const FERRY_FIRST_RUN_FLAG = 'story.m24.ferryOpen';
+
+/**
+ * K12's first run of the Greyfen ferry: the boat runs once the horn is blown (`story.m24.ferryOpen`) before M24 completes,
+ * and rides are free until the token is handed over. With the flag unset nothing changes.
+ */
+export function ferryGate(has: { token: boolean; running: boolean; firstRun: boolean }): { hasToken: boolean; running: boolean } {
+  return { hasToken: has.token || (has.firstRun && !has.running), running: has.running || has.firstRun };
+}
 const DROWN_ATTACK_ID = 'traversal.drown';
 /** How fast the camera swings in behind a glide (1/s). */
 const GLIDE_CAMERA_EASE = 1.5;
@@ -158,11 +168,16 @@ const traversal: GamePlugin = {
       if (boat) disposeMesh(boat);
       boat = null;
     });
+    const gateInputs = () => ({
+      token: ctx.services.get('inventory')?.has(FERRY_TOKEN_ID) ?? false,
+      running: ctx.state.getBool(FERRY_RUNNING_FLAG),
+      firstRun: ctx.state.getBool(FERRY_FIRST_RUN_FLAG),
+    });
     const ferry = new FerryRides({
       feet: () => ctx.player.feet,
       yaw: () => ctx.player.facingYaw,
-      hasToken: () => ctx.services.get('inventory')?.has(FERRY_TOKEN_ID) ?? false,
-      running: () => ctx.state.getBool(FERRY_RUNNING_FLAG),
+      hasToken: () => ferryGate(gateInputs()).hasToken,
+      running: () => ferryGate(gateInputs()).running,
       inCombat: () => ctx.services.get('waystones')?.hostileAggro ?? false,
       busy: () => ctx.player.actor.dead || ctx.input.contexts.top() !== 'gameplay' || mode() !== 'walk',
       mounted: () => ctx.services.get('mount')?.mounted() ?? false,
@@ -202,6 +217,8 @@ const traversal: GamePlugin = {
       if (ferry.riding && target.id === PLAYER_ID) req.outcome = 'immune';
     });
     const stopName = (id: string) => ctx.strings.t(`ferry.stop.${id}`);
+    /** K15's stop menu, when its plugin set one; a menu that does not open (or a throw) leaves the default boarding. */
+    let stopMenu: ((stop: string) => boolean) | null = null;
     for (const stop of ferry.stops()) {
       ctx.interaction.register({
         id: ferryInteractId(stop),
@@ -212,10 +229,20 @@ const traversal: GamePlugin = {
         },
         radius: 2.5,
         coneDegrees: 360,
-        promptKey: 'ferry.prompt',
+        // With K15's menu set, the press opens a chooser, so the prompt must not name one destination.
+        get promptKey() {
+          return stopMenu ? 'ferry.prompt.menu' : 'ferry.prompt';
+        },
         promptParams: () => ({ dest: stopName(ferry.defaultDestination(stop) ?? stop) }),
         enabled: () => !ferry.riding,
         onInteract: () => {
+          if (stopMenu && !ferry.riding) {
+            try {
+              if (stopMenu(stop)) return;
+            } catch (e) {
+              warn(`ferry: the stop menu failed: ${String(e)}`);
+            }
+          }
           const to = ferry.defaultDestination(stop);
           if (to) ferry.board(stop, to);
         },
@@ -244,6 +271,9 @@ const traversal: GamePlugin = {
       skip: () => ferry.skip(),
       get riding() {
         return ferry.riding;
+      },
+      setMenu: (open) => {
+        stopMenu = open;
       },
     };
     ctx.services.provide('ferry', ferryService);

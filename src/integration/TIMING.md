@@ -178,10 +178,36 @@ dialogue (38 nodes).
 | Opening (M01, M02) | 34.4 | 75 |
 | Phase A (M03 to M05, R01, R02, D01) | 105.7 | 245 |
 | Phase B (M06 to M10, R03, R04, D02) | 163.3 | 375 |
-| **Act 1** | **303.4** | **695** |
+| **Act 1 (the quest chain)** | **303.4** | **695** |
+| Side content (j01 to j11, below) | 56.1 | 52 |
+| **Act 1 with side content (j11 counted; 352.3, 50.7% before the ending)** | **359.5** | **695** |
 
 The tutorial itself (Knighting Day) sits outside these tables; it has its own smoke timing in
 plans/knighting-day-smoke.md. Before the density pass the act measured 136 formula minutes without the opening.
+
+## Act 1 side content (j01 to j11)
+
+Computed by `estimateTimingFor(h, SIDE_PLAN, trails)` inside the side-job end-to-end test (src/integration/side.e2e.test.ts), each
+job played from the save that fits it (the Phase A end save for j01 to j04, the M06 gate save for j05, j06 and j08, the class-chosen
+save for j07, j09 and j10, the complete save for j11). Every job lands within 25% of its design minutes. The three batch 2 Dead Road
+points of interest stay uncounted. Pay is in the quest files; the guard test keeps the whole set inside half a level.
+
+| job | travel m | nodes | estimate min | design min | delta % |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| j01 Hob's Lambs | 287 | 8 | 4.5 | 4.5 | -0 |
+| j02 Edda's Basket | 229 | 8 | 3.7 | 3.5 | +5 |
+| j03 The Dead Road Stones | 623 | 0 | 4.7 | 6.0 | -21 |
+| j04 Tobb's Fire | 43 | 6 | 2.3 | 2.5 | -7 |
+| j05 The Guild Hound | 867 | 6 | 5.5 | 5.5 | +1 |
+| j06 Smith's Crate | 681 | 4 | 4.4 | 4.5 | -1 |
+| j07 Candles for the Chapel | 1040 | 4 | 6.2 | 5.0 | +24 |
+| j08 Watch Patrol | 1133 | 5 | 7.4 | 6.0 | +23 |
+| j09 Stane's Open Board | 157 | 7 | 7.4 | 6.0 | +24 |
+| j10 Tobb's Second Verse | 86 | 7 | 2.8 | 2.5 | +13 |
+| j11 The Crates' Cart Tracks (after the ending: Underways, post-D02) | 951 | 5 | 7.2 | 6.0 | +20 |
+| **Side content** | | | **56.1** | **52.0** | **+8** |
+
+Act 1 with the side content: 303.4 + 56.1 = **359.5 of 695 formula minutes (51.7%)** with j11 counted. j11 is offered only after D02, which fires the Act 1 ending, so before the ending the act stands at 303.4 + 48.9 = **352.3 (50.7%)**, still over the 50% act target.
 
 # Act 2 play-time estimate (Phase C)
 

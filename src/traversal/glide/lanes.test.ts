@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { heightAt } from '../../terrain/heightfield';
 import { ACT3_GLIDE_UPDRAFTS } from '../../region/act3/act3Glide';
+import { dragonspineBuild } from '../../dragonspine/layout';
 import {
   GLIDE_LANES,
   GLIDE_OPEN_FLAG,
@@ -77,6 +78,17 @@ describe('lane tuning on the real heightfield', () => {
     // The hearth loop has no line to fly: straight through the column it comes down past the bowl, in its catch box.
     if (id === 'hearth-updraft') expect(inBox(l.site.catchBox, r.at.x, r.at.z)).toBe(true);
     else expect(r.landed).toBe(true);
+  });
+
+  it.each(GLIDE_LANES.map((l) => [l.site.id, l] as const))('%s: from K4 launch deck (the anchor the game prefers) it lands too', (id, l) => {
+    const b = dragonspineBuild().glide;
+    const p = b.launch[l.site.id];
+    const r = flyStraight(l, heightAt, { start: { x: p.x, y: b.deckTop[l.site.id] + 0.05, z: p.z } });
+    expect(r.touched).toBe(true);
+    expect(r.contained).toBe(false);
+    if (id === 'hearth-updraft') expect(inBox(l.site.catchBox, r.at.x, r.at.z)).toBe(true);
+    else expect(r.landed).toBe(true);
+    if (l.wind > 0) expect(r.minClearance).toBeGreaterThanOrEqual(10);
   });
 
   it.each(WIND_LANES)('%s: at least 10 m over the ground from 60 m past the lip, under 200 m up', (id) => {

@@ -58,8 +58,8 @@ export function phaseHolds(id: RegionId): readonly string[] {
 
 const NEVER: FlagCondition = { any: ['region.never'] };
 
-/** Ambience bed ids a region can name (A14 built the Act 2 ones). */
-export type RegionBedId = 'brightwater' | 'harrowmark' | 'cinderreach' | 'oldsmoke';
+/** Ambience bed ids a region can name (A14 built the Act 2 ones, K14 the Act 3 ones). */
+export type RegionBedId = 'brightwater' | 'harrowmark' | 'cinderreach' | 'oldsmoke' | 'greyfen' | 'dragonspine';
 
 export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
   brightwater: {
@@ -107,8 +107,7 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
     box: { x0: 500, z0: 10500, x1: 7500, z1: 16500 },
     levelBand: { min: 18, max: 26 },
     track: 'peat-and-pitch',
-    // The Act 3 beds ('greyfen', 'dragonspine') are the sound thread's: it widens RegionBedId and sets them here.
-    bed: null,
+    bed: 'greyfen',
     ground: 'greyfen',
     openWhen: { all: ['story.gate.a3'] },
     reserved: false,
@@ -118,7 +117,7 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
     box: { x0: 11000, z0: 12000, x1: 18000, z1: 18000 },
     levelBand: { min: 20, max: 28 },
     track: 'wing-over-rime',
-    bed: null,
+    bed: 'dragonspine',
     ground: 'dragonspine',
     openWhen: { all: ['story.gate.a3', ...phaseHolds('dragonspine')] },
     reserved: false,

@@ -26,7 +26,19 @@ export interface WyrmParams {
   legScale: number;
   /** Leg thickness multiplier on the bone radius. */
   legGirth: number;
+  /**
+   * Body form (Act 3, K6a): `land` the Act 2 build; `water` Hathren's: the dorsal spikes draw as a thin fin frill (pair it
+   * with `legs: 'none'` and a short `wingspan` for fin-wings).
+   */
+  form: WyrmForm;
+  /** Breath kind (Act 3, K6a): `flame` (fire and smoke) or `water` (spray and mist, design 10 row 29). */
+  breath: WyrmBreath;
+  /** An iron collar on the neck (Act 3, K6a: Skarl's drake). */
+  collar: boolean;
 }
+
+export type WyrmForm = 'land' | 'water';
+export type WyrmBreath = 'flame' | 'water';
 
 /** Shape constants at scale 1. */
 export const WYRM_SHAPE = {
@@ -60,6 +72,9 @@ export const DEFAULT_WYRM_PARAMS: Readonly<WyrmParams> = {
   stance: 1,
   legScale: 1,
   legGirth: 1,
+  form: 'land',
+  breath: 'flame',
+  collar: false,
 };
 
 export function wyrmParams(over: Partial<WyrmParams> = {}): WyrmParams {
@@ -67,6 +82,8 @@ export function wyrmParams(over: Partial<WyrmParams> = {}): WyrmParams {
   if (!(p.scale > 0) || !Number.isFinite(p.scale)) throw new Error(`wyrm: bad scale ${p.scale}`);
   if (!Number.isInteger(p.segments) || p.segments < 4 || p.segments > 64) throw new Error(`wyrm: bad segment count ${p.segments}`);
   if (!(p.wingspan > 0)) throw new Error(`wyrm: bad wingspan ${p.wingspan}`);
+  if (p.form !== 'land' && p.form !== 'water') throw new Error(`wyrm: bad form ${String(p.form)}`);
+  if (p.breath !== 'flame' && p.breath !== 'water') throw new Error(`wyrm: bad breath ${String(p.breath)}`);
   for (const k of ['stance', 'legScale', 'legGirth'] as const) {
     if (!(p[k] > 0) || !Number.isFinite(p[k])) throw new Error(`wyrm: bad ${k} ${p[k]}`);
   }
