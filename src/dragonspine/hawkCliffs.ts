@@ -6,6 +6,7 @@ import type { StructureSpec } from '../region/layoutTypes';
 import { a, emptyPart, numbered, open, polar, solid, sphere, type Part } from './helpers';
 import type { XZ } from './inputs';
 import { Placer } from './placer';
+import { roadFromPoints } from './road';
 import type { Sites } from './sites';
 
 /** The parents circle this far over the shelf. */
@@ -32,20 +33,35 @@ const fail = (msg: string): never => {
 export const PARAPET_HEIGHT = 0.6;
 export const PARAPET_LENGTH = 3.4;
 export const PARAPET_THICKNESS = 0.7;
-/** The stones' inner edge keeps this far off the path's flat half-width. */
+/** The stones' inner edge keeps this far off the path's flat half-width (from every walked line). */
 export const PARAPET_GAP = 0.6;
 /** Only the long runs of the path (its legs) get a parapet; the hairpin turns between them are 14 m. */
 const LEG_MIN = 30;
 
+/** Points round a stone's footprint (centre `x, z`, long axis along `dx, dz`), every quarter metre or closer. */
+function stoneOutline(x: number, z: number, dx: number, dz: number): XZ[] {
+  const out: XZ[] = [];
+  const hl = PARAPET_LENGTH / 2;
+  const ht = PARAPET_THICKNESS / 2;
+  const at = (u: number, v: number): XZ => ({ x: x + dx * u - dz * v, z: z + dz * u + dx * v });
+  const nl = Math.ceil(PARAPET_LENGTH / 0.25);
+  const nt = Math.ceil(PARAPET_THICKNESS / 0.25);
+  for (let k = 0; k <= nl; k++) for (const v of [-ht, ht]) out.push(at(-hl + (2 * hl * k) / nl, v));
+  for (let k = 1; k < nt; k++) for (const u of [-hl, hl]) out.push(at(u, -ht + (2 * ht * k) / nt));
+  return out;
+}
+
 /**
- * A low rock line (greybox stones with colliders) along the downhill edge of each leg of K1's path, kept out of its flat
- * half-width. The downhill side is read from the ground; a stone that would stand near another stretch of the path (at a
- * hairpin) is left out, so the turns stay open.
+ * A low rock line (greybox stones with colliders) along the downhill edge of each leg of K1's path. The downhill side is
+ * read from the ground. A stone is kept only when its whole footprint keeps `PARAPET_GAP` beyond the path's half-width from
+ * every walked line: K1's centreline and `walked`, the line a walker takes from climb anchor to climb anchor, which cuts the
+ * inside of each hairpin (R18's walker stalled on two stones there). So the turns stay open.
  */
-export function parapetStones(s: Sites): StructureSpec[] {
+export function parapetStones(s: Sites, walked: readonly XZ[]): StructureSpec[] {
   const pts = s.inp.hawkPathPoints;
   const hw = s.inp.hawkPathHalfWidth;
   const off = hw + PARAPET_GAP + PARAPET_THICKNESS / 2;
+  const lines = [s.hawkPath, roadFromPoints(walked.map((p) => [p.x, p.z] as const))];
   const out: StructureSpec[] = [];
   let n = 0;
   for (let i = 1; i < pts.length; i++) {
@@ -66,12 +82,7 @@ export function parapetStones(s: Sites): StructureSpec[] {
       const t = ((k + 0.5) / count) * len;
       const x = ax + dx * t + side * nx * off;
       const z = az + dz * t + side * nz * off;
-      // Both ends and the middle of the stone stay clear of every stretch of the path.
-      const clear = [-1, 0, 1].every((e) => {
-        const p = s.hawkPath.nearest(x + dx * e * (PARAPET_LENGTH / 2), z + dz * e * (PARAPET_LENGTH / 2));
-        return p.d >= hw + PARAPET_GAP - 0.05;
-      });
-      if (!clear) continue;
+      if (stoneOutline(x, z, dx, dz).some((q) => lines.some((l) => l.nearest(q.x, q.z).d < hw + PARAPET_GAP - 0.05))) continue;
       const yaw = (Math.atan2(-dz, dx) * 180) / Math.PI;
       out.push(solid(`dragonspine-hawk-parapet-${++n}`, 'rock', x, z, PARAPET_LENGTH, PARAPET_THICKNESS, PARAPET_HEIGHT, yaw));
     }
@@ -116,7 +127,8 @@ export function hawkCliffsLayout(s: Sites): { part: Part; info: HawkInfo } {
   const nestWant = [shelf, { x: shelf.x - 8, z: shelf.z + 2 }, { x: shelf.x + 8, z: shelf.z + 2 }];
   const nests = nestWant.map((w) => findFlat(s.h, { prefer: w, radius: 10, size: [2.2, 2.2], maxSpread: 0.45, step: 1, within }) ?? findFlat(s.h, { prefer: w, radius: 40, size: [2.2, 2.2], maxSpread: 0.45, step: 2 }) ?? fail(`no level spot for a nest near ${w.x.toFixed(0)},${w.z.toFixed(0)} on the nest shelf`));
   const nestSpecs = nests.map((p, i) => open(`dragonspine-nest-${i + 1}`, 'dragonspine-nest', p.x, p.z, 2.2, 2.2));
-  const parapet = parapetStones(s);
+  const end = path.point(climbLength);
+  const parapet = parapetStones(s, [climbStart, ...climbPts, { x: end.x, z: end.z }]);
   const hold = { x: F.maxX - 12, z: F.cz - 8 };
 
   const part: Part = {

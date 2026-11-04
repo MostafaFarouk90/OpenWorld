@@ -13,7 +13,8 @@ import { defaultInputs } from './inputs';
 import { TAN_40, worstSlope } from './testing/walk';
 import { routeOver } from './route';
 import { PARAPET_GAP, PARAPET_HEIGHT } from './hawkCliffs';
-import { footprintCorners } from '../region/geometry';
+import { WALL_T } from './lodge';
+import { footprintCorners, pointInFootprint } from '../region/geometry';
 import { roadFromPoints } from './road';
 
 let release: () => void;
@@ -54,7 +55,11 @@ describe('the places on the shipped ground', () => {
       'dragonspine-cave-ledge': 'dragonspine.cave.leap.launch',
       'dragonspine-m28-ledge-1': 'dragonspine.m28.leap.1.launch',
       'dragonspine-m28-ledge-2': 'dragonspine.m28.leap.2.launch',
+      'dragonspine-roost-ledge-1': 'dragonspine.roost.leap.1.launch',
+      'dragonspine-roost-ledge-2': 'dragonspine.roost.leap.2.launch',
+      'dragonspine-roost-ledge-3': 'dragonspine.roost.leap.3.launch',
     };
+    expect(b.layout.structures.filter((x) => x.role === 'ledge')).toHaveLength(6);
     for (const s of b.layout.structures.filter((x) => x.role === 'ledge')) {
       const l = anchor(launches[s.id]!);
       const rise = ledgeRise(heightAt, s.x, s.z, { x: l.x, z: l.z }, [s.footprint[0], s.footprint[1]]);
@@ -119,5 +124,75 @@ describe('the Hawk Cliffs parapet', () => {
       expect(out, `${x.id} (side ${sx})`).toBeLessThan(inn + 1);
     }
     expect(worstSlope(heightAt, b.hawk.climb)).toBeLessThanOrEqual(TAN_40);
+  });
+});
+
+describe('the Hawk Cliffs parapet and the walked line', () => {
+  const stones = b.layout.structures.filter((x) => x.id.startsWith('dragonspine-hawk-parapet-'));
+  const hw = inp.hawkPathHalfWidth;
+  const climbAnchors = b.layout.anchors
+    .filter((x) => /^dragonspine\.hawk\.climb\.\d+$/.test(x.id))
+    .sort((p, q) => Number(p.id.split('.').pop()) - Number(q.id.split('.').pop()));
+  const end = inp.hawkPathPoints[inp.hawkPathPoints.length - 1]!;
+  // A walker on R18 goes from climb anchor to climb anchor: at a hairpin that line cuts the inside of the turn.
+  const walked = roadFromPoints([[b.hawk.climbStart.x, b.hawk.climbStart.z], ...climbAnchors.map((x) => [x.x, x.z] as const), end]);
+
+  // The stone's own half size toward a line: the half extent of its footprint along the direction from the line's nearest point.
+  const halfToward = (x: (typeof stones)[number], ux: number, uz: number): number => {
+    const yaw = (x.yawDeg * Math.PI) / 180;
+    const ax = { x: Math.cos(yaw), z: -Math.sin(yaw) };
+    const bx = { x: Math.sin(yaw), z: Math.cos(yaw) };
+    return (Math.abs(ux * ax.x + uz * ax.z) * x.footprint[0]) / 2 + (Math.abs(ux * bx.x + uz * bx.z) * x.footprint[1]) / 2;
+  };
+
+  it('keeps every stone clear of K1\'s centreline and of the anchor-to-anchor line by halfWidth plus its own half size', () => {
+    expect(climbAnchors.length).toBeGreaterThan(10);
+    for (const x of stones) {
+      for (const [name, line] of [['centreline', b.sites.hawkPath], ['climb anchors\' line', walked]] as const) {
+        const n = line.nearest(x.x, x.z);
+        const p = line.point(n.s);
+        const half = halfToward(x, (x.x - p.x) / n.d, (x.z - p.z) / n.d);
+        expect(n.d, `${x.id} from the ${name}`).toBeGreaterThanOrEqual(hw + half);
+        // And no corner of it is inside the walkable width of any stretch of that line.
+        for (const [cx, cz] of footprintCorners(x)) expect(line.nearest(cx, cz).d, `${x.id} corner, ${name}`).toBeGreaterThanOrEqual(hw);
+      }
+    }
+  });
+
+  it('leaves the stretch between climb.10 and climb.11 (the hairpin where R18\'s walker stalled) free of stones', () => {
+    const c10 = climbAnchors[9]!;
+    const c11 = climbAnchors[10]!;
+    const seg = roadFromPoints([[c10.x, c10.z], [c11.x, c11.z]]);
+    for (const x of stones) for (const [cx, cz] of footprintCorners(x)) expect(seg.nearest(cx, cz).d, x.id).toBeGreaterThan(hw);
+  });
+});
+
+describe('the lodge hunters\' posts on the shipped ground', () => {
+  const ids = [1, 2, 3, 4, 5, 6].flatMap((n) => [`npc-post.lodge-hunter-${n}`, `npc-post.lodge-hunter-${n}.out`]);
+  const solids = b.layout.structures.filter((x) => x.mode === 'solid');
+  const e = b.lodge.edge;
+
+  it('stands every lodge hunter post, home and .out, on the ground inside the walls, clear of every solid (no tower tops)', () => {
+    for (const id of ids) {
+      const p = anchor(id);
+      expect(p, id).toBeTruthy();
+      expect(p.onStructure, id).toBeUndefined();
+      expect(p.dy ?? 0, id).toBeLessThanOrEqual(0.5);
+      expect(p.tags ?? [], id).not.toContain('elevated');
+      // Inside the curtain walls, where the gates let a walker in.
+      expect(p.x, id).toBeGreaterThan(e.w + WALL_T / 2);
+      expect(p.x, id).toBeLessThan(e.e - WALL_T / 2);
+      expect(p.z, id).toBeGreaterThan(e.s + WALL_T / 2);
+      expect(p.z, id).toBeLessThan(e.n - WALL_T / 2);
+      for (const sp of solids) expect(pointInFootprint(sp, p.x, p.z, 0.5), `${id} in ${sp.id}`).toBe(false);
+    }
+  });
+
+  it('can walk from the yard to every lodge hunter post over the ground', () => {
+    const yard = anchor('dragonspine.lodge.yard');
+    for (const id of ids) {
+      const p = anchor(id);
+      expect(routeOver(heightAt, { x: yard.x, z: yard.z }, { x: p.x, z: p.z }), id).not.toBeNull();
+    }
   });
 });

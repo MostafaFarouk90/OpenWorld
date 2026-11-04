@@ -31,10 +31,10 @@ export interface FittedLedge extends XZ {
 /**
  * The nearest ground to a wanted spot where a Leap ledge is climbable from a launch point: a launch strip that is level enough,
  * with the top 1.5 to 1.8 m above the launch ground (the Act 1 and Act 2 ledges rule). On a slope the launch point is found on
- * the uphill side, the one direction of eight where the rise comes out in range. `size` is the ledge's built footprint (the whole of it is fitted, not a 6 x 5 core). `dirs` limits the launch directions (indices of the eight compass steps from +X, counter-clockwise). Null when nothing within 60 m fits.
+ * the uphill side, the one direction of eight where the rise comes out in range. `size` is the ledge's built footprint (the whole of it is fitted, not a 6 x 5 core). `dirs` limits the launch directions (indices of the eight compass steps from +X, counter-clockwise). Null when nothing within `radius` m (default 60) fits.
  */
-export function fitLedge(h: HeightFn, want: XZ, dirs: readonly number[] = [0, 1, 2, 3, 4, 5, 6, 7], size: LedgeSize = DEFAULT_SIZE): FittedLedge | null {
-  for (let r = 0; r <= 60; r += 2) {
+export function fitLedge(h: HeightFn, want: XZ, dirs: readonly number[] = [0, 1, 2, 3, 4, 5, 6, 7], size: LedgeSize = DEFAULT_SIZE, radius = 60): FittedLedge | null {
+  for (let r = 0; r <= radius; r += 2) {
     for (let k = 0; k < Math.max(1, r * 2); k++) {
       const ang = (k / Math.max(1, r * 2)) * Math.PI * 2;
       const x = Math.round(want.x + Math.cos(ang) * r);

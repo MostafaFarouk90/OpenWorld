@@ -6,7 +6,7 @@ import { Containment } from '../region/containment';
 import { ACT3_CORRIDORS, ACT3_HOLES } from '../region/act3Containment';
 import { SUMMIT_BOX, areaAt } from '../region/areas';
 import { heightAt } from '../terrain/heightfield';
-import { CAVE_AREA, COLLAPSED_CAVE_ID, DRAGONSPINE_DOOR_LOCKS, DRAGONSPINE_FLAG_BLOCKERS, DRAGONSPINE_INTERIORS, ROCKFALL_BLOCKER_ID, WYRMWATCH_HALL_ID } from './interiors';
+import { CAVE_AREA, COLLAPSED_CAVE_ID, DRAGONSPINE_DOOR_LOCKS, DRAGONSPINE_FLAG_BLOCKERS, DRAGONSPINE_INTERIORS, FROSTFANG_KEEP_ID, KEEP_AREA, ROCKFALL_BLOCKER_ID, WYRMWATCH_HALL_ID } from './interiors';
 import { padFromRecord } from './inputs';
 import { buildDragonspine } from './layout';
 import { buildDragonspineInteriors } from './interiors';
@@ -20,10 +20,10 @@ const cave = DRAGONSPINE_INTERIORS.find((d) => d.id === COLLAPSED_CAVE_ID)!;
 describe('the Dragonspine interiors', () => {
   it('are registered through the Act 3 index and the interiors plugin\'s list', () => {
     // K3's interiors share the index: ours are in it, whatever else is.
-    expect(DRAGONSPINE_INTERIORS.map((d) => d.id)).toEqual([WYRMWATCH_HALL_ID, COLLAPSED_CAVE_ID]);
+    expect(DRAGONSPINE_INTERIORS.map((d) => d.id)).toEqual([WYRMWATCH_HALL_ID, COLLAPSED_CAVE_ID, FROSTFANG_KEEP_ID]);
     for (const d of DRAGONSPINE_INTERIORS) expect(ACT3_INTERIORS).toContain(d);
     for (const d of ACT3_INTERIORS) expect(ALL_INTERIORS).toContain(d);
-    expect(ACT3_DOOR_LOCKS).toMatchObject({ 'collapsed-cave': 'story.r16.started' });
+    expect(ACT3_DOOR_LOCKS).toMatchObject({ 'collapsed-cave': 'story.r16.started', 'frostfang-keep': 'story.d06.started' });
     expect(DRAGONSPINE_DOOR_LOCKS['wyrmwatch-hall']).toBeUndefined();
     expect(DRAGONSPINE_FLAG_BLOCKERS).toEqual({ [ROCKFALL_BLOCKER_ID]: 'story.r16.rockfallCleared' });
     expect(ACT3_FLAG_BLOCKERS).toMatchObject(DRAGONSPINE_FLAG_BLOCKERS);
@@ -99,6 +99,26 @@ describe('the Dragonspine interiors', () => {
     }
   });
 
+  it('floats the Frostfang keep inside the summit: every room corner in dragonspine-summit and SUMMIT_BOX, closed before the summit opens and open after', () => {
+    const keep = DRAGONSPINE_INTERIORS.find((d) => d.id === FROSTFANG_KEEP_ID)!;
+    expect(KEEP_AREA).toBe('dragonspine-summit');
+    const open: Record<string, boolean> = { 'story.gate.a3': true, 'story.phase.dragonspineOpen': true };
+    const summit = { ...open, ...Object.fromEntries((ACT3_HOLES[0]!.openWhen as { all: string[] }).all.map((k) => [k, true])) };
+    const corners = keep.rooms.flatMap((r) => [
+      [keep.site.x + r.x0, keep.site.z + r.z0],
+      [keep.site.x + r.x1, keep.site.z + r.z0],
+      [keep.site.x + r.x0, keep.site.z + r.z1],
+      [keep.site.x + r.x1, keep.site.z + r.z1],
+    ]);
+    for (const [x, z] of corners as [number, number][]) {
+      expect(areaAt(x, z)).toBe(KEEP_AREA);
+      expect(x >= SUMMIT_BOX.x0 && x < SUMMIT_BOX.x1 && z >= SUMMIT_BOX.z0 && z < SUMMIT_BOX.z1).toBe(true);
+      expect(z).toBeLessThan(16900);
+      expect(new Containment({ getFlag: (k: string) => summit[k as keyof typeof summit] }, ACT3_CORRIDORS, ACT3_HOLES).isOpen(x, z), `${x},${z}`).toBe(true);
+    }
+    expect(corners.some(([x, z]) => !new Containment({ getFlag: (k: string) => open[k] }, ACT3_CORRIDORS, ACT3_HOLES).isOpen(x!, z!))).toBe(true);
+  });
+
   it('puts every anchor and every exit at least 1.5 m inside a room, and every door anchor in a room', () => {
     for (const d of DRAGONSPINE_INTERIORS) {
       for (const a of d.anchors) {
@@ -145,16 +165,21 @@ describe('the Dragonspine interiors', () => {
     }
   });
 
-  it('puts the three waystones outside every interior and inside the open area once the gate and the phase hold', () => {
+  it('puts the five waystones outside every interior and inside the open area once the gate and the phase hold (the summit\'s two once the summit opens)', () => {
     registerDragonspineKinds()();
     const b = buildDragonspine(stubInputs());
     const flags: Record<string, boolean> = { 'story.gate.a3': true, 'story.phase.dragonspineOpen': true };
+    const summitOpen = Object.fromEntries((ACT3_HOLES[0]!.openWhen as { all: string[] }).all.map((k) => [k, true]));
     const c = new Containment({ getFlag: (k: string) => flags[k] }, ACT3_CORRIDORS, ACT3_HOLES);
+    const cs = new Containment({ getFlag: (k: string) => ({ ...flags, ...summitOpen })[k] }, ACT3_CORRIDORS, ACT3_HOLES);
     const closed = new Containment({ getFlag: (k: string) => ({ 'story.gate.a3': true })[k as 'story.gate.a3'] }, ACT3_CORRIDORS, ACT3_HOLES);
     const stones = b.layout.anchors.filter((a) => a.tags?.includes('waystone'));
-    expect(stones.map((s) => s.id).sort()).toEqual(['waystone.last-anvil', 'waystone.rime-pass', 'waystone.wyrmwatch-lodge']);
+    expect(stones.map((s) => s.id).sort()).toEqual(['waystone.frostfang-aerie', 'waystone.last-anvil', 'waystone.rime-pass', 'waystone.wyrms-hearth', 'waystone.wyrmwatch-lodge']);
     for (const s of stones) {
-      expect(c.isOpen(s.x, s.z), s.id).toBe(true);
+      const summit = s.id === 'waystone.frostfang-aerie' || s.id === 'waystone.wyrms-hearth';
+      expect(summit ? areaAt(s.x, s.z) : 'lower', s.id).toBe(summit ? 'dragonspine-summit' : 'lower');
+      expect((summit ? cs : c).isOpen(s.x, s.z), s.id).toBe(true);
+      if (summit) expect(c.isOpen(s.x, s.z), `${s.id} closed until the summit opens`).toBe(false);
       expect(closed.isOpen(s.x, s.z), `${s.id} closed in Phase E`).toBe(false);
       for (const d of ALL_INTERIORS) {
         const inside = d.rooms.some((r) => s.x >= d.site.x + r.x0 - 1 && s.x <= d.site.x + r.x1 + 1 && s.z >= d.site.z + r.z0 - 1 && s.z <= d.site.z + r.z1 + 1);
