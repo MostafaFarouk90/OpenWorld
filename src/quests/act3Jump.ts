@@ -14,6 +14,8 @@
 // it are lit, so the second block's lock sees the first block's Warmth (design 5.9). `order` defaults to `greyfen`.
 import { ACT1_CAMP_SEEN_FLAG, ACT1_CARD_SEEN_FLAG, ACT1_CARD_SEEN_FLAG_V06, ACT1_GATE_FLAG } from '../integration/act1Ending';
 import { actEnding } from '../integration/actEndings';
+import { applyEraKit, wantsEraKit, type EraKitPorts } from './act3EraKit';
+import { PEAKS_CARD_SEEN_FLAG } from '../integration/phaseECard';
 import { ACT3_BLOCKS, type Act3BlockId } from '../enemies/level';
 import { ACT1_PREREQS, completeAct1Quest, type Act1JumpPorts } from './act1Jump';
 import { ACT2_JUMP_CLASSES, completeAct2Quest } from './act2Jump';
@@ -89,6 +91,48 @@ export const ACT3_SHRINE_AFTER: Readonly<Record<string, string>> = {
   m34: 'shrine.wyrms-hearth.lit',
 };
 
+/**
+ * The waystones a prerequisite lights in real play (plan 3.5 and 2.1 to 2.3): the stone at the place the quest first takes the
+ * player. Each block's arrival stone (Reedgate, Wyrmwatch Lodge) is lit by `act3JumpWaystones` instead.
+ */
+export const ACT3_WAYSTONE_AFTER: Readonly<Record<string, string>> = {
+  m25: 'mireweather-hut', // Gytha's hut
+  r14: 'greywatch', // the Greywatch posts
+  m26: 'hathrens-mere', // the rite at the shrine
+  m29: 'rime-pass', // Eadgyth's shelter
+  m30: 'last-anvil', // the anvil sounded, the shrine lit
+  m31: 'wyrms-hearth', // the trial at the roost
+  d06: 'frostfang-aerie', // attuned on arrival
+};
+
+/** The arrival stone of each block (plan 3.5): where the player walks in, and where the jump places them. */
+export const ACT3_ARRIVAL_WAYSTONE: Readonly<Record<Act3BlockOf, string>> = {
+  greyfen: 'reedgate',
+  spine: 'wyrmwatch-lodge',
+  summit: 'wyrmwatch-lodge',
+};
+
+/**
+ * The waystones a player arriving at `id` in `order` already has, in the order the jump lights them: the arrival stone of
+ * every block a prerequisite is in, then each stone a prerequisite reached, and the target block's arrival stone last, so
+ * the respawn point (the last stone lit) is where the jump places the player.
+ */
+export function act3JumpWaystones(id: string, order: Act3Order): string[] {
+  const target = blockOf(id);
+  if (!target) return [];
+  const prereqs = act3Prereqs(id, order);
+  const out: string[] = [];
+  const add = (w: string | undefined) => {
+    if (w && !out.includes(w)) out.push(w);
+  };
+  for (const q of prereqs) {
+    add(ACT3_ARRIVAL_WAYSTONE[blockOf(q)!]);
+    add(ACT3_WAYSTONE_AFTER[q]);
+  }
+  const arrival = ACT3_ARRIVAL_WAYSTONE[target];
+  return [...out.filter((w) => w !== arrival), arrival];
+}
+
 /** The block a lock quest locks (Q5, design 5.9). */
 const LOCK_OF: Readonly<Record<string, Act3BlockId>> = Object.fromEntries(
   (Object.keys(ACT3_BLOCKS) as Act3BlockId[]).map((b) => [ACT3_BLOCKS[b].lockQuest, b]),
@@ -136,6 +180,8 @@ export interface Act3JumpPorts extends Act1JumpPorts {
   /** Raises the player's XP to `total` when below it (never lowers it); absent when no progression service. */
   topUpXp?(total: number): void;
   closeDialogue?(): boolean;
+  /** K16 era kit: the inventory, skills, party and Anvil ports `applyEraKit` runs on; absent in bare tests. */
+  eraKit?(): EraKitPorts | undefined;
 }
 
 export type Act3Phase = 'waiting' | 'tutorial' | 'act1' | 'act2' | 'act3' | 'quiet' | 'place' | 'done';
@@ -198,7 +244,19 @@ export class Act3Jump {
       this.phase = 'act3';
     }
     if (this.phase === 'act3') {
-      for (const q of ACT3_PREREQS[this.order][this.id] ?? []) this.inject(q);
+      const prereqs = ACT3_PREREQS[this.order][this.id] ?? [];
+      // K16: an injected D05 would raise the "peaks are next" card over the arriving player; a real play saw it already.
+      if (prereqs.includes('d05')) p.setFlag(PEAKS_CARD_SEEN_FLAG, true);
+      for (const q of prereqs) this.inject(q);
+      // The stones a player at this point already has (after the injected shrines, so a shrine's stone is open), the
+      // target block's arrival stone last: a first death respawns there, not in the last act's town.
+      for (const w of act3JumpWaystones(this.id, this.order)) p.rekindle(w);
+      // K16: Dragonspine and summit targets arrive with the era's kit (after the injection, so quest rewards count).
+      const block = blockOf(this.id);
+      if (wantsEraKit(block)) {
+        const kit = p.eraKit?.();
+        if (kit) applyEraKit(kit, this.classId, block);
+      }
       // The target's own lock happens when the player accepts it (K9); the jump leaves it offerable.
       this.phase = 'quiet';
     }

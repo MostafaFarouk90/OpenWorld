@@ -14,6 +14,9 @@ export const INTERIOR_STRINGS_EN: Record<string, string> = {
   'interior.enter.underways': '{key} Climb down into the Underways',
   'interior.exit.underways': '{key} Climb up to the street',
   'interior.m09.invoice': '{key} Copy the invoice',
+  'interior.j11.grate.open': '{key} Unlock the grate',
+  'interior.j11.grate.shut': '{key} Try the grate',
+  'interior.j11.grate.refused': 'The grate is shut. It wants a Sewer Master Key.',
   'interior.refused.aggro': 'You cannot go while enemies are on you',
   'interior.refused.locked': 'The way is barred',
 };

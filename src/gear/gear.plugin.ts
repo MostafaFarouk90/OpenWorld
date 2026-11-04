@@ -26,6 +26,11 @@ export interface GearService {
   /** Opens the screen in anvil mode; false while m14 is neither active nor completed. */
   openAnvil(): boolean;
   forge(itemId: string): ForgeResult | null;
+  /**
+   * K16 (additive): records that a piece of `tier` has been tempered at the Hushed Anvil, as a real temper there does, so
+   * a smith tempers that tier without "Anvil first". For dev jumps that arrive later in the story; tiers 1 to 5 only.
+   */
+  markAnvilTier?(tier: number): void;
 }
 
 declare module '../core/Services' {
@@ -139,6 +144,9 @@ const gearPlugin: GamePlugin = {
         session.forge(itemId);
         const r = session.view().lastResult;
         return r?.ok && r.forged ? { ok: true, from: itemId, to: r.forged } : { ok: false, reason: (r?.reason as never) ?? 'locked' };
+      },
+      markAnvilTier(tier) {
+        if (Number.isInteger(tier) && tier >= 1 && tier <= 5 && !state.anvilTiers.includes(tier)) state.anvilTiers.push(tier);
       },
     };
     ctx.services.provide('gear', service);

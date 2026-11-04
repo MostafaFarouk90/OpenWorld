@@ -324,6 +324,28 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | spawn.m10.ambush-2 | 8610 | 2484 | 0 | 0 | spawn |
 | spawn.d02.stray-1 | 8345 | 1390 | 0 | 0 | spawn |
 | spawn.d02.stray-2 | 8352 | 1394 | 0 | 0 | spawn |
+| j05.notice | 8342 | 1299 | 0 | 0 | quest, interact |
+| j06.notice | 8346 | 1299 | 0 | 0 | quest, interact |
+| j07.notice | 8350 | 1299 | 0 | 0 | quest, interact |
+| npc-post.sergeant | 8346 | 1304.5 | 0 | 0 | npc-post |
+| j05.search-1 | 8725 | 1520 | 0 | 180 | quest, poi |
+| j05.search-2 | 8700 | 1600 | 0 | 180 | quest, poi |
+| j05.search-3 | 8850 | 1554 | 0 | 180 | quest, poi |
+| npc-post.crumb.wait | 8856 | 1560 | 0 | 90 | npc-post |
+| npc-post.crumb.home | 8761 | 1526 | 0 | 270 | npc-post |
+| j06.crate | 7973 | 1522 | 0 | 270 | quest, carry |
+| npc-post.chandler | 8474 | 2138 | 0 | 90 | npc-post |
+| j07.candles | 8468 | 2136 | 0 | 90 | quest, interact |
+| j07.niche-1 | 8350 | 2133 | 0 | 270 | quest, interact |
+| j07.niche-2 | 8350 | 2145 | 0 | 270 | quest, interact |
+| j07.niche-3 | 8350 | 2167 | 0 | 270 | quest, interact |
+| j08.lane-1 | 8440 | 1440 | 0 | 180 | quest, poi |
+| j08.lane-2 | 8231 | 1521 | 0 | 180 | quest, poi |
+| j08.lane-3 | 8241 | 1626 | 0 | 180 | quest, poi |
+| j08.lane-4 | 8151 | 1601 | 0 | 180 | quest, poi |
+| spawn.j08.cutpurse-1 | 8108 | 1606 | 0 | 270 | spawn |
+| spawn.j08.cutpurse-2 | 8112 | 1612 | 0 | 270 | spawn |
+| j10.fire-ring | 8240 | 1668 | 0 | 270 | quest, interact |
 
 ## Triggers
 
@@ -339,6 +361,14 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | trg.harrowmark.bastion-yard | box | 8200 | 1735 | half 70 x 6 x 55 |
 | trg.harrowmark.anvil-sign | sphere | 8204 | 1645 | r 7 |
 | trg.harrowmark.m10-ride | sphere | 8500 | 1282 | r 9 |
+| j05.search-1 | sphere | 8725 | 1520 | r 4 |
+| j05.search-2 | sphere | 8700 | 1600 | r 4 |
+| j05.search-3 | sphere | 8850 | 1554 | r 4 |
+| j06.forge | sphere | 8174 | 1510 | r 3 |
+| j08.lane-1 | sphere | 8440 | 1440 | r 4 |
+| j08.lane-2 | sphere | 8231 | 1521 | r 4 |
+| j08.lane-3 | sphere | 8241 | 1626 | r 4 |
+| j08.lane-4 | sphere | 8151 | 1601 | r 4 |
 
 ## Structures
 

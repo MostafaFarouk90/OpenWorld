@@ -73,7 +73,9 @@ describe('Townsfolk', () => {
     const loader = fakeLoader();
     const { scene, t } = make({ loader });
     await flush();
-    expect(loader.loads.length).toBe(t.count);
+    // every figure wears a generated body (townsfolkBodies.ts) and loads Knight.glb with it for the clips
+    expect(loader.loads.filter((id) => id.startsWith('town-')).length).toBe(t.count);
+    expect(loader.loads.filter((id) => id === 'knight').length).toBe(t.count);
     expect(() => t.update(0.2)).not.toThrow();
     t.dispose();
     expect(roots(scene).length).toBe(0);

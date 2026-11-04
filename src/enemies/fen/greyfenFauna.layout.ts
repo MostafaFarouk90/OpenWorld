@@ -2,13 +2,14 @@
 // Anchors only: one per group member, in a small ring around the group's centre, each centre an offset from a named site.
 // Plain data; GREYFEN_FAUNA_ANCHORS.md is generated from it by tools/gen-region-docs.ts (drift-tested).
 import type { AnchorSpec, LayoutData } from '../../region/layoutTypes';
+import { HATHRENS_MERE } from '../../terrain/shape/greyfen';
+import { a3Placed } from '../../world/poi/act3/place';
 
 export const GREYFEN_FAUNA_DOC = { title: 'Greyfen ambient spawn anchors (K6b)', source: 'enemies/fen/greyfenFauna.layout.ts' } as const;
 
 /**
- * The Greyfen sites the fauna is placed from (engine metres). **Provisional:** these are the plan's Part 3.5 positions and
- * K6b's points of interest; when K1 publishes `ACT3_PLATEAUS` and K2 its POI anchors, `greyfenSite` reads them instead and
- * only this table changes. Nothing else in K6b names a position.
+ * The Greyfen sites the fauna is placed from (engine metres). **Provisional:** these are the plan's Part 3.5 positions; the
+ * four points of interest read K2's anchors (K2_SITES below). Nothing else in K6b names a position.
  */
 const SITES = {
   reedgate: [3200, 10200],
@@ -25,23 +26,35 @@ const SITES = {
   spineEdge: [6500, 12800],
   /** Where the Fen Road enters the fen box (the Greyfen-first approach). */
   fenRoadCorner: [6300, 9400],
-  // K6b's points of interest, until K2's templates publish theirs.
-  reedIsland: [1500, 12900],
-  peatCutting: [4200, 11000],
-  stiltCamp: [1800, 11200],
-  drownedChurch: [1000, 14800],
+  // The two groups that stood off K6b's provisional POI sites keep their ground (K2 moved the POIs themselves).
+  westFen: [600, 11500],
+  churchBog: [700, 14200],
 } as const satisfies Record<string, readonly [number, number]>;
 
-export type GreyfenSiteId = keyof typeof SITES;
+/** K2's points of interest (src/world/poi/act3): each group stands at the site's `fauna` anchor. */
+const K2_SITES = {
+  reedIsland: 'reed-island',
+  peatCutting: 'peat-cutting',
+  stiltCamp: 'stilt-camp',
+  drownedChurch: 'drowned-church',
+} as const;
+
+export type GreyfenSiteId = keyof typeof SITES | keyof typeof K2_SITES;
 
 /** A Greyfen site's position (engine metres). */
 export function greyfenSite(id: GreyfenSiteId): { x: number; z: number } {
-  const [x, z] = SITES[id];
+  if (id in K2_SITES) {
+    const k2 = K2_SITES[id as keyof typeof K2_SITES];
+    const a = a3Placed(k2).layout.anchors.find((x) => x.id.endsWith('.fauna'));
+    if (!a) throw new Error(`greyfen fauna: K2 site "${k2}" has no fauna anchor`);
+    return { x: a.x, z: a.z };
+  }
+  const [x, z] = SITES[id as keyof typeof SITES];
   return { x, z };
 }
 
-/** The Mere's deep water (not swimmable, plan 3.5): no ambient group stands inside it. */
-export const MERE_DEEP_RADIUS = 400;
+/** The Mere's deep water (not swimmable, plan 3.5; K1's HATHRENS_MERE.radius): no ambient group stands inside it. */
+export const MERE_DEEP_RADIUS = HATHRENS_MERE.radius;
 
 /** The quest sites ambient groups keep 150 m from (K3's quest-only spawns are at these; refined when K3's sites.ts lands). */
 export const QUEST_SITES: readonly GreyfenSiteId[] = [
@@ -78,14 +91,14 @@ export const GREYFEN_FAUNA_GROUPS: readonly FaunaGroup[] = [
   { id: 'leech.greywatch-causeway', kind: 'leech', site: 'greywatch2', dx: 600, dz: 100, count: 3 },
   { id: 'leech.mireweather-causeway', kind: 'leech', site: 'mireweather', dx: -1300, dz: 100, count: 3 },
   { id: 'leech.reed-island', kind: 'leech', site: 'reedIsland', dx: 0, dz: 0, count: 3 },
-  { id: 'leech.west-fen', kind: 'leech', site: 'stiltCamp', dx: -1200, dz: 300, count: 3 },
+  { id: 'leech.west-fen', kind: 'leech', site: 'westFen', dx: 0, dz: 0, count: 3 },
   { id: 'leech.north-east-reeds', kind: 'leech', site: 'mireweather', dx: -700, dz: 1100, count: 3 },
   // Shambler bogs (each registers its own peat patch).
   { id: 'shambler.peat-cutting', kind: 'shambler', site: 'peatCutting', dx: 0, dz: 0, count: 1 },
   { id: 'shambler.mere-east-a', kind: 'shambler', site: 'mere', dx: 900, dz: 400, count: 1 },
   { id: 'shambler.mere-east-b', kind: 'shambler', site: 'mere', dx: 700, dz: -700, count: 1 },
   { id: 'shambler.mireweather-north', kind: 'shambler', site: 'mireweather', dx: 0, dz: 800, count: 1 },
-  { id: 'shambler.church-bog', kind: 'shambler', site: 'drownedChurch', dx: -300, dz: -600, count: 1 },
+  { id: 'shambler.church-bog', kind: 'shambler', site: 'churchBog', dx: 0, dz: 0, count: 1 },
   // Hunter camps: three spearmen and a harpooner (the pack leader).
   { id: 'hunters.stilt-camp', kind: 'hunters', site: 'stiltCamp', dx: 0, dz: 0, count: 4 },
   { id: 'hunters.north-reeds', kind: 'hunters', site: 'greywatch4', dx: -500, dz: -400, count: 4 },

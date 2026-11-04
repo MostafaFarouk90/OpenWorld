@@ -110,7 +110,7 @@ describe('ledge and foundation rules', () => {
       expect(s.height).toBeLessThanOrEqual(LEDGE_MAX_HEIGHT);
       expect(Math.min(...s.footprint)).toBeGreaterThanOrEqual(LEDGE_MIN_DEPTH);
     }
-    expect(BRIGHTWATER_LAYOUT.structures.filter((x) => x.role === 'ledge')).toHaveLength(2);
+    expect(BRIGHTWATER_LAYOUT.structures.filter((x) => x.role === 'ledge')).toHaveLength(3); // the chapel, the reed island and j03's bluff
   });
 
   it('rejects a ledge a plain jump could reach (1.3 m)', () => {
