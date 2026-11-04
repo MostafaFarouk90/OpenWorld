@@ -15,7 +15,7 @@ export const CITY_NAV_BLOCKS: readonly CityNavBlock[] = [
   // The market ring, the stalls, the thieves' alley and the guildhall's south front.
   { id: 'guild-quarter', rect: { x0: 8705, z0: 1465, x1: 9065, z1: 1590 } },
   { id: 'forge-row', rect: { x0: 8080, z0: 1460, x1: 8300, z1: 1590 } },
-  // From the Tilted Anvil's back wall to the Bastion hall's front (the yard fence has no collider).
+  // From the Tilted Anvil's back wall to the Bastion hall's front (the yard fence is an env collider run: its boxes arrive as `extraObstacles`).
   { id: 'bastion-yard', rect: { x0: 8120, z0: 1686, x1: 8290, z1: 1795 } },
   // Inside the ring wall: the gate passage and the portcullis stay outside the grid, so its state never matters here.
   { id: 'south-gate', rect: { x0: 8410, z0: 1256, x1: 8590, z1: 1400 } },
@@ -82,6 +82,8 @@ export function blockGridDef(
   structures: readonly StructureSpec[],
   heightAt: (x: number, z: number) => number,
   ring: { cx: number; cz: number; r: number } = CITY_RING,
+  /** Extra blocked rects already padded like a footprint (the env colliders: fence and wall runs, carts, hearths); only those touching the block are kept. */
+  extraObstacles: readonly NavOrientedRect[] = [],
 ): BlockGridResult {
   const { rect } = block;
   const cells = Math.ceil((rect.x1 - rect.x0) / CITY_NAV_CELL) * Math.ceil((rect.z1 - rect.z0) / CITY_NAV_CELL);
@@ -105,7 +107,7 @@ export function blockGridDef(
   if (!(max - min <= MAX_BLOCK_GROUND_SPREAD)) {
     return { skipped: `ground varies ${(max - min).toFixed(2)} m (over ${MAX_BLOCK_GROUND_SPREAD} m)` };
   }
-  const blockedOriented = structures.filter(blocksStreet).map((s) => footprintRect(s)).filter((o) => overlaps(o, rect));
+  const blockedOriented = [...structures.filter(blocksStreet).map((s) => footprintRect(s)), ...extraObstacles].filter((o) => overlaps(o, rect));
   return {
     def: {
       id: `city.${block.id}`,

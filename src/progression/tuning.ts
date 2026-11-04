@@ -55,6 +55,12 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   scarecrow: 0,
 };
 
+/**
+ * Spawn tags whose kills and spared foes pay no XP at all (sparring, where the job's own reward is the pay): the Act 1 side
+ * job j09's yard bouts and the repeat bout Stane offers after it (plans/act1-side-content.md). Read by Progression.onKill and onMercy.
+ */
+export const NO_KILL_XP_TAGS: readonly string[] = ['j09.b1', 'j09.b2', 'j09.b3', 'j09.repeat'];
+
 /** Levels at which one skill point is granted: 2..14, then every third level from 17 to 38. */
 export const POINT_LEVELS: readonly number[] = [
   2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 17, 20, 23, 26, 29, 32, 35, 38,

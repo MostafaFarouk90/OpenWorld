@@ -888,6 +888,8 @@
           "story.r16.complete": true,
           "story.r17.complete": true,
           "story.r18.complete": true,
+          "story.side.boardOpen": true,
+          "story.side.kettlewickOpen": true,
           "tutorial.complete": true,
           "tutorial.heartshard-awakened": true,
           "tutorial.skipped": true,

@@ -2,7 +2,7 @@
 // cloak and lute, Hrolf's axe and beard), and a mixer that blends Idle, Walking_A and Running_A by gait. A5 adds a
 // one-shot attack and a held kneel for the companions who fight or fall.
 import * as THREE from 'three';
-import { buildPlaceholder, disposePlaceholder, prepareNpcModel } from '../npcs/npcModels';
+import { buildPlaceholder, disposePlaceholder, prepareNpcModel, withTownsfolkClips } from '../npcs/npcModels';
 import type { NpcDef, NpcModelLoader } from '../npcs/types';
 import type { Gait } from './FollowModel';
 import { applyTobbCloak, buildLute, disposeLute } from './tobbLook';
@@ -66,8 +66,9 @@ export class CompanionFigure {
   }
 
   /** Never rejects; a failure keeps the placeholder. */
-  async load(loader: NpcModelLoader | null | undefined, warn: (m: string) => void = console.warn): Promise<void> {
-    if (!loader || this.disposed) return;
+  async load(given: NpcModelLoader | null | undefined, warn: (m: string) => void = console.warn): Promise<void> {
+    if (!given || this.disposed) return;
+    const loader = withTownsfolkClips(given);
     try {
       await loader.load(this.def.model);
       if (this.disposed) return;

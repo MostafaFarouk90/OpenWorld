@@ -32,7 +32,8 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 page.on('crash', () => console.log('PAGE CRASHED'));
 if (process.env.CONSOLE) page.on('console', (m) => console.log('console:', m.text().slice(0, 200)));
-await page.goto(`${base}?tutorial=veteran&quality=medium`);
+// QUALITY=low|medium|high picks the quality step (default medium); QUERY=env=off adds more query parameters.
+await page.goto(`${base}?tutorial=veteran&quality=${process.env.QUALITY ?? 'medium'}${process.env.QUERY ? `&${process.env.QUERY}` : ''}`);
 await page.waitForFunction(() => window.__game?.game?.ctx, null, { timeout: 180000 });
 // SETTLE_MS=600000 lengthens the settle wait on a loaded machine (default 120 s).
 await page.evaluate((ms) => { window.__settleMs = ms; }, Number(process.env.SETTLE_MS) || 0);
@@ -113,7 +114,23 @@ for (const [name, c] of Object.entries(table.cameras)) {
   if (!result) throw new Error(`shot ${name} never settled`);
   if (result === 'focus') console.log(`warning: ${name}: the Knight could not stand at the camera; culling follows the camera and the meadow blades are missing`);
   await page.screenshot({ path: path.join(outDir, `${kind}-${name}.png`), timeout: 300000 });
-  console.log('shot', `${kind}-${name}`);
+  // TWIN=1 takes a second frame about 3 seconds of game time later (`-twin.png`), so the flicker can be compared between the two.
+  if (process.env.TWIN) {
+    await page.evaluate(async () => {
+      const t0 = window.__game.game.ctx.clock.seconds;
+      while (window.__game.game.ctx.clock.seconds - t0 < 3) await new Promise((r) => requestAnimationFrame(r));
+    });
+    await page.screenshot({ path: path.join(outDir, `${kind}-${name}-twin.png`), timeout: 300000 });
+  }
+  // STRIP=n takes n more frames 0.3 s of game time apart (`-s1.png` ...), to show the flicker as a strip of crops.
+  for (let i = 1; i <= (Number(process.env.STRIP) || 0); i++) {
+    await page.evaluate(async () => {
+      const t0 = window.__game.game.ctx.clock.seconds;
+      while (window.__game.game.ctx.clock.seconds - t0 < 0.3) await new Promise((r) => requestAnimationFrame(r));
+    });
+    await page.screenshot({ path: path.join(outDir, `${kind}-${name}-s${i}.png`), timeout: 300000 });
+  }
+  console.log('shot', `${kind}-${name}`, JSON.stringify(await page.evaluate(() => window.__game.game.ctx.services.get('env')?.glow?.() ?? null)));
 }
 }
 await browser.close();

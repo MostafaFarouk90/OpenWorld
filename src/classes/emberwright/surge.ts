@@ -22,7 +22,7 @@ export function emberwrightSurgeForm(zone: BurnZone, runtime: EmberwrightRuntime
     for (const hit of actorsInRadius(c.host.actors, c.feet, c.radius, { team: 'hostile', alive: true })) {
       const dx = hit.position.x - c.feet.x, dz = hit.position.z - c.feet.z;
       const len = Math.hypot(dx, dz);
-      const dir = len < 1e-6 ? new THREE.Vector3(Math.sin(c.facingYaw), 0, Math.cos(c.facingYaw)) : new THREE.Vector3(dx / len, 0, dz / len);
+      const dir = len < 1e-6 ? new THREE.Vector3(-Math.sin(c.facingYaw), 0, -Math.cos(c.facingYaw)) : new THREE.Vector3(dx / len, 0, dz / len);
       c.damage.apply({
         attackerId: c.casterId, targetId: hit.actor.id, amount: spellDamage(SURGE.damage), poise: c.poise, kind: 'spell',
         attackId: SURGE.spellId, point: new THREE.Vector3(hit.position.x, hit.position.y, hit.position.z), direction: dir,

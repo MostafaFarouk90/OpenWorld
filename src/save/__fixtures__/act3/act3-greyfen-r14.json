@@ -774,6 +774,8 @@
           "story.r11.complete": true,
           "story.r11.denSeen": true,
           "story.r11.started": true,
+          "story.side.boardOpen": true,
+          "story.side.kettlewickOpen": true,
           "tutorial.complete": true,
           "tutorial.heartshard-awakened": true,
           "tutorial.skipped": true,

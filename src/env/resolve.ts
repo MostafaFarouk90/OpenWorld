@@ -1,5 +1,5 @@
 // Which model draws an environment placement id. Order (Mostafa, 2026-10-22: use what exists in the object grids, placeholders only
-// where nothing matches): a runtime copy under public/assets/env, then a variant of one (tinted or rescaled), then a KayKit model
+// where nothing matches): a runtime copy under public/assets/env, then a scripted stand-in glb (public/assets/env-standin), then a variant of one (tinted or rescaled), then a KayKit model
 // from the imported packs, then a scripted placeholder. A later glb dropped under the same id replaces the placeholder or the
 // variant without touching a single placement.
 import manifest from '../../public/assets/env/manifest.json';
@@ -148,6 +148,15 @@ const SHAPES: ReadonlyArray<[RegExp, PlaceholderShape]> = [
 
 const ENV_IDS: ReadonlySet<string> = new Set(Object.keys(manifest.objects));
 
+/**
+ * Ids that have no artist glb yet but ship a scripted one in public/assets/env-standin (tools/env-pass/standins/gen-standins.ts), kept
+ * out of the manifest on purpose: a real glb dropped into public/assets/env makes the id an ENV_IDS member and wins, and the
+ * prompt list (docs/env/environment-needs-prompts.md) keeps asking for the real model. They sit between the runtime copies and the
+ * variants; if the file fails to load, `resolveStandIn` still gives the old tinted variant or KayKit line.
+ */
+export const STANDINS: ReadonlySet<string> = new Set(['slag-heap', 'ore-pile', 'mine-cart', 'smelter-chimney']);
+export const STANDIN_PREFIX = 'env-standin/';
+
 /** Colour of a tree, bush or clump on the grey east edge: drained toward ash, a little darker. Applies to ids with the suffix `-ashen`. */
 export const ASHEN: Tint = { sat: 0.15, mul: 0x8f8b85 };
 
@@ -170,6 +179,7 @@ function resolve(id: string, own: boolean): ModelRef {
     return { ...base, tint: { hue: t?.hue, sat: Math.min(t?.sat ?? 1, ASHEN.sat!), mul } };
   }
   if (own && ENV_IDS.has(id)) return { source: 'env', model: `env/${id}`, scale: 1 };
+  if (own && STANDINS.has(id)) return { source: 'env', model: `${STANDIN_PREFIX}${id}`, scale: 1 };
   const v = VARIANTS[id];
   if (v && ENV_IDS.has(v.base)) return { source: 'env', model: `env/${v.base}`, scale: v.scale, tint: v.tint, ...(v.stretchY ? { stretchY: v.stretchY } : {}), girth: v.girth };
   const k = KAYKIT[id] ?? (SWAP_FIT[`hex/${id}`] ? { model: `hex/${id}` } : SWAP_FIT[`hal/${id}`] ? { model: `hal/${id}` } : undefined);

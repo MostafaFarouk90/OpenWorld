@@ -7,6 +7,8 @@ import { Act3SfxRouter } from './act3SfxRouter';
 import { samplesToWavUrl } from './proceduralSounds';
 import '../companions/events';
 import './act3SfxEvents';
+import '../enemies/wyrm/hathren/events';
+import '../enemies/wyrm/drake/events';
 
 /** How long a `trial.ended` waits before the trial mix is dropped, so a restart (M31) that follows at once keeps it. */
 export const TRIAL_RELEASE_MS = 1000;
