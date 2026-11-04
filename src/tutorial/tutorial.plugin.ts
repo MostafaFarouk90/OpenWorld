@@ -592,6 +592,8 @@ const tutorial: GamePlugin = {
       questState: (id) => ctx.services.get('quests')?.state(id) ?? 'inactive',
       flag: flagOn,
       quality: () => ctx.services.get('quality')?.step ?? 'medium',
+      // The env plugin's pooled fire light (one slot of its glow pool); absent with ?env=off or when env failed, and the fires then burn light-less as before.
+      lights: ctx.services.get('env')?.fireLights,
     });
     const dressing = crisis;
     const refreshCrisis = () => {

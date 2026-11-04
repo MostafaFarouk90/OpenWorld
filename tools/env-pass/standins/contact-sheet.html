@@ -1,0 +1,95 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Stand-in contact sheet</title>
+<style>html,body{margin:0;background:#8a9aa6}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+// Offline contact sheet (no game): each stand-in glb on lawn, next to a 1.8 m reference figure, from a close three-quarter view and from
+// an eye-level view at 8 m. ?dir=/public/assets/env-standin/ ?ids=a,b ?w=1600&h=1200. Sets window.__done when drawn.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const q = new URLSearchParams(location.search);
+const dir = q.get('dir') ?? '/public/assets/env-standin/';
+const ids = (q.get('ids') ?? 'slag-heap,ore-pile,mine-cart,smelter-chimney').split(',');
+const W = +(q.get('w') ?? 1600), H = +(q.get('h') ?? 1200);
+const COLS = 4;
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+r.setSize(W, H);
+r.shadowMap.enabled = true;
+document.body.appendChild(r.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9fb4c4);
+scene.add(new THREE.HemisphereLight(0xdfe9f2, 0x6b7a4a, 1.5));
+const sun = new THREE.DirectionalLight(0xfff0d8, 2.6);
+sun.position.set(-8, 14, 10);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 40 });
+scene.add(sun);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshLambertMaterial({ color: 0x6f8f4a }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+const loader = new GLTFLoader();
+const load = (id) => loader.loadAsync(dir + id + '.glb').then((g) => g.scene);
+const figure = () => {
+  const g = new THREE.Group();
+  const m = new THREE.MeshLambertMaterial({ color: 0x3f5f8a });
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.28, 1.45, 10), m);
+  body.position.y = 0.72;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), new THREE.MeshLambertMaterial({ color: 0xd9b48f }));
+  head.position.y = 1.62;
+  g.add(body, head);
+  g.traverse((o) => (o.castShadow = true));
+  return g;
+};
+const sx = (i) => (i % COLS) * (W / COLS);
+const rows = 3;
+// Row 0: close three-quarter (camera distance scaled to the object). Row 1: eye level at 8 m, figure beside it. Row 2: eye level at 18 m.
+const objs = [];
+for (const id of ids) objs.push({ id, obj: await load(id) });
+const boxes = objs.map((o) => new THREE.Box3().setFromObject(o.obj));
+r.setScissorTest(true);
+r.autoClear = false;
+// A scene per cell: the objects stay in place on a lawn, only cameras change.
+const place = new THREE.Group();
+scene.clear();
+scene.add(new THREE.HemisphereLight(0xdfe9f2, 0x6b7a4a, 1.5), sun, ground, place);
+const fig = figure();
+objs.forEach((o, i) => {
+  o.obj.traverse((c) => { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+  o.obj.position.set(i * 30, 0, 0);
+  place.add(o.obj);
+});
+sun.target.position.set(0, 0, 0);
+for (let row = 0; row < rows; row++) {
+  objs.forEach((o, i) => {
+    const b = boxes[i];
+    const size = b.getSize(new THREE.Vector3());
+    const cx = i * 30;
+    sun.position.set(cx - 8, 14, 10);
+    sun.target.position.set(cx, 0, 0);
+    sun.target.updateMatrixWorld();
+    scene.add(sun.target);
+    fig.position.set(cx - size.x / 2 - 0.8, 0, 0.4);
+    place.add(fig);
+    const cam = new THREE.PerspectiveCamera(row === 0 ? 38 : 50, (W / COLS) / (H / rows), 0.1, 400);
+    if (row === 0) {
+      const d = Math.max(size.x, size.z, size.y) * 1.9 + 2;
+      cam.position.set(cx + d * 0.7, size.y * 0.5 + d * 0.28, d * 0.75);
+      cam.lookAt(cx, size.y * 0.42, 0);
+    } else if (row === 2) {
+      cam.position.set(cx + 8, 1.7, 17);
+      cam.lookAt(cx, Math.min(size.y * 0.4, 2.5), 0);
+    } else {
+      cam.position.set(cx + 4.5, 1.7, 8);
+      cam.lookAt(cx, Math.min(size.y * 0.4, 1.2), 0);
+    }
+    const x = sx(i), y = H - (row + 1) * (H / rows);
+    r.setViewport(x, y, W / COLS, H / rows);
+    r.setScissor(x, y, W / COLS, H / rows);
+    r.render(scene, cam);
+  });
+}
+window.__done = true;
+</script>

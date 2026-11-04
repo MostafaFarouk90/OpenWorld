@@ -22,10 +22,16 @@ describe('quest content', () => {
   it('has the expected quest ids, unique', () => {
     const ids = questDefs.map((q) => q.id);
     expect(ids).toEqual(['t03', 't12', 'm01', 'm02', 'm03', 'm04', 'm05', 'd01', 'r01', 'r02', 'm06', 'm07', 'm08', 'm09', 'm10', 'r03', 'r04', 'd02',
+      // Act 1 side jobs (j01 to j11)
+      'j01', 'j02', 'j03', 'j04', 'j05', 'j06', 'j07', 'j08', 'j09', 'j10', 'j11',
       // Act 2 (A12)
       'm11', 'm12', 'r06', 'r05', 'm13', 'r07', 'r11', 'm14', 'm15', 'd03',
       // Act 2 Oldsmoke surface (A13)
-      'm16', 'm17', 'r09', 'r08', 'm18', 'r10', 'm19', 'm20', 'm21', 'd04', 'm22']);
+      'm16', 'm17', 'r09', 'r08', 'm18', 'r10', 'm19', 'm20', 'm21', 'd04', 'm22',
+      // Act 3 Greyfen (K12)
+      'm23', 'm24', 'r12', 'm25', 'r14', 'r13', 'm26', 'm27', 'd05',
+      // Act 3 lower Dragonspine (K13)
+      'm28', 'r15', 'm29', 'r16', 'm30', 'r17', 'r18']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -303,7 +309,8 @@ describe('M01 and M02 walk-through with the real QuestManager', () => {
     expect(w.given.some((g) => g.itemId === 'hearth-stone-charm')).toBe(true);
     expect(w.xp()).toBe(550);
     expect(play(w, 'npc-edda', 'edda')[0]).toBe('farewell');
-    expect(play(w, 'npc-edda', 'edda')[0]).toBe('idle');
+    // with the farewell heard, Edda offers the side job j02 (src/quests/content/side)
+    expect(play(w, 'npc-edda', 'edda')[0]).toBe('j02-offer');
   });
 
   it('m02 hands in the hearth-stone on completion', () => {

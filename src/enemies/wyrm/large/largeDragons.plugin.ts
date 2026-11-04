@@ -81,6 +81,12 @@ const plugin: GamePlugin = {
       netCut: (n) => director.netCut(n),
       calm: () => director.calm(),
       dismiss: () => director.dismiss(),
+      holdWake: (on) => director.holdWake(on),
+      get wakeHeld() {
+        return director.wakeHeld;
+      },
+      wake: () => director.wake(),
+      headPoint: () => director.headPoint(),
     };
     ctx.services.provide('hathren', hathren);
     offs.push(ctx.events.on('save.loaded', () => director.onLoaded()));

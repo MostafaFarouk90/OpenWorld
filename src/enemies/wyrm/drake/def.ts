@@ -15,6 +15,9 @@ export const SKARL_DRAKE = {
   strikeHeight: 1.6,
 } as const;
 
+/** K8 PR 2: the drake's dive telegraph (the circling shadow), seconds. */
+export const SKARL_DRAKE_DIVE_WINDUP = 1.0;
+
 export const SKARL_DRAKE_DEF: EnemyDef = {
   ...EMBER_WYRM_DEF,
   kind: 'skarl-drake',
@@ -22,7 +25,8 @@ export const SKARL_DRAKE_DEF: EnemyDef = {
   maxHealth: 160,
   maxPoise: 50,
   // Its own move ids (the overlays read the `.spit` / `.dive` suffixes), so its tuning and telegraphs never alias the Ember Wyrm's.
-  moves: EMBER_WYRM_DEF.moves.map((m) => ({ ...m, id: m.id.replace(/^wyrm\./, 'drake.') })),
+  // K8 PR 2: the dive's telegraph (its circling shadow) is 1.0 s for this drake (design 10 row 22); the Ember Wyrm keeps 0.9 s.
+  moves: EMBER_WYRM_DEF.moves.map((m) => ({ ...m, id: m.id.replace(/^wyrm\./, 'drake.'), ...(m.id === 'wyrm.dive' ? { windup: SKARL_DRAKE_DIVE_WINDUP } : {}) })),
   mercy: undefined,
   tags: ['dragonkin'],
 };

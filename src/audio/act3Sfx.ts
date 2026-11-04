@@ -41,6 +41,9 @@ export const ACT3_SFX_KEYS = [
   'sfx.ysmeryth.slam',
   'sfx.ysmeryth.breath',
   'sfx.ysmeryth.call',
+  'sfx.ysmeryth.takeoff',
+  'sfx.ysmeryth.land',
+  'sfx.ysmeryth.settle',
   'sfx.dragon.wingbeat',
   'sfx.drake.chain',
   'sfx.drake.freed',
@@ -82,11 +85,15 @@ export const ACT3_SFX_VOLUME: Readonly<Record<Act3SfxKey, number>> = {
   'sfx.wyrm.hathren.roar': 0.95,
   'sfx.wyrm.hathren.song': 0.6,
   'sfx.wyrm.hathren.dive': 0.85,
-  'sfx.ysmeryth.roar': 1,
+  // The keeper's call (wind-up roar, then the boom) sits under the trial chant.
+  'sfx.ysmeryth.roar': 0.6,
   'sfx.ysmeryth.sweep': 0.85,
   'sfx.ysmeryth.slam': 1,
   'sfx.ysmeryth.breath': 0.9,
-  'sfx.ysmeryth.call': 0.75,
+  'sfx.ysmeryth.call': 0.55,
+  'sfx.ysmeryth.takeoff': 0.8,
+  'sfx.ysmeryth.land': 0.85,
+  'sfx.ysmeryth.settle': 0.4,
   'sfx.dragon.wingbeat': 0.55,
   'sfx.drake.chain': 0.6,
   'sfx.drake.freed': 0.75,
@@ -453,6 +460,41 @@ export function act3SfxSamples(key: Act3SfxKey): Float32Array<ArrayBuffer> {
       return render(2.6, (t) => {
         const f = 82 * (1 + 0.33 * Math.min(1, t / 0.9)) * (1 + 0.012 * Math.sin(TAU * 5 * t));
         return env(t, 2.6, 0.4, 1.2) * (saw(a(f), 10) * 0.35 + saw(b(f * 1.5), 6) * 0.15 + breath(rnd()) * 1.2) * 0.8;
+      });
+    }
+    case 'sfx.ysmeryth.takeoff': {
+      // A heavy downstroke: a rising whoosh of air, a deep thud as the wings bite, and a late snap of membrane.
+      const rnd = noise(337);
+      const ph = phasor();
+      const air = bandpass(150, 1600);
+      const rum = lowpass(140);
+      const snap = highpass(900);
+      return render(1.5, (t) => {
+        const swell = Math.sin(Math.PI * Math.min(1, t / 1.1)) * (t < 1.1 ? 1 : 0);
+        const whoosh = air(rnd(), 250 + 700 * Math.min(1, t / 0.6)) * 5 * swell * 0.6;
+        const thud = Math.sin(ph(48 - 18 * Math.min(1, t / 0.3))) * hit(t, 4.5) * 0.8;
+        return whoosh + thud + rum(rnd()) * 3 * hit(t, 3.5) * 0.5 + snap(rnd()) * 0.4 * hit(t - 0.3, 14) * (t > 0.3 ? 1 : 0);
+      });
+    }
+    case 'sfx.ysmeryth.land': {
+      // Touching down: a ground thud, a puff of dust and a settling rumble.
+      const rnd = noise(338);
+      const ph = phasor();
+      const rum = lowpass(110);
+      const dust = bandpass(300, 1800);
+      return render(1.6, (t) => {
+        const thud = Math.sin(ph(40 - 16 * Math.min(1, t / 0.3))) * hit(t, 4);
+        return drive(thud * 1.5 + rum(rnd()) * 6 * hit(t, 3), 1.6) * 0.75 + dust(rnd(), 800) * 3 * hit(t - 0.02, 10) * (t > 0.02 ? 1 : 0) * 0.5;
+      });
+    }
+    case 'sfx.ysmeryth.settle': {
+      // A calm, low chest rumble: a short one-shot that swells softly and fades out (never a loop).
+      const rnd = noise(339);
+      const ph = phasor();
+      const rum = lowpass(120);
+      return render(2.0, (t) => {
+        const f = 44 + 3 * Math.sin(TAU * 1.3 * t);
+        return env(t, 2.0, 0.3, 1.6) * (Math.sin(ph(f)) * 0.6 * (0.8 + 0.2 * Math.sin(TAU * 5 * t)) + rum(rnd()) * 2.5);
       });
     }
     case 'sfx.dragon.wingbeat': {

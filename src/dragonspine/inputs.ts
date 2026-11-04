@@ -1,9 +1,24 @@
 // What the Dragonspine places derive from. Every position in this folder comes from these inputs (K1's plateaus, the Rime Pass
 // polyline, the camp hearth and the interior pads) and every y from `heightAt`: move a plateau and the place moves with it.
+import { ACT3_GLIDE_LEDGES, LIP_RUN, type Act3GlideLedge, type Act3GlideLedgeId } from '../region/act3/act3Glide';
 import { ACT3_INTERIOR_PADS, WYRMWATCH_HEARTH, type Act3InteriorPad } from '../region/act3/act3Places';
+import { FOG_FACE_POINTS } from '../region/act3/act3World';
 import { ACT3_PLATEAUS } from '../terrain/shape/act3';
-import { DEEPGATE_TRACK_POINTS, HAWK_CLIFFS_PATH, HAWK_CLIFFS_PATH_POINTS, HAWK_NEST_SHELF, RIME_PASS, RIME_PASS_POINTS, SPINE_ROAD_POINTS } from '../terrain/shape/dragonspine';
-import type { PlateauDef } from '../terrain/shaping';
+import {
+  DEEPGATE_TRACK_POINTS,
+  FROSTFANG_CHASM,
+  FROSTFANG_MOAT,
+  FROSTFANG_WAYSTONE,
+  HAWK_CLIFFS_PATH,
+  HAWK_CLIFFS_PATH_POINTS,
+  HAWK_NEST_SHELF,
+  RIME_PASS,
+  RIME_PASS_POINTS,
+  SKYHOLD_SPUR,
+  SKYHOLD_SPUR_POINTS,
+  SPINE_ROAD_POINTS,
+} from '../terrain/shape/dragonspine';
+import type { PlateauDef, TroughDef } from '../terrain/shaping';
 import { heightAt as worldHeightAt } from '../terrain/heightfield';
 
 export type HeightFn = (x: number, z: number) => number;
@@ -59,6 +74,20 @@ export interface DragonspineInputs {
   hearth: XZ;
   pads: readonly InteriorPad[];
   heightAt: HeightFn;
+  // ---- the summit (PR 2)
+  /** K1's six glide ledge sites (`ACT3_GLIDE_LEDGES`): the launch dressing stands at each lip, a landing marker in each landing area. */
+  glideLedges: Readonly<Partial<Record<Act3GlideLedgeId, Act3GlideLedge>>>;
+  /** K1's launch run off each lip (`LIP_RUN`): no structure of this folder stands in it. */
+  launchRun: number;
+  /** K1's Frostfang waystone point (`FROSTFANG_WAYSTONE`) on the Aerie shelf. */
+  aerieWaystone: XZ;
+  /** K1's Frostfang chasm and moat troughs: the walker catch stands over their floors. */
+  troughs: readonly TroughDef[];
+  /** Where K1's `fog.summit` face crosses the Rime Pass (`FOG_FACE_POINTS`): the summit gate stands at it. */
+  summitFace: XZ;
+  /** K1's Skyhold spur (summit gate to the cliff top) and its flat half width. */
+  spurPoints: readonly (readonly [number, number])[];
+  spurHalfWidth: number;
 }
 
 /** K1's exports and the shipped ground. Tests pass their own `heightAt` (and shifted plateaus). */
@@ -75,11 +104,20 @@ export function defaultInputs(heightAt: HeightFn = worldHeightAt): DragonspineIn
     hearth: WYRMWATCH_HEARTH,
     pads: padsFromRecords(ACT3_INTERIOR_PADS),
     heightAt,
+    glideLedges: ACT3_GLIDE_LEDGES,
+    launchRun: LIP_RUN,
+    aerieWaystone: FROSTFANG_WAYSTONE,
+    troughs: [FROSTFANG_CHASM, FROSTFANG_MOAT],
+    summitFace: FOG_FACE_POINTS['fog.summit'],
+    spurPoints: SKYHOLD_SPUR_POINTS,
+    spurHalfWidth: SKYHOLD_SPUR.halfWidth,
   };
 }
 
 export const PLATEAU_IDS = ['wyrmwatch-lodge', 'rime-pass-shelter', 'last-anvil', 'hawk-cliffs-foot', 'collapsed-cave', 'm28-crag'] as const;
 export type PlateauId = (typeof PLATEAU_IDS)[number];
+/** The summit's plateaus (PR 2), K1's ids. */
+export const SUMMIT_PLATEAU_IDS = ['summit-gate', 'wyrms-hearth', 'skyhold-top', 'dragon-roost', 'frostfang-aerie', 'frostfang-keep'] as const;
 
 export function plateauById(inp: Pick<DragonspineInputs, 'plateaus'>, id: string): PlateauDef {
   const p = inp.plateaus.find((q) => q.id === id);
