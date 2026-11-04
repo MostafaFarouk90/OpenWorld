@@ -51,6 +51,9 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'skarl-drake': 0,
   // Murkjaw, D05 (K8): the same convention, so a Greyfen kill pays plan 6.2's about 600 (333 x 1.8 = 599.4, paid as 599).
   murkjaw: 333,
+  // K6b PR 2: stored divided by the Dragonspine's factor (1.8, set by the peak plugin): 90 and 240 there (plan 6.1).
+  'rime-hawk': 50,
+  'crag-ogre': 133,
   dummy: 0,
   scarecrow: 0,
 };

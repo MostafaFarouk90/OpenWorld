@@ -31,6 +31,7 @@ import type { EnemyDef, EnemyView, SpawnerDef, SpawnOptions, UnlockVerb } from '
 import { makeLineOfSight } from './ai/perception';
 import { drainPlayer } from './fen/drain';
 import { makeLeechBody } from './fen/leech/body';
+import { makeHawkBody } from './peak/hawk/body';
 import { FEN_TUNING } from './fen/tuning';
 import { TauntRegistry, type TauntService } from './taunts';
 import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
@@ -388,6 +389,7 @@ export class EnemyManager {
     if (def.body === 'crawler') return makeCrawlerBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'quadruped') return makeQuadrupedBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'leech') return makeLeechBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
+    if (def.body === 'bird') return makeHawkBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'wyrm') {
       const lowQuality = this.host.services.get('vfx')?.quality === 'low';
       return makeWyrmBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m), lowQuality });
