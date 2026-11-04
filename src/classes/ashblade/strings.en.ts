@@ -1,4 +1,4 @@
-import { ASH_CLOUD, ASH_DRIFT, BLEEDING_EMBER, CINDER_MARK, DECOY_FOOTPRINTS, PHOENIX_ROLL, SPARK_DODGE } from './tuning';
+import { ASH_CLOUD, ASH_DRIFT, BLEEDING_EMBER, CINDER_MARK, DECOY_FOOTPRINTS, FLICKER_STRIKE, GHOST_OF_THE_HEARTH, PHOENIX_ROLL, SPARK_DODGE, THOUSAND_SPARKS } from './tuning';
 
 /** Ashblade strings: skills, K-menu branches, the drill and the how-to entry (`ctx.strings.register('en', …)`). */
 export const ASHBLADE_STRINGS_EN: Record<string, string> = {
@@ -15,7 +15,7 @@ export const ASHBLADE_STRINGS_EN: Record<string, string> = {
   'skill.ashblade.cinderMark.name': 'Cinder Mark',
   'skill.ashblade.cinderMark.desc': `Mark a foe for ${CINDER_MARK.seconds} seconds: your hits on it deal x${CINDER_MARK.multiplier} damage, on top of Back-Slit. Targets your lock-on, else the nearest foe ahead. ${CINDER_MARK.cooldown} second cooldown, ${CINDER_MARK.emberCost} Ember.`,
   'skill.ashblade.deathByAThousandSparks.name': 'Death by a Thousand Sparks',
-  'skill.ashblade.deathByAThousandSparks.desc': 'A three second flurry of teleporting strikes.',
+  'skill.ashblade.deathByAThousandSparks.desc': `For ${THOUSAND_SPARKS.seconds} seconds you flicker from foe to foe, ${THOUSAND_SPARKS.hops} strikes of 60% damage, one every quarter second, each at the next foe within ${THOUSAND_SPARKS.range} metres. You cannot be hurt while it lasts. Needs a foe in range. ${THOUSAND_SPARKS.cooldown} second cooldown, ${THOUSAND_SPARKS.emberCost} Ember.`,
 
   'skill.ashblade.quietSoles.name': 'Quiet Soles',
   'skill.ashblade.quietSoles.desc': 'Your footsteps do not alert guards.',
@@ -26,7 +26,7 @@ export const ASHBLADE_STRINGS_EN: Record<string, string> = {
   'skill.ashblade.decoyFootprints.name': 'Decoy Footprints',
   'skill.ashblade.decoyFootprints.desc': `Leave a false trail of footprints for ${DECOY_FOOTPRINTS.seconds} seconds: you make no noise and foes that have not noticed you see you at 60% range. Foes already after you are not fooled. ${DECOY_FOOTPRINTS.cooldown} second cooldown, ${DECOY_FOOTPRINTS.emberCost} Ember.`,
   'skill.ashblade.ghostOfTheHearth.name': 'Ghost of the Hearth',
-  'skill.ashblade.ghostOfTheHearth.desc': 'Vanish for 12 seconds.',
+  'skill.ashblade.ghostOfTheHearth.desc': `Vanish for ${GHOST_OF_THE_HEARTH.seconds} seconds: foes that have not noticed you neither see nor hear you. Your first blow on a foe that is not a boss deals damage equal to its health. Any attack or skill ends the vanishing; foes already after you are not fooled. ${GHOST_OF_THE_HEARTH.cooldown} second cooldown, ${GHOST_OF_THE_HEARTH.emberCost} Ember.`,
 
   'skill.ashblade.quickSlip.name': 'Quick Slip',
   'skill.ashblade.quickSlip.desc': 'Your dodge carries you 20% further.',
@@ -37,7 +37,7 @@ export const ASHBLADE_STRINGS_EN: Record<string, string> = {
   'skill.ashblade.phoenixRoll.name': 'Phoenix Roll',
   'skill.ashblade.phoenixRoll.desc': `Dodging while you are on fire puts it out and leaves a fire patch behind for ${PHOENIX_ROLL.seconds} seconds that burns foes standing in it. It never clears your Heartshard Burn.`,
   'skill.ashblade.flickerStrike.name': 'Flicker Strike',
-  'skill.ashblade.flickerStrike.desc': 'Dash through enemies.',
+  'skill.ashblade.flickerStrike.desc': `Dash ${FLICKER_STRIKE.distance} metres in a quarter of a second, unhurt, striking every foe you pass for 120% damage; a dash through a foe's back counts as a back stab (Back-Slit). If it hit, a dodge within ${FLICKER_STRIKE.refreshSeconds} seconds dashes again, up to ${FLICKER_STRIKE.maxDashes} dashes in all. ${FLICKER_STRIKE.cooldown} second cooldown, ${FLICKER_STRIKE.emberCost} Ember.`,
 
   'classes.drill.ashblade.attack1': 'Gerta: "Quick and quiet. Key 1, a slash from both blades."',
   'classes.drill.ashblade.attack2': 'Gerta: "Follow it up. Key 2, a second slash from the other side."',

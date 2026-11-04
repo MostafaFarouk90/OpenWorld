@@ -13,6 +13,7 @@ import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 import companionsPlugin from './companions.plugin';
 import { TOBB } from './tobb';
+import { QUEST_WAITS } from './WaitDirector';
 import { COMPANION_TUNING } from './tuning';
 import './types';
 
@@ -31,6 +32,8 @@ const JOIN = TOBB.joinFlag;
 const GATE = 'npc-post.tobb.south-gate';
 const KEEP = 'npc-post.tobb.keep';
 const INN = 'npc-post.tobb.tilted-anvil';
+/** K13's R18 hold post (QUEST_WAITS): a rule every controller obeys after its own def's waits. */
+const HOLD = QUEST_WAITS[0]!.anchorId;
 
 type V = { x: number; y: number; z: number };
 
@@ -60,7 +63,8 @@ function world(opts: { anchors?: string[] } = {}) {
       const inn = { x: f.x + 400, z: f.z, floor: heightAt(f.x + 400, f.z) + 150 };
       boxes.push({ id: 'tilted-anvil', ...inn });
       posts[INN] = { position: { x: inn.x, y: inn.floor, z: inn.z }, yaw: 2 };
-      for (const id of opts.anchors ?? [GATE, KEEP, INN]) ctx.anchors.define({ id, ...posts[id] });
+      posts[HOLD] = { position: at(-3, 35), yaw: 1.5 };
+      for (const id of opts.anchors ?? [GATE, KEEP, INN, HOLD]) ctx.anchors.define({ id, ...posts[id] });
       ctx.services.provide('quests', {
         get: (id: string) => (quests.states.has(id) ? ({ id } as never) : undefined),
         state: (id: string) => quests.states.get(id) ?? 'inactive',
@@ -313,6 +317,40 @@ describe('Tobb waits: the Tilted Anvil (M09 stealth, M10 chase)', () => {
     t.game.render(0.5, 1 / 60);
     expect(t.root().visible).toBe(true);
     expect(t.dist(t.posts[INN].position)).toBeLessThan(0.01);
+    t.done();
+  });
+});
+
+describe('QUEST_WAITS reach the companion controller (R18\'s hold at the cliff foot)', () => {
+  it('a companion waits at the hold post once the camp is searched while R18 is active, and walks back to Cael when R18 is not active', async () => {
+    const t = await joined();
+    t.run(1);
+    t.quests.states.set('r18', 'active');
+    t.run(1);
+    expect(t.distToPlayer()).toBeLessThan(5); // before the camp is searched he follows
+    t.quests.done.add('r18.camp');
+    t.run(1);
+    expect(t.dist(t.posts[HOLD].position)).toBeLessThan(0.01);
+    const f = t.ctx.player.feet;
+    t.teleportPlayer(f.x + 150, f.z - 150);
+    t.run(120);
+    expect(t.dist(t.posts[HOLD].position)).toBeLessThan(0.01); // stays while Cael climbs away
+    // the nest is full: released at once
+    t.quests.done.add('r18.nested');
+    t.run(2);
+    expect(t.distToPlayer()).toBeLessThan(5);
+    t.done();
+  });
+
+  it('is released when R18 stops being active (failed or dropped)', async () => {
+    const t = await joined();
+    t.quests.states.set('r18', 'active');
+    t.quests.done.add('r18.camp');
+    t.run(1);
+    expect(t.dist(t.posts[HOLD].position)).toBeLessThan(0.01);
+    t.quests.states.set('r18', 'failed');
+    t.run(900); // he walks back from the post
+    expect(t.distToPlayer()).toBeLessThan(5);
     t.done();
   });
 });

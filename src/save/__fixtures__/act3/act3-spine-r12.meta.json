@@ -1,0 +1,34 @@
+{
+  "fixture": "act3-spine-r12.json",
+  "id": "r12",
+  "order": "spine",
+  "injected": [
+    "m28",
+    "r15",
+    "m29",
+    "r16",
+    "m30",
+    "r17",
+    "r18",
+    "m23",
+    "m24"
+  ],
+  "questDefs": [
+    "m23",
+    "m24",
+    "m28",
+    "m29",
+    "m30",
+    "r12",
+    "r15",
+    "r16",
+    "r17",
+    "r18"
+  ],
+  "lockedBlocks": {
+    "greyfen": 21,
+    "dragonspine-lower": 20
+  },
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/act3Fixtures.gen",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving"
+}

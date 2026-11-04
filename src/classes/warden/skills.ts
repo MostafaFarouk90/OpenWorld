@@ -1,5 +1,5 @@
 import { TIER_COST, masterBookGate, type SkillDef } from '../../progression/skills';
-import { BLOOD_CHANT, BOULDER, EARTHROOT, SKULLSPLITTER, WARDEN_CLASS_ID, WHIRLING_HEW } from './tuning';
+import { BLOOD_CHANT, BOULDER, EARTHROOT, MOUNTAIN_UNMOVED, SKULLSPLITTER, VOICE_OF_THE_MOUNTAIN, WARDEN_CLASS_ID, WHIRLING_HEW, WYRMBREAKER } from './tuning';
 
 type Branch = 'hewer' | 'stonehide' | 'howlcaller';
 type Row = [name: string, kind: 'active' | 'passive'];
@@ -36,6 +36,9 @@ const ACTIVE_COSTS: Record<string, { cooldown: number; emberCost: number }> = {
   [`${WARDEN_CLASS_ID}.bloodChant`]: BLOOD_CHANT,
   [`${WARDEN_CLASS_ID}.skullsplitter`]: SKULLSPLITTER,
   [`${WARDEN_CLASS_ID}.earthroot`]: EARTHROOT,
+  [`${WARDEN_CLASS_ID}.wyrmbreaker`]: WYRMBREAKER,
+  [`${WARDEN_CLASS_ID}.mountainUnmoved`]: MOUNTAIN_UNMOVED,
+  [`${WARDEN_CLASS_ID}.voiceOfTheMountain`]: VOICE_OF_THE_MOUNTAIN,
 };
 
 function build(): SkillDef[] {
