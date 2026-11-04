@@ -25,6 +25,16 @@ export interface HathrenService {
    * (a call before or after her own `save.loaded` re-derive is safe either way).
    */
   calm(): HathrenPlayback | null;
+  /**
+   * K12's wake scene (additive). While held, her wake is not started by the player coming near; `wake()` starts it in frame.
+   * Off by default, and released by herself when M26 is no longer active (abandoned, failed, left), so she can never stay silent.
+   */
+  holdWake(on: boolean): void;
+  readonly wakeHeld: boolean;
+  /** Starts the wake now: `done` settles when it ends (12 s) or is skipped; null unless she is in the nets, unwoken. */
+  wake(): HathrenPlayback | null;
+  /** Where her head is now (the camera's target), or null while she is not built. */
+  headPoint(): { x: number; y: number; z: number } | null;
   /** Gone without the sequence (the quest was abandoned by script). */
   dismiss(): void;
 }

@@ -101,9 +101,34 @@ export class HathrenSequence {
     this.startLoop();
   }
 
+  /** K12's set piece holds the wake back (the proximity no longer starts it) so it can start it itself in frame. Off by default. */
+  holdWake = false;
+
+  /** Starts the wake now (the set piece's call). False unless she is in the nets, unwoken. */
+  wakeNow(): boolean {
+    if (this._state !== 'nets' || this._phase !== 'waiting') return false;
+    this._phase = 'waking';
+    this.t = 0;
+    this.next = 0;
+    return true;
+  }
+
+  /** Waking only: every remaining wake beat once, in order, then the loop. */
+  skipWake(): HathrenBeat[] {
+    if (this._state !== 'nets' || this._phase !== 'waking') return [];
+    const out: HathrenBeat[] = [];
+    if (this.next === 0 && this.t === 0) out.push(...this.take(WAKE_BEATS, 0));
+    out.push(...WAKE_BEATS.slice(this.next).map((b) => b.beat));
+    this.next = WAKE_BEATS.length;
+    this.t = HATHREN.wakeSeconds;
+    this._phase = 'loop';
+    this.startLoop();
+    return out;
+  }
+
   /** The player is this far from the shore point: close enough starts the wake (once per entry). */
   playerDistance(d: number): void {
-    if (this._state === 'nets' && this._phase === 'waiting' && Number.isFinite(d) && d <= HATHREN.wakeRadius) {
+    if (!this.holdWake && this._state === 'nets' && this._phase === 'waiting' && Number.isFinite(d) && d <= HATHREN.wakeRadius) {
       this._phase = 'waking';
       this.t = 0;
       this.next = 0;
