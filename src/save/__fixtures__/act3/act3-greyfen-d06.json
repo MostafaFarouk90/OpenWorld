@@ -33,6 +33,7 @@
           "lore.nursery",
           "lore.place.greyfen",
           "howto.block-levels",
+          "lore.place.dragonspine",
           "howto.ferry",
           "howto.diving",
           "howto.wading",
@@ -40,6 +41,9 @@
           "lore.place.mireweather",
           "lore.place.greywatch",
           "lore.place.hathrens-mere",
+          "lore.place.rime-pass",
+          "lore.place.last-anvil",
+          "lore.place.wyrmwatch-lodge",
           "howto.rally-cry"
         ]
       },
@@ -157,6 +161,7 @@
           "ashmare-saddlebags": 1,
           "ashplate": 1,
           "barley-cake": 5,
+          "cliff-crampons": 1,
           "couriers-cloak": 1,
           "favour-mark": 1,
           "fen-salve-recipe": 1,
@@ -201,7 +206,8 @@
           "union-badge": 1,
           "watch-pass": 1,
           "wooden-round-shield": 1,
-          "wyrmling-scale": 1
+          "wyrmling-scale": 1,
+          "ysmeryths-ember-scale": 1
         },
         "unknown": {}
       },
@@ -270,8 +276,8 @@
           "knight.squiresResolve"
         ],
         "respecUsed": false,
-        "storyPoints": 1,
-        "xp": 32650
+        "storyPoints": 3,
+        "xp": 35550
       },
       "version": 2
     },
@@ -422,6 +428,22 @@
             "state": "completed"
           },
           "m30": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m31": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m32": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m33": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m34": {
             "objectives": {},
             "state": "completed"
           },
@@ -777,6 +799,7 @@
           "shrine.quenchstone.lit": true,
           "shrine.weeping-bellows.lit": true,
           "shrine.wyrms-hearth.lit": true,
+          "shrine.wyrms-hearth.open": true,
           "story.a2.campSeen": true,
           "story.a3.peaksCardSeen": true,
           "story.d02.campSeen": true,
@@ -882,9 +905,13 @@
           "story.m30.complete": true,
           "story.m30.started": true,
           "story.m31.complete": true,
+          "story.m31.started": true,
           "story.m32.complete": true,
+          "story.m32.started": true,
           "story.m33.complete": true,
+          "story.m33.started": true,
           "story.m34.complete": true,
+          "story.m34.started": true,
           "story.phase.dragonspineOpen": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,

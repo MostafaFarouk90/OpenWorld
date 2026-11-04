@@ -218,6 +218,8 @@ function build(ctx: PluginContext, offs: Array<() => void>): void {
       },
       // K5 (Act 3) is the sole caller: the Quenched aura (v0.7 item 17).
       setBurnGainScale: (fn) => burn.setGainScale(fn),
+      // K13 (Act 3) is the sole caller: Keeper's Understanding (M32).
+      setBurnDecayScale: (fn) => burn.setDecayScale(fn),
       removeScars: (n, reason) => {
         const removed = burn.removeScars(n);
         if (removed === 0) return 0;

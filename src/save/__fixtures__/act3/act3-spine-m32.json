@@ -33,13 +33,17 @@
           "lore.nursery",
           "lore.place.greyfen",
           "howto.block-levels",
+          "lore.place.dragonspine",
           "howto.ferry",
           "howto.diving",
           "howto.wading",
+          "lore.place.rime-pass",
+          "lore.place.last-anvil",
           "lore.place.reedgate",
           "lore.place.mireweather",
           "lore.place.greywatch",
           "lore.place.hathrens-mere",
+          "lore.place.wyrmwatch-lodge",
           "howto.rally-cry"
         ]
       },
@@ -196,7 +200,8 @@
           "union-badge": 1,
           "watch-pass": 1,
           "wooden-round-shield": 1,
-          "wyrmling-scale": 1
+          "wyrmling-scale": 1,
+          "ysmeryths-ember-scale": 1
         },
         "unknown": {}
       },
@@ -266,7 +271,7 @@
         ],
         "respecUsed": false,
         "storyPoints": 1,
-        "xp": 30720
+        "xp": 31470
       },
       "version": 2
     },
@@ -417,6 +422,10 @@
             "state": "completed"
           },
           "m30": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m31": {
             "objectives": {},
             "state": "completed"
           },
@@ -695,7 +704,6 @@
           "reedgate",
           "rime-pass",
           "weeping-bellows",
-          "wyrms-hearth",
           "wyrmwatch-lodge"
         ],
         "respawn": "wyrmwatch-lodge"
@@ -855,6 +863,7 @@
           "story.m30.complete": true,
           "story.m30.started": true,
           "story.m31.complete": true,
+          "story.m31.started": true,
           "story.phase.dragonspineOpen": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
@@ -918,7 +927,6 @@
           "waystone.reedgate.lit": true,
           "waystone.rime-pass.lit": true,
           "waystone.weeping-bellows.lit": true,
-          "waystone.wyrms-hearth.lit": true,
           "waystone.wyrmwatch-lodge.lit": true,
           "world.bellows.shortcutOpen": true,
           "world.bellows.solved": true,

@@ -101,7 +101,7 @@ export const ACT3_WAYSTONE_AFTER: Readonly<Record<string, string>> = {
   m26: 'hathrens-mere', // the rite at the shrine
   m29: 'rime-pass', // Eadgyth's shelter
   m30: 'last-anvil', // the anvil sounded, the shrine lit
-  m31: 'wyrms-hearth', // the trial at the roost
+  m34: 'wyrms-hearth', // the Hearth's waystone is the shrine and stays locked until M34 (K9 WYRMS_HEARTH.openFlag); lit by M34's rekindle
   d06: 'frostfang-aerie', // attuned on arrival
 };
 

@@ -56,7 +56,9 @@ describe('dialogue content', () => {
       'bell-keeper', 'brood-keeper', 'monk-echo', 'fen', 'hathren',
       // Act 3 lower Dragonspine (K13)
       'thorgar', 'eadgyth', 'ansgar', 'lodge-hunter-1', 'lodge-hunter-2', 'lodge-hunter-3', 'lodge-hunter-4', 'lodge-hunter-5', 'lodge-hunter-6', 'lodge-hunter-cave',
-      'sled-hand-1', 'sled-hand-2', 'egg-thief', 'pilgrim-1', 'pilgrim-2', 'pilgrim-3']).toContain(n.speaker);
+      'sled-hand-1', 'sled-hand-2', 'egg-thief', 'pilgrim-1', 'pilgrim-2', 'pilgrim-3',
+      // Act 3 summit (K13 PR 2)
+      'ysmeryth', 'hathren', 'skarl', 'skyhold-rigger', 'skyhold-handler', 'captive-hunter', 'skarl-led', 'aerie-escort-1', 'aerie-escort-2']).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {

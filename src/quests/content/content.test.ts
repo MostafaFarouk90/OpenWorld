@@ -31,7 +31,9 @@ describe('quest content', () => {
       // Act 3 Greyfen (K12)
       'm23', 'm24', 'r12', 'm25', 'r14', 'r13', 'm26', 'm27', 'd05',
       // Act 3 lower Dragonspine (K13)
-      'm28', 'r15', 'm29', 'r16', 'm30', 'r17', 'r18']);
+      'm28', 'r15', 'm29', 'r16', 'm30', 'r17', 'r18',
+      // Act 3 summit (K13 PR 2)
+      'm31', 'm32', 'm33', 'm34', 'd06']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 

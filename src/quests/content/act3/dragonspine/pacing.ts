@@ -16,7 +16,7 @@ import { SECTIONS } from '../../../../stealth/sections';
 
 /** 'door' = an interior frame change, 0 distance. */
 export type Act3Leg = 'ride' | 'foot' | 'wade' | 'glide' | 'ferry' | 'follow' | 'door' | 'sled';
-export type Act3Beat = 'killUnit' | 'search' | 'interact' | 'leap' | 'set' | 'stealthSection' | 'carry' | 'sled';
+export type Act3Beat = 'killUnit' | 'search' | 'interact' | 'leap' | 'set' | 'stealthSection' | 'carry' | 'sled' | 'duelRound' | 'boss';
 /** A leg with its measured distance (derived, never stored on the row). */
 export interface Act3PaceLeg { mode: Act3Leg; from: string; to: string; metres: number }
 
@@ -39,6 +39,10 @@ export const ACT3_BEAT_S: Readonly<Record<Act3Beat, number>> = {
   stealthSection: ACT2_BEAT_S.stealthSection, carry: ACT2_BEAT_S.carry,
   /** one sled hauled: hitching it, the haul's stops, a hawk's stoop dodged, setting it down */
   sled: 90,
+  /** one round of the Coal-Mother's trial (M31's Yield branch plays two) */
+  duelRound: ACT2_BEAT_S.duelRound,
+  /** Corvin Skarl's fight, intro to outcome (D06; the kill XP is K8's) */
+  boss: ACT2_BEAT_S.boss,
 };
 
 export const ACT3_SPEED_MPS = { foot: WALK_MPS, sled: WALK_MPS * 0.6, follow: ROUTE_FOLLOW_MPS, ride: 9, wade: 3.5, glide: 10, ferry: 5 } as const;
@@ -46,10 +50,12 @@ export const ACT3_SPEED_MPS = { foot: WALK_MPS, sled: WALK_MPS * 0.6, follow: RO
 export const ROW_GATE = 0.45;
 
 const CAVE = 'collapsed-cave';
+/** The interiors whose anchors are local metres: the cave (R16) and the Frostfang keep (D06). */
+const INTERIOR_IDS: readonly string[] = [CAVE, 'frostfang-keep'];
 interface At { space: string; x: number; z: number }
 const WORLD = new Map<string, At>(dragonspineBuild().layout.anchors.map((a: { id: string; x: number; z: number }) => [a.id, { space: 'world', x: a.x, z: a.z }]));
 const INSIDE = new Map<string, At>(
-  DRAGONSPINE_INTERIORS.filter((d) => d.id === CAVE).flatMap((d) => d.anchors.map((a): [string, At] => [a.id, { space: CAVE, x: a.x, z: a.z }])),
+  DRAGONSPINE_INTERIORS.filter((d) => INTERIOR_IDS.includes(d.id)).flatMap((d) => d.anchors.map((a): [string, At] => [a.id, { space: d.id, x: a.x, z: a.z }])),
 );
 
 /** Where an anchor is: the layout outdoors, an interior's local metres inside. Throws on an unknown id. */
@@ -59,10 +65,12 @@ export function paceAt(id: string): At {
   return at;
 }
 
-type Step = readonly [Act3Leg, string];
-const F = (to: string): Step => ['foot', to];
-const S = (to: string): Step => ['sled', to];
-const D = (to: string): Step => ['door', to];
+export type Step = readonly [Act3Leg, string];
+export const F = (to: string): Step => ['foot', to];
+export const S = (to: string): Step => ['sled', to];
+export const R = (to: string): Step => ['ride', to];
+export const G = (to: string): Step => ['glide', to];
+export const D = (to: string): Step => ['door', to];
 
 /** The legs of a row with their measured metres. */
 export function paceLegs(row: Act3PaceRow): Act3PaceLeg[] {
@@ -77,15 +85,15 @@ export function paceLegs(row: Act3PaceRow): Act3PaceLeg[] {
   });
 }
 
-function build(quest: string, design: number, start: string, steps: readonly Step[], nodes: number, beats: Act3PaceRow['beats']): Act3PaceRow {
+export function build(quest: string, design: number, start: string, steps: readonly Step[], nodes: number, beats: Act3PaceRow['beats']): Act3PaceRow {
   const route = [start, ...steps.map((s) => s[1])];
   const row: Act3PaceRow = { quest, design, route, legs: steps.map((s) => s[0]), nodes, beats };
   paceLegs(row); // throws on an unknown anchor or a leg that crosses a door
   return row;
 }
 
-const n = (prefix: string, from: number, to: number): string[] => Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${from + i}`);
-const feet = (ids: string[]): Step[] => ids.map(F);
+export const n = (prefix: string, from: number, to: number): string[] => Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${from + i}`);
+export const feet = (ids: string[]): Step[] => ids.map(F);
 const CAIRN = (k: number): string => `dragonspine.m28.cairn.${k}`;
 const WAY = (k: number): string => `dragonspine.wayside.${k}`;
 const CARVING = (k: number): string => `dragonspine.anvil.carving.${k}`;
