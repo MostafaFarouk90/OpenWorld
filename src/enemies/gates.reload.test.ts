@@ -28,14 +28,18 @@ beforeAll(async () => {
 // The model resolves after every plugin set up, as in the browser (a cached instant load would start the
 // spawners before the region plugin defines the corridor anchors).
 let modelReady: () => void = () => {};
-const assets = () =>
-  ({
+const assets = () => {
+  // One shared Knight load, as AssetLoader caches it: the generated townsfolk bodies load Knight.glb for their clips too, and a
+  // second load must not take over `modelReady`.
+  const knight = new Promise((res) => { modelReady = () => res(gltf); });
+  return {
     // Only the Knight is served: the swap models (horse, buildings) load in the background and must not take over `modelReady`.
-    load: (id: string) => (id === 'knight' ? new Promise((res) => { modelReady = () => res(gltf); }) : Promise.reject(new Error(`asset "${id}" is not served in this test`))),
+    load: (id: string) => (id === 'knight' ? knight : Promise.reject(new Error(`asset "${id}" is not served in this test`))),
     instantiate: () => cloneSkinned(gltf.scene),
     animations: () => gltf.animations,
     has: () => true,
-  }) as unknown as AssetLoader;
+  } as unknown as AssetLoader;
+};
 
 let physics: PhysicsWorld;
 let fake: FakeIndexedDb;

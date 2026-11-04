@@ -26,7 +26,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | npc-post.thorgar.yard | 13624 | 11883 | 0 | 53.13 | npc-post |
 | npc-post.lodge-hunter-1 | 13592 | 11860 | 0 | 180 | npc-post |
 | npc-post.lodge-hunter-2 | 13608 | 11860 | 0 | 180 | npc-post |
-| npc-post.lodge-hunter-3 | 13540 | 11855 | 11 | 180 | npc-post, elevated |
+| npc-post.lodge-hunter-3 | 13546 | 11861 | 0 | 180 | npc-post |
 | npc-post.lodge-hunter-4 | 13588 | 11886 | 0 | 270 | npc-post |
 | npc-post.lodge-hunter-5 | 13567 | 11897 | 0 | 180 | npc-post |
 | npc-post.lodge-hunter-6 | 13573 | 11897 | 0 | 180 | npc-post |
@@ -171,12 +171,12 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.hearth.companion.2 | 13578 | 15490 | 0 | 180 | poi |
 | dragonspine.hearth.companion.3 | 13582 | 15490 | 0 | 180 | poi |
 | dragonspine.roost.trailhead | 13650 | 15721 | 0 | 180 | objective |
-| dragonspine.roost.leap.1 | 13540 | 15909 | 1.8 | 180 | poi, leap-gated |
-| dragonspine.roost.leap.2 | 13699 | 16019 | 1.8 | 180 | poi, leap-gated |
-| dragonspine.roost.leap.3 | 13714 | 16097 | 1.8 | 180 | poi, leap-gated |
-| dragonspine.roost.leap.1.launch | 13536.11 | 15905.11 | 0 | 225 | poi |
-| dragonspine.roost.leap.2.launch | 13702.89 | 16015.11 | 0 | 135 | poi |
-| dragonspine.roost.leap.3.launch | 13719.5 | 16097 | 0 | 90 | poi |
+| dragonspine.roost.leap.1 | 13520 | 15852 | 1.8 | 180 | poi, leap-gated |
+| dragonspine.roost.leap.2 | 13549 | 15911 | 1.8 | 180 | poi, leap-gated |
+| dragonspine.roost.leap.3 | 13724 | 16090 | 1.8 | 180 | poi, leap-gated |
+| dragonspine.roost.leap.1.launch | 13525.5 | 15852 | 0 | 90 | poi |
+| dragonspine.roost.leap.2.launch | 13549 | 15905.5 | 0 | 180 | poi |
+| dragonspine.roost.leap.3.launch | 13729.5 | 16090 | 0 | 90 | poi |
 | dragonspine.roost.claw-ledge | 13599.82 | 15935.86 | 0 | 90 | objective |
 | dragonspine.roost.horn | 13787.56 | 16055.56 | 0 | 180 | objective |
 | dragonspine.roost.scale | 13667.5 | 16265.7 | 0 | 180 | objective |
@@ -258,7 +258,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine.glide.hearth-updraft.landing | 13600 | 15600 | 0 | 0 | poi |
 | npc-post.lodge-hunter-1.out | 13595 | 11858 | 0 | 0 | npc-post |
 | npc-post.lodge-hunter-2.out | 13605 | 11858 | 0 | 0 | npc-post |
-| npc-post.lodge-hunter-3.out | 13540 | 11855 | 11 | 0 | npc-post, elevated |
+| npc-post.lodge-hunter-3.out | 13546 | 11861 | 0 | 45 | npc-post |
 | npc-post.lodge-hunter-4.out | 13605 | 11942 | 0 | 180 | npc-post |
 | npc-post.lodge-hunter-5.out | 13543 | 11904 | 0 | 90 | npc-post |
 | npc-post.lodge-hunter-6.out | 13657 | 11904 | 0 | 270 | npc-post |
@@ -394,36 +394,30 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-hawk-parapet-38 | rock | 11428.11 | 13074.32 | 3.4 x 0.7 | solid |
 | dragonspine-hawk-parapet-39 | rock | 11424.43 | 13074.8 | 3.4 x 0.7 | solid |
 | dragonspine-hawk-parapet-40 | rock | 11420.75 | 13075.28 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-41 | rock | 11417.07 | 13075.76 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-42 | rock | 11413.39 | 13076.24 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-43 | rock | 11409.71 | 13076.72 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-44 | rock | 11406.03 | 13077.2 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-45 | rock | 11405.99 | 13084.68 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-46 | rock | 11409.69 | 13085.09 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-47 | rock | 11413.39 | 13085.5 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-48 | rock | 11417.1 | 13085.91 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-49 | rock | 11420.8 | 13086.31 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-50 | rock | 11424.51 | 13086.72 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-51 | rock | 11428.21 | 13087.13 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-52 | rock | 11431.91 | 13087.54 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-53 | rock | 11435.62 | 13087.94 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-54 | rock | 11439.32 | 13088.35 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-55 | rock | 11443.02 | 13088.76 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-56 | rock | 11446.73 | 13089.17 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-57 | rock | 11450.43 | 13089.57 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-58 | rock | 11454.14 | 13089.98 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-59 | rock | 11457.84 | 13090.39 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-60 | rock | 11461.54 | 13090.8 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-61 | rock | 11465.25 | 13091.2 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-62 | rock | 11468.95 | 13091.61 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-63 | rock | 11472.65 | 13092.02 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-64 | rock | 11476.36 | 13092.43 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-65 | rock | 11480.06 | 13092.83 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-66 | rock | 11483.77 | 13093.24 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-67 | rock | 11487.47 | 13093.65 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-68 | rock | 11491.17 | 13094.06 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-69 | rock | 11494.88 | 13094.46 | 3.4 x 0.7 | solid |
-| dragonspine-hawk-parapet-70 | rock | 11498.58 | 13094.87 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-41 | rock | 11413.39 | 13085.5 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-42 | rock | 11417.1 | 13085.91 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-43 | rock | 11420.8 | 13086.31 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-44 | rock | 11424.51 | 13086.72 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-45 | rock | 11428.21 | 13087.13 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-46 | rock | 11431.91 | 13087.54 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-47 | rock | 11435.62 | 13087.94 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-48 | rock | 11439.32 | 13088.35 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-49 | rock | 11443.02 | 13088.76 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-50 | rock | 11446.73 | 13089.17 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-51 | rock | 11450.43 | 13089.57 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-52 | rock | 11454.14 | 13089.98 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-53 | rock | 11457.84 | 13090.39 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-54 | rock | 11461.54 | 13090.8 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-55 | rock | 11465.25 | 13091.2 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-56 | rock | 11468.95 | 13091.61 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-57 | rock | 11472.65 | 13092.02 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-58 | rock | 11476.36 | 13092.43 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-59 | rock | 11480.06 | 13092.83 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-60 | rock | 11483.77 | 13093.24 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-61 | rock | 11487.47 | 13093.65 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-62 | rock | 11491.17 | 13094.06 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-63 | rock | 11494.88 | 13094.46 | 3.4 x 0.7 | solid |
+| dragonspine-hawk-parapet-64 | rock | 11498.58 | 13094.87 | 3.4 x 0.7 | solid |
 | dragonspine-cave-mouth | dragonspine-cave-mouth | 12300 | 13705 | 12 x 4 | solid |
 | dragonspine-cave-ledge | rock | 12300 | 13692 | 34 x 3.2 | solid |
 | dragonspine-m28-ledge-1 | rock | 13446 | 12623 | 6 x 5 | solid |
@@ -497,9 +491,9 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | dragonspine-hearth-glide-marker-1 | dragonspine-glide-marker | 13459.15 | 15550.19 | 1.2 x 1.2 | open |
 | dragonspine-hearth-glide-marker-2 | dragonspine-glide-marker | 13609.59 | 15720.51 | 1.2 x 1.2 | open |
 | dragonspine-hearth-perch | rock | 13734 | 15711 | 12 x 10 | solid |
-| dragonspine-roost-ledge-1 | rock | 13540 | 15909 | 6 x 5 | solid |
-| dragonspine-roost-ledge-2 | rock | 13699 | 16019 | 6 x 5 | solid |
-| dragonspine-roost-ledge-3 | rock | 13714 | 16097 | 6 x 5 | solid |
+| dragonspine-roost-ledge-1 | rock | 13520 | 15852 | 6 x 5 | solid |
+| dragonspine-roost-ledge-2 | rock | 13549 | 15911 | 6 x 5 | solid |
+| dragonspine-roost-ledge-3 | rock | 13724 | 16090 | 6 x 5 | solid |
 | dragonspine-roost-claw-ledge | rock | 13594.32 | 15935.86 | 4 x 3 | solid |
 | dragonspine-roost-horn | dragonspine-horn | 13787.56 | 16057.06 | 1.2 x 0.6 | open |
 | dragonspine-roost-scale | dragonspine-scale | 13667.5 | 16267.5 | 1.6 x 1.2 | open |

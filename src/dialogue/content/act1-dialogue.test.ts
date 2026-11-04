@@ -106,6 +106,8 @@ describe('every start branch is reachable', () => {
         // flag choices: enumerate by combination index over the first flag only plus the rest unset
         const flagSets: Map<string, FlagValue>[] = [new Map()];
         for (const [k, vals] of fl) for (const v of vals) if (v !== undefined) flagSets.push(new Map([[k, v]]));
+        // K13: a start rule may need several flags at once (the Act 3 gate and the Dragonspine phase flag): one set with each flag's first value
+        flagSets.push(new Map(fl.flatMap(([k, vals]) => [...vals].filter((v) => v !== undefined).slice(0, 1).map((v): [string, FlagValue] => [k, v!]))));
         for (const fs of flagSets) for (const band of bands) {
           const env = {
             state: { getFlag: (k: string) => fs.get(k), favourBand: () => band, favour: () => 30 } as any,
@@ -391,10 +393,13 @@ describe('Tobb', () => {
     expect(w.flags.get('story.m05.tobbBond')).toBe(true);
     expect(dialogueStrings['dialogue.npc-tobb.done-2']).toMatch(/Whistle/);
     w.set('m05', 'completed');
+    // with the bond told, Tobb offers the side job j04 first (src/quests/content/side); done, he banters
+    expect(first(w, 'npc-tobb', 'tobb')).toBe('j04-offer');
+    w.set('j04', 'completed');
     expect(first(w, 'npc-tobb', 'tobb')).toBe('banter');
     w.set('d01', 'completed');
     expect(first(w, 'npc-tobb', 'tobb')).toBe('banter-prior');
-    expect(w.started).toEqual([]);
+    expect(w.started).toEqual(['j04']); // only the side job's offer, accepted by `first`
   });
 });
 

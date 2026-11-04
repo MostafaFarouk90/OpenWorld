@@ -35,6 +35,20 @@ describe('Pathfinder skills', () => {
     expect(trap).toMatchObject({ kind: 'active', tier: 2, cooldown: 20, emberCost: 15 });
     expect(eye).toMatchObject({ kind: 'active', tier: 2, cooldown: 30, emberCost: 15 });
     expect(defs.find((d) => d.id === PF.skillIds.netLauncher)).toMatchObject({ kind: 'active', tier: 3, cooldown: 16, emberCost: 15 });
+    // Tier 4 (K11 PR 2): Caltrop Field is the only tier-4 active with a cost here; Triple Shot and Sure Foot are passives.
+    expect(defs.find((d) => d.id === PF.skillIds.caltropField)).toMatchObject({ kind: 'active', tier: 4, cooldown: 18, emberCost: 15 });
+    for (const id of [PF.skillIds.tripleShot, PF.skillIds.sureFoot]) expect(defs.find((d) => d.id === id)).toMatchObject({ kind: 'passive', tier: 4 });
+  });
+
+  it('tier 5 (K11 PR 4): all three capstones are actives (Dragonbane Bolt flipped from passive) with their cooldown, Ember and the tier cost', () => {
+    const defs = buildPathfinderSkills();
+    expect(defs.find((d) => d.id === PF.skillIds.dragonbaneBolt)).toMatchObject({ kind: 'active', tier: 5, cost: TIER_COST[4], cooldown: 40, emberCost: 40, capstone: true, exclusiveGroup: 'capstone' });
+    expect(defs.find((d) => d.id === PF.skillIds.huntersWeb)).toMatchObject({ kind: 'active', tier: 5, cost: TIER_COST[4], cooldown: 45, emberCost: 35, capstone: true });
+    expect(defs.find((d) => d.id === PF.skillIds.skyhawkStrike)).toMatchObject({ kind: 'active', tier: 5, cost: TIER_COST[4], cooldown: 40, emberCost: 30, capstone: true });
+    for (const id of ['dragonbaneBolt', 'huntersWeb', 'skyhawkStrike']) {
+      expect(PATHFINDER_STRINGS_EN[`skill.pathfinder.${id}.desc`], id).toMatch(/Ember/);
+      expect(PATHFINDER_STRINGS_EN[`skill.pathfinder.${id}.desc`], id).toMatch(/cooldown/);
+    }
   });
 
   it('keeps the node rule: one flat percentage bump on Bolt (Steady Shot) and one on Trail (Trailblaze), none on Snare', () => {

@@ -1,7 +1,7 @@
 // Quest posts for the Dragonspine cast (spread into `POST_RULES`, quests/posts.ts, after Deepgate's). The two hunters in the hall
 // stand on the interior's own posts (those anchors are defined by the interiors plugin, so the layout post is only the outside home).
-// PR 2, the midpoint: once `story.m34.complete` holds, all six lodge hunters stand at the gates and on the south-west tower facing
-// out (`npc-post.lodge-hunter-N.out`, worldChanges.ts); first matching entry wins, so the outward post goes first. The posts are
+// PR 2, the midpoint: once `story.m34.complete` holds, all six lodge hunters stand at the gates and at the foot of the south-west
+// tower (the towers have no stair) facing out (`npc-post.lodge-hunter-N.out`, worldChanges.ts); first matching entry wins, so the outward post goes first. The posts are
 // derived from the flag, so a load re-applies them either way.
 import type { PostRule } from '../quests/posts';
 import { M34_COMPLETE_FLAG } from './flags';

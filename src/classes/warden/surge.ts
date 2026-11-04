@@ -44,15 +44,15 @@ function ring(c: SurgeFormContext): void {
   }
 }
 
-/** The Blaze fissure: a line `FISSURE.length` long and `FISSURE.width` wide in front of the player. */
-export function inFissure(feet: Vec3, yaw: number, p: Vec3): boolean {
+/** The Blaze fissure: a line `FISSURE.length` long and `FISSURE.width` wide in front of the player (Wyrmbreaker passes its own size). */
+export function inFissure(feet: Vec3, yaw: number, p: Vec3, length: number = FISSURE.length, width: number = FISSURE.width): boolean {
   const fx = -Math.sin(yaw);
   const fz = -Math.cos(yaw);
   const dx = p.x - feet.x;
   const dz = p.z - feet.z;
   const along = dx * fx + dz * fz;
   const across = dx * fz - dz * fx;
-  return along >= 0 && along <= FISSURE.length && Math.abs(across) <= FISSURE.width / 2;
+  return along >= 0 && along <= length && Math.abs(across) <= width / 2;
 }
 
 /**

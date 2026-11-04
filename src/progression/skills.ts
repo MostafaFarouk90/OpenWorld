@@ -66,7 +66,7 @@ const TREE: Record<SkillBranch, Row[]> = {
     ['flowingCuts', 'passive'],
     ['chargeOfTheHalvard', 'active'],
     ['executionersArc', 'active'],
-    ['heartshardSmite', 'active'],
+    ['heartshardSmite', 'passive'],
   ],
   standard: [
     ['rallyCry', 'active'],
@@ -134,6 +134,18 @@ function build(): SkillDef[] {
   if (arc) {
     arc.cooldown = 10;
     arc.emberCost = 20;
+  }
+  // Tier 5 capstones (Act 3, K11 PR 3): Unbroken Oath 60 s and 30 Ember; Banner of the Sunforge 60 s and 30 Ember.
+  // Heartshard Smite is a passive (open point A): it triggers on the Surge and has no cooldown or cost of its own.
+  const unbroken = out.find((s) => s.id === 'knight.unbrokenOath');
+  if (unbroken) {
+    unbroken.cooldown = 60;
+    unbroken.emberCost = 30;
+  }
+  const sunforge = out.find((s) => s.id === 'knight.bannerOfTheSunforge');
+  if (sunforge) {
+    sunforge.cooldown = 60;
+    sunforge.emberCost = 30;
   }
   return out;
 }

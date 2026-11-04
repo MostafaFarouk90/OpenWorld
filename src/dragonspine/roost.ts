@@ -1,12 +1,14 @@
 // Ysmeryth's roost and M31's climb (PR 2). The roost is K1's `dragon-roost` pad (70 x 70 m, flat, in the hollow under the
 // crown's crest about 60 m below the Wyrm's Hearth's north rim), so the walk from the rim runs down to it and the three Leap
-// ledges face the player on the way back up. The route is routed over the ground (walkable everywhere) and wound to about 800 m;
+// ledges face the player on the way back up: their tops lie between the roost's and the rim's heights and rise from ledge 3
+// (nearest the roost) to ledge 1 (nearest the rim). The route is routed over the ground (walkable everywhere) and wound to about 800 m;
 // the ledges are fitted on it at their built size. The trial arena's centre `dragonspine.roost.arena.centre` is the pad's centre
 // (K0 trial v2 `arenaCentre`, the 80 m rule). Searches: the claw-scored ledge and a dead hunter's horn on the way, a shed scale
 // at the roost. Four hawk spawn anchors on the route.
 import type { StructureSpec } from '../region/layoutTypes';
 import { a, emptyPart, headingTo, ledge, LEDGE_HEIGHT, open, solid, sphere, type Part } from './helpers';
-import { fitLedge } from './fit';
+import { fitLedge, ledgeRise } from './fit';
+import { roadFromPoints } from './road';
 import type { HeightFn, XZ } from './inputs';
 import { pathLength, pathPoint, windingPath } from './paths';
 import { routeOver } from './route';
@@ -18,7 +20,19 @@ export const ROOST_CLIMB = 800;
 const CLIMB_TOLERANCE = 0.08;
 /** The trailhead stands this far inside the Hearth's north edge. */
 const RIM_INSET = 4;
-const LEDGE_AT = [0.3, 0.55, 0.8];
+/**
+ * Where the three Leap ledges are wanted by height, as shares of the way from the rim's height to the roost's: ledge 1 a
+ * quarter of the way, ledge 3 three quarters. On K1's ground the roost sits about 60 m below the rim, so the route runs down
+ * and a player climbing back from the roost meets ledge 3, then 2, then 1, each higher than the last (the order is checked as
+ * the ledges are fitted, whichever end is higher).
+ */
+const LEDGE_SHARE = [0.25, 0.5, 0.75];
+/** The ledge search steps along the route this far from the wanted spot, both ways, up to the whole route. */
+const LEDGE_SEARCH_STEP = 8;
+/** Each try looks for ground this far round its spot (the next try is LEDGE_SEARCH_STEP on), so a miss stays cheap. */
+const LEDGE_SEARCH_RADIUS = 20;
+/** A launch stands at most this far off the route (a short walk off it). */
+const LAUNCH_OFF_ROUTE = 20;
 const HAWK_AT = [0.25, 0.45, 0.62, 0.85];
 
 export interface RoostInfo {
@@ -79,21 +93,56 @@ export function roostLayout(s: SummitSites): { part: Part; info: RoostInfo } {
     return { x: p.x - p.dirZ * side, z: p.z + p.dirX * side };
   };
 
-  // The Leap ledges, fitted at their built size where the route has ground for them, nearest the wanted share.
-  const taken: XZ[] = [];
-  const leaps = LEDGE_AT.map((f, i) => {
-    for (let k = 0; k <= 16; k++) {
+  // The Leap ledges, fitted at their built size beside the route, every top between the roost's and the rim's heights and in
+  // order along the route: ledge 1 nearest the trailhead and nearest the rim's height, ledge 3 nearest the roost's. Each is
+  // looked for from where the route passes its wanted height (LEDGE_SHARE), stepping out along the route until a fit holds.
+  const route = roadFromPoints(climb.map((p) => [p.x, p.z] as const));
+  const groundAt = (at: number): number => {
+    const p = route.point(at);
+    return s.h(p.x, p.z);
+  };
+  const rimY = s.h(trailhead.x, trailhead.z);
+  const roostY = s.h(centre.x, centre.z);
+  const lowY = Math.min(rimY, roostY);
+  const highY = Math.max(rimY, roostY);
+  // The first route position from the trailhead where the ground comes closest to `y` (within half a metre of the best).
+  const passes = (y: number): number => {
+    let best = climbLength / 2;
+    let bestD = Infinity;
+    for (let at = 0; at <= climbLength; at += 2) {
+      const d = Math.abs(groundAt(at) - y);
+      if (d < bestD - 0.5) [best, bestD] = [at, d];
+    }
+    return best;
+  };
+  const taken: { x: number; z: number; s: number; launchY: number; top: number }[] = [];
+  const leaps = LEDGE_SHARE.map((f, i) => {
+    const prev = taken[i - 1];
+    const want = rimY + (roostY - rimY) * f;
+    const at0 = passes(want);
+    for (let k = 0; k * LEDGE_SEARCH_STEP <= climbLength; k++) {
       for (const sign of k === 0 ? [1] : [1, -1]) {
-        const at = f + sign * k * 0.02;
-        if (at < 0.08 || at > 0.92) continue;
-        const fitted = fitLedge(s.h, along(at, 5));
-        if (!fitted || taken.some((t) => Math.hypot(t.x - fitted.x, t.z - fitted.z) < 25)) continue;
+        const at = at0 + sign * k * LEDGE_SEARCH_STEP;
+        if (at < climbLength * 0.08 || at > climbLength * 0.92) continue;
+        // Ground well outside the band between the roost and the rim never holds a ledge inside it.
+        if (groundAt(at) < lowY - 3 || groundAt(at) > highY + 3) continue;
+        const fitted = fitLedge(s.h, along(at / climbLength, 5), undefined, undefined, LEDGE_SEARCH_RADIUS);
+        if (!fitted) continue;
         if (Math.hypot(fitted.x - centre.x, fitted.z - centre.z) < Math.min(R.w, R.d) / 2 + 6) continue;
-        taken.push(fitted);
+        if (taken.some((t) => Math.hypot(t.x - fitted.x, t.z - fitted.z) < 25)) continue;
+        if (route.nearest(fitted.launch.x, fitted.launch.z).d > LAUNCH_OFF_ROUTE) continue;
+        const sAt = route.nearest(fitted.x, fitted.z).s;
+        const launchY = s.h(fitted.launch.x, fitted.launch.z);
+        const top = launchY + ledgeRise(s.h, fitted.x, fitted.z, fitted.launch);
+        // The Leap lands the player between the two heights: the top is above the lower end and under the higher one.
+        if (top < lowY || top > highY) continue;
+        // In order along the route, and stepping toward the roost's height from the ledge before (no overlap in height).
+        if (prev && (sAt <= prev.s || (roostY < rimY ? top >= prev.launchY : launchY <= prev.top))) continue;
+        taken.push({ x: fitted.x, z: fitted.z, s: sAt, launchY, top });
         return { spec: ledge(`dragonspine-roost-ledge-${i + 1}`, fitted.x, fitted.z), launch: fitted.launch };
       }
     }
-    return fail(`no climbable ground for the roost's Leap ledge ${i + 1}`);
+    return fail(`no climbable ground for the roost's Leap ledge ${i + 1} between the roost and the rim`);
   });
   const leapSpecs = leaps.map((l) => l.spec);
   const avoid = [...leapSpecs];

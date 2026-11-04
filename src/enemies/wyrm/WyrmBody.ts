@@ -8,7 +8,7 @@ import type { EnemyBody } from '../body';
 import type { PlayOptions, WindowPhase } from '../EnemyAnimator';
 import type { MoveDef, WeaponChannel } from '../types';
 import type { WyrmParams } from './builder/params';
-import { LOD_DISTANCES, restPose, WYRM_JOINTS, WyrmRig, type RootFrame, type WyrmPose } from './builder/rig';
+import { lodDistances, restPose, WYRM_JOINTS, WyrmRig, type RootFrame, type WyrmPose } from './builder/rig';
 
 /** Canonical wyrm clips (procedural poses). */
 export const WYRM_CLIPS = {
@@ -25,6 +25,9 @@ export const WYRM_CLIPS = {
   headLower: 'HeadLower',
   roar: 'Roar',
   rest: 'Rest',
+  // Act 3 (K6a PR 2, Ysmeryth's trial): the wing sweep and the keeper's call.
+  sweep: 'Sweep',
+  call: 'Call',
 } as const;
 
 type Canonical = (typeof WYRM_CLIPS)[keyof typeof WYRM_CLIPS];
@@ -44,6 +47,8 @@ export const WYRM_CLIP_DURATIONS: Readonly<Record<Canonical, number>> = {
   HeadLower: 1,
   Roar: 1.6,
   Rest: 3,
+  Sweep: 1.4,
+  Call: 1.6,
 };
 
 /** The names `Enemy.ts` asks for, mapped onto wyrm clips (`currentClip` reports the name requested). */
@@ -82,8 +87,8 @@ const BASE_EASE = 8;
 /** Metres a camera must come back inside an LOD band before the finer level returns. */
 const LOD_HYSTERESIS = 3;
 
-function lodFor(distance: number, current: number): number {
-  const [near, far] = LOD_DISTANCES;
+export function lodFor(distance: number, current: number, scale = 1): number {
+  const [near, far] = lodDistances(scale);
   const raw = distance > far ? 2 : distance > near ? 1 : 0;
   if (raw >= current) return raw;
   // Coming closer: only once inside the band by the margin.
@@ -345,7 +350,7 @@ export class WyrmBody implements EnemyBody {
     this.evaluate(a, attackTime, dt);
 
     // LOD from the last rendered camera distance (0 when nothing renders: full detail), with 3 m of hysteresis.
-    this.rig.lod = lodFor(this.cameraDistance, this.rig.lod);
+    this.rig.lod = lodFor(this.cameraDistance, this.rig.lod, this.rig.params.scale);
     const frame = this.rootFrame();
     if (!this.spineSet) {
       // First tick at the real spawn: the body laid out behind the head along the root's facing.
@@ -511,6 +516,24 @@ export class WyrmBody implements EnemyBody {
         p.headPitch = -0.6;
         p.fold = 1;
         p.flap = -0.25;
+        break;
+      case 'Sweep':
+        // Ysmeryth's wing sweep: the wings spread and rise through the windup (with the wing flash), then beat down
+        // and forward through the window.
+        p.fold = u < ws ? 1 - pre : inWindow ? 0 : post;
+        p.flap = u < ws ? -0.2 + 0.9 * pre : inWindow ? 0.7 - 1.4 * ((u - ws) / Math.max(1e-6, we - ws)) : -0.7 * (1 - post);
+        p.flash = u < ws ? pre : inWindow ? 1 - (u - ws) / Math.max(1e-6, we - ws) : 0;
+        p.headPitch += u < ws ? 0.2 * pre : -0.1;
+        p.billow = inWindow ? 1 : 0;
+        break;
+      case 'Call':
+        // The keeper's call: she rears, wings wide, crest and eyes blazing (the flash), jaw open in the window.
+        p.headPitch = u < ws ? 0.8 * pre : inWindow ? 0.8 : 0.8 * (1 - post);
+        p.fold = u < ws ? 1 - pre : inWindow ? 0 : post;
+        p.flap = u < ws ? 0.6 * pre : inWindow ? 0.6 : 0.6 * (1 - post);
+        p.flash = u < ws ? pre : inWindow ? 1 : 1 - post;
+        p.jaw = inWindow ? 1 : 0.2;
+        p.mouth = u < ws ? 0.5 * pre : inWindow ? 0.9 : 0.5 * (1 - post);
         break;
     }
     // A telegraph flash on top lifts the rim (setTelegraph); the mouth never dims below the clip's own value.
