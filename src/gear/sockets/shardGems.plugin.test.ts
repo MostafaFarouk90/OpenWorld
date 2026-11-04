@@ -234,4 +234,24 @@ describe('shard-gems plugin', () => {
     expect(t.svc.recut('shard-gem.bulwark', 'shard-gem.fletching')).toEqual({ ok: false, reason: 'not-allowed' });
     expect(t.inv.gold).toBe(120);
   });
+
+  it("K15's setScreen hook: the screen gets the host and K10's model; null restores the fallback panel; a second open while one is up is false", { timeout: PLUGIN_TEST_TIMEOUT }, async () => {
+    const t = await boot({ cls: 'knight' });
+    const gem = gemFor('knight', 'a').id;
+    t.inv.add('wyrm-tempered-oathblade', 1);
+    t.inv.add(gem, 1);
+    t.inv.addGold(100);
+    const seen: { pieces: string[]; gems: string[]; gold: number; equipped: boolean | undefined }[] = [];
+    let closed = 0;
+    t.svc.setScreen((host, model) => {
+      seen.push({ pieces: model.pieces().map((p) => p.itemId), gems: model.gems().map((g) => g.id), gold: model.gold(), equipped: model.equipped?.('wyrm-tempered-oathblade') });
+      expect(typeof host.t).toBe('function');
+      return host.openModal({ id: 'test-screen', element: {} as never, dispose: () => void closed++ });
+    });
+    expect(t.svc.openScreen()).toBe(true);
+    expect(seen).toEqual([{ pieces: ['wyrm-tempered-oathblade'], gems: [gem], gold: 100, equipped: false }]);
+    expect(t.ctx.hud.modalOpen).toBe('test-screen');
+    expect(t.svc.openScreen()).toBe(false);
+    expect(seen).toHaveLength(2);
+  });
 });

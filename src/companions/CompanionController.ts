@@ -110,6 +110,8 @@ export class CompanionController {
   private mounted = false;
   /** Hidden on horseback after falling too far back; reappears behind the player on dismount. */
   private mountHidden = false;
+  /** Hidden while the player glides, rides the ferry or dives (v0.7 item 25); reappears behind the player at the end. */
+  private modeHidden = false;
   /** Seconds left in which a door event does not teleport him, after a wait ended with a walk back. */
   private walkBackWindow = 0;
 
@@ -299,6 +301,7 @@ export class CompanionController {
     this.wait = null;
     this.handoffAge = 0;
     this.mountHidden = false;
+    this.modeHidden = false;
     this.brain?.reset();
     this.setStonehide(false);
     this.setFlame(false);
@@ -426,6 +429,8 @@ export class CompanionController {
     // A mounted player always loads dismounted (contract v0.5), so the load clears it.
     this.mounted = false;
     this.mountHidden = false;
+    // Core sets the walk mode on the load too (either order): the loader has put the player on the ground.
+    this.modeHidden = false;
     this.walkBackWindow = 0;
     const saved = this.saved;
     this.saved = null;
@@ -467,7 +472,7 @@ export class CompanionController {
 
   /** No-op while waiting: doors, fast travel and respawns never pull a waiting companion to the player. */
   private requestTeleport(): void {
-    if (!this.model || this.wait) return;
+    if (!this.model || this.wait || this.modeHidden) return;
     this.teleportPending = true;
     this.spotCursor.next = 0;
     this.lastTrailPoint = this.model.trail.newest() ?? this.lastTrailPoint;
@@ -521,6 +526,36 @@ export class CompanionController {
     return v ? this.director.area(v) : null;
   }
 
+  /** Act 3 (K5): an event bark (the trial, the reveal, a ferry stop) through the area path, so pacing and gates hold. */
+  sayAt(place: string): void {
+    this.emitBark(this.area(place));
+  }
+
+  /**
+   * Act 3 (K5, v0.7 item 25): hidden while the movement mode hides companions; on the way back he is placed behind the
+   * player (landing, stop or surfacing point). Idempotent both ways; a companion waiting at a post stays there.
+   */
+  hideForMode(on: boolean): void {
+    if (on) {
+      // Re-applied every tick: a companion spawned or joined during the mode is hidden too.
+      if (!this.modeHidden) this.teleportPending = false;
+      this.modeHidden = true;
+      if (!this.wait && !this.hidden) this.setHidden(true);
+      return;
+    }
+    if (!this.modeHidden) return;
+    this.modeHidden = false;
+    if (!this.model || this.wait) return;
+    // The trail from before the mode is far behind by now.
+    this.model.trail.clear();
+    this.lastTrailPoint = null;
+    this.requestTeleport();
+  }
+
+  get isModeHidden(): boolean {
+    return this.modeHidden;
+  }
+
   private emitBark(b: Bark | null): void {
     // An inactive companion in the hand-off window (still walking to his post) stays quiet.
     if (!b || !this.actor || this.hidden || this.wait || !this.isActive() || !this.claimBark(this.def.id)) return;
@@ -561,7 +596,7 @@ export class CompanionController {
       this.setHidden(true);
     }
     const step = this.brainStep(dt, player);
-    if (!this.wait && !this.mountHidden) this.follow(dt, player, p.facingYaw, ports, step?.goal ?? null, step?.face ?? null);
+    if (!this.wait && !this.mountHidden && !this.modeHidden) this.follow(dt, player, p.facingYaw, ports, step?.goal ?? null, step?.face ?? null);
     if (step?.swing) this.figure?.playAttack(HROLF_TUNING.swingSeconds);
     if (step?.hit) this.strike(step.hit);
     this.updateStonehide(player);
@@ -719,6 +754,11 @@ export class CompanionController {
   private leaveWait(player: Vec3): void {
     const m = this.model!;
     this.wait = null;
+    if (this.modeHidden) {
+      // The player is gliding, seated or diving: he comes back when the mode ends.
+      this.setHidden(true);
+      return;
+    }
     this.director.setActive(!this.hidden);
     if (this.canWalkBack(player)) {
       // Clears the trail and the player history, so the first step after the wait is not taken for a jump.

@@ -11,5 +11,7 @@ export const NPC_STRINGS_EN: Record<string, string> = {
   'npc.carter-3.name': 'Carter',
   'npc.aldwin.name': 'Aldwin the Miller',
   'npc.garrick.name': 'Garrick Thorne',
+  'npc.orla.name': 'Orla Pike',
+  'npc.osmund.name': 'Sexton Osmund',
   'npc.silent': 'They have nothing to say yet.',
 };

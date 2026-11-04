@@ -6,6 +6,17 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { ModelSource } from '../assets/swap/ModelLibrary';
 
 export const ENV_PREFIX = 'env/';
+/** Scripted stand-in glbs (public/assets/env-standin), outside the asset manifest; see resolve.ts STANDINS. */
+export const STANDIN_PREFIX = 'env-standin/';
+
+/** The glb url under `base` for an env or env-standin id, or null for any other id. */
+export function envGlbUrl(id: string, base: string): string | null {
+  if (id.startsWith(ENV_PREFIX)) return `${base}assets/env/${id.slice(ENV_PREFIX.length)}.glb`;
+  if (id.startsWith(STANDIN_PREFIX)) return `${base}assets/env-standin/${id.slice(STANDIN_PREFIX.length)}.glb`;
+  return null;
+}
+
+const isEnvId = (id: string): boolean => id.startsWith(ENV_PREFIX) || id.startsWith(STANDIN_PREFIX);
 
 export class EnvModelSource implements ModelSource {
   private readonly loader = new GLTFLoader();
@@ -15,10 +26,11 @@ export class EnvModelSource implements ModelSource {
   constructor(private readonly delegate: ModelSource | undefined, private readonly base: string = import.meta.env.BASE_URL) {}
 
   load(id: string): Promise<unknown> {
-    if (!id.startsWith(ENV_PREFIX)) return this.delegate ? this.delegate.load(id) : Promise.reject(new Error(`no source for ${id}`));
+    const url = envGlbUrl(id, this.base);
+    if (!url) return this.delegate ? this.delegate.load(id) : Promise.reject(new Error(`no source for ${id}`));
     let p = this.scenes.get(id);
     if (!p) {
-      p = this.loader.loadAsync(`${this.base}assets/env/${id.slice(ENV_PREFIX.length)}.glb`).then((g) => {
+      p = this.loader.loadAsync(url).then((g) => {
         this.resolved.set(id, g.scene);
         return g.scene;
       });
@@ -28,7 +40,7 @@ export class EnvModelSource implements ModelSource {
   }
 
   instantiate(id: string): THREE.Object3D {
-    if (!id.startsWith(ENV_PREFIX)) {
+    if (!isEnvId(id)) {
       if (!this.delegate) throw new Error(`no source for ${id}`);
       return this.delegate.instantiate(id);
     }
@@ -39,6 +51,6 @@ export class EnvModelSource implements ModelSource {
   }
 
   packOf(id: string): string | undefined {
-    return id.startsWith(ENV_PREFIX) ? undefined : this.delegate?.packOf?.(id);
+    return isEnvId(id) ? undefined : this.delegate?.packOf?.(id);
   }
 }

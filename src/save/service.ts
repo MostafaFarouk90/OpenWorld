@@ -13,6 +13,11 @@ export interface SaveService {
   readonly loading: boolean;
   /** Applies the boot-time save (the Continue button). Resolves true when a save was applied. */
   continueNow(): Promise<boolean>;
+  /**
+   * Dev builds only (K16, the `?act3=` fixtures): applies a save file held in memory as Continue does, without reading or
+   * writing either slot. Resolves false in production, for a malformed file, or when the apply fails.
+   */
+  loadFile?(raw: unknown): Promise<boolean>;
   /** Clears both slots (after backing up a problem save). */
   newGame(): Promise<boolean>;
   /**

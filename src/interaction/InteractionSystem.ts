@@ -69,6 +69,12 @@ export const DEFAULT_INTERACT_RADIUS = 2;
 export const DEFAULT_CONE_DEGREES = 75;
 /** How much nearer an `ambient` interactable must be than a `live` one in reach to keep the focus. */
 export const AMBIENT_YIELD_METRES = 1.5;
+/**
+ * Act 3 (K5): kinds of a person the player turns to speak with. While one that is not `ambient` is in reach and in the
+ * facing cone, an `ambient` interactable (a following companion) never takes the focus, however near it stands
+ * (Gytha at D05's door, the glide launch: the companion beside the player took F).
+ */
+export const PERSON_KINDS: ReadonlySet<InteractKind> = new Set<InteractKind>(['talk', 'shop', 'trainer']);
 export const FOCUS_HALF_ANGLE = (DEFAULT_CONE_DEGREES * Math.PI) / 180;
 const EPS = 1e-6;
 
@@ -302,6 +308,7 @@ export class InteractionSystem implements GameSystem {
     const best: Record<InteractAction, Interactable | null> = { interact: null, mercy: null };
     const bestScore: Record<InteractAction, number> = { interact: Infinity, mercy: Infinity };
     const live: Record<InteractAction, boolean> = { interact: false, mercy: false };
+    const person: Record<InteractAction, boolean> = { interact: false, mercy: false };
     const cands = this.cands;
     cands.length = 0;
     for (const i of this.items.values()) {
@@ -317,9 +324,11 @@ export class InteractionSystem implements GameSystem {
       if (cone < 360 && hd > 1e-3 && (dx * fx + dz * fz) / hd < Math.cos((cone * Math.PI) / 180)) continue;
       const a = i.action === 'mercy' ? 'mercy' : 'interact';
       if (!live[a] && this.isLive(i)) live[a] = true;
+      if (!i.ambient && PERSON_KINDS.has(i.kind)) person[a] = true;
       cands.push({ i, a, score: this.itemScore(i, p.feet, dist) });
     }
     for (const c of cands) {
+      if (c.i.ambient && person[c.a]) continue;
       const score = c.i.ambient && live[c.a] ? c.score + AMBIENT_YIELD_METRES : c.score;
       const cur = best[c.a];
       if (score < bestScore[c.a] || (score === bestScore[c.a] && cur && c.i.id < cur.id)) {
