@@ -17,7 +17,8 @@ import { createAct3WorldPlugin, createFogBlender } from './act3World.plugin';
 type Flags = Record<string, boolean>;
 const PHASE_D: Flags = { 'story.gate.a2': true, 'story.d03.complete': true };
 const PHASE_E: Flags = { ...PHASE_D, 'story.gate.a3': true };
-const PHASE_F: Flags = { ...PHASE_E, 'story.phase.dragonspineOpen': true };
+// Phase F (K16 PR 2) retired the Dragonspine hold: the gate alone is Phase F.
+const PHASE_F: Flags = { ...PHASE_E };
 const SUMMIT: Flags = { ...PHASE_F, ...Object.fromEntries((SUMMIT_OPEN_WHEN.all ?? []).map((k) => [k, true])) };
 const reader = (flags: Flags) => ({ getFlag: (k: string) => flags[k] });
 function containment(flags: Flags): Containment {
@@ -111,8 +112,8 @@ describe('the act3-world plugin', () => {
     return { fc, plugin };
   }
 
-  it('defines every anchor and registers the four faces; all four stand in Phase E; dispose removes them all', () => {
-    const { fc, plugin } = rig(PHASE_E);
+  it('defines every anchor and registers the four faces; all four stand before Act 3; dispose removes them all', () => {
+    const { fc, plugin } = rig(PHASE_D);
     for (const a of ACT3_WORLD_LAYOUT.anchors) expect(fc.anchors.has(a.id), a.id).toBe(true);
     expect(fc.anchors.get('dragonspine.wyrmwatch.hearth')!.position.y).toBe(10);
     for (const w of ACT3_FOG_WALLS) {
@@ -141,11 +142,11 @@ describe('the act3-world plugin', () => {
     s.plugin.dispose?.();
   });
 
-  it('a load back to a Phase E save raises the Spine Road face again', () => {
+  it('a load back to a pre-Act 3 save raises the Spine Road face again', () => {
     const { fc, plugin } = rig(PHASE_F);
     expect(fc.triggers.has('trg.fog.spine-road')).toBe(false);
     fc.flags.clear();
-    for (const [k, v] of Object.entries(PHASE_E)) fc.flags.set(k, v);
+    for (const [k, v] of Object.entries(PHASE_D)) fc.flags.set(k, v);
     fc.fire('save.loaded', {});
     expect(fc.triggers.has('trg.fog.spine-road')).toBe(true);
     plugin.dispose?.();

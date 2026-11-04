@@ -134,7 +134,8 @@ describe('unlock tables name real signals', () => {
     expect(act3Backfill(none)).toEqual([]);
     expect(act3Backfill({ ...none, items: () => undefined })).toEqual([]);
     const flags = (...f: string[]) => ({ flagSet: (k: string) => f.includes(k), items: () => [] });
-    expect(act3Backfill(flags('story.gate.a3')).sort()).toEqual([ID.greyfen, ID.blockLevels].sort());
+    // Phase F (K16 PR 2) retired the Dragonspine hold: the gate opens both regions' entries.
+    expect(act3Backfill(flags('story.gate.a3')).sort()).toEqual([ID.greyfen, ID.dragonspine, ID.blockLevels].sort());
     expect(act3Backfill(flags('place.greyfen.discovered'))).toEqual([ID.greyfen]);
     expect(act3Backfill(flags('waystone.reedgate.lit'))).toEqual([ID.reedgate]);
     expect(act3Backfill(flags('waystone.greywatch.lit'))).toEqual([ID.greywatch]);
@@ -223,14 +224,14 @@ describe('codex-act3 plugin on a reduced manifest', () => {
 
   it('the Dragonspine flags unlock their entries live and on load, and the summit how-to follows the area', async () => {
     const a = await boot();
-    // The phase flag alone (a release hold) does not unlock the lore; it counts with the act-3 gate.
+    // The retired phase flag alone (an old save's) unlocks nothing; the act-3 gate opens the lore (Phase F, K16 PR 2).
     a.ctx.state.setFlag('story.phase.dragonspineOpen', true);
     expect(a.has(ID.dragonspine)).toBe(false);
     a.ctx.state.setFlag('story.gate.a3', true);
     expect(a.has(ID.dragonspine)).toBe(true);
     const a2 = await boot();
     a2.ctx.state.setFlag('story.gate.a3', true);
-    expect(a2.has(ID.dragonspine)).toBe(false);
+    expect(a2.has(ID.dragonspine)).toBe(true);
     const a3 = await boot();
     a3.ctx.state.load({ flags: { 'story.gate.a3': true, 'story.phase.dragonspineOpen': true } });
     a3.emit('save.loaded', { slot: 'test' });

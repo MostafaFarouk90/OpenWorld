@@ -1,7 +1,7 @@
 import type { QuestDef } from '../../../types';
 import { flagsAll, reads, story } from '../../act2/helpers';
 
-/** Phase E holds the Dragonspine with this flag (src/quests/act3Jump.ts `DRAGONSPINE_OPEN_FLAG`, pinned by a test; not imported: that file pulls in the quest registry). */
+/** Phase E held the Dragonspine with this flag (retired in Phase F, K16 PR 2; kept so old saves and tests read the name) (src/quests/act3Jump.ts `DRAGONSPINE_OPEN_FLAG`, pinned by a test; not imported: that file pulls in the quest registry). */
 export const M28_OPEN_FLAG = 'story.phase.dragonspineOpen';
 /** The four hunters in talk order, all on foot outside the hall: lodge-hunter-3 stands at the tower foot (K4 667a1bb); lodge-hunter-5 is inside Wyrmwatch Hall, so it is not one. */
 export const M28_HUNTER_POSTS = [1, 2, 3, 4] as const;
@@ -40,7 +40,8 @@ export const m28: QuestDef = {
   titleKey: 'quest.m28.title',
   summaryKey: 'quest.m28.summary',
   sequential: true,
-  startWhen: { all: [{ flag: 'story.gate.a3', equals: true }, { flag: M28_OPEN_FLAG, equals: true }] },
+  // Phase F (K16 PR 2) retired the Dragonspine hold: M28 opens with the act.
+  startWhen: { all: [{ flag: 'story.gate.a3', equals: true }] },
   objectives: [
     { id: 'brief', type: 'talk', target: 'thorgar', textKey: 'quest.m28.brief' },
     ...M28_HUNTERS.map((id, i) => ({ id: `hunter${i + 1}`, type: 'talk' as const, target: id, textKey: `quest.m28.hunter${i + 1}` })),

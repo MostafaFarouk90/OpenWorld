@@ -18,7 +18,7 @@ export const ACT3_FLAG_OWNERS: readonly Act3FlagOwner[] = [
   { pattern: 'story.a3.peaksCardSeen', owner: 'K16', note: 'the "peaks are next" card after D05 has shown (Phase E)' },
   { pattern: 'trainer.<classId>.masterBook', owner: 'K11', note: 'written through grantMasterBook' },
   { pattern: 'boss.<id>.outcome', owner: 'core boss registry', note: 'written by the core boss registry for every boss' },
-  { pattern: 'story.phase.dragonspineOpen', owner: 'Phase F PR', note: 'nothing writes it in Phase E' },
+  { pattern: 'story.phase.dragonspineOpen', owner: 'Phase F PR', note: 'retired in Phase F (K16 PR 2): nothing writes or reads it; an old save that has it loads silently' },
   { pattern: 'gear.shardgem.granted.<id>', owner: 'K10', note: 'one shard-gem paid per boss (live drop or the D01 to D04 retro-grant)' },
   { pattern: 'place.poi.a3.<id>.discovered', owner: 'K2', note: 'an Act 3 point of interest or Leap spot found' },
   { pattern: 'poi.a3.<id>.taken', owner: 'K2', note: 'an Act 3 Leap cache or the song stone taken (once)' },

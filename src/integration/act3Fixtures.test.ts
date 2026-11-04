@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACT3_WAYSTONES } from '../region/act3/act3Places';
 import { GREYFEN_LAYOUT } from '../greyfen/greyfen.layout';
 import { DRAGONSPINE_LAYOUT } from '../dragonspine/dragonspine.layout';
-import { ACT3_ARRIVAL, ACT3_ARRIVAL_WAYSTONE, act3JumpWaystones, ACT3_JUMP_IDS, ACT3_ORDERS, ACT3_PREREQS, ACT3_SHRINE_AFTER, blockOf, needsDragonspine } from '../quests/act3Jump';
+import { ACT3_ARRIVAL, ACT3_ARRIVAL_WAYSTONE, act3JumpWaystones, ACT3_JUMP_IDS, ACT3_ORDERS, ACT3_PREREQS, ACT3_SHRINE_AFTER, blockOf } from '../quests/act3Jump';
 import { act3FixtureFresh, act3FixtureName, fixtureDefIds, knownQuestDefs, type Act3FixtureMeta } from './act3FixtureKey';
 import { questDefs } from '../quests/content';
 import { generateAct3Fixture } from './act3Fixtures';
@@ -59,7 +59,7 @@ describe('the committed Act 3 fixtures', () => {
     for (const q of meta.injected) expect(flags[`story.${q}.complete`], q).toBe(true);
     expect(flags[`story.${id}.complete`]).toBeUndefined();
     for (const [q, shrine] of Object.entries(ACT3_SHRINE_AFTER)) expect(flags[shrine] === true, shrine).toBe(meta.injected.includes(q));
-    expect(flags['story.phase.dragonspineOpen'] === true).toBe(needsDragonspine(id, order));
+    expect(flags['story.phase.dragonspineOpen']).toBeUndefined();
     // A real play saw the "peaks are next" card at D05; the jump marks it seen, so it never pops over the arrival.
     expect(flags[PEAKS_CARD_SEEN_FLAG] === true).toBe(meta.injected.includes('d05'));
     for (const [block, level] of Object.entries(meta.lockedBlocks)) expect(flags[blockLevelFlag(block)], block).toBe(level);

@@ -13,6 +13,7 @@ import { DRAGONSPINE_DIALOGUE_STRINGS } from './content/act3/dragonspine';
 import { SUMMIT_DIALOGUE_STRINGS } from './content/act3/summit';
 import { ACT3_COMPANION_STRINGS } from './content/act3/companions';
 import { GREYFEN_DIALOGUE_STRINGS } from './content/act3/greyfen';
+import { SCENE_ACT3_CAMP } from './content/act3/campScene.dialogue';
 import { NPC_AELFREDA_COMPANION_STRINGS_EN } from '../companions/dialogue/npcAelfredaCompanion.dialogue';
 
 export const dialogueStrings: Record<string, string> = {
@@ -30,6 +31,7 @@ export const dialogueStrings: Record<string, string> = {
   ...SUMMIT_DIALOGUE_STRINGS,
   ...ACT3_COMPANION_STRINGS,
   ...GREYFEN_DIALOGUE_STRINGS,
+  ...SCENE_ACT3_CAMP.strings,
   // ---- Marshal Stane ----
   'dialogue.npc-stane.wave': 'Ho there, {name}! Good to see you walking Kettlewick lane with your head up.',
   'dialogue.npc-stane.wave2': 'Come by the Practice Yard when you have a moment. I am putting up a drill board, and every move you learn can be tried out on it.',

@@ -172,7 +172,8 @@ describe('the Dragonspine interiors', () => {
     const summitOpen = Object.fromEntries((ACT3_HOLES[0]!.openWhen as { all: string[] }).all.map((k) => [k, true]));
     const c = new Containment({ getFlag: (k: string) => flags[k] }, ACT3_CORRIDORS, ACT3_HOLES);
     const cs = new Containment({ getFlag: (k: string) => ({ ...flags, ...summitOpen })[k] }, ACT3_CORRIDORS, ACT3_HOLES);
-    const closed = new Containment({ getFlag: (k: string) => ({ 'story.gate.a3': true })[k as 'story.gate.a3'] }, ACT3_CORRIDORS, ACT3_HOLES);
+    // Before Act 3 (Phase F retired the Dragonspine hold, so the gate alone opens it).
+    const closed = new Containment({ getFlag: () => undefined }, ACT3_CORRIDORS, ACT3_HOLES);
     const stones = b.layout.anchors.filter((a) => a.tags?.includes('waystone'));
     expect(stones.map((s) => s.id).sort()).toEqual(['waystone.frostfang-aerie', 'waystone.last-anvil', 'waystone.rime-pass', 'waystone.wyrms-hearth', 'waystone.wyrmwatch-lodge']);
     for (const s of stones) {
@@ -180,7 +181,7 @@ describe('the Dragonspine interiors', () => {
       expect(summit ? areaAt(s.x, s.z) : 'lower', s.id).toBe(summit ? 'dragonspine-summit' : 'lower');
       expect((summit ? cs : c).isOpen(s.x, s.z), s.id).toBe(true);
       if (summit) expect(c.isOpen(s.x, s.z), `${s.id} closed until the summit opens`).toBe(false);
-      expect(closed.isOpen(s.x, s.z), `${s.id} closed in Phase E`).toBe(false);
+      expect(closed.isOpen(s.x, s.z), `${s.id} closed before Act 3`).toBe(false);
       for (const d of ALL_INTERIORS) {
         const inside = d.rooms.some((r) => s.x >= d.site.x + r.x0 - 1 && s.x <= d.site.x + r.x1 + 1 && s.z >= d.site.z + r.z0 - 1 && s.z <= d.site.z + r.z1 + 1);
         expect(inside, `${s.id} in ${d.id}`).toBe(false);

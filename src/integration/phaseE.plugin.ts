@@ -3,9 +3,8 @@ import type { GamePlugin } from '../core/plugins';
 import { ActEndingCard, type KeySource } from '../hud/ActEndingCard';
 import { asHtml, hudDocument } from '../hud/soft';
 import {
-  PEAKS_CARD_ID, PEAKS_CARD_SEEN_FLAG, PEAKS_CARD_TRIGGER_FLAG, PEAKS_CARD_WIDGET, PHASE_E_STRINGS_EN, peaksLineKey,
+  PEAKS_CARD_ID, PEAKS_CARD_SEEN_FLAG, PEAKS_CARD_TRIGGER_FLAG, PEAKS_CARD_WIDGET, PHASE_E_STRINGS_EN, PEAKS_LINE_KEY,
 } from './phaseECard';
-import { DRAGONSPINE_OPEN_FLAG } from '../quests/act3Jump';
 
 /** The card under `__phaseECard` for smoke runs and tests. */
 export type PhaseECardHandle = ActEndingCard;
@@ -27,7 +26,7 @@ const plugin: GamePlugin = {
         ctx.hud.modalOpen !== null || ctx.services.get('dialogue')?.active === true || ctx.services.get('actEndingCard')?.active() === true,
       seen: () => ctx.state.getBool(PEAKS_CARD_SEEN_FLAG),
       markSeen: () => ctx.state.setFlag(PEAKS_CARD_SEEN_FLAG, true),
-      recap: () => [t(peaksLineKey(ctx.state.getBool(DRAGONSPINE_OPEN_FLAG)))],
+      recap: () => [t(PEAKS_LINE_KEY)],
     });
     ctx.events.on('save.loaded', () => card.onLoaded());
     ctx.gates.flag(PEAKS_CARD_TRIGGER_FLAG, (open) => card.onGate(open));

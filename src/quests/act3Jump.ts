@@ -1,7 +1,7 @@
 // `?act3=<quest>&new&order=greyfen|spine` (dev and smoke only, contracts v0.7 item 22): jumps a fresh game into Act 3 before
 // any fixture exists (K16 owns the deterministic fixtures on this plumbing). Act 1 and Act 2 are replayed through the shipped
 // runners with both act endings marked seen, so neither card plays over the player; `story.gate.a3` is set before the teleport
-// (and `story.phase.dragonspineOpen` for any jump that needs the Dragonspine, since Phase E holds it). The Act 3 prerequisites
+// (Phase E's `story.phase.dragonspineOpen` hold was retired in Phase F, so no jump writes it now). The Act 3 prerequisites
 // are then completed by flag injection in the chosen block order: every prerequisite gets `story.<id>.complete`, and a quest
 // the quests service knows is also started and completed there (so its own effects run once the quest threads land). The
 // player's XP is topped up to the plan's Act 3 start (ACT3_START_XP, level 17) before any block locks, and the player is
@@ -240,7 +240,6 @@ export class Act3Jump {
       p.setFlag(ACT3_GATE_FLAG, true);
       // Before any block locks, so the previews read the plan's Act 3 starting level (17), not the replays' quest-only XP.
       p.topUpXp?.(ACT3_START_XP);
-      if (needsDragonspine(this.id, this.order)) p.setFlag(DRAGONSPINE_OPEN_FLAG, true);
       this.phase = 'act3';
     }
     if (this.phase === 'act3') {

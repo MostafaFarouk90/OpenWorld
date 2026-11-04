@@ -1,7 +1,7 @@
 /**
  * The shared body of the Phase E chain tests (run A and run B each in its own file, so each boot has a worker to itself):
  * the nine Greyfen quests played headless from the run's start fixture through D05, the peaks card shown once, the
- * Dragonspine's hold as the run expects, and the 52% gate on K12's rows with the nodes this run read.
+ * Dragonspine open (Phase F retired the hold), and the 52% gate on K12's rows with the nodes this run read.
  */
 import { expect } from 'vitest';
 import { bootPhaseE, measurePhaseE, PHASE_E_ORDER } from './phaseE';
@@ -20,7 +20,7 @@ const ALLOWED_SCRIPTED = [
   /^r13 song: struck on the virtual clock, 0 failed bars$/, /^m27 blinds: stepped \d+ m sneaking, (unseen|seen, pack fought)$/, /^m26 wake: (scene read|credited by the set piece without its scene)$/,
 ]
 
-export async function runPhaseE(run: 'a' | 'b', choices: GreyfenChoices, dragonspineOpen: boolean): Promise<string> {
+export async function runPhaseE(run: 'a' | 'b', choices: GreyfenChoices): Promise<string> {
   KILLS_FORCED.length = 0;
   const h = await bootPhaseE(run);
   try {
@@ -35,14 +35,14 @@ export async function runPhaseE(run: 'a' | 'b', choices: GreyfenChoices, dragons
     expect(scripted.filter((s) => !ALLOWED_SCRIPTED.some((r) => r.test(s)))).toEqual([]);
     expect(KILLS_FORCED).toEqual([]);
 
-    // The card, once, with the line for the hold as it stands.
+    // The card, once; Phase F retired the hold, so the Dragonspine is open in both orders and nothing wrote the old flag.
     const card = (globalThis as { __phaseECard?: PhaseECardHandle }).__phaseECard;
     expect(card?.visible, 'the peaks card is up after D05').toBe(true);
     expect(h.ctx.state.getBool(PEAKS_CARD_SEEN_FLAG)).toBe(true);
-    expect(h.ctx.state.getBool(DRAGONSPINE_OPEN_FLAG)).toBe(dragonspineOpen);
+    expect(h.ctx.state.getBool(DRAGONSPINE_OPEN_FLAG)).toBe(false);
     const c = h.ctx.services.require('containment');
-    expect(c.isOpen(ACT3_ARRIVAL.spine.x, ACT3_ARRIVAL.spine.z), 'the lodge').toBe(dragonspineOpen);
-    expect(fogOpenById('fog.dragonspine', h.ctx.state)).toBe(dragonspineOpen);
+    expect(c.isOpen(ACT3_ARRIVAL.spine.x, ACT3_ARRIVAL.spine.z), 'the lodge').toBe(true);
+    expect(fogOpenById('fog.dragonspine', h.ctx.state)).toBe(true);
 
     // The 52% gate on the Greyfen rows with the nodes read here.
     const { report, gate } = measurePhaseE(GREYFEN_PACE, trails, paceAt);
