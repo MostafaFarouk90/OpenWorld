@@ -15,6 +15,10 @@ import { whereIs, type PhaseCTrail } from './phaseC';
 import { diveAlong } from './phaseE';
 import type { ObjectiveDef } from '../quests/types';
 import { GREYFEN_SPAWNERS } from '../quests/content/act3/greyfen/spawners';
+import { DRAGONSPINE_SPAWNERS } from '../quests/content/act3/dragonspine/spawners';
+import { SUMMIT_SPAWNERS } from '../quests/content/act3/summit/spawners';
+/** Every Act 3 quest spawner (Phase F's driver kills the Dragonspine and summit groups through the same loop). */
+const ACT3_SPAWNERS = [...GREYFEN_SPAWNERS, ...DRAGONSPINE_SPAWNERS, ...SUMMIT_SPAWNERS];
 import { GREYFEN_GROUP_OBJECTIVES } from '../quests/content/act3/greyfen/groups';
 import { GREYFEN_PROPS } from '../quests/content/act3/greyfen/props';
 import { DIVE_TUNING } from '../water/types';
@@ -85,7 +89,7 @@ export async function pressAt(h: ChapterHarness, id: string, holdS = 0): Promise
 }
 
 /** Through a door interactable, waiting for the interior transition to land in `expect`. */
-async function throughDoor(h: ChapterHarness, doorId: string, expect: string | null): Promise<void> {
+export async function throughDoor(h: ChapterHarness, doorId: string, expect: string | null): Promise<void> {
   await pressAt(h, doorId);
   const I = interiors(h)!;
   for (let i = 0; i < 1200 && I.current !== expect; i++) await h.runAsync(1);
@@ -154,7 +158,7 @@ export async function talkTo(h: ChapterHarness, trail: PhaseCTrail, npc: string,
 }
 
 /** Waits (healed) until the game opens a dialogue by itself, then reads it. */
-async function awaitScene(h: ChapterHarness, trail: PhaseCTrail, what: string, seconds = 60): Promise<void> {
+export async function awaitScene(h: ChapterHarness, trail: PhaseCTrail, what: string, seconds = 60): Promise<void> {
   const dialogue = h.ctx.services.require('dialogue');
   for (let i = 0; i < seconds * 2 && !dialogue.active; i++) {
     await h.runAsync(30);
@@ -165,8 +169,8 @@ async function awaitScene(h: ChapterHarness, trail: PhaseCTrail, what: string, s
 }
 
 const spawnerAt = (h: ChapterHarness, spawnerId: string): THREE.Vector3 => {
-  const def = GREYFEN_SPAWNERS.find((s) => s.id === spawnerId);
-  ensure(def, `a Greyfen spawner ${spawnerId}`);
+  const def = ACT3_SPAWNERS.find((s) => s.id === spawnerId);
+  ensure(def, `an Act 3 spawner ${spawnerId}`);
   return h.anchor(def.anchor);
 };
 
@@ -182,7 +186,7 @@ const alive = (h: ChapterHarness, ids: readonly string[]) => {
 };
 
 /** Goes to each spawner in turn and kills what it raises, until `done()`. */
-async function killSpawners(h: ChapterHarness, ids: readonly string[], done: () => boolean, what: string, seen?: () => boolean): Promise<void> {
+export async function killSpawners(h: ChapterHarness, ids: readonly string[], done: () => boolean, what: string, seen?: () => boolean): Promise<void> {
   ensure(ids.length > 0, `${what}: spawners`);
   let site = 0;
   const forced = { n: 0 };
@@ -220,7 +224,7 @@ async function killSpawners(h: ChapterHarness, ids: readonly string[], done: () 
     }
   }
   const why = ids.map((id) => {
-    const def = GREYFEN_SPAWNERS.find((s) => s.id === id);
+    const def = ACT3_SPAWNERS.find((s) => s.id === id);
     const act = def?.activation as { flag?: string } | undefined;
     const tagged = [...h.ctx.actors.all()].filter((a) => (a as { spawnTag?: string }).spawnTag === def?.tag);
     const at = def ? h.anchor(def.anchor) : null;
@@ -231,9 +235,9 @@ async function killSpawners(h: ChapterHarness, ids: readonly string[], done: () 
   await h.runAsync(4);
 }
 
-const progressOf = (h: ChapterHarness, q: string, o: string) => qs(h).objectives(q).find((v) => v.def.id === o)?.progress ?? 0;
-const flag = (h: ChapterHarness, k: string) => h.ctx.state.getBool(k);
-const objDone = (h: ChapterHarness, q: string, o: string) => qs(h).objectiveDone(q, o);
+export const progressOf = (h: ChapterHarness, q: string, o: string) => qs(h).objectives(q).find((v) => v.def.id === o)?.progress ?? 0;
+export const flag = (h: ChapterHarness, k: string) => h.ctx.state.getBool(k);
+export const objDone = (h: ChapterHarness, q: string, o: string) => qs(h).objectiveDone(q, o);
 
 /** Swims a dive route from its entry stand to the pocket `pocketId` (or its first pocket), along the route's points. */
 async function diveTo(h: ChapterHarness, trail: PhaseCTrail, pocketId: string | null, volumeId?: string): Promise<void> {
@@ -345,10 +349,11 @@ const HANDLERS: Record<string, GreyfenHandler> = {
   'story.m26.woke': async (h, trail, q, o) => {
     await h.approach(h.anchor('greyfen.mere.shore'), 3);
     await waitFor(h, () => objDone(h, q, o.id), `${q}.${o.id}`, 180, trail);
-    // Headless, her wake may never reach its spray beat (the scene's cue), so the set piece credits the step without its lines:
-    // the measured nodes are then the lower count, never the higher.
+    // The wake scene is staged only where the game has a camera rig (K12's `canStage`): the rig is the renderer's, and a headless
+    // boot has none, so K6a's own wake beat credits the step without the scene's lines (the measured nodes are the lower count).
+    // Her spray beat itself fires on the fixed step; it is the staging, not the cue, that needs the renderer (K16 PR 2 item 9).
     const read = trail.talks.some((t) => t.npc === `scene-${q}.${o.id}`);
-    trail.scripted.push(`m26 wake: ${read ? 'scene read' : 'credited by the set piece without its scene'}`);
+    trail.scripted.push(`m26 wake: ${read ? 'scene read' : h.ctx.cameraRig ? 'credited by the set piece without its scene' : 'credited by her wake beat, the scene needs the renderer camera rig'}`);
   },
   'shrine.rekindled': async (h, trail, q, o) => {
     await pressAt(h, 'waystone:hathrens-mere', WAYSTONE_TUNING.rekindleHoldSeconds + 0.2);
@@ -403,7 +408,7 @@ const HANDLERS: Record<string, GreyfenHandler> = {
 };
 
 /** Waits (healed) for `done`; with a trail, a scene the game opens meanwhile is read into it (Hathren's wake, the brood). */
-async function waitFor(h: ChapterHarness, done: () => boolean, what: string, seconds: number, trail?: PhaseCTrail): Promise<void> {
+export async function waitFor(h: ChapterHarness, done: () => boolean, what: string, seconds: number, trail?: PhaseCTrail): Promise<void> {
   for (let i = 0; i < seconds * 2 && !done(); i++) {
     await h.runAsync(30);
     heal(h);
