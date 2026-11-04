@@ -50,7 +50,9 @@ export type EnemyKind =
   | 'skarl-drake'
   // Act 3 (K6b PR 2): the Dragonspine's own kinds.
   | 'rime-hawk'
-  | 'crag-ogre';
+  | 'crag-ogre'
+  // Act 3 (K6a PR 2): Ysmeryth the Coal-Mother in M31's trial.
+  | 'ysmeryth';
 
 /**
  * Act 2 kind ids (v0.6 item 14), reserved here so no other thread takes them. A6a and A6b move each id into
@@ -241,9 +243,9 @@ export interface EnemyDef {
   body?: 'humanoid' | 'quadruped' | 'wyrm' | 'golem' | 'crawler' | 'leech' | 'bird';
   /**
    * `circle-rush`: circle the target while a packmate is near, then rush (ai/Brain, hound/circleRush.ts). `wyrm-flight` (the Ember Wyrm) and
-   * `skittish` (the wyrmling) are behaviour overlays (behaviours.ts). A6b: `ceiling` (crawler drop), `back-core` (golem), `guide` (fox, sheep: harmless).
+   * `skittish` (the wyrmling) are behaviour overlays (behaviours.ts). A6b: `ceiling` (crawler drop), `back-core` (golem), `guide` (fox, sheep: harmless). K6a: `ysmeryth-trial` (wyrm/ysmeryth/overlay.ts).
    */
-  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide' | 'lurk' | 'peat' | 'hawk' | 'ogre';
+  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide' | 'lurk' | 'peat' | 'hawk' | 'ogre' | 'ysmeryth-trial';
   /** Seconds a poise break holds the stagger (and its mercy window); default `AI.breakStaggerSeconds` (1.2). */
   breakStaggerSeconds?: number;
   /** Hurtboxes on which a player-team or ally hit breaks poise at once (the Ember Wyrm's wings). */
