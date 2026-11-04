@@ -17,6 +17,10 @@ export const HALL_SIZE = { w: 40, d: 22, h: 10 } as const;
 /** R15's haul is about this long from the depot to the cache before the gate detours (the route comes to about 315 m: 3 x that is the plan's 1,000 m on foot, 2 x the 600 m ridden). */
 export const R15_LEG = 297;
 
+/** The yard-side foot of the south-west tower: clear of the tower and both walls, on the ground a walker reaches through the gates. */
+export const TOWER_FOOT = TOWER / 2 + 2.5;
+export const towerFoot = (edge: { w: number; s: number }): XZ => ({ x: edge.w + TOWER_FOOT, z: edge.s + TOWER_FOOT });
+
 export interface LodgeInfo {
   edge: { w: number; e: number; s: number; n: number };
   gateS: XZ;
@@ -116,7 +120,6 @@ export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
 
   const wayX = gateS.x - 14;
   const wayZ = edge.s - 6;
-  const sw = towerSpecs[0]!;
   const anchors = [
     a('waystone.wyrmwatch-lodge', wayX, wayZ, 0, ['waystone']),
     a('dragonspine.lodge.gate.south', gateS.x, edge.s - 4, 0, ['poi']),
@@ -137,7 +140,8 @@ export function lodgeLayout(s: Sites): { part: Part; info: LodgeInfo } {
     a('npc-post.thorgar.yard', s.hearth.x + 4, s.hearth.z + 3, headingTo(s.hearth.x + 4, s.hearth.z + 3, s.hearth.x, s.hearth.z), ['npc-post']),
     a('npc-post.lodge-hunter-1', gateS.x - 8, edge.s + 5, 0, ['npc-post']),
     a('npc-post.lodge-hunter-2', gateS.x + 8, edge.s + 5, 0, ['npc-post']),
-    a('npc-post.lodge-hunter-3', sw.x, sw.z, 0, ['npc-post', 'elevated'], { onStructure: sw.id, dy: TOWER_H }),
+    // The tower has no stair, so its lookout stands on the ground at the tower's yard-side foot (towerFoot), not on its top.
+    a('npc-post.lodge-hunter-3', towerFoot(edge).x, towerFoot(edge).z, 0, ['npc-post']),
     a('npc-post.lodge-hunter-4', L.cx - 12, L.cz - 14, 90, ['npc-post']),
     a('npc-post.lodge-hunter-5', door.x - 3, door.z - 4, 0, ['npc-post']),
     a('npc-post.lodge-hunter-6', door.x + 3, door.z - 4, 0, ['npc-post']),

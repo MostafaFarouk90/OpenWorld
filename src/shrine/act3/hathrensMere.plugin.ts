@@ -47,10 +47,6 @@ const hathrensMerePlugin: GamePlugin = {
       setFlag: (k, v) => ctx.state.setFlag(k, v),
       emitRekindled: (shrineId) => emit('shrine.rekindled', { shrineId }),
     });
-    // A silent sync lights the shrine with no event: the quests must read their doneWhen again (as the Act 2 shrines do).
-    const syncBinding = () => {
-      if (binding.sync()) ctx.services.get('quests')?.recheck?.();
-    };
     ctx.events.on('waystone.rekindled', (e) => binding.onRekindled(e.waystoneId));
     ctx.events.on('rest', (e) => {
       if (e.waystoneId) mere.onRest(e.waystoneId);
@@ -59,7 +55,7 @@ const hathrensMerePlugin: GamePlugin = {
       if (key === MERE.netsCutFlag || key === MERE.completeFlag || key === ForgeShrineBinding.flag(MERE.id)) mere.deriveOpen();
     });
     ctx.events.on('save.loaded', () => {
-      syncBinding();
+      binding.sync();
       mere.deriveOpen();
       mere.checkScale();
     });
@@ -98,7 +94,7 @@ const hathrensMerePlugin: GamePlugin = {
         );
       }
       visuals.build(s);
-      syncBinding(); // a load that ran before the anchors existed saw the waystone as unlit
+      binding.sync(); // a load that ran before the anchors existed saw the waystone as unlit
     };
 
     let first = true;
@@ -110,7 +106,7 @@ const hathrensMerePlugin: GamePlugin = {
       fixedUpdate() {
         if (first) {
           first = false;
-          syncBinding();
+          binding.sync();
         }
         if (!offQuests) offQuests = ctx.services.get('quests')?.onChange(() => mere.deriveOpen()) ?? null;
         mere.deriveOpen();

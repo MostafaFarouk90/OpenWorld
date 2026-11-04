@@ -29,7 +29,7 @@ import {
 } from './flags';
 import { a, open } from './helpers';
 import type { HeightFn, XZ } from './inputs';
-import { TOWER_H, type LodgeInfo } from './lodge';
+import { towerFoot, type LodgeInfo } from './lodge';
 import type { SkyholdInfo } from './skyhold';
 import { freeStand } from './summitSites';
 import type { Sites } from './sites';
@@ -83,14 +83,14 @@ export function buildToggles(s: Sites, lodge: LodgeInfo, hearth: HearthInfo, sky
       lift: AERIE_TOWER_H,
     },
   ];
-  // The hunters' outward posts (postRules.ts moves them there after M34), just inside the gates and on the south-west tower.
-  const sw = lodge.towers[0]!;
+  // The hunters' outward posts (postRules.ts moves them there after M34), just inside the gates and at the foot of the
+  // south-west tower (on the ground: the tower has no stair).
   const e = lodge.edge;
-  const out = (n: number, p: XZ, heading: number, rest: Partial<AnchorSpec> = {}, tags = ['npc-post']) => a(`npc-post.lodge-hunter-${n}.out`, p.x, p.z, heading, tags, rest);
+  const out = (n: number, p: XZ, heading: number) => a(`npc-post.lodge-hunter-${n}.out`, p.x, p.z, heading, ['npc-post']);
   const anchors: AnchorSpec[] = [
     out(1, { x: lodge.gateS.x - 5, z: e.s + 3 }, 180),
     out(2, { x: lodge.gateS.x + 5, z: e.s + 3 }, 180),
-    out(3, { x: sw.x, z: sw.z }, 180, { onStructure: sw.id, dy: TOWER_H }, ['npc-post', 'elevated']),
+    out(3, towerFoot(e), 225),
     out(4, { x: lodge.gateN.x + 5, z: e.n - 3 }, 0),
     out(5, { x: lodge.gateW.x + 3, z: lodge.gateW.z + 4 }, 270),
     out(6, { x: lodge.gateE.x - 3, z: lodge.gateE.z + 4 }, 90),

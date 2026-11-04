@@ -33,7 +33,17 @@ export const sceneAct1Camp: DialogueDef = {
 
     // 5. Aldith's debt
     { id: 'debt-forgiven', speaker: 'tobb', textKey: P + 'debt-forgiven', when: flagIs('world.harrowmark.inn.price', 'forgiven'), next: 'debt-collected' },
-    { id: 'debt-collected', speaker: 'gaut', textKey: P + 'debt-collected', when: flagIs('world.harrowmark.inn.price', 'collected'), next: 'notes' },
+    { id: 'debt-collected', speaker: 'gaut', textKey: P + 'debt-collected', when: flagIs('world.harrowmark.inn.price', 'collected'), next: 'verse-ash' },
+
+    // 6. Tobb's own verse, if Cael gave him a line at the fire ring (side job j04); skipped otherwise
+    { id: 'verse-ash', speaker: 'tobb', textKey: P + 'verse-ash', when: flagIs('story.j04.verse', 'ash'), next: 'verse-grain' },
+    { id: 'verse-grain', speaker: 'tobb', textKey: P + 'verse-grain', when: flagIs('story.j04.verse', 'grain'), next: 'verse-bread' },
+    { id: 'verse-bread', speaker: 'tobb', textKey: P + 'verse-bread', when: flagIs('story.j04.verse', 'bread'), next: 'verse2-forge' },
+    // ... and his second, from Harrowmark, if Cael gave him one at the Anvil yard's fire ring (side job j10); skipped otherwise
+    { id: 'verse2-forge', speaker: 'tobb', textKey: P + 'verse2-forge', when: flagIs('story.j10.verse', 'forge'), next: 'verse2-gate' },
+    { id: 'verse2-gate', speaker: 'tobb', textKey: P + 'verse2-gate', when: flagIs('story.j10.verse', 'gate'), next: 'verse2-window' },
+    { id: 'verse2-window', speaker: 'tobb', textKey: P + 'verse2-window', when: flagIs('story.j10.verse', 'window'), next: 'notes' },
+
 
     { id: 'notes', speaker: 'tobb', textKey: P + 'notes', next: 'oath' },
     { id: 'oath', speaker: 'gaut', textKey: P + 'oath', next: 'respect' },

@@ -27,6 +27,9 @@ export const SKILL_IDS = {
   skullsplitter: 'warden.skullsplitter',
   earthroot: 'warden.earthroot',
   frenziedHearth: 'warden.frenziedHearth',
+  wyrmbreaker: 'warden.wyrmbreaker',
+  mountainUnmoved: 'warden.mountainUnmoved',
+  voiceOfTheMountain: 'warden.voiceOfTheMountain',
 } as const;
 
 /** Cleaving Swing: attack 1 hits every hostile in the front arc (design 11.3: arc 120 degrees; the 3 m range is own). */
@@ -169,4 +172,77 @@ export const FRENZIED_HEARTH = {
   modifierId: 'warden.frenziedHearth',
   order: 10,
   effect: 'frenzied-hearth',
+} as const;
+
+/**
+ * Tier 5 capstones (K11 PR 3, design 9.2 and 11.5; numbers are own, about 2 to 3 times a tier 4 skill).
+ *
+ * Wyrmbreaker: the press charges for 0.8 s on its own (the bar has presses only), then the 2H chop plays (the same clip and hot
+ * window as Skullsplitter) and a 12 m by 4 m fissure ahead of the player takes 2.5x the weapon base with poise 60, once per cast.
+ * Every foe the chop hit is "cracked" for 8 s: a defender-band modifier at order -55 (before the guard at -50) raises every hit it
+ * takes by 25%, whatever the source. Enemies have no armour stat, so this is the cracked-armour reading. A flinch, stagger, dodge,
+ * death or another attack during the charge cancels the cast; the Ember is already spent (the abilities service charges on the
+ * press) and nothing is refunded.
+ */
+export const WYRMBREAKER = {
+  chargeTicks: 48, // 0.8 s at 60 Hz
+  /** A flinch (a light hit) does not break the charge; the chop waits up to this long after the charge for the flinch to end. */
+  flinchGraceTicks: 30,
+  length: 12,
+  width: 4,
+  damageFactor: 2.5,
+  poise: 60,
+  cooldown: 30,
+  emberCost: 30,
+  clip: WARDEN_CLIPS.chop,
+  attackId: 'warden.wyrmbreaker',
+  /** The chop clip: 98 ticks, blade hot from tick 34 (as Skullsplitter). The fissure lands on the first hot tick. */
+  chopTicks: 98,
+  hitTick: 34,
+  crackSeconds: 8,
+  crackFactor: 1.25,
+  crackModifierId: 'warden.wyrmbreaker.crack',
+  crackOrder: -55,
+  moveSource: 'warden.wyrmbreaker',
+  effect: 'wyrmbreaker',
+  chargeEffect: 'wyrmbreaker-charge',
+  /** Design 11.5: 100 ms hit-stop on release, plus a camera shake. */
+  hitStopSeconds: 0.1,
+  shakeAmplitude: 0.45,
+  shakeSeconds: 0.3,
+} as const;
+
+/**
+ * Mountain Unmoved: for 10 s the poise of every hit on the player is zeroed (a buffs-band modifier at order 20, between Frenzied
+ * Hearth at 10 and Grit Teeth at 50; Earthroot's -30 runs before it) so there is no stagger or break, and every knockback is
+ * cancelled through the combat verbs' knockback filter. The 0.3 s flinch on damage stays (it keys on the hit, as in Earthroot) and
+ * pulls (`actor.pulled`) are not knockback and stay.
+ */
+export const MOUNTAIN_UNMOVED = {
+  seconds: 10,
+  cooldown: 45,
+  emberCost: 25,
+  modifierId: 'warden.mountainUnmoved',
+  order: 20,
+  filterId: 'warden.mountainUnmoved',
+  effect: 'mountain-unmoved',
+} as const;
+
+/**
+ * Voice of the Mountain: every hostile within 12 m (horizontal, inclusive) takes a 0-damage unblockable hit with poise 40 and a 3 s
+ * stun under `warden.voiceOfTheMountain.stun`. Bosses take the poise only; foes in a mercy state are skipped.
+ */
+export const VOICE_OF_THE_MOUNTAIN = {
+  radius: 12,
+  poise: 40,
+  stunSeconds: 3,
+  stunId: 'warden.voiceOfTheMountain.stun',
+  cooldown: 45,
+  emberCost: 30,
+  attackId: 'warden.voiceOfTheMountain',
+  effect: 'voice-of-the-mountain',
+  stunEffect: 'voice-stun',
+  /** Design 11.5: camera shake 0.4 s. */
+  shakeAmplitude: 0.4,
+  shakeSeconds: 0.4,
 } as const;

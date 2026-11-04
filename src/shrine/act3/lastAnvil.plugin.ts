@@ -43,13 +43,9 @@ const lastAnvilPlugin: GamePlugin = {
       },
       emitRekindled: (shrineId) => emit('shrine.rekindled', { shrineId }),
     });
-    // A silent sync lights the shrine with no event: the quests must read their doneWhen again (as the Act 2 shrines do).
-    const syncBinding = () => {
-      if (binding.sync()) ctx.services.get('quests')?.recheck?.();
-    };
     ctx.events.on('waystone.rekindled', (e) => binding.onRekindled(e.waystoneId));
     ctx.events.on('save.loaded', () => {
-      syncBinding();
+      binding.sync();
       steps.deriveOpen();
     });
     ctx.events.on('flag.changed', ({ key }) => {
@@ -97,7 +93,7 @@ const lastAnvilPlugin: GamePlugin = {
         offs.push(ctx.anchors.define({ id: A.waystoneAnchor, position: off(A.waystoneOffset), yaw: 0, tags: ['waystone'] }));
       }
       visuals.build(s);
-      syncBinding();
+      binding.sync();
       for (const step of A.steps) {
         const pos = off(step.offset);
         offs.push(
@@ -160,7 +156,7 @@ const lastAnvilPlugin: GamePlugin = {
       fixedUpdate() {
         if (first) {
           first = false;
-          syncBinding();
+          binding.sync();
         }
         registerRubbings();
         steps.deriveOpen();

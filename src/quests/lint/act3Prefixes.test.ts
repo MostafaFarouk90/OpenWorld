@@ -40,7 +40,7 @@ describe('Act 3 reserved prefixes', () => {
     expect(triggerIds.some((id) => id.startsWith('trg.'))).toBe(true);
   });
 
-  /** Act 3 sub-prefixes an Act 3 thread owns and ships (coordinator rulings): K6b's ambient spawn anchors, K2's POIs. */
+  /** Act 3 sub-prefixes an Act 3 thread owns and ships (coordinator rulings): K6b's ambient spawn anchors (PR 1 the fen, PR 2 the peaks), K2's POIs. */
   const OWNED_SUB_PREFIXES = ['greyfen.fauna.', 'dragonspine.fauna.', 'greyfen.poi.', 'dragonspine.poi.', 'fenroad.poi.', 'spineroad.poi.'];
   /** K2's POI discovery triggers (the null-land caches use `trg.poi.a3.`, outside the reserved prefixes). */
   const OWNED_TRIGGER_SUB_PREFIXES = ['trg.greyfen.poi.', 'trg.dragonspine.poi.'];
@@ -98,6 +98,7 @@ describe('Act 3 flag owners', () => {
       'story.m26.netsCut': 'K12',
       'story.a3.campSeen': 'K16',
       'story.gate.a4': 'K16',
+      'story.a3.peaksCardSeen': 'K16',
       'trainer.<classId>.masterBook': 'K11',
       'boss.<id>.outcome': 'core boss registry',
       'story.phase.dragonspineOpen': 'Phase F PR',

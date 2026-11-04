@@ -42,6 +42,11 @@ export const HARROWMARK_NPC_DEFS: NpcDef[] = [
   def('clerk', 'mage', { scale: 0.95, tint: 0x3a6a68 }),
   // Act 2 Phase D (A13, additive): House Grisel's steward reads the refusal at the Council (M22).
   def('grisel-steward', 'knight', { tint: 0x3f6a4a }),
+  // Act 1 side jobs (the quests thread; additive): Rook's sergeant at the board (j08), Godric's dog Crumb (j05; a small
+  // brown rogue figure stands in for a hound until art exists) and the chandler by the chapel approach (j07).
+  def('sergeant', 'knight', { tint: 0x5a6a86 }),
+  def('crumb', 'rogue', { scale: 0.5, tint: 0x8a6a3a }),
+  def('chandler', 'barbarian', { scale: 0.95, tint: 0x9a8a5a }),
 ];
 
 export const HARROWMARK_NPC_STRINGS_EN: Record<string, string> = {
@@ -71,4 +76,7 @@ export const HARROWMARK_NPC_STRINGS_EN: Record<string, string> = {
   'npc.keep-guard.name': 'Keep Warden Ordric',
   'npc.grisel.name': 'Lord Aldous Grisel',
   'npc.clerk.name': 'Simeon Penhallow, Counting-House Clerk',
+  'npc.sergeant.name': 'Watch-Sergeant Ulf Marrick',
+  'npc.crumb.name': 'Crumb',
+  'npc.chandler.name': 'Cedric the Chandler',
 };

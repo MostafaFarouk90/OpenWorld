@@ -49,6 +49,7 @@ export class HathrenDirector {
   private scene: HathrenScene | null = null;
   private place: HathrenPlace | null = null;
   private glint: HathrenScene['glint'] | null = null;
+  private wakePlayback: { handle: HathrenPlayback; resolve: (o: HathrenCalmOutcome) => void } | null = null;
   private playback: { handle: HathrenPlayback; resolve: (o: HathrenCalmOutcome) => void } | null = null;
   private warned = false;
   private posed = false;
@@ -79,6 +80,7 @@ export class HathrenDirector {
   derive(): void {
     const want = this.wanted();
     const st = this.seq.state;
+    if (!want) this.seq.holdWake = false; // M26 abandoned, failed or left: she must wake for a player who returns later
     if (!want) {
       // Calming plays out even if K12 completes the quest mid-sequence; anything else leaves.
       if (st === 'nets') this.clear();
@@ -111,6 +113,35 @@ export class HathrenDirector {
     if (this.seq.state !== 'calming') this.settle('cancelled');
   }
 
+  holdWake(on: boolean): void {
+    this.seq.holdWake = on;
+  }
+
+  get wakeHeld(): boolean {
+    return this.seq.holdWake;
+  }
+
+  wake(): HathrenPlayback | null {
+    if (this.wakePlayback) return this.wakePlayback.handle;
+    if (!this.scene && !this.build()) return null;
+    if (!this.seq.wakeNow()) return null;
+    let resolve!: (o: HathrenCalmOutcome) => void;
+    const done = new Promise<HathrenCalmOutcome>((r) => (resolve = r));
+    this.wakePlayback = { handle: { done, skip: () => this.fire(this.seq.skipWake()) }, resolve };
+    return this.wakePlayback.handle;
+  }
+
+  headPoint(): { x: number; y: number; z: number } | null {
+    const h = this.scene && !this.scene.disposedYet ? this.scene.headPoint : null;
+    return h ? { x: h.x, y: h.y, z: h.z } : null;
+  }
+
+  private settleWake(outcome: HathrenCalmOutcome): void {
+    const p = this.wakePlayback;
+    this.wakePlayback = null;
+    p?.resolve(outcome);
+  }
+
   netCut(n: number): boolean {
     if (this.seq.state !== 'nets') return false;
     return this.seq.netCut(n);
@@ -125,6 +156,7 @@ export class HathrenDirector {
     this.seq.dismiss();
     this.teardownScene();
     this.settle('cancelled');
+    this.settleWake('cancelled');
   }
 
   /** Starts the calm (or returns the running one's playback). */
@@ -157,6 +189,7 @@ export class HathrenDirector {
     }
     const beats = this.seq.step(dt);
     this.fire(beats);
+    if (this.wakePlayback && !(this.seq.state === 'nets' && this.seq.phase === 'waking')) this.settleWake('finished');
     // Always the first step after a build, so the rig is posed (under the water) before it idles.
     if (this.scene && !this.scene.disposedYet && (!this.posed || !this.idle())) {
       this.scene.update(dt, this.seq);
@@ -207,6 +240,7 @@ export class HathrenDirector {
     this.teardownScene();
     this.seq.reset();
     this.settle('cancelled');
+    this.settleWake('cancelled');
   }
 
   private teardownScene(): void {

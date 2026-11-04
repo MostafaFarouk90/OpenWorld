@@ -75,3 +75,109 @@ export const FX = {
 } as const;
 
 export const ACTOR_RADIUS = 0.5;
+
+// ---- Tier 4 (Act 3, K11 PR 2; plans/act3-K11-pr2.md). Cooldowns, costs, radii and times are the plan's; the rest are provisional. ----
+
+/** Attacks 1 to 4 as the damage pipeline sees them: the spell attack ids (runtime.ts), and the staff's melee clips. */
+export const OWN_SPELL_ATTACK_IDS: readonly string[] = ['emberwright.bolt', 'emberwright.sparkBurst', 'emberwright.flameBall', 'emberwright.cinderRing'];
+
+export const CINDER_RAIN = {
+  skillId: 'emberwright.cinderRain', cooldown: 22, emberCost: 30,
+  /** Plan: a 5 m radius field for 3 s, a tick every 0.5 s (6 ticks), each hostile inside takes 0.35x the base spell damage (Ember Bolt's, `BOLT.damage`) as fire. */
+  radius: 5, seconds: 3, tickSeconds: 0.5, damageFraction: 0.35, damage: spellDamage(BOLT.damage) * 0.35,
+  /** Vertical reach either side of the field's ground. */
+  halfHeight: 3,
+  /** Centre: the lock-on target when a live hostile within `lockRange` m, else `ahead` m in front of the player. */
+  lockRange: 20, ahead: 8,
+  igniteId: 'emberwright.cinderRain.ignite', igniteSeconds: 3, igniteDps: 2, attackId: 'emberwright.cinderRain', effectId: 'cinder-rain',
+} as const;
+
+export const TEMPER_WEAPON = {
+  skillId: 'emberwright.temperWeapon', cooldown: 30, emberCost: 20, seconds: 20,
+  /** The nearest live companion within this many metres, else the Emberwright's own staff. */
+  range: 10,
+  /** Attacker band: after the staff's -150 and Cinder Mark's -149 neighbours, before the rest. */
+  order: -148, modifierId: 'emberwright-temper-weapon', multiplier: 1.3,
+  companionAttackPrefix: 'companion.',
+  igniteId: 'emberwright.temperWeapon.ignite', igniteSeconds: 3, igniteDps: 2,
+  /** A foe already burning from an id with this prefix (Ember Bolt, Fire Wall, Cinder Rain) takes no second ignite. */
+  igniteSkipPrefix: 'emberwright.',
+  effectId: 'temper-weapon',
+} as const;
+
+export const UPDRAFT = {
+  skillId: 'emberwright.updraft', cooldown: 18, emberCost: 20,
+  /** Plan: every hostile within 4 m (inclusive); `halfHeight` keeps a foe on another floor out. */
+  radius: 4, halfHeight: 3,
+  poise: 30, stunSeconds: 1.5, stunId: 'emberwright.updraft.stun', attackId: 'emberwright.updraft',
+  /** The lift is drawn by the VFX column (open point A): 1.5 m over 0.8 s. */
+  liftMetres: 1.5, liftSeconds: 0.8, effectId: 'emberwright-updraft',
+} as const;
+
+// ---- Tier 5 capstones (Act 3, K11 PR 4; plans/act3-K11-capstones.md). Cooldowns, costs, radii and times are the plan's; the rest are provisional. ----
+// "Base" below is Ember Bolt's damage (`BOLT.damage`, the same base Cinder Rain scales from).
+
+export const CAPSTONE_SKILL = {
+  sunfireNova: `${CLASS_ID}.sunfireNova`,
+  colossusOfSlag: `${CLASS_ID}.colossusOfSlag`,
+  breathOfTheKeepers: `${CLASS_ID}.breathOfTheKeepers`,
+} as const;
+
+export const SUNFIRE_NOVA = {
+  skillId: CAPSTONE_SKILL.sunfireNova, cooldown: 45, emberCost: 40,
+  /** A 0.6 s charge (a flinch is ridden out), then a ring that grows from 0 to `radius` over `expandSeconds`. */
+  chargeSeconds: 0.6, radius: 10, expandSeconds: 0.5, halfHeight: 3,
+  damageFactor: 3, damage: spellDamage(BOLT.damage) * 3, poise: 40,
+  /** A refused press (no live foe within `radius`) costs nothing; a cancelled charge refunds its Ember. */
+  /** Played as the ring is released (0.93 s, the hands thrust at 0.18); never during the charge, since a one-shot clip refuses the dodge. */
+  clip: 'Spellcast_Shoot',
+  igniteId: 'emberwright.sunfireNova.ignite', igniteSeconds: 3, igniteDps: 2,
+  /** A foe already burning from an id with this prefix takes no second ignite (as Temper Weapon). */
+  igniteSkipPrefix: 'emberwright.',
+  /** The burning ground the nova leaves: 6 m for 6 s, a tick every half second that ignites what stands in it. */
+  groundRadius: 6, groundSeconds: 6, groundTick: 0.5,
+  attackId: 'emberwright.sunfireNova', moveSource: 'emberwright.sunfireNova',
+  /** The mercy floor modifier (the buffs band, after the multipliers, as the Pathfinder capstones'). */
+  yieldFloorId: 'emberwright.sunfireNova.yieldFloor', yieldFloorOrder: 98,
+  chargeEffect: 'sunfire-charge', effectId: 'sunfire-nova', groundEffect: 'sunfire-ground',
+  /** Design 11.5: a 0.4 s camera shake and an 80 ms white flash. */
+  shakeAmplitude: 0.35, shakeSeconds: 0.4, flashStrength: 0.9, flashSeconds: 0.08, flashColor: 0xffffff,
+} as const;
+
+export const COLOSSUS = {
+  skillId: CAPSTONE_SKILL.colossusOfSlag, cooldown: 90, emberCost: 50,
+  seconds: 30, scale: 2, riseSeconds: 1.5,
+  idPrefix: 'colossus:', kind: 'colossus', health: 500,
+  /** Beside the player on the right of the facing, at spawn. */
+  spawnSide: 4,
+  followMax: 6, followStop: 4.5, snapDistance: 25, speed: 5, ySmoothing: 6,
+  /** The ground probe starts this far above the golem's feet and reaches `groundProbeAbove` + 8 m down. */
+  groundProbeAbove: 4,
+  /** A slam every 3 s (the first 1 s after it has risen), at a foe within `pickRange` of the golem and `leashRange` of the player. */
+  slamSeconds: 3, firstSlamSeconds: 1, retrySeconds: 0.25,
+  pickRange: 14, leashRange: 20,
+  /** The golem stops this far from the foe it slams; the blow lands 0.8 s into the 1.6 s Slam clip (GOLEM_ATTACKS.slam). */
+  engageDistance: 3.5, impactSeconds: 0.8, recoverSeconds: 0.8,
+  slamRadius: 4, halfHeight: 3,
+  damageFactor: 1.5, damage: spellDamage(BOLT.damage) * 1.5, poise: 40,
+  attackId: 'emberwright.colossus',
+  /** The golem is a taunter like the Iron Familiar. */
+  tauntRadius: 12, tauntSeconds: 6,
+  noKillId: 'emberwright.colossus.no-kill',
+  riseEffect: 'colossus-rise', slagEffect: 'colossus-slag', slamEffect: 'colossus-slam',
+  /** Lava-vein glow on the rig (GolemBody.setTelegraph). */
+  veinGlow: 0.55, veinColor: 0xff5a10,
+  riseShakeAmplitude: 0.3, riseShakeSeconds: 0.4, slamShakeAmplitude: 0.12, slamShakeSeconds: 0.15,
+} as const;
+
+export const KEEPERS_BREATH = {
+  skillId: CAPSTONE_SKILL.breathOfTheKeepers, cooldown: 30, emberCost: 35,
+  /** A 2 s channel (a flinch is ridden out), a tick every quarter second (8 ticks), an 8 m cone of 35 degrees either side. */
+  seconds: 2, tickSeconds: 0.25, range: 8, halfAngleDeg: 35, halfHeight: 3,
+  damageFactor: 0.4, damage: spellDamage(BOLT.damage) * 0.4,
+  /** Each tick the Emberwright and every ally in the cone recover this fraction of their maximum health. */
+  healFraction: 0.03,
+  igniteId: 'emberwright.breath.ignite', igniteSeconds: 3, igniteDps: 2, igniteSkipPrefix: 'emberwright.',
+  attackId: 'emberwright.breath', moveSource: 'emberwright.breath',
+  effectId: 'keepers-breath', healEffect: 'keepers-heal',
+} as const;

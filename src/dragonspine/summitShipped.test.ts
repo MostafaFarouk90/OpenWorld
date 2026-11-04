@@ -12,6 +12,9 @@ import { buildDragonspine } from './layout';
 import { registerDragonspineKinds } from './structureKinds';
 import { GLIDE_LEDGE_IDS } from './summitSites';
 import { TAN_40, worstSlope } from './testing/walk';
+import { ledgeRise, LEDGE_RISE_MIN } from './fit';
+import { LEDGE_MAX_HEIGHT } from '../region/layoutTypes';
+import { roadFromPoints } from './road';
 
 let release: () => void;
 beforeAll(() => (release = registerDragonspineKinds()));
@@ -92,6 +95,50 @@ describe('the summit on the shipped ground', () => {
       const p = returnPoint({ x: a.x, y, z: a.z }, (a.yawDeg * Math.PI) / 180);
       expect(inAnyVolume(b.catchVolumes, p), a.id).toBe(false);
       expect(heightAt(p.x, p.z), `${a.id}: the return point is not under the ground`).toBeLessThanOrEqual(y + 0.01);
+    }
+  });
+});
+
+describe('the roost\'s Leap ledges along M31\'s route (rim down to the roost, Leaps on the way back up)', () => {
+  const route = roadFromPoints(b.roost.climb.map((p) => [p.x, p.z] as const));
+  const rim = heightAt(b.roost.trailhead.x, b.roost.trailhead.z);
+  const roost = heightAt(b.roost.centre.x, b.roost.centre.z);
+  const ledges = b.roost.leaps.map((spec, i) => {
+    const launch = b.roost.launches[i]!;
+    const rise = ledgeRise(heightAt, spec.x, spec.z, launch, [spec.footprint[0], spec.footprint[1]]);
+    return { id: spec.id, top: heightAt(launch.x, launch.z) + rise, launchY: heightAt(launch.x, launch.z), s: route.nearest(spec.x, spec.z).s, launch, rise };
+  });
+
+  it('has the roost below the rim (the foot route runs down to it)', () => {
+    expect(rim - roost).toBeGreaterThan(30);
+  });
+
+  it('puts every ledge top between the roost and the rim', () => {
+    for (const l of ledges) {
+      expect(l.top, l.id).toBeGreaterThanOrEqual(roost);
+      expect(l.top, l.id).toBeLessThanOrEqual(rim);
+    }
+  });
+
+  it('meets the ledges 3, 2, 1 climbing back from the roost, each higher than the last', () => {
+    expect(ledges.map((l) => l.id)).toEqual([1, 2, 3].map((n) => `dragonspine-roost-ledge-${n}`));
+    for (let i = 1; i < ledges.length; i++) {
+      expect(ledges[i]!.s, ledges[i]!.id).toBeGreaterThan(ledges[i - 1]!.s);
+      expect(ledges[i]!.top, ledges[i]!.id).toBeLessThan(ledges[i - 1]!.launchY);
+    }
+  });
+
+  // The launch may sit on either side of its ledge along the route: the top is 1.5 to 1.8 m over the launch ground and the
+  // ledge's highest ground is under the top, so on a slope the launch is the ledge's uphill neighbour.
+  it('makes each Leap a step up of 1.5 to 1.8 m from a launch a short walkable step off the route', () => {
+    for (const l of ledges) {
+      expect(l.rise, l.id).toBeGreaterThanOrEqual(LEDGE_RISE_MIN);
+      expect(l.rise, l.id).toBeLessThanOrEqual(LEDGE_MAX_HEIGHT);
+      // The launch is a short walk off the route.
+      const n = route.nearest(l.launch.x, l.launch.z);
+      const on = route.point(n.s);
+      expect(n.d, l.id).toBeLessThan(25);
+      expect(worstSlope(heightAt, [{ x: on.x, z: on.z }, l.launch]), l.id).toBeLessThanOrEqual(TAN_40);
     }
   });
 });

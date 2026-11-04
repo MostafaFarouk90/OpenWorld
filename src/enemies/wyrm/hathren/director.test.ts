@@ -305,4 +305,80 @@ describe("Hathren's director (K6a, M26)", () => {
     expect(w.scene.children.filter((o) => o.name.startsWith('hathren'))).toHaveLength(0);
     expect(w.frozen + w.cutscene + w.cameras).toBe(0);
   });
+
+  describe('K12 wake hook (holdWake, wake, headPoint)', () => {
+    it('holding the wake stops the proximity start; wake() starts it, with beats at 0/6/9 s and done at 12 s', async () => {
+      const w = world();
+      w.accept();
+      w.d.holdWake(true);
+      w.tick(1);
+      w.player.z = SHORE.z - 20;
+      w.tick(2);
+      expect(w.beats).toEqual([]);
+      expect(w.d.headPoint()).not.toBeNull();
+      const p = w.d.wake()!;
+      expect(p).not.toBeNull();
+      w.tick(0.1);
+      expect(w.beats[0]).toBe('wake');
+      w.tick(10);
+      expect(w.beats).toContain('spray');
+      expect(w.beats).toContain('thrash');
+      let outcome = '';
+      void p.done.then((o) => (outcome = o));
+      w.tick(3);
+      await Promise.resolve();
+      expect(outcome).toBe('finished');
+      expect(w.d.wake()).toBeNull(); // already woke
+    });
+
+    it('skip jumps the wake: every remaining beat once, then the loop', async () => {
+      const w = world();
+      w.accept();
+      w.d.holdWake(true);
+      w.tick(1);
+      const p = w.d.wake()!;
+      p.skip();
+      expect(w.beats).toEqual(['wake', 'spray', 'thrash']);
+      expect(w.d.seq.phase).toBe('loop');
+      w.tick(0.1);
+      expect(await p.done).toBe('finished');
+    });
+
+    it('with the hold off (the default) nothing changes: she wakes on approach', () => {
+      const w = world();
+      w.accept();
+      w.tick(1);
+      expect(w.d.wakeHeld).toBe(false);
+      w.player.z = SHORE.z - 20;
+      w.tick(0.1);
+      expect(w.beats[0]).toBe('wake');
+    });
+
+    it('the hold releases by itself when M26 is abandoned or left, so she wakes for a player who returns', () => {
+      const w = world();
+      w.accept();
+      w.d.holdWake(true);
+      w.tick(1);
+      w.quests.set('m26', 'inactive'); // abandoned / failed
+      w.tick(1);
+      expect(w.d.wakeHeld).toBe(false);
+      w.accept();
+      w.tick(1);
+      w.player.z = SHORE.z - 20;
+      w.tick(0.1);
+      expect(w.beats[0]).toBe('wake');
+    });
+
+    it('a load cancels a running wake playback (the hold is the caller\'s)', async () => {
+      const w = world();
+      w.accept();
+      w.d.holdWake(true);
+      w.tick(1);
+      const p = w.d.wake()!;
+      w.tick(1);
+      w.d.onLoaded();
+      expect(await p.done).toBe('cancelled');
+      expect(w.d.wakeHeld).toBe(true);
+    });
+  });
 });

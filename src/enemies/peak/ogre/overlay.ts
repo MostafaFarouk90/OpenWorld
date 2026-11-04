@@ -1,9 +1,12 @@
 import type { BehaviourContext, BehaviourOverlay } from '../../behaviours';
 import type { ActorId } from '../../ports';
 import { ENEMY_CLIPS } from '../../clips';
+import { inWave, joinPack, packStamp, type PackMember } from '../pack';
 import { OGRE } from '../tuning';
 
 const WALK_CLIP = ENEMY_CLIPS.walk;
+/** Brain states out of the fight (for the pack's `waveSize`). */
+const LEFT = new Set(['return', 'released', 'spared', 'calmed', 'dead']);
 
 /** Where a calmed ogre is in its leave (tests and the plugin read it). */
 export type OgreLeave = 'none' | 'walkHome' | 'sitting' | 'walkOff';
@@ -30,7 +33,32 @@ export function makeOgreOverlay(ctx: BehaviourContext): BehaviourOverlay {
   /** Seconds of this engagement, and of it with the target within reach: the bluster (see `allowMove`). */
   let engaged = 0;
   let near = 0;
+  /** Player hits taken this engagement (the bluster's `blusterHits`). */
+  let hits = 0;
+  const blusterHits = Math.max(1, ctx.options.blusterHits ?? 1);
+  const blusterSeconds = ctx.options.blusterSeconds ?? OGRE.blusterSeconds;
   VIEWS.set(ctx.actorId, () => phase);
+
+  let since: number | null = null;
+  const fighting = () => ctx.brain.target !== null && !LEFT.has(ctx.brain.state);
+  const member: PackMember = {
+    actorId: ctx.actorId,
+    kind: 'ogre',
+    engagedSince: () => {
+      if (!fighting()) since = null;
+      else if (since === null) since = packStamp();
+      return since;
+    },
+    feet: () => ctx.feet(),
+  };
+  const leavePack = joinPack(ctx.host, ctx.spawnerId, member);
+  const waveSize = ctx.options.waveSize;
+  /** Past its wave but in the fight: it does not swing. */
+  let held = false;
+  /** Struck since it took up its current target (the wave never stands it down then). */
+  let struckInFight = false;
+  /** Held back by the wave from this target: it takes it up when a place frees. */
+  let reserved: ActorId | null = null;
 
   const walk = (to: { x: number; z: number }, speed: number, dt: number): number => {
     const f = ctx.feet();
@@ -42,10 +70,33 @@ export function makeOgreOverlay(ctx: BehaviourContext): BehaviourOverlay {
   };
 
   return {
+    notices(noticed) {
+      return noticed && inWave(ctx.host, ctx.spawnerId, member, waveSize);
+    },
+
     intent(dt, _intent, senses) {
+      member.engagedSince();
+      if (ctx.brain.target === null) struckInFight = false;
+      const st = ctx.brain.state;
+      held = (st === 'notice' || ctx.brain.target !== null) && !inWave(ctx.host, ctx.spawnerId, member, waveSize);
+      if (held && st !== 'telegraph' && st !== 'attack' && (st === 'notice' || !struckInFight)) {
+        // Past its group's wave and not yet struck: it lets the target go until a pack-mate is out of the fight. Once struck it is
+        // never stood down for the wave (a stand-down may send it home to heal, K13's crag run): it keeps its target and makes
+        // no swing (`allowMove`) until a place frees.
+        reserved = ctx.brain.target ?? ctx.host.actors.player.id;
+        ctx.brain.standDown();
+        since = null;
+        held = false;
+      } else if (reserved && ctx.brain.target === null && !LEFT.has(ctx.brain.state) && inWave(ctx.host, ctx.spawnerId, member, waveSize)) {
+        // A place in the wave is free: the reserve takes up the fight it was held from.
+        const who = reserved;
+        reserved = null;
+        ctx.brain.alert(who);
+      }
       if (ctx.brain.target === null) {
         engaged = 0;
         near = 0;
+        hits = 0;
         return;
       }
       engaged += dt;
@@ -56,12 +107,20 @@ export function makeOgreOverlay(ctx: BehaviourContext): BehaviourOverlay {
     // The bluster: no swing or throw until the target has stood within reach for `blusterSeconds` (the Calm window, design 10
     // row 12), or it was struck, or a target that hangs back at range has had `blusterMaxSeconds`.
     allowMove() {
-      return ctx.brain.struck || near >= OGRE.blusterSeconds || engaged >= OGRE.blusterMaxSeconds;
+      if (held) return false;
+      return hits >= blusterHits || near >= blusterSeconds || engaged >= OGRE.blusterMaxSeconds;
+    },
+
+    hit(attackerId) {
+      if (attackerId && ctx.host.actors.get(attackerId)?.team === 'player') struckInFight = true;
+      if (attackerId && ctx.host.actors.get(attackerId)?.team === 'player') hits++;
     },
 
     stateChanged(from) {
       // A calm revoked (struck on the way home or on the sit): hostile again, out of the sit; a later calm starts afresh.
       if (from !== 'calmed') return;
+      // Up off the ground at once: the held sit clip would otherwise play on into the fight.
+      if (phase === 'sitting') ctx.playOneShot(ENEMY_CLIPS.idle, 0.05);
       phase = 'none';
       t = 0;
       sitIdle = false;
@@ -116,6 +175,7 @@ export function makeOgreOverlay(ctx: BehaviourContext): BehaviourOverlay {
     },
 
     dispose() {
+      leavePack();
       VIEWS.delete(ctx.actorId);
     },
   };

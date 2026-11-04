@@ -108,7 +108,7 @@ describe("Skarl's drake (K6a)", () => {
   it('is the Ember Wyrm build at 0.8 with a collar, tagged dragonkin, its own move ids, no mercy', () => {
     expect(SKARL_DRAKE_DEF.kind).toBe('skarl-drake');
     expect(SKARL_DRAKE_DEF.tags).toEqual(['dragonkin']);
-    expect(EMBER_WYRM_DEF.tags ?? []).toContain('dragonkin'); // K6b PR 2 tags the Ember Wyrm dragonkin (plan 2.7)
+    expect(EMBER_WYRM_DEF.tags).toContain('dragonkin'); // K6b PR 2 tags the Ember Wyrm and wyrmling dragonkin (v0.7 item 13)
     expect(SKARL_DRAKE_DEF.mercy).toBeUndefined();
     expect(SKARL_DRAKE_DEF.behaviour).toBe('wyrm-flight');
     expect(SKARL_DRAKE_DEF.moves.map((m) => m.id)).toEqual(['drake.spit', 'drake.bite', 'drake.tailWhip', 'drake.dive']);

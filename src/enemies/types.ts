@@ -371,6 +371,17 @@ export interface SpawnOptions {
   nest?: string;
   /** K6b PR 2, the R18 parents: circle the nest, stoop only near it, break off after a stoop once the target backs away. */
   nestGuard?: boolean;
+  /**
+   * K6b, the peak packs (the M28 crag ruling): at most this many members of the group fight at once; the rest hold off (they
+   * do not take up the target) until one is down, calmed or lets go.
+   */
+  waveSize?: number;
+  /** K6b, the Rime Hawk: no stoop while an engaged ogre of its group stands within this many metres of the target. */
+  stoopClearOfOgre?: number;
+  /** K6b, the Crag Ogre: the bluster lasts until it has taken this many player hits (default 1: the first hit ends it). */
+  blusterHits?: number;
+  /** K6b, the Crag Ogre: seconds the target must stand within reach before it swings (default `OGRE.blusterSeconds`). */
+  blusterSeconds?: number;
 }
 
 export interface EnemyView {

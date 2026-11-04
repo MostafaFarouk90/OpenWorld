@@ -188,14 +188,14 @@ export interface StraightGlide {
 export function flyStraight(
   lane: GlideLane,
   heightAt: (x: number, z: number) => number,
-  opts: { yaw?: number; wind?: boolean; skip?: number; updrafts?: readonly UpdraftDef[] } = {},
+  opts: { yaw?: number; wind?: boolean; skip?: number; updrafts?: readonly UpdraftDef[]; start?: Vec3Like } = {},
 ): StraightGlide {
   const l = opts.wind === false ? { ...lane, wind: 0 } : lane;
   const yaw = opts.yaw ?? lane.def.heading;
   const fx = -Math.sin(yaw);
   const fz = -Math.cos(yaw);
   const dt = 1 / 20;
-  const start = fallbackStand(lane.site, heightAt);
+  const start = opts.start ?? fallbackStand(lane.site, heightAt);
   let x = start.x;
   let z = start.z;
   let y = start.y;

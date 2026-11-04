@@ -21,6 +21,7 @@ import { QUEST_PROPS } from '../content/props';
 import { CARRY_ITEMS } from '../content/carry';
 import { ACT2_QUEST_NOTES, ACT2_PROPS, ACT2_CARRY } from '../content/act2';
 import { ACT3_QUEST_NOTES, ACT3_PROPS, ACT3_CARRY } from '../content/act3';
+import { GREYFEN_QUEST_LAYOUT } from '../content/act3/greyfen/extraAnchors';
 import type { QuestNoteSpec } from '../notes';
 import { ACT3_POI_LAYOUT } from '../../world/poi/act3/place';
 
@@ -102,7 +103,7 @@ export function findNoteHits(input: NoteLintInput): NoteHit[] {
 
 export function shippedNoteInput(): NoteLintInput {
   const npcs: Occupant[] = [
-    ...ALL_LAYOUTS.flatMap((l) => l.npcs.map((n) => ({ id: `npc:${n.id}`, kind: 'npc' as const, anchorId: n.post }))),
+    ...[...ALL_LAYOUTS, GREYFEN_QUEST_LAYOUT].flatMap((l) => l.npcs.map((n) => ({ id: `npc:${n.id}`, kind: 'npc' as const, anchorId: n.post }))),
     ...TUTORIAL_ANCHORS.map((a) => ({ id: `npc:${a.id}`, kind: 'npc' as const, anchorId: a.id })),
   ];
   const props = [...QUEST_PROPS, ...ACT2_PROPS, ...ACT3_PROPS].map((p) => ({ id: p.interactableId, kind: 'prop' as const, anchorId: p.anchorId }));
@@ -110,7 +111,7 @@ export function shippedNoteInput(): NoteLintInput {
   return {
     notes: [...QUEST_NOTES, ...ACT2_QUEST_NOTES, ...ACT3_QUEST_NOTES],
     occupants: [...npcs, ...props, ...carry],
-    anchors: resolveAnchors(ALL_LAYOUTS, ALL_INTERIORS),
+    anchors: resolveAnchors([...ALL_LAYOUTS, GREYFEN_QUEST_LAYOUT], ALL_INTERIORS),
   };
 }
 

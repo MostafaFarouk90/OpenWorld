@@ -1,5 +1,5 @@
 import type { SpawnerDef, EnemyKind } from '../../../../enemies/types';
-import { cragOgreSpawner, r18ParentsSpawner, rimeHawkSpawner } from '../../../../enemies/act3Spawners';
+import { cragOgreSpawner, M28_CRAG_OPTIONS, r18ParentsSpawner, rimeHawkSpawner } from '../../../../enemies/act3Spawners';
 import { R15_STOOP_FLAGS, R15_STOOP_TAG } from './r15.quest';
 import { M28_CRAG_FLAG, M28_CRAG_TAG, M28_SCOUT_FLAG, M28_SCOUT_TAG } from './m28.quest';
 import { M29_HAWKS_FLAG, M29_HAWKS_TAG } from './m29.quest';
@@ -36,6 +36,8 @@ export const DRAGONSPINE_SPAWNERS: readonly SpawnerDef[] = [
   { id: 'dragonspine.q.m28.scout', tag: M28_SCOUT_TAG, enemy: 'hunter-spearman', count: 1, anchor: 'dragonspine.spawn.m28.scout', activation: { quest: 'm28', flag: M28_SCOUT_FLAG }, ...common },
   hawks('dragonspine.q.m28.crag', M28_CRAG_TAG, [...range('dragonspine.spawn.m28.hawk-', 1, 6), 'dragonspine.spawn.m28.ogre'], 'm28', M28_CRAG_FLAG, {
     memberKinds: [HAWK, HAWK, HAWK, HAWK, HAWK, HAWK, OGRE],
+    // K6b's crag balance: two at a time, the ogre blusters first, no stoop beside it, 0.75 damage
+    options: M28_CRAG_OPTIONS,
   }),
   // R15: two hawks at each stoop anchor, armed one group per haul (group N while haul N is out)
   ...[1, 2, 3].map((n) => hawks(`dragonspine.q.r15.stoop.${n}`, R15_STOOP_TAG, [`dragonspine.spawn.r15.stoop-${n}`], 'r15', R15_STOOP_FLAGS[n - 1]!, { count: 2 })),

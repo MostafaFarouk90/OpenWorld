@@ -5,7 +5,7 @@ import { regionAt } from '../../region/regionMask';
 import { heightAt } from '../../terrain/heightfield';
 import { layoutInterior } from '../layout';
 import type { InteriorDef } from '../types';
-import { generateUnderways, planUnderways, UNDERWAYS_ARENA_GATE, UNDERWAYS_DEF, UNDERWAYS_SEED } from './generate';
+import { generateUnderways, planCartSpur, planUnderways, UNDERWAYS_ARENA_GATE, UNDERWAYS_CARTWAY_GATE, UNDERWAYS_DEF, UNDERWAYS_SEED } from './generate';
 
 /**
  * FNV-1a over the def's JSON without its site: changes when the seed, the algorithm or any constant moves a corridor, not when
@@ -40,7 +40,9 @@ describe('the Underways generator', () => {
     expect(hashDef(generateUnderways(UNDERWAYS_SEED))).toBe(hashDef(generateUnderways(UNDERWAYS_SEED)));
     // Update deliberately when the layout is meant to change (old saves inside land at the entry, see InteriorController).
     // bbcbf1f0: the density pass (batch 4) added the D02 valve, tally, sluice-hound and crate anchors; no room moved.
-    expect(hashDef(UNDERWAYS_DEF)).toBe('bbcbf1f0');
+    // 298a8f16: the Act 1 side job j11 added the cart-track spur off a dead-end branch (four rooms, a grate, six anchors, two
+    // triggers); no earlier room moved.
+    expect(hashDef(UNDERWAYS_DEF)).toBe('298a8f16');
   });
 
   it('gives different tunnels for different seeds, and refuses a non-integer seed', () => {
@@ -90,11 +92,13 @@ describe('the shipped Underways', () => {
       ...[1, 2, 3, 4, 5, 6].map((i) => `underways.spawn.hound-${i}`),
       // the density pass, batch 4 (D02)
       'd02.valve-1', 'd02.valve-2', 'd02.tally', 'd02.den-crates', ...[1, 2, 3].map((i) => `underways.spawn.sluice-${i}`),
+      // side job j11 (the cart-track spur)
+      'j11.grate', 'j11.track-1', 'j11.track-2', 'j11.waybill', 'j11.spawn.hound-1', 'j11.spawn.hound-2',
     ]) {
       expect(ids, id).toContain(id);
     }
-    expect(layout.triggers.map((t) => t.id)).toEqual(['trg.underways.arena']);
-    expect(UNDERWAYS_DEF.blockers.map((b) => b.id)).toEqual([UNDERWAYS_ARENA_GATE]);
+    expect(layout.triggers.map((t) => t.id)).toEqual(['trg.underways.arena', 'trg.underways.j11-track-1', 'trg.underways.j11-track-2']);
+    expect(UNDERWAYS_DEF.blockers.map((b) => b.id)).toEqual([UNDERWAYS_ARENA_GATE, UNDERWAYS_CARTWAY_GATE]);
     expect(UNDERWAYS_DEF.doors.map((d) => d.doorId)).toEqual(['underways']);
     expect(UNDERWAYS_DEF.id).toBe('underways');
   });
@@ -184,3 +188,52 @@ describe('the shipped Underways', () => {
     }
   });
 });
+
+describe('the cart-track spur (side job j11)', () => {
+  const spur = planCartSpur(planUnderways(UNDERWAYS_SEED))!;
+
+  it('branches off a dead-end side branch, not the main path or a kennel', () => {
+    const plan = planUnderways(UNDERWAYS_SEED);
+    expect(spur).toBeTruthy();
+    expect(plan.mainPath).not.toContain(spur.from);
+    expect(plan.kennels).not.toContain(spur.from);
+    expect(plan.links.get(spur.from)!.size).toBe(1);
+    expect(planCartSpur(plan)).toEqual(spur);
+  });
+
+  it('adds no room that overlaps an older one, and no other room moved', () => {
+    const rooms = UNDERWAYS_DEF.rooms;
+    const mine = rooms.filter((r) => r.id.startsWith('j11-spur'));
+    expect(mine.map((r) => r.id)).toEqual(['j11-spur-1', 'j11-spur-c1', 'j11-spur-2', 'j11-spur-yard']);
+    const [first, ...rest] = mine;
+    for (const r of rooms.filter((x) => !x.id.startsWith('j11-spur'))) {
+      for (const m of [first, ...rest]) {
+        const overlap = m!.x0 < r.x1 && m!.x1 > r.x0 && m!.z0 < r.z1 && m!.z1 > r.z0;
+        // the first corridor starts inside the dead end's own chamber (they touch there); nothing else may
+        if (overlap) expect(r.id, `${m!.id} overlaps ${r.id}`).toMatch(/^(cell|corridor)-/);
+      }
+    }
+  });
+
+  it('is shut at the grate until the blocker opens: closed, nothing past it can be reached; open, the whole spur can', () => {
+    const g = new NavGrid(layout.nav);
+    expect(UNDERWAYS_DEF.blockers.find((b) => b.id === UNDERWAYS_CARTWAY_GATE)!.startClosed).toBe(true);
+    g.setBlocker(UNDERWAYS_CARTWAY_GATE, true);
+    expect(reach('harrowmark.underways.entry', 'j11.grate', g)).toBe(true);
+    for (const id of ['j11.track-1', 'j11.track-2', 'j11.waybill', 'j11.spawn.hound-1', 'j11.spawn.hound-2']) {
+      expect(reach('harrowmark.underways.entry', id, g), `${id} behind the shut grate`).toBe(false);
+    }
+    g.setBlocker(UNDERWAYS_CARTWAY_GATE, false);
+    for (const id of ['j11.track-1', 'j11.track-2', 'j11.waybill', 'j11.spawn.hound-1', 'j11.spawn.hound-2']) {
+      expect(reach('harrowmark.underways.entry', id, g), `${id} past the open grate`).toBe(true);
+    }
+  });
+
+  it('keeps the waybill, the hounds and the second track clear of the grate and the first track (3 m or more)', () => {
+    const d = (a: string, b: string) => Math.hypot(at(a).position.x - at(b).position.x, at(a).position.z - at(b).position.z);
+    expect(d('j11.waybill', 'j11.track-1')).toBeGreaterThan(3);
+    expect(d('j11.spawn.hound-1', 'j11.spawn.hound-2')).toBeGreaterThan(3);
+    expect(d('j11.grate', 'j11.track-1')).toBeGreaterThan(3);
+  });
+});
+

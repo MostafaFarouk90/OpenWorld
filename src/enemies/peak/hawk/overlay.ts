@@ -3,7 +3,11 @@ import type { BehaviourContext, BehaviourOverlay } from '../../behaviours';
 import type { ActorId, DamageResultLike } from '../../ports';
 import type { MoveDef } from '../../types';
 import { HAWK, HAWK_PARENT } from '../tuning';
+import { inWave, joinPack, ogreNear, packStamp, type PackMember } from '../pack';
 import { HawkFlight, type XZ } from './flight';
+
+/** Brain states out of the fight (for the pack's `waveSize`). */
+const LEFT = new Set(['return', 'released', 'spared', 'calmed', 'dead']);
 
 /** Duck-typed extras of the hawk body (HawkBody). */
 interface HawkBodyLike {
@@ -118,10 +122,35 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
 
   const offHit = ctx.host.events.on('damage.dealt', (r) => {
     if (r.attackerId === ctx.actorId && r.outcome !== 'immune' && ctx.brain.currentMove?.id.endsWith('.stoop')) flight.stoopLanded();
-    if (r.targetId !== ctx.actorId || r.killed || !flight.stooping) return;
+    if (r.targetId !== ctx.actorId || r.killed) return;
     if (!r.attackerId || ctx.host.actors.get(r.attackerId)?.team !== 'player') return;
-    if (isGroundingHit(r)) knockDown(r.attackerId);
+    // A projectile in the hover or the dive, or (the M28 crag ruling, for every hawk) a landed blade in the skim, knocks it
+    // down: melee then has the 4 s grounded stagger to finish it.
+    if (flight.stooping && isGroundingHit(r)) knockDown(r.attackerId);
+    else if (flight.mode === 'low' && r.outcome === 'hit' && r.kind === 'melee') knockDown(r.attackerId);
   });
+
+  let since: number | null = null;
+  const member: PackMember = {
+    actorId: ctx.actorId,
+    kind: 'hawk',
+    engagedSince: () => {
+      if (ctx.brain.target === null || LEFT.has(ctx.brain.state)) since = null;
+      else if (since === null) since = packStamp();
+      return since;
+    },
+    feet: () => ctx.feet(),
+  };
+  const leavePack = joinPack(ctx.host, ctx.spawnerId, member);
+  const waveSize = opts.waveSize;
+  /** Past its wave but in the fight: it circles but does not swing. */
+  let held = false;
+  /** Struck since it took up its current target (the wave never stands it down then). */
+  let struckInFight = false;
+  /** Held back by the wave from this target: it takes it up when a place frees. */
+  let reserved: ActorId | null = null;
+  /** The M28 crag rule: an engaged ogre of the group beside the target holds the stoop off. */
+  const ogreBy = (): boolean => ogreNear(ctx.host, ctx.spawnerId, aim(), opts.stoopClearOfOgre);
 
   VIEWS.set(ctx.actorId, () => ({ mode: flight.mode, altitude: flight.altitude, grounded: flight.grounded, stoops }));
 
@@ -129,6 +158,7 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
     // A parent that broke off (or whose target is past the leash) does not notice Cael again until he comes back inside the
     // stoop radius: no re-aggro loop at the leash edge (the combat music and companions key on aggro).
     notices(noticed, senses) {
+      if (noticed && !inWave(ctx.host, ctx.spawnerId, member, waveSize)) return false;
       if (!guard || !nest || !senses.targetPos) return noticed;
       const d = fromNest(senses.targetPos);
       if (brokeOff && d <= HAWK_PARENT.stoopRadius) brokeOff = false;
@@ -143,8 +173,30 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
       }
       self.x = senses.self.x;
       self.z = senses.self.z;
+      member.engagedSince();
+      if (ctx.brain.target === null) struckInFight = false;
       const state = ctx.brain.state;
-      if (state === 'telegraph' && flight.stooping) {
+      held = (state === 'notice' || ctx.brain.target !== null) && !inWave(ctx.host, ctx.spawnerId, member, waveSize);
+      if (held && state !== 'telegraph' && state !== 'attack' && (state === 'notice' || !struckInFight)) {
+        // Past its group's wave and not yet struck: it lets the target go until a pack-mate is out of the fight. Once struck it is
+        // never stood down for the wave (a stand-down may send it home to heal, K13's crag run): it keeps its target and makes
+        // no swing (`allowMove`) until a place frees.
+        reserved = ctx.brain.target ?? ctx.host.actors.player.id;
+        ctx.brain.standDown();
+        since = null;
+        held = false;
+      } else if (reserved && ctx.brain.target === null && !LEFT.has(ctx.brain.state) && inWave(ctx.host, ctx.spawnerId, member, waveSize)) {
+        // A place in the wave is free: the reserve takes up the fight it was held from.
+        const who = reserved;
+        reserved = null;
+        ctx.brain.alert(who);
+      }
+      if (state === 'telegraph' && flight.stooping && ogreBy()) {
+        // The ogre stepped up beside the target mid-hover: the hover is called off (the target is kept).
+        flight.abortStoop();
+        ctx.brain.abortSwing();
+      }
+      if (ctx.brain.state === 'telegraph' && flight.stooping) {
         const why = shielded();
         if (why) {
           // The hover is called off: no dive, it climbs away. In water it keeps its target (no trip home to heal); hidden in a
@@ -185,8 +237,9 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
     },
 
     allowMove(move: MoveDef) {
+      if (held) return false;
       if (move.id.endsWith('.stoop')) {
-        if (!flight.canStoop || shielded() !== null) return false;
+        if (!flight.canStoop || shielded() !== null || ogreBy()) return false;
         return !(guard && nest && fromNest(aim()) > HAWK_PARENT.stoopRadius);
       }
       if (move.id.endsWith('.rake')) return flight.canRake;
@@ -241,6 +294,10 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
       fallBy = null;
       ctx.brain.stunned(Math.max(seconds, HAWK.fallSeconds + 0.1));
       return true;
+    },
+
+    hit(attackerId) {
+      if (attackerId && ctx.host.actors.get(attackerId)?.team === 'player') struckInFight = true;
     },
 
     stateChanged(from) {
@@ -316,6 +373,7 @@ export function makeHawkOverlay(ctx: BehaviourContext): BehaviourOverlay {
     },
 
     dispose() {
+      leavePack();
       offHit();
       VIEWS.delete(ctx.actorId);
     },

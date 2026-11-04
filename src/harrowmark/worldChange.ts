@@ -1,12 +1,16 @@
 // The mini-ending world change ("Smoke Over Harrowmark"): banners over the Bastion and the Keep, and a lit brazier line
 // on the Keep road. Derived from `story.gate.a2` through ctx.gates, so a load either way re-derives it.
 import * as THREE from 'three';
+import { glowRegistry, type GlowSource } from '../env/glowSources';
 import type { Anchor, CoreContext } from '../region/coreTypes';
 import { HARROWMARK_LAYOUT } from './harrowmark.layout';
 
 export const A2_FLAG = 'story.gate.a2';
 /** Act 2's ending ("The Houses Stand") sets this once; it relights the Silver Fountain and reopens the closed stalls. */
 export const A3_FLAG = 'story.gate.a3';
+/** The glow kind (src/env/glow.ts GLOW) the Keep-road braziers register under, and the height of their flame above the anchor (the cone sits at 1.9). */
+export const BRAZIER_GLOW_KIND = 'keep-brazier';
+export const BRAZIER_FLAME_Y = 1.9;
 
 export interface WorldChange {
   readonly active: boolean;
@@ -51,6 +55,8 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
   let braziers = 0;
   let active = false;
   const geometries: THREE.BufferGeometry[] = [];
+  // The braziers are fires the env glow system may light (a shared pool of point lights, flicker): registered while the change is up.
+  let unregisterGlow: (() => void) | null = null;
 
   const track = <T extends THREE.BufferGeometry>(g: T): T => {
     geometries.push(g);
@@ -61,6 +67,8 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
     root.removeFromParent();
     root.clear();
     for (const g of geometries.splice(0)) g.dispose();
+    unregisterGlow?.();
+    unregisterGlow = null;
     banners = 0;
     braziers = 0;
     active = false;
@@ -87,7 +95,9 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
     const bowlGeo = track(new THREE.CylinderGeometry(0.45, 0.3, 0.4, 8));
     const postGeo = track(new THREE.CylinderGeometry(0.08, 0.1, 1.1, 6));
     const flameGeo = track(new THREE.ConeGeometry(0.3, 0.8, 6));
+    const fires: GlowSource[] = [];
     for (const anchor of byTag('brazier')) {
+      fires.push({ id: anchor.id, kind: BRAZIER_GLOW_KIND, x: anchor.position.x, y: anchor.position.y + BRAZIER_FLAME_Y, z: anchor.position.z });
       const g = new THREE.Group();
       g.position.copy(anchor.position as THREE.Vector3);
       const post = new THREE.Mesh(postGeo, POLE);
@@ -100,6 +110,7 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
       root.add(g);
       braziers++;
     }
+    unregisterGlow = glowRegistry.add(fires);
     ctx.scene.add(root);
     active = true;
   };

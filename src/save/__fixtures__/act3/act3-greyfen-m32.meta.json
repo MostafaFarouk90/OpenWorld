@@ -1,0 +1,38 @@
+{
+  "fixture": "act3-greyfen-m32.json",
+  "id": "m32",
+  "order": "greyfen",
+  "injected": [
+    "m23",
+    "m24",
+    "m25",
+    "r14",
+    "m26",
+    "m27",
+    "d05",
+    "m28",
+    "m29",
+    "r16",
+    "m30",
+    "m31"
+  ],
+  "questDefs": [
+    "d05",
+    "m23",
+    "m24",
+    "m25",
+    "m26",
+    "m27",
+    "m28",
+    "m29",
+    "m30",
+    "r14",
+    "r16"
+  ],
+  "lockedBlocks": {
+    "greyfen": 18,
+    "dragonspine-lower": 23
+  },
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/act3Fixtures.gen",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving"
+}

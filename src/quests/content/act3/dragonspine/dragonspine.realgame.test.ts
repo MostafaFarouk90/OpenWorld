@@ -24,8 +24,8 @@ describe('every K13 talk target can be reached on foot', () => {
       expect(p.tags ?? [], p.id).not.toContain('elevated');
     }
   });
-  it('M28 no longer sends Cael to the tower hunter', () => {
-    expect(M28_HUNTERS).not.toContain('lodge-hunter-3');
+  it('M28 sends Cael to the four outdoor hunters, never the one inside the hall', () => {
+    expect(M28_HUNTERS).toEqual(['lodge-hunter-1', 'lodge-hunter-2', 'lodge-hunter-3', 'lodge-hunter-4']);
     expect(M28_HUNTERS).toHaveLength(4);
     expect(DRAGONSPINE_POST_RULES.length).toBeGreaterThan(0);
   });

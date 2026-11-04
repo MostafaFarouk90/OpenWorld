@@ -393,10 +393,13 @@ describe('Tobb', () => {
     expect(w.flags.get('story.m05.tobbBond')).toBe(true);
     expect(dialogueStrings['dialogue.npc-tobb.done-2']).toMatch(/Whistle/);
     w.set('m05', 'completed');
+    // with the bond told, Tobb offers the side job j04 first (src/quests/content/side); done, he banters
+    expect(first(w, 'npc-tobb', 'tobb')).toBe('j04-offer');
+    w.set('j04', 'completed');
     expect(first(w, 'npc-tobb', 'tobb')).toBe('banter');
     w.set('d01', 'completed');
     expect(first(w, 'npc-tobb', 'tobb')).toBe('banter-prior');
-    expect(w.started).toEqual([]);
+    expect(w.started).toEqual(['j04']); // only the side job's offer, accepted by `first`
   });
 });
 

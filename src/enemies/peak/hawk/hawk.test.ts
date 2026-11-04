@@ -13,6 +13,7 @@ import '../overlays';
 import { HAWK } from '../tuning';
 import { RIME_HAWK } from './def';
 import { HawkBody } from './HawkBody';
+import { sweepBlade } from '../../../combat/sweep';
 import { hawkView, isGroundingHit } from './overlay';
 
 const DT = FIXED_TIMESTEP;
@@ -215,6 +216,37 @@ describe('Rime Hawk in the air', () => {
     const states = t.fake.bus.of('enemies.state').slice(before) as Array<{ to?: string }>;
     expect(states.some((s) => s.to === 'stagger')).toBe(false);
     expect(t.view(id).altitude).toBe(0);
+  });
+
+  it('after a stoop it skims within a blade\'s reach for three seconds: a melee poise break there grounds it', () => {
+    const t = rig({ playerZ: -10 });
+    const { id, enemy } = t.spawn();
+    t.tick(10, () => enemy.state === 'telegraph');
+    expect(t.tick(3, () => t.view(id).mode === 'low')).toBe(true);
+    expect(HAWK.lowSeconds).toBeGreaterThanOrEqual(3);
+    t.tick(2);
+    expect(t.view(id).mode).toBe('low');
+    expect(t.view(id).altitude).toBeLessThan(1.5);
+    t.fake.apply({ attackerId: 'player', targetId: id, amount: 1, poise: 40, kind: 'melee' });
+    t.tick(0.7);
+    expect(t.view(id).mode).toBe('grounded');
+  });
+
+  it('a Knight\'s horizontal slice connects with a skimming hawk 1.2 m in front of him (the blade measured in game, about 0.5 m up)', () => {
+    const t = rig({ playerZ: -10 });
+    const { id, enemy, body } = t.spawn();
+    t.tick(10, () => enemy.state === 'telegraph');
+    expect(t.tick(3, () => t.view(id).mode === 'low')).toBe(true);
+    t.tick(0.5);
+    body.root.updateMatrixWorld(true);
+    body.hurtboxes.update();
+    const f = enemy.feet;
+    // Cael stands 1.2 m on +Z of the hawk facing it (-Z); his slice sweeps right to left at about 0.52 m (in-game sample:
+    // hilt (+0.47, 0.54, -0.39), tip (-0.23, 0.52, -1.23) from his feet at the end of the swing).
+    const cael = { x: f.x, y: f.y, z: f.z + 1.2 };
+    const p = (dx: number, dy: number, dz: number) => new THREE.Vector3(cael.x + dx, cael.y + dy, cael.z + dz);
+    const hit = sweepBlade(p(-0.47, 0.54, -0.39), p(0.6, 0.52, -1.1), p(0.47, 0.54, -0.39), p(-0.23, 0.52, -1.23), body.hurtboxes);
+    expect(hit).not.toBeNull();
   });
 
   it('a spell in the dive grounds it too', () => {
