@@ -686,6 +686,7 @@
           "reedgate",
           "rime-pass",
           "weeping-bellows",
+          "wyrms-hearth",
           "wyrmwatch-lodge"
         ],
         "respawn": "wyrmwatch-lodge"
@@ -914,6 +915,7 @@
           "waystone.reedgate.lit": true,
           "waystone.rime-pass.lit": true,
           "waystone.weeping-bellows.lit": true,
+          "waystone.wyrms-hearth.lit": true,
           "waystone.wyrmwatch-lodge.lit": true,
           "world.bellows.shortcutOpen": true,
           "world.bellows.solved": true,
