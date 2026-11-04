@@ -19,7 +19,7 @@ describe('attack set', () => {
 describe('key 1: bolt', () => {
   it('spends Ember at the window open, flies at the target and applies damage and poise', () => {
     rig = makeRig();
-    rig.hostile('a', 0, 6);
+    rig.hostile('a', 0, -6);
     rig.w.player.facingYaw = 0;
     rig.window('Spellcast_Shoot');
     expect(rig.ember.value).toBe(97);
@@ -29,9 +29,25 @@ describe('key 1: bolt', () => {
     expect(rig.statusCalls).toHaveLength(0);
   });
 
+  it('regression: with no lock-on the bolt flies where she faces (yaw 0 is -Z), hitting the foe ahead and not the one behind', () => {
+    for (const yaw of [0, Math.PI / 2, Math.PI]) {
+      rig?.rt.dispose();
+      rig = makeRig();
+      // Ahead is (-sin yaw, -cos yaw); behind is the opposite.
+      const ax = -Math.sin(yaw) * 6, az = -Math.cos(yaw) * 6;
+      rig.hostile('ahead', ax, az);
+      rig.hostile('behind', -ax, -az);
+      rig.w.player.facingYaw = yaw;
+      expect(rig.state.lockOn).toBeNull();
+      rig.window('Spellcast_Shoot');
+      rig.step(0.6);
+      expect(rig.applied().map((r) => r.targetId)).toEqual(['ahead']);
+    }
+  });
+
   it('Ember Bolt adds ignite as emberwright.ignite sourced by the player, never kind burn', () => {
     rig = makeRig({ learned: [SKILL.emberBolt] });
-    rig.hostile('a', 0, 6);
+    rig.hostile('a', 0, -6);
     rig.window('Spellcast_Shoot');
     rig.step(0.6);
     expect(rig.statusCalls).toHaveLength(1);
@@ -40,7 +56,7 @@ describe('key 1: bolt', () => {
 
   it('skips ignite on a poise-breaking hit and on a kneeling target', () => {
     rig = makeRig({ learned: [SKILL.emberBolt] });
-    rig.hostile('a', 0, 6);
+    rig.hostile('a', 0, -6);
     rig.result = { staggered: true };
     rig.window('Spellcast_Shoot');
     rig.step(0.6);
@@ -55,7 +71,7 @@ describe('key 1: bolt', () => {
   it('too little Ember: no spell, no spend, the swing is a staff tap at 40%', () => {
     rig = makeRig();
     rig.ember.value = 2;
-    rig.hostile('a', 0, 4);
+    rig.hostile('a', 0, -4);
     rig.window('Spellcast_Shoot', 7);
     rig.step(0.5);
     expect(rig.ember.value).toBe(2);
@@ -116,8 +132,8 @@ describe('key 1: bolt', () => {
 
   it('a bolt stops at a wall instead of reaching the hostile behind it', () => {
     rig = makeRig();
-    rig.hostile('behind-wall', 0, 8);
-    rig.state.wallZ = 4;
+    rig.hostile('behind-wall', 0, -8);
+    rig.state.wallZ = -4;
     rig.window('Spellcast_Shoot');
     rig.step(0.8);
     expect(rig.applied()).toHaveLength(0);
@@ -129,8 +145,8 @@ describe('key 1: bolt', () => {
 
   it('a neutral in the way absorbs the bolt and is never hurt', () => {
     rig = makeRig();
-    rig.w.actors.add(new FakeActor('npc', 'neutral', 0, 3));
-    rig.hostile('far', 0, 8);
+    rig.w.actors.add(new FakeActor('npc', 'neutral', 0, -3));
+    rig.hostile('far', 0, -8);
     rig.window('Spellcast_Shoot');
     rig.step(0.6);
     expect(rig.applied()).toHaveLength(0);
@@ -149,7 +165,7 @@ describe('key 1: bolt', () => {
 describe('key 2: spark burst and Forge Spark', () => {
   it('three short bolts whose total at point blank is the design 10 damage and 10 poise', () => {
     rig = makeRig();
-    rig.hostile('a', 0, 2);
+    rig.hostile('a', 0, -2);
     rig.window('2H_Ranged_Shoot');
     expect(rig.ember.value).toBe(95);
     rig.step(0.4);
@@ -161,12 +177,12 @@ describe('key 2: spark burst and Forge Spark', () => {
 
   it('Forge Spark chains to at most two others within 4 m, once each, hostile only, at half damage; chains do not chain', () => {
     rig = makeRig({ learned: [SKILL.forgeSpark] });
-    rig.hostile('t', 0, 6);
-    rig.hostile('n1', 2, 6);
-    rig.hostile('n2', -2, 6);
-    rig.hostile('n3', 0, 9);
-    rig.hostile('out', 0, 12);
-    rig.w.actors.add(new FakeActor('npc', 'neutral', 1, 6));
+    rig.hostile('t', 0, -6);
+    rig.hostile('n1', 2, -6);
+    rig.hostile('n2', -2, -6);
+    rig.hostile('n3', 0, -9);
+    rig.hostile('out', 0, -12);
+    rig.w.actors.add(new FakeActor('npc', 'neutral', 1, -6));
     rig.window('2H_Ranged_Shoot');
     rig.step(0.6);
     const chain = rig.applied().filter((r) => r.attackId === 'emberwright.forgeSpark');
@@ -181,8 +197,8 @@ describe('key 2: spark burst and Forge Spark', () => {
 
   it('without Forge Spark nothing chains', () => {
     rig = makeRig();
-    rig.hostile('t', 0, 6);
-    rig.hostile('n1', 2, 6);
+    rig.hostile('t', 0, -6);
+    rig.hostile('n1', 2, -6);
     rig.window('2H_Ranged_Shoot');
     rig.step(0.6);
     expect(rig.applied().some((r) => r.attackId === 'emberwright.forgeSpark')).toBe(false);
@@ -192,10 +208,10 @@ describe('key 2: spark burst and Forge Spark', () => {
 describe('key 3 and 4', () => {
   it('the flame ball bursts on impact with a hostile-only splash at 60%', () => {
     rig = makeRig();
-    rig.hostile('t', 0, 8);
-    rig.hostile('near', 1.5, 8);
-    rig.hostile('away', 5, 8);
-    rig.w.actors.add(new FakeActor('ally', 'ally', 0.5, 8));
+    rig.hostile('t', 0, -8);
+    rig.hostile('near', 1.5, -8);
+    rig.hostile('away', 5, -8);
+    rig.w.actors.add(new FakeActor('ally', 'ally', 0.5, -8));
     rig.window('Spellcast_Long');
     expect(rig.ember.value).toBe(88);
     rig.step(1.5);
@@ -208,7 +224,7 @@ describe('key 3 and 4', () => {
 
   it('the flame ball that reaches the end of its range still bursts there', () => {
     rig = makeRig();
-    rig.hostile('t', 0, 19.2);
+    rig.hostile('t', 0, -19.2);
     rig.window('Spellcast_Long');
     rig.step(2);
     expect(rig.applied().some((r) => r.targetId === 't')).toBe(true);
@@ -280,7 +296,7 @@ describe('Gust Step', () => {
 describe('lifecycle', () => {
   it('a class change clears projectiles, pending impacts and burning ground', () => {
     rig = makeRig();
-    rig.hostile('t', 0, 8);
+    rig.hostile('t', 0, -8);
     rig.window('Spellcast_Long');
     rig.rt.addGround(0, 0, 0);
     rig.w.events.emit('class.changed', { classId: 'knight', previous: 'emberwright', free: true, cost: 0 } as never);
@@ -302,7 +318,7 @@ describe('review fixes', () => {
   it('a flame ball in flight deals nothing after a save load, a class change or a rest', () => {
     for (const ev of ['save.loaded', 'class.changed', 'rest'] as const) {
       rig = makeRig();
-      rig.hostile('t', 0, 8);
+      rig.hostile('t', 0, -8);
       rig.window('Spellcast_Long');
       rig.step(0.05);
       rig.w.events.emit(ev as never, {} as never);
@@ -314,7 +330,7 @@ describe('review fixes', () => {
 
   it('props the player must break (toll-post, dummies) take spell hits; neutral people still do not', () => {
     rig = makeRig();
-    const post = rig.w.actors.add(new FakeActor('post', 'neutral', 0, 6));
+    const post = rig.w.actors.add(new FakeActor('post', 'neutral', 0, -6));
     post.kind = 'toll-post';
     rig.window('Spellcast_Long');
     rig.step(2);
@@ -324,7 +340,7 @@ describe('review fixes', () => {
 
   it('a cancel request left over from a same-tick stagger does not kill the next cast', async () => {
     rig = makeRig();
-    rig.hostile('on', 0, 6);
+    rig.hostile('on', 0, -6);
     rig.rt.castAbility(SKILL.flameLash);
     rig.step(0.1);
     rig.w.events.emit('ui.modal' as never, { id: 'inv', open: true } as never);
@@ -337,10 +353,10 @@ describe('review fixes', () => {
 
   it('Anvil Drop refuses a lock-on target beyond 12 m or behind a wall; Warm Breath refuses with no ally in the cone', () => {
     rig = makeRig();
-    rig.hostile('far', 0, 20);
+    rig.hostile('far', 0, -20);
     rig.state.lockOn = 'far';
     expect(rig.rt.castAbility(SKILL.anvilDrop)).toEqual({ ok: false, reason: 'no-target' });
-    rig.hostile('near', 0, 5);
+    rig.hostile('near', 0, -5);
     rig.state.lockOn = 'near';
     rig.state.walls = true;
     expect(rig.rt.castAbility(SKILL.anvilDrop)).toEqual({ ok: false, reason: 'no-target' });

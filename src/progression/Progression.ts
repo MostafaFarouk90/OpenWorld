@@ -15,6 +15,7 @@ import {
   MERCY_XP_FRACTION,
   baseMaxHealthForLevel,
   killXp,
+  NO_KILL_XP_TAGS,
   levelForXp,
   levelPoints,
   respecGold,
@@ -64,6 +65,8 @@ export interface KillInfo {
   killerId: string | null | undefined;
   /** v0.7 item 27: the region of the killed actor's position (`regionAt(x, z)?.id`), null or absent for none. */
   regionId?: string | null;
+  /** the killed actor's spawn tag; a tag in NO_KILL_XP_TAGS pays nothing */
+  spawnTag?: string | null;
 }
 
 export interface MercyInfo {
@@ -72,6 +75,8 @@ export interface MercyInfo {
   level: number;
   /** v0.7 item 27: the region of the creature's position, null or absent for none. */
   regionId?: string | null;
+  /** the creature's spawn tag; a tag in NO_KILL_XP_TAGS pays nothing */
+  spawnTag?: string | null;
 }
 
 export interface ProgressionSave {
@@ -291,6 +296,7 @@ export class Progression implements ProgressionService {
     if (info.killerId !== 'player' || info.team !== 'hostile') return 0;
     if (this.killXpPaused || this.killed.has(info.actorId)) return 0;
     this.killed.add(info.actorId);
+    if (info.spawnTag && NO_KILL_XP_TAGS.includes(info.spawnTag)) return 0;
     const value = killXp(info.kind, info.level, this.level, this.regionFactor(info.regionId));
     const paid = this.mercy.get(info.actorId)?.paid ?? 0;
     return this.grantXp(Math.max(0, value - paid), `kill.${info.kind}`);
@@ -309,6 +315,7 @@ export class Progression implements ProgressionService {
   /** Pays 60% (floor) of the kill value, once per creature. */
   onMercy(info: MercyInfo): number {
     if (this.killXpPaused || this.mercy.has(info.actorId) || this.killed.has(info.actorId)) return 0;
+    if (info.spawnTag && NO_KILL_XP_TAGS.includes(info.spawnTag)) return 0;
     const value = killXp(info.kind, info.level, this.level, this.regionFactor(info.regionId));
     const pay = Math.floor(value * MERCY_XP_FRACTION);
     this.mercy.set(info.actorId, { paid: pay, revoked: false });

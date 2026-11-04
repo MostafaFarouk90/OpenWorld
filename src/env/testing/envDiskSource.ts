@@ -1,8 +1,8 @@
 // Test-only: a ModelSource that parses the committed public/assets/env/<id>.glb files from disk in node, so env fit tests run on the
-// real geometry without a renderer. Ids must start with `env/`.
+// real geometry without a renderer. Ids must start with `env/` or `env-standin/`.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { ENV_PREFIX } from '../envSource';
+import { ENV_PREFIX, STANDIN_PREFIX } from '../envSource';
 import type { ModelSource } from '../../assets/swap/ModelLibrary';
 
 type Fs = { readFileSync(p: string): Uint8Array };
@@ -17,9 +17,10 @@ export async function envDiskSource(): Promise<ModelSource & { loaded: string[] 
   return {
     loaded,
     async load(id) {
-      if (!id.startsWith(ENV_PREFIX)) throw new Error(`envDiskSource: "${id}" is not an env id`);
+      const file = id.startsWith(ENV_PREFIX) ? `public/assets/env/${id.slice(ENV_PREFIX.length)}.glb` : id.startsWith(STANDIN_PREFIX) ? `public/assets/env-standin/${id.slice(STANDIN_PREFIX.length)}.glb` : null;
+      if (!file) throw new Error(`envDiskSource: "${id}" is not an env id`);
       if (scenes.has(id)) return;
-      const bytes = fs.readFileSync(`public/assets/env/${id.slice(ENV_PREFIX.length)}.glb`);
+      const bytes = fs.readFileSync(file);
       const data = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
       const gltf = await new Promise<any>((res, rej) => new GLTFLoader().parse(data, '', res, rej));
       scenes.set(id, gltf.scene);
