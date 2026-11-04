@@ -46,6 +46,8 @@ export type EnemyKind =
   // Act 3 (K6b PR 1): the Greyfen's own kinds.
   | 'fen-leech'
   | 'peat-shambler'
+  // Act 3 (K6a PR 1): Skarl's chained drake (D06 is K8's).
+  | 'skarl-drake'
   // Act 3 (K6b PR 2): the Dragonspine's own kinds.
   | 'rime-hawk'
   | 'crag-ogre';

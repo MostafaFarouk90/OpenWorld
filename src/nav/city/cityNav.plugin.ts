@@ -2,7 +2,10 @@
 // `harrowmark`, so a city that fails to build leaves no grids over missing buildings.
 import type { GamePlugin } from '../../core/plugins';
 import { HARROWMARK_LAYOUT } from '../../harrowmark/harrowmark.layout';
+import { envNavObstacles } from '../../env/colliderNav';
+import { envEnabled } from '../../env/env.plugin';
 import type { StructureSpec } from '../../region/layoutTypes';
+import type { NavOrientedRect, NavRect } from '../NavGrid';
 import { heightAt } from '../../terrain/heightfield';
 import '../service';
 import { blockGridDef, CITY_NAV_BLOCKS, type CityNavBlock } from './blocks';
@@ -15,12 +18,19 @@ export interface CityNavPluginOptions {
   blocks?: readonly CityNavBlock[];
   structures?: readonly StructureSpec[];
   heightAt?: (x: number, z: number) => number;
+  /**
+   * Extra blocked rects for a block: by default the env colliders (fences, walls, carts, hearths of the H tiles), none with `?env=off`
+   * (no colliders exist then, so nothing must be blocked for them).
+   */
+  obstacles?: (rect: NavRect) => readonly NavOrientedRect[];
 }
 
 export function createCityNavPlugin(opts: CityNavPluginOptions = {}): GamePlugin {
   const blocks = opts.blocks ?? CITY_NAV_BLOCKS;
   const structures = opts.structures ?? HARROWMARK_LAYOUT.structures;
   const height = opts.heightAt ?? heightAt;
+  const obstacles =
+    opts.obstacles ?? ((rect: NavRect) => (envEnabled(typeof location === 'undefined' ? '' : location.search) ? envNavObstacles(rect) : []));
   let streamer: CityNavStreamer | null = null;
   return {
     id: 'city-nav',
@@ -29,7 +39,7 @@ export function createCityNavPlugin(opts: CityNavPluginOptions = {}): GamePlugin
       const nav = ctx.services.get('nav');
       if (!nav) throw new Error('city-nav: the nav service is missing');
       const s = new CityNavStreamer(blocks, {
-        def: (b) => blockGridDef(b, structures, height),
+        def: (b) => blockGridDef(b, structures, height, undefined, obstacles(b.rect)),
         add: (grid) => nav.addGrid(grid),
         warn: (message, err) => console.warn(message, ...(err === undefined ? [] : [err])),
       });

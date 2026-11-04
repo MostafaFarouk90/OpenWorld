@@ -2,10 +2,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { tutorialFromQuery } from '../tutorial/tutorial.plugin';
 import { devJumpBoot } from '../save/devJump';
+import { ACT3_WAYSTONES } from '../region/act3/act3Places';
 import { ACT1_PREREQS } from './act1Jump';
 import { ACT2_PREREQS, getActJump } from './actJump';
 import {
-  ACT3_ARRIVAL, ACT3_DIRECT, ACT3_START_XP, ACT3_GREYFEN, ACT3_JUMP_IDS, ACT3_ORDERS, ACT3_PREREQS, ACT3_SPINE, ACT3_SUMMIT, Act3Jump,
+  ACT3_ARRIVAL, ACT3_ARRIVAL_WAYSTONE, ACT3_DIRECT, ACT3_WAYSTONE_AFTER, act3JumpWaystones, ACT3_START_XP, ACT3_GREYFEN, ACT3_JUMP_IDS, ACT3_ORDERS, ACT3_PREREQS, ACT3_SPINE, ACT3_SUMMIT, Act3Jump,
   type Act3JumpPorts, type Act3Order, act3Prereqs, blockOf, needsDragonspine, parseAct3,
 } from './act3Jump';
 
@@ -92,6 +93,8 @@ function harness(known: readonly string[] = []) {
   const log: string[] = [];
   const locks: string[] = [];
   const placed: { x: number; z: number }[] = [];
+  const rekindled: string[] = [];
+  const kitAt: number[] = [];
   const xp = { total: 9000, atLock: [] as number[] };
   const warn = vi.fn();
   const tutorial = { begun: true, complete: true, beat: null, restartInFlight: false, begin() {}, skipCurrent() {} };
@@ -108,7 +111,7 @@ function harness(known: readonly string[] = []) {
     },
     runEffects: () => {},
     setFlag: (f) => void flags.set(f, true),
-    rekindle: () => {},
+    rekindle: (w) => void rekindled.push(w),
     giveGold: () => {},
     chooseClass: () => true,
     teleportTo: () => true,
@@ -122,8 +125,12 @@ function harness(known: readonly string[] = []) {
       locks.push(`${b}@${[...flags.keys()].filter((k) => k.startsWith('shrine.') && k.endsWith('.lit')).length}`);
     },
     placeAt: (at) => (placed.push(at), true),
+    eraKit: () => {
+      kitAt.push(log.length);
+      return undefined;
+    },
   };
-  return { ports, flags, log, locks, placed, warn, state, xp };
+  return { ports, flags, log, locks, placed, warn, state, xp, rekindled, kitAt };
 }
 
 function run(id: string, order: Act3Order, known: readonly string[] = []) {
@@ -134,6 +141,12 @@ function run(id: string, order: Act3Order, known: readonly string[] = []) {
 }
 
 describe('Act3Jump', () => {
+  it.each(ACT3_ORDERS.flatMap((o) => ACT3_JUMP_IDS.map((id) => [id, o] as const)))('%s (%s): era kit only for Dragonspine and summit targets, after the injection', (id, order) => {
+    const r = run(id, order, ACT3_JUMP_IDS);
+    if (blockOf(id) === 'greyfen') expect(r.kitAt).toEqual([]);
+    else expect(r.kitAt).toEqual([r.log.length]);
+  });
+
   it.each(ACT3_ORDERS.flatMap((o) => ACT3_JUMP_IDS.map((id) => [id, o] as const)))('%s (%s): reaches the arrival point', (id, order) => {
     const r = run(id, order);
     expect(r.jump.phase).toBe('done');
@@ -158,6 +171,52 @@ describe('Act3Jump', () => {
     expect(r.log).not.toContain('m23');
     expect(r.flags.get('story.m23.complete')).toBe(true);
     expect(r.state.get('m24')).toBe('completed');
+  });
+
+  it('K16: marks the "peaks are next" card seen only when D05 is injected, before the injection', () => {
+    expect(run('d05', 'greyfen').flags.has('story.a3.peaksCardSeen')).toBe(false);
+    expect(run('m28', 'greyfen').flags.get('story.a3.peaksCardSeen')).toBe(true);
+    expect(run('m28', 'spine').flags.has('story.a3.peaksCardSeen')).toBe(false);
+    expect(run('m23', 'spine').flags.has('story.a3.peaksCardSeen')).toBe(false);
+    const r = run('m31', 'spine');
+    const keys = [...r.flags.keys()];
+    expect(keys.indexOf('story.a3.peaksCardSeen')).toBeLessThan(keys.indexOf('story.d05.complete'));
+  });
+
+  it('lights the Act 3 waystones a player at that point has, the target block\'s arrival stone last (the respawn point)', () => {
+    const act3 = (r: { rekindled: string[] }) => r.rekindled.filter((w) => Object.values(ACT3_ARRIVAL_WAYSTONE).includes(w) || Object.values(ACT3_WAYSTONE_AFTER).includes(w));
+    // The first Greyfen quest: only Reedgate, where the player stands.
+    expect(act3(run('m23', 'greyfen'))).toEqual(['reedgate']);
+    // Into the Dragonspine after the whole Greyfen: its four stones, then the lodge.
+    expect(act3(run('m28', 'greyfen'))).toEqual(['reedgate', 'mireweather-hut', 'greywatch', 'hathrens-mere', 'wyrmwatch-lodge']);
+    // The lower Dragonspine first: nothing from the Greyfen.
+    expect(act3(run('m28', 'spine'))).toEqual(['wyrmwatch-lodge']);
+    // M31, lower Dragonspine first then the Greyfen: Rime Pass and the Last Anvil too; the lodge (where the jump places the player) last.
+    const m31 = act3(run('m31', 'spine'));
+    expect(m31.at(-1)).toBe('wyrmwatch-lodge');
+    expect([...m31].sort()).toEqual(['greywatch', 'hathrens-mere', 'last-anvil', 'mireweather-hut', 'reedgate', 'rime-pass', 'wyrmwatch-lodge']);
+    // Lit after the injected shrines, so the Mere's and the Anvil's stones are open when they are rekindled.
+    const r = run('m31', 'greyfen');
+    expect(r.flags.get('shrine.last-anvil.lit')).toBe(true);
+  });
+
+  it('act3JumpWaystones: every stone once, the arrival stone last, nothing for an unknown id; each stone named is a plan 3.5 waystone', () => {
+    for (const order of ACT3_ORDERS) {
+      for (const id of ACT3_JUMP_IDS) {
+        const w = act3JumpWaystones(id, order);
+        expect(new Set(w).size, `${id} ${order}`).toBe(w.length);
+        expect(w.at(-1), `${id} ${order}`).toBe(ACT3_ARRIVAL_WAYSTONE[blockOf(id)!]);
+        // A stone is only lit once the quest that reaches it is done (never the target's own).
+        for (const [q, stone] of Object.entries(ACT3_WAYSTONE_AFTER)) {
+          if (w.includes(stone) && stone !== w.at(-1)) expect(ACT3_PREREQS[order][id], `${stone} for ${id}`).toContain(q);
+        }
+      }
+    }
+    const named = [...Object.values(ACT3_ARRIVAL_WAYSTONE), ...Object.values(ACT3_WAYSTONE_AFTER)];
+    for (const w of named) expect(Object.keys(ACT3_WAYSTONES), w).toContain(w);
+    expect(act3JumpWaystones('m99', 'greyfen')).toEqual([]);
+    // D06's Aerie stone only once D06 is behind the player.
+    expect(act3JumpWaystones('m34', 'greyfen')).not.toContain('frostfang-aerie');
   });
 
   it('locks each block when its lock quest is injected, after the earlier shrines; the target block is left to the accept', () => {

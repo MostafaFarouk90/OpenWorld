@@ -1,6 +1,7 @@
 import type { HudWidget } from '../ui/HudLayer';
 import { hitTestMarker, mapExtent, playerArrowPosition, selectionOrder, stepSelection, worldToMap, type MapMarker } from './MapModel';
 import type { MapViewDeps } from './viewTypes';
+import type { BlockTone } from './act3/blockChips';
 
 /** Canvas length in pixels of the longer map edge; the shorter edge follows the bounds' aspect. */
 export const MAP_CANVAS_SIZE = 640;
@@ -8,6 +9,8 @@ export const MAP_CANVAS_SIZE = 640;
 export const MAP_MODAL_REDRAW_HZ = 10;
 
 const EMBER = '#ff8a3d';
+/** Block chip text by tone (design 5.9): gold at or under the player's level, orange up to three over, red beyond. */
+const TONE_COLOR: Readonly<Record<BlockTone, string>> = { gold: '#e8c860', orange: '#f0902c', red: '#e0483c' };
 
 export interface MapModalWidget extends HudWidget {
   update(frameTime: number): void;
@@ -55,16 +58,20 @@ export function createMapModal(deps: MapViewDeps): MapModalWidget {
   });
   const forgeRow = doc.createElement('div');
   const legend = doc.createElement('p');
+  const blockWarn = doc.createElement('p');
   forgeRow.className = 'map-modal__forge';
   legend.className = 'map-modal__legend';
+  blockWarn.className = 'map-modal__block-warning';
   Object.assign(forgeRow.style, { display: 'none', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' });
   Object.assign(legend.style, { display: 'none', margin: '0' });
+  Object.assign(blockWarn.style, { display: 'none', margin: '0' });
   element.appendChild(title);
   element.appendChild(canvas);
   element.appendChild(status);
   element.appendChild(hint);
   element.appendChild(forgeRow);
   element.appendChild(legend);
+  element.appendChild(blockWarn);
 
   const ctx = canvas.getContext('2d');
   const stats = { bitmapBuilds: 0, fogBuilds: 0, frames: 0 };
@@ -140,6 +147,16 @@ export function createMapModal(deps: MapViewDeps): MapModalWidget {
       ctx.fillStyle = c.closed ? '#9a9486' : '#e8dfc8';
       ctx.fillText(text, p.u, p.v);
     }
+    // Act 3 block chips sit under the region label (the lower slopes under the Dragonspine's).
+    for (const b of model.blocks?.() ?? []) {
+      const p = worldToMap(b.x, b.z, model.bounds, size);
+      const text = model.t(b.textKey, b.params);
+      const w = (ctx.measureText?.(text).width ?? text.length * 7) + 12;
+      ctx.fillStyle = 'rgba(20,16,12,0.92)';
+      ctx.fillRect(p.u - w / 2, p.v + 14, w, 20);
+      ctx.fillStyle = TONE_COLOR[b.tone] ?? TONE_COLOR.gold;
+      ctx.fillText(text, p.u, p.v + 24);
+    }
   }
 
   function drawMarker(m: MapMarker, selected: boolean): void {
@@ -200,6 +217,7 @@ export function createMapModal(deps: MapViewDeps): MapModalWidget {
   const forgeEls: HTMLElement[] = [];
   let forgeKey = '';
   let legendKey = '';
+  let blockWarnKey = '';
 
   /** Forge row and level legend are DOM text; rebuilt only when their content changes. */
   function drawOverlays(): void {
@@ -239,6 +257,15 @@ export function createMapModal(deps: MapViewDeps): MapModalWidget {
       legendKey = lk;
       legend.style.display = band ? 'block' : 'none';
       legend.textContent = band ? model.t('map.legend.level', { min: band.min, max: band.max }) : '';
+    }
+    // The player stands in an unstarted block: the chip's warning repeats under the legend, in the chip's colour.
+    const here = model.blocks?.().find((b) => b.here && !b.locked) ?? null;
+    const wk = here ? `${here.block}|${here.level}|${here.tone}|${here.params.player}` : '';
+    if (wk !== blockWarnKey) {
+      blockWarnKey = wk;
+      blockWarn.style.display = here ? 'block' : 'none';
+      blockWarn.style.color = here ? TONE_COLOR[here.tone] ?? TONE_COLOR.gold : '';
+      blockWarn.textContent = here ? model.t(here.textKey, here.params) : '';
     }
   }
 

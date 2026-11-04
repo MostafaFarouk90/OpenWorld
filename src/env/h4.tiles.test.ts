@@ -53,13 +53,10 @@ describe('H4 placements', () => {
     for (const id of ['forge-hearth-a', 'anvil-a', 'coal-heap-a', 'iron-stock-a', 'grindstone-a', 'charcoal-clamp-a', 'brazier-standing-a', 'trough-a', 'charred-stump', 'scorched-fence', 'stable-a', 'cottage-thatch-a', 'barn-a', 'fruit-tree-a', 'planter-box-a', 'keg-a', 'cart-goods-a']) {
       expect(resolveModel(id).source, id).toBe('env');
     }
-    // The Act 2 industry ids borrowed inside the wall have no file yet: tinted stand-ins of shipped env models (not boxes).
-    for (const id of ['slag-heap', 'ore-pile', 'mine-cart']) {
-      const m = resolveModel(id);
-      expect(m.source, id).toBe('env');
-      expect(m.source === 'env' && m.tint, id).toBeTruthy();
+    // The Act 2 industry ids borrowed inside the wall have no artist file yet: they draw the scripted stand-in glbs (public/assets/env-standin).
+    for (const id of ['slag-heap', 'ore-pile', 'mine-cart', 'smelter-chimney']) {
+      expect(resolveModel(id), id).toEqual({ source: 'env', model: `env-standin/${id}`, scale: 1 });
     }
-    expect(resolveModel('smelter-chimney').source).toBe('kaykit');
   });
 
   it('owns only its core: nothing outside x 7720..8440, z 1440..2240, none carrying dy', () => {

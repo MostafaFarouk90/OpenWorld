@@ -1,7 +1,7 @@
-# Dragonspine places (thread K4, PR 1: the lower slopes)
+# Dragonspine places (thread K4: the lower slopes and the summit)
 
-Plugin `dragonspine` (depends on core, region, npcs). PR 1 builds the places south of the summit hole; PR 2 (the summit) comes
-later. **Nothing here is a literal map coordinate or a height.** `inputs.ts` collects K1's exports (the plateaus in
+Plugin `dragonspine` (depends on core, region, npcs). PR 1 builds the places south of the summit hole; PR 2 builds the summit
+(below). **Nothing here is a literal map coordinate or a height.** `inputs.ts` collects K1's exports (the plateaus in
 `src/terrain/shape/dragonspine.ts`, the Rime Pass polyline, `WYRMWATCH_HEARTH` and `ACT3_INTERIOR_PADS` in
 `src/region/act3/act3Places.ts`) and the ground (`heightAt`); `sites.ts` frames them and each place file derives from the frames.
 Anchors carry a `dy` over the terrain, structures are resolved by the structure builder, and carry-route checkpoints, Leap ledges
@@ -11,7 +11,9 @@ moves with it (shifted-plateau tests).
 - **Places**: `lodge.ts` (Wyrmwatch Lodge: walls, two towers, south and pass gates, the long hall's shell at the hall pad's door,
   bunkhouse, stables, the R15 sled shed and depot, racks, the yard fire pit round K1's hearth, a waystone), `shelter.ts` (Eadgyth's
   hut, her trophy wall, the fire, the woodpile about 150 m off, the switchback bend dressing, a waystone), `hawkCliffs.ts` (the egg
-  thief's camp, the climb, three nests, the parents' circling points), `caveMouth.ts` (the mouth, the collapsed ledge, the trailhead and a 200 m approach over the Leap), `anvil.ts`
+  thief's camp, the climb, three nests, the parents' circling points, a low parapet of stones on the downhill edge of each leg:
+  every stone's footprint keeps `PARAPET_GAP` beyond the path's half-width from K1's centreline and from the anchor-to-anchor
+  line through `dragonspine.hawk.climb.N`, which cuts the inside of each hairpin, so a walker on either line never meets one), `caveMouth.ts` (the mouth, the collapsed ledge, the trailhead and a 200 m approach over the Leap), `anvil.ts`
   (the shrine pad and anchor, six carving stones, two keeper-marks, Ansgar's cell, the pilgrims' rest, a waystone),
   `wayside.ts` (R17's six stone platforms on the verge), `m28.ts` (M28's trailhead, climb, two Leap ledges, four cairns, the crag).
   `layout.ts` concatenates them (`buildDragonspine(inputs)`); `dragonspine.layout.ts` is the shipped constant.
@@ -27,7 +29,51 @@ moves with it (shifted-plateau tests).
   `candle.r17.down` (Anvil, 3, 2, 1) and `candle.r17.up` (1, 4, 5, 6), so neither doubles back (`resetAt`: the start and each shrine). Checkpoints are the route's polyline, 10 to 25 m apart, corridor 30, max drop 10.
 - **Leg lengths** (`legs.ts`): the plan's table computed from the layout; `legs.test.ts` prints it.
 - **Waystones**: `waystone.wyrmwatch-lodge`, `waystone.rime-pass`, `waystone.last-anvil`.
-- **NPCs** (`npcDefs.ts`): Thorgar, Eadgyth, Ansgar, six lodge hunters (two stand in the hall through `postRules.ts`), two sled-hands,
+- **NPCs** (`npcDefs.ts`): Thorgar, Eadgyth, Ansgar, six lodge hunters (two stand in the hall through `postRules.ts`; the
+  towers have no stair, so the lookout `npc-post.lodge-hunter-3` and its `.out` stand on the ground at the south-west tower's
+  yard-side foot, `towerFoot`; every lodge hunter post is on the ground inside the walls, a shipped-ground test), two sled-hands,
   the cave hunter, the egg thief, three pilgrims. Dialogue trees are K13's, vendor stock K10's.
 - **Anchors and triggers**: every id is in [ANCHORS.md](./ANCHORS.md) (generated: `npx vite-node tools/gen-region-docs.ts`).
   Spawn anchors for K6b are `dragonspine.spawn.*` (area `dragonspine-lower`).
+
+## PR 2: the summit
+
+All of it derives from K1's summit plateaus (`SUMMIT_PLATEAU_IDS`), `ACT3_GLIDE_LEDGES` and `LIP_RUN`, `FROSTFANG_WAYSTONE`, the
+`frostfang-keep` pad, the troughs `FROSTFANG_CHASM` and `FROSTFANG_MOAT`, the summit fog face and the Skyhold spur. `summitSites.ts`
+frames them and throws on anything missing (a plateau, a glide ledge, the troughs, the keep pad) or on a roost pad under 60 by 60
+m (there is no built-platform fallback). Every structure keeps out of K1's 60 m launch runs (`clearOfRuns`).
+
+- **Places**: `summitGate.ts` (the arch on the open side of K1's fog face: dressing only, the face is the blocker; Eadgyth's post),
+  `wyrmsHearth.ts` (the shrine, `waystone.wyrms-hearth`, the keeper-stone, the hoard and its searches, the black-glass tiers,
+  four carvings, two glide markers, Ysmeryth's perch and the M32 cast posts), `roost.ts` (M31: a climb of about 800 m down from
+  the Hearth's north rim to K1's roost pad, three Leap ledges fitted at built size, the arena centre, four hawk spawns). The
+  roost sits about 60 m below the rim, so the Leaps face the player climbing back: ledge 1 is nearest the trailhead, ledge 3
+  nearest the roost, each top between the roost's and the rim's heights and each lower than the ledge before it, so climbing
+  back the player meets 3, 2, 1 rising (shipped: tops about 540, 578 and 599 m). A launch is the ledge's uphill neighbour on
+  a slope (its ground is at or just over the ledge's highest ground), a short walk off the route on either side of it.
+  The ground under the route between ledges 2 and 3 dips into a hollow about 20 m below the roost (K1's shape, not a Leap).
+  `skyhold.ts` (Thorgar's rig camp, six net anchors on the cliff edge, two hunter packs, the escape flight point),
+  `aerie.ts` (D06: walls, towers, the west gate, the winch, the landing shelf, the keep shell on K1's pad, arena anchors, eight
+  courtyard hunters, four harpooners on the walls), `glideLedges.ts` (a rock deck, a wind banner and a landing marker at each of
+  K1's six ledges; `dragonspine.glide.<ledgeId>.launch` and `.landing`).
+- **Keep interior** (`frostfangKeep.ts`): `frostfang-keep` on K1's pad, area `dragonspine-summit` (`KEEP_AREA`); the door
+  (`dragonspine.aerie.keep.door`) opens on `story.d06.started`.
+- **Walker catch** (`chasmCatch.ts`, agreed with K7): one box per stretch of each trough, clipped to SUMMIT_BOX (with an unyawed cap
+  so the chasm band reaches z 16900 all the way across), tested directly on the feet (ids `trg.dragonspine.catch.<trough>.<n>`, not
+  registered as triggers). A walker held in one for `CATCH_HOLD` s is faded out and returned `CATCH_BACK` (2.5 m) behind
+  `dragonspine.glide.summit-aerie.launch` (on its deck's flat stand), or behind `dragonspine.aerie.landing` when last grounded on
+  the Aerie or K1's summit-aerie landing area. It stands down while `movementMode` is `glide` or K7's `glide` service has
+  `catchArmed` (a missing service reads false), and, like the containment push, inside an interior, while a save loads, during
+  waystone travel and while dead. A missing return anchor turns it off with one warning. `trg.dragonspine.aerie.arrival` attunes
+  `waystone.frostfang-aerie` (`rekindle('frostfang-aerie', 'script')`) on entering, every tick there and on `save.loaded`.
+- **Launch decks** (`glideLedges.ts`): 0.3 m over the highest ground under the deck, lengthened back up a falling lip until its back
+  edge is within `DECK_STEP` (0.35 m) of the ground, so it is walked onto without a jump.
+- **Readers** (`worldChanges.ts`): toggles (never in the layout) driven through `ctx.gates`, so they re-derive on every flag change
+  and on `save.loaded`, both ways: the Aerie gate (closed until `story.d06.gateOpen`), net section n (until `story.m33.anchorN`),
+  the R16 axe on the hoard (`story.r16.choice = give` and `story.m32.complete`), the lodge fire lit (`story.m34.complete`), Skarl's
+  banner burned (`boss.corvin-skarl.outcome = defeated` only) and the drake's roost on the Aerie's north-east tower
+  (`story.d06.complete`). After M34 the six lodge hunters stand on `npc-post.lodge-hunter-N.out` (`postRules.ts`). The plugin's
+  `dragonspine` service reports the shown toggles and the catch's state.
+- **Waystones**: `waystone.wyrms-hearth`, `waystone.frostfang-aerie`. Spawn anchors for the summit are `dragonspine.spawn.roost.*`,
+  `dragonspine.spawn.skyhold.*` and `dragonspine.spawn.aerie.*` (area `dragonspine-summit`).
+

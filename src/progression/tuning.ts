@@ -47,12 +47,22 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   // plan 6.1's 70 and 220 after the one rounding (39 x 1.8 = 70.2, 122 x 1.8 = 219.6). Coordinator ruling A.
   'fen-leech': 39,
   'peat-shambler': 122,
+  // K6a: Skarl's drake is freed on either D06 outcome, never a kill reward.
+  'skarl-drake': 0,
+  // Murkjaw, D05 (K8): the same convention, so a Greyfen kill pays plan 6.2's about 600 (333 x 1.8 = 599.4, paid as 599).
+  murkjaw: 333,
   // K6b PR 2: stored divided by the Dragonspine's factor (1.8, set by the peak plugin): 90 and 240 there (plan 6.1).
   'rime-hawk': 50,
   'crag-ogre': 133,
   dummy: 0,
   scarecrow: 0,
 };
+
+/**
+ * Spawn tags whose kills and spared foes pay no XP at all (sparring, where the job's own reward is the pay): the Act 1 side
+ * job j09's yard bouts and the repeat bout Stane offers after it (plans/act1-side-content.md). Read by Progression.onKill and onMercy.
+ */
+export const NO_KILL_XP_TAGS: readonly string[] = ['j09.b1', 'j09.b2', 'j09.b3', 'j09.repeat'];
 
 /** Levels at which one skill point is granted: 2..14, then every third level from 17 to 38. */
 export const POINT_LEVELS: readonly number[] = [
