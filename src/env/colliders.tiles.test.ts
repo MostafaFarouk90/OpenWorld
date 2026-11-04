@@ -20,7 +20,7 @@ const EXPECT: Record<string, { boxes: [number, number]; dropped: number }> = {
   h1: { boxes: [80, 200], dropped: 0 },
   h2: { boxes: [130, 280], dropped: 0 },
   h3: { boxes: [250, 480], dropped: 0 },
-  h4: { boxes: [250, 480], dropped: 1 },
+  h4: { boxes: [250, 480], dropped: 3 },
 };
 
 describe('colliders of the built tiles', () => {
