@@ -65,6 +65,21 @@ describe('spells plugin', () => {
     plugin.dispose!();
   });
 
+  it('setBurnDecayScale (K13) doubles the decay through the service and the undo lifts it', () => {
+    const f = makeCtx();
+    plugin.setup(f.ctx);
+    const s = f.services.spells!;
+    s.addBurn(50, 't');
+    const undo = s.setBurnDecayScale!(() => 2);
+    const tick = () => { for (const sys of f.systems) if (sys.id === 'spells-update') sys.fixedUpdate?.(10, f.ctx as never); };
+    tick();
+    expect(s.burn).toBeCloseTo(46);
+    undo();
+    tick();
+    expect(s.burn).toBeCloseTo(44);
+    plugin.dispose!();
+  });
+
   it('setMaxEmber changes maxEmber and refuses bad numbers', () => {
     const f = makeCtx();
     plugin.setup(f.ctx);
