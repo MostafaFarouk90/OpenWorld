@@ -5,11 +5,14 @@ import type { Act2Note } from '../act2/notes';
 import type { CarryItemSpec } from '../carry';
 import './greyfen/items';
 import { GREYFEN } from './greyfen/greyfen.content';
+import './dragonspine/items';
+import { DRAGONSPINE_LOWER } from './dragonspine/dragonspine.content';
 
 export { GREYFEN, GREYFEN_QUEST_IDS } from './greyfen/greyfen.content';
 export { GREYFEN_Q_NPC_DEFS, GREYFEN_Q_NPCS, GREYFEN_Q_NPC_STRINGS } from './greyfen/npcs';
+export { DRAGONSPINE_LOWER, DRAGONSPINE_QUEST_IDS } from './dragonspine/dragonspine.content';
 
-const BLOCKS = [GREYFEN] as const;
+const BLOCKS = [GREYFEN, DRAGONSPINE_LOWER] as const;
 
 export const ACT3_QUEST_DEFS: QuestDef[] = BLOCKS.flatMap((b) => b.quests);
 export const ACT3_PROPS = BLOCKS.flatMap((b) => b.props);

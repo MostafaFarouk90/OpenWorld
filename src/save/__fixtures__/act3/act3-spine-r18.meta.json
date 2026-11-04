@@ -5,7 +5,10 @@
   "injected": [
     "m28"
   ],
-  "questDefs": [],
+  "questDefs": [
+    "m28",
+    "r18"
+  ],
   "lockedBlocks": {
     "dragonspine-lower": 20
   },

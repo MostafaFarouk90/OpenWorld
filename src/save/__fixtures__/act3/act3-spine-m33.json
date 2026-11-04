@@ -135,7 +135,7 @@
         "equipped": {
           "armour": "ashplate",
           "offhand": "spike-shield",
-          "weapon": "ashforged-longsword"
+          "weapon": "rimewood-haft"
         },
         "gear": {
           "ashforged-longsword": {
@@ -160,6 +160,7 @@
           "fen-salve-recipe": 1,
           "ford-guard-shield": 1,
           "fox-fire-ember": 1,
+          "frostbrows-hunting-knife": 1,
           "gauts-spare-blade": 1,
           "gauts-spare-tabard": 1,
           "gear.fen-boots": 1,
@@ -182,6 +183,8 @@
           "picketts-lantern": 1,
           "ranger-longbow": 1,
           "redmanes-lance": 1,
+          "rime-cloak": 1,
+          "rimewood-haft": 1,
           "sewer-master-key": 1,
           "shard-gem.bulwark": 2,
           "shard-gem.oathfire": 2,
@@ -224,7 +227,7 @@
     "player": {
       "data": {
         "goldPouch": null,
-        "health": 290,
+        "health": 300,
         "lastRestedWaystoneId": null,
         "stamina": 100
       },
@@ -263,7 +266,7 @@
         ],
         "respecUsed": false,
         "storyPoints": 1,
-        "xp": 28633
+        "xp": 30720
       },
       "version": 2
     },
@@ -405,6 +408,18 @@
             "objectives": {},
             "state": "completed"
           },
+          "m28": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m29": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m30": {
+            "objectives": {},
+            "state": "completed"
+          },
           "r01": {
             "objectives": {},
             "state": "completed"
@@ -454,6 +469,10 @@
             "state": "completed"
           },
           "r14": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r16": {
             "objectives": {},
             "state": "completed"
           },
@@ -830,8 +849,11 @@
           "story.m27.complete": true,
           "story.m27.started": true,
           "story.m28.complete": true,
+          "story.m28.started": true,
           "story.m29.complete": true,
+          "story.m29.started": true,
           "story.m30.complete": true,
+          "story.m30.started": true,
           "story.m31.complete": true,
           "story.m32.complete": true,
           "story.phase.dragonspineOpen": true,
@@ -870,6 +892,7 @@
           "story.r14.complete": true,
           "story.r14.started": true,
           "story.r16.complete": true,
+          "story.r16.started": true,
           "story.side.boardOpen": true,
           "story.side.kettlewickOpen": true,
           "tutorial.complete": true,

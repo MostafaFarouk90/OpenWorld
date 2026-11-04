@@ -151,6 +151,7 @@
           "favour-mark": 1,
           "ford-guard-shield": 1,
           "fox-fire-ember": 1,
+          "frostbrows-hunting-knife": 1,
           "gauts-spare-blade": 1,
           "gauts-spare-tabard": 1,
           "grisel-writ": 1,
@@ -168,6 +169,7 @@
           "oswin-lockpicks": 5,
           "picketts-lantern": 1,
           "redmanes-lance": 1,
+          "rime-cloak": 1,
           "sewer-master-key": 1,
           "shard-gem.bulwark": 1,
           "shard-gem.oathfire": 2,
@@ -249,7 +251,7 @@
         ],
         "respecUsed": false,
         "storyPoints": 1,
-        "xp": 23500
+        "xp": 24587
       },
       "version": 2
     },
@@ -364,6 +366,14 @@
             "state": "completed"
           },
           "m22": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m28": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m29": {
             "objectives": {},
             "state": "completed"
           },
@@ -764,7 +774,9 @@
           "story.m22.complete": true,
           "story.m22.started": true,
           "story.m28.complete": true,
+          "story.m28.started": true,
           "story.m29.complete": true,
+          "story.m29.started": true,
           "story.phase.dragonspineOpen": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,

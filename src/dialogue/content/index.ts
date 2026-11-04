@@ -30,6 +30,7 @@ import { SIDE_DIALOGUES, withSideJobs } from '../../quests/content/side/dialogue
 import { questDefs } from '../../quests/content';
 import { withAct3Companions } from './act3/companions';
 import { GREYFEN_DIALOGUES } from './act3/greyfen';
+import { DRAGONSPINE_DIALOGUES } from './act3/dragonspine';
 
 // Act 3 (K10): the four Harrowmark trainers get their master-book lines in front. Act 3 (K5): Hrolf's master book and
 // the companions' M27, M32 and M34 scene trees. Act 1 side jobs: the givers' job rules, guarded by withSideJobs.
@@ -49,4 +50,6 @@ export const dialogueDefs: DialogueDef[] = withAct3Companions(withAct3Trainers(w
   ...SIDE_DIALOGUES,
   // Act 3 (K12): the Greyfen quests
   ...GREYFEN_DIALOGUES,
+  // Act 3 (K13): the lower Dragonspine quests
+  ...DRAGONSPINE_DIALOGUES,
 ], questDefs)));

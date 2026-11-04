@@ -135,7 +135,7 @@
         "equipped": {
           "armour": "ashplate",
           "offhand": "spike-shield",
-          "weapon": "ashforged-longsword"
+          "weapon": "rimewood-haft"
         },
         "gear": {
           "ashforged-longsword": {
@@ -151,8 +151,10 @@
         "gold": 650,
         "items": {
           "aldiths-stout": 1,
+          "ansgars-blessing": 1,
           "ashforged-longsword": 1,
           "ashmare-saddle": 1,
+          "ashmare-saddlebags": 1,
           "ashplate": 1,
           "barley-cake": 5,
           "couriers-cloak": 1,
@@ -160,11 +162,13 @@
           "fen-salve-recipe": 1,
           "ford-guard-shield": 1,
           "fox-fire-ember": 1,
+          "frostbrows-hunting-knife": 1,
           "gauts-spare-blade": 1,
           "gauts-spare-tabard": 1,
           "gear.fen-boots": 1,
           "grisel-writ": 1,
           "halvard-signet": 1,
+          "hawk-feather-charm": 1,
           "healing-flask": 5,
           "hearth-bread": 1,
           "hearth-stone-charm": 1,
@@ -184,6 +188,8 @@
           "ranger-longbow": 1,
           "redmanes-lance": 1,
           "reed-armour": 1,
+          "rime-cloak": 1,
+          "rimewood-haft": 1,
           "sewer-master-key": 1,
           "shard-gem.bulwark": 2,
           "shard-gem.oathfire": 2,
@@ -226,7 +232,7 @@
     "player": {
       "data": {
         "goldPouch": null,
-        "health": 290,
+        "health": 310,
         "lastRestedWaystoneId": null,
         "stamina": 100
       },
@@ -265,7 +271,7 @@
         ],
         "respecUsed": false,
         "storyPoints": 1,
-        "xp": 28850
+        "xp": 32650
       },
       "version": 2
     },
@@ -407,6 +413,18 @@
             "objectives": {},
             "state": "completed"
           },
+          "m28": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m29": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m30": {
+            "objectives": {},
+            "state": "completed"
+          },
           "r01": {
             "objectives": {},
             "state": "completed"
@@ -464,6 +482,22 @@
             "state": "completed"
           },
           "r14": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r15": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r16": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r17": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r18": {
             "objectives": {},
             "state": "completed"
           },
@@ -842,8 +876,11 @@
           "story.m27.complete": true,
           "story.m27.started": true,
           "story.m28.complete": true,
+          "story.m28.started": true,
           "story.m29.complete": true,
+          "story.m29.started": true,
           "story.m30.complete": true,
+          "story.m30.started": true,
           "story.m31.complete": true,
           "story.m32.complete": true,
           "story.m33.complete": true,
@@ -889,9 +926,13 @@
           "story.r14.complete": true,
           "story.r14.started": true,
           "story.r15.complete": true,
+          "story.r15.started": true,
           "story.r16.complete": true,
+          "story.r16.started": true,
           "story.r17.complete": true,
+          "story.r17.started": true,
           "story.r18.complete": true,
+          "story.r18.started": true,
           "story.side.boardOpen": true,
           "story.side.kettlewickOpen": true,
           "tutorial.complete": true,

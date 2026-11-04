@@ -9,6 +9,7 @@ import { dialogueStringsDensityC } from './strings.density-c.en';
 import { dialogueStringsSide } from '../quests/content/side/strings.side.en';
 import { ACT2_DIALOGUE_STRINGS } from './content/act2';
 import { ACT3_TRAINER_STRINGS } from './content/act3/trainers';
+import { DRAGONSPINE_DIALOGUE_STRINGS } from './content/act3/dragonspine';
 import { ACT3_COMPANION_STRINGS } from './content/act3/companions';
 import { GREYFEN_DIALOGUE_STRINGS } from './content/act3/greyfen';
 import { NPC_AELFREDA_COMPANION_STRINGS_EN } from '../companions/dialogue/npcAelfredaCompanion.dialogue';
@@ -24,6 +25,7 @@ export const dialogueStrings: Record<string, string> = {
   ...NPC_AELFREDA_COMPANION_STRINGS_EN,
   ...ACT2_DIALOGUE_STRINGS,
   ...ACT3_TRAINER_STRINGS,
+  ...DRAGONSPINE_DIALOGUE_STRINGS,
   ...ACT3_COMPANION_STRINGS,
   ...GREYFEN_DIALOGUE_STRINGS,
   // ---- Marshal Stane ----

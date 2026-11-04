@@ -29,7 +29,9 @@ describe('quest content', () => {
       // Act 2 Oldsmoke surface (A13)
       'm16', 'm17', 'r09', 'r08', 'm18', 'r10', 'm19', 'm20', 'm21', 'd04', 'm22',
       // Act 3 Greyfen (K12)
-      'm23', 'm24', 'r12', 'm25', 'r14', 'r13', 'm26', 'm27', 'd05']);
+      'm23', 'm24', 'r12', 'm25', 'r14', 'r13', 'm26', 'm27', 'd05',
+      // Act 3 lower Dragonspine (K13)
+      'm28', 'r15', 'm29', 'r16', 'm30', 'r17', 'r18']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 

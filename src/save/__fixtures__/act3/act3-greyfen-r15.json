@@ -184,6 +184,7 @@
           "ranger-longbow": 1,
           "redmanes-lance": 1,
           "reed-armour": 1,
+          "rime-cloak": 1,
           "sewer-master-key": 1,
           "shard-gem.bulwark": 2,
           "shard-gem.oathfire": 2,
@@ -226,7 +227,7 @@
     "player": {
       "data": {
         "goldPouch": null,
-        "health": 290,
+        "health": 300,
         "lastRestedWaystoneId": null,
         "stamina": 100
       },
@@ -265,7 +266,7 @@
         ],
         "respecUsed": false,
         "storyPoints": 1,
-        "xp": 28850
+        "xp": 29500
       },
       "version": 2
     },
@@ -404,6 +405,10 @@
             "state": "completed"
           },
           "m27": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m28": {
             "objectives": {},
             "state": "completed"
           },
@@ -835,6 +840,7 @@
           "story.m27.complete": true,
           "story.m27.started": true,
           "story.m28.complete": true,
+          "story.m28.started": true,
           "story.phase.dragonspineOpen": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,

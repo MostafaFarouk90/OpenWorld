@@ -12,7 +12,7 @@ import { WYRM_SPAWNERS } from './wyrm/spawners';
 import { WAVE_SPAWNERS } from '../waves/spawners';
 import { ACT2_SPAWNERS_A12 } from '../quests/content/act2/spawners';
 import { OLDSMOKE_SPAWNERS } from '../quests/content/act2/oldsmoke';
-import { ACT3_SPAWNERS as ACT3_QUEST_SPAWNERS } from '../quests/content/act3';
+import { ACT3_SPAWNERS as ACT3_QUEST_SPAWNERS, DRAGONSPINE_LOWER } from '../quests/content/act3';
 import { ACT3_SPAWNERS } from './act3Spawners';
 import { ACT3_DRAGON_SPAWNERS } from './wyrm/large/lodgeWyrms';
 import { ALL_INTERIORS } from '../interiors/interiors.plugin';
@@ -70,7 +70,8 @@ describe('Act 3 spawner lint', () => {
     expect(act3SpawnersMissingBlockOrArea(ALL_SPAWNER_DEFS)).toEqual([]);
     const inside = ALL_SPAWNER_DEFS.filter((s) => (anchors.get(s.anchor) ?? []).some((p) => act3RegionAt(p.x, p.z) !== null));
     // K6a PR 2: Ysmeryth's trial spawner sits on K4's roost landing mark (the other dragon spawners use runtime anchors).
-    expect(inside.map((s) => s.id).sort()).toEqual([...ACT3_SPAWNERS, ...YSMERYTH_SPAWNERS].map((s) => s.id).sort());
+    // K13: the lower Dragonspine quest groups stand on K4's shipped anchors (K12's Greyfen quest groups use their own extra anchors, not in this map).
+    expect(inside.map((s) => s.id).sort()).toEqual([...ACT3_SPAWNERS, ...DRAGONSPINE_LOWER.spawners, ...YSMERYTH_SPAWNERS].map((s) => s.id).sort());
     for (const s of inside) expect(s.block ?? s.area, s.id).toBeTruthy();
   });
 

@@ -6,7 +6,7 @@ import { bootChapter, type ChapterHarness } from '../../../../integration/chapte
 import { ACT2_TRIGGERS } from '../triggers';
 
 // Each test boots the whole manifest: the 5 s default is not a safe limit (review R3-3).
-vi.setConfig({ testTimeout: 60_000 });
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 }); // the boot runs in beforeEach: about 11 s on a loaded runner, past the 10 s hook default
 
 let h: ChapterHarness;
 beforeEach(async () => {

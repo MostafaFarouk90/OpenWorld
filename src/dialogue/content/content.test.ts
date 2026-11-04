@@ -53,7 +53,10 @@ describe('dialogue content', () => {
       // Act 3 Greyfen (K12)
       'leofa', 'dudda', 'hild', 'widow', 'gytha', 'crow', 'reed-cutter-1', 'reed-cutter-2', 'ferry-hand-1', 'ferry-hand-2', 'causeway-ranger',
       'reedgate-folk-1', 'reedgate-folk-2', 'reedgate-folk-3', 'herb-cutter', 'greywatch-ranger-1', 'greywatch-ranger-2', 'greywatch-ranger-3',
-      'bell-keeper', 'brood-keeper', 'monk-echo', 'fen', 'hathren']).toContain(n.speaker);
+      'bell-keeper', 'brood-keeper', 'monk-echo', 'fen', 'hathren',
+      // Act 3 lower Dragonspine (K13)
+      'thorgar', 'eadgyth', 'ansgar', 'lodge-hunter-1', 'lodge-hunter-2', 'lodge-hunter-3', 'lodge-hunter-4', 'lodge-hunter-5', 'lodge-hunter-6', 'lodge-hunter-cave',
+      'sled-hand-1', 'sled-hand-2', 'egg-thief', 'pilgrim-1', 'pilgrim-2', 'pilgrim-3']).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {

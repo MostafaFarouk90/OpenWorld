@@ -7,7 +7,12 @@
     "m29",
     "m30"
   ],
-  "questDefs": [],
+  "questDefs": [
+    "m28",
+    "m29",
+    "m30",
+    "r17"
+  ],
   "lockedBlocks": {
     "dragonspine-lower": 20
   },

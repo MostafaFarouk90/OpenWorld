@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { questDefs } from '../../index';
 import { ACT3_DIRECT } from '../../../act3Jump';
-import { ACT3_QUEST_DEFS, ACT3_PROPS, ACT3_QUEST_NOTES, ACT3_NOTE_LIST, ACT3_SPAWNERS, ACT3_QUEST_ITEMS, ACT3_QUEST_ITEM_STRINGS, ACT3_NOTE_CODEX } from '../../act3';
+import { GREYFEN, ACT3_QUEST_DEFS as ALL_ACT3_QUEST_DEFS } from '../../act3';
 import { GREYFEN_QUEST_LAYOUT, EXTRA_ANCHORS } from './extraAnchors';
 import { GREYFEN_ARMS } from './arms';
 import { GREYFEN_Q_NPCS, GREYFEN_Q_NPC_DEFS, GREYFEN_Q_NPC_STRINGS } from './npcs';
@@ -18,6 +18,16 @@ import { HUT_DEF } from '../../../../greyfen/hutInterior';
 import { GREYFEN_NPCS, GREYFEN_NPC_STRINGS_EN } from '../../../../greyfen/npcDefs';
 import { validateQuest } from '../../../validate';
 import type { Condition, Effect, QuestDef } from '../../../types';
+
+// This block's own content (other Act 3 blocks join the same aggregates; their own tests check them).
+const ACT3_QUEST_DEFS = GREYFEN.quests;
+const ACT3_PROPS = GREYFEN.props;
+const ACT3_NOTE_LIST = GREYFEN.notes;
+const ACT3_QUEST_NOTES = ACT3_NOTE_LIST.map((x) => ({ interactableId: `use:${x.id}`, anchorId: x.anchorId }));
+const ACT3_NOTE_CODEX = [...new Set(ACT3_NOTE_LIST.flatMap((n) => (n.codexId ? [n.codexId] : [])))];
+const ACT3_SPAWNERS = GREYFEN.spawners;
+const ACT3_QUEST_ITEMS = GREYFEN.items;
+const ACT3_QUEST_ITEM_STRINGS: Record<string, string> = GREYFEN.itemStrings;
 
 const strings: Record<string, string> = { ...questStrings, ...dialogueStrings, ...ACT3_QUEST_ITEM_STRINGS, ...GREYFEN_Q_NPC_STRINGS, ...GREYFEN_NPC_STRINGS_EN };
 const has = (k: string) => k in strings;
@@ -37,6 +47,7 @@ function questRefs(c: Condition | undefined, out = new Set<string>()): Set<strin
 describe('the Greyfen quests as data', () => {
   it('are the nine, in play order, registered with the shipped quests', () => {
     expect(ACT3_QUEST_DEFS.map((q) => q.id)).toEqual(['m23', 'm24', 'r12', 'm25', 'r14', 'r13', 'm26', 'm27', 'd05']);
+    expect(ALL_ACT3_QUEST_DEFS.slice(0, 9)).toEqual(ACT3_QUEST_DEFS);
     for (const q of ACT3_QUEST_DEFS) expect(questDefs).toContain(q);
   });
 

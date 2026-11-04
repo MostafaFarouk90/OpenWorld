@@ -160,6 +160,7 @@
           "fen-salve-recipe": 1,
           "ford-guard-shield": 1,
           "fox-fire-ember": 1,
+          "frostbrows-hunting-knife": 1,
           "gauts-spare-blade": 1,
           "gauts-spare-tabard": 1,
           "gear.fen-boots": 1,
@@ -184,6 +185,7 @@
           "ranger-longbow": 1,
           "redmanes-lance": 1,
           "reed-armour": 1,
+          "rime-cloak": 1,
           "sewer-master-key": 1,
           "shard-gem.bulwark": 2,
           "shard-gem.oathfire": 2,
@@ -226,7 +228,7 @@
     "player": {
       "data": {
         "goldPouch": null,
-        "health": 290,
+        "health": 300,
         "lastRestedWaystoneId": null,
         "stamina": 100
       },
@@ -265,7 +267,7 @@
         ],
         "respecUsed": false,
         "storyPoints": 1,
-        "xp": 28850
+        "xp": 30750
       },
       "version": 2
     },
@@ -404,6 +406,18 @@
             "state": "completed"
           },
           "m27": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m28": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m29": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m30": {
             "objectives": {},
             "state": "completed"
           },
@@ -839,8 +853,11 @@
           "story.m27.complete": true,
           "story.m27.started": true,
           "story.m28.complete": true,
+          "story.m28.started": true,
           "story.m29.complete": true,
+          "story.m29.started": true,
           "story.m30.complete": true,
+          "story.m30.started": true,
           "story.phase.dragonspineOpen": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
