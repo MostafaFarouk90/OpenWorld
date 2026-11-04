@@ -74,7 +74,7 @@ export async function useAt(h: ChapterHarness, anchorId: string, interactableId:
 }
 
 /** Through an interior door (F at its anchor), waiting for the transition. */
-async function enterInterior(h: ChapterHarness, door: string, id: string): Promise<void> {
+export async function enterInterior(h: ChapterHarness, door: string, id: string): Promise<void> {
   const i = interiors(h);
   const a = h.ctx.anchors.find(`harrowmark.${door}.door`);
   ensure(a, `door anchor ${door}`);
@@ -91,7 +91,7 @@ async function enterInterior(h: ChapterHarness, door: string, id: string): Promi
   await h.runAsync(10);
 }
 
-async function leaveInterior(h: ChapterHarness): Promise<void> {
+export async function leaveInterior(h: ChapterHarness): Promise<void> {
   const i = interiors(h);
   let done = false;
   void i.exit().then(() => (done = true));
@@ -101,7 +101,7 @@ async function leaveInterior(h: ChapterHarness): Promise<void> {
 }
 
 /** Kills every member of a spawn group as it appears, until `required` have died. */
-async function killGroup(h: ChapterHarness, spawnTag: string, kind: string, required: number, near: string, dist = 8): Promise<void> {
+export async function killGroup(h: ChapterHarness, spawnTag: string, kind: string, required: number, near: string, dist = 8): Promise<void> {
   await h.approach(h.anchor(near), dist);
   let killed = 0;
   for (let i = 0; i < 40 && killed < required; i++) {

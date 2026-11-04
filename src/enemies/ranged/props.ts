@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { makePeatMound, PEAT_MOUND_ID } from '../fen/shambler/mound';
+import { makeOgreClub, OGRE_CLUB_ID } from '../peak/ogre/club';
 
 /** Ids of the procedural props the ground enemies carry (`ModelProp.id` starting `proc/`; the pack has no spear). */
 export const GROUND_PROP_IDS = ['proc/hunter-spear', 'proc/hunter-harpoon'] as const;
@@ -21,6 +22,8 @@ function mesh(g: THREE.BufferGeometry, color: number, emissive = 0): THREE.Mesh 
 export function makeGroundProp(id: string): THREE.Object3D | null {
   // K6b: the Peat Shambler's mound (fen/shambler/mound.ts).
   if (id === PEAT_MOUND_ID) return makePeatMound();
+  // K6b PR 2: the Crag Ogre's club (peak/ogre/club.ts).
+  if (id === OGRE_CLUB_ID) return makeOgreClub();
   if (id === 'proc/hunter-spear') {
     const g = new THREE.Group();
     const shaft = mesh(new THREE.CylinderGeometry(0.018, 0.022, 2.0, 6), SHAFT);

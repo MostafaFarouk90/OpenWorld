@@ -25,6 +25,8 @@ export const HARROWMARK_FLAG_BLOCKERS: Readonly<Record<string, string>> = {
   // Batch 4: the Underways' arena gate opens once the hounds from the drained sluice are dealt with (Grimtooth's arena
   // still closes and reopens it during his fight).
   'underways.arena.gate': 'story.d02.sluiceClear',
+  // Act 1 side job j11: the cart-track spur's grate opens when the Sewer Master Key has turned (src/interiors/keyedGrates.ts).
+  'underways.cartway.gate': 'world.underways.cartway',
 };
 
 /** M09's invoices (thread 6 counts `use:m09-invoice-<n>` and writes `story.m09.invoice.<n>` when one is taken). */

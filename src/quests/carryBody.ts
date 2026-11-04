@@ -1,7 +1,8 @@
 // A villager's body for M01's carry: the KayKit figure the NPCs use, standing at home and cradled across the Knight's
 // arms while carried. A capsule stands in until the GLB loads (and in headless runs, which have no loader).
 import * as THREE from 'three';
-import { pickIdleClip, prepareNpcModel } from '../npcs/npcModels';
+import { loadNpcModel, pickIdleClip } from '../npcs/npcModels';
+import { withTownsfolkBody } from '../npcs/townsfolkBodies';
 import type { NpcDef, NpcModelId, NpcModelLoader } from '../npcs/types';
 
 /** Where the cradled body rides, in the Knight's frame (forward is -Z): in front of the chest, lying across the arms. */
@@ -10,7 +11,15 @@ export const CARRY_HEIGHT = 1.05;
 /** Height of the standing placeholder and of a standing body (m). */
 const BODY_HEIGHT = 1.8;
 
+/** KayKit bodies: the fallback of the generated body townsfolkBodies.ts gives each carried item (`carry:<item id>`). */
 const MODELS: readonly NpcModelId[] = ['barbarian', 'rogue', 'mage'];
+
+/** A carried body holds nothing: the generated bodies' tools (Item, Offhand) would cross the Knight's arms. */
+function hideTools(model: THREE.Object3D): void {
+  model.traverse((o) => {
+    if (o.name === 'Item' || o.name === 'Offhand') o.visible = false;
+  });
+}
 
 export function isModelLoader(x: unknown): x is NpcModelLoader {
   const l = x as Partial<NpcModelLoader> | null | undefined;
@@ -25,7 +34,8 @@ export class VillagerBody {
   private mixer: THREE.AnimationMixer | null = null;
   private disposed = false;
 
-  constructor(index: number, tint: number, loader: NpcModelLoader | null) {
+  /** `carryId` (the carry item's id) picks the generated body in townsfolkBodies.ts (`carry:<id>`); `index` the KayKit fallback. */
+  constructor(index: number, tint: number, loader: NpcModelLoader | null, carryId?: string) {
     this.placeholder = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.3, BODY_HEIGHT - 0.6, 4, 8),
       new THREE.MeshStandardMaterial({ color: tint }),
@@ -34,17 +44,26 @@ export class VillagerBody {
     this.figure.add(this.placeholder);
     this.root.add(this.figure);
     this.root.visible = false;
-    if (loader) void this.loadModel(loader, MODELS[index % MODELS.length], tint);
+    if (loader) void this.loadModel(loader, index % MODELS.length, tint, carryId);
   }
 
-  private async loadModel(loader: NpcModelLoader, model: NpcModelId, tint: number): Promise<void> {
+  private async loadModel(loader: NpcModelLoader, slot: number, tint: number, carryId: string | undefined): Promise<void> {
     try {
-      await loader.load(model);
-      if (this.disposed) return;
-      const def: NpcDef = { id: `carry-villager`, nameKey: '', model, scale: 1, tint, dialogueId: '', idleClip: 'Idle' };
-      const loaded = prepareNpcModel(loader, def);
+      const kaykit: NpcDef = { id: carryId ? `carry:${carryId}` : `carry-villager.${slot}`, nameKey: '', model: MODELS[slot], scale: 1, tint, dialogueId: '', idleClip: 'Idle' };
+      // the hook goes on after the swap: withTownsfolkBody leaves defs with hooks on KayKit
+      const town = withTownsfolkBody(kaykit);
+      const def: NpcDef = { ...town, decorate: hideTools };
+      if (def.fallback) def.fallback = { ...def.fallback, decorate: hideTools };
+      const loaded = await loadNpcModel(loader, def);
+      if (this.disposed) {
+        loaded.model.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (m.isMesh) for (const mm of Array.isArray(m.material) ? m.material : [m.material]) mm.dispose();
+        });
+        return;
+      }
       this.figure.add(loaded.model);
-      const clip = pickIdleClip(loaded.clips, def.idleClip);
+      const clip = pickIdleClip(loaded.clips, loaded.def.idleClip);
       if (clip) {
         this.mixer = new THREE.AnimationMixer(loaded.model);
         this.mixer.clipAction(clip).play();
@@ -88,10 +107,12 @@ export class VillagerBody {
     this.disposed = true;
     this.mixer?.stopAllAction();
     this.root.removeFromParent();
+    // the model's geometry is shared with the loader's source (and every NPC on the same body): free only what is ours,
+    // the cloned materials and the capsule
+    this.placeholder?.geometry.dispose();
     this.root.traverse((o) => {
       const m = o as THREE.Mesh;
       if (!m.isMesh) return;
-      m.geometry.dispose();
       for (const mm of Array.isArray(m.material) ? m.material : [m.material]) mm.dispose();
     });
   }

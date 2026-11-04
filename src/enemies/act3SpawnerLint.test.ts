@@ -1,6 +1,7 @@
 // Act 3 spawner lint (contracts v0.7, coordinator ruling 2): every spawner whose anchor lies in the Greyfen or Dragonspine
 // box (or whose band names one of those regions) names a `block` or an `area`, so the level fallback (Greyfen 18 to 26)
 // is never what a shipped spawner relies on. Today no spawner is there, so the list is empty.
+import { YSMERYTH_SPAWNERS } from './wyrm/ysmeryth/def';
 import { describe, expect, it } from 'vitest';
 import { SLICE_SPAWNERS } from './spawnerDefs';
 import { BRIGHTWATER_SPAWNERS } from './brightwaterSpawners';
@@ -11,7 +12,9 @@ import { WYRM_SPAWNERS } from './wyrm/spawners';
 import { WAVE_SPAWNERS } from '../waves/spawners';
 import { ACT2_SPAWNERS_A12 } from '../quests/content/act2/spawners';
 import { OLDSMOKE_SPAWNERS } from '../quests/content/act2/oldsmoke';
+import { ACT3_SPAWNERS as ACT3_QUEST_SPAWNERS } from '../quests/content/act3';
 import { ACT3_SPAWNERS } from './act3Spawners';
+import { ACT3_DRAGON_SPAWNERS } from './wyrm/large/lodgeWyrms';
 import { ALL_INTERIORS } from '../interiors/interiors.plugin';
 import { ALL_LAYOUTS, resolveAnchors } from '../quests/lint/noteLint';
 import { MAP_TO_ENGINE_OFFSET, REGION_BOXES_MAP } from '../region/regionMask';
@@ -23,7 +26,7 @@ const ACT3_REGIONS = ['greyfen', 'dragonspine'] as const;
 
 export const ALL_SPAWNER_DEFS: readonly SpawnerDef[] = [
   ...SLICE_SPAWNERS, ...BRIGHTWATER_SPAWNERS, ...HARROWMARK_SPAWNERS, ...DENSITY_SPAWNERS_A, ...WYRM_SPAWNERS, ...ACT2_SPAWNERS,
-  ...WAVE_SPAWNERS, ...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS, ...ACT3_SPAWNERS,
+  ...WAVE_SPAWNERS, ...ACT2_SPAWNERS_A12, ...OLDSMOKE_SPAWNERS, ...ACT3_QUEST_SPAWNERS, ...ACT3_SPAWNERS, ...ACT3_DRAGON_SPAWNERS,
 ];
 
 const anchors = resolveAnchors(ALL_LAYOUTS, ALL_INTERIORS);
@@ -66,7 +69,8 @@ describe('Act 3 spawner lint', () => {
   it('every shipped spawner in the Greyfen or Dragonspine boxes names a block or an area (K6b PR 1: the Greyfen ambient groups)', () => {
     expect(act3SpawnersMissingBlockOrArea(ALL_SPAWNER_DEFS)).toEqual([]);
     const inside = ALL_SPAWNER_DEFS.filter((s) => (anchors.get(s.anchor) ?? []).some((p) => act3RegionAt(p.x, p.z) !== null));
-    expect(inside.map((s) => s.id).sort()).toEqual(ACT3_SPAWNERS.map((s) => s.id).sort());
+    // K6a PR 2: Ysmeryth's trial spawner sits on K4's roost landing mark (the other dragon spawners use runtime anchors).
+    expect(inside.map((s) => s.id).sort()).toEqual([...ACT3_SPAWNERS, ...YSMERYTH_SPAWNERS].map((s) => s.id).sort());
     for (const s of inside) expect(s.block ?? s.area, s.id).toBeTruthy();
   });
 

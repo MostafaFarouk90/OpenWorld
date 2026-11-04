@@ -31,7 +31,9 @@ async function boot() {
   ctx.anchors.define({ id: 'waystone.quenchstone', position: { x: 5, y: 0, z: 5 }, yaw: 0, tags: ['waystone'] });
   await bootPlugins(game, [corePlugin, waystonesPlugin, spellsPlugin, progressionPlugin, enemiesPlugin, questsPlugin, shrinePlugin]);
   ctx.strings.register('en', { 'test.m23.title': 'M23', 'test.m23.objective': 'Go' });
-  ctx.services.require('quests').register({
+  ctx.state.setFlag('story.gate.a3', true); // the real M23 starts behind the Act 3 gate
+  // Act 3's real M23 is registered by the quests plugin now; the stub only fills in when it is absent.
+  if (!ctx.services.require('quests').get('m23')) ctx.services.require('quests').register({
     id: 'm23',
     titleKey: 'test.m23.title',
     summaryKey: 'test.m23.title',
