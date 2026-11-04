@@ -31,4 +31,7 @@ export const NPC_DEFS: NpcDef[] = [
   def('carter-3', 'barbarian', { tint: 0x6a5a40 }),
   def('aldwin', 'barbarian', { scale: 0.95, tint: 0xd8d0c0 }),
   def('garrick', 'barbarian', { tint: 0x6a6258 }),
+  // Act 1 side jobs (j02): the widow at the lane end and the Kettlewick chapel's sexton.
+  def('orla', 'rogueHooded', { scale: 0.95, tint: 0x5a5560 }),
+  def('osmund', 'mage', { tint: 0x6a5a48 }),
 ];

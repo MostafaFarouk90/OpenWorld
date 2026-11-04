@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
 import { VfxServiceImpl } from '../VfxServiceImpl';
-import { EMBERWRIGHT_T4_EFFECT_IDS, EMBERWRIGHT_T4_PARTICLES } from './emberwright';
+import { EMBERWRIGHT_T4_EFFECT_IDS, EMBERWRIGHT_T4_PARTICLES, EMBERWRIGHT_T5_EFFECT_IDS, EMBERWRIGHT_T5_PARTICLES } from './emberwright';
 
 const make = () => {
   const warn = vi.fn();
@@ -137,6 +137,154 @@ describe('Emberwright tier 4 presets (design 11.5)', () => {
     const { vfx } = make();
     for (const id of EMBERWRIGHT_T4_EFFECT_IDS) {
       expect(() => vfx.spawnEffect(id, { position: { x: 0, y: 0, z: 0 } }, { seconds: 'long' as never, radius: NaN })).not.toThrow();
+    }
+    frames(vfx, 1);
+  });
+});
+
+describe('Emberwright tier 5 presets (K11 PR 4, design 11.5)', () => {
+  const fresnel = (scene: THREE.Scene): THREE.Mesh[] => {
+    const out: THREE.Mesh[] = [];
+    scene.traverse((o) => void (o.name === 'fresnelShell' && out.push(o as THREE.Mesh)));
+    return out;
+  };
+
+  it('are known ids that spawn without a warning', () => {
+    for (const id of EMBERWRIGHT_T5_EFFECT_IDS) {
+      const { vfx, warn } = make();
+      const h = vfx.spawnEffect(id, { position: { x: 1, y: 0, z: 1 } });
+      frames(vfx, 0.1);
+      expect(warn, id).not.toHaveBeenCalled();
+      expect(h.alive, id).toBe(true);
+    }
+  });
+
+  it('measured peak live points stay inside the declared table, under 220 each, and every preset ends clean', () => {
+    // The pool jitters a point's life by x0.75..x1.25 with Math.random: pin it to the maximum so the measured peak is the deterministic worst case.
+    const rnd = vi.spyOn(Math, 'random').mockReturnValue(0.999999);
+    try {
+      const lasts: Record<string, number> = { 'sunfire-charge': 0.6, 'sunfire-nova': 0.8, 'sunfire-ground': 6, 'colossus-rise': 1.5, 'colossus-slag': 30, 'colossus-slam': 0.4, 'keepers-breath': 2, 'keepers-heal': 1 };
+      for (const id of EMBERWRIGHT_T5_EFFECT_IDS) {
+        const { vfx, scene } = make();
+        const h = vfx.spawnEffect(id, { position: { x: 0, y: 0, z: 0 }, yaw: 0 });
+        const max = peak(vfx, lasts[id] + 2);
+        expect(max, id).toBeLessThanOrEqual(EMBERWRIGHT_T5_PARTICLES[id]);
+        if (EMBERWRIGHT_T5_PARTICLES[id] > 0) expect(max, id).toBeGreaterThan(0);
+        expect(EMBERWRIGHT_T5_PARTICLES[id], id).toBeLessThan(220);
+        frames(vfx, 2);
+        expect(h.alive, id).toBe(false);
+        expect(own(scene), id).toHaveLength(0);
+        expect(vfx.points.liveCount, id).toBe(0);
+      }
+    } finally {
+      rnd.mockRestore();
+    }
+  });
+
+  it('stop removes the meshes at once and the effect emits nothing afterwards', () => {
+    for (const id of EMBERWRIGHT_T5_EFFECT_IDS) {
+      const { vfx, scene } = make();
+      const h = vfx.spawnEffect(id, { position: { x: 0, y: 0, z: 0 } });
+      frames(vfx, 0.1);
+      h.stop();
+      frames(vfx, 0.1);
+      expect(h.alive, id).toBe(false);
+      expect(own(scene), id).toHaveLength(0);
+      frames(vfx, 3);
+      expect(vfx.points.liveCount, id).toBe(0);
+    }
+  });
+
+  it('the attached presets ride a non-zero root with a zero offset', () => {
+    for (const [id, params] of [['sunfire-charge', { seconds: 0.6 }], ['colossus-slag', { seconds: 5 }], ['keepers-heal', {}]] as const) {
+      const { vfx, scene } = make();
+      const root = new THREE.Object3D();
+      scene.add(root);
+      root.position.set(4, 1, -3);
+      root.updateMatrixWorld(true);
+      vfx.spawnEffect(id, { position: { x: 0, y: 0, z: 0 }, attach: root }, params);
+      const group = scene.children.find((c) => c !== root && c.type === 'Group') as THREE.Object3D;
+      frames(vfx, 0.1);
+      expect(group.position.x, id).toBeCloseTo(4);
+      expect(group.position.z, id).toBeCloseTo(-3);
+      expect(group.position.y, id).toBeGreaterThanOrEqual(1);
+      root.position.set(-6, 0, 8);
+      root.updateMatrixWorld(true);
+      frames(vfx, 0.1);
+      expect(group.position.x, id).toBeCloseTo(-6);
+      expect(group.position.z, id).toBeCloseTo(8);
+    }
+  });
+
+  it('the Nova sphere grows from nothing to the 10 m ring in 0.5 s while it fades, and the shock ring expands with it', () => {
+    const { vfx, scene } = make();
+    vfx.spawnEffect('sunfire-nova', { position: { x: 3, y: 0, z: 2 } }, { radius: 10, seconds: 0.5 });
+    const shell = fresnel(scene)[0];
+    frames(vfx, 0.05);
+    const early = shell.scale.x;
+    frames(vfx, 0.25);
+    const mid = shell.scale.x;
+    frames(vfx, 0.3);
+    expect(early).toBeLessThan(2);
+    expect(mid).toBeGreaterThan(early);
+    expect(shell.scale.x).toBeCloseTo(10, 1);
+    const fade = (shell.material as THREE.ShaderMaterial).uniforms.uProgress.value as number;
+    expect(fade).toBeGreaterThan(0.9);
+    const group = scene.children.find((c) => c.type === 'Group') as THREE.Group;
+    expect(group.position.x).toBeCloseTo(3);
+    expect(group.position.z).toBeCloseTo(2);
+  });
+
+  it('the burning ground is 6 m wide and stays 6 s', () => {
+    const { vfx, scene } = make();
+    const h = vfx.spawnEffect('sunfire-ground', { position: { x: 0, y: 0, z: 0 } }, { radius: 6, seconds: 6 });
+    frames(vfx, 0.2);
+    const ringMesh = own(scene)[0].children.find((c) => (c as THREE.Mesh).geometry?.type === 'RingGeometry') as THREE.Mesh;
+    expect((ringMesh.geometry as THREE.RingGeometry).parameters.outerRadius).toBe(6);
+    frames(vfx, 5.5);
+    expect(h.alive).toBe(true);
+    frames(vfx, 0.5);
+    expect(h.alive).toBe(false);
+  });
+
+  it('the Breath cone opens along the facing, 8 m long and 35 degrees either side', () => {
+    const { vfx, scene } = make();
+    const yaw = Math.PI / 2; // faces -X
+    vfx.spawnEffect('keepers-breath', { position: { x: 10, y: 0, z: 5 }, yaw }, { seconds: 2, range: 8, halfAngle: 35 });
+    frames(vfx, 0.1);
+    const group = scene.children.find((c) => c.type === 'Group') as THREE.Group;
+    group.updateMatrixWorld(true);
+    const cone = group.children[0].children[0] as THREE.Mesh;
+    const params = (cone.geometry as THREE.ConeGeometry).parameters;
+    expect(params.height).toBe(8);
+    expect(params.radius).toBeCloseTo(8 * Math.tan((35 * Math.PI) / 180), 6);
+    const baseCentre = cone.localToWorld(new THREE.Vector3(0, -8, 0));
+    expect(baseCentre.x).toBeCloseTo(10 - 8, 4);
+    expect(baseCentre.z).toBeCloseTo(5, 4);
+    const apex = cone.localToWorld(new THREE.Vector3(0, 0, 0));
+    expect(apex.x).toBeCloseTo(10, 4);
+  });
+
+  it('the golem rises over 1.5 s with a 200-point throw and a floor decal, and the slag shell stays up 30 s', () => {
+    const { vfx } = make();
+    const h = vfx.spawnEffect('colossus-rise', { position: { x: 0, y: 0, z: 0 } });
+    frames(vfx, 0.05);
+    expect(vfx.points.liveCount).toBe(200);
+    expect(vfx.decals.liveCount).toBeGreaterThan(0);
+    frames(vfx, 1.5);
+    expect(h.alive).toBe(false);
+    const s = vfx.spawnEffect('colossus-slag', { position: { x: 0, y: 0, z: 0 } });
+    frames(vfx, 29);
+    expect(s.alive).toBe(true);
+    frames(vfx, 1.2);
+    expect(s.alive).toBe(false);
+  });
+
+  it('the five capstone presets of a cast stay far inside the 4,000-point cap, and bad params do not throw', () => {
+    expect(Math.max(...Object.values(EMBERWRIGHT_T5_PARTICLES))).toBeLessThan(220);
+    const { vfx } = make();
+    for (const id of EMBERWRIGHT_T5_EFFECT_IDS) {
+      expect(() => vfx.spawnEffect(id, { position: { x: 0, y: 0, z: 0 } }, { seconds: 'long' as never, radius: NaN, range: NaN, halfAngle: NaN, scale: NaN })).not.toThrow();
     }
     frames(vfx, 1);
   });

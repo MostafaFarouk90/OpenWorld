@@ -7,7 +7,8 @@ import '../waystones/service';
 import { showToast } from '../waystones/toast';
 import { createContinueModal } from './ContinueModal';
 import { devJumpBoot } from './devJump';
-import { SaveManager, type ApplyReport } from './SaveManager';
+import { SLOT_MANUAL, SaveManager, type ApplyReport } from './SaveManager';
+import { parseSave, type SaveFile } from './SaveSchema';
 import type { SaveService } from './service';
 import './service';
 import { IndexedDbSaveStore, MemorySaveStore } from './SaveStore';
@@ -126,9 +127,14 @@ const save: GamePlugin = {
     const loadSequence = async (): Promise<boolean> => {
       if (!boot || !boot.ok || consumed) return false;
       consumed = true;
+      return applyFile(boot.file, boot.slot);
+    };
+
+    // The Continue path's apply, shared with the dev `loadFile` (K16's `?act3=` fixtures).
+    const applyFile = async (file: SaveFile, slot: string): Promise<boolean> => {
       const release = ctx.player.addMoveModifier('save.load', { freeze: true });
       try {
-        const report: ApplyReport = manager.applyLoad(boot.file);
+        const report: ApplyReport = manager.applyLoad(file);
         const pos = sanitizePosition(report.playerPosition?.data);
         const onPlatform = platformLoadTarget(report.playerPosition?.data, ctx.services.get('platforms'));
         const target =
@@ -139,7 +145,7 @@ const save: GamePlugin = {
             return r ? { x: r.feet.x, y: r.feet.y, z: r.feet.z, yaw: r.yaw } : null;
           })();
         if (target) await waystones()?.safeTeleport({ x: target.x, y: target.y, z: target.z }, target.yaw);
-        ports.emitLoaded(boot.slot);
+        ports.emitLoaded(slot);
         return true;
       } catch (err) {
         console.error('save: load failed', err);
@@ -160,6 +166,19 @@ const save: GamePlugin = {
         return loading;
       },
       continueNow: loadSequence,
+      // Dev only (K16): applies a save file held in memory, as Continue does, without touching either slot. A dev jump
+      // holds saves for the session, so nothing writes it back.
+      loadFile: async (raw) => {
+        if (!import.meta.env.DEV) return false;
+        const parsed = parseSave(raw);
+        if (!parsed.ok) {
+          console.warn(`save: loadFile refused (${parsed.reason})`);
+          return false;
+        }
+        manager.beginLoad();
+        loading = true;
+        return applyFile(parsed.file, SLOT_MANUAL);
+      },
       newGame: async () => {
         const r = await manager.newGame();
         unlock();

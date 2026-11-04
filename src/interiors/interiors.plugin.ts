@@ -20,6 +20,7 @@ import { ACT2_DOOR_LOCKS, ACT2_INTERIORS } from './act2';
 import { ACT3_DOOR_LOCKS, ACT3_FLAG_BLOCKERS, ACT3_INTERIORS } from './act3';
 import { HARROWMARK_INTERIORS } from './harrowmark';
 import { HARROWMARK_DOOR_LOCKS, HARROWMARK_FLAG_BLOCKERS, M09_INVOICES } from './harrowmark/locks';
+import { grateAnswer, KEYED_GRATES } from './keyedGrates';
 import { OccupantHider } from './occupants';
 import { INTERIOR_STRINGS_EN } from './strings.en';
 import type { InteriorDef } from './types';
@@ -245,6 +246,34 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     invoices.clear();
   });
 
+  // Keyed grates (j11): the open one needs the key in the pack, the shut one only says so.
+  const grates = new Map<string, () => void>();
+  const syncGrates = () => {
+    for (const g of KEYED_GRATES) {
+      if (grates.has(g.openId)) continue;
+      const anchor = ctx.anchors.find(g.anchor);
+      if (!anchor) continue;
+      const answer = () => grateAnswer(ctx.state.getFlag(g.openFlag) === true, (ctx.services.get('inventory')?.count(g.itemId) ?? 0) > 0);
+      const spot = (out: THREE.Vector3) => out.set(anchor.position.x, anchor.position.y + 1, anchor.position.z);
+      const offOpen = ctx.interaction.register({
+        id: g.openId, kind: 'use', position: spot, radius: 2, promptKey: g.openPromptKey,
+        enabled: () => answer() === 'open',
+        onInteract: () => ctx.state.setFlag(g.openFlag, true),
+      });
+      const offShut = ctx.interaction.register({
+        id: g.shutId, kind: 'use', position: spot, radius: 2, promptKey: g.shutPromptKey,
+        enabled: () => answer() === 'shut',
+        onInteract: () => showToast(ctx.hud, ctx.strings.t(g.refusedKey)),
+      });
+      grates.set(g.openId, () => { offOpen(); offShut(); });
+    }
+  };
+  syncGrates();
+  cleanups.push(() => {
+    for (const off of grates.values()) off();
+    grates.clear();
+  });
+
   const hider = new OccupantHider();
   cleanups.push(() => hider.dispose());
 
@@ -266,6 +295,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
         debugInterior = null;
       }
       syncDoors();
+      syncGrates();
       controller.tick(dt);
     },
   });

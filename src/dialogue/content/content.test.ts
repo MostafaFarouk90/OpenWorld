@@ -40,6 +40,8 @@ describe('dialogue content', () => {
       'refugee-1', 'refugee-2', 'stallholder-1', 'stallholder-2', 'guild-doorman', 'pellam', 'sexton', 'fence', 'crabbe',
       // batch 4
       'armourer', 'keep-guard', 'grisel', 'clerk', 'wace',
+      // Act 1 side jobs
+      'orla', 'osmund', 'sergeant', 'crumb', 'chandler', 'dunstan',
       // Act 2 (A12)
       'osgar', 'brand', 'carter-bound', 'corwin', 'redmane', 'maud', 'beornwyn', 'ketta', 'pell', 'osric', 'hrolf', 'ealdred', 'wynne', 'lantern-keeper', 'prisoner', 'household-1', 'household-2', 'household-3', 'household-4', 'keeper',
       // Act 2 Oldsmoke (A13)
@@ -47,7 +49,14 @@ describe('dialogue content', () => {
       // Act 2 Oldsmoke mines (A13)
       'winch-wright', 'miner-hale', 'miner-brig', 'pickett', 'shift-crew', 'pike', 'pike-apprentice', 'steward-captain', 'wyrmling-keeper',
       // Act 3 companions (K5): the M27 deserter (K3's NPC def)
-      'deserter']).toContain(n.speaker);
+      'deserter',
+      // Act 3 Greyfen (K12)
+      'leofa', 'dudda', 'hild', 'widow', 'gytha', 'crow', 'reed-cutter-1', 'reed-cutter-2', 'ferry-hand-1', 'ferry-hand-2', 'causeway-ranger',
+      'reedgate-folk-1', 'reedgate-folk-2', 'reedgate-folk-3', 'herb-cutter', 'greywatch-ranger-1', 'greywatch-ranger-2', 'greywatch-ranger-3',
+      'bell-keeper', 'brood-keeper', 'monk-echo', 'fen', 'hathren',
+      // Act 3 lower Dragonspine (K13)
+      'thorgar', 'eadgyth', 'ansgar', 'lodge-hunter-1', 'lodge-hunter-2', 'lodge-hunter-3', 'lodge-hunter-4', 'lodge-hunter-5', 'lodge-hunter-6', 'lodge-hunter-cave',
+      'sled-hand-1', 'sled-hand-2', 'egg-thief', 'pilgrim-1', 'pilgrim-2', 'pilgrim-3']).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {

@@ -21,7 +21,7 @@ import { FollowModel, behind, yawToward, type Vec3 } from './FollowModel';
 import { RayBudget, findSpot, groundAt, type GroundPorts } from './ground';
 import { COMPANION_TUNING, HROLF_TUNING, TOBB_TUNING } from './tuning';
 import type { AttackSpeedHook, CompanionDef, InteriorsLike, NavLike } from './types';
-import { deriveWait, inView, sameWait, type ViewPorts, type Wait, type WaitRule, type WaitView } from './WaitDirector';
+import { deriveWait, inView, QUEST_WAITS, sameWait, type ViewPorts, type Wait, type WaitRule, type WaitView } from './WaitDirector';
 
 export interface SavedSpot {
   x: number;
@@ -124,7 +124,7 @@ export class CompanionController {
     this.isActive = opts.isActive ?? (() => true);
     this.trialRunning = opts.trialRunning ?? (() => false);
     this.claimBark = opts.claimBark ?? (() => true);
-    this.rules = [{ reason: 'party', anchorId: partyPost(def.id), inactive: true }, ...def.waits];
+    this.rules = [{ reason: 'party', anchorId: partyPost(def.id), inactive: true }, ...def.waits, ...QUEST_WAITS];
     this.vitals = def.vitals ? new CompanionVitals(def.vitals.maxHealth, def.downed.kneelSeconds) : null;
     this.brain = def.combat ? new HrolfBrain({ ...HROLF_TUNING, ...def.combat }) : null;
     this.aura = new AuraWindow(def.aura?.seconds ?? 1);

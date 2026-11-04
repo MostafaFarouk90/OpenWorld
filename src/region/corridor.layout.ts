@@ -91,6 +91,16 @@ const anchors: AnchorSpec[] = [
   a('patrol.deadroad.2.3', 640, -150, 90, ['patrol']),
   a('patrol.deadroad.2.4', 620, -138, 90, ['patrol']),
 
+  // Act 1 side jobs (src/quests/content/side). j03 Waystones of the Dead Road: a Leap-gated lore stone on a bluff beside the
+  // road's western end (launch spot 5.5 m south, as at the chapel ledge), and a barrow with a grave tablet and two wraiths
+  // further east, off the road's patrols and the wardstone trigger box. j04: a fire ring on the last stretch before the basin.
+  a('j03.bluff', 130, -112, 180, ['poi', 'leap-gated'], { dy: 2, onStructure: 'j03-bluff-ledge' }),
+  a('j03.bluff.launch', 130, -117.5, 0, ['poi']),
+  a('j03.barrow-tablet', 560, -100, 180, ['poi']),
+  a('spawn.j03.barrow-1', 554, -104, 180, ['spawn']),
+  a('spawn.j03.barrow-2', 563, -103.5, 180, ['spawn']),
+  a('j04.fire-ring', 931, -136, 90, ['interact']),
+
   // Ash piles for Release (thread 1 spends them): the churchyard and the road.
   a('pile.churchyard.1', 28, 54, 0, ['pile']),
   a('pile.churchyard.2', 34, 58, 0, ['pile']),
@@ -120,6 +130,9 @@ const structures: StructureSpec[] = [
   ...ledgeCluster('reed-island', 55, -300),
   { id: 'waystone-hollin-ford', kind: 'waystone', x: -398, z: -138.2, yawDeg: 0, footprint: [1.6, 1.6], mode: 'solid', height: 2.4 },
   { id: 'waystone-quenchstone', kind: 'waystone', x: 965, z: -160.2, yawDeg: 0, footprint: [1.6, 1.6], mode: 'solid', height: 2.4 },
+  // Act 1 side job j03: the bluff beside the road and the barrow's mound.
+  ...ledgeCluster('j03-bluff', 130, -112),
+  { id: 'j03-barrow-mound', kind: 'rock', x: 560, z: -94, yawDeg: 0, footprint: [7, 4], mode: 'solid', height: 1.6 },
 ];
 
 const npcs: NpcSpec[] = [

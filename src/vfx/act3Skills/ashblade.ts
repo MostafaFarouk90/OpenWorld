@@ -222,3 +222,146 @@ export function ashbladeT4Effects(h: Tier3Helpers): Record<AshbladeT4EffectId, E
     },
   };
 }
+
+// ---- Tier 5 capstones (K11 PR 3) -------------------------------------------------------------------------------------------
+
+/**
+ * Ashblade tier 5 presets (design 11.5). Particle use against the 11.1 cap of 4,000 live points; `ASHBLADE_T5_PARTICLES` is the
+ * peak live table, measured by a test against a real `VfxServiceImpl` (sparks-hop with the 12 spawns of one cast, flicker-hit
+ * with the 5 foes a dash can pass at once):
+ * - sparks-hop: 12 ash per hop (144 over a cast, the design's 150) with a 0.7 s life, one hop every 0.25 s;
+ *   the pool jitters a life by up to 25% (0.875 s), so at most 4 bursts are live (peak 48); a 1.2 m violet ring and a short
+ *   light flash per hop.
+ * - ghost-hearth: no points; a pulsing heartbeat shell on the player for the 12 s (2 meshes).
+ * - ghost-flash: 10 white ash points, a white ring and a light flash (peak 10).
+ * - flicker-dash: 10 embers along the path with a 0.4 s life, a bright straight ribbon, 3 afterimage capsules and an end ring
+ *   (peak 10); at most 5 dashes in a chain, never overlapping.
+ * - flicker-hit: 6 embers and a ring per foe passed (peak 30 for 5 foes at once).
+ * - flicker-ping: a white ring and a light flash, no points.
+ * Nothing here holds a point after `stop()` beyond its own short life. Not built (no helper exists): the screen desaturation and
+ * chromatic aberration of the Sparks (the plugin pulses the vignette in grey-violet instead) and the 0.2 s sound silence of the
+ * Ghost's first hit; the Ghost's near-invisible dissolve (0.9) is replaced by the heartbeat shell, since the avatar dissolver
+ * fades out and in only once.
+ */
+export const ASHBLADE_T5_EFFECT_IDS = ['sparks-hop', 'ghost-hearth', 'ghost-flash', 'flicker-dash', 'flicker-hit', 'flicker-ping'] as const;
+export type AshbladeT5EffectId = (typeof ASHBLADE_T5_EFFECT_IDS)[number];
+
+/** Peak live points per cast, for the budget test. */
+export const ASHBLADE_T5_PARTICLES: Record<AshbladeT5EffectId, number> = {
+  'sparks-hop': 48,
+  'ghost-hearth': 0,
+  'ghost-flash': 10,
+  'flicker-dash': 10,
+  'flicker-hit': 30,
+  'flicker-ping': 0,
+};
+
+const VIOLET = 0x9a7ad0;
+const GHOST = 0xb8a8d8;
+const WHITE = 0xfff4ff;
+
+export function ashbladeT5Effects(h: Tier3Helpers): Record<AshbladeT5EffectId, EffectFactory> {
+  const { ring, origin, num } = h;
+
+  return {
+    // One hop of the flurry: an ash burst and a violet ring at the landing, a short light flash.
+    'sparks-hop': (ctx, t) => {
+      const o = origin(t);
+      ctx.points.emit('ash', { x: o.x, y: o.y + 0.5, z: o.z }, 12, { color: 0x6a6272, spread: 0.6, rise: 0.8, life: 0.7 }, ctx.now());
+      ctx.lights.flash({ x: o.x, y: o.y + 1, z: o.z }, VIOLET, 5, 0.02, 0.18, ctx.now());
+      return ring(ctx, { position: { x: o.x, y: o.y, z: o.z } }, 1.2, VIOLET, 0.3);
+    },
+
+    // The Ghost: a heartbeat shell (a lub-dub every 1.1 s) on the player for `seconds` (12), riding `attach`.
+    'ghost-hearth': (ctx, t, p) => {
+      const seconds = Math.max(0.5, num(p, 'seconds', 12));
+      const group = new THREE.Group();
+      const shell = new THREE.Mesh(new THREE.SphereGeometry(0.85, 16, 12), additive(GHOST, 0.1));
+      shell.position.y = 0.95;
+      shell.scale.y = 1.25;
+      const halo = new THREE.Mesh(new THREE.SphereGeometry(1.05, 16, 12), additive(VIOLET, 0.05));
+      halo.position.y = 0.95;
+      halo.scale.y = 1.25;
+      group.add(shell, halo);
+      return followGroup(ctx, t, group, seconds, (prog) => {
+        const age = prog * seconds;
+        const phase = (age % 1.1) / 1.1;
+        // Two beats: a strong one at 0 and a weaker one at 0.3.
+        const beat = Math.exp(-Math.pow((phase - 0.02) * 9, 2)) + 0.6 * Math.exp(-Math.pow((phase - 0.3) * 9, 2));
+        (shell.material as THREE.MeshBasicMaterial).opacity = 0.08 + 0.16 * beat;
+        (halo.material as THREE.MeshBasicMaterial).opacity = 0.03 + 0.09 * beat;
+        halo.scale.setScalar(1 + 0.06 * beat);
+        halo.scale.y *= 1.25;
+      });
+    },
+
+    // The first hit of the Ghost: a white flash and ring on the foe it struck (attached to it, or at the point).
+    'ghost-flash': (ctx, t) => {
+      const o = origin(t);
+      ctx.lights.flash({ x: o.x, y: o.y + 1, z: o.z }, WHITE, 9, 0.02, 0.25, ctx.now());
+      ctx.points.emit('ash', { x: o.x, y: o.y + 1, z: o.z }, 10, { color: 0xf0e8ff, spread: 0.5, rise: 0.6, life: 0.5 }, ctx.now());
+      return ring(ctx, { position: { x: o.x, y: o.y, z: o.z } }, 1.6, WHITE, 0.25);
+    },
+
+    // One dash: a straight bright ribbon along `length` (6) from the start, fading in 0.3 s, three afterimages at a quarter, a
+    // half and three quarters, an end ring and 10 embers strung along the path. `yaw` is the dash's facing.
+    'flicker-dash': (ctx, t, p) => {
+      const o = origin(t);
+      const length = Math.max(1, num(p, 'length', 6));
+      const yaw = t.yaw ?? 0;
+      const dx = -Math.sin(yaw);
+      const dz = -Math.cos(yaw);
+      const group = new THREE.Group();
+      const ribbon = new THREE.Mesh(new THREE.PlaneGeometry(0.16, length), additive(WHITE, 0.9));
+      // Lie flat at hip height, long axis along the dash.
+      ribbon.rotation.set(-Math.PI / 2, 0, 0);
+      ribbon.position.set(0, 1, -length / 2);
+      const spine = new THREE.Group();
+      spine.add(ribbon);
+      spine.rotation.y = yaw;
+      group.add(spine);
+      const ghosts: THREE.Mesh[] = [];
+      for (let i = 1; i <= 3; i++) {
+        const g = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 0.9, 4, 8), additive(VIOLET, 0.35));
+        g.position.set(dx * length * (i / 4), 1, dz * length * (i / 4));
+        group.add(g);
+        ghosts.push(g);
+      }
+      for (let i = 0; i < 10; i++) {
+        const d = (i + 0.5) * (length / 10);
+        ctx.points.emit('ember', { x: o.x + dx * d, y: o.y + 1, z: o.z + dz * d }, 1, { color: 0xffe8c0, spread: 0.15, rise: 0.4, life: 0.4 }, ctx.now());
+      }
+      const end = ring(ctx, { position: { x: o.x + dx * length, y: o.y, z: o.z + dz * length } }, 1.2, VIOLET, 0.3);
+      const body = followGroup(ctx, { position: { x: o.x, y: o.y, z: o.z } }, group, 0.35, (prog) => {
+        const fade = 1 - prog;
+        (ribbon.material as THREE.MeshBasicMaterial).opacity = 0.9 * fade;
+        ghosts.forEach((g, i) => ((g.material as THREE.MeshBasicMaterial).opacity = 0.35 * Math.max(0, fade - (3 - i) * 0.12)));
+      });
+      return {
+        update: (now) => {
+          const a = body.update(now);
+          const b = end.update(now);
+          return a || b;
+        },
+        stop() {
+          body.stop();
+          end.stop();
+        },
+      };
+    },
+
+    // A foe passed: an ember ring at its feet and 6 embers.
+    'flicker-hit': (ctx, t) => {
+      const o = origin(t);
+      ctx.points.emit('ember', { x: o.x, y: o.y + 1, z: o.z }, 6, { color: EMBER, spread: 0.4, rise: 1, life: 0.4 }, ctx.now());
+      return ring(ctx, { position: { x: o.x, y: o.y, z: o.z } }, 1.4, ORANGE, 0.3);
+    },
+
+    // The dash refreshed: a white ping at the feet.
+    'flicker-ping': (ctx, t) => {
+      const o = origin(t);
+      ctx.lights.flash({ x: o.x, y: o.y + 1, z: o.z }, WHITE, 6, 0.02, 0.2, ctx.now());
+      return ring(ctx, { position: { x: o.x, y: o.y, z: o.z } }, 1, WHITE, 0.25);
+    },
+  };
+}

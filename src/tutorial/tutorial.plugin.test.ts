@@ -304,6 +304,8 @@ describe('clarity wiring on the real game', () => {
     expect(fires()).toBeGreaterThan(0);
     expect(fires()).toBeLessThanOrEqual(3);
     expect(folk()).toBe(0);
+    // The nearest fire holds one slot of the env glow pool (env.fireLights); a plugin set without env would leave it at 0.
+    expect(t.game.ctx.services.get('env')!.glow().reserved).toBe(1);
     t.game.ctx.state.setFlag('tutorial.complete', true);
     frame(t, 1);
     expect(folk()).toBe(0); // still burning: nobody idles beside the fires

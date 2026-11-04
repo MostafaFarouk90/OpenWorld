@@ -4,6 +4,7 @@
 // Everything sits inside the flat meadow (SPAWN_FLAT_RADIUS) except the beyond-the-village anchors.
 import { CORRIDOR_LAYOUT } from './corridor.layout';
 import { DENSITY_LAYOUT_A } from './density.layout';
+import { SIDE_LAYOUT_A } from './side.layout';
 import type { AnchorSpec, LayoutData, StructureSpec, TriggerSpec } from './layoutTypes';
 
 const a = (id: string, x: number, z: number, heading: number, tags: string[] = [], rest: Partial<AnchorSpec> = {}): AnchorSpec => ({
@@ -234,9 +235,9 @@ const structures: StructureSpec[] = [
 ];
 
 export const BRIGHTWATER_LAYOUT: LayoutData = {
-  anchors: [...anchors, ...CORRIDOR_LAYOUT.anchors, ...DENSITY_LAYOUT_A.anchors],
-  triggers: [...triggers, ...CORRIDOR_LAYOUT.triggers, ...DENSITY_LAYOUT_A.triggers],
-  structures: [...structures, ...CORRIDOR_LAYOUT.structures, ...DENSITY_LAYOUT_A.structures],
+  anchors: [...anchors, ...CORRIDOR_LAYOUT.anchors, ...DENSITY_LAYOUT_A.anchors, ...SIDE_LAYOUT_A.anchors],
+  triggers: [...triggers, ...CORRIDOR_LAYOUT.triggers, ...DENSITY_LAYOUT_A.triggers, ...SIDE_LAYOUT_A.triggers],
+  structures: [...structures, ...CORRIDOR_LAYOUT.structures, ...DENSITY_LAYOUT_A.structures, ...SIDE_LAYOUT_A.structures],
   patrols: [{ id: 'patrol.north', points: ['patrol.north.1', 'patrol.north.2', 'patrol.north.3', 'patrol.north.4'], loop: true }],
   npcs: [
     { id: 'gaut', post: 'npc-post.gaut', idleClip: 'Idle' },
@@ -248,6 +249,7 @@ export const BRIGHTWATER_LAYOUT: LayoutData = {
     { id: 'wynn', post: 'npc-post.wynn', idleClip: 'Idle' },
     ...CORRIDOR_LAYOUT.npcs,
     ...DENSITY_LAYOUT_A.npcs,
+    ...SIDE_LAYOUT_A.npcs,
   ],
   fields: [
     { id: 'barley-west', x0: -40, z0: 8, x1: -8, z1: 50, count: 3500 },

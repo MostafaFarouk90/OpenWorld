@@ -1,6 +1,7 @@
 import type { ChapterHarness } from './chapterHarness';
 import type { OpeningQuest, PhaseAQuest, QuestTrail, Trails } from './phaseA';
 import type { PhaseBQuest } from './phaseB';
+import type { SideJob } from './side';
 import type { PaceRow } from '../quests/content/act2/pacing';
 
 /**
@@ -287,6 +288,107 @@ export const PHASE_B_PLAN: Record<PhaseBQuest, QuestPlan> = {
   },
 };
 
+/**
+ * The Act 1 side jobs ("jobs", plans/act1-side-content.md), played headless by src/integration/side.ts on the Phase A end save.
+ * Same formula and constants as the main chain; `design` is the plan's minutes for the job (they have no design-doc budget), so the
+ * delta column reads against the plan. The jobs are optional: they count toward the Act 1 total in TIMING.md, and the three
+ * batch 2 Dead Road points of interest stay uncounted. A job without a giver (j03) starts from where its approach begins.
+ */
+export const SIDE_PLAN: Record<SideJob, QuestPlan> = {
+  j01: {
+    design: 4.5,
+    route: [
+      A('npc-post.hob'), A('j01.lamb-1'), T('j01.fold'), A('j01.lamb-2'), T('j01.fold'), A('j01.lamb-3'), T('j01.fold'), A('npc-post.hob'),
+    ],
+    // each lamb is picked up where it was found (goTo plus the pickup) and set down in the fold
+    beats: { carry: 3 },
+    note: 'Hob\'s offer (two ask-abouts), the stubble scar, the scarecrow field and the lane drain, three carries to the fold, the report',
+  },
+  j02: {
+    design: 3.5,
+    route: [
+      A('npc-post.edda'), A('j02.basket'), A('npc-post.orla'), A('m01.miller.walk-off'), A('npc-post.osmund'), A('npc-post.edda'),
+    ],
+    beats: { interact: 1 },
+    note: 'the basket on the step, the widow at the lane end (the loaf choice), the miller at the chapel, the sexton, Edda\'s remark',
+  },
+  j03: {
+    design: 6.0,
+    // the approach from the chapel waystone: the bluff above the road's western end, then the barrow far to the east
+    from: A('waystone.chapel'),
+    route: [A('j03.bluff.launch'), A('j03.bluff'), A('spawn.j03.barrow-1'), A('j03.barrow-tablet')],
+    beats: { leap: 1, killUnit: 2, note: 2 },
+    note: 'a Surge Leap onto the bluff and its stone, the barrow pair (2 wraiths), the grave tablet; the quest starts at the first stone',
+  },
+  j04: {
+    design: 2.5,
+    // M05 ends at the Quenchstone, where the bond scene is told: the fire ring is the next stop up the road
+    from: A('waystone.quenchstone'),
+    route: [A('j04.fire-ring')],
+    beats: { interact: 1 },
+    note: 'Tobb\'s offer, the fire ring, his question about the knighting and his answer',
+  },
+  j05: {
+    design: 5.5,
+    route: [
+      A('j05.notice'), A('npc-post.stallholder-1'), T('j05.search-1'), T('j05.search-2'), T('j05.search-3'), A('npc-post.crumb.wait'),
+      A('npc-post.stallholder-1'),
+    ],
+    beats: { note: 1 },
+    note: 'the notice on Rook\'s board, Godric\'s brief, three search points in the Guild Quarter, Crumb waiting at the last, back to the stall',
+  },
+  j06: {
+    design: 4.5,
+    route: [A('j06.notice'), A('npc-post.dunstan'), A('j06.crate'), T('j06.forge'), A('npc-post.dunstan')],
+    beats: { note: 1, carry: 1 },
+    note: 'the notice, Dunstan\'s brief, the crate by the old smelter yard carried to the forge door, the report',
+  },
+  j07: {
+    design: 5.0,
+    route: [
+      A('j07.notice'), A('npc-post.chandler'), A('j07.candles'), A('j07.niche-1'), A('j07.niche-2'), A('j07.niche-3'),
+      A('npc-post.sexton'),
+    ],
+    beats: { note: 1, interact: 4 },
+    note: 'the notice (it names the chandler), the chandler and his bundle, three niche candles, the sexton\'s thanks (the codex entry)',
+  },
+  j08: {
+    design: 6.0,
+    route: [
+      A('npc-post.sergeant'), T('j08.lane-1'), T('j08.lane-2'), A('npc-post.dunstan'), T('j08.lane-3'), A('npc-post.aldith'), T('j08.lane-4'),
+      A('spawn.j08.cutpurse-1'), A('npc-post.sergeant'),
+    ],
+    beats: { killUnit: 2 },
+    note: 'the sergeant\'s orders, a four-point lane loop with two remarks (the smith, Aldith), the cutpurse pair (2 kills or Spares), the report',
+  },
+  j09: {
+    design: 6.0,
+    // Stane stands at his Bastion post; each bout is the veteran at R02\'s spot, with his word between
+    route: [
+      A('npc-post.stane.bastion'), A('spawn.r02.bastion-bout'), A('npc-post.stane.bastion'), A('spawn.r02.bastion-bout'),
+      A('npc-post.stane.bastion'), A('spawn.r02.bastion-bout'), A('npc-post.stane.bastion'),
+    ],
+    beats: { bout: 3 },
+    note: 'Stane\'s offer, three bouts on the Replay board with his word between, the closing talk (the Halvard codex line)',
+  },
+  j10: {
+    design: 2.5,
+    // Tobb walks with Cael; the ring stands east of the Tilted Anvil
+    route: [A('harrowmark.tilted-anvil.door'), A('j10.fire-ring'), A('harrowmark.tilted-anvil.door')],
+    beats: { interact: 1 },
+    note: 'Tobb\'s offer, the fire ring in the Anvil yard, his question about the city and his answer (the two lines sung)',
+  },
+  j11: {
+    design: 6.0,
+    route: [
+      A('npc-post.rook'), A('harrowmark.underways.door'), 'DOOR', A('j11.grate'), T('trg.underways.j11-track-1'), T('trg.underways.j11-track-2'),
+      A('j11.waybill'), 'DOOR', A('harrowmark.underways.door'), A('npc-post.rook'),
+    ],
+    beats: { interact: 1, killUnit: 2, note: 1 },
+    note: 'Rook\'s memory of the spur, the grate and the key, two marks on the cart tracks, two hounds, the waybill, the report',
+  },
+};
+
 export interface TimingRow {
   quest: string;
   travelM: number;
@@ -401,3 +503,23 @@ export function estimatePaceRow(row: PaceRowLike, design: number, at: (anchor: s
 
 /** The dialogue nodes a trail read (a readable note is one `note` beat in the row, not its nodes). */
 export const trailNodes = (trail: QuestTrail): number => trail.talks.filter((t) => !t.npc.startsWith('note-')).reduce((n, t) => n + t.nodes, 0);
+
+/**
+ * Act 3 additions (plan Part 1.3), fixed before anything is measured. Seconds per beat unit for the beats Act 3 adds; the
+ * Act 1 and Act 2 tables above are unchanged. An anvil rubbing counts as a `search`.
+ */
+export const ACT3_BEAT_S = {
+  ...ACT2_BEAT_S,
+  /** one dive segment, air pocket to air pocket (at most 40 m): about 20 s swimming plus a 10 s look-around */
+  dive: 30,
+  /** one sled hauled up one leg of the pass */
+  sled: 90,
+} as const;
+/** Wading (water 0.4 to 1.2 m deep) before the Fen Boots, M23's reward. */
+export const WADE_MPS = 2.5;
+/** Wading with the Fen Boots (they halve the 2 m/s slowdown). */
+export const WADE_BOOTS_MPS = 3.5;
+/** Dragonspine Glide travel. */
+export const GLIDE_MPS = 10;
+/** A fen ferry ride. */
+export const FERRY_MPS = 5;

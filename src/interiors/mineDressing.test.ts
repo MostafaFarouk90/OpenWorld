@@ -14,14 +14,14 @@ import { UNDERWAYS_DEF } from './underways/generate';
 import { VAULT_DEF } from './vaultDef';
 import { COVER_HEIGHT, MAX_ASPECT, MIN_COVERAGE, heightGrid, planProp } from './propFit';
 
-/** Piece counts per non-mine interior, as planned before the mine dressing existed (d2cfc38); the mine work must not move them. */
+/** Piece counts per non-mine interior, as planned before the mine dressing existed (d2cfc38); the mine work must not move them (the underways row grew with the j11 cart-track spur). */
 const NON_MINE_PIECES: Record<string, Record<string, number>> = {
   'chapel-vault': { 'wall:dun/wall': 79, 'floor:dun/floor_tile_large': 60, 'wall:dun/wall_window_open': 5, 'pillar:dun/pillar': 4 },
   'tilted-anvil': { 'wall:dun/wall': 21, 'floor:dun/floor_wood_large': 15, 'wall:dun/wall_window_open': 2, 'prop:dun/table_long': 1, 'prop:dun/table_medium': 5, 'prop:fur/bed_single_A': 1 },
   'keep-hall': { 'wall:dun/wall': 48, 'floor:dun/floor_tile_large': 32, 'pillar:dun/pillar': 8 },
   'counting-house': { 'wall:dun/wall': 39, 'wall:dun/wall_window_open': 6, 'floor:dun/floor_wood_large': 35, 'prop:fur/table_medium_long': 7, 'prop:fur/cabinet_medium': 1, 'prop:dun/shelves': 4 },
   'archive': { 'wall:dun/wall': 60, 'floor:dun/floor_wood_large': 28, 'prop:fur/table_small': 1, 'prop:dun/table_medium': 4, 'prop:dun/shelves': 5 },
-  'underways': { 'wall:dun/wall_broken': 79, 'wall:dun/wall': 181, 'floor:dun/floor_tile_large': 213, 'wall:dun/wall_cracked': 84 },
+  'underways': { 'wall:dun/wall_broken': 81, 'wall:dun/wall': 188, 'floor:dun/floor_tile_large': 227, 'wall:dun/wall_cracked': 88 },
   'scorchhold-keep': { 'wall:dun/wall': 74, 'floor:dun/floor_tile_large': 69, 'pillar:dun/pillar': 4, 'prop:fur/table_medium_long': 4 },
   'grisel-hall': { 'wall:dun/wall': 97, 'wall:dun/wall_window_open': 16, 'floor:dun/floor_tile_large': 104, 'pillar:dun/pillar': 4, 'prop:dun/table_medium': 2, 'prop:fur/table_medium_long': 1, 'prop:fur/cabinet_medium': 1, 'prop:dun/shelves': 3 },
 };
