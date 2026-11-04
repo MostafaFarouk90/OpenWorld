@@ -1,6 +1,7 @@
 import { COMPANION_STRINGS_EN } from './strings.en';
 import { ACT2_TRIGGERS, COMPANION_DOWNED_SECONDS, TOBB_TUNING } from './tuning';
 import type { CompanionDef } from './types';
+import { ACT3_INTERIOR_ENTRY, ACT3_PLACES, act3Pools, act3Variant } from './act3/banter';
 
 const pool = (prefix: string): string[] =>
   Object.keys(COMPANION_STRINGS_EN).filter((k) => k.startsWith(`companion.tobb.bark.${prefix}.`));
@@ -37,6 +38,8 @@ export const TOBB: CompanionDef = {
       cinderreach: pool('area.cinderreach'),
       oldsmoke: pool('area.oldsmoke'),
       dell: pool('area.dell'),
+      // Act 3 (K5): the Greyfen, the Dragonspine, the trial, the reveal and the ferry.
+      ...act3Pools('tobb'),
     },
     combatStart: pool('combatStart'),
     combatEnd: pool('combatEnd'),
@@ -52,11 +55,14 @@ export const TOBB: CompanionDef = {
       'trg.harrowmark.bastion-yard': 'bastionYard',
       // Act 2: A9's Kindling Dell.
       [ACT2_TRIGGERS.dell]: 'dell',
+      ...ACT3_PLACES.triggers,
     },
-    interiors: { 'chapel-vault': 'vault', 'tilted-anvil': 'tiltedAnvil', underways: 'underways' },
+    interiors: { 'chapel-vault': 'vault', 'tilted-anvil': 'tiltedAnvil', underways: 'underways', ...ACT3_PLACES.interiors },
     // `harrowmark` is thread 4's region-mask id for the city (to confirm when the mask lands).
-    regions: { brightwater: 'brightwater', harrowmark: 'harrowmark', cinderreach: 'cinderreach', oldsmoke: 'oldsmoke' },
+    regions: { brightwater: 'brightwater', harrowmark: 'harrowmark', cinderreach: 'cinderreach', oldsmoke: 'oldsmoke', ...ACT3_PLACES.regions },
   },
+  // Act 3: Dragonspine places speak differently after the reveal (M32).
+  areaVariant: act3Variant,
   // Thread 3a's interior-side anchors (`harrowmark.<id>.entry`).
   interiorEntry: {
     'chapel-vault': 'vault.entry',
@@ -65,6 +71,7 @@ export const TOBB: CompanionDef = {
     archive: 'harrowmark.archive.entry',
     'keep-hall': 'harrowmark.keep-hall.entry',
     underways: 'harrowmark.underways.entry',
+    ...ACT3_INTERIOR_ENTRY,
   },
   // Quest-derived only (review B1; thread 18's liveness windows). Posts: south-gate and keep are thread 17's,
   // tilted-anvil is thread 3a's (the hearth, inside the inn).

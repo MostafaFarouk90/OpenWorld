@@ -22,6 +22,11 @@ export interface SpellsService {
    * Non-finite or non-positive `n` is ignored with a warning (K13 calls it with `source: 'dragons-respect'`).
    */
   addSurgeCharges(n: number, source: string): number;
+  /**
+   * v0.7 item 17, Act 3 (K5): sets the Burn gain multiplier (`Burn.setGainScale`). One slot, the last setter wins; K5's
+   * Quenched aura (src/companions/act3/quenched.ts) is its sole owner. Returns the undo.
+   */
+  setBurnGainScale?(fn: () => number): () => void;
   readonly ember: number;
   readonly maxEmber: number;
   spendEmber(n: number): boolean;

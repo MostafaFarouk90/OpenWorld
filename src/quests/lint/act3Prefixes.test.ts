@@ -36,8 +36,10 @@ describe('Act 3 reserved prefixes', () => {
     expect(triggerIds.some((id) => id.startsWith('trg.'))).toBe(true);
   });
 
-  /** Act 3 sub-prefixes an Act 3 thread owns and ships (coordinator rulings): K6b's ambient spawn anchors. */
-  const OWNED_SUB_PREFIXES = ['greyfen.fauna.'];
+  /** Act 3 sub-prefixes an Act 3 thread owns and ships (coordinator rulings): K6b's ambient spawn anchors, K2's POIs. */
+  const OWNED_SUB_PREFIXES = ['greyfen.fauna.', 'greyfen.poi.', 'dragonspine.poi.', 'fenroad.poi.', 'spineroad.poi.'];
+  /** K2's POI discovery triggers (the null-land caches use `trg.poi.a3.`, outside the reserved prefixes). */
+  const OWNED_TRIGGER_SUB_PREFIXES = ['trg.greyfen.poi.', 'trg.dragonspine.poi.'];
   it.each(ACT3_ANCHOR_PREFIXES)('no shipped anchor starts with %s outside an owned sub-prefix', (prefix) => {
     expect(anchorIds.filter((id) => id.startsWith(prefix) && !OWNED_SUB_PREFIXES.some((s) => id.startsWith(s)))).toEqual([]);
   });
@@ -49,8 +51,15 @@ describe('Act 3 reserved prefixes', () => {
     }
   });
 
-  it.each(ACT3_TRIGGER_PREFIXES)('no shipped trigger starts with %s', (prefix) => {
-    expect(triggerIds.filter((id) => id.startsWith(prefix))).toEqual([]);
+  it.each(ACT3_TRIGGER_PREFIXES)('no shipped trigger starts with %s outside an owned sub-prefix', (prefix) => {
+    expect(triggerIds.filter((id) => id.startsWith(prefix) && !OWNED_TRIGGER_SUB_PREFIXES.some((s) => id.startsWith(s)))).toEqual([]);
+  });
+
+  it('the owned trigger sub-prefixes are in use and sit under a reserved prefix', () => {
+    for (const s of OWNED_TRIGGER_SUB_PREFIXES) {
+      expect(ACT3_TRIGGER_PREFIXES.some((p) => s.startsWith(p)), s).toBe(true);
+      expect(triggerIds.some((id) => id.startsWith(s)), s).toBe(true);
+    }
   });
 
   it('the prefixes are the ones of the plan', () => {
@@ -89,6 +98,8 @@ describe('Act 3 flag owners', () => {
       'boss.<id>.outcome': 'core boss registry',
       'story.phase.dragonspineOpen': 'Phase F PR',
       'gear.shardgem.granted.<id>': 'K10',
+      'place.poi.a3.<id>.discovered': 'K2',
+      'poi.a3.<id>.taken': 'K2',
     });
   });
 

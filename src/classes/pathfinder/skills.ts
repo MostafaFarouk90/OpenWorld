@@ -3,7 +3,7 @@ import { PF } from './tuning';
 
 type Row = [name: string, kind: 'active' | 'passive'];
 
-/** Design 9.5. Tiers 1 to 3 are live; tiers 4 and 5 are listed so the tree draws its full shape. */
+/** Design 9.5. Tiers 1 to 4 are live (tier 4 behind the master book); tier 5 is listed so the tree draws its full shape. */
 const TREE: Record<string, Row[]> = {
   bolt: [
     ['steadyShot', 'passive'],
@@ -62,5 +62,8 @@ export function buildPathfinderSkills(): SkillDef[] {
   const net = out.find((s) => s.id === PF.skillIds.netLauncher)!;
   net.cooldown = PF.netLauncher.cooldown;
   net.emberCost = PF.netLauncher.ember;
+  const caltrops = out.find((s) => s.id === PF.skillIds.caltropField)!;
+  caltrops.cooldown = PF.caltropField.cooldown;
+  caltrops.emberCost = PF.caltropField.ember;
   return out;
 }
