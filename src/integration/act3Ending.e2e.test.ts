@@ -32,15 +32,21 @@ async function boot(file: unknown) {
   h = await bootFromSave(file, { models: false, virtualClock: true });
   expect(h.loaded).toBe(true);
   await h.runAsync(10);
+  // The hearth check below proves a move only if the boot puts the player well away from it.
+  const hearth = h.ctx.anchors.find(ACT3_ENDING.campAnchorId!)!.position;
+  const f0 = h.ctx.player.feet;
+  if (h.ctx.state.getFlag(ACT3_ENDING.campSeenFlag) !== true && h.ctx.state.getFlag(ACT3_ENDING.cardSeenFlag) !== true) {
+    expect(Math.hypot(f0.x - hearth.x, f0.z - hearth.z), 'the boot is away from the hearth').toBeGreaterThan(25);
+  }
   return h;
 }
 
-/** Counts every gate write, so a second `setFlag` of the same value still shows. */
+/** Counts every `true` write of the gate, so a second `setFlag` of the same value still shows. */
 function watchGate(t: ChapterHarness): () => number {
   let n = 0;
   const set = t.ctx.state.setFlag.bind(t.ctx.state);
   (t.ctx.state as { setFlag: typeof set }).setFlag = ((k: string, v: unknown) => {
-    if (k === GATE && v === true && t.ctx.state.getFlag(GATE) !== true) n++;
+    if (k === GATE && v === true) n++;
     return set(k as never, v as never);
   }) as typeof set;
   return () => n;

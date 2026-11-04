@@ -895,7 +895,7 @@ describe('Skyhawk Strike: the carry', () => {
   });
 
   it('the real containment: a closed summit hole is cut out of the open area, and an open one is not', () => {
-    const flags: Record<string, unknown> = { 'story.gate.a2': true, 'story.d03.complete': true, 'story.gate.a3': true, 'story.phase.dragonspineOpen': true };
+    const flags: Record<string, unknown> = { 'story.gate.a2': true, 'story.d03.complete': true, 'story.gate.a3': true };
     const c = new Containment({ getFlag: (k) => flags[k] }, [], ACT3_HOLES);
     const spine = engineBox('dragonspine');
     expect(spine.z1).toBeGreaterThan(SUMMIT_BOX.z1);

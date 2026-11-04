@@ -18,7 +18,7 @@ import { ACT3_CAMP_DIALOGUE, ACT3_CAMP_LINES } from '../dialogue/content/act3/ca
 import { blockLevelFlag } from '../shrine/warmthBlocks';
 import { summitLevel, SUMMIT_CAP_ABOVE_PLAYER } from '../enemies/level';
 import { DRAGONSPINE_SPAWNERS as DRAGONSPINE_AMBIENT } from '../enemies/act3Spawners';
-import { AREA_BANDS } from '../region/areas';
+import { AREA_BANDS, areaAt } from '../region/areas';
 import { DRAGONSPINE_OPEN_FLAG } from '../quests/act3Jump';
 
 /** What a run names: the sleds, the candle bundle, the eggs, the trial, the glide, Skarl (and the Greyfen's own in run B). */
@@ -101,7 +101,8 @@ export async function runPhaseF(run: 'a' | 'b', spine: SpineChoices, greyfen?: G
     // The summit door: the mercy-heavy level at M31's start, and no summit spawn above it by more than 3 (Q9).
     const ambient = ambientCensus();
     const prog = h.ctx.services.require('progression') as unknown as { xp: number; level: number };
-    const atM31 = censusLevels(prog.xp, xpLedger(h.of('xp.gained')), ambient.total);
+    // At M31's start a full play has walked the Greyfen and the lower slopes, not the summit: its ambient share is theirs.
+    const atM31 = censusLevels(prog.xp, xpLedger(h.of('xp.gained')), ambient.greyfen + ambient.lower);
     // Every summit spawn rolls on the area's band (26 to 28) and is capped at spawn: the top roll against the mercy-heavy level.
     expect(DRAGONSPINE_AMBIENT.some((d) => d.area === 'dragonspine-summit')).toBe(true);
     const summitTop = summitLevel(AREA_BANDS['dragonspine-summit'].band, 1, atM31.mercyHeavy);
@@ -109,7 +110,21 @@ export async function runPhaseF(run: 'a' | 'b', spine: SpineChoices, greyfen?: G
     expect(summitTop, `summit spawns at most 3 over the mercy-heavy level ${atM31.mercyHeavy}`).toBeLessThanOrEqual(atM31.mercyHeavy + 3);
     notes.push(`M31 start: chain level ${prog.level} (${prog.xp} XP), mercy-heavy full play level ${atM31.mercyHeavy} (${atM31.mercyHeavyXp} XP), summit spawns at most ${summitTop}`);
 
+    // Q9 on the live game: every hostile met on the summit stands at most 3 over the player's level when it is seen.
+    const overCap = new Set<string>();
+    const watchSummit = () => {
+      const P = level(h);
+      for (const a of h.ctx.actors.all() as Iterable<{ id: string; team?: string; dead?: boolean; level?: number; kind?: string; root?: { position: { x: number; z: number } } }>) {
+        if (a.team !== 'hostile' || a.dead || !a.root || typeof a.level !== 'number') continue;
+        if (areaAt(a.root.position.x, a.root.position.z) !== 'dragonspine-summit') continue;
+        if (a.kind === 'corvin-skarl' || a.kind === 'ysmeryth') continue; // the bosses and the trial have their own levels
+        if (a.level > P + 3) overCap.add(`${a.kind} ${a.level} at player ${P}`);
+      }
+    };
+    const offTick = h.ctx.events.on('quest.objective', watchSummit);
     for (const q of PHASE_F_SUMMIT) await play(q);
+    offTick?.();
+    if (overCap.size) findings.push(`summit hostiles over the Q9 cap: ${[...overCap].join(', ')}`);
     const all = [...PHASE_F_LOWER, ...(greyfen ? PHASE_E_ORDER : []), ...PHASE_F_SUMMIT];
     for (const q of all) expect(qs.state(q), q).toBe('completed');
     expect(h.ctx.state.getString('story.m31.choice')).toBe(spine.m31);

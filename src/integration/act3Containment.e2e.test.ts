@@ -101,7 +101,8 @@ describe('Act 3 containment on the fixtures (Phase F: the Dragonspine hold retir
   }, 60_000);
 
   // The containment grid with a glider: the summit hole is the shut land a Phase F player can glide at.
-  it('a player gliding into the shut summit is pushed back into the open area, once, with containment.pushed', async () => {
+  it('a player gliding into the shut summit is pushed back into the open area, with containment.pushed from the summit point', async () => {
+    // The glide may land or end on the push (K7's own rule, tested there); the grid's job is the open ground and the event.
     const { c } = await boot('greyfen', 'm28');
     const mm = h!.ctx.services.require('movementMode');
     mm.set('glide', { position: { x: LODGE.x, y: 400, z: LODGE.z }, yaw: 0 });
