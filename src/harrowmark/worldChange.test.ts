@@ -3,7 +3,8 @@ import { readFileSync } from '../region/testing/nodeFs';
 import { createFakeCore } from '../region/testing/fakeCore';
 import { resolveLayout } from '../region/resolveLayout';
 import { BANNER_COUNT, BRAZIER_COUNT, HARROWMARK_LAYOUT } from './harrowmark.layout';
-import { A2_FLAG, A3_FLAG, buildWorldChange, FOUNTAIN, STALL_PREFIX } from './worldChange';
+import { glowRegistry } from '../env/glowSources';
+import { A2_FLAG, A3_FLAG, BRAZIER_FLAME_Y, BRAZIER_GLOW_KIND, buildWorldChange, FOUNTAIN, STALL_PREFIX } from './worldChange';
 
 /** The scene's world-change groups, leaving out the closed-stall shutters (tested on their own below). */
 const changeRoots = (fc: { scene: { children: { name: string }[] } }) => fc.scene.children.filter((c) => c.name !== 'harrowmark-closed-stalls');
@@ -191,3 +192,42 @@ describe('closed market stalls (A16 final review #5)', () => {
   });
 });
 
+
+describe('Keep-road braziers as glow sources (additive hook for the env glow pool)', () => {
+  // The registry is shared across the file's worlds, so count what this world adds.
+  const keepFires = () => glowRegistry.list().filter((g) => g.kind === BRAZIER_GLOW_KIND);
+
+  it('registers nothing before story.gate.a2', () => {
+    const before = keepFires().length;
+    const { change } = setup();
+    expect(keepFires()).toHaveLength(before);
+    change.dispose();
+  });
+
+  it('registers one fire per brazier while the flag is on, at the flame, and drops them when it clears', () => {
+    const before = keepFires().length;
+    const { fc, change } = setup();
+    fc.ctx.state.setFlag(A2_FLAG, true);
+    const added = keepFires().slice(before);
+    expect(added).toHaveLength(BRAZIER_COUNT);
+    for (const g of added) {
+      const a = fc.anchors.get(g.id)!;
+      expect([g.x, g.y, g.z]).toEqual([a.position.x, a.position.y + BRAZIER_FLAME_Y, a.position.z]);
+    }
+    expect(new Set(added.map((g) => g.id)).size).toBe(BRAZIER_COUNT);
+    fc.ctx.state.setFlag(A2_FLAG, false);
+    expect(keepFires()).toHaveLength(before);
+    change.dispose();
+  });
+
+  it('does not stack when the flag is set twice or the save reloads, and is cleared by dispose', () => {
+    const before = keepFires().length;
+    const { fc, change } = setup(true);
+    expect(keepFires()).toHaveLength(before + BRAZIER_COUNT);
+    fc.ctx.state.setFlag(A2_FLAG, true);
+    fc.fire('save.loaded');
+    expect(keepFires()).toHaveLength(before + BRAZIER_COUNT);
+    change.dispose();
+    expect(keepFires()).toHaveLength(before);
+  });
+});
