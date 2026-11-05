@@ -1,6 +1,6 @@
 // v0.7 items 8 and 8b: the Warmth wiring in the spawners (block lock, preview, span roll) and the Q9 summit cap.
 import { describe, expect, it, vi } from 'vitest';
-import { ACT3_BLOCKS, SUMMIT_CAP_ABOVE_PLAYER, blockBaseLevel, enemyLevel, summitLevel } from './level';
+import { ACT3_BLOCKS, DRAGONSPINE_LOWER_CAP_ABOVE_PLAYER, SUMMIT_CAP_ABOVE_PLAYER, blockBaseLevel, enemyLevel, summitLevel } from './level';
 import type { AnchorLike } from './ports';
 import { SpawnRequest, SpawnerRegistry } from './spawners';
 import type { SpawnerDef } from './types';
@@ -69,6 +69,51 @@ describe('ACT3_BLOCKS and the 5.9 formula', () => {
     expect(blockBaseLevel('greyfen', 0, 30)).toBe(21); // P - 9
     expect(blockBaseLevel('greyfen', 99, 60)).toBe(40);
     expect(blockBaseLevel('greyfen', -5, 1)).toBe(6); // W clamps to 0: raw 9, window up to P + 5
+  });
+});
+
+describe('the lower Dragonspine cap (playthrough H1, the Q9 twin)', () => {
+  it('caps L at P + 3 for an under-levelled player arriving from the Greyfen (success)', () => {
+    expect(DRAGONSPINE_LOWER_CAP_ABOVE_PLAYER).toBe(3);
+    expect(ACT3_BLOCKS['dragonspine-lower'].capAbovePlayer).toBe(3);
+    // The playthrough repro: W = 4, level 19. Design 5.9 gives 23 (P + 4); the cap gives 22.
+    expect(blockBaseLevel('dragonspine-lower', 4, 19)).toBe(22);
+    expect(blockBaseLevel('dragonspine-lower', 4, 18)).toBe(21); // 23 would be P + 5
+    expect(blockBaseLevel('dragonspine-lower', 8, 20)).toBe(23); // P + 5 window, then the cap
+  });
+
+  it('leaves a lock at or under P + 3 alone, and never touches the Greyfen (failure to bite)', () => {
+    expect(blockBaseLevel('dragonspine-lower', 3, 17)).toBe(20); // Dragonspine first: already exactly P + 3
+    expect(blockBaseLevel('dragonspine-lower', 4, 22)).toBe(23); // recommended order, P + 1
+    expect(blockBaseLevel('dragonspine-lower', 0, 30)).toBe(21); // the P - 9 floor is untouched
+    expect(ACT3_BLOCKS.greyfen.capAbovePlayer).toBeUndefined();
+    expect(blockBaseLevel('greyfen', 8, 18)).toBe(23); // Greyfen keeps P + 5
+  });
+
+  it('edges: level 1 players, the level cap, and enemyLevel with a block id', () => {
+    expect(blockBaseLevel('dragonspine-lower', 8, 1)).toBe(4); // P + 3, not P + 5 = 6
+    expect(blockBaseLevel('dragonspine-lower', 99, 40)).toBe(35); // W clamps to 8; the cap never raises L
+    expect(blockBaseLevel('dragonspine-lower', 0, 60)).toBe(40); // the P - 9 floor, then the level cap 40
+    const band = { min: 1, max: 1 };
+    expect(enemyLevel(band, { block: { id: 'dragonspine-lower', offset: 2 }, warmthTier: 4, playerLevel: 19 })).toBe(22);
+    expect(enemyLevel(band, { block: { id: 'greyfen', offset: 2 }, warmthTier: 4, playerLevel: 19 })).toBe(23);
+    expect(enemyLevel(band, { block: { id: 'unknown', offset: 2 }, warmthTier: 4, playerLevel: 19 })).toBe(23);
+  });
+
+  it('the spawners lock at the capped preview and members still roll L to L + 2 on top', () => {
+    const { reg, reqs, state } = setup([mk({ block: 'dragonspine-lower', anchor: 'low', band: 'dragonspine' })], { player: 19, rolls: [1] });
+    reg.setWarmthTier(4);
+    expect(reg.blockPreview('dragonspine-lower')).toBe(22);
+    expect(reg.lockBlockLevel('dragonspine-lower', reg.blockPreview('dragonspine-lower')!)).toBe(22);
+    reg.spawnGroup('s');
+    expect(reqs[0].level).toBe(24);
+    // The cap reads the level at the lock; later levels never move it (Q5).
+    state.player = 25;
+    expect(reg.getLockedBlockLevel('dragonspine-lower')).toBe(22);
+    state.rolls = [0];
+    reg.reset('s');
+    reg.spawnGroup('s');
+    expect(reqs[reqs.length - 1].level).toBe(22);
   });
 });
 

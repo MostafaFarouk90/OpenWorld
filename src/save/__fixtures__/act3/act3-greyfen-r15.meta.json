@@ -29,7 +29,7 @@
   ],
   "lockedBlocks": {
     "greyfen": 18,
-    "dragonspine-lower": 23
+    "dragonspine-lower": 21
   },
   "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/act3Fixtures.gen",
   "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving"

@@ -80,11 +80,11 @@ describe('Warmth blocks on the shrine plugin', () => {
     expect(t.ctx.state.hasFlag('warmth.block.dragonspine-lower.level')).toBe(false);
     expect(w.preview!('dragonspine-lower')).toBe(20); // accepting M23 does not change W
     t.light('hathrens-mere'); // W4
-    expect(w.preview!('dragonspine-lower')).toBe(23);
+    expect(w.preview!('dragonspine-lower')).toBe(21); // design 5.9's 23, capped at P + 3 (H1)
     expect(w.preview!('greyfen')).toBe(18);
     t.start('m28');
-    expect(w.blockLevel!('dragonspine-lower')).toBe(23);
-    expect(t.ctx.state.getNumber('warmth.block.dragonspine-lower.level')).toBe(23);
+    expect(w.blockLevel!('dragonspine-lower')).toBe(21);
+    expect(t.ctx.state.getNumber('warmth.block.dragonspine-lower.level')).toBe(21);
   }, T);
 
   it('quest rewards scale through questRewardScale: m24 at L 21 pays 21/18, m22 pays 1', async () => {
