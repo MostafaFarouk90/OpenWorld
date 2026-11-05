@@ -67,7 +67,7 @@ describe('road dressing', () => {
   });
 
   it('is open whenever its road is (all flags of Act 3 set)', () => {
-    const flags: Record<string, boolean> = { 'story.gate.a2': true, 'story.d03.complete': true, 'story.gate.a3': true, 'story.phase.dragonspineOpen': true };
+    const flags: Record<string, boolean> = { 'story.gate.a2': true, 'story.d03.complete': true, 'story.gate.a3': true };
     const c = new Containment({ getFlag: (k: string) => flags[k] });
     for (const x of ACT3_CORRIDORS) c.addCorridor(x);
     for (const h of ACT3_HOLES) c.addHole(h);

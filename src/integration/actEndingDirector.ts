@@ -30,6 +30,10 @@ export interface ActEndingPorts {
   moveTo?(anchorId: string): Promise<boolean> | boolean;
 }
 
+/** How often a refused move to the camp anchor is tried, and the fixed ticks between tries. */
+export const MOVE_TRIES = 5;
+export const MOVE_RETRY_TICKS = 60;
+
 export class ActEndingDirector {
   /** The camp is owed and not running. */
   private campPending = false;
@@ -38,6 +42,11 @@ export class ActEndingDirector {
   /** The move to the camp anchor is in flight, or done for this camp. */
   private moving = false;
   private moved = false;
+  /** Bumped on a load: a move's late answer from before it is ignored. */
+  private moveGen = 0;
+  /** A refused move (another teleport still fading, e.g. one a load cut short) is tried again after a wait. */
+  private moveTries = 0;
+  private moveWait = 0;
   private warned = false;
 
   constructor(
@@ -81,6 +90,9 @@ export class ActEndingDirector {
     this.campPending = false;
     this.moving = false;
     this.moved = false;
+    this.moveGen++;
+    this.moveTries = 0;
+    this.moveWait = 0;
     if (!this.ended) {
       // Saved between the completion and the gate (or by an older build): the act did end. The HUD's gate watcher shows
       // the card; no `act.ended` (that event is the live moment only).
@@ -111,6 +123,10 @@ export class ActEndingDirector {
     }
     const p = this.ports;
     if (this.moving) return;
+    if (this.moveWait > 0) {
+      this.moveWait--;
+      return;
+    }
     if (p.busy() || p.inCombat()) return;
     if (this.def.campAnchorId && !this.moved) {
       this.moveThenStart(this.def.campAnchorId);
@@ -124,9 +140,14 @@ export class ActEndingDirector {
   private moveThenStart(anchorId: string): void {
     const p = this.ports;
     this.moving = true;
+    const gen = this.moveGen;
     const done = (ok: boolean): void => {
-      if (!this.moving) return; // a load cancelled the move
+      if (gen !== this.moveGen || !this.moving) return; // a load cancelled the move
       this.moving = false;
+      if (!ok && ++this.moveTries < MOVE_TRIES) {
+        this.moveWait = MOVE_RETRY_TICKS;
+        return;
+      }
       this.moved = true;
       if (!ok && !this.warned) {
         this.warned = true;

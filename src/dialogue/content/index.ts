@@ -32,6 +32,7 @@ import { withAct3Companions } from './act3/companions';
 import { GREYFEN_DIALOGUES } from './act3/greyfen';
 import { DRAGONSPINE_DIALOGUES } from './act3/dragonspine';
 import { withSummit } from './act3/summit';
+import { SCENE_ACT3_CAMP } from './act3/campScene.dialogue';
 
 // Act 3 (K10): the four Harrowmark trainers get their master-book lines in front. Act 3 (K5): Hrolf's master book and
 // the companions' M27, M32 and M34 scene trees. Act 1 side jobs: the givers' job rules, guarded by withSideJobs. The summit block's extensions (withSummit).
@@ -53,4 +54,6 @@ export const dialogueDefs: DialogueDef[] = withSummit(withAct3Companions(withAct
   ...GREYFEN_DIALOGUES,
   // Act 3 (K13): the lower Dragonspine quests
   ...DRAGONSPINE_DIALOGUES,
+  // Act 3 (K16 PR 2): the camp scene after "The Coal-Mother's Oath"
+  SCENE_ACT3_CAMP.def,
 ], questDefs))));

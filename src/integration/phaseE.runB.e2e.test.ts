@@ -11,6 +11,6 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('Phase E run B (the Greyfen second)', () => {
   it('plays M23 to D05 headless, shows the peaks card, with the Dragonspine open and clears the 52% gate', async () => {
-    console.log(await runPhaseE('b', GREYFEN_RUN_B, true));
+    console.log(await runPhaseE('b', GREYFEN_RUN_B));
   }, 1_800_000);
 });

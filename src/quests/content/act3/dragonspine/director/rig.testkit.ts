@@ -35,7 +35,7 @@ export const anchorPos = (id: string): { x: number; y: number; z: number } => {
 };
 
 export interface RigOpts {
-  /** `story.phase.dragonspineOpen` (M28 waits for it as well as the Act 3 gate): default true. */
+  /** Sets the retired `story.phase.dragonspineOpen` (Phase F: nothing reads it; an old save may carry it). Default false. */
   dragonspineOpen?: boolean;
   /** Flags set before anything runs (a loaded world). */
   flags?: Record<string, boolean | number | string>;
@@ -52,7 +52,7 @@ export function makeRig(opts: RigOpts = {}) {
   const flagsOff = installObjectiveFlags(DRAGONSPINE_OBJECTIVE_FLAGS, events as never, state as never, manager);
   services.provide('quests' as never, manager as never);
   for (const [k, v] of Object.entries(opts.flags ?? {})) state.setFlag(k, v);
-  if (opts.dragonspineOpen !== false) state.setFlag(M28_OPEN_FLAG, true);
+  if (opts.dragonspineOpen === true) state.setFlag(M28_OPEN_FLAG, true);
 
   const dialogue = { active: false, started: [] as Array<[string, string]>, start(id: string, npc: string) { this.started.push([id, npc]); return true; } };
   services.provide('dialogue' as never, dialogue as never);

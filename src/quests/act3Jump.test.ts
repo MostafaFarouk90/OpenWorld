@@ -154,7 +154,8 @@ describe('Act3Jump', () => {
     for (const q of ACT3_PREREQS[order][id]) expect(r.flags.get(`story.${q}.complete`), q).toBe(true);
     expect(r.flags.has(`story.${id}.complete`)).toBe(false);
     expect(r.placed).toEqual([ACT3_ARRIVAL[blockOf(id)!]]);
-    expect(r.flags.has('story.phase.dragonspineOpen')).toBe(needsDragonspine(id, order));
+    // Phase F (K16 PR 2) retired the hold: no jump writes the flag.
+    expect(r.flags.has('story.phase.dragonspineOpen')).toBe(false);
     expect(r.warn).not.toHaveBeenCalled();
   });
 

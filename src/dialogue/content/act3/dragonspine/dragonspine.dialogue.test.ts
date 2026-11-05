@@ -96,12 +96,12 @@ describe('every talk objective opens its own segment', () => {
   });
 });
 
-describe('M28 is offered only with the Dragonspine open', () => {
-  it('Thorgar does not open the brief on the Act 3 gate alone, and does with the phase flag too', () => {
+describe('M28 is offered with the Act 3 gate (Phase F retired the Dragonspine hold)', () => {
+  it('Thorgar opens the brief on the Act 3 gate alone, and with an old save\'s phase flag too', () => {
     const w = worldAt('m28', 'brief');
-    const shut = setup({ ...w, flags: { [GATE]: true } });
-    shut.dr.start('npc-thorgar', 'thorgar');
-    expect(shut.dr.view()?.nodeId).not.toBe('m28-brief');
+    const gateOnly = setup({ ...w, flags: { [GATE]: true } });
+    gateOnly.dr.start('npc-thorgar', 'thorgar');
+    expect(gateOnly.dr.view()?.nodeId).toBe('m28-brief');
     const open = setup(w);
     open.dr.start('npc-thorgar', 'thorgar');
     expect(open.dr.view()!.nodeId).toBe('m28-brief');

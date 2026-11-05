@@ -142,13 +142,12 @@ describe('Act 3 sites and containment', () => {
     for (const a of ACT3_POI_LAYOUT.anchors) expect(c.isOpen(a.x, a.z), a.id).toBe(false);
   });
 
-  it('opens the Greyfen and the Fen Road cache with the gate; the Dragonspine and the Spine Road cache only with the Phase E hold lifted', () => {
+  it('opens every Act 3 site with the gate (Phase F retired the Dragonspine hold)', () => {
     const e = containment(PHASE_E);
     const o = containment(OPEN);
     for (const p of ACT3_POI_PLACED) {
-      const early = p.region === 'greyfen' || p.region === 'fenroad';
       for (const a of p.layout.anchors) {
-        expect(e.isOpen(a.x, a.z), `${a.id} phase E`).toBe(early);
+        expect(e.isOpen(a.x, a.z), `${a.id} phase E`).toBe(true);
         expect(o.isOpen(a.x, a.z), `${a.id} open`).toBe(true);
       }
     }

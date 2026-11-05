@@ -31,14 +31,18 @@ const inBox = (b: Box, x: number, z: number) => x >= b.x0 && x < b.x1 && z >= b.
 
 const PHASE_D = { 'story.gate.a2': true, 'story.d03.complete': true };
 const SUMMIT_FLAGS = Object.fromEntries((SUMMIT_OPEN_WHEN.all ?? []).map((k) => [k, true]));
+// Phase F (K16 PR 2) retired the Dragonspine hold: a Phase E save (the gate alone) now opens what Phase F opens, and an old
+// save that still carries the retired flag reads the same.
 const STATES = {
   phaseE: { ...PHASE_D, 'story.gate.a3': true },
-  phaseF: { ...PHASE_D, 'story.gate.a3': true, 'story.phase.dragonspineOpen': true },
-  actComplete: { ...PHASE_D, 'story.gate.a3': true, 'story.phase.dragonspineOpen': true, ...SUMMIT_FLAGS, 'story.gate.a4': true },
+  phaseF: { ...PHASE_D, 'story.gate.a3': true },
+  oldHoldFlag: { ...PHASE_D, 'story.gate.a3': true, 'story.phase.dragonspineOpen': true },
+  actComplete: { ...PHASE_D, 'story.gate.a3': true, ...SUMMIT_FLAGS, 'story.gate.a4': true },
 } as const;
 type StateName = keyof typeof STATES;
 const OPEN: Record<StateName, { boxes: Box[]; spine: boolean; summit: boolean }> = {
-  phaseE: { boxes: [BOX.brightwater, BOX.harrowmark, BOX.cinderreach, BOX.oldsmoke, BOX.greyfen], spine: false, summit: false },
+  phaseE: { boxes: [BOX.brightwater, BOX.harrowmark, BOX.cinderreach, BOX.oldsmoke, BOX.greyfen, BOX.dragonspine], spine: true, summit: false },
+  oldHoldFlag: { boxes: [BOX.brightwater, BOX.harrowmark, BOX.cinderreach, BOX.oldsmoke, BOX.greyfen, BOX.dragonspine], spine: true, summit: false },
   phaseF: { boxes: [BOX.brightwater, BOX.harrowmark, BOX.cinderreach, BOX.oldsmoke, BOX.greyfen, BOX.dragonspine], spine: true, summit: false },
   actComplete: { boxes: [BOX.brightwater, BOX.harrowmark, BOX.cinderreach, BOX.oldsmoke, BOX.greyfen, BOX.dragonspine], spine: true, summit: true },
 };
@@ -162,7 +166,7 @@ describe('Act 3 containment: holds and regions', () => {
       expect(c.isOpen(19000, 2500)).toBe(true); // Cinderreach
     }
     expect(REGION_INFO.oldsmoke.openWhen).toEqual({ all: ['story.d03.complete'] });
-    expect(PHASE_HOLDS).toEqual({ dragonspine: ['story.phase.dragonspineOpen'] });
+    expect(PHASE_HOLDS).toEqual({});
     for (const id of REGION_IDS) if (id !== 'dragonspine') expect(JSON.stringify(REGION_INFO[id].openWhen)).not.toContain('dragonspineOpen');
   });
 
@@ -214,13 +218,14 @@ describe('Act 3 corridors: the 80 m rule', () => {
     }
   });
 
-  it('the Fen Road opens with Act 3 and the Spine Road with the Dragonspine hold', () => {
+  it('the Fen Road and the Spine Road both open with Act 3 (the Dragonspine hold is retired)', () => {
     const fen = (f: Record<string, boolean>) => containment(f).isOpen(6530, 6600);
     expect(fen(PHASE_D)).toBe(false);
     expect(fen(STATES.phaseE)).toBe(true);
     const spine = (f: Record<string, boolean>) => containment(f).isOpen(8200, 12700);
-    expect(spine(STATES.phaseE)).toBe(false);
-    expect(spine(STATES.phaseF)).toBe(true);
+    expect(spine(PHASE_D)).toBe(false);
+    expect(spine(STATES.phaseE)).toBe(true);
+    expect(spine(STATES.oldHoldFlag)).toBe(true);
   });
 });
 
@@ -270,7 +275,7 @@ describe('Act 3 fog faces (rules only; K1 places and registers them)', () => {
 
   it('conditions: the Spine Road face opens with the Dragonspine, the summit face with the summit, the Waste faces never', () => {
     const open = (id: Parameters<typeof act3FogFace>[0], f: Record<string, boolean>) => flagConditionHolds(act3FogFace(id).openWhen, stateOf(f));
-    expect([STATES.phaseE, STATES.phaseF].map((f) => open('fog.spine-road', f))).toEqual([false, true]);
+    expect([PHASE_D, STATES.phaseE, STATES.oldHoldFlag].map((f) => open('fog.spine-road', f))).toEqual([false, true, true]);
     expect([STATES.phaseF, STATES.actComplete].map((f) => open('fog.summit', f))).toEqual([false, true]);
     for (const f of Object.values(STATES)) {
       expect(open('fog.fen-waste', f)).toBe(false);

@@ -37,10 +37,10 @@ describe('Act 3 region chips', () => {
     expect(byId.dragonspine).toBe('Unknown lands');
   });
 
-  it('the gate names the Greyfen; the Dragonspine waits for its phase hold, then both are named', () => {
+  it('the gate names the Greyfen and the Dragonspine (Phase F retired the hold); an old save with the hold flag reads the same', () => {
     const gate = Object.fromEntries(names(openFor({ 'story.gate.a3': true })));
     expect(gate.greyfen).toBe('The Greyfen');
-    expect(gate.dragonspine).toBe('Unknown lands');
+    expect(gate.dragonspine).toBe('The Dragonspine');
     const both = Object.fromEntries(names(openFor({ 'story.gate.a3': true, 'story.phase.dragonspineOpen': true })));
     expect(both.greyfen).toBe('The Greyfen');
     expect(both.dragonspine).toBe('The Dragonspine');

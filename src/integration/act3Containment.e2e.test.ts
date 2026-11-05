@@ -1,7 +1,7 @@
 /**
  * Containment under the Act 3 flag states, read from the committed `?act3=` fixtures on the real save plugin (K16, Phase
- * E): the Greyfen and the Fen Road open on `story.gate.a3`; the Dragonspine, the Spine Road and their faces held shut by
- * `story.phase.dragonspineOpen` through the whole Greyfen block, D05 included; the summit hole shut until its condition;
+ * E, and Phase F since K16 PR 2 retired the Dragonspine hold): the Greyfen, the Fen Road, the Dragonspine and the Spine
+ * Road open on `story.gate.a3` (a Phase E save carries over); the summit hole shut until its condition;
  * the later acts' land never open. A player pushed back while gliding lands in the open area. The grid sweep per flag
  * state is region/containment.test.ts.
  */
@@ -46,34 +46,44 @@ async function boot(order: Act3Order, id: string) {
   return { h, c: h.ctx.services.require('containment'), s: h.ctx.state };
 }
 
-describe('Act 3 containment on the fixtures (Phase E)', () => {
+describe('Act 3 containment on the fixtures (Phase F: the Dragonspine hold retired)', () => {
+  // A Phase E save (the Greyfen block, D05 included, written before the hold was retired) carries into Phase F: the
+  // Dragonspine, the Spine Road and the lodge open, M28 is offered, the summit hole stays shut, no later land opens.
   for (const id of ['m23', 'd05'] as const) {
-    it(`greyfen ${id}: the Greyfen and the Fen Road open; the Dragonspine, the Spine Road and the summit held; no later land`, async () => {
+    it(`greyfen ${id} (a Phase E save): the Greyfen, the Fen Road, the Dragonspine and the Spine Road open; the summit held; M28 offered`, async () => {
       const { c, s } = await boot('greyfen', id);
-      expect(c.openRegions()).toEqual(['brightwater', 'harrowmark', 'cinderreach', 'oldsmoke', 'greyfen']);
+      expect(c.openRegions()).toEqual(['brightwater', 'harrowmark', 'cinderreach', 'oldsmoke', 'greyfen', 'dragonspine']);
       expect(c.isOpen(REEDGATE.x, REEDGATE.z)).toBe(true);
       for (const [x, z] of FEN_ROAD_POINTS) expect(c.isOpen(x, z), `fen road (${x}, ${z})`).toBe(true);
-      const spine = mid(SPINE_ROAD_POINTS);
-      expect(c.isOpen(spine.x, spine.z), 'spine road').toBe(false);
-      expect(c.isOpen(LODGE.x, LODGE.z)).toBe(false);
+      for (const [x, z] of SPINE_ROAD_POINTS) expect(c.isOpen(x, z), `spine road (${x}, ${z})`).toBe(true);
+      expect(c.isOpen(LODGE.x, LODGE.z)).toBe(true);
       expect(c.isOpen(HEARTH.x, HEARTH.z)).toBe(false);
       expect(c.isOpen(CALDERA.x, CALDERA.z)).toBe(false);
       expect(c.isOpen(WASTE.x, WASTE.z)).toBe(false);
-      expect(fogOpenById('fog.greyfen', s)).toBe(true);
-      for (const f of ['fog.dragonspine', 'fog.spine-road', 'fog.summit']) expect(fogOpenById(f, s), f).toBe(false);
+      for (const f of ['fog.greyfen', 'fog.dragonspine', 'fog.spine-road']) expect(fogOpenById(f, s), f).toBe(true);
+      expect(fogOpenById('fog.summit', s)).toBe(false);
       expect(s.getFlag('story.phase.dragonspineOpen')).toBeUndefined();
+      const quests = h!.ctx.services.require('quests');
+      expect(quests.state('m28')).toBe('inactive');
+      expect(quests.start('m28'), 'M28 is offered on the Act 3 gate alone').toBe(true);
     }, 60_000);
   }
 
-  it('greyfen d05: finishing D05 live leaves the Dragonspine held (Phase E ends at the peaks)', async () => {
-    const { c, s } = await boot('greyfen', 'd05');
-    s.setFlag('story.d05.complete', true);
-    await h!.runAsync(5);
-    expect(c.isOpen(LODGE.x, LODGE.z)).toBe(false);
-    expect(fogOpenById('fog.dragonspine', s)).toBe(false);
+  it('an old save still carrying the retired story.phase.dragonspineOpen loads silently, with the Dragonspine open', async () => {
+    const save = JSON.parse(JSON.stringify(await readAct3Fixture('greyfen', 'd05'))) as { entries: Record<string, { data: { flags: Record<string, unknown> } }> };
+    save.entries['world-state'].data.flags['story.phase.dragonspineOpen'] = true;
+    h = await bootFromSave(save, { models: false, virtualClock: true });
+    expect(h.loaded).toBe(true);
+    expect(h.statuses.filter((x) => x.state !== 'ok')).toEqual([]);
+    const said = warn.mock.calls.map((c: unknown[]) => String(c[0]));
+    expect(said.filter((m: string) => /dragonspineOpen|Persist:/.test(m))).toEqual([]);
+    const c = h.ctx.services.require('containment');
+    expect(c.openRegions()).toContain('dragonspine');
+    expect(c.isOpen(LODGE.x, LODGE.z)).toBe(true);
+    expect(c.isOpen(HEARTH.x, HEARTH.z)).toBe(false);
   }, 60_000);
 
-  it('greyfen m28 (the jump opened the hold): the Dragonspine and the Spine Road open, the summit hole still shut', async () => {
+  it('greyfen m28: the Dragonspine and the Spine Road open, the summit hole still shut', async () => {
     const { c, s } = await boot('greyfen', 'm28');
     expect(c.openRegions()).toContain('dragonspine');
     expect(c.isOpen(LODGE.x, LODGE.z)).toBe(true);
@@ -90,20 +100,20 @@ describe('Act 3 containment on the fixtures (Phase E)', () => {
     expect(c.isOpen(CALDERA.x, CALDERA.z)).toBe(false);
   }, 60_000);
 
-  // The glide's own end on the push (`glide.ended { reason: 'contained' }`) is K7 PR 2's, asserted once that branch is stacked.
-  it('a player gliding into the held Dragonspine is pushed back into the open area, once, with containment.pushed', async () => {
-    const { c } = await boot('greyfen', 'd05');
+  // The containment grid with a glider: the summit hole is the shut land a Phase F player can glide at.
+  it('a player gliding into the shut summit is pushed back into the open area, with containment.pushed from the summit point', async () => {
+    // The glide may land or end on the push (K7's own rule, tested there); the grid's job is the open ground and the event.
+    const { c } = await boot('greyfen', 'm28');
     const mm = h!.ctx.services.require('movementMode');
-    mm.set('glide', { position: { x: REEDGATE.x, y: 10, z: REEDGATE.z }, yaw: 0 });
+    mm.set('glide', { position: { x: LODGE.x, y: 400, z: LODGE.z }, yaw: 0 });
     const pushed = h!.of('containment.pushed').length;
-    h!.ctx.player.teleport({ x: LODGE.x, y: 400, z: LODGE.z });
+    h!.ctx.player.teleport({ x: HEARTH.x, y: 900, z: HEARTH.z });
     await h!.runAsync(5);
     const feet = h!.ctx.player.feet;
     expect(c.isOpen(feet.x, feet.z), JSON.stringify(feet)).toBe(true);
     const events = h!.of('containment.pushed').slice(pushed);
-    expect(mm.current).toBe('glide');
-    expect(events).toHaveLength(1);
-    expect(Math.hypot(events[0].from.x - LODGE.x, events[0].from.z - LODGE.z)).toBeLessThan(1);
+    expect(events.length).toBeGreaterThanOrEqual(1);
+    expect(Math.hypot(events[0].from.x - HEARTH.x, events[0].from.z - HEARTH.z)).toBeLessThan(1);
   }, 60_000);
 
   // November fix: a jump into the Dragonspine lit no Dragonspine stone, so the first death respawned the player about 7 km away.

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ACT_ENDINGS, actEnding, directorDef } from './actEndings';
-import { ActEndingDirector, type ActEndingPorts } from './actEndingDirector';
+import { ActEndingDirector, MOVE_RETRY_TICKS, MOVE_TRIES, type ActEndingPorts } from './actEndingDirector';
 import { HUD_STRINGS_EN } from '../hud/strings.en';
 
 function make(act: number, moveTo?: ActEndingPorts['moveTo']) {
@@ -77,7 +77,7 @@ describe('camp anchor', () => {
     t.d.tick();
     expect(t.startCamp).toHaveBeenCalledTimes(1);
   });
-  it('on false, a throw, a rejection or a missing port: warns once and starts the camp where the player stands', async () => {
+  it('on false, a throw, a rejection or a missing port: tried MOVE_TRIES times, then warns once and starts the camp where the player stands', async () => {
     const cases: (ActEndingPorts['moveTo'] | undefined)[] = [
       () => false,
       () => {
@@ -88,11 +88,14 @@ describe('camp anchor', () => {
     ];
     for (const moveTo of cases) {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-      const t = make(3, moveTo);
-      t.d.tick();
-      await flush();
-      t.d.tick();
+      const spy = moveTo ? vi.fn(moveTo) : undefined;
+      const t = make(3, spy);
+      for (let i = 0; i < MOVE_TRIES * (MOVE_RETRY_TICKS + 2) && t.startCamp.mock.calls.length === 0; i++) {
+        t.d.tick();
+        await flush();
+      }
       expect(t.startCamp).toHaveBeenCalledTimes(1);
+      if (spy) expect(spy).toHaveBeenCalledTimes(MOVE_TRIES);
       expect(warn).toHaveBeenCalledTimes(1);
       warn.mockRestore();
     }
@@ -110,5 +113,37 @@ describe('camp anchor', () => {
     expect(t.startCamp).not.toHaveBeenCalled();
     t.d.tick();
     expect(moveTo).toHaveBeenCalledTimes(2);
+  });
+  it('a move started before a load that answers after the new move began never finishes the new one', async () => {
+    const resolvers: Array<(v: boolean) => void> = [];
+    const moveTo = vi.fn(() => new Promise<boolean>((r) => resolvers.push(r)));
+    const t = make(3, moveTo);
+    t.d.tick();
+    t.flags['codex.actEnding.a3.seen'] = true;
+    t.d.onLoaded();
+    t.d.tick(); // the second move begins
+    expect(moveTo).toHaveBeenCalledTimes(2);
+    resolvers[0]!(true); // the first, stale answer
+    await flush();
+    t.d.tick();
+    expect(t.startCamp).not.toHaveBeenCalled();
+    resolvers[1]!(true);
+    await flush();
+    t.d.tick();
+    expect(t.startCamp).toHaveBeenCalledTimes(1);
+  });
+  it('a refused move (a teleport still fading) waits and is tried again; the camp starts after the move that lands', async () => {
+    const answers = [false, true];
+    const moveTo = vi.fn(() => answers.shift() ?? true);
+    const t = make(3, moveTo);
+    t.d.tick();
+    expect(moveTo).toHaveBeenCalledTimes(1);
+    for (let i = 0; i < MOVE_RETRY_TICKS; i++) t.d.tick();
+    expect(moveTo).toHaveBeenCalledTimes(1);
+    expect(t.startCamp).not.toHaveBeenCalled();
+    t.d.tick();
+    expect(moveTo).toHaveBeenCalledTimes(2);
+    t.d.tick();
+    expect(t.startCamp).toHaveBeenCalledTimes(1);
   });
 });

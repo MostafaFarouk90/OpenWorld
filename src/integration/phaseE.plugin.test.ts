@@ -43,7 +43,8 @@ describe('the "peaks are next" card', () => {
     expect(ctx.state.getBool(PEAKS_CARD_SEEN_FLAG)).toBe(true);
     const text = textOf(card.element);
     expect(text).toContain(PHASE_E_STRINGS_EN['hud.phaseE.peaks.title']);
-    expect(text).toContain(PHASE_E_STRINGS_EN['hud.phaseE.peaks.line.held']);
+    expect(text).toContain(PHASE_E_STRINGS_EN['hud.phaseE.peaks.line.open']);
+    expect(text).not.toContain('later update');
     card.dismiss();
     expect(card.visible).toBe(false);
     expect(card.active).toBe(false);
@@ -67,7 +68,7 @@ describe('the "peaks are next" card', () => {
     expect(ctx.state.getBool(PEAKS_CARD_SEEN_FLAG)).toBe(true);
   }, PLUGIN_TEST_TIMEOUT);
 
-  it('drops the "later update" clause once the Dragonspine is open', async () => {
+  it('an old save with the retired hold flag shows the same open line', async () => {
     const { ctx, card } = await boot();
     ctx.state.setFlag(DRAGONSPINE_OPEN_FLAG, true);
     ctx.state.setFlag(PEAKS_CARD_TRIGGER_FLAG, true);

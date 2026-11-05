@@ -53,8 +53,9 @@ describe('the lower Dragonspine quests as data', () => {
       const need = [...questRefs(q.startWhen)].sort();
       expect(need, q.id).toEqual([...ACT3_DIRECT[q.id]!].sort());
     }
-    // M28 opens on the Act 3 gate and the Dragonspine phase flag (Phase E holds the region), and nothing else of this block does
-    expect(DEFS.find((q) => q.id === 'm28')!.startWhen).toEqual({ all: [{ flag: 'story.gate.a3', equals: true }, { flag: DRAGONSPINE_OPEN_FLAG, equals: true }] });
+    // M28 opens on the Act 3 gate alone (Phase F, K16 PR 2, retired the Dragonspine hold), and nothing else of this block does
+    expect(DEFS.find((q) => q.id === 'm28')!.startWhen).toEqual({ all: [{ flag: 'story.gate.a3', equals: true }] });
+    expect(JSON.stringify(DEFS.find((q) => q.id === 'm28')!.startWhen)).not.toContain(DRAGONSPINE_OPEN_FLAG);
     for (const q of DEFS.filter((x) => x.id !== 'm28')) expect(JSON.stringify(q.startWhen), q.id).not.toContain('story.gate.a3');
     // the side quests wait for their main-line parent, never for a sibling side quest
     for (const [side, main] of [['r15', 'm28'], ['r18', 'm28'], ['r16', 'm29'], ['r17', 'm30']] as const) expect([...questRefs(DEFS.find((q) => q.id === side)!.startWhen)]).toEqual([main]);

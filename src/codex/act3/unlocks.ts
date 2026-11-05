@@ -7,7 +7,7 @@ import { ACT3_CODEX_IDS as ID } from './entries';
 /** The Greyfen opens with Act 3 (K0's `openWhen`); the region's own discover flag is set on the first step in (region.plugin). */
 export const GREYFEN_GATE_FLAG = 'story.gate.a3';
 export const GREYFEN_DISCOVERED_FLAG = 'place.greyfen.discovered';
-/** Phase F opens the Dragonspine (`story.phase.dragonspineOpen`, K16 and the act3 jump); the region's discover flag is set on the first step in. */
+/** Phase E's Dragonspine hold, retired in Phase F (K16 PR 2): nothing reads it for the entry now; the region's discover flag is set on the first step in. */
 export const DRAGONSPINE_OPEN_FLAG = 'story.phase.dragonspineOpen';
 export const DRAGONSPINE_DISCOVERED_FLAG = 'place.dragonspine.discovered';
 /** The summit area (src/region/areas.ts); entering it unlocks the how-to. */
@@ -26,7 +26,8 @@ export const blockLevelFlagOf = (block: string): string => `warmth.block.${block
  * once the act itself has opened.
  */
 export const ACT3_ALL_FLAG_UNLOCKS: readonly { all: readonly string[]; entry: string }[] = [
-  { all: [GREYFEN_GATE_FLAG, DRAGONSPINE_OPEN_FLAG], entry: ID.dragonspine },
+  // Phase F (K16 PR 2) retired the hold: the Dragonspine entry opens with the act.
+  { all: [GREYFEN_GATE_FLAG], entry: ID.dragonspine },
 ];
 
 /** A flag that is set (truthy, or a number above zero) unlocks the entry. */

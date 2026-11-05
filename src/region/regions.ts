@@ -44,12 +44,11 @@ export interface RegionDef {
 /**
  * Phase holds, per region: flags that nothing writes, held shut until a milestone retires them. Phase C held Oldsmoke
  * shut with `story.phase.oldsmokeOpen`; the Phase D PR retired it, so Oldsmoke opens on `story.d03.complete` alone.
- * v0.7: Act 3's Phase E holds the Dragonspine (and the Spine Road) with `story.phase.dragonspineOpen`; Phase F's PR
- * empties that entry. A region's hold is spread into its own `openWhen` only, so a hold never touches another region.
+ * v0.7: Act 3's Phase E held the Dragonspine (and the Spine Road) with `story.phase.dragonspineOpen`; Phase F's PR (K16 PR 2)
+ * retired it, so the Dragonspine opens on `story.gate.a3` alone. A region's hold is spread into its own `openWhen` only, so a
+ * hold never touches another region.
  */
-export const PHASE_HOLDS: Readonly<Partial<Record<RegionId, readonly string[]>>> = {
-  dragonspine: ['story.phase.dragonspineOpen'],
-};
+export const PHASE_HOLDS: Readonly<Partial<Record<RegionId, readonly string[]>>> = {};
 
 /** The hold flags of one region (empty when it has none). */
 export function phaseHolds(id: RegionId): readonly string[] {

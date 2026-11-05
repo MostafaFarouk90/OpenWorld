@@ -68,9 +68,7 @@ describe('the lower Dragonspine director plugin on a reduced real manifest', () 
     const quests = t.ctx.services.get('quests')!;
     expect(quests.start('m28')).toBe(false);
     t.ctx.state.setFlag('story.gate.a3', true);
-    // the phase hold: the Act 3 gate alone does not open the Dragonspine's first quest
-    expect(quests.start('m28')).toBe(false);
-    t.ctx.state.setFlag(DRAGONSPINE_OPEN_FLAG, true);
+    // Phase F (K16 PR 2) retired the hold: the Act 3 gate alone opens the Dragonspine's first quest
     expect(quests.start('m28')).toBe(true);
     t.run(4);
     expect(t.ctx.state.getBool('story.m28.started')).toBe(true);
