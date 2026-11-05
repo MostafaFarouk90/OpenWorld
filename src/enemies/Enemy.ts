@@ -1321,7 +1321,9 @@ export class Enemy {
         if (!hit || hit.collider === host.player.collider) return null;
         return { distance: hit.distance, point: hit.point };
       },
-      indoors: () => !!this.env.nav() || !!host.services.get('interiors')?.current,
+      // A nav grid under the feet, not the nav service's presence: the service is there in every real game, which grounded every
+      // flyer in the open (Skarl's chained drake never dived, so D06's chain strike never opened; act3-playthrough H3).
+      indoors: () => !!this.env.nav()?.hasGrid(this.mover.feet) || !!host.services.get('interiors')?.current,
       playOneShot: (clip, seconds) => this.oneShot(clip, seconds),
       move: (velocity, dt) => {
         if (Math.hypot(velocity.x, velocity.z) > 0.05) this.yaw = turnToward(this.yaw, Math.atan2(-velocity.x, -velocity.z), AI.turnRate * dt);

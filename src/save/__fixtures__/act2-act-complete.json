@@ -2,7 +2,7 @@
   "entries": {
     "burn": {
       "data": {
-        "burn": 54.6767,
+        "burn": 54.67,
         "scars": 0
       },
       "version": 1
@@ -45,9 +45,13 @@
           "hunter-spearman",
           "lore.place.scorchhold",
           "thrandil-redmane",
+          "howto.shard-gems",
           "lore.place.deepgate",
           "lore.pickett",
-          "lore.nursery"
+          "lore.nursery",
+          "lore.place.greyfen",
+          "howto.block-levels",
+          "lore.place.dragonspine"
         ]
       },
       "version": 1
@@ -565,7 +569,7 @@
           "r01.scarecrows#3",
           "r01.scarecrows#4"
         ],
-        "warmthTier": 2
+        "warmthTier": 3
       },
       "version": 1
     },
@@ -710,6 +714,8 @@
           "pup-companion": 1,
           "redmanes-lance": 1,
           "sewer-master-key": 1,
+          "shard-gem.bulwark": 2,
+          "shard-gem.oathfire": 2,
           "slag-core": 1,
           "squires-arming-sword": 1,
           "tobbs-lucky-whistle": 1,
@@ -721,7 +727,7 @@
         },
         "unknown": {}
       },
-      "version": 2
+      "version": 3
     },
     "map": {
       "data": {
@@ -1088,7 +1094,8 @@
               "letters": 3,
               "loyalists": 4,
               "report": 1,
-              "stealth": 1
+              "stealth": 1,
+              "withdraw": 1
             },
             "state": "completed"
           },
@@ -1316,12 +1323,25 @@
       "data": null,
       "version": 1
     },
+    "spells.surge": {
+      "data": {
+        "charges": 0
+      },
+      "version": 1
+    },
     "stealth": {
       "data": {
         "checkpoints": {
           "m09.counting-house": "ch.office",
           "m15.camp": "camp.inside"
         }
+      },
+      "version": 1
+    },
+    "traversal.carry": {
+      "data": {
+        "progress": {},
+        "sleds": {}
       },
       "version": 1
     },
@@ -1360,30 +1380,42 @@
       "data": {
         "buyBack": {
           "aldous": [],
+          "ansgar": [],
           "ashdown": [],
+          "dudda": [],
           "dunstan": [],
+          "eadgyth": [],
           "edda": [],
           "gerta": [],
+          "gytha": [],
           "ketta": [],
+          "leofa": [],
           "maud": [],
           "merrin": [],
           "osgar": [],
           "pike": [],
           "slagg": [],
+          "thorgar": [],
           "wenna": [],
           "wynn": [],
-          "wystan": []
+          "wystan": [],
+          "ysmeryth": []
         },
         "stock": {
           "aldous": {
             "deepcore-pick": 1,
             "grisel-oath-sash": 1
           },
+          "ansgar": {},
           "ashdown": {},
+          "dudda": {},
           "dunstan": {},
+          "eadgyth": {},
           "edda": {},
           "gerta": {},
+          "gytha": {},
           "ketta": {},
+          "leofa": {},
           "maud": {},
           "merrin": {
             "ledger-lens": 1,
@@ -1394,6 +1426,9 @@
           "osgar": {},
           "pike": {},
           "slagg": {},
+          "thorgar": {
+            "shed-wyrm-scale": 9
+          },
           "wenna": {},
           "wynn": {},
           "wystan": {
@@ -1401,6 +1436,10 @@
             "marshals-kite-shield": 1,
             "marshals-longsword": 1,
             "marshals-mantle": 1
+          },
+          "ysmeryth": {
+            "ember-mothers-scale": 1,
+            "keepers-scale-brooch": 1
           }
         }
       },
@@ -1422,9 +1461,10 @@
           "cinder-road",
           "hushed-anvil",
           "kettlewick",
-          "quenchstone"
+          "quenchstone",
+          "weeping-bellows"
         ],
-        "respawn": "hushed-anvil"
+        "respawn": "weeping-bellows"
       },
       "version": 1
     },
@@ -1467,6 +1507,10 @@
           "enemies.mercy.calm": true,
           "enemies.mercy.release": true,
           "enemies.mercy.spare": true,
+          "gear.shardgem.granted.ashen-prior": true,
+          "gear.shardgem.granted.gaffer-grimtooth": true,
+          "gear.shardgem.granted.the-slagmaw": true,
+          "gear.shardgem.granted.thrandil-redmane": true,
           "place.brightwater.discovered": true,
           "place.cinderreach.discovered": true,
           "place.harrowmark.discovered": true,
@@ -1495,6 +1539,7 @@
           "quest.t03.eddaGift": true,
           "shrine.hushed-anvil.lit": true,
           "shrine.quenchstone.lit": true,
+          "shrine.weeping-bellows.lit": true,
           "story.a2.campSeen": true,
           "story.a2.wennaAtCamp": true,
           "story.d01.antechamberClear": true,
@@ -1672,11 +1717,15 @@
           "story.r09.started": true,
           "story.r10.complete": true,
           "story.r10.started": true,
+          "story.r10duel.busy": false,
           "story.r11.axeTaken": true,
           "story.r11.choice": "slain",
           "story.r11.complete": true,
           "story.r11.denSeen": true,
           "story.r11.started": true,
+          "story.r15.haulOut": false,
+          "story.side.boardOpen": true,
+          "story.side.kettlewickOpen": true,
           "tutorial.complete": true,
           "tutorial.heartshard-awakened": true,
           "tutorial.skipped": true,
@@ -1691,6 +1740,9 @@
           "waystone.hushed-anvil.lit": true,
           "waystone.kettlewick.lit": true,
           "waystone.quenchstone.lit": true,
+          "waystone.weeping-bellows.lit": true,
+          "world.bellows.shortcutOpen": true,
+          "world.bellows.solved": true,
           "world.brightwater.barley": "saved",
           "world.brightwater.tollPost": true,
           "world.cinderreach.cinderford.cleansed": true,

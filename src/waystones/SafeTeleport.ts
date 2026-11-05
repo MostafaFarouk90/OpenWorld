@@ -111,7 +111,10 @@ export class SafeTeleport {
         break;
       case 'stuck':
         if (this.groundOk()) this.finishStuck();
-        else this.ticksSincePlace++;
+        else {
+          this.ticksSincePlace++;
+          if (this.clock >= WAYSTONE_TUNING.stuckRescueSeconds) this.releaseAtTarget(job);
+        }
         break;
       default:
         break;
@@ -157,10 +160,22 @@ export class SafeTeleport {
       this.placeNow(job.target, job.yaw);
       return;
     }
-    // Nothing worked: stay frozen and keep checking until terrain shows up.
+    // Nothing worked: stay frozen and keep checking until terrain shows up, for at most `stuckRescueSeconds`.
     this.phase = 'stuck';
+    this.clock = 0;
     job.resolve({ ok: false, reason: 'terrain-not-ready' });
     this.job = { ...job, resolve: () => undefined };
+  }
+
+  /**
+   * Stuck too long: let the player go where the caller sent them (a save's position, a respawn point, the travel target),
+   * never below the heightfield, with the fade lifted. The ground there was never confirmed, so a missing collider drops them
+   * onto the terrain or the kill plane's respawn; that beats a black screen and a frozen player. Interiors keep their height.
+   */
+  private releaseAtTarget(job: Job): void {
+    const t = job.target;
+    this.ports.place({ x: t.x, y: Math.max(t.y, this.ports.heightAt(t.x, t.z) + WAYSTONE_TUNING.retryLift), z: t.z }, job.yaw);
+    this.finishStuck();
   }
 
   private complete(job: Job): void {

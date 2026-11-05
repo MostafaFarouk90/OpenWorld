@@ -9,6 +9,7 @@ import type { ChapterHarness } from './chapterHarness';
 import { ensure } from './phaseA';
 import { ACT2_QUEST_DEFS } from '../quests/content/act2';
 import { ACT2_PREREQS } from '../quests/actJump';
+import { BELLOWS } from '../shrine/weepingBellows.tuning';
 
 const quests = (h: ChapterHarness) => h.ctx.services.require('quests');
 
@@ -27,9 +28,23 @@ export function finish(h: ChapterHarness, id: string): void {
   const def = ACT2_QUEST_DEFS.find((d) => d.id === id);
   ensure(def, `${id} has a def`);
   begin(h, id);
+  if (id === 'm18') lightBellows(h);
   for (const o of def!.objectives) if (!qs.objectiveDone(id, o.id)) qs.completeObjective(id, o.id);
   if (qs.state(id) !== 'completed') ensure(qs.complete(id), `${id} completed`);
   h.run(2);
+}
+
+/**
+ * What A9's solve leaves behind (weepingBellows.plugin.ts `onSolved`): the solved and shortcut flags, then the stone rekindled, which
+ * lights the shrine through its binding. M18 only credits these, so completing its objectives alone left the Bellows cold and every
+ * save after it one Warmth Tier light (act3-playthrough M1).
+ */
+export function lightBellows(h: ChapterHarness): void {
+  h.ctx.state.setFlag(BELLOWS.solvedFlag, true);
+  h.ctx.state.setFlag(BELLOWS.shortcutFlag, true);
+  h.ctx.services.require('waystones').rekindle(BELLOWS.waystoneId, 'script');
+  h.run(2);
+  ensure(h.ctx.state.getBool(`shrine.${BELLOWS.shrineId}.lit`), 'the Bellows shrine is lit');
 }
 
 /** Completes, in order, every quest in the row of `last` that is not done yet (a Phase C complete save has the earlier ones). */
