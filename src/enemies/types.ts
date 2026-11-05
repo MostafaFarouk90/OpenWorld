@@ -308,6 +308,11 @@ export interface SpawnerDef {
    */
   area?: AreaId;
   /**
+   * v0.8 (Act 4, Q1): a first-arrival group (M35's ambush and checkpoints, M42's first group) caps at P + 2 instead of
+   * the Act 4 P + 3. Read only for Act 4 spawns.
+   */
+  firstArrival?: boolean;
+  /**
    * auto: at setup and after `rest`; manual: the enemies service; quest: on `quest.started` with this id,
    * and with `flag` only while that quest is active and the flag is true (checked on start, flag change and save load).
    * gate: like auto, but present only while `flag` is on (when given) and `until` is off (when given); re-derived

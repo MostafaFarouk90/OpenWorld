@@ -26,6 +26,7 @@ export function spawnersFor(def: WaveSetDef): SpawnerDef[] {
         count: row.count,
         anchor: def.lanes[row.lane],
         band: def.band,
+        ...(def.area ? { area: def.area } : {}),
         activation: 'manual',
         ephemeral: true,
         respawn: 'never',

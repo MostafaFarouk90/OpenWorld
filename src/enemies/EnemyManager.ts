@@ -148,6 +148,7 @@ export class EnemyManager {
       gates: host.gates,
       rng: this.rng,
       playerLevel: () => host.services.get('progression')?.level,
+      flags: { getFlag: (k) => host.state.getBool(k, false) },
     });
     this.foes = new FoeManager({
       host,

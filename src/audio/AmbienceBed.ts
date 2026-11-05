@@ -40,8 +40,8 @@ function bedFor(regionId: string | null): BedId | null {
   if (regionId === null || !Object.prototype.hasOwnProperty.call(REGION_INFO, regionId)) return null;
   return REGION_INFO[regionId as keyof typeof REGION_INFO].bed;
 }
-const LOOP_SECONDS: Readonly<Record<BedId, number>> = { brightwater: 24, harrowmark: 28, underways: 26, cinderreach: 25, oldsmoke: 27, greyfen: 29, dragonspine: 31 };
-const SEEDS: Readonly<Record<BedId, number>> = { brightwater: 0x1b2c3d, harrowmark: 0x4e5f60, underways: 0x717283, cinderreach: 0x2d3e4f, oldsmoke: 0x5a6b7c, greyfen: 0x6c7d8e, dragonspine: 0x3f4a5b };
+const LOOP_SECONDS: Readonly<Record<BedId, number>> = { brightwater: 24, harrowmark: 28, underways: 26, cinderreach: 25, oldsmoke: 27, greyfen: 29, dragonspine: 31, 'ashen-waste': 30 };
+const SEEDS: Readonly<Record<BedId, number>> = { brightwater: 0x1b2c3d, harrowmark: 0x4e5f60, underways: 0x717283, cinderreach: 0x2d3e4f, oldsmoke: 0x5a6b7c, greyfen: 0x6c7d8e, dragonspine: 0x3f4a5b, 'ashen-waste': 0x7a5e41 };
 
 function rng(seed: number): () => number {
   let s = seed >>> 0;
@@ -169,6 +169,8 @@ export function makeBedSamples(id: BedId, sampleRate: number): Float32Array<Arra
     fillAct2Bed(id, x, n, sr, SEEDS[id]);
   } else if (id === 'greyfen' || id === 'dragonspine') {
     fillAct3Bed(id, x, n, sr, SEEDS[id]);
+  } else if (id === 'ashen-waste') {
+    // v0.8: the Waste's bed id is reserved by L0; L8 adds its creaking glass. Until then it plays the shared wind alone.
   } else {
     // Dripping water: sparse decaying sine pings, some with a quieter echo.
     const drips = 15 + Math.floor(u() * 5);
