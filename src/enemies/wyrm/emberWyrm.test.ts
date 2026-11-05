@@ -20,10 +20,12 @@ afterEach(() => {
 
 const NEST: SpawnerDef = { id: 'nest', enemy: 'ember-wyrm', count: 1, anchor: 'a', band: { min: 10, max: 10 }, activation: 'manual', respawn: 'never', leash: false };
 
-function rig(opts: { playerZ?: number; seed?: number; indoors?: boolean } = {}) {
+function rig(opts: { playerZ?: number; seed?: number; indoors?: boolean; navGrid?: (at: { x: number; z: number }) => boolean } = {}) {
   const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: opts.playerZ ?? -10 } });
   fake.defineAnchor('a', 0, 0);
   if (opts.indoors) fake.interiors = { current: 'test-hall' };
+  // The real game always has a nav service; only a grid under the feet makes a place indoors.
+  if (opts.navGrid) { const g = opts.navGrid; fake.nav = { hasGrid: (at) => g(at), path: () => null }; }
   const m = new EnemyManager(fake.host, FakeHost.factory(gltf), { spawners: [NEST], seed: opts.seed ?? 3 });
   const tick = (seconds = DT, each?: () => boolean | void) => {
     for (let i = 0; i < Math.max(1, Math.round(seconds / DT)); i++) {
@@ -143,6 +145,28 @@ describe('Ember Wyrm in the enemy stack', () => {
     expect(enemy.warmHandOpen).toBe(false);
     t.tick(2);
     expect(enemy.state).toBe('stagger');
+  });
+
+  it('with a nav service but no grid under it (the open world in a real game) it still takes off', () => {
+    const t = rig({ navGrid: () => false });
+    const { body } = t.spawn();
+    t.tick(2);
+    expect(body.altitude).toBeGreaterThan(4);
+  });
+
+  it('on a nav grid (an interior floor) it never takes off', () => {
+    const t = rig({ navGrid: () => true });
+    const { body } = t.spawn();
+    t.tick(15, () => {
+      expect(body.altitude).toBe(0);
+    });
+  });
+
+  it('a grid elsewhere does not ground it: only the grid under its own feet counts', () => {
+    const t = rig({ navGrid: (at) => at.x > 500 });
+    const { body } = t.spawn();
+    t.tick(2);
+    expect(body.altitude).toBeGreaterThan(4);
   });
 
   it('indoors it never takes off', () => {

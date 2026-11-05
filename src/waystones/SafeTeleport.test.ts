@@ -106,6 +106,68 @@ describe('SafeTeleport', () => {
     expect(releases()).toBe(freezes());
   });
 
+  describe('the stuck release (act3-playthrough H2)', () => {
+    const lastPlace = (log: string[]) => log.filter((l) => l.startsWith('place')).at(-1);
+    const balanced = (log: string[]) => log.filter((l) => l === 'release').length === log.filter((l) => l === 'freeze').length;
+
+    it('stuck for 6 s, the player is released at the target with the fade lifted', async () => {
+      const { tp, state, log } = setup();
+      state.grounded = false;
+      const p = tp.start({ x: 1, y: 10, z: 0 }, 0);
+      run(tp, 4.7); // fade 0.3 + settle 2 + retry 2: stuck now
+      await expect(p).resolves.toEqual({ ok: false, reason: 'terrain-not-ready' });
+      run(tp, 5.5);
+      expect(tp.active).toBe(true); // not yet: 6 s of stuck
+      run(tp, 0.6);
+      expect(tp.active).toBe(false);
+      expect(lastPlace(log)).toBe('place:1,10.05,0'); // the retry's height: never below heightAt + retryLift
+      expect(balanced(log)).toBe(true);
+      expect(log.at(-1)).toBe('fade:0');
+    });
+
+    it('a target high above the ground (an interior floor) keeps its height', () => {
+      const { tp, state, log } = setup();
+      state.grounded = false;
+      void tp.start({ x: 1, y: 160, z: 0 }, 0);
+      run(tp, 4.7 + 6.1);
+      expect(tp.active).toBe(false);
+      expect(lastPlace(log)).toBe('place:1,160.00,0');
+    });
+
+    it('with a fallback that also fails, the release is at the fallback, not the first target', () => {
+      const { tp, state, log } = setup();
+      state.grounded = false;
+      void tp.start({ x: 1, y: 10, z: 0 }, 0, { feet: { x: 9, y: 10, z: 9 }, yaw: 0 });
+      run(tp, 0.3 + 4 + 4 + 6.1);
+      expect(tp.active).toBe(false);
+      expect(lastPlace(log)?.startsWith('place:9,')).toBe(true);
+      expect(balanced(log)).toBe(true);
+    });
+
+    it('ground that arrives before the timeout still ends the stuck phase without a second placement', () => {
+      const { tp, state, log } = setup();
+      state.grounded = false;
+      void tp.start({ x: 1, y: 10, z: 0 }, 0);
+      run(tp, 4.7 + 3);
+      const places = log.filter((l) => l.startsWith('place')).length;
+      state.grounded = true;
+      run(tp, 0.1);
+      expect(tp.active).toBe(false);
+      expect(log.filter((l) => l.startsWith('place')).length).toBe(places);
+    });
+
+    it('a new start while stuck takes over at once (the old job already resolved)', async () => {
+      const { tp, state } = setup();
+      state.grounded = false;
+      void tp.start({ x: 1, y: 10, z: 0 }, 0);
+      run(tp, 5);
+      state.grounded = true;
+      const p = tp.start({ x: 3, y: 10, z: 3 }, 0);
+      run(tp, 1);
+      await expect(p).resolves.toEqual({ ok: true });
+    });
+  });
+
   it('keeps the fade black until chunks are resident, capped at 3 s', async () => {
     const { tp, state, ports } = setup();
     state.resident = false;

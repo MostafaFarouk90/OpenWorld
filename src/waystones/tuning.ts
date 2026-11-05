@@ -13,6 +13,11 @@ export const WAYSTONE_TUNING = {
   /** Render chunks may take at most this long before the fade lifts anyway. */
   revealTimeoutSeconds: 3,
   groundRayMaxDistance: 0.5,
+  /**
+   * Stuck (retry and fallback both failed) this long: release the player at the target (never below the heightfield) and lift
+   * the fade. Never a black screen and a frozen player for good.
+   */
+  stuckRescueSeconds: 6,
   retryLift: 0.05,
   fallbackSpawnAnchor: 'brightwater.player-spawn',
 } as const;
