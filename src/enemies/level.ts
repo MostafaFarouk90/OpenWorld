@@ -80,17 +80,21 @@ export function enemyLevel(
   if (isNum(ctx.lockedLevel)) {
     level = Math.round(ctx.lockedLevel) + Math.round(roll * (span ?? 0));
   } else if (ctx.block && warmth !== undefined && player !== undefined && offset !== undefined) {
-    level = blockFormula(offset, warmth, player) + Math.round(roll * (span ?? b.max - b.min));
+    level = blockFormula(offset, warmth, player, blockCapOf(ctx.block.id)) + Math.round(roll * (span ?? b.max - b.min));
   } else {
     level = b.min + Math.round(roll * (b.max - b.min));
   }
   return Math.min(LEVEL.cap, Math.max(1, Math.round(level)));
 }
 
-/** Design 5.9: L = clamp(18 + offset + 3 x (W - 3), P - 9, P + 5), before the cap. */
-function blockFormula(offset: number, warmth: number, player: number): number {
+/**
+ * Design 5.9: L = clamp(18 + offset + 3 x (W - 3), P - 9, P + 5), before the cap. A block with `capAbovePlayer` then
+ * takes `min(L, P + capAbovePlayer)` (the lower Dragonspine, see DRAGONSPINE_LOWER_CAP_ABOVE_PLAYER).
+ */
+function blockFormula(offset: number, warmth: number, player: number, capAbovePlayer: number | null = null): number {
   const raw = 18 + offset + 3 * (warmth - 3);
-  return Math.min(player + LEVEL.abovePlayer, Math.max(player - LEVEL.belowPlayer, raw));
+  const L = Math.min(player + LEVEL.abovePlayer, Math.max(player - LEVEL.belowPlayer, raw));
+  return capAbovePlayer === null ? L : Math.min(L, player + capAbovePlayer);
 }
 
 // ---- v0.7 (Act 3, contracts/CHANGES-v0.7.md items 8 and 8b) ----
@@ -108,12 +112,38 @@ export interface Act3BlockDef {
   lockQuest: string;
   /** The quests whose rewards scale (the approach block). */
   quests: readonly string[];
+  /**
+   * Optional: the base level L is never more than this many levels above the player level read when L is worked out
+   * (the preview, so the lock at the lock quest's accept). `null` or absent keeps design 5.9's P + 5 window only.
+   */
+  capAbovePlayer?: number | null;
 }
+
+/**
+ * A taste call Mostafa may veto (2026-11-05, the Act 3 playthrough's H1), the lower Dragonspine twin of Q9: the block
+ * locks at `min(design 5.9 L, P + 3)` when M28 is accepted, so a player arriving from the Greyfen under-levelled meets
+ * at most P + 3 (members still roll L to L + 2). `null` restores design 5.9's P + 5 window.
+ */
+export const DRAGONSPINE_LOWER_CAP_ABOVE_PLAYER: number | null = 3;
 
 export const ACT3_BLOCKS: Readonly<Record<Act3BlockId, Act3BlockDef>> = {
   greyfen: { offset: 0, span: 5, recommended: 18, lockQuest: 'm23', quests: ['m23', 'm24', 'm25', 'm26', 'm27', 'd05', 'r12', 'r13', 'r14'] },
-  'dragonspine-lower': { offset: 2, span: 2, recommended: 23, lockQuest: 'm28', quests: ['m28', 'm29', 'm30', 'r15', 'r16', 'r17', 'r18'] },
+  'dragonspine-lower': {
+    offset: 2,
+    span: 2,
+    recommended: 23,
+    lockQuest: 'm28',
+    quests: ['m28', 'm29', 'm30', 'r15', 'r16', 'r17', 'r18'],
+    capAbovePlayer: DRAGONSPINE_LOWER_CAP_ABOVE_PLAYER,
+  },
 };
+
+/** A block's cap above the player, or null for an unknown block, a block without one, or a non-finite or negative cap. */
+function blockCapOf(block: string): number | null {
+  if (!isAct3BlockId(block)) return null;
+  const c = ACT3_BLOCKS[block].capAbovePlayer;
+  return typeof c === 'number' && Number.isFinite(c) && c >= 0 ? Math.round(c) : null;
+}
 
 export function isAct3BlockId(v: unknown): v is Act3BlockId {
   return typeof v === 'string' && Object.prototype.hasOwnProperty.call(ACT3_BLOCKS, v);
@@ -121,7 +151,7 @@ export function isAct3BlockId(v: unknown): v is Act3BlockId {
 
 /** A block's base level L for the live Warmth Tier W and player level P (design 5.9), in 1..cap. The preview and the lock use it. */
 export function blockBaseLevel(block: Act3BlockId, warmth: number, player: number): number {
-  const L = blockFormula(ACT3_BLOCKS[block].offset, Math.min(8, Math.max(0, Math.round(warmth))), player);
+  const L = blockFormula(ACT3_BLOCKS[block].offset, Math.min(8, Math.max(0, Math.round(warmth))), player, blockCapOf(block));
   return Math.min(LEVEL.cap, Math.max(1, Math.round(L)));
 }
 

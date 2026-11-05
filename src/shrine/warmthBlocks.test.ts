@@ -41,18 +41,18 @@ function setup(over: Partial<WarmthBlocksPorts> = {}) {
 }
 
 describe('WarmthBlocks: design 5.9 in both block orders', () => {
-  it('Greyfen first: 18 at W3 P18; then the spine, after the Mere lit (W4), is 23', () => {
+  it('Greyfen first: 18 at W3 P18; then the spine, after the Mere lit (W4), is 23 capped to P + 3 = 21', () => {
     const t = setup();
     t.wb.onQuestStarted('m23');
     expect(t.wb.blockLevel('greyfen')).toBe(18);
     expect(t.flags.get('warmth.block.greyfen.level')).toBe(18);
     expect(t.wb.preview('dragonspine-lower')).toBe(20);
     t.enemies.W = 4; // the Mere is lit
-    expect(t.wb.preview('dragonspine-lower')).toBe(23);
+    expect(t.wb.preview('dragonspine-lower')).toBe(21); // design 5.9's 23, capped at P + 3 (H1)
     expect(t.wb.preview('greyfen')).toBe(18); // the map chip never moves after the lock
     t.wb.onQuestStarted('m28');
-    expect(t.wb.blockLevel('dragonspine-lower')).toBe(23);
-    expect(t.flags.get(blockLevelFlag('dragonspine-lower'))).toBe(23);
+    expect(t.wb.blockLevel('dragonspine-lower')).toBe(21);
+    expect(t.flags.get(blockLevelFlag('dragonspine-lower'))).toBe(21);
   });
 
   it('spine first: 20 at W3; then Greyfen second, after the Anvil lit (W4), is 21', () => {
@@ -221,8 +221,8 @@ describe('WarmthBlocks: rewardScale', () => {
     t.enemies.W = 4; // the preview moves; the scale does not
     expect(t.wb.rewardScale('r15')).toBe(1);
     t.wb.onQuestStarted('m28');
-    expect(t.wb.rewardScale('r15')).toBeCloseTo(23 / 23, 10);
-    expect(t.enemies.locks['dragonspine-lower']).toBe(23);
+    expect(t.wb.rewardScale('r15')).toBeCloseTo(21 / 23, 10); // P18 at W4: capped at P + 3 (H1)
+    expect(t.enemies.locks['dragonspine-lower']).toBe(21);
   });
 
   it('is 1 for a recommended level of 0 or NaN', () => {

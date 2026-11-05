@@ -93,7 +93,7 @@
       "data": {
         "cleared": [],
         "lockedBlockLevels": {
-          "dragonspine-lower": 23,
+          "dragonspine-lower": 21,
           "greyfen": 18
         },
         "spent": [],
@@ -268,7 +268,7 @@
         ],
         "respecUsed": false,
         "storyPoints": 1,
-        "xp": 29500
+        "xp": 29443
       },
       "version": 2
     },
@@ -894,7 +894,7 @@
           "tutorial.t04.vow3": "earnest",
           "tutorial.t12.kit": true,
           "tutorial.t12.kitDone": true,
-          "warmth.block.dragonspine-lower.level": 23,
+          "warmth.block.dragonspine-lower.level": 21,
           "warmth.block.greyfen.level": 18,
           "waystone.chapel.lit": true,
           "waystone.cinder-road.lit": true,
