@@ -5,7 +5,7 @@ import type { GameEventMap } from '../core/events';
 import type { GameContext } from '../core/Game';
 import { Services } from '../core/Services';
 import { setupMusic } from './music.plugin';
-import { ASH_ON_THE_PASTURE as ASH, BARLEY_AND_BRAZIER as BARLEY, HAMMERS_BELOW as HAMMERS, RESERVED_TRACKS, RESERVED_TRACK_IDS, SEVEN_GATES_ONE_DRUM as SEVEN, TRACKS_BY_ID, PEAT_AND_PITCH as PEAT, WING_OVER_RIME as WING } from './tracks';
+import { ASH_ON_THE_PASTURE as ASH, BARLEY_AND_BRAZIER as BARLEY, HAMMERS_BELOW as HAMMERS, RESERVED_TRACKS, RESERVED_TRACK_IDS, SEVEN_GATES_ONE_DRUM as SEVEN, SEVEN_GATES_ASH, DUST_CHANT, TRACKS_BY_ID, PEAT_AND_PITCH as PEAT, WING_OVER_RIME as WING } from './tracks';
 
 const SR = 8000;
 
@@ -621,8 +621,8 @@ describe('Act 2 tracks (registered by A14; the old reserved-track block asserted
   const HAMMERS_REGION = { id: 'oldsmoke', track: HAMMERS.id };
 
   it('nothing is reserved any more (the Act 3 tracks are built) and both Act 2 tracks are registered', () => {
-    // v0.8 item 19: only the two Act 4 ids are reserved, until L8 registers them.
-    expect(RESERVED_TRACK_IDS).toEqual(['dust-chant', 'seven-gates-ash']);
+    // v0.8 item 19 reserved the two Act 4 ids; L8 built them, so nothing is reserved.
+    expect(RESERVED_TRACK_IDS).toEqual([]);
     expect(RESERVED_TRACKS.map((t) => t.id)).toEqual(RESERVED_TRACK_IDS);
     expect(TRACKS_BY_ID[ASH.id]).toBe(ASH);
     expect(TRACKS_BY_ID[HAMMERS.id]).toBe(HAMMERS);
@@ -775,44 +775,73 @@ describe('v0.8 item 19: Harrowmark track from story.gate.a4', () => {
     return { flags, set };
   }
 
-  it('a reserved Act 4 id is silent: the city keeps Seven Gates after the gate', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  /** The explore mix the active mixer was last started with: identifies the track that plays. */
+  const startedWith = (e: ReturnType<typeof makeEnv>) => e.mixers[e.active()].start.mock.calls.at(-1)?.[0];
+
+  it('switches to the built Seven Gates ash variant when the gate flag is set in the city, and back on a pre-gate load', async () => {
+    const e = makeEnv({ regionAt: () => HARROWMARK });
+    const f = withFlags(e);
+    setupMusic(e.ctx);
+    await e.start();
+    expect(startedWith(e)).toBe(SEVEN.mixes.explore);
+    f.set('story.gate.a4', true);
+    await flush();
+    e.tick(0.1);
+    e.tick(8);
+    await flush();
+    e.tick(0.1);
+    expect(startedWith(e)).toBe(SEVEN_GATES_ASH.mixes.explore);
+    f.flags.delete('story.gate.a4');
+    e.events.emit('save.loaded', undefined as never);
+    await flush();
+    e.tick(8);
+    await flush();
+    e.tick(0.1);
+    expect(startedWith(e)).toBe(SEVEN.mixes.explore);
+  }, 30_000);
+
+  it('a save loaded after the gate starts the city on the ash variant; its Bellows-Engine and M38 keys play their mixes', async () => {
     const e = makeEnv({ regionAt: () => HARROWMARK });
     const f = withFlags(e);
     f.flags.set('story.gate.a4', true);
     setupMusic(e.ctx);
     await e.start();
-    expect(e.services.get('music')!.beat()!.bpm).toBe(SEVEN.bpm);
-    e.tick(1);
-    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('seven-gates-ash'));
-  });
+    expect(startedWith(e)).toBe(SEVEN_GATES_ASH.mixes.explore);
+    const music = e.services.get('music')!;
+    const mixer = e.mixers[e.active()];
+    music.setBoss(true, 'bellows-engine');
+    e.tick(0.5);
+    expect(mixer.setMix.mock.calls.at(-1)![0]).toBe(SEVEN_GATES_ASH.bossMixes!['bellows-engine'].phases[0]);
+    music.setBoss(false, 'bellows-engine');
+    e.tick(8);
+    music.setBoss(true, 'm38-council');
+    e.tick(0.5);
+    expect(mixer.setMix.mock.calls.at(-1)![0]).toBe(SEVEN_GATES_ASH.bossMixes!['m38-council'].phases[0]);
+    music.setBoss(true, 'm38-betrayal');
+    e.tick(0.5);
+    expect(mixer.setMix.mock.calls.at(-1)![0]).toBe(SEVEN_GATES_ASH.bossMixes!['m38-betrayal'].phases[0]);
+    // Released by id, both keys: the director goes through the ending mix to explore.
+    music.setBoss(false, 'm38-betrayal');
+    music.setBoss(false, 'm38-council');
+    e.tick(0.5);
+    expect(mixer.setMix.mock.calls.at(-1)![0]).toBe(SEVEN_GATES_ASH.mixes.ending);
+    e.tick(8);
+    expect(mixer.setMix.mock.calls.at(-1)![0]).toBe(SEVEN_GATES_ASH.mixes.explore);
+  }, 30_000);
 
-  it('switches to the registered Act 4 track when the gate flag is set in the city, and back on a pre-gate load', async () => {
-    const ASHY = { ...SEVEN, id: 'seven-gates-ash', bpm: 90 };
-    const reg = TRACKS_BY_ID as Record<string, typeof SEVEN>;
-    reg[ASHY.id] = ASHY;
-    try {
-      const e = makeEnv({ regionAt: () => HARROWMARK });
-      const f = withFlags(e);
-      setupMusic(e.ctx);
-      await e.start();
-      expect(e.services.get('music')!.beat()!.bpm).toBe(SEVEN.bpm);
-      f.set('story.gate.a4', true);
-      await flush();
-      e.tick(0.1);
-      e.tick(8);
-      await flush();
-      e.tick(0.1);
-      expect(e.services.get('music')!.beat()!.bpm).toBe(90);
-      f.flags.delete('story.gate.a4');
-      e.events.emit('save.loaded', undefined as never);
-      await flush();
-      e.tick(8);
-      await flush();
-      e.tick(0.1);
-      expect(e.services.get('music')!.beat()!.bpm).toBe(SEVEN.bpm);
-    } finally {
-      delete reg[ASHY.id];
-    }
-  });
+  it('the Waste plays Dust Chant (its eight stems, the toll included), and the Caldera hole keeps the track that plays', async () => {
+    let inHole = false;
+    const e = makeEnv({ regionAt: () => (inHole ? null : { id: 'ashen-waste', track: DUST_CHANT.id }) });
+    withFlags(e);
+    setupMusic(e.ctx);
+    await e.start();
+    expect(startedWith(e)).toBe(DUST_CHANT.mixes.explore);
+    expect(e.mixers[e.active()].stems.has('toll')).toBe(true);
+    inHole = true;
+    e.events.emit('region.entered', undefined as never);
+    e.tick(8);
+    await flush();
+    expect(e.audio.swapMusic).not.toHaveBeenCalled();
+    expect(e.services.get('music')!.beat()!.bpm).toBe(DUST_CHANT.bpm);
+  }, 30_000);
 });

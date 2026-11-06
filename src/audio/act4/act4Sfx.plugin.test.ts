@@ -105,6 +105,8 @@ describe('act4-sfx plugin', () => {
   it('forwards the weather: onset and wind on a storm, the muffled wind in a shelter, nothing after clear', () => {
     const f = fakeCtx({ audio: true });
     plugin.setup(f.ctx as never);
+    // Setup is a restore: the first few ticks treat a shelter entry as re-asserted (no flap).
+    for (let i = 0; i < 4; i++) f.systems[0].fixedUpdate?.(1 / 60);
     f.emit('weather.changed', { kind: 'storm', from: 'warning' });
     f.emit('shelter.entered', { id: 'waste.shelter.1' });
     f.emit('weather.changed', { kind: 'clear', from: 'storm' });

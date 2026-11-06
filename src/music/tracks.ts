@@ -213,13 +213,10 @@ export const SEVEN_GATES_ONE_DRUM: TrackDef = {
  * tracks); v0.7 item 23 reserved the two Act 3 slots (ACT3_TRACK_SLOTS), and the Act 3 sound pass built them, so it is empty again.
  */
 /**
- * v0.8 item 19: Act 4 track ids, silent when requested until L8 registers them in `TRACKS_BY_ID` (then drop the row).
- * `dust-chant` is the Ashen Waste; `seven-gates-ash` is Harrowmark from `story.gate.a4`.
+ * v0.8 item 19 reserved the two Act 4 ids (`dust-chant`, the Ashen Waste; `seven-gates-ash`, Harrowmark from
+ * `story.gate.a4`); the Act 4 sound pass (L8) built and registered both, so it is empty again.
  */
-export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [
-  { id: 'dust-chant', bpm: 91 },
-  { id: 'seven-gates-ash', bpm: 96 },
-];
+export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [];
 export const RESERVED_TRACK_IDS: readonly string[] = RESERVED_TRACKS.map((t) => t.id);
 
 export const TRACKS_BY_ID: Readonly<Record<string, TrackDef>> = {

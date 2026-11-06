@@ -15,8 +15,8 @@ describe('Act 3 tracks (v0.7 item 23, built by the Act 3 sound pass)', () => {
       expect(TRACKS_BY_ID[id]).toBe(track);
       expect(RESERVED_TRACK_IDS).not.toContain(id);
     }
-    // v0.8 item 19: only the two Act 4 ids are reserved, until L8 registers them.
-    expect(RESERVED_TRACK_IDS).toEqual(['dust-chant', 'seven-gates-ash']);
+    // v0.8 item 19 reserved the two Act 4 ids; L8 built them, so nothing is reserved.
+    expect(RESERVED_TRACK_IDS).toEqual([]);
     expect(RESERVED_TRACKS.map((t) => t.id)).toEqual(RESERVED_TRACK_IDS);
   });
   it('each built track matches its slot and validates', () => {

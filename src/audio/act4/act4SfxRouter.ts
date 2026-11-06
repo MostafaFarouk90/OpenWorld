@@ -49,6 +49,9 @@ export interface Act4SfxPorts {
   ensure?(key: Act4SfxKey): void;
 }
 
+/** Fixed ticks after a load in which L3's re-sent `shelter.entered` plays no flap (it arrives on the first). */
+export const QUIET_TICKS_AFTER_LOAD = 3;
+
 /** The loop name of the storm wind on the player. */
 const STORM_LOOP = 'storm';
 
@@ -65,6 +68,8 @@ export class Act4SfxRouter {
   private gustIn = 0;
   private gusts = 0;
   private seed = 0x2545f491;
+  /** Ticks after a restore during which a shelter entry is the weather runtime re-asserting it, not the player walking in. */
+  private quietTicks = 0;
 
   constructor(private readonly ports: Act4SfxPorts) {}
 
@@ -145,7 +150,8 @@ export class Act4SfxRouter {
   shelterEntered(e: { id: string }): void {
     if (this.shelters.has(e.id)) return;
     this.shelters.add(e.id);
-    this.flat(WEATHER_SFX.flap);
+    // L3 re-sends `shelter.entered` on the first fixed step after a load when the player stands in one: no flap for that.
+    if (this.quietTicks === 0) this.flat(WEATHER_SFX.flap);
     this.applyStorm();
   }
 
@@ -157,6 +163,7 @@ export class Act4SfxRouter {
 
   /** Every tick: gusts at seeded intervals while a storm blows outside a shelter, a rope creak on every third. */
   tick(dt: number): void {
+    if (this.quietTicks > 0) this.quietTicks--;
     if (this.weather !== 'storm' || this.inShelter || !(dt > 0)) return;
     this.gustIn -= dt;
     if (this.gustIn > 0) return;
@@ -169,6 +176,7 @@ export class Act4SfxRouter {
   /** After a load: the weather service's state, without the onset (the storm was already blowing), shelters forgotten. */
   restore(kind: StormKind): void {
     this.shelters.clear();
+    this.quietTicks = QUIET_TICKS_AFTER_LOAD;
     this.weather = kind;
     this.gustIn = this.nextGust();
     this.applyStorm();

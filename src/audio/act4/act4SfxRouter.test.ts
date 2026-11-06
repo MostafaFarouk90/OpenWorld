@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CREAK_EVERY_GUSTS, GUST_MAX_S, GUST_MIN_S, HUSK_SKIN } from './act4SfxEvents';
-import { Act4SfxRouter, type Act4SfxPorts } from './act4SfxRouter';
+import { Act4SfxRouter, QUIET_TICKS_AFTER_LOAD, type Act4SfxPorts } from './act4SfxRouter';
 
 function rig(opts: { audio?: boolean; attach?: boolean; throws?: boolean; random?: number } = {}) {
   const { audio = true, attach = true, throws = false, random = 0 } = opts;
@@ -169,6 +169,19 @@ describe('weather', () => {
     r.router.tick(0);
     r.router.tick(Number.NaN);
     expect(r.played.length).toBe(before);
+  });
+
+  it("after a load, L3's re-sent shelter entry muffles the wind without a flap; a later entry flaps", () => {
+    const r = rig();
+    r.router.restore('storm');
+    r.router.tick(1 / 60);
+    r.router.shelterEntered({ id: 's' });
+    expect(r.played).toEqual([]);
+    expect(r.attached.map((a) => a.key)).toEqual(['sfx.storm.loop', 'sfx.storm.muffled']);
+    for (let i = 0; i < QUIET_TICKS_AFTER_LOAD; i++) r.router.tick(1 / 60);
+    r.router.shelterLeft({ id: 's' });
+    r.router.shelterEntered({ id: 't' });
+    expect(r.played.filter((k) => k === 'sfx.shelter.flap')).toHaveLength(2);
   });
 
   it('restore after a load sets the wind without an onset and forgets shelters', () => {
