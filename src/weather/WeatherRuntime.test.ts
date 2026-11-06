@@ -420,3 +420,17 @@ describe('weather runtime: review fixes', () => {
     expect(r.w.serialize().lastShelterId).toBe('waste.shelter.1');
   });
 });
+
+describe('weather runtime: a load inside a shelter (L8 handshake)', () => {
+  it('re-emits shelter.entered on the first step after a load, even for the shelter the player was already in', () => {
+    const r = rig();
+    r.s.pos = { x: 10000, y: 120, z: 4700, yaw: 0 };
+    r.run(0.1);
+    const saved = r.w.serialize();
+    r.s.events.length = 0;
+    r.w.load(saved);
+    r.w.update(1 / 60);
+    expect(r.s.events.filter((e) => e.name === 'shelter.entered')).toEqual([{ name: 'shelter.entered', payload: { id: 'waste.shelter.1' } }]);
+    expect(r.s.events.some((e) => e.name === 'shelter.left')).toBe(false);
+  });
+});
