@@ -105,10 +105,12 @@ async function setup(opts: Opts = {}) {
   if (!opts.noBreaks) plugins.push(structureBreaksPlugin);
   else plugins.push({ id: 'structure-breaks', dependsOn: ['core'], setup() {} });
   if (opts.level !== undefined) plugins.push(fake('progression', 'progression', { level: opts.level, classId: null }));
+  const glow = { tier: 'high' as string };
   if (opts.lights !== undefined) {
     let free = opts.lights;
     plugins.push(
       fake('env', 'env', {
+        glow: () => ({ tier: glow.tier }),
         fireLights: {
           acquire: () => {
             if (free <= 0) return null;
@@ -200,7 +202,7 @@ async function setup(opts: Opts = {}) {
     world.dispose();
   };
   return {
-    game, ctx, scene, interiors, events, blockers, spawned, resets, toasts, slots, hemi, follow, of, run, runHealed, until, at, local,
+    glow, game, ctx, scene, interiors, events, blockers, spawned, resets, toasts, slots, hemi, follow, of, run, runHealed, until, at, local,
     enter, exit, dir, enc, boss, gongActor, state, hit, start, gongF, strikeGong, toFloor, waitWindow, teardown,
     step: () => game.fixedUpdate(),
   };
@@ -243,6 +245,53 @@ describe('eormen numbers', () => {
 });
 
 describe('eormen plugin', () => {
+  it(
+    'review fixes: a Release crumbles the husks a tick later (the pulse reads them first); a reset in an open window says it closed',
+    async () => {
+      const h = await setup();
+      let resetsAtRelease = -1;
+      h.game.events.on('boss.released', () => {
+        resetsAtRelease = h.resets.length;
+      });
+      h.enter();
+      winEormenForTest(h, { outcome: 'released' });
+      // Nothing crumbled inside the release's own dispatch; every group crumbled afterwards.
+      expect(resetsAtRelease).toBeGreaterThanOrEqual(0);
+      expect(h.resets.slice(resetsAtRelease).filter((g) => (HUSKS.groups as readonly string[]).includes(g)).length).toBeGreaterThanOrEqual(3);
+      const before = h.resets.slice(0, resetsAtRelease);
+      // The only resets before the release are the per-phase refills (reset then spawn), one per group.
+      expect(before).toEqual([...HUSKS.groups]);
+      h.teardown();
+
+      const r = await setup();
+      r.start();
+      r.waitWindow();
+      const pl = r.ctx.player.actor;
+      r.ctx.damage.apply({ attackerId: r.boss()!.id, targetId: pl.id, amount: pl.maxHealth * 10, poise: 0, kind: 'melee' });
+      r.run(3);
+      expect(r.of('eormen.gong.window').at(-1)).toEqual({ open: false, seconds: 0 });
+      r.teardown();
+    },
+    T30,
+  );
+
+  it(
+    'review fixes: a glow tier change re-takes the gong’s slot (a high slot goes dark on medium); none on low',
+    async () => {
+      const h = await setup({ lights: 3 });
+      h.start();
+      expect(h.slots).toHaveLength(1);
+      h.glow.tier = 'medium';
+      h.run(secs(1.2));
+      expect(h.slots[0].released).toBe(true);
+      expect(h.slots).toHaveLength(2);
+      expect(h.slots[1].released).toBe(false);
+      expect(h.enc().lastGong!.lit).toBe(true);
+      h.teardown();
+    },
+    T30,
+  );
+
   it(
     'the whole fight, defeated: three gong strikes after tolls, husks each phase, the nave dark from phase 2, lights back after',
     async () => {

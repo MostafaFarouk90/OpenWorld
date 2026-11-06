@@ -1,9 +1,10 @@
 // Test-only: the headless-safe way to win the Eormen fight (for L11's and L13's chains and this thread's real-game driver). It
 // walks the rules the player meets: wait out the intro, then in each phase damage him to the floor, wait for the toll to open
-// the Last Gong, strike it the way F does, and push him past the threshold; after the third bar, Release him (the registry's
-// release, as the hold does) or finish him. It never teleports and waits out every telegraph by ticking. Throws with a reason
+// the Last Gong, strike it the way F does, and push him past the threshold; after the third bar, Release him (the real hold's
+// completion when the enemies plugin is loaded) or finish him. It never teleports and waits out every telegraph by ticking. Throws with a reason
 // when a step does not happen inside its time.
 import type { GameContext } from '../../../core/Game';
+import { bossMercyInteractableId } from '../../../enemies/mercy';
 import { eormenDirector } from './eormen.plugin';
 import { EORMEN_BOSS_ID, PRESENTATION, TOLL } from './tuning';
 
@@ -58,7 +59,15 @@ export function winEormenForTest(
   }
   if (outcome === 'released') {
     until('the release window', () => h.ctx.bosses.state(EORMEN_BOSS_ID)?.releaseOpen === true, 2);
-    if (!h.ctx.bosses.release(EORMEN_BOSS_ID)) throw new Error('winEormenForTest: the registry refused the release');
+    // The real hold-T (EnemyManager's boss mercy interactable: 20 Burn, the mercy event, Ashwalkers +6, ledger D08, the pulse)
+    // when the enemies plugin registered it; a harness without it falls back to the registry's bare release.
+    const hold = (h.ctx.interaction as unknown as { items?: Map<string, { enabled?(): boolean; onInteract(a: unknown): void }> }).items?.get(
+      bossMercyInteractableId(EORMEN_BOSS_ID),
+    );
+    if (hold) {
+      if (hold.enabled && !hold.enabled()) throw new Error('winEormenForTest: the Release hold is not enabled (is the release verb unlocked?)');
+      hold.onInteract(h.ctx.player.actor);
+    } else if (!h.ctx.bosses.release(EORMEN_BOSS_ID)) throw new Error('winEormenForTest: the registry refused the release');
   } else {
     hit(enc()!.actor.maxHealth);
   }
