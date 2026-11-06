@@ -25,6 +25,7 @@ import {
   FOG_TOAST_WASTE_PHASE_G,
   HARROWMARK_GATE_FACES,
   cityGateFaceDef,
+  ACT4_FOG_STRINGS_EN,
 } from './act4Fog';
 import { ACT4_FOG_FACE_ANCHORS, ACT4_FOG_FACE_POINTS, ACT4_FOG_WALLS } from './act4/act4World';
 import { ACT4_WORLD_DOC, ACT4_WORLD_LAYOUT } from './act4/act4World.layout';
@@ -153,7 +154,7 @@ describe('Act 4 fog faces', () => {
     }
   });
 
-  it('fog.waste-edge: Hild before M41, the "later update" text in Phase G, open in Phase H', () => {
+  it('fog.waste-edge: Hild before M41, the "not yet open" text in Phase G, open in Phase H', () => {
     const def = ACT4_FOG_WALLS.find((w) => w.id === 'fog.waste-edge')!;
     expect(fogToastKey(def, reader(STATES.occupied))).toBe(FOG_TOAST_WASTE_HILD);
     expect(fogToastKey(def, reader(STATES.phaseG))).toBe(FOG_TOAST_WASTE_PHASE_G);
@@ -241,5 +242,12 @@ describe('ACT4_WORLD_ANCHORS.md and the act4-world plugin', () => {
     expect(fc.triggers.has('trg.fog.waste-edge')).toBe(false);
     expect(fc.triggers.has('trg.fog.caldera-rim.s')).toBe(true);
     plugin.dispose?.();
+  });
+});
+
+describe('Act 4 fog text (ruling C)', () => {
+  it('never dates itself: the Phase G toast matches the card ("the way in is not yet open")', () => {
+    expect(ACT4_FOG_STRINGS_EN[FOG_TOAST_WASTE_PHASE_G]).toContain('the way in is not yet open');
+    for (const [k, v] of Object.entries(ACT4_FOG_STRINGS_EN)) expect(v, k).not.toMatch(/later update/i);
   });
 });

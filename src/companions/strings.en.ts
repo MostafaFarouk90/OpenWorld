@@ -1,8 +1,11 @@
 import { act3BarkStrings } from './act3/strings.en';
+import { act4BarkStrings } from './act4/strings.en';
 /** Tobb's companion strings (namespace `companion.`). His dialogue lines belong to the quests thread. */
 export const COMPANION_STRINGS_EN: Record<string, string> = {
   // Act 3 (K5): the Greyfen, the Dragonspine, the trial, the reveal and the ferry (src/companions/act3/strings.en.ts).
   ...act3BarkStrings('tobb'),
+  // Act 4 (L4): the Ashen Waste, the M37 bond line and the mourning for Sir Gaut.
+  ...act4BarkStrings('tobb'),
   'companion.tobb.name': 'Tobb Fenwick',
   'companion.tobb.aura.name': 'Battle-song',
   'companion.say': '{name}: {line}',

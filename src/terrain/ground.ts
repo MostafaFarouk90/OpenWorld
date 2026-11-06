@@ -11,6 +11,7 @@ import { REGION_IDS, REGION_INFO, engineBox, type RegionId } from '../region/reg
 import { createNoise2D } from './noise';
 import { ACT2_PLATEAUS, ACT2_ROADS } from './shape/act2';
 import { GREYFEN_WATER_TABLE } from './shape/greyfen';
+import { GLASSLANDS_PLAIN } from './shape/waste';
 import type { ShapeBox } from './shaping';
 
 /** The Act 2 ground's local origin (engine metres): every point of both regions lies within 9 km of it. */
@@ -19,21 +20,24 @@ export const ACT2_GROUND_ORIGIN = { x: 19000, z: 5000 } as const;
 export const GREYFEN_GROUND_ORIGIN = { x: 3000, z: 12500 } as const;
 /** The Dragonspine ground's local origin, near the Wyrm's Hearth (engine metres). */
 export const DRAGONSPINE_GROUND_ORIGIN = { x: 13500, z: 14000 } as const;
+/** The Ashen Waste's ground origin, the Caldera's centre (Act 4 thread L1): every point of the Waste lies within 5 km. */
+export const WASTE_GROUND_ORIGIN = { x: 11000, z: 8000 } as const;
 
 /** Which origin a chunk's material samples: one per region family, never raw world coordinates. */
-export type GroundOriginKey = 'act2' | 'greyfen' | 'dragonspine';
+export type GroundOriginKey = 'act2' | 'greyfen' | 'dragonspine' | 'waste';
 export const GROUND_ORIGINS: Readonly<Record<GroundOriginKey, { readonly x: number; readonly z: number }>> = {
   act2: ACT2_GROUND_ORIGIN,
   greyfen: GREYFEN_GROUND_ORIGIN,
   dragonspine: DRAGONSPINE_GROUND_ORIGIN,
+  waste: WASTE_GROUND_ORIGIN,
 };
 
 /** A rule's weight smoothsteps from 1 at its region box to 0 this far outside it. */
 export const GROUND_BLEND = 600;
 
-export type GroundKey = 'cinderreach' | 'oldsmoke' | 'greyfen' | 'dragonspine';
+export type GroundKey = 'cinderreach' | 'oldsmoke' | 'greyfen' | 'dragonspine' | 'ash';
 
-const ORIGIN_OF: Readonly<Record<GroundKey, GroundOriginKey>> = { cinderreach: 'act2', oldsmoke: 'act2', greyfen: 'greyfen', dragonspine: 'dragonspine' };
+const ORIGIN_OF: Readonly<Record<GroundKey, GroundOriginKey>> = { cinderreach: 'act2', oldsmoke: 'act2', greyfen: 'greyfen', dragonspine: 'dragonspine', ash: 'waste' };
 
 export interface GroundRule {
   /** Linear RGB of open ground and of steep rock. */
@@ -51,6 +55,10 @@ export interface GroundRule {
   peat?: readonly [number, number, number];
   /** Snow by height and slope (Dragonspine), and the forge-glass veins the shader draws. */
   snow?: boolean;
+  /** Act 4 (L1): metres over which this rule fades out beyond its region's box; unset uses GROUND_BLEND. */
+  blend?: number;
+  /** Act 4 (L1): glass-sand glints, drawn by the shader on this rule's material (glassWeight). */
+  glass?: boolean;
 }
 
 export const GROUND_RULES: Readonly<Record<GroundKey, GroundRule>> = {
@@ -89,7 +97,22 @@ export const GROUND_RULES: Readonly<Record<GroundKey, GroundRule>> = {
     ashFog: false,
     snow: true,
   },
+  // Act 4 (L1): the Ashen Waste. White-grey ash soil, pale grey rock, sparse dead grass, glass-sand glints; a short
+  // 150 m blend so the ash never paints the Dragonspine's south edge or Harrowmark's north fields.
+  ash: {
+    soil: [0.36, 0.35, 0.33],
+    rock: [0.24, 0.235, 0.23],
+    grass: [0.46, 0.43, 0.35],
+    grassDensity: 0.15,
+    embers: false,
+    ashFog: false,
+    blend: 150,
+    glass: true,
+  },
 };
+
+/** The blend a rule fades out over (GROUND_BLEND unless the rule sets its own). */
+export const ruleBlend = (key: GroundKey): number => GROUND_RULES[key].blend ?? GROUND_BLEND;
 
 /** Ground within this many metres above the water table darkens toward wet peat (Greyfen). */
 export const WET_BAND = 2.5;
@@ -102,16 +125,18 @@ interface Area {
   key: GroundKey;
   box: ShapeBox;
   reach: ShapeBox;
+  blend: number;
 }
 
 const AREAS: readonly Area[] = REGION_IDS.filter((id) => isGroundKey(REGION_INFO[id].ground)).map((id: RegionId) => {
   const b = engineBox(id);
   const box = { minX: b.x0, maxX: b.x1, minZ: b.z0, maxZ: b.z1 };
-  return { key: REGION_INFO[id].ground as GroundKey, box, reach: grow(box, GROUND_BLEND) };
+  const key = REGION_INFO[id].ground as GroundKey;
+  return { key, box, reach: grow(box, ruleBlend(key)), blend: ruleBlend(key) };
 });
 
 function isGroundKey(k: string | null): k is GroundKey {
-  return k === 'cinderreach' || k === 'oldsmoke' || k === 'greyfen' || k === 'dragonspine';
+  return k === 'cinderreach' || k === 'oldsmoke' || k === 'greyfen' || k === 'dragonspine' || k === 'ash';
 }
 
 function grow(b: ShapeBox, m: number): ShapeBox {
@@ -145,7 +170,7 @@ const BRIDGE = (() => {
 
 /** Each ground rule's weight at (x, z): 1 inside its region, 0 beyond GROUND_BLEND (bridged across the pass). Pure. */
 export function groundWeights(x: number, z: number): Record<GroundKey, number> {
-  return weightsInto({ cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 0 }, x, z);
+  return weightsInto({ cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 0, ash: 0 }, x, z);
 }
 
 function weightsInto(w: Record<GroundKey, number>, x: number, z: number): Record<GroundKey, number> {
@@ -153,9 +178,10 @@ function weightsInto(w: Record<GroundKey, number>, x: number, z: number): Record
   w.oldsmoke = 0;
   w.greyfen = 0;
   w.dragonspine = 0;
+  w.ash = 0;
   for (const a of AREAS) {
     if (!inBox(a.reach, x, z)) continue;
-    w[a.key] = Math.max(w[a.key], 1 - smoothstep(0, GROUND_BLEND, boxDistance(a.box, x, z)));
+    w[a.key] = Math.max(w[a.key], 1 - smoothstep(0, a.blend, boxDistance(a.box, x, z)));
   }
   if (BRIDGE && inBox(BRIDGE.reach, x, z)) {
     const b = BRIDGE.box;
@@ -275,7 +301,7 @@ export function snowWeight(h: number, up: number): number {
 function tint(w: Record<GroundKey, number>, x: number, z: number, h: number, up: number, segs: readonly RoadSeg[], plateaus: readonly ShapeBox[], out: Float32Array, o: number): number {
   let mask = -1;
   const rock = Math.min(Math.max((0.82 - up) / 0.12, 0), 1);
-  for (const key of ['cinderreach', 'oldsmoke', 'greyfen', 'dragonspine'] as const) {
+  for (const key of ['cinderreach', 'oldsmoke', 'greyfen', 'dragonspine', 'ash'] as const) {
     const k = w[key];
     if (k <= 0) continue;
     const rule = GROUND_RULES[key];
@@ -326,7 +352,7 @@ export function groundColor(x: number, z: number, up: number, out: Float32Array,
 export function grassRule(x: number, z: number): { tint: readonly [number, number, number] | null; weight: number; density: number } {
   const w = groundWeights(x, z);
   let key: GroundKey = 'cinderreach';
-  for (const c of ['oldsmoke', 'greyfen', 'dragonspine'] as const) if (w[c] > w[key]) key = c;
+  for (const c of ['oldsmoke', 'greyfen', 'dragonspine', 'ash'] as const) if (w[c] > w[key]) key = c;
   const k = w[key];
   if (k <= 0) return { tint: null, weight: 0, density: 1 };
   const rule = GROUND_RULES[key];
@@ -337,6 +363,28 @@ export function grassRule(x: number, z: number): { tint: readonly [number, numbe
 export function veinWeight(x: number, z: number, h: number, up: number): number {
   const k = groundWeights(x, z).dragonspine;
   return k > 0 ? k * (1 - snowWeight(h, up)) : 0;
+}
+
+// ---- Act 4 (L1): glass-sand glints, strongest on the glass-sand plain round the Singing Slag
+
+/** The glints reach this far (metres) beyond the glass-sand plain's box at full strength... */
+export const GLASS_PLAIN_FADE = 600;
+/** ...and elsewhere on the ash, scattered patches up to this strength. */
+export const GLASS_SCATTER = 0.3;
+const glassNoise = createNoise2D(7793);
+
+/** Glass-sand glint weight (before the shader's sparkle pattern): the ash rule's weight on open ground, 1 on the plain. Pure. */
+export function glassWeight(x: number, z: number): number {
+  return glassWeightFrom(groundWeights(x, z).ash, x, z);
+}
+
+/** glassWeight for a known ash weight `k` (the chunk pass has it already). Pure. */
+export function glassWeightFrom(k: number, x: number, z: number): number {
+  if (k <= 0) return 0;
+  const p = GLASSLANDS_PLAIN.box;
+  const plain = 1 - smoothstep(0, GLASS_PLAIN_FADE, boxDistance(p, x, z));
+  const scatter = GLASS_SCATTER * smoothstep(0.3, 0.7, glassNoise((x - WASTE_GROUND_ORIGIN.x) / 260, (z - WASTE_GROUND_ORIGIN.z) / 260));
+  return k * Math.max(plain, scatter);
 }
 
 /** Ember-seam weight (before the shader's pattern): Cinderreach's weight on gentle open ground. Pure. */
@@ -436,13 +484,20 @@ export function chunkGround(cx: number, cz: number, size: number, heightAt: (x: 
   const dips = size <= DIP_MAX_CHUNK ? buildDipField(cx, cz, size, heightAt) : null;
   // In a Dragonspine chunk the `ground.x` channel carries the vein weight, not the ember weight (the shader's uGroundVein).
   const veins = groundOriginFor(cx, cz, size) === 'dragonspine';
-  const w: Record<GroundKey, number> = { cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 0 };
+  // In a Waste chunk `ground.x` carries the glass glint weight (the shader's uGroundGlass).
+  const glass = groundOriginFor(cx, cz, size) === 'waste';
+  const w: Record<GroundKey, number> = { cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 0, ash: 0 };
   return {
     vertex(x, z, h, up, colors, o, ground, g) {
       weightsInto(w, x, z);
       let mask = tint(w, x, z, h, up, segs, plateaus, colors, o);
       if (veins) {
         ground[g] = w.dragonspine > 0 ? w.dragonspine * (1 - snowWeight(h, up)) : 0;
+        ground[g + 1] = 0;
+        return;
+      }
+      if (glass) {
+        ground[g] = w.ash > 0 ? glassWeightFrom(w.ash, x, z) * smoothstep(0.8, 0.92, up) : 0;
         ground[g + 1] = 0;
         return;
       }

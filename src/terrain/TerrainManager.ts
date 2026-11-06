@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { TERRAIN } from '../config/constants';
 import { buildChunkIndices, type ChunkData, type ChunkRequest } from './chunkGeometry';
 import { groundOriginFor, type GroundOriginKey } from './ground';
-import { createGroundMaterial, wrapGroundTime, type GroundUniforms } from './groundShader';
+import { createGroundMaterial, releaseGroundUniforms, wrapGroundTime, type GroundUniforms } from './groundShader';
 import { heightAt } from './heightfield';
 import { buildPhysicsHeightfield, type PhysicsHeightfield } from './physicsHeightfield';
 import { LodQuadtree, type QuadNode, type QuadtreeHost } from './quadtree';
@@ -56,6 +56,7 @@ export class TerrainManager {
       act2: createGroundMaterial(params, 'act2'),
       greyfen: createGroundMaterial(params, 'greyfen'),
       dragonspine: createGroundMaterial(params, 'dragonspine'),
+      waste: createGroundMaterial(params, 'waste'),
     };
     this.indices = buildChunkIndices(TERRAIN.chunkSegments);
     this.pool = new WorkerPool(TERRAIN.workerCount, workerFactory);
@@ -108,7 +109,10 @@ export class TerrainManager {
     this.tree.dispose();
     this.jobs.clear();
     this.material.dispose();
-    for (const g of Object.values(this.groundMaterials)) g.material.dispose();
+    for (const g of Object.values(this.groundMaterials)) {
+      releaseGroundUniforms(g.uniforms);
+      g.material.dispose();
+    }
     this.group.removeFromParent();
   }
 

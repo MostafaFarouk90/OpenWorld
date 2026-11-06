@@ -19,6 +19,7 @@ import './service';
 import { ACT2_DOOR_LOCKS, ACT2_INTERIORS } from './act2';
 import { ACT3_DOOR_LOCKS, ACT3_FLAG_BLOCKERS, ACT3_INTERIORS } from './act3';
 import { HARROWMARK_INTERIORS } from './harrowmark';
+import { ACT4_HARROWMARK_DOOR_LOCKS, ACT4_HARROWMARK_EXIT_LOCKS, ACT4_HARROWMARK_FLAG_BLOCKERS, ACT4_HARROWMARK_INTERIORS, ACT4_HARROWMARK_LINKS } from './harrowmark/act4';
 import { HARROWMARK_DOOR_LOCKS, HARROWMARK_FLAG_BLOCKERS, M09_INVOICES } from './harrowmark/locks';
 import { grateAnswer, KEYED_GRATES } from './keyedGrates';
 import { OccupantHider } from './occupants';
@@ -28,7 +29,7 @@ import { UNDERWAYS_DEF } from './underways/generate';
 import { VAULT_DEF } from './vaultDef';
 
 /** Every interior the game ships (contracts/interiors-and-nav.md section 9). */
-export const ALL_INTERIORS: readonly InteriorDef[] = [VAULT_DEF, ...HARROWMARK_INTERIORS, UNDERWAYS_DEF, ...ACT2_INTERIORS, ...ACT3_INTERIORS];
+export const ALL_INTERIORS: readonly InteriorDef[] = [VAULT_DEF, ...HARROWMARK_INTERIORS, UNDERWAYS_DEF, ...ACT2_INTERIORS, ...ACT3_INTERIORS, ...ACT4_HARROWMARK_INTERIORS];
 
 /** Thread 3a's band in `rules` (requested for game-events-and-flags.md section 2) and in render `world`. */
 export const INTERIORS_RULES_ORDER = 400;
@@ -46,12 +47,14 @@ export interface InteriorsPluginOptions {
   doorLocks?: Readonly<Record<string, string>>;
   /** blockerId -> the flag that opens it (default: the Anvil's back-room gate). */
   flagBlockers?: Readonly<Record<string, string>>;
+  /** Act 4 (L2): doorId -> the flag while which its exit refuses, with the toast (default: the chamber's front door from M38). */
+  exitLocks?: Readonly<Record<string, { flag: string; toastKey: string }>>;
   /** v0.8: interior-to-interior links (default INTERIOR_LINKS). */
   links?: readonly InteriorLinkDef[];
 }
 
-/** v0.8 item 9b: L10 adds the Keep's links (M39's stairs, M40's deep run). */
-export const INTERIOR_LINKS: InteriorLinkDef[] = [];
+/** v0.8 item 9b: the Keep's links (L2: the chamber to the stairs for M39, the stairs to the deep run for M40, and back). */
+export const INTERIOR_LINKS: InteriorLinkDef[] = [...ACT4_HARROWMARK_LINKS];
 
 /** Throws on a link whose interiors or door are unknown, or whose target door has an outside interactable. */
 export function validateInteriorLinks(links: readonly InteriorLinkDef[], defs: readonly InteriorDef[]): void {
@@ -176,7 +179,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
 
   // Door locks and flag-driven blockers. Gates call back at once ('init') and again after a load, so the state re-derives.
   const known = new Set([...layouts.values()].flatMap((l) => l.def.doors.map((d) => d.doorId)));
-  for (const [doorId, flag] of Object.entries(opts.doorLocks ?? { ...HARROWMARK_DOOR_LOCKS, ...ACT2_DOOR_LOCKS, ...ACT3_DOOR_LOCKS })) {
+  for (const [doorId, flag] of Object.entries(opts.doorLocks ?? { ...HARROWMARK_DOOR_LOCKS, ...ACT2_DOOR_LOCKS, ...ACT3_DOOR_LOCKS, ...ACT4_HARROWMARK_DOOR_LOCKS })) {
     if (!known.has(doorId)) continue;
     let open = false;
     cleanups.push(ctx.gates.flag(flag, (o) => (open = o)));
@@ -189,7 +192,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     if (!found) console.warn(`interiors: unknown blocker "${id}"`);
     return found;
   };
-  for (const [blockerId, flag] of Object.entries(opts.flagBlockers ?? { ...HARROWMARK_FLAG_BLOCKERS, ...ACT3_FLAG_BLOCKERS })) {
+  for (const [blockerId, flag] of Object.entries(opts.flagBlockers ?? { ...HARROWMARK_FLAG_BLOCKERS, ...ACT3_FLAG_BLOCKERS, ...ACT4_HARROWMARK_FLAG_BLOCKERS })) {
     if (![...built.values()].some((b) => b.hasBlocker(blockerId))) continue;
     cleanups.push(ctx.gates.flag(flag, (o) => setBlocker(blockerId, !o)));
   }
@@ -198,6 +201,13 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     if (!(err instanceof InteriorError)) return console.warn('interiors: door failed', err);
     const key = TOASTED[err.reason];
     if (key) showToast(ctx.hud, ctx.strings.t(key));
+  };
+
+  // Act 4 (L2): exits that refuse while a flag holds (read live, so a load re-derives them).
+  const exitLocks = opts.exitLocks ?? (opts.defs ? {} : ACT4_HARROWMARK_EXIT_LOCKS);
+  const exitLocked = (doorId: string): boolean => {
+    const l = exitLocks[doorId];
+    return !!l && Boolean(ctx.state.getFlag(l.flag));
   };
 
   // Door interactables. The outside anchors are the layout thread's and may be defined after this plugin sets up.
@@ -222,10 +232,15 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
               radius: DOOR_RADIUS,
               coneDegrees: 360,
               get promptKey() {
+                if (side === 'inside' && exitLocked(door.doorId)) return 'interact.locked';
                 return side === 'outside' && controller.isDoorLocked(door.doorId) ? 'interact.locked' : text;
               },
               enabled: () => !controller.transitioning && (side === 'inside' || cooldown <= 0),
               onInteract: () => {
+                if (side === 'inside' && exitLocked(door.doorId)) {
+                  showToast(ctx.hud, ctx.strings.t(exitLocks[door.doorId]!.toastKey));
+                  return;
+                }
                 const p = side === 'outside' ? controller.enter(layout.def.id, door.doorId) : controller.exit(door.doorId);
                 p.catch(onRefused);
               },
@@ -242,7 +257,8 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
   });
 
   // v0.8 item 9b: interior-to-interior links, validated at registration.
-  const links = opts.links ?? INTERIOR_LINKS;
+  // A test with its own interiors gets no default links (they name the shipped interiors).
+  const links = opts.links ?? (opts.defs ? [] : INTERIOR_LINKS);
   validateInteriorLinks(links, [...layouts.values()].map((l) => l.def));
   for (const link of links) {
     cleanups.push(

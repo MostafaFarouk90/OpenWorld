@@ -33,7 +33,14 @@ describe('trainerPlacement', () => {
   it('rows for one class never move another class', () => {
     expect(trainerPlacement(DEFAULT_KITS.warden, flags({ 'story.m41.complete': true, 'story.m38.complete': true }), ROWS).moved).toBe(false);
   });
-  it('ships empty (the Act 4 threads add their rows)', () => {
-    expect(TRAINER_POSTS).toEqual([]);
+  it('ships the refuge rows (L7): before M41 every desk is the shipped desk, after it Rook holds the Knight desk', () => {
+    for (const kit of Object.values(DEFAULT_KITS)) expect(trainerPlacement(kit, flags({ 'story.m38.complete': true })).moved).toBe(false);
+    const after = flags({ 'story.m38.complete': true, 'story.m39.complete': true, 'story.m41.complete': true });
+    expect(trainerPlacement(knight, after)).toMatchObject({ npcId: 'rook', interactableId: 'trainer:rook', deskAnchor: 'ashgate.refuge.trainer.rook', nameKey: 'classes.trainer.rook' });
+    for (const id of ['warden', 'emberwright', 'ashblade', 'pathfinder'] as const) {
+      const kit = DEFAULT_KITS[id];
+      expect(trainerPlacement(kit, after)).toMatchObject({ npcId: kit.trainer.npcId, interactableId: trainerId(kit), deskAnchor: `ashgate.refuge.trainer.${kit.trainer.npcId}`, moved: true });
+    }
+    expect(TRAINER_POSTS.length).toBe(5);
   });
 });

@@ -17,11 +17,12 @@ import { ENEMY_DEFS } from '../enemies/defs';
 import { HrolfBrain, type BrainView, type Foe } from './HrolfBrain';
 import { CompanionVitals, type VitalsEdge } from './vitals';
 import './events';
-import { FollowModel, behind, yawToward, type Vec3 } from './FollowModel';
+import { FollowModel, behind, yawToward, type FollowSlot, type Vec3 } from './FollowModel';
 import { RayBudget, findSpot, groundAt, type GroundPorts } from './ground';
 import { COMPANION_TUNING, HROLF_TUNING, TOBB_TUNING } from './tuning';
 import type { AttackSpeedHook, CompanionDef, InteriorsLike, NavLike } from './types';
 import { deriveWait, inView, QUEST_WAITS, sameWait, type ViewPorts, type Wait, type WaitRule, type WaitView } from './WaitDirector';
+import { BENCH_MOVES_FLAG, benchPostFor } from './act4/benchPosts';
 
 export interface SavedSpot {
   x: number;
@@ -41,15 +42,15 @@ export interface ControllerOptions {
   claimBark?: (id: string) => boolean;
 }
 
-/** v0.8 item 10: the benched companions leave the occupied city for the Ashgate refuge from the betrayal. */
-export const PARTY_POST_MOVES_FLAG = 'story.m38.complete';
+/** v0.8 item 10: the benched companions leave the occupied city from the betrayal. */
+export const PARTY_POST_MOVES_FLAG = BENCH_MOVES_FLAG;
 
 /**
- * The camp post an inactive companion waits at: the Tilted Anvil (A5); v0.8, with flags and from `story.m38.complete`,
- * the Ashgate refuge (`ashgate.refuge.companions.<id>`, L4 places them). Without flags, the Anvil as before.
+ * The camp post an inactive companion waits at: the Tilted Anvil (A5); v0.8, with flags: from `story.m38.complete` the
+ * M41 camp outside the walls, from `story.m41.complete` the Ashgate refuge (L4, src/companions/act4/benchPosts.ts places
+ * the posts). Without flags, the Anvil as before.
  */
-export const partyPost = (id: string, flags?: { getFlag(k: string): unknown } | null): string =>
-  flags?.getFlag(PARTY_POST_MOVES_FLAG) ? `ashgate.refuge.companions.${id}` : `npc-post.${id}.tilted-anvil`;
+export const partyPost = (id: string, flags?: { getFlag(k: string): unknown } | null): string => benchPostFor(id, flags);
 
 /** Untyped lookups for services whose types live in threads that may not be merged yet. */
 function anyService<T>(ctx: GameContext, name: string): T | undefined {
@@ -119,6 +120,8 @@ export class CompanionController {
   private mountHidden = false;
   /** Hidden while the player glides, rides the ferry or dives (v0.7 item 25); reappears behind the player at the end. */
   private modeHidden = false;
+  /** Act 4 (L4): a slot that replaces the companion's own while set (the storm's rope slot); kept across respawns. */
+  private slotOverride: FollowSlot | null = null;
   /** Seconds left in which a door event does not teleport him, after a wait ended with a walk back. */
   private walkBackWindow = 0;
 
@@ -286,7 +289,8 @@ export class CompanionController {
     }
     this.actor = actor;
     this.figure = figure;
-    this.model = new FollowModel(at, this.ctx.player.facingYaw);
+    this.model = new FollowModel(at, this.ctx.player.facingYaw, COMPANION_TUNING, this.def.followSlot);
+    this.model.slotOverride = this.slotOverride;
     this.prev.x = at.x;
     this.prev.y = at.y;
     this.prev.z = at.z;
@@ -548,6 +552,12 @@ export class CompanionController {
     this.emitBark(this.area(place));
   }
 
+  /** Act 4 (L4): tightens (or, with null, restores) the rest slot; idempotent, so callers may re-apply it every tick. */
+  setSlotOverride(slot: FollowSlot | null): void {
+    this.slotOverride = slot;
+    if (this.model) this.model.slotOverride = slot;
+  }
+
   /**
    * Act 3 (K5, v0.7 item 25): hidden while the movement mode hides companions; on the way back he is placed behind the
    * player (landing, stop or surfacing point). Idempotent both ways; a companion waiting at a post stays there.
@@ -573,12 +583,26 @@ export class CompanionController {
     return this.modeHidden;
   }
 
+  /**
+   * Act 4 (L4): a one-off line (the M37 bond line, the mourning line) said now, outside the banter director's pacing but
+   * through the party's one-voice gate. False when he may not speak now (hidden, at a post, not seated, the other
+   * companion just spoke); the caller retries later.
+   */
+  sayLine(lineKey: string): boolean {
+    if (!this.actor || this.hidden || this.wait || !this.isActive() || !this.claimBark(this.def.id)) return false;
+    this.ctx.events.emit('companion.banter', { companionId: this.def.id, lineKey, trigger: 'area' });
+    const t = this.ctx.strings;
+    this.ctx.events.emit('hud.toast', { textKey: 'companion.say', params: { name: t.t(this.def.nameKey), line: t.t(lineKey) } });
+    return true;
+  }
+
   private emitBark(b: Bark | null): void {
     // An inactive companion in the hand-off window (still walking to his post) stays quiet.
     if (!b || !this.actor || this.hidden || this.wait || !this.isActive() || !this.claimBark(this.def.id)) return;
-    this.ctx.events.emit('companion.banter', { companionId: this.def.id, lineKey: b.lineKey, trigger: b.trigger });
+    const lineKey = this.def.lineSwap ? this.def.lineSwap(b.lineKey, (k) => this.ctx.state.getFlag(k)) : b.lineKey;
+    this.ctx.events.emit('companion.banter', { companionId: this.def.id, lineKey, trigger: b.trigger });
     const t = this.ctx.strings;
-    this.ctx.events.emit('hud.toast', { textKey: 'companion.say', params: { name: t.t(this.def.nameKey), line: t.t(b.lineKey) } });
+    this.ctx.events.emit('hud.toast', { textKey: 'companion.say', params: { name: t.t(this.def.nameKey), line: t.t(lineKey) } });
   }
 
   // ---- ticks -------------------------------------------------------------------------------------------------

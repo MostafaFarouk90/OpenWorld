@@ -34,6 +34,7 @@ export const MAP_STRINGS_EN: Record<string, string> = {
   'map.minimap.label': 'Minimap',
   'map.region.brightwater': 'Brightwater',
   'map.region.harrowmark': 'Harrowmark',
+  'map.region.harrowmark.held': 'Harrowmark (held by Vey)',
   'map.region.cinderreach': 'Cinderreach',
   'map.region.oldsmoke': 'Oldsmoke',
   // v0.7: the two Act 3 regions stop being reserved, so the map names them once they open.

@@ -288,7 +288,7 @@ describe('v0.8 item 11: Act 4 kinds, skins and boss rules', () => {
     const { ENEMY_SKINS, ENEMY_SKIN_IDS, isEnemySkinId } = await import('./skins');
     const { ENEMY_DEFS } = await import('./defs');
     expect(ACT4_ENEMY_KINDS).toEqual(['waste-strider', 'husk-knight', 'cinder-gnat-swarm']);
-    expect(ENEMY_SKIN_IDS.sort()).toEqual(['footman-masked', 'footman-soot', 'wraith-husk']);
+    expect(ENEMY_SKIN_IDS.sort()).toEqual(['footman-masked', 'footman-soot', 'watch-masked', 'wraith-husk']);
     for (const id of ENEMY_SKIN_IDS) expect(ENEMY_DEFS[ENEMY_SKINS[id].kind], id).toBeTruthy();
     expect(isEnemySkinId('wraith-husk')).toBe(true);
     expect(isEnemySkinId('nope')).toBe(false);
@@ -330,7 +330,7 @@ describe('v0.8 item 11: applyEnemySkin', () => {
     };
     const warn = vi.fn();
     const a = make();
-    applyEnemySkin(a, 'blighted-soldier', 'footman-soot', warn);
+    applyEnemySkin(a, 'ash-wraith', 'wraith-husk', warn); // L2 filled the Footman skins; the husk is still empty
     expect(a.helm.visible).toBe(true);
     expect(a.mat.color.getHex()).toBe(0xffffff);
     const b = make();

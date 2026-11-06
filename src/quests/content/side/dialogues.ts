@@ -176,7 +176,7 @@ function currentTalk(q: QuestDef, i: number): Condition {
  * Every side rule is therefore held back while some other quest's talk objective for the NPC is current; the giver's own
  * rules answer instead, and the job's rule returns the moment that step is done.
  */
-function guardRules(npcId: string, rules: Addition['rules'], defs: readonly QuestDef[]): Addition['rules'] {
+export function guardRules(npcId: string, rules: Addition['rules'], defs: readonly QuestDef[]): Addition['rules'] {
   const target = npcId.replace(/^npc-/, '');
   return rules.map((r) => {
     const own = [...JSON.stringify(r.when).matchAll(/"quest":"(j\d\d)"/g)].map((m) => m[1]).pop();

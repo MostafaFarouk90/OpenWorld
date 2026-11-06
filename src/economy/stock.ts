@@ -2,6 +2,8 @@ import { flagConditionHolds, type FlagCondition, type FlagReader } from '../core
 import type { ClassId } from '../actors/classes';
 import type { FavourBand, FavourTrack } from '../state/favour';
 import { ACT3_DISCOUNTS, ACT3_SELL_FLAT, ACT3_SHOP_LIST_PRICES, ACT3_VENDORS } from './stock.act3';
+import { ACT4_DISCOUNTS, ACT4_SHOP_LIST_PRICES, HILD, WENNA, WULFHILD } from './stock.act4';
+import { ACT4_VENDOR_OPEN_WHEN, ACT4_VENDOR_POSTS } from './refugePosts.act4';
 
 export type VendorId =
   | 'wystan' | 'merrin' | 'edda' | 'wynn' | 'dunstan' | 'gerta' | 'ashdown'
@@ -124,10 +126,10 @@ export const VENDORS: Readonly<Record<VendorId, VendorDef>> = {
       { itemId: 'deepcore-pick', count: 1, from: 'hearthbound' },
     ],
   },
-  wenna: { id: 'wenna', buys: false, lines: [] },
-  // Act 4 (v0.8 item 16): empty until L7 stocks them.
-  wulfhild: { id: 'wulfhild', buys: true, lines: [] },
-  hild: { id: 'hild', buys: false, lines: [] },
+  // Act 4 (L7): Wenna is the Grisel favour vendor from M38; Wulfhild (Ashwalkers, from M43) and Hild (Ashgate). In stock.act4.ts.
+  wenna: WENNA,
+  wulfhild: WULFHILD,
+  hild: HILD,
   slagg: {
     id: 'slagg',
     buys: true,
@@ -184,6 +186,7 @@ export const SHOP_LIST_PRICES: Readonly<Record<string, number>> = {
   'grisel-oath-sash': 90,
   'deepcore-pick': 400,
   ...ACT3_SHOP_LIST_PRICES,
+  ...ACT4_SHOP_LIST_PRICES,
 };
 
 /** Flat sell prices that bypass the 40% rule and may apply to quest-kind items (materials sold at Slagg). */
@@ -216,6 +219,7 @@ export const VENDOR_DISCOUNTS: readonly VendorDiscount[] = [
   { flag: 'story.r10.choice', value: 'miners', vendors: UNION_VENDORS, percent: 15 },
   { flag: 'story.r10.choice', value: 'stewards', vendors: UNION_VENDORS, percent: 0 },
   ...ACT3_DISCOUNTS,
+  ...ACT4_DISCOUNTS,
 ];
 
 /** The best matching discount percent for a vendor (0 when none); the buy price only, never sell or buy-back. */
@@ -240,9 +244,8 @@ export function discountPercent(
  * add rows (L7: Aldous closes from the betrayal, `{ none: ['story.m38.complete'] }`).
  */
 export const VENDOR_OPEN_WHEN: Partial<Record<VendorId, FlagCondition>> = {
-  // Closed until L7 replaces these rows with their opening conditions (Wulfhild at the refuge, Hild in the Waste).
-  wulfhild: { any: ['region.never'] },
-  hild: { any: ['region.never'] },
+  // L7 (economy/refugePosts.act4.ts): Wenna from M38, Aldous until M38, Hild from M41, Wulfhild from M43.
+  ...ACT4_VENDOR_OPEN_WHEN,
 };
 
 /**
@@ -254,7 +257,8 @@ export interface VendorPostRow {
   anchorId: string;
   when: FlagCondition;
 }
-export const VENDOR_POSTS: VendorPostRow[] = [];
+/** L7: the refuge shops from M41, Hild at Ashgate and Wulfhild at the Walker Camp (economy/refugePosts.act4.ts). */
+export const VENDOR_POSTS: VendorPostRow[] = [...ACT4_VENDOR_POSTS];
 
 /** The anchor `shop:<id>` stands at now: the last holding VENDOR_POSTS row, else `shop.<id>`. */
 export function vendorAnchor(v: VendorId, flags: FlagReader, rows: readonly VendorPostRow[] = VENDOR_POSTS): string {
@@ -267,4 +271,10 @@ export function vendorAnchor(v: VendorId, flags: FlagReader, rows: readonly Vend
 export function vendorOpenByTable(v: VendorId, flags: FlagReader, table: Partial<Record<VendorId, FlagCondition>> = VENDOR_OPEN_WHEN): boolean {
   const c = table[v];
   return c ? flagConditionHolds(c, flags) : true;
+}
+
+/** L7: a vendor's favour band, from its VENDORS track (null for a plain shop). The economy plugin's Shop port uses it. */
+export function vendorBand(v: VendorId, favourBand: (track: FavourTrack) => FavourBand): FavourBand | null {
+  const track = VENDORS[v]?.track;
+  return track ? favourBand(track) : null;
 }

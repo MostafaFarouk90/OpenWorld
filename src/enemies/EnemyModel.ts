@@ -1,3 +1,4 @@
+import type { EnemySkinDef } from './skins';
 import type { DamageBus } from '../combat/DamageBus';
 import * as THREE from 'three';
 import { KNIGHT } from '../config/constants';
@@ -69,7 +70,7 @@ type Tintable = THREE.Material & { color?: THREE.Color; emissive?: THREE.Color }
 export function buildEnemyModel(
   source: EnemyModelSource,
   def: EnemyDef,
-  opts: { bus?: DamageBus } = {},
+  opts: { bus?: DamageBus; skin?: EnemySkinDef } = {},
 ): EnemyModel {
   const root = new THREE.Group();
   root.name = `enemy-${def.kind}`;
@@ -102,6 +103,9 @@ export function buildEnemyModel(
       c.name = `${m.name || 'material'}#${def.kind}`;
       if (c.color) c.color.multiply(tint);
       if (c.emissive && def.model.emissive !== undefined) c.emissive.setHex(def.model.emissive);
+      // v0.8 (L2): a skin's look over the kind's own, before the base emissive is recorded, so a hit flash restores it.
+      if (c.color && opts.skin?.tint !== undefined) c.color.multiply(new THREE.Color(opts.skin.tint));
+      if (c.emissive && opts.skin?.emissive !== undefined) c.emissive.setHex(opts.skin.emissive);
       clones.set(m, c);
     }
     return c;
@@ -132,7 +136,7 @@ export function buildEnemyModel(
   model.traverse((o) => {
     if (HELD_ITEM.test(o.name) && !(o.parent && HELD_ITEM.test(o.parent.name))) o.visible = false;
   });
-  for (const name of def.model.hide ?? []) {
+  for (const name of [...(def.model.hide ?? []), ...(opts.skin?.hide ?? [])]) {
     const obj = model.getObjectByName(name);
     if (obj) obj.visible = false;
   }

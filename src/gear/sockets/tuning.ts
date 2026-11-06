@@ -30,6 +30,9 @@ export const GEM_BOSSES: readonly { bossId: string; variant: 'a' | 'b'; questId:
   { bossId: 'the-slagmaw', variant: 'b', questId: 'd04' },
   { bossId: 'murkjaw', variant: 'a', questId: 'd05' },
   { bossId: 'corvin-skarl', variant: 'b', questId: 'd06' },
+  // Act 4 (L7, Q6): one gem per boss, as in Act 3.
+  { bossId: 'bellows-engine', variant: 'a', questId: 'd07' },
+  { bossId: 'eormen', variant: 'b', questId: 'd08' },
 ];
 
 export const grantedFlag = (bossId: string): string => `gear.shardgem.granted.${bossId}`;

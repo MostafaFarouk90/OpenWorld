@@ -33,7 +33,9 @@ export interface CityValidateOptions {
 }
 
 const defaultOutsideOk = (id: string): boolean =>
-  /^harrowmark\.gate\.[a-z]+$/.test(id) || id.startsWith('harrowmark.gate.south.queue.') || id === 'stealth.m06.start' || id === 'npc-post.rook.gate';
+  /^harrowmark\.gate\.[a-z]+$/.test(id) || id.startsWith('harrowmark.gate.south.queue.') || id === 'stealth.m06.start' || id === 'npc-post.rook.gate' ||
+  // Act 4 (L2, additive): the occupied city's gate faces and R20's farm-ring huts stand outside the wall.
+  /^harrowmark\.a4\.gate\.[a-z]+\.face$/.test(id) || id.startsWith('harrowmark.a4.r20.hut.') || /^harrowmark\.a4\.spawn\.r20\.cp\.[23]\./.test(id) || id === 'harrowmark.a4.deeprun.exit';
 
 export function validateCity(layout: LayoutData, opts: CityValidateOptions = {}): string[] {
   const errors: string[] = [];

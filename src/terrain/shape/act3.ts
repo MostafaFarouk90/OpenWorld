@@ -19,3 +19,14 @@ export const ACT3_PROTECTED_BOXES: readonly ShapeBox[] = ACT3_PROTECTED_REGIONS.
 
 /** The kill plane (-50, Player.ts) plus 10 m: no trough, pool or bowl floor may be this low or lower. */
 export const ACT3_MIN_FLOOR = -40;
+
+/**
+ * Act 4 (L1): the boxes the world shaper guards, every flat, uplift and trough kept out of them. The Ashen Waste is Act
+ * 4's ground now, so it leaves the list; that no Act 3 layer reaches it, and no Act 4 layer reaches the Greyfen or the
+ * Dragonspine, are kept as tests (waste.test.ts).
+ */
+export const WORLD_PROTECTED_REGIONS: readonly RegionId[] = ACT3_PROTECTED_REGIONS.filter((id) => id !== 'ashen-waste');
+export const WORLD_PROTECTED_BOXES: readonly ShapeBox[] = WORLD_PROTECTED_REGIONS.map((id) => {
+  const b = engineBox(id);
+  return { minX: b.x0, maxX: b.x1, minZ: b.z0, maxZ: b.z1 };
+});

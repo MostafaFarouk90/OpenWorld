@@ -58,15 +58,15 @@ const ROADS: Act2RoadId[] = ['cinder-road', 'stonefold-road', 'fellwalker-track'
 
 describe('ground weights', () => {
   it('are 1 inside each Act 2 region and 0 for the other rule', () => {
-    expect(groundWeights(19000, 1500)).toEqual({ cinderreach: 1, oldsmoke: 0, greyfen: 0, dragonspine: 0 });
-    expect(groundWeights(19500, 9500)).toEqual({ cinderreach: 0, oldsmoke: 1, greyfen: 0, dragonspine: 0 });
+    expect(groundWeights(19000, 1500)).toEqual({ cinderreach: 1, oldsmoke: 0, greyfen: 0, dragonspine: 0, ash: 0 });
+    expect(groundWeights(19500, 9500)).toEqual({ cinderreach: 0, oldsmoke: 1, greyfen: 0, dragonspine: 0, ash: 0 });
   });
 
   it('are 0 everywhere in Brightwater and Harrowmark', () => {
     for (const id of ['brightwater', 'harrowmark'] as const) {
       const b = engineBox(id);
       for (let x = b.x0; x <= b.x1; x += 250) {
-        for (let z = b.z0; z <= b.z1; z += 250) expect(groundWeights(x, z)).toEqual({ cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 0 });
+        for (let z = b.z0; z <= b.z1; z += 250) expect(groundWeights(x, z)).toEqual({ cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 0, ash: 0 });
       }
     }
   });
@@ -400,19 +400,20 @@ describe('ground shader', () => {
     }
   });
 
-  it('has a ground key for each Act 2 and Act 3 region and none for the rest', () => {
+  it('has a ground key for each Act 2, Act 3 and Act 4 region and none for the rest (the Caldera lies inside the Waste)', () => {
     for (const id of REGION_IDS) {
       const touches = chunkTouchesGround((engineBox(id).x0 + engineBox(id).x1) / 2, (engineBox(id).z0 + engineBox(id).z1) / 2, 100);
-      expect(touches).toBe(['cinderreach', 'oldsmoke', 'greyfen', 'dragonspine'].includes(id));
+      expect(touches, id).toBe(['cinderreach', 'oldsmoke', 'greyfen', 'dragonspine', 'ashen-waste', 'caldera'].includes(id));
     }
   });
 });
 
 describe('Act 3 ground weights', () => {
   it('are 1 inside Greyfen and Dragonspine, 0 far away, and blend between', () => {
-    expect(groundWeights(3000, 12500)).toEqual({ cinderreach: 0, oldsmoke: 0, greyfen: 1, dragonspine: 0 });
-    expect(groundWeights(14000, 15000)).toEqual({ cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 1 });
-    expect(groundWeights(9000, 8000)).toEqual({ cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 0 });
+    expect(groundWeights(3000, 12500)).toEqual({ cinderreach: 0, oldsmoke: 0, greyfen: 1, dragonspine: 0, ash: 0 });
+    expect(groundWeights(14000, 15000)).toEqual({ cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 1, ash: 0 });
+    // Act 4 (L1): the middle of the Ashen Waste is the ash rule's.
+    expect(groundWeights(9000, 8000)).toEqual({ cinderreach: 0, oldsmoke: 0, greyfen: 0, dragonspine: 0, ash: 1 });
     const gb = engineBox('greyfen');
     expect(groundWeights(gb.x1 + GROUND_BLEND / 2, 12500).greyfen).toBeCloseTo(0.5, 5);
     expect(groundWeights(gb.x1 + GROUND_BLEND + 1, 12500).greyfen).toBe(0);

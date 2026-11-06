@@ -8,13 +8,17 @@ import { resolveLayout } from '../region/resolveLayout';
 import { modelLibraryFor } from '../assets/swap/ModelLibrary';
 import { buildCityModels, type CityModels } from './cityArt';
 import { buildCity } from './cityBuild';
-import { watchNorthwestGate, watchRiverGate, watchSouthGate } from './gate';
-import { NORTHWEST_PORTCULLIS_ID, RIVER_PORTCULLIS_ID } from './city';
+import { watchNortheastGate, watchNorthwestGate, watchRiverGate, watchSouthGate } from './gate';
+import { NORTHEAST_PORTCULLIS_ID, NORTHWEST_PORTCULLIS_ID, RIVER_PORTCULLIS_ID } from './city';
 import { DOORS, HARROWMARK_LAYOUT } from './harrowmark.layout';
 import { HARROWMARK_NPC_DEFS, HARROWMARK_NPC_STRINGS_EN } from './npcDefs';
 import './types';
 import { validateCity } from './validateCity';
 import { buildWorldChange } from './worldChange';
+import { OCCUPIED_FLAG } from './act4/sites';
+
+/** Act 4 (Q2): every working gate shuts while Vey holds the city. */
+const HELD = { closedWhen: OCCUPIED_FLAG };
 
 export interface HarrowmarkPluginOptions {
   layout?: typeof HARROWMARK_LAYOUT;
@@ -90,12 +94,15 @@ export function createHarrowmarkPlugin(opts: HarrowmarkPluginOptions = {}): Game
           }),
         );
 
-        const gate = watchSouthGate(ctx.gates, (state) => city.setPortcullis(state === 'closed'));
+        const gate = watchSouthGate(ctx.gates, (state) => city.setPortcullis(state === 'closed'), HELD);
         cleanups.push(() => gate.dispose());
-        const river = watchRiverGate(ctx.gates, (open) => city.setShutter(RIVER_PORTCULLIS_ID, !open));
+        const river = watchRiverGate(ctx.gates, (open) => city.setShutter(RIVER_PORTCULLIS_ID, !open), HELD);
         cleanups.push(() => river.dispose());
-        const northwest = watchNorthwestGate(ctx.gates, (open) => city.setShutter(NORTHWEST_PORTCULLIS_ID, !open));
+        const northwest = watchNorthwestGate(ctx.gates, (open) => city.setShutter(NORTHWEST_PORTCULLIS_ID, !open), HELD);
         cleanups.push(() => northwest.dispose());
+        // Act 4 (L1): the Ash Road's gate.
+        const northeast = watchNortheastGate(ctx.gates, (open) => city.setShutter(NORTHEAST_PORTCULLIS_ID, !open));
+        cleanups.push(() => northeast.dispose());
 
         const change = buildWorldChange(ctx);
         cleanups.push(() => change.dispose());

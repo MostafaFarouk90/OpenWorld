@@ -9,8 +9,9 @@
 import { TERRAIN, WORLD_BOUNDS } from '../config/constants';
 import { createNoise2D } from './noise';
 import { WORLD_SHAPE } from './shape';
-import { ACT3_MIN_FLOOR, ACT3_PROTECTED_BOXES } from './shape/act3';
+import { ACT3_MIN_FLOOR, WORLD_PROTECTED_BOXES } from './shape/act3';
 import { detailRelief } from './shape/detailRelief';
+import { wasteRelief } from './shape/waste';
 import { buildShaper } from './shaping';
 
 const warpNoise = createNoise2D(TERRAIN.seed);
@@ -101,13 +102,14 @@ export function naturalHeightAt(x: number, z: number): number {
 }
 
 /** The shaper's options for the world (tests rebuild variants of the world shape with them). */
-export const WORLD_SHAPER_OPTIONS = { bounds: WORLD_BOUNDS, heightRange: HEIGHT_RANGE, protectedBoxes: ACT3_PROTECTED_BOXES, minFloor: ACT3_MIN_FLOOR };
+export const WORLD_SHAPER_OPTIONS = { bounds: WORLD_BOUNDS, heightRange: HEIGHT_RANGE, protectedBoxes: WORLD_PROTECTED_BOXES, minFloor: ACT3_MIN_FLOOR };
 
 const shaper = buildShaper(WORLD_SHAPE, baseHeight, WORLD_SHAPER_OPTIONS);
 
 /** Terrain height in metres at world position (x, z). Deterministic and thread-safe. */
 export function heightAt(x: number, z: number): number {
-  return shaper.heightAt(x, z) + detailRelief(x, z);
+  // Act 4 (L1): the Waste's dunes, 0 outside the Waste and on every lane and site.
+  return shaper.heightAt(x, z) + detailRelief(x, z) + wasteRelief(x, z);
 }
 
 /** The world's road profiles (map, tests): centreline height at arc `s` and the road's length. */

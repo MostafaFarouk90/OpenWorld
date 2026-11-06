@@ -14,6 +14,7 @@ import { WYRM_SPAWNERS } from './wyrm/spawners';
 import { ACT3_DRAGON_SPAWNERS } from './wyrm/large/lodgeWyrms';
 import { SKARL_SPAWNERS } from '../bosses/skarl/spawners';
 import { WAVE_SPAWNERS } from '../waves/spawners';
+import { ACT4_HARROWMARK_SPAWNERS } from '../harrowmark/act4/spawners';
 import type { SpawnerDef } from './types';
 
 export const ALL_SPAWNERS: readonly SpawnerDef[] = [
@@ -31,4 +32,5 @@ export const ALL_SPAWNERS: readonly SpawnerDef[] = [
   ...ACT3_SPAWNERS,
   ...ACT3_DRAGON_SPAWNERS,
   ...SKARL_SPAWNERS,
+  ...ACT4_HARROWMARK_SPAWNERS,
 ];

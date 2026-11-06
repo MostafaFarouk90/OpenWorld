@@ -15,7 +15,10 @@ import { MAP_STRINGS_EN } from './strings.en';
 import { renderLocalTile, renderTerrainBitmap, minimapTilePlan, type TerrainBitmap } from './TerrainBitmap';
 import { DEFAULT_WORLD_BOUNDS, MAP_TUNING } from './tuning';
 import type { MapViewModel } from './viewTypes';
-import { openRegionAt, regionChips, type RegionChip } from './regionLayer';
+import { openRegionAt, REGION_LABEL_WHEN, regionChips, type RegionChip } from './regionLayer';
+
+/** Every flag a region label reads (REGION_LABEL_WHEN), so a change to any of them redraws the chips. */
+const LABEL_FLAGS = [...new Set(Object.values(REGION_LABEL_WHEN).flatMap((rows) => (rows ?? []).map((r) => r.flag)))];
 import { blockBandAt, blockChips, blockChipsKey, type BlockChip } from './act3/blockChips';
 import { MAP_ACT3_STRINGS_EN } from './act3/strings.en';
 import '../region/containment';
@@ -149,10 +152,11 @@ const map: GamePlugin = {
     let openSig = '';
     const currentChips = (): RegionChip[] => {
       const open = openNow();
-      const sig = open.join(',');
+      // Act 4 (L2): a label that changes by flag (Harrowmark held by Vey) is part of the signature, so a load redraws it.
+      const sig = `${open.join(',')}|${LABEL_FLAGS.map((f) => (ctx.state.getFlag(f) ? 1 : 0)).join('')}`;
       if (sig !== openSig) {
         openSig = sig;
-        chips = regionChips(open);
+        chips = regionChips(open, ctx.state);
 
       }
       return chips;
@@ -207,7 +211,12 @@ const map: GamePlugin = {
       // Inside a block area with a chip the legend shows the chip's range (L to L + span), not the wider region band.
       legend: () => blockBandAt(currentBlocks(), ctx.player.feet.x, ctx.player.feet.z) ?? sources.legend(ctx.player.feet.x, ctx.player.feet.z),
       player: () => ({ x: ctx.player.feet.x, z: ctx.player.feet.z, yaw: ctx.player.facingYaw }),
-      travelBlockedReason: () => waystones()?.travelBlockedReason() ?? 'busy',
+      travelBlockedReason: () => {
+        const reason = waystones()?.travelBlockedReason() ?? 'busy';
+        // v0.8 (Act 4 L3): a refusal in an ash storm also toasts, so it reads outside the map too.
+        if (reason === 'storm') ctx.events.emit('hud.toast', { textKey: 'map.blocked.storm' });
+        return reason;
+      },
       travel: (id) => void waystones()?.travel(id),
       t: (k, p) => ctx.strings.t(k, p),
     };

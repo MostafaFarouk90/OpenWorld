@@ -1,3 +1,4 @@
+import { applyEnemySkin, ENEMY_SKINS, isEnemySkinId, type EnemySkinId } from './skins';
 import * as THREE from 'three';
 import { isHeavyBlow } from '../combat/heavyBlow';
 import { HumanoidBody, type EnemyBody } from './body';
@@ -35,7 +36,6 @@ import { makeHawkBody } from './peak/hawk/body';
 import { FEN_TUNING } from './fen/tuning';
 import { TauntRegistry, type TauntService } from './taunts';
 import type { PerksService } from '../perks/types';
-import { applyEnemySkin } from './skins';
 import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
 
 
@@ -343,9 +343,10 @@ export class EnemyManager {
         slot: req.slot,
         skin: req.skin,
       };
-      const body = this.makeBody(def);
-      // v0.8 item 11: a skin's look over the kind's model (each body owns its materials).
-      applyEnemySkin(body, def.kind, req.skin, (m) => this.host.warn(m));
+      const body = this.makeBody(def, req.skin);
+      // Humanoid bodies draw the skin in the model builder (makeBody); the others (golem, crawler, quadruped, wyrm) take
+      // L0's applyEnemySkin over their materials.
+      if (req.skin && !(body instanceof HumanoidBody)) applyEnemySkin(body, def.kind, req.skin, (m) => this.host.warn(m));
       enemy = new Enemy(this.env, spawn, body);
     } catch (err) {
       this.host.warn(`enemies: could not spawn ${def.kind} for ${req.spawnerId}: ${String(err)}`);
@@ -392,7 +393,7 @@ export class EnemyManager {
   }
 
   /** The body for a def: the procedural quadruped, or the Knight rig from the model factory. */
-  private makeBody(def: EnemyDef): EnemyBody {
+  private makeBody(def: EnemyDef, skin?: EnemySkinId): EnemyBody {
     if (def.body === 'golem') return makeGolemBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'crawler') return makeCrawlerBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'quadruped') return makeQuadrupedBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
@@ -414,7 +415,8 @@ export class EnemyManager {
         return p;
       },
     };
-    const model = buildEnemyModel(source, def, { bus: this.host.combat.bus });
+    const look = skin && isEnemySkinId(skin) && ENEMY_SKINS[skin].kind === def.kind ? ENEMY_SKINS[skin] : undefined;
+    const model = buildEnemyModel(source, def, { bus: this.host.combat.bus, ...(look ? { skin: look } : {}) });
     const animator = new EnemyAnimator(model.owner, source.clips, { warn: (m) => this.host.warn(m) });
     const body = new HumanoidBody(model, animator);
     if (procedural.length) {

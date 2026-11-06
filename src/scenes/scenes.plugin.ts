@@ -28,10 +28,13 @@ const scenes: GamePlugin = {
       saveHold = ctx.services.get('save')?.suspend('scene') ?? null;
       inputHold = ctx.input.contexts.push('cutscene', 'scenes');
     };
+    // The input context goes first: the save hold's last release asks `gameplaySafe` at once, which must no longer
+    // see `cutscene` on top, or a save deferred during the scene stays pending (fresh review finding 2).
     const dropSaveAndInput = (): void => {
-      saveHold?.();
       inputHold?.();
-      saveHold = inputHold = null;
+      inputHold = null;
+      saveHold?.();
+      saveHold = null;
     };
     const runner = new SceneRunner({
       setFlag: (k, v) => ctx.state.setFlag(k, v),
@@ -43,8 +46,8 @@ const scenes: GamePlugin = {
         const modeOff = ctx.services.get('movementMode')?.push('scene', () => safe) ?? (() => undefined);
         takeSaveAndInput();
         return () => {
-          dropSaveAndInput();
           modeOff();
+          dropSaveAndInput();
         };
       },
       checkpointSave: () => {
@@ -97,7 +100,7 @@ const scenes: GamePlugin = {
     offs.push(ctx.events.on('save.loaded', () => void runner.resume()));
     offs.push(
       ctx.events.on('actor.died', (e) => {
-        if (e.actorId === PLAYER_ID) runner.cancel();
+        if (e.actorId === PLAYER_ID) runner.cancel(true);
       }),
     );
     teardown = () => {

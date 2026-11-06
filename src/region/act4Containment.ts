@@ -4,6 +4,7 @@
 // corridor points (the rule test pins 80 m from the Caldera).
 import type { FlagCondition } from '../core/flagCondition';
 import type { ContainmentHoleDef, CorridorDef } from './containment';
+import { ASH_ROAD_POINTS as ASH_ROAD_SHAPE_POINTS } from '../terrain/shape/waste';
 import { engineBox } from './regions';
 
 const NEVER: FlagCondition = { any: ['region.never'] };
@@ -21,19 +22,36 @@ export const OCCUPIED_FLAG = 'story.m38.complete';
 export const ASHGATE_POINT = { x: 10000, z: 4450 } as const;
 
 /**
- * Harrowmark's north-east gate (bearing 26 degrees from the city centre (8500, 2000), radius 750), north through the
- * shipped `fog.ashen-waste` face (9900, 3970) to Ashgate. Placeholder points until L1 fits the road.
+ * The Ash Road's fitted centreline (L1, src/terrain/shape/waste.ts) from Harrowmark's north-east gate, past the Underways
+ * exit junction and through the shipped `fog.ashen-waste` face, ending on Ashgate's arch point.
  */
-export const ASH_ROAD_POINTS: readonly (readonly [number, number])[] = [
-  [8826, 2676],
-  [9300, 3300],
-  [9900, 3970],
-  [ASHGATE_POINT.x, ASHGATE_POINT.z],
-];
+export const ASH_ROAD_POINTS: readonly (readonly [number, number])[] = [...ASH_ROAD_SHAPE_POINTS.slice(0, -1), [ASHGATE_POINT.x, ASHGATE_POINT.z]];
 
 export const ASH_ROAD_CORRIDOR: CorridorDef = { id: 'corridor.ash-road', points: ASH_ROAD_POINTS, openWhen: ASH_ROAD_OPEN_WHEN };
 
-export const ACT4_CORRIDORS: readonly CorridorDef[] = [ASH_ROAD_CORRIDOR];
+/** L1: the refuge camp on Ashgate's plateau, open with the road (its posts are present from M41). */
+export const ASHGATE_REFUGE_CORRIDOR: CorridorDef = {
+  id: 'corridor.ashgate-refuge',
+  points: [
+    [9580, 4410],
+    [10040, 4410],
+  ],
+  halfWidth: 60,
+  openWhen: ASH_ROAD_OPEN_WHEN,
+};
+
+/** L1: Ashgate's arch north into the Waste, open with the Waste's edge face. */
+export const ASHGATE_GATE_CORRIDOR: CorridorDef = {
+  id: 'corridor.ashgate-gate',
+  points: [
+    [ASHGATE_POINT.x, ASHGATE_POINT.z],
+    [ASHGATE_POINT.x, 4580],
+  ],
+  halfWidth: 12,
+  openWhen: WASTE_EDGE_OPEN_WHEN,
+};
+
+export const ACT4_CORRIDORS: readonly CorridorDef[] = [ASH_ROAD_CORRIDOR, ASHGATE_REFUGE_CORRIDOR, ASHGATE_GATE_CORRIDOR];
 
 /** The Caldera (Act 5) is a closed hole inside the open Waste for all of Act 4. */
 export const CALDERA_HOLE: ContainmentHoleDef = { id: 'hole.caldera', box: engineBox('caldera'), openWhen: NEVER };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createFakeCore } from '../region/testing/fakeCore';
-import { NORTHWEST_GATE_FLAG, watchNorthwestGate, M06_ROUTE_FLAG, M06_GUARDED_FLAG, RIVER_GATE_FLAG, watchRiverGate, M06_STARTED_FLAG, gateStateFor, watchSouthGate, type GateState } from './gate';
+import { NORTHEAST_GATE_FLAG, NORTHEAST_GATE_SHUT_FLAG, northeastGateOpen, watchNortheastGate, NORTHWEST_GATE_FLAG, watchNorthwestGate, M06_ROUTE_FLAG, M06_GUARDED_FLAG, RIVER_GATE_FLAG, watchRiverGate, M06_STARTED_FLAG, gateStateFor, watchSouthGate, type GateState } from './gate';
 
 function setup(flags: Record<string, boolean | string> = {}) {
   const fc = createFakeCore();
@@ -123,5 +123,103 @@ describe('North-west Gate shutter (Act 3, K1)', () => {
     gate.dispose();
     fc.ctx.state.setFlag(NORTHWEST_GATE_FLAG, true);
     expect(seen).toEqual([false, true, false]);
+  });
+});
+
+describe('North-east Gate (Act 4, L1): the Ash Road', () => {
+  it('opens from Act 4 and shuts again once Vey holds the city', () => {
+    expect(NORTHEAST_GATE_FLAG).toBe('story.gate.a4');
+    expect(NORTHEAST_GATE_SHUT_FLAG).toBe('story.m38.complete');
+    expect(northeastGateOpen(false, false)).toBe(false);
+    expect(northeastGateOpen(true, false)).toBe(true);
+    expect(northeastGateOpen(true, true)).toBe(false);
+    expect(northeastGateOpen(false, true)).toBe(false);
+  });
+
+  it('stays shut through Acts 1 to 3, follows the flags and re-derives on a load', () => {
+    const fc = createFakeCore();
+    const seen: boolean[] = [];
+    const gate = watchNortheastGate(fc.ctx.gates, (open) => seen.push(open));
+    expect(gate.open()).toBe(false);
+    for (const f of ['story.gate.a2', 'story.gate.a3']) fc.ctx.state.setFlag(f, true);
+    expect(gate.open()).toBe(false);
+    fc.ctx.state.setFlag(NORTHEAST_GATE_FLAG, true);
+    expect(gate.open()).toBe(true);
+    fc.ctx.state.setFlag(NORTHEAST_GATE_SHUT_FLAG, true);
+    expect(gate.open()).toBe(false);
+    // A load of a Phase G save (Act 4, the city not yet fallen) opens it again.
+    fc.flags.clear();
+    fc.flags.set(NORTHEAST_GATE_FLAG, true);
+    fc.fire('save.loaded');
+    expect(gate.open()).toBe(true);
+    gate.dispose();
+    fc.ctx.state.setFlag(NORTHEAST_GATE_SHUT_FLAG, true);
+    expect(seen).toEqual([false, true, false, true]);
+  });
+});
+
+describe('the occupied city holds every working gate shut (Act 4, L2: closedWhen)', () => {
+  const HELD = 'story.m38.complete';
+
+  it('the state rule: held beats every M06 state', () => {
+    expect(gateStateFor(true, true, true)).toBe('closed');
+    expect(gateStateFor(true, false, true)).toBe('closed');
+    expect(gateStateFor(true, true, false)).toBe('open');
+  });
+
+  it('the South Gate shuts on the flag, reopens on a load without it, and ignores the flag when not asked to', () => {
+    const fc = createFakeCore();
+    fc.flags.set(M06_ROUTE_FLAG, 'bribe');
+    const seen: GateState[] = [];
+    const gate = watchSouthGate(fc.ctx.gates, (s) => seen.push(s), { closedWhen: HELD });
+    expect(gate.state()).toBe('open');
+    fc.ctx.state.setFlag(HELD, true);
+    expect(gate.state()).toBe('closed');
+    fc.flags.set(HELD, false);
+    fc.fire('save.loaded');
+    expect(gate.state()).toBe('open');
+    expect(seen).toEqual(['open', 'closed', 'open']);
+    const plain = watchSouthGate(fc.ctx.gates, () => {});
+    fc.ctx.state.setFlag(HELD, true);
+    expect(plain.state()).toBe('open');
+    gate.dispose();
+    plain.dispose();
+  });
+
+  it('starts shut for a save already past M38, with one apply only', () => {
+    const fc = createFakeCore();
+    fc.flags.set(M06_ROUTE_FLAG, 'bribe');
+    fc.flags.set(HELD, true);
+    const seen: GateState[] = [];
+    watchSouthGate(fc.ctx.gates, (s) => seen.push(s), { closedWhen: HELD });
+    expect(seen).toEqual(['closed']);
+  });
+
+  it('the River and North-west shutters close on the flag over their own open flag, and re-derive on load', () => {
+    for (const [watch, flag] of [
+      [watchRiverGate, RIVER_GATE_FLAG],
+      [watchNorthwestGate, NORTHWEST_GATE_FLAG],
+    ] as const) {
+      const fc = createFakeCore();
+      fc.flags.set(flag, true);
+      const seen: boolean[] = [];
+      const g = watch(fc.ctx.gates, (o) => seen.push(o), { closedWhen: HELD });
+      expect(g.open()).toBe(true);
+      fc.ctx.state.setFlag(HELD, true);
+      expect(g.open()).toBe(false);
+      fc.flags.set(HELD, false);
+      fc.fire('save.loaded');
+      expect(g.open()).toBe(true);
+      // Held but never opened (an impossible save): still shut.
+      fc.flags.set(flag, false);
+      fc.flags.set(HELD, true);
+      fc.fire('save.loaded');
+      expect(g.open()).toBe(false);
+      expect(seen).toEqual([true, false, true, false]);
+      g.dispose();
+      fc.ctx.state.setFlag(HELD, false);
+      fc.ctx.state.setFlag(flag, true);
+      expect(seen).toHaveLength(4);
+    }
   });
 });
