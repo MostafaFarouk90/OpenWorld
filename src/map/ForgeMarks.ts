@@ -20,6 +20,8 @@ export const SHRINE_POSITIONS: Readonly<Partial<Record<ShrineId, { x: number; z:
   'hathrens-mere': { x: 3000, z: 12050 },
   'last-anvil': { x: 14700, z: 13900 },
   'wyrms-hearth': { x: 13600, z: 15600 },
+  // Act 4 (v0.8 item 13): in the Glasslands, east of the Caldera (map (14.3, 6.7)). L1 places the anchor and may move it.
+  'singing-slag': { x: 13300, z: 5700 },
 };
 
 export interface ForgeMark {

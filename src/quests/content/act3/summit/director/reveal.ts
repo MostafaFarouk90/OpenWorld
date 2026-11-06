@@ -138,10 +138,20 @@ export function installPerk(k: Kit): Off {
     const off = perks.register({ id: KEEPER_PERK_ID, active: () => scale() !== 1, burnDecayScale: scale });
     return () => off();
   }
+  // Plugins set up in dependency order, so in a full boot `perks` usually appears after this director: the retry registers
+  // the perk then (dropping a spells binding made in the meantime, which the perks plugin has replaced).
   let off: Off | null = null;
+  let viaPerks = false;
   const bind = (): void => {
+    if (viaPerks) return;
+    const p = ctx.services.get('perks');
+    if (p) {
+      off?.();
+      off = p.register({ id: KEEPER_PERK_ID, active: () => scale() !== 1, burnDecayScale: scale });
+      viaPerks = true;
+      return;
+    }
     if (off) return;
-    if (ctx.services.get('perks')) return;
     const spells = ctx.services.get('spells');
     if (spells?.setBurnDecayScale) off = spells.setBurnDecayScale(scale);
   };

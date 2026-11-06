@@ -35,6 +35,7 @@ import { makeHawkBody } from './peak/hawk/body';
 import { FEN_TUNING } from './fen/tuning';
 import { TauntRegistry, type TauntService } from './taunts';
 import type { PerksService } from '../perks/types';
+import { applyEnemySkin } from './skins';
 import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
 
 
@@ -342,7 +343,10 @@ export class EnemyManager {
         slot: req.slot,
         skin: req.skin,
       };
-      enemy = new Enemy(this.env, spawn, this.makeBody(def));
+      const body = this.makeBody(def);
+      // v0.8 item 11: a skin's look over the kind's model (each body owns its materials).
+      applyEnemySkin(body, def.kind, req.skin, (m) => this.host.warn(m));
+      enemy = new Enemy(this.env, spawn, body);
     } catch (err) {
       this.host.warn(`enemies: could not spawn ${def.kind} for ${req.spawnerId}: ${String(err)}`);
       return null;

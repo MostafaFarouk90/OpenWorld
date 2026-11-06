@@ -204,7 +204,14 @@ export const SEVEN_GATES_ONE_DRUM: TrackDef = {
  * Reserved track ids: known but not yet built, so the music plugin does not warn about them. Empty from A14 (the Act 2
  * tracks); v0.7 item 23 reserved the two Act 3 slots (ACT3_TRACK_SLOTS), and the Act 3 sound pass built them, so it is empty again.
  */
-export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [];
+/**
+ * v0.8 item 19: Act 4 track ids, silent when requested until L8 registers them in `TRACKS_BY_ID` (then drop the row).
+ * `dust-chant` is the Ashen Waste; `seven-gates-ash` is Harrowmark from `story.gate.a4`.
+ */
+export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [
+  { id: 'dust-chant', bpm: 91 },
+  { id: 'seven-gates-ash', bpm: 96 },
+];
 export const RESERVED_TRACK_IDS: readonly string[] = RESERVED_TRACKS.map((t) => t.id);
 
 export const TRACKS_BY_ID: Readonly<Record<string, TrackDef>> = {
