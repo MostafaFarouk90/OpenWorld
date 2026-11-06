@@ -3,7 +3,7 @@
 // containment service all read it. Boxes are in design "map" metres (engine = map + MAP_TO_ENGINE_OFFSET), min
 // inclusive and max exclusive. Reserved regions belong to later acts: their boxes are drawn so nothing else is built
 // there, `regionAt` never answers them and containment never opens them.
-import type { FlagCondition } from '../core/flagCondition';
+import { flagConditionHolds, type FlagCondition, type FlagReader } from '../core/flagCondition';
 
 export type RegionId =
   | 'brightwater'
@@ -39,6 +39,17 @@ export interface RegionDef {
   openWhen: FlagCondition;
   /** A later act's region: never answered by `regionAt`, never open. */
   reserved: boolean;
+  /**
+   * v0.8: act-scoped bands. The first entry whose condition holds replaces `levelBand` (Harrowmark's Act 4 band from
+   * `story.gate.a4`); none holding keeps `levelBand`. Read through `regionBandNow`.
+   */
+  bandWhen?: readonly { when: FlagCondition; band: { min: number; max: number } }[];
+  /** v0.8: a track variant by flag (Harrowmark's ash variant from `story.gate.a4`); the first entry that holds wins. */
+  trackWhen?: readonly { when: FlagCondition; track: string }[];
+  /** v0.8: the region's weather (L3 runs ash storms only where this is 'ash-storm': the Waste). */
+  weather?: 'ash-storm';
+  /** v0.8 (Q4): the Ashmare cannot be summoned in this region (`mount.refused.region`); L3 dismisses it at the edge. */
+  mount?: 'refused';
 }
 
 /**
@@ -48,7 +59,10 @@ export interface RegionDef {
  * retired it, so the Dragonspine opens on `story.gate.a3` alone. A region's hold is spread into its own `openWhen` only, so a
  * hold never touches another region.
  */
-export const PHASE_HOLDS: Readonly<Partial<Record<RegionId, readonly string[]>>> = {};
+export const PHASE_HOLDS: Readonly<Partial<Record<RegionId, readonly string[]>>> = {
+  // v0.8 (Act 4, Q11): Phase G holds the Waste shut behind `fog.waste-edge`; L13 PR 2 empties this entry.
+  'ashen-waste': ['story.phase.wasteOpen'],
+};
 
 /** The hold flags of one region (empty when it has none). */
 export function phaseHolds(id: RegionId): readonly string[] {
@@ -58,7 +72,12 @@ export function phaseHolds(id: RegionId): readonly string[] {
 const NEVER: FlagCondition = { any: ['region.never'] };
 
 /** Ambience bed ids a region can name (A14 built the Act 2 ones, K14 the Act 3 ones). */
-export type RegionBedId = 'brightwater' | 'harrowmark' | 'cinderreach' | 'oldsmoke' | 'greyfen' | 'dragonspine';
+export type RegionBedId = 'brightwater' | 'harrowmark' | 'cinderreach' | 'oldsmoke' | 'greyfen' | 'dragonspine' | 'ashen-waste';
+
+/** v0.8: Harrowmark's Act 4 band (design 3, plan 3.1), from `story.gate.a4`; capped at spawn by ACT4_CAP_ABOVE_PLAYER. */
+export const HARROWMARK_ACT4_BAND = { min: 28, max: 33 } as const;
+/** v0.8: the flag that switches Harrowmark to Act 4 (its band, its track variant, the kill XP factor and the cap). */
+export const ACT4_GATE_FLAG = 'story.gate.a4';
 
 export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
   brightwater: {
@@ -79,6 +98,8 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
     ground: null,
     openWhen: {},
     reserved: false,
+    bandWhen: [{ when: { all: [ACT4_GATE_FLAG] }, band: HARROWMARK_ACT4_BAND }],
+    trackWhen: [{ when: { all: [ACT4_GATE_FLAG] }, track: 'seven-gates-ash' }],
   },
   // Engine x 15500..22500, z -500..5500. Opens when Act 1 ends.
   cinderreach: {
@@ -121,16 +142,19 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
     openWhen: { all: ['story.gate.a3', ...phaseHolds('dragonspine')] },
     reserved: false,
   },
-  // Reserved (later acts): band and track are placeholders until the act that builds the region sets them.
-  // A ring around the Caldera; the box includes the Caldera, which is listed (and reserved) on its own.
+  // v0.8 (Act 4): engine x 7000..15000, z 4500..11000. A ring around the Caldera: the box includes the Caldera, which
+  // stays reserved (and a closed containment hole); `regionAt` answers null inside any reserved box. Opens when Gate of
+  // Ash (M42) is accepted, held shut in Phase G by `story.phase.wasteOpen`. Bands capped at spawn (Q1).
   'ashen-waste': {
     box: { x0: 8000, z0: 5500, x1: 16000, z1: 12000 },
-    levelBand: { min: 28, max: 34 },
-    track: 'ashen-waste',
-    bed: null,
-    ground: null,
-    openWhen: NEVER,
-    reserved: true,
+    levelBand: { min: 31, max: 35 },
+    track: 'dust-chant',
+    bed: 'ashen-waste',
+    ground: 'ash',
+    openWhen: { all: ['story.m42.started', ...phaseHolds('ashen-waste')] },
+    reserved: false,
+    weather: 'ash-storm',
+    mount: 'refused',
   },
   caldera: {
     box: { x0: 10500, z0: 7500, x1: 13500, z1: 10500 },
@@ -154,4 +178,18 @@ export function engineBox(id: RegionId): MapBox {
     x1: b.x1 + MAP_TO_ENGINE_OFFSET.x,
     z1: b.z1 + MAP_TO_ENGINE_OFFSET.z,
   };
+}
+
+/** v0.8: a region's band now: the first `bandWhen` entry that holds, else `levelBand`. A copy. */
+export function regionBandNow(id: RegionId, flags?: FlagReader | null): { min: number; max: number } {
+  const def = REGION_INFO[id];
+  if (flags) for (const e of def.bandWhen ?? []) if (flagConditionHolds(e.when, flags)) return { ...e.band };
+  return { ...def.levelBand };
+}
+
+/** v0.8: a region's track now: the first `trackWhen` entry that holds, else `track`. */
+export function regionTrackNow(id: RegionId, flags?: FlagReader | null): string {
+  const def = REGION_INFO[id];
+  if (flags) for (const e of def.trackWhen ?? []) if (flagConditionHolds(e.when, flags)) return e.track;
+  return def.track;
 }

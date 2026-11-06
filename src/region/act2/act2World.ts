@@ -9,6 +9,7 @@ import { roadPoint } from '../../terrain/shape/roadPoint';
 import type { CorridorDef } from '../containment';
 import type { FogWallDef } from '../fogWall';
 import { ACT3_FOG_STRINGS_EN, ACT3_SHIPPED_FACE_RULES } from '../act3Fog';
+import { ACT4_FOG_STRINGS_EN, ACT4_SHIPPED_FACE_RULES } from '../act4Fog';
 import { REGION_INFO } from '../regions';
 
 /** Never open: the faces toward the regions of later acts (the same never-set key the registry uses). */
@@ -75,6 +76,8 @@ export const ACT2_WORLD_STRINGS_EN: Record<string, string> = {
   [FOG_TOAST_SHUT]: 'The ash-fall here is a wall. Whatever lies beyond will have to wait.',
   // v0.7: the Act 3 fog toasts ride with the Act 2 world strings so the two shipped faces have their text.
   ...ACT3_FOG_STRINGS_EN,
+  // v0.8: and the Act 4 ones (the shipped Waste faces' new text, the Waste edge, the Caldera rim, the held city gates).
+  ...ACT4_FOG_STRINGS_EN,
 };
 
 /**
@@ -89,9 +92,10 @@ export const ACT2_FOG_WALLS: readonly FogWallDef[] = [
   // Shut faces where later acts' roads will cross.
   // v0.7: the Greyfen and Dragonspine faces take Act 3's conditions and toasts (act3Fog.ts).
   { id: 'fog.greyfen', anchorId: 'cinderroad.fog.greyfen', axis: 'z', halfLength: 150, blockedSide: 1, ...ACT3_SHIPPED_FACE_RULES['fog.greyfen'], pushBackTo: 1, cullBeyond: WALL_CULL },
-  { id: 'fog.ashen-waste', anchorId: 'cinderroad.fog.ashen-waste', axis: 'z', halfLength: 150, blockedSide: 1, openWhen: NEVER, toastKey: FOG_TOAST_SHUT, pushBackTo: 1, cullBeyond: WALL_CULL },
+  // v0.8: the Ash Road's face opens on M41 (act4Fog.ts).
+  { id: 'fog.ashen-waste', anchorId: 'cinderroad.fog.ashen-waste', axis: 'z', halfLength: 150, blockedSide: 1, toastKey: FOG_TOAST_SHUT, ...ACT4_SHIPPED_FACE_RULES['fog.ashen-waste'], pushBackTo: 1, cullBeyond: WALL_CULL },
   { id: 'fog.dragonspine', anchorId: 'cinderroad.fog.dragonspine', axis: 'x', halfLength: 500, blockedSide: -1, ...ACT3_SHIPPED_FACE_RULES['fog.dragonspine'], pushBackTo: 1, cullBeyond: WALL_CULL },
-  { id: 'fog.caldera', anchorId: 'cinderroad.fog.caldera', axis: 'x', halfLength: 150, blockedSide: -1, openWhen: NEVER, toastKey: FOG_TOAST_SHUT, pushBackTo: 1, cullBeyond: WALL_CULL },
+  { id: 'fog.caldera', anchorId: 'cinderroad.fog.caldera', axis: 'x', halfLength: 150, blockedSide: -1, openWhen: NEVER, toastKey: FOG_TOAST_SHUT, ...ACT4_SHIPPED_FACE_RULES['fog.caldera'], pushBackTo: 1, cullBeyond: WALL_CULL },
 ];
 
 /** Every Act 2 road's polyline with its half width: drawn as ribbons, and kept free of grass. */

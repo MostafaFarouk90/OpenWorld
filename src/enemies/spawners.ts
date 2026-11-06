@@ -1,10 +1,13 @@
+import type { EnemySkinId } from './skins';
 import type { Vec3 } from '../physics/PhysicsWorld';
 import { CUTPURSE } from './cutpurse/tuning';
 import { ENEMY_DEFS } from './defs';
 import { FOE_DEFS, isFoeKind } from './foes/defs';
 import type { FoeDef } from './foes/types';
 import { areaAt, AREA_BANDS, type AreaId } from '../region/areas';
-import { ACT3_BLOCKS, DEFAULT_BAND, bandForRegion, blockBaseLevel, enemyLevel, summitLevel, type Act3BlockId } from './level';
+import { ACT3_BLOCKS, DEFAULT_BAND, act4Level, bandForRegion, blockBaseLevel, enemyLevel, summitLevel, type Act3BlockId } from './level';
+import type { FlagReader } from '../core/flagCondition';
+import { ACT4_GATE_FLAG } from '../region/regions';
 import type { ActorId, AnchorLike, AnchorsPort, GatesPort } from './ports';
 import { LEVEL, WORLD_AI } from './tuning';
 import type { EnemyDef, LevelBand, SpawnOptions, SpawnerDef } from './types';
@@ -28,6 +31,8 @@ export interface SpawnRequest {
   options: SpawnOptions & { leash: boolean };
   /** `${spawnerId}#${slot}`: the ash pile this member rises from. */
   spentKey: string;
+  /** v0.8: the spawner's skin (`SpawnerDef.skin`); the actor carries it as `actor.skin`. */
+  skin?: EnemySkinId;
 }
 
 export interface SpawnerRegistryDeps {
@@ -40,6 +45,11 @@ export interface SpawnerRegistryDeps {
   rng?: () => number;
   /** v0.7: the live player level, read at spawn time by Act 3 block and summit spawners (EnemyManager wires progression). */
   playerLevel?: () => number | undefined;
+  /**
+   * v0.8: the flags, read at spawn time for act-scoped region bands (Harrowmark's Act 4 band from `story.gate.a4`) and the
+   * Act 4 cap. Absent (older tests) reads every band as its static base, as before v0.8.
+   */
+  flags?: FlagReader;
 }
 
 /**
@@ -166,6 +176,7 @@ export class SpawnerRegistry {
         level,
         patrol,
         patrolStride: def.patrolStride,
+        ...(def.skin ? { skin: def.skin } : {}),
         options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard, ...(def.peaceful && opts.peaceful === undefined ? { peaceful: true } : {}) },
         spentKey,
       });
@@ -597,7 +608,7 @@ export class SpawnerRegistry {
   private resolveBand(def: SpawnerDef, tierOffset: number | undefined): LevelBand {
     let band: LevelBand;
     if (typeof def.band === 'string') {
-      const found = bandForRegion(def.band);
+      const found = bandForRegion(def.band, this.deps.flags);
       if (!found) {
         this.warnOnce(`region:${def.band}`, `spawners: unknown region band '${def.band}' for '${def.id}'; using default`);
         band = DEFAULT_BAND;
@@ -635,12 +646,30 @@ export class SpawnerRegistry {
         if (p === undefined) this.warnOnce(`summit-p:${def.id}`, `spawners: no player level for summit spawner '${def.id}'; the summit cap is off`);
         return summitLevel(AREA_BANDS[area].band, roll, p);
       }
+      // v0.8 (Q1): every Act 4 spawn rolls its band, then caps at P + 3 (first arrivals P + 2), fixed at spawn.
+      if (this.isAct4Capped(def, area)) {
+        const p = this.livePlayerLevel();
+        if (p === undefined) this.warnOnce(`act4-p:${def.id}`, `spawners: no player level for Act 4 spawner '${def.id}'; the Act 4 cap is off`);
+        return act4Level(area ? AREA_BANDS[area].band : band, roll, p, def.firstArrival === true);
+      }
       if (area) return enemyLevel(AREA_BANDS[area].band, { roll }, (m) => this.deps.warn(m));
       return enemyLevel(band, { roll }, (m) => this.deps.warn(m));
     } catch (e) {
       this.warnOnce(`band:${JSON.stringify(band)}`, `spawners: invalid band ${JSON.stringify(band)}; using default (${String(e)})`);
       return enemyLevel(DEFAULT_BAND);
     }
+  }
+
+  /**
+   * v0.8: an Act 4 spawn (Q1): the `harrowmark-a4` interiors, the Ashen Waste's band, or Harrowmark's band once
+   * `story.gate.a4` is set. A literal band is never capped (the Act 1 to 3 groups); act4Bands.test.ts lints that no
+   * group that can spawn after the gate uses one.
+   */
+  private isAct4Capped(def: SpawnerDef, area: AreaId | null): boolean {
+    if (area === 'harrowmark-a4') return true;
+    if (area) return false;
+    if (def.band === 'ashen-waste') return true;
+    return def.band === 'harrowmark' && this.deps.flags !== undefined && Boolean(this.deps.flags.getFlag(ACT4_GATE_FLAG));
   }
 
   /** The area a spawner rolls in: its own `area`, else (for a band naming a region with areas) the area of its anchor. */

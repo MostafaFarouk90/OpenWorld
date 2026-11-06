@@ -1,3 +1,4 @@
+import type { EnemySkinId } from './skins';
 import type { DamageTag } from '../actors/DamageResolver';
 import type { FoeKind } from './foes/types';
 import type { ActorId, FavourTrack } from './ports';
@@ -67,6 +68,13 @@ export const ACT2_ENEMY_KINDS: readonly Act2EnemyKind[] = ['ember-wyrm', 'wyrmli
  */
 export type Act3EnemyKind = 'fen-leech' | 'peat-shambler' | 'rime-hawk' | 'crag-ogre' | 'skarl-drake';
 export const ACT3_ENEMY_KINDS: readonly Act3EnemyKind[] = ['fen-leech', 'peat-shambler', 'rime-hawk', 'crag-ogre', 'skarl-drake'];
+
+/**
+ * Act 4 kind ids (v0.8 item 11), reserved the same way: L5 moves each id into `EnemyKind` with its `ENEMY_DEFS` and
+ * `TELEGRAPH_STYLE` rows. The Footman is the shipped `blighted-soldier` in a skin (skins.ts), not a new kind.
+ */
+export type Act4EnemyKind = 'waste-strider' | 'husk-knight' | 'cinder-gnat-swarm';
+export const ACT4_ENEMY_KINDS: readonly Act4EnemyKind[] = ['waste-strider', 'husk-knight', 'cinder-gnat-swarm'];
 
 /** The impact-sound materials of `actor.data.audio.material` ('straw' and 'wood' are the foes'). */
 export type EnemyMaterial = 'ash' | 'metal' | 'straw' | 'wood';
@@ -307,6 +315,13 @@ export interface SpawnerDef {
    * (Q9). A spawner whose band is a region with areas and that names no area takes the area of its anchor.
    */
   area?: AreaId;
+  /**
+   * v0.8 (Act 4, Q1): a first-arrival group (M35's ambush and checkpoints, M42's first group) caps at P + 2 instead of
+   * the Act 4 P + 3. Read only for Act 4 spawns.
+   */
+  firstArrival?: boolean;
+  /** v0.8 item 11: the members' look over their kind's model (enemies/skins.ts); passed to the spawn and set on `actor.skin`. */
+  skin?: EnemySkinId;
   /**
    * auto: at setup and after `rest`; manual: the enemies service; quest: on `quest.started` with this id,
    * and with `flag` only while that quest is active and the flag is true (checked on start, flag change and save load).

@@ -28,6 +28,11 @@ export interface BossDef {
    */
   mercyVerb?: 'release' | 'spare';
   /**
+   * v0.8: the Burn a release of this boss costs, read by the encounter that spends it (Eormen 20, L13). Absent: the
+   * encounter's own rule (no shipped boss charges Burn for its release).
+   */
+  releaseBurnCost?: number;
+  /**
    * Asked on each stagger of the boss that is not shield-blocked. False: it is a forced stagger (a parry, a howl, Second Wind
    * on a boss that only breaks another way), not a poise break, so it is not counted: no `boss.break`, no pip, no release
    * window. The callback may restore the boss's poise itself. Default: every stagger counts.

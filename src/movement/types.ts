@@ -75,7 +75,19 @@ export interface CarryRouteDef {
 
 // ---- Movement modes (item 25) ----
 
-export type MovementMode = 'walk' | 'glide' | 'ferry' | 'dive' | 'haul';
+export type MovementMode = 'walk' | 'glide' | 'ferry' | 'dive' | 'haul' | 'storm' | 'escort' | 'scene';
+
+/** v0.8: the modes owners push (`movementMode.push`) over K7's set mode, highest first: scene > escort > storm. */
+export type PushedMovementMode = 'storm' | 'escort' | 'scene';
+export const PUSHED_MODE_PRIORITY: Readonly<Record<PushedMovementMode, number>> = { storm: 1, escort: 2, scene: 3 };
+
+export interface MovementSafePoint {
+  position: Vec3Like;
+  yaw: number;
+}
+
+/** A safe point, or a getter read each time the safe point is asked for (L3: the last shelter passed; L4: the last junction). */
+export type MovementSafePointSource = MovementSafePoint | (() => MovementSafePoint | null);
 
 export interface MovementModeRule {
   /** What a save stores as the player's position: the live position, or the mode's safe point (`movementMode.safePoint`). */
@@ -99,6 +111,12 @@ export const MOVEMENT_MODE_RULES: Readonly<Record<MovementMode, MovementModeRule
   dive: { save: 'safePoint', fastTravel: 'refused', mount: 'refused', companions: 'hidden' },
   // The player's position; the hauled object is saved where it lies (carry reset); fast travel returns it to its checkpoint.
   haul: { save: 'position', fastTravel: 'allowed', mount: 'refused', companions: 'follow' },
+  // v0.8 (Act 4, item 12). L3: the last shelter passed off a rope-line, else where the storm caught the player.
+  storm: { save: 'safePoint', fastTravel: 'refused', mount: 'refused', companions: 'follow' },
+  // L4: the escort's last junction (the load places the escort there too).
+  escort: { save: 'safePoint', fastTravel: 'refused', mount: 'refused', companions: 'follow' },
+  // The scene's start or its last checkpoint; the scene dismisses the mount and places companions itself.
+  scene: { save: 'safePoint', fastTravel: 'refused', mount: 'refused', companions: 'follow' },
 };
 
 /** The `movementMode` service (core provides it; K7 calls `set`). */
@@ -108,5 +126,11 @@ export interface MovementModeService {
   readonly safePoint: { position: Vec3Like; yaw: number } | null;
   /** K7: enters a mode with its safe point (`walk` clears it). Emits `movement.mode` on a change. */
   set(mode: MovementMode, safePoint?: { position: Vec3Like; yaw: number } | null): void;
+  /**
+   * v0.8: pushes `storm`, `escort` or `scene` over the set mode, with its safe point or a getter for it. The current mode
+   * is the highest pushed (scene > escort > storm), else the set mode. Returns the release (idempotent). Emits
+   * `movement.mode` when the current mode changes. A load does not clear pushed modes: their owners release them.
+   */
+  push(mode: PushedMovementMode, safePoint: MovementSafePointSource): () => void;
   rule(): MovementModeRule;
 }

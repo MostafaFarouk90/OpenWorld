@@ -3,6 +3,7 @@ import { EFFECT_EVENT_PATTERN, MAX_IF_DEPTH } from './types';
 import { evalCondition } from './conditions';
 import type { EffectEnv, EffectResult } from './ports';
 import { grantMasterBook } from '../progression/masterBooks';
+import { COMPANION_MAX_RANK, isCompanionId } from '../companions/ids';
 
 export interface EffectRunner { run(effects: Effect[] | undefined): EffectResult[] }
 
@@ -123,6 +124,15 @@ export function createEffectRunner(env: ScaledEffectEnv): EffectRunner {
     } else if ('grantMasterBook' in c) {
       const r = grantMasterBook(env.state as never, c.grantMasterBook, env.bus);
       if (!r.ok) throw new Error(`grantMasterBook ${String(c.grantMasterBook)}: ${r.reason}`);
+    } else if ('setCompanionRank' in c) {
+      const { id, rank, source } = (c.setCompanionRank ?? {}) as { id?: unknown; rank?: unknown; source?: unknown };
+      if (!isCompanionId(id)) throw new Error(`setCompanionRank: unknown companion ${String(id)}`);
+      if (typeof rank !== 'number' || !Number.isInteger(rank) || rank < 1 || rank > COMPANION_MAX_RANK) throw new Error(`setCompanionRank: rank must be 1 to ${COMPANION_MAX_RANK}`);
+      if (typeof source !== 'string' || !source) throw new Error('setCompanionRank needs a source');
+      const companions = env.companions?.();
+      if (!companions) { warnOnce('setCompanionRank: companions service absent'); throw new Silent('companions service absent'); }
+      // The service never lowers a rank and refuses an unjoined companion: a repeat or a lower rank is a quiet no-op.
+      companions.setRank(id, rank, source);
     } else if ('event' in c) {
       if (typeof c.event !== 'string' || !EFFECT_EVENT_PATTERN.test(c.event)) {
         throw new Error(`event name rejected: ${String(c.event)}`);

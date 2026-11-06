@@ -93,12 +93,12 @@ export function createCompanionsService(
       }
       return ok;
     },
-    setRank(id, rank) {
+    setRank(id, rank, source) {
       const c = byId(id);
       if (!c?.joined || !Number.isInteger(rank) || rank < 1 || rank > MAX_RANK) return false;
       if (rank <= c.rank()) return false;
       ctx.state.setFlag(c.def.rankFlag, rank);
-      ctx.events.emit('companion.bond', { companionId: id, rank });
+      ctx.events.emit('companion.bond', source ? { companionId: id, rank, source } : { companionId: id, rank });
       return true;
     },
     isActive: (id) => active().includes(id),
