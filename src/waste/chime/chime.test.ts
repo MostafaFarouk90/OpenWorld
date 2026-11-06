@@ -20,6 +20,12 @@ describe('chime phrases', () => {
       expect(() => new ChimeRun(metronome(), p, 0, { stepMs: STEP })).not.toThrow();
     }
   });
+  it('keep the wide window under half the closest gap, so one press never claims a neighbour', () => {
+    for (const p of CHIME_PHRASES) {
+      const gap = Math.min(...p.steps.slice(1).map((s, i) => s - p.steps[i]!));
+      expect(T.wideGoodMs).toBeLessThan((gap * STEP) / 2);
+    }
+  });
 });
 
 describe('ChimeRun', () => {
@@ -146,9 +152,13 @@ describe('ChimePuzzle', () => {
     const r = rig(1, 3);
     expect(r.puzzle.press(1, 0)).toBe('started');
     expect(r.puzzle.view(0)?.wide).toBe(true);
-    // 200 ms late is a hit in the wide window.
+    // 140 ms late is a hit in the wide window (a miss in the normal one)...
     const ph = CHIME_PHRASES[1]!;
-    expect(r.puzzle.press(ph.keys[0]!, at(0, 200))).toBe('good');
+    expect(r.puzzle.press(ph.keys[0]!, at(0, 140))).toBe('good');
+    // ...and on the 2-apart pair (steps 4 and 6) a late press still claims its own step, leaving the next one free.
+    expect(r.puzzle.press(ph.keys[1]!, at(4, 150))).toBe('good');
+    expect(r.puzzle.press(ph.keys[2]!, at(6))).toBe('perfect');
+    expect(r.puzzle.view(at(6))?.judged.slice(0, 3)).toEqual(['good', 'good', 'perfect']);
     r.puzzle.reset();
     const a = rig(1, 5);
     a.puzzle.press(1, 0);

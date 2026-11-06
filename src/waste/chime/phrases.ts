@@ -26,9 +26,13 @@ export const CHIME_TUNING = {
   strikeRadius: 3.5,
   /** Fails on one phrase before the plaque hums it and the next run shows each pillar a beat early (the lesson). */
   lessonAfter: 2,
-  /** R13's numbers: the hit window widens after three fails on a phrase... */
+  /** R13's count: the hit window widens after three fails on a phrase... */
   widenAfter: 3,
-  wideGoodMs: 260,
+  /**
+   * ...to 155 ms either side. Not R13's 260: at 91 BPM two strikes 2 steps apart are 330 ms apart, so any window of half
+   * that or more overlaps the next strike's and a late press claims the wrong step (worse for the player, not better).
+   */
+  wideGoodMs: 155,
   /** ...and after five the next run is struck for the player, so M45 can never loop for ever. */
   assistAfter: 5,
   /** Presses off the pattern a phrase forgives (R13's number). */

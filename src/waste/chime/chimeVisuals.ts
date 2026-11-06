@@ -100,6 +100,7 @@ export class ChimeVisuals {
   }
 
   dispose(): void {
+    this.light.dispose();
     this.root.removeFromParent();
     this.root.traverse((o) => {
       if (o instanceof THREE.Mesh) {

@@ -89,9 +89,14 @@ export class ChimePuzzle {
     return this.run.strike(tMs, key);
   }
 
+  /** Ends a replay that has rung out (the plugin calls it before a tick's presses, so the first press after it counts). */
+  expireReplay(tMs: number = this.p.now()): void {
+    if (this.replay && (tMs - this.replay.startMs) / this.stepMs - T.leadSteps >= 16) this.replay = null;
+  }
+
   /** Call a few times a second: judges a phrase once it is over and ends a replay. */
   update(tMs: number = this.p.now()): void {
-    if (this.replay && (tMs - this.replay.startMs) / this.stepMs - T.leadSteps >= 16) this.replay = null;
+    this.expireReplay(tMs);
     const run = this.run;
     if (!run || !run.finished(tMs)) return;
     const r = run.result(tMs);

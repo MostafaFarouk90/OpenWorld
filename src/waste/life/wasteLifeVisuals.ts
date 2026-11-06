@@ -23,6 +23,15 @@ const TANK_OFFSET = 2.6;
 
 interface Figure { root: THREE.Group; body: THREE.Object3D; placeholder: boolean; mixer: THREE.AnimationMixer | null }
 
+/** A loaded body's materials are its own clones; its geometry belongs to the loader's cache (Townsfolk.ts's rule). */
+function disposeModel(model: THREE.Object3D): void {
+  model.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    for (const mat of Array.isArray(m.material) ? m.material : [m.material]) mat.dispose();
+  });
+}
+
 export interface WasteLifeDeps {
   heightAt(x: number, z: number): number;
   loader?: NpcModelLoader;
@@ -110,7 +119,10 @@ export class WasteLifeVisuals {
     if (!loader) return;
     loadNpcModel(loader, def).then(
       ({ model, clips, def: built }) => {
-        if (this.disposed) return;
+        if (this.disposed) {
+          disposeModel(model);
+          return;
+        }
         root.remove(fig.body);
         disposePlaceholder(fig.body);
         fig.body = model;
@@ -157,7 +169,9 @@ export class WasteLifeVisuals {
     this.disposed = true;
     for (const f of this.figures) {
       f.mixer?.stopAllAction();
+      f.root.remove(f.body);
       if (f.placeholder) disposePlaceholder(f.body);
+      else disposeModel(f.body);
     }
     for (const g of [this.refuge, this.camp]) {
       g.removeFromParent();

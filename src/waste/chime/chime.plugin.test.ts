@@ -131,6 +131,8 @@ describe('waste-chime plugin', () => {
     expect(t.ctx.state.getNumber(CHIME_PHRASE_FLAG)).toBe(2);
     t.press(1, t.clock.t);
     t.ctx.events.emit('save.loaded', {} as never);
+    // Five steps on (off the old phrase's beat grid): without the restart the half-begun phrase would judge these presses.
+    t.clock.t += 5 * STEP;
     // The half-begun phrase is gone: the next press starts phrase three afresh.
     t.playPhrase(2);
     expect(t.ctx.state.getBool(LIT)).toBe(true);
