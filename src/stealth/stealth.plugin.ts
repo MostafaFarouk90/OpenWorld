@@ -81,7 +81,7 @@ export default {
         find: (id) => ctx.anchors.find(id),
         interiorAt: (p) => ctx.services.get('interiors')?.interiorAt(p) ?? null,
         playerFeet: () => ctx.player.feet,
-        sectionLive: (def) => questLive(quests(), def.quest),
+        sectionLive: (def) => questLive(quests(), def.quest) && (!def.liveWhen || ctx.state.getFlag(def.liveWhen.flag) === def.liveWhen.equals),
         exitArmed: (def) => objectivesDone(quests(), def.quest.id, def.quest.exitArmedAfter),
         guards: (def) => {
           // One reused array per tick (the director reads it several times a tick).

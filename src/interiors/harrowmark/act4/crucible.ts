@@ -11,7 +11,7 @@ export const CRUCIBLE_DOOR_ID = 'crucible-cellars';
 export const CRUCIBLE_LOCK_FLAG = 'story.d07.started';
 /** The arena's gate, built closed; it opens on L10's flag once the three vat-hall valves are turned (L6 may drive it). */
 export const CRUCIBLE_ARENA_GATE = 'crucible.arena.gate';
-export const CRUCIBLE_ARENA_GATE_FLAG = 'story.d07.vatValves';
+export const CRUCIBLE_ARENA_GATE_FLAG = 'story.d07.valves';
 
 const P = 'harrowmark.a4.crucible';
 const rect = (x0: number, z0: number, x1: number, z1: number): LocalRect => ({ x0, z0, x1, z1 });

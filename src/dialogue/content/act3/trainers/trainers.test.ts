@@ -100,7 +100,8 @@ describe.each(ACT3_TRAINERS)('$npcId', (t) => {
     const base = BASE[t.npcId];
     const ext = extended(t.npcId);
     expect(ext.nodes.slice(0, base.nodes.length)).toEqual(base.nodes);
-    const added = ext.nodes.slice(base.nodes.length);
+    // Act 4 (L10) appends its own `a4-` nodes after these (Gaut's M37 word)
+    const added = ext.nodes.slice(base.nodes.length).filter((n) => !n.id.startsWith('a4-'));
     expect(added.length).toBe(3);
     for (const n of added) expect(n.id.startsWith('a3-')).toBe(true);
   });

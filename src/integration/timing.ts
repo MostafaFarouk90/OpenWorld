@@ -523,3 +523,16 @@ export const WADE_BOOTS_MPS = 3.5;
 export const GLIDE_MPS = 10;
 /** A fen ferry ride. */
 export const FERRY_MPS = 5;
+
+/**
+ * Act 4 additions (plan Part 1.3, brief L13), fixed before anything is measured. The Act 1 to 3 tables above are unchanged.
+ */
+export const ACT4_BEAT_S = {
+  ...ACT3_BEAT_S,
+  /** sitting out one storm gust at a rope-line shelter */
+  shelterWait: 30,
+} as const;
+/** Walking along a rope-line in an ash storm (design 4.2's 3 m/s walk, storms only). Travel, under the 30% cap. */
+export const STORM_WALK_MPS = 3;
+/** R24's rain-cask cart. Travel, under the 30% cap. */
+export const ESCORT_CART_MPS = 1.5;

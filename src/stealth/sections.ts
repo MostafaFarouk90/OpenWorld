@@ -1,6 +1,7 @@
 import type { Anchor } from '../layout/AnchorRegistry';
 import type { QuestWindow } from './liveness';
 import type { P3 } from './perceptionPort';
+import { HARROWMARK_A4_SECTIONS } from '../quests/content/act4/harrowmark/sections';
 
 /**
  * A box placed on an anchor (anchors are points; plans/slice-2-stealth-chase.md section 12, B1). The box turns with
@@ -33,6 +34,8 @@ export interface StealthSectionDef {
   guardGroups: readonly string[];
   /** `hide` interactables registered by explicit id (never by tag). */
   hideSpots: readonly { id: string; anchor: string }[];
+  /** Act 4 (L10, additive): also live only while this flag has this value (R20's stealth way, one section per post). */
+  liveWhen?: { flag: string; equals: string | number | boolean };
 }
 
 const v = (anchor: string, hx: number, hy: number, hz: number, offset?: P3): VolumeDef => ({ anchor, half: { x: hx, y: hy, z: hz }, ...(offset ? { offset } : {}) });
@@ -125,6 +128,8 @@ export const SECTIONS: readonly StealthSectionDef[] = [
     guardGroups: [],
     hideSpots: [],
   },
+  // Act 4 (L10, additive): M36's rooftop walk, R20's three posts on the stealth way, R21's back lanes.
+  ...HARROWMARK_A4_SECTIONS,
 ];
 
 export const isInteriorBounds = (b: StealthSectionDef['bounds']): b is { interior: string } => 'interior' in b;

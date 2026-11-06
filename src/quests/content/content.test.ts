@@ -33,7 +33,9 @@ describe('quest content', () => {
       // Act 3 lower Dragonspine (K13)
       'm28', 'r15', 'm29', 'r16', 'm30', 'r17', 'r18',
       // Act 3 summit (K13 PR 2)
-      'm31', 'm32', 'm33', 'm34', 'd06']);
+      'm31', 'm32', 'm33', 'm34', 'd06',
+      // Act 4 Harrowmark (L10 PR 1)
+      'm35', 'm36', 'r19', 'r20', 'r21', 'r22', 'r23', 'd07', 'm37']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
