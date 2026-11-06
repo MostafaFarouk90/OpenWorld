@@ -49,6 +49,9 @@ export const LAZY_TILES: Record<string, () => Promise<readonly PlacementRow[]>> 
   d1: () => import('./d1.placements.json').then((m) => m.default as PlacementRow[]),
   d2: () => import('./d2.placements.json').then((m) => m.default as PlacementRow[]),
   d3: () => import('./d3.placements.json').then((m) => m.default as PlacementRow[]),
+  // W1 (Act 4 L1 PR 2): the petrified stumps along the Ash Road, the Waste's southern edge and its two stump groves, generated
+  // deterministically by src/waste/stumps.ts (about 600 wood rows; no TILE_BOUNDS, so no older scenery or ground cover is replaced).
+  w1: () => import('../waste/stumps').then((m) => m.wasteStumpRows()),
 };
 
 export interface TileRect {

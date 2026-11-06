@@ -13,6 +13,10 @@ export const PATTERNS: Readonly<Record<1 | 2 | 3, readonly number[]>> = {
 
 export const patternForTier = (tier: number): readonly number[] => PATTERNS[tier >= 3 ? 3 : tier === 2 ? 2 : 1];
 
+/** Custom steps: non-empty, whole, ascending inside one 16-step bar, each at least 2 after the last. */
+const validSteps = (steps: readonly number[]): boolean =>
+  steps.length > 0 && steps.every((s, i) => Number.isInteger(s) && s >= 0 && s < 16 && (i === 0 || s - steps[i - 1]! >= 2));
+
 export interface RunResult {
   judged: Judgement[];
   strays: number;
@@ -25,6 +29,11 @@ export interface RhythmOptions {
   stepMs?: number;
   perfectMs?: number;
   goodMs?: number;
+  /**
+   * The bar's strike steps instead of the tier's pattern (Act 4 L1 PR 2, the M45 chime phrases): ascending whole steps
+   * in 0..15, at least 2 apart, so one press still cannot claim two.
+   */
+  steps?: readonly number[];
 }
 
 /**
@@ -50,7 +59,8 @@ export class RhythmRun {
     opts: RhythmOptions = {},
   ) {
     const r = GEAR_TUNING.rhythm;
-    this.steps = patternForTier(tier);
+    if (opts.steps && !validSteps(opts.steps)) throw new Error(`RhythmRun: bad steps [${opts.steps.join(', ')}]`);
+    this.steps = opts.steps ? [...opts.steps] : patternForTier(tier);
     this.stepMs = opts.stepMs ?? 60000 / r.bpm / r.divisions;
     this.perfectMs = opts.perfectMs ?? r.perfectMs;
     this.goodMs = opts.goodMs ?? r.goodMs;
