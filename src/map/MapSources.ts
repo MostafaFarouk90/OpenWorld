@@ -9,7 +9,11 @@ import { ACT2_POI_PLACEMENTS, resolvePose } from '../world/poi/placement.act2';
 import { discoveredFlag, takenFlag } from '../world/poi/content';
 
 /** Shrines whose position comes from a published anchor (SHRINE_POSITIONS stays Act 1's table). */
-export const SHRINE_ANCHORS: Readonly<Partial<Record<ShrineId, string>>> = { 'hushed-anvil': 'cinderreach.hushed-anvil.site' };
+export const SHRINE_ANCHORS: Readonly<Partial<Record<ShrineId, string>>> = {
+  'hushed-anvil': 'cinderreach.hushed-anvil.site',
+  // v0.8 item 13: reserved for L1.
+  'singing-slag': 'waste.glasslands.singing-slag',
+};
 
 export interface Act2PoiSite {
   id: string;
