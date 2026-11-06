@@ -6,10 +6,10 @@ import { ACT1_CARD_SEEN_FLAG, ACT1_ENDING_ID } from './act1Ending';
 
 describe('act-ending table (v0.6)', () => {
   it('one row per act, unique ids and flags', () => {
-    expect(ACT_ENDINGS.map((d) => d.act)).toEqual([1, 2, 3]);
+    expect(ACT_ENDINGS.map((d) => d.act)).toEqual([1, 2, 3, 4]);
     const flags = ACT_ENDINGS.flatMap((d) => [d.gateFlag, d.cardSeenFlag, d.campSeenFlag]);
     expect(new Set(flags).size).toBe(flags.length);
-    expect(new Set(ACT_ENDINGS.map((d) => d.endingId)).size).toBe(3);
+    expect(new Set(ACT_ENDINGS.map((d) => d.endingId)).size).toBe(4);
   });
 
   it('act 1 keeps its v0.5 ids and reads the legacy seen key', () => {
@@ -30,7 +30,7 @@ describe('act-ending table (v0.6)', () => {
       campSeenFlag: 'story.a2.campSeen',
     });
     expect(worldChangeFlag(a2)).toBe('story.gate.a3');
-    expect(actEnding(4)).toBeUndefined();
+    expect(actEnding(5)).toBeUndefined();
   });
 
   it('the save aliases WorldState applies match the table', () => {

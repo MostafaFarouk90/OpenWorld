@@ -86,8 +86,14 @@ export class SceneRunner {
     return true;
   }
 
-  /** The player died (or the owner stops it): flags since the last checkpoint are dropped. */
-  cancel(): void {
+  /**
+   * The owner stops it: flags since the last checkpoint are dropped, and the next queued scene starts. With `all` (the
+   * player's death) the queued scenes are cancelled too, so none starts over a dead player.
+   */
+  cancel(all = false): void {
+    if (all) {
+      for (const q of this.queue.splice(0)) q.resolve('cancelled');
+    }
     if (!this.run) return;
     this.run.buffer.clear();
     this.end('cancelled');

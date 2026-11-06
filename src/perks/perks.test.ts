@@ -35,3 +35,26 @@ describe('Perks', () => {
     expect(() => p.register({ id: 'x', active: () => true })).not.toThrow();
   });
 });
+
+describe("Keeper's Understanding boot order (fresh review finding 1)", () => {
+  it('registers with perks once the service appears after the director, dropping the interim spells binding', async () => {
+    const { installPerk, KEEPER_DECAY_SCALE, KEEPER_PERK_ID } = await import('../quests/content/act3/summit/director/reveal');
+    const services = new Map<string, unknown>();
+    const ticks: Array<() => void> = [];
+    let spellsFn: (() => number) | null = null;
+    services.set('spells', { setBurnDecayScale: (fn: () => number) => ((spellsFn = fn), () => { if (spellsFn === fn) spellsFn = null; }) });
+    const ctx = { services: { get: (n: string) => services.get(n) }, player: { moving: true } };
+    const kit = { ctx, flag: () => true, every: (_n: number, fn: () => void) => void ticks.push(fn) };
+    const off = installPerk(kit as never);
+    expect(spellsFn).not.toBeNull(); // no perks yet: bound to spells as before
+    const p = new Perks(vi.fn());
+    services.set('perks', p);
+    for (const t of ticks) t();
+    expect(spellsFn).toBeNull();
+    expect(p.burnDecayScale()).toBe(KEEPER_DECAY_SCALE);
+    expect(() => p.register({ id: KEEPER_PERK_ID, active: () => true })).toThrow(); // registered once
+    for (const t of ticks) t();
+    off();
+    expect(p.burnDecayScale()).toBe(1);
+  });
+});

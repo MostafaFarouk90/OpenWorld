@@ -98,4 +98,33 @@ describe('the scenes plugin', () => {
     expect(await done).toBe('cancelled');
     expect(t.game.ctx.state.getBool('story.test.one')).toBe(false);
   });
+
+  it('a death also cancels the queued scenes, so none starts over the dead player (fresh review finding 3)', async () => {
+    const t = await boot();
+    t.scenes.register(DEF);
+    t.scenes.register({ ...DEF, id: 'queued' });
+    const first = t.scenes.play('test-scene');
+    const second = t.scenes.play('queued');
+    t.game.ctx.events.emit('actor.died', { actorId: 'player', killerId: null, kind: 'player', team: 'player', level: 1 } as never);
+    expect(await first).toBe('cancelled');
+    expect(await second).toBe('cancelled');
+    expect(t.scenes.active).toBeNull();
+    expect(t.game.ctx.input.contexts.top()).not.toBe('cutscene');
+  });
+
+  it('lets the input context go before the save hold, so the hold release sees a safe game (fresh review finding 2)', async () => {
+    const t = await boot();
+    const order: string[] = [];
+    const ctxs = t.game.ctx.input.contexts;
+    (t.game.ctx.services as unknown as { provide(n: string, v: unknown): void }).provide('save', {
+      suspend: () => () => void order.push(`save:${ctxs.top()}`),
+    });
+    t.scenes.register(DEF);
+    const done = t.scenes.play('test-scene');
+    t.run(2);
+    await done;
+    // Every release (the checkpoint's and the end's) sees the cutscene context already gone.
+    expect(order.length).toBeGreaterThanOrEqual(1);
+    for (const o of order) expect(o).not.toBe('save:cutscene');
+  });
 });

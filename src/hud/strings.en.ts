@@ -62,6 +62,7 @@ export const HUD_STRINGS_EN: Readonly<Record<string, string>> = {
   'hud.gold.label': 'Gold',
   'hud.ending.title': 'Smoke Over Harrowmark',
   'hud.ending.a3.title': "The Coal-Mother's Oath",
+  'hud.ending.a4.title': 'The Road to the Rim',
   'hud.ending.a3.line.m31.won': "Ysmeryth's trial was won on the roost, and the dragons count Cael worth their respect.",
   'hud.ending.a3.line.m31.yielded': "Cael yielded to Ysmeryth in her trial, and the dragons keep that trust.",
   'hud.ending.a3.line.d06.defeated': 'Corvin Skarl fell at Frostfang Aerie, and his hunters with him.',

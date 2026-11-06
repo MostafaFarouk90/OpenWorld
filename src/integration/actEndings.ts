@@ -70,6 +70,18 @@ export const ACT_ENDINGS: readonly ActEndingDef[] = [
     campSeenFlag: 'story.a3.campSeen',
     campAnchorId: 'dragonspine.wyrmwatch.hearth',
   },
+  // v0.8 item 14. L13 builds the director plugin, the camp scene and the anchor (L1 places `waste.rimfoot.fire`).
+  {
+    act: 4,
+    endingId: 'the-road-to-the-rim',
+    requires: ['m46', 'd08'],
+    gateFlag: 'story.gate.a5',
+    cardKey: 'hud.ending.a4.title',
+    cardSeenFlag: 'codex.actEnding.a4.seen',
+    campDialogueId: 'scene-act4-camp',
+    campSeenFlag: 'story.a4.campSeen',
+    campAnchorId: 'waste.rimfoot.fire',
+  },
 ];
 
 export function actEnding(act: number): ActEndingDef | undefined {
