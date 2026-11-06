@@ -26,7 +26,9 @@ export const ENEMY_SKINS: Readonly<Record<EnemySkinId, EnemySkinDef>> = {
   // a model (the env prompt list), since no builder reads `extra` yet.
   'footman-soot': { kind: 'blighted-soldier', tint: 0x6e6a66, emissive: 0x220c04 },
   'footman-masked': { kind: 'blighted-soldier', tint: 0xa8b0c4, emissive: 0x000000 },
-  'wraith-husk': { kind: 'ash-wraith' },
+  // L5 (plan act4-L5.md section 5): the cathedral's husks, bone-white ash with a faint ember in place of the wraith's green,
+  // the hat hidden so the head reads bald and shrunken. No new shader: the tint, the emissive and the shipped ash dissolve.
+  'wraith-husk': { kind: 'ash-wraith', tint: 0x8a8580, emissive: 0x3a2e26, hide: ['Mage_Hat'] },
   // L2: Vey's stealth observers (M36's rooftops, R20's stealth checkpoints) in the Regent's colours.
   'watch-masked': { kind: 'watch-guard', tint: 0x8890a0 },
 };
