@@ -101,6 +101,28 @@ describe('MapModal', () => {
     expect(w.stats.bitmapBuilds).toBe(1);
   });
 
+  it('Act 4 (L9): draws rope-lines dashed under the markers and place names beside their point', () => {
+    const { w, model, canvas } = make();
+    const c = canvas.ctx;
+    c.setLineDash = (...a: unknown[]) => c.calls.push(['setLineDash', a]);
+    c.fillText = (...a: unknown[]) => c.calls.push(['fillText', a]);
+    c.measureText = (t: string) => ({ width: t.length * 6 });
+    model.lines = () => [
+      { id: 'r#0', style: 'rope', points: [{ x: 0, z: 0 }, { x: 100, z: 0 }, { x: 200, z: 50 }] },
+      { id: 'r#1', style: 'rope', points: [{ x: 300, z: 0 }] }, // one point: nothing to draw
+    ];
+    model.labels = () => [{ id: 'place.ashgate', x: 0, z: 0, text: 'Ashgate' }];
+    w.update(0.1);
+    expect(count(canvas, 'setLineDash')).toBe(1);
+    const texts = c.calls.filter((x: any) => x[0] === 'fillText').map((x: any) => x[1][0]);
+    expect(texts.filter((t: string) => t === 'Ashgate')).toHaveLength(2); // shadow and text
+    // Without the hooks nothing extra is drawn.
+    const plain = make();
+    plain.canvas.ctx.setLineDash = (...a: unknown[]) => plain.canvas.ctx.calls.push(['setLineDash', a]);
+    plain.w.update(0.1);
+    expect(count(plain.canvas, 'setLineDash')).toBe(0);
+  });
+
   it('rate limits redraws to 10 Hz', () => {
     const { w } = make();
     w.update(0.016);
