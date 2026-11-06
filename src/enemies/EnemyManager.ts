@@ -36,7 +36,6 @@ import { makeHawkBody } from './peak/hawk/body';
 import { FEN_TUNING } from './fen/tuning';
 import { TauntRegistry, type TauntService } from './taunts';
 import type { PerksService } from '../perks/types';
-import { applyEnemySkin } from './skins';
 import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
 
 
