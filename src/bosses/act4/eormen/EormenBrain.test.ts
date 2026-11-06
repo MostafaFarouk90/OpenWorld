@@ -56,6 +56,7 @@ describe('EormenBrain', () => {
   it('tolls after a 1.2 s telegraph and opens the gong for 4 s', () => {
     const h = harness();
     h.brain.start();
+    h.brain.onFloor();
     h.until(() => h.brain.current === 'toll');
     expect(h.log).toContain(`telegraph:toll:${h.log.filter((x) => x.startsWith('telegraph')).length}:${TOLL.windup}`);
     h.until(() => h.brain.windowOpen);
@@ -70,6 +71,7 @@ describe('EormenBrain', () => {
     const h = harness();
     h.brain.start();
     expect(h.brain.strikeGong()).toBe('dud');
+    h.brain.onFloor();
     h.until(() => h.brain.windowOpen);
     expect(h.brain.strikeGong()).toBe('break');
     expect(h.brain.windowOpen).toBe(false);
@@ -79,6 +81,7 @@ describe('EormenBrain', () => {
   it('a toll during an open window extends it and never grants a second bar', () => {
     const h = harness();
     h.brain.start();
+    h.brain.onFloor();
     h.until(() => h.brain.windowOpen);
     // Force a second toll while the window is still open (the early toll's worst case).
     (h.brain as unknown as { tollIn: number }).tollIn = 0;
@@ -93,12 +96,37 @@ describe('EormenBrain', () => {
   it('the floor brings the toll forward to 1.5 s, but not while the gong is open', () => {
     const h = harness();
     h.brain.start();
+    expect(h.brain.onFloor()).toBe(true);
+    expect(h.brain.tollRemaining).toBeLessThanOrEqual(TOLL.atFloor);
     h.until(() => h.brain.windowOpen);
+    (h.brain as unknown as { tollIn: number }).tollIn = 30;
     expect(h.brain.onFloor()).toBe(false);
     expect(h.brain.tollRemaining).toBeGreaterThan(TOLL.atFloor);
     h.run(TOLL.windowSeconds + 0.1);
     expect(h.brain.onFloor()).toBe(true);
     expect(h.brain.tollRemaining).toBeLessThanOrEqual(TOLL.atFloor);
+  });
+
+  it('a toll before the floor opens nothing; the floor arms the gong; a break or a new phase disarms it', () => {
+    const h = harness();
+    h.brain.start();
+    h.until(() => h.log.some((x) => x.startsWith('toll:')), 20);
+    h.run(0.1);
+    expect(h.brain.gongReady).toBe(false);
+    expect(h.brain.windowOpen).toBe(false);
+    expect(h.log).not.toContain('window:open');
+    expect(h.brain.strikeGong()).toBe('dud');
+    h.brain.onFloor();
+    expect(h.brain.gongReady).toBe(true);
+    h.until(() => h.brain.windowOpen, 10);
+    expect(h.brain.strikeGong()).toBe('break');
+    expect(h.brain.gongReady).toBe(false);
+    h.brain.onFloor();
+    h.brain.onPhase(2);
+    expect(h.brain.gongReady).toBe(false);
+    const opens = h.log.filter((x) => x === 'window:open').length;
+    h.run(30);
+    expect(h.log.filter((x) => x === 'window:open')).toHaveLength(opens);
   });
 
   it('swipes when Cael stands close, then waits out its cooldown', () => {
@@ -139,6 +167,7 @@ describe('EormenBrain', () => {
   it('stops dead on defeat, closing an open window', () => {
     const h = harness();
     h.brain.start();
+    h.brain.onFloor();
     h.until(() => h.brain.windowOpen);
     h.brain.onDefeated();
     expect(h.log.slice(-1)[0]).toBe('window:close');
