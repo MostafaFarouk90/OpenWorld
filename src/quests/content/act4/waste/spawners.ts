@@ -15,10 +15,10 @@ import { M45_GUARD_ARM, M45_GUARD_GROUP } from './m45.quest';
 import { D08_ENTERED, D08_KNIGHTS } from './d08.quest';
 import { M46_OUTRIDERS, M46_OUTRIDERS_ARM } from './m46.quest';
 
-// L5 moves these ids into `EnemyKind` (v0.8 item 11); until its branch is stacked they are named through the reserved list.
-const STRIDER = 'waste-strider' as EnemyKind;
-const HUSK_KNIGHT = 'husk-knight' as EnemyKind;
-const GNATS = 'cinder-gnat-swarm' as EnemyKind;
+// The Waste kinds (L5, v0.8 item 11).
+const STRIDER: EnemyKind = 'waste-strider';
+const HUSK_KNIGHT: EnemyKind = 'husk-knight';
+const GNATS: EnemyKind = 'cinder-gnat-swarm';
 const WRAITH: EnemyKind = 'ash-wraith';
 const BAND = 'ashen-waste';
 
