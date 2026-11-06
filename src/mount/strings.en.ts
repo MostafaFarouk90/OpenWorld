@@ -11,5 +11,6 @@ export const MOUNT_STRINGS_EN: Record<string, string> = {
   'mount.refused.combat': 'Not with enemies on you.',
   'mount.refused.busy': 'Not now.',
   'mount.refused.movement': 'The Ashmare cannot follow you here.',
+  'mount.refused.region': 'The Ashmare will not walk the Waste. The drifts would break her legs.',
   'mount.whistle.noRoom': 'There is nowhere for the Ashmare to stand here.',
 };

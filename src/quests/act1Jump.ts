@@ -7,6 +7,7 @@
 // are held for the whole session, and the `&new` boot skips the slot clear (save.plugin.ts), so a jump neither
 // overwrites nor deletes a real save.
 import { dialogueDefs } from '../dialogue/content';
+import { NPC_TUNING } from '../npcs/tuning';
 import { registerActJump, type ActPoint } from './actJump';
 import { QUEST_LEADS } from './leads';
 import type { DialogueDef, Effect } from './types';
@@ -44,7 +45,8 @@ export const ACT1_GIVERS: Record<(typeof ACT1_PHASE_B_JUMP_IDS)[number], string>
   m06: 'rook', m07: 'aldith', m08: 'wystan', m09: 'merrin', m10: 'gerta', r03: 'aldith', r04: 'whitlock', d02: 'rook',
 };
 /** How far in front of the giver (along the post's facing) a Phase B jump lands. */
-export const GIVER_STAND_OFF = 2.5;
+// v0.8 item 18: the Act 2 rule (inside the talk radius with margin), so the landing is always in talk range.
+export const GIVER_STAND_OFF = NPC_TUNING.talkRadius - 0.7;
 
 export interface NodeRef {
   dialogueId: string;

@@ -34,3 +34,14 @@ describe('mount rules', () => {
     expect(unseatingHit({ kind: 'script', dealt: 50, staggered: false })).toBe(false);
   });
 });
+
+describe('v0.8 item 12: the region refusal', () => {
+  it('comes after every other reason, and the Waste refuses', async () => {
+    const { regionRefusesMount } = await import('../region/regions');
+    const base = { available: true, indoors: false, travelling: false, stealth: false, chase: false, aggro: false, busy: false };
+    expect(mountRefusal({ ...base, region: true })).toBe('region');
+    expect(mountRefusal({ ...base, region: true, movement: true })).toBe('movement');
+    expect(regionRefusesMount(9000, 7000)).toBe(true);
+    expect(regionRefusesMount(8500, 2000)).toBe(false);
+  });
+});

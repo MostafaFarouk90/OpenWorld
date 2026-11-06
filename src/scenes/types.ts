@@ -43,6 +43,8 @@ declare module '../core/events' {
     'scene.started': { id: string };
     'scene.checkpoint': { id: string; checkpoint: string };
     'scene.line': { id: string; speakerId: string; textKey: string };
+    /** An `anim` step (staged only): the owner of `who` plays `clip`. */
+    'scene.anim': { who: string; clip: string };
     'scene.ended': { id: string; reason: SceneEndReason };
   }
 }
