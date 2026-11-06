@@ -22,6 +22,7 @@ import { RayBudget, findSpot, groundAt, type GroundPorts } from './ground';
 import { COMPANION_TUNING, HROLF_TUNING, TOBB_TUNING } from './tuning';
 import type { AttackSpeedHook, CompanionDef, InteriorsLike, NavLike } from './types';
 import { deriveWait, inView, QUEST_WAITS, sameWait, type ViewPorts, type Wait, type WaitRule, type WaitView } from './WaitDirector';
+import { BENCH_MOVES_FLAG, benchPostFor } from './act4/benchPosts';
 
 export interface SavedSpot {
   x: number;
@@ -41,15 +42,15 @@ export interface ControllerOptions {
   claimBark?: (id: string) => boolean;
 }
 
-/** v0.8 item 10: the benched companions leave the occupied city for the Ashgate refuge from the betrayal. */
-export const PARTY_POST_MOVES_FLAG = 'story.m38.complete';
+/** v0.8 item 10: the benched companions leave the occupied city from the betrayal. */
+export const PARTY_POST_MOVES_FLAG = BENCH_MOVES_FLAG;
 
 /**
- * The camp post an inactive companion waits at: the Tilted Anvil (A5); v0.8, with flags and from `story.m38.complete`,
- * the Ashgate refuge (`ashgate.refuge.companions.<id>`, L4 places them). Without flags, the Anvil as before.
+ * The camp post an inactive companion waits at: the Tilted Anvil (A5); v0.8, with flags: from `story.m38.complete` the
+ * M41 camp outside the walls, from `story.m41.complete` the Ashgate refuge (L4, src/companions/act4/benchPosts.ts places
+ * the posts). Without flags, the Anvil as before.
  */
-export const partyPost = (id: string, flags?: { getFlag(k: string): unknown } | null): string =>
-  flags?.getFlag(PARTY_POST_MOVES_FLAG) ? `ashgate.refuge.companions.${id}` : `npc-post.${id}.tilted-anvil`;
+export const partyPost = (id: string, flags?: { getFlag(k: string): unknown } | null): string => benchPostFor(id, flags);
 
 /** Untyped lookups for services whose types live in threads that may not be merged yet. */
 function anyService<T>(ctx: GameContext, name: string): T | undefined {

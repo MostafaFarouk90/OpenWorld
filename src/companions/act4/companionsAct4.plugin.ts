@@ -3,6 +3,7 @@
 // (the M37 bond line, the mourning for Sir Gaut). Inert before Act 4's flags.
 import type { GamePlugin } from '../../core/plugins';
 import { companionControllers } from '../companions.plugin';
+import { BENCHED_IDS, defineBenchPosts } from './benchPosts';
 import { OneShotLines } from './oneShots';
 import '../../weather/types';
 
@@ -52,6 +53,8 @@ export default {
         if (kind === 'storm' && from !== 'storm') sayAll('a4.storm');
       }),
     );
+    let posts = defineBenchPosts(ctx.anchors);
+    let postsIn = 1;
     let roped = false;
     const ropeSlot = () => {
       // the storm mode, or a storm while a higher mode (an escort) holds the mode
@@ -68,6 +71,11 @@ export default {
         fixedUpdate: (dt) => {
           ropeSlot();
           lines.tick(dt);
+          // the bench posts, once their base anchors (L1's refuge, L2's camp) are placed; checked once a second
+          if (posts < BENCHED_IDS.length * 2 && (postsIn -= dt) <= 0) {
+            postsIn = 1;
+            posts = defineBenchPosts(ctx.anchors);
+          }
         },
       }),
     );
