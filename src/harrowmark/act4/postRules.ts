@@ -36,11 +36,20 @@ export const ACT4_POST_ROWS: readonly { npcId: string; home: string; posts: Post
 
 /** The shipped rules with the Act 4 rows put first; an NPC without a rule gets one. Never reorders or drops a shipped row. */
 export function withAct4Posts(rules: PostRule[]): PostRule[] {
-  const out = rules.map((r) => ({ ...r, posts: [...r.posts] }));
+  // Untouched rules keep their identity (other tables' tests find their rows in POST_RULES by reference).
+  const out = [...rules];
   for (const row of ACT4_POST_ROWS) {
-    const hit = out.find((r) => r.npcId === row.npcId);
-    if (hit) hit.posts.unshift(...row.posts);
+    const i = out.findIndex((r) => r.npcId === row.npcId);
+    if (i >= 0) out[i] = { ...out[i]!, posts: [...row.posts, ...out[i]!.posts] };
     else out.push({ npcId: row.npcId, home: row.home, posts: [...row.posts] });
   }
   return out;
+}
+
+const ACT4_ROW_SET = new Set(ACT4_POST_ROWS.flatMap((r) => r.posts));
+
+/** A rule with the Act 4 rows taken back out (for tables that pin their own shipped rows). */
+export function withoutAct4Rows(rule: PostRule): PostRule {
+  const posts = rule.posts.filter((p) => !ACT4_ROW_SET.has(p));
+  return posts.length === rule.posts.length ? rule : { ...rule, posts };
 }

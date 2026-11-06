@@ -84,14 +84,18 @@ const anchors: AnchorSpec[] = [
   }),
   // The checkpoints and their guards' posts.
   ...CHECKPOINTS.map((c) => a(`${P}.checkpoint.${c.id}`, c.x, c.z, c.heading, ['poi', 'checkpoint'])),
-  ...CHECKPOINTS.flatMap((c) => guardSpots(c).map((s, k) => a(`npc-post.${guardId(c, k + 1)}`, s.x, s.z, c.heading, ['npc-post']))),
+  // The guards' posts are tagged 'a4-post', not 'npc-post' (a static 2.5 m crowd keep-out): they stand only in Act 4's
+  // window, on the main streets the crowd lanes run down, and a permanent keep-out there reroutes the Act 1 to 3 crowd.
+  ...CHECKPOINTS.flatMap((c) => guardSpots(c).map((s, k) => a(`npc-post.${guardId(c, k + 1)}`, s.x, s.z, c.heading, ['a4-post']))),
   // Act 4 posts.
   ...(Object.keys(ACT4_POSTS) as (keyof typeof ACT4_POSTS)[]).map((id) => {
     const p = ACT4_POSTS[id];
     return a(postAnchor(id), p.x, p.z, p.heading, ['npc-post']);
   }),
   // The street groups' spawn points and M36's patrol.
-  ...Object.entries(ACT4_SPAWN_POINTS).flatMap(([g, pts]) => pts.map(([x, z], i) => a(spawnAnchor(g, i + 1), x, z, 0, ['spawn']))),
+  // Tagged 'a4-spawn', not 'spawn': these groups exist only during their quest beat, so the crowd keeps walking past the
+  // points the rest of the time (a 'spawn' tag is a 2.5 m crowd keep-out, and M36's points stand in the Rooftop Ward alley).
+  ...Object.entries(ACT4_SPAWN_POINTS).flatMap(([g, pts]) => pts.map(([x, z], i) => a(spawnAnchor(g, i + 1), x, z, 0, ['a4-spawn']))),
   ...M36_PATROL.map(([x, z], i) => a(M36_PATROL_ANCHOR(i + 1), x, z, 0, ['patrol'])),
   // R20's two checkpoint huts in the farm-ring outside the River Gate.
   ...R20_HUTS.map((h) => a(h.id, Math.round(h.x * 100) / 100, Math.round(h.z * 100) / 100, outward(gateBearing(GATE_NAMES.indexOf('river'))), ['poi'])),
