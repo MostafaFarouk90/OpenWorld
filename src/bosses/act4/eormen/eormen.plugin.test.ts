@@ -20,6 +20,7 @@ import plugin, { eormenDirector } from './eormen.plugin';
 import { GONG_INTERACT_ID } from './lastGong';
 import { EORMEN_SPAWNERS } from './spawners';
 import { winEormenForTest } from './testing';
+import { HUSK_CATHEDRAL_DEF } from '../../../waste/interiors/huskCathedral';
 import { ARENA, DARK, EORMEN, EORMEN_BOSS_ID, eormenLevel, eormenScale, GONG, GONG_KIND, HUSKS, PRESENTATION, TOLL } from './tuning';
 
 let physics: PhysicsWorld;
@@ -48,13 +49,8 @@ function fake(id: string, name: string, service: unknown): GamePlugin {
   };
 }
 
-/** The nave's local layout used by these tests (L1 builds the real one: door at z 0, gong and altar at the far end). */
-const LOCAL = {
-  [ARENA.entry]: { x: ARENA.entryLocal.x, z: ARENA.entryLocal.z, yaw: 0 },
-  [ARENA.centre]: { x: 0, z: 24, yaw: 0 },
-  [ARENA.gong]: { x: 4, z: 37, yaw: Math.PI },
-  [ARENA.altar]: { x: -4, z: 37, yaw: Math.PI },
-} as const;
+/** L1's nave anchors (src/waste/interiors/huskCathedral.ts), in the cathedral's local metres from its door. */
+const NAVE_ANCHORS = HUSK_CATHEDRAL_DEF.anchors.filter((a) => a.id.startsWith('waste.cathedral.nave.'));
 
 interface FakeSlot {
   pos: { x: number; y: number; z: number } | null;
@@ -145,11 +141,11 @@ async function setup(opts: Opts = {}) {
     for (let i = 0; i < n; i++) game.fixedUpdate();
   };
   run(2);
-  // The nave's local frame placed so the player stands at local (0, 10), inside the nave past the door.
+  // The cathedral's local frame placed so the player stands at local (0, 20), inside the nave past the arena gate.
   const p = ctx.player.feet.clone();
-  const o = { x: p.x, y: p.y, z: p.z - 10 };
+  const o = { x: p.x, y: p.y, z: p.z - 20 };
   const local = (x: number, z: number) => ({ x: o.x + x, y: p.y, z: o.z + z });
-  for (const [id, a] of Object.entries(LOCAL)) ctx.anchors.define({ id, position: local(a.x, a.z), yaw: a.yaw });
+  for (const a of NAVE_ANCHORS) ctx.anchors.define({ id: a.id, position: local(a.x, a.z), yaw: ((a as { yaw?: number }).yaw ?? 0) * (Math.PI / 180) });
   // A hemisphere and the interior's follow light, as SceneEnvironment leaves them inside.
   const hemi = new THREE.HemisphereLight(0xffffff, 0x222222, 0.9);
   const follow = new THREE.PointLight(0xffffff, 1.6);
@@ -310,8 +306,10 @@ describe('eormen plugin', () => {
       h.run(2);
       expect(h.dir().crownShown).toBe(true);
       const crown = h.scene.getObjectByName('eormen-crown-rest')!;
-      const altar = h.ctx.anchors.find(ARENA.altar)!;
-      expect(crown.position.x).toBeCloseTo(altar.position.x);
+      const altar = h.local(ARENA.altarLocal.x, ARENA.altarLocal.z);
+      expect(crown.position.x).toBeCloseTo(altar.x);
+      expect(crown.position.z).toBeCloseTo(altar.z);
+      expect(crown.position.y).toBeGreaterThan(altar.y + ARENA.altarLocal.top);
       h.interiors.current = null;
       h.run(2);
       expect(h.dir().crownShown).toBe(false);
@@ -519,11 +517,11 @@ describe('eormen plugin', () => {
     async () => {
       const h = await setup();
       h.start();
-      h.at(0, -12);
+      h.at(0, 3);
       h.run(secs(ARENA.abandonSeconds) + 2);
       expect(h.dir().current).toBeNull();
       expect(h.toasts).toHaveLength(1);
-      h.at(0, 10);
+      h.at(0, 20);
       h.exit();
       h.start();
       h.game.events.emit('interior.exited', { interiorId: ARENA.interiorId } as never);
@@ -572,7 +570,7 @@ describe('eormen plugin', () => {
     async () => {
       const h = await setup();
       h.start();
-      h.at(0, 16);
+      h.at(0, 24);
       h.runHealed(TOLL.first + TOLL.windup + 0.5);
       expect(h.of('damage.dealt').some((d) => d.targetId === h.ctx.player.actor.id && d.attackId === 'eormen.blades' && d.dealt > 0)).toBe(true);
       const tele = h.of('telegraph').find((t) => t.attackId === 'eormen.blades')!;

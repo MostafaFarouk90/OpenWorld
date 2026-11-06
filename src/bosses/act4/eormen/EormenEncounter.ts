@@ -265,7 +265,7 @@ export class EormenEncounter implements EormenHooks {
     this.registered = true;
     try {
       this.parts.push(breaks.register({ id: GONG_PART_ID, bossId: EORMEN_BOSS_ID }));
-      this.gong = new LastGong(this.ctx, { at: this.places.gong, yaw: this.places.gongYaw, onStrike: (s) => this.strikeGong(s), warn: this.warn });
+      this.gong = new LastGong(this.ctx, { at: this.places.gong, yaw: this.places.gongYaw, ownFrame: false, onStrike: (s) => this.strikeGong(s), warn: this.warn });
     } catch (err) {
       this.warn(`could not mount the Last Gong: ${err instanceof Error ? err.message : String(err)}`);
       this.mountFailed = true;
