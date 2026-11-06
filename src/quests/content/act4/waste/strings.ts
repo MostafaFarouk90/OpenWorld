@@ -34,7 +34,7 @@ const QUEST_TEXT: Record<string, QuestText> = {
     summary: 'Little Ebba of the Cinder Chapel hums a tune she cannot finish. Her family\'s music box is somewhere in the ruined village, past a nest of husks.',
     o: {
       brief: 'Speak to Little Ebba at the chapel', keeper: 'Ask Sister Aedre about Ebba\'s family', house1: 'Search the first ruined house',
-      nest: 'Clear the nest in the second house', house2: 'Search the second house', house3: 'Search the third house', box: 'Wind the music box',
+      nest: 'Clear the nest in the second house', house2: 'Search the second house', house3: 'Search the third house', box: 'Wind the music box', graves: 'Visit the graves behind the chapel',
       report: 'Bring the music box to Ebba',
     },
   },

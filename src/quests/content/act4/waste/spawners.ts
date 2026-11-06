@@ -45,9 +45,9 @@ export const WASTE_A4_Q_SPAWNERS: readonly SpawnerDef[] = [
     activation: 'manual', ephemeral: true, untauntable: true, leash: false, band: BAND, respawn: 'never',
   },
   // M44: the nest in the second house (L5 drops its own chapel nest)
-  group(M44_NEST_GROUP, WRAITH, ids(`${W}.m44.nest`, 4), M44_NEST_ARM, 'm44', { skin: 'wraith-husk' }),
+  group(M44_NEST_GROUP, WRAITH, ids(`${W}.m44.nest`, 6), M44_NEST_ARM, 'm44', { skin: 'wraith-husk' }),
   // R25: the knot at the third family's hearth
-  group(R25_KNOT_GROUP, WRAITH, ids(`${W}.r25.knot`, 4), R25_KNOT_ARM, 'r25', { skin: 'wraith-husk' }),
+  group(R25_KNOT_GROUP, WRAITH, ids(`${W}.r25.knot`, 5), R25_KNOT_ARM, 'r25', { skin: 'wraith-husk' }),
   // R24: the two attacks on the cart (striders, then husks), armed as the cart passes each point
   group(R24_GROUPS[0], STRIDER, ids(`${W}.r24.attack1`, 3), R24_ARM(1), 'r24'),
   group(R24_GROUPS[1], WRAITH, ids(`${W}.r24.attack2`, 3), R24_ARM(2), 'r24', { skin: 'wraith-husk' }),
