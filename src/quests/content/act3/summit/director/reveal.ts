@@ -121,6 +121,8 @@ export function installM32(k: Kit): Off {
   return () => { for (const o of offs.splice(0)) o(); };
 }
 
+export const KEEPER_PERK_ID = 'keepers-understanding';
+
 /** Keeper's Understanding: the Burn decay scale. Derived from the flag every time it is asked, so a load needs nothing; bound as soon as the spells service answers. */
 export function installPerk(k: Kit): Off {
   const { ctx } = k;
@@ -130,9 +132,16 @@ export function installPerk(k: Kit): Off {
     if (ctx.services.get('mount')?.mounted()) return 1;
     return KEEPER_DECAY_SCALE;
   };
+  // v0.8 item 17: a perk, read live through the perks service; without it (a reduced boot) bound to spells as before.
+  const perks = ctx.services.get('perks');
+  if (perks) {
+    const off = perks.register({ id: KEEPER_PERK_ID, active: () => scale() !== 1, burnDecayScale: scale });
+    return () => off();
+  }
   let off: Off | null = null;
   const bind = (): void => {
     if (off) return;
+    if (ctx.services.get('perks')) return;
     const spells = ctx.services.get('spells');
     if (spells?.setBurnDecayScale) off = spells.setBurnDecayScale(scale);
   };

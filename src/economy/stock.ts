@@ -1,14 +1,18 @@
+import { flagConditionHolds, type FlagCondition, type FlagReader } from '../core/flagCondition';
 import type { ClassId } from '../actors/classes';
 import type { FavourBand, FavourTrack } from '../state/favour';
 import { ACT3_DISCOUNTS, ACT3_SELL_FLAT, ACT3_SHOP_LIST_PRICES, ACT3_VENDORS } from './stock.act3';
-import { ACT4_DISCOUNTS, ACT4_SHOP_LIST_PRICES, WENNA } from './stock.act4';
+import { ACT4_DISCOUNTS, ACT4_SHOP_LIST_PRICES, HILD, WENNA, WULFHILD } from './stock.act4';
+import { ACT4_VENDOR_OPEN_WHEN, ACT4_VENDOR_POSTS } from './refugePosts.act4';
 
 export type VendorId =
   | 'wystan' | 'merrin' | 'edda' | 'wynn' | 'dunstan' | 'gerta' | 'ashdown'
   // Act 2 (v0.6 item 15). 'wenna' is reserved for Act 4.
   | 'aldous' | 'wenna' | 'slagg' | 'pike' | 'ketta' | 'maud' | 'osgar'
   // Act 3 (v0.7 item 16). Stock rows arrive with K10 and K13; 'ysmeryth' is band-stocked by the dragons' trust from `story.m32.complete`.
-  | 'leofa' | 'dudda' | 'gytha' | 'thorgar' | 'eadgyth' | 'ansgar' | 'ysmeryth';
+  | 'leofa' | 'dudda' | 'gytha' | 'thorgar' | 'eadgyth' | 'ansgar' | 'ysmeryth'
+  // Act 4 (v0.8 item 16): Wulfhild at the Ashgate refuge, Hild the Waste's guide. Stock rows arrive with L7.
+  | 'wulfhild' | 'hild';
 
 export interface StockLine {
   itemId: string;
@@ -122,8 +126,10 @@ export const VENDORS: Readonly<Record<VendorId, VendorDef>> = {
       { itemId: 'deepcore-pick', count: 1, from: 'hearthbound' },
     ],
   },
-  // Act 4 (L7): the Grisel favour vendor from M38, in stock.act4.ts.
+  // Act 4 (L7): Wenna is the Grisel favour vendor from M38; Wulfhild (Ashwalkers, from M43) and Hild (Ashgate). In stock.act4.ts.
   wenna: WENNA,
+  wulfhild: WULFHILD,
+  hild: HILD,
   slagg: {
     id: 'slagg',
     buys: true,
@@ -229,4 +235,40 @@ export function discountPercent(
     if (d.value === undefined ? Boolean(v) : v === d.value) best = Math.min(100, d.percent);
   }
   return best;
+}
+
+// ---- v0.8 item 16: vendors that open, close and move by flag ----
+
+/**
+ * A vendor's extra open condition, ANDed with its shipped rule (economy.plugin.ts `isOpen`): both must hold. Act 4 threads
+ * add rows (L7: Aldous closes from the betrayal, `{ none: ['story.m38.complete'] }`).
+ */
+export const VENDOR_OPEN_WHEN: Partial<Record<VendorId, FlagCondition>> = {
+  // L7 (economy/refugePosts.act4.ts): Wenna from M38, Aldous until M38, Hild from M41, Wulfhild from M43.
+  ...ACT4_VENDOR_OPEN_WHEN,
+};
+
+/**
+ * A vendor whose shop moves: while `when` holds the `shop:<id>` interactable stands at `anchorId` instead of
+ * `shop.<id>` (the last holding row wins). One interactable that moves, never two.
+ */
+export interface VendorPostRow {
+  vendorId: VendorId;
+  anchorId: string;
+  when: FlagCondition;
+}
+/** L7: the refuge shops from M41, Hild at Ashgate and Wulfhild at the Walker Camp (economy/refugePosts.act4.ts). */
+export const VENDOR_POSTS: VendorPostRow[] = [...ACT4_VENDOR_POSTS];
+
+/** The anchor `shop:<id>` stands at now: the last holding VENDOR_POSTS row, else `shop.<id>`. */
+export function vendorAnchor(v: VendorId, flags: FlagReader, rows: readonly VendorPostRow[] = VENDOR_POSTS): string {
+  let at = `shop.${v}`;
+  for (const r of rows) if (r.vendorId === v && flagConditionHolds(r.when, flags)) at = r.anchorId;
+  return at;
+}
+
+/** The table half of a vendor's open rule (true when it has no row). */
+export function vendorOpenByTable(v: VendorId, flags: FlagReader, table: Partial<Record<VendorId, FlagCondition>> = VENDOR_OPEN_WHEN): boolean {
+  const c = table[v];
+  return c ? flagConditionHolds(c, flags) : true;
 }

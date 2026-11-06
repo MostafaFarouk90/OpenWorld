@@ -142,8 +142,11 @@ export interface NpcSpec {
   id: string;
   post: string;
   idleClip?: string;
-  /** The NPC is not spawned (or is despawned) while this flag is true; its handover to a companion or a quest. */
-  absentWhen?: string;
+  /**
+   * The NPC is not spawned (or is despawned) while this flag is true; its handover to a companion or a quest. v0.8: or a
+   * list, absent while any holds. A retirement (npcs/retire.ts) adds its flag to this.
+   */
+  absentWhen?: string | readonly string[];
   /** The NPC is not spawned until this flag is true (Vey from M08, Ashdown from M07). Combines with `absentWhen`. */
   presentWhen?: string;
   /** Once `whenFlag` is true the NPC walks in a straight line to the anchor `to` (the only walking NPCs); on a load it just stands there. */
