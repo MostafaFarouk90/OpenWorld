@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ACT4_PLACES } from '../../region/act4/act4Places';
 import { ROPE_LINE_GEOMS, SHELTER_SPOTS } from '../../region/act4/ropeLines';
 import { MAP_ACT4_STRINGS_EN } from './strings.en';
-import { WASTE_LABEL_PLACES, placeDiscoveredFlag, wasteLabels, wasteLines, wasteShelters, type WastePorts } from './wasteLayer';
+import { WASTE_LABEL_PLACES, placeDiscoveredFlag, placeWaystoneFlag, wasteLabels, wasteLines, wasteShelters, type WastePorts } from './wasteLayer';
 
 const WASTE = ['harrowmark', 'ashen-waste'];
 const ports = (over: Partial<WastePorts> = {}): WastePorts => ({
@@ -53,9 +53,10 @@ describe('wasteLabels', () => {
     expect(wasteLabels(ports({ isRevealed: () => false }))).toEqual([]);
     const found = wasteLabels(ports({ isRevealed: () => false, flag: (k) => k === placeDiscoveredFlag('walker-camp') }));
     expect(found.map((l) => l.id)).toEqual(['place.walker-camp']);
-    // The cathedral and Rimfoot have no waystone: only the fog shows them.
-    expect(placeDiscoveredFlag('husk-cathedral')).toBeNull();
-    expect(wasteLabels(ports({ isRevealed: () => false, flag: () => true })).map((l) => l.id)).toEqual(['place.ashgate', 'place.walker-camp', 'place.cinder-chapel', 'place.glasslands']);
+    // A lit waystone shows its site too; the cathedral and Rimfoot have none, so only their discover flag or the fog does.
+    expect(placeWaystoneFlag('husk-cathedral')).toBeNull();
+    expect(wasteLabels(ports({ isRevealed: () => false, flag: (k) => k.startsWith('waystone.') })).map((l) => l.id)).toEqual(['place.ashgate', 'place.walker-camp', 'place.cinder-chapel', 'place.glasslands']);
+    expect(wasteLabels(ports({ isRevealed: () => false, flag: (k) => k === placeDiscoveredFlag('rimfoot') })).map((l) => l.id)).toEqual(['place.rimfoot']);
   });
 
   it('every place has a string', () => {
