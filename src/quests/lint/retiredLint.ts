@@ -1,9 +1,11 @@
 // Contracts v0.8 item 8: the retirement lint. For each retired NPC (npcs/retire.ts), nothing may still need it after its
 // flag: no objective that talks to it (or interacts with `npc:<id>`) in a quest that can still be live, and no class desk
-// that still belongs to it at the act's end. (Vendors join the check with item 16's VENDOR_OPEN_WHEN.) A quest from an
+// that still belongs to it at the act's end. A retired vendor's shop must be closed by a VENDOR_OPEN_WHEN row. A quest from an
 // earlier act is never live after an Act 4 flag; in Act 4, a main quest numbered at or below the flag's quest is done.
 import { DEFAULT_KITS, TRAINER_POSTS, trainerPlacement, type TrainerPostRow } from '../../classes/kits';
 import type { RetiredNpc } from '../../npcs/retire';
+import type { FlagCondition } from '../../core/flagCondition';
+import { VENDOR_OPEN_WHEN, isVendorId, vendorOpenByTable, type VendorId } from '../../economy/stock';
 import type { QuestDef } from '../types';
 import { ACT4_QUEST_IDS } from './act4Ids';
 
@@ -42,6 +44,7 @@ export function retiredLint(
   quests: readonly QuestDef[],
   rows: readonly TrainerPostRow[] = TRAINER_POSTS,
   allow: readonly RetiredLintAllow[] = RETIRED_LINT_ALLOW,
+  vendorTable: Partial<Record<VendorId, FlagCondition>> = VENDOR_OPEN_WHEN,
 ): string[] {
   const errs: string[] = [];
   const allowed = (npcId: string, what: string) => allow.some((a) => a.npcId === npcId && a.what === what);
@@ -54,6 +57,9 @@ export function retiredLint(
         const what = `quest:${q.id}/${o.id}`;
         if (hit && !allowed(r.id, what)) errs.push(`${r.id} retires at ${r.whenFlag}, but ${what} still needs them`);
       }
+    }
+    if (isVendorId(r.id) && vendorOpenByTable(r.id, actEndFlags(r.whenFlag), vendorTable) && !allowed(r.id, `vendor:${r.id}`)) {
+      errs.push(`${r.id} retires at ${r.whenFlag}, but their shop has no VENDOR_OPEN_WHEN row closing it`);
     }
     for (const kit of Object.values(DEFAULT_KITS)) {
       const p = trainerPlacement(kit, actEndFlags(r.whenFlag), rows);

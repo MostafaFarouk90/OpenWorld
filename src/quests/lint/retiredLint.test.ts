@@ -35,6 +35,11 @@ describe('retiredLint', () => {
     expect(retiredLint([GAUT], []).join()).toMatch(/knight desk is still theirs/);
     expect(retiredLint([GAUT], [], [{ classId: 'knight', npcId: 'rook', post: 'p', when: { all: ['story.m41.complete'] } }])).toEqual([]);
   });
+  it("a retired vendor's shop must be closed by its VENDOR_OPEN_WHEN row", () => {
+    const aldous = { id: 'aldous', whenFlag: 'story.m38.complete' };
+    expect(retiredLint([aldous], [], [], [], {}).join()).toMatch(/shop/);
+    expect(retiredLint([aldous], [], [], [], { aldous: { none: ['story.m38.complete'] } })).toEqual([]);
+  });
   it('an allow entry with a reason clears one finding', () => {
     expect(retiredLint([GAUT], [], [], [{ npcId: GAUT.id, what: 'trainer:knight', reason: 'test' }])).toEqual([]);
   });

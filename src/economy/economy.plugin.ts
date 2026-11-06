@@ -19,7 +19,7 @@ import './items.act3';
 import { PurseTracker } from './Purse';
 import './service';
 import { Shop } from './Shop';
-import { isVendorId, VENDOR_IDS, type VendorId } from './stock';
+import { isVendorId, VENDOR_IDS, VENDOR_POSTS, vendorAnchor, vendorOpenByTable, type VendorId } from './stock';
 import { ECONOMY_STRINGS_EN } from './strings.en';
 import { ECONOMY_ACT3_STRINGS_EN } from './strings.act3.en';
 import { VendorMenu } from './VendorMenu';
@@ -54,7 +54,9 @@ const economyPlugin: GamePlugin = {
 
     // ---- Gates, read at interaction time ---------------------------------------------------
     const questState = (id: string): string => soft<SoftQuests>('quests')?.state?.(id) ?? 'inactive';
-    const isOpen = (v: VendorId): boolean => {
+    // v0.8 item 16: the shipped rule AND the VENDOR_OPEN_WHEN row.
+    const isOpen = (v: VendorId): boolean => shippedOpen(v) && vendorOpenByTable(v, ctx.state);
+    const shippedOpen = (v: VendorId): boolean => {
       switch (v) {
         case 'wystan':
         case 'merrin':
@@ -91,6 +93,10 @@ const economyPlugin: GamePlugin = {
           return questState('m30') !== 'inactive';
         case 'ysmeryth':
           return questState('m32') === 'completed' || Boolean(ctx.state.getFlag('story.m32.complete'));
+        // Act 4: the table alone decides.
+        case 'wulfhild':
+        case 'hild':
+          return true;
         default:
           return ctx.state.getBool('tutorial.complete');
       }
@@ -331,6 +337,27 @@ const economyPlugin: GamePlugin = {
         const key = `shop:${v}`;
         if (placed.has(key)) continue;
         let pos: { x: number; y: number; z: number } | undefined;
+        // v0.8: a vendor with VENDOR_POSTS rows has one interactable that follows its current anchor (re-read live, so a
+        // gate change or a load moves it).
+        if (VENDOR_POSTS.some((r) => r.vendorId === v)) {
+          const anyAnchor = [`shop.${v}`, ...VENDOR_POSTS.filter((r) => r.vendorId === v).map((r) => r.anchorId)].some((id) => ctx.anchors.find(id));
+          if (!anyAnchor) continue;
+          placed.add(key);
+          ctx.interaction.register({
+            id: key,
+            kind: 'shop',
+            position: (out) => {
+              const a = ctx.anchors.find(vendorAnchor(v, ctx.state));
+              return a ? out.set(a.position.x, a.position.y, a.position.z) : out.set(0, -1e6, 0);
+            },
+            name: v,
+            promptKey: 'economy.shop.prompt',
+            priority: -0.01,
+            enabled: () => isOpen(v) && !!ctx.anchors.find(vendorAnchor(v, ctx.state)),
+            onInteract: () => openVendor(v),
+          });
+          continue;
+        }
         const own = ctx.anchors.find(`shop.${v}`);
         if (own) pos = own.position;
         else if (v === 'edda' || v === 'wynn') {
