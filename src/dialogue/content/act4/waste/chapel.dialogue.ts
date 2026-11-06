@@ -85,7 +85,7 @@ export const AEDRE = tree(CHAPEL_KEEPER, [{ when: at('m44', 'keeper'), seg: 'm44
   'm44-keeper': {
     lines: [
       AD('Ebba sent you. Of course she did. She has asked every walker who comes through that door.'),
-      AD('Her mother was Godgifu, the weaver. The third house, the blue door. Her father went first, to the storm; Godgifu went looking for him.'),
+      AD('Her mother was Eafa, the weaver. The third house, the blue door. Her father Wiglaf went first, to the storm; Eafa went looking for him.'),
       AD('The first house was the Wrights\'. The second has a nest in it now; we hear them at night through the wall.'),
       C('Then I will clear it.'),
       AD('Burn what you must, but bring the child something better than smoke. And read what they left. Somebody ought to.'),

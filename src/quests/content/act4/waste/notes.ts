@@ -5,7 +5,7 @@ import { W } from './ids';
 import { M42_NOTES } from './m42.quest';
 import { M43_NOTES } from './m43.quest';
 import { M44_NOTES } from './m44.quest';
-import { R25_NAME_NOTE, R25_REGISTER } from './r25.quest';
+import { R25_LETTER, R25_NAME_NOTE, R25_REGISTER } from './r25.quest';
 import { R24_SPRING_NOTE } from './r24.quest';
 import { M45_PLAQUES, M45_SEARCHES } from './m45.quest';
 import { D08_NOTES } from './d08.quest';
@@ -47,19 +47,39 @@ export const WASTE_A4_NOTE_LIST: Act2Note[] = [
     'A family book, the cover burned through: "Ebba, daughter of Eafa and Wiglaf, born in the thaw."',
     'Below it, in a different hand: "The tune is her grandmother\'s. Nobody knows where the grandmother had it from."',
   ]),
+  n(M44_NOTES.letter, `${W}.m44.house.1.b`, 'note', [
+    'A letter weighted under a stone on the sill: "Eafa, the Wrights will take Ebba to the chapel if we are not back by the thaw."',
+    '"I have gone after Wiglaf. Do not let her wind the box until I come home. It is bad luck to finish a song alone."',
+  ]),
   n(M44_NOTES.cradle, `${W}.m44.house.2`, 'cael', [
     'A cradle, the wicker burned black, rocking very slightly in the wind through the wall.',
     'The nest was round it. The wraiths do not sleep, but they gather where people did.',
+  ]),
+  n(M44_NOTES.toy, `${W}.m44.house.2.b`, 'cael', [
+    'A wooden horse with one leg whittled shorter than the others, so it rocks when the wind comes through.',
+    'Someone carved a name under the belly and then scratched it out, as if they had decided it should not be theirs to give.',
   ]),
   n(M44_NOTES.sampler, `${W}.m44.house.3`, 'note', [
     'A sampler in a cracked frame: a row of notes stitched in red, with words under them nobody wrote down in full.',
     '"...and the king beneath the anvil hums it too..." The rest of the line is scorched away.',
   ]),
+  n(M44_NOTES.ledger, `${W}.m44.house.3.b`, 'note', [
+    'A weaver\'s tally on a board: bolts of grey, bolts of ash-blue, three marked "for the chapel" and never delivered.',
+    'The last line is not a tally: "E. asks for the song every night now. I will teach her the end when she is older."',
+  ]),
+  n(M44_NOTES.graves, `${W}.m44.graves`, 'cael', [
+    'Low stones behind the chapel, each with a name and a small carved hand. The walkers mark their dead the same way.',
+    'There is no stone for Eafa or Wiglaf. Ebba has piled pebbles in a ring where one might go, one for each night she has waited.',
+  ], 'grave'),
   // R25
   ...FAMILIES.map(([a, b], i) => n(R25_NAME_NOTE(i + 1), `${W}.r25.name.${i + 1}`, i === 1 ? 'note' : 'cael', [a, b], 'grave')),
   n(R25_REGISTER, `${W}.r25.register`, 'note', [
     'The chapel register, kept by Sister Aedre since the blight came. Three pages are folded down at the corner.',
     'The Wardens, the Fletchers, the house of Eadburh. Beside each, today, in a child\'s hand: "candle lit".',
+  ]),
+  n(R25_LETTER, `${W}.r25.letter`, 'note', [
+    'A letter folded into the back of the register, in a weaver\'s careful hand: "Sister, if Wiglaf and I are not back by the thaw, Ebba is to stay with you."',
+    '"She will ask you to light candles for everyone. Let her. It is the only thing that has ever made the dark smaller."',
   ]),
   // R24
   n(R24_SPRING_NOTE, `${W}.r24.spring`, 'note', [

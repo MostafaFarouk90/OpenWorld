@@ -15,6 +15,8 @@ export const R25_SPARE_ASKED = 'story.r25.spareAsked';
 export const R25_CANDLES_GIVEN = 'story.r25.candlesGiven';
 export const R25_NAME_NOTE = (n: number): string => `note-r25-name-${n}`;
 export const R25_REGISTER = 'note-r25-register';
+/** A letter folded into the register (a pacing beat, plan 5). */
+export const R25_LETTER = 'note-r25-letter';
 export const R25_KNOT_GROUP = 'r25.knot';
 export const R25_KNOT_ARM = 'story.r25.knotArmed';
 export const R25_KNOT_DOWN = 'story.r25.knotDown';
@@ -39,7 +41,7 @@ export const r25: QuestDef = {
     story('knot', 'quest.r25.knot', R25_KNOT_DOWN, { doneWhen: { flag: R25_KNOT_DOWN, equals: true } }),
     reads('name3', 'quest.r25.name3', [R25_NAME_NOTE(3)]),
     { id: 'light3', type: 'interact', target: R25_LIGHT(3), textKey: 'quest.r25.light3' },
-    reads('register', 'quest.r25.register', [R25_REGISTER]),
+    reads('register', 'quest.r25.register', [R25_REGISTER, R25_LETTER]),
     { id: 'report', type: 'talk', target: EBBA, textKey: 'quest.r25.report' },
   ],
   rewards: rewardOf('r25', 550),
