@@ -9,7 +9,7 @@ import './items';
 import './items.act3';
 import { listPrice } from './prices';
 import { Shop, type ShopPorts } from './Shop';
-import { SHOP_LIST_PRICES, VENDOR_DISCOUNTS, VENDORS, bandAtLeast, stockWhenHolds } from './stock';
+import { SHOP_LIST_PRICES, VENDOR_DISCOUNTS, VENDORS, bandAtLeast, stockWhenHolds, type VendorId } from './stock';
 import { ACT4_DISCOUNTS, ACT4_FLAGS, HILD, WULFHILD } from './stock.act4';
 
 interface Opts {
@@ -42,7 +42,7 @@ function make(o: Opts = {}) {
   };
   return { shop: new Shop(ports), w };
 }
-const ids = (shop: Shop, v: 'wenna' | 'merrin') => shop.offers(v).map((x) => x.itemId);
+const ids = (shop: Shop, v: VendorId) => shop.offers(v).map((x) => x.itemId);
 
 /** A row's lines at a band and flags, the way the Shop filters them (for vendors whose id lands with L0 item 16). */
 const linesAt = (row: typeof WULFHILD, band: FavourBand, f: Record<string, unknown> = {}, held: Record<string, number> = {}) =>
@@ -127,5 +127,27 @@ describe("Merrin's R20 discount", () => {
     for (const d of ACT4_DISCOUNTS) expect(d.vendors).toEqual(['merrin']);
     expect(VENDOR_DISCOUNTS).toEqual(expect.arrayContaining([...ACT4_DISCOUNTS]));
     expect(make({ flags: { [ACT4_FLAGS.r20.key]: 'bribe' } }).shop.quote('wystan', 'healing-flask')).toBe(30);
+  });
+});
+
+describe('Wulfhild and Hild through the real Shop', () => {
+  it('are in VENDORS and sell with no warnings', () => {
+    expect(VENDORS.wulfhild).toBe(WULFHILD);
+    expect(VENDORS.hild).toBe(HILD);
+    const w = make({ band: 'hearthbound', flags: { [ACT4_FLAGS.m42Complete]: true } });
+    expect(ids(w.shop, 'wulfhild')).toEqual(linesAt(WULFHILD, 'hearthbound'));
+    expect(ids(w.shop, 'hild')).toEqual(['rain-flask', 'rope', 'healing-flask', 'ash-shroud-mask']);
+    expect(w.w.warnings).toEqual([]);
+  });
+  it('a Rain Flask costs 14 at Hild and 17 at Wulfhild on Cold (+20%)', () => {
+    expect(make({ band: 'cold' }).shop.quote('hild', 'rain-flask')).toBe(14);
+    expect(make({ band: 'cold' }).shop.quote('wulfhild', 'rain-flask')).toBe(17);
+  });
+  it('buying the limited Pyre-Cloak once empties it; the mask cannot be sold back', () => {
+    const t = make({ band: 'hearthbound', flags: { [ACT4_FLAGS.m42Complete]: true } });
+    expect(t.shop.buy('wulfhild', 'walker-pyre-cloak').ok).toBe(true);
+    expect(ids(t.shop, 'wulfhild')).not.toContain('walker-pyre-cloak');
+    expect(t.shop.buy('hild', 'ash-shroud-mask').ok).toBe(true);
+    expect(t.shop.sell('wulfhild', 'ash-shroud-mask').ok).toBe(false);
   });
 });

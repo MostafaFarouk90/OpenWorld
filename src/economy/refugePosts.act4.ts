@@ -4,6 +4,7 @@
 // TRAINER_POSTS (v0.8 item 10).
 import type { FlagCondition } from '../core/flagCondition';
 import type { TrainerPostRow } from '../classes/kits';
+import type { VendorId, VendorPostRow } from './stock';
 
 export const REFUGE_FROM: FlagCondition = { all: ['story.m41.complete'] };
 
@@ -17,13 +18,7 @@ export const HILD_SHOP = 'ashgate.shop.hild';
 export const WULFHILD_SHOP = 'waste.walker-camp.shop.wulfhild';
 
 /** The vendors whose shops move to the refuge (every vendor trading inside the walls before M38). */
-export const REFUGE_VENDORS = ['wystan', 'merrin', 'wenna', 'dunstan', 'gerta', 'ashdown'] as const;
-
-export interface VendorPostRow {
-  vendorId: string;
-  anchorId: string;
-  when: FlagCondition;
-}
+export const REFUGE_VENDORS = ['wystan', 'merrin', 'wenna', 'dunstan', 'gerta', 'ashdown'] as const satisfies readonly VendorId[];
 
 export const ACT4_VENDOR_POSTS: readonly VendorPostRow[] = [
   ...REFUGE_VENDORS.map((vendorId) => ({ vendorId, anchorId: refugeShop(vendorId), when: REFUGE_FROM })),
@@ -32,7 +27,7 @@ export const ACT4_VENDOR_POSTS: readonly VendorPostRow[] = [
 ];
 
 /** When each Act 4 vendor opens (L0's VENDOR_OPEN_WHEN, ANDed with the shipped switch). Aldous leaves at M38. */
-export const ACT4_VENDOR_OPEN_WHEN: Readonly<Record<string, FlagCondition>> = {
+export const ACT4_VENDOR_OPEN_WHEN: Readonly<Partial<Record<VendorId, FlagCondition>>> = {
   wenna: { all: ['story.m38.complete'] },
   aldous: { none: ['story.m38.complete'] },
   wulfhild: { all: ['story.m43.complete'] },

@@ -39,11 +39,8 @@ export const WENNA: VendorDef = {
   ],
 };
 
-/** An Act 4 vendor row before L0's item 16 adds `wulfhild` and `hild` to `VendorId`. */
-export type Act4VendorRow = Omit<VendorDef, 'id'> & { id: 'wulfhild' | 'hild' };
-
 /** Wulfhild, the Ashwalker favour vendor from M43 (design 8.2: basic, full, rare and the pyre-paint, master and one unique). */
-export const WULFHILD: Act4VendorRow = {
+export const WULFHILD: VendorDef = {
   id: 'wulfhild',
   track: 'ashwalkers',
   buys: true,
@@ -61,7 +58,7 @@ export const WULFHILD: Act4VendorRow = {
 };
 
 /** Hild Ropewright at Ashgate: masks, Rain Flasks and rope. The mask is a replacement only (M42 gives the first). */
-export const HILD: Act4VendorRow = {
+export const HILD: VendorDef = {
   id: 'hild',
   buys: false,
   lines: [

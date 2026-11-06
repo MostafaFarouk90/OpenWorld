@@ -13,7 +13,7 @@ import {
   refugeShop,
   refugeTrainer,
 } from './refugePosts.act4';
-import { VENDORS } from './stock';
+import { VENDOR_OPEN_WHEN, VENDOR_POSTS, VENDORS, vendorAnchor, vendorOpenByTable, type VendorId } from './stock';
 
 const flags = (f: Record<string, boolean>) => ({ getFlag: (k: string) => f[k] });
 const BEFORE_M38 = flags({ 'story.gate.a4': true });
@@ -69,7 +69,7 @@ describe('the refuge covers every service inside the walls', () => {
 });
 
 describe('Act 4 vendor open rules', () => {
-  const open = (v: string, f: ReturnType<typeof flags>) => flagConditionHolds(ACT4_VENDOR_OPEN_WHEN[v], f);
+  const open = (v: VendorId, f: ReturnType<typeof flags>) => flagConditionHolds(ACT4_VENDOR_OPEN_WHEN[v]!, f);
   it('Wenna opens at M38, Aldous closes at M38', () => {
     expect(open('wenna', BEFORE_M38)).toBe(false);
     expect(open('wenna', M38_TO_M41)).toBe(true);
@@ -85,7 +85,28 @@ describe('Act 4 vendor open rules', () => {
   });
   it('names only real or Act 4 vendor ids', () => {
     for (const v of [...Object.keys(ACT4_VENDOR_OPEN_WHEN), ...ACT4_VENDOR_POSTS.map((r) => r.vendorId)]) {
-      expect(v in VENDORS || v === 'wulfhild' || v === 'hild', v).toBe(true);
+      expect(v in VENDORS, v).toBe(true);
     }
+  });
+});
+
+describe('wired into L0\'s tables', () => {
+  it('VENDOR_OPEN_WHEN and VENDOR_POSTS carry the L7 rows', () => {
+    expect(VENDOR_OPEN_WHEN).toEqual(ACT4_VENDOR_OPEN_WHEN);
+    expect(VENDOR_POSTS).toEqual(ACT4_VENDOR_POSTS);
+  });
+  it('each refuge shop stands in the city before M38 and at the refuge after M41; Aldous stays put and closes', () => {
+    for (const v of REFUGE_VENDORS) {
+      expect(vendorAnchor(v, BEFORE_M38)).toBe(`shop.${v}`);
+      expect(vendorAnchor(v, AFTER_M41)).toBe(refugeShop(v));
+    }
+    expect(vendorAnchor('aldous', AFTER_M41)).toBe('shop.aldous');
+    expect(vendorOpenByTable('aldous', AFTER_M41)).toBe(false);
+    expect(vendorAnchor('hild', AFTER_M41)).toBe('ashgate.shop.hild');
+    expect(vendorAnchor('wulfhild', flags({ 'story.m43.complete': true }))).toBe('waste.walker-camp.shop.wulfhild');
+  });
+  it('a load without the flag puts the shop back (the rule is a pure read of the flags)', () => {
+    expect(vendorAnchor('merrin', AFTER_M41)).toBe(refugeShop('merrin'));
+    expect(vendorAnchor('merrin', BEFORE_M38)).toBe('shop.merrin');
   });
 });
