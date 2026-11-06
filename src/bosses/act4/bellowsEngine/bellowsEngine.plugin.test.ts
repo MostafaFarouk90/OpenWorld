@@ -15,6 +15,8 @@ import { ACT4_SITES, CRUCIBLE_ID } from '../../../harrowmark/act4/sites';
 import { regionAt } from '../../../region/regionMask';
 import structureBreaksPlugin from '../../structureBreaks.plugin';
 import { winBellowsForTest } from './testing';
+import { VALVE_INTERACT_PREFIX } from './valves';
+import { BELLOWS_VALVE_PREFIX } from '../../../audio/act2SfxRouter';
 import { OUTCOME_FLAG, RESET_TOAST_KEY } from './BellowsDirector';
 import { BELLOWS_BOSS_DEF, pickLiveValve } from './BellowsEncounter';
 import plugin, { bellowsEngineDirector } from './bellowsEngine.plugin';
@@ -47,7 +49,7 @@ function fake(id: string, name: string, service: unknown): GamePlugin {
   };
 }
 
-type Opts = { flags?: boolean; interior?: string | null; level?: number; noBreaks?: boolean };
+type Opts = { flags?: boolean; interior?: string | null; level?: number; noBreaks?: boolean; model?: boolean };
 
 async function setup(opts: Opts = {}) {
   const scene = new THREE.Scene();
@@ -60,12 +62,14 @@ async function setup(opts: Opts = {}) {
   const doc = Object.assign(new EventTarget(), { pointerLockElement: null as Element | null });
   const element = Object.assign(new EventTarget(), { requestPointerLock: () => {} }) as unknown as HTMLElement;
   const input = new InputManager(element, win, doc, { storage: null });
-  const game = new Game({ scene, physics, world, input, moveModifiers, assets: null as never, cameraRig: null as never, report: () => {} });
+  // The model is procedural: any asset loader at all means "build it"; none means headless.
+  const assets = opts.model ? { load: () => Promise.resolve(), instantiate: () => new THREE.Group(), animations: () => [] } : null;
+  const game = new Game({ scene, physics, world, input, moveModifiers, assets: assets as never, cameraRig: null as never, report: () => {} });
   const events: Array<{ type: keyof GameEventMap; payload: any }> = [];
   game.events.onAny((type, payload) => events.push({ type, payload }));
   const blockers: string[] = [];
   const interiors = {
-    current: 'interior' in opts ? opts.interior! : ARENA.interiorId,
+    current: ('interior' in opts ? opts.interior! : ARENA.interiorId) as string | null,
     setBlocker: (id: string, closed: boolean) => blockers.push(`${id}:${closed}`),
   };
   const plugins: GamePlugin[] = [
@@ -134,7 +138,7 @@ async function setup(opts: Opts = {}) {
     run(secs(PRESENTATION.introSeconds) + 2);
     expect(enc().contested).toBe(true);
   };
-  const interactable = (n: number) => (ctx.interaction as unknown as { items: Map<string, any> }).items.get(`valve:bellows-${n}`);
+  const interactable = (n: number) => (ctx.interaction as unknown as { items: Map<string, any> }).items.get(`${VALVE_INTERACT_PREFIX}${n}`);
   const turn = (n: number) => interactable(n).onInteract(ctx.player.actor);
   const strikeValve = (index: number, kind: 'melee' | 'spell' = 'melee', attackerId: string = ctx.player.actor.id) =>
     ctx.damage.apply({ attackerId, targetId: enc().valveBank!.actorId(index)!, amount: 20, poise: 20, kind, attackId: kind === 'spell' ? 'firebolt' : 'swing' });
@@ -151,7 +155,7 @@ async function setup(opts: Opts = {}) {
     game.dispose();
     world.dispose();
   };
-  return { game, ctx, events, blockers, of, run, runHealed, until, at, local, enter, exit, dir, enc, boss, state, hit, start, interactable, turn, strikeValve, toFloor, shutLive, teardown };
+  return { game, ctx, scene, interiors, events, blockers, of, run, runHealed, until, at, local, enter, exit, dir, enc, boss, state, hit, start, interactable, turn, strikeValve, toFloor, shutLive, teardown };
 }
 
 describe('bellows-engine numbers', () => {
@@ -508,6 +512,137 @@ describe('bellows-engine plugin', () => {
   );
 });
 
+describe('bellows-engine review fixes', () => {
+  it(
+    'poise is full again once a bar is counted (nothing reads it as staggered through the vent)',
+    async () => {
+      const h = await setup();
+      h.start();
+      h.shutLive();
+      expect(h.of('boss.break')).toHaveLength(1);
+      expect(h.boss()!.poise).toBe(BELLOWS.maxPoise);
+      h.teardown();
+    },
+    T30,
+  );
+
+  it(
+    'the punch is blockable and parryable, the jet and coal are not; a parried punch is no pip',
+    async () => {
+      const h = await setup();
+      h.at(0, 57.5);
+      const requests: Array<{ attackId?: string; parryable?: false; unblockable?: boolean }> = [];
+      h.ctx.damage.addModifier('test.spy', (req) => {
+        if (req.targetId === h.ctx.player.actor.id) requests.push({ attackId: req.attackId, parryable: req.parryable, unblockable: req.unblockable });
+      }, -150);
+      h.start();
+      h.runHealed(RHYTHM.first + 1.2);
+      const punch = requests.find((r) => r.attackId === 'bellows.punch')!;
+      expect(punch.parryable).toBeUndefined();
+      expect(punch.unblockable).toBeFalsy();
+      h.at(0, 54);
+      h.runHealed(8);
+      const jet = requests.find((r) => r.attackId === 'bellows.steam')!;
+      expect(jet.parryable).toBe(false);
+      expect(jet.unblockable).toBe(true);
+      // A parry staggers its attacker: on the engine that is refused and its poise refills.
+      h.ctx.damage.stagger(h.boss()!.id, h.ctx.player.actor.id, 1e6);
+      expect(h.of('boss.break')).toEqual([]);
+      expect(h.boss()!.poise).toBe(BELLOWS.maxPoise);
+      h.teardown();
+    },
+    T30,
+  );
+
+  it(
+    'a shut whose bar the registry does not count reopens its valve, lit, and a second shut works',
+    async () => {
+      const h = await setup();
+      h.start();
+      const svc = h.ctx.services.get('structureBreaks')!;
+      const real = svc.acceptBreak.bind(svc);
+      let refuse = 1;
+      svc.acceptBreak = (id: string) => (refuse-- > 0 ? false : real(id));
+      const live = h.enc().liveValve;
+      h.turn(live + 1);
+      expect(h.of('boss.break')).toEqual([]);
+      h.run(3);
+      expect(h.enc().liveValve).toBe(live);
+      expect(h.enc().valveBank!.look(live)).toBe('live');
+      expect(h.interactable(live + 1).enabled()).toBe(true);
+      // The armed break was drained: a stray stagger makes no pip.
+      h.ctx.damage.stagger(h.boss()!.id, h.ctx.player.actor.id, 1e6);
+      expect(h.of('boss.break')).toEqual([]);
+      h.turn(live + 1);
+      expect(h.of('boss.break')).toHaveLength(1);
+      h.teardown();
+    },
+    T30,
+  );
+
+  it(
+    'with a model: the fight runs on it, and a beaten engine stands as a wreck only while the Crucible is current',
+    async () => {
+      const h = await setup({ model: true });
+      h.start();
+      expect(h.scene.getObjectByName('boss-bellows-engine')).toBeDefined();
+      // The engine is solid: a ray along the floor from 6 m out stops at its body, not at the far wall.
+      const enc = h.dir().current!;
+      expect(enc.bodyCollider).not.toBeNull();
+      h.run(0.1);
+      const c = enc.actor.worldPosition(new THREE.Vector3());
+      const ray = () => physics.raycast({ x: c.x + 6, y: c.y + 1, z: c.z }, { x: -1, y: 0, z: 0 }, 6);
+      const hit = ray();
+      expect(hit?.collider).toBe(enc.bodyCollider);
+      expect(hit!.distance).toBeCloseTo(6 - BELLOWS.colliderRadius, 1);
+      winBellowsForTest({ ctx: h.ctx, step: () => h.game.fixedUpdate() });
+      h.run(2);
+      expect(h.dir().wreckShown).toBe(true);
+      const wreck = h.scene.getObjectByName('bellows-engine')!;
+      expect(wreck.visible).toBe(true);
+      // The fight's body went with it.
+      expect(enc.bodyCollider).toBeNull();
+      expect(ray()?.collider === hit!.collider).toBe(false);
+      h.interiors.current = null;
+      h.run(2);
+      expect(wreck.visible).toBe(false);
+      h.teardown();
+    },
+    T30,
+  );
+});
+
+describe('valve ids', () => {
+  it('never take the Act 2 Weeping Bellows wheels’ ids or their SFX prefix', () => {
+    expect(VALVE_INTERACT_PREFIX.startsWith(BELLOWS_VALVE_PREFIX)).toBe(false);
+    expect(BELLOWS_VALVE_PREFIX.startsWith(VALVE_INTERACT_PREFIX)).toBe(false);
+  });
+
+  it(
+    'a failed valve mount stops the fight without a retry loop until the player walks in again',
+    async () => {
+      const h = await setup();
+      // Something else already holds valve 1's id: the mount fails.
+      const off = h.ctx.interaction.register({ id: `${VALVE_INTERACT_PREFIX}1`, kind: 'valve', position: (o: THREE.Vector3) => o.set(0, 0, 0), radius: 1, promptKey: 'x', onInteract: () => {} } as never);
+      h.enter();
+      h.run(secs(PRESENTATION.introSeconds) + 2);
+      expect(h.dir().current).toBeNull();
+      h.run(secs(10));
+      expect(h.dir().current).toBeNull();
+      const fails = (console.warn as unknown as { mock: { calls: unknown[][] } }).mock.calls.filter((c) => String(c[0]).includes('could not mount')).length;
+      expect(fails).toBe(1);
+      // Freed and walked into again: it starts.
+      off();
+      h.exit();
+      h.enter();
+      h.run(secs(PRESENTATION.introSeconds) + 2);
+      expect(h.enc().contested).toBe(true);
+      h.teardown();
+    },
+    T30,
+  );
+});
+
 describe('winBellowsForTest (L13)', () => {
   it(
     'wins the fight headless by the rules, defeated',
@@ -539,7 +674,7 @@ describe('BellowsModel', () => {
   it('builds with hurtboxes on the boiler, head and arms, animates and disposes', () => {
     const m = buildBellowsModel();
     expect(m.hurtboxes.missing).toEqual([]);
-    expect(m.hurtboxes.count).toBe(4);
+    expect(m.hurtboxes.count).toBe(5);
     const armZ = () => (m.body.getObjectByName('bellows-arm-l') as THREE.Object3D).position.z;
     const z0 = armZ();
     m.setDraw(1);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BellowsBrain, type BellowsHooks } from './BellowsBrain';
-import { BELLOWS, VENT } from './tuning';
+import { BELLOWS, bellowsScale, VENT } from './tuning';
 
 /**
  * The boss beat is about 6 min (the Act 3 standard, plans/embers-act-3.md 7.1): a headless fight on the real brain and the
@@ -12,6 +12,8 @@ import { BELLOWS, VENT } from './tuning';
  */
 interface Profile {
   name: string;
+  /** The engine's level (31, or 29 for a player at 26 under the P + 3 cap); its health scales with it. */
+  level: number;
   dps: number;
   uptime: number;
   /** Seconds to reach the live valve. */
@@ -41,7 +43,7 @@ function fight(p: Profile): number {
   };
   const brain = new BellowsBrain(hooks);
   brain.start();
-  const max = BELLOWS.maxHealth;
+  const max = Math.round(BELLOWS.maxHealth * bellowsScale(p.level));
   let health = max;
   let phase = 1;
   const broken = [false, false, false];
@@ -73,26 +75,33 @@ function fight(p: Profile): number {
   return Infinity;
 }
 
+/** At 31 (a full-play player near 30), and at 29 (a player at 26, the ?act4= start level: weaker kit, about 12 % less damage). */
 const PROFILES: Profile[] = [
-  { name: 'blade', dps: 27, uptime: 0.5, valveWalk: 7, dist: 4 },
-  { name: 'ranged', dps: 17, uptime: 0.8, valveWalk: 9, dist: 14 },
-  { name: 'caster', dps: 19, uptime: 0.7, valveWalk: 9, dist: 10 },
+  { name: 'blade at 31', level: 31, dps: 27, uptime: 0.5, valveWalk: 7, dist: 4 },
+  { name: 'ranged at 31', level: 31, dps: 17, uptime: 0.8, valveWalk: 9, dist: 14 },
+  { name: 'caster at 31', level: 31, dps: 19, uptime: 0.7, valveWalk: 9, dist: 10 },
+  { name: 'blade at 29', level: 29, dps: 24, uptime: 0.5, valveWalk: 7, dist: 4 },
+  { name: 'ranged at 29', level: 29, dps: 15, uptime: 0.8, valveWalk: 9, dist: 14 },
+  { name: 'caster at 29', level: 29, dps: 17, uptime: 0.7, valveWalk: 9, dist: 10 },
 ];
 
 describe('Bellows-Engine pacing (the 6 min boss beat)', () => {
-  it.each(PROFILES.map((p) => [p.name, p] as const))('%s finishes it in 4 to 7 minutes', (_n, p) => {
+  it.each(PROFILES.map((p) => [p.name, p] as const))('%s finishes it in 4.5 to 6 minutes', (_n, p) => {
     const t = fight(p);
-    expect(t).toBeGreaterThan(240);
-    expect(t).toBeLessThan(420);
+    expect(t).toBeGreaterThan(260);
+    expect(t).toBeLessThan(360);
   });
 
   it('readings for L13', () => {
     const minutes = PROFILES.map((p) => `${p.name}: ${(fight(p) / 60).toFixed(1)} min`);
     expect(minutes).toMatchInlineSnapshot(`
       [
-        "blade: 4.5 min",
-        "ranged: 4.6 min",
-        "caster: 4.7 min",
+        "blade at 31: 4.5 min",
+        "ranged at 31: 4.6 min",
+        "caster at 31: 4.7 min",
+        "blade at 29: 4.6 min",
+        "ranged at 29: 4.7 min",
+        "caster at 29: 4.7 min",
       ]
     `);
   });

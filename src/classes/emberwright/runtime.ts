@@ -4,6 +4,7 @@ import { actorsInCone, actorsInRadius } from '../../spells/areas';
 import { SpellCaster, type SpellHost } from '../../spells/SpellCaster';
 import type { SpellDef } from '../../spells/spellDefs';
 import { SPELLCAST_CLIPS } from '../../spells/spellClips';
+import { isStruckProp } from '../../actors/struckProps';
 import type { ActorId, ActorLike, Vec3 } from '../../vfx/ports';
 import type { EmberwrightHost } from './ports';
 import { vec } from './ports';
@@ -363,9 +364,9 @@ export class EmberwrightRuntime {
     return this.host.status()?.apply(targetId, { id: IGNITE.id, kind: 'ignite', dps: IGNITE.dps, seconds: IGNITE.seconds, sourceId: this.host.player.actor.id }) ?? false;
   }
 
-  /** Hostiles, plus the neutral props the player must be able to break (toll-post, dummies); never a neutral person. */
+  /** Hostiles, plus the neutral props the player must be able to break (toll-post, dummies, a boss's struck props); never a neutral person. */
   private isTarget(a: ActorLike): boolean {
-    return a.team === 'hostile' || (a.team === 'neutral' && PROP_KINDS.has(a.kind));
+    return a.team === 'hostile' || (a.team === 'neutral' && PROP_KINDS.has(a.kind)) || isStruckProp(a);
   }
 
   private targetsIn(centre: Vec3, radius: number): ReturnType<typeof actorsInRadius> {

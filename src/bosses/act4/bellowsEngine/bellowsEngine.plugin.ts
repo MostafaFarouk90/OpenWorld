@@ -22,12 +22,15 @@ const plugin: GamePlugin = {
       makeModel: () => buildBellowsModel(),
     });
     director = d;
+    // Dev builds only: a handle for the browser real-game driver (a dynamic import of this module is another instance).
+    if (import.meta.env?.DEV) (globalThis as { __bellowsEngine?: BellowsDirector }).__bellowsEngine = d;
     offSystem = ctx.systems.add({ id: 'bosses.bellows-engine', fixedPhase: 'intent', order: -137, fixedUpdate: (dt) => d.fixedUpdate(dt) });
   },
   dispose() {
     offSystem?.();
     offSystem = null;
     director?.dispose();
+    if ((globalThis as { __bellowsEngine?: BellowsDirector }).__bellowsEngine === director) delete (globalThis as { __bellowsEngine?: BellowsDirector }).__bellowsEngine;
     director = null;
   },
 };

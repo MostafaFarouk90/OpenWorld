@@ -126,6 +126,12 @@ export class BellowsEncounter implements BellowsHooks {
   private telegraphT = 0;
   private jetSwing = -1;
   private outcomeT = -1;
+  private pendingBreak: { index: number; phase: number; ticks: number } | null = null;
+  private readonly warned = new Set<string>();
+  /** The engine's static body (a cylinder of BELLOWS.colliderRadius): the player cannot walk through it. Null without physics. */
+  bodyCollider: unknown = null;
+  /** `register()` could not mount the valves: the director stops arming until the next trigger enter (no retry loop). */
+  mountFailed = false;
   /** Valve shuts that broke a bar (tests and the real-game log). */
   valveBreaks = 0;
 
@@ -156,6 +162,7 @@ export class BellowsEncounter implements BellowsHooks {
     this.actor.untargetable = true;
     this.actor.data['audio'] = { material: 'metal' };
     if (opts.model) this.offs.push(ctx.combat.addTarget(opts.model.hurtboxes, this.actor.id));
+    if (opts.model) this.addBody(opts.places.centre);
     this.offs.push(
       ctx.damage.addModifier(BELLOWS_PLATE_MODIFIER_ID, (req) => this.plate(req), BELLOWS.plateModifierOrder),
       ctx.damage.addModifier(BELLOWS_FLOOR_MODIFIER_ID, (req) => this.floor(req), BELLOWS.floorModifierOrder),
@@ -168,9 +175,13 @@ export class BellowsEncounter implements BellowsHooks {
         if (!mine(p)) return;
         this.broken.add(p.phase);
         if (p.last) this.floorLifted = true;
+        this.pendingBreak = null;
         this.shots.clear();
         this.brain.onBreak();
         this.light(-1);
+        // The forced stagger emptied his poise; refill it once the registry has counted the bar, so nothing reads him as
+        // staggered through the vent (the Warden's staggered-target bonus, the bar's poise).
+        this.actor.restorePoise();
       }),
       ctx.events.on('boss.phase', (p) => {
         if (mine(p)) this.brain.onPhase(p.phase);
@@ -248,6 +259,7 @@ export class BellowsEncounter implements BellowsHooks {
       this.valves = new ValveBank(this.ctx, { places: this.places.valves, onShut: (i, s) => this.shutValve(i, s), warn: this.warn });
     } catch (err) {
       this.warn(`could not mount the valves: ${err instanceof Error ? err.message : String(err)}`);
+      this.mountFailed = true;
       this.finish('reset');
       return false;
     }
@@ -267,6 +279,7 @@ export class BellowsEncounter implements BellowsHooks {
       return;
     }
     if (!this.registered) return;
+    this.checkPendingBreak();
     this.valves?.tick(dt);
     this.shots.update(dt, (at) => this.coalLands(at));
     if (this.ended || this.outcomeT >= 0) return;
@@ -310,7 +323,7 @@ export class BellowsEncounter implements BellowsHooks {
     }
     const breaks = this.breaks();
     if (!breaks || breaks.strike(valvePartId(index + 1)) !== 'armed') {
-      this.warn(`valve ${index + 1} did not arm a break`);
+      this.warnOnce(`valve ${index + 1} did not arm a break`);
       return 'refused';
     }
     if (this.actor.poise <= 0) this.actor.restorePoise();
@@ -325,6 +338,8 @@ export class BellowsEncounter implements BellowsHooks {
     }
     this.used.add(index);
     this.valveBreaks++;
+    // The bar arrives with the stagger's events (now, or after the hit that shut the valve); `tick` undoes the shut if not.
+    this.pendingBreak = { index, phase: this.brain.phase, ticks: 0 };
     return 'vented';
   }
 
@@ -403,8 +418,8 @@ export class BellowsEncounter implements BellowsHooks {
   }
 
   ventEnd(): void {
+    // No valve to light here: a vent always follows this phase's bar, and the next phase lights its valve at the seal's end.
     this.model?.setVented(false);
-    if (!this.brain.sealPending && !this.broken.has(this.brain.phase)) this.light(this.pick());
   }
 
   sealStart(): void {
@@ -418,6 +433,35 @@ export class BellowsEncounter implements BellowsHooks {
   }
 
   // ---- internals ----
+
+  /**
+   * Backstop: a shut whose stagger the registry did not count (no `boss.break` by the next tick) would leave the phase with no bar
+   * and its valve shut for good. Undo it: drain the armed break, reopen the valve and light it again.
+   */
+  private checkPendingBreak(): void {
+    const p = this.pendingBreak;
+    if (!p) return;
+    if (this.broken.has(p.phase)) {
+      this.pendingBreak = null;
+      return;
+    }
+    if (++p.ticks < 2) return;
+    this.pendingBreak = null;
+    this.breaks()?.acceptBreak(BELLOWS_BOSS_ID);
+    this.used.delete(p.index);
+    this.valveBreaks--;
+    this.actor.restorePoise();
+    this.valves?.reopen(p.index);
+    this.live = -2;
+    this.light(p.index);
+    this.warnOnce(`valve ${p.index + 1}: the registry did not count the bar; the valve reopens`);
+  }
+
+  private warnOnce(message: string): void {
+    if (this.warned.has(message)) return;
+    this.warned.add(message);
+    this.warn(message);
+  }
 
   private breaks(): StructureBreaksService | undefined {
     try {
@@ -464,6 +508,7 @@ export class BellowsEncounter implements BellowsHooks {
     return this.tmp.set(c.x - Math.sin(this.yaw) * 2.1, c.y + 2.6, c.z - Math.cos(this.yaw) * 2.1);
   }
 
+  /** `dodgeOnly`: red, unblockable and never parried (the jet, coal). Otherwise blockable and parryable (the punch: a parry is no pip). */
   private hit(attackId: string, swingId: number, amount: number, poise: number, dodgeOnly: boolean): void {
     const player = this.ctx.player.actor;
     if (player.dead) return;
@@ -482,7 +527,7 @@ export class BellowsEncounter implements BellowsHooks {
       swingId,
       direction,
       unblockable: dodgeOnly || undefined,
-      parryable: false,
+      ...(dodgeOnly ? { parryable: false as const } : {}),
     });
   }
 
@@ -532,6 +577,23 @@ export class BellowsEncounter implements BellowsHooks {
   private tickOutcome(dt: number): void {
     this.outcomeT += dt;
     if (this.outcomeT >= PRESENTATION.deathSeconds) this.finish('defeated');
+  }
+
+  private addBody(at: THREE.Vector3): void {
+    const physics = this.ctx.physics;
+    if (!physics?.ready) return;
+    try {
+      const half = BELLOWS.colliderHeight / 2;
+      const desc = physics.rapier.ColliderDesc.cylinder(half, BELLOWS.colliderRadius).setTranslation(at.x, at.y + half, at.z);
+      const collider = physics.addStaticCollider(desc);
+      this.bodyCollider = collider;
+      this.offs.push(() => {
+        physics.removeCollider(collider);
+        this.bodyCollider = null;
+      });
+    } catch (err) {
+      this.warnOnce(`no body collider (${String(err)})`);
+    }
   }
 
   private finish(end: BellowsEnd): void {

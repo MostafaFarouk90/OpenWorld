@@ -182,6 +182,16 @@ describe('ProjectileSystem pierce, hostileOnly and the shared host', () => {
     run(s.ps, 2);
     expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'e' });
   });
+  it('hostileOnly still hits a neutral struck prop (a boss valve), never a neutral creature', () => {
+    const s = setup();
+    s.actors.add(new FakeActor('beast', 'neutral', 0, 3));
+    const valve = new FakeActor('valve', 'neutral', 0, 6);
+    valve.kind = 'bellows-valve';
+    s.actors.add(valve);
+    s.ps.launch(s.base({ hostileOnly: true }));
+    run(s.ps, 2);
+    expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'valve' });
+  });
   it('clear(true) drops projectiles without calling back', () => {
     const s = setup();
     s.ps.launch(s.base());

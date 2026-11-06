@@ -34,6 +34,8 @@ export class BellowsDirector {
   private readonly offs: (() => void)[] = [];
   private warnedPlaces = false;
   private warnedBreaks = false;
+  /** The last attempt could not mount its valves: stay unarmed until the next trigger enter or a death. */
+  private mountFailed = false;
   private outside = 0;
   private mouthOff: (() => void) | null = null;
   private wreck: BellowsModel | null = null;
@@ -53,7 +55,13 @@ export class BellowsDirector {
     // Before the arena's own listeners, so the announcement sees the fight that is about to be torn down.
     this.offs.push(
       ctx.events.on('actor.died', (e) => {
-        if (e.actorId === player() && this.live) this.announceReset();
+        if (e.actorId !== player()) return;
+        if (this.live) this.announceReset();
+        this.mountFailed = false;
+      }),
+      // A fresh enter clears a failed mount before the arena's own enter handler re-arms (the Slagmaw pattern).
+      ctx.events.on('trigger.enter', (e) => {
+        if (e.triggerId === ARENA.trigger && e.actorId === player()) this.mountFailed = false;
       }),
       ctx.events.on('interior.exited', (e) => {
         if (e.interiorId === ARENA.interiorId) this.abandon();
@@ -80,17 +88,22 @@ export class BellowsDirector {
         cue: (model) => model?.setDraw(1),
       },
       places: () => this.places(),
-      makeEncounter: (places, model, onEnd) =>
-        new BellowsEncounter(ctx, {
+      makeEncounter: (places, model, onEnd) => {
+        const encounter: BellowsEncounter = new BellowsEncounter(ctx, {
           model,
           places,
           level: bellowsLevel(ctx.services.get('progression')?.level),
           warn: this.warn,
-          onEnd: () => onEnd(),
-        }),
+          onEnd: () => {
+            if (encounter.mountFailed) this.mountFailed = true;
+            onEnd();
+          },
+        });
+        return encounter;
+      },
       makeModel: this.makeModel,
       modelState: this.modelState,
-      armed: () => ctx.state.hasFlag(D07_STARTED_FLAG) && ctx.state.hasFlag(ARENA_GATE_FLAG) && this.hasBreaks(),
+      armed: () => !this.mountFailed && ctx.state.hasFlag(D07_STARTED_FLAG) && ctx.state.hasFlag(ARENA_GATE_FLAG) && this.hasBreaks(),
       gateClear: (feet) => this.gateClear(feet),
       insideForReload: (feet) => this.onFloor(feet, 0),
       warn: this.warn,
@@ -161,7 +174,7 @@ export class BellowsDirector {
 
   private abandon(): void {
     this.outside = 0;
-    if (!this.live && !this.arena.introRunning) return;
+    if (!this.live) return;
     this.announceReset();
     this.arena.abandon();
   }
@@ -242,6 +255,8 @@ export class BellowsDirector {
   /** A beaten engine stands as a wreck (no actor, no hurtboxes) wherever its anchor is, in a game that draws. */
   private syncWreck(): void {
     const beaten = this.ctx.state.hasFlag(OUTCOME_FLAG);
+    // Interior anchors stay defined for good and the Crucible's root is hidden unless it is current: so is the wreck.
+    if (this.wreck?.root) this.wreck.root.visible = this.interiorCurrent();
     if (!beaten || this.arena.current) {
       if (!beaten && this.wreck) {
         this.wreck.dispose();
@@ -258,6 +273,7 @@ export class BellowsDirector {
       m.root.position.set(centre.position.x, centre.position.y, centre.position.z);
       m.setYaw(centre.yaw);
       m.setWrecked();
+      m.root.visible = this.interiorCurrent();
       this.ctx.scene.add(m.root);
       this.wreck = m;
     } catch (err) {
@@ -267,7 +283,15 @@ export class BellowsDirector {
   }
 
   private makeModelFailedOnce(): void {
-    // A failed wreck is cosmetic: stop retrying by standing in an empty group.
+    // A failed wreck is cosmetic: stop retrying by standing in an empty stand-in.
     this.wreck = { dispose: () => {} } as unknown as BellowsModel;
+  }
+
+  private interiorCurrent(): boolean {
+    try {
+      return (this.ctx.services.get as (n: string) => { current?: string | null } | undefined)('interiors')?.current === ARENA.interiorId;
+    } catch {
+      return false;
+    }
   }
 }

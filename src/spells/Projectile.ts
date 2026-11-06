@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isStruckProp } from '../actors/struckProps';
 import type { ActorId, ActorLike, ActorsLike, Vec3 } from '../vfx/ports';
 import { ACTOR_HIT, PROJECTILE } from './tuning';
 
@@ -194,7 +195,8 @@ export class ProjectileSystem {
     let bestD = Infinity;
     for (const a of this.host.actors.all()) {
       if (a.id === s.casterId || a.dead || !a.hittable || s.passed.has(a.id) || friendly(s.casterTeam, a.team)) continue;
-      if (s.hostileOnly && a.team !== 'hostile') continue;
+      // hostileOnly still takes a struck prop (a boss's valve or gong: src/actors/struckProps.ts).
+      if (s.hostileOnly && a.team !== 'hostile' && !isStruckProp(a)) continue;
       a.worldPosition(pos);
       const d = Math.hypot(pos.x - x, pos.z - z);
       if (d > ACTOR_HIT.radius + s.radius) continue;

@@ -61,6 +61,9 @@ export const BELLOWS = {
   turnRate: Math.PI / 3,
   /** Hurtbox and body radius: the engine never stands closer than this to the player (a script push is not needed: it is bolted down). */
   bodyRadius: 2.6,
+  /** The static body the player bumps into: a cylinder just outside the turntable's rim (the boiler turns, so not a box). */
+  colliderRadius: 3.1,
+  colliderHeight: 4,
 } as const;
 
 /** The design's 1.0 s telegraph, shared by the punch and the jet. */

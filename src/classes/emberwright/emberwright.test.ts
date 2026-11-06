@@ -338,6 +338,15 @@ describe('review fixes', () => {
     expect(rig.applied()[0].poise).toBe(FLAME_BALL.poise);
   });
 
+  it('a boss arena’s struck prop (the Bellows-Engine valve) takes spell hits too', () => {
+    rig = makeRig();
+    const valve = rig.w.actors.add(new FakeActor('valve', 'neutral', 0, -6));
+    valve.kind = 'bellows-valve';
+    rig.window('Spellcast_Long');
+    rig.step(2);
+    expect(rig.applied().map((r) => r.targetId)).toEqual(['valve']);
+  });
+
   it('a cancel request left over from a same-tick stagger does not kill the next cast', async () => {
     rig = makeRig();
     rig.hostile('on', 0, -6);

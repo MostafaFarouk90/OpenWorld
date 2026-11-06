@@ -17,6 +17,11 @@ export type ValveSource = 'interact' | 'hit';
 export type ValveLook = 'dark' | 'live' | 'shut';
 
 export const VALVE_MODIFIER_ID = 'bosses.bellows.valve-hit';
+/**
+ * The wheels' interactable ids. Not `valve:bellows-`: the Act 2 Weeping Bellows shrine owns those ids, and the Act 2 SFX router
+ * plays its wheel sounds on that prefix (src/audio/act2SfxRouter.ts).
+ */
+export const VALVE_INTERACT_PREFIX = 'valve:engine-';
 const VALVE_MODIFIER_ORDER = 80;
 
 const POST_GEO = new THREE.CylinderGeometry(0.1, 0.12, 1.1, 6);
@@ -110,6 +115,14 @@ export class ValveBank {
     if (!this.valves.some((x) => x.look === 'live')) this.plume.hide();
   }
 
+  /** Undoes `markShut` (the encounter's backstop when the registry did not count the bar). */
+  reopen(index: number): void {
+    const v = this.valves[index];
+    if (!v || v.look !== 'shut') return;
+    this.setLook(v, 'dark');
+    this.springBack(v);
+  }
+
   /** The valve shut by the player (F or a hit): ask the encounter, then spring a dud or a refusal back. */
   shut(index: number, source: ValveSource): ValveShutResult {
     const v = this.valves[index];
@@ -180,7 +193,7 @@ export class ValveBank {
     actor.data['audio'] = { material: 'metal' };
     this.offs.push(this.ctx.combat.addTarget(hurtboxes, actor.id));
     const wheel = new ValveWheel({
-      id: `valve:bellows-${n}`,
+      id: `${VALVE_INTERACT_PREFIX}${n}`,
       positions: 2,
       onChange: (position) => {
         if (position !== 0) this.shut(i, 'interact');

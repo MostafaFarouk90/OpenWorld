@@ -170,11 +170,14 @@ export function buildBellowsModel(): BellowsModel {
     body.add(gm);
   }
 
-  // Hurtboxes: the boiler, the head and the two arms (plain Object3D bones).
+  // Hurtboxes: the cradle, the boiler, the head and the two arms (plain Object3D bones).
   const boilerBone = new THREE.Object3D();
   boilerBone.name = BOILER_BONE;
   body.add(boilerBone);
   const defs: HurtboxDef[] = [
+    // The turntable and cradle, low down where a blade swings (the boiler and head stand above a Knight's reach). Upright and
+    // round, so the body's turn does not move it; its rim matches the turntable, just inside the static body.
+    { name: 'cradle', bone: BOILER_BONE, start: { x: 0, y: 0.3, z: 0 }, end: { x: 0, y: 1.2, z: 0 }, radius: 3.0 },
     { name: 'boiler', bone: BOILER_BONE, start: { x: 0, y: 2.0, z: 2.4 }, end: { x: 0, y: 2.0, z: -1.2 }, radius: 1.6 },
     { name: 'head', bone: HEAD_BONE, start: { x: -0.8, y: 0, z: 0 }, end: { x: 0.8, y: 0, z: 0 }, radius: 1.1 },
     ...ARM_BONES.map((bone, i) => ({ name: `arm-${i}`, bone, start: { x: 0, y: 0, z: 0.6 }, end: { x: 0, y: 0, z: -1.4 }, radius: 0.6 })),
