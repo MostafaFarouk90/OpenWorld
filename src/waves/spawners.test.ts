@@ -8,10 +8,13 @@ import { CINDERFORD_ANCHORS, CINDERFORD_RAID } from './defs/cinderford';
 import { spawnerId, spawnersFor, WAVE_SPAWNERS } from './spawners';
 import { makeKit, type Kit } from './testKit';
 
+// Act 4 (L2) adds M39's set; these checks are Cinderford's.
+const CINDERFORD_SPAWNERS = WAVE_SPAWNERS.filter((s) => s.id.startsWith(`waves.${CINDERFORD_RAID.id}.`));
+
 describe('WAVE_SPAWNERS', () => {
   it('has one spawner per (wave, lane, kind), sized to the data: 5, 7 and 9 members per wave', () => {
     const perWave = [0, 0, 0];
-    for (const sp of WAVE_SPAWNERS) perWave[Number(/\.w(\d)\./.exec(sp.id)![1])] += sp.count;
+    for (const sp of CINDERFORD_SPAWNERS) perWave[Number(/\.w(\d)\./.exec(sp.id)![1])] += sp.count;
     expect(perWave).toEqual([5, 7, 9]);
     expect(new Set(WAVE_SPAWNERS.map((s) => s.id)).size).toBe(WAVE_SPAWNERS.length);
     expect(WAVE_SPAWNERS.map((s) => s.id)).toContain(spawnerId(CINDERFORD_RAID.id, 0, '1', 'ember-hound'));
@@ -26,7 +29,7 @@ describe('WAVE_SPAWNERS', () => {
 
   it('every spawner is manual, ephemeral, never respawns, does not leash, is tagged m12 and sits on a lane anchor', () => {
     const lanes = new Set<string>(Object.values(CINDERFORD_ANCHORS.lanes));
-    for (const sp of WAVE_SPAWNERS) {
+    for (const sp of CINDERFORD_SPAWNERS) {
       expect(sp).toMatchObject({ activation: 'manual', ephemeral: true, respawn: 'never', leash: false, tag: 'm12', band: 'cinderreach' });
       expect(lanes.has(sp.anchor)).toBe(true);
     }

@@ -48,6 +48,28 @@ export function guardSpots(c: (typeof CHECKPOINTS)[number]): { x: number; z: num
 }
 export const guardId = (c: (typeof CHECKPOINTS)[number], k: number): string => `vey-guard-${c.id}-${k}`;
 
+/**
+ * Spawn points of the Act 4 street groups (section 4; the groups are in act4/spawners.ts and activate on L10's flags).
+ * Picked by a clearance probe: 1 m off every structure, 1.8 m off every environment prop, 1.5 m off every other anchor.
+ */
+export const ACT4_SPAWN_POINTS: Readonly<Record<string, readonly (readonly [number, number])[]>> = {
+  'm35.ambush.1': [[9172.5, 2153.5], [9174.5, 2153.5], [9173.5, 2155.5]],
+  'm35.ambush.2': [[9143.5, 2147], [9145.5, 2147], [9144, 2149]],
+  'm36.rooftops': [[8897, 2290], [8897, 2292], [8897, 2288]],
+  'm36.daggerman': [[8850, 2215], [8852, 2215], [8850.5, 2217], [8848.5, 2216.5]],
+  'r19.deserters.1': [[8857.5, 1381], [8859.5, 1381], [8857.5, 1383]],
+  'r19.deserters.2': [[8420, 2150], [8422, 2150], [8420.5, 2152]],
+  'r20.cp.1': [[9182.5, 2156], [9184.5, 2156], [9182.5, 2158]],
+  'r20.cp.2': [[9336.5, 2191], [9338.5, 2191], [9337, 2193]],
+  'r20.cp.3': [[9473, 2222], [9475, 2222], [9474, 2224]],
+  'r21.cellars': [[8870, 1630], [8872, 1630], [8870.5, 1632], [8868.5, 1631.5]],
+  'r23.forger': [[8530, 1325], [8532, 1325]],
+};
+/** M36's rooftop watch walks the Rooftop Ward's street at x 8897, between the crowd lane's points (at least 4 m off each). */
+export const M36_PATROL: readonly (readonly [number, number])[] = [[8897, 2280], [8897, 2345], [8897, 2405], [8897, 2455]];
+export const spawnAnchor = (group: string, k: number): string => `${P}.spawn.${group}.${k}`;
+export const M36_PATROL_ANCHOR = (k: number): string => `${P}.patrol.m36.${k}`;
+
 const anchors: AnchorSpec[] = [
   // The doors: the chamber's on the Keep's south face, the Crucible's inside the Smelter gate.
   a(CHAMBER_DOOR.anchor, CHAMBER_DOOR.x, CHAMBER_DOOR.z, CHAMBER_DOOR.heading, ['poi', 'door']),
@@ -66,6 +88,9 @@ const anchors: AnchorSpec[] = [
     const p = ACT4_POSTS[id];
     return a(postAnchor(id), p.x, p.z, p.heading, ['npc-post']);
   }),
+  // The street groups' spawn points and M36's patrol.
+  ...Object.entries(ACT4_SPAWN_POINTS).flatMap(([g, pts]) => pts.map(([x, z], i) => a(spawnAnchor(g, i + 1), x, z, 0, ['spawn']))),
+  ...M36_PATROL.map(([x, z], i) => a(M36_PATROL_ANCHOR(i + 1), x, z, 0, ['patrol'])),
   // R20's two checkpoint huts in the farm-ring outside the River Gate.
   ...R20_HUTS.map((h) => a(h.id, Math.round(h.x * 100) / 100, Math.round(h.z * 100) / 100, outward(gateBearing(GATE_NAMES.indexOf('river'))), ['poi'])),
 ];

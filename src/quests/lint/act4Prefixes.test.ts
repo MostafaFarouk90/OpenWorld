@@ -24,8 +24,12 @@ const triggerIds = [
   ...ALL_INTERIORS.flatMap((d) => d.triggers.map((t) => t.id)),
 ];
 
+// L2: Harrowmark's Act 4 city and interiors (act4.layout.ts, interiors/harrowmark/act4, interiors/deeprun).
+const L2_SUBS = ['chamber', 'checkpoint', 'crucible', 'deeprun', 'gate', 'patrol', 'post', 'r20', 'spawn', 'stairs'];
+const L2_TRIGGER_SUBS = ['chamber', 'crucible', 'deeprun', 'stairs'];
 /** Act 4 sub-prefixes a thread owns and ships (L0: the fog faces' anchors; L1: the roads, Ashgate, the refuge, the Waste's sites and rope-lines; act4World.layout.ts). */
 const OWNED_SUB_PREFIXES: readonly string[] = [
+  ...L2_SUBS.map((s) => `harrowmark.a4.${s}.`),
   'ashroad.fog.',
   'waste.fog.',
   // L1
@@ -48,7 +52,9 @@ const OWNED_SUB_PREFIXES: readonly string[] = [
   'waste.shelter.',
 ];
 /** L1: L4's banter volumes round the Waste's sites. */
-const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = ['trg.waste.walker-camp', 'trg.waste.cinder-chapel', 'trg.waste.husk-cathedral', 'trg.waste.rimfoot'];
+const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = [
+  ...L2_TRIGGER_SUBS.map((s) => `trg.harrowmark.a4.${s}.`),
+  'trg.waste.walker-camp', 'trg.waste.cinder-chapel', 'trg.waste.husk-cathedral', 'trg.waste.rimfoot'];
 
 describe('Act 4 ids and reserved prefixes (v0.8 item 15)', () => {
   it('lists the 21 quests, split into Phase G and Phase H, none shared with Act 3', () => {
