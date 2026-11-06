@@ -140,6 +140,9 @@ export const SWIPE = {
   cooldown: 2.5,
 } as const;
 
+/** The Release window (taste call): he glides toward Cael this fast and stops this close, inside the hold's 3 m. */
+export const RELEASE_BOW = { speed: 6, stopAt: 2 } as const;
+
 /** A bar broke at the gong: he reels this long (taste call), nothing lands meanwhile. */
 export const STAGGER = { seconds: 2.5 } as const;
 

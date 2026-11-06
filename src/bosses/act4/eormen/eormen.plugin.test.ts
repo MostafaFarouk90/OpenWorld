@@ -21,7 +21,7 @@ import { GONG_INTERACT_ID } from './lastGong';
 import { EORMEN_SPAWNERS } from './spawners';
 import { winEormenForTest } from './testing';
 import { HUSK_CATHEDRAL_DEF } from '../../../waste/interiors/huskCathedral';
-import { ARENA, DARK, EORMEN, EORMEN_BOSS_ID, eormenLevel, eormenScale, GONG, GONG_KIND, HUSKS, PRESENTATION, TOLL } from './tuning';
+import { ARENA, DARK, EORMEN, EORMEN_BOSS_ID, eormenLevel, eormenScale, GONG, GONG_KIND, HUSKS, PRESENTATION, RELEASE_BOW, TOLL } from './tuning';
 
 let physics: PhysicsWorld;
 
@@ -275,6 +275,34 @@ describe('eormen plugin', () => {
       r.run(3);
       expect(r.of('eormen.gong.window').at(-1)).toEqual({ open: false, seconds: 0 });
       r.teardown();
+    },
+    T30,
+  );
+
+  it(
+    'the Release window: he glides to within reach of the hold when the last bar breaks at the gong, 10 m from him',
+    async () => {
+      const h = await setup();
+      h.start();
+      for (let phase = 1; phase <= 3; phase++) {
+        h.waitWindow();
+        h.strikeGong('melee');
+        h.run(0.1);
+        if (phase < 3) {
+          h.hit(h.enc().actor.maxHealth);
+          expect(h.until(() => (h.state()?.phase ?? 0) > phase, 2)).toBe(true);
+        }
+      }
+      expect(h.state()!.releaseOpen).toBe(true);
+      // Cael rang the gong far from him; he comes to Cael while the window lasts and stops inside the hold's reach.
+      const b0 = h.boss()!.root!.position.clone();
+      const pos = () => h.boss()!.root!.position;
+      h.ctx.player.teleport({ x: b0.x, y: b0.y - EORMEN.hover, z: b0.z + 10 });
+      h.runHealed(2.5);
+      const f = h.ctx.player.feet;
+      expect(Math.hypot(pos().x - f.x, pos().z - f.z)).toBeLessThanOrEqual(RELEASE_BOW.stopAt + 0.05);
+      expect(Math.hypot(pos().x - f.x, pos().z - f.z)).toBeGreaterThanOrEqual(RELEASE_BOW.stopAt - 0.05);
+      h.teardown();
     },
     T30,
   );
