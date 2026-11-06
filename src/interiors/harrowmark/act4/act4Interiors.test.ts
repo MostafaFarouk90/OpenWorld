@@ -92,7 +92,7 @@ describe('Act 4 Harrowmark interiors', () => {
       'deep-run': 'story.m39.complete',
       'deep-run-exit': 'story.m40.started',
     });
-    expect(ACT4_HARROWMARK_FLAG_BLOCKERS).toEqual({ 'crucible.arena.gate': 'story.d07.vatValves', 'deeprun.sluice': 'story.m40.sluice' });
+    expect(ACT4_HARROWMARK_FLAG_BLOCKERS).toEqual({ 'crucible.arena.gate': 'story.d07.valves', 'deeprun.sluice': 'story.m40.sluice' });
     // After the betrayal the chamber can only be left down the stairs, and the stairs open at that same moment.
     expect(ACT4_HARROWMARK_EXIT_LOCKS).toEqual({ 'council-chamber': { flag: 'story.m38.complete', toastKey: 'interior.refused.chamberHeld' } });
     expect(ACT4_HARROWMARK_DOOR_LOCKS['keep-stairs']).toBe(ACT4_HARROWMARK_EXIT_LOCKS['council-chamber']!.flag);

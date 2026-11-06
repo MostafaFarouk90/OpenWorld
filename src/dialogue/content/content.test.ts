@@ -1,3 +1,5 @@
+import { ACT4_NPC_DEFS } from '../../harrowmark/act4/npcDefs';
+import { HARROWMARK_A4_Q_NPC_DEFS } from '../../quests/content/act4/harrowmark/npcs';
 import { describe, it, expect } from 'vitest';
 import { dialogueDefs } from './index';
 import { dialogueStrings, npcNameFallbackStrings } from '../strings.en';
@@ -11,6 +13,8 @@ import type { FlagValue } from '../../quests/types';
 
 const all: Record<string, string> = { ...questStrings, ...dialogueStrings, ...npcNameFallbackStrings };
 const hasKey = (k: string) => k in all;
+
+const ACT4_HM_SPEAKERS = [...ACT4_NPC_DEFS, ...HARROWMARK_A4_Q_NPC_DEFS].map((d) => d.id).concat(['daggerman']);
 
 describe('dialogue content', () => {
   it('ids are unique and roots exist', () => {
@@ -58,7 +62,9 @@ describe('dialogue content', () => {
       'thorgar', 'eadgyth', 'ansgar', 'lodge-hunter-1', 'lodge-hunter-2', 'lodge-hunter-3', 'lodge-hunter-4', 'lodge-hunter-5', 'lodge-hunter-6', 'lodge-hunter-cave',
       'sled-hand-1', 'sled-hand-2', 'egg-thief', 'pilgrim-1', 'pilgrim-2', 'pilgrim-3',
       // Act 3 summit (K13 PR 2)
-      'ysmeryth', 'hathren', 'skarl', 'skyhold-rigger', 'skyhold-handler', 'captive-hunter', 'skarl-led', 'aerie-escort-1', 'aerie-escort-2']).toContain(n.speaker);
+      'ysmeryth', 'hathren', 'skarl', 'skyhold-rigger', 'skyhold-handler', 'captive-hunter', 'skarl-led', 'aerie-escort-1', 'aerie-escort-2',
+      // Act 4 Harrowmark (L10): L2's cast, Vey's guards, the minor cast and the daggerman
+      ...ACT4_HM_SPEAKERS]).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {

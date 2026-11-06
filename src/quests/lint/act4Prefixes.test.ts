@@ -6,6 +6,7 @@ import { TUTORIAL_ANCHORS } from '../../tutorial/beats';
 import { ACT2_TRIGGERS } from '../content/act2';
 import { OLDSMOKE_TRIGGERS } from '../content/act2/oldsmoke';
 import { questDefs } from '../content';
+import { ACT4_QUEST_DEFS } from '../content/act4';
 import { ALL_LAYOUTS } from './noteLint';
 import { ACT4_ANCHOR_PREFIXES, ACT4_FLAG_OWNERS, ACT4_QUEST_FLAG_OWNERS, ACT4_TRIGGER_PREFIXES } from './act4Flags';
 import { ACT4_PHASE_G, ACT4_PHASE_H, ACT4_QUEST_IDS, isAct4Id } from './act4Ids';
@@ -50,10 +51,14 @@ const OWNED_SUB_PREFIXES: readonly string[] = [
   'waste.rimfoot.fire',
   'waste.rope.',
   'waste.shelter.',
+  // L10: the Harrowmark quests' own anchors (quests/content/act4/harrowmark/anchors.ts)
+  'harrowmark.a4.q.',
 ];
 /** L1: L4's banter volumes round the Waste's sites. */
 const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = [
   ...L2_TRIGGER_SUBS.map((s) => `trg.harrowmark.a4.${s}.`),
+  // L10
+  'trg.harrowmark.a4.q.',
   'trg.waste.walker-camp', 'trg.waste.cinder-chapel', 'trg.waste.husk-cathedral', 'trg.waste.rimfoot'];
 
 describe('Act 4 ids and reserved prefixes (v0.8 item 15)', () => {
@@ -100,9 +105,11 @@ describe('Act 4 ids and reserved prefixes (v0.8 item 15)', () => {
   });
 
   it('no quest shipped before Act 4 uses an Act 4 id or an Act 4 quest flag', () => {
-    const shipped = new Set(questDefs.map((q) => q.id));
+    // the Act 4 blocks themselves (L10 onward) are left out: this guards what shipped before them
+    const before = questDefs.filter((q) => !ACT4_QUEST_DEFS.includes(q));
+    const shipped = new Set(before.map((q) => q.id));
     for (const id of ACT4_QUEST_IDS) expect(shipped.has(id), id).toBe(false);
-    const json = JSON.stringify(questDefs);
+    const json = JSON.stringify(before);
     for (const id of ACT4_QUEST_IDS) expect(json.includes(`story.${id}.`), id).toBe(false);
   });
 });

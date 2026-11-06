@@ -77,7 +77,9 @@ describe("Rook's refuge lines", () => {
     const ext = rook();
     const base = withAct4Rook([npcRook])[0];
     expect(base.nodes.slice(0, npcRook.nodes.length)).toEqual(npcRook.nodes);
-    expect(ext.nodes.filter((n) => n.id.startsWith('a4-')).length).toBe(ROOK_REFUGE.def.nodes.length);
+    // L10's Harrowmark quest lines also extend Rook with a4- nodes; count only the refuge ones
+    const mine = new Set(ROOK_REFUGE.def.nodes.map((n) => n.id));
+    expect(ext.nodes.filter((n) => mine.has(n.id)).length).toBe(ROOK_REFUGE.def.nodes.length);
     for (const [k, v] of Object.entries(ACT4_ROOK_STRINGS)) expect(dialogueStrings[k], k).toBe(v);
     for (const n of ROOK_REFUGE.def.nodes) expect(all[n.textKey], n.textKey).toBeTruthy();
   });
@@ -86,7 +88,8 @@ describe("Rook's refuge lines", () => {
 describe("Rook's refuge lines step aside for quests", () => {
   it('while a quest talk objective for Rook is current (j11 left open), his base tree answers', () => {
     const ext = rook();
-    const guarded = (ext.start as { when: unknown; node: string }[]).filter((r) => r.node.startsWith('a4-'));
+    const mine = new Set(ROOK_REFUGE.def.nodes.map((n) => n.id));
+    const guarded = (ext.start as { when: unknown; node: string }[]).filter((r) => mine.has(r.node));
     expect(guarded).toHaveLength(2);
     for (const r of guarded) expect(JSON.stringify(r.when)).toContain('j11');
   });
