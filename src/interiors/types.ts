@@ -67,6 +67,19 @@ export interface DoorDef {
 }
 
 /**
+ * v0.8 item 9b: an interior-to-interior door (the Keep's stairs, M39 and M40). An interactable stands inside `from` at its
+ * anchor and moves the player through `interiors.transfer` to the target interior's door (whose `outsideInteractable` is
+ * false, the mine-lift pattern). The saved door becomes the target's door, so the shipped load rule holds.
+ */
+export interface InteriorLinkDef {
+  id: string;
+  from: { interior: string; anchor: string };
+  to: { interior: string; doorId: string };
+  /** Prompt key; default `interior.enter.<doorId>`. */
+  promptKey?: string;
+}
+
+/**
  * One interior in local metres (origin at its stair foot, yaw 0 faces -Z). It floats `FLOAT_HEIGHT` above the highest
  * terrain under its footprint at world `site` (plans/slice-2-interiors-nav.md section 2).
  */

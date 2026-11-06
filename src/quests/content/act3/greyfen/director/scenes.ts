@@ -5,13 +5,14 @@
 import type { CameraShot } from '../../../../../rendering/ThirdPersonCamera';
 import { createSkipWidget, SkipHold } from '../../../../../tutorial/SkipHold';
 import type { Kit } from './shared';
+import { canStage as canStageCtx } from '../../../../../scenes/canStage';
 
 export type PieceEnd = 'finished' | 'skipped' | 'load' | 'cancelled' | 'teardown';
 
 /** The three ways a scene can be staged; false in a reduced boot (no camera rig, no player), when the caller falls back. */
 export function canStage(k: Kit): boolean {
-  const c = k.ctx;
-  return !!c.cameraRig && typeof c.player?.addMoveModifier === 'function';
+  // v0.8: the rule moved to scenes/canStage.ts (the scene sequencer shares it).
+  return canStageCtx(k.ctx);
 }
 
 export class SetPiece {

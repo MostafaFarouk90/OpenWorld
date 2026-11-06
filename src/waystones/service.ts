@@ -1,4 +1,4 @@
-import type { RespawnPoint, TravelResult, Vec3 } from './types';
+import type { PlacementRule, RespawnPoint, TravelResult, Vec3 } from './types';
 import type { TeleportOutcome } from './SafeTeleport';
 
 /** The `waystones` service (contracts/game-events-and-flags.md section 6, provided by thread 6). */
@@ -26,6 +26,13 @@ export interface WaystoneService {
   restAt(placeId: string): { ok: boolean; reason?: string };
   /** Teleport that waits for the ground (also used by Continue). */
   safeTeleport(feet: Vec3, yaw: number): Promise<TeleportOutcome>;
+  /** v0.8 item 8: a rule every respawn point, load placement and safe teleport target passes through. Returns the undo. */
+  addPlacementRule(rule: PlacementRule): () => void;
+  /** v0.8: a death respawns at `anchorId` while checkpoint `id` is set (the latest set wins); persisted (`respawn` v1). */
+  setCheckpoint(id: string, anchorId: string): void;
+  clearCheckpoint(id: string): void;
+  /** v0.8: the stone is dark (WAYSTONE_DARK). */
+  isDark(id: string): boolean;
 }
 
 declare module '../core/Services' {

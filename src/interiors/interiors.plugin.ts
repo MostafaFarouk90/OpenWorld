@@ -24,7 +24,7 @@ import { HARROWMARK_DOOR_LOCKS, HARROWMARK_FLAG_BLOCKERS, M09_INVOICES } from '.
 import { grateAnswer, KEYED_GRATES } from './keyedGrates';
 import { OccupantHider } from './occupants';
 import { INTERIOR_STRINGS_EN } from './strings.en';
-import type { InteriorDef } from './types';
+import type { InteriorDef, InteriorLinkDef } from './types';
 import { UNDERWAYS_DEF } from './underways/generate';
 import { VAULT_DEF } from './vaultDef';
 
@@ -47,6 +47,28 @@ export interface InteriorsPluginOptions {
   doorLocks?: Readonly<Record<string, string>>;
   /** blockerId -> the flag that opens it (default: the Anvil's back-room gate). */
   flagBlockers?: Readonly<Record<string, string>>;
+  /** v0.8: interior-to-interior links (default INTERIOR_LINKS). */
+  links?: readonly InteriorLinkDef[];
+}
+
+/** v0.8 item 9b: L10 adds the Keep's links (M39's stairs, M40's deep run). */
+export const INTERIOR_LINKS: InteriorLinkDef[] = [];
+
+/** Throws on a link whose interiors or door are unknown, or whose target door has an outside interactable. */
+export function validateInteriorLinks(links: readonly InteriorLinkDef[], defs: readonly InteriorDef[]): void {
+  const ids = new Set<string>();
+  for (const l of links) {
+    if (ids.has(l.id)) throw new Error(`interiors: duplicate link "${l.id}"`);
+    ids.add(l.id);
+    const from = defs.find((d) => d.id === l.from.interior);
+    const to = defs.find((d) => d.id === l.to.interior);
+    if (!from) throw new Error(`interiors: link "${l.id}" starts in unknown interior "${l.from.interior}"`);
+    if (!to) throw new Error(`interiors: link "${l.id}" goes to unknown interior "${l.to.interior}"`);
+    if (from === to) throw new Error(`interiors: link "${l.id}" goes nowhere (same interior)`);
+    const door = to.doors.find((d) => d.doorId === l.to.doorId);
+    if (!door) throw new Error(`interiors: link "${l.id}" names unknown door "${l.to.doorId}" of "${to.id}"`);
+    if (door.outsideInteractable !== false) throw new Error(`interiors: link "${l.id}" target door "${door.doorId}" needs outsideInteractable: false`);
+  }
 }
 
 /** The plugin with its interiors injectable (tests use small defs; the game uses the chapel vault). */
@@ -219,6 +241,29 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     for (const off of doors.values()) off();
     doors.clear();
   });
+
+  // v0.8 item 9b: interior-to-interior links, validated at registration.
+  const links = opts.links ?? INTERIOR_LINKS;
+  validateInteriorLinks(links, [...layouts.values()].map((l) => l.def));
+  for (const link of links) {
+    cleanups.push(
+      ctx.interaction.register({
+        id: `link:${link.id}`,
+        kind: 'door',
+        position: (out: THREE.Vector3) => {
+          const a = ctx.anchors.find(link.from.anchor);
+          return a ? out.set(a.position.x, a.position.y, a.position.z) : out.set(0, -1e6, 0);
+        },
+        radius: DOOR_RADIUS,
+        coneDegrees: 360,
+        promptKey: link.promptKey ?? `interior.enter.${link.to.doorId}`,
+        enabled: () => !controller.transitioning && controller.current === link.from.interior && !!ctx.anchors.find(link.from.anchor),
+        onInteract: () => {
+          controller.transfer(link.to.interior, link.to.doorId).catch(onRefused);
+        },
+      }),
+    );
+  }
 
   // M09's invoices: one-use interactables at the office desk (thread 6 counts the interact and writes the taken flag).
   const invoices = new Map<string, () => void>();
