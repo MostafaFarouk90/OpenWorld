@@ -1,3 +1,4 @@
+import type { FlagCondition } from '../core/flagCondition';
 export const WAYSTONE_TUNING = {
   rekindleHoldSeconds: 1.2,
   restHoldSeconds: 1.0,
@@ -36,4 +37,13 @@ export const WAYSTONE_LOCKS: Readonly<Record<string, string>> = {
   'last-anvil': 'shrine.last-anvil.open',
   // Act 3 (K9 PR 2): the Wyrm's Hearth stone opens with M34 (active or completed), `story.m34.complete`, or an already lit shrine.
   'wyrms-hearth': 'shrine.wyrms-hearth.open',
+};
+
+/**
+ * v0.8 item 8: stones that go dark by condition (waystone id -> when). A dark stone is skipped for respawn and refuses
+ * fast travel (`dark`, map text `map.blocked.dark`). Q2: Harrowmark's gate stone and every stone inside the ring wall go
+ * dark from the betrayal (M38); the city stones are found by position (harrowmark/noStrand.ts), this table names the rest.
+ */
+export const WAYSTONE_DARK: Readonly<Record<string, FlagCondition>> = {
+  'harrowmark-gate': { all: ['story.m38.complete'] },
 };
