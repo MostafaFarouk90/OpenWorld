@@ -14,7 +14,9 @@ export const ACT4_TRACK_SLOTS: readonly { id: string; bpm: number }[] = [
 /**
  * M38, the Council fight (design 6.3: "the melody drops out mid-bar when the betrayal lands"). L10 PR 2 calls
  * `music.setBoss(true, M38_COUNCIL_MIX)` when the chamber turns, then `music.setBoss(true, M38_BETRAYAL_MIX)` the moment
- * the betrayal lands (the 0.4 s ramp drops the melody wherever the bar is), then `setBoss(false)`.
+ * the betrayal lands (the 0.4 s ramp drops the melody wherever the bar is). At the end it releases both by id,
+ * `setBoss(false, M38_BETRAYAL_MIX)` and `setBoss(false, M38_COUNCIL_MIX)`: a bare `setBoss(false)` clears only the
+ * anonymous boss and would leave the betrayal mix playing.
  */
 export const M38_COUNCIL_MIX = 'm38-council';
 export const M38_BETRAYAL_MIX = 'm38-betrayal';

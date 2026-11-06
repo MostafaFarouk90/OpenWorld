@@ -89,6 +89,27 @@ describe('creatures and bosses', () => {
     expect(r.played).toEqual(['sfx.engine.vent', 'sfx.eormen.release']);
   });
 
+  it('after a load, living actors are re-adopted silently: loops restart, a husk still crumbles, no rise', () => {
+    const r = rig();
+    r.router.spawned({ actorId: 'placed', kind: 'ash-wraith', skin: HUSK_SKIN });
+    r.router.spawned({ actorId: 'a', kind: 'waste-strider' });
+    r.router.saveLoaded();
+    r.router.adopt([{ actorId: 'placed', kind: 'ash-wraith', skin: HUSK_SKIN }, { actorId: 'a', kind: 'waste-strider' }]);
+    expect(r.attached.map((x) => x.key)).toEqual(['sfx.strider.click', 'sfx.strider.click']);
+    r.router.died({ actorId: 'placed', kind: 'ash-wraith' });
+    expect(r.playedAt).toEqual(['sfx.husk.rise', 'sfx.husk.collapse']);
+  });
+
+  it('a throwing player lookup never escapes a weather event', () => {
+    const r = rig();
+    const ports = (r.router as unknown as { ports: { playerObject: () => object } }).ports;
+    ports.playerObject = () => {
+      throw new Error('no player yet');
+    };
+    expect(() => r.router.weatherChanged({ kind: 'storm' })).not.toThrow();
+    expect(r.played).toEqual(['sfx.storm.onset']);
+  });
+
   it('a load drops actor loops and husk ids', () => {
     const r = rig();
     r.router.spawned({ actorId: 'placed', kind: 'waste-strider', skin: HUSK_SKIN });

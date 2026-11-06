@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { CHIME_PITCHES_HZ } from '../../music/act4Tracks';
 import { SR } from '../sfxKit';
 import { ACT4_LOOP_KEYS, ACT4_SFX_KEYS, ACT4_SFX_VOLUME, act4SfxSamples, pillarKey, type Act4SfxKey } from './act4Sfx';
-import { BOSS_PHASE_SFX_ACT4, BOSS_RELEASED_SFX_ACT4, DIED_SFX_ACT4, HUSK_SFX, LOOP_BY_KIND_ACT4, MOVE_SFX_ACT4, WEATHER_SFX } from './act4SfxEvents';
+import { ACT4_BOSS_IDS } from '../../bosses/act4Bosses';
+import { ACT4_ENEMY_KINDS } from '../../enemies/types';
+import { ENEMY_SKIN_IDS } from '../../enemies/skins';
+import { BOSS_PHASE_SFX_ACT4, BOSS_RELEASED_SFX_ACT4, DIED_SFX_ACT4, HUSK_SFX, HUSK_SKIN, LOOP_BY_KIND_ACT4, MOVE_SFX_ACT4, WEATHER_SFX } from './act4SfxEvents';
 import { makeBedSamples } from '../AmbienceBed';
 import { ASHEN_WASTE_BED_SECONDS, fillAshenWasteBed } from './ambienceAct4';
 
@@ -67,6 +70,26 @@ function power(x: Float32Array, hz: number, n: number): number {
   return s1 * s1 + s2 * s2 - c * s1 * s2;
 }
 
+describe('the tables use L0 ids', () => {
+  const bosses = new Set<string>(Object.values(ACT4_BOSS_IDS));
+  const kinds = new Set<string>(ACT4_ENEMY_KINDS);
+  it('death and loop kinds are Act 4 enemy kinds or boss ids; boss cues name Act 4 bosses; the husk skin is a skin', () => {
+    for (const k of [...Object.keys(DIED_SFX_ACT4), ...Object.keys(LOOP_BY_KIND_ACT4)]) expect(kinds.has(k) || bosses.has(k), k).toBe(true);
+    for (const k of [...Object.keys(BOSS_PHASE_SFX_ACT4), ...Object.keys(BOSS_RELEASED_SFX_ACT4)]) expect(bosses.has(k), k).toBe(true);
+    expect(ENEMY_SKIN_IDS as readonly string[]).toContain(HUSK_SKIN);
+  });
+});
+
+describe('the dream hum', () => {
+  it('never steps between notes (its gain is smoothed)', () => {
+    const x = s('sfx.dream.hum');
+    let maxStep = 0;
+    for (let i = 1; i < x.length; i++) maxStep = Math.max(maxStep, Math.abs(x[i] - x[i - 1]));
+    // A low hum (under 250 Hz fundamental) at 0.85 peak moves well under 0.1 per sample at this rate.
+    expect(maxStep).toBeLessThan(0.1);
+  });
+});
+
 describe('glass pillars', () => {
   it('pillarKey maps 0 to 5 and refuses anything else', () => {
     expect(pillarKey(0)).toBe('sfx.glass.pillar.1');
@@ -84,6 +107,10 @@ describe('glass pillars', () => {
     // Stronger at its own pitch than a semitone either side, and than at any other pillar's pitch.
     expect(at).toBeGreaterThan(power(x, hz * 2 ** (1 / 12), n) * 4);
     expect(at).toBeGreaterThan(power(x, hz * 2 ** (-1 / 12), n) * 4);
+    // Within 1%: over a 1 s window the pitch itself beats 1% either side.
+    const long = SR;
+    expect(power(x, hz, long)).toBeGreaterThan(power(x, hz * 1.01, long));
+    expect(power(x, hz, long)).toBeGreaterThan(power(x, hz * 0.99, long));
     CHIME_PITCHES_HZ.forEach((other, j) => {
       if (j !== i) expect(at, `vs pillar ${j}`).toBeGreaterThan(power(x, other, n));
     });

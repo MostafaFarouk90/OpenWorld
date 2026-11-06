@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { ACT4_SFX_KEYS } from './act4Sfx';
-import plugin, { skinOf } from './act4Sfx.plugin';
+import plugin, { ON_DEMAND_KEYS, skinOf } from './act4Sfx.plugin';
 import { ensureAct4Sfx } from './act4SfxEnsure';
 
 type Handler = (payload: never) => void;
@@ -38,7 +38,7 @@ function fakeCtx(opts: { audio?: boolean; weather?: 'clear' | 'warning' | 'storm
               }
             : undefined,
     },
-    actors: { get: (id: string) => actors.get(id) },
+    actors: { get: (id: string) => actors.get(id), all: () => actors.values() },
     player: { actor: { root: { name: 'player' } } },
     systems: { add: (s: { id: string; fixedUpdate?: (dt: number) => void }) => (systems.push(s), () => void systems.splice(systems.indexOf(s), 1)) },
     events: {
@@ -125,6 +125,23 @@ describe('act4-sfx plugin', () => {
     const f = fakeCtx({ audio: true, weather: 'throws' });
     expect(() => plugin.setup(f.ctx as never)).not.toThrow();
     expect(f.attached).toEqual([]);
+  });
+
+  it('re-adopts surviving actors on the tick after a load, without the rise', () => {
+    const f = fakeCtx();
+    plugin.setup(f.ctx as never);
+    f.emit('actor.spawned', { actor: f.actors.get('husk#1') });
+    f.emit('actor.spawned', { actor: f.actors.get('strider#1') });
+    f.emit('save.loaded', {});
+    f.systems[0].fixedUpdate?.(1 / 60);
+    expect(f.attached).toEqual(['sfx.strider.click', 'sfx.strider.click']);
+    expect(f.playedAt).toEqual(['sfx.husk.rise']);
+    f.emit('actor.died', { actorId: 'husk#1', killerId: null, kind: 'ash-wraith' });
+    expect(f.playedAt).toEqual(['sfx.husk.rise', 'sfx.husk.collapse']);
+  });
+
+  it('the on-demand scene cues are real keys', () => {
+    for (const k of ON_DEMAND_KEYS) expect(ACT4_SFX_KEYS).toContain(k);
   });
 
   it('skinOf reads a string skin and nothing else', () => {

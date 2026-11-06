@@ -91,10 +91,10 @@ export class Act4SfxRouter {
   }
 
   /** `actor.spawned`: husks rise; looping kinds start their loop on the actor. */
-  spawned(e: { actorId: string; kind: string; skin?: string | null }): void {
+  spawned(e: { actorId: string; kind: string; skin?: string | null }, opts: { silent?: boolean } = {}): void {
     if (e.skin === HUSK_SKIN) {
       this.husks.add(e.actorId);
-      this.at(HUSK_SFX.rise, e.actorId);
+      if (!opts.silent) this.at(HUSK_SFX.rise, e.actorId);
     }
     const loop = own(LOOP_BY_KIND_ACT4, e.kind);
     if (loop) {
@@ -174,10 +174,18 @@ export class Act4SfxRouter {
     this.applyStorm();
   }
 
-  /** On a load: actor loops and husk ids belong to actors that are rebuilt; the weather is restored separately. */
+  /**
+   * On a load: actor loops and husk ids are dropped, then re-derived from the actors still alive (`living`, read on the
+   * tick after the load so the enemy manager has settled), without the rise. The weather is restored separately.
+   */
   saveLoaded(): void {
     for (const name of [...this.loops.keys()]) if (name.startsWith('actor:')) this.stopLoop(name);
     this.husks.clear();
+  }
+
+  /** Re-adopts living actors after a load: husks keep their rasp and collapse, looping kinds their loop. */
+  adopt(living: Iterable<{ actorId: string; kind: string; skin?: string | null }>): void {
+    for (const a of living) this.spawned(a, { silent: true });
   }
 
   stopAll(): void {
@@ -206,7 +214,12 @@ export class Act4SfxRouter {
     if (want === current) return;
     this.stopLoop(STORM_LOOP);
     if (!want) return;
-    const player = this.ports.playerObject();
+    let player: object | undefined;
+    try {
+      player = this.ports.playerObject();
+    } catch {
+      player = undefined; // no player yet: the wind starts on the next weather event or load
+    }
     if (player) this.startLoop(STORM_LOOP, want, player);
   }
 

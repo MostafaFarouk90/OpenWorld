@@ -445,11 +445,16 @@ function raw(key: Act4SfxKey): Float32Array<ArrayBuffer> {
       const ph = phasor();
       const warm = lowpass(900);
       let idx = 0;
+      let gain = 0;
+      const smoothK = 1 - Math.exp(-1 / (0.015 * SR));
       return render(total, (t) => {
         while (idx + 1 < notes.length && t >= notes[idx + 1].at) idx++;
         const cur = notes[idx];
         const u = (t - cur.at) / cur.seconds;
-        const shape = Math.min(1, u / 0.15) * Math.min(1, (1 - u) / 0.2 + 0.3);
+        // A legato hum: each note dips and swells, the gain smoothed (about 15 ms) so a note change never steps.
+        const target = Math.min(1, u / 0.15) * Math.min(1, (1 - u) / 0.2 + 0.3);
+        gain += (target - gain) * smoothK;
+        const shape = gain;
         const hz = (cur.hz / 4) * (1 + 0.006 * Math.sin(TAU * 5 * t));
         const p = ph(hz);
         return warm(Math.sin(p) + 0.4 * Math.sin(2 * p) + 0.2 * Math.sin(3 * p)) * shape * 0.55;

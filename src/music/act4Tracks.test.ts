@@ -10,7 +10,10 @@ import {
 } from './act4Tracks';
 import { createAct4Voices } from './act4Voices';
 import { stemPeak, synthStem } from './stemSynth';
+import { ACT4_BOSS_IDS } from '../bosses/act4Bosses';
 import { regionTrackNow } from '../region/regions';
+import { createAct2Voices } from './act2Voices';
+import { createAct3Voices } from './act3Voices';
 import { DUST_CHANT, RESERVED_TRACK_IDS, SEVEN_GATES_ASH, SEVEN_GATES_ONE_DRUM, TRACKS_BY_ID, loopSamples, validateTrack, type TrackDef } from './tracks';
 
 const SR = 8000;
@@ -68,6 +71,14 @@ describe('Act 4 boss mixes', () => {
       expect(TRACKS_BY_ID[trackId]?.bossMixes?.[key], `${key} on ${trackId}`).toBeDefined();
     }
     expect(Object.keys(ACT4_BOSS_MIX_TRACK)).toEqual(expect.arrayContaining(['bellows-engine', 'eormen']));
+  });
+
+  it("every one of L0's ACT4_BOSS_IDS has a mix on its arena's track (a new or renamed boss id fails here)", () => {
+    for (const id of Object.values(ACT4_BOSS_IDS)) {
+      const trackId = ACT4_BOSS_MIX_TRACK[id];
+      expect(trackId, id).toBeDefined();
+      expect(TRACKS_BY_ID[trackId]?.bossMixes?.[id], id).toBeDefined();
+    }
   });
 
   it('Eormen: the walker chant leads, the gong joins in phase 2 and is full in phase 3; the hush drops the drums', () => {
@@ -130,7 +141,19 @@ describe('Ebba tune and the glass pillars', () => {
 });
 
 describe('Act 4 voice table', () => {
-  const table = createAct4Voices({ tokens: () => [], arc: () => 1, Feel: class {} as never });
+  const kit = { tokens: () => [], arc: () => 1, Feel: class {} as never };
+  const table = createAct4Voices(kit);
+  it('no voice name is shared between the Act 2, 3 and 4 tables or with an Act 1 style (none can shadow another)', () => {
+    const act1 = ['snap', 'rimshot', 'hum', 'throat-chant', 'flute', 'trumpet', 'tolling-gong', 'steam-anvil'];
+    const tables = [act1, Object.keys(createAct2Voices(kit as never)), Object.keys(createAct3Voices(kit as never)), Object.keys(table)];
+    const seen = new Map<string, number>();
+    tables.forEach((names, i) => {
+      for (const n of names) {
+        expect(seen.get(n), `${n} in tables ${seen.get(n)} and ${i}`).toBeUndefined();
+        seen.set(n, i);
+      }
+    });
+  });
   it('has a voice for every Act 4 voice name the two tracks use that no earlier act provides', () => {
     const shipped = new Set(['rimshot', 'throat-chant', 'trumpet']);
     for (const track of [DUST_CHANT, SEVEN_GATES_ASH]) {

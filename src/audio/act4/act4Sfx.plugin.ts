@@ -7,6 +7,9 @@ import { Act4SfxRouter, type StormKind } from './act4SfxRouter';
 import '../../weather/types';
 
 let teardown: (() => void) | null = null;
+
+/** Scene cues others play by name, rendered only when asked for (the music box alone is about 12 s). */
+export const ON_DEMAND_KEYS: ReadonlySet<Act4SfxKey> = new Set(['sfx.ebba.musicbox', 'sfx.dream.hum', 'sfx.m38.betrayal', 'sfx.eormen.release']);
 /** Rendered once per key: a reload or a second Game in one page reuses the samples. */
 const rendered = new Map<string, Float32Array<ArrayBuffer>>();
 const samples = (key: Act4SfxKey) => {
@@ -24,8 +27,9 @@ export function skinOf(actor: object): string | null {
 /**
  * The Act 4 sound pass: registers the synthesized placeholder sounds (`./act4Sfx`) under their stable keys and plays them
  * from the events the Waste and Harrowmark systems emit (creatures, bosses, the weather). A recording registered under the
- * same key replaces one. Keys that other threads play by name (glass pillars, the Last Gong, M38's sting, Ebba's music box,
- * the dream hum) are registered here too; those callers ask `ensureAct4Sfx(key)` first. Without an audio service it
+ * same key replaces one. Keys that other threads play by name (glass pillars and `sfx.glass.wrong`, the Last Gong,
+ * `sfx.engine.valve`, `sfx.huskknight.ember`, M38's sting, Ebba's music box, the dream hum) are registered here too; those
+ * callers ask `ensureAct4Sfx(key)` first. Without an audio service it
  * registers and plays nothing.
  */
 const plugin: GamePlugin = {
@@ -66,7 +70,9 @@ const plugin: GamePlugin = {
       };
       const slice = () => {
         cancel = null;
-        const key = ACT4_SFX_KEYS[i++];
+        let key = ACT4_SFX_KEYS[i++];
+        // The long scene cues are rendered on demand (`ensureAct4Sfx`), so the idle prefetch never holds one long task.
+        while (key !== undefined && ON_DEMAND_KEYS.has(key)) key = ACT4_SFX_KEYS[i++];
         if (key === undefined) return;
         ensure(key);
         later(slice);
@@ -98,6 +104,15 @@ const plugin: GamePlugin = {
       },
     });
     const ev = ctx.events;
+    // Survivors of a load are re-adopted on the next tick (the enemy manager keeps live enemies and emits no new spawn).
+    let adoptNextTick = false;
+    const living = function* () {
+      try {
+        for (const a of ctx.actors.all()) if (a.alive !== false) yield { actorId: a.id, kind: a.kind, skin: skinOf(a) };
+      } catch {
+        // no registry: nothing to adopt
+      }
+    };
     /** The weather service's kind now; no provider (or a throwing one) is clear weather. */
     const weatherNow = (): StormKind => {
       try {
@@ -120,13 +135,20 @@ const plugin: GamePlugin = {
       ev.on('save.loaded', () => {
         router.saveLoaded();
         router.restore(weatherNow());
+        adoptNextTick = true;
       }),
       () => router.stopAll(),
       ctx.systems.add({
         id: 'act4-sfx',
         fixedPhase: 'late',
         order: 901,
-        fixedUpdate: (dt) => router.tick(dt),
+        fixedUpdate: (dt) => {
+          if (adoptNextTick) {
+            adoptNextTick = false;
+            router.adopt(living());
+          }
+          router.tick(dt);
+        },
       }),
     );
 
