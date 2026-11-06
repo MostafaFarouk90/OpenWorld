@@ -25,8 +25,10 @@ const triggerIds = [
 ];
 
 /** Act 4 sub-prefixes a thread owns and ships (L0: the fog faces' anchors, act4World.layout.ts). */
-const OWNED_SUB_PREFIXES: readonly string[] = ['ashroad.fog.', 'waste.fog.'];
-const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = [];
+// L2: Harrowmark's Act 4 city and interiors (act4.layout.ts, interiors/harrowmark/act4, interiors/deeprun).
+const L2_SUBS = ['chamber', 'checkpoint', 'crucible', 'deeprun', 'gate', 'patrol', 'post', 'r20', 'spawn', 'stairs'];
+const OWNED_SUB_PREFIXES: readonly string[] = ['ashroad.fog.', 'waste.fog.', ...L2_SUBS.map((s) => `harrowmark.a4.${s}.`)];
+const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = ['chamber', 'crucible', 'deeprun', 'stairs'].map((s) => `trg.harrowmark.a4.${s}.`);
 
 describe('Act 4 ids and reserved prefixes (v0.8 item 15)', () => {
   it('lists the 21 quests, split into Phase G and Phase H, none shared with Act 3', () => {

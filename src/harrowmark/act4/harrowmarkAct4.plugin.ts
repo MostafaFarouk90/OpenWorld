@@ -5,6 +5,8 @@ import { heightAt } from '../../terrain/heightfield';
 import type { CoreContext, GamePlugin } from '../../region/coreTypes';
 import { buildAshState } from './ashState';
 import { buildR20Huts } from './r20Huts';
+import { buildFogWallDef, registerFogWall } from '../../region/fogWall';
+import { gateFaceDefs, HARROWMARK_ACT4_XP_FACTOR, HARROWMARK_XP_WHEN } from './occupied';
 
 export interface HarrowmarkAct4Options {
   heightAt?: (x: number, z: number) => number;
@@ -32,10 +34,24 @@ export function createHarrowmarkAct4Plugin(opts: HarrowmarkAct4Options = {}): Ga
         cleanups.push(() => ash.dispose());
         const huts = buildR20Huts(ctx, rapier, height);
         cleanups.push(() => huts.dispose());
+        // Q1: the city's kill XP factor from Act 4's start (L0's conditional factor).
+        const xp = ctx.services.get('killXpRegionFactor');
+        if (xp) cleanups.push(xp.set('harrowmark', HARROWMARK_ACT4_XP_FACTOR, { when: HARROWMARK_XP_WHEN }));
+        else console.warn('harrowmark-act4: no killXpRegionFactor service; Harrowmark kills pay x 1 in Act 4');
+        // Q2: the occupied city's faces outside the working gates (closed from story.m38.complete, L0's rules).
+        const faces = gateFaceDefs();
+        for (const def of faces) {
+          cleanups.push(registerFogWall(def));
+          if (!rapier) continue;
+          const at = ctx.anchors.get(def.anchorId).position;
+          const wall = buildFogWallDef({ ...ctx, rapier }, def, { x: at.x, y: at.y, z: at.z }, height);
+          cleanups.push(() => wall.dispose());
+        }
         cleanups.push(
           ctx.services.provide('harrowmarkAct4', {
             ash: () => ({ active: ash.active, ...ash.counts() }),
             huts: () => huts.look(),
+            faces: () => faces.map((f) => f.id),
           }),
         );
       } catch (err) {
@@ -53,6 +69,8 @@ export default createHarrowmarkAct4Plugin();
 export interface HarrowmarkAct4Service {
   ash(): { active: boolean; checkpoints: number; rails: number; posters: number; soot: number };
   huts(): import('./r20Huts').HutLook;
+  /** The occupied city's fog faces (registered, built when physics is ready). */
+  faces(): string[];
 }
 
 declare module '../../core/Services' {

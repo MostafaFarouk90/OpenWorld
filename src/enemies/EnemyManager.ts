@@ -1,3 +1,4 @@
+import { ENEMY_SKINS, isEnemySkinId, type EnemySkinId } from './skins';
 import * as THREE from 'three';
 import { isHeavyBlow } from '../combat/heavyBlow';
 import { HumanoidBody, type EnemyBody } from './body';
@@ -341,7 +342,7 @@ export class EnemyManager {
         slot: req.slot,
         skin: req.skin,
       };
-      enemy = new Enemy(this.env, spawn, this.makeBody(def));
+      enemy = new Enemy(this.env, spawn, this.makeBody(def, req.skin));
     } catch (err) {
       this.host.warn(`enemies: could not spawn ${def.kind} for ${req.spawnerId}: ${String(err)}`);
       return null;
@@ -386,7 +387,7 @@ export class EnemyManager {
   }
 
   /** The body for a def: the procedural quadruped, or the Knight rig from the model factory. */
-  private makeBody(def: EnemyDef): EnemyBody {
+  private makeBody(def: EnemyDef, skin?: EnemySkinId): EnemyBody {
     if (def.body === 'golem') return makeGolemBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'crawler') return makeCrawlerBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
     if (def.body === 'quadruped') return makeQuadrupedBody(def, { bus: this.host.combat.bus, warn: (m) => this.host.warn(m) });
@@ -408,7 +409,8 @@ export class EnemyManager {
         return p;
       },
     };
-    const model = buildEnemyModel(source, def, { bus: this.host.combat.bus });
+    const look = skin && isEnemySkinId(skin) && ENEMY_SKINS[skin].kind === def.kind ? ENEMY_SKINS[skin] : undefined;
+    const model = buildEnemyModel(source, def, { bus: this.host.combat.bus, ...(look ? { skin: look } : {}) });
     const animator = new EnemyAnimator(model.owner, source.clips, { warn: (m) => this.host.warn(m) });
     const body = new HumanoidBody(model, animator);
     if (procedural.length) {

@@ -125,3 +125,69 @@ describe('North-west Gate shutter (Act 3, K1)', () => {
     expect(seen).toEqual([false, true, false]);
   });
 });
+
+describe('the occupied city holds every working gate shut (Act 4, L2: closedWhen)', () => {
+  const HELD = 'story.m38.complete';
+
+  it('the state rule: held beats every M06 state', () => {
+    expect(gateStateFor(true, true, true)).toBe('closed');
+    expect(gateStateFor(true, false, true)).toBe('closed');
+    expect(gateStateFor(true, true, false)).toBe('open');
+  });
+
+  it('the South Gate shuts on the flag, reopens on a load without it, and ignores the flag when not asked to', () => {
+    const fc = createFakeCore();
+    fc.flags.set(M06_ROUTE_FLAG, 'bribe');
+    const seen: GateState[] = [];
+    const gate = watchSouthGate(fc.ctx.gates, (s) => seen.push(s), { closedWhen: HELD });
+    expect(gate.state()).toBe('open');
+    fc.ctx.state.setFlag(HELD, true);
+    expect(gate.state()).toBe('closed');
+    fc.flags.set(HELD, false);
+    fc.fire('save.loaded');
+    expect(gate.state()).toBe('open');
+    expect(seen).toEqual(['open', 'closed', 'open']);
+    const plain = watchSouthGate(fc.ctx.gates, () => {});
+    fc.ctx.state.setFlag(HELD, true);
+    expect(plain.state()).toBe('open');
+    gate.dispose();
+    plain.dispose();
+  });
+
+  it('starts shut for a save already past M38, with one apply only', () => {
+    const fc = createFakeCore();
+    fc.flags.set(M06_ROUTE_FLAG, 'bribe');
+    fc.flags.set(HELD, true);
+    const seen: GateState[] = [];
+    watchSouthGate(fc.ctx.gates, (s) => seen.push(s), { closedWhen: HELD });
+    expect(seen).toEqual(['closed']);
+  });
+
+  it('the River and North-west shutters close on the flag over their own open flag, and re-derive on load', () => {
+    for (const [watch, flag] of [
+      [watchRiverGate, RIVER_GATE_FLAG],
+      [watchNorthwestGate, NORTHWEST_GATE_FLAG],
+    ] as const) {
+      const fc = createFakeCore();
+      fc.flags.set(flag, true);
+      const seen: boolean[] = [];
+      const g = watch(fc.ctx.gates, (o) => seen.push(o), { closedWhen: HELD });
+      expect(g.open()).toBe(true);
+      fc.ctx.state.setFlag(HELD, true);
+      expect(g.open()).toBe(false);
+      fc.flags.set(HELD, false);
+      fc.fire('save.loaded');
+      expect(g.open()).toBe(true);
+      // Held but never opened (an impossible save): still shut.
+      fc.flags.set(flag, false);
+      fc.flags.set(HELD, true);
+      fc.fire('save.loaded');
+      expect(g.open()).toBe(false);
+      expect(seen).toEqual([true, false, true, false]);
+      g.dispose();
+      fc.ctx.state.setFlag(HELD, false);
+      fc.ctx.state.setFlag(flag, true);
+      expect(seen).toHaveLength(4);
+    }
+  });
+});

@@ -3,7 +3,7 @@
 // the base until L2 and L5 fill in the overrides. `SpawnerDef.skin` passes it to the spawn; the actor carries `actor.skin`.
 import type { EnemyKind } from './types';
 
-export type EnemySkinId = 'footman-soot' | 'footman-masked' | 'wraith-husk';
+export type EnemySkinId = 'footman-soot' | 'footman-masked' | 'wraith-husk' | 'watch-masked';
 
 export interface EnemySkinDef {
   /** The kind the skin dresses: a spawner with a skin of another kind is a lint error. */
@@ -19,9 +19,15 @@ export interface EnemySkinDef {
 }
 
 export const ENEMY_SKINS: Readonly<Record<EnemySkinId, EnemySkinDef>> = {
-  'footman-soot': { kind: 'blighted-soldier' },
-  'footman-masked': { kind: 'blighted-soldier' },
+  // L2 (plan act4-L2.md section 8): Vey's Footmen. A tint multiplies the kind's own (charred red), so these are relative.
+  // Soot: smoke-blackened kit, a low ember glow in the seams. Masked: the Regent's men, cooler and with no glow, so the
+  // two read apart at a glance. The shield stays (its tracer drives the block); the cloth mask and cloak extras wait for
+  // a model (the env prompt list), since no builder reads `extra` yet.
+  'footman-soot': { kind: 'blighted-soldier', tint: 0x6e6a66, emissive: 0x220c04 },
+  'footman-masked': { kind: 'blighted-soldier', tint: 0xa8b0c4, emissive: 0x000000 },
   'wraith-husk': { kind: 'ash-wraith' },
+  // L2: Vey's stealth observers (M36's rooftops, R20's stealth checkpoints) in the Regent's colours.
+  'watch-masked': { kind: 'watch-guard', tint: 0x8890a0 },
 };
 
 export const ENEMY_SKIN_IDS = Object.keys(ENEMY_SKINS) as EnemySkinId[];

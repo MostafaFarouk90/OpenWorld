@@ -6,6 +6,7 @@ import { HURTBOX_NAMES } from '../combat/types';
 import { EMBEDDED_SHIELD, EMBEDDED_SWORD, EMBEDDED_WEAPONS } from '../characters/knightClips';
 import { ASH_WRAITH, BLIGHTED_SOLDIER } from './defs';
 import { buildEnemyModel, CLAW_BONE, CLAW_LENGTH } from './EnemyModel';
+import { ENEMY_SKINS } from './skins';
 import type { EnemyDef } from './types';
 
 let gltf: { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
@@ -188,5 +189,37 @@ describe('buildEnemyModel', () => {
     expect(geoDisposed).not.toHaveBeenCalled();
     a.dispose();
     expect(disposed.length).toBe(a.materials.length);
+  });
+});
+
+describe('skins over a kind (v0.8, L2)', () => {
+  const src = () => [...sourceMaterials()][0] as THREE.MeshStandardMaterial;
+  const skinned = (skin: (typeof ENEMY_SKINS)[keyof typeof ENEMY_SKINS] | undefined) =>
+    buildEnemyModel({ model: SkeletonUtils.clone(gltf.scene), clips: gltf.animations }, BLIGHTED_SOLDIER, skin ? { skin } : {});
+
+  it('multiplies the skin tint over the kind tint and sets its emissive, which a telegraph then restores', () => {
+    const soot = ENEMY_SKINS['footman-soot'];
+    const m = skinned(soot);
+    const mat = m.materials[0] as THREE.MeshStandardMaterial;
+    const expected = src().color.clone().multiply(new THREE.Color(BLIGHTED_SOLDIER.model.tint)).multiply(new THREE.Color(soot.tint));
+    expect(mat.color.getHex()).toBe(expected.getHex());
+    expect(mat.emissive.getHex()).toBe(soot.emissive);
+    m.setTelegraph(1, 0xff0000);
+    m.setTelegraph(0);
+    expect(mat.emissive.getHex()).toBe(soot.emissive);
+  });
+
+  it('draws the two Footman skins apart from each other and from the base look', () => {
+    const hex = (skin?: (typeof ENEMY_SKINS)[keyof typeof ENEMY_SKINS]) => (skinned(skin).materials[0] as THREE.MeshStandardMaterial).color.getHex();
+    const looks = new Set([hex(), hex(ENEMY_SKINS['footman-soot']), hex(ENEMY_SKINS['footman-masked'])]);
+    expect(looks.size).toBe(3);
+  });
+
+  it('keeps the base look with no skin and leaves the source materials untouched', () => {
+    const before = src().color.getHex();
+    skinned(ENEMY_SKINS['footman-masked']);
+    expect(src().color.getHex()).toBe(before);
+    const plain = buildEnemyModel({ model: SkeletonUtils.clone(gltf.scene), clips: gltf.animations }, BLIGHTED_SOLDIER);
+    expect((plain.materials[0] as THREE.MeshStandardMaterial).emissive.getHex()).toBe(BLIGHTED_SOLDIER.model.emissive);
   });
 });
