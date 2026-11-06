@@ -281,3 +281,37 @@ describe('the Harrowmark kill XP factor from story.gate.a4 only (item 21)', () =
     expect(blind.factor('ashen-waste')).toBe(1);
   });
 });
+
+describe('v0.8 item 11: Act 4 kinds, skins and boss rules', () => {
+  it('reserves the kinds, and every skin dresses a shipped kind', async () => {
+    const { ACT4_ENEMY_KINDS } = await import('./types');
+    const { ENEMY_SKINS, ENEMY_SKIN_IDS, isEnemySkinId } = await import('./skins');
+    const { ENEMY_DEFS } = await import('./defs');
+    expect(ACT4_ENEMY_KINDS).toEqual(['waste-strider', 'husk-knight', 'cinder-gnat-swarm']);
+    expect(ENEMY_SKIN_IDS.sort()).toEqual(['footman-masked', 'footman-soot', 'wraith-husk']);
+    for (const id of ENEMY_SKIN_IDS) expect(ENEMY_DEFS[ENEMY_SKINS[id].kind], id).toBeTruthy();
+    expect(isEnemySkinId('wraith-husk')).toBe(true);
+    expect(isEnemySkinId('nope')).toBe(false);
+  });
+  it('the skin reaches the actor', async () => {
+    const { Actor } = await import('../actors/Actor');
+    expect(new Actor('a', { kind: 'ash-wraith', team: 'hostile', maxHealth: 1, skin: 'wraith-husk' }).skin).toBe('wraith-husk');
+    expect(new Actor('b', { kind: 'ash-wraith', team: 'hostile', maxHealth: 1 }).skin).toBeUndefined();
+  });
+  it('boss rules: the Engine takes no mercy, Eormen is released for 20 Burn', async () => {
+    const { ACT4_BOSS_RULES, ACT4_BOSS_BASE_LEVEL } = await import('../bosses/act4Bosses');
+    expect(ACT4_BOSS_RULES['bellows-engine']).toEqual({ releaseWindowSeconds: 0 });
+    expect(ACT4_BOSS_RULES.eormen).toEqual({ mercyVerb: 'release', releaseBurnCost: 20 });
+    expect(ACT4_BOSS_BASE_LEVEL).toEqual({ 'bellows-engine': 31, eormen: 35 });
+  });
+});
+
+describe('v0.8 item 11: SpawnerDef.skin reaches the spawn request', () => {
+  it('passes the skin when set, and leaves it off otherwise', () => {
+    const { reg, reqs } = setup([mk({ id: 'a', skin: 'footman-soot' }), mk({ id: 'b' })], { player: 5 });
+    reg.spawnGroup('a');
+    reg.spawnGroup('b');
+    expect(reqs[0].skin).toBe('footman-soot');
+    expect('skin' in reqs[1]).toBe(false);
+  });
+});

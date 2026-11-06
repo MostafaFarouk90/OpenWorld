@@ -1,3 +1,4 @@
+import { flagConditionHolds, type FlagCondition, type FlagReader } from '../core/flagCondition';
 import { CLASS_IDS, type ClassId } from '../actors/classes';
 import type { ClassBaseStats } from '../progression/classStats';
 import type { ClassKit, DrillStepDef } from './types';
@@ -132,6 +133,53 @@ export const trainerAnchor = (k: Pick<ClassKit, 'trainer'>): string => `harrowma
 /** Where the NPC stands while it trains (thread 17). */
 export const npcBastionPost = (k: Pick<ClassKit, 'trainer'>): string => `npc-post.${k.trainer.npcId}.bastion`;
 export const YARD_ANCHOR = 'harrowmark.bastion.yard';
+
+// ---- v0.8 item 10: trainer posts that move by flag ----
+
+/**
+ * A trainer post row. Without `classId`: NPC `npcId` (a shipped trainer) teaches at `post` while `when` holds. With
+ * `classId`: that class's desk is taught by `npcId` at `post` while `when` holds (L7: Rook takes the Knight desk at the
+ * refuge from M41, after Gaut retires). The desk's interactable is `trainer:<npcId>` and stands at `post`; the NPC must
+ * stand within TRAINER_POST_RADIUS of `post` for it to open. The last row that holds wins.
+ */
+export interface TrainerPostRow {
+  classId?: ClassId;
+  npcId: string;
+  /** The desk's anchor (and the post the NPC must stand at). */
+  post: string;
+  when: FlagCondition;
+  /** The desk's name key; default the class kit's trainer name (with `classId`, give the NPC's own). */
+  nameKey?: string;
+}
+
+/** Act 4 threads add their rows (L7: the refuge). Empty: every desk is the shipped Bastion desk. */
+export const TRAINER_POSTS: TrainerPostRow[] = [];
+
+export interface TrainerPlacement {
+  npcId: string;
+  /** The interactable id, `trainer:<npcId>`. */
+  interactableId: string;
+  /** Where the desk stands. */
+  deskAnchor: string;
+  /** Where the NPC must stand (null: no check, as the shipped desks when the NPC post is missing). */
+  postAnchor: string;
+  nameKey: string;
+  /** True for a moved or taken-over desk (a TRAINER_POSTS row), false for the shipped Bastion desk. */
+  moved: boolean;
+}
+
+/** Where class `id`'s desk is now, for the flags. */
+export function trainerPlacement(kit: Pick<ClassKit, 'classId' | 'trainer'>, flags: FlagReader, rows: readonly TrainerPostRow[] = TRAINER_POSTS): TrainerPlacement {
+  let hit: TrainerPostRow | null = null;
+  for (const r of rows) {
+    const mine = r.classId ? r.classId === kit.classId : r.npcId === kit.trainer.npcId;
+    if (mine && flagConditionHolds(r.when, flags)) hit = r;
+  }
+  if (!hit) {
+    return { npcId: kit.trainer.npcId, interactableId: trainerId(kit), deskAnchor: trainerAnchor(kit), postAnchor: npcBastionPost(kit), nameKey: kit.trainer.nameKey, moved: false };
+  }
+  return { npcId: hit.npcId, interactableId: `trainer:${hit.npcId}`, deskAnchor: hit.post, postAnchor: hit.post, nameKey: hit.nameKey ?? kit.trainer.nameKey, moved: true };
+}
 export const availableFlag = (id: ClassId): string => `classes.available.${id}`;
 /** Written by thread 6 at M07 o4: the trainers take pupils. */
 export const CLASS_OPEN_FLAG = 'story.m07.classOpen';

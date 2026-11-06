@@ -1,3 +1,4 @@
+import type { CompanionId } from '../companions/ids';
 // Quest and dialogue data types. Shapes follow contracts/quests-and-dialogue.md v0.2 plus the
 // review additions (xp, skillPoints, take effects; spawnTag; objective `when`).
 
@@ -45,6 +46,8 @@ export type Effect =
   | { grantAbility: string }
   /** K11 (Act 3, Q2): gives the class master's book (`trainer.<classId>.masterBook`); idempotent. */
   | { grantMasterBook: string }
+  /** v0.8 item 7: raises a joined companion's bond rank (never lowers it; idempotent); `companion.bond` with `source` when it rose. */
+  | { setCompanionRank: { id: CompanionId; rank: number; source: string } }
   | { event: string; payload?: unknown };
 
 /** Mercy verbs a quest can unlock (the flags `enemies.mercy.<verb>`). */

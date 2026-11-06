@@ -339,6 +339,7 @@ export class EnemyManager {
         patrol: patrolForSlot(req.patrol.map((a) => a.position), req.slot, req.patrolStride),
         options: req.options,
         slot: req.slot,
+        skin: req.skin,
       };
       enemy = new Enemy(this.env, spawn, this.makeBody(def));
     } catch (err) {

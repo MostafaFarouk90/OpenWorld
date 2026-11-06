@@ -1,3 +1,4 @@
+import type { EnemySkinId } from './skins';
 import type { Vec3 } from '../physics/PhysicsWorld';
 import { CUTPURSE } from './cutpurse/tuning';
 import { ENEMY_DEFS } from './defs';
@@ -30,6 +31,8 @@ export interface SpawnRequest {
   options: SpawnOptions & { leash: boolean };
   /** `${spawnerId}#${slot}`: the ash pile this member rises from. */
   spentKey: string;
+  /** v0.8: the spawner's skin (`SpawnerDef.skin`); the actor carries it as `actor.skin`. */
+  skin?: EnemySkinId;
 }
 
 export interface SpawnerRegistryDeps {
@@ -173,6 +176,7 @@ export class SpawnerRegistry {
         level,
         patrol,
         patrolStride: def.patrolStride,
+        ...(def.skin ? { skin: def.skin } : {}),
         options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard, ...(def.peaceful && opts.peaceful === undefined ? { peaceful: true } : {}) },
         spentKey,
       });

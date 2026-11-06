@@ -54,6 +54,8 @@ export interface ActorInitLike {
   owner?: unknown;
   /** Set once at spawn from the spawner's tag (coordinator ruling for thread 3's kill filter). */
   spawnTag?: string;
+  /** v0.8: the enemy's skin id (enemies/skins.ts), set on `actor.skin`. */
+  skin?: string;
 }
 
 export interface ActorsPort {
