@@ -23,6 +23,8 @@ export interface ActorInit {
   id?: ActorId;
   /** Set by the spawner (e.g. 'spawn.m01'), read-only afterwards; quests filter kills on it. */
   spawnTag?: string;
+  /** v0.8: the enemy's skin id (enemies/skins.ts), read-only; `actor.spawned` and `actor.died` listeners read it. */
+  skin?: string;
   /** AI target selection and lock-on never pick it (companions; v0.4 forward hook for Hrolf). Default false. */
   untargetable?: boolean;
 }
@@ -44,6 +46,7 @@ export class Actor {
   readonly id: ActorId;
   readonly kind: string;
   readonly spawnTag: string | undefined;
+  readonly skin: string | undefined;
   team: Team;
   level: number;
   health: number;
@@ -75,6 +78,7 @@ export class Actor {
     this.id = id;
     this.kind = init.kind;
     this.spawnTag = init.spawnTag;
+    this.skin = init.skin;
     this.team = init.team;
     this.level = level;
     this.maxHealth = maxHealth;

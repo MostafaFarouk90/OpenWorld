@@ -1,6 +1,20 @@
 import { GUILDHALL_THUG_TAG } from './guildhall/def';
 import { WATCH_GUARD_BAND } from './level';
-import type { SpawnerDef } from './types';
+import type { LevelBand, SpawnerDef } from './types';
+
+/**
+ * v0.8 (Act 4 item 2): the Act 1 quest groups' bands, named in one table. Every shipped group in this file is an Act 1
+ * quest group whose activation ends in Act 1, so none spawns after `story.gate.a4` and their numbers stay as shipped
+ * (pinned in act4Bands.test.ts). Any Harrowmark group that can spawn in Act 4 names `band: 'harrowmark'` (the region's
+ * act-scoped band, 28 to 33 from the gate, capped) or `area: 'harrowmark-a4'`, never a literal band (linted there).
+ */
+export const HARROWMARK_ACT1_BANDS = {
+  'r03.guildhall': { min: 5, max: 6 },
+  'm07.thieves': { min: 4, max: 5 },
+  'underways.kennel': { min: 6, max: 7 },
+  'grimtooth-summons': { min: 7, max: 8 },
+  watch: WATCH_GUARD_BAND,
+} as const satisfies Record<string, LevelBand>;
 
 const members = (prefix: string, from: number, to: number): string[] =>
   Array.from({ length: to - from + 1 }, (_, i) => `${prefix}${from + i}`);
@@ -28,7 +42,7 @@ export const HARROWMARK_SPAWNERS: readonly SpawnerDef[] = [
     count: 3,
     anchor: 'r03.guildhall.1',
     memberAnchors: members('r03.guildhall.', 1, 3),
-    band: { min: 5, max: 6 },
+    band: HARROWMARK_ACT1_BANDS['r03.guildhall'],
     // Act 1 density pass (quests thread): the thugs move once the Guildhall doorman has had his word
     activation: { quest: 'r03', flag: 'story.r03.doormanTalked' },
     respawn: 'never',
@@ -45,7 +59,7 @@ export const HARROWMARK_SPAWNERS: readonly SpawnerDef[] = [
     count: 3,
     anchor: 'm07.thieves.1',
     memberAnchors: members('m07.thieves.', 1, 3),
-    band: { min: 4, max: 5 },
+    band: HARROWMARK_ACT1_BANDS['m07.thieves'],
     // Act 1 density pass (quests thread): the thieves wait in their alley until Cael has followed the coins there
     activation: { quest: 'm07', flag: 'story.m07.trailFollowed' },
     respawn: 'never',
@@ -62,7 +76,7 @@ export const HARROWMARK_SPAWNERS: readonly SpawnerDef[] = [
       count: 3,
       anchor: `underways.spawn.hound-${n * 3 - 2}`,
       memberAnchors: members('underways.spawn.hound-', n * 3 - 2, n * 3),
-      band: { min: 6, max: 7 },
+      band: HARROWMARK_ACT1_BANDS['underways.kennel'],
       activation: { interior: 'underways' },
       respawn: 'never',
       leash: true,
@@ -77,7 +91,7 @@ export const HARROWMARK_SPAWNERS: readonly SpawnerDef[] = [
     count: 4,
     anchor: 'underways.summon.1',
     memberAnchors: members('underways.summon.', 1, 4),
-    band: { min: 7, max: 8 },
+    band: HARROWMARK_ACT1_BANDS['grimtooth-summons'],
     activation: 'manual',
     respawn: 'never',
     leash: false,
@@ -94,7 +108,7 @@ export const HARROWMARK_SPAWNERS: readonly SpawnerDef[] = [
     anchor: 'spawn.m06.watch-1',
     memberAnchors: members('spawn.m06.watch-', 1, 3),
     patrol: members('patrol.m06.gate-square.', 1, 5),
-    band: WATCH_GUARD_BAND,
+    band: HARROWMARK_ACT1_BANDS.watch,
     activation: { quest: 'm06' },
     respawn: 'never',
     leash: false,
@@ -116,7 +130,7 @@ function watch(id: string, slots: readonly number[], patrol?: { tag: string }): 
     anchor: `spawn.m09.watch-${slots[0]}`,
     memberAnchors: slots.map((i) => `spawn.m09.watch-${i}`),
     ...(patrol ? { patrol } : {}),
-    band: WATCH_GUARD_BAND,
+    band: HARROWMARK_ACT1_BANDS.watch,
     activation: { interior: 'counting-house' },
     respawn: 'never',
     leash: false,

@@ -5,6 +5,7 @@ import { DRAGONSPINE_ROADS } from '../../terrain/shape/dragonspine';
 import { GREYFEN_ROADS } from '../../terrain/shape/greyfen';
 import type { RoadPolyline } from '../../terrain/shape/cinderRoad';
 import { act3FogFace } from '../act3Fog';
+import { ACT4_SHIPPED_FACE_RULES } from '../act4Fog';
 import type { FogWallDef } from '../fogWall';
 import { WALL_CULL } from '../act2/act2World';
 import { SUMMIT_BOX } from '../areas';
@@ -58,6 +59,8 @@ export const ACT3_FACE_PUSH_DEPTH = 100;
 
 const face = (id: keyof typeof FOG_FACE_ANCHORS, axis: 'x' | 'z', halfLength: number, blockedSide: 1 | -1): FogWallDef => ({
   ...act3FogFace(id),
+  // v0.8: the two never-open Waste faces say from Act 4 that only Ashgate enters (act4Fog.ts).
+  ...(id === 'fog.wyrmwatch-waste' || id === 'fog.fen-waste' ? ACT4_SHIPPED_FACE_RULES[id] : {}),
   anchorId: FOG_FACE_ANCHORS[id],
   axis,
   halfLength,

@@ -3,7 +3,7 @@ import type {
 } from './types';
 import { QUESTS_SAVE_VERSION } from './types';
 import type {
-  ActorMetaPort, BusPort, ConditionEnv, EnemiesPort, InventoryPort, NpcPort, ProgressionPort, QuestActions, QuestReader,
+  ActorMetaPort, BusPort, CompanionsRankPort, ConditionEnv, EnemiesPort, InventoryPort, NpcPort, ProgressionPort, QuestActions, QuestReader,
   StatePort, TriggerPort, Unsubscribe,
 } from './ports';
 import { evalCondition } from './conditions';
@@ -21,6 +21,8 @@ export interface QuestManagerOpts {
   inventory?: () => InventoryPort | undefined;
   npcs?: () => NpcPort | undefined;
   enemies?: () => EnemiesPort | undefined;
+  /** v0.8: `setCompanionRank`'s rank writer. */
+  companions?: () => CompanionsRankPort | undefined;
   /** v0.7 item 9: the `questRewardScale` service; quest `rewards` XP and gold are multiplied by `scale(questId)`. */
   rewardScale?: () => { scale(questId: string): number } | undefined;
   warn?(m: string): void;
@@ -439,6 +441,7 @@ export class QuestManager implements QuestReader, QuestActions {
         inventory: this.opts.inventory,
         npcs: this.opts.npcs,
         enemies: this.opts.enemies,
+        companions: this.opts.companions,
         sourceId: `quest:${questId}`,
         warn: this.opts.warn,
         rewardScale: scaleRewards ? () => this.rewardScaleFor(questId) : undefined,

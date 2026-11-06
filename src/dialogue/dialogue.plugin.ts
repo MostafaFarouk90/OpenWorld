@@ -28,6 +28,7 @@ const plugin: GamePlugin = {
       inventory: () => svc('inventory'),
       npcs: () => svc('npcs'),
       enemies: () => svc('enemies'),
+      companions: () => svc('companions'),
       sourceId: 'dialogue',
       warn,
     });
