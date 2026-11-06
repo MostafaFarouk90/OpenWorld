@@ -6,8 +6,9 @@
 //   junction    -> waits until `go()` (Cael spoke to the lead); never times out
 //   player-far  -> Cael more than PLAYER_FAR from every member; resumes inside PLAYER_BACK
 import { Polyline, type P3 } from '../chase/route';
+import { ESCORT_PLAYER_FAR, type EscortHaltReason } from './types';
 
-export type EscortHaltReason = 'hit' | 'junction' | 'storm' | 'player-far';
+export type { EscortHaltReason };
 
 /** Halts in the order `escort.halted` reports the first of them. */
 export const HALT_ORDER: readonly EscortHaltReason[] = ['hit', 'storm', 'junction', 'player-far'];
@@ -16,7 +17,7 @@ export const ESCORT_RUN = {
   /** Metres between members along the route, the lead in front. */
   spacing: 1.6,
   /** Halt beyond this from the nearest member (contracts v0.8 ESCORT_PLAYER_FAR; the brief's 40 m was ruled down). */
-  playerFar: 25,
+  playerFar: ESCORT_PLAYER_FAR,
   /** ... and walk again once Cael is back within this. */
   playerBack: 15,
   /** Within this many metres (along the route) of a stop the lead is on it. */
