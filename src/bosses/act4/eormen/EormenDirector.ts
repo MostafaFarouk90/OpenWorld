@@ -211,7 +211,7 @@ export class EormenDirector {
   private rectWorld(): EormenPlaces['rect'] | null {
     const o = this.offset();
     if (!o) return null;
-    const r = ARENA.rect;
+    const r = ARENA.drift;
     return { x0: o.x + r.x0, x1: o.x + r.x1, z0: o.z + r.z0, z1: o.z + r.z1 };
   }
 

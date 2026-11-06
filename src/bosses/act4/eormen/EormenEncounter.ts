@@ -55,7 +55,7 @@ export interface EormenPlaces {
   centreYaw: number;
   gong: THREE.Vector3;
   gongYaw: number;
-  /** The nave floor in world metres (he never drifts off it). */
+  /** Where he may drift, in world metres: the open nave between the pillar rows, short of the altar (never behind a pillar). */
   rect: { x0: number; x1: number; z0: number; z1: number };
 }
 
@@ -520,14 +520,26 @@ export class EormenEncounter implements EormenHooks {
     if (this.brain.state !== 'ready' && this.brain.state !== 'recover') return;
     if (dist < 1e-3 || (dist >= EORMEN.keepMin && dist <= EORMEN.keepMax)) return;
     const c = this.root.position;
-    const away = dist < EORMEN.keepMin ? -1 : 1;
-    const want = away < 0 ? EORMEN.keepMin - dist : dist - EORMEN.keepMax;
-    const step = Math.min(EORMEN.driftSpeed * dt, want) * away;
-    c.x += ((feet.x - c.x) / dist) * step;
-    c.z += ((feet.z - c.z) / dist) * step;
     const r = this.places.rect;
-    c.x = THREE.MathUtils.clamp(c.x, r.x0 + 1, r.x1 - 1);
-    c.z = THREE.MathUtils.clamp(c.z, r.z0 + 1, r.z1 - 1);
+    const ux = (feet.x - c.x) / dist;
+    const uz = (feet.z - c.z) / dist;
+    let dx = ux;
+    let dz = uz;
+    if (dist < EORMEN.keepMin) {
+      // Back away, leaning toward the nave's middle so he slides along a wall instead of pinning himself in a corner.
+      const mx = (r.x0 + r.x1) / 2 - c.x;
+      const mz = (r.z0 + r.z1) / 2 - c.z;
+      const ml = Math.hypot(mx, mz) || 1;
+      dx = -ux + (mx / ml) * EORMEN.centreLean;
+      dz = -uz + (mz / ml) * EORMEN.centreLean;
+      const l = Math.hypot(dx, dz) || 1;
+      dx /= l;
+      dz /= l;
+    }
+    const want = dist < EORMEN.keepMin ? EORMEN.keepMin - dist : dist - EORMEN.keepMax;
+    const step = Math.min(EORMEN.driftSpeed * dt, want);
+    c.x = THREE.MathUtils.clamp(c.x + dx * step, r.x0, r.x1);
+    c.z = THREE.MathUtils.clamp(c.z + dz * step, r.z0, r.z1);
   }
 
   private bladeTouches(at: THREE.Vector3): boolean {
