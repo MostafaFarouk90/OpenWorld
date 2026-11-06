@@ -53,7 +53,10 @@ export function createChimePlugin(opts: ChimePluginOptions = {}): GamePlugin {
         solved: solve,
       });
       // A load mid-phrase restarts it (the phrase count and fails are flags and stand).
-      ctx.events.on('save.loaded', () => puzzle.reset());
+      const offLoaded = ctx.events.on('save.loaded', () => puzzle.reset());
+      // DEV only: the real-game run reads the strip's playhead to strike on the beat (like L6's __bellowsEngine).
+      const devWin = import.meta.env.DEV && typeof window !== 'undefined' ? (window as unknown as { __chime?: unknown }) : null;
+      if (devWin) devWin.__chime = { view: () => puzzle.view(), stepMs: puzzle.stepMs };
 
       const h = opts.heightAt ?? heightAt;
       const visuals = new ChimeVisuals({ pillars: SLAG.pillars, shrine: SLAG.shrine, drift: GLASS_DRIFT, heightAt: h });
@@ -87,6 +90,7 @@ export function createChimePlugin(opts: ChimePluginOptions = {}): GamePlugin {
           if (!playing) {
             if (puzzle.running || puzzle.replaying) puzzle.reset(); // leaving the stone, a menu or death: the phrase starts over
           } else {
+            puzzle.expireReplay(t);
             for (let k = 0; k < KEYS.length; k++) {
               const a = KEYS[k]!;
               if (!ctx.input.actions.pressed(a)) continue;
@@ -103,6 +107,8 @@ export function createChimePlugin(opts: ChimePluginOptions = {}): GamePlugin {
           visuals.update(frameTime);
         },
         dispose() {
+          offLoaded();
+          if (devWin) delete devWin.__chime;
           setPrompt(false);
           unmount();
           visuals.dispose();

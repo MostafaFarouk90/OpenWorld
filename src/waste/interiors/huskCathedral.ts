@@ -39,7 +39,10 @@ export const HUSK_CATHEDRAL_DEF: InteriorDef = {
   id: HUSK_CATHEDRAL_ID,
   site: { x: CATHEDRAL.floatSite[0], z: CATHEDRAL.floatSite[1] },
   rooms: [
-    { id: 'narthex', x0: -7, z0: -1.5, x1: 7, z1: 8.5, height: 8 },
+    // The narthex stops 1 m short of the nave: the only way through is the 4 m nave door, which the arena gate fills, so a
+    // closed gate seals the arena (touching rooms are open to each other along their whole shared edge).
+    { id: 'narthex', x0: -7, z0: -1.5, x1: 7, z1: 7.5, height: 8 },
+    { id: 'nave-door', x0: -2, z0: 7.5, x1: 2, z1: 8.5, height: 5 },
     { id: 'nave', ...HUSK_CATHEDRAL_ARENA, height: 14 },
     { id: 'crypt-passage', x0: 7, z0: 2, x1: 10, z1: 5, height: 4 },
     { id: 'crypt', x0: 10, z0: -8, x1: 22, z1: 8, height: 4.5 },
@@ -61,8 +64,8 @@ export const HUSK_CATHEDRAL_DEF: InteriorDef = {
     { id: HUSK_CATHEDRAL_CRYPT_GATE, rect: rect(7, 2, 7.5, 5), height: 4, startClosed: true },
   ],
   torches: [
-    { x: -6.9, y: 2.6, z: 7 },
-    { x: 6.9, y: 2.6, z: 7 },
+    { x: -6.9, y: 2.6, z: 6.5 },
+    { x: 6.9, y: 2.6, z: 6.5 },
     ...[12, 26, 42].flatMap((z) => [
       { x: -14.9, y: 4, z },
       { x: 14.9, y: 4, z },

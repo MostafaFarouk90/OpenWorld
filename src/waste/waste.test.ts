@@ -180,6 +180,20 @@ describe("the Waste's interiors", () => {
     expect(WASTE_DOOR_LOCKS).toEqual({ 'husk-cathedral': 'story.d08.started' });
   });
 
+  it('joins the narthex to the nave only through the nave door the arena gate fills', () => {
+    const room = (id: string) => HUSK_CATHEDRAL_DEF.rooms.find((r) => r.id === id)!;
+    const narthex = room('narthex');
+    const door = room('nave-door');
+    const a = HUSK_CATHEDRAL_ARENA;
+    expect(narthex.z1).toBeLessThan(a.z0);
+    expect([door.z0, door.z1]).toEqual([narthex.z1, a.z0]);
+    const gate = HUSK_CATHEDRAL_DEF.blockers.find((b) => b.id === HUSK_CATHEDRAL_ARENA_GATE)!.rect;
+    expect([gate.x0, gate.x1]).toEqual([door.x0, door.x1]);
+    expect(gate.z0 >= door.z0 && gate.z1 <= door.z1).toBe(true);
+    // No other room touches the nave (the crypt stops 0.5 m short of it, behind its own gate).
+    for (const r of HUSK_CATHEDRAL_DEF.rooms) if (r.id !== 'nave-door' && r.id !== 'nave') expect(r.z1 < a.z0, r.id).toBe(true);
+  });
+
   it("keeps the crypt out of the arena (it opens off the narthex)", () => {
     const crypt = HUSK_CATHEDRAL_DEF.rooms.find((r) => r.id === 'crypt')!;
     const a = HUSK_CATHEDRAL_ARENA;
