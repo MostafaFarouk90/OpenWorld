@@ -67,6 +67,8 @@ export class WeatherRuntime implements WeatherService {
   private readonly _clock: WeatherClock;
   private ropes: RopeIndex;
   private shelters: ShelterTracker;
+  /** The loaded last-shelter id, kept until the shelters resolve (it may name a shelter not resolved yet). */
+  private loadedLast: string | null = null;
   private readonly forced = new Map<string, number>();
   private readonly held = new Map<string, number>();
   private readonly exposure = new ExposureClock();
@@ -151,7 +153,8 @@ export class WeatherRuntime implements WeatherService {
 
   /** L1's data arriving after setup (or a test swapping it). */
   setData(data: WeatherData): void {
-    const last = this.shelters.last;
+    // A load can land before the shelters are resolved (a boot Continue runs before the first step): keep its id.
+    const last = this.shelters.last ?? this.loadedLast;
     this.ropes = new RopeIndex(data.ropes);
     this.shelters = new ShelterTracker(data.shelters);
     this.shelters.restoreLast(last);
@@ -176,7 +179,7 @@ export class WeatherRuntime implements WeatherService {
   }
 
   serialize(): WeatherSave {
-    return { seed: this._clock.seed, t: this._clock.t, lastShelterId: this.shelters.last };
+    return { seed: this._clock.seed, t: this._clock.t, lastShelterId: this.shelters.last ?? this.loadedLast };
   }
 
   /** `save.loaded` without a `weather` entry (an older save): back to a new game's clock. */
@@ -187,7 +190,8 @@ export class WeatherRuntime implements WeatherService {
   load(data: unknown): void {
     const d = (data ?? {}) as Partial<WeatherSave>;
     this._clock.restore(typeof d.seed === 'number' ? d.seed : WEATHER_SEED, typeof d.t === 'number' ? d.t : 0);
-    this.shelters.restoreLast(typeof d.lastShelterId === 'string' ? d.lastShelterId : null);
+    this.loadedLast = typeof d.lastShelterId === 'string' ? d.lastShelterId : null;
+    this.shelters.restoreLast(this.loadedLast);
     this.shelters.reset();
     this.exposure.reset();
     this.regionKind = this._clock.phase().kind;

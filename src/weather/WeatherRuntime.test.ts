@@ -319,8 +319,12 @@ describe('weather runtime: storm mode and speed (the movement row)', () => {
     const r = rig();
     r.w.load(null);
     expect(r.w.serialize()).toEqual({ seed: 4042, t: 0, lastShelterId: null });
-    r.w.load({ seed: 'x', t: Number.NaN, lastShelterId: 'gone' });
+    r.w.load({ seed: 'x', t: Number.NaN, lastShelterId: 7 });
     expect(r.w.serialize()).toEqual({ seed: 4042, t: 0, lastShelterId: null });
+    // An unknown shelter id is no safe point but is kept in the save (the shelters may not be resolved yet).
+    r.w.load({ seed: 4042, t: 0, lastShelterId: 'gone' });
+    expect(r.w.lastShelter).toBeNull();
+    expect(r.w.serialize().lastShelterId).toBe('gone');
   });
 
   it('fires shelter events with hysteresis and onShelter', () => {
@@ -432,5 +436,26 @@ describe('weather runtime: a load inside a shelter (L8 handshake)', () => {
     r.w.update(1 / 60);
     expect(r.s.events.filter((e) => e.name === 'shelter.entered')).toEqual([{ name: 'shelter.entered', payload: { id: 'waste.shelter.1' } }]);
     expect(r.s.events.some((e) => e.name === 'shelter.left')).toBe(false);
+  });
+});
+
+describe('weather runtime: a load before the shelters resolve', () => {
+  it('keeps the loaded last shelter until setData names it, and saves it meanwhile', () => {
+    const r = rig();
+    r.w.setData({ ropes: [], shelters: [] });
+    r.w.load({ seed: 4042, t: 300, lastShelterId: 'waste.shelter.2' });
+    expect(r.w.lastShelter).toBeNull();
+    expect(r.w.serialize().lastShelterId).toBe('waste.shelter.2');
+    r.w.setData({ ropes: [ROPE], shelters: SHELTERS });
+    expect(r.w.lastShelter).toBe('waste.shelter.2');
+  });
+
+  it('a load without a last shelter clears the kept id', () => {
+    const r = rig();
+    r.w.setData({ ropes: [], shelters: [] });
+    r.w.load({ seed: 4042, t: 300, lastShelterId: 'waste.shelter.2' });
+    r.w.load({ seed: 4042, t: 10, lastShelterId: null });
+    r.w.setData({ ropes: [ROPE], shelters: SHELTERS });
+    expect(r.w.lastShelter).toBeNull();
   });
 });
