@@ -17,7 +17,7 @@ export const CINDER_CHAPEL_DEF: InteriorDef = {
   rooms: [{ id: 'nave', x0: -5, z0: -1.5, x1: 5, z1: 14.5, height: 7 }],
   pillars: [],
   props: [
-    { id: 'altar', rect: rect(-1.5, 12.5, 1.5, 13.6), height: 1 },
+    { id: 'altar', rect: rect(-1.5, 12.5, 1.5, 13.5), height: 1 },
     { id: 'pew.w1', rect: rect(-4, 4, -1.5, 4.6), height: 0.4, walkable: true },
     { id: 'pew.e1', rect: rect(1.5, 4, 4, 4.6), height: 0.4, walkable: true },
     { id: 'pew.w2', rect: rect(-4, 7, -1.5, 7.6), height: 0.4, walkable: true },
