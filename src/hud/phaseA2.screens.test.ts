@@ -317,6 +317,26 @@ describe('TemperingScreen over A10\'s session', () => {
     expect(w.modal.closed).toBeGreaterThan(0);
   });
 
+  it('Escape closes the screen like its Close button, once (Act 3 playthrough M2); a held repeat does nothing', () => {
+    const w = makeWithElement();
+    clickText(w.buttons(), 'tier 1');
+    clickText(w.buttons(), 'Temper');
+    const gold = w.inv.gold;
+    w.listeners.forEach((f) => f({ key: 'Escape', repeat: true }));
+    expect(w.session.state).toBe('rhythm');
+    let closes = 0;
+    const real = w.session.close.bind(w.session);
+    w.session.close = () => {
+      closes++;
+      real();
+    };
+    w.listeners.forEach((f) => f({ key: 'Escape', code: 'Escape' }));
+    expect(closes).toBe(1);
+    expect(w.session.state).toBe('idle');
+    expect(w.inv.gold).toBe(gold);
+    expect(w.inv.gear('practice-sword').temper).toBe(0);
+  });
+
   it('returns null and leaves no listener when another modal is open', () => {
     const w = make();
     w.screen.dispose();
