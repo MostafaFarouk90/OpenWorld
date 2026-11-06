@@ -91,6 +91,13 @@ export const TOWNSFOLK_BODIES: Readonly<Record<string, TownBodyId>> = {
   'reed-cutter-1': 'town-farmer-a',
   'reed-cutter-2': 'town-farmer-b',
   'herb-cutter': 'town-villager-a',
+  // Act 4 Harrowmark (L2): the five M38 witnesses are ordinary folk; Vey's checkpoint guards wear the guard body
+  'witness-barracks': 'town-guard-a',
+  'witness-gatehouse': 'town-villager-b',
+  'witness-chapel': 'town-priest-a',
+  'witness-anvil': 'town-blacksmith-a',
+  'witness-stables': 'town-farmer-a',
+  ...Object.fromEntries(['keep-road-s', 'keep-road-n', 'market', 'guild', 'river-gate', 'counting'].flatMap((c) => [1, 2].map((k) => [`vey-guard-${c}-${k}`, 'town-guard-a' as const]))),
 };
 
 /** Def ids that must keep their KayKit body (story cast, companions, lords, stewards, ghosts). Pinned by a test. */
@@ -114,6 +121,8 @@ export const KEEP_KAYKIT: readonly string[] = [
   // Dragonspine (all of it for now: the generator has no frost palette yet, and the hunters wear the hunter look)
   'thorgar', 'eadgyth', 'ansgar', 'lodge-hunter-cave', 'egg-thief', 'lodge-hunter-1', 'lodge-hunter-2', 'lodge-hunter-3',
   'lodge-hunter-4', 'lodge-hunter-5', 'lodge-hunter-6', 'sled-hand-1', 'sled-hand-2', 'pilgrim-1', 'pilgrim-2', 'pilgrim-3',
+  // Act 4 Harrowmark (L2): the named knights, captains and Oswin's clerk
+  'aldric-cole', 'wilmot-penn', 'captain-hesketh', 'captain-morwen', 'captain-bran', 'captain-tolly',
 ];
 
 /** Def scale that brings `body` to TOWN_BODY_STANDING_HEIGHT (times `scale`) at the NPCs' KayKit base scale. */

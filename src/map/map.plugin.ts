@@ -149,10 +149,11 @@ const map: GamePlugin = {
     let openSig = '';
     const currentChips = (): RegionChip[] => {
       const open = openNow();
-      const sig = open.join(',');
+      // Act 4 (L2): a label that changes by flag (Harrowmark held by Vey) is part of the signature, so a load redraws it.
+      const sig = `${open.join(',')}|${ctx.state.getFlag('story.m38.complete') ? 1 : 0}`;
       if (sig !== openSig) {
         openSig = sig;
-        chips = regionChips(open);
+        chips = regionChips(open, ctx.state);
 
       }
       return chips;

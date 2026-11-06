@@ -6,6 +6,7 @@ import { flagConditionHolds, type FlagReader } from '../core/flagCondition';
 import { OCCUPIED_FLAG } from '../region/act4Containment';
 import type { PlacementRule } from '../waystones/types';
 import { WAYSTONE_DARK } from '../waystones/tuning';
+import { insideRingPolygon } from './act4/ringWall';
 
 export const CITY_CENTRE = { x: 8500, z: 2000 } as const;
 /** The ring wall's outer face (752 m) plus a margin; L2 may swap the circle for the wall polygon behind insideRingWall. */
@@ -18,8 +19,10 @@ export const M41_CAMP_ANCHOR = 'harrowmark.a4.m41.camp';
 export const REFUGE_REST_ANCHOR = 'ashgate.refuge.rest';
 export const ASH_ROAD_OPEN_FLAG = 'story.m41.complete';
 
+/** L2: the ring wall's 56-chord polygon plus 8 m (act4/ringWall.ts), not the 760 m circle; a quick reject first. */
 export function insideRingWall(x: number, z: number): boolean {
-  return Math.hypot(x - CITY_CENTRE.x, z - CITY_CENTRE.z) < RING_WALL_RADIUS;
+  if (Math.hypot(x - CITY_CENTRE.x, z - CITY_CENTRE.z) >= RING_WALL_RADIUS) return false;
+  return insideRingPolygon(x, z);
 }
 
 export interface NoStrandDeps {

@@ -257,3 +257,82 @@ describe('R20\'s huts', () => {
     expect(fc.colliders.size).toBe(0);
   });
 });
+
+describe('the occupied city: the absent table, the ring polygon and the dark stones', () => {
+  it('OCCUPIED_ABSENT is exactly the shipped NPCs whose every post is inside the walls, less vendors, trainers and companions', async () => {
+    const { OCCUPIED_ABSENT } = await import('./absent');
+    const { VENDORS } = await import('../../economy/stock');
+    const { DEFAULT_KITS } = await import('../../classes/kits');
+    const { COMPANION_IDS } = await import('../../companions/ids');
+    const { insideRingWall } = await import('../noStrand');
+    const exempt = new Set<string>([...Object.keys(VENDORS), ...Object.values(DEFAULT_KITS).map((k) => k.trainer.npcId), ...COMPANION_IDS]);
+    const at = new Map(HARROWMARK_LAYOUT.anchors.map((x) => [x.id, x]));
+    const newCast = new Set(ACT4_LAYOUT_HM.npcs.map((n) => n.id));
+    const expected = HARROWMARK_LAYOUT.npcs
+      .filter((n) => !newCast.has(n.id) && !exempt.has(n.id))
+      .filter((n) => {
+        const ids = [n.post, ...POST_RULES.filter((r) => r.npcId === n.id).flatMap((r) => [r.home, ...r.posts.map((p) => p.anchorId)])];
+        return ids.every((id) => {
+          const p = at.get(id);
+          return p !== undefined && insideRingWall(p.x, p.z);
+        });
+      })
+      .map((n) => n.id);
+    expect([...OCCUPIED_ABSENT].sort()).toEqual(expected.sort());
+    for (const n of HARROWMARK_LAYOUT.npcs) {
+      const flags = n.absentWhen === undefined ? [] : ([] as string[]).concat(n.absentWhen);
+      expect(flags.includes(OCCUPIED_FLAG), n.id).toBe(OCCUPIED_ABSENT.includes(n.id) || newCast.has(n.id));
+    }
+  });
+
+  it('withOccupiedAbsent keeps an NPC\'s own absent flag, adds the occupied one once, and leaves others alone', async () => {
+    const { withOccupiedAbsent } = await import('./absent');
+    const out = withOccupiedAbsent([{ id: 'a', post: 'p', absentWhen: 'x' }, { id: 'b', post: 'p' }, { id: 'c', post: 'p', absentWhen: [OCCUPIED_FLAG] }], ['a', 'c']);
+    expect(out[0]!.absentWhen).toEqual(['x', OCCUPIED_FLAG]);
+    expect(out[1]!.absentWhen).toBeUndefined();
+    expect(out[2]!.absentWhen).toEqual([OCCUPIED_FLAG]);
+  });
+
+  it('the ring wall polygon: the passages and the wall\'s outer face are inside; faces, huts, the deep run exit and 760 m are outside', async () => {
+    const { insideRingWall } = await import('../noStrand');
+    const { insideRingPolygon } = await import('./ringWall');
+    const { DEEP_RUN_EXIT } = await import('./sites');
+    for (const g of ['south', 'river', 'northwest', 'northeast', 'smelter'] as const) {
+      expect(insideRingWall(gatePosition(g, 752).x, gatePosition(g, 752).z), g).toBe(true);
+      expect(insideRingWall(gatePosition(g, 765).x, gatePosition(g, 765).z), g).toBe(false);
+    }
+    // Between chords (a vertex bearing) and on a chord's midpoint.
+    for (let k = 0; k < 56; k++) {
+      for (const half of [0, 0.5]) {
+        const b = ((180 + (k - half) * (360 / 56)) * Math.PI) / 180;
+        const p = (r: number) => ({ x: CENTER.x + r * Math.sin(b), z: CENTER.z + r * Math.cos(b) });
+        expect(insideRingPolygon(p(755).x, p(755).z)).toBe(true);
+        expect(insideRingWall(p(760).x, p(760).z)).toBe(false);
+      }
+    }
+    for (const h of R20_HUTS) expect(insideRingWall(h.x, h.z)).toBe(false);
+    expect(insideRingWall(DEEP_RUN_EXIT.x, DEEP_RUN_EXIT.z)).toBe(false);
+    expect(insideRingWall(CENTER.x, CENTER.z)).toBe(true);
+  });
+
+  it('the city stones go dark from M38 and come back on a load without it (L0\'s rule, my polygon)', async () => {
+    const { stoneIsDark } = await import('../noStrand');
+    const gate = HARROWMARK_LAYOUT.anchors.find((x) => x.id === 'harrowmark.square.fountain') ?? { x: CENTER.x, z: CENTER.z };
+    const flags: Record<string, boolean> = {};
+    const r = { getFlag: (k: string) => flags[k] };
+    expect(stoneIsDark('harrowmark-gate', undefined, r)).toBe(false);
+    expect(stoneIsDark('some-city-stone', gate, r)).toBe(false);
+    flags[OCCUPIED_FLAG] = true;
+    expect(stoneIsDark('harrowmark-gate', undefined, r)).toBe(true);
+    expect(stoneIsDark('some-city-stone', gate, r)).toBe(true);
+    expect(stoneIsDark('farm-stone', R20_HUTS[0], r)).toBe(false);
+  });
+});
+
+describe('the Act 4 cast\'s bodies', () => {
+  it('maps every checkpoint guard to the guard body (the townsfolk table names them by checkpoint id)', async () => {
+    const { TOWNSFOLK_BODIES } = await import('../../npcs/townsfolkBodies');
+    for (const d of ACT4_NPC_DEFS.filter((x) => x.id.startsWith('vey-guard-'))) expect(TOWNSFOLK_BODIES[d.id], d.id).toBe('town-guard-a');
+    expect(Object.keys(TOWNSFOLK_BODIES).filter((k) => k.startsWith('vey-guard-'))).toHaveLength(CHECKPOINTS.length * 2);
+  });
+});
