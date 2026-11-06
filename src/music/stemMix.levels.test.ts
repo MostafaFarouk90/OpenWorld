@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { STEM_PEAK, synthStem } from './stemSynth';
-import { ASH_ON_THE_PASTURE, BARLEY_AND_BRAZIER, HAMMERS_BELOW, SEVEN_GATES_ONE_DRUM, loopSamples, type StemMix, type TrackDef } from './tracks';
+import { stemPeak, synthStem } from './stemSynth';
+import { TRACKS_BY_ID, loopSamples, type StemMix, type TrackDef } from './tracks';
 
 // Level guard for the music-quality voices: every mix variant stays under full scale, the states sit in
 // a sensible loudness order against explore, and nothing drops far below the old sound.
@@ -26,14 +26,16 @@ function sum(track: TrackDef, stems: Record<string, Float32Array>, mix: StemMix)
 
 const db = (x: number): number => 20 * Math.log10(x);
 
-describe.each([BARLEY_AND_BRAZIER, SEVEN_GATES_ONE_DRUM, ASH_ON_THE_PASTURE, HAMMERS_BELOW])('$id levels', (track) => {
+const ALL = Object.values(TRACKS_BY_ID);
+
+describe.each(ALL)('$id levels', (track) => {
   const stems = rendered(track);
 
-  it('stem peaks are exactly their STEM_PEAK', () => {
+  it('stem peaks are exactly their STEM_PEAK times the track trim', () => {
     for (const id of track.stems) {
       let peak = 0;
       for (const v of stems[id]) peak = Math.max(peak, Math.abs(v));
-      expect(peak).toBeCloseTo(STEM_PEAK[id], 5);
+      expect(peak).toBeCloseTo(stemPeak(track, id), 5);
     }
   });
 
@@ -59,5 +61,27 @@ describe.each([BARLEY_AND_BRAZIER, SEVEN_GATES_ONE_DRUM, ASH_ON_THE_PASTURE, HAM
     expect(rms('talk')).toBeGreaterThan(explore - 5);
     expect(rms('discover')).toBeGreaterThan(explore);
     expect(rms('discover')).toBeLessThan(explore + 5);
+  });
+});
+
+// One loudness band for every region track (Act 4 L8): entering a new region must not jump in volume. The band is the
+// spread of the Acts 1 and 2 tracks (explore -24.5 to -27.4 dBFS, combat -18.0 to -19.6) with a little room each side.
+// The Act 3 tracks sat 3 to 6 dB above it before their `trimDb`.
+describe('every region track sits in one loudness band', () => {
+  const renders = new Map(ALL.map((t) => [t.id, rendered(t)]));
+  it.each(ALL.map((t) => [t.id, t] as const))('%s', (_id, track) => {
+    const stems = renders.get(track.id)!;
+    const explore = db(sum(track, stems, track.mixes.explore).rms);
+    const combat = db(sum(track, stems, track.mixes.combat).rms);
+    expect(explore, 'explore').toBeGreaterThan(-28);
+    expect(explore, 'explore').toBeLessThan(-23.5);
+    expect(combat, 'combat').toBeGreaterThan(-20.5);
+    expect(combat, 'combat').toBeLessThan(-17);
+  });
+
+  it('a hot track fails the band (the guard is live)', () => {
+    const hot: TrackDef = { ...ALL[0], id: 'hot', synth: { ...ALL[0].synth!, trimDb: 5 } };
+    const explore = db(sum(hot, rendered(hot), hot.mixes.explore).rms);
+    expect(explore).toBeGreaterThan(-23.5);
   });
 });

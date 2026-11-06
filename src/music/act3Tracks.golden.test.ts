@@ -4,32 +4,33 @@ import { PEAT_AND_PITCH, WING_OVER_RIME, type TrackDef } from './tracks';
 
 // Act 3 tracks (K14) pinned the same way as stemSynth.golden.test.ts: SHA-256 of the exact Float32 bytes of every stem
 // at 8 kHz, all 15 (seven for Peat and Pitch, eight for Wing over Rime including the trial chant). A later voice tweak
-// must replace these hashes deliberately; a refactor must leave every sample alone.
+// must replace these hashes deliberately; a refactor must leave every sample alone. Act 4 L8 replaced all 15 on purpose:
+// both tracks gained a whole-track `trimDb` (-4.5 and -3) to sit at the Acts 1 and 2 loudness.
 const SR = 8000;
 const GOLDEN: Array<[TrackDef, Record<string, string>]> = [
   [
     PEAT_AND_PITCH,
     {
-      kick: '08385d3d2025a880d852feb070a4db4a5383328bdbcd9d91f1d25d63fbd4342e',
-      snare: '4d81a217e841935bea7b464c69f4d010b7ea106f2e97109b84249769c7ddecaa',
-      hat: 'c19baf788187cbe67f4258adbb1152bb55b9519cb52a6c5b437343aceb2aaa3b',
-      bass: '58f80b9e8fd660074b2c95531af99a7180533bb74d81aa94b146ccadea074f39',
-      vocal: '33aa46c2b135f4561067f746cf72664290194b2d68a5c91aaa0f047a3e02526f',
-      melody: '8a2fad5d7eb05fd5e4e2663b96e003ef0bd98c4baaf7142c5d9bc8403c285be6',
-      boss: '8594e9fac7ff71920b9279c4b642167ae5c397fb6c0e41f4c855e508a5165cc6',
+      kick: 'c558fee0277b6320623c96972e9fcce97c0e0de2a5a699191da09e8cd2b04d3d',
+      snare: '68e6c4de3b63ea299c685b8488206466d39d0cb8f2f08761cc848d7fc6dee8b8',
+      hat: 'c9c3eb359a990bd0b33d74c18b8aa211b348dd9ea4f66aa4704105ce2923a887',
+      bass: '98f6ad607db210770a2d30508571ecc16ab80d8c64993a055139da30ea6ddaea',
+      vocal: '0969cfa0b1472e148e18e3b3c334e0f08a4c3e0b9383a8e3a1aeef12ae46eda7',
+      melody: 'c01f3f5072a63c9e5fa62607fe9af59a3804b340350553cc801cbd11adb06e3f',
+      boss: 'd9df27ff5af20c0a2495372042b2d53745174de7e5f544a8e9ba540c975dbcfc',
     },
   ],
   [
     WING_OVER_RIME,
     {
-      kick: '6d02f281a28440bffab59ab753b23fe8d0f40fe620d926ebad72354c031e430a',
-      snare: 'c35533de0743f3af18527e8295b8f5a29fe98ace48aa702700e53f21399dd20a',
-      hat: 'a88643491e42b2c11358e0bb406bd053c3b3ffd6b77696fe0e9009f295c324a0',
-      bass: '95f1179a714682241daafb96818982634b6c5ddefb67368d684ee057eff85dfb',
-      vocal: '4f317cc8a55cad5f9618dd865f12734701a131631c06417ea085e5c07d2c1060',
-      melody: '2445ace47cbeb606d19d0c8bd2c825f2ebf2677701015b7a4ae951e21ff8f4c6',
-      boss: '25e1793bc84cef2558bec8c0d0eebdb201fde83cf0c10c737f8005d9d95c3e8c',
-      chant: '73e724cd64c2f63fe555c89792058ed8e84b0dbb6d99fbfdc98df36121fbedc1',
+      kick: '07f222b40d56f7e891048d520ac61077fbb9150a4312c208678cc83ad206419a',
+      snare: '99e1b9de0f20513fdeeb132f2a654ae8ce8d9018c8d1b1604d86bec7e7c13f48',
+      hat: 'c3e8a546b651ae60977c8fdca6d0535556774f52295ee4df42a7a940480e8b3b',
+      bass: 'a23ec67a2efc2128824a02537d58b7ac8e3851369c103989660a71e003e265b2',
+      vocal: '145056f667bb238ce9e167346c7996729a38573565bb0cab48afafae444bffd4',
+      melody: '281dcf122f9c9d0fe0ed82b04cee1e01ac1a4093176637f6e328b3cdc3364491',
+      boss: 'eb85125ba0dc77f3e0ddb374d21c0f955442797cf387e8b3f211ed459424d113',
+      chant: 'b8354a61d80b2b64966b7b414ff70799e943a6f1214972cf5d65cda9ac8e5d2d',
     },
   ],
 ]

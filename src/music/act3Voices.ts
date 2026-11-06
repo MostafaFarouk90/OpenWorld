@@ -15,7 +15,7 @@ export interface Act3Kit {
 export type Act3Voice = (t: Track, g: Grid, c: Ctx) => void;
 export type Act3Voices = Readonly<Record<string, Act3Voice>>;
 
-interface Formant {
+export interface Formant {
   /** Centre Hz, bandwidth Hz and linear gain. */
   fc: number;
   bw: number;
@@ -27,7 +27,7 @@ interface Formant {
  * (sin(k w) by the Chebyshev recurrence, one sin and one cos per layer per sample). Returns a per-sample function
  * taking the pitch factor (vibrato, glide); phases carry on from sample to sample.
  */
-function formantVoice(sr: number, hz: number, detunes: readonly number[], formants: readonly Formant[], opts: { tilt?: number; maxHz?: number; maxK?: number; floor?: number } = {}): (pitch: number) => number {
+export function formantVoice(sr: number, hz: number, detunes: readonly number[], formants: readonly Formant[], opts: { tilt?: number; maxHz?: number; maxK?: number; floor?: number } = {}): (pitch: number) => number {
   const { tilt = 1, maxHz = 4000, maxK = 24, floor = 0.1 } = opts;
   const layers = detunes.map((d, i) => {
     const f0 = hz * d;
@@ -60,7 +60,7 @@ function formantVoice(sr: number, hz: number, detunes: readonly number[], forman
 }
 
 /** Schroeder hall: five damped combs and two all-passes. `dry` carries its own silent tail for the hall to ring into. */
-function hall(dry: Float32Array, sr: number): Float32Array {
+export function hall(dry: Float32Array, sr: number): Float32Array {
   const out = new Float32Array(dry.length);
   const combs = [0.0297, 0.0371, 0.0411, 0.0437, 0.0503].map((sec) => ({ buf: new Float32Array(Math.max(2, Math.round(sec * sr))), i: 0, lp: 0 }));
   const aps = [0.005, 0.0017].map((sec) => ({ buf: new Float32Array(Math.max(2, Math.round(sec * sr))), i: 0 }));
@@ -87,7 +87,7 @@ function hall(dry: Float32Array, sr: number): Float32Array {
 }
 
 /** Catmull-Rom interpolation of a low-rate buffer up by `q` to `full` samples. */
-function upsample(buf: Float32Array, q: number, full: number): Float32Array {
+export function upsample(buf: Float32Array, q: number, full: number): Float32Array {
   const out = new Float32Array(full);
   const last = buf.length - 1;
   for (let i = 0; i < full; i++) {
@@ -108,7 +108,7 @@ function upsample(buf: Float32Array, q: number, full: number): Float32Array {
  * well below Nyquist (hums, whistles, chants). `make(rate)` builds the per-sample voice for the rate it renders at.
  * Low sample rates (the 8 kHz golden and test renders) skip the trick, as there is no headroom to give away.
  */
-function lowAdd(t: Track, q0: number, start: number, seconds: number, make: (rate: number) => (s: number) => number): void {
+export function lowAdd(t: Track, q0: number, start: number, seconds: number, make: (rate: number) => (s: number) => number): void {
   const sr = t.sampleRate;
   const q = sr >= 32000 ? q0 : 1;
   if (q === 1) {
@@ -124,9 +124,9 @@ function lowAdd(t: Track, q0: number, start: number, seconds: number, make: (rat
   t.addBuffer(start, upsample(buf, q, full), 1);
 }
 
-const AH: readonly Formant[] = [{ fc: 750, bw: 150, g: 1.4 }, { fc: 1150, bw: 200, g: 0.8 }];
-const OO: readonly Formant[] = [{ fc: 320, bw: 90, g: 1.6 }, { fc: 880, bw: 150, g: 0.4 }];
-const OH: readonly Formant[] = [{ fc: 500, bw: 110, g: 1.5 }, { fc: 900, bw: 160, g: 0.6 }];
+export const AH: readonly Formant[] = [{ fc: 750, bw: 150, g: 1.4 }, { fc: 1150, bw: 200, g: 0.8 }];
+export const OO: readonly Formant[] = [{ fc: 320, bw: 90, g: 1.6 }, { fc: 880, bw: 150, g: 0.4 }];
+export const OH: readonly Formant[] = [{ fc: 500, bw: 110, g: 1.5 }, { fc: 900, bw: 160, g: 0.6 }];
 
 export function createAct3Voices(kit: Act3Kit): Act3Voices {
   const { tokens, arc, Feel } = kit;

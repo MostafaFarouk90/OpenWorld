@@ -8,6 +8,7 @@
 import { REGION_IDS, REGION_INFO, type RegionBedId } from '../region/regions';
 import { fillAct2Bed } from './ambienceAct2';
 import { fillAct3Bed } from './ambienceAct3';
+import { fillAshenWasteBed } from './act4/ambienceAct4';
 import { isMineInterior } from './InteriorFx';
 
 export type BedId = RegionBedId | 'underways';
@@ -170,7 +171,8 @@ export function makeBedSamples(id: BedId, sampleRate: number): Float32Array<Arra
   } else if (id === 'greyfen' || id === 'dragonspine') {
     fillAct3Bed(id, x, n, sr, SEEDS[id]);
   } else if (id === 'ashen-waste') {
-    // v0.8: the Waste's bed id is reserved by L0; L8 adds its creaking glass. Until then it plays the shared wind alone.
+    // Act 4 (L8): ash-hiss wind and creaking glass pillars.
+    fillAshenWasteBed(x, n, sr, SEEDS[id]);
   } else {
     // Dripping water: sparse decaying sine pings, some with a quieter echo.
     const drips = 15 + Math.floor(u() * 5);

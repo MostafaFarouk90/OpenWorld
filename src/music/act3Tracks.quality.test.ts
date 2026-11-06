@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createAct3Voices } from './act3Voices';
-import { STEM_PEAK, synthStem as synthRaw } from './stemSynth';
+import { STEM_PEAK, stemPeak, synthStem as synthRaw } from './stemSynth';
 import { BARLEY_AND_BRAZIER, HAMMERS_BELOW, PEAT_AND_PITCH, WING_OVER_RIME, loopSamples, validateTrack, type MixState, type StemMix, type TrackDef } from './tracks';
 
 // Quality guards for the two Act 3 tracks (K14), in the spirit of stemSynth.quality.test.ts and act2.tracks.test.ts:
@@ -47,7 +47,7 @@ describe.each(TRACKS)('$id stems', (track) => {
       peak = Math.max(peak, Math.abs(v));
     }
     expect(bad).toBe(0);
-    expect(peak).toBeCloseTo(STEM_PEAK[id] ?? 0.15, 4);
+    expect(peak).toBeCloseTo(stemPeak(track, id), 4);
     expect(peak).toBeLessThan(0.5);
     const r = rms(x);
     expect(r).toBeGreaterThan(0.003);
@@ -87,7 +87,7 @@ describe.each(TRACKS)('$id stems', (track) => {
       for (let i = 0; i + win < x.length; i += win) {
         let p = 0;
         for (let j = i; j < i + win; j++) p = Math.max(p, Math.abs(x[j]));
-        if (p > 0.1 * STEM_PEAK[id]) peaks.add(Math.round(p * 200));
+        if (p > 0.1 * stemPeak(track, id)) peaks.add(Math.round(p * 200));
       }
       expect(peaks.size, id).toBeGreaterThanOrEqual(6);
     }
