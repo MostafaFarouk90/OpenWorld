@@ -334,3 +334,16 @@ These are rigged creatures, not static props: a model only helps once someone ad
 |---|---|---|---|---|
 | ysmeryth | Ysmeryth the Coal-Mother, the eldest dragon: scales gone to cooled grey-black slag with faint ember cracks, a crest of horn plates that glows orange from within, old and heavy, calm eyes; no armour, no rider | Idle, Walk, Sweep (wing sweep), Slam, Spit (breath), Call (rear up, wings wide, jaw open), Fly loop, Land; scene poses perch, land, reveal (head low to the keeper-stone), oath (reared, crest blazing) | the 6x procedural wyrm, palette cooled-slag, lit crest | 5 x 46 x 7.5, head to tail tip (wingspan about 38) |
 | hathren | Hathren Quench-Tongue, the water dragon of the Mere: legless and serpentine, wet dark-teal scales with spines along the back, river weed and old net rope tangled on the horns, a pale throat, tired and wary | Idle (coiled in the shallows), Swim, Thrash in nets, Rise, Calm (head lowered) | the 4.5x procedural water wyrm (no legs), palette hathren | 4 x 34 x 5.5, head to tail tip, mostly in the water |
+
+## T. Act 4 Ash Road, Ashgate and the Ashen Waste (added 2026-11-06 by Act 4 L1, PR 1; greybox and procedural stand-ins until these arrive)
+Each id is one file under public/assets/env (Y up, 1 unit = 1 m, base-centre pivot, front +Z). Add the size to src/env/targets.json when the file is ingested.
+
+| id | prompt | where | greybox now | size (m, w x d x h) |
+| --- | --- | --- | --- | --- |
+| rope-post-a | a weathered grey timber post driven into pale ash, a knotted hemp guide rope tied round its top and running off both sides, ash drifted against the foot | every 25 m along the six Waste rope-lines (about 560) | `ropePosts.ts` cylinder and line rope | 0.2 x 0.2 x 1.3 |
+| shelter-lean-to-a | a storm lean-to of stitched grey hides over a frame of three poles, a solid back of stacked slag blocks, the open side toward the rope, ash piled on the windward side | each rope-line shelter (25) | `wall` back and `stall` roof boxes | 5 x 3.5 x 2.4 |
+| petrified-stump-a, -b, -c | a tree stump turned to grey-white stone by ash, cracked bark texture still visible, glassy black at the broken top; three variants (short and wide, tall and split, a fallen root plate) | scattered across the Waste (PR 2) | none yet | 1.2 x 1.2 x 0.9 / 0.9 x 0.9 x 2.2 / 2.4 x 0.8 x 1.4 |
+| ashgate-arch-a | a rough gate arch of two slag-block piers and a timber lintel hung with rope, warning rags and a bronze bell, set in a low ash-crusted wall stub either side | Ashgate, the Waste's only gate (1) | `gate` posts | 10 x 1.5 x 6 |
+| rope-warden-hut-a | a small rope-warden's hut of timber and hides beside a gate, coils of rope and a lantern on hooks, a counter flap on the front | beside the Ashgate arch (Hild's post) (1) | none yet | 4 x 3 x 3 |
+| ashwalker-tent-a | a low ridge tent of patched grey canvas over ash-crusted poles, guy ropes weighted with slag stones, a soot-dark flap | Ashgate refuge (7) and the Walker Camp (PR 2) | `house` box | 6 x 5 x 3 |
+| camp-fire-ring-a | a refuge camp fire ring of black slag stones round a bed of embers, a cooking tripod and a blackened pot | Ashgate refuge (1) | `well` ring | 2 x 2 x 1.2 |

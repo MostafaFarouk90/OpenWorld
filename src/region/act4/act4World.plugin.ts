@@ -12,13 +12,19 @@ import { buildStructures, coreFactories } from '../StructureBuilder';
 import { validateLayout } from '../validateLayout';
 import { buildAct4Roads } from './act4Roads';
 import { buildRopePosts } from './ropePosts';
+import { buildSunforgeLandmark, type SunforgeQuality } from './sunforgeLandmark';
+import * as THREE from 'three';
 import { ACT4_FOG_WALLS } from './act4World';
 import { ACT4_WORLD_LAYOUT } from './act4World.layout';
 
 export interface Act4WorldPluginOptions {
   heightAt?: (x: number, z: number) => number;
   walls?: readonly FogWallDef[];
+  /** L1: false skips the Sunforge landmark (plugin tests). */
+  visuals?: boolean;
 }
+
+export const ACT4_WORLD_SYSTEM_ID = 'act4-world.landmarks';
 
 export function createAct4WorldPlugin(opts: Act4WorldPluginOptions = {}): GamePlugin {
   const height = opts.heightAt ?? heightAt;
@@ -65,11 +71,39 @@ export function createAct4WorldPlugin(opts: Act4WorldPluginOptions = {}): GamePl
         ctx.scene.add(ropes.object);
         cleanups.push(() => ropes.dispose());
 
-        // L1: the Waste ground's glass glints follow the quality step (Low none, Medium glints, High sparkle).
+        // L1: the Sunforge column and the Waste ground's glass glints follow the quality step.
+        const sunforge = opts.visuals === false ? null : buildSunforgeLandmark(height);
+        if (sunforge) {
+          ctx.scene.add(sunforge.object);
+          cleanups.push(() => sunforge.dispose());
+        }
+        const applyQuality = (step: string): void => {
+          const s = (step in GLASS_TIER ? step : 'medium') as SunforgeQuality;
+          setGroundGlassTier(GLASS_TIER[s]);
+          sunforge?.setQuality(s);
+        };
         const quality = ctx.services.get('quality');
         if (quality) {
-          setGroundGlassTier(GLASS_TIER[quality.step as keyof typeof GLASS_TIER] ?? GLASS_TIER.medium);
-          cleanups.push(quality.subscribe((step) => setGroundGlassTier(GLASS_TIER[step as keyof typeof GLASS_TIER] ?? GLASS_TIER.medium)));
+          applyQuality(quality.step);
+          cleanups.push(quality.subscribe(applyQuality));
+        }
+        if (sunforge) {
+          let seconds = 0;
+          cleanups.push(
+            ctx.systems.add({
+              id: ACT4_WORLD_SYSTEM_ID,
+              renderPhase: 'world',
+              order: 912,
+              render: (_alpha, frameTime) => {
+                seconds = (seconds + frameTime) % 7200;
+                const cam = ctx.camera;
+                if (!cam) return;
+                const indoors = Boolean(ctx.services.get('interiors')?.current);
+                const fog = ctx.scene.fog instanceof THREE.Fog ? ctx.scene.fog.color : null;
+                sunforge.update(cam.position, cam.far, seconds, fog, indoors);
+              },
+            }),
+          );
         }
       } catch (err) {
         teardown();
