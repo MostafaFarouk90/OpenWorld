@@ -291,7 +291,9 @@ describe('Act 3 fog faces (rules only; K1 places and registers them)', () => {
     const greyfen = ACT2_FOG_WALLS.find((w) => w.id === 'fog.greyfen')!;
     expect(fogToastKey(greyfen, stateOf(PHASE_D))).toBe('region.fog.greyfen.toast');
     const shut = ACT2_FOG_WALLS.find((w) => w.id === 'fog.caldera')!;
-    expect(fogToastKey(shut, stateOf(STATES.actComplete))).toBe('region.fog.shut.toast');
+    expect(fogToastKey(shut, stateOf(STATES.phaseF))).toBe('region.fog.shut.toast');
+    // v0.8: from the Act 4 gate the shipped Waste faces say the way in is Ashgate.
+    expect(fogToastKey(shut, stateOf(STATES.actComplete))).toBe('region.fog.ashgateOnly.toast');
   });
 });
 

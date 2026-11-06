@@ -200,7 +200,7 @@ describe('the spawners: Act 4 bands and the cap', () => {
   it('a wave set that names an area passes it to its spawners (M39 and M46 waves are capped)', () => {
     const set: WaveSetDef = {
       id: 'w', barricadeId: 'b', barricadeHealth: 1, barricadeAnchors: ['hm'], lanes: { l1: 'keep' },
-      waves: [{ spawns: [{ lane: 'l1', kind: 'blighted-soldier', count: 2 }], carts: [] }],
+      waves: [{ spawns: [{ lane: 'l1', kind: 'blighted-soldier', count: 2, delay: 0, stagger: 0 }], carts: [] }],
       defenders: [], band: 'harrowmark', area: 'harrowmark-a4', spawnTag: 'w',
     };
     const defs = spawnersFor(set);
