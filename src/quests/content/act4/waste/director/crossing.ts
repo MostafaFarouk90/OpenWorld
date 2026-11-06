@@ -161,7 +161,7 @@ export function installStormWalk(k: Kit, now: () => number = () => performance.n
     strayed = 0;
     if (!k.flag(M43_DONE.walk)) {
       k.clear(M43_WALKING);
-      k.set(M43_KNOT, 0);
+      k.clear(M43_KNOT);
       for (const n of M43_LEES) k.clear(M43_LEE_DONE(n));
     }
   });

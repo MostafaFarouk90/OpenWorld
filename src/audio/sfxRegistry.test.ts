@@ -6,6 +6,7 @@ import { SFX_VARIANTS, sfxKey } from '../music/sfxSynth';
 import { LIFT_CUE_KEYS, LIFT_RIDE_SOUND } from '../oldsmoke/mines/liftSound';
 import { ACT2_SFX_KEYS } from './act2Sfx';
 import { ACT3_SFX_KEYS } from './act3Sfx';
+import { ACT4_SFX_KEYS } from './act4/act4Sfx';
 
 /** Every non-test source file under src, as text (Vite inlines these at transform time, so no Node types are needed). */
 const SOURCES = import.meta.glob(['../**/*.ts', '!../**/*.test.ts', '!../**/*.spec.ts'], { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
@@ -31,6 +32,7 @@ describe('sfx registry', () => {
     const registered = new Set<string>([
       ...ACT2_SFX_KEYS,
       ...ACT3_SFX_KEYS,
+      ...ACT4_SFX_KEYS,
       ...variantKeys,
       ...SPELL_SFX_IDS,
       ...BARE_SFX_IDS,
