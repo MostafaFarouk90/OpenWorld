@@ -4,6 +4,7 @@ import { AELFREDA_STRINGS_EN } from './strings.aelfreda.en';
 import { ACT2_TRIGGERS, AELFREDA_TUNING, COMPANION_DOWNED_SECONDS } from './tuning';
 import type { CompanionDef, CompanionLook } from './types';
 import { ACT3_INTERIOR_ENTRY, ACT3_PLACES, act3Pools, act3Variant } from './act3/banter';
+import { ACT4_PLACES, act4Pools, mourningSwap } from './act4/banter';
 
 const pool = (prefix: string): string[] =>
   Object.keys(AELFREDA_STRINGS_EN).filter((k) => k.startsWith(`companion.aelfreda.bark.${prefix}.`));
@@ -54,17 +55,21 @@ export const AELFREDA: CompanionDef = {
       dell: pool('area.dell'),
       // Act 3 (K5): the Greyfen, the Dragonspine, the trial, the reveal and the ferry.
       ...act3Pools('aelfreda'),
+      // Act 4 (L4): the Ashen Waste and the event places (storm, walkers, Ebba, the M37 bond, the mourning).
+      ...act4Pools('aelfreda'),
     },
     combatStart: pool('combatStart'),
     combatEnd: pool('combatEnd'),
     elapsed: pool('elapsed'),
   },
   places: {
-    triggers: { [ACT2_TRIGGERS.dell]: 'dell', ...ACT3_PLACES.triggers },
+    triggers: { [ACT2_TRIGGERS.dell]: 'dell', ...ACT3_PLACES.triggers, ...ACT4_PLACES.triggers },
     interiors: { 'tilted-anvil': 'tiltedAnvil', ...ACT3_PLACES.interiors },
-    regions: { harrowmark: 'harrowmark', cinderreach: 'cinderreach', oldsmoke: 'oldsmoke', ...ACT3_PLACES.regions },
+    regions: { harrowmark: 'harrowmark', cinderreach: 'cinderreach', oldsmoke: 'oldsmoke', ...ACT3_PLACES.regions, ...ACT4_PLACES.regions },
   },
   // Act 3: Dragonspine places speak differently after the reveal (M32).
+  // Act 4 (L4): after M39 a line that names Sir Gaut alive mourns him.
+  lineSwap: mourningSwap,
   areaVariant: act3Variant,
   interiorEntry: {
     'tilted-anvil': 'harrowmark.tilted-anvil.entry',
