@@ -17,6 +17,7 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 import type { AssetLoader } from '../assets/AssetLoader';
 import { KnightAvatar } from '../characters/KnightAvatar';
 import { ASSETS } from '../assets/AssetManifest';
+import { QUIET_ENV_PROPS } from '../enemies/envProp';
 
 /**
  * A headless game with EVERY real plugin (`PLUGIN_MODULES`), the `dummies` core service wired the way
@@ -128,6 +129,8 @@ export async function diskAssets(gate: Promise<void> = Promise.resolve()): Promi
     instantiate: (id: string) => cloneSkinned(get(id).scene),
     animations: (id: string) => get(id).animations,
     dispose: () => {},
+    // No `env/` glb loads by url here: the enemies' env props keep their fallback without a warning (L5).
+    [QUIET_ENV_PROPS]: true,
   } as unknown as AssetLoader;
 }
 
