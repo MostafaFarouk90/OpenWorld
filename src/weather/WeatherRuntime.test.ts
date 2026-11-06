@@ -4,6 +4,8 @@ import { MOVEMENT_MODE_RULES } from '../movement/types';
 import { MoveModifiers } from '../core/MoveModifiers';
 import { phaseAt } from './clock';
 import { WeatherRuntime, STORM_TOAST_KEYS, type WeatherPorts } from './WeatherRuntime';
+import { ROPE_ANCHORS, ROPE_LINES, SHELTERS as L1_SHELTERS } from '../region/act4/ropeLines';
+import { resolveWeatherData } from './weather.plugin';
 
 const DT = 1 / 60;
 const ROPE = { id: 'rope.a', points: [{ x: 10000, z: 4600 }, { x: 10000, z: 5500 }] };
@@ -353,16 +355,20 @@ describe('weather runtime: the Act 4 L3 fixture', () => {
   it('loads mid-storm at the shelter the save stored, with it as the safe point once off the rope', async () => {
     const file = (await import('../save/__fixtures__/act4/act4-l3-storm.json')).default as unknown as { entries: Record<string, { data: unknown }> };
     const r = rig();
+    // The real lines and shelters (L1 PR 1), resolved through L1's anchors.
+    const byId = new Map(ROPE_ANCHORS.map((a) => [a.id, { position: { x: a.x, z: a.z } }]));
+    r.w.setData(resolveWeatherData((id) => byId.get(id), ROPE_LINES, L1_SHELTERS, () => {}));
     r.w.load(file.entries.weather.data);
     const p = file.entries['player-position'].data as { x: number; y: number; z: number };
     r.s.pos = { ...p, yaw: 0 };
     r.run(0.1);
     expect(r.w.state().kind).toBe('storm');
     expect(r.modes.current).toBe('storm');
-    expect(r.w.lastShelter).toBe('waste.shelter.1');
-    r.s.pos = { x: 10060, y: 60, z: 4750, yaw: 0 };
+    expect(r.w.lastShelter).toBe('shelter.ashgate-camp.1');
+    r.s.pos = { x: 9700, y: 60, z: 4900, yaw: 0 };
     r.run(0.1);
-    expect(r.modes.safePoint?.position).toEqual({ x: 10000, y: 100.05, z: 4700 });
+    expect(r.w.onRope(9700, 4900)).toBe(false);
+    expect(r.modes.safePoint?.position).toEqual({ x: 9648, y: 100.05, z: 4741.84 });
   });
 });
 

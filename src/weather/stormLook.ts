@@ -116,8 +116,12 @@ export function installStormLook(ctx: CoreContext, rt: { lookKind: WeatherKind; 
       const i = ctx.services.get('interiors') as { current: string | null } | undefined;
       const indoors = !!i?.current;
       const goal = targetWeight(rt.lookKind, boxes, cam.x, cam.z, indoors);
-      weight = snap ? goal : ramp(weight, goal, frameTime);
-      snap = false;
+      // Indoors the weight holds (the interior's camera is elsewhere, and nothing outdoors shows): the door back out
+      // finds the look where it was, with no fade in. A load's snap waits for the first outdoor frame.
+      if (!indoors) {
+        weight = snap ? goal : ramp(weight, goal, frameTime);
+        snap = false;
+      }
       const mask = maskActive(ctx);
       const look = lookAt(step, weight, mask);
       target.near = look.fogNear;

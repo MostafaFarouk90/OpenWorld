@@ -159,4 +159,18 @@ describe('storm look in a scene (headless THREE)', () => {
     expect(t.fog.far).toBe(140);
     t.off();
   });
+
+  it('holds its weight indoors: the door back out shows the full storm at once', () => {
+    const t = fakeCtx({ v: 'storm' });
+    t.frame(4);
+    const layer = () => t.scene.getObjectByName('weather.ash-layer')!;
+    const interior = { current: 'test' as string | null };
+    t.services.set('interiors', interior);
+    t.frame(10);
+    interior.current = null;
+    t.frame(1 / 60);
+    expect(t.fog.far).toBe(140);
+    expect(layer().visible).toBe(true);
+    t.off();
+  });
 });

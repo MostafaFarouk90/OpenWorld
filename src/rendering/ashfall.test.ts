@@ -92,4 +92,19 @@ describe('Harrowmark ash-fall', () => {
     t.off();
     expect(t.sun.intensity).toBe(2.5);
   });
+
+  it('holds its weight indoors, so the door back out shows the grade at once (no fade back in)', () => {
+    const t = rig({ v: true });
+    t.frame(4);
+    const graded = t.sun.intensity;
+    const interior = { current: 'x' as string | null };
+    t.services.set('interiors', interior);
+    t.sun.intensity = 0;
+    t.frame(10); // long enough for a weight ramping to 0 to get there
+    interior.current = null;
+    t.sun.intensity = graded;
+    t.frame(1 / 60);
+    expect(t.sun.intensity).toBeCloseTo(graded, 9);
+    t.off();
+  });
 });

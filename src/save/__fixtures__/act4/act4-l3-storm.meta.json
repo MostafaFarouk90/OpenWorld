@@ -1,6 +1,6 @@
 {
   "fixture": "act4-l3-storm.json",
   "by": "Act 4 L3",
-  "purpose": "carries the `weather` persistable: a save made mid-storm off the rope after shelter 1, so the player stands at the shelter (what the storm mode's safe point stores), clock t 300 (a storm on seed 4042), story.m42.started set. Based on act3-spine-m34.json. L13's generated act4 fixtures supersede it.",
+  "purpose": "carries the `weather` persistable: a save made mid-storm off the rope after the first shelter of the Ashgate-to-camp line (`shelter.ashgate-camp.1`, L1 PR 1), so the player stands at that shelter (what the storm mode's safe point stores), clock t 300 (a storm on seed 4042), story.m41.complete, story.m42.started and story.phase.wasteOpen set (the Waste open, so containment keeps the player at the shelter). Based on act3-spine-m34.json. L13's generated act4 fixtures supersede it.",
   "savedAt": "copied from act3-spine-m34.json"
 }

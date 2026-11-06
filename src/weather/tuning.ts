@@ -17,8 +17,9 @@ export const EXPOSURE = {
   floor: 0.1,
 } as const;
 
-/** Within this many metres (horizontal) of a rope-line the player is storm-safe. */
-export const ROPE_SAFE_RADIUS = 3;
+/** Within this many metres (horizontal) of a rope-line the player is storm-safe: L1's lane half width
+ * (`ROPE_LANE_HALF_WIDTH`, src/region/act4/ropeLines.ts; data.test.ts pins the two equal). */
+export const ROPE_SAFE_RADIUS = 4;
 /** Metres of hysteresis on a shelter's edge, so standing on the line does not chatter. */
 export const SHELTER_HYSTERESIS = 1;
 

@@ -6,15 +6,15 @@ const rope = { id: 'rope.test', points: [{ x: 0, z: 0 }, { x: 100, z: 0 }, { x: 
 describe('rope index', () => {
   const idx = new RopeIndex([rope]);
 
-  it('is safe within 3 m and not beyond', () => {
-    expect(idx.onRope(50, 3)).toBe(true);
-    expect(idx.onRope(50, -3)).toBe(true);
-    expect(idx.onRope(50, 3.1)).toBe(false);
+  it('is safe within 4 m (the lane half width) and not beyond', () => {
+    expect(idx.onRope(50, 4)).toBe(true);
+    expect(idx.onRope(50, -4)).toBe(true);
+    expect(idx.onRope(50, 4.1)).toBe(false);
   });
 
   it('handles segment ends and the corner', () => {
-    expect(idx.onRope(-2.9, 0)).toBe(true);
-    expect(idx.onRope(-3.1, 0)).toBe(false);
+    expect(idx.onRope(-3.9, 0)).toBe(true);
+    expect(idx.onRope(-4.1, 0)).toBe(false);
     expect(idx.onRope(102, -2)).toBe(true);
     expect(idx.onRope(103, 103)).toBe(false);
     expect(idx.onRope(101, 60)).toBe(true);

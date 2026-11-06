@@ -78,8 +78,12 @@ export function installAshfall(ctx: Pick<GameContext, 'scene' | 'camera' | 'stat
       const i = ctx.services.get('interiors') as { current: string | null } | undefined;
       const indoors = !!i?.current;
       const goal = ashfallWeight(box, cam.x, cam.z, ctx.state.getBool(ACT4_GATE_FLAG), indoors);
-      weight = snap ? goal : ramp(weight, goal, frameTime);
-      snap = false;
+      // Indoors the weight holds (the interior's camera is elsewhere, and nothing outdoors shows): the door back out
+      // finds the look where it was, with no fade in. A load's snap waits for the first outdoor frame.
+      if (!indoors) {
+        weight = snap ? goal : ramp(weight, goal, frameTime);
+        snap = false;
+      }
       // Indoors the interior owns the lights and fog (it restores what this wrote on exit).
       if (!indoors) blender.apply(weight);
       particles.update(cam, frameTime, indoors ? 0 : weight, 0.7 * weight);
