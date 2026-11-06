@@ -14,12 +14,12 @@ import { EBBA, CHAPEL_KEEPER, M44_BOX, M44_DREAM_SCENE, M44_DREAM_SEEN, M44_NEST
 import { R25_CANDLE_ITEM, R25_KNOT_GROUP, R25_LETTER, R25_LIGHT, R25_NAME_NOTE, R25_NO_CANDLE, R25_REGISTER, R25_SPARE_ASKED } from '../r25.quest';
 import { R24_ARRIVED, R24_BRAKE, R24_CARTER, R24_CART_OUT, R24_CHOICE, R24_ESCORT, R24_LOAD, R24_SPRING_NOTE, R24_STORM_S, R24_UNLOAD, R24_WAITED } from '../r24.quest';
 import { CHIME_SOLVED_EVENT, M45_GUARD_GROUP, M45_MET_TRIGGER, M45_PLAQUES, M45_SEARCHES, M45_VOICE_SCENE, SHRINE_LIT } from '../m45.quest';
-import { CATHEDRAL_ID, D08_BOSS_FLAG, D08_DYING, D08_KNIGHTS, D08_NOTES, D08_SHARD_GIVEN } from '../d08.quest';
+import { CATHEDRAL_ID, D08_BOSS_FLAG, D08_DYING, D08_ENTERED, D08_KNIGHTS, D08_NOTES, D08_SHARD_GIVEN } from '../d08.quest';
 import { M46_HELD, M46_KEEPER, M46_LIGHT, M46_LORE, M46_MARKS, M46_OUTRIDERS, M46_RIM_SCENE, M46_RIM_TRIGGER, M46_WAVE } from '../m46.quest';
 import { R24_SHELTER_NODES } from '../anchors';
 import { WASTE_REWARD_IDS } from '../rewards';
 import { companionGuestFlag } from '../../../../../companions/companions.plugin';
-import { WALL_SECONDS } from './crossing';
+import { STRAY_S, WALL_SECONDS } from './crossing';
 import { makeRig, type Rig } from './rig.testkit';
 
 const T = 40_000;
@@ -162,7 +162,9 @@ describe('M43 What the Walkers Know', () => {
     r.at(L1.stormWalkKnot(1)); r.step(12);
     expect(r.num(M43_KNOT)).toBe(1);
     r.at(L1.stormWalkKnot(1), 0, 40);
-    r.step(12);
+    r.secs(STRAY_S - 1);
+    expect(r.teleports.length).toBe(0);
+    r.secs(1.5);
     expect(r.toasts).toContain('waste.q.m43.stray');
     expect(r.teleports.length).toBe(1);
     r.saveLoad();
@@ -379,6 +381,22 @@ describe('M45, D08 and M46', () => {
     }, T);
   }
 
+  it('D08: entering before Leofric speaks counts nothing and keeps him at the door; after his talk the next entry counts', () => {
+    phaseG(); doM42(); doM43();
+    r.begin('d08', 'wulfhild');
+    r.emit('interior.entered', { interiorId: CATHEDRAL_ID });
+    r.step(2);
+    expect(r.flag(D08_ENTERED)).toBe(false);
+    expect(r.manager.objectiveDone('d08', 'enter')).toBe(false);
+    r.talk(D08_DYING);
+    r.step(2);
+    expect(r.manager.objectiveDone('d08', 'dying')).toBe(true);
+    r.emit('interior.entered', { interiorId: CATHEDRAL_ID });
+    r.step(2);
+    expect(r.flag(D08_ENTERED)).toBe(true);
+    expect(r.manager.objectiveDone('d08', 'enter')).toBe(true);
+  }, T);
+
   it('M46: Hrolf walks as a guest; each cairn wave holds the storm clear only while it runs; the rim at the fire', () => {
     phaseG(); doM42(); doM43(); doM44();
     r.complete('r25', 'r24', 'm45', 'd08');
@@ -422,6 +440,21 @@ describe('M45, D08 and M46', () => {
     r.step(31);
     expect(r.flag(M46_HELD(1))).toBe(true);
     expect(r.current('m46', 'mark1')).toBe(true);
+  }, T);
+
+  it('M46: any other refusal is retried and never reads as held', () => {
+    phaseG(); doM42(); doM43(); doM44();
+    r.complete('r25', 'r24', 'm45', 'd08');
+    r.begin('m46', 'hrolf');
+    r.talk(M46_KEEPER(1));
+    r.waves.broken = true;
+    r.at(`${W}.m46.wave.1.barricade`);
+    r.step(91);
+    expect(r.flag(M46_HELD(1))).toBe(false);
+    expect(r.current('m46', 'wave1')).toBe(true);
+    r.waves.broken = false;
+    r.step(31);
+    expect(r.waves.current?.defId).toBe(M46_WAVE(1));
   }, T);
 
   it('holds the clear within 30 m of a hand-in talker only while that talk is current', () => {

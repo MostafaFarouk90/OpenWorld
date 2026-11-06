@@ -31,11 +31,16 @@ export const STONEHIDE_ORDER = 90;
 export const MAX_RANK = 5;
 
 /**
- * Act 4 L11 (plans/act4-L11.md, coordinator 18:01): while this flag is set a joined companion walks with Cael as a guest,
- * on top of the seats (`maxActive` is unchanged and `setActive` still refuses more than it). The quest director writes and
- * clears it, so a load re-derives it with the flags.
+ * Act 4 L11 (plans/act4-L11.md, coordinator 18:01): while this flag is set a joined companion follows and fights beside Cael
+ * as a guest without a seat. Only his controller's follow gate reads it: `active()`, the party screen, the portraits and
+ * `setActive` are unchanged. The quest director writes and clears it, so a load re-derives it with the flags.
  */
 export const companionGuestFlag = (id: string): string => `story.party.guest.${id}`;
+
+/** Whether `id` is joined and walks as a quest guest now (read by its controller's follow gate only). */
+export function isQuestGuest(ctx: { state: { getBool(k: string): boolean } }, list: readonly { def: { id: string }; joined: boolean }[], id: string): boolean {
+  return ctx.state.getBool(companionGuestFlag(id)) && !!list.find((c) => c.def.id === id)?.joined;
+}
 
 let controllers: CompanionController[] = [];
 let partyOffs: (() => void)[] = [];
@@ -71,10 +76,7 @@ export function createCompanionsService(
   const active = () => {
     const joined = list.filter((c) => c.joined).map((c) => c.def.id);
     const set = party.raw;
-    const seated = (set ? joined.filter((id) => set.includes(id)) : joined).slice(0, maxActive());
-    // Act 4 L11: a quest's guest walks with the party beyond the seats while its flag is set (Hrolf on M46)
-    const guests = joined.filter((id) => !seated.includes(id) && ctx.state.getBool(companionGuestFlag(id)));
-    return guests.length ? [...seated, ...guests] : seated;
+    return (set ? joined.filter((id) => set.includes(id)) : joined).slice(0, maxActive());
   };
   const announce = (before: string[]) => {
     const now = active();
@@ -203,7 +205,8 @@ export default {
       controllers = COMPANION_DEFS.map(
         (def) =>
           new CompanionController(ctx, def, {
-            isActive: () => service?.isActive(def.id) ?? true,
+            // Act 4 L11: a joined quest guest follows and fights while its flag is set, without a seat (the party list is unchanged)
+            isActive: () => (service?.isActive(def.id) ?? true) || isQuestGuest(ctx, controllers, def.id),
             trialRunning: () => tr.state() !== null,
             claimBark: (id) => barks.claim(id),
           }),

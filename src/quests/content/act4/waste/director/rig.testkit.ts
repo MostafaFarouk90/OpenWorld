@@ -114,8 +114,11 @@ export function makeRig(opts: { flags?: Record<string, boolean | number | string
     current: null as null | { defId: string; index: number },
     starts: [] as string[],
     done: new Set<string>(),
-    start(id: string) { if (this.current || this.done.has(id)) return false; this.current = { defId: id, index: 0 }; this.starts.push(id); return true; },
+    /** A refusal for another reason than a completed set (no enemies service, no barricade). */
+    broken: false,
+    start(id: string) { if (this.broken || this.current || this.done.has(id)) return false; this.current = { defId: id, index: 0 }; this.starts.push(id); return true; },
     stop() { this.current = null; },
+    serialize() { return { defId: null, index: 0, phase: 'idle', ...(this.done.size ? { done: [...this.done] } : {}) }; },
   };
   services.provide('waves' as never, waves as never);
   /** L3's weather: the holds standing now, by reason. */
