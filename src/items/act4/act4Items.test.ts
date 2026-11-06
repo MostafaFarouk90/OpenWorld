@@ -143,6 +143,14 @@ describe("Gaut's Oathblade (Q3)", () => {
     expect(inv.has(OATHBLADE.carried)).toBe(false);
     expect(reconcileOathblade(p)).toBe('none');
   });
+  it('a plain reconcile (a load) keeps an affix the forge changed; only a grant or a swap back resets it', () => {
+    const inv = freshInv();
+    const p = portsFor(inv, { id: 'knight' });
+    grantOathblade(p);
+    inv.setTemper(OATHBLADE.sword, 5, 'ember');
+    expect(reconcileOathblade(p)).toBe('none');
+    expect(inv.gear(OATHBLADE.sword)).toEqual({ temper: 5, affix: 'ember' });
+  });
   it('the swap never displaces another trinket', () => {
     const inv = freshInv({ [RIMWARD_BOOTS]: 1 });
     const cls: { id: ClassId | null } = { id: 'knight' };

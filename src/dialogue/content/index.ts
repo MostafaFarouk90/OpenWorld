@@ -58,4 +58,4 @@ export const dialogueDefs: DialogueDef[] = withAct4Rook(withSummit(withAct3Compa
   ...DRAGONSPINE_DIALOGUES,
   // Act 3 (K16 PR 2): the camp scene after "The Coal-Mother's Oath"
   SCENE_ACT3_CAMP.def,
-], questDefs)))));
+], questDefs)))), questDefs);

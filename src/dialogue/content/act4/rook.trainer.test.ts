@@ -14,7 +14,7 @@ import { ACT4_ROOK_STRINGS, ROOK_REFUGE, withAct4Rook } from './rook.trainer';
 const all: Record<string, string> = { ...questStrings, ...dialogueStrings, ...npcNameFallbackStrings };
 const BOOK = 'trainer.knight.masterBook';
 
-function world(flags: Record<string, FlagValue> = {}) {
+function world(flags: Record<string, FlagValue> = {}, active: string[] = []) {
   const store = new Map<string, FlagValue>(Object.entries(flags));
   const emitted: { t: string; p: unknown }[] = [];
   const bus = { on: () => () => {}, emit: (t: string, p: unknown) => void emitted.push({ t, p }) } as unknown as BusPort;
@@ -26,7 +26,7 @@ function world(flags: Record<string, FlagValue> = {}) {
     favour: () => 30,
     addFavour: () => 0,
   } as unknown as StatePort;
-  const quests = { state: () => 'completed', objectiveDone: () => true, start: () => true, complete: () => true, completeObjective: () => true } as unknown as QuestReader;
+  const quests = { state: (id: string) => (active.includes(id) ? 'active' : 'completed'), objectiveDone: (q: string) => !active.includes(q), start: () => true, complete: () => true, completeObjective: () => true } as unknown as QuestReader;
   const effects = createEffectRunner({ state, quests: quests as never, bus, sourceId: 'test', inventory: () => ({ add: (_i: string, n: number) => n }) } as never);
   const strings: StringsPort = { t: (k) => all[k] ?? `[[${k}]]`, has: (k) => k in all };
   const dr = new DialogueRunner({ bus, state, quests, effects, strings });
@@ -80,5 +80,24 @@ describe("Rook's refuge lines", () => {
     expect(ext.nodes.filter((n) => n.id.startsWith('a4-')).length).toBe(ROOK_REFUGE.def.nodes.length);
     for (const [k, v] of Object.entries(ACT4_ROOK_STRINGS)) expect(dialogueStrings[k], k).toBe(v);
     for (const n of ROOK_REFUGE.def.nodes) expect(all[n.textKey], n.textKey).toBeTruthy();
+  });
+});
+
+describe("Rook's refuge lines step aside for quests", () => {
+  it('while a quest talk objective for Rook is current (j11 left open), his base tree answers', () => {
+    const ext = rook();
+    const guarded = (ext.start as { when: unknown; node: string }[]).filter((r) => r.node.startsWith('a4-'));
+    expect(guarded).toHaveLength(2);
+    for (const r of guarded) expect(JSON.stringify(r.when)).toContain('j11');
+  });
+  it('in play: with j11 active and its talk step open after M41, Rook does not open on his refuge lines', () => {
+    const w = world(REFUGE, ['j11']);
+    expect(w.dr.start('npc-rook', 'npc-rook')).toBe(true);
+    expect(w.dr.view()!.nodeId.startsWith('a4-')).toBe(false);
+  });
+  it('with no quest waiting, the refuge lines still win after M41 (the book test above)', () => {
+    const w = world(REFUGE);
+    expect(w.dr.start('npc-rook', 'npc-rook')).toBe(true);
+    expect(w.dr.view()!.nodeId).toBe('a4-book');
   });
 });

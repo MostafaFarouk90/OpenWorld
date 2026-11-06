@@ -11,7 +11,7 @@ describe('Act 4 vendors (v0.8 item 16)', () => {
     expect(VENDORS.wulfhild.lines.length).toBeGreaterThan(0);
     expect(VENDORS.hild.lines.length).toBeGreaterThan(0);
   });
-  it('Wulfhild and Hild open by L7's rows (M43, M41); a vendor without a row is open by the table', () => {
+  it("Wulfhild and Hild open by L7's rows (M43, M41); a vendor without a row is open by the table", () => {
     expect(vendorOpenByTable('wulfhild', flags({ 'story.m41.complete': true }))).toBe(false);
     expect(vendorOpenByTable('wulfhild', flags({ 'story.m43.complete': true }))).toBe(true);
     expect(vendorOpenByTable('hild', flags({}))).toBe(false);

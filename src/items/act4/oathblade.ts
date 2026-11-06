@@ -45,16 +45,16 @@ export type ReconcileResult = 'none' | 'swapped' | 'waiting';
 /**
  * Makes the held form match the class: run on `class.changed`, `class.chosen` and `save.loaded`. A sword with gems that
  * would not fit back in the bag stays (`waiting`) until the next run, so a gem is never lost. The new form is equipped
- * only when the old one was and its own slot is free, so it never displaces another trinket or weapon.
+ * only when the old one was and its own slot is free, so it never displaces another trinket or weapon. Leaving the Knight
+ * empties the weapon slot when the sword was in it (the plugin toasts it). The sword is re-tempered to +5 Sworn only when
+ * it is given or swapped back, never on a plain load.
  */
 export function reconcileOathblade(p: OathbladePorts): ReconcileResult {
   const want = oathbladeFormFor(p.classId());
   const held = p.has(OATHBLADE.sword) ? OATHBLADE.sword : p.has(OATHBLADE.carried) ? OATHBLADE.carried : null;
   if (held === null) return 'none';
-  if (held === want) {
-    if (held === OATHBLADE.sword) temperSword(p);
-    return 'none';
-  }
+  // Matching form: nothing to do (a later affix from the forge is the player's to keep).
+  if (held === want) return 'none';
   if (held === OATHBLADE.sword && p.gemRoomFor && !p.gemRoomFor(held)) return 'waiting';
   const wasEquipped = p.equipped(slotOf(held)) === held;
   if (!p.remove(held, 1)) return 'none';

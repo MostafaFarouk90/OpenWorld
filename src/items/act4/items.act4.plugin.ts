@@ -5,7 +5,7 @@ import { PLAYER_ID } from '../../actors/teams';
 import type { GameContext } from '../../core/Game';
 import type { GamePlugin } from '../../core/plugins';
 import { REFUGE_ANVIL } from '../../economy/refugePosts.act4';
-import './catalog';
+import { OATHBLADE } from './catalog';
 import { OATHBLADE_POISE_MODIFIER, oathbladePoise, reconcileOathblade, type OathbladePorts } from './oathblade';
 import { ITEMS_ACT4_STRINGS_EN } from './strings.en';
 
@@ -48,7 +48,9 @@ const itemsAct4Plugin: GamePlugin = {
     const reconcile = (): void => {
       // Before a class is chosen there is nothing to match (M39 is long after M07).
       if (ports.classId() === null) return;
-      if (reconcileOathblade(ports) === 'waiting') ctx.events.emit('hud.toast', { textKey: 'item.gauts-oathblade.swapWaiting' });
+      const r = reconcileOathblade(ports);
+      if (r === 'waiting') ctx.events.emit('hud.toast', { textKey: 'item.gauts-oathblade.swapWaiting' });
+      else if (r === 'swapped') ctx.events.emit('hud.toast', { textKey: inventory.has(OATHBLADE.sword) ? 'item.gauts-oathblade.swappedSword' : 'item.gauts-oathblade.swappedCarried' });
     };
     offs.push(
       ctx.events.on('class.chosen', reconcile),

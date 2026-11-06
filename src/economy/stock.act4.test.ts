@@ -9,7 +9,7 @@ import './items';
 import './items.act3';
 import { listPrice } from './prices';
 import { Shop, type ShopPorts } from './Shop';
-import { SHOP_LIST_PRICES, VENDOR_DISCOUNTS, VENDORS, bandAtLeast, stockWhenHolds, type VendorId } from './stock';
+import { SHOP_LIST_PRICES, VENDOR_DISCOUNTS, VENDORS, bandAtLeast, stockWhenHolds, vendorBand, type VendorId } from './stock';
 import { ACT4_DISCOUNTS, ACT4_FLAGS, HILD, WULFHILD } from './stock.act4';
 
 interface Opts {
@@ -149,5 +149,26 @@ describe('Wulfhild and Hild through the real Shop', () => {
     expect(ids(t.shop, 'wulfhild')).not.toContain('walker-pyre-cloak');
     expect(t.shop.buy('hild', 'ash-shroud-mask').ok).toBe(true);
     expect(t.shop.sell('wulfhild', 'ash-shroud-mask').ok).toBe(false);
+  });
+});
+
+describe("the plugin's band port (vendorBand)", () => {
+  it('reads each favour vendor\'s own track: the shipped four unchanged, Wenna Grisel, Wulfhild Ashwalkers', () => {
+    const asked: string[] = [];
+    const band = (t: string) => (asked.push(t), 'stoked' as FavourBand);
+    const want: Partial<Record<VendorId, string>> = { wystan: 'halvard', merrin: 'oswin', aldous: 'grisel', ysmeryth: 'dragons', wenna: 'grisel', wulfhild: 'ashwalkers' };
+    for (const v of Object.keys(VENDORS) as VendorId[]) {
+      asked.length = 0;
+      const got = vendorBand(v, band as never);
+      if (want[v]) {
+        expect(got, v).toBe('stoked');
+        expect(asked, v).toEqual([want[v]]);
+      } else expect(got, v).toBeNull();
+    }
+  });
+  it('so at Cold Ashwalker favour Wulfhild shows only her basic stock at +20%', () => {
+    const t = make({ band: vendorBand('wulfhild', () => 'cold') ?? undefined });
+    expect(ids(t.shop, 'wulfhild')).toEqual(['healing-flask', 'rain-flask', 'rope']);
+    expect(t.shop.quote('wulfhild', 'rain-flask')).toBe(17);
   });
 });

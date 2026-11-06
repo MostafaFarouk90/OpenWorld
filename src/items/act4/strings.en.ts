@@ -55,5 +55,7 @@ export const ITEMS_ACT4_STRINGS_EN: Record<string, string> = {
   'item.walker-poultice.name': 'Walker Poultice',
   'item.walker-poultice.desc': 'Ash-salt and bitter moss. Cools 20 Burn. It heals nothing.',
   'item.gauts-oathblade.swapWaiting': "Gaut's Oathblade keeps its form until your shard-gems have room in your bag.",
+  'item.gauts-oathblade.swappedSword': "Gaut's Oathblade is a sword again in a Knight's hands: +5, sworn against wraiths.",
+  'item.gauts-oathblade.swappedCarried': "You carry Gaut's Oathblade now, not wield it. Check your weapon slot.",
   'enemies.calm.offering.rain-flask': 'Rain Flask',
 };

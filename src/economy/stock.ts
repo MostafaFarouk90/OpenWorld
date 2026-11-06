@@ -272,3 +272,9 @@ export function vendorOpenByTable(v: VendorId, flags: FlagReader, table: Partial
   const c = table[v];
   return c ? flagConditionHolds(c, flags) : true;
 }
+
+/** L7: a vendor's favour band, from its VENDORS track (null for a plain shop). The economy plugin's Shop port uses it. */
+export function vendorBand(v: VendorId, favourBand: (track: FavourTrack) => FavourBand): FavourBand | null {
+  const track = VENDORS[v]?.track;
+  return track ? favourBand(track) : null;
+}
