@@ -10,7 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACT4_JUMP_IDS } from '../quests/act4Jump';
 import { ACT4_BASE_NAME, act4FixtureName, readAct4Base, readAct4BaseMeta } from '../save/__fixtures__/act4';
 import { seedFixtureRandom } from './fixtureDeterminism';
-import { generateAct4Base, generateAct4Fixture } from './act4Fixtures';
+import { ACT4_EXTRAS, act4ExtraName, generateAct4Base, generateAct4Extra, generateAct4Fixture } from './act4Fixtures';
+import { readAct4Fixture } from '../save/__fixtures__/act4';
 
 const env = () => (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
 const GEN = env().GEN_FIXTURES === '1';
@@ -70,6 +71,22 @@ export function defineAct4FixtureGenerator(): void {
         expect(fixtureText(out.save), `${name}.json drifted: regenerate`).toBe(fs.readFileSync(`${dir}${name}.json`, 'utf8'));
         expect(fixtureText(out.meta), `${name}.meta.json drifted: regenerate`).toBe(fs.readFileSync(`${dir}${name}.meta.json`, 'utf8'));
       }
+    }, 180_000);
+  });
+}
+
+/** The extras run after the per-id set (they start from it); `ONLY=extra` narrows to them. */
+export function defineAct4ExtraGenerator(): void {
+  const cases = ACT4_EXTRAS.filter((e) => !ONLY || ONLY.includes('extra') || ONLY.includes(e.name));
+  describe.runIf((GEN && !BASE) || CHECK)('Act 4 extra fixtures', () => {
+    beforeEach(quiet);
+    afterEach(() => vi.restoreAllMocks());
+    it.each(cases.map((e) => [e.name, e] as const))('%s', async (_n, extra) => {
+      const { fs, dir } = await fsPorts();
+      const save = await generateAct4Extra(await readAct4Fixture(extra.from), extra);
+      const name = act4ExtraName(extra.name);
+      if (GEN) fs.writeFileSync(`${dir}${name}.json`, fixtureText(save));
+      else expect(fixtureText(save), `${name}.json drifted: regenerate`).toBe(fs.readFileSync(`${dir}${name}.json`, 'utf8'));
     }, 180_000);
   });
 }

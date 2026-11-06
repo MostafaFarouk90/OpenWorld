@@ -81,3 +81,65 @@ export async function generateAct4Fixture(
     h.dispose();
   }
 }
+
+/**
+ * Extra fixtures for the soft-lock guards (brief: an old save inside the walls, a load at every scene step; v0.8's
+ * `respawn` key): each boots a per-id fixture, sets one state up and saves. `act4-extra-<name>.json`, no meta.
+ */
+export interface Act4Extra {
+  name: string;
+  /** the per-id fixture it starts from */
+  from: string;
+  setUp(h: ChapterHarness): Promise<void>;
+}
+
+/** The Keep court, well inside the ring wall. */
+export const KEEP_COURT_POINT = { x: 8300, z: 2450 } as const;
+
+export const ACT4_EXTRAS: readonly Act4Extra[] = [
+  {
+    // An old save made inside the walls after the betrayal (before M41): the load must land at the M41 camp.
+    name: 'inside-walls-occupied',
+    from: 'm39',
+    async setUp(h) {
+      const { heightAt } = await import('../terrain/heightfield');
+      h.ctx.player.teleport({ x: KEEP_COURT_POINT.x, y: heightAt(KEEP_COURT_POINT.x, KEEP_COURT_POINT.z) + 0.05, z: KEEP_COURT_POINT.z }, 0);
+      await h.runAsync(2);
+    },
+  },
+  {
+    // The same after M41: the load must land at the refuge rest.
+    name: 'inside-walls-after-m41',
+    from: 'm42',
+    async setUp(h) {
+      const { heightAt } = await import('../terrain/heightfield');
+      h.ctx.player.teleport({ x: KEEP_COURT_POINT.x, y: heightAt(KEEP_COURT_POINT.x, KEEP_COURT_POINT.z) + 0.05, z: KEEP_COURT_POINT.z }, 0);
+      await h.runAsync(2);
+    },
+  },
+  {
+    // An interior checkpoint set (L10 sets it during M39): carries `respawn` v1; a death respawns there.
+    name: 'checkpoint-keep-stairs',
+    from: 'm39',
+    async setUp(h) {
+      const { STAIRS_CHECKPOINT_ANCHOR } = await import('../interiors/harrowmark/act4/keepStairs');
+      h.ctx.services.require('waystones').setCheckpoint('m39.stairs', STAIRS_CHECKPOINT_ANCHOR);
+      await h.runAsync(2);
+    },
+  },
+];
+
+export const act4ExtraName = (name: string): string => `act4-extra-${name}`;
+
+/** Boots `extra.from`'s committed fixture, runs its set-up and saves (the caller seeds `Math.random`). */
+export async function generateAct4Extra(fromSave: Record<string, unknown>, extra: Act4Extra): Promise<Record<string, unknown>> {
+  const h = await bootFromSave(fromSave, { models: false, virtualClock: true });
+  try {
+    ensure(h.loaded, `act4 extra ${extra.name}: act4-${extra.from} loaded`);
+    await extra.setUp(h);
+    // Bypass placement on save: the fixture records where the player stood (the point of an old inside-the-walls save).
+    return await saveFixture(h);
+  } finally {
+    h.dispose();
+  }
+}
