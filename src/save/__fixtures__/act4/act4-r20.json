@@ -76,10 +76,10 @@
         ],
         "positions": {
           "aelfreda": {
-            "x": 8775.2002,
+            "x": 8776.966,
             "y": 20,
-            "yaw": -1.2908,
-            "z": 1996.8625
+            "yaw": -2.5755,
+            "z": 1994.0577
           },
           "hrolf": {
             "x": 8775.2002,
@@ -915,6 +915,12 @@
             "spare": 0
           }
         }
+      },
+      "version": 1
+    },
+    "escorts": {
+      "data": {
+        "running": null
       },
       "version": 1
     },
@@ -1808,8 +1814,15 @@
           "thorgar": {
             "shed-wyrm-scale": 9
           },
-          "wenna": {},
-          "wulfhild": {},
+          "wenna": {
+            "deepcore-pick": 1,
+            "grisel-oath-sash": 1
+          },
+          "wulfhild": {
+            "ash-hide-wraps": 1,
+            "walker-pyre-cloak": 1,
+            "walker-pyre-paint": 1
+          },
           "wynn": {},
           "wystan": {
             "halvard-oath-sash": 1,

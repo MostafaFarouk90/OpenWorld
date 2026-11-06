@@ -14,7 +14,8 @@ import { gateFaceAnchor, WORKING_GATES } from '../harrowmark/act4/sites';
 import { CITY_CENTRE, insideRingWall, M41_CAMP_ANCHOR, REFUGE_REST_ANCHOR } from '../harrowmark/noStrand';
 import { heightAt } from '../terrain/heightfield';
 import { WASTE_OPEN_FLAG } from '../quests/act4Jump';
-import { REFUGE_STONE } from './act4Services';
+import { REFUGE_STONE, servicesAfterM41, unreachable } from './act4Services';
+import { vendorOpenByTable } from '../economy/stock';
 
 let h: (ChapterHarness & { loaded: boolean }) | null = null;
 let warn: ReturnType<typeof vi.spyOn>;
@@ -139,6 +140,25 @@ describe('Act 4 containment on the fixtures', () => {
     await go(REFUGE_STONE);
     await go(other);
     await go(REFUGE_STONE);
+  }, 120_000);
+
+  it('Phase G end: every service a player used inside the walls stands outside them (vendors, trainers, companions, the refuge stone)', async () => {
+    const { s } = await boot('m41');
+    s.setFlag('story.m38.complete', true);
+    s.setFlag('story.m41.complete', true);
+    await h!.runAsync(10);
+    const ws = h!.ctx.services.require('waystones');
+    ws.rekindle(REFUGE_STONE);
+    const rows = servicesAfterM41({
+      flags: s,
+      anchor: (id) => h!.ctx.anchors.find(id)?.position,
+      vendorOpen: (v) => vendorOpenByTable(v, s),
+      stoneLit: (id) => ws.isLit(id),
+      stoneDark: (id) => ws.isDark(id),
+    });
+    expect(rows.filter((r) => r.kind === 'vendor').length, 'Harrowmark vendors found').toBeGreaterThan(3);
+    expect(rows.filter((r) => r.kind === 'trainer').length).toBeGreaterThan(3);
+    expect(unreachable(rows)).toEqual([]);
   }, 120_000);
 
   it('Phase H (M42\'s fixture, the hold set): accepting M42 opens the Waste; the north band never opens', async () => {

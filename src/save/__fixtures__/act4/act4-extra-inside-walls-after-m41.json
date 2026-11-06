@@ -76,10 +76,10 @@
         ],
         "positions": {
           "aelfreda": {
-            "x": 8300.225,
+            "x": 8299.8335,
             "y": 20,
-            "yaw": -1,
-            "z": 2453
+            "yaw": 0.833,
+            "z": 2452.8486
           },
           "hrolf": {
             "x": 8300.225,
@@ -88,10 +88,10 @@
             "z": 2453
           },
           "tobb": {
-            "x": 8208,
-            "y": 170,
-            "yaw": -1.5708,
-            "z": 1650
+            "x": 9690,
+            "y": 45,
+            "yaw": 1.3734,
+            "z": 4380
           }
         }
       },
@@ -915,6 +915,12 @@
             "spare": 0
           }
         }
+      },
+      "version": 1
+    },
+    "escorts": {
+      "data": {
+        "running": null
       },
       "version": 1
     },
@@ -1808,8 +1814,15 @@
           "thorgar": {
             "shed-wyrm-scale": 9
           },
-          "wenna": {},
-          "wulfhild": {},
+          "wenna": {
+            "deepcore-pick": 1,
+            "grisel-oath-sash": 1
+          },
+          "wulfhild": {
+            "ash-hide-wraps": 1,
+            "walker-pyre-cloak": 1,
+            "walker-pyre-paint": 1
+          },
           "wynn": {},
           "wystan": {
             "halvard-oath-sash": 1,
