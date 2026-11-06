@@ -166,8 +166,10 @@ export class FollowModel {
     slot?: FollowSlot,
   ) {
     this.baseBack = slot?.back ?? tuning.slotBack;
-    this.baseSide = Math.abs(slot?.side ?? tuning.slotSide);
-    if (slot && slot.side < 0) this.side = -1;
+    const side = slot?.side ?? tuning.slotSide;
+    this.baseSide = Math.abs(side);
+    // the sign says which side it starts on (the Ember pup's tuning has -1; Aelfreda's slot too)
+    if (side < 0) this.side = -1;
     this.pos = { ...start };
     this.yaw = yaw;
     this.trail = new Trail(tuning.trailPoints, tuning.trailSpacing);
