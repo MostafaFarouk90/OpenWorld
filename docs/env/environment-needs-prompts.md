@@ -336,20 +336,40 @@ These are rigged creatures, not static props: a model only helps once someone ad
 | hathren | Hathren Quench-Tongue, the water dragon of the Mere: legless and serpentine, wet dark-teal scales with spines along the back, river weed and old net rope tangled on the horns, a pale throat, tired and wary | Idle (coiled in the shallows), Swim, Thrash in nets, Rise, Calm (head lowered) | the 4.5x procedural water wyrm (no legs), palette hathren | 4 x 34 x 5.5, head to tail tip, mostly in the water |
 
 ## T. Act 4 Ash Road, Ashgate and the Ashen Waste (added 2026-11-06 by Act 4 L1, PR 1; greybox and procedural stand-ins until these arrive)
-
-## U. Harrowmark in Act 4 (added 2026-11-06 by L2, "Build Act 4 Harrowmark and its interiors"; greybox and tinted stand-ins until these arrive)
 Each id is one file under public/assets/env (Y up, 1 unit = 1 m, base-centre pivot, front +Z). Add the size to src/env/targets.json when the file is ingested.
 
 | id | prompt | where | greybox now | size (m, w x d x h) |
 | --- | --- | --- | --- | --- |
 | rope-post-a | a weathered grey timber post driven into pale ash, a knotted hemp guide rope tied round its top and running off both sides, ash drifted against the foot | every 25 m along the six Waste rope-lines (about 560) | `ropePosts.ts` cylinder and line rope | 0.2 x 0.2 x 1.3 |
 | shelter-lean-to-a | a storm lean-to of stitched grey hides over a frame of three poles, a solid back of stacked slag blocks, the open side toward the rope, ash piled on the windward side | each rope-line shelter (25) | `wall` back and `stall` roof boxes | 5 x 3.5 x 2.4 |
-| petrified-stump-a, -b, -c | a tree stump turned to grey-white stone by ash, cracked bark texture still visible, glassy black at the broken top; three variants (short and wide, tall and split, a fallen root plate) | scattered across the Waste (PR 2) | none yet | 1.2 x 1.2 x 0.9 / 0.9 x 0.9 x 2.2 / 2.4 x 0.8 x 1.4 |
+| petrified-stump-a, -b, -c | a tree stump turned to grey-white stone by ash, cracked bark texture still visible, glassy black at the broken top; three variants (short and wide, tall and split, a fallen root plate) | about 600 along the Ash Road, the Waste's southern edge and the two stump groves (PR 2) | KayKit `stump-a` tinted charred (`charred-stump`) | 1.2 x 1.2 x 0.9 / 0.9 x 0.9 x 2.2 / 2.4 x 0.8 x 1.4 |
 | ashgate-arch-a | a rough gate arch of two slag-block piers and a timber lintel hung with rope, warning rags and a bronze bell, set in a low ash-crusted wall stub either side | Ashgate, the Waste's only gate (1) | `gate` posts | 10 x 1.5 x 6 |
 | rope-warden-hut-a | a small rope-warden's hut of timber and hides beside a gate, coils of rope and a lantern on hooks, a counter flap on the front | beside the Ashgate arch (Hild's post) (1) | none yet | 4 x 3 x 3 |
 | ashwalker-tent-a | a low ridge tent of patched grey canvas over ash-crusted poles, guy ropes weighted with slag stones, a soot-dark flap | Ashgate refuge (7) and the Walker Camp (PR 2) | `house` box | 6 x 5 x 3 |
 | camp-fire-ring-a | a refuge camp fire ring of black slag stones round a bed of embers, a cooking tripod and a blackened pot | Ashgate refuge (1) | `well` ring | 2 x 2 x 1.2 |
+| glass-pillar-a | a tall six-sided pillar of smoky black-green volcanic glass, rough at the foot where it rises from slag sand, smooth and faintly translucent higher up, a hairline crack spiralling round it; it should look like it would ring when struck | the Glasslands, the Singing Slag's chime arc (6, heights 4.5 to 6.3 m) | procedural hex prism over a `pole` collider | 1.3 x 1.3 x 5.4 |
+| chime-plaque-a | a slab of dark slag set upright on a stone foot, its face carved with a row of notches and dots (a rhythm in the Dust Chant notation), the cuts glinting with glass | the Glasslands (3) | `board` | 1.4 x 0.3 x 1.4 |
+| slag-shrine-a | the Singing Slag: a low mound of cooled black slag lumps round a cone of glassy ore that glows ember-gold from within when lit | the Glasslands shrine (1) | procedural lumps and a cone | 7 x 7 x 1.8 |
+| glass-drift-a | a low bank of broken black glass shards and slag heaped across a road, as if a wave of glass froze there | the foot of the Cinder Road North (1; shatters when the Singing Slag is lit) | procedural cones | 12 x 2 x 2 |
+| ash-pyre-a | an Ashwalker funeral pyre: a square stack of charred timber on a slag-stone footing, a grey shroud folded on top, bone charms hanging from a pole | the Walker Camp (3) | `altar` box | 2.4 x 2.4 x 1.2 |
+| rain-cistern-a | a round rain cistern of stacked slag blocks sealed with pitch, a timber lid half open, a ladle hanging on the rim (separate water plane so it can be shown full or empty) | the Walker Camp (2) | `well` box | 3 x 3 x 1.2 |
+| rain-cask-a | a squat iron-banded rain cask, the wood bleached grey, a wax-sealed bung | the Ashgate refuge after R24 "half" (6), R24's cart | cylinders | 0.65 x 0.65 x 0.8 |
+| house-banner-a, company-pennant-a | a tall cloth banner on a crossbar (House) and a short swallow-tailed pennant (company) on plain poles; separate cloth so it can be raised or furled | the Ashgate refuge (3 banners, 4 pennants) | poles and planes | 1.2 x 0.1 x 5 |
+| ruined-house-a | a roofless burned cottage of blackened stone, one doorway, a collapsed chimney, ash drifted inside | the Cinder Chapel village (3) and three burned villages (9) | four `wall` boxes | 8 x 6 x 2.2 |
+| cinder-chapel-a | a small stone chapel half buried in ash, a cracked bell-cote, candle soot round the door, a door opening at least 2.2 m high | the Cinder Chapel (1, enterable) | `chapel` box | 10 x 16 x 7 |
+| wagon-wreck-a | a broken covered wagon tipped on its side, the canvas rotted to ribs, one wheel off, ash to the axles | the lost wagon train POI (3) and the burned villages (3) | `cart` box | 3 x 1.6 x 1.6 |
+| buried-bell-a | the bronze crown and shoulder of a huge bell sticking out of the ash at a tilt, green with age, a carved band of names | the buried bell POI (1) | `altar` box | 2.4 x 2.4 x 1.4 |
+| walker-cairn-a | a waist-high cairn of flat slag stones with a rag-tied spear stuck in the top and a small lore stone beside it | the walker cairn POI and the Cinder Road North's three cairns (4) | `block` box | 1.6 x 1.6 x 1.6 |
+| strider-rib-a | a giant curved bone rib, bleached, standing out of the ash like a tusk | the strider nest POI (5) | `block` box | 1.2 x 1.2 x 3.2 |
+| husk-cathedral-ruin-a (shell, west and east bell towers as separate files) | a roofless Gothic cathedral of grey ash-stone: tall walls with empty lancet windows, buttresses, a 4 m arched doorway in the south front between two square bell towers, ash pouring in through the broken roof line | the Husk Cathedral (1) | `wall` and `tower` boxes | 34 x 48 x 12 (towers 4 x 4 x 18) |
+| last-gong-a | a great bronze gong hung in a black iron frame, cracked across, ash-dusted | inside the Husk Cathedral's nave (1) | box | 3.2 x 0.7 x 3.2 |
+| crypt-tomb-a | a plain stone tomb chest with a worn effigy lid | the Husk Cathedral's crypt (3) | box | 2 x 3.5 x 0.9 |
 
+## U. Harrowmark in Act 4 (added 2026-11-06 by L2, "Build Act 4 Harrowmark and its interiors"; greybox and tinted stand-ins until these arrive)
+Each id is one file under public/assets/env (Y up, 1 unit = 1 m, base-centre pivot, front +Z). Add the size to src/env/targets.json when the file is ingested.
+
+| id | prompt | where | greybox now | size (m, w x d x h) |
+| --- | --- | --- | --- | --- |
 | checkpoint-rail-a | a short barricade rail of charred timber with iron bands, a black-and-grey Regent's pennant tied to one end | six checkpoints on Harrowmark's main streets (2 each) | grey box | 2.5 x 0.6 x 1.2 |
 | pole-brazier-a | an iron pole brazier on a tripod foot, a shallow coal basket on top, soot-blackened | one per checkpoint (6) | thin box with a flame | 0.6 x 0.6 x 2.2 |
 | regent-poster-a | a nailed parchment poster with a stern grey seal and a crowned ash-tree device, corners curling | Keep road house fronts (24) | flat plane | 0.6 x 0.02 x 0.9 |
