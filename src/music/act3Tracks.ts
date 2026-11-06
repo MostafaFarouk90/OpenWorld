@@ -79,6 +79,8 @@ export const PEAT_AND_PITCH: TrackDef = {
       [2, 1], [3, 1], [4, 2], [3, 2], [2, 2], [0, 2], [1, 2], [0, 4],
     ],
     jitter: 0.006,
+    // About 4.5 dB hotter than the Acts 1 and 2 tracks as K14 built it (mostly the bog hum): trimmed to match (Act 4 L8).
+    trimDb: -4.5,
     voices: { snare: 'plip', vocal: 'bog-chant', melody: 'reed-whistle', boss: 'gurgle-chant', kick: 'wet', hat: 'bubble', bass: 'peat-hum' },
   },
 };
@@ -135,6 +137,8 @@ export const WING_OVER_RIME: TrackDef = {
       [8, 2], [7, 2], [6, 2], [4, 2], [5, 4], [7, 4],
     ],
     jitter: 0.004,
+    // About 3 dB hotter than the Acts 1 and 2 tracks as K14 built it: trimmed to match (Act 4 L8).
+    trimDb: -3,
     voices: {
       snare: 'room-clap', vocal: 'falsetto-choir', melody: 'soar-whistle', boss: 'harsh-chant',
       kick: 'airy', hat: 'tick', bass: 'chest-bass', chant: 'cathedral-chant',

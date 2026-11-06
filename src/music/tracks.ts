@@ -1,7 +1,8 @@
 import { ASH_ON_THE_PASTURE, HAMMERS_BELOW } from './act2Tracks';
 import { PEAT_AND_PITCH, WING_OVER_RIME } from './act3Tracks';
+import { DUST_CHANT, SEVEN_GATES_ASH } from './act4Tracks';
 
-export { ASH_ON_THE_PASTURE, HAMMERS_BELOW, PEAT_AND_PITCH, WING_OVER_RIME };
+export { ASH_ON_THE_PASTURE, DUST_CHANT, HAMMERS_BELOW, PEAT_AND_PITCH, SEVEN_GATES_ASH, WING_OVER_RIME };
 
 export type MixState = 'explore' | 'discover' | 'silence' | 'combat' | 'boss' | 'ending' | 'talk' | 'stealth' | 'chase';
 
@@ -52,17 +53,24 @@ export interface TrackSynth {
   swing?: number;
   /** Peak timing looseness in seconds on off-beat hits (downbeats stay put); default 0.005. */
   jitter?: number;
+  /**
+   * Whole-track level trim in dB (default 0): every stem finishes at `STEM_PEAK * 10^(trimDb / 20)`. The Act 3 tracks
+   * use it to sit at the Acts 1 and 2 loudness (Act 4 L8); `stemMix.levels.test.ts` holds every region track in one band.
+   */
+  trimDb?: number;
   voices: {
-    snare: 'snap' | 'rimshot' | 'thigh-slap' | 'metal-rim' | 'plip' | 'room-clap';
-    vocal: 'hum' | 'throat-chant' | 'lip-buzz' | 'anvil-clang' | 'bog-chant' | 'falsetto-choir';
-    melody: 'flute' | 'trumpet' | 'whistle-click' | 'cave-howl' | 'reed-whistle' | 'soar-whistle';
-    boss: 'tolling-gong' | 'steam-anvil' | 'gallop-hey' | 'pound-clang' | 'gurgle-chant' | 'harsh-chant';
-    /** Optional per-stem voices (Acts 2 and 3); absent means the Act 1 voice. */
-    kick?: 'boxy' | 'wet' | 'airy';
-    hat?: 'steam' | 'bubble' | 'tick';
-    bass?: 'dum' | 'peat-hum' | 'chest-bass';
+    snare: 'snap' | 'rimshot' | 'thigh-slap' | 'metal-rim' | 'plip' | 'room-clap' | 'dry-slap';
+    vocal: 'hum' | 'throat-chant' | 'lip-buzz' | 'anvil-clang' | 'bog-chant' | 'falsetto-choir' | 'throat-kh';
+    melody: 'flute' | 'trumpet' | 'whistle-click' | 'cave-howl' | 'reed-whistle' | 'soar-whistle' | 'overtone-whistle';
+    boss: 'tolling-gong' | 'steam-anvil' | 'gallop-hey' | 'pound-clang' | 'gurgle-chant' | 'harsh-chant' | 'walker-chant' | 'engine-hammer';
+    /** Optional per-stem voices (Acts 2 to 4); absent means the Act 1 voice. */
+    kick?: 'boxy' | 'wet' | 'airy' | 'muffled';
+    hat?: 'steam' | 'bubble' | 'tick' | 'sand-hiss';
+    bass?: 'dum' | 'peat-hum' | 'chest-bass' | 'drone-bass';
     /** A stem with no Act 1 voice at all (Wing over Rime's trial chant). */
     chant?: 'cathedral-chant';
+    /** Dust Chant's eighth stem, Eormen's hollow gong (Act 4). */
+    toll?: 'hollow-gong';
   };
 }
 
@@ -214,6 +222,8 @@ export const TRACKS_BY_ID: Readonly<Record<string, TrackDef>> = {
   [HAMMERS_BELOW.id]: HAMMERS_BELOW,
   [PEAT_AND_PITCH.id]: PEAT_AND_PITCH,
   [WING_OVER_RIME.id]: WING_OVER_RIME,
+  [DUST_CHANT.id]: DUST_CHANT,
+  [SEVEN_GATES_ASH.id]: SEVEN_GATES_ASH,
 };
 
 /** The one canonical sample length of every stem: round(bars * 240 / bpm * sampleRate). */
