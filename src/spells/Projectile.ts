@@ -200,9 +200,12 @@ export class ProjectileSystem {
       if (s.hostileOnly && a.team !== 'hostile' && !isStruckProp(a)) continue;
       a.worldPosition(pos);
       // A wide actor (a boss on a turntable) has its own cylinder: src/actors/hitShapes.ts.
-      const shape = projectileHitShape(a.kind) ?? ACTOR_HIT;
+      const wide = projectileHitShape(a.kind);
+      const shape = wide ?? ACTOR_HIT;
       const d = Math.hypot(pos.x - x, pos.z - z);
       if (d > shape.radius + s.radius) continue;
+      // A bolt leaving a wide cylinder (loosed from inside it, the Last Gong at Cael's back) flies away from it: no hit.
+      if (wide && (pos.x - x) * s.dx + (pos.z - z) * s.dz < 0) continue;
       if (y < pos.y - s.radius || y > pos.y + shape.height + s.radius) continue;
       if (d < bestD) { bestD = d; best = a; }
     }
