@@ -75,6 +75,12 @@ export const AMBIENT_YIELD_METRES = 1.5;
  * (Gytha at D05's door, the glide launch: the companion beside the player took F).
  */
 export const PERSON_KINDS: ReadonlySet<InteractKind> = new Set<InteractKind>(['talk', 'shop', 'trainer']);
+/**
+ * Act 4 (L4, Act 3 playthrough L2): fixed things the player walks up to on purpose. Like a person, one of these that is
+ * not `ambient`, in reach and in the cone always wins over a companion (Aelfreda beside the Wyrmwatch Lodge waystone took
+ * F). A plain `use` prop does not (a companion beside a barrel stays talkable); a live one yields by AMBIENT_YIELD_METRES.
+ */
+export const FIXTURE_KINDS: ReadonlySet<InteractKind> = new Set<InteractKind>(['waystone', 'door', 'chest', 'lever', 'kneel', 'pickup']);
 export const FOCUS_HALF_ANGLE = (DEFAULT_CONE_DEGREES * Math.PI) / 180;
 const EPS = 1e-6;
 
@@ -324,7 +330,7 @@ export class InteractionSystem implements GameSystem {
       if (cone < 360 && hd > 1e-3 && (dx * fx + dz * fz) / hd < Math.cos((cone * Math.PI) / 180)) continue;
       const a = i.action === 'mercy' ? 'mercy' : 'interact';
       if (!live[a] && this.isLive(i)) live[a] = true;
-      if (!i.ambient && PERSON_KINDS.has(i.kind)) person[a] = true;
+      if (!i.ambient && (PERSON_KINDS.has(i.kind) || FIXTURE_KINDS.has(i.kind))) person[a] = true;
       cands.push({ i, a, score: this.itemScore(i, p.feet, dist) });
     }
     for (const c of cands) {

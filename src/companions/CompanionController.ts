@@ -17,7 +17,7 @@ import { ENEMY_DEFS } from '../enemies/defs';
 import { HrolfBrain, type BrainView, type Foe } from './HrolfBrain';
 import { CompanionVitals, type VitalsEdge } from './vitals';
 import './events';
-import { FollowModel, behind, yawToward, type Vec3 } from './FollowModel';
+import { FollowModel, behind, yawToward, type FollowSlot, type Vec3 } from './FollowModel';
 import { RayBudget, findSpot, groundAt, type GroundPorts } from './ground';
 import { COMPANION_TUNING, HROLF_TUNING, TOBB_TUNING } from './tuning';
 import type { AttackSpeedHook, CompanionDef, InteriorsLike, NavLike } from './types';
@@ -119,6 +119,8 @@ export class CompanionController {
   private mountHidden = false;
   /** Hidden while the player glides, rides the ferry or dives (v0.7 item 25); reappears behind the player at the end. */
   private modeHidden = false;
+  /** Act 4 (L4): a slot that replaces the companion's own while set (the storm's rope slot); kept across respawns. */
+  private slotOverride: FollowSlot | null = null;
   /** Seconds left in which a door event does not teleport him, after a wait ended with a walk back. */
   private walkBackWindow = 0;
 
@@ -286,7 +288,8 @@ export class CompanionController {
     }
     this.actor = actor;
     this.figure = figure;
-    this.model = new FollowModel(at, this.ctx.player.facingYaw);
+    this.model = new FollowModel(at, this.ctx.player.facingYaw, COMPANION_TUNING, this.def.followSlot);
+    this.model.slotOverride = this.slotOverride;
     this.prev.x = at.x;
     this.prev.y = at.y;
     this.prev.z = at.z;
@@ -552,6 +555,12 @@ export class CompanionController {
    * Act 3 (K5, v0.7 item 25): hidden while the movement mode hides companions; on the way back he is placed behind the
    * player (landing, stop or surfacing point). Idempotent both ways; a companion waiting at a post stays there.
    */
+  /** Act 4 (L4): tightens (or, with null, restores) the rest slot; idempotent, so callers may re-apply it every tick. */
+  setSlotOverride(slot: FollowSlot | null): void {
+    this.slotOverride = slot;
+    if (this.model) this.model.slotOverride = slot;
+  }
+
   hideForMode(on: boolean): void {
     if (on) {
       // Re-applied every tick: a companion spawned or joined during the mode is hidden too.

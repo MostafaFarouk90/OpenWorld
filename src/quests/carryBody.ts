@@ -33,6 +33,8 @@ export class VillagerBody {
   private placeholder: THREE.Mesh | null;
   private mixer: THREE.AnimationMixer | null = null;
   private disposed = false;
+  /** Cradled in a carrier's arms: the idle clip holds still (a limp body does not shift its weight). */
+  private carried = false;
 
   /** `carryId` (the carry item's id) picks the generated body in townsfolkBodies.ts (`carry:<id>`); `index` the KayKit fallback. */
   constructor(index: number, tint: number, loader: NpcModelLoader | null, carryId?: string) {
@@ -82,25 +84,31 @@ export class VillagerBody {
   /** Standing at `p` (the feet), or, with a carrier yaw, lying across that carrier's arms at `p`. */
   setPose(p: { x: number; y: number; z: number }, carrierYaw?: number): void {
     if (carrierYaw === undefined) {
+      this.carried = false;
       this.root.position.set(p.x, p.y, p.z);
       this.root.rotation.set(0, 0, 0);
       this.figure.rotation.set(0, 0, 0);
       this.figure.position.set(0, 0, 0);
       return;
     }
-    // pivot at the carrier's feet, turned with them; the figure lies along local X, head to the carrier's left
+    this.carried = true;
+    // pivot at the carrier's feet, turned with them; the figure lies along local X, head to the carrier's left, and
+    // rolls face-up (Euler XYZ applies Z first: the model's front +Z stays level, then x = -PI/2 turns it to +Y)
     const fwdX = -Math.sin(carrierYaw);
     const fwdZ = -Math.cos(carrierYaw);
     this.root.position.set(p.x + fwdX * CARRY_FORWARD, p.y + CARRY_HEIGHT, p.z + fwdZ * CARRY_FORWARD);
     this.root.rotation.set(0, carrierYaw, 0);
-    this.figure.rotation.set(0, 0, Math.PI / 2);
+    this.figure.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
     this.figure.position.set(BODY_HEIGHT / 2, 0, 0);
   }
 
   setVisible(on: boolean): void { this.root.visible = on; }
 
+  /** True while it lies across a carrier's arms (the last `setPose` had a yaw). */
+  get isCarried(): boolean { return this.carried; }
+
   update(dt: number): void {
-    if (this.root.visible) this.mixer?.update(dt);
+    if (this.root.visible && !this.carried) this.mixer?.update(dt);
   }
 
   dispose(): void {
