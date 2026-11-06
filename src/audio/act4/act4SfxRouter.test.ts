@@ -79,14 +79,59 @@ describe('creatures and bosses', () => {
     expect(r.router.activeLoops).toEqual([]);
   });
 
-  it('the engine vents on each poise break (phase 2 and up), not on phase 1; Eormen released plays his release', () => {
+  it('no boss plays a phase cue (the engine vents on its valve instead); Eormen released plays his release', () => {
     const r = rig();
     r.router.bossPhase({ bossId: 'bellows-engine', phase: 1 });
     r.router.bossPhase({ bossId: 'bellows-engine', phase: 2 });
     r.router.bossPhase({ bossId: 'eormen', phase: 2 });
     r.router.bossReleased({ bossId: 'eormen' });
     r.router.bossReleased({ bossId: 'bellows-engine' });
-    expect(r.played).toEqual(['sfx.engine.vent', 'sfx.eormen.release']);
+    expect(r.played).toEqual(['sfx.eormen.release']);
+  });
+
+  it("a valve shut (L6's structure.struck) plays the valve then the vent at the engine; other structures play nothing", () => {
+    const r = rig();
+    r.router.structureStruck({ id: 'bellows-engine.valve.1', bossId: 'bellows-engine' });
+    expect(r.played).toEqual(['sfx.engine.valve', 'sfx.engine.vent']);
+    r.router.bossStarted({ bossId: 'bellows-engine', actorId: 'placed' });
+    r.router.structureStruck({ id: 'bellows-engine.valve.2', bossId: 'bellows-engine' });
+    r.router.structureStruck({ id: 'wyrm.chain.1', bossId: 'skarl' });
+    r.router.structureStruck({ id: undefined as unknown as string, bossId: 'bellows-engine' });
+    expect(r.playedAt).toEqual(['sfx.engine.valve', 'sfx.engine.vent']);
+  });
+
+  it('a dud valve hisses, at the engine while its fight runs', () => {
+    const r = rig();
+    r.router.valveDud();
+    r.router.bossStarted({ bossId: 'bellows-engine', actorId: 'placed' });
+    r.router.valveDud();
+    expect(r.played).toEqual(['sfx.engine.dud']);
+    expect(r.playedAt).toEqual(['sfx.engine.dud']);
+  });
+
+  it('the engine idles from boss.started to boss.ended, once, even if its kind also loops; Eormen has no loop', () => {
+    const r = rig();
+    r.router.spawned({ actorId: 'e', kind: 'bellows-engine' });
+    r.router.bossStarted({ bossId: 'bellows-engine', actorId: 'e' });
+    r.router.bossStarted({ bossId: 'eormen', actorId: 'o' });
+    expect(r.attached.map((a) => a.key)).toEqual(['sfx.engine.idle']);
+    r.router.bossEnded({ bossId: 'eormen', actorId: 'o' });
+    r.router.bossEnded({ bossId: 'bellows-engine', actorId: 'e' });
+    expect(r.detached).toEqual([1]);
+    expect(r.router.activeLoops).toEqual([]);
+  });
+
+  it('after a load the engine idle comes back while the engine lives, and is dropped once it is gone', () => {
+    const r = rig();
+    r.router.bossStarted({ bossId: 'bellows-engine', actorId: 'e' });
+    r.router.saveLoaded();
+    expect(r.router.activeLoops).toEqual([]);
+    r.router.adopt([{ actorId: 'e', kind: 'blighted-soldier' }]);
+    expect(r.attached.map((a) => a.key)).toEqual(['sfx.engine.idle', 'sfx.engine.idle']);
+    r.router.saveLoaded();
+    r.router.adopt([]);
+    r.router.adopt([{ actorId: 'e', kind: 'blighted-soldier' }]);
+    expect(r.attached).toHaveLength(2);
   });
 
   it('after a load, living actors are re-adopted silently: loops restart, a husk still crumbles, no rise', () => {

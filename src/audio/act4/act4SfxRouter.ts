@@ -1,6 +1,7 @@
 import type { Act4SfxKey } from './act4Sfx';
 import {
   BOSS_PHASE_SFX_ACT4,
+  BOSS_LOOP_SFX_ACT4,
   BOSS_RELEASED_SFX_ACT4,
   CREAK_EVERY_GUSTS,
   DIED_SFX_ACT4,
@@ -10,6 +11,8 @@ import {
   HUSK_SKIN,
   LOOP_BY_KIND_ACT4,
   MOVE_SFX_ACT4,
+  STRUCTURE_SFX_ACT4,
+  VALVE_DUD_SFX,
   WEATHER_SFX,
 } from './act4SfxEvents';
 
@@ -63,6 +66,8 @@ const STORM_LOOP = 'storm';
 export class Act4SfxRouter {
   private readonly loops = new Map<string, number>();
   private readonly husks = new Set<string>();
+  /** Running boss fights: boss id to its actor (structure cues play at it). */
+  private readonly bosses = new Map<string, string>();
   private weather: StormKind = 'clear';
   private shelters = new Set<string>();
   private gustIn = 0;
@@ -125,6 +130,39 @@ export class Act4SfxRouter {
     if (!(e.phase > 1)) return;
     const key = own(BOSS_PHASE_SFX_ACT4, e.bossId);
     if (key) this.flat(key);
+  }
+
+  /** `boss.started`: a looping boss (the Bellows-Engine's idle) starts its loop on the boss actor. */
+  bossStarted(e: { bossId: string; actorId: string }): void {
+    this.bosses.set(e.bossId, e.actorId);
+    const loop = own(BOSS_LOOP_SFX_ACT4, e.bossId);
+    if (!loop) return;
+    const object = this.ports.object(e.actorId);
+    // Named as the actor's loop, so its death or despawn stops it too and a kind loop never doubles it.
+    if (object) this.startLoop(`actor:${e.actorId}`, loop, object);
+  }
+
+  bossEnded(e: { bossId: string; actorId: string }): void {
+    if (this.bosses.get(e.bossId) === e.actorId) this.bosses.delete(e.bossId);
+    if (own(BOSS_LOOP_SFX_ACT4, e.bossId)) this.stopLoop(`actor:${e.actorId}`);
+  }
+
+  /** `structure.struck`: a Bellows-Engine valve shut plays the valve and the vent, at the engine when it is placed. */
+  structureStruck(e: { id: string; bossId: string }): void {
+    const row = STRUCTURE_SFX_ACT4.find((r) => typeof e.id === 'string' && e.id.startsWith(r.prefix));
+    if (!row) return;
+    const actorId = this.bosses.get(e.bossId);
+    for (const key of row.keys) {
+      if (actorId) this.at(key, actorId);
+      else this.flat(key);
+    }
+  }
+
+  /** L6's `bellows.valve.dud`: a dark or refused valve hisses. */
+  valveDud(): void {
+    const actorId = this.bosses.get('bellows-engine');
+    if (actorId) this.at(VALVE_DUD_SFX, actorId);
+    else this.flat(VALVE_DUD_SFX);
   }
 
   bossReleased(e: { bossId: string }): void {
@@ -193,12 +231,27 @@ export class Act4SfxRouter {
 
   /** Re-adopts living actors after a load: husks keep their rasp and collapse, looping kinds their loop. */
   adopt(living: Iterable<{ actorId: string; kind: string; skin?: string | null }>): void {
-    for (const a of living) this.spawned(a, { silent: true });
+    const alive = new Set<string>();
+    for (const a of living) {
+      alive.add(a.actorId);
+      this.spawned(a, { silent: true });
+    }
+    // A boss fight that survived the load keeps its loop (no new boss.started comes); a boss no longer alive is dropped.
+    for (const [bossId, actorId] of [...this.bosses]) {
+      if (!alive.has(actorId)) {
+        this.bosses.delete(bossId);
+        continue;
+      }
+      const loop = own(BOSS_LOOP_SFX_ACT4, bossId);
+      const object = loop ? this.ports.object(actorId) : undefined;
+      if (loop && object) this.startLoop(`actor:${actorId}`, loop, object);
+    }
   }
 
   stopAll(): void {
     for (const name of [...this.loops.keys()]) this.stopLoop(name);
     this.husks.clear();
+    this.bosses.clear();
     this.shelters.clear();
     this.weather = 'clear';
   }

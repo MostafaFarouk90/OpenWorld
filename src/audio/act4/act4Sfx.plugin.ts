@@ -132,6 +132,11 @@ const plugin: GamePlugin = {
       ev.on('actor.despawned', (e) => router.gone(e.actorId)),
       ev.on('boss.phase', (e) => router.bossPhase(e)),
       ev.on('boss.released', (e) => router.bossReleased(e)),
+      ev.on('boss.started', (e) => router.bossStarted(e)),
+      ev.on('boss.ended', (e) => router.bossEnded(e)),
+      ev.on('structure.struck', (e) => router.structureStruck(e)),
+      // L6's own event (a GameEventMap augmentation in its module), so it is subscribed by name here.
+      (ev.on as unknown as (name: string, fn: () => void) => () => void)('bellows.valve.dud', () => router.valveDud()),
       ev.on('save.loaded', () => {
         router.saveLoaded();
         router.restore(weatherNow());

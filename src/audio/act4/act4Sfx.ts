@@ -28,6 +28,7 @@ export const ACT4_SFX_KEYS = [
   'sfx.engine.steam',
   'sfx.engine.vent',
   'sfx.engine.valve',
+  'sfx.engine.dud',
   'sfx.engine.coalshot',
   'sfx.husk.rasp',
   'sfx.husk.rise',
@@ -80,6 +81,7 @@ export const ACT4_SFX_VOLUME: Readonly<Record<Act4SfxKey, number>> = {
   'sfx.engine.steam': 0.6,
   'sfx.engine.vent': 0.65,
   'sfx.engine.valve': 0.55,
+  'sfx.engine.dud': 0.4,
   'sfx.engine.coalshot': 0.6,
   'sfx.husk.rasp': 0.5,
   'sfx.husk.rise': 0.55,
@@ -300,6 +302,12 @@ function raw(key: Act4SfxKey): Float32Array<ArrayBuffer> {
         const clank = t >= 0.8 ? ring(t - 0.8, 420, [[1, 0.6, 12], [2.76, 0.4, 16], [5.4, 0.2, 22]]) : 0;
         return grind + clank;
       });
+    }
+    case 'sfx.engine.dud': {
+      // A dark or refused valve: a short, thin hiss and a dull knock, nothing shuts.
+      const rnd = noise(414);
+      const hp = highpass(2600);
+      return render(0.45, (t) => hp(rnd()) * env(t, 0.45, 0.01, 0.25) * 0.9 + ring(t, 180, [[1, 0.5, 30], [2.4, 0.2, 40]]) * 0.5);
     }
     case 'sfx.engine.coalshot': {
       // A coal-shot volley: a muffled cough and a scatter of burning lumps.

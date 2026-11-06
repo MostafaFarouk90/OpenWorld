@@ -59,6 +59,18 @@ function fakeCtx(opts: { audio?: boolean; weather?: 'clear' | 'warning' | 'storm
 afterEach(() => plugin.dispose?.());
 
 describe('act4-sfx plugin', () => {
+  it("wires L6's Bellows-Engine events: boss.started idles, a valve shut vents, a dud hisses, boss.ended stops the idle", () => {
+    const f = fakeCtx();
+    plugin.setup(f.ctx as never);
+    f.emit('boss.started', { bossId: 'bellows-engine', actorId: 'strider#1' });
+    f.emit('structure.struck', { id: 'bellows-engine.valve.1', bossId: 'bellows-engine' });
+    f.emit('bellows.valve.dud', { n: 2 });
+    expect(f.attached).toEqual(['sfx.engine.idle']);
+    expect(f.playedAt).toEqual(['sfx.engine.valve', 'sfx.engine.vent', 'sfx.engine.dud']);
+    f.emit('boss.ended', { bossId: 'bellows-engine', actorId: 'strider#1', reason: 'despawned' });
+    for (const k of ['sfx.engine.idle', 'sfx.engine.dud']) expect(f.registered.map((r) => r.key)).toContain(k);
+  });
+
   it('forwards spawns, telegraphs and deaths: a husk rises, rasps and crumbles; a strider clicks while alive', () => {
     const f = fakeCtx();
     plugin.setup(f.ctx as never);

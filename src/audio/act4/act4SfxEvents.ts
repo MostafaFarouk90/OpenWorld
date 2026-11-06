@@ -40,8 +40,26 @@ export const HUSK_SFX = {
   collapse: 'sfx.husk.collapse',
 } as const satisfies Record<string, Act4SfxKey>;
 
-/** Boss ids whose poise breaks (`boss.phase`) and releases play a cue: the engine vents, Eormen's toll rises away. */
-export const BOSS_PHASE_SFX_ACT4: Readonly<Record<string, Act4SfxKey>> = { 'bellows-engine': 'sfx.engine.vent' };
+/**
+ * Boss ids whose poise breaks (`boss.phase`) play a cue. Empty: the Bellows-Engine vents on its valve shut
+ * (`structure.struck`, L6), which is the moment its bar arms, so a phase cue would double it.
+ */
+export const BOSS_PHASE_SFX_ACT4: Readonly<Record<string, Act4SfxKey>> = {};
+
+/** Bosses that carry a loop while their fight runs (`boss.started` to `boss.ended`, attached to the boss actor). */
+export const BOSS_LOOP_SFX_ACT4: Readonly<Record<string, Act4SfxKey>> = { 'bellows-engine': 'sfx.engine.idle' };
+
+/**
+ * `structure.struck` ids (L6's final ids, `bellows-engine.valve.N`) by prefix: the valve wrenches shut, then the engine
+ * vents (its 8 s vent window starts on the same event).
+ */
+export const STRUCTURE_SFX_ACT4: readonly { prefix: string; keys: readonly Act4SfxKey[] }[] = [
+  { prefix: 'bellows-engine.valve.', keys: ['sfx.engine.valve', 'sfx.engine.vent'] },
+];
+
+/** L6's `bellows.valve.dud { n }` (a dark or refused valve): a short hiss. */
+export const VALVE_DUD_SFX: Act4SfxKey = 'sfx.engine.dud';
+
 export const BOSS_RELEASED_SFX_ACT4: Readonly<Record<string, Act4SfxKey>> = { eormen: 'sfx.eormen.release' };
 
 /** The storm, rope-line and shelter cues (L0 weather events). */

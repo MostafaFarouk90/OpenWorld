@@ -5,7 +5,7 @@ import { ACT4_LOOP_KEYS, ACT4_SFX_KEYS, ACT4_SFX_VOLUME, act4SfxSamples, pillarK
 import { ACT4_BOSS_IDS } from '../../bosses/act4Bosses';
 import { ACT4_ENEMY_KINDS } from '../../enemies/types';
 import { ENEMY_SKIN_IDS } from '../../enemies/skins';
-import { BOSS_PHASE_SFX_ACT4, BOSS_RELEASED_SFX_ACT4, DIED_SFX_ACT4, HUSK_SFX, HUSK_SKIN, LOOP_BY_KIND_ACT4, MOVE_SFX_ACT4, WEATHER_SFX } from './act4SfxEvents';
+import { BOSS_LOOP_SFX_ACT4, BOSS_PHASE_SFX_ACT4, BOSS_RELEASED_SFX_ACT4, STRUCTURE_SFX_ACT4, VALVE_DUD_SFX, DIED_SFX_ACT4, HUSK_SFX, HUSK_SKIN, LOOP_BY_KIND_ACT4, MOVE_SFX_ACT4, WEATHER_SFX } from './act4SfxEvents';
 import { makeBedSamples } from '../AmbienceBed';
 import { ASHEN_WASTE_BED_SECONDS, fillAshenWasteBed } from './ambienceAct4';
 
@@ -53,6 +53,9 @@ describe('Act 4 SFX samples', () => {
     const tables = [MOVE_SFX_ACT4, DIED_SFX_ACT4, LOOP_BY_KIND_ACT4, HUSK_SFX, BOSS_PHASE_SFX_ACT4, BOSS_RELEASED_SFX_ACT4, WEATHER_SFX];
     for (const t of tables) for (const k of Object.values(t)) expect(keys.has(k), k).toBe(true);
     for (const k of Object.values(LOOP_BY_KIND_ACT4)) expect(ACT4_LOOP_KEYS).toContain(k);
+    for (const k of Object.values(BOSS_LOOP_SFX_ACT4)) expect(ACT4_LOOP_KEYS).toContain(k);
+    for (const row of STRUCTURE_SFX_ACT4) for (const k of row.keys) expect(keys.has(k), k).toBe(true);
+    expect(keys.has(VALVE_DUD_SFX)).toBe(true);
   });
 });
 
@@ -75,7 +78,8 @@ describe('the tables use L0 ids', () => {
   const kinds = new Set<string>(ACT4_ENEMY_KINDS);
   it('death and loop kinds are Act 4 enemy kinds or boss ids; boss cues name Act 4 bosses; the husk skin is a skin', () => {
     for (const k of [...Object.keys(DIED_SFX_ACT4), ...Object.keys(LOOP_BY_KIND_ACT4)]) expect(kinds.has(k) || bosses.has(k), k).toBe(true);
-    for (const k of [...Object.keys(BOSS_PHASE_SFX_ACT4), ...Object.keys(BOSS_RELEASED_SFX_ACT4)]) expect(bosses.has(k), k).toBe(true);
+    for (const k of [...Object.keys(BOSS_PHASE_SFX_ACT4), ...Object.keys(BOSS_RELEASED_SFX_ACT4), ...Object.keys(BOSS_LOOP_SFX_ACT4)]) expect(bosses.has(k), k).toBe(true);
+    for (const row of STRUCTURE_SFX_ACT4) expect(bosses.has(row.prefix.split('.')[0]), row.prefix).toBe(true);
     expect(ENEMY_SKIN_IDS as readonly string[]).toContain(HUSK_SKIN);
   });
 });
