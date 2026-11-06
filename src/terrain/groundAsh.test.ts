@@ -80,5 +80,7 @@ describe('the glass glints', () => {
     expect(fragment).toContain('step(0.5, tier)');
     expect(fragment).toContain('tier > 1.5');
     expect(fragment).toContain('(1.0 - uGroundWaste)');
+    // Near the player only (no sub-pixel shimmer far off).
+    expect(fragment).toContain('smoothstep(12.0, 35.0, vGroundViewDist)');
   });
 });

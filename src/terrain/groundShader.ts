@@ -34,8 +34,11 @@ export const VEIN_PATCH = 220;
 export const VEIN_COLOR = new THREE.Color(1.0, 0.5, 0.18);
 
 /** Glass-sand glints: tiny bright cells, this many metres across, on the glint weight. */
-export const GLINT_CELL = 0.9;
+export const GLINT_CELL = 0.22;
 export const GLINT_COLOR = new THREE.Color(0.85, 0.9, 1.0);
+/** Glints fade out between these view distances: far off, a cell is under a pixel and would shimmer as noise. */
+export const GLINT_FADE_NEAR = 12;
+export const GLINT_FADE_FAR = 35;
 /** Glint level per quality step: Low none, Medium glints, High glints plus the view-angle sparkle. */
 export const GLASS_TIER = { low: 0, medium: 1, high: 2 } as const;
 
@@ -101,7 +104,9 @@ float groundGlint(vec2 local, vec3 viewDir, float tier) {
   vec2 cell = floor(local / ${GLINT_CELL.toFixed(2)});
   float angle = tier > 1.5 ? floor(dot(viewDir, vec3(9.0, 5.0, 7.0)) * 3.0) : 0.0;
   float h = groundHash(cell + angle * 13.7);
-  return smoothstep(0.985, 0.998, h) * step(0.5, tier);
+  // A small round fleck in the middle of a rare cell, never a lit square.
+  float fleck = 1.0 - smoothstep(0.12, 0.3, length(fract(local / ${GLINT_CELL.toFixed(2)}) - 0.5));
+  return smoothstep(0.993, 0.999, h) * fleck * step(0.5, tier);
 }
 `;
 
@@ -113,7 +118,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uAshFogColor, groundAsh * 0.45);
 export const GROUND_FRAGMENT_EMISSIVE = /* glsl */ `
 float groundPulse = 0.65 + 0.35 * sin(uGroundTime * ${((2 * Math.PI) / EMBER_PULSE_PERIOD).toFixed(6)} + groundValueNoise(vGroundLocal / 40.0) * 6.283185);
 totalEmissiveRadiance += uEmberColor * (vGround.x * groundSeam(vGroundLocal) * groundPulse * 0.9 * (1.0 - uGroundVein) * (1.0 - uGroundWaste));
-totalEmissiveRadiance += uGlintColor * (vGround.x * uGroundWaste * groundGlint(vGroundLocal, normalize(vViewPosition), uGroundGlass) * 0.8);
+totalEmissiveRadiance += uGlintColor * (vGround.x * uGroundWaste * groundGlint(vGroundLocal, normalize(vViewPosition), uGroundGlass) * 0.6 * (1.0 - smoothstep(${GLINT_FADE_NEAR.toFixed(1)}, ${GLINT_FADE_FAR.toFixed(1)}, vGroundViewDist)));
 totalEmissiveRadiance += uVeinColor * (vGround.x * groundVeinStreak(vGroundLocal) * uGroundVein * (0.2 + 0.1 * groundPulse));
 `;
 
