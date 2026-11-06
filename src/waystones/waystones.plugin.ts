@@ -229,7 +229,8 @@ const waystones: GamePlugin = {
       serialize: () => net.serialize(),
       load: (data) => net.load(data),
     });
-    // v0.8 item 8: the interior checkpoints (M39, M40), saved after `waystones` so its load clears them first.
+    // v0.8 item 8: the interior checkpoints (M39, M40). L13: either entry order loads (a key-sorted save has `respawn` first).
+    ctx.events.on('save.loaded', () => net.loadSettled());
     ctx.persist.register({
       key: 'respawn',
       version: 1,

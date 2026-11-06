@@ -1,0 +1,30 @@
+{
+  "fixture": "act4-carried-chain.json",
+  "chain": "phaseF run B (SPINE_RUN_B, GREYFEN_RUN_B): the lower Dragonspine, the Greyfen, the summit, the Act 3 ending and camp",
+  "level": 25,
+  "xp": 56077,
+  "act3QuestDefs": [
+    "d05",
+    "d06",
+    "m23",
+    "m24",
+    "m25",
+    "m26",
+    "m27",
+    "m28",
+    "m29",
+    "m30",
+    "m31",
+    "m32",
+    "m33",
+    "m34",
+    "r12",
+    "r13",
+    "r14",
+    "r15",
+    "r16",
+    "r17",
+    "r18"
+  ],
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/act4Fixtures.gen with BASE=1"
+}

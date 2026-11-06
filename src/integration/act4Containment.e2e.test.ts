@@ -14,6 +14,7 @@ import { gateFaceAnchor, WORKING_GATES } from '../harrowmark/act4/sites';
 import { CITY_CENTRE, insideRingWall, M41_CAMP_ANCHOR, REFUGE_REST_ANCHOR } from '../harrowmark/noStrand';
 import { heightAt } from '../terrain/heightfield';
 import { WASTE_OPEN_FLAG } from '../quests/act4Jump';
+import { REFUGE_STONE } from './act4Services';
 
 let h: (ChapterHarness & { loaded: boolean }) | null = null;
 let warn: ReturnType<typeof vi.spyOn>;
@@ -30,10 +31,16 @@ afterEach(() => {
 
 const WASTE = ACT4_PLACES['walker-camp'];
 const KEEP_COURT = { x: CITY_CENTRE.x - 200, z: CITY_CENTRE.z + 450 };
-const roadMid = () => {
-  const [x, z] = ASH_ROAD_POINTS[Math.floor(ASH_ROAD_POINTS.length / 2)];
-  return { x, z };
-};
+
+/** A safe teleport ticked until it settles (the game only advances while the harness runs). */
+async function safeTo(p: { x: number; z: number }) {
+  const ws = h!.ctx.services.require('waystones');
+  let done = false;
+  void ws.safeTeleport({ x: p.x, y: heightAt(p.x, p.z) + 0.05, z: p.z }, 0).then(() => (done = true));
+  for (let i = 0; i < 60 && !done; i++) await h!.runAsync(15);
+  expect(done, 'the safe teleport settled').toBe(true);
+  await h!.runAsync(10);
+}
 
 async function boot(id: string) {
   h = await bootFromSave(await readAct4Fixture(id), { models: false, virtualClock: true });
@@ -64,7 +71,7 @@ describe('Act 4 containment on the fixtures', () => {
     expect(s.getFlag('story.gate.a4')).toBe(true);
     expect(s.getBool(WASTE_OPEN_FLAG)).toBe(false);
     expect(c.isOpen(CITY_CENTRE.x, CITY_CENTRE.z)).toBe(true);
-    expect(c.isOpen(roadMid().x, roadMid().z)).toBe(false);
+    expect(c.isOpen(ASHGATE_POINT.x, ASHGATE_POINT.z)).toBe(false);
     expect(c.isOpen(WASTE.x, WASTE.z)).toBe(false);
     for (const g of WORKING_GATES) expect(fogOpenById(`fog.harrowmark.gate.${g}`, s), g).toBe(true);
     expect(fogOpenById('fog.ashen-waste', s)).toBe(false);
@@ -79,10 +86,10 @@ describe('Act 4 containment on the fixtures', () => {
     for (const g of WORKING_GATES) expect((await behindFace(g, 3)).distOut, `${g} pushes out`).toBeGreaterThan(1);
     const ws = h!.ctx.services.require('waystones');
     expect(ws.isDark('harrowmark-gate')).toBe(true);
+    ws.rekindle('harrowmark-gate');
     expect((await ws.travel('harrowmark-gate'))).toEqual({ ok: false, reason: 'dark' });
     // A safe teleport into the streets lands at the M41 camp (before M41).
-    await ws.safeTeleport({ x: KEEP_COURT.x, y: heightAt(KEEP_COURT.x, KEEP_COURT.z) + 0.05, z: KEEP_COURT.z }, 0);
-    await h!.runAsync(30);
+    await safeTo(KEEP_COURT);
     const f = h!.ctx.player.feet;
     expect(insideRingWall(f.x, f.z), 'not inside the walls').toBe(false);
     const camp = h!.ctx.anchors.find(M41_CAMP_ANCHOR)!.position;
@@ -101,12 +108,37 @@ describe('Act 4 containment on the fixtures', () => {
     expect(fogOpenById('fog.waste-edge', s)).toBe(false);
     expect(fogOpenById('fog.waste-north', s)).toBe(false);
     // A stranded spot now resolves to the refuge.
-    const ws = h!.ctx.services.require('waystones');
-    await ws.safeTeleport({ x: KEEP_COURT.x, y: heightAt(KEEP_COURT.x, KEEP_COURT.z) + 0.05, z: KEEP_COURT.z }, 0);
-    await h!.runAsync(30);
+    await safeTo(KEEP_COURT);
     const rest = h!.ctx.anchors.find(REFUGE_REST_ANCHOR)!.position;
     const f = h!.ctx.player.feet;
     expect(Math.hypot(f.x - rest.x, f.z - rest.z)).toBeLessThan(15);
+  }, 120_000);
+
+  it('Phase G end: waystone travel to the refuge stone and back out, both ways (coordinator ruling D)', async () => {
+    const { s } = await boot('m41');
+    s.setFlag('story.m38.complete', true);
+    s.setFlag('story.m41.complete', true);
+    await h!.runAsync(10);
+    const ws = h!.ctx.services.require('waystones');
+    expect(ws.ids()).toContain(REFUGE_STONE);
+    expect(ws.rekindle(REFUGE_STONE).ok || ws.isLit(REFUGE_STONE)).toBe(true);
+    expect(ws.isDark(REFUGE_STONE)).toBe(false);
+    // Another lit stone outside the walls.
+    const other = ws.litIds().find((id) => id !== REFUGE_STONE && !ws.isDark(id) && !insideRingWall(ws.position(id)!.x, ws.position(id)!.z))!;
+    expect(other, 'a lit stone outside the walls').toBeTruthy();
+    const go = async (to: string) => {
+      let r: unknown = null;
+      void ws.travel(to).then((v) => (r = v));
+      for (let i = 0; i < 80 && r === null; i++) await h!.runAsync(15);
+      expect(r, `travel to ${to}`).toEqual({ ok: true });
+      await h!.runAsync(10);
+      const at = ws.position(to)!;
+      const f = h!.ctx.player.feet;
+      expect(Math.hypot(f.x - at.x, f.z - at.z), `at ${to}`).toBeLessThan(12);
+    };
+    await go(REFUGE_STONE);
+    await go(other);
+    await go(REFUGE_STONE);
   }, 120_000);
 
   it('Phase H (M42\'s fixture, the hold set): accepting M42 opens the Waste; the north band never opens', async () => {

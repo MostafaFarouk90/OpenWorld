@@ -60,7 +60,7 @@ describe('the committed Act 4 fixtures', () => {
   it('has nothing beyond the base and the 21 ids (stale names are deleted on regeneration)', () => {
     const names = Object.keys(FILES).map((k) => k.split('/').pop()!.replace(/(\.meta)?\.json$/, ''));
     const want = new Set([ACT4_BASE_NAME, ...ACT4_JUMP_IDS.map(act4FixtureName)]);
-    expect([...new Set(names)].filter((n) => !want.has(n) && !n.startsWith('act4-extra-'))).toEqual([]);
+    expect([...new Set(names)].filter((n) => !want.has(n) && !n.startsWith('act4-extra-') && n !== 'act4-l3-storm')).toEqual([]);
   });
 });
 

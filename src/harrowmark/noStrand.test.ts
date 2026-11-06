@@ -174,4 +174,21 @@ describe('interior checkpoints', () => {
     p.load(data, 1);
     expect(w.respawnPoint().feet.x).toBe(8520);
   });
+
+  it('L13: a key-sorted save (`respawn` before `waystones`) keeps its checkpoint; the next load without one has none', async () => {
+    const { game, w } = await boot();
+    w.rekindle('farm-ring');
+    w.setCheckpoint('m40', 'harrowmark.a4.m40.checkpoint');
+    const p = game.ctx.persist.get('respawn')!;
+    const ways = game.ctx.persist.get('waystones')!;
+    const data = JSON.parse(JSON.stringify(p.serialize()));
+    const stones = JSON.parse(JSON.stringify(ways.serialize()));
+    p.load(data, 1);
+    ways.load(stones, 1);
+    expect(w.respawnPoint().feet.x).toBe(8520);
+    game.ctx.events.emit('save.loaded', { slot: 'slot-0' });
+    // A later save without `respawn`: the `waystones` entry clears the checkpoints.
+    ways.load(stones, 1);
+    expect(w.respawnPoint().waystoneId).toBe('farm-ring');
+  });
 });
