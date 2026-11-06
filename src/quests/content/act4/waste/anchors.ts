@@ -115,9 +115,9 @@ export const NEAR_ANCHORS: readonly NearAnchor[] = [
   ...[1, 2, 3].map((n) => near(`${W}.m44.house.${n}.b`, L1.house(n), -2.5, 2)),
   ...[1, 2, 3, 4, 5, 6].map((k) => near(`${W}.m44.nest.${k}`, L1.nest, (k - 3.5) * 2, k % 2 ? 2 : 4)),
   near(`${W}.m44.graves`, L1.chapelDoor, 8, 12),
-  // R25: a hearth beside each burned shell, its name stone 2.5 m off, the knot round the third; the register by Sister Aedre
+  // R25: a hearth beside each burned shell, its name stone 2.5 m off, the knot 30 m past the third (clear of L5's village knot); the register by Sister Aedre
   ...[1, 2, 3].map((n) => near(`${W}.r25.name.${n}`, L1.r25Hearth(n), 2.5, 0)),
-  ...[1, 2, 3, 4, 5].map((k) => near(`${W}.r25.knot.${k}`, L1.burnedVillage(3), (k - 3) * 3, -14)),
+  ...[1, 2, 3, 4, 5].map((k) => near(`${W}.r25.knot.${k}`, L1.burnedVillage(3), 30 + (k - 3) * 3, 14)),
   near(`${W}.r25.register`, L1.chapelNote, 0, 0, { interior: true }),
   near(`${W}.r25.letter`, L1.chapelNote, 1.5, 0, { interior: true }),
   // R24: the spring's note and the load point, the unload at the camp gate
