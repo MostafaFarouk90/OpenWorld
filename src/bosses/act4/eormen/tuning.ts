@@ -78,12 +78,9 @@ export const EORMEN = {
   healthFloor: 0.08,
   floorModifierOrder: 99,
   wardModifierOrder: 60,
-  /** He keeps this far from Cael (m), drifting a hand above the floor. */
-  keepMin: 6,
+  /** He drifts toward Cael (a hand above the floor) until within this far, and holds his ground when Cael closes in. */
   keepMax: 10,
   driftSpeed: 2.2,
-  /** Backing away, he leans this much toward the nave's middle (0: straight back), so he slides along a wall, not into a corner. */
-  centreLean: 0.7,
   /** He turns toward Cael this fast (radians a second). */
   turnRate: (2 * Math.PI) / 3,
   /** Scale of the Rogue_Hooded body (design). */
