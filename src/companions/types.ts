@@ -41,6 +41,8 @@ export interface CompanionDef {
    * no bark. Absent: the place id as it is.
    */
   areaVariant?(place: string, flag: (key: string) => unknown): string | null;
+  /** Act 4 (L4): the line actually said for a chosen key (Gaut's mourning lines after M39); absent: the key itself. */
+  lineSwap?(lineKey: string, flag: (key: string) => unknown): string;
   /** Area-bark places: trigger id, interior id and region id to place id. */
   places: {
     triggers: Readonly<Record<string, string>>;

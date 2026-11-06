@@ -534,16 +534,16 @@ export class CompanionController {
     this.emitBark(this.area(place));
   }
 
-  /**
-   * Act 3 (K5, v0.7 item 25): hidden while the movement mode hides companions; on the way back he is placed behind the
-   * player (landing, stop or surfacing point). Idempotent both ways; a companion waiting at a post stays there.
-   */
   /** Act 4 (L4): tightens (or, with null, restores) the rest slot; idempotent, so callers may re-apply it every tick. */
   setSlotOverride(slot: FollowSlot | null): void {
     this.slotOverride = slot;
     if (this.model) this.model.slotOverride = slot;
   }
 
+  /**
+   * Act 3 (K5, v0.7 item 25): hidden while the movement mode hides companions; on the way back he is placed behind the
+   * player (landing, stop or surfacing point). Idempotent both ways; a companion waiting at a post stays there.
+   */
   hideForMode(on: boolean): void {
     if (on) {
       // Re-applied every tick: a companion spawned or joined during the mode is hidden too.
@@ -565,12 +565,26 @@ export class CompanionController {
     return this.modeHidden;
   }
 
+  /**
+   * Act 4 (L4): a one-off line (the M37 bond line, the mourning line) said now, outside the banter director's pacing but
+   * through the party's one-voice gate. False when he may not speak now (hidden, at a post, not seated, the other
+   * companion just spoke); the caller retries later.
+   */
+  sayLine(lineKey: string): boolean {
+    if (!this.actor || this.hidden || this.wait || !this.isActive() || !this.claimBark(this.def.id)) return false;
+    this.ctx.events.emit('companion.banter', { companionId: this.def.id, lineKey, trigger: 'area' });
+    const t = this.ctx.strings;
+    this.ctx.events.emit('hud.toast', { textKey: 'companion.say', params: { name: t.t(this.def.nameKey), line: t.t(lineKey) } });
+    return true;
+  }
+
   private emitBark(b: Bark | null): void {
     // An inactive companion in the hand-off window (still walking to his post) stays quiet.
     if (!b || !this.actor || this.hidden || this.wait || !this.isActive() || !this.claimBark(this.def.id)) return;
-    this.ctx.events.emit('companion.banter', { companionId: this.def.id, lineKey: b.lineKey, trigger: b.trigger });
+    const lineKey = this.def.lineSwap ? this.def.lineSwap(b.lineKey, (k) => this.ctx.state.getFlag(k)) : b.lineKey;
+    this.ctx.events.emit('companion.banter', { companionId: this.def.id, lineKey, trigger: b.trigger });
     const t = this.ctx.strings;
-    this.ctx.events.emit('hud.toast', { textKey: 'companion.say', params: { name: t.t(this.def.nameKey), line: t.t(b.lineKey) } });
+    this.ctx.events.emit('hud.toast', { textKey: 'companion.say', params: { name: t.t(this.def.nameKey), line: t.t(lineKey) } });
   }
 
   // ---- ticks -------------------------------------------------------------------------------------------------
