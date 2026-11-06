@@ -125,6 +125,8 @@ describe('codex-act4 plugin', () => {
     expect(t.has(ID.walkerCamp)).toBe(true);
     t.emit('discover', { placeId: 'poi.a4.wagon-train', kind: 'poi' });
     expect(t.has(ID.huskCathedral)).toBe(false);
+    t.emit('discover', { placeId: 'waste.husk-cathedral', kind: 'poi' });
+    expect(t.has(ID.huskCathedral)).toBe(true);
     t.emit('weather.changed', { kind: 'clear', from: 'storm' });
     expect(t.has(ID.storms)).toBe(false);
     t.emit('weather.changed', { kind: 'warning', from: 'clear' });
