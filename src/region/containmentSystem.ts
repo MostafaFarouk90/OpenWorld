@@ -6,6 +6,7 @@
 import { MOUNT_TUNING } from '../mount/tuning';
 import { heightAt as terrainHeight } from '../terrain/heightfield';
 import { ACT3_CORRIDORS, ACT3_HOLES } from './act3Containment';
+import { ACT4_CORRIDORS, ACT4_HOLES } from './act4Containment';
 import { Containment, DEAD_ROAD_CORRIDOR, type ContainmentService } from './containment';
 import type { CoreContext } from './coreTypes';
 
@@ -35,7 +36,8 @@ export function installContainment(
   heightAt: (x: number, z: number) => number = terrainHeight,
 ): InstalledContainment {
   // v0.7: the Act 3 corridors and the summit hole are registered here, closed until their conditions hold.
-  const containment = new Containment(ctx.state, [DEAD_ROAD_CORRIDOR, ...ACT3_CORRIDORS], ACT3_HOLES);
+  // v0.8: the Ash Road corridor and the Caldera hole (act4Containment.ts).
+  const containment = new Containment(ctx.state, [DEAD_ROAD_CORRIDOR, ...ACT3_CORRIDORS, ...ACT4_CORRIDORS], [...ACT3_HOLES, ...ACT4_HOLES]);
   const offs: (() => void)[] = [];
   offs.push(ctx.services.provide('containment', containment));
   let sinceToast = Infinity;

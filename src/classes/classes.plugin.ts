@@ -24,8 +24,9 @@ import {
   availableFlag,
   drillFlag,
   npcBastionPost,
-  trainerAnchor,
+  TRAINER_POSTS,
   trainerId,
+  trainerPlacement,
 } from './kits';
 import { KitSwapper } from './KitSwapper';
 import { CLASSES_STRINGS_EN } from './strings.en';
@@ -158,15 +159,25 @@ const classesPlugin: GamePlugin = {
       toast,
     });
     const warned = new Set<string>();
+    // v0.8 item 10: the desk of class `id` for the flags now (the shipped Bastion desk, or a TRAINER_POSTS row).
+    const placementOf = (id: ClassId) => trainerPlacement(classes.kit(id) ?? DEFAULT_KITS[id], ctx.state);
     const trainerReady = (id: ClassId): boolean => {
       if (!classes.available(id)) return false;
       const kit = classes.kit(id) ?? DEFAULT_KITS[id];
-      if (!ctx.anchors.find(trainerAnchor(kit))) {
-        if (!warned.has(id)) {
-          warned.add(id);
-          warn(`classes: anchor "${trainerAnchor(kit)}" is missing; the ${id} trainer is closed`);
+      const place = placementOf(id);
+      if (!ctx.anchors.find(place.deskAnchor)) {
+        const key = `${id}:${place.deskAnchor}`;
+        if (!warned.has(key)) {
+          warned.add(key);
+          warn(`classes: anchor "${place.deskAnchor}" is missing; the ${id} trainer is closed`);
         }
         return false;
+      }
+      if (place.moved) {
+        const post = ctx.anchors.find(place.postAnchor);
+        const at = svc<{ position(id: string): { x: number; y: number; z: number } | undefined }>('npcs')?.position(place.npcId);
+        if (!post || !at) return true;
+        return Math.hypot(at.x - post.position.x, at.z - post.position.z) <= TRAINER_POST_RADIUS;
       }
       const post = ctx.anchors.find(npcBastionPost(kit));
       const at = svc<{ position(id: string): { x: number; y: number; z: number } | undefined }>('npcs')?.position(kit.trainer.npcId);
@@ -175,22 +186,32 @@ const classesPlugin: GamePlugin = {
     };
     const openTrainer = (id: ClassId): void => {
       if (!trainerReady(id)) return;
-      const kit = classes.kit(id) ?? DEFAULT_KITS[id];
-      desk.open(id, kit.trainer.nameKey);
+      desk.open(id, placementOf(id).nameKey);
     };
-    for (const id of CLASSES_OFFERED) {
-      const kit = DEFAULT_KITS[id];
+    // One interactable per desk id, which moves with its placement: the shipped `trainer:<npcId>` desks, plus one per
+    // NPC that takes over a class's desk (a TRAINER_POSTS row with `classId`). A desk is enabled only while its class's
+    // placement names it, so a taken-over shipped desk closes.
+    const desks = new Map<string, { classId: ClassId; nameKey: string }>();
+    for (const id of CLASSES_OFFERED) desks.set(trainerId(DEFAULT_KITS[id]), { classId: id, nameKey: DEFAULT_KITS[id].trainer.nameKey });
+    for (const row of TRAINER_POSTS) {
+      const deskId = `trainer:${row.npcId}`;
+      if (row.classId && !desks.has(deskId)) desks.set(deskId, { classId: row.classId, nameKey: row.nameKey ?? DEFAULT_KITS[row.classId].trainer.nameKey });
+    }
+    for (const [deskId, d] of desks) {
+      const mine = (): boolean => placementOf(d.classId).interactableId === deskId;
       ctx.interaction.register({
-        id: trainerId(kit),
+        id: deskId,
         kind: 'trainer',
         promptKey: 'classes.trainer.prompt',
-        name: ctx.strings.t(kit.trainer.nameKey),
+        name: ctx.strings.t(d.nameKey),
         position: (out: THREE.Vector3) => {
-          const a = ctx.anchors.find(trainerAnchor(kit));
+          const a = mine() ? ctx.anchors.find(placementOf(d.classId).deskAnchor) : undefined;
           return a ? out.set(a.position.x, a.position.y, a.position.z) : out.set(0, -1e6, 0);
         },
-        enabled: () => trainerReady(id),
-        onInteract: () => openTrainer(id),
+        enabled: () => mine() && trainerReady(d.classId),
+        onInteract: () => {
+          if (mine()) openTrainer(d.classId);
+        },
       });
     }
 

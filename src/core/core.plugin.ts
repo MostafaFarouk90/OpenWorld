@@ -61,7 +61,7 @@ const core: GamePlugin = {
     });
     ctx.services.provide('groupStanding', standing);
     ctx.services.provide('questRewardScale', new QuestRewardScale(warn));
-    ctx.services.provide('killXpRegionFactor', new KillXpRegionFactor(warn));
+    ctx.services.provide('killXpRegionFactor', new KillXpRegionFactor(warn, ctx.state));
 
     // v0.6 pull on the player: held through the combat verbs' forced move (walls stop it), before they apply it.
     const at = new THREE.Vector3();

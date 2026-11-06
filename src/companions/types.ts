@@ -64,7 +64,7 @@ export interface CompanionsService {
    */
   setActive(ids: readonly string[]): boolean;
   /** Raises the bond rank (1 to 5, never lower, joined only); `companion.bond` on a change. The only rank writer. */
-  setRank(id: string, rank: number): boolean;
+  setRank(id: string, rank: number, source?: string): boolean;
   isActive(id: string): boolean;
   actorId(id: string): ActorId | null;
   /** 0 when not joined. */

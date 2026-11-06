@@ -18,11 +18,17 @@ export const REGION_BOXES_MAP: Readonly<Record<RegionId, MapBox>> = Object.fromE
 ) as Record<RegionId, MapBox>;
 
 const BUILT: readonly RegionId[] = REGION_IDS.filter((id) => !REGION_INFO[id].reserved);
+const RESERVED: readonly RegionId[] = REGION_IDS.filter((id) => REGION_INFO[id].reserved);
 
 export function regionAt(x: number, z: number): RegionInfo | null {
   if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
   const mx = x - MAP_TO_ENGINE_OFFSET.x;
   const mz = z - MAP_TO_ENGINE_OFFSET.z;
+  // v0.8: a reserved box inside a built one (the Caldera inside the Waste) answers null, never the built region.
+  for (const id of RESERVED) {
+    const b = REGION_INFO[id].box;
+    if (mx >= b.x0 && mx < b.x1 && mz >= b.z0 && mz < b.z1) return null;
+  }
   for (const id of BUILT) {
     const b = REGION_INFO[id].box;
     if (mx >= b.x0 && mx < b.x1 && mz >= b.z0 && mz < b.z1) {

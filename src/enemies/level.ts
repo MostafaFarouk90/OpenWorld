@@ -1,4 +1,5 @@
-import { REGION_IDS, REGION_INFO } from '../region/regions';
+import type { FlagReader } from '../core/flagCondition';
+import { REGION_IDS, REGION_INFO, regionBandNow, type RegionId } from '../region/regions';
 import { LEVEL } from './tuning';
 import type { EnemyDef, LevelBand } from './types';
 
@@ -30,8 +31,23 @@ export const REGION_BANDS: Record<string, LevelBand> = Object.fromEntries(
 /** The Watch Guard's level band for spawner groups (inside the Brightwater and Harrowmark bands, where guards stand). */
 export const WATCH_GUARD_BAND: LevelBand = { min: 4, max: 6 };
 
-export function bandForRegion(id: string): LevelBand | undefined {
-  return Object.prototype.hasOwnProperty.call(REGION_BANDS, id) ? REGION_BANDS[id] : undefined;
+/**
+ * A built region's band. v0.8: with a flag reader, the act-scoped band in force now (`bandWhen`: Harrowmark is 28 to 33
+ * from `story.gate.a4`); without one, the static base band, as before v0.8.
+ */
+export function bandForRegion(id: string, flags?: FlagReader | null): LevelBand | undefined {
+  if (!Object.prototype.hasOwnProperty.call(REGION_BANDS, id)) return undefined;
+  return flags ? regionBandNow(id as RegionId, flags) : REGION_BANDS[id];
+}
+
+/**
+ * v0.8, the one player-relative cap (shared by A1's lower Dragonspine lock, the summit's Q9 and Act 4's Q1):
+ * `min(level, P + cap)`. A null cap or an unknown (non-finite) player level leaves the level as it is. Not clamped to
+ * 1..cap: callers clamp.
+ */
+export function capAbovePlayer(level: number, player: number | undefined, cap: number | null): number {
+  if (cap === null || !isNum(cap) || cap < 0 || !isNum(player)) return level;
+  return Math.min(level, Math.round(player) + Math.round(cap));
 }
 
 let warnedConsole = false;
@@ -91,10 +107,10 @@ export function enemyLevel(
  * Design 5.9: L = clamp(18 + offset + 3 x (W - 3), P - 9, P + 5), before the cap. A block with `capAbovePlayer` then
  * takes `min(L, P + capAbovePlayer)` (the lower Dragonspine, see DRAGONSPINE_LOWER_CAP_ABOVE_PLAYER).
  */
-function blockFormula(offset: number, warmth: number, player: number, capAbovePlayer: number | null = null): number {
+function blockFormula(offset: number, warmth: number, player: number, cap: number | null = null): number {
   const raw = 18 + offset + 3 * (warmth - 3);
   const L = Math.min(player + LEVEL.abovePlayer, Math.max(player - LEVEL.belowPlayer, raw));
-  return capAbovePlayer === null ? L : Math.min(L, player + capAbovePlayer);
+  return capAbovePlayer(L, player, cap);
 }
 
 // ---- v0.7 (Act 3, contracts/CHANGES-v0.7.md items 8 and 8b) ----
@@ -169,8 +185,35 @@ export const SUMMIT_CAP_ABOVE_PLAYER: number | null = 3;
 export function summitLevel(band: LevelBand, roll: number, playerLevel: number | undefined, cap: number | null = SUMMIT_CAP_ABOVE_PLAYER): number {
   const r = isNum(roll) ? Math.min(1, Math.max(0, roll)) : 0;
   let level = band.min + Math.round(r * (band.max - band.min));
-  if (cap !== null && isNum(playerLevel)) level = Math.min(level, Math.round(playerLevel) + cap);
+  level = capAbovePlayer(level, playerLevel, cap);
   return Math.min(LEVEL.cap, Math.max(1, level));
+}
+
+// ---- v0.8 (Act 4, contracts/CHANGES-v0.8.md item 4, Q1) ----
+
+/**
+ * Q1 (a), a taste call Mostafa may veto: no Act 4 enemy stands more than this many levels above the player. Applied to
+ * every Act 4 spawn (Harrowmark from `story.gate.a4`, the `harrowmark-a4` interiors, the Ashen Waste) after the band
+ * roll, at spawn time, fixed for the member's life. `null` restores the design's fixed bands.
+ */
+export const ACT4_CAP_ABOVE_PLAYER: number | null = 3;
+
+/** First-arrival groups (M35's ambush and checkpoints, M42's first group: `SpawnerDef.firstArrival`) cap at P + 2. */
+export const ACT4_FIRST_ARRIVAL_ABOVE_PLAYER = 2;
+
+/** An Act 4 member's level: the band rolled first, then capped by the live player level (P + 2 for first arrivals). */
+export function act4Level(band: LevelBand, roll: number, playerLevel: number | undefined, firstArrival = false, cap: number | null = ACT4_CAP_ABOVE_PLAYER): number {
+  const r = isNum(roll) ? Math.min(1, Math.max(0, roll)) : 0;
+  let level = band.min + Math.round(r * (band.max - band.min));
+  const c = cap === null ? null : firstArrival ? Math.min(cap, ACT4_FIRST_ARRIVAL_ABOVE_PLAYER) : cap;
+  level = capAbovePlayer(level, playerLevel, c);
+  return Math.min(LEVEL.cap, Math.max(1, level));
+}
+
+/** An Act 4 boss's level (plan 6.2: the Bellows-Engine 31, Eormen 35), capped the same way as every Act 4 spawn. */
+export function act4BossLevel(base: number, playerLevel: number | undefined, cap: number | null = ACT4_CAP_ABOVE_PLAYER): number {
+  const b = isNum(base) ? Math.round(base) : 1;
+  return Math.min(LEVEL.cap, Math.max(1, capAbovePlayer(b, playerLevel, cap)));
 }
 
 /** Health and damage scaling for a level; level 1 equals the def. */
