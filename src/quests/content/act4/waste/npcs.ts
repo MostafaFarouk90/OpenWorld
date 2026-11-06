@@ -85,7 +85,8 @@ export const WASTE_A4_POST_ROWS: readonly PostRule[] = [
     posts: [
       { when: done('m46'), anchorId: L1.wulfhildRimfoot },
       { when: { all: [active('m45'), { flag: M45_MET, equals: true }] }, anchorId: `${W}.post.wulfhild.glasslands` },
-      { when: { all: [{ not: { flag: M42_GATE, equals: true } }, { not: done('m42') }] }, anchorId: `${W}.post.wulfhild.ashgate` },
+      // Act 4 only: before the Ash Road opens nobody is moved (a fresh world resolves no Waste post)
+      { when: { all: [{ flag: OUT, equals: true }, { not: { flag: M42_GATE, equals: true } }, { not: done('m42') }] }, anchorId: `${W}.post.wulfhild.ashgate` },
     ],
   },
   {

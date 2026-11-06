@@ -30,6 +30,13 @@ export const ALLY_NO_KILL_ID = 'companions.ally-no-kill';
 export const STONEHIDE_ORDER = 90;
 export const MAX_RANK = 5;
 
+/**
+ * Act 4 L11 (plans/act4-L11.md, coordinator 18:01): while this flag is set a joined companion walks with Cael as a guest,
+ * on top of the seats (`maxActive` is unchanged and `setActive` still refuses more than it). The quest director writes and
+ * clears it, so a load re-derives it with the flags.
+ */
+export const companionGuestFlag = (id: string): string => `story.party.guest.${id}`;
+
 let controllers: CompanionController[] = [];
 let partyOffs: (() => void)[] = [];
 let trials: Trials | null = null;
@@ -64,7 +71,10 @@ export function createCompanionsService(
   const active = () => {
     const joined = list.filter((c) => c.joined).map((c) => c.def.id);
     const set = party.raw;
-    return (set ? joined.filter((id) => set.includes(id)) : joined).slice(0, maxActive());
+    const seated = (set ? joined.filter((id) => set.includes(id)) : joined).slice(0, maxActive());
+    // Act 4 L11: a quest's guest walks with the party beyond the seats while its flag is set (Hrolf on M46)
+    const guests = joined.filter((id) => !seated.includes(id) && ctx.state.getBool(companionGuestFlag(id)));
+    return guests.length ? [...seated, ...guests] : seated;
   };
   const announce = (before: string[]) => {
     const now = active();

@@ -337,7 +337,9 @@ describe('clearing', () => {
       expect(sp.ephemeral).toBe(true);
       expect(sp.activation).toBe('manual');
       expect(sp.respawn).toBe('never');
-      expect(sp.tag).toBe(sp.id.startsWith('waves.m39.') ? 'm39.waves' : 'm12'); // Act 4 (L2): M39's set has its own tag
+      // Act 4 (L2): M39's set has its own tag; Act 4 (L11): each M46 cairn's set is tagged with its own id
+      const cairn = /^waves\.(m46\.cairn-\d)\./.exec(sp.id)?.[1];
+      expect(sp.tag).toBe(cairn ?? (sp.id.startsWith('waves.m39.') ? 'm39.waves' : 'm12'));
     }
     kit.waves().start(ID);
     kit.runSecs(6);

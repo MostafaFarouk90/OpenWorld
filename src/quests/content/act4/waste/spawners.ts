@@ -6,7 +6,8 @@ import type { EnemyKind, SpawnerDef } from '../../../../enemies/types';
 import { W } from './ids';
 import { L1 } from './siteIds';
 import { M42_GROUPS } from './m42.quest';
-import { M43_PYRE_GROUP } from './m43.quest';
+import { M43_DANCE_SPAWNER, M43_PYRE_GROUP } from './m43.quest';
+import { R10_DUEL_ENEMY } from '../../act2/r10duels/r10Duels';
 import { M44_NEST_ARM, M44_NEST_GROUP } from './m44.quest';
 import { R25_KNOT_ARM, R25_KNOT_GROUP } from './r25.quest';
 import { R24_ARM, R24_GROUPS } from './r24.quest';
@@ -38,6 +39,11 @@ export const WASTE_A4_Q_SPAWNERS: readonly SpawnerDef[] = [
     id: M43_PYRE_GROUP(n), tag: M43_PYRE_GROUP(n), enemy: WRAITH, count: 1, anchor: L1.pyre(n), band: BAND, skin: 'wraith-husk',
     activation: 'manual', ephemeral: true, respawn: 'never', leash: true,
   })),
+  // M43: Hrodna in the ring (the trial's opponent, a yard veteran; her NPC stands in while the bout runs)
+  {
+    id: M43_DANCE_SPAWNER, tag: M43_DANCE_SPAWNER, enemy: R10_DUEL_ENEMY, count: 1, anchor: `${W}.m43.bout`,
+    activation: 'manual', ephemeral: true, untauntable: true, leash: false, band: BAND, respawn: 'never',
+  },
   // M44: the nest in the second house (L5 drops its own chapel nest)
   group(M44_NEST_GROUP, WRAITH, ids(`${W}.m44.nest`, 4), M44_NEST_ARM, 'm44', { skin: 'wraith-husk' }),
   // R25: the knot at the third family's hearth
