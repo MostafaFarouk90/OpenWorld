@@ -15,3 +15,16 @@ export const ACT4_HUD_STRINGS_EN: Record<string, string> = {
   'act4.hud.shelter.to': 'Shelter {m} m',
   'act4.hud.rope.to': 'Rope-line {m} m',
 };
+
+/** The Act 4 ending card's recap lines (invented; logged under "Act 4 L9" in design/changes-applied.md). */
+export const ACT4_ENDING_STRINGS_EN: Record<string, string> = {
+  'hud.ending.a4.line.m38': 'At the Council, Vey and Lord Aldous Grisel seized the chamber, and Harrowmark fell to the Regent.',
+  'hud.ending.a4.line.m39': 'Sir Gaut held the Keep stairs while Cael carried the king out. He fell there, and his sword went with Cael.',
+  'hud.ending.a4.line.d07': 'The Bellows-Engine choked and died in the Crucible under the old Smelter gate.',
+  'hud.ending.a4.line.m43': "Cael walked the Ashwalkers' trials and carries the walker's mark.",
+  'hud.ending.a4.line.r24.all': 'Every rain-cask reached the Walker Camp, and the cisterns filled.',
+  'hud.ending.a4.line.r24.half': "Half the rain-casks stayed at the Ashgate refuge for Harrowmark's people.",
+  'hud.ending.a4.line.d08.released': 'Archwraith Eormen was released at last in the Husk Cathedral.',
+  'hud.ending.a4.line.d08.defeated': 'Archwraith Eormen fell in the Husk Cathedral, and Cael carried off a shard of his crown.',
+  'hud.ending.a4.continues': 'The story continues.',
+};
