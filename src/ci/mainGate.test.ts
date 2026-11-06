@@ -16,7 +16,7 @@ const { join, resolve } = await load<{ join(...p: string[]): string; resolve(...
 const proc = (globalThis as unknown as { process: { execPath: string; env: Record<string, string | undefined>; cwd(): string } }).process;
 
 const gate = gateModule;
-const { ARTIFACT_PREFIX, decide, evaluate, summary } = gate;
+const { ARTIFACT_PREFIX, CHAINS_ARTIFACT_PREFIX, decide, evaluate, summary } = gate;
 type GateInput = Parameters<typeof decide>[0];
 
 const REPO = 'MostafaFarouk90/OpenWorld';
@@ -128,6 +128,28 @@ describe('evaluate (injected I/O)', () => {
   });
 });
 
+describe('the chains output (plans/act4-L13.md s.15)', () => {
+  const m = REAL[2];
+  const both = [{ name: ARTIFACT_PREFIX + m.tree }, { name: CHAINS_ARTIFACT_PREFIX + m.tree }];
+  it('skips the chains only when the tests skip and the PR run also ran the chains on this tree', () => {
+    expect(decide(input(m, { artifacts: both }))).toMatchObject({ tests: 'skip', chains: 'skip' });
+  });
+  it('runs them when the PR run did not run them, ran them on another tree, or the artifact expired', () => {
+    expect(decide(input(m))).toMatchObject({ tests: 'skip', chains: 'run' });
+    expect(decide(input(m, { artifacts: [both[0]!, { name: CHAINS_ARTIFACT_PREFIX + OTHER }] }))).toMatchObject({ chains: 'run' });
+    expect(decide(input(m, { artifacts: [both[0]!, { name: both[1]!.name, expired: true }] }))).toMatchObject({ chains: 'run' });
+  });
+  it('runs them whenever the tests run, even with the chains artifact', () => {
+    expect(decide(input(m, { artifacts: both, headTree: OTHER }))).toMatchObject({ tests: 'run', chains: 'run' });
+    expect(decide(input(m, { artifacts: both, runs: [{ id: 1, run_number: 5, status: 'completed', conclusion: 'failure' }] }))).toMatchObject({ chains: 'run' });
+  });
+  it('an error runs both', async () => {
+    const d = await evaluate({ sha: m.sha, mergedTree: m.tree, repo: REPO, fetchJson: api(input(m, { artifacts: both }), { path: /pulls/, throws: true }) });
+    expect(d).toMatchObject({ tests: 'run', chains: 'run' });
+  });
+  it('the summary names the chains decision', () => expect(summary(decide(input(m, { artifacts: both })))).toContain('Chains: `skip`'));
+});
+
 describe('the CLI wrapper under node (fake fetch via --import)', () => {
   function cli(i: GateInput, status = 200) {
     const dir = mkdtempSync(join(tmpdir(), 'main-gate-'));
@@ -155,14 +177,18 @@ globalThis.fetch = async (url) => {
   }
   it('writes tests=skip and the summary for a tested tree', () => {
     const r = cli(input(REAL[2]));
-    expect(r.output).toBe('tests=skip\n');
+    expect(r.output).toBe('tests=skip\nchains=run\n');
     expect(r.summary).toContain('tests skipped');
     expect(r.stdout).toContain('tests=skip');
   });
+  it('writes chains=skip when the PR run also ran the chains', () => {
+    const m = REAL[2];
+    expect(cli(input(m, { artifacts: [{ name: ARTIFACT_PREFIX + m.tree }, { name: CHAINS_ARTIFACT_PREFIX + m.tree }] })).output).toBe('tests=skip\nchains=skip\n');
+  });
   it('writes tests=run on a mismatch and on an HTTP 500', () => {
-    expect(cli(input(REAL[2], { headTree: OTHER })).output).toBe('tests=run\n');
+    expect(cli(input(REAL[2], { headTree: OTHER })).output).toBe('tests=run\nchains=run\n');
     const r = cli(input(REAL[2]), 500);
-    expect(r.output).toBe('tests=run\n');
+    expect(r.output).toBe('tests=run\nchains=run\n');
     expect(r.summary).toContain('HTTP 500');
   });
 });
@@ -183,19 +209,38 @@ describe('ci.yml wiring', () => {
     expect(g).toContain("if: github.event_name == 'push' && github.ref == 'refs/heads/main'");
     expect(g).toMatch(/permissions:\n\s+contents: read\n\s+pull-requests: read\n\s+actions: read/);
     expect(g).toContain('tests: ${{ steps.decide.outputs.tests }}');
+    expect(g).toContain('chains: ${{ steps.decide.outputs.chains }}');
     expect(g).toContain('node .github/scripts/main-gate.mjs');
     expect(g).toContain('timeout-minutes: 3');
   });
   it("tests need the gate and are skipped only on an explicit 'skip' (a PR always runs them)", () => {
     const t = job('test');
     expect(t).toContain('needs: [gate]');
-    expect(t).toContain("if: ${{ !cancelled() && (github.event_name == 'pull_request' || needs.gate.outputs.tests != 'skip') }}");
+    expect(t).toContain("if: ${{ !cancelled() && github.event_name != 'workflow_dispatch' && (github.event_name == 'pull_request' || needs.gate.outputs.tests != 'skip') }}");
   });
   it('deploy waits on the build, and on the tests unless the gate skipped them', () => {
     const d = job('deploy');
-    expect(d).toContain('needs: [gate, build, test]');
+    expect(d).toContain('needs: [gate, build, test, chains]');
+    expect(d).toContain("(needs.chains.result == 'success' || needs.chains.result == 'skipped')");
     expect(d).toContain("needs.build.result == 'success'");
     expect(d).toContain("(needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.gate.outputs.tests == 'skip'))");
+  });
+  it("the chains job runs by the build's scope, on main also unless the gate skipped them, in three legs", () => {
+    const c = job('chains');
+    expect(c).toContain('needs: [gate, build]');
+    expect(c).toContain("needs.build.outputs.chains != 'skip' && (github.event_name != 'push' || needs.gate.outputs.chains != 'skip')");
+    expect(c).toContain('overwrite: true');
+    expect(yml).toContain('group: ci-${{ github.event_name }}-${{ github.ref }}');
+    expect(job('build')).toContain('BEFORE_SHA: ${{ github.event.before }}');
+    expect(c).toContain('leg: [1, 2, 3]');
+    expect(c).toContain('npx vitest run --config vitest.chains.config.ts --shard=${{ matrix.leg }}/3');
+    expect(c).toMatch(/upload-artifact@v4\n\s+if: github.event_name == 'pull_request' && matrix.leg == 1\n\s+with:\n\s+name: chains-ran-\$\{\{ steps.tree.outputs.tree \}\}/);
+    expect(CHAINS_ARTIFACT_PREFIX).toBe('chains-ran-');
+    const b = job('build');
+    expect(b).toContain('chains: ${{ steps.scope.outputs.chains }}');
+    expect(b).toMatch(/checkout@v4\n\s+with:\n\s+fetch-depth: 2/);
+    expect(b).toContain('node .github/scripts/chains-scope.mjs');
+    expect(yml).toContain('workflow_dispatch:');
   });
   it('the tested-tree artifact is PR-only and named by the merge checkout tree', () => {
     const b = job('build');
