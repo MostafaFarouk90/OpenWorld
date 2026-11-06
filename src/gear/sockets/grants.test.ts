@@ -153,7 +153,7 @@ describe('bossBeaten', () => {
     expect(bossBeaten({ getFlag: () => undefined, questDone: (q) => q === 'd02' }, 'gaffer-grimtooth')).toBe(true);
     expect(bossBeaten({ getFlag: () => undefined, questDone: (q) => q === 'd02' }, 'ashen-prior')).toBe(false);
     expect(bossBeaten({ getFlag: () => 'defeated' }, 'hathren')).toBe(false);
-    expect(GEM_BOSSES.map((b) => b.questId)).toEqual(['d01', 'd02', 'd03', 'd04', 'd05', 'd06']);
+    expect(GEM_BOSSES.map((b) => b.questId)).toEqual(['d01', 'd02', 'd03', 'd04', 'd05', 'd06', 'd07', 'd08']);
   });
 });
 
@@ -162,5 +162,24 @@ describe('flag ownership', () => {
     const row = ACT3_FLAG_OWNERS.find((o) => o.pattern === 'gear.shardgem.granted.<id>');
     expect(row?.owner).toBe('K10');
     for (const b of GEM_BOSSES) expect(grantedFlag(b.bossId)).toMatch(/^gear\.shardgem\.granted\.[a-z0-9-]+$/);
+  });
+});
+
+describe('Act 4 boss gems (L7, Q6)', () => {
+  it('the Bellows-Engine (D07) pays gem A and Eormen (D08) gem B, each once', () => {
+    const t = rig('knight');
+    expect(grantBossGem(t.ports, 'bellows-engine')?.gemId).toBe(gemFor('knight', 'a').id);
+    expect(grantBossGem(t.ports, 'bellows-engine')).toBeNull();
+    expect(grantBossGem(t.ports, 'eormen')?.gemId).toBe(gemFor('knight', 'b').id);
+    expect(grantBossGem(t.ports, 'eormen')).toBeNull();
+  });
+  it('a released Eormen counts as beaten; the retro-grant pays a save with the outcomes once', () => {
+    const t = rig('emberwright', { 'boss.bellows-engine.outcome': 'defeated', 'boss.eormen.outcome': 'released' });
+    expect(retroGrant(t.ports).map((r) => r?.bossId)).toEqual(['bellows-engine', 'eormen']);
+    expect(retroGrant(t.ports)).toEqual([]);
+  });
+  it('a finished D07 quest without an outcome flag also pays', () => {
+    const t = rig('warden', {}, ['d07']);
+    expect(retroGrant(t.ports).map((r) => r?.bossId)).toEqual(['bellows-engine']);
   });
 });

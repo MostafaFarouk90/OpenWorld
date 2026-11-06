@@ -7,6 +7,8 @@ export const CLASSES_STRINGS_EN: Record<string, string> = {
 
   'classes.trainer.gaut': 'Sir Gaut Halvard',
   'classes.trainer.stane': 'Marshal Osric Stane',
+  // Act 4 (L7): Captain Rook holds the Knight desk at the Ashgate refuge from M41.
+  'classes.trainer.rook': 'Captain Ealdred Rook',
   'classes.trainer.pennard': 'Magister Ceolwin Pennard',
   'classes.trainer.gerta': 'Gerta Quickfingers',
   'classes.trainer.ashdown': 'Archer-Sergeant Cenric Ashdown',

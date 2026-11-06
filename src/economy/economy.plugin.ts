@@ -19,7 +19,7 @@ import './items.act3';
 import { PurseTracker } from './Purse';
 import './service';
 import { Shop } from './Shop';
-import { isVendorId, VENDOR_IDS, VENDOR_POSTS, vendorAnchor, vendorOpenByTable, type VendorId } from './stock';
+import { isVendorId, vendorBand, VENDOR_IDS, VENDOR_POSTS, vendorAnchor, vendorOpenByTable, type VendorId } from './stock';
 import { ECONOMY_STRINGS_EN } from './strings.en';
 import { ECONOMY_ACT3_STRINGS_EN } from './strings.act3.en';
 import { VendorMenu } from './VendorMenu';
@@ -115,10 +115,8 @@ const economyPlugin: GamePlugin = {
       },
       getItem,
       grant: (sourceId, itemId, count) => ctx.events.emit('loot.granted', { sourceId, items: [{ itemId, count }] }),
-      band: (v) => {
-        const track = ({ wystan: 'halvard', merrin: 'oswin', aldous: 'grisel', ysmeryth: 'dragons' } as Partial<Record<VendorId, 'halvard' | 'oswin' | 'grisel' | 'dragons'>>)[v];
-        return track ? ctx.state.favourBand(track) : null;
-      },
+      // L7: every favour vendor's band comes from its VENDORS track (Wenna's Grisel, Wulfhild's Ashwalkers included).
+      band: (v) => vendorBand(v, (track) => ctx.state.favourBand(track)),
       isOpen,
       gearRecord: (id) => inventory.gear(id),
       socketed: (id) => (inventory.socketsOf?.(id).length ?? 0) > 0,
