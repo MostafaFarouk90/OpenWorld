@@ -2,6 +2,8 @@
 // change. K9 sets the quest reward scale for the two approach blocks (L / L_rec); K6b sets the kill XP region factors
 // (the Greyfen in PR 1, the Dragonspine in PR 2). A provider or factor that is not a finite number of 0 or more reads as 1 (0 pays nothing, as QuestManager reads it).
 
+import { flagConditionHolds, type FlagCondition, type FlagReader } from './flagCondition';
+
 const valid = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 0;
 
 /** `questRewardScale`: quest XP and gold are multiplied by `scale(questId)` once, then rounded. */
@@ -41,28 +43,45 @@ export class QuestRewardScale implements QuestRewardScaleService {
 /** `killXpRegionFactor`: kill XP (and the mercy share of it) is multiplied by the factor of the region of the kill. */
 export interface KillXpRegionFactorService {
   factor(regionId: string | null): number;
-  /** Sets one region's factor; returns the undo (the factor goes back to 1). */
-  set(regionId: string, factor: number): () => void;
+  /**
+   * Sets one region's factor; returns the undo (the factor goes back to 1). v0.8: `opts.when` makes the factor apply only
+   * while the condition holds (L2 sets Harrowmark's x 2.4 with `when: story.gate.a4`, so Act 1 kills there pay as before).
+   */
+  set(regionId: string, factor: number, opts?: { when?: FlagCondition }): () => void;
+}
+
+interface FactorEntry {
+  factor: number;
+  when?: FlagCondition;
 }
 
 export class KillXpRegionFactor implements KillXpRegionFactorService {
-  private readonly factors = new Map<string, number>();
+  private readonly factors = new Map<string, FactorEntry>();
 
-  constructor(private readonly warn: (m: string) => void = () => {}) {}
+  /** v0.8: `flags` reads `when` conditions; without it a factor set with `when` never applies (it warns once at set). */
+  constructor(
+    private readonly warn: (m: string) => void = () => {},
+    private readonly flags: FlagReader | null = null,
+  ) {}
 
   factor(regionId: string | null): number {
     if (regionId === null) return 1;
-    return this.factors.get(regionId) ?? 1;
+    const e = this.factors.get(regionId);
+    if (!e) return 1;
+    if (e.when && !(this.flags && flagConditionHolds(e.when, this.flags))) return 1;
+    return e.factor;
   }
 
-  set(regionId: string, factor: number): () => void {
+  set(regionId: string, factor: number, opts: { when?: FlagCondition } = {}): () => void {
     if (!valid(factor)) {
       this.warn(`killXpRegionFactor: ignoring ${String(factor)} for "${regionId}"`);
       return () => {};
     }
-    this.factors.set(regionId, factor);
+    if (opts.when && !this.flags) this.warn(`killXpRegionFactor: "${regionId}" has a condition but no flags to read; it reads as 1`);
+    const entry: FactorEntry = opts.when ? { factor, when: opts.when } : { factor };
+    this.factors.set(regionId, entry);
     return () => {
-      if (this.factors.get(regionId) === factor) this.factors.delete(regionId);
+      if (this.factors.get(regionId) === entry) this.factors.delete(regionId);
     };
   }
 }

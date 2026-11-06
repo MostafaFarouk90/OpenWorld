@@ -1,6 +1,7 @@
 import type { Condition, Effect, QuestDef } from './types';
 import { EFFECT_EVENT_PATTERN, MAX_IF_DEPTH } from './types';
 import { isMasterBookClass } from '../progression/masterBooks';
+import { COMPANION_IDS, COMPANION_MAX_RANK, isCompanionId } from '../companions/ids';
 
 const TYPES = ['goTo', 'interact', 'kill', 'collect', 'carry', 'talk', 'event'];
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.trim() !== '';
@@ -88,6 +89,11 @@ export function validateEffects(effects: Effect[] | undefined, where = 'effects'
       if (!isStr(c.grantAbility)) errs.push(`${w}: grantAbility needs an ability id`);
     } else if ('grantMasterBook' in c) {
       if (!isMasterBookClass(c.grantMasterBook)) errs.push(`${w}: grantMasterBook needs a class id (knight, warden, emberwright, ashblade or pathfinder)`);
+    } else if ('setCompanionRank' in c) {
+      const r = c.setCompanionRank as { id?: unknown; rank?: unknown; source?: unknown } | undefined;
+      if (!isObj(r) || !isCompanionId(r.id)) errs.push(`${w}: setCompanionRank needs a companion id (${COMPANION_IDS.join(', ')})`);
+      else if (typeof r.rank !== 'number' || !Number.isInteger(r.rank) || r.rank < 1 || r.rank > COMPANION_MAX_RANK) errs.push(`${w}: setCompanionRank rank must be an integer 1 to ${COMPANION_MAX_RANK}`);
+      else if (!isStr(r.source)) errs.push(`${w}: setCompanionRank needs a source`);
     } else if ('event' in c) {
       if (typeof c.event !== 'string' || !EFFECT_EVENT_PATTERN.test(c.event)) errs.push(`${w}: event name not allowed`);
     } else {

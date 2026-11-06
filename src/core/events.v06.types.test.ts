@@ -10,7 +10,7 @@ import type { GameServices } from './Services';
 // Pins the v0.6 shared payloads (contracts/CHANGES-v0.6.md). Owners emit these and never redeclare them.
 describe('v0.6 event payloads', () => {
   it('companions, damage and bosses', () => {
-    expectTypeOf<GameEventMap['companion.bond']>().toEqualTypeOf<{ companionId: string; rank: number }>();
+    expectTypeOf<GameEventMap['companion.bond']>().toEqualTypeOf<{ companionId: string; rank: number; source?: string }>(); // v0.8 adds the optional source
     expectTypeOf<GameEventMap['actor.pulled']>().toEqualTypeOf<{ actorId: string; fromId: string; distance: number }>();
     expectTypeOf<GameEventMap['boss.spared']>().toEqualTypeOf<{ bossId: string; actorId: string }>();
   });

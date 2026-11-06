@@ -163,7 +163,8 @@ export interface GameEventMap {
 
   // ---- v0.6 (Act 2, thread A0; contracts/CHANGES-v0.6.md) ----
   /** A5: a companion's bond rank changed (`companion.<id>.rank`). */
-  'companion.bond': { companionId: string; rank: number };
+  /** v0.8: `source` names what raised the rank (a quest effect's `setCompanionRank.source`). */
+  'companion.bond': { companionId: string; rank: number; source?: string };
   /** The resolver, on a `hit` whose request carried `pull`: the mover drags the actor toward `fromId`. */
   'actor.pulled': { actorId: ActorId; fromId: ActorId; distance: number };
   /** The core boss registry, when a `spare` mercy ends the fight (outcome `'spared'`). */

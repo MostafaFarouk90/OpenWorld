@@ -1,4 +1,5 @@
 import type { EnemyKind } from '../enemies/types';
+import type { AreaId } from '../region/areas';
 
 /** Lane keys of a set: the numbered spawn lanes, plus named ones (the wyrm's approach). */
 export type LaneKey = string;
@@ -47,6 +48,8 @@ export interface WaveSetDef {
   defenders: readonly DefenderPostDef[];
   /** Level band region id for the wave enemies. */
   band: string;
+  /** v0.8: the sub-area band (the Act 4 interiors' `harrowmark-a4`), so a wave set is capped like any Act 4 spawner. */
+  area?: AreaId;
   /** `actor.spawnTag` of every wave enemy (A12's kill objective matches it). */
   spawnTag: string;
   /** Seconds between a cleared wave and the next; default `DIRECTOR.intermissionSeconds`. */
