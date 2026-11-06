@@ -36,6 +36,12 @@ export interface FollowStep {
 
 export type FollowTuning = { readonly [K in keyof typeof COMPANION_TUNING]: number };
 
+/** A rest slot: `back` metres behind the player's facing, `side` metres to its right (negative is left). */
+export interface FollowSlot {
+  readonly back: number;
+  readonly side: number;
+}
+
 const finite = (v: Vec3): boolean => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z);
 /** Smoothed player speed (m/s) above which the player counts as moving. */
 const PLAYER_MOVING = 1;
@@ -139,6 +145,14 @@ export class FollowModel {
   private playerSpeed = 0;
   /** Which side of the player the slot sits on: 1 right, -1 left. */
   private side = 1;
+  /** The slot's size (its side as a magnitude; `side` above holds which side it is on). */
+  private readonly baseBack: number;
+  private readonly baseSide: number;
+  /**
+   * Act 4 (L4): replaces the slot while set (a storm tightens it onto the rope-line). Null: the companion's own slot.
+   * Its side is a magnitude too; which side stays the companion's current one.
+   */
+  slotOverride: FollowSlot | null = null;
   private settled = true;
   private stuckClock = 0;
   private stuckFrom: Vec3 | null = null;
@@ -148,7 +162,14 @@ export class FollowModel {
     start: Vec3,
     yaw = 0,
     private readonly tuning: FollowTuning = COMPANION_TUNING,
+    /** The companion's own slot (Act 4, L4: Aelfreda walks beside, out of the camera's foreground); absent: the tuning's. */
+    slot?: FollowSlot,
   ) {
+    this.baseBack = slot?.back ?? tuning.slotBack;
+    const side = slot?.side ?? tuning.slotSide;
+    this.baseSide = Math.abs(side);
+    // the sign says which side it starts on (the Ember pup's tuning has -1; Aelfreda's slot too)
+    if (side < 0) this.side = -1;
     this.pos = { ...start };
     this.yaw = yaw;
     this.trail = new Trail(tuning.trailPoints, tuning.trailSpacing);
@@ -220,7 +241,7 @@ export class FollowModel {
     }
 
     // Distance still to cover beyond the slot, so speed matches the player's near the slot and closes the gap further out.
-    const gap = toPlayer <= t.directRadius ? d : toPlayer - t.slotBack;
+    const gap = toPlayer <= t.directRadius ? d : toPlayer - (this.slotOverride?.back ?? this.baseBack);
     const want = Math.min(t.sprintSpeed, Math.max(t.walkSpeed * 0.5, this.playerSpeed + gap * t.catchUpGain));
     this.speed = want;
     this.gait = this.nextGait(want);
@@ -295,9 +316,10 @@ export class FollowModel {
 
   /** The rest slot; switches side only when the other side's ground is clearly nearer the player's height. */
   private slot(player: Vec3, yaw: number, input: FollowInput): { x: number; z: number } {
-    const t = this.tuning;
-    const here = behind(player, yaw, t.slotBack, t.slotSide * this.side);
-    const there = behind(player, yaw, t.slotBack, -t.slotSide * this.side);
+    const back = this.slotOverride?.back ?? this.baseBack;
+    const sideM = Math.abs(this.slotOverride?.side ?? this.baseSide);
+    const here = behind(player, yaw, back, sideM * this.side);
+    const there = behind(player, yaw, back, -sideM * this.side);
     const gh = input.groundAt(here.x, here.z, player.y);
     const gt = input.groundAt(there.x, there.z, player.y);
     const errHere = gh === null ? Infinity : Math.abs(gh - player.y);

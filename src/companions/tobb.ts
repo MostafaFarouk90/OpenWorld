@@ -2,6 +2,7 @@ import { COMPANION_STRINGS_EN } from './strings.en';
 import { ACT2_TRIGGERS, COMPANION_DOWNED_SECONDS, TOBB_TUNING } from './tuning';
 import type { CompanionDef } from './types';
 import { ACT3_INTERIOR_ENTRY, ACT3_PLACES, act3Pools, act3Variant } from './act3/banter';
+import { ACT4_PLACES, act4Pools, mourningSwap } from './act4/banter';
 
 const pool = (prefix: string): string[] =>
   Object.keys(COMPANION_STRINGS_EN).filter((k) => k.startsWith(`companion.tobb.bark.${prefix}.`));
@@ -40,6 +41,8 @@ export const TOBB: CompanionDef = {
       dell: pool('area.dell'),
       // Act 3 (K5): the Greyfen, the Dragonspine, the trial, the reveal and the ferry.
       ...act3Pools('tobb'),
+      // Act 4 (L4): the Ashen Waste and the event places (storm, walkers, Ebba, the M37 bond, the mourning).
+      ...act4Pools('tobb'),
     },
     combatStart: pool('combatStart'),
     combatEnd: pool('combatEnd'),
@@ -56,12 +59,15 @@ export const TOBB: CompanionDef = {
       // Act 2: A9's Kindling Dell.
       [ACT2_TRIGGERS.dell]: 'dell',
       ...ACT3_PLACES.triggers,
+      ...ACT4_PLACES.triggers,
     },
     interiors: { 'chapel-vault': 'vault', 'tilted-anvil': 'tiltedAnvil', underways: 'underways', ...ACT3_PLACES.interiors },
     // `harrowmark` is thread 4's region-mask id for the city (to confirm when the mask lands).
-    regions: { brightwater: 'brightwater', harrowmark: 'harrowmark', cinderreach: 'cinderreach', oldsmoke: 'oldsmoke', ...ACT3_PLACES.regions },
+    regions: { brightwater: 'brightwater', harrowmark: 'harrowmark', cinderreach: 'cinderreach', oldsmoke: 'oldsmoke', ...ACT3_PLACES.regions, ...ACT4_PLACES.regions },
   },
   // Act 3: Dragonspine places speak differently after the reveal (M32).
+  // Act 4 (L4): after M39 a line that names Sir Gaut alive mourns him.
+  lineSwap: mourningSwap,
   areaVariant: act3Variant,
   // Thread 3a's interior-side anchors (`harrowmark.<id>.entry`).
   interiorEntry: {

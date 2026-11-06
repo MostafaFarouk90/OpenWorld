@@ -3,6 +3,7 @@ import { HROLF_STRINGS_EN } from './strings.hrolf.en';
 import { ACT2_TRIGGERS, COMPANION_DOWNED_SECONDS, HROLF_TUNING } from './tuning';
 import type { CompanionDef } from './types';
 import { ACT3_INTERIOR_ENTRY, ACT3_PLACES, act3Pools, act3Variant } from './act3/banter';
+import { ACT4_PLACES, act4Pools, mourningSwap } from './act4/banter';
 
 /** A12's R11 writes it: 'spared' or 'slain'. */
 export const R11_CHOICE_FLAG = 'story.r11.choice';
@@ -49,17 +50,21 @@ export const HROLF: CompanionDef = {
       'den.slain': pool('area.den.slain'),
       // Act 3 (K5): the Greyfen, the Dragonspine, the trial, the reveal and the ferry.
       ...act3Pools('hrolf'),
+      // Act 4 (L4): the Ashen Waste and the event places (storm, walkers, Ebba, the M37 bond, the mourning).
+      ...act4Pools('hrolf'),
     },
     combatStart: pool('combatStart'),
     combatEnd: pool('combatEnd'),
     elapsed: pool('elapsed'),
   },
   places: {
-    triggers: { [ACT2_TRIGGERS.dell]: 'dell', [ACT2_TRIGGERS.den]: 'den', ...ACT3_PLACES.triggers },
+    triggers: { [ACT2_TRIGGERS.dell]: 'dell', [ACT2_TRIGGERS.den]: 'den', ...ACT3_PLACES.triggers, ...ACT4_PLACES.triggers },
     interiors: { 'tilted-anvil': 'tiltedAnvil', ...ACT3_PLACES.interiors },
-    regions: { harrowmark: 'harrowmark', cinderreach: 'cinderreach', oldsmoke: 'oldsmoke', ...ACT3_PLACES.regions },
+    regions: { harrowmark: 'harrowmark', cinderreach: 'cinderreach', oldsmoke: 'oldsmoke', ...ACT3_PLACES.regions, ...ACT4_PLACES.regions },
   },
   // R11 (design 3): at the wyrm den he speaks by how it ended; nothing before the choice.
+  // Act 4 (L4): after M39 a line that names Sir Gaut alive mourns him.
+  lineSwap: mourningSwap,
   areaVariant: (place, flag) => {
     // Act 3: Dragonspine places speak differently after the reveal (M32).
     if (place !== 'den') return act3Variant(place, flag);

@@ -17,7 +17,7 @@ export const FOG_TOAST_CITY_HELD = 'region.fog.cityHeld.toast';
 
 export const ACT4_FOG_STRINGS_EN: Record<string, string> = {
   [FOG_TOAST_ASHGATE_ONLY]: "The drifts are too deep this way. The Ashwalkers' road starts at Ashgate.",
-  [FOG_TOAST_WASTE_PHASE_G]: "The Ashwalkers' road is next. The way opens in a later update.",
+  [FOG_TOAST_WASTE_PHASE_G]: "The Ashwalkers' road is next; the way in is not yet open.",
   [FOG_TOAST_WASTE_HILD]: "Hild will not let you onto the rope without Wulfhild's word.",
   [FOG_TOAST_CALDERA_RIM]: "The rim is Act 5's. Rest at Wulfhild's fire.",
   [FOG_TOAST_CITY_HELD]: "Vey's men hold the gate. The city is not yours tonight.",
@@ -37,7 +37,7 @@ export const ACT4_SHIPPED_FACE_RULES = {
 export type Act4FogFaceId = 'fog.waste-edge' | 'fog.waste-north' | 'fog.caldera-rim.n' | 'fog.caldera-rim.e' | 'fog.caldera-rim.s' | 'fog.caldera-rim.w';
 export type Act4FogFace = Pick<FogWallDef, 'openWhen' | 'toastKey' | 'toastWhen'> & { id: Act4FogFaceId };
 
-/** Phase G (M41 done, the hold standing) gives the "later update" text; before that, Hild's. */
+/** Phase G (M41 done, the hold standing) gives the "not yet open" text (ruling C: it never dates itself); before that, Hild's. */
 const WASTE_EDGE_TOASTS: NonNullable<FogWallDef['toastWhen']> = [
   { when: { any: ['story.m41.complete', 'story.m42.started'], none: ['story.phase.wasteOpen'] }, key: FOG_TOAST_WASTE_PHASE_G },
 ];
