@@ -64,11 +64,12 @@ export function stormView(r: StormReading): StormView | null {
     // The clear bar fills up toward the warning, so a full bar reads "ash is coming".
     return { phase: 'clear', textKey: 'act4.hud.storm.clear', params: { time: clockText(left) }, fill: 1 - remaining, line: null };
   }
+  // Safe places read the same in the warning as in the storm, so the shelter arrow never points from a shelter or a rope.
   let line: StormLine = null;
-  if (r.kind === 'storm') {
-    if (r.sheltered) line = 'shelter';
-    else if (r.onRope) line = 'rope';
-    else if (r.atFloor && r.exposed > 0) line = 'floor';
+  if (r.sheltered) line = 'shelter';
+  else if (r.onRope) line = 'rope';
+  else if (r.kind === 'storm') {
+    if (r.atFloor && r.exposed > 0) line = 'floor';
     else if (r.exposed > 0) line = 'exposed';
   }
   if (r.kind === 'warning') {

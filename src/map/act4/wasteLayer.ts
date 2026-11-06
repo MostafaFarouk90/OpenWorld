@@ -27,8 +27,10 @@ export const WASTE_LABEL_PLACES: readonly { id: Act4PlaceId; insideWaste: boolea
   { id: 'rimfoot', insideWaste: true },
 ];
 
-/** L1 PR 2's discover places for the sites (`discover { placeId: 'waste.<id>' }`), so a found site shows even under fog. */
-export const placeDiscoveredFlag = (id: string): string => `place.waste.${id}.discovered`;
+/** The places with a waystone (L1's `waystone.<id>`): a lit stone shows its label even under fog. */
+const WASTE_WAYSTONE_PLACES: ReadonlySet<string> = new Set(['ashgate', 'walker-camp', 'cinder-chapel', 'glasslands']);
+/** The flag that marks a place as found beyond the fog (its waystone lit), or null for a place with none. */
+export const placeDiscoveredFlag = (id: string): string | null => (WASTE_WAYSTONE_PLACES.has(id) ? `waystone.${id}.lit` : null);
 
 const safe = (f: () => boolean): boolean => {
   try {
@@ -70,7 +72,8 @@ export function wasteLabels(p: WastePorts): MapLabel[] {
     if (w.insideWaste && !open) continue;
     const at = ACT4_PLACES[w.id];
     if (!at || !Number.isFinite(at.x) || !Number.isFinite(at.z)) continue;
-    const seen = safe(() => p.isRevealed(at.x, at.z)) || safe(() => p.flag(placeDiscoveredFlag(w.id)));
+    const found = placeDiscoveredFlag(w.id);
+    const seen = safe(() => p.isRevealed(at.x, at.z)) || (found !== null && safe(() => p.flag(found)));
     if (seen) out.push({ id: `place.${w.id}`, x: at.x, z: at.z, text: p.t(`map.place.${w.id}`) });
   }
   return out;

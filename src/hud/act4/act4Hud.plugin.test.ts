@@ -7,7 +7,7 @@ import { PhysicsWorld } from '../../physics/PhysicsWorld';
 import { HudLayer } from '../../ui/HudLayer';
 import hudPlugin from '../hud.plugin';
 import { textOf, type ElementLike } from '../dom';
-import act4Hud, { ACT4_HUD_CSS, MASK_KNOWN_FLAG } from './act4Hud.plugin';
+import act4Hud, { ACT4_HUD_CSS, MASK_KNOWN_FLAG, PHASE_SECONDS } from './act4Hud.plugin';
 import type { WeatherState } from '../../weather/types';
 
 let physics: PhysicsWorld;
@@ -66,12 +66,26 @@ describe('act4-hud', () => {
     expect(textOf(meter)).toContain('Ash storm: 1:00 left');
     expect(textOf(meter)).toContain('Exposed');
     expect(textOf(meter)).not.toContain('Mask');
+    // The bar measures the time left against the longest storm, not the runtime's kind time (it restarts at the Waste's edge).
+    s.t = 0;
+    t.frame();
+    const find = (e: ElementLike, cls: string): ElementLike | undefined =>
+      e.className.split(' ').includes(cls) ? e : e.children.map((c) => find(c, cls)).find(Boolean);
+    expect(find(meter, 'owg-bar-fill')!.style.width).toBe(`${Math.round((60 / PHASE_SECONDS.storm) * 10000) / 100}%`);
     const arrow = t.widget('act4-shelter-arrow').element;
     expect(arrow.style.display).not.toBe('none');
     expect(textOf(arrow)).toContain('Shelter 30 m');
     t.ctx.state.setFlag(MASK_KNOWN_FLAG, true);
     t.frame();
     expect(textOf(meter)).toContain('No mask');
+    // A boss fight hides the meter and the arrow; its end brings them back.
+    t.ctx.events.emit('boss.started', { bossId: 'x' } as never);
+    t.frame();
+    expect(meter.style.display).toBe('none');
+    expect(arrow.style.display).toBe('none');
+    t.ctx.events.emit('boss.ended', { bossId: 'x' } as never);
+    t.frame();
+    expect(meter.style.display).not.toBe('none');
     // The storm ends: exposure clears, the arrow goes.
     s.kind = 'clear';
     t.ctx.events.emit('weather.changed', { kind: 'clear', from: 'storm' });

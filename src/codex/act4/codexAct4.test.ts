@@ -121,12 +121,18 @@ describe('codex-act4 plugin', () => {
 
   it('live signals unlock their entries', async () => {
     const t = await boot();
-    t.emit('discover', { placeId: 'waste.husk-cathedral', kind: 'poi' });
-    expect(t.has(ID.huskCathedral)).toBe(true);
+    t.emit('discover', { placeId: 'waystone.walker-camp', kind: 'waystone' });
+    expect(t.has(ID.walkerCamp)).toBe(true);
+    t.emit('discover', { placeId: 'poi.a4.wagon-train', kind: 'poi' });
+    expect(t.has(ID.huskCathedral)).toBe(false);
     t.emit('weather.changed', { kind: 'clear', from: 'storm' });
     expect(t.has(ID.storms)).toBe(false);
     t.emit('weather.changed', { kind: 'warning', from: 'clear' });
     expect(t.has(ID.storms)).toBe(true);
+    // Act 3's ferry Hild shares the npc id: before the Act 4 gate a talk unlocks nothing.
+    t.emit('dialogue.started', { dialogueId: 'x', npcId: 'hild' });
+    expect(t.has(ID.hild)).toBe(false);
+    t.ctx.state.setFlag('story.gate.a4', true);
     t.emit('dialogue.started', { dialogueId: 'x', npcId: 'ebba' });
     expect(t.has(ID.ebba)).toBe(true);
     t.emit('quest.started', { questId: 'm38' });
