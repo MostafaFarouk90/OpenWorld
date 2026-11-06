@@ -2,6 +2,7 @@ import type { GamePlugin } from '../../../../../core/plugins';
 import { makeKit, type Off } from '../../../act2/director/kit';
 import { installArms, installComplete, installExtraAnchors, installGroupObjectives, installDoneWhenRecheck, installTriggersAndCast } from './generic';
 import { installEscorts } from './escorts';
+import { installOrrin } from './orrin';
 import { installM38, installM39, installM40, installM41, installScenes } from './council';
 import { installCrossings, installD07, installM35, installM36, installM37, installR19, installR20, installR22 } from './quests';
 
@@ -40,6 +41,7 @@ const plugin: GamePlugin = {
     installM39(kit);
     installM40(kit);
     installM41(kit);
+    offs.push(installOrrin(kit));
 
     offs.push(ctx.systems.add({ id: 'harrowmark-a4-quests.tick', fixedPhase: 'rules', order: 10, fixedUpdate: () => tick() }));
   },
