@@ -239,17 +239,24 @@ export class EormenDirector {
   private places(): EormenPlaces | null {
     const a = this.ctx.anchors;
     const centre = a.find(ARENA.centre);
-    const gong = a.find(ARENA.gong);
+    const o = this.offset();
     const rect = this.rectWorld();
-    if (!centre || !gong || !rect || !a.find(ARENA.mouth)) {
+    if (!centre || !o || !rect || !a.find(ARENA.mouth)) {
       if (!this.warnedPlaces) {
         this.warnedPlaces = true;
-        this.warn(`nave anchors missing (${[ARENA.centre, ARENA.gong, ARENA.entry, ARENA.mouth].join(', ')}); Eormen does not start`);
+        this.warn(`nave anchors missing (${[ARENA.centre, ARENA.entry, ARENA.mouth].join(', ')}); Eormen does not start`);
       }
       return null;
     }
-    const v3 = (p: { x: number; y: number; z: number }) => new THREE.Vector3(p.x, p.y, p.z);
-    return { centre: v3(centre.position), centreYaw: centre.yaw, gong: v3(gong.position), gongYaw: gong.yaw, rect };
+    const g = ARENA.gongLocal;
+    return {
+      centre: new THREE.Vector3(centre.position.x, centre.position.y, centre.position.z),
+      centreYaw: centre.yaw,
+      // The disc hangs on the nave face of L1's gong frame, facing the door (yaw 0 faces -Z).
+      gong: new THREE.Vector3(o.x + g.x, o.y, o.z + g.front - 0.12),
+      gongYaw: 0,
+      rect,
+    };
   }
 
   /** After a Release his crown rests on the altar, shown inside the cathedral only. */
@@ -260,12 +267,14 @@ export class EormenDirector {
       return;
     }
     if (!this.crown) {
-      const altar = this.ctx.anchors.find(ARENA.altar);
-      if (!altar) return;
+      const o = this.offset();
+      if (!o) return;
+      const altar = ARENA.altarLocal;
       const crown = buildCrown();
       crown.name = 'eormen-crown-rest';
       crown.scale.setScalar(1.6);
-      crown.position.set(altar.position.x, altar.position.y + 1.05, altar.position.z);
+      // On the altar prop's top (L1's greybox altar), at its middle.
+      crown.position.set(o.x + altar.x, o.y + altar.top + 0.06, o.z + altar.z);
       this.ctx.scene.add(crown);
       this.crown = crown;
     }

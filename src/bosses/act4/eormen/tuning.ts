@@ -6,6 +6,7 @@
 // design/changes-applied.md "Act 4 L6 PR 2") for the pacing test and L13's census.
 import { ACT4_BOSS_BASE_LEVEL, ACT4_BOSS_IDS, ACT4_BOSS_RULES } from '../../act4Bosses';
 import { act4BossLevel } from '../../../enemies/level';
+import { HUSK_CATHEDRAL_ALTAR, HUSK_CATHEDRAL_ARENA, HUSK_CATHEDRAL_ARENA_GATE, HUSK_CATHEDRAL_DEF, HUSK_CATHEDRAL_GONG, HUSK_CATHEDRAL_ID } from '../../../waste/interiors/huskCathedral';
 
 export const EORMEN_BOSS_ID = ACT4_BOSS_IDS.eormen;
 export const EORMEN_KIND = 'eormen';
@@ -19,32 +20,42 @@ export const HUSK_SKIN = 'wraith-husk' as const;
 
 const P = 'waste.cathedral.nave';
 
+/** L1's greybox prop at the far end of the nave (the gong's frame and the altar); the gong and the crown stand where they are. */
+function prop(id: string): { x: number; z: number; top: number } {
+  const p = HUSK_CATHEDRAL_DEF.props?.find((q) => q.id === id);
+  if (!p) throw new Error(`eormen: L1's Husk Cathedral has no prop "${id}"`);
+  return { x: (p.rect.x0 + p.rect.x1) / 2, z: (p.rect.z0 + p.rect.z1) / 2, front: p.rect.z0, top: p.height };
+}
+
 /**
- * The Husk Cathedral's nave (L1 PR 2 builds the interior; these are the ids L6 asked for). The nave is laid out in its own local
- * metres from the entry anchor: the door at z 0, the gong at the far end (+z). Interiors are placed by translation only.
+ * L1's Husk Cathedral (src/waste/interiors/huskCathedral.ts), in its local metres from the door (the building runs along +Z: the
+ * narthex, then the nave, which is the arena). Interiors are placed by translation only, so the entry anchor gives the offset.
  */
 export const ARENA = {
-  interiorId: 'husk-cathedral',
+  interiorId: HUSK_CATHEDRAL_ID,
   trigger: `trg.${P}`,
   centre: `${P}.eormen`,
-  /** L1's inside-the-door anchor: the local frame's origin. */
+  /** L1's inside-the-arena-gate anchor: its local position places the frame. */
   entry: `${P}.entry`,
-  entryLocal: { x: 0, z: 2 },
-  /** The mouth anchor (outside the trigger): the reload rule and the gate's clearance. Defined by this plugin if L1 has not. */
+  entryLocal: { x: 0, z: 11 },
+  /** L1's mouth anchor in the narthex (outside the trigger): the reload rule and the gate's clearance. Defined here if missing. */
   mouth: `${P}.mouth`,
-  mouthLocal: { x: 0, z: -2 },
+  mouthLocal: { x: 0, z: 6.5 },
+  /** L1's stand-spot in front of the gong (F reaches the gong from it). */
   gong: `${P}.gong`,
   altar: `${P}.altar`,
+  /** The gong hangs in L1's frame prop; the crown rests on the altar prop's top (local). */
+  gongLocal: { ...prop('gong-frame'), standZ: HUSK_CATHEDRAL_GONG.z },
+  altarLocal: { ...prop('altar'), standZ: HUSK_CATHEDRAL_ALTAR.z },
   /** L5's split: ash.1..3 are the phase husks' piles; ash.4..6 belong to L5's night husk group. */
   ash: [1, 2, 3].map((n) => `${P}.ash.${n}`) as readonly string[],
-  /** L1's HUSK_CATHEDRAL_ARENA_GATE (starts open; BossArena drives it). */
-  gate: 'husk-cathedral.arena.gate',
+  gate: HUSK_CATHEDRAL_ARENA_GATE,
   /** The gate's nave side (local z) and the margin the player must be past it before it closes. */
-  gateLocalZ: 0,
+  gateLocalZ: HUSK_CATHEDRAL_ARENA.z0,
   gateMargin: 1,
-  gateClearance: 5,
-  /** The nave floor (local), about 30 by 40 m. */
-  rect: { x0: -15, x1: 15, z0: 0, z1: 40 },
+  gateClearance: 4,
+  /** The nave floor (local), 30 by 40 m. */
+  rect: HUSK_CATHEDRAL_ARENA,
   abandonSeconds: 3,
   veilWidth: 4.6,
   veilHeight: 5,

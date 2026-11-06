@@ -31,6 +31,8 @@ export interface LastGongOptions {
   at: THREE.Vector3;
   /** The yaw the gong's face turns to (toward the nave). */
   yaw: number;
+  /** Draw its own posts and beam (false when it hangs in a frame the interior already builds). Default true. */
+  ownFrame?: boolean;
   onStrike(source: GongSource): GongAnswer;
   warn(message: string): void;
 }
@@ -89,6 +91,9 @@ export class LastGong {
     const bone = new THREE.Object3D();
     bone.name = 'eormen-gong-bone';
     bone.position.y = h;
+    if (opts.ownFrame === false) {
+      for (const m of [postL, postR, beam]) m.visible = false;
+    }
     this.mesh.add(postL, postR, beam, this.disc, rim, this.decal, bone);
     ctx.scene.add(this.mesh);
     this.mesh.updateMatrixWorld(true);
