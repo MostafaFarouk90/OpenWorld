@@ -13,7 +13,19 @@
     "m37",
     "m38"
   ],
-  "questDefs": [],
+  "questDefs": [
+    "d07",
+    "m35",
+    "m36",
+    "m37",
+    "m38",
+    "m39",
+    "r19",
+    "r20",
+    "r21",
+    "r22",
+    "r23"
+  ],
   "base": {
     "fixture": "act4-carried-chain.json",
     "level": 25,

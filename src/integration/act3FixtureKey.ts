@@ -21,9 +21,9 @@ export const act3FixtureName = (order: Act3Order, id: string): string => `act3-$
 /** The ids whose quest defs decide a fixture's content: what it injects, and its target. */
 export const fixtureDefIds = (id: string, order: Act3Order): string[] => [...(ACT3_PREREQS[order][id] ?? []), id];
 
-/** The quest defs among `ids` that a build knows, sorted (the freshness key). */
 export const sameIdSet = (x: readonly string[], y: readonly string[]): boolean => sameSet(x, y);
 
+/** The quest defs among `ids` that a build knows, sorted (the freshness key). */
 export const knownQuestDefs = (has: (id: string) => boolean, ids: readonly string[]): string[] => ids.filter(has).sort();
 
 const sameSet = (x: readonly string[], y: readonly string[]): boolean => {

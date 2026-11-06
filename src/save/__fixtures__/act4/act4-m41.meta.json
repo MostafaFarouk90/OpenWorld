@@ -15,14 +15,28 @@
     "m39",
     "m40"
   ],
-  "questDefs": [],
+  "questDefs": [
+    "d07",
+    "m35",
+    "m36",
+    "m37",
+    "m38",
+    "m39",
+    "m40",
+    "m41",
+    "r19",
+    "r20",
+    "r21",
+    "r22",
+    "r23"
+  ],
   "base": {
     "fixture": "act4-carried-chain.json",
     "level": 25,
     "xp": 56077
   },
-  "xp": 64000,
-  "level": 26,
+  "xp": 65877,
+  "level": 27,
   "wasteOpen": false,
   "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/act4Fixtures.gen",
   "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving"

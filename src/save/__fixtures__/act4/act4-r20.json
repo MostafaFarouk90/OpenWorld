@@ -993,7 +993,9 @@
           "hearth-token": 1,
           "house-pledge-banner": 1,
           "hrolfs-axe-rune": 1,
+          "key.council-seal": 1,
           "key.ferry-token": 1,
+          "key.oswin-silver-key": 1,
           "lore-tome-1": 1,
           "lullaby-reed-pipe": 1,
           "marsh-bow-bolts": 20,
@@ -1453,6 +1455,14 @@
               "swear": 1,
               "thorgar": 1
             },
+            "state": "completed"
+          },
+          "m35": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m36": {
+            "objectives": {},
             "state": "completed"
           },
           "r01": {
@@ -2155,7 +2165,9 @@
           "story.m34.ledge": true,
           "story.m34.started": true,
           "story.m35.complete": true,
+          "story.m35.started": true,
           "story.m36.complete": true,
+          "story.m36.started": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,
@@ -2329,7 +2341,7 @@
     }
   },
   "format": 1,
-  "playtimeSeconds": 2075,
+  "playtimeSeconds": 2076,
   "reason": "manual",
   "savedAt": 1767225600000
 }

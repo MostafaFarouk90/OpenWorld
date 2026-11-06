@@ -993,7 +993,15 @@
           "hearth-token": 1,
           "house-pledge-banner": 1,
           "hrolfs-axe-rune": 1,
+          "key.banner-standard": 1,
+          "key.bond-cord": 1,
+          "key.council-seal": 1,
+          "key.engine-gear": 1,
           "key.ferry-token": 1,
+          "key.oswin-silver-key": 1,
+          "key.silver-convoy-writ": 1,
+          "key.watch-seal": 1,
+          "key.wennas-signet": 1,
           "lore-tome-1": 1,
           "lullaby-reed-pipe": 1,
           "marsh-bow-bolts": 20,
@@ -1009,7 +1017,7 @@
           "rime-cloak": 1,
           "rimewood-haft": 1,
           "sewer-master-key": 1,
-          "shard-gem.bulwark": 2,
+          "shard-gem.bulwark": 3,
           "shard-gem.oathfire": 3,
           "skarls-crossbow": 1,
           "slag-core": 1,
@@ -1158,6 +1166,10 @@
               "skarl": 1,
               "winch": 1
             },
+            "state": "completed"
+          },
+          "d07": {
+            "objectives": {},
             "state": "completed"
           },
           "m01": {
@@ -1455,6 +1467,18 @@
             },
             "state": "completed"
           },
+          "m35": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m36": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m37": {
+            "objectives": {},
+            "state": "completed"
+          },
           "r01": {
             "objectives": {},
             "state": "completed"
@@ -1609,6 +1633,26 @@
               "report": 1,
               "thief": 1
             },
+            "state": "completed"
+          },
+          "r19": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r20": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r21": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r22": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r23": {
+            "objectives": {},
             "state": "completed"
           },
           "t01": {
@@ -1906,12 +1950,14 @@
           "codex.actEnding.a2.seen": true,
           "codex.actEnding.a3.seen": true,
           "codex.actEndingSeen": true,
-          "companion.aelfreda.rank": 1,
-          "companion.hrolf.rank": 1,
-          "companion.tobb.rank": 1,
+          "companion.aelfreda.rank": 2,
+          "companion.hrolf.rank": 2,
+          "companion.tobb.rank": 2,
           "companions.a3.quenchedSeen": true,
+          "companions.a4.bond2Said.hrolf": true,
           "enemies.mercy.release": true,
           "enemies.mercy.spare": true,
+          "gear.shardgem.granted.bellows-engine": true,
           "gear.shardgem.granted.corvin-skarl": true,
           "gear.shardgem.granted.gaffer-grimtooth": true,
           "gear.shardgem.granted.murkjaw": true,
@@ -1976,6 +2022,7 @@
           "story.d06.linesDone": true,
           "story.d06.started": true,
           "story.d07.complete": true,
+          "story.d07.started": true,
           "story.gate.a2": true,
           "story.gate.a3": true,
           "story.gate.a4": true,
@@ -2156,8 +2203,11 @@
           "story.m34.ledge": true,
           "story.m34.started": true,
           "story.m35.complete": true,
+          "story.m35.started": true,
           "story.m36.complete": true,
+          "story.m36.started": true,
           "story.m37.complete": true,
+          "story.m37.started": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,
@@ -2262,10 +2312,15 @@
           "story.r18.nested": true,
           "story.r18.started": true,
           "story.r19.complete": true,
+          "story.r19.started": true,
           "story.r20.complete": true,
+          "story.r20.started": true,
           "story.r21.complete": true,
+          "story.r21.started": true,
           "story.r22.complete": true,
+          "story.r22.started": true,
           "story.r23.complete": true,
+          "story.r23.started": true,
           "story.side.boardOpen": true,
           "story.side.kettlewickOpen": true,
           "trainer.pathfinder.masterBook": true,
@@ -2336,7 +2391,7 @@
     }
   },
   "format": 1,
-  "playtimeSeconds": 2075,
+  "playtimeSeconds": 2076,
   "reason": "manual",
   "savedAt": 1767225600000
 }

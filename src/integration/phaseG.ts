@@ -27,14 +27,16 @@ export interface PhaseGChoices {
   r21: 'all' | 'leaders';
   r22: 'light' | 'heavy';
   r23: 'public' | 'private';
+  /** the two R19 companies that march (the other two hold) */
+  r19: readonly ('archers' | 'pikes' | 'horse' | 'engineers')[];
   /** spare every Footman the rules allow (M39's Halvard +1 each) */
   spare: boolean;
 }
 export const PHASE_G_RUN_A: PhaseGChoices = {
-  delegates: { halvard: 'won', oswin: 'won', grisel: 'won' }, r20: 'bribe', r21: 'all', r22: 'light', r23: 'public', spare: false,
+  delegates: { halvard: 'won', oswin: 'won', grisel: 'won' }, r20: 'bribe', r21: 'all', r22: 'light', r23: 'public', r19: ['archers', 'pikes'], spare: false,
 };
 export const PHASE_G_RUN_B: PhaseGChoices = {
-  delegates: { halvard: 'lost', oswin: 'lost', grisel: 'won' }, r20: 'stealth', r21: 'leaders', r22: 'heavy', r23: 'private', spare: true,
+  delegates: { halvard: 'lost', oswin: 'lost', grisel: 'won' }, r20: 'stealth', r21: 'leaders', r22: 'heavy', r23: 'private', r19: ['horse', 'engineers'], spare: true,
 };
 
 /** Plan 2.1 and 2.2 rewards (design table), L2's measured kill XP and L6's Bellows-Engine at an even level. */

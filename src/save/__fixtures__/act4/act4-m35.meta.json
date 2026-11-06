@@ -2,7 +2,9 @@
   "fixture": "act4-m35.json",
   "id": "m35",
   "injected": [],
-  "questDefs": [],
+  "questDefs": [
+    "m35"
+  ],
   "base": {
     "fixture": "act4-carried-chain.json",
     "level": 25,

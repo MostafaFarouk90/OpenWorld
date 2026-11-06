@@ -7,6 +7,7 @@ export type Act4FlagOwner = Act3FlagOwner;
 
 export const ACT4_FLAG_OWNERS: readonly Act4FlagOwner[] = [
   { pattern: 'story.m36.delegate.<id>', owner: 'L10', note: 'F3: one flag per House delegate won (M36)' },
+  { pattern: 'story.a4.orrinAway', owner: 'L10', note: 'Orrin (Grisel\'s steward) away: after M22 until the Act 4 gate, and from M38 (L10 fix, shipped in L13 PR 1)' },
   { pattern: 'story.d07.ledgers', owner: 'L10', note: 'the heart ledgers read in the Crucible (D07; L10 per the coordinator, 2026-11-06)' },
   { pattern: 'story.phase.wasteOpen', owner: 'L13', note: 'the Phase G hold on the Waste (PHASE_HOLDS); retired by L13 PR 2' },
   { pattern: 'story.a4.campSeen', owner: 'L13', note: 'the Act 4 camp scene at the Rimfoot fire has played' },

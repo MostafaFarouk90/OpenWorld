@@ -61,6 +61,9 @@ export async function generateAct4Fixture(
     h.ctx.systems.add({ id: 'l13-fixture-jump', fixedPhase: 'rules', order: 900, fixedUpdate: () => jump.tick() });
     for (let i = 0; i < MAX_TICKS && !jump.finished; i += 30) await h.runAsync(30);
     ensure(jump.finished, `act4 fixture ${id}: the jump settled (phase ${jump.phase})`);
+    // A quest the director starts by itself (M39, M41) may open its scene on the landing (M41's camp): saves wait out a scene,
+    // so the scene is read through first, as a player arriving there would (the fixture then starts after it).
+    await settleScenes(h);
     // The base is the chain's last moment, hurt from Act 3's last fights; a jump starts rested (the camp is a night's rest).
     const a = h.ctx.player.actor;
     h.ctx.damage.heal(a.id, a.maxHealth);
@@ -146,4 +149,18 @@ export async function generateAct4Extra(fromSave: Record<string, unknown>, extra
   } finally {
     h.dispose();
   }
+}
+
+/** Reads through any scene or dialogue the game opened by itself, until neither is open (at most a game minute). */
+export async function settleScenes(h: ChapterHarness): Promise<void> {
+  const scenes = () => (h.ctx.services as unknown as { get(n: string): { active: unknown } | undefined }).get('scenes');
+  const dialogue = h.ctx.services.require('dialogue');
+  for (let i = 0; i < 120; i++) {
+    if (dialogue.active) h.press('KeyF');
+    else if (!scenes()?.active) {
+      await h.runAsync(30);
+      if (!scenes()?.active && !dialogue.active) return;
+    } else await h.runAsync(30);
+  }
+  ensure(!scenes()?.active && !dialogue.active, 'the opening scene closed');
 }

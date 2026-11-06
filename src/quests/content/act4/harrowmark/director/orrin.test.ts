@@ -5,13 +5,15 @@ import { ORRIN_AWAY, installOrrin, orrinAway } from './orrin';
 function kit(init: Record<string, boolean>) {
   const flags = new Map(Object.entries(init));
   let tick: (() => void) | null = null;
+  let loaded: (() => void) | null = null;
   const k = {
+    on: (_e: string, fn: () => void) => { loaded = fn; return () => { loaded = null; }; },
     flag: (f: string) => flags.get(f) === true,
     set: (f: string) => void flags.set(f, true),
     clear: (f: string) => void flags.delete(f),
     every: (_n: number, fn: () => void) => { tick = fn; return () => { tick = null; }; },
   };
-  return { k: k as never, flags, tick: () => tick?.() };
+  return { k: k as never, flags, tick: () => tick?.(), load: () => loaded?.() };
 }
 
 describe('Orrin in Act 4', () => {
@@ -30,6 +32,16 @@ describe('Orrin in Act 4', () => {
     w.flags.set('story.gate.a4', true);
     w.tick();
     expect(w.flags.has(ORRIN_AWAY)).toBe(false);
+  });
+
+  it('syncs at once on a load, not only on the next poll', () => {
+    const w = kit({ 'story.m22.complete': true, 'story.gate.a4': true });
+    installOrrin(w.k);
+    expect(w.flags.has(ORRIN_AWAY)).toBe(false);
+    // an older save made after M22, before the gate, loads over it
+    w.flags.delete('story.gate.a4');
+    w.load();
+    expect(w.flags.get(ORRIN_AWAY)).toBe(true);
   });
 
   it('is what the layout reads for his absence', () => {

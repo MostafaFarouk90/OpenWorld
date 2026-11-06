@@ -17,5 +17,7 @@ export function installOrrin(k: Kit): Off {
     if (away !== k.flag(ORRIN_AWAY)) (away ? k.set(ORRIN_AWAY) : k.clear(ORRIN_AWAY));
   };
   sync();
-  return k.every(30, sync);
+  // also at once on a load, so an older save made after M22 does not show him for up to 30 ticks before the poll catches up
+  const offs = [k.every(30, sync), k.on('save.loaded', sync)];
+  return () => offs.forEach((o) => o());
 }

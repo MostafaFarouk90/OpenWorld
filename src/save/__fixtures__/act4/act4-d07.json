@@ -993,7 +993,9 @@
           "hearth-token": 1,
           "house-pledge-banner": 1,
           "hrolfs-axe-rune": 1,
+          "key.council-seal": 1,
           "key.ferry-token": 1,
+          "key.watch-seal": 1,
           "lore-tome-1": 1,
           "lullaby-reed-pipe": 1,
           "marsh-bow-bolts": 20,
@@ -1455,6 +1457,10 @@
             },
             "state": "completed"
           },
+          "m35": {
+            "objectives": {},
+            "state": "completed"
+          },
           "r01": {
             "objectives": {},
             "state": "completed"
@@ -1609,6 +1615,10 @@
               "report": 1,
               "thief": 1
             },
+            "state": "completed"
+          },
+          "r23": {
+            "objectives": {},
             "state": "completed"
           },
           "t01": {
@@ -2155,6 +2165,7 @@
           "story.m34.ledge": true,
           "story.m34.started": true,
           "story.m35.complete": true,
+          "story.m35.started": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,
@@ -2258,6 +2269,8 @@
           "story.r18.nest.3": true,
           "story.r18.nested": true,
           "story.r18.started": true,
+          "story.r23.complete": true,
+          "story.r23.started": true,
           "story.side.boardOpen": true,
           "story.side.kettlewickOpen": true,
           "trainer.pathfinder.masterBook": true,
@@ -2328,7 +2341,7 @@
     }
   },
   "format": 1,
-  "playtimeSeconds": 2072,
+  "playtimeSeconds": 2073,
   "reason": "manual",
   "savedAt": 1767225600000
 }

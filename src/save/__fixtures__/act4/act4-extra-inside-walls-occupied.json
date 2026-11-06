@@ -76,15 +76,15 @@
         ],
         "positions": {
           "aelfreda": {
-            "x": 8299.8335,
+            "x": 8299.889,
             "y": 20,
-            "yaw": 0.833,
-            "z": 2452.8486
+            "yaw": 0.6667,
+            "z": 2452.8991
           },
           "hrolf": {
-            "x": 8300.225,
+            "x": 8300.15,
             "y": 20,
-            "yaw": -1,
+            "yaw": -0.6667,
             "z": 2453
           },
           "tobb": {
@@ -993,7 +993,15 @@
           "hearth-token": 1,
           "house-pledge-banner": 1,
           "hrolfs-axe-rune": 1,
+          "key.banner-standard": 1,
+          "key.bond-cord": 1,
+          "key.council-seal": 1,
+          "key.engine-gear": 1,
           "key.ferry-token": 1,
+          "key.oswin-silver-key": 1,
+          "key.silver-convoy-writ": 1,
+          "key.watch-seal": 1,
+          "key.wennas-signet": 1,
           "lore-tome-1": 1,
           "lullaby-reed-pipe": 1,
           "marsh-bow-bolts": 20,
@@ -1009,7 +1017,7 @@
           "rime-cloak": 1,
           "rimewood-haft": 1,
           "sewer-master-key": 1,
-          "shard-gem.bulwark": 2,
+          "shard-gem.bulwark": 3,
           "shard-gem.oathfire": 3,
           "skarls-crossbow": 1,
           "slag-core": 1,
@@ -1029,7 +1037,7 @@
     },
     "map": {
       "data": {
-        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAfQAAAF8AP4d8AA+HwA9+AEAPIAfAD3wAQA9BACvVDwAPeAHADw8/gA84OcfADx+/gEAO/D3HwA8f/8BADvg8w8APBw/AD3wAwA8gD8APHz4AQA7wJ8fADz+/wEAO8D/HwA8/P8BADvA/w8APP7/ADzg/w8APPz/ADzA/w8APP7/ADzg/w8APP7/ADzA3w8APPj9ADyAzw8APGB+AD3gBwA9fwA98AcAFsADACSAPwAXfgAkgP8DABbgBwAk/B8AF34AJMD/AQAW4AcAJPwPABc8wAMAIsD/ABl+ACHgAAH4BwAY4AcAIIAfwH8AGf4AIfgD/gMAGOAPACDAP+A/ABl+ACH8A/4BABjwBwAggB/wBwAZPwAh8AF/ABn4AwAhBuAHAAU8ABKAHwAjfgAF4AcAEvgBACKAAwAFfgASgB8AKeAHABLwACp+AD3AAwBRvQMAPPx/ADzg/wcAPP9/ADzw/wcAPP4/ADzAAQB2wAMAPX4APeAPAD3+AQA84B8APf4BADzAHwAC8AMAOfgAAoB/AD38BwA8wH8APfgHAD0/AH88ADkPAAPgBwA4+AEAA/4BADeAHwAD4H8AOPgBAAP+/wAcOAAagB8AA8D/HwAbwAcAGvAABPD/AwAbfgAg/j8AG+AHAB+A/wMAG3wABzwAGPw/ABvAAwAG4AcAF+D/AQAjfgAY/w8AI+AHABf4DwAfDwAEfgAXwH8AH/gBAAPAAwAX/AMAHoAfABzAHwAf+GEAHPwAH4CfDwABDwAZgAcAH/D4AfABADqAH4AfADv4AfgBADrgDwABHwA7fgAB4AAYgAMAIeAHABp8ACJ+ABrgBwAh4AcAGn4AInwAGsAHACIBABcBAAI8ADp8AD3gDwA9/wA98A8APf8APfAPAD3/AD3wDwA9fgA9wAADPAA98AMAPIB/AD38BwA8wP8APfgPAD3/AD3gBwA9PwAB+A8AOvABwP//DwA4gD8AAfz//w8AOPAfwP///wMAOP8D/P//fwA44H+A////DwA4+AcAAfj//wA4gD8AA+AHADj4AwADfgA4wA8AA8AHADj8AAQYADiADwA9eACFBg=="
+        "fog": "RgHAn0AAAAAAAMCfQAAAAAAAQkgAAAAAAfQAAAF8AJgqDwA98AEAPIAfAD34AQA9HwA94ACWSDwAPeAHADw8/gA84OcfADx+/gEAO/D3HwA8f/8BADvg8w8APBw/AD3wAwA8gD8APHz4AQA7wJ8fADz+/wEAO8D/HwA8/P8BADvA/w8APP7/ADzg/w8APPz/ADzA/w8APP7/ADzg/w8APP7/ADzA3w8APPj9ADyAzw8APGB+AD3gBwA9fwA98AcAFsADACSAPwAXfgAkgP8DABbgBwAk/B8AF34AJMD/AQAW4AcAJPwPABc8wAMAIsD/ABl+ACHgAAH4BwAY4AcAIIAfwH8AGf4AIfgD/gMAGOAPACDAP+A/ABl+ACH8A/4BABjwBwAggB/wBwAZPwAh8AF/ABn4AwAhBuAHAAU8ABKAHwAjfgAF4AcAEvgBACKAAwAFfgASgB8AKeAHABLwACp+AD3AAwBRvQMAPPx/ADzg/wcAPP9/ADzw/wcAPP4/ADzAAQB2wAMAPX4APeAPAD3+AQA84B8APf4BADzAHwAC8AMAOfgAAoB/AD38BwA8wH8APfgHAD0/AH88ADkPAAPgBwA4+AEAA/4BADeAHwAD4H8AOPgBAAP+/wAcOAAagB8AA8D/HwAbwAcAGvAABPD/AwAbfgAg/j8AG+AHAB+A/wMAG3wABzwAGPw/ABvAAwAG4AcAF+D/AQAjfgAY/w8AI+AHABf4DwAfDwAEfgAXwH8AH/gBAAPAAwAX/AMAHoAfABzAHwAf+GEAHPwAH4CfDwABDwAZgAcAH/D4AfABADqAH4AfADv4AfgBADrgDwABHwA7fgAB4AAYgAMAIeAHABp8ACJ+ABrgBwAh4AcAGn4AInwAGsAHACIBABcBAAI8ADp8AD3gDwA9/wA98A8APf8APfAPAD3/AD3wDwA9fgA9wAADPAA98AMAPIB/AD38BwA8wP8APfgPAD3/AD3gBwA9PwAB+A8AOvABwP//DwA4gD8AAfz//w8AOPAfwP///wMAOP8D/P//fwA44H+A////DwA4+AcAAfj//wA4gD8AA+AHADj4AwADfgA4wA8AA8AHADj8AAQYADiADwA9eACFBg=="
       },
       "version": 2
     },
@@ -1158,6 +1166,10 @@
               "skarl": 1,
               "winch": 1
             },
+            "state": "completed"
+          },
+          "d07": {
+            "objectives": {},
             "state": "completed"
           },
           "m01": {
@@ -1455,6 +1467,26 @@
             },
             "state": "completed"
           },
+          "m35": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m36": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m37": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m38": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m39": {
+            "objectives": {},
+            "state": "active"
+          },
           "r01": {
             "objectives": {},
             "state": "completed"
@@ -1611,6 +1643,26 @@
             },
             "state": "completed"
           },
+          "r19": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r20": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r21": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r22": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r23": {
+            "objectives": {},
+            "state": "completed"
+          },
           "t01": {
             "objectives": {},
             "state": "completed"
@@ -1677,7 +1729,12 @@
     },
     "respawn": {
       "data": {
-        "checkpoints": []
+        "checkpoints": [
+          {
+            "anchorId": "harrowmark.a4.stairs.checkpoint",
+            "id": "m39.stairs"
+          }
+        ]
       },
       "version": 1
     },
@@ -1906,12 +1963,15 @@
           "codex.actEnding.a2.seen": true,
           "codex.actEnding.a3.seen": true,
           "codex.actEndingSeen": true,
-          "companion.aelfreda.rank": 1,
-          "companion.hrolf.rank": 1,
-          "companion.tobb.rank": 1,
+          "companion.aelfreda.rank": 2,
+          "companion.hrolf.rank": 2,
+          "companion.tobb.rank": 2,
           "companions.a3.quenchedSeen": true,
+          "companions.a4.bond2Said.aelfreda": true,
+          "companions.a4.bond2Said.hrolf": true,
           "enemies.mercy.release": true,
           "enemies.mercy.spare": true,
+          "gear.shardgem.granted.bellows-engine": true,
           "gear.shardgem.granted.corvin-skarl": true,
           "gear.shardgem.granted.gaffer-grimtooth": true,
           "gear.shardgem.granted.murkjaw": true,
@@ -1935,6 +1995,7 @@
           "story.a2.campSeen": true,
           "story.a3.campSeen": true,
           "story.a3.peaksCardSeen": true,
+          "story.a4.orrinAway": true,
           "story.d02.campSeen": true,
           "story.d02.sluiceClear": true,
           "story.d02.strayDealt": true,
@@ -1976,6 +2037,7 @@
           "story.d06.linesDone": true,
           "story.d06.started": true,
           "story.d07.complete": true,
+          "story.d07.started": true,
           "story.gate.a2": true,
           "story.gate.a3": true,
           "story.gate.a4": true,
@@ -2156,9 +2218,15 @@
           "story.m34.ledge": true,
           "story.m34.started": true,
           "story.m35.complete": true,
+          "story.m35.started": true,
           "story.m36.complete": true,
+          "story.m36.started": true,
           "story.m37.complete": true,
+          "story.m37.started": true,
           "story.m38.complete": true,
+          "story.m38.started": true,
+          "story.m38.witnessBand": "none",
+          "story.m39.started": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,
@@ -2263,10 +2331,15 @@
           "story.r18.nested": true,
           "story.r18.started": true,
           "story.r19.complete": true,
+          "story.r19.started": true,
           "story.r20.complete": true,
+          "story.r20.started": true,
           "story.r21.complete": true,
+          "story.r21.started": true,
           "story.r22.complete": true,
+          "story.r22.started": true,
           "story.r23.complete": true,
+          "story.r23.started": true,
           "story.side.boardOpen": true,
           "story.side.kettlewickOpen": true,
           "trainer.pathfinder.masterBook": true,
@@ -2337,7 +2410,7 @@
     }
   },
   "format": 1,
-  "playtimeSeconds": 2073,
+  "playtimeSeconds": 2080,
   "reason": "manual",
   "savedAt": 1767225600000
 }
