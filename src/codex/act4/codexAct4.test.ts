@@ -65,8 +65,13 @@ describe('Act 4 entries and strings', () => {
       ['cinder-gnat-swarm', 'bestiary', 'codex.bestiary.cinder-gnat-swarm.name'],
     ]);
     expect(strings['codex.bestiary.cinder-gnat-swarm.name']).toBe('Cinder Gnats');
-    // The shipped list is empty until L5's module is stacked: only L9's own entries.
-    expect(act4CodexEntries()).toHaveLength(ACT4_CODEX_ENTRIES.length);
+    // L5's shipped rows: three creatures beside L9's own entries, the two with `{key}` bound to the mercy key.
+    const shipped = act4CodexEntries();
+    expect(shipped).toHaveLength(ACT4_CODEX_ENTRIES.length + 3);
+    const byId = new Map(shipped.map((e) => [e.id, e]));
+    expect(byId.get('waste-strider')?.action).toBe('mercy');
+    expect(byId.get('husk-knight')?.action).toBe('mercy');
+    expect(byId.get('cinder-gnat-swarm')?.action).toBeUndefined();
   });
 });
 

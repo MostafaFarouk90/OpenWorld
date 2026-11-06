@@ -16,7 +16,9 @@ export function wasteCreatureEntries(rows: readonly WasteCodexRow[]): { entries:
   const strings: Record<string, string> = {};
   for (const r of rows) {
     if (!r || typeof r.kind !== 'string' || typeof r.slug !== 'string') continue;
-    entries.push(codexEntry('bestiary', r.kind, r.slug));
+    // `{key}` in a body is the mercy key (Release a Husk Knight, Calm a Strider with a Rain Flask).
+    const usesKey = Object.values(r.strings ?? {}).some((v) => typeof v === 'string' && v.includes('{key}'));
+    entries.push(codexEntry('bestiary', r.kind, r.slug, usesKey ? 'mercy' : undefined));
     for (const [k, v] of Object.entries(r.strings ?? {})) if (typeof v === 'string') strings[k] = v;
   }
   return { entries, strings };
