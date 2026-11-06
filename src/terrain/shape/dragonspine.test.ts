@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { heightAt, shapeBaseHeight, WORLD_SHAPER_OPTIONS, worldRoads } from '../heightfield';
 import { buildShaper, type RoadDef, type ShapeBox } from '../shaping';
 import { detailRelief } from './detailRelief';
-import { ACT3_MIN_FLOOR, ACT3_PROTECTED_BOXES } from './act3';
+import { ACT3_MIN_FLOOR, ACT3_PROTECTED_BOXES, WORLD_PROTECTED_BOXES } from './act3';
+import { WASTE_ROADS, WASTE_UPLIFTS } from './waste';
 import {
   DEEPGATE_TRACK,
   DEEPGATE_TRACK_POINTS,
@@ -59,13 +60,15 @@ const nearRoad = (x: number, z: number, m: number) => DRAGONSPINE_ROADS.some((r)
 
 describe('the Dragonspine shape is registered in the world shape', () => {
   it('lists every uplift, the chasm, every plateau and the roads in order (Spine Road, Deepgate Track, Rime Pass, Skyhold spur, the Hawk Cliffs path and shelf)', () => {
-    expect(WORLD_SHAPE.uplifts).toEqual(DRAGONSPINE_UPLIFTS);
+    // Act 4 (L1): the Waste's rim uplift follows the Dragonspine's.
+    expect(WORLD_SHAPE.uplifts).toEqual([...DRAGONSPINE_UPLIFTS, ...WASTE_UPLIFTS]);
     expect(WORLD_SHAPE.troughs).toEqual(expect.arrayContaining([...DRAGONSPINE_TROUGHS]));
     expect(WORLD_SHAPE.plateaus).toEqual(expect.arrayContaining([...DRAGONSPINE_PLATEAUS]));
     const order = ['spine-road', 'deepgate-track', 'rime-pass', 'skyhold-spur', 'hawk-cliffs-path', 'hawk-nest-shelf'];
     expect(DRAGONSPINE_ROADS.map((r) => r.id)).toEqual(order);
+    // Act 4 (L1): the Waste's roads come after every shipped road.
     const ids = WORLD_SHAPE.roads.map((r) => r.id);
-    expect(ids.slice(-order.length)).toEqual(order);
+    expect(ids.slice(-order.length - WASTE_ROADS.length, -WASTE_ROADS.length)).toEqual(order);
   });
 
   it('keeps the uplifts few (they run for every terrain vertex) and the spines short', () => {
@@ -389,7 +392,8 @@ describe('shipped ground', () => {
   );
 
   it('every protected box matches on a 50 m grid, except Oldsmoke under the Deepgate Track (its own cut and fill)', () => {
-    for (const b of ACT3_PROTECTED_BOXES) {
+    // Act 4 (L1): the Waste is Act 4's ground now (waste.test.ts pins that no Dragonspine layer reaches it).
+    for (const b of WORLD_PROTECTED_BOXES) {
       for (let x = b.minX; x <= b.maxX; x += 50) {
         for (let z = b.minZ; z <= b.maxZ; z += 50) {
           if (lineGap(DEEPGATE_TRACK.points, x, z) <= DEEPGATE_TRACK.halfWidth + (DEEPGATE_TRACK.maxBlend ?? 300)) continue;
