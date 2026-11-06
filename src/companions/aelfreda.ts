@@ -17,6 +17,9 @@ export const AELFREDA_LOOK: CompanionLook = {
 };
 
 /** The companion talk tree (the Hearth Rite); her Act 1 NPC keeps `npc-aelfreda`. */
+/** Her rest slot (L4): 1 m behind Cael and 2.2 m to his left, at the frame's edge from the default camera. */
+export const AELFREDA_FOLLOW_SLOT = { back: 1.0, side: -2.2 } as const;
+
 export const AELFREDA_COMPANION_DIALOGUE = 'npc-aelfreda-companion';
 
 /** Sister Aelfreda (design 8.1): joins at M14, healer, Calming flame; never attacks (Q3; plans/act2-A5.md section 2). */
@@ -36,6 +39,8 @@ export const AELFREDA: CompanionDef = {
     healFraction: AELFREDA_TUNING.flameHealFraction,
   },
   look: AELFREDA_LOOK,
+  // Act 4 (L4, playthrough L5): beside Cael on his left, not between him and the camera (her hat filled the foreground).
+  followSlot: AELFREDA_FOLLOW_SLOT,
   // A3 moves her NPC to `npc-post.aelfreda.anvil` for M14; the handover falls back to her chapel post.
   npcPost: 'npc-post.aelfreda',
   npcId: 'aelfreda',

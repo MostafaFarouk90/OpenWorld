@@ -1,5 +1,6 @@
 import type { ActorId } from '../actors/Actor';
 import type { BanterLines } from './BanterDirector';
+import type { FollowSlot } from './FollowModel';
 import type { WaitRule } from './WaitDirector';
 
 export interface CompanionDef {
@@ -21,6 +22,11 @@ export interface CompanionDef {
   dialogueId: string;
   /** Battle-song on block (Tobb only). Absent for a companion whose aura is not a block-triggered attack-speed buff. */
   aura?: { id: string; buffId: string; nameKey: string; seconds: number; attackSpeed: number };
+  /**
+   * Act 4 (L4, Act 3 playthrough L5): this companion's rest slot. Absent: the shared one (COMPANION_TUNING, 3 m back and
+   * 1.2 m aside), which sits between the camera and Cael.
+   */
+  followSlot?: FollowSlot;
   /** The figure's model and dress; absent means Tobb's look (the shipped default). */
   look?: CompanionLook;
   /** A5's own health pool (Stonehide and the downed rule); absent: the 1 HP immortal actor Tobb has. */

@@ -23,6 +23,47 @@ describe('VillagerBody', () => {
     expect(box.min.y).toBeGreaterThan(0.5);
   });
 
+  it('lies face-up while carried (the model front, +Z, points at the sky) and stands facing level when set down', () => {
+    const b = new VillagerBody(0, 0x888888, null);
+    const face = new THREE.Object3D();
+    face.position.set(0, 1.6, 0.3); // a point in front of the head, in the figure's frame
+    (b.root.children[0] as THREE.Object3D).add(face);
+    const head = new THREE.Object3D();
+    head.position.set(0, 1.6, 0);
+    (b.root.children[0] as THREE.Object3D).add(head);
+    const dirOf = () => {
+      b.root.updateMatrixWorld(true);
+      const f = face.getWorldPosition(new THREE.Vector3());
+      const h = head.getWorldPosition(new THREE.Vector3());
+      return f.sub(h).normalize();
+    };
+    for (const yaw of [0, 1.1, Math.PI, -2.4]) {
+      b.setPose({ x: 5, y: 2, z: -7 }, yaw);
+      expect(b.isCarried).toBe(true);
+      // within 15 degrees of straight up
+      expect(dirOf().y).toBeGreaterThan(Math.cos((15 * Math.PI) / 180));
+    }
+    b.setPose({ x: 5, y: 2, z: -7 });
+    expect(b.isCarried).toBe(false);
+    expect(Math.abs(dirOf().y)).toBeLessThan(1e-6);
+  });
+
+  it('holds the idle clip still while carried and plays it again once set down', () => {
+    const b = new VillagerBody(0, 0x888888, null);
+    let advanced = 0;
+    (b as unknown as { mixer: { update(dt: number): void; stopAllAction(): void } }).mixer = { update: (dt) => void (advanced += dt), stopAllAction() {} };
+    b.setVisible(true);
+    b.setPose({ x: 0, y: 0, z: 0 });
+    b.update(0.5);
+    expect(advanced).toBe(0.5);
+    b.setPose({ x: 0, y: 0, z: 0 }, 0);
+    b.update(0.5);
+    expect(advanced).toBe(0.5);
+    b.setPose({ x: 0, y: 0, z: 0 });
+    b.update(0.25);
+    expect(advanced).toBe(0.75);
+  });
+
   it('turns with the carrier', () => {
     const b = new VillagerBody(0, 0x888888, null);
     b.setPose({ x: 0, y: 0, z: 0 }, Math.PI / 2); // faces -X

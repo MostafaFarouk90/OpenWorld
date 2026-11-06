@@ -714,3 +714,39 @@ describe('InteractionSystem focus: companions never take F from a person in reac
     expect(t.sys.focusFor('mercy')).toBe(m);
   });
 });
+
+// Act 4 (L4, Act 3 playthrough L2): Aelfreda beside the Wyrmwatch Lodge waystone took F. A waystone, door, chest, lever,
+// kneel spot or pickup the player faces in reach now wins over a companion, however near she stands.
+describe('InteractionSystem focus: companions never take F from a fixture in reach (L4)', () => {
+  const companion = (t: ReturnType<typeof setup>, z: number) => t.item('companion:aelfreda', z, { kind: 'talk', radius: 3.6, ambient: true });
+
+  it.each(['waystone', 'door', 'chest', 'lever', 'kneel', 'pickup'] as const)('a %s farther than the companion takes the focus', (kind) => {
+    const t = setup();
+    const c = companion(t, -0.3);
+    const fixture = t.item(`${kind}:lodge`, -1.9, { kind });
+    t.sys.register(c);
+    t.sys.register(fixture);
+    t.tick();
+    expect(t.sys.focus).toBe(fixture);
+  });
+
+  it('a fixture out of reach, behind the player or disabled does not make the companion yield', () => {
+    const t = setup();
+    const c = companion(t, -0.3);
+    t.sys.register(c);
+    t.sys.register(t.item('waystone:far', -2.6, { kind: 'waystone' }));
+    t.sys.register(t.item('door:behind', 1.0, { kind: 'door' }));
+    t.sys.register(t.item('chest:off', -1.0, { kind: 'chest', enabled: () => false }));
+    t.tick();
+    expect(t.sys.focus).toBe(c);
+  });
+
+  it('a plain use prop still leaves the companion focused (unchanged)', () => {
+    const t = setup();
+    const c = companion(t, -0.3);
+    t.sys.register(c);
+    t.sys.register(t.item('use:barrel', -1.0));
+    t.tick();
+    expect(t.sys.focus).toBe(c);
+  });
+});
