@@ -217,16 +217,20 @@ describe('ThirdPersonCamera collision', () => {
     expect(distFromTarget(camera)).toBeCloseTo(3 - CAMERA.collisionMargin, 6);
   });
 
-  it('never goes closer than the clear distance for a tiny hit distance, so it stays out of the player', () => {
+  // Act 4 (L2) changed these two: the camera used to be pushed back out to minClearDistance, through a wall right behind the
+  // player. It now stops at the wall, down to nearWallMin, and fades the player instead.
+  it('stops just over the near plane for a tiny hit distance, never past the wall, and fades the player fully', () => {
     const { cam, camera } = setup(0.05);
     cam.update(feet);
-    expect(distFromTarget(camera)).toBeCloseTo(CAMERA.minClearDistance, 6);
+    // Along the ray the camera is at nearWallMin; the lift is refused (the mocked up ray hits at 0.05 too).
+    expect(distFromTarget(camera)).toBeCloseTo(CAMERA.nearWallMin, 6);
+    expect(cam.nearFade).toBe(1);
   });
 
-  it('never goes closer than the clear distance for a zero hit distance', () => {
+  it('stops at nearWallMin for a zero hit distance', () => {
     const { cam, camera } = setup(0);
     cam.update(feet);
-    expect(distFromTarget(camera)).toBeCloseTo(CAMERA.minClearDistance, 6);
+    expect(distFromTarget(camera)).toBeCloseTo(CAMERA.nearWallMin, 6);
   });
 
   it('is pulled in in front of a character standing behind the player, and clear of the body', () => {
@@ -284,7 +288,8 @@ describe('ThirdPersonCamera collision', () => {
     const { cam, raycast, ignore, state } = setup();
     state.wheel = 2;
     cam.update(feet);
-    expect(raycast).toHaveBeenCalledTimes(1);
+    // Act 4 (L2): the centre ray first, then the two side rays (no lift ray: nothing was hit).
+    expect(raycast).toHaveBeenCalledTimes(3);
     const [origin, direction, maxDistance, exclude] = raycast.mock.calls[0] as [
       THREE.Vector3,
       THREE.Vector3,
@@ -446,5 +451,75 @@ describe('ThirdPersonCamera and the wheel claim (v0.5)', () => {
     expect(input.consumeWheel('calm')).toBe(1);
     release();
     shot.release();
+  });
+});
+
+describe('ThirdPersonCamera near walls (Act 4, L2: the camera wall clip)', () => {
+  /** A raycast mock: the centre ray (from the orbit point) hits at `centre`, side rays at `side`, the lift ray at `up`. */
+  function setupRays(rays: { centre: number | null; side?: number | null; up?: number | null }) {
+    const s = setup();
+    const t = targetOf(feet);
+    s.raycast.mockImplementation((...args: unknown[]) => {
+      const [origin, dir] = args as [THREE.Vector3, THREE.Vector3];
+      if (dir.y > 0.99) return rays.up === undefined || rays.up === null ? null : { distance: rays.up };
+      const fromCentre = origin.distanceTo(t) < 1e-9;
+      const d = fromCentre ? rays.centre : (rays.side ?? null);
+      return d === null ? null : { distance: d };
+    });
+    return s;
+  }
+
+  it('a wall 0.8 m behind puts the camera in front of it, lifted, with the player partly faded', () => {
+    const { cam, camera } = setupRays({ centre: 0.8 });
+    cam.update(feet);
+    const t = targetOf(feet);
+    const along = 0.8 - CAMERA.collisionMargin;
+    // The camera never reaches the wall: its distance along the ray is the hit less the margin.
+    const flat = new THREE.Vector3().copy(camera.position);
+    const close = (CAMERA.minClearDistance - along) / (CAMERA.minClearDistance - CAMERA.nearWallMin);
+    flat.y -= close * CAMERA.nearWallLift;
+    expect(flat.distanceTo(t)).toBeCloseTo(along, 6);
+    expect(camera.position.y).toBeGreaterThan(flat.y);
+    expect(cam.nearFade).toBeGreaterThan(0);
+    expect(cam.nearFade).toBeLessThan(1);
+  });
+
+  it('caps the lift under a low ceiling', () => {
+    const { cam, camera } = setupRays({ centre: 0.6, up: 0.3 });
+    cam.update(feet);
+    const t = targetOf(feet);
+    const along = 0.6 - CAMERA.collisionMargin;
+    const flat = new THREE.Vector3().copy(camera.position);
+    flat.y -= 0.3 - CAMERA.collisionMargin;
+    expect(flat.distanceTo(t)).toBeCloseTo(along, 6);
+  });
+
+  it('leaves the pose and the fade exactly as before when nothing is near', () => {
+    const { cam, camera } = setupRays({ centre: null });
+    cam.update(feet);
+    expect(distFromTarget(camera)).toBeCloseTo(CAMERA.distance, 6);
+    expect(cam.nearFade).toBe(0);
+  });
+
+  it('catches a corner met at a glancing angle with a side ray the centre ray misses', () => {
+    const { cam, camera } = setupRays({ centre: null, side: 2 });
+    cam.update(feet);
+    expect(distFromTarget(camera)).toBeCloseTo(2 - CAMERA.collisionMargin, 6);
+  });
+
+  it('is pulled in front of a character the ray enters below its feet and leaves through its body (one on a stair above)', () => {
+    const { cam, camera } = setup();
+    // yaw 0, pitch -0.3: the ray climbs behind the player. A character 3.4 m behind on higher ground: the ray meets the cylinder's
+    // footprint under its feet and rises into its body before it leaves. The old test read y only at entry and missed it.
+    const t = targetOf(feet);
+    const D = 3.4;
+    const r = CAMERA.characterRadius;
+    const pitch = 0.3;
+    const yAt = (h: number) => t.y + Math.tan(pitch) * h;
+    const fy = (yAt(D - r) + yAt(D + r)) / 2 + 0.1;
+    expect(yAt(D - r)).toBeLessThan(fy - 0.1);
+    cam.characters = (visit) => visit(feet.x, fy, t.z + D);
+    cam.update(feet);
+    expect(distFromTarget(camera)).toBeLessThan(CAMERA.distance);
   });
 });
