@@ -27,6 +27,7 @@ import { DEEPGATE_PLATEAU, OLDSMOKE_PASS_ROAD, OLDSMOKE_PLATEAUS, OLDSMOKE_ROADS
 import { detailRelief } from './detailRelief';
 import { WORLD_SHAPE } from './index';
 import { FEN_ROAD } from './greyfen';
+import { M41_CAMP_PLATEAU, WASTE_ROADS } from './waste';
 import { roadLength, roadPoint } from './roadPoint';
 import { DEAD_ROAD, DEAD_ROAD_PLATEAUS } from './deadRoad';
 import { HARROWMARK_PLATEAU, HARROWMARK_RIDGES } from './harrowmark';
@@ -343,11 +344,29 @@ describe('Act 1 ground is unchanged outside the Cinder Road reach', () => {
     return { minX: Math.min(...pts.map((p) => p.x)) - m, maxX: Math.max(...pts.map((p) => p.x)) + m, minZ: Math.min(...pts.map((p) => p.z)) - m, maxZ: Infinity };
   })();
 
+  /** Act 4 (L1): the Ash Road and the Underways exit track (their points plus the widest blend) and the M41 camp. */
+  const ashReach = (x: number, z: number): boolean => {
+    const p = M41_CAMP_PLATEAU;
+    if (x >= p.box.minX - p.blend && x <= p.box.maxX + p.blend && z >= p.box.minZ - p.blend && z <= p.box.maxZ + p.blend) return true;
+    for (const r of WASTE_ROADS) {
+      const m = r.halfWidth + (r.maxBlend ?? 300);
+      for (let i = 1; i < r.points.length; i++) {
+        const a = r.points[i - 1];
+        const b = r.points[i];
+        const dx = b.x - a.x;
+        const dz = b.z - a.z;
+        const t = Math.min(Math.max(((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz), 0), 1);
+        if (Math.hypot(x - (a.x + dx * t), z - (a.z + dz * t)) <= m) return true;
+      }
+    }
+    return false;
+  };
+
   it('a 50 m grid over Brightwater, the Dead Road and Harrowmark matches the Act 1 shape exactly', () => {
     let compared = 0;
     for (let x = -1500; x <= 10500; x += 50) {
       for (let z = -1500; z <= 4000; z += 50) {
-        if (inBox(reach, x, z) || inBox(fenReach, x, z)) continue;
+        if (inBox(reach, x, z) || inBox(fenReach, x, z) || ashReach(x, z)) continue;
         compared++;
         if (heightAt(x, z) !== act1.heightAt(x, z) + detailRelief(x, z)) throw new Error(`Act 1 ground moved at (${x}, ${z})`);
       }

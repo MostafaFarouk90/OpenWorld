@@ -18,15 +18,37 @@ const anchorIds = [
   ...ALL_INTERIORS.flatMap((d) => d.anchors.map((a) => a.id)),
 ];
 const triggerIds = [
-  ...ALL_LAYOUTS.flatMap((l) => l.triggers.map((t) => t.id)),
+  ...[...ALL_LAYOUTS, ACT4_WORLD_LAYOUT].flatMap((l) => l.triggers.map((t) => t.id)),
   ...ACT2_TRIGGERS.map((t) => t.id),
   ...OLDSMOKE_TRIGGERS.map((t) => t.id),
   ...ALL_INTERIORS.flatMap((d) => d.triggers.map((t) => t.id)),
 ];
 
-/** Act 4 sub-prefixes a thread owns and ships (L0: the fog faces' anchors, act4World.layout.ts). */
-const OWNED_SUB_PREFIXES: readonly string[] = ['ashroad.fog.', 'waste.fog.'];
-const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = [];
+/** Act 4 sub-prefixes a thread owns and ships (L0: the fog faces' anchors; L1: the roads, Ashgate, the refuge, the Waste's sites and rope-lines; act4World.layout.ts). */
+const OWNED_SUB_PREFIXES: readonly string[] = [
+  'ashroad.fog.',
+  'waste.fog.',
+  // L1
+  'ashroad.start',
+  'ashroad.junction.',
+  'ashroad.end',
+  'harrowmark.a4.m41.camp',
+  'ashgate.arch',
+  'ashgate.shop.hild',
+  'ashgate.horse-post',
+  'ashgate.refuge.',
+  'waste.crossing',
+  'waste.spring',
+  'waste.walker-camp',
+  'waste.cinder-chapel',
+  'waste.glasslands.singing-slag',
+  'waste.husk-cathedral.entry',
+  'waste.rimfoot.fire',
+  'waste.rope.',
+  'waste.shelter.',
+];
+/** L1: L4's banter volumes round the Waste's sites. */
+const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = ['trg.waste.walker-camp', 'trg.waste.cinder-chapel', 'trg.waste.husk-cathedral', 'trg.waste.rimfoot'];
 
 describe('Act 4 ids and reserved prefixes (v0.8 item 15)', () => {
   it('lists the 21 quests, split into Phase G and Phase H, none shared with Act 3', () => {

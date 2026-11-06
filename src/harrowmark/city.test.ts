@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { footprintCorners } from '../region/geometry';
-import { CENTER, GATE_NAMES, MAX_STRUCTURE_RADIUS, NORTHWEST_PORTCULLIS_ID, PORTCULLIS_ID, RIVER_PORTCULLIS_ID, SHUTTER_IDS, gateBearing, gatePosition, polar, wallStructures, yawAlong } from './city';
+import { CENTER, GATE_NAMES, MAX_STRUCTURE_RADIUS, NORTHEAST_PORTCULLIS_ID, NORTHWEST_PORTCULLIS_ID, PORTCULLIS_ID, RIVER_PORTCULLIS_ID, SHUTTER_IDS, gateBearing, gatePosition, polar, wallStructures, yawAlong } from './city';
 import { HARROWMARK_PLATEAU } from '../terrain/shape/harrowmark';
 import { HARROWMARK_LAYOUT } from './harrowmark.layout';
 
@@ -25,14 +25,16 @@ describe('ring wall', () => {
     }
   });
 
-  it('plugs four gates and gives the South, River and (Act 3) North-west Gates a shutter each', () => {
+  it('plugs three gates and gives the South, River, (Act 3) North-west and (Act 4) North-east Gates a shutter each', () => {
     expect(wall.filter((w) => w.id.startsWith('plug.')).map((w) => w.id).sort()).toEqual(
-      GATE_NAMES.filter((g) => g !== 'south' && g !== 'river' && g !== 'northwest').map((g) => `plug.${g}`).sort(),
+      GATE_NAMES.filter((g) => g !== 'south' && g !== 'river' && g !== 'northwest' && g !== 'northeast').map((g) => `plug.${g}`).sort(),
     );
     expect(wall.filter((w) => w.id === PORTCULLIS_ID)).toHaveLength(1);
     expect(wall.filter((w) => w.id === RIVER_PORTCULLIS_ID)).toHaveLength(1);
     expect(wall.filter((w) => w.id === NORTHWEST_PORTCULLIS_ID)).toHaveLength(1);
-    expect(SHUTTER_IDS).toEqual([PORTCULLIS_ID, RIVER_PORTCULLIS_ID, NORTHWEST_PORTCULLIS_ID]);
+    expect(wall.filter((w) => w.id === NORTHEAST_PORTCULLIS_ID)).toHaveLength(1);
+    expect(wall.some((w) => w.id === 'plug.northeast')).toBe(false);
+    expect(SHUTTER_IDS).toEqual([PORTCULLIS_ID, RIVER_PORTCULLIS_ID, NORTHWEST_PORTCULLIS_ID, NORTHEAST_PORTCULLIS_ID]);
     expect(wall.filter((w) => SHUTTER_IDS.includes(w.id)).every((w) => w.kind === 'gate')).toBe(true);
   });
 

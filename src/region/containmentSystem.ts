@@ -12,8 +12,12 @@ import type { CoreContext } from './coreTypes';
 
 export const CONTAINMENT_SYSTEM_ID = 'region.containment';
 export const CONTAINMENT_TOAST_KEY = 'region.containment.toast';
-/** One toast at most this often (simulated seconds), however often the player leans on the edge. */
-export const CONTAINMENT_TOAST_SECONDS = 8;
+/**
+ * v0.8 (L1, playthrough L1): one toast per push episode. An episode starts at a push and ends once the player has been
+ * open and unpushed this long (simulated seconds), so leaning on an edge toasts once however long it lasts; the 8 s
+ * throttle this replaces toasted 11 times in 90 s of sliding along the Fen Road's corridor edge.
+ */
+export const CONTAINMENT_EPISODE_QUIET_SECONDS = 4;
 /** The mount's soft cap starts this far from a closed edge, falling to `EDGE_CAP_MIN` at the edge. */
 export const EDGE_CAP_METRES = 20;
 export const EDGE_CAP_MIN = MOUNT_TUNING.walkSpeed;
@@ -40,7 +44,8 @@ export function installContainment(
   const containment = new Containment(ctx.state, [DEAD_ROAD_CORRIDOR, ...ACT3_CORRIDORS, ...ACT4_CORRIDORS], [...ACT3_HOLES, ...ACT4_HOLES]);
   const offs: (() => void)[] = [];
   offs.push(ctx.services.provide('containment', containment));
-  let sinceToast = Infinity;
+  // Seconds since the last push; an episode is over (and the next push toasts) once this reaches the quiet time.
+  let sincePush = Infinity;
   let capOff: (() => void) | null = null;
 
   offs.push(
@@ -49,7 +54,7 @@ export function installContainment(
       fixedPhase: 'intent',
       order: -95,
       fixedUpdate(dt) {
-        sinceToast += dt;
+        sincePush += dt;
         if (!capOff) {
           const mount = ctx.services.get('mount');
           if (mount) capOff = mount.addSpeedCap((x, z) => edgeSpeedCap(containment.edgeDistance(x, z, EDGE_CAP_METRES)));
@@ -66,10 +71,9 @@ export function installContainment(
         ctx.player.teleport(to);
         // v0.7: K7's glide ends on it (`glide.ended { reason: 'contained' }`).
         ctx.events.emit('containment.pushed', { from, to });
-        if (sinceToast >= CONTAINMENT_TOAST_SECONDS) {
-          sinceToast = 0;
-          ctx.events.emit('hud.toast', { textKey: CONTAINMENT_TOAST_KEY });
-        }
+        const newEpisode = sincePush >= CONTAINMENT_EPISODE_QUIET_SECONDS;
+        sincePush = 0;
+        if (newEpisode) ctx.events.emit('hud.toast', { textKey: CONTAINMENT_TOAST_KEY });
       },
     }),
   );

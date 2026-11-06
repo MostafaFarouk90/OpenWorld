@@ -8,8 +8,8 @@ import { resolveLayout } from '../region/resolveLayout';
 import { modelLibraryFor } from '../assets/swap/ModelLibrary';
 import { buildCityModels, type CityModels } from './cityArt';
 import { buildCity } from './cityBuild';
-import { watchNorthwestGate, watchRiverGate, watchSouthGate } from './gate';
-import { NORTHWEST_PORTCULLIS_ID, RIVER_PORTCULLIS_ID } from './city';
+import { watchNortheastGate, watchNorthwestGate, watchRiverGate, watchSouthGate } from './gate';
+import { NORTHEAST_PORTCULLIS_ID, NORTHWEST_PORTCULLIS_ID, RIVER_PORTCULLIS_ID } from './city';
 import { DOORS, HARROWMARK_LAYOUT } from './harrowmark.layout';
 import { HARROWMARK_NPC_DEFS, HARROWMARK_NPC_STRINGS_EN } from './npcDefs';
 import './types';
@@ -96,6 +96,9 @@ export function createHarrowmarkPlugin(opts: HarrowmarkPluginOptions = {}): Game
         cleanups.push(() => river.dispose());
         const northwest = watchNorthwestGate(ctx.gates, (open) => city.setShutter(NORTHWEST_PORTCULLIS_ID, !open));
         cleanups.push(() => northwest.dispose());
+        // Act 4 (L1): the Ash Road's gate.
+        const northeast = watchNortheastGate(ctx.gates, (open) => city.setShutter(NORTHEAST_PORTCULLIS_ID, !open));
+        cleanups.push(() => northeast.dispose());
 
         const change = buildWorldChange(ctx);
         cleanups.push(() => change.dispose());

@@ -11,6 +11,7 @@ import { HARROWMARK_LAYOUT } from '../harrowmark/harrowmark.layout';
 import { surfaceColor } from '../terrain/chunkGeometry';
 import { RIVER_WIDTH } from './water';
 import { ACT3_CAUSEWAY_STRIPS, ACT3_ROAD_STRIPS } from './act3/act3World';
+import { ACT4_ROAD_STRIPS } from './act4/act4Strips';
 import { GREYFEN_WATER_TABLE, HATHRENS_MERE } from '../terrain/shape/greyfen';
 
 const flat = () => 0;
@@ -406,5 +407,17 @@ describe('grass in the Act 3 regions (K1)', () => {
     expect(dryGrown).toBeGreaterThan(500);
     // The Mere's centre is deep water.
     expect(accept(HATHRENS_MERE.x, HATHRENS_MERE.z)).toBe(false);
+  });
+});
+
+describe('grass on the Act 4 roads (L1)', () => {
+  const accept = grassAcceptFor([BRIGHTWATER_LAYOUT, DEADROAD_LAYOUT], heightAt);
+
+  it('keeps off the Ash Road, the Underways exit track, the wall track and every rope-lane', () => {
+    for (const r of ACT4_ROAD_STRIPS) {
+      const [ax, az] = r.points[1];
+      const [bx, bz] = r.points[2] ?? r.points[0];
+      expect(accept((ax + bx) / 2, (az + bz) / 2), r.id).toBe(false);
+    }
   });
 });

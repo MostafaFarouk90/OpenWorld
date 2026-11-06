@@ -304,7 +304,8 @@ describe('TerrainManager', () => {
       const spy = vi.spyOn(THREE.Material.prototype, 'dispose');
       manager.dispose();
       const materials = spy.mock.contexts.filter((c) => c instanceof THREE.MeshStandardMaterial);
-      expect(materials).toHaveLength(4);
+      // Act 1 and the four ground origins (Act 2, Greyfen, Dragonspine and, from Act 4, the Waste).
+      expect(materials).toHaveLength(5);
       const names = materials.map((m) => (m as THREE.Material).name);
       expect(names).toContain('terrain-act2-ground');
       expect(names).toContain('terrain-greyfen-ground');

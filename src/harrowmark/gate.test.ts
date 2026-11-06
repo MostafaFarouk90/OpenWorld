@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createFakeCore } from '../region/testing/fakeCore';
-import { NORTHWEST_GATE_FLAG, watchNorthwestGate, M06_ROUTE_FLAG, M06_GUARDED_FLAG, RIVER_GATE_FLAG, watchRiverGate, M06_STARTED_FLAG, gateStateFor, watchSouthGate, type GateState } from './gate';
+import { NORTHEAST_GATE_FLAG, NORTHEAST_GATE_SHUT_FLAG, northeastGateOpen, watchNortheastGate, NORTHWEST_GATE_FLAG, watchNorthwestGate, M06_ROUTE_FLAG, M06_GUARDED_FLAG, RIVER_GATE_FLAG, watchRiverGate, M06_STARTED_FLAG, gateStateFor, watchSouthGate, type GateState } from './gate';
 
 function setup(flags: Record<string, boolean | string> = {}) {
   const fc = createFakeCore();
@@ -123,5 +123,37 @@ describe('North-west Gate shutter (Act 3, K1)', () => {
     gate.dispose();
     fc.ctx.state.setFlag(NORTHWEST_GATE_FLAG, true);
     expect(seen).toEqual([false, true, false]);
+  });
+});
+
+describe('North-east Gate (Act 4, L1): the Ash Road', () => {
+  it('opens from Act 4 and shuts again once Vey holds the city', () => {
+    expect(NORTHEAST_GATE_FLAG).toBe('story.gate.a4');
+    expect(NORTHEAST_GATE_SHUT_FLAG).toBe('story.m38.complete');
+    expect(northeastGateOpen(false, false)).toBe(false);
+    expect(northeastGateOpen(true, false)).toBe(true);
+    expect(northeastGateOpen(true, true)).toBe(false);
+    expect(northeastGateOpen(false, true)).toBe(false);
+  });
+
+  it('stays shut through Acts 1 to 3, follows the flags and re-derives on a load', () => {
+    const fc = createFakeCore();
+    const seen: boolean[] = [];
+    const gate = watchNortheastGate(fc.ctx.gates, (open) => seen.push(open));
+    expect(gate.open()).toBe(false);
+    for (const f of ['story.gate.a2', 'story.gate.a3']) fc.ctx.state.setFlag(f, true);
+    expect(gate.open()).toBe(false);
+    fc.ctx.state.setFlag(NORTHEAST_GATE_FLAG, true);
+    expect(gate.open()).toBe(true);
+    fc.ctx.state.setFlag(NORTHEAST_GATE_SHUT_FLAG, true);
+    expect(gate.open()).toBe(false);
+    // A load of a Phase G save (Act 4, the city not yet fallen) opens it again.
+    fc.flags.clear();
+    fc.flags.set(NORTHEAST_GATE_FLAG, true);
+    fc.fire('save.loaded');
+    expect(gate.open()).toBe(true);
+    gate.dispose();
+    fc.ctx.state.setFlag(NORTHEAST_GATE_SHUT_FLAG, true);
+    expect(seen).toEqual([false, true, false, true]);
   });
 });

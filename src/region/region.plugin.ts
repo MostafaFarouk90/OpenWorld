@@ -14,6 +14,7 @@ import { distanceToPolyline, GrassField, type GrassAccept } from './grass';
 import { drawnWidth } from './act2/act2Roads';
 import { ACT2_ROAD_STRIPS } from './act2/act2World';
 import { ACT3_CAUSEWAY_STRIPS, ACT3_ROAD_STRIPS } from './act3/act3World';
+import { ACT4_ROAD_STRIPS } from './act4/act4Strips';
 import { GREYFEN_SHEET } from './act3/act3Water';
 import { GREYFEN_WATER_TABLE } from '../terrain/shape/greyfen';
 import { buildPoiProps } from './poiProps';
@@ -110,6 +111,8 @@ export function grassAcceptFor(
     // The Act 3 roads (thread K1) as drawn, and the causeways' decks (K3 draws them) with their 1 m kerb.
     ...ACT3_ROAD_STRIPS.map((r) => [r.points, drawnWidth(r.halfWidth) / 2 + 0.3] as [readonly (readonly [number, number])[], number]),
     ...ACT3_CAUSEWAY_STRIPS.map((r) => [r.points, r.halfWidth + 1] as [readonly (readonly [number, number])[], number]),
+    // The Act 4 roads, the wall track and the rope-lanes (thread L1) as drawn.
+    ...ACT4_ROAD_STRIPS.map((r) => [r.points, drawnWidth(r.halfWidth) / 2 + 0.3] as [readonly (readonly [number, number])[], number]),
   ];
   // Every Greyfen water surface lies at the water table (act3Water.ts): no tuft where the ground is under it.
   const underFenWater = (x: number, z: number): boolean =>
