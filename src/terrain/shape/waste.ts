@@ -189,9 +189,6 @@ for (const r of WASTE_ROADS) {
 }
 for (const p of WASTE_PLATEAUS) zones.push({ ax: p.box.minX, az: p.box.minZ, bx: p.box.maxX, bz: p.box.maxZ, hw: 0, rect: true });
 
-/** Extra keep-flat rectangles other modules register before the first sample (shelters); engine boxes. */
-export const DUNE_KEEP_RECTS: { x0: number; z0: number; x1: number; z1: number }[] = [];
-
 function zoneDistance(zn: Zone, x: number, z: number): number {
   if (zn.rect) return boxDistance({ x0: zn.ax, z0: zn.az, x1: zn.bx, z1: zn.bz }, x, z);
   const dx = zn.bx - zn.ax;
@@ -209,7 +206,8 @@ const ROWS = Math.ceil((WASTE_BOX.z1 - WASTE_BOX.z0) / CELL);
 let buckets: Zone[][] | null = null;
 
 function buildBuckets(): Zone[][] {
-  const all = [...zones, ...DUNE_KEEP_RECTS.map((r) => ({ ax: r.x0, az: r.z0, bx: r.x1, bz: r.z1, hw: 0, rect: true }))];
+  // Shelters stand 9 m off their line with a 6 m radius, inside the lane's keep-clear band, so they need no zone.
+  const all = zones;
   const out: Zone[][] = Array.from({ length: COLS * ROWS }, () => []);
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
