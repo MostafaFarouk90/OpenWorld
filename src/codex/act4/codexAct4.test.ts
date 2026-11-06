@@ -22,7 +22,7 @@ beforeAll(async () => {
 }, PLUGIN_TEST_TIMEOUT);
 afterEach(() => vi.restoreAllMocks());
 
-const ROWS = [
+const ROWS: { kind: string; slug: string; strings: Record<string, string> }[] = [
   { kind: 'waste-strider', slug: 'waste-strider', strings: { 'codex.bestiary.waste-strider.name': 'Waste Strider', 'codex.bestiary.waste-strider.body': 'Long legs.' } },
   { kind: 'cinder-gnat-swarm', slug: 'cinder-gnat-swarm', strings: { 'codex.bestiary.cinder-gnat-swarm.name': 'Cinder Gnats', 'codex.bestiary.cinder-gnat-swarm.body': 'Many.' } },
 ];
