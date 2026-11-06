@@ -27,9 +27,10 @@ import { INTERIOR_STRINGS_EN } from './strings.en';
 import type { InteriorDef, InteriorLinkDef } from './types';
 import { UNDERWAYS_DEF } from './underways/generate';
 import { VAULT_DEF } from './vaultDef';
+import { WASTE_DOOR_LOCKS, WASTE_FLAG_BLOCKERS, WASTE_INTERIORS } from '../waste/interiors';
 
 /** Every interior the game ships (contracts/interiors-and-nav.md section 9). */
-export const ALL_INTERIORS: readonly InteriorDef[] = [VAULT_DEF, ...HARROWMARK_INTERIORS, UNDERWAYS_DEF, ...ACT2_INTERIORS, ...ACT3_INTERIORS, ...ACT4_HARROWMARK_INTERIORS];
+export const ALL_INTERIORS: readonly InteriorDef[] = [VAULT_DEF, ...HARROWMARK_INTERIORS, UNDERWAYS_DEF, ...ACT2_INTERIORS, ...ACT3_INTERIORS, ...ACT4_HARROWMARK_INTERIORS, ...WASTE_INTERIORS];
 
 /** Thread 3a's band in `rules` (requested for game-events-and-flags.md section 2) and in render `world`. */
 export const INTERIORS_RULES_ORDER = 400;
@@ -179,7 +180,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
 
   // Door locks and flag-driven blockers. Gates call back at once ('init') and again after a load, so the state re-derives.
   const known = new Set([...layouts.values()].flatMap((l) => l.def.doors.map((d) => d.doorId)));
-  for (const [doorId, flag] of Object.entries(opts.doorLocks ?? { ...HARROWMARK_DOOR_LOCKS, ...ACT2_DOOR_LOCKS, ...ACT3_DOOR_LOCKS, ...ACT4_HARROWMARK_DOOR_LOCKS })) {
+  for (const [doorId, flag] of Object.entries(opts.doorLocks ?? { ...HARROWMARK_DOOR_LOCKS, ...ACT2_DOOR_LOCKS, ...ACT3_DOOR_LOCKS, ...ACT4_HARROWMARK_DOOR_LOCKS, ...WASTE_DOOR_LOCKS })) {
     if (!known.has(doorId)) continue;
     let open = false;
     cleanups.push(ctx.gates.flag(flag, (o) => (open = o)));
@@ -192,7 +193,7 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     if (!found) console.warn(`interiors: unknown blocker "${id}"`);
     return found;
   };
-  for (const [blockerId, flag] of Object.entries(opts.flagBlockers ?? { ...HARROWMARK_FLAG_BLOCKERS, ...ACT3_FLAG_BLOCKERS, ...ACT4_HARROWMARK_FLAG_BLOCKERS })) {
+  for (const [blockerId, flag] of Object.entries(opts.flagBlockers ?? { ...HARROWMARK_FLAG_BLOCKERS, ...ACT3_FLAG_BLOCKERS, ...ACT4_HARROWMARK_FLAG_BLOCKERS, ...WASTE_FLAG_BLOCKERS })) {
     if (![...built.values()].some((b) => b.hasBlocker(blockerId))) continue;
     cleanups.push(ctx.gates.flag(flag, (o) => setBlocker(blockerId, !o)));
   }
