@@ -315,3 +315,39 @@ describe('v0.8 item 11: SpawnerDef.skin reaches the spawn request', () => {
     expect('skin' in reqs[1]).toBe(false);
   });
 });
+
+describe('v0.8 item 11: applyEnemySkin', () => {
+  it('hides nodes, tints and lights the materials; an empty skin, an unknown skin or another kind changes nothing', async () => {
+    const THREE = await import('three');
+    const { applyEnemySkin, ENEMY_SKINS } = await import('./skins');
+    const make = () => {
+      const root = new THREE.Group();
+      const helm = new THREE.Object3D();
+      helm.name = 'helm';
+      root.add(helm);
+      const mat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+      return { root, helm, mat, materials: [mat] };
+    };
+    const warn = vi.fn();
+    const a = make();
+    applyEnemySkin(a, 'blighted-soldier', 'footman-soot', warn);
+    expect(a.helm.visible).toBe(true);
+    expect(a.mat.color.getHex()).toBe(0xffffff);
+    const b = make();
+    const saved = { ...ENEMY_SKINS['footman-soot'] };
+    Object.assign(ENEMY_SKINS['footman-soot'] as object, { hide: ['helm'], tint: 0x808080, emissive: 0x110000 });
+    try {
+      applyEnemySkin(b, 'blighted-soldier', 'footman-soot', warn);
+    } finally {
+      for (const k of ['hide', 'tint', 'emissive']) delete (ENEMY_SKINS['footman-soot'] as unknown as Record<string, unknown>)[k];
+      Object.assign(ENEMY_SKINS['footman-soot'] as object, saved);
+    }
+    expect(b.helm.visible).toBe(false);
+    expect(b.mat.color.getHex()).toBe(0x808080);
+    expect(b.mat.emissive.getHex()).toBe(0x110000);
+    const c = make();
+    applyEnemySkin(c, 'ash-wraith', 'footman-soot', warn);
+    applyEnemySkin(c, 'ash-wraith', 'nope', warn);
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+});

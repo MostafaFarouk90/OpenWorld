@@ -411,7 +411,9 @@ export class EnemyManager {
         return p;
       },
     };
+    // v0.8 item 11 (L2): the skin is drawn by the model builder, so a telegraph or hit flash restores the skin's emissive.
     const look = skin && isEnemySkinId(skin) && ENEMY_SKINS[skin].kind === def.kind ? ENEMY_SKINS[skin] : undefined;
+    if (skin && !look) this.host.warn(`enemies: skin "${skin}" does not dress ${def.kind}; drawing the base look`);
     const model = buildEnemyModel(source, def, { bus: this.host.combat.bus, ...(look ? { skin: look } : {}) });
     const animator = new EnemyAnimator(model.owner, source.clips, { warn: (m) => this.host.warn(m) });
     const body = new HumanoidBody(model, animator);
