@@ -1,3 +1,4 @@
+import { regionRefusesMount } from '../region/regions';
 // The Ashmare (slice 2 thread 20; plans/slice-2-ashmare.md with its review folded in). The rider and the horse
 // move as the player's own capsule through `Player.setRide`; this controller owns the gate, the H verb, the
 // whistle, the casts, the horse's own stamina, the hurtboxes on the horse, the visual, the camera offsets and the
@@ -282,6 +283,7 @@ export class MountController implements MountService {
       chase: anyService<{ active(): boolean }>(ctx, 'chase')?.active() === true,
       aggro: way?.hostileAggro === true,
       movement: anyService<{ rule(): { mount: string } }>(ctx, 'movementMode')?.rule().mount === 'refused',
+      region: regionRefusesMount(ctx.player.feet.x, ctx.player.feet.z),
       busy:
         ctx.player.actor.dead ||
         this.leaping ||

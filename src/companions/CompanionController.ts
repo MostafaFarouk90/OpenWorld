@@ -41,8 +41,15 @@ export interface ControllerOptions {
   claimBark?: (id: string) => boolean;
 }
 
-/** The camp post an inactive companion waits at (the Tilted Anvil, A5). */
-export const partyPost = (id: string): string => `npc-post.${id}.tilted-anvil`;
+/** v0.8 item 10: the benched companions leave the occupied city for the Ashgate refuge from the betrayal. */
+export const PARTY_POST_MOVES_FLAG = 'story.m38.complete';
+
+/**
+ * The camp post an inactive companion waits at: the Tilted Anvil (A5); v0.8, with flags and from `story.m38.complete`,
+ * the Ashgate refuge (`ashgate.refuge.companions.<id>`, L4 places them). Without flags, the Anvil as before.
+ */
+export const partyPost = (id: string, flags?: { getFlag(k: string): unknown } | null): string =>
+  flags?.getFlag(PARTY_POST_MOVES_FLAG) ? `ashgate.refuge.companions.${id}` : `npc-post.${id}.tilted-anvil`;
 
 /** Untyped lookups for services whose types live in threads that may not be merged yet. */
 function anyService<T>(ctx: GameContext, name: string): T | undefined {
@@ -126,7 +133,17 @@ export class CompanionController {
     this.isActive = opts.isActive ?? (() => true);
     this.trialRunning = opts.trialRunning ?? (() => false);
     this.claimBark = opts.claimBark ?? (() => true);
-    this.rules = [{ reason: 'party', anchorId: partyPost(def.id), inactive: true }, ...def.waits, ...QUEST_WAITS];
+    // The party post is read each time the wait is derived, so the move at M38 (and a load) needs nothing else.
+    // Until L4 places the refuge posts the Anvil stands in, so a benched companion never starts following.
+    const party = {
+      reason: 'party',
+      inactive: true,
+      get anchorId() {
+        const id = partyPost(def.id, ctx.state);
+        return ctx.anchors.find(id) ? id : partyPost(def.id);
+      },
+    };
+    this.rules = [party as (typeof def.waits)[number], ...def.waits, ...QUEST_WAITS];
     this.vitals = def.vitals ? new CompanionVitals(def.vitals.maxHealth, def.downed.kneelSeconds) : null;
     this.brain = def.combat ? new HrolfBrain({ ...HROLF_TUNING, ...def.combat }) : null;
     this.aura = new AuraWindow(def.aura?.seconds ?? 1);

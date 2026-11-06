@@ -193,3 +193,17 @@ export function regionTrackNow(id: RegionId, flags?: FlagReader | null): string 
   if (flags) for (const e of def.trackWhen ?? []) if (flagConditionHolds(e.when, flags)) return e.track;
   return def.track;
 }
+
+/**
+ * v0.8 item 12: the region at (x, z) refuses a summon (`mount: 'refused'`): the Ashen Waste, Caldera box included.
+ * Reads the engine boxes directly; the player cannot stand there before the Waste opens anyway (containment).
+ */
+export function regionRefusesMount(x: number, z: number): boolean {
+  for (const id of REGION_IDS) {
+    const r = REGION_INFO[id];
+    if (r.mount !== 'refused' || r.reserved) continue;
+    const b = engineBox(id);
+    if (x >= b.x0 && x < b.x1 && z >= b.z0 && z < b.z1) return true;
+  }
+  return false;
+}

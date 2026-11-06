@@ -5,6 +5,7 @@ import { createNpcState, stepNpc, wrapAngle, type NpcState } from './NpcBehavior
 import { buildPlaceholder, disposePlaceholder, pickIdleClip, prepareNpcModel, withTownsfolkClips } from './npcModels';
 import { withTownsfolkBody } from './townsfolkBodies';
 import { NPC_TUNING } from './tuning';
+import { RETIRED_NPCS, absentFlagsFor, type RetiredNpc } from './retire';
 import type { QuestsService } from '../quests/service';
 import type { NpcDef, NpcHandle, NpcModelId, NpcModelLoader, NpcsService } from './types';
 
@@ -21,6 +22,8 @@ export interface NpcManagerOptions {
   warn?: (message: string) => void;
   /** Terrain height; a walking NPC follows the ground instead of lerping between two anchor heights. */
   heightAt?: (x: number, z: number) => number;
+  /** v0.8: the retirement table (default RETIRED_NPCS); tests pass their own. */
+  retired?: readonly RetiredNpc[];
 }
 
 interface Entry {
@@ -45,6 +48,9 @@ export class NpcManager implements NpcsService {
   /** Where an NPC stood when it was despawned for a handover (`npcs.position` keeps answering for it). */
   private readonly lastPos = new Map<string, Vec3>();
   private readonly specs = new Map<string, NpcSpec>();
+  private get retired(): readonly RetiredNpc[] {
+    return this.opts.retired ?? RETIRED_NPCS;
+  }
   private gateOffs: Array<() => void> = [];
   /** Models whose GLB has loaded: an NPC that spawns later (a handover undone by a load) takes its model at once. */
   private readonly loadedModels = new Set<NpcModelId>();
@@ -151,17 +157,19 @@ export class NpcManager implements NpcsService {
     for (const spec of layoutNpcs) this.specs.set(spec.id, spec);
     for (const spec of layoutNpcs) {
       const def = defById.get(spec.id)!;
-      if (spec.absentWhen || spec.presentWhen) {
-        // Absent while `absentWhen` is true and until `presentWhen` is true (both read through ctx.gates, so a loaded save is honoured).
-        let absent = false;
+      const absentOn = absentFlagsFor(spec.id, spec.absentWhen, this.retired);
+      if (absentOn.length || spec.presentWhen) {
+        // Absent while any `absentWhen` flag (or its retirement) is true and until `presentWhen` is true (all read through
+        // ctx.gates, so a loaded save is honoured).
+        const absent = new Set<string>();
         let notYet = !!spec.presentWhen;
         const apply = (): void => {
           if (this.disposed) return;
-          if (absent || notYet) this.despawnOne(spec.id);
+          if (absent.size || notYet) this.despawnOne(spec.id);
           else if (!this.entries.has(spec.id)) this.spawnOne(spec, def);
         };
-        if (spec.absentWhen) {
-          offs.push(this.core.gates.flag(spec.absentWhen, (on) => { absent = on; apply(); }));
+        for (const flag of absentOn) {
+          offs.push(this.core.gates.flag(flag, (on) => { if (on) absent.add(flag); else absent.delete(flag); apply(); }));
         }
         if (spec.presentWhen) {
           offs.push(this.core.gates.flag(spec.presentWhen, (on) => { notYet = !on; apply(); }));
@@ -514,7 +522,7 @@ export class NpcManager implements NpcsService {
     if (last) return { ...last };
     // Absent through its gate since the load (never spawned): it still answers with where its post is.
     const spec = this.specs.get(id);
-    const post = spec?.absentWhen || spec?.presentWhen ? this.core.anchors.find(spec.post) : undefined;
+    const post = spec && (absentFlagsFor(spec.id, spec.absentWhen, this.retired).length || spec.presentWhen) ? this.core.anchors.find(spec.post) : undefined;
     return post ? { x: post.position.x, y: post.position.y, z: post.position.z } : undefined;
   }
 

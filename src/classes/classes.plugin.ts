@@ -29,6 +29,7 @@ import {
   trainerPlacement,
 } from './kits';
 import { KitSwapper } from './KitSwapper';
+import { retiredFlag } from '../npcs/retire';
 import { CLASSES_STRINGS_EN } from './strings.en';
 import { TrainerDesk } from './TrainerDesk';
 import './types';
@@ -165,6 +166,9 @@ const classesPlugin: GamePlugin = {
       if (!classes.available(id)) return false;
       const kit = classes.kit(id) ?? DEFAULT_KITS[id];
       const place = placementOf(id);
+      // v0.8: a retired trainer's desk is closed (until a TRAINER_POSTS row hands it on).
+      const gone = retiredFlag(place.npcId);
+      if (gone && ctx.state.getBool(gone, false)) return false;
       if (!ctx.anchors.find(place.deskAnchor)) {
         const key = `${id}:${place.deskAnchor}`;
         if (!warned.has(key)) {
