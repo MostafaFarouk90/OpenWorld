@@ -15,6 +15,8 @@ export interface Act3FixtureStartPorts {
   /** Applies a save file as Continue does; absent when the save service cannot. */
   loadFile?(save: Record<string, unknown>): Promise<boolean>;
   warn(message: string): void;
+  /** The freshness rule (L13: the Act 4 fixtures pass their own); Act 3's by default. */
+  fresh?(meta: Act3FreshnessMeta, known: readonly string[]): boolean;
 }
 
 export class Act3FixtureStart {
@@ -33,7 +35,7 @@ export class Act3FixtureStart {
   /** True while the jump should run (injection); false while a fixture is being found, decided, loading or loaded. */
   tick(): boolean {
     if (this.state === 'deciding' && this.ports.ready()) {
-      const choice = chooseAct3Start(this.name, true, this.found?.meta ?? null, this.ports.known());
+      const choice = chooseAct3Start(this.name, true, this.found?.meta ?? null, this.ports.known(), this.ports.fresh?.bind(this.ports));
       if (choice.use === 'inject') {
         this.ports.warn(`${choice.reason}; using flag injection`);
         this.state = 'inject';

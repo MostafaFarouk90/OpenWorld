@@ -61,7 +61,13 @@ async function throughEnding(h: ChapterHarness): Promise<{ camps: number; nodes:
   return { camps, nodes: campNodes, cardShown };
 }
 
-export async function runPhaseF(run: 'a' | 'b', spine: SpineChoices, greyfen?: GreyfenChoices): Promise<string> {
+/**
+ * `atEnd` (L13, additive): called on the live game right after the ending and the camp, before the census and the dispose;
+ * the Act 4 generator saves the carried base there.
+ */
+export async function runPhaseF(
+  run: 'a' | 'b', spine: SpineChoices, greyfen?: GreyfenChoices, atEnd?: (h: ChapterHarness) => Promise<void>,
+): Promise<string> {
   KILLS_FORCED.length = 0;
   const h = await bootPhaseF(run);
   const notes: string[] = [];
@@ -141,6 +147,7 @@ export async function runPhaseF(run: 'a' | 'b', spine: SpineChoices, greyfen?: G
     const hearth = h.ctx.anchors.find(ACT3_ENDING.campAnchorId!)!.position;
     const f = h.ctx.player.feet;
     expect(Math.hypot(f.x - hearth.x, f.z - hearth.z), 'at the lodge hearth').toBeLessThan(20);
+    await atEnd?.(h);
 
     // The census at the end.
     const ledger = xpLedger(h.of('xp.gained'));

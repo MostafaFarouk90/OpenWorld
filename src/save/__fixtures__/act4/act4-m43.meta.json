@@ -1,0 +1,45 @@
+{
+  "fixture": "act4-m43.json",
+  "id": "m43",
+  "injected": [
+    "m35",
+    "m36",
+    "r19",
+    "r20",
+    "r21",
+    "r22",
+    "r23",
+    "d07",
+    "m37",
+    "m38",
+    "m39",
+    "m40",
+    "m41",
+    "m42"
+  ],
+  "questDefs": [
+    "d07",
+    "m35",
+    "m36",
+    "m37",
+    "m38",
+    "m39",
+    "m40",
+    "m41",
+    "r19",
+    "r20",
+    "r21",
+    "r22",
+    "r23"
+  ],
+  "base": {
+    "fixture": "act4-carried-chain.json",
+    "level": 25,
+    "xp": 56077
+  },
+  "xp": 66877,
+  "level": 27,
+  "wasteOpen": true,
+  "generatedBy": "GEN_FIXTURES=1 npx vitest run src/integration/act4Fixtures.gen",
+  "savedAt": "fixed: Date.now() held at FIXTURE_SAVED_AT while saving"
+}

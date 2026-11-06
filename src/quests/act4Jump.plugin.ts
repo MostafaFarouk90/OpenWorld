@@ -8,6 +8,9 @@ import { act3JumpPorts } from './act3Jump.plugin';
 import { Act4Jump, parseAct4, type Act4JumpPorts } from './act4Jump';
 import { ACT4_ANCHOR_PREFIXES } from './lint/act4Flags';
 import { POST_RULES, resolvePosts } from './posts';
+import { Act3FixtureStart } from '../integration/act3FixtureStart';
+import { knownQuestDefs } from '../integration/act3FixtureKey';
+import { act4FixtureDefIds, act4FixtureFresh, act4FixtureName } from '../integration/act4FixtureKey';
 
 const TELEPORT_TRIES = 30;
 
@@ -106,12 +109,33 @@ const plugin: GamePlugin = {
     quietOff = () => ports.quiet?.(false);
     const jump = new Act4Jump(parsed.id, ports, parsed.classId);
     (globalThis as { __act4?: Act4Jump }).__act4 = jump;
-    ctx.systems.add({ id: 'act4-jump', fixedPhase: 'rules', order: 900, fixedUpdate: () => jump.tick() });
+    // L13: the committed fixture (made from the carried Act 3 chain save) when it is fresh, Knight only as generated; else
+    // the injection above. `&fixture=0` forces the injection.
+    const save = ctx.services.get('save');
+    const wantFixture = new URLSearchParams(search).get('fixture') !== '0' && parsed.classId === 'knight';
+    const start = new Act3FixtureStart(act4FixtureName(parsed.id), wantFixture, {
+      find: () => import('../integration/act4FixtureLoader').then((m) => m.findAct4Fixture(parsed.id)),
+      ready: ports.ready,
+      known: () => knownQuestDefs(ports.hasQuest, act4FixtureDefIds(parsed.id)),
+      loadFile: save?.loadFile ? (file) => save.loadFile!(file) : undefined,
+      warn: (m) => console.warn(`[act4] ${m}`),
+      fresh: act4FixtureFresh,
+    });
+    (globalThis as { __act4Start?: Act3FixtureStart }).__act4Start = start;
+    ctx.systems.add({
+      id: 'act4-jump',
+      fixedPhase: 'rules',
+      order: 900,
+      fixedUpdate: () => {
+        if (start.tick()) jump.tick();
+      },
+    });
   },
   dispose() {
     quietOff?.(); // never leave console.warn wrapped
     quietOff = null;
     delete (globalThis as { __act4?: unknown }).__act4;
+    delete (globalThis as { __act4Start?: unknown }).__act4Start;
   },
 };
 

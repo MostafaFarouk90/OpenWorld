@@ -73,6 +73,12 @@ export class WaystoneNetwork {
   private readonly rules: PlacementRule[] = [];
   /** Interior checkpoints in the order set (the last set wins). */
   private readonly checkpoints = new Map<string, string>();
+  /**
+   * L13: `respawn` was applied in the load now running. A save applies its entries in the file's key order, and a
+   * key-sorted file (every committed fixture) has `respawn` before `waystones`, so `load` must not clear what `respawn`
+   * just set. Reset by `loadSettled` on `save.loaded`.
+   */
+  private checkpointsLoaded = false;
 
   constructor(private readonly ports: NetworkPorts) {}
 
@@ -248,11 +254,17 @@ export class WaystoneNetwork {
     return { waystoneId: moved ? null : p.waystoneId, feet: placed.feet, yaw: placed.yaw };
   }
 
+  /** The load has settled (`save.loaded`): the next load's `waystones` entry clears the checkpoints again. */
+  loadSettled(): void {
+    this.checkpointsLoaded = false;
+  }
+
   serializeCheckpoints(): CheckpointSave {
     return { checkpoints: [...this.checkpoints].map(([id, anchorId]) => ({ id, anchorId })) };
   }
 
   loadCheckpoints(data: unknown): void {
+    this.checkpointsLoaded = true;
     this.checkpoints.clear();
     const list = (data as Partial<CheckpointSave> | null)?.checkpoints;
     if (!Array.isArray(list)) return;
@@ -327,8 +339,8 @@ export class WaystoneNetwork {
 
   /** Silent restore: sets state and flag mirrors, emits no gameplay events. */
   load(data: unknown): void {
-    // v0.8: the checkpoints are their own entry (`respawn`, saved after this one); a save without it has none.
-    this.checkpoints.clear();
+    // v0.8: the checkpoints are their own entry (`respawn`); a save without it has none. Either order of the two entries works.
+    if (!this.checkpointsLoaded) this.checkpoints.clear();
     this.lit.clear();
     this.lastRest = null;
     this.respawnId = null;
