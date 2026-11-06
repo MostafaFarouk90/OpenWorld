@@ -172,3 +172,14 @@ describe("the plugin's band port (vendorBand)", () => {
     expect(t.shop.quote('wulfhild', 'rain-flask')).toBe(17);
   });
 });
+
+describe('shop titles', async () => {
+  const { VENDOR_IDS } = await import('./stock');
+  const { ECONOMY_STRINGS_EN } = await import('./strings.en');
+  const { ECONOMY_ACT3_STRINGS_EN } = await import('./strings.act3.en');
+  it('every vendor has a shop title (the VendorMenu header reads economy.shop.title.<id>)', () => {
+    const all = { ...ECONOMY_STRINGS_EN, ...ECONOMY_ACT3_STRINGS_EN };
+    const missing = VENDOR_IDS.filter((v) => !all[`economy.shop.title.${v}`]);
+    expect(missing).toEqual([]);
+  });
+});

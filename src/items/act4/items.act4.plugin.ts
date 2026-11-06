@@ -6,7 +6,7 @@ import type { GameContext } from '../../core/Game';
 import type { GamePlugin } from '../../core/plugins';
 import { REFUGE_ANVIL } from '../../economy/refugePosts.act4';
 import { OATHBLADE } from './catalog';
-import { OATHBLADE_POISE_MODIFIER, oathbladePoise, reconcileOathblade, type OathbladePorts } from './oathblade';
+import { OATHBLADE_POISE_MODIFIER, oathbladePoise, oathbladeWorn, reconcileOathblade, type OathbladePorts } from './oathblade';
 import { ITEMS_ACT4_STRINGS_EN } from './strings.en';
 
 interface SoftClasses {
@@ -45,17 +45,28 @@ const itemsAct4Plugin: GamePlugin = {
       equip: (id) => inventory.equip(id),
       gemRoomFor: inventory.gemRoomFor ? (id) => inventory.gemRoomFor!(id) : undefined,
     };
-    const reconcile = (): void => {
+    // Whether a form was worn as of the last fixed tick: the class change's outfit swaps the weapon before `class.changed`.
+    let wornLastTick = false;
+    const reconcile = (wornBefore?: boolean): void => {
       // Before a class is chosen there is nothing to match (M39 is long after M07).
       if (ports.classId() === null) return;
-      const r = reconcileOathblade(ports);
+      const r = reconcileOathblade(ports, wornBefore);
+      wornLastTick = oathbladeWorn(ports);
       if (r === 'waiting') ctx.events.emit('hud.toast', { textKey: 'item.gauts-oathblade.swapWaiting' });
       else if (r === 'swapped') ctx.events.emit('hud.toast', { textKey: inventory.has(OATHBLADE.sword) ? 'item.gauts-oathblade.swappedSword' : 'item.gauts-oathblade.swappedCarried' });
     };
+    offs.push(ctx.systems.add({
+      id: 'items-act4.oathblade-worn',
+      fixedPhase: 'late',
+      order: 900,
+      fixedUpdate: () => {
+        wornLastTick = oathbladeWorn(ports);
+      },
+    }));
     offs.push(
-      ctx.events.on('class.chosen', reconcile),
-      ctx.events.on('class.changed', reconcile),
-      ctx.events.on('save.loaded', reconcile),
+      ctx.events.on('class.chosen', () => reconcile()),
+      ctx.events.on('class.changed', () => reconcile(wornLastTick)),
+      ctx.events.on('save.loaded', () => reconcile()),
       ctx.damage.addModifier(
         OATHBLADE_POISE_MODIFIER.id,
         (req) => {

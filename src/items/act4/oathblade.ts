@@ -49,14 +49,24 @@ export type ReconcileResult = 'none' | 'swapped' | 'waiting';
  * empties the weapon slot when the sword was in it (the plugin toasts it). The sword is re-tempered to +5 Sworn only when
  * it is given or swapped back, never on a plain load.
  */
-export function reconcileOathblade(p: OathbladePorts): ReconcileResult {
+/** True while either form sits in its own slot. */
+export function oathbladeWorn(p: Pick<OathbladePorts, 'equipped'>): boolean {
+  return p.equipped('weapon') === OATHBLADE.sword || p.equipped('trinket') === OATHBLADE.carried;
+}
+
+/**
+ * `wornBefore`: whether a form was worn before the class change. The class kit's outfit equips its starter weapon before
+ * `class.changed` fires, so by then the sword is already out of the weapon slot; the plugin remembers the last tick's
+ * state and passes it. A worn sword comes back over the starter weapon; the carried form goes on only into a free trinket slot.
+ */
+export function reconcileOathblade(p: OathbladePorts, wornBefore?: boolean): ReconcileResult {
   const want = oathbladeFormFor(p.classId());
   const held = p.has(OATHBLADE.sword) ? OATHBLADE.sword : p.has(OATHBLADE.carried) ? OATHBLADE.carried : null;
   if (held === null) return 'none';
   // Matching form: nothing to do (a later affix from the forge is the player's to keep).
   if (held === want) return 'none';
   if (held === OATHBLADE.sword && p.gemRoomFor && !p.gemRoomFor(held)) return 'waiting';
-  const wasEquipped = p.equipped(slotOf(held)) === held;
+  const wasEquipped = wornBefore ?? p.equipped(slotOf(held)) === held;
   if (!p.remove(held, 1)) return 'none';
   if (p.add(want, 1) < 1) {
     // Never leave the player with neither form.
@@ -65,7 +75,7 @@ export function reconcileOathblade(p: OathbladePorts): ReconcileResult {
     return 'waiting';
   }
   if (want === OATHBLADE.sword) temperSword(p);
-  if (wasEquipped && p.equipped(slotOf(want)) === null) p.equip(want);
+  if (wasEquipped && (want === OATHBLADE.sword || p.equipped(slotOf(want)) === null)) p.equip(want);
   return 'swapped';
 }
 

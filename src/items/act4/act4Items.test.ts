@@ -16,7 +16,7 @@ import { Inventory } from '../../inventory/Inventory';
 import { getItem } from '../../inventory/items';
 import { ACT4_QUEST_IDS } from '../../quests/lint/act4Ids';
 import { ACT4_ITEMS, ACT4_KEEPSAKES, ACT4_REWARDS, ASH_SHROUD_MASK, OATHBLADE, RAIN_FLASK, RIMWARD_BOOTS, WATERSKIN_OF_RAIN, practiceBladeFor } from './catalog';
-import { grantOathblade, oathbladeFormFor, oathbladePoise, OATHBLADE_POISE_MODIFIER, reconcileOathblade, type OathbladePorts } from './oathblade';
+import { grantOathblade, oathbladeFormFor, oathbladePoise, oathbladeWorn, OATHBLADE_POISE_MODIFIER, reconcileOathblade, type OathbladePorts } from './oathblade';
 import { ITEMS_ACT4_STRINGS_EN } from './strings.en';
 
 const REWARD_IDS = [...new Set(Object.values(ACT4_REWARDS).flat())];
@@ -150,6 +150,36 @@ describe("Gaut's Oathblade (Q3)", () => {
     inv.setTemper(OATHBLADE.sword, 5, 'ember');
     expect(reconcileOathblade(p)).toBe('none');
     expect(inv.gear(OATHBLADE.sword)).toEqual({ temper: 5, affix: 'ember' });
+  });
+  it('the class outfit swaps the weapon first: a sword worn before the change comes back over the starter weapon', () => {
+    const inv = freshInv({ 'squires-arming-sword': 1, 'apprentices-staff': 1 });
+    const cls: { id: ClassId | null } = { id: 'knight' };
+    const p = portsFor(inv, cls);
+    grantOathblade(p);
+    inv.equip(OATHBLADE.sword);
+    expect(oathbladeWorn(p)).toBe(true);
+    // The Emberwright outfit equips its staff before class.changed: the sword is out of the slot when we look.
+    inv.equip('apprentices-staff');
+    cls.id = 'emberwright';
+    expect(reconcileOathblade(p, true)).toBe('swapped');
+    expect(inv.equipped('trinket')).toBe(OATHBLADE.carried);
+    // Back to the Knight: the outfit puts the squire's sword in first, the Oathblade replaces it.
+    inv.equip('squires-arming-sword');
+    cls.id = 'knight';
+    expect(reconcileOathblade(p, oathbladeWorn(p))).toBe('swapped');
+    expect(inv.equipped('weapon')).toBe(OATHBLADE.sword);
+    expect(inv.gear(OATHBLADE.sword)).toEqual({ temper: 5, affix: 'sworn' });
+  });
+  it('a form not worn before the change is not equipped after it', () => {
+    const inv = freshInv({ 'squires-arming-sword': 1 });
+    const cls: { id: ClassId | null } = { id: 'warden' };
+    const p = portsFor(inv, cls);
+    grantOathblade(p);
+    expect(oathbladeWorn(p)).toBe(false);
+    inv.equip('squires-arming-sword');
+    cls.id = 'knight';
+    expect(reconcileOathblade(p, false)).toBe('swapped');
+    expect(inv.equipped('weapon')).toBe('squires-arming-sword');
   });
   it('the swap never displaces another trinket', () => {
     const inv = freshInv({ [RIMWARD_BOOTS]: 1 });
