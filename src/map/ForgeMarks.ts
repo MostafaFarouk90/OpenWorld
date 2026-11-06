@@ -1,6 +1,8 @@
 // Pure model of the forge-mark row: the eight main-path shrines in contract order (game-events-and-flags
 // section 5), each lit from its own `shrine.<id>.lit` flag, plus the Warmth tier and the Cooled pip.
 
+import { GLASSLANDS } from '../terrain/shape/waste';
+
 export const SHRINE_IDS = [
   'quenchstone',
   'hushed-anvil',
@@ -20,8 +22,9 @@ export const SHRINE_POSITIONS: Readonly<Partial<Record<ShrineId, { x: number; z:
   'hathrens-mere': { x: 3000, z: 12050 },
   'last-anvil': { x: 14700, z: 13900 },
   'wyrms-hearth': { x: 13600, z: 15600 },
-  // Act 4 (v0.8 item 13): in the Glasslands, east of the Caldera (map (14.3, 6.7)). L1 places the anchor and may move it.
-  'singing-slag': { x: 13300, z: 5700 },
+  // Act 4 (v0.8 item 13): in the Glasslands, east of the Caldera. Read from L1's master position (its shrine anchor
+  // `waste.glasslands.singing-slag` stands on the same point), so a move there moves the mark too (Act 4 L9).
+  'singing-slag': { x: GLASSLANDS[0], z: GLASSLANDS[1] },
 };
 
 export interface ForgeMark {
