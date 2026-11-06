@@ -9,7 +9,7 @@ interface QuestText { title: string; summary: string; o: Record<string, string> 
 const QUEST_TEXT: Record<string, QuestText> = {
   m42: {
     title: 'Gate of Ash',
-    summary: 'Wulfhild of the Ashwalkers waits at Ashgate. The only way to her people\'s camp is the rope-line across the Ashen Waste, shelter to shelter, and a storm is coming whether Cael is ready or not.',
+    summary: 'Wulfhild of the Ashwalkers waits at Ashgate. The only way to her people\'s camp is the rope-line across the Ashen Waste, shelter to shelter, and a storm is coming whether {name} is ready or not.',
     o: {
       brief: 'Speak to Wulfhild at Ashgate', clip: 'Let Hild Ropewright clip you to the rope', gate: 'Go through the gate arch onto the rope-line',
       shelter1: 'Reach the first shelter and wait out the storm wall', striders: 'Drive off the Waste Striders on the line',
@@ -21,7 +21,7 @@ const QUEST_TEXT: Record<string, QuestText> = {
   },
   m43: {
     title: 'What the Walkers Know',
-    summary: 'The Ashwalkers do not trust a knight because a queen says so. Wulfhild sets three trials: the Storm Walk, the Pyre Rite and the Spear-Dance. Pass them, in any order, and the camp will call Cael a walker.',
+    summary: 'The Ashwalkers do not trust a knight because a queen says so. Wulfhild sets three trials: the Storm Walk, the Pyre Rite and the Spear-Dance. Pass them, in any order, and the camp will call {name} a walker.',
     o: {
       brief: 'Hear Wulfhild\'s trials', walkTalk: 'Ask Osgar Knotwise for the Storm Walk', walk: 'Walk the knotted rope through the storm and count the knots',
       pyresTalk: 'Ask Mother Aelfgifu for the Pyre Rite', pyres: 'Lay three wraiths to rest at the pyres, or burn three Blightblooms',
@@ -40,7 +40,7 @@ const QUEST_TEXT: Record<string, QuestText> = {
   },
   r25: {
     title: 'The Child\'s Candle',
-    summary: 'Three families of the chapel village never came back. Ebba cannot go out to their hearths. She asks Cael to light a candle at each.',
+    summary: 'Three families of the chapel village never came back. Ebba cannot go out to their hearths. She asks {name} to light a candle at each.',
     o: {
       brief: 'Take Ebba\'s candles', name1: 'Find the first family\'s name at their hearth', light1: 'Light a candle on the first hearth',
       name2: 'Find the second family\'s name', light2: 'Light a candle on the second hearth', knot: 'Lay the husks at the third hearth to rest',
@@ -68,7 +68,7 @@ const QUEST_TEXT: Record<string, QuestText> = {
   },
   d08: {
     title: 'The Cathedral of Husks',
-    summary: 'The Husk Cathedral east of the Glasslands tolls the dead out of their ash. Wulfhild asks Cael to go in and silence it, by ending the Archwraith or by letting him go.',
+    summary: 'The Husk Cathedral east of the Glasslands tolls the dead out of their ash. Wulfhild asks {name} to go in and silence it, by ending the Archwraith or by letting him go.',
     o: {
       brief: 'Hear Wulfhild about the cathedral', dying: 'Speak to the walker at the cathedral door', enter: 'Enter the Husk Cathedral',
       knights: 'Defeat the Husk Knights in the narthex', bones: 'Search the pilgrim\'s bones', rope: 'Read the marks by the gong-rope',
@@ -99,6 +99,8 @@ export const WASTE_A4_DIRECTOR_TEXT: Record<string, string> = {
   'waste.q.m43.knot': 'A knot on the rope. Keep going.',
   'waste.q.m43.stray': 'You lost the rope. Back to the last knot.',
   'waste.q.m43.lee': 'A lee cairn. Wait out the wall here.',
+  'waste.q.m43.leeBack': 'Back in the lee. The wall has not passed.',
+  'waste.q.m43.leePassed': 'The wall has passed. On to the next knot.',
   'waste.q.m43.end': 'The end of the rope. Osgar wants the count.',
   'waste.q.m43.rested': 'The wraith lies down in the pyre\'s ash.',
   'waste.q.m43.rises': 'The wraith rises again from the pyre. The rite wants rest, not death.',

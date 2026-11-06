@@ -38,6 +38,8 @@ export const M43_RERISE_S = 8;
 
 // ---- the Spear-Dance -------------------------------------------------------------------------------------------------------
 export const M43_DANCE_TRIAL = 'm43.spear-dance';
+/** Hrodna's stand-in for the bout (manual, ephemeral). */
+export const M43_DANCE_SPAWNER = 'm43.dance';
 /** Hrodna's offer (dialogue event): the director starts the bout. */
 export const M43_DANCE_ASKED = 'story.m43.danceAsked';
 export const M43_DANCE_LOST = 'story.m43.danceLost';

@@ -18,6 +18,7 @@ import { m03 } from './content/m03.quest';
 import { m01 } from './content/m01.quest';
 import { m04 } from './content/m04.quest';
 import { m05 } from './content/m05.quest';
+import { WASTE_A4_POST_ROWS } from './content/act4/waste/npcs';
 
 describe('R01 torch bridge', () => {
   it('records the first torch clear while R01 is active, never otherwise', () => {
@@ -226,7 +227,7 @@ describe('quest posts', () => {
   it('never puts Tobb in a rule', () => {
     expect(POST_RULES.map((r) => r.npcId)).not.toContain('tobb');
     const w = makeWorld();
-    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager })).filter((id) => !DEEPGATE_NPCS.has(id) && !SUMMIT_POST_RULES.some((r) => r.npcId === id))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'refugee-1', 'refugee-2', 'gerta', 'edric', 'grisel-steward', 'vey', 'merrin', 'grisel', 'pennard', 'edda', 'aldwin', 'osgar', 'ketta', 'wystan', 'dunstan', 'ashdown']);
+    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager })).filter((id) => !DEEPGATE_NPCS.has(id) && !SUMMIT_POST_RULES.some((r) => r.npcId === id) && !WASTE_A4_POST_ROWS.some((r) => r.npcId === id))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'refugee-1', 'refugee-2', 'gerta', 'edric', 'grisel-steward', 'vey', 'merrin', 'grisel', 'pennard', 'edda', 'aldwin', 'osgar', 'ketta', 'wystan', 'dunstan', 'ashdown']);
   });
 });
 
