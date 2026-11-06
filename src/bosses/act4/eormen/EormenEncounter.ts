@@ -434,8 +434,8 @@ export class EormenEncounter implements EormenHooks {
     const next = EORMEN.phases[phase - 1];
     const floor = next !== undefined ? Math.floor(this.actor.maxHealth * next) + 1 : Math.ceil(this.actor.maxHealth * EORMEN.healthFloor);
     if (this.actor.health > floor) return;
-    this.floored.add(phase);
-    this.brain.onFloor();
+    // Marked only once the toll is scheduled: at the floor inside an open window, it is asked again after the window closes.
+    if (this.brain.onFloor()) this.floored.add(phase);
   }
 
   /** Backstop: a strike whose stagger the registry did not count (no `boss.break` by the next tick) drains the armed break. */
@@ -588,7 +588,9 @@ export class EormenEncounter implements EormenHooks {
     this.clearTelegraph();
     this.ring.stop();
     this.flying.clear();
-    this.crumbleHusks();
+    // A Release's pulse frees the staggered husks near him after this event returns (EnemyManager.completeBossMercy reads them
+    // then), so on a Release the husks crumble on the next tick; a death crumbles them now.
+    if (kind === 'defeated') this.crumbleHusks();
     this.dark.restore();
     this.gong?.setOpen(false);
     this.actor.untargetable = true;
@@ -598,6 +600,7 @@ export class EormenEncounter implements EormenHooks {
   }
 
   private tickOutcome(dt: number): void {
+    if (this.outcomeKind === 'released' && this.outcomeT === 0) this.crumbleHusks();
     this.outcomeT += dt;
     if (this.outcomeKind === 'defeated' && !this.dissolved && this.outcomeT >= DEATH_CLIP_SECONDS) {
       this.dissolved = true;
@@ -621,6 +624,7 @@ export class EormenEncounter implements EormenHooks {
     if (this.ended) return;
     this.ended = true;
     if (this.telegraphKind && end === 'reset') this.brain.stopAttack();
+    if (this.brain.windowOpen) this.ctx.events.emit('eormen.gong.window', { open: false, seconds: 0 });
     for (const off of this.offs.splice(0)) off();
     for (const off of this.parts.splice(0)) off();
     this.unregister = null;

@@ -51,6 +51,8 @@ export class LastGong {
   private readonly decal: THREE.Mesh;
   private slot: FireLightSlot | null = null;
   private retryLight = 0;
+  /** The glow tier the slot was taken on (a tier change re-takes it: a high-tier slot goes dark on medium). */
+  private tierSeen: string | null = null;
   private open = false;
   private remaining = 0;
   private time = 0;
@@ -104,6 +106,16 @@ export class LastGong {
     );
     this.actor = ctx.actors.spawn({ kind: GONG_KIND, team: 'neutral', immortal: true, maxHealth: 100, maxPoise: 0, root: this.mesh, owner: this.mesh });
     this.actor.data['audio'] = { material: 'metal' };
+    try {
+      this.wire(ctx, opts);
+    } catch (err) {
+      this.dispose();
+      throw err;
+    }
+    this.takeLight();
+  }
+
+  private wire(ctx: GameContext, opts: LastGongOptions): void {
     this.offs.push(
       ctx.combat.addTarget(this.hurtboxes, this.actor.id),
       ctx.damage.addModifier(GONG_MODIFIER_ID, (req, target, attacker) => this.onHit(req, target, attacker), GONG_MODIFIER_ORDER),
@@ -119,7 +131,6 @@ export class LastGong {
         onInteract: () => void this.strike('interact'),
       }),
     );
-    this.takeLight();
   }
 
   get isOpen(): boolean {
@@ -168,9 +179,14 @@ export class LastGong {
   tick(dt: number): void {
     if (this.disposed || !(dt > 0)) return;
     this.time += dt;
-    if (!this.slot) {
-      this.retryLight -= dt;
-      if (this.retryLight <= 0) this.takeLight();
+    this.retryLight -= dt;
+    if (this.retryLight <= 0) {
+      const tier = this.glowTier();
+      if (!this.slot || tier !== this.tierSeen) {
+        this.slot?.release();
+        this.slot = null;
+        this.takeLight();
+      } else this.retryLight = RETRY_LIGHT;
     }
     if (this.open) {
       this.remaining = Math.max(0, this.remaining - dt);
@@ -205,8 +221,17 @@ export class LastGong {
 
   // ---- internals ----
 
+  private glowTier(): string | null {
+    try {
+      return this.ctx.services.get('env')?.glow().tier ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   private takeLight(): void {
     this.retryLight = RETRY_LIGHT;
+    this.tierSeen = this.glowTier();
     try {
       this.slot = this.ctx.services.get('env')?.fireLights.acquire() ?? null;
     } catch (err) {

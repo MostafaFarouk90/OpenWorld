@@ -94,10 +94,10 @@ describe('EormenBrain', () => {
     const h = harness();
     h.brain.start();
     h.until(() => h.brain.windowOpen);
-    h.brain.onFloor();
+    expect(h.brain.onFloor()).toBe(false);
     expect(h.brain.tollRemaining).toBeGreaterThan(TOLL.atFloor);
     h.run(TOLL.windowSeconds + 0.1);
-    h.brain.onFloor();
+    expect(h.brain.onFloor()).toBe(true);
     expect(h.brain.tollRemaining).toBeLessThanOrEqual(TOLL.atFloor);
   });
 

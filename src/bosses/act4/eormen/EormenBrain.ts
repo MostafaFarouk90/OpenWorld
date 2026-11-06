@@ -146,10 +146,11 @@ export class EormenBrain {
     this.hooks.staggerStart();
   }
 
-  /** His health reached this phase's floor: toll soon (TOLL.atFloor) unless one is sooner or the gong is open. */
-  onFloor(): void {
-    if (!this.active || this.windowLeft > 0) return;
+  /** His health reached this phase's floor: toll soon (TOLL.atFloor) unless one is sooner. False (nothing changes) while the gong is open: ask again when it closes. */
+  onFloor(): boolean {
+    if (!this.active || this.windowLeft > 0) return false;
     this.tollIn = Math.min(this.tollIn, TOLL.atFloor);
+    return true;
   }
 
   /** The registry moved to `phase`: the cadences quicken. */
