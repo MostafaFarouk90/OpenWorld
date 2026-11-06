@@ -64,3 +64,16 @@ describe('defineBenchPosts', () => {
     expect(Math.hypot(a.get(refugePost('tobb')).position.x, a.get(refugePost('tobb')).position.z)).toBeCloseTo(2, 6);
   });
 });
+
+describe("the bench posts on L1's Act 4 layout", () => {
+  it('all six posts exist, the refuge ones on L1 spots', async () => {
+    const { ACT4_WORLD_LAYOUT } = await import('../../region/act4/act4World.layout');
+    const a = new AnchorRegistry();
+    for (const s of ACT4_WORLD_LAYOUT.anchors) a.define({ id: s.id, position: { x: s.x, y: 0, z: s.z }, yaw: ((s.yawDeg ?? 0) * Math.PI) / 180 });
+    expect(defineBenchPosts(a)).toBe(6);
+    for (const id of BENCHED_IDS) {
+      expect(a.get(refugePost(id)).position).toEqual(a.get(l1RefugeSpot(id)).position);
+      expect(a.find(campPost(id))).toBeDefined();
+    }
+  });
+});
