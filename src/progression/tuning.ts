@@ -52,6 +52,10 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'bellows-engine': 700 / 2.4,
   // The Crucible's struck steam valves (neutral, immortal) are never a kill.
   'bellows-valve': 0,
+  // Archwraith Eormen, D08 (Act 4 L6 PR 2): the Husk Cathedral floats in the Ashen Waste, whose kill XP factor is 2.4, so 750 at an
+  // even level; the Last Gong (a neutral struck prop) is never a kill.
+  eormen: 750 / 2.4,
+  'eormen-gong': 0,
   // Corvin Skarl, D06 (K8 PR 2): the summit has no region factor; 650 at an even level (the level scale adjusts it as for any kill).
   'corvin-skarl': 650,
   // K6a: Skarl's drake is freed on either D06 outcome, never a kill reward.
