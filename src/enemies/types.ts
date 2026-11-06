@@ -53,7 +53,11 @@ export type EnemyKind =
   | 'rime-hawk'
   | 'crag-ogre'
   // Act 3 (K6a PR 2): Ysmeryth the Coal-Mother in M31's trial.
-  | 'ysmeryth';
+  | 'ysmeryth'
+  // Act 4 (L5): the Ashen Waste's own kinds.
+  | 'waste-strider'
+  | 'husk-knight'
+  | 'cinder-gnat-swarm';
 
 /**
  * Act 2 kind ids (v0.6 item 14), reserved here so no other thread takes them. A6a and A6b move each id into
@@ -248,12 +252,12 @@ export interface EnemyDef {
   /** Alley Cutpurse behaviour (cutpurse/): steals on a grab, flees with the gold, can be caught and spared. */
   thief?: boolean;
   /** Which body the enemy gets: the Knight rig (default), the procedural quadruped, the wyrm (wyrm/), or A6b's golem and crawler. */
-  body?: 'humanoid' | 'quadruped' | 'wyrm' | 'golem' | 'crawler' | 'leech' | 'bird';
+  body?: 'humanoid' | 'quadruped' | 'wyrm' | 'golem' | 'crawler' | 'leech' | 'bird' | 'strider' | 'swarm';
   /**
    * `circle-rush`: circle the target while a packmate is near, then rush (ai/Brain, hound/circleRush.ts). `wyrm-flight` (the Ember Wyrm) and
    * `skittish` (the wyrmling) are behaviour overlays (behaviours.ts). A6b: `ceiling` (crawler drop), `back-core` (golem), `guide` (fox, sheep: harmless). K6a: `ysmeryth-trial` (wyrm/ysmeryth/overlay.ts).
    */
-  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide' | 'lurk' | 'peat' | 'hawk' | 'ogre' | 'ysmeryth-trial';
+  behaviour?: 'circle-rush' | 'wyrm-flight' | 'skittish' | 'ceiling' | 'back-core' | 'guide' | 'lurk' | 'peat' | 'hawk' | 'ogre' | 'ysmeryth-trial' | 'strider' | 'husk-knight' | 'gnats';
   /** Seconds a poise break holds the stagger (and its mercy window); default `AI.breakStaggerSeconds` (1.2). */
   breakStaggerSeconds?: number;
   /** Hurtboxes on which a player-team or ally hit breaks poise at once (the Ember Wyrm's wings). */
