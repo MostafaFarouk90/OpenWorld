@@ -607,14 +607,14 @@ describe('eormen plugin', () => {
     async () => {
       const h = await setup();
       h.start();
-      const b0 = h.boss()!.root.position.clone();
+      const b0 = h.boss()!.root!.position.clone();
       h.ctx.player.teleport({ x: b0.x + 1.5, y: b0.y - EORMEN.hover, z: b0.z - 1.5 });
       h.runHealed(2);
-      expect(h.boss()!.root.position.distanceTo(b0)).toBeLessThan(0.01);
+      expect(h.boss()!.root!.position.distanceTo(b0)).toBeLessThan(0.01);
       // Far off, near the west wall: he comes toward Cael but stays between the pillar rows.
       h.at(-14, 12);
       h.runHealed(8);
-      const b = h.boss()!.root.position;
+      const b = h.boss()!.root!.position;
       const lx = b.x - h.local(0, 0).x;
       const lz = b.z - h.local(0, 0).z;
       expect(Math.hypot(b.x - h.ctx.player.feet.x, b.z - h.ctx.player.feet.z)).toBeLessThan(EORMEN.keepMax + 4);
