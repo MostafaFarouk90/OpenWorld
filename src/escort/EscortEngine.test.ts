@@ -203,6 +203,53 @@ describe('escorts save and load', () => {
     expect(kit.ctx.services.require('movementMode').current).toBe('walk');
   });
 
+  it('the junction talk with a dialogue keeps the column waiting until the dialogue ends', () => {
+    const started: string[] = [];
+    (kit.ctx.services.provide as (n: string, v: unknown) => void)('dialogue', { start: (id: string) => (started.push(id), true) });
+    engine.start({ ...route(), junctionDialogue: { 'test.j.1': 'test-talk' } });
+    follow(16);
+    // the lead's talk, as F on it would run it
+    const items = (kit.ctx.interaction as unknown as { items: Map<string, { onInteract(): void }> }).items;
+    const talkItem = items.get('escort:test-deep-run');
+    expect(talkItem).toBeTruthy();
+    talkItem!.onInteract();
+    expect(started).toEqual(['test-talk']);
+    follow(1);
+    expect(engine.state('test.deep-run')).toMatchObject({ reason: 'junction' });
+    kit.ctx.events.emit('dialogue.ended', { dialogueId: 'other', npcId: 'edric', reason: 'done' } as never);
+    expect(engine.state('test.deep-run')!.reason).toBe('junction');
+    kit.ctx.events.emit('dialogue.ended', { dialogueId: 'test-talk', npcId: 'edric', reason: 'done' } as never);
+    expect(engine.state('test.deep-run')!.reason).toBeNull();
+  });
+
+  it.each([
+    ['a null member', (d: Act4EscortDef) => ({ ...d, members: [null] })],
+    ['a route that is not a list', (d: Act4EscortDef) => ({ ...d, route: 7 })],
+    ['an inherited member id', (d: Act4EscortDef) => ({ ...d, members: [{ id: 'toString', kind: 'npc' }] })],
+    ['a missing route anchor', (d: Act4EscortDef) => ({ ...d, route: ['test.r.0', 'nowhere.at-all'] })],
+  ])('a load with %s drops the escort without throwing', (_n, spoil) => {
+    engine.start(route());
+    follow(2);
+    const bad = { running: { def: spoil(route()), junctionIndex: 0, cartHealth: null } };
+    engine.load(bad, ESCORT_ENGINE.persistVersion);
+    expect(() => kit.ctx.events.emit('save.loaded', { slot: 'test' } as never)).not.toThrow();
+    expect(engine.active()).toBeNull();
+    expect(kit.ctx.services.require('movementMode').current).toBe('walk');
+  });
+
+  it('a later Cael absence calls out at once, even when it starts under a junction halt', () => {
+    engine.start(route());
+    follow(16);
+    const before = events('hud.toast').length;
+    cael.x += 100;
+    kit.runSecs(0.5);
+    expect(events('hud.toast').length).toBe(before + 1);
+    follow(0.5); // back with the lead
+    cael.x += 100;
+    kit.runSecs(0.5);
+    expect(events('hud.toast').length).toBe(before + 2);
+  });
+
   it('a load with no escort entry (or an old save) despawns a running escort', () => {
     engine.start(route());
     follow(3);

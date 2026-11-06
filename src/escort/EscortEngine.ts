@@ -85,6 +85,10 @@ interface Running {
   unregisterTalk: (() => void) | null;
   calloutLeft: number;
   arrivedSent: boolean;
+  /** The junction talk running (the column walks when it ends). */
+  awaitDialogue: string | null;
+  /** Cael was beyond the far distance last tick (the call-out timer resets on each new absence). */
+  wasFar: boolean;
 }
 
 const sanitize = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, '-');
@@ -101,6 +105,14 @@ export class EscortEngine implements Act4EscortsService {
     private readonly playerFeet: () => P3 = () => ctx.player.feet,
   ) {
     this.offs.push(ctx.events.on('save.loaded', () => this.onLoaded()));
+    this.offs.push(
+      ctx.events.on('dialogue.ended', ({ dialogueId }) => {
+        const r = this.cur;
+        if (!r || r.awaitDialogue !== dialogueId) return;
+        r.awaitDialogue = null;
+        this.go(r.def.id);
+      }),
+    );
   }
 
   // ---- service --------------------------------------------------------------------------------------------------
@@ -175,6 +187,11 @@ export class EscortEngine implements Act4EscortsService {
   // ---- tick -----------------------------------------------------------------------------------------------------
 
   fixedUpdate(dt: number): void {
+    // a load that never reached `save.loaded` (it failed after the entries) leaves nothing for the next one
+    if (this.loadedThisRound && !this.ctx.services.get('save')?.loading) {
+      this.loadedThisRound = false;
+      this.pendingLoad = null;
+    }
     const r = this.cur;
     if (!r) return;
     r.members.fixedUpdate(dt);
@@ -205,7 +222,11 @@ export class EscortEngine implements Act4EscortsService {
       return null;
     }
     const points: P3[] = [];
-    for (const id of def.route ?? []) {
+    if (!Array.isArray(def.route)) {
+      this.warn(`start("${def.id}") refused: a route is a list of anchor ids`);
+      return null;
+    }
+    for (const id of def.route) {
       const a = this.ctx.anchors.find(id);
       if (!a) {
         this.warn(`start("${def.id}") refused: route anchor "${id}" is not defined`);
@@ -224,6 +245,10 @@ export class EscortEngine implements Act4EscortsService {
     let cartIndex = -1;
     let cartDefHealth: number | undefined;
     for (const m of def.members) {
+      if (!m || typeof m !== 'object' || typeof m.id !== 'string') {
+        this.warn(`start("${def.id}") refused: a member needs an id`);
+        return null;
+      }
       if (m.kind === 'cart') {
         if (cartIndex >= 0) {
           this.warn(`start("${def.id}") refused: one cart per escort`);
@@ -275,7 +300,7 @@ export class EscortEngine implements Act4EscortsService {
       const saved = cartHealth === null ? cartDefHealth ?? ESCORT_CART.maxHealth : Math.max(cartHealth, ESCORT_CART.maxHealth * ESCORT_CART.reviveFraction);
       cart = new EscortCart(this.ctx, `${def.id}.cart`, poses[cartIndex], saved);
     }
-    const r: Running = { def, run, members, order, cart, cartIndex, releaseMode: null, releaseHold: null, unregisterTalk: null, calloutLeft: 0, arrivedSent: false };
+    const r: Running = { def, run, members, order, cart, cartIndex, releaseMode: null, releaseHold: null, unregisterTalk: null, calloutLeft: 0, arrivedSent: false, awaitDialogue: null, wasFar: false };
     this.cur = r;
     const mm = this.ctx.services.get('movementMode');
     r.releaseMode = mm?.push?.('escort', () => {
@@ -297,7 +322,6 @@ export class EscortEngine implements Act4EscortsService {
     for (const e of events) {
       if (e.type === 'halted') {
         this.ctx.events.emit('escort.halted', { escortId, reason: e.reason });
-        if (e.reason === 'player-far') r.calloutLeft = 0;
       } else if (e.type === 'resumed') this.ctx.events.emit('escort.resumed', { escortId });
       else if (e.type === 'junction') this.ctx.events.emit('escort.junction', { escortId, junction: e.junction });
       else if (e.type === 'arrived' && !r.arrivedSent) {
@@ -308,7 +332,11 @@ export class EscortEngine implements Act4EscortsService {
   }
 
   private callouts(r: Running, dt: number): void {
-    if (!r.run.halted.has('player-far')) return;
+    const far = r.run.halted.has('player-far');
+    // the first call-out comes at once each time Cael falls behind, whatever halt is reported
+    if (far && !r.wasFar) r.calloutLeft = 0;
+    r.wasFar = far;
+    if (!far) return;
     r.calloutLeft -= dt;
     if (r.calloutLeft > 0) return;
     r.calloutLeft = ESCORT_ENGINE.calloutSeconds;
@@ -325,7 +353,8 @@ export class EscortEngine implements Act4EscortsService {
     const groups = r.def.threatGroups ?? [];
     if (groups.length > 0) {
       const gs = this.ctx.services.get('groupStanding');
-      if (gs) return groups.every((g) => gs.isCleared(g));
+      // a group not yet spawned counts as cleared, so a stray hostile beside the cart still keeps it down
+      if (gs) return groups.every((g) => gs.isCleared(g)) && !!r.cart && !r.members.hostileNear(r.cart.position, ESCORT_KNEEL_CLEAR_RADIUS);
     }
     return !!r.cart && !r.members.hostileNear(r.cart.position, ESCORT_KNEEL_CLEAR_RADIUS);
   }
@@ -343,8 +372,12 @@ export class EscortEngine implements Act4EscortsService {
       onInteract: () => {
         const junction = r.run.junctionId;
         const dlg = junction ? r.def.junctionDialogue?.[junction] : undefined;
-        if (dlg) this.ctx.services.get('dialogue')?.start(dlg, lead.spec.id);
-        else this.ctx.events.emit('hud.toast', { textKey: 'escort.junction.go', params: { name: this.leadName(r) } });
+        // with a talk, the column waits until it ends (dialogue does not pause the world)
+        if (dlg && this.ctx.services.get('dialogue')?.start(dlg, lead.spec.id)) {
+          r.awaitDialogue = dlg;
+          return;
+        }
+        this.ctx.events.emit('hud.toast', { textKey: 'escort.junction.go', params: { name: this.leadName(r) } });
         this.go(r.def.id);
       },
     });
@@ -363,8 +396,14 @@ export class EscortEngine implements Act4EscortsService {
     this.teardown();
     const s = pending?.running;
     if (!s || !s.def) return;
-    const r = this.build(s.def, Number.isFinite(s.junctionIndex) ? s.junctionIndex : -1, typeof s.cartHealth === 'number' ? s.cartHealth : null);
-    if (r) r.members.riseAll();
+    try {
+      const r = this.build(s.def, Number.isFinite(s.junctionIndex) ? s.junctionIndex : -1, typeof s.cartHealth === 'number' ? s.cartHealth : null);
+      if (r) r.members.riseAll();
+    } catch (err) {
+      // a malformed save never breaks the load: the escort is dropped (the quest can start it again)
+      this.warn(`load: the saved escort could not be rebuilt (${String(err)})`);
+      this.teardown();
+    }
   }
 
   private teardown(): void {

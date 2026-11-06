@@ -8,6 +8,7 @@ import { FollowModel, behind, type FollowInput, type FollowSlot, type Vec3 } fro
 import { HROLF } from './hrolf';
 import { TOBB } from './tobb';
 import { COMPANION_TUNING } from './tuning';
+import { pupTuning } from './followers';
 
 const DT = 1 / 60;
 const v = (x: number, y: number, z: number): Vec3 => ({ x, y, z });
@@ -73,5 +74,13 @@ describe('per-companion rest slots (L4)', () => {
     const m = new FollowModel(v(0, 0, 0));
     settle(m, v(0, 0, 0));
     expect(near(m, 1.2, 3)).toBeLessThanOrEqual(COMPANION_TUNING.arriveRadius + 1e-9);
+  });
+
+  it("a tuning-only follower keeps its tuning's side (the Ember pup rests on the left, as shipped)", () => {
+    const t = pupTuning();
+    expect(t.slotSide).toBeLessThan(0);
+    const m = new FollowModel(v(0, 0, 0), 0, t);
+    settle(m, v(0, 0, 0));
+    expect(near(m, t.slotSide, t.slotBack)).toBeLessThanOrEqual(t.arriveRadius + 1e-9);
   });
 });

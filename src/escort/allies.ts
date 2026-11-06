@@ -53,6 +53,7 @@ export function isEscortAlly(id: string): boolean {
 
 /** The NPC def of a member id (Edric's carries the R22 blade from `flag`). */
 export function allyNpcDef(id: string, flag: (key: string) => unknown): NpcDef | null {
+  if (!isEscortAlly(id)) return null;
   const a = ESCORT_ALLIES[id];
   if (!a) return null;
   if (typeof a.npc === 'string') {
@@ -65,6 +66,7 @@ export function allyNpcDef(id: string, flag: (key: string) => unknown): NpcDef |
 
 /** The spec the engine spawns for a member id, or null for an unknown id. */
 export function memberSpec(id: string, loader: NpcModelLoader | null, flag: (key: string) => unknown): EscortMemberSpec | null {
+  if (!isEscortAlly(id)) return null;
   const a = ESCORT_ALLIES[id];
   const def = allyNpcDef(id, flag);
   if (!a || !def) return null;
