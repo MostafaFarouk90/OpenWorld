@@ -45,7 +45,7 @@ async function boot(opts: { post?: boolean } = {}) {
     shelters: [{ id: 'waste.shelter.1', at: 'waste.test.shelter.1', radius: 6 }],
   });
   const statuses = await bootPlugins(game, [corePlugin, waystonesPlugin, weather]);
-  for (const s of statuses) expect(s.state, `${s.id}: ${s.error ?? ''}`).toBe('ok');
+  for (const s of statuses) expect(s.state, s.id).toBe('ok');
   const toasts: string[] = [];
   game.events.on('hud.toast', (e) => {
     if (e.textKey) toasts.push(e.textKey);
@@ -185,6 +185,53 @@ describe('weather plugin', () => {
     expect(w.serialize()).toEqual({ seed: 4042, t: 300, lastShelterId: 'waste.shelter.1' });
     expect(WEATHER_PERSIST_KEY).toBe('weather');
     void persist;
+  }, PLUGIN_TEST_TIMEOUT);
+});
+
+describe('weather plugin: review fixes', () => {
+  it('resolves rope anchors defined after setup (L1 may set up later)', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const game = makeTestGame(physics);
+    games.push(game);
+    const weather = createWeatherPlugin({
+      visuals: false,
+      ropes: [{ id: 'rope.late', points: ['waste.late.0', 'waste.late.1'], shelters: [] }],
+      shelters: [],
+    });
+    await bootPlugins(game, [corePlugin, waystonesPlugin, weather]);
+    const g = (x: number, z: number) => ({ x, y: heightAt(x, z), z });
+    game.ctx.anchors.define({ id: 'waste.late.0', position: g(X, 4600), yaw: 0 });
+    game.ctx.anchors.define({ id: 'waste.late.1', position: g(X, 5500), yaw: 0 });
+    game.ctx.player.teleport({ x: X + 1, y: heightAt(X + 1, Z) + 0.05, z: Z });
+    game.ctx.services.get('weather')!.forceStorm('test');
+    for (let i = 0; i < 600; i++) game.fixedUpdate();
+    expect(game.ctx.player.actor.health).toBe(game.ctx.player.actor.maxHealth);
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('a rider at another face of the Waste is set down outside it, not sent to Ashgate', async () => {
+    const t = await boot({ post: true });
+    const calls: { at?: { x: number; z: number } }[] = [];
+    t.ctx.services.provide('mount', {
+      mounted: () => true,
+      summon: () => {},
+      dismount: (_r: string, at?: { x: number; z: number }) => calls.push({ at }),
+      stamina: () => null,
+      addSpeedCap: () => () => {},
+      addStaminaBonus: () => () => {},
+    } as never);
+    t.place(6998, 6000); // the west face
+    expect(calls[0].at!.x).toBeCloseTo(6992, 0);
+    expect(calls[0].at!.z).toBeCloseTo(6000, 0);
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('a save.loaded without a weather entry resets the clock', async () => {
+    const t = await boot();
+    t.place(X, Z);
+    t.run(5);
+    const w = t.ctx.services.get('weather') as unknown as { serialize(): { t: number } };
+    expect(w.serialize().t).toBeGreaterThan(4.9);
+    t.game.events.emit('save.loaded', { slot: 'test' });
+    expect(w.serialize().t).toBe(0);
   }, PLUGIN_TEST_TIMEOUT);
 });
 

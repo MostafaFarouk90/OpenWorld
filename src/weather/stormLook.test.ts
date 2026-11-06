@@ -1,14 +1,13 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { installStormLook, lookAt, maskActive, targetWeight } from './stormLook';
-import { STORM_LOOK } from './tuning';
 
 const WASTE = { x0: 7000, z0: 4500, x1: 15000, z1: 11000 };
 
 describe('storm look numbers', () => {
   it('uses the spike table per quality step', () => {
-    expect(lookAt('high', 1, false)).toMatchObject({ fogNear: 12, fogFar: 140, layerAlpha: 0.55, particles: 2000, cameraFar: 630 });
-    expect(lookAt('low', 1, false)).toMatchObject({ fogFar: 120, layerAlpha: 0.35, particles: 600, cameraFar: 525 });
+    expect(lookAt('high', 1, false)).toMatchObject({ fogNear: 12, fogFar: 140, layerAlpha: 0.55, particles: 2000 });
+    expect(lookAt('low', 1, false)).toMatchObject({ fogFar: 120, layerAlpha: 0.35, particles: 600 });
   });
 
   it('the mask opens the fog and thins the layer, nothing else', () => {
@@ -26,16 +25,8 @@ describe('storm look numbers', () => {
     expect(lookAt('high', 0, false)).toMatchObject({ particles: 0, layerAlpha: 0 });
   });
 
-  it('keeps the fog inside the camera far plane at every weight on every step', () => {
-    for (const step of ['low', 'medium', 'high'] as const) {
-      const base = step === 'low' ? 3200 : 4800;
-      for (let w = 0; w <= 1; w += 0.05) {
-        const l = STORM_LOOK[step];
-        const fog = base * 0.95 + (l.fogFar - base * 0.95) * w;
-        const cam = base * 1.05 + (l.viewDistance * 1.05 - base * 1.05) * w;
-        expect(fog).toBeLessThan(cam);
-      }
-    }
+  it('keeps the camera far plane alone, so the unfogged Caldera landmark stays visible', () => {
+    expect(Object.keys(lookAt('high', 1, false))).not.toContain('cameraFar');
   });
 
   it('weights by phase and the edge band, and is 0 indoors', () => {
@@ -93,7 +84,7 @@ describe('storm look in a scene (headless THREE)', () => {
     expect(t.fog.far).toBeGreaterThan(140);
     t.frame(2);
     expect(t.fog.far).toBe(140);
-    expect(t.camera.far).toBeCloseTo(630, 6);
+    expect(t.camera.far).toBe(5040);
     expect(t.scene.getObjectByName('weather.ash-layer')!.visible).toBe(true);
     expect(t.scene.getObjectByName('weather.beacon:s1')!.visible).toBe(true);
     kind.v = 'clear';
@@ -103,6 +94,20 @@ describe('storm look in a scene (headless THREE)', () => {
     expect(t.scene.getObjectByName('weather.ash-layer')!.visible).toBe(false);
     t.off();
     expect(t.scene.getObjectByName('weather.ash-layer')).toBeUndefined();
+  });
+
+  it('follows a quality change mid-storm (read each frame)', () => {
+    const t = fakeCtx({ v: 'storm' });
+    const q = { step: 'high' };
+    t.services.set('quality', q);
+    t.frame(4);
+    const pts = () => t.scene.getObjectByName('ash-particles:storm') as THREE.Points;
+    expect(pts().geometry.drawRange.count).toBe(2000);
+    q.step = 'low';
+    t.frame(0.1);
+    expect(pts().geometry.drawRange.count).toBe(600);
+    expect(t.fog.far).toBe(120);
+    t.off();
   });
 
   it('snaps to full weight after a load', () => {

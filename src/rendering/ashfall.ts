@@ -1,7 +1,8 @@
 // Act 4 L3 (plans/act4-L3.md 2.10): ash falling over Harrowmark from `story.gate.a4`, with a dusk grade (every light at
 // 45%, warmed toward orange, an ember sky and fog colour). No gameplay effect and no fog distance change. Weighted by
 // the camera's distance to Harrowmark's box (full inside, 0 at 300 m out), off indoors, quality-tiered (spike numbers).
-// The fields go through the weather's field blender, so the interiors' snapshot and restore stay exact.
+// The fields go through the weather's field blender, so the interiors' snapshot and restore stay exact. It shares the
+// fog colour and sky with the storm look, kept apart by distance (see weather/stormLook.ts).
 import * as THREE from 'three';
 import type { GameContext } from '../core/Game';
 import { ACT4_GATE_FLAG, engineBox } from '../region/regions';
@@ -50,13 +51,18 @@ export function installAshfall(ctx: Pick<GameContext, 'scene' | 'camera' | 'stat
     }
   }
   const stepNow = (): QualityStep => (ctx.services.get('quality')?.step ?? 'medium') as QualityStep;
-  let particles = new AshParticles(particleOpts(stepNow()));
+  let step = stepNow();
+  let particles = new AshParticles(particleOpts(step));
   ctx.scene.add(particles.object);
-  const offQuality = ctx.services.get('quality')?.subscribe((s) => {
+  // Read each frame: the quality plugin may set up after this one, and a change rebuilds the particles.
+  const syncStep = (): void => {
+    const s = stepNow();
+    if (s === step) return;
+    step = s;
     particles.dispose();
-    particles = new AshParticles(particleOpts(s as QualityStep));
+    particles = new AshParticles(particleOpts(step));
     ctx.scene.add(particles.object);
-  });
+  };
   let weight = 0;
   let snap = false;
   const offLoaded = ctx.events.on('save.loaded', () => {
@@ -67,6 +73,7 @@ export function installAshfall(ctx: Pick<GameContext, 'scene' | 'camera' | 'stat
     renderPhase: 'world',
     order: 914,
     render: (_alpha: number, frameTime: number) => {
+      syncStep();
       const cam = camera.position;
       const i = ctx.services.get('interiors') as { current: string | null } | undefined;
       const indoors = !!i?.current;
@@ -81,7 +88,6 @@ export function installAshfall(ctx: Pick<GameContext, 'scene' | 'camera' | 'stat
   return () => {
     off();
     offLoaded();
-    offQuality?.();
     blender.restore();
     particles.dispose();
   };

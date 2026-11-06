@@ -246,10 +246,10 @@
     },
     "player-position": {
       "data": {
-        "x": 10040,
-        "y": 120.05,
+        "x": 10000,
+        "y": 51.6358,
         "yaw": 0,
-        "z": 4800
+        "z": 4700
       },
       "version": 1
     },
@@ -910,6 +910,7 @@
           "story.m32.started": true,
           "story.m33.complete": true,
           "story.m33.started": true,
+          "story.m42.started": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,

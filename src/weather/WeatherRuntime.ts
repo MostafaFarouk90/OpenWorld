@@ -13,6 +13,7 @@ import { ExposureClock, exposureDamage } from './exposure';
 import { RopeIndex, ShelterTracker, type RopeLike, type ShelterLike, type XZ } from './lanes';
 import { resolveWeather } from './precedence';
 import { EXPOSURE, STORM_WALK, WEATHER_SEED } from './tuning';
+import { PLAYER } from '../config/constants';
 import type { WeatherKind, WeatherService, WeatherState } from './types';
 
 export interface WeatherPorts {
@@ -22,6 +23,11 @@ export interface WeatherPorts {
   indoors(): boolean;
   /** The player stands in a region with `weather: 'ash-storm'`. */
   stormRegion(x: number, z: number): boolean;
+  /**
+   * The player stands in a storm region or its look band outside (150 m): the clock runs there too, so a player who
+   * walks out to Ashgate mid-storm sees it pass instead of a storm frozen on the horizon.
+   */
+  stormBand(x: number, z: number): boolean;
   /** A dialogue is open. */
   dialogue(): boolean;
   /** The input context is gameplay (no dialogue, menu or cutscene on top). */
@@ -55,7 +61,7 @@ export interface WeatherSave {
 
 export const STORM_TOAST_KEYS = { warning: 'weather.toast.warning', exposed: 'weather.toast.exposed' } as const;
 
-const STORM_MODIFIER: MoveModifier = { speedScale: STORM_WALK.speed / STORM_WALK.baseWalk, noSprint: true };
+const STORM_MODIFIER: MoveModifier = { speedScale: STORM_WALK.speed / PLAYER.walkSpeed, noSprint: true };
 
 export class WeatherRuntime implements WeatherService {
   private readonly _clock: WeatherClock;
@@ -71,7 +77,7 @@ export class WeatherRuntime implements WeatherService {
   private releaseMode: (() => void) | null = null;
   private releaseSpeed: (() => void) | null = null;
   private toastedExposure = false;
-  private warnedReleases = false;
+  private toastedWarning = false;
   private floorWarned = false;
   /** The player is outdoors in a storm region this tick. */
   private _inRegion = false;
@@ -173,6 +179,11 @@ export class WeatherRuntime implements WeatherService {
     return { seed: this._clock.seed, t: this._clock.t, lastShelterId: this.shelters.last };
   }
 
+  /** `save.loaded` without a `weather` entry (an older save): back to a new game's clock. */
+  loadDefaultsIfMissing(loaded: boolean): void {
+    if (!loaded) this.load(null);
+  }
+
   load(data: unknown): void {
     const d = (data ?? {}) as Partial<WeatherSave>;
     this._clock.restore(typeof d.seed === 'number' ? d.seed : WEATHER_SEED, typeof d.t === 'number' ? d.t : 0);
@@ -180,15 +191,19 @@ export class WeatherRuntime implements WeatherService {
     this.shelters.reset();
     this.exposure.reset();
     this.regionKind = this._clock.phase().kind;
+    // A loaded storm or warning already happened to this player: no fresh warning toast on the first step.
+    this.toastedWarning = this.regionKind !== 'clear';
+    this.toastedExposure = false;
   }
 
   /** One fixed step. */
   update(dt: number): void {
     const p = this.ports.player();
-    const inRegion = !this.ports.indoors() && this.ports.stormRegion(p.x, p.z);
+    const outdoors = !this.ports.indoors();
+    const inRegion = outdoors && this.ports.stormRegion(p.x, p.z);
     this._inRegion = inRegion;
     const dialogue = this.ports.dialogue();
-    if (inRegion) this._clock.advance(dt, dialogue);
+    if (outdoors && (inRegion || this.ports.stormBand(p.x, p.z))) this._clock.advance(dt, dialogue);
     const regionKind = resolveWeather({
       clock: this._clock.phase().kind,
       forced: this.forced.size > 0,
@@ -196,6 +211,12 @@ export class WeatherRuntime implements WeatherService {
       dialogue,
       current: this.regionKind,
     });
+    // Toasts belong to the region's storm, not to the player's steps: walking out and back in, or through a door,
+    // does not repeat them.
+    if (regionKind !== this.regionKind) {
+      if (regionKind === 'clear') this.toastedWarning = false;
+      if (regionKind === 'storm') this.toastedExposure = false;
+    }
     this.regionKind = regionKind;
     const here: WeatherKind = inRegion ? regionKind : 'clear';
     if (here !== this.kind) {
@@ -203,8 +224,10 @@ export class WeatherRuntime implements WeatherService {
       this.kind = here;
       this.kindT = 0;
       this.ports.emit('weather.changed', { kind: here, from });
-      if (here === 'warning') this.ports.toast(STORM_TOAST_KEYS.warning);
-      if (here === 'storm') this.toastedExposure = false;
+      if (here === 'warning' && !this.toastedWarning) {
+        this.toastedWarning = true;
+        this.ports.toast(STORM_TOAST_KEYS.warning);
+      }
     } else this.kindT += dt;
 
     this.updateShelters(inRegion, p.x, p.z);
@@ -228,10 +251,6 @@ export class WeatherRuntime implements WeatherService {
       const n = set.get(reason) ?? 0;
       if (n <= 1) set.delete(reason);
       else set.set(reason, n - 1);
-      if (n === 0 && !this.warnedReleases) {
-        this.warnedReleases = true;
-        this.ports.warn(`weather: release of an unknown reason "${reason}"`);
-      }
     };
   }
 

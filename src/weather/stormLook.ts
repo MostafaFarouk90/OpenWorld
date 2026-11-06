@@ -2,6 +2,11 @@
 // drives the fog (near, far, colour), the sky colour, the camera's far plane (the storm view distance: fewer terrain
 // draw calls), the ash layer, the particles and the shelter beacons. Everything goes through the field blender, so the
 // graphics service, the Greyfen mist and the interiors keep their own values. Indoors the interior owns the scene.
+// The camera's far plane is left alone: the unfogged Caldera glow column must stay visible as the landmark through a
+// storm (design 4.2), and the spike measured the storm at +2 draw calls without the view-distance cut.
+// The Harrowmark ash-fall (rendering/ashfall.ts) blends the same fog colour and sky with its own blender. The two are
+// kept apart by distance: the ash-fall is 0 at 300 m outside Harrowmark's box (z 4300), the storm's band starts 150 m
+// outside the Waste's (z 4350). Retuning either fade so they overlap would make them rebase on each other.
 import * as THREE from 'three';
 import type { GameContext as CoreContext } from '../core/Game';
 import { engineBox, REGION_IDS, REGION_INFO } from '../region/regions';
@@ -17,7 +22,7 @@ import type { WeatherKind } from './types';
 export const STORM_LOOK_SYSTEM_ID = 'weather.look';
 
 /** What the look draws at `weight` (0 to 1, the storm's full strength at 1) on a quality step, with or without the mask. */
-export function lookAt(step: QualityStep, weight: number, mask: boolean): { fogNear: number; fogFar: number; layerAlpha: number; particles: number; cameraFar: number } {
+export function lookAt(step: QualityStep, weight: number, mask: boolean): { fogNear: number; fogFar: number; layerAlpha: number; particles: number } {
   const l: StormLook = STORM_LOOK[step] ?? STORM_LOOK.medium;
   const w = Math.min(1, Math.max(0, weight));
   return {
@@ -26,7 +31,6 @@ export function lookAt(step: QualityStep, weight: number, mask: boolean): { fogN
     layerAlpha: (mask ? l.maskLayerAlpha : l.layerAlpha) * w,
     // The warning shows a quarter of the particles (its weight is 0.2; the particles follow the weight at 1.25x).
     particles: Math.round(l.particles * Math.min(1, w * 1.25)),
-    cameraFar: l.viewDistance * 1.05,
   };
 }
 
@@ -55,21 +59,12 @@ export function installStormLook(ctx: CoreContext, rt: { lookKind: WeatherKind; 
   if (!camera) return () => {};
   const boxes = REGION_IDS.filter((id) => REGION_INFO[id].weather === 'ash-storm').map(engineBox);
   const stepNow = (): QualityStep => (ctx.services.get('quality')?.step ?? 'medium') as QualityStep;
-  const target = { near: 12, far: 140, camFar: 630 };
+  const target = { near: 12, far: 140 };
   const stormColor = new THREE.Color(STORM_COLOR);
   const fog = (): THREE.Fog | null => (ctx.scene.fog instanceof THREE.Fog ? ctx.scene.fog : null);
   const blender = new FieldBlender()
     .addNumber({ get: () => fog()?.near ?? 0, set: (v) => fog() && (fog()!.near = v), mix: (b, w) => toward(target.near)(b, w) })
     .addNumber({ get: () => fog()?.far ?? 0, set: (v) => fog() && (fog()!.far = v), mix: (b, w) => closeTo(target.far)(b, w) })
-    .addNumber({
-      get: () => camera.far,
-      set: (v) => {
-        if (camera.far === v) return;
-        camera.far = v;
-        camera.updateProjectionMatrix();
-      },
-      mix: (b, w) => closeTo(target.camFar)(b, w),
-    })
     .addColor({ get: () => fog()?.color ?? null, target: stormColor })
     .addColor({ get: () => (ctx.scene.background instanceof THREE.Color ? ctx.scene.background : null), target: stormColor });
 
@@ -78,12 +73,15 @@ export function installStormLook(ctx: CoreContext, rt: { lookKind: WeatherKind; 
   ctx.scene.add(layer.object);
   let particles = new AshParticles({ count: STORM_LOOK[step].particles, half: 30, wind: { x: 14, z: 5 }, fall: 1.5, sway: 2.5, color: 0x6f6a64, size: 0.12, seed: 'storm' });
   ctx.scene.add(particles.object);
-  const offQuality = ctx.services.get('quality')?.subscribe((s) => {
-    step = s as QualityStep;
+  // The quality step is read each frame (the quality plugin may set up after this one); a change rebuilds the particles.
+  const syncStep = (): void => {
+    const s = stepNow();
+    if (s === step) return;
+    step = s;
     particles.dispose();
     particles = new AshParticles({ count: STORM_LOOK[step].particles, half: 30, wind: { x: 14, z: 5 }, fall: 1.5, sway: 2.5, color: 0x6f6a64, size: 0.12, seed: 'storm' });
     ctx.scene.add(particles.object);
-  });
+  };
 
   // Shelter beacons: a lantern column per shelter, unfogged, so it shows through the storm.
   const beaconGeom = new THREE.CylinderGeometry(0.15, 0.15, 14, 6, 1, true);
@@ -113,6 +111,7 @@ export function installStormLook(ctx: CoreContext, rt: { lookKind: WeatherKind; 
     // After the Greyfen mist (911) and the stacks (910), so the storm's fog is the one drawn.
     order: 915,
     render: (_alpha, frameTime) => {
+      syncStep();
       const cam = camera.position;
       const i = ctx.services.get('interiors') as { current: string | null } | undefined;
       const indoors = !!i?.current;
@@ -123,7 +122,6 @@ export function installStormLook(ctx: CoreContext, rt: { lookKind: WeatherKind; 
       const look = lookAt(step, weight, mask);
       target.near = look.fogNear;
       target.far = look.fogFar;
-      target.camFar = look.cameraFar;
       // Indoors the interior owns fog, sky and lights: leave them and the blender's bases alone. The interior snapshots
       // what this wrote and restores it on exit, so the blend carries on from there (the act3 mist's rule).
       if (!indoors) blender.apply(weight);
@@ -146,7 +144,6 @@ export function installStormLook(ctx: CoreContext, rt: { lookKind: WeatherKind; 
   return () => {
     off();
     offLoaded();
-    offQuality?.();
     blender.restore();
     layer.dispose();
     particles.dispose();

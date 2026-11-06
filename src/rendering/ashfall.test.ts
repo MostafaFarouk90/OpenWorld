@@ -14,6 +14,7 @@ describe('Harrowmark ash-fall', () => {
     expect(ashfallWeight(HM, 8500, HM.z1 + 400, true, false)).toBe(0);
   });
 
+  let loaded: () => void = () => {};
   function rig(gate: { v: boolean }, step = 'medium') {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x9db8d3);
@@ -31,12 +32,12 @@ describe('Harrowmark ash-fall', () => {
       state: { getBool: () => gate.v },
       services: { get: (id: string) => services.get(id) },
       systems: { add: (s: never) => (systems.push(s), () => {}) },
-      events: { on: () => () => {} },
+      events: { on: (_n: string, fn: () => void) => ((loaded = fn), () => {}) },
     } as never);
     const frame = (s: number) => {
       for (let i = 0; i < Math.round(s * 60); i++) systems[0].render(0, 1 / 60);
     };
-    return { scene, sun, hemi, off, frame, services };
+    return { scene, sun, hemi, off, frame, services, loaded: () => loaded() };
   }
 
   it('grades the lights to 45% and warms the sky after the gate, and hands everything back', () => {
@@ -57,6 +58,14 @@ describe('Harrowmark ash-fall', () => {
     expect(t.sun.intensity).toBe(2.5);
     expect((t.scene.background as THREE.Color).getHex()).toBe(0x9db8d3);
     expect(t.sun.color.getHex()).toBe(0xffffff);
+    t.off();
+  });
+
+  it('is on at full weight right after a load with the gate set', () => {
+    const t = rig({ v: true });
+    t.loaded();
+    t.frame(1 / 60);
+    expect(t.sun.intensity).toBeCloseTo(2.5 * 0.45, 9);
     t.off();
   });
 

@@ -11,7 +11,8 @@ import { heightAt } from '../terrain/heightfield';
 import { ASHMARE_DISMISSED_KEY, ASHMARE_EDGE, ASHMARE_POST_ANCHOR, AshmareEdge, outward } from './ashmareEdge';
 import type { RopeLike, ShelterLike } from './lanes';
 import { WEATHER_STRINGS_EN } from './strings.en';
-import { WEATHER_SEED } from './tuning';
+import { STORM_EDGE, WEATHER_SEED } from './tuning';
+import { insideDepth } from './weight';
 import type { RopeLineDef, ShelterDef } from './types';
 import { WeatherRuntime, type WeatherPorts } from './WeatherRuntime';
 import { WEATHER_DATA } from './data';
@@ -32,6 +33,7 @@ export interface WeatherPluginOptions {
 
 const STORM_REGIONS: readonly RegionId[] = REGION_IDS.filter((id) => REGION_INFO[id].weather === 'ash-storm');
 const MOUNT_REFUSED: readonly RegionId[] = REGION_IDS.filter((id) => REGION_INFO[id].mount === 'refused');
+const STORM_BOXES = STORM_REGIONS.map(engineBox);
 
 /** Resolves L1's anchor-based defs to points (a missing anchor drops that point or shelter, with one warning). */
 export function resolveWeatherData(
@@ -83,14 +85,16 @@ export function createWeatherPlugin(opts: WeatherPluginOptions = {}): GamePlugin
         };
         const ports: WeatherPorts = {
           player: () => ({ x: ctx.player.feet.x, y: ctx.player.feet.y, z: ctx.player.feet.z, yaw: ctx.player.facingYaw }),
+          // Only a current interior counts: a door's transition step must not flap the weather (and its toasts).
           indoors: () => {
-            const i = ctx.services.get('interiors') as { current: string | null; transitioning?: boolean } | undefined;
-            return !!i && (i.current !== null || i.transitioning === true);
+            const i = ctx.services.get('interiors') as { current: string | null } | undefined;
+            return !!i && i.current !== null;
           },
           stormRegion: (x, z) => {
             const r = regionAt(x, z);
             return r !== null && STORM_REGIONS.includes(r.id);
           },
+          stormBand: (x, z) => STORM_BOXES.some((b) => insideDepth(b, x, z) > -STORM_EDGE.outside),
           dialogue: () => ctx.services.get('dialogue')?.active === true || ctx.input.contexts.top() === 'dialogue',
           gameplay: () => ctx.input.contexts.top() === 'gameplay',
           vitals: () => ({ health: ctx.player.actor.health, max: ctx.player.actor.maxHealth, dead: ctx.player.actor.dead }),
@@ -110,8 +114,14 @@ export function createWeatherPlugin(opts: WeatherPluginOptions = {}): GamePlugin
           groundAt: (x, z) => heightAt(x, z),
           warn,
         };
-        const data = resolveWeatherData((id) => ctx.anchors.find(id), opts.ropes ?? WEATHER_DATA.ropes, opts.shelters ?? WEATHER_DATA.shelters, warn);
-        const rt = new WeatherRuntime(ports, data, opts.seed ?? WEATHER_SEED);
+        const rt = new WeatherRuntime(ports, { ropes: [], shelters: [] }, opts.seed ?? WEATHER_SEED);
+        // L1's anchors may be defined by a plugin that sets up after this one: resolve on the first step, and again on
+        // every load (a load can follow a teardown and rebuild of the world plugins).
+        let resolved = false;
+        const resolveData = (): void => {
+          resolved = true;
+          rt.setData(resolveWeatherData((id) => ctx.anchors.find(id), opts.ropes ?? WEATHER_DATA.ropes, opts.shelters ?? WEATHER_DATA.shelters, warn));
+        };
         cleanups.push(() => rt.dispose());
         ctx.services.provide('weather', rt);
 
@@ -141,10 +151,12 @@ export function createWeatherPlugin(opts: WeatherPluginOptions = {}): GamePlugin
 
         // The Ashmare at the Waste's edge.
         const edge = new AshmareEdge(MOUNT_REFUSED.map(engineBox));
+        // The Ashgate post only for a rider at the Waste's south face (Ashgate's side); on any other face she stays
+        // just outside, where the rider was set down.
         const setDown = (box: Parameters<typeof outward>[0], x: number, z: number): THREE.Vector3 => {
-          const post = ctx.anchors.find(ASHMARE_POST_ANCHOR);
-          if (post) return new THREE.Vector3(post.position.x, post.position.y, post.position.z);
           const o = outward(box, x, z, ASHMARE_EDGE.fallbackStep);
+          const post = o.z < z ? ctx.anchors.find(ASHMARE_POST_ANCHOR) : undefined;
+          if (post) return new THREE.Vector3(post.position.x, post.position.y, post.position.z);
           return new THREE.Vector3(o.x, heightAt(o.x, o.z), o.z);
         };
 
@@ -154,6 +166,7 @@ export function createWeatherPlugin(opts: WeatherPluginOptions = {}): GamePlugin
             fixedPhase: 'rules',
             order: 420,
             fixedUpdate: (dt) => {
+              if (!resolved) resolveData();
               rt.update(dt);
               const mount = ctx.services.get('mount');
               const f = ctx.player.feet;
@@ -166,12 +179,24 @@ export function createWeatherPlugin(opts: WeatherPluginOptions = {}): GamePlugin
           }),
         );
 
+        // A save without a `weather` entry never reaches `load`: put the defaults back on `save.loaded` then.
+        let loadedEntry = false;
         ctx.persist.register({
           key: WEATHER_PERSIST_KEY,
           version: WEATHER_PERSIST_VERSION,
           serialize: () => rt.serialize(),
-          load: (d) => rt.load(d),
+          load: (d) => {
+            loadedEntry = true;
+            rt.load(d);
+          },
         });
+        cleanups.push(
+          ctx.events.on('save.loaded', () => {
+            rt.loadDefaultsIfMissing(loadedEntry);
+            loadedEntry = false;
+            resolveData();
+          }),
+        );
 
         if (opts.visuals ?? true) cleanups.push(installWeatherVisuals(ctx, rt));
         installDevHook(ctx, rt, cleanups);

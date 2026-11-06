@@ -34,6 +34,7 @@ function rig(opts: { seed?: number } = {}) {
     player: () => s.pos,
     indoors: () => s.indoors,
     stormRegion: (x, z) => x >= WASTE.x0 && x < WASTE.x1 && z >= WASTE.z0 && z < WASTE.z1,
+    stormBand: (x, z) => x >= WASTE.x0 - 150 && x < WASTE.x1 + 150 && z >= WASTE.z0 - 150 && z < WASTE.z1 + 150,
     dialogue: () => s.dialogue,
     gameplay: () => s.gameplay,
     vitals: () => ({ health: s.health, max: s.max, dead: s.dead }),
@@ -345,7 +346,7 @@ describe('weather runtime: storm mode and speed (the movement row)', () => {
 });
 
 describe('weather runtime: the Act 4 L3 fixture', () => {
-  it('loads mid-storm, off the rope, with the last shelter as the safe point', async () => {
+  it('loads mid-storm at the shelter the save stored, with it as the safe point once off the rope', async () => {
     const file = (await import('../save/__fixtures__/act4/act4-l3-storm.json')).default as unknown as { entries: Record<string, { data: unknown }> };
     const r = rig();
     r.w.load(file.entries.weather.data);
@@ -354,6 +355,68 @@ describe('weather runtime: the Act 4 L3 fixture', () => {
     r.run(0.1);
     expect(r.w.state().kind).toBe('storm');
     expect(r.modes.current).toBe('storm');
+    expect(r.w.lastShelter).toBe('waste.shelter.1');
+    r.s.pos = { x: 10060, y: 60, z: 4750, yaw: 0 };
+    r.run(0.1);
     expect(r.modes.safePoint?.position).toEqual({ x: 10000, y: 100.05, z: 4700 });
+  });
+});
+
+describe('weather runtime: review fixes', () => {
+  it('the clock runs in the band outside the edge, so a storm seen from Ashgate passes', () => {
+    const r = rig();
+    r.toStorm();
+    r.s.pos = { x: 10000, y: 50, z: 4450, yaw: 0 }; // Ashgate, 50 m out
+    const t = r.w.clockTime;
+    r.run(10);
+    expect(r.w.clockTime).toBeGreaterThan(t + 9.9);
+    expect(r.w.state().kind).toBe('clear'); // outside: no gameplay storm
+    r.run(200);
+    expect(r.w.lookKind).toBe('clear');
+    r.s.pos = { x: 8500, y: 50, z: 2000, yaw: 0 }; // Harrowmark: the clock stops
+    const t2 = r.w.clockTime;
+    r.run(5);
+    expect(r.w.clockTime).toBe(t2);
+  });
+
+  it('walking out and back in during one storm does not repeat the toasts', () => {
+    const r = rig();
+    r.s.pos = { x: 10050, y: 120, z: 4800, yaw: 0 };
+    r.toStorm();
+    r.run(4);
+    r.s.pos = { x: 10050, y: 50, z: 4450, yaw: 0 };
+    r.run(1);
+    r.s.pos = { x: 10050, y: 120, z: 4800, yaw: 0 };
+    r.run(4);
+    expect(r.s.toasts.filter((t) => t === STORM_TOAST_KEYS.exposed)).toHaveLength(1);
+    expect(r.s.toasts.filter((t) => t === STORM_TOAST_KEYS.warning)).toHaveLength(1);
+  });
+
+  it('releases the storm walk on a hold and indoors', () => {
+    const r = rig();
+    r.toStorm();
+    expect(r.mods.state().noSprint).toBe(true);
+    const off = r.w.holdClear('escort:r24');
+    r.run(0.1);
+    expect(r.mods.state()).toMatchObject({ speedScale: 1 });
+    expect(r.mods.state().noSprint).toBeUndefined();
+    off();
+    r.run(0.1);
+    expect(r.mods.state().noSprint).toBe(true);
+    r.s.indoors = true;
+    r.run(0.1);
+    expect(r.mods.state().noSprint).toBeUndefined();
+    expect(r.modes.current).toBe('walk');
+  });
+
+  it('a load with no weather entry puts a new game clock back', () => {
+    const r = rig();
+    r.s.pos = { x: 10000, y: 120, z: 4700, yaw: 0 };
+    r.run(30);
+    r.w.loadDefaultsIfMissing(false);
+    expect(r.w.serialize()).toEqual({ seed: 4042, t: 0, lastShelterId: null });
+    r.run(1);
+    r.w.loadDefaultsIfMissing(true);
+    expect(r.w.serialize().lastShelterId).toBe('waste.shelter.1');
   });
 });

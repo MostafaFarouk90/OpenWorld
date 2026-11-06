@@ -22,8 +22,8 @@ export const ROPE_SAFE_RADIUS = 3;
 /** Metres of hysteresis on a shelter's edge, so standing on the line does not chatter. */
 export const SHELTER_HYSTERESIS = 1;
 
-/** Walking speed in a storm (m/s) and the shipped walk it scales. Sprint is off while it lasts. */
-export const STORM_WALK = { speed: 3, baseWalk: 4.5 } as const;
+/** Walking speed in a storm (m/s); it scales the shipped walk (`PLAYER.walkSpeed`). Sprint is off while it lasts. */
+export const STORM_WALK = { speed: 3 } as const;
 
 /** The look weights: the warning is a thin haze; the ramp is the seconds a change takes to blend in or out. */
 export const STORM_WEIGHT = { warning: 0.2, storm: 1, rampSeconds: 3 } as const;
@@ -38,15 +38,13 @@ export interface StormLook {
   fogFar: number;
   maskFogFar: number;
   maskLayerAlpha: number;
-  /** Terrain view distance in a storm (camera far), metres. */
-  viewDistance: number;
 }
 
 /** Plan 2.4. Low keeps a thin layer and 600 particles (coordinator ruling, logged in design/changes-applied.md). */
 export const STORM_LOOK: Readonly<Record<QualityStep, StormLook>> = {
-  high: { particles: 2000, layerAlpha: 0.55, fogNear: 12, fogFar: 140, maskFogFar: 400, maskLayerAlpha: 0.3, viewDistance: 600 },
-  medium: { particles: 2000, layerAlpha: 0.55, fogNear: 12, fogFar: 140, maskFogFar: 400, maskLayerAlpha: 0.3, viewDistance: 600 },
-  low: { particles: 600, layerAlpha: 0.35, fogNear: 12, fogFar: 120, maskFogFar: 360, maskLayerAlpha: 0.2, viewDistance: 500 },
+  high: { particles: 2000, layerAlpha: 0.55, fogNear: 12, fogFar: 140, maskFogFar: 400, maskLayerAlpha: 0.3 },
+  medium: { particles: 2000, layerAlpha: 0.55, fogNear: 12, fogFar: 140, maskFogFar: 400, maskLayerAlpha: 0.3 },
+  low: { particles: 600, layerAlpha: 0.35, fogNear: 12, fogFar: 120, maskFogFar: 360, maskLayerAlpha: 0.2 },
 };
 
 /** Ash-grey storm colour for the fog and the sky. */
