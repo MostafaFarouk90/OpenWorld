@@ -84,12 +84,12 @@ export function placeholderEscortBody(color = 0x9a8a6a): EscortBody {
 const SWING_CLIP = '1H_Melee_Attack_Slice_Horizontal';
 
 /** The NPC's own model on the KayKit rig, or the placeholder when it is not loaded (headless, or still loading). */
-export function npcEscortBodyFactory(loader: NpcModelLoader | null, npcDef: NpcDef, decorate?: (model: THREE.Object3D) => void): EscortBodyFactory {
+/** The def's own `decorate` (Edric's blade) runs inside `prepareNpcModel`. */
+export function npcEscortBodyFactory(loader: NpcModelLoader | null, npcDef: NpcDef): EscortBodyFactory {
   return () => {
     if (!loader) return placeholderEscortBody(npcDef.tint ?? undefined);
     try {
       const { model, clips } = prepareNpcModel(loader, npcDef);
-      decorate?.(model);
       const root = new THREE.Group();
       root.name = `escort-${npcDef.id}`;
       root.add(model);
