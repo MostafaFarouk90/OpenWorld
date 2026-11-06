@@ -9,6 +9,7 @@ import { dialogueStringsDensityC } from './strings.density-c.en';
 import { dialogueStringsSide } from '../quests/content/side/strings.side.en';
 import { ACT2_DIALOGUE_STRINGS } from './content/act2';
 import { ACT3_TRAINER_STRINGS } from './content/act3/trainers';
+import { ACT4_ROOK_STRINGS } from './content/act4/rook.trainer';
 import { DRAGONSPINE_DIALOGUE_STRINGS } from './content/act3/dragonspine';
 import { SUMMIT_DIALOGUE_STRINGS } from './content/act3/summit';
 import { ACT3_COMPANION_STRINGS } from './content/act3/companions';
@@ -27,6 +28,7 @@ export const dialogueStrings: Record<string, string> = {
   ...NPC_AELFREDA_COMPANION_STRINGS_EN,
   ...ACT2_DIALOGUE_STRINGS,
   ...ACT3_TRAINER_STRINGS,
+  ...ACT4_ROOK_STRINGS,
   ...DRAGONSPINE_DIALOGUE_STRINGS,
   ...SUMMIT_DIALOGUE_STRINGS,
   ...ACT3_COMPANION_STRINGS,
