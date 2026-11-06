@@ -1,4 +1,4 @@
-// Act 4 thread L1 (plans/act4-L1.md section 8): the Sunforge column, `landmark.sunforge`. A fog-free additive glow
+// Act 4 thread L1 (plans/act4-L1.md section 8): the Sunforge column, `landmark.sunforge`. A fog-free translucent glow
 // column about 900 m tall over the Caldera's centre with a slow pulse, and a smoke plume of soft sprites rising and
 // drifting east. The Ash Road's start is 5.75 km away, past the camera's 5 km far plane, so beyond 0.9 x far the group
 // is drawn on the true line of sight at the true angular size (the Oldsmoke stacks' and the summit's method), tinted
@@ -55,7 +55,7 @@ export interface SunforgeLandmark {
   dispose(): void;
 }
 
-const GLOW = new THREE.Color(1.0, 0.55, 0.2);
+const GLOW = new THREE.Color(1.0, 0.45, 0.12);
 const SMOKE = new THREE.Color(0.32, 0.29, 0.27);
 
 /** A soft round sprite (radial alpha), built once per landmark. */
@@ -82,7 +82,8 @@ export function buildSunforgeLandmark(heightAt: (x: number, z: number) => number
   // The column: an open cylinder, wider at the foot, additive and fog-free (the haze is applied by hand).
   const colGeo = new THREE.CylinderGeometry(COLUMN_RADIUS * 0.6, COLUMN_RADIUS, COLUMN_HEIGHT, 16, 1, true);
   colGeo.translate(0, COLUMN_HEIGHT / 2, 0);
-  const colMat = new THREE.MeshBasicMaterial({ color: GLOW.clone(), transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide });
+  // Normal blending: additive over a bright sky washes to white; a translucent orange reads as fire by day.
+  const colMat = new THREE.MeshBasicMaterial({ color: GLOW.clone(), transparent: true, opacity: 0.5, depthWrite: false, fog: false, side: THREE.DoubleSide });
   const column = new THREE.Mesh(colGeo, colMat);
   column.name = 'sunforge-column';
   column.frustumCulled = false;

@@ -25,6 +25,8 @@ export interface Act4WorldPluginOptions {
 }
 
 export const ACT4_WORLD_SYSTEM_ID = 'act4-world.landmarks';
+/** The Sunforge column stands in the sky from Act 4's gate on. */
+export const SUNFORGE_SHOWN_FLAG = 'story.gate.a4';
 
 export function createAct4WorldPlugin(opts: Act4WorldPluginOptions = {}): GamePlugin {
   const height = opts.heightAt ?? heightAt;
@@ -78,7 +80,7 @@ export function createAct4WorldPlugin(opts: Act4WorldPluginOptions = {}): GamePl
           cleanups.push(() => sunforge.dispose());
         }
         const applyQuality = (step: string): void => {
-          const s = (step in GLASS_TIER ? step : 'medium') as SunforgeQuality;
+          const s = (Object.hasOwn(GLASS_TIER, step) ? step : 'medium') as SunforgeQuality;
           setGroundGlassTier(GLASS_TIER[s]);
           sunforge?.setQuality(s);
         };
@@ -100,7 +102,8 @@ export function createAct4WorldPlugin(opts: Act4WorldPluginOptions = {}): GamePl
                 if (!cam) return;
                 const indoors = Boolean(ctx.services.get('interiors')?.current);
                 const fog = ctx.scene.fog instanceof THREE.Fog ? ctx.scene.fog.color : null;
-                sunforge.update(cam.position, cam.far, seconds, fog, indoors);
+                // The column shows from Act 4 (the gate flag), never over Acts 1 to 3.
+                sunforge.update(cam.position, cam.far, seconds, fog, indoors || !ctx.state.getFlag(SUNFORGE_SHOWN_FLAG));
               },
             }),
           );

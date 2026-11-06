@@ -375,7 +375,11 @@ const glassNoise = createNoise2D(7793);
 
 /** Glass-sand glint weight (before the shader's sparkle pattern): the ash rule's weight on open ground, 1 on the plain. Pure. */
 export function glassWeight(x: number, z: number): number {
-  const k = groundWeights(x, z).ash;
+  return glassWeightFrom(groundWeights(x, z).ash, x, z);
+}
+
+/** glassWeight for a known ash weight `k` (the chunk pass has it already). Pure. */
+export function glassWeightFrom(k: number, x: number, z: number): number {
   if (k <= 0) return 0;
   const p = GLASSLANDS_PLAIN.box;
   const plain = 1 - smoothstep(0, GLASS_PLAIN_FADE, boxDistance(p, x, z));
@@ -493,7 +497,7 @@ export function chunkGround(cx: number, cz: number, size: number, heightAt: (x: 
         return;
       }
       if (glass) {
-        ground[g] = w.ash > 0 ? glassWeight(x, z) * smoothstep(0.8, 0.92, up) : 0;
+        ground[g] = w.ash > 0 ? glassWeightFrom(w.ash, x, z) * smoothstep(0.8, 0.92, up) : 0;
         ground[g + 1] = 0;
         return;
       }

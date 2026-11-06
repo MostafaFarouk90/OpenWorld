@@ -303,8 +303,15 @@ export function buildFogWallDef(
         const feet = deps.player.feet;
         if (needsPushBackDef(def, feet, wall) && !exempt()) {
           const to = def.pushBackTo ?? PUSH_BACK_TO;
-          const back = def.axis === 'x' ? { x: wall.x - to * def.blockedSide, z: feet.z } : { x: feet.x, z: wall.z - to * def.blockedSide };
-          deps.player.teleport({ x: back.x, y: Math.max(feet.y, heightAt(back.x, back.z)) + 0.1, z: back.z });
+          let back: { x: number; z: number } | null = def.axis === 'x' ? { x: wall.x - to * def.blockedSide, z: feet.z } : { x: feet.x, z: wall.z - to * def.blockedSide };
+          // v0.8 (L1, playthrough L1): never push to a closed point. The target is clamped through containment; if the
+          // clamped point is still behind the face, containment alone holds the player (no push loop between the two).
+          const containment = services?.get('containment') as { isOpen(x: number, z: number): boolean; nearestOpen(x: number, z: number): { x: number; z: number } } | undefined;
+          if (containment && !containment.isOpen(back.x, back.z)) {
+            const q = containment.nearestOpen(back.x, back.z);
+            back = needsPushBackDef(def, q, wall) ? null : { x: q.x, z: q.z };
+          }
+          if (back) deps.player.teleport({ x: back.x, y: Math.max(feet.y, heightAt(back.x, back.z)) + 0.1, z: back.z });
         }
         if (def.cullBeyond !== undefined && group) {
           group.visible = distanceToWall(def, feet, wall) <= def.cullBeyond;

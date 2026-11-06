@@ -50,7 +50,7 @@ export function pointAt(pts: readonly XZ[], arc: number): { x: number; z: number
     const len = Math.hypot(bx - ax, bz - az);
     if (left <= len || i === pts.length - 1) {
       const t = len > 0 ? Math.min(left / len, 1) : 0;
-      return { x: ax + (bx - ax) * t, z: az + (bz - az) * t, dx: (bx - ax) / len, dz: (bz - az) / len };
+      return { x: ax + (bx - ax) * t, z: az + (bz - az) * t, dx: len > 0 ? (bx - ax) / len : 0, dz: len > 0 ? (bz - az) / len : 1 };
     }
     left -= len;
   }
