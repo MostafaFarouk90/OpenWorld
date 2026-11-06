@@ -512,6 +512,11 @@ describe('bellows-engine plugin', () => {
   );
 });
 
+/** The cradle hurtbox's radius on the live model. */
+function m0cradle(enc: { model?: { hurtboxes: { capsules: { name: string; radius: number }[] } } | null }): number {
+  return enc.model!.hurtboxes.capsules.find((c) => c.name === 'cradle')!.radius;
+}
+
 describe('bellows-engine review fixes', () => {
   it(
     'poise is full again once a bar is counted (nothing reads it as staggered through the vent)',
@@ -595,6 +600,10 @@ describe('bellows-engine review fixes', () => {
       const hit = ray();
       expect(hit?.collider).toBe(enc.bodyCollider);
       expect(hit!.distance).toBeCloseTo(6 - BELLOWS.colliderRadius, 1);
+      // It is low and inside the cradle hurtbox: a camera ray at the boiler passes over it (bolts aim at the hurtboxes).
+      expect(BELLOWS.colliderRadius).toBeLessThan(m0cradle(enc as never));
+      const high = physics.raycast({ x: c.x + 6, y: c.y + 2.2, z: c.z }, { x: -1, y: 0, z: 0 }, 6);
+      expect(high?.collider === enc.bodyCollider).toBe(false);
       winBellowsForTest({ ctx: h.ctx, step: () => h.game.fixedUpdate() });
       h.run(2);
       expect(h.dir().wreckShown).toBe(true);

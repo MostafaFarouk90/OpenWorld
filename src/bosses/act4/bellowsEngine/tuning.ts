@@ -61,9 +61,13 @@ export const BELLOWS = {
   turnRate: Math.PI / 3,
   /** Hurtbox and body radius: the engine never stands closer than this to the player (a script push is not needed: it is bolted down). */
   bodyRadius: 2.6,
-  /** The static body the player bumps into: a cylinder just outside the turntable's rim (the boiler turns, so not a box). */
-  colliderRadius: 3.1,
-  colliderHeight: 4,
+  /**
+   * The static body the player bumps into: a low cylinder at the turntable (the boiler turns, so not a box). Inside the cradle
+   * hurtbox (radius 3.0) and only cradle high, so a camera-ray aim (the Pathfinder's bolts) lands on a hurtbox, never on a
+   * collider in front of one.
+   */
+  colliderRadius: 2.9,
+  colliderHeight: 1.2,
 } as const;
 
 /** The design's 1.0 s telegraph, shared by the punch and the jet. */
