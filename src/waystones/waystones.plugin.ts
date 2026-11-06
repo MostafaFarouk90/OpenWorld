@@ -12,6 +12,7 @@ import { showToast } from './toast';
 import { WAYSTONE_LOCKS, WAYSTONE_TUNING } from './tuning';
 import type { WaystoneService } from './service';
 import { WaystoneNetwork } from './WaystoneNetwork';
+import { createNoStrandRule, stoneIsDark, strandTarget } from '../harrowmark/noStrand';
 
 const waystones: GamePlugin = {
   id: 'waystones',
@@ -68,6 +69,7 @@ const waystones: GamePlugin = {
     let pendingSave: 'waystone' | 'rest' | null = null;
     let pendingDelay = 0;
     const prompts = () => ctx.services.get('prompts');
+    const isDarkStone = (id: string): boolean => stoneIsDark(id, ctx.anchors.find(`waystone.${id}`)?.position, ctx.state);
     const net = new WaystoneNetwork({
       anchors: ctx.anchors,
       emit: (e, p) => (ctx.events.emit as (e: string, p: unknown) => void)(e, p),
@@ -98,6 +100,8 @@ const waystones: GamePlugin = {
       playerFeet: () => ctx.player.feet,
       playerYaw: () => ctx.player.facingYaw,
       teleport,
+      dark: (id) => isDarkStone(id),
+      darkRespawn: () => ctx.anchors.find(strandTarget(ctx.state)),
       log: (level, msg) => (level === 'warn' ? console.warn(msg) : console.info(msg)),
     });
     net.applyPreLit();
@@ -197,15 +201,39 @@ const waystones: GamePlugin = {
       get hostileAggro() {
         return hostileNow();
       },
-      safeTeleport: (feet, yaw) => teleport.start(feet, yaw, null, { takeover: false }),
+      safeTeleport: (feet, yaw) => {
+        const t = net.place({ feet, yaw }, 'teleport');
+        return teleport.start(t.feet, t.yaw, null, { takeover: false });
+      },
+      addPlacementRule: (rule) => net.addPlacementRule(rule),
+      setCheckpoint: (id, anchorId) => net.setCheckpoint(id, anchorId),
+      clearCheckpoint: (id) => net.clearCheckpoint(id),
+      isDark: (id) => net.isDark(id),
     };
     ctx.services.provide('waystones', service);
+    // v0.8 item 8: the occupied city never takes the player (inert before M38).
+    net.addPlacementRule(
+      createNoStrandRule({
+        flags: ctx.state,
+        anchors: ctx.anchors,
+        heightAt,
+        fallbackAnchor: WAYSTONE_TUNING.fallbackSpawnAnchor,
+        warn: (m) => console.warn(m),
+      }),
+    );
 
     ctx.persist.register({
       key: 'waystones',
       version: 1,
       serialize: () => net.serialize(),
       load: (data) => net.load(data),
+    });
+    // v0.8 item 8: the interior checkpoints (M39, M40), saved after `waystones` so its load clears them first.
+    ctx.persist.register({
+      key: 'respawn',
+      version: 1,
+      serialize: () => net.serializeCheckpoints(),
+      load: (data) => net.loadCheckpoints(data),
     });
   },
 };

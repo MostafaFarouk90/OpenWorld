@@ -1,6 +1,6 @@
 import { SafeTeleport } from './SafeTeleport';
 import { WAYSTONE_TUNING } from './tuning';
-import type { RespawnPoint, TravelResult, Vec3 } from './types';
+import type { CheckpointSave, PlacementKind, PlacementRule, PlacementTarget, RespawnPoint, TravelResult, Vec3 } from './types';
 
 export interface AnchorLike {
   id: string;
@@ -37,6 +37,10 @@ export interface NetworkPorts {
   playerYaw?(): number;
   teleport: SafeTeleport;
   log(level: 'warn' | 'info', msg: string): void;
+  /** v0.8: the stone is dark now (WAYSTONE_DARK); a dark stone is skipped for respawn and refuses travel. Absent: none. */
+  dark?(id: string): boolean;
+  /** v0.8: where a death goes when its stone is dark (the M41 camp or the refuge); absent or undefined: the fallback spawn. */
+  darkRespawn?(): AnchorLike | undefined;
 }
 
 export interface WaystoneSave {
@@ -66,6 +70,9 @@ export class WaystoneNetwork {
   private lastRest: string | null = null;
   private respawnId: string | null = null;
   private busy = false;
+  private readonly rules: PlacementRule[] = [];
+  /** Interior checkpoints in the order set (the last set wins). */
+  private readonly checkpoints = new Map<string, string>();
 
   constructor(private readonly ports: NetworkPorts) {}
 
@@ -165,16 +172,93 @@ export class WaystoneNetwork {
     return { ok: true };
   }
 
+  /**
+   * v0.8 item 8: adds a placement rule (the no-strand rule). Every respawn point, load placement and safe teleport target
+   * passes through the rules in order. Returns the undo.
+   */
+  addPlacementRule(rule: PlacementRule): () => void {
+    this.rules.push(rule);
+    return () => {
+      const i = this.rules.indexOf(rule);
+      if (i >= 0) this.rules.splice(i, 1);
+    };
+  }
+
+  /** The target after every placement rule (a throwing rule is skipped with a warning). */
+  place(target: PlacementTarget, kind: PlacementKind): PlacementTarget {
+    let t: PlacementTarget = { feet: { ...target.feet }, yaw: target.yaw };
+    for (const rule of [...this.rules]) {
+      try {
+        const next = rule(t, kind);
+        if (next && Number.isFinite(next.feet.x) && Number.isFinite(next.feet.y) && Number.isFinite(next.feet.z)) t = { feet: { ...next.feet }, yaw: next.yaw };
+      } catch (err) {
+        this.ports.log('warn', `waystones: a placement rule failed (${String(err)}); skipped`);
+      }
+    }
+    return t;
+  }
+
+  /** v0.8: while a checkpoint is set, a death respawns at its anchor (M39's stairs, M40's deep run), not at a stone. */
+  setCheckpoint(id: string, anchorId: string): void {
+    this.checkpoints.delete(id);
+    this.checkpoints.set(id, anchorId);
+  }
+
+  clearCheckpoint(id: string): void {
+    this.checkpoints.delete(id);
+  }
+
+  activeCheckpoint(): { id: string; anchorId: string } | null {
+    const all = [...this.checkpoints];
+    for (let i = all.length - 1; i >= 0; i--) if (this.ports.anchors.find(all[i][1])) return { id: all[i][0], anchorId: all[i][1] };
+    return null;
+  }
+
+  isDark(id: string): boolean {
+    return this.ports.dark?.(id) ?? false;
+  }
+
   respawnPoint(): RespawnPoint {
+    const cp = this.activeCheckpoint();
+    if (cp) {
+      const a = this.ports.anchors.find(cp.anchorId)!;
+      // A checkpoint is inside an interior (150 m up): the rules exempt it, so it is returned as set.
+      return { waystoneId: null, feet: { ...a.position }, yaw: a.yaw };
+    }
     const id = this.respawnId;
+    let p: RespawnPoint | null = null;
     if (id !== null && this.lit.has(id)) {
       const a = this.anchor(id);
-      if (a) return { waystoneId: id, feet: { ...a.position }, yaw: a.yaw };
+      if (a && !this.isDark(id)) p = { waystoneId: id, feet: { ...a.position }, yaw: a.yaw };
+      else if (a) {
+        const d = this.ports.darkRespawn?.();
+        if (d) p = { waystoneId: null, feet: { ...d.position }, yaw: d.yaw };
+      }
     }
-    const spawn = this.ports.anchors.find(WAYSTONE_TUNING.fallbackSpawnAnchor);
-    if (spawn) return { waystoneId: null, feet: { ...spawn.position }, yaw: spawn.yaw };
-    this.ports.log('warn', 'waystones: no respawn anchor, using origin');
-    return { waystoneId: null, feet: { x: 0, y: 0, z: 0 }, yaw: 0 };
+    if (!p) {
+      const spawn = this.ports.anchors.find(WAYSTONE_TUNING.fallbackSpawnAnchor);
+      if (spawn) p = { waystoneId: null, feet: { ...spawn.position }, yaw: spawn.yaw };
+    }
+    if (!p) {
+      this.ports.log('warn', 'waystones: no respawn anchor, using origin');
+      p = { waystoneId: null, feet: { x: 0, y: 0, z: 0 }, yaw: 0 };
+    }
+    const placed = this.place(p, 'respawn');
+    const moved = placed.feet.x !== p.feet.x || placed.feet.y !== p.feet.y || placed.feet.z !== p.feet.z;
+    return { waystoneId: moved ? null : p.waystoneId, feet: placed.feet, yaw: placed.yaw };
+  }
+
+  serializeCheckpoints(): CheckpointSave {
+    return { checkpoints: [...this.checkpoints].map(([id, anchorId]) => ({ id, anchorId })) };
+  }
+
+  loadCheckpoints(data: unknown): void {
+    this.checkpoints.clear();
+    const list = (data as Partial<CheckpointSave> | null)?.checkpoints;
+    if (!Array.isArray(list)) return;
+    for (const c of list) {
+      if (c && typeof c.id === 'string' && typeof c.anchorId === 'string' && c.id && c.anchorId) this.checkpoints.set(c.id, c.anchorId);
+    }
   }
 
   async respawnPlayer(): Promise<void> {
@@ -187,6 +271,7 @@ export class WaystoneNetwork {
     const dest = this.anchor(toId);
     if (!dest) return { ok: false, reason: 'unknown' };
     if (!this.lit.has(toId)) return { ok: false, reason: 'not-lit' };
+    if (this.isDark(toId)) return { ok: false, reason: 'dark' };
     if (this.busy || this.ports.teleport.active) return { ok: false, reason: 'busy' };
     const ctx = this.ports.context();
     if (ctx.dead) return { ok: false, reason: 'dead' };
@@ -242,6 +327,8 @@ export class WaystoneNetwork {
 
   /** Silent restore: sets state and flag mirrors, emits no gameplay events. */
   load(data: unknown): void {
+    // v0.8: the checkpoints are their own entry (`respawn`, saved after this one); a save without it has none.
+    this.checkpoints.clear();
     this.lit.clear();
     this.lastRest = null;
     this.respawnId = null;

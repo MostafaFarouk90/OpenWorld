@@ -54,6 +54,8 @@ export function makeMercyInteractable(
     complete(subject: MercySubject): void;
     /** Calm only: the offering the prompt shows, or null when the player can pay nothing (no prompt). */
     calmLabel?(): string | null;
+    /** v0.8: the Release cost now (after perks); default MERCY.releaseBurn. */
+    releaseCost?(): number;
   },
 ): InteractableLike {
   const calm = subject.def.mercy.verb === 'calm';
@@ -73,7 +75,7 @@ export function makeMercyInteractable(
     get priority() {
       return deps.lockOnTarget() === subject.actorId ? MERCY.lockOnPriority : 0;
     },
-    promptParams: () => mercyPromptParams(subject.def.mercy.verb, MERCY.releaseBurn, deps.calmLabel?.() ?? ''),
+    promptParams: () => mercyPromptParams(subject.def.mercy.verb, deps.releaseCost?.() ?? MERCY.releaseBurn, deps.calmLabel?.() ?? ''),
     enabled: open,
     onInteract: () => {
       // The hold may complete on the tick the window closes; check again.

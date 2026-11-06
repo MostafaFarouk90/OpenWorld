@@ -121,6 +121,8 @@ export function installM32(k: Kit): Off {
   return () => { for (const o of offs.splice(0)) o(); };
 }
 
+export const KEEPER_PERK_ID = 'keepers-understanding';
+
 /** Keeper's Understanding: the Burn decay scale. Derived from the flag every time it is asked, so a load needs nothing; bound as soon as the spells service answers. */
 export function installPerk(k: Kit): Off {
   const { ctx } = k;
@@ -130,8 +132,25 @@ export function installPerk(k: Kit): Off {
     if (ctx.services.get('mount')?.mounted()) return 1;
     return KEEPER_DECAY_SCALE;
   };
+  // v0.8 item 17: a perk, read live through the perks service; without it (a reduced boot) bound to spells as before.
+  const perks = ctx.services.get('perks');
+  if (perks) {
+    const off = perks.register({ id: KEEPER_PERK_ID, active: () => scale() !== 1, burnDecayScale: scale });
+    return () => off();
+  }
+  // Plugins set up in dependency order, so in a full boot `perks` usually appears after this director: the retry registers
+  // the perk then (dropping a spells binding made in the meantime, which the perks plugin has replaced).
   let off: Off | null = null;
+  let viaPerks = false;
   const bind = (): void => {
+    if (viaPerks) return;
+    const p = ctx.services.get('perks');
+    if (p) {
+      off?.();
+      off = p.register({ id: KEEPER_PERK_ID, active: () => scale() !== 1, burnDecayScale: scale });
+      viaPerks = true;
+      return;
+    }
     if (off) return;
     const spells = ctx.services.get('spells');
     if (spells?.setBurnDecayScale) off = spells.setBurnDecayScale(scale);

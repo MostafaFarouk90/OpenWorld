@@ -621,8 +621,9 @@ describe('Act 2 tracks (registered by A14; the old reserved-track block asserted
   const HAMMERS_REGION = { id: 'oldsmoke', track: HAMMERS.id };
 
   it('nothing is reserved any more (the Act 3 tracks are built) and both Act 2 tracks are registered', () => {
-    expect(RESERVED_TRACK_IDS).toEqual([]);
-    expect(RESERVED_TRACKS).toEqual([]);
+    // v0.8 item 19: only the two Act 4 ids are reserved, until L8 registers them.
+    expect(RESERVED_TRACK_IDS).toEqual(['dust-chant', 'seven-gates-ash']);
+    expect(RESERVED_TRACKS.map((t) => t.id)).toEqual(RESERVED_TRACK_IDS);
     expect(TRACKS_BY_ID[ASH.id]).toBe(ASH);
     expect(TRACKS_BY_ID[HAMMERS.id]).toBe(HAMMERS);
   });
@@ -757,5 +758,61 @@ describe('Act 3 boss and trial keys through the plugin', () => {
     expect(e.mixers[0].setMix.mock.calls.at(-1)![0]).toBe(WING.mixes.ending);
     e.tick(8);
     expect(e.mixers[0].setMix.mock.calls.at(-1)![0]).toBe(WING.mixes.explore);
+  });
+});
+
+describe('v0.8 item 19: Harrowmark track from story.gate.a4', () => {
+  function withFlags(e: ReturnType<typeof makeEnv>) {
+    const flags = new Map<string, unknown>();
+    const watchers: Array<() => void> = [];
+    const c = e.ctx as unknown as Record<string, unknown>;
+    c.state = { isMercied: () => false, getFlag: (k: string) => flags.get(k), getBool: (k: string) => Boolean(flags.get(k)) };
+    c.gates = { watch: (_p: unknown, cb: () => void) => (watchers.push(cb), () => {}) };
+    const set = (k: string, v: unknown): void => {
+      flags.set(k, v);
+      for (const w of watchers) w();
+    };
+    return { flags, set };
+  }
+
+  it('a reserved Act 4 id is silent: the city keeps Seven Gates after the gate', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const e = makeEnv({ regionAt: () => HARROWMARK });
+    const f = withFlags(e);
+    f.flags.set('story.gate.a4', true);
+    setupMusic(e.ctx);
+    await e.start();
+    expect(e.services.get('music')!.beat()!.bpm).toBe(SEVEN.bpm);
+    e.tick(1);
+    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('seven-gates-ash'));
+  });
+
+  it('switches to the registered Act 4 track when the gate flag is set in the city, and back on a pre-gate load', async () => {
+    const ASHY = { ...SEVEN, id: 'seven-gates-ash', bpm: 90 };
+    const reg = TRACKS_BY_ID as Record<string, typeof SEVEN>;
+    reg[ASHY.id] = ASHY;
+    try {
+      const e = makeEnv({ regionAt: () => HARROWMARK });
+      const f = withFlags(e);
+      setupMusic(e.ctx);
+      await e.start();
+      expect(e.services.get('music')!.beat()!.bpm).toBe(SEVEN.bpm);
+      f.set('story.gate.a4', true);
+      await flush();
+      e.tick(0.1);
+      e.tick(8);
+      await flush();
+      e.tick(0.1);
+      expect(e.services.get('music')!.beat()!.bpm).toBe(90);
+      f.flags.delete('story.gate.a4');
+      e.events.emit('save.loaded', undefined as never);
+      await flush();
+      e.tick(8);
+      await flush();
+      e.tick(0.1);
+      expect(e.services.get('music')!.beat()!.bpm).toBe(SEVEN.bpm);
+    } finally {
+      delete reg[ASHY.id];
+    }
   });
 });

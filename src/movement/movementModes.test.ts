@@ -20,12 +20,91 @@ describe('MOVEMENT_MODE_RULES (plan item 25)', () => {
     ['ferry', 'safePoint', 'refused', 'refused', 'hidden'],
     ['dive', 'safePoint', 'refused', 'refused', 'hidden'],
     ['haul', 'position', 'allowed', 'refused', 'follow'],
+    // v0.8 item 12.
+    ['storm', 'safePoint', 'refused', 'refused', 'follow'],
+    ['escort', 'safePoint', 'refused', 'refused', 'follow'],
+    ['scene', 'safePoint', 'refused', 'refused', 'follow'],
   ];
   it.each(rows)('%s', (mode, save, fastTravel, mount, companions) => {
     expect(MOVEMENT_MODE_RULES[mode]).toEqual({ save, fastTravel, mount, companions });
   });
-  it('has exactly the five modes', () => {
-    expect(Object.keys(MOVEMENT_MODE_RULES).sort()).toEqual(['dive', 'ferry', 'glide', 'haul', 'walk']);
+  it('has exactly the eight modes (v0.8 adds storm, escort, scene)', () => {
+    expect(Object.keys(MOVEMENT_MODE_RULES).sort()).toEqual(['dive', 'escort', 'ferry', 'glide', 'haul', 'scene', 'storm', 'walk']);
+  });
+});
+
+describe('MovementModes.push (v0.8 item 12)', () => {
+  it('a pushed mode beats the set mode, saves its safe point, and its release restores the set mode', () => {
+    const { m, emit } = make();
+    m.set('haul');
+    const off = m.push('storm', pt(4));
+    expect(m.current).toBe('storm');
+    expect(emit).toHaveBeenLastCalledWith('storm', 'haul');
+    expect(m.saveOverride()).toEqual(pt(4));
+    expect(m.rule().fastTravel).toBe('refused');
+    off();
+    expect(m.current).toBe('haul');
+    expect(emit).toHaveBeenLastCalledWith('haul', 'storm');
+    off();
+    expect(emit).toHaveBeenCalledTimes(3);
+  });
+  it('stacks scene > escort > storm whatever the push order, and releases in any order', () => {
+    const { m } = make();
+    const scene = m.push('scene', pt(3));
+    const storm = m.push('storm', pt(1));
+    const escort = m.push('escort', pt(2));
+    expect(m.current).toBe('scene');
+    expect(m.safePoint?.position.x).toBe(3);
+    scene();
+    expect(m.current).toBe('escort');
+    // A storm during an escort saves the junction.
+    expect(m.saveOverride()?.position.x).toBe(2);
+    escort();
+    expect(m.current).toBe('storm');
+    storm();
+    expect(m.current).toBe('walk');
+    expect(m.safePoint).toBeNull();
+  });
+  it('a getter is read each time, so the safe point follows its owner', () => {
+    const { m } = make();
+    let x = 1;
+    m.push('escort', () => pt(x));
+    expect(m.saveOverride()?.position.x).toBe(1);
+    x = 7;
+    expect(m.saveOverride()?.position.x).toBe(7);
+  });
+  it('a getter that returns null, a non-finite point or throws stores the live position', () => {
+    const { m, warn } = make();
+    const a = m.push('storm', () => null);
+    expect(m.saveOverride()).toBeNull();
+    a();
+    const b = m.push('storm', () => ({ position: { x: NaN, y: 0, z: 0 }, yaw: 0 }));
+    expect(m.saveOverride()).toBeNull();
+    b();
+    m.push('storm', () => {
+      throw new Error('boom');
+    });
+    expect(m.saveOverride()).toBeNull();
+    expect(warn).toHaveBeenCalled();
+  });
+  it('set keeps its meaning under a push; set refuses the pushed modes; push refuses the set modes', () => {
+    const { m, warn } = make();
+    const off = m.push('scene', pt());
+    m.set('glide', pt(5));
+    expect(m.current).toBe('scene');
+    off();
+    expect(m.current).toBe('glide');
+    expect(m.safePoint?.position.x).toBe(5);
+    m.set('storm' as never);
+    expect(m.current).toBe('glide');
+    expect(m.push('walk' as never, pt())).toBeTypeOf('function');
+    expect(m.current).toBe('glide');
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+  it('walk is unchanged with nothing pushed', () => {
+    const { m } = make();
+    expect(m.rule()).toBe(MOVEMENT_MODE_RULES.walk);
+    expect(m.saveOverride()).toBeNull();
   });
 });
 

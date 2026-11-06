@@ -16,6 +16,7 @@ import { registerPlaceholderSfx, SfxPlayer } from './SfxPlayer';
 import { loadTrackStems } from './stemLoader';
 import { HandoverMachine, planHandover } from './trackSwitch';
 import { BARLEY_AND_BRAZIER, loopSeconds, RESERVED_TRACK_IDS, TRACKS_BY_ID, type TrackDef } from './tracks';
+import { ACT4_GATE_FLAG, REGION_INFO, regionTrackNow, type RegionId } from '../region/regions';
 
 export type MusicService = GameServices['music'];
 
@@ -74,9 +75,24 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
 
   const lazy = <K extends keyof LazyServices>(name: K): LazyServices[K] | undefined =>
     (ctx.services as unknown as { get(n: string): unknown }).get(name) as LazyServices[K] | undefined;
+  /**
+   * v0.8 item 19: a region's track now (`trackWhen`: Harrowmark plays `seven-gates-ash` from `story.gate.a4`). A track
+   * that is not registered yet (a reserved id) keeps the region's static one, so the city never goes silent.
+   */
+  const liveTrack = (info: { id: string; track: string }): string => {
+    if (!Object.prototype.hasOwnProperty.call(REGION_INFO, info.id)) return info.track;
+    let now = info.track;
+    try {
+      now = regionTrackNow(info.id as RegionId, ctx.state);
+    } catch {
+      return info.track; // no flag reader (a bare test context): the static track
+    }
+    return TRACKS_BY_ID[now] ? now : info.track;
+  };
   const regionAtPlayer = (): { id: string; track: string } | null => {
     try {
-      return lazy('region')?.at(ctx.player.feet.x, ctx.player.feet.z) ?? null;
+      const info = lazy('region')?.at(ctx.player.feet.x, ctx.player.feet.z) ?? null;
+      return info ? { id: info.id, track: liveTrack(info) } : null;
     } catch {
       return null;
     }
@@ -220,6 +236,8 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
     failedUntil.clear();
     pollRegion();
   });
+  // v0.8 item 19: the act gate changes Harrowmark's track while the player stands in it (save.loaded re-polls above).
+  ctx.gates?.watch((s) => s.getBool(ACT4_GATE_FLAG), () => pollRegion(), { keys: [ACT4_GATE_FLAG] });
 
   // Boss music follows the core registry only (phases are 1-based).
   ev.on('boss.started', (e) => director.bossStarted(e.bossId, ctx.bosses?.state(e.bossId)?.phase ?? 1, gameTime));
@@ -472,7 +490,8 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
     for (const [dx, dz] of PROBE_DIRECTIONS) {
       let at: { track: string } | null = null;
       try {
-        at = region.at(x + dx * PROBE_METRES, z + dz * PROBE_METRES);
+        const info = region.at(x + dx * PROBE_METRES, z + dz * PROBE_METRES);
+        at = info ? { track: liveTrack(info) } : null;
       } catch {
         at = null;
       }

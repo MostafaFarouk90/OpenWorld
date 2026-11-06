@@ -34,9 +34,11 @@ describe('regionChips', () => {
   });
 
   it('a reserved region is closed even if a bad open list names it', () => {
-    // v0.7: the Greyfen and the Dragonspine are built; the Ashen Waste stays reserved (Act 4).
-    const c = regionChips(['ashen-waste']).find((x) => x.id === 'ashen-waste')!;
-    expect(c.closed).toBe(true);
+    // v0.8: the Ashen Waste is built (Act 4) and closed until it opens; the Caldera stays reserved and has no chip of its
+    // own (it lies wholly inside the Waste, next test), so a bad list naming it opens nothing.
+    expect(regionChips([]).find((x) => x.id === 'ashen-waste')!.closed).toBe(true);
+    expect(regionChips(['ashen-waste']).find((x) => x.id === 'ashen-waste')!.closed).toBe(false);
+    expect(regionChips(['caldera']).every((x) => x.id !== 'caldera' || x.closed)).toBe(true);
   });
 
   it('skips a region wholly inside another (the Caldera inside the Ashen Waste)', () => {

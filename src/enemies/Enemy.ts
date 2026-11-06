@@ -78,6 +78,8 @@ export interface EnemySpawn {
   options: SpawnOptions & { leash: boolean };
   /** The spawner slot this member fills (behaviour overlays key per-slot state on it: a wyrmling's chain). */
   slot?: number;
+  /** v0.8: the member's skin (enemies/skins.ts), copied to `actor.skin`. */
+  skin?: string;
 }
 
 type Phase = 'alive' | 'dying' | 'fading' | 'leaving' | 'gone';
@@ -199,6 +201,7 @@ export class Enemy {
         root: body.root,
         owner: body.owner,
         spawnTag: spawn.spawnTag,
+        skin: spawn.skin,
       });
       this.actor.data['audio'] = { material: this.def.material };
       this.actor.data['enemies'] = this.view;

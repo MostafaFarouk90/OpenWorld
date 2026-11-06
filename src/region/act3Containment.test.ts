@@ -166,14 +166,15 @@ describe('Act 3 containment: holds and regions', () => {
       expect(c.isOpen(19000, 2500)).toBe(true); // Cinderreach
     }
     expect(REGION_INFO.oldsmoke.openWhen).toEqual({ all: ['story.d03.complete'] });
-    expect(PHASE_HOLDS).toEqual({});
+    // v0.8: only the Ashen Waste carries a Phase G hold now.
+    expect(PHASE_HOLDS).toEqual({ 'ashen-waste': ['story.phase.wasteOpen'] });
     for (const id of REGION_IDS) if (id !== 'dragonspine') expect(JSON.stringify(REGION_INFO[id].openWhen)).not.toContain('dragonspineOpen');
   });
 
-  it('the Greyfen and the Dragonspine are built; the Ashen Waste and the Caldera stay reserved', () => {
+  it('the Greyfen and the Dragonspine are built; the Caldera stays reserved (v0.8 builds the Ashen Waste)', () => {
     expect(REGION_INFO.greyfen.reserved).toBe(false);
     expect(REGION_INFO.dragonspine.reserved).toBe(false);
-    expect(REGION_INFO['ashen-waste'].reserved).toBe(true);
+    expect(REGION_INFO['ashen-waste'].reserved).toBe(false);
     expect(REGION_INFO.caldera.reserved).toBe(true);
     expect(REGION_INFO.greyfen.track).toBe('peat-and-pitch');
     expect(REGION_INFO.dragonspine.track).toBe('wing-over-rime');
@@ -200,7 +201,7 @@ describe('Act 3 containment: holds and regions', () => {
 describe('Act 3 corridors: the 80 m rule', () => {
   it('every corridor centreline (shipped and Act 3) keeps 80 m from every reserved box', () => {
     const reserved = REGION_IDS.filter((id) => REGION_INFO[id].reserved);
-    expect(reserved).toEqual(['ashen-waste', 'caldera']);
+    expect(reserved).toEqual(['caldera']); // v0.8: the Waste is built; act4Containment.test.ts checks its own corridor
     for (const k of ALL_CORRIDORS) {
       for (const id of reserved) {
         const d = lineToBox(k.points, engineBox(id));
@@ -290,7 +291,9 @@ describe('Act 3 fog faces (rules only; K1 places and registers them)', () => {
     const greyfen = ACT2_FOG_WALLS.find((w) => w.id === 'fog.greyfen')!;
     expect(fogToastKey(greyfen, stateOf(PHASE_D))).toBe('region.fog.greyfen.toast');
     const shut = ACT2_FOG_WALLS.find((w) => w.id === 'fog.caldera')!;
-    expect(fogToastKey(shut, stateOf(STATES.actComplete))).toBe('region.fog.shut.toast');
+    expect(fogToastKey(shut, stateOf(STATES.phaseF))).toBe('region.fog.shut.toast');
+    // v0.8: from the Act 4 gate the shipped Waste faces say the way in is Ashgate.
+    expect(fogToastKey(shut, stateOf(STATES.actComplete))).toBe('region.fog.ashgateOnly.toast');
   });
 });
 

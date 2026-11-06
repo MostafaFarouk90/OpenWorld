@@ -34,6 +34,8 @@ import { makeLeechBody } from './fen/leech/body';
 import { makeHawkBody } from './peak/hawk/body';
 import { FEN_TUNING } from './fen/tuning';
 import { TauntRegistry, type TauntService } from './taunts';
+import type { PerksService } from '../perks/types';
+import { applyEnemySkin } from './skins';
 import { PerceptionHub, type PerceptionProvider, type Unregister } from './perceptionHook';
 
 
@@ -148,6 +150,7 @@ export class EnemyManager {
       gates: host.gates,
       rng: this.rng,
       playerLevel: () => host.services.get('progression')?.level,
+      flags: { getFlag: (k) => host.state.getBool(k, false) },
     });
     this.foes = new FoeManager({
       host,
@@ -338,8 +341,12 @@ export class EnemyManager {
         patrol: patrolForSlot(req.patrol.map((a) => a.position), req.slot, req.patrolStride),
         options: req.options,
         slot: req.slot,
+        skin: req.skin,
       };
-      enemy = new Enemy(this.env, spawn, this.makeBody(def));
+      const body = this.makeBody(def);
+      // v0.8 item 11: a skin's look over the kind's model (each body owns its materials).
+      applyEnemySkin(body, def.kind, req.skin, (m) => this.host.warn(m));
+      enemy = new Enemy(this.env, spawn, body);
     } catch (err) {
       this.host.warn(`enemies: could not spawn ${def.kind} for ${req.spawnerId}: ${String(err)}`);
       return null;
@@ -368,6 +375,7 @@ export class EnemyManager {
         lockOnTarget: () => this.host.services.get('lockOn')?.targetId ?? null,
         complete: (s) => this.completeMercy(s),
         calmLabel: () => this.calmLabel(holdId),
+        releaseCost: () => this.releaseCost(),
       }),
     );
     this.mercyRemovers.set(enemy, () => {
@@ -493,7 +501,8 @@ export class EnemyManager {
     const covered = mercyTargets(initiator, this.subjects.values());
     const events = mercyEvents(covered);
     // One charge per completed hold, however many wraiths the pulse covers (design 9.7).
-    if (initiator.def.mercy.verb === 'release') this.chargeShard(MERCY.releaseBurn, 'release');
+    // v0.8 item 17: the cost passes through the perks (the Walker Tattoo); a plain Release of foes is not a boss's.
+    if (initiator.def.mercy.verb === 'release') this.chargeShard(this.releaseCost(), 'release');
     this.applyMercy(events);
     if (initiator.def.mercy.verb === 'spare') this.sharePackSpare(initiator);
     if (initiator.def.mercy.verb === 'release') {
@@ -552,6 +561,12 @@ export class EnemyManager {
   }
 
   /** Burn and, at 75 or more, a Scar: thread 2's `useShard` when it exists, the bare Burn charge otherwise. */
+  /** v0.8: the foe Release cost after the perks (absent: the shipped MERCY.releaseBurn). */
+  releaseCost(): number {
+    const perks = (this.host.services as unknown as { get(n: string): PerksService | undefined }).get('perks');
+    return perks ? perks.releaseBurnCost(MERCY.releaseBurn, { isBoss: false }) : MERCY.releaseBurn;
+  }
+
   private chargeShard(cost: number, source: string): void {
     const spells = this.host.services.get('spells');
     if (!spells) return;

@@ -12,12 +12,13 @@ import { World } from '../world/World';
 import slice1Complete from '../save/__fixtures__/slice1-complete.json';
 import { tutorialFromQuery } from '../tutorial/tutorial.plugin';
 import {
-  ACT1_GIVERS, ACT1_JUMP_IDS, ACT1_NODE_EFFECTS, ACT1_PHASE_B_JUMP_IDS, ACT1_PREREQS, ACT1_WORLD_AFTER, Act1Jump, type Act1JumpId, GIVER_STAND_OFF,
+  ACT1_GIVERS, ACT1_JUMP_IDS, ACT1_NODE_EFFECTS, ACT1_PHASE_B_JUMP_IDS, ACT1_PREREQS, ACT1_WORLD_AFTER, Act1Jump, type Act1JumpId,
   nodeEffects, parseAct1,
 } from './act1Jump';
 import { dialogueDefs } from '../dialogue/content';
 import { heightAt } from '../terrain/heightfield';
 import { regionAt } from '../region/regionMask';
+import { NPC_TUNING } from '../npcs/tuning';
 
 describe('parseAct1', () => {
   it('accepts every Act 1 quest with &new', () => {
@@ -290,7 +291,7 @@ describe('?act1= on the real game', () => {
     expect(t.ctx.services.require('interiors').current).toBeNull();
     const giver = t.ctx.services.require('npcs').position(ACT1_GIVERS[id]);
     expect(giver, ACT1_GIVERS[id]).toBeDefined();
-    expect(Math.hypot(giver!.x - feet.x, giver!.z - feet.z), JSON.stringify({ feet, giver })).toBeLessThan(GIVER_STAND_OFF + 2);
+    expect(Math.hypot(giver!.x - feet.x, giver!.z - feet.z), JSON.stringify({ feet, giver })).toBeLessThanOrEqual(NPC_TUNING.talkRadius);
     const s = t.ctx.state;
     if (id === 'm06') expect(feet.z).toBeLessThan(1250 - 1); // south of the portcullis
     else expect(s.getFlag('story.m06.route')).toBe('bribe');

@@ -8,6 +8,7 @@ export const MAP_STRINGS_EN: Record<string, string> = {
   'map.blocked.dormant': 'This waystone is still cold. Kneel at it to rekindle it first.',
   'map.blocked.busy': 'You cannot travel right now.',
   // v0.7 (item 25): fast travel is refused while gliding, seated on the ferry or diving.
+  'map.blocked.dark': 'This waystone has gone dark. The city is held.',
   'map.blocked.movement': 'You cannot travel while gliding, riding the ferry or under water.',
   'map.markers.waystone': 'Waystone',
   'map.markers.shrine': 'Shrine',
@@ -38,6 +39,7 @@ export const MAP_STRINGS_EN: Record<string, string> = {
   // v0.7: the two Act 3 regions stop being reserved, so the map names them once they open.
   'map.region.greyfen': 'The Greyfen',
   'map.region.dragonspine': 'The Dragonspine',
+  'map.region.ashen-waste': 'The Ashen Waste',
   'map.region.unknown': 'Unknown lands',
   'map.poi.emptied': '{name} (emptied)',
   'map.poi.camp': 'Roadside camp',

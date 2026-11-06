@@ -5,7 +5,7 @@
 import { engineBox, type MapBox, type RegionId } from './regions';
 import type { LevelBand } from '../enemies/types';
 
-export type AreaId = 'greyfen' | 'dragonspine-lower' | 'dragonspine-summit';
+export type AreaId = 'greyfen' | 'dragonspine-lower' | 'dragonspine-summit' | 'harrowmark-a4';
 
 export interface AreaDef {
   region: RegionId;
@@ -15,6 +15,11 @@ export interface AreaDef {
   band: LevelBand;
   /** Levels rolled on top of a block's base level L (design 5.9: L to L + span). */
   span: number;
+  /**
+   * v0.8: a named-only area has no ground of its own (Act 4's interiors float at their doors' x, z): `areaAt` never answers
+   * it, and only a spawner (or wave set) that names it uses its band.
+   */
+  namedOnly?: boolean;
 }
 
 /** The summit box (an invented box, plan 3.1): engine x 11500..16500, z 14800..16900; south of the world edge (17000). */
@@ -24,6 +29,8 @@ export const AREA_BANDS: Readonly<Record<AreaId, AreaDef>> = {
   greyfen: { region: 'greyfen', box: null, band: { min: 18, max: 23 }, span: 5 },
   'dragonspine-lower': { region: 'dragonspine', box: null, band: { min: 20, max: 22 }, span: 2 },
   'dragonspine-summit': { region: 'dragonspine', box: SUMMIT_BOX, band: { min: 26, max: 28 }, span: 2 },
+  // v0.8 (Act 4): the Council Chamber, the Keep stairs, the Crucible Cellars and the deep run, 28 to 33, capped (Q1).
+  'harrowmark-a4': { region: 'harrowmark', box: null, band: { min: 28, max: 33 }, span: 0, namedOnly: true },
 };
 
 export const AREA_IDS = Object.keys(AREA_BANDS) as AreaId[];
@@ -35,11 +42,11 @@ export function areaAt(x: number, z: number): AreaId | null {
   if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
   for (const id of AREA_IDS) {
     const b = AREA_BANDS[id].box;
-    if (b && inBox(b, x, z)) return id;
+    if (b && !AREA_BANDS[id].namedOnly && inBox(b, x, z)) return id;
   }
   for (const id of AREA_IDS) {
     const a = AREA_BANDS[id];
-    if (!a.box && inBox(engineBox(a.region), x, z)) return id;
+    if (!a.box && !a.namedOnly && inBox(engineBox(a.region), x, z)) return id;
   }
   return null;
 }

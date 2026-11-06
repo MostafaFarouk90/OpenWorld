@@ -64,6 +64,11 @@ export interface ConditionEnv {
   warn?(msg: string): void;
 }
 
+/** The part of the companions service `setCompanionRank` uses: true when the rank rose. */
+export interface CompanionsRankPort {
+  setRank(id: string, rank: number, source?: string): boolean;
+}
+
 export interface EffectEnv {
   state: StatePort;
   quests: QuestReader & QuestActions;
@@ -73,6 +78,8 @@ export interface EffectEnv {
   inventory?: () => InventoryPort | undefined;
   npcs?: () => NpcPort | undefined;
   enemies?: () => EnemiesPort | undefined;
+  /** v0.8: the companions service's rank writer (`setCompanionRank`). */
+  companions?: () => CompanionsRankPort | undefined;
   /** id recorded as `sourceId` on loot.granted and as xp source */
   sourceId: string;
   warn?(msg: string): void;
