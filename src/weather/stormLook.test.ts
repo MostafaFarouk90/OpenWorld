@@ -113,6 +113,31 @@ describe('storm look in a scene (headless THREE)', () => {
     t.off();
   });
 
+  it('an interior that snapshots the storm and restores it on exit leaves the sky exact after the storm', () => {
+    const kind = { v: 'storm' as 'clear' | 'warning' | 'storm' };
+    const t = fakeCtx(kind);
+    const sky0 = (t.scene.background as THREE.Color).getHex();
+    const fog0 = t.fog.color.getHex();
+    t.frame(4);
+    // The interior environment's snapshot and swap.
+    const snap = { bg: t.scene.background, fog: t.fog.color.getHex(), near: t.fog.near, far: t.fog.far };
+    const interior = { current: 'test' as string | null };
+    t.services.set('interiors', interior);
+    t.scene.background = new THREE.Color(0);
+    t.fog.color.setHex(0x101010);
+    t.frame(2);
+    interior.current = null;
+    t.scene.background = snap.bg;
+    t.fog.color.setHex(snap.fog);
+    t.fog.near = snap.near;
+    t.fog.far = snap.far;
+    kind.v = 'clear';
+    t.frame(5);
+    expect((t.scene.background as THREE.Color).getHex()).toBe(sky0);
+    expect(t.fog.color.getHex()).toBe(fog0);
+    t.off();
+  });
+
   it('lets go indoors and comes back outside', () => {
     const t = fakeCtx({ v: 'storm' });
     t.frame(4);

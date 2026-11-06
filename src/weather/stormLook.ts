@@ -124,9 +124,9 @@ export function installStormLook(ctx: CoreContext, rt: { lookKind: WeatherKind; 
       target.near = look.fogNear;
       target.far = look.fogFar;
       target.camFar = look.cameraFar;
-      // Indoors the interior owns fog, sky and far plane: let go (the blender hands its bases back on exit).
-      if (indoors) blender.restore();
-      else blender.apply(weight);
+      // Indoors the interior owns fog, sky and lights: leave them and the blender's bases alone. The interior snapshots
+      // what this wrote and restores it on exit, so the blend carries on from there (the act3 mist's rule).
+      if (!indoors) blender.apply(weight);
       layer.update(frameTime, indoors ? 0 : look.layerAlpha);
       particles.update(cam, frameTime, indoors ? 0 : look.particles / Math.max(1, particles.count), Math.min(1, weight * 1.25) * 0.8);
       const inRange = new Set<string>();

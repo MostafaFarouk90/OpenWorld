@@ -1,0 +1,6 @@
+{
+  "fixture": "act4-l3-storm.json",
+  "by": "Act 4 L3",
+  "purpose": "carries the `weather` persistable (mid-storm clock t 300, off the rope, a shelter passed); based on act3-spine-m34.json with the player moved into the Waste. L13's generated act4 fixtures supersede it.",
+  "savedAt": "copied from act3-spine-m34.json"
+}

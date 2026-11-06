@@ -343,3 +343,17 @@ describe('weather runtime: storm mode and speed (the movement row)', () => {
     expect(r.mods.size).toBe(0);
   });
 });
+
+describe('weather runtime: the Act 4 L3 fixture', () => {
+  it('loads mid-storm, off the rope, with the last shelter as the safe point', async () => {
+    const file = (await import('../save/__fixtures__/act4/act4-l3-storm.json')).default as unknown as { entries: Record<string, { data: unknown }> };
+    const r = rig();
+    r.w.load(file.entries.weather.data);
+    const p = file.entries['player-position'].data as { x: number; y: number; z: number };
+    r.s.pos = { ...p, yaw: 0 };
+    r.run(0.1);
+    expect(r.w.state().kind).toBe('storm');
+    expect(r.modes.current).toBe('storm');
+    expect(r.modes.safePoint?.position).toEqual({ x: 10000, y: 100.05, z: 4700 });
+  });
+});

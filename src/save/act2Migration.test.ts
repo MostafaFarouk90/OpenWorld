@@ -21,6 +21,9 @@ const NAMES = Object.keys(FIXTURES).filter((k) => !k.endsWith('.meta.json')).sor
 // for the persistable coverage below, not booted one by one here.
 const ACT3_FIXTURES = import.meta.glob<Record<string, unknown>>('./__fixtures__/act3/*.json', { eager: true, import: 'default' });
 const ACT3_NAMES = Object.keys(ACT3_FIXTURES).filter((k) => !k.endsWith('.meta.json'));
+// v0.8: Act 4 fixtures (L3's `weather` carrier now, L13's `?act4=` set later): counted for the coverage below.
+const ACT4_FIXTURES = import.meta.glob<Record<string, unknown>>('./__fixtures__/act4/*.json', { eager: true, import: 'default' });
+const ACT4_NAMES = Object.keys(ACT4_FIXTURES).filter((k) => !k.endsWith('.meta.json'));
 type Entries = Record<string, { version: number; data: unknown }>;
 
 let h: (ChapterHarness & { loaded: boolean }) | null = null;
@@ -68,6 +71,7 @@ describe('the persistables', () => {
     const inAny = new Set([
       ...NAMES.flatMap((n) => Object.keys((FIXTURES[n].entries as Entries))),
       ...ACT3_NAMES.flatMap((n) => Object.keys((ACT3_FIXTURES[n].entries as Entries))),
+      ...ACT4_NAMES.flatMap((n) => Object.keys((ACT4_FIXTURES[n].entries as Entries))),
     ]);
     // The keys an Act 1 save lacks are the ones Act 2 added: the Act 1 loads above are their no-key loads, and the
     // Phase C fixtures carry them.
