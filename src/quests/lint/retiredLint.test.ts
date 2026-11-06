@@ -32,7 +32,7 @@ describe('retiredLint', () => {
     expect(errs.join()).toMatch(/quest:r21\/o1/);
   });
   it("fails when the retired NPC's class desk is never handed on, and passes once a row takes it", () => {
-    expect(retiredLint([GAUT], []).join()).toMatch(/knight desk is still theirs/);
+    expect(retiredLint([GAUT], [], []).join()).toMatch(/knight desk is still theirs/);
     expect(retiredLint([GAUT], [], [{ classId: 'knight', npcId: 'rook', post: 'p', when: { all: ['story.m41.complete'] } }])).toEqual([]);
   });
   it("a retired vendor's shop must be closed by its VENDOR_OPEN_WHEN row", () => {
