@@ -1,6 +1,8 @@
 import * as THREE from 'three';
+import { isStruckProp } from '../actors/struckProps';
 import type { ActorId, ActorLike, ActorsLike, Vec3 } from '../vfx/ports';
 import { ACTOR_HIT, PROJECTILE } from './tuning';
+import { projectileHitShape } from '../actors/hitShapes';
 
 export interface ProjectileHost {
   actors: ActorsLike;
@@ -194,11 +196,14 @@ export class ProjectileSystem {
     let bestD = Infinity;
     for (const a of this.host.actors.all()) {
       if (a.id === s.casterId || a.dead || !a.hittable || s.passed.has(a.id) || friendly(s.casterTeam, a.team)) continue;
-      if (s.hostileOnly && a.team !== 'hostile') continue;
+      // hostileOnly still takes a struck prop (a boss's valve or gong: src/actors/struckProps.ts).
+      if (s.hostileOnly && a.team !== 'hostile' && !isStruckProp(a)) continue;
       a.worldPosition(pos);
+      // A wide actor (a boss on a turntable) has its own cylinder: src/actors/hitShapes.ts.
+      const shape = projectileHitShape(a.kind) ?? ACTOR_HIT;
       const d = Math.hypot(pos.x - x, pos.z - z);
-      if (d > ACTOR_HIT.radius + s.radius) continue;
-      if (y < pos.y - s.radius || y > pos.y + ACTOR_HIT.height + s.radius) continue;
+      if (d > shape.radius + s.radius) continue;
+      if (y < pos.y - s.radius || y > pos.y + shape.height + s.radius) continue;
       if (d < bestD) { bestD = d; best = a; }
     }
     return best;

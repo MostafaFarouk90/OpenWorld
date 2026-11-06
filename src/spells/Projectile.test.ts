@@ -182,6 +182,34 @@ describe('ProjectileSystem pierce, hostileOnly and the shared host', () => {
     run(s.ps, 2);
     expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'e' });
   });
+  it('hostileOnly still hits a neutral struck prop (a boss valve), never a neutral creature', () => {
+    const s = setup();
+    s.actors.add(new FakeActor('beast', 'neutral', 0, 3));
+    const valve = new FakeActor('valve', 'neutral', 0, 6);
+    valve.kind = 'bellows-valve';
+    s.actors.add(valve);
+    s.ps.launch(s.base({ hostileOnly: true }));
+    run(s.ps, 2);
+    expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'valve' });
+  });
+  it('a wide actor (the Bellows-Engine) is struck at its own cylinder, before the collider round it ends the bolt', () => {
+    // The engine stands at z 10 with a static body 2.9 m round it; its hit cylinder is 3.0 m.
+    const s = setup({ rayCast: (o: any, d: any, m: number) => (o.z < 7.1 && o.z + d.z * m >= 7.1 ? { point: { x: 0, y: 1, z: 7.1 } } : null) });
+    const engine = new FakeActor('engine', 'hostile', 0, 10);
+    engine.kind = 'bellows-engine';
+    s.actors.add(engine);
+    s.ps.launch(s.base({ hostileOnly: true, speed: 55 }));
+    run(s.ps, 1);
+    expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'engine' });
+    expect(s.hits[0].point.z).toBeLessThan(7.4);
+  });
+  it('an ordinary actor keeps the person-sized cylinder: a bolt 1 m to its side flies past', () => {
+    const s = setup();
+    s.actors.add(new FakeActor('e', 'hostile', 1.0, 6));
+    s.ps.launch(s.base({ radius: 0.12 }));
+    run(s.ps, 2.5);
+    expect(s.hits.map((h) => h.kind)).toEqual(['expired']);
+  });
   it('clear(true) drops projectiles without calling back', () => {
     const s = setup();
     s.ps.launch(s.base());
