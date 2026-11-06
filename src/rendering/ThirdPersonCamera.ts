@@ -66,10 +66,17 @@ export class ThirdPersonCamera {
    * collider the raycast ignores). Set by the world; null leaves only the physics raycast.
    */
   characters: ((visit: (x: number, y: number, z: number) => void) => void) | null = null;
+  /**
+   * Act 4 (L2): 0 while the camera has its clear distance, rising to 1 as a wall pushes it to `CAMERA.nearFadeFull` m from the
+   * orbit point. The world fades the player's mesh by it, so a camera stopped at a wall never shows the inside of the head.
+   */
+  nearFade = 0;
   private distance: number = CAMERA.distance;
   private readonly target = new THREE.Vector3();
   private readonly offset = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
+  private readonly side = new THREE.Vector3();
+  private readonly rayOrigin = new THREE.Vector3();
 
   private readonly stack: Entry[] = [];
   private from: Source = { kind: 'follow' };
@@ -263,17 +270,47 @@ export class ThirdPersonCamera {
       Math.cos(this.yaw) * Math.cos(this.pitch),
     );
 
-    let dist = this.distance + this.mountDistance;
-    const hit = this.physics.raycast(this.target, this.offset, dist + CAMERA.collisionMargin, this.ignore);
-    if (hit) dist = hit.distance - CAMERA.collisionMargin;
+    const want = this.distance + this.mountDistance;
+    let dist = want;
+    const hit = this.wallDistance(want + CAMERA.collisionMargin);
+    if (hit !== null) dist = hit - CAMERA.collisionMargin;
     if (this.characters) dist = Math.min(dist, this.characterClearance(dist));
-    // Never inside the player: a wall right behind them is clipped instead.
-    dist = Math.max(dist, Math.min(CAMERA.minClearDistance, this.distance + this.mountDistance));
+    // Act 4 (L2): never past a wall. The old floor (minClearDistance) pushed the camera back out through a wall right behind
+    // the player; now it stops at the wall, down to just over the near plane, lifts toward an over-the-head view and fades
+    // the player's mesh (`nearFade`).
+    dist = Math.max(dist, Math.min(CAMERA.nearWallMin, want));
+    const span = CAMERA.minClearDistance - CAMERA.nearWallMin;
+    const close = dist < CAMERA.minClearDistance ? Math.min(1, (CAMERA.minClearDistance - dist) / span) : 0;
+    this.nearFade = dist < CAMERA.minClearDistance ? Math.min(1, (CAMERA.minClearDistance - dist) / (CAMERA.minClearDistance - CAMERA.nearFadeFull)) : 0;
 
     this.followPos.copy(this.target).addScaledVector(this.offset, dist);
+    if (close > 0) {
+      // Lift only as far as the space above the camera allows (a low ceiling in the deep run).
+      let lift = close * CAMERA.nearWallLift;
+      const up = this.physics.raycast(this.followPos, this.tmp.set(0, 1, 0), lift + CAMERA.collisionMargin, this.ignore);
+      if (up) lift = Math.max(0, Math.min(lift, up.distance - CAMERA.collisionMargin));
+      this.followPos.y += lift;
+    }
     this.camera.position.copy(this.followPos);
     this.camera.lookAt(this.target);
     this.applyBlend(frameTime);
+  }
+
+  /**
+   * The nearest wall along the camera ray: the centre ray from the orbit point plus two rays offset sideways by
+   * `CAMERA.sideRayOffset` (Act 4, L2), so a corner met at a glancing angle cannot slip between them. Null when none hits.
+   */
+  private wallDistance(max: number): number | null {
+    const centre = this.physics.raycast(this.target, this.offset, max, this.ignore);
+    let best = centre ? centre.distance : null;
+    // The horizontal right vector of the view (perpendicular to the ray's heading).
+    this.side.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw)).multiplyScalar(CAMERA.sideRayOffset);
+    for (const s of [1, -1]) {
+      this.rayOrigin.copy(this.target).addScaledVector(this.side, s);
+      const h = this.physics.raycast(this.rayOrigin, this.offset, max, this.ignore);
+      if (h && (best === null || h.distance < best)) best = h.distance;
+    }
+    return best;
   }
 
   /** The distance along the camera ray (from `target` along `offset`) to the first character cylinder, less a margin; `max` if none. */
@@ -296,10 +333,23 @@ export class ThirdPersonCamera {
       const c = px * px + pz * pz - r * r;
       const disc = b * b - a * c;
       if (disc < 0) return;
-      const t = (-b - Math.sqrt(disc)) / a;
+      const t0 = (-b - Math.sqrt(disc)) / a;
+      const t1 = (-b + Math.sqrt(disc)) / a;
+      // Act 4 (L2): the ray is inside the cylinder's footprint over [t0, t1]; it meets the body where that span also lies within
+      // the body's height. (The y range used to be checked at t0 only, so a ray entering above the head and leaving through the
+      // body was missed.)
+      const lo = fy - 0.1;
+      const hi = fy + CAMERA.characterHeight;
+      let t = t0;
+      if (Math.abs(dy) < 1e-9) {
+        if (oy < lo || oy > hi) return;
+      } else {
+        const ta = (lo - oy) / dy;
+        const tb = (hi - oy) / dy;
+        t = Math.max(t0, Math.min(ta, tb));
+        if (t > Math.min(t1, Math.max(ta, tb))) return;
+      }
       if (t <= 0 || t >= best + CAMERA.collisionMargin) return;
-      const y = oy + dy * t;
-      if (y < fy - 0.1 || y > fy + CAMERA.characterHeight) return;
       // Too close to be pulled in front of: the minimum clear distance would put the camera inside it anyway, so a character
       // standing right behind the player is left alone (the camera then sits behind it, outside its body).
       if (t - CAMERA.collisionMargin < CAMERA.minClearDistance) return;

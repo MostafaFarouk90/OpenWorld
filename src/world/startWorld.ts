@@ -3,6 +3,7 @@ import { COMBAT, KNIGHT, TERRAIN, WORLD } from '../config/constants';
 import { GameLoop } from '../core/GameLoop';
 import { Renderer } from '../rendering/Renderer';
 import { ThirdPersonCamera } from '../rendering/ThirdPersonCamera';
+import { NearFade } from '../rendering/nearFade';
 import { PhysicsWorld } from '../physics/PhysicsWorld';
 import { InputManager } from '../input/InputManager';
 import { TerrainManager } from '../terrain/TerrainManager';
@@ -67,6 +68,7 @@ export async function startWorld(container: HTMLElement): Promise<void> {
   const input = new InputManager(renderer.renderer.domElement);
   const followCamera = new ThirdPersonCamera(camera, input, physics, world.player.controller.collider);
   const cameraForward = new THREE.Vector3();
+  const playerFade = new NearFade();
   container.style.position ||= 'relative'; // HUD slots are positioned against it
   game = new Game({
     scene,
@@ -157,7 +159,11 @@ export async function startWorld(container: HTMLElement): Promise<void> {
       ready.fixedUpdate();
     },
     render(alpha, frameTime) {
-      ready.render(alpha, frameTime, () => followCamera.update(world.player.feet, frameTime));
+      ready.render(alpha, frameTime, () => {
+        followCamera.update(world.player.feet, frameTime);
+        // Act 4 (L2): a wall holding the camera close fades the player instead of showing the inside of the head.
+        playerFade.apply(world.player.mesh, followCamera.overridden ? 0 : followCamera.nearFade);
+      });
       damageNumbers.update(frameTime);
       terrain.update(camera.position);
       followSun(sun, world.player.feet);
