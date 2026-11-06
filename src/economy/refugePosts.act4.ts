@@ -40,7 +40,7 @@ export const ACT4_VENDOR_OPEN_WHEN: Readonly<Partial<Record<VendorId, FlagCondit
  */
 export const ACT4_TRAINER_POSTS: readonly TrainerPostRow[] = [
   ...(['stane', 'pennard', 'gerta', 'ashdown'] as const).map((npcId) => ({ npcId, post: refugeTrainer(npcId), when: REFUGE_FROM })),
-  { classId: 'knight', npcId: 'rook', post: refugeTrainer('rook'), when: REFUGE_FROM, nameKey: 'npc.rook.name' },
+  { classId: 'knight', npcId: 'rook', post: refugeTrainer('rook'), when: REFUGE_FROM, nameKey: 'classes.trainer.rook' },
 ];
 
 /**
