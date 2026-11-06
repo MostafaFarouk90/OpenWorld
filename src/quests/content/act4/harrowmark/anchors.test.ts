@@ -8,7 +8,7 @@ import { blocksStreet, footprintRect } from '../../../../nav/city/blocks';
 import { NavGrid } from '../../../../nav/NavGrid';
 import { envNavObstacles } from '../../../../env/colliderNav';
 import { TILTED_ANVIL_DEF } from '../../../../interiors/harrowmark/tiltedAnvil';
-import { CRUCIBLE_DEF } from '../../../../interiors/harrowmark/act4/crucible';
+import { ACT4_HARROWMARK_INTERIORS } from '../../../../interiors/harrowmark/act4';
 import { M37_INN_ANCHORS, NEAR_ANCHORS, Q, QUEST_WORLD_ANCHORS, ROUTES } from './anchors';
 import { HARROWMARK_A4_PROPS } from './props';
 import { HARROWMARK_A4_NOTE_LIST } from './notes';
@@ -80,10 +80,10 @@ describe('the Harrowmark quest anchors', () => {
     }
   });
 
-  it('every prop and note anchor resolves (a world, near, inn or Crucible anchor)', () => {
+  it('every prop and note anchor resolves (a world, near, inn or Act 4 interior anchor)', () => {
     const known = new Set([
       ...harrowmarkA4QuestLayout([...HARROWMARK_LAYOUT.anchors, ...ACT4_LAYOUT_HM.anchors]).anchors.map((a) => a.id),
-      ...NEAR_ANCHORS.map((a) => a.id), ...CRUCIBLE_DEF.anchors.map((a) => a.id),
+      ...NEAR_ANCHORS.map((a) => a.id), ...ACT4_HARROWMARK_INTERIORS.flatMap((d) => d.anchors.map((a) => a.id)),
     ]);
     for (const id of [...HARROWMARK_A4_PROPS.map((p) => p.anchorId), ...HARROWMARK_A4_NOTE_LIST.map((n) => n.anchorId)]) expect(known.has(id), id).toBe(true);
   });

@@ -147,9 +147,11 @@ describe('the Act 4 chain on the real game', () => {
     down!.onInteract(undefined as never);
     await t.run(200);
     expect(t.svc().current).toBe('keep-stairs');
-    // The deep run is shut until the stairs are held.
+    // The deep run is shut until M40 starts (L10 PR 2: Rook's offer, after the stairs are held), not on M39 alone.
     expect(await reason(t, t.svc().transfer('deep-run', 'deep-run'))).toBe('locked');
     flags.setFlag('story.m39.complete', true);
+    expect(await reason(t, t.svc().transfer('deep-run', 'deep-run'))).toBe('locked');
+    flags.setFlag('story.m40.started', true);
     await settle(t, t.svc().transfer('deep-run', 'deep-run'));
     expect(t.svc().current).toBe('deep-run');
     // The ladder: out by the grate, outside the ring wall.

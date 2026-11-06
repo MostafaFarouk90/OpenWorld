@@ -270,6 +270,30 @@ describe('pause rules for interiors and travel', () => {
   });
 });
 
+describe('a set fought inside an interior (L10 PR 2: M39 on the Keep stairs)', () => {
+  it('runs while the player is in its own interior and waits in any other or outdoors', async () => {
+    kit.teardown();
+    const def = CINDERFORD_RAID as { interior?: string };
+    def.interior = 'keep-stairs';
+    try {
+      const interior = { current: 'keep-stairs' as string | null };
+      kit = await makeKit(physics, { interior });
+      kit.waves().start(ID);
+      kit.runSecs(8);
+      const n = kit.enemies.all().length;
+      expect(n).toBeGreaterThan(0);
+      interior.current = 'underways';
+      kit.runSecs(20);
+      expect(kit.enemies.all().length).toBe(n);
+      interior.current = null;
+      kit.runSecs(20);
+      expect(kit.enemies.all().length).toBe(n);
+    } finally {
+      delete def.interior;
+    }
+  });
+});
+
 describe('clearing', () => {
   it('spared, calmed and released members that are walking off count as cleared', () => {
     kit.waves().start(ID);

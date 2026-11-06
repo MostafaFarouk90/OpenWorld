@@ -7,6 +7,7 @@ import { R21_KEEPER } from '../../../../quests/content/act4/harrowmark/r21.quest
 import { R22_SITES } from '../../../../quests/content/act4/harrowmark/r22.quest';
 import { R23_WITNESSES } from '../../../../quests/content/act4/harrowmark/r23.quest';
 import { D07_CAPTIVE } from '../../../../quests/content/act4/harrowmark/d07.quest';
+import { M38_CASE_SCENE } from '../../../../quests/content/act4/harrowmark/m38.quest';
 import { M37_BOND_SCENE, M37_COMPANIONS, M37_END_SCENE } from '../../../../quests/content/act4/harrowmark/m37.quest';
 
 export interface TalkRow { quest: string; objective: string; tree: string; seg: string; flags?: Record<string, string | boolean> }
@@ -47,4 +48,16 @@ export const HARROWMARK_A4_TALKS: readonly TalkRow[] = [
   ...M37_COMPANIONS.map((c) => t('m37', c, M37_BOND_SCENE(c), 'scene')),
   t('m37', 'gaut', 'npc-gaut', 'a4-m37-gaut'),
   t('m37', 'toast', M37_END_SCENE, 'scene'),
+  // PR 2
+  t('m38', 'brief', 'npc-edric', 'a4-m38-brief'),
+  ...(['wystan', 'merrin', 'wenna'] as const).map((id) => t('m38', id, `npc-${id}`, `a4-m38-${id}`)),
+  t('m38', 'case', M38_CASE_SCENE, 'scene'),
+  t('m38', 'rally', 'npc-edric', 'a4-m38-rally'),
+  t('m39', 'gaut', 'npc-gaut', 'a4-m39-gaut'),
+  t('m39', 'edric', 'npc-edric', 'a4-m39-edric'),
+  t('m40', 'brief', 'npc-rook', 'a4-m40-brief'),
+  t('m41', 'edric', 'npc-edric', 'a4-m41-edric'),
+  t('m41', 'rook', 'npc-rook', 'a4-m41-rook'),
+  t('m41', 'wystan', 'npc-wystan', 'a4-m41-wystan'),
+  t('m41', 'ashgate', 'npc-edric', 'a4-m41-ashgate'),
 ];

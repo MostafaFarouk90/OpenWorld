@@ -89,7 +89,7 @@ describe('Act 4 Harrowmark interiors', () => {
       'council-chamber': 'story.m38.started',
       'crucible-cellars': 'story.d07.started',
       'keep-stairs': 'story.m38.complete',
-      'deep-run': 'story.m39.complete',
+      'deep-run': 'story.m40.started',
       'deep-run-exit': 'story.m40.started',
     });
     expect(ACT4_HARROWMARK_FLAG_BLOCKERS).toEqual({ 'crucible.arena.gate': 'story.d07.valves', 'deeprun.sluice': 'story.m40.sluice' });

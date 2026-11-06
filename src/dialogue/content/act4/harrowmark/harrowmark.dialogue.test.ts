@@ -16,6 +16,8 @@ import { R21_CHOICE } from '../../../../quests/content/act4/harrowmark/r21.quest
 import { R22_CHOICE } from '../../../../quests/content/act4/harrowmark/r22.quest';
 import { R23_CHOICE } from '../../../../quests/content/act4/harrowmark/r23.quest';
 import { HARROWMARK_A4_TALKS } from './talks';
+import { SCENE_M39_BREATH, SCENE_M40_JUNCTIONS } from './council.dialogue';
+import { SCENE_M38_BETRAYAL, SCENE_M39_FALL, SCENE_M41_CAMP } from '../../../../quests/content/act4/harrowmark/scenes';
 import { HARROWMARK_A4_NODES } from '../../../../quests/content/act4/harrowmark/pacing';
 import { HARROWMARK_A4_DIALOGUE_STRINGS, HARROWMARK_A4_EXTENSIONS, HARROWMARK_A4_NOTE_DIALOGUES, HARROWMARK_A4_TREES } from './index';
 
@@ -74,15 +76,21 @@ function worldAt(quest: string, objective: string, flags: Record<string, FlagVal
   const def = DEFS[quest]!;
   const i = def.objectives.findIndex((o) => o.id === objective);
   const base: Record<string, FlagValue> = { ...(quest === 'd07' ? { 'story.r23.crucible': true } : {}), ...flags };
-  if (i === 0) return { states: BRIEF_PARENTS[quest]!, flags: base };
-  return { states: { m35: 'completed', m36: 'completed', [quest]: 'active' }, done: { [quest]: def.objectives.slice(0, i).map((o) => o.id) }, flags: base };
+  // M39 and M41 are started by the director when the quest before them completes; their first step is current at once
+  if (i === 0 && !DIRECTOR_STARTED.has(quest)) return { states: BRIEF_PARENTS[quest]!, flags: base };
+  if (i === 0) return { states: { ...BRIEF_PARENTS[quest]!, [quest]: 'active' }, flags: base };
+  return { states: { ...(BRIEF_PARENTS[quest] ?? {}), m35: 'completed', m36: 'completed', [quest]: 'active' }, done: { [quest]: def.objectives.slice(0, i).map((o) => o.id) }, flags: base };
 }
+const PHASE_G_BEFORE_COUNCIL = ['m35', 'm36', 'r19', 'r20', 'r21', 'r22', 'r23', 'd07', 'm37'];
 const done = (...ids: string[]): Record<string, QuestState> => Object.fromEntries(ids.map((q) => [q, 'completed' as QuestState]));
 /** The quests done when each brief is first offered (each quest's start rule; R23 waits on D07's crucible flag). */
 const BRIEF_PARENTS: Record<string, Record<string, QuestState>> = {
   m35: {}, m36: done('m35'), r19: done('m35'), r22: done('m35'), r23: done('m35'), r20: done('m35', 'm36'), r21: done('m35', 'm36'),
   d07: done('m35', 'r23'), m37: done('m35', 'm36', 'r19', 'r20', 'r21', 'r22', 'r23', 'd07'),
+  m38: done(...PHASE_G_BEFORE_COUNCIL), m39: done(...PHASE_G_BEFORE_COUNCIL, 'm38'), m40: done(...PHASE_G_BEFORE_COUNCIL, 'm38', 'm39'),
+  m41: done(...PHASE_G_BEFORE_COUNCIL, 'm38', 'm39', 'm40'),
 };
+const DIRECTOR_STARTED = new Set(['m39', 'm41']);
 const npcOf = (tree: string) => (tree.startsWith('scene-') ? `scene.${tree.slice(6).replace(/-/g, '.')}` : tree.replace('npc-', ''));
 
 describe('every talk objective opens its own segment', () => {
@@ -253,6 +261,12 @@ describe('the pacing rows count the real trees', () => {
         for (const id of m) per[q.id] = (per[q.id] ?? 0) + (notes.get(id) ?? 0);
       }
     }
+    // the talks no objective names (Gaut between the waves, Edric at the three junctions) and the sequencer scenes' lines
+    const lines = (d: { steps: readonly object[] }) => d.steps.filter((x) => 'line' in x).length;
+    per.m38! += lines(SCENE_M38_BETRAYAL);
+    per.m39! += SCENE_M39_BREATH.def.nodes.length + lines(SCENE_M39_FALL);
+    per.m40! += SCENE_M40_JUNCTIONS.reduce((n, t) => n + t.def.nodes.length, 0);
+    per.m41! += lines(SCENE_M41_CAMP);
     expect(per).toEqual({ ...HARROWMARK_A4_NODES });
   });
 });

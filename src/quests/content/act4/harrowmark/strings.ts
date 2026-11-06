@@ -2,6 +2,7 @@
 // director's toasts, in the shape of Act 3's strings.ts. No literal player name and no dashes (the content tests check both).
 import { HARROWMARK_A4_PROMPTS } from './props';
 import { beatStrings } from './director/beat';
+import { HARROWMARK_A4_SCENE_STRINGS } from './scenes';
 
 interface QuestText { title: string; summary: string; o: Record<string, string> }
 
@@ -92,6 +93,39 @@ const QUEST_TEXT: Record<string, QuestText> = {
       song: 'Drum the war-song on the table', gaut: 'Find Gaut by the back stair', toast: 'Raise the last toast',
     },
   },
+  m38: {
+    title: 'The Council of Houses',
+    summary: 'The Council of Ash sits in the Great Chamber. Edric means to lay the whole case before the three Houses and take back his crown by their vote. Vey has come to the chamber too, with more men than a Regent needs.',
+    o: {
+      brief: 'Speak to Edric before the Council', enter: 'Go into the Great Council Chamber', wystan: 'Speak to Wystan in the chamber',
+      merrin: 'Speak to Merrin in the chamber', wenna: 'Speak to Wenna in the chamber', evidence: 'Lay the evidence on the table', case: 'Put the case before the Houses',
+      turn: 'Stand by Edric', fight: 'Cut down Vey\'s Footmen in the chamber', search: 'Search the chamber', rally: 'Get Edric on his feet',
+    },
+  },
+  m39: {
+    title: 'Gaut\'s Last Stand',
+    summary: 'The Keep is Vey\'s. Sir Gaut holds the stairs so the King can get away below. Clear the stair-head, shut the barricade and hold the flights with him.',
+    o: {
+      gaut: 'Speak to Sir Gaut on the top landing', stairhead: 'Clear the stair-head', barricade: 'Shut the barricade',
+      hold: 'Hold the stairs with Gaut', fall: 'Stand with Gaut', token: 'Take up what Gaut left', edric: 'Go down to the King at the stair foot',
+    },
+  },
+  m40: {
+    title: 'Flight Through the Underways',
+    summary: 'Rook knows a way under the city that Vey does not. Take Edric down through the deep run, past the hounds and the Regent\'s patrol, and up the ladder beyond the north wall.',
+    o: {
+      brief: 'Speak to Rook at the stair foot', enter: 'Go down into the deep run', den1: 'Clear the first hound den', sluice: 'Turn the sluice wheel',
+      den2: 'Clear the second hound den', out: 'Bring Edric and Rook out beyond the north wall',
+    },
+  },
+  m41: {
+    title: 'The Boy King Remembers',
+    summary: 'Outside the walls, round a fire in the dark, the ones who got out of Harrowmark gather to the King. Edric has lost his city and his oldest knight in one night. Hear him out, and find where the road goes from here.',
+    o: {
+      gather: 'Wait by the fire as the others come in', edric: 'Speak to Edric', rook: 'Speak to Rook', wystan: 'Speak to Wystan', camp: 'See to the map table and the fire',
+      search: 'Read what Edric carried out', ashgate: 'Hear where Edric means to go',
+    },
+  },
 };
 
 /** The director's toasts. */
@@ -105,7 +139,12 @@ export const HARROWMARK_A4_DIRECTOR_TEXT: Record<string, string> = {
   'harrowmark.a4.q.d07.valves': 'The vats are vented. The engine gate grinds open.',
   // the escort bars' titles (L4's EscortBar)
   'escort.a4.m35.oswin': 'The Oswin delegation', 'escort.a4.m35.halvard': 'The Halvard delegation', 'escort.a4.m35.grisel': 'The Grisel delegation',
-  'escort.a4.r20': 'The Oswin silver', 'escort.a4.r21': "Wenna's miners",
+  'escort.a4.r20': 'The Oswin silver', 'escort.a4.r21': "Wenna's miners", 'escort.a4.m40': 'The King and Rook',
+  'harrowmark.a4.q.m38.stairsOpen': 'The door behind the dais is open. The Keep stairs.',
+  'harrowmark.a4.q.m39.guard': 'Heavy boots on the last flight. The champion\'s guard is coming down.',
+  'harrowmark.a4.q.m39.oathblade': 'Gaut\'s Oathblade is yours.',
+  'harrowmark.a4.q.m39.bagFull': 'Your pack is full. Make room for Gaut\'s sword.',
+  'harrowmark.a4.q.m40.gate': 'The sluice gate is shut across the tunnel. Turn the wheel.',
   ...beatStrings('harrowmark.a4.q.r22.beat', {
     start: 'Dunstan lifts the hammer. Strike with him on the beat.', lesson: 'Draw the blade: strike on the gold cells.', real: 'Temper it: strike on the gold cells.',
     falter: 'The steel cools out of true. Heat it and strike again.', assist: 'Dunstan takes the beat and guides your arm.',
@@ -124,6 +163,6 @@ export const HARROWMARK_A4_QUEST_STRINGS: Record<string, string> = (() => {
     for (const [oid, text] of Object.entries(q.o)) out[`quest.${id}.${oid}`] = text;
   }
   for (const [k, v] of Object.entries(HARROWMARK_A4_PROMPTS)) out[`quest.prompt.a4.${k}`] = `{key} ${v}`;
-  Object.assign(out, HARROWMARK_A4_DIRECTOR_TEXT);
+  Object.assign(out, HARROWMARK_A4_DIRECTOR_TEXT, HARROWMARK_A4_SCENE_STRINGS);
   return out;
 })();

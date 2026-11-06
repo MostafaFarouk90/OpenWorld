@@ -52,6 +52,7 @@ export const NOTE_LINT_ALLOW: readonly NoteLintAllow[] = [
   { noteId: 'note-m15-map', other: 'npc:corwin', reason: 'handled by outranks (NOTES_UNDER_NPCS, tested in notesUnderNpcs.test.ts)', owner: 'K0 (shipped Act 1 and 2)' },
   { noteId: 'note-m22-stalls', other: 'npc:gerta', reason: 'handled by outranks since polish pass 3 (#144; NOTES_UNDER_NPCS, tested in notesUnderNpcs.test.ts)', owner: 'K0 (shipped Act 1 and 2)' },
   { noteId: 'note-m03-ember', other: 'use:d01-altar', reason: 'time-disjoint: the note reads only during M03, the altar is enabled only while D01 altar is current', owner: 'K0 (shipped Act 1 and 2)' },
+  { noteId: 'note-m39-token', other: 'use:m39-barricade', reason: 'time-disjoint: M39 is sequential, the barricade is used (and spent) before the token objective is current', owner: 'L10 (Act 4 Harrowmark quests)' },
 ];
 
 /** A position in a space: 'world' for layouts, the interior id for an interior's local coordinates. */

@@ -16,12 +16,27 @@ const ORRIN = M36_DELEGATE('grisel');
 export const WENNA_A4 = buildTree({
   id: 'npc-wenna',
   start: [
+    { when: at('m38', 'wenna'), seg: 'a4-m38-wenna' },
     { when: at('r21', 'report'), seg: 'a4-r21-report' },
     { when: all(qActive('m36'), not(objDone('m36', 'grisel')), not(flagIs(M36_WENNA_WORD))), seg: 'a4-m36-word' },
     { when: offer('r21'), seg: 'a4-r21-brief' },
     { when: qActive('r21'), seg: 'a4-r21-wait' },
   ],
   segments: {
+    'a4-m38-wenna': {
+      lines: [
+        WE('My father has not looked at me once. He is sitting beside Vey as if he has always sat there.'),
+        C('Orrin will vote for the King.'),
+        WE('Orrin will, if he is still breathing when the clerk calls Grisel. My father does not lose votes. He removes them.'),
+        WE('The miners are in the yard below. If it goes wrong, they will not get up these stairs in time. Nobody will.'),
+        C('Then we are on our own in here.'),
+        WE('We are. You, me, Wystan, Merrin, a boy and an old knight on a staircase.'),
+        WE('When I was small my father told me a Council was where men went to agree. I believed him for years.'),
+        C('And now?'),
+        WE('Now I think it is where men go to find out who has the most swords in the room. Stay near Edric. Whatever happens, stay near him.'),
+      ],
+    },
+
     'a4-m36-word': {
       lines: [
         WE('You are going to Orrin. I can see it on you. He is frightened, not bought: my father holds his sister\'s house over his head.'),
@@ -129,7 +144,7 @@ export const TOBB_A4 = buildTree({
 
 export const GAUT_A4 = buildTree({
   id: 'npc-gaut',
-  start: [{ when: at('m37', 'gaut'), seg: 'a4-m37-gaut' }],
+  start: [{ when: at('m39', 'gaut'), seg: 'a4-m39-gaut' }, { when: at('m37', 'gaut'), seg: 'a4-m37-gaut' }],
   segments: {
     'a4-m37-gaut': {
       lines: [
@@ -140,6 +155,17 @@ export const GAUT_A4 = buildTree({
         G('I will not be in the hall. My knees will not climb those stairs fast enough if it goes wrong, and you will need to be fast.'),
         G('So I will say it now, while I can. Whatever comes, I am proud of you. That is all. Go back to your supper.'),
         C('Thank you, Gaut.'),
+      ],
+    },
+    'a4-m39-gaut': {
+      lines: [
+        G('There you are. Rook has the King on the lower flights. They will be down and away by the time anyone thinks to look.'),
+        G('Vey\'s men are at the stair-head, and more coming up from the court. Clear the head, then help me shut the barricade on the second landing.'),
+        C('And then?'),
+        G('Then we hold. A stair is a good place to hold, lad. They can only come at us two at a time.'),
+        G('I told the King I would see him at the bottom. I may have been generous with the truth.'),
+        C('Gaut...'),
+        G('None of that. Go. I am right behind you. My knees are slow, but my sword is not.'),
       ],
     },
   },

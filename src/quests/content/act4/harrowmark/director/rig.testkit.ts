@@ -13,6 +13,8 @@ import { makeKit, type Off } from '../../../act2/director/kit';
 import type { Act4EscortDef } from '../../../../../escort/EscortEngine';
 import { HARROWMARK_LAYOUT } from '../../../../../harrowmark/harrowmark.layout';
 import { ACT4_LAYOUT_HM } from '../../../../../harrowmark/act4/act4.layout';
+import { ACT4_WORLD_LAYOUT } from '../../../../../region/act4/act4World.layout';
+import { ACT4_HARROWMARK_INTERIORS } from '../../../../../interiors/harrowmark/act4';
 import { HARROWMARK_A4_QUEST_DEFS } from '../harrowmark.content';
 import { HARROWMARK_A4_OBJECTIVE_FLAGS } from '../objectiveFlags';
 import { HARROWMARK_A4_PROPS } from '../props';
@@ -21,11 +23,15 @@ import { harrowmarkA4InteriorExtras, harrowmarkA4QuestLayout } from '../layout';
 import { installArms, installComplete, installGroupObjectives, installDoneWhenRecheck } from './generic';
 import { installEscorts } from './escorts';
 import { installCrossings, installD07, installM35, installM36, installM37, installR19, installR20, installR22 } from './quests';
+import { installM38, installM39, installM40, installM41, installScenes } from './council';
+import type { SceneDef } from '../../../../../scenes/types';
 
-const ALL = [...HARROWMARK_LAYOUT.anchors, ...ACT4_LAYOUT_HM.anchors];
+const ALL = [...HARROWMARK_LAYOUT.anchors, ...ACT4_LAYOUT_HM.anchors, ...ACT4_WORLD_LAYOUT.anchors];
 const ANCHORS = new Map<string, { x: number; z: number }>([
   ...ALL.map((a) => [a.id, { x: a.x, z: a.z }] as const),
   ...harrowmarkA4QuestLayout(ALL).anchors.map((a) => [a.id, { x: a.x, z: a.z }] as const),
+  // the Act 4 interiors in their own frame (the deep run's checkpoints are only measured against each other)
+  ...ACT4_HARROWMARK_INTERIORS.flatMap((d) => d.anchors.map((a) => [a.id, { x: a.x, z: a.z }] as const)),
   ...harrowmarkA4InteriorExtras().flatMap((d) => d.anchors.map((a) => [a.id, { x: a.x, z: a.z }] as const)),
 ]);
 export const anchorPos = (id: string): { x: number; y: number; z: number } => {
@@ -56,6 +62,7 @@ export function makeRig(opts: RigOpts = {}) {
     alive: (id: string) => standing.get(id) ?? [],
     spawnGroup: (id: string) => { enemyCalls.push(`spawn ${id}`); return [`${id}-1`]; },
     despawnGroup: (id: string) => void enemyCalls.push(`despawn ${id}`),
+    reset: (id: string) => void enemyCalls.push(`reset ${id}`),
   } as never);
 
   const trials = {
@@ -78,6 +85,48 @@ export function makeRig(opts: RigOpts = {}) {
   };
   services.provide('escortsAct4' as never, escorts as never);
 
+  /** L0's sequencer, run to the end at once: its flags written, its spawns asked of the enemies stub. */
+  const sceneDefs = new Map<string, SceneDef>();
+  const scenes = {
+    active: null as string | null,
+    played: [] as string[],
+    register(d: SceneDef) { sceneDefs.set(d.id, d); return () => void sceneDefs.delete(d.id); },
+    play(id: string) {
+      this.played.push(id);
+      for (const st of sceneDefs.get(id)?.steps ?? []) {
+        if ('flag' in st) state.setFlag(st.flag.key, st.flag.value ?? true);
+        if ('spawn' in st) enemyCalls.push(`spawn ${st.spawn}`);
+        if ('checkpoint' in st) events.emit('scene.checkpoint' as never, { id, checkpoint: st.checkpoint } as never);
+      }
+      return Promise.resolve('finished' as const);
+    },
+    skip: () => false,
+  };
+  services.provide('scenes' as never, scenes as never);
+  /** The wave director: one run at a time; the test sends `wave.cleared`. */
+  const waves = {
+    current: null as null | { defId: string; index: number },
+    starts: [] as string[],
+    start(id: string) { if (this.current) return false; this.current = { defId: id, index: 0 }; this.starts.push(id); return true; },
+    stop() { this.current = null; },
+  };
+  services.provide('waves' as never, waves as never);
+  const checkpoints = new Map<string, string>();
+  services.provide('waystones' as never, { setCheckpoint: (id: string, a: string) => void checkpoints.set(id, a), clearCheckpoint: (id: string) => void checkpoints.delete(id) } as never);
+  const bag = new Map<string, number>();
+  const tempers = new Map<string, number>();
+  let bagRoom = 99;
+  services.provide('inventory' as never, {
+    has: (id: string) => (bag.get(id) ?? 0) > 0,
+    add: (id: string, n: number) => { if (bagRoom <= 0) return 0; bag.set(id, (bag.get(id) ?? 0) + n); return n; },
+    remove: (id: string, n: number) => { const c = bag.get(id) ?? 0; if (c < n) return false; bag.set(id, c - n); return true; },
+    setTemper: (id: string, level: number) => { tempers.set(id, level); return true; },
+    equipped: () => null, equip: () => ({ ok: true }), takeGold: (n: number) => n, gold: () => opts.gold ?? 0,
+  } as never);
+  let classId = 'knight';
+  services.provide('classes' as never, { chosen: () => true, current: () => classId } as never);
+  const actorTags = new Map<string, string>();
+
   const toasts: string[] = [];
   events.on('hud.toast' as never, ((e: { textKey: string }) => void toasts.push(e.textKey)) as never);
 
@@ -88,6 +137,7 @@ export function makeRig(opts: RigOpts = {}) {
     triggers: { add: () => () => {} },
     strings: { t: (k: string) => k, register: () => () => {} },
     player,
+    actors: { get: (id: string) => (actorTags.has(id) ? { id, spawnTag: actorTags.get(id), dead: false } : undefined), all: () => [] },
   } as unknown as GameContext;
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   const offs: Off[] = [];
@@ -108,6 +158,11 @@ export function makeRig(opts: RigOpts = {}) {
   offs.push(installR22(kit, now));
   installD07(kit);
   offs.push(installM37(kit, now));
+  offs.push(...installScenes(kit));
+  installM38(kit);
+  installM39(kit);
+  installM40(kit);
+  installM41(kit);
 
   const emit = (type: string, payload: unknown = {}): void => void events.emit(type as never, payload as never);
   const step = (n = 1): void => { for (let i = 0; i < n; i++) tick(); };
@@ -116,6 +171,8 @@ export function makeRig(opts: RigOpts = {}) {
 
   const r = {
     events, state, manager, kit, tick, step, emit, dialogue, standing, enemyCalls, player, warn, toasts, trials, escorts, ctx,
+    scenes, waves, checkpoints, bag, tempers, actorTags,
+    setBagRoom: (n: number) => { bagRoom = n; }, setClass: (c: string) => { classId = c; },
     advance: (ms: number) => { clock += ms; },
     dispose: () => { for (const o of offs.splice(0)) o(); flagsOff.dispose(); warn.mockRestore(); },
     at: (anchorId: string) => { const p = anchorPos(anchorId); player.feet = { ...p }; return p; },

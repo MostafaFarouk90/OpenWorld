@@ -58,6 +58,9 @@ export interface WaveSetDef {
   restartBeat?: number;
   /** The director runs only within this many metres of the barricade; default `DIRECTOR.activeRadius`. */
   radius?: number;
+  /** L10 PR 2: the interior the set is fought in (M39's Keep stairs); it runs while the player is in that interior and
+   * pauses in any other. Without it, any interior pauses the set (the shipped rule). */
+  interior?: string;
 }
 
 export type RunPhase = 'running' | 'intermission' | 'done';

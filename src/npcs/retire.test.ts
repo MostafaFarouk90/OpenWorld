@@ -29,8 +29,8 @@ describe('absentFlags and absentFlagsFor', () => {
     expect(absentFlagsFor('x', 'r', [{ id: 'x', whenFlag: 'r' }])).toEqual(['r']);
     expect(absentFlagsFor('y', undefined, [{ id: 'x', whenFlag: 'r' }])).toEqual([]);
   });
-  it('ships with no retirement (L10 adds Gaut)', () => {
-    expect(RETIRED_NPCS).toEqual([]);
+  it('retires Aldous when the Council falls and Gaut when he falls (L10)', () => {
+    expect(RETIRED_NPCS).toEqual([{ id: 'aldous', whenFlag: 'story.m38.complete' }, { id: 'gaut', whenFlag: 'story.m39.fallen' }]);
   });
 });
 

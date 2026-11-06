@@ -8,6 +8,8 @@ import '../save/service';
 import '../waystones/service';
 import { canStage } from './canStage';
 import { SceneRunner } from './SceneRunner';
+import { installSceneSubtitles } from './subtitle';
+import { LineCards } from '../tutorial/Cards';
 import './types';
 import type { ScenesService } from './types';
 
@@ -97,6 +99,10 @@ const scenes: GamePlugin = {
         load: (data) => runner.load(data),
       }),
     );
+    // Each `scene.line` as a speaker card in the subtitle slot (L10 PR 2 carry; headless: no document, nothing drawn)
+    const doc = typeof document === 'undefined' ? null : document;
+    const hud = (ctx as { hud?: { mount(slot: string, w: { id: string; element: HTMLElement; order?: number }): () => void } }).hud;
+    if (hud) offs.push(installSceneSubtitles({ events: ctx.events, t: (k) => ctx.strings.t(k), cards: new LineCards({ doc, mount: (slot, w, order) => hud.mount(slot, { ...w, order }) }, 1) }));
     offs.push(ctx.events.on('save.loaded', () => void runner.resume()));
     offs.push(
       ctx.events.on('actor.died', (e) => {

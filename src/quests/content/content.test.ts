@@ -35,7 +35,9 @@ describe('quest content', () => {
       // Act 3 summit (K13 PR 2)
       'm31', 'm32', 'm33', 'm34', 'd06',
       // Act 4 Harrowmark (L10 PR 1)
-      'm35', 'm36', 'r19', 'r20', 'r21', 'r22', 'r23', 'd07', 'm37']);
+      'm35', 'm36', 'r19', 'r20', 'r21', 'r22', 'r23', 'd07', 'm37',
+      // Act 4 Harrowmark (L10 PR 2)
+      'm38', 'm39', 'm40', 'm41']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 

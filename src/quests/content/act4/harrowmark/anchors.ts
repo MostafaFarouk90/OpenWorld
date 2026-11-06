@@ -136,7 +136,23 @@ export const M37_INN_ANCHORS: readonly NearAnchor[] = [
   { id: `${Q}.post.gaut.inn`, near: INN, dx: -3, dz: -6.5, heading: 180, interior: true },
 ];
 
-export const NEAR_ANCHORS: readonly NearAnchor[] = [...R22_SITE_ANCHORS, ...M37_INN_ANCHORS];
+const CAMP = 'harrowmark.a4.m41.camp';
+/** The M41 camp outside the north wall (L1's anchor): the map table, the fire, two search points, and a spot for everyone the
+ * camp scene brings out of the city, on a ring 6 to 9 m out (L4's benched companions stand 2 m round the anchor). */
+export const M41_CAMP_ANCHORS: readonly NearAnchor[] = [
+  { id: `${Q}.m41.map`, near: CAMP, dx: 4, dz: 3 },
+  { id: `${Q}.m41.fire`, near: CAMP, dx: -1, dz: 5 },
+  { id: `${Q}.m41.grandfather`, near: CAMP, dx: 6, dz: -1 },
+  { id: `${Q}.m41.tunnel`, near: CAMP, dx: -9, dz: -6 },
+  { id: `${Q}.m41.edric`, near: CAMP, dx: 2, dz: 6, heading: 180 },
+  { id: `${Q}.m41.rook`, near: CAMP, dx: -3, dz: 7, heading: 180 },
+  ...['wystan', 'merrin', 'wenna', 'dunstan', 'stane', 'pennard', 'gerta', 'ashdown'].map((id, i): NearAnchor => {
+    const a = (Math.PI * (0.15 + i * 0.1)) * 2;
+    return { id: `${Q}.m41.${id}`, near: CAMP, dx: Math.round(8 * Math.cos(a) * 10) / 10, dz: Math.round(-8 * Math.sin(a) * 10) / 10 };
+  }),
+];
+
+export const NEAR_ANCHORS: readonly NearAnchor[] = [...R22_SITE_ANCHORS, ...M37_INN_ANCHORS, ...M41_CAMP_ANCHORS];
 
 /** Spawn anchors of my own groups: R21's lane watch reuses its patrol nodes; R22's guards are in R22_SITE_ANCHORS. */
 export const R21_WATCH_PATROL = [1, 2, 3, 4].map((n) => `${Q}.r21.patrol.${n}`);

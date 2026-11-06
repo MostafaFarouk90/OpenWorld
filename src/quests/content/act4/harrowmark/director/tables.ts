@@ -10,6 +10,10 @@ import { R22_ARM, R22_DOWN, R22_GROUP, R22_SITES } from '../r22.quest';
 import { R23_FORGER_DOWN, R23_FORGER_FLAG, R23_FORGER_GROUPS } from '../r23.quest';
 import { D07_ENTERED, D07_FORGE, D07_FORGE_DOWN, D07_HALLS, D07_HALLS_DOWN } from '../d07.quest';
 import { R21_WATCH_FLAG } from '../spawners';
+import { M38_CHAMBER_DOWN, M38_CHAMBER_GROUP } from '../m38.quest';
+import { M39_GUARD, M39_HELD, M39_STAIRHEAD, M39_STAIRHEAD_DOWN } from '../m39.quest';
+import { M40_DEN_DOWN, M40_DENS, M40_ENTERED } from '../m40.quest';
+import { M38_CHAMBER_SPAWNED, M39_GUARD_SPAWNED, M39_STAIRHEAD_SPAWNED } from './council';
 
 export interface Arm { quest: string; objective: string; flag: string }
 export interface GroupObjective { quest: string; objective: string; groups: readonly string[]; armFlag: string; seen: string; down: string }
@@ -39,4 +43,10 @@ export const HARROWMARK_A4_GROUPS: readonly GroupObjective[] = [
   row('r23', 'forger', R23_FORGER_GROUPS, R23_FORGER_FLAG, R23_FORGER_DOWN),
   row('d07', 'halls', D07_HALLS, D07_ENTERED, D07_HALLS_DOWN),
   row('d07', 'forge', D07_FORGE, D07_ENTERED, D07_FORGE_DOWN),
+  // PR 2: the betrayal's six, the stair head and the champion's guard (all spawned by the director), the two hound dens (live on entering the deep run)
+  row('m38', 'fight', [M38_CHAMBER_GROUP], M38_CHAMBER_SPAWNED, M38_CHAMBER_DOWN),
+  row('m39', 'stairhead', [M39_STAIRHEAD], M39_STAIRHEAD_SPAWNED, M39_STAIRHEAD_DOWN),
+  row('m39', 'hold', [M39_GUARD], M39_GUARD_SPAWNED, M39_HELD),
+  row('m40', 'den1', [M40_DENS[0]], M40_ENTERED, M40_DEN_DOWN(1)),
+  row('m40', 'den2', [M40_DENS[1]], M40_ENTERED, M40_DEN_DOWN(2)),
 ];
