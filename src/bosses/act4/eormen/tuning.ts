@@ -56,6 +56,8 @@ export const ARENA = {
   gateClearance: 4,
   /** The nave floor (local), 30 by 40 m. */
   rect: HUSK_CATHEDRAL_ARENA,
+  /** Where he drifts (local): inside the pillar rows (|x| 12.3 and out), 3 m in from the arena gate, 2.5 m short of the altar. */
+  drift: { x0: -10.5, x1: 10.5, z0: HUSK_CATHEDRAL_ARENA.z0 + 3, z1: 44 },
   abandonSeconds: 3,
   veilWidth: 4.6,
   veilHeight: 5,
@@ -80,6 +82,8 @@ export const EORMEN = {
   keepMin: 6,
   keepMax: 10,
   driftSpeed: 2.2,
+  /** Backing away, he leans this much toward the nave's middle (0: straight back), so he slides along a wall, not into a corner. */
+  centreLean: 0.7,
   /** He turns toward Cael this fast (radians a second). */
   turnRate: (2 * Math.PI) / 3,
   /** Scale of the Rogue_Hooded body (design). */
