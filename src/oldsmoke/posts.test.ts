@@ -1,3 +1,4 @@
+import { withoutAct4Rows } from '../harrowmark/act4/postRules';
 import { describe, expect, it } from 'vitest';
 import { GRISEL_HALL_DEF } from './griselHall';
 import { MINE_DEFS } from './mines';
@@ -31,7 +32,8 @@ describe('Deepgate NPC posts', () => {
   });
 
   it('comes first in POST_RULES, and no Act 1 row names a Deepgate NPC', () => {
-    expect(POST_RULES.slice(0, OLDSMOKE_POST_RULES.length)).toEqual(OLDSMOKE_POST_RULES);
+    // Act 4 (L2) puts its rows in front of Wenna's and Grisel's steward's; the Deepgate rows themselves are unchanged.
+    expect(POST_RULES.slice(0, OLDSMOKE_POST_RULES.length).map(withoutAct4Rows)).toEqual(OLDSMOKE_POST_RULES);
     const ours = new Set(OLDSMOKE_NPCS.map((n) => n.id));
     for (const r of POST_RULES.slice(OLDSMOKE_POST_RULES.length)) expect(ours.has(r.npcId), r.npcId).toBe(false);
   });

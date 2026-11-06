@@ -149,6 +149,7 @@ export function layoutInterior(def: InteriorDef, heightAt: (x: number, z: number
   for (const sk of def.sunken ?? []) {
     if (!(sk.depth > 0)) throw new Error(`Interior "${def.id}": sunken ${sk.id} needs a positive depth`);
     if (sk.roof !== undefined && !(sk.roof > -sk.depth)) throw new Error(`Interior "${def.id}": sunken ${sk.id} has its roof under its floor`);
+    if (sk.stairs && sk.roof !== undefined) throw new Error(`Interior "${def.id}": stair step ${sk.id} cannot have a roof`);
   }
   const ground = groundRange(def, heightAt);
   if (ground.max - ground.min > MAX_GROUND_RANGE) {
@@ -314,11 +315,36 @@ export function layoutInterior(def: InteriorDef, heightAt: (x: number, z: number
       blocked: [
         ...def.pillars,
         ...props.filter((p) => !p.walkable).map((p) => p.rect),
-        ...(def.sunken ?? []).filter((sk) => sk.depth > MAX_WALKABLE_PROP).map((sk) => sk.rect),
+        ...(def.sunken ?? []).filter((sk) => sk.depth > MAX_WALKABLE_PROP && !sk.stairs).map((sk) => sk.rect),
       ].map(toWorldRect),
       blockers: Object.fromEntries(def.blockers.filter((b) => !isFloorBlocker(b)).map((b) => [b.id, [toWorldRect(b.rect)]])),
       // v0.7: a closed blocker that tops out at the floor from below is floor (a bridge over a pit), walkable while closed.
       ...(def.blockers.some(isFloorBlocker) ? { bridges: Object.fromEntries(def.blockers.filter(isFloorBlocker).map((b) => [b.id, [toWorldRect(b.rect)]])) } : {}),
     },
   };
+}
+
+/**
+ * Act 4 (L2): every pair of side-by-side room cells (CELL apart) whose floors differ by more than MAX_WALKABLE_PROP while at
+ * least one of them is a stair step, as `{ x, z, rise }` at the higher cell. Empty for a well-built flight; tests assert it.
+ */
+export function stairSteps(def: InteriorDef): { x: number; z: number; rise: number }[] {
+  const stairs = (def.sunken ?? []).filter((sk) => sk.stairs);
+  if (stairs.length === 0) return [];
+  const inRoom = (x: number, z: number) => def.rooms.some((rm) => inRect(rm, x, z));
+  const floor = (x: number, z: number) => -sunkenDepthAt(def, x, z);
+  const isStair = (x: number, z: number) => sunkenAt(def, x, z)?.stairs === true;
+  const box = roomsBox(def);
+  const out: { x: number; z: number; rise: number }[] = [];
+  for (let x = box.x0 + CELL / 2; x < box.x1; x += CELL) {
+    for (let z = box.z0 + CELL / 2; z < box.z1; z += CELL) {
+      if (!inRoom(x, z)) continue;
+      for (const [nx, nz] of [[x + CELL, z], [x, z + CELL]]) {
+        if (!inRoom(nx, nz) || !(isStair(x, z) || isStair(nx, nz))) continue;
+        const rise = Math.abs(floor(x, z) - floor(nx, nz));
+        if (rise > MAX_WALKABLE_PROP + 1e-6) out.push({ x, z, rise });
+      }
+    }
+  }
+  return out;
 }

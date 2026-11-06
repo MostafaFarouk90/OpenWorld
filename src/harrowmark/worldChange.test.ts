@@ -4,7 +4,7 @@ import { createFakeCore } from '../region/testing/fakeCore';
 import { resolveLayout } from '../region/resolveLayout';
 import { BANNER_COUNT, BRAZIER_COUNT, HARROWMARK_LAYOUT } from './harrowmark.layout';
 import { glowRegistry } from '../env/glowSources';
-import { A2_FLAG, A3_FLAG, BRAZIER_FLAME_Y, BRAZIER_GLOW_KIND, buildWorldChange, FOUNTAIN, STALL_PREFIX } from './worldChange';
+import { A2_FLAG, A3_FLAG, A4_FLAG, BRAZIER_FLAME_Y, BRAZIER_GLOW_KIND, buildWorldChange, FOUNTAIN, STALL_PREFIX } from './worldChange';
 
 /** The scene's world-change groups, leaving out the closed-stall shutters (tested on their own below). */
 const changeRoots = (fc: { scene: { children: { name: string }[] } }) => fc.scene.children.filter((c) => c.name !== 'harrowmark-closed-stalls');
@@ -192,6 +192,43 @@ describe('closed market stalls (A16 final review #5)', () => {
   });
 });
 
+
+describe('Act 4 ash state on the stalls and the fountain (L2, additive)', () => {
+  const stalls = HARROWMARK_LAYOUT.structures.filter((s) => s.id.startsWith(STALL_PREFIX)).length;
+  const shut = (fc: { scene: { children: { name: string }[] } }) => fc.scene.children.filter((c) => c.name === 'harrowmark-closed-stalls');
+
+  it('shuts the stalls again and stops the fountain when Act 4 opens on an Act 3 save', () => {
+    const { fc, change } = setup(true);
+    fc.ctx.state.setFlag(A3_FLAG, true);
+    expect(change.act2.active).toBe(true);
+    fc.ctx.state.setFlag(A4_FLAG, true);
+    expect(change.act2.active).toBe(false);
+    expect(change.act2.counts()).toEqual({ fountainJets: 0, stalls: 0 });
+    expect(change.closedStalls.counts().stalls).toBe(stalls);
+    expect(shut(fc)).toHaveLength(1);
+  });
+
+  it('re-derives on a load either way, and a save without the Act 4 flag runs the fountain again', () => {
+    const { fc, change } = setup(true);
+    fc.flags.set(A3_FLAG, true);
+    fc.flags.set(A4_FLAG, true);
+    fc.fire('save.loaded');
+    expect(change.act2.active).toBe(false);
+    expect(change.closedStalls.active).toBe(true);
+    fc.flags.set(A4_FLAG, false);
+    fc.fire('save.loaded');
+    expect(change.act2.active).toBe(true);
+    expect(change.closedStalls.active).toBe(false);
+    expect(shut(fc)).toHaveLength(0);
+  });
+
+  it('keeps Act 2\'s banners and braziers up in Act 4', () => {
+    const { fc, change } = setup(true);
+    fc.ctx.state.setFlag(A3_FLAG, true);
+    fc.ctx.state.setFlag(A4_FLAG, true);
+    expect(change.counts()).toEqual({ banners: BANNER_COUNT.bastion + BANNER_COUNT.keep, braziers: BRAZIER_COUNT });
+  });
+});
 
 describe('Keep-road braziers as glow sources (additive hook for the env glow pool)', () => {
   // The registry is shared across the file's worlds, so count what this world adds.

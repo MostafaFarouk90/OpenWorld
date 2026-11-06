@@ -313,7 +313,7 @@ describe('clearing', () => {
       expect(sp.ephemeral).toBe(true);
       expect(sp.activation).toBe('manual');
       expect(sp.respawn).toBe('never');
-      expect(sp.tag).toBe('m12');
+      expect(sp.tag).toBe(sp.id.startsWith('waves.m39.') ? 'm39.waves' : 'm12'); // Act 4 (L2): M39's set has its own tag
     }
     kit.waves().start(ID);
     kit.runSecs(6);

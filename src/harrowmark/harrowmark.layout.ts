@@ -8,6 +8,8 @@ import { GATE_NAMES, gateBearing, inward, outward, polar, wallStructures, PORTCU
 import { a, numbered, open, solid, stairs } from './layout.helpers';
 import { DENSITY_LAYOUT_HM } from './density.layout';
 import { SIDE_LAYOUT_HM } from './side.layout';
+import { withOccupiedAbsent } from './act4/absent';
+import { ACT4_LAYOUT_HM } from './act4/act4.layout';
 
 export const H = (id: string) => `harrowmark.${id}`;
 
@@ -376,11 +378,13 @@ const patrols: PatrolSpec[] = PATROLS.map((p) => ({ id: p.id, loop: p.loop, poin
 
 export const HARROWMARK_LAYOUT: LayoutData = {
   // the Act 1 density pass adds its anchors, triggers and NPCs (src/harrowmark/density.layout.ts), the side jobs theirs (side.layout.ts)
-  anchors: [...anchors, ...DENSITY_LAYOUT_HM.anchors, ...SIDE_LAYOUT_HM.anchors],
+  // Act 4 (L2, additive): the doors, gate faces, checkpoints, posts and huts of Act 4's city (act4/act4.layout.ts)
+  anchors: [...anchors, ...DENSITY_LAYOUT_HM.anchors, ...SIDE_LAYOUT_HM.anchors, ...ACT4_LAYOUT_HM.anchors],
   triggers: [...triggers, ...DENSITY_LAYOUT_HM.triggers, ...SIDE_LAYOUT_HM.triggers],
   structures,
   patrols,
-  npcs: [...HARROWMARK_NPCS, ...DENSITY_LAYOUT_HM.npcs, ...SIDE_LAYOUT_HM.npcs],
+  // Act 4 (L2): the occupied city's absent table over the shipped cast.
+  npcs: [...withOccupiedAbsent([...HARROWMARK_NPCS, ...DENSITY_LAYOUT_HM.npcs, ...SIDE_LAYOUT_HM.npcs]), ...ACT4_LAYOUT_HM.npcs],
   fields: [],
 };
 

@@ -336,6 +336,8 @@ These are rigged creatures, not static props: a model only helps once someone ad
 | hathren | Hathren Quench-Tongue, the water dragon of the Mere: legless and serpentine, wet dark-teal scales with spines along the back, river weed and old net rope tangled on the horns, a pale throat, tired and wary | Idle (coiled in the shallows), Swim, Thrash in nets, Rise, Calm (head lowered) | the 4.5x procedural water wyrm (no legs), palette hathren | 4 x 34 x 5.5, head to tail tip, mostly in the water |
 
 ## T. Act 4 Ash Road, Ashgate and the Ashen Waste (added 2026-11-06 by Act 4 L1, PR 1; greybox and procedural stand-ins until these arrive)
+
+## U. Harrowmark in Act 4 (added 2026-11-06 by L2, "Build Act 4 Harrowmark and its interiors"; greybox and tinted stand-ins until these arrive)
 Each id is one file under public/assets/env (Y up, 1 unit = 1 m, base-centre pivot, front +Z). Add the size to src/env/targets.json when the file is ingested.
 
 | id | prompt | where | greybox now | size (m, w x d x h) |
@@ -347,3 +349,15 @@ Each id is one file under public/assets/env (Y up, 1 unit = 1 m, base-centre piv
 | rope-warden-hut-a | a small rope-warden's hut of timber and hides beside a gate, coils of rope and a lantern on hooks, a counter flap on the front | beside the Ashgate arch (Hild's post) (1) | none yet | 4 x 3 x 3 |
 | ashwalker-tent-a | a low ridge tent of patched grey canvas over ash-crusted poles, guy ropes weighted with slag stones, a soot-dark flap | Ashgate refuge (7) and the Walker Camp (PR 2) | `house` box | 6 x 5 x 3 |
 | camp-fire-ring-a | a refuge camp fire ring of black slag stones round a bed of embers, a cooking tripod and a blackened pot | Ashgate refuge (1) | `well` ring | 2 x 2 x 1.2 |
+
+| checkpoint-rail-a | a short barricade rail of charred timber with iron bands, a black-and-grey Regent's pennant tied to one end | six checkpoints on Harrowmark's main streets (2 each) | grey box | 2.5 x 0.6 x 1.2 |
+| pole-brazier-a | an iron pole brazier on a tripod foot, a shallow coal basket on top, soot-blackened | one per checkpoint (6) | thin box with a flame | 0.6 x 0.6 x 2.2 |
+| regent-poster-a | a nailed parchment poster with a stern grey seal and a crowned ash-tree device, corners curling | Keep road house fronts (24) | flat plane | 0.6 x 0.02 x 0.9 |
+| farm-hut-a | a small farm-ring hut of daub and thatch with a plank door | R20's two huts outside the River Gate | box | 4 x 4 x 3 |
+| farm-hut-burned-a | the same hut burned out: black stumps of walls, a fallen roof beam, ash | the huts after R20's force branch | low dark box | 4 x 4 x 1.5 |
+| council-throne-a | a heavy carved stone council throne with a high back and a worn ember-red cushion | the Great Council Chamber dais | box | 1.4 x 1.2 x 2.4 |
+| crucible-vat-a | a wide riveted iron vat on stone feet, a valve wheel on its side, crusted with slag | the Crucible Cellars (2 vats, 3 valves) | cylinder-ish box | 4 x 4 x 3 |
+| bellows-cradle-a | an iron cradle frame on rails, holding a cast drum, chains hanging | the Crucible's cradle gallery (6) | box | 2 x 3 x 2 |
+| footman-mask-a | a black cloth half-mask with a stitched grey seal, to sit over a Footman's face (attached to the head bone) | masked Footmen | none (tint only) | 0.25 x 0.2 x 0.2 |
+| footman-cloak-a | a short ash-grey cloak, ragged hem, for soot Footmen (attached to the chest bone) | soot Footmen | none (tint only) | 0.6 x 0.3 x 1.0 |
+

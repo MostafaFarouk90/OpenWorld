@@ -80,6 +80,16 @@ export const CAMERA = {
   collisionMargin: 0.2,
   /** The camera never comes closer than this to its orbit point, so a wall at the player's back cannot put it inside the body (player capsule radius 0.35). */
   minClearDistance: 1.3,
+  /**
+   * Act 4 (L2): a wall closer than minClearDistance stops the camera at the wall (never past it), down to this distance from
+   * the orbit point (just over the near plane). Inside minClearDistance the camera lifts up to `nearWallLift` m toward an
+   * over-the-head view and the player's mesh fades (`nearFade`, full at `nearFadeFull`).
+   */
+  nearWallMin: 0.35,
+  nearWallLift: 0.6,
+  nearFadeFull: 0.5,
+  /** Half the spacing of the two side rays beside the centre ray, so a corner at a glancing angle cannot slip between. */
+  sideRayOffset: 0.2,
   /** Other characters (NPCs, enemies) block the camera as upright cylinders this wide and tall. */
   characterRadius: 0.55,
   characterHeight: 2.1,
