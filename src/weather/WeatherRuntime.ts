@@ -118,6 +118,11 @@ export class WeatherRuntime implements WeatherService {
     return this._inRegion;
   }
 
+  /** The region's resolved weather (for the look's edge band), whether or not the player stands in it. */
+  get lookKind(): WeatherKind {
+    return this.regionKind;
+  }
+
   get clockTime(): number {
     return this._clock.t;
   }
@@ -128,6 +133,10 @@ export class WeatherRuntime implements WeatherService {
 
   get lastShelter(): string | null {
     return this.shelters.last;
+  }
+
+  shelterPoints(): readonly { id: string; x: number; z: number }[] {
+    return [...this.shelters.all()].map((s) => ({ id: s.id, x: s.at.x, z: s.at.z }));
   }
 
   get currentShelter(): string | null {

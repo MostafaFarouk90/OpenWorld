@@ -175,7 +175,8 @@ const waystones: GamePlugin = {
       if (c === 'cutscene') return 'cutscene';
       if (c === 'dialogue') return 'dialogue';
       if (hostileNow()) return 'in-combat';
-      if (movementRefuses()) return 'movement';
+      // v0.8 (Act 4 L3): an ash storm names itself (`map.blocked.storm`); every other refusing mode keeps 'movement'.
+      if (movementRefuses()) return ctx.services.get('movementMode')?.current === 'storm' ? 'storm' : 'movement';
       return null;
     };
 

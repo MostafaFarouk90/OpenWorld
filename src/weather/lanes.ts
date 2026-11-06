@@ -112,6 +112,10 @@ export class ShelterTracker {
     return this._last;
   }
 
+  all(): IterableIterator<ShelterLike> {
+    return this.byId.values();
+  }
+
   shelter(id: string | null): ShelterLike | null {
     return id ? this.byId.get(id) ?? null : null;
   }
