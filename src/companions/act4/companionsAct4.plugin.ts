@@ -4,6 +4,10 @@
 import type { GamePlugin } from '../../core/plugins';
 import { companionControllers } from '../companions.plugin';
 import { OneShotLines } from './oneShots';
+import '../../weather/types';
+
+/** In a storm (L3's `storm` movement mode) companions walk the rope-line right behind Cael, not on the dunes beside it. */
+export const STORM_ROPE_SLOT = { back: 1.5, side: 0 } as const;
 
 /** Flags whose rise says an event bark (each once per rise; the director's repeat window paces the rest). */
 export const ACT4_FLAG_BARKS: Readonly<Record<string, string>> = {
@@ -42,7 +46,31 @@ export default {
       speakers: () => companionControllers(),
     });
     offs.push(ctx.events.on('rest', () => lines.rested()));
-    offs.push(ctx.systems.add({ id: 'companions-act4', fixedPhase: 'rules', order: 60, fixedUpdate: (dt) => lines.tick(dt) }));
+    // A storm starting says the storm line (the director paces repeats).
+    offs.push(
+      ctx.events.on('weather.changed', ({ kind, from }) => {
+        if (kind === 'storm' && from !== 'storm') sayAll('a4.storm');
+      }),
+    );
+    let roped = false;
+    const ropeSlot = () => {
+      // the storm mode, or a storm while a higher mode (an escort) holds the mode
+      const storm = ctx.services.get('movementMode')?.current === 'storm' || ctx.services.get('weather')?.state().kind === 'storm';
+      if (storm === roped) return;
+      roped = storm;
+      for (const c of companionControllers()) c.setSlotOverride(storm ? STORM_ROPE_SLOT : null);
+    };
+    offs.push(
+      ctx.systems.add({
+        id: 'companions-act4',
+        fixedPhase: 'rules',
+        order: 60,
+        fixedUpdate: (dt) => {
+          ropeSlot();
+          lines.tick(dt);
+        },
+      }),
+    );
   },
   dispose() {
     teardown?.();

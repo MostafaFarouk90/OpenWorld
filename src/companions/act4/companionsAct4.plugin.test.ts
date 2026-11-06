@@ -10,11 +10,11 @@ import { InputManager } from '../../input/InputManager';
 import { PhysicsWorld } from '../../physics/PhysicsWorld';
 import { TerrainColliders } from '../../world/TerrainColliders';
 import { World } from '../../world/World';
-import companionsPlugin from '../companions.plugin';
+import companionsPlugin, { companionControllers } from '../companions.plugin';
 import { TOBB } from '../tobb';
 import { HROLF } from '../hrolf';
 import { GAUT_FALLEN_FLAG } from './banter';
-import act4Plugin from './companionsAct4.plugin';
+import act4Plugin, { STORM_ROPE_SLOT } from './companionsAct4.plugin';
 import { ONE_SHOT } from './oneShots';
 import { act4BarkKey } from './strings.en';
 
@@ -115,6 +115,29 @@ describe('companions-act4', () => {
     t.ctx.events.emit('rest', { waystoneId: 'x' } as never);
     t.run(120);
     expect(t.said().filter((k) => k === mourn)).toHaveLength(1);
+    t.done();
+  }, TIMEOUT);
+
+  it('a storm says the storm line once on its start', async () => {
+    const t = await boot();
+    t.ctx.events.emit('weather.changed', { kind: 'storm', from: 'warning' });
+    t.run(2);
+    expect(t.said().filter((k) => k.startsWith('companion.tobb.bark.area.a4.storm.'))).toHaveLength(1);
+    t.done();
+  }, TIMEOUT);
+
+  it('in the storm mode companions take the rope slot right behind Cael, and their own slot when it ends', async () => {
+    const t = await boot();
+    const tobb = companionControllers().find((c) => c.def.id === 'tobb')!;
+    const slot = () => (tobb as unknown as { slotOverride: unknown }).slotOverride;
+    expect(slot()).toBeNull();
+    const f = t.ctx.player.feet;
+    const release = t.ctx.services.require('movementMode').push('storm', { position: { x: f.x, y: f.y, z: f.z }, yaw: 0 });
+    t.run(2);
+    expect(slot()).toEqual(STORM_ROPE_SLOT);
+    release();
+    t.run(2);
+    expect(slot()).toBeNull();
     t.done();
   }, TIMEOUT);
 });
