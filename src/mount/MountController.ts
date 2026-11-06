@@ -29,7 +29,8 @@ export interface MountService {
   mounted(): boolean;
   /** Whistles the horse (H when it is not within reach); refused like H. */
   summon(): void;
-  dismount(reason: DismountReason): void;
+  /** `at` (v0.8, Act 4 L3): where the horse is left standing (the Ashgate post); omitted, she steps aside. */
+  dismount(reason: DismountReason, at?: Vec3): void;
   /** The horse's stamina while mounted; null when unmounted (thread 8 draws it under the Ember bar). */
   stamina(): { value: number; max: number } | null;
   /** A region speed cap (m/s) at a point, e.g. the Ashen Waste's drifts in Act 2; returns the undo. */
