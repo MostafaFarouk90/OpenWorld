@@ -200,6 +200,11 @@ describe("the Waste's interiors", () => {
     expect(crypt.z1 <= a.z0 || crypt.x0 >= a.x1).toBe(true);
   });
 
+  it('has a door prompt in and out of both interiors', async () => {
+    const { INTERIOR_STRINGS_EN } = await import('../interiors/strings.en');
+    for (const id of ['husk-cathedral', 'cinder-chapel']) for (const way of ['enter', 'exit']) expect(INTERIOR_STRINGS_EN[`interior.${way}.${id}`]).toMatch(/^\{key\} /);
+  });
+
   it("opens the chapel's door onto the shell's south face", () => {
     expect(CINDER_CHAPEL_DEF.doors[0]!.outside).toBe('waste.cinder-chapel.door');
     expect(ids).toContain('waste.cinder-chapel.door');
