@@ -1,4 +1,5 @@
 import type { NpcDef, NpcModelId } from '../npcs/types';
+import { ACT4_NPC_DEFS, ACT4_NPC_STRINGS_EN } from './act4/npcDefs';
 
 const def = (id: string, model: NpcModelId, extra: { scale?: number; tint?: number | null } = {}): NpcDef => ({
   id,
@@ -47,6 +48,8 @@ export const HARROWMARK_NPC_DEFS: NpcDef[] = [
   def('sergeant', 'knight', { tint: 0x5a6a86 }),
   def('crumb', 'rogue', { scale: 0.5, tint: 0x8a6a3a }),
   def('chandler', 'barbarian', { scale: 0.95, tint: 0x9a8a5a }),
+  // Act 4 (L2, additive): the delegates, the banner-captains, the old watchmen and Vey's checkpoint guards.
+  ...ACT4_NPC_DEFS,
 ];
 
 export const HARROWMARK_NPC_STRINGS_EN: Record<string, string> = {
@@ -79,4 +82,5 @@ export const HARROWMARK_NPC_STRINGS_EN: Record<string, string> = {
   'npc.sergeant.name': 'Watch-Sergeant Ulf Marrick',
   'npc.crumb.name': 'Crumb',
   'npc.chandler.name': 'Cedric the Chandler',
+  ...ACT4_NPC_STRINGS_EN,
 };

@@ -346,6 +346,49 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | spawn.j08.cutpurse-1 | 8108 | 1606 | 0 | 270 | spawn |
 | spawn.j08.cutpurse-2 | 8112 | 1612 | 0 | 270 | spawn |
 | j10.fire-ring | 8240 | 1668 | 0 | 270 | quest, interact |
+| harrowmark.a4.chamber.door | 8532 | 2598 | 0 | 0 | poi, door |
+| harrowmark.a4.crucible.door | 7927.7 | 1543.61 | 0 | 51.43 | poi, door |
+| harrowmark.a4.gate.south.face | 8500 | 1235 | 0 | 0 | gate, fog |
+| harrowmark.a4.gate.river.face | 9245.82 | 2170.23 | 0 | 257.14 | gate, fog |
+| harrowmark.a4.gate.northwest.face | 8168.08 | 2689.24 | 0 | 154.29 | gate, fog |
+| harrowmark.a4.gate.northeast.face | 8831.92 | 2689.24 | 0 | 205.71 | gate, fog |
+| harrowmark.a4.checkpoint.keep-road-s | 8500 | 1880 | 0 | 180 | poi, checkpoint |
+| harrowmark.a4.checkpoint.keep-road-n | 8500 | 2380 | 0 | 180 | poi, checkpoint |
+| harrowmark.a4.checkpoint.market | 8500 | 1640 | 0 | 270 | poi, checkpoint |
+| harrowmark.a4.checkpoint.guild | 8640 | 1600 | 0 | 225 | poi, checkpoint |
+| harrowmark.a4.checkpoint.river-gate | 9212 | 2162 | 0 | 257 | poi, checkpoint |
+| harrowmark.a4.checkpoint.counting | 8740 | 2000 | 0 | 270 | poi, checkpoint |
+| npc-post.vey-guard-keep-road-s-1 | 8495 | 1880 | 0 | 180 | npc-post |
+| npc-post.vey-guard-keep-road-s-2 | 8505 | 1880 | 0 | 180 | npc-post |
+| npc-post.vey-guard-keep-road-n-1 | 8495 | 2380 | 0 | 180 | npc-post |
+| npc-post.vey-guard-keep-road-n-2 | 8505 | 2380 | 0 | 180 | npc-post |
+| npc-post.vey-guard-market-1 | 8500 | 1645 | 0 | 270 | npc-post |
+| npc-post.vey-guard-market-2 | 8500 | 1635 | 0 | 270 | npc-post |
+| npc-post.vey-guard-guild-1 | 8636.46 | 1603.54 | 0 | 225 | npc-post |
+| npc-post.vey-guard-guild-2 | 8643.54 | 1596.46 | 0 | 225 | npc-post |
+| npc-post.vey-guard-river-gate-1 | 9210.88 | 2166.87 | 0 | 257 | npc-post |
+| npc-post.vey-guard-river-gate-2 | 9213.12 | 2157.13 | 0 | 257 | npc-post |
+| npc-post.vey-guard-counting-1 | 8740 | 2005 | 0 | 270 | npc-post |
+| npc-post.vey-guard-counting-2 | 8740 | 1995 | 0 | 270 | npc-post |
+| harrowmark.a4.post.wystan | 8488 | 2566 | 0 | 0 | npc-post |
+| harrowmark.a4.post.wystan.bastion | 8214 | 1738 | 0 | 0 | npc-post |
+| harrowmark.a4.post.merrin | 8780 | 1996 | 0 | 90 | npc-post |
+| harrowmark.a4.post.wenna | 8704 | 1562 | 0 | 180 | npc-post |
+| harrowmark.a4.post.edric | 8508 | 2566 | 0 | 0 | npc-post |
+| harrowmark.a4.post.grisel-steward | 9194.15 | 2158.43 | 0 | 257 | npc-post |
+| harrowmark.a4.post.aldric-cole | 8186 | 1732 | 0 | 0 | npc-post |
+| harrowmark.a4.post.wilmot-penn | 8800 | 2086 | 0 | 90 | npc-post |
+| harrowmark.a4.post.captain-hesketh | 7805.85 | 2158.43 | 0 | 270 | npc-post |
+| harrowmark.a4.post.captain-morwen | 8236 | 1730 | 0 | 0 | npc-post |
+| harrowmark.a4.post.captain-bran | 8652 | 1382 | 0 | 0 | npc-post |
+| harrowmark.a4.post.captain-tolly | 8386 | 2168 | 0 | 90 | npc-post |
+| harrowmark.a4.post.witness-barracks | 8366 | 1390 | 0 | 0 | npc-post |
+| harrowmark.a4.post.witness-gatehouse | 8522 | 1300 | 0 | 0 | npc-post |
+| harrowmark.a4.post.witness-chapel | 8382 | 2140 | 0 | 90 | npc-post |
+| harrowmark.a4.post.witness-anvil | 8232 | 1662 | 0 | 270 | npc-post |
+| harrowmark.a4.post.witness-stables | 8628 | 1386 | 0 | 0 | npc-post |
+| harrowmark.a4.r20.hut.1 | 9348.19 | 2193.59 | 0 | 257.14 | poi |
+| harrowmark.a4.r20.hut.2 | 9484.68 | 2224.75 | 0 | 257.14 | poi |
 
 ## Triggers
 

@@ -5,6 +5,7 @@ import { createHarrowmarkPlugin } from './harrowmark.plugin';
 import { HARROWMARK_LAYOUT, HARROWMARK_NPCS } from './harrowmark.layout';
 import { DENSITY_LAYOUT_HM } from './density.layout';
 import { SIDE_LAYOUT_HM } from './side.layout';
+import { ACT4_LAYOUT_HM } from './act4/act4.layout';
 import { HARROWMARK_NPC_DEFS } from './npcDefs';
 import type { HarrowmarkService } from './types';
 
@@ -43,7 +44,7 @@ describe('harrowmark plugin', () => {
     expect(registered[0].specs).toEqual(HARROWMARK_LAYOUT.npcs);
     expect(registered[0].defs).toBe(HARROWMARK_NPC_DEFS);
     // the density pass's NPCs follow thread 17's cast (src/harrowmark/density.layout.ts)
-    expect(HARROWMARK_LAYOUT.npcs).toEqual([...HARROWMARK_NPCS, ...DENSITY_LAYOUT_HM.npcs, ...SIDE_LAYOUT_HM.npcs]);
+    expect(HARROWMARK_LAYOUT.npcs).toEqual([...HARROWMARK_NPCS, ...DENSITY_LAYOUT_HM.npcs, ...SIDE_LAYOUT_HM.npcs, ...ACT4_LAYOUT_HM.npcs]);
     expect(fc.colliders.size).toBe(HARROWMARK_LAYOUT.structures.filter((s) => s.mode === 'solid').length);
     plugin.dispose?.();
   });
