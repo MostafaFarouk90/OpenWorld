@@ -10,7 +10,8 @@ import {
 } from './act4Tracks';
 import { createAct4Voices } from './act4Voices';
 import { stemPeak, synthStem } from './stemSynth';
-import { DUST_CHANT, SEVEN_GATES_ASH, SEVEN_GATES_ONE_DRUM, TRACKS_BY_ID, loopSamples, validateTrack, type TrackDef } from './tracks';
+import { regionTrackNow } from '../region/regions';
+import { DUST_CHANT, RESERVED_TRACK_IDS, SEVEN_GATES_ASH, SEVEN_GATES_ONE_DRUM, TRACKS_BY_ID, loopSamples, validateTrack, type TrackDef } from './tracks';
 
 const SR = 8000;
 
@@ -135,5 +136,20 @@ describe('Act 4 voice table', () => {
     for (const track of [DUST_CHANT, SEVEN_GATES_ASH]) {
       for (const name of Object.values(track.synth!.voices)) if (!shipped.has(name!)) expect(table[name!], name).toBeTypeOf('function');
     }
+  });
+});
+
+describe('region tracks (L0 v0.8 slots)', () => {
+  const flags = (set: readonly string[]) => ({ getFlag: (k: string) => set.includes(k) });
+  it('the Waste plays Dust Chant; Harrowmark plays Seven Gates before story.gate.a4 and the ash variant after', () => {
+    expect(regionTrackNow('ashen-waste', flags([]))).toBe('dust-chant');
+    expect(regionTrackNow('harrowmark', flags([]))).toBe('seven-gates-one-drum');
+    expect(regionTrackNow('harrowmark', null)).toBe('seven-gates-one-drum');
+    expect(regionTrackNow('harrowmark', flags(['story.gate.a4']))).toBe('seven-gates-ash');
+    for (const id of ['dust-chant', 'seven-gates-ash']) expect(TRACKS_BY_ID[id], id).toBeDefined();
+  });
+
+  it('the two Act 4 ids are no longer reserved (they are built)', () => {
+    for (const slot of ACT4_TRACK_SLOTS) expect(RESERVED_TRACK_IDS).not.toContain(slot.id);
   });
 });

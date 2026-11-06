@@ -5,7 +5,7 @@ import { ensureAct4Sfx } from './act4SfxEnsure';
 
 type Handler = (payload: never) => void;
 
-function fakeCtx(opts: { audio?: boolean } = { audio: true }) {
+function fakeCtx(opts: { audio?: boolean; weather?: 'clear' | 'warning' | 'storm' | 'throws' } = { audio: true }) {
   const handlers = new Map<string, Handler[]>();
   const registered: Array<{ key: string; loop?: boolean }> = [];
   const played: string[] = [];
@@ -25,7 +25,19 @@ function fakeCtx(opts: { audio?: boolean } = { audio: true }) {
     ['strider#1', actor('strider#1', 'waste-strider')],
   ]);
   const ctx = {
-    services: { get: (name: string) => (name === 'audio' && opts.audio ? audio : undefined) },
+    services: {
+      get: (name: string) =>
+        name === 'audio' && opts.audio
+          ? audio
+          : name === 'weather' && opts.weather
+            ? {
+                state: () => {
+                  if (opts.weather === 'throws') throw new Error('no clock');
+                  return { kind: opts.weather };
+                },
+              }
+            : undefined,
+    },
     actors: { get: (id: string) => actors.get(id) },
     player: { actor: { root: { name: 'player' } } },
     systems: { add: (s: { id: string; fixedUpdate?: (dt: number) => void }) => (systems.push(s), () => void systems.splice(systems.indexOf(s), 1)) },
@@ -88,6 +100,31 @@ describe('act4-sfx plugin', () => {
     ensureAct4Sfx('sfx.gong.last');
     expect(f.registered).toEqual([]);
     expect(f.playedAt).toEqual([]);
+  });
+
+  it('forwards the weather: onset and wind on a storm, the muffled wind in a shelter, nothing after clear', () => {
+    const f = fakeCtx({ audio: true });
+    plugin.setup(f.ctx as never);
+    f.emit('weather.changed', { kind: 'storm', from: 'warning' });
+    f.emit('shelter.entered', { id: 'waste.shelter.1' });
+    f.emit('weather.changed', { kind: 'clear', from: 'storm' });
+    expect(f.played).toEqual(['sfx.storm.onset', 'sfx.shelter.flap']);
+    expect(f.attached).toEqual(['sfx.storm.loop', 'sfx.storm.muffled']);
+  });
+
+  it('a running storm is picked up at setup and after a load from the weather service, without an onset', () => {
+    const f = fakeCtx({ audio: true, weather: 'storm' });
+    plugin.setup(f.ctx as never);
+    expect(f.attached).toEqual(['sfx.storm.loop']);
+    f.emit('save.loaded', {});
+    expect(f.attached).toEqual(['sfx.storm.loop']);
+    expect(f.played).toEqual([]);
+  });
+
+  it('a throwing weather service reads as clear', () => {
+    const f = fakeCtx({ audio: true, weather: 'throws' });
+    expect(() => plugin.setup(f.ctx as never)).not.toThrow();
+    expect(f.attached).toEqual([]);
   });
 
   it('skinOf reads a string skin and nothing else', () => {

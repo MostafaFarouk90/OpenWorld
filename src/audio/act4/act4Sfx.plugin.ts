@@ -3,7 +3,8 @@ import type { GamePlugin } from '../../core/plugins';
 import { samplesToWavUrl } from '../proceduralSounds';
 import { ACT4_SFX_KEYS, ACT4_SFX_VOLUME, act4SfxSamples, isAct4Loop, type Act4SfxKey } from './act4Sfx';
 import { setAct4SfxEnsure } from './act4SfxEnsure';
-import { Act4SfxRouter } from './act4SfxRouter';
+import { Act4SfxRouter, type StormKind } from './act4SfxRouter';
+import '../../weather/types';
 
 let teardown: (() => void) | null = null;
 /** Rendered once per key: a reload or a second Game in one page reuses the samples. */
@@ -14,7 +15,7 @@ const samples = (key: Act4SfxKey) => {
   return s;
 };
 
-/** The skin id an actor was spawned with (L0's `SpawnerDef.skin`, carried on the actor), if any. */
+/** The skin id an actor was spawned with (L0's `SpawnerDef.skin`, carried as the read-only `actor.skin`), if any. */
 export function skinOf(actor: object): string | null {
   const skin = (actor as { skin?: unknown }).skin;
   return typeof skin === 'string' ? skin : null;
@@ -97,14 +98,29 @@ const plugin: GamePlugin = {
       },
     });
     const ev = ctx.events;
+    /** The weather service's kind now; no provider (or a throwing one) is clear weather. */
+    const weatherNow = (): StormKind => {
+      try {
+        return ctx.services.get('weather')?.state().kind ?? 'clear';
+      } catch {
+        return 'clear';
+      }
+    };
+    router.restore(weatherNow());
     offs.push(
+      ev.on('weather.changed', (e) => router.weatherChanged(e)),
+      ev.on('shelter.entered', (e) => router.shelterEntered(e)),
+      ev.on('shelter.left', (e) => router.shelterLeft(e)),
       ev.on('telegraph', (e) => router.telegraph(e)),
       ev.on('actor.spawned', (e) => router.spawned({ actorId: e.actor.id, kind: e.actor.kind, skin: skinOf(e.actor) })),
       ev.on('actor.died', (e) => router.died(e)),
       ev.on('actor.despawned', (e) => router.gone(e.actorId)),
       ev.on('boss.phase', (e) => router.bossPhase(e)),
       ev.on('boss.released', (e) => router.bossReleased(e)),
-      ev.on('save.loaded', () => router.saveLoaded()),
+      ev.on('save.loaded', () => {
+        router.saveLoaded();
+        router.restore(weatherNow());
+      }),
       () => router.stopAll(),
       ctx.systems.add({
         id: 'act4-sfx',

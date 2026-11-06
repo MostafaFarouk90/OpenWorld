@@ -3,6 +3,7 @@ import { CHIME_PITCHES_HZ } from '../../music/act4Tracks';
 import { SR } from '../sfxKit';
 import { ACT4_LOOP_KEYS, ACT4_SFX_KEYS, ACT4_SFX_VOLUME, act4SfxSamples, pillarKey, type Act4SfxKey } from './act4Sfx';
 import { BOSS_PHASE_SFX_ACT4, BOSS_RELEASED_SFX_ACT4, DIED_SFX_ACT4, HUSK_SFX, LOOP_BY_KIND_ACT4, MOVE_SFX_ACT4, WEATHER_SFX } from './act4SfxEvents';
+import { makeBedSamples } from '../AmbienceBed';
 import { ASHEN_WASTE_BED_SECONDS, fillAshenWasteBed } from './ambienceAct4';
 
 const cache = new Map<string, Float32Array>();
@@ -109,5 +110,22 @@ describe('Ashen Waste bed body', () => {
     expect(Math.sqrt(rms / a.length)).toBeGreaterThan(0.01);
     expect(a).toEqual(b);
     expect(a).not.toEqual(c);
+  });
+});
+
+describe('Ashen Waste bed in AmbienceBed', () => {
+  it('renders a seamless, normalised loop of ASHEN_WASTE_BED_SECONDS', () => {
+    const sr = 8000;
+    const x = makeBedSamples('ashen-waste', sr);
+    expect(x.length).toBe(ASHEN_WASTE_BED_SECONDS * sr);
+    let peak = 0;
+    let maxStep = 0;
+    for (let i = 0; i < x.length; i++) {
+      peak = Math.max(peak, Math.abs(x[i]));
+      if (i > 0) maxStep = Math.max(maxStep, Math.abs(x[i] - x[i - 1]));
+    }
+    expect(peak).toBeGreaterThan(0.1);
+    expect(peak).toBeLessThanOrEqual(1);
+    expect(Math.abs(x[0] - x[x.length - 1])).toBeLessThanOrEqual(maxStep + 1e-6);
   });
 });
