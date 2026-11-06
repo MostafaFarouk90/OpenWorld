@@ -603,24 +603,23 @@ describe('eormen plugin', () => {
   );
 
   it(
-    'chased into a corner he slides along the wall, staying between the pillar rows and short of the altar',
+    'he holds his ground when Cael closes in, drifts toward him from afar, and never leaves the open nave',
     async () => {
       const h = await setup();
       h.start();
-      // Press him toward the west wall and the apse from several sides.
-      for (const [x, z] of [[2, 30], [4, 36], [6, 40], [-2, 44], [8, 30]] as const) {
-        for (let k = 0; k < 20; k++) {
-          const b = h.boss()!.root.position;
-          h.ctx.player.teleport({ x: b.x + (x > 0 ? 3 : -3), y: b.y - EORMEN.hover, z: b.z - 2 });
-          h.runHealed(0.25);
-        }
-        const b = h.boss()!.root.position;
-        const lx = b.x - h.local(0, 0).x;
-        const lz = b.z - h.local(0, 0).z;
-        expect(Math.abs(lx)).toBeLessThanOrEqual(ARENA.drift.x1 + 1e-6);
-        expect(lz).toBeLessThanOrEqual(ARENA.drift.z1 + 1e-6);
-        expect(lz).toBeGreaterThanOrEqual(ARENA.drift.z0 - 1e-6);
-      }
+      const b0 = h.boss()!.root.position.clone();
+      h.ctx.player.teleport({ x: b0.x + 1.5, y: b0.y - EORMEN.hover, z: b0.z - 1.5 });
+      h.runHealed(2);
+      expect(h.boss()!.root.position.distanceTo(b0)).toBeLessThan(0.01);
+      // Far off, near the west wall: he comes toward Cael but stays between the pillar rows.
+      h.at(-14, 12);
+      h.runHealed(8);
+      const b = h.boss()!.root.position;
+      const lx = b.x - h.local(0, 0).x;
+      const lz = b.z - h.local(0, 0).z;
+      expect(Math.hypot(b.x - h.ctx.player.feet.x, b.z - h.ctx.player.feet.z)).toBeLessThan(EORMEN.keepMax + 4);
+      expect(lx).toBeGreaterThanOrEqual(ARENA.drift.x0 - 1e-6);
+      expect(lz).toBeGreaterThanOrEqual(ARENA.drift.z0 - 1e-6);
       h.teardown();
     },
     T30,

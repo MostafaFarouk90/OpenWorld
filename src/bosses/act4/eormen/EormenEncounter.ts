@@ -518,28 +518,14 @@ export class EormenEncounter implements EormenHooks {
   /** He drifts to keep 6 to 10 m from Cael, on the nave floor; never while winding up a move, reeling or dying. */
   private drift(dt: number, feet: THREE.Vector3Like, dist: number): void {
     if (this.brain.state !== 'ready' && this.brain.state !== 'recover') return;
-    if (dist < 1e-3 || (dist >= EORMEN.keepMin && dist <= EORMEN.keepMax)) return;
+    // He closes to 10 m when Cael stands off, and holds his ground when Cael comes in (a boss that backs away from a blade can
+    // never be reached: the first real-game run). Close in, the swipe answers.
+    if (dist <= EORMEN.keepMax) return;
     const c = this.root.position;
     const r = this.places.rect;
-    const ux = (feet.x - c.x) / dist;
-    const uz = (feet.z - c.z) / dist;
-    let dx = ux;
-    let dz = uz;
-    if (dist < EORMEN.keepMin) {
-      // Back away, leaning toward the nave's middle so he slides along a wall instead of pinning himself in a corner.
-      const mx = (r.x0 + r.x1) / 2 - c.x;
-      const mz = (r.z0 + r.z1) / 2 - c.z;
-      const ml = Math.hypot(mx, mz) || 1;
-      dx = -ux + (mx / ml) * EORMEN.centreLean;
-      dz = -uz + (mz / ml) * EORMEN.centreLean;
-      const l = Math.hypot(dx, dz) || 1;
-      dx /= l;
-      dz /= l;
-    }
-    const want = dist < EORMEN.keepMin ? EORMEN.keepMin - dist : dist - EORMEN.keepMax;
-    const step = Math.min(EORMEN.driftSpeed * dt, want);
-    c.x = THREE.MathUtils.clamp(c.x + dx * step, r.x0, r.x1);
-    c.z = THREE.MathUtils.clamp(c.z + dz * step, r.z0, r.z1);
+    const step = Math.min(EORMEN.driftSpeed * dt, dist - EORMEN.keepMax);
+    c.x = THREE.MathUtils.clamp(c.x + ((feet.x - c.x) / dist) * step, r.x0, r.x1);
+    c.z = THREE.MathUtils.clamp(c.z + ((feet.z - c.z) / dist) * step, r.z0, r.z1);
   }
 
   private bladeTouches(at: THREE.Vector3): boolean {
