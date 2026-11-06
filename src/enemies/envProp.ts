@@ -17,6 +17,14 @@ export const HELD_PROP_ROTATION: readonly [number, number, number] = [-Math.PI /
 const libraries = new WeakMap<object, ModelLibrary>();
 
 /**
+ * Set on a test asset loader that reads the asset packs from disk but cannot load `env/` glbs by url (the headless chapter
+ * harness): its env props are absent by design, so the library keeps the fallback without the "unavailable" warning. The game's
+ * own loader never carries it, so a glb missing in the real game still warns.
+ */
+export const QUIET_ENV_PROPS = 'quietEnvProps';
+export type QuietEnvProps = { readonly [QUIET_ENV_PROPS]?: boolean };
+
+/**
  * The one library for env-pass hand-held models per asset loader (`env/<id>` files load from public/assets/env). A glb that is
  * not there resolves to null and warns once, so callers keep their procedural prop. Without a loader it has no source.
  */
@@ -24,7 +32,8 @@ export function envPropLibrary(assets: (ModelSource & object) | null | undefined
   if (!assets) return new ModelLibrary(undefined);
   let lib = libraries.get(assets);
   if (!lib || lib.isDisposed) {
-    lib = new ModelLibrary(new EnvModelSource(assets));
+    const quiet = (assets as QuietEnvProps)[QUIET_ENV_PROPS] === true;
+    lib = quiet ? new ModelLibrary(new EnvModelSource(assets), () => {}) : new ModelLibrary(new EnvModelSource(assets));
     libraries.set(assets, lib);
   }
   return lib;
