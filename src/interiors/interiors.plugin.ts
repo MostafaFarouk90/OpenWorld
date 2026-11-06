@@ -19,7 +19,7 @@ import './service';
 import { ACT2_DOOR_LOCKS, ACT2_INTERIORS } from './act2';
 import { ACT3_DOOR_LOCKS, ACT3_FLAG_BLOCKERS, ACT3_INTERIORS } from './act3';
 import { HARROWMARK_INTERIORS } from './harrowmark';
-import { ACT4_HARROWMARK_DOOR_LOCKS, ACT4_HARROWMARK_FLAG_BLOCKERS, ACT4_HARROWMARK_INTERIORS } from './harrowmark/act4';
+import { ACT4_HARROWMARK_DOOR_LOCKS, ACT4_HARROWMARK_FLAG_BLOCKERS, ACT4_HARROWMARK_INTERIORS, ACT4_HARROWMARK_LINKS } from './harrowmark/act4';
 import { HARROWMARK_DOOR_LOCKS, HARROWMARK_FLAG_BLOCKERS, M09_INVOICES } from './harrowmark/locks';
 import { grateAnswer, KEYED_GRATES } from './keyedGrates';
 import { OccupantHider } from './occupants';
@@ -51,8 +51,8 @@ export interface InteriorsPluginOptions {
   links?: readonly InteriorLinkDef[];
 }
 
-/** v0.8 item 9b: L10 adds the Keep's links (M39's stairs, M40's deep run). */
-export const INTERIOR_LINKS: InteriorLinkDef[] = [];
+/** v0.8 item 9b: the Keep's links (L2: the chamber to the stairs for M39, the stairs to the deep run for M40, and back). */
+export const INTERIOR_LINKS: InteriorLinkDef[] = [...ACT4_HARROWMARK_LINKS];
 
 /** Throws on a link whose interiors or door are unknown, or whose target door has an outside interactable. */
 export function validateInteriorLinks(links: readonly InteriorLinkDef[], defs: readonly InteriorDef[]): void {
@@ -243,7 +243,8 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
   });
 
   // v0.8 item 9b: interior-to-interior links, validated at registration.
-  const links = opts.links ?? INTERIOR_LINKS;
+  // A test with its own interiors gets no default links (they name the shipped interiors).
+  const links = opts.links ?? (opts.defs ? [] : INTERIOR_LINKS);
   validateInteriorLinks(links, [...layouts.values()].map((l) => l.def));
   for (const link of links) {
     cleanups.push(
