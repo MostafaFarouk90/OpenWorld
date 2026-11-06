@@ -147,3 +147,13 @@ describe('camp anchor', () => {
     expect(t.startCamp).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('act 4 ending row (v0.8 item 14)', () => {
+  it('builds a director def that ends on M46 and D08 at the Rimfoot fire', () => {
+    const d = directorDef(actEnding(4)!);
+    expect(d.endingId).toBe('the-road-to-the-rim');
+    expect(d.requires).toEqual(['m46', 'd08']);
+    expect(d.gateFlag).toBe('story.gate.a5');
+    expect(d.campAnchorId).toBe('waste.rimfoot.fire');
+  });
+});
