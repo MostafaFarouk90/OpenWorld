@@ -61,6 +61,10 @@ export async function generateAct4Fixture(
     h.ctx.systems.add({ id: 'l13-fixture-jump', fixedPhase: 'rules', order: 900, fixedUpdate: () => jump.tick() });
     for (let i = 0; i < MAX_TICKS && !jump.finished; i += 30) await h.runAsync(30);
     ensure(jump.finished, `act4 fixture ${id}: the jump settled (phase ${jump.phase})`);
+    // The base is the chain's last moment, hurt from Act 3's last fights; a jump starts rested (the camp is a night's rest).
+    const a = h.ctx.player.actor;
+    h.ctx.damage.heal(a.id, a.maxHealth);
+    a.restoreStamina(a.maxStamina);
     await h.runAsync(60);
     const save = await saveFixture(h);
     const p = prog(h);

@@ -77,7 +77,7 @@ export function capOffenders(actors: Iterable<CapActor>, playerLevel: number, se
   for (const a of actors) {
     if (a.team !== 'hostile' || a.dead || !a.root || typeof a.level !== 'number' || CAP_EXEMPT_KINDS.has(a.kind)) continue;
     const first = !!a.spawnTag && FIRST_ARRIVAL_TAGS.has(a.spawnTag);
-    const cap = playerLevel + (first ? ACT4_FIRST_ARRIVAL_ABOVE_PLAYER : ACT4_CAP_ABOVE_PLAYER);
+    const cap = playerLevel + ((first ? ACT4_FIRST_ARRIVAL_ABOVE_PLAYER : ACT4_CAP_ABOVE_PLAYER) ?? Infinity);
     if (a.level > cap) {
       const key = `${a.kind}@${a.spawnTag ?? '?'} ${a.level} at player ${playerLevel}${first ? ' (first arrival)' : ''}`;
       if (!seen.has(key)) {

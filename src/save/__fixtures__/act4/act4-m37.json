@@ -1046,7 +1046,7 @@
     "player": {
       "data": {
         "goldPouch": null,
-        "health": 130,
+        "health": 370,
         "lastRestedWaystoneId": null,
         "stamina": 100
       },
