@@ -7,8 +7,13 @@
 //   3. the newest `pull_request` run of this workflow for that head sha concluded `success`;
 //   4. that run carries the `tested-tree-<sha>` artifact naming the merged tree (the tree of the merge checkout it tested).
 // The artifact's name carries the tree, so the gate lists artifacts and never downloads one.
+//
+// Its second output, `chains`, is `skip` only when the tests skip AND that run also carries `chains-ran-<tree>` (the
+// chains ran green on this tree in the PR); anything else is `run`, and the chains job then asks its own scope.
 
 export const ARTIFACT_PREFIX = 'tested-tree-';
+/** The PR run's `chains` job uploads this, named by the same tree, when it ran the chains (plans/act4-L13.md s.15). */
+export const CHAINS_ARTIFACT_PREFIX = 'chains-ran-';
 export const WORKFLOW_FILE = 'ci.yml';
 
 /**
@@ -16,13 +21,21 @@ export const WORKFLOW_FILE = 'ci.yml';
  * @typedef {{ id: number, status: string, conclusion: string | null, created_at?: string, run_number?: number }} RunLike
  * @typedef {{ name: string, expired?: boolean }} ArtifactLike
  * @typedef {{ sha: string, mergedTree: string, pulls: PullLike[] | null, headTree: string | null, runs: RunLike[] | null, artifacts: ArtifactLike[] | null }} GateInput
- * @typedef {{ tests: 'skip' | 'run', reason: string, pr?: number, headSha?: string, headTree?: string | null, mergedTree?: string, runId?: number }} GateDecision
+ * @typedef {{ tests: 'skip' | 'run', chains?: 'skip' | 'run', reason: string, pr?: number, headSha?: string, headTree?: string | null, mergedTree?: string, runId?: number }} GateDecision
  */
 
 const SHA = /^[0-9a-f]{40}$/;
 
 /** Pure decision over already-fetched data. @param {GateInput} input @returns {GateDecision} */
 export function decide(input) {
+  const d = decideTests(input);
+  const ran = Array.isArray(input.artifacts)
+    && input.artifacts.some((a) => a && !a.expired && a.name === CHAINS_ARTIFACT_PREFIX + input.mergedTree);
+  return { ...d, chains: d.tests === 'skip' && ran ? 'skip' : 'run' };
+}
+
+/** The tests' half of the decision. @param {GateInput} input @returns {GateDecision} */
+function decideTests(input) {
   const base = { mergedTree: input.mergedTree };
   if (!SHA.test(String(input.sha))) return { tests: 'run', reason: 'no commit sha', ...base };
   if (!SHA.test(String(input.mergedTree))) return { tests: 'run', reason: 'no merged tree', ...base };
@@ -74,7 +87,7 @@ export async function evaluate({ sha, mergedTree, repo, fetchJson }) {
     }
     return decide(input);
   } catch (e) {
-    return { tests: 'run', reason: `error: ${e instanceof Error ? e.message : String(e)}`, mergedTree };
+    return { tests: 'run', chains: 'run', reason: `error: ${e instanceof Error ? e.message : String(e)}`, mergedTree };
   }
 }
 
@@ -84,6 +97,7 @@ export function summary(d) {
     `### Main-run gate: tests ${d.tests === 'skip' ? 'skipped' : 'run'}`,
     '',
     `- Decision: \`${d.tests}\` (${d.reason})`,
+    `- Chains: \`${d.chains ?? 'run'}\` (skipped only when the PR run also ran them on this tree)`,
     `- PR: ${d.pr !== undefined ? `#${d.pr}` : 'none'}`,
     `- Head sha: \`${d.headSha ?? '-'}\``,
     `- Head tree: \`${d.headTree ?? '-'}\``,
@@ -122,9 +136,9 @@ export async function main(env = process.env) {
     repo: env.GITHUB_REPOSITORY ?? '',
     fetchJson: githubFetchJson(env.GITHUB_TOKEN ?? '', env.GITHUB_API_URL ?? 'https://api.github.com'),
   });
-  if (env.GITHUB_OUTPUT) fs.appendFileSync(env.GITHUB_OUTPUT, `tests=${d.tests}\n`);
+  if (env.GITHUB_OUTPUT) fs.appendFileSync(env.GITHUB_OUTPUT, `tests=${d.tests}\nchains=${d.chains ?? 'run'}\n`);
   if (env.GITHUB_STEP_SUMMARY) fs.appendFileSync(env.GITHUB_STEP_SUMMARY, summary(d));
-  console.log(`main-gate: tests=${d.tests} (${d.reason})`);
+  console.log(`main-gate: tests=${d.tests} chains=${d.chains ?? 'run'} (${d.reason})`);
   return d;
 }
 
@@ -134,7 +148,7 @@ if (isCli) {
     // Never fail the job on our own error: print `run` so the tests run.
     console.log(`main-gate: tests=run (error: ${e instanceof Error ? e.message : String(e)})`);
     if (process.env.GITHUB_OUTPUT) {
-      import('node:fs').then((fs) => fs.appendFileSync(process.env.GITHUB_OUTPUT, 'tests=run\n'));
+      import('node:fs').then((fs) => fs.appendFileSync(process.env.GITHUB_OUTPUT, 'tests=run\nchains=run\n'));
     }
   });
 }

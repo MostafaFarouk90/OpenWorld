@@ -1,4 +1,5 @@
-import { defineConfig, mergeConfig } from 'vitest/config';
+import { configDefaults, defineConfig, mergeConfig } from 'vitest/config';
+import { CHAIN_FILES } from './vitest.chains';
 import viteConfig from './vite.config';
 
 // vite.config exports a function (its base depends on the command); vitest runs as `serve`, so base stays '/'.
@@ -14,6 +15,8 @@ export default defineConfig((env) =>
       },
       test: {
         include: ['src/**/*.test.ts'],
+        // the whole-phase chains run on their own (vitest.chains.config.ts, `npm run test:chains`)
+        exclude: [...configDefaults.exclude, ...CHAIN_FILES],
         environment: 'node',
         // Run Rapier through Vite so vite-plugin-wasm handles its .wasm import; Node cannot.
         server: { deps: { inline: [/@dimforge\/rapier3d/] } },
