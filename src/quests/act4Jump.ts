@@ -131,6 +131,15 @@ export class Act4Jump {
 
   get finished(): boolean { return this.phase === 'done'; }
 
+  /**
+   * L13 (additive): on a game already carried through the whole of Act 3 (the Act 4 fixtures' base save), skip the Acts 1 to
+   * 3 replay and the Act 3 ending step; only the Act 4 injection, the XP top-up and the placement run.
+   */
+  fromCarriedSave(): this {
+    this.phase = 'act4';
+    return this;
+  }
+
   tick(): void {
     if (this.finished) return;
     const p = this.ports;

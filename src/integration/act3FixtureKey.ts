@@ -22,6 +22,8 @@ export const act3FixtureName = (order: Act3Order, id: string): string => `act3-$
 export const fixtureDefIds = (id: string, order: Act3Order): string[] => [...(ACT3_PREREQS[order][id] ?? []), id];
 
 /** The quest defs among `ids` that a build knows, sorted (the freshness key). */
+export const sameIdSet = (x: readonly string[], y: readonly string[]): boolean => sameSet(x, y);
+
 export const knownQuestDefs = (has: (id: string) => boolean, ids: readonly string[]): string[] => ids.filter(has).sort();
 
 const sameSet = (x: readonly string[], y: readonly string[]): boolean => {
@@ -55,10 +57,11 @@ export type Act3StartChoice = { use: 'fixture' } | { use: 'inject'; reason: stri
  */
 export function chooseAct3Start(
   name: string, wantFixture: boolean, meta: Act3FreshnessMeta | null, known: readonly string[],
+  fresh: (meta: Act3FreshnessMeta, known: readonly string[]) => boolean = act3FixtureFresh,
 ): Act3StartChoice {
   if (!wantFixture) return { use: 'inject', reason: '&fixture=0' };
   if (!meta) return { use: 'inject', reason: `no fixture ${name}` };
-  if (!act3FixtureFresh(meta, known)) {
+  if (!fresh(meta, known)) {
     return {
       use: 'inject',
       reason: `fixture ${name} is stale (generated with quest defs [${meta.questDefs.join(', ')}], this build has [${known.join(', ')}]); regenerate it`,
