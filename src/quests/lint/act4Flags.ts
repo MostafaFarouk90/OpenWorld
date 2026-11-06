@@ -11,6 +11,7 @@ export const ACT4_FLAG_OWNERS: readonly Act4FlagOwner[] = [
   { pattern: 'story.phase.wasteOpen', owner: 'L13', note: 'the Phase G hold on the Waste (PHASE_HOLDS); retired by L13 PR 2' },
   { pattern: 'story.a4.campSeen', owner: 'L13', note: 'the Act 4 camp scene at the Rimfoot fire has played' },
   { pattern: 'story.gate.a5', owner: 'L13', note: 'the Act 5 gate (the Act 4 ending)' },
+  { pattern: 'story.a4.wasteCardSeen', owner: 'L13', note: 'the "Waste is next" card after M41 has shown (Phase G)' },
   { pattern: 'boss.<id>.outcome', owner: 'core boss registry', note: 'bellows-engine (defeated only) and eormen (released or defeated)' },
 ];
 
