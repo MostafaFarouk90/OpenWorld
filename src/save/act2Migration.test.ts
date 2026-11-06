@@ -79,7 +79,8 @@ describe('the persistables', () => {
     // written yet; there must be none, so a new persistable ships with a fixture that carries it.
     // The v0.7 keys (`spells.surge`, `traversal.carry`) are carried by K16's Act 3 fixtures; none is awaited now.
     const AWAITING_ACT3_FIXTURES: string[] = [];
-    const AWAITING_ACT4_FIXTURES: string[] = [];
+    // v0.8: `respawn`, `scenes` and `escorts` are carried by L13's act4-*.json fixtures. A thread that adds a new key lists it
+    // here until L13 regenerates the fixtures.
     const AWAITING_ACT4_FIXTURES: string[] = [];
     const awaited = [...AWAITING_ACT3_FIXTURES, ...AWAITING_ACT4_FIXTURES];
     const orphans = keys.filter((k) => !inAny.has(k) && !awaited.includes(k));
