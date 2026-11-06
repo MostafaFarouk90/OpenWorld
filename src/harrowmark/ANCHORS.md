@@ -348,6 +348,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | j10.fire-ring | 8240 | 1668 | 0 | 270 | quest, interact |
 | harrowmark.a4.chamber.door | 8532 | 2598 | 0 | 0 | poi, door |
 | harrowmark.a4.crucible.door | 7927.7 | 1543.61 | 0 | 51.43 | poi, door |
+| harrowmark.a4.deeprun.exit | 8900 | 3300 | 0 | 20 | poi, door |
 | harrowmark.a4.gate.south.face | 8500 | 1235 | 0 | 0 | gate, fog |
 | harrowmark.a4.gate.river.face | 9245.82 | 2170.23 | 0 | 257.14 | gate, fog |
 | harrowmark.a4.gate.northwest.face | 8168.08 | 2689.24 | 0 | 154.29 | gate, fog |
@@ -425,8 +426,8 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | harrowmark.a4.patrol.m36.2 | 8897 | 2345 | 0 | 180 | patrol |
 | harrowmark.a4.patrol.m36.3 | 8897 | 2405 | 0 | 180 | patrol |
 | harrowmark.a4.patrol.m36.4 | 8897 | 2455 | 0 | 180 | patrol |
-| harrowmark.a4.r20.hut.1 | 9348.19 | 2193.59 | 0 | 257.14 | poi |
-| harrowmark.a4.r20.hut.2 | 9484.68 | 2224.75 | 0 | 257.14 | poi |
+| harrowmark.a4.r20.hut.1 | 9345.52 | 2205.29 | 0 | 257.14 | poi |
+| harrowmark.a4.r20.hut.2 | 9482.01 | 2236.45 | 0 | 257.14 | poi |
 
 ## Triggers
 

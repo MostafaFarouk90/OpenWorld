@@ -237,7 +237,9 @@ export function generateDeepRun(seed = DEEP_RUN_SEED): InteriorDef {
       { id: 'trg.harrowmark.a4.deeprun.exit', center: { x: end.x, y: 2, z: end.z }, half: { x: 3, y: 2, z: 3 } },
     ],
     doors: [
-      { doorId: DEEP_RUN_EXIT_DOOR_ID, outside: DEEP_RUN_EXIT.anchor, inside: `${P}.arrive`, exit: `${P}.ladder`, outsideInteractable: false },
+      // The grate opens from outside once the city is Vey's (lock in act4/index.ts): the way back to the Keep stairs if a
+      // player leaves the chain between M38 and M40 (a stale-load rescue or the chamber's front door lands them outside).
+      { doorId: DEEP_RUN_EXIT_DOOR_ID, outside: DEEP_RUN_EXIT.anchor, inside: `${P}.arrive`, exit: `${P}.ladder` },
       { doorId: DEEP_RUN_DOOR_ID, outside: DEEP_RUN_EXIT.anchor, inside: `${P}.entry`, exit: LINK_ONLY_EXIT, outsideInteractable: false },
     ],
     environment: {

@@ -50,10 +50,11 @@ export const GATE_FACE_OUT = 15;
 export const RING_FACE_RADIUS = 750 + GATE_FACE_OUT;
 /**
  * The faces' size, agreed with L1 (2026-11-06): L1's track round the walls runs about 45 m outside them, so a face 15 m out
- * pushes at most 20 m deep and spans 10 m either side of the gate, and never reaches the track.
+ * pushes at most 13 m deep (to the wall's outer face, so a player inside the walls beside a shut gate is never pushed out
+ * through it) and spans 10 m either side of the gate, and never reaches the track.
  */
 export const GATE_FACE_HALF_LENGTH = 10;
-export const GATE_FACE_PUSH_DEPTH = 20;
+export const GATE_FACE_PUSH_DEPTH = 13;
 export const gateFaceAnchor = (gate: GateName): string => `harrowmark.a4.gate.${gate}.face`;
 
 /** The River Gate's inside checkpoint, 20 m in from the gate on its bearing. */
@@ -69,11 +70,21 @@ export const CHECKPOINTS = [
   { id: 'counting', x: 8740, z: 2000, heading: 90 },
 ] as const;
 
-/** R20's two farm-ring huts outside the River Gate (120 m and 260 m out on the convoy road). */
+/** A point `r` out on the River Gate's bearing, then `side` metres to its left (facing out), off the convoy road. */
+function riverSide(r: number, side: number): { x: number; z: number } {
+  const b = (gateBearing(GATE_NAMES.indexOf('river')) * Math.PI) / 180;
+  const p = gatePosition('river', r);
+  // Left of a heading b (compass, 0 = +Z) is (-cos b, sin b).
+  return { x: Math.round((p.x - Math.cos(b) * side) * 100) / 100, z: Math.round((p.z + Math.sin(b) * side) * 100) / 100 };
+}
+
+/** R20's two farm-ring huts beside the convoy road outside the River Gate (120 m and 260 m out, 12 m off the road). */
 export const R20_HUTS = [
-  { id: 'harrowmark.a4.r20.hut.1', ...gatePosition('river', 870) },
-  { id: 'harrowmark.a4.r20.hut.2', ...gatePosition('river', 1010) },
+  { id: 'harrowmark.a4.r20.hut.1', ...riverSide(870, 12) },
+  { id: 'harrowmark.a4.r20.hut.2', ...riverSide(1010, 12) },
 ] as const;
+/** How far the huts stand off the road's centreline. */
+export const R20_HUT_ROAD_OFFSET = 12;
 
 /**
  * A door reached only by an interior link (L0's v0.8 item 9b) names this as its `exit`. No interior defines it, so the

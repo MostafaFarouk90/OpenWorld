@@ -69,7 +69,7 @@ export default createHarrowmarkAct4Plugin();
 export interface HarrowmarkAct4Service {
   ash(): { active: boolean; checkpoints: number; rails: number; posters: number; soot: number };
   huts(): import('./r20Huts').HutLook;
-  /** The occupied city's fog faces (registered, built when physics is ready). */
+  /** The occupied city's fog faces (registered; built only when physics is up at setup, as in every other plugin). */
   faces(): string[];
 }
 

@@ -214,7 +214,9 @@ describe('ThirdPersonCamera collision', () => {
   it('pulls the camera to hit distance minus margin', () => {
     const { cam, camera } = setup(3);
     cam.update(feet);
-    expect(distFromTarget(camera)).toBeCloseTo(3 - CAMERA.collisionMargin, 6);
+    // This mock answers 3 m for every ray; the two leaning side rays (L2) then count a hair nearer along the camera ray.
+    expect(distFromTarget(camera)).toBeCloseTo(3 - CAMERA.collisionMargin, 2);
+    expect(distFromTarget(camera)).toBeLessThanOrEqual(3 - CAMERA.collisionMargin);
   });
 
   // Act 4 (L2) changed these two: the camera used to be pushed back out to minClearDistance, through a wall right behind the
@@ -462,7 +464,9 @@ describe('ThirdPersonCamera near walls (Act 4, L2: the camera wall clip)', () =>
     s.raycast.mockImplementation((...args: unknown[]) => {
       const [origin, dir] = args as [THREE.Vector3, THREE.Vector3];
       if (dir.y > 0.99) return rays.up === undefined || rays.up === null ? null : { distance: rays.up };
-      const fromCentre = origin.distanceTo(t) < 1e-9;
+      // Every ray starts at the orbit point; at yaw 0 the centre ray has no x, the side rays lean along +-x.
+      expect(origin.distanceTo(t)).toBeLessThan(1e-9);
+      const fromCentre = Math.abs(dir.x) < 1e-9;
       const d = fromCentre ? rays.centre : (rays.side ?? null);
       return d === null ? null : { distance: d };
     });
@@ -504,7 +508,26 @@ describe('ThirdPersonCamera near walls (Act 4, L2: the camera wall clip)', () =>
   it('catches a corner met at a glancing angle with a side ray the centre ray misses', () => {
     const { cam, camera } = setupRays({ centre: null, side: 2 });
     cam.update(feet);
-    expect(distFromTarget(camera)).toBeCloseTo(2 - CAMERA.collisionMargin, 6);
+    // The side ray leans by sideRayOffset over the camera's reach, so its hit counts a little nearer along the camera ray.
+    const max = CAMERA.distance + CAMERA.collisionMargin;
+    const along = 2 * (max / Math.hypot(max, CAMERA.sideRayOffset));
+    expect(distFromTarget(camera)).toBeCloseTo(along - CAMERA.collisionMargin, 6);
+  });
+
+  it('casts the side rays from the orbit point toward the camera end (they converge, so hugging a wall does not pull the camera in)', () => {
+    const s = setup();
+    s.raycast.mockReturnValue(null);
+    s.cam.update(feet);
+    const t = targetOf(feet);
+    const calls = s.raycast.mock.calls.slice(0, 3) as [THREE.Vector3, THREE.Vector3, number][];
+    for (const [o] of calls) expect(o.distanceTo(t)).toBeLessThan(1e-9);
+    const [, centreDir, centreLen] = calls[0]!;
+    for (const [, d, len] of calls.slice(1)) {
+      expect(d.length()).toBeCloseTo(1, 9);
+      // The end point is sideRayOffset off the centre ray's end.
+      const end = d.clone().multiplyScalar(len);
+      expect(end.distanceTo(centreDir.clone().multiplyScalar(centreLen))).toBeCloseTo(CAMERA.sideRayOffset, 6);
+    }
   });
 
   it('is pulled in front of a character the ray enters below its feet and leaves through its body (one on a stair above)', () => {

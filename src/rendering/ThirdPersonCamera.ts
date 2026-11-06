@@ -297,8 +297,10 @@ export class ThirdPersonCamera {
   }
 
   /**
-   * The nearest wall along the camera ray: the centre ray from the orbit point plus two rays offset sideways by
-   * `CAMERA.sideRayOffset` (Act 4, L2), so a corner met at a glancing angle cannot slip between them. Null when none hits.
+   * The nearest wall along the camera ray: the centre ray from the orbit point plus two rays from the same point to the
+   * camera end offset sideways by `CAMERA.sideRayOffset` (Act 4, L2), so a corner met at a glancing angle cannot slip past
+   * the camera. The side rays converge on the orbit point, so a wall beside the player (hugging it) does not catch them
+   * near the player; a side hit counts by how far along the camera ray it is. Null when none hits.
    */
   private wallDistance(max: number): number | null {
     const centre = this.physics.raycast(this.target, this.offset, max, this.ignore);
@@ -306,9 +308,14 @@ export class ThirdPersonCamera {
     // The horizontal right vector of the view (perpendicular to the ray's heading).
     this.side.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw)).multiplyScalar(CAMERA.sideRayOffset);
     for (const s of [1, -1]) {
-      this.rayOrigin.copy(this.target).addScaledVector(this.side, s);
-      const h = this.physics.raycast(this.rayOrigin, this.offset, max, this.ignore);
-      if (h && (best === null || h.distance < best)) best = h.distance;
+      this.rayOrigin.copy(this.offset).multiplyScalar(max).addScaledVector(this.side, s);
+      const len = this.rayOrigin.length();
+      if (len < 1e-6) continue;
+      this.rayOrigin.divideScalar(len);
+      const h = this.physics.raycast(this.target, this.rayOrigin, len, this.ignore);
+      if (!h) continue;
+      const along = h.distance * (max / len);
+      if (best === null || along < best) best = along;
     }
     return best;
   }

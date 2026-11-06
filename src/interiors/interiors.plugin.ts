@@ -19,7 +19,7 @@ import './service';
 import { ACT2_DOOR_LOCKS, ACT2_INTERIORS } from './act2';
 import { ACT3_DOOR_LOCKS, ACT3_FLAG_BLOCKERS, ACT3_INTERIORS } from './act3';
 import { HARROWMARK_INTERIORS } from './harrowmark';
-import { ACT4_HARROWMARK_DOOR_LOCKS, ACT4_HARROWMARK_FLAG_BLOCKERS, ACT4_HARROWMARK_INTERIORS, ACT4_HARROWMARK_LINKS } from './harrowmark/act4';
+import { ACT4_HARROWMARK_DOOR_LOCKS, ACT4_HARROWMARK_EXIT_LOCKS, ACT4_HARROWMARK_FLAG_BLOCKERS, ACT4_HARROWMARK_INTERIORS, ACT4_HARROWMARK_LINKS } from './harrowmark/act4';
 import { HARROWMARK_DOOR_LOCKS, HARROWMARK_FLAG_BLOCKERS, M09_INVOICES } from './harrowmark/locks';
 import { grateAnswer, KEYED_GRATES } from './keyedGrates';
 import { OccupantHider } from './occupants';
@@ -47,6 +47,8 @@ export interface InteriorsPluginOptions {
   doorLocks?: Readonly<Record<string, string>>;
   /** blockerId -> the flag that opens it (default: the Anvil's back-room gate). */
   flagBlockers?: Readonly<Record<string, string>>;
+  /** Act 4 (L2): doorId -> the flag while which its exit refuses, with the toast (default: the chamber's front door from M38). */
+  exitLocks?: Readonly<Record<string, { flag: string; toastKey: string }>>;
   /** v0.8: interior-to-interior links (default INTERIOR_LINKS). */
   links?: readonly InteriorLinkDef[];
 }
@@ -201,6 +203,13 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
     if (key) showToast(ctx.hud, ctx.strings.t(key));
   };
 
+  // Act 4 (L2): exits that refuse while a flag holds (read live, so a load re-derives them).
+  const exitLocks = opts.exitLocks ?? (opts.defs ? {} : ACT4_HARROWMARK_EXIT_LOCKS);
+  const exitLocked = (doorId: string): boolean => {
+    const l = exitLocks[doorId];
+    return !!l && Boolean(ctx.state.getFlag(l.flag));
+  };
+
   // Door interactables. The outside anchors are the layout thread's and may be defined after this plugin sets up.
   const doors = new Map<string, () => void>();
   const syncDoors = () => {
@@ -223,10 +232,15 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
               radius: DOOR_RADIUS,
               coneDegrees: 360,
               get promptKey() {
+                if (side === 'inside' && exitLocked(door.doorId)) return 'interact.locked';
                 return side === 'outside' && controller.isDoorLocked(door.doorId) ? 'interact.locked' : text;
               },
               enabled: () => !controller.transitioning && (side === 'inside' || cooldown <= 0),
               onInteract: () => {
+                if (side === 'inside' && exitLocked(door.doorId)) {
+                  showToast(ctx.hud, ctx.strings.t(exitLocks[door.doorId]!.toastKey));
+                  return;
+                }
                 const p = side === 'outside' ? controller.enter(layout.def.id, door.doorId) : controller.exit(door.doorId);
                 p.catch(onRefused);
               },

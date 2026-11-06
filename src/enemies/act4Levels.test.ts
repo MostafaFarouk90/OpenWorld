@@ -330,7 +330,7 @@ describe('v0.8 item 11: applyEnemySkin', () => {
     };
     const warn = vi.fn();
     const a = make();
-    applyEnemySkin(a, 'blighted-soldier', 'footman-soot', warn);
+    applyEnemySkin(a, 'ash-wraith', 'wraith-husk', warn); // L2 filled the Footman skins; the husk is still empty
     expect(a.helm.visible).toBe(true);
     expect(a.mat.color.getHex()).toBe(0xffffff);
     const b = make();
