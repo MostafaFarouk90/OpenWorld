@@ -107,6 +107,20 @@ describe('RhythmRun', () => {
     expect(run.judged(5000).every((j) => j === null)).toBe(true);
   });
 
+  it('takes custom steps (the M45 chime phrases) and judges them like a pattern', () => {
+    const run = new RhythmRun(metronome(), 1, 0, { steps: [2, 6, 10] });
+    expect(run.steps).toEqual([2, 6, 10]);
+    expect(run.strike(at(2))).toBe('perfect');
+    expect(run.strike(at(4))).toBe('stray');
+    expect(run.strike(at(6, 60))).toBe('good');
+    expect(run.finished(at(10, 99))).toBe(false);
+    expect(run.result(at(10, 101)).judged).toEqual(['perfect', 'good', 'miss']);
+  });
+
+  it('refuses custom steps that are empty, out of the bar, unsorted or adjacent', () => {
+    for (const steps of [[], [16], [-1, 4], [4, 2], [0, 1], [0.5, 4]]) expect(() => new RhythmRun(metronome(), 1, 0, { steps })).toThrow(/bad steps/);
+  });
+
   it('reports the bar position in steps', () => {
     const run = new RhythmRun(metronome(), 1, 0);
     expect(run.position(0)).toBeCloseTo(-4);

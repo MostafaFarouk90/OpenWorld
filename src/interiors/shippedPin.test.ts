@@ -44,7 +44,7 @@ const hashOf = (id: string): string => {
 
 describe('shipped interiors are unchanged by the v0.7 interior fields', () => {
   it('pins every Act 1 and Act 2 interior', () => {
-    // Act 3 and Act 4 interiors are pinned by their own tests (Act 4: harrowmark/act4/act4Interiors.test.ts, waste/waste.test.ts).
+    // Act 3 and Act 4 interiors are pinned by their own tests (Act 4: harrowmark/act4/act4Interiors.test.ts; the Waste's two by their geometry tests in waste/waste.test.ts).
     const act3 = new Set([...ACT3_INTERIORS, ...ACT4_HARROWMARK_INTERIORS, ...WASTE_INTERIORS].map((d) => d.id));
     const shipped = ALL_INTERIORS.map((d) => d.id).filter((id) => !act3.has(id));
     expect(shipped.sort()).toEqual(Object.keys(PINNED).sort());
