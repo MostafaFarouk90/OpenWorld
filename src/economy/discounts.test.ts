@@ -33,7 +33,9 @@ const TABLE: VendorDiscount[] = [
 
 describe('vendor discounts', () => {
   it('ships the Act 2 union table and changes no Act 1 vendor', () => {
-    for (const d of VENDOR_DISCOUNTS) expect(d.vendors.every((v) => ['aldous', 'slagg', 'pike', 'thorgar'].includes(v))).toBe(true);
+    // Act 3 adds Thorgar's R15 row; Act 4 (L7) Merrin's R20 rows, keyed on story.r20.choice only.
+    for (const d of VENDOR_DISCOUNTS) expect(d.vendors.every((v) => ['aldous', 'slagg', 'pike', 'thorgar', 'merrin'].includes(v))).toBe(true);
+    for (const d of VENDOR_DISCOUNTS.filter((x) => x.vendors.includes('merrin'))) expect(d.flag).toBe('story.r20.choice');
     const { shop } = shopWith({ 'story.r10.choice': 'miners', 'story.r09.choice': 'miners' });
     expect(shop.quote('edda', 'barley-cake')).toBe(6);
   });
@@ -62,11 +64,10 @@ describe('vendor discounts', () => {
 });
 
 describe('Act 2 vendors', () => {
-  it('are in the full record; wenna (Act 4) stays empty and the rest are stocked', () => {
+  it('are in the full record and stocked (wenna since Act 4, L7)', () => {
     for (const id of ['aldous', 'wenna', 'slagg', 'pike', 'ketta', 'maud', 'osgar'] as const) {
       expect(VENDORS[id].id).toBe(id);
-      if (id === 'wenna') expect(VENDORS[id].lines).toEqual([]);
-      else expect(VENDORS[id].lines.length).toBeGreaterThan(0);
+      expect(VENDORS[id].lines.length).toBeGreaterThan(0);
       expect(VENDOR_IDS).toContain(id);
     }
   });

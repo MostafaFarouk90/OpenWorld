@@ -153,7 +153,7 @@ describe('bossBeaten', () => {
     expect(bossBeaten({ getFlag: () => undefined, questDone: (q) => q === 'd02' }, 'gaffer-grimtooth')).toBe(true);
     expect(bossBeaten({ getFlag: () => undefined, questDone: (q) => q === 'd02' }, 'ashen-prior')).toBe(false);
     expect(bossBeaten({ getFlag: () => 'defeated' }, 'hathren')).toBe(false);
-    expect(GEM_BOSSES.map((b) => b.questId)).toEqual(['d01', 'd02', 'd03', 'd04', 'd05', 'd06']);
+    expect(GEM_BOSSES.map((b) => b.questId)).toEqual(['d01', 'd02', 'd03', 'd04', 'd05', 'd06', 'd07', 'd08']);
   });
 });
 

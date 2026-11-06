@@ -1,6 +1,7 @@
 import type { ClassId } from '../actors/classes';
 import type { FavourBand, FavourTrack } from '../state/favour';
 import { ACT3_DISCOUNTS, ACT3_SELL_FLAT, ACT3_SHOP_LIST_PRICES, ACT3_VENDORS } from './stock.act3';
+import { ACT4_DISCOUNTS, ACT4_SHOP_LIST_PRICES, WENNA } from './stock.act4';
 
 export type VendorId =
   | 'wystan' | 'merrin' | 'edda' | 'wynn' | 'dunstan' | 'gerta' | 'ashdown'
@@ -121,7 +122,8 @@ export const VENDORS: Readonly<Record<VendorId, VendorDef>> = {
       { itemId: 'deepcore-pick', count: 1, from: 'hearthbound' },
     ],
   },
-  wenna: { id: 'wenna', buys: false, lines: [] },
+  // Act 4 (L7): the Grisel favour vendor from M38, in stock.act4.ts.
+  wenna: WENNA,
   slagg: {
     id: 'slagg',
     buys: true,
@@ -178,6 +180,7 @@ export const SHOP_LIST_PRICES: Readonly<Record<string, number>> = {
   'grisel-oath-sash': 90,
   'deepcore-pick': 400,
   ...ACT3_SHOP_LIST_PRICES,
+  ...ACT4_SHOP_LIST_PRICES,
 };
 
 /** Flat sell prices that bypass the 40% rule and may apply to quest-kind items (materials sold at Slagg). */
@@ -210,6 +213,7 @@ export const VENDOR_DISCOUNTS: readonly VendorDiscount[] = [
   { flag: 'story.r10.choice', value: 'miners', vendors: UNION_VENDORS, percent: 15 },
   { flag: 'story.r10.choice', value: 'stewards', vendors: UNION_VENDORS, percent: 0 },
   ...ACT3_DISCOUNTS,
+  ...ACT4_DISCOUNTS,
 ];
 
 /** The best matching discount percent for a vendor (0 when none); the buy price only, never sell or buy-back. */

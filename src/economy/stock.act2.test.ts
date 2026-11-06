@@ -95,7 +95,8 @@ describe('Act 2 vendor stock', () => {
     expect(ids(make().shop, 'pike')).toEqual(['lamp-oil', 'cooling-draught', 'healing-flask']);
     expect(ids(make().shop, 'slagg')).toEqual(['pickaxe', 'ember-coal', 'iron-ore', 'coal', 'cinder-steel-ingot']);
     expect(VENDORS.slagg.buys).toBe(true);
-    expect(VENDORS.wenna.lines).toEqual([]);
+    // Act 4 (L7): Wenna is stocked; stock.act4.test.ts pins her lines.
+    expect(VENDORS.wenna.track).toBe('grisel');
   });
 
   it('aldous stock follows the grisel band, with limited sash and pick', () => {
