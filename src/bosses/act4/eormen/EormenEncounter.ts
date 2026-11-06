@@ -22,6 +22,7 @@ import {
   GONG_PART_ID,
   HUSKS,
   PRESENTATION,
+  RELEASE_BOW,
   SWIPE,
   TOLL,
 } from './tuning';
@@ -302,6 +303,9 @@ export class EormenEncounter implements EormenHooks {
       this.brain.tick(dt, { dist });
       if (this.ended || this.outcomeT >= 0) return;
       this.checkFloor();
+    } else {
+      this.turn(dt, feet);
+      this.bow(dt, feet, dist);
     }
     if (this.telegraphKind) {
       this.telegraphT += dt;
@@ -524,6 +528,19 @@ export class EormenEncounter implements EormenHooks {
     const c = this.root.position;
     const r = this.places.rect;
     const step = Math.min(EORMEN.driftSpeed * dt, dist - EORMEN.keepMax);
+    c.x = THREE.MathUtils.clamp(c.x + ((feet.x - c.x) / dist) * step, r.x0, r.x1);
+    c.z = THREE.MathUtils.clamp(c.z + ((feet.z - c.z) / dist) * step, r.z0, r.z1);
+  }
+
+  /**
+   * The Release window: he sinks toward Cael and stops within reach of the hold. The last bar breaks at the gong, often 10 m from
+   * him, and the window is 4 s (real-game run: the hold was out of reach before it closed).
+   */
+  private bow(dt: number, feet: THREE.Vector3Like, dist: number): void {
+    if (dist <= RELEASE_BOW.stopAt) return;
+    const c = this.root.position;
+    const r = this.places.rect;
+    const step = Math.min(RELEASE_BOW.speed * dt, dist - RELEASE_BOW.stopAt);
     c.x = THREE.MathUtils.clamp(c.x + ((feet.x - c.x) / dist) * step, r.x0, r.x1);
     c.z = THREE.MathUtils.clamp(c.z + ((feet.z - c.z) / dist) * step, r.z0, r.z1);
   }
