@@ -3,6 +3,7 @@
 // the road ribbons and the rope-lines. The corridors and holes are containment's (act4Containment.ts). Failing here
 // costs only the Act 4 world: the region plugin does not depend on it.
 import { heightAt } from '../../terrain/heightfield';
+import { GLASS_TIER, setGroundGlassTier } from '../../terrain/groundShader';
 import type { CoreContext, GamePlugin } from '../coreTypes';
 import { buildFogWallDef, registerFogWall, type FogWallDef } from '../fogWall';
 import { BuildingLookup } from '../buildingLookup';
@@ -63,6 +64,13 @@ export function createAct4WorldPlugin(opts: Act4WorldPluginOptions = {}): GamePl
         const ropes = buildRopePosts(height);
         ctx.scene.add(ropes.object);
         cleanups.push(() => ropes.dispose());
+
+        // L1: the Waste ground's glass glints follow the quality step (Low none, Medium glints, High sparkle).
+        const quality = ctx.services.get('quality');
+        if (quality) {
+          setGroundGlassTier(GLASS_TIER[quality.step as keyof typeof GLASS_TIER] ?? GLASS_TIER.medium);
+          cleanups.push(quality.subscribe((step) => setGroundGlassTier(GLASS_TIER[step as keyof typeof GLASS_TIER] ?? GLASS_TIER.medium)));
+        }
       } catch (err) {
         teardown();
         throw err;

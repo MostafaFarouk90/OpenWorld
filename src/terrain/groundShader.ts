@@ -10,6 +10,10 @@
 // Act 3 (thread K1) reuses the one shader with three materials, one per origin (Act 2, Greyfen, Dragonspine; see
 // createGroundMaterial and groundOriginFor in ground.ts). On a Dragonspine material `uGroundVein` is 1: the `ground.x`
 // channel then means forge-glass vein weight, drawn as a thin faint emissive streak, and the ember seams are off.
+//
+// Act 4 (thread L1) adds a fourth material, the Waste's: `uGroundWaste` is 1, `ground.x` means glass-sand glint weight
+// (ground.ts glassWeight) and `uGroundGlass` is the quality tier's glint level (0 Low: none; 1 Medium: glints;
+// 2 High: glints plus a view-angle sparkle). setGroundGlassTier sets it on every live Waste material.
 import * as THREE from 'three';
 import { GROUND_ORIGINS, type GroundOriginKey } from './ground';
 
@@ -28,6 +32,12 @@ export const ASH_FADE_FAR = 1100;
 export const VEIN_CELL = 36;
 export const VEIN_PATCH = 220;
 export const VEIN_COLOR = new THREE.Color(1.0, 0.5, 0.18);
+
+/** Glass-sand glints: tiny bright cells, this many metres across, on the glint weight. */
+export const GLINT_CELL = 0.9;
+export const GLINT_COLOR = new THREE.Color(0.85, 0.9, 1.0);
+/** Glint level per quality step: Low none, Medium glints, High glints plus the view-angle sparkle. */
+export const GLASS_TIER = { low: 0, medium: 1, high: 2 } as const;
 
 export const EMBER_COLOR = new THREE.Color(1.0, 0.32, 0.06);
 export const ASH_FOG_COLOR = new THREE.Color(0.42, 0.4, 0.38);
@@ -52,6 +62,9 @@ uniform vec3 uEmberColor;
 uniform vec3 uAshFogColor;
 uniform float uGroundVein;
 uniform vec3 uVeinColor;
+uniform float uGroundWaste;
+uniform float uGroundGlass;
+uniform vec3 uGlintColor;
 varying vec2 vGround;
 varying vec2 vGroundLocal;
 varying float vGroundViewDist;
@@ -83,6 +96,13 @@ float groundVeinStreak(vec2 local) {
   float veinPatch = smoothstep(0.62, 0.8, groundValueNoise(local / ${VEIN_PATCH.toFixed(1)} + 31.0));
   return streak * veinPatch;
 }
+float groundGlint(vec2 local, vec3 viewDir, float tier) {
+  // Medium: a sparse static scatter of bright cells. High: the lit cells change with the view angle (a sparkle).
+  vec2 cell = floor(local / ${GLINT_CELL.toFixed(2)});
+  float angle = tier > 1.5 ? floor(dot(viewDir, vec3(9.0, 5.0, 7.0)) * 3.0) : 0.0;
+  float h = groundHash(cell + angle * 13.7);
+  return smoothstep(0.985, 0.998, h) * step(0.5, tier);
+}
 `;
 
 export const GROUND_FRAGMENT_COLOR = /* glsl */ `
@@ -92,7 +112,8 @@ diffuseColor.rgb = mix(diffuseColor.rgb, uAshFogColor, groundAsh * 0.45);
 
 export const GROUND_FRAGMENT_EMISSIVE = /* glsl */ `
 float groundPulse = 0.65 + 0.35 * sin(uGroundTime * ${((2 * Math.PI) / EMBER_PULSE_PERIOD).toFixed(6)} + groundValueNoise(vGroundLocal / 40.0) * 6.283185);
-totalEmissiveRadiance += uEmberColor * (vGround.x * groundSeam(vGroundLocal) * groundPulse * 0.9 * (1.0 - uGroundVein));
+totalEmissiveRadiance += uEmberColor * (vGround.x * groundSeam(vGroundLocal) * groundPulse * 0.9 * (1.0 - uGroundVein) * (1.0 - uGroundWaste));
+totalEmissiveRadiance += uGlintColor * (vGround.x * uGroundWaste * groundGlint(vGroundLocal, normalize(vViewPosition), uGroundGlass) * 0.8);
 totalEmissiveRadiance += uVeinColor * (vGround.x * groundVeinStreak(vGroundLocal) * uGroundVein * (0.2 + 0.1 * groundPulse));
 `;
 
@@ -103,6 +124,23 @@ export interface GroundUniforms {
   uAshFogColor: { value: THREE.Color };
   uGroundVein: { value: number };
   uVeinColor: { value: THREE.Color };
+  uGroundWaste: { value: number };
+  uGroundGlass: { value: number };
+  uGlintColor: { value: THREE.Color };
+}
+
+const liveGlass = new Set<GroundUniforms>();
+let glassTier: number = GLASS_TIER.medium;
+
+/** Sets the glint level (GLASS_TIER) on every live Waste ground material, and on any made later. */
+export function setGroundGlassTier(tier: number): void {
+  glassTier = tier;
+  for (const u of liveGlass) u.uGroundGlass.value = tier;
+}
+
+/** Stops a Waste material's uniforms following the glint tier (its material is being disposed). */
+export function releaseGroundUniforms(u: GroundUniforms): void {
+  liveGlass.delete(u);
 }
 
 /** Injects the ground snippets into a MeshStandardMaterial's shader source. Pure (on the strings). */
@@ -141,7 +179,11 @@ export function createGroundMaterial(params: THREE.MeshStandardMaterialParameter
     uGroundTime: { value: 0 },
     uEmberColor: { value: EMBER_COLOR.clone() },
     uAshFogColor: { value: ASH_FOG_COLOR.clone() },
+    uGroundWaste: { value: origin === 'waste' ? 1 : 0 },
+    uGroundGlass: { value: origin === 'waste' ? glassTier : 0 },
+    uGlintColor: { value: GLINT_COLOR.clone() },
   };
+  if (origin === 'waste') liveGlass.add(uniforms);
   const material = new THREE.MeshStandardMaterial(params);
   const key = origin === 'act2' ? 'terrain-act2-ground' : `terrain-${origin}-ground`;
   material.name = key;
