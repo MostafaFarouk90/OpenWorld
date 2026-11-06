@@ -77,7 +77,7 @@ describe('the persistables', () => {
     const AWAITING_ACT3_FIXTURES: string[] = [];
     // v0.8: the Act 4 keys have round-trip tests (SceneRunner.test.ts, noStrand.test.ts); L13 PR 1's act4-*.json fixtures
     // carry them, and each wave 1 thread adds its own new key here. L13 drops the entries as its fixtures land.
-    const AWAITING_ACT4_FIXTURES: string[] = ['respawn', 'scenes'];
+    const AWAITING_ACT4_FIXTURES: string[] = ['respawn', 'scenes', 'escorts'];
     const awaited = [...AWAITING_ACT3_FIXTURES, ...AWAITING_ACT4_FIXTURES];
     const orphans = keys.filter((k) => !inAny.has(k) && !awaited.includes(k));
     expect(orphans, 'persistables no fixture carries').toEqual([]);
