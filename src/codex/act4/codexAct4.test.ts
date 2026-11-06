@@ -125,6 +125,8 @@ describe('codex-act4 plugin', () => {
     expect(t.has(ID.walkerCamp)).toBe(true);
     t.emit('discover', { placeId: 'poi.a4.wagon-train', kind: 'poi' });
     expect(t.has(ID.huskCathedral)).toBe(false);
+    t.emit('discover', { placeId: 'waste.husk-cathedral', kind: 'poi' });
+    expect(t.has(ID.huskCathedral)).toBe(true);
     t.emit('weather.changed', { kind: 'clear', from: 'storm' });
     expect(t.has(ID.storms)).toBe(false);
     t.emit('weather.changed', { kind: 'warning', from: 'clear' });
@@ -133,6 +135,11 @@ describe('codex-act4 plugin', () => {
     t.emit('dialogue.started', { dialogueId: 'x', npcId: 'hild' });
     expect(t.has(ID.hild)).toBe(false);
     t.ctx.state.setFlag('story.gate.a4', true);
+    // Her id never unlocks the rope-warden's entry; L11's `hild-ropewright` does.
+    t.emit('dialogue.started', { dialogueId: 'x', npcId: 'hild' });
+    expect(t.has(ID.hild)).toBe(false);
+    t.emit('dialogue.started', { dialogueId: 'x', npcId: 'hild-ropewright' });
+    expect(t.has(ID.hild)).toBe(true);
     t.emit('dialogue.started', { dialogueId: 'x', npcId: 'ebba' });
     expect(t.has(ID.ebba)).toBe(true);
     t.emit('quest.started', { questId: 'm38' });
