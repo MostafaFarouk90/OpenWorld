@@ -123,6 +123,9 @@ describe('the Act 4 Harrowmark spawners', () => {
     const sp = spawnersFor(ACT4_M39_WAVES);
     expect(sp.every((d) => d.area === 'harrowmark-a4' && d.band === 'harrowmark')).toBe(true);
     expect(sp.reduce((n, d) => n + d.count, 0)).toBe(8);
+    // L10 PR 2: one Footman per lane spawner, so none lands on the ring slot off the narrow stair floor
+    expect(sp.every((d) => d.count === 1)).toBe(true);
+    expect(ACT4_M39_WAVES.interior).toBe('keep-stairs');
   });
 });
 

@@ -7,6 +7,9 @@ import type { PostRule } from '../../../posts';
 import { Q } from './anchors';
 import { R22_SITES } from './r22.quest';
 import { ACT4_CITY } from '../../../../harrowmark/act4/postRules';
+import type { Condition } from '../../../types';
+import { M41_ARRIVALS } from './m41.quest';
+import { M38_ALLIES } from './m38.quest';
 
 const def = (id: string, model: NpcModelId, extra: { scale?: number; tint?: number | null } = {}): NpcDef => ({
   id, nameKey: `npc.${id}.name`, model, scale: extra.scale ?? 1, tint: extra.tint ?? null, dialogueId: `npc-${id}`, idleClip: 'Idle',
@@ -14,6 +17,14 @@ const def = (id: string, model: NpcModelId, extra: { scale?: number; tint?: numb
 const VEY_TINT = 0x2a2624;
 const A4 = 'story.gate.a4';
 const HELD = 'story.m38.complete';
+const done = (q: string): Condition => ({ quest: q, state: 'completed' });
+const active = (q: string): Condition => ({ quest: q, state: 'active' });
+/** From the Council's fall to the deep run (M39 and M40's brief): the Keep stairs. */
+const STAIRS: Condition = { all: [done('m38'), { not: active('m40') }, { not: done('m40') }] };
+/** Gaut holds the stairs from the Council's fall until he falls (his retirement at story.m39.fallen takes him then). */
+const GAUT_STAIRS: Condition = { all: [done('m38'), { not: { flag: 'story.m39.fallen', equals: true } }] };
+/** From the deep run until Ashgate is named: the M41 camp. */
+const CAMP: Condition = { all: [{ any: [active('m40'), done('m40')] }, { not: done('m41') }] };
 
 export const HARROWMARK_A4_Q_NPC_DEFS: NpcDef[] = [
   ...[1, 2, 3].map((n) => def(`r20-sergeant-${n}`, 'knight', { tint: VEY_TINT })),
@@ -55,11 +66,27 @@ export const HARROWMARK_A4_QUEST_POST_ROWS: readonly { npcId: string; home: stri
   {
     npcId: 'gaut', home: 'npc-post.gaut',
     posts: [
+      { when: GAUT_STAIRS, anchorId: 'harrowmark.a4.stairs.gaut' },
       { when: { quest: 'm37', state: 'active' }, anchorId: `${Q}.post.gaut.inn` },
       { when: ACT4_CITY, anchorId: 'npc-post.gaut.bastion' },
     ],
   },
+  // PR 2: after the Council nobody is needed at a city post (plan 3, L2's question). Edric and Rook wait on the Keep stairs
+  // until the deep run, then at the M41 camp (L4's escort walks them through the run itself); the allies come out to the camp.
+  { npcId: 'edric', home: 'npc-post.edric', posts: [{ when: STAIRS, anchorId: 'harrowmark.a4.stairs.edric' }, { when: CAMP, anchorId: `${Q}.m41.edric` }] },
+  { npcId: 'rook', home: 'npc-post.rook', posts: [{ when: STAIRS, anchorId: 'harrowmark.a4.stairs.rook' }, { when: CAMP, anchorId: `${Q}.m41.rook` }] },
+  // M38: the three allies sit in the Council Chamber while it runs (L2's seats)
+  ...M38_ALLIES.map((id) => ({ npcId: id, home: `npc-post.${id}`, posts: [{ when: active('m38'), anchorId: `harrowmark.a4.chamber.seat.${id}` }] })),
+  ...M41_ARRIVALS.map((id) => ({ npcId: id, home: `npc-post.${id}`, posts: [{ when: { quest: 'm41', state: 'active' } as Condition, anchorId: `${Q}.m41.${id}` }] })),
 ];
+
+const QUEST_ROW_SET = new Set(HARROWMARK_A4_QUEST_POST_ROWS.flatMap((r) => r.posts));
+
+/** A rule with this block's rows taken back out (for tables that pin their own shipped rows, like L2's `withoutAct4Rows`). */
+export function withoutHarrowmarkQuestRows(rule: PostRule): PostRule {
+  const posts = rule.posts.filter((p) => !QUEST_ROW_SET.has(p));
+  return posts.length === rule.posts.length ? rule : { ...rule, posts };
+}
 
 /** The rules with this block's rows put first (the first matching row wins); never reorders or drops a row. */
 export function withHarrowmarkQuestPosts(rules: PostRule[]): PostRule[] {

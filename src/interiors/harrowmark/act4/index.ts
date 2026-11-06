@@ -19,7 +19,8 @@ export const ACT4_HARROWMARK_DOOR_LOCKS: Readonly<Record<string, string>> = {
   // A transfer checks the target door's lock too. The stairs open with the betrayal itself (the chamber's front door is
   // shut from then, so the stairs are never a dead end's only way out), the deep run once the stairs are held (M39 done).
   [STAIRS_DOOR_ID]: 'story.m38.complete',
-  [DEEP_RUN_DOOR_ID]: 'story.m39.complete',
+  // L10 PR 2: with M40 itself (Rook's offer), so the first den cannot be cleared before its step can count it
+  [DEEP_RUN_DOOR_ID]: 'story.m40.started',
   // The grate outside the north wall opens from outside with M40: a player who left the run (a death respawn at the camp)
   // can go back in and finish it.
   [DEEP_RUN_EXIT_DOOR_ID]: 'story.m40.started',

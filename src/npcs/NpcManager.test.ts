@@ -113,7 +113,8 @@ describe('spawnAll rollback', () => {
     void blocker;
   });
   it('throws on the first npc leaves scene, actors and interactables empty', () => {
-    const { fc, m } = setup();
+    // without the retirement table: Gaut (the first NPC) retires at M39, which spawns him through the flag gate instead
+    const { fc, m } = setup({ retired: [] });
     fc.ctx.interaction.register({ id: 'npc:gaut', kind: 'talk', name: 'x', radius: 1, position: (o) => o, onInteract: () => {} });
     expect(() => m.spawnAll()).toThrow(/duplicate/);
     expect(fc.scene.children.length).toBe(0);

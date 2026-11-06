@@ -23,7 +23,7 @@ const PHASE_G_BEFORE_M37 = ['m35', 'm36', 'r19', 'r20', 'r21', 'r22', 'r23', 'd0
 
 /** Plan 2.5, direct prerequisites inside Act 4 (`story.gate.a4` opens M35). Q12: M37 and M46 wait on every quest of their phase. */
 export const ACT4_DIRECT: Readonly<Record<string, readonly string[]>> = {
-  m35: [], m36: ['m35'], r19: ['m35'], r22: ['m35'], r23: ['m35'], d07: ['m35'], r20: ['m36'], r21: ['m36'],
+  m35: [], m36: ['m35'], r19: ['m35'], r22: ['m35'], r23: ['m35'], d07: ['m35', 'r23'], r20: ['m36'], r21: ['m36'],
   m37: PHASE_G_BEFORE_M37, m38: ['m37'], m39: ['m38'], m40: ['m39'], m41: ['m40'],
   m42: ['m41'], m43: ['m42'], m44: ['m43'], r24: ['m43'], d08: ['m43'], r25: ['m44'], m45: ['m44'],
   m46: ['m42', 'm43', 'm44', 'm45', 'd08', 'r24', 'r25'],

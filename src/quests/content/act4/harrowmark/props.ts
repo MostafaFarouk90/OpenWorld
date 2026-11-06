@@ -10,6 +10,10 @@ import { R21_DOOR, R21_GRATE, R21_GRATE_FLAG } from './r21.quest';
 import { R22_ANVIL, R22_BELLOWS, R22_FIND, R22_FORGED, R22_FOUND, R22_HILT, R22_QUENCH, R22_SITES } from './r22.quest';
 import { R23_CHOICE, R23_EXPOSED, R23_READING } from './r23.quest';
 import { D07_VALVE, D07_VALVE_ANCHOR, D07_VALVES } from './d07.quest';
+import { M38_EVIDENCE, M38_EVIDENCE_FLAG } from './m38.quest';
+import { M39_BARRICADE, M39_BARRICADE_FLAG } from './m39.quest';
+import { M40_SLUICE, M40_SLUICE_FLAG } from './m40.quest';
+import { M41_FIRE, M41_MAP } from './m41.quest';
 import { M37_COMPANIONS, M37_FEAST, M37_FEAST_FLAG, M37_SEAT, M37_SUNG, M37_TABLE } from './m37.quest';
 
 export const HARROWMARK_A4_PROPS: QuestPropSpec[] = [
@@ -49,6 +53,15 @@ export const HARROWMARK_A4_PROPS: QuestPropSpec[] = [
     interactableId: M37_SEAT(c), anchorId: `${Q}.m37.seat.${c}`, promptKey: `quest.prompt.a4.seat.${c}`, objective: ['m37', c], priority: 1,
   })),
   { interactableId: M37_TABLE, anchorId: `${Q}.m37.table`, promptKey: 'quest.prompt.a4.table', objective: ['m37', 'song'], when: { not: { flag: M37_SUNG, equals: true } }, priority: 1 },
+  // M38: the evidence laid on the chamber table before the case
+  { interactableId: M38_EVIDENCE, anchorId: 'harrowmark.a4.chamber.evidence', promptKey: 'quest.prompt.a4.evidence', objective: ['m38', 'evidence'], usedFlag: M38_EVIDENCE_FLAG, look: 'box', priority: 1 },
+  // M39: the barricade on the second landing (L2's wave set defends it once shut)
+  { interactableId: M39_BARRICADE, anchorId: 'harrowmark.a4.stairs.barricade', promptKey: 'quest.prompt.a4.barricade', objective: ['m39', 'barricade'], usedFlag: M39_BARRICADE_FLAG, priority: 1 },
+  // M40: the sluice wheel in the deep run
+  { interactableId: M40_SLUICE, anchorId: 'harrowmark.a4.deeprun.sluice-wheel', promptKey: 'quest.prompt.a4.sluice', objective: ['m40', 'sluice'], usedFlag: M40_SLUICE_FLAG, priority: 1 },
+  // M41: the map table and the fire at the camp
+  { interactableId: M41_MAP, anchorId: `${Q}.m41.map`, promptKey: 'quest.prompt.a4.map', objective: ['m41', 'camp'], usedFlag: 'story.m41.map', look: 'page', priority: 1 },
+  { interactableId: M41_FIRE, anchorId: `${Q}.m41.fire`, promptKey: 'quest.prompt.a4.fire', objective: ['m41', 'camp'], usedFlag: 'story.m41.fire', priority: 1 },
 ];
 
 export const HARROWMARK_A4_PROMPTS: Record<string, string> = {
@@ -58,4 +71,5 @@ export const HARROWMARK_A4_PROMPTS: Record<string, string> = {
   bellows: 'Work the bellows', anvil: 'Strike on the beat', quench: 'Quench the blade', hilt: 'Fit the hilt', reading: 'Read the orders aloud',
   valve: 'Turn the valve wheel', feast: 'Sit down to the feast', 'seat.tobb': 'Sit with Tobb', 'seat.hrolf': 'Sit with Hrolf',
   'seat.aelfreda': 'Sit with Aelfreda', table: 'Drum the war-song on the table',
+  evidence: 'Lay out the evidence', barricade: 'Shut the barricade', sluice: 'Turn the sluice wheel', map: 'Spread out the map', fire: 'Bank up the fire',
 };

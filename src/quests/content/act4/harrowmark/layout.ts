@@ -2,13 +2,15 @@
 // itself gets them from the director (installExtraAnchors); this file only resolves the same rows against the shipped layouts.
 import type { AnchorSpec, LayoutData } from '../../../../region/layoutTypes';
 import { HARROWMARK_LAYOUT } from '../../../../harrowmark/harrowmark.layout';
+import { ACT4_LAYOUT_HM } from '../../../../harrowmark/act4/act4.layout';
+import { ACT4_WORLD_LAYOUT } from '../../../../region/act4/act4World.layout';
 import { TILTED_ANVIL_DEF, TILTED_ANVIL_ID } from '../../../../interiors/harrowmark/tiltedAnvil';
 import { NEAR_ANCHORS, QUEST_WORLD_ANCHORS, type NearAnchor } from './anchors';
 
 const yawDeg = (heading?: number): number => ((heading ?? 0) + 180) % 360;
 
 /** The world anchors, plus the near ones whose base is a static world anchor (the waystones are placed by code at runtime). */
-export function harrowmarkA4QuestLayout(world: readonly { id: string; x: number; z: number }[] = HARROWMARK_LAYOUT.anchors): LayoutData {
+export function harrowmarkA4QuestLayout(world: readonly { id: string; x: number; z: number }[] = [...HARROWMARK_LAYOUT.anchors, ...ACT4_LAYOUT_HM.anchors, ...ACT4_WORLD_LAYOUT.anchors]): LayoutData {
   const byId = new Map(world.map((a) => [a.id, a]));
   const near = NEAR_ANCHORS.filter((n) => !n.interior).flatMap((n): AnchorSpec[] => {
     const b = byId.get(n.near);

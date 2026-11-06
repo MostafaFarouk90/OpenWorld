@@ -37,7 +37,8 @@ export const d07: QuestDef = {
   titleKey: 'quest.d07.title',
   summaryKey: 'quest.d07.summary',
   sequential: true,
-  startWhen: { all: [{ quest: 'm35', state: 'completed' }, { flag: 'story.r23.crucible', equals: true }] },
+  // the first witness's word opens it; R23 done implies it (a save or a dev jump that completes R23 without its talks)
+  startWhen: { all: [{ quest: 'm35', state: 'completed' }, { any: [{ flag: 'story.r23.crucible', equals: true }, { quest: 'r23', state: 'completed' }] }] },
   objectives: [
     { id: 'brief', type: 'talk', target: 'rook', textKey: 'quest.d07.brief' },
     story('enter', 'quest.d07.enter', 'interior.entered', { match: { interiorId: CRUCIBLE_ID }, doneWhen: { flag: D07_ENTERED, equals: true } }),

@@ -10,6 +10,9 @@ import { R21_NOTES } from './r21.quest';
 import { R22_NOTES } from './r22.quest';
 import { R23_ORDER } from './r23.quest';
 import { D07_NOTES, D07_NOTE_ANCHORS } from './d07.quest';
+import { M38_NOTES } from './m38.quest';
+import { M39_NOTE_TOKEN } from './m39.quest';
+import { M41_NOTES } from './m41.quest';
 
 const n = (id: string, anchorId: string, speaker: 'note' | 'cael', lines: string[], look: Act2Note['look'] = 'page'): Act2Note =>
   ({ id, anchorId, speaker, lines, look });
@@ -117,5 +120,28 @@ export const HARROWMARK_A4_NOTE_LIST: Act2Note[] = [
   n(D07_NOTES.log, D07_NOTE_ANCHORS.log, 'note', [
     'The furnace log. At its foot, chalked for the night shift: "To vent the vats: the middle wheel, then the north, then the south. Never the south first."',
     'Under it, in another hand: "Gerd turned the south first. Gerd is in the vat."',
+  ]),
+  // M38
+  n(M38_NOTES[0], 'harrowmark.a4.chamber.clerk', 'note', [
+    'On the clerk\'s table, under the voting roll: a list in Vey\'s own hand. Every delegate\'s name, and beside each, "for" or "against" or "remove".',
+    'Edric\'s name is at the bottom. Beside it, one word: "stairs". He knew which way we would run.',
+  ]),
+  n(M38_NOTES[1], 'harrowmark.a4.chamber.footman.e1', 'cael', [
+    'On the Footman by the east door, a writ with the Regent\'s seal, dated a week ago: the order to hold the chamber "when the vote is called".',
+    'A week ago. Before the Houses arrived, before a single delegate was walked in. The vote was never going to be counted.',
+  ], 'box'),
+  // M39
+  n(M39_NOTE_TOKEN, 'harrowmark.a4.stairs.sword', 'cael', [
+    'Beside the barricade, where he fell, Gaut\'s old knight\'s token: a tin badge on a frayed ribbon, the Kettlewick mill-wheel stamped into it.',
+    'He wore it under his mail for forty years. It is warm still. I put it on.',
+  ], 'box'),
+  // M41
+  n(M41_NOTES[0], `${Q}.m41.grandfather`, 'note', [
+    'Folded in Edric\'s doublet, worn soft: a note in his grandfather\'s hand. "If the city is ever lost, it is not the crown that is lost. Go to the ash. The Ashgate holds."',
+    'Under it, a child\'s copy of the same words, letter by careful letter. Edric learned to write from it.',
+  ]),
+  n(M41_NOTES[1], `${Q}.m41.tunnel`, 'cael', [
+    'On the rock by the deep run\'s grate, a mark cut long ago: a gate with a road running out of it toward the north-east.',
+    'Whoever cut it meant someone to come this way in a bad hour, and to know where to go next.',
   ]),
 ];

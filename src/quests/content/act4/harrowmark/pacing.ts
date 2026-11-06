@@ -8,9 +8,10 @@ import { ACT4_LAYOUT_HM } from '../../../../harrowmark/act4/act4.layout';
 import { CINDERREACH_LAYOUT } from '../../../../cinderreach/cinderreach.layout';
 import { GREYFEN_LAYOUT } from '../../../../greyfen/greyfen.layout';
 import { DRAGONSPINE_LAYOUT } from '../../../../dragonspine/dragonspine.layout';
-import { CRUCIBLE_DEF } from '../../../../interiors/harrowmark/act4/crucible';
+import { ACT4_HARROWMARK_INTERIORS } from '../../../../interiors/harrowmark/act4';
+import { ACT4_WORLD_LAYOUT } from '../../../../region/act4/act4World.layout';
 import { TILTED_ANVIL_DEF } from '../../../../interiors/harrowmark/tiltedAnvil';
-import { CRUCIBLE_DOOR } from '../../../../harrowmark/act4/sites';
+import { CHAMBER_DOOR, CRUCIBLE_DOOR, DEEP_RUN_ID } from '../../../../harrowmark/act4/sites';
 import { Q, routeIds } from './anchors';
 import { harrowmarkA4InteriorExtras, harrowmarkA4QuestLayout } from './layout';
 import { R22_SITES } from './r22.quest';
@@ -20,6 +21,13 @@ const post = (id: string): string => `${P}.post.${id}`;
 const INN_DOOR = 'harrowmark.tilted-anvil.door';
 const INN = 'npc-post.tobb.tilted-anvil';
 const CRU = 'harrowmark.a4.crucible';
+const CH = 'harrowmark.a4.chamber';
+const ST = 'harrowmark.a4.stairs';
+const DR = 'harrowmark.a4.deeprun';
+/** The deep run's escort route (L2's nodes every second cell, in order). */
+const DEEP_RUN_ROUTE: string[] = ACT4_HARROWMARK_INTERIORS.find((d) => d.id === DEEP_RUN_ID)!.anchors
+  .filter((a) => /^harrowmark\.a4\.deeprun\.route\.\d+$/.test(a.id)).map((a) => a.id)
+  .sort((a, b) => Number(a.split('.').pop()) - Number(b.split('.').pop()));
 
 type Step = readonly [Act4Leg, string];
 /** A row from a start anchor and its steps (each step: how the leg is travelled, and where it ends). */
@@ -31,7 +39,7 @@ const follow = (ids: string[]): Step[] => ids.map((id) => ['follow', id] as cons
 const route = (name: string, n: number, from = 2): string[] => routeIds(name, n).slice(from - 1);
 
 /** Dialogue nodes of each quest's shorter branch: the talk rows plus the notes its search objectives read (2 lines each). */
-export const HARROWMARK_A4_NODES = { m35: 35, m36: 46, r19: 31, r20: 24, r21: 21, r22: 31, r23: 45, d07: 25, m37: 43 } as const;
+export const HARROWMARK_A4_NODES = { m35: 35, m36: 46, r19: 31, r20: 24, r21: 21, r22: 31, r23: 45, d07: 25, m37: 43, m38: 66, m39: 32, m40: 28, m41: 43 } as const;
 
 export const HARROWMARK_A4_PACE: readonly Act4PaceRow[] = [
   // M35: Wystan, Merrin and the Oswin walk, Aldric and the Halvard walk, the steward out at the River Gate, the chain, the lane
@@ -88,6 +96,26 @@ export const HARROWMARK_A4_PACE: readonly Act4PaceRow[] = [
   build('m37', 35, INN_DOOR, [
     ['door', INN], ...foot(`${Q}.m37.feast`, `${Q}.m37.seat.tobb`, `${Q}.m37.seat.hrolf`, `${Q}.m37.seat.aelfreda`, `${Q}.post.gaut.inn`, `${Q}.m37.table`, `${Q}.m37.feast`),
   ], HARROWMARK_A4_NODES.m37, { set: 2, rhythm: 1, interact: 4 }),
+  // M38: Edric at the Keep court, the chamber door, the three allies at their seats, the evidence and the podium, the betrayal,
+  // the six Footmen, down behind the dais to the stairs
+  build('m38', 60, post('edric'), [
+    ...foot(CHAMBER_DOOR.anchor), ['door', `${CH}.entry`],
+    ...foot(`${CH}.seat.wystan`, `${CH}.seat.merrin`, `${CH}.seat.wenna`, `${CH}.evidence`, `${CH}.podium`, `${CH}.footman.w2`, `${CH}.footman.e2`, `${CH}.from-stairs`),
+    ['door', `${ST}.entry`],
+  ], HARROWMARK_A4_NODES.m38, { set: 2, killUnit: 6, interact: 1, search: 2 }),
+  // M39: Gaut on the top landing, the stair-head four, the barricade, four waves of two, the champion and the fall, the token,
+  // down to the King at the stair foot
+  build('m39', 50, `${ST}.entry`, [
+    ...foot(`${ST}.gaut`, `${ST}.wave.top.2`, `${ST}.barricade`, `${ST}.wave.one.2`, `${ST}.barricade`, `${ST}.sword`, `${ST}.edric`),
+  ], HARROWMARK_A4_NODES.m39, { killUnit: 8, waveEnemy: 8, set: 2, interact: 1, search: 1 }),
+  // M40: Rook at the stair foot, the deep run at the column's pace (two dens, the sluice, the patrol hall), up the ladder
+  build('m40', 50, `${ST}.rook`, [
+    ['door', `${DR}.entry`], ...follow(DEEP_RUN_ROUTE), ['door', 'harrowmark.a4.deeprun.exit'],
+  ], HARROWMARK_A4_NODES.m40, { killUnit: 10, interact: 1, set: 1 }),
+  // M41: the camp scene, Edric, Rook, Wystan, the map and the fire, the two searches, Edric again
+  build('m41', 35, 'harrowmark.a4.m41.camp', [
+    ...foot(`${Q}.m41.edric`, `${Q}.m41.rook`, `${Q}.m41.wystan`, `${Q}.m41.map`, `${Q}.m41.fire`, `${Q}.m41.grandfather`, `${Q}.m41.tunnel`, `${Q}.m41.edric`),
+  ], HARROWMARK_A4_NODES.m41, { set: 1, interact: 2, search: 2 }),
 ];
 
 function spawn(group: string): string { return `${P}.spawn.${group}.1`; }
@@ -96,9 +124,9 @@ let byId: Map<string, { x: number; z: number }> | undefined;
 /** Any anchor a Harrowmark pacing row names: the city, its Act 4 sites, my quest anchors, R22's waystone sites, the two interiors. */
 export function paceAt(anchor: string): { x: number; z: number } {
   if (!byId) {
-    const world = [...HARROWMARK_LAYOUT.anchors, ...ACT4_LAYOUT_HM.anchors, ...CINDERREACH_LAYOUT.anchors, ...GREYFEN_LAYOUT.anchors, ...DRAGONSPINE_LAYOUT.anchors];
+    const world = [...HARROWMARK_LAYOUT.anchors, ...ACT4_LAYOUT_HM.anchors, ...ACT4_WORLD_LAYOUT.anchors, ...CINDERREACH_LAYOUT.anchors, ...GREYFEN_LAYOUT.anchors, ...DRAGONSPINE_LAYOUT.anchors];
     const inn = harrowmarkA4InteriorExtras()[0]!.anchors;
-    byId = new Map([...world, ...harrowmarkA4QuestLayout(world).anchors, ...CRUCIBLE_DEF.anchors, ...TILTED_ANVIL_DEF.anchors, ...inn].map((a) => [a.id, { x: a.x, z: a.z }]));
+    byId = new Map([...world, ...harrowmarkA4QuestLayout(world).anchors, ...ACT4_HARROWMARK_INTERIORS.flatMap((d) => d.anchors), ...TILTED_ANVIL_DEF.anchors, ...inn].map((a) => [a.id, { x: a.x, z: a.z }]));
   }
   const p = byId.get(anchor);
   if (!p) throw new Error(`harrowmark a4 pacing: no anchor ${anchor}`);

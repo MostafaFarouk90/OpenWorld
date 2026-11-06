@@ -1,14 +1,19 @@
 // Contracts v0.8 item 8: NPC retirement. A retired NPC is absent (despawned, never spawned again) from its flag on, in
 // every layout that places it: NpcManager merges RETIRED_NPCS into each NpcSpec's absent flags. A post rule cannot bring it
 // back (NpcManager.place refuses an NPC that is not spawned). The retirement lint (quests/lint/retiredLint.ts) checks
-// that no quest, vendor or trainer still needs it after the flag. L10 adds Gaut (story.m39.complete).
+// that no quest, vendor or trainer still needs it after the flag. L10 adds Gaut (story.m39.fallen).
 
 export interface RetiredNpc {
   id: string;
   whenFlag: string;
 }
 
-export const RETIRED_NPCS: RetiredNpc[] = [];
+export const RETIRED_NPCS: RetiredNpc[] = [
+  // L10: Aldous leaves his post (and his stall) when the Council falls; Gaut falls on the Keep stairs (M39's
+  // fall scene writes `story.m39.fallen`; he is not seen again after it).
+  { id: 'aldous', whenFlag: 'story.m38.complete' },
+  { id: 'gaut', whenFlag: 'story.m39.fallen' },
+];
 
 /** `absentWhen` as a list (v0.8: one flag or any of several). */
 export function absentFlags(absentWhen: string | readonly string[] | undefined): string[] {

@@ -30,6 +30,7 @@ const pick = (way: R20Way): Effect[] => [
 export const MERRIN_A4 = buildTree({
   id: 'npc-merrin',
   start: [
+    { when: at('m38', 'merrin'), seg: 'a4-m38-merrin' },
     { when: at('m35', 'oswin'), seg: 'a4-m35-oswin' },
     { when: at('m36', 'report'), seg: 'a4-m36-report' },
     { when: at('r20', 'report'), seg: 'a4-r20-report' },
@@ -41,6 +42,21 @@ export const MERRIN_A4 = buildTree({
     { when: qActive('r20'), seg: 'a4-r20-wait' },
   ],
   segments: {
+    'a4-m38-merrin': {
+      lines: [
+        M('The Oswin seat has the King\'s proxy, if the charter holds. Wilmot will read it out when the clerk calls the Houses.'),
+        M('I have brought the Counting-House ledgers too. Every coin the Regent took out of this city is in them, if anyone wants to count.'),
+        C('Will they count?'),
+        M('No. Nobody in this room cares about the money. They care about who will be standing when the vote is done.'),
+        M('Which is why I have also brought a knife. Do not look so shocked. I am a merchant, not a fool.'),
+        C('Can you use it?'),
+        M('My father made me learn. He said a merchant who cannot defend her strongbox does not have a strongbox for long.'),
+        M('Aldous has been smiling at me since I sat down. Aldous never smiles at me. Aldous owes my house three thousand crowns.'),
+        C('Then watch him.'),
+        M('I am watching all of them. That is what a counting-house is for.'),
+      ],
+    },
+
     'a4-m35-oswin': {
       lines: [
         M('There you are. The Oswin delegation: Elder Osric, who has sat on four Councils and slept through two, and my own two guards.'),

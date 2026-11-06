@@ -468,7 +468,8 @@ export class WaveDirector implements WavesService {
   private paused(def: WaveSetDef): boolean {
     const player = this.host.actors.player;
     if (player.dead) return true;
-    if (this.host.services.get('interiors')?.current) return true;
+    const inside = this.host.services.get('interiors')?.current ?? null;
+    if (inside !== (def.interior ?? null)) return true;
     if (this.host.services.get('waystones')?.travelling) return true;
     const origin = this.world?.origin ?? this.originOf(def);
     if (!origin) return true;

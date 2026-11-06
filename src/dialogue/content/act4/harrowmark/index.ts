@@ -11,11 +11,12 @@ import { DUNSTAN_A4 } from './dunstan.dialogue';
 import { GAUT_A4, ORRIN_A4, TOBB_A4, WENNA_A4 } from './friends.dialogue';
 import { CAST_TREES } from './cast.dialogue';
 import { SCENE_TREES, SPEAKER_NAMES } from './scenes.dialogue';
+import { COUNCIL_SCENE_TREES, EDRIC_A4 } from './council.dialogue';
 
 /** New trees (the new cast and the scenes). */
-export const HARROWMARK_A4_TREES: readonly BuiltTree[] = [...CAST_TREES, ...SCENE_TREES];
+export const HARROWMARK_A4_TREES: readonly BuiltTree[] = [...CAST_TREES, ...SCENE_TREES, ...COUNCIL_SCENE_TREES];
 /** Extensions of shipped trees (their rules go first; node ids start `a4-`). */
-export const HARROWMARK_A4_EXTENSIONS: readonly BuiltTree[] = [WYSTAN_A4, MERRIN_A4, ROOK_A4, DUNSTAN_A4, WENNA_A4, ORRIN_A4, TOBB_A4, GAUT_A4];
+export const HARROWMARK_A4_EXTENSIONS: readonly BuiltTree[] = [WYSTAN_A4, MERRIN_A4, ROOK_A4, DUNSTAN_A4, WENNA_A4, ORRIN_A4, TOBB_A4, GAUT_A4, EDRIC_A4];
 
 /** One short dialogue per note (node ids '1'..'n', as Act 3's notes). */
 export const HARROWMARK_A4_NOTE_DIALOGUES: DialogueDef[] = HARROWMARK_A4_NOTE_LIST.map((n) => ({

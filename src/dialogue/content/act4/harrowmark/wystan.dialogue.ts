@@ -9,6 +9,8 @@ const W = voice('wystan');
 export const WYSTAN_A4 = buildTree({
   id: 'npc-wystan',
   start: [
+    { when: at('m38', 'wystan'), seg: 'a4-m38-wystan' },
+    { when: at('m41', 'wystan'), seg: 'a4-m41-wystan' },
     { when: at('m35', 'report'), seg: 'a4-m35-report' },
     { when: at('r19', 'report'), seg: 'a4-r19-report' },
     { when: offer('m35'), seg: 'a4-m35-brief' },
@@ -17,6 +19,31 @@ export const WYSTAN_A4 = buildTree({
     { when: qActive('r19'), seg: 'a4-r19-wait' },
   ],
   segments: {
+    'a4-m38-wystan': {
+      lines: [
+        W('Count them. Twelve of Vey\'s men along the walls, and those are the ones I can see. The side doors have been locked from outside.'),
+        C('Locked?'),
+        W('Barred. I tried the east one when the clerk was not looking. If this goes badly, the only way out is behind the dais, down the Keep stairs.'),
+        W('Gaut is on the stairs already. He would not say why. I think he knows Vey better than any of us.'),
+        C('And the watch? The men you raised at the Bastion?'),
+        W('Outside the Keep gate, where Vey\'s writ says they must wait. Four hundred men, a wall and a gate away. They might as well be in Cinderreach.'),
+        W('If I could send one runner I would. Vey\'s men took my runner\'s horn at the door, very politely.'),
+        C('Then we do this with what is in the room.'),
+        W('We do. I have done worse with less. Not often.'),
+        W('Lay the papers out. Let the boy speak. And keep your hand near your sword.'),
+      ],
+    },
+    'a4-m41-wystan': {
+      lines: [
+        W('I have forty men out of four hundred, and most of them are hurt. The Bastion will fly Vey\'s colours by morning.'),
+        C('You got them out. That matters.'),
+        W('It does. Gaut would say so. He would also say I took too long about it.'),
+        W('The banners you raised stood till the last. The men saw them from the walls when the Footmen came. They held because of them.'),
+        W('Ashgate, then. I have never seen it. My father said the ash eats leather and the wind eats men. We will need both, and new boots.'),
+        W('Go and rest, {name}. I will take the first watch with Rook.'),
+      ],
+    },
+
     'a4-m35-brief': {
       lines: [
         W('{name}. Good. Edric has called the Council of Ash, all three Houses under one roof, and Vey has a guard on every gate in the city.'),

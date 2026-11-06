@@ -9,6 +9,8 @@ const R = voice('rook');
 export const ROOK_A4 = buildTree({
   id: 'npc-rook',
   start: [
+    { when: at('m41', 'rook'), seg: 'a4-m41-rook' },
+    { when: offer('m40'), seg: 'a4-m40-brief' },
     { when: at('r23', 'choose'), seg: 'a4-r23-choose' },
     { when: at('r23', 'report'), seg: 'a4-r23-report' },
     { when: at('d07', 'report'), seg: 'a4-d07-report' },
@@ -84,6 +86,36 @@ export const ROOK_A4 = buildTree({
         R('Then the Council will hear it from the ledgers, not from us. Keep them close.'),
         R('And keep this. A gear from the engine, still warm. Dunstan will know what to make of it.'),
         R('Go and sleep, {name}. Tobb has been asking where you are, and he is not a patient man when there is food on the table.'),
+      ],
+    },
+    'a4-m40-brief': {
+      lines: [
+        R('Down here. Quick. Gaut bought us the time; we spend it or we waste it.'),
+        R('There is a way under the city the Regent has never walked: the old deep run, from the Keep\'s cellars to beyond the north wall. Hounds keep it now, and Vey\'s patrol walks the middle.'),
+        C('And Edric?'),
+        R('Between us, all the way. He will stop at every turn. Let him. A boy who has just watched that needs to be talked down every hundred yards.'),
+        C('Gaut?'),
+        R('I heard. I am not going to talk about it down here. Up top, by a fire, with something to drink. Not down here.'),
+        R('There is a sluice gate halfway. The wheel is stiff; it wants your back, not mine.'),
+        {
+          s: 'rook', t: 'Ready?',
+          choices: [
+            { id: 'accept', t: 'Ready. Lead on.', go: null, fx: [{ startQuest: 'm40' }] },
+            { id: 'later', t: 'One moment.', go: null },
+          ],
+        },
+      ],
+    },
+    'a4-m41-rook': {
+      lines: [
+        R('He is holding together better than I did at his age. Better than I am now, if I am honest.'),
+        C('You knew Gaut a long time.'),
+        R('Thirty years of arguing about everything. He was wrong about most of it, and right about the only thing that mattered.'),
+        C('Which was?'),
+        R('That the boy was worth it. I said a king is a king; any of them would do. Gaut said no, this one. He was right.'),
+        R('Now. Enough of that before I start to sound like him.'),
+        R('The road is north-east, into the ash. I have walked the start of it. Past that I know only stories, and none of them are good.'),
+        R('See to the fire, would you? And the map. I will keep watch on the wall. They will not come out tonight, but I will watch anyway.'),
       ],
     },
   },

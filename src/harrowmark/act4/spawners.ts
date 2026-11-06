@@ -99,7 +99,9 @@ export const ACT4_M39_WAVES: WaveSetDef = {
   barricadeAnchors: [`${P}.stairs.barricade`],
   lanes: { '1': `${P}.stairs.wave.top.1`, '2': `${P}.stairs.wave.top.3`, '3': `${P}.stairs.wave.one.2`, '4': `${P}.stairs.wave.one.4` },
   waves: [
-    { spawns: [{ lane: '1', kind: FOOTMAN, count: 2, delay: 0, stagger: 2 }], carts: [] },
+    // one per lane (L10 PR 2): a lane of two puts the second on the spawner's ring, off the narrow stair floor, where it
+    // fell to the terrain below the interior and the wave could never clear
+    { spawns: [{ lane: '1', kind: FOOTMAN, count: 1, delay: 0, stagger: 0 }, { lane: '2', kind: FOOTMAN, count: 1, delay: 2, stagger: 0 }], carts: [] },
     { spawns: [{ lane: '1', kind: FOOTMAN, count: 1, delay: 0, stagger: 0 }, { lane: '2', kind: FOOTMAN, count: 1, delay: 1, stagger: 0 }], carts: [] },
     { spawns: [{ lane: '3', kind: FOOTMAN, count: 1, delay: 0, stagger: 0 }, { lane: '4', kind: FOOTMAN, count: 1, delay: 1, stagger: 0 }], carts: [] },
     { spawns: [{ lane: '1', kind: FOOTMAN, count: 1, delay: 0, stagger: 0 }, { lane: '3', kind: FOOTMAN, count: 1, delay: 2, stagger: 0 }], carts: [] },
@@ -109,4 +111,6 @@ export const ACT4_M39_WAVES: WaveSetDef = {
   area: 'harrowmark-a4',
   spawnTag: 'm39.waves',
   radius: 40,
+  // fought inside the Keep stairs (L10 PR 2: without it the wave director pauses indoors and the hold never ends)
+  interior: 'keep-stairs',
 };
