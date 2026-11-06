@@ -7,7 +7,7 @@ import { gatePosition, outward } from '../city';
 import { gateBearing, GATE_NAMES } from '../city';
 import type { AnchorSpec, LayoutData, NpcSpec } from '../../region/layoutTypes';
 import { a } from '../layout.helpers';
-import { A4_FLAG, CHAMBER_DOOR, CHECKPOINTS, CRUCIBLE_DOOR, GATE_FACE_OUT, gateFaceAnchor, OCCUPIED_FLAG, R20_HUTS, RING_FACE_RADIUS, WORKING_GATES } from './sites';
+import { A4_FLAG, CHAMBER_DOOR, DEEP_RUN_EXIT, CHECKPOINTS, CRUCIBLE_DOOR, GATE_FACE_OUT, gateFaceAnchor, OCCUPIED_FLAG, R20_HUTS, RING_FACE_RADIUS, WORKING_GATES } from './sites';
 
 const P = 'harrowmark.a4';
 
@@ -74,6 +74,8 @@ const anchors: AnchorSpec[] = [
   // The doors: the chamber's on the Keep's south face, the Crucible's inside the Smelter gate.
   a(CHAMBER_DOOR.anchor, CHAMBER_DOOR.x, CHAMBER_DOOR.z, CHAMBER_DOOR.heading, ['poi', 'door']),
   a(CRUCIBLE_DOOR.anchor, CRUCIBLE_DOOR.x, CRUCIBLE_DOOR.z, CRUCIBLE_DOOR.heading, ['poi', 'door']),
+  // The deep run's grate outside the north wall (both of its doors land here).
+  a(DEEP_RUN_EXIT.anchor, DEEP_RUN_EXIT.x, DEEP_RUN_EXIT.z, DEEP_RUN_EXIT.heading, ['poi', 'door']),
   // The occupied city's faces, one outside each working gate, facing out (L0's HARROWMARK_GATE_FACES reads them).
   ...WORKING_GATES.map((g) => {
     const b = gateBearing(GATE_NAMES.indexOf(g));

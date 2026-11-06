@@ -1,4 +1,4 @@
-import { ENEMY_SKINS, isEnemySkinId, type EnemySkinId } from './skins';
+import { applyEnemySkin, ENEMY_SKINS, isEnemySkinId, type EnemySkinId } from './skins';
 import * as THREE from 'three';
 import { isHeavyBlow } from '../combat/heavyBlow';
 import { HumanoidBody, type EnemyBody } from './body';
@@ -343,7 +343,11 @@ export class EnemyManager {
         slot: req.slot,
         skin: req.skin,
       };
-      enemy = new Enemy(this.env, spawn, this.makeBody(def, req.skin));
+      const body = this.makeBody(def, req.skin);
+      // Humanoid bodies draw the skin in the model builder (makeBody); the others (golem, crawler, quadruped, wyrm) take
+      // L0's applyEnemySkin over their materials.
+      if (req.skin && !(body instanceof HumanoidBody)) applyEnemySkin(body, def.kind, req.skin, (m) => this.host.warn(m));
+      enemy = new Enemy(this.env, spawn, body);
     } catch (err) {
       this.host.warn(`enemies: could not spawn ${def.kind} for ${req.spawnerId}: ${String(err)}`);
       return null;

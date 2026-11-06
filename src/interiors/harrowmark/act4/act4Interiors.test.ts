@@ -12,6 +12,7 @@ import type { InteriorDef } from '../../types';
 import { UNDERWAYS_DEF } from '../../underways/generate';
 import {
   ACT4_HARROWMARK_DOOR_LOCKS,
+  ACT4_HARROWMARK_EXIT_LOCKS,
   ACT4_HARROWMARK_FLAG_BLOCKERS,
   ACT4_HARROWMARK_INTERIORS,
   ACT4_HARROWMARK_LINKS,
@@ -87,12 +88,14 @@ describe('Act 4 Harrowmark interiors', () => {
     expect(ACT4_HARROWMARK_DOOR_LOCKS).toEqual({
       'council-chamber': 'story.m38.started',
       'crucible-cellars': 'story.d07.started',
-      'keep-stairs': 'story.m39.started',
-      'deep-run': 'story.m40.started',
+      'keep-stairs': 'story.m38.complete',
+      'deep-run': 'story.m39.complete',
+      'deep-run-exit': 'story.m40.started',
     });
     expect(ACT4_HARROWMARK_FLAG_BLOCKERS).toEqual({ 'crucible.arena.gate': 'story.d07.vatValves', 'deeprun.sluice': 'story.m40.sluice' });
-    // The world exit of the deep run never locks (exits never lock; it has no outside prompt either).
-    expect(Object.keys(ACT4_HARROWMARK_DOOR_LOCKS)).not.toContain('deep-run-exit');
+    // After the betrayal the chamber can only be left down the stairs, and the stairs open at that same moment.
+    expect(ACT4_HARROWMARK_EXIT_LOCKS).toEqual({ 'council-chamber': { flag: 'story.m38.complete', toastKey: 'interior.refused.chamberHeld' } });
+    expect(ACT4_HARROWMARK_DOOR_LOCKS['keep-stairs']).toBe(ACT4_HARROWMARK_EXIT_LOCKS['council-chamber']!.flag);
   });
 
   it('pins every Act 4 layout (a change here moves anchors other threads use: update deliberately)', () => {

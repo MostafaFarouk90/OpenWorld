@@ -8,7 +8,7 @@ import type { ConditionEnv } from '../../quests/ports';
 import type { FlagValue, QuestState } from '../../quests/types';
 import { pointInFootprint } from '../../region/geometry';
 import { createFakeCore } from '../../region/testing/fakeCore';
-import { CENTER, gatePosition, RING_RADIUS } from '../city';
+import { CENTER, gateBearing, GATE_NAMES, gatePosition, RING_RADIUS } from '../city';
 import { DOORS, HARROWMARK_LAYOUT } from '../harrowmark.layout';
 import { HARROWMARK_NPC_DEFS, HARROWMARK_NPC_STRINGS_EN } from '../npcDefs';
 import { validateCity } from '../validateCity';
@@ -108,6 +108,9 @@ describe('Act 4 layout', () => {
 
   it('places R20\'s huts in the farm-ring outside the River Gate, beyond L1\'s wall track', () => {
     for (const h of R20_HUTS) expect(radius(h.x, h.z)).toBeGreaterThan(840);
+    // Off the convoy road (the River Gate's bearing line), so an escort or cart on it never paths round a hut.
+    const b = (gateBearing(GATE_NAMES.indexOf('river')) * Math.PI) / 180;
+    for (const h of R20_HUTS) expect(Math.abs((h.x - CENTER.x) * Math.cos(b) - (h.z - CENTER.z) * Math.sin(b))).toBeGreaterThanOrEqual(10);
   });
 });
 

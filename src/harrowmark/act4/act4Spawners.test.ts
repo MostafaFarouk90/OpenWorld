@@ -13,7 +13,7 @@ import { fogWalls, needsPushBackDef } from '../../region/fogWall';
 import { createFakeCore } from '../../region/testing/fakeCore';
 import { WAVE_SETS } from '../../waves/defs';
 import { spawnersFor } from '../../waves/spawners';
-import { CENTER, gatePosition, RING_RADIUS } from '../city';
+import { CENTER, gateBearing, GATE_NAMES, gatePosition, RING_RADIUS } from '../city';
 import { HARROWMARK_LAYOUT } from '../harrowmark.layout';
 import { createHarrowmarkAct4Plugin } from './harrowmarkAct4.plugin';
 import { gateFaceDefs, gateFacePlacement, HARROWMARK_ACT4_XP_FACTOR, HARROWMARK_XP_WHEN } from './occupied';
@@ -134,17 +134,22 @@ describe('the occupied city\'s gate faces', () => {
     for (const d of defs) {
       expect(HARROWMARK_GATE_FACES.some((f) => f.id === d.id && f.openWhen === d.openWhen)).toBe(true);
       expect(d.halfLength).toBe(10);
-      expect(d.pushDepth).toBe(20);
+      expect(d.pushDepth).toBe(13);
     }
     expect(() => act4FogFace('fog.waste-edge')).not.toThrow();
   });
 
-  it('pushes a player at the gate\'s passage out, holds nobody 30 m outside or deep in the streets, and never reaches L1\'s track', () => {
+  it('holds the outside of each gate, never pushes anyone inside the walls (even beside the gate), and never reaches L1\'s track', () => {
     for (const g of WORKING_GATES) {
       const def = gateFaceDefs().find((d) => d.anchorId === gateFaceAnchor(g))!;
       const wall = HARROWMARK_LAYOUT.anchors.find((a) => a.id === def.anchorId)!;
-      expect(needsPushBackDef(def, gatePosition(g, RING_RADIUS), wall), `${g} passage`).toBe(true);
-      expect(needsPushBackDef(def, gatePosition(g, RING_RADIUS - 4), wall), `${g} inside the gate`).toBe(true);
+      expect(needsPushBackDef(def, gatePosition(g, 755), wall), `${g} at the gate's outer mouth`).toBe(true);
+      expect(needsPushBackDef(def, gatePosition(g, RING_RADIUS), wall), `${g} passage`).toBe(false);
+      expect(needsPushBackDef(def, gatePosition(g, RING_RADIUS - 4), wall), `${g} inside the gate`).toBe(false);
+      // Against the inner wall face, 9 m beside the gate.
+      const b = (gateBearing(GATE_NAMES.indexOf(g)) * Math.PI) / 180;
+      const beside = { x: gatePosition(g, 746).x + Math.cos(b) * 9, z: gatePosition(g, 746).z - Math.sin(b) * 9 };
+      expect(needsPushBackDef(def, beside, wall), `${g} beside the gate inside`).toBe(false);
       expect(needsPushBackDef(def, gatePosition(g, RING_RADIUS + 45), wall), `${g} track`).toBe(false);
       expect(needsPushBackDef(def, gatePosition(g, RING_RADIUS + 30), wall), `${g} outside`).toBe(false);
       expect(needsPushBackDef(def, gatePosition(g, 700), wall), `${g} streets`).toBe(false);

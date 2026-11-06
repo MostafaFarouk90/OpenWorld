@@ -8,9 +8,16 @@ export const NEAR_FADE_MIN_OPACITY = 0.25;
 
 interface Saved {
   originals: THREE.Material | THREE.Material[];
+  /** What we put on the mesh (the array itself for an array material), to tell whether another system swapped it since. */
+  installed: THREE.Material | THREE.Material[];
   faded: THREE.Material[];
 }
 
+/**
+ * Another system may swap a mesh's material while it is faded (the weapon tier tint, gear/weaponTint.ts) and later put
+ * back what it found, which may be our clone. So a clone is never left translucent: whenever we let go of one we set its
+ * opacity and transparency back to its original's, and we only dispose clones that are still ours alone on the mesh.
+ */
 export class NearFade {
   private readonly saved = new Map<THREE.Mesh, Saved>();
   private last = 0;
@@ -29,6 +36,12 @@ export class NearFade {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh || !mesh.material) return;
       let s = this.saved.get(mesh);
+      if (s && mesh.material !== s.installed) {
+        // Swapped under us: our clones go opaque again (never disposed, the other system may hold one) and we start over.
+        unfade(s);
+        this.saved.delete(mesh);
+        s = undefined;
+      }
       if (!s) {
         const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         const faded = list.map((m) => {
@@ -36,20 +49,35 @@ export class NearFade {
           c.transparent = true;
           return c;
         });
-        s = { originals: mesh.material, faded };
+        const installed = Array.isArray(mesh.material) ? faded : faded[0]!;
+        s = { originals: mesh.material, installed, faded };
         this.saved.set(mesh, s);
-        mesh.material = Array.isArray(mesh.material) ? faded : faded[0]!;
+        mesh.material = installed;
       }
       for (const m of s.faded) m.opacity = opacity;
     });
   }
 
-  /** Puts every original material back and frees the clones. */
+  /** Puts every original material back and frees the clones that are still only ours. */
   restore(): void {
     for (const [mesh, s] of this.saved) {
-      mesh.material = s.originals;
-      for (const m of s.faded) m.dispose();
+      unfade(s);
+      if (mesh.material === s.installed) {
+        mesh.material = s.originals;
+        for (const m of s.faded) m.dispose();
+      }
     }
     this.saved.clear();
   }
+}
+
+/** Sets each clone's opacity and transparency back to its original's. */
+function unfade(s: Saved): void {
+  const orig = Array.isArray(s.originals) ? s.originals : [s.originals];
+  s.faded.forEach((m, i) => {
+    const o = orig[i];
+    if (!o) return;
+    m.opacity = o.opacity;
+    m.transparent = o.transparent;
+  });
 }

@@ -16,9 +16,21 @@ export const ACT4_HARROWMARK_INTERIORS: readonly InteriorDef[] = [COUNCIL_CHAMBE
 export const ACT4_HARROWMARK_DOOR_LOCKS: Readonly<Record<string, string>> = {
   [CHAMBER_DOOR_ID]: CHAMBER_LOCK_FLAG,
   [CRUCIBLE_DOOR_ID]: CRUCIBLE_LOCK_FLAG,
-  // A transfer checks the target door's lock too: the stairs open with M39 and the deep run with M40.
-  [STAIRS_DOOR_ID]: 'story.m39.started',
-  [DEEP_RUN_DOOR_ID]: 'story.m40.started',
+  // A transfer checks the target door's lock too. The stairs open with the betrayal itself (the chamber's front door is
+  // shut from then, so the stairs are never a dead end's only way out), the deep run once the stairs are held (M39 done).
+  [STAIRS_DOOR_ID]: 'story.m38.complete',
+  [DEEP_RUN_DOOR_ID]: 'story.m39.complete',
+  // The grate outside the north wall opens from outside with M40: a player who left the run (a death respawn at the camp)
+  // can go back in and finish it.
+  [DEEP_RUN_EXIT_DOOR_ID]: 'story.m40.started',
+};
+
+/**
+ * Exits that refuse while a flag holds (L2, additive to the interiors plugin): from the betrayal the chamber's front door
+ * would put the player in the held city, cut off from the stairs, so it stays shut; the way out is down the stairs.
+ */
+export const ACT4_HARROWMARK_EXIT_LOCKS: Readonly<Record<string, { flag: string; toastKey: string }>> = {
+  [CHAMBER_DOOR_ID]: { flag: 'story.m38.complete', toastKey: 'interior.refused.chamberHeld' },
 };
 
 /** Flag-driven blockers (closed while the flag is false; re-derived on a load). */
