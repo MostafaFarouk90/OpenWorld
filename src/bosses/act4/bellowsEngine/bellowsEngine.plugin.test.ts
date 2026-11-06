@@ -16,12 +16,14 @@ import { regionAt } from '../../../region/regionMask';
 import structureBreaksPlugin from '../../structureBreaks.plugin';
 import { winBellowsForTest } from './testing';
 import { VALVE_INTERACT_PREFIX } from './valves';
+import { BOLT_CACHE_PREFIX } from './boltCaches';
+import { cachePlaces } from './BellowsEncounter';
 import { BELLOWS_VALVE_PREFIX } from '../../../audio/act2SfxRouter';
 import { OUTCOME_FLAG, RESET_TOAST_KEY } from './BellowsDirector';
 import { BELLOWS_BOSS_DEF, pickLiveValve } from './BellowsEncounter';
 import plugin, { bellowsEngineDirector } from './bellowsEngine.plugin';
 import { buildBellowsModel } from './BellowsModel';
-import { ARENA, BELLOWS, BELLOWS_BOSS_ID, bellowsLevel, bellowsScale, COAL, PRESENTATION, RHYTHM, VALVES, VENT } from './tuning';
+import { ARENA, BELLOWS, BELLOWS_BOSS_ID, BOLT_CACHES, bellowsLevel, bellowsScale, COAL, PRESENTATION, RHYTHM, VALVES, VENT } from './tuning';
 
 let physics: PhysicsWorld;
 
@@ -49,7 +51,7 @@ function fake(id: string, name: string, service: unknown): GamePlugin {
   };
 }
 
-type Opts = { flags?: boolean; interior?: string | null; level?: number; noBreaks?: boolean; model?: boolean };
+type Opts = { flags?: boolean; interior?: string | null; level?: number; noBreaks?: boolean; model?: boolean; classId?: string; bolts?: number };
 
 async function setup(opts: Opts = {}) {
   const scene = new THREE.Scene();
@@ -66,7 +68,11 @@ async function setup(opts: Opts = {}) {
   const assets = opts.model ? { load: () => Promise.resolve(), instantiate: () => new THREE.Group(), animations: () => [] } : null;
   const game = new Game({ scene, physics, world, input, moveModifiers, assets: assets as never, cameraRig: null as never, report: () => {} });
   const events: Array<{ type: keyof GameEventMap; payload: any }> = [];
+  const pouch = { bolts: opts.bolts ?? 0 };
   game.events.onAny((type, payload) => events.push({ type, payload }));
+  game.events.on('loot.granted', (p) => {
+    for (const it of p.items) if (it.itemId === 'crossbow-bolts') pouch.bolts += it.count;
+  });
   const blockers: string[] = [];
   const interiors = {
     current: ('interior' in opts ? opts.interior! : ARENA.interiorId) as string | null,
@@ -80,7 +86,9 @@ async function setup(opts: Opts = {}) {
   ];
   if (!opts.noBreaks) plugins.push(structureBreaksPlugin);
   else plugins.push({ id: 'structure-breaks', dependsOn: ['core'], setup() {} });
-  if (opts.level !== undefined) plugins.push(fake('progression', 'progression', { level: opts.level }));
+  if (opts.level !== undefined || opts.classId !== undefined) plugins.push(fake('progression', 'progression', { level: opts.level ?? 26, classId: opts.classId ?? null }));
+  // A pouch of bolts that `loot.granted` fills (the loot plugin's job in the game).
+  if (opts.bolts !== undefined) plugins.push(fake('inventory', 'inventory', { count: (id: string) => (id === 'crossbow-bolts' ? pouch.bolts : 0) }));
   await game.loadPlugins(modules(...plugins));
   const ctx = game.ctx;
   if (opts.flags !== false) {
@@ -155,7 +163,7 @@ async function setup(opts: Opts = {}) {
     game.dispose();
     world.dispose();
   };
-  return { game, ctx, scene, interiors, events, blockers, of, run, runHealed, until, at, local, enter, exit, dir, enc, boss, state, hit, start, interactable, turn, strikeValve, toFloor, shutLive, teardown };
+  return { pouch, game, ctx, scene, interiors, events, blockers, of, run, runHealed, until, at, local, enter, exit, dir, enc, boss, state, hit, start, interactable, turn, strikeValve, toFloor, shutLive, teardown };
 }
 
 describe('bellows-engine numbers', () => {
@@ -615,6 +623,71 @@ describe('bellows-engine review fixes', () => {
       h.interiors.current = null;
       h.run(2);
       expect(wreck.visible).toBe(false);
+      h.teardown();
+    },
+    T30,
+  );
+});
+
+describe('bolt caches (coordinator ruling: the fight never goes dry)', () => {
+  const cacheAt = (h: Awaited<ReturnType<typeof setup>>, i: number) =>
+    (h.ctx.interaction as unknown as { items: Map<string, any> }).items.get(`${BOLT_CACHE_PREFIX}${i + 1}`);
+
+  it(
+    'three caches by the side valves top a Pathfinder up to 40, empty when taken, and restock when a valve vents',
+    async () => {
+      const h = await setup({ classId: 'pathfinder', bolts: 0 });
+      h.start();
+      const caches = h.enc().caches!;
+      expect(caches.count).toBe(3);
+      // Two metres from valves 1, 2 and 4 toward the engine.
+      const places = cachePlaces({ centre: h.boss()!.worldPosition(new THREE.Vector3()), valves: ARENA.valves.map((id) => h.ctx.anchors.find(id)!.position) });
+      for (const [k, v] of [0, 1, 3].entries()) {
+        const valve = h.ctx.anchors.find(ARENA.valves[v])!.position;
+        expect(Math.hypot(places[k].x - valve.x, places[k].z - valve.z)).toBeCloseTo(BOLT_CACHES.inset, 3);
+        expect(caches.position(k)!.distanceTo(places[k])).toBeLessThan(1e-6);
+      }
+      expect(cacheAt(h, 0).enabled()).toBe(true);
+      cacheAt(h, 0).onInteract(h.ctx.player.actor);
+      expect(h.pouch.bolts).toBe(40);
+      expect(h.of('loot.granted').at(-1)).toEqual({ sourceId: `${BOLT_CACHE_PREFIX}1`, items: [{ itemId: 'crossbow-bolts', count: 40 }] });
+      expect(caches.stocked(0)).toBe(false);
+      // A full pouch: no prompt anywhere, and a take grants nothing.
+      expect(cacheAt(h, 1).enabled()).toBe(false);
+      expect(caches.take(1)).toBe(0);
+      // Spent 25: cache 1 tops up 25, cache 0 stays empty until a vent.
+      h.pouch.bolts = 15;
+      expect(cacheAt(h, 0).enabled()).toBe(false);
+      expect(caches.take(0)).toBe(0);
+      expect(caches.take(1)).toBe(25);
+      expect(h.pouch.bolts).toBe(40);
+      h.pouch.bolts = 0;
+      h.toFloor();
+      h.shutLive();
+      h.run(2);
+      expect(h.state()!.breaks + h.state()!.phase).toBeGreaterThan(1);
+      expect([0, 1, 2].map((i) => caches.stocked(i))).toEqual([true, true, true]);
+      expect(caches.take(0)).toBe(40);
+      expect(caches.granted).toBe(105);
+      h.teardown();
+    },
+    T30,
+  );
+
+  it(
+    'a Knight never sees a cache prompt and gets nothing (no free sellable bolts); the caches go with the fight',
+    async () => {
+      const h = await setup({ classId: 'knight', bolts: 0 });
+      h.start();
+      const caches = h.enc().caches!;
+      expect(cacheAt(h, 0).enabled()).toBe(false);
+      expect(caches.take(0)).toBe(0);
+      expect(h.of('loot.granted')).toEqual([]);
+      expect(h.scene.getObjectByName('bellows-bolt-cache-1')).toBeDefined();
+      winBellowsForTest({ ctx: h.ctx, step: () => h.game.fixedUpdate() });
+      h.run(2);
+      expect(h.scene.getObjectByName('bellows-bolt-cache-1')).toBeUndefined();
+      expect(cacheAt(h, 0)).toBeUndefined();
       h.teardown();
     },
     T30,

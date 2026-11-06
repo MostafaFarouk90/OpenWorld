@@ -175,3 +175,15 @@ export function bellowsScale(level: number): number {
 
 /** The structure-break part id of valve `n` (1-based). */
 export const valvePartId = (n: number): string => `${BELLOWS_BOSS_ID}.valve.${n}`;
+
+/**
+ * Bolt caches (coordinator ruling 2026-11-06, taste call "Act 4 L6"): crates beside the side valves (1, 2 and 4, 0-based 0, 1
+ * and 3), this far toward the engine, that top a Pathfinder's pouch up to the item's cap and restock at every vent.
+ */
+export const BOLT_CACHES = {
+  besideValves: [0, 1, 3] as readonly number[],
+  inset: 2,
+  interactRadius: 2,
+  /** The bolts' stackMax (src/inventory/items.ts). */
+  fillTo: 40,
+} as const;

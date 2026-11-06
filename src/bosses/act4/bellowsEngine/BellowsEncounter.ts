@@ -13,6 +13,7 @@ import type { BellowsModel } from './BellowsModel';
 import { CoalShots, SteamCone } from './bellowsFx';
 import {
   BELLOWS,
+  BOLT_CACHES,
   BELLOWS_BOSS_ID,
   BELLOWS_KIND,
   BELLOWS_NAME_KEY,
@@ -25,6 +26,7 @@ import {
   VENT,
   valvePartId,
 } from './tuning';
+import { BoltCaches } from './boltCaches';
 import { ValveBank, type ValveShutResult, type ValveSource } from './valves';
 
 declare module '../../../core/events' {
@@ -59,6 +61,19 @@ export interface BellowsPlaces {
 }
 
 export type BellowsEnd = 'defeated' | 'reset';
+
+/** The bolt caches: beside the side valves, `BOLT_CACHES.inset` metres toward the engine. */
+export function cachePlaces(places: { centre: THREE.Vector3Like; valves: readonly THREE.Vector3Like[] }): THREE.Vector3[] {
+  return BOLT_CACHES.besideValves
+    .map((i) => places.valves[i])
+    .filter((v): v is THREE.Vector3Like => v !== undefined)
+    .map((v) => {
+      const at = new THREE.Vector3(v.x, v.y, v.z);
+      const d = new THREE.Vector3(places.centre.x - v.x, 0, places.centre.z - v.z);
+      const len = d.length();
+      return len > 1e-6 ? at.addScaledVector(d, BOLT_CACHES.inset / len) : at;
+    });
+}
 
 export interface BellowsEncounterOptions {
   model: BellowsModel | null;
@@ -112,6 +127,8 @@ export class BellowsEncounter implements BellowsHooks {
   private readonly steam = new SteamCone();
   private readonly tmp = new THREE.Vector3();
   private valves: ValveBank | null = null;
+  /** The Pathfinder's bolt caches by the side valves (null until registered). */
+  caches: BoltCaches | null = null;
   private unregister: (() => void) | null = null;
   private registered = false;
   private ended = false;
@@ -182,6 +199,7 @@ export class BellowsEncounter implements BellowsHooks {
         // The forced stagger emptied his poise; refill it once the registry has counted the bar, so nothing reads him as
         // staggered through the vent (the Warden's staggered-target bonus, the bar's poise).
         this.actor.restorePoise();
+        this.caches?.restock();
       }),
       ctx.events.on('boss.phase', (p) => {
         if (mine(p)) this.brain.onPhase(p.phase);
@@ -257,6 +275,7 @@ export class BellowsEncounter implements BellowsHooks {
     try {
       this.places.valves.forEach((_, i) => this.parts.push(breaks.register({ id: valvePartId(i + 1), bossId: BELLOWS_BOSS_ID })));
       this.valves = new ValveBank(this.ctx, { places: this.places.valves, onShut: (i, s) => this.shutValve(i, s), warn: this.warn });
+      this.caches = new BoltCaches(this.ctx, cachePlaces(this.places));
     } catch (err) {
       this.warn(`could not mount the valves: ${err instanceof Error ? err.message : String(err)}`);
       this.mountFailed = true;
@@ -605,6 +624,8 @@ export class BellowsEncounter implements BellowsHooks {
     // The registry drops the registration on `actor.despawned` (exactly one `boss.ended`); only a teardown unregisters first.
     this.unregister = null;
     this.valves?.dispose();
+    this.caches?.dispose();
+    this.caches = null;
     this.valves = null;
     this.shots.dispose();
     this.steam.dispose();
