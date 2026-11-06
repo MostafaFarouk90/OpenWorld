@@ -53,6 +53,43 @@ export const CINDER_CHAPEL_PLATEAU = plateau('cinder-chapel', 7820, 7980, 8120, 
 export const HUSK_CATHEDRAL_PLATEAU = plateau('husk-cathedral', 13740, 13860, 7870, 8040, 80, 80);
 export const RIMFOOT_PLATEAU = plateau('rimfoot', 10950, 11050, 6150, 6250, 178, 100);
 
+/**
+ * The rope-line shelters' pads (L1 plan section 7): a flat 10 m square at each shelter (src/region/act4/ropeLines.ts
+ * SHELTER_SPOTS, 13 m off its line), level with its line's graded profile there, so the lean-to stands flat and the
+ * pad meets the lane without a step. Fitted from the built road profiles (ropeLines.test.ts checks both the positions
+ * and the heights); the Crossing's shelter stands on the Crossing's own plateau.
+ */
+export const SHELTER_PAD_HALF = 5;
+export const SHELTER_PAD_SITES: readonly (readonly [id: string, x: number, z: number, height: number, blend: number])[] = [
+  ['shelter.cinder-road-north.1', 10221.58, 4897, 80.92, 5],
+  ['shelter.cinder-road-north.2', 10578.87, 5632.17, 123.91, 65],
+  ['shelter.cinder-road-north.3', 10771.21, 5930.25, 153.59, 48],
+  ['shelter.ashgate-camp.1', 9648, 4741.84, 86.84, 5],
+  ['shelter.ashgate-camp.2', 9326.94, 5021.66, 77.61, 12],
+  ['shelter.ashgate-camp.3', 9006.53, 5302.01, 87.18, 5],
+  ['shelter.ashgate-camp.4', 8691.85, 5589.76, 102.32, 30],
+  ['shelter.camp-chapel.1', 8171.73, 6327.48, 125.89, 35],
+  ['shelter.camp-chapel.2', 8063.89, 6800.91, 155.80, 101],
+  ['shelter.camp-chapel.3', 8097.18, 7282.18, 90.23, 44],
+  ['shelter.camp-chapel.4', 8036.07, 7734.82, 79.73, 5],
+  ['shelter.camp-crossing.1', 8814.83, 5789.12, 109.82, 8],
+  ['shelter.camp-crossing.2', 9225.93, 5665.79, 121.76, 78],
+  ['shelter.camp-crossing.3', 9638.4, 5548.46, 115.04, 133],
+  ['shelter.camp-crossing.4', 10050.22, 5425.85, 163.32, 89],
+  ['shelter.crossing-glasslands.1', 10940.35, 5268.58, 69.43, 5],
+  ['shelter.crossing-glasslands.2', 11412.25, 5331.89, 72.82, 5],
+  ['shelter.crossing-glasslands.3', 11886.9, 5411, 69.55, 5],
+  ['shelter.crossing-glasslands.4', 12357.85, 5502.86, 78.22, 20],
+  ['shelter.crossing-glasslands.5', 12825.59, 5618.38, 82.00, 130],
+  ['shelter.glasslands-cathedral.1', 13494.23, 6117.53, 130.25, 106],
+  ['shelter.glasslands-cathedral.2', 13625.09, 6553.97, 82.34, 5],
+  ['shelter.glasslands-cathedral.3', 13670.15, 7001.68, 76.55, 5],
+  ['shelter.glasslands-cathedral.4', 13655.28, 7462.83, 85.37, 5],
+];
+export const SHELTER_PADS: readonly PlateauDef[] = SHELTER_PAD_SITES.map(([id, x, z, h, blend]) =>
+  plateau(`pad.${id}`, x - SHELTER_PAD_HALF, x + SHELTER_PAD_HALF, z - SHELTER_PAD_HALF, z + SHELTER_PAD_HALF, h, blend),
+);
+
 export const WASTE_PLATEAUS: readonly PlateauDef[] = [
   ASHGATE_PLATEAU,
   M41_CAMP_PLATEAU,
@@ -61,6 +98,7 @@ export const WASTE_PLATEAUS: readonly PlateauDef[] = [
   CINDER_CHAPEL_PLATEAU,
   HUSK_CATHEDRAL_PLATEAU,
   RIMFOOT_PLATEAU,
+  ...SHELTER_PADS,
 ];
 
 // ---- flats and the rim (plan 3 items 1 to 3)

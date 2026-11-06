@@ -26,7 +26,7 @@ export interface ShelterSpot {
 export const SHELTER_MAX_SPACING = 500;
 export const SHELTER_RADIUS = 6;
 /** A shelter stands this far off its line's centreline, so it never blocks the lane. */
-export const SHELTER_OFFSET = 9;
+export const SHELTER_OFFSET = 13;
 /** A post every this many metres of arc, this far to the left of the centreline. */
 export const POST_SPACING = 25;
 export const POST_OFFSET = 2.2;
@@ -81,8 +81,13 @@ function arcOf(pts: readonly XZ[], x: number, z: number): number {
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
+/** How far the Crossing's shelter stands from the junction, on its plateau. */
+export const CROSSING_SHELTER_DISTANCE = 17;
 /** The Crossing's shelter stands in the one quarter no line leaves by: north-west of the junction, between the camp's line and the road north. */
-const CROSSING_SHELTER_AT = { x: r2(ROPE_POINTS['rope.cinder-road-north'][3][0] - SHELTER_OFFSET * Math.SQRT1_2 - 2), z: r2(ROPE_POINTS['rope.cinder-road-north'][3][1] + SHELTER_OFFSET * Math.SQRT1_2 + 2) };
+const CROSSING_SHELTER_AT = {
+  x: r2(ROPE_POINTS['rope.cinder-road-north'][3][0] - CROSSING_SHELTER_DISTANCE * Math.SQRT1_2),
+  z: r2(ROPE_POINTS['rope.cinder-road-north'][3][1] + CROSSING_SHELTER_DISTANCE * Math.SQRT1_2),
+};
 
 function buildShelters(): { lines: RopeLineGeom[]; shelters: ShelterSpot[] } {
   const shelters: ShelterSpot[] = [];

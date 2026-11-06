@@ -28,6 +28,7 @@ import {
 } from './act4Places';
 import { ACT4_FOG_FACE_ANCHORS, ACT4_FOG_FACE_POINTS } from './act4World';
 import { ROPE_ANCHORS } from './ropeLines';
+import { ACT4_STRUCTURES } from './act4Structures';
 
 export const ACT4_WORLD_DOC = { title: 'Act 4 world anchors (the Ash Road, Ashgate and its refuge, the Waste, the fog walls)', source: 'act4/act4World.layout.ts' } as const;
 
@@ -100,4 +101,4 @@ const triggers: TriggerSpec[] = (Object.keys(WASTE_SITE_TRIGGERS) as (keyof type
   radius: WASTE_SITE_TRIGGERS[id].radius,
 }));
 
-export const ACT4_WORLD_LAYOUT: LayoutData = { anchors, triggers, structures: [], patrols: [], npcs: [], fields: [] };
+export const ACT4_WORLD_LAYOUT: LayoutData = { anchors, triggers, structures: [...ACT4_STRUCTURES], patrols: [], npcs: [], fields: [] };

@@ -103,31 +103,31 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | waste.rope.glasslands-cathedral.2 | 13700 | 6800 | 0 | 0 | rope-line |
 | waste.rope.glasslands-cathedral.3 | 13650 | 7400 | 0 | 0 | rope-line |
 | waste.rope.glasslands-cathedral.4 | 13800 | 7900 | 0 | 0 | rope-line |
-| waste.shelter.cinder-road-north.1 | 10224.52 | 4894.3 | 0 | 0 | shelter |
-| waste.shelter.crossing | 10451.64 | 5308.36 | 0 | 0 | shelter |
-| waste.shelter.cinder-road-north.2 | 10582.58 | 5630.68 | 0 | 0 | shelter |
-| waste.shelter.cinder-road-north.3 | 10774.54 | 5928.03 | 0 | 0 | shelter |
-| waste.shelter.ashgate-camp.1 | 9650.6 | 4744.88 | 0 | 0 | shelter |
-| waste.shelter.ashgate-camp.2 | 9329.57 | 5024.67 | 0 | 0 | shelter |
-| waste.shelter.ashgate-camp.3 | 9009.16 | 5305.02 | 0 | 0 | shelter |
-| waste.shelter.ashgate-camp.4 | 8694.68 | 5592.59 | 0 | 0 | shelter |
-| waste.shelter.camp-chapel.1 | 8175.31 | 6329.26 | 0 | 0 | shelter |
-| waste.shelter.camp-chapel.2 | 8067.83 | 6801.63 | 0 | 0 | shelter |
-| waste.shelter.camp-chapel.3 | 8101.12 | 7281.46 | 0 | 0 | shelter |
-| waste.shelter.camp-chapel.4 | 8039.76 | 7736.39 | 0 | 0 | shelter |
-| waste.shelter.camp-crossing.1 | 8813.68 | 5785.29 | 0 | 0 | shelter |
-| waste.shelter.camp-crossing.2 | 9224.78 | 5661.96 | 0 | 0 | shelter |
-| waste.shelter.camp-crossing.3 | 9637.35 | 5544.6 | 0 | 0 | shelter |
-| waste.shelter.camp-crossing.4 | 10048.99 | 5422.04 | 0 | 0 | shelter |
-| waste.shelter.crossing-glasslands.1 | 10939.99 | 5264.6 | 0 | 0 | shelter |
-| waste.shelter.crossing-glasslands.2 | 11412.9 | 5327.94 | 0 | 0 | shelter |
-| waste.shelter.crossing-glasslands.3 | 11887.56 | 5407.05 | 0 | 0 | shelter |
-| waste.shelter.crossing-glasslands.4 | 12358.82 | 5498.98 | 0 | 0 | shelter |
-| waste.shelter.crossing-glasslands.5 | 12826.37 | 5614.45 | 0 | 0 | shelter |
-| waste.shelter.glasslands-cathedral.1 | 13497.81 | 6115.74 | 0 | 0 | shelter |
-| waste.shelter.glasslands-cathedral.2 | 13628.97 | 6553 | 0 | 0 | shelter |
-| waste.shelter.glasslands-cathedral.3 | 13674.13 | 7002.01 | 0 | 0 | shelter |
-| waste.shelter.glasslands-cathedral.4 | 13659.11 | 7461.68 | 0 | 0 | shelter |
+| waste.shelter.cinder-road-north.1 | 10221.58 | 4897 | 0 | 0 | shelter |
+| waste.shelter.crossing | 10447.98 | 5312.02 | 0 | 0 | shelter |
+| waste.shelter.cinder-road-north.2 | 10578.87 | 5632.17 | 0 | 0 | shelter |
+| waste.shelter.cinder-road-north.3 | 10771.21 | 5930.25 | 0 | 0 | shelter |
+| waste.shelter.ashgate-camp.1 | 9648 | 4741.84 | 0 | 0 | shelter |
+| waste.shelter.ashgate-camp.2 | 9326.94 | 5021.66 | 0 | 0 | shelter |
+| waste.shelter.ashgate-camp.3 | 9006.53 | 5302.01 | 0 | 0 | shelter |
+| waste.shelter.ashgate-camp.4 | 8691.85 | 5589.76 | 0 | 0 | shelter |
+| waste.shelter.camp-chapel.1 | 8171.73 | 6327.48 | 0 | 0 | shelter |
+| waste.shelter.camp-chapel.2 | 8063.89 | 6800.91 | 0 | 0 | shelter |
+| waste.shelter.camp-chapel.3 | 8097.18 | 7282.18 | 0 | 0 | shelter |
+| waste.shelter.camp-chapel.4 | 8036.07 | 7734.82 | 0 | 0 | shelter |
+| waste.shelter.camp-crossing.1 | 8814.83 | 5789.12 | 0 | 0 | shelter |
+| waste.shelter.camp-crossing.2 | 9225.93 | 5665.79 | 0 | 0 | shelter |
+| waste.shelter.camp-crossing.3 | 9638.4 | 5548.46 | 0 | 0 | shelter |
+| waste.shelter.camp-crossing.4 | 10050.22 | 5425.85 | 0 | 0 | shelter |
+| waste.shelter.crossing-glasslands.1 | 10940.35 | 5268.58 | 0 | 0 | shelter |
+| waste.shelter.crossing-glasslands.2 | 11412.25 | 5331.89 | 0 | 0 | shelter |
+| waste.shelter.crossing-glasslands.3 | 11886.9 | 5411 | 0 | 0 | shelter |
+| waste.shelter.crossing-glasslands.4 | 12357.85 | 5502.86 | 0 | 0 | shelter |
+| waste.shelter.crossing-glasslands.5 | 12825.59 | 5618.38 | 0 | 0 | shelter |
+| waste.shelter.glasslands-cathedral.1 | 13494.23 | 6117.53 | 0 | 0 | shelter |
+| waste.shelter.glasslands-cathedral.2 | 13625.09 | 6553.97 | 0 | 0 | shelter |
+| waste.shelter.glasslands-cathedral.3 | 13670.15 | 7001.68 | 0 | 0 | shelter |
+| waste.shelter.glasslands-cathedral.4 | 13655.28 | 7462.83 | 0 | 0 | shelter |
 | ashroad.fog.waste-edge | 10000 | 4470 | 0 | 0 | fog-wall |
 | waste.fog.waste-north | 10750 | 11050 | 0 | 0 | fog-wall |
 | waste.fog.caldera-rim.n | 11000 | 9530 | 0 | 0 | fog-wall |
@@ -148,3 +148,72 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 
 | id | kind | x | z | footprint | mode |
 | --- | --- | --- | --- | --- | --- |
+| ashgate.refuge.stall.wystan | stall | 9620.8 | 4429 | 3 x 2 | open |
+| ashgate.refuge.stall.merrin | stall | 9650.8 | 4429 | 3 x 2 | open |
+| ashgate.refuge.stall.wenna | stall | 9680.8 | 4429 | 3 x 2 | open |
+| ashgate.refuge.stall.dunstan | stall | 9710.8 | 4429 | 3 x 2 | open |
+| ashgate.refuge.stall.gerta | stall | 9740.8 | 4429 | 3 x 2 | open |
+| ashgate.refuge.stall.ashdown | stall | 9770.8 | 4429 | 3 x 2 | open |
+| ashgate.refuge.fire | well | 9790 | 4404 | 2 x 2 | open |
+| ashgate.refuge.anvil-block | altar | 9707 | 4429.5 | 1.2 x 0.6 | open |
+| ashgate.refuge.cask-stack | crate | 9935 | 4434 | 2 x 1.2 | open |
+| ashgate.refuge.tent.n1 | house | 9600 | 4458 | 6 x 5 | solid |
+| ashgate.refuge.tent.n2 | house | 9660 | 4458 | 6 x 5 | solid |
+| ashgate.refuge.tent.n3 | house | 9720 | 4458 | 6 x 5 | solid |
+| ashgate.refuge.tent.n4 | house | 9780 | 4458 | 6 x 5 | solid |
+| ashgate.refuge.tent.s1 | house | 9620 | 4365 | 6 x 5 | solid |
+| ashgate.refuge.tent.s2 | house | 9760 | 4365 | 6 x 5 | solid |
+| ashgate.refuge.tent.s3 | house | 9860 | 4365 | 6 x 5 | solid |
+| ashgate.arch.frame | gate | 10000 | 4478 | 10 x 1.5 | open |
+| ashgate.waystone.stone | waystone | 9960 | 4432.6 | 1.6 x 1.6 | solid |
+| ashgate.horse-post.pole | pole | 9930 | 4459.5 | 0.4 x 0.4 | open |
+| shelter.cinder-road-north.1.back | wall | 10218.64 | 4899.71 | 5 x 0.5 | solid |
+| shelter.cinder-road-north.1.roof | stall | 10221.58 | 4897 | 5 x 3.5 | open |
+| shelter.crossing.back | wall | 10445.15 | 5314.85 | 5 x 0.5 | solid |
+| shelter.crossing.roof | stall | 10447.98 | 5312.02 | 5 x 3.5 | open |
+| shelter.cinder-road-north.2.back | wall | 10575.16 | 5633.66 | 5 x 0.5 | solid |
+| shelter.cinder-road-north.2.roof | stall | 10578.87 | 5632.17 | 5 x 3.5 | open |
+| shelter.cinder-road-north.3.back | wall | 10767.88 | 5932.47 | 5 x 0.5 | solid |
+| shelter.cinder-road-north.3.roof | stall | 10771.21 | 5930.25 | 5 x 3.5 | open |
+| shelter.ashgate-camp.1.back | wall | 9645.4 | 4738.8 | 5 x 0.5 | solid |
+| shelter.ashgate-camp.1.roof | stall | 9648 | 4741.84 | 5 x 3.5 | open |
+| shelter.ashgate-camp.2.back | wall | 9324.31 | 5018.65 | 5 x 0.5 | solid |
+| shelter.ashgate-camp.2.roof | stall | 9326.94 | 5021.66 | 5 x 3.5 | open |
+| shelter.ashgate-camp.3.back | wall | 9003.9 | 5299 | 5 x 0.5 | solid |
+| shelter.ashgate-camp.3.roof | stall | 9006.53 | 5302.01 | 5 x 3.5 | open |
+| shelter.ashgate-camp.4.back | wall | 8689.02 | 5586.93 | 5 x 0.5 | solid |
+| shelter.ashgate-camp.4.roof | stall | 8691.85 | 5589.76 | 5 x 3.5 | open |
+| shelter.camp-chapel.1.back | wall | 8168.15 | 6325.69 | 5 x 0.5 | solid |
+| shelter.camp-chapel.1.roof | stall | 8171.73 | 6327.48 | 5 x 3.5 | open |
+| shelter.camp-chapel.2.back | wall | 8059.95 | 6800.2 | 5 x 0.5 | solid |
+| shelter.camp-chapel.2.roof | stall | 8063.89 | 6800.91 | 5 x 3.5 | open |
+| shelter.camp-chapel.3.back | wall | 8093.24 | 7282.89 | 5 x 0.5 | solid |
+| shelter.camp-chapel.3.roof | stall | 8097.18 | 7282.18 | 5 x 3.5 | open |
+| shelter.camp-chapel.4.back | wall | 8032.39 | 7733.25 | 5 x 0.5 | solid |
+| shelter.camp-chapel.4.roof | stall | 8036.07 | 7734.82 | 5 x 3.5 | open |
+| shelter.camp-crossing.1.back | wall | 8815.98 | 5792.95 | 5 x 0.5 | solid |
+| shelter.camp-crossing.1.roof | stall | 8814.83 | 5789.12 | 5 x 3.5 | open |
+| shelter.camp-crossing.2.back | wall | 9227.08 | 5669.62 | 5 x 0.5 | solid |
+| shelter.camp-crossing.2.roof | stall | 9225.93 | 5665.79 | 5 x 3.5 | open |
+| shelter.camp-crossing.3.back | wall | 9639.45 | 5552.32 | 5 x 0.5 | solid |
+| shelter.camp-crossing.3.roof | stall | 9638.4 | 5548.46 | 5 x 3.5 | open |
+| shelter.camp-crossing.4.back | wall | 10051.45 | 5429.66 | 5 x 0.5 | solid |
+| shelter.camp-crossing.4.roof | stall | 10050.22 | 5425.85 | 5 x 3.5 | open |
+| shelter.crossing-glasslands.1.back | wall | 10940.72 | 5272.56 | 5 x 0.5 | solid |
+| shelter.crossing-glasslands.1.roof | stall | 10940.35 | 5268.58 | 5 x 3.5 | open |
+| shelter.crossing-glasslands.2.back | wall | 11411.59 | 5335.84 | 5 x 0.5 | solid |
+| shelter.crossing-glasslands.2.roof | stall | 11412.25 | 5331.89 | 5 x 3.5 | open |
+| shelter.crossing-glasslands.3.back | wall | 11886.24 | 5414.95 | 5 x 0.5 | solid |
+| shelter.crossing-glasslands.3.roof | stall | 11886.9 | 5411 | 5 x 3.5 | open |
+| shelter.crossing-glasslands.4.back | wall | 12356.88 | 5506.74 | 5 x 0.5 | solid |
+| shelter.crossing-glasslands.4.roof | stall | 12357.85 | 5502.86 | 5 x 3.5 | open |
+| shelter.crossing-glasslands.5.back | wall | 12824.8 | 5622.3 | 5 x 0.5 | solid |
+| shelter.crossing-glasslands.5.roof | stall | 12825.59 | 5618.38 | 5 x 3.5 | open |
+| shelter.glasslands-cathedral.1.back | wall | 13490.65 | 6119.32 | 5 x 0.5 | solid |
+| shelter.glasslands-cathedral.1.roof | stall | 13494.23 | 6117.53 | 5 x 3.5 | open |
+| shelter.glasslands-cathedral.2.back | wall | 13621.21 | 6554.94 | 5 x 0.5 | solid |
+| shelter.glasslands-cathedral.2.roof | stall | 13625.09 | 6553.97 | 5 x 3.5 | open |
+| shelter.glasslands-cathedral.3.back | wall | 13666.16 | 7001.35 | 5 x 0.5 | solid |
+| shelter.glasslands-cathedral.3.roof | stall | 13670.15 | 7001.68 | 5 x 3.5 | open |
+| shelter.glasslands-cathedral.4.back | wall | 13651.45 | 7463.98 | 5 x 0.5 | solid |
+| shelter.glasslands-cathedral.4.roof | stall | 13655.28 | 7462.83 | 5 x 3.5 | open |
