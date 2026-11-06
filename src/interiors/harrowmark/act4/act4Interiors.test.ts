@@ -99,7 +99,7 @@ describe('Act 4 Harrowmark interiors', () => {
     expect(Object.fromEntries(ACT4_HARROWMARK_INTERIORS.map((d) => [d.id, hashOf(d)]))).toMatchInlineSnapshot(`
       {
         "council-chamber": "2c9fb6e5a7ffc75d",
-        "crucible-cellars": "29bb57a45c156cd8",
+        "crucible-cellars": "135b8285c9d25d35",
         "deep-run": "36cc6fd1f324e96f",
         "keep-stairs": "96fc145c3f651a9a",
       }

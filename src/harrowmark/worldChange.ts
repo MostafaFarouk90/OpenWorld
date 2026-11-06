@@ -8,6 +8,8 @@ import { HARROWMARK_LAYOUT } from './harrowmark.layout';
 export const A2_FLAG = 'story.gate.a2';
 /** Act 2's ending ("The Houses Stand") sets this once; it relights the Silver Fountain and reopens the closed stalls. */
 export const A3_FLAG = 'story.gate.a3';
+/** Act 4 (L2, additive): from Act 4's start the ash state shuts the stalls again and the fountain stops (Vey's checkpoints). */
+export const A4_FLAG = 'story.gate.a4';
 /** The glow kind (src/env/glow.ts GLOW) the Keep-road braziers register under, and the height of their flame above the anchor (the cone sits at 1.9). */
 export const BRAZIER_GLOW_KIND = 'keep-brazier';
 export const BRAZIER_FLAME_Y = 1.9;
@@ -212,7 +214,10 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
   };
   let gateA2 = false;
   let gateA3 = false;
-  const syncClosed = (): void => (gateA2 && !gateA3 ? build3() : clear3());
+  let gateA4 = false;
+  const syncClosed = (): void => ((gateA2 && !gateA3) || gateA4 ? build3() : clear3());
+  // The running fountain and the open stalls stand from Act 2's ending until Act 4 opens (L2, additive).
+  const syncOpen = (): void => (gateA3 && !gateA4 ? build2() : clear2());
 
   const off = ctx.gates.flag(A2_FLAG, (on) => {
     gateA2 = on;
@@ -223,8 +228,12 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
   const off2 = ctx.gates.flag(A3_FLAG, (on) => {
     gateA3 = on;
     syncClosed();
-    if (on) build2();
-    else clear2();
+    syncOpen();
+  });
+  const off3 = ctx.gates.flag(A4_FLAG, (on) => {
+    gateA4 = on;
+    syncClosed();
+    syncOpen();
   });
   return {
     get active() {
@@ -246,6 +255,7 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
     dispose() {
       off();
       off2();
+      off3();
       clear();
       clear2();
       clear3();

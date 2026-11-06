@@ -15,8 +15,8 @@ export const DEEP_RUN_ID = 'deep-run';
 
 /** The Council Chamber's own door on the Keep's south face, 32 m east of the Keep hall's (which stays as it is). */
 export const CHAMBER_DOOR = { anchor: 'harrowmark.a4.chamber.door', x: 8532, z: 2598, heading: 180 } as const;
-/** The Crucible's door, 12 m inside the plugged Smelter gate, facing the wall (outward). */
-const SMELTER_IN = gatePosition('smelter', 738);
+/** The Crucible's door, 18 m inside the plugged Smelter gate (6 m past the shipped smelter-gate anchor), facing the wall (outward). */
+const SMELTER_IN = gatePosition('smelter', 732);
 export const CRUCIBLE_DOOR = {
   anchor: 'harrowmark.a4.crucible.door',
   x: Math.round(SMELTER_IN.x * 100) / 100,
@@ -46,6 +46,14 @@ export const ACT4_SITES = {
 export const WORKING_GATES: readonly GateName[] = ['south', 'river', 'northwest', 'northeast'];
 /** Each working gate's face anchor sits this far outside the wall on the gate's bearing. */
 export const GATE_FACE_OUT = 15;
+/** The face anchors' radius from the city centre (the wall's centreline is 750 m out). */
+export const RING_FACE_RADIUS = 750 + GATE_FACE_OUT;
+/**
+ * The faces' size, agreed with L1 (2026-11-06): L1's track round the walls runs about 45 m outside them, so a face 15 m out
+ * pushes at most 20 m deep and spans 10 m either side of the gate, and never reaches the track.
+ */
+export const GATE_FACE_HALF_LENGTH = 10;
+export const GATE_FACE_PUSH_DEPTH = 20;
 export const gateFaceAnchor = (gate: GateName): string => `harrowmark.a4.gate.${gate}.face`;
 
 /** The River Gate's inside checkpoint, 20 m in from the gate on its bearing. */
