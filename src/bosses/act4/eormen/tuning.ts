@@ -21,7 +21,7 @@ export const HUSK_SKIN = 'wraith-husk' as const;
 const P = 'waste.cathedral.nave';
 
 /** L1's greybox prop at the far end of the nave (the gong's frame and the altar); the gong and the crown stand where they are. */
-function prop(id: string): { x: number; z: number; top: number } {
+function prop(id: string): { x: number; z: number; front: number; top: number } {
   const p = HUSK_CATHEDRAL_DEF.props?.find((q) => q.id === id);
   if (!p) throw new Error(`eormen: L1's Husk Cathedral has no prop "${id}"`);
   return { x: (p.rect.x0 + p.rect.x1) / 2, z: (p.rect.z0 + p.rect.z1) / 2, front: p.rect.z0, top: p.height };
