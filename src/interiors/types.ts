@@ -48,6 +48,12 @@ export interface SunkenDef {
   rect: LocalRect;
   depth: number;
   roof?: number;
+  /**
+   * Act 4 (L2): a step of a walkable flight. A stair entry stays on the nav grid whatever its depth (other sunken cells deeper
+   * than one step are off it), so enemies and escorts can path down a stairwell. It may not carry a `roof`. The author keeps
+   * each step within MAX_WALKABLE_PROP of its neighbours; `stairSteps` in layout.ts reports any step that is not.
+   */
+  stairs?: boolean;
 }
 
 /** A door: the outside anchor is the layout thread's; the inside anchor and the exit interactable's anchor are the interior's. */
