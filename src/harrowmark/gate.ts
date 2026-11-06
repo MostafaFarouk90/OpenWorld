@@ -82,6 +82,43 @@ export function watchNorthwestGate(gates: Pick<FlagGates, 'flag'>, apply: (open:
   return watchShutter(gates, NORTHWEST_GATE_FLAG, apply);
 }
 
+/** Act 4 (L1): set when Act 4 opens; the North-east Gate's shutter opens onto the Ash Road. */
+export const NORTHEAST_GATE_FLAG = 'story.gate.a4';
+/** Act 4 (Q2): from M38 Vey holds the city, and every working gate shuts (L2's faces stand outside them). */
+export const NORTHEAST_GATE_SHUT_FLAG = 'story.m38.complete';
+
+/** The North-east Gate's shutter: open from Act 4 until the city falls, derived on every flag change and load. */
+export function northeastGateOpen(act4: boolean, occupied: boolean): boolean {
+  return act4 && !occupied;
+}
+
+export function watchNortheastGate(gates: Pick<FlagGates, 'flag'>, apply: (open: boolean) => void): RiverGate {
+  let act4 = false;
+  let occupied = false;
+  let last: boolean | null = null;
+  let ready = false;
+  const push = (): void => {
+    if (!ready) return;
+    const open = northeastGateOpen(act4, occupied);
+    if (open === last) return;
+    last = open;
+    apply(open);
+  };
+  const offs = [
+    gates.flag(NORTHEAST_GATE_FLAG, (on) => {
+      act4 = !!on;
+      push();
+    }),
+    gates.flag(NORTHEAST_GATE_SHUT_FLAG, (on) => {
+      occupied = !!on;
+      push();
+    }),
+  ];
+  ready = true;
+  push();
+  return { open: () => northeastGateOpen(act4, occupied), dispose: () => offs.splice(0).forEach((off) => off()) };
+}
+
 /** A shutter open while one flag holds. `apply` runs once at the start and then only on change. */
 function watchShutter(gates: Pick<FlagGates, 'flag'>, flag: string, apply: (open: boolean) => void): RiverGate {
   let open = false;
