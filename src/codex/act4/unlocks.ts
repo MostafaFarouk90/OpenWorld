@@ -50,7 +50,7 @@ export const ACT4_DISCOVER_UNLOCKS: Readonly<Record<string, string>> = {
 /** NPCs whose first talk unlocks their entry (`dialogue.started { npcId }`). */
 export const ACT4_TALK_UNLOCKS: Readonly<Record<string, string>> = {
   wulfhild: ID.wulfhild,
-  hild: ID.hild,
+  'hild-ropewright': ID.hild,
   ebba: ID.ebba,
 };
 
