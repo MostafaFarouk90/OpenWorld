@@ -120,7 +120,10 @@ export const TOLL = {
   gap: [14, 12, 10] as readonly number[],
   first: 6,
   atFloor: 1.5,
-  /** Plan 6.2: the Last Gong is open this long after a toll. A toll during an open window extends it to this from the new toll. */
+  /**
+   * Plan 6.2: the Last Gong is open this long after a toll. A toll during an open window extends it to this from the new toll.
+   * A toll opens it only once his health is held at the phase's floor (real-game run: stray bolts broke every bar early).
+   */
   windowSeconds: 4,
 } as const;
 

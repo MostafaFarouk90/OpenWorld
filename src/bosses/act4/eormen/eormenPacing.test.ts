@@ -108,12 +108,12 @@ describe('Eormen pacing (the 6 min boss beat)', () => {
     const minutes = PROFILES.map((p) => `${p.name}: ${(fight(p) / 60).toFixed(1)} min`);
     expect(minutes).toMatchInlineSnapshot(`
       [
-        "blade at 35: 5.7 min",
-        "ranged at 35: 5.8 min",
-        "caster at 35: 5.8 min",
-        "blade at 32: 5.7 min",
+        "blade at 35: 5.4 min",
+        "ranged at 35: 5.7 min",
+        "caster at 35: 5.6 min",
+        "blade at 32: 5.6 min",
         "ranged at 32: 5.4 min",
-        "caster at 32: 5.8 min",
+        "caster at 32: 5.7 min",
       ]
     `);
   });

@@ -49,6 +49,8 @@ export class EormenBrain {
   private swipeCd = 0;
   /** The Last Gong: seconds left open, and whether this window has given its bar. */
   private windowLeft = 0;
+  /** The gong answers only once his health is held at this phase's floor (a toll before that opens nothing). */
+  private gongArmed = false;
 
   constructor(private readonly hooks: EormenHooks) {}
 
@@ -65,6 +67,11 @@ export class EormenBrain {
   }
 
   /** The Last Gong is open (a strike now breaks a bar). */
+  /** His health is at this phase's floor, so his tolls open the gong (tests, the fx). */
+  get gongReady(): boolean {
+    return this.gongArmed;
+  }
+
   get windowOpen(): boolean {
     return this.windowLeft > 0;
   }
@@ -134,6 +141,7 @@ export class EormenBrain {
   strikeGong(): GongStrike {
     if (!this.active || this.windowLeft <= 0) return 'dud';
     this.windowLeft = 0;
+    this.gongArmed = false;
     this.hooks.windowClose();
     return 'break';
   }
@@ -149,6 +157,7 @@ export class EormenBrain {
   /** His health reached this phase's floor: toll soon (TOLL.atFloor) unless one is sooner. False (nothing changes) while the gong is open: ask again when it closes. */
   onFloor(): boolean {
     if (!this.active || this.windowLeft > 0) return false;
+    this.gongArmed = true;
     this.tollIn = Math.min(this.tollIn, TOLL.atFloor);
     return true;
   }
@@ -157,6 +166,7 @@ export class EormenBrain {
   onPhase(phase: number): void {
     if (phase <= this._phase) return;
     this._phase = phase;
+    this.gongArmed = false;
     this.tollIn = Math.min(this.tollIn, this.tollGap());
     this.bladesIn = Math.min(this.bladesIn, this.bladeGap());
   }
@@ -210,9 +220,11 @@ export class EormenBrain {
     } else if (attack === 'toll') {
       this.hooks.toll(this.swing);
       this.tollIn = this.tollGap();
-      const extended = this.windowLeft > 0;
-      this.windowLeft = TOLL.windowSeconds;
-      this.hooks.windowOpen(extended);
+      if (this.gongArmed) {
+        const extended = this.windowLeft > 0;
+        this.windowLeft = TOLL.windowSeconds;
+        this.hooks.windowOpen(extended);
+      }
     } else if (attack === 'swipe') {
       this.hooks.swipe(this.swing);
       this.swipeCd = SWIPE.cooldown;

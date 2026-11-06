@@ -196,7 +196,11 @@ async function setup(opts: Opts = {}) {
   const strikeGong = (kind: 'melee' | 'spell' = 'melee') =>
     ctx.damage.apply({ attackerId: ctx.player.actor.id, targetId: gongActor()!.id, amount: 20, poise: 20, kind, attackId: kind === 'spell' ? 'firebolt' : 'swing' });
   const toFloor = () => hit(state()!.health);
-  const waitWindow = () => expect(until(() => enc().brain.windowOpen, Math.max(...TOLL.gap) + 4)).toBe(true);
+  /** The gong answers only at the phase's floor: brings him there first if needed, then waits for a toll to open it. */
+  const waitWindow = () => {
+    if (!enc().brain.gongReady) toFloor();
+    expect(until(() => enc().brain.windowOpen, Math.max(...TOLL.gap) + 4)).toBe(true);
+  };
   const teardown = () => {
     game.dispose();
     world.dispose();
@@ -399,10 +403,15 @@ describe('eormen plugin', () => {
       h.gongF();
       expect(h.of('boss.break')).toHaveLength(1);
       expect(h.of('eormen.gong.dud')).toHaveLength(2);
-      // The next toll (this phase's bar already broken) opens a window that breaks nothing.
-      h.waitWindow();
+      // The next toll, above phase 2's floor, opens nothing: the gong answers only at the floor.
+      const opened = h.of('eormen.gong.window').filter((w) => w.open).length;
+      expect(h.until(() => h.enc().brain.current === 'toll', Math.max(...TOLL.gap) + 4)).toBe(true);
+      h.run(TOLL.windup + 0.2);
+      expect(h.enc().brain.windowOpen).toBe(false);
+      expect(h.of('eormen.gong.window').filter((w) => w.open)).toHaveLength(opened);
       h.gongF();
       expect(h.of('boss.break')).toHaveLength(1);
+      expect(h.of('eormen.gong.dud')).toHaveLength(3);
       h.teardown();
     },
     T30,
