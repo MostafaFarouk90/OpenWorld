@@ -65,9 +65,10 @@ async function boot() {
 }
 
 describe('insideRingWall and the pure rule', () => {
-  it('a 760 m circle round the city centre', () => {
+  it('the ring wall polygon round the city centre (L2: the 56 chords plus 8 m, inside the 760 m circle)', () => {
     expect(insideRingWall(8500, 2000)).toBe(true);
-    expect(insideRingWall(8500 + 759, 2000)).toBe(true);
+    expect(insideRingWall(8500 + 755, 2000)).toBe(true);
+    expect(insideRingWall(8500 + 759, 2000)).toBe(false);
     expect(insideRingWall(8500 + 761, 2000)).toBe(false);
   });
   it('falls back to the shipped spawn when the camp anchor is missing, never inside the walls', () => {

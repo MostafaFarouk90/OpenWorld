@@ -17,6 +17,14 @@ export interface RegionChip {
 
 export const UNKNOWN_REGION_KEY = 'map.region.unknown';
 
+/**
+ * Act 4 (L2): an open region's label by flag; the first entry that holds wins. Harrowmark reads "held by Vey" from the
+ * betrayal (story.m38.complete) until Act 5.
+ */
+export const REGION_LABEL_WHEN: Partial<Record<RegionId, readonly { flag: string; key: string }[]>> = {
+  harrowmark: [{ flag: 'story.m38.complete', key: 'map.region.harrowmark.held' }],
+};
+
 function inside(inner: MapBox, outer: MapBox): boolean {
   return inner.x0 >= outer.x0 && inner.x1 <= outer.x1 && inner.z0 >= outer.z0 && inner.z1 <= outer.z1;
 }
@@ -25,7 +33,7 @@ function inside(inner: MapBox, outer: MapBox): boolean {
  * One chip per region. A region whose box sits wholly inside another's (the Caldera inside the Ashen Waste) gets no
  * chip of its own, so labels never stack; its area is still shaded through the outer box while closed.
  */
-export function regionChips(open: readonly RegionId[]): RegionChip[] {
+export function regionChips(open: readonly RegionId[], flags?: { getFlag(key: string): unknown }): RegionChip[] {
   const openSet = new Set(open);
   const out: RegionChip[] = [];
   for (const id of REGION_IDS) {
@@ -44,7 +52,7 @@ export function regionChips(open: readonly RegionId[]): RegionChip[] {
       x: (box.x0 + box.x1) / 2,
       z: (box.z0 + box.z1) / 2,
       closed,
-      labelKey: closed ? UNKNOWN_REGION_KEY : `map.region.${id}`,
+      labelKey: closed ? UNKNOWN_REGION_KEY : (flags && REGION_LABEL_WHEN[id]?.find((w) => flags.getFlag(w.flag))?.key) || `map.region.${id}`,
     });
   }
   return out;
@@ -52,7 +60,7 @@ export function regionChips(open: readonly RegionId[]): RegionChip[] {
 
 /** Stable signature, so the view redraws its region layer only when the open set changes. */
 export function chipsKey(chips: readonly RegionChip[]): string {
-  return chips.map((c) => `${c.id}${c.closed ? 0 : 1}`).join('|');
+  return chips.map((c) => `${c.id}${c.closed ? 0 : 1}${c.labelKey}`).join('|');
 }
 
 /** The open region a point is in (registry order; null between regions), for the minimap caption. */

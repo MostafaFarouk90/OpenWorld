@@ -92,3 +92,19 @@ describe('region names (v0.7)', () => {
     }
   });
 });
+
+describe('Act 4 (L2): Harrowmark held by Vey', () => {
+  it('reads the held label from M38 while open, the plain label before, Unknown while closed, and changes the signature', async () => {
+    const { regionChips: chipsFor, chipsKey: keyOf } = await import('./regionLayer');
+    const flags: Record<string, boolean> = {};
+    const r = { getFlag: (k: string) => flags[k] };
+    const hm = (open: Parameters<typeof chipsFor>[0]) => chipsFor(open, r).find((c) => c.id === 'harrowmark')!;
+    expect(hm(['brightwater', 'harrowmark']).labelKey).toBe('map.region.harrowmark');
+    const before = keyOf(chipsFor(['brightwater', 'harrowmark'], r));
+    flags['story.m38.complete'] = true;
+    expect(hm(['brightwater', 'harrowmark']).labelKey).toBe('map.region.harrowmark.held');
+    expect(keyOf(chipsFor(['brightwater', 'harrowmark'], r))).not.toBe(before);
+    expect(hm(['brightwater']).labelKey).toBe('map.region.unknown');
+    expect(chipsFor(['harrowmark']).find((c) => c.id === 'harrowmark')!.labelKey).toBe('map.region.harrowmark');
+  });
+});
