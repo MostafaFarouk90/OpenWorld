@@ -46,9 +46,18 @@ export function installM45(k: Kit): void {
   playWhen(k, { quest: 'm45', objective: 'voice', scene: M45_VOICE_SCENE, done: M45_VOICE });
 }
 
+type WavesSavedView = { defId: string | null; phase: string; done?: string[] };
+/** The sets the wave director has completed, read from its saved form (the service type does not list them; none if absent). */
+export function completedSets(w: object): string[] {
+  const s = (w as { serialize?: () => WavesSavedView }).serialize?.();
+  if (!s) return [];
+  return [...(s.done ?? []), ...(s.phase === 'done' && s.defId ? [s.defId] : [])];
+}
+
 export function installD08(k: Kit): void {
   k.on('interior.entered', (e) => {
-    if (e.interiorId !== CATHEDRAL_ID || !k.active('d08') || k.flag(D08_ENTERED)) return;
+    // only once Leofric has spoken: the flag sends him away, so an early entry must not strand his talk (review finding)
+    if (e.interiorId !== CATHEDRAL_ID || !k.active('d08') || k.flag(D08_ENTERED) || !k.objDone('d08', 'dying')) return;
     k.set(D08_ENTERED);
     k.later(() => recheck(k));
   });
@@ -89,14 +98,19 @@ export function installM46(k: Kit): void {
     if (!want && k.flag(guest)) k.clear(guest);
   });
 
+  const refused = new Set<string>();
   k.every(30, () => {
     const id = wantedWave(k);
     const w = k.ctx.services.get('waves');
     if (!id || !w || w.current) return;
     if (w.start(id)) { toast(k, 'waste.q.m46.wave'); return; }
-    // the director refuses a set it has already completed (a load between the last kill and the flag): the cairn was held
+    // a set the director has already completed (a load between the last kill and the flag): the cairn was held. Any other
+    // refusal (no enemies service, no barricade) is retried, never read as a fight won (review finding).
+    if (!completedSets(w).includes(id)) {
+      if (!refused.has(id)) { refused.add(id); k.warn(`${LOG} waves ${id} did not start; retrying`); }
+      return;
+    }
     const n = M46_CAIRNS.find((c) => M46_WAVE(c) === id)!;
-    k.warn(`${LOG} waves ${id} did not start; reading it as held`);
     k.set(M46_HELD(n));
     k.later(() => recheck(k));
   });

@@ -22,7 +22,9 @@ export const LEE_RADIUS = 6;
 /** Metres from a knot that pass it. */
 export const KNOT_RADIUS = 5;
 /** Metres off the start-to-end line beyond which a Storm Walk stray is sent back. */
-export const STRAY_M = 15;
+/** Plan: straying more than 12 m from the rope for 6 s puts Cael back at the last knot. */
+export const STRAY_M = 12;
+export const STRAY_S = 6;
 export const M43_BEAT = 'waste.q.m43.beat';
 
 const player = (k: Kit, id: string): boolean => id === 'player' || id === k.ctx.player.actor?.id;
@@ -107,6 +109,16 @@ export function installStormWalk(k: Kit, now: () => number = () => performance.n
   const pos = (id: string) => k.ctx.anchors.find(id)?.position ?? null;
   const knot = (): number => k.num(M43_KNOT);
   let lee: { n: number; c: WallCount } | null = null;
+  let strayed = 0;
+  /** The guide rope: the stone, the five knots, the end. */
+  const rope = () => [L1.stormWalkStart, ...Array.from({ length: M43_KNOTS }, (_, i) => L1.stormWalkKnot(i + 1)), L1.stormWalkEnd]
+    .map(pos).filter((x): x is NonNullable<typeof x> => !!x);
+  const offRope = (p: { x: number; z: number }): number => {
+    const pts = rope();
+    let best = Infinity;
+    for (let i = 1; i < pts.length; i++) best = Math.min(best, offLine(p, pts[i - 1]!, pts[i]!));
+    return best;
+  };
   const can = (): boolean => k.active('m43') && k.objDone('m43', 'walkTalk') && !k.flag(M43_DONE.walk);
 
   const back = (): void => {
@@ -136,9 +148,8 @@ export function installStormWalk(k: Kit, now: () => number = () => performance.n
       if (lee.c.step(POLL / 60, distanceTo(k, L1.stormWalkKnot(n)) <= LEE_RADIUS)) { k.set(M43_LEE_DONE(n)); lee = null; }
       return;
     }
-    const a = pos(L1.stormWalkStart);
-    const b = pos(L1.stormWalkEnd);
-    if (a && b && offLine(k.ctx.player.feet, a, b) > STRAY_M) { back(); return; }
+    strayed = offRope(k.ctx.player.feet) > STRAY_M ? strayed + POLL / 60 : 0;
+    if (strayed >= STRAY_S) { strayed = 0; back(); return; }
     if (distanceTo(k, L1.stormWalkKnot(n + 1)) <= KNOT_RADIUS) {
       k.set(M43_KNOT, n + 1);
       toast(k, n + 1 === M43_KNOTS ? 'waste.q.m43.end' : 'waste.q.m43.knot');
@@ -147,6 +158,7 @@ export function installStormWalk(k: Kit, now: () => number = () => performance.n
   // a load drops the walk: it starts again from the stone (the lees and the knots with it)
   k.on('save.loaded', () => {
     lee = null;
+    strayed = 0;
     if (!k.flag(M43_DONE.walk)) {
       k.clear(M43_WALKING);
       k.set(M43_KNOT, 0);
