@@ -2,16 +2,18 @@
 // R24 cart walks. Lines, shelters and posts are derived from the fitted centrelines in src/terrain/shape/waste.ts, so
 // every consumer reads one source. Plain data and maths, worker-safe.
 import { ROPE_LINE_IDS, ROPE_POINTS, type RopeLineId, type XZ } from '../../terrain/shape/waste';
+import type { RopeLineDef, ShelterDef } from '../../weather/types';
+import type { AnchorSpec } from '../layoutTypes';
 
-/** L0's `RopeLineDef` shape (contracts v0.8 item 5): the centreline and its shelters in order along it. */
-export interface RopeLine {
+/** A rope-line's geometry: the centreline and its shelters in order along it (L0's `RopeLineDef` names anchors instead). */
+export interface RopeLineGeom {
   id: RopeLineId;
   points: readonly XZ[];
   shelters: readonly string[];
 }
 
-/** L0's `ShelterDef` shape: a storm shelter beside a line. */
-export interface Shelter {
+/** A storm shelter's geometry beside its line (L0's `ShelterDef` names its anchor instead). */
+export interface ShelterSpot {
   id: string;
   at: { x: number; z: number };
   radius: number;
@@ -82,9 +84,9 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 /** The Crossing's shelter stands in the one quarter no line leaves by: north-west of the junction, between the camp's line and the road north. */
 const CROSSING_SHELTER_AT = { x: r2(ROPE_POINTS['rope.cinder-road-north'][3][0] - SHELTER_OFFSET * Math.SQRT1_2 - 2), z: r2(ROPE_POINTS['rope.cinder-road-north'][3][1] + SHELTER_OFFSET * Math.SQRT1_2 + 2) };
 
-function buildShelters(): { lines: RopeLine[]; shelters: Shelter[] } {
-  const shelters: Shelter[] = [];
-  const lines: RopeLine[] = [];
+function buildShelters(): { lines: RopeLineGeom[]; shelters: ShelterSpot[] } {
+  const shelters: ShelterSpot[] = [];
+  const lines: RopeLineGeom[] = [];
   const crossing = ROPE_POINTS['rope.cinder-road-north'][3];
   for (const id of ROPE_LINE_IDS) {
     const pts = ROPE_POINTS[id];
@@ -125,12 +127,26 @@ function buildShelters(): { lines: RopeLine[]; shelters: Shelter[] } {
 }
 
 const built = buildShelters();
-/** Every rope-line, Cinder Road North first. L3 imports these; never copy a point. */
-export const ROPE_LINES: readonly RopeLine[] = built.lines;
-export const SHELTERS: readonly Shelter[] = built.shelters;
+/** Every rope-line's geometry, Cinder Road North first. Never copy a point. */
+export const ROPE_LINE_GEOMS: readonly RopeLineGeom[] = built.lines;
+export const SHELTER_SPOTS: readonly ShelterSpot[] = built.shelters;
 
-export const ropeLine = (id: RopeLineId): RopeLine => {
-  const l = ROPE_LINES.find((r) => r.id === id);
+/** The anchor at a rope-line's `i`th centreline point, and at a shelter. */
+export const ropePointAnchorId = (id: RopeLineId, i: number): string => `waste.${id}.${i}`;
+export const shelterAnchorId = (shelterId: string): string => `waste.${shelterId}`;
+
+/** L0's contract shapes (v0.8, src/weather/types.ts), what L3's storms read: lines and shelters by anchor id. */
+export const ROPE_LINES: readonly RopeLineDef[] = ROPE_LINE_GEOMS.map((l) => ({ id: l.id, points: l.points.map((_, i) => ropePointAnchorId(l.id, i)), shelters: l.shelters }));
+export const SHELTERS: readonly ShelterDef[] = SHELTER_SPOTS.map((s) => ({ id: s.id, at: shelterAnchorId(s.id), radius: s.radius }));
+
+/** The anchors those ids name (in ACT4_WORLD_LAYOUT). */
+export const ROPE_ANCHORS: readonly AnchorSpec[] = [
+  ...ROPE_LINE_GEOMS.flatMap((l) => l.points.map(([x, z], i) => ({ id: ropePointAnchorId(l.id, i), x, z, yawDeg: 0, tags: ['rope-line'] }))),
+  ...SHELTER_SPOTS.map((s) => ({ id: shelterAnchorId(s.id), x: s.at.x, z: s.at.z, yawDeg: 0, tags: ['shelter'] })),
+];
+
+export const ropeLine = (id: RopeLineId): RopeLineGeom => {
+  const l = ROPE_LINE_GEOMS.find((r) => r.id === id);
   if (!l) throw new Error(`rope-lines: unknown line "${id}"`);
   return l;
 };
@@ -145,7 +161,7 @@ export function ropePosts(id: RopeLineId): { x: number; z: number; yawDeg: numbe
     const p = pointAt(pts, arc);
     const x = p.x - p.dz * POST_OFFSET;
     const z = p.z + p.dx * POST_OFFSET;
-    if (SHELTERS.some((s) => Math.hypot(s.at.x - x, s.at.z - z) <= s.radius)) continue;
+    if (SHELTER_SPOTS.some((s) => Math.hypot(s.at.x - x, s.at.z - z) <= s.radius)) continue;
     out.push({ x: r2(x), z: r2(z), yawDeg: r2((Math.atan2(-p.dz, p.dx) * 180) / Math.PI) });
   }
   return out;
@@ -163,7 +179,7 @@ interface Seg {
   lineId: RopeLineId;
 }
 const segs: Seg[] = [];
-for (const l of ROPE_LINES) {
+for (const l of ROPE_LINE_GEOMS) {
   let s0 = 0;
   for (let i = 1; i < l.points.length; i++) {
     const [ax, az] = l.points[i - 1];

@@ -27,6 +27,7 @@ import {
   WASTE_SITE_TRIGGERS,
 } from './act4Places';
 import { ACT4_FOG_FACE_ANCHORS, ACT4_FOG_FACE_POINTS } from './act4World';
+import { ROPE_ANCHORS } from './ropeLines';
 
 export const ACT4_WORLD_DOC = { title: 'Act 4 world anchors (the Ash Road, Ashgate and its refuge, the Waste, the fog walls)', source: 'act4/act4World.layout.ts' } as const;
 
@@ -85,6 +86,8 @@ const anchors: AnchorSpec[] = [
   at('waste.husk-cathedral.entry', HUSK_CATHEDRAL, ['poi']),
   // L0's reserved id: the Act 4 ending camp (ACT_ENDINGS act 4 campAnchorId).
   at('waste.rimfoot.fire', RIMFOOT, ['camp']),
+  // The rope-lines' points and shelters (ROPE_LINES and SHELTERS name them).
+  ...ROPE_ANCHORS,
   ...fogFaces,
 ];
 

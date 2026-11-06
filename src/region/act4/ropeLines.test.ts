@@ -10,13 +10,17 @@ import {
   pointAt,
   POST_SPACING,
   ROPE_LANE_HALF_WIDTH,
+  ROPE_ANCHORS,
+  ROPE_LINE_GEOMS,
   ROPE_LINES,
   ropeLine,
   ropeLineLength,
   ropePosts,
   SHELTER_MAX_SPACING,
+  SHELTER_SPOTS,
   SHELTERS,
 } from './ropeLines';
+import { ACT4_WORLD_LAYOUT } from './act4World.layout';
 
 const near = (p: readonly [number, number], q: XZ, m = 40) => Math.hypot(p[0] - q[0], p[1] - q[1]) <= m;
 const first = (id: Parameters<typeof ropeLine>[0]) => ropeLine(id).points[0];
@@ -39,10 +43,10 @@ describe('rope-lines', () => {
   });
 
   it('total about 14 km and stay inside the open Waste (or Ashgate), never in the Caldera hole', () => {
-    const total = ROPE_LINES.reduce((s, l) => s + ropeLineLength(l.id), 0);
+    const total = ROPE_LINE_GEOMS.reduce((s, l) => s + ropeLineLength(l.id), 0);
     expect(total).toBeGreaterThan(13000);
     expect(total).toBeLessThan(15000);
-    for (const l of ROPE_LINES) {
+    for (const l of ROPE_LINE_GEOMS) {
       const len = ropeLineLength(l.id);
       for (let s = 0; s <= len; s += 10) {
         const p = pointAt(l.points, s);
@@ -55,26 +59,26 @@ describe('rope-lines', () => {
   it('give the M42 crossing four shelters about 430 m apart', () => {
     const l = ropeLine('rope.ashgate-camp');
     expect(l.shelters).toHaveLength(4);
-    const arcs = l.shelters.map((id) => SHELTERS.find((s) => s.id === id)!.arc);
+    const arcs = l.shelters.map((id) => SHELTER_SPOTS.find((s) => s.id === id)!.arc);
     for (let i = 1; i < arcs.length; i++) expect(arcs[i] - arcs[i - 1]).toBeCloseTo(ropeLineLength(l.id) / 5, 0);
   });
 });
 
 describe('shelters', () => {
   it('number about 25, with unique ids, every one on a line that lists it', () => {
-    expect(SHELTERS.length).toBeGreaterThanOrEqual(22);
-    expect(SHELTERS.length).toBeLessThanOrEqual(30);
-    expect(new Set(SHELTERS.map((s) => s.id)).size).toBe(SHELTERS.length);
-    for (const s of SHELTERS) expect(ROPE_LINES.some((l) => l.shelters.includes(s.id)), s.id).toBe(true);
-    for (const l of ROPE_LINES) expect(new Set(l.shelters).size, l.id).toBe(l.shelters.length);
+    expect(SHELTER_SPOTS.length).toBeGreaterThanOrEqual(22);
+    expect(SHELTER_SPOTS.length).toBeLessThanOrEqual(30);
+    expect(new Set(SHELTER_SPOTS.map((s) => s.id)).size).toBe(SHELTER_SPOTS.length);
+    for (const s of SHELTER_SPOTS) expect(ROPE_LINE_GEOMS.some((l) => l.shelters.includes(s.id)), s.id).toBe(true);
+    for (const l of ROPE_LINE_GEOMS) expect(new Set(l.shelters).size, l.id).toBe(l.shelters.length);
   });
 
   it('are never more than 500 m apart along a line, counting its ends', () => {
-    for (const l of ROPE_LINES) {
+    for (const l of ROPE_LINE_GEOMS) {
       const len = ropeLineLength(l.id);
       // The Crossing's arc is per line: recompute it on this line.
       const fixed = l.shelters.map((id) => {
-        if (id !== CROSSING_SHELTER_ID) return SHELTERS.find((s) => s.id === id)!.arc;
+        if (id !== CROSSING_SHELTER_ID) return SHELTER_SPOTS.find((s) => s.id === id)!.arc;
         let best = Infinity;
         let arc = 0;
         for (let s = 0; s <= len; s += 1) {
@@ -93,7 +97,7 @@ describe('shelters', () => {
   });
 
   it('stand off the lane, on ground no steeper than a plateau blend, outside the Caldera hole', () => {
-    for (const s of SHELTERS) {
+    for (const s of SHELTER_SPOTS) {
       expect(onRopeLane(s.at.x, s.at.z), s.id).toBe(false);
       expect(inCaldera(s.at.x, s.at.z), s.id).toBe(false);
       const h = heightAt(s.at.x, s.at.z);
@@ -106,11 +110,11 @@ describe('shelters', () => {
 describe('posts', () => {
   it('stand every 25 m along each line, about 560 in all, none inside a shelter', () => {
     let total = 0;
-    for (const l of ROPE_LINES) {
+    for (const l of ROPE_LINE_GEOMS) {
       const posts = ropePosts(l.id);
       total += posts.length;
       expect(posts.length, l.id).toBeGreaterThan(ropeLineLength(l.id) / POST_SPACING - 3);
-      for (const p of posts) for (const s of SHELTERS) expect(Math.hypot(p.x - s.at.x, p.z - s.at.z)).toBeGreaterThan(s.radius);
+      for (const p of posts) for (const s of SHELTER_SPOTS) expect(Math.hypot(p.x - s.at.x, p.z - s.at.z)).toBeGreaterThan(s.radius);
     }
     expect(total).toBeGreaterThan(500);
     expect(total).toBeLessThan(620);
@@ -125,7 +129,7 @@ describe('nearestRope', () => {
       const x = 7000 + rand() * 8000;
       const z = 4300 + rand() * 6700;
       let best = Infinity;
-      for (const l of ROPE_LINES) {
+      for (const l of ROPE_LINE_GEOMS) {
         for (let k = 1; k < l.points.length; k++) {
           const [ax, az] = l.points[k - 1];
           const [bx, bz] = l.points[k];
@@ -148,5 +152,24 @@ describe('nearestRope', () => {
     expect(onRopeLane(p.x - p.dz * 3.9, p.z + p.dx * 3.9)).toBe(true);
     expect(onRopeLane(p.x - p.dz * 4.5, p.z + p.dx * 4.5)).toBe(false);
     expect(nearestRope(0, 0)).toBeNull();
+  });
+});
+
+describe("L0's contract shapes", () => {
+  it('name anchors that sit on the geometry, all in the Act 4 world layout', () => {
+    const anchors = new Map(ACT4_WORLD_LAYOUT.anchors.map((a) => [a.id, a]));
+    for (const a of ROPE_ANCHORS) expect(anchors.get(a.id), a.id).toEqual(a);
+    expect(ROPE_LINES.map((l) => l.id)).toEqual(ROPE_LINE_GEOMS.map((l) => l.id));
+    for (const l of ROPE_LINES) {
+      const g = ropeLine(l.id as Parameters<typeof ropeLine>[0]);
+      expect(l.shelters).toEqual(g.shelters);
+      l.points.forEach((id, i) => expect([anchors.get(id)!.x, anchors.get(id)!.z], id).toEqual([g.points[i][0], g.points[i][1]]));
+      for (const s of l.shelters) expect(SHELTERS.some((d) => d.id === s), s).toBe(true);
+    }
+    for (const s of SHELTERS) {
+      const spot = SHELTER_SPOTS.find((p) => p.id === s.id)!;
+      expect([anchors.get(s.at)!.x, anchors.get(s.at)!.z]).toEqual([spot.at.x, spot.at.z]);
+      expect(s.radius).toBe(spot.radius);
+    }
   });
 });

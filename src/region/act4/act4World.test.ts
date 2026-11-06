@@ -1,5 +1,5 @@
 // Act 4 thread L1: the Act 4 world's anchors, the refuge's layout and the master positions (plans/act4-L1.md 1 and 6).
-import { readFileSync } from 'node:fs';
+import { readFileSync } from '../testing/nodeFs';
 import { describe, expect, it } from 'vitest';
 import { CENTER, RING_RADIUS, gatePosition } from '../../harrowmark/city';
 import { heightAt } from '../../terrain/heightfield';
