@@ -203,6 +203,15 @@ describe('ProjectileSystem pierce, hostileOnly and the shared host', () => {
     expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'engine' });
     expect(s.hits[0].point.z).toBeLessThan(7.4);
   });
+  it('the Last Gong (a struck prop) is struck across its 0.85 m disc by a hostileOnly bolt', () => {
+    const s = setup();
+    const gong = new FakeActor('gong', 'neutral', 0.8, 6);
+    gong.kind = 'eormen-gong';
+    s.actors.add(gong);
+    s.ps.launch(s.base({ hostileOnly: true, radius: 0.12 }));
+    run(s.ps, 2.5);
+    expect(s.hits[0]).toMatchObject({ kind: 'actor', actorId: 'gong' });
+  });
   it('an ordinary actor keeps the person-sized cylinder: a bolt 1 m to its side flies past', () => {
     const s = setup();
     s.actors.add(new FakeActor('e', 'hostile', 1.0, 6));
