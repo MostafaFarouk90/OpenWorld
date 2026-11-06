@@ -7,6 +7,9 @@ import { ACT4_DISCOVER_UNLOCKS, ACT4_ITEM_UNLOCKS, ACT4_QUEST_UNLOCKS, ACT4_TALK
 import { WASTE_CODEX_ROWS, type WasteCodexRow } from './wasteRows';
 import '../service';
 
+/** Act 4's gate: talk unlocks wait for it. */
+export const ACT4_GATE_FLAG = 'story.gate.a4';
+
 type CodexLike = { register?(entries: readonly CodexEntryDef[]): () => void; unlock?(id: string): void };
 type InventoryLike = { items?(): { id: string; count: number }[] };
 
@@ -103,8 +106,9 @@ const codexAct4: GamePlugin = {
         if (e?.kind === 'warning' || e?.kind === 'storm') unlock(ID.storms);
       }),
       ctx.events.on('dialogue.started', (e) => {
+        // Only once Act 4 is open: Act 3's ferry Hild in the Greyfen shares the npc id.
         const entry = typeof e?.npcId === 'string' ? ACT4_TALK_UNLOCKS[e.npcId] : undefined;
-        if (entry) unlock(entry);
+        if (entry && ctx.state.getBool(ACT4_GATE_FLAG)) unlock(entry);
       }),
       ctx.events.on('quest.started', (e) => questEntries(e?.questId)),
       ctx.events.on('quest.completed', (e) => questEntries(e?.questId)),

@@ -78,6 +78,9 @@ describe('stormView', () => {
     expect(stormView(base({ kind: 'storm', exposed: 4, sheltered: true, onRope: true }))!.line).toBe('shelter');
     // A warning never exposes.
     expect(stormView(base({ kind: 'warning', exposed: 4 }))!.line).toBeNull();
+    // Safe places read the same in the warning, so the shelter arrow stays hidden there.
+    expect(stormView(base({ kind: 'warning', sheltered: true }))!.line).toBe('shelter');
+    expect(stormView(base({ kind: 'warning', onRope: true }))!.line).toBe('rope');
   });
 
   it('an unknown clock still draws the phase (no NaN)', () => {

@@ -9,17 +9,12 @@ export const ACT4_FLAG_UNLOCKS: readonly { flag: string; entry: string }[] = [
   { flag: 'boss.eormen.outcome', entry: ID.eormen },
   { flag: 'place.ashen-waste.discovered', entry: ID.waste },
   { flag: 'waystone.ashgate.lit', entry: ID.ashgate },
-  // L1 PR 2's waystones and site discover places (`place.<placeId>.discovered`).
+  // L1 PR 2's site waystones. The cathedral and Rimfoot have no discover place: their quests (D08, M46) unlock them.
   { flag: 'waystone.walker-camp.lit', entry: ID.walkerCamp },
-  { flag: 'place.waste.walker-camp.discovered', entry: ID.walkerCamp },
   { flag: 'waystone.cinder-chapel.lit', entry: ID.cinderChapel },
-  { flag: 'place.waste.cinder-chapel.discovered', entry: ID.cinderChapel },
   { flag: 'waystone.glasslands.lit', entry: ID.glasslands },
-  { flag: 'place.waste.glasslands.discovered', entry: ID.glasslands },
   { flag: 'shrine.singing-slag.lit', entry: ID.glasslands },
   { flag: 'shrine.singing-slag.lit', entry: ID.chime },
-  { flag: 'place.waste.husk-cathedral.discovered', entry: ID.huskCathedral },
-  { flag: 'place.waste.rimfoot.discovered', entry: ID.rimfoot },
   { flag: 'story.m38.complete', entry: ID.vey },
   { flag: 'story.m39.complete', entry: ID.gaut },
   { flag: 'story.m43.complete', entry: ID.ashwalkers },
@@ -43,18 +38,13 @@ export const ACT4_QUEST_UNLOCKS: readonly { quest: string; entry: string }[] = [
   { quest: 'm46', entry: ID.rimfoot },
 ];
 
-/** `discover { placeId }`: the region's id, a waystone's `waystone.<id>`, a Waste site's `waste.<id>`. */
+/** `discover { placeId }`: the region's id, or a waystone's `waystone.<id>`. */
 export const ACT4_DISCOVER_UNLOCKS: Readonly<Record<string, string>> = {
   'ashen-waste': ID.waste,
   'waystone.ashgate': ID.ashgate,
   'waystone.walker-camp': ID.walkerCamp,
-  'waste.walker-camp': ID.walkerCamp,
   'waystone.cinder-chapel': ID.cinderChapel,
-  'waste.cinder-chapel': ID.cinderChapel,
   'waystone.glasslands': ID.glasslands,
-  'waste.glasslands': ID.glasslands,
-  'waste.husk-cathedral': ID.huskCathedral,
-  'waste.rimfoot': ID.rimfoot,
 };
 
 /** NPCs whose first talk unlocks their entry (`dialogue.started { npcId }`). */

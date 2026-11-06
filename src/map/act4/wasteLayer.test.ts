@@ -53,6 +53,9 @@ describe('wasteLabels', () => {
     expect(wasteLabels(ports({ isRevealed: () => false }))).toEqual([]);
     const found = wasteLabels(ports({ isRevealed: () => false, flag: (k) => k === placeDiscoveredFlag('walker-camp') }));
     expect(found.map((l) => l.id)).toEqual(['place.walker-camp']);
+    // The cathedral and Rimfoot have no waystone: only the fog shows them.
+    expect(placeDiscoveredFlag('husk-cathedral')).toBeNull();
+    expect(wasteLabels(ports({ isRevealed: () => false, flag: () => true })).map((l) => l.id)).toEqual(['place.ashgate', 'place.walker-camp', 'place.cinder-chapel', 'place.glasslands']);
   });
 
   it('every place has a string', () => {

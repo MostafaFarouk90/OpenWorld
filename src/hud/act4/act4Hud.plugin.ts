@@ -5,7 +5,7 @@ import { StormMeter, type StormReading } from './StormMeter';
 import { ShelterArrow, type XZPoint } from './ShelterArrow';
 import { ACT4_HUD_STRINGS_EN } from './strings.en';
 import { maskActive } from '../../weather/stormLook';
-import { EXPOSURE } from '../../weather/tuning';
+import { EXPOSURE, STORM_CLOCK } from '../../weather/tuning';
 import type { WeatherService } from '../../weather/types';
 import { SHELTER_SPOTS, nearestRope, pointAt, ropeLine } from '../../region/act4/ropeLines';
 import '../../weather/types';
@@ -47,6 +47,16 @@ function injectAct4Css(): void {
   document.head.appendChild(el);
 }
 
+/**
+ * The longest each clock phase runs (L3's base plus its jitter). The bar measures the time left against this, not against the
+ * runtime's `state().t`, which restarts when the player crosses the Waste's edge and would show a running storm as fresh.
+ */
+export const PHASE_SECONDS = {
+  clear: STORM_CLOCK.clear + STORM_CLOCK.clearJitter,
+  warning: STORM_CLOCK.warning,
+  storm: STORM_CLOCK.storm + STORM_CLOCK.stormJitter,
+} as const;
+
 /** L3's runtime extras the meter reads when the provider is the shipped `WeatherRuntime` (duck-typed, all optional). */
 interface WeatherExtras {
   inRegion?: boolean;
@@ -81,6 +91,7 @@ const act4Hud: GamePlugin = {
 
     // The last `storm.exposed` seconds, for a provider without the getter; cleared when the storm ends and on load.
     let exposedEvent = 0;
+    let boss = false;
     const offs = [
       ctx.events.on('storm.exposed', (e) => {
         exposedEvent = typeof e?.seconds === 'number' ? e.seconds : 0;
@@ -93,12 +104,22 @@ const act4Hud: GamePlugin = {
       }),
       ctx.events.on('save.loaded', () => {
         exposedEvent = 0;
+        boss = false;
       }),
+      // The boss bar owns the top of the screen during a fight (plan section 1): the meter steps aside.
+      ctx.events.on('boss.started', () => {
+        boss = true;
+      }),
+      ...(['boss.defeated', 'boss.released', 'boss.ended'] as const).map((type) =>
+        ctx.events.on(type, () => {
+          boss = false;
+        }),
+      ),
     ];
 
     const read = (): StormReading | null => {
       const w = weather();
-      if (!w) return null;
+      if (!w || boss) return null;
       const s = w.state();
       const f = ctx.player.feet;
       // The shipped runtime knows whether the player is outdoors in the Waste; another provider says so by its weather.
@@ -109,13 +130,15 @@ const act4Hud: GamePlugin = {
       const onRope = typeof w.onRope === 'function' ? w.onRope(f.x, f.z) === true : false;
       const p = ctx.actors.player;
       const atFloor = p && p.maxHealth > 0 ? p.health <= p.maxHealth * EXPOSURE.floor + 1e-6 : false;
+      const nextIn = next && Number.isFinite(next.at) ? next.at : null;
+      const phase = PHASE_SECONDS[s.kind as keyof typeof PHASE_SECONDS];
       return {
         inRegion,
         kind: s.kind,
-        t: s.t,
+        t: nextIn !== null && typeof phase === 'number' ? Math.max(0, phase - nextIn) : s.t,
         forced: s.forced,
         held: s.held,
-        nextIn: next && Number.isFinite(next.at) ? next.at : null,
+        nextIn,
         exposed,
         onRope,
         sheltered,
