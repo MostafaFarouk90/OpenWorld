@@ -29,6 +29,7 @@ import { HARROWMARK_A4_Q_NPCS } from '../content/act4/harrowmark/npcs';
 import { wasteA4InteriorExtras, wasteA4QuestLayout } from '../content/act4/waste/layout';
 // Act 5 (N10, additive)
 import { rimA5InteriorExtras, rimA5QuestLayout } from '../content/act5/rim/layout';
+import { foundryA5InteriorExtras, foundryA5QuestLayout } from '../content/act5/foundry/layout';
 import { WASTE_A4_NPCS } from '../content/act4/waste/npcs';
 import type { QuestNoteSpec } from '../notes';
 import { ACT3_POI_LAYOUT } from '../../world/poi/act3/place';
@@ -122,7 +123,7 @@ export function shippedNoteInput(): NoteLintInput {
   return {
     notes: [...QUEST_NOTES, ...ACT2_QUEST_NOTES, ...ACT3_QUEST_NOTES, ...ACT4_QUEST_NOTES, ...ACT5_QUEST_NOTES],
     occupants: [...npcs, ...props, ...carry],
-    anchors: resolveAnchors([...ALL_LAYOUTS, GREYFEN_QUEST_LAYOUT, harrowmarkA4QuestLayout(), wasteA4QuestLayout(), rimA5QuestLayout()], [...ALL_INTERIORS, ...harrowmarkA4InteriorExtras(), ...wasteA4InteriorExtras(), ...rimA5InteriorExtras()]),
+    anchors: resolveAnchors([...ALL_LAYOUTS, GREYFEN_QUEST_LAYOUT, harrowmarkA4QuestLayout(), wasteA4QuestLayout(), rimA5QuestLayout(), foundryA5QuestLayout()], [...ALL_INTERIORS, ...harrowmarkA4InteriorExtras(), ...wasteA4InteriorExtras(), ...rimA5InteriorExtras(), ...foundryA5InteriorExtras()]),
   };
 }
 

@@ -59,9 +59,18 @@ export function createLavaPlugin(): GamePlugin {
         heal: (amount) => ctx.damage.heal(actor().id, amount),
         throwTo: async (to, yaw) => {
           const ws = ctx.services.get('waystones');
-          if (ws) return (await ws.safeTeleport(to, yaw)).ok;
-          ctx.player.teleport(to, yaw);
-          return true;
+          if (!ws) {
+            ctx.player.teleport(to, yaw);
+            return true;
+          }
+          // A save asked for during the throw's fade is deferred; this hold's release (once Cael stands on the lip)
+          // writes it, rather than leaving it waiting for the next cutscene or dialogue to end.
+          const release = ctx.services.get('save')?.suspend('lava-throw');
+          try {
+            return (await ws.safeTeleport(to, yaw)).ok;
+          } finally {
+            release?.();
+          }
         },
         entered: (volumeId) => ctx.events.emit('lava.entered', { volumeId }),
         thrown: (volumeId, to) => ctx.events.emit('lava.thrown', { volumeId, to: { ...to } }),
