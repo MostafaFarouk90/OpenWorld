@@ -98,10 +98,10 @@ describe('Act 5 ids and reserved prefixes (v0.9 item 14)', () => {
     expect([...ACT5_TRIGGER_PREFIXES]).toEqual(['trg.caldera.']);
   });
 
-  it('no shipped quest uses an Act 5 id or an Act 5 quest flag', () => {
-    const shipped = new Set(questDefs.map((q) => q.id));
-    for (const id of ACT5_QUEST_IDS) expect(shipped.has(id), id).toBe(false);
-    const json = JSON.stringify(questDefs);
+  // N10 (additive): Act 5's own quests now ship, so the guard reads every quest before Act 5
+  it('no quest before Act 5 uses an Act 5 id or an Act 5 quest flag', () => {
+    const before = questDefs.filter((q) => !(ACT5_QUEST_IDS as readonly string[]).includes(q.id));
+    const json = JSON.stringify(before);
     for (const id of ACT5_QUEST_IDS) expect(json.includes(`story.${id}.`), id).toBe(false);
   });
 });

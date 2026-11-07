@@ -18,6 +18,7 @@ import { VEY_SPAWNERS } from '../bosses/act5/vey/spawners';
 import { WAVE_SPAWNERS } from '../waves/spawners';
 import { ACT4_HARROWMARK_SPAWNERS } from '../harrowmark/act4/spawners';
 import { ACT4_QUEST_SPAWNERS } from '../quests/content/act4';
+import { ACT5_QUEST_SPAWNERS } from '../quests/content/act5';
 import { WASTE_SPAWNERS } from './waste/spawners';
 import { CALDERA_AMBIENT_SPAWNERS } from './act5/spawners';
 import type { SpawnerDef } from './types';
@@ -39,6 +40,8 @@ export const ALL_SPAWNERS: readonly SpawnerDef[] = [
   ...SKARL_SPAWNERS,
   ...ACT4_HARROWMARK_SPAWNERS,
   ...ACT4_QUEST_SPAWNERS,
+  // Act 5 (N10, additive): the Rim quests' groups
+  ...ACT5_QUEST_SPAWNERS,
   ...WASTE_SPAWNERS,
   ...CALDERA_AMBIENT_SPAWNERS,
   ...EORMEN_SPAWNERS,

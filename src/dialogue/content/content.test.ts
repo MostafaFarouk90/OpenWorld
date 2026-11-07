@@ -11,12 +11,15 @@ import { createEffectRunner } from '../../quests/effects';
 import type { BusPort, StatePort, StringsPort } from '../../quests/ports';
 import type { FlagValue } from '../../quests/types';
 import { WASTE_A4_NPC_DEFS } from '../../quests/content/act4/waste/npcs';
+import { RIM_A5_NPC_DEFS } from '../../quests/content/act5/rim/npcs';
 
 const all: Record<string, string> = { ...questStrings, ...dialogueStrings, ...npcNameFallbackStrings };
 const hasKey = (k: string) => k in all;
 
 /** Act 4 Waste (L11): the Waste cast. */
 const ACT4_WASTE_SPEAKERS = WASTE_A4_NPC_DEFS.map((d) => d.id);
+/** Act 5 Rim (N10, additive): the Rim cast and the two dragons spoken to from their perches. */
+const ACT5_RIM_SPEAKERS = [...RIM_A5_NPC_DEFS.map((d) => d.id), 'orsk'];
 const ACT4_HM_SPEAKERS = [...ACT4_NPC_DEFS, ...HARROWMARK_A4_Q_NPC_DEFS].map((d) => d.id).concat(['daggerman']);
 
 describe('dialogue content', () => {
@@ -67,7 +70,7 @@ describe('dialogue content', () => {
       // Act 3 summit (K13 PR 2)
       'ysmeryth', 'hathren', 'skarl', 'skyhold-rigger', 'skyhold-handler', 'captive-hunter', 'skarl-led', 'aerie-escort-1', 'aerie-escort-2',
       // Act 4 Harrowmark (L10): L2's cast, Vey's guards, the minor cast and the daggerman
-      ...ACT4_HM_SPEAKERS, ...ACT4_WASTE_SPEAKERS]).toContain(n.speaker);
+      ...ACT4_HM_SPEAKERS, ...ACT4_WASTE_SPEAKERS, ...ACT5_RIM_SPEAKERS]).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {
