@@ -404,10 +404,15 @@ export async function fightGroups(r: PhaseGRun, ids: readonly string[], done: ()
 }
 
 /** Fights everything hostile within `radius` of the player as it comes (waves, the chamber's six), until `done()`. */
-export async function holdGround(r: PhaseGRun, done: () => boolean, what: string, radius = 60, seconds = 600): Promise<void> {
+// N12 (additive): `between` runs after each half second's fights (Act 5's tunnel hold puts Cael back inside its 5 m bounds
+// when a Spare's stand-off took him out of them).
+export async function holdGround(
+  r: PhaseGRun, done: () => boolean, what: string, radius = 60, seconds = 600, between?: () => Promise<void>,
+): Promise<void> {
   for (let i = 0; i < seconds * 2 && !done(); i++) {
     await tick(r, 30, what);
     for (const a of hostilesNear(r.h, r.h.ctx.player.feet, radius)) await spareOrKill(r, a);
+    if (between) await between();
     if (DEBUG && i % 60 === 59) {
       const w = r.h.ctx.services.get('waves') as unknown as { current: unknown; wave?: { members: string[]; cursor: number; items: unknown[] }; run?: { phase?: string } };
       const mem = (w.wave?.members ?? []).map((id) => `${id}:${r.h.ctx.actors.get(id)?.dead ? 'dead' : enemyState(r.h, id)}`);
