@@ -79,6 +79,7 @@ const plugin: GamePlugin = {
     }
     const preset = q?.get('favour') ?? 'marshal';
     let wait = 2;
+    const viaJump = q?.has('act5') === true;
     let started = false;
     let landing: { ready(): boolean } | null = null;
     ctx.systems.add({
@@ -87,6 +88,8 @@ const plugin: GamePlugin = {
       order: 901,
       fixedUpdate: (dt) => {
         if (started || ctx.services.get('save')?.loading) return;
+        // Under `?act5=m52&new&favour=...` wait for N0's jump to write the snapshot (it lands the player too).
+        if (viaJump && ctx.state.getFlag(snapshotFlag('m52', 'taken')) !== true) return;
         wait -= dt;
         if (wait > 0) return;
         // With N1's layout the siege has a start point: go there first (the set runs within its radius of the gate).
