@@ -1,7 +1,7 @@
 // Alric, last of the stokers (N10): M47's meeting inside the Rim Gate and its report, M48's brief and report, M50's brief and
 // report, and his word in M51. A new tree (`npc-alric`); invented (Q6), logged under "Act 5 N10".
 import { ALRIC } from '../../../../quests/content/act5/rim/m47.quest';
-import { C, accept, at, offer, qActive, tree, voice } from './common';
+import { C, accept, at, offer, qActive, qDone, tree, voice } from './common';
 
 const A = voice(ALRIC);
 
@@ -17,6 +17,8 @@ export const ALRIC_TREE = tree(`npc-${ALRIC}`, [
   { when: offer('m50'), seg: 'm50-brief' },
   { when: at('m50', 'report'), seg: 'm50-report' },
   { when: qActive('m50'), seg: 'm50-wait' },
+  // after the siege: the rim anvil and how to pay for the forge set (the coordinator's gold ruling, N12's Phase I report)
+  { when: qDone('m52'), seg: 'm52-anvil' },
 ], {
   // ---- M47 -----------------------------------------------------------------------------------------------------------------
   'm47-alric': {
@@ -85,6 +87,14 @@ export const ALRIC_TREE = tree(`npc-${ALRIC}`, [
       A('The hall\'s keeper may still be there. Hildeburh. She never left. She will know you are coming before you do.'),
       A('I will meet you at the door. My knees can manage a hall. A stair, no.'),
       accept(ALRIC, 'm50', 'Will you go down?', 'Down into the hall.'),
+    ],
+  },
+  'm52-anvil': {
+    lines: [
+      A('You held the gate. Now let me hold the hammer. The rim anvil is hot, and what you carry was not made for what is under the Caldera.'),
+      C('What would it cost?'),
+      A('More than a knight keeps in his purse. But you have Oswin\'s bounty note from the convoy, sealed in Lady Merrin\'s hand. Any trader in camp will pay for it.'),
+      A('Sell the note, bring me the coin, and I will temper your steel at the anvil beside my stall.'),
     ],
   },
   'm50-wait': { lines: [A('The chart, then the wheels in its order. Watch the gauge. When it is red, step back and breathe.')] },
