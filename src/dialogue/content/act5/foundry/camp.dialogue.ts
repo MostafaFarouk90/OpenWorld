@@ -238,10 +238,11 @@ const edricSegments = {
 export const EDRIC_A5F: BuiltTree = buildTree({
   id: 'npc-edric',
   start: [
-    { when: offer('m53'), seg: 'a5f-m53-brief' },
+    // the current hand-in first, then the R30 line, and only then the offer and the wait (a real-game run: the offer hid the line)
     { when: at('m53', 'decide'), seg: 'a5f-m53-decide' },
-    { when: all(qActive('m53'), any(at('m53', 'rook'), at('m53', 'truce'), at('m53', 'broken'), at('m53', 'gate'))), seg: 'a5f-m53-wait' },
     { when: askLine('edric'), seg: 'a5f-r30-line-edric' },
+    { when: offer('m53'), seg: 'a5f-m53-brief' },
+    { when: all(qActive('m53'), any(at('m53', 'rook'), at('m53', 'truce'), at('m53', 'broken'), at('m53', 'gate'))), seg: 'a5f-m53-wait' },
   ],
   segments: { ...edricSegments, ...lineSegment('edric') },
 });

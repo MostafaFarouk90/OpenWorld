@@ -64,6 +64,14 @@ describe('Foundry Act 5 start rules (review: no optional offer may hide a needed
     expect(opens('npc-wulfhild', st, ['r30.brief'], HOLDS)).toBe('a5f-r30-line-wulfhild');
     expect(opens('npc-wenna', st, ['r30.brief'], HOLDS)).toBe('a5f-r30-line-wenna');
   });
+  it('Edric gives his R30 line while M53 is on offer or under way, but the decide hand-in comes first', () => {
+    const st = { ...PHASE_J, r30: 'active' };
+    expect(opens('npc-edric', st, ['r30.brief'], HOLDS)).toBe('a5f-r30-line-edric');
+    expect(opens('npc-edric', { ...st, m53: 'active' }, ['r30.brief', 'm53.brief'], HOLDS)).toBe('a5f-r30-line-edric');
+    const m53Done = ['brief', 'rook', 'truce', 'broken', 'gate'].map((o) => `m53.${o}`);
+    expect(opens('npc-edric', { ...st, m53: 'active' }, ['r30.brief', ...m53Done], HOLDS)).toBe('a5f-m53-decide');
+    expect(opens('npc-edric', PHASE_J, [], HOLDS)).toBe('a5f-m53-brief');
+  });
   it('a current hand-in comes before an R30 line', () => {
     const st = { ...PHASE_J, r30: 'active', r27: 'active' };
     const r27Done = ['brief', 'enter', 'captain', 'line', 'signs', 'ready', 'hold', 'choose'].map((o) => `r27.${o}`);
