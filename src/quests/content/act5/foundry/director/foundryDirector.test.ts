@@ -21,7 +21,7 @@ import {
 } from '../flags';
 import { D09_ENTERED, D09_SLUICE_USE } from '../d09.quest';
 import { R28_LIGHT } from '../r28.quest';
-import { R30_ANVIL, R30_SUNG } from '../r30.quest';
+import { R30_ANVIL, R30_SUNG, R30_YSMERYTH_USE } from '../r30.quest';
 import { M53_WITHDRAWN } from '../m53.quest';
 import { D09_GUARD_PAIR_ARM } from '../spawners';
 import { snapshotTaken } from '../../../../../state/favour';
@@ -31,15 +31,11 @@ function rig(flags: Record<string, boolean | number | string> = {}) {
   const state = new WorldState(events, () => {});
   const services = new Services();
   const manager = new QuestManager({ bus: events as never, state: state as never, playerId: () => 'player', warn: () => {} });
-  // N12 (merge with N10 PR 2): the stand-in M52 only while N10's real M52 is not in ACT5_QUEST_DEFS
-  if (!ACT5_QUEST_DEFS.some((q) => q.id === 'm52')) manager.register({ id: 'm52', titleKey: 'x', summaryKey: 'x', sequential: true, objectives: [{ id: 'x', type: 'event', target: 'test.m52', textKey: 'x' }] });
   for (const q of ACT5_QUEST_DEFS) manager.register(q);
   const flagsOff = installObjectiveFlags(ACT5_OBJECTIVE_FLAGS, events as never, state as never, manager);
   services.provide('quests' as never, manager as never);
   for (const h of phaseHolds('caldera')) state.setFlag(h, true);
   for (const [k, v] of Object.entries(flags)) state.setFlag(k, v);
-  manager.start('m52');
-  manager.complete('m52');
   state.setFlag('story.m52.complete', true);
 
   const standing = new Map<string, string[]>();
@@ -53,6 +49,8 @@ function rig(flags: Record<string, boolean | number | string> = {}) {
   services.provide('spells' as never, spells as never);
   const lava = { added: [] as string[], live: new Set<string>(), add(d: { id: string }) { this.added.push(d.id); this.live.add(d.id); return () => void this.live.delete(d.id); } };
   services.provide('lava' as never, lava as never);
+  const dialogue = { starts: [] as string[], start(tree: string, npc: string) { this.starts.push(`${tree}/${npc}`); return true; } };
+  services.provide('dialogue' as never, dialogue as never);
   const toasts: string[] = [];
   events.on('hud.toast' as never, ((e: { textKey: string }) => void toasts.push(e.textKey)) as never);
   const ctx = {
@@ -76,7 +74,7 @@ function rig(flags: Record<string, boolean | number | string> = {}) {
   installD09(kit);
   const emit = (type: string, payload: unknown = {}): void => void events.emit(type as never, payload as never);
   const r = {
-    state, manager, siege, interiors, spells, lava, toasts, standing, beat, emit,
+    state, manager, siege, interiors, spells, lava, toasts, standing, beat, emit, dialogue,
     step: (n = 1): void => { for (let i = 0; i < n; i++) tick(); },
     advance: (ms: number) => { clock += ms; },
     talk: (npcId: string) => emit('dialogue.ended', { dialogueId: `npc-${npcId}`, npcId, reason: 'completed' }),
@@ -188,6 +186,19 @@ describe('R28 lighting', () => {
 });
 
 describe('R30', () => {
+  it('Ysmeryth\'s prop opens her tree only while the lines step is current', () => {
+    const r = make();
+    r.use(R30_YSMERYTH_USE);
+    r.step(2);
+    expect(r.dialogue.starts).toEqual([]);
+    r.manager.start('r30');
+    r.manager.completeObjective('r30', 'brief');
+    r.step(2);
+    r.use(R30_YSMERYTH_USE);
+    r.step(2);
+    expect(r.dialogue.starts).toEqual(['npc-ysmeryth/ysmeryth']);
+  });
+
   it('the anvil run passes on the assist and the camp sings after the verse', () => {
     const r = make();
     r.manager.start('r30');

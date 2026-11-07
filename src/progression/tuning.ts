@@ -56,6 +56,9 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   // even level; the Last Gong (a neutral struck prop) is never a kill.
   eormen: 750 / 2.4,
   'eormen-gong': 0,
+  // Morcant Vey, D09 (Act 5 N6 PR 1): the Foundry floats over the Caldera, whose kill XP factor is 3.0, so plan 6.2's 900 at an
+  // even level when he is struck down.
+  'vey-reforged': 900 / 3,
   // Corvin Skarl, D06 (K8 PR 2): the summit has no region factor; 650 at an even level (the level scale adjusts it as for any kill).
   'corvin-skarl': 650,
   // K6a: Skarl's drake is freed on either D06 outcome, never a kill reward.

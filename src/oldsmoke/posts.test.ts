@@ -1,7 +1,7 @@
 import { withoutAct4Rows } from '../harrowmark/act4/postRules';
 import { withoutHarrowmarkQuestRows } from '../quests/content/act4/harrowmark/npcs';
-import { withoutRimQuestRows } from '../quests/content/act5/rim/npcs';
 import { withoutFoundryQuestRows } from '../quests/content/act5/foundry/npcs';
+import { withoutRimQuestRows } from '../quests/content/act5/rim/npcs';
 import { describe, expect, it } from 'vitest';
 import { GRISEL_HALL_DEF } from './griselHall';
 import { MINE_DEFS } from './mines';

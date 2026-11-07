@@ -3,6 +3,7 @@
 // frames), one travel mode per leg, the dialogue nodes of the shorter branch (pinned to the real trees by talks.ts) and its
 // beats. A note, a page or a name read is one `search` beat, never dialogue (the shipped convention). Scene lines are not
 // dialogue. A door into an interior is a `door` leg.
+import { QUEST_WORLD_ANCHORS as RIM_QUEST_WORLD_ANCHORS } from '../rim/anchors';
 import type { Act4Leg, Act4PaceRow } from '../../../../integration/act4Timing';
 import { CALDERA_LAYOUT } from '../../../../caldera/caldera.layout';
 import { ALL_INTERIORS } from '../../../../interiors/interiors.plugin';
@@ -25,7 +26,7 @@ const FD = (s: string): string => `caldera.int.foundry.${s}`;
 const ALLY_POST: Record<(typeof R30_ALLIES)[number], string> = {
   wystan: 'npc-post.wystan.rim', merrin: 'npc-post.merrin.rim', wenna: 'npc-post.wenna.rim', wulfhild: 'npc-post.wulfhild.rim',
   rook: 'npc-post.rook.rim', edric: 'npc-post.edric.rim', hrolf: 'caldera.camp.companion.hrolf', aelfreda: 'caldera.camp.companion.aelfreda',
-  ansgar: 'npc-post.ansgar.rim', ysmeryth: 'caldera.terraces.ledge.1',
+  ansgar: 'npc-post.ansgar.rim', ysmeryth: 'caldera.q.m51.talk.ysmeryth',
 };
 const TOBB = 'caldera.camp.companion.tobb';
 const N = FOUNDRY_A5_TALK_NODES;
@@ -74,7 +75,7 @@ export function paceAt(anchor: string): { x: number; z: number } {
   if (!byId) {
     byId = new Map([
       ...CALDERA_LAYOUT.anchors, ...foundryA5QuestLayout().anchors, ...ALL_INTERIORS.flatMap((d) => d.anchors),
-      ...foundryA5InteriorExtras().flatMap((d) => d.anchors),
+      ...foundryA5InteriorExtras().flatMap((d) => d.anchors), ...RIM_QUEST_WORLD_ANCHORS,
     ].map((a) => [a.id, { x: a.x, z: a.z }]));
   }
   const p = byId.get(anchor);
