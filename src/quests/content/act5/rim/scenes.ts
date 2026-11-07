@@ -10,11 +10,15 @@ import { R26_IN, R26_SCENE } from './r26.quest';
 import { R29_SCENE, R29_SOUNDED } from './r29.quest';
 import { M50_COMPLETE, M50_COOLED, M50_COOL_SCENE } from './m50.quest';
 import { M51_DRAGONS_SCENE, M51_FIRES, M51_FIRES_SCENE, M51_LANDED } from './m51.quest';
+import { M52_GATE_HELD, M52_HOLDS_SCENE, M52_STAIRS, M52_STAIRS_SCENE } from './m52.quest';
 
 /** Named scene tests the director registers (`scenes.registerTest`). */
 export const TEST_DELEGATE = (h: M49House): string => `a5r.delegate.${h}`;
 export const TEST_R11_SPARED = 'a5r.r11.spared';
 export const TEST_R26_FAST = 'a5r.r26.fast';
+/** M52's holds scene reads N4's roster on the snapshot: the dragons that came, the Ashwalkers under F8 All. */
+export const TEST_M52_DRAGONS = 'a5r.m52.dragons';
+export const TEST_M52_ASHWALKERS = 'a5r.m52.ashwalkers';
 
 const text: Record<string, string> = {};
 const line = (scene: string, n: number | string, speakerId: string, t: string, seconds = 4): SceneStep => {
@@ -139,8 +143,33 @@ export const SCENE_M51_FIRES: SceneDef = {
   ],
 };
 
+const W = (n: number | string, who: string, t: string, s?: number) => line(M52_STAIRS_SCENE, n, who, t, s);
+export const SCENE_M52_STAIRS: SceneDef = {
+  id: M52_STAIRS_SCENE,
+  steps: [
+    W(1, 'wystan', 'Look down. All the way down, where the stairs turn. That is not a river of lava. Those are torches.', 5),
+    W(2, 'cael', 'How many?', 2),
+    W(3, 'wystan', 'More than we have. Fewer than he needs, if the gate holds. Take your place behind it.', 5),
+    flag(M52_STAIRS),
+  ],
+};
+
+const H = (n: number | string, who: string, t: string, s?: number) => line(M52_HOLDS_SCENE, n, who, t, s);
+export const SCENE_M52_HOLDS: SceneDef = {
+  id: M52_HOLDS_SCENE,
+  steps: [
+    { wait: 1 },
+    H(1, 'wystan', 'The last ram is burning. They are going back down the stairs.', 4),
+    { variant: { cases: [{ when: { test: TEST_M52_DRAGONS }, step: H('dragons', 'ysmeryth', 'We will follow them as far as the plain. They will not climb again tonight.', 5) }] } },
+    { variant: { cases: [{ when: { test: TEST_M52_ASHWALKERS }, step: H('ashwalkers', 'wulfhild', 'The walkers held the lee wall. Tell the nobles that, when they write the songs.', 5) }] } },
+    H(2, 'edric', 'The banners are still up. Every one of them.', 3),
+    H(3, 'wystan', 'The gate holds. Come down to the camp when you have your breath back, knight.', 5),
+    flag(M52_GATE_HELD),
+  ],
+};
+
 export const RIM_A5_SCENES: readonly SceneDef[] = [
   SCENE_M47_SIGHT, SCENE_M48_VENTS, SCENE_M49_ARRIVAL, SCENE_M49_BANNERS, SCENE_R26_CONVOY, SCENE_R29_GONG, SCENE_M50_COOL,
-  SCENE_M51_DRAGONS, SCENE_M51_FIRES,
+  SCENE_M51_DRAGONS, SCENE_M51_FIRES, SCENE_M52_STAIRS, SCENE_M52_HOLDS,
 ];
 export const RIM_A5_SCENE_STRINGS: Readonly<Record<string, string>> = text;

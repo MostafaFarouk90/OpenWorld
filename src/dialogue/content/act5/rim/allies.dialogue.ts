@@ -4,6 +4,7 @@
 import { buildTree, type BuiltTree, type Line } from '../../act2/build';
 import { R26_CHOICE, R26_FAST } from '../../../../quests/content/act5/rim/r26.quest';
 import { C, accept, any, at, flagIs, offer, qActive, voice, when } from './common';
+import { M52_COMPANION_RULES, M52_COMPANION_SEGMENTS, M52_WYSTAN_RULES, M52_WYSTAN_SEGMENTS } from './siege.dialogue';
 
 type Rule = Parameters<typeof buildTree>[0]['start'][number];
 const ext = (npc: string, start: Rule[], segments: Record<string, { lines: Line[] }>): BuiltTree => buildTree({ id: `npc-${npc}`, start, segments });
@@ -101,7 +102,11 @@ export const ROOK_A5R = ext('rook', [
   },
 });
 
-export const WYSTAN_A5R = ext('wystan', [{ when: at('m49', 'wystan'), seg: 'a5r-m49' }], {
+export const WYSTAN_A5R = ext('wystan', [
+  { when: at('m49', 'wystan'), seg: 'a5r-m49' },
+  ...M52_WYSTAN_RULES,
+], {
+  ...M52_WYSTAN_SEGMENTS,
   'a5r-m49': {
     lines: [
       WY('Knight. House Halvard keeps its promises. You asked for pikes at the rim, and here they are.'),
@@ -178,10 +183,12 @@ export const MAUD_A5R = ext('maud', [{ when: at('m49', 'maud'), seg: 'a5r-m49' }
 });
 
 export const HROLF_A5R = ext('hrolf', [
+  ...M52_COMPANION_RULES('hrolf'),
   { when: at('m49', 'report'), seg: 'a5r-m49-report' },
   { when: offer('m49'), seg: 'a5r-m49-brief' },
   { when: qActive('m49'), seg: 'a5r-m49-wait' },
 ], {
+  ...M52_COMPANION_SEGMENTS('hrolf'),
   'a5r-m49-brief': {
     lines: [
       HR('The rim is ours, the stair is walked, and I have eaten nothing but stoker biscuits for two days. I have had worse weeks.'),
@@ -231,4 +238,10 @@ export const ANSGAR_A5R = ext('ansgar', [
   },
 });
 
-export const ALLY_EXTENSIONS: readonly BuiltTree[] = [WULFHILD_A5R, EDRIC_A5R, ROOK_A5R, WYSTAN_A5R, MERRIN_A5R, WENNA_A5R, MAUD_A5R, HROLF_A5R, ANSGAR_A5R];
+/** Aelfreda and Tobb at the aid tent after M52 (Hrolf's is in his extension above). */
+export const AELFREDA_A5R = ext('aelfreda', M52_COMPANION_RULES('aelfreda'), M52_COMPANION_SEGMENTS('aelfreda'));
+export const TOBB_A5R = ext('tobb', M52_COMPANION_RULES('tobb'), M52_COMPANION_SEGMENTS('tobb'));
+
+export const ALLY_EXTENSIONS: readonly BuiltTree[] = [
+  WULFHILD_A5R, EDRIC_A5R, ROOK_A5R, WYSTAN_A5R, MERRIN_A5R, WENNA_A5R, MAUD_A5R, HROLF_A5R, ANSGAR_A5R, AELFREDA_A5R, TOBB_A5R,
+];

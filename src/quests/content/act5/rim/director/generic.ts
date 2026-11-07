@@ -9,7 +9,8 @@ import { NEAR_ANCHORS, QUEST_WORLD_ANCHORS } from '../anchors';
 import { RIM_A5_QUEST_DEFS, RIM_A5_QUEST_IDS } from '../rim.content';
 import { RIM_A5_TRIGGERS } from '../triggers';
 import { RIM_A5_NPC_DEFS, RIM_A5_NPC_STRINGS, RIM_A5_NPCS } from '../npcs';
-import { RIM_A5_SCENES, TEST_DELEGATE, TEST_R11_SPARED, TEST_R26_FAST } from '../scenes';
+import { RIM_A5_SCENES, TEST_DELEGATE, TEST_M52_ASHWALKERS, TEST_M52_DRAGONS, TEST_R11_SPARED, TEST_R26_FAST } from '../scenes';
+import { siegeRoster } from '../../../../../siege/roster';
 import { DELEGATE_FLAG, M49_HOUSES } from '../m49.quest';
 import { R26_CHOICE, R26_FAST } from '../r26.quest';
 import { R11_CHOICE } from '../m51.quest';
@@ -72,6 +73,9 @@ export function installTriggersCastScenes(k: Kit, offs: Off[]): void {
   for (const h of M49_HOUSES) offs.push(scenes.registerTest(TEST_DELEGATE(h), () => k.str(DELEGATE_FLAG(h)) === 'won'));
   offs.push(scenes.registerTest(TEST_R11_SPARED, () => k.str(R11_CHOICE) === 'spared'));
   offs.push(scenes.registerTest(TEST_R26_FAST, () => k.str(R26_CHOICE) === R26_FAST));
+  // M52's holds scene reads N4's roster on the snapshot, so its lines match who stood
+  offs.push(scenes.registerTest(TEST_M52_DRAGONS, () => siegeRoster(k.ctx.state, 'm52').dragons.length > 0));
+  offs.push(scenes.registerTest(TEST_M52_ASHWALKERS, () => siegeRoster(k.ctx.state, 'm52').squads.some((s) => s.look === 'ashwalker')));
 }
 
 /** `story.<id>.complete` on completion and re-derived on a load. */

@@ -7,6 +7,7 @@ import { installM47, installM48 } from './gate';
 import { installM49, installM51, installR29 } from './camp';
 import { installR26 } from './convoy';
 import { installM50 } from './hall';
+import { installM52 } from './siege';
 
 let offs: Off[] = [];
 
@@ -17,7 +18,7 @@ let offs: Off[] = [];
  */
 const plugin: GamePlugin = {
   id: 'rim-a5-quests',
-  dependsOn: ['core', 'quests', 'dialogue', 'enemies', 'npcs', 'interiors', 'escorts', 'scenes', 'weather'],
+  dependsOn: ['core', 'quests', 'dialogue', 'enemies', 'npcs', 'interiors', 'escorts', 'scenes', 'weather', 'siege'],
   setup(ctx) {
     offs = [];
     const warn = (m: string): void => void console.warn(m);
@@ -36,6 +37,7 @@ const plugin: GamePlugin = {
     offs.push(installR29(kit));
     offs.push(installM50(kit));
     offs.push(installM51(kit));
+    offs.push(installM52(kit));
 
     offs.push(ctx.systems.add({ id: 'rim-a5-quests.tick', fixedPhase: 'rules', order: 11, fixedUpdate: () => tick() }));
   },

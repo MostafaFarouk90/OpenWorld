@@ -40,7 +40,7 @@ const HROLF = 'caldera.camp.companion.hrolf';
  * Dialogue nodes of each quest's shorter branch, by the shipped convention (L13): its talk rows and choices, pinned to the trees
  * by the dialogue test. M47 carries the two nodes the coordinator asked for at Alric's post (ruling 1).
  */
-export const RIM_A5_NODES = { m47: 28, m48: 28, m49: 52, r26: 23, r29: 24, m50: 26, m51: 44 } as const;
+export const RIM_A5_NODES = { m47: 28, m48: 28, m49: 52, r26: 23, r29: 24, m50: 26, m51: 44, m52: 19 } as const;
 
 export const RIM_A5_PACE: readonly RimPaceRow[] = [
   // M47: Wulfhild at the Rimfoot fire, the knots on the switchbacks, the hairpin and the journal, the inscription, the winch, Alric,
@@ -94,6 +94,11 @@ export const RIM_A5_PACE: readonly RimPaceRow[] = [
     ...foot(RIM('alric'), RIM('edric'), 'waystone.wyrm-terraces', q('m51.talk.ysmeryth'), q('m51.talk.orsk'), q('m51.talk.hathren'),
       q('m51.scouts.2'), q('post.m51.captain'), q('m51.orders'), q('m51.bones'), q('m51.talk.ysmeryth')),
   ], RIM_A5_NODES.m51, { set: 3, killUnit: 4, search: 2, interact: 2 }),
+  // M52: Wystan at the camp, the stairs (scene), the start point; four waves at the gate with a walk to the war post and back in
+  // each of the three breaks (N4's orders); the gate holds (scene); Wystan at the camp (the shorter branch skips the aid tent)
+  build('m52', 55, RIM('wystan'), [
+    ...foot('caldera.siege.start', ...[1, 2, 3].flatMap(() => ['caldera.siege.orders', 'caldera.siege.start']), RIM('wystan')),
+  ], RIM_A5_NODES.m52, { waveEnemy: 16, structure: 2, killUnit: 4, set: 3 }, { siegeOrder: 3 }),
 ];
 
 /** L13's estimate with Act 5's local beats added to the beat sum (so they also widen the travel cap, as N12's table will). */

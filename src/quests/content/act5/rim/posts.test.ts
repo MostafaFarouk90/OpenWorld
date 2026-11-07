@@ -65,4 +65,11 @@ describe('Rim posts', () => {
     expect(i[R26_MASTER]!.anchorId).toBe(`${Q}.post.r26.master.camp`);
     expect(i[R26_GUARD(2)]!.anchorId).toBe(`${Q}.post.r26.guard.2.camp`);
   });
+
+  it('M52: Wystan stands at the war post from the brief until the gate holds, then back at the camp', () => {
+    const arrived = { [M49_ARRIVED]: true };
+    expect(at({ m52: 'active' }, arrived)['wystan']!.anchorId).toBe(RIM('wystan'));
+    expect(at({ m52: 'active' }, arrived, { m52: ['brief'] })['wystan']!.anchorId).toBe('caldera.siege.orders');
+    expect(at({ m52: 'active' }, { ...arrived, 'story.m52.gateHeld': true }, { m52: ['brief'] })['wystan']!.anchorId).toBe(RIM('wystan'));
+  });
 });

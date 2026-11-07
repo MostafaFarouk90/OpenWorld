@@ -98,6 +98,11 @@ export const RIM_A5_POST_ROWS: readonly PostRule[] = [
     posts: [atRim(id), { when: flag(M47_RIM_GATE_OPEN), anchorId: `${Q}.post.${id}.gate` }],
   })),
   ...(['wystan', 'merrin', 'wenna', 'wulfhild', 'ansgar'] as const).map((id): PostRule => ({ npcId: id, home: HOME[id], posts: [atRim(id)] })),
+  // M52 (a later row for the same NPC goes in front, so this beats his camp post): Wystan gives the orders at N4's war post from the brief until the gate holds (N4's orders tree, siege-orders-m52)
+  {
+    npcId: 'wystan', home: HOME.wystan,
+    posts: [{ when: { all: [active('m52'), { objective: ['m52', 'brief'], done: true }, { not: { flag: 'story.m52.gateHeld', equals: true } }] }, anchorId: 'caldera.siege.orders' }],
+  },
   // Maud cooks at the camp only with F4 Cleanse (N7's kitchen)
   { npcId: 'maud', home: HOME.maud, posts: [{ when: { all: [ARRIVED, flag(F4_CLEANSED)] }, anchorId: RIM('maud') }] },
   // R26: once the convoy is in, the master and the guards stand at the camp (a wounded guard at the aid tent, either way)
