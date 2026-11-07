@@ -525,8 +525,9 @@ export class SiegeRun {
     if (!g) return;
     const marks: Vec3[] = [];
     for (let i = 1; i <= 6; i++) {
+      // N1's sky marks are ground points flown `skyHeights` above (SIEGE_POINTS in src/caldera/calderaSites.ts).
       const p = this.anchor(SIEGE_ANCHORS.sky(i));
-      if (p) marks.push(p);
+      if (p) marks.push({ x: p.x, y: p.y + DRAGON.skyHeights[i - 1], z: p.z });
     }
     const gate = g.gate[0] ?? { x: g.origin.x, y: this.host.player.feet.y, z: g.origin.z };
     for (const [k, d] of this.roster.dragons.entries()) {
