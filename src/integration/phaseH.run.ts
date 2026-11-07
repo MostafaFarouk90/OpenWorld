@@ -229,9 +229,10 @@ export function definePhaseHRun(run: 'a' | 'b'): void {
       // the act's levels
       expect(r.level.end).toBeGreaterThanOrEqual(PHASE_H_END_LEVEL[run].min);
       expect(r.level.end).toBeLessThanOrEqual(PHASE_H_END_LEVEL[run].max);
-      // the pacing, last (so every other check above has run): the act at 50% or more, no quest under the 40% floor
+      // the pacing, last (so every other check above has run): no quest under the 40% floor in either run; the act line
+      // (50%) on run A only, as Phase G's chain does (run B's spares and Releases skip talk, so it reads lower by design)
       expect(r.report.failures, 'no quest under the 40% floor').toEqual([]);
-      expect(r.report.act.share).toBeGreaterThanOrEqual(ACT4_ACT_TARGET - 1e-9);
+      if (run === 'a') expect(r.report.act.share).toBeGreaterThanOrEqual(ACT4_ACT_TARGET - 1e-9);
     }, 3_600_000);
   });
 }
