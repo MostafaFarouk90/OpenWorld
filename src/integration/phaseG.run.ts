@@ -24,7 +24,6 @@ import { evalCondition } from '../quests/conditions';
 import { HARROWMARK_A4_PACE, paceAt } from '../quests/content/act4/harrowmark/pacing';
 import { M37_NEEDS } from '../quests/content/act4/harrowmark/m37.quest';
 import { WASTE_CARD_SEEN_FLAG } from './phaseGCard';
-import { WASTE_OPEN_FLAG } from '../quests/act4Jump';
 import { insideRingWall } from '../harrowmark/noStrand';
 import { vendorOpenByTable } from '../economy/stock';
 
@@ -47,6 +46,9 @@ export interface PhaseGResult {
   /** the travel results, out to another stone and back to the refuge */
   travel: unknown[];
 }
+
+/** A point well inside the Ashen Waste (engine x 8000..16000, z 5500..12000), off the Caldera. */
+const WASTE_DEEP = { x: 9000, z: 7000 } as const;
 
 const prog = (h: ChapterHarness) => h.ctx.services.require('progression') as unknown as { xp: number; level: number };
 
@@ -139,7 +141,8 @@ export async function runPhaseG(run: 'a' | 'b', c: PhaseGChoices = run === 'a' ?
     Object.assign(result, {
       world: {
         gautStanding: gaut,
-        held: !h.ctx.state.getBool(WASTE_OPEN_FLAG),
+        // the Waste shut at Phase G's end: M42 not yet accepted, so a point deep in the Waste is closed (the hold is retired)
+        held: !h.ctx.state.getBool('story.m42.started') && !h.ctx.services.require('containment').isOpen(WASTE_DEEP.x, WASTE_DEEP.z),
         cardSeen: h.ctx.state.getBool(WASTE_CARD_SEEN_FLAG),
         insideWalls: insideAfterM41,
         refugeLit: ws.isLit(REFUGE_STONE),

@@ -33,6 +33,7 @@ import { GREYFEN_DIALOGUES } from './act3/greyfen';
 import { DRAGONSPINE_DIALOGUES } from './act3/dragonspine';
 import { withSummit } from './act3/summit';
 import { SCENE_ACT3_CAMP } from './act3/campScene.dialogue';
+import { SCENE_ACT4_CAMP } from './act4/campScene.dialogue';
 import { withAct4Rook } from './act4/rook.trainer';
 import { withHarrowmarkA4 } from './act4/harrowmark';
 import { withWasteA4 } from './act4/waste';
@@ -60,4 +61,5 @@ export const dialogueDefs: DialogueDef[] = withWasteA4(withHarrowmarkA4(withAct4
   ...DRAGONSPINE_DIALOGUES,
   // Act 3 (K16 PR 2): the camp scene after "The Coal-Mother's Oath"
   SCENE_ACT3_CAMP.def,
+  SCENE_ACT4_CAMP.def,
 ], questDefs)))), questDefs)));

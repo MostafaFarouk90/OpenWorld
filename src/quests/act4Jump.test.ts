@@ -137,7 +137,8 @@ describe('Act4Jump', () => {
     expect(r.flags.get('story.gate.a4')).toBe(true);
     for (const q of ACT4_PREREQS[id]) expect(r.flags.get(`story.${q}.complete`), q).toBe(true);
     expect(r.flags.get(`story.${id}.complete`)).toBeUndefined();
-    expect(r.flags.get(WASTE_OPEN_FLAG)).toBe(phaseOf(id) === 'H' ? true : undefined);
+    // the Phase G hold is retired (L13 PR 2): no target sets it
+    expect(r.flags.get(WASTE_OPEN_FLAG)).toBeUndefined();
     expect(r.xp.total).toBeGreaterThanOrEqual(ACT4_START_XP);
     expect(r.placed).toEqual([ACT4_PLACEHOLDER[phaseOf(id)!]]);
     expect(r.quiet).toEqual([true, false]);

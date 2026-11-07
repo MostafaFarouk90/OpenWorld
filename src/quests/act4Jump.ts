@@ -160,7 +160,6 @@ export class Act4Jump {
     }
     if (this.phase === 'act4') {
       const prereqs = ACT4_PREREQS[this.id] ?? [];
-      if (phaseOf(this.id) === 'H') p.setFlag(WASTE_OPEN_FLAG, true);
       for (const q of prereqs) this.inject(q, 'act4');
       p.topUpXp?.(ACT4_START_XP);
       this.phase = 'quiet';

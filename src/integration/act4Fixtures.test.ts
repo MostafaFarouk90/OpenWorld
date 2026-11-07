@@ -5,7 +5,7 @@
  * the real save plugin are in act4Containment.e2e.test.ts.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ACT4_JUMP_IDS, ACT4_PREREQS, ACT4_START_XP, phaseOf, WASTE_OPEN_FLAG } from '../quests/act4Jump';
+import { ACT4_JUMP_IDS, ACT4_PREREQS, ACT4_START_XP, WASTE_OPEN_FLAG } from '../quests/act4Jump';
 import { ACT3_JUMP_IDS } from '../quests/act3Jump';
 import { actEnding } from './actEndings';
 import { ACT4_BASE_NAME, act4FixtureName, type Act4BaseMeta, type Act4FixtureMeta } from './act4FixtureKey';
@@ -51,8 +51,9 @@ describe('the committed Act 4 fixtures', () => {
     for (const q of meta!.injected) expect(f[`story.${q}.complete`], q).toBe(true);
     expect(f[`story.${id}.complete`], 'the target itself is not done').not.toBe(true);
     // The Phase G hold stands for Phase G ids; Phase H ids set it (until PR 2 retires it).
-    expect(meta!.wasteOpen).toBe(phaseOf(id) === 'H');
-    expect(f[WASTE_OPEN_FLAG] === true).toBe(phaseOf(id) === 'H');
+    // the Phase G hold is retired (L13 PR 2): no fixture carries it
+    expect(meta!.wasteOpen).toBe(false);
+    expect(f[WASTE_OPEN_FLAG]).toBeUndefined();
     // Topped up to plan 7.2's full-play start (a base above it would be left alone).
     expect(meta!.xp).toBeGreaterThanOrEqual(ACT4_START_XP);
   });
