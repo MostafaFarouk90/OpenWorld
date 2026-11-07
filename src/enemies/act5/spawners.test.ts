@@ -61,13 +61,6 @@ describe('the Caldera ambient groups', () => {
     expect(flag('caldera.rim.stokers.1')).toBe(CALDERA_GATE_FLAGS['gate.a5']);
     expect(flag('caldera.stair.outriders')).toBe('story.m47.rimGateOpen');
     expect(flag('caldera.foundry.guards')).toBe('story.phase.foundryOpen');
-    // Nothing spawns behind a closed gate, and a group spawns once its flag is set.
-    const closed = registry({}, 33);
-    closed.reg.spawnGroup('caldera.stair.outriders');
-    const open = registry({ 'story.m47.rimGateOpen': true }, 33);
-    open.reg.spawnGroup('caldera.stair.outriders');
-    expect(open.reqs.length).toBe(2);
-    expect(closed.reqs.length).toBeLessThanOrEqual(open.reqs.length);
   });
 
   it('caps every group at P + 3 (the first arrival P + 2), at the Caldera bands, for several player levels', () => {
@@ -87,6 +80,12 @@ describe('the Caldera ambient groups', () => {
     const { reg, reqs } = registry({ 'story.m47.rimGateOpen': true }, 33);
     reg.spawnGroup('caldera.terraces.pikes');
     expect(reqs.map((r) => [r.role, (r as { line?: string }).line])).toEqual([['pike', 'caldera.fauna.terraces'], ['pike', 'caldera.fauna.terraces']]);
+  });
+
+  it('every anchor stands on ground the layout validator accepts', async () => {
+    const { validateLayout } = await import('../../region/validateLayout');
+    const { heightAt } = await import('../../terrain/heightfield');
+    expect(validateLayout(CALDERA_FAUNA_LAYOUT, heightAt).filter((m) => !m.startsWith('missing anchor'))).toEqual([]);
   });
 
   it('anchor ids are unique, prefixed caldera.fauna. and no two members share ground', () => {

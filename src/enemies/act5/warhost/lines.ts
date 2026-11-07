@@ -18,6 +18,15 @@ interface LineEntry {
 
 const LINES = new Map<string, LineEntry>();
 
+/** One game clock for every line (seconds): members spawn at different times and sleep separately, so a member's own clock cannot time a window. Advanced by the creatures plugin's fixed system. */
+let clock = 0;
+export function tickLines(dt: number): void {
+  clock += dt;
+}
+export function lineNow(): number {
+  return clock;
+}
+
 function entry(lineId: string): LineEntry {
   let e = LINES.get(lineId);
   if (!e) LINES.set(lineId, (e = { line: new ShieldLine(lineId), members: new Map() }));
@@ -68,4 +77,5 @@ export function resetLines(): void {
 /** Tests. */
 export function clearLines(): void {
   LINES.clear();
+  clock = 0;
 }
