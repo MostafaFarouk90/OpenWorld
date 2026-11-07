@@ -29,9 +29,19 @@ export const HILD_TREE = tree(HILD, [{ when: at('m42', 'clip'), seg: 'm42-clip' 
 // ---- the trial-masters ----------------------------------------------------------------------------------------------------
 const OS = voice(M43_MASTER.walk);
 export const OSGAR = tree(M43_MASTER.walk, [
+  { when: at('m42', 'unclip'), seg: 'm42-unclip' },
   { when: open43('walkTalk'), seg: 'm43-walk' },
   { when: open43('walk'), seg: 'm43-walk-again' },
 ], {
+  'm42-unclip': {
+    lines: [
+      OS('Stand still. You are still on the rope, and in the camp that makes you a dog on a lead.'),
+      OS('Hild\'s clip. She tightens the gate too far; it bites. There. You are off.'),
+      C('Four walls. I counted every one.'),
+      OS('Everyone counts the walls the first time. The second time you count the posts. The tenth time you count nothing and sleep in the shelter.'),
+      OS('Wulfhild is at the long fire. Go and tell her you are not dead; she will pretend it surprises her.'),
+    ],
+  },
   'm43-walk': {
     lines: [
       OS('So. You are the knight who came down the crossing rope. That rope has a knot every ten paces; a child could follow it.'),
