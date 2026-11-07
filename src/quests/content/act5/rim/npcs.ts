@@ -108,6 +108,13 @@ export const RIM_A5_POST_ROWS: readonly PostRule[] = [
   })),
 ];
 
+const RIM_ROW_SET = new Set(RIM_A5_POST_ROWS.flatMap((r) => r.posts));
+/** A rule without this block's rows (for the shipped posts tests that compare their own rows). */
+export function withoutRimQuestRows(rule: PostRule): PostRule {
+  const posts = rule.posts.filter((p) => !RIM_ROW_SET.has(p));
+  return posts.length === rule.posts.length ? rule : { ...rule, posts };
+}
+
 /** The rules with this block's rows put first (the first matching row wins); never reorders or drops a row. */
 export function withRimQuestPosts(rules: PostRule[]): PostRule[] {
   const out = [...rules];

@@ -8,7 +8,7 @@ import { R26_CHOICE, R26_FAST, R26_GUARD, R26_LONG, R26_MASTER } from '../../../
 import { R29_GHOST } from '../../../../quests/content/act5/rim/r29.quest';
 import { M50_KEEPER } from '../../../../quests/content/act5/rim/m50.quest';
 import { F2_CHOICE, M51_CALL_DIALOGUE, M51_CALL_NPC, M51_CAPTAIN, R11_CHOICE, R16_CHOICE } from '../../../../quests/content/act5/rim/m51.quest';
-import { C, accept, at, flagIs, offer, qActive, tree, voice, when } from './common';
+import { C, accept, any, at, flagIs, offer, qActive, tree, voice, when } from './common';
 
 // ---- R26 -------------------------------------------------------------------------------------------------------------------
 const MA = voice(R26_MASTER);
@@ -117,7 +117,7 @@ const OR = voice('orsk');
 const HA = voice('hathren');
 const CA = voice(M51_CAPTAIN);
 
-export const M51_CALL_TREE = tree(M51_CALL_DIALOGUE, [{ when: offer('m51'), seg: 'm51-call' }, { when: at('m51', 'call'), seg: 'm51-call' }], {
+export const M51_CALL_TREE = tree(M51_CALL_DIALOGUE, [{ when: any(offer('m51'), at('m51', 'call')), seg: 'm51-call' }], {
   'm51-call': {
     lines: [
       C('The horn-stone is humming. A low note, under the noise of the camp.'),
