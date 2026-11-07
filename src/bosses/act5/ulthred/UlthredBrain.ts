@@ -50,6 +50,8 @@ export class UlthredBrain {
   private fireT = 0;
   private chainsT = 0;
   private started = false;
+  /** A sweep is never followed by another: the next move is a slam, so the hammer sticks for anyone who stays close. */
+  private swept = false;
 
   constructor(private readonly hooks: UlthredHooks) {}
 
@@ -190,10 +192,12 @@ export class UlthredBrain {
       this.tell(CHAINS, 'chainsTell');
       return;
     }
-    if (this.p !== 2 && sense.dist <= SWEEP.within) {
+    if (this.p !== 2 && sense.dist <= SWEEP.within && !this.swept) {
+      this.swept = true;
       this.tell(SWEEP, 'sweepTell');
       return;
     }
+    this.swept = false;
     // Phase 2: he holds the Anvil's middle and slams across the ring at Cael's platform.
     if (this.p === 2 || sense.dist <= this.reach()) this.tell(SLAM, 'slamTell');
     else this.go('approach', 6);
