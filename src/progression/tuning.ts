@@ -72,6 +72,9 @@ export const KILL_XP_BASE: Readonly<Record<string, number>> = {
   'waste-strider': 67,
   'husk-knight': 125,
   'cinder-gnat-swarm': 17,
+  // Act 5 (N5): stored at paid / 3.0 (the Caldera factor): 120 and 300 paid at an even level.
+  'warhost-soldier': 40,
+  'warhost-guard': 100,
   dummy: 0,
   scarecrow: 0,
 };

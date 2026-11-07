@@ -16,6 +16,7 @@ import { YSMERYTH_DEF } from './wyrm/ysmeryth/def';
 import { WASTE_STRIDER } from './waste/strider/def';
 import { HUSK_KNIGHT_DEF } from './waste/huskKnight/def';
 import { CINDER_GNAT_SWARM } from './waste/gnats/def';
+import { WARHOST_GUARD_DEF, WARHOST_SOLDIER } from './act5/warhost/def';
 import type { EnemyDef, EnemyKind, MoveDef } from './types';
 
 /**
@@ -257,6 +258,9 @@ export const ENEMY_DEFS: Readonly<Record<EnemyKind, EnemyDef>> = {
   'waste-strider': WASTE_STRIDER,
   'husk-knight': HUSK_KNIGHT_DEF,
   'cinder-gnat-swarm': CINDER_GNAT_SWARM,
+  // Act 5 (N5): Vey's warhost.
+  'warhost-soldier': WARHOST_SOLDIER,
+  'warhost-guard': WARHOST_GUARD_DEF,
 };
 
 /**
@@ -296,6 +300,9 @@ export const TELEGRAPH_STYLE: Readonly<Record<EnemyKind, { part: 'hand' | 'weapo
   'waste-strider': { part: 'hand', color: 0xd8c08a },
   'husk-knight': { part: 'core', color: 0xffa040 },
   'cinder-gnat-swarm': { part: 'core', color: 0xffb040 },
+  // N5: the pike's gold-black flash (design 10 row 32); the same for the household guard.
+  'warhost-soldier': { part: 'weapon', color: 0xe0b040 },
+  'warhost-guard': { part: 'weapon', color: 0xe0b040 },
 };
 
 function move(
