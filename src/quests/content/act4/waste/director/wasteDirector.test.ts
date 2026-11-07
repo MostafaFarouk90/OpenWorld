@@ -55,6 +55,7 @@ function doM42(): void {
   r.read(M42_NOTES.knot);
   r.enter(M42_CAMP_TRIGGER);
   r.step(20);
+  r.talk(M43_MASTER.walk); // Osgar takes the clip off
   r.talk('wulfhild');
 }
 
@@ -114,6 +115,9 @@ describe('M42 Gate of Ash', () => {
     r.enter(M42_CAMP_TRIGGER);
     r.step(16);
     expect(r.weather.storms.size).toBe(0);
+    r.talk('wulfhild'); // too early: Osgar has not taken the clip off
+    expect(r.current('m42', 'unclip')).toBe(true);
+    r.talk(M43_MASTER.walk);
     r.talk('wulfhild');
     expect(r.qs('m42')).toBe('completed');
     expect(r.flag('story.m42.complete')).toBe(true);
@@ -219,6 +223,7 @@ function doM44(): void {
   r.reads([M44_NOTES.sampler, M44_NOTES.ledger]);
   r.use(M44_BOX);
   r.read(M44_NOTES.graves);
+  r.talk(CHAPEL_KEEPER);
   r.talk(EBBA);
 }
 
@@ -256,6 +261,7 @@ describe('M44 and R25: the chapel', () => {
     r.step(21);
     expect(r.flag(R25_NO_CANDLE)).toBe(false); // every hearth lit: nothing is owed
     r.reads([R25_REGISTER, R25_LETTER]);
+    r.talk(CHAPEL_KEEPER);
     r.talk(EBBA);
     expect(r.qs('r25')).toBe('completed');
   }, T);

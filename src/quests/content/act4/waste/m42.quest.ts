@@ -46,6 +46,8 @@ export const m42: QuestDef = {
     shelter(4),
     reads('knot', 'quest.m42.knot', [M42_NOTES.knot]),
     story('camp', 'quest.m42.camp', M42_CAMP, { doneWhen: { flag: M42_CAMP, equals: true } }),
+    // Osgar takes the clip off at the camp edge (a pacing addition, L13 Phase H M1: M42 at 43% by the shipped count)
+    { id: 'unclip', type: 'talk', target: 'walker-knots', textKey: 'quest.m42.unclip' },
     { id: 'report', type: 'talk', target: 'wulfhild', textKey: 'quest.m42.report' },
   ],
   rewards: rewardOf('m42', 850),
