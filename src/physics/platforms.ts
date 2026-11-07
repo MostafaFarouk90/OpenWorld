@@ -269,6 +269,26 @@ export class Platforms {
     }
   }
 
+  /**
+   * v0.9 (N3's arena kit): sets a turning platform's rate in degrees a second; 0 holds it still (its carry is 0 from the
+   * next step) and the angle is kept, so a later rate turns on from where it stopped. False for an unknown id, a platform
+   * that does not spin, or a non-finite rate.
+   */
+  setSpinRate(id: string, degPerS: number): boolean {
+    const sp = this.entries.get(id)?.spin;
+    if (!sp || !Number.isFinite(degPerS)) return false;
+    sp.omega = (degPerS * Math.PI) / 180;
+    return true;
+  }
+
+  /** v0.9: a turning platform back at angle 0 at its rest stop (an arena reset); its rate is kept. False if it does not spin. */
+  resetSpin(id: string): boolean {
+    const e = this.entries.get(id);
+    if (!e?.spin) return false;
+    this.applyStop(e, 0);
+    return true;
+  }
+
   private entryOf(target: RAPIER.Collider | RAPIER.RigidBody): Entry | undefined {
     const body = 'parent' in target && typeof target.parent === 'function' ? target.parent() : (target as RAPIER.RigidBody);
     return body ? this.byBody.get(body.handle) : undefined;

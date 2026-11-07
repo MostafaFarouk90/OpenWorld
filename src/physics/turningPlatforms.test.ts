@@ -165,3 +165,33 @@ describe('turning platforms (item 7b)', () => {
     expect(carry.air).toBeUndefined();
   });
 });
+
+describe('spin rate and reset (v0.9, for N3)', () => {
+  it('a rate of 0 holds the angle and carries nothing; a new rate turns on from there; reset goes back to 0', () => {
+    const { c } = spinner(8);
+    for (let i = 0; i < 60; i++) tick(c);
+    expect(platforms.setSpinRate('anvil.ring', 0)).toBe(true);
+    tick(c);
+    const held = platforms.angle('anvil.ring')!;
+    for (let i = 0; i < 60; i++) tick(c);
+    expect(platforms.angle('anvil.ring')).toBe(held);
+    expect(c.carryYaw).toBe(0);
+    expect(platforms.setSpinRate('anvil.ring', -DEG)).toBe(true);
+    for (let i = 0; i < 60; i++) tick(c);
+    expect(platforms.angle('anvil.ring')!).toBeCloseTo(held - OMEGA, 6);
+    expect(platforms.resetSpin('anvil.ring')).toBe(true);
+    expect(platforms.angle('anvil.ring')).toBe(0);
+    expect(platforms.renderPose('anvil.ring', 1)!.yaw).toBe(0);
+  });
+  it('refuses unknown ids, non-spinning platforms and bad rates', () => {
+    spinner(3);
+    expect(platforms.setSpinRate('nope', 5)).toBe(false);
+    expect(platforms.setSpinRate('anvil.ring', NaN)).toBe(false);
+    expect(platforms.resetSpin('nope')).toBe(false);
+    const body = physics.world.createRigidBody(physics.rapier.RigidBodyDesc.kinematicPositionBased());
+    physics.world.createCollider(physics.rapier.ColliderDesc.cuboid(1, 0.25, 1), body);
+    platforms.register('lift', body, { stops: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 5, z: 0 }], speed: 1, wait: 0 });
+    expect(platforms.setSpinRate('lift', 5)).toBe(false);
+    expect(platforms.resetSpin('lift')).toBe(false);
+  });
+});
