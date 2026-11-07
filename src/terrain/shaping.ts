@@ -21,6 +21,11 @@ export interface PlateauDef {
   blend: number;
   /** v0.7: a pit cut into the finished plateau (straight walls with a 1 m soft edge), e.g. a dive pool. */
   hollow?: { box: ShapeBox; depth: number };
+  /**
+   * v0.9 (Act 5 N1): a round plateau, flat inside the circle inscribed in `box` (which must be square) and blended over
+   * `blend` from its edge. The Caldera's island.
+   */
+  round?: boolean;
 }
 
 /** Scales the ridged-mountain term by `1 - strength` inside `box`, blended over `blend` metres. */
@@ -201,6 +206,13 @@ function boxDistance(b: ShapeBox, x: number, z: number): number {
   const dx = x < b.minX ? b.minX - x : x > b.maxX ? x - b.maxX : 0;
   const dz = z < b.minZ ? b.minZ - z : z > b.maxZ ? z - b.maxZ : 0;
   return dx === 0 ? dz : dz === 0 ? dx : Math.hypot(dx, dz);
+}
+
+/** Distance from a plateau's flat top: its box, or (round) the circle inscribed in it. */
+function plateauDistance(p: PlateauDef, x: number, z: number): number {
+  if (!p.round) return boxDistance(p.box, x, z);
+  const r = (p.box.maxX - p.box.minX) / 2;
+  return Math.max(0, Math.hypot(x - (p.box.minX + r), z - (p.box.minZ + (p.box.maxZ - p.box.minZ) / 2)) - r);
 }
 
 function expand(b: ShapeBox, m: number): ShapeBox {
@@ -526,6 +538,8 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
     if (range && (p.height < range.min || p.height > range.max)) throw new Error(`${where}: height outside the terrain range`);
     const reach = expand(p.box, p.blend);
     if (protectedBox && overlaps(reach, protectedBox)) throw new Error(`${where}: reaches into the Phase A protected box`);
+    if (p.round && Math.abs(p.box.maxX - p.box.minX - (p.box.maxZ - p.box.minZ)) > 1e-6) throw new Error(`${where}: a round plateau needs a square box`);
+    if (p.round && p.hollow) throw new Error(`${where}: a round plateau cannot have a hollow`);
     if (p.hollow) {
       const hb = p.hollow.box;
       checkBox(`${where} hollow`, hb, bounds);
@@ -541,7 +555,7 @@ export function buildShaper(shape: TerrainShape, base: BaseHeight, opts: ShaperO
   const plateaued = (x: number, z: number, h: number): number => {
     for (const p of plateaus) {
       if (!inBox(p.reach, x, z)) continue;
-      const w = 1 - smoothstep(0, p.def.blend, boxDistance(p.def.box, x, z));
+      const w = 1 - smoothstep(0, p.def.blend, plateauDistance(p.def, x, z));
       if (w > 0) h += (p.def.height - h) * w;
       const hollow = p.def.hollow;
       if (hollow && inBox(hollow.box, x, z)) {

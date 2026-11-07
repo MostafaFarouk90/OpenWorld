@@ -134,6 +134,8 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | waste.fog.caldera-rim.s | 11000 | 6470 | 0 | 0 | fog-wall |
 | waste.fog.caldera-rim.e | 12530 | 8000 | 0 | 0 | fog-wall |
 | waste.fog.caldera-rim.w | 9470 | 8000 | 0 | 0 | fog-wall |
+| waste.fog.caldera-rim.sw | 10228 | 6470 | 0 | 0 | fog-wall |
+| waste.fog.caldera-rim.se | 11772 | 6470 | 0 | 0 | fog-wall |
 
 ## Triggers
 
