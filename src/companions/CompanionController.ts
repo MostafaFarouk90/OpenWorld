@@ -458,7 +458,7 @@ export class CompanionController {
     if (!this.model) return;
     // A load is black: a wait that holds is applied at once and the saved spot is ignored.
     this.handoffAge = 0;
-    const want = deriveWait(this.rules, this.waitView());
+    const want = this.wanted();
     if (want) {
       this.enterWait(want);
       return;
@@ -692,6 +692,31 @@ export class CompanionController {
 
   // ---- waits -------------------------------------------------------------------------------------------------
 
+  /** N4 (Act 5): a scripted sit-out (the siege's wounded companion) beats every derived wait while it stands. */
+  private sitOutWait: Wait | null = null;
+
+  /**
+   * N4: the companion waits at `anchorId` (no follow, no fighting, no barks) until the release is called. A second call
+   * replaces the first. The move uses the shipped relocation (out of view, a door's black, or the hand-off timeout).
+   */
+  sitOut(anchorId: string): () => void {
+    const w: Wait = { reason: 'sitOut', anchorId };
+    this.sitOutWait = w;
+    return () => {
+      if (this.sitOutWait === w) this.sitOutWait = null;
+    };
+  }
+
+  get sittingOut(): string | null {
+    return this.sitOutWait?.anchorId ?? null;
+  }
+
+  private wanted(): Wait | null {
+    const s = this.sitOutWait;
+    if (s && this.ctx.anchors.find(s.anchorId)) return s;
+    return deriveWait(this.rules, this.waitView());
+  }
+
   private waitView(): WaitView {
     const q = this.ctx.services.get('quests');
     return {
@@ -738,7 +763,7 @@ export class CompanionController {
    * he can walk back, or after `handoffMaxSeconds` regardless.
    */
   private updateWait(dt: number, player: Vec3, playerYaw: number): void {
-    const want = deriveWait(this.rules, this.waitView());
+    const want = this.wanted();
     if (sameWait(want, this.wait)) {
       this.handoffAge = 0;
       return;
