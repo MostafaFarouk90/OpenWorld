@@ -298,10 +298,13 @@ describe('M44 and R25: the chapel', () => {
 
 function cartHome(r: Rig): void {
   for (const n of [1, 2] as const) {
+    r.step(16);
+    expect(r.weather.clears.has('quest:r24.road'), `the road before shelter ${n} is held clear`).toBe(true);
     r.escorts.st = { id: R24_ESCORT, reason: 'junction', junction: R24_SHELTER_NODES[n - 1]!, arrived: false };
     r.emit('escort.junction', { escortId: R24_ESCORT, junction: R24_SHELTER_NODES[n - 1]! });
     r.step(16);
     expect(r.weather.storms.has(`quest:r24.shelter.${n}`)).toBe(true);
+    expect(r.weather.clears.has('quest:r24.road'), 'the road hold yields to the shelter storm').toBe(false);
     r.secs(R24_STORM_S + 1);
     expect(r.flag(R24_WAITED(n))).toBe(false); // the brake is not set yet
     expect(r.use(R24_BRAKE(n))).toBe(true);
@@ -311,7 +314,8 @@ function cartHome(r: Rig): void {
     expect(r.weather.storms.has(`quest:r24.shelter.${n}`)).toBe(false);
   }
   r.emit('escort.arrived', { escortId: R24_ESCORT });
-  r.step(2);
+  r.step(16);
+  expect(r.weather.clears.has('quest:r24.road'), 'released at the gate').toBe(false);
 }
 
 describe('R24 Ashwalker Water-Debt', () => {
@@ -335,6 +339,7 @@ describe('R24 Ashwalker Water-Debt', () => {
       expect(r.qs('r24')).toBe('completed');
       r.step(16);
       expect(r.flag(R24_CART_OUT)).toBe(false);
+      expect(r.weather.storms.size + r.weather.clears.size).toBe(0);
     }, T);
   }
 
