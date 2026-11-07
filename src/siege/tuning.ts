@@ -75,6 +75,8 @@ export const DRAGON = {
   strikeAtS: 12,
   strikeEveryS: 9,
   loopSpeed: 14,
+  /** Metres above N1's ground sky marks 1 to 6 (N1's `SIEGE_POINTS.skyHeights`, kept equal). */
+  skyHeights: [45, 50, 55, 60, 65, 70] as readonly number[],
   wyrmStrafeLen: 30,
   wyrmStrafePct: 0.15,
   wyrmStrafeWidth: 3,
