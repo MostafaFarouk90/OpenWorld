@@ -10,7 +10,7 @@ import { R27_CAPTAIN } from './r27.quest';
 import { R28_MOURNER, R28_PYRE_NS } from './r28.quest';
 import { M53_VEY, M53_WITHDRAWN } from './m53.quest';
 import { D09_ENTERED, D09_STOKER } from './d09.quest';
-import { D09_GUARDS_DOWN } from './flags';
+import { D09_GUARDS_DOWN, VEY_OUTCOME } from './flags';
 
 const def = (id: string, model: NpcModelId, extra: { scale?: number; tint?: number | null } = {}): NpcDef => ({
   id, nameKey: `npc.${id}.name`, model, scale: extra.scale ?? 1, tint: extra.tint ?? null, dialogueId: `npc-${id}`, idleClip: 'Idle',
@@ -60,7 +60,13 @@ export const FOUNDRY_A5_POST_ROWS: readonly PostRule[] = [
     npcId: 'wenna', home: 'npc-post.wenna.rim',
     posts: [{ when: { all: [active('d09'), { not: flag('story.m21.choice', 'confront') }, { not: flag(D09_GUARDS_DOWN) }] }, anchorId: 'caldera.int.foundry.wenna' }],
   },
-  { npcId: 'alric', home: 'npc-post.alric.rim', posts: [{ when: { all: [{ any: [{ quest: 'm53', state: 'completed' }, active('d09')] }, { not: flag(D09_ENTERED) }, { not: { quest: 'd09', state: 'completed' } }] }, anchorId: FA.d09Alric }] },
+  {
+    npcId: 'alric', home: 'npc-post.alric.rim', posts: [
+      // after Vey's fight, at the Foundry's foot for D09's last talk
+      { when: { all: [active('d09'), { any: [flag(VEY_OUTCOME, 'spared'), flag(VEY_OUTCOME, 'defeated')] }] }, anchorId: FA.d09AlricFoot },
+      { when: { all: [{ any: [{ quest: 'm53', state: 'completed' }, active('d09')] }, { not: flag(D09_ENTERED) }, { not: { quest: 'd09', state: 'completed' } }] }, anchorId: FA.d09Alric },
+    ],
+  },
 ];
 
 /** The rules with this block's rows put first (the first matching row wins); never reorders or drops a row. */

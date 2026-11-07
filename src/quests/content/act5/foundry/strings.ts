@@ -1,5 +1,6 @@
 // The Foundry quests' journal strings (titles, summaries, objective lines) and prompts. Prose is invented where the design is
 // silent (Q6). Keys are `quest.<id>.*` and `quest.prompt.a5f.*`; none is shared with another block (the duplicate-key trap).
+import { beatStrings } from '../../act4/harrowmark/director/beat';
 import { FOUNDRY_A5_PROMPTS } from './props';
 import { SPIRIT_FLAME_STRINGS } from './spiritFlames';
 
@@ -75,4 +76,17 @@ export const FOUNDRY_A5_QUEST_STRINGS: Record<string, string> = {
   'quest.d09.slagFlood': 'The slag floods the runnels. The sluices reset.',
   'quest.d09.slagLesson': 'The plate\'s next wheel glows.',
   'quest.r28.lit': 'The pyre takes the Heartshard fire.',
+  'quest.r28.litWalkers': 'The pyre takes the Heartshard fire. The Ashwalkers light their torches from it.',
+  'quest.r28.tooHot': 'The Heartshard is too hot to give more fire. Let the Burn fall first.',
+  'quest.r28.riteDone': 'The pyres burn down. The ash goes up, not into the stone.',
+  'quest.r27.lineSet': 'The line is set. Stand at the posts: they are coming.',
+  'quest.r27.collapse': 'The charges go off. The far shoring comes down with a sound like a mountain sitting.',
+  'quest.r30.sung': 'The whole camp takes up Tobb\'s song.',
+  'quest.m53.withdrawn': 'Vey walks back into the Foundry. The truce is over.',
+  'quest.d09.sluiceRight': 'The slag runs down the right channel.',
+  'quest.d09.slagDone': 'The slag cools in the basin. The lift gate grinds open.',
+  ...beatStrings('quest.r30.beat', {
+    start: 'Tobb counts you in. Strike the anvil on the beat.', lesson: 'Strike on the gold cells.', real: 'Ring out the Rim\'s tune: strike on the gold cells.',
+    falter: 'Tobb loses the tune and laughs. Again.', assist: 'Tobb takes the beat and nods you along.',
+  }),
 };

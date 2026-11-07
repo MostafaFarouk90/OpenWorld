@@ -36,12 +36,13 @@ import { SCENE_ACT3_CAMP } from './act3/campScene.dialogue';
 import { withAct4Rook } from './act4/rook.trainer';
 import { withHarrowmarkA4 } from './act4/harrowmark';
 import { withWasteA4 } from './act4/waste';
+import { withAct5 } from './act5';
 import { SIEGE_ORDER_TREES } from '../../siege/orders.dialogue';
 
 // Act 3 (K10): the four Harrowmark trainers get their master-book lines in front. Act 3 (K5): Hrolf's master book and
 // the companions' M27, M32 and M34 scene trees. Act 1 side jobs: the givers' job rules, guarded by withSideJobs. The summit block's extensions (withSummit).
 // Act 4 (L7): Rook's refuge lines (Gaut's book and the Knight desk) after M41. Act 4 (L10): the Harrowmark quests' extensions.
-export const dialogueDefs: DialogueDef[] = withWasteA4(withHarrowmarkA4(withAct4Rook(withSummit(withAct3Companions(withAct3Trainers(withSideJobs([
+export const dialogueDefs: DialogueDef[] = withAct5(withWasteA4(withHarrowmarkA4(withAct4Rook(withSummit(withAct3Companions(withAct3Trainers(withSideJobs([
   npcStane, npcEdda, npcHob, npcWynn, npcTobb, npcCarter1, npcCarter2, t04Vow,
   npcRook, npcAldith, npcMerrin, npcGerta, npcWhitlock, npcAshdown, sceneAct1Camp,
   npcCarter3, npcAldwin, npcGarrick, ...NOTE_DIALOGUES,
@@ -63,4 +64,4 @@ export const dialogueDefs: DialogueDef[] = withWasteA4(withHarrowmarkA4(withAct4
   SCENE_ACT3_CAMP.def,
   // Act 5 (N4): the siege's war-post orders
   ...SIEGE_ORDER_TREES.map((t) => t.def),
-], questDefs)))), questDefs)));
+], questDefs)))), questDefs))));
