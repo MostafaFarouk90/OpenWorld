@@ -50,7 +50,7 @@ export interface InteriorsPluginOptions {
   /** blockerId -> the flag that opens it (default: the Anvil's back-room gate). */
   flagBlockers?: Readonly<Record<string, string>>;
   /** Act 4 (L2): doorId -> the flag while which its exit refuses, with the toast (default: the chamber's front door from M38). */
-  exitLocks?: Readonly<Record<string, { flag: string; toastKey: string }>>;
+  exitLocks?: Readonly<Record<string, { flag: string; toastKey: string; unlessFlag?: string }>>;
   /** v0.8: interior-to-interior links (default INTERIOR_LINKS). */
   links?: readonly InteriorLinkDef[];
 }
@@ -209,7 +209,8 @@ function setupInteriors(ctx: GameContext, opts: InteriorsPluginOptions, cleanups
   const exitLocks = opts.exitLocks ?? (opts.defs ? {} : ACT4_HARROWMARK_EXIT_LOCKS);
   const exitLocked = (doorId: string): boolean => {
     const l = exitLocks[doorId];
-    return !!l && Boolean(ctx.state.getFlag(l.flag));
+    // N13: `unlessFlag` lifts the lock (the world after the ending opens the chamber's front door again).
+    return !!l && Boolean(ctx.state.getFlag(l.flag)) && !(l.unlessFlag && ctx.state.getFlag(l.unlessFlag));
   };
 
   // Door interactables. The outside anchors are the layout thread's and may be defined after this plugin sets up.

@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { glowRegistry, type GlowSource } from '../env/glowSources';
 import type { Anchor, CoreContext } from '../region/coreTypes';
 import { HARROWMARK_LAYOUT } from './harrowmark.layout';
+import { AFTER_ENDING_FLAG } from '../region/act5Regions';
 
 export const A2_FLAG = 'story.gate.a2';
 /** Act 2's ending ("The Houses Stand") sets this once; it relights the Silver Fountain and reopens the closed stalls. */
@@ -215,9 +216,11 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
   let gateA2 = false;
   let gateA3 = false;
   let gateA4 = false;
-  const syncClosed = (): void => ((gateA2 && !gateA3) || gateA4 ? build3() : clear3());
-  // The running fountain and the open stalls stand from Act 2's ending until Act 4 opens (L2, additive).
-  const syncOpen = (): void => (gateA3 && !gateA4 ? build2() : clear2());
+  let after = false;
+  const syncClosed = (): void => (((gateA2 && !gateA3) || gateA4) && !after ? build3() : clear3());
+  // The running fountain and the open stalls stand from Act 2's ending until Act 4 opens (L2, additive), and again in the
+  // world after the ending (N13, v0.9 item 10).
+  const syncOpen = (): void => ((gateA3 && !gateA4) || (gateA3 && after) ? build2() : clear2());
 
   const off = ctx.gates.flag(A2_FLAG, (on) => {
     gateA2 = on;
@@ -232,6 +235,11 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
   });
   const off3 = ctx.gates.flag(A4_FLAG, (on) => {
     gateA4 = on;
+    syncClosed();
+    syncOpen();
+  });
+  const off4 = ctx.gates.flag(AFTER_ENDING_FLAG, (on) => {
+    after = on;
     syncClosed();
     syncOpen();
   });
@@ -256,6 +264,7 @@ export function buildWorldChange(ctx: Pick<CoreContext, 'scene' | 'anchors' | 'g
       off();
       off2();
       off3();
+      off4();
       clear();
       clear2();
       clear3();

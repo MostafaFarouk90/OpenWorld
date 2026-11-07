@@ -9,6 +9,7 @@ import type { StructureSpec } from '../../region/layoutTypes';
 import { buildCity, type BuildDeps } from '../cityBuild';
 import { FOUNTAIN } from '../worldChange';
 import { A4_FLAG, CHECKPOINTS } from './sites';
+import { AFTER_ENDING_FLAG } from '../../region/act5Regions';
 
 /** The rail pieces either side of the pass (local x from the checkpoint centre) and their size. */
 export const RAIL = { offset: 2.75, length: 2.5, depth: 0.6, height: 1.2 } as const;
@@ -151,7 +152,10 @@ export function buildAshState(
     active = true;
   };
 
-  const off = ctx.gates.flag(A4_FLAG, (on) => (on ? build() : clear()));
+  // N13 (v0.9 item 10): the checkpoints, posters and soot come down in the world after the ending.
+  const off = ctx.gates.watch((st) => Boolean(st.getFlag(A4_FLAG)) && !st.getFlag(AFTER_ENDING_FLAG), (on) => (on ? build() : clear()), {
+    keys: [A4_FLAG, AFTER_ENDING_FLAG],
+  });
   return {
     get active() {
       return active;

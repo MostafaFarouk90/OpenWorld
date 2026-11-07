@@ -22,7 +22,11 @@ export const UNKNOWN_REGION_KEY = 'map.region.unknown';
  * betrayal (story.m38.complete) until Act 5.
  */
 export const REGION_LABEL_WHEN: Partial<Record<RegionId, readonly { flag: string; key: string }[]>> = {
-  harrowmark: [{ flag: 'story.m38.complete', key: 'map.region.harrowmark.held' }],
+  // N13 (v0.9 item 10): retaken in the world after the ending (first holding row wins).
+  harrowmark: [
+    { flag: 'world.afterEnding', key: 'map.region.harrowmark.retaken' },
+    { flag: 'story.m38.complete', key: 'map.region.harrowmark.held' },
+  ],
 };
 
 function inside(inner: MapBox, outer: MapBox): boolean {

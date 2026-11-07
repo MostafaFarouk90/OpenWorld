@@ -16,9 +16,10 @@ import './types';
 import { validateCity } from './validateCity';
 import { buildWorldChange } from './worldChange';
 import { OCCUPIED_FLAG } from './act4/sites';
+import { AFTER_ENDING_FLAG } from '../region/act5Regions';
 
-/** Act 4 (Q2): every working gate shuts while Vey holds the city. */
-const HELD = { closedWhen: OCCUPIED_FLAG };
+/** Act 4 (Q2): every working gate shuts while Vey holds the city; Act 5 (N13): they open again after the ending. */
+const HELD = { closedWhen: OCCUPIED_FLAG, reopenWhen: AFTER_ENDING_FLAG };
 
 export interface HarrowmarkPluginOptions {
   layout?: typeof HARROWMARK_LAYOUT;
@@ -101,7 +102,7 @@ export function createHarrowmarkPlugin(opts: HarrowmarkPluginOptions = {}): Game
         const northwest = watchNorthwestGate(ctx.gates, (open) => city.setShutter(NORTHWEST_PORTCULLIS_ID, !open), HELD);
         cleanups.push(() => northwest.dispose());
         // Act 4 (L1): the Ash Road's gate.
-        const northeast = watchNortheastGate(ctx.gates, (open) => city.setShutter(NORTHEAST_PORTCULLIS_ID, !open));
+        const northeast = watchNortheastGate(ctx.gates, (open) => city.setShutter(NORTHEAST_PORTCULLIS_ID, !open), AFTER_ENDING_FLAG);
         cleanups.push(() => northeast.dispose());
 
         const change = buildWorldChange(ctx);

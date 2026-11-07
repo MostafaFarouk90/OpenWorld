@@ -21,6 +21,30 @@ export const gateStateFor = (started: boolean, route: boolean, held = false): Ga
 /** Act 4 (L2): an optional flag that shuts a gate while it holds, on top of the gate's own rule. */
 export interface GateHold {
   closedWhen?: string;
+  /** Act 5 (N13, v0.9 item 10): once this flag holds the hold no longer shuts the gate (the world after the ending). */
+  reopenWhen?: string;
+}
+
+/** The hold's flags through ctx.gates: `set(true)` while `closedWhen` holds and `reopenWhen` does not. */
+function watchHold(gates: Pick<FlagGates, 'flag'>, hold: GateHold, set: (held: boolean) => void): Array<() => void> {
+  if (!hold.closedWhen) return [];
+  let closed = false;
+  let reopened = false;
+  const offs = [
+    gates.flag(hold.closedWhen, (on) => {
+      closed = !!on;
+      set(closed && !reopened);
+    }),
+  ];
+  if (hold.reopenWhen) {
+    offs.push(
+      gates.flag(hold.reopenWhen, (on) => {
+        reopened = !!on;
+        set(closed && !reopened);
+      }),
+    );
+  }
+  return offs;
 }
 
 export interface SouthGate {
@@ -56,14 +80,10 @@ export function watchSouthGate(gates: Pick<FlagGates, 'flag'>, apply: (state: Ga
       route = on;
       push();
     }),
-    ...(hold.closedWhen
-      ? [
-          gates.flag(hold.closedWhen, (on) => {
-            held = !!on;
-            push();
-          }),
-        ]
-      : []),
+    ...watchHold(gates, hold, (h) => {
+      held = h;
+      push();
+    }),
   ];
   ready = true;
   push();
@@ -107,7 +127,8 @@ export function northeastGateOpen(act4: boolean, occupied: boolean): boolean {
   return act4 && !occupied;
 }
 
-export function watchNortheastGate(gates: Pick<FlagGates, 'flag'>, apply: (open: boolean) => void): RiverGate {
+/** N13: the flag that lifts the North-east Gate's shut (the world after the ending); optional, so shipped callers are unchanged. */
+export function watchNortheastGate(gates: Pick<FlagGates, 'flag'>, apply: (open: boolean) => void, reopenWhen?: string): RiverGate {
   let act4 = false;
   let occupied = false;
   let last: boolean | null = null;
@@ -124,8 +145,8 @@ export function watchNortheastGate(gates: Pick<FlagGates, 'flag'>, apply: (open:
       act4 = !!on;
       push();
     }),
-    gates.flag(NORTHEAST_GATE_SHUT_FLAG, (on) => {
-      occupied = !!on;
+    ...watchHold(gates, { closedWhen: NORTHEAST_GATE_SHUT_FLAG, reopenWhen }, (h) => {
+      occupied = h;
       push();
     }),
   ];
@@ -154,14 +175,10 @@ export function watchShutter(gates: Pick<FlagGates, 'flag'>, flag: string, apply
       on = !!v;
       push();
     }),
-    ...(hold.closedWhen
-      ? [
-          gates.flag(hold.closedWhen, (v) => {
-            held = !!v;
-            push();
-          }),
-        ]
-      : []),
+    ...watchHold(gates, hold, (h) => {
+      held = h;
+      push();
+    }),
   ];
   ready = true;
   push();

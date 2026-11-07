@@ -4,6 +4,7 @@ import type { ClassBaseStats } from '../progression/classStats';
 import type { ClassKit, DrillStepDef } from './types';
 import { ACT4_TRAINER_POSTS } from '../economy/refugePosts.act4';
 import { ACT5_TRAINER_POSTS } from '../economy/rimCamp.act5';
+import { AFTER_KNIGHT_DESK, rowHoldsAfterEnding } from '../afterEnding/posts';
 
 /**
  * Which classes M07 offers (Mostafa's default: all five at tiers 1 and 2). "Knight plus one" is a one-line change here; the
@@ -175,8 +176,11 @@ export function trainerPlacement(kit: Pick<ClassKit, 'classId' | 'trainer'>, fla
   let hit: TrainerPostRow | null = null;
   for (const r of rows) {
     const mine = r.classId ? r.classId === kit.classId : r.npcId === kit.trainer.npcId;
-    if (mine && flagConditionHolds(r.when, flags)) hit = r;
+    // N13 (afterEnding/posts.ts): the refuge and Rim Camp desks go home after the ending.
+    if (mine && flagConditionHolds(r.when, flags) && rowHoldsAfterEnding(r.post, r.npcId, flags)) hit = r;
   }
+  // N13: Gaut is retired, so after the ending Rook keeps the Knight desk, at Gaut's own Bastion desk.
+  if (!hit && kit.classId === AFTER_KNIGHT_DESK.classId && flagConditionHolds(AFTER_KNIGHT_DESK.when, flags)) hit = AFTER_KNIGHT_DESK;
   if (!hit) {
     return { npcId: kit.trainer.npcId, interactableId: trainerId(kit), deskAnchor: trainerAnchor(kit), postAnchor: npcBastionPost(kit), nameKey: kit.trainer.nameKey, moved: false };
   }
