@@ -6,7 +6,7 @@
  * Rekindle, kills as kills); run B the keepers' (R27 kept, four pyres, Vey spared, Let It Die, the Spare and the Release
  * offered first: the mercy-heavy census).
  *
- * Measures what the brief names: per-quest seconds, levels and XP (the census: run A ends 35 to 37, run B at 32 or more),
+ * Measures what the brief names: per-quest seconds, levels and XP (the census: run A ends 37 to 38, run B 36 to 37, as ruled),
  * deaths, the cap on every hostile met, mercy, favour and the M56 snapshot, the ending's steps and the flags it leaves, the
  * pacing of Phase J on N11's rows with the nodes each quest's run read, and the act's (Phase I's rows from the end save's
  * trails), and what was scripted. N6 PR 2's hammer trial and Ulthred are stand-ins until that PR is in the stack (the
@@ -39,9 +39,10 @@ import {
 const prog = (h: ChapterHarness) => h.ctx.services.require('progression') as unknown as { xp: number; level: number };
 const gold = (h: ChapterHarness): number => (h.ctx.services.get('inventory') as { gold?: number } | undefined)?.gold ?? -1;
 
-/** Plan 11: the chain's end (quest kills only). The plan's 35 to 36 was set on a 98,800 start; a real Phase I enters Phase J
- * at 33 to 34 (the Phase I report's L1), so the top is 37. Under 35 is N5's factor (up to x 3.4), never a lower assert. */
-export const PHASE_J_END_LEVEL: Readonly<Record<'a' | 'b', readonly [number, number]>> = { a: [35, 37], b: [32, 37] };
+/** Plan 11's census, as ruled after the Phase J report (M1, 2026-11-07): run A ends at 37 to 38, run B (mercy-heavy) at 36
+ * to 37, with Ulthred's real kill in; the kill factor stays 3.0. (The plan's 35 to 36 was set on a 98,800 start; a real
+ * Phase I enters Phase J at 33 to 34.) */
+export const PHASE_J_END_LEVEL: Readonly<Record<'a' | 'b', readonly [number, number]>> = { a: [37, 38], b: [36, 37] };
 
 /** The flags the ending leaves (asserted per run). */
 export const ENDING_FLAGS = ['story.gate.end', 'codex.actEnding.a5.seen', 'world.afterEnding'] as const;
