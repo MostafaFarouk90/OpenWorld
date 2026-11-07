@@ -12,10 +12,24 @@ export const KILL_FAILSAFE_SPAWNERS: Readonly<Record<string, string>> = {
   'm05.shrine': 'density.m05.shrine',
   'd01.antechamber': 'density.d01.antechamber',
   'r01.root': 'density.r01.root',
+  // Act 4 L14: M03's churchyard wraiths and D02's stray and sluice hounds. D02's kennels (two spawners, one tag, six
+  // hounds for four) keep their built-in margin instead; nothing here touches the Underways lattice.
+  'm03.churchyard': 'brightwater.churchyard',
+  'd02.stray': 'density.d02.stray',
+  'd02.sluice': 'density.d02.sluice',
+};
+
+/**
+ * Groups whose spawner gate opens on a flag set after their kill objective is already current (the failsafe's
+ * `spawnGroup` does not read gates): refill only once the flag is set. D02's strays wait for Rook's bread (the Calm
+ * lesson), which a load can leave unset while the `stray` objective is current (Act 4 L14 review).
+ */
+export const KILL_FAILSAFE_NEEDS: Readonly<Record<string, string>> = {
+  'd02.stray': 'story.d02.breadGiven',
 };
 
 /** Quests that own those groups. */
-export const KILL_FAILSAFE_QUESTS: readonly string[] = ['m01', 'm02', 'm05', 'd01', 'r01'];
+export const KILL_FAILSAFE_QUESTS: readonly string[] = ['m01', 'm02', 'm03', 'm05', 'd01', 'd02', 'r01'];
 
 export interface KillTarget { questId: string; objectiveId: string; spawnTag: string; remaining: number }
 
@@ -25,13 +39,15 @@ export interface KillQuestPort {
 }
 
 /** The unfinished, currently open kill objectives of the failsafe's groups. */
-export function currentKillTargets(quests: KillQuestPort, questIds: readonly string[]): KillTarget[] {
+export function currentKillTargets(quests: KillQuestPort, questIds: readonly string[], flag?: (key: string) => boolean): KillTarget[] {
   const out: KillTarget[] = [];
   for (const questId of questIds) {
     if (quests.state(questId) !== 'active') continue;
     for (const o of quests.objectives(questId)) {
       const tag = o.def.spawnTag;
       if (o.def.type !== 'kill' || o.done || !o.current || !tag || !KILL_FAILSAFE_SPAWNERS[tag]) continue;
+      const need = KILL_FAILSAFE_NEEDS[tag];
+      if (need && !(flag?.(need) ?? false)) continue;
       const remaining = (o.def.required ?? 1) - o.progress;
       if (remaining > 0) out.push({ questId, objectiveId: o.def.id, spawnTag: tag, remaining });
     }
