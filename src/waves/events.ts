@@ -3,6 +3,8 @@ import type { CartRole } from './structures';
 
 declare module '../core/events' {
   interface GameEventMap {
+    /** The waves save entry is about to load (inside `persist.loadAll`, before `save.loaded`). */
+    'waves.loading': Record<string, never>;
     /** A set with `breach` lost its barricade: the wave goes on in the court (no `waves.failed`). `index` is 0-based. */
     'waves.breached': { defId: string; index: number };
     /** A cart began its wind-up (a ram's creak). */

@@ -36,6 +36,7 @@ const allies = () => kit.siege().run!.squads.flatMap((s) => s.set.all);
 const endBreak = (order?: string) => {
   if (order) kit.ctx.events.emit(`siege.order.${order}` as 'siege.order.hold', undefined);
   runUntil(kit, () => kit.director().phase === 'running', BREAK.orderTimeoutS + BREAK.beatS + 2, false);
+  kit.run(1); // the siege maps the wave start on its next tick
 };
 const toWave = (n: number) => runUntil(kit, () => kit.siege().current?.wave === n && kit.siege().current?.phase === 'running' && kit.director().phase === 'running', 900);
 const save = (): SaveEntry[] => kit.ctx.persist.saveAll();
@@ -390,10 +391,15 @@ describe('save and load', () => {
     kit.director().damageBarricade(100);
     const entries = save();
     kit.clearEvents();
+
     load(entries);
+    kit.run(1);
     expect(kit.siege().run).not.toBeNull();
     expect(kit.siege().current).toMatchObject({ wave: 3, phase: 'running' });
-    expect(kit.of('siege.wave.started').at(-1)).toEqual({ siegeId: 'm52', n: 3 });
+    expect(kit.of('siege.wave.started')).toEqual([{ siegeId: 'm52', n: 3 }]);
+    kit.run(2);
+    expect(kit.of('siege.wave.started')).toHaveLength(1);
+    expect(kit.of('siege.gong')).toEqual([]);
     expect(kit.of('siege.gate.damaged').at(-1)!.pct).toBeCloseTo((startHealth / GATE.m52Health) * 100, 5);
     expect(kit.director().barricade!.health).toBe(startHealth);
     expect(kit.director().impactScale).toBe(ORDERS.braceImpactScale);
@@ -424,3 +430,57 @@ describe('R27, the stokers tunnel', () => {
 
 void TICK;
 void clearWave;
+
+describe('review folds', () => {
+  it('stop clears the run flags: a restarted M52 has no order and no wounded companion', async () => {
+    await boot();
+    kit.siege().start('m52');
+    runUntil(kit, () => kit.siege().current?.phase === 'orders', 200);
+    kit.siege().order('brace');
+    kit.ctx.state.setFlag(SIEGE_FLAGS.wounded, 'hrolf');
+    kit.siege().stop();
+    expect(kit.ctx.state.getFlag(SIEGE_FLAGS.order('m52', 1))).toBeUndefined();
+    expect(kit.ctx.state.getFlag(SIEGE_FLAGS.wounded)).toBeUndefined();
+    expect(kit.siege().start('m52')).toBe(true);
+    expect(kit.companions.sitting.size).toBe(0);
+  }, 60_000);
+
+  it('a break does not run down while the set is paused (travelling)', async () => {
+    await boot();
+    kit.siege().start('m52');
+    runUntil(kit, () => kit.siege().current?.phase === 'orders', 200);
+    kit.travel.value = true;
+    expect(kit.director().isPaused).toBe(true);
+    kit.runSecs(BREAK.orderTimeoutS + BREAK.beatS + 5);
+    expect(kit.siege().current?.phase).toBe('orders');
+    expect(kit.of('siege.order')).toEqual([]);
+  }, 60_000);
+
+  it('the resupply count comes from the order flags, so a load keeps it', async () => {
+    await boot({ preset: 'keepers' });
+    setSnapshot(kit, { oswin: 90 }, 10);
+    kit.siege().start('m52');
+    runUntil(kit, () => kit.siege().current?.phase === 'orders', 300);
+    kit.siege().order('flasks');
+    endBreak();
+    load(save());
+    kit.run(1);
+    runUntil(kit, () => kit.siege().current?.phase === 'orders', 300);
+    expect(kit.siege().orders()).not.toContain('flasks');
+  }, 90_000);
+
+  it("the old run goes at the waves entry's load, before save.loaded", async () => {
+    await boot();
+    kit.siege().start('m52');
+    const entries = save();
+    const seen: Array<boolean> = [];
+    kit.ctx.events.on('save.loaded', () => void seen.push(kit.siege().run === null || kit.siege().run !== undefined));
+    let runAtLoaded: unknown = 'unset';
+    const old = kit.siege().run;
+    kit.ctx.events.on('waves.loading', () => void (runAtLoaded = kit.siege().run));
+    load(entries);
+    expect(runAtLoaded).toBeNull();
+    expect(kit.siege().run).not.toBe(old);
+    expect(kit.siege().run).not.toBeNull();
+  }, 60_000);
+});

@@ -119,6 +119,7 @@ export async function makeSiegeKit(physics: PhysicsWorld, opts: SiegeKitOptions 
   const companions = fakeCompanions(opts.party ?? ['aelfreda', 'hrolf']);
   const inventory = fakeInventory(opts.items);
   const dialogues: string[] = [];
+  const travel = { value: false };
   const quests = { r29: opts.r29 ? 'completed' : 'inactive' };
   const provide = (id: string, value: unknown): GamePlugin => ({
     id: `fake-${id}`,
@@ -135,6 +136,7 @@ export async function makeSiegeKit(physics: PhysicsWorld, opts: SiegeKitOptions 
       provide('companions', companions.service),
       provide('inventory', inventory.service),
       provide('quests', { state: (id: string) => (quests as Record<string, string>)[id] ?? 'inactive' }),
+      provide('waystones', { get travelling() { return travel.value; } }),
       provide('dialogue', { start: (id: string) => (dialogues.push(id), true), active: false, close: () => {}, hasSeen: () => false }),
     ),
   );
@@ -155,7 +157,7 @@ export async function makeSiegeKit(physics: PhysicsWorld, opts: SiegeKitOptions 
   if (opts.anchors !== false) standIns('m52');
   return {
     game, ctx, world, events, of, run, runSecs: (s: number) => run(secs(s)), enemies, weather, companions, inventory, quests, dialogues,
-    siege, director, at, standIns,
+    siege, director, at, standIns, travel,
     clearEvents: () => void events.splice(0),
     teardown: () => {
       game.dispose();

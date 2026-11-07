@@ -1,6 +1,6 @@
 // Ally squads on the shipped defenders (plans/act5-N4.md section 5). Every member stands at a post; the brain is per squad:
 // melee, pikes and sappers swing in reach (one candidate scan per squad per 0.25 s), archers loose a volley at foes in
-// their field, healers mend Cael and lift kneeling allies. Allies never die (the shipped lethal handler, the kneel rule).
+// their field, healers mend Cael. Allies never die (the shipped lethal handler, the kneel rule).
 import * as THREE from 'three';
 import type { Actor } from '../actors/Actor';
 import { mercyStateOf } from '../actors/DamageResolver';
@@ -77,6 +77,8 @@ export interface SquadOptions {
   scales: SquadScales;
   /** Foes inside the archers' field (engine x, z). */
   inField(x: number, z: number): boolean;
+  /** A siege foe (the current wave's members): archers shoot nothing else. */
+  isFoe(id: string): boolean;
   /** A hostile (alive, no mercy state) within `r` of `at`: the kneel rule's test. */
   hostileWithin(at: Vec3, r: number): boolean;
   rng(): number;
@@ -164,7 +166,7 @@ export class Squad {
     const p = new THREE.Vector3();
     for (const a of this.host.actors.all()) {
       if (a.team !== 'hostile' || a.dead || !a.root || !a.hittable) continue;
-      if (mercyStateOf(a) !== 'none' || (engage && !engage.mayEngage(a.id))) continue;
+      if (!this.opts.isFoe(a.id) || mercyStateOf(a) !== 'none' || (engage && !engage.mayEngage(a.id))) continue;
       a.root.getWorldPosition(p);
       if (this.opts.inField(p.x, p.z)) foes.push({ a, p: p.clone() });
     }
@@ -183,7 +185,7 @@ export class Squad {
     return shots;
   }
 
-  /** Mends Cael within reach of a standing healer; lifts kneeling allies of this squad once no hostile is near. */
+  /** Mends Cael within reach of a standing healer (kneeling allies rise by the shipped kneel rule, not the healers). */
   heal(): void {
     const feet = this.host.player.feet;
     const pl = this.host.player.actor;

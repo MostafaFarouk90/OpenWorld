@@ -46,6 +46,8 @@ export class SiegeController implements SiegeService {
     private readonly warnFn: (m: string) => void = (m) => console.warn(`[siege] ${m}`),
   ) {
     this.offs.push(
+      // The old run goes before anything loads on top of it (its holds, its companion sit-out); resync builds the new one.
+      ctx.events.on('waves.loading', () => this.endRun()),
       ctx.events.on('save.loaded', () => this.resync()),
     );
   }
@@ -68,6 +70,8 @@ export class SiegeController implements SiegeService {
       this.warn(`cannot start '${siegeId}': wave set '${d.current.defId}' is running`);
       return false;
     }
+    // A fresh start: no order or wounded flag from an earlier, stopped run.
+    this.clearRunFlags(siegeId);
     // The runner listens before the director's first wave starts, so wave 1's events map.
     const run = new SiegeRun(this.ctx, siegeId, d, (m) => this.warn(m));
     this.run = run;
@@ -77,12 +81,22 @@ export class SiegeController implements SiegeService {
       this.run = null;
       return false;
     }
+    run.flush();
     return true;
   }
 
   stop(): void {
+    const id = this.run?.siegeId;
     this.director?.stop();
     this.endRun();
+    if (id) this.clearRunFlags(id);
+  }
+
+  /** The run's own flags (orders, the wounded companion); never the `done` flag. */
+  private clearRunFlags(siegeId: SiegeId): void {
+    const st = this.ctx.state;
+    for (let n = 0; n <= 4; n++) if (st.getFlag(SIEGE_FLAGS.order(siegeId, n)) !== undefined) st.clearFlag(SIEGE_FLAGS.order(siegeId, n));
+    if (siegeId === 'm52' && st.getFlag(SIEGE_FLAGS.wounded) !== undefined) st.clearFlag(SIEGE_FLAGS.wounded);
   }
 
   private endRun(): void {

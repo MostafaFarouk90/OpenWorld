@@ -22,7 +22,7 @@ import { offerFlag, OFFERED_ORDERS, ORDERS_SPEAKER, ORDERS_TREE, orderEvent, typ
 import { SIEGE_POSTS, siegeRoster, type RosterSquad, type SiegeId, type SiegeRoster } from './roster';
 import { namedDef, Squad } from './squads';
 import { SIEGE_FLASK_FALLBACK_ID, SIEGE_FLASK_ID, siegeSupply } from './supply';
-import { BREAK, DRAGON, GATE, ORDERS, SALLY, SAPPERS, STORM, WOUNDED } from './tuning';
+import { BREAK, DRAGON, GATE, ORDERS, ROLE, SALLY, SAPPERS, STORM, WOUNDED } from './tuning';
 
 export type SiegeHost = GameContext;
 
@@ -110,7 +110,12 @@ export class SiegeRun {
   private boostLeft = 0;
   private storming = false;
   private crateTaken = false;
-  private resupplyUsed = 0;
+  /** Resupplies used: one `flasks` order flag each (so a load keeps the count). */
+  private get resupplyUsed(): number {
+    let n = 0;
+    for (let w = 1; w <= this.waveCount(); w++) if (this.host.state.getFlag(SIEGE_FLAGS.order(this.siegeId, w)) === 'flasks') n++;
+    return n;
+  }
   private sallyDone = false;
   private sally: { t: number; riders: Rider[]; from: Vec3; to: Vec3; hit: Set<ActorId> } | null = null;
   private ramSpawnT: number | null = null;
@@ -135,6 +140,17 @@ export class SiegeRun {
     this.fireActor = host.actors.spawn({ kind: 'siege-fire', team: 'ally', maxHealth: 1e9, maxPoise: 0, root, owner: root, untargetable: true });
     this.assist = new AssistRule(host, { handlerId: `siege.${siegeId}.assist`, isSiegeFoe: (id) => this.memberSet.has(id) });
     this.woundedDone = siegeId === 'r27' || typeof host.state.getFlag(SIEGE_FLAGS.wounded) === 'string';
+    try {
+      this.build();
+    } catch (err) {
+      this.dispose();
+      throw err;
+    }
+  }
+
+  private build(): void {
+    const host = this.host;
+    const siegeId = this.siegeId;
     this.listen();
     this.hold('movement', () =>
       host.services.require('movementMode').push('siege', () => {
@@ -255,7 +271,8 @@ export class SiegeRun {
           loader,
           castShadow,
           scales: { damage: () => (this.boostLeft > 0 ? ORDERS.gongBoostScale : 1), volley: () => this.volleyScale * (this.storming ? STORM.archerScale : 1) },
-          inField: (x, z) => flat({ x, z }, g.origin) <= 60,
+          inField: (x, z) => flat({ x, z }, g.origin) <= ROLE.archers.fieldMetres,
+          isFoe: (id) => this.memberSet.has(id),
           hostileWithin: (at, r) => this.memberPos.some((m) => flat(m.p, at) <= r),
           rng: this.rng,
         }),
@@ -359,7 +376,9 @@ export class SiegeRun {
     this.offs.push(
       ev.on('wave.started', (p) => {
         // During a load the service rebuilds the run after `save.loaded` and resumes it; this (stale) run stays quiet.
-        if (this.mine(p.defId) && !this.host.services.get('save')?.loading) this.onWaveStarted(p.index + 1);
+        // Mapped on this run's next tick (or by `flush`): during a load the director restarts its wave inside its own
+        // `save.loaded` handler, before the service rebuilds the run, so the stale run must not act on it.
+        if (this.mine(p.defId)) this.pendingStart = { n: p.index + 1, resumed: this.pendingStart?.resumed === true && this.pendingStart.n === p.index + 1 };
       }),
       ev.on('wave.cleared', (p) => {
         if (this.mine(p.defId)) this.onWaveCleared(p.index + 1);
@@ -387,13 +406,28 @@ export class SiegeRun {
     return this.setId === 'rim-siege' ? 'caldera.siege.gate' : 'caldera.tunnel.line';
   }
 
-  /** After a load: the director has already restarted its wave; map it (re-emits `siege.wave.started`, the gate). */
-  resume(): void {
-    const cur = this.director.current;
-    if (cur && cur.defId === this.setId && this.director.phase === 'running' && !this.director.parked) this.onWaveStarted(cur.index + 1);
+  /** A wave start the director announced, mapped on the next tick. */
+  private pendingStart: { n: number; resumed: boolean } | null = null;
+
+  /** Maps a pending wave start now (the service's `start`, so wave 1's events go out with it). */
+  flush(): void {
+    const p = this.pendingStart;
+    this.pendingStart = null;
+    if (p) this.onWaveStarted(p.n, p.resumed);
   }
 
-  private onWaveStarted(n: number): void {
+  /**
+   * After a load: the director restarted its wave inside its `save.loaded` handler (the bus delivers that
+   * `wave.started` after every `save.loaded` handler, so it reaches this run, not the stale one). Marks it as resumed
+   * (no gong) and maps it on the next tick; re-emits `siege.wave.started` and the gate for N9.
+   */
+  resume(): void {
+    const cur = this.director.current;
+    if (cur && cur.defId === this.setId && this.director.phase === 'running' && !this.director.parked) this.pendingStart = { n: cur.index + 1, resumed: true };
+  }
+
+  private onWaveStarted(n: number, resumed: boolean): void {
+    if (resumed && n > FIRST_RAM_WAVE[this.setId]) this.firstRamBreathDone = true;
     this.buildWorld();
     this.wave = n;
     this.waveT = 0;
@@ -411,7 +445,7 @@ export class SiegeRun {
       for (const s of this.squads) s.set.rally(true);
       this.boostLeft = ORDERS.gongBoostS;
     }
-    if (n > 1) this.host.events.emit('siege.gong', { siegeId: this.siegeId, by: order === 'gong' || this.r29Done() ? 'cael' : 'ansgar' });
+    if (n > 1 && !resumed) this.host.events.emit('siege.gong', { siegeId: this.siegeId, by: order === 'gong' || this.r29Done() ? 'cael' : 'ansgar' });
     // The storm: waves 2 and 4 of M52, unless the Ashwalkers' storm-cover stands.
     if (this.siegeId === 'm52' && (n === 2 || n === 4) && !this.roster.stormCover) this.forceStorm();
     else {
@@ -465,7 +499,6 @@ export class SiegeRun {
     if (this.breakPhase !== 'orders' || !this.offers().includes(id)) return false;
     this.host.state.setFlag(SIEGE_FLAGS.order(this.siegeId, this.wave), id);
     if (id === 'flasks') {
-      this.resupplyUsed++;
       this.giveFlasks(this.supply().perBreak);
     }
     this.host.events.emit('siege.order', { siegeId: this.siegeId, id: id as SiegeOrderId });
@@ -578,7 +611,7 @@ export class SiegeRun {
     const riders: Rider[] = [];
     for (let i = 0; i <= SALLY.riders; i++) {
       const r = new EscortRider(i === 0 ? def : { ...def, id: `siege-rider-${i}` });
-      void r.load(this.host.assets as unknown as HorseLoader | null, this.host.assets as unknown as NpcModelLoader | null, () => {});
+      r.load(this.host.assets as unknown as HorseLoader | null, this.host.assets as unknown as NpcModelLoader | null, () => {}).catch(() => {});
       this.host.scene.add(r.root);
       riders.push({ rider: r, side: i === 0 ? 0 : (i % 2 === 0 ? 1 : -1) * Math.ceil(i / 2) * 1.6 });
     }
@@ -681,9 +714,10 @@ export class SiegeRun {
   }
 
   fixedUpdate(dt: number): void {
+    this.flush();
     this.refreshMembers();
     this.assist.fixedUpdate(dt);
-    if (this.director.parked || !this.director.current) return;
+    if (this.director.parked || !this.director.current || this.director.isPaused) return; // nothing runs while the set waits
     this.buildWorld();
     this.gate?.fixedUpdate(dt);
     for (const s of this.squads) s.fixedUpdate(dt);
@@ -740,6 +774,14 @@ export class SiegeRun {
     this.host.actors.despawn(this.fireActor.id);
   }
 }
+
+/** The 1-based wave of each set's first ram (Infinity: none). */
+const FIRST_RAM_WAVE: Readonly<Record<string, number>> = Object.fromEntries(
+  Object.keys(SET_SIEGE).map((id) => {
+    const i = WAVE_SETS[id]?.waves.findIndex((w) => w.carts.some((c) => c.role === 'ram')) ?? -1;
+    return [id, i >= 0 ? i + 1 : Infinity];
+  }),
+);
 
 /** Waves per set (read from the defs at import). */
 const SET_SIZES: Readonly<Record<string, number>> = Object.fromEntries(Object.keys(SET_SIEGE).map((id) => [id, WAVE_SETS[id]?.waves.length ?? 0]));
