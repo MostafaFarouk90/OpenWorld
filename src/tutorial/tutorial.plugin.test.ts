@@ -223,6 +223,10 @@ describe('tutorialFromQuery', () => {
     expect(tutorialFromQuery('?tutorial=bogus')).toBeNull();
     expect(tutorialFromQuery('')).toBeNull();
   });
+  it('a valid ?act5= jump skips the start screen; a refused one does not', () => {
+    expect(tutorialFromQuery('?act5=m47&new')).toEqual({ mode: 'kettlewick' });
+    expect(tutorialFromQuery('?act5=m47')).toBeNull();
+  });
 });
 
 describe('clarity wiring on the real game', () => {
