@@ -21,6 +21,8 @@ export const ACT5_HUD_STRINGS_EN: Record<string, string> = {
   'hud.siege.ally.melee': 'Swords',
   'hud.siege.ally.sappers': 'Sappers',
   'hud.siege.ally.healers': 'Healers',
+  'hud.siege.ally.dragon': 'Dragon',
+  'hud.siege.ally.company': 'Company',
   'hud.lava.entered': 'The lava burns.',
   'hud.lava.thrown': 'The stair throws you back.',
   'hud.vent.open': 'Vent open: {s} s',
@@ -37,6 +39,7 @@ export const ACT5_HUD_STRINGS_EN: Record<string, string> = {
   'hud.phase.rimHolds.row.household': 'Vey\'s household guard broke at the gate.',
   'hud.epilogue.skip': 'Hold Esc to skip',
   'hud.epilogue.next': 'Press F to continue',
+  'hud.epilogue.speaker': '{name} speaks',
   'hud.credits.skip': 'Hold Esc to skip',
   'hud.credits.continue': 'Press F to continue',
 };

@@ -5,6 +5,7 @@ import { PhysicsWorld } from '../../physics/PhysicsWorld';
 import questsPlugin from '../../quests/quests.plugin';
 import type { JournalTabs } from '../../quests/journalTabs';
 import hudJournalPlugin from '../hudJournal.plugin';
+import hudJournalAct4 from '../act4/hudJournalAct4.plugin';
 import hudJournalAct5 from './hudJournalAct5.plugin';
 
 let physics: PhysicsWorld;
@@ -51,6 +52,14 @@ describe('hud-journal-act5 plugin', () => {
     expect(t.journal.notes().find((n) => n.id === 'lastchance.m54')).toBeUndefined();
     t.ctx.state.setFlag('story.m56.choice', 'rekindle');
     expect(t.journal.notes().find((n) => n.id === 'scars.a5')).toBeUndefined();
+  }, PLUGIN_TEST_TIMEOUT);
+
+  it('Acts 3 and 4 pointers are not drawn twice when both journal plugins run', async () => {
+    const t = await boot([corePlugin, questsPlugin, hudJournalPlugin, hudJournalAct4, hudJournalAct5]);
+    t.ctx.state.setFlag('story.gate.a4', true);
+    expect(t.journal.notes().filter((n) => n.id === 'start.a4')).toHaveLength(1);
+    t.ctx.state.setFlag('story.gate.a5', true);
+    expect(t.journal.notes().filter((n) => n.id === 'start.a5')).toHaveLength(1);
   }, PLUGIN_TEST_TIMEOUT);
 
   it('is skipped cleanly without the quests plugin', async () => {

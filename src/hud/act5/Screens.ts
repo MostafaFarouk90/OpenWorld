@@ -16,13 +16,17 @@ export interface KeySource2 {
 }
 
 export const SCREEN_ARM_S = 0.5;
+/** Seconds the last credits frame holds ("Press F to continue") before it closes by itself. */
+export const CREDITS_END_HOLD_S = 8;
+/** Keys that advance a screen (the interact key, Enter, Space); movement and menu keys never do. */
+const isAdvanceKey = (e?: KeyEvt): boolean => ['f', 'F', 'Enter', ' '].includes(e?.key ?? '') || ['KeyF', 'Enter', 'Space'].includes(e?.code ?? '');
 export const SKIP_HOLD_S = 1.5;
 export const FADE_S = 0.4;
 
 type Mode = 'phase' | 'slides' | 'credits';
 
 export interface Act5ScreensService {
-  showPhaseCard(id: string, lines: readonly string[], titleKey?: string): Promise<void>;
+  showPhaseCard(id: string, lines?: readonly string[], titleKey?: string): Promise<void>;
   showEpilogue(deck: SlideDeck): Promise<void>;
   showCredits(def: CreditsDef, opts?: { onStep?: (s: VerseStep) => void }): Promise<void>;
   /** A screen is open: callers hold autosave while this is true. */
@@ -36,6 +40,10 @@ export interface Act5ScreensSource {
   t: Translate;
   keys?: KeySource2 | null;
   reducedMotion?(): boolean;
+  /** The recap lines for a phase card shown with none (N9 builds "The Rim holds" from flags). */
+  phaseLines?(id: string): readonly string[];
+  /** Takes input away from gameplay while a screen is open; returns the release (or null if it could not). */
+  lock?(): (() => void) | null;
   closed?(kind: 'phaseCard' | 'epilogue' | 'credits', id?: string): void;
   slide?(n: number): void;
 }
@@ -54,6 +62,10 @@ export class Act5Screens implements HudWidgetView, Act5ScreensService {
   private fade = 0;
   private held = 0;
   private escDown = false;
+  private anyDown = false;
+  private creditsDone = false;
+  private endHold = 0;
+  private unlock: (() => void) | null = null;
   private readonly onDown = (e: KeyEvt): void => {
     if (!this.mode) return;
     const esc = e?.key === 'Escape' || e?.code === 'Escape';
@@ -61,6 +73,7 @@ export class Act5Screens implements HudWidgetView, Act5ScreensService {
       this.escDown = true;
       return;
     }
+    if (this.mode === 'credits') this.anyDown = true;
     if (e?.repeat || this.age < SCREEN_ARM_S) return;
     if ((e?.key === 'ArrowLeft' || e?.code === 'ArrowLeft') && this.mode === 'slides') {
       this.slides?.back();
@@ -68,17 +81,15 @@ export class Act5Screens implements HudWidgetView, Act5ScreensService {
       this.render();
       return;
     }
-    if (this.mode === 'credits') {
-      // Any key skips only by holding (the roll is long and wants to be seen); a tap does nothing.
-      return;
-    }
+    // Only the interact, Enter and Space keys advance; a movement key does nothing (and gameplay is locked anyway).
+    if (!isAdvanceKey(e)) return;
+    if (this.mode === 'credits' && !this.creditsDone) return; // the roll is long and wants to be seen; hold a key to skip
     this.advance();
   };
   private readonly onUp = (e: KeyEvt): void => {
-    if (e?.key === 'Escape' || e?.code === 'Escape') {
-      this.escDown = false;
-      this.held = 0;
-    }
+    if (e?.key === 'Escape' || e?.code === 'Escape') this.escDown = false;
+    this.anyDown = false;
+    this.held = 0;
   };
 
   constructor(
@@ -117,18 +128,24 @@ export class Act5Screens implements HudWidgetView, Act5ScreensService {
     this.age = 0;
     this.fade = 0;
     this.held = 0;
+    this.creditsDone = false;
+    this.endHold = 0;
+    this.anyDown = false;
+    this.escDown = false;
+    if (!this.unlock) this.unlock = this.src.lock?.() ?? null;
     setShown(this.element, true, 'flex');
     return new Promise((res) => {
       this.resolve = res;
     });
   }
 
-  showPhaseCard(id: string, lines: readonly string[], titleKey = 'hud.phase.rimHolds.title'): Promise<void> {
+  showPhaseCard(id: string, lines?: readonly string[], titleKey = 'hud.phase.rimHolds.title'): Promise<void> {
     const p = this.open('phase');
     this.phaseId = id;
     this.body.replaceChildren();
     makeEl(this.doc, 'h2', 'owg-act5-title', this.body).textContent = this.src.t(titleKey);
-    for (const l of lines) makeEl(this.doc, 'p', 'owg-act5-line', this.body).textContent = l;
+    const rows = lines && lines.length > 0 ? lines : (this.src.phaseLines?.(id) ?? []);
+    for (const l of rows) makeEl(this.doc, 'p', 'owg-act5-line', this.body).textContent = l;
     this.hint.textContent = this.src.t('hud.epilogue.next');
     return p;
   }
@@ -158,7 +175,9 @@ export class Act5Screens implements HudWidgetView, Act5ScreensService {
       this.fade = 0;
       if (this.slides.next()) this.close();
       else this.render();
-    } else if (this.mode === 'credits') this.finish();
+    } else if (this.mode === 'credits') {
+      if (this.creditsDone) this.close();
+    }
   }
 
   finish(): void {
@@ -175,6 +194,7 @@ export class Act5Screens implements HudWidgetView, Act5ScreensService {
     this.body.replaceChildren();
     if (this.mode === 'slides' && this.slides?.current) {
       const s = this.slides.current;
+      if (this.slides.deck.speaker) makeEl(this.doc, 'p', 'owg-act5-speaker', this.body).textContent = this.src.t('hud.epilogue.speaker').replace('{name}', this.slides.deck.speaker);
       const title = s.title ?? (s.titleKey ? this.src.t(s.titleKey) : '');
       if (title) makeEl(this.doc, 'h2', 'owg-act5-title', this.body).textContent = title;
       for (const l of s.lines) makeEl(this.doc, 'p', 'owg-act5-line', this.body).textContent = l;
@@ -204,8 +224,12 @@ export class Act5Screens implements HudWidgetView, Act5ScreensService {
     this.slides = null;
     this.credits = null;
     this.escDown = false;
+    this.anyDown = false;
+    this.creditsDone = false;
     this.held = 0;
     setShown(this.element, false);
+    this.unlock?.();
+    this.unlock = null;
     const done = this.resolve;
     this.resolve = null;
     this.src.closed?.(mode === 'phase' ? 'phaseCard' : mode === 'slides' ? 'epilogue' : 'credits', mode === 'phase' ? id : undefined);
@@ -218,7 +242,7 @@ export class Act5Screens implements HudWidgetView, Act5ScreensService {
     this.fade = Math.min(FADE_S, this.fade + dt);
     const reduced = this.src.reducedMotion?.() === true;
     this.element.style.opacity = reduced ? '1' : String(Math.min(1, this.fade / FADE_S));
-    if (this.escDown && this.mode !== 'phase') {
+    if (((this.escDown && this.mode !== 'phase') || (this.anyDown && this.mode === 'credits' && !this.creditsDone))) {
       this.held += dt;
       if (this.held >= SKIP_HOLD_S) {
         this.finish();
@@ -226,9 +250,17 @@ export class Act5Screens implements HudWidgetView, Act5ScreensService {
       }
     }
     if (this.mode === 'credits' && this.credits) {
+      if (this.creditsDone) {
+        this.endHold += dt;
+        if (this.endHold >= CREDITS_END_HOLD_S) this.close();
+        return;
+      }
       const before = this.credits.blockIndex;
-      if (this.credits.update(dt)) this.close();
-      else if (this.credits.blockIndex !== before) this.render();
+      if (this.credits.update(dt)) {
+        // The last frame holds with "Press F to continue", then closes by itself.
+        this.creditsDone = true;
+        this.hint.textContent = this.src.t('hud.credits.continue');
+      } else if (this.credits.blockIndex !== before) this.render();
     }
   }
 

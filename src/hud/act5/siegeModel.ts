@@ -50,6 +50,7 @@ export class SiegeModel {
   private flashKey: { textKey: string; params?: Record<string, string | number> } | null = null;
   private flashLeft = 0;
   private lineLeft = 0;
+  private readonly ended = new Set<string>();
 
   constructor(private readonly ports: SiegeModelPorts = {}) {}
 
@@ -76,10 +77,26 @@ export class SiegeModel {
     this.flashKey = null;
     this.flashLeft = 0;
     this.lineLeft = 0;
+    this.ended.clear();
+  }
+
+  /** A siege finished (N4's `siege.completed`): hidden until that siege starts a wave again. */
+  end(siegeId: unknown): void {
+    if (typeof siegeId !== 'string') return;
+    this.ended.add(siegeId);
+  }
+
+  /** Seeds from N4's `siege.current` after a load, so the view is right before the restarted wave's events arrive. */
+  seed(cur: { siegeId?: unknown; wave?: unknown; gatePct?: unknown; breached?: unknown } | null | undefined): void {
+    if (!cur || !this.take(cur.siegeId)) return;
+    if (typeof cur.wave === 'number' && cur.wave > 0) this.wave = Math.floor(cur.wave);
+    if (typeof cur.gatePct === 'number' && Number.isFinite(cur.gatePct)) this.gate = Math.max(0, Math.min(100, cur.gatePct));
+    this.breached = cur.breached === true;
   }
 
   waveStarted(e: { siegeId?: unknown; n?: unknown }): void {
     if (!this.take(e?.siegeId)) return;
+    this.ended.delete(e.siegeId as string);
     this.wave = typeof e.n === 'number' && e.n > 0 ? Math.floor(e.n) : this.wave;
     this.between = false;
   }
@@ -146,7 +163,7 @@ export class SiegeModel {
   /** null: hidden. */
   view(): SiegeView | null {
     if (this.id === null || !this.known(this.id)) return null;
-    if (this.ports.over?.(this.id)) return null;
+    if (this.ended.has(this.id) || this.ports.over?.(this.id)) return null;
     const total = this.ports.waveTotal?.(this.id) ?? null;
     return {
       siegeId: this.id,
