@@ -38,6 +38,9 @@ const gold = (h: ChapterHarness): number => (h.ctx.services.get('inventory') as 
 
 const PHASE_I_SKIP = (((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.PHASE_I_SKIP) ?? '').split(',').filter(Boolean);
 
+/** Collider patches round Cael (N4: the siege's foes march over patches 50 to 200 m off). */
+export const PHASE_I_COLLIDER_RADIUS = 4;
+
 /** Alric's anvil at the Rim Camp (N7's forge): the gold is read the first time Cael stands within this of it. */
 export const ALRIC_ANVIL_ANCHOR = 'caldera.camp.anvil.alric';
 export const ALRIC_ANVIL_M = 6;
@@ -96,7 +99,7 @@ export async function runPhaseI(
   watchDialogueRunner();
   seedFixtureRandom();
   await readAct5BaseMeta(run);
-  const h = await bootFromSave(await readAct5Base(run), { models: true, virtualClock: true });
+  const h = await bootFromSave(await readAct5Base(run), { models: true, virtualClock: true, colliderRadius: PHASE_I_COLLIDER_RADIUS });
   try {
     ensure(h.loaded, `Phase I run ${run}: the carried base loaded`);
     await h.runAsync(30);
