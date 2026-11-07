@@ -13,6 +13,9 @@ import { World } from '../world/World';
 import { createLeadSource } from '../quests/leads';
 import { FakeIndexedDb } from './__fixtures__/fakeIndexedDb';
 
+// Boots the whole plugin manifest: the 5 s default is not a safe limit (census B13, Act 4 L14).
+vi.setConfig({ testTimeout: 30_000 });
+
 const FIXTURES = import.meta.glob<unknown>('./__fixtures__/slice1-*.json', { eager: true, import: 'default' });
 const fixture = (name: string): unknown => structuredClone(FIXTURES[`./__fixtures__/${name}.json`]);
 

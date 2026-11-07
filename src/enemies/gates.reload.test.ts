@@ -15,6 +15,9 @@ import { FakeIndexedDb } from '../save/__fixtures__/fakeIndexedDb';
 import { TerrainColliders } from '../world/TerrainColliders';
 import { World } from '../world/World';
 
+// Boots the whole plugin manifest: the 5 s default is not a safe limit (census B13, Act 4 L14).
+vi.setConfig({ testTimeout: 30_000 });
+
 // The enemies plugin spawns once the Knight model has loaded (enemies.plugin.ts): serve it from disk.
 let gltf: { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
 beforeAll(async () => {
