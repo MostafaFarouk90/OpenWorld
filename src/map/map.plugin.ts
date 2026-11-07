@@ -23,6 +23,7 @@ import { blockBandAt, blockChips, blockChipsKey, type BlockChip } from './act3/b
 import { MAP_ACT3_STRINGS_EN } from './act3/strings.en';
 import { MAP_ACT4_STRINGS_EN } from './act4/strings.en';
 import { wasteLabels, wasteLines, wasteShelters, type WastePorts } from './act4/wasteLayer';
+import { calderaLabels, MAP_ACT5_STRINGS_EN } from './act5/calderaLayer';
 import '../region/containment';
 
 
@@ -33,6 +34,7 @@ const map: GamePlugin = {
     ctx.strings.register('en', MAP_STRINGS_EN);
     ctx.strings.register('en', MAP_ACT3_STRINGS_EN);
     ctx.strings.register('en', MAP_ACT4_STRINGS_EN);
+    ctx.strings.register('en', MAP_ACT5_STRINGS_EN);
     const bounds = { ...DEFAULT_WORLD_BOUNDS };
     let fog = FogGrid.forBounds(bounds);
     const waystones = () => ctx.services.get('waystones');
@@ -214,7 +216,7 @@ const map: GamePlugin = {
         }),
       regions: currentChips,
       lines: () => wasteLines(wastePorts()),
-      labels: () => wasteLabels(wastePorts()),
+      labels: () => [...wasteLabels(wastePorts()), ...calderaLabels(wastePorts())],
       blocks: currentBlocks,
       regionCaption: () => {
         const id = openRegionAt(ctx.player.feet.x, ctx.player.feet.z, openNow());
