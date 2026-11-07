@@ -19,7 +19,12 @@ export interface LeapHost {
   zone(): BurnZone;
   feetY(): number;
   /** Core's `player.leap`; null when it refuses (airborne, frozen, already leaping). */
-  startLeap(opts: { distance: number; apex: number }): LeapHandleLike | null;
+  startLeap(opts: { distance: number; apex: number; yaw?: number }): LeapHandleLike | null;
+  /**
+   * Act 5 N3 (optional): a Surge-crossing lip's aim for a Leap pressed now (a yaw and a distance), or null for the
+   * shipped Leap. Absent: the shipped call, unchanged. Cost, Scar and cooldown do not change.
+   */
+  aim?(): { yaw: number; distance: number } | null;
   /** The shard-use path; `scarred` was decided at the press. */
   useShard(gain: number, source: string, scarred: boolean): void;
   /** Takeoff succeeded: effects. */
@@ -59,7 +64,9 @@ export class LeapController {
     if (busy) return { ok: false, reason: busy };
     const scarred = h.zone() === 'cinder';
     const startY = h.feetY();
-    const handle = h.startLeap({ distance: LEAP.distance, apex: LEAP.apex });
+    const aim = h.aim?.() ?? null;
+    const aimed = aim && Number.isFinite(aim.yaw) && aim.distance > 0 && Number.isFinite(aim.distance) ? aim : null;
+    const handle = h.startLeap(aimed ? { distance: aimed.distance, apex: LEAP.apex, yaw: aimed.yaw } : { distance: LEAP.distance, apex: LEAP.apex });
     if (!handle) return { ok: false, reason: 'rejected' };
     this.pending = { handle, startY, scarred };
     return { ok: true };
