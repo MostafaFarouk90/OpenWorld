@@ -1,6 +1,6 @@
 // Act 5 N9 (plans/act5-N9.md section 3): the Caldera's place names on the full map. Pure, like L9's wasteLayer: the plugin passes
 // the fog test and a flag reader; nothing is cached, so a load or a newly revealed cell shows on the next draw.
-import { CALDERA_CENTRE } from '../../region/act5Regions';
+import { CALDERA_PLACES as SITES } from '../../caldera/calderaSites';
 import type { MapLabel } from '../viewTypes';
 
 export interface CalderaPlace {
@@ -12,18 +12,17 @@ export interface CalderaPlace {
 }
 
 /**
- * The Caldera's named places. **Placeholder positions** copied from N1's plan (plans/act5-N1.md section 1); N1's `CALDERA_PLACES` export replaces
- * this table once its branch is merged (the common rule: import, never hard-code).
+ * The Caldera's named places, positions imported from N1's master table (`CALDERA_PLACES`, src/caldera/calderaSites.ts).
  */
 export const CALDERA_PLACES: readonly CalderaPlace[] = [
-  { id: 'rim-gate', x: 11000, z: 6470 }, // N1 plan: CALDERA_PLACES.rimGate (src/caldera/calderaSites.ts); import once merged
-  { id: 'rim-camp', x: 11000, z: 6760 }, // rimCamp
-  { id: 'lava-stair', x: 11000, z: 6880 }, // lavaStairHead
-  { id: 'cooling-hall', x: 11150, z: 7420 }, // coolingHall
-  { id: 'wyrm-terraces', x: 11950, z: 7650 }, // wyrmTerraces
-  { id: 'foundry', x: 11000, z: 7500 }, // foundry
-  { id: 'hammer-hall', x: 11000, z: 7700 }, // hammerHall (label only, it is an interior)
-  { id: 'anvil-of-ages', x: CALDERA_CENTRE.x, z: CALDERA_CENTRE.z },
+  { id: 'rim-gate', x: SITES.rimGate[0], z: SITES.rimGate[1] },
+  { id: 'rim-camp', x: SITES.rimCamp[0], z: SITES.rimCamp[1] },
+  { id: 'lava-stair', x: SITES.lavaStairHead[0], z: SITES.lavaStairHead[1] },
+  { id: 'cooling-hall', x: SITES.coolingHall[0], z: SITES.coolingHall[1] },
+  { id: 'wyrm-terraces', x: SITES.wyrmTerraces[0], z: SITES.wyrmTerraces[1] },
+  { id: 'foundry', x: SITES.foundry[0], z: SITES.foundry[1] },
+  { id: 'hammer-hall', x: SITES.hammerHall[0], z: SITES.hammerHall[1] },
+  { id: 'anvil-of-ages', x: SITES.anvil[0], z: SITES.anvil[1] },
 ];
 
 export interface CalderaPorts {
