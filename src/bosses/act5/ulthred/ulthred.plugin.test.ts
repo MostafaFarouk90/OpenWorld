@@ -17,7 +17,7 @@ import { ARMOUR_BARK_KEYS, ULTHRED_BOSS_DEF } from './UlthredEncounter';
 import { TRIAL_KIND } from './hammerTrial';
 import ulthredPlugin, { hammerTrial, ulthredDirector } from './ulthred.plugin';
 import { winUlthredForTest } from './testing';
-import { ANVILS, D10_STARTED_FLAG, DROP_ANCHOR, FLAMES, HALL, HEARTSHARD, PRESENTATION, SCAR_TAX, SLAM, TRIAL, ULTHRED, ULTHRED_BOSS_ID, ULTHRED_KIND, VEY_OUTCOME_FLAG } from './tuning';
+import { ANVILS, D10_STARTED_FLAG, DROP_ANCHOR, FLAMES, HALL, HEARTSHARD, PRESENTATION, SCAR_TAX, SLAM, ULTHRED, ULTHRED_BOSS_ID, ULTHRED_KIND, VEY_OUTCOME_FLAG } from './tuning';
 
 let physics: PhysicsWorld;
 beforeEach(async () => {
@@ -33,7 +33,7 @@ const TICK = 1 / 60;
 const secs = (s: number) => Math.round(s / TICK);
 const HEAVY = '1H_Melee_Attack_Chop';
 
-async function setup(opts: { flag?: boolean; scars?: number } = {}) {
+async function setup(opts: { flag?: boolean; scars?: number; teleport?: 'fail' | 'hang' } = {}) {
   const scene = new THREE.Scene();
   const moveModifiers = new MoveModifiers();
   const world = new World(scene, physics, { colliders: new TerrainColliders(physics, { patchSize: 50, cells: 16 }), moveModifier: () => moveModifiers.state() });
@@ -47,6 +47,8 @@ async function setup(opts: { flag?: boolean; scars?: number } = {}) {
   const blockers: string[] = [];
   const entered: string[] = [];
   const burns: Array<[number, string]> = [];
+  const holds: string[] = [];
+  const released: string[] = [];
   const interiorsState = { current: HALL.interiorId as string | null };
   const interiors: GamePlugin = {
     id: 'interiors',
@@ -76,7 +78,18 @@ async function setup(opts: { flag?: boolean; scars?: number } = {}) {
     id: 'act5-core',
     dependsOn: ['core'],
     setup(c) {
-      arenas = new BossArenas({ warn: () => {}, anchor: (id) => c.anchors.find(id) ?? undefined });
+      const safeTeleport = opts.teleport === 'fail' ? async () => ({ ok: false }) : opts.teleport === 'hang' ? () => new Promise<{ ok: boolean }>(() => {}) : undefined;
+      arenas = new BossArenas({ warn: () => {}, anchor: (id) => c.anchors.find(id) ?? undefined, ...(safeTeleport ? { safeTeleport } : {}) });
+      if (opts.teleport) {
+        // A waystones service makes the director use the arena's safe teleport; the autosave hold is counted.
+        (c.services.provide as (n: string, v: unknown) => void)('waystones', {});
+        (c.services.provide as (n: string, v: unknown) => void)('save', {
+          suspend: (reason: string) => {
+            holds.push(reason);
+            return () => void released.push(reason);
+          },
+        });
+      }
       (c.services.provide as (n: string, v: unknown) => void)('bossArena', arenas);
       c.events.on('boss.ended', (e) => arenas!.onBossEnded(e.bossId));
       c.events.on('save.loaded', () => arenas!.onLoaded());
@@ -153,7 +166,7 @@ async function setup(opts: { flag?: boolean; scars?: number } = {}) {
     game.dispose();
     world.dispose();
   };
-  return { game, ctx, events, of, run, runHealed, enter, boss, state, enc, hit, heal, startFight, breakBar, settle, toIsland, flush, blockers, entered, burns, interiorsState, arenas: () => arenas!, teardown, loc };
+  return { game, ctx, events, of, run, runHealed, enter, boss, state, enc, hit, heal, startFight, breakBar, settle, toIsland, flush, blockers, entered, holds, released, burns, interiorsState, arenas: () => arenas!, teardown, loc };
 }
 
 describe('Ulthred on the real core', () => {
@@ -266,7 +279,12 @@ describe('Ulthred on the real core', () => {
     const at = ulthredDirector()!.anvilArena!.anvils[1]!;
     t.ctx.player.teleport({ x: at.x + 1.5, y: at.y + 0.1, z: at.z }, 0);
     t.game.events.emit('player.leap', { phase: 'land', from: at, to: { x: at.x + 1.5, y: at.y, z: at.z } });
+    // A player swing opens its attack window (the real player emits no `telegraph`, so that must not crack anything).
     t.game.events.emit('telegraph', { actorId: t.ctx.player.actor.id, kind: 'block', attackId: HEAVY, moveId: HEAVY, swingId: 1, leadSeconds: 0.3 });
+    expect(t.enc().bars).toBe(4);
+    t.game.events.emit('attack.window', { actorId: t.ctx.player.actor.id, attackId: HEAVY, swingId: 1, phase: 'close' });
+    expect(t.enc().bars).toBe(4);
+    t.game.events.emit('attack.window', { actorId: t.ctx.player.actor.id, attackId: HEAVY, swingId: 2, phase: 'open' });
     expect(t.enc().bars).toBe(5);
     expect(t.enc().cracked).toBe(2);
     t.teardown();
@@ -391,6 +409,38 @@ describe('Ulthred on the real core', () => {
   });
 });
 
+describe('Ulthred: the drop teleport fails', () => {
+  for (const mode of ['fail', 'hang'] as const) {
+    it(`edge (${mode}): the fight resets, autosave is released, and the floor piece never closes the pit itself`, async () => {
+      const t = await setup({ teleport: mode });
+      t.startFight();
+      const before = t.blockers.length;
+      const first = t.enc();
+      const firstId = t.boss()!.id;
+      await t.toIsland();
+      if (mode === 'hang') {
+        for (let i = 0; i < secs(ULTHRED.dropTimeoutSeconds) + 4; i++) {
+          t.game.fixedUpdate();
+          t.heal();
+          await t.flush();
+        }
+      }
+      // That fight is over (the hall restarts it from phase 1 while Cael stands in the trigger), never on the island.
+      expect(first.done).toBe(true);
+      expect(first.island).toBe(false);
+      expect(t.ctx.actors.get(firstId)).toBeFalsy();
+      expect(t.ctx.state.getFlag(OUTCOME_FLAG)).toBeUndefined();
+      expect(t.holds).toEqual(['ulthred.drop']);
+      expect(t.released).toEqual(['ulthred.drop']);
+      // The break opened the floor; closing it again is N2's pit guard, never this piece.
+      const floor = t.blockers.slice(before).filter((b) => b.startsWith(`${HALL.floorBlocker}:`));
+      expect(floor).toContain(`${HALL.floorBlocker}:false`);
+      expect(floor).not.toContain(`${HALL.floorBlocker}:true`);
+      t.teardown();
+    });
+  }
+});
+
 describe('the M55 hammer trial', () => {
   it('refuses outside the hall; three rounds of five slams that miss Cael win it; it never takes Cael below 1 HP', async () => {
     const t = await setup({ flag: false });
@@ -400,22 +450,52 @@ describe('the M55 hammer trial', () => {
     t.interiorsState.current = HALL.interiorId;
     expect(trial.start()).toBe(true);
     expect(t.of('ulthred.trial.round')).toEqual([{ n: 1 }]);
-    // Cael stands well clear: every slam misses and counts.
-    for (let i = 0; i < secs(200) && trial.running; i++) {
-      const f = t.ctx.player.feet;
-      const opp = [...t.ctx.actors.all()].find((a) => a.kind === TRIAL_KIND);
-      if (opp) {
-        const p = opp.root!.position;
-        if (Math.hypot(p.x - f.x, p.z - f.z) < TRIAL.length + 3) t.ctx.player.teleport({ x: p.x + 14, y: f.y, z: p.z }, 0);
+    // Cael waits on the line, then steps 3.5 m aside half way through each tell: every slam is aimed at him and misses.
+    let tells = 0;
+    let side = 1;
+    let stepAt = -1;
+    for (let i = 0; i < secs(300) && trial.running; i++) {
+      const seen = t.of('telegraph').filter((e) => e.attackId === SLAM.attackId).length;
+      if (seen > tells) {
+        tells = seen;
+        stepAt = i + secs(SLAM.windupSeconds / 2);
+      }
+      if (i === stepAt) {
+        const opp = [...t.ctx.actors.all()].find((a) => a.kind === TRIAL_KIND)!;
+        const yaw = opp.root!.rotation.y;
+        const f = t.ctx.player.feet;
+        t.ctx.player.teleport({ x: f.x + Math.cos(yaw) * 3.5 * side, y: f.y, z: f.z - Math.sin(yaw) * 3.5 * side }, 0);
+        side = -side;
       }
       t.game.fixedUpdate();
     }
+    expect(t.of('damage.dealt').filter((e) => e.attackId === SLAM.attackId && e.outcome === 'hit')).toHaveLength(0);
     expect(t.of('ulthred.trial.round').map((e) => e.n)).toEqual([1, 2, 3]);
     expect(t.of('ulthred.trial.won')).toHaveLength(1);
     expect(trial.running).toBe(false);
     expect([...t.ctx.actors.all()].some((a) => a.kind === TRIAL_KIND)).toBe(false);
     t.teardown();
   }, 60_000);
+
+  it('edge: staying out of his reach is not dodging (he closes in; a slam not aimed at Cael does not count)', async () => {
+    const t = await setup({ flag: false });
+    const trial = hammerTrial()!;
+    expect(trial.start()).toBe(true);
+    for (let i = 0; i < secs(60) && trial.running; i++) {
+      const opp = [...t.ctx.actors.all()].find((a) => a.kind === TRIAL_KIND)!;
+      const p = opp.root!.position;
+      const f = t.ctx.player.feet;
+      const d = Math.hypot(p.x - f.x, p.z - f.z);
+      // Always keep 12 m between them (beyond the slam's 9 m).
+      if (d < 12) t.ctx.player.teleport({ x: p.x + ((f.x - p.x) / (d || 1)) * 12, y: f.y, z: p.z + ((f.z - p.z) / (d || 1)) * 12 }, 0);
+      t.game.fixedUpdate();
+    }
+    expect(t.of('telegraph').filter((e) => e.attackId === SLAM.attackId).length).toBeGreaterThan(2);
+    expect(trial.round).toBe(1);
+    expect(trial.counted).toBe(0);
+    trial.stop();
+    t.teardown();
+  });
 
   it('a slam that lands does not count, and leaves Cael at 1 HP at worst; leaving the hall stops it with no win', async () => {
     const t = await setup({ flag: false });

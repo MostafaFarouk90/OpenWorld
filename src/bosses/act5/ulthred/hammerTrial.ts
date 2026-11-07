@@ -1,6 +1,6 @@
 // M55's hammer trial (plans/act5-N6.md section 3): Ulthred (his model, no boss bar, not on the registry) in N2's Hammer Hall, three
 // rounds of five slams. He walks to the slam site nearest Cael and slams toward Cael (the 1.2 s tell, no lava). A slam counts when
-// it ends without landing on Cael (dodged, blocked, parried or out of reach); a round ends at five counted slams; 4 s between rounds.
+// it was aimed at Cael when its tell began and ends without landing (dodged, blocked or parried); a round ends at five counted slams; 4 s between rounds.
 // It runs on the shipped trial service when it is there (both sides held at 1 HP, the distance rule at the hall's centre); either
 // way a guard keeps the trial's slams from taking Cael below 1 HP. Leaving the hall, a load, or the trial service ending the duel
 // stops it with no win (N11's quest re-offers it, from round 1).
@@ -61,6 +61,10 @@ interface Run {
   swing: number;
   clip: UlthredClip | null;
   offs: (() => void)[];
+  /** The tell began with Cael on the slam's line. */
+  aimed: boolean;
+  /** Times he has closed in on Cael since the last site. */
+  chase: number;
 }
 
 export interface HammerTrialOptions {
@@ -134,7 +138,7 @@ export class HammerTrial implements HammerTrialService {
     actor.data['audio'] = { material: 'metal' };
     const offs: (() => void)[] = [];
     if (model) offs.push(this.ctx.combat.addTarget(model.hurtboxes, actor.id));
-    this.run = { actor, root, model, line, phase: 'walk', t: 0, target: new THREE.Vector3(), swing: 0, clip: null, offs };
+    this.run = { actor, root, model, line, phase: 'walk', t: 0, target: new THREE.Vector3(), swing: 0, clip: null, offs, aimed: false, chase: 0 };
     this.r = 1;
     this.c = 0;
     const trials = this.ctx.services.get('trials');
@@ -170,7 +174,18 @@ export class HammerTrial implements HammerTrialService {
           this.loop(run, 'walk');
           return;
         }
+        // Out of reach of the site: he closes in until Cael is inside the slam's length, then slams.
+        const reach = Math.hypot(feet.x - pos.x, feet.z - pos.z);
+        if (reach > TRIAL.length - TRIAL.reachMargin && run.chase < 2) {
+          run.chase++;
+          const k = (reach - (TRIAL.length - TRIAL.reachMargin - 1)) / (reach || 1);
+          run.target.set(pos.x + (feet.x - pos.x) * k, pos.y, pos.z + (feet.z - pos.z) * k);
+          run.t = 0;
+          return;
+        }
         run.root.rotation.y = yawToward(pos, feet);
+        // Only a slam aimed at where Cael stands when the tell starts counts: standing out of reach is not dodging.
+        run.aimed = distToSegment(feet, pos, lineEnd(pos, run.root.rotation.y, TRIAL.length)) <= SLAM.halfWidth;
         run.swing++;
         run.phase = 'tell';
         run.t = 0;
@@ -230,7 +245,7 @@ export class HammerTrial implements HammerTrialService {
     }
     run.phase = 'recover';
     run.t = 0;
-    if (landed) return;
+    if (landed || !run.aimed) return;
     this.c++;
     if (this.c < TRIAL.slamsPerRound) return;
     if (this.r >= TRIAL.rounds) {
@@ -262,6 +277,7 @@ export class HammerTrial implements HammerTrialService {
     run.target.set(best?.x ?? run.root.position.x, run.root.position.y, best?.z ?? run.root.position.z);
     run.phase = 'walk';
     run.t = 0;
+    run.chase = 0;
   }
 
   private hallCentre(): { x: number; z: number } | null {
@@ -288,6 +304,8 @@ export class HammerTrial implements HammerTrialService {
     const run = this.run;
     if (!run) return;
     this.run = null;
+    // The win is announced before the trial service ends its duel, so a `trial.ended` listener already sees it.
+    if (won) this.ctx.events.emit('ulthred.trial.won', {});
     const trials = this.ctx.services.get('trials');
     if (trials?.state()?.id === TRIAL.id) trials.stop(TRIAL.id);
     for (const off of run.offs.splice(0)) off();
@@ -297,6 +315,5 @@ export class HammerTrial implements HammerTrialService {
     else run.root.removeFromParent();
     this.r = 0;
     this.c = 0;
-    if (won) this.ctx.events.emit('ulthred.trial.won', {});
   }
 }

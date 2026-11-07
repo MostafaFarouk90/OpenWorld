@@ -22,8 +22,11 @@ export const ANVIL_ARENA_LAYOUT = {
   anvilSize: { x: 1.2, y: 1, z: 2 },
   flameR: 28,
   flameCount: 10,
-  /** The fight's floor: Cael counts as on the Anvil within this radius of the centre and 6 m of its height. */
-  arenaR: 31,
+  /**
+   * The fight's floor: Cael counts as on the Anvil within this radius of the centre and 6 m of its height. It reaches past N1's
+   * rim lips (r 50, src/caldera/calderaSites.ts), so a lava throw to a lip is not leaving the fight.
+   */
+  arenaR: 54,
 } as const;
 
 export interface AnvilArena {

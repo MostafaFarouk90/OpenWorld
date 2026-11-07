@@ -78,6 +78,8 @@ export interface UlthredStage {
   teleportToAnvil(): Promise<boolean>;
   /** Cael's toast/subtitle line. */
   say(key: string): void;
+  /** Puts Cael back at the hall mouth (a drop teleport that landed after the fight had already ended). */
+  toHallMouth?(): void;
 }
 
 export interface UlthredEncounterOptions {
@@ -208,8 +210,9 @@ export class UlthredEncounter implements UlthredHooks {
       ctx.events.on('player.leap', (e) => {
         if (e.phase === 'land' && e.to) this.primeAnvils(e.to);
       }),
-      ctx.events.on('telegraph', (e) => {
-        if (e.actorId === player()) this.strikeAnvils();
+      // A player swing opens its attack window (the player emits no `telegraph`; src/siege/gate.ts reads the same event).
+      ctx.events.on('attack.window', (w) => {
+        if (w.phase === 'open' && w.actorId === player()) this.strikeAnvils();
       }),
     );
     this.loop('idle');
@@ -331,17 +334,24 @@ export class UlthredEncounter implements UlthredHooks {
     if (!a || a.cracked || !this.onIsland || this.brain.phase !== 2 || this.dropping || this.dying || !this.registered) return false;
     a.cracked = true;
     a.primed = 0;
-    this.stage.anvil()?.setAnvilCracked(index, true);
-    this.stage.piece('anvils', `cracked:${this.anvils.map((x, i) => (x.cracked ? i : -1)).filter((i) => i >= 0).join(',')}`);
-    this.sfx('sfx.anvil.strike');
     this.crackPending = true;
     this.actor.restorePoise();
     const staggered = this.ctx.damage.stagger(this.actor.id, this.ctx.player.actor.id, 999);
     if (!staggered) {
+      // No break: the anvil stays whole (its prompt and a later leap can still crack it).
+      a.cracked = false;
       this.crackPending = false;
       this.warnOnce('a cracked anvil could not stagger him');
+      return false;
     }
+    this.stage.anvil()?.setAnvilCracked(index, true);
+    this.stage.piece('anvils', this.anvilsState());
+    this.sfx('sfx.anvil.strike');
     return true;
+  }
+
+  private anvilsState(): string {
+    return `cracked:${this.anvils.map((x, i) => (x.cracked ? i : -1)).filter((i) => i >= 0).join(',')}`;
   }
 
   // ---- UlthredHooks ----
@@ -557,14 +567,24 @@ export class UlthredEncounter implements UlthredHooks {
     const before = this.dropT;
     this.dropT += dt;
     if (before < ULTHRED.breakAt && this.dropT >= ULTHRED.breakAt) this.stage.piece('floor', 'broken');
-    if (before < ULTHRED.dropSeconds && this.dropT >= ULTHRED.dropSeconds) {
-      this.dropT = Infinity;
-      void this.landOnAnvil();
+    if (before < ULTHRED.dropSeconds && this.dropT >= ULTHRED.dropSeconds) void this.landOnAnvil();
+    // A teleport that never answers: the fight resets rather than hang invulnerable with autosave held.
+    if (this.landing !== 0 && this.dropT >= ULTHRED.dropSeconds + ULTHRED.dropTimeoutSeconds) {
+      this.landing = 0;
+      this.warnOnce('the drop teleport did not answer; the fight resets');
+      this.releaseDrop();
+      this.reset();
     }
   }
 
+  /** The pending drop teleport's token (0 when none): a late answer to a cancelled one is ignored. */
+  private landing = 0;
+  private landSeq = 0;
+
   private async landOnAnvil(): Promise<void> {
     const anvil = this.stage.anvil();
+    const token = ++this.landSeq;
+    this.landing = token;
     let ok = false;
     if (anvil) {
       try {
@@ -573,7 +593,13 @@ export class UlthredEncounter implements UlthredHooks {
         this.warnOnce(`the drop teleport threw (${String(err)})`);
       }
     }
-    if (this.ended) return;
+    if (this.landing !== token || this.ended) {
+      // The fight ended (or timed out) while the teleport ran: a Cael who landed on the island goes back to the hall.
+      if (ok) this.stage.toHallMouth?.();
+      return;
+    }
+    this.landing = 0;
+    this.dropT = Infinity;
     if (!ok || !anvil) {
       this.warnOnce(anvil ? 'the drop teleport was refused; the fight resets (the pit steps lead out)' : 'no Anvil arena; the fight resets');
       this.releaseDrop();
@@ -758,9 +784,15 @@ export class UlthredEncounter implements UlthredHooks {
   }
 
   private endTelegraph(): void {
+    const m = this.telegraphMove;
     this.telegraphT = -1;
     this.telegraphMove = null;
     this.model?.setHammerGlow(0);
+    // A tell cut short (a break, the drop, death) takes its warning shapes with it; a slam that landed keeps its line a moment.
+    if (m === SWEEP) this.ring.hide();
+    else if (m === FORGEFIRE) this.fires.forEach((f) => f.hide());
+    else if (m === CHAINS) this.chainLines.forEach((l) => l.hide());
+    else if (m === SLAM && this.lineHideT <= 0) this.slamLine.hide();
   }
 
   private loop(clip: UlthredClip): void {

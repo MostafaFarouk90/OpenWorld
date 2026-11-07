@@ -79,6 +79,8 @@ export const ULTHRED = {
   dropSeconds: 2.5,
   /** The drop's sub-beats: cracked at 0, broken at this, teleport at dropSeconds. */
   breakAt: 1.2,
+  /** A drop teleport that has not answered this long after the drop resets the fight. */
+  dropTimeoutSeconds: 6,
   /** He stands this far north of the drop anchor on the island. */
   anvilStand: 8,
 } as const;
@@ -196,7 +198,7 @@ export const LOOK = {
   soot: 0x1a1210,
 } as const;
 
-/** The trial (M55): three rounds of five slams that miss Cael; 4 s between rounds. */
+/** The trial (M55): three rounds of five slams aimed at Cael that miss him; 4 s between rounds. */
 export const TRIAL = {
   id: 'ulthred-hammer',
   rounds: 3,
@@ -206,6 +208,8 @@ export const TRIAL = {
   length: 9,
   /** He walks to the slam site nearest Cael, then slams toward Cael. */
   walkSpeed: 3.2,
+  /** He closes in until Cael is this much inside the slam's length. */
+  reachMargin: 1.5,
   leaveDistance: 30,
 } as const;
 
