@@ -10,6 +10,8 @@ import type { NpcModelLoader } from '../npcs/types';
 import type { Vec3 } from '../physics/PhysicsWorld';
 import type { WaveDirector } from '../waves/director';
 import { WAVE_SETS } from '../waves/defs';
+import { M52_GUARD_LINE, SIEGE_KINDS } from '../waves/defs/act5';
+import { spawnerId } from '../waves/spawners';
 import type { Cart } from '../waves/structures';
 import { EscortRider, type HorseLoader } from '../companions/escort/escortHorse';
 import type { SiegeOrderId } from '../caldera/siege';
@@ -384,7 +386,12 @@ export class SiegeRun {
         if (this.mine(p.defId)) this.onWaveCleared(p.index + 1);
       }),
       ev.on('waves.breached', (p) => {
-        if (this.mine(p.defId)) ev.emit('siege.gate.breached', { siegeId: id });
+        if (!this.mine(p.defId)) return;
+        this.breachedThisWave = true;
+        ev.emit('siege.gate.breached', { siegeId: id });
+      }),
+      ev.on('actor.died', (p) => {
+        if (this.guards.delete(p.actorId)) ev.emit('siege.guard.fallen', { siegeId: id, actorId: p.actorId });
       }),
       ev.on('structure.damaged', (p) => {
         const b = this.director.barricade;
@@ -405,6 +412,11 @@ export class SiegeRun {
   private gateId(): string {
     return this.setId === 'rim-siege' ? 'caldera.siege.gate' : 'caldera.tunnel.line';
   }
+
+  /** The gate fell in the current wave (reported on `siege.wave.cleared`). */
+  private breachedThisWave = false;
+  /** Live household guards (M52 wave 4), watched for `siege.guard.fallen`. */
+  private readonly guards = new Set<ActorId>();
 
   /** A wave start the director announced, mapped on the next tick. */
   private pendingStart: { n: number; resumed: boolean } | null = null;
@@ -431,6 +443,8 @@ export class SiegeRun {
     this.buildWorld();
     this.wave = n;
     this.waveT = 0;
+    this.breachedThisWave = false;
+    this.guards.clear();
     this.breakPhase = null;
     this.ramSpawnT = null;
     this.sapped.clear();
@@ -460,7 +474,7 @@ export class SiegeRun {
   }
 
   private onWaveCleared(n: number): void {
-    this.host.events.emit('siege.wave.cleared', { siegeId: this.siegeId, n });
+    this.host.events.emit('siege.wave.cleared', { siegeId: this.siegeId, n, breached: this.breachedThisWave });
     if (n >= this.waveCount()) {
       this.complete();
       return;
@@ -677,6 +691,12 @@ export class SiegeRun {
     }
   }
 
+  private watchGuards(): void {
+    const enemies = this.host.services.get('enemies');
+    if (!enemies) return;
+    for (const id of enemies.alive(M52_GUARD_SPAWNER)) this.guards.add(id);
+  }
+
   /** The wounded beat (Q2 a): the companion in the second seat (else the first) sits out at the aid post. Once. */
   private wound(): void {
     if (this.woundedDone || this.siegeId !== 'm52') return;
@@ -738,6 +758,7 @@ export class SiegeRun {
         this.strike(p.dragon);
       }
       this.tickRams();
+      if (this.setId === 'rim-siege' && this.wave === 4) this.watchGuards();
       if (this.wave === 3 && !this.woundedDone && this.waveT >= WOUNDED.fallbackS) this.wound();
     } else if (this.breakPhase !== null) {
       this.breakTimer -= dt;
@@ -775,6 +796,9 @@ export class SiegeRun {
     this.host.actors.despawn(this.fireActor.id);
   }
 }
+
+/** The household guard's spawner (M52 wave 4, the ram lane). */
+export const M52_GUARD_SPAWNER = spawnerId('rim-siege', 3, 'ram', SIEGE_KINDS.guard, 'shield', M52_GUARD_LINE);
 
 /** The 1-based wave of each set's first ram (Infinity: none). */
 const FIRST_RAM_WAVE: Readonly<Record<string, number>> = Object.fromEntries(
