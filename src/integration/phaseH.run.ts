@@ -24,6 +24,7 @@ import {
 } from './phaseHDriver';
 import type { PhaseGEndMeta } from './phaseG.run';
 import { seedFixtureRandom } from './fixtureDeterminism';
+import { writeAct5CarriedBase } from './act5CarriedBase';
 import { act4PacingReport, act4TimingMarkdown, ACT4_ACT_TARGET, estimateAct4Row, type Act4PacingReport } from './act4Timing';
 import { readPhaseGEnd, readPhaseGEndMeta } from '../save/__fixtures__/act4';
 import { HARROWMARK_A4_PACE, paceAt as harrowmarkPaceAt } from '../quests/content/act4/harrowmark/pacing';
@@ -70,7 +71,11 @@ export interface PhaseHResult {
 const WASTE_DEEP = { x: 9000, z: 7000 } as const;
 
 /** Plays the whole of Phase H on a fresh boot of the run's Phase G end save. */
-export async function runPhaseH(run: 'a' | 'b'): Promise<PhaseHResult> {
+export async function runPhaseH(
+  run: 'a' | 'b',
+  // N12 (additive): called with the live game after the act's end, before the harness is disposed (SAVE_PHASE_H_END)
+  atEnd?: (h: ChapterHarness, r: PhaseHResult, trails: Record<string, PhaseCTrail>, gMeta: PhaseGEndMeta) => Promise<void>,
+): Promise<PhaseHResult> {
   watchDialogueRunner();
   seedFixtureRandom();
   const gMeta = await readPhaseGEndMeta(run);
@@ -170,7 +175,7 @@ export async function runPhaseH(run: 'a' | 'b'): Promise<PhaseHResult> {
       ...WASTE_A4_PACE.map((row) => estimateAct4Row(row, at, withNotes(trails[row.quest]!))),
     ]);
     const released = h.of('mercy').filter((m) => m.verb === 'release').length;
-    return {
+    const result: PhaseHResult = {
       run, seconds, picks,
       xp: { start: Math.round(xp0), end: Math.round(xp1), quests: Math.round(questXp), kill: Math.round(ledger.kill), other: Math.round(ledger.other) },
       level: { start: level0, afterM42Accept, end: prog(h).level },
@@ -198,6 +203,8 @@ export async function runPhaseH(run: 'a' | 'b'): Promise<PhaseHResult> {
       outcomes: { eormen: s.getString(D08_BOSS_FLAG), r24: s.getString(R24_CHOICE) },
       census: { ambientAtStart: census0, ambientAtEnd: wasteAmbientCensus(WASTE_AMBIENT_SPAWNERS, { playerLevel: prog(h).level }).total },
     };
+    if (atEnd) await atEnd(h, result, trails, gMeta);
+    return result;
   } finally {
     h.dispose();
   }
@@ -212,7 +219,8 @@ export function definePhaseHRun(run: 'a' | 'b'): void {
     });
     afterEach(() => vi.restoreAllMocks());
     it('plays M42 to M46 from the Phase G end save and ends the act once', async () => {
-      const r = await runPhaseH(run);
+      // N12 (additive): SAVE_PHASE_H_END=1 writes the run's end save, Act 5's carried base (act5-carried-chain-<run>.json)
+      const r = await runPhaseH(run, SAVE_PHASE_H_END ? writeAct5CarriedBase : undefined);
       console.log(JSON.stringify({ ...r, report: undefined, pacing: undefined }, null, 1));
       console.log(r.pacing);
       console.log(`with notes as nodes (L11's count): Phase H ${(r.pacingWithNotes.phaseH * 100).toFixed(1)}%, act ${(r.pacingWithNotes.act * 100).toFixed(1)}%`);
@@ -236,6 +244,8 @@ export function definePhaseHRun(run: 'a' | 'b'): void {
     }, 3_600_000);
   });
 }
+
+const SAVE_PHASE_H_END = ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.SAVE_PHASE_H_END) === '1';
 
 /** Phase G's end meta for the report (read without booting). */
 export type { PhaseGEndMeta };

@@ -57,10 +57,12 @@ export const ACT5_GIVERS: Readonly<Record<string, string>> = {
 };
 
 /**
- * Plan 7.2: Act 5 starts at about 105,000 XP (full play, level 33). A PLACEHOLDER until L13's Phase H playthrough report
- * (plans/act4-phase-h-playthrough.md) gives the measured end-of-Act-4 figure; N12 PR 1 replaces it with that number.
+ * Plan 7.2, measured (N12 PR 1, coordinator ruling A 2026-11-07): full play enters Act 5 at 98,800 XP (level 32): L13's
+ * Phase H run A chain ends at 87,604 (plans/act4-phase-h-playthrough.md) and the Waste's ambient census the chain leaves
+ * unfought is 11,152 at level 28. It replaced N0's 105,000 placeholder. A census short of Q3's "near 39" is fixed by N5's
+ * kill factor, never by a higher start.
  */
-export const ACT5_START_XP = 105_000;
+export const ACT5_START_XP = 98_800;
 export const ACT5_GIVER_STAND_OFF = ACT4_GIVER_STAND_OFF;
 /** Anchor prefixes that count as an Act 5 post (a giver still at an Act 4 post lands at the placeholder instead). */
 export const ACT5_POST_PREFIXES: readonly string[] = ['caldera.'];
@@ -157,7 +159,7 @@ export function act5Landing(id: string, pose: Act4Pose | undefined): { at: { x: 
   return { at: { x: p.x, z: p.z }, yaw: Math.PI, giver: false };
 }
 
-export type Act5JumpPhase = 'replay' | 'act4-end' | 'act5' | 'quiet' | 'place' | 'done';
+export type Act5JumpPhase = 'replay' | 'act4-end' | 'act5' | 'preset' | 'quiet' | 'place' | 'done';
 
 /** Ticked once per rules step until `done`. */
 export class Act5Jump {
@@ -185,9 +187,22 @@ export class Act5Jump {
     return this;
   }
 
+  /**
+   * On a committed `act5-<id>.json` fixture the plugin just loaded (N12 PR 1): the save already carries the Act 5 step, so
+   * only the favour preset (if any) is applied, then the world is quieted and the player placed as usual.
+   */
+  onLoadedFixture(): this {
+    this.phase = 'preset';
+    return this;
+  }
+
   tick(): void {
     if (this.finished) return;
     const p = this.ports;
+    if (this.phase === 'preset') {
+      if (this.favour) this.applyPreset(this.favour);
+      this.phase = 'quiet';
+    }
     if (this.phase === 'replay') {
       // Phase G's one-off "The Waste is next" card queues the moment M41 completes in the replay and shows even if its
       // seen flag is set later, so it is marked seen before the replay reaches M41.
