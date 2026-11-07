@@ -1639,7 +1639,7 @@
           "favour-mark": 1,
           "fen-salve-recipe": 1,
           "ford-guard-shield": 1,
-          "forge-heart-fragment": 2,
+          "forge-heart-fragment": 4,
           "fox-fire-ember": 1,
           "frostbrows-axe": 1,
           "frostbrows-hunting-knife": 1,
@@ -1665,10 +1665,12 @@
           "key.ebbas-candle": 1,
           "key.edrics-map": 1,
           "key.edrics-practice-blade-light": 1,
+          "key.edrics-seal": 1,
           "key.engine-gear": 1,
           "key.eormens-crown-shard": 1,
           "key.ferry-token": 1,
           "key.keepers-call": 1,
+          "key.miners-last-pick": 1,
           "key.music-box": 1,
           "key.oswin-silver-key": 1,
           "key.rooks-whistle": 1,
@@ -1689,6 +1691,7 @@
           "ranger-longbow": 1,
           "redmanes-lance": 1,
           "reed-armour": 1,
+          "regents-gauntlet": 1,
           "rime-cloak": 1,
           "rimewood-haft": 1,
           "rimward-boots": 1,
@@ -1881,6 +1884,10 @@
               "rope": 1,
               "tablets": 1
             },
+            "state": "completed"
+          },
+          "d09": {
+            "objectives": {},
             "state": "completed"
           },
           "m01": {
@@ -2381,6 +2388,10 @@
             "objectives": {},
             "state": "completed"
           },
+          "m53": {
+            "objectives": {},
+            "state": "completed"
+          },
           "r01": {
             "objectives": {},
             "state": "completed"
@@ -2659,6 +2670,10 @@
             "state": "completed"
           },
           "r26": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "r27": {
             "objectives": {},
             "state": "completed"
           },
@@ -2946,8 +2961,8 @@
           "ashwalkers": 33,
           "dragons": 24,
           "grisel": 31,
-          "halvard": 33,
-          "oswin": 32
+          "halvard": 37,
+          "oswin": 30
         },
         "flags": {
           "ability.surge-leap.learned": true,
@@ -3078,6 +3093,7 @@
           "story.d08.shardGiven": true,
           "story.d08.started": true,
           "story.d09.complete": true,
+          "story.d09.started": true,
           "story.gate.a2": true,
           "story.gate.a3": true,
           "story.gate.a4": true,
@@ -3395,6 +3411,7 @@
           "story.m51.started": true,
           "story.m52.complete": true,
           "story.m53.complete": true,
+          "story.m53.started": true,
           "story.m54.complete": true,
           "story.m55.complete": true,
           "story.phase.foundryOpen": true,
@@ -3593,6 +3610,7 @@
           "story.r26.complete": true,
           "story.r26.started": true,
           "story.r27.complete": true,
+          "story.r27.started": true,
           "story.side.boardOpen": true,
           "story.side.kettlewickOpen": true,
           "trainer.pathfinder.masterBook": true,

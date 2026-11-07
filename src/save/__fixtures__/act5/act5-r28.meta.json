@@ -16,7 +16,8 @@
     "m49",
     "m50",
     "m51",
-    "r26"
+    "r26",
+    "r28"
   ],
   "base": {
     "fixture": "act5-carried-chain-a.json",

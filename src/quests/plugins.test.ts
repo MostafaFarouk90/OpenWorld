@@ -1,4 +1,3 @@
-import { ACT5_CARRY } from './content/act5';
 import { ACT2_CARRY } from './content/act2';
 import * as THREE from 'three';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
