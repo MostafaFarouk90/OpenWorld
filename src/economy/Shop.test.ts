@@ -281,3 +281,16 @@ describe('Shop save and load', () => {
     expect(shop.serialize().stock.wystan['marshals-longsword']).toBe(1);
   });
 });
+
+describe('Shop save, v0.9', () => {
+  it("leaves out Act 5's unstocked vendors, so older saves keep their bytes; a load still knows them", () => {
+    const { shop, w } = world();
+    const save = shop.serialize();
+    expect(save.stock).not.toHaveProperty('alric');
+    expect(save.stock).not.toHaveProperty('maud-rim');
+    expect(save.buyBack).not.toHaveProperty('alric');
+    expect(save.stock).toHaveProperty('wystan');
+    shop.load({ stock: { alric: {} }, buyBack: { 'maud-rim': [] } }, 1);
+    expect(w.warnings).toEqual([]);
+  });
+});
