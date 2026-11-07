@@ -647,7 +647,7 @@ const HANDLERS: Record<string, Handler> = {
 export const PHASE_G_TABLE: DriverTable = { handlers: HANDLERS, groups: HARROWMARK_A4_GROUPS };
 
 /** One current objective, played. */
-async function playObjective(r: PhaseGRun, q: string, o: ObjectiveDef, table: DriverTable = PHASE_G_TABLE): Promise<void> {
+export async function playObjective(r: PhaseGRun, q: string, o: ObjectiveDef, table: DriverTable = PHASE_G_TABLE): Promise<void> {
   const { h } = r;
   const key = `${q}.${o.id}`;
   for (let i = 0; i < 7200 && (h.ctx.input.contexts.top() === 'cutscene' || scenes(h)?.active); i += 30) await tick(r, 30, key);
@@ -699,7 +699,10 @@ export async function playPhaseGQuest(r: PhaseGRun, q: PhaseGQuest): Promise<voi
 }
 
 /** Plays one quest with `table`'s drivers, from its giver's offer (or, for `autoStart`, the director's start) to its hand-in. */
-export async function playQuest(r: PhaseGRun, q: string, table: DriverTable, autoStart: readonly string[] = []): Promise<void> {
+// N12 (additive): `givers` lets Act 5's Phase I driver pass its own table (default Act 4's).
+export async function playQuest(
+  r: PhaseGRun, q: string, table: DriverTable, autoStart: readonly string[] = [], givers: Readonly<Record<string, string>> = ACT4_GIVERS,
+): Promise<void> {
   const { h } = r;
   const quests = qs(h);
   // M39 and M41 follow their quest at once (no offer); the others are offered by their giver
@@ -707,7 +710,7 @@ export async function playQuest(r: PhaseGRun, q: string, table: DriverTable, aut
   // the sequencer scenes' subtitle lines are read like dialogue nodes (L10's node pins count them the same way)
   const lines0 = h.of('scene.line').length;
   if (quests.state(q) === 'inactive') {
-    const giver = ACT4_GIVERS[q]!;
+    const giver = givers[q]!;
     await talkTo(r, giver);
     ensure(quests.state(q) === 'active', `${q} offered by ${giver} (${describeQuest(h, q)})`);
   }
