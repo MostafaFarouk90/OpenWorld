@@ -176,8 +176,8 @@ const channel = (c: M50Channel): Handler => async (r, q, o) => {
  * driver lets N4's defaults stand) and the ram is fought as it comes.
  */
 const SIEGE_DEBUG = !!((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.PHASE_I_DEBUG);
-/** The reach the siege steps fight at (the lane heads stand ~300 m from the gate's lee). */
-export const SIEGE_REACH_M = 450;
+/** The reach the siege steps fight at from the gate's lee: the gate line, the court and the stairs' top. */
+export const SIEGE_REACH_M = 60;
 const siegeStep: Handler = async (r, q, o) => {
   const { h } = r;
   const [x, z] = SIEGE_POINTS.lee;
@@ -189,12 +189,29 @@ const siegeStep: Handler = async (r, q, o) => {
       .map((a) => { const p = (a as { root?: { position: { x: number; z: number } } }).root?.position; return `${a.kind}@${p ? `${p.x.toFixed(0)},${p.z.toFixed(0)}` : '?'}`; });
     console.log(`[phaseI] ${q}.${o.id}: siege ${JSON.stringify(siege?.current)} hostiles ${hostiles.length}: ${hostiles.slice(0, 12).join(' ')}`);
   }
-  // N4 bug (reported 2026-11-07): spawned siege foes keep their aggro pending until they see Cael (18 m), so they stand idle at the
-  // lane heads ~300 m down the stairs, outside the siege keep-in. Until the march lands, they are fought at range by script.
-  await holdGround(r, done(r, q, o.id), `${q}.${o.id}`, SIEGE_REACH_M, 900);
-  const note = `m52 siege: the foes stood idle at the lane heads (~300 m, outside the keep-in); fought at range by script (N4 bug)`;
-  if (!r.watch.notes.includes(note)) r.watch.notes.push(note);
-  r.trail.scripted.push(`${q}.${o.id}: fought at range by script`);
+  // the foes march on the gate line (N4 94da66a, src/siege/march.ts): Cael fights what comes within reach of the lee. A foe that
+  // stops short and stands (as a player would see it) is gone out to: Cael walks to the nearest one and fights there.
+  let walks = 0;
+  for (let round = 0; round < 30 && !done(r, q, o.id)(); round++) {
+    try { await holdGround(r, done(r, q, o.id), `${q}.${o.id}`, SIEGE_REACH_M, 30); } catch { /* the round ran out: look further */ }
+    if (done(r, q, o.id)()) break;
+    const f = h.ctx.player.feet;
+    let best: { x: number; y: number; z: number } | null = null;
+    let bestD = Infinity;
+    for (const a of h.ctx.actors.all() as Iterable<{ team?: string; dead?: boolean; spawnTag?: string; root?: { getWorldPosition(v: unknown): { x: number; y: number; z: number } } }>) {
+      if (a.team !== 'hostile' || a.dead || !a.root || !(a.spawnTag ?? '').startsWith('m52.')) continue;
+      const p = a.root.getWorldPosition(f.clone());
+      const d = Math.hypot(p.x - f.x, p.z - f.z);
+      if (d < bestD) { bestD = d; best = { x: p.x, y: p.y, z: p.z }; }
+    }
+    if (best && bestD > SIEGE_REACH_M * 0.5) { await h.approach(best, 3); walks++; }
+  }
+  ensure(done(r, q, o.id)(), `${q}.${o.id} (feet ${h.ctx.player.feet.toArray().map((v) => v.toFixed(0))})`);
+  if (walks) {
+    r.trail.scripted.push(`${q}.${o.id}: went out to foes standing short of the gate ${walks} times`);
+    const note = 'm52 siege: some foes stop short of the gate and stand in "notice" (below the landing); Cael goes out to them';
+    if (!r.watch.notes.includes(note)) r.watch.notes.push(note);
+  }
 };
 
 // ---- M51 ---------------------------------------------------------------------------------------------------------------
