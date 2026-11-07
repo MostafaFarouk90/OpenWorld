@@ -19,7 +19,7 @@ function spawnerFor(g: CalderaFaunaGroup): SpawnerDef {
     ...(g.role ? { role: g.role } : {}),
     ...(g.skin ? { skin: g.skin } : {}),
     ...(g.line ? { line: g.line } : {}),
-    activation: { flag: CALDERA_GATE_FLAGS[g.gate] },
+    activation: g.until ? { flag: CALDERA_GATE_FLAGS[g.gate], until: g.until } : { flag: CALDERA_GATE_FLAGS[g.gate] },
     respawn: 'never',
     leash: true,
   };

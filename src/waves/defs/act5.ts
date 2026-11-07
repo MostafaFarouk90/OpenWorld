@@ -6,11 +6,10 @@ import type { WaveSetDef, WaveSpawnDef } from '../types';
 import { GATE, RAM, BRAZIER, SIEGE_MAX_ALIVE } from '../../siege/tuning';
 
 /**
- * The Warhost kinds (N5). N5's `warhost-soldier` and `warhost-guard` are not EnemyKinds on this base yet: the siege
- * stands in the shipped `blighted-soldier` (the spike's stand-in, the Warhost's base) until N5's branch merges, then
- * this one map changes. The role and line ride on every row either way.
+ * The Warhost kinds (N5). N5's `warhost-soldier` and `warhost-guard` (merged into this branch from N5; the siege used the shipped
+ * `blighted-soldier` as a stand-in before that). The role and line ride on every row either way.
  */
-export const SIEGE_KINDS: Readonly<{ soldier: EnemyKind; guard: EnemyKind }> = { soldier: 'blighted-soldier', guard: 'blighted-soldier' };
+export const SIEGE_KINDS: Readonly<{ soldier: EnemyKind; guard: EnemyKind }> = { soldier: 'warhost-soldier', guard: 'warhost-guard' };
 
 export const RIM_SIEGE_ANCHORS = {
   gate: [1, 2, 3, 4].map((n) => `caldera.siege.gate.${n}`),
