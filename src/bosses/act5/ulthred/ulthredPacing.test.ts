@@ -87,7 +87,8 @@ function fight(p: Profile): { seconds: number; phases: number[] } {
     }
     heavyT += TICK * k;
     let dp = p.lightPoisePerS * LIGHT_POISE_SCALE * TICK * k;
-    if (heavyT >= p.heavyEvery) {
+    // A player saves a ready heavy for a breakable moment (phase 1: a stuck hammer).
+    if (heavyT >= p.heavyEvery && (phase !== 1 || brain.stuck)) {
       heavyT = 0;
       dp += p.heavyPoise * HEAVY_POISE_SCALE;
     }
@@ -135,12 +136,12 @@ describe('Ulthred pacing (D10: the hall 3 to 7 min, each later phase 2 to 4 min,
     const m = (s: number) => (s / 60).toFixed(1);
     expect(PROFILES.map((p) => fight(p)).map((r, i) => `${PROFILES[i]!.name}: ${r.phases.map(m).join(' + ')} = ${m(r.seconds)} min`)).toMatchInlineSnapshot(`
       [
-        "knight: 4.5 + 2.9 + 2.8 = 10.1 min",
-        "warden: 3.4 + 3.1 + 3.2 = 9.7 min",
-        "ashblade: 5.9 + 2.7 + 2.6 = 11.3 min",
-        "pathfinder: 3.2 + 2.7 + 2.3 = 8.2 min",
-        "emberwright: 3.2 + 2.8 + 2.6 = 8.7 min",
-        "knight at 34: 5.1 + 3.0 + 2.9 = 11.0 min",
+        "knight: 4.4 + 2.9 + 2.4 = 9.6 min",
+        "warden: 4.8 + 3.1 + 3.2 = 11.0 min",
+        "ashblade: 3.6 + 2.7 + 2.3 = 8.6 min",
+        "pathfinder: 3.3 + 2.7 + 2.3 = 8.3 min",
+        "emberwright: 3.3 + 2.8 + 2.6 = 8.8 min",
+        "knight at 34: 4.8 + 3.0 + 2.7 = 10.6 min",
       ]
     `);
   });

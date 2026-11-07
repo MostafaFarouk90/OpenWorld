@@ -56,7 +56,7 @@ export const ULTHRED = {
   /** Health and damage scale this much per level away from 40, never below 0.5. */
   perLevel: 0.05,
   /** Vey's measured value: a real swing's raw poise is about 10 (x 2 heavy, x 0.5 light). */
-  maxPoise: 60,
+  maxPoise: 70,
   poiseRegenDelay: 5,
   phases: ACT5_BOSS_RULES[ULTHRED_BOSS_ID].phases ?? [0.66, 0.33],
   breaksPerPhase: ACT5_BOSS_RULES[ULTHRED_BOSS_ID].breaksPerPhase ?? 3,
@@ -95,8 +95,11 @@ export const SLAM = {
   halfWidth: 1.3,
   damage: 52,
   poise: 40,
-  /** The hammer stays stuck this long after a slam: the only time phase 1 poise lands. */
-  stuckSeconds: 1.6,
+  /**
+   * The hammer stays stuck this long after a slam: the only time phase 1 poise lands. He slams from up to 6.3 m away, so a Cael
+   * who dodged needs time to run in and land a heavy (the real-game run measured 4 to 6 m after a sidestep).
+   */
+  stuckSeconds: 2.2,
   recoverSeconds: 0.6,
   /** Seconds between moves when nothing else is due. */
   gapSeconds: 1.1,
