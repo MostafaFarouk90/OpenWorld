@@ -1288,7 +1288,7 @@
           "r26-master-6",
           "r26-master-7",
           "a5r-r26-report",
-          "a5r-r26-report-3",
+          "a5r-r26-report-2",
           "a5r-r26-report-4",
           "a5r-r26-report-5",
           "a5r-r26-report-6",
@@ -1484,6 +1484,9 @@
           "m47.knot.2",
           "m48.golems",
           "m48.gnats",
+          "r26.ambush.1",
+          "caldera.rim.stokers.1",
+          "r26.ambush.2",
           "r29.dead.1",
           "r29.dead.2",
           "r29.dead.3",
@@ -1648,6 +1651,7 @@
           "m48.gnats#1",
           "m48.gnats#2",
           "m48.gnats#3",
+          "r26.ambush.1#0",
           "r29.dead.1#0",
           "r29.dead.2#0",
           "r29.dead.3#0",
@@ -1738,6 +1742,15 @@
           "m47.knot.1#1",
           "m47.knot.2#2",
           "caldera.stair.outriders#0",
+          "r26.ambush.1#1",
+          "r26.ambush.1#2",
+          "r26.ambush.1#3",
+          "caldera.rim.stokers.1#0",
+          "caldera.rim.stokers.1#1",
+          "r26.ambush.2#0",
+          "r26.ambush.2#1",
+          "r26.ambush.2#2",
+          "r26.ambush.2#3",
           "r29.dead.1#1",
           "r29.dead.2#1",
           "r29.dead.3#1",
@@ -1758,8 +1771,8 @@
         "rows": {
           "ash-wraith": {
             "calm": 0,
-            "killed": 20,
-            "release": 28,
+            "killed": 21,
+            "release": 33,
             "spare": 0
           },
           "blighted-soldier": {
@@ -1844,7 +1857,7 @@
             "calm": 0,
             "killed": 2,
             "release": 0,
-            "spare": 37
+            "spare": 41
           },
           "waste-strider": {
             "calm": 0,
@@ -1999,7 +2012,7 @@
     },
     "map": {
       "data": {
-        "fog": "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"
+        "fog": "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"
       },
       "version": 2
     },
@@ -2061,7 +2074,7 @@
         ],
         "respecUsed": false,
         "storyPoints": 3,
-        "xp": 105394
+        "xp": 106042
       },
       "version": 2
     },
@@ -3049,12 +3062,10 @@
           },
           "r26": {
             "objectives": {
-              "brake1": 1,
-              "brake2": 1,
+              "ambush1": 1,
+              "ambush2": 1,
               "brief": 1,
               "guard": 1,
-              "halt1": 1,
-              "halt2": 1,
               "in": 1,
               "load": 1,
               "manifest": 1,
@@ -3361,7 +3372,7 @@
       "data": {
         "lastShelterId": "shelter.camp-crossing.2",
         "seed": 4042,
-        "t": 3337.8833
+        "t": 2797.5167
       },
       "version": 1
     },
@@ -3379,7 +3390,7 @@
           "dragons": 51,
           "grisel": 34,
           "halvard": 21,
-          "oswin": 55
+          "oswin": 52
         },
         "flags": {
           "ability.surge-leap.learned": true,
@@ -3412,7 +3423,7 @@
           "favour.snapshot.m52.dragons": 51,
           "favour.snapshot.m52.grisel": 34,
           "favour.snapshot.m52.halvard": 21,
-          "favour.snapshot.m52.oswin": 55,
+          "favour.snapshot.m52.oswin": 52,
           "favour.snapshot.m52.taken": true,
           "gear.shardgem.granted.bellows-engine": true,
           "gear.shardgem.granted.corvin-skarl": true,
@@ -4111,20 +4122,21 @@
           "story.r25.lit2": true,
           "story.r25.lit3": true,
           "story.r25.started": true,
+          "story.r26.ambush1Armed": true,
+          "story.r26.ambush1Down": true,
+          "story.r26.ambush1Down.seen": true,
+          "story.r26.ambush2Armed": true,
+          "story.r26.ambush2Down": true,
+          "story.r26.ambush2Down.seen": true,
           "story.r26.arrived": true,
-          "story.r26.atHalt1": true,
-          "story.r26.atHalt2": true,
-          "story.r26.brake1": true,
-          "story.r26.brake2": true,
-          "story.r26.choice": "long",
+          "story.r26.choice": "fast",
           "story.r26.complete": true,
-          "story.r26.cratesLeft": 2,
           "story.r26.in": true,
           "story.r26.loaded": true,
           "story.r26.started": true,
           "story.r26.unloaded": true,
-          "story.r26.waited1": true,
-          "story.r26.waited2": true,
+          "story.r26.wounded.1": true,
+          "story.r26.wounded.2": true,
           "story.r29.beatFails": 0,
           "story.r29.complete": true,
           "story.r29.dead1Armed": true,
@@ -4204,7 +4216,7 @@
           "world.wayside.5.lit": true,
           "world.wayside.6.lit": true
         },
-        "mercyCount": 129
+        "mercyCount": 138
       },
       "version": 1
     },
@@ -4216,7 +4228,7 @@
     }
   },
   "format": 1,
-  "playtimeSeconds": 8101,
+  "playtimeSeconds": 7561,
   "reason": "manual",
   "savedAt": 1767225600000
 }

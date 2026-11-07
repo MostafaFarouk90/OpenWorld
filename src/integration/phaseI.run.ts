@@ -1,10 +1,10 @@
 /**
  * Phase I's headless chain (N12 PR 1): the Rim quests, M47 to M52 with R26 and R29 (M52 on N4's siege),
  * played in plan order by phaseIDriver.ts on Act 5's carried base (`act5-carried-chain-<run>.json`, the end of L13's Phase H
- * chain: the save test from Act 4 to Act 5). Run A is the design's "marshal" playthrough on base A (R26 the fast road, kills
- * as kills); run B is "keepers" on base B (R26 the long road, the Spare and the Release offered first). The preset's choice
- * flags and live favour are set on the loaded save before anything is played, so M52's snapshot reads the design's table
- * (no Rim quest moves favour).
+ * chain: the save test from Act 4 to Act 5). Run A is the design's "marshal" playthrough on base A (R26 the long road, kills
+ * as kills); run B is "keepers" on base B (R26 the fast road, the Spare and the Release offered first). The preset's choice
+ * flags and live favour are set on the loaded save before anything is played, less R26's road (the only Rim choice that
+ * moves favour), so M52's snapshot reads the design's table.
  *
  * Measures what the brief and the coordinator name: per-quest seconds, levels and XP, deaths, the cap on every hostile met,
  * the player's gold on first reaching Alric's anvil and at the phase's end (N7's forge set is 550), the pacing on N10's rows
@@ -27,8 +27,9 @@ import { act5PacingReport, act5TimingMarkdown, estimateAct5Row, phaseIGate, type
 import { readAct5Base, readAct5BaseMeta, type Act5BaseMeta } from '../save/__fixtures__/act5';
 import { writePhaseIEnd } from './act5PhaseIEnd';
 import { RIM_A5_PACE, paceAt, type RimPaceRow } from '../quests/content/act5/rim/pacing';
-import { ACT5_PHASE_I, ACT5_PRESET_FLAGS, presetLiveFavour, type Act5FavourPreset } from '../quests/act5Jump';
-import { FAVOUR_TRACKS, snapshotFlag } from '../state/favour';
+import { ACT5_PHASE_I, ACT5_PRESET_FAVOUR, ACT5_PRESET_FLAGS, presetLiveFavour, type Act5FavourPreset } from '../quests/act5Jump';
+import { FAVOUR_TRACKS, snapshotFlag, type FavourTrack } from '../state/favour';
+import { R26_MASTER_TREE } from '../dialogue/content/act5/rim/rim.dialogue';
 import { M52_SPARED_ANY, M52_STOOD, M52_STOOD_ROWS, M52_WAVE4_HELD, M52_WOUNDED } from '../quests/content/act5/rim/m52.quest';
 import { RIM_CARD_SEEN_FLAG } from './phaseICard';
 import { INSIDE_FLOOR_POINT } from './act5Fixtures';
@@ -84,12 +85,34 @@ export function rimToAct5Row(r: RimPaceRow): Act5PaceRow {
   return { quest: r.quest, design: r.design, route: r.route, legs: r.legs as Act5PaceRow['legs'], nodes: r.nodes, beats };
 }
 
-/** Sets the preset's choice flags and live favour on the loaded game (as the `&favour=` jump does). */
-export function applyPhaseIPreset(h: ChapterHarness, preset: Act5FavourPreset): void {
+/** The favour R26's road choice moves, read from N10's master tree (the only Rim choice that moves favour). */
+export function r26FavourDeltas(road: 'fast' | 'long'): Partial<Record<FavourTrack, number>> {
+  const out: Partial<Record<FavourTrack, number>> = {};
+  const walk = (o: unknown): void => {
+    if (Array.isArray(o)) return o.forEach(walk);
+    if (!o || typeof o !== 'object') return;
+    const r = o as { id?: unknown; effects?: unknown };
+    if (r.id === road && Array.isArray(r.effects)) {
+      for (const fx of r.effects as { favour?: FavourTrack; delta?: number }[]) if (fx.favour && typeof fx.delta === 'number') out[fx.favour] = (out[fx.favour] ?? 0) + fx.delta;
+      return;
+    }
+    Object.values(o).forEach(walk);
+  };
+  walk(R26_MASTER_TREE.def);
+  return out;
+}
+
+/**
+ * Sets the preset's choice flags and live favour on the loaded game. The design's table is the M52 snapshot, which already
+ * holds R26's road (marshal long, Oswin +3 to 20; keepers fast, -3 to 52), so the seed at M47 is the table less the run's
+ * road: R26 then lands the snapshot on the table. (PR 1 seeded the table itself, so R26 counted twice: 17/55, then 23/49.)
+ */
+export function applyPhaseIPreset(h: ChapterHarness, preset: Act5FavourPreset, road: 'fast' | 'long'): void {
   const s = h.ctx.state;
   for (const [k, v] of Object.entries(ACT5_PRESET_FLAGS[preset])) s.setFlag(k as never, v as never);
   const live = presetLiveFavour(preset, 'm47');
-  for (const t of FAVOUR_TRACKS) s.addFavour(t, live[t] - s.favour(t), 'script');
+  const d = r26FavourDeltas(road);
+  for (const t of FAVOUR_TRACKS) s.addFavour(t, live[t] - (d[t] ?? 0) - s.favour(t), 'script');
 }
 
 /** Plays Phase I on a fresh boot of the run's carried base. */
@@ -105,7 +128,7 @@ export async function runPhaseI(
     ensure(h.loaded, `Phase I run ${run}: the carried base loaded`);
     await h.runAsync(30);
     const preset = PHASE_I_PRESET[run];
-    applyPhaseIPreset(h, preset);
+    applyPhaseIPreset(h, preset, (run === 'a' ? PHASE_I_RUN_A : PHASE_I_RUN_B).r26);
     await h.runAsync(10);
     const quests = h.ctx.services.require('quests');
     const c = run === 'a' ? PHASE_G_RUN_A : PHASE_G_RUN_B;
@@ -231,7 +254,7 @@ export function definePhaseIRun(run: 'a' | 'b'): void {
       console.log(JSON.stringify({ ...r, report: undefined, pacing: undefined }, null, 1));
       console.log(r.pacing);
       expect(r.missing.filter((m) => m.includes('skipped')), 'no quest skipped').toEqual([]);
-      expect(r.outcomes.r26).toBe(run === 'a' ? 'fast' : 'long');
+      expect(r.outcomes.r26).toBe(run === 'a' ? 'long' : 'fast');
       expect(r.cap).toEqual([]);
       expect(r.deaths).toBe(0);
       expect(r.gold.atAnvil).not.toBeNull();
@@ -239,6 +262,9 @@ export function definePhaseIRun(run: 'a' | 'b'): void {
       // the phase's end: the card once, the floor still shut (M53 not done; the hold is retired, so its flag stays unwritten)
       expect(r.end).toEqual({ cardShown: true, cardSeen: true, floorShut: true, foundryHoldMet: false });
       expect(r.siege.snapshot.taken).toBe(true);
+      // M52's snapshot is the design's table for the run's preset (Oswin 20 marshal, 52 keepers)
+      const table = ACT5_PRESET_FAVOUR[PHASE_I_PRESET[run]].m52;
+      expect(FAVOUR_TRACKS.map((t) => r.siege.snapshot[t])).toEqual([...table]);
       // no quest outside Phase I started by the run (e.g. D01 offered by Aelfreda's priory tree at the aid tent)
       expect(r.startedOutside, 'only Phase I quests started').toEqual([]);
       expect(r.report.failures, 'no quest under the 40% floor').toEqual([]);

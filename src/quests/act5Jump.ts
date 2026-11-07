@@ -65,7 +65,7 @@ export const ACT5_GIVERS: Readonly<Record<string, string>> = {
 export const ACT5_START_XP = 98_800;
 /**
  * N12 PR 2 (coordinator ruling L1, 2026-11-07): Phase J targets start at 109,000 XP, the measured Phase I end. The Phase I
- * chains end at 113,206 (run A) and 105,394 (run B), plans/act5-phase-i-playthrough.md; 109,000 sits between them, so a
+ * chains end at 111,979 (run A) and 106,042 (run B), plans/act5-phase-i-playthrough.md; 109,000 sits between them, so a
  * Phase J fixture no longer starts Cael two levels under the player who reached it.
  */
 export const ACT5_PHASE_J_START_XP = 109_000;
