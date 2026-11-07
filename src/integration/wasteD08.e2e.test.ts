@@ -4,7 +4,6 @@
  * at a phase floor, the Release window) for each outcome, the crypt notes, and Wulfhild's report. The Crown Shard comes only
  * from a defeat.
  */
-import { appendFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootFromSave, type ChapterHarness } from './chapterHarness';
 import { winEormenForTest } from '../bosses/act4/eormen/testing';
@@ -36,8 +35,6 @@ describe('D08 on the real game', () => {
       const { ctx } = h;
       const q = ctx.services.require('quests');
       const cur = () => q.get('d08')!.objectives.find((o) => !q.objectiveDone('d08', o.id))?.id ?? null;
-      const mark = (s: string) => { if (process.env.D08_TRACE) appendFileSync(process.env.D08_TRACE, `[d08] ${s} cur=${cur()} t=${Date.now() - t0}\n`); };
-      const t0 = Date.now();
       /** An interior transition resolves only as the game ticks: tick until it does, then settle. */
       const settle = async (p: Promise<void>) => {
         let done = false;
@@ -48,16 +45,13 @@ describe('D08 on the real game', () => {
       };
       // the fixture predates the Waste quests: Phase G is done; M42 and M43 are completed here
       expect(q.state('m41')).toBe('completed');
-      mark('booted');
-      for (const id of ['m42', 'm43']) { mark(`start ${id} ${q.start(id)}`); mark(`complete ${id} ${q.complete(id)}`); }
+      for (const id of ['m42', 'm43']) { q.start(id); q.complete(id); }
       await h.runAsync(10);
-      mark('prereqs ticked');
       expect(q.state('m43')).toBe('completed');
       // the brief: the quest offered by Wulfhild (her hub is covered by the dialogue tests)
       expect(q.start('d08')).toBe(true);
       ctx.events.emit('dialogue.ended', { dialogueId: 'npc-wulfhild', npcId: 'wulfhild', reason: 'completed' });
       await h.runAsync(30);
-      mark('dying');
       expect(cur()).toBe('dying');
       // Leofric by the door, a real conversation
       const lp = ctx.services.require('npcs').position(D08_DYING)!;
@@ -65,25 +59,20 @@ describe('D08 on the real game', () => {
       await h.approach(lp, 2);
       expect(h.talk(`npc-${D08_DYING}`, D08_DYING)).toBeGreaterThan(0);
       await h.runAsync(30);
-      mark('enter');
       expect(cur()).toBe('enter');
       // the door, the real way
       await h.approach(h.anchor(HUSK_CATHEDRAL_OUTSIDE), 1.5);
       await settle(ctx.services.require('interiors').enter(CATHEDRAL_ID, HUSK_CATHEDRAL_DOOR_ID));
-      mark('knights');
       expect(cur()).toBe('knights');
       // the narthex: each Husk Knight rises once, so keep striking until every tagged body is gone
       const tagged = () => [...ctx.actors.all()].filter((a) => (D08_KNIGHTS as readonly string[]).includes(a.spawnTag ?? '') && a.health > 0);
       for (let i = 0; i < 120 && cur() === 'knights'; i++) {
         for (const a of tagged()) ctx.damage.apply({ attackerId: ctx.player.actor.id, targetId: a.id, amount: 100_000, poise: 999, kind: 'melee' });
-        mark(`knights ${tagged().length}`);
         await h.runAsync(30);
         ctx.player.actor.health = ctx.player.actor.maxHealth;
       }
-      mark('bones');
       expect(cur()).toBe('bones');
       for (const n of [D08_NOTES.bones, D08_NOTES.rope]) { h.talk(n, n); await h.runAsync(10); }
-      mark('boss');
       expect(cur()).toBe('boss');
       // the nave: the real fight
       await h.enterTrigger(ARENA.trigger);
@@ -91,10 +80,8 @@ describe('D08 on the real game', () => {
       expect(r.outcome).toBe(outcome);
       expect(ctx.state.getFlag(D08_BOSS_FLAG)).toBe(outcome);
       await h.runAsync(60);
-      mark('tablets');
       expect(cur()).toBe('tablets');
       for (const n of [D08_NOTES.tablets, D08_NOTES.niche]) { h.talk(n, n); await h.runAsync(10); }
-      mark('report');
       expect(cur()).toBe('report');
       // out, and the report with Wulfhild
       await settle(ctx.services.require('interiors').exit(HUSK_CATHEDRAL_DOOR_ID));
