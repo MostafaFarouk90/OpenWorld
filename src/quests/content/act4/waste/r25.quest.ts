@@ -1,7 +1,7 @@
 import type { QuestDef } from '../../../types';
 import { reads, story } from '../../act2/helpers';
 import { rewardOf } from './rewards';
-import { EBBA } from './m44.quest';
+import { CHAPEL_KEEPER, EBBA } from './m44.quest';
 
 export const R25_HEARTHS = [1, 2, 3] as const;
 export const R25_CANDLE_ITEM = 'r25-candle';
@@ -42,6 +42,8 @@ export const r25: QuestDef = {
     reads('name3', 'quest.r25.name3', [R25_NAME_NOTE(3)]),
     { id: 'light3', type: 'interact', target: R25_LIGHT(3), textKey: 'quest.r25.light3' },
     reads('register', 'quest.r25.register', [R25_REGISTER, R25_LETTER]),
+    // Sister Aedre writes the three hearths into the register (L13 Phase H M1: R25 at 35% by the shipped count)
+    { id: 'aedre', type: 'talk', target: CHAPEL_KEEPER, textKey: 'quest.r25.aedre' },
     { id: 'report', type: 'talk', target: EBBA, textKey: 'quest.r25.report' },
   ],
   rewards: rewardOf('r25', 550),

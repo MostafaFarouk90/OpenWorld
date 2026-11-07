@@ -1,13 +1,13 @@
 // The Waste quests' weather (plan 4, coordinator 18:01): forced storms on M42's crossing (gate arch to camp), on M43's Storm
-// Walk and at R24's two shelter waits; the clear held while M46's waves run (the road between keeps real weather) and within
-// 30 m of a hand-in. Every hold is derived from flags and quest state each poll, so a load, a completion or a teardown can never
+// Walk and at R24's two shelter waits; the clear held while M46's waves run (the road between keeps real weather), on R24's road
+// between its two storms, and within 30 m of a hand-in. Every hold is derived from flags and quest state each poll, so a load, a completion or a teardown can never
 // strand one; one map, one release each.
 import type { Kit, Off } from '../../harrowmark/director/shared';
 import '../../../../../weather/types';
 import { WASTE_A4_QUEST_DEFS } from '../waste.content';
 import { M42_CAMP, M42_GATE } from '../m42.quest';
 import { M43_WALKING } from '../m43.quest';
-import { R24_WAITED } from '../r24.quest';
+import { R24_ARRIVED, R24_CART_OUT, R24_WAITED } from '../r24.quest';
 import { R24_AT_SHELTER } from '../props';
 import { LOG } from './generic';
 
@@ -25,7 +25,10 @@ export function wantedWeather(k: Kit, extraClear: () => string[] = () => []): St
   if (k.active('m42') && k.flag(M42_GATE) && !k.flag(M42_CAMP)) storms.push('quest:m42.crossing');
   if (k.active('m43') && k.flag(M43_WALKING)) storms.push('quest:m43.walk');
   for (const n of [1, 2] as const) if (k.active('r24') && k.flag(R24_AT_SHELTER(n)) && !k.flag(R24_WAITED(n))) storms.push(`quest:r24.shelter.${n}`);
-  return { storms, clears: [...handInClears(k), ...extraClear()] };
+  // R24 has its own two storms: the real weather does not halt the column on the road between them (L13 Phase H L2: the cart
+  // ran 27 game minutes with real storms halting it). Released at each shelter wait, so the quest's storm can blow.
+  const road = k.active('r24') && k.flag(R24_CART_OUT) && !k.flag(R24_ARRIVED) && !storms.some((x) => x.startsWith('quest:r24.')) ? ['quest:r24.road'] : [];
+  return { storms, clears: [...road, ...handInClears(k), ...extraClear()] };
 }
 
 /** A talk step is current and Cael stands within 30 m of its talker. */
