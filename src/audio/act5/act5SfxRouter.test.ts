@@ -46,17 +46,24 @@ describe('Act 5 SFX router', () => {
     const f = setup();
     for (const pct of [90, 70, 49, 45, 19, 10]) f.router.gateDamaged({ siegeId: 'm52', pct });
     expect(f.played).toEqual(['sfx.gate.hit', 'sfx.gate.hit', 'sfx.gate.crack', 'sfx.gate.hit', 'sfx.gate.crack', 'sfx.gate.hit']);
+    // The gate's health carries over between waves (Q4): a new wave does not crack it again.
     f.router.waveStarted({ siegeId: 'm52' });
     f.played.length = 0;
-    f.router.gateDamaged({ siegeId: 'm52', pct: 40 });
-    expect(f.played).toEqual(['sfx.gate.crack']);
+    f.router.gateDamaged({ siegeId: 'm52', pct: 8 });
+    expect(f.played).toEqual(['sfx.gate.hit']);
+    // After a load the first event is the baseline, not a crack.
+    f.router.saveLoaded();
+    f.played.length = 0;
+    f.router.gateDamaged({ siegeId: 'm52', pct: 30 });
+    expect(f.played).toEqual(['sfx.gate.hit']);
   });
 
   it('two sieges keep their own gate health (R27 tunnel and M52)', () => {
     const f = setup();
+    f.router.gateDamaged({ siegeId: 'm52', pct: 60 });
     f.router.gateDamaged({ siegeId: 'm52', pct: 40 });
     f.router.gateDamaged({ siegeId: 'r27', pct: 80 });
-    expect(f.played).toEqual(['sfx.gate.crack', 'sfx.gate.hit']);
+    expect(f.played).toEqual(['sfx.gate.hit', 'sfx.gate.crack', 'sfx.gate.hit']);
   });
 
   it('only dragons announce themselves on arrival; the ram, telegraphs and arena pieces map through their tables', () => {

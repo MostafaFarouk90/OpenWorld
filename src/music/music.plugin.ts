@@ -248,6 +248,7 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
   ev.on('actor.revived', (e) => {
     if (e.actorId === playerId && e.reason === 'respawn') {
       director.reset(gameTime);
+      if (cue) cue.running = null; // the director dropped the cue's mix with its bosses; applyCue starts it again
       rederiveBosses();
       rederiveSneakAndChase();
     }
@@ -504,6 +505,7 @@ export function setupMusic(ctx: GameContext, initialTrack?: TrackDef): () => voi
     }
     const queued = machine.swap();
     if (queued) void prepare(TRACKS_BY_ID[queued]);
+    applyCue(); // a cue's mix starts on the swap, not up to a poll later
   }
 
   /** What the player's region wants: the bed, and the track (never from the null corridor). */

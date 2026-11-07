@@ -41,6 +41,9 @@ describe('the siege mix is keyed on the siege events, not the movement mode', ()
     router.modeChanged({ mode: 'siege', previous: 'walk' });
     router.modeChanged({ mode: 'walk', previous: 'siege' });
     expect(calls).toEqual(['+siege', '-siege']);
+    // and a load re-derives it from the mode afterwards
+    router.saveLoaded(true);
+    expect(calls.at(-1)).toBe('+siege');
   });
 
   it('the mode does not override a wave event that already runs the lull', () => {
@@ -49,6 +52,22 @@ describe('the siege mix is keyed on the siege events, not the movement mode', ()
     router.waveCleared();
     router.modeChanged({ mode: 'siege', previous: 'walk' });
     expect(calls).toEqual(['+siege', '+siege.lull', '-siege']);
+  });
+
+  it('a scene pushed over the siege (scene 5 outranks siege 4) pauses nothing: neither entering nor leaving it changes the mix', () => {
+    const { router, calls } = setup();
+    router.waveStarted();
+    router.waveCleared();
+    router.modeChanged({ mode: 'scene', previous: 'siege' });
+    router.modeChanged({ mode: 'siege', previous: 'scene' });
+    expect(calls).toEqual(['+siege', '+siege.lull', '-siege']);
+  });
+
+  it('leaving the siege mode ends only a mix the mode itself pushed', () => {
+    const { router, calls } = setup();
+    router.waveStarted();
+    router.modeChanged({ mode: 'walk', previous: 'siege' });
+    expect(calls).toEqual(['+siege']);
   });
 
   it('a lull with no new wave hands the music back after the timeout; a mode-driven mix does not time out', () => {
@@ -101,6 +120,16 @@ describe('Ulthred phase 3 drops to the bass and the heartbeat, then builds back 
     expect(calls).toEqual(['+ulthred.3.drop', '+ulthred.3.build', '-ulthred.3.drop']);
     beats(BUILD_BARS);
     expect(calls.at(-1)).toBe('-ulthred.3.build');
+  });
+
+  it('a phase 3 that arrives mid-bar still steps once the clock is running (the wait resets on every beat)', () => {
+    const { router, calls, bar } = setup();
+    router.bossPhase({ bossId: 'ulthred', phase: 3 });
+    for (let t = 0; t < 4; t++) {
+      router.tick(0.6);
+      bar(); // beats arrive every 0.6 s, but ticks between them would have expired a bar-line-only wait
+    }
+    expect(calls).toContain('+ulthred.3.drop');
   });
 
   it('other phases and other bosses do nothing', () => {

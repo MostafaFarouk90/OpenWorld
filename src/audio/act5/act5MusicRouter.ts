@@ -51,11 +51,19 @@ export class Act5MusicRouter {
 
   /** `movement.mode`: the siege mode starts the mix if no wave event has; leaving it ends the siege music. */
   modeChanged(e: { mode: string; previous: string }): void {
+    // A scene (scene 5 outranks siege 4) pauses the siege without ending it: neither entering nor leaving one changes the mix.
+    if (e.mode === 'scene' || e.previous === 'scene') {
+      if (e.mode === 'siege' && this.mix === null) {
+        this.viaMode = true;
+        this.to('siege');
+      }
+      return;
+    }
     if (e.mode === 'siege' && this.mix === null) {
       this.viaMode = true;
       this.to('siege');
-    } else if (e.previous === 'siege' && e.mode !== 'siege') {
-      this.to(null);
+    } else if (e.previous === 'siege' && e.mode !== 'siege' && this.viaMode) {
+      this.to(null); // only a mix the mode itself pushed ends with it
     }
   }
 
@@ -77,8 +85,9 @@ export class Act5MusicRouter {
 
   private onBeat(beat: number): void {
     const s = this.step;
-    if (!s || beat !== 0) return; // only bar lines count
-    s.idle = 0;
+    if (!s) return;
+    s.idle = 0; // any beat shows the clock is running
+    if (beat !== 0) return; // only bar lines step
     if (s.kind === 'wait') {
       this.start(ULTHRED_DROP_MIX_KEY);
       s.kind = 'drop';

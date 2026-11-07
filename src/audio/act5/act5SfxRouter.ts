@@ -59,7 +59,7 @@ export class Act5SfxRouter {
 
   // --- the siege --------------------------------------------------------------------------------
   waveStarted(e: { siegeId: string }): void {
-    this.gate.delete(e.siegeId);
+    void e; // the gate's health carries over between waves (Q4): its cracks are not repeated
     this.flat('sfx.siege.horn');
   }
   waveCleared(): void {
@@ -67,7 +67,7 @@ export class Act5SfxRouter {
   }
   /** `pct` is what remains, 0..100: a crack when it crosses a threshold on the way down, a hit otherwise. */
   gateDamaged(e: { siegeId: string; pct: number }): void {
-    const before = this.gate.get(e.siegeId) ?? 100;
+    const before = this.gate.get(e.siegeId) ?? e.pct; // the first event after a start or a load is the baseline
     this.gate.set(e.siegeId, e.pct);
     const crossed = GATE_CRACK_PCT.some((p) => before > p && e.pct <= p);
     this.flat(crossed ? 'sfx.gate.crack' : 'sfx.gate.hit');

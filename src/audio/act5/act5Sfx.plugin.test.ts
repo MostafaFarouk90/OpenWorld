@@ -48,9 +48,10 @@ describe('act5-sfx plugin', () => {
     const f = fakeCtx();
     plugin.setup(f.ctx as never);
     f.emit('siege.wave.started', { siegeId: 'r27', n: 1 });
+    f.emit('siege.gate.damaged', { siegeId: 'r27', pct: 60 });
     f.emit('siege.gate.damaged', { siegeId: 'r27', pct: 45 });
     f.emit('siege.wave.cleared', { siegeId: 'r27', n: 1 });
-    expect(f.played).toEqual(['sfx.siege.horn', 'sfx.gate.crack', 'sfx.siege.clear']);
+    expect(f.played).toEqual(['sfx.siege.horn', 'sfx.gate.hit', 'sfx.gate.crack', 'sfx.siege.clear']);
     expect(f.boss).toEqual(['+siege', '+siege.lull', '-siege']);
     for (const k of ['sfx.siege.horn', 'sfx.gate.crack']) expect(f.registered.map((r) => r.key)).toContain(k);
   });
@@ -64,13 +65,25 @@ describe('act5-sfx plugin', () => {
     expect(f.played).toEqual(['sfx.vent.crack', 'sfx.ram.hit', 'sfx.siege.lineBreak']);
   });
 
-  it('steps Ulthred on boss.phase 3 and leaves the music alone when he is not the boss', () => {
+  it('listens for the beat on Ulthred\'s phase 3 and for no other boss, and re-derives the siege mix after a load', () => {
     const f = fakeCtx();
+    let beatListeners = 0;
+    const svc = f.ctx.services.get;
+    f.ctx.services.get = ((n: string) => {
+      const s = svc(n) as { onBeat?: () => () => void } | undefined;
+      if (n === 'music' && s) return { ...s, onBeat: () => (beatListeners++, () => {}) };
+      if (n === 'movementMode') return { current: 'siege' };
+      return s;
+    }) as never;
     plugin.setup(f.ctx as never);
     f.emit('boss.phase', { bossId: 'vey', phase: 3, previous: 2 });
-    expect(f.boss).toEqual([]);
-    f.emit('boss.defeated', { bossId: 'ulthred' });
-    expect(f.boss).toEqual([]);
+    expect(beatListeners).toBe(0);
+    f.emit('boss.phase', { bossId: 'ulthred', phase: 3, previous: 2 });
+    expect(beatListeners).toBe(1);
+    f.emit('save.loaded', {});
+    expect(f.boss).toEqual([]); // not synchronously: the music plugin resets its director after this handler
+    f.systems[0].fixedUpdate?.(1 / 60);
+    expect(f.boss).toEqual(['+siege']);
   });
 
   it('the lava and vent loops follow N3\'s service when it exists, and a load stops them', () => {
