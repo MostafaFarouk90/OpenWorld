@@ -1,15 +1,17 @@
 // The look of the world after the ending (N13, plans/act5-N13.md section 6), attached to N0's `worldTint`:
-// - Rekindle: a warm, lighter grade outdoors (taste call T8), faded out inside the Caldera (which keeps the ending's own
-//   look) and held indoors (the interior owns the lights and restores what this wrote, as the ashfall does).
+// - Rekindle: a warm, lighter grade outdoors (taste call T8), held indoors (the interior owns the lights and restores what
+//   this wrote, as the ashfall does). Two FieldBlenders engaged on the same field re-base on each other every frame, so the
+//   grade never overlaps another one: it is 0 in and near every storm region (the Waste and the Caldera inside it, where the
+//   storm look and the Caldera sky write the same fields) and the ashfall over Harrowmark is off under Rekindle.
 // - Let It Die: no grade; three dragons fly closed loops over Harrowmark, the Dragonspine and the Waste's plain (N4's
-//   SiegeDragon, taste call T9), and the Waste's storm fog reads a step darker (look only, taste call T6).
-// Every write goes through the weather's FieldBlender, so the storm look and the ashfall still blend over it. Nothing
-// registers a glow light (the 3/2/0 pool is untouched).
+//   SiegeDragon, taste call T9). The Waste's darker storms are the storm look's own target colour (weather/stormLook.ts).
+// Nothing registers a glow light (the 3/2/0 pool is untouched).
 import * as THREE from 'three';
 import { engineBox, type RegionId } from '../region/regions';
-import type { MapBox } from '../region/regions';
 import { FieldBlender, scaled } from '../weather/fieldBlend';
-import { insideDepth, ramp } from '../weather/weight';
+import { insideDepth, ramp, stormBoxes, type Box } from '../weather/weight';
+import { STORM_EDGE } from '../weather/tuning';
+import { REGION_IDS, REGION_INFO } from '../region/regions';
 import { SiegeDragon } from '../siege/dragons';
 import type { DragonId } from '../siege/roster';
 import type { PathPoint } from '../enemies/wyrm/large/flightPath';
@@ -17,8 +19,6 @@ import type { WorldTintKey } from '../caldera/worldTint';
 
 /** Rekindle's grade (T8): lights toward warm white and a touch brighter, fog and sky toward a pale gold. */
 export const REKINDLE_GRADE = { light: 0xffe6c0, lightMix: 0.25, intensity: 1.08, sky: 0xd9d2bf, skyMix: 0.2 } as const;
-/** Let It Die in the Waste (T6): the fog and sky a step darker, weighted by depth into the Waste's box. */
-export const WASTE_WILD = { sky: 0x4a4642, mix: 0.15 } as const;
 /** Metres over which a box's weight fades in at its edge. */
 export const LOOK_EDGE = 200;
 
@@ -55,15 +55,22 @@ export function flightLoop(f: FlightDef, groundAt: (x: number, z: number) => num
   return out;
 }
 
-/** 1 deep inside a box, 0 at its edge and outside. */
-export function boxWeight(box: MapBox, x: number, z: number): number {
-  const d = insideDepth(box, x, z);
-  return d <= 0 ? 0 : Math.min(1, d / LOOK_EDGE);
+/** The storm regions' boxes (the Waste; the Caldera sits inside it). */
+export function stormRegionBoxes(): Box[] {
+  return stormBoxes(REGION_IDS, (id) => REGION_INFO[id as RegionId], (id) => engineBox(id as RegionId)).boxes;
 }
 
-/** Rekindle's weight at a point: 1 everywhere outdoors, fading out inside the Caldera box. */
-export function rekindleWeight(caldera: MapBox, x: number, z: number): number {
-  return 1 - boxWeight(caldera, x, z);
+/**
+ * Rekindle's weight at a point: 0 inside a storm region and within the storm look's outside band (STORM_EDGE.outside), then
+ * rising to 1 over LOOK_EDGE metres further out. So it never writes a field the storm look or the Caldera sky writes.
+ */
+export function rekindleWeight(storms: readonly Box[], x: number, z: number): number {
+  let w = 1;
+  for (const b of storms) {
+    const out = -insideDepth(b, x, z) - STORM_EDGE.outside;
+    w = Math.min(w, Math.max(0, Math.min(1, out / LOOK_EDGE)));
+  }
+  return w;
 }
 
 export interface LookHost {
@@ -80,14 +87,11 @@ export class AfterEndingLook {
   private readonly warmSky = new FieldBlender();
   private readonly warmLight = new FieldBlender();
   private readonly warmLevel = new FieldBlender();
-  private readonly wild = new FieldBlender();
   private warmW = 0;
-  private wildW = 0;
   private snap = true;
   private dragons: SiegeDragon[] = [];
   private readonly near = new Set<string>();
-  private readonly caldera = engineBox('caldera' as RegionId);
-  private readonly waste = engineBox('ashen-waste' as RegionId);
+  private readonly storms = stormRegionBoxes();
 
   constructor(private readonly host: LookHost) {
     const fog = (): THREE.Color | null => (host.scene.fog instanceof THREE.Fog ? host.scene.fog.color : null);
@@ -106,9 +110,6 @@ export class AfterEndingLook {
         this.warmLight.addColor({ get: () => l.color, target: light.clone() });
       }
     }
-    const dark = new THREE.Color(WASTE_WILD.sky);
-    this.wild.addColor({ get: fog, target: dark.clone() });
-    this.wild.addColor({ get: bg, target: dark.clone() });
   }
 
   get current(): WorldTintKey | null {
@@ -132,15 +133,12 @@ export class AfterEndingLook {
     const cam = this.host.camera();
     const indoors = this.host.indoors();
     if (cam && !indoors) {
-      const warmGoal = this.key === 'rekindle' ? rekindleWeight(this.caldera, cam.x, cam.z) : 0;
-      const wildGoal = this.key === 'let-it-die' ? boxWeight(this.waste, cam.x, cam.z) * (1 - boxWeight(this.caldera, cam.x, cam.z)) : 0;
+      const warmGoal = this.key === 'rekindle' ? rekindleWeight(this.storms, cam.x, cam.z) : 0;
       this.warmW = this.snap ? warmGoal : ramp(this.warmW, warmGoal, frameTime);
-      this.wildW = this.snap ? wildGoal : ramp(this.wildW, wildGoal, frameTime);
       this.snap = false;
       this.warmSky.apply(this.warmW * REKINDLE_GRADE.skyMix);
       this.warmLight.apply(this.warmW * REKINDLE_GRADE.lightMix);
       this.warmLevel.apply(this.warmW);
-      this.wild.apply(this.wildW * WASTE_WILD.mix);
     }
     for (const d of this.dragons) {
       d.update(frameTime);
@@ -157,9 +155,15 @@ export class AfterEndingLook {
     }
   }
 
+  /** After a load: the audio stops every loop, so a dragon still in range announces itself again on the next frame. */
+  onLoaded(): void {
+    this.near.clear();
+    this.snap = true;
+  }
+
   /** Puts back what this wrote and lands the dragons. */
   dispose(): void {
-    for (const b of [this.warmSky, this.warmLight, this.warmLevel, this.wild]) b.restore();
+    for (const b of [this.warmSky, this.warmLight, this.warmLevel]) b.restore();
     this.land();
     this.key = null;
   }

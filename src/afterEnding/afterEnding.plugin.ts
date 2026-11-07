@@ -49,6 +49,8 @@ export function setupAfterEnding(ctx: GameContext, opts: { groundAt?: (x: number
     warn,
   });
   local.push(ctx.services.provide('afterEnding', service));
+  // A load ends the session's waking (a load before the choice replays it, and N12 awaits wake() again).
+  local.push(ctx.events.on('save.loaded', () => service.reset()));
 
   // The tint follows the flags on setup, on every change and on every load (a load never wakes).
   const sync = (): void => tint?.set(endingChoice(ctx.state));
@@ -66,6 +68,7 @@ export function setupAfterEnding(ctx: GameContext, opts: { groundAt?: (x: number
     });
     const l = look;
     local.push(tint.attach((key) => l.set(key)));
+    local.push(ctx.events.on('save.loaded', () => l.onLoaded()));
     local.push(ctx.systems.add({ id: AFTER_ENDING_SYSTEM_ID, renderPhase: 'world', order: 913, render: (_a: number, frameTime: number) => l.step(frameTime) }));
     local.push(() => l.dispose());
   }
@@ -89,7 +92,7 @@ function devHook(ctx: GameContext, service: AfterEnding): () => void {
     console.warn(`[after-ending] unknown ending '${choice}' (rekindle or let-it-die)`);
     return () => {};
   }
-  let wait = 2;
+  let wait = 3;
   let done = false;
   return ctx.systems.add({
     id: 'after-ending.dev',
@@ -97,6 +100,8 @@ function devHook(ctx: GameContext, service: AfterEnding): () => void {
     order: 902,
     fixedUpdate: (dt) => {
       if (done || ctx.services.get('save')?.loading) return;
+      // Under `?act5=m56&new` wait for N0's jump to have played everything before M56 (it lands the player too).
+      if (q?.has('act5') && ctx.state.getFlag('story.d10.complete') !== true) return;
       wait -= dt;
       if (wait > 0) return;
       done = true;

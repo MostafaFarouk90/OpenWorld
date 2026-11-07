@@ -1,5 +1,6 @@
 // Act 4 L7 (plans/act4-L7.md): registers the Act 4 item strings, keeps Gaut's Oathblade in the form the class carries,
 // adds the carried form's poise bonus, and puts Dunstan's forge at the Ashgate refuge from M41.
+import { afterEnding } from '../../afterEnding/flags';
 import type { ClassId } from '../../actors/classes';
 import { PLAYER_ID } from '../../actors/teams';
 import type { GameContext } from '../../core/Game';
@@ -92,7 +93,8 @@ const itemsAct4Plugin: GamePlugin = {
         const a = ctx.anchors.find(forgeAnchor());
         return a ? out.set(a.position.x, a.position.y, a.position.z) : out.set(0, -1e6, 0);
       },
-      enabled: () => ctx.state.getBool('story.m41.complete') && questDone('m14') && !!ctx.anchors.find(forgeAnchor()),
+      // N13: after the ending Dunstan is home at his shipped forge (`use:forge-dunstan` by shop.dunstan), so this one closes.
+      enabled: () => ctx.state.getBool('story.m41.complete') && !afterEnding(ctx.state) && questDone('m14') && !!ctx.anchors.find(forgeAnchor()),
       onInteract: () => void soft<SoftGear>('gear')?.openSmith?.(),
     });
   },

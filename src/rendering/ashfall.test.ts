@@ -29,7 +29,7 @@ describe('Harrowmark ash-fall', () => {
     const off = installAshfall({
       scene,
       camera,
-      state: { getBool: () => gate.v, getFlag: () => undefined },
+      state: { getBool: () => gate.v },
       services: { get: (id: string) => services.get(id) },
       systems: { add: (s: never) => (systems.push(s), () => {}) },
       events: { on: (_n: string, fn: () => void) => ((loaded = fn), () => {}) },
