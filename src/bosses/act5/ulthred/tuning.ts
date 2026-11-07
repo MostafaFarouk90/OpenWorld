@@ -51,7 +51,8 @@ export const DROP_ANCHOR = HAMMER_HALL_DROP_ANCHOR;
 
 export const ULTHRED = {
   level: ACT5_BOSS_BASE_LEVEL[ULTHRED_BOSS_ID],
-  maxHealth: 4800,
+  /** Plan 3 said about 4,800; 6,000 brings the pacing readings to the plan's 6 + 3 + 3 minutes (taste call). */
+  maxHealth: 6000,
   /** Health and damage scale this much per level away from 40, never below 0.5. */
   perLevel: 0.05,
   /** Vey's measured value: a real swing's raw poise is about 10 (x 2 heavy, x 0.5 light). */
