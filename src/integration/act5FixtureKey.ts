@@ -46,6 +46,30 @@ export interface Act5FixtureMeta {
   savedAt: string;
 }
 
+/** N12 PR 2: the live game at the end of the Phase I chain, run A and run B (the Phase J chain's start; SAVE_PHASE_I_END=1). */
+export const act5PhaseIEndName = (run: Act5Run): string => `act5-phase-i-end-${run}`;
+
+export interface Act5PhaseIEndMeta {
+  fixture: string;
+  run: Act5Run;
+  preset: string;
+  chain: string;
+  level: number;
+  xp: number;
+  gold: number;
+  scars: number;
+  deaths: number;
+  favour: Record<string, number>;
+  /** the Phase I choice and outcome flags the Phase J readers use, as the chain left them */
+  choices: Record<string, string | boolean | undefined>;
+  /** the Phase I quest defs the generating build knew */
+  phaseIQuestDefs: string[];
+  /** per-quest trails of Act 4 (from the carried base) and Phase I (this run): the act's pacing without a replay */
+  trails: Record<string, unknown>;
+  act4Trails: Record<string, unknown>;
+  generatedBy: string;
+}
+
 export const act5FixtureName = (id: string): string => `act5-${id}`;
 export const act5ExtraName = (name: string): string => `act5-extra-${name}`;
 

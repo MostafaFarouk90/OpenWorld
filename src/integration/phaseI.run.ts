@@ -24,7 +24,8 @@ import {
 } from './phaseIDriver';
 import { seedFixtureRandom } from './fixtureDeterminism';
 import { act5PacingReport, act5TimingMarkdown, estimateAct5Row, phaseIGate, type Act5PaceRow, type Act5PacingReport } from './act5Timing';
-import { readAct5Base, readAct5BaseMeta } from '../save/__fixtures__/act5';
+import { readAct5Base, readAct5BaseMeta, type Act5BaseMeta } from '../save/__fixtures__/act5';
+import { writePhaseIEnd } from './act5PhaseIEnd';
 import { RIM_A5_PACE, paceAt, type RimPaceRow } from '../quests/content/act5/rim/pacing';
 import { ACT5_PHASE_I, ACT5_PRESET_FLAGS, presetLiveFavour, type Act5FavourPreset } from '../quests/act5Jump';
 import { FAVOUR_TRACKS, snapshotFlag } from '../state/favour';
@@ -94,11 +95,11 @@ export function applyPhaseIPreset(h: ChapterHarness, preset: Act5FavourPreset): 
 /** Plays Phase I on a fresh boot of the run's carried base. */
 export async function runPhaseI(
   run: 'a' | 'b',
-  atEnd?: (h: ChapterHarness, r: PhaseIResult, trails: Record<string, PhaseCTrail>) => Promise<void>,
+  atEnd?: (h: ChapterHarness, r: PhaseIResult, trails: Record<string, PhaseCTrail>, base: Act5BaseMeta) => Promise<void>,
 ): Promise<PhaseIResult> {
   watchDialogueRunner();
   seedFixtureRandom();
-  await readAct5BaseMeta(run);
+  const baseMeta = await readAct5BaseMeta(run);
   const h = await bootFromSave(await readAct5Base(run), { models: true, virtualClock: true, colliderRadius: PHASE_I_COLLIDER_RADIUS });
   try {
     ensure(h.loaded, `Phase I run ${run}: the carried base loaded`);
@@ -209,7 +210,7 @@ export async function runPhaseI(
       siege, end,
       startedOutside: h.of('quest.started').map((e) => e.questId).filter((id) => !ACT5_PHASE_I.includes(id)),
     };
-    if (atEnd) await atEnd(h, result, trails);
+    if (atEnd) await atEnd(h, result, trails, baseMeta);
     return result;
   } finally {
     h.dispose();
@@ -225,7 +226,8 @@ export function definePhaseIRun(run: 'a' | 'b'): void {
     });
     afterEach(() => vi.restoreAllMocks());
     it('plays the Rim quests from the carried base', async () => {
-      const r = await runPhaseI(run);
+      // PR 2: SAVE_PHASE_I_END=1 writes the run's end save, the Phase J chain's start (act5-phase-i-end-<run>.json)
+      const r = await runPhaseI(run, SAVE_PHASE_I_END ? writePhaseIEnd : undefined);
       console.log(JSON.stringify({ ...r, report: undefined, pacing: undefined }, null, 1));
       console.log(r.pacing);
       expect(r.missing.filter((m) => m.includes('skipped')), 'no quest skipped').toEqual([]);
@@ -234,7 +236,7 @@ export function definePhaseIRun(run: 'a' | 'b'): void {
       expect(r.deaths).toBe(0);
       expect(r.gold.atAnvil).not.toBeNull();
       expect(r.missing, 'every Phase I quest in the build').toEqual([]);
-      // the phase's end: the card once, the Foundry still shut (the hold PR 2 retires)
+      // the phase's end: the card once, the floor still shut (M53 not done; the hold is retired, so its flag stays unwritten)
       expect(r.end).toEqual({ cardShown: true, cardSeen: true, floorShut: true, foundryHoldMet: false });
       expect(r.siege.snapshot.taken).toBe(true);
       // no quest outside Phase I started by the run (e.g. D01 offered by Aelfreda's priory tree at the aid tent)
@@ -244,3 +246,5 @@ export function definePhaseIRun(run: 'a' | 'b'): void {
     }, 3_600_000);
   });
 }
+
+const SAVE_PHASE_I_END = ((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.SAVE_PHASE_I_END) === '1';

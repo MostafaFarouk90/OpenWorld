@@ -6,12 +6,13 @@
  *
  *   SAVE_PHASE_H_END=1 npx vitest run src/integration/phaseH.runA src/integration/phaseH.runB   the bases (~10 min each)
  *   GEN_FIXTURES=1 npx vitest run src/integration/act5Fixtures.gen                          the 17 per-id and the extras
+ *   SAVE_PHASE_I_END=1 npm run test:chains -- src/integration/phaseI.runA src/integration/phaseI.runB   the Phase I ends (PR 2)
  */
 import {
-  act5BaseName, act5ExtraName, act5FixtureName, type Act5BaseMeta, type Act5FixtureMeta, type Act5Run,
+  act5BaseName, act5ExtraName, act5FixtureName, act5PhaseIEndName, type Act5BaseMeta, type Act5FixtureMeta, type Act5PhaseIEndMeta, type Act5Run,
 } from '../../integration/act5FixtureKey';
 
-export { act5BaseName, act5ExtraName, act5FixtureName, type Act5BaseMeta, type Act5FixtureMeta, type Act5Run };
+export { act5BaseName, act5ExtraName, act5FixtureName, act5PhaseIEndName, type Act5BaseMeta, type Act5FixtureMeta, type Act5PhaseIEndMeta, type Act5Run };
 
 async function readJson(rel: string): Promise<Record<string, unknown>> {
   const fsName = 'node:fs';
@@ -29,3 +30,9 @@ export const readAct5Extra = (name: string): Promise<Record<string, unknown>> =>
 export const readAct5Base = (run: Act5Run): Promise<Record<string, unknown>> => readJson(`./act5/${act5BaseName(run)}.json`);
 export const readAct5BaseMeta = async (run: Act5Run): Promise<Act5BaseMeta> =>
   (await readJson(`./act5/${act5BaseName(run)}.meta.json`)) as unknown as Act5BaseMeta;
+export const readAct5PhaseIEnd = (run: Act5Run): Promise<Record<string, unknown>> => readJson(`./act5/${act5PhaseIEndName(run)}.json`);
+export const readAct5PhaseIEndMeta = async (run: Act5Run): Promise<Act5PhaseIEndMeta> =>
+  (await readJson(`./act5/${act5PhaseIEndName(run)}.meta.json`)) as unknown as Act5PhaseIEndMeta;
+/** The Phase I end save written on PR 1's build (the hold standing), kept to show it loads on the final build. */
+export const ACT5_PHASE_I_BUILD_END = 'act5-phase-i-build-end-a';
+export const readAct5PhaseIBuildEnd = (): Promise<Record<string, unknown>> => readJson(`./act5/${ACT5_PHASE_I_BUILD_END}.json`);

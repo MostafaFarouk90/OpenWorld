@@ -9,7 +9,8 @@ import { ACT5_JUMP_IDS, ACT5_PREREQS, ACT5_PRESET_FAVOUR, ACT5_START_XP, ACT5_PH
 import { act5JumpPorts } from '../quests/act5Jump.plugin';
 import { ACT4_JUMP_IDS } from '../quests/act4Jump';
 import { actEnding } from './actEndings';
-import { ACT5_FIXTURE_BASE_RUN, act5BaseName, act5ExtraName, act5FixtureName, type Act5BaseMeta, type Act5FixtureMeta } from './act5FixtureKey';
+import { ACT5_FIXTURE_BASE_RUN, act5BaseName, act5ExtraName, act5FixtureName, act5PhaseIEndName, type Act5BaseMeta, type Act5FixtureMeta } from './act5FixtureKey';
+import { ACT5_PHASE_I_BUILD_END } from '../save/__fixtures__/act5';
 import { ACT5_EXTRAS, generateAct5Fixture } from './act5Fixtures';
 import { act5FixtureText } from './act5CarriedBase';
 import { bootFromSave } from './chapterHarness';
@@ -77,7 +78,7 @@ describe('the committed Act 5 fixtures', () => {
 
   it('has nothing beyond the two bases, the 17 ids and the named extras', () => {
     const names = new Set(Object.keys(FILES).map((k) => k.split('/').pop()!.replace(/(\.meta)?\.json$/, '')));
-    const want = new Set([act5BaseName('a'), act5BaseName('b'), ...ACT5_JUMP_IDS.map(act5FixtureName), ...ACT5_EXTRAS.map((e) => act5ExtraName(e.name))]);
+    const want = new Set([act5BaseName('a'), act5BaseName('b'), act5PhaseIEndName('a'), act5PhaseIEndName('b'), ACT5_PHASE_I_BUILD_END, ...ACT5_JUMP_IDS.map(act5FixtureName), ...ACT5_EXTRAS.map((e) => act5ExtraName(e.name))]);
     expect([...names].filter((n) => !want.has(n))).toEqual([]);
     for (const e of ACT5_EXTRAS) expect(names.has(act5ExtraName(e.name)), e.name).toBe(true);
   });
