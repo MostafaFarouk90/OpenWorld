@@ -1,6 +1,7 @@
 // Act 4 L14 (census B4, open-followups "R05 fog hounds"): a headless fight of R05's three fog hounds (band 9-11, the real
 // hound AI, moves and hit tracing on the enemies' fake host) against a level 9 Knight standing his ground. Report only: it
-// runs with SIM_R05=1 and prints a table; the numbers are in plans/act4-L14.md. Assumptions: the squire's sword (10 a hit,
+// runs with SIM_R05=1 and prints a table; the numbers are in plans/act4-L14.md. It plays the shipped group, so its options
+// (R05_FOG_OPTIONS) apply. Assumptions: the squire's sword (10 a hit,
 // one swing every 0.75 s at a hound in 2.6 m, walking at the nearest one otherwise), a dodge or block taken on a telegraph with the profile's chance gives a
 // 0.45 s window of no damage, no potions, no skills, no Second Wind.
 import type * as THREE from 'three';
@@ -8,11 +9,16 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { FIXED_TIMESTEP as DT } from '../config/constants';
 import { EnemyManager } from '../enemies/EnemyManager';
 import { FakeHost, loadKnight } from '../enemies/testing/fakeHost';
-import { R05_FOG_BAND } from '../quests/content/act2/spawners';
+import { ACT2_SPAWNERS_A12, R05_FOG_BAND } from '../quests/content/act2/spawners';
 import { baseMaxHealthForLevel } from '../progression/tuning';
 import type { SpawnerDef } from '../enemies/types';
 
 // no Node types in the app tsconfig: read the env the way fixtures.gen.test.ts does
+/** SIM_R05_DAMAGE=<x> and SIM_R05_HEALTH=<x> try scales over the shipped ones (tuning only). */
+const SCALE = (): { damageScale?: number; healthScale?: number } => {
+  const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
+  return { ...(env.SIM_R05_DAMAGE ? { damageScale: Number(env.SIM_R05_DAMAGE) } : {}), ...(env.SIM_R05_HEALTH ? { healthScale: Number(env.SIM_R05_HEALTH) } : {}) };
+};
 const RUN = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.SIM_R05 === '1';
 
 let gltf: { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
@@ -38,9 +44,9 @@ function rand(seed: number): () => number {
 }
 
 function fight(seed: number, p: Profile): { died: boolean; seconds: number; healthLeft: number; atFlee: number; hits: number } {
-  const def: SpawnerDef = {
-    id: 'r05', tag: 'r05.fog', enemy: 'ember-hound', count: 3, anchor: 'a', band: R05_FOG_BAND, activation: 'manual', respawn: 'never', leash: false,
-  };
+  // the shipped R05 group (count, band and its own options), placed at a test anchor
+  const real = ACT2_SPAWNERS_A12.find((d) => d.id === 'q12.r05.fog')!;
+  const def: SpawnerDef = { ...real, id: 'r05', anchor: 'a', memberAnchors: undefined, activation: 'manual', leash: false, options: { ...real.options, ...SCALE() } };
   const fake = new FakeHost(gltf.scene, { playerFeet: { x: 0, y: 0, z: -12 } });
   fake.defineAnchor('a', 0, 0);
   const m = new EnemyManager(fake.host, FakeHost.factory(gltf), { spawners: [def], seed });
