@@ -51,7 +51,7 @@ describe('the refuge covers every service inside the walls', () => {
       expect(trainerPlacement(kit, BEFORE_M38).moved, kit.classId).toBe(false);
     }
     expect(trainerPlacement(DEFAULT_KITS.knight, AFTER_M41).npcId).toBe('rook');
-    expect(TRAINER_POSTS).toEqual(ACT4_TRAINER_POSTS);
+    expect(TRAINER_POSTS.slice(0, ACT4_TRAINER_POSTS.length)).toEqual(ACT4_TRAINER_POSTS);
   });
   it('every Harrowmark NPC is moved, shut on purpose or has no service, and the shut list holds no stale entry', () => {
     const moved = new Set<string>([...REFUGE_VENDORS, ...ACT4_TRAINER_POSTS.map((r) => r.npcId)]);
@@ -92,9 +92,9 @@ describe('Act 4 vendor open rules', () => {
 
 describe('wired into L0\'s tables', () => {
   it('VENDOR_OPEN_WHEN and VENDOR_POSTS carry the L7 rows', () => {
-    // v0.9 item 15 adds the two Act 5 vendors, closed until N7.
-    expect(VENDOR_OPEN_WHEN).toEqual({ ...ACT4_VENDOR_OPEN_WHEN, alric: { any: ['region.never'] }, 'maud-rim': { any: ['region.never'] } });
-    expect(VENDOR_POSTS).toEqual(ACT4_VENDOR_POSTS);
+    // N7 adds the Act 5 rows after these (economy/rimCamp.act5.ts, tested in stock.act5.test.ts).
+    expect(VENDOR_OPEN_WHEN).toMatchObject(ACT4_VENDOR_OPEN_WHEN);
+    expect(VENDOR_POSTS.slice(0, ACT4_VENDOR_POSTS.length)).toEqual(ACT4_VENDOR_POSTS);
   });
   it('each refuge shop stands in the city before M38 and at the refuge after M41; Aldous stays put and closes', () => {
     for (const v of REFUGE_VENDORS) {

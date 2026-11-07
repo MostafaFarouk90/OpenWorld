@@ -4,6 +4,9 @@ import type { FavourBand, FavourTrack } from '../state/favour';
 import { ACT3_DISCOUNTS, ACT3_SELL_FLAT, ACT3_SHOP_LIST_PRICES, ACT3_VENDORS } from './stock.act3';
 import { ACT4_DISCOUNTS, ACT4_SHOP_LIST_PRICES, HILD, WENNA, WULFHILD } from './stock.act4';
 import { ACT4_VENDOR_OPEN_WHEN, ACT4_VENDOR_POSTS } from './refugePosts.act4';
+import { ACT5_SELL_FLAT } from '../items/act5/catalog';
+import { ACT5_VENDOR_OPEN_WHEN, ACT5_VENDOR_POSTS } from './rimCamp.act5';
+import { ALRIC, MAUD_RIM } from './stock.act5';
 
 export type VendorId =
   | 'wystan' | 'merrin' | 'edda' | 'wynn' | 'dunstan' | 'gerta' | 'ashdown'
@@ -133,8 +136,9 @@ export const VENDORS: Readonly<Record<VendorId, VendorDef>> = {
   wulfhild: WULFHILD,
   hild: HILD,
   // v0.9 item 15: reserved, empty until N7 (closed by VENDOR_OPEN_WHEN below).
-  alric: { id: 'alric', buys: false, lines: [] },
-  'maud-rim': { id: 'maud-rim', buys: false, lines: [] },
+  // N7 (economy/stock.act5.ts): unlimited lines only, so neither enters the shop save.
+  alric: ALRIC,
+  'maud-rim': MAUD_RIM,
   slagg: {
     id: 'slagg',
     buys: true,
@@ -201,6 +205,7 @@ export const SELL_FLAT: Readonly<Record<string, number>> = {
   coal: 5,
   'cinder-steel-ingot': 40,
   ...ACT3_SELL_FLAT,
+  ...ACT5_SELL_FLAT,
 };
 
 export const VENDOR_IDS = Object.keys(VENDORS) as VendorId[];
@@ -251,9 +256,8 @@ export function discountPercent(
 export const VENDOR_OPEN_WHEN: Partial<Record<VendorId, FlagCondition>> = {
   // L7 (economy/refugePosts.act4.ts): Wenna from M38, Aldous until M38, Hild from M41, Wulfhild from M43.
   ...ACT4_VENDOR_OPEN_WHEN,
-  // v0.9 item 15: closed until N7 writes their rows (the Rim Camp from M49, RIM_CAMP_MOVE_FLAG).
-  alric: { any: ['region.never'] },
-  'maud-rim': { any: ['region.never'] },
+  // N7 (economy/rimCamp.act5.ts): Alric from M47, Maud's rim kitchen from M49 with F4 Cleanse.
+  ...ACT5_VENDOR_OPEN_WHEN,
 };
 
 /** v0.9 item 15: the Rim Camp's posts move inside the Rim Gate when M49 completes (N7's VENDOR_POSTS and TRAINER_POSTS rows). */
@@ -269,7 +273,7 @@ export interface VendorPostRow {
   when: FlagCondition;
 }
 /** L7: the refuge shops from M41, Hild at Ashgate and Wulfhild at the Walker Camp (economy/refugePosts.act4.ts). */
-export const VENDOR_POSTS: VendorPostRow[] = [...ACT4_VENDOR_POSTS];
+export const VENDOR_POSTS: VendorPostRow[] = [...ACT4_VENDOR_POSTS, ...ACT5_VENDOR_POSTS];
 
 /** The anchor `shop:<id>` stands at now: the last holding VENDOR_POSTS row, else `shop.<id>`. */
 export function vendorAnchor(v: VendorId, flags: FlagReader, rows: readonly VendorPostRow[] = VENDOR_POSTS): string {

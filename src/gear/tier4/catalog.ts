@@ -5,6 +5,7 @@ import { LIST_PRICES } from '../../economy/prices';
 import type { ItemDef } from '../../hud/ports';
 import { registerItems } from '../../inventory/items';
 import type { GearRow } from '../catalog';
+import { TIER5_ROWS } from '../tier5/catalog';
 
 /** Tier 4 materials. Scales and hide are only ever shed or sloughed: no loot table carries them (catalog.test scans). */
 export const TIER4_MATERIALS = { scale: 'shed-wyrm-scale', hide: 'wyrm-hide', rimeIron: 'rime-iron' } as const;
@@ -59,7 +60,7 @@ export const TIER4_RECIPES: Readonly<Record<string, string>> = {
 
 /** Design 9.4 and 9.5 work hide; the rest scales. */
 export function tier4MaterialFor(itemId: string): string {
-  const r = [...TIER4_ROWS, ...TIER4_REWARD_ROWS].find((x) => x.id === itemId);
+  const r = [...TIER4_ROWS, ...TIER4_REWARD_ROWS, ...TIER5_ROWS].find((x) => x.id === itemId);
   const cls = r?.classes[0];
   return cls === 'ashblade' || cls === 'pathfinder' ? TIER4_MATERIALS.hide : TIER4_MATERIALS.scale;
 }
