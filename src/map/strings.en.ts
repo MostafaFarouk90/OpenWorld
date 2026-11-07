@@ -35,6 +35,7 @@ export const MAP_STRINGS_EN: Record<string, string> = {
   'map.region.brightwater': 'Brightwater',
   'map.region.harrowmark': 'Harrowmark',
   'map.region.harrowmark.held': 'Harrowmark (held by Vey)',
+  'map.region.harrowmark.retaken': 'Harrowmark (retaken)',
   'map.region.cinderreach': 'Cinderreach',
   'map.region.oldsmoke': 'Oldsmoke',
   // v0.7: the two Act 3 regions stop being reserved, so the map names them once they open.

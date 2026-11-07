@@ -147,6 +147,11 @@ export interface NpcSpec {
    * list, absent while any holds. A retirement (npcs/retire.ts) adds its flag to this.
    */
   absentWhen?: string | readonly string[];
+  /**
+   * Act 5 (N13, v0.9 item 10): an `absentWhen` flag (the key) stops counting while its value flag holds. The occupied
+   * city's townsfolk (`story.m38.complete`) come home in the world after the ending (`world.afterEnding`).
+   */
+  absentUnless?: Readonly<Record<string, string>>;
   /** The NPC is not spawned until this flag is true (Vey from M08, Ashdown from M07). Combines with `absentWhen`. */
   presentWhen?: string;
   /** Once `whenFlag` is true the NPC walks in a straight line to the anchor `to` (the only walking NPCs); on a load it just stands there. */

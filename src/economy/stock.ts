@@ -7,6 +7,7 @@ import { ACT4_VENDOR_OPEN_WHEN, ACT4_VENDOR_POSTS } from './refugePosts.act4';
 import { ACT5_SELL_FLAT } from '../items/act5/catalog';
 import { ACT5_VENDOR_OPEN_WHEN, ACT5_VENDOR_POSTS } from './rimCamp.act5';
 import { ALRIC, MAUD_RIM } from './stock.act5';
+import { rowHoldsAfterEnding } from '../afterEnding/posts';
 
 export type VendorId =
   | 'wystan' | 'merrin' | 'edda' | 'wynn' | 'dunstan' | 'gerta' | 'ashdown'
@@ -278,7 +279,8 @@ export const VENDOR_POSTS: VendorPostRow[] = [...ACT4_VENDOR_POSTS, ...ACT5_VEND
 /** The anchor `shop:<id>` stands at now: the last holding VENDOR_POSTS row, else `shop.<id>`. */
 export function vendorAnchor(v: VendorId, flags: FlagReader, rows: readonly VendorPostRow[] = VENDOR_POSTS): string {
   let at = `shop.${v}`;
-  for (const r of rows) if (r.vendorId === v && flagConditionHolds(r.when, flags)) at = r.anchorId;
+  // N13 (afterEnding/posts.ts): in the world after the ending the refuge and Rim Camp rows stop holding (the shops go home).
+  for (const r of rows) if (r.vendorId === v && flagConditionHolds(r.when, flags) && rowHoldsAfterEnding(r.anchorId, v, flags)) at = r.anchorId;
   return at;
 }
 

@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import type { GameContext } from '../core/Game';
 import { ACT4_GATE_FLAG, engineBox } from '../region/regions';
+import { ashfallScale } from '../afterEnding/flags';
 import type { QualityStep } from '../vfx/tuning';
 import { FieldBlender, scaled } from '../weather/fieldBlend';
 import { AshParticles } from '../weather/particles';
@@ -77,7 +78,8 @@ export function installAshfall(ctx: Pick<GameContext, 'scene' | 'camera' | 'stat
       const cam = camera.position;
       const i = ctx.services.get('interiors') as { current: string | null } | undefined;
       const indoors = !!i?.current;
-      const goal = ashfallWeight(box, cam.x, cam.z, ctx.state.getBool(ACT4_GATE_FLAG), indoors);
+      // Act 5 (N13): the world after the ending clears (Rekindle) or thins (Let It Die) the ashfall.
+      const goal = ashfallWeight(box, cam.x, cam.z, ctx.state.getBool(ACT4_GATE_FLAG), indoors) * ashfallScale(ctx.state);
       // Indoors the weight holds (the interior's camera is elsewhere, and nothing outdoors shows): the door back out
       // finds the look where it was, with no fade in. A load's snap waits for the first outdoor frame.
       if (!indoors) {

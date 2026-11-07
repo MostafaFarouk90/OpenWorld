@@ -4,6 +4,7 @@
 // the list from the layout and the post rules, so a new NPC inside the walls cannot slip through.
 import type { NpcSpec } from '../../region/layoutTypes';
 import { OCCUPIED_FLAG } from './sites';
+import { AFTER_ENDING_FLAG } from '../../region/act5Regions';
 
 export const OCCUPIED_ABSENT: readonly string[] = [
   'aldith', 'whitlock', 'wace', 'stallholder-1', 'stallholder-2', 'guild-doorman', 'pellam', 'sexton', 'fence', 'crabbe',
@@ -16,6 +17,7 @@ export function withOccupiedAbsent(specs: readonly NpcSpec[], ids: readonly stri
   return specs.map((s) => {
     if (!set.has(s.id)) return s;
     const own = s.absentWhen === undefined ? [] : typeof s.absentWhen === 'string' ? [s.absentWhen] : [...s.absentWhen];
-    return { ...s, absentWhen: own.includes(OCCUPIED_FLAG) ? own : [...own, OCCUPIED_FLAG] };
+    // N13 (v0.9 item 10): they come home in the world after the ending.
+    return { ...s, absentWhen: own.includes(OCCUPIED_FLAG) ? own : [...own, OCCUPIED_FLAG], absentUnless: { ...s.absentUnless, [OCCUPIED_FLAG]: AFTER_ENDING_FLAG } };
   });
 }
