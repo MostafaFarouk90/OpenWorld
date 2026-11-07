@@ -14,7 +14,6 @@ import { M43_DANCE_ASKED, M43_MASTER } from '../../../../quests/content/act4/was
 import { R24_CHOICE, R24_CHOSEN_EVENT } from '../../../../quests/content/act4/waste/r24.quest';
 import { R25_NO_CANDLE, R25_SPARE_ASKED } from '../../../../quests/content/act4/waste/r25.quest';
 import { D08_BOSS_FLAG } from '../../../../quests/content/act4/waste/d08.quest';
-import { SCENE_M45_VOICE, SCENE_M46_RIM } from '../../../../quests/content/act4/waste/scenes';
 import { WASTE_A4_NODES } from '../../../../quests/content/act4/waste/pacing';
 import { WASTE_A4_TALKS } from './talks';
 import { WASTE_A4_DIALOGUE_STRINGS, WASTE_A4_EXTENSIONS, WASTE_A4_NOTE_DIALOGUES, WASTE_A4_TREES } from './index';
@@ -183,7 +182,7 @@ describe('strings', () => {
 });
 
 describe('the pacing rows count the real trees', () => {
-  it('each quest\'s nodes are its talks on the shorter branch, the notes it reads and its scene lines', () => {
+  it('each quest\'s nodes are its talks on the shorter branch and R24\'s choice (notes and scene lines are not counted)', () => {
     const per: Record<string, number> = {};
     for (const t of WASTE_A4_TALKS) {
       const { dr } = setup(worldAt(t.quest, t.objective, t.objective === 'report' ? EXTRA[t.quest] : {}));
@@ -194,16 +193,7 @@ describe('the pacing rows count the real trees', () => {
     const ch = setup(worldAt('r24', 'choose'));
     ch.dr.start('npc-wulfhild', 'wulfhild');
     per.r24! += runOut(ch.dr, () => 'all').nodes.length;
-    const notes = new Map(WASTE_A4_NOTE_DIALOGUES.map((d) => [d.id, d.nodes.length]));
-    for (const q of WASTE_A4_QUEST_DEFS) {
-      for (const o of q.objectives) {
-        const m = o.type === 'event' && o.target === 'dialogue.ended' ? (o.match as { npcId?: string[] } | undefined)?.npcId ?? [] : [];
-        for (const id of m) per[q.id] = (per[q.id] ?? 0) + (notes.get(id) ?? 0);
-      }
-    }
-    const lines = (d: { steps: readonly object[] }) => d.steps.filter((x) => 'line' in x).length;
-    per.m45! += lines(SCENE_M45_VOICE);
-    per.m46! += lines(SCENE_M46_RIM);
+    // the shipped convention (L13, ruled 2026-11-07): a note is one search beat, not dialogue; scenes are not dialogue either
     expect(per).toEqual({ ...WASTE_A4_NODES });
   });
 });
