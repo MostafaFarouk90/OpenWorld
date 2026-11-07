@@ -86,6 +86,14 @@ export class Act5SfxRouter {
     const key = own(RAM_SFX_ACT5, name);
     if (key) this.flat(key);
   }
+  /** N4's `siege.dragon.breath`: the fire lands about a second after it. */
+  dragonBreath(): void {
+    this.flat('sfx.dragon.breath');
+  }
+  /** N4's `siege.gong`: the rim gong that starts waves 2 to 4. */
+  gong(): void {
+    this.flat('sfx.gong.rim');
+  }
   /** N5's `enemies.shieldLine.broken`. */
   lineBroken(): void {
     this.flat('sfx.siege.lineBreak');
