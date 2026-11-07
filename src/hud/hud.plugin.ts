@@ -253,6 +253,8 @@ const hudPlugin: GamePlugin = {
     ctx.events.on('waves.failed', () => structureBar.reset());
     ctx.events.on('save.loaded', () => structureBar.loaded());
     mount('top-center', structureBar, 2);
+    // v0.9 (Act 5 N9): lets the siege HUD take over the Rim Gate's and the rams' bars.
+    ctx.services.provide('structureBar', { suppress: (pred) => structureBar.suppress(pred) });
 
     // The Party screen: key P (read-only outside the waystone window) or a waystone rest with two companions.
     let closeParty: (() => void) | null = null;
