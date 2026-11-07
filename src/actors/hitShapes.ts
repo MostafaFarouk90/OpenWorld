@@ -10,6 +10,10 @@ export interface HitCylinder {
 export const PROJECTILE_HIT_SHAPES: ReadonlyMap<string, HitCylinder> = new Map([
   // The cradle hurtbox's rim (3.0 m, src/bosses/act4/bellowsEngine/BellowsModel.ts) and the stacks' height.
   ['bellows-engine', { radius: 3.0, height: 5.0 }],
+  // L6 PR 2: the Last Gong's disc is 0.85 m round, hung 1.6 m up its frame; Eormen is a Rogue_Hooded at 1.4 hovering 0.25 m
+  // (about 2.6 m to the crown), taller than the person-sized cylinder.
+  ['eormen-gong', { radius: 1.0, height: 2.6 }],
+  ['eormen', { radius: 0.6, height: 2.6 }],
 ]);
 
 /** The projectile hit cylinder for `kind`, or null for the default person-sized one. */

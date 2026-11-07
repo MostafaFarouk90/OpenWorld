@@ -117,7 +117,8 @@ describe("Hrolf's master-book talk", () => {
     const grants = ext.nodes.flatMap((n) => (n.effects ?? []).filter((e: Effect) => 'grantMasterBook' in e));
     expect(grants).toEqual([{ grantMasterBook: 'warden' }]);
     expect(ext.nodes.slice(0, BASE.nodes.length)).toEqual(BASE.nodes);
-    for (const n of ext.nodes.slice(BASE.nodes.length)) expect(n.id.startsWith('a3-')).toBe(true);
+    // Act 4 (L11) adds Hrolf's M46 talk after the Act 3 nodes (`a4w-`)
+    for (const n of ext.nodes.slice(BASE.nodes.length)) expect(n.id.startsWith('a3-') || n.id.startsWith('a4w-'), n.id).toBe(true);
   });
 
   it('every added node and scene line has a string, registered with the dialogue strings', () => {

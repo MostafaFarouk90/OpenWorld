@@ -12,8 +12,8 @@ const NEVER: FlagCondition = { any: ['region.never'] };
 /** M41 opens the Ash Road (the shipped `fog.ashen-waste` face opens then too). */
 export const ASH_ROAD_OPEN_WHEN: FlagCondition = { all: ['story.m41.complete'] };
 
-/** The Waste's edge face north of Ashgate opens with the Waste itself (M42 accepted, the Phase G hold retired). */
-export const WASTE_EDGE_OPEN_WHEN: FlagCondition = { all: ['story.m42.started', 'story.phase.wasteOpen'] };
+/** The Waste's edge face north of Ashgate opens with the Waste itself: M42 accepted (L13 PR 2 retired the Phase G hold). */
+export const WASTE_EDGE_OPEN_WHEN: FlagCondition = { all: ['story.m42.started'] };
 
 /** Q2: Harrowmark is Vey's from the betrayal (M38) until Act 5. */
 export const OCCUPIED_FLAG = 'story.m38.complete';

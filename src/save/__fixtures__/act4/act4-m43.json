@@ -63,7 +63,17 @@
           "lore.rubbing.anvil-6",
           "howto.gliding",
           "lore.place.frostfang-aerie",
-          "corvin-skarl"
+          "corvin-skarl",
+          "howto.escorts",
+          "lore.place.crucible",
+          "lore.place.council-chamber",
+          "lore.person.vey",
+          "lore.person.gaut",
+          "lore.person.wulfhild",
+          "lore.person.hild",
+          "howto.ash-storms",
+          "lore.place.ashen-waste",
+          "howto.ash-mask"
         ]
       },
       "version": 1
@@ -971,6 +981,7 @@
         "items": {
           "aldiths-stout": 1,
           "ansgars-blessing": 1,
+          "ash-shroud-mask": 1,
           "ashforged-longsword": 1,
           "ashmare-saddle": 1,
           "ashmare-saddlebags": 1,
@@ -1106,7 +1117,7 @@
         ],
         "respecUsed": false,
         "storyPoints": 3,
-        "xp": 66877
+        "xp": 67727
       },
       "version": 2
     },
@@ -1499,6 +1510,10 @@
             "state": "completed"
           },
           "m41": {
+            "objectives": {},
+            "state": "completed"
+          },
+          "m42": {
             "objectives": {},
             "state": "completed"
           },
@@ -2243,7 +2258,7 @@
           "story.m41.complete": true,
           "story.m41.started": true,
           "story.m42.complete": true,
-          "story.phase.wasteOpen": true,
+          "story.m42.started": true,
           "story.r01.rootWoke": true,
           "story.r01.shawlRead": true,
           "story.r03.copperTaken": true,

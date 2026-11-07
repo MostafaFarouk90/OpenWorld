@@ -45,8 +45,9 @@ describe('the "Waste is next" card', () => {
     expect(ctx.state.getBool(WASTE_CARD_SEEN_FLAG)).toBe(true);
     const text = textOf(card.element);
     expect(text).toContain(PHASE_G_STRINGS_EN['hud.phaseG.waste.title']);
-    expect(text).toContain(PHASE_G_STRINGS_EN['hud.phaseG.waste.line.held']);
-    expect(text).toContain('the way in is not yet open');
+    expect(text).toContain(PHASE_G_STRINGS_EN['hud.phaseG.waste.line']);
+    // the hold is retired (L13 PR 2): the line no longer says the way in is shut
+    expect(text).not.toContain('not yet open');
     expect(text).not.toContain('later update');
     card.dismiss();
     expect(card.visible).toBe(false);
@@ -83,7 +84,7 @@ describe('the "Waste is next" card', () => {
     expect(card.visible).toBe(true);
   }, PLUGIN_TEST_TIMEOUT);
 
-  it('does not show for the hold alone, only for M41', async () => {
+  it('does not show for the retired hold flag alone (an old save may carry it), only for M41', async () => {
     const { ctx, card } = await boot();
     ctx.state.setFlag(WASTE_OPEN_FLAG, true);
     card.update(0.016);

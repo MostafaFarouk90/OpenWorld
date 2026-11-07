@@ -2,8 +2,8 @@
 // (L13 PR 1 owns the deterministic `act4-*.json` fixtures on this plumbing). Acts 1 to 3 are replayed through the shipped
 // `?act3=` runner (Act 3 in order greyfen, to D06 complete) with every ending card and camp marked seen, so no card plays
 // over the player. Then `story.gate.a4` is set, the Act 4 prerequisites are injected the Act 3 way (`story.<id>.complete`,
-// plus start and complete when the quests service knows the id), and the player's XP is topped up to ACT4_START_XP. A Phase H
-// target also sets `story.phase.wasteOpen` until L13 retires that hold. The player lands at the giver's post at the 1.8 m
+// plus start and complete when the quests service knows the id), and the player's XP is topped up to ACT4_START_XP (the
+// Phase H hold is retired: no target sets `story.phase.wasteOpen`). The player lands at the giver's post at the 1.8 m
 // stand-off (ACT4_GIVER_STAND_OFF) when the giver is placed, else at the phase's placeholder point: the Harrowmark South Gate
 // road (outside the ring wall, so the no-strand rule never applies) or Ashgate.
 import { act3Prereqs, Act3Jump, type Act3JumpPorts } from './act3Jump';
@@ -160,7 +160,6 @@ export class Act4Jump {
     }
     if (this.phase === 'act4') {
       const prereqs = ACT4_PREREQS[this.id] ?? [];
-      if (phaseOf(this.id) === 'H') p.setFlag(WASTE_OPEN_FLAG, true);
       for (const q of prereqs) this.inject(q, 'act4');
       p.topUpXp?.(ACT4_START_XP);
       this.phase = 'quiet';

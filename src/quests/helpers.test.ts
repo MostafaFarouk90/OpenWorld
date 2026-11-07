@@ -18,6 +18,7 @@ import { m03 } from './content/m03.quest';
 import { m01 } from './content/m01.quest';
 import { m04 } from './content/m04.quest';
 import { m05 } from './content/m05.quest';
+import { WASTE_A4_POST_ROWS } from './content/act4/waste/npcs';
 
 describe('R01 torch bridge', () => {
   it('records the first torch clear while R01 is active, never otherwise', () => {
@@ -226,7 +227,7 @@ describe('quest posts', () => {
   it('never puts Tobb in a rule', () => {
     expect(POST_RULES.map((r) => r.npcId)).not.toContain('tobb');
     const w = makeWorld();
-    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager })).filter((id) => !DEEPGATE_NPCS.has(id) && !SUMMIT_POST_RULES.some((r) => r.npcId === id))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'refugee-1', 'refugee-2', 'gerta', 'edric', 'grisel-steward', 'vey', 'merrin', 'grisel', 'pennard', 'edda', 'aldwin', 'osgar', 'ketta', 'wystan', 'dunstan', 'ashdown']);
+    expect(Object.keys(resolvePosts(POST_RULES, { state: w.state, quests: w.manager })).filter((id) => !DEEPGATE_NPCS.has(id) && !SUMMIT_POST_RULES.some((r) => r.npcId === id) && !WASTE_A4_POST_ROWS.some((r) => r.npcId === id))).toEqual(['gaut', 'aelfreda', 'stane', 'rook', 'refugee-1', 'refugee-2', 'gerta', 'edric', 'grisel-steward', 'vey', 'merrin', 'grisel', 'pennard', 'edda', 'aldwin', 'osgar', 'ketta', 'wystan', 'dunstan', 'ashdown']);
   });
 });
 
@@ -344,6 +345,28 @@ describe('journal tabs', () => {
     off();
     buttons()[0].click();
     expect(root.textContent).toContain('T:quest.journal.empty');
+  });
+  it('notes (Act 4 L9): drawn above the quests in order, a null or throwing provider is skipped, dispose removes once', () => {
+    const { state } = fakeState();
+    const tabs = new JournalTabs(defaultSlots((k) => state.getFlag(k), () => {}));
+    let show = true;
+    const offA = tabs.registerNote(() => (show ? { id: 'a', title: 'Go to the Keep.' } : null));
+    tabs.registerNote(() => { throw new Error('boom'); });
+    tabs.registerNote(() => ({ id: 'b', title: 'Before X, finish:', lines: ['One', 'Two'] }));
+    expect(tabs.notes().map((n) => n.id)).toEqual(['a', 'b']);
+    const w = createJournalPanel(model, doc, { tabs, t });
+    const root = w.element as unknown as El;
+    const notes = () => root.find((e) => e.className.includes('journal-note '));
+    expect(notes().map((n) => n.dataset.note)).toEqual(['a', 'b']);
+    expect(root.textContent).toContain('Before X, finish:OneTwo');
+    // The quests (here the empty line) still draw under the notes.
+    expect(root.textContent).toContain('T:quest.journal.empty');
+    show = false;
+    w.refresh();
+    expect(notes().map((n) => n.dataset.note)).toEqual(['b']);
+    offA(); offA();
+    show = true;
+    expect(tabs.notes().map((n) => n.id)).toEqual(['b']);
   });
   it('falls back to Quests when the active tab becomes hidden', () => {
     const { state, flags } = fakeState();

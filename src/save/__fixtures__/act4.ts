@@ -24,3 +24,9 @@ export const readAct4FixtureMeta = async (id: string): Promise<Act4FixtureMeta> 
 export const readAct4Base = (): Promise<Record<string, unknown>> => readJson(`./act4/${ACT4_BASE_NAME}.json`);
 export const readAct4BaseMeta = async (): Promise<Act4BaseMeta> =>
   (await readJson(`./act4/${ACT4_BASE_NAME}.meta.json`)) as unknown as Act4BaseMeta;
+
+/** The Phase G chain's end saves (run A and run B, `SAVE_PHASE_G_END=1` on phaseG.runA/B): Phase H's chain starts from them. */
+export const phaseGEndName = (run: 'a' | 'b'): string => `act4-phase-g-end-${run}`;
+export const readPhaseGEnd = (run: 'a' | 'b'): Promise<Record<string, unknown>> => readJson(`./act4/${phaseGEndName(run)}.json`);
+export const readPhaseGEndMeta = async (run: 'a' | 'b'): Promise<import('../../integration/phaseG.run').PhaseGEndMeta> =>
+  (await readJson(`./act4/${phaseGEndName(run)}.meta.json`)) as never;

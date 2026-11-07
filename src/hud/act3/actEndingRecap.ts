@@ -22,8 +22,16 @@ export const ACT3_RECAP_ROWS: RecapRow[] = [
   { id: 'oath', line: () => 'hud.ending.a3.line.oath' },
 ];
 
-/** The recap text: every row that has a line (a throwing row is skipped), then "The story continues." */
-export function act3RecapLines(read: (flag: string) => unknown, t: Translate, rows: readonly RecapRow[] = ACT3_RECAP_ROWS): string[] {
+/**
+ * The recap text: every row that has a line (a throwing row is skipped), then "The story continues." Act 4 (L9) reuses it
+ * with its own rows and closing key (additive: Act 3's call is unchanged).
+ */
+export function act3RecapLines(
+  read: (flag: string) => unknown,
+  t: Translate,
+  rows: readonly RecapRow[] = ACT3_RECAP_ROWS,
+  continuesKey: string = A3_CONTINUES_KEY,
+): string[] {
   const out: string[] = [];
   for (const r of rows) {
     // The card draws at most ACT_ENDING_MAX_LINES; the closing line must never be the one cut.
@@ -32,9 +40,9 @@ export function act3RecapLines(read: (flag: string) => unknown, t: Translate, ro
       const key = r.line(read);
       if (key) out.push(t(key));
     } catch (err) {
-      console.warn(`act3 ending recap: row "${r.id}" failed`, err);
+      console.warn(`act ending recap: row "${r.id}" failed`, err);
     }
   }
-  out.push(t(A3_CONTINUES_KEY));
+  out.push(t(continuesKey));
   return out;
 }

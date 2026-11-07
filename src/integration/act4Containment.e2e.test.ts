@@ -1,7 +1,7 @@
 /**
  * Containment under the Act 4 flag states (L13 PR 1), read from the committed `?act4=` fixtures on the real save plugin:
  * the act start (M35), the city held from the betrayal (M39's fixture: `story.m38.complete`), the end of Phase G (M41 done,
- * the Phase G hold standing) and Phase H (the hold set by the jump). L0's grid sweep over the same states is
+ * M42 not yet accepted) and Phase H (L13 PR 2 retired the hold: accepting M42 opens the Waste). L0's grid sweep over the same states is
  * region/act4Containment.test.ts; this file walks the faces and the no-strand rule in a booted game.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -97,11 +97,11 @@ describe('Act 4 containment on the fixtures', () => {
     expect(Math.hypot(f.x - camp.x, f.z - camp.z)).toBeLessThan(15);
   }, 120_000);
 
-  it('Phase G end (M41 done, the hold standing): the Ash Road and Ashgate open, the Waste\'s edge shut even with M42 accepted', async () => {
+  it('Phase G end (M41 done, M42 not yet accepted): the Ash Road and Ashgate open, the Waste\'s edge shut', async () => {
     const { c, s } = await boot('m41');
     s.setFlag('story.m41.complete', true);
-    s.setFlag('story.m42.started', true);
     await h!.runAsync(10);
+    expect(s.getBool('story.m42.started')).toBe(false);
     for (const [x, z] of ASH_ROAD_POINTS) expect(c.isOpen(x, z), `ash road (${x}, ${z})`).toBe(true);
     expect(c.isOpen(ASHGATE_POINT.x, ASHGATE_POINT.z)).toBe(true);
     expect(c.isOpen(WASTE.x, WASTE.z)).toBe(false);
@@ -161,9 +161,9 @@ describe('Act 4 containment on the fixtures', () => {
     expect(unreachable(rows)).toEqual([]);
   }, 120_000);
 
-  it('Phase H (M42\'s fixture, the hold set): accepting M42 opens the Waste; the north band never opens', async () => {
+  it('Phase H (M42\'s fixture): accepting M42 opens the Waste (the hold is retired); the north band never opens', async () => {
     const { c, s } = await boot('m42');
-    expect(s.getBool(WASTE_OPEN_FLAG)).toBe(true);
+    expect(s.getBool(WASTE_OPEN_FLAG)).toBe(false);
     expect(c.isOpen(WASTE.x, WASTE.z)).toBe(false);
     s.setFlag('story.m42.started', true);
     await h!.runAsync(10);

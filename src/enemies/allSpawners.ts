@@ -13,9 +13,11 @@ import { ACT3_SPAWNERS as ACT3_QUEST_SPAWNERS } from '../quests/content/act3';
 import { WYRM_SPAWNERS } from './wyrm/spawners';
 import { ACT3_DRAGON_SPAWNERS } from './wyrm/large/lodgeWyrms';
 import { SKARL_SPAWNERS } from '../bosses/skarl/spawners';
+import { EORMEN_SPAWNERS } from '../bosses/act4/eormen/spawners';
 import { WAVE_SPAWNERS } from '../waves/spawners';
 import { ACT4_HARROWMARK_SPAWNERS } from '../harrowmark/act4/spawners';
 import { ACT4_QUEST_SPAWNERS } from '../quests/content/act4';
+import { WASTE_SPAWNERS } from './waste/spawners';
 import type { SpawnerDef } from './types';
 
 export const ALL_SPAWNERS: readonly SpawnerDef[] = [
@@ -35,4 +37,6 @@ export const ALL_SPAWNERS: readonly SpawnerDef[] = [
   ...SKARL_SPAWNERS,
   ...ACT4_HARROWMARK_SPAWNERS,
   ...ACT4_QUEST_SPAWNERS,
+  ...WASTE_SPAWNERS,
+  ...EORMEN_SPAWNERS,
 ];

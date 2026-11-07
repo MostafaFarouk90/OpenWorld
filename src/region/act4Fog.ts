@@ -37,10 +37,11 @@ export const ACT4_SHIPPED_FACE_RULES = {
 export type Act4FogFaceId = 'fog.waste-edge' | 'fog.waste-north' | 'fog.caldera-rim.n' | 'fog.caldera-rim.e' | 'fog.caldera-rim.s' | 'fog.caldera-rim.w';
 export type Act4FogFace = Pick<FogWallDef, 'openWhen' | 'toastKey' | 'toastWhen'> & { id: Act4FogFaceId };
 
-/** Phase G (M41 done, the hold standing) gives the "not yet open" text (ruling C: it never dates itself); before that, Hild's. */
-const WASTE_EDGE_TOASTS: NonNullable<FogWallDef['toastWhen']> = [
-  { when: { any: ['story.m41.complete', 'story.m42.started'], none: ['story.phase.wasteOpen'] }, key: FOG_TOAST_WASTE_PHASE_G },
-];
+/**
+ * The Phase G hold is retired (L13 PR 2): the face opens as M42 is accepted, so a closed face always means Wulfhild has not
+ * given her word yet, and Hild's line says so. The "not yet open" key stays defined for an older reader, and no rule picks it.
+ */
+const WASTE_EDGE_TOASTS: NonNullable<FogWallDef['toastWhen']> = [];
 
 export const ACT4_FOG_FACES: readonly Act4FogFace[] = [
   { id: 'fog.waste-edge', openWhen: WASTE_EDGE_OPEN_WHEN, toastKey: FOG_TOAST_WASTE_HILD, toastWhen: WASTE_EDGE_TOASTS },

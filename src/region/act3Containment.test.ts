@@ -167,7 +167,7 @@ describe('Act 3 containment: holds and regions', () => {
     }
     expect(REGION_INFO.oldsmoke.openWhen).toEqual({ all: ['story.d03.complete'] });
     // v0.8: only the Ashen Waste carries a Phase G hold now.
-    expect(PHASE_HOLDS).toEqual({ 'ashen-waste': ['story.phase.wasteOpen'] });
+    expect(PHASE_HOLDS).toEqual({});
     for (const id of REGION_IDS) if (id !== 'dragonspine') expect(JSON.stringify(REGION_INFO[id].openWhen)).not.toContain('dragonspineOpen');
   });
 
