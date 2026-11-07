@@ -14,6 +14,10 @@ export const ACT5_FLAG_OWNERS: readonly Act5FlagOwner[] = [
   { pattern: 'favour.snapshot.<id>.<track>', owner: 'core (WorldState.snapshotFavour)', note: 'm52 (N10), d09 and m56 (N11) take them' },
   { pattern: 'favour.snapshot.<id>.taken', owner: 'core (WorldState.snapshotFavour)', note: 'set with the snapshot, once' },
   { pattern: 'shrine.anvil-of-ages.lit', owner: 'N11', note: 'M56 lights the Anvil in both endings' },
+  { pattern: 'siege.<siegeId>.order.<n>', owner: 'N4', note: 'the order given in the break after wave n (m52, r27); a load in or after the break keeps it' },
+  { pattern: 'siege.<siegeId>.done', owner: 'N4', note: 'the siege completed (N10 and N11 complete their quests on siege.completed)' },
+  { pattern: 'siege.m52.wounded', owner: 'N4', note: "the companion id of M52's wounded beat (Q2 a); they sit out at the aid post" },
+  { pattern: 'siege.offer.<order>', owner: 'N4', note: "the war post's offered orders during a break (dialogue conditions)" },
   { pattern: 'boss.<id>.outcome', owner: 'core boss registry', note: 'vey (spared or defeated) and ulthred (defeated only)' },
 ];
 

@@ -17,6 +17,7 @@ import { GREYFEN_DIALOGUE_STRINGS } from './content/act3/greyfen';
 import { SCENE_ACT3_CAMP } from './content/act3/campScene.dialogue';
 import { HARROWMARK_A4_DIALOGUE_STRINGS } from './content/act4/harrowmark';
 import { WASTE_A4_DIALOGUE_STRINGS } from './content/act4/waste';
+import { SIEGE_ORDER_STRINGS } from '../siege/orders.dialogue';
 import { NPC_AELFREDA_COMPANION_STRINGS_EN } from '../companions/dialogue/npcAelfredaCompanion.dialogue';
 
 export const dialogueStrings: Record<string, string> = {
@@ -29,6 +30,7 @@ export const dialogueStrings: Record<string, string> = {
   ...dialogueStringsSide,
   ...NPC_AELFREDA_COMPANION_STRINGS_EN,
   ...ACT2_DIALOGUE_STRINGS,
+  ...SIEGE_ORDER_STRINGS,
   ...ACT3_TRAINER_STRINGS,
   ...ACT4_ROOK_STRINGS,
   ...DRAGONSPINE_DIALOGUE_STRINGS,

@@ -26,6 +26,9 @@ export const CART = {
   vanishSeconds: 0.6,
 } as const;
 
+/** N4 (Act 5): the siege's ram strikes again every `cycleSeconds` (the 1.0 s wind-back inside it) while the gate stands. */
+export const RAM = { cycleSeconds: 2.5 } as const;
+
 /** The barricade keeps one value: 400 health, so one leaked cart (250) is survivable and two fail. */
 export const BARRICADE = { maxHealth: 400 } as const;
 

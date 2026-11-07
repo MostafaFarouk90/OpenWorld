@@ -23,13 +23,29 @@ export interface WeatherClock {
 /** The `weather` service (L3 provides it). With no provider there is no weather: `isStorming` is false. */
 export interface WeatherService {
   state(): WeatherState;
-  /** Scenes, boss arenas and quest beats force a storm; returns the release (idempotent). */
-  forceStorm(reason: string): () => void;
+  /**
+   * Scenes, boss arenas and quest beats force a storm; returns the release (idempotent). N4 (Act 5): with `area`, while
+   * this force stands the points inside the area count as a storm region too (the siege's court inside the Caldera box).
+   */
+  forceStorm(reason: string, opts?: { area: StormArea }): () => void;
   /** Scenes, boss arenas and escort hand-ins hold the clear; beats every other rule. Returns the release. */
   holdClear(reason: string): () => void;
   readonly clock: WeatherClock;
   /** True while the player stands in shelter `id` (a rope-line hut, a cairn). */
   onShelter(id: string): boolean;
+  /**
+   * N4 (Act 5): while registered, standing within `radius` of `at` is safe from exposure, as a shelter is (the siege's
+   * lee ring). Returns the release. A zone does not count as a shelter for `onShelter` or the shelter events.
+   */
+  addShelterZone?(zone: { id: string; at: { x: number; z: number }; radius: number }): () => void;
+}
+
+/** N4: an area a forced storm covers (engine x, z). */
+export type StormArea = { box: { minX: number; maxX: number; minZ: number; maxZ: number } } | { circle: { x: number; z: number; r: number } };
+
+export function inStormArea(a: StormArea, x: number, z: number): boolean {
+  if ('box' in a) return x >= a.box.minX && x <= a.box.maxX && z >= a.box.minZ && z <= a.box.maxZ;
+  return Math.hypot(x - a.circle.x, z - a.circle.z) <= a.circle.r;
 }
 
 /** A rope-line across the Waste: the path a storm cannot take the player off, with the shelters along it. */

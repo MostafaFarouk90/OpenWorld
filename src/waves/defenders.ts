@@ -141,9 +141,13 @@ export class Defender {
     readonly yaw: number,
     kind: string = DEFENDER.kind,
     private readonly kneel?: KneelRule,
+    private readonly swingRule?: SwingRule,
+    private readonly candidates?: () => readonly Actor[],
+    castShadow?: boolean,
   ) {
     this.body = makeBody();
     const root = this.body.root;
+    if (castShadow === false) root.traverse((o) => void (o.castShadow = false));
     host.scene.add(root);
     root.position.set(post.x, post.y, post.z);
     root.rotation.set(0, yaw, 0);
@@ -234,7 +238,41 @@ export class Defender {
     this.scan -= dt;
     if (this.scan > 0 || this.cooldown > 0) return;
     this.scan = DEFENDER.scanSeconds;
-    this.swing();
+    if (this.swingRule) this.swingByRule(this.swingRule);
+    else this.swing();
+  }
+
+  /** N4: where the body stands now (its post). */
+  get position(): Vec3 {
+    const p = this.body.root.position;
+    return { x: p.x, y: p.y, z: p.z };
+  }
+
+  /** N4 (siege squads): the role's reach, cooldown and hit, from the squad's shared candidate list; may kill when the rule says so. */
+  private swingByRule(rule: SwingRule): void {
+    if (rule.range <= 0) return;
+    const engage = this.host.services.get('allyEngagement');
+    if (!engage) return;
+    const here = this.body.root.position;
+    let best: Actor | null = null;
+    let bestD: number = rule.range;
+    const p = new THREE.Vector3();
+    for (const a of this.candidates?.() ?? this.host.actors.all()) {
+      if (a.team !== 'hostile' || a.dead || !a.root) continue;
+      a.root.getWorldPosition(p);
+      const d = Math.hypot(p.x - here.x, p.z - here.z);
+      if (d <= bestD && engage.mayEngage(a.id)) {
+        best = a;
+        bestD = d;
+      }
+    }
+    if (!best) return;
+    let amount = rule.hit(best);
+    if (!rule.kills) amount = Math.min(amount, best.health - 1);
+    if (!(amount > 0)) return;
+    this.cooldown = rule.cooldown;
+    this.body.play('swing');
+    this.host.damage.apply({ attackerId: this.actor.id, targetId: best.id, amount, poise: 0, kind: 'melee', attackId: rule.attackId ?? DEFENDER.swingAttackId });
   }
 
   dispose(): void {
@@ -284,6 +322,26 @@ export interface DefendersOptions {
   kind: string;
   /** v0.9 item 5 (the siege's allies): with it, a downed defender kneels past its knockdown until no hostile is near. */
   kneel?: KneelRule;
+  /** N4 (siege squads): the role's swing in place of the militia's; see `SwingRule`. */
+  swing?: SwingRule;
+  /** N4: false draws the bodies without shadows (wall and back ranks on Low and Medium, the spike's finding). */
+  castShadow?: boolean;
+  /** N4: each standing defender is a taunter of this radius (the L4 escort pattern); a downed one is not. */
+  taunt?: { radius: number };
+}
+
+/**
+ * N4 (Act 5 siege squads): a role's swing. The hit is health (callers give it as a fraction of the target's maximum);
+ * `kills` lets the blow be lethal (the siege's assist rule then decides the XP); without it the shipped floor holds.
+ * `range` 0 never swings (archers and healers act at squad level). Candidates are refreshed once per scan for the
+ * whole set, not per member.
+ */
+export interface SwingRule {
+  range: number;
+  cooldown: number;
+  hit(target: Actor): number;
+  kills?: boolean;
+  attackId?: string;
 }
 
 /**
@@ -303,6 +361,9 @@ export class Defenders {
   private readonly list = new Map<ActorId, Defender>();
   private unhandle: (() => void) | null = null;
   private unhandleNoKill: (() => void) | null = null;
+  private readonly untaunt = new Map<ActorId, () => void>();
+  private cache: Actor[] = [];
+  private cacheAge = Infinity;
 
   constructor(
     private readonly host: DefenderHost,
@@ -318,11 +379,12 @@ export class Defenders {
     return this.list.size;
   }
 
-  build(posts: readonly Vec3[], yaw: number): void {
+  build(posts: readonly Vec3[], yaw: number, bodies?: readonly (DefenderBodyFactory | undefined)[]): void {
     this.despawnAll();
-    for (const post of posts) {
+    const candidates = this.opts.swing ? () => this.cache : undefined;
+    for (const [i, post] of posts.entries()) {
       try {
-        const d = new Defender(this.host, this.makeBody, post, yaw, this.opts.kind, this.opts.kneel);
+        const d = new Defender(this.host, bodies?.[i] ?? this.makeBody, post, yaw, this.opts.kind, this.opts.kneel, this.opts.swing, candidates, this.opts.castShadow);
         this.list.set(d.id, d);
       } catch (err) {
         console.warn(`[waves] could not build a militiaman: ${String(err)}`);
@@ -339,6 +401,7 @@ export class Defenders {
     });
     // A modifier after the swing (a back-hit multiplier) can lift it past the cap, so the rule is enforced on resolve:
     // a militiaman's hit never kills, credit, XP and mercy stay with the player.
+    if (this.opts.swing?.kills) return; // N4: a siege squad may land the blow (the assist rule decides the XP)
     this.unhandleNoKill = this.host.damage.addLethalHandler(
       this.opts.noKillHandlerId,
       (target, r) => {
@@ -350,16 +413,68 @@ export class Defenders {
     );
   }
 
+  /** N4: standing (not down) members. */
+  get standing(): number {
+    let n = 0;
+    for (const d of this.list.values()) if (d.state === 'post') n++;
+    return n;
+  }
+
+  /** N4: lifts every downed member whose post has no hostile within the kneel radius (the healers' and the gong's rally). */
+  rally(force = false): number {
+    let n = 0;
+    for (const d of this.list.values()) {
+      if (d.state !== 'down') continue;
+      if (!force && this.opts.kneel?.hostileWithin(d.post, this.opts.kneel.clearRadius)) continue;
+      d.revive();
+      n++;
+    }
+    if (n > 0) this.syncTaunts();
+    return n;
+  }
+
   /** Everyone stands at their post at full health. */
   reviveAll(): void {
     for (const d of this.list.values()) d.revive();
   }
 
   fixedUpdate(dt: number): void {
+    if (this.opts.swing) {
+      // One pass over the actors per set per scan (squad level), shared by every member's swing.
+      this.cacheAge += dt;
+      if (this.cacheAge >= DEFENDER.scanSeconds) {
+        this.cacheAge = 0;
+        this.cache = [...this.host.actors.all()].filter((a) => a.team === 'hostile' && !a.dead && !!a.root);
+      }
+    }
     for (const d of this.list.values()) d.fixedUpdate(dt);
+    if (this.opts.taunt) this.syncTaunts();
+  }
+
+  /** Standing members are taunters; downed ones are not (the L4 escort pattern). */
+  private syncTaunts(): void {
+    const radius = this.opts.taunt?.radius;
+    const taunts = radius ? this.host.services.get('enemies')?.taunts : undefined;
+    if (!taunts || !radius) return;
+    for (const d of this.list.values()) {
+      const has = this.untaunt.has(d.id);
+      const up = d.state === 'post';
+      if (!up && has) {
+        this.untaunt.get(d.id)!();
+        this.untaunt.delete(d.id);
+      } else if (up && !has) {
+        this.untaunt.set(
+          d.id,
+          taunts.register({ id: d.id, position: () => d.post, alive: () => d.state === 'post' && !d.actor.dead, radius, seconds: Number.POSITIVE_INFINITY }),
+        );
+      }
+    }
   }
 
   despawnAll(): void {
+    for (const off of this.untaunt.values()) off();
+    this.untaunt.clear();
+    this.cache = [];
     this.unhandle?.();
     this.unhandle = null;
     this.unhandleNoKill?.();
