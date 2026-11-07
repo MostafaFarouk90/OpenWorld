@@ -73,7 +73,7 @@ export function surfaceGeometry(shape: LavaShape, origin: THREE.Vector3, heightA
     uv.push(0, i / (pts.length - 1), 1, i / (pts.length - 1));
     if (i > 0) {
       const k = (i - 1) * 2;
-      idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+      idx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3); // counter-clockwise from above: the face points up
     }
   });
   const g = new THREE.BufferGeometry();
