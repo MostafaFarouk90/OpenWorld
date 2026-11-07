@@ -3,7 +3,7 @@
 // N2's (`caldera.int.tunnel.*`).
 import type { EnemyKind } from '../../enemies/types';
 import type { WaveSetDef, WaveSpawnDef } from '../types';
-import { GATE, RAM, BRAZIER, SIEGE_MAX_ALIVE } from '../../siege/tuning';
+import { GATE, MARCH, RAM, BRAZIER, SIEGE_MAX_ALIVE } from '../../siege/tuning';
 
 /**
  * The Warhost kinds (N5). N5's `warhost-soldier` and `warhost-guard` are not EnemyKinds on this base yet: the siege
@@ -52,6 +52,8 @@ export const RIM_SIEGE: WaveSetDef = {
   maxAlive: SIEGE_MAX_ALIVE,
   breach: { patchToPct: GATE.patchToPct },
   cartImpact: { brazier: GATE.m52Health * BRAZIER.strikePct, ram: GATE.m52Health * RAM.strikePct },
+  // The lane heads lie far down the stairs: foot soldiers join the stairs below the landing (the rams' target), in reach.
+  join: { metres: MARCH.joinMetres, toward: 'ram' },
   waves: [
     // Wave 1: two shield lines and pikes, in two pulses.
     {

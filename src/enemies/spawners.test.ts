@@ -51,6 +51,17 @@ describe('SpawnerRegistry', () => {
     const pts = new Set(reqs.slice(1).map((r) => `${r.feet.x.toFixed(3)},${r.feet.z.toFixed(3)}`));
     expect(pts.size).toBe(3);
   });
+  it('v0.9 at: a call stands its ring round the given point, keeping the anchor yaw; refills and bad points use the anchor', () => {
+    const { reg, reqs } = setup([anchor('sp', 10, 20)], [mk({ id: 'one', count: 1 }), mk({ id: 'two', count: 2 })]);
+    expect(reg.spawnGroup('one', { at: { x: 40, y: 5, z: -3 } })).toHaveLength(1);
+    expect(reqs[0]!.feet).toEqual({ x: 40, y: 5, z: -3 });
+    expect(reqs[0]!.yaw).toBe(1.5);
+    expect((reqs[0]!.options as { at?: unknown }).at).toBeUndefined();
+    expect(reg.spawnGroup('two', { count: 1, at: { x: Number.NaN, y: 0, z: 0 } })).toHaveLength(1);
+    expect(Math.hypot(reqs[1]!.feet.x - 10, reqs[1]!.feet.z - 20)).toBeCloseTo(WORLD_AI.ringRadius);
+    expect(reg.spawnGroup('two', { count: 1, at: { x: 0, y: 1, z: 0 } })).toHaveLength(1);
+    expect(Math.hypot(reqs[2]!.feet.x, reqs[2]!.feet.z)).toBeCloseTo(WORLD_AI.ringRadius);
+  });
   it('missing anchor warns once, spawns nothing, others unaffected', () => {
     const { reg, warn, reqs } = setup([anchor('ok', 0, 0)], [mk({ id: 'bad', anchor: 'gone' }), mk({ id: 'good', anchor: 'ok' })]);
     expect(reg.spawnGroup('bad')).toEqual([]);

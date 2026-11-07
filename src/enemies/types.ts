@@ -388,6 +388,12 @@ export interface SpawnOptions {
   damageScale?: number;
   /** Notice the player at once. */
   aggro?: boolean;
+  /**
+   * v0.9 additive (Act 5 N4), `spawnGroup` only: the members stand round this point instead of the spawner's anchor (the
+   * anchor's yaw, level and area are kept; a member anchor still wins). The siege's foes join their lane in reach of the
+   * gate. Not remembered for refills; ignored when not finite.
+   */
+  at?: { x: number; y: number; z: number };
   tierOffset?: number;
   /** Default: the spawner's `leash`, else true. */
   leash?: boolean;

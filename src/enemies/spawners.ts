@@ -147,7 +147,7 @@ export class SpawnerRegistry {
       return [];
     }
     // `count` limits this call only: it is not a spawn option for the members, nor remembered for refills.
-    const { count, ...memberOpts } = opts;
+    const { count, at, ...memberOpts } = opts;
     if (count !== undefined && (!Number.isInteger(count) || count <= 0)) {
       this.warnOnce(`count:${id}`, `spawners: spawnGroup('${id}') ignored a bad count ${String(count)}; nothing spawned`);
       return [];
@@ -156,6 +156,8 @@ export class SpawnerRegistry {
     const { count: _defCount, ...defOpts } = def.options ?? {};
     opts = { ...defOpts, ...memberOpts };
     if (onlySlot === undefined) this.lastOpts.set(id, opts);
+    // v0.9 (N4): `at` moves this call's ring off the anchor; the anchor still names the level, the area and the yaw.
+    const base: AnchorLike = at && Number.isFinite(at.x) && Number.isFinite(at.y) && Number.isFinite(at.z) ? { ...anchor, position: { x: at.x, y: at.y, z: at.z } } : anchor;
     const band = this.resolveBand(def, opts.tierOffset);
     const patrol = this.resolvePatrol(def);
     const slots = this.slots.get(id)!;
@@ -171,7 +173,7 @@ export class SpawnerRegistry {
       if (def.memberAnchors?.[slot] && !own) {
         this.warnOnce(`member:${id}#${slot}`, `spawners: spawner '${id}' member ${slot} has no anchor '${def.memberAnchors[slot]}'; using a ring slot`);
       }
-      const feet = own ? { ...own.position } : this.slotPosition(anchor, slot, slots.length);
+      const feet = own ? { ...own.position } : this.slotPosition(base, slot, slots.length);
       const actorId = this.deps.spawn({
         spawnerId: id,
         spawnTag: def.tag ?? def.id,
