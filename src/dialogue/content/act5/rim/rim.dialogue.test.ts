@@ -13,7 +13,7 @@ import { questStrings } from '../../../../quests/strings.en';
 import { RIM_A5_QUEST_DEFS } from '../../../../quests/content/act5/rim/rim.content';
 import { R26_CHOICE, R26_FAST, R26_LONG, R26_MASTER } from '../../../../quests/content/act5/rim/r26.quest';
 import { M49_FORECAST, M49_TABLE_DIALOGUE, M49_TABLE_NPC } from '../../../../quests/content/act5/rim/m49.quest';
-import { M52_STOOD, M52_WOUNDED } from '../../../../quests/content/act5/rim/m52.quest';
+import { M52_STOOD } from '../../../../quests/content/act5/rim/m52.quest';
 import { RIM_A5_NODES } from '../../../../quests/content/act5/rim/pacing';
 import { RIM_A5_TALKS } from './talks';
 import { RIM_A5_DIALOGUE_STRINGS, RIM_A5_EXTENSIONS, RIM_A5_NOTE_DIALOGUES, RIM_A5_TREES } from './index';
@@ -77,22 +77,20 @@ function flagsFor(c: Condition | undefined, out: Record<string, FlagValue> = {})
 }
 
 /** The world in which `quest`.`objective` is the current step (a brief: the quest not begun, its parents done). */
-function worldAt(quest: string, objective: string, npc?: string): World {
+function worldAt(quest: string, objective: string): World {
   const def = DEFS[quest]!;
   const i = def.objectives.findIndex((o) => o.id === objective);
   if (i === 0 && !AUTO.has(quest)) return { states: PARENTS[quest]! };
   // the steps before, except the other road's optional ones
   const before = def.objectives.slice(0, i).filter((o) => !o.optional).map((o) => o.id);
-  // M52's wounded talk is the companion N4 sat out (`siege.m52.wounded` holds their id)
-  const extra: Record<string, FlagValue> = quest === 'm52' && objective === 'wounded' && npc ? { [M52_WOUNDED]: npc } : {};
-  return { states: { ...PARENTS[quest]!, [quest]: 'active' }, done: { [quest]: before }, flags: { ...flagsFor(def.objectives[i]!.when), ...extra } };
+  return { states: { ...PARENTS[quest]!, [quest]: 'active' }, done: { [quest]: before }, flags: flagsFor(def.objectives[i]!.when) };
 }
 const pick = (quest: string) => (ids: string[]) => (ids.includes('accept') ? 'accept' : ids.includes(quest) ? quest : undefined);
 const isBrief = (quest: string, objective: string): boolean => DEFS[quest]!.objectives[0]!.id === objective && !AUTO.has(quest);
 
 describe('every talk objective opens its own segment', () => {
   it.each(RIM_A5_TALKS.map((t) => [`${t.quest}.${t.objective} (${t.tree})`, t] as const))('%s', (_n, t) => {
-    const { dr, started } = setup(worldAt(t.quest, t.objective, t.npc));
+    const { dr, started } = setup(worldAt(t.quest, t.objective));
     expect(dr.start(t.tree, t.npc)).toBe(true);
     expect(dr.view()!.nodeId).toBe(t.seg);
     runOut(dr, pick(t.quest));
@@ -103,7 +101,7 @@ describe('every talk objective opens its own segment', () => {
   // the four camp quests run side by side: another one under way must not hide this one's step behind its wait line
   const SIDE = ['r26', 'r29', 'm50', 'm51'];
   it.each(RIM_A5_TALKS.filter((t) => SIDE.includes(t.quest) && !isBrief(t.quest, t.objective)).map((t) => [`${t.quest}.${t.objective}`, t] as const))('%s with the other camp quests under way', (_n, t) => {
-    const w = worldAt(t.quest, t.objective, t.npc);
+    const w = worldAt(t.quest, t.objective);
     for (const q of SIDE) if (q !== t.quest) w.states![q] = 'active';
     const { dr } = setup(w);
     expect(dr.start(t.tree, t.npc)).toBe(true);
@@ -160,8 +158,8 @@ describe('M52', () => {
 
   it('only the wounded companion has the aid-tent line', () => {
     for (const c of ['hrolf', 'aelfreda', 'tobb']) {
-      const { dr } = setup({ ...worldAt('m52', 'wounded', 'tobb') });
-      dr.start(`npc-${c}`, c);
+      const { dr } = setup({ ...worldAt('m52', 'wounded-tobb') });
+      dr.start(c === 'aelfreda' ? 'npc-aelfreda-companion' : `npc-${c}`, c);
       expect(dr.view()?.nodeId === 'a5r-m52-wounded', c).toBe(c === 'tobb');
     }
   });
@@ -186,7 +184,7 @@ describe('the pacing rows count the real trees', () => {
     const per: Record<string, number> = {};
     // an optional talk (Maud with F4 Cleanse) is not on the shorter branch
     for (const t of RIM_A5_TALKS.filter((x) => !DEFS[x.quest]!.objectives.find((o) => o.id === x.objective)!.optional)) {
-      const { dr } = setup(worldAt(t.quest, t.objective, t.npc));
+      const { dr } = setup(worldAt(t.quest, t.objective));
       dr.start(t.tree, t.npc);
       per[t.quest] = (per[t.quest] ?? 0) + runOut(dr, pick(t.quest)).nodes.length;
     }

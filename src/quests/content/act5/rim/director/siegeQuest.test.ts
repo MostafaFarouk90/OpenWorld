@@ -64,6 +64,7 @@ describe('M52', () => {
     toStart(r);
     r.step(16);
     expect(r.siege.starts).toEqual(['m52']);
+    r.step(16);
     expect(r.flag(M52_OUT('rook'))).toBe(true);
     expect(r.flag(M52_OUT('edric'))).toBe(true);
     expect(r.flag(M52_OUT('wulfhild')), 'F8 All: her squad stands').toBe(true);
@@ -81,11 +82,12 @@ describe('M52', () => {
     expect(r.flag(M52_WAVE4_HELD)).toBe(true);
     r.siege.finish();
     r.emit('siege.completed', { siegeId: 'm52' });
+    r.step(16);
+    // N4's squads are gone with the run: the bodies are back for the holds scene
+    for (const id of ['rook', 'edric', 'wulfhild'] as const) expect(r.flag(M52_OUT(id)), id).toBe(false);
     settle(r);
     expect(r.flag(M52_GATE_HELD)).toBe(true);
     expect(r.flag(M52_STOOD('ashwalker'))).toBe(true);
-    r.step(16);
-    for (const id of ['rook', 'edric', 'wulfhild'] as const) expect(r.flag(M52_OUT(id)), id).toBe(false);
     r.talk('wystan');
     r.step(2);
     expect(r.qs('m52')).toBe('completed');
@@ -160,8 +162,12 @@ describe('M52', () => {
     r.siege.finish();
     r.emit('siege.completed', { siegeId: 'm52' });
     settle(r);
-    expect(r.current('m52', 'wounded')).toBe(true);
+    expect(r.current('m52', 'wounded-hrolf')).toBe(true);
+    expect(r.current('m52', 'wounded-tobb'), 'only the one N4 sat out').toBe(false);
     expect(r.current('m52', 'report')).toBe(true);
+    r.talk('hrolf');
+    r.step(1);
+    expect(r.done('m52', 'wounded-hrolf'), 'the talk counts').toBe(true);
     r.talk('wystan');
     r.step(2);
     expect(r.qs('m52')).toBe('completed');
@@ -170,5 +176,13 @@ describe('M52', () => {
   it('the named allies\' shipped specs step out on the flags the director writes', () => {
     const specs = [...HARROWMARK_NPCS, ...WASTE_A4_NPCS];
     for (const id of M52_OUT_NPCS) expect(specs.find((n) => n.id === id)?.absentWhen, id).toBe(M52_OUT(id));
+  });
+
+  it('a siege that does not start hides nobody', () => {
+    const r = ready();
+    r.siege.refuse = true;
+    toStart(r);
+    r.step(32);
+    for (const id of ['rook', 'edric'] as const) expect(r.flag(M52_OUT(id)), id).toBe(false);
   });
 });

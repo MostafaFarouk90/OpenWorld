@@ -103,6 +103,9 @@ export const RIM_A5_POST_ROWS: readonly PostRule[] = [
     npcId: 'wystan', home: HOME.wystan,
     posts: [{ when: { all: [active('m52'), { objective: ['m52', 'brief'], done: true }, { not: { flag: 'story.m52.gateHeld', equals: true } }] }, anchorId: 'caldera.siege.orders' }],
   },
+  // M52: while a squad stands for them their world body is out (absentWhen); leaving them unplaced then makes the post director
+  // place them afresh at the Rim when they come back (else NpcManager respawns them at their spec post, far from the Caldera)
+  ...(['rook', 'edric', 'wulfhild'] as const).map((id): PostRule => ({ npcId: id, home: HOME[id], posts: [], leaveWhen: flag(`story.m52.out.${id}`) })),
   // Maud cooks at the camp only with F4 Cleanse (N7's kitchen)
   { npcId: 'maud', home: HOME.maud, posts: [{ when: { all: [ARRIVED, flag(F4_CLEANSED)] }, anchorId: RIM('maud') }] },
   // R26: once the convoy is in, the master and the guards stand at the camp (a wounded guard at the aid tent, either way)
@@ -115,9 +118,15 @@ export const RIM_A5_POST_ROWS: readonly PostRule[] = [
 
 const RIM_ROW_SET = new Set(RIM_A5_POST_ROWS.flatMap((r) => r.posts));
 /** A rule without this block's rows (for the shipped posts tests that compare their own rows). */
+const RIM_LEAVE_SET = new Set(RIM_A5_POST_ROWS.flatMap((r) => (r.leaveWhen ? [r.leaveWhen] : [])));
 export function withoutRimQuestRows(rule: PostRule): PostRule {
   const posts = rule.posts.filter((p) => !RIM_ROW_SET.has(p));
-  return posts.length === rule.posts.length ? rule : { ...rule, posts };
+  const lw = rule.leaveWhen;
+  const base = !lw ? undefined : RIM_LEAVE_SET.has(lw) ? undefined
+    : 'any' in lw && lw.any.length === 2 && RIM_LEAVE_SET.has(lw.any[0]!) ? lw.any[1] : lw;
+  if (posts.length === rule.posts.length && base === lw) return rule;
+  const { leaveWhen: _drop, ...rest } = rule;
+  return { ...rest, posts, ...(base ? { leaveWhen: base } : {}) };
 }
 
 /** The rules with this block's rows put first (the first matching row wins); never reorders or drops a row. */
@@ -125,8 +134,12 @@ export function withRimQuestPosts(rules: PostRule[]): PostRule[] {
   const out = [...rules];
   for (const row of RIM_A5_POST_ROWS) {
     const i = out.findIndex((r) => r.npcId === row.npcId);
-    if (i >= 0) out[i] = { ...out[i]!, posts: [...row.posts, ...out[i]!.posts] };
-    else out.push({ npcId: row.npcId, home: row.home, posts: [...row.posts] });
+    const leave = (base: PostRule['leaveWhen']): PostRule['leaveWhen'] =>
+      row.leaveWhen && base ? { any: [row.leaveWhen, base] } : (row.leaveWhen ?? base);
+    if (i >= 0) {
+      const lw = leave(out[i]!.leaveWhen);
+      out[i] = { ...out[i]!, posts: [...row.posts, ...out[i]!.posts], ...(lw ? { leaveWhen: lw } : {}) };
+    } else out.push({ npcId: row.npcId, home: row.home, posts: [...row.posts], ...(row.leaveWhen ? { leaveWhen: row.leaveWhen } : {}) });
   }
   return out;
 }

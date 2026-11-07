@@ -3,8 +3,8 @@
 // roster on the M52 snapshot, so what he says matches who stood); the wounded companion at the aid tent (Q2 a: on their feet).
 // Node ids `a5r-` (they go into shipped trees). Invented (Q6), logged under "Act 5 N10".
 import type { buildTree, Line } from '../../act2/build';
-import { M52_STOOD, M52_WOUNDED } from '../../../../quests/content/act5/rim/m52.quest';
-import { C, accept, all, at, flagIs, offer, qActive, voice, when } from './common';
+import { M52_STOOD, M52_WOUNDED_STEP } from '../../../../quests/content/act5/rim/m52.quest';
+import { C, accept, at, flagIs, offer, qActive, voice, when } from './common';
 
 type Rule = Parameters<typeof buildTree>[0]['start'][number];
 const WY = voice('wystan');
@@ -65,7 +65,7 @@ const companionLine: Record<'hrolf' | 'aelfreda' | 'tobb', [string, string]> = {
 };
 
 export const M52_COMPANION_RULES = (id: 'hrolf' | 'aelfreda' | 'tobb'): Rule[] => [
-  { when: all(at('m52', 'wounded'), flagIs(M52_WOUNDED, id)), seg: 'a5r-m52-wounded' },
+  { when: at('m52', M52_WOUNDED_STEP(id)), seg: 'a5r-m52-wounded' },
 ];
 export const M52_COMPANION_SEGMENTS = (id: 'hrolf' | 'aelfreda' | 'tobb'): Record<string, { lines: Line[] }> => ({
   'a5r-m52-wounded': { lines: [voice(id)(companionLine[id][0]), C(companionLine[id][1])] },

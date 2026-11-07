@@ -26,6 +26,7 @@ export const M52_GATE_HELD = 'story.m52.gateHeld';
 /** N4's flag: the companion who sat out wave 3 at the aid post (Q2 a; the beat is scripted, nobody falls). */
 export const M52_WOUNDED = 'siege.m52.wounded';
 export const M52_COMPANIONS = ['hrolf', 'aelfreda', 'tobb'] as const;
+export const M52_WOUNDED_STEP = (c: (typeof M52_COMPANIONS)[number]): string => `wounded-${c}`;
 /** What stood at the gate, written by the director from N4's roster on the snapshot when the gate holds (Wystan's report reads them). */
 export const M52_STOOD_ROWS = ['halvard', 'grisel', 'ashwalker', 'dragons', 'supply'] as const;
 export const M52_STOOD = (row: (typeof M52_STOOD_ROWS)[number]): string => `story.m52.stood.${row}`;
@@ -53,7 +54,11 @@ const objectives: ObjectiveDef[] = [
   },
   { ...wave(4), when: done('wave3') },
   story('holds', 'quest.m52.holds', M52_GATE_HELD, { doneWhen: { flag: M52_GATE_HELD, equals: true }, when: { all: [done('wave4'), done('guard')] } }),
-  { id: 'wounded', type: 'talk', target: [...M52_COMPANIONS], textKey: 'quest.m52.wounded', optional: true, when: done('holds') },
+  // one optional talk per companion, live only for the one N4 sat out (a talk objective credits a single npc id)
+  ...M52_COMPANIONS.map((c): ObjectiveDef => ({
+    id: M52_WOUNDED_STEP(c), type: 'talk', target: c, textKey: 'quest.m52.wounded', optional: true,
+    when: { all: [done('holds'), { flag: M52_WOUNDED, equals: c }] },
+  })),
   { id: 'report', type: 'talk', target: M52_GIVER, textKey: 'quest.m52.report', when: done('holds') },
 ];
 
