@@ -3,6 +3,7 @@ import { CLASS_IDS, type ClassId } from '../actors/classes';
 import type { ClassBaseStats } from '../progression/classStats';
 import type { ClassKit, DrillStepDef } from './types';
 import { ACT4_TRAINER_POSTS } from '../economy/refugePosts.act4';
+import { ACT5_TRAINER_POSTS } from '../economy/rimCamp.act5';
 
 /**
  * Which classes M07 offers (Mostafa's default: all five at tiers 1 and 2). "Knight plus one" is a one-line change here; the
@@ -154,7 +155,7 @@ export interface TrainerPostRow {
 }
 
 /** Act 4 threads add their rows. L7: the refuge desks from M41, Rook's Knight desk among them (economy/refugePosts.act4.ts). */
-export const TRAINER_POSTS: TrainerPostRow[] = [...ACT4_TRAINER_POSTS];
+export const TRAINER_POSTS: TrainerPostRow[] = [...ACT4_TRAINER_POSTS, ...ACT5_TRAINER_POSTS];
 
 export interface TrainerPlacement {
   npcId: string;

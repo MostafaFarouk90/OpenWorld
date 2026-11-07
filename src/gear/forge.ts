@@ -1,6 +1,8 @@
 import { getItem } from '../inventory/items';
 import { type GearInventory, MATERIALS, type MaterialCost } from './tempering';
 import { TIER4_MATERIALS, TIER4_RECIPES, tier4MaterialFor } from './tier4/catalog';
+import { FORGE_HEART_FRAGMENT } from './tier5/fragments';
+import { TIER5_RECIPES, isTier5Recipe } from './tier5/catalog';
 import { GEAR_TUNING } from './tuning';
 
 /** Tier 2 piece to its tier 3 piece (R3). */
@@ -19,8 +21,11 @@ export const FORGE_RECIPES: Readonly<Record<string, string>> = {
 };
 
 /** K10: every recipe, tier 2 to 3 and tier 3 to 4 (`TIER4_RECIPES`). */
-export const ALL_FORGE_RECIPES: Readonly<Record<string, string>> = { ...FORGE_RECIPES, ...TIER4_RECIPES };
+export const ALL_FORGE_RECIPES: Readonly<Record<string, string>> = { ...FORGE_RECIPES, ...TIER4_RECIPES, ...TIER5_RECIPES };
 export const isTier4Recipe = (fromId: string): boolean => Object.prototype.hasOwnProperty.call(TIER4_RECIPES, fromId);
+
+/** N7: a tier 5 recipe is forged only at Alric's rim anvil (session mode 'rim'). */
+export { isTier5Recipe };
 
 /** `no-materials` (K10): a tier 4 forge without its rime-iron, scales or hide; `gems` would leave no room for a gem. */
 export type ForgeRefusal = 'no-recipe' | 'not-held' | 'no-ingot' | 'no-gold' | 'locked' | 'owned' | 'no-materials' | 'gems';
@@ -34,6 +39,13 @@ export interface ForgeCost {
 }
 
 export function forgeCost(fromId: string): ForgeCost | null {
+  if (isTier5Recipe(fromId)) {
+    // N7: forge-heart fragments and gold only; a weapon and an armour cost 2 fragments, the offhand 1.
+    const f = GEAR_TUNING.forgeTier5;
+    const slot = getItem(TIER5_RECIPES[fromId])?.slot;
+    const offhand = slot === 'offhand';
+    return { ingots: 0, gold: offhand ? f.goldOffhand : slot === 'armour' ? f.goldArmour : f.goldWeapon, materials: [{ itemId: FORGE_HEART_FRAGMENT, count: offhand ? f.fragmentsOffhand : f.fragmentsPiece }] };
+  }
   if (isTier4Recipe(fromId)) {
     const f = GEAR_TUNING.forgeTier4;
     const to = TIER4_RECIPES[fromId];
