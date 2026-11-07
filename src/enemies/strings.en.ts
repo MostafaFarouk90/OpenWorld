@@ -39,6 +39,8 @@ export const ENEMY_STRINGS_EN: Record<string, string> = {
   'enemies.name.waste-strider': 'Waste Strider',
   'enemies.name.husk-knight': 'Husk Knight',
   'enemies.name.cinder-gnat-swarm': 'Cinder Gnats',
+  'enemies.name.warhost-soldier': 'Warhost Soldier',
+  'enemies.name.warhost-guard': 'Household Guard',
   'enemies.name.crag-ogre': 'Crag Ogre',
   'enemies.name.ysmeryth': 'Ysmeryth the Coal-Mother',
   'enemies.name.steward-guard': 'Steward Guard',
