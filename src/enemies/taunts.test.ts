@@ -20,6 +20,21 @@ beforeAll(async () => {
   gltf = await loadKnight();
 });
 
+describe('TauntRegistry: N4 accepts filter', () => {
+  const src = (id: string, x: number, over: Record<string, unknown> = {}) => ({
+    id, radius: 10, seconds: 5, position: () => ({ x, y: 0, z: 0 }), alive: () => true, ...over,
+  });
+  it('a source that refuses an enemy is skipped for it, and the next nearest is picked', () => {
+    const r = new TauntRegistry();
+    r.register(src('gate', 2, { accepts: (e: string) => e !== 'hit-by-cael' }));
+    r.register(src('ally', 6));
+    expect(r.pick({ x: 0, z: 0 }, null, 'fresh')?.id).toBe('gate');
+    expect(r.pick({ x: 0, z: 0 }, null, 'hit-by-cael')?.id).toBe('ally');
+    // No enemy id: the shipped behaviour (the filter is not consulted).
+    expect(r.pick({ x: 0, z: 0 })?.id).toBe('gate');
+  });
+});
+
 describe('TauntRegistry', () => {
   const src = (id: string, x: number, over: Record<string, unknown> = {}) => ({
     id, radius: 10, seconds: 5, position: () => ({ x, y: 0, z: 0 }), alive: () => true, ...over,

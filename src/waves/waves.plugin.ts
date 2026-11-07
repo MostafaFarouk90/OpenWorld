@@ -9,7 +9,7 @@ import type { NpcModelLoader } from '../npcs/types';
 declare module '../core/coreServices' {
   interface WavesService {
     /** v0.6 additive (A7): kind and maximum health of a structure id from `structure.damaged` (carts and the barricade); undefined for an unknown id. */
-    structure(id: string): { kind: StructureKind; maxHealth: number } | undefined;
+    structure(id: string): { kind: StructureKind; maxHealth: number; role?: 'brazier' | 'ram' } | undefined;
   }
 }
 

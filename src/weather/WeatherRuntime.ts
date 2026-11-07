@@ -14,7 +14,7 @@ import { RopeIndex, ShelterTracker, type RopeLike, type ShelterLike, type XZ } f
 import { resolveWeather } from './precedence';
 import { EXPOSURE, STORM_WALK, WEATHER_SEED } from './tuning';
 import { PLAYER } from '../config/constants';
-import type { WeatherKind, WeatherService, WeatherState } from './types';
+import { inStormArea, type StormArea, type WeatherKind, type WeatherService, type WeatherState } from './types';
 
 export interface WeatherPorts {
   /** The player's simulated feet. */
@@ -83,6 +83,11 @@ export class WeatherRuntime implements WeatherService {
   private floorWarned = false;
   /** The player is outdoors in a storm region this tick. */
   private _inRegion = false;
+  /** N4: areas that count as a storm region while their force stands. */
+  private readonly areas = new Map<number, StormArea>();
+  private nextArea = 1;
+  /** N4: shelter zones (the siege's lee ring). */
+  private readonly zones = new Map<string, { x: number; z: number; r: number }>();
 
   constructor(private readonly ports: WeatherPorts, data: WeatherData, seed = WEATHER_SEED) {
     this._clock = new WeatherClock(seed);
@@ -96,8 +101,33 @@ export class WeatherRuntime implements WeatherService {
     return { kind: this.kind, t: this.kindT, forced: this.forced.size > 0, held: this.held.size > 0 };
   }
 
-  forceStorm(reason: string): () => void {
-    return this.addReason(this.forced, reason);
+  forceStorm(reason: string, opts?: { area: StormArea }): () => void {
+    const off = this.addReason(this.forced, reason);
+    if (!opts?.area) return off;
+    const key = this.nextArea++;
+    this.areas.set(key, opts.area);
+    return () => {
+      this.areas.delete(key);
+      off();
+    };
+  }
+
+  addShelterZone(zone: { id: string; at: { x: number; z: number }; radius: number }): () => void {
+    const z = { x: zone.at.x, z: zone.at.z, r: zone.radius };
+    this.zones.set(zone.id, z);
+    return () => {
+      if (this.zones.get(zone.id) === z) this.zones.delete(zone.id);
+    };
+  }
+
+  private inArea(x: number, z: number): boolean {
+    for (const a of this.areas.values()) if (inStormArea(a, x, z)) return true;
+    return false;
+  }
+
+  private inZone(x: number, z: number): boolean {
+    for (const c of this.zones.values()) if (Math.hypot(x - c.x, z - c.z) <= c.r) return true;
+    return false;
   }
 
   holdClear(reason: string): () => void {
@@ -204,7 +234,7 @@ export class WeatherRuntime implements WeatherService {
   update(dt: number): void {
     const p = this.ports.player();
     const outdoors = !this.ports.indoors();
-    const inRegion = outdoors && this.ports.stormRegion(p.x, p.z);
+    const inRegion = outdoors && (this.ports.stormRegion(p.x, p.z) || (this.areas.size > 0 && this.inArea(p.x, p.z)));
     this._inRegion = inRegion;
     const dialogue = this.ports.dialogue();
     if (outdoors && (inRegion || this.ports.stormBand(p.x, p.z))) this._clock.advance(dt, dialogue);
@@ -285,7 +315,7 @@ export class WeatherRuntime implements WeatherService {
   private updateExposure(dt: number, storm: boolean, x: number, z: number): void {
     const v = this.ports.vitals();
     const inStorm = storm && !v.dead && this.ports.gameplay();
-    const safe = this.ropes.onRope(x, z) || this.shelters.current !== null;
+    const safe = this.ropes.onRope(x, z) || this.shelters.current !== null || (this.zones.size > 0 && this.inZone(x, z));
     // Paused (not reset) while a dialogue or menu is on top, so a talk does not wipe the meter.
     if (storm && !v.dead && !this.ports.gameplay()) return;
     const ticks = this.exposure.step(dt, { inStorm, safe });

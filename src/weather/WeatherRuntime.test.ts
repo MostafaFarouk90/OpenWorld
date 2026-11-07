@@ -465,3 +465,42 @@ describe('weather runtime: a load before the shelters resolve', () => {
     expect(r.w.lastShelter).toBeNull();
   });
 });
+
+describe('weather runtime: N4 siege storm area and lee zone', () => {
+  // The Rim Gate court sits in the Caldera box, outside the Waste's storm region (N1 excludes it from the clock).
+  const COURT = { x: 11000, y: 120, z: 12000, yaw: 0 };
+  const area = { box: { minX: 10920, maxX: 11080, minZ: 11920, maxZ: 12080 } };
+
+  it('a forced storm with an area storms the area outside the Waste, and only while it stands', () => {
+    const r = rig();
+    r.s.pos = { ...COURT };
+    r.run(0.1);
+    expect(r.w.state().kind).toBe('clear');
+    const off = r.w.forceStorm('siege.m52', { area });
+    r.run(0.1);
+    expect(r.w.state().kind).toBe('storm');
+    r.s.pos = { ...COURT, x: 11200 };
+    r.run(0.1);
+    expect(r.w.state().kind).toBe('clear');
+    r.s.pos = { ...COURT };
+    off();
+    r.run(0.1);
+    expect(r.w.state().kind).toBe('clear');
+  });
+
+  it('a shelter zone is safe from exposure; outside it the shipped exposure ticks', () => {
+    const r = rig();
+    r.w.forceStorm('siege.m52', { area });
+    const offZone = r.w.addShelterZone({ id: 'siege.m52.lee', at: { x: COURT.x, z: COURT.z }, radius: 14 });
+    r.s.pos = { ...COURT, x: COURT.x + 10 };
+    r.run(9.05);
+    expect(r.s.health).toBe(1000);
+    r.s.pos = { ...COURT, x: COURT.x + 40 };
+    r.run(9.05);
+    expect(r.s.health).toBeCloseTo(940, 6);
+    offZone();
+    r.s.pos = { ...COURT, x: COURT.x + 10 };
+    r.run(3.05);
+    expect(r.s.health).toBeLessThan(940);
+  });
+});

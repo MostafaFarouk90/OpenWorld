@@ -77,6 +77,11 @@ export interface CompanionsService {
   actorId(id: string): ActorId | null;
   /** 0 when not joined. */
   rank(id: string): number;
+  /**
+   * N4 (Act 5, the siege's wounded beat): the companion waits at `anchorId` and does not follow or fight until the
+   * release is called. Unknown id: a no-op release.
+   */
+  sitOut?(id: string, anchorId: string): () => void;
   /** Which optional services resolved (the all-plugins test asserts these). */
   integration(): { npcs: boolean; attackSpeedHook: boolean; nav: boolean };
 }

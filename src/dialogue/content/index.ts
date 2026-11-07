@@ -36,6 +36,7 @@ import { SCENE_ACT3_CAMP } from './act3/campScene.dialogue';
 import { withAct4Rook } from './act4/rook.trainer';
 import { withHarrowmarkA4 } from './act4/harrowmark';
 import { withWasteA4 } from './act4/waste';
+import { SIEGE_ORDER_TREES } from '../../siege/orders.dialogue';
 
 // Act 3 (K10): the four Harrowmark trainers get their master-book lines in front. Act 3 (K5): Hrolf's master book and
 // the companions' M27, M32 and M34 scene trees. Act 1 side jobs: the givers' job rules, guarded by withSideJobs. The summit block's extensions (withSummit).
@@ -60,4 +61,6 @@ export const dialogueDefs: DialogueDef[] = withWasteA4(withHarrowmarkA4(withAct4
   ...DRAGONSPINE_DIALOGUES,
   // Act 3 (K16 PR 2): the camp scene after "The Coal-Mother's Oath"
   SCENE_ACT3_CAMP.def,
+  // Act 5 (N4): the siege's war-post orders
+  ...SIEGE_ORDER_TREES.map((t) => t.def),
 ], questDefs)))), questDefs)));

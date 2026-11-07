@@ -777,7 +777,7 @@ export class EnemyManager {
       const opt = self.def.tauntable;
       if (opt === false || (opt !== true && this.isBoss(self.id))) return null;
       if (self.spawnerId && this.spawners.defOf(self.spawnerId)?.untauntable) return null;
-      return this.tauntRegistry.pick(self.feet, self.tauntTarget);
+      return this.tauntRegistry.pick(self.feet, self.tauntTarget, self.id);
     },
     perceptionModifiers: (self: Enemy, targetId: ActorId) => this.perceptionHub.combined(targetId, () => self.pose()),
     partnerOf: (self: Enemy) => {
