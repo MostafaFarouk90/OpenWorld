@@ -48,7 +48,7 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | waystone.wyrm-terraces | 12150 | 7850 | 0 | 0 | waystone |
 | waystone.inner-gate | 11030 | 7425 | 0 | 0 | waystone |
 | caldera.door.cooling-hall | 11150 | 7420 | 0 | 180 | door |
-| caldera.door.foundry | 11000 | 7500 | 0 | 180 | door |
+| caldera.door.foundry | 11000 | 7625 | 0 | 180 | door |
 | caldera.door.tunnel | 10550 | 6955 | 0 | 122.01 | door |
 | caldera.tunnel.mouth | 10550 | 6955 | 0 | 122.01 | quest |
 | caldera.lava-stair.head | 11000 | 6812 | 0 | 15.61 | path |
