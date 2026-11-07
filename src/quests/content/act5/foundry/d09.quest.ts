@@ -14,7 +14,7 @@ export const D09_SLUICE_ORDER = [1, 3, 2] as const;
 export const D09_FLOOD_S = 8;
 /** After this many wrong orders the next right sluice glows (the M50 lesson rule). */
 export const D09_LESSON_AFTER = 2;
-export const D09_NOTES = { plate: 'note-d09-plate', ledgers: 'note-d09-heart-ledgers', vats: 'note-d09-vats', map: 'note-d09-anvils-map', orders: 'note-d09-orders' } as const;
+export const D09_NOTES = { plate: 'note-d09-plate', ledgers: 'note-d09-heart-ledgers', vats: 'note-d09-vats', map: 'note-d09-anvils-map', orders: 'note-d09-orders', shift: 'note-d09-shift-board', letters: 'note-d09-letters' } as const;
 export const D09_GROUPS = { patrol: 'd09.patrol', guards: 'd09.guards', vatPatrol: 'd09.vat-patrol' } as const;
 export const D09_WENNA = 'wenna-foundry';
 /** The outcome scene played (the spare or the strike, and Alric's words after). */
@@ -38,10 +38,10 @@ export const d09: QuestDef = {
     story('enter', 'quest.d09.enter', 'interior.entered', { match: { interiorId: FOUNDRY_DESCENT_ID }, doneWhen: { flag: D09_ENTERED, equals: true } }),
     story('patrol', 'quest.d09.patrol', D09_PATROL_DOWN, { doneWhen: { flag: D09_PATROL_DOWN, equals: true } }),
     { id: 'stoker', type: 'talk', target: D09_STOKER, textKey: 'quest.d09.stoker' },
-    reads('plate', 'quest.d09.plate', [D09_NOTES.plate]),
+    reads('plate', 'quest.d09.plate', [D09_NOTES.plate, D09_NOTES.shift]),
     story('slag', 'quest.d09.slag', D09_SLAG, { doneWhen: { flag: D09_SLAG, equals: true } }),
     story('guards', 'quest.d09.guards', D09_GUARDS_DOWN, { doneWhen: { flag: D09_GUARDS_DOWN, equals: true } }),
-    reads('gallery', 'quest.d09.gallery', [D09_NOTES.ledgers, D09_NOTES.vats, D09_NOTES.map, D09_NOTES.orders]),
+    reads('gallery', 'quest.d09.gallery', [D09_NOTES.ledgers, D09_NOTES.vats, D09_NOTES.map, D09_NOTES.orders, D09_NOTES.letters]),
     story('vey', 'quest.d09.vey', ['boss.defeated', 'boss.spared'], {
       match: { bossId: 'vey' },
       doneWhen: { any: [{ flag: VEY_OUTCOME, equals: 'spared' }, { flag: VEY_OUTCOME, equals: 'defeated' }] },

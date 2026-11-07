@@ -38,6 +38,8 @@ export const FA = {
   tunnelNote: (k: string) => `${F}.r27.note.${k}`,
   d09Stoker: `${F}.d09.stoker`,
   d09Plate: `${F}.d09.plate`,
+  d09Shift: `${F}.d09.shift-board`,
+  d09Letters: `${F}.d09.letters`,
   d09Guard: (n: number) => `${F}.d09.guard.${n}`,
 } as const;
 
@@ -67,9 +69,13 @@ export const NEAR_ANCHORS: readonly NearAnchor[] = [
   near(FA.tunnelCaptain, `${T}.post.4`, 0, -1.2),
   near(FA.tunnelNote('tally'), `${T}.checkpoint`, 0, 5),
   near(FA.tunnelNote('door'), `${T}.checkpoint`, 3.5, -2),
+  near(FA.tunnelNote('roster'), `${T}.checkpoint`, -3.5, -2),
   // D09: the captive stoker on floor 1 (near the checkpoint), the sluices' plate (3 m in front of the first sluice)
   near(FA.d09Stoker, `${FD}.checkpoint.1`, 3, 2),
   near(FA.d09Plate, `${FD}.sluice.1`, 4, 5),
+  // D09: the stokers' shift board by the lift head; Edric's mother's letters on the last stair, before the arena
+  near(FA.d09Shift, `${FD}.basin`, 5, -2),
+  near(FA.d09Letters, `${FD}.checkpoint.3`, 4, -2),
   // D09: Alric comes down to the foot once Vey's fight is over (beside the link to the Hammer Hall)
   near(FA.d09AlricFoot, `${FD}.link.hammer`, 2, -3),
 ];
