@@ -248,4 +248,13 @@ describe('economy plugin on the real game', () => {
     t.ctx.events.emit('item.used', { itemId: 'maud-stew' });
     expect(a.maxHealth).toBeCloseTo(base * 1.1, 1);
   });
+
+  it("N7: Maud's rim dishes light Hearty like the stew", async () => {
+    for (const food of ['rim-hotpot', 'ember-broth']) {
+      const t = await boot();
+      const base = t.ctx.actors.player.maxHealth;
+      t.ctx.events.emit('item.used', { itemId: food });
+      expect(t.ctx.actors.player.maxHealth, food).toBeCloseTo(base * 1.1, 1);
+    }
+  });
 });

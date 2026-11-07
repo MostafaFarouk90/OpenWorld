@@ -76,6 +76,9 @@ export interface Offer {
 
 const isCount = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n > 0;
 
+/** Act 5 vendors with unlimited stock and no buying: left out of the shop save so no older save's bytes change. */
+export const ACT5_UNPERSISTED: ReadonlySet<VendorId> = new Set<VendorId>(['alric', 'maud-rim']);
+
 /** Vendors' stock and buy-back. Every transaction validates fully, then takes gold, with no refund path. */
 export class Shop {
   static readonly key = 'vendors';
@@ -249,7 +252,12 @@ export class Shop {
   serialize(): VendorsSave {
     // v0.9: a vendor with no stock lines and nothing to buy back (Act 5's reserved rows until N7 stocks them) is left out,
     // so adding a vendor id never changes an older save's bytes. A load fills it from the defaults as before.
-    const silent = (v: VendorId) => VENDORS[v].lines.length === 0 && (this.buyBackList.get(v)?.length ?? 0) === 0;
+    // N7: so is an Act 5 vendor whose lines are all unlimited (Alric, Maud's rim kitchen): nothing of theirs ever changes.
+    const silent = (v: VendorId) => {
+      if ((this.buyBackList.get(v)?.length ?? 0) > 0) return false;
+      if (VENDORS[v].lines.length === 0) return true;
+      return ACT5_UNPERSISTED.has(v) && VENDORS[v].lines.every((l) => l.count === undefined);
+    };
     const stock: VendorsSave['stock'] = {};
     for (const [v, m] of this.stock) if (!silent(v)) stock[v] = Object.fromEntries(m);
     const buyBack: VendorsSave['buyBack'] = {};
