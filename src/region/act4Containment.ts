@@ -2,7 +2,8 @@
 // to Ashgate, the closed Caldera hole inside the Ashen Waste, and the occupied city's rule (Q2). Registered by the
 // containment service at install, so it holds from the first tick of every save. L1 lays the real road and may move the
 // corridor points (the rule test pins 80 m from the Caldera).
-import type { FlagCondition } from '../core/flagCondition';
+import type { FlagCondition, FlagReader } from '../core/flagCondition';
+import { ACT5_GATE_FLAG, AFTER_ENDING_FLAG } from './act5Regions';
 import type { ContainmentHoleDef, CorridorDef } from './containment';
 import { ASH_ROAD_POINTS as ASH_ROAD_SHAPE_POINTS } from '../terrain/shape/waste';
 import { engineBox } from './regions';
@@ -15,8 +16,19 @@ export const ASH_ROAD_OPEN_WHEN: FlagCondition = { all: ['story.m41.complete'] }
 /** The Waste's edge face north of Ashgate opens with the Waste itself: M42 accepted (L13 PR 2 retired the Phase G hold). */
 export const WASTE_EDGE_OPEN_WHEN: FlagCondition = { all: ['story.m42.started'] };
 
-/** Q2: Harrowmark is Vey's from the betrayal (M38) until Act 5. */
+/** Q2: Harrowmark is Vey's from the betrayal (M38) until the world after the ending (v0.9 item 10). */
 export const OCCUPIED_FLAG = 'story.m38.complete';
+
+/**
+ * v0.9 item 10: the city is held from M38 until `world.afterEnding` (N12 sets it when the final choice has played out;
+ * N13 builds the rest of the world after it). The gate faces, `WAYSTONE_DARK` and the no-strand rule read this.
+ */
+export function harrowmarkOccupied(flags: FlagReader): boolean {
+  return Boolean(flags.getFlag(OCCUPIED_FLAG)) && !flags.getFlag(AFTER_ENDING_FLAG);
+}
+
+/** `harrowmarkOccupied` as a flat condition, for tables (WAYSTONE_DARK). */
+export const HARROWMARK_OCCUPIED_WHEN: FlagCondition = { all: [OCCUPIED_FLAG], none: [AFTER_ENDING_FLAG] };
 
 /** Ashgate (map (11, 5.5)), just outside the Waste's south edge (engine z 4500), plan 3.2. */
 export const ASHGATE_POINT = { x: 10000, z: 4450 } as const;
@@ -53,8 +65,11 @@ export const ASHGATE_GATE_CORRIDOR: CorridorDef = {
 
 export const ACT4_CORRIDORS: readonly CorridorDef[] = [ASH_ROAD_CORRIDOR, ASHGATE_REFUGE_CORRIDOR, ASHGATE_GATE_CORRIDOR];
 
-/** The Caldera (Act 5) is a closed hole inside the open Waste for all of Act 4. */
-export const CALDERA_HOLE: ContainmentHoleDef = { id: 'hole.caldera', box: engineBox('caldera'), openWhen: NEVER };
+/**
+ * The Caldera (Act 5) is a closed hole inside the open Waste for all of Act 4. v0.9: retired on `story.gate.a5` (kept, not
+ * deleted, so every Act 4 state reads exactly as before and an Act 4 save never sees the box open).
+ */
+export const CALDERA_HOLE: ContainmentHoleDef = { id: 'hole.caldera', box: engineBox('caldera'), openWhen: { all: [ACT5_GATE_FLAG] } };
 
 /**
  * L1 (plan act4-L1.md section 4): the Waste's north edge west of the shipped `fog.wyrmwatch-waste` face (x 10000 to

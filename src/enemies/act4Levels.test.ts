@@ -113,7 +113,8 @@ describe('act-scoped region bands (item 2)', () => {
     expect(regionBandNow('greyfen', after)).toEqual(REGION_INFO.greyfen.levelBand);
     expect(bandForRegion('harrowmark')).toEqual({ min: 4, max: 9 });
     expect(bandForRegion('harrowmark', after)).toEqual({ min: 28, max: 33 });
-    expect(bandForRegion('caldera', after)).toBeUndefined(); // reserved
+    // v0.9: the Caldera is built (Act 5, 35 to 40; capped at spawn).
+    expect(bandForRegion('caldera', after)).toEqual({ min: 35, max: 40 });
     expect(bandForRegion('nowhere', after)).toBeUndefined();
   });
   it('the track variant follows the same gate', () => {
@@ -121,11 +122,11 @@ describe('act-scoped region bands (item 2)', () => {
     expect(regionTrackNow('harrowmark', { getFlag: (k) => k === 'story.gate.a4' })).toBe('seven-gates-ash');
     expect(regionTrackNow('ashen-waste')).toBe('dust-chant');
   });
-  it('the Waste is built at 31 to 35; the Caldera inside it answers null', () => {
+  it('the Waste is built at 31 to 35; the Caldera inside it answers itself (v0.9: built)', () => {
     expect(REGION_INFO['ashen-waste'].levelBand).toEqual({ min: 31, max: 35 });
     expect(regionAt(8400, 5900)?.id).toBe('ashen-waste');
     expect(regionAt(13300, 5700)?.id).toBe('ashen-waste');
-    expect(regionAt(11000, 8000)).toBeNull();
+    expect(regionAt(11000, 8000)?.id).toBe('caldera');
     expect(regionAt(10000, 4450)?.id).not.toBe('ashen-waste'); // Ashgate sits outside the Waste's edge
   });
   it('the harrowmark-a4 area is named-only: areaAt never answers it', () => {
@@ -288,7 +289,8 @@ describe('v0.8 item 11: Act 4 kinds, skins and boss rules', () => {
     const { ENEMY_SKINS, ENEMY_SKIN_IDS, isEnemySkinId } = await import('./skins');
     const { ENEMY_DEFS } = await import('./defs');
     expect(ACT4_ENEMY_KINDS).toEqual(['waste-strider', 'husk-knight', 'cinder-gnat-swarm']);
-    expect(ENEMY_SKIN_IDS.sort()).toEqual(['footman-masked', 'footman-soot', 'watch-masked', 'wraith-husk']);
+    // v0.9 item 11 adds the three Act 5 skins.
+    expect(ENEMY_SKIN_IDS.sort()).toEqual(['footman-grisel', 'footman-masked', 'footman-soot', 'golem-lava', 'watch-masked', 'wraith-husk', 'wraith-stoker']);
     for (const id of ENEMY_SKIN_IDS) expect(ENEMY_DEFS[ENEMY_SKINS[id].kind], id).toBeTruthy();
     expect(isEnemySkinId('wraith-husk')).toBe(true);
     expect(isEnemySkinId('nope')).toBe(false);

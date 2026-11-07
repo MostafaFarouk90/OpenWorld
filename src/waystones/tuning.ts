@@ -59,5 +59,6 @@ export const WAYSTONE_LOCKS: Readonly<Record<string, string>> = {
  * dark from the betrayal (M38); the city stones are found by position (harrowmark/noStrand.ts), this table names the rest.
  */
 export const WAYSTONE_DARK: Readonly<Record<string, FlagCondition>> = {
-  'harrowmark-gate': { all: ['story.m38.complete'] },
+  // v0.9 item 10: lit again in the world after the ending (`world.afterEnding`; HARROWMARK_OCCUPIED_WHEN).
+  'harrowmark-gate': { all: ['story.m38.complete'], none: ['world.afterEnding'] },
 };

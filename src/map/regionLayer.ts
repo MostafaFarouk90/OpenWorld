@@ -58,6 +58,11 @@ export function regionChips(open: readonly RegionId[], flags?: { getFlag(key: st
   return out;
 }
 
+function isNested(id: RegionId): boolean {
+  const box = engineBox(id);
+  return REGION_IDS.some((other) => other !== id && inside(box, engineBox(other)) && !inside(engineBox(other), box));
+}
+
 /** Stable signature, so the view redraws its region layer only when the open set changes. */
 export function chipsKey(chips: readonly RegionChip[]): string {
   return chips.map((c) => `${c.id}${c.closed ? 0 : 1}${c.labelKey}`).join('|');
@@ -66,7 +71,9 @@ export function chipsKey(chips: readonly RegionChip[]): string {
 /** The open region a point is in (registry order; null between regions), for the minimap caption. */
 export function openRegionAt(x: number, z: number, open: readonly RegionId[]): RegionId | null {
   if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
-  for (const id of open) {
+  // v0.9: a region nested inside another (the Caldera inside the Waste) answers first, as `regionAt` does.
+  const nestedFirst = [...open].sort((a, b) => Number(isNested(b)) - Number(isNested(a)));
+  for (const id of nestedFirst) {
     if (REGION_INFO[id].reserved) continue;
     const b = engineBox(id);
     if (x >= b.x0 && x < b.x1 && z >= b.z0 && z < b.z1) return id;

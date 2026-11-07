@@ -4,7 +4,7 @@
 import type * as THREE from 'three';
 import type { EnemyKind } from './types';
 
-export type EnemySkinId = 'footman-soot' | 'footman-masked' | 'wraith-husk' | 'watch-masked';
+export type EnemySkinId = 'footman-soot' | 'footman-masked' | 'wraith-husk' | 'watch-masked' | 'footman-grisel' | 'wraith-stoker' | 'golem-lava';
 
 export interface EnemySkinDef {
   /** The kind the skin dresses: a spawner with a skin of another kind is a lint error. */
@@ -31,6 +31,11 @@ export const ENEMY_SKINS: Readonly<Record<EnemySkinId, EnemySkinDef>> = {
   'wraith-husk': { kind: 'ash-wraith', tint: 0x8a8580, emissive: 0x3a2e26, hide: ['Mage_Hat'] },
   // L2: Vey's stealth observers (M36's rooftops, R20's stealth checkpoints) in the Regent's colours.
   'watch-masked': { kind: 'watch-guard', tint: 0x8890a0 },
+  // v0.9 item 11 (Act 5): rows that draw like their base until N5 sets the overrides (Grisel's green, the stokers' soot,
+  // the lava golem's crust and glow).
+  'footman-grisel': { kind: 'blighted-soldier' },
+  'wraith-stoker': { kind: 'ash-wraith' },
+  'golem-lava': { kind: 'cinder-golem' },
 };
 
 export const ENEMY_SKIN_IDS = Object.keys(ENEMY_SKINS) as EnemySkinId[];

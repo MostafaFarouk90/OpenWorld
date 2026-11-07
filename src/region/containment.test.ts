@@ -78,7 +78,8 @@ describe('containment: the open area under each flag state', () => {
     expect(new Containment(stateOf(all)).openRegions()).toEqual(['brightwater', 'harrowmark', 'cinderreach', 'oldsmoke', 'greyfen', 'dragonspine']);
     const oldHold = { ...all, 'story.phase.dragonspineOpen': true };
     expect(new Containment(stateOf(oldHold)).openRegions()).toEqual(['brightwater', 'harrowmark', 'cinderreach', 'oldsmoke', 'greyfen', 'dragonspine']);
-    expect(PHASE_HOLDS).toEqual({}); // v0.8's Phase G hold retired by L13 PR 2
+    // v0.8's Phase G hold retired by L13 PR 2; v0.9 the Caldera floor's Phase I hold.
+    expect(PHASE_HOLDS).toEqual({ caldera: ['story.phase.foundryOpen'] });
   });
 
   it('named points: the spawn, Harrowmark, the null strip on and off the road, Cinderreach, Oldsmoke, the Caldera', () => {

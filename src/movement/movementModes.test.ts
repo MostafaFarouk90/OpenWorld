@@ -28,8 +28,8 @@ describe('MOVEMENT_MODE_RULES (plan item 25)', () => {
   it.each(rows)('%s', (mode, save, fastTravel, mount, companions) => {
     expect(MOVEMENT_MODE_RULES[mode]).toEqual({ save, fastTravel, mount, companions });
   });
-  it('has exactly the eight modes (v0.8 adds storm, escort, scene)', () => {
-    expect(Object.keys(MOVEMENT_MODE_RULES).sort()).toEqual(['dive', 'escort', 'ferry', 'glide', 'haul', 'scene', 'storm', 'walk']);
+  it('has exactly the eleven modes (v0.8 adds storm, escort, scene; v0.9 siege, lava-stair, arena)', () => {
+    expect(Object.keys(MOVEMENT_MODE_RULES).sort()).toEqual(['arena', 'dive', 'escort', 'ferry', 'glide', 'haul', 'lava-stair', 'scene', 'siege', 'storm', 'walk']);
   });
 });
 

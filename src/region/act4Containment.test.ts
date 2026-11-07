@@ -103,6 +103,8 @@ describe('Act 4 containment over the states', () => {
   it('the Caldera stays a closed hole in every Act 4 state, with its rim ground open around it in Phase H', () => {
     expect(CALDERA_HOLE.box).toEqual(CALDERA);
     for (const [name, flags] of Object.entries(STATES)) {
+      // v0.9: the Act 4 ending writes `story.gate.a5`, which opens the Caldera (act5Containment.test.ts has that grid).
+      if (name === 'actComplete') continue;
       const c = containment(flags);
       expect(c.isOpen((CALDERA.x0 + CALDERA.x1) / 2, (CALDERA.z0 + CALDERA.z1) / 2), name).toBe(false);
       expect(flagConditionHolds(CALDERA_HOLE.openWhen, reader(flags)), name).toBe(false);
@@ -112,7 +114,11 @@ describe('Act 4 containment over the states', () => {
     // A player inside the Caldera is placed back on Waste ground.
     const back = h.nearestOpen((CALDERA.x0 + CALDERA.x1) / 2, CALDERA.z0 + 10);
     expect(h.isOpen(back.x, back.z)).toBe(true);
-    expect(regionAt((CALDERA.x0 + CALDERA.x1) / 2, (CALDERA.z0 + CALDERA.z1) / 2)).toBeNull();
+    // v0.9: the Caldera is built, so regionAt names it (containment, not the region table, keeps Act 4 out).
+    expect(regionAt((CALDERA.x0 + CALDERA.x1) / 2, (CALDERA.z0 + CALDERA.z1) / 2)?.id).toBe('caldera');
+    const done = containment(STATES.actComplete);
+    expect(flagConditionHolds(CALDERA_HOLE.openWhen, reader(STATES.actComplete))).toBe(true);
+    expect(done.isOpen(11000, 6750)).toBe(true);
   });
 
   it("L1's north band: the Waste's north edge is closed both ways in every state, so the only way in is Ashgate", () => {

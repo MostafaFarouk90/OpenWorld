@@ -5,6 +5,7 @@
 // never writes a flag twice. Everything outside is a port, so the runner is tested headless.
 import type { CameraShot } from '../rendering/ThirdPersonCamera';
 import type { SavedScene, SceneDef, SceneEndReason, SceneStep } from './types';
+import { sceneTestHolds, type SceneTestReader } from './sceneTest';
 
 type FlagValue = boolean | number | string;
 
@@ -23,6 +24,8 @@ export interface SceneRunnerPorts {
   move(who: string, to: string, yaw?: number): void;
   spawn(spawnerId: string): void;
   warn(msg: string): void;
+  /** v0.9: the world state the `variant` step's tests read (flags and favour); absent reads every test needing it as false. */
+  reader?: SceneTestReader;
 }
 
 interface Running {
@@ -50,8 +53,33 @@ export class SceneRunner {
 
   constructor(private readonly ports: SceneRunnerPorts) {}
 
+  private readonly tests = new Map<string, () => boolean>();
+
+  /** v0.9: a named predicate for `SceneTest.test`. */
+  registerTest(id: string, fn: () => boolean): () => void {
+    if (this.tests.has(id)) throw new Error(`scenes: duplicate test "${id}"`);
+    this.tests.set(id, fn);
+    return () => {
+      if (this.tests.get(id) === fn) this.tests.delete(id);
+    };
+  }
+
+  /** v0.9: the step a variant picks now (the first case that holds, else `otherwise`), or null to skip it. */
+  private choose(s: SceneStep): SceneStep | null {
+    if (!('variant' in s)) return s;
+    for (const c of s.variant.cases) if (sceneTestHolds(c.when, this.ports.reader, this.tests, (m) => this.ports.warn(m))) return c.step;
+    return s.variant.otherwise ?? null;
+  }
+
   register(def: SceneDef): () => void {
     if (this.defs.has(def.id)) throw new Error(`scenes: duplicate scene "${def.id}"`);
+    for (const s of def.steps) {
+      if (!('variant' in s)) continue;
+      for (const inner of [...s.variant.cases.map((c) => c.step), ...(s.variant.otherwise ? [s.variant.otherwise] : [])]) {
+        if ('variant' in inner) throw new Error(`scenes: scene "${def.id}" nests a variant inside a variant`);
+        if ('checkpoint' in inner) throw new Error(`scenes: scene "${def.id}" puts a checkpoint inside a variant`);
+      }
+    }
     const cps = def.steps.filter((s): s is { checkpoint: string } => 'checkpoint' in s).map((s) => s.checkpoint);
     if (new Set(cps).size !== cps.length) throw new Error(`scenes: scene "${def.id}" repeats a checkpoint name`);
     this.defs.set(def.id, def);
@@ -79,8 +107,9 @@ export class SceneRunner {
     const r = this.run;
     if (!r || r.def.skippable === false) return false;
     for (let i = r.at; i < r.def.steps.length; i++) {
-      const s = r.def.steps[i];
-      if ('flag' in s) r.buffer.set(s.flag.key, s.flag.value ?? true);
+      // v0.9: a variant writes the flag of the case it would pick now.
+      const s = this.choose(r.def.steps[i]);
+      if (s && 'flag' in s) r.buffer.set(s.flag.key, s.flag.value ?? true);
     }
     this.end('skipped');
     return true;
@@ -176,8 +205,10 @@ export class SceneRunner {
     this.ports.emit('scene.started', { id: def.id });
   }
 
-  private step(r: Running, s: SceneStep): void {
+  private step(r: Running, step: SceneStep): void {
     try {
+      const s = this.choose(step);
+      if (!s) return;
       if ('line' in s) {
         this.ports.emit('scene.line', { id: r.def.id, speakerId: s.line.speakerId, textKey: s.line.textKey });
         r.wait = s.line.seconds ?? DEFAULT_LINE_SECONDS;

@@ -56,7 +56,8 @@ describe('regionAt', () => {
   });
 
   it('is null in the far world and for non-finite input', () => {
-    expect(regionAt(12_000, 9_000)).toBeNull();
+    // v0.9: (12000, 9000) is inside the Caldera, built now; the far world stays null.
+    expect(regionAt(12_000, 9_000)?.id).toBe('caldera');
     expect(regionAt(-50_000, -50_000)).toBeNull();
     expect(regionAt(Number.NaN, 0)).toBeNull();
     expect(regionAt(0, Number.POSITIVE_INFINITY)).toBeNull();

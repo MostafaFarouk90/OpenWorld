@@ -132,6 +132,7 @@ export class Defender {
   private cooldown = 0;
   private scan = 0;
   private rising = false;
+  private _kneeling = false;
 
   constructor(
     private readonly host: DefenderHost,
@@ -139,6 +140,7 @@ export class Defender {
     readonly post: Vec3,
     readonly yaw: number,
     kind: string = DEFENDER.kind,
+    private readonly kneel?: KneelRule,
   ) {
     this.body = makeBody();
     const root = this.body.root;
@@ -172,6 +174,11 @@ export class Defender {
     return this._state;
   }
 
+  /** v0.9: down past the knockdown time, held by the kneel rule (a hostile within its radius). */
+  get kneeling(): boolean {
+    return this._kneeling;
+  }
+
   get id(): ActorId {
     return this.actor.id;
   }
@@ -182,6 +189,7 @@ export class Defender {
     this._state = 'down';
     this.downLeft = DEFENDER.knockdownSeconds;
     this.rising = false;
+    this._kneeling = false;
     this.actor.hittable = false;
     this.body.play('down');
   }
@@ -190,6 +198,7 @@ export class Defender {
   revive(): void {
     this._state = 'post';
     this.rising = false;
+    this._kneeling = false;
     this.downLeft = 0;
     this.cooldown = 0;
     if (this.actor.dead) this.host.damage.revive(this.actor.id, 1, 'script');
@@ -205,6 +214,15 @@ export class Defender {
     this.body.root.updateMatrixWorld(true);
     if (this._state === 'down') {
       this.downLeft -= dt;
+      // v0.9: the kneel rule holds him just before the rise while a hostile is within its radius.
+      if (this.kneel && !this.rising && this.downLeft <= DEFENDER.riseSeconds) {
+        const held = this.kneel.hostileWithin(this.post, this.kneel.clearRadius);
+        this._kneeling = held;
+        if (held) {
+          this.downLeft = DEFENDER.riseSeconds + 1e-6;
+          return;
+        }
+      }
       if (!this.rising && this.downLeft <= DEFENDER.riseSeconds) {
         this.rising = true;
         this.body.play('rise');
@@ -264,7 +282,21 @@ export interface DefendersOptions {
   lethalHandlerId: string;
   noKillHandlerId: string;
   kind: string;
+  /** v0.9 item 5 (the siege's allies): with it, a downed defender kneels past its knockdown until no hostile is near. */
+  kneel?: KneelRule;
 }
+
+/**
+ * v0.9 item 5, the kneel rule: a downed defender stays down (kneeling, before the rise) after its knockdown time while
+ * `hostileWithin(post, clearRadius)` is true, then rises as before. Without it the shipped timer path is unchanged.
+ */
+export interface KneelRule {
+  /** Metres (plan 3.5: 8). */
+  clearRadius: number;
+  hostileWithin(at: Vec3, r: number): boolean;
+}
+
+export const KNEEL_CLEAR_RADIUS = 8;
 
 /** The militia of one set. The lethal handler exists only while they do. */
 export class Defenders {
@@ -290,7 +322,7 @@ export class Defenders {
     this.despawnAll();
     for (const post of posts) {
       try {
-        const d = new Defender(this.host, this.makeBody, post, yaw, this.opts.kind);
+        const d = new Defender(this.host, this.makeBody, post, yaw, this.opts.kind, this.opts.kneel);
         this.list.set(d.id, d);
       } catch (err) {
         console.warn(`[waves] could not build a militiaman: ${String(err)}`);

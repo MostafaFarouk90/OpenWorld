@@ -22,7 +22,10 @@ const core: GamePlugin = {
     ctx.persist.register(ctx.state);
 
     // Moving platforms: Game.fixedUpdate steps them just before the world (controller + physics step), so each frame delta is ready for the carry.
-    const carry = (collider: Parameters<Platforms['delta']>[0]) => platforms.delta(collider);
+    // v0.9: `carryAt` adds a turning platform's rotation step for the feet and its yaw (Platforms, item 7b).
+    // Not a platform: a zero carry, as the shipped `delta` gave (the controller then still takes off a kinematic ground's ride).
+    const carry = (collider: Parameters<Platforms['delta']>[0], feet: { x: number; y: number; z: number }) =>
+      platforms.carryAt(collider, feet) ?? { x: 0, y: 0, z: 0, yaw: 0 };
     const platforms: Platforms = new Platforms({
       onArrived: (id, stop) => ctx.events.emit('platform.arrived', { id, stop }),
       // The carry (and its ground ray) runs only while a platform exists; nothing in Act 1 registers one.
@@ -31,6 +34,19 @@ const core: GamePlugin = {
       paused: () => ctx.services.get('save')?.loading === true,
     });
     ctx.services.provide('platforms', platforms);
+    // v0.9 item 7b: the camera turns with a turning platform under the player (the player's facing turns in Player),
+    // except under lock-on, where the camera follows the target.
+    ctx.systems.add({
+      id: 'core.platformCamera',
+      fixedPhase: 'afterCombat',
+      order: -90,
+      fixedUpdate: () => {
+        const yaw = ctx.world?.player?.controller?.carryYaw ?? 0;
+        if (yaw === 0 || !ctx.cameraRig) return;
+        if (ctx.services.get('lockOn')?.targetId) return;
+        ctx.cameraRig.yaw += yaw;
+      },
+    });
     ctx.persist.register({
       key: 'platforms',
       version: 1,
