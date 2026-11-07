@@ -168,6 +168,7 @@ describe('The Road to the Rim fires exactly once', () => {
     await u.runAsync(120);
     expect(ended(u)).toEqual([]);
     expect(u.of('dialogue.started').filter((e) => e.dialogueId === ACT4_CAMP_DIALOGUE)).toEqual([]);
+    u.ctx.hud.update(0.5);
     expect(card(u).active()).toBe(false);
   }, 180_000);
 });
