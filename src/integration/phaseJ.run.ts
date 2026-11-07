@@ -9,8 +9,8 @@
  * Measures what the brief names: per-quest seconds, levels and XP (the census: run A ends 37 to 38, run B 36 to 37, as ruled),
  * deaths, the cap on every hostile met, mercy, favour and the M56 snapshot, the ending's steps and the flags it leaves, the
  * pacing of Phase J on N11's rows with the nodes each quest's run read, and the act's (Phase I's rows from the end save's
- * trails), and what was scripted. N6 PR 2's hammer trial and Ulthred are stand-ins until that PR is in the stack (the
- * trail says so). Numbers owned by other threads are reported, never retuned here.
+ * trails), and what was scripted. M55's trial and D10's Ulthred are N6's real pieces
+ * (the trial dodged by side-steps, Ulthred through winUlthredForTest). Numbers owned by other threads are reported, never retuned here.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bootFromSave, type ChapterHarness } from './chapterHarness';
