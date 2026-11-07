@@ -2,7 +2,7 @@ import type { GameContext } from '../../core/Game';
 import type { GamePlugin } from '../../core/plugins';
 import type { JournalService } from '../../quests/journalTabs';
 import type { QuestsService } from '../../quests/service';
-import { ACT_START_ROWS, actStartNote, stillNeededNote, type ActStartRow, type NotePorts } from '../act4/notes';
+import { requiredQuests, actStartNote, stillNeededNote, type ActStartRow, type NotePorts } from '../act4/notes';
 import { lastChanceNote, scarNote } from '../../hud/act5/scarNote';
 import { ACT5_JOURNAL_STRINGS_EN } from '../../hud/act5/strings.en';
 
@@ -13,7 +13,7 @@ export const A5_STILL_NEEDED: readonly string[] = ['m52', 'm54'];
 
 /**
  * Act 5 N9 (plans/act5-N9.md section 4): the Act 5 start pointer, the still-needed lists, the last-chance warning and the Scar
- * line, all through the `journal.registerNote` hook. Uses L9's pure functions with its own rows: no Act 4 file is edited.
+ * line, all through the `journal.registerNote` hook. Uses L9's pure functions with its own row only (L9's plugin keeps Acts 3 and 4, so no pointer shows twice): no Act 4 file is edited.
  */
 const hudJournalAct5: GamePlugin = {
   id: 'hud-journal-act5',
@@ -35,9 +35,9 @@ const hudJournalAct5: GamePlugin = {
     const isSet = (k: string): boolean => ctx.state.getBool(k) || ctx.state.getNumber(k) > 0 || (typeof ctx.state.getFlag(k) === 'string' && ctx.state.getFlag(k) !== '');
     const scars = (): number | undefined => (svc.get('spells') as { scars?: number } | undefined)?.scars;
     const offs = [
-      registerNote(() => actStartNote(ports, [...ACT_START_ROWS, A5_START_ROW])),
+      registerNote(() => actStartNote(ports, [A5_START_ROW])),
       ...A5_STILL_NEEDED.map((gate) => registerNote(() => stillNeededNote(ports, gate))),
-      registerNote(() => lastChanceNote(ports)),
+      registerNote(() => lastChanceNote({ ...ports, needs: (id) => requiredQuests(quests()?.get(id)?.startWhen) })),
       registerNote(() => scarNote({ flag: isSet, scars, t: ports.t })),
     ];
     ctx.systems.add({

@@ -7,6 +7,8 @@ export interface SiegeHudSource {
   t: Translate;
   /** Called each update before the view is read (polls N4's `siege` service for ram stalls). */
   poll?(): void;
+  /** The chip text for an ally id (squad role or dragon); the default is the `hud.siege.ally.<id>` string. */
+  chipName?(id: string): string;
 }
 
 /** The siege HUD (plans/act5-N9.md section 1): gate bar, ram bars, wave counter, ally chips, order and line-broken flashes. */
@@ -71,7 +73,7 @@ export class SiegeHud implements HudWidgetView {
     );
     const chips = v.chips.map((id) => {
       const c = makeEl(this.doc, 'span', 'owg-siege-chip');
-      c.textContent = t(`hud.siege.ally.${id}`);
+      c.textContent = this.src.chipName ? this.src.chipName(id) : t(`hud.siege.ally.${id}`);
       return c;
     });
     if (v.chipsMore > 0) {

@@ -15,7 +15,7 @@ export interface VentCueView {
   textKey: 'hud.vent.open' | 'hud.vent.closed' | 'hud.vent.openNoTime' | 'hud.vent.closedNoTime';
   params?: { s: number };
   distance: number;
-  /** Radians, clockwise from straight ahead (the camera's yaw is subtracted). */
+  /** Radians, clockwise from straight ahead (0 dead ahead, +90 degrees to the right). */
   bearing: number;
 }
 
@@ -34,8 +34,9 @@ export function ventCue(
   if (!best) return null;
   const { v, d } = best;
   // Yaw 0 faces -Z: a vent straight ahead is at -z, bearing 0.
-  const world = Math.atan2(v.at.x - player.x, -(v.at.z - player.z));
-  let bearing = world - (Number.isFinite(cameraYaw) ? cameraYaw : 0);
+  // A positive camera yaw turns left (ShelterArrow's convention), so the arrow turns by yaw minus the facing yaw of the vent.
+  const face = Math.atan2(-(v.at.x - player.x), -(v.at.z - player.z));
+  let bearing = (Number.isFinite(cameraYaw) ? cameraYaw : 0) - face;
   bearing = Math.atan2(Math.sin(bearing), Math.cos(bearing));
   const timed = typeof v.inS === 'number' && Number.isFinite(v.inS);
   const open = v.state === 'open';

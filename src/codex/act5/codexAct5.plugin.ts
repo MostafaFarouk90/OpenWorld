@@ -85,7 +85,6 @@ const codexAct5: GamePlugin = {
     };
     const questEntries = (questId: unknown): void => {
       for (const u of ACT5_QUEST_UNLOCKS) if (u.quest === questId) unlock(u.entry);
-      if (questId === SKIN_ROW_UNLOCK_QUEST) for (const s of creatures.skinIds) unlock(s);
     };
     const loose = ctx.events.on as unknown as (n: string, f: (e: never) => void) => () => void;
     offs.push(
@@ -100,6 +99,8 @@ const codexAct5: GamePlugin = {
       // A completed quest unlocks too, except the skin rows which wait for the quest's end.
       ctx.events.on('quest.completed', (e) => {
         questEntries(e?.questId);
+        // Skin rows wait for the quest's end, the same as the load path.
+        if (e?.questId === SKIN_ROW_UNLOCK_QUEST) for (const s of creatures.skinIds) unlock(s);
       }),
       ctx.events.on('inventory.changed', (e) => {
         for (const u of ACT5_ITEM_UNLOCKS) if (e?.itemId === u.item && e.count > 0) unlock(u.entry);

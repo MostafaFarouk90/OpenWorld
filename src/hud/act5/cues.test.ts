@@ -20,7 +20,9 @@ describe('ventCue', () => {
     const v = ventCue([{ id: 'e', at: { x: 10, z: 0 }, state: 'closed' }], p, 0)!;
     expect(v.textKey).toBe('hud.vent.closedNoTime');
     expect(v.bearing).toBeCloseTo(Math.PI / 2);
-    expect(ventCue([{ id: 'e', at: { x: 10, z: 0 }, state: 'closed' }], p, Math.PI / 2)!.bearing).toBeCloseTo(0);
+    // Facing -X (yaw +90) with the vent at +X: it is behind. Vent at -X: dead ahead.
+    expect(Math.abs(ventCue([{ id: 'e', at: { x: 10, z: 0 }, state: 'closed' }], p, Math.PI / 2)!.bearing)).toBeCloseTo(Math.PI);
+    expect(ventCue([{ id: 'w', at: { x: -10, z: 0 }, state: 'closed' }], p, Math.PI / 2)!.bearing).toBeCloseTo(0);
   });
   it('shows nothing with no list, out of range, or junk positions', () => {
     expect(ventCue(undefined, p, 0)).toBeNull();

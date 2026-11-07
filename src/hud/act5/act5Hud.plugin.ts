@@ -6,6 +6,7 @@ import { makeEl, setShown, type HudWidgetView } from '../widget';
 import { Act5Screens, type Act5ScreensService, type KeySource2 } from './Screens';
 import { LavaFlash } from './lavaCue';
 import { M52_COMPLETE_FLAG } from './ports';
+import { rimHoldsLines } from './phaseCard';
 import { SiegeHud } from './SiegeHud';
 import { SiegeModel } from './siegeModel';
 import { ventCue, type VentReading } from './ventCue';
@@ -62,6 +63,9 @@ interface SiegeSvcLike {
   defs?: readonly { id: string; waves: readonly unknown[] }[] | Record<string, { id?: string; waves: readonly unknown[] }>;
   rams?(): readonly { id: string; stalled: number }[];
   structures?(siegeId: string): readonly string[];
+  allies?(): readonly { id: string; role?: string }[];
+  current?: { siegeId?: string; wave?: number; gatePct?: number; breached?: boolean } | null;
+  completed?(siegeId: string): boolean;
 }
 interface StructureLike {
   structure?(id: string): { kind: string; maxHealth: number; role?: string } | undefined;
@@ -82,7 +86,7 @@ const act5Hud: GamePlugin = {
 
     const siegeSvc = (): SiegeSvcLike | undefined => svc.get('siege') as SiegeSvcLike | undefined;
     const model = new SiegeModel({
-      over: (id) => (id === 'm52' ? ctx.state.getBool(M52_COMPLETE_FLAG) : false),
+      over: (id) => (id === 'm52' && ctx.state.getBool(M52_COMPLETE_FLAG)) || (siegeSvc()?.completed?.(id) ?? false),
       waveTotal: (id) => {
         const d = siegeSvc()?.defs;
         const def = Array.isArray(d) ? d.find((x) => x.id === id) : (d as Record<string, { waves: readonly unknown[] }> | undefined)?.[id];
@@ -95,6 +99,12 @@ const act5Hud: GamePlugin = {
     const siege = new SiegeHud(doc, {
       model,
       t,
+      chipName: (id) => {
+        const role = siegeSvc()?.allies?.().find((a) => a.id === id)?.role;
+        if (role && ACT5_HUD_STRINGS_EN[`hud.siege.ally.${role}`]) return t(`hud.siege.ally.${role}`);
+        if (ACT5_HUD_STRINGS_EN[`hud.siege.ally.${id}`]) return t(`hud.siege.ally.${id}`);
+        return /dragon|wyrm/i.test(id) ? t('hud.siege.ally.dragon') : t('hud.siege.ally.company');
+      },
       poll: () => {
         for (const r of siegeSvc()?.rams?.() ?? []) model.setStall(r.id, r.stalled);
       },
@@ -105,7 +115,8 @@ const act5Hud: GamePlugin = {
       const v = model.view();
       if (!v) return false;
       const listed = siegeSvc()?.structures?.(v.siegeId);
-      return listed ? listed.includes(id) : isRam(id) || /gate/.test(id);
+      // The gate and the rams only: brazier carts keep the shared bar (N4's list holds the gate and every cart).
+      return listed ? listed.includes(id) && (!id.includes('.cart.') || isRam(id)) : isRam(id) || /gate/.test(id);
     });
 
     // Vent cue and lava flash.
@@ -153,6 +164,12 @@ const act5Hud: GamePlugin = {
       t,
       keys,
       reducedMotion: () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches,
+      phaseLines: (id) => (id === 'rim-holds' ? rimHoldsLines((k) => ctx.state.getBool(k), t) : []),
+      lock: () => {
+        // Input stays out of gameplay while a screen is open (the epilogue's keys must not walk or interact).
+        const off = ctx.hud.openModal({ id: 'act5-screen-lock', element: asHtml(makeEl(doc, 'div', 'owg-act5-lock')) }, { context: 'menu' });
+        return typeof off === 'function' ? off : null;
+      },
       closed: (kind, id) => {
         if (kind === 'phaseCard') ctx.events.emit('hud.phaseCard.closed', { id: id ?? '' });
         else if (kind === 'epilogue') ctx.events.emit('hud.epilogue.closed', {});
@@ -183,8 +200,11 @@ const act5Hud: GamePlugin = {
       }),
       on('lava.thrown', () => ctx.events.emit('hud.toast', { textKey: 'hud.lava.thrown' })),
       // A load re-derives everything: the siege director re-emits its events for the restarted wave.
+      on('siege.completed', (e: { siegeId?: string }) => model.end(e?.siegeId)),
       on('save.loaded', () => {
         model.reset();
+        // Seed from the siege service so the view is right whichever handler runs first; the restarted wave re-emits too.
+        model.seed(siegeSvc()?.current);
         flash.reset();
       }),
     ];
