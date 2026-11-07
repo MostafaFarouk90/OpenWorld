@@ -1,4 +1,5 @@
 import { withoutAct4Rows } from '../harrowmark/act4/postRules';
+import { withoutAfterEndingRows } from '../afterEnding/posts';
 import { withoutHarrowmarkQuestRows } from '../quests/content/act4/harrowmark/npcs';
 import { describe, expect, it } from 'vitest';
 import { GRISEL_HALL_DEF } from './griselHall';
@@ -33,8 +34,8 @@ describe('Deepgate NPC posts', () => {
   });
 
   it('comes first in POST_RULES, and no Act 1 row names a Deepgate NPC', () => {
-    // Act 4 (L2, and L10's quest rows such as Wenna at the M41 camp) puts its rows in front of Wenna's and Grisel's steward's; the Deepgate rows themselves are unchanged.
-    expect(POST_RULES.slice(0, OLDSMOKE_POST_RULES.length).map((r) => withoutAct4Rows(withoutHarrowmarkQuestRows(r)))).toEqual(OLDSMOKE_POST_RULES);
+    // Act 4 (L2, and L10's quest rows such as Wenna at the M41 camp) puts its rows in front of Wenna's and Grisel's steward's; the Deepgate rows themselves are unchanged. Act 5 N13 puts its after-ending row first for the NPCs who go home.
+    expect(POST_RULES.slice(0, OLDSMOKE_POST_RULES.length).map((r) => withoutAct4Rows(withoutHarrowmarkQuestRows(withoutAfterEndingRows(r))))).toEqual(OLDSMOKE_POST_RULES);
     const ours = new Set(OLDSMOKE_NPCS.map((n) => n.id));
     for (const r of POST_RULES.slice(OLDSMOKE_POST_RULES.length)) expect(ours.has(r.npcId), r.npcId).toBe(false);
   });
