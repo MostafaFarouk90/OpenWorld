@@ -59,7 +59,8 @@ export class SiegeHud implements HudWidgetView {
       : v.waves
         ? t('hud.siege.wave', { n: v.wave, total: v.waves })
         : t('hud.siege.waveOnly', { n: v.wave });
-    this.gateText.textContent = v.breached ? t('hud.siege.breached') : t('hud.siege.gate', { pct: Math.round(v.gatePct) });
+    const r27 = v.siegeId === 'r27';
+    this.gateText.textContent = v.breached ? t(r27 ? 'hud.siege.breached.r27' : 'hud.siege.breached') : t(r27 ? 'hud.siege.gate.r27' : 'hud.siege.gate', { pct: Math.round(v.gatePct) });
     this.gateFill.style.width = pct(v.gatePct / 100);
     this.gateRow.className = `owg-siege-gate ${v.breached ? 'owg-siege-breached' : v.gatePct < 25 ? 'owg-siege-low' : v.gatePct < 50 ? 'owg-siege-warn' : ''}`;
     this.rams.replaceChildren(
