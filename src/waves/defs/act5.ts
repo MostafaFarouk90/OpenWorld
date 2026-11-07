@@ -14,7 +14,7 @@ export const SIEGE_KINDS: Readonly<{ soldier: EnemyKind; guard: EnemyKind }> = {
 
 export const RIM_SIEGE_ANCHORS = {
   gate: [1, 2, 3, 4].map((n) => `caldera.siege.gate.${n}`),
-  lanes: { '1': 'caldera.siege.lane.1', '2': 'caldera.siege.lane.2', '3': 'caldera.siege.lane.3', '4': 'caldera.siege.lane.4', ram: 'caldera.siege.lane.ram' },
+  lanes: { '1': 'caldera.siege.lane.1', '2': 'caldera.siege.lane.2', '3': 'caldera.siege.lane.3', '4': 'caldera.siege.lane.4', ram: 'caldera.siege.ram' },
 } as const;
 
 export const TUNNEL_ANCHORS = {
