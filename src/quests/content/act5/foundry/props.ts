@@ -2,10 +2,10 @@
 // `quest.prompt.a5f.<name>`, so they never share a key with another block's table.
 import type { QuestPropSpec } from '../../../props';
 import { FA } from './anchors';
-import { R27_CHARGE, R27_LAMP, R27_PROP, D09_SLUICE, R28_LAID, R28_LIT } from './flags';
+import { R27_CHARGE, R27_LAMP, R27_PROP, D09_SLUICE, R28_LAID, R28_LIT, R30_LINE } from './flags';
 import { R27_CHARGES, R27_LAMPS, R27_PROPS, R27_USE } from './r27.quest';
 import { R28_LAY, R28_LIGHT, R28_PYRE_NS, R28_RITE } from './r28.quest';
-import { R30_ANVIL } from './r30.quest';
+import { R30_ANVIL, R30_YSMERYTH_SPOT, R30_YSMERYTH_USE } from './r30.quest';
 import { D09_SLUICES, D09_SLUICE_USE } from './d09.quest';
 
 export const R28_RITE_USE = 'use:r28-rite';
@@ -26,11 +26,13 @@ export const FOUNDRY_A5_PROPS: QuestPropSpec[] = [
   p('rite', R28_RITE_USE, FA.rite, ['r28', 'rite'], R28_RITE, { look: 'brazier' }),
   // R30: the camp's old anvil (the director runs the rhythm run on use)
   p('anvil', R30_ANVIL, FA.r30Anvil, ['r30', 'tune'], undefined, { look: 'hearth' }),
+  // R30: Ysmeryth's line (she has no talk interactable of her own; the director opens her tree)
+  p('ysmeryth', R30_YSMERYTH_USE, R30_YSMERYTH_SPOT, ['r30', 'lines'], undefined, { when: { not: { flag: R30_LINE('ysmeryth'), equals: true } } }),
   // D09: the three slag sluices (the director checks the order; no used flag, a wrong order resets them)
   ...D09_SLUICES.map((n) => p('sluice', D09_SLUICE_USE(n), `caldera.int.foundry.sluice.${n}`, ['d09', 'slag'], undefined, { when: { not: { flag: D09_SLUICE(n), equals: true } } })),
 ];
 
 export const FOUNDRY_A5_PROMPTS: Record<string, string> = {
   shore: 'Set the shoring prop', lamp: 'Light the lamp', charge: 'Set the charge', lay: 'Lay the pyre wood',
-  light: 'Light the pyre with Heartshard fire (10 Burn)', rite: 'Begin the rite', anvil: 'Drum the tune with Tobb', sluice: 'Turn the sluice',
+  light: 'Light the pyre with Heartshard fire (10 Burn)', rite: 'Begin the rite', anvil: 'Drum the tune with Tobb', ysmeryth: 'Speak to Ysmeryth', sluice: 'Turn the sluice',
 };

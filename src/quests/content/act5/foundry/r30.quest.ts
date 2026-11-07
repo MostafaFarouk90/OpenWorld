@@ -10,6 +10,9 @@ export type R30Ally = (typeof R30_ALLIES)[number];
 export const R30_LINE_EVENT = 'story.r30.lineGiven';
 export const R30_PAGE = (n: number): string => `note-r30-page-${n}`;
 export const R30_ANVIL = 'use:r30-anvil';
+/** Ysmeryth is no NPC (she perches): her R30 line opens from a prop in front of her perch, N10's M51 talk spot. */
+export const R30_YSMERYTH_USE = 'use:r30-talk-ysmeryth';
+export const R30_YSMERYTH_SPOT = 'caldera.q.m51.talk.ysmeryth';
 export const R30_CHOSEN_EVENT = 'story.r30.chosen';
 export const R30_SUNG = 'story.r30.sung';
 
