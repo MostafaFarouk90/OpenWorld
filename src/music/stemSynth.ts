@@ -2,6 +2,7 @@ import { Biquad, TAU, onePole, pluck, rng, sawBlep, smooth, soften } from './dsp
 import { createAct2Voices, type Act2Voices } from './act2Voices';
 import { createAct3Voices, type Act3Voices } from './act3Voices';
 import { createAct4Voices, type Act4Voices } from './act4Voices';
+import { createAct5Voices, type Act5Voices } from './act5Voices';
 import { BARLEY_SYNTH, loopSamples, type TrackDef, type TrackSynth, type TuneNote } from './tracks';
 
 // Procedural placeholder stems until recorded ones exist. Every stem is exactly loopSamples() long.
@@ -519,7 +520,7 @@ function steamAnvil(t: Track, g: Grid, c: Ctx): void {
 }
 
 /** Per-stem peak so the summed combat and boss mixes stay under full scale at the mixer's output. */
-export const STEM_PEAK: Readonly<Record<string, number>> = { kick: 0.4, snare: 0.34, hat: 0.27, bass: 0.38, vocal: 0.31, melody: 0.19, boss: 0.1, chant: 0.2, toll: 0.16 };
+export const STEM_PEAK: Readonly<Record<string, number>> = { kick: 0.4, snare: 0.34, hat: 0.27, bass: 0.38, vocal: 0.31, melody: 0.19, boss: 0.1, chant: 0.2, toll: 0.16, medley: 0.14, heartbeat: 0.3, pluck: 0.2, crew: 0.2, 'verse-gaut': 0.2, 'verse-keepers': 0.2, 'verse-houses': 0.2, 'verse-walkers': 0.2 };
 
 const VOICES: Record<string, (t: Track, g: Grid, c: Ctx) => void> = { kick, snare, hat, bass, vocal, melody, boss };
 
@@ -544,6 +545,13 @@ function act4Voices(): Act4Voices {
   return (act4 ??= createAct4Voices({ tokens, arc, Feel }));
 }
 
+let act5: Act5Voices | null = null;
+
+/** The Act 5 voice table, built on first use the same way (it also builds the Act 2 to 4 tables for the medley). */
+function act5Voices(): Act5Voices {
+  return (act5 ??= createAct5Voices({ tokens, arc, Feel, Track, coreVocal: vocal }));
+}
+
 /** The voice name a track picks for a stem, or null when it uses the stem's Act 1 voice. */
 function voiceName(syn: TrackSynth, stemId: string): string | null {
   const v = syn.voices as Record<string, string | undefined>;
@@ -555,7 +563,7 @@ export function synthStem(track: TrackDef, stemId: string, sampleRate: number): 
   const syn = track.synth ?? BARLEY_SYNTH;
   const name = voiceName(syn, stemId);
   // A named voice wins (Act 2, then Act 3, then Act 4); a stem with no Act 1 voice (`chant`, `toll`) needs one.
-  const voice = (name !== null && (act2Voices()[name] ?? act3Voices()[name] ?? act4Voices()[name])) || VOICES[stemId];
+  const voice = (name !== null && (act2Voices()[name] ?? act3Voices()[name] ?? act4Voices()[name] ?? act5Voices()[name])) || VOICES[stemId];
   if (!voice) throw new Error(`No placeholder synth for stem "${stemId}"`);
   const length = loopSamples(track, sampleRate);
   const t = new Track(length, sampleRate);

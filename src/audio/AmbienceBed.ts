@@ -9,6 +9,7 @@ import { REGION_IDS, REGION_INFO, type RegionBedId } from '../region/regions';
 import { fillAct2Bed } from './ambienceAct2';
 import { fillAct3Bed } from './ambienceAct3';
 import { fillAshenWasteBed } from './act4/ambienceAct4';
+import { fillCalderaBed } from './act5/ambienceAct5';
 import { isMineInterior } from './InteriorFx';
 
 export type BedId = RegionBedId | 'underways';
@@ -41,8 +42,8 @@ function bedFor(regionId: string | null): BedId | null {
   if (regionId === null || !Object.prototype.hasOwnProperty.call(REGION_INFO, regionId)) return null;
   return REGION_INFO[regionId as keyof typeof REGION_INFO].bed;
 }
-const LOOP_SECONDS: Readonly<Record<BedId, number>> = { brightwater: 24, harrowmark: 28, underways: 26, cinderreach: 25, oldsmoke: 27, greyfen: 29, dragonspine: 31, 'ashen-waste': 30 };
-const SEEDS: Readonly<Record<BedId, number>> = { brightwater: 0x1b2c3d, harrowmark: 0x4e5f60, underways: 0x717283, cinderreach: 0x2d3e4f, oldsmoke: 0x5a6b7c, greyfen: 0x6c7d8e, dragonspine: 0x3f4a5b, 'ashen-waste': 0x7a5e41 };
+const LOOP_SECONDS: Readonly<Record<BedId, number>> = { brightwater: 24, harrowmark: 28, underways: 26, cinderreach: 25, oldsmoke: 27, greyfen: 29, dragonspine: 31, 'ashen-waste': 30, caldera: 28 };
+const SEEDS: Readonly<Record<BedId, number>> = { brightwater: 0x1b2c3d, harrowmark: 0x4e5f60, underways: 0x717283, cinderreach: 0x2d3e4f, oldsmoke: 0x5a6b7c, greyfen: 0x6c7d8e, dragonspine: 0x3f4a5b, 'ashen-waste': 0x7a5e41, caldera: 0x61d3a7 };
 
 function rng(seed: number): () => number {
   let s = seed >>> 0;
@@ -173,6 +174,9 @@ export function makeBedSamples(id: BedId, sampleRate: number): Float32Array<Arra
   } else if (id === 'ashen-waste') {
     // Act 4 (L8): ash-hiss wind and creaking glass pillars.
     fillAshenWasteBed(x, n, sr, SEEDS[id]);
+  } else if (id === 'caldera') {
+    // Act 5 (N8): low rumble, bubbling lava, ember crackle and a far hammer.
+    fillCalderaBed(x, n, sr, SEEDS[id]);
   } else {
     // Dripping water: sparse decaying sine pings, some with a quieter echo.
     const drips = 15 + Math.floor(u() * 5);
