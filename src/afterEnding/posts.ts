@@ -64,3 +64,8 @@ export function withAfterEndingPosts<R extends { npcId: string; home: string; po
     return { ...r, posts: [{ when: AFTER, anchorId }, ...r.posts] };
   });
 }
+
+/** For table tests in other owners' files: a rule with N13's after-ending row taken off (the inverse of `withAfterEndingPosts`). */
+export function withoutAfterEndingRows<R extends { posts: { when: Condition; anchorId: string }[] }>(r: R): R {
+  return { ...r, posts: r.posts.filter((p) => p.when !== AFTER) };
+}
