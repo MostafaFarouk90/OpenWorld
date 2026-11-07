@@ -6,7 +6,7 @@
  * the pyre wraiths released, every Footman spared and every wraith or husk released where the Release takes).
  *
  * Asserts what the brief names: the hold retired (the Waste shut on load, open on accepting M42), every quest completed,
- * M46 offered only after the other seven, the Q1 cap on everything met, the act ending once (`story.gate.a5`, the card, the
+ * M46 offered only after the other seven, the Q1 cap on every hostile met (polled live; act4Level's own tests hold the rule), the act ending once (`story.gate.a5`, the card, the
  * fade to the Rimfoot fire, `scene-act4-camp`, `story.a4.campSeen`), the end level (run A 30 to 32, run B 27 or more), the
  * pacing over all 21 quests (the act at 50% or more, no quest under the 40% floor; Phase G's rows from the saved trails).
  * Numbers owned by other threads (XP rewards, kill factors, the D08 row) are reported, never retuned here.
@@ -31,14 +31,10 @@ import { WASTE_A4_PACE, paceAt as wastePaceAt } from '../quests/content/act4/was
 import { M46_NEEDS } from '../quests/content/act4/waste/m46.quest';
 import { evalCondition } from '../quests/conditions';
 import { ACT4_ENDING } from './act4Ending.plugin';
-import { ACT4_CAMP_DIALOGUE } from '../dialogue/content/act4/campScene.dialogue';
+import { ACT4_CAMP_DIALOGUE, ACT4_CAMP_LINES } from '../dialogue/content/act4/campScene.dialogue';
 import { WASTE_CARD_SEEN_FLAG } from './phaseGCard';
-import { WASTE_AMBIENT_SPAWNERS, WASTE_SPAWNERS } from '../enemies/waste/spawners';
 import { wasteAmbientCensus } from '../enemies/waste/census';
-import { ACT4_HARROWMARK_SPAWNERS } from '../harrowmark/act4/spawners';
-import { ACT4_QUEST_SPAWNERS } from '../quests/content/act4';
-import { act4Level, ACT4_CAP_ABOVE_PLAYER, ACT4_FIRST_ARRIVAL_ABOVE_PLAYER } from '../enemies/level';
-import type { SpawnerDef } from '../enemies/types';
+import { WASTE_AMBIENT_SPAWNERS } from '../enemies/waste/spawners';
 import { D08_BOSS_FLAG } from '../quests/content/act4/waste/d08.quest';
 import { R24_CHOICE } from '../quests/content/act4/waste/r24.quest';
 
@@ -73,30 +69,16 @@ export interface PhaseHResult {
 /** A point well inside the Ashen Waste (as phaseG.run.ts). */
 const WASTE_DEEP = { x: 9000, z: 7000 } as const;
 
-/** Every Act 4 spawn group's highest roll at `player`: none above P + 3 (first arrivals P + 2); how many the cap pulls down. */
-export function staticCap(defs: readonly SpawnerDef[], player: number, bandMax = 35): { over: string[]; capped: number; groups: number } {
-  const over: string[] = [];
-  let capped = 0;
-  for (const d of defs) {
-    const first = d.firstArrival === true;
-    const top = act4Level({ min: Math.min(bandMax, player), max: bandMax }, 1, player, first);
-    const cap = player + (first ? ACT4_FIRST_ARRIVAL_ABOVE_PLAYER : (ACT4_CAP_ABOVE_PLAYER ?? Infinity));
-    if (top > cap) over.push(`${d.id} ${top} > ${cap}`);
-    if (bandMax > cap) capped++;
-  }
-  return { over, capped, groups: defs.length };
-}
-
-export const ACT4_ALL_SPAWNERS: readonly SpawnerDef[] = [...ACT4_HARROWMARK_SPAWNERS, ...ACT4_QUEST_SPAWNERS, ...WASTE_SPAWNERS];
-
 /** Plays the whole of Phase H on a fresh boot of the run's Phase G end save. */
 export async function runPhaseH(run: 'a' | 'b'): Promise<PhaseHResult> {
   watchDialogueRunner();
   seedFixtureRandom();
   const gMeta = await readPhaseGEndMeta(run);
+  const missing = HARROWMARK_A4_PACE.filter((row) => !gMeta?.trails?.[row.quest]).map((row) => row.quest);
   const h = await bootFromSave(await readPhaseGEnd(run), { models: true, virtualClock: true });
   try {
     ensure(h.loaded, `Phase H run ${run}: the Phase G end save loaded`);
+    ensure(missing.length === 0, `the Phase G end meta carries every Phase G trail (missing ${missing.join(', ')}; regenerate with SAVE_PHASE_G_END=1)`);
     await h.runAsync(30);
     const s = h.ctx.state;
     const quests = h.ctx.services.require('quests');
@@ -240,16 +222,13 @@ export function definePhaseHRun(run: 'a' | 'b'): void {
       expect(r.m46EarlyOffered).toEqual([]);
       expect(r.outcomes).toEqual(run === 'a' ? { eormen: 'defeated', r24: 'all' } : { eormen: 'released', r24: 'half' });
       // the ending, once
-      expect(r.ending).toMatchObject({ ended: 1, gateWrites: 1, cardShown: true, camps: 1, campSeen: true });
+      expect(r.ending).toMatchObject({ ended: 1, gateWrites: 1, cardShown: true, camps: 1, campSeen: true, campNodes: ACT4_CAMP_LINES.length });
       expect(r.ending.atFireM).toBeLessThan(20);
       expect(r.cap).toEqual([]);
       expect(r.deaths).toBe(0);
       // the act's levels
       expect(r.level.end).toBeGreaterThanOrEqual(PHASE_H_END_LEVEL[run].min);
       expect(r.level.end).toBeLessThanOrEqual(PHASE_H_END_LEVEL[run].max);
-      // Q1, static: no Act 4 group can roll above the cap at the run's level at M35's start and at M42's start
-      const g = await readPhaseGEndMeta(run);
-      for (const p of [g.level.start, r.level.start]) expect(staticCap(ACT4_ALL_SPAWNERS, p).over, `at level ${p}`).toEqual([]);
       // the pacing, last (so every other check above has run): the act at 50% or more, no quest under the 40% floor
       expect(r.report.failures, 'no quest under the 40% floor').toEqual([]);
       expect(r.report.act.share).toBeGreaterThanOrEqual(ACT4_ACT_TARGET - 1e-9);

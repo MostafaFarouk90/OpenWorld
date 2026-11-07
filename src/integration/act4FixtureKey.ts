@@ -29,7 +29,7 @@ export interface Act4FixtureMeta {
   /** the player's XP and level in the saved fixture (after the top-up to ACT4_START_XP) */
   xp: number;
   level: number;
-  /** `story.phase.wasteOpen` in the save (Phase H targets only while the hold stands) */
+  /** `story.phase.wasteOpen` in the save (always false since L13 PR 2 retired the hold; kept so older metas read) */
   wasteOpen: boolean;
   generatedBy: string;
   savedAt: string;

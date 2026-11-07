@@ -4,6 +4,7 @@
  * byte-identical and match the committed file). The full drift check is `CHECK_FIXTURES=1` (act4FixturesGen.ts); loads on
  * the real save plugin are in act4Containment.e2e.test.ts.
  */
+import { phaseGEndName } from '../save/__fixtures__/act4';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACT4_JUMP_IDS, ACT4_PREREQS, ACT4_START_XP, WASTE_OPEN_FLAG } from '../quests/act4Jump';
 import { ACT3_JUMP_IDS } from '../quests/act3Jump';
@@ -60,7 +61,8 @@ describe('the committed Act 4 fixtures', () => {
 
   it('has nothing beyond the base and the 21 ids (stale names are deleted on regeneration)', () => {
     const names = Object.keys(FILES).map((k) => k.split('/').pop()!.replace(/(\.meta)?\.json$/, ''));
-    const want = new Set([ACT4_BASE_NAME, ...ACT4_JUMP_IDS.map(act4FixtureName)]);
+    // plus Phase G's chain end saves, Phase H's start (phaseG.run.ts, SAVE_PHASE_G_END=1)
+    const want = new Set([ACT4_BASE_NAME, ...ACT4_JUMP_IDS.map(act4FixtureName), phaseGEndName('a'), phaseGEndName('b')]);
     expect([...new Set(names)].filter((n) => !want.has(n) && !n.startsWith('act4-extra-') && n !== 'act4-l3-storm')).toEqual([]);
   });
 });

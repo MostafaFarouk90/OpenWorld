@@ -48,7 +48,7 @@ import { stepMsAt } from '../waste/chime/chimePuzzle';
 import { ACT4_PHASE_H } from '../quests/act4Jump';
 
 export type PhaseHQuest = (typeof ACT4_PHASE_H)[number];
-/** Plan 2.3's order: R25 before R24 (the chapel errands while Ebba is near), D08 before M46. */
+/** Plan 2.3's order as ACT4_PHASE_H lists it (R25 before R24, D08 before M46); the run asserts M46 is offered last. */
 export const PHASE_H_ORDER: readonly PhaseHQuest[] = ACT4_PHASE_H;
 
 export interface PhaseHChoices {
