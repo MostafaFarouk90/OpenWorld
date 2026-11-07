@@ -330,9 +330,10 @@ describe('v0.8 item 11: applyEnemySkin', () => {
     };
     const warn = vi.fn();
     const a = make();
-    applyEnemySkin(a, 'ash-wraith', 'wraith-husk', warn); // L2 filled the Footman skins; the husk is still empty
+    applyEnemySkin(a, 'ash-wraith', 'wraith-husk', warn); // L5 filled the husk: a tint and a faint ember, the hat hidden
     expect(a.helm.visible).toBe(true);
-    expect(a.mat.color.getHex()).toBe(0xffffff);
+    expect(a.mat.color.getHex()).toBe(ENEMY_SKINS['wraith-husk'].tint);
+    expect(a.mat.emissive.getHex()).toBe(ENEMY_SKINS['wraith-husk'].emissive);
     const b = make();
     const saved = { ...ENEMY_SKINS['footman-soot'] };
     Object.assign(ENEMY_SKINS['footman-soot'] as object, { hide: ['helm'], tint: 0x808080, emissive: 0x110000 });

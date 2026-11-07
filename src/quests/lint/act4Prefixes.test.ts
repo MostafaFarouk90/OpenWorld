@@ -12,14 +12,15 @@ import { ACT4_ANCHOR_PREFIXES, ACT4_FLAG_OWNERS, ACT4_QUEST_FLAG_OWNERS, ACT4_TR
 import { ACT4_PHASE_G, ACT4_PHASE_H, ACT4_QUEST_IDS, isAct4Id } from './act4Ids';
 import { ACT3_QUEST_IDS } from './act3Ids';
 import { ACT4_WORLD_LAYOUT } from '../../region/act4/act4World.layout';
+import { WASTE_LAYOUT } from '../../waste/waste.layout';
 
 const anchorIds = [
-  ...[...ALL_LAYOUTS, ACT4_WORLD_LAYOUT].flatMap((l) => l.anchors.map((a) => a.id)),
+  ...[...ALL_LAYOUTS, ACT4_WORLD_LAYOUT, WASTE_LAYOUT].flatMap((l) => l.anchors.map((a) => a.id)),
   ...TUTORIAL_ANCHORS.map((a) => a.id),
   ...ALL_INTERIORS.flatMap((d) => d.anchors.map((a) => a.id)),
 ];
 const triggerIds = [
-  ...[...ALL_LAYOUTS, ACT4_WORLD_LAYOUT].flatMap((l) => l.triggers.map((t) => t.id)),
+  ...[...ALL_LAYOUTS, ACT4_WORLD_LAYOUT, WASTE_LAYOUT].flatMap((l) => l.triggers.map((t) => t.id)),
   ...ACT2_TRIGGERS.map((t) => t.id),
   ...OLDSMOKE_TRIGGERS.map((t) => t.id),
   ...ALL_INTERIORS.flatMap((d) => d.triggers.map((t) => t.id)),
@@ -51,6 +52,13 @@ const OWNED_SUB_PREFIXES: readonly string[] = [
   'waste.rimfoot.fire',
   'waste.rope.',
   'waste.shelter.',
+  // L1 PR 2: the Waste's places (waste/waste.layout.ts) and interiors (waste/interiors)
+  'waste.glasslands.',
+  'waste.husk-cathedral',
+  'waste.cathedral.',
+  'waste.cinder-road.',
+  'waste.rimfoot.',
+  'waste.poi.',
   // L10: the Harrowmark quests' own anchors (quests/content/act4/harrowmark/anchors.ts)
   'harrowmark.a4.q.',
 ];
@@ -59,7 +67,9 @@ const OWNED_TRIGGER_SUB_PREFIXES: readonly string[] = [
   ...L2_TRIGGER_SUBS.map((s) => `trg.harrowmark.a4.${s}.`),
   // L10
   'trg.harrowmark.a4.q.',
-  'trg.waste.walker-camp', 'trg.waste.cinder-chapel', 'trg.waste.husk-cathedral', 'trg.waste.rimfoot'];
+  'trg.waste.walker-camp', 'trg.waste.cinder-chapel', 'trg.waste.husk-cathedral', 'trg.waste.rimfoot',
+  // L1 PR 2
+  'trg.waste.glasslands', 'trg.waste.cinder-road.', 'trg.waste.poi.', 'trg.waste.cathedral.'];
 
 describe('Act 4 ids and reserved prefixes (v0.8 item 15)', () => {
   it('lists the 21 quests, split into Phase G and Phase H, none shared with Act 3', () => {

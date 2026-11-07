@@ -37,7 +37,9 @@ describe('quest content', () => {
       // Act 4 Harrowmark (L10 PR 1)
       'm35', 'm36', 'r19', 'r20', 'r21', 'r22', 'r23', 'd07', 'm37',
       // Act 4 Harrowmark (L10 PR 2)
-      'm38', 'm39', 'm40', 'm41']);
+      'm38', 'm39', 'm40', 'm41',
+      // Act 4 Ashen Waste (L11)
+      'm42', 'm43', 'm44', 'r25', 'r24', 'm45', 'd08', 'm46']);
     expect(new Set(ids).size).toBe(ids.length);
   });
 

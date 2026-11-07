@@ -10,10 +10,13 @@ import { DialogueRunner } from '../DialogueRunner';
 import { createEffectRunner } from '../../quests/effects';
 import type { BusPort, StatePort, StringsPort } from '../../quests/ports';
 import type { FlagValue } from '../../quests/types';
+import { WASTE_A4_NPC_DEFS } from '../../quests/content/act4/waste/npcs';
 
 const all: Record<string, string> = { ...questStrings, ...dialogueStrings, ...npcNameFallbackStrings };
 const hasKey = (k: string) => k in all;
 
+/** Act 4 Waste (L11): the Waste cast. */
+const ACT4_WASTE_SPEAKERS = WASTE_A4_NPC_DEFS.map((d) => d.id);
 const ACT4_HM_SPEAKERS = [...ACT4_NPC_DEFS, ...HARROWMARK_A4_Q_NPC_DEFS].map((d) => d.id).concat(['daggerman']);
 
 describe('dialogue content', () => {
@@ -64,7 +67,7 @@ describe('dialogue content', () => {
       // Act 3 summit (K13 PR 2)
       'ysmeryth', 'hathren', 'skarl', 'skyhold-rigger', 'skyhold-handler', 'captive-hunter', 'skarl-led', 'aerie-escort-1', 'aerie-escort-2',
       // Act 4 Harrowmark (L10): L2's cast, Vey's guards, the minor cast and the daggerman
-      ...ACT4_HM_SPEAKERS]).toContain(n.speaker);
+      ...ACT4_HM_SPEAKERS, ...ACT4_WASTE_SPEAKERS]).toContain(n.speaker);
   });
 
   it('no literal Cael in strings', () => {

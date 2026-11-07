@@ -114,6 +114,11 @@ export const createTemperingScreen: TemperingScreenFactory = (host: ScreenHost):
 
   const onKey = (e: { key?: string; code?: string; repeat?: boolean; timeStamp?: number }): void => {
     if (e.repeat) return;
+    // Act 4 L9 (Act 3 playthrough M2): Escape closes the screen, the same path as its Close button.
+    if (e.key === 'Escape' || e.code === 'Escape') {
+      session.close();
+      return;
+    }
     if (e.key !== '1' && e.code !== 'Digit1') return;
     // The press time, not the time this handler ran: a key queued behind a long frame is still judged where it landed.
     // `timeStamp` shares `performance.now()`'s origin (the gear plugin's clock); a value from elsewhere falls back to now.
