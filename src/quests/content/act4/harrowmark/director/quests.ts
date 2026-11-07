@@ -2,7 +2,7 @@
 // R19's pair and Bran's bout, R20's way at each post, R21's lanes, R22's anvil runs, D07's door, valves and ledgers, M37's seats,
 // war-song and toast. Choices themselves are dialogue effects (the Act 1 pattern).
 import type { Kit, Off } from './shared';
-import { distanceTo, offerScene, recheck, toast } from './shared';
+import { distanceTo, offerScene, onFloorWithin, recheck, toast } from './shared';
 import { createSongBar } from '../../../act3/greyfen/director/songBar';
 import { ACT4_SPAWN_FLAGS } from '../../../../../harrowmark/act4/spawners';
 import { CRUCIBLE_ID } from '../../../../../harrowmark/act4/sites';
@@ -204,6 +204,6 @@ export function installM37(k: Kit, now: () => number = () => performance.now()):
   k.every(6, () => run.update());
   k.on('save.loaded', () => run.reset());
   // the last toast, at the table
-  offerScene(k, { quest: 'm37', objective: 'toast', scene: M37_END_SCENE, npc: M37_END_NPC, ready: () => distanceTo(k, `${Q}.m37.feast`) <= 12 });
+  offerScene(k, { quest: 'm37', objective: 'toast', scene: M37_END_SCENE, npc: M37_END_NPC, ready: () => onFloorWithin(k, `${Q}.m37.feast`, 12) });
   return mountBar(k, run, M37_BEAT);
 }
