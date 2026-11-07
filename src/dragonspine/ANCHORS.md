@@ -37,11 +37,11 @@ Metres from the origin, +Z north, yaw 0 faces -Z, yaw 90 faces -X. Anchor `y` is
 | npc-post.eadgyth.fire | 13013 | 13308 | 0 | 90 | npc-post |
 | dragonspine.shelter.m31-offer | 13006 | 13305 | 0 | 180 | objective |
 | dragonspine.shelter.woodpile | 12866.57 | 13291.93 | 0 | 180 | objective |
-| dragonspine.shelter.trophy.1 | 12979.6 | 13302.6 | 0 | 180 | objective |
-| dragonspine.shelter.trophy.2 | 12981.8 | 13302.6 | 0 | 180 | objective |
+| dragonspine.shelter.trophy.1 | 12978.6 | 13302.6 | 0 | 180 | objective |
+| dragonspine.shelter.trophy.2 | 12981.3 | 13302.6 | 0 | 180 | objective |
 | dragonspine.shelter.trophy.3 | 12984 | 13302.6 | 0 | 180 | objective |
-| dragonspine.shelter.trophy.4 | 12986.2 | 13302.6 | 0 | 180 | objective |
-| dragonspine.shelter.trophy.5 | 12988.4 | 13302.6 | 0 | 180 | objective |
+| dragonspine.shelter.trophy.4 | 12986.7 | 13302.6 | 0 | 180 | objective |
+| dragonspine.shelter.trophy.5 | 12989.4 | 13302.6 | 0 | 180 | objective |
 | dragonspine.spawn.shelter.hawk-1 | 12854.57 | 13300.93 | 0 | 180 | spawn |
 | dragonspine.spawn.shelter.hawk-2 | 12878.57 | 13302.93 | 0 | 180 | spawn |
 | dragonspine.anvil.shrine | 14700 | 13900 | 0 | 0 | objective |

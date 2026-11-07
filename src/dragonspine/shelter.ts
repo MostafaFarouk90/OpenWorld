@@ -8,6 +8,12 @@ import type { XZ } from './inputs';
 import { Placer } from './placer';
 import type { Sites } from './sites';
 
+/**
+ * Act 4 L14 (Act 3 playthrough L3): the five M29 trophy notes along the 12 m wall, 2.7 m apart. At 2.2 m with a 2 m read
+ * radius, F standing at one often read the neighbour just read; now only one is in reach from in front of each.
+ */
+export const M29_TROPHY_OFFSETS = [-5.4, -2.7, 0, 2.7, 5.4] as const;
+
 export const WOODPILE_DISTANCE = 150;
 /** Bearings tried, in order, for the woodpile's direction from the fire. */
 const WOODPILE_BEARINGS = [235, 205, 265, 175, 295, 145, 325, 115, 355, 85];
@@ -107,7 +113,7 @@ export function shelterLayout(s: Sites): { part: Part; info: ShelterInfo } {
     a('npc-post.eadgyth.fire', pit.x + 3, pit.z, headingTo(pit.x + 3, pit.z, pit.x, pit.z), ['npc-post']),
     a('dragonspine.shelter.m31-offer', pit.x - 4, pit.z - 3, 0, ['objective']),
     a('dragonspine.shelter.woodpile', woodpile.x, woodpile.z - 3, 0, ['objective']),
-    ...numbered('dragonspine.shelter.trophy', [-4.4, -2.2, 0, 2.2, 4.4].map((dx) => [trophy.x + dx, trophyFront] as const), ['objective'], 0),
+    ...numbered('dragonspine.shelter.trophy', M29_TROPHY_OFFSETS.map((dx) => [trophy.x + dx, trophyFront] as const), ['objective'], 0),
     a('dragonspine.spawn.shelter.hawk-1', woodpile.x - 12, woodpile.z + 6, 0, ['spawn']),
     a('dragonspine.spawn.shelter.hawk-2', woodpile.x + 12, woodpile.z + 8, 0, ['spawn']),
   ];
