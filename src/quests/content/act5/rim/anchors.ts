@@ -95,10 +95,11 @@ export const QUEST_WORLD_ANCHORS: readonly WorldAnchor[] = [
   at(`${Q}.m47.journal`, off(RIM_STAIRS.hairpin, 6, 5)),
   at(`${Q}.m47.inscription`, off(RIM_GATE_SITE.landing, -6, -2)),
   at(`${Q}.post.alric.gate`, off(GATE, -10, 50), 180),
-  at(`${Q}.post.edric.gate`, off(GATE, -16, 58), 160),
+  // inside the gate's 28 m span: beside it, the never-open rim faces push Cael back out (N12's scan, 2026-11-07)
+  at(`${Q}.post.edric.gate`, off(GATE, -9, 62), 160),
   at(`${Q}.post.rook.gate`, off(GATE, -4, 60), 200),
   at(`${Q}.m47.brazier`, off(GATE, 4, 56)),
-  at(`${Q}.m47.lamp`, off(RIM_GATE_SITE.towers[1]!, 4, 6)),
+  at(`${Q}.m47.lamp`, off(RIM_GATE_SITE.towers[1]!, -3, 6)),
   at(`${Q}.m47.bell`, off(GATE, 12, 70)),
   // M48: Alric at the stair's head and foot, the ghost on the middle landing, the two knots, the marks, the tally, the cache
   at(`${Q}.post.alric.stair`, off(LAVA_STAIR.head, 5, -5), headingTo(LAVA_STAIR.head, LAVA_STAIR.mid)),
@@ -123,7 +124,7 @@ export const QUEST_WORLD_ANCHORS: readonly WorldAnchor[] = [
   ...[...M49_HOUSES, 'camp' as const].map((h, i) => at(`${Q}.m49.banner.${h}`, off(SIEGE_POINTS.banner, (i - 1.5) * 6, -4))),
   at(`${Q}.m49.post.brace`, off(SIEGE_POINTS.gate[1]!, 0, 8)),
   at(`${Q}.m49.post.crates`, off(SIEGE_POINTS.crates, 0, -4)),
-  at(`${Q}.m49.post.wall`, off(SIEGE_POINTS.wallLeft, -5, 6)),
+  at(`${Q}.m49.post.wall`, off(SIEGE_POINTS.wallLeft, 3, 6)),
   at(`${Q}.m49.plan`, off(RIM_CAMP.warTable, 4, -4)),
   at(`${Q}.m49.tally`, off(STOKERS.post, -10, 6)),
   // R26: the master, the guards, the load point and the manifest at Rimfoot; both roads; the ambushes; the brakes; the unload

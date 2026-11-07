@@ -13,6 +13,7 @@ import { questStrings } from '../../../../quests/strings.en';
 import { RIM_A5_QUEST_DEFS } from '../../../../quests/content/act5/rim/rim.content';
 import { R26_CHOICE, R26_FAST, R26_LONG, R26_MASTER } from '../../../../quests/content/act5/rim/r26.quest';
 import { M49_FORECAST, M49_TABLE_DIALOGUE, M49_TABLE_NPC } from '../../../../quests/content/act5/rim/m49.quest';
+import { M52_STOOD } from '../../../../quests/content/act5/rim/m52.quest';
 import { RIM_A5_NODES } from '../../../../quests/content/act5/rim/pacing';
 import { RIM_A5_TALKS } from './talks';
 import { RIM_A5_DIALOGUE_STRINGS, RIM_A5_EXTENSIONS, RIM_A5_NOTE_DIALOGUES, RIM_A5_TREES } from './index';
@@ -62,7 +63,7 @@ function runOut(dr: DialogueRunner, pick: (ids: string[]) => string | undefined 
 const done = (...ids: string[]): Record<string, QuestState> => Object.fromEntries(ids.map((q) => [q, 'completed' as QuestState]));
 const CAMP = done('m47', 'm48', 'm49');
 /** The quests done when each brief is first offered (each quest's start rule). */
-const PARENTS: Record<string, Record<string, QuestState>> = { m47: {}, m48: done('m47'), m49: done('m47', 'm48'), r26: CAMP, r29: CAMP, m50: CAMP, m51: CAMP };
+const PARENTS: Record<string, Record<string, QuestState>> = { m47: {}, m48: done('m47'), m49: done('m47', 'm48'), r26: CAMP, r29: CAMP, m50: CAMP, m51: CAMP, m52: done('m47', 'm48', 'm49', 'm50', 'm51', 'r26') };
 /** M47 starts by itself on the Act 5 gate: its first talk is a step, not a brief. */
 const AUTO = new Set(['m47']);
 
@@ -142,6 +143,25 @@ describe('the choices and the forecast', () => {
     const loud = setup({ ...worldAt('m49', 'table'), flags: { [M49_FORECAST('dragons')]: true, [M49_FORECAST('named')]: true } });
     loud.dr.start(M49_TABLE_DIALOGUE, M49_TABLE_NPC);
     expect(runOut(loud.dr).nodes.length).toBeGreaterThan(a);
+  });
+});
+
+describe('M52', () => {
+  it('Wystan\'s report says what stood: more lines when more stood', () => {
+    const few = setup(worldAt('m52', 'report'));
+    few.dr.start('npc-wystan', 'wystan');
+    const a = runOut(few.dr).nodes;
+    const many = setup({ ...worldAt('m52', 'report'), flags: { [M52_STOOD('halvard')]: true, [M52_STOOD('ashwalker')]: true, [M52_STOOD('dragons')]: true } });
+    many.dr.start('npc-wystan', 'wystan');
+    expect(runOut(many.dr).nodes.length).toBe(a.length + 3);
+  });
+
+  it('only the wounded companion has the aid-tent line', () => {
+    for (const c of ['hrolf', 'aelfreda', 'tobb']) {
+      const { dr } = setup({ ...worldAt('m52', 'wounded-tobb') });
+      dr.start(c === 'aelfreda' ? 'npc-aelfreda-companion' : `npc-${c}`, c);
+      expect(dr.view()?.nodeId === 'a5r-m52-wounded', c).toBe(c === 'tobb');
+    }
   });
 });
 

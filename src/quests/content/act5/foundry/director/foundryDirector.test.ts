@@ -31,7 +31,8 @@ function rig(flags: Record<string, boolean | number | string> = {}) {
   const state = new WorldState(events, () => {});
   const services = new Services();
   const manager = new QuestManager({ bus: events as never, state: state as never, playerId: () => 'player', warn: () => {} });
-  manager.register({ id: 'm52', titleKey: 'x', summaryKey: 'x', sequential: true, objectives: [{ id: 'x', type: 'event', target: 'test.m52', textKey: 'x' }] });
+  // N12 (merge with N10 PR 2): the stand-in M52 only while N10's real M52 is not in ACT5_QUEST_DEFS
+  if (!ACT5_QUEST_DEFS.some((q) => q.id === 'm52')) manager.register({ id: 'm52', titleKey: 'x', summaryKey: 'x', sequential: true, objectives: [{ id: 'x', type: 'event', target: 'test.m52', textKey: 'x' }] });
   for (const q of ACT5_QUEST_DEFS) manager.register(q);
   const flagsOff = installObjectiveFlags(ACT5_OBJECTIVE_FLAGS, events as never, state as never, manager);
   services.provide('quests' as never, manager as never);

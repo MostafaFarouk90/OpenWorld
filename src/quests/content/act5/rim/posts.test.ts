@@ -2,6 +2,7 @@
 // camp on the arrival (Maud only with F4 Cleanse), Alric follows his quests, and R26's cast reaches the camp once in or wounded.
 import { describe, expect, it } from 'vitest';
 import { POST_RULES, resolvePosts } from '../../../posts';
+import { evalCondition } from '../../../conditions';
 import type { ConditionEnv } from '../../../ports';
 import type { FlagValue, QuestState } from '../../../types';
 import { ALRIC, M47_RIM_GATE_OPEN } from './m47.quest';
@@ -64,5 +65,25 @@ describe('Rim posts', () => {
     const i = at({ r26: 'active' }, { [R26_IN]: true });
     expect(i[R26_MASTER]!.anchorId).toBe(`${Q}.post.r26.master.camp`);
     expect(i[R26_GUARD(2)]!.anchorId).toBe(`${Q}.post.r26.guard.2.camp`);
+  });
+
+  it('M52: Wystan stands at the war post from the brief until the gate holds, then back at the camp', () => {
+    const arrived = { [M49_ARRIVED]: true };
+    expect(at({ m52: 'active' }, arrived)['wystan']!.anchorId).toBe(RIM('wystan'));
+    expect(at({ m52: 'active' }, arrived, { m52: ['brief'] })['wystan']!.anchorId).toBe('caldera.siege.orders');
+    expect(at({ m52: 'active' }, { ...arrived, 'story.m52.gateHeld': true }, { m52: ['brief'] })['wystan']!.anchorId).toBe(RIM('wystan'));
+  });
+
+  it('M52: Rook, Edric and Wulfhild are left unplaced while their squad stands, so they are placed afresh when back', () => {
+    for (const id of ['rook', 'edric', 'wulfhild']) {
+      const rule = POST_RULES.find((r) => r.npcId === id)!;
+      expect(rule.leaveWhen, id).toBeDefined();
+      const env = (on: boolean): ConditionEnv => ({
+        state: { getFlag: (k: string) => (on && k === `story.m52.out.${id}` ? true : undefined) } as never,
+        quests: { state: () => 'inactive', objectiveDone: () => false } as never,
+      });
+      expect(evalCondition(rule.leaveWhen, env(true)), id).toBe(true);
+      expect(evalCondition(rule.leaveWhen, env(false)), id).toBe(false);
+    }
   });
 });
