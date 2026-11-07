@@ -11,8 +11,8 @@ import { heightAt } from '../terrain/heightfield';
 import { ASHMARE_DISMISSED_KEY, ASHMARE_EDGE, ASHMARE_POST_ANCHOR, AshmareEdge, outward } from './ashmareEdge';
 import type { RopeLike, ShelterLike } from './lanes';
 import { WEATHER_STRINGS_EN } from './strings.en';
-import { STORM_EDGE, WEATHER_SEED } from './tuning';
-import { insideDepth } from './weight';
+import { WEATHER_SEED } from './tuning';
+import { inStormBand, stormBoxes } from './weight';
 import type { RopeLineDef, ShelterDef } from './types';
 import { WeatherRuntime, type WeatherPorts } from './WeatherRuntime';
 import { WEATHER_DATA } from './data';
@@ -33,7 +33,8 @@ export interface WeatherPluginOptions {
 
 const STORM_REGIONS: readonly RegionId[] = REGION_IDS.filter((id) => REGION_INFO[id].weather === 'ash-storm');
 const MOUNT_REFUSED: readonly RegionId[] = REGION_IDS.filter((id) => REGION_INFO[id].mount === 'refused');
-const STORM_BOXES = STORM_REGIONS.map(engineBox);
+// v0.9 (Act 5 N1): the Caldera, nested in the Waste's box, keeps no storm clock (the siege forces its own).
+const { boxes: STORM_BOXES, holes: STORM_HOLES } = stormBoxes(REGION_IDS, (id) => REGION_INFO[id as RegionId], (id) => engineBox(id as RegionId));
 
 /** Resolves L1's anchor-based defs to points (a missing anchor drops that point or shelter, with one warning). */
 export function resolveWeatherData(
@@ -94,7 +95,7 @@ export function createWeatherPlugin(opts: WeatherPluginOptions = {}): GamePlugin
             const r = regionAt(x, z);
             return r !== null && STORM_REGIONS.includes(r.id);
           },
-          stormBand: (x, z) => STORM_BOXES.some((b) => insideDepth(b, x, z) > -STORM_EDGE.outside),
+          stormBand: (x, z) => inStormBand(STORM_BOXES, STORM_HOLES, x, z),
           dialogue: () => ctx.services.get('dialogue')?.active === true || ctx.input.contexts.top() === 'dialogue',
           gameplay: () => ctx.input.contexts.top() === 'gameplay',
           vitals: () => ({ health: ctx.player.actor.health, max: ctx.player.actor.maxHealth, dead: ctx.player.actor.dead }),
