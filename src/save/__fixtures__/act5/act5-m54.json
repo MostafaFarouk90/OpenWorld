@@ -2982,6 +2982,7 @@
           "story.a4.campSeen": true,
           "story.a4.orrinAway": true,
           "story.a4.wasteCardSeen": true,
+          "story.a5.rimCardSeen": true,
           "story.d02.campSeen": true,
           "story.d02.sluiceClear": true,
           "story.d02.strayDealt": true,
