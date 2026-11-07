@@ -28,7 +28,7 @@ import { WASTE_LAYOUT } from '../waste/waste.layout';
 import { WAYSTONE_LOCKS } from '../waystones/tuning';
 import { inStormBand, stormBoxes, stormHoleFactor, STORM_HOLE_FADE } from '../weather/weight';
 import { inLava, type LavaVolumeDef } from './lava';
-import { CALDERA_DOC, CALDERA_LAYOUT, CALDERA_TRIGGERS, CALDERA_WAYSTONES } from './caldera.layout';
+import { CALDERA_DOC, CALDERA_DOOR_ANCHORS, CALDERA_LAYOUT, CALDERA_TRIGGERS, CALDERA_WAYSTONES } from './caldera.layout';
 import { CALDERA_MAX_FOOTPRINT_SPREAD, CALDERA_STRINGS_EN } from './caldera.plugin';
 import { CALDERA_GATES, GATE_MOVE_SECONDS, GateState, stepGate } from './calderaGates';
 import { BOWL_HEIGHTS, CALDERA_FAUNA_SITES, CALDERA_PLACES, LAVA_LAKE, RIM_CAMP, SIEGE_POINTS, radiusOf, type XZ } from './calderaSites';
@@ -261,6 +261,20 @@ describe("the Caldera's places", () => {
       for (const st of CALDERA_LAYOUT.structures) {
         const half = Math.hypot(st.footprint[0], st.footprint[1]) / 2;
         expect(Math.hypot(st.x - t.x, st.z - t.z) - half - r, `${t.id} vs ${st.id}`).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
+  it("stands every door on flat ground, so an interior's exit (1.6 m out, at the anchor's height) lands on it", () => {
+    for (const id of Object.values(CALDERA_DOOR_ANCHORS)) {
+      const a = resolved.anchors.find((x) => x.id === id);
+      expect(a, id).toBeDefined();
+      for (let r = 0.5; r <= 4; r += 0.5) {
+        for (let deg = 0; deg < 360; deg += 15) {
+          const x = a!.position.x + r * Math.sin((deg * Math.PI) / 180);
+          const z = a!.position.z + r * Math.cos((deg * Math.PI) / 180);
+          expect(Math.abs(heightAt(x, z) - a!.position.y), `${id} r${r} ${deg}`).toBeLessThanOrEqual(0.05);
+        }
       }
     }
   });
