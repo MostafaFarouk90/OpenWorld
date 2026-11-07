@@ -7,6 +7,8 @@ import { spawnerId } from './spawners';
 import { BarricadeFx, BarricadeState, Carts, type Cart, type CartOutcome, type StructureHost } from './structures';
 import { cartId, CART, DIRECTOR } from './tuning';
 import type { StructureKind, WaveCartDef, WaveSetDef, WaveSpawnDef, WavesSaved } from './types';
+import type { CartRole } from './structures';
+import './events';
 
 export type DirectorHost = StructureHost & Pick<GameContext, 'anchors' | 'services' | 'player'>;
 
@@ -33,6 +35,8 @@ interface Run {
   startHealth: number;
   /** Parked: the barricade health to restore when the set is rebuilt. */
   parkedHealth?: number;
+  /** N4: the barricade fell in this wave of a `breach` set (the court is being cleared). */
+  breached: boolean;
 }
 
 type Item = { at: number; spawn: WaveSpawnDef } | { at: number; cart: WaveCartDef; n: number };
@@ -73,6 +77,7 @@ export class WaveDirector implements WavesService {
   private readonly warned = new Set<string>();
   private readonly offs: Array<() => void> = [];
   private readonly warn: (m: string) => void;
+  private _impactScale = 1;
 
   constructor(
     private readonly host: DirectorHost,
@@ -101,7 +106,7 @@ export class WaveDirector implements WavesService {
       this.warn(`cannot start '${defId}': no enemies service`);
       return false;
     }
-    this.run = { def, index: 0, phase: 'running', live: true, timer: 0, startHealth: def.barricadeHealth };
+    this.run = { def, index: 0, phase: 'running', live: true, timer: 0, startHealth: def.barricadeHealth, breached: false };
     if (!this.build(def)) {
       this.run = null;
       return false;
@@ -117,15 +122,95 @@ export class WaveDirector implements WavesService {
     this.pending = null;
   }
 
-  /** Stable ids and sizes for the HUD (A15): the barricade and every cart of every set. Undefined for anything else. */
-  structure(id: string): { kind: StructureKind; maxHealth: number } | undefined {
+  /**
+   * Stable ids and sizes for the HUD (A15): the barricade and every cart of every set. Undefined for anything else. N4:
+   * a cart also names its role ('brazier' or 'ram').
+   */
+  structure(id: string): { kind: StructureKind; maxHealth: number; role?: CartRole } | undefined {
     for (const def of Object.values(this.opts.defs)) {
       if (def.barricadeId === id) return { kind: 'barricade', maxHealth: def.barricadeHealth };
       for (let w = 0; w < def.waves.length; w++) {
-        for (let n = 1; n <= def.waves[w].carts.length; n++) if (cartId(def.id, w, n) === id) return { kind: 'cart', maxHealth: CART.maxHealth };
+        const carts = def.waves[w].carts;
+        for (let n = 1; n <= carts.length; n++) if (cartId(def.id, w, n) === id) return { kind: 'cart', maxHealth: CART.maxHealth, role: carts[n - 1].role ?? 'brazier' };
       }
     }
     return undefined;
+  }
+
+  /**
+   * N4: scales every cart strike on the barricade from now on (the siege's `brace` order halves them). 1 is the shipped
+   * value; a bad value reads as 1. The caller puts it back.
+   */
+  set impactScale(k: number) {
+    this._impactScale = Number.isFinite(k) && k >= 0 ? k : 1;
+  }
+
+  get impactScale(): number {
+    return this._impactScale;
+  }
+
+  /**
+   * N4: ends the current intermission now (the siege's break ends on an order and the gong, not a timer). False when
+   * no live set is in an intermission.
+   */
+  advance(): boolean {
+    const run = this.run;
+    if (!run || !run.live || run.phase !== 'intermission' || !this.world) return false;
+    this.startWave(run.index + 1, false);
+    return true;
+  }
+
+  /** N4: heals the barricade by `n` health (R19's engineers between waves), never above its maximum; false when none stands. */
+  mendBarricade(n: number): boolean {
+    const world = this.world;
+    if (!world || !(n > 0) || world.barricade.destroyed) return false;
+    world.barricade.restore(Math.min(world.barricade.maxHealth, world.barricade.health + n));
+    world.fx.reset(world.barricade.health);
+    return true;
+  }
+
+  /**
+   * N4: takes `n` health off the barricade from outside the carts (the siege's foot soldiers at the gate). The fall is
+   * handled on the next tick as any fall is (a breach in a `breach` set, else the shipped fail). False when none stands.
+   */
+  damageBarricade(n: number): boolean {
+    const world = this.world;
+    if (!world || !this.run?.live || this.run.phase !== 'running' || !(n > 0) || world.barricade.destroyed) return false;
+    world.barricade.damage(n);
+    world.fx.show(world.barricade.health);
+    return true;
+  }
+
+  /** N4: the barricade's health now and its maximum (null with no set built). */
+  get barricade(): { health: number; max: number; destroyed: boolean } | null {
+    const b = this.world?.barricade;
+    return b ? { health: b.health, max: b.maxHealth, destroyed: b.destroyed } : null;
+  }
+
+  /** N4: the current wave's live members (actor ids; gone ones filtered out). */
+  get members(): readonly ActorId[] {
+    return this.wave ? this.wave.members.filter((id) => !this.gone(id)) : [];
+  }
+
+  /** N4: the set's origin and gate points (engine), null with no set built. */
+  get geometry(): { origin: { x: number; z: number }; gate: readonly Vec3[]; lanes: ReadonlyMap<string, Vec3> } | null {
+    const w = this.world;
+    return w ? { origin: w.origin, gate: w.barricadePoints, lanes: w.lanes } : null;
+  }
+
+  /** N4: the barricade fell in the current wave of a `breach` set. */
+  get breached(): boolean {
+    return this.run?.breached ?? false;
+  }
+
+  /** N4: live wave members (not gone) plus live carts, the number `maxAlive` caps. 0 with no wave running. */
+  get alive(): number {
+    const wave = this.wave;
+    if (!wave || !this.world) return 0;
+    let n = 0;
+    for (const id of wave.members) if (!this.gone(id)) n++;
+    for (const c of wave.carts) if (c.active) n++;
+    return n;
   }
 
   /** Live objects (tests). */
@@ -135,6 +220,11 @@ export class WaveDirector implements WavesService {
 
   get phase(): Phase | null {
     return this.run?.phase ?? null;
+  }
+
+  /** N4: the live set is paused (beyond its radius, outside its interior, travelling, or the player dead). */
+  get isPaused(): boolean {
+    return !!this.run && this.paused(this.run.def);
   }
 
   get parked(): boolean {
@@ -165,6 +255,8 @@ export class WaveDirector implements WavesService {
   }
 
   load(data: unknown, version: number): void {
+    // N4: before anything else loads on top of a live run (the siege tears its run down here, not after save.loaded).
+    this.host.events.emit('waves.loading', {});
     this.sawEntry = true;
     this.teardown();
     this.run = null;
@@ -225,6 +317,7 @@ export class WaveDirector implements WavesService {
       timer: 0,
       startHealth: p.barricade ?? p.def.barricadeHealth,
       parkedHealth: p.barricade,
+      breached: false,
     };
     this.tryResume();
   }
@@ -265,10 +358,25 @@ export class WaveDirector implements WavesService {
   private tickWave(run: Run, world: World, dt: number): void {
     const wave = this.wave!;
     wave.t += dt;
-    while (wave.cursor < wave.items.length && wave.items[wave.cursor].at <= wave.t + 1e-9) this.issue(run, world, wave.items[wave.cursor++]);
+    const cap = run.def.maxAlive;
+    let alive = cap !== undefined ? this.alive : 0;
+    while (wave.cursor < wave.items.length && wave.items[wave.cursor].at <= wave.t + 1e-9) {
+      // N4: a due item waits for a slot under the set's alive cap (carts count one each).
+      if (cap !== undefined && alive >= cap) break;
+      const before = wave.members.length + wave.carts.length;
+      this.issue(run, world, wave.items[wave.cursor++]);
+      alive += wave.members.length + wave.carts.length - before;
+    }
     if (world.barricade.destroyed) {
-      this.fail();
-      return;
+      if (!run.def.breach) {
+        this.fail();
+        return;
+      }
+      if (!run.breached) {
+        run.breached = true;
+        world.fx.collapse();
+        this.host.events.emit('waves.breached', { defId: run.def.id, index: run.index });
+      }
     }
     if (wave.cursor < wave.items.length) return;
     if (world.carts.threats > 0 || wave.carts.some((c) => c.active)) return;
@@ -281,7 +389,7 @@ export class WaveDirector implements WavesService {
     if ('spawn' in item) {
       const s = item.spawn;
       const enemies = this.host.services.get('enemies');
-      const sid = spawnerId(run.def.id, run.index, s.lane, s.kind);
+      const sid = spawnerId(run.def.id, run.index, s.lane, s.kind, s.role, s.line);
       const ids = enemies?.spawnGroup(sid, { count: 1, aggro: true }) ?? [];
       if (ids.length === 0) this.warnOnce(`spawn:${sid}`, `spawner '${sid}' spawned nothing (missing anchor or spawner?)`);
       wave.members.push(...ids);
@@ -299,6 +407,8 @@ export class WaveDirector implements WavesService {
     const len = Math.hypot(dx, dz);
     const k = len > CART.startDistance ? CART.startDistance / len : 1;
     const start = { x: target.x + dx * k, y: target.y + (lane.y - target.y) * k, z: target.z + dz * k };
+    const role: CartRole = item.cart.role ?? 'brazier';
+    const defId = run.def.id;
     const cart = world.carts.spawn({
       id: cartId(run.def.id, run.index, item.n),
       start,
@@ -306,15 +416,32 @@ export class WaveDirector implements WavesService {
       origin: world.origin,
       onResolve: (c, how) => this.onCart(c, how),
       ...(item.cart.role ? { role: item.cart.role } : {}),
+      onWindup: (c) => this.host.events.emit('waves.cart.windup', { defId, id: c.id, role }),
+      // N4: a ram in a breach set strikes again and again while the barricade stands (Act 2's sets have no rams).
+      ...(role === 'ram' && run.def.breach
+        ? { onStrike: (c: Cart) => this.strikeBarricade(c, role), canStrike: () => !!this.world && !this.world.barricade.destroyed }
+        : {}),
     });
     if (cart) wave.carts.push(cart);
   }
 
-  private onCart(_cart: Cart, how: CartOutcome): void {
+  private onCart(cart: Cart, how: CartOutcome): void {
     const world = this.world;
     if (how !== 'arrived' || !world) return;
-    world.barricade.damage(CART.impactDamage);
+    // A ram that went inert at a breach resolves 'arrived' with no strike left to land.
+    if (world.barricade.destroyed) return;
+    this.strikeBarricade(cart, cart.role);
+  }
+
+  private strikeBarricade(cart: Cart, role: CartRole): void {
+    const world = this.world;
+    const run = this.run;
+    if (!world || !run || world.barricade.destroyed) return;
+    const base = run.def.cartImpact?.[role] ?? CART.impactDamage;
+    const damage = base * this._impactScale;
+    world.barricade.damage(damage);
     world.fx.show(world.barricade.health);
+    this.host.events.emit('waves.cart.struck', { defId: run.def.id, id: cart.id, role, damage });
     if (world.barricade.destroyed) world.fx.collapse();
   }
 
@@ -327,6 +454,12 @@ export class WaveDirector implements WavesService {
 
   private cleared(run: Run, world: World): void {
     const { def, index } = run;
+    // N4: a breach is patched before anything reads the barricade (the intermission save, the next wave's start).
+    if (run.breached && def.breach) {
+      run.breached = false;
+      world.barricade.restore(Math.max(1, Math.round(def.barricadeHealth * def.breach.patchToPct)));
+      world.fx.reset(world.barricade.health);
+    }
     this.host.events.emit('wave.cleared', { defId: def.id, index });
     if (index >= def.waves.length - 1) {
       this.completed.push(def.id);
@@ -358,6 +491,7 @@ export class WaveDirector implements WavesService {
     const def = run.def;
     run.index = index;
     run.phase = 'running';
+    run.breached = false;
     if (restart) {
       world.barricade.restore(run.startHealth);
     } else {
@@ -381,7 +515,7 @@ export class WaveDirector implements WavesService {
     const enemies = this.host.services.get('enemies');
     if (enemies) {
       const ids = new Set<string>();
-      for (const s of run.def.waves[run.index]?.spawns ?? []) ids.add(spawnerId(run.def.id, run.index, s.lane, s.kind));
+      for (const s of run.def.waves[run.index]?.spawns ?? []) ids.add(spawnerId(run.def.id, run.index, s.lane, s.kind, s.role, s.line));
       for (const id of ids) enemies.reset(id);
     }
     this.wave = null;
