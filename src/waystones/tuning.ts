@@ -24,6 +24,20 @@ export const WAYSTONE_TUNING = {
 } as const;
 
 /**
+ * Act 4 L14: stones whose stone stands off their anchor (the anchor is where a traveller lands, clear of the stone). The
+ * use point sits on the stone itself, so it is in reach from every side (the Act 3 playthrough found the Wyrmwatch Lodge
+ * stone reachable from one side only). Every Dragonspine stone is built this way (its `waystone` structure 1.8 m south of
+ * the anchor); stoneOffset.l14.test.ts checks each one against the layout.
+ */
+export const WAYSTONE_STONE_OFFSET: Readonly<Record<string, { x: number; z: number }>> = {
+  'wyrmwatch-lodge': { x: 0, z: 1.8 },
+  'rime-pass': { x: 0, z: 1.8 },
+  'last-anvil': { x: 0, z: 1.8 },
+  'wyrms-hearth': { x: 0, z: 1.8 },
+  'frostfang-aerie': { x: 0, z: 1.8 },
+};
+
+/**
  * Stones that refuse the player until a flag is set (waystone id without the `waystone.` prefix -> flag). The South
  * Gate stone stays shut until M06's route is chosen. Read through `ctx.gates`, so a load re-derives it.
  */

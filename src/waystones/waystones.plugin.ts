@@ -9,7 +9,7 @@ import '../save/service';
 import './service';
 import '../region/containment';
 import { showToast } from './toast';
-import { WAYSTONE_LOCKS, WAYSTONE_TUNING } from './tuning';
+import { WAYSTONE_LOCKS, WAYSTONE_STONE_OFFSET, WAYSTONE_TUNING } from './tuning';
 import type { WaystoneService } from './service';
 import { WaystoneNetwork } from './WaystoneNetwork';
 import { createNoStrandRule, stoneIsDark, strandTarget } from '../harrowmark/noStrand';
@@ -126,7 +126,10 @@ const waystones: GamePlugin = {
         const stone = {
           id: `waystone:${id}`,
           kind: 'waystone' as const,
-          position: (out: THREE.Vector3) => out.set(anchor.position.x, anchor.position.y, anchor.position.z),
+          position: (out: THREE.Vector3) => {
+            const off = WAYSTONE_STONE_OFFSET[id];
+            return out.set(anchor.position.x + (off?.x ?? 0), anchor.position.y, anchor.position.z + (off?.z ?? 0));
+          },
           radius: WAYSTONE_TUNING.interactRadius,
           coneDegrees: 360,
           get promptKey() {
