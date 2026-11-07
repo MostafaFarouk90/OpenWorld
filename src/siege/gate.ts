@@ -23,6 +23,11 @@ export interface GateOptions {
   damageGate(n: number): void;
   /** False once the gate is breached: the taunters stand down. */
   standing(): boolean;
+  /**
+   * The draw's radius (default `GATE.tauntRadius`). The march sets it past the farthest lane: `accepts` then decides who
+   * marches (siege foes away from Cael) and who is drawn only at the gate.
+   */
+  radius?: number;
 }
 
 /** The gate's taunters and the foot-hit rule. */
@@ -60,7 +65,7 @@ export class GateTaunters {
             id: actor.id,
             position: () => ({ x: p.x, y: p.y, z: p.z }),
             alive: () => opts.standing(),
-            radius: GATE.tauntRadius,
+            radius: opts.radius ?? GATE.tauntRadius,
             seconds: Number.POSITIVE_INFINITY,
             accepts: (enemyId) => opts.accepts(enemyId),
           }),

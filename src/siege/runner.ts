@@ -20,6 +20,7 @@ import './events';
 import { AssistRule } from './assist';
 import { BreathMark, dragonLoop, SiegeDragon } from './dragons';
 import { GateTaunters } from './gate';
+import { March } from './march';
 import { offerFlag, OFFERED_ORDERS, ORDERS_SPEAKER, ORDERS_TREE, orderEvent, type OfferedOrder } from './orders.dialogue';
 import { SIEGE_POSTS, siegeRoster, type RosterSquad, type SiegeId, type SiegeRoster } from './roster';
 import { namedDef, Squad } from './squads';
@@ -100,6 +101,8 @@ export class SiegeRun {
   private readonly warned = new Set<string>();
   private memberSet = new Set<ActorId>();
   private memberPos: Array<{ a: Actor; p: THREE.Vector3 }> = [];
+  private memberAt = new Map<ActorId, THREE.Vector3>();
+  private march: March | null = null;
   private readonly tmp = new THREE.Vector3();
 
   /** 1-based wave now running (or the one just cleared, in a break). */
@@ -244,13 +247,27 @@ export class SiegeRun {
     const g = this.director.geometry;
     if (!g || this.gate) return;
     const b = this.director.barricade;
+    const standing = () => !this.director.breached && !(this.director.barricade?.destroyed ?? true);
+    const join = WAVE_SETS[this.setId]?.join;
+    const march = new March(this.host, {
+      gate: g.gate,
+      origin: g.origin,
+      lanes: g.lanes.values(),
+      landing: join ? (g.lanes.get(join.toward) ?? null) : null,
+      isMember: (id) => this.memberSet.has(id),
+      memberAt: (id) => this.memberAt.get(id) ?? null,
+      assisted: (id) => this.assist.assisted(id),
+      standing,
+    });
+    this.march = march;
     this.gate = new GateTaunters(this.host, {
       siegeId: this.siegeId,
       points: g.gate,
       maxHealth: b?.max ?? GATE.m52Health,
-      accepts: (id) => !this.assist.assisted(id),
+      accepts: (id) => march.gateAccepts(id),
       damageGate: (n) => void this.director.damageBarricade(n),
-      standing: () => !this.director.breached && !(this.director.barricade?.destroyed ?? true),
+      standing,
+      radius: march.reach,
     });
     // Foes face the lanes: the squads face away from the court, toward the lane heads (yaw 0 faces -Z).
     let lx = 0;
@@ -726,11 +743,14 @@ export class SiegeRun {
     const ids = this.director.members;
     this.memberSet = new Set(ids);
     this.memberPos = [];
+    this.memberAt.clear();
     for (const id of ids) {
       const a = this.host.actors.get(id);
       if (!a || a.dead || !a.root) continue;
       a.root.getWorldPosition(this.tmp);
-      this.memberPos.push({ a, p: this.tmp.clone() });
+      const p = this.tmp.clone();
+      this.memberPos.push({ a, p });
+      this.memberAt.set(id, p);
     }
   }
 
@@ -740,6 +760,7 @@ export class SiegeRun {
     this.assist.fixedUpdate(dt);
     if (this.director.parked || !this.director.current || this.director.isPaused) return; // nothing runs while the set waits
     this.buildWorld();
+    this.march?.update(dt, this.memberPos);
     this.gate?.fixedUpdate(dt);
     for (const s of this.squads) s.fixedUpdate(dt);
     for (const d of this.dragons) d.update(dt);
@@ -791,6 +812,8 @@ export class SiegeRun {
     for (const s of this.squads.splice(0)) s.dispose();
     this.gate?.dispose();
     this.gate = null;
+    this.march?.dispose();
+    this.march = null;
     this.assist.dispose();
     this.director.impactScale = 1;
     this.host.actors.despawn(this.fireActor.id);

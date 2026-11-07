@@ -6,7 +6,7 @@ import { RIM_SIEGE, RIM_SIEGE_ANCHORS } from './defs/act5';
 import { CINDERFORD_RAID } from './defs/cinderford';
 import { WAVE_SETS } from './defs';
 import { spawnerId, spawnersFor, WAVE_SPAWNERS } from './spawners';
-import { CART, RAM } from './tuning';
+import { CART, DIRECTOR, RAM } from './tuning';
 import { makeKit, secs, type Kit } from './testKit';
 
 let physics: PhysicsWorld;
@@ -152,5 +152,22 @@ describe('breach and the repeating ram', () => {
     expect(d.barricade!.health).toBe(900);
     expect(d.mendBarricade(5000)).toBe(true);
     expect(d.barricade!.health).toBe(1000);
+  });
+
+  it('join: far lanes spawn joinMetres short of the ram stand, spaced across the line; near lanes and Act 2 sets at their anchors', () => {
+    kit.waves().start(ID);
+    for (let i = 0; i < secs(8); i++) kit.run(1);
+    const ram = kit.ctx.anchors.find(RIM_SIEGE_ANCHORS.lanes.ram)!.position;
+    const opts = kit.enemies.spawnOpts as Array<{ at?: { x: number; y: number; z: number } }>;
+    const ats = opts.map((o) => o.at).filter((a): a is { x: number; y: number; z: number } => !!a);
+    // Wave 1 spawns lanes 2 and 3 (36 and 24 m from the ram stand here) and 1 and 4 (48 and 12): lanes 1 and 2 join.
+    expect(ats.length).toBeGreaterThan(0);
+    expect(opts.length).toBeGreaterThan(ats.length);
+    for (const a of ats) expect(Number.isFinite(a.y)).toBe(true);
+    // Lane 2 (x -12, the ram stand x 24, both at z -62): 30 m short of the stand, shifted 0.75 m across (second of four lanes).
+    const lane2 = ats.find((a) => Math.abs(a.x - (kit.at.x + 24 - RIM_SIEGE.join!.metres)) < 1e-6);
+    expect(lane2).toBeDefined();
+    expect(lane2!.z).toBeCloseTo(ram.z + DIRECTOR.joinSpacing * 0.5, 6);
+    expect(CINDERFORD_RAID.join).toBeUndefined();
   });
 });

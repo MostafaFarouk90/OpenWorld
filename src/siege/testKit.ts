@@ -98,20 +98,26 @@ export interface SiegeKitOptions {
   anchors?: boolean;
   /** Fake inventory knows these ids (default the shipped flask only). */
   items?: readonly string[];
+  /** The real enemies plugin (real brains, taunts and dormancy) in place of the waves kit's fake, with this asset loader. */
+  realEnemies?: { plugin: GamePlugin; assets: unknown };
+  /** A fake `interiors` service reporting Cael inside this interior (R27's set runs only in the tunnel). */
+  interior?: string;
 }
 
 export async function makeSiegeKit(physics: PhysicsWorld, opts: SiegeKitOptions = {}) {
   const scene = new THREE.Scene();
   const moveModifiers = new MoveModifiers();
   const world = new World(scene, physics, {
-    colliders: new TerrainColliders(physics, { patchSize: 50, cells: 16 }),
+    // The real enemies sleep off resident collider patches: their runs stream 200 m and more round Cael, as the game's 200 m patches do.
+    colliders: new TerrainColliders(physics, { patchSize: 50, cells: 16, ...(opts.realEnemies ? { radius: 4 } : {}) }),
     moveModifier: () => moveModifiers.state(),
   });
   const win = new EventTarget();
   const doc = Object.assign(new EventTarget(), { pointerLockElement: null as Element | null });
   const element = Object.assign(new EventTarget(), { requestPointerLock: () => {} }) as unknown as HTMLElement;
   const input = new InputManager(element, win, doc, { storage: null });
-  const game = new Game({ scene, physics, world, input, moveModifiers, assets: null, cameraRig: null, report: () => {} });
+  const assets = (opts.realEnemies?.assets ?? null) as ConstructorParameters<typeof Game>[0]['assets'];
+  const game = new Game({ scene, physics, world, input, moveModifiers, assets, cameraRig: null, report: () => {} });
   const events: Array<{ type: keyof GameEventMap; payload: any }> = [];
   game.events.onAny((type, payload) => events.push({ type, payload }));
   const enemies = fakeEnemies();
@@ -129,7 +135,7 @@ export async function makeSiegeKit(physics: PhysicsWorld, opts: SiegeKitOptions 
   await game.loadPlugins(
     modules(
       corePlugin,
-      enemies.plugin,
+      opts.realEnemies?.plugin ?? enemies.plugin,
       wavesPlugin,
       siegePlugin,
       provide('weather', weather.service),
@@ -137,6 +143,7 @@ export async function makeSiegeKit(physics: PhysicsWorld, opts: SiegeKitOptions 
       provide('inventory', inventory.service),
       provide('quests', { state: (id: string) => (quests as Record<string, string>)[id] ?? 'inactive' }),
       provide('waystones', { get travelling() { return travel.value; } }),
+      ...(opts.interior ? [provide('interiors', { current: opts.interior })] : []),
       provide('dialogue', { start: (id: string) => (dialogues.push(id), true), active: false, close: () => {}, hasSeen: () => false }),
     ),
   );
@@ -158,6 +165,8 @@ export async function makeSiegeKit(physics: PhysicsWorld, opts: SiegeKitOptions 
   return {
     game, ctx, world, events, of, run, runSecs: (s: number) => run(secs(s)), enemies, weather, companions, inventory, quests, dialogues,
     siege, director, at, standIns, travel,
+    /** Stand-ins round another point (the gate 14 m ahead of it, -Z). */
+    standInsFrom: (id: SiegeId, from: { x: number; y: number; z: number }) => defineSiegeStandIns(ctx, id, from),
     clearEvents: () => void events.splice(0),
     teardown: () => {
       game.dispose();
