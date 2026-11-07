@@ -79,6 +79,8 @@ const scenes: GamePlugin = {
         enemies.spawnGroup(id);
       },
       warn,
+      // v0.9: the variant step's tests read the flags and the live favour.
+      reader: { getFlag: (k) => ctx.state.getFlag(k), favour: (t) => ctx.state.favour(t) },
     });
     const service: ScenesService = {
       play: (id) => runner.play(id),
@@ -87,6 +89,7 @@ const scenes: GamePlugin = {
       },
       skip: () => runner.skip(),
       register: (def) => runner.register(def),
+      registerTest: (id, fn) => runner.registerTest(id, fn),
     };
     const offs: Array<() => void> = [];
     offs.push(ctx.services.provide('scenes', service));

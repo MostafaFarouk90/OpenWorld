@@ -6,6 +6,8 @@ import type { FlagCondition } from '../core/flagCondition';
 import { ASH_ROAD_OPEN_WHEN, OCCUPIED_FLAG, WASTE_EDGE_OPEN_WHEN } from './act4Containment';
 import type { FogWallDef } from './fogWall';
 import { GATE_NAMES } from '../harrowmark/city';
+import { ACT5_RIM_FACE_RULES } from './act5Fog';
+import { AFTER_ENDING_FLAG } from './act5Regions';
 
 const NEVER: FlagCondition = { any: ['region.never'] };
 
@@ -45,7 +47,8 @@ const WASTE_EDGE_TOASTS: NonNullable<FogWallDef['toastWhen']> = [
 export const ACT4_FOG_FACES: readonly Act4FogFace[] = [
   { id: 'fog.waste-edge', openWhen: WASTE_EDGE_OPEN_WHEN, toastKey: FOG_TOAST_WASTE_HILD, toastWhen: WASTE_EDGE_TOASTS },
   { id: 'fog.waste-north', openWhen: NEVER, toastKey: FOG_TOAST_ASHGATE_ONLY },
-  ...(['n', 'e', 's', 'w'] as const).map((d): Act4FogFace => ({ id: `fog.caldera-rim.${d}`, openWhen: NEVER, toastKey: FOG_TOAST_CALDERA_RIM })),
+  // v0.9: Act 5's rules (act5Fog.ts): the south face is the Rim Gate; Act 4's own toast stays the default before the gate.
+  ...(['n', 'e', 's', 'w'] as const).map((d): Act4FogFace => ({ id: `fog.caldera-rim.${d}`, toastKey: FOG_TOAST_CALDERA_RIM, ...ACT5_RIM_FACE_RULES[`fog.caldera-rim.${d}`] })),
 ];
 
 export function act4FogFace(id: Act4FogFaceId): Act4FogFace {
@@ -61,8 +64,11 @@ export function act4FogFace(id: Act4FogFaceId): Act4FogFace {
 export const HARROWMARK_GATES = GATE_NAMES;
 export type HarrowmarkGate = (typeof GATE_NAMES)[number];
 
-/** Closed from the betrayal (M38) until Act 5; one face per working gate, on its outside. */
-export const CITY_HELD_OPEN_WHEN: FlagCondition = { none: [OCCUPIED_FLAG] };
+/**
+ * Closed from the betrayal (M38) until the world after the ending (v0.9 item 10, `world.afterEnding`); one face per
+ * working gate, on its outside. Read as `!harrowmarkOccupied(flags)` (act4Containment.ts).
+ */
+export const CITY_HELD_OPEN_WHEN: FlagCondition = { anyOf: [{ none: [OCCUPIED_FLAG] }, { all: [AFTER_ENDING_FLAG] }] };
 
 export interface CityGateFace extends Pick<FogWallDef, 'id' | 'anchorId' | 'openWhen' | 'toastKey'> {
   gate: HarrowmarkGate;

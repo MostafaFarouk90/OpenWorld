@@ -166,16 +166,16 @@ describe('Act 3 containment: holds and regions', () => {
       expect(c.isOpen(19000, 2500)).toBe(true); // Cinderreach
     }
     expect(REGION_INFO.oldsmoke.openWhen).toEqual({ all: ['story.d03.complete'] });
-    // v0.8: only the Ashen Waste carries a Phase G hold now.
-    expect(PHASE_HOLDS).toEqual({ 'ashen-waste': ['story.phase.wasteOpen'] });
+    // v0.8: only the Ashen Waste carries a Phase G hold now. v0.9: and the Caldera's bowl floor its Phase I hold.
+    expect(PHASE_HOLDS).toEqual({ 'ashen-waste': ['story.phase.wasteOpen'], caldera: ['story.phase.foundryOpen'] });
     for (const id of REGION_IDS) if (id !== 'dragonspine') expect(JSON.stringify(REGION_INFO[id].openWhen)).not.toContain('dragonspineOpen');
   });
 
-  it('the Greyfen and the Dragonspine are built; the Caldera stays reserved (v0.8 builds the Ashen Waste)', () => {
+  it('the Greyfen and the Dragonspine are built (v0.8 builds the Ashen Waste, v0.9 the Caldera)', () => {
     expect(REGION_INFO.greyfen.reserved).toBe(false);
     expect(REGION_INFO.dragonspine.reserved).toBe(false);
     expect(REGION_INFO['ashen-waste'].reserved).toBe(false);
-    expect(REGION_INFO.caldera.reserved).toBe(true);
+    expect(REGION_INFO.caldera.reserved).toBe(false);
     expect(REGION_INFO.greyfen.track).toBe('peat-and-pitch');
     expect(REGION_INFO.dragonspine.track).toBe('wing-over-rime');
     expect(engineBox('greyfen')).toEqual(BOX.greyfen);
@@ -200,8 +200,10 @@ describe('Act 3 containment: holds and regions', () => {
 
 describe('Act 3 corridors: the 80 m rule', () => {
   it('every corridor centreline (shipped and Act 3) keeps 80 m from every reserved box', () => {
-    const reserved = REGION_IDS.filter((id) => REGION_INFO[id].reserved);
-    expect(reserved).toEqual(['caldera']); // v0.8: the Waste is built; act4Containment.test.ts checks its own corridor
+    // v0.8: the Waste is built; act4Containment.test.ts checks its own corridor. v0.9: the Caldera is built too, and its
+    // box keeps the clearance (it opens only from the Rim Gate).
+    const reserved = REGION_IDS.filter((id) => REGION_INFO[id].reserved || id === 'caldera');
+    expect(reserved).toEqual(['caldera']);
     for (const k of ALL_CORRIDORS) {
       for (const id of reserved) {
         const d = lineToBox(k.points, engineBox(id));

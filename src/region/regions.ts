@@ -50,6 +50,8 @@ export interface RegionDef {
   weather?: 'ash-storm';
   /** v0.8 (Q4): the Ashmare cannot be summoned in this region (`mount.refused.region`); L3 dismisses it at the edge. */
   mount?: 'refused';
+  /** v0.9: a sky key the environment reads by region ('caldera-orange'); an unknown key keeps the default sky. */
+  sky?: string;
 }
 
 /**
@@ -62,14 +64,15 @@ export interface RegionDef {
 export const PHASE_HOLDS: Readonly<Partial<Record<RegionId, readonly string[]>>> = {
   // v0.8 (Act 4, Q11): Phase G holds the Waste shut behind `fog.waste-edge`; L13 PR 2 empties this entry.
   'ashen-waste': ['story.phase.wasteOpen'],
+  // v0.9 (Act 5): Phase I holds the bowl floor (`hole.caldera.floor`) with `story.phase.foundryOpen`; N12 PR 2 empties it.
+  // The exception to the rule above: the Caldera's hold is spread into its floor hole, not the region's `openWhen`.
+  caldera: ['story.phase.foundryOpen'],
 };
 
 /** The hold flags of one region (empty when it has none). */
 export function phaseHolds(id: RegionId): readonly string[] {
   return PHASE_HOLDS[id] ?? [];
 }
-
-const NEVER: FlagCondition = { any: ['region.never'] };
 
 /** Ambience bed ids a region can name (A14 built the Act 2 ones, K14 the Act 3 ones). */
 export type RegionBedId = 'brightwater' | 'harrowmark' | 'cinderreach' | 'oldsmoke' | 'greyfen' | 'dragonspine' | 'ashen-waste';
@@ -78,6 +81,8 @@ export type RegionBedId = 'brightwater' | 'harrowmark' | 'cinderreach' | 'oldsmo
 export const HARROWMARK_ACT4_BAND = { min: 28, max: 33 } as const;
 /** v0.8: the flag that switches Harrowmark to Act 4 (its band, its track variant, the kill XP factor and the cap). */
 export const ACT4_GATE_FLAG = 'story.gate.a4';
+/** v0.9: the flag that opens Act 5 (M46 and D08 complete): the Caldera's region, its band and the kill XP factor. */
+export const ACT5_GATE_FLAG = 'story.gate.a5';
 
 export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
   brightwater: {
@@ -156,14 +161,21 @@ export const REGION_INFO: Readonly<Record<RegionId, RegionDef>> = {
     weather: 'ash-storm',
     mount: 'refused',
   },
+  // v0.9 (Act 5): engine x 9500..12500, z 6500..9500, inside the Waste's ring; `regionAt` answers it before the Waste.
+  // Opens on `story.gate.a5` (M46 and D08 complete). Bands are capped at spawn (ACT5_CAP_ABOVE_PLAYER); the bowl's sub-bands
+  // are named-only areas (areas.ts). No storm clock (the siege forces its own); the Ashmare is refused as in the Waste.
+  // The ambience bed stays null until N8 adds 'caldera' to RegionBedId with its samples.
   caldera: {
     box: { x0: 10500, z0: 7500, x1: 13500, z1: 10500 },
-    levelBand: { min: 34, max: 40 },
-    track: 'caldera',
+    levelBand: { min: 35, max: 40 },
+    track: 'heart-of-the-anvil',
     bed: null,
-    ground: null,
-    openWhen: NEVER,
-    reserved: true,
+    ground: 'caldera',
+    // The Phase I hold (`PHASE_HOLDS.caldera`) holds the bowl floor's hole, not the region (act5Containment.ts).
+    openWhen: { all: [ACT5_GATE_FLAG] },
+    reserved: false,
+    mount: 'refused',
+    sky: 'caldera-orange',
   },
 };
 

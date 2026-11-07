@@ -19,6 +19,8 @@ export interface WaveSpawnDef {
 export interface WaveCartDef {
   lane: LaneKey;
   delay: number;
+  /** v0.9 item 5: 'ram' for the siege's ram (N4); default 'brazier', so Act 2's data reads the same. */
+  role?: 'brazier' | 'ram';
 }
 
 export interface WaveDef {

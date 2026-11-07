@@ -343,6 +343,8 @@ export class EnemyManager {
         options: req.options,
         slot: req.slot,
         skin: req.skin,
+        ...(req.area ? { area: req.area } : {}),
+        ...(req.role ? { role: req.role } : {}),
       };
       const body = this.makeBody(def, req.skin);
       // Humanoid bodies draw the skin in the model builder (makeBody); the others (golem, crawler, quadruped, wyrm) take

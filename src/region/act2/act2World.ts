@@ -10,6 +10,7 @@ import type { CorridorDef } from '../containment';
 import type { FogWallDef } from '../fogWall';
 import { ACT3_FOG_STRINGS_EN, ACT3_SHIPPED_FACE_RULES } from '../act3Fog';
 import { ACT4_FOG_STRINGS_EN, ACT4_SHIPPED_FACE_RULES } from '../act4Fog';
+import { ACT5_FOG_STRINGS_EN } from '../act5Fog';
 import { REGION_INFO } from '../regions';
 
 /** Never open: the faces toward the regions of later acts (the same never-set key the registry uses). */
@@ -78,6 +79,8 @@ export const ACT2_WORLD_STRINGS_EN: Record<string, string> = {
   ...ACT3_FOG_STRINGS_EN,
   // v0.8: and the Act 4 ones (the shipped Waste faces' new text, the Waste edge, the Caldera rim, the held city gates).
   ...ACT4_FOG_STRINGS_EN,
+  // v0.9: and the Act 5 ones (the Rim Gate, the sheer rim, the Inner Gate, the siege's keep-in).
+  ...ACT5_FOG_STRINGS_EN,
 };
 
 /**

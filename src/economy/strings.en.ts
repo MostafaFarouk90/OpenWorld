@@ -15,6 +15,9 @@ export const ECONOMY_STRINGS_EN: Record<string, string> = {
   'economy.shop.title.wenna': "Wenna's Grisel stores",
   'economy.shop.title.wulfhild': "Wulfhild's trade blanket",
   'economy.shop.title.hild': "Hild's ash-gear",
+  // v0.9 item 15 (placeholders N7 may reword): the Rim Camp's two shops.
+  'economy.shop.title.alric': "Alric's rim forge",
+  'economy.shop.title.maud-rim': "Maud's rim kitchen",
   'economy.shop.otherClass': 'Another class',
   'economy.shop.fail.tempered': 'Tempered gear cannot be sold.',
   'economy.shop.fail.socketed': 'Have a smith take out its shard-gems first.',

@@ -63,3 +63,53 @@ export function bandFor(value: number): FavourBand {
   if (value >= 25) return 'banked';
   return 'cold';
 }
+
+// ---- v0.9 (Act 5, contracts/CHANGES-v0.9.md item 6): the favour snapshot ----
+
+/** The snapshots Act 5 takes: M52's start (N10), the Foundry door before D09 and M56's start (N11). */
+export const ACT5_SNAPSHOTS = ['m52', 'd09', 'm56'] as const;
+export type Act5SnapshotId = (typeof ACT5_SNAPSHOTS)[number];
+
+/** The flag that holds one track of one snapshot (`WorldState.snapshotFavour` writes it). */
+export function snapshotFlag(snapshotId: string, track: FavourTrack | 'taken'): string {
+  return `favour.snapshot.${snapshotId}.${track}`;
+}
+
+interface SnapshotReader {
+  getFlag(key: string): unknown;
+}
+
+/** True once `snapshotId` has been taken. */
+export function snapshotTaken(state: SnapshotReader, snapshotId: string): boolean {
+  return state.getFlag(snapshotFlag(snapshotId, 'taken')) === true;
+}
+
+/** A track's value at the snapshot, or undefined before it is taken (or for an unknown track). */
+export function snapshotValue(state: SnapshotReader, snapshotId: string, track: FavourTrack): number | undefined {
+  if (!isFavourTrack(track) || !snapshotTaken(state, snapshotId)) return undefined;
+  const v = state.getFlag(snapshotFlag(snapshotId, track));
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+}
+
+/** A track's band at the snapshot, or undefined before it is taken (callers decide what that means). */
+export function bandAt(state: SnapshotReader, snapshotId: string, track: FavourTrack): FavourBand | undefined {
+  const v = snapshotValue(state, snapshotId, track);
+  return v === undefined ? undefined : bandFor(v);
+}
+
+/** The track highest at the snapshot, or 'tie' when two or more share the top; undefined before it is taken. */
+export function highestTrack(state: SnapshotReader, snapshotId: string): FavourTrack | 'tie' | undefined {
+  if (!snapshotTaken(state, snapshotId)) return undefined;
+  let best: FavourTrack | undefined;
+  let bestV = -Infinity;
+  let tie = false;
+  for (const t of FAVOUR_TRACKS) {
+    const v = snapshotValue(state, snapshotId, t) ?? 0;
+    if (v > bestV) {
+      bestV = v;
+      best = t;
+      tie = false;
+    } else if (v === bestV) tie = true;
+  }
+  return tie ? 'tie' : best;
+}

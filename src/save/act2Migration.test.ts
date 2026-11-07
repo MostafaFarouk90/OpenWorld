@@ -82,7 +82,10 @@ describe('the persistables', () => {
     // v0.8: `respawn`, `scenes` and `escorts` are carried by L13's act4-*.json fixtures. A thread that adds a new key lists it
     // here until L13 regenerates the fixtures.
     const AWAITING_ACT4_FIXTURES: string[] = [];
-    const awaited = [...AWAITING_ACT3_FIXTURES, ...AWAITING_ACT4_FIXTURES];
+    // v0.9: Act 5 adds no persistable in N0 (favour snapshots are flags). A thread that adds one lists it here until N12
+    // PR 1 ships the act5-*.json fixtures.
+    const AWAITING_ACT5_FIXTURES: string[] = [];
+    const awaited = [...AWAITING_ACT3_FIXTURES, ...AWAITING_ACT4_FIXTURES, ...AWAITING_ACT5_FIXTURES];
     const orphans = keys.filter((k) => !inAny.has(k) && !awaited.includes(k));
     expect(orphans, 'persistables no fixture carries').toEqual([]);
     for (const k of awaited) expect(inAny.has(k), `${k}: a fixture carries it now, drop the entry`).toBe(false);

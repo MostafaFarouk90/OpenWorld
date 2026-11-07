@@ -17,7 +17,8 @@ describe('Act 4 vendors (v0.8 item 16)', () => {
     expect(vendorOpenByTable('hild', flags({}))).toBe(false);
     expect(vendorOpenByTable('hild', flags({ 'story.m41.complete': true }))).toBe(true);
     expect(vendorOpenByTable('wystan', flags({}))).toBe(true);
-    expect(Object.keys(VENDOR_OPEN_WHEN).sort()).toEqual(['aldous', 'hild', 'wenna', 'wulfhild']);
+    // v0.9 item 15: the Rim Camp's Alric and Maud, closed until N7 writes their rows.
+    expect(Object.keys(VENDOR_OPEN_WHEN).sort()).toEqual(['aldous', 'alric', 'hild', 'maud-rim', 'wenna', 'wulfhild']);
   });
   it('a closing row (Aldous from M38) closes the table half', () => {
     const t = { aldous: { none: ['story.m38.complete'] } };

@@ -216,7 +216,8 @@ export const SEVEN_GATES_ONE_DRUM: TrackDef = {
  * v0.8 item 19 reserved the two Act 4 ids (`dust-chant`, the Ashen Waste; `seven-gates-ash`, Harrowmark from
  * `story.gate.a4`); the Act 4 sound pass (L8) built and registered both, so it is empty again.
  */
-export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [];
+/** v0.9 item 17 reserves the Caldera's track (`heart-of-the-anvil`, 100 BPM); N8 builds and registers it, then empties this. */
+export const RESERVED_TRACKS: readonly { id: string; bpm: number }[] = [{ id: 'heart-of-the-anvil', bpm: 100 }];
 export const RESERVED_TRACK_IDS: readonly string[] = RESERVED_TRACKS.map((t) => t.id);
 
 export const TRACKS_BY_ID: Readonly<Record<string, TrackDef>> = {

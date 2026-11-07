@@ -305,6 +305,7 @@ export class WaveDirector implements WavesService {
       end: target,
       origin: world.origin,
       onResolve: (c, how) => this.onCart(c, how),
+      ...(item.cart.role ? { role: item.cart.role } : {}),
     });
     if (cart) wave.carts.push(cart);
   }

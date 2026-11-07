@@ -41,6 +41,7 @@ export const MAP_STRINGS_EN: Record<string, string> = {
   'map.region.greyfen': 'The Greyfen',
   'map.region.dragonspine': 'The Dragonspine',
   'map.region.ashen-waste': 'The Ashen Waste',
+  'map.region.caldera': 'The Sunforge Caldera',
   'map.region.unknown': 'Unknown lands',
   'map.poi.emptied': '{name} (emptied)',
   'map.poi.camp': 'Roadside camp',

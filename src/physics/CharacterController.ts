@@ -1,6 +1,12 @@
 import type RAPIER_API from '@dimforge/rapier3d';
 import { CHARACTER_CONTROLLER, FIXED_TIMESTEP, PLAYER } from '../config/constants';
 import type { PhysicsWorld, Vec3 } from './PhysicsWorld';
+import { PLATFORM_AIR_CARRY_S, type PlatformCarry } from './platforms';
+
+/** v0.9: a platform carry: the shipped translation, or a `PlatformCarry` with a yaw step and the air flag. */
+type PlatformCarryLike = Vec3 | PlatformCarry;
+/** The platform source (core wires `platforms.carryAt`); `feet` is the character's feet before this tick's move. */
+export type PlatformSource = (collider: RAPIER_API.Collider, feet: Vec3) => PlatformCarryLike | null;
 
 export interface MoveIntent {
   /** Desired horizontal direction in world space (x, z); length is clamped to 1. */
@@ -53,7 +59,11 @@ export class CharacterController {
   airJumpSpeed?: number;
   private airJumpsLeft = 0;
   private prevJump = false;
-  private platformSource: ((collider: RAPIER_API.Collider) => Vec3 | null) | undefined;
+  private platformSource: PlatformSource | undefined;
+  /** v0.9: the turning platform an airborne player left, and how long its carry still holds. */
+  private airCarryCollider: RAPIER_API.Collider | null = null;
+  private airCarryLeft = 0;
+  private carryYaw_ = 0;
   private groundCollider_: RAPIER_API.Collider | null = null;
   private wallNormal: Vec3 | null = null;
   private wallSlideMax: number | null = null;
@@ -112,9 +122,22 @@ export class CharacterController {
     return this._grounded;
   }
 
-  /** Supplies the frame translation of a moving platform; while grounded on one, the character is carried by it. */
-  setPlatformSource(fn: ((collider: RAPIER_API.Collider) => Vec3 | null) | undefined): void {
+  /**
+   * Supplies the frame translation of a moving platform; while grounded on one, the character is carried by it. v0.9: the
+   * source also gets the feet (a turning platform's carry depends on where they are) and may answer a yaw step (read back
+   * as `carryYaw`) and `air: true` (the carry holds while airborne, PLATFORM_AIR_CARRY_S). The one-argument form still works.
+   */
+  setPlatformSource(fn: PlatformSource | undefined): void {
     this.platformSource = fn;
+    if (!fn) {
+      this.airCarryCollider = null;
+      this.airCarryLeft = 0;
+    }
+  }
+
+  /** v0.9: radians the platform under (or just left by) the character turned this tick; 0 otherwise. */
+  get carryYaw(): number {
+    return this.carryYaw_;
   }
 
   /** The collider the character stood on after the last move, or null when airborne. */
@@ -190,7 +213,20 @@ export class CharacterController {
     const desired = { x: mx * speed * dt, y: this.verticalVelocity * dt, z: mz * speed * dt };
     // The platform's own frame translation, added after the collision move: the move is resolved against the
     // platform where it still is (so snap-to-ground keeps the feet on it), then rides along with it.
-    const carry = this._grounded && this.platformSource && this.groundCollider_ ? this.platformSource(this.groundCollider_) : null;
+    // v0.9: a turning platform's carry continues for an airborne player who left it (a jump), until landing or for
+    // PLATFORM_AIR_CARRY_S; then the character flies free as before.
+    const feetNow = this.body.translation();
+    const feetPt = { x: feetNow.x, y: feetNow.y - CENTRE_HEIGHT, z: feetNow.z };
+    const groundedCarry = this._grounded && this.platformSource && this.groundCollider_;
+    let airCarry = false;
+    let carry: PlatformCarryLike | null = null;
+    if (groundedCarry) carry = this.platformSource!(this.groundCollider_!, feetPt);
+    else if (this.platformSource && this.airCarryCollider && this.airCarryLeft > 0) {
+      this.airCarryLeft -= dt;
+      carry = this.platformSource(this.airCarryCollider, feetPt);
+      airCarry = carry !== null;
+    }
+    this.carryYaw_ = carry && typeof (carry as { yaw?: number }).yaw === 'number' ? (carry as { yaw: number }).yaw : 0;
     this.controller.computeColliderMovement(this.collider, desired);
     let move = this.controller.computedMovement();
     this._grounded = this.controller.computedGrounded();
@@ -222,13 +258,20 @@ export class CharacterController {
     if (carry) {
       // Rapier already rides a kinematic ground at the body's last-step velocity; add only the difference so
       // the character follows the platform's actual frame translation exactly, with or without that support.
-      const v = this.groundCollider_?.parent()?.linvel();
+      // An air carry has no ground under it, so nothing to take off.
+      const v = airCarry ? null : this.groundCollider_?.parent()?.linvel();
       move = {
         x: move.x + carry.x - (v ? v.x * dt : 0),
         y: move.y + carry.y - (v ? v.y * dt : 0),
         z: move.z + carry.z - (v ? v.z * dt : 0),
       };
     }
+    // v0.9: remember a turning platform stood on this tick (its carry says `air`), for the air carry after a jump.
+    if (this._grounded) {
+      const holds = carry !== null && !airCarry && (carry as { air?: boolean }).air === true;
+      this.airCarryCollider = holds ? this.groundCollider_ : null;
+      this.airCarryLeft = holds ? PLATFORM_AIR_CARRY_S : 0;
+    } else if (this.airCarryLeft <= 0) this.airCarryCollider = null;
     const t = this.body.translation();
     this.body.setNextKinematicTranslation({ x: t.x + move.x, y: t.y + move.y, z: t.z + move.z });
     this.curr.x = t.x + move.x;
@@ -258,6 +301,8 @@ export class CharacterController {
     this.verticalVelocity = 0;
     this._grounded = false;
     this.groundCollider_ = null;
+    this.airCarryCollider = null;
+    this.airCarryLeft = 0;
     this.wallNormal = null;
     this.readFeet(this.curr);
     Object.assign(this.prev, this.curr);

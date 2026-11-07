@@ -4,8 +4,8 @@ import { CUTPURSE } from './cutpurse/tuning';
 import { ENEMY_DEFS } from './defs';
 import { FOE_DEFS, isFoeKind } from './foes/defs';
 import type { FoeDef } from './foes/types';
-import { areaAt, AREA_BANDS, type AreaId } from '../region/areas';
-import { ACT3_BLOCKS, DEFAULT_BAND, act4Level, bandForRegion, blockBaseLevel, enemyLevel, summitLevel, type Act3BlockId } from './level';
+import { areaAt, AREA_BANDS, isCalderaArea, type AreaId } from '../region/areas';
+import { ACT3_BLOCKS, DEFAULT_BAND, act4Level, act5Level, bandForRegion, blockBaseLevel, enemyLevel, summitLevel, type Act3BlockId } from './level';
 import type { FlagReader } from '../core/flagCondition';
 import { ACT4_GATE_FLAG } from '../region/regions';
 import type { ActorId, AnchorLike, AnchorsPort, GatesPort } from './ports';
@@ -33,6 +33,13 @@ export interface SpawnRequest {
   spentKey: string;
   /** v0.8: the spawner's skin (`SpawnerDef.skin`); the actor carries it as `actor.skin`. */
   skin?: EnemySkinId;
+  /**
+   * v0.9: the area the member rolled in (`SpawnerDef.area`, else its anchor's area); the actor carries it as
+   * `actor.data.spawn.area`, so the kill XP factor answers by area (a `caldera-*` member pays the Caldera's anywhere).
+   */
+  area?: AreaId;
+  /** v0.9: the spawner's role (`SpawnerDef.role`, the warhost's shield, pike or torch), carried as `actor.data.spawn.role`. */
+  role?: string;
 }
 
 export interface SpawnerRegistryDeps {
@@ -159,6 +166,7 @@ export class SpawnerRegistry {
       const spentKey = `${id}#${slot}`;
       if (this.spent.has(spentKey) || this.dead.has(spentKey)) continue;
       const level = this.levelFor(def, band, anchor.position);
+      const area = this.areaOf(def, anchor.position) ?? undefined;
       const own = def.memberAnchors?.[slot] ? this.deps.anchors.find(def.memberAnchors[slot]) : undefined;
       if (def.memberAnchors?.[slot] && !own) {
         this.warnOnce(`member:${id}#${slot}`, `spawners: spawner '${id}' member ${slot} has no anchor '${def.memberAnchors[slot]}'; using a ring slot`);
@@ -177,6 +185,8 @@ export class SpawnerRegistry {
         patrol,
         patrolStride: def.patrolStride,
         ...(def.skin ? { skin: def.skin } : {}),
+        ...(area ? { area } : {}),
+        ...(def.role ? { role: def.role } : {}),
         options: { ...opts, leash: opts.leash ?? def.leash ?? true, guard: opts.guard ?? def.guard, ...(def.peaceful && opts.peaceful === undefined ? { peaceful: true } : {}) },
         spentKey,
       });
@@ -645,6 +655,12 @@ export class SpawnerRegistry {
         const p = this.livePlayerLevel();
         if (p === undefined) this.warnOnce(`summit-p:${def.id}`, `spawners: no player level for summit spawner '${def.id}'; the summit cap is off`);
         return summitLevel(AREA_BANDS[area].band, roll, p);
+      }
+      // v0.9 (Q3): every Caldera spawn (the `caldera` band or a `caldera-*` area) rolls its band, then caps at P + 3.
+      if (area ? isCalderaArea(area) : def.band === 'caldera') {
+        const p = this.livePlayerLevel();
+        if (p === undefined) this.warnOnce(`act5-p:${def.id}`, `spawners: no player level for Act 5 spawner '${def.id}'; the Act 5 cap is off`);
+        return act5Level(area ? AREA_BANDS[area].band : band, roll, p, def.firstArrival === true);
       }
       // v0.8 (Q1): every Act 4 spawn rolls its band, then caps at P + 3 (first arrivals P + 2), fixed at spawn.
       if (this.isAct4Capped(def, area)) {

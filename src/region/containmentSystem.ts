@@ -7,6 +7,7 @@ import { MOUNT_TUNING } from '../mount/tuning';
 import { heightAt as terrainHeight } from '../terrain/heightfield';
 import { ACT3_CORRIDORS, ACT3_HOLES } from './act3Containment';
 import { ACT4_CORRIDORS, ACT4_HOLES } from './act4Containment';
+import { ACT5_HOLES, ACT5_KEEPINS } from './act5Containment';
 import { Containment, DEAD_ROAD_CORRIDOR, type ContainmentService } from './containment';
 import type { CoreContext } from './coreTypes';
 
@@ -41,8 +42,10 @@ export function installContainment(
 ): InstalledContainment {
   // v0.7: the Act 3 corridors and the summit hole are registered here, closed until their conditions hold.
   // v0.8: the Ash Road corridor and the Caldera hole (act4Containment.ts).
-  const containment = new Containment(ctx.state, [DEAD_ROAD_CORRIDOR, ...ACT3_CORRIDORS, ...ACT4_CORRIDORS], [...ACT3_HOLES, ...ACT4_HOLES]);
+  // v0.9: the bowl floor's round hole and the siege's keep-in (act5Containment.ts).
+  const containment = new Containment(ctx.state, [DEAD_ROAD_CORRIDOR, ...ACT3_CORRIDORS, ...ACT4_CORRIDORS], [...ACT3_HOLES, ...ACT4_HOLES, ...ACT5_HOLES]);
   const offs: (() => void)[] = [];
+  for (const k of ACT5_KEEPINS) offs.push(containment.addKeepIn(k));
   offs.push(ctx.services.provide('containment', containment));
   // Seconds since the last push; an episode is over (and the next push toasts) once this reaches the quiet time.
   let sincePush = Infinity;
@@ -73,7 +76,8 @@ export function installContainment(
         ctx.events.emit('containment.pushed', { from, to });
         const newEpisode = sincePush >= CONTAINMENT_EPISODE_QUIET_SECONDS;
         sincePush = 0;
-        if (newEpisode) ctx.events.emit('hud.toast', { textKey: CONTAINMENT_TOAST_KEY });
+        // v0.9: a push out of a live keep-in toasts its own line (the siege's "Hold the gate").
+        if (newEpisode) ctx.events.emit('hud.toast', { textKey: containment.pushToastKey(from.x, from.z) ?? CONTAINMENT_TOAST_KEY });
       },
     }),
   );
