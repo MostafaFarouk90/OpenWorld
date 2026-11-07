@@ -16,9 +16,9 @@ const p = (name: string, interactableId: string, anchorId: string, objective: [s
 
 export const FOUNDRY_A5_PROPS: QuestPropSpec[] = [
   // R27: the shoring props, the tunnel's lamps, the charges at the far shoring
-  ...R27_PROPS.map((n) => p('shore', R27_USE.prop(n), T(`prop.${n}`), ['r27', 'props'], R27_PROP(n), { look: 'stake', lookOnlyUsed: true })),
-  ...R27_LAMPS.map((n) => p('lamp', R27_USE.lamp(n), T(`lamp.${n}`), ['r27', 'lamps'], R27_LAMP(n), { look: 'brazier', lookOnlyUsed: true })),
-  ...R27_CHARGES.map((n) => p('charge', R27_USE.charge(n), T(`charge.${n}`), ['r27', 'charges'], R27_CHARGE(n), { look: 'box', lookOnlyUsed: true })),
+  ...R27_PROPS.map((n) => p('shore', R27_USE.prop(n), T(`prop.${n}`), ['r27', 'line'], R27_PROP(n), { look: 'stake', lookOnlyUsed: true })),
+  ...R27_LAMPS.map((n) => p('lamp', R27_USE.lamp(n), T(`lamp.${n}`), ['r27', 'line'], R27_LAMP(n), { look: 'brazier', lookOnlyUsed: true })),
+  ...R27_CHARGES.map((n) => p('charge', R27_USE.charge(n), T(`charge.${n}`), ['r27', 'line'], R27_CHARGE(n), { look: 'box', lookOnlyUsed: true })),
   // R28: lay the wood at each pyre (its token carried in first); light it (optional, Heartshard fire, before the rite); the rite
   ...R28_PYRE_NS.map((n) => p('lay', R28_LAY(n), FA.pyre(n), ['r28', `lay${n}`], R28_LAID(n), { look: 'hearth', lookOnlyUsed: true })),
   // no used flag: the director spends the Burn and writes `story.r28.lit<n>` (the prop hides itself once lit)

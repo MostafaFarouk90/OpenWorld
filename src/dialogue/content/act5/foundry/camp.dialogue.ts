@@ -43,10 +43,12 @@ const lineSegment = (a: R30Ally): Record<string, { lines: Line[] }> => ({
 export const WENNA_A5F: BuiltTree = buildTree({
   id: 'npc-wenna',
   start: [
-    { when: offer('r27'), seg: 'a5f-r27-brief' },
-    { when: at('r27', 'report'), seg: 'a5f-r27-report' },
+    // the vat gallery first (D09 under Spy must never be held up by an R27 offer), then her R30 line, then R27
     WENNA_D09_RULE,
+    // a current talk step goes before any other segment (any completed talk with her would complete it)
+    { when: at('r27', 'report'), seg: 'a5f-r27-report' },
     { when: askLine('wenna'), seg: 'a5f-r30-line-wenna' },
+    { when: offer('r27'), seg: 'a5f-r27-brief' },
     { when: qActive('r27'), seg: 'a5f-r27-wait' },
   ],
   segments: {
@@ -91,9 +93,10 @@ const F8_ALL = flagIs('story.r24.choice', 'all');
 export const WULFHILD_A5F: BuiltTree = buildTree({
   id: 'npc-wulfhild',
   start: [
-    { when: offer('r28'), seg: 'a5f-r28-brief' },
+    // her R30 line before the R28 offer: R30 must never need the optional R28
     { when: open('r28', 'farewell'), seg: 'a5f-r28-farewell' },
     { when: askLine('wulfhild'), seg: 'a5f-r30-line-wulfhild' },
+    { when: offer('r28'), seg: 'a5f-r28-brief' },
     { when: qActive('r28'), seg: 'a5f-r28-wait' },
   ],
   segments: {

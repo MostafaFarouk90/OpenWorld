@@ -61,7 +61,7 @@ export const FOUNDRY_A5_NOTE_LIST: Act2Note[] = [
     'The top one is unopened. On the back, in Vey\'s hand: "For the boy, when he is old enough to hate me properly."',
   ]),
   n(D09_NOTES.plate, FA.d09Plate, 'note', [
-    'A stokers\' plate bolted to a pillar beside the sluices: three wheels drawn as circles, numbered in the old way. The west wheel first, then the east, then the middle. "Never the middle first," someone has scratched. "It floods the runs."',
+    'A stokers\' plate bolted to a pillar beside the sluices: three wheels drawn along the wall, numbered in the old way. The wheel nearest the door first, then the farthest, then the middle one. "Never the middle first," someone has scratched. "It floods the runs."',
   ]),
   n(D09_NOTES.ledgers, FD('ledger.1'), 'note', [
     'The Regent\'s heart ledgers. Each page a name: Corvanth, Ysgaer, Thrane. Each name a weight and a yield. Each one struck through in red.',
