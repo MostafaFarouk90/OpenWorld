@@ -1,7 +1,7 @@
 // The Foundry Approach and the Hammer Hall (Act 5 N2, M54, M55, D10 phase 1), greybox, one interior. The Approach (four mural walls,
 // four dormant forge-thralls, Alric) leads through a gate to the ring hall (the trial floor). The hall's centre is a pit bridged by
 // the floor blocker `hammer.floor` (closed = a flat floor). N3's BreakingFloor piece opens it for the drop; this thread owns the
-// base state and resets it on leaving, on a load and when Ulthred's fight ends. The pit is 3 m deep with a stepped north side, so a
+// base state and resets it on leaving, on a load and when Ulthred's fight ends. The pit is 3 m deep with a stepped south side, so a
 // player who falls and finds the teleport has failed walks out. Entered only by the Foundry's link. Local metres, rooms run +Z.
 import { LINK_ONLY_EXIT } from '../../harrowmark/act4/sites';
 import type { InteriorDef, SunkenDef } from '../../interiors/types';
@@ -10,6 +10,8 @@ import { BLOCKERS, CALDERA_INTERIOR_SITES, DOOR_FOUNDRY, HAMMER_HALL_DOOR_ID, HA
 const P = `${INT_ANCHOR}.hammer`;
 const T = `${INT_TRIGGER}.hammer`;
 export const HAMMER_LINK_ANCHOR = `${P}.link.foundry`;
+/** Local z of the entry anchor (the plugin's pit check reads the player's local position from it). */
+export const HAMMER_ENTRY_Z = 3;
 export const HAMMER_PIT_TRIGGER = `${T}.pit`;
 const STEP = 0.3;
 /** Eight hammer-slam sites on a ring of radius 14 about the pit's centre (0, 56). */
@@ -46,7 +48,7 @@ export const HAMMER_HALL_DEF: InteriorDef = {
     ]),
   ],
   anchors: [
-    { id: `${P}.entry`, x: 0, z: 3, yaw: 180 },
+    { id: `${P}.entry`, x: 0, z: HAMMER_ENTRY_Z, yaw: 180 },
     { id: HAMMER_LINK_ANCHOR, x: 0, z: 0.6, yaw: 180 },
     { id: `${P}.checkpoint.1`, x: 0, z: 5, yaw: 180 },
     { id: `${P}.alric`, x: 0, z: 26, yaw: 0 },
